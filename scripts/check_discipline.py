@@ -56,7 +56,7 @@ def main():
     rules = load_rules()
     grandfather = load_grandfather()
     violations = []
-    files = [f for d in ("Vsa", "VsaIris", "OCaml") for f in (ROOT / d).rglob("*.lean")]
+    files = [f for d in ("Vsa", "VsaIris", "OCaml", "tcb") for f in (ROOT / d).rglob("*.lean")]
     for f in sorted(files):
         rel = str(f.relative_to(ROOT))
         if rel in grandfather:

@@ -61,6 +61,18 @@ documents.
   `c/src/main.c` (in place of `runtime/main.c`) and `c/src/htif.c`. The ELF
   links the unmodified runtime, which the linking exception covers.
   `boot/ocamlc` is the release's checked-in bootstrap compiler.
+* **SibylFS** (`tcb/upstream/sibylfs/`: `t_fs_spec.lem_cppo`,
+  `t_dir_heap.lem_cppo`): Tom Ridge, David Sheets, Thomas Tuerk, Andrea
+  Giugliano; `sibylfs/sibylfs_src` at
+  `30675bc3b91e73f7133d0c30f18857bb1f4df8fa`, ISC licence
+  (`tcb/LICENSE-sibylfs`). Ported to Lean in `tcb/TCB/Os/Fs.lean` and
+  `tcb/TCB/Os/Syscall.lean` (Linux flavour, files and directories; the
+  deviations are listed there and in `tcb/README.md`).
+* **CakeML basis file-system model** (`tcb/upstream/cakeml/fsFFIScript.sml`):
+  CakeML contributors; `CakeML/cakeml` at
+  `530c7deec135ad421cce7ca768eed2f5801261b2`, BSD-3-Clause
+  (`tcb/LICENSE-cakeml`). Its stream model and nondeterministic
+  read/write lengths are ported in `tcb/TCB/Os/Streams.lean`.
 * **Sail RISC-V model** (`riscv-lean/Lean_RV64D*`, `riscv-lean/lean_emulator`):
   BSD-2-Clause (`riscv-lean/LICENCE-sail-riscv`).
 * **lean-sail** (`riscv-lean/lean-sail/`): rems-project/lean-sail, patched by

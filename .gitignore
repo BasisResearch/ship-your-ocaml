@@ -21,3 +21,6 @@ __pycache__/
 # host ocamlc artifacts next to test sources
 *.cmi
 *.cmo
+tcb/validation/out/
+tcb/validation/out-quick/
+tcb/validation/tmp/

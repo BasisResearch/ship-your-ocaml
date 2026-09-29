@@ -30,3 +30,15 @@ subDir = "Iris"
 [[lean_exe]]
 name = "runbc"
 root = "RunBc"
+
+# Trusted computing base: the OS interface specification (SibylFS/CakeML
+# ports) and its trace checker. Dependency-free (Lean core only); see
+# tcb/README.md.
+[[lean_lib]]
+name = "TCB"
+srcDir = "tcb"
+
+[[lean_exe]]
+name = "tcbcheck"
+root = "TCBCheck"
+srcDir = "tcb"

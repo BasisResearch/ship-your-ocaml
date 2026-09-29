@@ -9,6 +9,9 @@
 #                            scripts/discipline_rules.tsv; O1-O4 cover OCaml/);
 #   (a5) generated files   — OCaml/Bytecode/Opcode.lean and OCaml/Vm/Layout.lean
 #                            are exactly what their generators emit;
+#   (t1) TCB               — tcb/ builds, its lemmas' axioms are standard, and
+#                            the quick OS-spec validation accepts every Linux
+#                            trace (tcb/validation/quick.sh);
 #   (a6) ELF pin           — c/ocamlrun-riscv-htif.elf matches c/ELF.sha256, and
 #                            contains no `ecall` (a libgloss syscall stub would
 #                            trap with no handler on the bare machine).
@@ -51,4 +54,13 @@ n=$($HOME/toolchains/xpack-riscv-none-elf-gcc-15.2.0-1/bin/riscv-none-elf-objdum
 [ "$n" = 0 ] || fail "stage a6: $n ecall instruction(s) linked (libgloss syscall stubs trap on the bare machine)"
 (cd c && sha256sum -c ELF.sha256) || fail "stage a6: ELF sha256"
 echo "stage a6: OK"
+
+echo "== stage t1: trusted computing base (tcb/)"
+(ulimit -v 31457280; lake build TCB tcbcheck 2>&1) | tail -1 | grep -q "Build completed successfully" || fail "stage t1: build TCB"
+out=$(lake env lean tcb/Audit.lean 2>&1)
+echo "$out"
+bad=$(echo "$out" | grep "depends on axioms" | grep -vE "axioms: \[(propext|Classical.choice|Quot.sound)(, (propext|Classical.choice|Quot.sound))*\]$" || true)
+[ -z "$bad" ] || fail "stage t1: non-standard axioms: $bad"
+tcb/validation/quick.sh || fail "stage t1: OS-spec validation (quick): a Linux trace was rejected"
+echo "stage t1: OK"
 echo "ALL STAGES OK"

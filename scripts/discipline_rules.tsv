@@ -24,3 +24,7 @@ O1-no-sorry	OCaml/*	(?<!`)\b(sorry|admit)\b(?!`)	no sorry/admit: unproved theore
 O2-no-axiom	OCaml/*	^\s*(axiom|opaque)\s	no new axioms or opaque constants: headline theorems depend only on propext, Classical.choice, Quot.sound
 O3-no-native-decide	OCaml/*	(?<!`)\b(native_decide|ofReduceBool|trustCompiler)\b(?!`)	no native_decide (it adds Lean.ofReduceBool); kernel decide or generated lemmas only
 O4-anon-projection-tower	OCaml/*	\.2\.2\.2\.2	deep anonymous projection: posts/entries are named-field structures (VmReprAt, LoadedAt)
+# ship-your-ocaml: the same rules for the trusted computing base tcb/
+T1-no-sorry	tcb/*	(?<!`)\b(sorry|admit)\b(?!`)	no sorry/admit in the TCB: its lemmas are proved, its specification is definitions
+T2-no-axiom	tcb/*	^\s*(axiom|opaque)\s	no axioms in the TCB: trusted content is stated as definitions (the spec), never as axioms
+T3-no-native-decide	tcb/*	(?<!`)\b(native_decide|ofReduceBool|trustCompiler)\b(?!`)	no native_decide in the TCB
