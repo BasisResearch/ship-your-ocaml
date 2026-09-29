@@ -31,7 +31,7 @@ Layer B′: program logic over BcSem — how BcSem-level facts about
   runtime needs neither.
 * **One copying minor heap + a non-moving incremental mark-and-sweep major
   heap** (best-fit allocator), with compaction the only other mover and
-  switchable off (`OCAMLRUNPARAM=o=1000000`, PLAN §GC). 5.x's runtime
+  switchable off (`OCAMLRUNPARAM=O=1000000`, PLAN §GC). 5.x's runtime
   adds per-domain minor heaps and a concurrent major collector.
 * **The bytecode is stable**: 149 opcodes, no effect handlers (5.x adds
   `PERFORM`/`RESUME*`/`REPERFORM` and fibers, i.e. stack switching).
@@ -139,7 +139,11 @@ blocks reachable from the roots (`Live`).
   and enough for ordinary test programs (VALIDATION §GC: eight of the nine
   difftests never collect after the cut at the default 256k-word minor
   heap; the allocation-pressure test first collects 26.9M steps in) and
-  for `ocamlc` on small inputs with a larger minor heap.
+  for `ocamlc` on small inputs. Measured: the heap size alone is not
+  enough — opening a channel's 64 KiB custom block requests a major slice
+  — but `OCAMLRUNPARAM=M=1000` makes a `boot/ocamlc` compile run
+  collection-free (VALIDATION §2.3). The G1 configuration: a large `s`,
+  `M=1000`, `O=1000000`.
 * **G2: the minor collection as a heap isomorphism.** Prove
   `caml_empty_minor_heap` (oldify + mopup, 499 instructions, plus the
   remembered set `ref_table` maintained by `caml_modify`) maps the reachable
@@ -148,7 +152,7 @@ blocks reachable from the roots (`Live`).
   frees only non-`Live` blocks, which `HeapRepr` does not constrain; the
   work is the mark invariant (tri-colour, incremental slices interleaved
   with `caml_modify`'s write barrier). Compaction stays off
-  (`o=1000000`).
+  (`O=1000000`).
 * **G3: the collector as an obligation.** State `GcSim` (a C-level spec:
   after `caml_minor_collection`, ∃ `φ'` …) as a structure of obligations
   that Layer A consumes, and prove it later. Same statement as G2, deferred
