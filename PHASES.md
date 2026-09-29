@@ -46,8 +46,8 @@ ELF pin).
 ## P0: validation and scaffold (done)
 
 * **Result** (VALIDATION.md): the ELF runs on Sail (`while.ml`,
-  9 difftests, `boot/ocamlc -version`; `boot/ocamlc` compiling a one-line
-  program via the host mirror, on Sail in progress); census of the ELF and of `boot/ocamlc`; `BcSem` agrees with the
+  9 difftests, `boot/ocamlc -version`, `boot/ocamlc` compiling a one-line
+  program); census of the ELF and of `boot/ocamlc`; `BcSem` agrees with the
   host `ocamlrun` on the F1 programs (compiled evaluation) and with the ELF
   on `while_min` (kernel evaluation); `boot/ocamlc` is a fixpoint of the
   4.14.2 sources up to configuration strings.

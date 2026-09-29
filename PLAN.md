@@ -221,7 +221,7 @@ generated.
 
 * **Emulator time.** ~49k steps/s. `while.ml` is 4.6M steps (93 s),
   `boot/ocamlc -version` 53.8M (20 min), compiling a one-liner
-  ≈ VALIDATION §Sail. Startup dominates: MD5 of the code segment and linear
+  81.9M (28 min). Startup dominates: MD5 of the code segment and linear
   `strcmp` primitive resolution (3.7M steps even for `while.ml`). All of it
   is before the cut point, so it costs emulator time and boot-witness size,
   not proof.

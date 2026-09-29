@@ -63,7 +63,8 @@ The emulator runs at about 49,000 steps/s.
 | `while.ml` (proof ELF) | `55\n2500\n36\n` | 0 | 4,568,271 | 4,496,050 | 72,221 |
 | `while_min.ml` (no Stdlib) | `55\n2500\n36\n` | 0 | 4,310,590 | 4,266,900 | 43,690 |
 | `boot/ocamlc -version` | `4.14.2\n` | 0 | 53,831,034 | 48,242,926 | 5,588,108 |
-| `boot/ocamlc -nostdlib -I /lib/ocaml -dinstr -c /src/hello.ml` | still running on Sail at publication (see below) | | | 48,243,742 | |
+| `boot/ocamlc -nostdlib -I /lib/ocaml -dinstr -c /src/hello.ml` | the bytecode listing (below) | 0 | 81,880,193 | 48,244,801 | 33,635,392 |
+| same, `OCAMLRUNPARAM=M=1000` | the same listing | 0 | 76,680,968 | 48,246,986 | 28,433,982 |
 
 `while.ml` is the OCaml port of ship-your-interpreter's `c/tests/while.wl`
 (while loops, `break` as an exception, nesting). `hello.ml` is
@@ -71,18 +72,31 @@ The emulator runs at about 49,000 steps/s.
 host 4.14.2 at `/lib/ocaml/stdlib.cmi`, and `-dinstr` makes the compiler
 print the bytecode it generates on the HTIF console.
 
-**The compile run.** On Sail it reaches the cut point (step 48,243,742,
-the same load as `-version`) and then executes the compiler's 964,604
-ZINC instructions (§2.3); at ~49k steps/s this is hours, and the run was
-still going (past 90 minutes, ≈ 270M steps) when this was written. The first
-attempt ended at step 54,303,453 with `Error: Unbound module Stdlib`,
-exit 2 — a correct run of the compiler over a file system without
-directories (4.14's `Load_path` lists include directories with
-`Sys.readdir`), which led to directory support in `htif.c`. With that fix,
-the host mirror (§6: same runtime, same file system) prints the expected
-listing (`const 7; push; const 6; mulint; push; getglobal Stdlib!;
-getfield 43; apply 1; …; setglobal Hello!`) and exits 0. The Sail result
-will be added to `c/results/ocamlc-hello*.json` and this table.
+**The compile run** prints, exactly as the host compiler does,
+
+```
+	const 7
+	push
+	const 6
+	mulint
+	push
+	getglobal Stdlib!
+	getfield 43
+	apply 1
+	push
+	makeblock 0, 0
+	pop 1
+	setglobal Hello!
+```
+
+and writes `/src/hello.cmi` and `/src/hello.cmo` into the in-memory file
+system (through a temporary file and `rename`, as `Misc.output_to_file_via_temporary`
+does). It takes about 28 minutes of emulation. Two earlier attempts
+failed, and both failures were OS-layer bugs the runtime surfaced
+faithfully: without directory listing the compiler stopped with
+`Error: Unbound module Stdlib` (exit 2, step 54,303,453; 4.14's
+`Load_path` indexes include directories with `Sys.readdir`); without a
+clock it hung in libgloss's `ecall` (§1).
 
 **Where the steps go before the cut point** (`while.ml`; `ocamlc`):
 
@@ -126,10 +140,12 @@ length, not proof (PLAN.md §6).
   26.9M steps after the cut, and 3 minor collections and 2 major slices in
   all. `boot/ocamlc -version`: none after the cut.
 * **`boot/ocamlc` compiling `hello.ml` collects once, whatever the minor
-  heap size** (host mirror, §6, which runs the same runtime with the same
-  heap parameters, so collection points are the same): 206,018 minor
-  words (below the 256k-word minor heap), 1 minor collection at the
-  default size, at `s=1M` and at `s=4M`. The cause, found by backtraces in
+  heap size**: on Sail, one minor collection and one major slice after the
+  cut, the minor collection at step 76,014,867 (27.8M steps after the
+  cut). In the host mirror (§6: same runtime, same heap parameters, so the
+  same collection points) the run allocates 206,018 minor words, below the
+  256k-word minor heap, and still collects once at the default size, at
+  `s=1M` and at `s=4M`. The cause, found by backtraces in
   the mirror: opening an output channel allocates a custom block
   accounting for its 64 KiB buffer (`caml_alloc_custom_mem`), and
   `caml_adjust_gc_speed` turns that into a major-slice request, which the
@@ -137,7 +153,8 @@ length, not proof (PLAN.md §6).
   (`caml_alloc_small_dispatch` → `caml_check_urgent_gc` →
   `caml_gc_dispatch`). Raising the custom-block ratio removes it:
   **with `OCAMLRUNPARAM=M=1000` the compile runs no minor or major
-  collection at all** (also with `s=4M`). So G1 (PLAN.md §3) is a runtime
+  collection at all** — on Sail (76,680,968 steps; the collection had cost
+  5.2M steps) and in the mirror (also with `s=4M`). So G1 (PLAN.md §3) is a runtime
   configuration: a large `s`, `M=1000`, and `O=1000000` against
   compaction; `Fits` must also bound custom-block memory.
 * The bytecode instruction counts (host `ocamlrund -t`):
@@ -262,8 +279,10 @@ So `boot/ocamlc` is the 4.14.2 compiler compiled by itself, up to
 to `htif.c` by macros, `c/tests/hostmirror.h`), so an embedded-program run
 that takes Sail an hour can be reproduced in milliseconds when debugging
 the OS layer. It reproduces `while.ml` and the `boot/ocamlc` compile run
-(same `-dinstr` listing, exit 0). It is a debugging aid, not evidence:
-every number above is from Sail.
+(same `-dinstr` listing, exit 0), and was used with backtraces to find the
+cause of the forced collection (§2.3). It is a debugging aid, not
+evidence, and it has a real clock and the host's `isatty`: it did not
+show the `ecall` hang (§1). The Sail numbers above are authoritative.
 
 ## 7. What did not work, and limits
 

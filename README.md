@@ -11,10 +11,9 @@ which proved a WHILE interpreter's ELF against a big-step semantics
 their machine layer (ATTRIBUTION.md).
 
 **Status.** Phase 1 (validation) is done: `ocamlrun` runs on Sail —
-`while.ml`, nine difftests and `boot/ocamlc -version` (VALIDATION.md);
-`boot/ocamlc` compiling a program is a multi-hour Sail run. The Lean
-scaffold builds and `scripts/check_all.sh` passes. The headline theorems
-are *stated* as
+`while.ml`, nine difftests, `boot/ocamlc -version`, and `boot/ocamlc`
+compiling a program (VALIDATION.md). The Lean scaffold builds and
+`scripts/check_all.sh` passes. The headline theorems are *stated* as
 `Prop`s, never `sorry` or axioms; their compositions, the determinism
 theory of `BcSem`, the bytecode program logic's adequacy and a kernel-checked
 `BcSem` run of a real executable are *proved*. PHASES.md is the plan and
@@ -133,7 +132,7 @@ def endToEnd_ocaml_Statement S parse load boot L B : Prop :=   -- EndToEnd
 | `while.ml` on Sail | `55\n2500\n36\n`, exit 0, 4,568,271 steps; cut point at 4,496,050 (startup: code MD5 and primitive resolution) |
 | difftests (host `ocamlrun` vs Sail) | 9/9 pass (ints, closures, data, exceptions, strings/`Printf`, allocation, soft-float, objects); 4.6M–222M steps |
 | `boot/ocamlc -version` on Sail | `4.14.2`, exit 0, 53.8M steps (cut at 48.2M) |
-| `boot/ocamlc` compiling `let () = print_int (6 * 7)` | 964,604 ZINC instructions after a 48.2M-step load; running on Sail (hours); the host mirror of the same build compiles it correctly. One collection, forced by channel custom-block accounting; none with `OCAMLRUNPARAM=M=1000` |
+| `boot/ocamlc -dinstr -c hello.ml` (`let () = print_int (6 * 7)`) on Sail | the compiler's bytecode listing, exit 0, 81.9M steps (cut at 48.2M); one collection, forced by a channel's custom-block accounting; none with `OCAMLRUNPARAM=M=1000` (76.7M steps) |
 | `BcSem` vs binary | identical output on `while`, `f2_closures` (118,119 ZINC steps), `while_min` (kernel-checked); never `.wrong` |
 | ELF census | 1,123 reachable functions, 77,157 instructions; `caml_interprete` 1,966 instructions, 147 arms, median 7; 83% in existing site classes; 131 functions identical to the WHILE ELF |
 | bytecode census | `boot/ocamlc` 411,971 instructions, 165 units; Translcore+Matching+Bytegen+Emitcode 23,606 |
