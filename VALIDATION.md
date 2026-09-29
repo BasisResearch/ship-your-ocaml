@@ -298,7 +298,13 @@ trace (`tcb/validation/RESULTS.md`, reproducible in ~3 s):
 * The in-image file system is **not** POSIX yet: unknown fds behave as the
   console instead of `EBADF`, it has no `mkdir`/`rmdir` (directories are
   path prefixes), it answers `ENOENT` where POSIX says `ENOTDIR`, and it
-  reports a link count of 1 after `unlink`. On bare metal the spec is a
+  reports a link count of 1 after `unlink`. ship-your-lua's run of the
+  same driver found three more, which apply here too: `fstat` on the
+  console fds gives `st_nlink = 0` (newlib calls it before the first
+  write), `close` of fd 0-2 or of an unknown fd succeeds without closing,
+  and `lseek` with an invalid `whence` acts as `SEEK_END` instead of
+  `EINVAL`. The seven are fixed together in F5 (one re-measurement of the
+  ELF). On bare metal the spec is a
   proof obligation (`OCaml.Os.HtifFsImplements`), so these must be fixed,
   or the spec instance restricted, before it can be discharged.
 * The gate runs a 329-trace subset (`scripts/check_all.sh` stage t1).

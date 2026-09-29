@@ -83,6 +83,9 @@ from POSIX, not of the spec:
 | M2: no directories | 226 `open` with `O_CREAT` under a missing directory or with a trailing slash succeeds; 1 `rename` into a "subdirectory" of a file succeeds | names are opaque strings containing `/` |
 | M3: `ENOENT` where POSIX says `ENOTDIR` | 18 (`rename`/`unlink`/`stat`/`opendir`/`open` through a file) | no path resolution |
 | M4: link count of an unlinked-but-open file | 12 `fstat` → 1 | `_fstat` reports `st_nlink = 1` always (POSIX: 0 after unlink) |
+| M5: `fstat` on fd 0-2 | found by ship-your-lua's run of this driver; confirmed in the source | `_fstat` zeroes the struct for the console: `st_nlink = 0`. newlib calls `_fstat(1)` before the first write, so every program hits it |
+| M6: `close` of fd 0-2 or of an fd never issued | ditto | `_close` returns 0 and nothing is closed (POSIX: fd 0-2 become closed; an unknown fd gives `EBADF`) |
+| M7: `lseek` with an invalid `whence` on a file | ditto | treated as `SEEK_END` (POSIX: `EINVAL`) |
 
 (`readdir` without `.`/`..` never shows up: every script that opens a
 directory also calls `mkdir` first.)

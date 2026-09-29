@@ -34,7 +34,7 @@ ELF pin).
 | library proofs of the 67 byte-identical functions retargeted to this ELF | `Vsa/`, `scripts/retarget_syi.py` | P0 | **done** (pins checked, `memcpy_bytepath_spec`/`muldi3_spec`/`udivdi3_spec` audited) |
 | `strcmp`, `__ssprint_r`, `__ssputs_r` (8 changed words), `_malloc_r`, `_free_r`, `_svfprintf_r` for this ELF | `experiments/syi/while-elf-only/` → `Vsa/` | A0 | open |
 | decode for the 20,457 reachable words without a lemma (via syi's `decodeW`) | — | A0 | open |
-| `HtifFsImplements` (the in-image file system meets the OS spec) | `OCaml/Os.lean` | F5 | open; first fix `htif.c`'s 4 POSIX deviations (VALIDATION §6) |
+| `HtifFsImplements` (the in-image file system meets the OS spec) | `OCaml/Os.lean` | F5 | open; first fix `htif.c`'s 7 POSIX deviations (VALIDATION §6) |
 | `BcSem` world over `TCB.Os.OsState` (file/time/env primitives through `OsStep`) | `OCaml/Bytecode/Semantics.lean` | F5 | open |
 | Linux instantiation: `ecall` as an external step constrained by `OsStep` | `Vsa.Machine` extension | E | open |
 | `Layout.runtimeOk` concrete instance | `OCaml/Refinement.lean` | A0 | to define |
@@ -109,7 +109,8 @@ ELF pin).
 * F5 moves `BcSem`'s world to `TCB.Os.OsState`, specifies the file, time
   and environment primitives through `OsStep`, adds the file system to
   `WorldRepr`, and discharges `HtifFsImplements` after fixing `htif.c`'s
-  POSIX deviations (unknown fds, directories, `ENOTDIR`, link counts).
+  POSIX deviations (unknown fds, directories, `ENOTDIR`, link counts,
+  console `fstat`, `close`, invalid `whence`).
 * **Exit per fragment**: the difftests of the fragment pass under `runbc`
   and on Sail, and Layer A holds for the fragment.
 

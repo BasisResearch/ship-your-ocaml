@@ -148,7 +148,7 @@ def endToEnd_ocaml_Statement S parse load boot L B : Prop :=   -- EndToEnd
 | difftests (host `ocamlrun` vs Sail) | 9/9 pass (ints, closures, data, exceptions, strings/`Printf`, allocation, soft-float, objects); 4.6M–222M steps |
 | `boot/ocamlc -version` on Sail | `4.14.4`, exit 0, 54.4M steps (cut at 48.8M) |
 | `boot/ocamlc -dinstr -c hello.ml` (`let () = print_int (6 * 7)`) on Sail | the compiler's bytecode listing, exit 0, 82.6M steps (cut at 48.8M); one collection, forced by a channel's custom-block accounting; none with `OCAMLRUNPARAM=M=1000` (77.4M steps) |
-| OS spec (`tcb/`) | 6,490 scripts, 101,621 calls on Linux: 0 traces rejected; the in-image file system has 4 documented POSIX deviations |
+| OS spec (`tcb/`) | 6,490 scripts, 101,621 calls on Linux: 0 traces rejected; the in-image file system has 7 documented POSIX deviations |
 | reused proofs | 67 functions retargeted, 2,560 pinned bytes = the ELF's |
 | `BcSem` vs binary | identical output on `while`, `f2_closures` (118,120 ZINC steps), `while_min` (kernel-checked); never `.wrong` |
 | ELF census | 1,123 reachable functions, 77,530 instructions; `caml_interprete` 1,966 instructions, 147 arms, median 7; 83% in existing site classes; 131 functions identical to the WHILE ELF |
