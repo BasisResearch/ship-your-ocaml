@@ -2,25 +2,25 @@
  "elf": "ocamlrun-riscv-htif.elf",
  "exit": 0,
  "fuel_out": false,
- "steps": 4568481,
+ "steps": 4568271,
  "output": "55\n2500\n36\n",
- "cut_point_step": 4496260,
- "first_minor_gc_step": 4482776,
+ "cut_point_step": 4496050,
+ "first_minor_gc_step": 4482566,
  "first_minor_gc_after_cut": null,
  "minor_gcs": 1,
  "major_slices": 0,
  "minor_gcs_after_cut": 0,
  "first": {
-  "caml_main": 50224,
-  "caml_init_gc": 55189,
-  "caml_interprete": 122913,
-  "caml_load_code": 123254,
-  "caml_build_primitive_table": 387976,
-  "caml_input_val": 4458582,
-  "caml_oldify_mopup": 4482776,
-  "caml_do_exit": 4568408,
-  "_exit": 4568476,
-  "_exit.sd": 4568480
+  "caml_main": 50212,
+  "caml_init_gc": 55177,
+  "caml_interprete": 122930,
+  "caml_load_code": 123271,
+  "caml_build_primitive_table": 387993,
+  "caml_input_val": 4458372,
+  "caml_oldify_mopup": 4482566,
+  "caml_do_exit": 4568198,
+  "_exit": 4568266,
+  "_exit.sd": 4568270
  },
  "counts": {
   "caml_main": 1,
@@ -35,7 +35,3 @@
   "_exit.sd": 1
  }
 }
-
-real	1m33.839s
-user	1m33.813s
-sys	0m0.024s

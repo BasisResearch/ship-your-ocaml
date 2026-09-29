@@ -2,56 +2,56 @@
  "elf": "/data/home/kirancodes/Documents/code/ship-your-ocaml/c/ocamlrun-riscv-htif.elf",
  "image": {
   "functions": 1321,
-  "insts": 83826
+  "insts": 83777
  },
  "reachable_from_main": {
   "functions": 1123,
-  "insts": 77206
+  "insts": 77157
  },
  "interp_reachable": {
   "functions": 1003,
-  "insts": 68880,
+  "insts": 68831,
   "c_primitives": 403
  },
  "address_taken_functions": 484,
  "indirect_jump_sites": 234,
  "mnemonics": {
-  "ld": 11887,
-  "sd": 8613,
-  "mv": 7003,
-  "addi": 6843,
+  "ld": 11878,
+  "sd": 8602,
+  "mv": 7000,
+  "addi": 6840,
   "li": 5432,
-  "jal": 4741,
-  "auipc": 3285,
+  "jal": 4740,
+  "auipc": 3280,
   "j": 3222,
-  "slli": 2241,
-  "beqz": 1865,
-  "add": 1814,
-  "ret": 1531,
+  "slli": 2237,
+  "beqz": 1866,
+  "add": 1812,
+  "ret": 1530,
   "bnez": 1310,
   "andi": 1053,
   "addiw": 1052,
   "lw": 1023,
   "srli": 997,
   "addw": 846,
-  "lbu": 842,
+  "lbu": 841,
   "beq": 825,
-  "sw": 750,
+  "sw": 749,
   "lui": 663,
   "slliw": 635,
   "bltu": 622,
   "bgeu": 608,
   "or": 580,
-  "sb": 569,
-  "sub": 555,
+  "sb": 568,
+  "sub": 551,
   "bne": 522,
   "subw": 472,
   "srai": 467,
-  "sext.w": 418,
+  "sext.w": 417,
   "bge": 376,
   "and": 357,
   "blt": 333,
-  "bltz": 285,
+  "bltz": 284,
   "blez": 250,
   "srliw": 237,
   "xor": 229,
@@ -71,10 +71,10 @@
   "srl": 53,
   "jr": 48,
   "seqz": 39,
-  "negw": 34,
+  "negw": 33,
   "srlw": 30,
-  "sltiu": 26,
   "neg": 26,
+  "sltiu": 26,
   "slti": 24,
   "sraw": 21,
   "slt": 16,
@@ -83,42 +83,40 @@
   "sltu": 10,
   "lb": 7,
   "sgtz": 3,
-  "sra": 3,
-  "ecall": 1
+  "sra": 3
  },
  "site_classes": {
-  "alu_addi": 19278,
-  "ld": 11887,
-  "sd": 8613,
+  "alu_addi": 19272,
+  "ld": 11878,
+  "sd": 8602,
   "branch_taken": 7331,
-  "jal": 4741,
+  "jal": 4740,
   "j": 3222,
-  "alu_add": 1814,
-  "jr": 1578,
-  "addiw": 1470,
+  "alu_add": 1812,
+  "jr": 1577,
+  "addiw": 1469,
   "lw": 1023,
-  "lbu": 842,
-  "sw": 750,
-  "sub": 581,
-  "sb": 569,
-  "subw": 506
+  "lbu": 841,
+  "sw": 749,
+  "sub": 577,
+  "sb": 568,
+  "subw": 505
  },
- "site_supported_insts": 64205,
+ "site_supported_insts": 64166,
  "unsupported_by_reason": {
-  "OP-IMM funct3 != ADDI": 5297,
-  "opcode 0x17": 3285,
+  "OP-IMM funct3 != ADDI": 5293,
+  "opcode 0x17": 3280,
   "RTYPE op not ADD/SUB": 1412,
   "OP-IMM-32 funct3 != ADDIW": 958,
   "RTYPEW op not SUBW": 953,
   "opcode 0x37": 663,
   "load width/signedness (lb/lh/lhu/lwu?)": 200,
   "jalr shape != jr rs1 (rd=x0, imm=0)": 165,
-  "store width (sh?)": 67,
-  "opcode 0x73": 1
+  "store width (sh?)": 67
  },
  "unsupported_by_mnemonic": {
-  "auipc": 3285,
-  "slli": 2241,
+  "auipc": 3280,
+  "slli": 2237,
   "andi": 1053,
   "srli": 997,
   "addw": 846,
@@ -153,761 +151,760 @@
   "lb": 7,
   "sgtz": 3,
   "sra": 3,
-  "ecall": 1,
   "jr": 1
  },
  "caml_interprete": {
-  "dispatch_jr": "0x8000117c",
-  "table": "0x8005cc68",
+  "dispatch_jr": "0x800011c0",
+  "table": "0x8005cba0",
   "n_opcodes": 149,
   "distinct_arm_entries": 147,
-  "loop_head": "0x8000115c",
+  "loop_head": "0x800011a0",
   "insts_in_some_arm": 1899,
   "insts_shared_by_arms": 111,
   "insts_total": 1966,
   "arms": {
    "ACC0": {
-    "addr": "0x80001520",
+    "addr": "0x80001564",
     "insts": 3,
     "own": 3
    },
    "ACC1": {
-    "addr": "0x80001514",
+    "addr": "0x80001558",
     "insts": 3,
     "own": 3
    },
    "ACC2": {
-    "addr": "0x80001508",
+    "addr": "0x8000154c",
     "insts": 3,
     "own": 3
    },
    "ACC3": {
-    "addr": "0x800014fc",
+    "addr": "0x80001540",
     "insts": 3,
     "own": 3
    },
    "ACC4": {
-    "addr": "0x800014f0",
+    "addr": "0x80001534",
     "insts": 3,
     "own": 3
    },
    "ACC5": {
-    "addr": "0x800014e4",
+    "addr": "0x80001528",
     "insts": 3,
     "own": 3
    },
    "ACC6": {
-    "addr": "0x800014d8",
+    "addr": "0x8000151c",
     "insts": 3,
     "own": 3
    },
    "ACC7": {
-    "addr": "0x800014cc",
+    "addr": "0x80001510",
     "insts": 3,
     "own": 3
    },
    "ACC": {
-    "addr": "0x800012ac",
+    "addr": "0x800012f0",
     "insts": 6,
     "own": 6
    },
    "PUSH": {
-    "addr": "0x800012e8",
+    "addr": "0x8000132c",
     "insts": 4,
     "own": 4
    },
    "PUSHACC0": {
-    "addr": "0x800012e8",
+    "addr": "0x8000132c",
     "insts": 4,
     "own": 4
    },
    "PUSHACC1": {
-    "addr": "0x800012f8",
+    "addr": "0x8000133c",
     "insts": 5,
     "own": 5
    },
    "PUSHACC2": {
-    "addr": "0x80001320",
+    "addr": "0x80001364",
     "insts": 5,
     "own": 5
    },
    "PUSHACC3": {
-    "addr": "0x8000130c",
+    "addr": "0x80001350",
     "insts": 5,
     "own": 5
    },
    "PUSHACC4": {
-    "addr": "0x80001648",
+    "addr": "0x8000168c",
     "insts": 5,
     "own": 5
    },
    "PUSHACC5": {
-    "addr": "0x80001634",
+    "addr": "0x80001678",
     "insts": 5,
     "own": 5
    },
    "PUSHACC6": {
-    "addr": "0x80001620",
+    "addr": "0x80001664",
     "insts": 5,
     "own": 5
    },
    "PUSHACC7": {
-    "addr": "0x8000160c",
+    "addr": "0x80001650",
     "insts": 5,
     "own": 5
    },
    "PUSHACC": {
-    "addr": "0x800012a4",
+    "addr": "0x800012e8",
     "insts": 2,
     "own": 2
    },
    "POP": {
-    "addr": "0x800015f8",
+    "addr": "0x8000163c",
     "insts": 5,
     "own": 5
    },
    "ASSIGN": {
-    "addr": "0x800015dc",
+    "addr": "0x80001620",
     "insts": 7,
     "own": 7
    },
    "ENVACC1": {
-    "addr": "0x800015d0",
+    "addr": "0x80001614",
     "insts": 3,
     "own": 3
    },
    "ENVACC2": {
-    "addr": "0x800015c4",
+    "addr": "0x80001608",
     "insts": 3,
     "own": 3
    },
    "ENVACC3": {
-    "addr": "0x800015b8",
+    "addr": "0x800015fc",
     "insts": 3,
     "own": 3
    },
    "ENVACC4": {
-    "addr": "0x800015ac",
+    "addr": "0x800015f0",
     "insts": 3,
     "own": 3
    },
    "ENVACC": {
-    "addr": "0x8000128c",
+    "addr": "0x800012d0",
     "insts": 6,
     "own": 6
    },
    "PUSHENVACC1": {
-    "addr": "0x80001598",
+    "addr": "0x800015dc",
     "insts": 5,
     "own": 5
    },
    "PUSHENVACC2": {
-    "addr": "0x80001584",
+    "addr": "0x800015c8",
     "insts": 5,
     "own": 5
    },
    "PUSHENVACC3": {
-    "addr": "0x80001570",
+    "addr": "0x800015b4",
     "insts": 5,
     "own": 5
    },
    "PUSHENVACC4": {
-    "addr": "0x8000155c",
+    "addr": "0x800015a0",
     "insts": 5,
     "own": 5
    },
    "PUSHENVACC": {
-    "addr": "0x80001284",
+    "addr": "0x800012c8",
     "insts": 2,
     "own": 2
    },
    "PUSH_RETADDR": {
-    "addr": "0x80001e1c",
+    "addr": "0x80001e60",
     "insts": 11,
     "own": 11
    },
    "APPLY": {
-    "addr": "0x80001dc0",
+    "addr": "0x80001e04",
     "insts": 40,
     "own": 4
    },
    "APPLY1": {
-    "addr": "0x80001df0",
+    "addr": "0x80001e34",
     "insts": 47,
     "own": 11
    },
    "APPLY2": {
-    "addr": "0x80001a0c",
+    "addr": "0x80001a50",
     "insts": 48,
     "own": 16
    },
    "APPLY3": {
-    "addr": "0x80001ce0",
+    "addr": "0x80001d24",
     "insts": 51,
     "own": 15
    },
    "APPTERM": {
-    "addr": "0x80001c88",
+    "addr": "0x80001ccc",
     "insts": 58,
     "own": 22
    },
    "APPTERM1": {
-    "addr": "0x80001dd0",
+    "addr": "0x80001e14",
     "insts": 44,
     "own": 8
    },
    "APPTERM2": {
-    "addr": "0x80001954",
+    "addr": "0x80001998",
     "insts": 46,
     "own": 10
    },
    "APPTERM3": {
-    "addr": "0x80001d3c",
+    "addr": "0x80001d80",
     "insts": 49,
     "own": 13
    },
    "RETURN": {
-    "addr": "0x80001d1c",
+    "addr": "0x80001d60",
     "insts": 14,
     "own": 14
    },
    "RESTART": {
-    "addr": "0x80001d70",
+    "addr": "0x80001db4",
     "insts": 20,
     "own": 20
    },
    "GRAB": {
-    "addr": "0x800019f4",
+    "addr": "0x80001a38",
     "insts": 72,
     "own": 72
    },
    "CLOSURE": {
-    "addr": "0x80001bc4",
+    "addr": "0x80001c08",
     "insts": 94,
     "own": 94
    },
    "CLOSUREREC": {
-    "addr": "0x80001a64",
+    "addr": "0x80001aa8",
     "insts": 152,
     "own": 152
    },
    "OFFSETCLOSUREM3": {
-    "addr": "0x80001278",
+    "addr": "0x800012bc",
     "insts": 3,
     "own": 3
    },
    "OFFSETCLOSURE0": {
-    "addr": "0x800027d4",
+    "addr": "0x80002818",
     "insts": 3,
     "own": 3
    },
    "OFFSETCLOSURE3": {
-    "addr": "0x80001264",
+    "addr": "0x800012a8",
     "insts": 3,
     "own": 3
    },
    "OFFSETCLOSURE": {
-    "addr": "0x80001248",
+    "addr": "0x8000128c",
     "insts": 5,
     "own": 5
    },
    "PUSHOFFSETCLOSUREM3": {
-    "addr": "0x80001270",
+    "addr": "0x800012b4",
     "insts": 2,
     "own": 2
    },
    "PUSHOFFSETCLOSURE0": {
-    "addr": "0x800017d4",
+    "addr": "0x80001818",
     "insts": 5,
     "own": 5
    },
    "PUSHOFFSETCLOSURE3": {
-    "addr": "0x8000125c",
+    "addr": "0x800012a0",
     "insts": 2,
     "own": 2
    },
    "PUSHOFFSETCLOSURE": {
-    "addr": "0x80001240",
+    "addr": "0x80001284",
     "insts": 2,
     "own": 2
    },
    "GETGLOBAL": {
-    "addr": "0x80001220",
+    "addr": "0x80001264",
     "insts": 8,
     "own": 8
    },
    "PUSHGETGLOBAL": {
-    "addr": "0x80001218",
+    "addr": "0x8000125c",
     "insts": 2,
     "own": 2
    },
    "GETGLOBALFIELD": {
-    "addr": "0x800011e8",
+    "addr": "0x8000122c",
     "insts": 12,
     "own": 12
    },
    "PUSHGETGLOBALFIELD": {
-    "addr": "0x800011e0",
+    "addr": "0x80001224",
     "insts": 2,
     "own": 2
    },
    "SETGLOBAL": {
-    "addr": "0x800017ac",
+    "addr": "0x800017f0",
     "insts": 10,
     "own": 10
    },
    "ATOM0": {
-    "addr": "0x800011cc",
+    "addr": "0x80001210",
     "insts": 5,
     "own": 5
    },
    "ATOM": {
-    "addr": "0x800011a4",
+    "addr": "0x800011e8",
     "insts": 8,
     "own": 8
    },
    "PUSHATOM0": {
-    "addr": "0x800011c4",
+    "addr": "0x80001208",
     "insts": 2,
     "own": 2
    },
    "PUSHATOM": {
-    "addr": "0x8000119c",
+    "addr": "0x800011e0",
     "insts": 2,
     "own": 2
    },
    "MAKEBLOCK": {
-    "addr": "0x8000183c",
+    "addr": "0x80001880",
     "insts": 86,
     "own": 86
    },
    "MAKEBLOCK1": {
-    "addr": "0x800017e8",
+    "addr": "0x8000182c",
     "insts": 40,
     "own": 40
    },
    "MAKEBLOCK2": {
-    "addr": "0x800018f0",
+    "addr": "0x80001934",
     "insts": 44,
     "own": 44
    },
    "MAKEBLOCK3": {
-    "addr": "0x80001740",
+    "addr": "0x80001784",
     "insts": 46,
     "own": 46
    },
    "MAKEFLOATBLOCK": {
-    "addr": "0x80001680",
+    "addr": "0x800016c4",
     "insts": 74,
     "own": 74
    },
    "GETFIELD0": {
-    "addr": "0x80001674",
+    "addr": "0x800016b8",
     "insts": 3,
     "own": 3
    },
    "GETFIELD1": {
-    "addr": "0x80001668",
+    "addr": "0x800016ac",
     "insts": 3,
     "own": 3
    },
    "GETFIELD2": {
-    "addr": "0x8000165c",
+    "addr": "0x800016a0",
     "insts": 3,
     "own": 3
    },
    "GETFIELD3": {
-    "addr": "0x80001438",
+    "addr": "0x8000147c",
     "insts": 3,
     "own": 3
    },
    "GETFIELD": {
-    "addr": "0x80001420",
+    "addr": "0x80001464",
     "insts": 6,
     "own": 6
    },
    "GETFLOATFIELD": {
-    "addr": "0x800013c8",
+    "addr": "0x8000140c",
     "insts": 41,
     "own": 41
    },
    "SETFIELD0": {
-    "addr": "0x800013ac",
+    "addr": "0x800013f0",
     "insts": 7,
     "own": 7
    },
    "SETFIELD1": {
-    "addr": "0x80001390",
+    "addr": "0x800013d4",
     "insts": 7,
     "own": 7
    },
    "SETFIELD2": {
-    "addr": "0x80001374",
+    "addr": "0x800013b8",
     "insts": 7,
     "own": 7
    },
    "SETFIELD3": {
-    "addr": "0x80001358",
+    "addr": "0x8000139c",
     "insts": 7,
     "own": 7
    },
    "SETFIELD": {
-    "addr": "0x80001334",
+    "addr": "0x80001378",
     "insts": 9,
     "own": 9
    },
    "SETFLOATFIELD": {
-    "addr": "0x800014a4",
+    "addr": "0x800014e8",
     "insts": 10,
     "own": 10
    },
    "VECTLENGTH": {
-    "addr": "0x8000148c",
+    "addr": "0x800014d0",
     "insts": 6,
     "own": 6
    },
    "GETVECTITEM": {
-    "addr": "0x8000146c",
+    "addr": "0x800014b0",
     "insts": 8,
     "own": 8
    },
    "SETVECTITEM": {
-    "addr": "0x80001444",
+    "addr": "0x80001488",
     "insts": 10,
     "own": 10
    },
    "GETBYTESCHAR": {
-    "addr": "0x800012c4",
+    "addr": "0x80001308",
     "insts": 9,
     "own": 9
    },
    "SETBYTESCHAR": {
-    "addr": "0x80002314",
+    "addr": "0x80002358",
     "insts": 10,
     "own": 10
    },
    "BRANCH": {
-    "addr": "0x80002304",
+    "addr": "0x80002348",
     "insts": 4,
     "own": 4
    },
    "BRANCHIF": {
-    "addr": "0x800022ec",
+    "addr": "0x80002330",
     "insts": 8,
     "own": 8
    },
    "BRANCHIFNOT": {
-    "addr": "0x800022dc",
+    "addr": "0x80002320",
     "insts": 8,
     "own": 8
    },
    "SWITCH": {
-    "addr": "0x8000234c",
+    "addr": "0x80002390",
     "insts": 19,
     "own": 19
    },
    "BOOLNOT": {
-    "addr": "0x8000233c",
+    "addr": "0x80002380",
     "insts": 4,
     "own": 4
    },
    "PUSHTRAP": {
-    "addr": "0x8000237c",
+    "addr": "0x800023c0",
     "insts": 23,
     "own": 23
    },
    "POPTRAP": {
-    "addr": "0x800022a8",
+    "addr": "0x800022ec",
     "insts": 37,
     "own": 13
    },
    "RAISE": {
-    "addr": "0x80002278",
+    "addr": "0x800022bc",
     "insts": 74,
     "own": 22
    },
    "CHECK_SIGNALS": {
-    "addr": "0x800027cc",
+    "addr": "0x80002810",
     "insts": 28,
     "own": 2
    },
    "C_CALL1": {
-    "addr": "0x8000221c",
+    "addr": "0x80002260",
     "insts": 23,
     "own": 23
    },
    "C_CALL2": {
-    "addr": "0x800021bc",
+    "addr": "0x80002200",
     "insts": 24,
     "own": 24
    },
    "C_CALL3": {
-    "addr": "0x80002158",
+    "addr": "0x8000219c",
     "insts": 25,
     "own": 25
    },
    "C_CALL4": {
-    "addr": "0x800020f0",
+    "addr": "0x80002134",
     "insts": 26,
     "own": 26
    },
    "C_CALL5": {
-    "addr": "0x80002084",
+    "addr": "0x800020c8",
     "insts": 27,
     "own": 27
    },
    "C_CALLN": {
-    "addr": "0x80002010",
+    "addr": "0x80002054",
     "insts": 29,
     "own": 29
    },
    "CONST0": {
-    "addr": "0x800027c0",
+    "addr": "0x80002804",
     "insts": 3,
     "own": 3
    },
    "CONST1": {
-    "addr": "0x80002004",
+    "addr": "0x80002048",
     "insts": 3,
     "own": 3
    },
    "CONST2": {
-    "addr": "0x80001ff8",
+    "addr": "0x8000203c",
     "insts": 3,
     "own": 3
    },
    "CONST3": {
-    "addr": "0x80001fec",
+    "addr": "0x80002030",
     "insts": 3,
     "own": 3
    },
    "CONSTINT": {
-    "addr": "0x80001188",
+    "addr": "0x800011cc",
     "insts": 5,
     "own": 5
    },
    "PUSHCONST0": {
-    "addr": "0x80001fd8",
+    "addr": "0x8000201c",
     "insts": 5,
     "own": 5
    },
    "PUSHCONST1": {
-    "addr": "0x80001fc4",
+    "addr": "0x80002008",
     "insts": 5,
     "own": 5
    },
    "PUSHCONST2": {
-    "addr": "0x80001fb0",
+    "addr": "0x80001ff4",
     "insts": 5,
     "own": 5
    },
    "PUSHCONST3": {
-    "addr": "0x80001f9c",
+    "addr": "0x80001fe0",
     "insts": 5,
     "own": 5
    },
    "PUSHCONSTINT": {
-    "addr": "0x80001180",
+    "addr": "0x800011c4",
     "insts": 2,
     "own": 2
    },
    "NEGINT": {
-    "addr": "0x80001f8c",
+    "addr": "0x80001fd0",
     "insts": 4,
     "own": 4
    },
    "ADDINT": {
-    "addr": "0x80001f74",
+    "addr": "0x80001fb8",
     "insts": 6,
     "own": 6
    },
    "SUBINT": {
-    "addr": "0x80001f5c",
+    "addr": "0x80001fa0",
     "insts": 6,
     "own": 6
    },
    "MULINT": {
-    "addr": "0x80001f38",
+    "addr": "0x80001f7c",
     "insts": 9,
     "own": 9
    },
    "DIVINT": {
-    "addr": "0x80001f10",
+    "addr": "0x80001f54",
     "insts": 18,
     "own": 10
    },
    "MODINT": {
-    "addr": "0x80001ee4",
+    "addr": "0x80001f28",
     "insts": 19,
     "own": 11
    },
    "ANDINT": {
-    "addr": "0x80001ed0",
+    "addr": "0x80001f14",
     "insts": 5,
     "own": 5
    },
    "ORINT": {
-    "addr": "0x800027ac",
+    "addr": "0x800027f0",
     "insts": 5,
     "own": 5
    },
    "XORINT": {
-    "addr": "0x80002640",
+    "addr": "0x80002684",
     "insts": 6,
     "own": 6
    },
    "LSLINT": {
-    "addr": "0x80002730",
+    "addr": "0x80002774",
     "insts": 8,
     "own": 8
    },
    "LSRINT": {
-    "addr": "0x800024d8",
+    "addr": "0x8000251c",
     "insts": 7,
     "own": 7
    },
    "ASRINT": {
-    "addr": "0x80002790",
+    "addr": "0x800027d4",
     "insts": 7,
     "own": 7
    },
    "EQ": {
-    "addr": "0x80002608",
+    "addr": "0x8000264c",
     "insts": 8,
     "own": 8
    },
    "NEQ": {
-    "addr": "0x800026f8",
+    "addr": "0x8000273c",
     "insts": 8,
     "own": 8
    },
    "LTINT": {
-    "addr": "0x800024a0",
+    "addr": "0x800024e4",
     "insts": 8,
     "own": 8
    },
    "LEINT": {
-    "addr": "0x80002488",
+    "addr": "0x800024cc",
     "insts": 8,
     "own": 8
    },
    "GTINT": {
-    "addr": "0x80002470",
+    "addr": "0x800024b4",
     "insts": 8,
     "own": 8
    },
    "GEINT": {
-    "addr": "0x80002458",
+    "addr": "0x8000249c",
     "insts": 8,
     "own": 8
    },
    "OFFSETINT": {
-    "addr": "0x80002444",
+    "addr": "0x80002488",
     "insts": 5,
     "own": 5
    },
    "OFFSETREF": {
-    "addr": "0x80002424",
+    "addr": "0x80002468",
     "insts": 8,
     "own": 8
    },
    "ISINT": {
-    "addr": "0x80002410",
+    "addr": "0x80002454",
     "insts": 5,
     "own": 5
    },
    "GETMETHOD": {
-    "addr": "0x800023ec",
+    "addr": "0x80002430",
     "insts": 9,
     "own": 9
    },
    "BEQ": {
-    "addr": "0x800023d8",
+    "addr": "0x8000241c",
     "insts": 10,
     "own": 10
    },
    "BNEQ": {
-    "addr": "0x80002770",
+    "addr": "0x800027b4",
     "insts": 10,
     "own": 10
    },
    "BLTINT": {
-    "addr": "0x80002710",
+    "addr": "0x80002754",
     "insts": 10,
     "own": 10
    },
    "BLEINT": {
-    "addr": "0x80002750",
+    "addr": "0x80002794",
     "insts": 10,
     "own": 10
    },
    "BGTINT": {
-    "addr": "0x80002620",
+    "addr": "0x80002664",
     "insts": 10,
     "own": 10
    },
    "BGEINT": {
-    "addr": "0x800026c0",
+    "addr": "0x80002704",
     "insts": 10,
     "own": 10
    },
    "ULTINT": {
-    "addr": "0x800026a8",
+    "addr": "0x800026ec",
     "insts": 8,
     "own": 8
    },
    "UGEINT": {
-    "addr": "0x800026e0",
+    "addr": "0x80002724",
     "insts": 8,
     "own": 8
    },
    "BULTINT": {
-    "addr": "0x800024b8",
+    "addr": "0x800024fc",
     "insts": 10,
     "own": 10
    },
    "BUGEINT": {
-    "addr": "0x800025e8",
+    "addr": "0x8000262c",
     "insts": 10,
     "own": 10
    },
    "GETPUBMET": {
-    "addr": "0x800025ac",
+    "addr": "0x800025f0",
     "insts": 38,
     "own": 38
    },
    "GETDYNMET": {
-    "addr": "0x8000255c",
+    "addr": "0x800025a0",
     "insts": 22,
     "own": 22
    },
    "STOP": {
-    "addr": "0x800024f4",
+    "addr": "0x80002538",
     "insts": 26,
     "own": 10
    },
    "EVENT": {
-    "addr": "0x80002658",
+    "addr": "0x8000269c",
     "insts": 43,
     "own": 20
    },
    "BREAK": {
-    "addr": "0x80001e8c",
+    "addr": "0x80001ed0",
     "insts": 36,
     "own": 13
    },
    "RERAISE": {
-    "addr": "0x80001e48",
+    "addr": "0x80001e8c",
     "insts": 74,
     "own": 22
    },
    "RAISE_NOTRACE": {
-    "addr": "0x8000152c",
+    "addr": "0x80001570",
     "insts": 63,
     "own": 12
    },
    "GETSTRINGCHAR": {
-    "addr": "0x800012c4",
+    "addr": "0x80001308",
     "insts": 9,
     "own": 9
    }

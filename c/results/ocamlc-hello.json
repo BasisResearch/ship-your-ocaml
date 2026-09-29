@@ -1,26 +1,24 @@
 {
  "elf": "build/ocamlc-hello.elf",
- "exit": 2,
+ "exit": -15,
  "fuel_out": false,
- "steps": 54303453,
- "output": "File \"command line\", line 1:\nError: Unbound module Stdlib\n",
- "cut_point_step": 48243742,
- "first_minor_gc_step": 48242334,
+ "steps": null,
+ "output": "",
+ "cut_point_step": 48244784,
+ "first_minor_gc_step": 48243376,
  "first_minor_gc_after_cut": null,
  "minor_gcs": 1,
  "major_slices": 0,
+ "minor_gcs_after_cut": 0,
  "first": {
-  "caml_main": 49168,
-  "caml_init_gc": 53919,
-  "caml_interprete": 121643,
-  "caml_load_code": 121984,
-  "caml_build_primitive_table": 37031320,
-  "caml_input_val": 41101718,
-  "caml_oldify_mopup": 48242334,
-  "caml_raise": 48425204,
-  "caml_do_exit": 54303380,
-  "_exit": 54303448,
-  "_exit.sd": 54303452
+  "caml_main": 50224,
+  "caml_init_gc": 54964,
+  "caml_interprete": 122688,
+  "caml_load_code": 123029,
+  "caml_build_primitive_table": 37032365,
+  "caml_input_val": 41102760,
+  "caml_oldify_mopup": 48243376,
+  "caml_raise": 48426246
  },
  "counts": {
   "caml_main": 1,
@@ -28,11 +26,8 @@
   "caml_interprete": 2,
   "caml_load_code": 1,
   "caml_build_primitive_table": 1,
-  "caml_input_val": 1,
+  "caml_input_val": 4,
   "caml_oldify_mopup": 1,
-  "caml_raise": 13,
-  "caml_do_exit": 1,
-  "_exit": 1,
-  "_exit.sd": 1
+  "caml_raise": 11
  }
 }

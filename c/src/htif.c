@@ -249,6 +249,25 @@ void *_sbrk(ptrdiff_t incr) {
     return prev;
 }
 
+/* --- time ------------------------------------------------------------- */
+
+/* There is no clock. newlib's libgloss implements _gettimeofday (and
+ * _times, through it) with an `ecall`, which on this bare machine traps
+ * with no handler and never returns: these replace them with a clock that
+ * stays at 0, so Sys.time and the compiler's Profile timers are
+ * deterministic. scripts/check_all.sh fails if an ecall is linked. */
+#include <sys/time.h>
+#include <sys/times.h>
+int _gettimeofday(struct timeval *tv, void *tz) {
+    (void)tz;
+    if (tv) { tv->tv_sec = 0; tv->tv_usec = 0; }
+    return 0;
+}
+clock_t _times(struct tms *t) {
+    if (t) memset(t, 0, sizeof *t);
+    return 0;
+}
+
 /* --- process ----------------------------------------------------------- */
 
 int _kill(int pid, int sig) { (void)pid; (void)sig; errno = EINVAL; return -1; }

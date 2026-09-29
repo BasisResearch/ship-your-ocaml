@@ -41,9 +41,15 @@ The emulator runs at about 49,000 steps/s.
   `caml_main` then opens the embedded executable `/prog` through its
   ordinary `ocamlrun prog args` path; the runtime is not patched.
   `c/src/main.c` bakes in `argv = { "ocamlrun", "/prog", ARGS… }` and
-  `OCAMLRUNPARAM`.
-* **The proof ELF**: `c/ocamlrun-riscv-htif.elf` (521,128 bytes, sha256
-  `c8afd9dc1c4e7b886577a0ecd5bdebdb9991d52affc4183e58832cd0cca5e8c5`,
+  `OCAMLRUNPARAM`. There is no clock: `_gettimeofday`/`_times` return 0.
+  They must be provided, because newlib's libgloss versions execute
+  `ecall`, which on the bare Sail machine traps with no handler and never
+  returns; the compiler reaches them through `Sys.time` (its `Profile`
+  timers), and a first Sail compile run hung there after 4 hours while the
+  host mirror (§6, which uses the host's clock) finished. The image now
+  contains no `ecall` (`scripts/check_all.sh` stage a6 checks this).
+* **The proof ELF**: `c/ocamlrun-riscv-htif.elf` (520,712 bytes, sha256
+  `23e41905eb0e4ae691455ab06559bcde4fc3b4c6e0a18377b689558c8d53e866`,
   `c/ELF.sha256`) with `c/tests/while.ml` embedded: `c/while.byte`, the
   21,993-byte bytecode executable from the host `ocamlc` (sha256 in
   `c/ELF.sha256`).
@@ -54,8 +60,8 @@ The emulator runs at about 49,000 steps/s.
 
 | program | output | exit | steps | cut point (2nd `caml_interprete` call) | after the cut |
 |---|---|---|---|---|---|
-| `while.ml` (proof ELF) | `55\n2500\n36\n` | 0 | 4,568,481 | 4,496,260 | 72,221 |
-| `while_min.ml` (no Stdlib) | `55\n2500\n36\n` | 0 | 4,310,573 | 4,266,883 | 43,690 |
+| `while.ml` (proof ELF) | `55\n2500\n36\n` | 0 | 4,568,271 | 4,496,050 | 72,221 |
+| `while_min.ml` (no Stdlib) | `55\n2500\n36\n` | 0 | 4,310,590 | 4,266,900 | 43,690 |
 | `boot/ocamlc -version` | `4.14.2\n` | 0 | 53,831,034 | 48,242,926 | 5,588,108 |
 | `boot/ocamlc -nostdlib -I /lib/ocaml -dinstr -c /src/hello.ml` | still running on Sail at publication (see below) | | | 48,243,742 | |
 
@@ -111,7 +117,7 @@ length, not proof (PLAN.md §6).
 
 * Every program has exactly one minor collection before the cut point:
   `caml_main` promotes the unmarshalled global data (`caml_oldify_one` +
-  `caml_oldify_mopup`, `startup_byt.c`) at step 4,482,776 for `while.ml`,
+  `caml_oldify_mopup`, `startup_byt.c`) at step 4,482,566 for `while.ml`,
   13,484 steps before the cut.
 * **After the cut point, with the default 256k-word minor heap, eight of
   the nine difftests run no minor collection and no major slice** (table
@@ -173,9 +179,9 @@ length, not proof (PLAN.md §6).
 
 | | functions | instructions |
 |---|---|---|
-| image | 1,321 | 83,826 |
-| reachable from `_start` (direct edges ∪ address-taken) | 1,123 | 77,206 |
-| reachable from `caml_interprete` + the 403 C primitives | 1,003 | 68,880 |
+| image | 1,321 | 83,777 |
+| reachable from `_start` (direct edges ∪ address-taken) | 1,123 | 77,157 |
+| reachable from `caml_interprete` + the 403 C primitives | 1,003 | 68,831 |
 
 * 484 address-taken functions (the primitive table, custom-operation
   tables, hooks); 234 indirect jump sites.
@@ -189,9 +195,9 @@ length, not proof (PLAN.md §6).
   raise, signal and callback paths). Loop-head registers: pc `s0`, sp
   `s1`, accu `s5`, env `s9`, extra_args `s2`.
 * **Site classes** (ship-your-interpreter's `disasm_to_sites.py`
-  classifier): 64,205 of 77,206 reachable instructions (83.2%) fall in a
-  class its generators handle. The rest by mnemonic: `auipc` 3,285,
-  `slli` 2,241, `andi` 1,053, `srli` 997, `addw` 846, `lui` 663, `slliw`
+  classifier): 64,205 of 77,157 reachable instructions (83.2%) fall in a
+  class its generators handle. The rest by mnemonic: `auipc` 3,280,
+  `slli` 2,237, `andi` 1,053, `srli` 997, `addw` 846, `lui` 663, `slliw`
   635, `or` 580, `srai` 467, `and` 357 — the tagged-integer idiom
   (`slli`/`srai`/`ori 1`) is the main new family.
 * **New C constructs** beyond the WHILE interpreter: the switch jump table;

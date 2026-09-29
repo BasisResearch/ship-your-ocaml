@@ -96,7 +96,7 @@ in a site class the generators handle; the rest are the new idioms below.
 
 | idiom | where | plan |
 |---|---|---|
-| tagged-int ALU: `slli`/`srai`/`ori 1`/`addw`/`slliw` | every integer arm | add ALU site classes (the census counts 2,241 `slli`, 467 `srai`, 846 `addw`) |
+| tagged-int ALU: `slli`/`srai`/`ori 1`/`addw`/`slliw` | every integer arm | add ALU site classes (the census counts 2,237 `slli`, 467 `srai`, 846 `addw`) |
 | switch jump table `lw; add base; jr` | dispatch (one site) | one lemma: table contents from the image, `jr` target per opcode |
 | C primitive calls through `caml_builtin_cprim` (`jalr`) | `C_CALLn` | table lookup lemma + the callee's function summary |
 | `setjmp`/`longjmp` for exceptions raised in C | `caml_raise`, `caml_interprete` prologue | the functions are byte-identical to the WHILE ELF's; new: the jmp_buf as a frame predicate |

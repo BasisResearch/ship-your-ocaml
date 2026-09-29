@@ -9,7 +9,9 @@
 #                            scripts/discipline_rules.tsv; O1-O4 cover OCaml/);
 #   (a5) generated files   — OCaml/Bytecode/Opcode.lean and OCaml/Vm/Layout.lean
 #                            are exactly what their generators emit;
-#   (a6) ELF pin           — c/ocamlrun-riscv-htif.elf matches c/ELF.sha256.
+#   (a6) ELF pin           — c/ocamlrun-riscv-htif.elf matches c/ELF.sha256, and
+#                            contains no `ecall` (a libgloss syscall stub would
+#                            trap with no handler on the bare machine).
 # Heavy steps honour the shared-machine rules (30 GB cap).
 set -u
 cd "$(dirname "$0")/.."
@@ -44,7 +46,9 @@ python3 scripts/gen_opcodes.py | cmp -s - OCaml/Bytecode/Opcode.lean || fail "st
 python3 scripts/gen_layout.py | cmp -s - OCaml/Vm/Layout.lean || fail "stage a5: Layout.lean differs from gen_layout.py"
 echo "stage a5: OK"
 
-echo "== stage a6: ELF pin"
+echo "== stage a6: ELF pin, and no ecall in the image"
+n=$($HOME/toolchains/xpack-riscv-none-elf-gcc-15.2.0-1/bin/riscv-none-elf-objdump -d c/ocamlrun-riscv-htif.elf | grep -cw ecall)
+[ "$n" = 0 ] || fail "stage a6: $n ecall instruction(s) linked (libgloss syscall stubs trap on the bare machine)"
 (cd c && sha256sum -c ELF.sha256) || fail "stage a6: ELF sha256"
 echo "stage a6: OK"
 echo "ALL STAGES OK"
