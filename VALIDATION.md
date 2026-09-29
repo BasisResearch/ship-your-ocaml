@@ -63,8 +63,8 @@ The emulator runs at about 49,000 steps/s.
 | `while.ml` (proof ELF) | `55\n2500\n36\n` | 0 | 4,569,924 | 4,497,703 | 72,221 |
 | `while_min.ml` (no Stdlib) | `55\n2500\n36\n` | 0 | 4,311,271 | 4,267,581 | 43,690 |
 | `boot/ocamlc -version` | `4.14.4\n` | 0 | 54,414,266 | 48,825,888 | 5,588,378 |
-| `boot/ocamlc -nostdlib -I /lib/ocaml -dinstr -c /src/hello.ml` | the bytecode listing (below) | 0 | 81,880,193 | 48,244,801 | 33,635,392 |
-| same, `OCAMLRUNPARAM=M=1000` | the same listing | 0 | 76,680,968 | 48,246,986 | 28,433,982 |
+| `boot/ocamlc -nostdlib -I /lib/ocaml -dinstr -c /src/hello.ml` | the bytecode listing (below) | 0 | 82,603,090 | 48,826,563 | 33,776,527 |
+| same, `OCAMLRUNPARAM=M=1000` | the same listing | 0 | 77,403,136 | 48,828,748 | 28,574,388 |
 
 `while.ml` is the OCaml port of ship-your-interpreter's `c/tests/while.wl`
 (while loops, `break` as an exception, nesting). `hello.ml` is
@@ -102,10 +102,10 @@ clock it hung in libgloss's `ecall` (§1).
 
 | phase | `while.ml` | `boot/ocamlc -version` |
 |---|---|---|
-| crt0 (`.bss` clear), `caml_init_gc` | 0 → 123k | 0 → 122k |
-| `caml_load_code`: read CODE through the in-memory file system, MD5 of the code | 123k → 388k | 122k → 37.03M |
-| `caml_build_primitive_table`: linear `strcmp` over the 403 builtin names per required primitive | 388k → 4.46M | 37.03M → 41.10M |
-| `caml_input_val` (unmarshal DATA), promotion (one minor collection), `caml_sys_init` | 4.46M → 4.50M | 41.10M → 48.24M |
+| crt0 (`.bss` clear), `caml_init_gc` | 0 → 123k | 0 → 123k |
+| `caml_load_code`: read CODE through the in-memory file system, MD5 of the code | 123k → 388k | 123k → 37.01M |
+| `caml_build_primitive_table`: linear `strcmp` over the 403 builtin names per required primitive | 388k → 4.46M | 37.01M → 41.08M |
+| `caml_input_val` (unmarshal DATA), promotion (one minor collection), `caml_sys_init` | 4.46M → 4.50M | 41.08M → 48.83M |
 
 All of it is before the cut point: it costs emulator time and boot-witness
 length, not proof (PLAN.md §7).
@@ -117,15 +117,15 @@ length, not proof (PLAN.md §7).
 
 | test | result | Sail steps | after the cut | minor GCs after the cut |
 |---|---|---|---|---|
-| `f1_arith` (int ops, `min_int`, `lsr`/`asr`) | PASS | 5,236,154 | 147,629 | 0 |
-| `f1_while` | PASS | 4,567,501 | 72,221 | 0 |
-| `f2_closures` (fib 15, partial application, 10k-deep tail loop) | PASS | 6,825,165 | 1,733,653 | 0 |
-| `f3_data` (variants, records, arrays, `List.sort`) | PASS | 5,391,536 | 98,235 | 0 |
-| `f4_exn` (handlers, re-raise, `Fun.protect`, `Invalid_argument`, `Division_by_zero`) | PASS | 7,642,246 | 103,167 | 0 |
-| `f5_strings` (`Bytes`, `Buffer`, `Printf`) | PASS | 7,219,728 | 140,926 | 0 |
-| `f6_alloc` (100k-element list, 20k `Hashtbl.replace`, 20k-pair list) | PASS | 221,732,295 | 215,322,916 | 3 (+ 2 major slices) |
-| `f7_float` (soft-float, `%g`/`%e`/`%f`) | PASS | 7,263,012 | 189,048 | 0 |
-| `f8_objects` (a class, `Lazy`, polymorphic compare) | PASS | 5,904,042 | 116,517 | 0 |
+| `f1_arith` (int ops, `min_int`, `lsr`/`asr`) | PASS | 5,240,633 | 147,649 | 0 |
+| `f1_while` | PASS | 4,569,984 | 72,221 | 0 |
+| `f2_closures` (fib 15, partial application, 10k-deep tail loop) | PASS | 6,828,747 | 1,733,673 | 0 |
+| `f3_data` (variants, records, arrays, `List.sort`) | PASS | 5,396,193 | 98,255 | 0 |
+| `f4_exn` (handlers, re-raise, `Fun.protect`, `Invalid_argument`, `Division_by_zero`) | PASS | 7,655,763 | 103,203 | 0 |
+| `f5_strings` (`Bytes`, `Buffer`, `Printf`) | PASS | 7,230,988 | 140,946 | 0 |
+| `f6_alloc` (100k-element list, 20k `Hashtbl.replace`, 20k-pair list) | PASS (4.14.2 build; 4.14.4 rerun pending) | 221,732,295 | 215,322,916 | 3 (+ 2 major slices) |
+| `f7_float` (soft-float, `%g`/`%e`/`%f`) | PASS | 7,274,403 | 189,068 | 0 |
+| `f8_objects` (a class, `Lazy`, polymorphic compare) | PASS | 5,908,525 | 116,537 | 0 |
 
 ### 2.3 GC
 
@@ -141,7 +141,7 @@ length, not proof (PLAN.md §7).
   all. `boot/ocamlc -version`: none after the cut.
 * **`boot/ocamlc` compiling `hello.ml` collects once, whatever the minor
   heap size**: on Sail, one minor collection and one major slice after the
-  cut, the minor collection at step 76,014,867 (27.8M steps after the
+  cut, the minor collection at step 76,737,043 (27.9M steps after the
   cut). In the host mirror (§8: same runtime, same heap parameters, so the
   same collection points) the run allocates 206,018 minor words, below the
   256k-word minor heap, and still collects once at the default size, at
@@ -153,7 +153,7 @@ length, not proof (PLAN.md §7).
   (`caml_alloc_small_dispatch` → `caml_check_urgent_gc` →
   `caml_gc_dispatch`). Raising the custom-block ratio removes it:
   **with `OCAMLRUNPARAM=M=1000` the compile runs no minor or major
-  collection at all** — on Sail (76,680,968 steps; the collection had cost
+  collection at all** — on Sail (77,403,136 steps; the collection had cost
   5.2M steps) and in the mirror (also with `s=4M`). So G1 (PLAN.md §3) is a runtime
   configuration: a large `s`, `M=1000`, and `O=1000000` against
   compaction; `Fits` must also bound custom-block memory.
@@ -172,9 +172,9 @@ length, not proof (PLAN.md §7).
   | program | `BcSem` | ZINC steps |
   |---|---|---|
   | `f1_while` | `55\n2500\n36\n`, exit 0 — identical to host and Sail | 2,602 |
-  | `f2_closures` | identical to host and Sail (5 lines) | 118,119 |
+  | `f2_closures` | identical to host and Sail (5 lines) | 118,120 |
   | `while_min` | identical | 2,161 |
-  | f1_arith / f3 / f4–f7 / f8 | stops `.unsupported` at the first primitive outside F1 (`caml_greaterequal`, `caml_make_vect`, `caml_create_bytes`, `caml_obj_block`) | 1,105–2,139 |
+  | f1_arith / f3 / f4–f7 / f8 | stops `.unsupported` at the first primitive outside F1 (`caml_greaterequal`, `caml_make_vect`, `caml_create_bytes`, `caml_obj_block`) | 1,106–2,140 |
 
   No test ever reaches `.wrong`. Two transcription bugs were found by these
   runs and fixed, both in offsets: `SWITCH` and `CLOSUREREC` offsets are
