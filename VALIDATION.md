@@ -45,8 +45,8 @@ The emulator runs at about 49,000 steps/s.
   They must be provided, because newlib's libgloss versions execute
   `ecall`, which on the bare Sail machine traps with no handler and never
   returns; the compiler reaches them through `Sys.time` (its `Profile`
-  timers), and a first Sail compile run hung there after 4 hours while the
-  host mirror (§6, which uses the host's clock) finished. The image now
+  timers); a first Sail compile run was stuck there (at about step 75M)
+  when it was stopped after 3.5 hours, while the host mirror (§6, which uses the host's clock) finished. The image now
   contains no `ecall` (`scripts/check_all.sh` stage a6 checks this).
 * **The proof ELF**: `c/ocamlrun-riscv-htif.elf` (520,712 bytes, sha256
   `23e41905eb0e4ae691455ab06559bcde4fc3b4c6e0a18377b689558c8d53e866`,
