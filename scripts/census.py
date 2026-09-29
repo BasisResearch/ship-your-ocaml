@@ -275,7 +275,7 @@ def main():
     ap.add_argument("--while-elf", default=os.path.expanduser(
         "~/Documents/code/syi/c/while-riscv-htif.elf"))
     ap.add_argument("--instruct-h", default=str(
-        ROOT / "vendor/ocaml-4.14.2/runtime/caml/instruct.h"))
+        ROOT / "vendor/ocaml-4.14.4/runtime/caml/instruct.h"))
     ap.add_argument("--json", default=str(ROOT / "results/census.json"))
     a = ap.parse_args()
 

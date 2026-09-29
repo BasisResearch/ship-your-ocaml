@@ -3,7 +3,7 @@ import OCaml.Bytecode.Opcode
 /-!
 # ZINC bytecode: code words, instruction decoding, executables
 
-OCaml 4.14.2's bytecode is an array of 32-bit words (`code_t = opcode_t *`,
+OCaml 4.14.4's bytecode is an array of 32-bit words (`code_t = opcode_t *`,
 `opcode_t = int32_t`, `runtime/caml/mlvalues.h`). An instruction is an
 opcode word followed by its operands; operands that are code offsets are
 relative to the operand's own position (`pc += *pc` in `interp.c`).

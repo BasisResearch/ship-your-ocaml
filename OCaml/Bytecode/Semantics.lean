@@ -5,7 +5,7 @@ import OCaml.Bytecode.Value
 # `BcSem`: the ZINC bytecode semantics — fragment F1
 
 A deterministic step function `step P s` over VM states, transcribed from
-`caml_interprete` (`runtime/interp.c`, OCaml 4.14.2) arm by arm, and its
+`caml_interprete` (`runtime/interp.c`, OCaml 4.14.4) arm by arm, and its
 graph `Step` with the observable behaviours `BcHalts` / `BcDiverges` on top
 (the same shape as `Vsa.Machine`: `Step`, `Halted`, `Halts`, `Diverges`).
 

@@ -8,7 +8,7 @@ The plan (README.md): give `ocamlc` a formal meaning at the SOURCE level,
 prove its back half correct there, and connect the source-level compiler to
 the bytes of `boot/ocamlc` by ONE translation validation — the bootstrap
 fixpoint (`boot/ocamlc` is the compiler's sources compiled by itself; for
-4.14.2 VALIDATION.md §Fixpoint checks this on the host: CODE, PRIM, SYMB and
+4.14.4 VALIDATION.md §Fixpoint checks this on the host: CODE, PRIM, SYMB and
 CRCS are byte-identical, DATA differs only in `configure`'s install paths).
 
 Everything here is parametric in the source semantics `S` (the LLM-written
@@ -79,7 +79,7 @@ def BackendCorrect (S : SourceSem) (ocamlc : S.Program) (parse : List UInt8 → 
       (BcDiverges P ↔ S.Div sp argv fs)
 
 /-- The command line that rebuilds the compiler from its sources, and the
-sources (as files); instantiated from the 4.14.2 build (`boot/ocamlc`'s own
+sources (as files); instantiated from the 4.14.4 build (`boot/ocamlc`'s own
 link command). -/
 structure Bootstrap where
   argv : List String

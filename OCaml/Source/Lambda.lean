@@ -1,7 +1,7 @@
 /-!
 # Lambda: the intermediate language `OCamlSem` is written on (syntax)
 
-Transcribed from OCaml 4.14.2's `lambda/lambda.mli` (constructors in the
+Transcribed from OCaml 4.14.4's `lambda/lambda.mli` (constructors in the
 same order, scoped locations and debug events dropped). This is the
 language between the two halves of `ocamlc`: `Translcore`/`Matching`
 produce it from the typed tree, `Bytegen`/`Emitcode` consume it. Layer C's

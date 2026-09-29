@@ -1,4 +1,4 @@
-/* Bare-metal entry for ocamlrun (OCaml 4.14.2) under HTIF.
+/* Bare-metal entry for ocamlrun (OCaml 4.14.4) under HTIF.
  *
  * Replaces runtime/main.c. The command line and OCAMLRUNPARAM are baked
  * in at build time (there is no host to pass them): argv is

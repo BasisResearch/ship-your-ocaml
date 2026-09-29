@@ -10,7 +10,7 @@
 set -e
 cd "$(dirname "$0")/.."
 OUT=$1; PROG=$2; ARGS=$3; FILES=$4; RP=${5:-}
-RT=../vendor/ocaml-4.14.2/runtime
+RT=../vendor/ocaml-4.14.4/runtime
 D=build/mirror-$(basename $OUT); mkdir -p $D
 src/gen_prims.sh $RT $(realpath $D)/prims.c
 # embedded files as a C table instead of .incbin

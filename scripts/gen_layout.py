@@ -62,7 +62,7 @@ def main():
         if n not in sym:
             die(f"symbol {n} not found")
 
-    tbl = (ROOT / "vendor/ocaml-4.14.2/runtime/caml/domain_state.tbl").read_text()
+    tbl = (ROOT / "vendor/ocaml-4.14.4/runtime/caml/domain_state.tbl").read_text()
     fields = re.findall(r"^DOMAIN_STATE\([^,]+,\s*(\w+)\)", tbl, flags=re.M)
     off = {f: 8 * i for i, f in enumerate(fields)}
 

@@ -1,6 +1,6 @@
 /* Machine configuration for the bare-metal RV64 build (rv64i, lp64,
  * little-endian). Hand-written in place of configure's output; matches
- * the host 4.14.2 configuration in every setting that affects the
+ * the host 4.14.4 configuration in every setting that affects the
  * bytecode format (ARCH_SIXTYFOUR, CAML_SAFE_STRING, FLAT_FLOAT_ARRAY,
  * naked pointers allowed). */
 #define ARCH_SIXTYFOUR 1

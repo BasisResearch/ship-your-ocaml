@@ -1,5 +1,5 @@
 #!/bin/bash
-# Differential test: host ocamlrun (4.14.2, same vendored source) vs the
+# Differential test: host ocamlrun (4.14.4, same vendored source) vs the
 # bare-metal ELF on the Sail Lean emulator. Both run the SAME bytecode
 # executable (host ocamlc -o x.byte x.ml). Compares stdout and the exit
 # status. Reports Sail steps, the cut-point step (2nd caml_interprete call)
@@ -9,7 +9,7 @@ set -u
 cd "$(dirname "$0")/.."
 JOBS=${JOBS:-8}
 RUNPARAM=${RUNPARAM:-}
-OCAMLBIN=${OCAMLBIN:-$HOME/toolchains/ocaml-4.14.2/bin}
+OCAMLBIN=${OCAMLBIN:-$HOME/toolchains/ocaml-4.14.4/bin}
 OUT=build/difftest${RUNPARAM:+-$RUNPARAM}
 mkdir -p $OUT
 files=("$@"); [ ${#files[@]} -eq 0 ] && files=(tests/difftest/*.ml)

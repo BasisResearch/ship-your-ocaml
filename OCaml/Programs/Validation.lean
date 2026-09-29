@@ -5,7 +5,7 @@ import OCaml.Programs.WhileMin
 
 `whileMin` is `c/tests/nostdlib/while_min.ml` — `c/tests/while.ml` (the OCaml
 port of ship-your-interpreter's `while.wl`) without the Stdlib, printing
-through the channel primitives directly — compiled by the host 4.14.2
+through the channel primitives directly — compiled by the host 4.14.4
 `ocamlc -nopervasives -nostdlib` and loaded as `caml_main` loads it
 (`OCaml/Bytecode/Load.lean`, generated literal in `WhileMin.lean`). The
 bare-metal ELF running the same bytecode prints `55\n2500\n36\n` and exits

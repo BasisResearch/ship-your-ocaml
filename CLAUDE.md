@@ -1,6 +1,6 @@
 # Proof discipline — the exponentiating layer is MANDATORY
 
-This repository proves the bare-metal `ocamlrun` of OCaml 4.14.2
+This repository proves the bare-metal `ocamlrun` of OCaml 4.14.4
 (`c/ocamlrun-riscv-htif.elf`) against the ZINC bytecode semantics `BcSem`
 (Layer A), gives bytecode programs a machine-style program logic (Layer B′),
 and states the compiler's correctness at the source level with the bootstrap

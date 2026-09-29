@@ -4,7 +4,7 @@
     python3 scripts/bc_census.py [EXE] [--dumpobj CMD] [--json OUT]
         [--modules Translcore,Matching,Bytegen,Emitcode]
 
-Runs the 4.14.2 `dumpobj` on EXE (default vendor/.../boot/ocamlc) and
+Runs the 4.14.4 `dumpobj` on EXE (default vendor/.../boot/ocamlc) and
 reports: code size in words, instruction count, the opcode histogram, the
 C primitives called (C_CALLn names), and per-compilation-unit sizes.
 
@@ -22,14 +22,14 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DUMPOBJ = os.path.expanduser("~/toolchains/build/ocaml-4.14.2/tools/dumpobj")
+DUMPOBJ = os.path.expanduser("~/toolchains/build/ocaml-4.14.4/tools/dumpobj")
 INST_RE = re.compile(r"^\s*(\d+)\s+([A-Z_0-9]+)(?:\s+(.*))?$")
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("exe", nargs="?",
-                    default=str(ROOT / "vendor/ocaml-4.14.2/boot/ocamlc"))
+                    default=str(ROOT / "vendor/ocaml-4.14.4/boot/ocamlc"))
     ap.add_argument("--dumpobj", default=DUMPOBJ)
     ap.add_argument("--modules", default="Translcore,Matching,Bytegen,Emitcode")
     ap.add_argument("--json", default=str(ROOT / "results/bc_census.json"))

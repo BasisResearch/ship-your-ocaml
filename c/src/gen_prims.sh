@@ -1,7 +1,7 @@
 #!/bin/sh
 # prims.c for the bare-metal runtime: the table of C primitives that the
 # bytecode's PRIM section is resolved against. Same recipe as the rule in
-# vendor/ocaml-4.14.2/runtime/Makefile (run from that directory).
+# vendor/ocaml-4.14.4/runtime/Makefile (run from that directory).
 set -e
 export LC_ALL=C
 cd "$1"

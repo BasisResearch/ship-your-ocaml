@@ -11,15 +11,15 @@ namespace OCaml.Vm.Layout
 /-- `caml_interprete` -/
 def sym_caml_interprete : Nat := 0x8000103c
 /-- `Caml_state` -/
-def sym_Caml_state : Nat := 0x80068e18
+def sym_Caml_state : Nat := 0x80069630
 /-- `caml_global_data` -/
-def sym_caml_global_data : Nat := 0x80068910
+def sym_caml_global_data : Nat := 0x80069110
 /-- `caml_atom_table` -/
-def sym_caml_atom_table : Nat := 0x80068ac8
+def sym_caml_atom_table : Nat := 0x800692c8
 /-- `caml_something_to_do` -/
-def sym_caml_something_to_do : Nat := 0x80068c58
+def sym_caml_something_to_do : Nat := 0x80069458
 /-- `tohost` -/
-def sym_tohost : Nat := 0x800660c0
+def sym_tohost : Nat := 0x800668c0
 /-- `_exit` -/
 def sym_exit : Nat := 0x800000ac
 /-- `caml_main` -/
@@ -27,24 +27,24 @@ def sym_caml_main : Nat := 0x80003fc8
 /-- `main` -/
 def sym_main : Nat := 0x80001014
 /-- `caml_start_code` -/
-def sym_caml_start_code : Nat := 0x80068aa8
+def sym_caml_start_code : Nat := 0x800692a8
 /-- `caml_code_size` -/
-def sym_caml_code_size : Nat := 0x80068aa0
+def sym_caml_code_size : Nat := 0x800692a0
 /-- `caml_int64_ops` -/
-def sym_caml_int64_ops : Nat := 0x80067ab8
+def sym_caml_int64_ops : Nat := 0x800682b8
 /-- `caml_int32_ops` -/
-def sym_caml_int32_ops : Nat := 0x80067a78
+def sym_caml_int32_ops : Nat := 0x80068278
 /-- `caml_nativeint_ops` -/
-def sym_caml_nativeint_ops : Nat := 0x80067af8
+def sym_caml_nativeint_ops : Nat := 0x800682f8
 /-- `channel_operations` -/
-def sym_channel_operations : Nat := 0x80067b38
+def sym_channel_operations : Nat := 0x80068338
 /-- `caml_all_opened_channels` -/
-def sym_caml_all_opened_channels : Nat := 0x80068c68
+def sym_caml_all_opened_channels : Nat := 0x80069468
 
 /-- `caml_interprete`'s dispatch loop head (fetch of the opcode word). -/
 def loopHead : Nat := 0x800011a0
 /-- The switch jump table (`int32` offsets from its own base). -/
-def jumpTable : Nat := 0x8005cba0
+def jumpTable : Nat := 0x8005d398
 
 /-! GPR indices holding `caml_interprete`'s locals at `loopHead`. -/
 /-- `pc` lives in `s0` -/

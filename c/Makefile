@@ -1,4 +1,4 @@
-# ocamlrun (OCaml 4.14.2 bytecode runtime) for bare-metal RV64 (HTIF), with
+# ocamlrun (OCaml 4.14.4 bytecode runtime) for bare-metal RV64 (HTIF), with
 # a bytecode executable embedded in the image.
 #
 #   make                 ./ocamlrun-riscv-htif.elf running tests/while.ml
@@ -7,13 +7,13 @@
 #   make difftest        host ocamlrun vs the ELF on tests/difftest/*.ml
 #   make clean
 #
-# The host compiler is OCaml 4.14.2 built from the same vendored source
-# (see README: ~/toolchains/ocaml-4.14.2); bytecode executables are only
+# The host compiler is OCaml 4.14.4 built from the same vendored source
+# (see README: ~/toolchains/ocaml-4.14.4); bytecode executables are only
 # portable between runtimes of the same version.
 
-OCAML_DIR := ../vendor/ocaml-4.14.2
+OCAML_DIR := ../vendor/ocaml-4.14.4
 RT        := $(OCAML_DIR)/runtime
-HOST_OCAML ?= $(HOME)/toolchains/ocaml-4.14.2/bin
+HOST_OCAML ?= $(HOME)/toolchains/ocaml-4.14.4/bin
 OCAMLC    ?= $(HOST_OCAML)/ocamlc
 OCAMLRUN  ?= $(HOST_OCAML)/ocamlrun
 
