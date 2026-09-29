@@ -1,0 +1,37 @@
+{
+ "elf": "build/difftest/f1_arith.elf",
+ "exit": 0,
+ "fuel_out": false,
+ "steps": 5236154,
+ "output": "22 12 85 3 2 -3 -2 1 21 20 136 8 7 1 5 17 17 \n2418\n4611686018427387903\n-4611686018427387904\n",
+ "cut_point_step": 5088525,
+ "first_minor_gc_step": 5088063,
+ "first_minor_gc_after_cut": null,
+ "minor_gcs": 1,
+ "major_slices": 0,
+ "minor_gcs_after_cut": 0,
+ "first": {
+  "caml_main": 49168,
+  "caml_init_gc": 54144,
+  "caml_interprete": 121868,
+  "caml_load_code": 122209,
+  "caml_build_primitive_table": 982199,
+  "caml_input_val": 5052499,
+  "caml_oldify_mopup": 5088063,
+  "caml_do_exit": 5236081,
+  "_exit": 5236149,
+  "_exit.sd": 5236153
+ },
+ "counts": {
+  "caml_main": 1,
+  "caml_init_gc": 1,
+  "caml_interprete": 2,
+  "caml_load_code": 1,
+  "caml_build_primitive_table": 1,
+  "caml_input_val": 1,
+  "caml_oldify_mopup": 1,
+  "caml_do_exit": 1,
+  "_exit": 1,
+  "_exit.sd": 1
+ }
+}

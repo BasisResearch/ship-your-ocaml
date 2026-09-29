@@ -1,0 +1,37 @@
+{
+ "elf": "build/difftest/f2_closures.elf",
+ "exit": 0,
+ "fuel_out": false,
+ "steps": 6825165,
+ "output": "610\n25\n50005000\n42\neven\n",
+ "cut_point_step": 5091512,
+ "first_minor_gc_step": 5091050,
+ "first_minor_gc_after_cut": null,
+ "minor_gcs": 1,
+ "major_slices": 0,
+ "minor_gcs_after_cut": 0,
+ "first": {
+  "caml_main": 49168,
+  "caml_init_gc": 54144,
+  "caml_interprete": 121868,
+  "caml_load_code": 122209,
+  "caml_build_primitive_table": 984533,
+  "caml_input_val": 5054833,
+  "caml_oldify_mopup": 5091050,
+  "caml_do_exit": 6825092,
+  "_exit": 6825160,
+  "_exit.sd": 6825164
+ },
+ "counts": {
+  "caml_main": 1,
+  "caml_init_gc": 1,
+  "caml_interprete": 2,
+  "caml_load_code": 1,
+  "caml_build_primitive_table": 1,
+  "caml_input_val": 1,
+  "caml_oldify_mopup": 1,
+  "caml_do_exit": 1,
+  "_exit": 1,
+  "_exit.sd": 1
+ }
+}
