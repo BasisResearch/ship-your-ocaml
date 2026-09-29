@@ -21,3 +21,4 @@ __pycache__/
 # host ocamlc artifacts next to test sources
 *.cmi
 *.cmo
+results/*-build.log

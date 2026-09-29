@@ -1,0 +1,8 @@
+00025797;OK;LeanRV64DExecutable.instruction.UTYPE   (0x00025#20, LeanRV64DExecutable.regidx.Regidx 0x0f#5, LeanRV64DExecutable.uop.AUIPC)
+355050ef;OK;LeanRV64DExecutable.instruction.JAL (0x005b54#21, LeanRV64DExecutable.regidx.Regidx 0x01#5)
+bb07b783;OK;LeanRV64DExecutable.instruction.LOAD   (0xbb0#12, LeanRV64DExecutable.regidx.Regidx 0x0f#5, LeanRV64DExecutable.regidx.Regidx 0x0f#5, false, 8)
+ca9e40ef;OK;LeanRV64DExecutable.instruction.JAL (0x1e4ca8#21, LeanRV64DExecutable.regidx.Regidx 0x01#5)
+cd1ef0ef;OK;LeanRV64DExecutable.instruction.JAL (0x1efcd0#21, LeanRV64DExecutable.regidx.Regidx 0x01#5)
+d68e50ef;OK;LeanRV64DExecutable.instruction.JAL (0x1e5568#21, LeanRV64DExecutable.regidx.Regidx 0x01#5)
+db9f10ef;OK;LeanRV64DExecutable.instruction.JAL (0x1f1db8#21, LeanRV64DExecutable.regidx.Regidx 0x01#5)
+e15ef0ef;OK;LeanRV64DExecutable.instruction.JAL (0x1efe14#21, LeanRV64DExecutable.regidx.Regidx 0x01#5)
