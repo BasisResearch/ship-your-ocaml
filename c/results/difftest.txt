@@ -1,0 +1,11 @@
+test           result host  emu    sail-steps   cut-point minorGC
+f1_arith       PASS   0     0         5236154     5088525      0
+f1_while       PASS   0     0         4567501     4495280      0
+f2_closures    PASS   0     0         6825165     5091512      0
+f3_data        PASS   0     0         5391536     5293301      0
+f4_exn         PASS   0     0         7642246     7539079      0
+f5_strings     PASS   0     0         7219728     7078802      0
+f6_alloc       PASS   0     0       221732295     6409379      3
+f7_float       PASS   0     0         7263012     7073964      0
+f8_objects     PASS   0     0         5904042     5787525      0
+pass=9 fail=0

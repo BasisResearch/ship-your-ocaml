@@ -1,0 +1,32 @@
+name = "ShipYourOCaml"
+defaultTargets = ["OCaml"]
+
+# Machine layer copied from ship-your-interpreter (module names kept so
+# that its proofs and generators apply unchanged; see ATTRIBUTION.md).
+# The same file set as ship-your-lua's copy.
+[[lean_lib]]
+name = "Vsa"
+leanOptions.backward.isDefEq.respectTransparency = false
+
+[[lean_lib]]
+name = "VsaIris"
+
+# New: ZINC bytecode semantics, VM representation, program logic over
+# bytecode, and the Layer A / B' / C theorem statements.
+[[lean_lib]]
+name = "OCaml"
+
+[[require]]
+name = "lean-riscv"
+path = "riscv-lean/lean_emulator"
+
+[[require]]
+name = "iris"
+git = "https://github.com/leanprover-community/iris-lean"
+rev = "740e2c4a9c672c61d76ad2f9c478c922f7461cf6"
+subDir = "Iris"
+
+# `runbc FILE`: execute BcSem on a bytecode executable (validation).
+[[lean_exe]]
+name = "runbc"
+root = "RunBc"

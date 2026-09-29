@@ -1,0 +1,836 @@
+import OCaml.Bytecode.Syntax
+import OCaml.Bytecode.Value
+
+/-!
+# `BcSem`: the ZINC bytecode semantics — fragment F1
+
+A deterministic step function `step P s` over VM states, transcribed from
+`caml_interprete` (`runtime/interp.c`, OCaml 4.14.2) arm by arm, and its
+graph `Step` with the observable behaviours `BcHalts` / `BcDiverges` on top
+(the same shape as `Vsa.Machine`: `Step`, `Halted`, `Halts`, `Diverges`).
+
+**F1** (`OCaml/Fragment.lean` is the authority on what is in it):
+stack/accumulator/environment moves, integer arithmetic and comparisons,
+branches, `SWITCH`, globals, structured blocks, closures (incl. mutually
+recursive ones, i.e. infix pointers), application / return / partial
+application (`APPLY*`, `APPTERM*`, `RETURN`, `GRAB`, `RESTART`),
+exceptions with handlers (`PUSHTRAP`, `POPTRAP`, `RAISE*` caught in the
+program), `STOP`, and `C_CALL1..5` of the F1 primitives listed in
+`primF1` (channels to the console, `%d` formatting, named values,
+`exit`, string equality, `Int64.float_of_bits`).
+
+Everything else steps to `.unsupported`: floats in blocks, arrays, byte
+access, objects, `C_CALLN`, events, other primitives, and an exception
+that reaches the top (the runtime then calls back into OCaml, `at_exit`,
+before printing `Fatal error: exception …`, a callback fragment).
+
+Faithfulness conventions:
+
+* `pc` indexes the OPCODE word (`Syntax.lean`); C's `pc + *pc` at operand
+  `k` is our `pc + 1 + k + arg k`.
+* The stack is a list, head = `sp[0]`. The trap pointer is kept as the
+  depth (from the stack bottom) of the innermost trap frame, `0` = none
+  (`Caml_state->trapsp = stack_high`); a trap frame stores its link as the
+  word distance to the previous frame, exactly as `Trap_link_offset`.
+* Integer operations are computed on the TAGGED 64-bit word exactly as the
+  C does (`tag64`/`untag`), so wrapping and shift amounts (`sll`/`srl`/`sra`
+  use the low 6 bits on RV64) are the binary's.
+* The heap is abstract (`Value.lean`): no collection is ever observable in
+  `BcSem`. The machine's collections are the representation predicate's
+  business (`OCaml/Vm/Repr.lean`).
+* A state for which the binary's behaviour depends on something `BcSem`
+  abstracts away (an ordered comparison of pointers, a field read from an
+  integer) steps to `.wrong`. Bytecode produced by `ocamlc` from well-typed
+  programs never reaches it; the Layer A theorem assumes so (`Good`).
+* Output: channels buffer exactly as `runtime/io.c` (`caml_putblock`,
+  `Putch`, `caml_flush`, 64 KiB buffers); bytes written to fd 1 or 2 are
+  appended to the console, the HTIF console that `Vsa.Machine.output`
+  observes.
+-/
+
+namespace OCaml.Bytecode
+
+/-! ## Programs and states -/
+
+/-- A loaded bytecode program: what `caml_main` has built when it calls
+`caml_interprete(code, size)` — the code, the primitive table, and the
+global data already unmarshalled into the heap. -/
+structure Prog where
+  code : Code
+  prims : Array String
+  heap0 : Heap
+  /-- `caml_global_data`. -/
+  globals : Val
+  /-- `caml_exe_name` and `main_argv` (an array of strings in `heap0`), set
+  by `caml_sys_init` before the cut point. -/
+  exeName : List UInt8
+  argv : Val
+  /-- The files embedded in the image (`src/gen_embed.sh`), `/prog` included. -/
+  files0 : List (String × List UInt8)
+
+/-- A channel (`struct channel`, `runtime/caml/io.h`): its fd, whether it is
+an output channel (`max == NULL`), and the pending bytes of its buffer. -/
+structure Chan where
+  fd : Int
+  isOut : Bool
+  buf : List UInt8
+  deriving DecidableEq, Repr
+
+/-- The C-side world the primitives act on. -/
+structure World where
+  /-- Everything written to fds 1 and 2: the HTIF console. -/
+  console : List UInt8
+  /-- `caml_all_opened_channels`, in creation order (id = index). -/
+  chans : List Chan
+  /-- `caml_register_named_value`. -/
+  named : List (String × Val)
+  /-- `oo_last_id` (`runtime/obj.c`), untagged. -/
+  ooId : Nat
+  /-- `caml_exe_name`. -/
+  exeName : List UInt8
+  /-- `main_argv` (`caml_sys_init`, allocated before the cut point). -/
+  argv : Val
+  /-- The in-memory file system (`c/src/htif.c`): path ↦ contents. F1's
+  primitives do not touch it; F5's (`caml_sys_open`, channel I/O on files)
+  do. -/
+  files : List (String × List UInt8)
+  deriving DecidableEq, Repr
+
+/-- A VM state: the interpreter's registers (`pc`, `accu`, `sp`, `env`,
+`extra_args`, `Caml_state->trapsp`), the heap and the world. -/
+structure St where
+  pc : Nat
+  accu : Val
+  stack : List Val
+  env : Val
+  extra : Nat
+  trap : Nat
+  heap : Heap
+  world : World
+
+/-- `caml_interprete`'s initial registers for the main program:
+`accu = Val_int(0)`, `env = Atom(0)`, `extra_args = 0`, empty stack. -/
+def Prog.init (P : Prog) : St :=
+  ⟨0, .int 0, [], .atom 0, 0, 0, P.heap0, ⟨[], [], [], 0, P.exeName, P.argv, P.files0⟩⟩
+
+/-- Result of one step. -/
+inductive Res where
+  | next (s : St)
+  /-- the program ended: HTIF exit code and the final world -/
+  | halt (e : Nat) (w : World)
+  /-- outside the fragment (ledgered in `Fragment.lean`) -/
+  | unsupported
+  /-- behaviour depends on what `BcSem` abstracts (never for `ocamlc` output
+  of well-typed programs) -/
+  | wrong
+
+/-! ## Words -/
+
+/-- The tagged 64-bit word of an integer value. -/
+def tag64 (n : BitVec 63) : BitVec 64 := (n.signExtend 64 <<< 1) ||| 1
+
+/-- `Long_val` of a tagged word, back to 63 bits. -/
+def untag (w : BitVec 64) : BitVec 63 := (w.sshiftRight 1).truncate 63
+
+/-- `Long_val` as a (64-bit) integer. -/
+def longVal (n : BitVec 63) : BitVec 64 := n.signExtend 64
+
+/-- Physical equality of two words (`EQ`/`NEQ`), where it is determined by
+the abstraction: integers are odd words, pointers even and distinct per
+(block, field). -/
+def physEq? : Val → Val → Option Bool
+  | .raw _, _ | _, .raw _ => none
+  | a, b => some (a == b)
+
+/-- Both integers. -/
+def ints? : Val → Val → Option (BitVec 63 × BitVec 63)
+  | .int a, .int b => some (a, b)
+  | _, _ => none
+
+def opt {α} (o : Option α) (k : α → Res) : Res :=
+  match o with
+  | some a => k a
+  | none => .wrong
+
+/-! ## Channels (`runtime/io.c`) -/
+
+/-- `IO_BUFFER_SIZE`. -/
+def ioBufferSize : Nat := 65536
+
+/-- Write a buffer to an fd: fds 1 and 2 are the console (`htif.c`'s
+`_write` writes everything); other fds are not in F1. -/
+def writeFd (w : World) (fd : Int) (b : List UInt8) : Option World :=
+  if fd = 1 ∨ fd = 2 then some { w with console := w.console ++ b } else none
+
+def World.setChan (w : World) (id : Nat) (c : Chan) : World :=
+  { w with chans := w.chans.set id c }
+
+/-- `caml_flush`: write out the whole buffer. -/
+def flushChan (w : World) (id : Nat) : Option World := do
+  let c ← w.chans[id]?
+  if c.fd = -1 then pure w else
+  let w' ← writeFd w c.fd c.buf
+  pure (w'.setChan id { c with buf := [] })
+
+/-- `caml_putblock` iterated by `caml_ml_output_bytes`: fill the buffer;
+when a block reaches the end of the buffer (`n ≥ free`), fill it and
+write it out whole. -/
+def putBlock (w : World) (id : Nat) : List UInt8 → Nat → Option World
+  | [], _ => some w
+  | bs, 0 => if bs = [] then some w else none
+  | bs, fuel + 1 => do
+    let c ← w.chans[id]?
+    let free := ioBufferSize - c.buf.length
+    if bs.length < free then
+      pure (w.setChan id { c with buf := c.buf ++ bs })
+    else
+      let full := c.buf ++ bs.take free
+      let w' ← writeFd w c.fd full
+      putBlock (w'.setChan id { c with buf := [] }) id (bs.drop free) fuel
+
+/-- `Putch`: flush first if the buffer is full, then append. -/
+def putChar (w : World) (id : Nat) (b : UInt8) : Option World := do
+  let c ← w.chans[id]?
+  if c.buf.length ≥ ioBufferSize then
+    let w' ← writeFd w c.fd c.buf
+    pure (w'.setChan id { c with buf := [b] })
+  else pure (w.setChan id { c with buf := c.buf ++ [b] })
+
+/-! ## Primitives of F1 -/
+
+/-- Result of a C primitive. -/
+inductive PRes where
+  | ok (accu : Val) (h : Heap) (w : World)
+  | raise (exn : Val) (h : Heap) (w : World)
+  | exit (code : Nat) (w : World)
+  | unsupported
+
+def strOf? (h : Heap) : Val → Option (List UInt8)
+  | .ptr l 0 => match h.get? l with
+    | some (.bytes b) => some b
+    | _ => none
+  | _ => none
+
+def chanOf? (h : Heap) : Val → Option Nat
+  | .ptr l 0 => match h.get? l with
+    | some (.channel id) => some id
+    | _ => none
+  | _ => none
+
+def intArg? : Val → Option Int
+  | .int n => some n.toInt
+  | _ => none
+
+/-- Decimal rendering of `%ld`. -/
+def decimal (n : Int) : List UInt8 :=
+  (toString n).toList.map fun c => c.toNat.toUInt8
+
+/-- Open a channel on `fd` (`caml_ml_open_descriptor_{in,out}`). -/
+def openChan (h : Heap) (w : World) (fd : Int) (isOut : Bool) : PRes :=
+  let id := w.chans.length
+  let (h', l) := h.alloc (.channel id)
+  .ok (.ptr l 0) h' { w with chans := w.chans ++ [⟨fd, isOut, []⟩] }
+
+/-- `caml_ml_out_channels_list`: walks `caml_all_opened_channels` (most
+recent first) consing a FRESH custom block per output channel, so the
+result lists output channels oldest first. -/
+def outChannelsList (h : Heap) (w : World) : Heap × Val :=
+  let ids := ((List.range w.chans.length).filter fun i =>
+    (w.chans[i]?.map (·.isOut)).getD false).reverse
+  ids.foldl (fun (h, acc) id =>
+    let (h1, lc) := h.alloc (.channel id)
+    let (h2, cell) := h1.alloc (.block 0 [.ptr lc 0, acc])
+    (h2, .ptr cell 0)) (h, .int 0)
+
+/-- The primitives of F1 (`Fragment.lean`). -/
+def primsF1 : List String :=
+  [ "caml_register_named_value", "caml_ml_open_descriptor_out",
+    "caml_ml_open_descriptor_in", "caml_ml_out_channels_list", "caml_ml_flush",
+    "caml_ml_output_char", "caml_ml_output", "caml_ml_output_bytes", "caml_format_int",
+    "caml_ml_string_length", "caml_ml_bytes_length", "caml_string_equal",
+    "caml_string_notequal", "caml_int64_float_of_bits",
+    "caml_sys_const_naked_pointers_checked", "caml_sys_const_big_endian",
+    "caml_sys_const_word_size", "caml_sys_const_int_size", "caml_sys_const_max_wosize",
+    "caml_sys_const_ostype_unix", "caml_sys_const_ostype_win32",
+    "caml_sys_const_ostype_cygwin", "caml_sys_const_backend_type", "caml_sys_get_config",
+    "caml_sys_executable_name", "caml_sys_argv", "caml_sys_get_argv", "caml_int_compare",
+    "caml_fresh_oo_id", "caml_sys_exit" ]
+
+/-- The F1 primitives' behaviour, by name, on their arguments (`accu`
+first). An argument shape the fragment does not cover is `.unsupported`. -/
+def primF1Impl (name : String) (args : List Val) (h : Heap) (w : World) : PRes :=
+  let some := fun {α} (o : Option α) (k : α → PRes) => match o with
+    | .some a => k a
+    | .none => PRes.unsupported
+  match name, args with
+  | "caml_register_named_value", [vn, v] =>
+      some (strOf? h vn) fun n =>
+        .ok .unit h { w with named := w.named ++ [(String.ofList (n.map fun b => Char.ofNat b.toNat), v)] }
+  | "caml_ml_open_descriptor_out", [fd] => some (intArg? fd) fun fd => openChan h w fd true
+  | "caml_ml_open_descriptor_in", [fd] => some (intArg? fd) fun fd => openChan h w fd false
+  | "caml_ml_out_channels_list", [_] =>
+      let (h', l) := outChannelsList h w
+      .ok l h' w
+  | "caml_ml_flush", [ch] =>
+      some (chanOf? h ch) fun id => some (flushChan w id) fun w' => .ok .unit h w'
+  | "caml_ml_output_char", [ch, c] =>
+      some (chanOf? h ch) fun id => some (intArg? c) fun c =>
+        some (putChar w id (c % 256).toNat.toUInt8) fun w' => .ok .unit h w'
+  | "caml_ml_output", [ch, s, ofs, len]
+  | "caml_ml_output_bytes", [ch, s, ofs, len] =>
+      some (chanOf? h ch) fun id => some (strOf? h s) fun b =>
+      some (intArg? ofs) fun o => some (intArg? len) fun n =>
+        if 0 ≤ o ∧ 0 ≤ n ∧ o + n ≤ b.length then
+          some (putBlock w id ((b.drop o.toNat).take n.toNat) (n.toNat + 1)) fun w' => .ok .unit h w'
+        else .unsupported
+  | "caml_format_int", [fmt, n] =>
+      some (strOf? h fmt) fun f => some (intArg? n) fun n =>
+        if f = "%d".toList.map (·.toNat.toUInt8) then
+          let (h', l) := h.alloc (.bytes (decimal n))
+          .ok (.ptr l 0) h' w
+        else .unsupported
+  | "caml_ml_string_length", [s] | "caml_ml_bytes_length", [s] =>
+      some (strOf? h s) fun b => .ok (Val.ofInt b.length) h w
+  | "caml_string_equal", [a, b] =>
+      some (strOf? h a) fun a => some (strOf? h b) fun b => .ok (Val.ofBool (a == b)) h w
+  | "caml_string_notequal", [a, b] =>
+      some (strOf? h a) fun a => some (strOf? h b) fun b => .ok (Val.ofBool (a != b)) h w
+  | "caml_int64_float_of_bits", [v] =>
+      match v with
+      | .ptr l 0 => match h.get? l with
+        | .some (.int64 n) => let (h', d) := h.alloc (.double n); .ok (.ptr d 0) h' w
+        | _ => .unsupported
+      | _ => .unsupported
+  | "caml_sys_const_naked_pointers_checked", [_] => .ok (Val.ofBool false) h w
+  -- `runtime/sys.c` constants of this build (`m.h`/`s.h`: 64-bit,
+  -- little-endian, OCAML_OS_TYPE "Unix", bytecode backend)
+  | "caml_sys_const_big_endian", [_] => .ok (Val.ofBool false) h w
+  | "caml_sys_const_word_size", [_] => .ok (Val.ofInt 64) h w
+  | "caml_sys_const_int_size", [_] => .ok (Val.ofInt 63) h w
+  | "caml_sys_const_max_wosize", [_] => .ok (Val.ofInt (2 ^ 54 - 1)) h w
+  | "caml_sys_const_ostype_unix", [_] => .ok (Val.ofBool true) h w
+  | "caml_sys_const_ostype_win32", [_] | "caml_sys_const_ostype_cygwin", [_] => .ok (Val.ofBool false) h w
+  | "caml_sys_const_backend_type", [_] => .ok (Val.ofInt 1) h w
+  | "caml_sys_get_config", [_] =>
+      let (h1, os) := h.alloc (.bytes ("Unix".toList.map (·.toNat.toUInt8)))
+      let (h2, r) := h1.alloc (.block 0 [.ptr os 0, Val.ofInt 64, Val.ofBool false])
+      .ok (.ptr r 0) h2 w
+  | "caml_sys_executable_name", [_] =>
+      -- `caml_exe_name`: the path `caml_main` opened (`src/main.c`: "/prog")
+      let (h', l) := h.alloc (.bytes w.exeName)
+      .ok (.ptr l 0) h' w
+  | "caml_sys_argv", [_] => .ok w.argv h w
+  | "caml_sys_get_argv", [_] =>
+      let (h1, e) := h.alloc (.bytes w.exeName)
+      let (h2, r) := h1.alloc (.block 0 [.ptr e 0, w.argv])
+      .ok (.ptr r 0) h2 w
+  | "caml_int_compare", [a, b] =>
+      some (intArg? a) fun a => some (intArg? b) fun b =>
+        .ok (Val.ofInt (if a < b then -1 else if a > b then 1 else 0)) h w
+  | "caml_fresh_oo_id", [_] => .ok (Val.ofInt w.ooId) h { w with ooId := w.ooId + 1 }
+  | "caml_sys_exit", [c] => some (intArg? c) fun c => .exit (BitVec.ofInt 32 c).toNat w
+  | _, _ => .unsupported
+
+/-- The F1 primitives: `primF1Impl` on `primsF1`, `.unsupported` elsewhere. -/
+def primF1 (name : String) (args : List Val) (h : Heap) (w : World) : PRes :=
+  if name ∈ primsF1 then primF1Impl name args h w else .unsupported
+
+/-! ## The step function -/
+
+section
+variable (P : Prog) (s : St)
+
+/-- Advance past an instruction of `n` words. -/
+def St.adv (s : St) (n : Nat) : St := { s with pc := s.pc + n }
+
+/-- Code target `pc + 1 + k + ofs` of operand `k` (an absolute code index). -/
+def target (pc k : Nat) (ofs : Int) : Option Nat :=
+  let t := (pc + 1 + k : Int) + ofs
+  if t < 0 then none else some t.toNat
+
+/-- The exception-raising path (`raise_notrace:` in `interp.c`): unwind to
+the innermost trap frame. An exception reaching the top is not in F1. -/
+def raiseTo (s : St) (exn : Val) : Res :=
+  if s.trap = 0 then .unsupported else
+  let len := s.stack.length
+  if len < s.trap then .wrong else
+  match s.stack.drop (len - s.trap) with
+  | .code h :: .int link :: env :: .int ex :: rest =>
+      let d := s.trap
+      if link.toNat > d then .wrong else
+      .next { s with pc := h, accu := exn, stack := rest, env := env, extra := ex.toNat, trap := d - link.toNat }
+  | _ => .wrong
+
+/-- Apply the closure in `accu` (`pc = Code_val(accu); env = accu`). -/
+def enter (s : St) (stack : List Val) (extra : Nat) : Res :=
+  opt (field? s.heap s.accu 0) fun
+    | .code c => .next { s with pc := c, env := s.accu, stack := stack, extra := extra }
+    | _ => .wrong
+
+/-- Run a C primitive (`C_CALLn`, `n = args.length`): pops `n - 1` stack
+words. -/
+def cCall (s : St) (len : Nat) (name : String) (args : List Val) : Res :=
+  match primF1 name args s.heap s.world with
+  | .ok a h w => .next { s with pc := s.pc + len, accu := a, heap := h, world := w, stack := s.stack.drop (args.length - 1) }
+  | .raise e h w =>
+      let s' : St := { s with heap := h, world := w, stack := s.stack.drop (args.length - 1) }
+      raiseTo s' e
+  | .exit c w => .halt c w
+  | .unsupported => .unsupported
+
+/-- Integer binary operation computed on the tagged words (`accu` op `sp[0]`). -/
+def intOp (f : BitVec 64 → BitVec 64 → BitVec 64) : Res :=
+  match s.stack with
+  | b :: rest => opt (ints? s.accu b) fun (x, y) =>
+      .next { s with pc := s.pc + 1, accu := .int (untag (f (tag64 x) (tag64 y))), stack := rest }
+  | [] => .wrong
+
+/-- Word comparison producing `Val_int`. -/
+def cmpOp (f : BitVec 64 → BitVec 64 → Bool) : Res :=
+  match s.stack with
+  | b :: rest => opt (ints? s.accu b) fun (x, y) =>
+      .next { s with pc := s.pc + 1, accu := Val.ofBool (f (tag64 x) (tag64 y)), stack := rest }
+  | [] => .wrong
+
+/-- `Integer_branch_comparison`: compare the operand `n` with `Long_val(accu)`. -/
+def brOp (n ofs : Int) (f : BitVec 64 → BitVec 64 → Bool) : Res :=
+  match s.accu with
+  | .int a =>
+      if f (BitVec.ofInt 64 n) (longVal a) then
+        opt (target s.pc 1 ofs) fun t => .next { s with pc := t }
+      else .next (s.adv 3)
+  | _ => .wrong
+
+/-- `MAKEBLOCK`: `Field(b,0) = accu`, the rest popped from the stack. -/
+def makeBlock (len size tag : Nat) : Res :=
+  if size = 0 then .wrong else
+  if s.stack.length < size - 1 then .wrong else
+  let (h, l) := s.heap.alloc (.block tag (s.accu :: s.stack.take (size - 1)))
+  .next { s with pc := s.pc + len, accu := .ptr l 0, heap := h, stack := s.stack.drop (size - 1) }
+
+/-- Push `accu` first (the `PUSH…` variants). -/
+def pushAccu (s : St) : St := { s with stack := s.accu :: s.stack }
+
+/-- One step of the ZINC machine: `caml_interprete`'s arm for the
+instruction at `pc`. -/
+def stepI (i : Instr) : Res :=
+  let pc := s.pc
+  let stk := s.stack
+  let nth := fun (k : Nat) => stk[k]?
+  match i.op, i.args with
+  -- Accumulator and stack
+  | .ACC0, [] => opt (nth 0) fun v => .next { (s.adv 1) with accu := v }
+  | .ACC1, [] => opt (nth 1) fun v => .next { (s.adv 1) with accu := v }
+  | .ACC2, [] => opt (nth 2) fun v => .next { (s.adv 1) with accu := v }
+  | .ACC3, [] => opt (nth 3) fun v => .next { (s.adv 1) with accu := v }
+  | .ACC4, [] => opt (nth 4) fun v => .next { (s.adv 1) with accu := v }
+  | .ACC5, [] => opt (nth 5) fun v => .next { (s.adv 1) with accu := v }
+  | .ACC6, [] => opt (nth 6) fun v => .next { (s.adv 1) with accu := v }
+  | .ACC7, [] => opt (nth 7) fun v => .next { (s.adv 1) with accu := v }
+  | .ACC, [n] => opt (stk[n.toNat]?) fun v => .next { (s.adv 2) with accu := v }
+  | .PUSH, [] | .PUSHACC0, [] => .next (pushAccu (s.adv 1))
+  | .PUSHACC1, [] => opt (nth 0) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
+  | .PUSHACC2, [] => opt (nth 1) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
+  | .PUSHACC3, [] => opt (nth 2) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
+  | .PUSHACC4, [] => opt (nth 3) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
+  | .PUSHACC5, [] => opt (nth 4) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
+  | .PUSHACC6, [] => opt (nth 5) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
+  | .PUSHACC7, [] => opt (nth 6) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
+  | .PUSHACC, [n] =>
+      -- `*--sp = accu; accu = sp[*pc++]` : index n of the pushed stack
+      opt ((s.accu :: stk)[n.toNat]?) fun v => .next { (pushAccu (s.adv 2)) with accu := v }
+  | .POP, [n] => if stk.length < n.toNat then .wrong else .next { (s.adv 2) with stack := stk.drop n.toNat }
+  | .ASSIGN, [n] =>
+      if n.toNat < stk.length then
+        .next { (s.adv 2) with stack := stk.set n.toNat s.accu, accu := .unit }
+      else .wrong
+  -- Environment
+  | .ENVACC1, [] => opt (field? s.heap s.env 1) fun v => .next { (s.adv 1) with accu := v }
+  | .ENVACC2, [] => opt (field? s.heap s.env 2) fun v => .next { (s.adv 1) with accu := v }
+  | .ENVACC3, [] => opt (field? s.heap s.env 3) fun v => .next { (s.adv 1) with accu := v }
+  | .ENVACC4, [] => opt (field? s.heap s.env 4) fun v => .next { (s.adv 1) with accu := v }
+  | .ENVACC, [n] => opt (field? s.heap s.env n.toNat) fun v => .next { (s.adv 2) with accu := v }
+  | .PUSHENVACC1, [] => opt (field? s.heap s.env 1) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
+  | .PUSHENVACC2, [] => opt (field? s.heap s.env 2) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
+  | .PUSHENVACC3, [] => opt (field? s.heap s.env 3) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
+  | .PUSHENVACC4, [] => opt (field? s.heap s.env 4) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
+  | .PUSHENVACC, [n] => opt (field? s.heap s.env n.toNat) fun v => .next { (pushAccu (s.adv 2)) with accu := v }
+  -- Function application
+  | .PUSH_RETADDR, [ofs] => opt (target pc 0 ofs) fun r =>
+      .next { (s.adv 2) with stack := .code r :: s.env :: Val.ofInt s.extra :: stk }
+  | .APPLY, [n] => if n < 1 then .wrong else enter s stk (n.toNat - 1)
+  | .APPLY1, [] => match stk with
+      | a1 :: rest => enter s (a1 :: .code (pc + 1) :: s.env :: Val.ofInt s.extra :: rest) 0
+      | _ => .wrong
+  | .APPLY2, [] => match stk with
+      | a1 :: a2 :: rest => enter s (a1 :: a2 :: .code (pc + 1) :: s.env :: Val.ofInt s.extra :: rest) 1
+      | _ => .wrong
+  | .APPLY3, [] => match stk with
+      | a1 :: a2 :: a3 :: rest =>
+          enter s (a1 :: a2 :: a3 :: .code (pc + 1) :: s.env :: Val.ofInt s.extra :: rest) 2
+      | _ => .wrong
+  | .APPTERM, [nargs, slot] =>
+      let n := nargs.toNat; let k := slot.toNat
+      if n = 0 ∨ k < n ∨ stk.length < k then .wrong else
+      enter s (stk.take n ++ stk.drop k) (s.extra + n - 1)
+  | .APPTERM1, [slot] =>
+      if slot < 1 ∨ stk.length < slot.toNat then .wrong else
+      enter s (stk.take 1 ++ stk.drop slot.toNat) s.extra
+  | .APPTERM2, [slot] =>
+      if slot < 2 ∨ stk.length < slot.toNat then .wrong else
+      enter s (stk.take 2 ++ stk.drop slot.toNat) (s.extra + 1)
+  | .APPTERM3, [slot] =>
+      if slot < 3 ∨ stk.length < slot.toNat then .wrong else
+      enter s (stk.take 3 ++ stk.drop slot.toNat) (s.extra + 2)
+  | .RETURN, [n] =>
+      let rest := stk.drop n.toNat
+      if stk.length < n.toNat then .wrong else
+      if s.extra > 0 then enter s rest (s.extra - 1)
+      else match rest with
+        | .code r :: env :: .int ex :: rest' =>
+            .next { s with pc := r, env := env, extra := ex.toNat, stack := rest' }
+        | _ => .wrong
+  | .RESTART, [] =>
+      match s.env with
+      | .ptr l 0 => match s.heap.get? l with
+        | some (.block _ fs) =>
+            if fs.length < 3 then .wrong else
+            .next { (s.adv 1) with
+              stack := fs.drop 3 ++ stk, env := fs.getD 2 .unit, extra := s.extra + (fs.length - 3) }
+        | _ => .wrong
+      | _ => .wrong
+  | .GRAB, [req] =>
+      if req.toNat ≤ s.extra then .next { (s.adv 2) with extra := s.extra - req.toNat }
+      else
+        let na := 1 + s.extra
+        -- C's `pc - 3` is taken after the operand read (C `pc` = our `pc + 2`):
+        -- the RESTART just before this GRAB
+        if stk.length < na + 3 ∨ pc < 1 then .wrong else
+        let (h, l) := s.heap.alloc (.block closureTag
+          (.code (pc - 1) :: Val.ofInt 2 :: s.env :: stk.take na))
+        match stk.drop na with
+        | .code r :: env :: .int ex :: rest =>
+            .next { s with pc := r, accu := .ptr l 0, heap := h, env := env, extra := ex.toNat, stack := rest }
+        | _ => .wrong
+  | .CLOSURE, [nv, ofs] =>
+      let n := nv.toNat
+      let stk' := if n > 0 then s.accu :: stk else stk
+      if stk'.length < n then .wrong else
+      opt (target pc 1 ofs) fun c =>
+      let (h, l) := s.heap.alloc (.block closureTag (.code c :: Val.ofInt 2 :: stk'.take n))
+      .next { (s.adv 3) with accu := .ptr l 0, heap := h, stack := stk'.drop n }
+  | .CLOSUREREC, nf :: nv :: ofss =>
+      let f := nf.toNat; let n := nv.toNat
+      if f = 0 ∨ ofss.length ≠ f then .wrong else
+      let stk' := if n > 0 then s.accu :: stk else stk
+      if stk'.length < n then .wrong else
+      -- `pc + pc[i]` with `pc` at the first offset: every offset is relative
+      -- to the table start (operand 2), not to its own slot
+      opt (ofss.mapM fun o => target pc 2 o) fun cs =>
+      let envofs := 3 * f - 1
+      -- function k ≥ 1 sits at field 3k, its infix header at 3k - 1
+      let funWords := (cs.zipIdx.map fun (c, k) =>
+        (if k = 0 then [] else [Val.raw (BitVec.ofNat 64 ((3 * k) * 1024 + infixTag))]) ++
+        [Val.code c, Val.ofInt (envofs - 3 * k)]).flatten
+      let (h, l) := s.heap.alloc (.block closureTag (funWords ++ stk'.take n))
+      -- `*--sp = accu` then the infix pointers, last function on top
+      let infixPtrs := ((List.range f).drop 1).reverse.map fun k => Val.ptr l (3 * k)
+      .next { (s.adv (3 + f)) with accu := .ptr l 0, heap := h, stack := infixPtrs ++ (Val.ptr l 0 :: stk'.drop n) }
+  | .OFFSETCLOSUREM3, [] | .PUSHOFFSETCLOSUREM3, [] | .OFFSETCLOSURE0, []
+  | .PUSHOFFSETCLOSURE0, [] | .OFFSETCLOSURE3, [] | .PUSHOFFSETCLOSURE3, []
+  | .OFFSETCLOSURE, [_] | .PUSHOFFSETCLOSURE, [_] =>
+      let d : Int := match i.op, i.args with
+        | .OFFSETCLOSUREM3, _ | .PUSHOFFSETCLOSUREM3, _ => -3
+        | .OFFSETCLOSURE3, _ | .PUSHOFFSETCLOSURE3, _ => 3
+        | .OFFSETCLOSURE, [n] | .PUSHOFFSETCLOSURE, [n] => n
+        | _, _ => 0
+      let push := match i.op with
+        | .PUSHOFFSETCLOSUREM3 | .PUSHOFFSETCLOSURE0 | .PUSHOFFSETCLOSURE3
+        | .PUSHOFFSETCLOSURE => true
+        | _ => false
+      let s1 := if push then pushAccu s else s
+      match s.env with
+      | .ptr l k =>
+          if (k : Int) + d < 0 then .wrong else
+          .next { (s1.adv (1 + i.args.length)) with accu := .ptr l ((k : Int) + d).toNat }
+      | _ => .wrong
+  -- Globals
+  | .GETGLOBAL, [n] => opt (field? s.heap P.globals n.toNat) fun v => .next { (s.adv 2) with accu := v }
+  | .PUSHGETGLOBAL, [n] =>
+      opt (field? s.heap P.globals n.toNat) fun v => .next { (pushAccu (s.adv 2)) with accu := v }
+  | .GETGLOBALFIELD, [n, k] =>
+      opt (field? s.heap P.globals n.toNat) fun g =>
+      opt (field? s.heap g k.toNat) fun v => .next { (s.adv 3) with accu := v }
+  | .PUSHGETGLOBALFIELD, [n, k] =>
+      opt (field? s.heap P.globals n.toNat) fun g =>
+      opt (field? s.heap g k.toNat) fun v => .next { (pushAccu (s.adv 3)) with accu := v }
+  | .SETGLOBAL, [n] =>
+      opt (setField? s.heap P.globals n.toNat s.accu) fun h =>
+        .next { (s.adv 2) with heap := h, accu := .unit }
+  -- Blocks
+  | .ATOM0, [] => .next { (s.adv 1) with accu := .atom 0 }
+  | .ATOM, [t] => .next { (s.adv 2) with accu := .atom t.toNat }
+  | .PUSHATOM0, [] => .next { (pushAccu (s.adv 1)) with accu := .atom 0 }
+  | .PUSHATOM, [t] => .next { (pushAccu (s.adv 2)) with accu := .atom t.toNat }
+  | .MAKEBLOCK, [sz, t] => makeBlock s 3 sz.toNat t.toNat
+  | .MAKEBLOCK1, [t] => makeBlock s 2 1 t.toNat
+  | .MAKEBLOCK2, [t] => makeBlock s 2 2 t.toNat
+  | .MAKEBLOCK3, [t] => makeBlock s 2 3 t.toNat
+  | .GETFIELD0, [] => opt (field? s.heap s.accu 0) fun v => .next { (s.adv 1) with accu := v }
+  | .GETFIELD1, [] => opt (field? s.heap s.accu 1) fun v => .next { (s.adv 1) with accu := v }
+  | .GETFIELD2, [] => opt (field? s.heap s.accu 2) fun v => .next { (s.adv 1) with accu := v }
+  | .GETFIELD3, [] => opt (field? s.heap s.accu 3) fun v => .next { (s.adv 1) with accu := v }
+  | .GETFIELD, [n] => opt (field? s.heap s.accu n.toNat) fun v => .next { (s.adv 2) with accu := v }
+  | .SETFIELD0, [] | .SETFIELD1, [] | .SETFIELD2, [] | .SETFIELD3, [] | .SETFIELD, [_] =>
+      let k := match i.op, i.args with
+        | .SETFIELD1, _ => 1 | .SETFIELD2, _ => 2 | .SETFIELD3, _ => 3
+        | .SETFIELD, [n] => n.toNat | _, _ => 0
+      match stk with
+      | v :: rest => opt (setField? s.heap s.accu k v) fun h =>
+          .next { (s.adv (1 + i.args.length)) with heap := h, accu := .unit, stack := rest }
+      | [] => .wrong
+  -- Branches
+  | .BRANCH, [ofs] => opt (target pc 0 ofs) fun t => .next { s with pc := t }
+  | .BRANCHIF, [ofs] =>
+      if s.accu = .int 0 then .next (s.adv 2) else opt (target pc 0 ofs) fun t => .next { s with pc := t }
+  | .BRANCHIFNOT, [ofs] =>
+      if s.accu = .int 0 then opt (target pc 0 ofs) fun t => .next { s with pc := t } else .next (s.adv 2)
+  | .SWITCH, sizes :: tbl =>
+      let nc := sizes.toNat % 65536
+      let idx : Option Nat := match s.accu with
+        | .int n => if 0 ≤ n.toInt ∧ n.toInt < nc then some n.toNat else none
+        | v => (tag? s.heap v).bind fun t => if t < sizes.toNat / 65536 then some (nc + t) else none
+      -- `pc += pc[k]` with `pc` at the table start (operand 1)
+      opt idx fun k => opt tbl[k]? fun o => opt (target pc 1 o) fun t => .next { s with pc := t }
+  | .BOOLNOT, [] => match s.accu with
+      | .int n => .next { (s.adv 1) with accu := .int (1 - n) }
+      | _ => .wrong
+  -- Exceptions
+  | .PUSHTRAP, [ofs] => opt (target pc 0 ofs) fun h =>
+      let d := stk.length + 4
+      .next { (s.adv 2) with stack := .code h :: Val.ofInt (d - s.trap) :: s.env :: Val.ofInt s.extra :: stk, trap := d }
+  | .POPTRAP, [] => match stk with
+      | _ :: .int link :: _ :: _ :: rest =>
+          if link.toNat > stk.length then .wrong else
+          .next { (s.adv 1) with trap := stk.length - link.toNat, stack := rest }
+      | _ => .wrong
+  | .RAISE, [] | .RERAISE, [] | .RAISE_NOTRACE, [] => raiseTo s s.accu
+  | .CHECK_SIGNALS, [] => .next (s.adv 1)
+  -- C calls
+  | .C_CALL1, [p] => opt P.prims[p.toNat]? fun nm => cCall s 2 nm [s.accu]
+  | .C_CALL2, [p] => opt P.prims[p.toNat]? fun nm => cCall s 2 nm (s.accu :: stk.take 1)
+  | .C_CALL3, [p] => opt P.prims[p.toNat]? fun nm => cCall s 2 nm (s.accu :: stk.take 2)
+  | .C_CALL4, [p] => opt P.prims[p.toNat]? fun nm => cCall s 2 nm (s.accu :: stk.take 3)
+  | .C_CALL5, [p] => opt P.prims[p.toNat]? fun nm => cCall s 2 nm (s.accu :: stk.take 4)
+  -- Integer constants and arithmetic
+  | .CONST0, [] => .next { (s.adv 1) with accu := .int 0 }
+  | .CONST1, [] => .next { (s.adv 1) with accu := .int 1 }
+  | .CONST2, [] => .next { (s.adv 1) with accu := .int 2 }
+  | .CONST3, [] => .next { (s.adv 1) with accu := .int 3 }
+  | .CONSTINT, [n] => .next { (s.adv 2) with accu := Val.ofInt n }
+  | .PUSHCONST0, [] => .next { (pushAccu (s.adv 1)) with accu := .int 0 }
+  | .PUSHCONST1, [] => .next { (pushAccu (s.adv 1)) with accu := .int 1 }
+  | .PUSHCONST2, [] => .next { (pushAccu (s.adv 1)) with accu := .int 2 }
+  | .PUSHCONST3, [] => .next { (pushAccu (s.adv 1)) with accu := .int 3 }
+  | .PUSHCONSTINT, [n] => .next { (pushAccu (s.adv 2)) with accu := Val.ofInt n }
+  | .NEGINT, [] => match s.accu with
+      | .int a => .next { (s.adv 1) with accu := .int (untag (2 - tag64 a)) }
+      | _ => .wrong
+  | .ADDINT, [] => intOp s fun a b => a + b - 1
+  | .SUBINT, [] => intOp s fun a b => a - b + 1
+  | .MULINT, [] => intOp s fun a b => tag64 (untag a * untag b)
+  | .DIVINT, [] | .MODINT, [] => match stk with
+      | b :: rest => opt (ints? s.accu b) fun (x, y) =>
+          if y = 0 then
+            -- `caml_raise_zero_divide`: Field(caml_global_data, ZERO_DIVIDE_EXN = 5)
+            opt (field? s.heap P.globals 5) fun e => raiseTo { s with stack := rest } e
+          else
+            let r := if i.op = .DIVINT then x.sdiv y else x.srem y
+            .next { (s.adv 1) with accu := .int r, stack := rest }
+      | [] => .wrong
+  | .ANDINT, [] => intOp s fun a b => a &&& b
+  | .ORINT, [] => intOp s fun a b => a ||| b
+  | .XORINT, [] => intOp s fun a b => (a ^^^ b) ||| 1
+  | .LSLINT, [] => intOp s fun a b => ((a - 1) <<< ((untag b).toNat % 64)) + 1
+  | .LSRINT, [] => intOp s fun a b => (a >>> ((untag b).toNat % 64)) ||| 1
+  | .ASRINT, [] => intOp s fun a b => (a.sshiftRight ((untag b).toNat % 64)) ||| 1
+  | .EQ, [] | .NEQ, [] => match stk with
+      | b :: rest => opt (physEq? s.accu b) fun e =>
+          .next { (s.adv 1) with accu := Val.ofBool (if i.op = .EQ then e else !e), stack := rest }
+      | [] => .wrong
+  | .LTINT, [] => cmpOp s fun a b => a.slt b
+  | .LEINT, [] => cmpOp s fun a b => a.sle b
+  | .GTINT, [] => cmpOp s fun a b => b.slt a
+  | .GEINT, [] => cmpOp s fun a b => b.sle a
+  | .ULTINT, [] => cmpOp s fun a b => a.ult b
+  | .UGEINT, [] => cmpOp s fun a b => b.ule a
+  | .OFFSETINT, [n] => match s.accu with
+      | .int a => .next { (s.adv 2) with accu := .int (untag (tag64 a + (BitVec.ofInt 64 n <<< 1))) }
+      | _ => .wrong
+  | .OFFSETREF, [n] => opt (field? s.heap s.accu 0) fun
+      | .int a => opt (setField? s.heap s.accu 0 (.int (untag (tag64 a + (BitVec.ofInt 64 n <<< 1)))))
+          fun h => .next { (s.adv 2) with heap := h, accu := .unit }
+      | _ => .wrong
+  | .ISINT, [] => match s.accu with
+      | .raw _ => .wrong
+      | v => .next { (s.adv 1) with accu := Val.ofBool v.isInt }
+  | .BEQ, [n, o] => brOp s n o fun a b => a == b
+  | .BNEQ, [n, o] => brOp s n o fun a b => a != b
+  | .BLTINT, [n, o] => brOp s n o fun a b => a.slt b
+  | .BLEINT, [n, o] => brOp s n o fun a b => a.sle b
+  | .BGTINT, [n, o] => brOp s n o fun a b => b.slt a
+  | .BGEINT, [n, o] => brOp s n o fun a b => b.sle a
+  | .BULTINT, [n, o] => brOp s n o fun a b => a.ult b
+  | .BUGEINT, [n, o] => brOp s n o fun a b => b.ule a
+  -- Machine control: `STOP` returns to `caml_main`, which exits 0
+  | .STOP, [] => .halt 0 s.world
+  | _, _ => .unsupported
+
+/-- One step at `s.pc`. -/
+def step : Res :=
+  match decodeAt P.code s.pc with
+  | some i => stepI P s i
+  | none => .wrong
+
+end
+
+/-! ## The relation and the behaviours -/
+
+/-- The graph of `step`. -/
+inductive Step (P : Prog) : St → St → Prop where
+  | mk {s s' : St} : step P s = .next s' → Step P s s'
+
+/-- Exactly `n` steps. -/
+inductive StepsN (P : Prog) : Nat → St → St → Prop where
+  | zero (s : St) : StepsN P 0 s s
+  | succ {n : Nat} {a b c : St} : Step P a b → StepsN P n b c → StepsN P (n + 1) a c
+
+/-- Reachable from the initial state. -/
+def Reach (P : Prog) (s : St) : Prop := ∃ n, StepsN P n P.init s
+
+/-- Bytes to the console string, one `Char` per byte (`Vsa.Machine.output`'s
+convention for the HTIF console). -/
+def bytesToString (b : List UInt8) : String := String.ofList (b.map fun x => Char.ofNat x.toNat)
+
+/-- **`BcSem`**: the program halts with exit code `e` having printed `out`. -/
+def BcHalts (P : Prog) (out : String) (e : Nat) : Prop :=
+  ∃ s w, Reach P s ∧ step P s = .halt e w ∧ bytesToString w.console = out
+
+/-- `BcSem` with the file system observed: halts with exit `e`, console
+`out` and final files `fs`. -/
+def BcRun (P : Prog) (out : String) (e : Nat) (fs : List (String × List UInt8)) : Prop :=
+  ∃ s w, Reach P s ∧ step P s = .halt e w ∧ bytesToString w.console = out ∧ w.files = fs
+
+theorem BcRun.halts {P : Prog} {out : String} {e : Nat} {fs : List (String × List UInt8)}
+    (h : BcRun P out e fs) : BcHalts P out e := by
+  obtain ⟨s, w, hr, hs, ho, -⟩ := h
+  exact ⟨s, w, hr, hs, ho⟩
+
+theorem BcHalts.run {P : Prog} {out : String} {e : Nat} (h : BcHalts P out e) :
+    ∃ fs, BcRun P out e fs := by
+  obtain ⟨s, w, hr, hs, ho⟩ := h
+  exact ⟨w.files, s, w, hr, hs, ho, rfl⟩
+
+/-- The program runs forever. -/
+def BcDiverges (P : Prog) : Prop := ∀ n, ∃ s, StepsN P n P.init s
+
+/-- The program never reaches an unsupported or wrong state: it is inside
+the fragment, and its behaviour does not depend on the abstraction. -/
+def Good (P : Prog) : Prop :=
+  ∀ s, Reach P s → step P s ≠ .unsupported ∧ step P s ≠ .wrong
+
+/-! ## Determinism and the trichotomy -/
+
+theorem Step.det {P : Prog} {a b b' : St} (h : Step P a b) (h' : Step P a b') : b = b' := by
+  cases h with | mk e => cases h' with | mk e' => rw [e] at e'; cases e'; rfl
+
+theorem StepsN.det {P : Prog} {n : Nat} {a b b' : St}
+    (h : StepsN P n a b) (h' : StepsN P n a b') : b = b' := by
+  induction h generalizing b' with
+  | zero => cases h'; rfl
+  | succ s _ ih =>
+    cases h' with
+    | succ s' r' => exact ih (Step.det s s' ▸ r')
+
+theorem StepsN.snoc {P : Prog} {n : Nat} {a b c : St}
+    (h : StepsN P n a b) (s : Step P b c) : StepsN P (n + 1) a c := by
+  induction h with
+  | zero => exact .succ s (.zero _)
+  | succ s0 _ ih => exact .succ s0 (ih s)
+
+/-- A state of `n` steps that does not step has no successor at `n + 1`. -/
+theorem StepsN.stop {P : Prog} {n : Nat} {a b c : St} (h : StepsN P n a b)
+    (hs : ∀ x, ¬ step P b = .next x) (h' : StepsN P (n + 1) a c) : False := by
+  induction h generalizing c with
+  | zero =>
+    cases h' with
+    | succ s _ => cases s with | mk e => exact hs _ e
+  | succ s0 _ ih =>
+    cases h' with
+    | succ s1 r => exact ih hs (Step.det s0 s1 ▸ r)
+
+/-- Every run of a `Good` program halts or diverges. -/
+theorem halts_or_diverges (P : Prog) (hg : Good P) :
+    (∃ out e, BcHalts P out e) ∨ BcDiverges P := by
+  by_cases hd : BcDiverges P
+  · exact .inr hd
+  · left
+    -- the least `n` with no state after `n` steps
+    have : ∃ n, ¬ ∃ s, StepsN P n P.init s := by
+      unfold BcDiverges at hd; exact Classical.not_forall.1 hd
+    obtain ⟨n, hn⟩ := this
+    induction n with
+    | zero => exact (hn ⟨_, .zero _⟩).elim
+    | succ k ih =>
+      by_cases hk : ∃ s, StepsN P k P.init s
+      · obtain ⟨s, hs⟩ := hk
+        obtain ⟨hu, hw⟩ := hg s ⟨k, hs⟩
+        match hst : step P s with
+        | .next s' => exact (hn ⟨s', hs.snoc (.mk hst)⟩).elim
+        | .halt e w => exact ⟨_, e, s, w, ⟨k, hs⟩, hst, rfl⟩
+        | .unsupported => exact (hu hst).elim
+        | .wrong => exact (hw hst).elim
+      · exact ih hk
+
+/-- A halting program does not diverge. -/
+theorem BcHalts.not_diverges {P : Prog} {out : String} {e : Nat}
+    (h : BcHalts P out e) : ¬ BcDiverges P := by
+  rintro hd
+  obtain ⟨s, w, ⟨n, hn⟩, hst, -⟩ := h
+  obtain ⟨c, hc⟩ := hd (n + 1)
+  exact hn.stop (fun x hx => by rw [hst] at hx; cases hx) hc
+
+/-- Every run has all its prefixes. -/
+theorem StepsN.prefix {P : Prog} {m : Nat} :
+    ∀ {k : Nat} {a c : St}, StepsN P (m + k) a c → ∃ b, StepsN P m a b := by
+  induction m with
+  | zero => intro k a c _; exact ⟨a, .zero _⟩
+  | succ m ih =>
+    intro k a c h
+    rw [Nat.add_right_comm] at h
+    cases h with
+    | succ s r =>
+      obtain ⟨b, hb⟩ := ih r
+      exact ⟨b, .succ s hb⟩
+
+/-- `BcSem` is deterministic. -/
+theorem BcHalts.det {P : Prog} {out out' : String} {e e' : Nat}
+    (h : BcHalts P out e) (h' : BcHalts P out' e') : out = out' ∧ e = e' := by
+  obtain ⟨s, w, ⟨n, hn⟩, hst, rfl⟩ := h
+  obtain ⟨s', w', ⟨n', hn'⟩, hst', rfl⟩ := h'
+  have key : ∀ {m m' : Nat} {x y : St} {ex ey : Nat} {wx wy : World},
+      StepsN P m P.init x → StepsN P m' P.init y → m ≤ m' →
+      step P x = .halt ex wx → step P y = .halt ey wy → x = y := by
+    intro m m' x y ex ey wx wy hx hy hle hx' _
+    rcases Nat.lt_or_eq_of_le hle with hlt | rfl
+    · exfalso
+      obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_lt hlt
+      rw [Nat.add_right_comm] at hy
+      obtain ⟨z, hz⟩ := StepsN.prefix (m := m + 1) (k := d) hy
+      exact hx.stop (fun q hq => by rw [hx'] at hq; cases hq) hz
+    · exact hx.det hy
+  rcases Nat.le_total n n' with hle | hle
+  · have := key hn hn' hle hst hst'; subst this; rw [hst] at hst'; cases hst'; exact ⟨rfl, rfl⟩
+  · have := key hn' hn hle hst' hst; subst this; rw [hst] at hst'; cases hst'; exact ⟨rfl, rfl⟩
+
+end OCaml.Bytecode

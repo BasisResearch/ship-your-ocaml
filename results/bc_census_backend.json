@@ -1,0 +1,1538 @@
+{
+ "exe": "/data/home/kirancodes/Documents/code/ship-your-ocaml/vendor/ocaml-4.14.2/boot/ocamlc",
+ "code_words": 655735,
+ "insts": 411971,
+ "distinct_opcodes": 132,
+ "opcodes": {
+  "PUSHACC": 32107,
+  "PUSHACC1": 18984,
+  "PUSHACC0": 18792,
+  "GETFIELD0": 17045,
+  "PUSHGETGLOBALFIELD": 16050,
+  "ACC0": 15110,
+  "PUSHACC2": 14248,
+  "RETURN": 11807,
+  "GETFIELD1": 11557,
+  "GETFIELD": 10967,
+  "PUSHACC3": 10595,
+  "PUSHENVACC": 10341,
+  "APPLY1": 10210,
+  "CLOSURE": 9620,
+  "APPLY2": 9301,
+  "PUSHACC4": 8992,
+  "ACC1": 8501,
+  "BRANCHIFNOT": 8057,
+  "POP": 8044,
+  "MAKEBLOCK2": 7991,
+  "PUSHENVACC2": 7571,
+  "PUSHACC5": 6937,
+  "PUSHCONST0": 6815,
+  "BRANCH": 6155,
+  "PUSH": 5750,
+  "PUSHACC6": 5735,
+  "RESTART": 5606,
+  "GRAB": 5606,
+  "GETFIELD2": 5370,
+  "MAKEBLOCK1": 5342,
+  "PUSHGETGLOBAL": 4935,
+  "CONST0": 4745,
+  "PUSHACC7": 4730,
+  "GETFIELD3": 4591,
+  "PUSHENVACC3": 4093,
+  "APPTERM2": 3831,
+  "ACC2": 3645,
+  "GETGLOBAL": 3143,
+  "PUSHOFFSETCLOSURE0": 3016,
+  "APPLY3": 2893,
+  "SWITCH": 2659,
+  "MAKEBLOCK": 2609,
+  "ACC3": 2305,
+  "APPTERM": 2233,
+  "APPTERM1": 2201,
+  "APPTERM3": 2078,
+  "PUSH_RETADDR": 1955,
+  "APPLY": 1955,
+  "ACC": 1888,
+  "C_CALL2": 1679,
+  "OFFSETINT": 1586,
+  "MAKEBLOCK3": 1575,
+  "ACC4": 1496,
+  "PUSHOFFSETCLOSURE": 1407,
+  "EQ": 1365,
+  "RAISE": 1220,
+  "BRANCHIF": 1082,
+  "ASSIGN": 1063,
+  "CLOSUREREC": 1029,
+  "GETGLOBALFIELD": 1002,
+  "SETFIELD0": 940,
+  "PUSHCONST1": 911,
+  "ACC5": 897,
+  "PUSHCONSTINT": 875,
+  "CONSTINT": 869,
+  "C_CALL1": 866,
+  "CONST1": 859,
+  "ENVACC": 840,
+  "POPTRAP": 769,
+  "PUSHTRAP": 767,
+  "RERAISE": 752,
+  "ENVACC2": 748,
+  "ACC6": 725,
+  "BNEQ": 509,
+  "ACC7": 493,
+  "PUSHOFFSETCLOSURE3": 444,
+  "ENVACC3": 432,
+  "BEQ": 376,
+  "NEQ": 346,
+  "BGTINT": 334,
+  "GTINT": 315,
+  "ADDINT": 290,
+  "PUSHOFFSETCLOSUREM3": 290,
+  "ISINT": 281,
+  "BOOLNOT": 277,
+  "ENVACC4": 277,
+  "PUSHCONST2": 252,
+  "SUBINT": 243,
+  "BLEINT": 213,
+  "C_CALL3": 196,
+  "LTINT": 180,
+  "VECTLENGTH": 180,
+  "SETGLOBAL": 165,
+  "CONST2": 158,
+  "CHECK_SIGNALS": 155,
+  "BGEINT": 111,
+  "PUSHCONST3": 108,
+  "GEINT": 102,
+  "SETFIELD": 101,
+  "BUGEINT": 87,
+  "OFFSETREF": 85,
+  "MULINT": 84,
+  "LEINT": 77,
+  "CONST3": 75,
+  "SETFIELD1": 66,
+  "BLTINT": 62,
+  "ANDINT": 58,
+  "ATOM0": 51,
+  "LSLINT": 45,
+  "SETBYTESCHAR": 44,
+  "DIVINT": 40,
+  "ORINT": 37,
+  "SETFIELD2": 36,
+  "LSRINT": 35,
+  "NEGINT": 31,
+  "C_CALL5": 30,
+  "MODINT": 27,
+  "GETBYTESCHAR": 27,
+  "ASRINT": 22,
+  "GETSTRINGCHAR": 19,
+  "C_CALL4": 18,
+  "BULTINT": 17,
+  "SETFIELD3": 12,
+  "XORINT": 10,
+  "OFFSETCLOSURE": 4,
+  "GETVECTITEM": 3,
+  "SETVECTITEM": 2,
+  "OFFSETCLOSURE0": 2,
+  "RAISE_NOTRACE": 1,
+  "OFFSETCLOSUREM3": 1,
+  "OFFSETCLOSURE3": 1,
+  "STOP": 1
+ },
+ "distinct_c_primitives": 257,
+ "c_primitives": {
+  "caml_string_notequal": 400,
+  "caml_ml_string_length": 236,
+  "caml_array_get_addr": 213,
+  "caml_string_get": 189,
+  "caml_string_equal": 140,
+  "caml_fresh_oo_id": 117,
+  "caml_ml_bytes_length": 86,
+  "caml_equal": 79,
+  "caml_make_vect": 72,
+  "caml_array_set_addr": 70,
+  "caml_array_unsafe_get": 54,
+  "caml_array_get": 47,
+  "caml_create_bytes": 43,
+  "caml_obj_tag": 39,
+  "caml_compare": 32,
+  "caml_floatarray_get": 29,
+  "caml_string_compare": 29,
+  "caml_notequal": 29,
+  "caml_bytes_get": 23,
+  "caml_bytes_set": 23,
+  "caml_array_set": 22,
+  "caml_floatarray_set": 19,
+  "caml_floatarray_unsafe_get": 19,
+  "caml_sys_file_exists": 17,
+  "caml_array_unsafe_set": 16,
+  "caml_floatarray_create": 16,
+  "caml_int64_of_int": 16,
+  "caml_int_of_string": 15,
+  "caml_sys_getenv": 15,
+  "caml_float_of_string": 14,
+  "caml_lessequal": 14,
+  "caml_int_compare": 14,
+  "caml_lessthan": 14,
+  "caml_sys_argv": 13,
+  "caml_float_of_int": 13,
+  "caml_signbit_float": 12,
+  "caml_int64_sub": 12,
+  "caml_blit_bytes": 11,
+  "caml_bytes_set16": 11,
+  "caml_blit_string": 10,
+  "caml_bytes_get16": 10,
+  "caml_bswap16": 10,
+  "caml_ensure_stack_capacity": 10,
+  "caml_ml_flush": 9,
+  "caml_greaterequal": 9,
+  "caml_int64_add": 9,
+  "caml_add_float": 9,
+  "caml_ml_output_char": 8,
+  "caml_string_of_bytes": 8,
+  "caml_floatarray_unsafe_set": 8,
+  "caml_eq_float": 8,
+  "caml_div_float": 8,
+  "caml_int32_sub": 8,
+  "caml_int32_of_int": 8,
+  "caml_int64_shift_left": 8,
+  "caml_sub_float": 7,
+  "caml_format_int": 6,
+  "caml_int64_float_of_bits": 6,
+  "caml_bytes_set32": 6,
+  "caml_bytes_set64": 6,
+  "caml_int64_bswap": 6,
+  "caml_int32_bswap": 6,
+  "caml_floatarray_blit": 6,
+  "caml_hash": 6,
+  "caml_gt_float": 6,
+  "caml_nativeint_sub": 6,
+  "caml_restore_raw_backtrace": 6,
+  "caml_mul_float": 6,
+  "caml_bytes_get32": 5,
+  "caml_bytes_get64": 5,
+  "caml_int32_to_int": 5,
+  "caml_int64_shift_right_unsigned": 5,
+  "caml_int64_or": 5,
+  "caml_ml_input": 4,
+  "caml_ml_close_channel": 4,
+  "caml_nativeint_to_int": 4,
+  "caml_float_compare": 4,
+  "caml_int32_shift_right_unsigned": 4,
+  "caml_int32_shift_left": 4,
+  "caml_int32_of_string": 4,
+  "caml_int64_of_string": 4,
+  "caml_int64_neg": 4,
+  "caml_lt_float": 4,
+  "caml_get_exception_raw_backtrace": 4,
+  "caml_obj_dup": 4,
+  "caml_greaterthan": 4,
+  "caml_int64_of_int32": 4,
+  "caml_sys_getcwd": 4,
+  "caml_get_global_data": 4,
+  "caml_ml_input_char": 3,
+  "caml_sys_open": 3,
+  "caml_ml_open_descriptor_out": 3,
+  "caml_format_float": 3,
+  "caml_register_named_value": 3,
+  "caml_nativeint_shift_left": 3,
+  "caml_array_sub": 3,
+  "caml_neq_float": 3,
+  "caml_int32_mul": 3,
+  "caml_int32_compare": 3,
+  "caml_int32_neg": 3,
+  "caml_int32_add": 3,
+  "caml_int64_mul": 3,
+  "caml_int64_compare": 3,
+  "caml_int64_to_int": 3,
+  "caml_nativeint_compare": 3,
+  "caml_nativeint_of_string": 3,
+  "caml_final_register": 3,
+  "caml_int32_or": 3,
+  "caml_ml_channel_size": 2,
+  "caml_ml_set_binary_mode": 2,
+  "caml_input_value": 2,
+  "caml_ml_channel_size_64": 2,
+  "caml_ml_open_descriptor_in": 2,
+  "caml_ml_set_channel_name": 2,
+  "caml_output_value": 2,
+  "caml_ml_output": 2,
+  "caml_ml_output_bytes": 2,
+  "caml_nativeint_shift_right": 2,
+  "caml_nativeint_shift_right_unsigned": 2,
+  "caml_obj_make_forward": 2,
+  "caml_obj_block": 2,
+  "caml_bytes_of_string": 2,
+  "caml_fill_bytes": 2,
+  "caml_marshal_data_size": 2,
+  "caml_nextafter_float": 2,
+  "caml_int32_div": 2,
+  "caml_int32_format": 2,
+  "caml_int32_xor": 2,
+  "caml_int64_div": 2,
+  "caml_int64_format": 2,
+  "caml_int64_xor": 2,
+  "caml_nativeint_mul": 2,
+  "caml_nativeint_format": 2,
+  "caml_nativeint_neg": 2,
+  "caml_classify_float": 2,
+  "caml_md5_string": 2,
+  "caml_sys_random_seed": 2,
+  "caml_int32_mod": 2,
+  "caml_int64_mod": 2,
+  "caml_int64_to_nativeint": 2,
+  "caml_nativeint_of_int32": 2,
+  "caml_sys_isatty": 2,
+  "caml_sys_remove": 2,
+  "caml_power_float": 2,
+  "caml_sys_read_directory": 2,
+  "caml_sys_system_command": 2,
+  "caml_int64_and": 2,
+  "caml_int64_to_int32": 2,
+  "caml_string_lessthan": 2,
+  "caml_output_value_to_string": 2,
+  "caml_ml_output_int": 1,
+  "caml_ml_seek_out": 1,
+  "caml_ml_pos_out": 1,
+  "caml_ml_input_int": 1,
+  "caml_ml_seek_in": 1,
+  "caml_ml_pos_in": 1,
+  "caml_ml_seek_out_64": 1,
+  "caml_ml_pos_out_64": 1,
+  "caml_ml_seek_in_64": 1,
+  "caml_ml_pos_in_64": 1,
+  "caml_gc_major": 1,
+  "caml_sys_exit": 1,
+  "caml_ml_input_scan_line": 1,
+  "caml_ml_out_channels_list": 1,
+  "caml_sys_const_naked_pointers_checked": 1,
+  "caml_ml_enable_runtime_warnings": 1,
+  "caml_ml_runtime_warnings_enabled": 1,
+  "caml_install_signal_handler": 1,
+  "caml_sys_executable_name": 1,
+  "caml_sys_get_config": 1,
+  "caml_sys_const_backend_type": 1,
+  "caml_sys_const_big_endian": 1,
+  "caml_sys_const_word_size": 1,
+  "caml_sys_const_int_size": 1,
+  "caml_sys_const_ostype_unix": 1,
+  "caml_sys_const_ostype_win32": 1,
+  "caml_sys_const_ostype_cygwin": 1,
+  "caml_sys_const_max_wosize": 1,
+  "caml_ephe_get_data": 1,
+  "caml_ephe_get_data_copy": 1,
+  "caml_ephe_set_data": 1,
+  "caml_ephe_unset_data": 1,
+  "caml_ephe_check_data": 1,
+  "caml_ephe_blit_data": 1,
+  "caml_ephe_blit_key": 1,
+  "caml_ephe_check_key": 1,
+  "caml_ephe_unset_key": 1,
+  "caml_ephe_set_key": 1,
+  "caml_ephe_get_key_copy": 1,
+  "caml_ephe_get_key": 1,
+  "caml_ephe_create": 1,
+  "caml_obj_raw_field": 1,
+  "caml_lazy_make_forward": 1,
+  "caml_bytes_equal": 1,
+  "caml_bytes_compare": 1,
+  "caml_string_get16": 1,
+  "caml_string_get32": 1,
+  "caml_string_get64": 1,
+  "caml_input_value_from_bytes": 1,
+  "caml_output_value_to_buffer": 1,
+  "caml_array_concat": 1,
+  "caml_array_blit": 1,
+  "caml_array_fill": 1,
+  "caml_array_append": 1,
+  "caml_make_float_vect": 1,
+  "caml_trunc_float": 1,
+  "caml_nativeint_div": 1,
+  "caml_nativeint_xor": 1,
+  "caml_nativeint_add": 1,
+  "caml_nativeint_of_int": 1,
+  "caml_new_lex_engine": 1,
+  "caml_lex_engine": 1,
+  "caml_set_parser_trace": 1,
+  "caml_parse_engine": 1,
+  "caml_hexstring_of_float": 1,
+  "caml_record_backtrace": 1,
+  "caml_backtrace_status": 1,
+  "caml_raw_backtrace_slot": 1,
+  "caml_convert_raw_backtrace_slot": 1,
+  "caml_raw_backtrace_next_slot": 1,
+  "caml_ml_debug_info_status": 1,
+  "caml_convert_raw_backtrace": 1,
+  "caml_final_register_called_without_value": 1,
+  "caml_final_release": 1,
+  "caml_memprof_stop": 1,
+  "caml_memprof_start": 1,
+  "caml_gc_counters": 1,
+  "caml_gc_stat": 1,
+  "caml_md5_chan": 1,
+  "caml_int64_of_nativeint": 1,
+  "caml_nativeint_to_int32": 1,
+  "caml_sys_close": 1,
+  "caml_sys_rename": 1,
+  "caml_int_of_float": 1,
+  "caml_floor_float": 1,
+  "caml_gc_quick_stat": 1,
+  "caml_sys_time_include_children": 1,
+  "caml_terminfo_rows": 1,
+  "caml_int32_and": 1,
+  "caml_int32_shift_right": 1,
+  "caml_int32_of_float": 1,
+  "caml_int32_to_float": 1,
+  "caml_int64_shift_right": 1,
+  "caml_int64_of_float": 1,
+  "caml_int64_to_float": 1,
+  "caml_string_lessequal": 1,
+  "caml_alloc_dummy": 1,
+  "caml_update_dummy": 1,
+  "caml_ge_float": 1,
+  "caml_dynlink_get_current_libs": 1,
+  "caml_dynlink_add_primitive": 1,
+  "caml_dynlink_lookup_symbol": 1,
+  "caml_dynlink_open_lib": 1,
+  "caml_dynlink_close_lib": 1,
+  "caml_get_section_table": 1,
+  "caml_realloc_global": 1,
+  "caml_sys_mkdir": 1
+ },
+ "units": 165,
+ "unit_sizes": [
+  {
+   "unit": "CamlinternalFormatBasics",
+   "pc": 0,
+   "insts": 563,
+   "words": 757
+  },
+  {
+   "unit": "CamlinternalAtomic",
+   "pc": 757,
+   "insts": 87,
+   "words": 128
+  },
+  {
+   "unit": "Stdlib",
+   "pc": 885,
+   "insts": 1172,
+   "words": 1913
+  },
+  {
+   "unit": "Stdlib__Sys",
+   "pc": 2798,
+   "insts": 194,
+   "words": 339
+  },
+  {
+   "unit": "Stdlib__Obj",
+   "pc": 3137,
+   "insts": 412,
+   "words": 661
+  },
+  {
+   "unit": "CamlinternalLazy",
+   "pc": 3798,
+   "insts": 109,
+   "words": 163
+  },
+  {
+   "unit": "Stdlib__Lazy",
+   "pc": 3961,
+   "insts": 138,
+   "words": 229
+  },
+  {
+   "unit": "Stdlib__Seq",
+   "pc": 4190,
+   "insts": 1810,
+   "words": 2562
+  },
+  {
+   "unit": "Stdlib__Option",
+   "pc": 6752,
+   "insts": 213,
+   "words": 331
+  },
+  {
+   "unit": "Stdlib__Result",
+   "pc": 7083,
+   "insts": 275,
+   "words": 465
+  },
+  {
+   "unit": "Stdlib__Char",
+   "pc": 7548,
+   "insts": 191,
+   "words": 332
+  },
+  {
+   "unit": "Stdlib__Uchar",
+   "pc": 7880,
+   "insts": 285,
+   "words": 475
+  },
+  {
+   "unit": "Stdlib__List",
+   "pc": 8355,
+   "insts": 2711,
+   "words": 3920
+  },
+  {
+   "unit": "Stdlib__Int",
+   "pc": 12275,
+   "insts": 86,
+   "words": 138
+  },
+  {
+   "unit": "Stdlib__Bytes",
+   "pc": 12413,
+   "insts": 3677,
+   "words": 5556
+  },
+  {
+   "unit": "Stdlib__String",
+   "pc": 17969,
+   "insts": 1223,
+   "words": 1954
+  },
+  {
+   "unit": "Stdlib__Marshal",
+   "pc": 19923,
+   "insts": 127,
+   "words": 201
+  },
+  {
+   "unit": "Stdlib__Array",
+   "pc": 20124,
+   "insts": 1823,
+   "words": 2632
+  },
+  {
+   "unit": "Stdlib__Float",
+   "pc": 22756,
+   "insts": 2058,
+   "words": 3088
+  },
+  {
+   "unit": "Stdlib__Int32",
+   "pc": 25844,
+   "insts": 238,
+   "words": 398
+  },
+  {
+   "unit": "Stdlib__Int64",
+   "pc": 26242,
+   "insts": 213,
+   "words": 353
+  },
+  {
+   "unit": "Stdlib__Nativeint",
+   "pc": 26595,
+   "insts": 220,
+   "words": 366
+  },
+  {
+   "unit": "Stdlib__Lexing",
+   "pc": 26961,
+   "insts": 593,
+   "words": 881
+  },
+  {
+   "unit": "Stdlib__Parsing",
+   "pc": 27842,
+   "insts": 469,
+   "words": 742
+  },
+  {
+   "unit": "Stdlib__Set",
+   "pc": 28584,
+   "insts": 2451,
+   "words": 3429
+  },
+  {
+   "unit": "Stdlib__Map",
+   "pc": 32013,
+   "insts": 2376,
+   "words": 3383
+  },
+  {
+   "unit": "Stdlib__Stack",
+   "pc": 35396,
+   "insts": 197,
+   "words": 293
+  },
+  {
+   "unit": "Stdlib__Queue",
+   "pc": 35689,
+   "insts": 394,
+   "words": 541
+  },
+  {
+   "unit": "Stdlib__Buffer",
+   "pc": 36230,
+   "insts": 1235,
+   "words": 1822
+  },
+  {
+   "unit": "CamlinternalFormat",
+   "pc": 38052,
+   "insts": 11562,
+   "words": 18736
+  },
+  {
+   "unit": "Stdlib__Printf",
+   "pc": 56788,
+   "insts": 168,
+   "words": 272
+  },
+  {
+   "unit": "Stdlib__Arg",
+   "pc": 57060,
+   "insts": 1603,
+   "words": 2511
+  },
+  {
+   "unit": "Stdlib__Atomic",
+   "pc": 59571,
+   "insts": 29,
+   "words": 42
+  },
+  {
+   "unit": "Stdlib__Printexc",
+   "pc": 59613,
+   "insts": 897,
+   "words": 1434
+  },
+  {
+   "unit": "Stdlib__Fun",
+   "pc": 61047,
+   "insts": 106,
+   "words": 157
+  },
+  {
+   "unit": "Stdlib__Gc",
+   "pc": 61204,
+   "insts": 278,
+   "words": 469
+  },
+  {
+   "unit": "Stdlib__Digest",
+   "pc": 61673,
+   "insts": 262,
+   "words": 423
+  },
+  {
+   "unit": "Stdlib__Random",
+   "pc": 62096,
+   "insts": 809,
+   "words": 1264
+  },
+  {
+   "unit": "Stdlib__Hashtbl",
+   "pc": 63360,
+   "insts": 2186,
+   "words": 3153
+  },
+  {
+   "unit": "Stdlib__Format",
+   "pc": 66513,
+   "insts": 4046,
+   "words": 6354
+  },
+  {
+   "unit": "Stdlib__Scanf",
+   "pc": 72867,
+   "insts": 4519,
+   "words": 7020
+  },
+  {
+   "unit": "Stdlib__Filename",
+   "pc": 79887,
+   "insts": 1468,
+   "words": 2392
+  },
+  {
+   "unit": "Stdlib__StringLabels",
+   "pc": 82279,
+   "insts": 211,
+   "words": 406
+  },
+  {
+   "unit": "Config",
+   "pc": 82685,
+   "insts": 688,
+   "words": 1168
+  },
+  {
+   "unit": "Build_path_prefix_map",
+   "pc": 83853,
+   "insts": 411,
+   "words": 667
+  },
+  {
+   "unit": "Misc",
+   "pc": 84520,
+   "insts": 4346,
+   "words": 7024
+  },
+  {
+   "unit": "Identifiable",
+   "pc": 91544,
+   "insts": 1320,
+   "words": 2182
+  },
+  {
+   "unit": "Numbers",
+   "pc": 93726,
+   "insts": 275,
+   "words": 444
+  },
+  {
+   "unit": "Arg_helper",
+   "pc": 94170,
+   "insts": 415,
+   "words": 597
+  },
+  {
+   "unit": "Clflags",
+   "pc": 94767,
+   "insts": 1738,
+   "words": 2889
+  },
+  {
+   "unit": "Profile",
+   "pc": 97656,
+   "insts": 1065,
+   "words": 1597
+  },
+  {
+   "unit": "Local_store",
+   "pc": 99253,
+   "insts": 207,
+   "words": 298
+  },
+  {
+   "unit": "Load_path",
+   "pc": 99551,
+   "insts": 445,
+   "words": 722
+  },
+  {
+   "unit": "Terminfo",
+   "pc": 100273,
+   "insts": 93,
+   "words": 159
+  },
+  {
+   "unit": "Ccomp",
+   "pc": 100432,
+   "insts": 623,
+   "words": 1112
+  },
+  {
+   "unit": "Warnings",
+   "pc": 101544,
+   "insts": 2465,
+   "words": 4179
+  },
+  {
+   "unit": "Consistbl",
+   "pc": 105723,
+   "insts": 325,
+   "words": 487
+  },
+  {
+   "unit": "Strongly_connected_components",
+   "pc": 106210,
+   "insts": 555,
+   "words": 826
+  },
+  {
+   "unit": "Targetint",
+   "pc": 107036,
+   "insts": 695,
+   "words": 1228
+  },
+  {
+   "unit": "Int_replace_polymorphic_compare",
+   "pc": 108264,
+   "insts": 67,
+   "words": 104
+  },
+  {
+   "unit": "Domainstate",
+   "pc": 108368,
+   "insts": 330,
+   "words": 597
+  },
+  {
+   "unit": "Binutils",
+   "pc": 108965,
+   "insts": 2111,
+   "words": 3236
+  },
+  {
+   "unit": "Lazy_backtrack",
+   "pc": 112201,
+   "insts": 183,
+   "words": 274
+  },
+  {
+   "unit": "Diffing",
+   "pc": 112475,
+   "insts": 1511,
+   "words": 2209
+  },
+  {
+   "unit": "Diffing_with_keys",
+   "pc": 114684,
+   "insts": 764,
+   "words": 1118
+  },
+  {
+   "unit": "Location",
+   "pc": 115802,
+   "insts": 2827,
+   "words": 4333
+  },
+  {
+   "unit": "Longident",
+   "pc": 120135,
+   "insts": 138,
+   "words": 218
+  },
+  {
+   "unit": "Docstrings",
+   "pc": 120353,
+   "insts": 1172,
+   "words": 1904
+  },
+  {
+   "unit": "Syntaxerr",
+   "pc": 122257,
+   "insts": 33,
+   "words": 52
+  },
+  {
+   "unit": "Ast_helper",
+   "pc": 122309,
+   "insts": 4015,
+   "words": 6286
+  },
+  {
+   "unit": "Pprintast",
+   "pc": 128595,
+   "insts": 8664,
+   "words": 14430
+  },
+  {
+   "unit": "CamlinternalMenhirLib",
+   "pc": 143025,
+   "insts": 4719,
+   "words": 7135
+  },
+  {
+   "unit": "Parser",
+   "pc": 150160,
+   "insts": 51897,
+   "words": 74511
+  },
+  {
+   "unit": "Lexer",
+   "pc": 224671,
+   "insts": 2867,
+   "words": 4765
+  },
+  {
+   "unit": "Parse",
+   "pc": 229436,
+   "insts": 362,
+   "words": 617
+  },
+  {
+   "unit": "Printast",
+   "pc": 230053,
+   "insts": 4811,
+   "words": 7190
+  },
+  {
+   "unit": "Ast_mapper",
+   "pc": 237243,
+   "insts": 6016,
+   "words": 9642
+  },
+  {
+   "unit": "Ast_iterator",
+   "pc": 246885,
+   "insts": 2991,
+   "words": 4079
+  },
+  {
+   "unit": "Attr_helper",
+   "pc": 250964,
+   "insts": 142,
+   "words": 213
+  },
+  {
+   "unit": "Builtin_attributes",
+   "pc": 251177,
+   "insts": 1188,
+   "words": 2297
+  },
+  {
+   "unit": "Ast_invariants",
+   "pc": 253474,
+   "insts": 714,
+   "words": 1344
+  },
+  {
+   "unit": "Depend",
+   "pc": 254818,
+   "insts": 2812,
+   "words": 4088
+  },
+  {
+   "unit": "Ident",
+   "pc": 258906,
+   "insts": 1316,
+   "words": 2022
+  },
+  {
+   "unit": "Path",
+   "pc": 260928,
+   "insts": 539,
+   "words": 863
+  },
+  {
+   "unit": "Primitive",
+   "pc": 261791,
+   "insts": 726,
+   "words": 1139
+  },
+  {
+   "unit": "Type_immediacy",
+   "pc": 262930,
+   "insts": 48,
+   "words": 88
+  },
+  {
+   "unit": "Shape",
+   "pc": 263018,
+   "insts": 1655,
+   "words": 2613
+  },
+  {
+   "unit": "Types",
+   "pc": 265631,
+   "insts": 2009,
+   "words": 3151
+  },
+  {
+   "unit": "Btype",
+   "pc": 268782,
+   "insts": 3164,
+   "words": 5166
+  },
+  {
+   "unit": "Oprint",
+   "pc": 273948,
+   "insts": 3280,
+   "words": 5476
+  },
+  {
+   "unit": "Subst",
+   "pc": 279424,
+   "insts": 3033,
+   "words": 4627
+  },
+  {
+   "unit": "Predef",
+   "pc": 284051,
+   "insts": 959,
+   "words": 1563
+  },
+  {
+   "unit": "Datarepr",
+   "pc": 285614,
+   "insts": 698,
+   "words": 1118
+  },
+  {
+   "unit": "Cmi_format",
+   "pc": 286732,
+   "insts": 231,
+   "words": 371
+  },
+  {
+   "unit": "Persistent_env",
+   "pc": 287103,
+   "insts": 1089,
+   "words": 1710
+  },
+  {
+   "unit": "Env",
+   "pc": 288813,
+   "insts": 13742,
+   "words": 21766
+  },
+  {
+   "unit": "Errortrace",
+   "pc": 310579,
+   "insts": 368,
+   "words": 588
+  },
+  {
+   "unit": "Typedtree",
+   "pc": 311167,
+   "insts": 786,
+   "words": 1185
+  },
+  {
+   "unit": "Signature_group",
+   "pc": 312352,
+   "insts": 557,
+   "words": 840
+  },
+  {
+   "unit": "Printtyped",
+   "pc": 313192,
+   "insts": 4647,
+   "words": 7015
+  },
+  {
+   "unit": "Ctype",
+   "pc": 320207,
+   "insts": 23029,
+   "words": 38438
+  },
+  {
+   "unit": "Printtyp",
+   "pc": 358645,
+   "insts": 9487,
+   "words": 15131
+  },
+  {
+   "unit": "Includeclass",
+   "pc": 373776,
+   "insts": 313,
+   "words": 528
+  },
+  {
+   "unit": "Mtype",
+   "pc": 374304,
+   "insts": 2380,
+   "words": 3697
+  },
+  {
+   "unit": "Envaux",
+   "pc": 378001,
+   "insts": 432,
+   "words": 659
+  },
+  {
+   "unit": "Includecore",
+   "pc": 378660,
+   "insts": 3283,
+   "words": 5402
+  },
+  {
+   "unit": "Tast_iterator",
+   "pc": 384062,
+   "insts": 2194,
+   "words": 3210
+  },
+  {
+   "unit": "Tast_mapper",
+   "pc": 387272,
+   "insts": 3292,
+   "words": 4781
+  },
+  {
+   "unit": "Stypes",
+   "pc": 392053,
+   "insts": 581,
+   "words": 883
+  },
+  {
+   "unit": "Cmt_format",
+   "pc": 392936,
+   "insts": 559,
+   "words": 912
+  },
+  {
+   "unit": "Cmt2annot",
+   "pc": 393848,
+   "insts": 737,
+   "words": 1213
+  },
+  {
+   "unit": "Untypeast",
+   "pc": 395061,
+   "insts": 4424,
+   "words": 6699
+  },
+  {
+   "unit": "Includemod",
+   "pc": 401760,
+   "insts": 4045,
+   "words": 6448
+  },
+  {
+   "unit": "Includemod_errorprinter",
+   "pc": 408208,
+   "insts": 3252,
+   "words": 5173
+  },
+  {
+   "unit": "Typetexp",
+   "pc": 413381,
+   "insts": 3520,
+   "words": 5749
+  },
+  {
+   "unit": "Printpat",
+   "pc": 419130,
+   "insts": 716,
+   "words": 1216
+  },
+  {
+   "unit": "Patterns",
+   "pc": 420346,
+   "insts": 769,
+   "words": 1150
+  },
+  {
+   "unit": "Parmatch",
+   "pc": 421496,
+   "insts": 7768,
+   "words": 12899
+  },
+  {
+   "unit": "Typedecl_properties",
+   "pc": 434395,
+   "insts": 174,
+   "words": 260
+  },
+  {
+   "unit": "Typedecl_variance",
+   "pc": 434655,
+   "insts": 1898,
+   "words": 3042
+  },
+  {
+   "unit": "Typedecl_unboxed",
+   "pc": 437697,
+   "insts": 188,
+   "words": 323
+  },
+  {
+   "unit": "Typedecl_immediacy",
+   "pc": 438020,
+   "insts": 256,
+   "words": 408
+  },
+  {
+   "unit": "Typedecl_separability",
+   "pc": 438428,
+   "insts": 1206,
+   "words": 1953
+  },
+  {
+   "unit": "Typedecl",
+   "pc": 440381,
+   "insts": 6713,
+   "words": 10984
+  },
+  {
+   "unit": "Typeopt",
+   "pc": 451365,
+   "insts": 658,
+   "words": 1241
+  },
+  {
+   "unit": "Rec_check",
+   "pc": 452606,
+   "insts": 2398,
+   "words": 3723
+  },
+  {
+   "unit": "Typecore",
+   "pc": 456329,
+   "insts": 22393,
+   "words": 37440
+  },
+  {
+   "unit": "Typeclass",
+   "pc": 493769,
+   "insts": 7167,
+   "words": 11616
+  },
+  {
+   "unit": "Typemod",
+   "pc": 505385,
+   "insts": 12069,
+   "words": 18949
+  },
+  {
+   "unit": "Debuginfo",
+   "pc": 524334,
+   "insts": 650,
+   "words": 1015
+  },
+  {
+   "unit": "Lambda",
+   "pc": 525349,
+   "insts": 3342,
+   "words": 5191
+  },
+  {
+   "unit": "Printlambda",
+   "pc": 530540,
+   "insts": 2687,
+   "words": 4890
+  },
+  {
+   "unit": "Switch",
+   "pc": 535430,
+   "insts": 3131,
+   "words": 4548
+  },
+  {
+   "unit": "Matching",
+   "pc": 539978,
+   "insts": 12175,
+   "words": 19503
+  },
+  {
+   "unit": "Translobj",
+   "pc": 559481,
+   "insts": 644,
+   "words": 1130
+  },
+  {
+   "unit": "Translattribute",
+   "pc": 560611,
+   "insts": 1578,
+   "words": 2699
+  },
+  {
+   "unit": "Translprim",
+   "pc": 563310,
+   "insts": 2558,
+   "words": 4671
+  },
+  {
+   "unit": "Translcore",
+   "pc": 567981,
+   "insts": 4741,
+   "words": 7884
+  },
+  {
+   "unit": "Translclass",
+   "pc": 575865,
+   "insts": 4610,
+   "words": 8072
+  },
+  {
+   "unit": "Translmod",
+   "pc": 583937,
+   "insts": 6300,
+   "words": 10294
+  },
+  {
+   "unit": "Tmc",
+   "pc": 594231,
+   "insts": 2291,
+   "words": 3580
+  },
+  {
+   "unit": "Simplif",
+   "pc": 597811,
+   "insts": 4293,
+   "words": 7018
+  },
+  {
+   "unit": "Runtimedef",
+   "pc": 604829,
+   "insts": 10,
+   "words": 17
+  },
+  {
+   "unit": "Meta",
+   "pc": 604846,
+   "insts": 2,
+   "words": 3
+  },
+  {
+   "unit": "Opcodes",
+   "pc": 604849,
+   "insts": 304,
+   "words": 600
+  },
+  {
+   "unit": "Bytesections",
+   "pc": 605449,
+   "insts": 287,
+   "words": 434
+  },
+  {
+   "unit": "Dll",
+   "pc": 605883,
+   "insts": 496,
+   "words": 794
+  },
+  {
+   "unit": "Symtable",
+   "pc": 606677,
+   "insts": 1399,
+   "words": 2222
+  },
+  {
+   "unit": "Pparse",
+   "pc": 608899,
+   "insts": 683,
+   "words": 1099
+  },
+  {
+   "unit": "Compenv",
+   "pc": 609998,
+   "insts": 2829,
+   "words": 4995
+  },
+  {
+   "unit": "Main_args",
+   "pc": 614993,
+   "insts": 8114,
+   "words": 14587
+  },
+  {
+   "unit": "Compmisc",
+   "pc": 629580,
+   "insts": 292,
+   "words": 496
+  },
+  {
+   "unit": "Makedepend",
+   "pc": 630076,
+   "insts": 2420,
+   "words": 4059
+  },
+  {
+   "unit": "Compile_common",
+   "pc": 634135,
+   "insts": 405,
+   "words": 691
+  },
+  {
+   "unit": "Instruct",
+   "pc": 634826,
+   "insts": 8,
+   "words": 13
+  },
+  {
+   "unit": "Bytegen",
+   "pc": 634839,
+   "insts": 4687,
+   "words": 9159
+  },
+  {
+   "unit": "Printinstr",
+   "pc": 643998,
+   "insts": 503,
+   "words": 988
+  },
+  {
+   "unit": "Emitcode",
+   "pc": 644986,
+   "insts": 2003,
+   "words": 3885
+  },
+  {
+   "unit": "Bytelink",
+   "pc": 648871,
+   "insts": 2249,
+   "words": 3761
+  },
+  {
+   "unit": "Bytelibrarian",
+   "pc": 652632,
+   "insts": 384,
+   "words": 628
+  },
+  {
+   "unit": "Bytepackager",
+   "pc": 653260,
+   "insts": 959,
+   "words": 1594
+  },
+  {
+   "unit": "Compile",
+   "pc": 654854,
+   "insts": 188,
+   "words": 312
+  },
+  {
+   "unit": "Maindriver",
+   "pc": 655166,
+   "insts": 300,
+   "words": 540
+  },
+  {
+   "unit": "Main",
+   "pc": 655706,
+   "insts": 11,
+   "words": 20
+  },
+  {
+   "unit": "Std_exit",
+   "pc": 655726,
+   "insts": 5,
+   "words": 8
+  }
+ ],
+ "selected": {
+  "Lambda": {
+   "unit": "Lambda",
+   "pc": 525349,
+   "insts": 3342,
+   "words": 5191
+  },
+  "Matching": {
+   "unit": "Matching",
+   "pc": 539978,
+   "insts": 12175,
+   "words": 19503
+  },
+  "Switch": {
+   "unit": "Switch",
+   "pc": 535430,
+   "insts": 3131,
+   "words": 4548
+  },
+  "Translattribute": {
+   "unit": "Translattribute",
+   "pc": 560611,
+   "insts": 1578,
+   "words": 2699
+  },
+  "Translprim": {
+   "unit": "Translprim",
+   "pc": 563310,
+   "insts": 2558,
+   "words": 4671
+  },
+  "Translobj": {
+   "unit": "Translobj",
+   "pc": 559481,
+   "insts": 644,
+   "words": 1130
+  },
+  "Translcore": {
+   "unit": "Translcore",
+   "pc": 567981,
+   "insts": 4741,
+   "words": 7884
+  },
+  "Translclass": {
+   "unit": "Translclass",
+   "pc": 575865,
+   "insts": 4610,
+   "words": 8072
+  },
+  "Translmod": {
+   "unit": "Translmod",
+   "pc": 583937,
+   "insts": 6300,
+   "words": 10294
+  },
+  "Tmc": {
+   "unit": "Tmc",
+   "pc": 594231,
+   "insts": 2291,
+   "words": 3580
+  },
+  "Simplif": {
+   "unit": "Simplif",
+   "pc": 597811,
+   "insts": 4293,
+   "words": 7018
+  },
+  "Instruct": {
+   "unit": "Instruct",
+   "pc": 634826,
+   "insts": 8,
+   "words": 13
+  },
+  "Bytegen": {
+   "unit": "Bytegen",
+   "pc": 634839,
+   "insts": 4687,
+   "words": 9159
+  },
+  "Emitcode": {
+   "unit": "Emitcode",
+   "pc": 644986,
+   "insts": 2003,
+   "words": 3885
+  },
+  "Printinstr": {
+   "unit": "Printinstr",
+   "pc": 643998,
+   "insts": 503,
+   "words": 988
+  },
+  "Bytelink": {
+   "unit": "Bytelink",
+   "pc": 648871,
+   "insts": 2249,
+   "words": 3761
+  },
+  "Bytepackager": {
+   "unit": "Bytepackager",
+   "pc": 653260,
+   "insts": 959,
+   "words": 1594
+  },
+  "Bytelibrarian": {
+   "unit": "Bytelibrarian",
+   "pc": 652632,
+   "insts": 384,
+   "words": 628
+  },
+  "Symtable": {
+   "unit": "Symtable",
+   "pc": 606677,
+   "insts": 1399,
+   "words": 2222
+  },
+  "Dll": {
+   "unit": "Dll",
+   "pc": 605883,
+   "insts": 496,
+   "words": 794
+  }
+ },
+ "selected_distinct_opcodes": {
+  "Lambda": 87,
+  "Matching": 100,
+  "Switch": 102,
+  "Translattribute": 73,
+  "Translprim": 89,
+  "Translobj": 68,
+  "Translcore": 93,
+  "Translclass": 87,
+  "Translmod": 92,
+  "Tmc": 83,
+  "Simplif": 93,
+  "Instruct": 8,
+  "Bytegen": 99,
+  "Emitcode": 93,
+  "Printinstr": 38,
+  "Bytelink": 84,
+  "Bytepackager": 76,
+  "Bytelibrarian": 68,
+  "Symtable": 81,
+  "Dll": 64
+ },
+ "selected_insts": 58351
+}

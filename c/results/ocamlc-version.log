@@ -1,0 +1,39 @@
+{
+ "elf": "build/ocamlc-version.elf",
+ "exit": 0,
+ "fuel_out": false,
+ "steps": 53831034,
+ "output": "4.14.2\n",
+ "cut_point_step": 48242926,
+ "first_minor_gc_step": 48242211,
+ "first_minor_gc_after_cut": null,
+ "minor_gcs": 1,
+ "major_slices": 0,
+ "minor_gcs_after_cut": 0,
+ "first": {
+  "caml_main": 49168,
+  "caml_init_gc": 53865,
+  "caml_interprete": 121618,
+  "caml_load_code": 121959,
+  "caml_build_primitive_table": 37031295,
+  "caml_input_val": 41101595,
+  "caml_oldify_mopup": 48242211,
+  "caml_raise": 48424359,
+  "caml_do_exit": 53830961,
+  "_exit": 53831029,
+  "_exit.sd": 53831033
+ },
+ "counts": {
+  "caml_main": 1,
+  "caml_init_gc": 1,
+  "caml_interprete": 2,
+  "caml_load_code": 1,
+  "caml_build_primitive_table": 1,
+  "caml_input_val": 1,
+  "caml_oldify_mopup": 1,
+  "caml_raise": 6,
+  "caml_do_exit": 1,
+  "_exit": 1,
+  "_exit.sd": 1
+ }
+}

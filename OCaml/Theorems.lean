@@ -1,0 +1,62 @@
+import OCaml.EndToEnd
+import OCaml.Logic.BcModel
+
+/-!
+# The headline statements, by name
+
+Each is a `Prop` (never an axiom or `sorry`); PHASES.md is the ledger of who
+proves what, when. What IS proved about them is listed after the
+statements.
+-/
+
+namespace OCaml
+
+open OCaml.Bytecode
+
+/-- **Layer A.** The bare-metal `ocamlrun` refines `BcSem`
+(`OCaml/Refinement.lean`: `OcamlrunRefinement`). -/
+def ocamlrun_refinement_Statement (L : Layout) (B : Budget) : Prop := OcamlrunRefinement L B
+
+/-- **Layer B′.** Adequacy of the machine-level program logic over `BcSem`
+(`OCaml/Logic/BcModel.lean`). PROVED: `bytecode_logic_adequacy`. -/
+def bytecode_logic_adequacy_Statement : Prop := Logic.BytecodeLogicAdequacy
+
+theorem bytecode_logic_adequacy : bytecode_logic_adequacy_Statement := Logic.bytecodeLogicAdequacy
+
+/-- **Layer C.** The back half of `ocamlc` is correct at the source level
+(`OCaml/EndToEnd.lean`: `BackendCorrect`). -/
+def ocamlc_backend_correct_Statement (S : SourceSem) (ocamlc : S.Program)
+    (parse : List UInt8 → Option S.Program) (load : Loader) : Prop :=
+  BackendCorrect S ocamlc parse load
+
+/-- **The bootstrap fixpoint.** Under the source semantics, the compiler
+compiles its own sources to exactly the bytes of `boot/ocamlc`
+(`SelfCompiles`). -/
+def boot_ocamlc_fixpoint_Statement (S : SourceSem) (ocamlc : S.Program) (bs : Bootstrap)
+    (boot : List UInt8) : Prop :=
+  SelfCompiles S ocamlc bs boot
+
+/-- **End to end** (`EndToEnd`). -/
+def endToEnd_ocaml_Statement (S : SourceSem) (parse : List UInt8 → Option S.Program)
+    (load : Loader) (boot : List UInt8) (L : Layout) (B : Budget) : Prop :=
+  EndToEnd S parse load boot L B
+
+/-- **The composition is proved**: Layer A, Layer C (for user programs and
+for the compiler's own build) and the fixpoint give the end-to-end
+statement (`endToEnd_ocaml`). -/
+theorem endToEnd_of_layers {S : SourceSem} {ocamlc : S.Program}
+    {parse : List UInt8 → Option S.Program} {load : Loader} {bs : Bootstrap}
+    {boot : List UInt8} {L : Layout} {B : Budget}
+    (hA : ocamlrun_refinement_Statement L B)
+    (hC : ocamlc_backend_correct_Statement S ocamlc parse load)
+    (hCself : BackendCorrectFor S ocamlc load bs.argv bs.sources bs.output ocamlc)
+    (hF : boot_ocamlc_fixpoint_Statement S ocamlc bs boot) :
+    endToEnd_ocaml_Statement S parse load boot L B :=
+  endToEnd_ocaml hA hC hCself hF
+
+/-- **Layer A from its per-arm obligations is proved** (`simOfArms`). -/
+theorem ocamlrun_refinement_of_arms' {L : Layout} {B : Budget} (A : ∀ P, ArmSim L B P) :
+    ocamlrun_refinement_Statement L B :=
+  ocamlrun_refinement_of_arms A
+
+end OCaml

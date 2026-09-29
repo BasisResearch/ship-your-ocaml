@@ -1,0 +1,235 @@
+# Plan: verifying OCaml's bootstrap compiler
+
+The target: the bytes of `boot/ocamlc` (OCaml 4.14.2), run by the
+bare-metal `ocamlrun` on the Sail RISC-V model, compile an OCaml program to
+bytecode whose behaviour on the same machine is the program's source-level
+meaning. In Lean 4 + iris-lean, no `sorry`, only the standard axioms.
+
+The shape is ship-your-interpreter's: a CompCert-style refinement between
+a machine (`Vsa.Machine`, the Sail model as a relation) and an LLM-written
+semantics, with the proof effort pushed through generators (the
+exponentiating layer). OCaml adds two layers and a trick:
+
+```
+OCamlSem p        ↔  BcSem (ocamlc p)    ↔  Halts c out e      (user program)
+  Layer C: ocamlc_backend_correct          Layer A: ocamlrun_refinement
+BcSem boot/ocamlc ↔  OCamlSem ocamlc-src                     (the compiler)
+  boot_ocamlc_fixpoint (+ Layer C for the compiler's own build)
+Layer B′: program logic over BcSem — how BcSem-level facts about
+          compiler-sized bytecode get proved at all
+```
+
+`endToEnd_ocaml` (proved, `OCaml/EndToEnd.lean`) composes them.
+
+## 1. Choice of release: 4.14.2
+
+* **The runtime is single-domain C.** 5.x's bytecode runtime is built
+  around domains: it needs pthreads (domain creation, the backup thread,
+  STW barriers) and C11 atomics even for a single-domain program. The
+  proof ELF is rv64i (the Sail Lean model has no A extension), newlib has no
+  pthreads, and every atomic would be a libatomic call to prove. 4.14's
+  runtime needs neither.
+* **One copying minor heap + a non-moving incremental mark-and-sweep major
+  heap** (best-fit allocator), with compaction the only other mover and
+  switchable off (`OCAMLRUNPARAM=o=1000000`, PLAN §GC). 5.x's runtime
+  adds per-domain minor heaps and a concurrent major collector.
+* **The bytecode is stable**: 149 opcodes, no effect handlers (5.x adds
+  `PERFORM`/`RESUME*`/`REPERFORM` and fibers, i.e. stack switching).
+* **`boot/ocamlc` is a fixpoint of the sources** (VALIDATION.md §Fixpoint:
+  CODE, PRIM, SYMB, CRCS byte-identical after a rebuild; DATA differs only
+  in `configure`'s install paths). The bootstrap-fixpoint step of Layer C
+  needs exactly this.
+* 4.14 is the last 4.x and an LTS line (4.14.2, March 2024).
+
+Build choices (all in `c/`, the runtime sources are unmodified):
+threaded code off (`-DSHRINKED_GNUC`), so `caml_interprete` dispatches through
+one switch jump table and the loaded code is opcodes, not label addresses;
+no sockets, dynamic loading, signals, or clocks (`s.h`); newlib over HTIF
+with a small in-memory file system (`htif.c`) so `caml_main` opens the
+embedded executable through its ordinary `ocamlrun prog args` path; argv
+and `OCAMLRUNPARAM` baked in (`main.c`).
+
+## 2. Layer A: `ocamlrun_refinement`
+
+**Cut point.** `caml_interprete(caml_start_code, caml_code_size)` called
+from `caml_main`, after the code is loaded, primitives resolved, the global
+data unmarshalled and promoted (the one minor collection before the cut,
+VALIDATION §Sail), and `caml_sys_init` has built `Sys.argv`. `Loaded`
+(`OCaml/Refinement.lean`, fields in `LoadedAt`) says exactly that, plus an
+abstract `Layout.runtimeOk` for the collector's own invariants (the analogue
+of ship-your-interpreter's abstract `Layout.atInterpRun`).
+
+**`BcSem`** (`OCaml/Bytecode/Semantics.lean`): a deterministic step
+function transcribed arm by arm from `interp.c`, its graph `Step`, and
+`BcHalts`/`BcDiverges`. Values are abstract (`int`/`ptr l k`/`code`/`atom`),
+the heap is a list of blocks never moved or freed, integer operations are
+computed on the tagged 64-bit words exactly as the C does. Primitives are
+specified one by one (`primF1Impl`); channels buffer exactly as `io.c`, so
+stdout/stderr interleaving on the HTIF console is the binary's.
+Validated: executable `BcSem` (`runbc`) reproduces the host `ocamlrun`
+byte for byte on the programs inside F1, and the kernel evaluates it on a
+Stdlib-free `while.ml` (`whileMin_bcSem`). The differential runs caught two
+transcription bugs on the way (VALIDATION §BcSem).
+
+**The statement** (`OcamlrunRefinement L B`): for every loaded program that
+never leaves the fragment and never goes `wrong` (`Good`) and fits the
+budget (`Fits B`), `BcHalts P out e ↔ Halts c out e` and
+`BcDiverges P ↔ Diverges c`. `Good` excludes states whose behaviour depends
+on what `BcSem` abstracts (e.g. ordered comparison of pointers); `ocamlc`
+output of well-typed programs never reaches one, which is Layer C's
+business.
+
+**Proof decomposition** (proved: `ocamlrun_refinement_of_arms`): Layer A
+follows from `ArmSim` — entry, one obligation per `step` outcome, the
+`.next` case split by `caml_interprete` arm — by determinism of both sides
+and `halts_or_diverges`. Each arm obligation is: from `VmRepr P s c` at the
+loop head, the machine runs the arm and reaches the loop head in
+`VmRepr P s' c'`. The census (VALIDATION §Census): 147 distinct arm entries,
+median 7 RISC-V instructions, 1,899 instructions reachable from arms, the
+largest `CLOSUREREC` (152). These are straight-line or short-branching
+segments over `s0`=pc, `s1`=sp, `s5`=accu, `s9`=env, `s2`=extra_args
+(`OCaml/Vm/Layout.lean`, generated): exactly what `disasm_to_segment.py`
+→ `gen_segment.py` produce. 83% of the reachable instructions are already
+in a site class the generators handle; the rest are the new idioms below.
+
+**New idioms** (not in ship-your-interpreter's site families):
+
+| idiom | where | plan |
+|---|---|---|
+| tagged-int ALU: `slli`/`srai`/`ori 1`/`addw`/`slliw` | every integer arm | add ALU site classes (the census counts 2,241 `slli`, 467 `srai`, 846 `addw`) |
+| switch jump table `lw; add base; jr` | dispatch (one site) | one lemma: table contents from the image, `jr` target per opcode |
+| C primitive calls through `caml_builtin_cprim` (`jalr`) | `C_CALLn` | table lookup lemma + the callee's function summary |
+| `setjmp`/`longjmp` for exceptions raised in C | `caml_raise`, `caml_interprete` prologue | the functions are byte-identical to the WHILE ELF's; new: the jmp_buf as a frame predicate |
+| soft-float (`__adddf3` …, 19 functions) | GC pacing (`caml_adjust_gc_speed`), even on integer programs | function summaries once; the WHILE ELF has 12 of them identical |
+| allocation fast path `young_ptr -= …; bltu young_limit` | every allocating arm | one segment family; the slow path (`caml_gc_dispatch`) is the GC boundary |
+
+**Libraries.** 131 functions of the ELF (9,869 instructions) are identical
+to the WHILE ELF's modulo relocation (`memcpy`, `strlen`, `strcmp`,
+`__muldi3`, `_realloc_r`, `setjmp`/`longjmp`, …): their site proofs
+transfer after the address retarget (A0). `_malloc_r`/`_free_r` are the same
+newlib objects but linker relaxation shortened different call sequences in
+the larger image, so their proofs are regenerated, not re-proved.
+
+**Fragment order** (`OCaml/Fragment.lean`; `ledger` lists every non-F1
+opcode, `ledger_exact` is checked by `decide`):
+
+| | opcodes | primitives | programs |
+|---|---|---|---|
+| **F1** | 134: stack, env, ints, branches, `SWITCH`, globals, blocks, closures incl. `CLOSUREREC`, apply/return/`GRAB`/`RESTART`, traps, `STOP`, `C_CALL1-5` | 30: console channels, `%d`, named values, `Sys` constants, `exit`, string equality | `while.ml`, `f2_closures.ml` |
+| **F2** | float fields, arrays, bytes/strings, `C_CALLN` | bytes/strings/arrays, compare, hash, `caml_format_float`, `Printf` | f1/f3/f5/f7 |
+| **F3** | `GETMETHOD`, `GETPUBMET` (writes its cache INTO THE CODE), `GETDYNMET` | `caml_obj_*`, lazy | f8 |
+| **F4** | — | callbacks: uncaught exceptions (`at_exit` then `Fatal error`), finalisers | error exits |
+| **F5** | — | files (`caml_sys_open`, channel I/O on the in-memory FS), `getenv` | `ocamlc` |
+| GC | — | `caml_gc_*` | allocation-heavy programs, `ocamlc` |
+
+`boot/ocamlc` links 257 distinct primitives and uses 132 of the 149
+opcodes (VALIDATION §Census): it needs F1–F5 and the GC.
+
+## 3. The GC: options and recommendation
+
+`BcSem`'s heap is abstract and never collected. The machine's collector
+moves blocks (the copying minor GC; compaction) and frees unreachable ones
+(sweeping). The representation predicate is built for this already:
+`VmRepr` is `∃ placement, VmReprAt …`, and `HeapRepr` constrains only
+blocks reachable from the roots (`Live`).
+
+* **G1: no collection after the cut point.** Bake in a minor heap large
+  enough that the run never fills it; `Fits` bounds allocated words by it;
+  the allocation fast path is the only path, the placement is fixed. Cheap,
+  and enough for ordinary test programs (VALIDATION §GC: eight of the nine
+  difftests never collect after the cut at the default 256k-word minor
+  heap; the allocation-pressure test first collects 26.9M steps in) and
+  for `ocamlc` on small inputs with a larger minor heap.
+* **G2: the minor collection as a heap isomorphism.** Prove
+  `caml_empty_minor_heap` (oldify + mopup, 499 instructions, plus the
+  remembered set `ref_table` maintained by `caml_modify`) maps the reachable
+  graph to an isomorphic one: after it, `VmReprAt` holds with a new
+  placement `φ'`. Mark-and-sweep never moves: `φ` is unchanged, sweeping
+  frees only non-`Live` blocks, which `HeapRepr` does not constrain; the
+  work is the mark invariant (tri-colour, incremental slices interleaved
+  with `caml_modify`'s write barrier). Compaction stays off
+  (`o=1000000`).
+* **G3: the collector as an obligation.** State `GcSim` (a C-level spec:
+  after `caml_minor_collection`, ∃ `φ'` …) as a structure of obligations
+  that Layer A consumes, and prove it later. Same statement as G2, deferred
+  proof.
+
+**Recommendation.** G1 now: it unblocks Layer A for F1–F3 without touching
+the collector, and the budget hypothesis is honest (`Fits`). Then G2 for
+the minor collector and the non-moving major heap, with compaction
+disabled permanently in the proof configuration. G3 is only the
+bookkeeping name for G2 while it is in progress. `ocamlc` allocates
+heavily (VALIDATION §GC), so it cannot stay in G1 for real inputs: G2 is on
+the critical path for the bootstrap theorem, not for Layer A's first
+fragments.
+
+## 4. Layer B′: a program logic over `BcSem`
+
+`bcModel P` (`OCaml/Logic/BcModel.lean`) presents the ZINC machine of `P`
+as a `VsaIris.MachineModel`: registers pc/accu/env/depth/extra/trap, and a
+word store holding the stack (region 0) and each block (region `l+1`) as
+disjoint footprints. ship-your-interpreter's ghost maps, total WP and
+adequacy apply unchanged: `bytecode_adequacy` is proved by instantiating
+`VsaIris.mach_adequacy`.
+
+The exponentiating layer is re-targeted at bytecode:
+
+* **decode table**: `dumpobj` output → one `decodeAt code pc = some i`
+  lemma per instruction (as `gen_decode_table.py` does per RISC-V word);
+* **segments**: basic blocks of bytecode (`BRANCH*`, `B*INT`, `SWITCH`,
+  `RETURN`, `APPTERM`, `RAISE` terminate) → `gen_segment.py`-style
+  per-segment WP rules generated from `BcSem`'s step equations;
+* **functions**: closures' code (from `CLOSURE`/`CLOSUREREC` targets) →
+  `gen_fn.py`-style summaries.
+
+Sizes (VALIDATION §Bytecode census): `boot/ocamlc` is 411,971 instructions
+in 165 units; the back half named in the brief (Translcore, Matching,
+Bytegen, Emitcode) is 23,606 instructions, the whole Lambda-to-bytecode
+path 58,351. Nothing of this size is proved by hand; everything is
+generated.
+
+## 5. Layer C: the compiler, at the source level
+
+* **`OCamlSem`** (LLM-written, like ship-your-interpreter's `BigStep`):
+  first a big-step semantics of Lambda (`OCaml/Source/Lambda.lean` has the
+  syntax, transcribed from `lambda.mli`), then of the typed tree.
+* **`ocamlc_backend_correct`** (`BackendCorrect`): Bytegen/Emitcode (then
+  Translcore/Matching) correct, proved at the SOURCE level with a program
+  logic over `OCamlSem` — the compiler is an OCaml program, so its
+  correctness proof is a program proof in `OCamlSem`'s logic, not a proof
+  about 58k bytecode instructions.
+* **`boot_ocamlc_fixpoint`** (`SelfCompiles`): under `OCamlSem`, the
+  compiler compiles its own sources to exactly the bytes of
+  `boot/ocamlc`. Combined with backend correctness for the compiler's own
+  build this gives `boot_meaning` (proved): `BcSem` of the bytes IS the
+  source compiler. This is the ONE translation validation — of the
+  compiler against itself — and it is what lets the bytes be discharged
+  without verifying 412k bytecode instructions directly. Practical route:
+  the Lambda of each compiler module (trusted front end, `-dlambda`) run
+  through a verified Lean model of Bytegen/Emitcode, compared with
+  `boot/ocamlc`'s CODE; the host check (VALIDATION §Fixpoint) says the
+  comparison will succeed up to configuration strings.
+* **Front end.** Parser and typechecker trusted (`parse` is a parameter of
+  every statement), or validated per program (the typed tree / Lambda
+  checked against the source by a validator) before being verified.
+
+## 6. Costs and risks
+
+* **Emulator time.** ~49k steps/s. `while.ml` is 4.6M steps (93 s),
+  `boot/ocamlc -version` 53.8M (20 min), compiling a one-liner
+  ≈ VALIDATION §Sail. Startup dominates: MD5 of the code segment and linear
+  `strcmp` primitive resolution (3.7M steps even for `while.ml`). All of it
+  is before the cut point, so it costs emulator time and boot-witness size,
+  not proof.
+* **Boot witnesses.** ship-your-interpreter's `Loaded` witnesses replay the
+  boot trace (85k steps). Here the boot is 4.5M (`while.ml`) to 48M
+  (`boot/ocamlc`) steps: witnesses for small programs only; `Loaded` itself
+  stays a predicate.
+* **Kernel evaluation of `BcSem`** keeps no sharing across steps: a 2,161-
+  step Stdlib-free run checks in 26 s / 6.5 GB, a Stdlib-initialised heap
+  exhausts 30 GB in ~100 steps. Longer validation runs need chunked lemmas
+  over explicit intermediate states (A1).
+* **Self-modifying bytecode**: `GETPUBMET` writes its method cache into
+  the code. `VmReprAt.code` must become "code up to caches" in F3.
+* **Callbacks** (F4): the uncaught-exception path re-enters
+  `caml_interprete`; the simulation must nest.

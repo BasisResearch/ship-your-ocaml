@@ -1,0 +1,10 @@
+image: {'functions': 1321, 'insts': 83826}
+reachable from main: {'functions': 1123, 'insts': 77206}
+interpreter-reachable: {'functions': 1003, 'insts': 68880, 'c_primitives': 403}
+address-taken functions: 484; indirect jump sites: 234
+site-classifier: 64205/77206 (83.2%) in an existing class
+  unsupported by mnemonic: auipc 3285, slli 2241, andi 1053, srli 997, addw 846, lui 663, slliw 635, or 580, srai 467, and 357, srliw 237, xor 229, ori 188, jalr 164, zext.b 155
+caml_interprete: 1966 insts, 149 opcodes, 147 distinct arm entries
+  largest arms: CLOSUREREC 152, CLOSURE 94, MAKEBLOCK 86, MAKEFLOATBLOCK 74, RAISE 74, RERAISE 74, GRAB 72, RAISE_NOTRACE 63, APPTERM 58, APPLY3 51, APPTERM3 49, APPLY2 48
+  median arm 7 insts; 1899 insts reachable from some arm, 111 shared by several (GC/raise/signal/callback paths)
+shared with WHILE ELF: 131 identical functions (9869 insts) of 213 same-named; 99 reachable (8644 insts)
