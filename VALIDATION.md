@@ -123,7 +123,7 @@ length, not proof (PLAN.md §7).
 | `f3_data` (variants, records, arrays, `List.sort`) | PASS | 5,396,193 | 98,255 | 0 |
 | `f4_exn` (handlers, re-raise, `Fun.protect`, `Invalid_argument`, `Division_by_zero`) | PASS | 7,655,763 | 103,203 | 0 |
 | `f5_strings` (`Bytes`, `Buffer`, `Printf`) | PASS | 7,230,988 | 140,946 | 0 |
-| `f6_alloc` (100k-element list, 20k `Hashtbl.replace`, 20k-pair list) | PASS (4.14.2 build; 4.14.4 rerun pending) | 221,732,295 | 215,322,916 | 3 (+ 2 major slices) |
+| `f6_alloc` (100k-element list, 20k `Hashtbl.replace`, 20k-pair list) | PASS | 221,739,875 | 215,322,876 | 3 (+ 2 major slices) |
 | `f7_float` (soft-float, `%g`/`%e`/`%f`) | PASS | 7,274,403 | 189,068 | 0 |
 | `f8_objects` (a class, `Lazy`, polymorphic compare) | PASS | 5,908,525 | 116,537 | 0 |
 
@@ -136,7 +136,7 @@ length, not proof (PLAN.md §7).
 * **After the cut point, with the default 256k-word minor heap, eight of
   the nine difftests run no minor collection and no major slice** (table
   above): they stay in PLAN.md's G1 regime. `f6_alloc` (allocation
-  pressure by design) runs its first minor collection at step 33,328,567,
+  pressure by design) runs its first minor collection at step 33,336,207,
   26.9M steps after the cut, and 3 minor collections and 2 major slices in
   all. `boot/ocamlc -version`: none after the cut.
 * **`boot/ocamlc` compiling `hello.ml` collects once, whatever the minor
