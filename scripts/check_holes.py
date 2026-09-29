@@ -31,7 +31,8 @@ def strip(src: str) -> str:
     return "".join(out)
 
 
-files = sorted((ROOT / "OCaml").rglob("*.lean")) + [ROOT / "OCaml.lean", ROOT / "RunBc.lean"]
+files = (sorted((ROOT / "OCaml").rglob("*.lean")) + sorted((ROOT / "tcb").rglob("*.lean"))
+         + [ROOT / "OCaml.lean", ROOT / "RunBc.lean"])
 hits = []
 for f in files:
     code = strip(f.read_text())

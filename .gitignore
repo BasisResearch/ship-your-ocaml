@@ -22,3 +22,6 @@ __pycache__/
 *.cmi
 *.cmo
 results/*-build.log
+tcb/validation/out/
+tcb/validation/out-quick/
+tcb/validation/tmp/

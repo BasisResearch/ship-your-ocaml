@@ -10,6 +10,9 @@
 #                            scripts/discipline_rules.tsv; O1-O4 cover OCaml/);
 #   (a5) generated files   — OCaml/Bytecode/Opcode.lean and OCaml/Vm/Layout.lean
 #                            are exactly what their generators emit;
+#   (t1) TCB               — tcb/ builds, its lemmas' axioms are standard, and
+#                            the quick OS-spec validation accepts every Linux
+#                            trace (tcb/validation/quick.sh);
 #   (a6) ELF pin           — c/ocamlrun-riscv-htif.elf matches c/ELF.sha256, and
 #                            contains no `ecall` (a libgloss syscall stub would
 #                            trap with no handler on the bare machine).
@@ -59,4 +62,13 @@ echo "== stage a7: retargeted library proofs pin this ELF's bytes"
 python3 scripts/check_code_pins.py | tail -1
 python3 scripts/check_code_pins.py > /dev/null || fail "stage a7: code pins differ from the ELF"
 echo "stage a7: OK"
+
+echo "== stage t1: trusted computing base (tcb/)"
+systemd-run --user --scope -q -p MemoryMax=30G lake build TCB tcbcheck 2>&1 | tail -1 | grep -q "Build completed successfully" || fail "stage t1: build TCB"
+out=$(lake env lean tcb/Audit.lean 2>&1)
+echo "$out"
+bad=$(echo "$out" | grep "depends on axioms" | grep -vE "axioms: \[(propext|Classical.choice|Quot.sound)(, (propext|Classical.choice|Quot.sound))*\]$" || true)
+[ -z "$bad" ] || fail "stage t1: non-standard axioms: $bad"
+tcb/validation/quick.sh || fail "stage t1: OS-spec validation (quick): a Linux trace was rejected"
+echo "stage t1: OK"
 echo "ALL STAGES OK"
