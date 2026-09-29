@@ -21,10 +21,10 @@ import Vsa.Sim.DivSites
 
 One observational-step (`StepObs`) lemma per instruction of newlib `memcpy`'s
 **byte-copy path** — the branch the binary takes when the alignment fast-path
-does not apply (`(src ^ dst) & 7 ≠ 0` at `0x80006bd4`, jumping to the byte loop
-at `0x80006c40`).
+does not apply (`(src ^ dst) & 7 ≠ 0` at `0x80041994`, jumping to the byte loop
+at `0x80041a00`).
 
-The byte path (addresses in `[0x80006c40, 0x80006c60)`):
+The byte path (addresses in `[0x80041a00, 0x80041a20)`):
 
 | pc | word | mnemonic | AST | class |
 |----|------|----------|-----|-------|
@@ -50,9 +50,9 @@ open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail ConcurrencyInterface
 open Register
 open Sail.ConcurrencyInterfaceV1.PreSail
 open Vsa.Machine (MState)
-open Vsa.Sim.Code (MemcpyLoaded memcpy_at_80006c40 memcpy_at_80006c44 memcpy_at_80006c48
-  memcpy_at_80006c4c memcpy_at_80006c50 memcpy_at_80006c54 memcpy_at_80006c58
-  memcpy_at_80006c5c)
+open Vsa.Sim.Code (MemcpyLoaded memcpy_at_80041a00 memcpy_at_80041a04 memcpy_at_80041a08
+  memcpy_at_80041a0c memcpy_at_80041a10 memcpy_at_80041a14 memcpy_at_80041a18
+  memcpy_at_80041a1c)
 
 set_option maxHeartbeats 8000000
 set_option maxRecDepth 1000000
@@ -103,7 +103,7 @@ theorem c5c_word : (((0x00#8).append (0x00#8)).append (0x80#8)).append (0x67#8) 
 theorem c5c_notrvc : Sail.BitVec.extractLsb ((((0x00#8).append (0x00#8)).append (0x80#8)).append (0x67#8)) 1 0 = (0b11#2 : BitVec 2) := by
   apply BitVec.eq_of_toNat_eq; decide
 
-/-! ## Site 0x80006c40 — `mv a4,a0` = `addi a4,a0,0` (rd = x14, rs1 = x10) -/
+/-! ## Site 0x80041a00 — `mv a4,a0` = `addi a4,a0,0` (rd = x14, rs1 = x10) -/
 
 theorem exec_c40 (σ : MState) (pc : BitVec 64) (v10 : BitVec 64)
     (hx10 : σ.regs.get? Register.x10 = some v10) :
@@ -118,21 +118,21 @@ theorem exec_c40 (σ : MState) (pc : BitVec 64) (v10 : BitVec 64)
     (rX_bits_x10 _ v10 hx10₂)
     (wX_bits_x14 _ (v10 + sign_extend (m := 64) (0x000#12)))
 
-/-- **Observational step at 0x80006c40** (`mv a4,a0`). Writes `x14 := v10`. -/
-theorem site_80006c40
+/-- **Observational step at 0x80041a00** (`mv a4,a0`). Writes `x14 := v10`. -/
+theorem site_80041a00
     (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret v10 : BitVec 64)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
     (hminstret : σ.regs.get? Register.minstret = some vminstret)
     (hx10 : σ.regs.get? Register.x10 = some v10)
     (hmem : MemcpyLoaded σ.mem)
-    (hpcv : pc = (0x80006c40#64 : BitVec 64)) (hi : i < 2) :
+    (hpcv : pc = (0x80041a00#64 : BitVec 64)) (hi : i < 2) :
     ∃ (σ' : MState) (i' : Nat),
       Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧ σ'.mem = σ.mem ∧
       ReadsLikePost σ'
         (sigmaPost_alu σ pc vminstret Register.x14 (v10 + sign_extend (m := 64) (0x000#12))) := by
   subst hpcv
-  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80006c40 hmem
-  exact stepObs_alu σ i u (0x80006c40#64) vminstret (0x00050713#32)
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80041a00 hmem
+  exact stepObs_alu σ i u (0x80041a00#64) vminstret (0x00050713#32)
     (instruction.ITYPE (0x000#12, regidx.Regidx 0x0a#5, regidx.Regidx 0x0e#5, iop.ADDI))
     Register.x14 (v10 + sign_extend (m := 64) (0x000#12)) (0x13#8) (0x07#8) (0x05#8) (0x00#8)
     hG hpc hminstret c40_word c40_notrvc
@@ -140,11 +140,11 @@ theorem site_80006c40
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
-    (exec_c40 σ (0x80006c40#64) v10 hx10)
+    (exec_c40 σ (0x80041a00#64) v10 hx10)
     (by decide) (by decide) (by decide) (by decide) (by decide)
     hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
 
-/-! ## Site 0x80006c4c — `addi a4,a4,1` (rd = x14, rs1 = x14) -/
+/-! ## Site 0x80041a0c — `addi a4,a4,1` (rd = x14, rs1 = x14) -/
 
 theorem exec_c4c (σ : MState) (pc : BitVec 64) (v14 : BitVec 64)
     (hx14 : σ.regs.get? Register.x14 = some v14) :
@@ -159,21 +159,21 @@ theorem exec_c4c (σ : MState) (pc : BitVec 64) (v14 : BitVec 64)
     (rX_bits_x14 _ v14 hx14₂)
     (wX_bits_x14 _ (v14 + sign_extend (m := 64) (0x001#12)))
 
-/-- **Observational step at 0x80006c4c** (`addi a4,a4,1`). Writes `x14 := a4 + 1`. -/
-theorem site_80006c4c
+/-- **Observational step at 0x80041a0c** (`addi a4,a4,1`). Writes `x14 := a4 + 1`. -/
+theorem site_80041a0c
     (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret v14 : BitVec 64)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
     (hminstret : σ.regs.get? Register.minstret = some vminstret)
     (hx14 : σ.regs.get? Register.x14 = some v14)
     (hmem : MemcpyLoaded σ.mem)
-    (hpcv : pc = (0x80006c4c#64 : BitVec 64)) (hi : i < 2) :
+    (hpcv : pc = (0x80041a0c#64 : BitVec 64)) (hi : i < 2) :
     ∃ (σ' : MState) (i' : Nat),
       Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧ σ'.mem = σ.mem ∧
       ReadsLikePost σ'
         (sigmaPost_alu σ pc vminstret Register.x14 (v14 + sign_extend (m := 64) (0x001#12))) := by
   subst hpcv
-  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80006c4c hmem
-  exact stepObs_alu σ i u (0x80006c4c#64) vminstret (0x00170713#32)
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80041a0c hmem
+  exact stepObs_alu σ i u (0x80041a0c#64) vminstret (0x00170713#32)
     (instruction.ITYPE (0x001#12, regidx.Regidx 0x0e#5, regidx.Regidx 0x0e#5, iop.ADDI))
     Register.x14 (v14 + sign_extend (m := 64) (0x001#12)) (0x13#8) (0x07#8) (0x17#8) (0x00#8)
     hG hpc hminstret c4c_word c4c_notrvc
@@ -181,11 +181,11 @@ theorem site_80006c4c
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
-    (exec_c4c σ (0x80006c4c#64) v14 hx14)
+    (exec_c4c σ (0x80041a0c#64) v14 hx14)
     (by decide) (by decide) (by decide) (by decide) (by decide)
     hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
 
-/-! ## Site 0x80006c50 — `addi a1,a1,1` (rd = x11, rs1 = x11) -/
+/-! ## Site 0x80041a10 — `addi a1,a1,1` (rd = x11, rs1 = x11) -/
 
 theorem exec_c50 (σ : MState) (pc : BitVec 64) (v11 : BitVec 64)
     (hx11 : σ.regs.get? Register.x11 = some v11) :
@@ -200,21 +200,21 @@ theorem exec_c50 (σ : MState) (pc : BitVec 64) (v11 : BitVec 64)
     (rX_bits_x11 _ v11 hx11₂)
     (wX_bits_x11 _ (v11 + sign_extend (m := 64) (0x001#12)))
 
-/-- **Observational step at 0x80006c50** (`addi a1,a1,1`). Writes `x11 := a1 + 1`. -/
-theorem site_80006c50
+/-- **Observational step at 0x80041a10** (`addi a1,a1,1`). Writes `x11 := a1 + 1`. -/
+theorem site_80041a10
     (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret v11 : BitVec 64)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
     (hminstret : σ.regs.get? Register.minstret = some vminstret)
     (hx11 : σ.regs.get? Register.x11 = some v11)
     (hmem : MemcpyLoaded σ.mem)
-    (hpcv : pc = (0x80006c50#64 : BitVec 64)) (hi : i < 2) :
+    (hpcv : pc = (0x80041a10#64 : BitVec 64)) (hi : i < 2) :
     ∃ (σ' : MState) (i' : Nat),
       Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧ σ'.mem = σ.mem ∧
       ReadsLikePost σ'
         (sigmaPost_alu σ pc vminstret Register.x11 (v11 + sign_extend (m := 64) (0x001#12))) := by
   subst hpcv
-  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80006c50 hmem
-  exact stepObs_alu σ i u (0x80006c50#64) vminstret (0x00158593#32)
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80041a10 hmem
+  exact stepObs_alu σ i u (0x80041a10#64) vminstret (0x00158593#32)
     (instruction.ITYPE (0x001#12, regidx.Regidx 0x0b#5, regidx.Regidx 0x0b#5, iop.ADDI))
     Register.x11 (v11 + sign_extend (m := 64) (0x001#12)) (0x93#8) (0x85#8) (0x15#8) (0x00#8)
     hG hpc hminstret c50_word c50_notrvc
@@ -222,11 +222,11 @@ theorem site_80006c50
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
-    (exec_c50 σ (0x80006c50#64) v11 hx11)
+    (exec_c50 σ (0x80041a10#64) v11 hx11)
     (by decide) (by decide) (by decide) (by decide) (by decide)
     hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
 
-/-! ## Site 0x80006c48 — `lbu a5,0(a1)` (LOAD unsigned width 1, rd = x15, rs1 = x11)
+/-! ## Site 0x80041a08 — `lbu a5,0(a1)` (LOAD unsigned width 1, rd = x15, rs1 = x11)
 
 The effective address is `a1 + sext 0x000 = a1`. The loaded byte `b : BitVec 8`
 (`= data : BitVec (8*1)`) is written to `x15` as `zero_extend (m := 64) b`. -/
@@ -284,15 +284,15 @@ theorem exec_c48 (σ : MState) (pc : BitVec 64) (v11 : BitVec 64) (b : BitVec 8)
     (sigma3_alu σ pc Register.x15 (zero_extend (m := 64) (b : BitVec (8*1))))
     (by decide) hread hwr
 
-/-- **Observational step at 0x80006c48** (`lbu a5,0(a1)`). Writes
+/-- **Observational step at 0x80041a08** (`lbu a5,0(a1)`). Writes
 `x15 := zero_extend b`, where `b` is the byte at `a1`. -/
-theorem site_80006c48
+theorem site_80041a08
     (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret v11 : BitVec 64) (b : BitVec 8)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
     (hminstret : σ.regs.get? Register.minstret = some vminstret)
     (hx11 : σ.regs.get? Register.x11 = some v11)
     (hmem : MemcpyLoaded σ.mem)
-    (hpcv : pc = (0x80006c48#64 : BitVec 64))
+    (hpcv : pc = (0x80041a08#64 : BitVec 64))
     (hlo : 0x80000000 ≤ v11.toNat) (hhiram : v11.toNat + 1 ≤ 0x100000000)
     (hhtif : v11.toNat + 1 ≤ tohostAddr ∨ tohostAddr + 8 ≤ v11.toNat)
     (hm0 : σ.mem[v11.toNat]? = some b) (hi : i < 2) :
@@ -301,8 +301,8 @@ theorem site_80006c48
       ReadsLikePost σ'
         (sigmaPost_alu σ pc vminstret Register.x15 (zero_extend (m := 64) (b : BitVec (8*1)))) := by
   subst hpcv
-  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80006c48 hmem
-  exact stepObs_alu σ i u (0x80006c48#64) vminstret (0x0005c783#32)
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80041a08 hmem
+  exact stepObs_alu σ i u (0x80041a08#64) vminstret (0x0005c783#32)
     (instruction.LOAD (0x000#12, regidx.Regidx 0x0b#5, regidx.Regidx 0x0f#5, true, 1))
     Register.x15 (zero_extend (m := 64) (b : BitVec (8*1))) (0x83#8) (0xc7#8) (0x05#8) (0x00#8)
     hG hpc hminstret c48_word c48_notrvc
@@ -310,11 +310,11 @@ theorem site_80006c48
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
-    (exec_c48 σ (0x80006c48#64) v11 b hG hx11 hlo hhiram hhtif hm0)
+    (exec_c48 σ (0x80041a08#64) v11 b hG hx11 hlo hhiram hhtif hm0)
     (by decide) (by decide) (by decide) (by decide) (by decide)
     hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
 
-/-! ## Site 0x80006c54 — `sb a5,-1(a4)` (STORE width 1, rs2 = x15, rs1 = x14)
+/-! ## Site 0x80041a14 — `sb a5,-1(a4)` (STORE width 1, rs2 = x15, rs1 = x14)
 
 Effective address `a4 + sext 0xfff = a4 - 1`. Stores the low byte
 `extractLsb v15 7 0` of `a5` (= `x15`). Post memory
@@ -386,44 +386,44 @@ theorem exec_c54 (σ : MState) (pc : BitVec 64) (v14 v15 : BitVec 64)
   simp only [execute]
   exact hchar
 
-/-- **Observational step at 0x80006c54** (`sb a5,-1(a4)`). Stores the low byte of
+/-- **Observational step at 0x80041a14** (`sb a5,-1(a4)`). Stores the low byte of
 `a5` at `a4-1`; post memory is `σ.mem.insert (a4-1).toNat (low byte of a5)`. -/
-theorem site_80006c54
+theorem site_80041a14
     (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret v14 v15 : BitVec 64)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
     (hminstret : σ.regs.get? Register.minstret = some vminstret)
     (hx14 : σ.regs.get? Register.x14 = some v14)
     (hx15 : σ.regs.get? Register.x15 = some v15)
     (hmem : MemcpyLoaded σ.mem)
-    (hpcv : pc = (0x80006c54#64 : BitVec 64))
+    (hpcv : pc = (0x80041a14#64 : BitVec 64))
     (halo : 0x80000000 ≤ (sbAddr v14).toNat)
     (hahiram : (sbAddr v14).toNat + 1 ≤ 0x100000000)
     (hahiwin : tohostAddr + 16 ≤ (sbAddr v14).toNat) (hi : i < 2) :
     ∃ (σ' : MState) (i' : Nat),
       Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧
-      σ'.mem = (afterNextPC (afterPrelude σ) (0x80006c54#64)).mem.insert (sbAddr v14).toNat (sbData v15) ∧
+      σ'.mem = (afterNextPC (afterPrelude σ) (0x80041a14#64)).mem.insert (sbAddr v14).toNat (sbData v15) ∧
       ReadsLikePost σ'
         (sigmaPost_store σ pc vminstret
-          ((afterNextPC (afterPrelude σ) (0x80006c54#64)).mem.insert (sbAddr v14).toNat (sbData v15))) := by
+          ((afterNextPC (afterPrelude σ) (0x80041a14#64)).mem.insert (sbAddr v14).toNat (sbData v15))) := by
   subst hpcv
-  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80006c54 hmem
-  exact stepObs_store σ i u (0x80006c54#64) vminstret (0xfef70fa3#32)
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80041a14 hmem
+  exact stepObs_store σ i u (0x80041a14#64) vminstret (0xfef70fa3#32)
     (instruction.STORE (0xfff#12, regidx.Regidx 0x0f#5, regidx.Regidx 0x0e#5, 1))
-    ((afterNextPC (afterPrelude σ) (0x80006c54#64)).mem.insert (sbAddr v14).toNat (sbData v15))
+    ((afterNextPC (afterPrelude σ) (0x80041a14#64)).mem.insert (sbAddr v14).toNat (sbData v15))
     (0xa3#8) (0x0f#8) (0xf7#8) (0xfe#8)
     hG hpc hminstret c54_word c54_notrvc
     (Vsa.Sim.DecodeTable.decode_fef70fa3 (afterPrelude σ)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
-    (exec_c54 σ (0x80006c54#64) v14 v15 hG hx14 hx15 halo hahiram hahiwin)
+    (exec_c54 σ (0x80041a14#64) v14 v15 hG hx14 hx15 halo hahiram hahiwin)
     hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
 
-/-! ## Site 0x80006c44 — `bgeu a0,a7` = BTYPE(0x1ff8, x17, x10, BGEU)
+/-! ## Site 0x80041a04 — `bgeu a0,a7` = BTYPE(0x1ff8, x17, x10, BGEU)
 
 Decode: `BTYPE (0x1ff8#13, x17, x10, BGEU)`, rs1 = x10, rs2 = x17. Taken (a0 ≥u a7)
-⇒ branch to `pc + sext 0x1ff8 = pc - 8 = 0x80006c3c` (ret). Not-taken (a0 <u a7)
-⇒ fall through to `pc + 4 = 0x80006c48` (byte loop). -/
+⇒ branch to `pc + sext 0x1ff8 = pc - 8 = 0x800419fc` (ret). Not-taken (a0 <u a7)
+⇒ fall through to `pc + 4 = 0x80041a08` (byte loop). -/
 
 theorem exec_c44_taken (σ : MState) (pc : BitVec 64) (v10 v17 : BitVec 64)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
@@ -461,8 +461,8 @@ theorem exec_c44_nottaken (σ : MState) (pc : BitVec 64) (v10 v17 : BitVec 64)
     v10 v17 (afterNextPC (afterPrelude σ) pc)
     (rX_bits_x10 _ v10 hx10₂) (rX_bits_x17 _ v17 hx17₂) hv
 
-/-- **Observational step at 0x80006c44, not taken** (`bgeu a0,a7`, a0 <u a7): fall
-to byte loop 0x80006c48. -/
+/-- **Observational step at 0x80041a04, not taken** (`bgeu a0,a7`, a0 <u a7): fall
+to byte loop 0x80041a08. -/
 theorem site_80006c44_nottaken
     (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret v10 v17 : BitVec 64)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
@@ -470,13 +470,13 @@ theorem site_80006c44_nottaken
     (hx10 : σ.regs.get? Register.x10 = some v10)
     (hx17 : σ.regs.get? Register.x17 = some v17)
     (hmem : MemcpyLoaded σ.mem)
-    (hpcv : pc = (0x80006c44#64 : BitVec 64)) (hv : zopz0zKzJ_u v10 v17 = false) (hi : i < 2) :
+    (hpcv : pc = (0x80041a04#64 : BitVec 64)) (hv : zopz0zKzJ_u v10 v17 = false) (hi : i < 2) :
     ∃ (σ' : MState) (i' : Nat),
       Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧ σ'.mem = σ.mem ∧
       ReadsLikePost σ' (sigmaPost_branch_nottaken σ pc vminstret) := by
   subst hpcv
-  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80006c44 hmem
-  exact stepObs_branch_nottaken σ i u (0x80006c44#64) vminstret (0x1ff8#13)
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80041a04 hmem
+  exact stepObs_branch_nottaken σ i u (0x80041a04#64) vminstret (0x1ff8#13)
     (regidx.Regidx 0x0a#5) (regidx.Regidx 0x11#5) bop.BGEU (0xff157ce3#32)
     (0xe3#8) (0x7c#8) (0x15#8) (0xff#8)
     hG hpc hminstret c44_word c44_notrvc
@@ -484,11 +484,11 @@ theorem site_80006c44_nottaken
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
-    (exec_c44_nottaken σ (0x80006c44#64) v10 v17 hx10 hx17 hv)
+    (exec_c44_nottaken σ (0x80041a04#64) v10 v17 hx10 hx17 hv)
     hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
 
-/-- **Observational step at 0x80006c44, taken** (`bgeu a0,a7`, a0 ≥u a7): branch to
-0x80006c3c (ret). -/
+/-- **Observational step at 0x80041a04, taken** (`bgeu a0,a7`, a0 ≥u a7): branch to
+0x800419fc (ret). -/
 theorem site_80006c44_taken
     (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret v10 v17 : BitVec 64)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
@@ -496,15 +496,15 @@ theorem site_80006c44_taken
     (hx10 : σ.regs.get? Register.x10 = some v10)
     (hx17 : σ.regs.get? Register.x17 = some v17)
     (hmem : MemcpyLoaded σ.mem)
-    (hpcv : pc = (0x80006c44#64 : BitVec 64))
+    (hpcv : pc = (0x80041a04#64 : BitVec 64))
     (htgt : (pc + sign_extend (m := 64) (0x1ff8#13)).toNat % 4 = 0)
     (hv : zopz0zKzJ_u v10 v17 = true) (hi : i < 2) :
     ∃ (σ' : MState) (i' : Nat),
       Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧ σ'.mem = σ.mem ∧
       ReadsLikePost σ' (sigmaPost_branch_taken σ pc vminstret (0x1ff8#13)) := by
   subst hpcv
-  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80006c44 hmem
-  exact stepObs_branch_taken σ i u (0x80006c44#64) vminstret (0x1ff8#13)
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80041a04 hmem
+  exact stepObs_branch_taken σ i u (0x80041a04#64) vminstret (0x1ff8#13)
     (regidx.Regidx 0x0a#5) (regidx.Regidx 0x11#5) bop.BGEU (0xff157ce3#32)
     (0xe3#8) (0x7c#8) (0x15#8) (0xff#8)
     hG hpc hminstret c44_word c44_notrvc
@@ -512,14 +512,14 @@ theorem site_80006c44_taken
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
-    (exec_c44_taken σ (0x80006c44#64) v10 v17 hG hpc hx10 hx17 htgt hv)
+    (exec_c44_taken σ (0x80041a04#64) v10 v17 hG hpc hx10 hx17 htgt hv)
     hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
 
-/-! ## Site 0x80006c58 — `bne a7,a4` = BTYPE(0x1ff0, x14, x17, BNE)
+/-! ## Site 0x80041a18 — `bne a7,a4` = BTYPE(0x1ff0, x14, x17, BNE)
 
 Decode: `BTYPE (0x1ff0#13, x14, x17, BNE)`, rs1 = x17, rs2 = x14. Taken (a7 ≠ a4)
-⇒ branch to `pc + sext 0x1ff0 = pc - 16 = 0x80006c48` (loop back). Not-taken
-(a7 = a4) ⇒ fall through to `pc + 4 = 0x80006c5c` (ret). -/
+⇒ branch to `pc + sext 0x1ff0 = pc - 16 = 0x80041a08` (loop back). Not-taken
+(a7 = a4) ⇒ fall through to `pc + 4 = 0x80041a1c` (ret). -/
 
 theorem exec_c58_taken (σ : MState) (pc : BitVec 64) (v17 v14 : BitVec 64)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
@@ -557,8 +557,8 @@ theorem exec_c58_nottaken (σ : MState) (pc : BitVec 64) (v17 v14 : BitVec 64)
     v17 v14 (afterNextPC (afterPrelude σ) pc)
     (rX_bits_x17 _ v17 hx17₂) (rX_bits_x14 _ v14 hx14₂) hv
 
-/-- **Observational step at 0x80006c58, taken** (`bne a7,a4`, a7 ≠ a4): loop back to
-0x80006c48. -/
+/-- **Observational step at 0x80041a18, taken** (`bne a7,a4`, a7 ≠ a4): loop back to
+0x80041a08. -/
 theorem site_80006c58_taken
     (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret v17 v14 : BitVec 64)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
@@ -566,15 +566,15 @@ theorem site_80006c58_taken
     (hx17 : σ.regs.get? Register.x17 = some v17)
     (hx14 : σ.regs.get? Register.x14 = some v14)
     (hmem : MemcpyLoaded σ.mem)
-    (hpcv : pc = (0x80006c58#64 : BitVec 64))
+    (hpcv : pc = (0x80041a18#64 : BitVec 64))
     (htgt : (pc + sign_extend (m := 64) (0x1ff0#13)).toNat % 4 = 0)
     (hv : (v17 != v14) = true) (hi : i < 2) :
     ∃ (σ' : MState) (i' : Nat),
       Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧ σ'.mem = σ.mem ∧
       ReadsLikePost σ' (sigmaPost_branch_taken σ pc vminstret (0x1ff0#13)) := by
   subst hpcv
-  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80006c58 hmem
-  exact stepObs_branch_taken σ i u (0x80006c58#64) vminstret (0x1ff0#13)
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80041a18 hmem
+  exact stepObs_branch_taken σ i u (0x80041a18#64) vminstret (0x1ff0#13)
     (regidx.Regidx 0x11#5) (regidx.Regidx 0x0e#5) bop.BNE (0xfee898e3#32)
     (0xe3#8) (0x98#8) (0xe8#8) (0xfe#8)
     hG hpc hminstret c58_word c58_notrvc
@@ -582,11 +582,11 @@ theorem site_80006c58_taken
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
-    (exec_c58_taken σ (0x80006c58#64) v17 v14 hG hpc hx17 hx14 htgt hv)
+    (exec_c58_taken σ (0x80041a18#64) v17 v14 hG hpc hx17 hx14 htgt hv)
     hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
 
-/-- **Observational step at 0x80006c58, not taken** (`bne a7,a4`, a7 = a4): fall to
-ret 0x80006c5c. -/
+/-- **Observational step at 0x80041a18, not taken** (`bne a7,a4`, a7 = a4): fall to
+ret 0x80041a1c. -/
 theorem site_80006c58_nottaken
     (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret v17 v14 : BitVec 64)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
@@ -594,13 +594,13 @@ theorem site_80006c58_nottaken
     (hx17 : σ.regs.get? Register.x17 = some v17)
     (hx14 : σ.regs.get? Register.x14 = some v14)
     (hmem : MemcpyLoaded σ.mem)
-    (hpcv : pc = (0x80006c58#64 : BitVec 64)) (hv : (v17 != v14) = false) (hi : i < 2) :
+    (hpcv : pc = (0x80041a18#64 : BitVec 64)) (hv : (v17 != v14) = false) (hi : i < 2) :
     ∃ (σ' : MState) (i' : Nat),
       Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧ σ'.mem = σ.mem ∧
       ReadsLikePost σ' (sigmaPost_branch_nottaken σ pc vminstret) := by
   subst hpcv
-  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80006c58 hmem
-  exact stepObs_branch_nottaken σ i u (0x80006c58#64) vminstret (0x1ff0#13)
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80041a18 hmem
+  exact stepObs_branch_nottaken σ i u (0x80041a18#64) vminstret (0x1ff0#13)
     (regidx.Regidx 0x11#5) (regidx.Regidx 0x0e#5) bop.BNE (0xfee898e3#32)
     (0xe3#8) (0x98#8) (0xe8#8) (0xfe#8)
     hG hpc hminstret c58_word c58_notrvc
@@ -608,19 +608,19 @@ theorem site_80006c58_nottaken
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
-    (exec_c58_nottaken σ (0x80006c58#64) v17 v14 hx17 hx14 hv)
+    (exec_c58_nottaken σ (0x80041a18#64) v17 v14 hx17 hx14 hv)
     hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
 
-/-! ## Site 0x80006c5c — `ret` = `jalr x0,ra,0` (rs1 = x1) -/
+/-! ## Site 0x80041a1c — `ret` = `jalr x0,ra,0` (rs1 = x1) -/
 
-/-- **Observational step at 0x80006c5c** (`ret`): PC → bit-0-cleared `ra`. -/
-theorem site_80006c5c
+/-- **Observational step at 0x80041a1c** (`ret`): PC → bit-0-cleared `ra`. -/
+theorem site_80041a1c
     (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret vra : BitVec 64)
     (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
     (hminstret : σ.regs.get? Register.minstret = some vminstret)
     (hx1 : σ.regs.get? Register.x1 = some vra)
     (hmem : MemcpyLoaded σ.mem)
-    (hpcv : pc = (0x80006c5c#64 : BitVec 64))
+    (hpcv : pc = (0x80041a1c#64 : BitVec 64))
     (htgt : (BitVec.update (vra + sign_extend (m := 64) (0x000#12)) 0 0#1).toNat % 4 = 0)
     (hi : i < 2) :
     ∃ (σ' : MState) (i' : Nat),
@@ -628,12 +628,12 @@ theorem site_80006c5c
       ReadsLikePost σ'
         (sigmaPost_jump_x0 σ pc vminstret (BitVec.update (vra + sign_extend (m := 64) (0x000#12)) 0 0#1)) := by
   subst hpcv
-  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80006c5c hmem
-  have hx1₂ : (rX_bits (regidx.Regidx 0x01#5)).run (afterNextPC (afterPrelude σ) (0x80006c5c#64))
-      = .ok vra (afterNextPC (afterPrelude σ) (0x80006c5c#64)) := by
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := memcpy_at_80041a1c hmem
+  have hx1₂ : (rX_bits (regidx.Regidx 0x01#5)).run (afterNextPC (afterPrelude σ) (0x80041a1c#64))
+      = .ok vra (afterNextPC (afterPrelude σ) (0x80041a1c#64)) := by
     apply rX_bits_x1
-    rw [get?_afterNextPC σ (0x80006c5c#64) _ (by decide) (by decide)]; exact hx1
-  exact stepObs_jr σ i u (0x80006c5c#64) vminstret vra (0x00008067#32) (0x000#12)
+    rw [get?_afterNextPC σ (0x80041a1c#64) _ (by decide) (by decide)]; exact hx1
+  exact stepObs_jr σ i u (0x80041a1c#64) vminstret vra (0x00008067#32) (0x000#12)
     (regidx.Regidx 0x01#5) (0x67#8) (0x80#8) (0x00#8) (0x00#8)
     hG hpc hminstret hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide)
     c5c_notrvc c5c_word

@@ -1,7 +1,8 @@
 #!/bin/bash
 # ship-your-ocaml gate (the analogue of ship-your-interpreter's
 # scripts/check_all.sh, cut to what this repository contains):
-#   (a1) build             — `lake build OCaml` (the scaffold and its imports);
+#   (a1) build             — `lake build OCaml Vsa VsaIris` (the scaffold and the
+#                            whole copied, retargeted machine layer);
 #   (a2) no holes          — no sorry/admit/axiom/native_decide in OCaml/;
 #   (a3) axioms            — every audited theorem (OCaml/Audit.lean) depends
 #                            only on propext, Classical.choice, Quot.sound;
@@ -12,6 +13,8 @@
 #   (a6) ELF pin           — c/ocamlrun-riscv-htif.elf matches c/ELF.sha256, and
 #                            contains no `ecall` (a libgloss syscall stub would
 #                            trap with no handler on the bare machine).
+#   (a7) code pins         — every byte the retargeted library proofs pin
+#                            (Vsa/Sim/Code/*.lean) is the ELF's byte there.
 # Heavy steps honour the shared-machine rules (30 GB cap).
 set -u
 cd "$(dirname "$0")/.."
@@ -20,8 +23,9 @@ fail() { echo "FAIL: $*"; exit 1; }
 # address space than that for its thread stacks, so the audit runs uncapped
 # (it only loads .olean files).
 
-echo "== stage a1: lake build OCaml"
-(ulimit -v 31457280; lake build OCaml 2>&1) | tail -1 | grep -q "Build completed successfully" || fail "stage a1: build"
+echo "== stage a1: lake build OCaml Vsa VsaIris (under a 30 GB cgroup cap)"
+systemd-run --user --scope -q -p MemoryMax=30G lake build OCaml Vsa VsaIris 2>&1 | tail -1 \
+  | grep -q "Build completed successfully" || fail "stage a1: build"
 echo "stage a1: OK"
 
 echo "== stage a2: no holes in OCaml/"
@@ -34,7 +38,7 @@ echo "$out"
 n=$(echo "$out" | grep -c "depends on axioms")
 bad=$(echo "$out" | grep "depends on axioms" | grep -vE "axioms: \[(propext|Classical.choice|Quot.sound)(, (propext|Classical.choice|Quot.sound))*\]$" || true)
 [ -z "$bad" ] || fail "stage a3: non-standard axioms: $bad"
-[ "$n" -ge 16 ] || fail "stage a3: expected >= 16 audited theorems, got $n"
+[ "$n" -ge 23 ] || fail "stage a3: expected >= 23 audited theorems, got $n"
 echo "stage a3: OK ($n theorems audited)"
 
 echo "== stage a4: proof discipline"
@@ -51,4 +55,8 @@ n=$($HOME/toolchains/xpack-riscv-none-elf-gcc-15.2.0-1/bin/riscv-none-elf-objdum
 [ "$n" = 0 ] || fail "stage a6: $n ecall instruction(s) linked (libgloss syscall stubs trap on the bare machine)"
 (cd c && sha256sum -c ELF.sha256) || fail "stage a6: ELF sha256"
 echo "stage a6: OK"
+echo "== stage a7: retargeted library proofs pin this ELF's bytes"
+python3 scripts/check_code_pins.py | tail -1
+python3 scripts/check_code_pins.py > /dev/null || fail "stage a7: code pins differ from the ELF"
+echo "stage a7: OK"
 echo "ALL STAGES OK"

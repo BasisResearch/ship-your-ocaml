@@ -217,7 +217,68 @@ generated.
   every statement), or validated per program (the typed tree / Lambda
   checked against the source by a validator) before being verified.
 
-## 6. Costs and risks
+## 6. The OS interface and the trusted base (`tcb/`)
+
+Everything the headline theorem assumes rather than proves is collected
+in `tcb/` (`tcb/README.md` is the list: each item, its Lean name, where it
+comes from, how it is validated). The OS is the largest item, and the one
+that decides how usable the result is beyond this bare-metal build.
+
+**One spec, two instantiations.** `tcb/TCB/Os/` is a Lean port of
+SibylFS's POSIX file-system specification (Linux flavour, regular files and
+directories) and of CakeML's basis model of console streams and partial
+reads/writes: an OS state and a relation `OsStep st call ret st'` per
+system call, nondeterministic exactly where POSIX is (which error, how many
+bytes). The same spec serves two ways:
+
+* **bare metal (this build)**: the file system is `c/src/htif.c`, code
+  *inside* the ELF. Its conformance to `OsStep` is a proof obligation
+  (`HtifFsImplements`), discharged like any other C code in the image.
+  Nothing about files is trusted here; only the HTIF console convention
+  and the Sail model are.
+* **Linux**: system calls are `ecall`s. Layer A treats an `ecall` as an
+  external step whose result `OsStep` constrains (as CakeML treats its FFI
+  oracle). Here the spec IS trusted: it is the assumption that the kernel
+  behaves as POSIX says.
+
+`BcSem`'s `World` moves to an `OsState` (F5), and the C primitives that
+touch files, time and the environment are specified through `OsStep`, so
+Layer A and C statements are the same for both instantiations.
+
+**Validation of the trusted spec** (SibylFS's own method; results in
+`tcb/validation/RESULTS.md`):
+
+1. generated test scripts (systematic per-call cases including each errno,
+   and random sequences) run on the real Linux host; every observed trace
+   must be accepted by the executable form of `OsStep`;
+2. the same scripts run against the in-image file system (natively, as in
+   `c/tests/hostmirror.sh`): acceptance there is evidence for the
+   bare-metal obligation, and each rejection is either a spec-port bug
+   (fixed, citing SibylFS) or a documented deviation of `htif.c` from POSIX;
+3. a soundness lemma ties the executable checker to the `OsStep` relation,
+   so accepting a trace is a statement about the spec, not about the
+   checker.
+
+**Other trusted items** (all listed in `tcb/README.md`): the Sail RISC-V
+model and the HTIF convention (validated by ship-your-interpreter's
+cross-checks against the emulator); the Lean kernel; the Layer A
+hypotheses `Layout.runtimeOk`, `Fits`, `Good` (hypotheses of the theorem,
+established per program — by the boot witness, the budget check and the
+fragment check); Layer C's front end `parse` and the `Loader`. The
+executable loader (`OCaml/Bytecode/Load.lean`) and `runbc` are validation
+tools only; no theorem depends on them.
+
+**Reused machine proofs.** The copied layer's proofs of shared library code
+(`memcpy`, `memset`, `strlen`, `strcpy`, `__muldi3`, the 64-bit division
+routines, …) are retargeted to this ELF by `scripts/retarget_syi.py`:
+functions whose instruction words are byte-identical in the two ELFs map
+address-for-address, and the HTIF mailbox constant moves with the image.
+Functions whose code differs only at call sites (`strcmp`, `__ssprint_r`,
+`__ssputs_r`) need regenerated code lemmas and decode lemmas for the
+changed words; functions that differ (`_malloc_r`, `_free_r`,
+`_svfprintf_r`) are regenerated, not ported (PHASES.md A0).
+
+## 7. Costs and risks
 
 * **Emulator time.** ~49k steps/s. `while.ml` is 4.6M steps (93 s),
   `boot/ocamlc -version` 53.8M (20 min), compiling a one-liner

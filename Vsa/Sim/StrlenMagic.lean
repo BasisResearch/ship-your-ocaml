@@ -3,7 +3,7 @@ import Vsa.Sim.MemLoadTotal
 /-!
 # The magic-constant zero-byte detection arithmetic (`strlen` word-wise core)
 
-The word-wise `strlen` loop (`0x80006d10 … 0x80006d28`) scans 8 bytes at a time,
+The word-wise `strlen` loop (`0x80041ad0 … 0x80041ae8`) scans 8 bytes at a time,
 detecting whether the aligned word `w` contains a zero byte with the classic
 `0x7f7f7f7f7f7f7f7f` trick (newlib's `strlen`, matching the disassembly):
 

@@ -1,0 +1,549 @@
+{
+ "ported_functions": {
+  "_Bfree": {
+   "old": "0x80012c10",
+   "new": "0x80045280",
+   "size": 36
+  },
+  "__any_on": {
+   "old": "0x80013ea0",
+   "new": "0x80046510",
+   "size": 100
+  },
+  "__ascii_mbtowc": {
+   "old": "0x80012268",
+   "new": "0x800448d8",
+   "size": 104
+  },
+  "__ascii_wctomb": {
+   "old": "0x80014528",
+   "new": "0x80046580",
+   "size": 48
+  },
+  "__b2d": {
+   "old": "0x80013a88",
+   "new": "0x800460f8",
+   "size": 312
+  },
+  "__copybits": {
+   "old": "0x80013e38",
+   "new": "0x800464a8",
+   "size": 104
+  },
+  "__divdi3": {
+   "old": "0x800046a4",
+   "new": "0x800364dc",
+   "size": 132
+  },
+  "__divsi3": {
+   "old": "0x8000469c",
+   "new": "0x800364d4",
+   "size": 200
+  },
+  "__eqdf2": {
+   "old": "0x80017a74",
+   "new": "0x80033984",
+   "size": 112
+  },
+  "__eucjp_mbtowc": {
+   "old": "0x80012764",
+   "new": "0x80044dd4",
+   "size": 544
+  },
+  "__eucjp_wctomb": {
+   "old": "0x800146c8",
+   "new": "0x80046720",
+   "size": 160
+  },
+  "__fixdfsi": {
+   "old": "0x8001881c",
+   "new": "0x8003472c",
+   "size": 104
+  },
+  "__gedf2": {
+   "old": "0x80017ae4",
+   "new": "0x800339f4",
+   "size": 160
+  },
+  "__gtdf2": {
+   "old": "0x80017ae4",
+   "new": "0x800339f4",
+   "size": 160
+  },
+  "__hi0bits": {
+   "old": "0x80012f00",
+   "new": "0x80045570",
+   "size": 136
+  },
+  "__hidden___udivdi3": {
+   "old": "0x800046ac",
+   "new": "0x800364e4",
+   "size": 72
+  },
+  "__jis_wctomb": {
+   "old": "0x80014768",
+   "new": "0x800467c0",
+   "size": 188
+  },
+  "__ledf2": {
+   "old": "0x80017b84",
+   "new": "0x80033a94",
+   "size": 164
+  },
+  "__libc_fini_array": {
+   "old": "0x80010558",
+   "new": "0x8004cb70",
+   "size": 84
+  },
+  "__lo0bits": {
+   "old": "0x80012f88",
+   "new": "0x800455f8",
+   "size": 284
+  },
+  "__localeconv_l": {
+   "old": "0x80010250",
+   "new": "0x800412a8",
+   "size": 8
+  },
+  "__ltdf2": {
+   "old": "0x80017b84",
+   "new": "0x80033a94",
+   "size": 164
+  },
+  "__mcmp": {
+   "old": "0x80013754",
+   "new": "0x80045dc4",
+   "size": 88
+  },
+  "__moddi3": {
+   "old": "0x80004728",
+   "new": "0x80036560",
+   "size": 48
+  },
+  "__modsi3": {
+   "old": "0x80004728",
+   "new": "0x80036560",
+   "size": 48
+  },
+  "__muldi3": {
+   "old": "0x80004640",
+   "new": "0x80036478",
+   "size": 36
+  },
+  "__nedf2": {
+   "old": "0x80017a74",
+   "new": "0x80033984",
+   "size": 112
+  },
+  "__retarget_lock_acquire": {
+   "old": "0x80006fdc",
+   "new": "0x80041674",
+   "size": 4
+  },
+  "__retarget_lock_acquire_recursive": {
+   "old": "0x80006fe0",
+   "new": "0x80041678",
+   "size": 4
+  },
+  "__retarget_lock_close": {
+   "old": "0x80006fd4",
+   "new": "0x8004166c",
+   "size": 4
+  },
+  "__retarget_lock_close_recursive": {
+   "old": "0x80006fd8",
+   "new": "0x80041670",
+   "size": 4
+  },
+  "__retarget_lock_init": {
+   "old": "0x80006fcc",
+   "new": "0x80041664",
+   "size": 4
+  },
+  "__retarget_lock_init_recursive": {
+   "old": "0x80006fd0",
+   "new": "0x80041668",
+   "size": 4
+  },
+  "__retarget_lock_release": {
+   "old": "0x80006ff4",
+   "new": "0x8004168c",
+   "size": 4
+  },
+  "__retarget_lock_release_recursive": {
+   "old": "0x80006ff8",
+   "new": "0x80041690",
+   "size": 4
+  },
+  "__retarget_lock_try_acquire": {
+   "old": "0x80006fe4",
+   "new": "0x8004167c",
+   "size": 8
+  },
+  "__retarget_lock_try_acquire_recursive": {
+   "old": "0x80006fec",
+   "new": "0x80041684",
+   "size": 8
+  },
+  "__seofread": {
+   "old": "0x8000efcc",
+   "new": "0x8003f2d4",
+   "size": 8
+  },
+  "__sjis_mbtowc": {
+   "old": "0x800125e4",
+   "new": "0x80044c54",
+   "size": 384
+  },
+  "__sjis_wctomb": {
+   "old": "0x80014644",
+   "new": "0x8004669c",
+   "size": 132
+  },
+  "__trunctfdf2": {
+   "old": "0x80018978",
+   "new": "0x80052220",
+   "size": 528
+  },
+  "__udivdi3": {
+   "old": "0x800046ac",
+   "new": "0x800364e4",
+   "size": 72
+  },
+  "__udivsi3": {
+   "old": "0x80004664",
+   "new": "0x8003649c",
+   "size": 24
+  },
+  "__ulp": {
+   "old": "0x800139f8",
+   "new": "0x80046068",
+   "size": 144
+  },
+  "__umoddi3": {
+   "old": "0x800046f4",
+   "new": "0x8003652c",
+   "size": 16
+  },
+  "__umodsi3": {
+   "old": "0x8000467c",
+   "new": "0x800364b4",
+   "size": 32
+  },
+  "__unorddf2": {
+   "old": "0x800187d4",
+   "new": "0x800346e4",
+   "size": 72
+  },
+  "__utf8_mbtowc": {
+   "old": "0x800122d0",
+   "new": "0x80044940",
+   "size": 788
+  },
+  "__utf8_wctomb": {
+   "old": "0x80014558",
+   "new": "0x800465b0",
+   "size": 236
+  },
+  "_fwalk_sglue": {
+   "old": "0x8000e368",
+   "new": "0x8003e8a0",
+   "size": 208
+  },
+  "_getpid": {
+   "old": "0x800001bc",
+   "new": "0x80000bc0",
+   "size": 8
+  },
+  "_isatty": {
+   "old": "0x80000110",
+   "new": "0x80000adc",
+   "size": 8
+  },
+  "_strtoll_r": {
+   "old": "0x80006938",
+   "new": "0x8004d518",
+   "size": 4
+  },
+  "_wcsnrtombs_l": {
+   "old": "0x80014c34",
+   "new": "0x8004d93c",
+   "size": 400
+  },
+  "longjmp": {
+   "old": "0x8000703c",
+   "new": "0x80041dcc",
+   "size": 68
+  },
+  "memchr": {
+   "old": "0x8000f394",
+   "new": "0x8003f81c",
+   "size": 192
+  },
+  "memcmp": {
+   "old": "0x80006514",
+   "new": "0x8003f8dc",
+   "size": 108
+  },
+  "memcpy": {
+   "old": "0x80006bc8",
+   "new": "0x80041988",
+   "size": 296
+  },
+  "memmove": {
+   "old": "0x800069c4",
+   "new": "0x80041784",
+   "size": 296
+  },
+  "memset": {
+   "old": "0x80006aec",
+   "new": "0x800418ac",
+   "size": 220
+  },
+  "setjmp": {
+   "old": "0x80006ffc",
+   "new": "0x80041d8c",
+   "size": 64
+  },
+  "strchr": {
+   "old": "0x80014948",
+   "new": "0x8004c69c",
+   "size": 368
+  },
+  "strcpy": {
+   "old": "0x80006dc4",
+   "new": "0x80041b84",
+   "size": 220
+  },
+  "strlcpy": {
+   "old": "0x80014ab8",
+   "new": "0x8004c80c",
+   "size": 68
+  },
+  "strlen": {
+   "old": "0x80006cf0",
+   "new": "0x80041ab0",
+   "size": 212
+  },
+  "strncmp": {
+   "old": "0x80014b7c",
+   "new": "0x8003fe08",
+   "size": 184
+  },
+  "strncpy": {
+   "old": "0x8000f454",
+   "new": "0x8003fec0",
+   "size": 188
+  }
+ },
+ "demoted": {},
+ "rewritten": {
+  "Vsa/Sim/Code/Memcpy.lean": {
+   "replacements": 668,
+   "functions": [
+    "memcpy",
+    "strlen"
+   ]
+  },
+  "Vsa/Sim/Code/Memset.lean": {
+   "replacements": 497,
+   "functions": [
+    "memcpy",
+    "memset"
+   ]
+  },
+  "Vsa/Sim/Code/Strcpy.lean": {
+   "replacements": 497,
+   "functions": [
+    "strcmp",
+    "strcpy"
+   ]
+  },
+  "Vsa/Sim/Code/Strlen.lean": {
+   "replacements": 479,
+   "functions": [
+    "strcpy",
+    "strlen"
+   ]
+  },
+  "Vsa/Sim/Code/__ascii_mbtowc.lean": {
+   "replacements": 236,
+   "functions": [
+    "__ascii_mbtowc",
+    "__utf8_mbtowc"
+   ]
+  },
+  "Vsa/Sim/Code/__divdi3.lean": {
+   "replacements": 20,
+   "functions": [
+    "__divdi3"
+   ]
+  },
+  "Vsa/Sim/Code/__hidden___udivdi3.lean": {
+   "replacements": 164,
+   "functions": [
+    "__divdi3"
+   ]
+  },
+  "Vsa/Sim/Code/__moddi3.lean": {
+   "replacements": 137,
+   "functions": [
+    "__divsi3",
+    "exit"
+   ]
+  },
+  "Vsa/Sim/Code/__muldi3.lean": {
+   "replacements": 83,
+   "functions": [
+    "__muldi3",
+    "__udivsi3"
+   ]
+  },
+  "Vsa/Sim/Code/__umoddi3.lean": {
+   "replacements": 119,
+   "functions": [
+    "__divdi3",
+    "__divsi3"
+   ]
+  },
+  "Vsa/Sim/DivLoops.lean": {
+   "replacements": 16,
+   "functions": [
+    "__divdi3"
+   ]
+  },
+  "Vsa/Sim/DivSites.lean": {
+   "replacements": 154,
+   "functions": [
+    "__divdi3"
+   ]
+  },
+  "Vsa/Sim/DivSites2.lean": {
+   "replacements": 58,
+   "functions": [
+    "__divdi3",
+    "__divsi3"
+   ]
+  },
+  "Vsa/Sim/DivSites3.lean": {
+   "replacements": 168,
+   "functions": [
+    "__divdi3",
+    "__divsi3"
+   ]
+  },
+  "Vsa/Sim/DivSpec.lean": {
+   "replacements": 96,
+   "functions": [
+    "__divdi3"
+   ]
+  },
+  "Vsa/Sim/Hooks.lean": {
+   "replacements": 1,
+   "functions": [
+    "?"
+   ]
+  },
+  "Vsa/Sim/InitValues.lean": {
+   "replacements": 1,
+   "functions": [
+    "?"
+   ]
+  },
+  "Vsa/Sim/MemLoad.lean": {
+   "replacements": 3,
+   "functions": [
+    "?"
+   ]
+  },
+  "Vsa/Sim/MemcpySites.lean": {
+   "replacements": 89,
+   "functions": [
+    "memcpy"
+   ]
+  },
+  "Vsa/Sim/MemcpySites2.lean": {
+   "replacements": 101,
+   "functions": [
+    "memcpy"
+   ]
+  },
+  "Vsa/Sim/MemcpySites3.lean": {
+   "replacements": 58,
+   "functions": [
+    "memcpy"
+   ]
+  },
+  "Vsa/Sim/MemcpySites4.lean": {
+   "replacements": 134,
+   "functions": [
+    "memcpy"
+   ]
+  },
+  "Vsa/Sim/MemcpySpec.lean": {
+   "replacements": 60,
+   "functions": [
+    "?",
+    "memcpy",
+    "strlen"
+   ]
+  },
+  "Vsa/Sim/Muldi3Sites.lean": {
+   "replacements": 89,
+   "functions": [
+    "?",
+    "__muldi3",
+    "__udivsi3"
+   ]
+  },
+  "Vsa/Sim/Muldi3Spec.lean": {
+   "replacements": 56,
+   "functions": [
+    "__muldi3"
+   ]
+  },
+  "Vsa/Sim/SnprintfSitesPro3.lean": {
+   "replacements": 128,
+   "functions": [
+    "memset"
+   ]
+  },
+  "Vsa/Sim/SnprintfSitesRet4.lean": {
+   "replacements": 47,
+   "functions": [
+    "__ascii_mbtowc"
+   ]
+  },
+  "Vsa/Sim/StrcpySites.lean": {
+   "replacements": 474,
+   "functions": [
+    "strcmp",
+    "strcpy"
+   ]
+  },
+  "Vsa/Sim/StrlenMagic.lean": {
+   "replacements": 2,
+   "functions": [
+    "strlen"
+   ]
+  },
+  "Vsa/Sim/StrlenSites.lean": {
+   "replacements": 449,
+   "functions": [
+    "strcpy",
+    "strlen"
+   ]
+  }
+ },
+ "skipped_mixed": {},
+ "mailbox": {
+  "0x8001ad00": "0x800668c0",
+  "2147593472": "2147903680",
+  "2147593480": "2147903688"
+ },
+ "mailbox_files": [
+  "Vsa/Sim/Hooks.lean",
+  "Vsa/Sim/MemLoad.lean",
+  "Vsa/Sim/RamReadData.lean"
+ ]
+}

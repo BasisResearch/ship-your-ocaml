@@ -55,7 +55,7 @@ def initPmpaddr : Vector (BitVec 64) 64 := Vector.replicate 64 (0#64)
 
 /-- `.tohost` HTIF mailbox address of `c/while-riscv-htif.elf` (symbol
 table; also `htif_tohost` post-init). -/
-def tohostAddr : Nat := 0x8001ad00
+def tohostAddr : Nat := 0x800668c0
 
 open MemoryRegionType AtomicSupport Reservability misaligned_exception in
 /-- `pma_regions` after init (`sail_model_init`,

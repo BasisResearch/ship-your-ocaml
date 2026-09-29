@@ -17,7 +17,7 @@ copied-prefix description) and each `stepObs_store` transition threads it throug
 the single-byte insert (`Std.ExtHashMap.getElem?_insert` read-over-write; key
 disequalities are omega-shaped from the region bounds + non-overlap).
 
-## The byte loop (`[0x80006c48, 0x80006c5c)`, back-edge `0x58 → 0x48`)
+## The byte loop (`[0x80041a08, 0x80041a1c)`, back-edge `0x58 → 0x48`)
 
 At loop head `0x48`, iteration `i` (`0 ≤ i ≤ n`):
 * `x11 (a1) = src + i`, `x14 (a4) = dst + i`, `x17 (a7) = dst + n`, `x10 (a0) = dst`;
@@ -79,10 +79,10 @@ theorem getElem_transfer (mem : Std.ExtHashMap Nat (BitVec 8)) (k a : Nat) (v b 
   rw [Std.ExtHashMap.getElem?_insert, if_neg (by simp [hne])]; exact h
 
 /-- **`MemcpyLoaded` is preserved by inserting a byte outside the code region**
-`[0x80006bc8, 0x80006cf0)`. Each of the 74×4 code-byte reads survives the insert
+`[0x80041988, 0x80041ab0)`. Each of the 74×4 code-byte reads survives the insert
 because its (concrete) address differs from the (out-of-range) key `k` (`omega`). -/
 theorem loaded_insert (mem : Std.ExtHashMap Nat (BitVec 8)) (k : Nat) (v : BitVec 8)
-    (hk : k < 0x80006bc8 ∨ 0x80006cf0 ≤ k) (h : MemcpyLoaded mem) :
+    (hk : k < 0x80041988 ∨ 0x80041ab0 ≤ k) (h : MemcpyLoaded mem) :
     MemcpyLoaded (mem.insert k v) := by
   obtain ⟨c0, c1, c2, c3, c4⟩ := h
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
@@ -130,14 +130,14 @@ structure Regions (dst src : BitVec 64) (n : Nat) : Prop where
   dst_nowrap : dst.toNat + n < 2^64
   src_nowrap : src.toNat + n < 2^64
   disjoint : dst.toNat + n ≤ src.toNat ∨ src.toNat + n ≤ dst.toNat
-  -- the destination region is disjoint from the `memcpy` code `[0x80006bc8, 0x80006cf0)`
-  code_disjoint : dst.toNat + n ≤ 0x80006bc8 ∨ 0x80006cf0 ≤ dst.toNat
+  -- the destination region is disjoint from the `memcpy` code `[0x80041988, 0x80041ab0)`
+  code_disjoint : dst.toNat + n ≤ 0x80041988 ∨ 0x80041ab0 ≤ dst.toNat
   -- both regions in RAM `[0x80000000, 0x100000000)`
   dst_lo : 0x80000000 ≤ dst.toNat
   dst_hi : dst.toNat + n ≤ 0x100000000
   src_lo : 0x80000000 ≤ src.toNat
   src_hi : src.toNat + n ≤ 0x100000000
-  -- both regions above the HTIF window (`tohostAddr = 0x8001ad00`, ± 16)
+  -- both regions above the HTIF window (`tohostAddr = 0x800668c0`, ± 16)
   dst_win : tohostAddr + 16 ≤ dst.toNat
   src_win : tohostAddr + 16 ≤ src.toNat
 
@@ -316,7 +316,7 @@ structure StB58 (g : (R : Register) → Option (RegisterType R)) (i : Nat)
     (m0 : Std.ExtHashMap Nat (BitVec 8)) (bs : Nat → BitVec 8) (c : Config) : Prop where
   good : GoodState c.σ
   loaded : MemcpyLoaded c.σ.mem
-  pc : c.σ.regs.get? Register.PC = some (0x80006c58#64 : BitVec 64)
+  pc : c.σ.regs.get? Register.PC = some (0x80041a18#64 : BitVec 64)
   a0 : c.σ.regs.get? Register.x10 = some dst
   a1 : c.σ.regs.get? Register.x11 = some (src + BitVec.ofNat 64 (i + 1))
   a4 : c.σ.regs.get? Register.x14 = some (dst + BitVec.ofNat 64 (i + 1))
@@ -345,7 +345,7 @@ theorem src_ptr_bounds (dst src : BitVec 64) (n : Nat) (hreg : Regions dst src n
   have hlo := hreg.src_lo
   have hhi := hreg.src_hi
   have hwin := hreg.src_win
-  have htoh : tohostAddr = 0x8001ad00 := rfl
+  have htoh : tohostAddr = 0x800668c0 := rfl
   refine ⟨htn, ?_, ?_, ?_⟩
   · rw [htn]; omega
   · rw [htn]; omega
@@ -365,7 +365,7 @@ theorem dst_ptr_bounds (dst src : BitVec 64) (n : Nat) (hreg : Regions dst src n
   have hlo := hreg.dst_lo
   have hhi := hreg.dst_hi
   have hwin := hreg.dst_win
-  have htoh : tohostAddr = 0x8001ad00 := rfl
+  have htoh : tohostAddr = 0x800668c0 := rfl
   refine ⟨htn, ?_, ?_, ?_, hsb⟩
   · rw [hsb]; omega
   · rw [hsb]; omega
@@ -417,7 +417,7 @@ Chains `lbu → addi a4 → addi a1 → sb`. The `lbu` reads `bs i` from `src+i`
 at `dst+i` (`sbAddr_succ`), and `meminv_store` re-establishes `MemInv … (i+1)`. -/
 theorem iterB (g : (R : Register) → Option (RegisterType R)) (i : Nat) (r dst src : BitVec 64) (n : Nat)
     (m0 : Std.ExtHashMap Nat (BitVec 8)) (bs : Nat → BitVec 8) (hi : i < n) :
-    Triple (StB g (0x80006c48#64) i r dst src n m0 bs) (StB58 g i r dst src n m0 bs) := by
+    Triple (StB g (0x80041a08#64) i r dst src n m0 bs) (StB58 g i r dst src n m0 bs) := by
   intro c hSt
   obtain ⟨hgood, hloaded, hpc, ha0, ha1, ha4, ha7, hra, ⟨vmi, hmi⟩, htick,
     hreg, hile, hminv, hframe⟩ := hSt
@@ -428,11 +428,11 @@ theorem iterB (g : (R : Register) → Option (RegisterType R)) (i : Nat) (r dst 
     rw [htn_src]; exact hminv.src_intact i (Nat.le_refl i) hi
   -- === c48: lbu a5,0(a1) ===
   obtain ⟨σ1, i1, hs1, hi1, hG1, hmem1, hobs1⟩ :=
-    site_80006c48 c.σ c.tick c.steps (0x80006c48#64) vmi (src + BitVec.ofNat 64 i) (bs i)
+    site_80041a08 c.σ c.tick c.steps (0x80041a08#64) vmi (src + BitVec.ofNat 64 i) (bs i)
       hgood hpc hmi ha1 hloaded rfl hslo hshi hshtif hbyte htick
   -- read the successor's registers/mem
-  have hpc1 : σ1.regs.get? Register.PC = some (0x80006c4c#64 : BitVec 64) := by
-    have := obs_alu_pc hobs1; rwa [show BitVec.addInt (0x80006c48#64) 4 = (0x80006c4c#64 : BitVec 64) from by decide] at this
+  have hpc1 : σ1.regs.get? Register.PC = some (0x80041a0c#64 : BitVec 64) := by
+    have := obs_alu_pc hobs1; rwa [show BitVec.addInt (0x80041a08#64) 4 = (0x80041a0c#64 : BitVec 64) from by decide] at this
   have ha0_1 := obs_alu_other hobs1 Register.x10 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha0
   have ha1_1 := obs_alu_other hobs1 Register.x11 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha1
   have ha4_1 := obs_alu_other hobs1 Register.x14 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha4
@@ -443,10 +443,10 @@ theorem iterB (g : (R : Register) → Option (RegisterType R)) (i : Nat) (r dst 
   -- === c4c: addi a4,a4,1 ===
   obtain ⟨vmi1, hmi1'⟩ := hmi_1
   obtain ⟨σ2, i2, hs2, hi2, hG2, hmem2, hobs2⟩ :=
-    site_80006c4c σ1 i1 (c.steps + 1) (0x80006c4c#64) vmi1 (dst + BitVec.ofNat 64 i)
+    site_80041a0c σ1 i1 (c.steps + 1) (0x80041a0c#64) vmi1 (dst + BitVec.ofNat 64 i)
       hG1 hpc1 hmi1' ha4_1 (by rw [hmem1]; exact hloaded) rfl hi1
-  have hpc2 : σ2.regs.get? Register.PC = some (0x80006c50#64 : BitVec 64) := by
-    have := obs_alu_pc hobs2; rwa [show BitVec.addInt (0x80006c4c#64) 4 = (0x80006c50#64 : BitVec 64) from by decide] at this
+  have hpc2 : σ2.regs.get? Register.PC = some (0x80041a10#64 : BitVec 64) := by
+    have := obs_alu_pc hobs2; rwa [show BitVec.addInt (0x80041a0c#64) 4 = (0x80041a10#64 : BitVec 64) from by decide] at this
   have ha0_2 := obs_alu_other hobs2 Register.x10 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha0_1
   have ha1_2 := obs_alu_other hobs2 Register.x11 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha1_1
   have ha7_2 := obs_alu_other hobs2 Register.x17 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha7_1
@@ -459,10 +459,10 @@ theorem iterB (g : (R : Register) → Option (RegisterType R)) (i : Nat) (r dst 
   -- === c50: addi a1,a1,1 ===
   obtain ⟨vmi2, hmi2'⟩ := hmi_2
   obtain ⟨σ3, i3, hs3, hi3, hG3, hmem3, hobs3⟩ :=
-    site_80006c50 σ2 i2 (c.steps + 1 + 1) (0x80006c50#64) vmi2 (src + BitVec.ofNat 64 i)
+    site_80041a10 σ2 i2 (c.steps + 1 + 1) (0x80041a10#64) vmi2 (src + BitVec.ofNat 64 i)
       hG2 hpc2 hmi2' ha1_2 (by rw [hmem2, hmem1]; exact hloaded) rfl hi2
-  have hpc3 : σ3.regs.get? Register.PC = some (0x80006c54#64 : BitVec 64) := by
-    have := obs_alu_pc hobs3; rwa [show BitVec.addInt (0x80006c50#64) 4 = (0x80006c54#64 : BitVec 64) from by decide] at this
+  have hpc3 : σ3.regs.get? Register.PC = some (0x80041a14#64 : BitVec 64) := by
+    have := obs_alu_pc hobs3; rwa [show BitVec.addInt (0x80041a10#64) 4 = (0x80041a14#64 : BitVec 64) from by decide] at this
   have ha0_3 := obs_alu_other hobs3 Register.x10 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha0_2
   have ha4_3 := obs_alu_other hobs3 Register.x14 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha4_2
   have ha7_3 := obs_alu_other hobs3 Register.x17 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha7_2
@@ -477,7 +477,7 @@ theorem iterB (g : (R : Register) → Option (RegisterType R)) (i : Nat) (r dst 
   -- σ3.mem = c.σ.mem (three regs-only steps)
   have hmem3eq : σ3.mem = c.σ.mem := by rw [hmem3, hmem2, hmem1]
   obtain ⟨σ4, i4, hs4, hi4, hG4, hmem4, hobs4⟩ :=
-    site_80006c54 σ3 i3 (c.steps + 1 + 1 + 1) (0x80006c54#64) vmi3
+    site_80041a14 σ3 i3 (c.steps + 1 + 1 + 1) (0x80041a14#64) vmi3
       (dst + BitVec.ofNat 64 (i + 1)) (zero_extend (m := 64) ((bs i) : BitVec (8*1)))
       hG3 hpc3 hmi3' ha4_3 ha5_3 (by rw [hmem3eq]; exact hloaded) rfl
       hdlo hdhi hdwin hi3
@@ -488,9 +488,9 @@ theorem iterB (g : (R : Register) → Option (RegisterType R)) (i : Nat) (r dst 
     (((Steps.single hs1).trans (Steps.single hs2)).trans (Steps.single hs3)).trans (Steps.single hs4)
   refine ⟨⟨σ4, i4, c.steps + 1 + 1 + 1 + 1⟩, hsteps, ?_⟩
   · -- StB58 i
-    have hpc4 : σ4.regs.get? Register.PC = some (0x80006c58#64 : BitVec 64) := by
+    have hpc4 : σ4.regs.get? Register.PC = some (0x80041a18#64 : BitVec 64) := by
       have := obs_store_pc hobs4
-      rwa [show BitVec.addInt (0x80006c54#64) 4 = (0x80006c58#64 : BitVec 64) from by decide] at this
+      rwa [show BitVec.addInt (0x80041a14#64) 4 = (0x80041a18#64 : BitVec 64) from by decide] at this
     have ha0_4 := obs_store_other hobs4 Register.x10 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha0_3
     have ha1_4 := obs_store_other hobs4 Register.x11 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha1_3
     have ha4_4 := obs_store_other hobs4 Register.x14 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha4_3
@@ -525,7 +525,7 @@ structure StBDone (g : (R : Register) → Option (RegisterType R)) (r dst src : 
     (m0 : Std.ExtHashMap Nat (BitVec 8)) (bs : Nat → BitVec 8) (c : Config) : Prop where
   good : GoodState c.σ
   loaded : MemcpyLoaded c.σ.mem
-  pc : c.σ.regs.get? Register.PC = some (0x80006c5c#64 : BitVec 64)
+  pc : c.σ.regs.get? Register.PC = some (0x80041a1c#64 : BitVec 64)
   a0 : c.σ.regs.get? Register.x10 = some dst
   a4 : c.σ.regs.get? Register.x14 = some (dst + BitVec.ofNat 64 n)
   a7 : c.σ.regs.get? Register.x17 = some (dst + BitVec.ofNat 64 n)
@@ -554,18 +554,18 @@ theorem bne_false (dst : BitVec 64) (n i : Nat) (heq : i + 1 = n) :
 /-- `bne a7,a4` taken (0x58 → 0x48): loop back to iteration `i+1`. -/
 theorem tr_bne_back (g : (R : Register) → Option (RegisterType R)) (i : Nat) (r dst src : BitVec 64) (n : Nat)
     (m0 : Std.ExtHashMap Nat (BitVec 8)) (bs : Nat → BitVec 8) (hlt : i + 1 < n) :
-    Triple (StB58 g i r dst src n m0 bs) (StB g (0x80006c48#64) (i + 1) r dst src n m0 bs) := by
+    Triple (StB58 g i r dst src n m0 bs) (StB g (0x80041a08#64) (i + 1) r dst src n m0 bs) := by
   apply Triple.of_step
   intro c hSt
   obtain ⟨hgood, hloaded, hpc, ha0, ha1, ha4, ha7, hra, ⟨vmi, hmi⟩, htick,
     hreg, hile, hminv, hframe⟩ := hSt
   have hv : ((dst + BitVec.ofNat 64 n) != (dst + BitVec.ofNat 64 (i + 1))) = true :=
     bne_true dst n i hreg.dst_nowrap hlt
-  have htgt : ((0x80006c58#64 : BitVec 64) + sign_extend (m := 64) (0x1ff0#13)).toNat % 4 = 0 := by decide
+  have htgt : ((0x80041a18#64 : BitVec 64) + sign_extend (m := 64) (0x1ff0#13)).toNat % 4 = 0 := by decide
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_80006c58_taken c.σ c.tick c.steps (0x80006c58#64) vmi (dst + BitVec.ofNat 64 n)
+    site_80006c58_taken c.σ c.tick c.steps (0x80041a18#64) vmi (dst + BitVec.ofNat 64 n)
       (dst + BitVec.ofNat 64 (i + 1)) hgood hpc hmi ha7 ha4 hloaded rfl htgt hv htick
-  have hpceq : (0x80006c58#64 : BitVec 64) + sign_extend (m := 64) (0x1ff0#13) = (0x80006c48#64 : BitVec 64) := by
+  have hpceq : (0x80041a18#64 : BitVec 64) + sign_extend (m := 64) (0x1ff0#13) = (0x80041a08#64 : BitVec 64) := by
     apply BitVec.eq_of_toNat_eq; decide
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hloaded, ?_,
@@ -590,11 +590,11 @@ theorem tr_bne_done (g : (R : Register) → Option (RegisterType R)) (i : Nat) (
   have hv : ((dst + BitVec.ofNat 64 n) != (dst + BitVec.ofNat 64 (i + 1))) = false :=
     bne_false dst n i heq
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_80006c58_nottaken c.σ c.tick c.steps (0x80006c58#64) vmi (dst + BitVec.ofNat 64 n)
+    site_80006c58_nottaken c.σ c.tick c.steps (0x80041a18#64) vmi (dst + BitVec.ofNat 64 n)
       (dst + BitVec.ofNat 64 (i + 1)) hgood hpc hmi ha7 ha4 hloaded rfl hv htick
-  have hpc' : σ'.regs.get? Register.PC = some (0x80006c5c#64 : BitVec 64) := by
+  have hpc' : σ'.regs.get? Register.PC = some (0x80041a1c#64 : BitVec 64) := by
     have := obs_bnottaken_pc hobs
-    rwa [show BitVec.addInt (0x80006c58#64) 4 = (0x80006c5c#64 : BitVec 64) from by decide] at this
+    rwa [show BitVec.addInt (0x80041a18#64) 4 = (0x80041a1c#64 : BitVec 64) from by decide] at this
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hloaded, hpc',
     obs_bnottaken_other hobs Register.x10 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha0,
@@ -623,7 +623,7 @@ reached with copy remaining; the exiting iteration leaves via the `bne` to
 `StBDone`, never back to the head at `i = n`). -/
 def AtHeadB (g : (R : Register) → Option (RegisterType R)) (r dst src : BitVec 64) (n : Nat) (m0 : Std.ExtHashMap Nat (BitVec 8))
     (bs : Nat → BitVec 8) (c : Config) : Prop :=
-  ∃ i, i < n ∧ StB g (0x80006c48#64) i r dst src n m0 bs c
+  ∃ i, i < n ∧ StB g (0x80041a08#64) i r dst src n m0 bs c
 
 def LoopIB (g : (R : Register) → Option (RegisterType R)) (r dst src : BitVec 64) (n : Nat) (m0 : Std.ExtHashMap Nat (BitVec 8))
     (bs : Nat → BitVec 8) (c : Config) : Prop :=
@@ -641,7 +641,7 @@ def LoopMuB (c : Config) : Nat :=
 /-- At loop head iteration `i`, `LoopMuB = n - i`. -/
 theorem loopmu_headB (g : (R : Register) → Option (RegisterType R)) (i : Nat) (r dst src : BitVec 64) (n : Nat)
     (m0 : Std.ExtHashMap Nat (BitVec 8)) (bs : Nat → BitVec 8) (c : Config)
-    (hSt : StB g (0x80006c48#64) i r dst src n m0 bs c) (hile : i ≤ n) :
+    (hSt : StB g (0x80041a08#64) i r dst src n m0 bs c) (hile : i ≤ n) :
     LoopMuB c = n - i := by
   simp only [LoopMuB, hSt.a7, hSt.a4, Option.getD_some]
   have h7 : (dst + BitVec.ofNat 64 n).toNat = dst.toNat + n :=
@@ -705,7 +705,7 @@ structure PreB (g : (R : Register) → Option (RegisterType R)) (r dst src : Bit
     (bs : Nat → BitVec 8) (c : Config) : Prop where
   good : GoodState c.σ
   loaded : MemcpyLoaded c.σ.mem
-  pc : c.σ.regs.get? Register.PC = some (0x80006c40#64 : BitVec 64)
+  pc : c.σ.regs.get? Register.PC = some (0x80041a00#64 : BitVec 64)
   a0 : c.σ.regs.get? Register.x10 = some dst
   a1 : c.σ.regs.get? Register.x11 = some src
   a7 : c.σ.regs.get? Register.x17 = some (dst + BitVec.ofNat 64 n)
@@ -734,9 +734,9 @@ theorem prefixB (g : (R : Register) → Option (RegisterType R)) (r dst src : Bi
   obtain ⟨hgood, hloaded, hpc, ha0, ha1, ha7, hra, ⟨vmi, hmi⟩, htick, hreg, hnpos, hminv, hframe⟩ := hPre
   -- 0x40: mv a4,a0  (a4 := dst)
   obtain ⟨σ1, i1, hs1, hi1, hG1, hmem1, hobs1⟩ :=
-    site_80006c40 c.σ c.tick c.steps (0x80006c40#64) vmi dst hgood hpc hmi ha0 hloaded rfl htick
-  have hpc1 : σ1.regs.get? Register.PC = some (0x80006c44#64 : BitVec 64) := by
-    have := obs_alu_pc hobs1; rwa [show BitVec.addInt (0x80006c40#64) 4 = (0x80006c44#64 : BitVec 64) from by decide] at this
+    site_80041a00 c.σ c.tick c.steps (0x80041a00#64) vmi dst hgood hpc hmi ha0 hloaded rfl htick
+  have hpc1 : σ1.regs.get? Register.PC = some (0x80041a04#64 : BitVec 64) := by
+    have := obs_alu_pc hobs1; rwa [show BitVec.addInt (0x80041a00#64) 4 = (0x80041a04#64 : BitVec 64) from by decide] at this
   have ha0_1 := obs_alu_other hobs1 Register.x10 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha0
   have ha1_1 := obs_alu_other hobs1 Register.x11 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha1
   have ha7_1 := obs_alu_other hobs1 Register.x17 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha7
@@ -749,10 +749,10 @@ theorem prefixB (g : (R : Register) → Option (RegisterType R)) (r dst src : Bi
   -- 0x44: bgeu a0,a7 not-taken → 0x48
   have hv : zopz0zKzJ_u dst (dst + BitVec.ofNat 64 n) = false := bgeu_false_dst_span dst n hreg.dst_nowrap hnpos
   obtain ⟨σ2, i2, hs2, hi2, hG2, hmem2, hobs2⟩ :=
-    site_80006c44_nottaken σ1 i1 (c.steps + 1) (0x80006c44#64) vmi1 dst (dst + BitVec.ofNat 64 n)
+    site_80006c44_nottaken σ1 i1 (c.steps + 1) (0x80041a04#64) vmi1 dst (dst + BitVec.ofNat 64 n)
       hG1 hpc1 hmi1' ha0_1 ha7_1 (by rw [hmem1]; exact hloaded) rfl hv hi1
-  have hpc2 : σ2.regs.get? Register.PC = some (0x80006c48#64 : BitVec 64) := by
-    have := obs_bnottaken_pc hobs2; rwa [show BitVec.addInt (0x80006c44#64) 4 = (0x80006c48#64 : BitVec 64) from by decide] at this
+  have hpc2 : σ2.regs.get? Register.PC = some (0x80041a08#64 : BitVec 64) := by
+    have := obs_bnottaken_pc hobs2; rwa [show BitVec.addInt (0x80041a04#64) 4 = (0x80041a08#64 : BitVec 64) from by decide] at this
   refine ⟨⟨σ2, i2, c.steps + 1 + 1⟩, (Steps.single hs1).trans (Steps.single hs2), 0, hnpos, ?_⟩
   refine ⟨hG2, by rw [hmem2, hmem1]; exact hloaded, hpc2, ?_, ?_, ?_, ?_,
     obs_bnottaken_other hobs2 Register.x1 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) hra_1,
@@ -798,7 +798,7 @@ theorem tr_retB (g : (R : Register) → Option (RegisterType R)) (r dst src : Bi
   have htgt : (BitVec.update (r + sign_extend (m := 64) (0x000#12)) 0 0#1).toNat % 4 = 0 := by
     rw [ret_tgt r halign]; exact halign
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_80006c5c c.σ c.tick c.steps (0x80006c5c#64) vmi r hgood hpc hmi hra hloaded rfl htgt htick
+    site_80041a1c c.σ c.tick c.steps (0x80041a1c#64) vmi r hgood hpc hmi hra hloaded rfl htgt htick
   have hpc' : σ'.regs.get? Register.PC = some r := by
     rw [obs_jr_pc hobs, ret_tgt r halign]
   have ha0' := obs_jr_other hobs Register.x10 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) ha0
@@ -811,7 +811,7 @@ theorem tr_retB (g : (R : Register) → Option (RegisterType R)) (r dst src : Bi
 
 /-! ## The byte-copy-path total-correctness spec
 
-Entry precondition at `0x80006c40` (the byte-copy path the binary takes when the
+Entry precondition at `0x80041a00` (the byte-copy path the binary takes when the
 alignment fast-path does not apply), `n > 0`. The machine runs (finitely many
 architectural steps, tick parity unconstrained) to `r` with `x10 = dst`,
 `GoodState`, and the memory holding the described update: the `n` source bytes

@@ -108,7 +108,7 @@ clock it hung in libgloss's `ecall` (§1).
 | `caml_input_val` (unmarshal DATA), promotion (one minor collection), `caml_sys_init` | 4.46M → 4.50M | 41.10M → 48.24M |
 
 All of it is before the cut point: it costs emulator time and boot-witness
-length, not proof (PLAN.md §6).
+length, not proof (PLAN.md §7).
 
 ### 2.2 Difftests
 
@@ -289,6 +289,6 @@ show the `ecall` hang (§1). The Sail numbers above are authoritative.
 * No `native_decide` anywhere. The kernel cannot evaluate `BcSem` over a Stdlib-initialised heap for
   more than ~100 steps within 30 GB (§3).
 * Startup is expensive on Sail (§2.1); boot witnesses beyond small
-  programs are impractical (PLAN.md §6).
+  programs are impractical (PLAN.md §7).
 * The difftest ELFs are separate builds of the same sources with other
   embedded programs; the proof ELF is `c/ocamlrun-riscv-htif.elf` only.

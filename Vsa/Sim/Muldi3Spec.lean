@@ -365,12 +365,12 @@ private theorem andi1 (v : BitVec 64) : v &&& sign_extend (m := 64) (0x001#12) =
 preserved; `a2` overwritten by `x`; `x13` (a3) passes through unchanged. -/
 theorem tr_40_44 (g : (R : Register) → Option (RegisterType R))
     (x y r a2old a3old : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) :
-    Triple (St g (0x80004640#64) x y a2old a3old r m0 o) (St g (0x80004644#64) x y x a3old r m0 o) := by
+    Triple (St g (0x80036478#64) x y a2old a3old r m0 o) (St g (0x8003647c#64) x y x a3old r m0 o) := by
   apply Triple.of_step
   intro c hSt
   obtain ⟨vmi, hmi⟩ := hSt.minstret
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_80004640 c.σ c.tick c.steps (0x80004640#64) vmi x hSt.good hSt.pc hmi hSt.a0 hSt.loaded rfl hSt.tick
+    site_80036478 c.σ c.tick c.steps (0x80036478#64) vmi x hSt.good hSt.pc hmi hSt.a0 hSt.loaded rfl hSt.tick
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hSt.loaded, by rw [hmem']; exact hSt.mem,
     by rw [hobs.out]; exact hSt.sailOut,
@@ -389,12 +389,12 @@ theorem tr_40_44 (g : (R : Register) → Option (RegisterType R))
 /-- `li a0,0` (0x44 → 0x48): `x10 := 0`. -/
 theorem tr_44_48 (g : (R : Register) → Option (RegisterType R))
     (x y r a2 a3old : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) :
-    Triple (St g (0x80004644#64) x y a2 a3old r m0 o) (St g (0x80004648#64) (0#64) y a2 a3old r m0 o) := by
+    Triple (St g (0x8003647c#64) x y a2 a3old r m0 o) (St g (0x80036480#64) (0#64) y a2 a3old r m0 o) := by
   apply Triple.of_step
   intro c hSt
   obtain ⟨vmi, hmi⟩ := hSt.minstret
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_80004644 c.σ c.tick c.steps (0x80004644#64) vmi hSt.good hSt.pc hmi hSt.loaded rfl hSt.tick
+    site_8003647c c.σ c.tick c.steps (0x8003647c#64) vmi hSt.good hSt.pc hmi hSt.loaded rfl hSt.tick
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hSt.loaded, by rw [hmem']; exact hSt.mem,
     by rw [hobs.out]; exact hSt.sailOut,
@@ -411,12 +411,12 @@ theorem tr_44_48 (g : (R : Register) → Option (RegisterType R))
 /-- `andi a3,a1,1` (0x48 → 0x4c): `x13 := a1 &&& 1`. -/
 theorem tr_48_4c (g : (R : Register) → Option (RegisterType R))
     (x y r a0 a2 a3old : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) :
-    Triple (St g (0x80004648#64) a0 y a2 a3old r m0 o) (St g (0x8000464c#64) a0 y a2 (y &&& 1#64) r m0 o) := by
+    Triple (St g (0x80036480#64) a0 y a2 a3old r m0 o) (St g (0x80036484#64) a0 y a2 (y &&& 1#64) r m0 o) := by
   apply Triple.of_step
   intro c hSt
   obtain ⟨vmi, hmi⟩ := hSt.minstret
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_80004648 c.σ c.tick c.steps (0x80004648#64) vmi y hSt.good hSt.pc hmi hSt.a1 hSt.loaded rfl hSt.tick
+    site_80036480 c.σ c.tick c.steps (0x80036480#64) vmi y hSt.good hSt.pc hmi hSt.a1 hSt.loaded rfl hSt.tick
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hSt.loaded, by rw [hmem']; exact hSt.mem,
     by rw [hobs.out]; exact hSt.sailOut,
@@ -434,12 +434,12 @@ theorem tr_48_4c (g : (R : Register) → Option (RegisterType R))
 /-- `add a0,a0,a2` (0x50 → 0x54, odd path): `x10 := a0 + a2`. -/
 theorem tr_50_54 (g : (R : Register) → Option (RegisterType R))
     (x y r a0 a2 a3 : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) :
-    Triple (St g (0x80004650#64) a0 y a2 a3 r m0 o) (St g (0x80004654#64) (a0 + a2) y a2 a3 r m0 o) := by
+    Triple (St g (0x80036488#64) a0 y a2 a3 r m0 o) (St g (0x8003648c#64) (a0 + a2) y a2 a3 r m0 o) := by
   apply Triple.of_step
   intro c hSt
   obtain ⟨vmi, hmi⟩ := hSt.minstret
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_80004650 c.σ c.tick c.steps (0x80004650#64) vmi a0 a2 hSt.good hSt.pc hmi hSt.a0 hSt.a2 hSt.loaded rfl hSt.tick
+    site_80036488 c.σ c.tick c.steps (0x80036488#64) vmi a0 a2 hSt.good hSt.pc hmi hSt.a0 hSt.a2 hSt.loaded rfl hSt.tick
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hSt.loaded, by rw [hmem']; exact hSt.mem,
     by rw [hobs.out]; exact hSt.sailOut,
@@ -455,12 +455,12 @@ theorem tr_50_54 (g : (R : Register) → Option (RegisterType R))
 /-- `srli a1,a1,1` (0x54 → 0x58): `x11 := a1 >>> 1`. -/
 theorem tr_54_58 (g : (R : Register) → Option (RegisterType R))
     (x y r a0 a1 a2 a3 : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) :
-    Triple (St g (0x80004654#64) a0 a1 a2 a3 r m0 o) (St g (0x80004658#64) a0 (a1 >>> (1:Nat)) a2 a3 r m0 o) := by
+    Triple (St g (0x8003648c#64) a0 a1 a2 a3 r m0 o) (St g (0x80036490#64) a0 (a1 >>> (1:Nat)) a2 a3 r m0 o) := by
   apply Triple.of_step
   intro c hSt
   obtain ⟨vmi, hmi⟩ := hSt.minstret
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_80004654 c.σ c.tick c.steps (0x80004654#64) vmi a1 hSt.good hSt.pc hmi hSt.a1 hSt.loaded rfl hSt.tick
+    site_8003648c c.σ c.tick c.steps (0x8003648c#64) vmi a1 hSt.good hSt.pc hmi hSt.a1 hSt.loaded rfl hSt.tick
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hSt.loaded, by rw [hmem']; exact hSt.mem,
     by rw [hobs.out]; exact hSt.sailOut,
@@ -478,12 +478,12 @@ theorem tr_54_58 (g : (R : Register) → Option (RegisterType R))
 /-- `slli a2,a2,1` (0x58 → 0x5c): `x12 := a2 <<< 1`. -/
 theorem tr_58_5c (g : (R : Register) → Option (RegisterType R))
     (x y r a0 a1 a2 a3 : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) :
-    Triple (St g (0x80004658#64) a0 a1 a2 a3 r m0 o) (St g (0x8000465c#64) a0 a1 (a2 <<< (1:Nat)) a3 r m0 o) := by
+    Triple (St g (0x80036490#64) a0 a1 a2 a3 r m0 o) (St g (0x80036494#64) a0 a1 (a2 <<< (1:Nat)) a3 r m0 o) := by
   apply Triple.of_step
   intro c hSt
   obtain ⟨vmi, hmi⟩ := hSt.minstret
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_80004658 c.σ c.tick c.steps (0x80004658#64) vmi a2 hSt.good hSt.pc hmi hSt.a2 hSt.loaded rfl hSt.tick
+    site_80036490 c.σ c.tick c.steps (0x80036490#64) vmi a2 hSt.good hSt.pc hmi hSt.a2 hSt.loaded rfl hSt.tick
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hSt.loaded, by rw [hmem']; exact hSt.mem,
     by rw [hobs.out]; exact hSt.sailOut,
@@ -552,14 +552,14 @@ theorem obs_bnottaken_minstret {σ' σ : MState} {pc vm : BitVec 64}
 theorem tr_4c_54 (g : (R : Register) → Option (RegisterType R))
     (x y r a0 a2 : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String)
     (hodd : ((y &&& 1#64) == (0#64)) = true) :
-    Triple (St g (0x8000464c#64) a0 y a2 (y &&& 1#64) r m0 o) (St g (0x80004654#64) a0 y a2 (y &&& 1#64) r m0 o) := by
+    Triple (St g (0x80036484#64) a0 y a2 (y &&& 1#64) r m0 o) (St g (0x8003648c#64) a0 y a2 (y &&& 1#64) r m0 o) := by
   apply Triple.of_step
   intro c hSt
   obtain ⟨vmi, hmi⟩ := hSt.minstret
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_8000464c_taken c.σ c.tick c.steps (0x8000464c#64) vmi (y &&& 1#64)
+    site_8000464c_taken c.σ c.tick c.steps (0x80036484#64) vmi (y &&& 1#64)
       hSt.good hSt.pc hmi hSt.a3 hSt.loaded rfl hodd hSt.tick
-  have hpceq : (0x8000464c#64 : BitVec 64) + sign_extend (m := 64) (0x0008#13) = (0x80004654#64 : BitVec 64) := by
+  have hpceq : (0x80036484#64 : BitVec 64) + sign_extend (m := 64) (0x0008#13) = (0x8003648c#64 : BitVec 64) := by
     apply BitVec.eq_of_toNat_eq; decide
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hSt.loaded, by rw [hmem']; exact hSt.mem,
@@ -577,12 +577,12 @@ theorem tr_4c_54 (g : (R : Register) → Option (RegisterType R))
 theorem tr_4c_50 (g : (R : Register) → Option (RegisterType R))
     (x y r a0 a2 : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String)
     (hodd : ((y &&& 1#64) == (0#64)) = false) :
-    Triple (St g (0x8000464c#64) a0 y a2 (y &&& 1#64) r m0 o) (St g (0x80004650#64) a0 y a2 (y &&& 1#64) r m0 o) := by
+    Triple (St g (0x80036484#64) a0 y a2 (y &&& 1#64) r m0 o) (St g (0x80036488#64) a0 y a2 (y &&& 1#64) r m0 o) := by
   apply Triple.of_step
   intro c hSt
   obtain ⟨vmi, hmi⟩ := hSt.minstret
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_8000464c_nottaken c.σ c.tick c.steps (0x8000464c#64) vmi (y &&& 1#64)
+    site_8000464c_nottaken c.σ c.tick c.steps (0x80036484#64) vmi (y &&& 1#64)
       hSt.good hSt.pc hmi hSt.a3 hSt.loaded rfl hodd hSt.tick
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hSt.loaded, by rw [hmem']; exact hSt.mem,
@@ -600,14 +600,14 @@ theorem tr_4c_50 (g : (R : Register) → Option (RegisterType R))
 theorem tr_5c_48 (g : (R : Register) → Option (RegisterType R))
     (x y r a0 a2 a3 a1 : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String)
     (hne : (a1 != (0#64)) = true) :
-    Triple (St g (0x8000465c#64) a0 a1 a2 a3 r m0 o) (St g (0x80004648#64) a0 a1 a2 a3 r m0 o) := by
+    Triple (St g (0x80036494#64) a0 a1 a2 a3 r m0 o) (St g (0x80036480#64) a0 a1 a2 a3 r m0 o) := by
   apply Triple.of_step
   intro c hSt
   obtain ⟨vmi, hmi⟩ := hSt.minstret
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_8000465c_taken c.σ c.tick c.steps (0x8000465c#64) vmi a1
+    site_8000465c_taken c.σ c.tick c.steps (0x80036494#64) vmi a1
       hSt.good hSt.pc hmi hSt.a1 hSt.loaded rfl hne hSt.tick
-  have hpceq : (0x8000465c#64 : BitVec 64) + sign_extend (m := 64) (0x1fec#13) = (0x80004648#64 : BitVec 64) := by
+  have hpceq : (0x80036494#64 : BitVec 64) + sign_extend (m := 64) (0x1fec#13) = (0x80036480#64 : BitVec 64) := by
     apply BitVec.eq_of_toNat_eq; decide
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hSt.loaded, by rw [hmem']; exact hSt.mem,
@@ -625,12 +625,12 @@ theorem tr_5c_48 (g : (R : Register) → Option (RegisterType R))
 theorem tr_5c_60 (g : (R : Register) → Option (RegisterType R))
     (x y r a0 a2 a3 a1 : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String)
     (hne : (a1 != (0#64)) = false) :
-    Triple (St g (0x8000465c#64) a0 a1 a2 a3 r m0 o) (St g (0x80004660#64) a0 a1 a2 a3 r m0 o) := by
+    Triple (St g (0x80036494#64) a0 a1 a2 a3 r m0 o) (St g (0x80036498#64) a0 a1 a2 a3 r m0 o) := by
   apply Triple.of_step
   intro c hSt
   obtain ⟨vmi, hmi⟩ := hSt.minstret
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_8000465c_nottaken c.σ c.tick c.steps (0x8000465c#64) vmi a1
+    site_8000465c_nottaken c.σ c.tick c.steps (0x80036494#64) vmi a1
       hSt.good hSt.pc hmi hSt.a1 hSt.loaded rfl hne hSt.tick
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hSt.loaded, by rw [hmem']; exact hSt.mem,
@@ -712,7 +712,7 @@ theorem ret_tgt (r : BitVec 64) (halign : r.toNat % 4 = 0) :
 theorem tr_60_ret (g : (R : Register) → Option (RegisterType R))
     (x y r a0 a1 a2 a3 : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String)
     (halign : r.toNat % 4 = 0) :
-    Triple (St g (0x80004660#64) a0 a1 a2 a3 r m0 o)
+    Triple (St g (0x80036498#64) a0 a1 a2 a3 r m0 o)
            (fun c => GoodState c.σ ∧ c.σ.mem = m0 ∧ c.σ.sailOutput = o ∧
              c.σ.regs.get? Register.PC = some r ∧
              c.σ.regs.get? Register.x10 = some a0 ∧ c.σ.regs.get? Register.x11 = some a1 ∧
@@ -724,7 +724,7 @@ theorem tr_60_ret (g : (R : Register) → Option (RegisterType R))
   have htgt : (BitVec.update (r + sign_extend (m := 64) (0x000#12)) 0 0#1).toNat % 4 = 0 := by
     rw [ret_tgt r halign]; exact halign
   obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-    site_80004660 c.σ c.tick c.steps (0x80004660#64) vmi r
+    site_80036498 c.σ c.tick c.steps (0x80036498#64) vmi r
       hSt.good hSt.pc hmi hSt.ra hSt.loaded rfl htgt hSt.tick
   refine ⟨⟨σ', i', c.steps + 1⟩, by cases c; exact hstep,
     hG', by rw [hmem']; exact hSt.mem,
@@ -745,18 +745,18 @@ theorem tr_60_ret (g : (R : Register) → Option (RegisterType R))
 
 /-- At loop head 0x48 with the shift-add invariant. -/
 def AtHead (g : (R : Register) → Option (RegisterType R)) (x y r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
-  ∃ a0 a1 a2 a3, St g (0x80004648#64) a0 a1 a2 a3 r m0 o c ∧ a0 + a2 * a1 = x * y
+  ∃ a0 a1 a2 a3, St g (0x80036480#64) a0 a1 a2 a3 r m0 o c ∧ a0 + a2 * a1 = x * y
 
 /-- Done at 0x60 with `a0 = x * y`. -/
 def AtDone (g : (R : Register) → Option (RegisterType R)) (x y r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
-  ∃ a1 a2 a3, St g (0x80004660#64) (x * y) a1 a2 a3 r m0 o c
+  ∃ a1 a2 a3, St g (0x80036498#64) (x * y) a1 a2 a3 r m0 o c
 
 def LoopI (g : (R : Register) → Option (RegisterType R)) (x y r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
   AtHead g x y r m0 o c ∨ AtDone g x y r m0 o c
 
 /-- Loop guard: at `0x48` (`AtHead`) with a nonzero `a1`. -/
 def LoopB (g : (R : Register) → Option (RegisterType R)) (x y r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
-  ∃ a0 a1 a2 a3, St g (0x80004648#64) a0 a1 a2 a3 r m0 o c ∧ a0 + a2 * a1 = x * y ∧ a1 ≠ 0#64
+  ∃ a0 a1 a2 a3, St g (0x80036480#64) a0 a1 a2 a3 r m0 o c ∧ a0 + a2 * a1 = x * y ∧ a1 ≠ 0#64
 
 /-- Loop measure: `x11.toNat` (`0` if `x11` undefined — total on `Config`).
 `x11 : Register` has `RegisterType = BitVec 64`, whose default is `0#64`. -/
@@ -797,20 +797,20 @@ of the new accumulator. -/
 theorem iter_48_5c (g : (R : Register) → Option (RegisterType R))
     (x y r a0 a1 a2 a3old : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String)
     (hinv : a0 + a2 * a1 = x * y) :
-    Triple (St g (0x80004648#64) a0 a1 a2 a3old r m0 o)
-           (fun c => ∃ a0', St g (0x8000465c#64) a0' (a1 >>> (1:Nat)) (a2 <<< (1:Nat)) (a1 &&& 1#64) r m0 o c
+    Triple (St g (0x80036480#64) a0 a1 a2 a3old r m0 o)
+           (fun c => ∃ a0', St g (0x80036494#64) a0' (a1 >>> (1:Nat)) (a2 <<< (1:Nat)) (a1 &&& 1#64) r m0 o c
              ∧ a0' + (a2 <<< (1:Nat)) * (a1 >>> (1:Nat)) = x * y) := by
   -- andi: 0x48 → 0x4c, x13 := a1 &&& 1  (tr_48_4c branches on register value `y := a1`)
-  have h1 : Triple (St g (0x80004648#64) a0 a1 a2 a3old r m0 o)
-      (St g (0x8000464c#64) a0 a1 a2 (a1 &&& 1#64) r m0 o) := tr_48_4c g x a1 r a0 a2 a3old m0 o
+  have h1 : Triple (St g (0x80036480#64) a0 a1 a2 a3old r m0 o)
+      (St g (0x80036484#64) a0 a1 a2 (a1 &&& 1#64) r m0 o) := tr_48_4c g x a1 r a0 a2 a3old m0 o
   rcases and1_cases a1 with hev | hod
   · -- even: beqz taken, skip add
     have hbeq : ((a1 &&& 1#64) == (0#64)) = true := by rw [hev]; rfl
     have h2 := tr_4c_54 g x a1 r a0 a2 m0 o hbeq
     have h3 := tr_54_58 g x y r a0 a1 a2 (a1 &&& 1#64) m0 o
     have h4 := tr_58_5c g x y r a0 (a1 >>> (1:Nat)) a2 (a1 &&& 1#64) m0 o
-    have hchain : Triple (St g (0x80004648#64) a0 a1 a2 a3old r m0 o)
-        (St g (0x8000465c#64) a0 (a1 >>> (1:Nat)) (a2 <<< (1:Nat)) (a1 &&& 1#64) r m0 o) :=
+    have hchain : Triple (St g (0x80036480#64) a0 a1 a2 a3old r m0 o)
+        (St g (0x80036494#64) a0 (a1 >>> (1:Nat)) (a2 <<< (1:Nat)) (a1 &&& 1#64) r m0 o) :=
       (h1.seq h2).seq (h3.seq h4)
     exact hchain.conseq (fun _ h => h) (fun c hc =>
       ⟨a0, hc, by rw [inv_even a0 a1 a2 hev]; exact hinv⟩)
@@ -820,8 +820,8 @@ theorem iter_48_5c (g : (R : Register) → Option (RegisterType R))
     have h2' := tr_50_54 g x a1 r a0 a2 (a1 &&& 1#64) m0 o
     have h3 := tr_54_58 g x a1 r (a0 + a2) a1 a2 (a1 &&& 1#64) m0 o
     have h4 := tr_58_5c g x a1 r (a0 + a2) (a1 >>> (1:Nat)) a2 (a1 &&& 1#64) m0 o
-    have hchain : Triple (St g (0x80004648#64) a0 a1 a2 a3old r m0 o)
-        (St g (0x8000465c#64) (a0 + a2) (a1 >>> (1:Nat)) (a2 <<< (1:Nat)) (a1 &&& 1#64) r m0 o) :=
+    have hchain : Triple (St g (0x80036480#64) a0 a1 a2 a3old r m0 o)
+        (St g (0x80036494#64) (a0 + a2) (a1 >>> (1:Nat)) (a2 <<< (1:Nat)) (a1 &&& 1#64) r m0 o) :=
       ((h1.seq h2).seq h2').seq (h3.seq h4)
     exact hchain.conseq (fun _ h => h) (fun c hc =>
       ⟨a0 + a2, hc, by rw [inv_odd a0 a1 a2 hod]; exact hinv⟩)
@@ -908,11 +908,11 @@ theorem loop_to_done (g : (R : Register) → Option (RegisterType R)) (x y r : B
 
 /-! ## The precondition of `__muldi3` and the spec
 
-`muldi3_pre x y r m0 c`: entry `St` at `0x80004640` with `x10 = x`, `x11 = y`,
+`muldi3_pre x y r m0 c`: entry `St` at `0x80036478` with `x10 = x`, `x11 = y`,
 `x1 = r`, `mem = m0`, tick `< 2`, and `r` a 4-aligned return address. The `a2`/`a3`
 entry values are irrelevant (existentially closed in the statement). -/
 def muldi3_pre (g : (R : Register) → Option (RegisterType R)) (x y r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
-  (∃ a2old a3old, St g (0x80004640#64) x y a2old a3old r m0 o c) ∧ r.toNat % 4 = 0
+  (∃ a2old a3old, St g (0x80036478#64) x y a2old a3old r m0 o c) ∧ r.toNat % 4 = 0
 
 /-- `muldi3_post`: PC back at `r`, `x10 = x * y`, `GoodState`, memory unchanged
 (`= m0`), the callee-saved return register `x1 = r` intact, `tick < 2`, and the
