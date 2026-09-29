@@ -1,7 +1,7 @@
 # Ship your OCaml
 
 This project will verify **OCaml's bootstrap compiler**: the checked-in
-bytes of `boot/ocamlc` (OCaml 4.14.2), run by the bytecode interpreter
+bytes of `boot/ocamlc` (OCaml 4.14.4), run by the bytecode interpreter
 `ocamlrun` compiled for bare-metal RV64 (`c/ocamlrun-riscv-htif.elf`) on the
 Sail RISC-V model, in Lean 4 + iris-lean. It is a sibling of
 [ship-your-interpreter](https://github.com/BasisResearch/ship-your-interpreter),
@@ -18,6 +18,21 @@ compiling a program (VALIDATION.md). The Lean scaffold builds and
 theory of `BcSem`, the bytecode program logic's adequacy and a kernel-checked
 `BcSem` run of a real executable are *proved*. PHASES.md is the plan and
 the obligation ledger; PLAN.md explains it.
+
+**Trusted base: `tcb/`.** Everything the theorems assume rather than prove
+is listed in `tcb/README.md`. The largest item is the OS interface, a Lean
+port of SibylFS (POSIX file-system calls, Linux flavour) and of CakeML's
+console-stream model, validated SibylFS-style on 6,490 generated scripts
+run on Linux (every trace accepted). On this bare-metal build the "OS" is
+`c/src/htif.c`, code inside the ELF, so the same spec is a proof obligation
+(`OCaml.Os.HtifFsImplements`) rather than an assumption; on Linux it is
+the assumption about the kernel (PLAN.md §6).
+
+**Reused machine proofs.** ship-your-interpreter's proofs of the library
+code both binaries share (`memcpy`, `memset`, `strlen`, `strcpy`,
+`__muldi3`, the division routines, …: 67 byte-identical functions) are
+retargeted to this ELF's addresses by `scripts/retarget_syi.py`; the
+2,560 code bytes they pin are checked against the ELF.
 
 ## The plan
 
@@ -61,7 +76,7 @@ fixpoint**: under `OCamlSem`, the compiler compiles its own sources to
 exactly the bytes of `boot/ocamlc`. With backend correctness for that build
 this gives `boot_meaning` (proved): `BcSem` of the bytes *is* the source
 compiler — without verifying its 412k bytecode instructions one by one. For
-4.14.2 the host check agrees: rebuilding the compiler with `boot/ocamlc`
+4.14.4 the host check agrees: rebuilding the compiler with `boot/ocamlc`
 reproduces its CODE, PRIM, SYMB and CRCS byte for byte, and DATA up to
 `configure`'s install paths. Parser and typechecker are trusted (a
 parameter `parse`) or validated per program at first.
@@ -107,7 +122,7 @@ def endToEnd_ocaml_Statement S parse load boot L B : Prop :=   -- EndToEnd
 ```
 
 **Proved** (only `propext`, `Classical.choice`, `Quot.sound`;
-`scripts/check_all.sh` stage a3 audits 20 theorems):
+`scripts/check_all.sh` stage a3 audits 23 theorems, stage t1 the `tcb/` lemmas):
 
 * `endToEnd_of_layers` / `endToEnd_ocaml`: Layer A ∧ Layer C ∧ fixpoint →
   end to end; `boot_meaning`: fixpoint ∧ backend correctness → the bytes
@@ -129,13 +144,15 @@ def endToEnd_ocaml_Statement S parse load boot L B : Prop :=   -- EndToEnd
 
 | | |
 |---|---|
-| `while.ml` on Sail | `55\n2500\n36\n`, exit 0, 4,568,271 steps; cut point at 4,496,050 (startup: code MD5 and primitive resolution) |
+| `while.ml` on Sail | `55\n2500\n36\n`, exit 0, 4,569,924 steps; cut point at 4,497,703 (startup: code MD5 and primitive resolution) |
 | difftests (host `ocamlrun` vs Sail) | 9/9 pass (ints, closures, data, exceptions, strings/`Printf`, allocation, soft-float, objects); 4.6M–222M steps |
-| `boot/ocamlc -version` on Sail | `4.14.2`, exit 0, 53.8M steps (cut at 48.2M) |
+| `boot/ocamlc -version` on Sail | `4.14.4`, exit 0, 54.4M steps (cut at 48.2M) |
 | `boot/ocamlc -dinstr -c hello.ml` (`let () = print_int (6 * 7)`) on Sail | the compiler's bytecode listing, exit 0, 81.9M steps (cut at 48.2M); one collection, forced by a channel's custom-block accounting; none with `OCAMLRUNPARAM=M=1000` (76.7M steps) |
+| OS spec (`tcb/`) | 6,490 scripts, 101,621 calls on Linux: 0 traces rejected; the in-image file system has 4 documented POSIX deviations |
+| reused proofs | 67 functions retargeted, 2,560 pinned bytes = the ELF's |
 | `BcSem` vs binary | identical output on `while`, `f2_closures` (118,119 ZINC steps), `while_min` (kernel-checked); never `.wrong` |
-| ELF census | 1,123 reachable functions, 77,157 instructions; `caml_interprete` 1,966 instructions, 147 arms, median 7; 83% in existing site classes; 131 functions identical to the WHILE ELF |
-| bytecode census | `boot/ocamlc` 411,971 instructions, 165 units; Translcore+Matching+Bytegen+Emitcode 23,606 |
+| ELF census | 1,123 reachable functions, 77,530 instructions; `caml_interprete` 1,966 instructions, 147 arms, median 7; 83% in existing site classes; 131 functions identical to the WHILE ELF |
+| bytecode census | `boot/ocamlc` 412,087 instructions, 165 units; Translcore+Matching+Bytegen+Emitcode 23,678 |
 | fixpoint | rebuilt `ocamlc` = `boot/ocamlc` on CODE/PRIM/SYMB/CRCS; DATA up to install paths |
 
 ## Layout
@@ -151,14 +168,16 @@ def endToEnd_ocaml_Statement S parse load boot L B : Prop :=   -- EndToEnd
 | `OCaml/Programs/` | kernel-checked `BcSem` runs |
 | `RunBc.lean` | `runbc`: executable `BcSem` |
 | `c/` | the bare-metal build, the ELF (`ELF.sha256`), tests, Sail runner, results |
-| `vendor/ocaml-4.14.2/` | OCaml 4.14.2 (LGPL 2.1 + linking exception) |
-| `Vsa/`, `VsaIris/`, `riscv-lean/`, `scripts/syi/`, `experiments/syi/` | copied from ship-your-interpreter |
-| `scripts/` | census, generators, `check_all.sh` |
+| `vendor/ocaml-4.14.4/` | OCaml 4.14.4 (LGPL 2.1 + linking exception) |
+| `Vsa/`, `VsaIris/`, `riscv-lean/`, `scripts/syi/`, `experiments/syi/` | copied from ship-your-interpreter (`Vsa/` library proofs retargeted to this ELF; `experiments/syi/while-elf-only/` not built) |
+| `tcb/` | the trusted base: OS spec (SibylFS/CakeML ports), checker, validation, `README.md` |
+| `OCaml/Os.lean` | the bare-metal OS obligation `HtifFsImplements` |
+| `scripts/` | census, generators, `retarget_syi.py`, `check_code_pins.py`, `check_all.sh` |
 
 ## Reproducing
 
 ```sh
-# host OCaml 4.14.2 and the xPack toolchain in ~/toolchains (VALIDATION.md §1)
+# host OCaml 4.14.4 and the xPack toolchain in ~/toolchains (VALIDATION.md §1)
 make -C c                                  # the proof ELF
 sha256sum -c c/ELF.sha256 --quiet          # (from c/)
 c/tests/sail_run.py c/ocamlrun-riscv-htif.elf  # needs the Lean emulator

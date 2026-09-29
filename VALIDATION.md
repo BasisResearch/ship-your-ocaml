@@ -11,10 +11,10 @@ The emulator runs at about 49,000 steps/s.
 
 ## 1. Release and toolchain
 
-* **OCaml 4.14.2** (PLAN.md §1 for why not 5.x: domains need pthreads and
-  atomics, the proof ELF is rv64i). Vendored in `vendor/ocaml-4.14.2`
-  (tarball sha256 in ATTRIBUTION.md). A host 4.14.2 built from the same
-  tarball (`~/toolchains/ocaml-4.14.2`) compiles the test programs, so the
+* **OCaml 4.14.4** (PLAN.md §1 for why not 5.x: domains need pthreads and
+  atomics, the proof ELF is rv64i). Vendored in `vendor/ocaml-4.14.4`
+  (tarball sha256 in ATTRIBUTION.md). A host 4.14.4 built from the same
+  tarball (`~/toolchains/ocaml-4.14.4`) compiles the test programs, so the
   bytecode matches the runtime version.
 * **Cross toolchain**: the xPack `riscv-none-elf-gcc` 15.2.0-1 (GCC 15.2.0,
   newlib 4.5.0.20241231) in `~/toolchains/`, the same release, flags and
@@ -46,10 +46,10 @@ The emulator runs at about 49,000 steps/s.
   `ecall`, which on the bare Sail machine traps with no handler and never
   returns; the compiler reaches them through `Sys.time` (its `Profile`
   timers); a first Sail compile run was stuck there (at about step 75M)
-  when it was stopped after 3.5 hours, while the host mirror (§6, which uses the host's clock) finished. The image now
+  when it was stopped after 3.5 hours, while the host mirror (§8, which uses the host's clock) finished. The image now
   contains no `ecall` (`scripts/check_all.sh` stage a6 checks this).
-* **The proof ELF**: `c/ocamlrun-riscv-htif.elf` (520,712 bytes, sha256
-  `23e41905eb0e4ae691455ab06559bcde4fc3b4c6e0a18377b689558c8d53e866`,
+* **The proof ELF**: `c/ocamlrun-riscv-htif.elf` (522,912 bytes, sha256
+  `1558494b30565bc722b9aaccfac73cd713d1522326456ce767a9ccb38c424630`,
   `c/ELF.sha256`) with `c/tests/while.ml` embedded: `c/while.byte`, the
   21,993-byte bytecode executable from the host `ocamlc` (sha256 in
   `c/ELF.sha256`).
@@ -60,16 +60,16 @@ The emulator runs at about 49,000 steps/s.
 
 | program | output | exit | steps | cut point (2nd `caml_interprete` call) | after the cut |
 |---|---|---|---|---|---|
-| `while.ml` (proof ELF) | `55\n2500\n36\n` | 0 | 4,568,271 | 4,496,050 | 72,221 |
-| `while_min.ml` (no Stdlib) | `55\n2500\n36\n` | 0 | 4,310,590 | 4,266,900 | 43,690 |
-| `boot/ocamlc -version` | `4.14.2\n` | 0 | 53,831,034 | 48,242,926 | 5,588,108 |
+| `while.ml` (proof ELF) | `55\n2500\n36\n` | 0 | 4,569,924 | 4,497,703 | 72,221 |
+| `while_min.ml` (no Stdlib) | `55\n2500\n36\n` | 0 | 4,311,271 | 4,267,581 | 43,690 |
+| `boot/ocamlc -version` | `4.14.4\n` | 0 | 54,414,266 | 48,825,888 | 5,588,378 |
 | `boot/ocamlc -nostdlib -I /lib/ocaml -dinstr -c /src/hello.ml` | the bytecode listing (below) | 0 | 81,880,193 | 48,244,801 | 33,635,392 |
 | same, `OCAMLRUNPARAM=M=1000` | the same listing | 0 | 76,680,968 | 48,246,986 | 28,433,982 |
 
 `while.ml` is the OCaml port of ship-your-interpreter's `c/tests/while.wl`
 (while loops, `break` as an exception, nesting). `hello.ml` is
 `let () = print_int (6 * 7)`; the compile run embeds `stdlib.cmi` from the
-host 4.14.2 at `/lib/ocaml/stdlib.cmi`, and `-dinstr` makes the compiler
+host 4.14.4 at `/lib/ocaml/stdlib.cmi`, and `-dinstr` makes the compiler
 print the bytecode it generates on the HTIF console.
 
 **The compile run** prints, exactly as the host compiler does,
@@ -131,7 +131,7 @@ length, not proof (PLAN.md §7).
 
 * Every program has exactly one minor collection before the cut point:
   `caml_main` promotes the unmarshalled global data (`caml_oldify_one` +
-  `caml_oldify_mopup`, `startup_byt.c`) at step 4,482,566 for `while.ml`,
+  `caml_oldify_mopup`, `startup_byt.c`) at step 4,484,219 for `while.ml`,
   13,484 steps before the cut.
 * **After the cut point, with the default 256k-word minor heap, eight of
   the nine difftests run no minor collection and no major slice** (table
@@ -142,7 +142,7 @@ length, not proof (PLAN.md §7).
 * **`boot/ocamlc` compiling `hello.ml` collects once, whatever the minor
   heap size**: on Sail, one minor collection and one major slice after the
   cut, the minor collection at step 76,014,867 (27.8M steps after the
-  cut). In the host mirror (§6: same runtime, same heap parameters, so the
+  cut). In the host mirror (§8: same runtime, same heap parameters, so the
   same collection points) the run allocates 206,018 minor words, below the
   256k-word minor heap, and still collects once at the default size, at
   `s=1M` and at `s=4M`. The cause, found by backtraces in
@@ -196,9 +196,9 @@ length, not proof (PLAN.md §7).
 
 | | functions | instructions |
 |---|---|---|
-| image | 1,321 | 83,777 |
-| reachable from `_start` (direct edges ∪ address-taken) | 1,123 | 77,157 |
-| reachable from `caml_interprete` + the 403 C primitives | 1,003 | 68,831 |
+| image | 1,321 | 84,179 |
+| reachable from `_start` (direct edges ∪ address-taken) | 1,123 | 77,530 |
+| reachable from `caml_interprete` + the 403 C primitives | 1,004 | 69,172 |
 
 * 484 address-taken functions (the primitive table, custom-operation
   tables, hooks); 234 indirect jump sites.
@@ -212,10 +212,10 @@ length, not proof (PLAN.md §7).
   raise, signal and callback paths). Loop-head registers: pc `s0`, sp
   `s1`, accu `s5`, env `s9`, extra_args `s2`.
 * **Site classes** (ship-your-interpreter's `disasm_to_sites.py`
-  classifier): 64,205 of 77,157 reachable instructions (83.2%) fall in a
-  class its generators handle. The rest by mnemonic: `auipc` 3,280,
-  `slli` 2,237, `andi` 1,053, `srli` 997, `addw` 846, `lui` 663, `slliw`
-  635, `or` 580, `srai` 467, `and` 357 — the tagged-integer idiom
+  classifier): 64,452 of 77,530 reachable instructions (83.1%) fall in a
+  class its generators handle. The rest by mnemonic: `auipc` 3,333,
+  `slli` 2,247, `andi` 1,056, `srli` 1,010, `addw` 846, `lui` 663, `slliw`
+  635, `or` 582, `srai` 473, `and` 359 — the tagged-integer idiom
   (`slli`/`srai`/`ori 1`) is the main new family.
 * **New C constructs** beyond the WHILE interpreter: the switch jump table;
   calls through the primitive table (`jalr`); `setjmp`/`longjmp` for
@@ -235,23 +235,23 @@ length, not proof (PLAN.md §7).
   sequences in the larger image. Site proofs transfer by address retarget
   (A0); these two are regenerated.
 
-### 4.2 The bytecode (`scripts/bc_census.py` over the 4.14.2 `dumpobj`)
+### 4.2 The bytecode (`scripts/bc_census.py` over the 4.14.4 `dumpobj`)
 
-* **`boot/ocamlc`**: 655,735 code words, **411,971 instructions**, 132 of
+* **`boot/ocamlc`**: 655,922 code words, **412,087 instructions**, 132 of
   the 149 opcodes, 257 distinct C primitives, 165 compilation units. The
   largest units: Parser 51,897, Ctype 23,029, Typecore 22,393, Env 13,742,
   Matching 12,175, Typemod 12,069.
 * **The back half named in the plan**: Translcore 4,741, Matching 12,175,
-  Bytegen 4,687, Emitcode 2,003 — **23,606 instructions**. The whole path
+  Bytegen 4,759, Emitcode 2,003 — **23,678 instructions**. The whole path
   from the typed tree to bytes (adding Lambda, Switch, Translattribute,
   Translprim, Translobj, Translclass, Translmod, Tmc, Simplif, Instruct,
   Printinstr, Bytelink, Bytepackager, Bytelibrarian, Symtable, Dll):
-  58,351.
+  58,423.
 * `while.byte` (Stdlib linked): 1,930 instructions, 96 opcodes, 48
   primitives (static); `while_min.byte`: 133 instructions.
-* Top opcodes in `boot/ocamlc`: `PUSHACC` 32,107, `PUSHACC1` 18,984,
-  `PUSHACC0` 18,792, `GETFIELD0` 17,045, `PUSHGETGLOBALFIELD` 16,050,
-  `ACC0` 15,110.
+* Top opcodes in `boot/ocamlc`: `PUSHACC` 32,115, `PUSHACC1` 18,989,
+  `PUSHACC0` 18,799, `GETFIELD0` 17,052, `PUSHGETGLOBALFIELD` 16,050,
+  `ACC0` 15,122.
 
 ## 5. Fixpoint
 
@@ -261,18 +261,71 @@ compiler's sources with `boot/ocamlc`. Section by section, the resulting
 
 | section | `boot/ocamlc` | rebuilt `ocamlc` | equal |
 |---|---|---|---|
-| CODE | 2,622,940 | 2,622,940 | yes |
+| CODE | 2,623,688 | 2,623,688 | yes |
 | PRIM | 7,858 | 7,858 | yes |
 | SYMB | 3,338 | 3,338 | yes |
 | CRCS | 5,827 | 5,827 | yes |
-| DATA | 358,533 | 358,597 | no: only `Config`'s install paths (`/usr/local/bin`, `/usr/local/lib/ocaml` vs the build prefix) |
-| DBUG | 0 | 17,631,284 | the host build uses `-g` |
+| DATA | 358,536 | 358,600 | no: only `Config`'s install paths (`/usr/local/bin`, `/usr/local/lib/ocaml` vs the build prefix) |
+| DBUG | 0 | 17,407,329 | the host build uses `-g` |
 
-So `boot/ocamlc` is the 4.14.2 compiler compiled by itself, up to
+So `boot/ocamlc` is the 4.14.4 compiler compiled by itself, up to
 `configure`'s strings: the premise of the bootstrap-fixpoint step
 (`boot_ocamlc_fixpoint_Statement`, PLAN.md §5) holds for this release.
 
-## 6. Host mirror
+## 6. The OS spec (`tcb/`)
+
+The trusted OS interface is a Lean port of SibylFS (files and directories,
+Linux flavour) and of CakeML's console-stream model, with an executable
+checker proved sound and complete for the relation
+(`TCB.Os.allowed_sound`/`allowed_complete`, `checkTrace_sound`). It is
+validated with SibylFS's own method: 6,490 generated scripts (systematic
+per-call cases covering every path-resolution outcome and error, random
+sequences, and a flat family) run on the Linux host and checked trace by
+trace (`tcb/validation/RESULTS.md`, reproducible in ~3 s):
+
+| system | calls | accepted | rejected | unconstrained ("special") | not runnable |
+|---|---|---|---|---|---|
+| Linux 7.0 host (ext4) | 101,621 | 6,398 | 0 | 92 | 0 |
+| in-image file system (`htif.c`, natively) | 18,477 | 245 | 1,781 | 0 | 4,464 |
+
+* The first Linux run rejected 645 traces; each class was a difference
+  between SibylFS (2015, Linux 3.x) and today's Linux, or a porting error,
+  and is now a documented `DEVIATION` in the Lean source: `O_CREAT|O_DIRECTORY`
+  gives `EINVAL` since Linux 6.4 (540 traces), `rename` of `.`/`..` gives
+  `EBUSY` (82), `mkdir "file/"` gives `EEXIST` (20), `opendir` consumes an
+  fd, and others; one was a SibylFS bug (renaming a directory did not
+  update its parent pointer).
+* The in-image file system is **not** POSIX yet: unknown fds behave as the
+  console instead of `EBADF`, it has no `mkdir`/`rmdir` (directories are
+  path prefixes), it answers `ENOENT` where POSIX says `ENOTDIR`, and it
+  reports a link count of 1 after `unlink`. On bare metal the spec is a
+  proof obligation (`OCaml.Os.HtifFsImplements`), so these must be fixed,
+  or the spec instance restricted, before it can be discharged.
+* The gate runs a 329-trace subset (`scripts/check_all.sh` stage t1).
+
+## 7. The reused machine proofs
+
+`scripts/retarget_syi.py` retargets ship-your-interpreter's proofs of the
+67 library functions that are byte-identical in the two ELFs (30 files,
+5,084 addresses, plus the HTIF mailbox `0x8001ad00` → `0x800668c0`). The
+whole `Vsa`/`VsaIris` layer rebuilds; `scripts/check_code_pins.py` finds
+all 2,560 bytes pinned by the ported code predicates equal to the ELF's;
+`memcpy_bytepath_spec`, `muldi3_spec` and `udivdi3_spec` (now at this
+ELF's addresses, e.g. `memcpy`'s precondition PC `0x80041a00`) depend only
+on the standard axioms. Not ported, and why:
+
+* `strcmp`, `__ssprint_r`, `__ssputs_r`: identical except for 8
+  instruction words (6 `jal`s, and the `auipc`/`ld` of `strcmp`'s `mask`);
+  their decode ASTs are dumped (`results/port_new_words.dump`,
+  `experiments/DecodeDump.lean`); regenerating their code lemmas and sites
+  is A0.
+* `_malloc_r`, `_free_r`, `_svfprintf_r`, `snprintf`: the code differs
+  (linker relaxation, configuration); regenerated, not ported.
+* The 20,457 reachable instruction words of this ELF without a decode
+  lemma: A0, where ship-your-interpreter's new one-shot decoder
+  (`decodeW`, any word) replaces per-word lemmas.
+
+## 8. Host mirror
 
 `c/tests/hostmirror.sh` builds the same runtime sources, configuration,
 `main.c` and in-memory file system natively (the file-system calls routed
@@ -284,7 +337,7 @@ cause of the forced collection (§2.3). It is a debugging aid, not
 evidence, and it has a real clock and the host's `isatty`: it did not
 show the `ecall` hang (§1). The Sail numbers above are authoritative.
 
-## 7. What did not work, and limits
+## 9. What did not work, and limits
 
 * No `native_decide` anywhere. The kernel cannot evaluate `BcSem` over a Stdlib-initialised heap for
   more than ~100 steps within 30 GB (§3).

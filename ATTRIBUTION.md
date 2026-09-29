@@ -17,7 +17,8 @@ layer applies to both.
 | here | there | changes |
 |---|---|---|
 | `riscv-lean/` (without `.lake/`) | `riscv-lean/` | none (plus `README.md`, `LICENCE-sail-riscv` from ship-your-lua) |
-| `Vsa/` (663 modules) | `Vsa/` | none; `Vsa.lean` imports only the copied modules |
+| `Vsa/` (641 modules) | `Vsa/` | **retargeted to this ELF** by `scripts/retarget_syi.py` (below); `Vsa.lean` imports only the built modules |
+| `experiments/syi/while-elf-only/` (22 modules) | `Vsa/Sim/` | none; out of the build: proofs of `snprintf`/`_svfprintf_r`, `strcmp`, `__ssprint_r`, `__ssputs_r`, whose code differs in this ELF (their README) |
 | `VsaIris/` (19 modules) | `VsaIris/` | none; `VsaIris.lean` likewise |
 | `scripts/syi/` | `scripts/` | none: segment and site generators (`disasm_to_segment.py`, `disasm_to_sites.py`, `gen_segment.py`, `gen_sites.py`, `genseg/`, `genseg.py`, `segment_certificates.py`, `segments/`), `gen_fn.py`, `gen_decode_index.py`, the boot-witness generator `gen_boot_witness.py`, the difftest library, `check_final_axioms.sh` |
 | `experiments/syi/` | `experiments/` | none (`gen_decode_table.py`, `gen_code_lemmas.py`, `disasm_census.py`, `disasm_reachable.py`) |
@@ -35,9 +36,18 @@ contains none of ship-your-interpreter's WHILE semantics or representation
 (`Vsa.While.*`, `Vsa.MemRepr*`, `Vsa.Refinement`); `OCaml/Refinement.lean`
 restates the refinement pattern of `Vsa/Refinement.lean` for `BcSem`.
 
-**Proof instances are about the WHILE ELF.** The copied site proofs are
-about the WHILE ELF's addresses (decode lemmas aside, which are per
-instruction word). PHASES.md A0 retargets them to `c/ocamlrun-riscv-htif.elf`.
+**Retargeting.** The copied proofs of library code were stated at the
+WHILE ELF's addresses. `scripts/retarget_syi.py` rewrites, in 30 files,
+every address inside the 67 functions that are byte-identical in the two
+ELFs (`memcpy`, `memset`, `memmove`, `strlen`, `strcpy`, `__muldi3`, the
+64-bit division routines, `setjmp`/`longjmp`, …) to the same offset in this
+ELF, maps function starts and data symbols by name, and moves the HTIF
+mailbox constant `Vsa.Sim.tohostAddr` (`0x8001ad00` → `0x800668c0`). No
+proof text changed otherwise; the layer rebuilds, and
+`scripts/check_code_pins.py` checks all 2,560 bytes the ported code
+predicates pin against the ELF. The WHILE interpreter's own `value_*`
+pins (`Vsa/Sim/Code/Value_*.lean`) remain facts about the WHILE ELF, which
+other copied proofs import; nothing here uses them.
 
 ## New here
 
@@ -50,14 +60,14 @@ documents.
 
 ## Third party
 
-* **OCaml 4.14.2** (`vendor/ocaml-4.14.2/`): INRIA and contributors,
-  LGPL 2.1 with the OCaml linking exception (`vendor/ocaml-4.14.2/LICENSE`).
-  From `https://github.com/ocaml/ocaml/archive/refs/tags/4.14.2.tar.gz`,
-  sha256 `c2d706432f93ba85bd3383fa451d74543c32a4e84a1afaf3e8ace18f7f097b43`.
+* **OCaml 4.14.4** (`vendor/ocaml-4.14.4/`): INRIA and contributors,
+  LGPL 2.1 with the OCaml linking exception (`vendor/ocaml-4.14.4/LICENSE`).
+  From `https://github.com/ocaml/ocaml/archive/refs/tags/4.14.4.tar.gz`,
+  sha256 `71415c000ebfce604defafaa584ab5ed10ad81ff180897db4e6fea8dac6e4b0d`.
   Vendored unmodified, except that `testsuite/` and `manual/` are left
   out. The bare-metal build compiles the runtime sources unmodified: the
   platform lives in `c/src/config/` (hand-written `m.h`/`s.h`/`build_config.h`
-  in place of `configure`'s output; `version.h` from the 4.14.2 build),
+  in place of `configure`'s output; `version.h` from the 4.14.4 build),
   `c/src/main.c` (in place of `runtime/main.c`) and `c/src/htif.c`. The ELF
   links the unmodified runtime, which the linking exception covers.
   `boot/ocamlc` is the release's checked-in bootstrap compiler.

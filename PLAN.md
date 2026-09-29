@@ -1,6 +1,6 @@
 # Plan: verifying OCaml's bootstrap compiler
 
-The target: the bytes of `boot/ocamlc` (OCaml 4.14.2), run by the
+The target: the bytes of `boot/ocamlc` (OCaml 4.14.4), run by the
 bare-metal `ocamlrun` on the Sail RISC-V model, compile an OCaml program to
 bytecode whose behaviour on the same machine is the program's source-level
 meaning. In Lean 4 + iris-lean, no `sorry`, only the standard axioms.
@@ -21,7 +21,7 @@ Layer B′: program logic over BcSem — how BcSem-level facts about
 
 `endToEnd_ocaml` (proved, `OCaml/EndToEnd.lean`) composes them.
 
-## 1. Choice of release: 4.14.2
+## 1. Choice of release: 4.14.4
 
 * **The runtime is single-domain C.** 5.x's bytecode runtime is built
   around domains: it needs pthreads (domain creation, the backup thread,
@@ -39,7 +39,9 @@ Layer B′: program logic over BcSem — how BcSem-level facts about
   CODE, PRIM, SYMB, CRCS byte-identical after a rebuild; DATA differs only
   in `configure`'s install paths). The bootstrap-fixpoint step of Layer C
   needs exactly this.
-* 4.14 is the last 4.x and an LTS line (4.14.2, March 2024).
+* 4.14 is the last 4.x line; 4.14.4 (June 2026) is its latest
+  maintenance release, and its runtime differs from 4.14.2's in five
+  files only.
 
 Build choices (all in `c/`, the runtime sources are unmodified):
 threaded code off (`-DSHRINKED_GNUC`), so `caml_interprete` dispatches through
@@ -96,7 +98,7 @@ in a site class the generators handle; the rest are the new idioms below.
 
 | idiom | where | plan |
 |---|---|---|
-| tagged-int ALU: `slli`/`srai`/`ori 1`/`addw`/`slliw` | every integer arm | add ALU site classes (the census counts 2,237 `slli`, 467 `srai`, 846 `addw`) |
+| tagged-int ALU: `slli`/`srai`/`ori 1`/`addw`/`slliw` | every integer arm | add ALU site classes (the census counts 2,247 `slli`, 473 `srai`, 846 `addw`) |
 | switch jump table `lw; add base; jr` | dispatch (one site) | one lemma: table contents from the image, `jr` target per opcode |
 | C primitive calls through `caml_builtin_cprim` (`jalr`) | `C_CALLn` | table lookup lemma + the callee's function summary |
 | `setjmp`/`longjmp` for exceptions raised in C | `caml_raise`, `caml_interprete` prologue | the functions are byte-identical to the WHILE ELF's; new: the jmp_buf as a frame predicate |
@@ -186,10 +188,10 @@ The exponentiating layer is re-targeted at bytecode:
 * **functions**: closures' code (from `CLOSURE`/`CLOSUREREC` targets) →
   `gen_fn.py`-style summaries.
 
-Sizes (VALIDATION §Bytecode census): `boot/ocamlc` is 411,971 instructions
+Sizes (VALIDATION §Bytecode census): `boot/ocamlc` is 412,087 instructions
 in 165 units; the back half named in the brief (Translcore, Matching,
-Bytegen, Emitcode) is 23,606 instructions, the whole Lambda-to-bytecode
-path 58,351. Nothing of this size is proved by hand; everything is
+Bytegen, Emitcode) is 23,678 instructions, the whole Lambda-to-bytecode
+path 58,423. Nothing of this size is proved by hand; everything is
 generated.
 
 ## 5. Layer C: the compiler, at the source level
@@ -281,7 +283,7 @@ changed words; functions that differ (`_malloc_r`, `_free_r`,
 ## 7. Costs and risks
 
 * **Emulator time.** ~49k steps/s. `while.ml` is 4.6M steps (93 s),
-  `boot/ocamlc -version` 53.8M (20 min), compiling a one-liner
+  `boot/ocamlc -version` 54.4M (20 min), compiling a one-liner
   81.9M (28 min). Startup dominates: MD5 of the code segment and linear
   `strcmp` primitive resolution (3.7M steps even for `while.ml`). All of it
   is before the cut point, so it costs emulator time and boot-witness size,

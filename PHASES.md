@@ -30,6 +30,13 @@ ELF pin).
 | `simOfArms`, `ocamlrun_refinement_of_arms` (Layer A from per-arm obligations) | `OCaml/Refinement.lean` | P0 | **proved** |
 | `bytecode_logic_adequacy` (Layer B′ adequacy) | `OCaml/Logic/BcModel.lean`, `OCaml/Theorems.lean` | P0 | **proved** (instance of `VsaIris.mach_adequacy`) |
 | `boot_meaning`, `endToEnd_ocaml` / `endToEnd_of_layers` (composition) | `OCaml/EndToEnd.lean`, `OCaml/Theorems.lean` | P0 | **proved** |
+| OS spec (SibylFS + CakeML port), executable checker `allowed_sound`/`allowed_complete`/`checkTrace_sound` | `tcb/TCB/Os/` | P0 | **proved**; spec **trusted** for Linux, validated on 6,490 Linux traces (0 rejected) |
+| library proofs of the 67 byte-identical functions retargeted to this ELF | `Vsa/`, `scripts/retarget_syi.py` | P0 | **done** (pins checked, `memcpy_bytepath_spec`/`muldi3_spec`/`udivdi3_spec` audited) |
+| `strcmp`, `__ssprint_r`, `__ssputs_r` (8 changed words), `_malloc_r`, `_free_r`, `_svfprintf_r` for this ELF | `experiments/syi/while-elf-only/` → `Vsa/` | A0 | open |
+| decode for the 20,457 reachable words without a lemma (via syi's `decodeW`) | — | A0 | open |
+| `HtifFsImplements` (the in-image file system meets the OS spec) | `OCaml/Os.lean` | F5 | open; first fix `htif.c`'s 4 POSIX deviations (VALIDATION §6) |
+| `BcSem` world over `TCB.Os.OsState` (file/time/env primitives through `OsStep`) | `OCaml/Bytecode/Semantics.lean` | F5 | open |
+| Linux instantiation: `ecall` as an external step constrained by `OsStep` | `Vsa.Machine` extension | E | open |
 | `Layout.runtimeOk` concrete instance | `OCaml/Refinement.lean` | A0 | to define |
 | `Loaded` at real entry states (boot witnesses, small programs) | new `OCaml/Vm/Boot/` | A0 | open |
 | `ArmSim` entry + F1 arms (134 opcodes) + halt | new `OCaml/Vm/Sim/` | A1 | open |
@@ -50,13 +57,15 @@ ELF pin).
   program); census of the ELF and of `boot/ocamlc`; `BcSem` agrees with the
   host `ocamlrun` on the F1 programs (compiled evaluation) and with the ELF
   on `while_min` (kernel evaluation); `boot/ocamlc` is a fixpoint of the
-  4.14.2 sources up to configuration strings.
+  4.14.4 sources up to configuration strings.
 * **Scaffold**: ZINC syntax and decoding (`Opcode.lean` generated), `BcSem`
   F1, fragment ledger, `VmReprAt`/`VmRepr` (placement-existential),
   `Loaded`, statements of all layers, the proved compositions.
 * **Exit**: `scripts/check_all.sh` passes.
 
 ## A0: retarget the machine layer (exit: `Loaded` has a witness)
+
+* Done in P0: the 67 byte-identical library functions (`scripts/retarget_syi.py`).
 
 * Instantiate `Layout.runtimeOk` with the collector's invariants at the cut
   point (minor heap bounds, `young_ptr = young_alloc_end` after the startup
@@ -65,8 +74,10 @@ ELF pin).
 * Regenerate the decode table, code lemmas and image pins for
   `c/ocamlrun-riscv-htif.elf` (`experiments/syi/gen_decode_table.py`,
   `gen_code_lemmas.py`); regenerate the 131 identical library functions'
-  site proofs at their new addresses; regenerate `_malloc_r`/`_free_r`
-  (relaxation differs).
+  site proofs at their new addresses (done for the 67 byte-identical ones);
+  regenerate `strcmp`/`__ssprint_r`/`__ssputs_r` (8 changed words) and
+  `_malloc_r`/`_free_r`/`_svfprintf_r` (code differs); replace per-word
+  decode lemmas by ship-your-interpreter's `decodeW`.
 * Boot witness for `while_min` (4.27M steps to the cut) with
   `scripts/syi/gen_boot_witness.py`.
 * **Exit**: `Loaded L whileMin (fillZero c)` for the machine's own entry
@@ -95,7 +106,10 @@ ELF pin).
 * F3 relaxes `VmReprAt.code` to "code up to method caches"
   (`GETPUBMET` writes into the code).
 * F4 nests the simulation for re-entrant `caml_interprete` (callbacks).
-* F5 adds the in-memory file system to `WorldRepr`.
+* F5 moves `BcSem`'s world to `TCB.Os.OsState`, specifies the file, time
+  and environment primitives through `OsStep`, adds the file system to
+  `WorldRepr`, and discharges `HtifFsImplements` after fixing `htif.c`'s
+  POSIX deviations (unknown fds, directories, `ENOTDIR`, link counts).
 * **Exit per fragment**: the difftests of the fragment pass under `runbc`
   and on Sail, and Layer A holds for the fragment.
 
@@ -111,7 +125,7 @@ ELF pin).
 
 * Decode-table and segment generators over `dumpobj` output; per-segment
   WP rules for `bcModel`; function summaries for closures.
-* **Exit**: the generated rules for the back-half modules (23,606
+* **Exit**: the generated rules for the back-half modules (23,678
   instructions) build within the elaboration budget; `bytecode_adequacy`
   instantiated for one generated function summary end to end.
 

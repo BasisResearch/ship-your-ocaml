@@ -1,0 +1,54 @@
+import TCB
+import Vsa.Machine
+
+/-!
+# The OS boundary on bare metal: `htif.c` against the trusted OS spec
+
+`tcb/TCB/Os` is the OS interface (a port of SibylFS for files and of
+CakeML's basis model for console streams): `OsStep st call ret st'`. On
+Linux it is trusted — it describes the kernel. On this bare-metal build
+the "kernel" is `c/src/htif.c`, code inside the ELF, so the spec is a
+proof obligation instead: `HtifFsImplements`.
+
+The statement is about the machine: whenever the ELF enters one of its
+system-call functions (`_open`, `_read`, `_write`, `_lseek`, `_close`,
+`_fstat`, `_stat`, `_unlink`, `rename`, `opendir`, `readdir`, `closedir`,
+`_gettimeofday`, `_times`) in a state whose in-image file system
+represents the abstract state `st` (the relation `R`, over the machine's
+memory), the function returns after finitely many steps with a result the
+spec allows, and the new memory represents the new abstract state.
+
+`CallConv` (how arguments and results sit in registers and memory at the
+entry and return of those functions) is a parameter here; its instance is
+generated from the ELF like `OCaml/Vm/Layout.lean` (PHASES F5).
+
+The trace validation in `tcb/validation/` (RESULTS.md) is the empirical
+side: `htif.c` currently deviates from the spec (unknown fds behave as the
+console instead of EBADF; no `mkdir`/`rmdir`; ENOENT for ENOTDIR; link
+count after unlink), so this obligation needs those fixes first — or an
+instance of the spec restricted to what the file system supports.
+-/
+
+namespace OCaml.Os
+
+open Vsa.Machine
+
+/-- The calling convention of the ELF's system-call functions: the call
+decoded at a function's entry, and the result read at its return. -/
+structure CallConv where
+  /-- `some call` iff `c` is at the entry of a system-call function with
+  arguments that decode to `call` -/
+  callAt : Config → Option TCB.Os.Call
+  /-- `c'` is the return point of the call entered at `c` (the return
+  address reached with the callee's stack frame popped) -/
+  returnsTo : Config → Config → Prop
+  /-- the result as the C library sees it (return value, `errno`) -/
+  retOf : Config → TCB.Os.Ret
+
+/-- **The in-image file system implements the OS spec (statement).** -/
+def HtifFsImplements (cc : CallConv) (R : Config → TCB.Os.OsState → Prop) : Prop :=
+  ∀ c st call, R c st → cc.callAt c = some call →
+    ∃ c' st', Steps c c' ∧ cc.returnsTo c c' ∧
+      TCB.Os.OsStep st call (cc.retOf c') st' ∧ R c' st'
+
+end OCaml.Os
