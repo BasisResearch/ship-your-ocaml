@@ -1,17 +1,31 @@
-/* HTIF back end for newlib, with a small in-memory file system.
+/* HTIF back end for newlib, with an in-image file system.
  *
  * Console output is the riscv-tests HTIF convention (device 1 / command 1
  * through the 64-bit `tohost` mailbox), exit is device 0 with the low
- * payload bit set -- exactly ship-your-interpreter's c/src/htif.c, which
- * the Sail Lean emulator implements.
+ * payload bit set. This is what Spike and the sail-riscv emulators
+ * (including the Lean one) implement. There is no console input; the
+ * script to run is linked into the image (see src/chunk.S).
  *
- * ocamlrun is an ordinary POSIX program: caml_main() open()s the bytecode
- * executable named on its command line, lseek()s to the trailer and
- * read()s the sections. Instead of patching the runtime, this file gives
- * newlib a file system whose files are the blobs linked into the image by
- * embed.S (read-only), plus files the program creates (heap-backed, so
- * e.g. ocamlc can write its .cmi/.cmo outputs). No other OS services
- * exist: no processes, signals or clocks; directories are path prefixes. */
+ * Shared with ship-your-lua (its c/src/htif.c, commit 0309425); the
+ * OCaml-only parts are marked OCAML: the files embedded in the image
+ * (embed.S: the bytecode executable, .cmi files), which exist from the
+ * start as read-only nodes copied on first write, and opendir/readdir/
+ * closedir (4.14's Load_path lists include directories).
+ *
+ * The file system is the one the shared OS spec describes (`tcb/`,
+ * `TCB.Os.next`: SibylFS for files and directories, CakeML's console
+ * streams on fds 0-2). It starts empty but for the embedded files,
+ * and lives in the heap (`malloc`), so the allocator's proofs cover its
+ * memory. Descriptors are one table: 0-2 are the console streams, and
+ * `open` takes the smallest free number, as the spec numbers them; a
+ * descriptor that is not in the table is `EBADF`. Path resolution is
+ * `TCB.Os.Fs.resolveRel` (no symlinks; the working directory is the
+ * root). Where the spec allows several errors, the code returns one of
+ * them (Linux's choice where it has one). The clock is frozen at 0
+ * (`TCB.Os.Clock.frozen`). Validated against the spec by trace checking:
+ * experiments/os/run.sh and experiments/os/RESULTS.md. */
+#if defined(LUA_HTIF) || defined(OCAML_HTIF) || defined(HOST_MIRROR)
+
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
@@ -37,121 +51,289 @@ volatile uint64_t fromhost __attribute__((section(".tohost"), aligned(8)));
 static void htif_putc(char c) {
     tohost = HTIF_DEV_CONSOLE | HTIF_CMD_WRITE | (uint8_t)c;
 }
+#else
+/* OCAML: c/tests/hostmirror.sh runs this file system natively; the console
+ * is the host's stdout there. */
+static void htif_putc(char c) { write(1, &c, 1); }
+#endif
 
+#ifndef HOST_MIRROR
 void _exit(int code) {
     tohost = ((uint64_t)(uint32_t)code << 1) | 1;
     for (;;) {}
 }
-#else
-/* tests/hostmirror.sh: the same file system on a Linux host, console to
- * the host's stdout (see there). */
-extern ssize_t write(int, const void *, size_t);
-static void htif_putc(char c) { write(1, &c, 1); }
 #endif
 
-/* --- in-memory files ----------------------------------------------------- */
+/* --- in-memory file system ----------------------------------------------- */
 
-struct embedded_file { const char *path; const char *start; const char *end; };
-extern const struct embedded_file embedded_files[]; /* embed.S, NULL-terminated */
-
-#define MAX_FILES 64
+#define MAX_FILES 64   /* files and directories; files[0] is the root */
 #define MAX_FDS   32
-#define FD_BASE   3
+#define FS_ROOT      0
 
+/* A file or directory (the spec's inode). While `linked`, it is the entry
+ * `name` of directory `parent`; an unlinked file lives on while a
+ * descriptor refers to it (link count 0). */
 struct mfile {
-    char *path;          /* NULL: slot free */
-    char *data;
+    unsigned char used, dir, linked;
+    int parent;
+    char *name;
+    size_t nlen;
+    char *data;           /* file contents */
     size_t size, cap;
-    int writable;        /* 0: points into the image (embedded) */
+    int opens;            /* descriptors referring to it */
+    unsigned char ro;     /* OCAML: `data` points into the image (embed.S) */
 };
-struct mfd { struct mfile *f; size_t pos; int flags; };
+
+enum { FD_FREE, FD_STDIN, FD_STDOUT, FD_STDERR, FD_FILE };
+struct mfd { int kind; int node; size_t pos; int flags; };
 
 static struct mfile files[MAX_FILES];
 static struct mfd fds[MAX_FDS];
 static int fs_ready;
 
+static int child(int d, const char *n, size_t k);
+static int new_node(int d, const char *n, size_t k, int dir);
+
+/* OCAML: the files linked into the image by embed.S, NULL-terminated. */
+struct embedded_file { const char *path; const char *start; const char *end; };
+extern const struct embedded_file embedded_files[];
+
 static void fs_init(void) {
     if (fs_ready) return;
     fs_ready = 1;
-    for (int i = 0; embedded_files[i].path && i < MAX_FILES; i++) {
-        files[i].path = (char *)embedded_files[i].path;
-        files[i].data = (char *)embedded_files[i].start;
-        files[i].size = (size_t)(embedded_files[i].end - embedded_files[i].start);
-        files[i].writable = 0;
+    files[FS_ROOT].used = 1;
+    files[FS_ROOT].dir = 1;
+    fds[0].kind = FD_STDIN;
+    fds[1].kind = FD_STDOUT;
+    fds[2].kind = FD_STDERR;
+    /* OCAML: each embedded file, with its parent directories (absolute
+     * paths without `.`/`..`, as gen_embed.sh writes them) */
+    for (int e = 0; embedded_files[e].path; e++) {
+        const char *p = embedded_files[e].path;
+        int d = FS_ROOT;
+        for (;;) {
+            while (*p == '/') p++;
+            const char *q = strchr(p, '/');
+            size_t k = q ? (size_t)(q - p) : strlen(p);
+            if (k == 0) break;
+            int c = child(d, p, k);
+            if (q) {                                  /* a directory */
+                if (c < 0) c = new_node(d, p, k, 1);
+                if (c < 0 || !files[c].dir) break;
+                d = c; p = q;
+            } else {                                  /* the file */
+                if (c < 0) c = new_node(d, p, k, 0);
+                if (c >= 0 && !files[c].dir) {
+                    files[c].data = (char *)embedded_files[e].start;
+                    files[c].size = files[c].cap =
+                        (size_t)(embedded_files[e].end - embedded_files[e].start);
+                    files[c].ro = 1;
+                }
+                break;
+            }
+        }
     }
 }
 
-static struct mfile *lookup(const char *path) {
-    fs_init();
-    for (int i = 0; i < MAX_FILES; i++)
-        if (files[i].path && strcmp(files[i].path, path) == 0) return &files[i];
-    return NULL;
-}
-
-static struct mfile *create(const char *path) {
-    for (int i = 0; i < MAX_FILES; i++)
-        if (!files[i].path) {
-            size_t n = strlen(path) + 1;
-            files[i].path = malloc(n);
-            if (!files[i].path) return NULL;
-            memcpy(files[i].path, path, n);
-            files[i].data = NULL;
-            files[i].size = files[i].cap = 0;
-            files[i].writable = 1;
-            return &files[i];
-        }
-    return NULL;
-}
-
-/* Copy-on-write for an embedded file opened for writing. */
+/* OCAML: copy an embedded file's contents to the heap before changing it. */
 static int make_writable(struct mfile *f) {
-    if (f->writable) return 0;
+    if (!f->ro) return 0;
     char *d = malloc(f->size ? f->size : 1);
     if (!d) return -1;
     memcpy(d, f->data, f->size);
-    f->data = d; f->cap = f->size; f->writable = 1;
+    f->data = d; f->cap = f->size; f->ro = 0;
     return 0;
 }
 
+static void release(int i) {
+    struct mfile *f = &files[i];
+    if (i == FS_ROOT || f->linked || f->opens) return;
+    free(f->name);
+    if (!f->ro) free(f->data);
+    memset(f, 0, sizeof *f);
+}
+
+static int child(int d, const char *n, size_t k) {
+    for (int i = 1; i < MAX_FILES; i++)
+        if (files[i].used && files[i].linked && files[i].parent == d &&
+            files[i].nlen == k && memcmp(files[i].name, n, k) == 0)
+            return i;
+    return -1;
+}
+
+static int dir_empty(int d) {
+    for (int i = 1; i < MAX_FILES; i++)
+        if (files[i].used && files[i].linked && files[i].parent == d) return 0;
+    return 1;
+}
+
+static int nsubdirs(int d) {
+    int k = 0;
+    for (int i = 1; i < MAX_FILES; i++)
+        if (files[i].used && files[i].linked && files[i].dir && files[i].parent == d) k++;
+    return k;
+}
+
+/* `a` is `d` or one of its ancestors. */
+static int ancestor(int a, int d) {
+    for (int n = 0; n <= MAX_FILES; n++) {
+        if (d == a) return 1;
+        if (d == FS_ROOT) return 0;
+        d = files[d].parent;
+    }
+    return 0;
+}
+
+/* The result of resolving a path (the spec's `RN`). */
+enum { R_DIR, R_FILE, R_NONE, R_ERR };
+struct res {
+    int kind;
+    int dir;              /* R_DIR: it; R_FILE/R_NONE: the directory holding it */
+    int node;             /* R_FILE: the file; R_ERR: the file before a trailing '/', or -1 */
+    const char *name;     /* R_FILE/R_NONE: the last component */
+    size_t nlen;
+    int err;              /* R_ERR */
+    int slash;            /* the path ends with '/' (`endsWithSlash`) */
+    int last_dot;         /* the last non-empty component is "." */
+    int last_dotdot;      /* ... is ".." */
+};
+
+static int only_slashes(const char *p) {
+    while (*p == '/') p++;
+    return *p == 0;
+}
+
+/* `processPath` + `resolveRel` (tcb/TCB/Os/Fs.lean). */
+static void resolve(const char *path, struct res *r) {
+    fs_init();
+    memset(r, 0, sizeof *r);
+    r->node = -1;
+    size_t len = strlen(path);
+    r->slash = len > 0 && path[len - 1] == '/';
+    /* the last non-empty component */
+    size_t e = len;
+    while (e > 0 && path[e - 1] == '/') e--;
+    size_t b = e;
+    while (b > 0 && path[b - 1] != '/') b--;
+    r->last_dot = e - b == 1 && path[b] == '.';
+    r->last_dotdot = e - b == 2 && path[b] == '.' && path[b + 1] == '.';
+    if (len == 0) { r->kind = R_ERR; r->err = ENOENT; return; }
+    int d = FS_ROOT;
+    const char *p = path;
+    for (;;) {
+        const char *q = strchr(p, '/');
+        size_t k = q ? (size_t)(q - p) : strlen(p);
+        const char *rest = q ? q + 1 : NULL;       /* NULL: no more components */
+        int last = rest == NULL || only_slashes(rest);
+        if (k == 0 || (k == 1 && p[0] == '.')) {
+            /* stay */
+        } else if (k == 2 && p[0] == '.' && p[1] == '.') {
+            d = files[d].parent;                      /* the root's parent is the root */
+        } else {
+            int c = child(d, p, k);
+            if (c < 0) {
+                if (last) { r->kind = R_NONE; r->dir = d; r->name = p; r->nlen = k; }
+                else { r->kind = R_ERR; r->err = ENOENT; }
+                return;
+            }
+            if (files[c].dir) {
+                d = c;
+            } else if (rest == NULL) {
+                r->kind = R_FILE; r->dir = d; r->node = c; r->name = p; r->nlen = k;
+                return;
+            } else {
+                r->kind = R_ERR; r->err = ENOTDIR;
+                if (last) { r->dir = d; r->node = c; }
+                return;
+            }
+        }
+        if (rest == NULL) break;
+        p = rest;
+    }
+    r->kind = R_DIR; r->dir = d;
+}
+
+static int new_node(int d, const char *n, size_t k, int dir) {
+    for (int i = 1; i < MAX_FILES; i++)
+        if (!files[i].used) {
+            char *nm = malloc(k + 1);
+            if (!nm) return -1;
+            memcpy(nm, n, k);
+            nm[k] = 0;
+            memset(&files[i], 0, sizeof files[i]);
+            files[i].used = 1; files[i].dir = (unsigned char)dir; files[i].linked = 1;
+            files[i].parent = d; files[i].name = nm; files[i].nlen = k;
+            return i;
+        }
+    return -1;
+}
+
+/* Remove the entry naming node `i` (the spec's `unlink`/`rmdir` of it). */
+static void unlink_node(int i) {
+    files[i].linked = 0;
+    release(i);
+}
+
 static struct mfd *getfd(int fd) {
-    if (fd < FD_BASE || fd >= FD_BASE + MAX_FDS || !fds[fd - FD_BASE].f) return NULL;
-    return &fds[fd - FD_BASE];
+    fs_init();
+    if (fd < 0 || fd >= MAX_FDS || fds[fd].kind == FD_FREE) return NULL;
+    return &fds[fd];
 }
 
 int _open(const char *path, int flags, int mode) {
     (void)mode;
-    struct mfile *f = lookup(path);
-    if (!f) {
-        if (!(flags & O_CREAT)) { errno = ENOENT; return -1; }
-        if (!(f = create(path))) { errno = ENOSPC; return -1; }
-    } else if ((flags & O_CREAT) && (flags & O_EXCL)) {
-        errno = EEXIST; return -1;
+    int acc = flags & O_ACCMODE;
+    if (acc != O_RDONLY && acc != O_WRONLY && acc != O_RDWR) { errno = EINVAL; return -1; }
+    int wr = acc != O_RDONLY, creat = (flags & O_CREAT) != 0;
+    if (creat && (flags & O_DIRECTORY)) { errno = EINVAL; return -1; }
+    struct res r;
+    resolve(path, &r);
+    int err = 0;
+    if (r.kind == R_ERR) err = r.err;
+    else if (r.kind == R_NONE && !creat) err = ENOENT;
+    else if (creat && r.slash) err = EISDIR;
+    else if ((wr || (flags & O_TRUNC)) && r.kind == R_DIR) err = EISDIR;
+    else if ((flags & O_DIRECTORY) && r.kind == R_FILE) err = ENOTDIR;
+    else if (creat && (flags & O_EXCL) && r.kind != R_NONE) err = EEXIST;
+    else if (creat && r.kind == R_DIR) err = EISDIR;
+    if (err) { errno = err; return -1; }
+    int fd = 0;
+    while (fd < MAX_FDS && fds[fd].kind != FD_FREE) fd++;
+    if (fd == MAX_FDS) { errno = EMFILE; return -1; }
+    int node = r.kind == R_DIR ? r.dir : r.node;
+    if (r.kind == R_NONE && (node = new_node(r.dir, r.name, r.nlen, 0)) < 0) {
+        errno = ENOSPC; return -1;
     }
-    if ((flags & O_ACCMODE) != O_RDONLY) {
-        if (make_writable(f) < 0) { errno = ENOMEM; return -1; }
-        if (flags & O_TRUNC) f->size = 0;
+    if ((flags & O_TRUNC) && !files[node].dir) {
+        if (files[node].ro) { files[node].ro = 0; files[node].data = NULL; files[node].cap = 0; }
+        files[node].size = 0;
     }
-    for (int i = 0; i < MAX_FDS; i++)
-        if (!fds[i].f) {
-            fds[i].f = f; fds[i].pos = 0; fds[i].flags = flags;
-            return FD_BASE + i;
-        }
-    errno = EMFILE;
-    return -1;
+    fds[fd].kind = FD_FILE; fds[fd].node = node; fds[fd].pos = 0; fds[fd].flags = flags;
+    files[node].opens++;
+    return fd;
 }
 
 int _close(int fd) {
     struct mfd *d = getfd(fd);
-    if (d) d->f = NULL;
+    if (!d) { errno = EBADF; return -1; }
+    if (d->kind == FD_FILE) {
+        files[d->node].opens--;
+        release(d->node);
+    }
+    d->kind = FD_FREE;
     return 0;
 }
 
 ssize_t _read(int fd, void *buf, size_t len) {
     struct mfd *d = getfd(fd);
-    if (!d) return 0; /* stdin: EOF, no console input over HTIF */
-    size_t avail = d->pos < d->f->size ? d->f->size - d->pos : 0;
+    if (!d || d->kind == FD_STDOUT || d->kind == FD_STDERR) { errno = EBADF; return -1; }
+    if (d->kind == FD_STDIN) return 0;  /* no console input over HTIF */
+    if ((d->flags & O_ACCMODE) == O_WRONLY) { errno = EBADF; return -1; }
+    struct mfile *f = &files[d->node];
+    if (f->dir) { errno = EISDIR; return -1; }
+    size_t avail = d->pos < f->size ? f->size - d->pos : 0;
     if (len > avail) len = avail;
-    memcpy(buf, d->f->data + d->pos, len);
+    memcpy(buf, f->data + d->pos, len);
     d->pos += len;
     return (ssize_t)len;
 }
@@ -159,81 +341,215 @@ ssize_t _read(int fd, void *buf, size_t len) {
 ssize_t _write(int fd, const void *buf, size_t len) {
     const char *p = buf;
     struct mfd *d = getfd(fd);
-    if (!d) { /* stdout and stderr both go to the HTIF console */
+    if (!d || d->kind == FD_STDIN) { errno = EBADF; return -1; }
+    if (d->kind != FD_FILE) {       /* stdout and stderr: the HTIF console */
         for (size_t i = 0; i < len; i++) htif_putc(p[i]);
         return (ssize_t)len;
     }
-    struct mfile *f = d->f;
-    if (d->flags & O_APPEND) d->pos = f->size;
-    if (d->pos + len > f->cap) {
+    if ((d->flags & O_ACCMODE) == O_RDONLY) { errno = EBADF; return -1; }
+    struct mfile *f = &files[d->node];
+    if (len == 0) return 0;         /* the offset stays, also with O_APPEND */
+    if (make_writable(f) < 0) { errno = ENOSPC; return -1; }
+    size_t pos = (d->flags & O_APPEND) ? f->size : d->pos;
+    if (pos + len > f->cap) {
         size_t cap = f->cap ? f->cap : 256;
-        while (cap < d->pos + len) cap *= 2;
+        while (cap < pos + len) cap *= 2;
         char *nd = realloc(f->data, cap);
         if (!nd) { errno = ENOSPC; return -1; }
         f->data = nd; f->cap = cap;
     }
-    if (d->pos > f->size) memset(f->data + f->size, 0, d->pos - f->size);
-    memcpy(f->data + d->pos, p, len);
-    d->pos += len;
+    if (pos > f->size) memset(f->data + f->size, 0, pos - f->size);
+    memcpy(f->data + pos, p, len);
+    d->pos = pos + len;
     if (d->pos > f->size) f->size = d->pos;
     return (ssize_t)len;
 }
 
 off_t _lseek(int fd, off_t offset, int whence) {
     struct mfd *d = getfd(fd);
-    if (!d) { errno = ESPIPE; return -1; }
-    off_t base = whence == SEEK_SET ? 0
-               : whence == SEEK_CUR ? (off_t)d->pos : (off_t)d->f->size;
-    if (base + offset < 0) { errno = EINVAL; return -1; }
+    if (!d) { errno = EBADF; return -1; }
+    if (whence != SEEK_SET && whence != SEEK_CUR && whence != SEEK_END) { errno = EINVAL; return -1; }
+    if (d->kind != FD_FILE) { errno = ESPIPE; return -1; }
+    struct mfile *f = &files[d->node];
+    if (whence == SEEK_END && f->dir) { errno = EINVAL; return -1; }
+    off_t base = whence == SEEK_SET ? 0 : whence == SEEK_CUR ? (off_t)d->pos : (off_t)f->size;
+    if (offset < 0 ? base < -offset : 0) { errno = EINVAL; return -1; }
     d->pos = (size_t)(base + offset);
     return (off_t)d->pos;
 }
 
-static void fill_stat(struct mfile *f, struct stat *st) {
+static void fill_stat(int i, struct stat *st) {
+    struct mfile *f = &files[i];
     memset(st, 0, sizeof *st);
-    st->st_mode = S_IFREG | 0644;
-    st->st_size = (off_t)f->size;
-    st->st_nlink = 1;
+    if (f->dir) {
+        st->st_mode = S_IFDIR | 0755;
+        st->st_nlink = 2 + nsubdirs(i);
+    } else {
+        st->st_mode = S_IFREG | 0644;
+        st->st_size = (off_t)f->size;
+        st->st_nlink = f->linked;
+    }
 }
 
 int _fstat(int fd, struct stat *st) {
     struct mfd *d = getfd(fd);
-    if (!d) { memset(st, 0, sizeof *st); st->st_mode = S_IFCHR; return 0; }
-    fill_stat(d->f, st);
+    if (!d) { errno = EBADF; return -1; }
+    if (d->kind != FD_FILE) {
+        memset(st, 0, sizeof *st);
+        st->st_mode = S_IFCHR;
+        st->st_nlink = 1;
+        return 0;
+    }
+    fill_stat(d->node, st);
     return 0;
 }
 
 int _stat(const char *path, struct stat *st) {
-    struct mfile *f = lookup(path);
-    if (!f) { errno = ENOENT; return -1; }
-    fill_stat(f, st);
+    struct res r;
+    resolve(path, &r);
+    if (r.kind == R_ERR) { errno = r.err; return -1; }
+    if (r.kind == R_NONE) { errno = ENOENT; return -1; }
+    fill_stat(r.kind == R_DIR ? r.dir : r.node, st);
     return 0;
 }
 
 int _unlink(const char *path) {
-    struct mfile *f = lookup(path);
-    if (!f) { errno = ENOENT; return -1; }
-    if (f->writable) { free(f->data); free(f->path); }
-    memset(f, 0, sizeof *f);
+    struct res r;
+    resolve(path, &r);
+    if (r.kind == R_ERR) { errno = r.err; return -1; }
+    if (r.kind == R_NONE) { errno = r.slash ? ENOTDIR : ENOENT; return -1; }
+    if (r.kind == R_DIR) { errno = EISDIR; return -1; }
+    unlink_node(r.node);
     return 0;
 }
 
+int mkdir(const char *path, mode_t mode) {
+    (void)mode;
+    struct res r;
+    resolve(path, &r);
+    if (r.kind == R_ERR) { errno = r.err; return -1; }
+    if (r.kind != R_NONE) { errno = EEXIST; return -1; }
+    if (new_node(r.dir, r.name, r.nlen, 1) < 0) { errno = ENOSPC; return -1; }
+    return 0;
+}
+
+int rmdir(const char *path) {
+    struct res r;
+    resolve(path, &r);
+    if (r.last_dot) { errno = EINVAL; return -1; }
+    if (r.kind == R_ERR) { errno = r.err; return -1; }
+    if (r.kind == R_NONE) { errno = ENOENT; return -1; }
+    if (r.kind == R_FILE) { errno = ENOTDIR; return -1; }
+    if (!dir_empty(r.dir)) { errno = ENOTEMPTY; return -1; }
+    if (r.dir == FS_ROOT) { errno = EBUSY; return -1; }
+    unlink_node(r.dir);
+    return 0;
+}
+
+/* `fsop_rename` (tcb/TCB/Os/Fs.lean: `renameChecks`, `renameCore`). */
 int rename(const char *from, const char *to) {
-    struct mfile *f = lookup(from);
-    if (!f) { errno = ENOENT; return -1; }
-    struct mfile *g = lookup(to);
-    if (g && g != f) _unlink(to);
-    size_t n = strlen(to) + 1;
-    char *p = malloc(n);
-    if (!p) { errno = ENOMEM; return -1; }
-    memcpy(p, to, n);
-    if (f->writable) free(f->path);
-    f->path = p;
+    struct res a, b;
+    resolve(from, &a);
+    resolve(to, &b);
+    int err = 0;
+    if (a.last_dot || a.last_dotdot || b.last_dot || b.last_dotdot) err = EBUSY;
+    else if (!(a.kind == R_DIR && b.kind == R_DIR && a.dir == b.dir)) {
+        if (a.kind == R_NONE) err = ENOENT;
+        else if (a.kind == R_ERR) err = a.err;
+        else if (b.kind == R_ERR) err = b.err;
+        else if (a.kind == R_FILE && b.kind == R_DIR) err = EISDIR;
+        else if (a.kind == R_FILE && b.kind == R_NONE && b.slash) err = ENOTDIR;
+        else if (a.kind == R_DIR && (b.kind == R_FILE || b.kind == R_ERR)) err = ENOTDIR;
+        else if (b.kind == R_DIR && !dir_empty(b.dir)) err = ENOTEMPTY;
+    }
+    if (!err && a.kind == R_DIR) {
+        /* moving the root, or a directory below itself */
+        if (a.dir == FS_ROOT) err = EBUSY;
+        else if (b.kind == R_DIR ? (a.dir != b.dir && ancestor(a.dir, b.dir))
+                                 : ancestor(a.dir, b.dir)) err = EINVAL;
+        else if (b.kind == R_DIR && b.dir == FS_ROOT) err = ENOTEMPTY;
+    }
+    if (err) { errno = err; return -1; }
+    int src = a.kind == R_DIR ? a.dir : a.node;
+    int dst = b.kind == R_DIR ? b.dir : b.kind == R_FILE ? b.node : -1;
+    if (src == dst) return 0;
+    int d1; const char *n1; size_t k1;
+    if (dst >= 0) { d1 = files[dst].parent; n1 = files[dst].name; k1 = files[dst].nlen; }
+    else { d1 = b.dir; n1 = b.name; k1 = b.nlen; }
+    char *nm = malloc(k1 + 1);
+    if (!nm) { errno = ENOSPC; return -1; }
+    memcpy(nm, n1, k1);
+    nm[k1] = 0;
+    if (dst >= 0) unlink_node(dst);
+    free(files[src].name);
+    files[src].name = nm; files[src].nlen = k1; files[src].parent = d1;
+    return 0;
+}
+
+/* --- OCAML: directory streams -------------------------------------------- */
+
+/* `os_opendir`/`os_readdir`/`os_closedir` (tcb/TCB/Os/Syscall.lean): a
+ * stream reports `.`, `..`, then the directory's entries; entries added or
+ * removed while it is open may or may not be reported (the spec's must/may
+ * sets), so walking the live table is allowed. The handle takes no file
+ * descriptor (DEVIATION 6 makes that optional). */
+#include "sys/dir.h"
+#define MAX_DIRS 4
+struct baremetal_dir { int used; int node; int pos; struct direct ent; };
+static struct baremetal_dir dirs[MAX_DIRS];
+
+DIR *opendir(const char *path) {
+    struct res r;
+    resolve(path, &r);
+    if (r.kind == R_ERR) { errno = r.err; return NULL; }
+    if (r.kind == R_NONE) { errno = ENOENT; return NULL; }
+    if (r.kind == R_FILE) { errno = ENOTDIR; return NULL; }
+    for (int i = 0; i < MAX_DIRS; i++)
+        if (!dirs[i].used) {
+            dirs[i].used = 1; dirs[i].node = r.dir; dirs[i].pos = -2;
+            files[r.dir].opens++;
+            return &dirs[i];
+        }
+    errno = EMFILE;
+    return NULL;
+}
+
+struct direct *readdir(DIR *d) {
+    if (!d || !d->used) { errno = EBADF; return NULL; }
+    if (d->pos < 0) {                     /* `.` then `..` */
+        strcpy(d->ent.d_name, d->pos == -2 ? "." : "..");
+        d->pos++;
+        return &d->ent;
+    }
+    for (; d->pos < MAX_FILES; d->pos++) {
+        struct mfile *f = &files[d->pos];
+        if (d->pos != FS_ROOT && f->used && f->linked && f->parent == d->node &&
+            f->nlen < sizeof d->ent.d_name) {
+            memcpy(d->ent.d_name, f->name, f->nlen);
+            d->ent.d_name[f->nlen] = 0;
+            d->pos++;
+            return &d->ent;
+        }
+    }
+    return NULL;
+}
+
+int closedir(DIR *d) {
+    if (!d || !d->used) { errno = EBADF; return -1; }
+    files[d->node].opens--;
+    release(d->node);
+    d->used = 0;
+    return 0;
+}
+
+int _isatty(int fd) {
+    struct mfd *d = getfd(fd);
+    if (d && d->kind != FD_FILE) return 1;
+    errno = d ? ENOTTY : EBADF;
     return 0;
 }
 
 int _link(const char *from, const char *to) { (void)from; (void)to; errno = EMLINK; return -1; }
-int _isatty(int fd) { return fd < FD_BASE; }
 
 /* --- heap -------------------------------------------------------------- */
 
@@ -251,11 +567,11 @@ void *_sbrk(ptrdiff_t incr) {
 
 /* --- time ------------------------------------------------------------- */
 
-/* There is no clock. newlib's libgloss implements _gettimeofday (and
- * _times, through it) with an `ecall`, which on this bare machine traps
- * with no handler and never returns: these replace them with a clock that
- * stays at 0, so Sys.time and the compiler's Profile timers are
- * deterministic. scripts/check_all.sh fails if an ecall is linked. */
+/* The clock is frozen at 0 (`TCB.Os.Clock.frozen`, which meets the spec's
+ * monotone clock). newlib's libgloss implements _gettimeofday and _times
+ * with an `ecall`, which on this bare machine traps with no handler and
+ * never returns: these replace them (scripts/check.sh fails if an ecall is
+ * linked). os.time() and os.clock() are then 0. */
 #include <sys/time.h>
 #include <sys/times.h>
 int _gettimeofday(struct timeval *tv, void *tz) {
@@ -272,68 +588,17 @@ clock_t _times(struct tms *t) {
 
 int _kill(int pid, int sig) { (void)pid; (void)sig; errno = EINVAL; return -1; }
 int _getpid(void) { return 1; }
+
+/* OCAML: symbols the OCaml runtime references (runtime/unix.c, sys.c):
+ * one process, run as root, whose working directory is the root. */
 pid_t getppid(void) { return 0; }
 uid_t getuid(void) { return 0; }
 uid_t geteuid(void) { return 0; }
 gid_t getgid(void) { return 0; }
 gid_t getegid(void) { return 0; }
-int chdir(const char *path) { (void)path; errno = ENOENT; return -1; }
-int mkdir(const char *path, mode_t mode) { (void)path; (void)mode; errno = EROFS; return -1; }
-int rmdir(const char *path) { (void)path; errno = ENOENT; return -1; }
+int chdir(const char *path) { (void)path; errno = ENOSYS; return -1; }
 
-/* --- directories -------------------------------------------------------- */
-
-/* A directory is a path prefix: readdir lists the distinct first components
- * of the files below it (OCaml 4.14's Load_path indexes include directories
- * with Sys.readdir, so ocamlc needs this to find .cmi files). */
-#include "sys/dir.h"
-struct baremetal_dir { char path[256]; size_t plen; int next; struct direct ent; };
-static struct baremetal_dir dirs[4];
-
-DIR *opendir(const char *name) {
-    fs_init();
-    size_t n = strlen(name);
-    while (n > 1 && name[n - 1] == '/') n--;
-    if (n >= sizeof dirs[0].path - 1) { errno = ENAMETOOLONG; return NULL; }
-    int found = 0;
-    for (int i = 0; i < MAX_FILES && !found; i++)
-        if (files[i].path && strncmp(files[i].path, name, n) == 0 &&
-            files[i].path[n] == '/')
-            found = 1;
-    if (!found) { errno = ENOENT; return NULL; }
-    for (int i = 0; i < 4; i++)
-        if (dirs[i].plen == 0) {
-            memcpy(dirs[i].path, name, n);
-            dirs[i].path[n] = '/';
-            dirs[i].plen = n + 1;
-            dirs[i].next = 0;
-            return &dirs[i];
-        }
-    errno = EMFILE;
-    return NULL;
-}
-
-struct direct *readdir(DIR *d) {
-    for (; d->next < MAX_FILES; d->next++) {
-        struct mfile *f = &files[d->next];
-        if (!f->path || strncmp(f->path, d->path, d->plen) != 0) continue;
-        const char *rest = f->path + d->plen;
-        size_t k = strcspn(rest, "/");
-        if (k == 0 || k >= sizeof d->ent.d_name) continue;
-        /* report each child once: skip it if an earlier file had it */
-        int dup = 0;
-        for (int j = 0; j < d->next && !dup; j++)
-            if (files[j].path && strncmp(files[j].path, d->path, d->plen) == 0 &&
-                strncmp(files[j].path + d->plen, rest, k) == 0 &&
-                (files[j].path[d->plen + k] == '/' || files[j].path[d->plen + k] == 0))
-                dup = 1;
-        if (dup) continue;
-        memcpy(d->ent.d_name, rest, k);
-        d->ent.d_name[k] = 0;
-        d->next++;
-        return &d->ent;
-    }
-    return NULL;
-}
-
-int closedir(DIR *d) { d->plen = 0; return 0; }
+#else
+/* Non-HTIF build: nothing here. */
+typedef int not_empty_translation_unit;
+#endif
