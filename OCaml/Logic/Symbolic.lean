@@ -23,6 +23,26 @@ Model: `OCaml/Programs/CountLoop.lean`, a counting loop for ANY bound in
 
 namespace OCaml.Bytecode
 
+/-- Allocation preserves every location already in the heap. -/
+@[simp] theorem Heap.get_alloc_old (h : Heap) (o : Obj) (l : Nat)
+    (hl : l < h.objs.length) : (h.alloc o).1.get? l = h.get? l := by
+  simp [Heap.alloc, Heap.get?, List.getElem?_append, hl]
+
+/-- The location returned by allocation reads back the allocated object. -/
+@[simp] theorem Heap.get_alloc_fresh (h : Heap) (o : Obj) :
+    (h.alloc o).1.get? (h.alloc o).2 = some o := by
+  simp [Heap.alloc, Heap.get?]
+
+/-- A captured field is readable immediately, even on a symbolic heap. -/
+@[simp] theorem field_alloc_fresh (h : Heap) (tag : Nat) (fs : List Val) (k i : Nat) :
+    field? (h.alloc (.block tag fs)).1 (.ptr (h.alloc (.block tag fs)).2 k) i = fs[k + i]? := by
+  simp only [field?, Heap.get_alloc_fresh]
+
+/-- Allocation also preserves fields of existing (including infix) pointers. -/
+theorem field_alloc_old (h : Heap) (o : Obj) (l k i : Nat) (hl : l < h.objs.length) :
+    field? (h.alloc o).1 (.ptr l k) i = field? h (.ptr l k) i := by
+  simp only [field?, Heap.get_alloc_old h o l hl]
+
 theorem sym_step {P : Prog} {n : Nat} {s s' : St} (h : step P s = .next s') :
     Run.iter (bcK P) (n + 1) s = Run.iter (bcK P) n s' := by
   simp [Run.iter, bcK, h]; rfl
@@ -34,6 +54,36 @@ theorem sym_seq {P : Prog} {a b : Nat} {s s' s'' : St}
 
 theorem sym_sound {P : Prog} {n : Nat} {s s' : St} (h : Run.iter (bcK P) n s = .ok s') : StepsN P n s s' :=
   stepsN_iff.2 h
+
+/-- A closure-building segment captures the accumulator then reads it back.
+The decoder premises are supplied by generated code tables. Stack, heap,
+environment and world are arbitrary; no concrete heap is evaluated. -/
+theorem closure_capture_read (P : Prog) (pc dest : Nat)
+    (hc : decodeAt P.code pc = some ⟨.CLOSURE, [1, dest]⟩)
+    (hg : decodeAt P.code (pc + 3) = some ⟨.GETFIELD2, []⟩)
+    (a e : Val) (rest : List Val) (x t : Nat) (h : Heap) (w : World) :
+    Run.iter (bcK P) 2 ⟨pc, a, rest, e, x, t, h, w⟩ =
+      .ok ⟨pc + 4, a, rest, e, x, t,
+        (h.alloc (.block closureTag [.code (pc + 2 + dest), Val.ofInt 2, a])).1, w⟩ := by
+  let obj := Obj.block closureTag [.code (pc + 2 + dest), Val.ofInt 2, a]
+  let mid : St := ⟨pc + 3, .ptr (h.alloc obj).2 0, rest, e, x, t, (h.alloc obj).1, w⟩
+  have first : step P ⟨pc, a, rest, e, x, t, h, w⟩ = .next mid := by
+    rw [step, hc]
+    simp only [stepI]
+    have ht : target pc 1 (dest : Int) = some (pc + 2 + dest) := by
+      unfold target
+      simp
+      omega
+    simp [ht, opt, mid, obj, St.adv]
+  rw [sym_step first]
+  have second : step P mid = .next
+      ⟨pc + 4, a, rest, e, x, t, (h.alloc obj).1, w⟩ := by
+    rw [step, show mid.pc = pc + 3 from rfl, hg]
+    change opt (field? (h.alloc obj).1 (.ptr (h.alloc obj).2 0) 2) _ = _
+    rw [field_alloc_fresh]
+    rfl
+  rw [sym_step second]
+  rfl
 
 /-- A conditional branch not taken. -/
 theorem step_br_fall {P : Prog} {s : St} {n o : Int} {f : BitVec 64 → BitVec 64 → Bool} {a : BitVec 63}

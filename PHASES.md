@@ -47,6 +47,7 @@ ELF pin).
 | **`ocamlrun_refinement_Statement L B`** (Layer A, F1) | `OCaml/Theorems.lean` | A1 (by `ocamlrun_refinement_of_arms`) | open |
 | F2/F3/F4/F5 arms and primitives | `OCaml/Vm/Sim/` | A2–A5 | open |
 | GC: `caml_empty_minor_heap` preserves `VmReprAt` up to a new placement (G2) | new `OCaml/Vm/Gc/` | A6 | open |
+| symbolic heap allocation/read laws; arbitrary-heap closure capture/read segment | `OCaml/Logic/Symbolic.lean` | B′1 | **proved** (`Heap.get_alloc_old`, `Heap.get_alloc_fresh`, `field_alloc_fresh`, `field_alloc_old`, `closure_capture_read`) |
 | bytecode decode table / segment generators for `boot/ocamlc` | `scripts/` | B′1 | open |
 | `OCamlSem` on Lambda (LLM-written) + its program logic | new `OCaml/Source/Sem.lean` | C1 | open |
 | **`ocamlc_backend_correct_Statement`** (Bytegen/Emitcode, then Translcore/Matching) | `OCaml/Theorems.lean` | C2 | open |
@@ -141,8 +142,9 @@ ELF pin).
 * Route (adopted, round 1): `BcSem` specs by symbolic reduction and
   `loop_rule` (`OCaml/Logic/Symbolic.lean`; model
   `OCaml/Programs/CountLoop.lean`). Run laws come from the run kernel
-  (`OCaml/Run/`). Next blocker: segments that allocate and then read the heap
-  (`Heap.alloc` on a symbolic heap stays a term).
+  (`OCaml/Run/`). Allocation/read laws and the arbitrary-heap `closure_capture_read` segment
+  are proved in `Symbolic.lean`. Next: generated decoder tables, code locality,
+  application summaries and the back-half build measurements.
 * **Exit**: the generated rules for the back-half modules (23,678
   instructions) build within the elaboration budget; `bytecode_adequacy`
   instantiated for one generated function summary end to end.

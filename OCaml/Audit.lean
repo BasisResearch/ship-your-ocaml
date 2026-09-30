@@ -58,3 +58,10 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms Vsa.Sim.memcpy_bytepath_spec
 #print axioms Vsa.Sim.muldi3_spec
 #print axioms Vsa.Sim.udivdi3_spec
+
+/-! Symbolic allocation and closure capture (B′). -/
+#print axioms OCaml.Bytecode.Heap.get_alloc_old
+#print axioms OCaml.Bytecode.Heap.get_alloc_fresh
+#print axioms OCaml.Bytecode.field_alloc_fresh
+#print axioms OCaml.Bytecode.field_alloc_old
+#print axioms OCaml.Bytecode.closure_capture_read
