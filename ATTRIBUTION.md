@@ -109,3 +109,15 @@ are generated retargets of the preserved copies in
 three function bodies, with its SHA-256, so drift checks do not need that
 external ELF. `gen_library_pins.py` reuses the preserved code-lemma generator
 for the six complete code regions in this ELF.
+
+The whole-function `StrcmpSpec{,W,W2,W3,W4,Cond}.lean` proof sources
+are preserved from ship-your-interpreter commit `46b1eb8e` (the original
+copy baseline) under `experiments/syi/while-elf-only/Vsa/Sim/`.
+`retarget_library_sites.py` also retargets these, deriving the relocated
+mask base and load address from the ELF instruction pair.
+`Vsa/MemRepr.lean` keeps only the generic memory/C-string definitions
+from syi-exp `69939cfc`; `StrlenSpec.lean` keeps its arithmetic helpers
+and the three C-string lemmas from `46b1eb8e`. `ObsAvoid.lean` is copied
+from `69939cfc`, replacing two redundant WHILE-specific observation helpers
+with the identical generic helpers already present in this repository.
+These import cuts introduce no WHILE runtime or WHILE code predicates.

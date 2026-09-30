@@ -36,7 +36,8 @@ ELF pin).
 | symbolic stepping + `loop_rule`; a counting loop for any bound | `OCaml/Logic/Symbolic.lean`, `OCaml/Programs/CountLoop.lean` | round 1 (B′ route) | **proved** |
 | OS spec (SibylFS + CakeML port), executable checker `allowed_sound`/`allowed_complete`/`checkTrace_sound` | `tcb/TCB/Os/` | P0 | **proved**; spec **trusted** for Linux, validated on 6,490 Linux traces (0 rejected) |
 | library proofs of the 66 byte-identical functions retargeted to this ELF | `Vsa/`, `scripts/retarget_syi.py` | P0 | **done** (pins checked, `memcpy_bytepath_spec`/`muldi3_spec`/`udivdi3_spec` audited) |
-| `strcmp`, `__ssprint_r`, `__ssputs_r` (8 changed words), `_malloc_r`, `_free_r`, `_svfprintf_r` for this ELF | `experiments/syi/while-elf-only/` → `Vsa/` | A0 | open |
+| `strcmp_full_spec_cond` for this ELF (aligned and unaligned ASCII C strings, framed return) | `Vsa/Sim/StrcmpSpecCond.lean` | A0 | **proved**, regenerated address/mask retarget, pinned and audited |
+| `__ssprint_r`, `__ssputs_r`, `_malloc_r`, `_free_r`, `_svfprintf_r` function specs for this ELF | `experiments/syi/while-elf-only/` → `Vsa/` | A0 | open; all six code regions pinned, ssprint/ssputs site batteries retargeted and audited |
 | decode for every disassembled instruction word (via syi’s `decodeW`) | `Vsa/Sim/ElfDecode/`, `scripts/gen_elf_decode.py` | A0 | **proved**: 29,475 words, 231 chunks; covers all reachable words; a5 drift check |
 | `HtifFsImplements` (the in-image file system meets the OS spec) | `OCaml/Os.lean` | F5 | open; `htif.c` conforms on all 6,490 validation scripts (VALIDATION §6) |
 | `BcSem` world over `TCB.Os.OsState` (file/time/env primitives through `OsStep`) | `OCaml/Bytecode/Semantics.lean` | F5 | open |

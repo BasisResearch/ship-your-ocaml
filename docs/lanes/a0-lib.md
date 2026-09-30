@@ -16,7 +16,7 @@
   each one against Sail using `decodeW` and `rfl`.
 - OCaml/Audit.lean audits the generic equality, decodeW, and representative
   generated applications; all audited axioms are standard. Full integration
-  gate pending.
+  gate passed; landed as `7e0668e`.
 
 - Six complete code regions regenerated with the existing code-lemma
   generator (`scripts/gen_library_pins.py`); 36,264 total pinned library
@@ -33,8 +33,16 @@
 
 ## Open / next
 
-- All six function specifications remain open; decode facts alone do not
-  discharge them. Compose the three same-layout site batteries into function specs and regenerate
+- `strcmp_full_spec_cond` (`Vsa/Sim/StrcmpSpecCond.lean:102`) now proves
+  the whole strcmp contract, including aligned word and unaligned byte
+  paths, return sign, memory/output preservation, and the register frame.
+  Its ASCII/NUL-terminated C-string, region/slack, code/mask pin and return
+  alignment hypotheses are preserved from upstream. Six proof modules
+  built in 3–23 seconds each. Both mask addresses are derived from this
+  ELF's AUIPC/LD pair. Axiom audit added; integration pending.
+
+- Five function specifications remain open; decode facts alone do not
+  discharge them. Compose the two stdio site batteries into function specs and regenerate
   `_malloc_r`, `_free_r`, `_svfprintf_r`; pin their regions and audit specs.
 - Upstream current trees have removed scripts; `gen_alloc_steps.py` and
   `rv_steps.py` are recoverable read-only from syi commit `af62bc55^`.
@@ -45,4 +53,4 @@
 
 ## Exit
 
-Decode coverage complete; six function specs outstanding.
+Decode coverage and strcmp complete; five function specs outstanding.

@@ -1,3 +1,4 @@
+import Vsa.Sim.StrcmpSpecCond
 import Vsa.Sim.StrcmpSites
 import Vsa.Sim.SsprintSites
 import Vsa.Sim.SsputsSites
@@ -263,3 +264,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms Vsa.Sim.site_143e8_sp
 #print axioms Vsa.Sim.site_143ec_sp
 #print axioms Vsa.Sim.site_143f0_sp
+
+-- Whole-function strcmp, both aligned and unaligned entry paths.
+#print axioms Vsa.Sim.strcmp_full_spec_cond
+#print axioms Vsa.Sim.strcmp_full_spec
+#print axioms Vsa.Sim.strcmp_word_spec
+#print axioms Vsa.Sim.strcmp_byte_path
