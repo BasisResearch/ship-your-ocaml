@@ -32,6 +32,19 @@ added to the headline theorem.
 
 ## Proved
 
+* Contract repair landed as `ef4e701` via `scripts/integrate.sh`; all gates
+  passed after rebasing on A0-lib's decode table and A0-boot's runtime repair.
+* First generated arm body: `Vsa.Sim.tr_const0`
+  (`OCaml/Vm/Sim/Const0Segment.lean:20`) proves the three instructions from
+  `0x800035c0` to the dispatch head. `const0_loaded`
+  (`OCaml/Vm/Sim/Const0Pins.lean:8`) derives its code pins from the complete
+  OCaml image. This is a machine segment, not yet a full `ArmSim.next` case:
+  dispatch, the blanket register/runtime frame, and the VM-data bridge remain.
+* `scripts/gen_arm_pilot.py` composes the existing code-pin, site and segment
+  generators using census boundaries and A0's per-word `ElfDecode` facts.
+  It imports only the `SegSt` boundary record from syi; no Snprintf import
+  closure is needed. Generated files and their spec are checked for drift.
+
 * `run_sim`, `simOfArms`, `ocamlrun_refinement_of_arms` now carry the stronger
   relation throughout and still derive the unchanged headline.
 * `forceExit_not_running` in `OCaml/Vm/Sim/Obstruction.lean` proves the old
@@ -53,13 +66,17 @@ added to the headline theorem.
 * Full validation and landing use `scripts/integrate.sh`, including image
   generator drift, axiom, TCB and abstraction gates.
 
+* CONST0 measured build: sites 5.3s, segment 6.6s (default limits).
+  Image-byte projections use small `decide +kernel` computations; ordinary
+  tactic `decide` hit recursion depth on the packed literal, with no need
+  to raise limits. The successful pin module build is measured separately.
+
 ## Open / next
 
-Land this contract repair first, then resume one generated F1 family per
-measured build. No concrete entry/next/halt arm, F1 refinement instance, or
+Continue with one generated F1 family per measured build. No concrete entry/next/halt arm, F1 refinement instance, or
 machine `whileMin` result is claimed. `whileMin_bcSem` remains bytecode-level.
 
-The site generators still need shifts/addw/tagged ALU support. Dispatch,
+Next is the shared shifts/addw/tagged-ALU generator adapter. Dispatch,
 allocation fast path, primitive summaries, and the actual loop/entry machine
 proofs remain open. A0 has repaired the nursery bounds via `runtimeLayout`; its remaining
 boot ELF text mismatch is tracked in that lane's log. `L.runtimeOk` must

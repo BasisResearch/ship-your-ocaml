@@ -121,3 +121,10 @@ and the three C-string lemmas from `46b1eb8e`. `ObsAvoid.lean` is copied
 from `69939cfc`, replacing two redundant WHILE-specific observation helpers
 with the identical generic helpers already present in this repository.
 These import cuts introduce no WHILE runtime or WHILE code predicates.
+
+## A1 segment boundary import cut
+
+`Vsa/Sim/SegState.lean` ports only the `SegSt` record from
+ship-your-interpreter commit `95ee5f98^`, same path. It keeps the existing
+`RegPins` import and omits SnprintfSpec18, examples and unused transport
+lemmas. The port uses default elaboration limits.

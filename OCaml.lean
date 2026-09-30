@@ -23,4 +23,6 @@ import OCaml.Os
 import OCaml.Programs.Validation
 import OCaml.Programs.CountLoop
 import OCaml.Vm.Sim.Obstruction
+import OCaml.Vm.Sim.Const0Segment
+import OCaml.Vm.Sim.Const0Pins
 import OCaml.Vm.PlatformReloc

@@ -206,6 +206,7 @@ class SpecError(Exception):
 
 def file_header(spec: dict) -> str:
     header = "\n".join(f"import {m}" for m in spec["imports"])
+    limits = "" if spec.get("default_limits", False) else "set_option maxHeartbeats 8000000\nset_option maxRecDepth 1000000"
     header += f"""
 
 /-!
@@ -219,8 +220,7 @@ open Sail.ConcurrencyInterfaceV1.PreSail
 open Vsa.Machine (MState Config Step Steps)
 open Vsa.Logic
 
-set_option maxHeartbeats 8000000
-set_option maxRecDepth 1000000
+{limits}
 
 namespace {spec.get('namespace', 'Vsa.Sim')}
 """

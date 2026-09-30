@@ -68,6 +68,7 @@ python3 scripts/gen_elf_decode.py --check || fail "stage a5: ELF decode table dr
 python3 scripts/gen_library_pins.py --check || fail "stage a5: A0 library code pin drift"
 python3 scripts/retarget_library_sites.py --check || fail "stage a5: A0 library site drift"
 python3 scripts/gen_ocaml_image.py | cmp -s - OCaml/Vm/ImageData.lean || fail "stage a5: OCaml image pins differ from generator"
+python3 scripts/gen_arm_pilot.py --check || fail "stage a5: arm pilot drift"
 echo "stage a5: OK"
 
 echo "== stage a6: ELF pin, and no ecall in the image"

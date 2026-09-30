@@ -110,8 +110,8 @@ def reg_hyp(n: int) -> str:
     return f"    (hx{n} : σ.regs.get? Register.x{n} = some v{n})\n"
 
 
-def decode_block(word: int) -> str:
-    return (f"    (Vsa.Sim.DecodeTable.decode_{word:08x} (afterPrelude σ)\n"
+def decode_block(word: int, namespace: str = "Vsa.Sim.DecodeTable") -> str:
+    return (f"    ({namespace}.decode_{word:08x} (afterPrelude σ)\n"
             "      (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)\n"
             "      (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)\n"
             "      (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))")
@@ -137,10 +137,15 @@ class Site:
 
 
 class Emitter:
-    def __init__(self, pred: str, accessor: str, suffix: str):
+    def __init__(self, pred: str, accessor: str, suffix: str,
+                 decode_namespace: str = "Vsa.Sim.DecodeTable"):
         self.pred = pred           # fully-qualified predicate, e.g. Vsa.Sim.Code.MemmoveLoaded
         self.accessor = accessor   # fully-qualified prefix, e.g. Vsa.Sim.Code.memmove_at_
         self.suffix = suffix
+        self.decode_namespace = decode_namespace
+
+    def decode_block(self, word: int) -> str:
+        return decode_block(word, self.decode_namespace)
 
     # -- shared scaffolding ---------------------------------------------------
 
@@ -186,7 +191,7 @@ class Emitter:
             f"    {b[0]} {b[1]} {b[2]} {b[3]}\n"
             "    hG hpc hminstret (by apply BitVec.eq_of_toNat_eq; decide)\n"
             "    (by apply BitVec.eq_of_toNat_eq; decide)\n"
-            f"{decode_block(s.word)}\n"
+            f"{self.decode_block(s.word)}\n"
             f"{exec_proof}\n"
             "    (by decide) (by decide) (by decide) (by decide) (by decide)\n"
             "    hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi\n"
@@ -351,7 +356,7 @@ class Emitter:
             f"    {b[0]} {b[1]} {b[2]} {b[3]}\n"
             "    hG hpc hminstret (by apply BitVec.eq_of_toNat_eq; decide)\n"
             "    (by apply BitVec.eq_of_toNat_eq; decide)\n"
-            f"{decode_block(s.word)}\n"
+            f"{self.decode_block(s.word)}\n"
             f"{exec_proof}\n"
             "    hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi\n"
         )
@@ -628,7 +633,7 @@ class Emitter:
             f"    {b[0]} {b[1]} {b[2]} {b[3]}\n"
             "    hG hpc hminstret (by apply BitVec.eq_of_toNat_eq; decide)\n"
             "    (by apply BitVec.eq_of_toNat_eq; decide)\n"
-            f"{decode_block(s.word)}\n"
+            f"{self.decode_block(s.word)}\n"
             f"    ({helper} σ (0x{s.addr:08x}#64) (0x{imm:03x}#12) ({regidx(rs2)}) "
             f"({regidx(rs1)})\n"
             f"      v{rs1} {v2} hG\n"
@@ -669,7 +674,7 @@ class Emitter:
             "    hG hpc hminstret hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide)\n"
             "    (by apply BitVec.eq_of_toNat_eq; decide) "
             "(by apply BitVec.eq_of_toNat_eq; decide)\n"
-            f"{decode_block(s.word)}\n"
+            f"{self.decode_block(s.word)}\n"
             "    (by decide)\n"
             "    (by decide) (by decide) (by decide) (by decide) (by decide) ?_ hi\n"
             f"  exact wX_bits_x{rd} _ (BitVec.addInt (0x{s.addr:08x}#64) 4)\n"
@@ -695,7 +700,7 @@ class Emitter:
             "    hG hpc hminstret hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) "
             "(by decide)\n"
             "    (by apply BitVec.eq_of_toNat_eq; decide)\n"
-            f"{decode_block(s.word)}\n"
+            f"{self.decode_block(s.word)}\n"
             "    htgt hi\n"
         )
         return head + body
@@ -720,7 +725,7 @@ class Emitter:
             "    hG hpc hminstret hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide)\n"
             "    (by apply BitVec.eq_of_toNat_eq; decide) "
             "(by apply BitVec.eq_of_toNat_eq; decide)\n"
-            f"{decode_block(s.word)}\n"
+            f"{self.decode_block(s.word)}\n"
             f"    (rX_bits_x{rs1} _ v{rs1}\n"
             f"      (by rw [get?_afterNextPC σ (0x{s.addr:08x}#64) _ (by decide) "
             f"(by decide)]; exact hx{rs1}))\n"
@@ -804,6 +809,7 @@ def main() -> int:
     ap.add_argument("--suffix", default="",
                     help="suffix appended to every site theorem name, e.g. _gen")
     ap.add_argument("--namespace", default="Vsa.Sim")
+    ap.add_argument("--decode-namespace", default="Vsa.Sim.DecodeTable")
     ap.add_argument("--default-limits", action="store_true",
                     help="retain Lean's default elaboration limits")
     ap.add_argument("--index", type=Path, default=DEFAULT_INDEX,
@@ -837,7 +843,7 @@ def main() -> int:
     imports.append(code_import)
     imports.extend(sorted(decode_imports))
 
-    em = Emitter(args.code_loaded, accessor, args.suffix)
+    em = Emitter(args.code_loaded, accessor, args.suffix, args.decode_namespace)
     theorems = []
     for s in sites:
         theorems.append(getattr(em, CLASS_EMITTERS[s.cls])(s))

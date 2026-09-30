@@ -274,5 +274,10 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Loaded.platform
 #print axioms OCaml.Vm.PlatformOk.htif_done
 #print axioms OCaml.Vm.Sim.forceExit_not_running
+#print axioms Vsa.Sim.tr_const0
+#print axioms OCaml.Vm.Sim.const0_loaded
+#print axioms Vsa.Sim.site_800035c0_const0
+#print axioms Vsa.Sim.site_800035c4_const0
+#print axioms Vsa.Sim.site_800035c8_const0
 #print axioms OCaml.Vm.Reloc.platformOk_reloc
 #print axioms OCaml.Vm.Reloc.loopRegisters_reloc
