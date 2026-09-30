@@ -128,3 +128,17 @@ These import cuts introduce no WHILE runtime or WHILE code predicates.
 ship-your-interpreter commit `95ee5f98^`, same path. It keeps the existing
 `RegPins` import and omits SnprintfSpec18, examples and unused transport
 lemmas. The port uses default elaboration limits.
+`SnprintfSpec18/19/20` preserve the `46b1eb8e` memmove forward-copy,
+ssputs fast-path, and two-iovec ssprint contracts, respectively; originals
+are retained in `experiments/syi/while-elf-only/`. The retarget generator
+emits these with the ELF addresses, relative calls, and mailbox bounds;
+`SnprintfSpec20Part0`–`Part4` split the composition to bound peak elaborator
+memory. `LibraryFacts.lean` extracts only the generic copying, byte-store,
+word-reassembly, and stack-arithmetic lemmas from upstream `StrcpySpec`,
+`SnprintfSpec5`, `EnvDefSpec4`, `EnvNewSpec` (`46b1eb8e`) and the retained
+`ValueSpec`/`ValueTruthySpec` helpers (`69939cfc`). No WHILE state predicates
+or interpreter code are imported by these helpers.
+
+`SsprintCodeFrame.lean` retains the four code-preservation helpers from
+`SnprintfSpec9` at `46b1eb8e`; the preserved excerpt is retargeted by the
+same generator.

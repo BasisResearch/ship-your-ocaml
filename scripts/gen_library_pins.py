@@ -4,7 +4,7 @@ import argparse
 import importlib.util
 from census import ROOT, disasm
 
-FUNCTIONS = ('strcmp', '__ssprint_r', '__ssputs_r', '_malloc_r', '_free_r', '_svfprintf_r')
+FUNCTIONS = ('strcmp', '__ssprint_r', '__ssputs_r', '_malloc_r', '_free_r', '_svfprintf_r', 'memmove')
 spec = importlib.util.spec_from_file_location('code_lemmas', ROOT / 'experiments/syi/gen_code_lemmas.py')
 code = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(code)
@@ -32,4 +32,4 @@ if __name__ == '__main__':
                 raise SystemExit(f'library code pin drift: {p.relative_to(ROOT)}')
         elif not p.exists() or p.read_text() != s:
             p.write_text(s)
-    print('A0 library pins: all six function regions current')
+    print('A0 library pins: six function regions and memmove current')

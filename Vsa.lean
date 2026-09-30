@@ -1,3 +1,4 @@
+import Vsa.Sim.SnprintfSpec20
 import Vsa.Sim.StrcmpSpecCond
 import Vsa.Sim.StrcmpSites
 import Vsa.Sim.SsprintSites

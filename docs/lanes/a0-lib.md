@@ -31,26 +31,52 @@
   preserved WHILE sources and a committed old-layout snapshot, without
   requiring an upstream checkout; wired into a5, alongside library pins.
 
-## Open / next
-
-- `strcmp_full_spec_cond` (`Vsa/Sim/StrcmpSpecCond.lean:102`) now proves
+- `strcmp_full_spec_cond` (`Vsa/Sim/StrcmpSpecCond.lean:104`) now proves
   the whole strcmp contract, including aligned word and unaligned byte
   paths, return sign, memory/output preservation, and the register frame.
   Its ASCII/NUL-terminated C-string, region/slack, code/mask pin and return
   alignment hypotheses are preserved from upstream. Six proof modules
   built in 3–23 seconds each. Both mask addresses are derived from this
-  ELF's AUIPC/LD pair. Axiom audit added; integration pending.
+  ELF's AUIPC/LD pair. Axiom audit passed; landed as `38d36d5`.
 
-- Five function specifications remain open; decode facts alone do not
-  discharge them. Compose the two stdio site batteries into function specs and regenerate
-  `_malloc_r`, `_free_r`, `_svfprintf_r`; pin their regions and audit specs.
-- Upstream current trees have removed scripts; `gen_alloc_steps.py` and
-  `rv_steps.py` are recoverable read-only from syi commit `af62bc55^`.
-- The mandatory allocator `VsaIris.Vsa.SymRun` import closure currently has
-  89 missing modules, including WHILE-only dependencies through MemRepr,
-  MallocFastSegs, ObsAvoid, and BridgeSeg. Machine import cuts are
-  prerequisites to bringing this route into the build.
+- `memmove_fwd_spec` (`Vsa/Sim/SnprintfSpec18.lean:1455`) and
+  `ssputs_fast_spec` (`Vsa/Sim/SnprintfSpec19.lean:1083`) prove short,
+  non-overlapping copies with sufficient sink capacity and framed return.
+- `ssprint_iov2_spec` (`Vsa/Sim/SnprintfSpec20Part4.lean:418`) composes
+  two such copies. It proves the copied bytes, advanced cursor, decremented
+  capacity, cleared count/residual, return value zero, restored callee-saves
+  and stack, and memory preservation outside the written windows.
+- All three new headlines passed the axiom audit (only propext,
+  Classical.choice, Quot.sound). The five generated ssprint modules built
+  in 4, 6, 248, 104, and 6 seconds under a 24 GB cap. No heartbeat limit
+  was increased. The first monolithic attempt was stopped by this lane
+  after 189 seconds at over 12 GB RSS; splitting bounded elaborator memory.
+- `SsprintCodeFrame` extracts four upstream code-preservation helpers.
+  The new memmove region and stdio outputs are drift-checked by a5.
+  `check_code_pins.py`: 36,856 pin occurrences, zero mismatches.
+
+## Open / next
+
+- `_malloc_r`, `_free_r`, `_svfprintf_r` function contracts remain open.
+  Instruction census (old -> this ELF): 560 -> 569, 193 -> 195,
+  3212 -> 3213. The added instructions expand GP-relative global accesses
+  into AUIPC/load/store sequences; svfprintf expands `__global_locale`.
+- Upstream generators are recoverable read-only from syi commit
+  `0c4ebe85b4b99e22d30fb9920efb806578aad899`. Neither upstream repo was edited.
+- The mandatory allocator `VsaIris.Vsa.SymRun` route originally had an
+  89-module missing closure with WHILE dependencies. A smaller generic
+  import cut is staged in `/tmp/a0-core`, not installed or compiled yet.
+  It includes generic memory helpers, ELF-derived entry/GP constants,
+  and run conversions through the existing OCaml run-kernel presentations.
+- The staged allocator generator reads this ELF and emits 1,461 sites in
+  46 chunks of 32 instructions. Existing unsupported cases remain explicit:
+  `sltu` at `0x80037f0c`, `sltiu` at `0x80042858`. Normalizing global-access
+  sequences aligns all 557 malloc and 190 free instruction groups, including
+  their 9 and 2 expansions. This is preparation, not a function-spec claim.
 
 ## Exit
 
-Decode coverage and strcmp complete; five function specs outstanding.
+Decode coverage and strcmp landed (`7e0668e`, `38d36d5`). The two stdio
+contracts and memmove dependency have built and passed the axiom audit;
+this commit is ready for the full integration gate. The three changed-layout
+function specs remain outstanding, so the lane exit criterion is not met.

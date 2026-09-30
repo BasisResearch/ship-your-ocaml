@@ -37,7 +37,8 @@ ELF pin).
 | OS spec (SibylFS + CakeML port), executable checker `allowed_sound`/`allowed_complete`/`checkTrace_sound` | `tcb/TCB/Os/` | P0 | **proved**; spec **trusted** for Linux, validated on 6,490 Linux traces (0 rejected) |
 | library proofs of the 66 byte-identical functions retargeted to this ELF | `Vsa/`, `scripts/retarget_syi.py` | P0 | **done** (pins checked, `memcpy_bytepath_spec`/`muldi3_spec`/`udivdi3_spec` audited) |
 | `strcmp_full_spec_cond` for this ELF (aligned and unaligned ASCII C strings, framed return) | `Vsa/Sim/StrcmpSpecCond.lean` | A0 | **proved**, regenerated address/mask retarget, pinned and audited |
-| `__ssprint_r`, `__ssputs_r`, `_malloc_r`, `_free_r`, `_svfprintf_r` function specs for this ELF | `experiments/syi/while-elf-only/` → `Vsa/` | A0 | open; all six code regions pinned, ssprint/ssputs site batteries retargeted and audited |
+| `ssputs_fast_spec` and `ssprint_iov2_spec` for this ELF (short disjoint copies, sufficient capacity, two iovecs) | `Vsa/Sim/SnprintfSpec19.lean`, `SnprintfSpec20Part4.lean` | A0 | **proved**, retargeted call/region addresses, pinned and audited; framed return and copied bytes |
+| `_malloc_r`, `_free_r`, `_svfprintf_r` function specs for this ELF | `experiments/syi/while-elf-only/` → `Vsa/` | A0 | open; complete code regions pinned and decoded; changed-layout run proofs still require regeneration |
 | decode for every disassembled instruction word (via syi’s `decodeW`) | `Vsa/Sim/ElfDecode/`, `scripts/gen_elf_decode.py` | A0 | **proved**: 29,475 words, 231 chunks; covers all reachable words; a5 drift check |
 | `HtifFsImplements` (the in-image file system meets the OS spec) | `OCaml/Os.lean` | F5 | open; `htif.c` conforms on all 6,490 validation scripts (VALIDATION §6) |
 | `BcSem` world over `TCB.Os.OsState` (file/time/env primitives through `OsStep`) | `OCaml/Bytecode/Semantics.lean` | F5 | open |

@@ -8,7 +8,8 @@
 #                            only on propext, Classical.choice, Quot.sound;
 #   (a4) proof discipline  — scripts/check_discipline.py (rules in
 #                            scripts/discipline_rules.tsv; O1-O4 cover OCaml/);
-#   (a5) generated files   — OCaml/Bytecode/Opcode.lean and OCaml/Vm/Layout.lean
+#   (a5) generated files   — opcode/layout/boot facts, complete ELF decode
+#                            coverage, library pins and retargeted specs
 #                            are exactly what their generators emit;
 #   (t1) TCB               — tcb/ builds, its lemmas' axioms are standard, and
 #                            the quick OS-spec validation accepts every Linux
@@ -92,7 +93,7 @@ out=$(run_lean lake env lean tcb/Audit.lean 2>&1)
 echo "$out"
 bad=$(echo "$out" | grep "depends on axioms" | grep -vE "axioms: \[(propext|Classical.choice|Quot.sound)(, (propext|Classical.choice|Quot.sound))*\]$" || true)
 [ -z "$bad" ] || fail "stage t1: non-standard axioms: $bad"
-tcb/validation/quick.sh || fail "stage t1: OS-spec validation (quick): a Linux trace was rejected"
+run_lean tcb/validation/quick.sh || fail "stage t1: OS-spec validation (quick): a Linux trace was rejected"
 echo "stage t1: OK"
 echo "== stage a8: abstraction-discovery gate"
 python3 scripts/check_abstraction_gate.py || fail "stage a8: run /abstraction-discovery"

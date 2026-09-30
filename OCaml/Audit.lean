@@ -1,3 +1,4 @@
+import Vsa.Sim.SnprintfSpec20
 import Vsa.Sim.StrcmpSpecCond
 import Vsa.Sim.StrcmpSites
 import Vsa.Sim.SsprintSites
@@ -324,3 +325,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Programs.GeneratedAdequacy.jump_wp
 #print axioms OCaml.Programs.GeneratedAdequacy.jump_hyp
 #print axioms OCaml.Programs.GeneratedAdequacy.jumpStop_adequacy
+
+-- Short non-overlapping copies and the two-iovec stdio flush at this ELF.
+#print axioms Vsa.Sim.memmove_fwd_spec
+#print axioms Vsa.Sim.ssputs_fast_spec
+#print axioms Vsa.Sim.ssprint_iov2_spec
