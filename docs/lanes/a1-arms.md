@@ -1,5 +1,19 @@
 # Lane a1-arms
 
+## Integration waiting for host memory
+
+The approved representation repair is landed (`ef4e701`), and the first
+CONST0 segment is landed (`3229c53`). ISINT plus the shared ALU adapter is
+committed as `7994562`; `scripts/integrate.sh` is waiting for the mandated
+25 GB of available memory before its gate. Repeated checks reached 9 GB.
+The largest process observed was unrelated `rocqworker` PID 1799904 at
+about 90 GiB RSS; this lane did not start it and must not stop it.
+The foreman has been asked for memory relief. No additional contract
+approval is requested. The full A1 exit criterion is still open.
+
+When memory is available, finish the 16 ALU smoke-site build and the full
+gate, record the integration result, then resume the remaining arm bridges.
+
 ## Current contract
 
 Foreman's approved repair is implemented. `OcamlrunRefinement` retains its
