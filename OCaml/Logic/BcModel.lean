@@ -113,6 +113,21 @@ theorem halts_bcHalts {P : Prog} {e : Nat} {out : String}
   cases o <;> cases hg
   exact bcHalts_iff.2 ⟨_, Run.haltsK_iff.2 ⟨n, ho⟩, rfl⟩
 
+/-- The converse of `halts_bcHalts`: a `BcSem` halt is a `bcModel` halt,
+through the same lockstep square. -/
+theorem bcHalts_halts {P : Prog} {e : Nat} {out : String} (h : BcHalts P out e) :
+    VsaIris.Halts (bcModel P) P.init e out := by
+  obtain ⟨w, hh, ho⟩ := bcHalts_iff.1 h
+  obtain ⟨n, hn⟩ := Run.haltsK_iff.1 hh
+  subst ho
+  refine Run.mm_halts_iff.2 (Run.haltsK_iff.2 ⟨n, ?_⟩)
+  exact (Run.iter_transport id gBc (bcModel_square P) n P.init).trans (by rw [hn]; rfl)
+
+/-- `bcModel` halts exactly as `BcSem` does. -/
+theorem halts_iff_bcHalts {P : Prog} {e : Nat} {out : String} :
+    VsaIris.Halts (bcModel P) P.init e out ↔ BcHalts P out e :=
+  ⟨halts_bcHalts, bcHalts_halts⟩
+
 open Iris in
 /-- **Adequacy of the bytecode program logic.** If the client proves the
 total WP of the ZINC loop of `P` from ownership of the initial registers

@@ -59,4 +59,16 @@ theorem ocamlrun_refinement_of_arms' {L : Layout} {B : Budget} (A : ∀ P, ArmSi
     ocamlrun_refinement_Statement L B :=
   ocamlrun_refinement_of_arms A
 
+/-- Layer A observing only the exit code. -/
+theorem ocamlrun_refinement_exit {L : Layout} {B : Budget} (A : ∀ P, ArmSim L B P) {P : Prog} {c : Vsa.Machine.Config}
+    (hL : Loaded L P c) (hg : Good P) (hf : Fits B P) (e : Nat) :
+    (∃ out, BcHalts P out e) ↔ (∃ out, Vsa.Machine.Halts c out e) :=
+  exists_congr fun out => (ocamlrun_refinement_of_arms A P c hL hg hf).1 out e
+
+/-- Layer A against the Iris machine model of the bytecode. -/
+theorem ocamlrun_refinement_bcModel {L : Layout} {B : Budget} (A : ∀ P, ArmSim L B P) {P : Prog}
+    {c : Vsa.Machine.Config} (hL : Loaded L P c) (hg : Good P) (hf : Fits B P) (out : String) (e : Nat) :
+    VsaIris.Halts (Logic.bcModel P) P.init e out ↔ Vsa.Machine.Halts c out e :=
+  Logic.halts_iff_bcHalts.trans ((ocamlrun_refinement_of_arms A P c hL hg hf).1 out e)
+
 end OCaml

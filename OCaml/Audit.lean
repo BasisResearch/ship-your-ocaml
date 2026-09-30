@@ -49,6 +49,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Bytecode.loop_rule
 #print axioms OCaml.Bytecode.step_br_taken
 #print axioms OCaml.Programs.CountLoop.loopN_reaches
+#print axioms OCaml.Logic.halts_iff_bcHalts
+#print axioms OCaml.ocamlrun_refinement_exit
+#print axioms OCaml.ocamlrun_refinement_bcModel
 
 /-! Library proofs from ship-your-interpreter, retargeted to this ELF
 (`scripts/retarget_syi.py`; pins checked by `scripts/check_code_pins.py`). -/

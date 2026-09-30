@@ -102,14 +102,10 @@ theorem ocamlrun_refinement_of_sim {L : Layout} {B : Budget} (H : OcamlrunSim L 
   intro P c hL hg hf
   have fwd := H.term_sim P c hL hg hf
   have dv := H.div_sim P c hL hg hf
-  refine ⟨fun out e => ⟨fwd out e, fun hm => ?_⟩, ⟨dv, fun hd => ?_⟩⟩
-  · rcases halts_or_diverges P hg with ⟨out', e', hb⟩ | hbd
-    · obtain ⟨ho, he⟩ := hm.deterministic (fwd out' e' hb)
-      subst ho; subst he; exact hb
-    · exact (Diverges.not_halts (dv hbd) hm).elim
-  · rcases halts_or_diverges P hg with ⟨out', e', hb⟩ | hbd
-    · exact (Diverges.not_halts hd (fwd out' e' hb)).elim
-    · exact hbd
+  rcases halts_or_diverges P hg with ⟨out', e', hb⟩ | hbd
+  · refine ⟨fun out e => ⟨fwd out e, fun hm => ?_⟩, dv, fun hd => (Diverges.not_halts hd (fwd out' e' hb)).elim⟩
+    obtain ⟨rfl, rfl⟩ := hm.deterministic (fwd out' e' hb); exact hb
+  · exact ⟨fun out e => ⟨fwd out e, fun hm => (Diverges.not_halts (dv hbd) hm).elim⟩, dv, fun _ => hbd⟩
 
 /-- The dense-memory form, as ship-your-interpreter states its headline
 (`Loaded` of `fillZero c`: absent RAM bytes read as the zero they are). -/
@@ -163,13 +159,11 @@ theorem run_sim {L : Layout} {B : Budget} {P : Prog} (A : ArmSim L B P) (hg : Go
   induction hs generalizing c with
   | zero => exact ⟨0, c, Nat.le_refl _, .zero _, hv⟩
   | @succ k a b d st _ ih =>
-    cases st with
-    | mk e =>
-      obtain ⟨c1, ⟨n1, h1⟩, hv1⟩ := A.next a b c hr hg hf hv e
-      obtain ⟨hn, hk⟩ := hr
-      have hrb : Reach P b := ⟨hn + 1, hk.snoc (.mk e)⟩
-      obtain ⟨n2, c2, hle, h2, hv2⟩ := ih hrb hv1
-      exact ⟨n1 + 1 + n2, c2, by omega, h1.append h2, hv2⟩
+    obtain ⟨e⟩ := st
+    obtain ⟨c1, ⟨n1, h1⟩, hv1⟩ := A.next a b c hr hg hf hv e
+    obtain ⟨hn, hk⟩ := hr
+    obtain ⟨n2, c2, hle, h2, hv2⟩ := ih ⟨hn + 1, hk.snoc (.mk e)⟩ hv1
+    exact ⟨n1 + 1 + n2, c2, by omega, h1.append h2, hv2⟩
 
 /-- **Forward simulation from the per-arm obligations.** -/
 theorem simOfArms {L : Layout} {B : Budget} (A : ∀ P, ArmSim L B P) : OcamlrunSim L B where
@@ -177,18 +171,14 @@ theorem simOfArms {L : Layout} {B : Budget} (A : ∀ P, ArmSim L B P) : Ocamlrun
     intro P c hL hg hf out e ⟨s, w, ⟨k, hk⟩, hst, ho⟩
     obtain ⟨c0, ⟨n0, h0⟩, hv0⟩ := (A P).entry c hL hg hf
     obtain ⟨n, c', -, hn, hv⟩ := run_sim (A P) hg hf ⟨0, .zero _⟩ hk hv0
-    have hh := (A P).halt s e w c' ⟨k, hk⟩ hg hf hv hst
-    rw [ho] at hh
-    exact Halts.of_steps (h0.toSteps.trans' hn.toSteps) hh
+    exact Halts.of_steps (h0.toSteps.trans' hn.toSteps) (ho ▸ (A P).halt s e w c' ⟨k, hk⟩ hg hf hv hst)
   div_sim := by
     intro P c hL hg hf hd m
     obtain ⟨c0, ⟨n0, h0⟩, hv0⟩ := (A P).entry c hL hg hf
     obtain ⟨s, hs⟩ := hd m
     obtain ⟨n, c', hle, hn, -⟩ := run_sim (A P) hg hf ⟨0, .zero _⟩ hs hv0
-    have hall := h0.append hn
     obtain ⟨d, hd'⟩ := Nat.exists_eq_add_of_le (show m ≤ n0 + 1 + n by omega)
-    rw [hd'] at hall
-    exact Vsa.Machine.StepsN.prefix' hall
+    exact Vsa.Machine.StepsN.prefix' (hd' ▸ h0.append hn)
 
 /-- **Layer A from the per-arm obligations.** -/
 theorem ocamlrun_refinement_of_arms {L : Layout} {B : Budget} (A : ∀ P, ArmSim L B P) :

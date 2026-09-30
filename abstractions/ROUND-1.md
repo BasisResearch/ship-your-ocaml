@@ -289,3 +289,40 @@ Novel, worth writing up:
   validates the proofs' law and not the collector's (L3 vs L3′: 8,664 and
   3,123 counterexamples, and two runtime cases found in `minor_gc.c` by
   reading the source).
+
+## 8. Round 1b: ship-your-interpreter's `Vsa/Lang` layer vs the incumbent (Layer A plumbing)
+
+ship-your-interpreter (branch `exponentiate`, commit 3274bd70) offered a
+language-parametric refinement layer (`Vsa/Lang`: `SmallStep`,
+`ArmSim.simTotal`, `SimTotal.refinement`, `Refines.of_fillZero`). The
+held-out suite was fixed and committed before either entrant started
+(`abstractions/pilot/Pilot2.lean`, 42506b6):
+* H10: Layer A observing only the exit code;
+* H11: Layer A against the Iris model `bcModel`.
+
+The refactor R4 is `Refinement.lean`'s five simulation proofs (55 lines).
+Both worktrees were created at 42506b6 with the build copied in.
+
+| entrant | setup | H10 + H11 | R4 (orig 55) | fails |
+|---|---|---|---|---|
+| Incumbent (existing tools + run kernel) | 10 (the converse `bcHalts_halts`, 7, + an iff) | 2 + 2 = **4** | 55 as scored; 45 with existing tools, no new lemma | 1 |
+| LangLayer | 243 copied + 57 bridge written | 2 + 2 = **4** | **9** | 5 (all setup) |
+
+**Decision: LangLayer not adopted.**
+* The held-out cases tie (4 = 4), so the rule's first half ("held-out cases
+  get cheaper") fails. The refactor saving (−46 lines) costs 300 new lines
+  in this repository.
+* The layer pays off with several language instances. This repository has
+  one: about 40 lines per extra instance through the layer, per the entrant.
+* Two findings go back upstream:
+  * `Vsa/Lang/Runs.lean` re-proves machine run algebra by induction,
+    duplicating the run kernel;
+  * `Basic`/`SmallStep` trip discipline rule R7 (∃ count).
+
+**Landed from the incumbent:**
+* `Logic.bcHalts_halts` and `halts_iff_bcHalts`: the model and `BcSem` halt
+  alike, by the run kernel's lockstep transport;
+* `ocamlrun_refinement_exit` (H10) and `ocamlrun_refinement_bcModel` (H11)
+  in `Theorems.lean`;
+* the three shorter simulation proofs (`ocamlrun_refinement_of_sim`,
+  `run_sim`, `simOfArms`: 45 → 35 lines).
