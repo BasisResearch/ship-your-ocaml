@@ -57,6 +57,17 @@ def reg_accu : Nat := 21
 def reg_env : Nat := 25
 /-- `extra` lives in `s2` -/
 def reg_extra : Nat := 18
+/-- `dispatchTable` lives in `s6` -/
+def reg_dispatchTable : Nat := 22
+/-- `opcodeBound` lives in `s8` -/
+def reg_opcodeBound : Nat := 24
+/-- `pending` lives in `s4` -/
+def reg_pending : Nat := 20
+/-- `domain` lives in `s3` -/
+def reg_domain : Nat := 19
+
+/-- Largest opcode accepted by the dispatch bound check. -/
+def opcodeBound : Nat := 148
 
 /-! `Caml_state` field offsets (bytes). -/
 def off_young_limit : Nat := 0

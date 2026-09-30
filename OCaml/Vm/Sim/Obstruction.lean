@@ -5,9 +5,8 @@ import OCaml.Refinement
 
 `VmRepr` forgets the HTIF control registers. Setting `htif_done` preserves
 it but prevents a positive machine run, or forces the wrong exit code.
-Consequently the present `ArmSim` cannot hold for a loaded, good program
-within budget. The simulation invariant needs a running-machine predicate
-(preserved by the arms), including the code image and platform invariants.
+Consequently the legacy `DataOnlyArmSim` cannot hold for a loaded, good program
+within budget. The repaired `ArmSim` uses `Running`, with separate data and platform parts.
 This file records the obstruction without weakening the requested theorem.
 -/
 
@@ -15,12 +14,21 @@ namespace OCaml.Vm.Sim
 open OCaml.Bytecode Vsa.Machine LeanRV64DExecutable
 open Sail Sail.ConcurrencyInterfaceV1
 
+/-- The original A1 contract, retained only to state the checked obstruction.
+Production `ArmSim` uses the strengthened `Running` relation instead. -/
+structure DataOnlyArmSim (L : OCaml.Layout) (B : Budget) (P : Prog) : Prop where
+  entry : ∀ c, Loaded L P c → Good P → Fits B P → ∃ c', Plus c c' ∧ VmRepr P P.init c'
+  next : ∀ s s' c, Reach P s → Good P → Fits B P → VmRepr P s c → step P s = .next s' →
+    ∃ c', Plus c c' ∧ VmRepr P s' c'
+  halt : ∀ s e w c, Reach P s → Good P → Fits B P → VmRepr P s c → step P s = .halt e w →
+    Halts c (bytesToString w.console) e
+
 /-- Change only the two HTIF control registers, leaving VM observations intact. -/
 def forceExit (c : Config) (e : BitVec 64) : Config :=
   { c with σ := { c.σ with regs :=
       (c.σ.regs.insert Register.htif_done true).insert Register.htif_exit_code e } }
 
-/-- The current VM predicate admits already halted configurations. -/
+/-- The data-only VM predicate admits already halted configurations. -/
 theorem repr_forceExit {P : Prog} {s : St} {c : Config}
     (h : VmRepr P s c) (e : BitVec 64) : VmRepr P s (forceExit c e) := by
   obtain ⟨pl, cp, sp, high, h⟩ := h
@@ -55,9 +63,9 @@ theorem forceExit_not_plus (c c' : Config) (e : BitVec 64) :
   | succ hstep _ => exact hstep.not_halted (forceExit_halted c e)
 
 /-- Even the halt arm is impossible: `VmRepr` permits any HTIF exit code.
-This refutes the current invariant for any represented reachable good state. -/
+This refutes the legacy data-only invariant for any represented reachable good state. -/
 theorem armSim_not_repr {L : OCaml.Layout} {B : Budget} {P : Prog}
-    (A : ArmSim L B P) (hg : Good P) (hf : Fits B P)
+    (A : DataOnlyArmSim L B P) (hg : Good P) (hf : Fits B P)
     {s : St} (hr : Reach P s) {c : Config} (hv : VmRepr P s c) : False := by
   have hg' := hg s hr
   cases hs : step P s with
@@ -78,11 +86,18 @@ theorem armSim_not_repr {L : OCaml.Layout} {B : Budget} {P : Prog}
       exact hbad (hx.deterministic hm).2
 
 /-- A nonvacuous instance of the lane exit criterion is impossible with
-`ArmSim`'s current precondition, independently of any generator coverage. -/
+`DataOnlyArmSim`'s precondition, independently of any generator coverage. -/
 theorem loaded_not_armSim {L : OCaml.Layout} {B : Budget} {P : Prog} {c : Config}
-    (hl : Loaded L P c) (hg : Good P) (hf : Fits B P) : ¬ ArmSim L B P := by
+    (hl : Loaded L P c) (hg : Good P) (hf : Fits B P) : ¬ DataOnlyArmSim L B P := by
   intro A
   obtain ⟨c', _, hv⟩ := A.entry c hl hg hf
   exact armSim_not_repr A hg hf ⟨0, .zero _⟩ hv
+
+/-- Regression check: the strengthened representation excludes the old witness. -/
+theorem forceExit_not_running (L : OCaml.Layout) (P : Prog) (s : St)
+    (c : Config) (e : BitVec 64) : ¬ Running L P s (forceExit c e) := by
+  intro h
+  have hd := h.platform.htif_done
+  simp [forceExit, Std.ExtDHashMap.get?_insert] at hd
 
 end OCaml.Vm.Sim

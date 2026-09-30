@@ -1,59 +1,66 @@
 # Lane a1-arms
 
-## NEEDS KIRAN
+## Current contract
 
-The requested nonvacuous `ArmSim L B P` is impossible as currently stated.
-Choose/coordinate the shared invariant repair with A0 boot and A6 GC before
-resuming the arm proofs. Recommended: keep the data representation separate
-and parameterize the simulation by a named invariant carrying the running
-platform, executable image, dispatch registers and allocator state; require
-entry to establish it and each next arm to preserve it. This changes the
-shared Layer A contract and the other lanes' obligations, not just an A1
-implementation detail. No permission to weaken the theorem is inferred.
+Foreman's approved repair is implemented. `OcamlrunRefinement` retains its
+exact definition; `ArmSim` now establishes/preserves/consumes `Running`.
+The representation has separate named data, platform, and fixed loop-register
+parts (`OCaml/Refinement.lean:100`). No additional simulation premise was
+added to the headline theorem.
+
+* `PlatformOk` (`OCaml/Vm/Platform.lean:28`) carries the existing Sail
+  `GoodState` (including `htif_done = false`), `ExecutableImage`, and
+  `L.runtimeOk`.
+* `ExecutableImage` pins the approved OCaml ELF's complete `.text` and
+  `.rodata`, including the jump table. The old WHILE `FixedImage` literals
+  are NOT used as the image. Only its generic `FixedBytesLoaded` predicate
+  is reused. `scripts/gen_ocaml_image.py` emits balanced 256-byte page
+  lookups from the SHA-pinned ELF; check_all a5 enforces generator equality.
+  A0-lib's code-pin projections can use this common range interface.
+* `LoopRegisters` pins the dispatch table, opcode bound, pending-signal
+  symbol and domain-state symbol registers. `gen_layout.py` extracts and
+  checks their initialization pairs in the interpreter prologue. Variable
+  pc/sp/accu/env/extra registers remain in `VmReprAt`.
+* A0 boot must now establish `LoadedAt.platform`. `Loaded.platform` exposes
+  that obligation; `Loaded.runtime` retains its original interface. The
+  prologue must additionally establish the fixed loop registers.
+* Platform and loop-register fields have no abstract heap placement.
+  `OCaml/Vm/PlatformReloc.lean` supplies `platformEqv` and `loopRegistersEqv`
+  and the proved `platformOk_reloc`/`loopRegisters_reloc` transports (lines
+  31 and 56). Collector control/runtime restoration and immutable-byte
+  frames remain explicit typed obligations, not assumed preservation.
 
 ## Proved
 
-All names below are in namespace `OCaml.Vm.Sim`, in
-`OCaml/Vm/Sim/Obstruction.lean`:
-
-* `repr_forceExit` (line 24): changing HTIF done/exit code preserves `VmRepr`.
-* `forceExit_halted` (line 43): the resulting machine immediately halts.
-* `forceExit_not_plus` (line 51): no positive machine segment starts there.
-* `armSim_not_repr` (line 59): `ArmSim` contradicts any represented reachable
-  state of a good program within budget.
-* `loaded_not_armSim` (line 82): `Loaded L P c`, `Good P`, and `Fits B P`
-  imply `¬ ArmSim L B P`, using entry to obtain the represented initial state.
-
-The obstruction holds for every runtime predicate `L.runtimeOk`; strengthening
-only `Loaded` cannot fix the next/halt fields. It does not refute the eventual
-machine refinement theorem under a repaired simulation invariant.
+* `run_sim`, `simOfArms`, `ocamlrun_refinement_of_arms` now carry the stronger
+  relation throughout and still derive the unchanged headline.
+* `forceExit_not_running` in `OCaml/Vm/Sim/Obstruction.lean` proves the old
+  HTIF witness cannot satisfy the repaired relation.
+* The five original obstruction results remain checked and audited:
+  `repr_forceExit`, `forceExit_halted`, `forceExit_not_plus`,
+  `armSim_not_repr`, and `loaded_not_armSim`. The last two now explicitly
+  refer to `DataOnlyArmSim`, the legacy data-only loop contract, not the
+  repaired production `ArmSim`.
 
 ## Validation
 
-* Read lane brief, COMMON.md, CLAUDE.md, PLAN.md, PHASES.md; ran
-  `scripts/abs_inventory.sh`; rebased on origin/main.
-* `lake build OCaml.Vm.Sim.Obstruction` passed under `MemoryMax=24G`;
-  reported module elaboration 1.2 seconds. No heartbeat changes or holes.
-* All five theorems added to `OCaml/Audit.lean`; imported by `OCaml.lean`.
-* Proof discipline and abstraction gate passed. This is an invariant
-  obstruction, not an a8 per-arm cost failure; no arm-family cost claimed.
-* `lake build OCaml` passed under `MemoryMax=24G` (484 jobs).
-* `scripts/integrate.sh` landed the proof as `ea1cc61` on main under an
-  enclosing 24 GB scope. All stages passed: full build, no holes, standard
-  axioms, proof discipline, generator drift, ELF/code pins, TCB validation,
-  and abstraction gate. The audit-file rebase conflict retained both lanes
-  theorem lists.
+* Original obstruction landed as `ea1cc61`, log as `c87fb48`, through
+  `scripts/integrate.sh` with all gates passing.
+* Repair targeted build passed under `MemoryMax=24G`: image data 7.9s,
+  platform 0.9s, refinement 1.0s, obstruction/regression 1.3s.
+* `OcamlrunRefinement` definition compared byte-for-byte with its previous
+  definition; unchanged. New headline results are in `OCaml/Audit.lean`.
+* Full validation and landing use `scripts/integrate.sh`, including image
+  generator drift, axiom, TCB and abstraction gates.
 
 ## Open / next
 
-No entry, next, halt arm, F1 machine refinement, or machine `whileMin` theorem
-has been proved. The existing `whileMin_bcSem` is bytecode-level only.
-The PHASES.md ledger now records the checked obstruction explicitly.
+Land this contract repair first, then resume one generated F1 family per
+measured build. No concrete entry/next/halt arm, F1 refinement instance, or
+machine `whileMin` result is claimed. `whileMin_bcSem` remains bytecode-level.
 
-After the shared invariant is repaired, consume A0's image/decode and boot
-premises and generate one F1 family per measured build. The existing
-`disasm_to_sites.py` supports addi/addiw/add/sub/subw but still lacks the
-requested shift/addw/tagged ALU classes; generator help executes successfully.
-Dispatch, allocation fast-path and primitive summaries remain open.
-The existing generator machinery does not resolve the false arm precondition;
-no hand-stepped substitute or circular primitive obligation was introduced.
+The site generators still need shifts/addw/tagged ALU support. Dispatch,
+allocation fast path, primitive summaries, and the actual loop/entry machine
+proofs remain open. A0 has repaired the nursery bounds via `runtimeLayout`; its remaining
+boot ELF text mismatch is tracked in that lane's log. `L.runtimeOk` must
+still be maintained by every generated arm.

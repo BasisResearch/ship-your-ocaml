@@ -1,4 +1,4 @@
-import OCaml.Vm.Repr
+import OCaml.Vm.Platform
 import Vsa.Densify
 import OCaml.Run.Machine
 
@@ -20,7 +20,7 @@ obligations by determinism alone.
   `BcSem` behaviours are machine behaviours. `ocamlrun_refinement_of_sim`
   derives the full equivalence from it (proved here).
 * `ArmSim L B P` — the per-instruction obligations, one per `caml_interprete`
-  arm (plus entry and the exits): from `VmRepr P s c` and `step P s = .next
+  arm (plus entry and the exits): from `Running L P s c` and `step P s = .next
   s'`, the machine reaches (in at least one step) a configuration
   representing `s'`. `simOfArms` derives `OcamlrunSim` from them (proved
   here). These are what the exponentiating layer generates, one family of
@@ -77,16 +77,28 @@ structure LoadedAt (L : Layout) (P : Prog) (c : Config) (pl : Place) (cp : ChanP
   trapsp : (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trapsp)).toNat = high
   heap : HeapRepr c pl cp P P.init
   world : WorldRepr c cp P.init.world
-  runtime : L.runtimeOk c
+  platform : PlatformOk L.runtimeOk c
 
 def Loaded (L : Layout) (P : Prog) (c : Config) : Prop :=
   ∃ (pl : Place) (cp : ChanPlace) (high : Nat), LoadedAt L P c pl cp high
 
+/-- Startup supplies the same platform predicate consumed at the loop head.
+The prologue additionally establishes `LoopRegisters` and the VM data. -/
+theorem Loaded.platform {L : Layout} {P : Prog} {c : Config} (h : Loaded L P c) :
+    PlatformOk L.runtimeOk c := by
+  obtain ⟨pl, cp, high, entry⟩ := h
+  exact entry.platform
+
 /-- The runtime component of a loaded witness, independent of its placement. -/
 theorem Loaded.runtime {L : Layout} {P : Prog} {c : Config} (h : Loaded L P c) :
-    L.runtimeOk c := by
-  obtain ⟨pl, cp, high, entry⟩ := h
-  exact entry.runtime
+    L.runtimeOk c := h.platform.runtime
+
+/-- The loop-head representation: VM data and platform facts are separate
+named parts. No platform field depends on the abstract heap placement. -/
+structure Running (L : Layout) (P : Prog) (s : St) (c : Config) : Prop where
+  data : VmRepr P s c
+  platform : PlatformOk L.runtimeOk c
+  loop : LoopRegisters c
 
 /-- **Layer A (statement).** `ocamlrun` refines `BcSem`: for every loaded
 program inside the fragment (`Good`) and the budget (`Fits`), the machine
@@ -132,10 +144,10 @@ def Plus (c c' : Config) : Prop := ∃ n, StepsN (n + 1) c c'
 `step` outcome. Each field is what one family of generated segment proofs
 discharges (the `.next` field splits by `caml_interprete` arm). -/
 structure ArmSim (L : Layout) (B : Budget) (P : Prog) : Prop where
-  entry : ∀ c, Loaded L P c → Good P → Fits B P → ∃ c', Plus c c' ∧ VmRepr P P.init c'
-  next : ∀ s s' c, Reach P s → Good P → Fits B P → VmRepr P s c → step P s = .next s' →
-    ∃ c', Plus c c' ∧ VmRepr P s' c'
-  halt : ∀ s e w c, Reach P s → Good P → Fits B P → VmRepr P s c → step P s = .halt e w →
+  entry : ∀ c, Loaded L P c → Good P → Fits B P → ∃ c', Plus c c' ∧ Running L P P.init c'
+  next : ∀ s s' c, Reach P s → Good P → Fits B P → Running L P s c → step P s = .next s' →
+    ∃ c', Plus c c' ∧ Running L P s' c'
+  halt : ∀ s e w c, Reach P s → Good P → Fits B P → Running L P s c → step P s = .halt e w →
     Halts c (bytesToString w.console) e
 
 /-! Machine run laws: corollaries of the run kernel (`OCaml/Run/Machine.lean`). -/
@@ -158,8 +170,8 @@ theorem _root_.Vsa.Machine.StepsN.prefix' : ∀ {m k : Nat} {a c : Config}, Step
 runs at least `k` steps to a configuration representing the end state. -/
 theorem run_sim {L : Layout} {B : Budget} {P : Prog} (A : ArmSim L B P) (hg : Good P)
     (hf : Fits B P) :
-    ∀ {k : Nat} {s s' : St} {c : Config}, Reach P s → StepsN P k s s' → VmRepr P s c →
-      ∃ n c', k ≤ n ∧ StepsN n c c' ∧ VmRepr P s' c' := by
+    ∀ {k : Nat} {s s' : St} {c : Config}, Reach P s → StepsN P k s s' → Running L P s c →
+      ∃ n c', k ≤ n ∧ StepsN n c c' ∧ Running L P s' c' := by
   intro k s s' c hr hs hv
   -- discipline: allow(O5-run-induction) run_sim is the simulation induction (one ArmSim per BcSem step), not run algebra
   induction hs generalizing c with

@@ -270,3 +270,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms Vsa.Sim.strcmp_full_spec
 #print axioms Vsa.Sim.strcmp_word_spec
 #print axioms Vsa.Sim.strcmp_byte_path
+/-! Strengthened A1 representation and placement-independent platform frame. -/
+#print axioms OCaml.Loaded.platform
+#print axioms OCaml.Vm.PlatformOk.htif_done
+#print axioms OCaml.Vm.Sim.forceExit_not_running
+#print axioms OCaml.Vm.Reloc.platformOk_reloc
+#print axioms OCaml.Vm.Reloc.loopRegisters_reloc
