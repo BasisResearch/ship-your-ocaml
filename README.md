@@ -144,7 +144,7 @@ def endToEnd_ocaml_Statement S parse load boot L B : Prop :=   -- EndToEnd
 
 | | |
 |---|---|
-| `while.ml` on Sail | `55\n2500\n36\n`, exit 0, 4,569,924 steps; cut point at 4,497,703 (startup: code MD5 and primitive resolution) |
+| `while.ml` on Sail | `55\n2500\n36\n`, exit 0, 4,571,586 steps; cut point at 4,499,328 (startup: code MD5 and primitive resolution) |
 | difftests (host `ocamlrun` vs Sail) | 9/9 pass (ints, closures, data, exceptions, strings/`Printf`, allocation, soft-float, objects); 4.6M–222M steps |
 | `boot/ocamlc -version` on Sail | `4.14.4`, exit 0, 54.4M steps (cut at 48.8M) |
 | `boot/ocamlc -dinstr -c hello.ml` (`let () = print_int (6 * 7)`) on Sail | the compiler's bytecode listing, exit 0, 82.6M steps (cut at 48.8M); one collection, forced by a channel's custom-block accounting; none with `OCAMLRUNPARAM=M=1000` (77.4M steps) |

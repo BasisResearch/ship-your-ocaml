@@ -1,5 +1,6 @@
 import OCaml.Vm.Repr
 import Vsa.Densify
+import OCaml.Run.Machine
 
 /-!
 # Layer A: `ocamlrun` refines `BcSem`
@@ -135,31 +136,21 @@ structure ArmSim (L : Layout) (B : Budget) (P : Prog) : Prop where
   halt : ∀ s e w c, Reach P s → Good P → Fits B P → VmRepr P s c → step P s = .halt e w →
     Halts c (bytesToString w.console) e
 
-theorem _root_.Vsa.Machine.StepsN.append {n m : Nat} {a b c : Config} (h1 : StepsN n a b) (h2 : StepsN m b c) :
-    StepsN (n + m) a c := by
-  induction h1 with
-  | zero => simpa using h2
-  | succ s _ ih => rw [Nat.add_right_comm]; exact .succ s (ih h2)
+/-! Machine run laws: corollaries of the run kernel (`OCaml/Run/Machine.lean`). -/
 
-theorem _root_.Vsa.Machine.Steps.trans' {a b c : Config} (h1 : Steps a b) (h2 : Steps b c) : Steps a c := by
-  induction h1 with
-  | refl => exact h2
-  | head s _ ih => exact .head s (ih h2)
+theorem _root_.Vsa.Machine.StepsN.append {n m : Nat} {a b c : Config} (h1 : StepsN n a b) (h2 : StepsN m b c) :
+    StepsN (n + m) a c :=
+  Run.vsa_stepsN_iff.2 (by rw [Run.iter_add, Run.vsa_stepsN_iff.1 h1]; exact Run.vsa_stepsN_iff.1 h2)
+
+theorem _root_.Vsa.Machine.Steps.trans' {a b c : Config} (h1 : Steps a b) (h2 : Steps b c) : Steps a c :=
+  Run.vsa_steps_iff.2 ((Run.vsa_steps_iff.1 h1).trans (Run.vsa_steps_iff.1 h2))
 
 theorem _root_.Vsa.Machine.Halts.of_steps {c c' : Config} {out : String} {e : Nat} (h : Steps c c')
-    (h' : Halts c' out e) : Halts c out e := by
-  obtain ⟨c'', σ, hs, hh, ho⟩ := h'
-  exact ⟨c'', σ, h.trans' hs, hh, ho⟩
+    (h' : Halts c' out e) : Halts c out e :=
+  let ⟨σ, hh, ho⟩ := Run.vsa_halts_iff.1 h'; Run.vsa_halts_iff.2 ⟨σ, hh.of_reach (Run.vsa_steps_iff.1 h), ho⟩
 
-theorem _root_.Vsa.Machine.StepsN.prefix' : ∀ {m k : Nat} {a c : Config}, StepsN (m + k) a c → ∃ b, StepsN m a b := by
-  intro m
-  induction m with
-  | zero => intro k a c _; exact ⟨a, .zero _⟩
-  | succ m ih =>
-    intro k a c h
-    rw [Nat.add_right_comm] at h
-    cases h with
-    | succ s r => obtain ⟨b, hb⟩ := ih r; exact ⟨b, .succ s hb⟩
+theorem _root_.Vsa.Machine.StepsN.prefix' : ∀ {m k : Nat} {a c : Config}, StepsN (m + k) a c → ∃ b, StepsN m a b :=
+  fun h => let ⟨b, hb⟩ := Run.iter_prefix (Run.vsa_stepsN_iff.1 h); ⟨b, Run.vsa_stepsN_iff.2 hb⟩
 
 /-- Along a `BcSem` run of `k` steps from a represented state, the machine
 runs at least `k` steps to a configuration representing the end state. -/
@@ -168,6 +159,7 @@ theorem run_sim {L : Layout} {B : Budget} {P : Prog} (A : ArmSim L B P) (hg : Go
     ∀ {k : Nat} {s s' : St} {c : Config}, Reach P s → StepsN P k s s' → VmRepr P s c →
       ∃ n c', k ≤ n ∧ StepsN n c c' ∧ VmRepr P s' c' := by
   intro k s s' c hr hs hv
+  -- discipline: allow(O5-run-induction) run_sim is the simulation induction (one ArmSim per BcSem step), not run algebra
   induction hs generalizing c with
   | zero => exact ⟨0, c, Nat.le_refl _, .zero _, hv⟩
   | @succ k a b d st _ ih =>

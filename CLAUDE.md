@@ -9,7 +9,11 @@ fixpoint (Layer C). The discipline is ship-your-interpreter's
 subexponential exactly when work was done by hand beside an abstraction that
 already existed. `scripts/check_all.sh` stage a4
 (`scripts/check_discipline.py` + `scripts/discipline_rules.tsv`) FAILS new
-files that bypass it; rules O1–O4 cover `OCaml/`.
+files that bypass it; rules O1–O7 cover `OCaml/`. Stage a8
+(`scripts/check_abstraction_gate.py`) fails with "run /abstraction-discovery"
+when an obligation cluster (`abstractions/clusters.def`) reaches 8 hand
+proofs without its per-case cost falling by a third; the only allowed next
+task is then a discovery round (`abstractions/ROUND-<n>.md`).
 
 **Before ANY proof work:**
 * Run `scripts/abs_inventory.sh` and reuse by name.
@@ -43,7 +47,10 @@ The Availability column says:
 | `BcSem` behaviour of a concrete program | `bcHalts_of_runTo` + `decide +kernel` on `runTo` (model: `OCaml/Programs/Validation.lean`); runs longer than a few thousand steps: chunk over explicit intermediate states | here |
 | Growing `BcSem` (a new opcode or primitive) | transcribe the `interp.c` arm / C primitive into `stepI`/`primF1Impl`, then `runbc` against the host `ocamlrun` on a difftest before any proof; update `Fragment.lean`'s ledger (`ledger_exact` is `decide`d) | here |
 | A `caml_interprete` arm (Layer A) | `ArmSim.next`, one generated segment family per arm (`scripts/syi/disasm_to_segment.py` → `gen_segment.py`), arm boundaries from `scripts/census.py` | A1 |
+| Bytecode segment or loop spec over `BcSem` (Layer B′, from ANY state) | `OCaml/Logic/Symbolic.lean`: reduce the real `step` on a template state with free tail/env/heap/world (`Run.iter (bcK P) k tmpl = .ok tmpl'` by `rfl`), resolve symbolic branches with `step_br_fall`/`step_br_taken`, tagged arithmetic with the `*_ofNat` lemmas + `omega`, loops with `loop_rule` (section invariant + rank). Model: `OCaml/Programs/CountLoop.lean` (any bound). Never hand-list intermediate states with `.succ (.mk rfl)` (rule O7), never enumerate start values | here |
 | Bytecode-level proofs (Layer B′) | `bcModel P` + the MachWP rules; per-instruction step lemmas and per-block segments GENERATED from `dumpobj` output (never hand-stepped `step P s`) | B′1 |
+| Run laws of any step relation (determinism, append/snoc/prefix, unique halting, halts-or-diverges, `Reaches` ↔ `∃ n`, transport between systems) | the run kernel `OCaml/Run/Kernel.lean`: give the relation a `Graph` + `ConsPres`/`ClosPres` presentation and use `iter`'s laws; lossy lockstep squares by `iter_transport`; adapters `bcK` (`Semantics.lean`), `vsaK` (`Run/Machine.lean`), `mmK` (`Run/Model.lean`). Never induct on a run relation (rule O5) | here |
+| A representation component that must survive a minor GC (relocation) | `OCaml/Vm/Reloc.lean`: write it as an `Eqv` combinator term and use `Eqv.transport` (models `objAt_reloc`, `heapRepr_reloc`). The bridge to the real collector is `ScanCoherent`, and it needs the NoForgery and RememberedComplete premises (`abstractions/ROUND-1.md` §2, L3′). Never unfold `reloc` by hand (rule O6) | here |
 | New post/entry predicate | named-field `structure ... : Prop where` (models: `VmReprAt`, `LoadedAt`); never an anonymous ∃/∧ tower | — |
 | Consuming a landed ∃/∧ tower | write ONE named destructuring lemma beside its definition | — |
 

@@ -63,11 +63,11 @@ The emulator runs at about 49,000 steps/s.
 
 | program | output | exit | steps | cut point (2nd `caml_interprete` call) | after the cut |
 |---|---|---|---|---|---|
-| `while.ml` (proof ELF) | `55\n2500\n36\n` | 0 | 4,569,924 | 4,497,703 | 72,221 |
-| `while_min.ml` (no Stdlib) | `55\n2500\n36\n` | 0 | 4,311,271 | 4,267,581 | 43,690 |
-| `boot/ocamlc -version` | `4.14.4\n` | 0 | 54,414,266 | 48,825,888 | 5,588,378 |
-| `boot/ocamlc -nostdlib -I /lib/ocaml -dinstr -c /src/hello.ml` | the bytecode listing (below) | 0 | 82,603,090 | 48,826,563 | 33,776,527 |
-| same, `OCAMLRUNPARAM=M=1000` | the same listing | 0 | 77,403,136 | 48,828,748 | 28,574,388 |
+| `while.ml` (proof ELF) | `55\n2500\n36\n` | 0 | 4,571,586 | 4,499,328 | 72,258 |
+| `while_min.ml` (no Stdlib) | `55\n2500\n36\n` | 0 | 4,312,956 | 4,269,235 | 43,721 |
+| `boot/ocamlc -version` | `4.14.4\n` | 0 | 54,416,058 | 48,827,336 | 5,588,722 |
+| `boot/ocamlc -nostdlib -I /lib/ocaml -dinstr -c /src/hello.ml` | the bytecode listing (below) | 0 | 82,642,691 | 48,831,922 | 33,810,769 |
+| same, `OCAMLRUNPARAM=M=1000` | the same listing | 0 | 77,438,635 | 48,834,107 | 28,604,528 |
 
 `while.ml` is the OCaml port of ship-your-interpreter's `c/tests/while.wl`
 (while loops, `break` as an exception, nesting). `hello.ml` is
@@ -134,7 +134,7 @@ length, not proof (PLAN.md §7).
 
 * Every program has exactly one minor collection before the cut point:
   `caml_main` promotes the unmarshalled global data (`caml_oldify_one` +
-  `caml_oldify_mopup`, `startup_byt.c`) at step 4,484,219 for `while.ml`,
+  `caml_oldify_mopup`, `startup_byt.c`) at step 4,485,844 for `while.ml`,
   13,484 steps before the cut.
 * **After the cut point, with the default 256k-word minor heap, eight of
   the nine difftests run no minor collection and no major slice** (table
@@ -144,7 +144,7 @@ length, not proof (PLAN.md §7).
   all. `boot/ocamlc -version`: none after the cut.
 * **`boot/ocamlc` compiling `hello.ml` collects once, whatever the minor
   heap size**: on Sail, one minor collection and one major slice after the
-  cut, the minor collection at step 76,737,043 (27.9M steps after the
+  cut, the minor collection at step 76,769,749 (27.9M steps after the
   cut). In the host mirror (§8: same runtime, same heap parameters, so the
   same collection points) the run allocates 206,018 minor words, below the
   256k-word minor heap, and still collects once at the default size, at
@@ -156,7 +156,7 @@ length, not proof (PLAN.md §7).
   (`caml_alloc_small_dispatch` → `caml_check_urgent_gc` →
   `caml_gc_dispatch`). Raising the custom-block ratio removes it:
   **with `OCAMLRUNPARAM=M=1000` the compile runs no minor or major
-  collection at all** — on Sail (77,403,136 steps; the collection had cost
+  collection at all** — on Sail (77,438,635 steps; the collection had cost
   5.2M steps) and in the mirror (also with `s=4M`). So G1 (PLAN.md §3) is a runtime
   configuration: a large `s`, `M=1000`, and `O=1000000` against
   compaction; `Fits` must also bound custom-block memory.

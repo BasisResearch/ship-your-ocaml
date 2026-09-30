@@ -28,6 +28,28 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.endToEnd_of_layers
 #print axioms OCaml.ocamlrun_refinement_of_arms'
 
+/-! Adopted abstractions, abstraction-discovery round 1 (`abstractions/ROUND-1.md`). -/
+#print axioms OCaml.Run.iter_add
+#print axioms OCaml.Run.HaltsK.unique
+#print axioms OCaml.Run.halts_or_div
+#print axioms OCaml.Run.div_iff_not_halts
+#print axioms OCaml.Run.ConsPres.iff
+#print axioms OCaml.Run.ClosPres.iff
+#print axioms OCaml.Run.iter_transport
+#print axioms OCaml.Run.mm_halts_unique
+#print axioms OCaml.Run.mm_reaches_iff
+#print axioms OCaml.Logic.reaches_stepsN
+#print axioms OCaml.Logic.halts_bcHalts
+#print axioms Vsa.Machine.Halts.of_steps
+#print axioms OCaml.Vm.Reloc.valWord_relocates
+#print axioms OCaml.Vm.Reloc.objAt_reloc
+#print axioms OCaml.Vm.Reloc.stackRepr_reloc
+#print axioms OCaml.Vm.Reloc.heapRepr_reloc
+#print axioms OCaml.Vm.Reloc.ScanCoherent.act
+#print axioms OCaml.Bytecode.loop_rule
+#print axioms OCaml.Bytecode.step_br_taken
+#print axioms OCaml.Programs.CountLoop.loopN_reaches
+
 /-! Library proofs from ship-your-interpreter, retargeted to this ELF
 (`scripts/retarget_syi.py`; pins checked by `scripts/check_code_pins.py`). -/
 #print axioms Vsa.Sim.memcpy_bytepath_spec

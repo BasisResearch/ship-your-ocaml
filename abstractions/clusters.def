@@ -7,6 +7,7 @@
 # unique, halting excludes divergence, halts-or-diverges, conversions),
 # re-proved for each step relation.
 cluster C1-run-algebra
+adopted 2026-09-30 abstractions/ROUND-1.md   # run kernel, OCaml/Run/Kernel.lean
 Vsa/Machine.lean Step.deterministic
 Vsa/Machine.lean Halted.deterministic
 Vsa/Machine.lean Step.not_halted
@@ -49,3 +50,21 @@ tcb/TCB/Os/Syscall.lean allowed_sound
 tcb/TCB/Os/Syscall.lean allowed_complete
 tcb/TCB/Os/Syscall.lean checkFrom_sound
 tcb/TCB/Os/Syscall.lean checkTrace_sound
+
+# C3 moving-GC representation: a representation component survives a
+# relocation of live blocks. Adopted route: OCaml/Vm/Reloc.lean (Eqv).
+cluster C3-relocation
+adopted 2026-09-30 abstractions/ROUND-1.md   # Eqv combinators, OCaml/Vm/Reloc.lean
+OCaml/Vm/Reloc.lean valWord_relocates
+OCaml/Vm/Reloc.lean objAt_reloc
+OCaml/Vm/Reloc.lean stackRepr_reloc
+OCaml/Vm/Reloc.lean heapRepr_reloc
+OCaml/Vm/Reloc.lean globals_reloc
+
+# C4 bytecode specifications (Layer B′): specs of bytecode segments and loops.
+# Adopted route: OCaml/Logic/Symbolic.lean (symbolic reduction + loop_rule).
+cluster C4-bytecode-specs
+adopted 2026-09-30 abstractions/ROUND-1.md   # symbolic stepping, OCaml/Logic/Symbolic.lean
+OCaml/Programs/CountLoop.lean loopN_body
+OCaml/Programs/CountLoop.lean loopN_exit
+OCaml/Programs/CountLoop.lean loopN_reaches

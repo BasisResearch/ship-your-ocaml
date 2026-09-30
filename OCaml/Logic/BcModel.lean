@@ -1,5 +1,6 @@
 import OCaml.Bytecode.Semantics
 import VsaIris.Adequacy
+import OCaml.Run.Model
 
 /-!
 # Layer B′: a machine-level program logic over `BcSem`
@@ -87,30 +88,30 @@ def bcModel (P : Prog) : VsaIris.MachineModel where
   mem s a := (wordAt s (a / 8)).extractLsb' (8 * (a % 8)) 8
   out s := bytesToString s.world.console
 
+/-- `bcModel`'s lossy outcome map (`unsupported`/`wrong` collapse to `stuck`). -/
+def gBc : Res → Option (Nat × String)
+  | .halt e w => some (e, bytesToString w.console)
+  | _ => none
+
+/-- The lockstep square from `BcSem`'s kernel to `bcModel`'s. -/
+theorem bcModel_square (P : Prog) (s : St) :
+    Run.mmK (bcModel P) s = Run.mapOut id gBc (bcK P s) := by
+  unfold Run.mmK bcK bcModel; dsimp only; cases step P s <;> rfl
+
 /-- `Reaches` of the model is `BcSem`'s `StepsN`. -/
 theorem reaches_stepsN {P : Prog} {a b : (bcModel P).State}
     (h : VsaIris.Reaches (bcModel P) a b) : ∃ n, Bytecode.StepsN P n a b := by
-  induction h with
-  | refl => exact ⟨0, .zero _⟩
-  | @step x y z hs _ ih =>
-    obtain ⟨n, hn⟩ := ih
-    refine ⟨n + 1, .succ (.mk ?_) hn⟩
-    simp only [bcModel] at hs
-    split at hs <;> first | (cases hs; assumption) | cases hs
+  obtain ⟨n, hn⟩ := ((Run.reaches_pres _).iff (Run.mmK_graph _)).1 h
+  obtain ⟨c, hc, rfl⟩ := Run.mapOut_ok ((Run.iter_transport id gBc (bcModel_square P) n a).symm.trans hn)
+  exact ⟨n, stepsN_iff.2 hc⟩
 
 /-- The model halts exactly as `BcSem` does. -/
 theorem halts_bcHalts {P : Prog} {e : Nat} {out : String}
     (h : VsaIris.Halts (bcModel P) P.init e out) : BcHalts P out e := by
-  obtain ⟨σf, hr, hs⟩ := h
-  obtain ⟨n, hn⟩ := reaches_stepsN hr
-  simp only [bcModel] at hs
-  split at hs
-  · cases hs
-  · rename_i e' w hst
-    cases hs
-    exact ⟨σf, w, ⟨n, hn⟩, hst, rfl⟩
-  · cases hs
-  · cases hs
+  obtain ⟨n, hn⟩ := Run.haltsK_iff.1 (Run.mm_halts_iff.1 h)
+  obtain ⟨o, ho, hg⟩ := Run.mapOut_error ((Run.iter_transport id gBc (bcModel_square P) n P.init).symm.trans hn)
+  cases o <;> cases hg
+  exact bcHalts_iff.2 ⟨_, Run.haltsK_iff.2 ⟨n, ho⟩, rfl⟩
 
 open Iris in
 /-- **Adequacy of the bytecode program logic.** If the client proves the

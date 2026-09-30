@@ -81,3 +81,62 @@ inj = [trial(True) for _ in range(20000)]
 non = [trial(False) for _ in range(20000)]
 print(f"L3 (injective relocation): {sum(1 for a,b in inj if a and not b)} counterexamples in {sum(a for a,_ in inj)} valid starts")
 print(f"L3 (relocation not injective): {sum(1 for a,b in non if a and not b)} counterexamples in {sum(a for a,_ in non)} valid starts  <- the law needs disjoint targets")
+
+# ---------- L3' (round 2): the collector's real classifier and traversal ----------
+# Round-2 agents R2-1 B/E and R2-4 #2 objected that L3 above relocates by VM
+# sort over every pointer, while the minor GC (minor_gc.c) rewrites a word
+# iff it is even and inside the young range (Is_block && Is_young), and
+# visits only roots, the ref table and copied blocks. Mirror that here.
+Y0, Y1 = 10000, 20000                      # young range; old space 1000..9999, copies go to 30000+
+def gc_trial(forge, ref_complete):
+    L = random.randint(1, 5)
+    young = {l: random.random() < .6 for l in range(L)}
+    def rnd_val():
+        k = random.random()
+        if k < .3: return ('int', random.randint(0, 9))
+        if k < .6: return ('ptr', random.randrange(L), 0)
+        if k < .8: return ('code', 3)
+        # a raw word: forged => may be an even young-range word, else odd (an infix header 3072k+249)
+        return ('raw', random.choice([Y0 + 8*random.randrange(40), 3072*random.randint(1, 3) + 249]) if forge
+                       else 3072*random.randint(1, 3) + 249)
+    heap = {l: [rnd_val() for _ in range(random.randint(1, 4))] for l in range(L)}
+    stack = [rnd_val() for _ in range(random.randint(0, 3))]
+    slots = random.sample(range(1, 40), L)
+    phi = {l: (Y0 if young[l] else 1000) + 128*slots[l] for l in range(L)}
+    def word(ph, v):
+        if v[0] == 'int': return 2*v[1]+1
+        if v[0] == 'code': return 10**6 + 4*v[1]
+        if v[0] == 'raw': return v[1]
+        return ph[v[1]] + 8*v[2]
+    mem = {}
+    for l, fs in heap.items():
+        for i, v in enumerate(fs): mem[phi[l] + 8*i] = word(phi, v)
+    stk = [word(phi, v) for v in stack]
+    ref = {phi[l] + 8*i for l, fs in heap.items() if not young[l] for i, v in enumerate(fs)
+           if v[0] == 'ptr' and young[v[1]] and (ref_complete or random.random() < .5)}
+    # the collector: forward young blocks (live = all here), rewrite scanned even young words
+    tgt = {phi[l]: 30000 + 128*i for i, l in enumerate(sorted(l for l in heap if young[l]))}
+    def fwd(w):
+        if w % 2 == 0 and Y0 <= w < Y1:
+            base = max((b for b in tgt if b <= w), default=None)
+            return tgt[base] + (w - base) if base is not None and w - base < 8*4 else w + 7  # dangling: garbage
+        return w
+    mem2 = dict(mem)
+    for l, fs in heap.items():
+        if young[l]:
+            for i in range(len(fs)): mem2[tgt[phi[l]] + 8*i] = fwd(mem[phi[l] + 8*i])
+        else:
+            for i in range(len(fs)):
+                a = phi[l] + 8*i
+                if a in ref: mem2[a] = fwd(mem[a])
+    stk2 = [fwd(w) for w in stk]
+    phi2 = {l: tgt[phi[l]] if young[l] else phi[l] for l in heap}
+    ok = all(mem2.get(phi2[l] + 8*i) == word(phi2, v) for l, fs in heap.items() for i, v in enumerate(fs)) \
+        and stk2 == [word(phi2, v) for v in stack]
+    return ok
+
+for forge, refc, name in [(False, True, "no forged raw words, complete ref table"),
+                          (True, True, "raw words may look young (no NoForgery)"),
+                          (False, False, "incomplete ref table (no RememberedComplete)")]:
+    r = [gc_trial(forge, refc) for _ in range(20000)]
+    print(f"L3' bit-true GC, {name}: {r.count(False)} counterexamples / 20000")

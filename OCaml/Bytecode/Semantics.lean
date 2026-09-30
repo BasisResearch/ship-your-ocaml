@@ -1,5 +1,6 @@
 import OCaml.Bytecode.Syntax
 import OCaml.Bytecode.Value
+import OCaml.Run.Kernel
 
 /-!
 # `BcSem`: the ZINC bytecode semantics — fragment F1
@@ -744,93 +745,91 @@ def Good (P : Prog) : Prop :=
 theorem Step.det {P : Prog} {a b b' : St} (h : Step P a b) (h' : Step P a b') : b = b' := by
   cases h with | mk e => cases h' with | mk e' => rw [e] at e'; cases e'; rfl
 
+/-! ### `BcSem` as a run kernel (`OCaml/Run/Kernel.lean`)
+
+The run laws below are corollaries of the kernel; never re-prove them by
+induction on `StepsN` (discipline rule O5). -/
+
+/-- `BcSem` of `P` as a kernel; the outcome is the whole non-`next` result. -/
+def bcK (P : Prog) (s : St) : Except Res St :=
+  match step P s with
+  | .next s' => .ok s'
+  | r => .error r
+
+theorem bcK_graph (P : Prog) : Run.Graph (bcK P) (Step P) :=
+  ⟨fun {a _} => ⟨fun ⟨h⟩ => by simp [bcK, h], fun h => ⟨by unfold bcK at h; split at h <;> simp_all⟩⟩⟩
+
+theorem bcK_error {P : Prog} {s : St} {o : Res} (h : bcK P s = .error o) : step P s = o := by
+  unfold bcK at h; split at h <;> simp_all
+
+theorem bcK_halt {P : Prog} {s : St} {e : Nat} {w : World} (h : step P s = .halt e w) :
+    bcK P s = .error (.halt e w) := by simp [bcK, h]
+
+theorem bcK_not_next {P : Prog} {s s' : St} : bcK P s ≠ .error (.next s') := by
+  unfold bcK; split <;> simp_all
+
+theorem stepsN_pres (P : Prog) : Run.ConsPres (Step P) (StepsN P) :=
+  ⟨.zero, .succ, fun h => by cases h with | zero => exact .inl ⟨rfl, rfl⟩ | succ s r => exact .inr ⟨_, _, rfl, s, r⟩⟩
+
+theorem stepsN_iff {P : Prog} {n : Nat} {a b : St} : StepsN P n a b ↔ Run.iter (bcK P) n a = .ok b :=
+  (stepsN_pres P).iff (bcK_graph P)
+
+theorem bcDiverges_iff {P : Prog} : BcDiverges P ↔ Run.DivK (bcK P) P.init :=
+  forall_congr' fun _ => exists_congr fun _ => stepsN_iff
+
+theorem bcHalts_iff {P : Prog} {out : String} {e : Nat} :
+    BcHalts P out e ↔ ∃ w, Run.HaltsK (bcK P) P.init (.halt e w) ∧ bytesToString w.console = out :=
+  ⟨fun ⟨s, w, ⟨n, hn⟩, hst, ho⟩ => ⟨w, ⟨s, ⟨n, stepsN_iff.1 hn⟩, bcK_halt hst⟩, ho⟩,
+   fun ⟨w, ⟨s, ⟨n, hn⟩, hs⟩, ho⟩ => ⟨s, w, ⟨n, stepsN_iff.2 hn⟩, bcK_error hs, ho⟩⟩
+
+/-- `Good` excludes the bad outcomes of the `BcSem` kernel. -/
+theorem Good.halt {P : Prog} (hg : Good P) {o : Res} (h : Run.HaltsK (bcK P) P.init o) :
+    ∃ e w, o = .halt e w := by
+  obtain ⟨s, ⟨n, hn⟩, hs⟩ := h
+  obtain ⟨hu, hw⟩ := hg s ⟨n, stepsN_iff.2 hn⟩
+  have hst := bcK_error hs
+  cases o with
+  | next s' => exact (bcK_not_next hs).elim
+  | halt e w => exact ⟨e, w, rfl⟩
+  | unsupported => exact (hu hst).elim
+  | wrong => exact (hw hst).elim
+
 theorem StepsN.det {P : Prog} {n : Nat} {a b b' : St}
     (h : StepsN P n a b) (h' : StepsN P n a b') : b = b' := by
-  induction h generalizing b' with
-  | zero => cases h'; rfl
-  | succ s _ ih =>
-    cases h' with
-    | succ s' r' => exact ih (Step.det s s' ▸ r')
+  have := stepsN_iff.1 h; rw [stepsN_iff.1 h'] at this; cases this; rfl
 
 theorem StepsN.snoc {P : Prog} {n : Nat} {a b c : St}
-    (h : StepsN P n a b) (s : Step P b c) : StepsN P (n + 1) a c := by
-  induction h with
-  | zero => exact .succ s (.zero _)
-  | succ s0 _ ih => exact .succ s0 (ih s)
+    (h : StepsN P n a b) (s : Step P b c) : StepsN P (n + 1) a c :=
+  stepsN_iff.2 (by rw [Run.iter_succ', stepsN_iff.1 h]; exact (bcK_graph P).iff.1 s)
 
 /-- A state of `n` steps that does not step has no successor at `n + 1`. -/
 theorem StepsN.stop {P : Prog} {n : Nat} {a b c : St} (h : StepsN P n a b)
-    (hs : ∀ x, ¬ step P b = .next x) (h' : StepsN P (n + 1) a c) : False := by
-  induction h generalizing c with
-  | zero =>
-    cases h' with
-    | succ s _ => cases s with | mk e => exact hs _ e
-  | succ s0 _ ih =>
-    cases h' with
-    | succ s1 r => exact ih hs (Step.det s0 s1 ▸ r)
+    (hs : ∀ x, ¬ step P b = .next x) (h' : StepsN P (n + 1) a c) : False :=
+  Run.iter_stop (stepsN_iff.1 h) (fun x hx => by obtain ⟨h⟩ := (bcK_graph P).iff.2 hx; exact hs x h) c
+    (stepsN_iff.1 h')
 
 /-- Every run of a `Good` program halts or diverges. -/
 theorem halts_or_diverges (P : Prog) (hg : Good P) :
     (∃ out e, BcHalts P out e) ∨ BcDiverges P := by
-  by_cases hd : BcDiverges P
-  · exact .inr hd
-  · left
-    -- the least `n` with no state after `n` steps
-    have : ∃ n, ¬ ∃ s, StepsN P n P.init s := by
-      unfold BcDiverges at hd; exact Classical.not_forall.1 hd
-    obtain ⟨n, hn⟩ := this
-    induction n with
-    | zero => exact (hn ⟨_, .zero _⟩).elim
-    | succ k ih =>
-      by_cases hk : ∃ s, StepsN P k P.init s
-      · obtain ⟨s, hs⟩ := hk
-        obtain ⟨hu, hw⟩ := hg s ⟨k, hs⟩
-        match hst : step P s with
-        | .next s' => exact (hn ⟨s', hs.snoc (.mk hst)⟩).elim
-        | .halt e w => exact ⟨_, e, s, w, ⟨k, hs⟩, hst, rfl⟩
-        | .unsupported => exact (hu hst).elim
-        | .wrong => exact (hw hst).elim
-      · exact ih hk
+  rw [bcDiverges_iff]
+  refine (Run.halts_or_div (f := bcK P) P.init).imp (fun ⟨o, h⟩ => ?_) id
+  obtain ⟨e, w, rfl⟩ := hg.halt h
+  exact ⟨_, e, bcHalts_iff.2 ⟨w, h, rfl⟩⟩
 
 /-- A halting program does not diverge. -/
 theorem BcHalts.not_diverges {P : Prog} {out : String} {e : Nat}
-    (h : BcHalts P out e) : ¬ BcDiverges P := by
-  rintro hd
-  obtain ⟨s, w, ⟨n, hn⟩, hst, -⟩ := h
-  obtain ⟨c, hc⟩ := hd (n + 1)
-  exact hn.stop (fun x hx => by rw [hst] at hx; cases hx) hc
+    (h : BcHalts P out e) : ¬ BcDiverges P := fun hd => by
+  obtain ⟨w, h, -⟩ := bcHalts_iff.1 h; exact h.not_div (bcDiverges_iff.1 hd)
 
 /-- Every run has all its prefixes. -/
 theorem StepsN.prefix {P : Prog} {m : Nat} :
-    ∀ {k : Nat} {a c : St}, StepsN P (m + k) a c → ∃ b, StepsN P m a b := by
-  induction m with
-  | zero => intro k a c _; exact ⟨a, .zero _⟩
-  | succ m ih =>
-    intro k a c h
-    rw [Nat.add_right_comm] at h
-    cases h with
-    | succ s r =>
-      obtain ⟨b, hb⟩ := ih r
-      exact ⟨b, .succ s hb⟩
+    ∀ {k : Nat} {a c : St}, StepsN P (m + k) a c → ∃ b, StepsN P m a b := fun h =>
+  let ⟨b, hb⟩ := Run.iter_prefix (stepsN_iff.1 h); ⟨b, stepsN_iff.2 hb⟩
 
 /-- `BcSem` is deterministic. -/
 theorem BcHalts.det {P : Prog} {out out' : String} {e e' : Nat}
     (h : BcHalts P out e) (h' : BcHalts P out' e') : out = out' ∧ e = e' := by
-  obtain ⟨s, w, ⟨n, hn⟩, hst, rfl⟩ := h
-  obtain ⟨s', w', ⟨n', hn'⟩, hst', rfl⟩ := h'
-  have key : ∀ {m m' : Nat} {x y : St} {ex ey : Nat} {wx wy : World},
-      StepsN P m P.init x → StepsN P m' P.init y → m ≤ m' →
-      step P x = .halt ex wx → step P y = .halt ey wy → x = y := by
-    intro m m' x y ex ey wx wy hx hy hle hx' _
-    rcases Nat.lt_or_eq_of_le hle with hlt | rfl
-    · exfalso
-      obtain ⟨d, rfl⟩ := Nat.exists_eq_add_of_lt hlt
-      rw [Nat.add_right_comm] at hy
-      obtain ⟨z, hz⟩ := StepsN.prefix (m := m + 1) (k := d) hy
-      exact hx.stop (fun q hq => by rw [hx'] at hq; cases hq) hz
-    · exact hx.det hy
-  rcases Nat.le_total n n' with hle | hle
-  · have := key hn hn' hle hst hst'; subst this; rw [hst] at hst'; cases hst'; exact ⟨rfl, rfl⟩
-  · have := key hn' hn hle hst' hst; subst this; rw [hst] at hst'; cases hst'; exact ⟨rfl, rfl⟩
+  obtain ⟨w, hk, rfl⟩ := bcHalts_iff.1 h; obtain ⟨w', hk', rfl⟩ := bcHalts_iff.1 h'
+  cases hk.unique hk'; exact ⟨rfl, rfl⟩
 
 end OCaml.Bytecode

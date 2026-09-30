@@ -118,6 +118,15 @@ ELF pin).
 * G2: the minor collection preserves `VmReprAt` up to a new placement
   (oldify/mopup + remembered set); the major heap is non-moving and
   sweeps only non-`Live` blocks; compaction off (`O=1000000`).
+* Route (adopted, round 1): every `VmReprAt` component as an `Eqv` term
+  (`OCaml/Vm/Reloc.lean`; done: value words, objects, stack, `HeapRepr`,
+  globals). The collector simulation must supply `ScanCoherent`, plus the
+  premises the L3′ check found (`abstractions/ROUND-1.md` §2):
+  * NoForgery: no scanned word looks young unless it is a young pointer;
+  * RememberedComplete: every old→young field is in `ref_table`,
+    maintained by `caml_modify`;
+  * a lax clause for `Forward_tag` short-circuiting;
+  * interior pointers only behind `Infix_tag`.
 * **Exit**: `Fits` restated on live words; `ocamlc` compiling a one-line
   program is within Layer A.
 
@@ -125,6 +134,11 @@ ELF pin).
 
 * Decode-table and segment generators over `dumpobj` output; per-segment
   WP rules for `bcModel`; function summaries for closures.
+* Route (adopted, round 1): `BcSem` specs by symbolic reduction and
+  `loop_rule` (`OCaml/Logic/Symbolic.lean`; model
+  `OCaml/Programs/CountLoop.lean`). Run laws come from the run kernel
+  (`OCaml/Run/`). Next blocker: segments that allocate and then read the heap
+  (`Heap.alloc` on a symbolic heap stays a term).
 * **Exit**: the generated rules for the back-half modules (23,678
   instructions) build within the elaboration budget; `bytecode_adequacy`
   instantiated for one generated function summary end to end.

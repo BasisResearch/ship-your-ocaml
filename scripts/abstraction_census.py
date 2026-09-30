@@ -4,7 +4,7 @@
     python3 scripts/abstraction_census.py > abstractions/clusters.tsv
 
 Clusters are declared in abstractions/clusters.def (cluster id, then
-`file theorem` lines). For each member this tool finds the proof in the
+`file theorem` lines, and `adopted <date> <round-file>` lines for the gate). For each member this tool finds the proof in the
 file, measures its cost (lines from the `theorem` line to the next
 top-level declaration, blank lines and comments excluded), and dates it by
 the first commit that introduced the theorem's name into that file — in
@@ -61,6 +61,8 @@ def main():
             continue
         if l.startswith("cluster "):
             cluster = l.split()[1]
+            continue
+        if l.startswith("adopted "):   # read by the gate, not a member
             continue
         rel, name = l.split()
         path = ROOT / rel

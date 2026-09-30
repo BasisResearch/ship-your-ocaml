@@ -45,7 +45,7 @@ echo "$out"
 n=$(echo "$out" | grep -c "depends on axioms")
 bad=$(echo "$out" | grep "depends on axioms" | grep -vE "axioms: \[(propext|Classical.choice|Quot.sound)(, (propext|Classical.choice|Quot.sound))*\]$" || true)
 [ -z "$bad" ] || fail "stage a3: non-standard axioms: $bad"
-[ "$n" -ge 23 ] || fail "stage a3: expected >= 23 audited theorems, got $n"
+[ "$n" -ge 38 ] || fail "stage a3: expected >= 38 audited theorems, got $n"
 echo "stage a3: OK ($n theorems audited)"
 
 echo "== stage a4: proof discipline"
