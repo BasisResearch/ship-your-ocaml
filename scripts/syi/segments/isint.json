@@ -1,0 +1,82 @@
+{
+  "theorem": "tr_isint",
+  "doc": "ISINT arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.IsintSites",
+    "Vsa.Sim.SegState"
+  ],
+  "params": [
+    "(v21 v23 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlIsintLoaded",
+  "pins": [
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    },
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80003210",
+      "site": "site_80003210_isint",
+      "class": "alu",
+      "asm": "slli s5,s5,0x1",
+      "rd": "x21",
+      "rd_val": "(shift_bits_left v21 (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "raw_val": "(shift_bits_left v21 (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003214",
+      "site": "site_80003214_isint",
+      "class": "alu",
+      "asm": "andi s5,s5,2",
+      "rd": "x21",
+      "rd_val": "((shift_bits_left v21 (Sail.BitVec.extractLsb (0x01#6) 5 0)) &&& sign_extend (m := 64) (0x002#12))",
+      "raw_val": "(v21 &&& sign_extend (m := 64) (0x002#12))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003218",
+      "site": "site_80003218_isint",
+      "class": "alu",
+      "asm": "addi s5,s5,1",
+      "rd": "x21",
+      "rd_val": "(((shift_bits_left v21 (Sail.BitVec.extractLsb (0x01#6) 5 0)) &&& sign_extend (m := 64) (0x002#12)) + sign_extend (m := 64) (0x001#12))",
+      "raw_val": "(v21 + sign_extend (m := 64) (0x001#12))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000321c",
+      "site": "site_8000321c_isint",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003220",
+      "site": "site_80003220_isint",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1fed3c#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80003210",
+  "mem_param": "m0",
+  "default_limits": true
+}

@@ -44,6 +44,7 @@ raw machine-level value expression for each write in an informational
 lookup, not a re-derivation.
 """
 
+import alu_classes
 import argparse
 import json
 import sys
@@ -57,6 +58,7 @@ SEG_CLASS = {"alu_addi": "alu", "addiw": "alu", "alu_add": "alu", "sub": "alu",
              "sd": "sd", "sw": "sw", "sb": "sb",
              "branch_taken": "btaken", "branch_nottaken": "bnottaken",
              "jal": "jal", "j": "j", "jr": "jr"}
+SEG_CLASS.update({cls: "alu" for cls in alu_classes.CLASSES})
 LOAD_BYTES = {"ld": 8, "lw": 4, "lbu": 1}
 STORE_BYTES = {"sd": 8, "sw": 4, "sb": 1}
 
@@ -74,6 +76,8 @@ class Instr:
 
     def reads(self) -> list[int]:
         c, o = self.cls, self.ops
+        if c in alu_classes.CLASSES:
+            return alu_classes.reads(c, o)
         if c in ("alu_addi", "addiw", "ld", "lw", "lbu"):
             rs = [int(o[1])]
         elif c in ("alu_add", "sub", "subw"):
@@ -90,6 +94,8 @@ class Instr:
 
     def writes(self) -> int | None:
         c, o = self.cls, self.ops
+        if c in alu_classes.CLASSES:
+            return int(o[0])
         if c in ("alu_addi", "addiw", "alu_add", "sub", "subw",
                  "ld", "lw", "lbu"):
             return int(o[0])
@@ -101,6 +107,8 @@ class Instr:
         """The machine-level written-value expression (informational)."""
         c, o = self.cls, self.ops
         v = lambda r: f"v{r}" if int(r) else "(0#64)"
+        if c in alu_classes.CLASSES:
+            return alu_classes.value(c, o)
         if c == "alu_addi":
             return f"({v(o[1])} + sign_extend (m := 64) (0x{o[2]}#12))"
         if c == "addiw":
@@ -205,6 +213,13 @@ class DraftBuilder:
               "class": SEG_CLASS[c]}
         if ins.asm:
             st["asm"] = ins.asm
+        if c in alu_classes.CLASSES:
+            vregs = alu_classes.reads(c, o)
+            vals = " ".join(self.V(r) for r in vregs)
+            hyps = " ".join(self.H(r) for r in vregs)
+            st.update(rd=f"x{ins.writes()}", rd_val="TODO", rw="TODO", raw_val=ins.raw_val(),
+                      call=f"$vmi {vals} $hG $hpc $hmi {hyps} $hmem rfl $hi")
+            return [st]
         vregs = [r for r in dict.fromkeys(
             [int(x) for x in (o[1:3] if c in ("alu_add", "sub", "subw",
                                               "branch_taken",

@@ -18,7 +18,8 @@ trailing comment on every row.
 
 Supported classes (see gen_sites.py's docstring):
     alu_addi (addi/mv/li)      addiw (addiw/sext.w)
-    alu_add  sub  subw
+    alu_add  sub  subw  addw
+    slli srli srai slliw srliw sraiw; andi ori xori; alu_and alu_or alu_xor sll srl sra
     branch_taken / branch_nottaken (BEQ/BNE/BLT/BGE/BLTU/BGEU + pseudo forms)
     ld lw lbu    sd sw sb
     jal (rd != x0)    j (jal x0)    jr (jalr x0,0(rs1), incl. `ret`)
@@ -37,6 +38,7 @@ statically (rd=x0 ALU ops such as `nop`, x0-operand loads, rs1=x0 stores,
 non-`ret` jalr shapes) are also emitted as `#UNSUPPORTED`.
 """
 
+import alu_classes
 import argparse
 import re
 import subprocess
@@ -116,6 +118,10 @@ def unsupported(addr, word, raw, why) -> Row:
 
 def classify(addr: int, word: int, raw: str, path: dict) -> list[Row]:
     """One disasm line -> one or more TSV rows (branches emit both arms)."""
+    extra = alu_classes.classify(word)
+    if extra is not None:
+        cls, operands = extra
+        return [Row(addr, word, cls, operands, raw=raw)]
     f = fields(word)
     op = f["opcode"]
 

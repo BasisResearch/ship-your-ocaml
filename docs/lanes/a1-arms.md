@@ -32,6 +32,18 @@ added to the headline theorem.
 
 ## Proved
 
+* CONST0 pilot landed as `3229c53` through `scripts/integrate.sh`.
+* Second generated arm body: `Vsa.Sim.tr_isint` in
+  `OCaml/Vm/Sim/IsintSegment.lean:20`, five instructions including SLLI and
+  ANDI. `isint_loaded` derives its local code pins from `ExecutableImage`.
+  Raw machine values are threaded through repeated writes by the generator.
+  The abstract-value bridge still needs placement/alignment facts and the
+  full register/runtime frame; no `ArmSim.next` case is claimed.
+* Shared `scripts/syi/alu_classes.py` connects classification, def-use/value
+  extraction, and site emission for 16 added ALU classes: 64/32-bit immediate
+  shifts, ADDW, bitwise immediate/register operations and register shifts.
+  Uses existing `execute_*_char` lemmas; no new per-instruction hand proofs.
+
 * Contract repair landed as `ef4e701` via `scripts/integrate.sh`; all gates
   passed after rebasing on A0-lib's decode table and A0-boot's runtime repair.
 * First generated arm body: `Vsa.Sim.tr_const0`
@@ -71,12 +83,25 @@ added to the headline theorem.
   tactic `decide` hit recursion depth on the packed literal, with no need
   to raise limits. The successful pin module build is measured separately.
 
+* ISINT measured build: code pins 1.4s, full-image projection 1.7s, sites
+  1.9s, five-step segment 1.8s; wall time 6.27s, peak process RSS 1.70 GiB.
+  One family per build; timing differences include shared-machine load.
+* Python checks pass for reserved shift encodings, 5/6-bit shift widths,
+  x0/repeated operands and read-before-write tracking. All artifacts regenerate.
+* Additional ALU smoke sites are generated from real ELF instructions;
+  their Lean build is pending memory availability. The shared machine fell
+  below the 25 GB available-memory threshold; further builds are held.
+* Interpreter census after adapter: only AUIPC (69), indirect JALR (6), and
+  LHU (1) remain unsupported by the site classifier (whole interpreter scope,
+  not an F1 opcode count). No claim that classification alone proves arms.
+
 ## Open / next
 
 Continue with one generated F1 family per measured build. No concrete entry/next/halt arm, F1 refinement instance, or
 machine `whileMin` result is claimed. `whileMin_bcSem` remains bytecode-level.
 
-Next is the shared shifts/addw/tagged-ALU generator adapter. Dispatch,
+Next: validate all 16 generated ALU smoke sites, land the adapter/ISINT
+family, then discharge dispatch and full representation/frame bridges. Dispatch,
 allocation fast path, primitive summaries, and the actual loop/entry machine
 proofs remain open. A0 has repaired the nursery bounds via `runtimeLayout`; its remaining
 boot ELF text mismatch is tracked in that lane's log. `L.runtimeOk` must

@@ -1,6 +1,6 @@
 {
   "theorem": "tr_const0",
-  "doc": "CONST0 arm body: advance pc from s7, set the tagged zero, return to dispatch. This is a machine segment, not yet ArmSim.next.",
+  "doc": "CONST0 arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
   "namespace": "Vsa.Sim",
   "imports": [
     "OCaml.Vm.Sim.Const0Sites",

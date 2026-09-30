@@ -18,6 +18,11 @@ Classes (registers are decimal x-register numbers, immediates hex):
     alu_add  rd rs1 rs2            # RTYPE ADD
     sub      rd rs1 rs2            # RTYPE SUB (64-bit)
     subw     rd rs1 rs2            # RTYPEW SUBW
+    addw     rd rs1 rs2            # RTYPEW ADDW
+    slli/srli/srai rd rs1 shamt6    # SHIFTIOP
+    slliw/srliw/sraiw rd rs1 shamt5 # SHIFTIWOP
+    andi/ori/xori rd rs1 imm12      # tagged-word bitwise immediates
+    alu_and/alu_or/alu_xor/sll/srl/sra rd rs1 rs2
     branch_taken    bop rs1 rs2 imm13   # bop in BEQ/BNE/BLT/BGE/BLTU/BGEU
     branch_nottaken bop rs1 rs2 imm13
     ld  rd rs1 imm12               # 8-byte RAM load (exec_ld_ram_bytes)
@@ -50,6 +55,7 @@ Decode-table imports are looked up per instruction word in
 scripts/decode_index.tsv (regenerate with scripts/gen_decode_index.py).
 """
 
+import alu_classes
 import argparse
 import sys
 from pathlib import Path
@@ -221,6 +227,28 @@ class Emitter:
             "σ'.mem = σ.mem",
             f"sigmaPost_alu σ pc vminstret Register.x{rd}\n        {value}")
         return head + self.alu_body(s, instr, rd, value, exec_proof)
+
+    def emit_extended_alu(self, s: Site) -> str:
+        rd = int(s.fields[0])
+        if rd == 0:
+            raise ValueError(f"line {s.lineno}: {s.cls} with rd=x0 unsupported")
+        instr, helper, args = alu_classes.shape(s.cls, s.fields)
+        value = alu_classes.value(s.cls, s.fields)
+        reads = alu_classes.reads(s.cls, s.fields)
+        # Execute helpers consume both operands, including x0 and repeated rs.
+        regs = [int(s.fields[1])]
+        if s.cls in alu_classes.REG or s.cls == "addw":
+            regs.append(int(s.fields[2]))
+        vals = " ".join(vname(r) for r in regs)
+        read_hyps = "\n      ".join(rx_read(r, s.addr) for r in regs)
+        proof = (f"    ({helper} {args} {vals}\n"
+                 f"      (afterNextPC (afterPrelude σ) (0x{s.addr:08x}#64))\n"
+                 f"      (sigma3_alu σ (0x{s.addr:08x}#64) Register.x{rd} {value})\n"
+                 f"      {read_hyps}\n      (wX_bits_x{rd} _ {value}))")
+        head = self.head(self.site_name(s.addr), s.addr, f"`{s.cls}`.", reads, "",
+                         "".join(reg_hyp(r) for r in reads), "", "σ'.mem = σ.mem",
+                         f"sigmaPost_alu σ pc vminstret Register.x{rd} {value}")
+        return head + self.alu_body(s, instr, rd, value, proof)
 
     def emit_addiw(self, s: Site) -> str:
         rd, rs1, imm = int(s.fields[0]), int(s.fields[1]), int(s.fields[2], 16)
@@ -757,6 +785,8 @@ CLASS_EMITTERS = {
     "j": "emit_j",
     "jr": "emit_jr",
 }
+
+CLASS_EMITTERS.update({cls: "emit_extended_alu" for cls in alu_classes.CLASSES})
 
 NEEDS_STRCPY_SITES = {"lbu", "sb"}
 
