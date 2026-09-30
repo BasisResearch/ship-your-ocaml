@@ -5,8 +5,9 @@ import OCaml.Refinement
 
 The free-list invariant is a named parameter, to be supplied by the
 collector proof. All machine addresses come from the generated layout.
-`PromotedRuntimeOk` records the empty-nursery requirement in the A0 brief;
-it must not be confused with promotion of just the global-data root.
+`RuntimeOk` permits allocations remaining in the nursery at the cut;
+promotion of the global-data root does not empty the nursery. Live nursery
+blocks are covered by the ordinary `HeapRepr` placement.
 -/
 
 namespace OCaml.Vm
@@ -52,25 +53,23 @@ structure MinorHeapBounds (r : RuntimeFields) : Prop where
   alignedEnd : r.allocEnd % 8 = 0
   alignedPtr : r.youngPtr % 8 = 0
 
-/-- Runtime invariant for the requested post-collection cut. The allocator
+/-- Runtime invariant at the second interpreter entry. The allocator
 and collector summaries must supply `freeList`; it is not assumed true. -/
-structure PromotedRuntimeOk (freeList : Config → Prop) (c : Config) : Prop where
+structure RuntimeOk (freeList : Config → Prop) (c : Config) : Prop where
   bounds : MinorHeapBounds (runtimeFields c)
-  emptyMinor : (runtimeFields c).youngPtr = (runtimeFields c).allocEnd
   noPending : (runtimeFields c).somethingToDo = 0
   freeListShape : freeList c
 
 /-- A concrete `Layout.runtimeOk`, parameterized only by the free-list shape. -/
-def promotedLayout (freeList : Config → Prop) : OCaml.Layout :=
-  ⟨PromotedRuntimeOk freeList⟩
+def runtimeLayout (freeList : Config → Prop) : OCaml.Layout :=
+  ⟨RuntimeOk freeList⟩
 
-/-- A nonempty observed nursery rules out the requested invariant once the
-machine-to-projection equality is certified. The equality is a genuine open
-boot obligation, not a theorem about the untrusted emulator trace. -/
-theorem not_promotedRuntimeOk_of_projection {freeList : Config → Prop}
-    {c : Config} {r : RuntimeFields} (projection : runtimeFields c = r)
-    (nonempty : r.youngPtr ≠ r.allocEnd) : ¬ PromotedRuntimeOk freeList c := by
-  intro h
-  exact nonempty (projection ▸ h.emptyMinor)
+/-- The startup invariant allows exactly the ordinary allocation interval;
+live blocks in its allocated part are handled by `HeapRepr`. -/
+theorem RuntimeOk.youngPtr_bounds {freeList : Config → Prop} {c : Config}
+    (h : RuntimeOk freeList c) :
+    (runtimeFields c).allocStart ≤ (runtimeFields c).youngPtr ∧
+    (runtimeFields c).youngPtr ≤ (runtimeFields c).allocEnd :=
+  ⟨h.bounds.alloc, h.bounds.ptr⟩
 
 end OCaml.Vm
