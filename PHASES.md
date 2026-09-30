@@ -30,6 +30,10 @@ ELF pin).
 | `simOfArms`, `ocamlrun_refinement_of_arms` (Layer A from per-arm obligations) | `OCaml/Refinement.lean` | P0 | **proved** |
 | `bytecode_logic_adequacy` (Layer B′ adequacy) | `OCaml/Logic/BcModel.lean`, `OCaml/Theorems.lean` | P0 | **proved** (instance of `VsaIris.mach_adequacy`) |
 | `boot_meaning`, `endToEnd_ocaml` / `endToEnd_of_layers` (composition) | `OCaml/EndToEnd.lean`, `OCaml/Theorems.lean` | P0 | **proved** |
+| run kernel: run laws of every step relation (`iter`, presentations, lossy transport); R1–R3 re-proved through it | `OCaml/Run/`, `Semantics.lean`, `Refinement.lean`, `BcModel.lean` | round 1 | **proved** (adopted, `abstractions/ROUND-1.md`) |
+| `halts_iff_bcHalts`, `ocamlrun_refinement_exit`, `ocamlrun_refinement_bcModel` | `OCaml/Logic/BcModel.lean`, `OCaml/Theorems.lean` | round 1b | **proved** |
+| relocation invariance of value words, objects, stack, `HeapRepr`, globals (`Eqv` combinators) | `OCaml/Vm/Reloc.lean` | round 1 (A6 route) | **proved** under the typed relocation; the real-collector bridge `ScanCoherent` is open (A6) |
+| symbolic stepping + `loop_rule`; a counting loop for any bound | `OCaml/Logic/Symbolic.lean`, `OCaml/Programs/CountLoop.lean` | round 1 (B′ route) | **proved** |
 | OS spec (SibylFS + CakeML port), executable checker `allowed_sound`/`allowed_complete`/`checkTrace_sound` | `tcb/TCB/Os/` | P0 | **proved**; spec **trusted** for Linux, validated on 6,490 Linux traces (0 rejected) |
 | library proofs of the 66 byte-identical functions retargeted to this ELF | `Vsa/`, `scripts/retarget_syi.py` | P0 | **done** (pins checked, `memcpy_bytepath_spec`/`muldi3_spec`/`udivdi3_spec` audited) |
 | `strcmp`, `__ssprint_r`, `__ssputs_r` (8 changed words), `_malloc_r`, `_free_r`, `_svfprintf_r` for this ELF | `experiments/syi/while-elf-only/` → `Vsa/` | A0 | open |
