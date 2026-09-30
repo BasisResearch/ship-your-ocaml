@@ -26,10 +26,10 @@ still refer directly to the generated global address constants.
 
 ## Defined and proved
 
-* `OCaml/Vm/Runtime.lean:57`: `RuntimeOk` supplies minor-heap bounds,
+* `OCaml/Vm/Runtime.lean:58`: `RuntimeOk` supplies minor-heap bounds,
   no pending work, and a named abstract `freeList` predicate.
-  `runtimeLayout` (line 63) is the concrete `OCaml.Layout`.
-* `OCaml/Vm/Runtime.lean:68`: `RuntimeOk.youngPtr_bounds`.
+  `runtimeLayout` (line 64) is the concrete `OCaml.Layout`.
+* `OCaml/Vm/Runtime.lean:69`: `RuntimeOk.youngPtr_bounds`.
 * `OCaml/Refinement.lean`: `Loaded.runtime`, the named accessor for the
   runtime part of the existing existential witness.
 * `OCaml/Vm/Boot/WhileMinObservation.lean:30`: `bounds`; line 33:
@@ -109,4 +109,11 @@ python3 scripts/check_boot_text.py --candidate c/build/nostdlib/while_min.elf --
 * Actual Sail trace reproduces the documented cut-step count.
 * Targeted runtime and observation builds pass under `MemoryMax=24G`.
 * The first progress commit `f328a83` passed all integration stages and landed.
-* Updated nursery contract and ELF mismatch pin: integration gate pending.
+* Updated nursery contract and ELF mismatch pin landed as `ee2d145` through
+  `scripts/integrate.sh`; all stages passed, including standard-axiom audit,
+  generated-file drift, code/ELF pins, TCB validation and abstraction gate.
+* Consumed main's `7e0668e`: a0-lib's 29,475-word decode table and three
+  retargeted site batteries. Its whole-function specs remain open; no code
+  facts are transferred to the differing standalone ELF.
+* Text identity check exits 1 as expected; `--check-pin` verifies the exact
+  recorded mismatch. The pinned ELF's SHA-256 remains unchanged.
