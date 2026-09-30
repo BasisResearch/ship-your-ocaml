@@ -104,3 +104,13 @@ stay inside that restriction except for `Sys.readdir` on `/lib/ocaml`.
 `clock` calls: Linux returns increasing microsecond counts, the in-image
 clock always 0; both accepted (monotone), the second being
 `TCB.Os.Clock.frozen`.
+
+## DEVIATION 10 (readdir at end of directory)
+
+At the end of a directory stream SibylFS drops the updated handle
+(spec:5214-5216), so after a still-to-report entry is removed, a second
+`readdir` was forced to return it — which rejects Linux (the end stays the
+end). Found by running the conforming in-image file system (branch
+`f5-htif`) through the driver; Linux never hit it because ext4 reported
+the entry early. Fixed in `tcb/TCB/Os/Syscall.lean`; the Linux results
+above are unchanged (6,398 / 0 / 92).
