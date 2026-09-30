@@ -1,0 +1,47 @@
+{
+  "memory_cap_gib": 24,
+  "heartbeat_budget": "Lean default (200000)",
+  "executable_sha256": "4000f553d130d88213c95f019d77afd145ac211e54499242708c0762b6d11394",
+  "modules": {
+    "Translcore": {
+      "wall_seconds": 75.33,
+      "user_seconds": 109.44,
+      "system_seconds": 2.18,
+      "max_rss_kib": 1505620,
+      "exit_status": 0,
+      "source_sha256": "4a818561afec62cb836e1e9217457a1078ee630572619329df8631854446d406",
+      "instructions": 4741,
+      "blocks": 1004
+    },
+    "Matching": {
+      "wall_seconds": 243.75,
+      "user_seconds": 315.67,
+      "system_seconds": 7.87,
+      "max_rss_kib": 3204964,
+      "exit_status": 0,
+      "source_sha256": "89896696228681550599f7bf8add673b6c219ec7f411ca8d11617af4461b19a1",
+      "instructions": 12175,
+      "blocks": 2792
+    },
+    "Bytegen": {
+      "wall_seconds": 235.05,
+      "user_seconds": 158.81,
+      "system_seconds": 3.97,
+      "max_rss_kib": 1577300,
+      "exit_status": 0,
+      "source_sha256": "d8f43d58a3e320efaa4da4301949429f676b941162ad6e3bcbc4edfb66450d1a",
+      "instructions": 4759,
+      "blocks": 1113
+    },
+    "Emitcode": {
+      "wall_seconds": 38.55,
+      "user_seconds": 55.24,
+      "system_seconds": 1.3,
+      "max_rss_kib": 988696,
+      "exit_status": 0,
+      "source_sha256": "c64778bda5cb488a8badf06804a736995f70306334b6843f77f4e1943c9203d1",
+      "instructions": 2003,
+      "blocks": 505
+    }
+  }
+}

@@ -29,3 +29,10 @@ import OCaml.Vm.Sim.IsintPins
 import OCaml.Vm.Sim.AluSites
 import OCaml.Vm.Sim.Const0Pins
 import OCaml.Vm.PlatformReloc
+
+import OCaml.Logic.ApplicationSteps
+import OCaml.Programs.Generated.Translcore
+import OCaml.Programs.Generated.Matching
+import OCaml.Programs.Generated.Bytegen
+import OCaml.Programs.Generated.Emitcode
+import OCaml.Programs.GeneratedAdequacy

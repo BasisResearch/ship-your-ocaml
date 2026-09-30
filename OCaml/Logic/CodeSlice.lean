@@ -100,4 +100,21 @@ theorem CodeSlice.iter_eq (c : CodeSlice) (P : Prog) (region : Nat → Prop)
   rw [cover.decode_eq t.pc (confined k hk t ht)]
   rfl
 
+/-- A successful local run needs decoder agreement only where it decoded
+an instruction. The successful-run premise rules out all window escapes
+before its last step, so clients need no separate confinement proof. -/
+theorem decoded_run_sound (P : Prog) (decode : Nat → Option Instr)
+    (cover : ∀ pc i, decode pc = some i → decodeAt P.code pc = some i)
+    (n : Nat) (s t : St) (h : Run.iter (decodedK P decode) n s = .ok t) :
+    Run.iter (bcK P) n s = .ok t := by
+  apply Run.iter_ok_of_step (decodedK P decode) (bcK P) _ n s t h
+  intro a b hab
+  cases hd : decode a.pc with
+  | none => simp [decodedK, hd] at hab
+  | some i =>
+    unfold bcK step
+    rw [cover a.pc i hd]
+    simp only [decodedK, hd] at hab
+    cases hr : stepI P a i <;> simp_all
+
 end OCaml.Bytecode

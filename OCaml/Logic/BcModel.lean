@@ -87,6 +87,27 @@ def bcModel (P : Prog) : VsaIris.MachineModel where
     | _ => 0
   mem s a := (wordAt s (a / 8)).extractLsb' (8 * (a % 8)) 8
   out s := bytesToString s.world.console
+  -- The ghost PC is a 64-bit word; exclude aliases at pc + 2^64.
+  ok s := s.pc < 2^64
+
+/-- PC ownership identifies an absolute address in well-formed states.
+Without `ok`'s bound, pc and pc + 2^64 have identical ghost registers. -/
+theorem pc_eq_of_reg {P : Prog} {s : St} {pc : Nat} (hok : (bcModel P).ok s)
+    (hpc : pc < 2^64) (hr : (bcModel P).reg s 0 = BitVec.ofNat 64 pc) : s.pc = pc := by
+  have h := congrArg BitVec.toNat hr
+  change s.pc % 2^64 = pc % 2^64 at h
+  simpa only [Nat.mod_eq_of_lt hok, Nat.mod_eq_of_lt hpc] using h
+
+/-- Machine-checked reason for the PC bound: 0 and 2^64 share a ghost
+register encoding, but the latter is excluded from well-formed states. -/
+theorem pc_alias_excluded (P : Prog) (s : St) :
+    (bcModel P).reg { s with pc := 0 } 0 = (bcModel P).reg { s with pc := 2^64 } 0 ∧
+      ¬ (bcModel P).ok { s with pc := 2^64 } := by
+  constructor
+  · change (0#64) = BitVec.ofNat 64 (2^64)
+    decide
+  · change ¬ 2^64 < 2^64
+    omega
 
 /-- `bcModel`'s lossy outcome map (`unsupported`/`wrong` collapse to `stuck`). -/
 def gBc : Res → Option (Nat × String)
@@ -97,6 +118,13 @@ def gBc : Res → Option (Nat × String)
 theorem bcModel_square (P : Prog) (s : St) :
     Run.mmK (bcModel P) s = Run.mapOut id gBc (bcK P s) := by
   unfold Run.mmK bcK bcModel; dsimp only; cases step P s <;> rfl
+
+/-- Symbolic bytecode runs feed the existing MachWP run interface through
+its run-kernel presentation, without a new induction on machine runs. -/
+theorem reachesN_of_symbolic {P : Prog} {n : Nat} {s t : St}
+    (h : Run.iter (bcK P) n s = .ok t) : VsaIris.ReachesN (bcModel P) n s t := by
+  apply ((Run.reachesN_pres _).iff (Run.mmK_graph _)).2
+  exact (Run.iter_transport id gBc (bcModel_square P) n s).trans (by rw [h]; rfl)
 
 /-- `Reaches` of the model is `BcSem`'s `StepsN`. -/
 theorem reaches_stepsN {P : Prog} {a b : (bcModel P).State}
@@ -141,7 +169,7 @@ theorem bytecode_adequacy {GF : BundledGFunctors} [VsaIris.MachGpreS GF] (P : Pr
     (φ : Nat × String → Prop)
     (H : VsaIris.AdequacyHyp GF (bcModel P) mr mm ((bcModel P).out P.init) φ) :
     ∃ e out, BcHalts P out e ∧ φ (e, out) := by
-  obtain ⟨e, out, hh, hφ⟩ := VsaIris.mach_adequacy (M := bcModel P) P.init mr mm hr hm trivial φ H
+  obtain ⟨e, out, hh, hφ⟩ := VsaIris.mach_adequacy (M := bcModel P) P.init mr mm hr hm (by change 0 < 2^64; decide) φ H
   exact ⟨e, out, halts_bcHalts hh, hφ⟩
 
 /-- The statement of Layer B′'s adequacy as a `Prop` (for PHASES.md's

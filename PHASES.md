@@ -54,8 +54,10 @@ ELF pin).
 | F2/F3/F4/F5 arms and primitives | `OCaml/Vm/Sim/` | A2–A5 | open |
 | GC: `caml_empty_minor_heap` preserves `VmReprAt` up to a new placement (G2) | new `OCaml/Vm/Gc/` | A6 | open |
 | symbolic heap allocation/read laws; arbitrary-heap closure capture/read segment | `OCaml/Logic/Symbolic.lean` | B′1 | **proved** (`Heap.get_alloc_old`, `Heap.get_alloc_fresh`, `field_alloc_fresh`, `field_alloc_old`, `closure_capture_read`) |
-| absolute-address code locality (`decodeAt_extract`, `CodeSlice.iter_eq`) | `OCaml/Logic/CodeSlice.lean`, `OCaml/Run/Local.lean` | B′1 | **proved**; generator instantiation next |
-| bytecode decode table / segment generators for `boot/ocamlc` | `scripts/` | B′1 | open |
+| absolute-address code locality (`decodeAt_extract`, `CodeSlice.iter_eq`) | `OCaml/Logic/CodeSlice.lean`, `OCaml/Run/Local.lean` | B′1 | **proved**, instantiated by `CertifiedBlock.run` and all generated windows |
+| bytecode decode table / segment generators for `boot/ocamlc` | `scripts/gen_bc_rules.py`, `OCaml/Programs/Generated/` | B′1 | **done**: 23,678 instructions / 5,414 block rules, four modules build at default heartbeats; measurements in `results/bprime_build.json` |
+| push/enter, over/under-application boundaries and application-summary composition | `OCaml/Logic/Application.lean`, `ApplicationSteps.lean` | B′1 | **proved** (`apply1_enter`, `return_over`, `grab_under`, `restart_partial`, `call_summary`, `tail_summary`) |
+| generated function summary → MachWP → `bytecode_adequacy` | `OCaml/Programs/GeneratedAdequacy.lean` | B′ exit | **proved** (`jumpStop_adequacy`, small branch-function fixture) |
 | `OCamlSem` on Lambda (LLM-written) + its program logic | new `OCaml/Source/Sem.lean` | C1 | open |
 | **`ocamlc_backend_correct_Statement`** (Bytegen/Emitcode, then Translcore/Matching) | `OCaml/Theorems.lean` | C2 | open |
 | `BackendCorrectFor` the compiler's own build | `OCaml/EndToEnd.lean` | C2 | open |
@@ -181,17 +183,36 @@ A0 library projections can consume the shared `FixedBytesLoaded` interface.
 
 ## B′: the exponentiating layer on bytecode
 
-* Decode-table and segment generators over `dumpobj` output; per-segment
-  WP rules for `bcModel`; function summaries for closures.
-* Route (adopted, round 1): `BcSem` specs by symbolic reduction and
-  `loop_rule` (`OCaml/Logic/Symbolic.lean`; model
-  `OCaml/Programs/CountLoop.lean`). Run laws come from the run kernel
-  (`OCaml/Run/`). Allocation/read laws and the arbitrary-heap `closure_capture_read` segment
-  are proved in `Symbolic.lean`. Next: generated decoder tables, code locality,
-  application summaries and the back-half build measurements.
-* **Exit**: the generated rules for the back-half modules (23,678
-  instructions) build within the elaboration budget; `bytecode_adequacy`
-  instantiated for one generated function summary end to end.
+* `scripts/gen_bc_rules.py` reads host 4.14.4 `dumpobj` and cross-checks all
+  instruction boundaries/opcodes against CODE. It emits 5,414 symbolic-window
+  run rules over all 23,678 instructions of Translcore, Matching, Bytegen and
+  Emitcode, grouped into 585 closure-entry regions. Calls and control-flow
+  targets split blocks; straight-line windows are capped at 16 instructions.
+* Route: symbolic reduction of real `stepI`, allocation/read laws in
+  `Symbolic.lean`, and `loop_rule`. Run laws come from `OCaml/Run/`.
+  `decodeAt_extract`, `CodeSlice.iter_eq`, and `CertifiedBlock.run` preserve
+  absolute PCs while evaluating small windows. Generated rules take an exact
+  extracted-code pin and a successful local symbolic run; they do not assume
+  an unproved full-program run. Unsupported instructions retain their real
+  unsupported outcome.
+* Calls: `ApplicationSummary` retains the extra-argument count and caller
+  frame; `call_summary`/`tail_summary` compose runs. `apply1_enter`,
+  `return_over`, `grab_under`, `restart_partial` prove the push/enter and
+  arity-mismatch boundaries. Client function invariants, postconditions and
+  termination remain program-proof obligations.
+* Scale: all four generated modules build at default heartbeats under 24 GiB.
+  Translcore 75.33 s / 1.44 GiB, Matching 243.75 s / 3.06 GiB,
+  Bytegen 235.05 s / 1.50 GiB, Emitcode 38.55 s / 0.94 GiB peak RSS.
+  `results/bprime_build.json` records CPU time and source hashes too;
+  `scripts/measure_bc_rules.py` reproduces the measurements sequentially.
+  Stage a5 checks generator drift and all 5,414 generated theorem axiom sets.
+* **Exit discharged**: generated rules for all 23,678 back-half instructions
+  build within the budget. `jumpStop_adequacy` instantiates
+  `bytecode_adequacy` end to end via a generated branch-function summary,
+  `MachWP.run` and `MachWP.haltConsole`, with proved initial ownership and WP.
+  The fixture is deliberately small; compiler correctness remains Layer C.
+  `bcModel.ok` bounds the natural PC by 2^64 so its ghost register cannot alias
+  another address (`pc_alias_excluded`).
 
 ## C1–C3: the compiler at the source level
 

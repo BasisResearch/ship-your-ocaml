@@ -1,47 +1,88 @@
 # Lane bprime
 
+## Status
+
+The proof/build exit criteria are met: all 23,678 backend instructions have
+building generated rules, and `jumpStop_adequacy` instantiates
+`bytecode_adequacy` on a generated function summary. Allocation and locality
+milestones landed via `scripts/integrate.sh` as `a4d7b7a` and `65da6fc`;
+both full gates passed. The generated-rule milestone uses the same full
+integration gate. No lane proof/build obligations or user decisions remain.
+
 ## Proved
 
 - `Heap.get_alloc_old`, `Heap.get_alloc_fresh`, `field_alloc_fresh`,
-  `field_alloc_old` (`OCaml/Logic/Symbolic.lean:26`): allocation preserves
-  old reads and exposes the new block and its fields, including infix fields.
-- `closure_capture_read` (`OCaml/Logic/Symbolic.lean:59`): a two-instruction
-  CLOSURE/GETFIELD2 segment captures and reads an arbitrary value, with an
-  arbitrary heap, stack tail, environment, extra arguments, trap and world.
-  Decoder premises are explicit inputs for generated tables. Closure target
-  offsets use operand 1, hence `pc + 2 + offset` in this semantics.
-- All five theorem names are in `OCaml/Audit.lean`.
-- Targeted build: `lake build OCaml.Logic.Symbolic` under a 24 GiB cgroup,
-  default heartbeat budget, passed (545 ms module build).
+  `field_alloc_old` (`OCaml/Logic/Symbolic.lean:26`): allocation preserves old
+  locations and exposes the new block, including infix fields.
+- `closure_capture_read` (`OCaml/Logic/Symbolic.lean:59`) and the generated
+  `capture_summary` (`OCaml/Programs/Generated/Demo.lean`): CLOSURE/GETFIELD2
+  captures and retrieves any accumulator on an arbitrary heap and stack.
+- `Run.iter_eq_of_agree` and `Run.iter_ok_of_step` (`OCaml/Run/Local.lean`):
+  local agreement and partial simulation through the adopted run kernel.
+- `decodeAt_local`, `code_extract_word`, `decodeAt_extract`,
+  `CodeSlice.iter_eq`, `decoded_run_sound` (`OCaml/Logic/CodeSlice.lean:22`):
+  instruction extraction and run locality with absolute PCs. The last
+  instruction may leave a window; saved PCs and closure pointers are unchanged.
+- `CertifiedBlock.decode_sound` and `CertifiedBlock.run`
+  (`OCaml/Logic/Block.lean:29`): checked decoder entries lift a successful
+  symbolic window run to the real program. A named `pin` premise states the
+  exact extracted words required of the surrounding program.
+- `call_summary`, `tail_summary` (`OCaml/Logic/Application.lean:28`): compose
+  generated call prefixes, full-state application summaries and continuations.
+  `apply1_enter`, `return_over`, `grab_under`, `restart_partial`
+  (`OCaml/Logic/ApplicationSteps.lean:18`) reduce the real application arms.
+  Summary predicates retain extra arguments, environment and caller frame.
+  Back edges use the existing `loop_rule`; function termination/postconditions
+  remain the client program proof's work.
+- `jumpStop_summary` is generated through `runbc --lean` and instantiated via
+  `jump_runFact`, `jump_wp`, `jump_hyp`, `jumpStop_adequacy`
+  (`OCaml/Programs/GeneratedAdequacy.lean:12`). The last theorem invokes
+  `bytecode_adequacy` with proved ownership and WP, leaving no client premise.
+  This is a small branch/STOP fixture, not a proof of compiler termination.
+- `pc_eq_of_reg` and `pc_alias_excluded` (`OCaml/Logic/BcModel.lean:95`):
+  `bcModel.ok` now bounds the natural PC by 2^64. This makes the 64-bit PC
+  ghost cell usable without aliasing; initial states satisfy the bound.
 
-- First milestone landed on main as `a4d7b7a`, full integration gate passed.
-- `Run.iter_eq_of_agree` (`OCaml/Run/Local.lean:8`) transports a bounded run
-  using agreement only on states visited before its bound.
-- `decodeAt_local`, `code_extract_word`, `decodeAt_extract`
-  (`OCaml/Logic/CodeSlice.lean:23`): decoding is local to the instruction's
-  words, including variable-length operands; extraction preserves decoding.
-- `CodeSlice.iter_eq` (`OCaml/Logic/CodeSlice.lean:94`) transports a run to an
-  absolute-address slice decoder under explicit coverage and confinement.
-  The last instruction can leave the slice. PCs and closure/return addresses
-  are not rebased. All new headline facts are audited.
-- Targeted locality build passed (682 ms, 24 GiB cap, default heartbeats).
+## Generated coverage and reproduction
 
-## Open / next
+`python3 scripts/gen_bc_rules.py` cross-checks host OCaml 4.14.4 dumpobj
+instruction boundaries/opcodes against the vendored executable's CODE.
+Closure entries delimit function regions; control-flow targets, transfers,
+calls and 16-instruction cuts delimit windows. Signed operands come from
+CODE. Every instruction appears in exactly one block. One lookahead word
+supports decoder locality but is not an executable site.
 
-- Generate decoder/block rules from actual bytecode; keep outputs checked at a5.
-- Instantiate the proved locality rules from generated instruction tables.
-- Call summaries including over/under-application and push/enter; loops use
-  `loop_rule`.
-- Back-half module coverage and per-module time/memory measurements.
-- Instantiate `bytecode_adequacy` on a generated function summary.
-- Lane exit is not yet met.
+| Module | Instructions | Blocks | Function regions | Measured wall | Peak RSS |
+|---|---:|---:|---:|---:|---:|
+| Translcore | 4,741 | 1,004 | 99 | 75.33 s | 1,505,620 KiB |
+| Matching | 12,175 | 2,792 | 386 | 243.75 s | 3,204,964 KiB |
+| Bytegen | 4,759 | 1,113 | 68 | 235.05 s | 1,577,300 KiB |
+| Emitcode | 2,003 | 505 | 32 | 38.55 s | 988,696 KiB |
+| Total | 23,678 | 5,414 | 585 | | |
 
-## Evidence / obstructions
+Builds use default heartbeats and a 24 GiB cgroup, one lake build at a time.
+Timings include shared-machine contention. `scripts/measure_bc_rules.py`
+rebuilds only the selected generated modules and records source hashes,
+wall/CPU time and peak RSS. Generated rules are checked at a5, and
+`scripts/check_bc_audit.py` audits every generated block theorem against the
+manifest. The root audit covers all handwritten headline theorems and the
+end-to-end example. `scripts/gen_bc_demo.py --check` checks the fixtures.
 
-A broad `simp [stepI]` across an unresolved second instruction hit the default
-200,000 heartbeat limit. Reducing only after each decoder premise fixes it;
-the successful proof does not raise the budget. No unresolved obstruction.
+The rules accept a code-window pin and a successful symbolic local run.
+They certify the actual instruction semantics without inventing behaviour
+for unsupported opcodes. Per-function semantic specifications, source-level
+compiler correctness and growth of BcSem's fragment belong to subsequent
+program proofs / other lanes.
 
-Census correction: `boot/ocamlc` contains 655,922 words and 412,087
-instructions (VALIDATION.md:243); the lane brief calls the instruction count
-words. The required four modules total 23,678 instructions.
+## Evidence and integration
+
+- A broad simplifier across an unresolved instruction reached the default
+  200,000 heartbeat limit. Restricting reduction to the decoded instruction
+  fixes it; no budget was raised.
+- PC ghost encoding aliases 0 and 2^64; `pc_alias_excluded` checks the reason
+  for the new `ok` bound. No BcSem transition was changed.
+- Census correction: the compiler has 655,922 words and 412,087 instructions
+  (VALIDATION.md:243); the lane brief calls the instruction count words.
+- All four measured builds passed. Measurements and source hashes are saved
+  in `results/bprime_build.json`. Final landing uses `scripts/integrate.sh`,
+  including the generated-rule audit and full a1–a8/t1 gates.
