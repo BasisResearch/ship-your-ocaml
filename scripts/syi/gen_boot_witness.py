@@ -8,6 +8,11 @@ entry applied, and the entry row's registers. This tool turns the emulator's
 
 Subcommands (all scratch output goes under `--work`, outside the repository):
 
+  ocaml-cut --elf ELF --layout Layout.lean --work W
+          observe OCaml's second caml_interprete entry and stream its stores;
+          unlike the legacy WHILE subcommands below, this is only a candidate
+          extractor, not a kernel-checked Loaded witness.
+
   corpus  --work W --emulator E WL...   build one ELF per script by patching the
           proof ELF's script blob (`_script_start`, 453 bytes + NUL), trace each
           to the entry, and dump the loader pieces natively
@@ -779,4 +784,10 @@ def write_index():
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "ocaml-cut":
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from boot_cut import main as ocaml_main
+        del sys.argv[1]
+        ocaml_main()
+    else:
+        main()

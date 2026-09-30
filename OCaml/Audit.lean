@@ -17,6 +17,13 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Bytecode.primF1_unsupported
 #print axioms OCaml.ocamlrun_refinement_of_sim
 #print axioms OCaml.ocamlrun_refinement_fillZero
+#print axioms OCaml.Loaded.runtime
+#print axioms OCaml.Vm.not_promotedRuntimeOk_of_projection
+#print axioms OCaml.Vm.Boot.WhileMinObservation.bounds
+#print axioms OCaml.Vm.Boot.WhileMinObservation.noPending
+#print axioms OCaml.Vm.Boot.WhileMinObservation.nursery_not_empty
+#print axioms OCaml.Vm.Boot.WhileMinObservation.not_promoted
+#print axioms OCaml.Vm.Boot.WhileMinObservation.not_loaded
 #print axioms OCaml.simOfArms
 #print axioms OCaml.ocamlrun_refinement_of_arms
 #print axioms OCaml.Logic.bytecode_adequacy

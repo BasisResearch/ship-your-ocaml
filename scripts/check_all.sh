@@ -22,16 +22,24 @@
 #                            proofs (abstractions/clusters.def) at 8+ proofs whose
 #                            per-case cost did not fall by a third fails with
 #                            "run /abstraction-discovery".
-# Heavy steps honour the shared-machine rules (30 GB cap).
+# Heavy steps honour the shared-machine rules (24 GB cap).
 set -u
 cd "$(dirname "$0")/.."
 fail() { echo "FAIL: $*"; exit 1; }
-# lake builds run under a 30 GB address-space cap; lean needs more virtual
-# address space than that for its thread stacks, so the audit runs uncapped
-# (it only loads .olean files).
+# Apply the lane's shared-machine limit to builds and axiom audits alike.
+run_lean() {
+  while :; do
+    free -g
+    avail=$(free -g | awk '/^Mem:/{print $7}')
+    [ "$avail" -ge 25 ] && break
+    echo "check_all: ${avail} GB available (< 25), waiting" >&2
+    sleep 120
+  done
+  systemd-run --user --scope -q -p MemoryMax=24G "$@"
+}
 
-echo "== stage a1: lake build OCaml Vsa VsaIris (under a 30 GB cgroup cap)"
-systemd-run --user --scope -q -p MemoryMax=30G lake build OCaml Vsa VsaIris 2>&1 | tail -1 \
+echo "== stage a1: lake build OCaml Vsa VsaIris (under a 24 GB cgroup cap)"
+run_lean lake build OCaml Vsa VsaIris 2>&1 | tail -1 \
   | grep -q "Build completed successfully" || fail "stage a1: build"
 echo "stage a1: OK"
 
@@ -40,7 +48,7 @@ python3 scripts/check_holes.py || fail "stage a2: hole found"
 echo "stage a2: OK"
 
 echo "== stage a3: axiom audit"
-out=$(lake env lean OCaml/Audit.lean 2>&1)
+out=$(run_lean lake env lean OCaml/Audit.lean 2>&1)
 echo "$out"
 n=$(echo "$out" | grep -c "depends on axioms")
 bad=$(echo "$out" | grep "depends on axioms" | grep -vE "axioms: \[(propext|Classical.choice|Quot.sound)(, (propext|Classical.choice|Quot.sound))*\]$" || true)
@@ -55,6 +63,7 @@ echo "stage a4: OK"
 echo "== stage a5: generated files are current"
 python3 scripts/gen_opcodes.py | cmp -s - OCaml/Bytecode/Opcode.lean || fail "stage a5: Opcode.lean differs from gen_opcodes.py"
 python3 scripts/gen_layout.py | cmp -s - OCaml/Vm/Layout.lean || fail "stage a5: Layout.lean differs from gen_layout.py"
+python3 scripts/gen_boot_observation.py results/boot/while_min-cut.json | cmp -s - OCaml/Vm/Boot/WhileMinObservation.lean || fail "stage a5: boot observation differs from generator"
 echo "stage a5: OK"
 
 echo "== stage a6: ELF pin, and no ecall in the image"
@@ -68,8 +77,8 @@ python3 scripts/check_code_pins.py > /dev/null || fail "stage a7: code pins diff
 echo "stage a7: OK"
 
 echo "== stage t1: trusted computing base (tcb/)"
-systemd-run --user --scope -q -p MemoryMax=30G lake build TCB tcbcheck 2>&1 | tail -1 | grep -q "Build completed successfully" || fail "stage t1: build TCB"
-out=$(lake env lean tcb/Audit.lean 2>&1)
+run_lean lake build TCB tcbcheck 2>&1 | tail -1 | grep -q "Build completed successfully" || fail "stage t1: build TCB"
+out=$(run_lean lake env lean tcb/Audit.lean 2>&1)
 echo "$out"
 bad=$(echo "$out" | grep "depends on axioms" | grep -vE "axioms: \[(propext|Classical.choice|Quot.sound)(, (propext|Classical.choice|Quot.sound))*\]$" || true)
 [ -z "$bad" ] || fail "stage t1: non-standard axioms: $bad"

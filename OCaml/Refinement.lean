@@ -82,6 +82,12 @@ structure LoadedAt (L : Layout) (P : Prog) (c : Config) (pl : Place) (cp : ChanP
 def Loaded (L : Layout) (P : Prog) (c : Config) : Prop :=
   ∃ (pl : Place) (cp : ChanPlace) (high : Nat), LoadedAt L P c pl cp high
 
+/-- The runtime component of a loaded witness, independent of its placement. -/
+theorem Loaded.runtime {L : Layout} {P : Prog} {c : Config} (h : Loaded L P c) :
+    L.runtimeOk c := by
+  obtain ⟨pl, cp, high, entry⟩ := h
+  exact entry.runtime
+
 /-- **Layer A (statement).** `ocamlrun` refines `BcSem`: for every loaded
 program inside the fragment (`Good`) and the budget (`Fits`), the machine
 halts with `(out, e)` iff `BcSem` does, and diverges iff `BcSem` does. -/

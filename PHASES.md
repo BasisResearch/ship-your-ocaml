@@ -41,8 +41,9 @@ ELF pin).
 | `HtifFsImplements` (the in-image file system meets the OS spec) | `OCaml/Os.lean` | F5 | open; `htif.c` conforms on all 6,490 validation scripts (VALIDATION §6) |
 | `BcSem` world over `TCB.Os.OsState` (file/time/env primitives through `OsStep`) | `OCaml/Bytecode/Semantics.lean` | F5 | open |
 | Linux instantiation: `ecall` as an external step constrained by `OsStep` | `Vsa.Machine` extension | E | open |
-| `Layout.runtimeOk` concrete instance | `OCaml/Refinement.lean` | A0 | to define |
-| `Loaded` at real entry states (boot witnesses, small programs) | new `OCaml/Vm/Boot/` | A0 | open |
+| `Layout.runtimeOk` concrete instance | `OCaml/Vm/Runtime.lean` | A0 | **defined**: `promotedLayout freeList`; empty-nursery clause conflicts with measured startup (see below) |
+| `Loaded` at real entry states (boot witnesses, small programs) | `OCaml/Vm/Boot/` | A0 | **open, contract decision needed**: measured nursery is nonempty; execution/projection certificate and ELF layout alignment remain open |
+| `WhileMinObservation.bounds`, `noPending`, `nursery_not_empty`, `not_loaded` | `OCaml/Vm/Boot/WhileMinObservation.lean` | A0 | **proved for the observed projection**; `not_loaded` explicitly requires the unproved machine projection equality |
 | `ArmSim` entry + F1 arms (134 opcodes) + halt | `OCaml/Vm/Sim/` | A1 | **blocked: current precondition refuted** by `loaded_not_armSim`; see A1 below |
 | **`ocamlrun_refinement_Statement L B`** (Layer A, F1) | `OCaml/Theorems.lean` | A1 (by `ocamlrun_refinement_of_arms`) | open; current per-arm route needs an invariant repair |
 | `repr_forceExit`, `armSim_not_repr`, `loaded_not_armSim` | `OCaml/Vm/Sim/Obstruction.lean` | A1 | **proved**: any loaded, good, fitting program refutes the current `ArmSim` |
@@ -71,6 +72,19 @@ ELF pin).
 * **Exit**: `scripts/check_all.sh` passes.
 
 ## A0: retarget the machine layer (exit: `Loaded` has a witness)
+
+**Startup obstruction (lane a0-boot):** at the measured `while_min` cut
+(step 4,269,235), `young_ptr = 0x80283ce0` and
+`young_alloc_end = 0x80284000`: 800 nursery bytes remain allocated.
+`startup_byt.c` promotes the globals with `caml_oldify_one`/`caml_oldify_mopup`
+without resetting the nursery, then `caml_sys_init` allocates argv. The
+small projection checks are kernel-checked; connecting that observation to
+a reachable Sail state is still an explicit, unproved premise. Kiran must
+choose between a nonempty-nursery invariant at the existing cut and a
+changed startup/cut. No `Loaded` witness is claimed. The measured standalone
+ELF also relocates data symbols relative to the pinned proof ELF: its layout
+cannot be substituted into the current `Loaded` silently. See
+`docs/lanes/a0-boot.md` for reproduction and remaining obligations.
 
 * Done in P0: the 66 byte-identical library functions (`scripts/retarget_syi.py`).
 
