@@ -65,3 +65,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Bytecode.field_alloc_fresh
 #print axioms OCaml.Bytecode.field_alloc_old
 #print axioms OCaml.Bytecode.closure_capture_read
+/-! A1: machine-checked obstruction to the current arm precondition. -/
+#print axioms OCaml.Vm.Sim.repr_forceExit
+#print axioms OCaml.Vm.Sim.forceExit_halted
+#print axioms OCaml.Vm.Sim.forceExit_not_plus
+#print axioms OCaml.Vm.Sim.armSim_not_repr
+#print axioms OCaml.Vm.Sim.loaded_not_armSim

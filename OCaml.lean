@@ -19,3 +19,4 @@ import OCaml.Theorems
 import OCaml.Os
 import OCaml.Programs.Validation
 import OCaml.Programs.CountLoop
+import OCaml.Vm.Sim.Obstruction
