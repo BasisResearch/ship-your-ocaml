@@ -38,9 +38,11 @@ machine refinement theorem under a repaired simulation invariant.
 * Proof discipline and abstraction gate passed. This is an invariant
   obstruction, not an a8 per-arm cost failure; no arm-family cost claimed.
 * `lake build OCaml` passed under `MemoryMax=24G` (484 jobs).
-* Landing uses `scripts/integrate.sh` under an enclosing 24 GB scope; its
-  complete build, axiom, discipline, image and abstraction gates must pass
-  before it pushes this commit to main.
+* `scripts/integrate.sh` landed the proof as `ea1cc61` on main under an
+  enclosing 24 GB scope. All stages passed: full build, no holes, standard
+  axioms, proof discipline, generator drift, ELF/code pins, TCB validation,
+  and abstraction gate. The audit-file rebase conflict retained both lanes
+  theorem lists.
 
 ## Open / next
 
