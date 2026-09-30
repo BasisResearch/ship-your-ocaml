@@ -18,6 +18,10 @@
 #                            trap with no handler on the bare machine).
 #   (a7) code pins         — every byte the retargeted library proofs pin
 #                            (Vsa/Sim/Code/*.lean) is the ELF's byte there.
+#   (a8) abstraction gate  — scripts/check_abstraction_gate.py: a cluster of hand
+#                            proofs (abstractions/clusters.def) at 8+ proofs whose
+#                            per-case cost did not fall by a third fails with
+#                            "run /abstraction-discovery".
 # Heavy steps honour the shared-machine rules (30 GB cap).
 set -u
 cd "$(dirname "$0")/.."
@@ -71,4 +75,7 @@ bad=$(echo "$out" | grep "depends on axioms" | grep -vE "axioms: \[(propext|Clas
 [ -z "$bad" ] || fail "stage t1: non-standard axioms: $bad"
 tcb/validation/quick.sh || fail "stage t1: OS-spec validation (quick): a Linux trace was rejected"
 echo "stage t1: OK"
+echo "== stage a8: abstraction-discovery gate"
+python3 scripts/check_abstraction_gate.py || fail "stage a8: run /abstraction-discovery"
+echo "stage a8: OK"
 echo "ALL STAGES OK"

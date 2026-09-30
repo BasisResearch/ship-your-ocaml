@@ -1,0 +1,51 @@
+# Obligation clusters of hand proofs (scripts/abstraction_census.py reads this).
+# `cluster <id>` then one `file theorem` per member. A proof belongs to the
+# cluster whose SHAPE it re-proves, whatever its data.
+
+# C1 run-algebra: facts about the reflexive-transitive / n-step closure of a
+# deterministic step function (determinism, snoc/append/prefix, halting is
+# unique, halting excludes divergence, halts-or-diverges, conversions),
+# re-proved for each step relation.
+cluster C1-run-algebra
+Vsa/Machine.lean Step.deterministic
+Vsa/Machine.lean Halted.deterministic
+Vsa/Machine.lean Step.not_halted
+Vsa/Machine.lean Steps.halted_start
+Vsa/Machine.lean Steps.confluence_halted
+Vsa/Machine.lean Halts.deterministic
+Vsa/Machine.lean StepsN.halted_no_extension
+Vsa/Machine.lean Steps.toN
+Vsa/Machine.lean Diverges.not_halts
+Vsa/Triple.lean Steps.trans
+Vsa/Triple.lean StepsN.trans_add
+Vsa/Triple.lean StepsN.toSteps
+VsaIris/Machine.lean trans
+VsaIris/Machine.lean snoc
+VsaIris/Machine.lean split
+VsaIris/Machine.lean zero_eq
+VsaIris/Adequacy.lean ReachesN.reaches
+VsaIris/Adequacy.lean erased_of_reachesN
+OCaml/Bytecode/Semantics.lean Step.det
+OCaml/Bytecode/Semantics.lean StepsN.det
+OCaml/Bytecode/Semantics.lean StepsN.snoc
+OCaml/Bytecode/Semantics.lean StepsN.stop
+OCaml/Bytecode/Semantics.lean halts_or_diverges
+OCaml/Bytecode/Semantics.lean BcHalts.not_diverges
+OCaml/Bytecode/Semantics.lean StepsN.prefix
+OCaml/Bytecode/Semantics.lean BcHalts.det
+OCaml/Refinement.lean Vsa.Machine.StepsN.append
+OCaml/Refinement.lean Vsa.Machine.Steps.trans'
+OCaml/Refinement.lean Vsa.Machine.Halts.of_steps
+OCaml/Refinement.lean Vsa.Machine.StepsN.prefix'
+OCaml/Logic/BcModel.lean reaches_stepsN
+
+# C2 checker-soundness: an executable function (runner, checker) is sound
+# (or complete) for the relation it computes.
+cluster C2-checker-soundness
+OCaml/Bytecode/Load.lean runTo_sound
+OCaml/Bytecode/Load.lean bcHalts_of_runTo
+OCaml/Logic/BcModel.lean halts_bcHalts
+tcb/TCB/Os/Syscall.lean allowed_sound
+tcb/TCB/Os/Syscall.lean allowed_complete
+tcb/TCB/Os/Syscall.lean checkFrom_sound
+tcb/TCB/Os/Syscall.lean checkTrace_sound
