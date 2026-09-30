@@ -1,3 +1,13 @@
+import Vsa.Sim.StrcmpSites
+import Vsa.Sim.SsprintSites
+import Vsa.Sim.SsputsSites
+import Vsa.Sim.Code.Strcmp
+import Vsa.Sim.Code.__ssprint_r
+import Vsa.Sim.Code.__ssputs_r
+import Vsa.Sim.Code._malloc_r
+import Vsa.Sim.Code._free_r
+import Vsa.Sim.Code._svfprintf_r
+import Vsa.Sim.ElfDecode
 import Vsa.Densify
 import Vsa.Densify.GenA
 import Vsa.Densify.GenB

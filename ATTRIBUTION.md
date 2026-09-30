@@ -92,3 +92,20 @@ documents.
   GCC runtime library exception.
 * **Lean dependencies** (`iris-lean`, `batteries`, `Qq`, `ELFSage`, `Cli`):
   fetched by Lake under their own licences.
+
+## Generic machine decoder (A0 library lane)
+
+`Vsa/Meta/SimpNF.lean` and `Vsa/Sim/DecodeNF.lean` are copied unchanged
+from ship-your-interpreter's `exponentiate` worktree (`syi-exp`), commit
+`69939cfcad4e6261c546419f4f71808fcc5bb70e`. The source trees were read only.
+`scripts/gen_elf_decode.py` instantiates this generic decoder for all text
+words in this repository's ELF, in `Vsa/Sim/ElfDecode/`. Its Python decoder
+proposes statements only; each proof uses `decodeW` and kernel reduction.
+
+The three same-layout site batteries in `Vsa/Sim/{Strcmp,Ssputs,Ssprint}Sites.lean`
+are generated retargets of the preserved copies in
+`experiments/syi/while-elf-only/`, from the original attribution above.
+`library_layout.json` in that directory records the WHILE ELF's symbols and
+three function bodies, with its SHA-256, so drift checks do not need that
+external ELF. `gen_library_pins.py` reuses the preserved code-lemma generator
+for the six complete code regions in this ELF.

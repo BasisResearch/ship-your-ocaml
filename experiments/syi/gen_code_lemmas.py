@@ -45,7 +45,7 @@ def lean_ident(name):
     return re.sub(r"[^A-Za-z0-9_]", "_", name)
 
 
-def emit(name, insts):
+def render(name, insts):
     f = lean_ident(name)
     F = f[0].upper() + f[1:]
     chunks = [insts[i:i + CHUNK] for i in range(0, len(insts), CHUNK)]
@@ -103,10 +103,16 @@ def emit(name, insts):
                      f"  have hc := {f}_chunk{ci} h\n{allow}  ⟨{parts}⟩\n")
 
     L.append("end Vsa.Sim.Code\n")
+    return "\n".join(L)
+
+
+def emit(name, insts):
+    f = lean_ident(name)
+    F = f[0].upper() + f[1:]
     out = pathlib.Path(f"Vsa/Sim/Code/{F}.lean")
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text("\n".join(L))
-    print(f"wrote {out} ({len(insts)} sites, {len(chunks)} chunks)")
+    out.write_text(render(name, insts))
+    print(f"wrote {out} ({len(insts)} sites, {(len(insts) + CHUNK - 1) // CHUNK} chunks)")
 
 
 if __name__ == "__main__":
