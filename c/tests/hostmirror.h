@@ -17,6 +17,8 @@ int _fstat(int, struct stat *);
 int _stat(const char *, struct stat *);
 int _unlink(const char *);
 int mf_rename(const char *, const char *);
+int mf_mkdir(const char *, mode_t);
+int mf_rmdir(const char *);
 #define open(p, f, ...) _open(p, f, 0)
 #define close(fd) _close(fd)
 #define read(fd, b, n) _read(fd, b, n)
@@ -28,6 +30,8 @@ int mf_rename(const char *, const char *);
 #define stat(p, s) _stat(p, s)
 #define unlink(p) _unlink(p)
 #define rename(a, b) mf_rename(a, b)
+#define mkdir(p, m) mf_mkdir(p, m)
+#define rmdir(p) mf_rmdir(p)
 #define opendir mf_opendir
 #define readdir mf_readdir
 #define closedir mf_closedir

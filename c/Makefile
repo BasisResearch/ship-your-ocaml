@@ -32,7 +32,7 @@ RISCV_CC     ?= $(if $(XPACK_GCC),$(XPACK_GCC),riscv-none-elf-gcc)
 # choice as ship-your-lua's LUA_USE_JUMPTABLE=0.
 RISCV_CFLAGS ?= -std=gnu11 -O2 -Wall -march=rv64i -mabi=lp64 -mcmodel=medany \
                 -fno-strict-aliasing -fwrapv -fno-common -fno-tree-vrp \
-                -DCAML_NAME_SPACE -DCAMLDLLIMPORT= -DSHRINKED_GNUC \
+                -DCAML_NAME_SPACE -DCAMLDLLIMPORT= -DSHRINKED_GNUC -DOCAML_HTIF \
                 -Isrc/config/caml -Isrc/config -I$(RT)
 
 # The runtime's BYTECODE_C_SOURCES minus main.c (replaced by src/main.c)
