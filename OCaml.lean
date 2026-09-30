@@ -13,6 +13,7 @@ import OCaml.Vm.Reloc
 import OCaml.Refinement
 import OCaml.Logic.BcModel
 import OCaml.Logic.Symbolic
+import OCaml.Logic.CodeSlice
 import OCaml.Source.Lambda
 import OCaml.EndToEnd
 import OCaml.Theorems

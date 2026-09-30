@@ -49,6 +49,7 @@ ELF pin).
 | F2/F3/F4/F5 arms and primitives | `OCaml/Vm/Sim/` | A2–A5 | open |
 | GC: `caml_empty_minor_heap` preserves `VmReprAt` up to a new placement (G2) | new `OCaml/Vm/Gc/` | A6 | open |
 | symbolic heap allocation/read laws; arbitrary-heap closure capture/read segment | `OCaml/Logic/Symbolic.lean` | B′1 | **proved** (`Heap.get_alloc_old`, `Heap.get_alloc_fresh`, `field_alloc_fresh`, `field_alloc_old`, `closure_capture_read`) |
+| absolute-address code locality (`decodeAt_extract`, `CodeSlice.iter_eq`) | `OCaml/Logic/CodeSlice.lean`, `OCaml/Run/Local.lean` | B′1 | **proved**; generator instantiation next |
 | bytecode decode table / segment generators for `boot/ocamlc` | `scripts/` | B′1 | open |
 | `OCamlSem` on Lambda (LLM-written) + its program logic | new `OCaml/Source/Sem.lean` | C1 | open |
 | **`ocamlc_backend_correct_Statement`** (Bytegen/Emitcode, then Translcore/Matching) | `OCaml/Theorems.lean` | C2 | open |

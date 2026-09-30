@@ -71,3 +71,10 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.forceExit_not_plus
 #print axioms OCaml.Vm.Sim.armSim_not_repr
 #print axioms OCaml.Vm.Sim.loaded_not_armSim
+
+/-! Absolute-address code locality (B′). -/
+#print axioms OCaml.Run.iter_eq_of_agree
+#print axioms OCaml.Bytecode.decodeAt_local
+#print axioms OCaml.Bytecode.code_extract_word
+#print axioms OCaml.Bytecode.decodeAt_extract
+#print axioms OCaml.Bytecode.CodeSlice.iter_eq
