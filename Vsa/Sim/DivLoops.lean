@@ -95,11 +95,11 @@ def NrmK (d a2 a3 : BitVec 64) : Prop :=
 
 /-- At the normalize-loop head `c4`, with the shared invariant. -/
 def AtHeadN (g : (R : Register) → Option (RegisterType R)) (d n neg1 r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
-  ∃ a2 a3, Ust g (0x800364fc#64) neg1 n a2 a3 r m0 o c ∧ NrmK d a2 a3
+  ∃ a2 a3, Ust g (0x800372b8#64) neg1 n a2 a3 r m0 o c ∧ NrmK d a2 a3
 
 /-- Normalize done at `d4`: divide-loop entry facts (`a2 = d·2^K`, `n < 2·a2`). -/
 def AtDoneN (g : (R : Register) → Option (RegisterType R)) (d n neg1 r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
-  ∃ a2 a3, Ust g (0x8003650c#64) neg1 n a2 a3 r m0 o c ∧ NrmK d a2 a3 ∧ n.toNat < 2 * a2.toNat
+  ∃ a2 a3, Ust g (0x800372c8#64) neg1 n a2 a3 r m0 o c ∧ NrmK d a2 a3 ∧ n.toNat < 2 * a2.toNat
 
 def NrmI (g : (R : Register) → Option (RegisterType R)) (d n neg1 r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
   AtHeadN g d n neg1 r m0 o c ∨ AtDoneN g d n neg1 r m0 o c
@@ -112,7 +112,7 @@ def NrmB (g : (R : Register) → Option (RegisterType R)) (d n neg1 r : BitVec 6
 makes the measure strictly drop on the exit edge (to `d4`, where it is `0`) as well
 as on the back-edge (to `c4`, where `a2` has doubled). -/
 def NrmMu (c : Config) : Nat :=
-  if c.σ.regs.get? Register.PC = some (0x800364fc#64)
+  if c.σ.regs.get? Register.PC = some (0x800372b8#64)
   then 2^64 - ((c.σ.regs.get? Register.x12).getD (0#64)).toNat
   else 0
 
@@ -134,7 +134,7 @@ theorem norm_loop_body (g : (R : Register) → Option (RegisterType R)) (d n neg
   have ha2pos : 0 < a2.toNat := by rw [hk2]; exact Nat.mul_pos hd (Nat.two_pow_pos k)
   have ha2ne : a2 ≠ 0#64 := by intro h; rw [h] at ha2pos; simp at ha2pos
   -- On an exit to d4, the measure is 0 (PC ≠ c4), hence < mmeas.
-  have exit_mu : ∀ (c' : Config), c'.σ.regs.get? Register.PC = some (0x8003650c#64) → NrmMu c' < mmeas := by
+  have exit_mu : ∀ (c' : Config), c'.σ.regs.get? Register.PC = some (0x800372c8#64) → NrmMu c' < mmeas := by
     intro c' hpc'
     have : NrmMu c' = 0 := by
       simp only [NrmMu, hpc']
@@ -208,7 +208,7 @@ theorem norm_loop_to_done (g : (R : Register) → Option (RegisterType R)) (d n 
 (`AtHeadN`). Either way land in `NrmI`. -/
 theorem entry_c0 (g : (R : Register) → Option (RegisterType R)) (d n neg1 r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String)
     (hd : 0 < d.toNat) (hdbnd : d.toNat < 2^64) :
-    Triple (Ust g (0x800364f8#64) neg1 n d (1#64) r m0 o) (NrmI g d n neg1 r m0 o) := by
+    Triple (Ust g (0x800372b4#64) neg1 n d (1#64) r m0 o) (NrmI g d n neg1 r m0 o) := by
   intro c hSt
   have hK : NrmK d d (1#64) := by
     refine ⟨0, ?_, ?_, ?_⟩
@@ -236,13 +236,13 @@ def DivK (d a2 a3 : BitVec 64) (j : Nat) : Prop :=
 
 /-- At the divide-loop head `d8`, with the full division invariant. -/
 def AtHeadD (g : (R : Register) → Option (RegisterType R)) (d n r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
-  ∃ a0 a1 a2 a3, Ust g (0x80036510#64) a0 a1 a2 a3 r m0 o c ∧ ∃ j,
+  ∃ a0 a1 a2 a3, Ust g (0x800372cc#64) a0 a1 a2 a3 r m0 o c ∧ ∃ j,
     DivK d a2 a3 j ∧ a0.toNat % 2^(j+1) = 0 ∧
     n.toNat = d.toNat * a0.toNat + a1.toNat ∧ a1.toNat < 2 * a2.toNat
 
 /-- Divide done at `f0`: `a0 = n/d`, `a1 = n%d` (as `Nat` facts). -/
 def AtDoneD (g : (R : Register) → Option (RegisterType R)) (d n r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
-  ∃ a0 a1 a2 a3, Ust g (0x80036528#64) a0 a1 a2 a3 r m0 o c ∧
+  ∃ a0 a1 a2 a3, Ust g (0x800372e4#64) a0 a1 a2 a3 r m0 o c ∧
     a0.toNat = n.toNat / d.toNat ∧ a1.toNat = n.toNat % d.toNat
 
 def DvI (g : (R : Register) → Option (RegisterType R)) (d n r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
@@ -250,13 +250,13 @@ def DvI (g : (R : Register) → Option (RegisterType R)) (d n r : BitVec 64) (m0
 
 /-- Guard: at `d8` (`AtHeadD`) with a nonzero `a3`. -/
 def DvB (g : (R : Register) → Option (RegisterType R)) (d n r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
-  ∃ a0 a1 a2 a3, Ust g (0x80036510#64) a0 a1 a2 a3 r m0 o c ∧ (∃ j,
+  ∃ a0 a1 a2 a3, Ust g (0x800372cc#64) a0 a1 a2 a3 r m0 o c ∧ (∃ j,
     DivK d a2 a3 j ∧ a0.toNat % 2^(j+1) = 0 ∧
     n.toNat = d.toNat * a0.toNat + a1.toNat ∧ a1.toNat < 2 * a2.toNat) ∧ a3 ≠ 0#64
 
 /-- Measure: `a3.toNat` **at the loop head `d8`**, else `0`. -/
 def DvMu (c : Config) : Nat :=
-  if c.σ.regs.get? Register.PC = some (0x80036510#64)
+  if c.σ.regs.get? Register.PC = some (0x800372cc#64)
   then ((c.σ.regs.get? Register.x13).getD (0#64)).toNat
   else 0
 
@@ -320,7 +320,7 @@ theorem div_loop_body (g : (R : Register) → Option (RegisterType R)) (d n r : 
   have ha3pos : 0 < a3.toNat := by rw [hk3]; exact Nat.two_pow_pos j
   have hmpos : 0 < mmeas := by rw [← hmu]; exact ha3pos
   -- exit-to-f0 has measure 0 < mmeas
-  have exit_mu : ∀ (c' : Config), c'.σ.regs.get? Register.PC = some (0x80036528#64) → DvMu c' < mmeas := by
+  have exit_mu : ∀ (c' : Config), c'.σ.regs.get? Register.PC = some (0x800372e4#64) → DvMu c' < mmeas := by
     intro c' hpc'
     have : DvMu c' = 0 := by
       simp only [DvMu, hpc']
@@ -466,10 +466,10 @@ private def neg1c : BitVec 64 := (0#64) + sign_extend (m := 64) (0xfff#12)
 private theorem one_c : ((0#64) + sign_extend (m := 64) (0x001#12) : BitVec 64) = (1#64 : BitVec 64) := by
   apply BitVec.eq_of_toNat_eq; decide
 
-/-- `udivdi3_pre n d r m0 o c`: entry `Ust` at `0x800364e4` with `x10 = n`, `x11 = d`,
+/-- `udivdi3_pre n d r m0 o c`: entry `Ust` at `0x800372a0` with `x10 = n`, `x11 = d`,
 `x1 = r`, `mem = m0`, plus `d ≠ 0` and `r` 4-aligned. -/
 def udivdi3_pre (g : (R : Register) → Option (RegisterType R)) (n d r : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
-  (∃ a2old a3old, Ust g (0x800364e4#64) n d a2old a3old r m0 o c) ∧ 0 < d.toNat ∧ r.toNat % 4 = 0
+  (∃ a2old a3old, Ust g (0x800372a0#64) n d a2old a3old r m0 o c) ∧ 0 < d.toNat ∧ r.toNat % 4 = 0
 
 /-- `udivdi3_post`: PC back at `r`, `x10 = n / d` (`BitVec.udiv`), `x11 = n % d`,
 `GoodState`, memory unchanged, `x1 = r` intact. Also surfaces that the scratch
@@ -492,7 +492,7 @@ theorem udivdi3_spec (g : (R : Register) → Option (RegisterType R)) (n d r : B
     Triple (udivdi3_pre g n d r m0 o) (udivdi3_post g n d r m0 o) := by
   -- Prefix ac → c0 establishing Ust c0 neg1 n d 1 r
   have hpre : Triple (udivdi3_pre g n d r m0 o)
-      (fun c => Ust g (0x800364f8#64) neg1c n d (1#64) r m0 o c ∧ 0 < d.toNat ∧ r.toNat % 4 = 0) := by
+      (fun c => Ust g (0x800372b4#64) neg1c n d (1#64) r m0 o c ∧ 0 < d.toNat ∧ r.toNat % 4 = 0) := by
     intro c hc
     obtain ⟨⟨a2old, a3old, hEntry⟩, hd, halign⟩ := hc
     obtain ⟨c1, hs1, hSt1⟩ := utr_ac_b0 g n d a2old a3old r m0 o c hEntry
@@ -508,7 +508,7 @@ theorem udivdi3_spec (g : (R : Register) → Option (RegisterType R)) (n d r : B
     rw [one_c] at hSt5
     exact ⟨c5, hs1.trans (hs2.trans (hs3.trans (hs4.trans hs5))), hSt5, hd, halign⟩
   -- entry_c0 → NrmI → AtDoneN g (normalize loop)
-  have hnorm : Triple (fun c => Ust g (0x800364f8#64) neg1c n d (1#64) r m0 o c ∧ 0 < d.toNat ∧ r.toNat % 4 = 0)
+  have hnorm : Triple (fun c => Ust g (0x800372b4#64) neg1c n d (1#64) r m0 o c ∧ 0 < d.toNat ∧ r.toNat % 4 = 0)
       (fun c => AtDoneN g d n neg1c r m0 o c ∧ 0 < d.toNat ∧ r.toNat % 4 = 0) := by
     intro c hc
     obtain ⟨hSt, hd, halign⟩ := hc
@@ -541,7 +541,7 @@ theorem udivdi3_spec (g : (R : Register) → Option (RegisterType R)) (n d r : B
     have htgt : (BitVec.update (r + sign_extend (m := 64) (0x000#12)) 0 0#1).toNat % 4 = 0 := by
       rw [ret_tgt r halign]; exact halign
     obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
-      site_80036528 c.σ c.tick c.steps (0x80036528#64) vmi r hSt.good hSt.pc hmi hSt.ra hSt.loaded rfl htgt hSt.tick
+      site_800372e4 c.σ c.tick c.steps (0x800372e4#64) vmi r hSt.good hSt.pc hmi hSt.ra hSt.loaded rfl htgt hSt.tick
     -- a0 = n/d, a1 = n%d as BitVec
     have ha0eq : a0 = n / d := by apply BitVec.eq_of_toNat_eq; rw [hq, BitVec.toNat_udiv]
     have ha1eq : a1 = n % d := by apply BitVec.eq_of_toNat_eq; rw [hr, BitVec.toNat_umod]

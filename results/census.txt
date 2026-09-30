@@ -1,10 +1,10 @@
-image: {'functions': 1321, 'insts': 84179}
-reachable from main: {'functions': 1123, 'insts': 77530}
-interpreter-reachable: {'functions': 1004, 'insts': 69172, 'c_primitives': 403}
+image: {'functions': 1325, 'insts': 85031}
+reachable from main: {'functions': 1129, 'insts': 78529}
+interpreter-reachable: {'functions': 1010, 'insts': 70171, 'c_primitives': 403}
 address-taken functions: 484; indirect jump sites: 234
-site-classifier: 64452/77530 (83.1%) in an existing class
-  unsupported by mnemonic: auipc 3333, slli 2247, andi 1056, srli 1010, addw 846, lui 663, slliw 635, or 582, srai 473, and 359, srliw 237, xor 229, ori 188, jalr 164, zext.b 153
+site-classifier: 65315/78529 (83.2%) in an existing class
+  unsupported by mnemonic: auipc 3367, slli 2306, andi 1063, srli 1011, addw 846, lui 669, slliw 635, or 589, srai 473, and 372, srliw 237, xor 231, ori 188, jalr 164, zext.b 155
 caml_interprete: 1966 insts, 149 opcodes, 147 distinct arm entries
   largest arms: CLOSUREREC 152, CLOSURE 94, MAKEBLOCK 86, MAKEFLOATBLOCK 74, RAISE 74, RERAISE 74, GRAB 72, RAISE_NOTRACE 63, APPTERM 58, APPLY3 51, APPTERM3 49, APPLY2 48
   median arm 7 insts; 1899 insts reachable from some arm, 111 shared by several (GC/raise/signal/callback paths)
-shared with WHILE ELF: 131 identical functions (9869 insts) of 213 same-named; 99 reachable (8644 insts)
+shared with WHILE ELF: 130 identical functions (9867 insts) of 213 same-named; 100 reachable (8789 insts)

@@ -42,11 +42,10 @@ It is used in two ways, and it is **trusted only in the first**:
    `OsStep`s with exactly the observed returns).
 2. **On bare metal**, the "OS" is `c/src/htif.c`'s in-image file system,
    which is code in the ELF: that it implements `next` is a **proof
-   obligation**, not trust. The same traces show it does not yet (it
-   treats unknown descriptors as the console, has no directories, and
-   reports a link count of 1 after `unlink`; `validation/RESULTS.md`
-   §In-image), so that obligation needs those fixes first, or a restriction
-   of the bare-metal instance to root-level files. The frozen bare-metal
+   obligation**, not trust (`OCaml.Os.HtifFsImplements`). The same traces
+   are its empirical side: it is accepted on all 6,490 scripts
+   (`validation/RESULTS.md`, the `f5-htif` section; the first version's
+   seven deviations are fixed). The frozen bare-metal
    clock does meet the spec (`TCB.Os.Clock.frozen_ok`).
 
 Scope limits (outside every statement that uses the spec): symlinks, hard

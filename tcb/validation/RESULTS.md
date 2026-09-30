@@ -68,7 +68,9 @@ documented deviations in the Lean source (`DEVIATION n`):
 | `lseek` SEEK_END on a directory; `lseek` on fd 0 (`/dev/null`) succeeds | 3 (quick) | DEVIATION 5 and EXTENSION: unconstrained |
 | `O_TRUNC` on a directory stopped the check although `EISDIR` was allowed | 6 (quick) | checker: a `special` alternative only stops checking when no normal alternative matches |
 
-## In-image file system: 6,490 traces — 245 accepted, 1,781 rejected, 4,464 unsupported
+## In-image file system, first version: 6,490 traces — 245 accepted, 1,781 rejected, 4,464 unsupported
+
+(Superseded: the conforming version, now on `main`, is in the last section.)
 
 The in-image file system (`c/src/htif.c`) has no `mkdir`/`rmdir`, so the
 driver reports those calls as unsupported and the checker skips the rest
@@ -105,7 +107,7 @@ stay inside that restriction except for `Sys.readdir` on `/lib/ocaml`.
 clock always 0; both accepted (monotone), the second being
 `TCB.Os.Clock.frozen`.
 
-## Branch `f5-htif`: the conforming in-image file system
+## The conforming in-image file system (branch `f5-htif`, merged)
 
 `c/src/htif.c` replaced by ship-your-lua's conforming file system
 (its commit 0309425) plus the OCaml-only parts (marked `OCAML`: embedded

@@ -23,11 +23,8 @@ entry and return of those functions) is a parameter here; its instance is
 generated from the ELF like `OCaml/Vm/Layout.lean` (PHASES F5).
 
 The trace validation in `tcb/validation/` (RESULTS.md) is the empirical
-side: `htif.c` currently deviates from the spec (VALIDATION §6: seven deviations,
-including unknown fds behaving as the console instead of `EBADF`, no
-`mkdir`/`rmdir`, and `close` not closing), so this obligation needs those
-fixes first — or an instance of the spec restricted to what the file system
-supports.
+side: `htif.c` (the file system shared with ship-your-lua, plus embedded
+files and directory streams) is accepted on all 6,490 validation scripts.
 -/
 
 namespace OCaml.Os

@@ -74,8 +74,20 @@ def words(elf, start, size):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true")
+    ap.add_argument("--reset", action="store_true",
+                    help="first restore the files a previous run rewrote (listed in the "
+                         "report) from ship-your-interpreter's originals, so the tool can "
+                         "be re-run after the ELF changes")
     ap.add_argument("--report", default=str(ROOT / "results/retarget.json"))
     a = ap.parse_args()
+
+    if a.reset:
+        prev = json.loads(Path(a.report).read_text())
+        syi = Path(OLD_ELF).parent.parent
+        paths = set(prev["rewritten"]) | set(prev.get("mailbox_files", []))
+        for rel in sorted(paths):
+            Path(ROOT / rel).write_text((syi / rel).read_text())
+        print(f"reset {len(paths)} files from {syi}")
 
     old, new = funcs(OLD_ELF), funcs(NEW_ELF)
     ported, differs = {}, {}

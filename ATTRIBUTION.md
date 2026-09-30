@@ -38,11 +38,11 @@ restates the refinement pattern of `Vsa/Refinement.lean` for `BcSem`.
 
 **Retargeting.** The copied proofs of library code were stated at the
 WHILE ELF's addresses. `scripts/retarget_syi.py` rewrites, in 30 files,
-every address inside the 67 functions that are byte-identical in the two
+every address inside the 66 functions that are byte-identical in the two
 ELFs (`memcpy`, `memset`, `memmove`, `strlen`, `strcpy`, `__muldi3`, the
 64-bit division routines, `setjmp`/`longjmp`, …) to the same offset in this
 ELF, maps function starts and data symbols by name, and moves the HTIF
-mailbox constant `Vsa.Sim.tohostAddr` (`0x8001ad00` → `0x800668c0`). No
+mailbox constant `Vsa.Sim.tohostAddr` (`0x8001ad00` → `0x80067600`). No
 proof text changed otherwise; the layer rebuilds, and
 `scripts/check_code_pins.py` checks all 2,560 bytes the ported code
 predicates pin against the ELF. The WHILE interpreter's own `value_*`

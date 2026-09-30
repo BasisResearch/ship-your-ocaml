@@ -34,10 +34,13 @@ The emulator runs at about 49,000 steps/s.
   which `interp.c` references even when `debugger.c` compiles to nothing
   without sockets) plus empty `sys/ioctl.h` and a `sys/dir.h`.
 * **OS layer** (`c/src/htif.c`): HTIF console and exit as in
-  ship-your-interpreter, plus an in-memory file system: files linked into
-  the image by `c/src/gen_embed.sh` (read-only, copy-on-write), files the
-  program creates (heap-backed), directories as path prefixes (needed:
-  4.14's `Load_path` indexes include directories with `Sys.readdir`).
+  ship-your-interpreter, plus an in-memory POSIX file system that meets the
+  trusted OS spec on every validation script (§6): real directories and
+  path resolution, one descriptor table with the console on fds 0-2, files
+  linked into the image by `c/src/gen_embed.sh` as read-only nodes copied
+  on first write, and directory streams (4.14's `Load_path` indexes include
+  directories with `Sys.readdir`). It is shared with ship-your-lua
+  function for function; the OCaml-only parts are marked `OCAML`.
   `caml_main` then opens the embedded executable `/prog` through its
   ordinary `ocamlrun prog args` path; the runtime is not patched.
   `c/src/main.c` bakes in `argv = { "ocamlrun", "/prog", ARGS… }` and
@@ -48,8 +51,8 @@ The emulator runs at about 49,000 steps/s.
   timers); a first Sail compile run was stuck there (at about step 75M)
   when it was stopped after 3.5 hours, while the host mirror (§8, which uses the host's clock) finished. The image now
   contains no `ecall` (`scripts/check_all.sh` stage a6 checks this).
-* **The proof ELF**: `c/ocamlrun-riscv-htif.elf` (522,912 bytes, sha256
-  `1558494b30565bc722b9aaccfac73cd713d1522326456ce767a9ccb38c424630`,
+* **The proof ELF**: `c/ocamlrun-riscv-htif.elf` (526,360 bytes, sha256
+  `cecc68322fa55ccd75327a535915782e082c4e2d356077afdea0110a6c22fe31`,
   `c/ELF.sha256`) with `c/tests/while.ml` embedded: `c/while.byte`, the
   21,993-byte bytecode executable from the host `ocamlc` (sha256 in
   `c/ELF.sha256`).
@@ -196,9 +199,9 @@ length, not proof (PLAN.md §7).
 
 | | functions | instructions |
 |---|---|---|
-| image | 1,321 | 84,179 |
-| reachable from `_start` (direct edges ∪ address-taken) | 1,123 | 77,530 |
-| reachable from `caml_interprete` + the 403 C primitives | 1,004 | 69,172 |
+| image | 1,325 | 85,031 |
+| reachable from `_start` (direct edges ∪ address-taken) | 1,129 | 78,529 |
+| reachable from `caml_interprete` + the 403 C primitives | 1,010 | 70,171 |
 
 * 484 address-taken functions (the primitive table, custom-operation
   tables, hooks); 234 indirect jump sites.
@@ -212,10 +215,10 @@ length, not proof (PLAN.md §7).
   raise, signal and callback paths). Loop-head registers: pc `s0`, sp
   `s1`, accu `s5`, env `s9`, extra_args `s2`.
 * **Site classes** (ship-your-interpreter's `disasm_to_sites.py`
-  classifier): 64,452 of 77,530 reachable instructions (83.1%) fall in a
-  class its generators handle. The rest by mnemonic: `auipc` 3,333,
-  `slli` 2,247, `andi` 1,056, `srli` 1,010, `addw` 846, `lui` 663, `slliw`
-  635, `or` 582, `srai` 473, `and` 359 — the tagged-integer idiom
+  classifier): 65,315 of 78,529 reachable instructions (83.2%) fall in a
+  class its generators handle. The rest by mnemonic: `auipc` 3,367,
+  `slli` 2,306, `andi` 1,063, `srli` 1,011, `addw` 846, `lui` 669, `slliw`
+  635, `or` 589, `srai` 473, `and` 372 — the tagged-integer idiom
   (`slli`/`srai`/`ori 1`) is the main new family.
 * **New C constructs** beyond the WHILE interpreter: the switch jump table;
   calls through the primitive table (`jalr`); `setjmp`/`longjmp` for
@@ -225,8 +228,8 @@ length, not proof (PLAN.md §7).
   13,398 instructions: `caml_empty_minor_heap` 205, `caml_oldify_one` 145,
   `caml_oldify_mopup` 149, `caml_major_collection_slice` 509, best-fit
   allocator); `intern_rec` (730) before the cut.
-* **Shared with the WHILE proof ELF**: 131 of the 213 same-named functions
-  (9,869 instructions; 99 reachable, 8,644 instructions) are identical up
+* **Shared with the WHILE proof ELF**: 130 of the 213 same-named functions
+  (9,867 instructions; 100 reachable, 8,789 instructions) are identical up
   to PC-relative immediates: `memcpy`, `memmove`, `memset`, `strlen`,
   `strcmp`, `strcpy`, `__muldi3`, `__divdi3`, `__moddi3`, `__umoddi3`,
   `__ssprint_r`, `__ssputs_r`, `_realloc_r`, `setjmp`, `longjmp`, 12
@@ -286,7 +289,7 @@ trace (`tcb/validation/RESULTS.md`, reproducible in ~3 s):
 | system | calls | accepted | rejected | unconstrained ("special") | not runnable |
 |---|---|---|---|---|---|
 | Linux 7.0 host (ext4) | 101,621 | 6,398 | 0 | 92 | 0 |
-| in-image file system (`htif.c`, natively) | 18,477 | 245 | 1,781 | 0 | 4,464 |
+| in-image file system (`htif.c`, natively) | 101,621 | 6,410 | 0 | 80 | 0 |
 
 * The first Linux run rejected 645 traces; each class was a difference
   between SibylFS (2015, Linux 3.x) and today's Linux, or a porting error,
@@ -295,29 +298,31 @@ trace (`tcb/validation/RESULTS.md`, reproducible in ~3 s):
   `EBUSY` (82), `mkdir "file/"` gives `EEXIST` (20), `opendir` consumes an
   fd, and others; one was a SibylFS bug (renaming a directory did not
   update its parent pointer).
-* The in-image file system is **not** POSIX yet: unknown fds behave as the
-  console instead of `EBADF`, it has no `mkdir`/`rmdir` (directories are
-  path prefixes), it answers `ENOENT` where POSIX says `ENOTDIR`, and it
-  reports a link count of 1 after `unlink`. ship-your-lua's run of the
-  same driver found three more, which apply here too: `fstat` on the
-  console fds gives `st_nlink = 0` (newlib calls it before the first
-  write), `close` of fd 0-2 or of an unknown fd succeeds without closing,
-  and `lseek` with an invalid `whence` acts as `SEEK_END` instead of
-  `EINVAL`. The seven are fixed together in F5 (one re-measurement of the
-  ELF). On bare metal the spec is a
-  proof obligation (`OCaml.Os.HtifFsImplements`), so these must be fixed,
-  or the spec instance restricted, before it can be discharged.
+* The in-image file system meets the spec on every script. It is
+  ship-your-lua's conforming file system (shared function for function)
+  plus the OCaml-only parts: the embedded files as read-only nodes with
+  their directories, copied on first write, and directory streams. The
+  first version failed 1,781 traces and could not run 4,464, through seven
+  deviations — unknown fds acting as the console instead of `EBADF`, no
+  `mkdir`/`rmdir`, `ENOENT` for `ENOTDIR`, link counts after `unlink`,
+  `fstat` of the console giving `st_nlink = 0`, `close` not closing, and
+  an invalid `whence` acting as `SEEK_END`; all are fixed. Its one
+  remaining rejection was a SibylFS bug (at the end of a directory stream
+  the updated handle was dropped, forcing a removed entry to be reported
+  on the next `readdir`), fixed as DEVIATION 10. On bare metal the spec is
+  still a proof obligation (`OCaml.Os.HtifFsImplements`); these results
+  are the empirical side of it.
 * The gate runs a 329-trace subset (`scripts/check_all.sh` stage t1).
 
 ## 7. The reused machine proofs
 
 `scripts/retarget_syi.py` retargets ship-your-interpreter's proofs of the
-67 library functions that are byte-identical in the two ELFs (30 files,
-5,084 addresses, plus the HTIF mailbox `0x8001ad00` → `0x800668c0`). The
+66 library functions that are byte-identical in the two ELFs (30 files,
+5,084 addresses, plus the HTIF mailbox `0x8001ad00` → `0x80067600`). The
 whole `Vsa`/`VsaIris` layer rebuilds; `scripts/check_code_pins.py` finds
 all 2,560 bytes pinned by the ported code predicates equal to the ELF's;
 `memcpy_bytepath_spec`, `muldi3_spec` and `udivdi3_spec` (now at this
-ELF's addresses, e.g. `memcpy`'s precondition PC `0x80041a00`) depend only
+ELF's addresses, e.g. `memcpy`'s precondition PC `0x800428d8`) depend only
 on the standard axioms. Not ported, and why:
 
 * `strcmp`, `__ssprint_r`, `__ssputs_r`: identical except for 8
