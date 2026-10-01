@@ -99,6 +99,8 @@ import OCaml.Vm.Sim.Atom
 import OCaml.Vm.Sim.Acc
 import OCaml.Vm.Sim.Pop
 import OCaml.Vm.Sim.Getvectitem
+import OCaml.Vm.Sim.Getbyteschar
+import OCaml.Vm.Sim.Getstringchar
 import OCaml.Vm.Sim.Envacc
 import OCaml.Vm.Sim.Getfield
 import OCaml.Vm.Sim.OffsetWidth

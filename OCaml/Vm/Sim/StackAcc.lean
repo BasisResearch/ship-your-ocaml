@@ -12,6 +12,14 @@ theorem stack_value_root {P : Prog} {s : St} {i : Nat} {v : Val}
   intro l hl
   exact Live.root (by simp [roots, List.mem_of_getElem? selected]) hl
 
+/-- The represented integer at the top of the VM stack. -/
+theorem stack_integer_word {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high : Nat} {n : BitVec 63} {rest : List Val}
+    (h : VmReprAt P s c pl cp sp high) (stack : s.stack = .int n :: rest) :
+    word c sp = tag64 n := by
+  have repr := h.stack.2 0 (.int n) (by simp [stack])
+  simpa only [Nat.mul_zero, Nat.add_zero] using (Option.some.inj repr).symm
+
 /-- Stack shape and the represented machine stack-high word exclude address
 wraparound for every selected slot. RAM/HTIF geometry is separate. -/
 theorem stack_slot_nat {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}

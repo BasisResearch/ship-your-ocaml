@@ -17,4 +17,25 @@ theorem value_index_word (n : BitVec 63) :
   simp only [BitVec.toNat_shiftLeft, Nat.shiftLeft_eq, BitVec.toNat_ofNat]
   omega
 
+/-- A RAM-sized byte index is in the nonnegative tagged-integer range. -/
+theorem value_byte_index (n : BitVec 63) (small : n.toNat < 2^62) :
+    shift_bits_right_arith (tag64 n) (Sail.BitVec.extractLsb (0x01#6) 5 0) =
+      BitVec.ofNat 64 n.toNat := by
+  change (tag64 n).sshiftRight 1 = _
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_sshiftRight]
+  simp only [BitVec.msb_eq_decide, tag_toNat, Nat.shiftRight_eq_div_pow, BitVec.toNat_ofNat, decide_eq_true_eq]
+  split <;> omega
+
+/-- Unsigned byte loads followed by the native tag operation represent the byte. -/
+theorem byte_tag (b : BitVec 8) :
+    Sail.shift_bits_left (LeanRV64DExecutable.zero_extend (m := 64) b) (Sail.BitVec.extractLsb (0x01#6) 5 0) + 1#64 =
+      tag64 (BitVec.ofNat 63 b.toNat) := by
+  change (b.setWidth 64 <<< (1 : Nat)) + 1#64 = _
+  apply BitVec.eq_of_toNat_eq
+  have bound := b.isLt
+  simp only [BitVec.toNat_add, BitVec.toNat_shiftLeft, Nat.shiftLeft_eq,
+    BitVec.toNat_setWidth, BitVec.toNat_ofNat, tag_toNat]
+  omega
+
 end OCaml.Vm.Sim

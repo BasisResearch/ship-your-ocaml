@@ -32,6 +32,8 @@ FAMILIES = {
     'DISPATCH': ('Dispatch', ['lw_tot', 'alu_addi', 'branch_taken', 'slli', 'alu_add', 'lw_tot', 'alu_add', 'jr']),
     'ENVACC': ('Envacc', ['lw_tot', 'alu_addi', 'slli', 'alu_add', 'ld_tot', 'j']),
     'GETFIELD': ('Getfield', ['lw_tot', 'alu_addi', 'slli', 'alu_add', 'ld_tot', 'j']),
+    'GETBYTESCHAR': ('Getbyteschar', ['ld_tot', 'alu_addi', 'alu_addi', 'srai', 'alu_add', 'lbu_tot', 'slli', 'alu_addi', 'j']),
+    'GETSTRINGCHAR': ('Getstringchar', ['ld_tot', 'alu_addi', 'alu_addi', 'srai', 'alu_add', 'lbu_tot', 'slli', 'alu_addi', 'j']),
     'GETVECTITEM': ('Getvectitem', ['ld_tot', 'alu_addi', 'alu_addi', 'srai', 'slli', 'alu_add', 'ld_tot', 'j']),
     'POP': ('Pop', ['lw_tot', 'alu_addi', 'slli', 'alu_add', 'j']),
     'ACC': ('Acc', ['lw_tot', 'alu_addi', 'slli', 'alu_add', 'ld_tot', 'j']),

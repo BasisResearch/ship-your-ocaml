@@ -24,9 +24,7 @@ theorem getvectitem_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
       {s with pc := s.pc + 1, accu := v, stack := rest} c' := by
   have value := FieldSelection.read h.toVmReprAt (by simp [roots]) selected
   have source := represented_register h.accu selected.sourceWord
-  have slot : word c sp = tag64 n := by
-    have repr := h.stack.2 0 (.int n) (by simp [stack])
-    simpa only [Nat.mul_zero, Nat.add_zero] using (Option.some.inj repr).symm
+  have slot := stack_integer_word h.toVmReprAt stack
   have bound : 1 ≤ s.stack.length := by simp [stack]
   have dropped : s.stack.drop 1 = rest := by simp [stack]
   rw [← dropped]

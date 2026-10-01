@@ -22,9 +22,7 @@ theorem xorint_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
       Running L P {s with pc := s.pc + 1, accu := .int (untag ((tag64 m ^^^ tag64 n) ||| 1#64)), stack := rest} c' := by
   have selected : s.stack[0]? = some (.int n) := by simp only [stack, List.getElem?_cons_zero]
   have source := represented_register h.accu (by rw [accu]; rfl : valWord pl s.accu = some (tag64 m))
-  have slot : word c sp = tag64 n := by
-    have value := h.stack.2 0 (.int n) selected
-    simpa only [Nat.mul_zero, Nat.add_zero] using (Option.some.inj value).symm
+  have slot := stack_integer_word h.toVmReprAt stack
   have natAddress : (BitVec.ofNat 64 sp).toNat = sp := by
     simpa only [Nat.mul_zero, Nat.add_zero] using stack_slot_nat h.toVmReprAt selected
   have bound : 1 ≤ s.stack.length := by simp only [stack, List.length_cons]; omega

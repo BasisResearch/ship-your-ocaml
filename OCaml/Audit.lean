@@ -684,6 +684,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.stack_drop
 #print axioms OCaml.Vm.Sim.live_stack_drop
 #print axioms OCaml.Vm.Sim.payload_stack_drop
+#print axioms OCaml.Vm.Sim.stack_integer_word
+#print axioms OCaml.Vm.Sim.value_byte_index
+#print axioms OCaml.Vm.Sim.byte_tag
+#print axioms OCaml.Vm.Sim.ByteSelection.sourceWord
+#print axioms OCaml.Vm.Sim.ByteSelection.read
+#print axioms OCaml.Vm.Sim.getbyteschar_loaded
+#print axioms OCaml.Vm.Sim.getstringchar_loaded
+#print axioms Vsa.Sim.tr_getbyteschar
+#print axioms Vsa.Sim.tr_getstringchar
+#print axioms OCaml.Vm.Sim.getbyteschar_arm
+#print axioms OCaml.Vm.Sim.getstringchar_arm
 #print axioms OCaml.Vm.Sim.value_index_word
 #print axioms OCaml.Vm.Sim.getvectitem_loaded
 #print axioms Vsa.Sim.tr_getvectitem

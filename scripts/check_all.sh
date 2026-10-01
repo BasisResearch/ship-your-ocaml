@@ -107,6 +107,7 @@ python3 scripts/gen_field_arms.py --check || fail "stage a5: field arm bridge dr
 python3 scripts/gen_conditional_arms.py --check || fail "stage a5: conditional arm bridge drift"
 python3 scripts/gen_compare_branch_arms.py --check || fail "stage a5: comparison branch bridge drift"
 python3 scripts/gen_binary_arms.py --check || fail "stage a5: binary arm bridge drift"
+python3 scripts/gen_byte_arms.py --check || fail "stage a5: byte arm bridge drift"
 python3 scripts/gen_indexed_arms.py --check || fail "stage a5: indexed arm bridge drift"
 python3 scripts/gen_atom_arms.py --check || fail "stage a5: atom arm bridge drift"
 python3 scripts/gen_acc_arms.py --check || fail "stage a5: stack arm bridge drift"
