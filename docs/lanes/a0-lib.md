@@ -63,20 +63,29 @@
   into AUIPC/load/store sequences; svfprintf expands `__global_locale`.
 - Upstream generators are recoverable read-only from syi commit
   `0c4ebe85b4b99e22d30fb9920efb806578aad899`. Neither upstream repo was edited.
-- The mandatory allocator `VsaIris.Vsa.SymRun` route originally had an
-  89-module missing closure with WHILE dependencies. A smaller generic
-  import cut is staged in `/tmp/a0-core`, not installed or compiled yet.
-  It includes generic memory helpers, ELF-derived entry/GP constants,
-  and run conversions through the existing OCaml run-kernel presentations.
-- The staged allocator generator reads this ELF and emits 1,461 sites in
-  46 chunks of 32 instructions. Existing unsupported cases remain explicit:
-  `sltu` at `0x80037f0c`, `sltiu` at `0x80042858`. Normalizing global-access
-  sequences aligns all 557 malloc and 190 free instruction groups, including
-  their 9 and 2 expansions. This is preparation, not a function-spec claim.
+- The mandatory allocator symbolic-run route now builds with a generic
+  import cut. `Vsa.Sim.segEval_sound` (`Vsa/Sim/SegEvalSound.lean:8`),
+  `VsaIris.Inst.seg_runFact` (`VsaIris/Vsa/Instance.lean:302`), and
+  `VsaIris.Sym.swp_step` / `swp_jal` (`SymRun.lean:403` / `:368`) have
+  passed the standard-axiom audit. Run conversions use OCaml's existing
+  kernel presentations; `iter_counter` is a generic kernel corollary.
+- `scripts/syi/gen_alloc_steps.py` has regenerated 1,459 instruction-step
+  lemmas across 46 modules, from 1,461 instructions in 16 allocator/helper
+  functions. Every chunk built (typically 2–3 seconds), in batches of four
+  within a 24 GB cap. All `_malloc_r` and `_free_r` words have step lemmas.
+  The two explicitly unsupported words are in other functions: `_realloc_r`
+  (`sltu`, `0x80037f0c`) and `memcpy` (`sltiu`, `0x80042858`).
+- `AllocCode` pins 5,852 code/global bytes with balanced 16-byte chunks.
+  The generator derives GP and `_impure_ptr` from this ELF, uses its decode
+  table, and is drift-checked by a5. `gen_library_layout.py` also drift-checks
+  the entry/GP constants. Representative malloc/free entry steps are audited.
+- The next work is function-level composition over SWP. Normalizing global
+  accesses aligns all 557 malloc and 190 free instruction groups, including
+  their 9 and 2 expansions. That mapping is preparation, not a function spec.
 
 ## Exit
 
 Decode coverage and strcmp landed (`7e0668e`, `38d36d5`). The two stdio
-contracts and memmove dependency have built and passed the axiom audit;
-this commit is ready for the full integration gate. The three changed-layout
+contracts and memmove dependency landed as `2d4953b`; the full integration
+gate passed, including 285 axiom audits. The three changed-layout
 function specs remain outstanding, so the lane exit criterion is not met.

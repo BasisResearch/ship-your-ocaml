@@ -1,3 +1,4 @@
+import VsaIris.Vsa.AllocSteps
 import VsaIris.Adequacy
 import VsaIris.Call
 import VsaIris.CallAbort

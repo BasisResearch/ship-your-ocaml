@@ -142,3 +142,34 @@ or interpreter code are imported by these helpers.
 `SsprintCodeFrame.lean` retains the four code-preservation helpers from
 `SnprintfSpec9` at `46b1eb8e`; the preserved excerpt is retargeted by the
 same generator.
+
+## A0 generic symbolic-run import cut
+
+The generic block evaluator/soundness, frame/write-log helpers, derivation
+and fact tactics, and `VsaIris/Vsa/{Instance,Tools,RunBase,SymRun}` are copied
+from syi-exp `69939cfcad4e6261c546419f4f71808fcc5bb70e`. Imports of WHILE
+representation and function-specific examples are replaced by the existing
+machine helpers. `LibraryMemory` extracts the two-byte disjoint-store and
+read64-write lemmas from `ValueSpec`, and `AgreeP` with its read lemmas from
+`ReprSurvival`, at that commit. `Vsa/Alloc` retains only the generic ABI,
+stack and disjointness definitions. Entry and GP constants are generated
+from this ELF by `scripts/gen_library_layout.py`.
+
+`StepCount` retains the upstream one-step counter fact, but derives run
+counts through `OCaml.Run.iter`; `Instance`'s run conversions use the
+existing `Graph`, `ConsPres`, and `ClosPres` presentations rather than
+repeating inductions over machine run relations.
+
+`LibrarySiteGood` and `GprCases` extract the newer generic APIs from
+upstream `ValueSites` and `RegAccess`. `LibraryLoadValue` extracts the
+address-independent read64/byte-value bridges from `ValueTruthySpec`,
+`EnvGetSpec3`, `ExecRetEpilogue`, and `MallocFastSegs`, replacing equivalent
+helper references with the copies already present here.
+
+`scripts/syi/{gen_alloc_steps,rv_steps}.py` are ported from syi commit
+`0c4ebe85b4b99e22d30fb9920efb806578aad899`. The generator now reads this ELF
+with the existing census reader, derives `_impure_ptr` bytes and GP from
+the symbol/data sections, imports the generated full-ELF decode chunks,
+and supports drift checking. It emits 32 instruction sites per module.
+The `AllocRun` definition is copied from syi-exp `69939cfc`; `AllocCode`
+and `AllocSteps` are generated anew, never hand-retargeted.

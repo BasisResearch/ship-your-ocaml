@@ -1,3 +1,4 @@
+import VsaIris.Vsa.AllocSteps
 import Vsa.Sim.SnprintfSpec20
 import Vsa.Sim.StrcmpSpecCond
 import Vsa.Sim.StrcmpSites
@@ -330,3 +331,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.memmove_fwd_spec
 #print axioms Vsa.Sim.ssputs_fast_spec
 #print axioms Vsa.Sim.ssprint_iov2_spec
+
+-- Generic symbolic-run soundness and regenerated allocator instruction examples.
+#print axioms OCaml.Run.iter_counter
+#print axioms Vsa.Machine.Steps.toN_of_stepsField
+#print axioms Vsa.Sim.segEval_sound
+#print axioms VsaIris.Inst.seg_runFact
+#print axioms VsaIris.Sym.swp_step
+#print axioms VsaIris.Sym.swp_jal
+#print axioms VsaIris.Sym.st_800375b8
+#print axioms VsaIris.Sym.st_80044868
