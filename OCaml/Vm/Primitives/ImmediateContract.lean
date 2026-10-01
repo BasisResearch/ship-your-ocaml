@@ -25,21 +25,49 @@ structure ImmediateInput (runtimeOk : Config → Prop) (P : Prog) (s : St)
   loop : LoopRegisters c
   arguments : ArgumentsRepr pl args c
 
-structure ImmediatePost (runtimeOk : Config → Prop) (P : Prog) (s : St)
+structure ReadOnlyPost (runtimeOk : Config → Prop) (P : Prog) (s : St)
     (pl : Place) (cp : ChanPlace) (sp high : Nat) (name : String) (args : List Val)
-    (n : BitVec 63) (writes : List Nat) (before : Config) (ra : BitVec 64)
+    (v : Val) (w : BitVec 64) (writes : List Nat) (before : Config) (ra : BitVec 64)
     (after : Config) : Prop where
-  call : RegisterPost writes before ra (tag64 n) after
-  data : VmPayload P {s with accu := .int n} after pl cp sp high
+  call : RegisterPost writes before ra w after
+  data : VmPayload P {s with accu := v} after pl cp sp high
   platform : PlatformOk runtimeOk after
   loop : LoopRegisters after
-  resultRepr : valWord pl (.int n) = some (tag64 n)
-  semantics : primF1Impl name args s.heap s.world = .ok (.int n) s.heap s.world
+  resultRepr : valWord pl (v) = some w
+  semantics : primF1Impl name args s.heap s.world = .ok (v) s.heap s.world
+
+/-- The immediate-result specialization preserves the original primitive API. -/
+abbrev ImmediatePost (runtimeOk : Config → Prop) (P : Prog) (s : St)
+    (pl : Place) (cp : ChanPlace) (sp high : Nat) (name : String) (args : List Val)
+    (n : BitVec 63) (writes : List Nat) (before : Config) (ra : BitVec 64) :=
+  ReadOnlyPost runtimeOk P s pl cp sp high name args (.int n) (tag64 n) writes before ra
 
 /-- A finite write-set check protects the interpreter's dedicated registers. -/
 def PreservesLoopRegisters (writes : List Nat) : Prop :=
   ∀ r ∈ [Layout.reg_dispatchTable, Layout.reg_opcodeBound, Layout.reg_pending, Layout.reg_domain],
     ∀ n ∈ writes, gprReg n ≠ gprReg r
+
+theorem readOnly_contract {runtimeOk : Config → Prop} (stable : MemoryStable runtimeOk)
+    {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high : Nat} {ra entry : BitVec 64}
+    {c : Config} {name : String} {args : List Val} {v : Val} {w : BitVec 64} {writes : List Nat}
+    (h : ImmediateInput runtimeOk P s pl cp sp high ra args c)
+    (S : FnSummary entry (fun x => x = c) (RegisterPost writes c ra w))
+    (frame : PreservesLoopRegisters writes)
+    (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
+    (repr : valWord pl v = some w)
+    (model : primF1Impl name args s.heap s.world = .ok (v) s.heap s.world) :
+    FnSummary entry (fun x => x = c)
+      (ReadOnlyPost runtimeOk P s pl cp sp high name args v w writes c ra) := by
+  apply S.weaken (fun _ h => h)
+  intro after post
+  refine ⟨post, (h.data.accu_of_root v root).frame post.memory post.output,
+    ⟨post.good, post.image, stable _ _ post.memory h.runtime⟩, ?_, repr, model⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · exact (post.frame (gprReg Layout.reg_dispatchTable) (frame Layout.reg_dispatchTable (by simp)) (by decide)).trans h.loop.dispatchTable
+  · exact (post.frame (gprReg Layout.reg_opcodeBound) (frame Layout.reg_opcodeBound (by simp)) (by decide)).trans h.loop.opcodeBound
+  · exact (post.frame (gprReg Layout.reg_pending) (frame Layout.reg_pending (by simp)) (by decide)).trans h.loop.pending
+  · exact (post.frame (gprReg Layout.reg_domain) (frame Layout.reg_domain (by simp)) (by decide)).trans h.loop.domain
+
 
 theorem immediate_contract {runtimeOk : Config → Prop} (stable : MemoryStable runtimeOk)
     {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high : Nat} {ra entry : BitVec 64}
@@ -50,14 +78,6 @@ theorem immediate_contract {runtimeOk : Config → Prop} (stable : MemoryStable 
     (model : primF1Impl name args s.heap s.world = .ok (.int n) s.heap s.world) :
     FnSummary entry (fun x => x = c)
       (ImmediatePost runtimeOk P s pl cp sp high name args n writes c ra) := by
-  apply S.weaken (fun _ h => h)
-  intro after post
-  refine ⟨post, (h.data.accu_int n).frame post.memory post.output,
-    ⟨post.good, post.image, stable _ _ post.memory h.runtime⟩, ?_, rfl, model⟩
-  refine ⟨?_, ?_, ?_, ?_⟩
-  · exact (post.frame (gprReg Layout.reg_dispatchTable) (frame Layout.reg_dispatchTable (by simp)) (by decide)).trans h.loop.dispatchTable
-  · exact (post.frame (gprReg Layout.reg_opcodeBound) (frame Layout.reg_opcodeBound (by simp)) (by decide)).trans h.loop.opcodeBound
-  · exact (post.frame (gprReg Layout.reg_pending) (frame Layout.reg_pending (by simp)) (by decide)).trans h.loop.pending
-  · exact (post.frame (gprReg Layout.reg_domain) (frame Layout.reg_domain (by simp)) (by decide)).trans h.loop.domain
+  exact readOnly_contract stable h S frame (fun _ hl => by cases hl) rfl model
 
 end OCaml.Vm.Primitives

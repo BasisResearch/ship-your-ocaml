@@ -47,26 +47,48 @@ theorem live_of_roots {heap : Heap} {rs rs' : List Val} {l : Nat}
   | root hv hl => exact roots _ _ hv hl
   | field h hg hv hl ih => exact Live.field ih hg hv hl
 
-theorem live_accu_int {P : Prog} {s : St} {n : BitVec 63} {l : Nat}
-    (h : Live s.heap (roots P {s with accu := .int n}) l) : Live s.heap (roots P s) l := by
+/-- Replacing the accumulator by an existing root cannot create new live objects. -/
+theorem live_accu_of_root {P : Prog} {s : St} {v : Val} {l : Nat}
+    (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
+    (h : Live s.heap (roots P {s with accu := v}) l) : Live s.heap (roots P s) l := by
   apply live_of_roots h
-  intro v loc hv hl
-  change v ∈ (.int n :: _) at hv
+  intro v' loc hv hl
+  change v' ∈ (v :: _) at hv
   rcases List.mem_cons.mp hv with rfl | hv
-  · cases hl
+  · exact root loc hl
   · exact Live.root (List.mem_cons_of_mem _ hv) hl
 
-/-- Returning an immediate preserves the old heap representation, restricted
-only by the new state's reachable roots. -/
-theorem VmPayload.accu_int {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high : Nat} (h : VmPayload P s c pl cp sp high) (n : BitVec 63) :
-    VmPayload P {s with accu := .int n} c pl cp sp high := by
+theorem live_accu_int {P : Prog} {s : St} {n : BitVec 63} {l : Nat}
+    (h : Live s.heap (roots P {s with accu := .int n}) l) : Live s.heap (roots P s) l :=
+  live_accu_of_root (fun _ hl => by cases hl) h
+
+/-- A read-only return may select an existing root and retain its representation. -/
+theorem VmPayload.accu_of_root {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high : Nat} (h : VmPayload P s c pl cp sp high) (v : Val)
+    (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l) :
+    VmPayload P {s with accu := v} c pl cp sp high := by
   refine { h with heap := ?_ }
   constructor
   · intro l hl
-    exact h.heap.1 l (live_accu_int hl)
+    exact h.heap.1 l (live_accu_of_root root hl)
   · intro l l' a a' o o' hl hl' hn hp hp' hg hg'
-    exact h.heap.2 l l' a a' o o' (live_accu_int hl) (live_accu_int hl') hn hp hp' hg hg'
+    exact h.heap.2 l l' a a' o o' (live_accu_of_root root hl) (live_accu_of_root root hl') hn hp hp' hg hg'
+
+/-- Returning an immediate discards roots without inventing a live object. -/
+theorem VmPayload.accu_int {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high : Nat} (h : VmPayload P s c pl cp sp high) (n : BitVec 63) :
+    VmPayload P {s with accu := .int n} c pl cp sp high :=
+  h.accu_of_root (.int n) (fun _ hl => by cases hl)
+
+/-- Resolve the unique placement and object of a live abstract location. -/
+theorem VmPayload.object_at {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high l a : Nat} {o : Obj} (h : VmPayload P s c pl cp sp high)
+    (live : Live s.heap (roots P s) l) (placed : pl.φ l = some a)
+    (object : s.heap.get? l = some o) : ObjAt c pl cp a o := by
+  obtain ⟨a', o', ha, ho, layout⟩ := h.heap.1 l live
+  have hea : a' = a := Option.some.inj (ha.symm.trans placed)
+  have heo : o' = o := Option.some.inj (ho.symm.trans object)
+  simpa only [hea, heo] using layout
 
 /-- Runtime predicates defined only by memory (such as collector bounds and
 memory-based free-list invariants) satisfy this frame rule. It must be supplied

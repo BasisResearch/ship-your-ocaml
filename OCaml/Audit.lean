@@ -560,3 +560,26 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinEntry.loaded
 #print axioms OCaml.Vm.Boot.WhileMinEntry.EntryControl.fillZero
 #print axioms OCaml.Vm.Boot.WhileMinEntry.loaded_fillZero
+-- Read-only roots, total scalar observations and string-length contracts.
+#print axioms OCaml.Vm.Primitives.VmPayload.accu_of_root
+#print axioms OCaml.Vm.Primitives.VmPayload.object_at
+#print axioms OCaml.Vm.Primitives.readOnly_contract
+#print axioms OCaml.Vm.Primitives.read8_pins
+#print axioms OCaml.Vm.Primitives.read8_value
+#print axioms OCaml.Vm.Primitives.byte_total
+#print axioms OCaml.Vm.Primitives.stringLengthWord_tag
+#print axioms OCaml.Vm.Primitives.StringInput.shape
+#print axioms OCaml.Vm.Primitives.string_length_contract
+#print axioms OCaml.Vm.Primitives.caml_sys_argv_primitive
+#print axioms OCaml.Vm.Primitives.caml_ml_string_length_primitive
+#print axioms OCaml.Vm.Primitives.caml_ml_bytes_length_primitive
+
+#print axioms OCaml.Vm.Primitives.singleton_chain_facts
+#print axioms OCaml.Vm.Primitives.return_facts
+#print axioms OCaml.Vm.Primitives.readonly_wlog
+#print axioms OCaml.Vm.Primitives.readonly_log
+#print axioms OCaml.Vm.Primitives.readonly_facts_append
+#print axioms OCaml.Vm.Primitives.memory_free_facts
+#print axioms OCaml.Vm.Primitives.access_then_free_facts
+#print axioms OCaml.Vm.Primitives.ReadWindow.ld
+#print axioms OCaml.Vm.Primitives.ReadWindow.lbu

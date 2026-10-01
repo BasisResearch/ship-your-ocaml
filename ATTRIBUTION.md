@@ -256,3 +256,11 @@ interfaces are new composition/frame adapters; they add no machine run law.
 `Register` and `ImmediateContract` generalize these adapters to ABI scratch
 registers and represented argument lists. `TagArithmetic` relates tagged
 63-bit signed values to the generated integer comparison.
+
+`Read`, `StringArithmetic`, `StringRead`, and `StringContract` connect the
+existing total-read segment API to `ObjAt`'s OCaml string representation.
+`Control` supplies operand-independent return and no-store certificates;
+its list induction is over instruction syntax, not a machine execution.
+The argv and string/bytes length instances are generated from the same
+pinned-ELF backend and preserve the represented VM payload through the
+shared read-only contract.

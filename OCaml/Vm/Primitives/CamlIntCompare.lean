@@ -156,7 +156,7 @@ theorem caml_int_compare_regs (ra x y : BitVec 64) :
 
 theorem caml_int_compare_summary (c : Config) (ra x y : BitVec 64) (h : LeafInput ra c)
     (hx : gprGet c.σ 10 = some x) (hy : gprGet c.σ 11 = some y) :
-    FnSummary (BitVec.ofNat 64 Layout.sym_caml_int_compare) (fun z => z = c)
+    FnSummary (BitVec.ofNat 64 Layout.sym_caml_int_compare) (fun x => x = c)
       (RegisterPost [10, 15] c ra (compareWord x y)) := by
   apply register_of_blocks h.image (caml_int_compare_blocks_summary c ra x y h.good h.image h.minstret h.raReg h.tick h.aligned hx hy)
   · rfl

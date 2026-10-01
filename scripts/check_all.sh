@@ -78,6 +78,8 @@ python3 scripts/gen_opcodes.py | cmp -s - OCaml/Bytecode/Opcode.lean || fail "st
 python3 scripts/gen_primitive_census.py --check || fail "stage a5: F1 primitive census drift"
 python3 scripts/syi/gen_fn.py --ocaml-constants --check || fail "stage a5: F1 constant summary drift"
 python3 scripts/syi/gen_fn.py --ocaml-compare --check || fail "stage a5: F1 comparison summary drift"
+python3 scripts/syi/gen_fn.py --ocaml-argv --check || fail "stage a5: F1 argv summary drift"
+python3 scripts/syi/gen_fn.py --ocaml-lengths --check || fail "stage a5: F1 string-length summary drift"
 python3 scripts/gen_layout.py | cmp -s - OCaml/Vm/Layout.lean || fail "stage a5: Layout.lean differs from gen_layout.py"
 python3 scripts/gen_boot_observation.py results/boot/while_min-cut.json | cmp -s - OCaml/Vm/Boot/WhileMinObservation.lean || fail "stage a5: boot observation differs from generator"
 python3 scripts/gen_boot_log.py --check || fail "stage a5: boot log certificate drift"
