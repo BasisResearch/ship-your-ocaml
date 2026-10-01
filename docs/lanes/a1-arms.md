@@ -27,14 +27,20 @@ the semantics; primitive summaries continue to come from a1-prims.
 Re-read the brief's “After F1” section at that transition, including F3
 method caches, F4 callback simulation, and F5 OS interfaces.
 
-## Pending ELF migration
+## ELF migration
 
-A0-boot is moving the embedded program to a fixed-address `.embed` section.
-Function addresses stay fixed; data symbols and gp/auipc immediates change.
-After that landing, rebase and regenerate `gen_ocaml_image.py`,
-`gen_arm_pilot.py`, `gen_alu_pilot.py`, and `gen_dispatch_table.py` against the pinned ELF, then run
-integration. Use `Layout` for data symbols; the RAM bounds in generated
-load contracts are architectural limits, not data-symbol addresses.
+Rebased onto A0-boot’s `272e436` / `7fa1750` fixed-`.embed` migration.
+Pinned ELF SHA-256: `b055163e2280efbec1d16c255afccf31e23315f9f37a7ffcba5bbed0850b1c99`.
+Regenerated `gen_ocaml_image.py`, `gen_arm_pilot.py`, `gen_alu_pilot.py`,
+and `gen_dispatch_table.py` after the rebase; all outputs agree with the
+migrated artifacts. Function addresses remain fixed. Data references use
+`Layout`; load-contract RAM bounds remain architectural limits.
+The old integration attempt was stopped after its automatic migration rebase
+so regeneration preceded further validation. Post-migration checks precede landing the current NEGINT bridge.
+All six generated families rebuild successfully at default limits. CONST0’s
+full dependency rebuild took 88.61s, peak process RSS 2.52 GiB; NEGINT,
+ISINT, ACC0, and ACC then took 2.38–3.48s each, below 2.07 GiB.
+The dispatch segment and named boundary each rebuilt in about one second.
 
 ## Current contract
 
