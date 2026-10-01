@@ -125,6 +125,7 @@ Step dict (site step):
     "key": "vsp.toNat - 24", "key_rw": "hkey40",    # EA.toNat normalization
     "src_val": "v9",                                # stored value expression
     "data_rw": "stData_zext",                       # optional (sb)
+    "mem_alias": "m1", "mem_alias_eq": "hm1",       # optional ghost m1 = write result
     "loaded_via": "ssputs_writeMap8_ss _ _ _ (by omega) $prev" }
 
 Placeholders ($-sigil; `@` collides with Lean explicit-application):
@@ -457,10 +458,14 @@ class SegmentEmitter:
                 rws.append(self.subst(st["key_rw"], k))
             if st.get("data_rw"):
                 rws.append(self.subst(st["data_rw"], k))
+            alias = self.subst(st['mem_alias'], k) if st.get('mem_alias') else None
+            alias_eq = self.subst(st['mem_alias_eq'], k) if alias else None
+            if alias:
+                rws.append(f'← {alias_eq}')
             self.lines.append(
-                f"  have hmemE{k} : σ{k}.mem = {new_mem} := by\n"
+                f"  have hmemE{k} : σ{k}.mem = {alias or new_mem} := by\n"
                 f"    rw [{', '.join(rws)}]")
-            self.mem_expr = new_mem
+            self.mem_expr = alias or new_mem
             lv = st.get("loaded_via")
             if lv is None:
                 raise SpecError(f"store step {k}: 'loaded_via' required")
@@ -471,7 +476,7 @@ class SegmentEmitter:
             lv = self.subst(lv, k).replace("$prev", prev_at_expr)
             self.lines.append(
                 f"  have hload{k} : {pred} σ{k}.mem := by\n"
-                f"    rw [hmemE{k}]\n    exact {lv}")
+                f"    rw [hmemE{k}" + (f", {alias_eq}" if alias else '') + f"]\n    exact {lv}")
         else:
             prev = self.mem_expr if self.mem_expr is not None else \
                 self.spec["pre_bind"]["mem0"]

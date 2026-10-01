@@ -684,6 +684,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.stack_drop
 #print axioms OCaml.Vm.Sim.live_stack_drop
 #print axioms OCaml.Vm.Sim.payload_stack_drop
+-- Exact memory effects for generated stack-write bodies.
+#print axioms Vsa.Sim.push_code_store
+#print axioms Vsa.Sim.tr_push
+#print axioms OCaml.Vm.Sim.push_loaded
+#print axioms Vsa.Sim.pushacc0_code_store
+#print axioms Vsa.Sim.tr_pushacc0
+#print axioms OCaml.Vm.Sim.pushacc0_loaded
+#print axioms Vsa.Sim.pushacc1_code_store
+#print axioms Vsa.Sim.tr_pushacc1
+#print axioms OCaml.Vm.Sim.pushacc1_loaded
+
 -- Closure offsets preserve allocation identity, including signed displacements.
 #print axioms OCaml.Vm.Sim.pointer_offset_word
 #print axioms OCaml.Vm.Sim.signed_index_word

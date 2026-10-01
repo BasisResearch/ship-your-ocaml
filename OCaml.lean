@@ -98,6 +98,12 @@ import OCaml.Vm.Sim.Atom0
 import OCaml.Vm.Sim.Atom
 import OCaml.Vm.Sim.Acc
 import OCaml.Vm.Sim.Pop
+import OCaml.Vm.Sim.PushSegment
+import OCaml.Vm.Sim.PushPins
+import OCaml.Vm.Sim.Pushacc0Segment
+import OCaml.Vm.Sim.Pushacc0Pins
+import OCaml.Vm.Sim.Pushacc1Segment
+import OCaml.Vm.Sim.Pushacc1Pins
 import OCaml.Vm.Sim.Getvectitem
 import OCaml.Vm.Sim.Getbyteschar
 import OCaml.Vm.Sim.Getstringchar
