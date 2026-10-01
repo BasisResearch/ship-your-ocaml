@@ -2,8 +2,22 @@
 
 ## Current status
 
-All six requested functions now have compiled contracts at this ELF’s addresses.
-The final formatter axiom audit passed; the full integration gate is next.
+**Lane exit criterion met.** All six requested functions have specs at this
+ELF’s addresses, pinned and audited. Final proof milestone `86cf6c9` landed on
+main through `scripts/integrate.sh`; every `check_all.sh` stage passed, including
+a8. The reachable-word decode coverage is generated and drift-checked by a5,
+and the PHASES.md ledger is updated. No lane work remains open.
+
+- `strcmp`: `strcmp_full_spec_cond`.
+- `__ssputs_r`: `ssputs_fast_spec`, plus the general string-FILE `ssputs_nw`.
+- `__ssprint_r`: `ssprint_iov2_spec`, plus the iovec-loop `ssprint_nw`.
+- `_malloc_r`: `malloc_all`, with proved malloc wrapper run contracts.
+- `_free_r`: `free_body`, with proved free wrapper run contracts.
+- `_svfprintf_r`: `svfprintf_nw`, for literal text, `%s`, and `%d` under the
+  initialization and bounded-output hypotheses detailed below.
+
+The final audit checks 341 theorems. Code pins cover 37,048 bytes with zero
+mismatches; the decoder covers 29,475 distinct disassembled words in 231 chunks.
 
 
 ## Proved
@@ -279,3 +293,8 @@ The root library build and `OCaml.Audit` pass (1,041 jobs). New entry,
 conversion, digit-loop, and final `svfprintf_nw` audits depend only on
 `{propext, Classical.choice, Quot.sound}`. Proof discipline, abstraction gate,
 whitespace, and 47-module generator drift checks pass. Final integration is next.
+
+Final proof milestone `86cf6c9` landed on main. All integration stages passed:
+builds, differential validation, 341 headline axiom audits, discipline,
+generator drift, ELF hash/ecall checks, code pins, TCB validation, and the
+abstraction gate. This lane is complete.
