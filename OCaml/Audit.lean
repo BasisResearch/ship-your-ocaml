@@ -482,3 +482,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.dispatchOpcode_guard
 #print axioms OCaml.Vm.Sim.dispatchTarget_aligned
 #print axioms OCaml.Vm.Sim.dispatchTarget_clear
+-- Promotion may recolor a header without changing its representation.
+#print axioms OCaml.Vm.Reloc.headerView_color

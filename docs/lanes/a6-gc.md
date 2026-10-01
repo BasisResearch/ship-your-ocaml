@@ -17,7 +17,7 @@ the one-line ocamlc run is covered by G2.
 
 ## Checked progress
 
-- `OCaml/Vm/Reloc.lean:436` `vmReprAt_reloc`: all fourteen current
+- `OCaml/Vm/Reloc.lean:455` `vmReprAt_reloc`: all fourteen current
   `VmReprAt` fields transport via Eqv from the named `VmImage` interface.
   Adds optional-value register, general observation, and fixed-code-base
   combinators; channels, console, code and trap metadata are covered.
@@ -151,3 +151,20 @@ the one-line ocamlc run is covered by G2.
   pins, loop summaries, or call contracts are discharged.
 - `8d4c9ac` (queue-law checks / fingerprints) and `edec486` (logical
   remembered-set barrier rule) landed using scripts/integrate.sh (exit 0).
+
+
+## Promotion footprint corrections
+
+- `Eqv.wordView` observes only the relevant parts of a memory word;
+  `objEqv` now uses tag/size (`headerView`) rather than requiring a verbatim
+  header copy. `headerView_color` proves that all four color encodings
+  preserve tag and size when the header fits in 64 bits.
+- `ObjMoved`, `objAt_reloc`, and `payload_copyIn` now require exactly
+  `8 * o.wosize` payload bytes, not an extra word. Existing transport proofs
+  still use Eqv; this strengthens the usable transport theorem by weakening
+  its image premises to what the real collector supplies.
+- Source: `memory.c:caml_alloc_shr_aux` chooses white/black when promoting;
+  `minor_gc.c:caml_oldify_one` copies precisely Wosize payload words.
+  Python checks exercise both allocation colors and an absent next word;
+  cyclic queue tests also vary the allocation color. The law checker and
+  targeted Reloc/Invariant/Barrier builds pass.

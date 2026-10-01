@@ -150,7 +150,7 @@ for forge, refc, name in [(False, True, "no forged raw words, complete ref table
 # marker, deferred field scanning, Forward_tag exceptions, and Infix_tag.
 INFIX, FORWARD, LAZY, DOUBLE, NO_SCAN = 249, 250, 246, 253, 251
 
-def oldify_special(memory, roots, flat_float=True, value_area=None):
+def oldify_special(memory, roots, flat_float=True, value_area=None, allocation_color=0):
     mem = dict(memory)
     todo_head = 0
     next_addr = 30000
@@ -162,7 +162,8 @@ def oldify_special(memory, roots, flat_float=True, value_area=None):
         nonlocal next_addr
         a = next_addr
         next_addr += 8 * (size + 1)
-        mem[a - 8] = size * 1024 + kind
+        assert allocation_color in (0, 768)
+        mem[a - 8] = size * 1024 + kind + allocation_color
         return a
     def check_todo():
         # Partial-relocation invariant of the C intrusive queue. A queued
@@ -289,7 +290,8 @@ for _ in range(2000):
     mem = {a-8: len(fs)*1024 for a, fs in fields.items()}
     mem.update({a+8*i: v for a, fs in fields.items() for i, v in enumerate(fs)})
     for initial_roots in ([bases[0]], [bases[0]] + bases):
-        rs, after = oldify_special(mem, initial_roots)
+        color = random.choice([0, 768])
+        rs, after = oldify_special(mem, initial_roots, allocation_color=color)
         reachable, work = set(), list(initial_roots)
         while work:
             source = work.pop()
@@ -308,7 +310,7 @@ for _ in range(2000):
                 continue
             target = moved[source]
             assert after[source-8] == 0 and after[source] == target
-            assert after[target-8] == len(fs)*1024
+            assert after[target-8] == len(fs)*1024 + color
             assert [after[target+8*i] for i in range(len(fs))] == [moved.get(v, v) for v in fs]
 print("L3' intrusive oldify/mopup: 2000 cyclic/aliased heaps, two root policies, pass queue and final-image invariants")
 
@@ -333,3 +335,18 @@ for slot_young in (False, True):
                 barrier_cases += 1
 assert 1000 not in modify_refs(False, True, True, 1000, [])
 print(f"L3' caml_modify: {barrier_cases} complete-table cases pass; old-young early return requires pre-state completeness")
+
+
+# Promotion allocates a fresh major header with allocation_color, rather
+# than copying the young header verbatim (memory.c:caml_alloc_shr_aux).
+for color in (0, 768):
+    source = Y0 + 8
+    old_header = 1024 + DOUBLE
+    rs, after = oldify_special({source-8: old_header, source: 85}, [source],
+                               allocation_color=color)
+    new_header = after[rs[0]-8]
+    assert (new_header % 256, new_header // 1024) == (old_header % 256, old_header // 1024)
+    assert (new_header == old_header) == (color == 0)
+    assert after[rs[0]] == 85
+    assert rs[0] + 8 not in after  # no payload word beyond Wosize is copied
+print("L3' promotion headers: white/black preserve tag and size; byte-identical headers and an extra payload word are not required")

@@ -210,6 +210,9 @@ are open; see `docs/lanes/a2-sem.md`.
   without an Infix header. `Forward.lean` checks the strict bridge obstruction
   and shows a transparent value relation does not preserve ISINT on all
   abstract values. The pinned host 4.14.4 regression reproduces it.
+* Header images preserve tag/size and allow promotion recoloring; raw
+  payload images cover exactly Wosize words (`headerView_color`,
+  `payload_copyIn`, `ObjMoved`).
 * `LoopHead` adds named NoForgery, RememberedComplete and InfixValid fields;
   `WritingArmBarrier` records the a1 supplier obligations. Concrete runtime
   ref-table linkage and use in the production ArmSim remain open.

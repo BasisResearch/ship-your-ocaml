@@ -129,6 +129,13 @@ def val (v : Val) (f : Nat → Nat) : Eqv :=
    fun μ pl b b' c c' => word c' (f b') = relocWord μ pl v (word c (f b)),
    fun _ _ _ _ _ _ h i => by rw [i]; exact valWord_reloc h⟩
 
+/-- A word observation may ignore bits that the runtime is allowed to change,
+for example the major collector's color bits in an object header. -/
+def wordView {α : Type} (f : Nat → Nat) (view : BitVec 64 → α) (R : α → Prop) : Eqv :=
+  ⟨fun _ b c => R (view (word c (f b))),
+   fun _ _ b b' c c' => view (word c' (f b')) = view (word c (f b)),
+   fun _ _ _ _ _ _ h hi => by rw [hi]; exact h⟩
+
 /-- Raw (non-value) word / 32-bit word / byte at `f b`: copied verbatim. -/
 def rawW (f : Nat → Nat) (R : BitVec 64 → Prop) : Eqv :=
   ⟨fun _ b c => R (word c (f b)), fun _ _ b b' c c' => word c' (f b') = word c (f b),
@@ -240,14 +247,25 @@ def payload (cp : ChanPlace) : Obj → Eqv
   | .channel id => Eqv.and (Eqv.rawW (fun a => a) (·.toNat = Layout.sym_channel_operations))
       (Eqv.rawW (· + 8) fun w => cp id = some w.toNat)
 
+/-- Header observations used by ObjAt; the color bits are deliberately absent. -/
+def headerView (w : BitVec 64) : Nat × Nat := (w.toNat % 256, w.toNat / 1024)
+
+/-- Allocation may choose any color without changing tag or payload size,
+provided the header fits in a machine word. -/
+theorem headerView_color (size tag color : Nat) (ht : tag < 256) (hc : color < 4)
+    (fits : 1024 * size + 256 * color + tag < 2^64) :
+    headerView (BitVec.ofNat 64 (1024 * size + 256 * color + tag)) = (tag, size) := by
+  simp only [headerView, BitVec.toNat_ofNat, Nat.mod_eq_of_lt fits]
+  apply Prod.ext <;> dsimp <;> omega
+
 def objEqv (cp : ChanPlace) (o : Obj) : Eqv :=
-  Eqv.and (Eqv.rawW (· - 8) fun w => HeaderOk w o.wosize o.tag) (payload cp o)
+  Eqv.and (Eqv.wordView (· - 8) headerView fun h => h.1 = o.tag ∧ h.2 = o.wosize) (payload cp o)
 
 theorem objAt_eq (c : Config) (pl : Place) (cp : ChanPlace) (a : Nat) (o : Obj) :
     ObjAt c pl cp a o = (objEqv cp o).P pl a c := by cases o <;> rfl
 
 theorem payload_copyIn (cp : ChanPlace) (o : Obj) (hnb : ∀ t fs, o ≠ .block t fs) :
-    (payload cp o).CopyIn (8 * o.wosize + 8) := by
+    (payload cp o).CopyIn (8 * o.wosize) := by
   cases o with
   | block t fs => exact absurd rfl (hnb t fs)
   | bytes b =>
@@ -256,7 +274,7 @@ theorem payload_copyIn (cp : ChanPlace) (o : Obj) (hnb : ∀ t fs, o ≠ .block 
     have := (List.getElem?_eq_some_iff.1 hx).1
     exact Eqv.rawB_copyIn i (fun _ => rfl) (by simp only [Obj.wosize]; omega)
   | double d =>
-    show (Eqv.rawW (fun a => a) (· = d)).CopyIn (8 * 1 + 8)
+    show (Eqv.rawW (fun a => a) (· = d)).CopyIn (8 * 1)
     exact Eqv.rawW_copyIn 0 (fun _ => rfl) (by omega)
   | doubleArray ds =>
     refine Eqv.list_copyIn fun i x hx => ?_
@@ -269,12 +287,13 @@ theorem payload_copyIn (cp : ChanPlace) (o : Obj) (hnb : ∀ t fs, o ≠ .block 
     exact Eqv.and_copyIn (Eqv.rawW_copyIn 0 (fun _ => rfl) (by simp [Obj.wosize]))
       (Eqv.rawW32_copyIn 8 (fun _ => rfl) (by simp [Obj.wosize]))
 
-/-- H6's premises, named: header copied, fields relocated, raw payload copied. -/
+/-- H6's premises: header shape preserved (recoloring allowed), fields
+relocated, and exactly the raw payload copied. -/
 structure ObjMoved (c c' : Config) (pl : Place) (μ : Nat → Nat) (a : Nat) (o : Obj) : Prop where
-  header : word c' (μ a - 8) = word c (a - 8)
+  header : headerView (word c' (μ a - 8)) = headerView (word c (a - 8))
   fields : ∀ t fs, o = .block t fs → ∀ i v, fs[i]? = some v →
     valWord (reloc μ pl) v = some (word c' (μ a + 8 * i))
-  raw : (∀ t fs, o ≠ .block t fs) → Copied c c' a (μ a) (8 * o.wosize + 8)
+  raw : (∀ t fs, o ≠ .block t fs) → Copied c c' a (μ a) (8 * o.wosize)
 
 theorem objImg {c c' pl cp μ a o} (h : ObjAt c pl cp a o) (m : ObjMoved c c' pl μ a o) :
     (objEqv cp o).Img μ pl a (μ a) c c' := by
@@ -289,10 +308,10 @@ theorem objAt_reloc :
   ∀ (c c' : Vsa.Machine.Config) (pl : Place) (cp : ChanPlace) (μ : Nat → Nat) (a : Nat) (o : Obj),
     ObjAt c pl cp a o →
     8 ≤ μ a →
-    word c' (μ a - 8) = word c (a - 8) →
+    headerView (word c' (μ a - 8)) = headerView (word c (a - 8)) →
     (∀ t fs, o = .block t fs → ∀ i v, fs[i]? = some v →
       valWord (reloc μ pl) v = some (word c' (μ a + 8 * i))) →
-    ((∀ t fs, o ≠ .block t fs) → ∀ j, j < 8 * o.wosize + 8 → byte c' (μ a + j) = byte c (a + j)) →
+    ((∀ t fs, o ≠ .block t fs) → ∀ j, j < 8 * o.wosize → byte c' (μ a + j) = byte c (a + j)) →
     ObjAt c' (reloc μ pl) cp (μ a) o := by
   intro c c' pl cp μ a o h _ hhdr hf hraw
   have m : ObjMoved c c' pl μ a o := ⟨hhdr, hf, fun hnb j hj => hraw hnb j hj⟩
