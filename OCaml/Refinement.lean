@@ -78,6 +78,7 @@ structure LoadedAt (L : Layout) (P : Prog) (c : Config) (pl : Place) (cp : ChanP
   heap : HeapRepr c pl cp P P.init
   world : WorldRepr c cp P.init.world
   platform : PlatformOk L.runtimeOk c
+  primitives : PrimitiveBindings P c
 
 def Loaded (L : Layout) (P : Prog) (c : Config) : Prop :=
   ∃ (pl : Place) (cp : ChanPlace) (high : Nat), LoadedAt L P c pl cp high
@@ -88,6 +89,12 @@ theorem Loaded.platform {L : Layout} {P : Prog} {c : Config} (h : Loaded L P c) 
     PlatformOk L.runtimeOk c := by
   obtain ⟨pl, cp, high, entry⟩ := h
   exact entry.platform
+
+/-- Startup binds every PRIM name to the function pointer used by C_CALL. -/
+theorem Loaded.primitives {L : Layout} {P : Prog} {c : Config} (h : Loaded L P c) :
+    PrimitiveBindings P c := by
+  obtain ⟨pl, cp, high, entry⟩ := h
+  exact entry.primitives
 
 /-- The runtime component of a loaded witness, independent of its placement. -/
 theorem Loaded.runtime {L : Layout} {P : Prog} {c : Config} (h : Loaded L P c) :

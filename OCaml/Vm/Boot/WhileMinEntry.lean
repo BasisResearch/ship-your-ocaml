@@ -1,14 +1,14 @@
 import OCaml.Vm.Boot.WhileMinEntryReads
 import Vsa.Sim.Frame
 
-/-! Assembly of the proved entry-memory facts. The remaining control/image
+/-! Assembly of the proved entry-memory facts. The remaining control/image/binding
 premise must be supplied for the actual Sail cut, along with its memory
 projection. This theorem does not assert startup reachability. -/
 namespace OCaml.Vm.Boot.WhileMinEntry
 open OCaml.Bytecode OCaml.Programs Vsa.Machine Vsa.Sim.Boot WhileMinLog WhileMinHeap
 
-/-- Facts not supplied by the store log. A concrete captured configuration
-and its executable-image certificate must establish these at the cut. -/
+/-- Entry obligations not yet discharged by the memory certificates. The
+actual cut must supply control, executable-image and primitive-table facts. -/
 structure EntryControl (c : Config) : Prop where
   atEntry : pcOf c = some (BitVec.ofNat 64 Layout.sym_caml_interprete)
   argCode : gpr c 10 = some (BitVec.ofNat 64 place.codeBase)
@@ -16,9 +16,11 @@ structure EntryControl (c : Config) : Prop where
   console : output c.σ = ""
   control : Vsa.Sim.GoodState c.σ
   image : ExecutableImage c
+  /-- Startup resolves the PRIM names to their native function pointers. -/
+  primitives : PrimitiveBindings whileMin c
 
 /-- All heap, code, globals, stack and runtime obligations follow from the
-certified store-log memory. Control and the immutable image remain explicit. -/
+certified store-log memory. Control, image and primitive bindings remain explicit. -/
 theorem loaded {c : Config} {initial : Vsa.MemRepr.Mem}
     (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log))
     (entry : EntryControl c) : Loaded (runtimeLayout BestFitSingleton) whileMin c := by
@@ -37,6 +39,7 @@ theorem loaded {c : Config} {initial : Vsa.MemRepr.Mem}
     heap := WhileMinHeap.repr memory
     world := ?_
     platform := ⟨entry.control, entry.image, WhileMinRuntime.runtimeOk memory⟩
+    primitives := entry.primitives
   }⟩
   · rw [dom]; exact congrArg BitVec.toNat (read_stack_high memory)
   · rw [dom]; exact congrArg BitVec.toNat (read_extern_sp memory)
@@ -46,7 +49,7 @@ theorem loaded {c : Config} {initial : Vsa.MemRepr.Mem}
     change ([] : List Chan)[id]? = some ch at hc
     simp at hc
 
-/-- Densification changes neither control registers nor existing image bytes. -/
+/-- Densification preserves control, image bytes and total primitive-table reads. -/
 theorem EntryControl.fillZero {c : Config} (h : EntryControl c) :
     EntryControl (Vsa.Densify.fillZero c) where
   atEntry := h.atEntry
@@ -59,8 +62,11 @@ theorem EntryControl.fillZero {c : Config} (h : EntryControl c) :
     rodata := fun i hi => Vsa.Densify.fillZeroMem_some (h.image.rodata i hi)
   }
 
+  primitives := h.primitives.of_words fun a =>
+    bytesT_memEqv (Vsa.Densify.memEqv_fillZeroMem c.σ.mem).symm a 8
+
 /-- The requested densified entry statement, conditional only on the actual
-cut's memory projection and remaining control/image certificate. -/
+cut's memory projection and remaining control/image/binding certificate. -/
 theorem loaded_fillZero {c : Config} {initial : Vsa.MemRepr.Mem}
     (memory : c.σ.mem = observedMem initial log) (entry : EntryControl c) :
     Loaded (runtimeLayout BestFitSingleton) whileMin (Vsa.Densify.fillZero c) :=

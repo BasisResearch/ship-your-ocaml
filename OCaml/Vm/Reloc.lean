@@ -434,6 +434,13 @@ def domainFieldEqv (off value : Nat) : Eqv :=
   Eqv.observe (fun c => (word c ((word c Layout.sym_Caml_state).toNat + off)).toNat)
     (· = value)
 
+/-- Primitive targets are observations of fixed runtime metadata and code
+pointers. Relocation renames no abstract location in this component. -/
+def primitiveBindingsEqv (P : Prog) : Eqv :=
+  Eqv.all fun i => Eqv.all fun name => Eqv.guard (P.prims[i]? = some name) <|
+    Eqv.observe (fun c => primitiveTarget c i)
+      (fun target => ∃ entry, PrimitiveEntries.lookup name = some entry ∧ target = BitVec.ofNat 64 entry)
+
 /-- Images the machine collector must establish at its return to dispatch.
 This is a conditional transport interface, not a collector execution proof. -/
 structure VmImage (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
@@ -452,6 +459,7 @@ structure VmImage (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
   stack : (stackEqv high s.stack).Img μ pl sp sp c c'
   heap : (heapEqv cp P s).Img μ pl 0 0 c c'
   world : (worldEqv cp s.world).Img μ pl 0 0 c c'
+  primitives : (primitiveBindingsEqv P).Img μ pl 0 0 c c'
 
 /-- All loop-head fields transport via Eqv, including code, registers,
 trap-stack metadata, channels, and console output. -/
@@ -462,7 +470,7 @@ theorem vmReprAt_reloc {P s c c' pl cp sp high μ}
   have basePre : codeBaseEqv.P pl 0 c := ⟨pl.codeBase, rfl, h.codeBase⟩
   obtain ⟨base, hb, hp⟩ := (pcEqv s.pc).transport μ pl 0 0 c c' pcPre hi.pc
   obtain ⟨base', hb', hp'⟩ := codeBaseEqv.transport μ pl 0 0 c c' basePre hi.codeBase
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact (Eqv.observe pcOf (· = some (BitVec.ofNat 64 Layout.loopHead))).transport μ pl 0 0 c c' h.atHead hi.atHead
   · change (reloc μ pl).codeBase = base at hb
     change gpr c' Layout.reg_pc = some (BitVec.ofNat 64 (base + 4 * s.pc)) at hp
@@ -482,5 +490,6 @@ theorem vmReprAt_reloc {P s c c' pl cp sp high μ}
   · exact (heapRepr_iff _ _ _ _ _).2 <|
       (heapEqv cp P s).transport μ pl 0 0 c c' ((heapRepr_iff _ _ _ _ _).1 h.heap) hi.heap
   · exact (worldEqv cp s.world).transport μ pl 0 0 c c' h.world hi.world
+  · exact ⟨(primitiveBindingsEqv P).transport μ pl 0 0 c c' h.primitives.targets hi.primitives⟩
 
 end OCaml.Vm.Reloc

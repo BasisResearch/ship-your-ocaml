@@ -1,27 +1,44 @@
 # Lane a1-arms
 
-## Checked primitive-binding gap
+## Primitive binding repair
 
-`primitive_binding_obstruction` (`OCaml/Vm/Sim/PrimitiveBinding.lean`) proves
-that the current `Loaded` relation cannot support `OcamlrunRefinement` when
-the small `wordProbe` is loaded and the budget covers its initial heap.
-`loaded_prims` shows that `Loaded` ignores `P.prims`. The probe and its variant
-have identical code, heap, globals and world; swapping only the word-size and
-int-size entries in PRIM changes the exit from 64 to 63. Both are `Good` and
-`Fits`; machine determinism gives the contradiction. No concrete loaded
-machine witness is claimed by this conditional obstruction.
+The obstruction landed as `2bb35a3`. `primitive_binding_obstruction` now
+retains that checked result against the explicit legacy `UnboundLoaded` /
+`UnboundRefinement` snapshot. The generated probes have identical code,
+heap, globals and world; swapping only word-size/int-size names in PRIM
+changes the exit from 64 to 63. Host ocamlrun, runbc, and Lean agree; both
+programs are `Good` and fit any budget covering their initial heap. The
+obstruction is conditional on a loaded witness, not a concrete boot proof.
 
-`scripts/gen_primitive_binding_probe.py` compiles with pinned OCaml 4.14.4,
-swaps the two primitive names without changing section lengths, validates
-both exits with host ocamlrun and runbc, and emits the `Prog`s via `runbc
---lean`. Lean checks the short bytecode runs and finite budgets; run-kernel
-uniqueness/bounds supply the general reasoning. Build: 2.1s, 2.57s wall,
-1.93 GiB peak RSS, default limits under 24 GiB.
+Production `LoadedAt` and `VmReprAt` now carry named `PrimitiveBindings`.
+It ties every `P.prims` entry to the function pointer read by C_CALL.
+`PrimitiveEntries.lookup` is generated from all 403 parallel name/address
+entries in the pinned ELF, checked against symbols and `.text`; its balanced
+lookup has named facts for all 30 F1 primitives. The table symbol and contents
+offset come from `Layout`, with the offset recovered from C_CALL1's load.
+`loaded_probes_disjoint` proves the old ambiguity is excluded.
 
-Next repair: add named primitive-table bindings at the loaded cut and VM
-representation, with memory framing and relocation transport. Preserve the
-headline verbatim and retain this obstruction against the old contract.
-Primitive bodies remain a1-prims-owned.
+`PrimitiveBindings.frame` preserves the metadata under memory equality;
+CONST0/NEGINT’s shared restoration uses it. `primitiveBindingsEqv` uses
+`Eqv.all` / `guard` / `observe`; `VmImage.primitives` asks the collector to
+preserve the selected function-pointer observations. No abstract heap pointer
+is renamed. The existing `vmReprAt_reloc` and GC `LoopHead` consumer build.
+A0-boot must supply `LoadedAt.primitives` at the cut. The newly landed
+`WhileMinEntry.EntryControl` carries that explicit obligation; its `loaded`
+assembly consumes it, and `fillZero` preserves it via `of_words` and the
+existing `bytesT_memEqv` law. C_CALL arms can consume
+read-only primitive memory frames; mutating summaries will need the metadata
+frame as well. Primitive bodies remain a1-prims-owned.
+
+`OcamlrunRefinement` was compared byte-for-byte with the pre-repair definition
+and is unchanged. The HTIF obstructions remain checked, with their memory
+frame extended to preserve primitive bindings.
+
+Validation: resolver 14s, representation 1.2s, refinement 1.1s, relocation
+2.1s, legacy/disambiguation regression 2.8s, GC invariant 1.0s. CONST0 and
+NEGINT rebuild at 1.1s / 1.2s; targeted runs remain below 2.08 GiB under
+24 GiB. No proof budget changed. Drift, discipline and abstraction checks
+pass; integration runs the full audit and gate before landing.
 
 ## Current status
 

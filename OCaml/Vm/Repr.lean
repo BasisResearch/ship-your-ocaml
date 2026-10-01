@@ -1,5 +1,6 @@
 import OCaml.Bytecode.Semantics
 import OCaml.Vm.Layout
+import OCaml.Vm.PrimitiveEntries
 import Vsa.Machine
 import Vsa.Sim.RamReadBytes
 import Vsa.Sim.BlockPilot
@@ -49,6 +50,41 @@ def gpr (c : Config) (n : Nat) : Option (BitVec 64) := Vsa.Sim.gprGet c.σ n
 /-- The program counter. -/
 def pcOf (c : Config) : Option (BitVec 64) :=
   c.σ.regs.get? LeanRV64DExecutable.Register.PC
+
+/-- The function pointer selected by a bytecode primitive index. Both data
+addresses come from the ELF-derived layout; entries are ordinary code pointers. -/
+def primitiveTarget (c : Config) (index : Nat) : BitVec 64 :=
+  word c ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * index)
+
+/-- The bytecode's primitive names must agree with the runtime's function
+pointer table. This metadata contains no abstract heap locations. -/
+structure PrimitiveBindings (P : Prog) (c : Config) : Prop where
+  targets : ∀ i name, P.prims[i]? = some name →
+    ∃ entry, PrimitiveEntries.lookup name = some entry ∧ primitiveTarget c i = BitVec.ofNat 64 entry
+
+/-- Select a represented call target using its checked ELF entry. -/
+theorem PrimitiveBindings.get {P : Prog} {c : Config} (h : PrimitiveBindings P c)
+    {i : Nat} {name : String} {entry : Nat} (hp : P.prims[i]? = some name)
+    (he : PrimitiveEntries.lookup name = some entry) :
+    primitiveTarget c i = BitVec.ofNat 64 entry := by
+  obtain ⟨entry', he', target⟩ := h.targets i name hp
+  rw [he] at he'
+  cases he'
+  exact target
+
+/-- Binding metadata depends only on total word reads, including the dynamic
+pointer-table address. This also supports zero-equivalent boot memories. -/
+theorem PrimitiveBindings.of_words {P : Prog} {c c' : Config} (h : PrimitiveBindings P c)
+    (hw : ∀ a, word c' a = word c a) : PrimitiveBindings P c' := by
+  refine ⟨?_⟩
+  intro i name hp
+  obtain ⟨entry, he, target⟩ := h.targets i name hp
+  exact ⟨entry, he, by simpa only [primitiveTarget, hw] using target⟩
+
+/-- Read-only machine summaries preserve every primitive binding together. -/
+theorem PrimitiveBindings.frame {P : Prog} {c c' : Config} (h : PrimitiveBindings P c)
+    (hm : c'.σ.mem = c.σ.mem) : PrimitiveBindings P c' :=
+  h.of_words fun _ => by simp only [word, hm]
 
 /-- Where the abstract heap lives at a given moment. -/
 structure Place where
@@ -198,6 +234,7 @@ structure VmReprAt (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace
   stack : StackRepr c pl sp high s.stack
   heap : HeapRepr c pl cp P s
   world : WorldRepr c cp s.world
+  primitives : PrimitiveBindings P c
 
 /-- **`VmRepr P s c`**: the machine is at `caml_interprete`'s loop head in the
 state `s` of program `P`, under SOME placement (a collection may change it). -/

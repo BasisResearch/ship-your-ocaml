@@ -52,6 +52,8 @@ def sym_embed_start : Nat := 0x86800000
 def sym_heap_end : Nat := 0x86800000
 /-- `__stack_top` -/
 def sym_stack_top : Nat := 0x88000000
+/-- `caml_prim_table` -/
+def sym_caml_prim_table : Nat := 0x8006c0b8
 /-- `caml_register_named_value` -/
 def sym_caml_register_named_value : Nat := 0x800213d0
 /-- `caml_ml_open_descriptor_out` -/
@@ -156,6 +158,9 @@ def reg_domain : Nat := 19
 
 /-- Largest opcode accepted by the dispatch bound check. -/
 def opcodeBound : Nat := 148
+
+/-- `caml_prim_table.contents`, recovered from C_CALL1. -/
+def off_prim_contents : Nat := 8
 
 /-! `Caml_state` field offsets (bytes). -/
 def off_young_limit : Nat := 0

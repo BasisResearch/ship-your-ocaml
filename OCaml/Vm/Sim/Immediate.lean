@@ -39,7 +39,7 @@ theorem immediate_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Conf
   refine ⟨⟨pl, cp, sp, high, ?_⟩, ?_, ?_⟩
   · refine ⟨post.head, post.code, ?_, ⟨tag64 n, post.accu, rfl⟩, ?_, ?_,
       payload.stackHigh, payload.trapsp, payload.codeBase, payload.code,
-      payload.globals, payload.stack, payload.heap, payload.world⟩
+      payload.globals, payload.stack, payload.heap, payload.world, data.primitives.frame post.memory⟩
     · exact (post.preserved _ (by decide)).trans data.spReg
     · obtain ⟨w, hw, hv⟩ := data.env
       exact ⟨w, (post.preserved _ (by decide)).trans hw, hv⟩

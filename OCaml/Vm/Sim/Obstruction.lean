@@ -45,7 +45,8 @@ theorem repr_forceExit {P : Prog} {s : St} {c : Config}
     spReg := (hregs _).trans h.spReg
     accu := by simpa only [hregs] using h.accu
     env := by simpa only [hregs] using h.env
-    extra := (hregs _).trans h.extra }
+    extra := (hregs _).trans h.extra
+    primitives := h.primitives.frame rfl }
 
 /-- `stepOnce` checks HTIF before fetching any instruction. -/
 theorem forceExit_halted (c : Config) (e : BitVec 64) :

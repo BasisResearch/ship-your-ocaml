@@ -530,6 +530,44 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 -- Primitive-name binding is necessary at the loaded cut.
 #print axioms OCaml.Vm.Sim.PrimitiveBinding.loaded_prims
 #print axioms OCaml.Vm.Sim.PrimitiveBinding.primitive_binding_obstruction
+-- Primitive bindings strengthen entry/loop data and survive memory frames.
+#print axioms OCaml.Vm.PrimitiveBindings.of_words
+#print axioms OCaml.Vm.PrimitiveBindings.get
+#print axioms OCaml.Vm.PrimitiveBindings.frame
+#print axioms OCaml.Loaded.primitives
+#print axioms OCaml.Vm.Sim.PrimitiveBinding.loaded_forget_primitives
+#print axioms OCaml.Vm.Sim.PrimitiveBinding.loaded_probes_disjoint
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_register_named_value
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_ml_open_descriptor_out
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_ml_open_descriptor_in
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_ml_out_channels_list
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_ml_flush
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_ml_output_char
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_ml_output
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_ml_output_bytes
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_format_int
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_ml_string_length
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_ml_bytes_length
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_string_equal
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_string_notequal
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_int64_float_of_bits
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_const_naked_pointers_checked
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_const_big_endian
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_const_word_size
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_const_int_size
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_const_max_wosize
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_const_ostype_unix
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_const_ostype_win32
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_const_ostype_cygwin
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_const_backend_type
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_get_config
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_executable_name
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_argv
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_get_argv
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_int_compare
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_fresh_oo_id
+#print axioms OCaml.Vm.PrimitiveEntries.entry_caml_sys_exit
+
 #print axioms Vsa.Sim.Boot.writeLog_view
 #print axioms Vsa.Sim.Boot.loaderMem_get
 #print axioms Vsa.Sim.Boot.observedMem_get
