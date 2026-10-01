@@ -96,10 +96,13 @@ The bytecode generators and logic currently contain no native data addresses:
 their PCs are CODE word indices. The hexadecimal constant in `gen_bc_demo.py`
 is an OCaml Marshal format marker, not an address.
 
-Rebased onto main `a22f2b9` and reran `scripts/gen_bc_rules.py` and
-`scripts/gen_bc_demo.py`; both artefact sets are unchanged. The migration is
-not in that revision. Main's new BcSem opcode semantics require the ordinary
-integration build/audit even though the generated source is unchanged.
+Initially rebased onto main `a22f2b9`; integration then caught up through
+`772e509`, including the expanded BcSem definitions and audit import closure.
+Landed the address audit as `bce2437` through `scripts/integrate.sh`: all
+a1–a8/t1 stages passed, including 784 headline theorem audits and all 5,414
+generated block-rule audits. Reran `scripts/gen_bc_rules.py` and
+`scripts/gen_bc_demo.py` after that landing; both artefact sets are unchanged.
+The image migration is not in that revision, so its follow-up remains open.
 After the migration lands, rebase again, rerun both generators, and validate
 through `scripts/integrate.sh`. Native Layout/decode/pin regeneration belongs
 to a0-boot's migration landing.
