@@ -11,6 +11,7 @@ def outputs():
     specs += [(f'PUSHACC{n}', 'load', n - 1) for n in range(1, 8)]
     specs += [(f'PUSHCONST{n}', 'const', n) for n in range(4)]
     specs += [(f'PUSHENVACC{n}', 'env', n) for n in range(1, 5)]
+    specs += [(f'PUSHOFFSETCLOSURE{s}', 'closure', n) for s, n in [('M3', -3), ('0', 0), ('3', 3)]]
     for op, kind, n in specs:
         stem, lower = op.title(), op.lower()
         spec = json.loads((ROOT / f'scripts/syi/segments/{lower}.json').read_text())
@@ -78,6 +79,19 @@ def outputs():
       simpa only [word, hm, bytesT_eight_eq, sign_extend,
         Sail.BitVec.signExtend, BitVec.signExtend_eq] using hp
     simpa only [same] using current'''
+        if kind == 'closure':
+            extra_import = 'import OCaml.Vm.Sim.ClosureOffset\n'
+            extra_binders = ' {l a k dest : Nat}'
+            extra_inputs = f'    (selected : ClosureOffset s pl ({n}) l a k dest)\n'
+            value_setup = '  have environment := represented_register h.env selected.sourceWord\n'
+            value, root, result_val = 'selected.resultWord', 'selected.root', '.ptr l dest'
+            load_setup = f'''  have address : BitVec.ofNat 64 (a + 8 * k) + sign_extend (m := 64) (0x{(8*n)%4096:03x}#12) =
+      BitVec.ofNat 64 (a + 8 * dest) := by
+    rw [show sign_extend (m := 64) (0x{(8*n)%4096:03x}#12) = BitVec.ofInt 64 (8 * ({n})) from by decide]
+    exact pointer_offset_word a k dest ({n}) selected.target
+'''
+            load_simp = ', address'
+            accu = f'  · exact PinsHold.get post.pins ⟨{accu_pin}, by simp⟩'
         words = {'x9': 'BitVec.ofNat 64 sp', 'x21': 'w',
                  'x23': 'BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64',
                  'x25': 'BitVec.ofNat 64 (a + 8 * k)'}

@@ -1,0 +1,107 @@
+{
+  "theorem": "tr_pushoffsetclosure0",
+  "doc": "PUSHOFFSETCLOSURE0 arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.Pushoffsetclosure0Sites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut",
+    "OCaml.Vm.Sim.Pushoffsetclosure0StoreFrame"
+  ],
+  "params": [
+    "(v9 v21 v23 v25 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_800025d4 : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(hhi_800025d4 : (v9 + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_800025d4 : tohostAddr + 16 ≤ (v9 + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(halign_800025d4 : (v9 + sign_extend (m := 64) (0xff8#12)).toNat % 8 = 0)",
+    "(hcode_800025d4 : (v9 + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x800025d4 ∨ 0x800025e8 ≤ (v9 + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(m_800025d4 : Std.ExtHashMap Nat (BitVec 8))",
+    "(hstore_800025d4 : m_800025d4 = writeMap8 (m0) ((v9 + sign_extend (m := 64) (0xff8#12)).toNat) (sdData_val v21))"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlPushoffsetclosure0Loaded",
+  "pins": [
+    {
+      "reg": "x9",
+      "val": "v9",
+      "hyp": "hv9"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    },
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    },
+    {
+      "reg": "x25",
+      "val": "v25",
+      "hyp": "hv25"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x800025d4",
+      "site": "site_800025d4_pushoffsetclosure0",
+      "class": "sd",
+      "asm": "sd s5,-8(s1)",
+      "key": "(v9 + sign_extend (m := 64) (0xff8#12)).toNat",
+      "src_val": "v21",
+      "loaded_via": "pushoffsetclosure0_code_store _ _ _ hcode_800025d4 $prev",
+      "call": "$vmi $v:x9 $v:x21 $hG $hpc $hmi $pin:x9 $pin:x21 $hmem rfl hlo_800025d4 hhi_800025d4 hhtif_800025d4 halign_800025d4 $hi",
+      "mem_alias": "m_800025d4",
+      "mem_alias_eq": "hstore_800025d4"
+    },
+    {
+      "addr": "0x800025d8",
+      "site": "site_800025d8_pushoffsetclosure0",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800025dc",
+      "site": "site_800025dc_pushoffsetclosure0",
+      "class": "alu",
+      "asm": "addi s1,s1,-8",
+      "rd": "x9",
+      "rd_val": "(v9 + sign_extend (m := 64) (0xff8#12))",
+      "raw_val": "(v9 + sign_extend (m := 64) (0xff8#12))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800025e0",
+      "site": "site_800025e0_pushoffsetclosure0",
+      "class": "alu",
+      "asm": "mv s5,s9",
+      "rd": "x21",
+      "rd_val": "(v25 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v25 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x25 $hG $hpc $hmi $pin:x25 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800025e4",
+      "site": "site_800025e4_pushoffsetclosure0",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1ff978#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x800025d4",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

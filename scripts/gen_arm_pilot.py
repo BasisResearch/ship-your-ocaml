@@ -103,6 +103,12 @@ PATHS = {
 }
 
 
+for _suffix in ['M3', '0', '3']:
+    _op = 'PUSHOFFSETCLOSURE' + _suffix
+    FAMILIES[_op] = (_op.title(), ['sd', 'alu_addi', 'alu_addi', 'alu_addi', 'j'])
+    PATHS[_op] = (_op, [])
+
+
 # Integer comparisons branch to the false-result helper; fallthrough returns true.
 for _op in ['LTINT', 'LEINT', 'GTINT', 'GEINT', 'ULTINT', 'UGEINT']:
     for _truth in [True, False]:

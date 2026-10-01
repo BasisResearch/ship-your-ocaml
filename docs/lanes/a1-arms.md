@@ -1,5 +1,22 @@
 # Lane a1-arms
 
+## Fixed PUSH closure offsets
+
+`pushoffsetclosurem3_arm`, `pushoffsetclosure0_arm` and
+`pushoffsetclosure3_arm` reuse `ClosureOffset` and `push_value_arm` in the
+shared push generator. The machine generator follows the census entry through
+fallthrough prefixes to the actual terminal jump, so the two-instruction
+PUSH prefix and its common suffix form one checked five-instruction body.
+The old accumulator is saved before the adjusted environment pointer becomes
+the result; its allocation identity remains live.
+
+All three families pass separately under 24 GiB/default limits: bodies
+1.5–3.3s, bridges 1.2–1.6s on the shared host. Existing artifacts regenerate.
+PUSHENVACC landed as `3e32ee0` with the full gate passing. There are now 80
+conditional represented opcode bridges. Next: operand-driven PUSH prefixes,
+using write-log preservation of their bytecode operand. Full `ArmSim`,
+semantic-domain fixes, entry/halt and the lane exits remain open.
+
 ## Fixed PUSHENVACC families
 
 `pushenvacc1_arm`–`pushenvacc4_arm` use the same generated push bridge as
@@ -821,7 +838,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 77 conditional represented opcode bridges,
+stack-writing families. There are 80 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 
