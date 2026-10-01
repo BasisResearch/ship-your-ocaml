@@ -105,6 +105,10 @@ import OCaml.Vm.Sim.Pushoffsetclosure0
 import OCaml.Vm.Sim.Pushoffsetclosure3
 import OCaml.Vm.Sim.Pushconstint
 import OCaml.Vm.Sim.Pushoffsetclosure
+import OCaml.Vm.Sim.Pushacc
+import OCaml.Vm.Sim.Pushenvacc
+import OCaml.Vm.Sim.Pushatom0
+import OCaml.Vm.Sim.Pushatom
 import OCaml.Vm.Sim.Pushenvacc1
 import OCaml.Vm.Sim.Pushenvacc2
 import OCaml.Vm.Sim.Pushenvacc3

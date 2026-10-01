@@ -1,5 +1,21 @@
 # Lane a1-arms
 
+## Indexed and atom PUSH families
+
+`pushacc_arm`, `pushenvacc_arm`, `pushatom0_arm` and `pushatom_arm`
+reuse the common push generator. `pushedWord`, `pushed_value`, `pushed_root`
+and `PushWriteOk.pushed_read` cover selection from the pushed stack, including
+index zero (the saved accumulator). Environment selection reuses the field
+frame; atom loads use `PushWriteOk.word_read` with the payload atom-global
+separation and the runtime table binding. All data addresses come from Layout.
+Nonnegative operand and RAM-window premises remain explicit for indexed arms.
+
+Separate 24 GiB/default-limit builds pass: bodies 1.6–2.7s, bridges 1.1–1.2s.
+The prior operand-prefix landing is `77f9d50`, full gate passing. There are
+now 86 conditional represented opcode bridges. Next: global-read families
+and their PUSH variants, then the remaining write/allocation/call families.
+Full `ArmSim`, entry/halt, semantic-domain corrections and lane exits remain open.
+
 ## Operand-driven PUSH prefixes
 
 `pushconstint_arm` and `pushoffsetclosure_arm` save the accumulator, read
@@ -853,7 +869,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 82 conditional represented opcode bridges,
+stack-writing families. There are 86 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 

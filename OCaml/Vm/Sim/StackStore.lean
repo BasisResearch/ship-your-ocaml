@@ -32,17 +32,26 @@ theorem PushWriteOk.code {P s c pl cp sp w lo hi} (h : PushWriteOk P s c pl cp s
     sp - 8 + 8 ≤ Image.textBase) ∧ True at outside
   rcases outside.1 with left | right <;> omega
 
+/-- Every separated word retains its total native load observation. -/
+theorem PushWriteOk.word_read {P s c pl cp sp w a}
+    {memoryAfter : Std.ExtHashMap Nat (BitVec 8)} (h : PushWriteOk P s c pl cp sp w)
+    (outside : OutLRange (pushLog sp w) a 8)
+    (memory : memoryAfter = writeLog c.σ.mem (pushLog sp w)) :
+    LeanRV64DExecutable.Functions.sign_extend (m := 64)
+      (bytesT8 memoryAfter a) = word c a := by
+  have frame := bytesT_writeLog_out c.σ.mem outside
+  rw [memory]
+  simpa only [word, bytesT_eight_eq, LeanRV64DExecutable.Functions.sign_extend,
+    Sail.BitVec.signExtend, BitVec.signExtend_eq] using frame
+
 /-- Every old stack slot outside the push log has its original total word. -/
 theorem PushWriteOk.stack_read {P s c pl cp sp w i v}
     {memoryAfter : Std.ExtHashMap Nat (BitVec 8)} (h : PushWriteOk P s c pl cp sp w)
     (selected : s.stack[i]? = some v)
     (memory : memoryAfter = writeLog c.σ.mem (pushLog sp w)) :
     LeanRV64DExecutable.Functions.sign_extend (m := 64)
-      (bytesT8 memoryAfter (sp + 8 * i)) = word c (sp + 8 * i) := by
-  have frame := bytesT_writeLog_out c.σ.mem (h.payload.stack i v selected)
-  rw [memory]
-  simpa only [word, bytesT_eight_eq, LeanRV64DExecutable.Functions.sign_extend,
-    Sail.BitVec.signExtend, BitVec.signExtend_eq] using frame
+      (bytesT8 memoryAfter (sp + 8 * i)) = word c (sp + 8 * i) :=
+  h.word_read (h.payload.stack i v selected) memory
 
 /-- Ordinary bytecode operands retain their value after the separated stack write. -/
 theorem PushWriteOk.operand_read32 {P s c pl cp sp pushed i operandWord}
@@ -56,6 +65,49 @@ theorem PushWriteOk.operand_read32 {P s c pl cp sp pushed i operandWord}
   rw [bytesT_four_eq] at frame
   rw [memory, frame]
   simpa only [bytesT_four_eq] using operand.read32 (d := c) code rfl
+
+/-- Word selected from the pushed stack: the saved accumulator at zero,
+and the old stack at every successor index. -/
+def pushedWord (c : Config) (sp : Nat) (w : BitVec 64) : Nat → BitVec 64
+  | 0 => w
+  | i + 1 => word c (sp + 8 * i)
+
+theorem pushed_value {P s c pl cp sp high i v w}
+    (h : VmReprAt P s c pl cp sp high) (pushed : valWord pl s.accu = some w)
+    (selected : (s.accu :: s.stack)[i]? = some v) :
+    valWord pl v = some (pushedWord c sp w i) := by
+  cases i with
+  | zero =>
+    have eq : s.accu = v := Option.some.inj selected
+    simpa only [← eq, pushedWord] using pushed
+  | succ i => exact h.stack.2 i v selected
+
+theorem pushed_root {P : Prog} {s : St} {i : Nat} {v : Val}
+    (selected : (s.accu :: s.stack)[i]? = some v) :
+    ∀ l, v.loc? = some l → Live s.heap (roots P s) l := by
+  intro l hl
+  have member := List.mem_of_getElem? selected
+  apply Live.root ?_ hl
+  rcases List.mem_cons.mp member with rfl | member
+  · simp [roots]
+  · simp [roots, member]
+
+/-- The total native load sees the corresponding word of the pushed stack. -/
+theorem PushWriteOk.pushed_read {P s c pl cp sp w i v}
+    {memoryAfter : Std.ExtHashMap Nat (BitVec 8)}
+    (space : PushWriteOk P s c pl cp sp w)
+    (selected : (s.accu :: s.stack)[i]? = some v)
+    (memory : memoryAfter = writeLog c.σ.mem (pushLog sp w)) :
+    LeanRV64DExecutable.Functions.sign_extend (m := 64)
+      (bytesT8 memoryAfter (sp - 8 + 8 * i)) = pushedWord c sp w i := by
+  cases i with
+  | zero =>
+    simp only [Nat.mul_zero, Nat.add_zero, pushedWord, memory]
+    simpa only [pushLog, bytesT_eight_eq, LeanRV64DExecutable.Functions.sign_extend,
+      Sail.BitVec.signExtend, BitVec.signExtend_eq] using word_writeLog c.σ.mem (sp - 8) w
+  | succ i =>
+    have address : sp - 8 + 8 * (i + 1) = sp + 8 * i := by have := space.room; omega
+    simpa only [address, pushedWord] using space.stack_read selected memory
 
 abbrev PushPost (before : Config) (pl : Place) (pc sp : Nat) (pushed result : BitVec 64)
     (after : Config) : Prop :=

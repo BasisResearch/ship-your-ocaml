@@ -741,6 +741,27 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.pushoffsetclosure_code_store
 #print axioms Vsa.Sim.tr_pushoffsetclosure
 #print axioms OCaml.Vm.Sim.pushoffsetclosure_loaded
+
+#print axioms OCaml.Vm.Sim.pushed_value
+#print axioms OCaml.Vm.Sim.pushed_root
+#print axioms OCaml.Vm.Sim.PushWriteOk.pushed_read
+#print axioms OCaml.Vm.Sim.PushWriteOk.word_read
+#print axioms OCaml.Vm.Sim.pushacc_arm
+#print axioms Vsa.Sim.pushacc_code_store
+#print axioms Vsa.Sim.tr_pushacc
+#print axioms OCaml.Vm.Sim.pushacc_loaded
+#print axioms OCaml.Vm.Sim.pushenvacc_arm
+#print axioms Vsa.Sim.pushenvacc_code_store
+#print axioms Vsa.Sim.tr_pushenvacc
+#print axioms OCaml.Vm.Sim.pushenvacc_loaded
+#print axioms OCaml.Vm.Sim.pushatom0_arm
+#print axioms Vsa.Sim.pushatom0_code_store
+#print axioms Vsa.Sim.tr_pushatom0
+#print axioms OCaml.Vm.Sim.pushatom0_loaded
+#print axioms OCaml.Vm.Sim.pushatom_arm
+#print axioms Vsa.Sim.pushatom_code_store
+#print axioms Vsa.Sim.tr_pushatom
+#print axioms OCaml.Vm.Sim.pushatom_loaded
 #print axioms OCaml.Vm.Sim.PushWriteOk.stack_read
 #print axioms OCaml.Vm.Sim.pushacc1_arm
 #print axioms OCaml.Vm.Sim.pushacc2_arm

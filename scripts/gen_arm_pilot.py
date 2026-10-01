@@ -112,6 +112,15 @@ for _op, _finish in [('PUSHCONSTINT', 'alu_addi'), ('PUSHOFFSETCLOSURE', 'alu_ad
     FAMILIES[_op] = (_op.title(), ['sd', 'alu_addi', 'lw_tot', 'alu_addi', 'slli', _finish, 'j'])
     PATHS[_op] = (_op, [])
 
+for _op in ['PUSHENVACC', 'PUSHACC']:
+    FAMILIES[_op] = (_op.title(), ['sd', 'alu_addi', 'lw_tot', 'alu_addi', 'slli', 'alu_add', 'ld_tot', 'j'])
+    PATHS[_op] = (_op, [])
+
+FAMILIES['PUSHATOM0'] = ('Pushatom0', ['sd', 'alu_addi', 'auipc', 'ld_tot', 'alu_addi', 'alu_addi', 'j'])
+FAMILIES['PUSHATOM'] = ('Pushatom', ['sd', 'alu_addi', 'lw_tot', 'auipc', 'ld_tot', 'alu_addi', 'slli', 'alu_addi', 'alu_add', 'j'])
+for _op in ['PUSHATOM0', 'PUSHATOM']:
+    PATHS[_op] = (_op, [])
+
 
 # Integer comparisons branch to the false-result helper; fallthrough returns true.
 for _op in ['LTINT', 'LEINT', 'GTINT', 'GEINT', 'ULTINT', 'UGEINT']:

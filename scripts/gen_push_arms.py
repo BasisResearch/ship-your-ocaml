@@ -12,7 +12,9 @@ def outputs():
     specs += [(f'PUSHCONST{n}', 'const', n) for n in range(4)]
     specs += [(f'PUSHENVACC{n}', 'env', n) for n in range(1, 5)]
     specs += [(f'PUSHOFFSETCLOSURE{s}', 'closure', n) for s, n in [('M3', -3), ('0', 0), ('3', 3)]]
-    specs += [('PUSHCONSTINT', 'operand_const', 0), ('PUSHOFFSETCLOSURE', 'operand_closure', 0)]
+    specs += [('PUSHCONSTINT', 'operand_const', 0), ('PUSHOFFSETCLOSURE', 'operand_closure', 0),
+              ('PUSHENVACC', 'operand_env', 0), ('PUSHACC', 'operand_stack', 0),
+              ('PUSHATOM0', 'atom', 0), ('PUSHATOM', 'operand_atom', 0)]
     for op, kind, n in specs:
         stem, lower = op.title(), op.lower()
         spec = json.loads((ROOT / f'scripts/syi/segments/{lower}.json').read_text())
@@ -53,31 +55,34 @@ def outputs():
             accu = f'  · exact PinsHold.get post.pins ⟨{accu_pin}, by simp⟩'
         extra_import, value_setup = '', ''
         advance = 1
-        if kind == 'env':
+        if kind in ('env', 'operand_env'):
+            index = str(n) if kind == 'env' else 'operandWord.toInt.toNat'
+            window = 'read' if kind == 'env' else 'window'
+            result_val = 'v'
             extra_import = 'import OCaml.Vm.Sim.FieldRead\n'
             extra_binders = ' {l a k : Nat} {v : Val}'
-            extra_inputs = f'''    (selected : FieldSelection s.heap pl s.env {n} v l a k)
-    (read : RamReadAt (a + 8 * (k + {n})) 8)
+            extra_inputs = f'''    (selected : FieldSelection s.heap pl s.env {index} v l a k)
+    ({window} : RamReadAt (a + 8 * (k + {index})) 8)
 '''
             value_setup = '''  have value := FieldSelection.read h.toVmReprAt (by simp [roots]) selected
   have environment := represented_register h.env selected.sourceWord
 '''
             value, root = 'value.word', 'value.root'
             load_setup = f'''  have address : BitVec.ofNat 64 (a + 8 * k) + sign_extend (m := 64) (0x{8*n:03x}#12) =
-      BitVec.ofNat 64 (a + 8 * (k + {n})) := by
-    rw [show sign_extend (m := 64) (0x{8*n:03x}#12) = BitVec.ofNat 64 (8 * {n}) from by decide]
+      BitVec.ofNat 64 (a + 8 * (k + {index})) := by
+    rw [show sign_extend (m := 64) (0x{8*n:03x}#12) = BitVec.ofNat 64 (8 * {index}) from by decide]
     simp only [Nat.mul_add, ← Nat.add_assoc, BitVec.ofNat_add]
 '''
-            load_simp = ', address, read.toNat'
-            load_args = '\n    read.lower read.upper read.htif'
+            load_simp = f', address, {window}.toNat'
+            load_args = f'\n    {window}.lower {window}.upper {window}.htif'
             accu = f'''  · have hp : gpr after Layout.reg_accu = some
-        (sign_extend (m := 64) (bytesT8 memoryAfter (a + 8 * (k + {n})))) :=
+        (sign_extend (m := 64) (bytesT8 memoryAfter (a + 8 * (k + {index})))) :=
       PinsHold.get post.pins ⟨{accu_pin}, by simp⟩
     have same := selected.word_frame (payload_of_repr h.toVmReprAt) (by simp [roots])
       space.payload (hm.trans (memoryEq.trans
         (congrArg (fun m => writeLog m (pushLog sp w)) dp.memory)))
       (frame.out.trans dp.frame.out)
-    have current : gpr after Layout.reg_accu = some (word after (a + 8 * (k + {n}))) := by
+    have current : gpr after Layout.reg_accu = some (word after (a + 8 * (k + {index}))) := by
       simpa only [word, hm, bytesT_eight_eq, sign_extend,
         Sail.BitVec.signExtend, BitVec.signExtend_eq] using hp
     simpa only [same] using current'''
@@ -97,8 +102,8 @@ def outputs():
         variable = kind.startswith('operand_')
         if variable:
             advance = 2
-            extra_binders = ' {operandWord : BitVec 32}'
-            extra_inputs = '    (operand : OperandAt P pl (s.pc + 1) operandWord)\n'
+            extra_binders = ' {operandWord : BitVec 32}' + extra_binders
+            extra_inputs = '    (operand : OperandAt P pl (s.pc + 1) operandWord)\n' + extra_inputs
             load_setup = '''  have read := space.operand_read32 h.code operand (memoryEq.trans
     (congrArg (fun m => writeLog m (pushLog sp w)) dp.memory))
 '''
@@ -112,7 +117,7 @@ def outputs():
         ((operandWord.signExtend 64 <<< (1 : Nat)) + 1#64) :=
       PinsHold.get post.pins ⟨{accu_pin}, by simp⟩
     simpa only [tag_word32] using hp'''
-            else:
+            elif kind == 'operand_closure':
                 extra_import = 'import OCaml.Vm.Sim.ClosureOffset\n'
                 extra_binders += ' {l a k dest : Nat}'
                 extra_inputs += '    (selected : ClosureOffset s pl operandWord.toInt l a k dest)\n'
@@ -126,6 +131,53 @@ def outputs():
 '''
                 load_simp = ', address'
                 accu = f'  · exact PinsHold.get post.pins ⟨{accu_pin}, by simp⟩'
+            elif kind in ('operand_env', 'operand_stack'):
+                extra_import += 'import OCaml.Vm.Sim.IndexWord\n'
+                extra_inputs += '    (nonnegative : 0 ≤ operandWord.toInt)\n'
+                if kind == 'operand_stack':
+                    extra_binders += ' {v : Val}'
+                    extra_inputs += '''    (selected : (s.accu :: s.stack)[operandWord.toInt.toNat]? = some v)
+    (window : RamReadAt (sp - 8 + 8 * operandWord.toInt.toNat) 8)
+'''
+                    value, root, result_val = '(pushed_value h.toVmReprAt pushed selected)', '(pushed_root selected)', 'v'
+                    base, addr = 'sp - 8', 'sp - 8 + 8 * operandWord.toInt.toNat'
+                    load_setup += '''  have loaded := space.pushed_read selected (memoryEq.trans
+    (congrArg (fun m => writeLog m (pushLog sp w)) dp.memory))
+'''
+                    accu = f'''  · have hp : gpr after Layout.reg_accu = some
+        (sign_extend (m := 64) (bytesT8 memoryAfter ({addr}))) :=
+      PinsHold.get post.pins ⟨{accu_pin}, by simp⟩
+    simpa only [loaded] using hp'''
+                    swap = ''
+                else:
+                    base, addr = 'a + 8 * k', 'a + 8 * (k + operandWord.toInt.toNat)'
+                    swap = f''',
+    show BitVec.ofNat 64 (8 * operandWord.toInt.toNat) + BitVec.ofNat 64 ({base}) =
+      BitVec.ofNat 64 ({base}) + BitVec.ofNat 64 (8 * operandWord.toInt.toNat) from BitVec.add_comm _ _'''
+                load_setup += f'''  have address : BitVec.ofNat 64 ({base}) + BitVec.ofNat 64 (8 * operandWord.toInt.toNat) =
+      BitVec.ofNat 64 ({addr}) := by
+    simp only [Nat.mul_add, ← Nat.add_assoc, BitVec.ofNat_add]
+'''
+                load_simp = f''', show sign_extend (m := 64) (0x000#12) = 0#64 from by decide,
+    BitVec.add_zero, index_word operandWord nonnegative{swap}, address, window.toNat'''
+                load_args += '\n    window.lower window.upper window.htif'
+        if kind in ('atom', 'operand_atom'):
+            extra_import = 'import OCaml.Vm.Sim.IndexWord\n'
+            tag = 'operandWord.toInt.toNat' if variable else '0'
+            result_val = f'.atom ({tag})'
+            value, root = f'(atom_word_of_binding h.atomBase ({tag}))', '(fun _ hl => by cases hl)'
+            ea = [p for p in spec['params'] if p.startswith('(hlo_')][-1].split(' ≤ ', 1)[1].removesuffix('.toNat)')
+            load_setup += f'''  have table : RamReadAt Layout.sym_caml_atom_table 8 := ⟨by decide, by decide, by decide⟩
+  have address : {ea} = BitVec.ofNat 64 Layout.sym_caml_atom_table := by decide
+  have tableRead := space.word_read space.payload.atomBase (memoryEq.trans
+    (congrArg (fun m => writeLog m (pushLog sp w)) dp.memory))
+'''
+            load_simp = ', address, table.toNat, tableRead, show sign_extend (m := 64) (0x008#12) = 8#64 from by decide'
+            if variable:
+                extra_inputs += '    (nonnegative : 0 ≤ operandWord.toInt)\n'
+                load_simp += ', atom_index_offset operandWord nonnegative'
+            load_args += '\n    table.lower table.upper table.htif'
+            accu = f'''  · exact PinsHold.get post.pins ⟨{accu_pin}, by simp⟩'''
         words = {'x9': 'BitVec.ofNat 64 sp', 'x21': 'w',
                  'x8': 'BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)',
                  'x23': 'BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64',
@@ -147,14 +199,16 @@ def outputs():
       PinsHold.get post.pins ⟨{pc_pin}, by simp⟩
     simpa only [show sign_extend (m := 64) (0x000#12) = 0#64 from by decide,
       BitVec.add_zero, codePc_succ] using hp'''
-        if variable:
+        if variable or kind == 'atom':
+            operand_simps = '''show sign_extend (m := 64) (0x004#12) = 4#64 from by decide,
+    codePc_succ, operand.geometry.toNat, read''' if variable else 'push_address space.room'
             run_application = f'''  have body := run space.window.lower space.window.upper
     space.window.htif space.window.aligned (by simpa only [space.toNat] using code)
     memoryAfter (by rw [space.toNat]; exact memoryEq)
-  simp only [show sign_extend (m := 64) (0x004#12) = 4#64 from by decide,
-    codePc_succ, operand.geometry.toNat, read{load_simp}] at body
+  simp only [{operand_simps}{load_simp}] at body
   obtain ⟨nb, after, _, hb, post⟩ := body{load_args} d bp'''
             load_simp = ''
+        if variable:
             pc_proof = f'''  · have hp : gpr after Layout.reg_pc = some
         (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 8#64) :=
       PinsHold.get post.pins ⟨{pc_pin}, by simp⟩
