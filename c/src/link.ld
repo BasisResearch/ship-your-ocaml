@@ -50,5 +50,16 @@ SECTIONS
     PROVIDE(end = .);
 
     __stack_top = ORIGIN(RAM) + LENGTH(RAM);
-    __heap_end = __stack_top - __stack_size;
+
+    /* Everything that varies with the embedded program (its files, argv,
+     * OCAMLRUNPARAM: gen_embed.sh) sits at a FIXED address below the stack,
+     * so the runtime's .text/.rodata/.data/.bss are the same bytes for every
+     * program (Layer A quantifies over programs with one runtime image). */
+    __embed_start = __stack_top - __stack_size - 0x1000000;
+    .embed __embed_start : ALIGN(8) {
+        KEEP(*(.embed))
+    } > RAM
+    ASSERT(. <= __stack_top - __stack_size, "embedded files exceed the 16 MiB .embed region")
+
+    __heap_end = __embed_start;
 }
