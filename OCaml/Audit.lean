@@ -516,6 +516,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.payload_pc
 #print axioms OCaml.Vm.Sim.ArmInput.running
 #print axioms OCaml.Vm.Sim.ArmInput.of_repr
+#print axioms OCaml.Vm.Sim.DispatchPost.image
+#print axioms OCaml.Vm.Sim.immediate_arm
+#print axioms Vsa.Sim.tr_const1
+#print axioms OCaml.Vm.Sim.const1_loaded
+#print axioms OCaml.Vm.Sim.const1_arm
+#print axioms Vsa.Sim.tr_const2
+#print axioms OCaml.Vm.Sim.const2_loaded
+#print axioms OCaml.Vm.Sim.const2_arm
+#print axioms Vsa.Sim.tr_const3
+#print axioms OCaml.Vm.Sim.const3_loaded
+#print axioms OCaml.Vm.Sim.const3_arm
 #print axioms OCaml.Vm.Sim.const0_arm
 
 -- Shared immediate-result restoration and modular NEGINT.

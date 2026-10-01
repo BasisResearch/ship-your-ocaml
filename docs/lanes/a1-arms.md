@@ -38,7 +38,24 @@ Validation: resolver 14s, representation 1.2s, refinement 1.1s, relocation
 2.1s, legacy/disambiguation regression 2.8s, GC invariant 1.0s. CONST0 and
 NEGINT rebuild at 1.1s / 1.2s; targeted runs remain below 2.08 GiB under
 24 GiB. No proof budget changed. Drift, discipline and abstraction checks
-pass; integration runs the full audit and gate before landing.
+pass; the full integration gate passed and landed the repair as `9eeb667`.
+
+## Constant-arm family
+
+`immediate_arm` (`OCaml/Vm/Sim/Immediate.lean`) composes the shared dispatch
+run, any generated immediate-result body, and `immediate_restore` once.
+`DispatchPost.image` supplies the body image from dispatch's memory frame.
+CONST0 and NEGINT now consume this rule. `gen_const_arms.py` emits represented
+CONST0–CONST3 bridges; `gen_arm_pilot.py` emits their machine bodies, sites,
+ELF pins and image projections from the census. The new `const1_arm`,
+`const2_arm`, and `const3_arm` restore the exact semantic PC/accumulator result
+and every data/platform/loop component, including primitive bindings.
+
+These remain conditional on `ArmInput` and `MemoryStable L.runtimeOk`;
+no unconditional `ArmSim.next` case is claimed. Axiom and generator-drift
+checks cover the new family. Separate default-limit builds under 24 GiB:
+CONST0 plus composition 3.52s; CONST1 5.92s, CONST2 4.74s, CONST3 4.58s.
+New constant bridge elaboration is 1.0–1.4s; peak process RSS below 2 GiB.
 
 ## Current status
 
@@ -334,5 +351,5 @@ Next: extend generated arm families, then discharge dispatch and full
 representation/frame bridges. Dispatch,
 allocation fast path, primitive summaries, and the actual loop/entry machine
 proofs remain open. A0 has repaired the nursery bounds via `runtimeLayout`; its remaining
-boot ELF text mismatch is tracked in that lane's log. `L.runtimeOk` must
+boot `Loaded` assembly now exposes its remaining control/image/binding obligations. `L.runtimeOk` must
 still be maintained by every generated arm.

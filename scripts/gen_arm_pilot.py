@@ -33,6 +33,9 @@ FAMILIES = {
     'ACC': ('Acc', ['lw_tot', 'alu_addi', 'slli', 'alu_add', 'ld_tot', 'j']),
     'ACC0': ('Acc0', ['ld_tot', 'alu_addi', 'j']),
     'CONST0': ('Const0', ['alu_addi', 'alu_addi', 'j']),
+    'CONST1': ('Const1', ['alu_addi', 'alu_addi', 'j']),
+    'CONST2': ('Const2', ['alu_addi', 'alu_addi', 'j']),
+    'CONST3': ('Const3', ['alu_addi', 'alu_addi', 'j']),
     'NEGINT': ('Negint', ['alu_addi', 'alu_addi', 'sub', 'j']),
     'ISINT': ('Isint', ['slli', 'andi', 'alu_addi', 'alu_addi', 'j']),
 }

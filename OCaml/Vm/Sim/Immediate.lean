@@ -60,4 +60,30 @@ theorem immediate_preserved {W : List Register} {σ σ' : MState}
     ∀ r ∈ immediatePreserved, σ'.regs.get? r = σ.regs.get? r :=
   fun r hr => frame.frame r (avoid r hr)
 
+/-- Dispatch's memory frame preserves the executable image for the body. -/
+theorem DispatchPost.image {before after : Config} {op : Opcode} {a : BitVec 64}
+    (h : DispatchPost before op a after) (image : ExecutableImage before) :
+    ExecutableImage after :=
+  ⟨fun i hi => by rw [h.memory]; exact image.text i hi,
+   fun i hi => by rw [h.memory]; exact image.rodata i hi⟩
+
+/-- Shared composition for generated immediate-result bodies. The body premise
+is discharged by each generated segment; it is not a headline assumption. -/
+theorem immediate_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
+    {c : Config} {pl : Place} {cp : ChanPlace} {sp high pc : Nat} {n : BitVec 63}
+    (stable : MemoryStable L.runtimeOk) (h : ArmInput L P s op c pl cp sp high)
+    (body : ∀ d, DispatchPost c op (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d →
+      ∃ nb after, StepsN nb d after ∧ ImmediatePost d pl pc n after) :
+    ∃ after, Plus c after ∧ Running L P {s with pc := pc, accu := .int n} after := by
+  obtain ⟨nd, d, hnd, hd, dp⟩ := dispatch_run h.dispatch
+  obtain ⟨nb, after, hb, post⟩ := body d dp
+  refine ⟨after, ?_, ?_⟩
+  · refine ⟨nd + nb - 1, ?_⟩
+    simpa only [Nat.sub_add_cancel (by omega : 1 ≤ nd + nb)] using hd.append hb
+  · apply immediate_restore stable h.toVmReprAt h.running.platform h.dispatch.loop
+    exact ⟨post.good, post.head, post.code, post.accu,
+      post.memory.trans dp.memory, post.output.trans dp.frame.out,
+      fun r hr => (post.preserved r hr).trans
+        (immediate_preserved dp.frame (by decide) r hr)⟩
+
 end OCaml.Vm.Sim

@@ -94,6 +94,7 @@ python3 scripts/retarget_allocator_specs.py --check || fail "stage a5: allocator
 python3 scripts/retarget_stdio_specs.py --check || fail "stage a5: stdio composition/image drift"
 python3 scripts/retarget_library_sites.py --check || fail "stage a5: A0 library site drift"
 python3 scripts/gen_ocaml_image.py | cmp -s - OCaml/Vm/ImageData.lean || fail "stage a5: OCaml image pins differ from generator"
+python3 scripts/gen_const_arms.py --check || fail "stage a5: constant arm bridge drift"
 python3 scripts/gen_arm_pilot.py --check || fail "stage a5: arm pilot drift"
 python3 scripts/gen_dispatch_table.py --check || fail "stage a5: dispatch table drift"
 python3 scripts/gen_primitive_binding_probe.py --check || fail "stage a5: primitive binding probe drift"
