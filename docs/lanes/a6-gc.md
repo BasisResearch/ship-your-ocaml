@@ -79,7 +79,13 @@ the one-line ocamlc run is covered by G2.
 ## Landing
 
 - `2ef2a72` landed on origin/main with scripts/integrate.sh (exit 0).
-- Second checked piece: run the integration gate after this log update.
+- `f29a381` (obstructions/interfaces/budget) and `4f26d45` (census)
+  landed on origin/main with scripts/integrate.sh (exit 0). A push race
+  with the NEGINT lane was resolved by retaining both import/audit lists;
+  the complete gate was rerun successfully after the rebase.
+- New headline theorem axiom audit passed; no nonstandard axioms. The
+  refreshed abstraction census passes: C3 has 7 proofs since adoption.
+- Log-only landing follows these checked commits; no proof claim changed.
 - Exit remains unmet: no oldify machine loop proof, no lax bridge compatible
   with all admitted observations, no production live-word Fits, and no
   one-line compiler Layer A budget theorem. The specification question at
