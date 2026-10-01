@@ -978,3 +978,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.DoubleAllocation.copy_double_fast
 #print axioms OCaml.Vm.Primitives.DoubleAllocation.field_address
 #print axioms OCaml.Vm.Primitives.DoubleAllocation.double_layout
+
+-- callback.c named-root replacement and C-string keys.
+#print axioms OCaml.Bytecode.registerNamedValue_lookup
+#print axioms OCaml.Bytecode.registerNamedValue_lookup_other
+#print axioms OCaml.Bytecode.registerNamedValue_member
+#print axioms OCaml.Bytecode.named_replacement_check
+#print axioms OCaml.Bytecode.named_first_nul_check
+#print axioms OCaml.Bytecode.named_primitive_replacement

@@ -398,3 +398,23 @@ show the `ecall` hang (§1). The Sail numbers above are authoritative.
 * Program-specific builds share the fixed runtime sections and layout;
   their `.embed` contents differ. A `Loaded` witness must establish
   each program's code, heap, world and platform state at the cut.
+
+
+## Named-value registration model (2026-10-01)
+
+`runtime/callback.c:203–227` replaces a matching named root and treats names
+as C strings. `primF1Impl` now follows both rules: `namedValueKey` takes the
+prefix before the first NUL; `registerNamedValue` updates the existing slot.
+This removes the replaced value from `World.named`, which is also a GC root
+source. The previous append-only model retained obsolete roots.
+
+`python3 scripts/validate_named_values.py` builds a temporary host 4.14.4
+C/OCaml probe using `caml_named_value`. Registering one key with 11 then 22
+observes 22; registering two names with the same pre-NUL prefix with 33 then
+44 observes 44. `OCaml/Bytecode/NamedValues.lean` checks corresponding model
+transitions and proves generic lookup/frame/root-membership laws.
+
+`python3 scripts/difftest_bc.py --json results/bc-named.json` passes all ten
+tests, including `f1_named.ml`. This compares stdout and exit status; the
+separate table probe and kernel-checked primitive transition check the named
+state itself. No Sail or whole-function named-registration proof is claimed.

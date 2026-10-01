@@ -266,7 +266,7 @@ def primF1Impl (name : String) (args : List Val) (h : Heap) (w : World) : PRes :
   match name, args with
   | "caml_register_named_value", [vn, v] =>
       some (strOf? h vn) fun n =>
-        .ok .unit h { w with named := w.named ++ [(String.ofList (n.map fun b => Char.ofNat b.toNat), v)] }
+        .ok .unit h { w with named := registerNamedValue (namedValueKey n) v w.named }
   | "caml_ml_open_descriptor_out", [fd] => some (intArg? fd) fun fd => openChan h w fd true
   | "caml_ml_open_descriptor_in", [fd] => some (intArg? fd) fun fd => openChan h w fd false
   | "caml_ml_out_channels_list", [_] =>

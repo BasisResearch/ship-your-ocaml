@@ -265,3 +265,23 @@ stays **16/30**. These are reusable support results, not a seventeenth primitive
 
 Allocation-support validation: full regression and audit pass (1,918 targets;
 permitted standard axioms only). Generator drift, discipline and a8 pass.
+
+Allocation support landed at `0c3d49d` after the complete integration gate.
+
+## Named-value model correction
+
+The C runtime (`runtime/callback.c:203–227`) updates the matching root slot;
+the former model appended a duplicate. Since `roots` includes `World.named`,
+that retained an obsolete value as a GC root. C names also end at the first
+NUL byte, whereas the former model used the complete OCaml byte string.
+`scripts/validate_named_values.py` probes both cases against the host 4.14.4
+runtime through `caml_named_value`: replacement yields 22, and two names
+sharing their pre-NUL prefix yield 44. The model transcription now uses
+`namedValueKey` and `registerNamedValue`. All ten host/model difftests pass
+(`results/bc-named.json`), including the new `f1_named` registration sequence.
+The direct host table probe supplements stdout/exit comparison.
+`OCaml/Bytecode/NamedValues.lean` proves latest-key lookup, other-key framing,
+retained-root membership, and the actual primitive replacement transition. No machine primitive is counted by this repair.
+
+Named-value correction validation: full regression/audit passes (1,965 targets,
+standard axioms only); discipline, generator checks and a8 pass.

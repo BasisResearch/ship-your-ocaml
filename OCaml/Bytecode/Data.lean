@@ -1,9 +1,21 @@
 import OCaml.Bytecode.Value
 
-/-! Data operations transcribed from runtime/{array,str,compare}.c.
+/-! Data operations transcribed from runtime/{array,str,compare,callback}.c.
 Fuel bounds only traversal of possibly cyclic values; exhaustion leaves the
 operation outside the supported fragment. -/
 namespace OCaml.Bytecode
+
+/-- `runtime/callback.c` hashes and compares the first-NUL-terminated C name. -/
+def namedValueKey (bytes : List UInt8) : String :=
+  String.ofList ((bytes.takeWhile (· != 0)).map fun b => Char.ofNat b.toNat)
+
+/-- `caml_register_named_value` updates an existing root slot, or allocates a
+new one when no key matches. Table order is abstract; keys remain unique from
+an initially unique table. Replaced values cease to be named GC roots. -/
+def registerNamedValue (name : String) (v : Val) : List (String × Val) → List (String × Val)
+  | [] => [(name, v)]
+  | (key, old) :: rest =>
+      if key == name then (key, v) :: rest else (key, old) :: registerNamedValue name v rest
 
 /-- Byte lexicographic order (`memcmp`, followed by length). -/
 def compareBytes : List UInt8 → List UInt8 → Int
