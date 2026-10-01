@@ -97,6 +97,7 @@ import OCaml.Vm.Sim.AtomObstruction
 import OCaml.Vm.Sim.Atom0
 import OCaml.Vm.Sim.Atom
 import OCaml.Vm.Sim.Acc
+import OCaml.Vm.Sim.Pop
 import OCaml.Vm.Sim.Envacc
 import OCaml.Vm.Sim.Getfield
 import OCaml.Vm.Sim.OffsetWidth

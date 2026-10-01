@@ -1,5 +1,26 @@
 # Lane a1-arms
 
+## General stack consumption and POP
+
+`ConsumeValuePost`, `consume_value_restore` and `consume_value_arm`
+(`Sim/StackConsume.lean`) generalize the integer binary restoration to an
+arbitrary represented value. The result becomes a live accumulator root
+before source stack slots are dropped. Existing integer APIs are direct
+specializations, with no repeated dispatch/run proof.
+
+`pop_arm` and `pop_step_arm` (`Sim/Pop.lean`) consume a bounded nonnegative
+operand count and preserve the accumulator. The generated five-step body
+and image pins come from `gen_arm_pilot.py`; the semantic adapter derives
+the stack bound from the actual `stepI` result. Operand sign, code read
+geometry and runtime stability remain explicit premises.
+
+Default-limit/24 GiB checks: generalized restoration 0.928s; POP body 1.3s;
+POP represented and semantic bridge 1.0s. ADDINT regression passes through
+the integer specialization. The indexed-load landing is `26bdddf`, with
+all integration gates passing. There are now 53 conditional represented
+opcode bridges; complete `ArmSim`, entry/halt and the lane exits remain open.
+Next: consume a vector-index slot using the general value-result restoration.
+
 ## Indexed stack and field loads
 
 `acc_arm`, `envacc_arm` and `getfield_arm` (`Sim/Acc.lean`,
