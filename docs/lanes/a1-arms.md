@@ -28,6 +28,32 @@ Default-limit 24 GiB checks: OFFSETINT body/pins 5.56s (segment 2.1s),
 arithmetic witness 3.60s (module 2.3s), peak process RSS below 2 GiB.
 CONSTINT landed as `9786220` with the full gate passing.
 
+## Read-only stack-consuming arithmetic
+
+`gen_binary_arms.py` emits ADDINT, SUBINT, ANDINT, ORINT and XORINT bridges,
+including `*_step_arm` wrappers consuming a successful `stepI` result.
+`intOp_next` (`BinarySemantics.lean`) extracts the two represented integer
+inputs and remaining stack once for the family. `tag_add` and the existing
+`tag_sub` establish the modular arithmetic; `tag_untag_odd` establishes the
+shared tag/untag round trip for all odd native bitwise results.
+
+`stack_drop`, `live_stack_drop`, and `payload_stack_drop` (`StackDrop.lean`)
+transport stack shape and live-root observations after consuming a prefix.
+`consume_arm`/`consume_restore` (`StackConsume.lean`) compose dispatch and
+restore the result. `readOnly_restore` (`ReadOnly.lean`) now shares the
+platform/image/primitive-binding frame with the earlier accumulator-only
+restoration. No new invariant field or headline premise is introduced.
+The generated bridges derive stack non-wraparound from representation;
+RAM/HTIF geometry and dispatch/runtime-frame premises remain explicit.
+
+All five machine bodies and represented bridges pass separate builds under
+24 GiB at default limits. New bodies take 1.0–2.1s; represented bridges take
+1.2–1.7s, after the common helpers are cached. The generator reads pin order
+and native result expressions from the generated segment JSON, avoiding a
+second hand-maintained register assignment. There are now 32 conditional
+represented opcode bridges. Conditional branches landed as `54450e7` with
+the full gate passing; full `ArmSim`, entry and halt remain open.
+
 ## Conditional branches
 
 `branchif_arm` and `branchifnot_arm` (`OCaml/Vm/Sim/Branchif*.lean`)

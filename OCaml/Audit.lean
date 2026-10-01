@@ -605,6 +605,37 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 -- Shared control restoration and both guarded conditional paths.
 #print axioms OCaml.Vm.Sim.control_arm
+
+-- Shared read-only payload restoration and stack-consuming integer arms.
+#print axioms OCaml.Vm.Sim.readOnly_restore
+#print axioms OCaml.Vm.Sim.stack_drop
+#print axioms OCaml.Vm.Sim.live_stack_drop
+#print axioms OCaml.Vm.Sim.payload_stack_drop
+#print axioms OCaml.Vm.Sim.consume_restore
+#print axioms OCaml.Vm.Sim.consume_arm
+#print axioms OCaml.Vm.Sim.tag_add
+#print axioms OCaml.Vm.Sim.tag_untag_odd
+#print axioms OCaml.Vm.Sim.intOp_next
+#print axioms Vsa.Sim.tr_addint
+#print axioms OCaml.Vm.Sim.addint_loaded
+#print axioms OCaml.Vm.Sim.addint_arm
+#print axioms OCaml.Vm.Sim.addint_step_arm
+#print axioms Vsa.Sim.tr_subint
+#print axioms OCaml.Vm.Sim.subint_loaded
+#print axioms OCaml.Vm.Sim.subint_arm
+#print axioms OCaml.Vm.Sim.subint_step_arm
+#print axioms Vsa.Sim.tr_andint
+#print axioms OCaml.Vm.Sim.andint_loaded
+#print axioms OCaml.Vm.Sim.andint_arm
+#print axioms OCaml.Vm.Sim.andint_step_arm
+#print axioms Vsa.Sim.tr_orint
+#print axioms OCaml.Vm.Sim.orint_loaded
+#print axioms OCaml.Vm.Sim.orint_arm
+#print axioms OCaml.Vm.Sim.orint_step_arm
+#print axioms Vsa.Sim.tr_xorint
+#print axioms OCaml.Vm.Sim.xorint_loaded
+#print axioms OCaml.Vm.Sim.xorint_arm
+#print axioms OCaml.Vm.Sim.xorint_step_arm
 #print axioms OCaml.Vm.Sim.tag_eq_false
 #print axioms OCaml.Vm.Sim.false_word_iff
 #print axioms Vsa.Sim.tr_branchif_jump

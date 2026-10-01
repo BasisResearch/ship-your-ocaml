@@ -60,6 +60,11 @@ FAMILIES = {
     'CONST3': ('Const3', ['alu_addi', 'alu_addi', 'j']),
     'BOOLNOT': ('Boolnot', ['alu_addi', 'alu_addi', 'sub', 'j']),
     'NEGINT': ('Negint', ['alu_addi', 'alu_addi', 'sub', 'j']),
+    'ADDINT': ('Addint', ['ld_tot', 'alu_addi', 'alu_addi', 'alu_add', 'alu_addi', 'j']),
+    'SUBINT': ('Subint', ['ld_tot', 'alu_addi', 'alu_addi', 'sub', 'alu_addi', 'j']),
+    'ANDINT': ('Andint', ['ld_tot', 'alu_addi', 'alu_addi', 'alu_and', 'j']),
+    'ORINT': ('Orint', ['ld_tot', 'alu_addi', 'alu_addi', 'alu_or', 'j']),
+    'XORINT': ('Xorint', ['ld_tot', 'alu_addi', 'alu_addi', 'alu_xor', 'ori', 'j']),
     'ISINT': ('Isint', ['slli', 'andi', 'alu_addi', 'alu_addi', 'j']),
 }
 

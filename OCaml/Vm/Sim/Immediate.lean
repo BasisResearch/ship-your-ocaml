@@ -1,4 +1,4 @@
-import OCaml.Vm.Sim.ArmInput
+import OCaml.Vm.Sim.ReadOnly
 
 namespace OCaml.Vm.Sim
 open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable
@@ -46,19 +46,14 @@ theorem accu_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
     (post : AccuPost c pl pc w after) :
     Running L P {s with pc := pc, accu := v} after := by
-  have payload := (payload_pc ((payload_of_repr data).accu_of_root v root) pc).frame post.memory post.output
-  refine ⟨⟨pl, cp, sp, high, ?_⟩, ?_, ?_⟩
-  · refine ⟨post.head, post.code, ?_, ⟨w, post.accu, value⟩, ?_, ?_,
-      payload.stackHigh, payload.trapsp, payload.codeBase, payload.code,
-      payload.globals, payload.stack, payload.heap, payload.world, data.primitives.frame post.memory⟩
+  have payload := payload_pc ((payload_of_repr data).accu_of_root v root) pc
+  apply readOnly_restore stable payload data.primitives platform ?_ ?_
+    post.good post.memory post.output
+  · refine ⟨post.head, post.code, ?_, ⟨w, post.accu, value⟩, ?_, ?_⟩
     · exact (post.preserved _ (by decide)).trans data.spReg
     · obtain ⟨w, hw, hv⟩ := data.env
       exact ⟨w, (post.preserved _ (by decide)).trans hw, hv⟩
     · exact (post.preserved _ (by decide)).trans data.extra
-  · exact ⟨post.good,
-      ⟨fun i hi => by rw [post.memory]; exact platform.image.text i hi,
-       fun i hi => by rw [post.memory]; exact platform.image.rodata i hi⟩,
-      stable c after post.memory platform.runtime⟩
   · exact ⟨(post.preserved _ (by decide)).trans loop.dispatchTable,
       (post.preserved _ (by decide)).trans loop.opcodeBound,
       (post.preserved _ (by decide)).trans loop.pending,

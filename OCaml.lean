@@ -73,6 +73,11 @@ import OCaml.Vm.Sim.Constint
 import OCaml.Vm.Sim.Branch
 import OCaml.Vm.Sim.Branchif
 import OCaml.Vm.Sim.Branchifnot
+import OCaml.Vm.Sim.Addint
+import OCaml.Vm.Sim.Subint
+import OCaml.Vm.Sim.Andint
+import OCaml.Vm.Sim.Orint
+import OCaml.Vm.Sim.Xorint
 import OCaml.Vm.Sim.OffsetWidth
 import OCaml.Vm.Sim.Envacc1
 import OCaml.Vm.Sim.Envacc2
