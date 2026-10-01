@@ -94,3 +94,5 @@ import OCaml.Vm.Primitives.CamlMlBytesLength
 import OCaml.Vm.Primitives.CamlFreshOoId
 
 import OCaml.Vm.Primitives.StringEncoding
+
+import OCaml.Vm.Primitives.CamlStringEqual

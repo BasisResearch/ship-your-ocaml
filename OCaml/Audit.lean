@@ -759,3 +759,21 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMin.loaded_fillZero
 
 #print axioms OCaml.Vm.Boot.WhileMin.memory_equiv
+
+-- Canonical string equality: generated CFG and total word-loop fold.
+#print axioms OCaml.Vm.Primitives.holds_select
+#print axioms OCaml.Vm.Primitives.holds_project
+#print axioms OCaml.Vm.Primitives.boundary_of_blocks
+#print axioms OCaml.Vm.Primitives.BoundaryPost.then
+#print axioms OCaml.Vm.Primitives.BoundaryPost.finish
+#print axioms OCaml.Vm.Primitives.boundary_bind
+#print axioms OCaml.Vm.Primitives.WordRange.window
+#print axioms OCaml.Vm.Primitives.scanPtr_delta
+#print axioms OCaml.Vm.Primitives.header_words
+#print axioms OCaml.Vm.Primitives.StringScan.scan_iteration
+#print axioms OCaml.Vm.Primitives.StringScan.scan_loop
+#print axioms OCaml.Vm.Primitives.StringScan.scan_words
+#print axioms OCaml.Vm.Primitives.StringScan.string_equal_machine
+#print axioms OCaml.Vm.Primitives.string_comparison_value
+#print axioms OCaml.Vm.Primitives.string_equal_contract
+#print axioms OCaml.Vm.Primitives.caml_string_equal_primitive
