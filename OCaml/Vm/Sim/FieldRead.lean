@@ -1,5 +1,6 @@
 import OCaml.Vm.Sim.Immediate
 import OCaml.Vm.Primitives.Read
+import OCaml.Vm.Primitives.MemoryFrame
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -41,8 +42,8 @@ theorem FieldSelection.sourceWord {heap : Heap} {pl : Place} {source v : Val}
 
 /-- Resolve both the field word and its existing-root proof through the
 primitive lane's object lookup and the shared Live graph. -/
-theorem FieldSelection.read {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high i l a k : Nat} {source v : Val} (h : VmReprAt P s c pl cp sp high)
+theorem FieldSelection.read_payload {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high i l a k : Nat} {source v : Val} (h : VmPayload P s c pl cp sp high)
     (member : source ∈ roots P s) (f : FieldSelection s.heap pl source i v l a k) :
     FieldValue P s pl c v (a + 8 * (k + i)) := by
   have live : Live s.heap (roots P s) l := Live.root member (by simp [f.pointer, Val.loc?])
@@ -53,9 +54,29 @@ theorem FieldSelection.read {P : Prog} {s : St} {c : Config} {pl : Place} {cp : 
   | some obj =>
     cases obj <;> simp only [field?, object] at selected
     case block tag fs =>
-      have placed := (payload_of_repr h).object_at live f.placed object
+      have placed := h.object_at live f.placed object
       exact ⟨placed.2 (k + i) v selected,
         fun l' hl => Live.field live object (List.mem_of_getElem? selected) hl⟩
     all_goals cases selected
+
+/-- Loop-head specialization of the common payload field observation. -/
+theorem FieldSelection.read {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high i l a k : Nat} {source v : Val} (h : VmReprAt P s c pl cp sp high)
+    (member : source ∈ roots P s) (f : FieldSelection s.heap pl source i v l a k) :
+    FieldValue P s pl c v (a + 8 * (k + i)) :=
+  f.read_payload (payload_of_repr h) member
+
+/-- The payload's write-log frame preserves the selected field's unique word. -/
+theorem FieldSelection.word_frame {P : Prog} {s : St} {c after : Config}
+    {pl : Place} {cp : ChanPlace} {sp high i l a k : Nat} {source v : Val} {log : List Vsa.Sim.WEntry}
+    (h : VmPayload P s c pl cp sp high) (member : source ∈ roots P s)
+    (f : FieldSelection s.heap pl source i v l a k)
+    (outside : PayloadOutside log P s c pl cp sp)
+    (memory : after.σ.mem = Vsa.Sim.writeLog c.σ.mem log)
+    (output : after.σ.sailOutput = c.σ.sailOutput) :
+    word after (a + 8 * (k + i)) = word c (a + 8 * (k + i)) := by
+  have beforeValue := f.read_payload h member
+  have afterValue := f.read_payload (h.frame_log outside memory output) member
+  exact Option.some.inj (afterValue.word.symm.trans beforeValue.word)
 
 end OCaml.Vm.Sim

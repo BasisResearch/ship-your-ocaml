@@ -100,6 +100,10 @@ import OCaml.Vm.Sim.Acc
 import OCaml.Vm.Sim.Pop
 import OCaml.Vm.Sim.Push
 import OCaml.Vm.Sim.Pushacc0
+import OCaml.Vm.Sim.Pushenvacc1
+import OCaml.Vm.Sim.Pushenvacc2
+import OCaml.Vm.Sim.Pushenvacc3
+import OCaml.Vm.Sim.Pushenvacc4
 import OCaml.Vm.Sim.Pushacc1
 import OCaml.Vm.Sim.Pushacc2
 import OCaml.Vm.Sim.Pushacc3

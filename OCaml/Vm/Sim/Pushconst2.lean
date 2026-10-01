@@ -32,10 +32,10 @@ theorem pushconst2_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
       (fun σ => Vsa.Sim.Code.CamlPushconst2Loaded σ.mem ∧ σ.mem = d.σ.mem ∧ σ = d.σ) d :=
     ⟨dp.good, dp.pc,
       ⟨(dp.frame.frame Register.x9 (by decide)).trans h.spReg,
-       (dp.frame.frame Register.x21 (by decide)).trans source, dp.nextCode, trivial⟩,
+       (dp.frame.frame Register.x21 (by decide)).trans source,
+       dp.nextCode, trivial⟩,
       dp.good.minstret, dp.tick, pushconst2_loaded (dp.image h.dispatch.image), rfl, rfl⟩
-  have run := tr_pushconst2 (BitVec.ofNat 64 sp) w
-    (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) d.σ.mem d.σ
+  have run := tr_pushconst2 (BitVec.ofNat 64 sp) (w) (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) d.σ.mem d.σ
   simp only [push_address space.room] at run
   obtain ⟨nb, after, _, hb, post⟩ := run space.window.lower space.window.upper
     space.window.htif space.window.aligned (by simpa only [space.toNat] using code)

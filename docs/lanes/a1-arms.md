@@ -1,5 +1,22 @@
 # Lane a1-arms
 
+## Fixed PUSHENVACC families
+
+`pushenvacc1_arm`–`pushenvacc4_arm` use the same generated push bridge as
+stack selections and constants. Its input register list now comes from segment
+metadata as well as its result positions. `FieldSelection.read_payload`
+factors the existing loop-head field read; `FieldSelection.word_frame` uses
+the landed payload write-log frame to preserve the selected field's unique
+word. No separate heap-byte survival proof is assumed or duplicated.
+
+Separate default-limit/24 GiB builds pass for all four families: bodies
+1.3–1.5s, represented bridges 1.1–1.3s. ENVACC1, GETVECTITEM and PUSHACC1
+regressions pass; the original read API is retained. The fixed PUSHACC/PUSHCONST
+landing is `29b05a2`, full gate passing. There are now 77 conditional represented
+opcode bridges. Next: PUSH-prefixed closure offsets and variable-operand
+prefixes. Full `ArmSim`, the semantic corrections, entry/halt and lane exits
+remain open.
+
 ## Fixed PUSHACC and PUSHCONST families
 
 `pushacc1_arm`–`pushacc7_arm` and `pushconst0_arm`–`pushconst3_arm` now
@@ -804,7 +821,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 73 conditional represented opcode bridges,
+stack-writing families. There are 77 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 

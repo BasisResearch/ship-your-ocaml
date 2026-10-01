@@ -88,6 +88,8 @@ FAMILIES = {
 
 for _n in range(1, 8):
     FAMILIES[f'PUSHACC{_n}'] = (f'Pushacc{_n}', ['sd', 'alu_addi', 'ld_tot', 'alu_addi', 'j'])
+for _n in range(1, 5):
+    FAMILIES[f'PUSHENVACC{_n}'] = (f'Pushenvacc{_n}', ['sd', 'ld_tot', 'alu_addi', 'alu_addi', 'j'])
 for _n in range(4):
     FAMILIES[f'PUSHCONST{_n}'] = (f'Pushconst{_n}', ['sd', 'alu_addi', 'alu_addi', 'alu_addi', 'j'])
 

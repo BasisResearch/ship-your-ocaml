@@ -40,10 +40,10 @@ theorem pushacc2_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
       (fun σ => Vsa.Sim.Code.CamlPushacc2Loaded σ.mem ∧ σ.mem = d.σ.mem ∧ σ = d.σ) d :=
     ⟨dp.good, dp.pc,
       ⟨(dp.frame.frame Register.x9 (by decide)).trans h.spReg,
-       (dp.frame.frame Register.x21 (by decide)).trans source, dp.nextCode, trivial⟩,
+       (dp.frame.frame Register.x21 (by decide)).trans source,
+       dp.nextCode, trivial⟩,
       dp.good.minstret, dp.tick, pushacc2_loaded (dp.image h.dispatch.image), rfl, rfl⟩
-  have run := tr_pushacc2 (BitVec.ofNat 64 sp) w
-    (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) d.σ.mem d.σ
+  have run := tr_pushacc2 (BitVec.ofNat 64 sp) (w) (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) d.σ.mem d.σ
   simp only [push_address space.room, address, read.toNat] at run
   obtain ⟨nb, after, _, hb, post⟩ := run space.window.lower space.window.upper
     space.window.htif space.window.aligned (by simpa only [space.toNat] using code)
