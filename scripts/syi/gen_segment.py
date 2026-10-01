@@ -92,6 +92,7 @@ Core segment-spec JSON
     "mem0": "m0", "memeq": "hmemeq"  # or "mem0": "c.σ.mem" (no memeq)
   },
   "pins": [ {"reg": "x10", "val": "dst", "hyp": "ha0"}, ... ],
+  "counted": true,                  # SegSt only: TripleN via StepCount (import it)
   "frame": {                       # optional ghost register-frame threading
     "pred": "NotWrittenMv", "rhs": "g R", "init": "hframe",
     "tmpl": { "alu": "frame_alu_mv $hobs R hR.$rd hR",
@@ -236,6 +237,9 @@ class SegmentEmitter:
         self.pins = [(p["reg"], p["val"]) for p in spec.get("pins", [])]
         self.pin_hyps = [p.get("hyp") for p in spec.get("pins", [])]
         self.segst = spec.get("boundary") == "segst"
+        self.counted = spec.get("counted", False)
+        if self.counted and not self.segst:
+            raise SpecError("counted output requires boundary=segst")
         self.frame = spec.get("frame")
         self.lines: list[str] = []
         self.chain: str | None = None          # Steps chain expression so far
@@ -664,8 +668,15 @@ class SegmentEmitter:
                     f"({self._segst_payload(self.mem_expr)})")
             payload = f"⟨hload{N}, hmemE{N}" + \
                 (f", hframe{N}" if self.frame else "") + "⟩"
+            if self.counted:
+                self.lines.append(
+                    f"  have hcount : Vsa.Machine.StepsN {N} c {cfg} :=\n"
+                    f"    hsteps{N}.toN_of_stepsEq rfl")
+                witness = f"{N}, {cfg}, Nat.le_refl _, hcount"
+            else:
+                witness = f"{cfg}, hsteps{N}"
             self.lines.append(
-                f"  exact ⟨{cfg}, hsteps{N},\n"
+                f"  exact ⟨{witness},\n"
                 f"    ⟨hG{N}, hpc{N}, hp{N}, ⟨vmi{N}, hmi{N}⟩, hi{N}, "
                 f"{payload}⟩⟩")
         elif "post_proof" in spec:
@@ -713,7 +724,8 @@ class SegmentEmitter:
             head.append(f"    {p}")
         if hclose_param:
             head.append(hclose_param)
-        head.append(f"    : Triple ({spec['pre']}) ({post}) := by")
+        triple = f"TripleN {N}" if self.counted else "Triple"
+        head.append(f"    : {triple} ({spec['pre']}) ({post}) := by")
         body.append("\n".join(head))
         body.extend(self.lines)
         ns = spec.get("namespace", "Vsa.Sim")

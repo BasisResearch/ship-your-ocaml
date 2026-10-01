@@ -4,7 +4,8 @@
   "namespace": "Vsa.Sim",
   "imports": [
     "OCaml.Vm.Sim.Acc0Sites",
-    "Vsa.Sim.SegState"
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount"
   ],
   "params": [
     "(v9 v23 : BitVec 64)",
@@ -62,5 +63,6 @@
   "boundary": "segst",
   "entry": "0x80002320",
   "mem_param": "m0",
-  "default_limits": true
+  "default_limits": true,
+  "counted": true
 }

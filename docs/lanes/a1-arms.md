@@ -7,6 +7,7 @@ The repair (`ef4e701`), CONST0 (`3229c53`), and ISINT/shared ALU adapter
 `scripts/integrate.sh`. The delayed integration completed successfully
 when host memory recovered; all gates, including the 16 ALU smoke sites,
 passed. NEGINT subsequently landed as `e2777bc` with all gates passing.
+ACC/ACC0 subsequently landed as `dd48ca0` with all gates passing.
 The F1 exit remains open.
 
 F1 primitive machine summaries belong to **a1-prims**, including all
@@ -51,6 +52,14 @@ added to the headline theorem.
   frames remain explicit typed obligations, not assumed preservation.
 
 ## Proved
+
+* The five generated body theorems now return the existing `TripleN`
+  instead of forgetting their step counts: CONST0/NEGINT/ISINT/ACC0/ACC
+  have lower bounds 3/4/5/3/6. `TripleN.toTriple` retains ordinary triple
+  use. The shared generator's optional `counted` mode uses
+  `Steps.toN_of_stepsEq` from `Vsa.Sim.StepCount` (the run-kernel counter
+  law), not a second induction on machine runs. Calls/custom postconditions
+  remain outside this mode; the existing SegSt restriction checks that.
 
 * `Vsa.Sim.tr_acc0` and `Vsa.Sim.tr_acc` in
   `OCaml/Vm/Sim/Acc0Segment.lean:20` and `AccSegment.lean:20` prove the
@@ -105,6 +114,11 @@ added to the headline theorem.
   repaired production `ArmSim`.
 
 ## Validation
+
+* Counted body rebuilds, one family per build under 24 GiB, all pass:
+  CONST0 1.1s, NEGINT 1.2s, ISINT 1.4s, ACC0 1.3s, ACC 1.5s.
+  Wall times 1.68–2.19s; maximum process RSS 1.85 GiB. Generator drift
+  checks pass; no elaboration limit increased.
 
 * ACC0 targeted build: code 0.884s, sites 0.907s, image projection 0.855s,
   segment 1.0s; wall 3.29s, peak process RSS 1.70 GiB.

@@ -81,10 +81,10 @@ def outputs(family='CONST0'):
     pin_module = f'Vsa.Sim.Code.Caml{stem}'
     site_module = f'OCaml.Vm.Sim.{stem}Sites'
     instrs = [Instr(r.addr, r.word, r.cls, [str(x) for x in r.ops], r.raw) for r in rows]
-    draft = DraftBuilder(instrs, '_' + lower, pred).build('tr_' + lower, [site_module, 'Vsa.Sim.SegState'])
+    draft = DraftBuilder(instrs, '_' + lower, pred).build('tr_' + lower, [site_module, 'Vsa.Sim.SegState', 'Vsa.Sim.StepCount'])
     draft['params'].pop(0)  # Bounds are emitted below; no callee ghosts.
     draft['prelude'] = []
-    draft.update(boundary='segst', entry=hex(start), mem_param='m0', default_limits=True,
+    draft.update(boundary='segst', entry=hex(start), mem_param='m0', default_limits=True, counted=True,
                  doc=f'{family} arm body, generated from the census. This is a machine segment, not yet ArmSim.next.')
     for k in ['pre', 'post', 'pre_bind', 'post_proof']:
         draft.pop(k)
