@@ -473,3 +473,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.caml_int_compare_primitive
 #print axioms Vsa.Sim.tr_dispatch
 #print axioms OCaml.Vm.Sim.dispatch_loaded
+
+#print axioms Vsa.Sim.PinsHold.get

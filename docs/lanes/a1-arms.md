@@ -63,6 +63,13 @@ added to the headline theorem.
 
 ## Proved
 
+* `Vsa.Sim.PinsHold.get` (`Vsa/Sim/PinLookup.lean:10`) is the shared
+  finite-index accessor for register-pin lists. The segment generator uses
+  it for pin reads and bundle restriction, eliminating deep positional
+  conjunction projections. Its index bound simplifies only list lengths.
+  Dispatch's first full gate exposed the old generator's positional
+  projections; this fixes the generator without a discipline exemption.
+
 * `Vsa.Sim.tr_dispatch` (`OCaml/Vm/Sim/DispatchSegment.lean:22`) proves
   the in-range eight-step loop-head path: opcode load, bound branch,
   jump-table offset load, and indirect jump. It exports `TripleN 8`, memory
@@ -144,6 +151,11 @@ added to the headline theorem.
   repaired production `ArmSim`.
 
 ## Validation
+
+* All six segment families pass after the pin-lookup change, each built
+  separately under 24 GiB: CONST0 15s, NEGINT 15s, ISINT 6.6s, ACC0 13s,
+  ACC 23s, dispatch 11s (shared-host wall timings). Peak process RSS stays
+  below 1.86 GiB. Discipline, generator drift, and abstraction checks pass.
 
 * Dispatch build passes under 24 GiB and default proof limits: code 3.7s,
   sites 9.6s, image projection 2.4s, segment 44s; wall 66.55s, measured

@@ -191,7 +191,7 @@ def bv64(addr: int) -> str:
 
 
 def proj(base: str, idx: int) -> str:
-    return base + ".2" * idx + ".1"
+    return f"(PinsHold.get {base} ⟨{idx}, by simp⟩)"
 
 
 def pin_term(reg: str, val: str) -> str:
@@ -207,7 +207,8 @@ class SpecError(Exception):
 
 
 def file_header(spec: dict) -> str:
-    header = "\n".join(f"import {m}" for m in spec["imports"])
+    imports = list(dict.fromkeys([*spec["imports"], "Vsa.Sim.PinLookup"]))
+    header = "\n".join(f"import {m}" for m in imports)
     limits = "" if spec.get("default_limits", False) else "set_option maxHeartbeats 8000000\nset_option maxRecDepth 1000000"
     header += f"""
 
