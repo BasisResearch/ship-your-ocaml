@@ -44,6 +44,14 @@ import OCaml.Vm.Gc.Forward
 import OCaml.Vm.Gc.Invariant
 import OCaml.Vm.Gc.Budget
 
+import OCaml.Vm.Sim.Acc0
+import OCaml.Vm.Sim.Acc1
+import OCaml.Vm.Sim.Acc2
+import OCaml.Vm.Sim.Acc3
+import OCaml.Vm.Sim.Acc4
+import OCaml.Vm.Sim.Acc5
+import OCaml.Vm.Sim.Acc6
+import OCaml.Vm.Sim.Acc7
 import OCaml.Vm.Sim.Acc0Segment
 import OCaml.Vm.Sim.Acc0Pins
 

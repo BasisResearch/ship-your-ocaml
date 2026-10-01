@@ -5,39 +5,45 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable
 open OCaml.Vm.Primitives
 
 /-- Registers unchanged by arms that only advance PC and replace the
-accumulator with an immediate. Use the generated register assignment. -/
+accumulator with an immediate or an existing live root. Use the generated register assignment. -/
 def immediatePreserved : List Register :=
   [gprReg Layout.reg_sp, gprReg Layout.reg_env, gprReg Layout.reg_extra,
    gprReg Layout.reg_dispatchTable, gprReg Layout.reg_opcodeBound,
    gprReg Layout.reg_pending, gprReg Layout.reg_domain]
 
-/-- Machine observations sufficient to restore an immediate-result VM state.
+/-- Machine observations sufficient to restore an accumulator-result VM state.
 The generated segment supplies execution and its complete frame separately. -/
-structure ImmediatePost (before : Config) (pl : Place) (pc : Nat) (n : BitVec 63)
+structure AccuPost (before : Config) (pl : Place) (pc : Nat) (w : BitVec 64)
     (after : Config) : Prop where
   good : GoodState after.σ
   head : pcOf after = some (BitVec.ofNat 64 Layout.loopHead)
   code : gpr after Layout.reg_pc = some (BitVec.ofNat 64 (pl.codeBase + 4 * pc))
-  accu : gpr after Layout.reg_accu = some (tag64 n)
+  accu : gpr after Layout.reg_accu = some w
   memory : after.σ.mem = before.σ.mem
   output : after.σ.sailOutput = before.σ.sailOutput
   preserved : ∀ r ∈ immediatePreserved, after.σ.regs.get? r = before.σ.regs.get? r
+
+/-- Immediate results specialize the shared accumulator-word postcondition. -/
+abbrev ImmediatePost (before : Config) (pl : Place) (pc : Nat) (n : BitVec 63)
+    (after : Config) : Prop := AccuPost before pl pc (tag64 n) after
 
 theorem codePc_succ (pl : Place) (pc : Nat) :
     BitVec.ofNat 64 (pl.codeBase + 4 * pc) + 4#64 =
       BitVec.ofNat 64 (pl.codeBase + 4 * (pc + 1)) := by
   simp only [Nat.mul_add, Nat.mul_one, ← Nat.add_assoc, BitVec.ofNat_add]
 
-/-- One restoration proof for all read-only, immediate-result arms. -/
-theorem immediate_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
-    {pl : Place} {cp : ChanPlace} {sp high pc : Nat} {n : BitVec 63}
+/-- One restoration proof for read-only accumulator replacements. -/
+theorem accu_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
+    {pl : Place} {cp : ChanPlace} {sp high pc : Nat} {v : Val} {w : BitVec 64}
     (stable : MemoryStable L.runtimeOk) (data : VmReprAt P s c pl cp sp high)
     (platform : PlatformOk L.runtimeOk c) (loop : LoopRegisters c)
-    (post : ImmediatePost c pl pc n after) :
-    Running L P {s with pc := pc, accu := .int n} after := by
-  have payload := (payload_pc ((payload_of_repr data).accu_int n) pc).frame post.memory post.output
+    (value : valWord pl v = some w)
+    (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
+    (post : AccuPost c pl pc w after) :
+    Running L P {s with pc := pc, accu := v} after := by
+  have payload := (payload_pc ((payload_of_repr data).accu_of_root v root) pc).frame post.memory post.output
   refine ⟨⟨pl, cp, sp, high, ?_⟩, ?_, ?_⟩
-  · refine ⟨post.head, post.code, ?_, ⟨tag64 n, post.accu, rfl⟩, ?_, ?_,
+  · refine ⟨post.head, post.code, ?_, ⟨w, post.accu, value⟩, ?_, ?_,
       payload.stackHigh, payload.trapsp, payload.codeBase, payload.code,
       payload.globals, payload.stack, payload.heap, payload.world, data.primitives.frame post.memory⟩
     · exact (post.preserved _ (by decide)).trans data.spReg
@@ -53,6 +59,15 @@ theorem immediate_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Conf
       (post.preserved _ (by decide)).trans loop.pending,
       (post.preserved _ (by decide)).trans loop.domain⟩
 
+/-- Immediate results introduce no heap root. -/
+theorem immediate_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
+    {pl : Place} {cp : ChanPlace} {sp high pc : Nat} {n : BitVec 63}
+    (stable : MemoryStable L.runtimeOk) (data : VmReprAt P s c pl cp sp high)
+    (platform : PlatformOk L.runtimeOk c) (loop : LoopRegisters c)
+    (post : ImmediatePost c pl pc n after) :
+    Running L P {s with pc := pc, accu := .int n} after :=
+  accu_restore stable data platform loop rfl (fun _ h => by cases h) post
+
 /-- Check a generated write-set once, then consume the whole frame. -/
 theorem immediate_preserved {W : List Register} {σ σ' : MState}
     (frame : StepFrameOut W σ σ')
@@ -67,23 +82,34 @@ theorem DispatchPost.image {before after : Config} {op : Opcode} {a : BitVec 64}
   ⟨fun i hi => by rw [h.memory]; exact image.text i hi,
    fun i hi => by rw [h.memory]; exact image.rodata i hi⟩
 
-/-- Shared composition for generated immediate-result bodies. The body premise
+/-- Shared composition for generated read-only accumulator bodies. The body premise
 is discharged by each generated segment; it is not a headline assumption. -/
-theorem immediate_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
-    {c : Config} {pl : Place} {cp : ChanPlace} {sp high pc : Nat} {n : BitVec 63}
+theorem accu_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
+    {c : Config} {pl : Place} {cp : ChanPlace} {sp high pc : Nat} {v : Val} {w : BitVec 64}
     (stable : MemoryStable L.runtimeOk) (h : ArmInput L P s op c pl cp sp high)
+    (value : valWord pl v = some w)
+    (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
     (body : ∀ d, DispatchPost c op (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d →
-      ∃ nb after, StepsN nb d after ∧ ImmediatePost d pl pc n after) :
-    ∃ after, Plus c after ∧ Running L P {s with pc := pc, accu := .int n} after := by
+      ∃ nb after, StepsN nb d after ∧ AccuPost d pl pc w after) :
+    ∃ after, Plus c after ∧ Running L P {s with pc := pc, accu := v} after := by
   obtain ⟨nd, d, hnd, hd, dp⟩ := dispatch_run h.dispatch
   obtain ⟨nb, after, hb, post⟩ := body d dp
   refine ⟨after, ?_, ?_⟩
   · refine ⟨nd + nb - 1, ?_⟩
     simpa only [Nat.sub_add_cancel (by omega : 1 ≤ nd + nb)] using hd.append hb
-  · apply immediate_restore stable h.toVmReprAt h.running.platform h.dispatch.loop
+  · apply accu_restore stable h.toVmReprAt h.running.platform h.dispatch.loop value root
     exact ⟨post.good, post.head, post.code, post.accu,
       post.memory.trans dp.memory, post.output.trans dp.frame.out,
       fun r hr => (post.preserved r hr).trans
         (immediate_preserved dp.frame (by decide) r hr)⟩
+
+/-- Compose an immediate-result arm through the general accumulator rule. -/
+theorem immediate_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
+    {c : Config} {pl : Place} {cp : ChanPlace} {sp high pc : Nat} {n : BitVec 63}
+    (stable : MemoryStable L.runtimeOk) (h : ArmInput L P s op c pl cp sp high)
+    (body : ∀ d, DispatchPost c op (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d →
+      ∃ nb after, StepsN nb d after ∧ ImmediatePost d pl pc n after) :
+    ∃ after, Plus c after ∧ Running L P {s with pc := pc, accu := .int n} after :=
+  accu_arm stable h rfl (fun _ h => by cases h) body
 
 end OCaml.Vm.Sim

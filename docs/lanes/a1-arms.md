@@ -40,6 +40,28 @@ NEGINT rebuild at 1.1s / 1.2s; targeted runs remain below 2.08 GiB under
 24 GiB. No proof budget changed. Drift, discipline and abstraction checks
 pass; the full integration gate passed and landed the repair as `9eeb667`.
 
+## ACC0–ACC7 representation bridges
+
+`accu_restore` and `accu_arm` (`OCaml/Vm/Sim/Immediate.lean`) generalize the
+shared restoration/composition to represented accumulator words. They consume
+`VmPayload.accu_of_root` from a1-prims; immediate arms specialize this rule
+without a second heap/root proof. `stack_value_root` in `StackAcc.lean` selects an
+existing stack root, and `stack_slot_nat` derives non-wrapping addresses from
+stack shape and the represented `stack_high` word.
+
+`gen_acc_arms.py` emits `acc0_arm` through `acc7_arm`; the census/site/segment
+pipeline emits every machine body and ELF pin. Each bridge selects the exact
+abstract stack value, advances PC by one, and restores all data/platform/loop
+fields. The only extra load premise is the shared `ReadWindow` RAM/HTIF
+geometry; absent bytes remain total zero reads. Dispatch readiness and runtime
+memory stability remain explicit, so these are conditional represented arms.
+
+Separate default-limit builds under 24 GiB pass: ACC0 3.96s including shared
+restoration, ACC1–ACC7 4.51/4.53/6.66/5.16/5.55/5.60/5.70s. Each generated
+bridge elaborates in 1.0–1.4s; peak process RSS remains below 2 GiB. The
+14 represented arm bridges are CONST0–3, NEGINT, ISINT and ACC0–7; generic
+ACC has its machine body only. The F1 `ArmSim` exit remains open.
+
 ## ISINT representation bridge
 
 `isint_arm` (`OCaml/Vm/Sim/Isint.lean`) composes generated dispatch/ISINT
@@ -51,7 +73,7 @@ heap placements; it is an explicit premise, not yet part of `Running`.
 at address 1 has the same word as integer zero, so `valWord` alone cannot
 justify the classification. This is not a full `Running` counterexample.
 
-Both files build at default limits under 24 GiB: arithmetic 1.2s, bridge
+Landed as `48219ed` with the full gate passing. Both files build at default limits under 24 GiB: arithmetic 1.2s, bridge
 1.5s, total wall 3.46s, peak process RSS below 2 GiB. The new theorem names
 are included in the axiom audit. The constant-arm family landed with the
 full gate as `ebf75db`.
