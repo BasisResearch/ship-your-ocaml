@@ -46,10 +46,10 @@ the one-line ocamlc run is covered by G2.
   Nursery bounds must permit the observed 800 allocated bytes at startup.
 - `scripts/gc_cfg.py --check` / `results/gc-cfg.json`: gen_fn accepts oldify
   (145 instructions, 38 blocks), but does not recognise its loop template.
-  Its emitted rows import absent `Vsa.Sim.DeriveCaseRow`. Mopup is rejected
+  Its `Vsa.Sim.DeriveCaseRow` dependency is now ported. Mopup is rejected
   for 29 branches (>20); empty_minor_heap for 205 instructions (>150).
-  Do not raise those budgets; port the missing generator dependency and
-  split into meaningful machine segments/routes with named loop invariants.
+  Do not raise those budgets; generate collector code pins and split into
+  meaningful machine segments/routes with named loop invariants.
 
 ## Additional checked results
 
@@ -137,3 +137,17 @@ the one-line ocamlc run is covered by G2.
 - 14 exhaustive abstract classifier/table-membership cases pass; the
   missing-pre-completeness negative case demonstrates why old-young early
   return cannot repair an already incomplete table.
+
+
+## Generated-row adapter
+
+- `Vsa/Sim/DeriveCaseRow.lean:35` `segToTriple` ports the existing generic
+  adapter from ship-your-interpreter (provenance in ATTRIBUTION.md). It
+  reuses segEval_sound and uses a named-field SegPre. No instruction is
+  hand-stepped, no concrete address is introduced, and no heartbeat setting
+  is raised. `lake build Vsa.Sim.DeriveCaseRow` passes under the 24 GB cap.
+- The collector report is regenerated with the now-resolved import
+  dependency. This does not claim generated collector machine rows, code
+  pins, loop summaries, or call contracts are discharged.
+- `8d4c9ac` (queue-law checks / fingerprints) and `edec486` (logical
+  remembered-set barrier rule) landed using scripts/integrate.sh (exit 0).

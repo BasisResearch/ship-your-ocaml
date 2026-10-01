@@ -1,3 +1,4 @@
+import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
 import VsaIris.Vsa.SnpStrlen
@@ -441,3 +442,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 -- Logical remembered-set rule; machine caml_modify summary remains open.
 #print axioms OCaml.Vm.Gc.slotComplete_store
 #print axioms OCaml.Vm.Gc.rememberedComplete_of_slots
+
+-- Ported adapter consumed by whole-function generation.
+#print axioms Vsa.Sim.segToTriple

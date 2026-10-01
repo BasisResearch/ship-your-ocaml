@@ -215,7 +215,9 @@ are open; see `docs/lanes/a2-sem.md`.
 * `scripts/gc_cfg.py --check` records gen_fn's coverage: oldify is 145
   instructions / 38 blocks, without a recognised counted-loop template;
   mopup exceeds the branch limit, empty-minor-heap the instruction limit.
-  Emitted oldify rows also need the absent `Vsa.Sim.DeriveCaseRow` port.
+  The generic `Vsa.Sim.DeriveCaseRow` adapter (`segToTriple`) is now ported
+  and checked. Collector code pins, concrete generated rows, call summaries
+  and the oldify/mopup loop invariants remain open.
 * **Exit**: `Fits` restated on live words; `ocamlc` compiling a one-line
   program is within Layer A.
 

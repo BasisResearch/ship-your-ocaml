@@ -229,3 +229,10 @@ upstream-style checked piece with a separately checked branch. It checks each
 branch type and submits the assembled theorem to the Lean kernel; it introduces
 no run law or trusted proof primitive. The stdio image helpers also retain the
 upstream `Arm` load-normalization rule for 32-bit reads across word stores.
+
+
+`Vsa/Sim/DeriveCaseRow.lean` ports the generic `SegPre`/`segToTriple` API
+from ship-your-interpreter commit `d3be8dc07d15b806281966b6d0bdc96885f84076`
+(the local syi-refine checkout). The adapter reuses `segEval_sound`; its
+precondition has named fields. The unrelated demo, unused FrameCalc import
+and heartbeat setting are omitted. It contains no ELF-specific addresses.
