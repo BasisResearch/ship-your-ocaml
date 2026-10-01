@@ -142,6 +142,15 @@ for _op in ['LTINT', 'LEINT', 'GTINT', 'GEINT', 'ULTINT', 'UGEINT']:
              'branch_nottaken' if _truth else 'branch_taken', 'alu_addi', 'j'])
         PATHS[_family] = (_op, [not _truth])
 
+for _op in ['EQ', 'NEQ']:
+    for _truth in [True, False]:
+        _taken = _truth if _op == 'EQ' else not _truth
+        _family = _op + ('_TRUE' if _truth else '_FALSE')
+        FAMILIES[_family] = (_op.title() + ('True' if _truth else 'False'),
+            ['ld_tot', 'alu_addi', 'alu_addi',
+             'branch_taken' if _taken else 'branch_nottaken', 'alu_addi', 'j'])
+        PATHS[_family] = (_op, [_taken])
+
 
 for _op in ['BLTINT', 'BLEINT', 'BGTINT', 'BGEINT', 'BULTINT', 'BUGEINT', 'BEQ', 'BNEQ']:
     for _jumping in [True, False]:

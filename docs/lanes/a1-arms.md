@@ -1,5 +1,22 @@
 # Lane a1-arms
 
+## Physical equality arms
+
+`eq_step_arm` and `neq_step_arm` consume successful physical-equality
+`stepI` results and compose both generated native paths through shared stack
+consumption. `WordEquality.reflects` is the named static condition equating
+abstract physical equality with equality of represented words; it makes no
+execution assumption. `WordEquality.ints` discharges it for all tagged
+integers via `untag_tag`. General pointer/value injectivity remains an
+invariant-adapter obligation and is not inferred from current placement alone.
+
+Separate 24 GiB/default-limit builds pass: bodies 1.0–1.7s, path bridges
+1.1–1.5s, compositions 1.0–1.1s. The preceding integer equality-branch
+landing is `d090876`, full gate passing. There are now 94 conditional
+represented opcode bridges. Next: header/length reads, then remaining stack
+and heap stores, allocation and calls. Full `ArmSim`, entry/halt, semantic
+domain corrections and lane exits remain open.
+
 ## Integer equality branches and pointer guard gap
 
 `beq_step_arm` and `bneq_step_arm` consume successful `stepI` results
@@ -923,7 +940,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 92 conditional represented opcode bridges,
+stack-writing families. There are 94 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 

@@ -799,6 +799,23 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.bneq_next_arm
 #print axioms Vsa.Sim.tr_bneq_next
 #print axioms OCaml.Vm.Sim.bneq_next_loaded
+
+#print axioms OCaml.Vm.Sim.WordEquality.guard
+#print axioms OCaml.Vm.Sim.WordEquality.ints
+#print axioms OCaml.Vm.Sim.eq_step_arm
+#print axioms OCaml.Vm.Sim.eq_true_arm
+#print axioms Vsa.Sim.tr_eq_true
+#print axioms OCaml.Vm.Sim.eq_true_loaded
+#print axioms OCaml.Vm.Sim.eq_false_arm
+#print axioms Vsa.Sim.tr_eq_false
+#print axioms OCaml.Vm.Sim.eq_false_loaded
+#print axioms OCaml.Vm.Sim.neq_step_arm
+#print axioms OCaml.Vm.Sim.neq_true_arm
+#print axioms Vsa.Sim.tr_neq_true
+#print axioms OCaml.Vm.Sim.neq_true_loaded
+#print axioms OCaml.Vm.Sim.neq_false_arm
+#print axioms Vsa.Sim.tr_neq_false
+#print axioms OCaml.Vm.Sim.neq_false_loaded
 #print axioms OCaml.Vm.Sim.PushWriteOk.stack_read
 #print axioms OCaml.Vm.Sim.pushacc1_arm
 #print axioms OCaml.Vm.Sim.pushacc2_arm
