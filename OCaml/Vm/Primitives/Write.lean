@@ -21,6 +21,14 @@ theorem WriteWindow.sd {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs}
   refine ⟨h.lower, h.upper, ?_, h.aligned⟩
   simpa only [tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using h.htif
 
+/-- Byte stores share the RAM/HTIF side conditions and need no alignment. -/
+theorem WriteWindow.sb {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs}
+    {a : MInstr} {x : BitVec 64} {bs : List (BitVec 8)} (h : WriteWindow x 1)
+    (kind : a.kind = .sb) (address : eaddrM a L = x) : MemFacts m L bs a := by
+  simp only [MemFacts, kind, address]
+  refine ⟨h.lower, h.upper, ?_⟩
+  simpa only [tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using h.htif
+
 /-- Observe the value stored by one full-word write-log entry. -/
 theorem word_writeLog (m : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) (value : BitVec 64) :
     bytesT (writeLog m [(a, 8, value)]) a 8 = value := by

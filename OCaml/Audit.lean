@@ -1,3 +1,4 @@
+import OCaml.Vm.Primitives.StringReadback
 import OCaml.Vm.Primitives.SmallAllocation
 import OCaml.Vm.Primitives.StringFast
 import OCaml.Vm.Primitives.LibraryStrlen
@@ -1230,3 +1231,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.StringAllocation.prepare_fast
 #print axioms OCaml.Vm.Primitives.StringAllocation.reserve_fast
 #print axioms OCaml.Vm.Primitives.StringAllocation.initialize_fast
+
+#print axioms OCaml.Vm.Primitives.WriteWindow.sb
+#print axioms OCaml.Vm.Primitives.StringAllocation.initialize_access
+#print axioms OCaml.Vm.Primitives.StringAllocation.alloc_string_nursery
+#print axioms OCaml.Vm.Primitives.StringAllocation.nursery_readback

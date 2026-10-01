@@ -138,6 +138,45 @@ theorem initialize_log (R : Nat → BitVec 64) (bd byoung bra : List (BitVec 8))
   simp only [h0, h8, h252, hm8, hm1, ← BitVec.sub_eq_add_neg, BitVec.add_zero]
   rfl
 
+/-- Scalar obligations for initializing a string and restoring its native frame.
+The two metadata reads follow the header store; the saved RA read follows
+all three stores, so its pins explicitly describe that updated memory. -/
+theorem initialize_access (c : Config) (R : Nat → BitVec 64) (bd byoung bra : List (BitVec 8))
+    (header : WriteWindow (R 13) 8) (global : ReadWindow (R 16) 8)
+    (young : ReadWindow (DoubleAllocation.youngSlot (bytesVal .ld bd)) 8)
+    (lastWord : WriteWindow (bytesVal .ld byoung + 8#64 + R 15 - 8#64) 8)
+    (padding : WriteWindow (bytesVal .ld byoung + 8#64 + (R 15 - 1#64)) 1)
+    (saved : ReadWindow (R 2 + 40#64) 8)
+    (domainPins : LPins8 (writeLog c.σ.mem [((R 13).toNat, 8, (R 10 <<< 10) + 252#64)])
+      (R 16).toNat bd)
+    (youngPins : LPins8 (writeLog c.σ.mem [((R 13).toNat, 8, (R 10 <<< 10) + 252#64)])
+      (DoubleAllocation.youngSlot (bytesVal .ld bd)).toNat byoung)
+    (savedPins : LPins8 (writeLog c.σ.mem (initializationLog R (bytesVal .ld byoung)))
+      (R 2 + 40#64).toNat bra) :
+    AccessPlan c.σ.mem (initialize_input R) [bd, byoung, bra] initialize_body := by
+  have h0 : Functions.sign_extend (m := 64) (0#12) = 0#64 := by decide
+  have h8 : Functions.sign_extend (m := 64) (8#12) = 8#64 := by decide
+  have h252 : Functions.sign_extend (m := 64) (252#12) = 252#64 := by decide
+  have h40 : Functions.sign_extend (m := 64) (40#12) = 40#64 := by decide
+  have hm8 : Functions.sign_extend (m := 64) (4088#12) = -8#64 := by decide
+  have hm1 : Functions.sign_extend (m := 64) (4095#12) = -1#64 := by decide
+  simp only [AccessPlan, initialize_body]
+  chain_facts True.intro
+  all_goals simp only [initialize_input, stepMemM, wentryM, widthOfM, stepGM, stepLdsM,
+    wvalM, eaddrM, srcVal, lookupG, eraseG, Nat.reduceAdd, Nat.reduceEqDiff,
+    ite_true, ite_false, Option.getD_some, List.headD_cons, List.tail_cons,
+    h0, h8, h252, h40, hm8, hm1, ← BitVec.sub_eq_add_neg, BitVec.add_zero]
+  · apply header.sd (m := c.σ.mem) rfl
+    simp [eaddrM, srcVal, lookupG, h0]
+  · apply global.ld rfl ?_ domainPins
+    simp [eaddrM, srcVal, lookupG, h0]
+  · exact young.ld rfl rfl youngPins
+  · apply lastWord.sd rfl
+    simp [eaddrM, srcVal, lookupG, hm8, BitVec.sub_eq_add_neg]
+  · apply padding.sb rfl
+    simp [eaddrM, srcVal, lookupG, h0]
+  · exact saved.ld rfl rfl savedPins
+
 /-- The final block restores the saved return address and exposes all
 initialized bytes through its exact log. -/
 theorem initialize_fast (c : Config) (R : Nat → BitVec 64) (bd byoung bra : List (BitVec 8))

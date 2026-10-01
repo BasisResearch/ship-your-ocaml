@@ -355,3 +355,18 @@ plan, whole-constructor composition and string layout remain next.
 The initialization write log required small explicit constant certificates
 instead of eager global simplification; no budget increase was used.
 Discipline and abstraction checks pass (C1=0, C2=7, C3=7, C4=3).
+
+Nursery block certificates landed at `5984250`. The complete
+`alloc_string_nursery` function summary now composes all three blocks and
+restores native `sp`, retaining the exact combined write log.
+`initialize_access` supplies all six scalar accesses from RAM/write windows
+and post-store pins. `nursery_readback` discharges those post-store reads
+from `NurseryMetadata` plus stack/header/metadata separation, without an
+execution premise. Focused builds pass at the default budget.
+
+Next: string header/padding layout, the copy-string caller, and full memcpy.
+The existing local `MemcpySpec` only certifies the byte-loop entry; upstream
+`syi-absint-merge` at `1453d2e1` also has `MemcpyLoops.memcpyLocalRun` covering
+dispatch/alignment/word/bulk/byte paths. Reuse and retarget that proof for the
+caller instead of limiting executable names to the short byte-copy path.
+The primitive count remains 17/30 until represented caller contracts land.
