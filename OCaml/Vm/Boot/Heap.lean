@@ -36,4 +36,12 @@ theorem HeapImage.repr {c : Config} {pl : Place} {cp : ChanPlace} {P : Prog} {s 
   · intro l l' a a' o o' _ _ ne ha ha' ho ho'
     exact image.separated l l' a a' o o' ne ha ha' ho ho'
 
+/-- Introduce an optional list lookup using only its finite valid indices. -/
+theorem list_get_of_fin {α : Type} {xs : List α} {R : Nat → α → Prop}
+    (h : ∀ i : Fin xs.length, R i.val xs[i.val]) :
+    ∀ i x, xs[i]? = some x → R i x := by
+  intro i x hx
+  obtain ⟨hi, rfl⟩ := List.getElem?_eq_some_iff.mp hx
+  exact h ⟨i, hi⟩
+
 end OCaml.Vm.Boot

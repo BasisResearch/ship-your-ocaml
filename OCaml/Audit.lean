@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.WhileMinEntry
 import OCaml.Vm.Boot.WhileMinRuntime
 import OCaml.Vm.Boot.Heap
 import OCaml.Vm.Boot.FreeList
@@ -548,3 +549,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinRuntime.freeList
 #print axioms OCaml.Vm.Boot.WhileMinRuntime.runtimeOk
 #print axioms OCaml.Vm.Boot.WhileMinRuntime.runtimeOk_fillZero
+
+#print axioms OCaml.Vm.Boot.list_get_of_fin
+#print axioms OCaml.Vm.Boot.WhileMinHeap.objects
+#print axioms OCaml.Vm.Boot.WhileMinHeap.closed
+#print axioms OCaml.Vm.Boot.WhileMinHeap.separated
+#print axioms OCaml.Vm.Boot.WhileMinHeap.image
+#print axioms OCaml.Vm.Boot.WhileMinHeap.repr
+#print axioms OCaml.Vm.Boot.WhileMinEntry.code
+#print axioms OCaml.Vm.Boot.WhileMinEntry.loaded
+#print axioms OCaml.Vm.Boot.WhileMinEntry.EntryControl.fillZero
+#print axioms OCaml.Vm.Boot.WhileMinEntry.loaded_fillZero

@@ -5,6 +5,7 @@ import gzip
 import json
 import re
 from pathlib import Path
+from boot_certificate import emit_read
 
 ROOT = Path(__file__).resolve().parents[1]
 ap = argparse.ArgumentParser(description=__doc__)
@@ -35,14 +36,7 @@ out = ['import OCaml.Vm.Boot.WhileMinLogChecks', 'import OCaml.Vm.Boot.FreeList'
        'variable {c : Config} {initial : Vsa.MemRepr.Mem}', '']
 
 def fact(name, expr, addr, width=8):
-    val=read(addr,width)
-    op='word' if width==8 else 'word32'
-    out.extend([f'theorem read_{name} (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :',
-        f'    {op} c ({expr}) = {val:#x}#{width*8} := by',
-        f'  unfold {op}',
-        f'  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := {expr}) (w := {width}) (by decide +kernel)]',
-        '  decide +kernel', ''])
-    return f'read_{name} memory'
+    return emit_read(out, name, expr, read(addr, width), width)
 
 fact('domain', 'Layout.sym_Caml_state',layout['sym_Caml_state'])
 fields=['young_start','young_end','young_alloc_start','young_alloc_end','young_ptr','young_limit']

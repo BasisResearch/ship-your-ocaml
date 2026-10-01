@@ -134,3 +134,26 @@ covered by stores. `bytesT_memEqv` reuses the model's zero-equivalence,
 so the same read certificates cover densification. Runtime read generation
 is drift-checked by stage a5. `boot_cut.py` now enumerates domain fields
 from `domain_state.tbl`, excluding the newly added free-list offsets.
+
+
+## Heap and entry-memory assembly
+
+The runtime certificate landed as `5fd769b`, with the full gate passing.
+The next checked piece establishes:
+
+* `WhileMinHeap.objects`, `closed`, `separated`, `image`, and `repr`: all
+  29 object layouts, string bytes/padding, reference closure, and pairwise
+  non-overlap. The finite-image lemma supplies the production `HeapRepr`.
+* `WhileMinEntry.code`: all 191 bytecode words at the observed code base.
+  Entry reads also pin globals, `stack_high`, `extern_sp`, and `trapsp`.
+* `WhileMinEntry.loaded` and `loaded_fillZero`: heap/code/runtime and entry
+  memory assembled into `Loaded`, with the actual configuration's memory
+  projection and `EntryControl` explicitly required. `EntryControl` carries
+  PC, argument registers, empty console, `GoodState` and executable image.
+  This is a conditional theorem, not the lane's closed exit witness.
+
+The read emitter is shared in `scripts/boot_certificate.py`; heap and
+entry generators are checked for drift. Object reads use the checked
+store log only, with no invented heap contents or initial-memory premises.
+The next step is the concrete cut-state control/image certificate and its
+connection to the actual machine entry.

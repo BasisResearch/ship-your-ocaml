@@ -9,7 +9,7 @@ echo "# recent stack commits:"
 git log --oneline -15 | grep -iE 'abstraction|geom|segeval|seg[- ]?eval|framecalc|frame|heapops|realloc|derive|loopstep|reflect|marshal' | sed 's/^/#   /' || true
 FILES=$(ls Vsa/Sim/GeomFacts.lean Vsa/Sim/SegEval*.lean Vsa/Sim/FrameCalc.lean Vsa/Sim/DeriveCase.lean \
            Vsa/Sim/LoopStep.lean Vsa/Sim/HeapOps.lean Vsa/Sim/ReallocSpec.lean Vsa/Sim/EnvDefineClose.lean \
-           Vsa/Sim/ErrorSites.lean \
+           Vsa/Sim/ErrorSites.lean Vsa/Sim/Boot/*.lean OCaml/Vm/Boot/Heap.lean \
            Vsa/Sim/DeriveCallSeg.lean Vsa/Sim/DeriveLoop.lean Vsa/Sim/DeriveErrorSite.lean \
            Vsa/Sim/DeriveCaseRow.lean Vsa/Sim/ChainFactsTac.lean \
            Vsa/Sim/FrameMeta.lean Vsa/Sim/BridgeSeg.lean Vsa/Sim/BridgeSegFramed.lean Vsa/Sim/WidenMeta.lean \

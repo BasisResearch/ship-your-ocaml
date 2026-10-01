@@ -36,6 +36,7 @@ The Availability column says:
 | Call splice (prefix ≫ callee ≫ suffix) | `callSeg`/`callSegConseq` (`DeriveCallSeg`) | here |
 | Loop | `loopFromBody` (`DeriveLoop`) | here |
 | Load / byte-read obligation | total reads, `RamRead{Policy,Single,Data,Scalar,Virtual,Load,Value}`; the model's `readByte` is `getD 0`, so never demand presence the densification (`fillZero`) already gives | here |
+| Startup memory snapshot | `Vsa/Sim/Boot/Log.lean` (`writeLog_view`), `Boot/Checks.lean` (balanced certificate composition), `Boot/Bytes.lean` (total reads and zero-equivalence); generators `gen_boot_log.py` and `boot_certificate.py`. This certifies memory effects, not execution. | here |
 | Allocator machine run (`_malloc_r`, `_free_r`, `_realloc_r`) | `SWP pc R Mt` (`VsaIris/Vsa/SymRun.lean`) with generated step tables (`scripts/syi/gen_alloc_steps.py`); never a hand stage over `seg_step` | A0 |
 | Iris-route block (segment, helper call, fuel loop) for total and partial WP | state it `∀ (Wp : MachWP M)` and use `Wp.run`/`wp_segW`/`wp_callW`/`wp_retW`/`wp_localRunW` (`VsaIris/MachWP.lean`) | here |
 | Newlib stdout call (`print` → `fwrite` → `__sfvwrite_r` → `_write`) | the stdio step tables (`VsaIris/Vsa/Stdout/*`) | A0 |
