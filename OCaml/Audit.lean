@@ -299,6 +299,12 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.PlatformOk.htif_done
 #print axioms OCaml.Vm.Sim.forceExit_not_running
 #print axioms Vsa.Sim.tr_isint
+#print axioms OCaml.Vm.Sim.isintWord_eq
+#print axioms OCaml.Vm.Sim.ofBool_int
+#print axioms OCaml.Vm.Sim.valWord_parity
+#print axioms OCaml.Vm.Sim.isintWord_repr
+#print axioms OCaml.Vm.Sim.isint_not_valWord
+#print axioms OCaml.Vm.Sim.isint_arm
 #print axioms OCaml.Vm.Sim.isint_loaded
 #print axioms Vsa.Sim.tr_const0
 #print axioms OCaml.Vm.Sim.const0_loaded

@@ -1,0 +1,75 @@
+import OCaml.Vm.Sim.ImmediateArithmetic
+import OCaml.Vm.Repr
+
+namespace OCaml.Vm.Sim
+set_option autoImplicit false
+open OCaml.Bytecode OCaml.Vm.Primitives
+
+/-- The arithmetic performed by the generated ISINT body. -/
+def isintWord (w : BitVec 64) : BitVec 64 := ((w <<< (1 : Nat)) &&& 2#64) + 1#64
+
+theorem isintWord_eq (w : BitVec 64) :
+    isintWord w = tag64 (if w.toNat % 2 = 1 then 1#63 else 0#63) := by
+  have hmask : w &&& 1#64 = BitVec.ofNat 64 (w.toNat % 2) := by
+    apply BitVec.eq_of_toNat_eq
+    rw [BitVec.toNat_and, show (1#64).toNat = 1 from rfl, Nat.and_one_is_mod,
+      BitVec.toNat_ofNat]
+    omega
+  have htwo : (1#64 <<< (1 : Nat)) = 2#64 := by decide
+  unfold isintWord
+  rw [← htwo, ← BitVec.shiftLeft_and_distrib, hmask]
+  rcases Nat.mod_two_eq_zero_or_one w.toNat with h | h <;> rw [h] <;> decide
+
+theorem ofBool_int (b : Bool) : Val.ofBool b = .int (if b then 1#63 else 0#63) := by
+  cases b <;> rfl
+
+/-- Only alignment, not a heap graph property: necessary for ISINT to
+classify represented pointers and bytecode addresses as non-integers. -/
+structure EvenPlace (pl : Place) : Prop where
+  code : pl.codeBase % 2 = 0
+  heap : ∀ l a, pl.φ l = some a → a % 2 = 0
+
+theorem valWord_parity {pl : Place} (aligned : EvenPlace pl) {v : Val} {w : BitVec 64}
+    (repr : valWord pl v = some w) (notRaw : ∀ x, v ≠ .raw x) :
+    w.toNat % 2 = if v.isInt then 1 else 0 := by
+  cases v with
+  | int n =>
+    cases repr
+    simp only [Val.isInt, ↓reduceIte, tag_toNat]
+    omega
+  | ptr l k =>
+    cases hp : pl.φ l with
+    | none => simp [valWord, hp] at repr
+    | some a =>
+      simp only [valWord, hp, Option.map_some, Option.some.injEq] at repr
+      subst w
+      have he := aligned.heap l a hp
+      change ((a + 8 * k) % 2^64) % 2 = 0
+      omega
+  | code pc =>
+    cases repr
+    have he := aligned.code
+    change ((pl.codeBase + 4 * pc) % 2^64) % 2 = 0
+    omega
+  | atom tag =>
+    cases repr
+    have he : Layout.sym_caml_atom_table % 2 = 0 := by decide
+    change ((Layout.sym_caml_atom_table + 8 * tag + 8) % 2^64) % 2 = 0
+    omega
+  | raw x => exact (notRaw x rfl).elim
+
+theorem isintWord_repr {pl : Place} (aligned : EvenPlace pl) {v : Val} {w : BitVec 64}
+    (repr : valWord pl v = some w) (notRaw : ∀ x, v ≠ .raw x) :
+    isintWord w = tag64 (if v.isInt then 1#63 else 0#63) := by
+  rw [isintWord_eq, valWord_parity aligned repr notRaw]
+  cases v.isInt <;> rfl
+
+/-- Value representation alone does not exclude odd pointer addresses. This
+checked alias explains the explicit alignment premise in the ISINT bridge. -/
+theorem isint_not_valWord : ¬ (∀ (pl : Place) (v : Val) (w : BitVec 64),
+    valWord pl v = some w → isintWord w = tag64 (if v.isInt then 1#63 else 0#63)) := by
+  intro h
+  have bad := h ⟨fun _ => some 1, 0⟩ (.ptr 0 0) 1#64 rfl
+  exact (by decide : isintWord 1#64 ≠ tag64 0#63) bad
+
+end OCaml.Vm.Sim

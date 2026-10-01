@@ -62,6 +62,7 @@ ELF pin).
 | `const0_arm`, `ArmInput.of_repr` (represented dispatch/body composition) | `OCaml/Vm/Sim/Const0.lean`, `ArmInput.lean` | A1 | **proved conditionally** on code geometry, tick, non-cache opcode position and runtime memory frame; full `ArmSim.next` open |
 | `const1_arm`, `const2_arm`, `const3_arm`, `immediate_arm` | `OCaml/Vm/Sim/Const*.lean`, `Immediate.lean` | A1 | **proved conditionally**; generated constant family restores data/platform through one shared dispatch/body composition |
 | `tr_isint`, `isint_loaded` (generated five-instruction machine body with SLLI/ANDI) | `OCaml/Vm/Sim/Isint*.lean` | A1 | **proved**; full representation/frame bridge open |
+| `isint_arm`, `isintWord_repr`, `isint_not_valWord` | `OCaml/Vm/Sim/Isint*.lean` | A1 | **proved conditionally** on dispatch readiness, runtime frame, even placement and non-raw accumulator; checked value-level alignment obstruction retained |
 | `tr_negint`, `negint_loaded` (generated four-instruction tagged-negation body) | `OCaml/Vm/Sim/Negint*.lean` | A1 | **proved**; represented composition below |
 | `negint_arm`, `immediate_restore`, `tag_neg`, `untag_neg` | `OCaml/Vm/Sim/Negint.lean`, `Immediate*.lean` | A1 | **proved conditionally** on `ArmInput` / runtime memory frame, with exact modular `stepI` result |
 | `tr_acc0`, `tr_acc`, `acc0_loaded`, `acc_loaded` (generated stack loads through total RAM reads) | `OCaml/Vm/Sim/Acc*.lean` | A1 | **proved**; address geometry and representation/frame bridge open |

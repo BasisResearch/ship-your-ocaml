@@ -40,6 +40,22 @@ NEGINT rebuild at 1.1s / 1.2s; targeted runs remain below 2.08 GiB under
 24 GiB. No proof budget changed. Drift, discipline and abstraction checks
 pass; the full integration gate passed and landed the repair as `9eeb667`.
 
+## ISINT representation bridge
+
+`isint_arm` (`OCaml/Vm/Sim/Isint.lean`) composes generated dispatch/ISINT
+segments through `immediate_arm`. `IsintArithmetic.lean` proves the body's
+shift/mask/add result equals `Val.ofBool s.accu.isInt` under `EvenPlace` and
+the semantics' non-raw-value condition. `EvenPlace` requires even code and
+heap placements; it is an explicit premise, not yet part of `Running`.
+`isint_not_valWord` is a checked value-level counterexample: a pointer placed
+at address 1 has the same word as integer zero, so `valWord` alone cannot
+justify the classification. This is not a full `Running` counterexample.
+
+Both files build at default limits under 24 GiB: arithmetic 1.2s, bridge
+1.5s, total wall 3.46s, peak process RSS below 2 GiB. The new theorem names
+are included in the axiom audit. The constant-arm family landed with the
+full gate as `ebf75db`.
+
 ## Constant-arm family
 
 `immediate_arm` (`OCaml/Vm/Sim/Immediate.lean`) composes the shared dispatch
