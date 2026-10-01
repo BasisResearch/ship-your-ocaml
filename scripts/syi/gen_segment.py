@@ -92,6 +92,7 @@ Core segment-spec JSON
     "mem0": "m0", "memeq": "hmemeq"  # or "mem0": "c.σ.mem" (no memeq)
   },
   "pins": [ {"reg": "x10", "val": "dst", "hyp": "ha0"}, ... ],
+  "frame_origin": "σ0",            # SegSt: incoming state, export StepFrameOut; import ChainFrameOut
   "counted": true,                  # SegSt only: TripleN via StepCount (import it)
   "frame": {                       # optional ghost register-frame threading
     "pred": "NotWrittenMv", "rhs": "g R", "init": "hframe",
@@ -237,6 +238,9 @@ class SegmentEmitter:
         self.pins = [(p["reg"], p["val"]) for p in spec.get("pins", [])]
         self.pin_hyps = [p.get("hyp") for p in spec.get("pins", [])]
         self.segst = spec.get("boundary") == "segst"
+        self.frame_origin = spec.get("frame_origin")
+        if self.frame_origin and not self.segst:
+            raise SpecError("frame_origin requires boundary=segst")
         self.counted = spec.get("counted", False)
         if self.counted and not self.segst:
             raise SpecError("counted output requires boundary=segst")
@@ -580,12 +584,25 @@ class SegmentEmitter:
 
     # -- segst boundaries ----------------------------------------------------
 
-    def _segst_payload(self, mem_rhs: str) -> str:
+    def _frame_writes(self) -> str:
+        """Value-free write log consumed by the existing chain_frame_out fold."""
+        parts = []
+        for step in self.spec['steps']:
+            if step['class'] in ('alu', 'jal'):
+                parts.append(f"(Register.{step['rd']} :: noiseRegs)")
+            else:
+                parts.append('noiseRegs')
+        return '(' + ' ++ '.join(parts) + ')'
+
+    def _segst_payload(self, mem_rhs: str, post: bool = False) -> str:
         """The SegSt payload `P : MState → Prop`: loaded ∧ mem-eq [∧ frame]."""
         parts = [f"{self.spec['loaded_pred']} σ.mem", f"σ.mem = {mem_rhs}"]
         if self.frame:
             parts.append(f"(∀ R : Register, {self.frame['pred']} R → "
                          f"σ.regs.get? R = {self.frame['rhs']})")
+        if self.frame_origin:
+            parts.append(f"StepFrameOut {self._frame_writes()} {self.frame_origin} σ"
+                         if post else f"σ = {self.frame_origin}")
         return "fun σ => " + " ∧ ".join(parts)
 
     def _setup_segst(self):
@@ -600,7 +617,8 @@ class SegmentEmitter:
             raise SpecError("boundary=segst: 'entry' (the pre PC) is required")
         mem_param = spec.get("mem_param", "m0")
         payload_pat = "⟨hloaded, hmemeq" + \
-            (", hframe" if self.frame else "") + "⟩"
+            (", hframe" if self.frame else "") + \
+            (", hinitial" if self.frame_origin else "") + "⟩"
         spec["pre_bind"] = {
             "obtain": f"⟨hgood, hpc, hp0, ⟨vmi, hmi⟩, htick, {payload_pat}⟩",
             "good": "hgood", "pc": "hpc", "minstret_var": "vmi",
@@ -665,9 +683,16 @@ class SegmentEmitter:
                     "be parameter-level (got "
                     f"{self.mem_expr!r}); lift store values to parameters")
             post = (f"SegSt ({self.end_pc}) {pin_list(self.pins)}\n      "
-                    f"({self._segst_payload(self.mem_expr)})")
+                    f"({self._segst_payload(self.mem_expr, post=True)})")
             payload = f"⟨hload{N}, hmemE{N}" + \
-                (f", hframe{N}" if self.frame else "") + "⟩"
+                (f", hframe{N}" if self.frame else "") + \
+                (", hwhole" if self.frame_origin else "") + "⟩"
+            if self.frame_origin:
+                observations = ', '.join(f'hobs{k}' for k in range(1, N + 1))
+                self.lines.append(
+                    f"  have hwhole : StepFrameOut {self._frame_writes()} {self.frame_origin} σ{N} := by\n"
+                    f"    rw [← hinitial]\n"
+                    f"    chain_frame_out [{observations}]")
             if self.counted:
                 self.lines.append(
                     f"  have hcount : Vsa.Machine.StepsN {N} c {cfg} :=\n"

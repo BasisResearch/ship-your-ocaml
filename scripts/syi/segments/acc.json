@@ -5,11 +5,13 @@
   "imports": [
     "OCaml.Vm.Sim.AccSites",
     "Vsa.Sim.SegState",
-    "Vsa.Sim.StepCount"
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
   ],
   "params": [
     "(v8 v9 : BitVec 64)",
     "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
     "(hlo_800020ac : 0x80000000 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
     "(hhi_800020ac : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ 0x100000000)",
     "(hhtif_800020ac : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
@@ -98,5 +100,6 @@
   "entry": "0x800020ac",
   "mem_param": "m0",
   "default_limits": true,
-  "counted": true
+  "counted": true,
+  "frame_origin": "σ0"
 }

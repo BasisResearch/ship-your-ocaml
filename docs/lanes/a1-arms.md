@@ -21,6 +21,15 @@ the semantics; primitive summaries continue to come from a1-prims.
 Re-read the brief's “After F1” section at that transition, including F3
 method caches, F4 callback simulation, and F5 OS interfaces.
 
+## Pending ELF migration
+
+A0-boot is moving the embedded program to a fixed-address `.embed` section.
+Function addresses stay fixed; data symbols and gp/auipc immediates change.
+After that landing, rebase and regenerate `gen_ocaml_image.py`,
+`gen_arm_pilot.py`, and `gen_alu_pilot.py` against the pinned ELF, then run
+integration. Use `Layout` for data symbols; the RAM bounds in generated
+load contracts are architectural limits, not data-symbol addresses.
+
 ## Current contract
 
 Foreman's approved repair is implemented. `OcamlrunRefinement` retains its
@@ -52,6 +61,14 @@ added to the headline theorem.
   frames remain explicit typed obligations, not assumed preservation.
 
 ## Proved
+
+* The shared generator now exports a `StepFrameOut` component for every
+  pilot body, through its optional `frame_origin` parameter. The caller
+  supplies the incoming state; the post preserves console output and all
+  registers outside the computed write log. One `chain_frame_out` fold
+  consumes the generated observations. Memory equality and `TripleN`
+  counts remain in the same contract. This uses the existing frame
+  abstraction rather than per-site, per-register proof threading.
 
 * The five generated body theorems now return the existing `TripleN`
   instead of forgetting their step counts: CONST0/NEGINT/ISINT/ACC0/ACC
@@ -114,6 +131,10 @@ added to the headline theorem.
   repaired production `ArmSim`.
 
 ## Validation
+
+* Framed body rebuilds, separately under 24 GiB, pass at default limits:
+  CONST0 1.6s, NEGINT 2.0s, ISINT 2.5s, ACC0 1.0s, ACC 2.4s.
+  Wall times 2.37–3.55s; maximum process RSS 1.85 GiB.
 
 * Counted body rebuilds, one family per build under 24 GiB, all pass:
   CONST0 1.1s, NEGINT 1.2s, ISINT 1.4s, ACC0 1.3s, ACC 1.5s.

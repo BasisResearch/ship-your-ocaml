@@ -5,11 +5,13 @@
   "imports": [
     "OCaml.Vm.Sim.Const0Sites",
     "Vsa.Sim.SegState",
-    "Vsa.Sim.StepCount"
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
   ],
   "params": [
     "(v23 : BitVec 64)",
-    "(m0 : Std.ExtHashMap Nat (BitVec 8))"
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)"
   ],
   "loaded_pred": "Vsa.Sim.Code.CamlConst0Loaded",
   "pins": [
@@ -55,5 +57,6 @@
   "entry": "0x800035c0",
   "mem_param": "m0",
   "default_limits": true,
-  "counted": true
+  "counted": true,
+  "frame_origin": "σ0"
 }
