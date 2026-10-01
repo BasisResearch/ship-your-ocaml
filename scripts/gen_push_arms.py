@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate fixed PUSH families through shared write restoration and payload reads."""
+"""Generate PUSH families through shared write restoration and payload reads."""
 import argparse
 import json
 from census import ROOT
@@ -12,6 +12,7 @@ def outputs():
     specs += [(f'PUSHCONST{n}', 'const', n) for n in range(4)]
     specs += [(f'PUSHENVACC{n}', 'env', n) for n in range(1, 5)]
     specs += [(f'PUSHOFFSETCLOSURE{s}', 'closure', n) for s, n in [('M3', -3), ('0', 0), ('3', 3)]]
+    specs += [('PUSHCONSTINT', 'operand_const', 0), ('PUSHOFFSETCLOSURE', 'operand_closure', 0)]
     for op, kind, n in specs:
         stem, lower = op.title(), op.lower()
         spec = json.loads((ROOT / f'scripts/syi/segments/{lower}.json').read_text())
@@ -51,6 +52,7 @@ def outputs():
         else:
             accu = f'  · exact PinsHold.get post.pins ⟨{accu_pin}, by simp⟩'
         extra_import, value_setup = '', ''
+        advance = 1
         if kind == 'env':
             extra_import = 'import OCaml.Vm.Sim.FieldRead\n'
             extra_binders = ' {l a k : Nat} {v : Val}'
@@ -92,10 +94,44 @@ def outputs():
 '''
             load_simp = ', address'
             accu = f'  · exact PinsHold.get post.pins ⟨{accu_pin}, by simp⟩'
+        variable = kind.startswith('operand_')
+        if variable:
+            advance = 2
+            extra_binders = ' {operandWord : BitVec 32}'
+            extra_inputs = '    (operand : OperandAt P pl (s.pc + 1) operandWord)\n'
+            load_setup = '''  have read := space.operand_read32 h.code operand (memoryEq.trans
+    (congrArg (fun m => writeLog m (pushLog sp w)) dp.memory))
+'''
+            load_simp = ''
+            load_args = '\n    operand.geometry.lower operand.geometry.upper operand.geometry.htif'
+            if kind == 'operand_const':
+                extra_import = 'import OCaml.Vm.Sim.ImmediateArithmetic\n'
+                result_val = '.int (BitVec.ofInt 63 operandWord.toInt)'
+                value, root = 'rfl', '(fun _ hl => by cases hl)'
+                accu = f'''  · have hp : gpr after Layout.reg_accu = some
+        ((operandWord.signExtend 64 <<< (1 : Nat)) + 1#64) :=
+      PinsHold.get post.pins ⟨{accu_pin}, by simp⟩
+    simpa only [tag_word32] using hp'''
+            else:
+                extra_import = 'import OCaml.Vm.Sim.ClosureOffset\n'
+                extra_binders += ' {l a k dest : Nat}'
+                extra_inputs += '    (selected : ClosureOffset s pl operandWord.toInt l a k dest)\n'
+                value_setup = '  have environment := represented_register h.env selected.sourceWord\n'
+                value, root, result_val = 'selected.resultWord', 'selected.root', '.ptr l dest'
+                load_setup += '''  have address : Sail.shift_bits_left (sign_extend (m := 64) operandWord)
+      (Sail.BitVec.extractLsb (0x03#6) 5 0) + BitVec.ofNat 64 (a + 8 * k) =
+      BitVec.ofNat 64 (a + 8 * dest) := by
+    rw [signed_index_word, BitVec.add_comm]
+    exact pointer_offset_word a k dest operandWord.toInt selected.target
+'''
+                load_simp = ', address'
+                accu = f'  · exact PinsHold.get post.pins ⟨{accu_pin}, by simp⟩'
         words = {'x9': 'BitVec.ofNat 64 sp', 'x21': 'w',
+                 'x8': 'BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)',
                  'x23': 'BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64',
                  'x25': 'BitVec.ofNat 64 (a + 8 * k)'}
         holds = {'x9': '(dp.frame.frame Register.x9 (by decide)).trans h.spReg',
+                 'x8': '(dp.frame.frame Register.x8 (by decide)).trans h.pc',
                  'x21': '(dp.frame.frame Register.x21 (by decide)).trans source',
                  'x23': 'dp.nextCode',
                  'x25': '(dp.frame.frame Register.x25 (by decide)).trans environment'}
@@ -103,6 +139,27 @@ def outputs():
         pre_pins = ',\n       '.join(f'⟨Register.{r}, {words[r]}⟩' for r in inputs)
         pre_holds = ',\n       '.join(holds[r] for r in inputs)
         run_args = ' '.join(f'({words[r]})' for r in inputs)
+        run_application = f'''  obtain ⟨nb, after, _, hb, post⟩ := run space.window.lower space.window.upper
+    space.window.htif space.window.aligned (by simpa only [space.toNat] using code)
+    memoryAfter (by rw [space.toNat]; exact memoryEq){load_args} d bp'''
+        pc_proof = f'''  · have hp : gpr after Layout.reg_pc = some
+        ((BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) + sign_extend (m := 64) (0x000#12)) :=
+      PinsHold.get post.pins ⟨{pc_pin}, by simp⟩
+    simpa only [show sign_extend (m := 64) (0x000#12) = 0#64 from by decide,
+      BitVec.add_zero, codePc_succ] using hp'''
+        if variable:
+            run_application = f'''  have body := run space.window.lower space.window.upper
+    space.window.htif space.window.aligned (by simpa only [space.toNat] using code)
+    memoryAfter (by rw [space.toNat]; exact memoryEq)
+  simp only [show sign_extend (m := 64) (0x004#12) = 4#64 from by decide,
+    codePc_succ, operand.geometry.toNat, read{load_simp}] at body
+  obtain ⟨nb, after, _, hb, post⟩ := body{load_args} d bp'''
+            load_simp = ''
+            pc_proof = f'''  · have hp : gpr after Layout.reg_pc = some
+        (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 8#64) :=
+      PinsHold.get post.pins ⟨{pc_pin}, by simp⟩
+    simpa only [show BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 8#64 =
+      BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2)) from codePc_add pl s.pc 2] using hp'''
         result[ROOT / f'OCaml/Vm/Sim/{stem}.lean'] = f'''import OCaml.Vm.Sim.StackStore
 {extra_import}import OCaml.Vm.Sim.{stem}Segment
 import OCaml.Vm.Sim.{stem}Pins
@@ -122,7 +179,7 @@ theorem {lower}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}
     (space : PushWriteOk P s c pl cp sp w)
 {extra_inputs}    (pushed : valWord pl s.accu = some w) :
     ∃ c', Plus c c' ∧ Running L P
-      {{s with pc := s.pc + 1, accu := {result_val}, stack := s.accu :: s.stack}} c' := by
+      {{s with pc := s.pc + {advance}, accu := {result_val}, stack := s.accu :: s.stack}} c' := by
   have source := represented_register h.accu pushed
 {value_setup}  apply push_value_arm stable h space pushed {value} {root}
   intro d dp
@@ -138,16 +195,10 @@ theorem {lower}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}
       dp.good.minstret, dp.tick, {lower}_loaded (dp.image h.dispatch.image), rfl, rfl⟩
   have run := tr_{lower} {run_args} d.σ.mem d.σ
   simp only [push_address space.room{load_simp}] at run
-  obtain ⟨nb, after, _, hb, post⟩ := run space.window.lower space.window.upper
-    space.window.htif space.window.aligned (by simpa only [space.toNat] using code)
-    memoryAfter (by rw [space.toNat]; exact memoryEq){load_args} d bp
+{run_application}
   obtain ⟨_, hm, frame⟩ := post.extra
   refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, ?_, hm.trans memoryEq, frame.out, ?_⟩
-  · have hp : gpr after Layout.reg_pc = some
-        ((BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) + sign_extend (m := 64) (0x000#12)) :=
-      PinsHold.get post.pins ⟨{pc_pin}, by simp⟩
-    simpa only [show sign_extend (m := 64) (0x000#12) = 0#64 from by decide,
-      BitVec.add_zero, codePc_succ] using hp
+{pc_proof}
   · exact PinsHold.get post.pins ⟨{sp_pin}, by simp⟩
 {accu}
   · intro r hr

@@ -1,5 +1,20 @@
 # Lane a1-arms
 
+## Operand-driven PUSH prefixes
+
+`pushconstint_arm` and `pushoffsetclosure_arm` save the accumulator, read
+the preserved operand, and restore the complete represented result.
+`PushWriteOk.operand_read32` derives that read from the existing payload
+write separation and `OperandAt`; the generated body instantiates its opaque
+post-store memory before using the read. Signed closure offsets reuse
+`ClosureOffset`, including negative operands with nonnegative destinations.
+
+Separate 24 GiB/default-limit builds pass: bodies 1.5–1.7s, bridges 1.1s.
+The fixed PUSH closure-offset landing is `043c033`, full gate passing.
+There are now 82 conditional represented opcode bridges. Next: variable
+PUSHENVACC/PUSHACC, using the same operand-preservation and payload frames.
+Full `ArmSim`, entry/halt, semantic-domain corrections and lane exits remain open.
+
 ## Fixed PUSH closure offsets
 
 `pushoffsetclosurem3_arm`, `pushoffsetclosure0_arm` and
@@ -838,7 +853,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 80 conditional represented opcode bridges,
+stack-writing families. There are 82 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 

@@ -44,6 +44,19 @@ theorem PushWriteOk.stack_read {P s c pl cp sp w i v}
   simpa only [word, bytesT_eight_eq, LeanRV64DExecutable.Functions.sign_extend,
     Sail.BitVec.signExtend, BitVec.signExtend_eq] using frame
 
+/-- Ordinary bytecode operands retain their value after the separated stack write. -/
+theorem PushWriteOk.operand_read32 {P s c pl cp sp pushed i operandWord}
+    {memoryAfter : Std.ExtHashMap Nat (BitVec 8)}
+    (space : PushWriteOk P s c pl cp sp pushed)
+    (code : CodeRepr P.code pl.codeBase c)
+    (operand : OperandAt P pl i operandWord)
+    (memory : memoryAfter = writeLog c.σ.mem (pushLog sp pushed)) :
+    bytesT4 memoryAfter (pl.codeBase + 4 * i) = operandWord := by
+  have frame := bytesT_writeLog_out c.σ.mem (space.payload.code i operandWord operand.fetch)
+  rw [bytesT_four_eq] at frame
+  rw [memory, frame]
+  simpa only [bytesT_four_eq] using operand.read32 (d := c) code rfl
+
 abbrev PushPost (before : Config) (pl : Place) (pc sp : Nat) (pushed result : BitVec 64)
     (after : Config) : Prop :=
   StackPost before pl pc (sp - 8) result (writeLog before.σ.mem (pushLog sp pushed)) after

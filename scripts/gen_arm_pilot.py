@@ -108,6 +108,10 @@ for _suffix in ['M3', '0', '3']:
     FAMILIES[_op] = (_op.title(), ['sd', 'alu_addi', 'alu_addi', 'alu_addi', 'j'])
     PATHS[_op] = (_op, [])
 
+for _op, _finish in [('PUSHCONSTINT', 'alu_addi'), ('PUSHOFFSETCLOSURE', 'alu_add')]:
+    FAMILIES[_op] = (_op.title(), ['sd', 'alu_addi', 'lw_tot', 'alu_addi', 'slli', _finish, 'j'])
+    PATHS[_op] = (_op, [])
+
 
 # Integer comparisons branch to the false-result helper; fallthrough returns true.
 for _op in ['LTINT', 'LEINT', 'GTINT', 'GEINT', 'ULTINT', 'UGEINT']:

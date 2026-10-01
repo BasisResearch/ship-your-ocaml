@@ -731,6 +731,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.pushoffsetclosure3_code_store
 #print axioms Vsa.Sim.tr_pushoffsetclosure3
 #print axioms OCaml.Vm.Sim.pushoffsetclosure3_loaded
+
+#print axioms OCaml.Vm.Sim.PushWriteOk.operand_read32
+#print axioms OCaml.Vm.Sim.pushconstint_arm
+#print axioms Vsa.Sim.pushconstint_code_store
+#print axioms Vsa.Sim.tr_pushconstint
+#print axioms OCaml.Vm.Sim.pushconstint_loaded
+#print axioms OCaml.Vm.Sim.pushoffsetclosure_arm
+#print axioms Vsa.Sim.pushoffsetclosure_code_store
+#print axioms Vsa.Sim.tr_pushoffsetclosure
+#print axioms OCaml.Vm.Sim.pushoffsetclosure_loaded
 #print axioms OCaml.Vm.Sim.PushWriteOk.stack_read
 #print axioms OCaml.Vm.Sim.pushacc1_arm
 #print axioms OCaml.Vm.Sim.pushacc2_arm
