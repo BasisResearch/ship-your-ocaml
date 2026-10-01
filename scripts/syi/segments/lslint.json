@@ -1,0 +1,126 @@
+{
+  "theorem": "tr_lslint",
+  "doc": "LSLINT arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.LslintSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v9 v21 v23 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80003530 : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_80003530 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80003530 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlLslintLoaded",
+  "pins": [
+    {
+      "reg": "x9",
+      "val": "v9",
+      "hyp": "hv9"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    },
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80003530",
+      "site": "site_80003530_lslint",
+      "class": "alu",
+      "asm": "ld a5,0(s1)",
+      "rd": "x15",
+      "rd_val": "(sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl hlo_80003530 hhi_80003530 hhtif_80003530 $hi",
+      "rw": "hmemeq"
+    },
+    {
+      "addr": "0x80003534",
+      "site": "site_80003534_lslint",
+      "class": "alu",
+      "asm": "addi s5,s5,-1",
+      "rd": "x21",
+      "rd_val": "(v21 + sign_extend (m := 64) (0xfff#12))",
+      "raw_val": "(v21 + sign_extend (m := 64) (0xfff#12))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003538",
+      "site": "site_80003538_lslint",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000353c",
+      "site": "site_8000353c_lslint",
+      "class": "alu",
+      "asm": "srai a5,a5,0x1",
+      "rd": "x15",
+      "rd_val": "(shift_bits_right_arith (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "raw_val": "(shift_bits_right_arith v15 (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003540",
+      "site": "site_80003540_lslint",
+      "class": "alu",
+      "asm": "sll s5,s5,a5",
+      "rd": "x21",
+      "rd_val": "(shift_bits_left (v21 + sign_extend (m := 64) (0xfff#12)) (Sail.BitVec.extractLsb (shift_bits_right_arith (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (Sail.BitVec.extractLsb (0x01#6) 5 0)) 5 0))",
+      "raw_val": "(shift_bits_left v21 (Sail.BitVec.extractLsb v15 5 0))",
+      "call": "$vmi $v:x21 $v:x15 $hG $hpc $hmi $pin:x21 $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003544",
+      "site": "site_80003544_lslint",
+      "class": "alu",
+      "asm": "addi s5,s5,1",
+      "rd": "x21",
+      "rd_val": "((shift_bits_left (v21 + sign_extend (m := 64) (0xfff#12)) (Sail.BitVec.extractLsb (shift_bits_right_arith (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (Sail.BitVec.extractLsb (0x01#6) 5 0)) 5 0)) + sign_extend (m := 64) (0x001#12))",
+      "raw_val": "(v21 + sign_extend (m := 64) (0x001#12))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003548",
+      "site": "site_80003548_lslint",
+      "class": "alu",
+      "asm": "addi s1,s1,8",
+      "rd": "x9",
+      "rd_val": "(v9 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v9 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000354c",
+      "site": "site_8000354c_lslint",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1fea10#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80003530",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

@@ -78,6 +78,9 @@ import OCaml.Vm.Sim.Subint
 import OCaml.Vm.Sim.Andint
 import OCaml.Vm.Sim.Orint
 import OCaml.Vm.Sim.Xorint
+import OCaml.Vm.Sim.Lslint
+import OCaml.Vm.Sim.Lsrint
+import OCaml.Vm.Sim.Asrint
 import OCaml.Vm.Sim.OffsetWidth
 import OCaml.Vm.Sim.Envacc1
 import OCaml.Vm.Sim.Envacc2

@@ -65,6 +65,9 @@ FAMILIES = {
     'ANDINT': ('Andint', ['ld_tot', 'alu_addi', 'alu_addi', 'alu_and', 'j']),
     'ORINT': ('Orint', ['ld_tot', 'alu_addi', 'alu_addi', 'alu_or', 'j']),
     'XORINT': ('Xorint', ['ld_tot', 'alu_addi', 'alu_addi', 'alu_xor', 'ori', 'j']),
+    'LSLINT': ('Lslint', ['ld_tot', 'alu_addi', 'alu_addi', 'srai', 'sll', 'alu_addi', 'alu_addi', 'j']),
+    'LSRINT': ('Lsrint', ['ld_tot', 'alu_addi', 'alu_addi', 'srai', 'srl', 'ori', 'j']),
+    'ASRINT': ('Asrint', ['ld_tot', 'alu_addi', 'alu_addi', 'srai', 'sra', 'ori', 'j']),
     'ISINT': ('Isint', ['slli', 'andi', 'alu_addi', 'alu_addi', 'j']),
 }
 

@@ -615,6 +615,26 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.consume_arm
 #print axioms OCaml.Vm.Sim.tag_add
 #print axioms OCaml.Vm.Sim.tag_untag_odd
+
+-- Shared low-six-bit shift count and generated shift arms.
+#print axioms OCaml.Vm.Sim.shift_count
+#print axioms OCaml.Vm.Sim.shiftLeft_native
+#print axioms OCaml.Vm.Sim.shiftRight_native
+#print axioms OCaml.Vm.Sim.shiftArith_native
+#print axioms OCaml.Vm.Sim.tag_sub_one_even
+#print axioms OCaml.Vm.Sim.left_shift_odd
+#print axioms Vsa.Sim.tr_lslint
+#print axioms OCaml.Vm.Sim.lslint_loaded
+#print axioms OCaml.Vm.Sim.lslint_arm
+#print axioms OCaml.Vm.Sim.lslint_step_arm
+#print axioms Vsa.Sim.tr_lsrint
+#print axioms OCaml.Vm.Sim.lsrint_loaded
+#print axioms OCaml.Vm.Sim.lsrint_arm
+#print axioms OCaml.Vm.Sim.lsrint_step_arm
+#print axioms Vsa.Sim.tr_asrint
+#print axioms OCaml.Vm.Sim.asrint_loaded
+#print axioms OCaml.Vm.Sim.asrint_arm
+#print axioms OCaml.Vm.Sim.asrint_step_arm
 #print axioms OCaml.Vm.Sim.intOp_next
 #print axioms Vsa.Sim.tr_addint
 #print axioms OCaml.Vm.Sim.addint_loaded

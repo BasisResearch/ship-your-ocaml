@@ -28,6 +28,24 @@ Default-limit 24 GiB checks: OFFSETINT body/pins 5.56s (segment 2.1s),
 arithmetic witness 3.60s (module 2.3s), peak process RSS below 2 GiB.
 CONSTINT landed as `9786220` with the full gate passing.
 
+## Integer shifts
+
+`lslint_step_arm`, `lsrint_step_arm`, and `asrint_step_arm`
+(`OCaml/Vm/Sim/Lslint.lean`, `Lsrint.lean`, `Asrint.lean`) extend the existing
+binary-arm generator and stack-restoration proof. `shift_count`
+(`ShiftArithmetic.lean`) connects Sail's low-six-bit extraction after
+arithmetic untagging to `n.toNat % 64`, for every 63-bit input. Its three
+native shift adapters and `left_shift_odd` discharge the complete machine
+result/tagging expressions; no restricted shift-count domain is assumed.
+
+Bodies and represented bridges build separately under 24 GiB at default
+limits. LSLINT takes 2.1s for the body and 1.1s for the represented bridge;
+LSRINT/ASRINT bodies take 1.9s and bridges take 1.2s/1.1s. The shared
+arithmetic module takes 0.85s. There are now 35 conditional
+represented opcode bridges. The five binary arms landed as `0434121` with
+the full gate passing. Entry, full `ArmSim.next`, halt, and the OFFSETINT
+width correction remain open.
+
 ## Read-only stack-consuming arithmetic
 
 `gen_binary_arms.py` emits ADDINT, SUBINT, ANDINT, ORINT and XORINT bridges,
