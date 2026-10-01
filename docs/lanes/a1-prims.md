@@ -76,7 +76,7 @@ the max_wosize shift case. Shared payload/root restriction and runtime frame
 lemmas compile. The abstraction gate and discipline checks pass. The full
 `OCaml.Audit` build passes (1,060 targets); all nine primitive theorems and
 shared adapters use only `propext`, `Classical.choice`, and `Quot.sound`.
-The full build passes. Audit formatting uses a 200-column width so the
-existing gate can parse the longest theorem name on one line.
+The full build passes. The audit gate normalizes wrapped axiom lists before applying its unchanged
+allow-list, and now rejects Lean process errors explicitly.
 This nine-primitive milestone is ready for the integration gate; no semantic
 changes were made to `primF1Impl`.

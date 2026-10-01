@@ -39,6 +39,15 @@ run_lean() {
   systemd-run --user --scope -q -p MemoryMax=24G "$@"
 }
 
+# Lean may wrap a long theorem's axiom list. Normalize only those reports;
+# incomplete lists remain malformed and fail the allow-list check below.
+normalize_axioms() {
+  awk '/depends on axioms: \[/ {
+    while ($0 !~ /\]$/ && (getline continuation) > 0) $0 = $0 " " continuation
+    gsub(/,[[:space:]]+/, ", ")
+  } { print }'
+}
+
 echo "== stage a1: lake build OCaml Vsa VsaIris (under a 24 GB cgroup cap)"
 run_lean lake build OCaml Vsa VsaIris runbc 2>&1 | tail -1 \
   | grep -q "Build completed successfully" || fail "stage a1: build"
@@ -49,7 +58,8 @@ python3 scripts/check_holes.py || fail "stage a2: hole found"
 echo "stage a2: OK"
 
 echo "== stage a3: axiom audit"
-out=$(run_lean lake env lean OCaml/Audit.lean 2>&1)
+out=$(run_lean lake env lean OCaml/Audit.lean 2>&1) || { echo "$out"; fail "stage a3: Lean audit failed"; }
+out=$(echo "$out" | normalize_axioms)
 echo "$out"
 n=$(echo "$out" | grep -c "depends on axioms")
 bad=$(echo "$out" | grep "depends on axioms" | grep -vE "axioms: \[(propext|Classical.choice|Quot.sound)(, (propext|Classical.choice|Quot.sound))*\]$" || true)
@@ -95,7 +105,8 @@ echo "stage a7: OK"
 
 echo "== stage t1: trusted computing base (tcb/)"
 run_lean lake build TCB tcbcheck 2>&1 | tail -1 | grep -q "Build completed successfully" || fail "stage t1: build TCB"
-out=$(run_lean lake env lean tcb/Audit.lean 2>&1)
+out=$(run_lean lake env lean tcb/Audit.lean 2>&1) || { echo "$out"; fail "stage t1: Lean audit failed"; }
+out=$(echo "$out" | normalize_axioms)
 echo "$out"
 bad=$(echo "$out" | grep "depends on axioms" | grep -vE "axioms: \[(propext|Classical.choice|Quot.sound)(, (propext|Classical.choice|Quot.sound))*\]$" || true)
 [ -z "$bad" ] || fail "stage t1: non-standard axioms: $bad"
