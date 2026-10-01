@@ -1,5 +1,29 @@
 # Lane a1-arms
 
+## Represented PUSH and shared write restoration
+
+`push_arm` and `pushacc0_arm` (`Sim/Push.lean`, `Pushacc0.lean`) are generated
+through `gen_push_arms.py`. `PushWriteOk` names stack space, RAM/alignment,
+image, payload and primitive-table separation. `push_value_restore` uses
+existing write-log frame lemmas, adds the saved accumulator to the represented
+stack, retains live roots and restores all loop/platform parts. Its runtime
+premise is `WindowStable` for exactly the saved stack word. These static
+placement/frame facts remain explicit invariant-adapter obligations.
+
+The common `dispatch_compose` now handles every dispatch/body run concatenation;
+`running_of_payload` assembles the final relation for both memory effects.
+`StackPost` keeps the exact memory map opaque. `live_stack_of_root` and
+`payload_stack_of_root` factor stack-edit root preservation, with POP and
+integer-consuming arms retained as specializations. PUSH can return any
+already live value through `push_value_arm`, for later PUSH-prefixed variants.
+
+Default-limit/24 GiB builds: stack payload 0.983s, push payload/address 0.941s,
+write restoration 1.1s, PUSH bridge 1.0s and PUSHACC0 0.984s. Constant,
+arithmetic, POP and vector regressions pass. The generated-store milestone
+landed as `b03069c`, full gate passing. There are now 62 conditional represented
+opcode bridges. Next: PUSHACC1 and the remaining generated PUSH variants;
+full `ArmSim`, semantic gaps, entry/halt and lane exits remain open.
+
 ## Generated stack-write machine bodies
 
 `tr_push`, `tr_pushacc0` and `tr_pushacc1` now certify their exact store
@@ -761,7 +785,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 60 conditional represented opcode bridges,
+stack-writing families. There are 62 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 

@@ -93,4 +93,15 @@ theorem represented_register {pl : Place} {v : Val} {c : Config} {r : Nat} {w : 
   have same := Option.some.inj (hv.symm.trans value)
   exact same ▸ hx
 
+/-- Dispatch plus a generated body gives a nonempty machine run. All arm
+families share this composition; the body establishes its own final predicate. -/
+theorem dispatch_compose {c : Config} {op : Opcode} {a : BitVec 64} {Q : Config → Prop}
+    (h : DispatchInput op a c)
+    (body : ∀ d, DispatchPost c op a d → ∃ nb after, StepsN nb d after ∧ Q after) :
+    ∃ after, Plus c after ∧ Q after := by
+  obtain ⟨nd, d, hnd, hd, dp⟩ := dispatch_run h
+  obtain ⟨nb, after, hb, post⟩ := body d dp
+  refine ⟨after, ⟨nd + nb - 1, ?_⟩, post⟩
+  simpa only [Nat.sub_add_cancel (by omega : 1 ≤ nd + nb)] using hd.append hb
+
 end OCaml.Vm.Sim

@@ -12,17 +12,21 @@ def consumePreserved : List Register :=
    gprReg Layout.reg_dispatchTable, gprReg Layout.reg_opcodeBound,
    gprReg Layout.reg_pending, gprReg Layout.reg_domain]
 
-/-- Read-only observations after consuming stack slots and returning a word. -/
-structure ConsumeValuePost (before : Config) (pl : Place) (pc sp : Nat) (w : BitVec 64)
-    (after : Config) : Prop where
+/-- Register/output observations with an exact, opaque memory effect. -/
+structure StackPost (before : Config) (pl : Place) (pc sp : Nat) (w : BitVec 64)
+    (memoryAfter : Std.ExtHashMap Nat (BitVec 8)) (after : Config) : Prop where
   good : GoodState after.σ
   head : pcOf after = some (BitVec.ofNat 64 Layout.loopHead)
   code : gpr after Layout.reg_pc = some (BitVec.ofNat 64 (pl.codeBase + 4 * pc))
   stack : gpr after Layout.reg_sp = some (BitVec.ofNat 64 sp)
   accu : gpr after Layout.reg_accu = some w
-  memory : after.σ.mem = before.σ.mem
+  memory : after.σ.mem = memoryAfter
   output : after.σ.sailOutput = before.σ.sailOutput
   preserved : ∀ r ∈ consumePreserved, after.σ.regs.get? r = before.σ.regs.get? r
+
+/-- Read-only specialization for stack-consuming bodies. -/
+abbrev ConsumeValuePost (before : Config) (pl : Place) (pc sp : Nat) (w : BitVec 64)
+    (after : Config) : Prop := StackPost before pl pc sp w before.σ.mem after
 
 /-- Integer-result specialization retained for the arithmetic families. -/
 abbrev ConsumePost (before : Config) (pl : Place) (pc sp : Nat) (n : BitVec 63)
@@ -61,13 +65,12 @@ theorem consume_value_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
       ∃ nb after, StepsN nb d after ∧ ConsumeValuePost d pl pc (sp + 8 * count) w after) :
     ∃ after, Plus c after ∧
       Running L P {s with pc := pc, accu := v, stack := s.stack.drop count} after := by
-  obtain ⟨nd, d, hnd, hd, dp⟩ := dispatch_run h.dispatch
+  apply dispatch_compose h.dispatch
+  intro d dp
   obtain ⟨nb, after, hb, post⟩ := body d dp
-  refine ⟨after, ?_, ?_⟩
-  · refine ⟨nd + nb - 1, ?_⟩
-    simpa only [Nat.sub_add_cancel (by omega : 1 ≤ nd + nb)] using hd.append hb
-  · apply consume_value_restore stable h.toVmReprAt h.running.platform h.dispatch.loop value root bound
-    exact ⟨post.good, post.head, post.code, post.stack, post.accu,
+  refine ⟨nb, after, hb, ?_⟩
+  apply consume_value_restore stable h.toVmReprAt h.running.platform h.dispatch.loop value root bound
+  exact ⟨post.good, post.head, post.code, post.stack, post.accu,
       post.memory.trans dp.memory, post.output.trans dp.frame.out,
       fun r hr => (post.preserved r hr).trans
         (dp.frame.frame r (by revert r; decide))⟩

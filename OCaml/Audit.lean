@@ -684,6 +684,22 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.stack_drop
 #print axioms OCaml.Vm.Sim.live_stack_drop
 #print axioms OCaml.Vm.Sim.payload_stack_drop
+-- Shared dispatch, payload assembly and represented stack-write restoration.
+#print axioms OCaml.Vm.Sim.dispatch_compose
+#print axioms OCaml.Vm.Sim.running_of_payload
+#print axioms OCaml.Vm.Sim.live_stack_of_root
+#print axioms OCaml.Vm.Sim.payload_stack_of_root
+#print axioms OCaml.Vm.Sim.stack_push
+#print axioms OCaml.Vm.Sim.payload_stack_push
+#print axioms OCaml.Vm.Sim.live_stack_push
+#print axioms OCaml.Vm.Sim.push_address
+#print axioms OCaml.Vm.Sim.PushWriteOk.toNat
+#print axioms OCaml.Vm.Sim.PushWriteOk.code
+#print axioms OCaml.Vm.Sim.push_value_restore
+#print axioms OCaml.Vm.Sim.push_value_arm
+#print axioms OCaml.Vm.Sim.push_arm
+#print axioms OCaml.Vm.Sim.pushacc0_arm
+
 -- Exact memory effects for generated stack-write bodies.
 #print axioms Vsa.Sim.push_code_store
 #print axioms Vsa.Sim.tr_push

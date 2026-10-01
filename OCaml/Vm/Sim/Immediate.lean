@@ -92,13 +92,12 @@ theorem accu_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
     (body : ∀ d, DispatchPost c op (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d →
       ∃ nb after, StepsN nb d after ∧ AccuPost d pl pc w after) :
     ∃ after, Plus c after ∧ Running L P {s with pc := pc, accu := v} after := by
-  obtain ⟨nd, d, hnd, hd, dp⟩ := dispatch_run h.dispatch
+  apply dispatch_compose h.dispatch
+  intro d dp
   obtain ⟨nb, after, hb, post⟩ := body d dp
-  refine ⟨after, ?_, ?_⟩
-  · refine ⟨nd + nb - 1, ?_⟩
-    simpa only [Nat.sub_add_cancel (by omega : 1 ≤ nd + nb)] using hd.append hb
-  · apply accu_restore stable h.toVmReprAt h.running.platform h.dispatch.loop value root
-    exact ⟨post.good, post.head, post.code, post.accu,
+  refine ⟨nb, after, hb, ?_⟩
+  apply accu_restore stable h.toVmReprAt h.running.platform h.dispatch.loop value root
+  exact ⟨post.good, post.head, post.code, post.accu,
       post.memory.trans dp.memory, post.output.trans dp.frame.out,
       fun r hr => (post.preserved r hr).trans
         (immediate_preserved dp.frame (by decide) r hr)⟩
