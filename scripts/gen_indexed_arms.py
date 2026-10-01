@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate ACC, ENVACC and GETFIELD through one indexed-read template."""
+"""Generate stack, environment, accumulator and global indexed reads through one indexed-read template."""
 import argparse
 import json
 from census import ROOT
@@ -9,18 +9,39 @@ def outputs():
     result = {}
     for op, stem, reg, source in [('ACC', 'Acc', 9, None),
                                   ('ENVACC', 'Envacc', 25, 'env'),
-                                  ('GETFIELD', 'Getfield', 21, 'accu')]:
+                                  ('GETFIELD', 'Getfield', 21, 'accu'),
+                                  ('GETGLOBAL', 'Getglobal', None, 'globals')]:
         lower = op.lower()
         draft = json.loads((ROOT / f'scripts/syi/segments/{lower}.json').read_text())
         base = 'sp' if source is None else '(a + 8 * k)'
         address = 'sp + 8 * w.toInt.toNat' if source is None else 'a + 8 * (k + w.toInt.toNat)'
+        source_expr = 'P.globals' if source == 'globals' else f's.{source}'
         selection = ('(selected : s.stack[w.toInt.toNat]? = some v)' if source is None else
-                     f'(selected : FieldSelection s.heap pl s.{source} w.toInt.toNat v l a k)')
+                     f'(selected : FieldSelection s.heap pl {source_expr} w.toInt.toNat v l a k)')
         intro = ('''  have value := h.stack.2 w.toInt.toNat v selected
   have root := stack_value_root (P := P) selected
   have source := h.spReg''' if source is None else f'''  have value := FieldSelection.read h.toVmReprAt (by simp [roots]) selected
   have root := value.root
   have source := represented_register h.{source} selected.sourceWord''')
+        global_read, global_simp, global_args = '', '', ''
+        if source == 'globals':
+            intro = '''  have value := FieldSelection.read h.toVmReprAt (by simp [roots]) selected
+  have root := value.root
+  have globalWord : word c Layout.sym_caml_global_data = BitVec.ofNat 64 (a + 8 * k) :=
+    Option.some.inj (h.globals.symm.trans selected.sourceWord)'''
+            ea = [p for p in draft['params'] if p.startswith('(hlo_')][1].split(' ≤ ', 1)[1].removesuffix('.toNat)')
+            global_read = f'''  have globalWindow : RamReadAt Layout.sym_caml_global_data 8 := ⟨by decide, by decide, by decide⟩
+  have globalAddress : {ea} = BitVec.ofNat 64 Layout.sym_caml_global_data := by decide
+  have globalRead : sign_extend (m := 64) (bytesT8 d.σ.mem Layout.sym_caml_global_data) =
+      BitVec.ofNat 64 (a + 8 * k) := by
+    simpa only [dp.memory, word, bytesT_eight_eq, sign_extend,
+      Sail.BitVec.signExtend, BitVec.signExtend_eq] using globalWord
+'''
+            global_simp = 'globalAddress, globalWindow.toNat, globalRead, '
+            global_args = 'globalWindow.lower globalWindow.upper globalWindow.htif '
+        pin_tail = f',\n       ⟨Register.x{reg}, BitVec.ofNat 64 {base}⟩' if reg is not None else ''
+        hold_tail = f',\n       (dp.frame.frame Register.x{reg} (by decide)).trans source' if reg is not None else ''
+        arg_tail = f'\n    (BitVec.ofNat 64 {base})' if reg is not None else ''
         params = 'sp high' if source is None else 'sp high l a k'
         # Segment pin order follows last writes, then untouched input pins.
         final_regs = []
@@ -57,27 +78,24 @@ theorem {lower}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}
   intro d dp
   have read : bytesT4 d.σ.mem (pl.codeBase + 4 * (s.pc + 1)) = w :=
     operand.read32 h.code dp.memory
-  have address : BitVec.ofNat 64 {base} + BitVec.ofNat 64 (8 * w.toInt.toNat) =
+{global_read}  have address : BitVec.ofNat 64 {base} + BitVec.ofNat 64 (8 * w.toInt.toNat) =
       BitVec.ofNat 64 ({address}) := by
     simp only [{'' if source is None else 'Nat.mul_add, ← Nat.add_assoc, '}BitVec.ofNat_add]
   have bp : SegSt ({draft['entry']}#64)
-      [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩,
-       ⟨Register.x{reg}, BitVec.ofNat 64 {base}⟩]
+      [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩{pin_tail}]
       (fun σ => Vsa.Sim.Code.Caml{stem}Loaded σ.mem ∧ σ.mem = d.σ.mem ∧ σ = d.σ) d :=
     ⟨dp.good, dp.pc,
-      ⟨(dp.frame.frame Register.x8 (by decide)).trans h.pc,
-       (dp.frame.frame Register.x{reg} (by decide)).trans source, trivial⟩,
+      ⟨(dp.frame.frame Register.x8 (by decide)).trans h.pc{hold_tail}, trivial⟩,
       dp.good.minstret, dp.tick, {lower}_loaded (dp.image h.dispatch.image), rfl, rfl⟩
-  have run := tr_{lower} (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc))
-    (BitVec.ofNat 64 {base}) d.σ.mem d.σ
+  have run := tr_{lower} (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)){arg_tail} d.σ.mem d.σ
   simp only [show sign_extend (m := 64) (0x004#12) = 4#64 from by decide,
     show sign_extend (m := 64) (0x008#12) = 8#64 from by decide,
     show sign_extend (m := 64) (0x000#12) = 0#64 from by decide,
-    BitVec.add_zero, codePc_succ, operand.geometry.toNat, read, index_word w nonnegative,
+    {global_simp}BitVec.add_zero, codePc_succ, operand.geometry.toNat, read, index_word w nonnegative,
     {'' if source is None else f'show BitVec.ofNat 64 (8 * w.toInt.toNat) + BitVec.ofNat 64 {base} =\n      BitVec.ofNat 64 {base} + BitVec.ofNat 64 (8 * w.toInt.toNat) from BitVec.add_comm _ _, '}
     address, window.toNat] at run
   obtain ⟨nb, after, _, hb, post⟩ := run operand.geometry.lower operand.geometry.upper
-    operand.geometry.htif window.lower window.upper window.htif d bp
+    operand.geometry.htif {global_args}window.lower window.upper window.htif d bp
   obtain ⟨_, hm, frame⟩ := post.extra
   refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, hm, frame.out,
     immediate_preserved frame (by decide)⟩

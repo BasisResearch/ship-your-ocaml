@@ -14,7 +14,8 @@ def outputs():
     specs += [(f'PUSHOFFSETCLOSURE{s}', 'closure', n) for s, n in [('M3', -3), ('0', 0), ('3', 3)]]
     specs += [('PUSHCONSTINT', 'operand_const', 0), ('PUSHOFFSETCLOSURE', 'operand_closure', 0),
               ('PUSHENVACC', 'operand_env', 0), ('PUSHACC', 'operand_stack', 0),
-              ('PUSHATOM0', 'atom', 0), ('PUSHATOM', 'operand_atom', 0)]
+              ('PUSHATOM0', 'atom', 0), ('PUSHATOM', 'operand_atom', 0),
+              ('PUSHGETGLOBAL', 'operand_global', 0)]
     for op, kind, n in specs:
         stem, lower = op.title(), op.lower()
         spec = json.loads((ROOT / f'scripts/syi/segments/{lower}.json').read_text())
@@ -55,17 +56,23 @@ def outputs():
             accu = f'  · exact PinsHold.get post.pins ⟨{accu_pin}, by simp⟩'
         extra_import, value_setup = '', ''
         advance = 1
-        if kind in ('env', 'operand_env'):
+        if kind in ('env', 'operand_env', 'operand_global'):
+            source_expr = 'P.globals' if kind == 'operand_global' else 's.env'
             index = str(n) if kind == 'env' else 'operandWord.toInt.toNat'
             window = 'read' if kind == 'env' else 'window'
             result_val = 'v'
             extra_import = 'import OCaml.Vm.Sim.FieldRead\n'
             extra_binders = ' {l a k : Nat} {v : Val}'
-            extra_inputs = f'''    (selected : FieldSelection s.heap pl s.env {index} v l a k)
+            extra_inputs = f'''    (selected : FieldSelection s.heap pl {source_expr} {index} v l a k)
     ({window} : RamReadAt (a + 8 * (k + {index})) 8)
 '''
             value_setup = '''  have value := FieldSelection.read h.toVmReprAt (by simp [roots]) selected
   have environment := represented_register h.env selected.sourceWord
+'''
+            if kind == 'operand_global':
+                value_setup = '''  have value := FieldSelection.read h.toVmReprAt (by simp [roots]) selected
+  have globalWord : word c Layout.sym_caml_global_data = BitVec.ofNat 64 (a + 8 * k) :=
+    Option.some.inj (h.globals.symm.trans selected.sourceWord)
 '''
             value, root = 'value.word', 'value.root'
             load_setup = f'''  have address : BitVec.ofNat 64 (a + 8 * k) + sign_extend (m := 64) (0x{8*n:03x}#12) =
@@ -131,7 +138,7 @@ def outputs():
 '''
                 load_simp = ', address'
                 accu = f'  · exact PinsHold.get post.pins ⟨{accu_pin}, by simp⟩'
-            elif kind in ('operand_env', 'operand_stack'):
+            elif kind in ('operand_env', 'operand_stack', 'operand_global'):
                 extra_import += 'import OCaml.Vm.Sim.IndexWord\n'
                 extra_inputs += '    (nonnegative : 0 ≤ operandWord.toInt)\n'
                 if kind == 'operand_stack':
@@ -160,6 +167,15 @@ def outputs():
 '''
                 load_simp = f''', show sign_extend (m := 64) (0x000#12) = 0#64 from by decide,
     BitVec.add_zero, index_word operandWord nonnegative{swap}, address, window.toNat'''
+                if kind == 'operand_global':
+                    ea = [p for p in spec['params'] if p.startswith('(hlo_')][2].split(' ≤ ', 1)[1].removesuffix('.toNat)')
+                    load_setup += f'''  have globalWindow : RamReadAt Layout.sym_caml_global_data 8 := ⟨by decide, by decide, by decide⟩
+  have globalAddress : {ea} = BitVec.ofNat 64 Layout.sym_caml_global_data := by decide
+  have globalRead := (space.word_read space.payload.globals (memoryEq.trans
+    (congrArg (fun m => writeLog m (pushLog sp w)) dp.memory))).trans globalWord
+'''
+                    load_simp = ', globalAddress, globalWindow.toNat, globalRead' + load_simp
+                    load_args += '\n    globalWindow.lower globalWindow.upper globalWindow.htif'
                 load_args += '\n    window.lower window.upper window.htif'
         if kind in ('atom', 'operand_atom'):
             extra_import = 'import OCaml.Vm.Sim.IndexWord\n'

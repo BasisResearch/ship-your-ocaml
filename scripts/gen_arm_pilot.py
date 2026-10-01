@@ -121,6 +121,11 @@ FAMILIES['PUSHATOM'] = ('Pushatom', ['sd', 'alu_addi', 'lw_tot', 'auipc', 'ld_to
 for _op in ['PUSHATOM0', 'PUSHATOM']:
     PATHS[_op] = (_op, [])
 
+FAMILIES['GETGLOBAL'] = ('Getglobal', ['lw_tot', 'auipc', 'ld_tot', 'alu_addi', 'slli', 'alu_add', 'ld_tot', 'j'])
+FAMILIES['PUSHGETGLOBAL'] = ('Pushgetglobal', ['sd', 'alu_addi', 'lw_tot', 'auipc', 'ld_tot', 'alu_addi', 'slli', 'alu_add', 'ld_tot', 'j'])
+for _op in ['GETGLOBAL', 'PUSHGETGLOBAL']:
+    PATHS[_op] = (_op, [])
+
 
 # Integer comparisons branch to the false-result helper; fallthrough returns true.
 for _op in ['LTINT', 'LEINT', 'GTINT', 'GEINT', 'ULTINT', 'UGEINT']:

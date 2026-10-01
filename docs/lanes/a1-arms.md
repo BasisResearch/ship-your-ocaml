@@ -1,5 +1,20 @@
 # Lane a1-arms
 
+## Global-root indexed loads
+
+`getglobal_arm` and `pushgetglobal_arm` reuse the indexed-read and push
+generators. The source pointer is derived from `VmReprAt.globals` and the
+selected root placement, with the global address checked against Layout.
+The PUSH variant frames that binding and selected field through the stack
+store using the existing payload separation. Existing generated families
+are unchanged by these extensions.
+
+Separate 24 GiB/default-limit builds pass: bodies 2.1s/3.1s, represented
+bridges 1.2s/1.3s. The preceding PUSH landing is `62bbdfd`, full gate passing.
+There are now 88 conditional represented opcode bridges. Next: the nested
+GETGLOBALFIELD/PUSHGETGLOBALFIELD selections. Full `ArmSim`, entry/halt,
+semantic-domain corrections and lane exits remain open.
+
 ## Indexed and atom PUSH families
 
 `pushacc_arm`, `pushenvacc_arm`, `pushatom0_arm` and `pushatom_arm`
@@ -869,7 +884,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 86 conditional represented opcode bridges,
+stack-writing families. There are 88 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 
