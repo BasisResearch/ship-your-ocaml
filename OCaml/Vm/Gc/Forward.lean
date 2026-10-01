@@ -17,7 +17,7 @@ inductive ForwardValue (heap : Heap) (pl : Place) : Val → BitVec 64 → Prop w
 
 /-- The immediate payload is allowed by the C short-circuit guard. -/
 theorem forwardValue_int (pl : Place) :
-    ForwardValue ⟨[.block forwardTag [.int 42]]⟩ pl (.ptr 0 0) 85 :=
+    ForwardValue ⟨#[.block forwardTag [.int 42]]⟩ pl (.ptr 0 0) 85 :=
   .shortcut rfl (.exact rfl)
 
 /-- No observation-preserving ISINT rule exists for this lax relation on

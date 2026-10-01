@@ -400,9 +400,12 @@ end Eqv
 /-- Channels are malloc'd structures, not moving OCaml heap blocks. -/
 def chanEqv (a : Nat) (ch : Chan) : Eqv :=
   Eqv.and (Eqv.rawW32 (fun _ => a + chanOffFd) (·.toInt = ch.fd)) <|
+  Eqv.and (Eqv.rawW (fun _ => a + chanOffOffset) (·.toInt = ch.offset)) <|
   Eqv.and (Eqv.rawW (fun _ => a + chanOffCurr)
-    (·.toNat = a + chanOffBuff + ch.buf.length)) <|
-  Eqv.list ch.buf fun i b => Eqv.rawB (fun _ => a + chanOffBuff + i)
+    (·.toNat = a + chanOffBuff + ch.cursor)) <|
+  Eqv.and (Eqv.rawW (fun _ => a + chanOffMax)
+    (·.toNat = (if ch.fd = -1 then a + chanOffBuff + ioBufferSize else if ch.isOut then 0 else a + chanOffBuff + ch.inBuf.length))) <|
+  Eqv.list ch.buffer fun i b => Eqv.rawB (fun _ => a + chanOffBuff + i)
     (· = BitVec.ofNat 8 b.toNat)
 
 def worldEqv (cp : ChanPlace) (w : World) : Eqv :=
@@ -423,7 +426,7 @@ def codeBaseEqv : Eqv :=
 
 def codeEqv (P : Prog) : Eqv :=
   Eqv.atCode <| Eqv.all fun i => Eqv.all fun w => Eqv.guard (P.code[i]? = some w) <|
-    Eqv.rawW32 (· + 4 * i) (· = w)
+    Eqv.rawW32 (· + 4 * i) (CodeWordOk P.code i w)
 
 /-- Caml_state is fixed during a minor collection; the observation includes
 both the pointer load and its selected field. -/

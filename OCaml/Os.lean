@@ -54,4 +54,42 @@ def HtifFsImplements (cc : CallConv) (R : Config → TCB.Os.OsState → Prop) : 
     ∃ c' st', Steps c c' ∧ cc.returnsTo c c' ∧
       (TCB.Os.OsStep st call (cc.retOf c') st' ∨ TCB.Os.OsSpecial st call) ∧ R c' st'
 
+/-- The C functions covered by the file-system validation driver. -/
+inductive HtifFunction where
+  | open | read | write | lseek | close | fstat | stat | unlink
+  | rename | opendir | readdir | closedir | gettimeofday | times
+  deriving DecidableEq, Repr
+
+/-- Concrete entry classification remains an ELF calling-convention
+obligation. Its addresses must be supplied by generated `Vm.Layout` symbols;
+it must not be instantiated from trace results or hard-coded addresses. -/
+structure HtifEntries (cc : CallConv) where
+  entry : HtifFunction → Config → Prop
+  covers : ∀ c call, cc.callAt c = some call → ∃ f, entry f c
+
+/-- Named remaining machine premise, split into termination and partial
+correctness for each C function. Supply these fields with generated function
+summaries (`gen_fn.py`/MachWP), using the pinned ELF and a concrete FS memory
+relation R. The native-C trace evidence in results/htif-fs.json validates
+behaviour but does not establish either universal machine field. -/
+structure HtifFunctionObligations (cc : CallConv)
+    (R : Config → TCB.Os.OsState → Prop) (entries : HtifEntries cc) : Prop where
+  terminates : ∀ f c st call, entries.entry f c → R c st → cc.callAt c = some call →
+    ∃ c', Steps c c' ∧ cc.returnsTo c c'
+  refines : ∀ f c st call c', entries.entry f c → R c st → cc.callAt c = some call →
+    Steps c c' → cc.returnsTo c c' →
+    ∃ st', (TCB.Os.OsStep st call (cc.retOf c') st' ∨ TCB.Os.OsSpecial st call) ∧ R c' st'
+
+/-- Reduction of the whole HTIF boundary to the named per-function machine
+obligations. This theorem deliberately does not claim those premises are
+proved by the finite trace suite. -/
+theorem htifFsImplements_of_functions (cc : CallConv)
+    (R : Config → TCB.Os.OsState → Prop) (entries : HtifEntries cc)
+    (h : HtifFunctionObligations cc R entries) : HtifFsImplements cc R := by
+  intro c st call hr hc
+  obtain ⟨f, hf⟩ := entries.covers c call hc
+  obtain ⟨c', hs, hret⟩ := h.terminates f c st call hf hr hc
+  obtain ⟨st', hspec, hr'⟩ := h.refines f c st call c' hf hr hc hs hret
+  exact ⟨c', st', hs, hret, hspec, hr'⟩
+
 end OCaml.Os

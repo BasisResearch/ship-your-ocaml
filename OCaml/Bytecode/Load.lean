@@ -80,7 +80,7 @@ def internRec (base : Nat) : Nat → IS → Option (Val × IS)
       let (bs, r) ← st.r.raw len
       pure (newObj (.bytes bs) { st with r := r })
     let shared := fun (ofs : Nat) (st : IS) =>
-      let n := st.h.objs.length - base
+      let n := st.h.size - base
       if ofs = 0 ∨ ofs > n then none else some (Val.ptr (base + n - ofs) 0, st)
     if code ≥ 0x80 then block (code % 16) ((code / 16) % 8) st
     else if code ≥ 0x40 then pure (Val.ofInt (code % 64), st)
@@ -131,7 +131,7 @@ def unmarshal (b : ByteArray) (h : Heap) : Option (Val × Heap) := do
   let r ← if magic = 0x8495A6BE then (do let (_, r) ← r.raw 16; pure r)
           else if magic = 0x8495A6BF then (do let (_, r) ← r.raw 28; pure r)
           else none
-  let (v, st) ← internRec h.objs.length (b.size * 4 + 16) ⟨r, h⟩
+  let (v, st) ← internRec h.size (b.size * 4 + 16) ⟨r, h⟩
   pure (v, st.h)
 
 def strBytes (s : String) : List UInt8 := s.toList.map (·.toNat.toUInt8)
@@ -144,7 +144,7 @@ def loadExe (f : ByteArray) (args : List String := [])
   let code ← sectionBytes f "CODE"
   let prim ← sectionBytes f "PRIM"
   let data ← sectionBytes f "DATA"
-  let (g, h) ← unmarshal data ⟨[]⟩
+  let (g, h) ← unmarshal data ⟨#[]⟩
   let (h, ls) := ("/prog" :: args).foldl (fun (h, ls) a =>
     let (h, l) := h.alloc (.bytes (strBytes a)); (h, ls ++ [Val.ptr l 0])) (h, [])
   let (h, av) := if ls.isEmpty then (h, Val.atom 0) else
@@ -186,8 +186,8 @@ theorem bcHalts_of_runTo {P : Prog} {k : Nat} {e : Nat} {w : World}
   exact ⟨s, w, hr, hs, rfl⟩
 
 /-- The primitive a `C_CALLn` at `s.pc` calls, for diagnostics. -/
-def primName (P : Prog) (s : St) : String :=
-  match decodeAt P.code s.pc with
+def primNameAt (P : Prog) (pc : Nat) : String :=
+  match decodeAt P.code pc with
   | some ⟨.C_CALL1, [p]⟩ | some ⟨.C_CALL2, [p]⟩ | some ⟨.C_CALL3, [p]⟩
   | some ⟨.C_CALL4, [p]⟩ | some ⟨.C_CALL5, [p]⟩ | some ⟨.C_CALLN, [_, p]⟩ =>
       P.prims[p.toNat]?.getD "?"
@@ -197,13 +197,17 @@ def primName (P : Prog) (s : St) : String :=
 def run (P : Prog) : Nat → St → Nat → (String × Option Nat × Nat × String)
   | 0, s, n => (bytesToString s.world.console, none, n, s!"fuel out at pc {s.pc}")
   | fuel + 1, s, n =>
+    -- Retain only diagnostic scalars/output across step. Keeping s alive
+    -- here forces every otherwise-exclusive heap array update to copy.
+    let pc := s.pc
+    let output := s.world.console
     match step P s with
     | .next s' => run P fuel s' (n + 1)
     | .halt e w => (bytesToString w.console, some e, n, "halt")
     | .unsupported =>
-      (bytesToString s.world.console, none, n,
-        s!"unsupported at pc {s.pc}: {repr ((decodeAt P.code s.pc).map (·.op))} {primName P s}")
-    | .wrong => (bytesToString s.world.console, none, n,
-        s!"wrong at pc {s.pc}: {repr ((decodeAt P.code s.pc).map (·.op))}")
+      (bytesToString output, none, n,
+        s!"unsupported at pc {pc}: {repr ((decodeAt P.code pc).map (·.op))} {primNameAt P pc}")
+    | .wrong => (bytesToString output, none, n,
+        s!"wrong at pc {pc}: {repr ((decodeAt P.code pc).map (·.op))}")
 
 end OCaml.Bytecode

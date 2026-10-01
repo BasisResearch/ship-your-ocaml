@@ -103,19 +103,42 @@ end Obj
 
 /-- The abstract heap: an allocation counter and the blocks allocated so
 far. Allocation always takes `next`, so locations are never reused. -/
+instance : Coe (List Obj) (Array Obj) := ⟨List.toArray⟩
+
+
 structure Heap where
-  objs : List Obj
+  storage : Array Obj
   deriving DecidableEq, Repr, Inhabited
 
 namespace Heap
 
-def get? (h : Heap) (l : Nat) : Option Obj := h.objs[l]?
+/-- List view for existing symbolic specifications; execution uses the array. -/
+def objs (h : Heap) : List Obj := h.storage.toList
+
+@[simp] theorem storage_list_eq (h : Heap) : h.storage.toList = h.objs := rfl
+
+/-- Keep array sizes in the existing symbolic heap interface. -/
+@[simp] theorem storage_size_eq (h : Heap) : h.storage.size = h.objs.length := rfl
+
+def size (h : Heap) : Nat := h.storage.size
+
+def get? (h : Heap) (l : Nat) : Option Obj := h.storage.toList[l]?
+
+def getArray? (h : Heap) (l : Nat) : Option Obj := h.storage[l]?
+
+/-- The compiled read uses Array's constant-time operation; the specification
+retains the existing list view and its symbolic allocation laws. -/
+@[csimp] theorem get?_eq_getArray : @get? = @getArray? := by
+  funext h l
+  exact Array.getElem?_toList
 
 /-- Allocate `o`, returning its location. -/
-def alloc (h : Heap) (o : Obj) : Heap × Nat := (⟨h.objs ++ [o]⟩, h.objs.length)
+def alloc (h : Heap) (o : Obj) : Heap × Nat :=
+  let n := h.storage.size
+  (⟨h.storage.push o⟩, n)
 
 /-- Replace block `l` (mutation). -/
-def set (h : Heap) (l : Nat) (o : Obj) : Heap := ⟨h.objs.set l o⟩
+def set (h : Heap) (l : Nat) (o : Obj) : Heap := ⟨h.storage.setIfInBounds l o⟩
 
 /-- Words allocated so far (headers included): the no-GC budget measure. -/
 def words (h : Heap) : Nat := h.objs.foldl (fun a o => a + o.wosize + 1) 0

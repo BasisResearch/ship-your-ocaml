@@ -1,0 +1,23 @@
+[
+  {
+    "test": "f2_ops",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 1860 prims 403 heap0 140"
+  },
+  {
+    "test": "format",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 29412 prims 403 heap0 600"
+  },
+  {
+    "test": "files",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 3451 prims 403 heap0 523"
+  }
+]

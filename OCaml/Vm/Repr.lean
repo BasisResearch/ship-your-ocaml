@@ -75,12 +75,22 @@ def chanOffFd : Nat := 0
 def chanOffCurr : Nat := 24
 def chanOffBuff : Nat := 72
 
-/-- A channel structure at `a` holds `ch`: its fd, and its pending bytes
-between `buff` and `curr`. -/
+def chanOffOffset : Nat := 8
+def chanOffMax : Nat := 32
+
+/-- The active bytes and cursor of either kind of C channel. -/
+def _root_.OCaml.Bytecode.Chan.buffer (ch : Chan) : List UInt8 :=
+  if ch.fd = -1 then [] else if ch.isOut then ch.buf else ch.inBuf
+def _root_.OCaml.Bytecode.Chan.cursor (ch : Chan) : Nat :=
+  if ch.fd = -1 then ioBufferSize else if ch.isOut then ch.buf.length else ch.inPos
+
+/-- Channel layout from runtime/caml/io.h, including read-ahead and offset. -/
 def ChanAt (c : Config) (a : Nat) (ch : Chan) : Prop :=
   (word32 c (a + chanOffFd)).toInt = ch.fd ∧
-  (word c (a + chanOffCurr)).toNat = a + chanOffBuff + ch.buf.length ∧
-  ∀ i (b : UInt8), ch.buf[i]? = some b → byte c (a + chanOffBuff + i) = BitVec.ofNat 8 b.toNat
+  (word c (a + chanOffOffset)).toInt = ch.offset ∧
+  (word c (a + chanOffCurr)).toNat = a + chanOffBuff + ch.cursor ∧
+  (word c (a + chanOffMax)).toNat = (if ch.fd = -1 then a + chanOffBuff + ioBufferSize else if ch.isOut then 0 else a + chanOffBuff + ch.inBuf.length) ∧
+  ∀ i (b : UInt8), ch.buffer[i]? = some b → byte c (a + chanOffBuff + i) = BitVec.ofNat 8 b.toNat
 
 /-- Where the `struct channel`s live (`caml_open_descriptor_in` mallocs
 them). -/
@@ -141,6 +151,30 @@ def WorldRepr (c : Config) (cp : ChanPlace) (w : World) : Prop :=
   output c.σ = bytesToString w.console ∧
   ∀ id ch, w.chans[id]? = some ch → ∃ a, cp id = some a ∧ ChanAt c a ch
 
+/-- Recognize only GETPUBMET cache operands on a linear instruction decode.
+An opcode-looking operand is never treated as an instruction boundary. -/
+def methodCacheSlot (code : Code) (index : Nat) : Bool :=
+  let rec scan : Nat → Nat → Bool
+    | 0, _ => false
+    | fuel + 1, pc =>
+      if pc > index then false else
+      match decodeAt code pc with
+      | none => false
+      | some ins =>
+        if ins.op == .GETPUBMET && index == pc + 2 then true
+        else scan fuel (pc + 1 + ins.args.length)
+  scan code.size 0
+
+/-- Cache payloads may change; every opcode and ordinary operand stays pinned.
+Correctness of the cache hit/miss lookup remains an F3 arm obligation, with
+well-formed method tables and control flow through instruction boundaries. -/
+def CodeWordOk (code : Code) (index : Nat) (expected actual : BitVec 32) : Prop :=
+  methodCacheSlot code index = true ∨ actual = expected
+
+/-- Shared code observation for dispatch states and C-call payloads. -/
+def CodeRepr (code : Code) (base : Nat) (c : Config) : Prop :=
+  ∀ i w, code[i]? = some w → CodeWordOk code i w (word32 c (base + 4 * i))
+
 /-- The machine is at `caml_interprete`'s loop head in state `s`, under the
 placement `pl`, channel placement `cp`, stack pointer `sp` and stack top
 `high` (named fields: the discipline's rule for posts/entries). -/
@@ -158,8 +192,8 @@ structure VmReprAt (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace
   trapsp : (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trapsp)).toNat =
     high - 8 * s.trap
   codeBase : (word c Layout.sym_caml_start_code).toNat = pl.codeBase
-  /-- the code, unmodified (F3's `GETPUBMET` relaxes this to "up to caches") -/
-  code : ∀ i w, P.code[i]? = some w → word32 c (pl.codeBase + 4 * i) = w
+  /-- Code is immutable except for decoded GETPUBMET cache operands. -/
+  code : CodeRepr P.code pl.codeBase c
   globals : valWord pl P.globals = some (word c Layout.sym_caml_global_data)
   stack : StackRepr c pl sp high s.stack
   heap : HeapRepr c pl cp P s

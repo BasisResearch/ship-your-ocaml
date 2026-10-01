@@ -1,4 +1,5 @@
 import OCaml.Bytecode.Semantics
+import OCaml.Programs.OcamlcExecuted
 
 /-!
 # Fragments: what Layer A covers, and the ledger of the rest
@@ -91,5 +92,184 @@ theorem f1_count : (Opcode.all.filter (·.fragment = .F1)).length = 134 := by de
 theorem primF1_unsupported (name : String) (h : name ∉ primsF1) (args : List Val)
     (hp : Heap) (w : World) : primF1 name args hp w = .unsupported := by
   simp [primF1, h]
+
+
+/-- An entry records executable-domain coverage or an explicit open boundary.
+Implemented domains may reject malformed/unsupported arguments; this is not
+an arm-simulation theorem or a claim that the compiler runs under BcSem. -/
+inductive PrimitiveCoverage where
+  | domain | openBoundary (reason : String)
+  deriving DecidableEq, Repr
+
+/-- Primitive names with executable cases, including partial domains such as
+integer-only hash and ordinary-block comparison. -/
+def primitiveDomains : List String := [
+  "caml_abs_float",
+  "caml_add_float",
+  "caml_array_append",
+  "caml_array_blit",
+  "caml_array_fill",
+  "caml_array_get",
+  "caml_array_get_addr",
+  "caml_array_set",
+  "caml_array_set_addr",
+  "caml_array_sub",
+  "caml_array_unsafe_get",
+  "caml_array_unsafe_set",
+  "caml_atan_float",
+  "caml_backtrace_status",
+  "caml_blit_bytes",
+  "caml_blit_string",
+  "caml_bytes_compare",
+  "caml_bytes_get",
+  "caml_bytes_of_string",
+  "caml_bytes_set",
+  "caml_compare",
+  "caml_create_bytes",
+  "caml_div_float",
+  "caml_equal",
+  "caml_fill_bytes",
+  "caml_float_of_int",
+  "caml_format_float",
+  "caml_format_int",
+  "caml_fresh_oo_id",
+  "caml_get_exception_raw_backtrace",
+  "caml_greaterequal",
+  "caml_greaterthan",
+  "caml_hash",
+  "caml_int32_add",
+  "caml_int32_and",
+  "caml_int32_compare",
+  "caml_int32_mul",
+  "caml_int32_neg",
+  "caml_int32_of_int",
+  "caml_int32_or",
+  "caml_int32_shift_left",
+  "caml_int32_shift_right",
+  "caml_int32_shift_right_unsigned",
+  "caml_int32_sub",
+  "caml_int32_to_int",
+  "caml_int32_xor",
+  "caml_int64_add",
+  "caml_int64_and",
+  "caml_int64_compare",
+  "caml_int64_float_of_bits",
+  "caml_int64_mul",
+  "caml_int64_neg",
+  "caml_int64_of_int",
+  "caml_int64_or",
+  "caml_int64_shift_left",
+  "caml_int64_shift_right",
+  "caml_int64_shift_right_unsigned",
+  "caml_int64_sub",
+  "caml_int64_to_int",
+  "caml_int64_xor",
+  "caml_int_compare",
+  "caml_int_of_float",
+  "caml_int_of_string",
+  "caml_lessequal",
+  "caml_lessthan",
+  "caml_make_vect",
+  "caml_ml_bytes_length",
+  "caml_ml_close_channel",
+  "caml_ml_flush",
+  "caml_ml_input",
+  "caml_ml_input_char",
+  "caml_ml_open_descriptor_in",
+  "caml_ml_open_descriptor_out",
+  "caml_ml_out_channels_list",
+  "caml_ml_output",
+  "caml_ml_output_bytes",
+  "caml_ml_output_char",
+  "caml_ml_output_int",
+  "caml_ml_pos_in",
+  "caml_ml_pos_out",
+  "caml_ml_seek_in",
+  "caml_ml_seek_out",
+  "caml_ml_set_binary_mode",
+  "caml_ml_set_channel_name",
+  "caml_ml_string_length",
+  "caml_mul_float",
+  "caml_nativeint_add",
+  "caml_nativeint_and",
+  "caml_nativeint_compare",
+  "caml_nativeint_mul",
+  "caml_nativeint_neg",
+  "caml_nativeint_of_int",
+  "caml_nativeint_or",
+  "caml_nativeint_shift_left",
+  "caml_nativeint_shift_right",
+  "caml_nativeint_shift_right_unsigned",
+  "caml_nativeint_sub",
+  "caml_nativeint_to_int",
+  "caml_nativeint_xor",
+  "caml_neg_float",
+  "caml_notequal",
+  "caml_obj_block",
+  "caml_obj_dup",
+  "caml_obj_make_forward",
+  "caml_obj_set_tag",
+  "caml_obj_tag",
+  "caml_register_named_value",
+  "caml_restore_raw_backtrace",
+  "caml_set_oo_id",
+  "caml_sqrt_float",
+  "caml_string_compare",
+  "caml_string_equal",
+  "caml_string_get",
+  "caml_string_notequal",
+  "caml_string_of_bytes",
+  "caml_sub_float",
+  "caml_sys_argv",
+  "caml_sys_close",
+  "caml_sys_const_backend_type",
+  "caml_sys_const_big_endian",
+  "caml_sys_const_int_size",
+  "caml_sys_const_max_wosize",
+  "caml_sys_const_naked_pointers_checked",
+  "caml_sys_const_ostype_cygwin",
+  "caml_sys_const_ostype_unix",
+  "caml_sys_const_ostype_win32",
+  "caml_sys_const_word_size",
+  "caml_sys_executable_name",
+  "caml_sys_exit",
+  "caml_sys_file_exists",
+  "caml_sys_get_argv",
+  "caml_sys_get_config",
+  "caml_sys_getenv",
+  "caml_sys_open",
+  "caml_sys_remove",
+  "caml_sys_rename",
+  "caml_sys_time",
+  "caml_sys_time_include_children"]
+
+/-- Remaining measured compiler primitive boundaries and their owners. -/
+def primitiveOpen : List (String × String) := [
+  ("caml_alloc_dummy", "F2 recursive module initialization"),
+  ("caml_update_dummy", "F2 recursive module initialization"),
+  ("caml_ensure_stack_capacity", "runtime stack capacity"),
+  ("caml_gc_quick_stat", "collector statistics are not represented in the abstract heap"),
+  ("caml_input_value", "F5 unmarshalling from a channel"),
+  ("caml_output_value", "F5 marshalling to a channel"),
+  ("caml_md5_chan", "F5 channel digest"),
+  ("caml_md5_string", "F2 string digest"),
+  ("caml_new_lex_engine", "F2 lexer engine"),
+  ("caml_sys_random_seed", "F5 entropy source"),
+  ("caml_sys_read_directory", "F5 directory streams")]
+
+def primitiveLedger : List (String × PrimitiveCoverage) :=
+  primitiveDomains.map (fun n => (n, .domain)) ++
+  primitiveOpen.map (fun (n, why) => (n, .openBoundary why))
+
+/-- Every opcode has an explicit fragment assignment, including debugger ops. -/
+def opcodeLedger : List (Opcode × Fragment) := Opcode.all.map fun o => (o, o.fragment)
+
+/-- Coverage of the successful host compiler execution census. The measurement
+itself remains validation evidence, as documented in OcamlcExecuted.lean. -/
+theorem executed_opcodes_ledgered :
+    ∀ o ∈ ocamlcExecutedOpcodes, o ∈ opcodeLedger.map (·.1) := by decide
+
+theorem executed_primitives_ledgered :
+    ∀ n ∈ ocamlcExecutedPrimitives, n ∈ primitiveLedger.map (·.1) := by decide
 
 end OCaml.Bytecode

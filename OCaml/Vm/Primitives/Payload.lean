@@ -12,7 +12,7 @@ structure VmPayload (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlac
   stackHigh : (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high)).toNat = high
   trapsp : (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trapsp)).toNat = high - 8 * s.trap
   codeBase : (word c Layout.sym_caml_start_code).toNat = pl.codeBase
-  code : ∀ i w, P.code[i]? = some w → word32 c (pl.codeBase + 4 * i) = w
+  code : CodeRepr P.code pl.codeBase c
   globals : valWord pl P.globals = some (word c Layout.sym_caml_global_data)
   stack : StackRepr c pl sp high s.stack
   heap : HeapRepr c pl cp P s
@@ -32,7 +32,7 @@ theorem VmPayload.frame {P : Prog} {s : St} {c c' : Config} {pl : Place} {cp : C
   · simpa only [hw] using h.stackHigh
   · simpa only [hw] using h.trapsp
   · simpa only [hw] using h.codeBase
-  · simpa only [word32, hm] using h.code
+  · simpa only [CodeRepr, word32, hm] using h.code
   · simpa only [hw] using h.globals
   · simpa only [StackRepr, hw] using h.stack
   · simpa only [HeapRepr, ObjAt, word, word32, byte, hm] using h.heap

@@ -44,7 +44,7 @@ ELF pin).
 | `_free_r` and `free` function contracts for this ELF | `VsaIris/Vsa/FreeTop.lean`, `FreeRunAll.lean` | A0 | **proved**: `free_body` at `_free_r` entry, plus `freeChgRun_proved` and `freeLocalRun_proved`; coalescing, trimming and complete generated step/pin closure, audited |
 | `_svfprintf_r` function spec for this ELF | `VsaIris/Vsa/SnpFmt.lean` | A0 | **proved**: `svfprintf_nw` at `0x8004789c`, entry-to-return for literal text, `%s`, and `%d`; initialized string FILE, ASCII locale, bounded stack arguments/output, truncated bytes and full rendered-length return; 47 generated modules, pinned and audited, a5 drift check |
 | decode for every disassembled instruction word (via syi’s `decodeW`) | `Vsa/Sim/ElfDecode/`, `scripts/gen_elf_decode.py` | A0 | **proved**: 29,475 words, 231 chunks; covers all reachable words; a5 drift check |
-| `HtifFsImplements` (the in-image file system meets the OS spec) | `OCaml/Os.lean` | F5 | open; `htif.c` conforms on all 6,490 validation scripts (VALIDATION §6) |
+| `HtifFsImplements` (the in-image file system meets the OS spec) | `OCaml/Os.lean` | F5 | reduced by `htifFsImplements_of_functions` to `HtifEntries` + `HtifFunctionObligations` (termination/partial correctness); premises open. Native trace evidence: 6,410 accepted, 80 special, zero rejected (`results/htif-fs.json`) |
 | `BcSem` world over `TCB.Os.OsState` (file/time/env primitives through `OsStep`) | `OCaml/Bytecode/Semantics.lean` | F5 | open |
 | Linux instantiation: `ecall` as an external step constrained by `OsStep` | `Vsa.Machine` extension | E | open |
 | `Layout.runtimeOk` concrete instance | `OCaml/Vm/Runtime.lean` | A0 | **defined**: `runtimeLayout freeList`, with ordinary nonempty-nursery bounds |
@@ -171,11 +171,24 @@ A0 library projections can consume the shared `FixedBytesLoaded` interface.
 
 ## A2–A5: F2 data, F3 objects, F4 callbacks, F5 files
 
-Semantics lane: all ten F2 opcode arms are transcribed; array/byte and
-structural-comparison primitive subsets pass four of nine difftests plus
-`c/tests/bc/f2_ops.ml`. `results/bc-data.json` records remaining first
-unsupported calls. Machine simulation and the remaining primitive domains
-are open; see `docs/lanes/a2-sem.md`.
+Semantics-lane exit: **9/9 host/runbc difftests pass**
+(`results/bc-f2-f5.json`), plus focused data, formatting/float and file tests
+(`results/bc-focused.json`). The successful boot/ocamlc hello compilation
+census has 121 opcode kinds and 86 primitive names; kernel-checked
+`executed_opcodes_ledgered` and `executed_primitives_ledgered` cover every
+measured name. The measurement is host evidence, not a BcSem compiler run.
+
+| Semantics slice | Current status / remaining boundary |
+|---|---|
+| F2 data | Ten opcode arms; data/format/float/boxed-integer subsets. Primitive domains and eleven remaining compiler boundaries are explicit in `Fragment.lean`; universal primitive refinement remains open. |
+| F3 objects | Object/method semantics validated; `CodeWordOk` relaxes only linearly decoded GETPUBMET cache slots. Cache hit/miss simulation and method-table invariants remain open. |
+| F4 callbacks | Caught exceptions and disabled-backtrace primitives validated. Re-entrant callbacks, uncaught exceptions, signals and finalisers remain open; the nine-test exit does not certify them. |
+| F5 files | World uses `TCB.Os.OsState`; buffered file/env/time primitives use `osCall_sound`. HTIF reduced to named typed function premises with trace evidence; concrete FS memory relation and ELF function proofs remain open. |
+| Executable heap | Array-backed storage with certified list-view compilation (`Heap.get?_eq_getArray`); existing symbolic heap/application proofs retained. |
+
+`docs/lanes/a2-sem.md` records argument-domain restrictions, proof boundaries
+and the image-migration regeneration requirement. Machine arms remain a1's
+work; passing executable difftests does not discharge Layer A.
 
 * Each fragment: its `BcSem` rules and primitives (grown in
   `Semantics.lean`, validated with `runbc` against the host `ocamlrun`

@@ -25,9 +25,9 @@ def main():
             src.write_bytes(source.read_bytes())
             exe = src.with_suffix('.byte')
             subprocess.run([ocaml / 'ocamlc', '-o', exe, src], check=True)
-            host = subprocess.run([ocaml / 'ocamlrun', exe], capture_output=True, timeout=a.timeout)
+            host = subprocess.run([ocaml / 'ocamlrun', exe], capture_output=True, timeout=a.timeout, cwd=tmp)
             try:
-                model = subprocess.run([ROOT / '.lake/build/bin/runbc', exe], capture_output=True, timeout=a.timeout)
+                model = subprocess.run([ROOT / '.lake/build/bin/runbc', exe], capture_output=True, timeout=a.timeout, cwd=tmp)
                 row = dict(test=source.stem, passed=host.returncode == model.returncode and host.stdout == model.stdout,
                            host_exit=host.returncode, model_exit=model.returncode,
                            status=model.stderr.decode(errors='replace').strip())

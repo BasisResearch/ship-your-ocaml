@@ -2,36 +2,79 @@
 
 ## Current status
 
-Exit is open. Baseline host/BcSem differential result: 2/9 pass
-(`results/bc-baseline.json`). `scripts/difftest_bc.py` compiles temporary
-copies with host 4.14.4 and compares stdout and exit status without changing
-the proof ELF. `scripts/syi/difftest.py` targets the copied WHILE machine
-workflow, not BcSem; this runner supplies the missing bytecode comparison.
+All four lane exit items are implemented; final integration gate pending:
+
+- 121 executed opcode kinds and 86 primitive names are ledgered, with finite
+  kernel-checked coverage theorems.
+- All nine standard host/runbc difftests pass in the combined run
+  (`results/bc-f2-f5.json`); allocation takes 8,274,724 steps.
+- HTIF is reduced to named typed function premises with reproduced evidence.
+- PHASES rows distinguish executable status from remaining proof obligations.
+
+The pinned ELF migration is pending on main; no new machine data addresses
+are hard-coded. Rebase and regenerate when a0 lands it.
 
 ## Implemented and validated
 
-- F2 opcode arms in `OCaml/Bytecode/Semantics.lean`: float records,
-  vector length/access/update, byte/string access/update, C_CALLN.
-  Transcribed from `runtime/interp.c` lines 719–816 and 962–972.
-- Data primitive subset from `runtime/{array,str,compare}.c`: generic
-  arrays, bytes create/blit/fill/access, and structural comparison of
-  integers, strings, objects and ordinary blocks. Bounds failures allocate
-  `Invalid_argument` using the actual global exception constructor.
-- `OCaml/Bytecode/Data.lean` factors structural comparison; exhaustion or
-  unsupported value domains remain explicit, including custom/float values.
-- `lake build runbc OCaml.Fragment` passes under 24 GiB. Four of nine
-  difftests pass (`results/bc-data.json`); `c/tests/bc/f2_ops.ml` also passes.
-- No new theorem claims. Machine-arm proofs remain owned by a1-arms.
+- F2's ten opcode arms; ordinary and float data, array/bytes/string
+  primitives, integer formatting/parsing, rational decimal float formatting,
+  fdlibm atan, boxed integer operations, and integer hash. Argument-domain
+  gaps remain explicit (`compareVal` excludes custom/float values; hashing
+  currently handles integers).
+- F3 method lookups and object primitives. `VmReprAt.code` now identifies
+  GETPUBMET cache operands by linear decoding and permits cache mutation;
+  ordinary code words remain pinned. `CodeRepr` is shared with the newly
+  landed primitive `VmPayload` so its frame proofs use the same contract. Cache hit/miss simulation and method
+  table well-formedness remain machine-arm obligations.
+- World state uses `TCB.Os.OsState`. File open/read/write/seek/close,
+  rename/remove/existence, environment and time select transitions through
+  `TCB.Os.allowed`. Channel representation includes input buffers/cursors
+  and offsets. `osCall_sound` derives `OsStep` from `allowed_sound`.
+- The final combined 9/9 run passes after formatter/channel corrections.
+- Focused data, format/float and buffered-file tests pass
+  (`results/bc-focused.json`). Host and model execute in a temporary directory.
+- The heap uses an array for executable indexing/allocation with a logical
+  list view. `Heap.get?_eq_getArray` certifies its compilation rewrite;
+  `storage_list_eq` and `storage_size_eq` preserve symbolic interfaces.
+  Existing Symbolic and CountLoop proofs build. The word-budget definition
+  retains its logical list fold for the newly landed A6 live-word bound.
+  CountLoop and Forward counterexample heap literals use array notation;
+  their statements and proofs are otherwise unchanged.
+- Successful host boot/ocamlc hello compile measured 121 opcode kinds and
+  86 primitives (`results/ocamlc-executed.json`). The generated finite census
+  and `executed_{opcodes,primitives}_ledgered` account for every name, with
+  explicit open primitive reasons. This is not a BcSem compiler run proof.
+- Native HTIF validation reproduced 6,490 traces / 101,621 calls: 6,410
+  accepted, 80 special, zero rejected/unsupported. Reproducer:
+  `scripts/validate_htif_fs.py`; hashes and scope: `results/htif-fs.json`.
+  `HtifFunctionObligations` names remaining per-function termination and
+  partial-correctness premises; `htifFsImplements_of_functions` composes them.
 
 ## Open / next
 
-Complete the nine differential programs, update fragment coverage, then
-callbacks and OS world migration. Add the actually executed compiler
-opcode/primitive census and account for every entry. Relax the representation
-of GETPUBMET cache words without weakening other code pins. Reduce
-`HtifFsImplements` to concrete named typed function obligations with trace
-validation evidence. Update PHASES rows as each part is checked.
+Land through the full audit/integration gate. The integer formatter now uses
+character-list parsing; the existing `whileMin_runTo` and `whileMin_bcSem`
+kernel proofs pass again (125 seconds under the 24 GiB build cap).
+F4 currently supports caught exceptions and disabled raw-backtrace state;
+re-entrant callbacks and uncaught-exception handling remain open. The eleven
+compiler primitive boundaries in `primitiveOpen` are ledgered, not implemented.
+The concrete HTIF entry classification, memory relation and generated machine
+function proofs are open; trace validation does not discharge them.
 
-Representation caveat: bytes allocation currently chooses zero for C's
-uninitialized payload; a defined-read discipline or explicit initialization
-state is needed before claiming a machine refinement of this primitive.
+Representation caveat: bytes allocation chooses zero for C's uninitialized
+payload. A defined-read discipline or initialization state is needed for
+machine refinement. Float execution and formatting are differential-tested
+subsets, not a universal soft-float/newlib correctness theorem. WorldRepr
+still needs the concrete HTIF memory relation beyond console/channel layout.
+
+## New theorem index
+
+- `Heap.storage_list_eq`, `Heap.storage_size_eq`, `Heap.get?_eq_getArray`:
+  `OCaml/Bytecode/Value.lean:118`, `:121`, `:131`.
+- `osCall_sound`: `OCaml/Bytecode/Os.lean:24`.
+- `executed_opcodes_ledgered`, `executed_primitives_ledgered`:
+  `OCaml/Fragment.lean:269`, `:272`.
+- `htifFsImplements_of_functions`: `OCaml/Os.lean:86`.
+
+All are included in `OCaml/Audit.lean`. The HTIF theorem is conditional;
+its named premises are not supplied by the native-C trace evidence.

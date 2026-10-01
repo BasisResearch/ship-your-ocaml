@@ -488,3 +488,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 -- All generated collector/barrier segments, rows and code pins.
 #audit_gc_rows
+
+/-! A2 executable heap representation and measured compiler coverage. -/
+#print axioms OCaml.Bytecode.Heap.storage_list_eq
+#print axioms OCaml.Bytecode.Heap.storage_size_eq
+#print axioms OCaml.Bytecode.Heap.get?_eq_getArray
+#print axioms OCaml.Bytecode.executed_opcodes_ledgered
+#print axioms OCaml.Bytecode.executed_primitives_ledgered
+
+#print axioms OCaml.Bytecode.osCall_sound
+#print axioms OCaml.Os.htifFsImplements_of_functions

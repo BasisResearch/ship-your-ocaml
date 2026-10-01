@@ -1,29 +1,20 @@
 import OCaml.Bytecode.Syntax
 import OCaml.Bytecode.Data
+import OCaml.Bytecode.FloatOps
+import OCaml.Bytecode.Os
 import OCaml.Run.Kernel
 
 /-!
-# `BcSem`: the ZINC bytecode semantics — fragment F1
+# `BcSem`: executable ZINC semantics, fragments F1–F5
 
-A deterministic step function `step P s` over VM states, transcribed from
-`caml_interprete` (`runtime/interp.c`, OCaml 4.14.4) arm by arm, and its
-graph `Step` with the observable behaviours `BcHalts` / `BcDiverges` on top
-(the same shape as `Vsa.Machine`: `Step`, `Halted`, `Halts`, `Diverges`).
-
-**F1** (`OCaml/Fragment.lean` is the authority on what is in it):
-stack/accumulator/environment moves, integer arithmetic and comparisons,
-branches, `SWITCH`, globals, structured blocks, closures (incl. mutually
-recursive ones, i.e. infix pointers), application / return / partial
-application (`APPLY*`, `APPTERM*`, `RETURN`, `GRAB`, `RESTART`),
-exceptions with handlers (`PUSHTRAP`, `POPTRAP`, `RAISE*` caught in the
-program), `STOP`, and `C_CALL1..5` of the F1 primitives listed in
-`primF1` (channels to the console, `%d` formatting, named values,
-`exit`, string equality, `Int64.float_of_bits`).
-
-Everything else steps to `.unsupported`: floats in blocks, arrays, byte
-access, objects, `C_CALLN`, events, other primitives, and an exception
-that reaches the top (the runtime then calls back into OCaml, `at_exit`,
-before printing `Fatal error: exception …`, a callback fragment).
+The deterministic `step P s` transcribes OCaml 4.14.4's interpreter and
+selected C primitives. `Fragment.lean` records implemented argument domains
+and open compiler boundaries; a listed primitive need not support every
+possible argument. Core execution includes data, objects, caught exceptions,
+formatting and buffered file/environment/time operations through `osCall`.
+Re-entrant callbacks, marshalling, lexer/digest helpers and collector
+statistics remain explicit boundaries. Machine-arm simulation is separate
+from this executable semantics and its host differential validation.
 
 Faithfulness conventions:
 
@@ -75,12 +66,15 @@ structure Chan where
   fd : Int
   isOut : Bool
   buf : List UInt8
+  /-- Input read-ahead storage and cursor; output uses buf above. -/
+  inBuf : List UInt8 := []
+  inPos : Nat := 0
+  /-- C channel offset: end of read-ahead, or bytes flushed on output. -/
+  offset : Int := 0
   deriving DecidableEq, Repr
 
 /-- The C-side world the primitives act on. -/
 structure World where
-  /-- Everything written to fds 1 and 2: the HTIF console. -/
-  console : List UInt8
   /-- `caml_all_opened_channels`, in creation order (id = index). -/
   chans : List Chan
   /-- `caml_register_named_value`. -/
@@ -91,11 +85,14 @@ structure World where
   exeName : List UInt8
   /-- `main_argv` (`caml_sys_init`, allocated before the cut point). -/
   argv : Val
-  /-- The in-memory file system (`c/src/htif.c`): path ↦ contents. F1's
-  primitives do not touch it; F5's (`caml_sys_open`, channel I/O on files)
-  do. -/
-  files : List (String × List UInt8)
+  /-- Files, descriptors, streams, environment, clock and exit state. -/
+  os : TCB.Os.OsState
   deriving DecidableEq, Repr
+
+/-- HTIF console interleaving, observed from the OS state. -/
+def World.console (w : World) : List UInt8 := w.os.streams.console
+
+def World.files (w : World) : List (String × List UInt8) := osFiles w.os
 
 /-- A VM state: the interpreter's registers (`pc`, `accu`, `sp`, `env`,
 `extra_args`, `Caml_state->trapsp`), the heap and the world. -/
@@ -112,7 +109,7 @@ structure St where
 /-- `caml_interprete`'s initial registers for the main program:
 `accu = Val_int(0)`, `env = Atom(0)`, `extra_args = 0`, empty stack. -/
 def Prog.init (P : Prog) : St :=
-  ⟨0, .int 0, [], .atom 0, 0, 0, P.heap0, ⟨[], [], [], 0, P.exeName, P.argv, P.files0⟩⟩
+  ⟨0, .int 0, [], .atom 0, 0, 0, P.heap0, ⟨[], [], 0, P.exeName, P.argv, osInitial P.files0⟩⟩
 
 /-- Result of one step. -/
 inductive Res where
@@ -148,7 +145,7 @@ def ints? : Val → Val → Option (BitVec 63 × BitVec 63)
   | .int a, .int b => some (a, b)
   | _, _ => none
 
-def opt {α} (o : Option α) (k : α → Res) : Res :=
+@[inline] def opt {α} (o : Option α) (k : α → Res) : Res :=
   match o with
   | some a => k a
   | none => .wrong
@@ -161,7 +158,9 @@ def ioBufferSize : Nat := 65536
 /-- Write a buffer to an fd: fds 1 and 2 are the console (`htif.c`'s
 `_write` writes everything); other fds are not in F1. -/
 def writeFd (w : World) (fd : Int) (b : List UInt8) : Option World :=
-  if fd = 1 ∨ fd = 2 then some { w with console := w.console ++ b } else none
+  if fd < 0 then none else do
+    let (r, os) ← osCall w.os (.write fd.toNat b b.length)
+    if r = .num b.length then pure { w with os := os } else none
 
 def World.setChan (w : World) (id : Nat) (c : Chan) : World :=
   { w with chans := w.chans.set id c }
@@ -171,7 +170,7 @@ def flushChan (w : World) (id : Nat) : Option World := do
   let c ← w.chans[id]?
   if c.fd = -1 then pure w else
   let w' ← writeFd w c.fd c.buf
-  pure (w'.setChan id { c with buf := [] })
+  pure (w'.setChan id { c with buf := [], offset := c.offset + c.buf.length })
 
 /-- `caml_putblock` iterated by `caml_ml_output_bytes`: fill the buffer;
 when a block reaches the end of the buffer (`n ≥ free`), fill it and
@@ -181,20 +180,21 @@ def putBlock (w : World) (id : Nat) : List UInt8 → Nat → Option World
   | bs, 0 => if bs = [] then some w else none
   | bs, fuel + 1 => do
     let c ← w.chans[id]?
+    if c.fd < 0 then none else do
     let free := ioBufferSize - c.buf.length
     if bs.length < free then
       pure (w.setChan id { c with buf := c.buf ++ bs })
     else
       let full := c.buf ++ bs.take free
       let w' ← writeFd w c.fd full
-      putBlock (w'.setChan id { c with buf := [] }) id (bs.drop free) fuel
+      putBlock (w'.setChan id { c with buf := [], offset := c.offset + full.length }) id (bs.drop free) fuel
 
 /-- `Putch`: flush first if the buffer is full, then append. -/
 def putChar (w : World) (id : Nat) (b : UInt8) : Option World := do
   let c ← w.chans[id]?
-  if c.buf.length ≥ ioBufferSize then
+  if c.fd < 0 then none else if c.buf.length ≥ ioBufferSize then
     let w' ← writeFd w c.fd c.buf
-    pure (w'.setChan id { c with buf := [b] })
+    pure (w'.setChan id { c with buf := [b], offset := c.offset + c.buf.length })
   else pure (w.setChan id { c with buf := c.buf ++ [b] })
 
 /-! ## Primitives of F1 -/
@@ -230,14 +230,14 @@ def decimal (n : Int) : List UInt8 :=
 def openChan (h : Heap) (w : World) (fd : Int) (isOut : Bool) : PRes :=
   let id := w.chans.length
   let (h', l) := h.alloc (.channel id)
-  .ok (.ptr l 0) h' { w with chans := w.chans ++ [⟨fd, isOut, []⟩] }
+  .ok (.ptr l 0) h' { w with chans := w.chans ++ [⟨fd, isOut, [], [], 0, (match TCB.Os.lookupFd w.os fd.toNat with | .some (.file _ off _) => (if fd < 0 then -1 else off) | _ => -1)⟩] }
 
 /-- `caml_ml_out_channels_list`: walks `caml_all_opened_channels` (most
 recent first) consing a FRESH custom block per output channel, so the
 result lists output channels oldest first. -/
 def outChannelsList (h : Heap) (w : World) : Heap × Val :=
   let ids := ((List.range w.chans.length).filter fun i =>
-    (w.chans[i]?.map (·.isOut)).getD false).reverse
+    (w.chans[i]?.map (fun c => c.isOut && c.fd != -1)).getD false).reverse
   ids.foldl (fun (h, acc) id =>
     let (h1, lc) := h.alloc (.channel id)
     let (h2, cell) := h1.alloc (.block 0 [.ptr lc 0, acc])
@@ -284,12 +284,10 @@ def primF1Impl (name : String) (args : List Val) (h : Heap) (w : World) : PRes :
         if 0 ≤ o ∧ 0 ≤ n ∧ o + n ≤ b.length then
           some (putBlock w id ((b.drop o.toNat).take n.toNat) (n.toNat + 1)) fun w' => .ok .unit h w'
         else .unsupported
-  | "caml_format_int", [fmt, n] =>
-      some (strOf? h fmt) fun f => some (intArg? n) fun n =>
-        if f = "%d".toList.map (·.toNat.toUInt8) then
-          let (h', l) := h.alloc (.bytes (decimal n))
-          .ok (.ptr l 0) h' w
-        else .unsupported
+  | "caml_format_int", [fmt, .int n] =>
+      some (strOf? h fmt) fun f => some (formatInteger f n) fun bs =>
+      let (h', l) := h.alloc (.bytes bs)
+      .ok (.ptr l 0) h' w
   | "caml_ml_string_length", [s] | "caml_ml_bytes_length", [s] =>
       some (strOf? h s) fun b => .ok (Val.ofInt b.length) h w
   | "caml_string_equal", [a, b] =>
@@ -329,7 +327,9 @@ def primF1Impl (name : String) (args : List Val) (h : Heap) (w : World) : PRes :
       some (intArg? a) fun a => some (intArg? b) fun b =>
         .ok (Val.ofInt (if a < b then -1 else if a > b then 1 else 0)) h w
   | "caml_fresh_oo_id", [_] => .ok (Val.ofInt w.ooId) h { w with ooId := w.ooId + 1 }
-  | "caml_sys_exit", [c] => some (intArg? c) fun c => .exit (BitVec.ofInt 32 c).toNat w
+  | "caml_sys_exit", [c] => some (intArg? c) fun c =>
+    let e := (BitVec.ofInt 32 c).toNat
+    some (osCall w.os (.exit e)) fun (_, os) => .exit e { w with os := os }
   | _, _ => .unsupported
 
 /-- The F1 primitives: `primF1Impl` on `primsF1`, `.unsupported` elsewhere. -/
@@ -352,7 +352,7 @@ def primException (globals : Val) (h : Heap) (w : World) (idx : Nat) (msg : Stri
 
 /-- The data primitives currently transcribed from array.c, str.c and compare.c. -/
 def primsF2 : List String :=
-  [ "caml_array_unsafe_get", "caml_array_unsafe_set", "caml_string_of_bytes", "caml_bytes_of_string", "caml_make_vect", "caml_array_get", "caml_array_get_addr", "caml_array_set",
+  [ "caml_string_compare", "caml_bytes_compare", "caml_array_sub", "caml_array_append", "caml_array_blit", "caml_array_fill", "caml_int_of_string", "caml_hash", "caml_array_unsafe_get", "caml_array_unsafe_set", "caml_string_of_bytes", "caml_bytes_of_string", "caml_make_vect", "caml_array_get", "caml_array_get_addr", "caml_array_set",
     "caml_array_set_addr", "caml_create_bytes", "caml_blit_bytes", "caml_blit_string",
     "caml_fill_bytes", "caml_bytes_get", "caml_string_get", "caml_bytes_set",
     "caml_compare", "caml_equal", "caml_notequal", "caml_lessthan", "caml_lessequal",
@@ -389,6 +389,45 @@ def primF2 (globals : Val) (name : String) (args : List Val) (h : Heap) (w : Wor
         (doubleOf? h v).bind (setFloatField? h a n.toNat)
       else setField? h a n.toNat v
     some write fun h' => .ok .unit h' w
+  | "caml_string_compare", [a, b] | "caml_bytes_compare", [a, b] =>
+    some (strOf? h a) fun a => some (strOf? h b) fun b => .ok (Val.ofInt (compareBytes a b)) h w
+  | "caml_array_sub", [a, .int off, .int len] =>
+    some (arrayObj? h a) fun a =>
+    if off.toInt < 0 ∨ len.toInt < 0 then .unsupported else
+    some (arraySlice a off.toNat len.toNat) fun o =>
+      if o.wosize = 0 then .ok (.atom 0) h w else primAlloc h w o
+  | "caml_array_append", [a, b] =>
+    some (arrayObj? h a) fun a => some (arrayObj? h b) fun b =>
+    some (arrayAppend a b) fun o =>
+      if o.wosize = 0 then .ok (.atom 0) h w else primAlloc h w o
+  | "caml_array_blit", [src, .int off, dst, .int to, .int len] =>
+    if off.toInt < 0 ∨ to.toInt < 0 ∨ len.toInt < 0 then .unsupported else
+    some (arrayObj? h src) fun src => some (arrayObj? h dst) fun target =>
+    some (arraySlice src off.toNat len.toNat) fun part =>
+    some (arraySplice target to.toNat part) fun out =>
+      match dst with
+      | .ptr l 0 => .ok .unit (h.set l out) w
+      | .atom 0 => if len = 0 then .ok .unit h w else .unsupported
+      | _ => .unsupported
+  | "caml_array_fill", [dst, .int off, .int len, v] =>
+    if off.toInt < 0 ∨ len.toInt < 0 then .unsupported else
+    some (arrayObj? h dst) fun target =>
+    let filled := match target with
+      | .block 0 _ => .some (Obj.block 0 (List.replicate len.toNat v))
+      | .doubleArray _ => (doubleOf? h v).map fun d => Obj.doubleArray (List.replicate len.toNat d)
+      | _ => .none
+    some filled fun part => some (arraySplice target off.toNat part) fun out =>
+      match dst with
+      | .ptr l 0 => .ok .unit (h.set l out) w
+      | .atom 0 => if len = 0 then .ok .unit h w else .unsupported
+      | _ => .unsupported
+  | "caml_int_of_string", [v] => some (strOf? h v) fun bs =>
+    match parseInteger bs with
+    | .some n => .ok n h w
+    | .none => primException globals h w 2 "int_of_string"
+  | "caml_hash", [.int count, .int _, .int seed, .int v] =>
+    let hsh := if count.toInt > 0 then hashIntnat (seed.setWidth 32) (tag64 v) else seed.setWidth 32
+    .ok (Val.ofInt (hashFinish hsh).toNat) h w
   | "caml_string_of_bytes", [v] | "caml_bytes_of_string", [v] => .ok v h w
   | "caml_create_bytes", [.int n] =>
     if n.toInt < 0 ∨ n.toNat > (2^54 - 1)*8 - 1 then primException globals h w 3 "Bytes.create"
@@ -423,7 +462,7 @@ def primF2 (globals : Val) (name : String) (args : List Val) (h : Heap) (w : Wor
   | nm, [a, b] =>
     if nm ∈ ["caml_compare", "caml_equal", "caml_notequal", "caml_lessthan", "caml_lessequal",
         "caml_greaterthan", "caml_greaterequal"] then
-      some (compareVal h (nm == "caml_compare") (h.objs.length + 1) a b) fun r =>
+      some (compareVal h (nm == "caml_compare") (h.size + 1) a b) fun r =>
       let v := if nm = "caml_compare" then Val.ofInt r
         else Val.ofBool (match nm with
           | "caml_equal" => r == 0 | "caml_notequal" => r != 0
@@ -432,6 +471,303 @@ def primF2 (globals : Val) (name : String) (args : List Val) (h : Heap) (w : Wor
       .ok v h w
     else .unsupported
   | _, _ => .unsupported
+
+/-- Binary method-table search, from GETDYNMET's `li = 3`, tagged `hi`.
+A miss is outside the safe domain of method invocation. -/
+def methodLookup? (h : Heap) (obj : Val) (label : BitVec 63) : Option Val := do
+  let methods ← field? h obj 0
+  let .int count ← field? h methods 0 | none
+  let rec search : Nat → Nat → Nat → Option Nat
+    | 0, _, _ => none
+    | fuel + 1, lo, hi => do
+      if lo ≥ hi then return lo
+      let mid := ((lo + hi) / 2) ||| 1
+      let .int tag ← field? h methods mid | none
+      if label.toInt < tag.toInt then search fuel lo (mid - 2)
+      else search fuel mid hi
+  let idx ← search (count.toNat + 1) 3 (2 * count.toNat + 1)
+  let .int tag ← field? h methods idx | none
+  if tag != label then none else field? h methods (idx - 1)
+
+/-- Object primitives' supported domain (`runtime/obj.c`). Raw no-scan
+allocation and retagging across representation kinds remain unsupported. -/
+def primsF3 : List String :=
+  ["caml_obj_block", "caml_obj_dup", "caml_obj_tag", "caml_obj_set_tag",
+   "caml_obj_make_forward", "caml_set_oo_id"]
+
+def primF3 (globals : Val) (name : String) (args : List Val) (h : Heap) (w : World) : PRes :=
+  let some := fun {α} (o : Option α) (k : α → PRes) => match o with
+    | .some a => k a
+    | .none => PRes.unsupported
+  match name, args with
+  | "caml_obj_block", [.int tag, .int n] =>
+    let t := tag.toNat % 256
+    if n.toInt < 0 ∨ t ≥ noScanTag then .unsupported
+    else if t = closureTag ∧ n.toNat < 2 then primException globals h w 3 "Obj.new_block"
+    else if n = 0 then .ok (.atom t) h w
+    else
+      let fs := List.replicate n.toNat Val.unit
+      let fs := if t = closureTag then fs.set 1 (Val.ofInt 2) else fs
+      primAlloc h w (.block t fs)
+  | "caml_obj_dup", [.atom t] => .ok (.atom t) h w
+  | "caml_obj_dup", [.ptr l 0] => some (h.get? l) fun o =>
+    -- Custom operations pointers are preserved by memcpy. Channels alias
+    -- the same external struct, as reflected by their unchanged channel id.
+    primAlloc h w o
+  | "caml_obj_tag", [v] =>
+    if v.isInt then .ok (Val.ofInt 1000) h w
+    else some (tag? h v) fun t => .ok (Val.ofInt t) h w
+  | "caml_obj_set_tag", [.ptr l 0, .int t] => some (h.get? l) fun
+    | .block _ fs => if t.toNat % 256 < noScanTag then
+        .ok .unit (h.set l (.block (t.toNat % 256) fs)) w else .unsupported
+    | _ => .unsupported
+  | "caml_obj_make_forward", [.ptr l 0, v] => some (h.get? l) fun
+    | .block _ (_ :: xs) => .ok .unit (h.set l (.block forwardTag (v :: xs))) w
+    | _ => .unsupported
+  | "caml_set_oo_id", [v] => some (setField? h v 1 (Val.ofInt w.ooId)) fun h' =>
+    .ok v h' { w with ooId := w.ooId + 1 }
+  | _, _ => .unsupported
+
+/-- Fixed-width custom integer extraction, from runtime/ints.c. -/
+def boxedInt? (h : Heap) (kind : String) : Val → Option (BitVec 64)
+  | .ptr l 0 => match h.get? l with
+    | .some (.int64 n) => if kind = "int64" then .some n else .none
+    | .some (.nativeint n) => if kind = "nativeint" then .some n else .none
+    | .some (.int32 n) => if kind = "int32" then .some (n.signExtend 64) else .none
+    | _ => .none
+  | _ => .none
+
+def primBoxed (name : String) (args : List Val) (h : Heap) (w : World) : PRes :=
+  let some := fun {α} (o : Option α) (k : α → PRes) => match o with
+    | .some a => k a
+    | .none => PRes.unsupported
+  let parts := name.splitOn "_"
+  let kind := parts[1]?.getD ""
+  let op := "_".intercalate (parts.drop 2)
+  let box := fun (n : BitVec 64) => primAlloc h w
+    (if kind = "int32" then .int32 (n.setWidth 32) else if kind = "nativeint" then .nativeint n else .int64 n)
+  if kind ∉ ["int64", "int32", "nativeint"] then .unsupported else
+  match op, args with
+  | "of_int", [.int n] => box (n.signExtend 64)
+  | "to_int", [v] => some (boxedInt? h kind v) fun n => .ok (Val.ofInt n.toInt) h w
+  | "neg", [v] => some (boxedInt? h kind v) fun n => box (-n)
+  | "shift_left", [v, .int n] => some (boxedInt? h kind v) fun v => box (v <<< (n.toNat % 64))
+  | "shift_right", [v, .int n] => some (boxedInt? h kind v) fun v => box (v.sshiftRight (n.toNat % 64))
+  | "shift_right_unsigned", [v, .int n] => some (boxedInt? h kind v) fun v =>
+    box ((if kind = "int32" then v &&& 0xffffffff else v) >>> (n.toNat % 64))
+  | op, [a, b] => some (boxedInt? h kind a) fun a => some (boxedInt? h kind b) fun b =>
+    match op with
+    | "add" => box (a + b) | "sub" => box (a - b) | "mul" => box (a * b)
+    | "and" => box (a &&& b) | "or" => box (a ||| b) | "xor" => box (a ^^^ b)
+    | "compare" => .ok (Val.ofInt (if a.toInt < b.toInt then -1 else if a.toInt > b.toInt then 1 else 0)) h w
+    | _ => .unsupported
+  | _, _ => .unsupported
+
+/-- runtime/floats.c arithmetic and decimal printf. -/
+def primFloat (name : String) (args : List Val) (h : Heap) (w : World) : PRes :=
+  let some := fun {α} (o : Option α) (k : α → PRes) => match o with
+    | .some a => k a
+    | .none => PRes.unsupported
+  let box := fun (f : Float) => primAlloc h w (.double (floatBits f))
+  match name, args with
+  | "caml_format_float", [fmt, v] =>
+    some (strOf? h fmt) fun fmt => some (doubleOf? h v) fun d =>
+    some (formatDouble fmt d) fun bs => primAlloc h w (.bytes bs)
+  | "caml_float_of_int", [.int n] =>
+    let f := n.toInt.natAbs.toUInt64.toFloat
+    box (if n.toInt < 0 then -f else f)
+  | "caml_int_of_float", [v] => some (doubleOf? h v) fun d =>
+    some (doubleRatio d) fun (n, den) =>
+    let n := n / den
+    if n ≥ 2^63 then .unsupported else
+    .ok (Val.ofInt (if d.toNat / 2^63 = 0 then (n : Int) else -(n : Int))) h w
+  | op, [v] => some (doubleOf? h v) fun d =>
+    let f := floatFromBits d
+    match op with
+    | "caml_sqrt_float" => box f.sqrt
+    | "caml_atan_float" => box (atan64 f)
+    | "caml_neg_float" => box (-f)
+    | "caml_abs_float" => box f.abs
+    | _ => .unsupported
+  | op, [a, b] => some (doubleOf? h a) fun a => some (doubleOf? h b) fun b =>
+    let a := floatFromBits a
+    let b := floatFromBits b
+    match op with
+    | "caml_add_float" => box (a + b) | "caml_sub_float" => box (a - b)
+    | "caml_mul_float" => box (a * b) | "caml_div_float" => box (a / b)
+    | _ => .unsupported
+  | _, _ => .unsupported
+
+/-- `caml_convert_flag_list` for sys.c's nine open flags. -/
+def openFlags? (h : Heap) (v : Val) : Option TCB.Os.Fs.OpenFlags :=
+  let rec go : Nat → Val → TCB.Os.Fs.OpenFlags → Option TCB.Os.Fs.OpenFlags
+    | 0, _, _ => none
+    | fuel + 1, v, f => match v with
+      | .int 0 => some f
+      | _ => do
+        let .int k ← field? h v 0 | none
+        let tail ← field? h v 1
+        let f ← match k.toNat with
+          | 0 => some f
+          | 1 => some { f with access := .wronly }
+          | 2 => some { f with access := .wronly, append := true }
+          | 3 => some { f with creat := true }
+          | 4 => some { f with trunc := true }
+          | 5 => some { f with excl := true }
+          | 6 | 7 | 8 => some f
+          | _ => none
+        go fuel tail f
+  go (h.size + 1) v { access := .rdonly }
+
+/-- strerror text used by the configured runtime's ordinary I/O failures. -/
+def errnoText : TCB.Os.Errno → String
+  | .ENOENT => "No such file or directory" | .EBADF => "Bad file descriptor"
+  | .EACCES => "Permission denied" | .EEXIST => "File exists"
+  | .ENOTDIR => "Not a directory" | .EISDIR => "Is a directory"
+  | .EINVAL => "Invalid argument" | .ESPIPE => "Illegal seek"
+  | .EROFS => "Read-only file system" | .ENOSPC => "No space left on device"
+  | .ENOTEMPTY => "Directory not empty" | .EMFILE => "Too many open files"
+  | e => e.name
+
+def sysError (P : Prog) (h : Heap) (w : World) (e : TCB.Os.Errno) (path : String := "") : PRes :=
+  primException P.globals h w 1 ((if path = "" then "" else path ++ ": ") ++ errnoText e)
+
+/-- `caml_ml_input`'s one-buffer read, including its short-read behaviour.
+The channel offset is the end of the read-ahead buffer, not the logical
+position returned to OCaml. -/
+def readChan (w : World) (id n : Nat) : Option (TCB.Os.Ret × World) := do
+  let c ← w.chans[id]?
+  if n = 0 then return (.bytes [], w)
+  if c.fd < 0 then return (.err .EBADF, w)
+  if c.isOut then none else do
+  let n := min n (2^31 - 1)
+  let unread := c.inBuf.drop c.inPos
+  if n = 0 || !unread.isEmpty then
+    let bs := unread.take n
+    return (.bytes bs, w.setChan id { c with inPos := c.inPos + bs.length })
+  let (r, os) ← osCall w.os (.read c.fd.toNat ioBufferSize)
+  let w := { w with os := os }
+  match r with
+  | .bytes bs =>
+    let out := bs.take n
+    return (.bytes out, w.setChan id { c with inBuf := bs, inPos := out.length, offset := c.offset + bs.length })
+  | _ => return (r, w)
+
+/-- Input seeks inside the read-ahead buffer do not move the file descriptor. -/
+def seekChan (w : World) (id : Nat) (pos : Int) : Option (TCB.Os.Ret × World) := do
+  let c ← w.chans[id]?
+  if c.fd < 0 then return (.err .EBADF, w)
+  if !c.isOut && pos ≥ c.offset - c.inBuf.length && pos ≤ c.offset then
+    return (.none, w.setChan id { c with inPos := (pos - c.offset + c.inBuf.length).toNat })
+  let w ← if c.isOut then flushChan w id else some w
+  let c ← w.chans[id]?
+  let (r, os) ← osCall w.os (.lseek c.fd.toNat pos 0)
+  let w := { w with os := os }
+  match r with
+  | .num p => return (.none, w.setChan id { c with inBuf := [], inPos := 0, offset := p })
+  | _ => return (r, w)
+
+/-- Environment lookup (`runtime/sys.c`), with Not_found's global identity. -/
+def primOs (P : Prog) (name : String) (args : List Val) (h : Heap) (w : World) : PRes :=
+  let some := fun {α} (o : Option α) (k : α → PRes) => match o with
+    | .some a => k a
+    | .none => PRes.unsupported
+  match name, args with
+  | "caml_sys_open", [path, flags, .int _] =>
+    some (strOf? h path) fun path => some (openFlags? h flags) fun flags =>
+    let path := String.ofList (path.map fun b => Char.ofNat b.toNat)
+    if path.contains '\x00' then sysError P h w .ENOENT path else
+    some (osCall w.os (.open path flags)) fun (r, os) =>
+    let w := { w with os := os }
+    match r with
+    | .num fd => .ok (Val.ofInt fd) h w
+    | .err e => sysError P h w e path
+    | _ => .unsupported
+  | "caml_sys_file_exists", [path] => some (strOf? h path) fun bs =>
+    let path := String.ofList (bs.map fun b => Char.ofNat b.toNat)
+    some (osCall w.os (.stat path)) fun (r, os) =>
+    .ok (Val.ofBool (match r with | .stats _ => true | _ => false)) h { w with os := os }
+  | "caml_sys_remove", [path] => some (strOf? h path) fun bs =>
+    let path := String.ofList (bs.map fun b => Char.ofNat b.toNat)
+    some (osCall w.os (.unlink path)) fun (r, os) =>
+    let w := { w with os := os }
+    match r with
+    | .none => .ok .unit h w | .err e => sysError P h w e path | _ => .unsupported
+  | "caml_sys_rename", [src, dst] => some (strOf? h src) fun src => some (strOf? h dst) fun dst =>
+    let src := String.ofList (src.map fun b => Char.ofNat b.toNat)
+    let dst := String.ofList (dst.map fun b => Char.ofNat b.toNat)
+    some (osCall w.os (.rename src dst)) fun (r, os) =>
+    let w := { w with os := os }
+    match r with
+    | .none => .ok .unit h w | .err e => sysError P h w e | _ => .unsupported
+  | "caml_sys_close", [.int fd] =>
+    if fd.toInt < 0 then .ok .unit h w else
+    some (osCall w.os (.close fd.toNat)) fun (_, os) => .ok .unit h { w with os := os }
+  | "caml_ml_set_channel_name", [ch, nm] =>
+    some (chanOf? h ch) fun _ => some (strOf? h nm) fun _ => .ok .unit h w
+  | "caml_ml_set_binary_mode", [ch, .int _] => some (chanOf? h ch) fun _ => .ok .unit h w
+  | "caml_ml_close_channel", [ch] => some (chanOf? h ch) fun id => some w.chans[id]? fun c =>
+    if c.fd < 0 then .ok .unit h w else
+    some (osCall w.os (.close c.fd.toNat)) fun (r, os) =>
+    let w := ({ w with os := os } : World).setChan id { c with fd := -1, buf := [], inBuf := [], inPos := 0 }
+    match r with
+    | .none => .ok .unit h w | .err e => sysError P h w e | _ => .unsupported
+  | "caml_ml_input", [ch, dst, .int start, .int len] =>
+    some (chanOf? h ch) fun id => some (strOf? h dst) fun buf =>
+    if start.toInt < 0 ∨ len.toInt < 0 ∨ start.toNat + len.toNat > buf.length then .unsupported else
+    some (readChan w id len.toNat) fun (r, w) =>
+    match r, dst with
+    | .bytes bs, .ptr l 0 =>
+      let out := buf.take start.toNat ++ bs ++ buf.drop (start.toNat + bs.length)
+      .ok (Val.ofInt bs.length) (h.set l (.bytes out)) w
+    | .err e, _ => sysError P h w e
+    | _, _ => .unsupported
+  | "caml_ml_input_char", [ch] => some (chanOf? h ch) fun id =>
+    some (readChan w id 1) fun (r, w) => match r with
+    | .bytes [b] => .ok (Val.ofInt b.toNat) h w
+    | .bytes [] => some (field? h P.globals 4) fun exn => .raise exn h w
+    | .err e => sysError P h w e
+    | _ => .unsupported
+  | "caml_ml_output_int", [ch, .int n] => some (chanOf? h ch) fun id =>
+    let bs := [24, 16, 8, 0].map fun shift => (n.toNat / 2^shift % 256).toUInt8
+    some (putBlock w id bs 5) fun w => .ok .unit h w
+  | "caml_ml_pos_out", [ch] | "caml_ml_pos_in", [ch] =>
+    some (chanOf? h ch) fun id => some w.chans[id]? fun c =>
+    if c.fd < 0 then .unsupported else
+    .ok (Val.ofInt (if c.isOut then c.offset + c.buf.length else c.offset - (c.inBuf.length - c.inPos))) h w
+  | "caml_ml_seek_out", [ch, .int pos] | "caml_ml_seek_in", [ch, .int pos] =>
+    some (chanOf? h ch) fun id => some (seekChan w id pos.toInt) fun (r, w) =>
+    match r with
+    | .none => .ok .unit h w | .err e => sysError P h w e | _ => .unsupported
+  | "caml_sys_time", [_] | "caml_sys_time_include_children", [_] =>
+    some (osCall w.os .clock) fun (r, os) => match r with
+    | .num n => primAlloc h { w with os := os } (.double (floatBits (n.toNat.toUInt64.toFloat / 1000000.0)))
+    | _ => .unsupported
+  | "caml_sys_getenv", [v] => match strOf? h v with
+    | none => .unsupported
+    | .some bs =>
+      let key := String.ofList (bs.map fun b => Char.ofNat b.toNat)
+      match osCall w.os (.getenv key) with
+      | .some (.bytes bytes, os) => primAlloc h { w with os := os } (.bytes bytes)
+      | .some (.none, os) => match field? h P.globals 6 with
+        | .some exn => .raise exn h { w with os := os }
+        | none => .unsupported
+      | _ => .unsupported
+  | _, _ => .unsupported
+
+/-- Fragment dispatcher. An unsupported argument domain remains explicit. -/
+def prim (P : Prog) (name : String) (args : List Val) (h : Heap) (w : World) : PRes :=
+  if name ∈ primsF1 then primF1 name args h w
+  else if name ∈ primsF2 then primF2 P.globals name args h w
+  else if name ∈ primsF3 then primF3 P.globals name args h w
+  else if name = "caml_get_exception_raw_backtrace" && args == [.unit] then .ok (.atom 0) h w
+  else if name = "caml_restore_raw_backtrace" && args.length == 2 && args[1]? == .some (.atom 0) then .ok .unit h w
+  else if name = "caml_backtrace_status" && args == [.unit] then .ok (Val.ofBool false) h w
+  else match primBoxed name args h w with
+    | .unsupported => match primFloat name args h w with
+      | .unsupported => primOs P name args h w
+      | r => r
+    | r => r
 
 /-! ## The step function -/
 
@@ -468,8 +804,10 @@ def enter (s : St) (stack : List Val) (extra : Nat) : Res :=
 /-- Run a C primitive (`C_CALLn`, `n = args.length`): pops `n - 1` stack
 words. -/
 def cCall (P : Prog) (s : St) (len : Nat) (name : String) (args : List Val) : Res :=
-  match (if name ∈ primsF1 then primF1 name args s.heap s.world
-    else primF2 P.globals name args s.heap s.world) with
+  let heap := s.heap
+  let world := s.world
+  let s := { s with heap := ⟨#[]⟩, world := world }
+  match prim P name args heap world with
   | .ok a h w => .next { s with pc := s.pc + len, accu := a, heap := h, world := w, stack := s.stack.drop (args.length - 1) }
   | .raise e h w =>
       let s' : St := { s with heap := h, world := w, stack := s.stack.drop (args.length - 1) }
@@ -722,6 +1060,18 @@ def stepI (i : Instr) : Res :=
             .next { (s.adv 1) with accu := .unit, stack := rest, heap := s.heap.set l (.bytes (bs.set n.toNat b.toNat.toUInt8)) }
           else .wrong
       | _, _ => .wrong
+  -- F3: the uncached lookup path of interp.c. Cache correctness is a
+  -- separate representation obligation; semantic lookup checks the label.
+  | .GETMETHOD, [] => match s.accu, stk with
+      | .int n, obj :: _ => opt (field? s.heap obj 0) fun ms =>
+        opt (field? s.heap ms n.toNat) fun v => .next { (s.adv 1) with accu := v }
+      | _, _ => .wrong
+  | .GETPUBMET, [label, _] => opt (methodLookup? s.heap s.accu (BitVec.ofInt 63 label)) fun v =>
+      .next { (s.adv 3) with accu := v, stack := s.accu :: stk }
+  | .GETDYNMET, [] => match s.accu, stk with
+      | .int label, obj :: _ => opt (methodLookup? s.heap obj label) fun v =>
+        .next { (s.adv 1) with accu := v }
+      | _, _ => .wrong
   -- Branches
   | .BRANCH, [ofs] => opt (target pc 0 ofs) fun t => .next { s with pc := t }
   | .BRANCHIF, [ofs] =>
@@ -810,8 +1160,13 @@ def stepI (i : Instr) : Res :=
   | .ISINT, [] => match s.accu with
       | .raw _ => .wrong
       | v => .next { (s.adv 1) with accu := Val.ofBool v.isInt }
-  | .BEQ, [n, o] => brOp s n o fun a b => a == b
-  | .BNEQ, [n, o] => brOp s n o fun a b => a != b
+  | .BEQ, [n, o] | .BNEQ, [n, o] =>
+      match s.accu with
+      | .int _ => brOp s n o (if i.op = .BEQ then fun a b => a == b else fun a b => a != b)
+      | .ptr .. | .atom _ =>
+        if i.op = .BEQ then .next (s.adv 3)
+        else opt (target pc 1 o) fun t => .next { s with pc := t }
+      | _ => .wrong
   | .BLTINT, [n, o] => brOp s n o fun a b => a.slt b
   | .BLEINT, [n, o] => brOp s n o fun a b => a.sle b
   | .BGTINT, [n, o] => brOp s n o fun a b => b.slt a
