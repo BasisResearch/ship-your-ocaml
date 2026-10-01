@@ -28,6 +28,9 @@ import Vsa.Sim.DivLoops
 stage a3 checks the output: only `propext`, `Classical.choice`,
 `Quot.sound`). -/
 
+-- Keep each axiom report on one line for scripts/check_all.sh.
+set_option pp.width 200
+
 #print axioms OCaml.Bytecode.halts_or_diverges
 #print axioms OCaml.Bytecode.BcHalts.det
 #print axioms OCaml.Bytecode.BcHalts.not_diverges
