@@ -48,3 +48,5 @@ import OCaml.Vm.Sim.Acc0Pins
 
 import OCaml.Vm.Sim.AccSegment
 import OCaml.Vm.Sim.AccPins
+
+import OCaml.Vm.Gc.Barrier

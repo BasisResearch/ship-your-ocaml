@@ -437,3 +437,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 #print axioms Vsa.Sim.tr_acc
 #print axioms OCaml.Vm.Sim.acc_loaded
+
+-- Logical remembered-set rule; machine caml_modify summary remains open.
+#print axioms OCaml.Vm.Gc.slotComplete_store
+#print axioms OCaml.Vm.Gc.rememberedComplete_of_slots

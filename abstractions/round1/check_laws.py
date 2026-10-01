@@ -311,3 +311,25 @@ for _ in range(2000):
             assert after[target-8] == len(fs)*1024
             assert [after[target+8*i] for i in range(len(fs))] == [moved.get(v, v) for v in fs]
 print("L3' intrusive oldify/mopup: 2000 cyclic/aliased heaps, two root policies, pass queue and final-image invariants")
+
+# caml_modify's remembered-set branches (runtime/memory.c). The marking
+# branch may darken an overwritten major pointer; that obligation is separate.
+def modify_refs(slot_young, old_young, value_young, slot, refs):
+    if slot_young or old_young:
+        return list(refs)
+    return list(refs) + ([slot] if value_young else [])
+
+barrier_cases = 0
+for slot_young in (False, True):
+    for old_young in (False, True):
+        for value_young in (False, True):
+            for recorded in (False, True):
+                if not slot_young and old_young and not recorded:
+                    continue  # pre-state completeness excludes this case
+                refs = [2000] + ([1000] if recorded else [])
+                post = modify_refs(slot_young, old_young, value_young, 1000, refs)
+                assert set(refs) <= set(post)
+                assert slot_young or not value_young or 1000 in post
+                barrier_cases += 1
+assert 1000 not in modify_refs(False, True, True, 1000, [])
+print(f"L3' caml_modify: {barrier_cases} complete-table cases pass; old-young early return requires pre-state completeness")

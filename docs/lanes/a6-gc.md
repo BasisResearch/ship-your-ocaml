@@ -41,7 +41,7 @@ the one-line ocamlc run is covered by G2.
   the collector establishes `VmImage`.
 - A pointer to field 2 without an Infix header is treated as a separate
   object by the runtime; the law check asserts failure of affine relocation.
-- Next: named NoForgery/RememberedComplete and barrier interfaces; partial
+- Next: concrete suppliers for the named safety/barrier interfaces; partial
   relocation invariant; generated machine CFG/segments and MachWP loops.
   Nursery bounds must permit the observed 800 allocated bytes at startup.
 - `scripts/gc_cfg.py --check` / `results/gc-cfg.json`: gen_fn accepts oldify
@@ -118,3 +118,22 @@ the one-line ocamlc run is covered by G2.
   forwarding, injective destinations, final typed payloads, and preservation
   of unreachable sources. Existing Forward/Infix and 20,000-trial law checks
   still pass. This is executable-model validation, not a machine proof.
+
+
+## Remembered-set store rule
+
+- `OCaml/Vm/Gc/Barrier.lean`: `slotComplete_store` proves completeness
+  across a field update from the named `BarrierEffect` (old scanned-slot
+  frame, retention of existing table entries, insertion on the newly-young
+  branch). The old-young early return uses PRE-state completeness.
+- `rememberedComplete_of_slots` supplies the typed `RememberedComplete`
+  interface from the stronger invariant over a fixed set of all old scanned
+  slots. Representation and slot-coverage hypotheses remain explicit.
+- This is the reusable logical half of caml_modify, not its machine run.
+  Darkening major-heap headers, concrete ref-table linkage/growth and new
+  allocation slots remain separate obligations. Header and table writes are
+  intentionally outside the scanned-slot frame. There are no data addresses
+  in the rule, so the .embed migration does not affect its statement.
+- 14 exhaustive abstract classifier/table-membership cases pass; the
+  missing-pre-completeness negative case demonstrates why old-young early
+  return cannot repair an already incomplete table.
