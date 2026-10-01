@@ -19,7 +19,8 @@ gate passed and the accessor milestone is landed at `029d516`.
 `caml_fresh_oo_id` is proved (14/30 total), including the updated counter
 and VM payload frame. Its generated module compiles in 1.7 seconds; the complete
 regression build and axiom audit pass (1,273 targets, standard axioms only).
-The integration gate is the remaining landing check.
+The complete integration gate passed and the milestone landed at `54ce77c`
+(39,560 pinned bytes, zero mismatches).
 
 ## Inventory and next work
 
@@ -32,10 +33,10 @@ Nine system constants share a register-only leaf shape (two instructions,
 three for max_wosize). They now use the `gen_fn.py --ocaml-constants` backend,
 which calls the original CFG extractor and folds the existing segment kernel.
 Integer comparison uses `--ocaml-compare`; argv and length accessors use
-`--ocaml-argv`/`--ocaml-lengths`. Next is `caml_fresh_oo_id`: its six-instruction
-body reads and updates `Layout.sym_oo_last_id`. It needs a shared memory-region
-frame and an explicit link from that global to `World.ooId`, followed by the
-allocating/channel primitives. Calls and tail calls
+`--ocaml-argv`/`--ocaml-lengths`. The six-instruction `--ocaml-counter`
+family reads and updates `Layout.sym_oo_last_id` with a shared memory-region
+frame and explicit link to `World.ooId`. Next are canonical string equality
+and the allocating/channel primitives. Calls and tail calls
 will use `FnSummary.callSplice` / `tailJump` and the landed A0 library specs.
 
 The unused legacy generator backend still has WHILE-specific path defaults
@@ -168,3 +169,18 @@ required frame law over the counter window. No execution premise is assumed.
 | Primitive | Theorem | Lines |
 | --- | --- | --- |
 | `caml_fresh_oo_id` | `CamlFreshOoId.caml_fresh_oo_id_primitive` (namespace `OCaml.Vm.Primitives`) | 204 |
+
+## Current follow-up
+
+The rebase includes the arms lane’s `PrimitiveBindings` repair. Primitive
+input/post records now carry this metadata; read-only summaries use its
+existing memory frame, while `BindingsOutside` supplies the two table
+observations needed for a disjoint write-log frame. All fourteen summaries
+and the full axiom audit pass (1,334 targets, standard axioms only).
+
+`PaddedString` records the allocator’s canonical zero padding. The shared
+word-to-byte bridge reuses `bytesT_extract` and `Reloc.Copied` to connect the
+ELF’s full-word comparisons to abstract string contents.
+`PaddedString.eq_iff_words` proves equivalence in both directions, including
+length recovery from the final padding-count byte. String equality and
+inequality remain open and are not counted.

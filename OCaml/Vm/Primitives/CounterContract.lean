@@ -26,6 +26,7 @@ its static separation from VM observations. -/
 structure CounterInput (runtimeOk : Config → Prop) (P : Prog) (s : St)
     (pl : Place) (cp : ChanPlace) (sp high : Nat) (ra : BitVec 64) (c : Config) : Prop
     extends ImmediateInput runtimeOk P s pl cp sp high ra [s.accu] c where
+  bindingsOutside : BindingsOutside (counterLog (counterWord s.world.ooId)) P c
   counter : word c Layout.sym_oo_last_id = counterWord s.world.ooId
   outside : PayloadOutside (counterLog (counterWord s.world.ooId)) P s c pl cp sp
 
@@ -54,6 +55,7 @@ theorem counter_contract {runtimeOk P s pl cp sp high ra c entry}
   refine { toPrimitivePost := {
     call := post
     data := ?_
+    primitives := bindings_frame_log h.primitives h.bindingsOutside post.memory
     platform := ⟨post.good, post.image, stable _ _ frame h.runtime⟩
     loop := post.loop (by
       simp [PreservesLoopRegisters, Layout.reg_dispatchTable, Layout.reg_opcodeBound,

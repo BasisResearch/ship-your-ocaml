@@ -21,6 +21,7 @@ structure ImmediateInput (runtimeOk : Config → Prop) (P : Prog) (s : St)
     (pl : Place) (cp : ChanPlace) (sp high : Nat) (ra : BitVec 64)
     (args : List Val) (c : Config) : Prop extends LeafInput ra c where
   data : VmPayload P s c pl cp sp high
+  primitives : PrimitiveBindings P c
   runtime : runtimeOk c
   loop : LoopRegisters c
   arguments : ArgumentsRepr pl args c
@@ -32,6 +33,7 @@ structure PrimitivePost (runtimeOk : Config → Prop) (P : Prog) (s : St)
     (after : Config) : Prop where
   call : EffectPost writes expectedMem before ra w after
   data : VmPayload P {s with accu := v, heap := heapAfter, world := worldAfter} after pl cp sp high
+  primitives : PrimitiveBindings P after
   platform : PlatformOk runtimeOk after
   loop : LoopRegisters after
   resultRepr : valWord pl (v) = some w
@@ -62,7 +64,7 @@ theorem readOnly_contract {runtimeOk : Config → Prop} (stable : MemoryStable r
       (ReadOnlyPost runtimeOk P s pl cp sp high name args v w writes c ra) := by
   apply S.weaken (fun _ h => h)
   intro after post
-  refine ⟨post, (h.data.accu_of_root v root).frame post.memory post.output,
+  refine ⟨post, (h.data.accu_of_root v root).frame post.memory post.output, h.primitives.frame post.memory,
     ⟨post.good, post.image, stable _ _ post.memory h.runtime⟩, ?_, repr, model⟩
   exact post.loop frame h.loop
 

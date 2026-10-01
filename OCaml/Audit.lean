@@ -685,3 +685,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.counterWord_repr
 #print axioms OCaml.Vm.Primitives.counter_contract
 #print axioms OCaml.Vm.Primitives.caml_fresh_oo_id_primitive
+
+#print axioms OCaml.Vm.Primitives.bindings_frame_log
+#print axioms OCaml.Vm.Primitives.word_byte_extract
+#print axioms OCaml.Vm.Primitives.words_copied
+#print axioms OCaml.Vm.Primitives.PaddedString.eq_of_words
+#print axioms OCaml.Vm.Primitives.PaddedString.copied
+#print axioms OCaml.Vm.Primitives.PaddedString.eq_iff_words

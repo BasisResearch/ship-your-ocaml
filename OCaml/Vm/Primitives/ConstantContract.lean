@@ -10,6 +10,7 @@ structure ConstantInput (runtimeOk : Config → Prop) (P : Prog) (s : St)
     (pl : Place) (cp : ChanPlace) (sp high : Nat) (ra : BitVec 64) (c : Config) : Prop
     extends LeafInput ra c where
   data : VmPayload P s c pl cp sp high
+  primitives : PrimitiveBindings P c
   runtime : runtimeOk c
   loop : LoopRegisters c
   argument : ∃ w, valWord pl s.accu = some w ∧ gpr c 10 = some w
@@ -19,6 +20,7 @@ structure ConstantPost (runtimeOk : Config → Prop) (P : Prog) (s : St)
     (before : Config) (ra : BitVec 64) (after : Config) : Prop where
   call : LeafPost before ra (tag64 n) after
   data : VmPayload P {s with accu := .int n} after pl cp sp high
+  primitives : PrimitiveBindings P after
   platform : PlatformOk runtimeOk after
   loop : LoopRegisters after
   resultRepr : valWord pl (.int n) = some (tag64 n)
@@ -37,7 +39,7 @@ theorem constant_contract {runtimeOk : Config → Prop} (stable : MemoryStable r
       (ConstantPost runtimeOk P s pl cp sp high name n c ra) := by
   apply S.weaken (fun _ h => h)
   intro after post
-  refine ⟨post, (h.data.accu_int n).frame post.memory post.output,
+  refine ⟨post, (h.data.accu_int n).frame post.memory post.output, h.primitives.frame post.memory,
     ⟨post.good, post.image, stable _ _ post.memory h.runtime⟩, ?_, rfl, model⟩
   refine ⟨?_, ?_, ?_, ?_⟩
   · exact (post.frame (gprReg Layout.reg_dispatchTable) (by decide) (by decide)).trans h.loop.dispatchTable

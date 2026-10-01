@@ -123,4 +123,26 @@ theorem VmPayload.ooId {P s c pl cp sp high} (h : VmPayload P s c pl cp sp high)
     VmPayload P {s with world := {s.world with ooId := n}} c pl cp sp high :=
   ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, h.world⟩
 
+/-- The primitive-table pointer and all referenced entries are outside a write
+log. The caller supplies this from its table allocation and write separation. -/
+structure BindingsOutside (log : List WEntry) (P : Prog) (c : Config) : Prop where
+  contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8
+  entries : ∀ i name, P.prims[i]? = some name →
+    OutLRange log ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
+
+/-- Preserve the ELF binding of bytecode primitive names across disjoint writes. -/
+theorem bindings_frame_log {P c c' log} (h : PrimitiveBindings P c)
+    (outside : BindingsOutside log P c)
+    (memory : c'.σ.mem = writeLog c.σ.mem log) : PrimitiveBindings P c' := by
+  have contents : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents) :=
+    Reloc.bytesT_congr (copied_of_writeLog memory outside.contents)
+  constructor
+  intro i name hi
+  obtain ⟨entry, he, target⟩ := h.targets i name hi
+  refine ⟨entry, he, ?_⟩
+  unfold primitiveTarget
+  rw [contents]
+  exact (Reloc.bytesT_congr (copied_of_writeLog memory (outside.entries i name hi))).trans target
+
 end OCaml.Vm.Primitives
