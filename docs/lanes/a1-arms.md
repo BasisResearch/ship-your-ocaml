@@ -11,6 +11,7 @@ ACC/ACC0 subsequently landed as `dd48ca0` with all gates passing.
 Counted contracts landed as `a22f2b9`; register/console frames as `ee18571`.
 Dispatch and checked pin lookup landed as `2857cd0` / `7e2ae1a`, after
 a full gate and a rebase over the primitive lane’s signed comparison.
+The table facts landed as `c7989c8`, with the full gate passing.
 The F1 exit remains open.
 
 F1 primitive machine summaries belong to **a1-prims**, including all
@@ -161,10 +162,20 @@ against census targets. `dispatchOpcode_guard`, `dispatchTarget_aligned`, and
 All are generated in `OCaml/Vm/Sim/DispatchTable.lean` and its seven chunks
 by `scripts/gen_dispatch_table.py`, with data addresses from `Layout.jumpTable`.
 Each literal byte is checked separately in the kernel; the full image is
-never evaluated as one proposition. The machine dispatch-to-`Running` bridge
-remains open.
+never evaluated as one proposition. `dispatch_run` (`OCaml/Vm/Sim/Dispatch.lean:37`) composes the table with
+`tr_dispatch`: from named `DispatchInput`, it reaches the selected arm in at
+least eight machine steps. `DispatchPost` records its PC, advanced bytecode
+pointer, unchanged memory, and complete frame outside x15/x23 and standard
+step noise. `dispatchIndex*` discharge the table RAM/HTIF geometry.
+The input retains explicit bytecode-address bounds/HTIF exclusion and tick
+bounds, which `Running` does not yet supply; a full arm case is not claimed.
 
 ## Validation
+
+* Composed dispatch builds in 1.4s (2.29s wall, 1.93 GiB peak RSS).
+  The extended table chunks build in 1.6–3.5s each, below 1.85 GiB.
+  Generator headers disable implicit undeclared identifiers; literal index
+  facts are checked separately and composed by opcode cases.
 
 * Dispatch table chunks pass separately under 24 GiB at default limits:
   8.4s, 4.4s, 6.4s, 5.2s, 4.0s, 4.5s, 2.8s; peak process RSS below 1.86 GiB.

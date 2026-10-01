@@ -498,3 +498,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 #print axioms OCaml.Bytecode.osCall_sound
 #print axioms OCaml.Os.htifFsImplements_of_functions
+#print axioms OCaml.Vm.Sim.dispatchIndex
+#print axioms OCaml.Vm.Sim.dispatchIndex_nat
+#print axioms OCaml.Vm.Sim.dispatchIndex_lower
+#print axioms OCaml.Vm.Sim.dispatchIndex_upper
+#print axioms OCaml.Vm.Sim.dispatchIndex_htif
+#print axioms OCaml.Vm.Sim.dispatch_run
