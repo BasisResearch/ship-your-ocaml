@@ -1,0 +1,106 @@
+{
+  "theorem": "tr_pushacc3",
+  "doc": "PUSHACC3 arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.Pushacc3Sites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut",
+    "OCaml.Vm.Sim.Pushacc3StoreFrame"
+  ],
+  "params": [
+    "(v9 v21 v23 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_8000210c : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(hhi_8000210c : (v9 + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_8000210c : tohostAddr + 16 ≤ (v9 + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(halign_8000210c : (v9 + sign_extend (m := 64) (0xff8#12)).toNat % 8 = 0)",
+    "(hcode_8000210c : (v9 + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x8000210c ∨ 0x80002120 ≤ (v9 + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(m_8000210c : Std.ExtHashMap Nat (BitVec 8))",
+    "(hstore_8000210c : m_8000210c = writeMap8 (m0) ((v9 + sign_extend (m := 64) (0xff8#12)).toNat) (sdData_val v21))",
+    "(hlo_80002114 : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0x010#12)).toNat)",
+    "(hhi_80002114 : (v9 + sign_extend (m := 64) (0x010#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80002114 : (v9 + sign_extend (m := 64) (0x010#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v9 + sign_extend (m := 64) (0x010#12)).toNat)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlPushacc3Loaded",
+  "pins": [
+    {
+      "reg": "x9",
+      "val": "v9",
+      "hyp": "hv9"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    },
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x8000210c",
+      "site": "site_8000210c_pushacc3",
+      "class": "sd",
+      "asm": "sd s5,-8(s1)",
+      "key": "(v9 + sign_extend (m := 64) (0xff8#12)).toNat",
+      "src_val": "v21",
+      "loaded_via": "pushacc3_code_store _ _ _ hcode_8000210c $prev",
+      "call": "$vmi $v:x9 $v:x21 $hG $hpc $hmi $pin:x9 $pin:x21 $hmem rfl hlo_8000210c hhi_8000210c hhtif_8000210c halign_8000210c $hi",
+      "mem_alias": "m_8000210c",
+      "mem_alias_eq": "hstore_8000210c"
+    },
+    {
+      "addr": "0x80002110",
+      "site": "site_80002110_pushacc3",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002114",
+      "site": "site_80002114_pushacc3",
+      "class": "alu",
+      "asm": "ld s5,16(s1)",
+      "rd": "x21",
+      "rd_val": "(sign_extend (m := 64) (bytesT8 (m_8000210c) (v9 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v9 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl hlo_80002114 hhi_80002114 hhtif_80002114 $hi",
+      "rw": "hmemE2"
+    },
+    {
+      "addr": "0x80002118",
+      "site": "site_80002118_pushacc3",
+      "class": "alu",
+      "asm": "addi s1,s1,-8",
+      "rd": "x9",
+      "rd_val": "(v9 + sign_extend (m := 64) (0xff8#12))",
+      "raw_val": "(v9 + sign_extend (m := 64) (0xff8#12))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000211c",
+      "site": "site_8000211c_pushacc3",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1ffe40#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x8000210c",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

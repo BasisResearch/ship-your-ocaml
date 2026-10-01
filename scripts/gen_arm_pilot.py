@@ -30,7 +30,6 @@ spec.loader.exec_module(code)
 
 FAMILIES = {
     'PUSH': ('Push', ['sd', 'alu_addi', 'alu_addi', 'j']),
-    'PUSHACC1': ('Pushacc1', ['sd', 'alu_addi', 'ld_tot', 'alu_addi', 'j']),
     'PUSHACC0': ('Pushacc0', ['sd', 'alu_addi', 'alu_addi', 'j']),
     'DISPATCH': ('Dispatch', ['lw_tot', 'alu_addi', 'branch_taken', 'slli', 'alu_add', 'lw_tot', 'alu_add', 'jr']),
     'ENVACC': ('Envacc', ['lw_tot', 'alu_addi', 'slli', 'alu_add', 'ld_tot', 'j']),
@@ -85,6 +84,12 @@ FAMILIES = {
     'ATOM': ('Atom', ['lw_tot', 'auipc', 'ld_tot', 'alu_addi', 'slli', 'alu_addi', 'alu_add', 'j']),
     'ISINT': ('Isint', ['slli', 'andi', 'alu_addi', 'alu_addi', 'j']),
 }
+
+
+for _n in range(1, 8):
+    FAMILIES[f'PUSHACC{_n}'] = (f'Pushacc{_n}', ['sd', 'alu_addi', 'ld_tot', 'alu_addi', 'j'])
+for _n in range(4):
+    FAMILIES[f'PUSHCONST{_n}'] = (f'Pushconst{_n}', ['sd', 'alu_addi', 'alu_addi', 'alu_addi', 'j'])
 
 
 PATHS = {

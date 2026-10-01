@@ -100,6 +100,17 @@ import OCaml.Vm.Sim.Acc
 import OCaml.Vm.Sim.Pop
 import OCaml.Vm.Sim.Push
 import OCaml.Vm.Sim.Pushacc0
+import OCaml.Vm.Sim.Pushacc1
+import OCaml.Vm.Sim.Pushacc2
+import OCaml.Vm.Sim.Pushacc3
+import OCaml.Vm.Sim.Pushacc4
+import OCaml.Vm.Sim.Pushacc5
+import OCaml.Vm.Sim.Pushacc6
+import OCaml.Vm.Sim.Pushacc7
+import OCaml.Vm.Sim.Pushconst0
+import OCaml.Vm.Sim.Pushconst1
+import OCaml.Vm.Sim.Pushconst2
+import OCaml.Vm.Sim.Pushconst3
 import OCaml.Vm.Sim.PushSegment
 import OCaml.Vm.Sim.PushPins
 import OCaml.Vm.Sim.Pushacc0Segment

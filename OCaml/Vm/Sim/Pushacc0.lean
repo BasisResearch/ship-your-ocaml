@@ -8,7 +8,7 @@ set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable LeanRV64DExecutable.Functions
 open OCaml.Vm.Primitives
 
-/-- PUSHACC0 writes the accumulator below sp and restores the complete represented state.
+/-- PUSHACC0 saves the accumulator and restores the complete represented result.
 Stack placement/separation and runtime window stability remain explicit obligations. -/
 theorem pushacc0_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     {pl : Place} {cp : ChanPlace} {sp high : Nat} {w : BitVec 64}
@@ -17,13 +17,14 @@ theorem pushacc0_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     (space : PushWriteOk P s c pl cp sp w)
     (pushed : valWord pl s.accu = some w) :
     ∃ c', Plus c c' ∧ Running L P
-      {s with pc := s.pc + 1, stack := s.accu :: s.stack} c' := by
+      {s with pc := s.pc + 1, accu := s.accu, stack := s.accu :: s.stack} c' := by
   have source := represented_register h.accu pushed
-  apply push_value_arm stable h space pushed pushed
-    (fun l hl => Live.root (by simp [roots]) hl)
+  apply push_value_arm stable h space pushed pushed (fun l hl => Live.root (by simp [roots]) hl)
   intro d dp
   have code : sp - 8 + 8 ≤ 0x800020e8 ∨ 0x800020f8 ≤ sp - 8 :=
     space.code (by decide) (by decide)
+  obtain ⟨memoryAfter, memoryEq⟩ : ∃ m : Std.ExtHashMap Nat (BitVec 8),
+      m = writeLog d.σ.mem (pushLog sp w) := ⟨_, rfl⟩
   have bp : SegSt (0x800020e8#64)
       [⟨Register.x9, BitVec.ofNat 64 sp⟩,
        ⟨Register.x21, w⟩,
@@ -38,9 +39,9 @@ theorem pushacc0_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
   simp only [push_address space.room] at run
   obtain ⟨nb, after, _, hb, post⟩ := run space.window.lower space.window.upper
     space.window.htif space.window.aligned (by simpa only [space.toNat] using code)
-    (writeLog d.σ.mem (pushLog sp w)) (by rw [space.toNat]; rfl) d bp
+    memoryAfter (by rw [space.toNat]; exact memoryEq) d bp
   obtain ⟨_, hm, frame⟩ := post.extra
-  refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, ?_, hm, frame.out, ?_⟩
+  refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, ?_, hm.trans memoryEq, frame.out, ?_⟩
   · have hp : gpr after Layout.reg_pc = some
         ((BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) + sign_extend (m := 64) (0x000#12)) :=
       PinsHold.get post.pins ⟨1, by simp⟩

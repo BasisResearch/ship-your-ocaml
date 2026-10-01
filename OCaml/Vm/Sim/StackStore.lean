@@ -32,6 +32,18 @@ theorem PushWriteOk.code {P s c pl cp sp w lo hi} (h : PushWriteOk P s c pl cp s
     sp - 8 + 8 ≤ Image.textBase) ∧ True at outside
   rcases outside.1 with left | right <;> omega
 
+/-- Every old stack slot outside the push log has its original total word. -/
+theorem PushWriteOk.stack_read {P s c pl cp sp w i v}
+    {memoryAfter : Std.ExtHashMap Nat (BitVec 8)} (h : PushWriteOk P s c pl cp sp w)
+    (selected : s.stack[i]? = some v)
+    (memory : memoryAfter = writeLog c.σ.mem (pushLog sp w)) :
+    LeanRV64DExecutable.Functions.sign_extend (m := 64)
+      (bytesT8 memoryAfter (sp + 8 * i)) = word c (sp + 8 * i) := by
+  have frame := bytesT_writeLog_out c.σ.mem (h.payload.stack i v selected)
+  rw [memory]
+  simpa only [word, bytesT_eight_eq, LeanRV64DExecutable.Functions.sign_extend,
+    Sail.BitVec.signExtend, BitVec.signExtend_eq] using frame
+
 abbrev PushPost (before : Config) (pl : Place) (pc sp : Nat) (pushed result : BitVec 64)
     (after : Config) : Prop :=
   StackPost before pl pc (sp - 8) result (writeLog before.σ.mem (pushLog sp pushed)) after

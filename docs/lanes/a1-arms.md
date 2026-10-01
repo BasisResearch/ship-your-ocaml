@@ -1,5 +1,24 @@
 # Lane a1-arms
 
+## Fixed PUSHACC and PUSHCONST families
+
+`pushacc1_arm`–`pushacc7_arm` and `pushconst0_arm`–`pushconst3_arm` now
+share `gen_push_arms.py` with PUSH/PUSHACC0. The generator derives postcondition
+register positions from the generated segment metadata. Old stack selections
+use `PushWriteOk.stack_read`, preserving their total word through the one-word
+push log; constants reuse the existing immediate-value representation.
+Each represented proof keeps the intermediate memory opaque through its exact
+equation, matching the machine generator's store/load interface.
+
+All eleven families pass separately under 24 GiB/default limits. Machine
+bodies are approximately 1.3–1.4s and represented bridges approximately 1.1s.
+PUSH/PUSHACC0 regressions pass with the generalized template. The initial
+represented push landing is `43905e1`, full gate passing. There are now 73
+conditional represented opcode bridges. Static write separation, runtime
+window stability and selected-load geometry remain explicit. Next: fixed
+environment PUSH loads and other shared PUSH prefixes. Full `ArmSim` and
+lane exits remain open.
+
 ## Represented PUSH and shared write restoration
 
 `push_arm` and `pushacc0_arm` (`Sim/Push.lean`, `Pushacc0.lean`) are generated
@@ -785,7 +804,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 62 conditional represented opcode bridges,
+stack-writing families. There are 73 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 
