@@ -520,3 +520,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.untag_tag
 #print axioms OCaml.Vm.Sim.untag_neg
 #print axioms OCaml.Vm.Sim.negint_arm
+
+-- Primitive-name binding is necessary at the loaded cut.
+#print axioms OCaml.Vm.Sim.PrimitiveBinding.loaded_prims
+#print axioms OCaml.Vm.Sim.PrimitiveBinding.primitive_binding_obstruction

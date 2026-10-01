@@ -1,5 +1,28 @@
 # Lane a1-arms
 
+## Checked primitive-binding gap
+
+`primitive_binding_obstruction` (`OCaml/Vm/Sim/PrimitiveBinding.lean`) proves
+that the current `Loaded` relation cannot support `OcamlrunRefinement` when
+the small `wordProbe` is loaded and the budget covers its initial heap.
+`loaded_prims` shows that `Loaded` ignores `P.prims`. The probe and its variant
+have identical code, heap, globals and world; swapping only the word-size and
+int-size entries in PRIM changes the exit from 64 to 63. Both are `Good` and
+`Fits`; machine determinism gives the contradiction. No concrete loaded
+machine witness is claimed by this conditional obstruction.
+
+`scripts/gen_primitive_binding_probe.py` compiles with pinned OCaml 4.14.4,
+swaps the two primitive names without changing section lengths, validates
+both exits with host ocamlrun and runbc, and emits the `Prog`s via `runbc
+--lean`. Lean checks the short bytecode runs and finite budgets; run-kernel
+uniqueness/bounds supply the general reasoning. Build: 2.1s, 2.57s wall,
+1.93 GiB peak RSS, default limits under 24 GiB.
+
+Next repair: add named primitive-table bindings at the loaded cut and VM
+representation, with memory framing and relocation transport. Preserve the
+headline verbatim and retain this obstruction against the old contract.
+Primitive bodies remain a1-prims-owned.
+
 ## Current status
 
 The repair (`ef4e701`), CONST0 (`3229c53`), and ISINT/shared ALU adapter
@@ -14,6 +37,8 @@ a full gate and a rebase over the primitive lane’s signed comparison.
 The table facts landed as `c7989c8`, with the full gate passing.
 Composed dispatch landed as `fe72ca4` with the full gate passing.
 The CONST0 representation bridge landed as `85275ba` with all gates passing.
+NEGINT and post-migration checks landed as `c26cecd` / `50aa08d`, with the
+full gate passing against the new image.
 The F1 exit remains open.
 
 F1 primitive machine summaries belong to **a1-prims**, including all
