@@ -98,3 +98,5 @@ import OCaml.Vm.Primitives.CamlFreshOoId
 import OCaml.Vm.Primitives.StringEncoding
 
 import OCaml.Vm.Primitives.CamlStringEqual
+
+import OCaml.Vm.Primitives.CamlStringNotequal

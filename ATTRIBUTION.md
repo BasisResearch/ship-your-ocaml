@@ -264,3 +264,12 @@ its list induction is over instruction syntax, not a machine execution.
 The argv and string/bytes length instances are generated from the same
 pinned-ELF backend and preserve the represented VM payload through the
 shared read-only contract.
+
+`Vsa/Sim/BridgeSegFull.lean` is copied from the local
+ship-your-interpreter `syi-absint-merge` worktree at
+`1453d2e15f62712eff0809eb661e301b075df2be`. It packages the existing segment
+kernel and JAL observation into a complete register/output frame. The source
+worktree was read only. Its theorem bodies are unchanged; an explicit
+`SegEvalSound` import repairs the existing import cut.
+`OCaml/Vm/Primitives/Call.lean` adapts generated ELF
+call-site certificates to that bridge.

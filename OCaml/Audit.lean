@@ -796,3 +796,26 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.string_comparison_value
 #print axioms OCaml.Vm.Primitives.string_equal_contract
 #print axioms OCaml.Vm.Primitives.caml_string_equal_primitive
+
+-- Full JAL bridge and represented string inequality wrapper.
+#print axioms OCaml.Vm.Primitives.BlockPost.effect
+#print axioms OCaml.Vm.Primitives.registers_of_blocks
+#print axioms OCaml.Vm.Primitives.EffectPost.trans
+#print axioms OCaml.Vm.Primitives.EffectPost.widen
+#print axioms OCaml.Vm.Primitives.call_observed
+#print axioms OCaml.Vm.Primitives.call_summary
+#print axioms OCaml.Vm.Primitives.call_registers_summary
+#print axioms OCaml.Vm.Primitives.native_save_address
+#print axioms OCaml.Vm.Primitives.savedRa_value
+#print axioms OCaml.Vm.Primitives.summary_bind
+#print axioms OCaml.Vm.Primitives.PaddedString.frame_log
+#print axioms OCaml.Vm.Primitives.StringWrapper.save_summary
+#print axioms OCaml.Vm.Primitives.StringWrapper.restore_summary
+#print axioms OCaml.Vm.Primitives.wrapper_enter
+#print axioms OCaml.Vm.Primitives.wrapper_equal
+#print axioms OCaml.Vm.Primitives.wrapper_leave
+#print axioms OCaml.Vm.Primitives.string_notequal_machine
+#print axioms OCaml.Vm.Primitives.string_complement
+#print axioms OCaml.Vm.Primitives.string_notequal_contract
+#print axioms OCaml.Vm.Primitives.caml_string_notequal_primitive
+#print axioms Vsa.Sim.bridgeOfSegFull

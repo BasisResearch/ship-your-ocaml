@@ -724,7 +724,7 @@ def emit_ocaml_counter_body(E, fn, ins):
       '', 'end OCaml.Vm.Primitives', '')
 
 
-def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False, counter=False, scan=False):
+def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False, counter=False, scan=False, wrapper=False):
     """Read-only F1 leaves: existing CFG extraction + segment kernel fold.
 
     This backend consumes the pinned OCaml ELF and per-word ElfDecode facts,
@@ -747,6 +747,11 @@ def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False, 
         for w in re.findall(r'^theorem decode_([0-9a-f]{8})', path.read_text(), re.M):
             decode[int(w, 16)] = 'Vsa.Sim.ElfDecode.' + path.stem
     result = {}
+    if wrapper:
+        from ocaml_wrapper import emit_wrapper
+        result = emit_wrapper(root, functions, decode, code, text_base, lib, build_cfg, ocaml_literal_mline)
+        write_ocaml_artifacts(result, root, check, "--ocaml-string-wrapper")
+        return
     if scan:
         from ocaml_scan import emit_scan
         result = emit_scan(root, functions, decode, code, text_base, lib, build_cfg, ocaml_literal_mline)
@@ -1086,6 +1091,7 @@ def main():
     p.add_argument("--ocaml-lengths", action="store_true")
     p.add_argument("--ocaml-counter", action="store_true")
     p.add_argument("--ocaml-string-scan", action="store_true")
+    p.add_argument("--ocaml-string-wrapper", action="store_true")
     p.add_argument("--check", action="store_true")
     p.add_argument("--entry")
     p.add_argument("-o", "--out")
@@ -1103,8 +1109,8 @@ def main():
     p.add_argument("--cfg-only", action="store_true",
                    help="print the CFG classification and exit")
     args = p.parse_args()
-    if args.ocaml_constants or args.ocaml_compare or args.ocaml_argv or args.ocaml_lengths or args.ocaml_counter or args.ocaml_string_scan:
-        emit_ocaml_constants(args.check, compare=args.ocaml_compare, argv=args.ocaml_argv, lengths=args.ocaml_lengths, counter=args.ocaml_counter, scan=args.ocaml_string_scan)
+    if args.ocaml_constants or args.ocaml_compare or args.ocaml_argv or args.ocaml_lengths or args.ocaml_counter or args.ocaml_string_scan or args.ocaml_string_wrapper:
+        emit_ocaml_constants(args.check, compare=args.ocaml_compare, argv=args.ocaml_argv, lengths=args.ocaml_lengths, counter=args.ocaml_counter, scan=args.ocaml_string_scan, wrapper=args.ocaml_string_wrapper)
         return
     if not args.fn or not args.entry:
         p.error("--fn and --entry are required outside --ocaml-constants")

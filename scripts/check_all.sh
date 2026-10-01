@@ -82,6 +82,7 @@ python3 scripts/syi/gen_fn.py --ocaml-argv --check || fail "stage a5: F1 argv su
 python3 scripts/syi/gen_fn.py --ocaml-lengths --check || fail "stage a5: F1 string-length summary drift"
 python3 scripts/syi/gen_fn.py --ocaml-counter --check || fail "stage a5: F1 counter summary drift"
 python3 scripts/syi/gen_fn.py --ocaml-string-scan --check || fail "stage a5: F1 string scan summary drift"
+python3 scripts/syi/gen_fn.py --ocaml-string-wrapper --check || fail "stage a5: F1 string wrapper summary drift"
 python3 scripts/gen_layout.py | cmp -s - OCaml/Vm/Layout.lean || fail "stage a5: Layout.lean differs from gen_layout.py"
 python3 scripts/gen_boot_observation.py results/boot/while_min-cut.json | cmp -s - OCaml/Vm/Boot/WhileMinObservation.lean || fail "stage a5: boot observation differs from generator"
 python3 scripts/gen_boot_log.py --check || fail "stage a5: boot log certificate drift"

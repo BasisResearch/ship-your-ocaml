@@ -45,6 +45,26 @@ theorem EffectPost.loop {writes expectedMem before ra value after}
 
 /-- Package the segment kernel's complete frame for a callee with a write log.
 The generated certificate proves its accesses and image separation. -/
+theorem BlockPost.effect {bs : List BBlock} {entry : BitVec 64} {before after : Config}
+    {L : GRegs} {loads : List (List (BitVec 8))} {writes : List Nat}
+    {ra value : BitVec 64} (image : ExecutableImage before)
+    {log : List WEntry} (outside : ImageOutside log)
+    (h : BlockPost bs entry L loads before after)
+    (hlog : (evalBlocks bs (SegEvalState.init L loads)).log = log)
+    (hpc : evalBlocksPC entry (SegEvalState.init L loads) bs = ra)
+    (hresult : ∀ σ, GHolds σ (evalBlocks bs (SegEvalState.init L loads)).regs →
+      gprGet σ 10 = some value)
+    (hwrites : ∀ n ∈ wrChain bs, n ∈ writes) :
+    WritePost writes log before ra value after := by
+  have hm : after.σ.mem = writeLog before.σ.mem log := by simpa only [hlog] using h.memory
+  refine ⟨h.good, image_of_writeLog image outside hm, h.minstret, h.tick, ?_, hresult _ h.regs, hm, h.output, ?_⟩
+  · exact h.pc.trans (congrArg some hpc)
+  · intro r hr hn
+    apply h.frame r hn
+    intro n hmem
+    exact beq_eq_false_iff_ne.mpr (hr n (hwrites n hmem))
+
+
 theorem write_of_blocks {bs : List BBlock} {entry : BitVec 64} {before : Config}
     {L : GRegs} {loads : List (List (BitVec 8))} {writes : List Nat}
     {ra value : BitVec 64} (image : ExecutableImage before)
@@ -56,15 +76,7 @@ theorem write_of_blocks {bs : List BBlock} {entry : BitVec 64} {before : Config}
       gprGet σ 10 = some value)
     (hwrites : ∀ n ∈ wrChain bs, n ∈ writes) :
     FnSummary entry (fun c => c = before) (WritePost writes log before ra value) := by
-  apply S.weaken (fun _ h => h)
-  intro after h
-  have hm : after.σ.mem = writeLog before.σ.mem log := by simpa only [hlog] using h.memory
-  refine ⟨h.good, image_of_writeLog image outside hm, h.minstret, h.tick, ?_, hresult _ h.regs, hm, h.output, ?_⟩
-  · exact h.pc.trans (congrArg some hpc)
-  · intro r hr hn
-    apply h.frame r hn
-    intro n hmem
-    exact beq_eq_false_iff_ne.mpr (hr n (hwrites n hmem))
+  exact S.weaken (fun _ h => h) (fun _ h => h.effect image outside hlog hpc hresult hwrites)
 
 /-- Read-only packaging is the empty-log specialization. -/
 theorem register_of_blocks {bs : List BBlock} {entry : BitVec 64} {before : Config}

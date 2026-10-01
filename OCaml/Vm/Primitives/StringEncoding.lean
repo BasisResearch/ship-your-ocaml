@@ -1,5 +1,6 @@
 import OCaml.Vm.Primitives.StringContract
 import OCaml.Vm.Reloc
+import OCaml.Vm.Primitives.MemoryFrame
 
 namespace OCaml.Vm.Primitives
 open OCaml.Bytecode Vsa.Machine Vsa.Sim
@@ -10,6 +11,29 @@ structure PaddedString (c : Config) (a : Nat) (b : List UInt8) : Prop
     extends StringShape c a b where
   data : ∀ i x, b[i]? = some x → byte c (a + i) = BitVec.ofNat 8 x.toNat
   zeroPad : ∀ i, b.length ≤ i → i < 8 * ((b.length + 8) / 8) - 1 → byte c (a + i) = 0
+
+/-- Canonical allocator padding survives writes outside the string object. -/
+theorem PaddedString.frame_log {c c' a b log} (h : PaddedString c a b)
+    (outside : ObjectOutside log a (.bytes b))
+    (memory : c'.σ.mem = writeLog c.σ.mem log) : PaddedString c' a b := by
+  have header : word c' (a - 8) = word c (a - 8) :=
+    Reloc.bytesT_congr (copied_of_writeLog memory outside.header)
+  have extent : (Obj.bytes b).wosize = (b.length + 8) / 8 := by
+    simp only [Obj.wosize]
+    omega
+  have payload := copied_of_writeLog memory outside.payload
+  rw [extent] at payload
+  have positive : 0 < 8 * ((b.length + 8) / 8) := by omega
+  have last : a + 8 * ((b.length + 8) / 8) - 1 = a + (8 * ((b.length + 8) / 8) - 1) := by omega
+  constructor
+  · exact ⟨by rw [header]; exact h.headerSize,
+      by rw [last, payload _ (by omega), ← last]; exact h.padding⟩
+  · intro i x hi
+    rw [payload i (by have := (List.getElem?_eq_some_iff.mp hi).1; omega)]
+    exact h.data i x hi
+  · intro i low high
+    rw [payload i (by omega)]
+    exact h.zeroPad i low high
 
 /-- Read a byte from a total machine word, using the RAM observation algebra. -/
 theorem word_byte_extract (c : Config) (a i : Nat) (hi : i < 8) :

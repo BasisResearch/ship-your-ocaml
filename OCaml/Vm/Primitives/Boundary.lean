@@ -75,15 +75,21 @@ theorem BoundaryPost.select {writes before after ra pc source target}
     BoundaryPost writes before ra pc target after :=
   { h with regs := holds_select h.regs select }
 
+/-- Instantiate the next summary at the state reached by a preceding summary. -/
+theorem summary_bind {entry pc pre post Q}
+    (S : FnSummary entry pre post) (parked : ∀ c, post c → PCAt pc c)
+    (next : ∀ c, post c → FnSummary pc (fun d => d = c) Q) : FnSummary entry pre Q := by
+  constructor
+  apply Vsa.Logic.Triple.seq S.run
+  intro c h
+  exact (next c h).run c ⟨parked c h, rfl⟩
+
 /-- A dependent sequence of generated summaries uses the standard triple rule. -/
 theorem boundary_bind {entry pre writes before ra pc regs Q}
     (S : FnSummary entry pre (BoundaryPost writes before ra pc regs))
     (next : ∀ c, BoundaryPost writes before ra pc regs c →
-      FnSummary pc (fun d => d = c) Q) : FnSummary entry pre Q := by
-  constructor
-  apply Vsa.Logic.Triple.seq S.run
-  intro c h
-  exact (next c h).run c ⟨h.pc, rfl⟩
+      FnSummary pc (fun d => d = c) Q) : FnSummary entry pre Q :=
+  summary_bind S (fun _ h => h.pc) next
 
 /-- A finite lookup certificate selects register interfaces without positional
 conjunct projections or a separate proof for each register. -/
