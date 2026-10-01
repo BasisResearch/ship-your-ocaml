@@ -28,6 +28,22 @@ Default-limit 24 GiB checks: OFFSETINT body/pins 5.56s (segment 2.1s),
 arithmetic witness 3.60s (module 2.3s), peak process RSS below 2 GiB.
 CONSTINT landed as `9786220` with the full gate passing.
 
+## Signed relative branch
+
+`branch_arm` (`OCaml/Vm/Sim/Branch.lean`) composes the generated four-step
+BRANCH body with dispatch, preserving the accumulator, memory and remaining
+VM/platform state. `target_int` and `relative_code_word` prove the signed
+relative bytecode-to-machine address identity, for forward and backward
+branches and arbitrary operand-base offsets. `OperandAt.read32` factors the
+read-only prefix observation shared with CONSTINT.
+
+The represented bridge takes successful semantic `target` computation and
+the existing ordinary operand/dispatch/runtime-frame premises. Its targeted
+build is 1.0s (1.57s wall); the final shared-helper rebuild takes 3.91s, with
+peak process RSS below 2 GiB under 24 GiB. CONSTINT rebuilds after adopting
+the same operand helper. Fixed environment/field arms landed as `b52357e`
+with the full gate passing; BRANCH brings the conditional arm count to 25.
+
 ## Fixed environment and field loads
 
 `gen_field_arms.py` emits `envacc1_arm`–`envacc4_arm` and

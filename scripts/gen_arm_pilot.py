@@ -47,6 +47,7 @@ FAMILIES = {
     'GETFIELD1': ('Getfield1', ['ld_tot', 'alu_addi', 'j']),
     'GETFIELD2': ('Getfield2', ['ld_tot', 'alu_addi', 'j']),
     'GETFIELD3': ('Getfield3', ['ld_tot', 'alu_addi', 'j']),
+    'BRANCH': ('Branch', ['lw_tot', 'slli', 'alu_add', 'j']),
     'OFFSETINT': ('Offsetint', ['lw_tot', 'alu_addi', 'slliw', 'alu_add', 'j']),
     'CONSTINT': ('Constint', ['lw_tot', 'alu_addi', 'slli', 'alu_addi', 'j']),
     'CONST0': ('Const0', ['alu_addi', 'alu_addi', 'j']),

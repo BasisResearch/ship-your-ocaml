@@ -19,9 +19,8 @@ theorem constint_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
       {s with pc := s.pc + 2, accu := .int (BitVec.ofInt 63 w.toInt)} c' := by
   apply immediate_arm stable h
   intro d dp
-  have read : bytesT4 d.σ.mem (pl.codeBase + 4 * (s.pc + 1)) = w := by
-    rw [dp.memory]
-    simpa only [word32, bytesT_four_eq] using code_read h.code operand.fetch operand.ordinary
+  have read : bytesT4 d.σ.mem (pl.codeBase + 4 * (s.pc + 1)) = w :=
+    operand.read32 h.code dp.memory
   have bp : SegSt (0x80001f88#64) [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩]
       (fun σ => Vsa.Sim.Code.CamlConstintLoaded σ.mem ∧ σ.mem = d.σ.mem ∧ σ = d.σ) d :=
     ⟨dp.good, dp.pc, ⟨(dp.frame.frame Register.x8 (by decide)).trans h.pc, trivial⟩,

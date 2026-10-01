@@ -56,6 +56,14 @@ theorem OperandAt.read {P : Prog} {pl : Place} {i : Nat} {w : BitVec 32} {c : Co
   rw [h.geometry.toNat]
   exact code_read repr h.fetch h.ordinary
 
+/-- The generated load's four-byte observation survives a read-only prefix. -/
+theorem OperandAt.read32 {P : Prog} {pl : Place} {i : Nat} {w : BitVec 32} {c d : Config}
+    (h : OperandAt P pl i w) (repr : CodeRepr P.code pl.codeBase c)
+    (memory : d.σ.mem = c.σ.mem) :
+    Vsa.Sim.bytesT4 d.σ.mem (pl.codeBase + 4 * i) = w := by
+  rw [memory]
+  simpa only [word32, Vsa.Sim.bytesT_four_eq] using code_read repr h.fetch h.ordinary
+
 /-- The representation supplies every dispatch input except the explicitly
 named clock, code-placement, and non-cache opcode-position facts. -/
 theorem ArmInput.of_repr {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
