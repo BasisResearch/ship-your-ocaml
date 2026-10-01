@@ -25,6 +25,7 @@
   "VsaIris.Vsa.HeapSplit",
   "VsaIris.Vsa.HeapTake",
   "VsaIris.Vsa.LibraryAllocFacts",
+  "VsaIris.Vsa.LibraryCopyFacts",
   "VsaIris.Vsa.Malloc",
   "VsaIris.Vsa.MallocBlocks",
   "VsaIris.Vsa.MallocBlocks2",
@@ -42,6 +43,9 @@
   "VsaIris.Vsa.MallocRunAll",
   "VsaIris.Vsa.MallocSplit",
   "VsaIris.Vsa.MallocTop",
+  "VsaIris.Vsa.MemcpyLoops",
+  "VsaIris.Vsa.MemcpyRun",
+  "VsaIris.Vsa.MemcpySteps",
   "VsaIris.Vsa.ProofPieces",
   "VsaIris.Vsa.Sbrk"
 ]

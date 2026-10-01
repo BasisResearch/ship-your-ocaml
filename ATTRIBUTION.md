@@ -273,3 +273,14 @@ worktree was read only. Its theorem bodies are unchanged; an explicit
 `SegEvalSound` import repairs the existing import cut.
 `OCaml/Vm/Primitives/Call.lean` adapts generated ELF
 call-site certificates to that bridge.
+
+The full `memcpy` local-run proof (`MemcpyRun`, `MemcpySteps`, `MemcpyLoops`)
+is preserved from the same `syi-absint-merge` commit in
+`experiments/syi/allocator-template/` and retargeted by
+`scripts/retarget_allocator_specs.py`. The import cut uses the landed
+symbolic-run/observation layer, a local code-text constructor, and
+`LibraryCopyFacts` rather than importing the source interpreter's binary
+image and value-representation proofs. `LibraryCopyFacts` preserves the
+source's `and7_toNat`/`sltiu8` arithmetic; its loaded-word store readback uses
+the already landed byte-extraction and store-projection lemmas. The source
+worktree remains read only. HTIF data addresses come from `OCaml.Vm.Layout`.

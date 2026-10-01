@@ -64,4 +64,28 @@ theorem image_observed {live c c'} (image : ExecutableImage c)
   ⟨fixedBytes_observed image.text memory (fun i hi => good.live _ (liveImage.text i hi)),
    fixedBytes_observed image.rodata memory (fun i hi => good.live _ (liveImage.rodata i hi))⟩
 
+/-- A library's mutable footprint excludes both immutable ELF sections. -/
+structure ImageSeparate (S : Nat → Prop) : Prop where
+  text : ∀ i, i < Image.textSize → ¬ S (Image.textBase + i)
+  rodata : ∀ i, i < Image.rodataSize → ¬ S (Image.rodataBase + i)
+
+/-- Recover exact code pins after a confined library write. -/
+theorem image_local {live S c c'} (image : ExecutableImage c)
+    (good : VsaOk live c') (liveImage : ImageLive live) (outside : ImageSeparate S)
+    (memory : ∀ a, ¬ S a → (vsaModel live).mem c' a = (vsaModel live).mem c a) :
+    ExecutableImage c' := by
+  constructor
+  · intro i hi
+    apply some_of_observed (zero := 0) (good.live _ (liveImage.text i hi))
+    have agree := memory _ (outside.text i hi)
+    change (c'.σ.mem[Image.textBase + i]?).getD 0 = (c.σ.mem[Image.textBase + i]?).getD 0 at agree
+    rw [agree, image.text i hi]
+    rfl
+  · intro i hi
+    apply some_of_observed (zero := 0) (good.live _ (liveImage.rodata i hi))
+    have agree := memory _ (outside.rodata i hi)
+    change (c'.σ.mem[Image.rodataBase + i]?).getD 0 = (c.σ.mem[Image.rodataBase + i]?).getD 0 at agree
+    rw [agree, image.rodata i hi]
+    rfl
+
 end OCaml.Vm.Primitives

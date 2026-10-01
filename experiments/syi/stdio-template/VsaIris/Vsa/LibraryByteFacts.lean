@@ -1,10 +1,8 @@
 import Vsa.Sim.SnprintfSpec19
 import Vsa.Sim.MemcpySpec
+import Vsa.Sim.MemcpySites2
 open Sail LeanRV64DExecutable.Functions
 namespace Vsa.Sim
-
-abbrev ldData8 (b0 b1 b2 b3 b4 b5 b6 b7 : BitVec 8) : BitVec (8 * 8) :=
-  ((((((b7.append b6).append b5).append b4).append b3).append b2).append b1).append b0
 
 theorem extractLsb'_ldData8 (c0 c1 c2 c3 c4 c5 c6 c7 : BitVec 8) (k : Nat) (hk : k < 8)
     (ck : BitVec 8)

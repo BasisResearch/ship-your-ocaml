@@ -187,3 +187,5 @@ import OCaml.Vm.Primitives.SmallAllocation
 import OCaml.Vm.Primitives.StringFast
 
 import OCaml.Vm.Primitives.StringReadback
+
+import OCaml.Vm.Primitives.LibraryMemcpy

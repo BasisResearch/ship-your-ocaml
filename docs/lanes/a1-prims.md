@@ -370,3 +370,20 @@ The existing local `MemcpySpec` only certifies the byte-loop entry; upstream
 dispatch/alignment/word/bulk/byte paths. Reuse and retarget that proof for the
 caller instead of limiting executable names to the short byte-copy path.
 The primitive count remains 17/30 until represented caller contracts land.
+
+The complete nursery constructor/readback support landed at `74e6126`
+(after one fast-forward race and a repeated successful gate). Full memcpy
+is being ported through the existing allocator-template generator, with
+its source interpreter import dependencies cut at pure byte facts. The
+source is read-only `syi-absint-merge` commit `1453d2e1`; provenance is in
+ATTRIBUTION.md. Constructor string layout and copy-string caller remain
+open alongside that port.
+
+Full memcpy now compiles at the default budget (loop module about 21s,
+`memcpy_summary` bridge about 1.4s). `image_local` recovers exact immutable
+code pins from the confined write frame and live-byte presence. The bridge
+returns `LeafInput`, represented copy bytes and the complete observational
+frame. The import cut now reuses `MemcpySites2.ldData8`, avoiding a duplicate
+definition in `LibraryByteFacts`; its users remain source-generated.
+Discipline and a8 pass unchanged. This closes library support, not a new
+primitive count. Next is the string layout/copy-string represented caller.

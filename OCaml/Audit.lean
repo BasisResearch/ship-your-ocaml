@@ -1,3 +1,4 @@
+import OCaml.Vm.Primitives.LibraryMemcpy
 import OCaml.Vm.Primitives.StringReadback
 import OCaml.Vm.Primitives.SmallAllocation
 import OCaml.Vm.Primitives.StringFast
@@ -1289,3 +1290,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.StringAllocation.initialize_access
 #print axioms OCaml.Vm.Primitives.StringAllocation.alloc_string_nursery
 #print axioms OCaml.Vm.Primitives.StringAllocation.nursery_readback
+
+#print axioms Vsa.Sim.writeMap8_get_byte
+#print axioms Vsa.Sim.writeMap8_ld_byte
+#print axioms VsaIris.Memcpy.memcpyLocalRun
+#print axioms OCaml.Vm.Primitives.image_local
+#print axioms OCaml.Vm.Primitives.copyResult_of_library
+#print axioms OCaml.Vm.Primitives.memcpy_summary
