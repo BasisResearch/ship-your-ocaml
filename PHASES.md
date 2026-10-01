@@ -58,6 +58,7 @@ ELF pin).
 | `const0_arm`, `ArmInput.of_repr` (represented dispatch/body composition) | `OCaml/Vm/Sim/Const0.lean`, `ArmInput.lean` | A1 | **proved conditionally** on code geometry, tick, non-cache opcode position and runtime memory frame; full `ArmSim.next` open |
 | `tr_isint`, `isint_loaded` (generated five-instruction machine body with SLLI/ANDI) | `OCaml/Vm/Sim/Isint*.lean` | A1 | **proved**; full representation/frame bridge open |
 | `tr_negint`, `negint_loaded` (generated four-instruction tagged-negation body) | `OCaml/Vm/Sim/Negint*.lean` | A1 | **proved**; full representation/frame bridge open |
+| `negint_arm`, `immediate_restore`, `tag_neg`, `untag_neg` | `OCaml/Vm/Sim/Negint.lean`, `Immediate*.lean` | A1 | **proved conditionally** on `ArmInput` / runtime memory frame, with exact modular `stepI` result |
 | `tr_acc0`, `tr_acc`, `acc0_loaded`, `acc_loaded` (generated stack loads through total RAM reads) | `OCaml/Vm/Sim/Acc*.lean` | A1 | **proved**; address geometry and representation/frame bridge open |
 | F1 primitive summaries (`primsF1`, 30 entries) | `OCaml/Vm/Primitives/` | A1 | **10/30 proved**: system constants and signed integer comparison, generated ELF `FnSummary` plus represented VM payload/result and platform/ABI frame; runtime parameter uses `MemoryStable` (proved for `RuntimeOk` from its free-list frame law). Other 20 primitives open |
 | `tr_dispatch`, `dispatch_loaded` (in-range dispatch machine path) | `OCaml/Vm/Sim/Dispatch*.lean` | A1 | **proved**; Running/jump-table-to-arm bridge open |

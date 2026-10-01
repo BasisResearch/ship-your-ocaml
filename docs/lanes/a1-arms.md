@@ -13,6 +13,7 @@ Dispatch and checked pin lookup landed as `2857cd0` / `7e2ae1a`, after
 a full gate and a rebase over the primitive lane’s signed comparison.
 The table facts landed as `c7989c8`, with the full gate passing.
 Composed dispatch landed as `fe72ca4` with the full gate passing.
+The CONST0 representation bridge landed as `85275ba` with all gates passing.
 The F1 exit remains open.
 
 F1 primitive machine summaries belong to **a1-prims**, including all
@@ -188,7 +189,26 @@ condition is needed because the landed F3 `CodeRepr` permits cache words to
 vary. These remaining premises are explicit; neither `ArmSim.next` nor the
 headline refinement is claimed or weakened.
 
+## Shared immediate arms and NEGINT
+
+`immediate_restore` and `immediate_preserved` in
+`OCaml/Vm/Sim/Immediate.lean` package the restoration of VM data, fixed
+registers, executable image and runtime from an `ImmediatePost`. CONST0 now
+uses this shared rule. `negint_arm` (`OCaml/Vm/Sim/Negint.lean:12`) composes
+its generated dispatch/body with the same rule, returning exactly the
+`stepI` accumulator `untag (2 - tag64 n)`.
+
+`tag_neg`, `untag_tag`, and `untag_neg` in `ImmediateArithmetic.lean` prove
+modular negation and signed untagging for every 63-bit value. They reuse
+`Primitives.tag_toNat`; no bounded-integer approximation or increased proof
+limit is involved. Both arm bridges retain the documented `ArmInput` and
+`MemoryStable` premises.
+
 ## Validation
+
+* Shared restoration and refactored CONST0: 0.931s / 0.962s; 2.49s wall,
+  1.96 GiB peak RSS. NEGINT arithmetic / arm: 0.952s / 1.0s; 2.58s wall,
+  1.96 GiB peak RSS. Builds are separate and capped at 24 GiB.
 
 * CONST0 representation bridge passes at default limits: ArmInput 1.0s,
   Const0 1.1s, combined 2.72s wall and 1.95 GiB peak RSS, under 24 GiB.

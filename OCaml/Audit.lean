@@ -511,3 +511,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ArmInput.running
 #print axioms OCaml.Vm.Sim.ArmInput.of_repr
 #print axioms OCaml.Vm.Sim.const0_arm
+
+-- Shared immediate-result restoration and modular NEGINT.
+#print axioms OCaml.Vm.Sim.codePc_succ
+#print axioms OCaml.Vm.Sim.immediate_restore
+#print axioms OCaml.Vm.Sim.immediate_preserved
+#print axioms OCaml.Vm.Sim.tag_neg
+#print axioms OCaml.Vm.Sim.untag_tag
+#print axioms OCaml.Vm.Sim.untag_neg
+#print axioms OCaml.Vm.Sim.negint_arm

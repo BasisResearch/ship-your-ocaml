@@ -59,3 +59,4 @@ import OCaml.Vm.Sim.DispatchPins
 import OCaml.Vm.Sim.DispatchTable
 import OCaml.Vm.Sim.Dispatch
 import OCaml.Vm.Sim.Const0
+import OCaml.Vm.Sim.Negint
