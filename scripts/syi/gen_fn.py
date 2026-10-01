@@ -609,17 +609,17 @@ def ocaml_literal_mline(pc, word):
     if opcode == 3:
         kind = {3: 'ld', 4: 'lbu'}[funct3]
     elif opcode == 0x13:
-        kind = {0: 'addi', 1: 'slli', 5: 'srli'}[funct3]
+        kind = {0: 'addi', 1: 'slli', 5: 'srli', 7: 'andi'}[funct3]
     elif opcode == 0x17:
         kind = 'auipc'
-    elif opcode == 0x23 and funct3 == 3:
-        kind = 'sd'
-    elif opcode == 0x33 and funct3 == 0:
-        kind = {0: 'add', 0x20: 'sub'}[word >> 25]
+    elif opcode == 0x23:
+        kind = {0: 'sb', 3: 'sd'}[funct3]
+    elif opcode in (0x33, 0x3b) and funct3 == 0:
+        kind = {0: 'add', 0x20: 'sub'}[word >> 25] + ('w' if opcode == 0x3b else '')
     else:
         raise ValueError(f'unsupported read-only instruction {word:08x}')
     rd, rs1 = (word >> 7) & 31, (word >> 15) & 31
-    rs2, imm = ((word >> 20) & 31, 0) if opcode == 0x33 else (0, word >> 20)
+    rs2, imm = ((word >> 20) & 31, 0) if opcode in (0x33, 0x3b) else (0, word >> 20)
     if opcode == 0x17:
         rs1, rs2, imm = 0, 0, 0
     elif opcode == 0x23:

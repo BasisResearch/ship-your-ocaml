@@ -1,3 +1,5 @@
+import OCaml.Vm.Primitives.SmallAllocation
+import OCaml.Vm.Primitives.StringFast
 import OCaml.Vm.Primitives.LibraryStrlen
 import OCaml.Vm.Boot.WhileMin
 import OCaml.Vm.Boot.WhileMinEntry
@@ -1167,3 +1169,21 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.image_observed
 #print axioms OCaml.Vm.Primitives.strlen_leaf
 #print axioms OCaml.Vm.Primitives.strlen_result
+
+#print axioms OCaml.Vm.Primitives.accessPlan_facts
+#print axioms OCaml.Vm.Primitives.SmallAllocation.reserve_summary
+#print axioms OCaml.Vm.Primitives.SmallAllocation.initialize_summary
+#print axioms OCaml.Vm.Primitives.StringAllocation.prepare_summary
+#print axioms OCaml.Vm.Primitives.StringAllocation.reserve_summary
+#print axioms OCaml.Vm.Primitives.StringAllocation.initialize_summary
+#print axioms OCaml.Vm.Primitives.StringAllocation.prepare_eval
+#print axioms OCaml.Vm.Primitives.StringAllocation.reserve_eval
+#print axioms OCaml.Vm.Primitives.StringAllocation.initialize_eval
+#print axioms OCaml.Vm.Primitives.StringAllocation.prepare_access
+#print axioms OCaml.Vm.Primitives.StringAllocation.reserve_access
+#print axioms OCaml.Vm.Primitives.StringAllocation.prepare_log
+#print axioms OCaml.Vm.Primitives.StringAllocation.reserve_log
+#print axioms OCaml.Vm.Primitives.StringAllocation.initialize_log
+#print axioms OCaml.Vm.Primitives.StringAllocation.prepare_fast
+#print axioms OCaml.Vm.Primitives.StringAllocation.reserve_fast
+#print axioms OCaml.Vm.Primitives.StringAllocation.initialize_fast

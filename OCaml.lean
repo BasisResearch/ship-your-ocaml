@@ -165,3 +165,6 @@ import OCaml.Bytecode.NamedValues
 import OCaml.Vm.Primitives.CamlInt64FloatOfBits
 
 import OCaml.Vm.Primitives.LibraryStrlen
+
+import OCaml.Vm.Primitives.SmallAllocation
+import OCaml.Vm.Primitives.StringFast

@@ -337,3 +337,21 @@ channel transport still use the existing relocation combinators.
 primitive bindings, and restores exact code pins from byte observations plus
 live-memory presence. `strlen_leaf` and `strlen_result` supply the next
 generated caller segment's ABI input and length. Focused builds pass.
+
+Observational frames landed at `19470f8` through the full gate. Nursery work
+now shares `AccessPlan` and `scripts/syi/ocaml_nursery.py`: generated
+`SmallAllocation` reserve/initialize and `StringAllocation`
+prepare/reserve/initialize block summaries compile from this ELF. String
+initialization's internal fallthrough split is merged along the selected
+nursery path. Concrete string-prefix stack/size facts are in progress;
+reservation, padding layout and caller composition remain open. No new
+primitive is counted by these block certificates.
+
+The three string block effect theorems now compile: `prepare_fast`,
+`reserve_fast`, `initialize_fast`. `prepare_access` and `reserve_access`
+discharge scalar accesses from explicit RAM/write windows and total load
+pins. Initialization still takes its finite `AccessPlan`; discharge of that
+plan, whole-constructor composition and string layout remain next.
+The initialization write log required small explicit constant certificates
+instead of eager global simplification; no budget increase was used.
+Discipline and abstraction checks pass (C1=0, C2=7, C3=7, C4=3).
