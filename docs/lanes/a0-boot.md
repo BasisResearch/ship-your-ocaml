@@ -105,7 +105,7 @@ that Sail executed the log or that `Loaded` holds.
 * `OCaml/Vm/Boot/FreeList.lean` defines the concrete startup singleton
   best-fit shape. Native inspection finds empty small lists and one blue
   large block, with self-linked list pointers, null tree children, and a
-  size matching `caml_fl_cur_wsz`. Its machine-memory proof remains open.
+  size matching `caml_fl_cur_wsz`. Its memory-candidate proof now passes.
 * `gen_layout.py` extracts best-fit structure sizes and offsets from
   `runtime/freelist.c` using the RV64 compiler, alongside ELF symbols.
 
@@ -114,3 +114,23 @@ The certificate is reproducible from the compressed observed log in
 Full Sail reachability and the `Loaded` witness remain open. Next: instantiate
 the byte view for the 29 heap objects, code and runtime fields, then connect
 the concrete entry configuration and platform image.
+
+
+## Concrete runtime certificate
+
+The store-log certificate landed as `10ddb87`, with the full gate passing.
+`WhileMinRuntime.fields`, `freeList`, `runtimeOk`, and `runtimeOk_fillZero`
+now build: the collector invariant holds for a configuration whose memory
+is zero-equivalent to the certified observed memory, including its
+`fillZero` configuration. The free tree contains a blue block at
+`0x80283008`, with 126,879 payload words and 126,880 total free words;
+all sixteen small-list heads are null and their merge cursors point to
+the respective head slots. These are proved from generated reads, not
+assumed as observation fields. The native trace-to-Sail connection and
+full `Loaded` remain open.
+
+`observedMem_bytes_stored` removes the initial-memory dependency for reads
+covered by stores. `bytesT_memEqv` reuses the model's zero-equivalence,
+so the same read certificates cover densification. Runtime read generation
+is drift-checked by stage a5. `boot_cut.py` now enumerates domain fields
+from `domain_state.tbl`, excluding the newly added free-list offsets.

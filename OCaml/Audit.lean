@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.WhileMinRuntime
 import OCaml.Vm.Boot.Heap
 import OCaml.Vm.Boot.FreeList
 import OCaml.Vm.Boot.WhileMinLogChecks
@@ -540,3 +541,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 #print axioms OCaml.Vm.Boot.HeapClosed.live_defined
 #print axioms OCaml.Vm.Boot.HeapImage.repr
+
+#print axioms Vsa.Sim.Boot.observedMem_bytes_stored
+#print axioms Vsa.Sim.Boot.bytesT_memEqv
+#print axioms OCaml.Vm.Boot.WhileMinRuntime.fields
+#print axioms OCaml.Vm.Boot.WhileMinRuntime.freeList
+#print axioms OCaml.Vm.Boot.WhileMinRuntime.runtimeOk
+#print axioms OCaml.Vm.Boot.WhileMinRuntime.runtimeOk_fillZero

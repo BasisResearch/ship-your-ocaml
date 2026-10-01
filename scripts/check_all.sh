@@ -81,6 +81,7 @@ python3 scripts/syi/gen_fn.py --ocaml-compare --check || fail "stage a5: F1 comp
 python3 scripts/gen_layout.py | cmp -s - OCaml/Vm/Layout.lean || fail "stage a5: Layout.lean differs from gen_layout.py"
 python3 scripts/gen_boot_observation.py results/boot/while_min-cut.json | cmp -s - OCaml/Vm/Boot/WhileMinObservation.lean || fail "stage a5: boot observation differs from generator"
 python3 scripts/gen_boot_log.py --check || fail "stage a5: boot log certificate drift"
+python3 scripts/gen_boot_runtime.py --check || fail "stage a5: boot runtime read drift"
 python3 scripts/gen_elf_decode.py --check || fail "stage a5: ELF decode table drift"
 python3 scripts/gen_library_pins.py --check || fail "stage a5: A0 library code pin drift"
 python3 scripts/gen_library_layout.py --check || fail "stage a5: library layout drift"

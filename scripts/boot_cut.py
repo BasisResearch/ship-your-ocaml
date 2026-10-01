@@ -77,8 +77,9 @@ def main():
     if entry is None:
         raise SystemExit("second caml_interprete entry not reached")
     domain = read(layout["sym_Caml_state"])
-    fields = {name.removeprefix("off_"): read(domain + off)
-              for name, off in layout.items() if name.startswith("off_")}
+    domain_names = re.findall(r"^DOMAIN_STATE\([^,]+,\s*(\w+)\)",
+        (ROOT / "vendor/ocaml-4.14.4/runtime/caml/domain_state.tbl").read_text(), re.M)
+    fields = {name: read(domain + layout["off_" + name]) for name in domain_names}
     result = {
         "status": "observed candidate; no kernel-checked execution certificate",
         "elf_sha256": hashlib.sha256(image.raw).hexdigest(),
