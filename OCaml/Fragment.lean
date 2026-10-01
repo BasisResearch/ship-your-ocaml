@@ -8,8 +8,8 @@ never with `sorry`: an instruction or primitive outside the current
 fragment steps to `.unsupported`, and the Layer A statement assumes the
 program never reaches one (`Good`). This file names the fragments, assigns
 every opcode to one, and ledgers every opcode outside F1 with the reason it
-is not in F1 yet. Primitives are ledgered by name in `primLedger` (the ones
-`boot/ocamlc` links, `OCaml/Programs/OcamlcPrims.lean`, generated).
+belongs to a later fragment. Implemented primitives are listed in `primsF1` and `primsF2`; coverage of
+the compiler's executed primitive set remains an explicit lane obligation.
 
 Fragment order (README.md, PHASES.md):
 
@@ -67,6 +67,12 @@ def ledger : List (Opcode × Fragment × String) :=
     (.GETDYNMET, .F3, "dynamic method lookup (binary search)"),
     (.EVENT, .Dbg, "debugger event (only under ocamldebug)"),
     (.BREAK, .Dbg, "debugger breakpoint (only under ocamldebug)") ]
+
+/-- Executable F2 opcode coverage. This records transcription status; it
+is not a claim that machine-arm simulation has been proved. -/
+def implementedF2 : List Opcode :=
+  [.MAKEFLOATBLOCK, .GETFLOATFIELD, .SETFLOATFIELD, .VECTLENGTH,
+   .GETVECTITEM, .SETVECTITEM, .GETBYTESCHAR, .SETBYTESCHAR, .GETSTRINGCHAR, .C_CALLN]
 
 /-- The ledger lists exactly the non-F1 opcodes. -/
 theorem ledger_exact :

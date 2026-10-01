@@ -156,6 +156,12 @@ A0 library projections can consume the shared `FixedBytesLoaded` interface.
 
 ## A2–A5: F2 data, F3 objects, F4 callbacks, F5 files
 
+Semantics lane: all ten F2 opcode arms are transcribed; array/byte and
+structural-comparison primitive subsets pass four of nine difftests plus
+`c/tests/bc/f2_ops.ml`. `results/bc-data.json` records remaining first
+unsupported calls. Machine simulation and the remaining primitive domains
+are open; see `docs/lanes/a2-sem.md`.
+
 * Each fragment: its `BcSem` rules and primitives (grown in
   `Semantics.lean`, validated with `runbc` against the host `ocamlrun`
   on its difftests before any proof), its arms, its primitive summaries.

@@ -1,5 +1,5 @@
 import OCaml.Bytecode.Syntax
-import OCaml.Bytecode.Value
+import OCaml.Bytecode.Data
 import OCaml.Run.Kernel
 
 /-!
@@ -336,6 +336,103 @@ def primF1Impl (name : String) (args : List Val) (h : Heap) (w : World) : PRes :
 def primF1 (name : String) (args : List Val) (h : Heap) (w : World) : PRes :=
   if name ∈ primsF1 then primF1Impl name args h w else .unsupported
 
+/-- Allocate the result of a data primitive. -/
+def primAlloc (h : Heap) (w : World) (o : Obj) : PRes :=
+  let (h', l) := h.alloc o
+  .ok (.ptr l 0) h' w
+
+/-- `caml_raise_with_string` with a built-in exception constructor. -/
+def primException (globals : Val) (h : Heap) (w : World) (idx : Nat) (msg : String) : PRes :=
+  match field? h globals idx with
+  | none => .unsupported
+  | .some ex =>
+    let (h, l) := h.alloc (.bytes (msg.toList.map (·.toNat.toUInt8)))
+    let (h, e) := h.alloc (.block 0 [ex, .ptr l 0])
+    .raise (.ptr e 0) h w
+
+/-- The data primitives currently transcribed from array.c, str.c and compare.c. -/
+def primsF2 : List String :=
+  [ "caml_array_unsafe_get", "caml_array_unsafe_set", "caml_string_of_bytes", "caml_bytes_of_string", "caml_make_vect", "caml_array_get", "caml_array_get_addr", "caml_array_set",
+    "caml_array_set_addr", "caml_create_bytes", "caml_blit_bytes", "caml_blit_string",
+    "caml_fill_bytes", "caml_bytes_get", "caml_string_get", "caml_bytes_set",
+    "caml_compare", "caml_equal", "caml_notequal", "caml_lessthan", "caml_lessequal",
+    "caml_greaterthan", "caml_greaterequal" ]
+
+/-- F2's defined argument domain; unsafe calls outside their C preconditions
+remain unsupported. `globals` supplies built-in exception identities. -/
+def primF2 (globals : Val) (name : String) (args : List Val) (h : Heap) (w : World) : PRes :=
+  let some := fun {α} (o : Option α) (k : α → PRes) => match o with
+    | .some a => k a
+    | .none => PRes.unsupported
+  let bounds := primException globals h w 3 "index out of bounds"
+  match name, args with
+  | "caml_make_vect", [.int n, v] =>
+    if n.toInt < 0 ∨ n.toNat > 2^54 - 1 then primException globals h w 3 "Array.make"
+    else if n = 0 then .ok (.atom 0) h w
+    else match doubleOf? h v with
+      | .some d => primAlloc h w (.doubleArray (List.replicate n.toNat d))
+      | .none => primAlloc h w (.block 0 (List.replicate n.toNat v))
+  | "caml_array_get", [a, .int n] | "caml_array_get_addr", [a, .int n]
+  | "caml_array_unsafe_get", [a, .int n] =>
+    some (size? h a) fun sz =>
+    if n.toInt < 0 ∨ n.toNat ≥ sz then
+      (if name = "caml_array_unsafe_get" ∨ name = "caml_array_unsafe_set" then .unsupported else bounds) else
+    if name != "caml_array_get_addr" && tag? h a == .some doubleArrayTag then
+      some (floatField? h a n.toNat) fun d => primAlloc h w (.double d)
+    else some (field? h a n.toNat) fun v => .ok v h w
+  | "caml_array_set", [a, .int n, v] | "caml_array_set_addr", [a, .int n, v]
+  | "caml_array_unsafe_set", [a, .int n, v] =>
+    some (size? h a) fun sz =>
+    if n.toInt < 0 ∨ n.toNat ≥ sz then
+      (if name = "caml_array_unsafe_get" ∨ name = "caml_array_unsafe_set" then .unsupported else bounds) else
+    let write := if name != "caml_array_set_addr" && tag? h a == .some doubleArrayTag then
+        (doubleOf? h v).bind (setFloatField? h a n.toNat)
+      else setField? h a n.toNat v
+    some write fun h' => .ok .unit h' w
+  | "caml_string_of_bytes", [v] | "caml_bytes_of_string", [v] => .ok v h w
+  | "caml_create_bytes", [.int n] =>
+    if n.toInt < 0 ∨ n.toNat > (2^54 - 1)*8 - 1 then primException globals h w 3 "Bytes.create"
+    else primAlloc h w (.bytes (List.replicate n.toNat 0))
+  | "caml_blit_bytes", [src, .int off, dst, .int to, .int len]
+  | "caml_blit_string", [src, .int off, dst, .int to, .int len] =>
+    some (strOf? h src) fun bs => some (strOf? h dst) fun ds =>
+    match dst with
+    | .ptr l 0 =>
+      if off.toInt < 0 ∨ to.toInt < 0 ∨ len.toInt < 0 ∨
+          off.toNat + len.toNat > bs.length ∨ to.toNat + len.toNat > ds.length then .unsupported
+      else .ok .unit (h.set l (.bytes (ds.take to.toNat ++
+        (bs.drop off.toNat).take len.toNat ++ ds.drop (to.toNat + len.toNat)))) w
+    | _ => .unsupported
+  | "caml_fill_bytes", [dst, .int off, .int len, .int v] =>
+    some (strOf? h dst) fun ds => match dst with
+    | .ptr l 0 =>
+      if off.toInt < 0 ∨ len.toInt < 0 ∨ off.toNat + len.toNat > ds.length then .unsupported
+      else .ok .unit (h.set l (.bytes (ds.take off.toNat ++
+        List.replicate len.toNat v.toNat.toUInt8 ++ ds.drop (off.toNat + len.toNat)))) w
+    | _ => .unsupported
+  | "caml_bytes_get", [a, .int n] | "caml_string_get", [a, .int n] =>
+    some (strOf? h a) fun bs =>
+    if n.toInt < 0 ∨ n.toNat ≥ bs.length then bounds
+    else .ok (Val.ofInt (bs[n.toNat]!).toNat) h w
+  | "caml_bytes_set", [a, .int n, .int v] =>
+    some (strOf? h a) fun bs =>
+    if n.toInt < 0 ∨ n.toNat ≥ bs.length then bounds else
+    match a with
+    | .ptr l 0 => .ok .unit (h.set l (.bytes (bs.set n.toNat v.toNat.toUInt8))) w
+    | _ => .unsupported
+  | nm, [a, b] =>
+    if nm ∈ ["caml_compare", "caml_equal", "caml_notequal", "caml_lessthan", "caml_lessequal",
+        "caml_greaterthan", "caml_greaterequal"] then
+      some (compareVal h (nm == "caml_compare") (h.objs.length + 1) a b) fun r =>
+      let v := if nm = "caml_compare" then Val.ofInt r
+        else Val.ofBool (match nm with
+          | "caml_equal" => r == 0 | "caml_notequal" => r != 0
+          | "caml_lessthan" => r < 0 | "caml_lessequal" => r ≤ 0
+          | "caml_greaterthan" => r > 0 | _ => r ≥ 0)
+      .ok v h w
+    else .unsupported
+  | _, _ => .unsupported
+
 /-! ## The step function -/
 
 section
@@ -370,8 +467,9 @@ def enter (s : St) (stack : List Val) (extra : Nat) : Res :=
 
 /-- Run a C primitive (`C_CALLn`, `n = args.length`): pops `n - 1` stack
 words. -/
-def cCall (s : St) (len : Nat) (name : String) (args : List Val) : Res :=
-  match primF1 name args s.heap s.world with
+def cCall (P : Prog) (s : St) (len : Nat) (name : String) (args : List Val) : Res :=
+  match (if name ∈ primsF1 then primF1 name args s.heap s.world
+    else primF2 P.globals name args s.heap s.world) with
   | .ok a h w => .next { s with pc := s.pc + len, accu := a, heap := h, world := w, stack := s.stack.drop (args.length - 1) }
   | .raise e h w =>
       let s' : St := { s with heap := h, world := w, stack := s.stack.drop (args.length - 1) }
@@ -590,6 +688,40 @@ def stepI (i : Instr) : Res :=
       | v :: rest => opt (setField? s.heap s.accu k v) fun h =>
           .next { (s.adv (1 + i.args.length)) with heap := h, accu := .unit, stack := rest }
       | [] => .wrong
+  -- F2 data: runtime/interp.c, MAKEFLOATBLOCK through SETBYTESCHAR.
+  | .MAKEFLOATBLOCK, [sz] =>
+      if sz ≤ 0 ∨ stk.length < sz.toNat - 1 then .wrong else
+      opt ((s.accu :: stk.take (sz.toNat - 1)).mapM (doubleOf? s.heap)) fun ds =>
+      let (h, l) := s.heap.alloc (.doubleArray ds)
+      .next { (s.adv 2) with accu := .ptr l 0, heap := h, stack := stk.drop (sz.toNat - 1) }
+  | .GETFLOATFIELD, [n] => opt (floatField? s.heap s.accu n.toNat) fun d =>
+      let (h, l) := s.heap.alloc (.double d)
+      .next { (s.adv 2) with accu := .ptr l 0, heap := h }
+  | .SETFLOATFIELD, [n] => match stk with
+      | v :: rest => opt (doubleOf? s.heap v) fun d =>
+          opt (setFloatField? s.heap s.accu n.toNat d) fun h =>
+          .next { (s.adv 2) with accu := .unit, heap := h, stack := rest }
+      | _ => .wrong
+  | .VECTLENGTH, [] => opt (size? s.heap s.accu) fun n =>
+      .next { (s.adv 1) with accu := Val.ofInt n }
+  | .GETVECTITEM, [] => match stk with
+      | .int n :: rest => opt (field? s.heap s.accu n.toNat) fun v =>
+          .next { (s.adv 1) with accu := v, stack := rest }
+      | _ => .wrong
+  | .SETVECTITEM, [] => match stk with
+      | .int n :: v :: rest => opt (setField? s.heap s.accu n.toNat v) fun h =>
+          .next { (s.adv 1) with accu := .unit, heap := h, stack := rest }
+      | _ => .wrong
+  | .GETBYTESCHAR, [] | .GETSTRINGCHAR, [] => match stk with
+      | .int n :: rest => opt (strOf? s.heap s.accu) fun bs => opt bs[n.toNat]? fun b =>
+          .next { (s.adv 1) with accu := Val.ofInt b.toNat, stack := rest }
+      | _ => .wrong
+  | .SETBYTESCHAR, [] => match s.accu, stk with
+      | .ptr l 0, .int n :: .int b :: rest => opt (strOf? s.heap s.accu) fun bs =>
+          if n.toNat < bs.length then
+            .next { (s.adv 1) with accu := .unit, stack := rest, heap := s.heap.set l (.bytes (bs.set n.toNat b.toNat.toUInt8)) }
+          else .wrong
+      | _, _ => .wrong
   -- Branches
   | .BRANCH, [ofs] => opt (target pc 0 ofs) fun t => .next { s with pc := t }
   | .BRANCHIF, [ofs] =>
@@ -618,11 +750,14 @@ def stepI (i : Instr) : Res :=
   | .RAISE, [] | .RERAISE, [] | .RAISE_NOTRACE, [] => raiseTo s s.accu
   | .CHECK_SIGNALS, [] => .next (s.adv 1)
   -- C calls
-  | .C_CALL1, [p] => opt P.prims[p.toNat]? fun nm => cCall s 2 nm [s.accu]
-  | .C_CALL2, [p] => opt P.prims[p.toNat]? fun nm => cCall s 2 nm (s.accu :: stk.take 1)
-  | .C_CALL3, [p] => opt P.prims[p.toNat]? fun nm => cCall s 2 nm (s.accu :: stk.take 2)
-  | .C_CALL4, [p] => opt P.prims[p.toNat]? fun nm => cCall s 2 nm (s.accu :: stk.take 3)
-  | .C_CALL5, [p] => opt P.prims[p.toNat]? fun nm => cCall s 2 nm (s.accu :: stk.take 4)
+  | .C_CALL1, [p] => opt P.prims[p.toNat]? fun nm => cCall P s 2 nm [s.accu]
+  | .C_CALL2, [p] => opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 1)
+  | .C_CALL3, [p] => opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 2)
+  | .C_CALL4, [p] => opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 3)
+  | .C_CALL5, [p] => opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 4)
+  | .C_CALLN, [n, p] =>
+      if n ≤ 0 ∨ stk.length < n.toNat - 1 then .wrong else
+      opt P.prims[p.toNat]? fun nm => cCall P s 3 nm (s.accu :: stk.take (n.toNat - 1))
   -- Integer constants and arithmetic
   | .CONST0, [] => .next { (s.adv 1) with accu := .int 0 }
   | .CONST1, [] => .next { (s.adv 1) with accu := .int 1 }

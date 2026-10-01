@@ -144,4 +144,31 @@ def setField? (h : Heap) : Val → Nat → Val → Option Heap
     | _ => none
   | _, _, _ => none
 
+/-- A boxed double, as used by the float-field arms in `interp.c`. -/
+def doubleOf? (h : Heap) : Val → Option (BitVec 64)
+  | .ptr l 0 => match h.get? l with
+    | some (.double d) => some d
+    | _ => none
+  | _ => none
+
+/-- Unboxed float-field access (`Double_flat_field`). -/
+def floatField? (h : Heap) : Val → Nat → Option (BitVec 64)
+  | .ptr l 0, i => match h.get? l with
+    | some (.doubleArray ds) => ds[i]?
+    | _ => none
+  | _, _ => none
+
+def setFloatField? (h : Heap) : Val → Nat → BitVec 64 → Option Heap
+  | .ptr l 0, i, d => match h.get? l with
+    | some (.doubleArray ds) =>
+        if i < ds.length then some (h.set l (.doubleArray (ds.set i d))) else none
+    | _ => none
+  | _, _, _ => none
+
+/-- `Wosize_val`, including static atoms and infix pointers. -/
+def size? (h : Heap) : Val → Option Nat
+  | .atom _ => some 0
+  | .ptr l k => (h.get? l).map fun o => o.wosize - k
+  | _ => none
+
 end OCaml.Bytecode

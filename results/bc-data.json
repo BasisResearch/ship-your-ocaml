@@ -1,0 +1,65 @@
+[
+  {
+    "test": "f1_arith",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 4128 prims 403 heap0 103"
+  },
+  {
+    "test": "f1_while",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 2602 prims 403 heap0 67"
+  },
+  {
+    "test": "f2_closures",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 118120 prims 403 heap0 108"
+  },
+  {
+    "test": "f3_data",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 3140 prims 403 heap0 126"
+  },
+  {
+    "test": "f4_exn",
+    "passed": false,
+    "host_exit": 0,
+    "model_exit": 3,
+    "status": "unsupported at pc 41318: some (OCaml.Bytecode.Opcode.C_CALL1) caml_obj_dup exit none steps 2397 prims 403 heap0 650"
+  },
+  {
+    "test": "f5_strings",
+    "passed": false,
+    "host_exit": 0,
+    "model_exit": 3,
+    "status": "unsupported at pc 31694: some (OCaml.Bytecode.Opcode.C_CALL2) caml_format_int exit none steps 3829 prims 403 heap0 515"
+  },
+  {
+    "test": "f6_alloc",
+    "passed": false,
+    "host_exit": 0,
+    "model_exit": 3,
+    "status": "unsupported at pc 22428: some (OCaml.Bytecode.Opcode.C_CALL1) caml_int64_of_int exit none steps 2054 prims 403 heap0 224"
+  },
+  {
+    "test": "f7_float",
+    "passed": false,
+    "host_exit": 0,
+    "model_exit": 3,
+    "status": "unsupported at pc 36060: some (OCaml.Bytecode.Opcode.C_CALL2) caml_div_float exit none steps 2115 prims 403 heap0 523"
+  },
+  {
+    "test": "f8_objects",
+    "passed": false,
+    "host_exit": 0,
+    "model_exit": 3,
+    "status": "unsupported at pc 19364: some (OCaml.Bytecode.Opcode.C_CALL2) caml_obj_block exit none steps 2140 prims 403 heap0 157"
+  }
+]
