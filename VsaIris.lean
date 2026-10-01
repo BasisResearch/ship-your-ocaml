@@ -1,3 +1,4 @@
+import VsaIris.Vsa.MallocRunAll
 import VsaIris.Vsa.MallocExtend
 import VsaIris.Vsa.HeapFree
 import VsaIris.Vsa.HeapCarve

@@ -1,0 +1,39 @@
+import VsaIris.Vsa.SymRun
+
+namespace VsaIris.Sym
+
+open Vsa.MemRepr Vsa.Sim
+
+/-- An aligned word read is changed exactly when its address is written. -/
+theorem read64_word_store (m : Mem) (a b : Nat) (v : BitVec 64)
+    (ha : a % 8 = 0) (hb : b % 8 = 0) :
+    read64 (writeLog m [(b, 8, v)]) a =
+      if a = b then some v.toNat else read64 m a := by
+  by_cases he : a = b
+  · subst b; simp only [ite_true, read64_store_hit]
+  · rw [if_neg he, read64_store_miss m v (by omega)]
+
+/-- The first-order word log records only its most recent matching write. -/
+def wordRead (initial : Option Nat) (address : Nat) : List WEntry → Option Nat
+  | [] => initial
+  | e :: rest => wordRead (if address = e.1 then some e.2.2.toNat else initial) address rest
+
+/-- All entries write an aligned eight-byte word. -/
+def WordLogOK : List WEntry → Prop
+  | [] => True
+  | e :: rest => e.2.1 = 8 ∧ e.1 % 8 = 0 ∧ WordLogOK rest
+
+/-- Sound reflection of aligned word reads through a write log. -/
+theorem read64_word_log (m : Mem) (log : List WEntry) (a : Nat)
+    (ha : a % 8 = 0) (hl : WordLogOK log) :
+    read64 (writeLog m log) a = wordRead (read64 m a) a log := by
+  induction log generalizing m with
+  | nil => rfl
+  | cons e rest ih =>
+    rcases e with ⟨b, w, v⟩
+    obtain ⟨rfl, hb, ht⟩ := hl
+    change read64 (writeLog (writeLog m [(b, 8, v)]) rest) a = _
+    rw [ih _ ht, read64_word_store m a b v ha hb]
+    rfl
+
+end VsaIris.Sym

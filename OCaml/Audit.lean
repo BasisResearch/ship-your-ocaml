@@ -1,3 +1,4 @@
+import VsaIris.Vsa.MallocRunAll
 import VsaIris.Vsa.MallocExtend
 import VsaIris.Vsa.HeapFree
 import VsaIris.Vsa.HeapCarve
@@ -366,3 +367,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms VsaIris.VsaHeap.top_split
 #print axioms VsaIris.VsaHeap.ext_grow
 #print axioms VsaIris.VsaHeap.extend_top
+
+-- Complete allocator entry contracts at the current ELF addresses.
+#print axioms VsaIris.Sym.read64_word_log
+#print axioms VsaIris.VsaHeap.link_words_disjoint
+#print axioms VsaIris.VsaHeap.bw_split_ret
+#print axioms VsaIris.VsaHeap.malloc_all
+#print axioms VsaIris.VsaHeap.mallocChgRun_proved
+#print axioms VsaIris.VsaHeap.mallocLocalRun_proved

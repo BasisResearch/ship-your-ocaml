@@ -147,4 +147,29 @@ Checkpoint audit passed for all 19 added headline facts: dependencies are
 only `{propext, Classical.choice, Quot.sound}` (the concrete alignment fact
 has no axioms). Entry points include `small_take` in `MallocPaths.lean`,
 `top_split` in `MallocTop.lean`, and `extend_top` in `MallocExtend.lean`.
-The full integration gate is the next check before landing this checkpoint.
+The full integration gate passed and the checkpoint landed as `46187da`.
+The lane exit criterion remains unmet; function-level composition continues.
+
+After the checkpoint, `MallocSplit`, `MallocRebin`, and `MallocRebinL`
+compiled. The large-bin return proof exposed an `omega` proof-term type
+mismatch involving existential witness expressions in its large context;
+`link_words_disjoint` isolates the word-alignment arithmetic with three
+explicit hypotheses. The remaining block scanner now carries word alignment
+and a proved `links_ne` field, replacing its old 16-byte sentinel assumption.
+These later modules are still pending promotion into the checked manifest.
+
+`MallocLarge` and `MallocChain` also compile. `AlignedWordLog` adds the
+checked generic theorem `read64_word_log`: aligned eight-byte writes can
+be reflected into a first-order address lookup. `MallocBlocks.bw_split_ret`
+is being refactored to use that theorem in checked proof pieces; combined
+read simplification exceeded the default heartbeat budget. No budget was
+raised. This refactor and the full malloc/free compositions remain pending.
+
+The complete malloc composition now builds: `malloc_all` at
+`VsaIris/Vsa/MallocBlocks2.lean:718` proves the `_malloc_r` entry
+(`0x800375b8`); `mallocChgRun_proved` and `mallocLocalRun_proved` in
+`MallocRunAll.lean` provide the wrapper run contracts. The split-return
+reflection is composed from kernel-checked pieces at the default budget.
+The checked manifest now selects 37 modules. All six newly added audit
+entries passed with only `{propext, Classical.choice, Quot.sound}`; the
+integration gate is next. `_free_r` and `_svfprintf_r` remain open.
