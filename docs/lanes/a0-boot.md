@@ -5,8 +5,10 @@
 Migration landed atomically as `7fa1750`, including the foreman's
 `elf-fix` (`11989b1`) and all regenerated artifacts. Program files, argv and environment now live behind the fixed
 three-pointer `.embed` header at `0x86800000`. One pinned runtime/Layout
-serves every program. All five Sail runs passed. The `Loaded` exit
-criterion remains open; work has resumed on its concrete memory certificate.
+serves every program. All five Sail runs passed. The closed theorem
+`WhileMin.loaded_fillZero` now checks `Loaded` for the complete captured
+while_min entry state. Its native provenance
+is checked byte-for-byte, but reset-to-cut execution is not kernel-proved.
 
 ## Image migration
 
@@ -76,14 +78,42 @@ criterion remains open; work has resumed on its concrete memory certificate.
   the pre-step second interpreter entry. `scripts/gen_boot_observation.py`
   generates the scalar checks; check_all a5 checks drift.
 
-## Next
+## Closed captured-entry witness
 
-1. Build the concrete boot-state/reflection certificate, reusing the newly
-   landed allocator and stdio function specs and run-kernel composition.
-   Summarize the primitive-lookup loop instead of evaluating millions of
-   Sail steps in a single kernel check.
-2. Establish code, heap, globals, world, registers, platform/runtime and
-   `fillZero` facts for the actual while_min entry; prove and audit `Loaded`.
+`OCaml/Vm/Boot/WhileMin.lean` defines the concrete `cut` and proves
+`loaded` and `loaded_fillZero` without hypotheses. The latter is
+`Loaded (runtimeLayout BestFitSingleton) whileMin (fillZero cut)`.
+All data comes from the machine capture, not a state constructed to fit
+an abstract heap. This completes the lane's closed `Loaded` witness;
+reset-to-cut reachability is a separate open execution theorem.
+
+* `WhileMinImage.executable` proves the pinned text and read-only image
+  survives the checked store log. Initial memory comes from the emulator's
+  exact ELF initializer, including its auxiliary pieces.
+* `WhileMinRegisters.good_state` proves the platform invariant from all
+  176 defined registers. The full capture also supplies tick 1, step
+  4,269,257, Sail cycle counter 1 and an empty console.
+* `WhileMinPrimitives.bindings` proves all 403 PRIM-name/native-address
+  bindings from the observed table, using the shared ELF-derived resolver.
+* `WhileMin.control` discharges every remaining entry obligation. It
+  composes with the existing heap, code, runtime and densification lemmas.
+* Native `bootdump` independently ran `Vsa.setupElf` and 4,269,257 calls
+  to `Vsa.stepOnce`. It checked all 560,326 mapped bytes and map cardinality
+  against the complete loader-plus-store-log memory, then dumped every
+  defined register and all counters/output. It took 115.75 seconds and
+  124.9 MiB peak RSS. The hashes and capture are in `results/boot/`;
+  reproduction commands are in `VALIDATION.md` §2.1.
+* No native computation is a Lean proof assumption. Kernel theorems prove
+  properties of the captured concrete state. The claim that this state
+  was reached from reset has native validation, not a kernel run proof.
+* The generators, capture helper, register/image/table certificates and
+  axiom audit are included in the full gate. No proof-budget increases.
+
+## Earlier landed certificates
+
+The following sections record the incremental proofs. Their former open
+control/image/memory premises are now discharged by the concrete witness
+above; kernel startup reachability remains open.
 
 ## Checked store-log certificate
 
@@ -92,7 +122,7 @@ criterion remains open; work has resumed on its concrete memory certificate.
 observed stores and 2,146 final runs (135,207 bytes). The build passed with
 no heartbeat or recursion-budget overrides. These prove the exact memory
 effect of the supplied store log for any initial memory. They do not prove
-that Sail executed the log or that `Loaded` holds.
+that Sail executed the log; `Loaded` is now supplied by the closed witness.
 
 * `Vsa/Sim/Boot/Log.lean` ports the existing packed-log checker unchanged.
 * `Boot/Checks.lean` composes small checks using `StoresChecked.join` and
@@ -111,9 +141,8 @@ that Sail executed the log or that `Loaded` holds.
 
 The certificate is reproducible from the compressed observed log in
 `results/boot/while_min-stores.jsonl.gz`; stage a5 checks generated drift.
-Full Sail reachability and the `Loaded` witness remain open. Next: instantiate
-the byte view for the 29 heap objects, code and runtime fields, then connect
-the concrete entry configuration and platform image.
+Full Sail reachability remains open. The subsequent certificates instantiate
+this byte view for the heap, code, runtime and complete captured cut.
 
 
 ## Concrete runtime certificate
@@ -126,8 +155,8 @@ is zero-equivalent to the certified observed memory, including its
 `0x80283008`, with 126,879 payload words and 126,880 total free words;
 all sixteen small-list heads are null and their merge cursors point to
 the respective head slots. These are proved from generated reads, not
-assumed as observation fields. The native trace-to-Sail connection and
-full `Loaded` remain open.
+assumed as observation fields. The complete capture now validates the
+trace memory against Sail natively, and the closed `Loaded` theorem checks.
 
 `observedMem_bytes_stored` removes the initial-memory dependency for reads
 covered by stores. `bytesT_memEqv` reuses the model's zero-equivalence,
@@ -155,5 +184,5 @@ The next checked piece establishes:
 The read emitter is shared in `scripts/boot_certificate.py`; heap and
 entry generators are checked for drift. Object reads use the checked
 store log only, with no invented heap contents or initial-memory premises.
-The next step is the concrete cut-state control/image certificate and its
-connection to the actual machine entry.
+The concrete cut-state control/image certificate and complete native
+comparison now supply these premises.

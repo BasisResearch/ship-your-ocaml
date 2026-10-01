@@ -13,6 +13,7 @@ import OCaml.Vm.Reloc
 import OCaml.Refinement
 import OCaml.Vm.Runtime
 import OCaml.Vm.Boot.WhileMinObservation
+import OCaml.Vm.Boot.WhileMin
 import OCaml.Logic.BcModel
 import OCaml.Logic.Symbolic
 import OCaml.Logic.CodeSlice

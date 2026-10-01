@@ -49,7 +49,7 @@ normalize_axioms() {
 }
 
 echo "== stage a1: lake build OCaml OCaml.Audit Vsa VsaIris (under a 24 GB cgroup cap)"
-run_lean lake build OCaml OCaml.Audit Vsa VsaIris runbc 2>&1 | tail -1 \
+run_lean lake build OCaml OCaml.Audit Vsa VsaIris runbc bootdump 2>&1 | tail -1 \
   | grep -q "Build completed successfully" || fail "stage a1: build"
 echo "stage a1: OK"
 
@@ -87,6 +87,10 @@ python3 scripts/gen_boot_log.py --check || fail "stage a5: boot log certificate 
 python3 scripts/gen_boot_runtime.py --check || fail "stage a5: boot runtime read drift"
 python3 scripts/gen_boot_heap.py --check || fail "stage a5: boot heap certificate drift"
 python3 scripts/gen_boot_entry.py --check || fail "stage a5: boot entry certificate drift"
+python3 scripts/gen_boot_image.py --check || fail "stage a5: boot image drift"
+python3 scripts/gen_boot_dump.py --check || fail "stage a5: boot capture utility drift"
+python3 scripts/gen_boot_registers.py --check || fail "stage a5: boot register/snapshot drift"
+python3 scripts/gen_boot_primitives.py --check || fail "stage a5: boot primitive binding drift"
 python3 scripts/gen_elf_decode.py --check || fail "stage a5: ELF decode table drift"
 python3 scripts/gen_library_pins.py --check || fail "stage a5: A0 library code pin drift"
 python3 scripts/gen_library_layout.py --check || fail "stage a5: library layout drift"

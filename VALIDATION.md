@@ -120,6 +120,46 @@ clock it hung in libgloss's `ecall` (§1).
 All of it is before the cut point: it costs emulator time and boot-witness
 length, not proof (PLAN.md §7).
 
+### Complete while_min cut snapshot
+
+`OCaml.Vm.Boot.WhileMin.loaded_fillZero` is a closed kernel-checked
+`Loaded` witness for the complete captured cut, using the one pinned
+runtime Layout. It includes the heap, bytecode, collector invariant,
+platform/image and all 403 primitive bindings. Reset-to-cut execution is
+validated natively below and remains a separate open kernel theorem.
+
+`results/boot/while_min-snapshot.json` records an independent native run of
+`Vsa.setupElf` and `Vsa.stepOnce` to step 4,269,257. The PC and all 31 GPRs
+match the earlier traced cut. The capture checks all 560,326 candidate
+memory bytes and the map cardinality, so extra or missing mapped bytes
+also fail validation. It records all 176 defined registers, tick 1,
+Sail concurrency-interface cycle counter 1, and an empty console.
+
+The initial memory comes from the emulator ELF loader's own segment and
+gap tables, including `.embed`. Its `.text` and `.rodata` are byte-identical
+to the pinned runtime. The saved register table, loader data and store log
+are generator inputs; their hashes are in the snapshot report. Native
+capture is distinct from a kernel proof of the reset-to-cut execution.
+
+To reproduce from the matching while_min ELF (the SHA is checked):
+
+```sh
+free -g
+systemd-run --user --scope -q -p MemoryMax=24G lake build bootdump
+free -g
+systemd-run --user --scope -q -p MemoryMax=24G lake env lean --run \
+  scripts/boot_elf_pieces.lean "$MIN_ELF" > /tmp/while-min-pieces.json
+python3 scripts/gen_boot_image.py --capture "$MIN_ELF" \
+  --pieces /tmp/while-min-pieces.json --expected-memory /tmp/while-min-memory.bin
+systemd-run --user --scope -q -p MemoryMax=24G .lake/build/bin/bootdump \
+  "$MIN_ELF" 4269257 /tmp/while-min-memory.bin > /tmp/while-min-registers.txt
+python3 scripts/gen_boot_registers.py --capture /tmp/while-min-registers.txt
+```
+
+The native capture with complete memory checking took 115.75 seconds and
+124.9 MiB peak RSS on the shared machine. Reproduction still observes the
+25 GiB available-memory floor before each Lean invocation.
+
 ### 2.2 Difftests
 
 `c/tests/difftest.sh`: host `ocamlrun` vs the ELF on Sail, same bytecode
@@ -327,7 +367,7 @@ trace (`tcb/validation/RESULTS.md`, reproducible in ~3 s):
 `scripts/retarget_syi.py --refresh-report` revalidates the 66 byte-identical
 library functions against the source ELF. The fixed runtime's HTIF mailbox
 is `0x80061fc0`; both the machine layer and OCaml layout derive it from the
-ELF. `scripts/check_code_pins.py` checks 39,056 pinned bytes with no mismatch.
+ELF. `scripts/check_code_pins.py` checks 39,312 pinned bytes with no mismatch.
 
 The A0 library layer now includes regenerated strcmp/string-copy sites,
 `ssputs_fast_spec`, `ssprint_iov2_spec`, the complete `malloc_all` and
@@ -356,5 +396,5 @@ show the `ecall` hang (§1). The Sail numbers above are authoritative.
 * Startup is expensive on Sail (§2.1); boot witnesses beyond small
   programs are impractical (PLAN.md §7).
 * Program-specific builds share the fixed runtime sections and layout;
-  their `.embed` contents differ. A `Loaded` witness still needs to establish
+  their `.embed` contents differ. A `Loaded` witness must establish
   each program's code, heap, world and platform state at the cut.

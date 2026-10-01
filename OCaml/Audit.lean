@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.WhileMin
 import OCaml.Vm.Boot.WhileMinEntry
 import OCaml.Vm.Boot.WhileMinRuntime
 import OCaml.Vm.Boot.Heap
@@ -700,3 +701,21 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.PaddedString.eq_of_words
 #print axioms OCaml.Vm.Primitives.PaddedString.copied
 #print axioms OCaml.Vm.Primitives.PaddedString.eq_iff_words
+#print axioms OCaml.Vm.Boot.WhileMinLog.fin_none_below
+#print axioms OCaml.Vm.Boot.WhileMinLog.memory_below
+#print axioms OCaml.Vm.Boot.WhileMinImage.initial_text
+#print axioms OCaml.Vm.Boot.WhileMinImage.initial_rodata
+#print axioms OCaml.Vm.Boot.WhileMinImage.observed_text
+#print axioms OCaml.Vm.Boot.WhileMinImage.observed_rodata
+#print axioms OCaml.Vm.Boot.WhileMinImage.executable
+#print axioms OCaml.Vm.Boot.WhileMinRegisters.assignments_distinct
+#print axioms OCaml.Vm.Boot.WhileMinRegisters.register_get
+#print axioms OCaml.Vm.Boot.WhileMinRegisters.good_state
+#print axioms OCaml.Vm.Boot.PrimitiveRowAt.binding
+#print axioms OCaml.Vm.Boot.WhileMinPrimitives.bindings
+#print axioms OCaml.Vm.Boot.WhileMin.memory_eq
+#print axioms OCaml.Vm.Boot.WhileMin.control
+#print axioms OCaml.Vm.Boot.WhileMin.loaded
+#print axioms OCaml.Vm.Boot.WhileMin.loaded_fillZero
+
+#print axioms OCaml.Vm.Boot.WhileMin.memory_equiv

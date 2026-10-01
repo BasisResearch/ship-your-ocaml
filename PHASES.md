@@ -48,11 +48,11 @@ ELF pin).
 | `BcSem` world over `TCB.Os.OsState` (file/time/env primitives through `OsStep`) | `OCaml/Bytecode/Semantics.lean` | F5 | open |
 | Linux instantiation: `ecall` as an external step constrained by `OsStep` | `Vsa.Machine` extension | E | open |
 | `Layout.runtimeOk` concrete instance | `OCaml/Vm/Runtime.lean` | A0 | **defined**: `runtimeLayout freeList`, with ordinary nonempty-nursery bounds |
-| `Loaded` at real entry states (boot witnesses, small programs) | `OCaml/Vm/Boot/` | A0 | **open**: fixed `.embed` makes the runtime image identical across programs; execution/projection certificate remains open |
-| `WhileMinObservation.bounds`, `noPending`, `nursery_not_empty` | `OCaml/Vm/Boot/WhileMinObservation.lean` | A0 | **proved for the observed projection**; machine-to-projection certificate remains open |
-| `WhileMinLog.logOk`, `memory_view` | `OCaml/Vm/Boot/WhileMinLogChecks.lean` | A0 | **proved**: exact memory effect of 35,304 observed stores, checked in small chunks; Sail execution and `Loaded` remain open |
+| `Loaded` at real entry states (boot witnesses, small programs) | `OCaml/Vm/Boot/` | A0 | **proved for the complete captured while_min cut**: `WhileMin.loaded_fillZero`, no premises; full native-state comparison; kernel reset-to-cut execution remains open |
+| `WhileMinObservation.bounds`, `noPending`, `nursery_not_empty` | `OCaml/Vm/Boot/WhileMinObservation.lean` | A0 | **proved for the observed projection**; complete native capture validates it; kernel startup execution remains open |
+| `WhileMinLog.logOk`, `memory_view` | `OCaml/Vm/Boot/WhileMinLogChecks.lean` | A0 | **proved**: exact memory effect of 35,304 observed stores, checked in small chunks; kernel Sail execution remains open; closed `Loaded` now proved separately |
 | `WhileMinRuntime.runtimeOk`, `runtimeOk_fillZero` | `OCaml/Vm/Boot/WhileMinRuntime.lean` | A0 | **proved for the certified memory candidate**: nursery bounds, no pending work and singleton best-fit free-list shape; actual startup execution remains open |
-| `WhileMinHeap.repr`, `WhileMinEntry.code`, `loaded_fillZero` | `OCaml/Vm/Boot/WhileMin{Heap,Entry}.lean` | A0 | **proved conditionally**: all 29 objects, non-overlap, closure, 191 code words and runtime assembled; actual cut memory and control/image premises remain open |
+| `WhileMinHeap.repr`, `WhileMinEntry.code`, `loaded_fillZero` | `OCaml/Vm/Boot/WhileMin{Heap,Entry}.lean` | A0 | **proved**: all 29 objects, non-overlap, closure, 191 code words and runtime assembled; `WhileMin.loaded_fillZero` discharges memory, control/image and all 403 primitive bindings for the complete capture |
 | `ArmSim` entry + F1 arms (134 opcodes) + halt | `OCaml/Vm/Sim/` | A1 | open; strengthened `Running` contract excludes the HTIF obstruction |
 | **`ocamlrun_refinement_Statement L B`** (Layer A, F1) | `OCaml/Theorems.lean` | A1 (by `ocamlrun_refinement_of_arms`) | open; derives unchanged from the repaired arm contract |
 | `PlatformOk`, `Running`, `forceExit_not_running`, `platformOk_reloc`, `loopRegisters_reloc` | `OCaml/Vm/Platform*.lean`, `OCaml/Refinement.lean` | A1 | **contract repaired**; composition and regression/transport theorems proved |
@@ -118,7 +118,9 @@ kernel-checked; the reachable Sail-state certificate is still open.
 `.text`, `.rodata`, `.data` and `.tohost`, so all use one generated Layout
 and the same A0 library code facts. The migration regenerates decode tables,
 library layouts/pins/specifications, arm pilots and OCaml image pins. The
-boot projection is freshly observed; the `Loaded` witness remains open.
+complete cut is freshly captured and compared against every native memory
+byte and register. `WhileMin.loaded_fillZero` is a closed kernel theorem
+for that snapshot; it does not assert kernel startup reachability.
 
 * Done in P0: the 66 byte-identical library functions (`scripts/retarget_syi.py`).
 

@@ -263,4 +263,35 @@ theorem logOk : LogOk log runs :=
 theorem memory_view (m : Std.ExtHashMap Nat (BitVec 8)) (x : Nat) :
   (Vsa.Sim.writeLog m log.log)[x]? = logView runs (fun a => m[a]?) x :=
   writeLog_view logOk m x
+theorem fin_none_below {x : Nat} (hx : x < run0.base) : runs.fin x = none := by
+  have bound : x < 0x80063b98 := hx
+  unfold RunTree.fin
+  rw [runs]
+  have h2146 : x < 0x80075210 := by omega
+  rw [tree_0_2146, RunTree.find, if_pos h2146]
+  have h1073 : x < 0x8006cbd0 := by omega
+  rw [tree_0_1073, RunTree.find, if_pos h1073]
+  have h536 : x < 0x800688d0 := by omega
+  rw [tree_0_536, RunTree.find, if_pos h536]
+  have h268 : x < 0x80066750 := by omega
+  rw [tree_0_268, RunTree.find, if_pos h268]
+  have h134 : x < 0x80065690 := by omega
+  rw [tree_0_134, RunTree.find, if_pos h134]
+  have h67 : x < 0x80064e10 := by omega
+  rw [tree_0_67, RunTree.find, if_pos h67]
+  have h33 : x < 0x800649d0 := by omega
+  rw [tree_0_33, RunTree.find, if_pos h33]
+  have h16 : x < 0x800647e8 := by omega
+  rw [tree_0_16, RunTree.find, if_pos h16]
+  have h8 : x < 0x80063c40 := by omega
+  rw [tree_0_8, RunTree.find, if_pos h8]
+  have h4 : x < 0x80063be0 := by omega
+  rw [tree_0_4, RunTree.find, if_pos h4]
+  have h2 : x < 0x80063bb0 := by omega
+  rw [tree_0_2, RunTree.find, if_pos h2]
+  rw [RunTree.find, Run.cell, if_neg (fun h => Nat.not_le_of_lt hx h.1)]
+theorem memory_below (initial : Std.ExtHashMap Nat (BitVec 8)) {x : Nat}
+    (hx : x < run0.base) : (Vsa.Sim.writeLog initial log.log)[x]? = initial[x]? := by
+  rw [memory_view]
+  simp only [logView, fin_none_below hx]
 end OCaml.Vm.Boot.WhileMinLog

@@ -1,0 +1,13 @@
+{
+  "status": "native exact full-state capture; kernel Loaded theorem is separate from startup reachability",
+  "elf_sha256": "3042b1cd6df22ee3d70aeff2de67e4aa93c8479088cb6f2bf67ca847d5ce5e1c",
+  "cut_step": 4269257,
+  "tick": 1,
+  "cycles": 1,
+  "defined_registers": 176,
+  "memory_bytes": 560326,
+  "register_capture_sha256": "f6b17b63c418cf8800bf00f228f50a8ebd4c2c05495d00d77c047f78743927f1",
+  "initial_capture_sha256": "59fe490b2c1cb72a9a9c6fa6256b638473d467da2763e87c8e791264fc522a89",
+  "store_trace_sha256": "123e61b5d618d3356ba088187e3ac1b64f9a947a8c4a2169554db55a444e258a",
+  "expected_memory_sha256": "8fa4a65a055d5c3d45e4c85a0920c2764d5ed3a025d0f568cd73662c9fd4615d"
+}

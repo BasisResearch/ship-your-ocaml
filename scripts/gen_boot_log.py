@@ -83,6 +83,19 @@ stores_checked=store_tree(0,len(pages),body)
 runs_checked=run_tree(0,len(runs),body)
 body += [f'theorem logOk : LogOk log runs :=\n  LogOk.of_checks {stores_checked} {runs_checked}',
          'theorem memory_view (m : Std.ExtHashMap Nat (BitVec 8)) (x : Nat) :\n  (Vsa.Sim.writeLog m log.log)[x]? = logView runs (fun a => m[a]?) x :=\n  writeLog_view logOk m x']
+body += ['theorem fin_none_below {x : Nat} (hx : x < run0.base) : runs.fin x = none := by',
+         f'  have bound : x < {runs[0][0]:#x} := hx',
+         '  unfold RunTree.fin', '  rw [runs]']
+hi=len(runs)
+while hi > 1:
+    mid=hi//2
+    body += [f'  have h{hi} : x < {runs[mid][0]:#x} := by omega',
+             f'  rw [tree_0_{hi}, RunTree.find, if_pos h{hi}]']
+    hi=mid
+body += ['  rw [RunTree.find, Run.cell, if_neg (fun h => Nat.not_le_of_lt hx h.1)]',
+         'theorem memory_below (initial : Std.ExtHashMap Nat (BitVec 8)) {x : Nat}',
+         '    (hx : x < run0.base) : (Vsa.Sim.writeLog initial log.log)[x]? = initial[x]? := by',
+         '  rw [memory_view]', '  simp only [logView, fin_none_below hx]']
 outputs['OCaml/Vm/Boot/WhileMinLogChecks.lean'] = '\n'.join([f'import {imports[-1]}'] + header + body + end)
 for rel, text in outputs.items():
     path=root/rel

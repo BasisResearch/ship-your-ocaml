@@ -42,3 +42,9 @@ srcDir = "tcb"
 name = "tcbcheck"
 root = "TCBCheck"
 srcDir = "tcb"
+
+# Native cut-state observations; emitted data is not a kernel execution proof.
+[[lean_exe]]
+name = "bootdump"
+root = "boot_dump"
+srcDir = "scripts"
