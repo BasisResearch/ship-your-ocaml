@@ -1,4 +1,4 @@
-import OCaml.Vm.Primitives.Register
+import OCaml.Vm.Primitives.Boundary
 
 namespace OCaml.Vm.Primitives
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable
@@ -48,5 +48,17 @@ theorem EffectPost.widen {writes writes' mem before after pc value}
     (h : EffectPost writes mem before pc value after)
     (subset : ∀ n ∈ writes, n ∈ writes') : EffectPost writes' mem before pc value after :=
   { h with frame := fun r hr hn => h.frame r (fun n hm => hr n (subset n hm)) hn }
+
+/-- Compose a read-only tail prefix with a callee's abstract write log before
+instantiating that log. This keeps memory maps opaque during elaboration. -/
+theorem BoundaryPost.then_write {w1 w2 before mid after ra pc regs log target value}
+    (h : BoundaryPost w1 before ra pc regs mid)
+    (h' : WritePost w2 log mid target value after) :
+    WritePost (w1 ++ w2) log before target value after := by
+  refine ⟨h'.good, h'.image, h'.minstret, h'.tick, h'.pc, h'.result,
+    h'.memory.trans (congrArg (fun m => writeLog m log) h.memory), h'.output.trans h.output, ?_⟩
+  intro r hr hn
+  exact (h'.frame r (fun n hm => hr n (List.mem_append_right _ hm)) hn).trans
+    (h.frame r (fun n hm => hr n (List.mem_append_left _ hm)) hn)
 
 end OCaml.Vm.Primitives

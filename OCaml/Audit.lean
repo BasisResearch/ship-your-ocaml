@@ -991,3 +991,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Bytecode.named_replacement_check
 #print axioms OCaml.Bytecode.named_first_nul_check
 #print axioms OCaml.Bytecode.named_primitive_replacement
+
+-- G1 boxed int64 bit reinterpretation through the nursery allocator.
+#print axioms OCaml.Vm.Primitives.BoundaryPost.then_write
+#print axioms OCaml.Vm.Primitives.DoubleAllocation.FastMemory.frame
+#print axioms OCaml.Vm.Primitives.Int64FloatTail.summary
+#print axioms OCaml.Vm.Primitives.int64_float_machine
+#print axioms OCaml.Vm.Primitives.int64_float_contract
+#print axioms OCaml.Vm.Primitives.caml_int64_float_of_bits_primitive

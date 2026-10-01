@@ -104,4 +104,6 @@ def emit_alloc(root, functions, decode, code, text_base, lib, build_cfg, literal
         E(f'  · exact {name}_eval {params} {bs}', '  · rfl', '  · decide', '')
     E('end OCaml.Vm.Primitives.DoubleAllocation','')
     result[root/'OCaml/Vm/Primitives/DoubleAllocation.lean']=E.text()
+    from ocaml_tail import emit_int64_tail
+    result.update(emit_int64_tail(root, functions, decode, code, text_base, lib, build_cfg, literal))
     return result

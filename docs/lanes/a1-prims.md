@@ -102,6 +102,7 @@ requires the named `PaddedString` allocator invariant.
 | `caml_fresh_oo_id` | `caml_fresh_oo_id_primitive` | `CamlFreshOoId.lean:204` |
 | `caml_string_equal` | `caml_string_equal_primitive` | `CamlStringEqual.lean:7` |
 | `caml_string_notequal` | `caml_string_notequal_primitive` | `CamlStringNotequal.lean:7` |
+| `caml_int64_float_of_bits` | `caml_int64_float_of_bits_primitive` | `CamlInt64FloatOfBits.lean:7` |
 
 
 
@@ -285,3 +286,27 @@ retained-root membership, and the actual primitive replacement transition. No ma
 
 Named-value correction validation: full regression/audit passes (1,965 targets,
 standard axioms only); discipline, generator checks and a8 pass.
+
+The named-value correction landed at `d05db1f` through the full gate.
+
+## G1 allocating primitive contracts
+
+PLAN.md §3 selects G1 (no collection after the cut) for the initial F1–F3
+refinement. Accordingly, allocating primitive summaries will carry explicit
+allocation-room and metadata-separation premises supplied from the budget and
+runtime invariant. Their G1 machine summaries do not require completing the
+A6 collector branch. The double constructor support is ready; its int64
+payload-load/tail-call and represented allocation bridge are being connected.
+
+`int64_float_machine` now composes the generated boxed-payload load and tail
+jump with `copy_double_fast`, using `FnSummary.tailJump`. The complete G1
+represented allocation contract compiles: `Int64FloatInput` supplies the
+represented source object, RAM bound, reserved fresh placement, separation
+and nursery room. `AllocationRuntime` is the chosen runtime predicate's
+memory-effect frame supplier; no machine execution is assumed by that
+premise. The result heap gains exactly `.double bits` and the world is
+unchanged. `BoundaryPost.then_write` factors the read-only-prefix/write-log
+composition so concrete memory maps remain opaque during elaboration.
+The generated headline and full regression/audit pass (2,103 targets, standard
+axioms only), with **17/30 G1 summaries proved**. Integration is next; the
+collector-enabled extension remains A6.

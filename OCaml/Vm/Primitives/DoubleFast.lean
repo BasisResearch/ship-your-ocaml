@@ -7,9 +7,7 @@ open Vsa.Machine Vsa.Sim LeanRV64DExecutable
 
 /-- The allocator's nursery fast path, including separation of metadata reads
 from its header write. The collector case is deliberately not assumed here. -/
-structure FastInput (ra bits domain young limit : BitVec 64) (c : Config) : Prop
-    extends LeafInput ra c where
-  bitsReg : gpr c 10 = some bits
+structure FastMemory (bits domain young limit : BitVec 64) (c : Config) : Prop where
   domainValue : word c domainGlobal.toNat = domain
   youngValue : word c (youngSlot domain).toNat = young
   limitValue : word c (limitSlot domain).toNat = limit
@@ -23,6 +21,19 @@ structure FastInput (ra bits domain young limit : BitVec 64) (c : Config) : Prop
   globalOutsideReserve : OutLRange (reserveLog domain young) domainGlobal.toNat 8
   globalOutsideHeader : OutLRange (headerLog (young - 16#64)) domainGlobal.toNat 8
   youngOutsideHeader : OutLRange (headerLog (young - 16#64)) (youngSlot domain).toNat 8
+
+structure FastInput (ra bits domain young limit : BitVec 64) (c : Config) : Prop
+    extends LeafInput ra c, FastMemory bits domain young limit c where
+  bitsReg : gpr c 10 = some bits
+
+/-- A read-only tail prefix preserves the allocator's memory-side conditions. -/
+theorem FastMemory.frame {bits domain young limit c d}
+    (h : FastMemory bits domain young limit c) (memory : d.σ.mem = c.σ.mem) :
+    FastMemory bits domain young limit d :=
+  { h with
+    domainValue := by simpa only [word, memory] using h.domainValue
+    youngValue := by simpa only [word, memory] using h.youngValue
+    limitValue := by simpa only [word, memory] using h.limitValue }
 
 def allocationLog (domain young bits : BitVec 64) : List WEntry :=
   reserveLog domain young ++ initializeLog (young - 16#64) (young - 16#64) bits

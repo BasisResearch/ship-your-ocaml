@@ -90,6 +90,12 @@ structure AllocationInput (runtimeOk : Config → Prop) (P : Prog) (s : St)
   payloadOutside : PayloadOutside log P s c pl cp sp
   bindingsOutside : BindingsOutside log P c
 
+/-- The runtime invariant's supplier checks the exact allocation memory effect,
+including the decreased young_ptr and untouched free-list metadata. No run is
+assumed; this is the memory-only frame law for the chosen runtime predicate. -/
+def AllocationRuntime (runtimeOk : Config → Prop) (before : Config) (log : List WEntry) : Prop :=
+  ∀ after : Config, after.σ.mem = writeLog before.σ.mem log → runtimeOk before → runtimeOk after
+
 /-- One allocation bridge for all generated constructors. Layout and platform
 suppliers concern only the first-order memory effect; the function summary
 must prove the actual machine execution separately. -/
@@ -98,7 +104,7 @@ theorem allocation_contract {runtimeOk P s pl cp sp high ra entry args name o a 
     (S : FnSummary entry (fun d => d = c)
       (WritePost writes log c ra (BitVec.ofNat 64 a)))
     (layout : ∀ after : Config, after.σ.mem = writeLog c.σ.mem log → ObjAt after pl cp a o)
-    (runtime : ∀ after : Config, after.σ.mem = writeLog c.σ.mem log → runtimeOk after)
+    (runtime : AllocationRuntime runtimeOk c log)
     (frame : PreservesLoopRegisters writes)
     (model : primF1Impl name args s.heap s.world =
       .ok (.ptr (s.heap.alloc o).2 0) (s.heap.alloc o).1 s.world) :
@@ -108,7 +114,7 @@ theorem allocation_contract {runtimeOk P s pl cp sp high ra entry args name o a 
   apply S.weaken (fun _ h => h)
   intro after post
   refine ⟨post, ?_, bindings_frame_log h.primitives h.bindingsOutside post.memory,
-    ⟨post.good, post.image, runtime after post.memory⟩, post.loop frame h.loop, ?_, model⟩
+    ⟨post.good, post.image, runtime after post.memory h.runtime⟩, post.loop frame h.loop, ?_, model⟩
   · exact (h.data.frame_log h.payloadOutside post.memory post.output).allocate
       h.fields h.placed (layout after post.memory) h.separate
   · simp [valWord, h.placed]
