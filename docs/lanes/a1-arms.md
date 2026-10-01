@@ -8,6 +8,7 @@ The repair (`ef4e701`), CONST0 (`3229c53`), and ISINT/shared ALU adapter
 when host memory recovered; all gates, including the 16 ALU smoke sites,
 passed. NEGINT subsequently landed as `e2777bc` with all gates passing.
 ACC/ACC0 subsequently landed as `dd48ca0` with all gates passing.
+Counted contracts landed as `a22f2b9`; register/console frames as `ee18571`.
 The F1 exit remains open.
 
 F1 primitive machine summaries belong to **a1-prims**, including all
@@ -62,6 +63,18 @@ added to the headline theorem.
 
 ## Proved
 
+* `Vsa.Sim.tr_dispatch` (`OCaml/Vm/Sim/DispatchSegment.lean:22`) proves
+  the in-range eight-step loop-head path: opcode load, bound branch,
+  jump-table offset load, and indirect jump. It exports `TripleN 8`, memory
+  equality and `StepFrameOut`. `dispatch_loaded` supplies instruction pins.
+  The path starts at the census loop head and follows the decoded taken
+  branch; no data symbol is hard-coded. RAM/HTIF bounds, opcode guard, and
+  target alignment remain explicit. A bridge from Running and the pinned
+  jump table to these conditions and the selected arm address is still open.
+* The shared segment front end now names branch site variants consistently
+  with `gen_sites.py`; indirect-jump output can retain the exact machine
+  target expression without an unnecessary rewrite premise.
+
 * The shared generator now exports a `StepFrameOut` component for every
   pilot body, through its optional `frame_origin` parameter. The caller
   supplies the incoming state; the post preserves console output and all
@@ -101,7 +114,7 @@ added to the headline theorem.
   ANDI. `isint_loaded` derives its local code pins from `ExecutableImage`.
   Raw machine values are threaded through repeated writes by the generator.
   The abstract-value bridge still needs placement/alignment facts and the
-  full register/runtime frame; no `ArmSim.next` case is claimed.
+  runtime frame and data bridge; no `ArmSim.next` case is claimed.
 * Shared `scripts/syi/alu_classes.py` connects classification, def-use/value
   extraction, and site emission for 16 added ALU classes: 64/32-bit immediate
   shifts, ADDW, bitwise immediate/register operations and register shifts.
@@ -114,7 +127,7 @@ added to the headline theorem.
   `0x800035c0` to the dispatch head. `const0_loaded`
   (`OCaml/Vm/Sim/Const0Pins.lean:8`) derives its code pins from the complete
   OCaml image. This is a machine segment, not yet a full `ArmSim.next` case:
-  dispatch, the blanket register/runtime frame, and the VM-data bridge remain.
+  dispatch-to-body composition, runtime preservation, and the VM-data bridge remain.
 * `scripts/gen_arm_pilot.py` composes the existing code-pin, site and segment
   generators using census boundaries and A0's per-word `ElfDecode` facts.
   It imports only the `SegSt` boundary record from syi; no Snprintf import
@@ -131,6 +144,11 @@ added to the headline theorem.
   repaired production `ArmSim`.
 
 ## Validation
+
+* Dispatch build passes under 24 GiB and default proof limits: code 3.7s,
+  sites 9.6s, image projection 2.4s, segment 44s; wall 66.55s, measured
+  user/system CPU 6.49/2.11s, peak process RSS 1.85 GiB. Shared-host
+  scheduling affects these wall timings; no budget was increased.
 
 * Framed body rebuilds, separately under 24 GiB, pass at default limits:
   CONST0 1.6s, NEGINT 2.0s, ISINT 2.5s, ACC0 1.0s, ACC 2.4s.

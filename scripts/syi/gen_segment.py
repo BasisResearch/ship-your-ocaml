@@ -397,10 +397,13 @@ class SegmentEmitter:
             end_pc = bv64(tgt)[1:-1]
         elif cls == "jr":
             pc_val = self.subst(st["pc_val"], k)
-            pc_rw = self.subst(st["pc_rw"], k)
+            if st.get("pc_rw"):
+                pc_rw = self.subst(st["pc_rw"], k)
+                proof = f"by\n    rw [obs_jr_pc hobs{k}, {pc_rw}]"
+            else:
+                proof = f"obs_jr_pc hobs{k}"
             self.lines.append(
-                f"  have hpc{k} : σ{k}.regs.get? Register.PC = some {pc_val} "
-                f":= by\n    rw [obs_jr_pc hobs{k}, {pc_rw}]")
+                f"  have hpc{k} : σ{k}.regs.get? Register.PC = some {pc_val} := {proof}")
             end_pc = pc_val
         else:
             raise SpecError(f"unknown class {cls}")

@@ -274,6 +274,8 @@ class DraftBuilder:
             st["call"] = (f"$vmi {vals}$hG $hpc $hmi {hyps}$hmem rfl "
                           f"{side} $hi")
         elif c in ("branch_taken", "branch_nottaken"):
+            variant = '_taken' if c == 'branch_taken' else '_nottaken'
+            st['site'] = f"site_{ins.addr:08x}{variant}{self.suffix}"
             imm = int(o[3], 16)
             if c == "branch_taken":
                 st["imm"] = f"0x{imm:04x}#13"

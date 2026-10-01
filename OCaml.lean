@@ -54,3 +54,5 @@ import OCaml.Vm.Primitives.Constants
 import OCaml.Vm.Primitives.RuntimeFrame
 
 import OCaml.Vm.Primitives.CamlIntCompare
+import OCaml.Vm.Sim.DispatchSegment
+import OCaml.Vm.Sim.DispatchPins

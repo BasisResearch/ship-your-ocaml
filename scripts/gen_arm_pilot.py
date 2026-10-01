@@ -20,6 +20,8 @@ sys.path.insert(0, str(ROOT / 'scripts/syi'))
 from disasm_to_sites import classify
 from disasm_to_segment import Instr, DraftBuilder, TOTAL_LOAD_BYTES
 from gen_segment import SegmentEmitter
+from gen_sites import BRANCH_OPS
+from disasm_to_sites import sext
 
 spec = importlib.util.spec_from_file_location('code_lemmas', ROOT / 'experiments/syi/gen_code_lemmas.py')
 code = importlib.util.module_from_spec(spec)
@@ -27,6 +29,7 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'DISPATCH': ('Dispatch', ['lw_tot', 'alu_addi', 'branch_taken', 'slli', 'alu_add', 'lw_tot', 'alu_add', 'jr']),
     'ACC': ('Acc', ['lw_tot', 'alu_addi', 'slli', 'alu_add', 'ld_tot', 'j']),
     'ACC0': ('Acc0', ['ld_tot', 'alu_addi', 'j']),
     'CONST0': ('Const0', ['alu_addi', 'alu_addi', 'j']),
@@ -64,12 +67,30 @@ def outputs(family='CONST0'):
     stem, shape = FAMILIES[family]
     lower = family.lower()
     text_base = sections((ROOT / 'c/ocamlrun-riscv-htif.elf').read_bytes())['.text'][0]
-    arm = json.loads((ROOT / 'results/census.json').read_text())['caml_interprete']['arms'][family]
-    start = int(arm['addr'], 16)
-    stop = start + 4 * arm['own']
-    insts = [i for i in disasm(ROOT / 'c/ocamlrun-riscv-htif.elf')['caml_interprete']['insts']
-             if start <= i[0] < stop]
-    rows = [row for a, w, m, ops in insts for row in classify(a, w, m + ' ' + ops, {})]
+    census = json.loads((ROOT / 'results/census.json').read_text())['caml_interprete']
+    instructions = disasm(ROOT / 'c/ocamlrun-riscv-htif.elf')['caml_interprete']['insts']
+    if family == 'DISPATCH':
+        start = int(census['loop_head'], 16)
+        by_pc = {i[0]: i for i in instructions}
+        pc, insts, rows = start, [], []
+        # Select the in-range branch path. The generated theorem carries its guard.
+        for _ in range(16):
+            ins = by_pc[pc]
+            choices = classify(ins[0], ins[1], ins[2] + ' ' + ins[3], {})
+            row = next((r for r in choices if r.cls == 'branch_taken'), choices[0])
+            insts.append(ins)
+            rows.append(row)
+            if row.cls == 'jr':
+                break
+            pc = pc + sext(int(row.ops[3], 16), 13) if row.cls == 'branch_taken' else pc + 4
+        else:
+            raise ValueError('dispatch path did not terminate at an indirect jump')
+    else:
+        arm = census['arms'][family]
+        start = int(arm['addr'], 16)
+        stop = start + 4 * arm['own']
+        insts = [i for i in instructions if start <= i[0] < stop]
+        rows = [row for a, w, m, ops in insts for row in classify(a, w, m + ' ' + ops, {})]
     for row in rows:
         if row.cls in ('ld', 'lw', 'lbu'):
             row.cls += '_tot'
@@ -91,6 +112,8 @@ def outputs(family='CONST0'):
         draft.pop(k)
     values = {}
     for index, step in enumerate(draft['steps']):
+        cls, ops = instrs[index].cls, instrs[index].ops
+        value = lambda reg: values.get('x' + reg, 'v' + reg) if int(reg) else '(0#64)'
         if step['class'] == 'alu':
             step['rd_val'] = re.sub(r'\bv(\d+)\b', lambda m: values.get('x' + m[1], m[0]), step['raw_val'])
             previous_values = dict(values)
@@ -110,6 +133,20 @@ def outputs(family='CONST0'):
                 step['rd_val'] = step['rd_val'].replace('σ.mem', 'm0')
                 values[step['rd']] = step['rd_val']
                 step['rw'] = 'hmemeq' if index == 0 else f'hmemE{index}'
+        elif cls in ('branch_taken', 'branch_nottaken'):
+            guard = BRANCH_OPS[ops[0]][1].format(v1=value(ops[1]), v2=value(ops[2]))
+            truth = 'true' if cls == 'branch_taken' else 'false'
+            tag = step['addr'][2:]
+            draft['params'].append(f'(hguard_{tag} : {guard} = {truth})')
+            step['pre_lines'] = []
+            step['call'] = step['call'].replace('hguard$k', f'hguard_{tag}')
+        elif cls == 'jr':
+            target = f'(BitVec.update ({value(ops[0])} + sign_extend (m := 64) (0x000#12)) 0 0#1)'
+            tag = step['addr'][2:]
+            draft['params'].append(f'(htgt_{tag} : {target}.toNat % 4 = 0)')
+            step['call'] = step['call'].replace('TODO(htgt)', f'htgt_{tag}')
+            step['pc_val'] = target
+            step.pop('pc_rw')
     spec_text = json.dumps(draft, indent=2, ensure_ascii=False) + '\n'
     if 'TODO' in spec_text:
         raise ValueError('unfilled pilot residue')
