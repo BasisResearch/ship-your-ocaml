@@ -388,6 +388,12 @@ def atCode (E : Eqv) : Eqv :=
    fun μ pl _ _ c c' => E.Img μ pl pl.codeBase pl.codeBase c c',
    fun μ pl _ _ c c' h hi => E.transport μ pl pl.codeBase pl.codeBase c c' h hi⟩
 
+/-- The atom-table allocation is static across heap relocation. -/
+def atAtoms (E : Eqv) : Eqv :=
+  ⟨fun pl _ c => E.P pl pl.atomBase c,
+   fun μ pl _ _ c c' => E.Img μ pl pl.atomBase pl.atomBase c c',
+   fun μ pl _ _ c c' h hi => E.transport μ pl pl.atomBase pl.atomBase c c' h hi⟩
+
 /-- An optional value observation, shared by all value registers. -/
 def valRead (v : Val) (read : Config → Option (BitVec 64)) : Eqv :=
   ⟨fun pl _ c => ∃ w, read c = some w ∧ valWord pl v = some w,
@@ -423,6 +429,11 @@ def codeBaseEqv : Eqv :=
   Eqv.atCode <| Eqv.ex fun base =>
     Eqv.and (Eqv.pure (· = base))
       (Eqv.rawW (fun _ => Layout.sym_caml_start_code) (·.toNat = base))
+
+def atomBaseEqv : Eqv :=
+  Eqv.atAtoms <| Eqv.ex fun base =>
+    Eqv.and (Eqv.pure (· = base))
+      (Eqv.rawW (fun _ => Layout.sym_caml_atom_table) (·.toNat = base))
 
 def codeEqv (P : Prog) : Eqv :=
   Eqv.atCode <| Eqv.all fun i => Eqv.all fun w => Eqv.guard (P.code[i]? = some w) <|
@@ -460,6 +471,7 @@ structure VmImage (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
   heap : (heapEqv cp P s).Img μ pl 0 0 c c'
   world : (worldEqv cp s.world).Img μ pl 0 0 c c'
   primitives : (primitiveBindingsEqv P).Img μ pl 0 0 c c'
+  atomBase : atomBaseEqv.Img μ pl 0 0 c c'
 
 /-- All loop-head fields transport via Eqv, including code, registers,
 trap-stack metadata, channels, and console output. -/
@@ -470,7 +482,7 @@ theorem vmReprAt_reloc {P s c c' pl cp sp high μ}
   have basePre : codeBaseEqv.P pl 0 c := ⟨pl.codeBase, rfl, h.codeBase⟩
   obtain ⟨base, hb, hp⟩ := (pcEqv s.pc).transport μ pl 0 0 c c' pcPre hi.pc
   obtain ⟨base', hb', hp'⟩ := codeBaseEqv.transport μ pl 0 0 c c' basePre hi.codeBase
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact (Eqv.observe pcOf (· = some (BitVec.ofNat 64 Layout.loopHead))).transport μ pl 0 0 c c' h.atHead hi.atHead
   · change (reloc μ pl).codeBase = base at hb
     change gpr c' Layout.reg_pc = some (BitVec.ofNat 64 (base + 4 * s.pc)) at hp
@@ -491,5 +503,10 @@ theorem vmReprAt_reloc {P s c c' pl cp sp high μ}
       (heapEqv cp P s).transport μ pl 0 0 c c' ((heapRepr_iff _ _ _ _ _).1 h.heap) hi.heap
   · exact (worldEqv cp s.world).transport μ pl 0 0 c c' h.world hi.world
   · exact ⟨(primitiveBindingsEqv P).transport μ pl 0 0 c c' h.primitives.targets hi.primitives⟩
+  · have pre : atomBaseEqv.P pl 0 c := ⟨pl.atomBase, rfl, h.atomBase⟩
+    obtain ⟨base, hb, hp⟩ := atomBaseEqv.transport μ pl 0 0 c c' pre hi.atomBase
+    change (reloc μ pl).atomBase = base at hb
+    change (word c' Layout.sym_caml_atom_table).toNat = base at hp
+    rw [hb]; exact hp
 
 end OCaml.Vm.Reloc

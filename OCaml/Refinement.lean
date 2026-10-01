@@ -79,6 +79,7 @@ structure LoadedAt (L : Layout) (P : Prog) (c : Config) (pl : Place) (cp : ChanP
   world : WorldRepr c cp P.init.world
   platform : PlatformOk L.runtimeOk c
   primitives : PrimitiveBindings P c
+  atomBase : (word c Layout.sym_caml_atom_table).toNat = pl.atomBase
 
 def Loaded (L : Layout) (P : Prog) (c : Config) : Prop :=
   ∃ (pl : Place) (cp : ChanPlace) (high : Nat), LoadedAt L P c pl cp high

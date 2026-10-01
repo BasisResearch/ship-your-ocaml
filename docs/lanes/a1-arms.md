@@ -1,5 +1,35 @@
 # Lane a1-arms
 
+## Atom-table representation repair
+
+The pinned ATOM0/ATOM bodies load the pointer stored at `caml_atom_table`.
+The old `valWord (.atom t)` instead added the tag offset to the address of
+that global variable. The checked whileMin store log has global address
+`0x800649a0` and table pointer `0x8038c000`. `captured_atom_not_legacy`
+(`Sim/AtomObstruction.lean`) proves the native ATOM0 result word differs
+from the legacy value, under the existing certified memory projection.
+This is a word-level witness, not a claimed whole-program execution.
+
+`Place.atomBase` now names the allocated static table. `LoadedAt`,
+`VmReprAt` and `VmPayload` bind it to the total runtime word at
+`Layout.sym_caml_atom_table`. `atom_word_of_binding` connects this field to
+native atom-pointer arithmetic. `gen_boot_heap.py` derives the base and its
+read certificate from the captured store log; the existing boot `loaded`
+assembly consumes the certificate. `OcamlrunRefinement` is unchanged
+(byte-compared), and no semantic rule is changed.
+
+The base stays fixed under heap relocation. `Eqv.atAtoms` / `atomBaseEqv`
+add only a fixed global-word image to `VmImage`; `vmReprAt_reloc` transports
+it. Read-only framing preserves the binding, and write-log framing adds
+`PayloadOutside.atomBase` for a1-prims' mutating summaries. `EvenPlace.atoms`
+states the atom-table alignment needed by ISINT and Boolean tests, replacing
+the accidental proof that the pointer-global address was even.
+
+Targeted core/relocation/frame checks and the boot Loaded assembly pass
+under 24 GiB at default limits. ATOM arms will follow this contract repair.
+Immediate-comparison branches landed as `47d9f5c` with the full gate passing;
+47 represented opcode bridges remain conditional, and full `ArmSim` is open.
+
 ## OFFSETINT width correction needed in a2-sem
 
 The pinned OFFSETINT body uses `slliw` at `0x8000324c`: the operand is

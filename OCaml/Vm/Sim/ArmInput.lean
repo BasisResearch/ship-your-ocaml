@@ -20,7 +20,7 @@ memory payload. Register restoration is a separate machine obligation. -/
 theorem payload_pc {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp high : Nat} (h : VmPayload P s c pl cp sp high) (pc : Nat) :
     VmPayload P {s with pc := pc} c pl cp sp high :=
-  ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, h.world⟩
+  ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, h.world, h.atomBase⟩
 
 theorem ArmInput.running {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
     {c : Config} {pl : Place} {cp : ChanPlace} {sp high : Nat}

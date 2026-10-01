@@ -42,7 +42,7 @@ C3-relocation	2026-09-30T05:53:26Z	13	OCaml/Vm/Reloc.lean	objAt_reloc
 C3-relocation	2026-09-30T05:53:26Z	6	OCaml/Vm/Reloc.lean	stackRepr_reloc
 C3-relocation	2026-09-30T05:53:26Z	15	OCaml/Vm/Reloc.lean	heapRepr_reloc
 C3-relocation	2026-09-30T05:53:26Z	5	OCaml/Vm/Reloc.lean	globals_reloc
-C3-relocation	2026-10-01T17:53:49Z	28	OCaml/Vm/Reloc.lean	vmReprAt_reloc
+C3-relocation	2026-10-01T17:53:49Z	33	OCaml/Vm/Reloc.lean	vmReprAt_reloc
 C3-relocation	2026-10-01T18:14:18Z	10	OCaml/Vm/Gc/Invariant.lean	LoopHead.reloc
 C4-bytecode-specs	2026-09-30T05:53:26Z	8	OCaml/Programs/CountLoop.lean	loopN_body
 C4-bytecode-specs	2026-09-30T05:53:26Z	7	OCaml/Programs/CountLoop.lean	loopN_exit

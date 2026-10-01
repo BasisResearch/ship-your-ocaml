@@ -28,6 +28,7 @@ classify represented pointers and bytecode addresses as non-integers. -/
 structure EvenPlace (pl : Place) : Prop where
   code : pl.codeBase % 2 = 0
   heap : ∀ l a, pl.φ l = some a → a % 2 = 0
+  atoms : pl.atomBase % 2 = 0
 
 theorem valWord_parity {pl : Place} (aligned : EvenPlace pl) {v : Val} {w : BitVec 64}
     (repr : valWord pl v = some w) (notRaw : ∀ x, v ≠ .raw x) :
@@ -53,8 +54,8 @@ theorem valWord_parity {pl : Place} (aligned : EvenPlace pl) {v : Val} {w : BitV
     omega
   | atom tag =>
     cases repr
-    have he : Layout.sym_caml_atom_table % 2 = 0 := by decide
-    change ((Layout.sym_caml_atom_table + 8 * tag + 8) % 2^64) % 2 = 0
+    have he := aligned.atoms
+    change ((pl.atomBase + 8 * tag + 8) % 2^64) % 2 = 0
     omega
   | raw x => exact (notRaw x rfl).elim
 
@@ -101,7 +102,7 @@ checked alias explains the explicit alignment premise in the ISINT bridge. -/
 theorem isint_not_valWord : ¬ (∀ (pl : Place) (v : Val) (w : BitVec 64),
     valWord pl v = some w → isintWord w = tag64 (if v.isInt then 1#63 else 0#63)) := by
   intro h
-  have bad := h ⟨fun _ => some 1, 0⟩ (.ptr 0 0) 1#64 rfl
+  have bad := h ⟨fun _ => some 1, 0, 0⟩ (.ptr 0 0) 1#64 rfl
   exact (by decide : isintWord 1#64 ≠ tag64 0#63) bad
 
 end OCaml.Vm.Sim

@@ -54,7 +54,7 @@ theorem object_copied {c c' : Config} {pl : Place} {cp : ChanPlace} {a : Nat} {o
 theorem channel_copied {c c' : Config} {a : Nat} {ch : Chan}
     (h : ChanAt c a ch)
     (copied : Reloc.Copied c c' a a (chanOffBuff + ch.buffer.length)) : ChanAt c' a ch := by
-  let pl : Place := ⟨fun _ => none, 0⟩
+  let pl : Place := ⟨fun _ => none, 0, 0⟩
   have img : (Reloc.chanEqv a ch).Img id pl 0 0 c c' := by
     refine ⟨?_, ?_, ?_, ?_, ?_⟩
     · exact Reloc.bytesT_congr (copied.mono chanOffFd 4 (by simp only [chanOffFd, chanOffBuff]; omega))
@@ -80,6 +80,7 @@ structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
   stackHigh : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high) 8
   trapsp : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_trapsp) 8
   codeBase : OutLRange log Layout.sym_caml_start_code 8
+  atomBase : OutLRange log Layout.sym_caml_atom_table 8
   globals : OutLRange log Layout.sym_caml_global_data 8
   code : ∀ i w, P.code[i]? = some w → OutLRange log (pl.codeBase + 4 * i) 4
   stack : ∀ i v, s.stack[i]? = some v → OutLRange log (sp + 8 * i) 8
@@ -125,11 +126,13 @@ theorem VmPayload.frame_log {P s c c' pl cp sp high log}
     · intro id ch hc
       obtain ⟨a, ha, layout⟩ := h.world.2 id ch hc
       exact ⟨a, ha, channel_copied layout (copy _ _ (outside.channels id ch a hc ha))⟩
+  · rw [hw _ outside.atomBase]
+    exact h.atomBase
 
 /-- The object-ID counter does not change roots, channels or console state. -/
 theorem VmPayload.ooId {P s c pl cp sp high} (h : VmPayload P s c pl cp sp high) (n : Nat) :
     VmPayload P {s with world := {s.world with ooId := n}} c pl cp sp high :=
-  ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, h.world⟩
+  ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, h.world, h.atomBase⟩
 
 /-- The primitive-table pointer and all referenced entries are outside a write
 log. The caller supplies this from its table allocation and write separation. -/

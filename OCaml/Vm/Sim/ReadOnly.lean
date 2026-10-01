@@ -28,7 +28,7 @@ theorem readOnly_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Confi
   refine ⟨⟨pl, cp, sp, high, ?_⟩, ?_, loop⟩
   · exact ⟨regs.head, regs.pc, regs.spReg, regs.accu, regs.env, regs.extra,
       data.stackHigh, data.trapsp, data.codeBase, data.code,
-      data.globals, data.stack, data.heap, data.world, primitives.frame memory⟩
+      data.globals, data.stack, data.heap, data.world, primitives.frame memory, data.atomBase⟩
   · exact ⟨good,
       ⟨fun i hi => by rw [memory]; exact platform.image.text i hi,
        fun i hi => by rw [memory]; exact platform.image.rodata i hi⟩,

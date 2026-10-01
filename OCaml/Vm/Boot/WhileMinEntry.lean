@@ -40,6 +40,7 @@ theorem loaded {c : Config} {initial : Vsa.MemRepr.Mem}
     world := ?_
     platform := ⟨entry.control, entry.image, WhileMinRuntime.runtimeOk memory⟩
     primitives := entry.primitives
+    atomBase := congrArg BitVec.toNat (WhileMinHeap.read_atom_table memory)
   }⟩
   · rw [dom]; exact congrArg BitVec.toNat (read_stack_high memory)
   · rw [dom]; exact congrArg BitVec.toNat (read_extern_sp memory)

@@ -653,6 +653,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 -- Shared control restoration and both guarded conditional paths.
 #print axioms OCaml.Vm.Sim.control_arm
 
+-- Runtime atom-table binding and the retained legacy word obstruction.
+#print axioms OCaml.Vm.Boot.WhileMinHeap.read_atom_table
+#print axioms OCaml.Vm.Sim.atom_word_of_binding
+#print axioms OCaml.Vm.Sim.captured_atom_not_legacy
+
 -- Shared read-only payload restoration and stack-consuming integer arms.
 #print axioms OCaml.Vm.Sim.readOnly_restore
 #print axioms OCaml.Vm.Sim.stack_drop

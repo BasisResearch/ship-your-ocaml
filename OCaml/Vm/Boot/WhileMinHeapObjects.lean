@@ -9,8 +9,14 @@ open OCaml.Bytecode OCaml.Programs
 open Vsa.Machine Vsa.Sim Vsa.Sim.Boot WhileMinLog
 
 def addresses : List Nat := [0x8037af88, 0x8037af70, 0x8037ad08, 0x8037af58, 0x8037ad20, 0x8037af40, 0x8037ad38, 0x8037af28, 0x8037ad48, 0x8037af10, 0x8037ad68, 0x8037aef8, 0x8037ad80, 0x8037aee0, 0x8037ada0, 0x8037aec8, 0x8037adb8, 0x8037aeb0, 0x8037add0, 0x8037ae98, 0x8037ade8, 0x8037ae80, 0x8037ae00, 0x8037ae68, 0x8037ae18, 0x8037ae58, 0x8037ae40, 0x80281ce8, 0x80281cf8]
-def place : Place := ⟨fun l => addresses[l]?, 0x8038d7f0⟩
+def place : Place := ⟨fun l => addresses[l]?, 0x8038d7f0, 0x8038c000⟩
 variable {c : Config} {initial : Vsa.MemRepr.Mem} {cp : ChanPlace}
+
+theorem read_atom_table (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_atom_table) = 0x8038c000#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_atom_table) (w := 8) (by decide +kernel)]
+  decide +kernel
 
 def obj0 : Obj := (.block 0 [(.ptr 1 0), (.ptr 3 0), (.ptr 5 0), (.ptr 7 0), (.ptr 9 0), (.ptr 11 0), (.ptr 13 0), (.ptr 15 0), (.ptr 17 0), (.ptr 19 0), (.ptr 21 0), (.ptr 23 0), (.ptr 25 0), (.ptr 26 0), (.int 0#63)])
 theorem read_header0 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :

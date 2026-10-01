@@ -63,8 +63,9 @@ out=['import OCaml.Vm.Boot.WhileMinLogChecks','import Vsa.Sim.Boot.Bytes',
      'namespace OCaml.Vm.Boot.WhileMinHeap','open OCaml.Bytecode OCaml.Programs',
      'open Vsa.Machine Vsa.Sim Vsa.Sim.Boot WhileMinLog','',
      'def addresses : List Nat := ['+', '.join(hex(placements[i]) for i in range(len(objects)))+']',
-     f'def place : Place := ⟨fun l => addresses[l]?, {read(layout["sym_caml_start_code"]):#x}⟩',
+     f'def place : Place := ⟨fun l => addresses[l]?, {read(layout["sym_caml_start_code"]):#x}, {read(layout["sym_caml_atom_table"]):#x}⟩',
      'variable {c : Config} {initial : Vsa.MemRepr.Mem} {cp : ChanPlace}', '']
+emit_read(out, "atom_table", "Layout.sym_caml_atom_table", read(layout["sym_caml_atom_table"]))
 for i,(kind,tag,contents,lean) in enumerate(objects):
     a=placements[i]
     out.append(f'def obj{i} : Obj := {lean}')

@@ -92,13 +92,15 @@ structure Place where
   φ : Nat → Option Nat
   /-- `caml_start_code` -/
   codeBase : Nat
+  /-- Address stored in caml_atom_table; the allocated static table does not move. -/
+  atomBase : Nat
 
 /-- The machine word of a value under a placement. -/
 def valWord (pl : Place) : Val → Option (BitVec 64)
   | .int n => some (tag64 n)
   | .ptr l k => (pl.φ l).map fun a => BitVec.ofNat 64 (a + 8 * k)
   | .code pc => some (BitVec.ofNat 64 (pl.codeBase + 4 * pc))
-  | .atom t => some (BitVec.ofNat 64 (Layout.sym_caml_atom_table + 8 * t + 8))
+  | .atom t => some (BitVec.ofNat 64 (pl.atomBase + 8 * t + 8))
   | .raw w => some w
 
 /-- A header word describes `wosize` and `tag` (the two color bits are the
@@ -235,6 +237,8 @@ structure VmReprAt (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace
   heap : HeapRepr c pl cp P s
   world : WorldRepr c cp s.world
   primitives : PrimitiveBindings P c
+  /-- Bind atom values to the runtime table pointer, not its global variable address. -/
+  atomBase : (word c Layout.sym_caml_atom_table).toNat = pl.atomBase
 
 /-- **`VmRepr P s c`**: the machine is at `caml_interprete`'s loop head in the
 state `s` of program `P`, under SOME placement (a collection may change it). -/
