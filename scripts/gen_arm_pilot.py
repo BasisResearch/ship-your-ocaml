@@ -39,6 +39,7 @@ FAMILIES = {
     'ACC5': ('Acc5', ['ld_tot', 'alu_addi', 'j']),
     'ACC6': ('Acc6', ['ld_tot', 'alu_addi', 'j']),
     'ACC7': ('Acc7', ['ld_tot', 'alu_addi', 'j']),
+    'OFFSETINT': ('Offsetint', ['lw_tot', 'alu_addi', 'slliw', 'alu_add', 'j']),
     'CONSTINT': ('Constint', ['lw_tot', 'alu_addi', 'slli', 'alu_addi', 'j']),
     'CONST0': ('Const0', ['alu_addi', 'alu_addi', 'j']),
     'CONST1': ('Const1', ['alu_addi', 'alu_addi', 'j']),

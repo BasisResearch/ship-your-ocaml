@@ -1,5 +1,33 @@
 # Lane a1-arms
 
+## OFFSETINT width correction needed in a2-sem
+
+The pinned OFFSETINT body uses `slliw` at `0x8000324c`: the operand is
+shifted in 32 bits and then sign-extended to 64. `stepI` currently shifts
+`BitVec.ofInt 64 n` in 64 bits. For operand `0x40000000` and accumulator 64,
+these produce different represented integers. `offsetint_width_obstruction`
+(`OCaml/Vm/Sim/OffsetWidth.lean`) kernel-checks that difference using the
+exact Sail operand expression from the generated `tr_offsetint` postcondition.
+The five-step machine body and ELF-image projection are proved. This is a
+word-level obstruction, not a complete `Loaded`/Sail whole-program result.
+
+Reproduce: `python3 scripts/probe_offset_width.py --expect-model 1`.
+It compiles a Stdlib-free OCaml 4.14.4 program testing `size () + 1 > 0`,
+then changes only OFFSETINT's operand to `2^30`. Baseline host/runbc exit 1;
+patched host exits 2 while runbc exits 1. The script reads opcode numbers
+from `gen_opcodes.opcodes`, and supports `--expect-model 2` to validate the
+repair. No assumption excluding the operand was added to the headline.
+
+A2-sem must match the pinned 32-bit shift for OFFSETINT. OFFSETREF has the
+same 64-bit expression in `stepI` and `slliw` at `0x80003230`, so needs the
+same width correction; its complete store arm is not proved here. The
+arithmetic obstruction is independent of `stepI`, allowing it to remain as
+regression documentation after the fix. Other arm families remain unblocked.
+
+Default-limit 24 GiB checks: OFFSETINT body/pins 5.56s (segment 2.1s),
+arithmetic witness 3.60s (module 2.3s), peak process RSS below 2 GiB.
+CONSTINT landed as `9786220` with the full gate passing.
+
 ## Primitive binding repair
 
 The obstruction landed as `2bb35a3`. `primitive_binding_obstruction` now

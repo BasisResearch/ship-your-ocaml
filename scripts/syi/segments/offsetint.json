@@ -1,0 +1,91 @@
+{
+  "theorem": "tr_offsetint",
+  "doc": "OFFSETINT arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.OffsetintSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v8 v21 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80003244 : 0x80000000 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
+    "(hhi_80003244 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ 0x100000000)",
+    "(hhtif_80003244 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlOffsetintLoaded",
+  "pins": [
+    {
+      "reg": "x8",
+      "val": "v8",
+      "hyp": "hv8"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80003244",
+      "site": "site_80003244_offsetint",
+      "class": "alu",
+      "asm": "lw a5,4(s0)",
+      "rd": "x15",
+      "rd_val": "(sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT4 σ.mem (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4)))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl hlo_80003244 hhi_80003244 hhtif_80003244 $hi",
+      "rw": "hmemeq"
+    },
+    {
+      "addr": "0x80003248",
+      "site": "site_80003248_offsetint",
+      "class": "alu",
+      "asm": "addi s0,s0,8",
+      "rd": "x8",
+      "rd_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000324c",
+      "site": "site_8000324c_offsetint",
+      "class": "alu",
+      "asm": "slliw a5,a5,0x1",
+      "rd": "x15",
+      "rd_val": "(sign_extend (m := 64) (shift_bits_left (Sail.BitVec.extractLsb (sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4))) 31 0) (0x01#5)))",
+      "raw_val": "(sign_extend (m := 64) (shift_bits_left (Sail.BitVec.extractLsb v15 31 0) (0x01#5)))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003250",
+      "site": "site_80003250_offsetint",
+      "class": "alu",
+      "asm": "add s5,s5,a5",
+      "rd": "x21",
+      "rd_val": "(v21 + (sign_extend (m := 64) (shift_bits_left (Sail.BitVec.extractLsb (sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4))) 31 0) (0x01#5))))",
+      "raw_val": "(v21 + v15)",
+      "call": "$vmi $v:x21 $v:x15 $hG $hpc $hmi $pin:x21 $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003254",
+      "site": "site_80003254_offsetint",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1fed08#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80003244",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}
