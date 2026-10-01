@@ -684,6 +684,25 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.stack_drop
 #print axioms OCaml.Vm.Sim.live_stack_drop
 #print axioms OCaml.Vm.Sim.payload_stack_drop
+-- Closure offsets preserve allocation identity, including signed displacements.
+#print axioms OCaml.Vm.Sim.pointer_offset_word
+#print axioms OCaml.Vm.Sim.signed_index_word
+#print axioms OCaml.Vm.Sim.ClosureOffset.root
+#print axioms OCaml.Vm.Sim.ClosureOffset.sourceWord
+#print axioms OCaml.Vm.Sim.ClosureOffset.resultWord
+#print axioms OCaml.Vm.Sim.offsetclosurem3_loaded
+#print axioms Vsa.Sim.tr_offsetclosurem3
+#print axioms OCaml.Vm.Sim.offsetclosurem3_arm
+#print axioms OCaml.Vm.Sim.offsetclosure0_loaded
+#print axioms Vsa.Sim.tr_offsetclosure0
+#print axioms OCaml.Vm.Sim.offsetclosure0_arm
+#print axioms OCaml.Vm.Sim.offsetclosure3_loaded
+#print axioms Vsa.Sim.tr_offsetclosure3
+#print axioms OCaml.Vm.Sim.offsetclosure3_arm
+#print axioms OCaml.Vm.Sim.offsetclosure_loaded
+#print axioms Vsa.Sim.tr_offsetclosure
+#print axioms OCaml.Vm.Sim.offsetclosure_arm
+
 #print axioms OCaml.Vm.Sim.stack_integer_word
 #print axioms OCaml.Vm.Sim.value_byte_index
 #print axioms OCaml.Vm.Sim.byte_tag

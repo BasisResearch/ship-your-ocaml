@@ -101,6 +101,10 @@ import OCaml.Vm.Sim.Pop
 import OCaml.Vm.Sim.Getvectitem
 import OCaml.Vm.Sim.Getbyteschar
 import OCaml.Vm.Sim.Getstringchar
+import OCaml.Vm.Sim.Offsetclosurem3
+import OCaml.Vm.Sim.Offsetclosure0
+import OCaml.Vm.Sim.Offsetclosure3
+import OCaml.Vm.Sim.Offsetclosure
 import OCaml.Vm.Sim.Envacc
 import OCaml.Vm.Sim.Getfield
 import OCaml.Vm.Sim.OffsetWidth

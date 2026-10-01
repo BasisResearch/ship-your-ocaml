@@ -1,0 +1,67 @@
+{
+  "theorem": "tr_offsetclosure3",
+  "doc": "OFFSETCLOSURE3 arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.Offsetclosure3Sites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v23 v25 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlOffsetclosure3Loaded",
+  "pins": [
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    },
+    {
+      "reg": "x25",
+      "val": "v25",
+      "hyp": "hv25"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80002064",
+      "site": "site_80002064_offsetclosure3",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002068",
+      "site": "site_80002068_offsetclosure3",
+      "class": "alu",
+      "asm": "addi s5,s9,24",
+      "rd": "x21",
+      "rd_val": "(v25 + sign_extend (m := 64) (0x018#12))",
+      "raw_val": "(v25 + sign_extend (m := 64) (0x018#12))",
+      "call": "$vmi $v:x25 $hG $hpc $hmi $pin:x25 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000206c",
+      "site": "site_8000206c_offsetclosure3",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1ffef0#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80002064",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}
