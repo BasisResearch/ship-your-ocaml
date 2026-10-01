@@ -36,4 +36,18 @@ theorem brOp_accu {s s' : St} {imm ofs : Int} {f : BitVec 64 → BitVec 64 → B
   cases ha : s.accu <;> simp [brOp, ha] at step
   exact ⟨_, rfl⟩
 
+/-- A pointer in architectural RAM can pass the native BEQ integer guard.
+The current abstract non-integer branch instead treats it as unequal. This
+is a word-level witness, not a complete Loaded/run counterexample. -/
+theorem beq_pointer_guard_obstruction :
+    ((sign_extend (m := 64) (0x40000000#32)) ==
+      shift_bits_right_arith (0x80000000#64) (Sail.BitVec.extractLsb (0x01#6) 5 0)) = true ∧
+    physEq? (.int (BitVec.ofInt 63 1073741824)) (.ptr 0 0) = some false := by
+  decide +kernel
+
+/-- The semantic side of the retained pointer guard discrepancy. -/
+theorem beq_pointer_falls_through (P : Prog) (s : St) (l k : Nat) :
+    stepI P {s with accu := .ptr l k} ⟨.BEQ, [1073741824, 2]⟩ =
+      .next {s with accu := .ptr l k, pc := s.pc + 3} := rfl
+
 end OCaml.Vm.Sim

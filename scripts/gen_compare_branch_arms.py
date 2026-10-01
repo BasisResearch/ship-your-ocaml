@@ -14,7 +14,8 @@ def comparison_value(semantic):
 def outputs():
     arms = json.loads((ROOT / 'results/census.json').read_text())['caml_interprete']['arms']
     result = {}
-    for cmpop, (semantic, guard_lemma) in COMPARISONS.items():
+    comparisons = dict(COMPARISONS, EQ=('a == b', 'native_eq'), NEQ=('a != b', 'native_neq'))
+    for cmpop, (semantic, guard_lemma) in comparisons.items():
         op = 'B' + cmpop
         stem_base = op.title()
         comparison = comparison_value(semantic)
@@ -47,9 +48,17 @@ def outputs():
 '''
             # Native branch always selects the non-jumping semantic result.
             guard_fn = {'native_sge': 'zopz0zKzJ_s', 'native_slt': 'zopz0zI_s',
-                        'native_uge': 'zopz0zKzJ_u', 'native_ult': 'zopz0zI_u'}[guard_lemma]
+                        'native_uge': 'zopz0zKzJ_u', 'native_ult': 'zopz0zI_u',
+                        'native_eq': '', 'native_neq': ''}[guard_lemma]
             reversed_args = cmpop in ('LEINT', 'GTINT')
             args = '(longVal n) (BitVec.ofInt 64 imm.toInt)' if reversed_args else '(BitVec.ofInt 64 imm.toInt) (longVal n)'
+            guard = f'''  have guard : {guard_fn} {args} = {str(not jumping).lower()} := by
+    simp only [{guard_lemma}, test, Bool.not_{str(jumping).lower()}]'''
+            if cmpop in ('EQ', 'NEQ'):
+                taken = jumping if cmpop == 'EQ' else not jumping
+                proof = 'exact test' if cmpop == 'EQ' else 'simpa only [bne, Bool.not_not, Bool.not_true, Bool.not_false] using congrArg Bool.not test'
+                guard = f'''  have guard : ((BitVec.ofInt 64 imm.toInt) == longVal n) = {str(taken).lower()} := by
+    {proof}'''
             result[ROOT / f'OCaml/Vm/Sim/{stem}.lean'] = f'''import OCaml.Vm.Sim.BranchCompare
 import OCaml.Vm.Sim.{stem}Segment
 import OCaml.Vm.Sim.{stem}Pins
@@ -77,8 +86,7 @@ theorem {lower}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}
   subst w
   have read : bytesT4 d.σ.mem (pl.codeBase + 4 * (s.pc + 1)) = imm :=
     operand.read32 h.code dp.memory
-{extra_reads}  have guard : {guard_fn} {args} = {str(not jumping).lower()} := by
-    simp only [{guard_lemma}, test, Bool.not_{str(jumping).lower()}]
+{extra_reads}{guard}
   have bp : SegSt ({entry}#64)
       [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩, ⟨Register.x21, tag64 n⟩]
       (fun σ => Vsa.Sim.Code.Caml{stem}Loaded σ.mem ∧ σ.mem = d.σ.mem ∧ σ = d.σ) d :=
@@ -98,6 +106,13 @@ theorem {lower}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}
 
 end OCaml.Vm.Sim
 '''
+        integer_input = '    (integer : s.accu.isInt = true)\n' if cmpop in ('EQ', 'NEQ') else ''
+        step_proof = 'step'
+        if cmpop in ('EQ', 'NEQ'):
+            step_proof = '''by
+    obtain ⟨value, accu⟩ : ∃ value, s.accu = .int value := by
+      cases ha : s.accu <;> simp_all [Val.isInt]
+    simpa [stepI, accu] using step'''
         result[ROOT / f'OCaml/Vm/Sim/{stem_base}.lean'] = f'''import OCaml.Vm.Sim.{stem_base}Jump
 import OCaml.Vm.Sim.{stem_base}Next
 
@@ -112,11 +127,11 @@ theorem {op.lower()}_step_arm {{L : OCaml.Layout}} {{P : Prog}} {{s s' : St}} {{
     {{pl : Place}} {{cp : ChanPlace}} {{sp high : Nat}} {{imm ofs : BitVec 32}}
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s .{op} c pl cp sp high)
-    (operand : OperandAt P pl (s.pc + 1) imm)
+{integer_input}    (operand : OperandAt P pl (s.pc + 1) imm)
     (offset : OperandAt P pl (s.pc + 2) ofs)
     (step : stepI P s ⟨.{op}, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', Plus c c' ∧ Running L P s' c' := by
-  have step' : brOp s imm.toInt ofs.toInt (fun a b => {semantic}) = .next s' := step
+  have step' : brOp s imm.toInt ofs.toInt (fun a b => {semantic}) = .next s' := {step_proof}
   obtain ⟨n, accu⟩ := brOp_accu step'
   cases test : ({comparison}) with
   | false =>

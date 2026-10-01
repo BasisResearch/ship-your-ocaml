@@ -1,5 +1,29 @@
 # Lane a1-arms
 
+## Integer equality branches and pointer guard gap
+
+`beq_step_arm` and `bneq_step_arm` consume successful `stepI` results
+with an explicit integer-accumulator premise. Both paths use the existing
+comparison-branch generator, `longVal_native`, control restoration and
+relative-code arithmetic. BEQ takes the native equality branch on a semantic
+jump; BNEQ takes it on semantic fallthrough. No new guard assumption is used.
+
+`BranchCompare.beq_pointer_guard_obstruction` (in namespace `OCaml.Vm.Sim`)
+checks that shifting pointer word `0x80000000` produces immediate
+`0x40000000`, making the native equality guard true. Abstract physical
+equality is false, and `beq_pointer_falls_through` checks the actual pointer
+BEQ rule. This is a word/semantic-rule discrepancy, not a full Loaded/run
+counterexample. The arbitrary pointer word is not a fixed ELF data address.
+A2-sem needs to resolve this non-integer domain alongside the OFFSETINT/REF
+width and negative-index gaps; the headline theorem is unchanged.
+
+Separate 24 GiB/default-limit builds pass: BEQ bodies 1.9s/2.8s, path
+bridges 1.5s; BNEQ path bridges 1.2s/1.6s and composition 1.2s. The
+preceding nested-field landing is `f7d5deb`, full gate passing. There are
+now 92 conditional represented opcode bridges. Next: EQ/NEQ with named
+word-equality reflection, then remaining stores, allocation and calls.
+Full `ArmSim`, entry/halt and lane exits remain open.
+
 ## Composed global-field loads
 
 `getglobalfield_arm` and `pushgetglobalfield_arm` compose two represented
@@ -611,7 +635,7 @@ checks cover the new family. Separate default-limit builds under 24 GiB:
 CONST0 plus composition 3.52s; CONST1 5.92s, CONST2 4.74s, CONST3 4.58s.
 New constant bridge elaboration is 1.0–1.4s; peak process RSS below 2 GiB.
 
-## Current status
+## Earlier core landings
 
 The repair (`ef4e701`), CONST0 (`3229c53`), and ISINT/shared ALU adapter
 (`7994562`, integration head `dac2c19`) have landed through
@@ -899,7 +923,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 90 conditional represented opcode bridges,
+stack-writing families. There are 92 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 

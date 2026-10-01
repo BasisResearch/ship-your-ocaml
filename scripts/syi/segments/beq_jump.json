@@ -1,0 +1,126 @@
+{
+  "theorem": "tr_beq_jump",
+  "doc": "BEQ_JUMP arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.BeqJumpSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v8 v21 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_800031d8 : 0x80000000 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
+    "(hhi_800031d8 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ 0x100000000)",
+    "(hhtif_800031d8 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
+    "(hguard_800031e0 : ((sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4))) == (shift_bits_right_arith v21 (Sail.BitVec.extractLsb (0x01#6) 5 0))) = true)",
+    "(hlo_80003838 : 0x80000000 ≤ (v8 + sign_extend (m := 64) (0x008#12)).toNat)",
+    "(hhi_80003838 : (v8 + sign_extend (m := 64) (0x008#12)).toNat + 4 ≤ 0x100000000)",
+    "(hhtif_80003838 : (v8 + sign_extend (m := 64) (0x008#12)).toNat + 4 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v8 + sign_extend (m := 64) (0x008#12)).toNat)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlBeqJumpLoaded",
+  "pins": [
+    {
+      "reg": "x8",
+      "val": "v8",
+      "hyp": "hv8"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x800031d8",
+      "site": "site_800031d8_beq_jump",
+      "class": "alu",
+      "asm": "lw a4,4(s0)",
+      "rd": "x14",
+      "rd_val": "(sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT4 σ.mem (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4)))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl hlo_800031d8 hhi_800031d8 hhtif_800031d8 $hi",
+      "rw": "hmemeq"
+    },
+    {
+      "addr": "0x800031dc",
+      "site": "site_800031dc_beq_jump",
+      "class": "alu",
+      "asm": "srai a5,s5,0x1",
+      "rd": "x15",
+      "rd_val": "(shift_bits_right_arith v21 (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "raw_val": "(shift_bits_right_arith v21 (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800031e0",
+      "site": "site_800031e0_taken_beq_jump",
+      "class": "btaken",
+      "asm": "beq a4,a5,80003838 <caml_interprete+0x1a40>",
+      "imm": "0x0658#13",
+      "target": "0x80003838",
+      "pre_lines": [],
+      "call": "$vmi $v:x14 $v:x15 $hG $hpc $hmi $pin:x14 $pin:x15 $hmem rfl hguard_800031e0 $hi"
+    },
+    {
+      "addr": "0x80003838",
+      "site": "site_80003838_beq_jump",
+      "class": "alu",
+      "asm": "lw a5,8(s0)",
+      "rd": "x15",
+      "rd_val": "(sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x008#12)).toNat : BitVec (8 * 4)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT4 σ.mem (v8 + sign_extend (m := 64) (0x008#12)).toNat : BitVec (8 * 4)))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl hlo_80003838 hhi_80003838 hhtif_80003838 $hi",
+      "rw": "hmemE3"
+    },
+    {
+      "addr": "0x8000383c",
+      "site": "site_8000383c_beq_jump",
+      "class": "alu",
+      "asm": "slli a5,a5,0x2",
+      "rd": "x15",
+      "rd_val": "(shift_bits_left (sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x008#12)).toNat : BitVec (8 * 4))) (Sail.BitVec.extractLsb (0x02#6) 5 0))",
+      "raw_val": "(shift_bits_left v15 (Sail.BitVec.extractLsb (0x02#6) 5 0))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003840",
+      "site": "site_80003840_beq_jump",
+      "class": "alu",
+      "asm": "addi a5,a5,8",
+      "rd": "x15",
+      "rd_val": "((shift_bits_left (sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x008#12)).toNat : BitVec (8 * 4))) (Sail.BitVec.extractLsb (0x02#6) 5 0)) + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v15 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003844",
+      "site": "site_80003844_beq_jump",
+      "class": "alu",
+      "asm": "add s0,s0,a5",
+      "rd": "x8",
+      "rd_val": "(v8 + ((shift_bits_left (sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x008#12)).toNat : BitVec (8 * 4))) (Sail.BitVec.extractLsb (0x02#6) 5 0)) + sign_extend (m := 64) (0x008#12)))",
+      "raw_val": "(v8 + v15)",
+      "call": "$vmi $v:x8 $v:x15 $hG $hpc $hmi $pin:x8 $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003848",
+      "site": "site_80003848_beq_jump",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1fe714#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x800031d8",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

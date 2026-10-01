@@ -143,13 +143,14 @@ for _op in ['LTINT', 'LEINT', 'GTINT', 'GEINT', 'ULTINT', 'UGEINT']:
         PATHS[_family] = (_op, [not _truth])
 
 
-for _op in ['BLTINT', 'BLEINT', 'BGTINT', 'BGEINT', 'BULTINT', 'BUGEINT']:
+for _op in ['BLTINT', 'BLEINT', 'BGTINT', 'BGEINT', 'BULTINT', 'BUGEINT', 'BEQ', 'BNEQ']:
     for _jumping in [True, False]:
         _family = _op + ('_JUMP' if _jumping else '_NEXT')
+        _taken = _jumping if _op == 'BEQ' else not _jumping
         FAMILIES[_family] = (_op.title() + ('Jump' if _jumping else 'Next'),
-            ['lw_tot', 'srai', 'branch_nottaken' if _jumping else 'branch_taken'] +
+            ['lw_tot', 'srai', 'branch_taken' if _taken else 'branch_nottaken'] +
             (['lw_tot', 'slli', 'alu_addi', 'alu_add', 'j'] if _jumping else ['alu_addi', 'j']))
-        PATHS[_family] = (_op, [not _jumping])
+        PATHS[_family] = (_op, [_taken])
 
 
 def path_span(instructions, start, decisions):

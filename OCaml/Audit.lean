@@ -782,6 +782,23 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.tr_pushgetglobalfield
 #print axioms OCaml.Vm.Sim.pushgetglobalfield_loaded
 #print axioms Vsa.Sim.pushgetglobalfield_code_store
+
+#print axioms OCaml.Vm.Sim.beq_pointer_guard_obstruction
+#print axioms OCaml.Vm.Sim.beq_pointer_falls_through
+#print axioms OCaml.Vm.Sim.beq_step_arm
+#print axioms OCaml.Vm.Sim.beq_jump_arm
+#print axioms Vsa.Sim.tr_beq_jump
+#print axioms OCaml.Vm.Sim.beq_jump_loaded
+#print axioms OCaml.Vm.Sim.beq_next_arm
+#print axioms Vsa.Sim.tr_beq_next
+#print axioms OCaml.Vm.Sim.beq_next_loaded
+#print axioms OCaml.Vm.Sim.bneq_step_arm
+#print axioms OCaml.Vm.Sim.bneq_jump_arm
+#print axioms Vsa.Sim.tr_bneq_jump
+#print axioms OCaml.Vm.Sim.bneq_jump_loaded
+#print axioms OCaml.Vm.Sim.bneq_next_arm
+#print axioms Vsa.Sim.tr_bneq_next
+#print axioms OCaml.Vm.Sim.bneq_next_loaded
 #print axioms OCaml.Vm.Sim.PushWriteOk.stack_read
 #print axioms OCaml.Vm.Sim.pushacc1_arm
 #print axioms OCaml.Vm.Sim.pushacc2_arm
