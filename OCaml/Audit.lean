@@ -1067,3 +1067,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.strlen_symbolic
 #print axioms OCaml.Vm.Primitives.strlen_summary
 #print axioms OCaml.Vm.Primitives.strlen_memory
+
+#print axioms OCaml.Vm.Primitives.copied_of_observedLog
+#print axioms OCaml.Vm.Primitives.VmPayload.frame_observedLog
+#print axioms OCaml.Vm.Primitives.VmPayload.frame_observed
+#print axioms OCaml.Vm.Primitives.some_of_observed
+#print axioms OCaml.Vm.Primitives.library_pc
+#print axioms OCaml.Vm.Primitives.library_gpr
+#print axioms OCaml.Vm.Primitives.library_register_frame
+#print axioms OCaml.Vm.Primitives.bindings_observed
+#print axioms OCaml.Vm.Primitives.fixedBytes_observed
+#print axioms OCaml.Vm.Primitives.image_observed
+#print axioms OCaml.Vm.Primitives.strlen_leaf
+#print axioms OCaml.Vm.Primitives.strlen_result

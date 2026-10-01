@@ -1,4 +1,4 @@
-import OCaml.Vm.Primitives.LocalRunBridge
+import OCaml.Vm.Primitives.LibraryFrame
 import VsaIris.Vsa.SnpStrlen
 
 namespace OCaml.Vm.Primitives
@@ -48,5 +48,23 @@ theorem strlen_memory {live Dt DA S Mt len R before after}
   by_cases owned : S a
   · exact (post.result.memory a owned).trans (input.memory a owned).symm
   · exact post.memory a owned
+
+/-- A returned library reader supplies the next generated segment's ABI input. -/
+theorem strlen_leaf {live Dt DA S Mt len R before after}
+    (input : SymbolicInput live (snpText ++ dataOf Dt DA) nRegs S R Mt before)
+    (image : ExecutableImage before) (liveImage : ImageLive live)
+    (aligned : (R 1).toNat % 4 = 0)
+    (post : LocalPost live roR (snpText ++ dataOf Dt DA) nRegs S
+      (StrlenResult S R Mt len) before after) : LeafInput (R 1) after :=
+  ⟨post.good.good, image_observed image post.good liveImage (strlen_memory input post),
+    post.good.good.minstret,
+    library_gpr post.good (by decide) (by decide)
+      (post.result.registers 1 (by decide) (by decide) (by decide)), aligned, post.good.tick⟩
+
+/-- The strlen result is a machine a0 value, ready for a generated caller. -/
+theorem strlen_result {live Dt DA S Mt len R before after}
+    (post : LocalPost live roR (snpText ++ dataOf Dt DA) nRegs S
+      (StrlenResult S R Mt len) before after) : gpr after 10 = some (BitVec.ofNat 64 len) :=
+  library_gpr post.good (by decide) (by decide) post.result.length
 
 end OCaml.Vm.Primitives

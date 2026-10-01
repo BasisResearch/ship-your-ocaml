@@ -327,3 +327,13 @@ non-scratch registers and unchanged total bytes (`strlen_memory`). Both
 modules compile at the default elaboration budget (about one second each).
 These are shared support, so the primitive count remains 17/30. The next
 step is observational VM framing and the generated string-allocation caller.
+
+Library bridge landed at `21fe0a3`, including the full gate and axiom audit.
+`VmPayload.frame_observedLog` now generalizes the existing write-log frame
+using `MemEqv` and observable output; `frame_log` remains its exact-map
+specialization. `frame_observed` supplies the read-only case. Object and
+channel transport still use the existing relocation combinators.
+`LibraryFrame.lean` recovers optional ABI/PC values from `VsaOk`, preserves
+primitive bindings, and restores exact code pins from byte observations plus
+live-memory presence. `strlen_leaf` and `strlen_result` supply the next
+generated caller segment's ABI input and length. Focused builds pass.

@@ -1,6 +1,7 @@
 import OCaml.Vm.Primitives.Read
 import OCaml.Vm.Primitives.Payload
 import OCaml.Vm.Reloc
+import Vsa.Sim.Boot.Bytes
 
 /-! Observation frames for primitive writes. The write-log frame supplies byte
 agreement; the existing relocation combinators transport represented objects
@@ -15,6 +16,15 @@ theorem copied_of_writeLog {c c' : Config} {log : List WEntry} {a n : Nat}
   intro j hj
   rw [byte_total, byte_total, memory,
     writeLog_out _ _ _ (outL_of_range outside (by omega) (by omega))]
+
+/-- The library model's total-byte write-log observation suffices for copying. -/
+theorem copied_of_observedLog {c c' : Config} {log : List WEntry} {a n : Nat}
+    (memory : Vsa.Densify.MemEqv c'.σ.mem (writeLog c.σ.mem log))
+    (outside : OutLRange log a n) : Reloc.Copied c c' a a n := by
+  intro j hj
+  rw [byte_total, byte_total]
+  have same : (c'.σ.mem[a + j]?).getD 0 = ((writeLog c.σ.mem log)[a + j]?).getD 0 := memory _
+  rw [same, writeLog_out _ _ _ (outL_of_range outside (by omega) (by omega))]
 
 /-- Total scalar observations are unchanged outside a first-order write log. -/
 theorem bytesT_writeLog_out (m : Std.ExtHashMap Nat (BitVec 8)) {log : List WEntry} {a n : Nat}
@@ -90,11 +100,12 @@ structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
     OutLRange log a (chanOffBuff + ch.buffer.length)
 
 /-- Transport the complete VM payload using only the checked write log. -/
-theorem VmPayload.frame_log {P s c c' pl cp sp high log}
+theorem VmPayload.frame_observedLog {P s c c' pl cp sp high log}
     (h : VmPayload P s c pl cp sp high) (outside : PayloadOutside log P s c pl cp sp)
-    (memory : c'.σ.mem = writeLog c.σ.mem log) (outputEq : c'.σ.sailOutput = c.σ.sailOutput) :
+    (memory : Vsa.Densify.MemEqv c'.σ.mem (writeLog c.σ.mem log))
+    (outputEq : output c'.σ = output c.σ) :
     VmPayload P s c' pl cp sp high := by
-  have copy := fun a n (ho : OutLRange log a n) => copied_of_writeLog memory ho
+  have copy := fun a n (ho : OutLRange log a n) => copied_of_observedLog memory ho
   have hw : ∀ a, OutLRange log a 8 → word c' a = word c a :=
     fun a ho => Reloc.bytesT_congr (copy a 8 ho)
   have domain := hw Layout.sym_Caml_state outside.domain
@@ -122,12 +133,27 @@ theorem VmPayload.frame_log {P s c c' pl cp sp high log}
       exact ⟨a, o, ha, ho, object_copied layout (copy _ 8 iso.header) (copy _ _ iso.payload)⟩
     · exact h.heap.2
   · refine ⟨?_, ?_⟩
-    · simpa only [output, outputEq] using h.world.1
+    · simpa only [outputEq] using h.world.1
     · intro id ch hc
       obtain ⟨a, ha, layout⟩ := h.world.2 id ch hc
       exact ⟨a, ha, channel_copied layout (copy _ _ (outside.channels id ch a hc ha))⟩
   · rw [hw _ outside.atomBase]
     exact h.atomBase
+
+/-- Exact write logs are a specialization of the observational frame. -/
+theorem VmPayload.frame_log {P s c c' pl cp sp high log}
+    (h : VmPayload P s c pl cp sp high) (outside : PayloadOutside log P s c pl cp sp)
+    (memory : c'.σ.mem = writeLog c.σ.mem log) (outputEq : c'.σ.sailOutput = c.σ.sailOutput) :
+    VmPayload P s c' pl cp sp high :=
+  h.frame_observedLog outside (fun a => by rw [memory]) (by simp only [output, outputEq])
+
+/-- Library readers preserve the complete VM payload through total observations. -/
+theorem VmPayload.frame_observed {P s c c' pl cp sp high}
+    (h : VmPayload P s c pl cp sp high) (memory : Vsa.Densify.MemEqv c'.σ.mem c.σ.mem)
+    (outputEq : output c'.σ = output c.σ) : VmPayload P s c' pl cp sp high := by
+  apply h.frame_observedLog (log := []) _ memory outputEq
+  constructor
+  all_goals first | trivial | (intros; trivial) | (intros; exact ⟨True.intro, True.intro⟩)
 
 /-- The object-ID counter does not change roots, channels or console state. -/
 theorem VmPayload.ooId {P s c pl cp sp high} (h : VmPayload P s c pl cp sp high) (n : Nat) :
