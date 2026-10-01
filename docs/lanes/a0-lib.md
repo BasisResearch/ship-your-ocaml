@@ -59,7 +59,7 @@
 
 - `_svfprintf_r` is the remaining open function contract. `_free_r`
   (`free_body`, `FreeTop.lean:339`) and the free wrapper run contracts now
-  build and pass the axiom audit; their integration checkpoint is in progress. `_malloc_r`
+  are proved and audited; their checkpoint landed as `7c1d052`. `_malloc_r`
   is proved and audited (`malloc_all`, `MallocBlocks2.lean:718`), and its
   malloc wrapper run contracts landed as `270ae83`.
   Instruction census (old -> this ELF): 560 -> 569, 193 -> 195,
@@ -199,3 +199,28 @@ mallinfo/stack disjointness fact. The checked manifest selects all 45
 allocator-template modules. All six new headline audits passed with only
 `{propext, Classical.choice, Quot.sound}`; integration is next. Only the
 `_svfprintf_r` function composition remains open.
+
+Free checkpoint `7c1d052` landed through the full integration gate. Work
+on the remaining `_svfprintf_r` contract starts from the preserved Snp
+proofs at syi-exp `412ce9b2`. Generic data-read, observed-step and driver
+modules are being cut free of interpreter/WHILE dependencies. The old
+conversion-table address is unnamed; its new base is derived from the
+matched AUIPC reference, and table entries will be checked against the
+mapped dispatch targets.
+
+The stdio matcher now validates 13 function layouts and all 91 conversion-table
+jump targets. Four GP accesses become generated two-instruction segments. All
+18 preserved step chunks compile, as do `memmove_nw` (`SnpMove.lean:568`),
+`strlen_nw` (`SnpStrlen.lean:281`), `udiv_nw` / `umod_nw` (`SnpArith`), and
+`ssputs_nw` (`SnpPuts.lean:177`). Fresh code/table byte images use bounded lookup
+trees. Expanded locale address expressions are retained until symbolic
+normalization, avoiding excessive definitional reduction without raising the
+heartbeat budget. Generic formatting/decimal-rendering facts also compile.
+Current work: checking `SnpPrint`, then formatter entry/conversions/loop and
+`svfprintf_nw`. The abstraction gate and proof-discipline checks still pass.
+
+The complete iovec `ssprint_nw` contract (`SnpPrint`) now compiles. Its
+`ssprint_iterB` composition uses two checked pieces and eliminates the
+impossible error-return branch before driving the remaining instructions.
+The checked stdio manifest now contains 40 template modules (plus the generated
+byte-image module); formatter entry/conversion/loop templates remain pending.

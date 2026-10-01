@@ -1,3 +1,8 @@
+import VsaIris.Vsa.SnpPrint
+import VsaIris.Vsa.SnpStrlen
+import VsaIris.Vsa.SnpArith
+import VsaIris.Vsa.LibraryFormat
+import VsaIris.Vsa.SegRun
 import VsaIris.Vsa.FreeRunAll
 import VsaIris.Vsa.MallocRunAll
 import VsaIris.Vsa.MallocExtend
@@ -384,3 +389,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms VsaIris.VsaHeap.free_body
 #print axioms VsaIris.VsaHeap.freeChgRun_proved
 #print axioms VsaIris.VsaHeap.freeLocalRun_proved
+
+-- Regenerated stdio SWP steps and formatter helper contracts.
+#print axioms VsaIris.Sym.ntD_8003fe64
+#print axioms VsaIris.Sym.nt_80042144
+#print axioms VsaIris.Sym.memmove_nw
+#print axioms VsaIris.Sym.strlen_nw
+#print axioms VsaIris.Sym.ssputs_nw
+#print axioms VsaIris.Interp.udiv_nw
+#print axioms VsaIris.Interp.umod_nw
+#print axioms Vsa.Sim.digits_eq_natToString
+#print axioms VsaIris.Sym.ssprint_nw

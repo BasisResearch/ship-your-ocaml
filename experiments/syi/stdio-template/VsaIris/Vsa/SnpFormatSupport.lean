@@ -1,0 +1,45 @@
+import VsaIris.Vsa.SnpSvfLoop
+namespace VsaIris.Sym
+open Vsa.MemRepr Vsa.Sim VsaIris.MallocFast
+def SvfLoopRun (live : Nat → Prop) (Dt : Mem) (DA : List Nat)
+    (Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop) (s dst n : Nat) (R0 : Nat → BitVec 64)
+    (Mt0 : Mem) (p ap : Nat) (total : List (BitVec 8)) : Prop :=
+  ∀ R Mt, SvfAt s dst n R0 Mt0 p ap (BitVec.ofNat 64 0) [] R Mt →
+    SvfRetK live Dt DA Q s dst n R0 Mt0 (BitVec.ofNat 64 total.length) total →
+    SnpW live Dt DA (snpS s dst n) Q 0x80007720#64 R Mt
+
+theorem natDigits_length_le : ∀ (fuel n k : Nat), 1 ≤ k → n < 10 ^ k →
+    (Vsa.While.natDigits fuel n).length ≤ k
+  | 0, _, _, _, _ => by simp [Vsa.While.natDigits]
+  | fuel + 1, n, k, hk, hn => by
+    unfold Vsa.While.natDigits
+    split
+    · simp; omega
+    · have hk2 : 2 ≤ k := by
+        rcases Nat.lt_or_ge k 2 with h | h
+        · have : k = 1 := by omega
+          subst this; omega
+        · exact h
+      have := natDigits_length_le fuel (n / 10) (k - 1) (by omega) (by
+        rw [Nat.div_lt_iff_lt_mul (by decide),
+          show 10 ^ (k - 1) * 10 = 10 ^ k by rw [← Nat.pow_succ]; congr 1; omega]; exact hn)
+      simp; omega
+
+theorem intToString_length_le (v : BitVec 64) : (strBytes (Vsa.While.intToString v.toInt)).length ≤ 20 := by
+  unfold strBytes
+  rw [List.length_map, Vsa.Sim.intToString_of_bv v]
+  have hn : ∀ m, m < 2 ^ 64 → (Vsa.While.natToString m).toList.length ≤ 20 := fun m hm => by
+    rw [Vsa.Sim.natToString_toList_39]
+    exact natDigits_length_le _ _ 20 (by decide) (by have h := (show 2 ^ 64 < 10 ^ 20 by decide); omega)
+  split
+  · rw [String.toList_append, List.length_append]
+    have h1 : (-v).toNat < 2 ^ 63 + 1 := by
+      have := BitVec.toNat_neg v
+      rw [this]; rename_i h; have := v.isLt; omega
+    have h2 : (Vsa.While.natToString (-v).toNat).toList.length ≤ 19 := by
+      rw [Vsa.Sim.natToString_toList_39]
+      exact natDigits_length_le _ _ 19 (by decide) (by have h := (show 2 ^ 63 + 1 ≤ 10 ^ 19 by decide); omega)
+    simp only [show ("-" : String).toList.length = 1 from rfl]; omega
+  · exact hn _ v.isLt
+
+end VsaIris.Sym

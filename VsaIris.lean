@@ -1,3 +1,8 @@
+import VsaIris.Vsa.SnpPrint
+import VsaIris.Vsa.SnpStrlen
+import VsaIris.Vsa.SnpArith
+import VsaIris.Vsa.LibraryFormat
+import VsaIris.Vsa.SegRun
 import VsaIris.Vsa.FreeRunAll
 import VsaIris.Vsa.MallocRunAll
 import VsaIris.Vsa.MallocExtend

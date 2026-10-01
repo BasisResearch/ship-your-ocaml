@@ -203,3 +203,22 @@ the pinned `_impure_ptr` bytes with a computed-address premise.
 combinators from `VsaIris/Interp/ITac.lean` at the same source commit.
 They split the small-allocation composition into kernel-checked pieces
 within the existing heartbeat limit, without importing interpreter steps.
+
+The stdio SWP proof templates in `experiments/syi/stdio-template` are extracted
+from the same syi-exp commit `412ce9b2f9eae68892f58893805ae3be611a0ebc`.
+`retarget_stdio_specs.py`, `stdio_layout.py`, `stdio_steps.py`, and
+`gen_stdio_image.py` regenerate their addresses, instruction fields, byte
+images, and conversion-table offsets from the OCaml ELF. The preserved layout
+snapshot includes old symbols, disassembly, and initialized data; regeneration
+has no dependency on the upstream checkout. All 91 relative dispatch targets
+are checked against the instruction map. Four old GP accesses expand into
+AUIPC pairs, represented by generated two-instruction symbolic segments.
+
+`LibraryJalrFacts`, `LibraryStepTac`, `LibraryImageFacts`, `LibraryByteFacts`,
+`LibraryDivFacts`, and `LibraryFormat` extract generic facts from the source
+indirect-call, interpreter-driver, image, arithmetic, and formatting modules.
+`SymData`, `SymHavoc`, `SymObs`, `ObsStep`, `SegRun`, and `TextPieces` cut
+interpreter and WHILE-image imports. Unused recursive run-law proofs are
+omitted; the existing OCaml run-kernel route remains authoritative.
+`LibraryStdioFoot` follows relocated ELF objects. The checked-modules manifest
+records the compositions already promoted; other templates remain work in progress.
