@@ -39,3 +39,6 @@ import OCaml.Programs.GeneratedAdequacy
 
 import OCaml.Vm.Sim.NegintSegment
 import OCaml.Vm.Sim.NegintPins
+import OCaml.Vm.Gc.Forward
+import OCaml.Vm.Gc.Invariant
+import OCaml.Vm.Gc.Budget

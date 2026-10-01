@@ -420,3 +420,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Reloc.vmReprAt_reloc
 #print axioms Vsa.Sim.tr_negint
 #print axioms OCaml.Vm.Sim.negint_loaded
+
+-- A6 safety interfaces, checked Forward obstructions, and candidate live budget.
+#print axioms OCaml.Vm.Gc.forwardValue_int
+#print axioms OCaml.Vm.Gc.forwardValue_not_isInt
+#print axioms OCaml.Vm.Gc.scanCoherent_forward_int_obstruction
+#print axioms OCaml.Vm.Gc.forward_objAt_obstruction
+#print axioms OCaml.Vm.Gc.LoopHead.running
+#print axioms OCaml.Vm.Gc.LoopHead.reloc
+#print axioms OCaml.Vm.Gc.rememberedComplete_empty
+#print axioms OCaml.Vm.Gc.liveWordsFrom_le
+#print axioms OCaml.Vm.Gc.liveWords_le_allocated
+#print axioms OCaml.Vm.Gc.fitsLive_of_fits

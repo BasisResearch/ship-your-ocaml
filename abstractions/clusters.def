@@ -60,6 +60,8 @@ OCaml/Vm/Reloc.lean objAt_reloc
 OCaml/Vm/Reloc.lean stackRepr_reloc
 OCaml/Vm/Reloc.lean heapRepr_reloc
 OCaml/Vm/Reloc.lean globals_reloc
+OCaml/Vm/Reloc.lean vmReprAt_reloc
+OCaml/Vm/Gc/Invariant.lean LoopHead.reloc
 
 # C4 bytecode specifications (Layer B′): specs of bytecode segments and loops.
 # Adopted route: OCaml/Logic/Symbolic.lean (symbolic reduction + loop_rule).

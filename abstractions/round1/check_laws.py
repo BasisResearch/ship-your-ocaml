@@ -43,6 +43,7 @@ def l1_trial():
     return bad
 
 l1 = [b for _ in range(20000) for b in l1_trial()]
+assert not l1, l1[:3]
 print(f"L1: 20000 random systems, {len(l1)} counterexamples {l1[:3]}")
 
 # ---------- L3 ----------
@@ -79,6 +80,8 @@ def trial(injective=True):
 
 inj = [trial(True) for _ in range(20000)]
 non = [trial(False) for _ in range(20000)]
+assert all(not a or b for a, b in inj)
+assert any(a and not b for a, b in non)
 print(f"L3 (injective relocation): {sum(1 for a,b in inj if a and not b)} counterexamples in {sum(a for a,_ in inj)} valid starts")
 print(f"L3 (relocation not injective): {sum(1 for a,b in non if a and not b)} counterexamples in {sum(a for a,_ in non)} valid starts  <- the law needs disjoint targets")
 
@@ -139,6 +142,7 @@ for forge, refc, name in [(False, True, "no forged raw words, complete ref table
                           (True, True, "raw words may look young (no NoForgery)"),
                           (False, False, "incomplete ref table (no RememberedComplete)")]:
     r = [gc_trial(forge, refc) for _ in range(20000)]
+    assert all(r) if not forge and refc else not all(r)
     print(f"L3' bit-true GC, {name}: {r.count(False)} counterexamples / 20000")
 
 # ---------- L3' special tags: minor_gc.c:caml_oldify_one ----------
@@ -213,9 +217,6 @@ for flat in (False, True):
                 mem = {a-8: 1024+FORWARD, a: b, b-8: 1024+target_tag, b: 85}
                 rs, after = oldify_special(mem, ([b] if already else []) + [a], flat)
                 copied = target_tag in ({FORWARD, LAZY, DOUBLE} if flat else {FORWARD, LAZY})
-                # A young Forward block itself shortcuts to 85 if scanned first.
-                if already and target_young and target_tag == FORWARD:
-                    copied = True  # no zero header installed by short-circuiting
                 if copied:
                     assert after[rs[-1]-8] % 256 == FORWARD
                 else:

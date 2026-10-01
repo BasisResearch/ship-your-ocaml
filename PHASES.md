@@ -58,7 +58,10 @@ ELF pin).
 | `tr_isint`, `isint_loaded` (generated five-instruction machine body with SLLI/ANDI) | `OCaml/Vm/Sim/Isint*.lean` | A1 | **proved**; full representation/frame bridge open |
 | `tr_negint`, `negint_loaded` (generated four-instruction tagged-negation body) | `OCaml/Vm/Sim/Negint*.lean` | A1 | **proved**; full representation/frame bridge open |
 | F2/F3/F4/F5 arms and primitives | `OCaml/Vm/Sim/` | A2–A5 | open |
-| GC: `caml_empty_minor_heap` preserves `VmReprAt` up to a new placement (G2) | new `OCaml/Vm/Gc/` | A6 | open |
+| GC: `caml_empty_minor_heap` preserves `VmReprAt` up to a new placement (G2) | `OCaml/Vm/Gc/` | A6 | open: strict Forward bridge obstructed; machine oldify/mopup proof remains open |
+| Forward short-circuit obstruction / transparent-value ISINT incompatibility | `OCaml/Vm/Gc/Forward.lean` | A6 | **proved**; pinned host regression confirms `false true`; semantic safety precondition or revised semantics needs a decision |
+| NoForgery / remembered completeness / writing-arm barrier interface | `OCaml/Vm/Gc/Invariant.lean` | A6 / a1-arms | named `LoopHead` and `WritingArmBarrier`; `LoopHead.reloc` and empty-table reset rule **proved conditionally**; concrete table linkage, startup and arm suppliers open |
+| Candidate live-word budget | `OCaml/Vm/Gc/Budget.lean` | A6 | `liveWords_le_allocated`, `fitsLive_of_fits` **proved**; production `Fits` unchanged pending GC/reclamation proof |
 | symbolic heap allocation/read laws; arbitrary-heap closure capture/read segment | `OCaml/Logic/Symbolic.lean` | B′1 | **proved** (`Heap.get_alloc_old`, `Heap.get_alloc_fresh`, `field_alloc_fresh`, `field_alloc_old`, `closure_capture_read`) |
 | absolute-address code locality (`decodeAt_extract`, `CodeSlice.iter_eq`) | `OCaml/Logic/CodeSlice.lean`, `OCaml/Run/Local.lean` | B′1 | **proved**, instantiated by `CertifiedBlock.run` and all generated windows |
 | bytecode decode table / segment generators for `boot/ocamlc` | `scripts/gen_bc_rules.py`, `OCaml/Programs/Generated/` | B′1 | **done**: 23,678 instructions / 5,414 block rules, four modules build at default heartbeats; measurements in `results/bprime_build.json` |
@@ -195,7 +198,18 @@ are open; see `docs/lanes/a2-sem.md`.
 * Law checks now include 42 `Forward_tag` cases and 12 valid infix cases
   (`abstractions/round1/check_laws.py`). Strict object preservation fails
   for short-circuiting Forward blocks; arbitrary interior pointers fail
-  without an Infix header. The lax representation bridge remains open.
+  without an Infix header. `Forward.lean` checks the strict bridge obstruction
+  and shows a transparent value relation does not preserve ISINT on all
+  abstract values. The pinned host 4.14.4 regression reproduces it.
+* `LoopHead` adds named NoForgery, RememberedComplete and InfixValid fields;
+  `WritingArmBarrier` records the a1 supplier obligations. Concrete runtime
+  ref-table linkage and use in the production ArmSim remain open.
+* `FitsLive` and `fitsLive_of_fits` are checked candidate budget facts,
+  not a discharge of G2 or a replacement for production `Fits`.
+* `scripts/gc_cfg.py --check` records gen_fn's coverage: oldify is 145
+  instructions / 38 blocks, without a recognised counted-loop template;
+  mopup exceeds the branch limit, empty-minor-heap the instruction limit.
+  Emitted oldify rows also need the absent `Vsa.Sim.DeriveCaseRow` port.
 * **Exit**: `Fits` restated on live words; `ocamlc` compiling a one-line
   program is within Layer A.
 
