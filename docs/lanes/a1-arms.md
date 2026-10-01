@@ -12,6 +12,7 @@ Counted contracts landed as `a22f2b9`; register/console frames as `ee18571`.
 Dispatch and checked pin lookup landed as `2857cd0` / `7e2ae1a`, after
 a full gate and a rebase over the primitive lane’s signed comparison.
 The table facts landed as `c7989c8`, with the full gate passing.
+Composed dispatch landed as `fe72ca4` with the full gate passing.
 The F1 exit remains open.
 
 F1 primitive machine summaries belong to **a1-prims**, including all
@@ -170,7 +171,27 @@ step noise. `dispatchIndex*` discharge the table RAM/HTIF geometry.
 The input retains explicit bytecode-address bounds/HTIF exclusion and tick
 bounds, which `Running` does not yet supply; a full arm case is not claimed.
 
+## CONST0 representation bridge
+
+`const0_arm` (`OCaml/Vm/Sim/Const0.lean:14`) composes `dispatch_run` and
+`tr_const0` through `StepsN.append`, then restores `Running` for the state
+with PC advanced by one and accumulator zero. The payload uses the primitive
+lane’s `VmPayload.accu_int` and `.frame`; complete register frames preserve
+sp/env/extra and all fixed loop registers. `MemoryStable L.runtimeOk` supplies
+the runtime frame, just as it does for the primitive summaries.
+
+`ArmInput` (`OCaml/Vm/Sim/ArmInput.lean:11`) is a named, stronger entry;
+`ArmInput.running` projects to `Running`. `ArmInput.of_repr` derives it from
+`VmReprAt`, platform/loop facts, the fetched opcode, `CodeReadAt`, tick < 2,
+and a non-cache opcode position (`methodCacheSlot ... = false`). The last
+condition is needed because the landed F3 `CodeRepr` permits cache words to
+vary. These remaining premises are explicit; neither `ArmSim.next` nor the
+headline refinement is claimed or weakened.
+
 ## Validation
+
+* CONST0 representation bridge passes at default limits: ArmInput 1.0s,
+  Const0 1.1s, combined 2.72s wall and 1.95 GiB peak RSS, under 24 GiB.
 
 * Composed dispatch builds in 1.4s (2.29s wall, 1.93 GiB peak RSS).
   The extended table chunks build in 1.6–3.5s each, below 1.85 GiB.
@@ -238,7 +259,7 @@ bounds, which `Running` does not yet supply; a full arm case is not claimed.
 
 ## Open / next
 
-Continue with one generated F1 family per measured build. No concrete entry/next/halt arm, F1 refinement instance, or
+Continue with one generated F1 family per measured build. No unconditional entry/next/halt arm, F1 refinement instance, or
 machine `whileMin` result is claimed. `whileMin_bcSem` remains bytecode-level.
 
 Next: extend generated arm families, then discharge dispatch and full
