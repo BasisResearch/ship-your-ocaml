@@ -19,9 +19,6 @@ theorem native_save_address (sp : BitVec 64) : sp - 16#64 + 8#64 = sp - 8#64 := 
 theorem savedRa_log_in (sp ra : BitVec 64) : LogInW (savedRaWindows sp) (savedRaLog sp ra) := by
   simp [savedRaWindows, savedRaLog, LogInW, InsideW]
 
-theorem WriteWindow.read {a : BitVec 64} {n : Nat} (h : WriteWindow a n) : ReadWindow a n :=
-  ⟨h.lower, h.upper, Or.inr (by have hh := h.htif; omega)⟩
-
 theorem savedRa_value (c : Config) (sp ra : BitVec 64) :
     bytesT (writeLog c.σ.mem (savedRaLog sp ra)) (sp - 8#64).toNat 8 = ra :=
   word_writeLog c.σ.mem (sp - 8#64).toNat ra

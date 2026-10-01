@@ -120,6 +120,8 @@ def sym_main_argv : Nat := 0x80064c10
 def sym_caml_exe_name : Nat := 0x80064c18
 /-- `oo_last_id` -/
 def sym_oo_last_id : Nat := 0x80064898
+/-- `caml_copy_double` -/
+def sym_caml_copy_double : Nat := 0x800121f4
 /-- `bf_small_fl` -/
 def sym_bf_small_fl : Nat := 0x800662d8
 /-- `bf_small_map` -/

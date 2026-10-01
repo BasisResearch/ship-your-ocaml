@@ -101,7 +101,7 @@ def main():
             "embedded_files", "embedded_argv", "embedded_env", "__embed_start",
             "__heap_end", "__stack_top", "caml_prim_table"]
     need += primitive_names()
-    need += ["main_argv", "caml_exe_name", "oo_last_id"]
+    need += ["main_argv", "caml_exe_name", "oo_last_id", "caml_copy_double"]
     need += ["bf_small_fl", "bf_small_map", "bf_large_tree", "bf_large_least",
              "caml_fl_cur_wsz"]
     for n in need:

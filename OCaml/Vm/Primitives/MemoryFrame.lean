@@ -16,6 +16,14 @@ theorem copied_of_writeLog {c c' : Config} {log : List WEntry} {a n : Nat}
   rw [byte_total, byte_total, memory,
     writeLog_out _ _ _ (outL_of_range outside (by omega) (by omega))]
 
+/-- Total scalar observations are unchanged outside a first-order write log. -/
+theorem bytesT_writeLog_out (m : Std.ExtHashMap Nat (BitVec 8)) {log : List WEntry} {a n : Nat}
+    (outside : OutLRange log a n) : bytesT (writeLog m log) a n = bytesT m a n := by
+  apply BitVec.eq_of_getLsbD_eq
+  intro k hk
+  rw [getLsbD_bytesT _ _ _ _ hk, getLsbD_bytesT _ _ _ _ hk,
+    writeLog_out _ _ _ (outL_of_range outside (by omega) (by omega))]
+
 /-- Identity law for the placement action, reused by every fixed-address frame. -/
 theorem placement_identity (pl : Place) : Reloc.reloc id pl = pl := by
   -- discipline: allow(O6-hand-relocation) generic identity law for the action; component frames below use Eqv.transport

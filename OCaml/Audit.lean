@@ -870,3 +870,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.string_notequal_contract
 #print axioms OCaml.Vm.Primitives.caml_string_notequal_primitive
 #print axioms Vsa.Sim.bridgeOfSegFull
+
+-- Allocation transport and generated double nursery fast path.
+#print axioms OCaml.Vm.Primitives.VmPayload.live_bound
+#print axioms OCaml.Vm.Primitives.live_after_alloc
+#print axioms OCaml.Vm.Primitives.VmPayload.allocate
+#print axioms OCaml.Vm.Primitives.allocation_contract
+#print axioms OCaml.Vm.Primitives.bytesT_writeLog_out
+#print axioms OCaml.Vm.Primitives.DoubleAllocation.reserve_summary
+#print axioms OCaml.Vm.Primitives.DoubleAllocation.initialize_summary
+#print axioms OCaml.Vm.Primitives.DoubleAllocation.copy_double_fast
+#print axioms OCaml.Vm.Primitives.DoubleAllocation.field_address
+#print axioms OCaml.Vm.Primitives.DoubleAllocation.double_layout

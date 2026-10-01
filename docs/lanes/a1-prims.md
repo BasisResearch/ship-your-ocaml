@@ -32,7 +32,7 @@ at `24ef4c7`.
 stack save/JAL/restore wrapper around the equality summary. The complete
 machine call splice and represented contract pass their focused build; the
 full regression and axiom audit pass (1,891 targets; standard axioms only).
-The integration gate is next. The native sp is restored, and the saved
+The complete integration gate passed and the milestone landed at `5aec151`. The native sp is restored, and the saved
 return-address write is framed from the represented heap/world and primitive
 bindings using explicit static separation. The whole wrapper uses the default
 proof budgets.
@@ -237,3 +237,31 @@ using `Reloc.Copied`. The represented contract compiles in 16 seconds.
 The generated wrapper certificates compile in 1.9 seconds; finite sign-extension
 certificates avoid deep normalization of symbolic addresses. No budgets were
 raised. The abstraction gate passes (C1=0, C2=7, C3=7, C4=3), as does discipline.
+
+
+## Allocating primitive follow-up
+
+The next shared component is heap-allocation transport: the old reachable
+objects retain their placement and one fresh result object becomes reachable.
+The `caml_int64_float_of_bits` tail call enters `caml_copy_double`; its nursery
+fast path writes young_ptr, a double header and one payload word. The slow
+path calls `caml_alloc_small_dispatch` and needs collector integration. This
+primitive remains open; a fast-path lemma alone will not be counted as the
+complete primitive.
+
+`VmPayload.allocate` and `allocation_contract` now build. They reuse the
+symbolic heap allocation laws and classify post-allocation reachability as
+fresh or old; fresh-object fields must point to old live objects. A placement
+can reserve its unreachable fresh key before the call. No relocation or run
+induction is introduced.
+
+`gen_fn.py --ocaml-allocation` emits both nursery blocks, code pins, scalar
+access certificates, exact write-log equations and `FnSummary` folds.
+`DoubleAllocation.copy_double_fast` composes the blocks with `summary_bind`
+and proves the complete successful nursery path. `double_layout` connects
+the exact log to the double object's header and bit payload (253 tag, one word). The collector
+branch and the primitive's input/tail-jump bridge remain open, so the total
+stays **16/30**. These are reusable support results, not a seventeenth primitive.
+
+Allocation-support validation: full regression and audit pass (1,918 targets;
+permitted standard axioms only). Generator drift, discipline and a8 pass.

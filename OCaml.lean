@@ -108,3 +108,5 @@ import OCaml.Vm.Primitives.StringEncoding
 import OCaml.Vm.Primitives.CamlStringEqual
 
 import OCaml.Vm.Primitives.CamlStringNotequal
+
+import OCaml.Vm.Primitives.DoubleLayout

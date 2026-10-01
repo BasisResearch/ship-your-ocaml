@@ -11,6 +11,9 @@ structure WriteWindow (a : BitVec 64) (width : Nat) : Prop where
   htif : Layout.sym_tohost + 16 ≤ a.toNat
   aligned : a.toNat % width = 0
 
+theorem WriteWindow.read {a : BitVec 64} {n : Nat} (h : WriteWindow a n) : ReadWindow a n :=
+  ⟨h.lower, h.upper, Or.inr (by have hh := h.htif; omega)⟩
+
 theorem WriteWindow.sd {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs}
     {a : MInstr} {x : BitVec 64} {bs : List (BitVec 8)} (h : WriteWindow x 8)
     (kind : a.kind = .sd) (address : eaddrM a L = x) : MemFacts m L bs a := by
