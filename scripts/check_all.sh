@@ -1,7 +1,7 @@
 #!/bin/bash
 # ship-your-ocaml gate (the analogue of ship-your-interpreter's
 # scripts/check_all.sh, cut to what this repository contains):
-#   (a1) build             — `lake build OCaml Vsa VsaIris` (the scaffold and the
+#   (a1) build             — `lake build OCaml OCaml.Audit Vsa VsaIris` (the scaffold and the
 #                            whole copied, retargeted machine layer);
 #   (a2) no holes          — no sorry/admit/axiom/native_decide in OCaml/;
 #   (a3) axioms            — every audited theorem (OCaml/Audit.lean) depends
@@ -48,8 +48,8 @@ normalize_axioms() {
   } { print }'
 }
 
-echo "== stage a1: lake build OCaml Vsa VsaIris (under a 24 GB cgroup cap)"
-run_lean lake build OCaml Vsa VsaIris runbc 2>&1 | tail -1 \
+echo "== stage a1: lake build OCaml OCaml.Audit Vsa VsaIris (under a 24 GB cgroup cap)"
+run_lean lake build OCaml OCaml.Audit Vsa VsaIris runbc 2>&1 | tail -1 \
   | grep -q "Build completed successfully" || fail "stage a1: build"
 echo "stage a1: OK"
 
