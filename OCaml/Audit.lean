@@ -669,3 +669,19 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.access_then_free_facts
 #print axioms OCaml.Vm.Primitives.ReadWindow.ld
 #print axioms OCaml.Vm.Primitives.ReadWindow.lbu
+
+-- Mutable global effects and representation frames.
+#print axioms OCaml.Vm.Primitives.image_of_writeLog
+#print axioms OCaml.Vm.Primitives.EffectPost.loop
+#print axioms OCaml.Vm.Primitives.write_of_blocks
+#print axioms OCaml.Vm.Primitives.copied_of_writeLog
+#print axioms OCaml.Vm.Primitives.object_copied
+#print axioms OCaml.Vm.Primitives.channel_copied
+#print axioms OCaml.Vm.Primitives.VmPayload.frame_log
+#print axioms OCaml.Vm.Primitives.VmPayload.ooId
+#print axioms OCaml.Vm.Primitives.WriteWindow.sd
+#print axioms OCaml.Vm.Primitives.word_writeLog
+#print axioms OCaml.Vm.Primitives.counterWord_succ
+#print axioms OCaml.Vm.Primitives.counterWord_repr
+#print axioms OCaml.Vm.Primitives.counter_contract
+#print axioms OCaml.Vm.Primitives.caml_fresh_oo_id_primitive

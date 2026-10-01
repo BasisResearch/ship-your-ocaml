@@ -78,3 +78,5 @@ import OCaml.Vm.Sim.PrimitiveBinding
 import OCaml.Vm.Primitives.CamlSysArgv
 import OCaml.Vm.Primitives.CamlMlStringLength
 import OCaml.Vm.Primitives.CamlMlBytesLength
+
+import OCaml.Vm.Primitives.CamlFreshOoId

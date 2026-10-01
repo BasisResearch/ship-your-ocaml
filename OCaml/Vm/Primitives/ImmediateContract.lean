@@ -16,7 +16,7 @@ theorem ArgumentsRepr.get {pl : Place} {args : List Val} {c : Config}
   have he : w' = w := Option.some.inj (hw'.symm.trans hv)
   simpa only [he] using hr
 
-/-- Data and platform facts common to read-only primitive calls. -/
+/-- Data, platform and ABI facts common to primitive calls. -/
 structure ImmediateInput (runtimeOk : Config → Prop) (P : Prog) (s : St)
     (pl : Place) (cp : ChanPlace) (sp high : Nat) (ra : BitVec 64)
     (args : List Val) (c : Config) : Prop extends LeafInput ra c where
@@ -25,27 +25,29 @@ structure ImmediateInput (runtimeOk : Config → Prop) (P : Prog) (s : St)
   loop : LoopRegisters c
   arguments : ArgumentsRepr pl args c
 
-structure ReadOnlyPost (runtimeOk : Config → Prop) (P : Prog) (s : St)
+structure PrimitivePost (runtimeOk : Config → Prop) (P : Prog) (s : St)
     (pl : Place) (cp : ChanPlace) (sp high : Nat) (name : String) (args : List Val)
-    (v : Val) (w : BitVec 64) (writes : List Nat) (before : Config) (ra : BitVec 64)
+    (v : Val) (w : BitVec 64) (heapAfter : Heap) (worldAfter : World)
+    (writes : List Nat) (expectedMem : Std.ExtHashMap Nat (BitVec 8)) (before : Config) (ra : BitVec 64)
     (after : Config) : Prop where
-  call : RegisterPost writes before ra w after
-  data : VmPayload P {s with accu := v} after pl cp sp high
+  call : EffectPost writes expectedMem before ra w after
+  data : VmPayload P {s with accu := v, heap := heapAfter, world := worldAfter} after pl cp sp high
   platform : PlatformOk runtimeOk after
   loop : LoopRegisters after
   resultRepr : valWord pl (v) = some w
-  semantics : primF1Impl name args s.heap s.world = .ok (v) s.heap s.world
+  semantics : primF1Impl name args s.heap s.world = .ok v heapAfter worldAfter
+
+/-- A read-only primitive leaves the abstract heap/world and concrete memory unchanged. -/
+abbrev ReadOnlyPost (runtimeOk : Config → Prop) (P : Prog) (s : St)
+    (pl : Place) (cp : ChanPlace) (sp high : Nat) (name : String) (args : List Val)
+    (v : Val) (w : BitVec 64) (writes : List Nat) (before : Config) (ra : BitVec 64) :=
+  PrimitivePost runtimeOk P s pl cp sp high name args v w s.heap s.world writes before.σ.mem before ra
 
 /-- The immediate-result specialization preserves the original primitive API. -/
 abbrev ImmediatePost (runtimeOk : Config → Prop) (P : Prog) (s : St)
     (pl : Place) (cp : ChanPlace) (sp high : Nat) (name : String) (args : List Val)
     (n : BitVec 63) (writes : List Nat) (before : Config) (ra : BitVec 64) :=
   ReadOnlyPost runtimeOk P s pl cp sp high name args (.int n) (tag64 n) writes before ra
-
-/-- A finite write-set check protects the interpreter's dedicated registers. -/
-def PreservesLoopRegisters (writes : List Nat) : Prop :=
-  ∀ r ∈ [Layout.reg_dispatchTable, Layout.reg_opcodeBound, Layout.reg_pending, Layout.reg_domain],
-    ∀ n ∈ writes, gprReg n ≠ gprReg r
 
 theorem readOnly_contract {runtimeOk : Config → Prop} (stable : MemoryStable runtimeOk)
     {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high : Nat} {ra entry : BitVec 64}
@@ -62,11 +64,7 @@ theorem readOnly_contract {runtimeOk : Config → Prop} (stable : MemoryStable r
   intro after post
   refine ⟨post, (h.data.accu_of_root v root).frame post.memory post.output,
     ⟨post.good, post.image, stable _ _ post.memory h.runtime⟩, ?_, repr, model⟩
-  refine ⟨?_, ?_, ?_, ?_⟩
-  · exact (post.frame (gprReg Layout.reg_dispatchTable) (frame Layout.reg_dispatchTable (by simp)) (by decide)).trans h.loop.dispatchTable
-  · exact (post.frame (gprReg Layout.reg_opcodeBound) (frame Layout.reg_opcodeBound (by simp)) (by decide)).trans h.loop.opcodeBound
-  · exact (post.frame (gprReg Layout.reg_pending) (frame Layout.reg_pending (by simp)) (by decide)).trans h.loop.pending
-  · exact (post.frame (gprReg Layout.reg_domain) (frame Layout.reg_domain (by simp)) (by decide)).trans h.loop.domain
+  exact post.loop frame h.loop
 
 
 theorem immediate_contract {runtimeOk : Config → Prop} (stable : MemoryStable runtimeOk)

@@ -610,12 +610,20 @@ def ocaml_literal_mline(pc, word):
         kind = {3: 'ld', 4: 'lbu'}[funct3]
     elif opcode == 0x13:
         kind = {0: 'addi', 1: 'slli', 5: 'srli'}[funct3]
+    elif opcode == 0x17:
+        kind = 'auipc'
+    elif opcode == 0x23 and funct3 == 3:
+        kind = 'sd'
     elif opcode == 0x33 and funct3 == 0:
         kind = {0: 'add', 0x20: 'sub'}[word >> 25]
     else:
         raise ValueError(f'unsupported read-only instruction {word:08x}')
     rd, rs1 = (word >> 7) & 31, (word >> 15) & 31
     rs2, imm = ((word >> 20) & 31, 0) if opcode == 0x33 else (0, word >> 20)
+    if opcode == 0x17:
+        rs1, rs2, imm = 0, 0, 0
+    elif opcode == 0x23:
+        rd, rs2, imm = 0, (word >> 20) & 31, ((word >> 25) << 5) | ((word >> 7) & 31)
     fields = [f'0x{pc:08x}#64', f'0x{word:08x}#32'] + lib.le_bytes(word)
     fields += [f'.{kind}', str(rd), str(rs1), str(rs2), f'0x{imm:03x}#12']
     return '⟨' + ', '.join(fields) + '⟩'
@@ -636,7 +644,87 @@ def emit_ocaml_register_return(E, fn, signature, hypotheses, writes, value, bloc
       '  · intro σ hr', f'    rw [{fn}_regs] at hr', '    exact hr.1', '  · decide', '')
 
 
-def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False):
+def emit_ocaml_counter_body(E, fn, ins):
+    """Fixed-global read/increment/store, certified by the shared block kernel."""
+    L = '[(1, ra)]'
+    loads = '[read8 c.σ.mem Layout.sym_oo_last_id]'
+    state = f'(SegEvalState.init {L} {loads})'
+    old = 'word c Layout.sym_oo_last_id'
+    offset = -lib.sext(((ins[4][1] >> 25) << 5) | ((ins[4][1] >> 7) & 31), 12)
+    base = f'(BitVec.ofNat 64 (Layout.sym_oo_last_id + {offset}))'
+    regs = f'[(14, {base}), (15, {old} + 2), (10, {old}), (1, ra)]'
+    rawregs = regs.replace(old, 'bytesVal .ld (read8 c.σ.mem Layout.sym_oo_last_id)')
+    E(f'theorem {fn}_body_regs (c : Config) (ra : BitVec 64) :',
+      f'    runGM {fn}_body {L} {loads} = {regs} := by',
+      f'  generalize hb : read8 c.σ.mem Layout.sym_oo_last_id = bs',
+      '  have hv : bytesVal .ld bs = word c Layout.sym_oo_last_id := by rw [← hb]; exact read8_value _ _',
+      f'  simp only [{fn}_body, runGM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, List.headD, List.nil_append]',
+      '  rw [hv]',
+      '  simp [counterLog, imm20Of, eraseG, lookupG, LeanRV64DExecutable.Functions.sign_extend,',
+      '    Sail.BitVec.signExtend, Layout.sym_oo_last_id]', '',
+      f'theorem {fn}_regs (c : Config) (ra : BitVec 64) :',
+      f'    (evalBlocks {fn}_blocks {state}).regs = {regs} := by',
+      f'  exact {fn}_body_regs c ra', '',
+      f'theorem {fn}_log (c : Config) (ra : BitVec 64) :',
+      f'    (evalBlocks {fn}_blocks {state}).log = counterLog ({old}) := by',
+      f'  generalize hb : read8 c.σ.mem Layout.sym_oo_last_id = bs',
+      '  have hv : bytesVal .ld bs = word c Layout.sym_oo_last_id := by rw [← hb]; exact read8_value _ _',
+      f'  simp only [{fn}_blocks, {fn}_body, evalBlocks, evalBlock, SegEvalState.init, wlogM, stepGM, stepLdsM, wvalM, wentryM, eaddrM, widthOfM, srcVal, lookupG, eraseG, List.headD, List.nil_append]',
+      '  rw [hv]',
+      '  simp [counterLog, imm20Of, eraseG, lookupG, LeanRV64DExecutable.Functions.sign_extend,',
+      '    Sail.BitVec.signExtend, Layout.sym_oo_last_id]', '',
+      f'theorem {fn}_ra (c : Config) (ra : BitVec 64) :',
+      f'    srcVal 1 (runGM {fn}_body {L} {loads}) = ra := by',
+      f'  rw [{fn}_body_regs]', '  rfl', '',
+      f'theorem {fn}_return_pc (c : Config) (ra : BitVec 64) (ha : ra.toNat % 4 = 0) :',
+      f'    evalBlocksPC (BitVec.ofNat 64 Layout.sym_{fn}) {state} {fn}_blocks = ra := by',
+      f'  simp only [evalBlocksPC, {fn}_blocks, SegEvalState.init, chainEndPC, endPCB, tgtPCT]',
+      '  exact (congrArg (fun r : BitVec 64 =>',
+      '    Sail.BitVec.update (r + LeanRV64DExecutable.Functions.sign_extend (m := 64) (0#12)) 0 0#1)',
+      f'    ({fn}_ra c ra)).trans (ret_tgt ra ha)', '',
+      f'theorem {fn}_shape : ChainOK (BitVec.ofNat 64 Layout.sym_{fn}) [1] {fn}_blocks := by',
+      f'  simp only [ChainOK, BBlockOK, {fn}_blocks, {fn}_body, BlockOKM]',
+      '  repeat apply And.intro', '  all_goals decide', '',
+      f'theorem {fn}_blocks_summary (c : Config) (ra : BitVec 64) (h : LeafInput ra c) :',
+      f'    FnSummary (BitVec.ofNat 64 Layout.sym_{fn}) (fun x => x = c)',
+      f'      (BlockPost {fn}_blocks (BitVec.ofNat 64 Layout.sym_{fn}) {L} {loads} c) := by',
+      '  apply block_summary',
+      '  refine ⟨h.good, h.minstret, ⟨h.raReg, True.intro⟩, ?_, ?_, ?_, h.tick⟩',
+      '  · change KeysOK [1]; decide',
+      f'  · change ChainFacts c.σ.mem c.σ.mem {L} {loads} {fn}_blocks',
+      '    apply singleton_chain_facts',
+      f'    · have hc := {fn}_loaded h.image',
+      f'      chain_facts hc with "Vsa.Sim.Code.{fn}_at_"',
+      '      · apply counter_read.ld rfl ?_ (read8_pins _ _)',
+      '        simp [eaddrM, stepGM, wvalM, srcVal, lookupG, eraseG, imm20Of,',
+      '          LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend,',
+      '          Sail.BitVec.extractLsb, Layout.sym_oo_last_id]',
+      '      · apply counter_write.sd rfl ?_',
+      '        simp [eaddrM, stepGM, wvalM, srcVal, lookupG, eraseG, imm20Of,',
+      '          LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend,',
+      '          Sail.BitVec.extractLsb, Layout.sym_oo_last_id]',
+      f'    · have hc := {fn}_loaded h.image',
+      f'      chain_facts hc with "Vsa.Sim.Code.{fn}_at_"',
+      f'    · exact return_facts _ rfl rfl rfl ({fn}_ra c ra) h.aligned',
+      f'  · exact {fn}_shape', '',
+      f'theorem {fn}_summary (c : Config) (ra : BitVec 64) (h : LeafInput ra c) :',
+      f'    FnSummary (BitVec.ofNat 64 Layout.sym_{fn}) (fun x => x = c)',
+      f'      (WritePost [10, 14, 15] (counterLog ({old})) c ra ({old})) := by',
+      f'  apply write_of_blocks h.image (counter_image _) ({fn}_blocks_summary c ra h)',
+      f'  · exact {fn}_log c ra',
+      f'  · exact {fn}_return_pc c ra h.aligned',
+      '  · intro σ hr', f'    rw [{fn}_regs] at hr',
+      '    exact gholds_lookup _ hr rfl', '  · decide', '',
+      f'theorem {fn}_primitive {{runtimeOk P s pl cp sp high ra c}}',
+      '    (stable : WindowStable runtimeOk counterWindows)',
+      '    (h : CounterInput runtimeOk P s pl cp sp high ra c) :',
+      f'    FnSummary (BitVec.ofNat 64 Layout.sym_{fn}) (fun x => x = c)',
+      '      (CounterPost runtimeOk P s pl cp sp high c ra) := by',
+      f'  exact counter_contract stable h ({fn}_summary c ra h.toLeafInput)',
+      '', 'end OCaml.Vm.Primitives', '')
+
+
+def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False, counter=False):
     """Read-only F1 leaves: existing CFG extraction + segment kernel fold.
 
     This backend consumes the pinned OCaml ELF and per-word ElfDecode facts,
@@ -659,9 +747,9 @@ def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False):
         for w in re.findall(r'^theorem decode_([0-9a-f]{8})', path.read_text(), re.M):
             decode[int(w, 16)] = 'Vsa.Sim.ElfDecode.' + path.stem
     result = {}
-    backend = '--ocaml-lengths' if lengths else '--ocaml-argv' if argv else ('--ocaml-compare' if compare else '--ocaml-constants')
+    backend = '--ocaml-counter' if counter else '--ocaml-lengths' if lengths else '--ocaml-argv' if argv else ('--ocaml-compare' if compare else '--ocaml-constants')
     for fn in primitive_names():
-        selected = (fn in ('caml_ml_string_length', 'caml_ml_bytes_length')) if lengths else (fn == 'caml_sys_argv') if argv else (fn == 'caml_int_compare' if compare else fn.startswith('caml_sys_const_'))
+        selected = (fn == 'caml_fresh_oo_id') if counter else (fn in ('caml_ml_string_length', 'caml_ml_bytes_length')) if lengths else (fn == 'caml_sys_argv') if argv else (fn == 'caml_int_compare' if compare else fn.startswith('caml_sys_const_'))
         if not selected:
             continue
         ins = functions[fn]['insts']
@@ -670,7 +758,7 @@ def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False):
         _, blocks = build_cfg(fn, entry, di, {fn: (entry, end)})
         if len(blocks) != 1 or blocks[0].kind != 'ret':
             raise ValueError(f'{fn}: changed leaf CFG')
-        if not (compare or argv or lengths) and any((w & 127) != 0x13 or ((w >> 7) & 31) != 10 for a, w, op, args in ins[:-1]):
+        if not (compare or argv or lengths or counter) and any((w & 127) != 0x13 or ((w >> 7) & 31) != 10 for a, w, op, args in ins[:-1]):
             raise ValueError(f'{fn}: not an a0-only integer leaf')
         stem = ''.join(x.capitalize() for x in fn.split('_'))
         pred = 'Vsa.Sim.Code.' + fn[0].upper() + fn[1:] + 'Loaded'
@@ -685,12 +773,14 @@ def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False):
             imports += ['OCaml.Vm.Primitives.ImmediateContract', 'OCaml.Vm.Primitives.Read']
         if lengths:
             imports += ['OCaml.Vm.Primitives.StringContract', 'OCaml.Vm.Primitives.Control']
+        if counter:
+            imports += ['OCaml.Vm.Primitives.CounterContract', 'OCaml.Vm.Primitives.Control']
         imports += sorted({decode[w] for a,w,_,_ in ins})
         E = lib.Emitter()
         for m in imports: E('import ' + m)
         E('', f'/-! GENERATED by scripts/syi/gen_fn.py {backend}. -/',
           'namespace OCaml.Vm.Primitives', 'open Vsa.Sim Vsa.Machine LeanRV64DExecutable', '')
-        if lengths:
+        if lengths or counter:
             E(f'def {fn}_body : List MInstr := [',
               ',\n'.join('  ' + ocaml_literal_mline(a, w) for a,w,_,_ in ins[:-1]), ']', '')
             E(f'def {fn}_blocks : List BBlock := [{{', f'  body := {fn}_body')
@@ -713,6 +803,10 @@ def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False):
                 E(f'  · have hb := h.text {off} (by decide)',
                   f'    have he : Image.textByte {off} = (0x{(w>>(8*k))&255:02x}#8) := by decide +kernel',
                   '    rw [he] at hb', '    exact hb')
+        if counter:
+            emit_ocaml_counter_body(E, fn, ins)
+            result[root / ('OCaml/Vm/Primitives/' + stem + '.lean')] = E.text()
+            continue
         if lengths:
             E(f'def {fn}_load_prefix : List MInstr := [',
               ',\n'.join('  ' + ocaml_literal_mline(a, w) for a,w,_,_ in ins[:5]), ']', '')
@@ -958,7 +1052,7 @@ def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False):
           f'  exact constant_contract stable h ({fn}_summary c ra h.toLeafInput) rfl',
           '', 'end OCaml.Vm.Primitives', '')
         result[root / ('OCaml/Vm/Primitives/' + stem + '.lean')] = E.text()
-    if not (compare or argv or lengths):
+    if not (compare or argv or lengths or counter):
         modules = sorted('.'.join(path.relative_to(root).with_suffix('').parts)
                          for path in result if 'Primitives' in path.parts)
         result[root / 'OCaml/Vm/Primitives/Constants.lean'] = (
@@ -981,6 +1075,7 @@ def main():
     p.add_argument("--ocaml-compare", action="store_true")
     p.add_argument("--ocaml-argv", action="store_true")
     p.add_argument("--ocaml-lengths", action="store_true")
+    p.add_argument("--ocaml-counter", action="store_true")
     p.add_argument("--check", action="store_true")
     p.add_argument("--entry")
     p.add_argument("-o", "--out")
@@ -998,8 +1093,8 @@ def main():
     p.add_argument("--cfg-only", action="store_true",
                    help="print the CFG classification and exit")
     args = p.parse_args()
-    if args.ocaml_constants or args.ocaml_compare or args.ocaml_argv or args.ocaml_lengths:
-        emit_ocaml_constants(args.check, compare=args.ocaml_compare, argv=args.ocaml_argv, lengths=args.ocaml_lengths)
+    if args.ocaml_constants or args.ocaml_compare or args.ocaml_argv or args.ocaml_lengths or args.ocaml_counter:
+        emit_ocaml_constants(args.check, compare=args.ocaml_compare, argv=args.ocaml_argv, lengths=args.ocaml_lengths, counter=args.ocaml_counter)
         return
     if not args.fn or not args.entry:
         p.error("--fn and --entry are required outside --ocaml-constants")
