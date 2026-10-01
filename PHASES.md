@@ -56,6 +56,7 @@ ELF pin).
 | `repr_forceExit`, `armSim_not_repr`, `loaded_not_armSim` | `OCaml/Vm/Sim/Obstruction.lean` | A1 | **proved** against legacy `DataOnlyArmSim`; retained as a regression witness |
 | `tr_const0`, `const0_loaded` (first generated machine arm body and full-image pin projection) | `OCaml/Vm/Sim/Const0*.lean` | A1 | **proved**; dispatch and full representation/frame bridge open |
 | `tr_isint`, `isint_loaded` (generated five-instruction machine body with SLLI/ANDI) | `OCaml/Vm/Sim/Isint*.lean` | A1 | **proved**; full representation/frame bridge open |
+| `tr_negint`, `negint_loaded` (generated four-instruction tagged-negation body) | `OCaml/Vm/Sim/Negint*.lean` | A1 | **proved**; full representation/frame bridge open |
 | F2/F3/F4/F5 arms and primitives | `OCaml/Vm/Sim/` | A2–A5 | open |
 | GC: `caml_empty_minor_heap` preserves `VmReprAt` up to a new placement (G2) | new `OCaml/Vm/Gc/` | A6 | open |
 | symbolic heap allocation/read laws; arbitrary-heap closure capture/read segment | `OCaml/Logic/Symbolic.lean` | B′1 | **proved** (`Heap.get_alloc_old`, `Heap.get_alloc_fresh`, `field_alloc_fresh`, `field_alloc_old`, `closure_capture_read`) |
@@ -145,7 +146,9 @@ A0 library projections can consume the shared `FixedBytesLoaded` interface.
   `disasm_to_segment.py` → `gen_segment.py`, with the new site classes
   (tagged-int ALU, `slli`/`srai`/`addw`), the dispatch lemma (jump table)
   and the allocation fast path. Primitives: `gen_fn.py` summaries for the
-  30 F1 primitives against `primF1Impl`.
+  30 F1 primitives against `primF1Impl`, owned by lane **a1-prims**.
+  C_CALL arms consume named call-site/return-state summary premises until
+  those machine summaries land; their prefix/suffix composition stays in A1.
 * Budget: G1 (PLAN §GC) — `Fits` with the minor heap as the heap budget;
   the slow path is excluded by `Fits`.
 * **Exit**: `ArmSim L B P` for every `P`; hence

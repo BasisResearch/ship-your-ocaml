@@ -28,6 +28,7 @@ spec.loader.exec_module(code)
 
 FAMILIES = {
     'CONST0': ('Const0', ['alu_addi', 'alu_addi', 'j']),
+    'NEGINT': ('Negint', ['alu_addi', 'alu_addi', 'sub', 'j']),
     'ISINT': ('Isint', ['slli', 'andi', 'alu_addi', 'alu_addi', 'j']),
 }
 

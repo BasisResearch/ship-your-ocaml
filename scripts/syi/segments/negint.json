@@ -1,0 +1,72 @@
+{
+  "theorem": "tr_negint",
+  "doc": "NEGINT arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.NegintSites",
+    "Vsa.Sim.SegState"
+  ],
+  "params": [
+    "(v23 v21 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlNegintLoaded",
+  "pins": [
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80002d8c",
+      "site": "site_80002d8c_negint",
+      "class": "alu",
+      "asm": "li a5,2",
+      "rd": "x15",
+      "rd_val": "((0#64) + sign_extend (m := 64) (0x002#12))",
+      "raw_val": "((0#64) + sign_extend (m := 64) (0x002#12))",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002d90",
+      "site": "site_80002d90_negint",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002d94",
+      "site": "site_80002d94_negint",
+      "class": "alu",
+      "asm": "sub s5,a5,s5",
+      "rd": "x21",
+      "rd_val": "(((0#64) + sign_extend (m := 64) (0x002#12)) - v21)",
+      "raw_val": "(v15 - v21)",
+      "call": "$vmi $v:x15 $v:x21 $hG $hpc $hmi $pin:x15 $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002d98",
+      "site": "site_80002d98_negint",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1ff1c4#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80002d8c",
+  "mem_param": "m0",
+  "default_limits": true
+}

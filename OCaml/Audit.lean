@@ -418,3 +418,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 -- Complete conditional VM-data relocation (collector execution remains open).
 #print axioms OCaml.Vm.Reloc.vmReprAt_reloc
+#print axioms Vsa.Sim.tr_negint
+#print axioms OCaml.Vm.Sim.negint_loaded

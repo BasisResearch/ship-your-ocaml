@@ -36,3 +36,6 @@ import OCaml.Programs.Generated.Matching
 import OCaml.Programs.Generated.Bytegen
 import OCaml.Programs.Generated.Emitcode
 import OCaml.Programs.GeneratedAdequacy
+
+import OCaml.Vm.Sim.NegintSegment
+import OCaml.Vm.Sim.NegintPins

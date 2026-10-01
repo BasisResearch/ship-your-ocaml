@@ -1,18 +1,23 @@
 # Lane a1-arms
 
-## Integration waiting for host memory
+## Current status
 
-The approved representation repair is landed (`ef4e701`), and the first
-CONST0 segment is landed (`3229c53`). ISINT plus the shared ALU adapter is
-committed as `7994562`; `scripts/integrate.sh` is waiting for the mandated
-25 GB of available memory before its gate. Repeated checks reached 9 GB.
-The largest process observed was unrelated `rocqworker` PID 1799904 at
-about 90 GiB RSS; this lane did not start it and must not stop it.
-The foreman has been asked for memory relief. No additional contract
-approval is requested. The full A1 exit criterion is still open.
+The repair (`ef4e701`), CONST0 (`3229c53`), and ISINT/shared ALU adapter
+(`7994562`, integration head `dac2c19`) have landed through
+`scripts/integrate.sh`. The delayed integration completed successfully
+when host memory recovered; all gates, including the 16 ALU smoke sites,
+passed. The F1 exit remains open.
 
-When memory is available, finish the 16 ALU smoke-site build and the full
-gate, record the integration result, then resume the remaining arm bridges.
+F1 primitive machine summaries belong to **a1-prims**, including all
+`primsF1` C_CALL targets. This lane will consume their represented
+call-site/return-state contracts through named premises until they land;
+it will prove the generated arm prefix/suffix and composition, not the
+primitive bodies. No C_CALL arm has yet been discharged.
+
+After F1, continue with F2, F3, F4, and F5 arms in order as a2-sem lands
+the semantics; primitive summaries continue to come from a1-prims.
+Re-read the brief's “After F1” section at that transition, including F3
+method caches, F4 callback simulation, and F5 OS interfaces.
 
 ## Current contract
 
@@ -45,6 +50,12 @@ added to the headline theorem.
   frames remain explicit typed obligations, not assumed preservation.
 
 ## Proved
+
+* `Vsa.Sim.tr_negint` (`OCaml/Vm/Sim/NegintSegment.lean:20`) proves the
+  four-instruction NEGINT body, including the subtraction of the incoming
+  tagged accumulator from 2. `negint_loaded` projects its image pins.
+  Generated through the same family pipeline without new proof machinery;
+  abstract semantics and full representation/frame composition remain open.
 
 * CONST0 pilot landed as `3229c53` through `scripts/integrate.sh`.
 * Second generated arm body: `Vsa.Sim.tr_isint` in
@@ -83,6 +94,10 @@ added to the headline theorem.
 
 ## Validation
 
+* NEGINT targeted build passed under `MemoryMax=24G`, default Lean limits:
+  code 4.8s, sites 3.7s, image projection 3.7s, segment 2.2s;
+  wall 12.71s, maximum process RSS 1.69 GiB.
+
 * Original obstruction landed as `ea1cc61`, log as `c87fb48`, through
   `scripts/integrate.sh` with all gates passing.
 * Repair targeted build passed under `MemoryMax=24G`: image data 7.9s,
@@ -103,8 +118,7 @@ added to the headline theorem.
 * Python checks pass for reserved shift encodings, 5/6-bit shift widths,
   x0/repeated operands and read-before-write tracking. All artifacts regenerate.
 * Additional ALU smoke sites are generated from real ELF instructions;
-  their Lean build is pending memory availability. The shared machine fell
-  below the 25 GB available-memory threshold; further builds are held.
+  their Lean build and axiom audit passed in the completed integration gate.
 * Interpreter census after adapter: only AUIPC (69), indirect JALR (6), and
   LHU (1) remain unsupported by the site classifier (whole interpreter scope,
   not an F1 opcode count). No claim that classification alone proves arms.
@@ -114,8 +128,8 @@ added to the headline theorem.
 Continue with one generated F1 family per measured build. No concrete entry/next/halt arm, F1 refinement instance, or
 machine `whileMin` result is claimed. `whileMin_bcSem` remains bytecode-level.
 
-Next: validate all 16 generated ALU smoke sites, land the adapter/ISINT
-family, then discharge dispatch and full representation/frame bridges. Dispatch,
+Next: extend generated arm families, then discharge dispatch and full
+representation/frame bridges. Dispatch,
 allocation fast path, primitive summaries, and the actual loop/entry machine
 proofs remain open. A0 has repaired the nursery bounds via `runtimeLayout`; its remaining
 boot ELF text mismatch is tracked in that lane's log. `L.runtimeOk` must
