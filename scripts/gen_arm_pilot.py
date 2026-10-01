@@ -84,6 +84,7 @@ FAMILIES = {
     'ATOM': ('Atom', ['lw_tot', 'auipc', 'ld_tot', 'alu_addi', 'slli', 'alu_addi', 'alu_add', 'j']),
     'ISINT': ('Isint', ['slli', 'andi', 'alu_addi', 'alu_addi', 'j']),
     'VECTLENGTH': ('Vectlength', ['ld_tot', 'alu_addi', 'srli', 'slli', 'alu_addi', 'j']),
+    'ASSIGN': ('Assign', ['lw_tot', 'alu_addi', 'slli', 'alu_add', 'sd', 'alu_addi', 'j']),
 }
 
 

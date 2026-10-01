@@ -24,6 +24,39 @@ structure StackPost (before : Config) (pl : Place) (pc sp : Nat) (w : BitVec 64)
   output : after.σ.sailOutput = before.σ.sailOutput
   preserved : ∀ r ∈ consumePreserved, after.σ.regs.get? r = before.σ.regs.get? r
 
+/-- One register reconstruction for stack reads, pushes and in-place edits. -/
+theorem StackPost.registers {P : Prog} {s target : St} {c after : Config}
+    {pl : Place} {cp : ChanPlace} {oldSp sp high : Nat} {w : BitVec 64}
+    {memoryAfter : Std.ExtHashMap Nat (BitVec 8)}
+    (post : StackPost c pl target.pc sp w memoryAfter after)
+    (data : VmReprAt P s c pl cp oldSp high)
+    (env : target.env = s.env) (extra : target.extra = s.extra)
+    (value : valWord pl target.accu = some w) : VmRegisters target pl sp after := by
+  refine ⟨post.head, post.code, post.stack, ⟨w, post.accu, value⟩, ?_, ?_⟩
+  · obtain ⟨e, he, hv⟩ := data.env
+    exact ⟨e, (post.preserved _ (by decide)).trans he, by rw [env]; exact hv⟩
+  · rw [extra]
+    exact (post.preserved _ (by decide)).trans data.extra
+
+/-- The common stack-operation frame retains every fixed loop register. -/
+theorem StackPost.loopRegisters {c after : Config} {pl : Place} {pc sp : Nat} {w : BitVec 64}
+    {memoryAfter : Std.ExtHashMap Nat (BitVec 8)}
+    (post : StackPost c pl pc sp w memoryAfter after) (loop : LoopRegisters c) :
+    LoopRegisters after :=
+  ⟨(post.preserved _ (by decide)).trans loop.dispatchTable,
+   (post.preserved _ (by decide)).trans loop.opcodeBound,
+   (post.preserved _ (by decide)).trans loop.pending,
+   (post.preserved _ (by decide)).trans loop.domain⟩
+
+/-- Transport the shared body observations through dispatch's complete frame. -/
+theorem StackPost.after_dispatch {before d after : Config} {op : Opcode} {a : BitVec 64}
+    {pl : Place} {pc sp : Nat} {w : BitVec 64} {memoryAfter : Std.ExtHashMap Nat (BitVec 8)}
+    (post : StackPost d pl pc sp w memoryAfter after) (dp : DispatchPost before op a d) :
+    StackPost before pl pc sp w memoryAfter after :=
+  ⟨post.good, post.head, post.code, post.stack, post.accu, post.memory,
+    post.output.trans dp.frame.out, fun r hr => (post.preserved r hr).trans
+      (dp.frame.frame r (by revert r; decide))⟩
+
 /-- Read-only specialization for stack-consuming bodies. -/
 abbrev ConsumeValuePost (before : Config) (pl : Place) (pc sp : Nat) (w : BitVec 64)
     (after : Config) : Prop := StackPost before pl pc sp w before.σ.mem after
@@ -43,16 +76,9 @@ theorem consume_value_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : 
     (post : ConsumeValuePost c pl pc (sp + 8 * count) w after) :
     Running L P {s with pc := pc, accu := v, stack := s.stack.drop count} after := by
   have payload := payload_pc (payload_stack_drop ((payload_of_repr data).accu_of_root v root) bound) pc
-  apply readOnly_restore stable payload data.primitives platform ?_ ?_
+  exact readOnly_restore stable payload data.primitives platform
+    (post.registers data rfl rfl value) (post.loopRegisters loop)
     post.good post.memory post.output
-  · refine ⟨post.head, post.code, post.stack, ⟨w, post.accu, value⟩, ?_, ?_⟩
-    · obtain ⟨w, hw, hv⟩ := data.env
-      exact ⟨w, (post.preserved _ (by decide)).trans hw, hv⟩
-    · exact (post.preserved _ (by decide)).trans data.extra
-  · exact ⟨(post.preserved _ (by decide)).trans loop.dispatchTable,
-      (post.preserved _ (by decide)).trans loop.opcodeBound,
-      (post.preserved _ (by decide)).trans loop.pending,
-      (post.preserved _ (by decide)).trans loop.domain⟩
 
 /-- Compose dispatch with a generated consuming body, sharing payload restoration. -/
 theorem consume_value_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
@@ -70,10 +96,7 @@ theorem consume_value_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
   obtain ⟨nb, after, hb, post⟩ := body d dp
   refine ⟨nb, after, hb, ?_⟩
   apply consume_value_restore stable h.toVmReprAt h.running.platform h.dispatch.loop value root bound
-  exact ⟨post.good, post.head, post.code, post.stack, post.accu,
-      post.memory.trans dp.memory, post.output.trans dp.frame.out,
-      fun r hr => (post.preserved r hr).trans
-        (dp.frame.frame r (by revert r; decide))⟩
+  simpa only [dp.memory] using post.after_dispatch dp
 
 /-- Existing integer restoration API, obtained from the arbitrary-result rule. -/
 theorem consume_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}

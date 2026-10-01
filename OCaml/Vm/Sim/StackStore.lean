@@ -23,14 +23,20 @@ structure PushWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPl
 theorem PushWriteOk.toNat {P s c pl cp sp w} (h : PushWriteOk P s c pl cp sp w) :
     (BitVec.ofNat 64 (sp - 8)).toNat = sp - 8 := Nat.mod_eq_of_lt h.address
 
+/-- A separated one-word write preserves every subrange of the pinned text. -/
+theorem image_word_code {a : Nat} {w : BitVec 64} {lo hi : Nat}
+    (h : ImageOutside [(a, 8, w)])
+    (lower : Image.textBase ≤ lo) (upper : hi ≤ Image.textBase + Image.textSize) :
+    a + 8 ≤ lo ∨ hi ≤ a := by
+  have outside := h.text
+  change (Image.textBase + Image.textSize ≤ a ∨ a + 8 ≤ Image.textBase) ∧ True at outside
+  rcases outside.1 with left | right <;> omega
+
 /-- Global image separation supplies every generated arm's local fetch window. -/
 theorem PushWriteOk.code {P s c pl cp sp w lo hi} (h : PushWriteOk P s c pl cp sp w)
     (lower : Image.textBase ≤ lo) (upper : hi ≤ Image.textBase + Image.textSize) :
-    sp - 8 + 8 ≤ lo ∨ hi ≤ sp - 8 := by
-  have outside := h.image.text
-  change (Image.textBase + Image.textSize ≤ sp - 8 ∨
-    sp - 8 + 8 ≤ Image.textBase) ∧ True at outside
-  rcases outside.1 with left | right <;> omega
+    sp - 8 + 8 ≤ lo ∨ hi ≤ sp - 8 :=
+  image_word_code h.image lower upper
 
 /-- Every separated word retains its total native load observation. -/
 theorem PushWriteOk.word_read {P s c pl cp sp w a}
@@ -136,18 +142,11 @@ theorem push_value_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Con
     simp only [pushLog, LogInW, InsideW, or_false, and_true]
     have room := space.room
     exact ⟨Nat.le_refl _, by omega⟩
-  apply running_of_payload (payload_pc selected pc)
+  exact running_of_payload (payload_pc selected pc)
     (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
-      stable c after memoryFrame platform.runtime⟩ ?_ ?_
-  · refine ⟨post.head, post.code, post.stack, ⟨result, post.accu, value⟩, ?_, ?_⟩
-    · obtain ⟨e, he, hv⟩ := data.env
-      exact ⟨e, (post.preserved _ (by decide)).trans he, hv⟩
-    · exact (post.preserved _ (by decide)).trans data.extra
-  · exact ⟨(post.preserved _ (by decide)).trans loop.dispatchTable,
-      (post.preserved _ (by decide)).trans loop.opcodeBound,
-      (post.preserved _ (by decide)).trans loop.pending,
-      (post.preserved _ (by decide)).trans loop.domain⟩
+      stable c after memoryFrame platform.runtime⟩
+    (post.registers data rfl rfl value) (post.loopRegisters loop)
 
 /-- Shared dispatch composition for stack-writing bodies. -/
 theorem push_value_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
@@ -165,9 +164,6 @@ theorem push_value_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c :
   obtain ⟨nb, after, hb, post⟩ := body d dp
   refine ⟨nb, after, hb, ?_⟩
   apply push_value_restore stable h.toVmReprAt h.running.platform h.dispatch.loop space pushed value root
-  exact ⟨post.good, post.head, post.code, post.stack, post.accu,
-    post.memory.trans (congrArg (fun m => writeLog m (pushLog sp w)) dp.memory),
-    post.output.trans dp.frame.out,
-    fun r hr => (post.preserved r hr).trans (dp.frame.frame r (by revert r; decide))⟩
+  simpa only [dp.memory] using post.after_dispatch dp
 
 end OCaml.Vm.Sim

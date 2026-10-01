@@ -824,6 +824,22 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.vectlength_step_arm
 #print axioms OCaml.Vm.Sim.vectlength_loaded
 #print axioms Vsa.Sim.tr_vectlength
+
+#print axioms OCaml.Vm.Sim.StackPost.registers
+#print axioms OCaml.Vm.Sim.StackPost.loopRegisters
+#print axioms OCaml.Vm.Sim.StackPost.after_dispatch
+#print axioms OCaml.Vm.Sim.image_word_code
+#print axioms OCaml.Vm.Sim.payload_frame_stack
+#print axioms OCaml.Vm.Sim.stack_assign
+#print axioms OCaml.Vm.Sim.assigned_root
+#print axioms OCaml.Vm.Sim.payload_stack_assign
+#print axioms OCaml.Vm.Sim.assign_restore
+#print axioms OCaml.Vm.Sim.assign_body_arm
+#print axioms OCaml.Vm.Sim.assign_arm
+#print axioms OCaml.Vm.Sim.assign_step_arm
+#print axioms OCaml.Vm.Sim.assign_loaded
+#print axioms Vsa.Sim.assign_code_store
+#print axioms Vsa.Sim.tr_assign
 #print axioms OCaml.Vm.Sim.PushWriteOk.stack_read
 #print axioms OCaml.Vm.Sim.pushacc1_arm
 #print axioms OCaml.Vm.Sim.pushacc2_arm

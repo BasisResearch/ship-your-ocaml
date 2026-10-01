@@ -1,5 +1,27 @@
 # Lane a1-arms
 
+## ASSIGN and shared stack-edit frames
+
+`assign_arm` and `assign_step_arm` prove the in-place stack update and unit
+result through the generated seven-instruction store body. `stack_assign`
+checks the overwritten word and preserves every other slot; `assigned_root`
+retains only already live values. `payload_frame_stack` reuses the existing
+whole-payload frame on an empty-stack view and `object_copied` for the
+original live heap, then installs the new stack. `StackEditOutside` names
+the required non-stack and heap separation.
+
+Before introducing a third register/dispatch reconstruction, the common
+parts were factored as `StackPost.registers`, `loopRegisters`, and
+`after_dispatch`. Existing consuming and PUSH bodies now use them.
+`image_word_code` similarly shares the store-versus-fetch range argument.
+
+Default-limit/24 GiB builds pass for the frame/restoration modules
+(0.9–1.0s each) and represented ASSIGN bridge (1.1s). The preceding vector
+length landing is `86dbfaf`, full gate passing after the memcpy rebase.
+There are now 96 conditional represented opcode bridges. Next: primitive
+call setup/restoration and remaining heap-write/allocation/control families.
+Full `ArmSim`, entry/halt, semantic-domain corrections and lane exits remain open.
+
 ## Header size and VECTLENGTH
 
 `vectlength_arm` and `vectlength_step_arm` reuse `header_words` from the
@@ -960,7 +982,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 95 conditional represented opcode bridges,
+stack-writing families. There are 96 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 
