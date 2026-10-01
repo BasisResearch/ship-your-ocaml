@@ -1,0 +1,92 @@
+{
+  "theorem": "tr_bgeint_next",
+  "doc": "BGEINT_NEXT arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.BgeintNextSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v8 v21 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_800034c0 : 0x80000000 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
+    "(hhi_800034c0 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ 0x100000000)",
+    "(hhtif_800034c0 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
+    "(hguard_800034c8 : zopz0zI_s (sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4))) (shift_bits_right_arith v21 (Sail.BitVec.extractLsb (0x01#6) 5 0)) = true)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlBgeintNextLoaded",
+  "pins": [
+    {
+      "reg": "x8",
+      "val": "v8",
+      "hyp": "hv8"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x800034c0",
+      "site": "site_800034c0_bgeint_next",
+      "class": "alu",
+      "asm": "lw a4,4(s0)",
+      "rd": "x14",
+      "rd_val": "(sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT4 σ.mem (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4)))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl hlo_800034c0 hhi_800034c0 hhtif_800034c0 $hi",
+      "rw": "hmemeq"
+    },
+    {
+      "addr": "0x800034c4",
+      "site": "site_800034c4_bgeint_next",
+      "class": "alu",
+      "asm": "srai a5,s5,0x1",
+      "rd": "x15",
+      "rd_val": "(shift_bits_right_arith v21 (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "raw_val": "(shift_bits_right_arith v21 (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800034c8",
+      "site": "site_800034c8_taken_bgeint_next",
+      "class": "btaken",
+      "asm": "blt a4,a5,8000364c <caml_interprete+0x1854>",
+      "imm": "0x0184#13",
+      "target": "0x8000364c",
+      "pre_lines": [],
+      "call": "$vmi $v:x14 $v:x15 $hG $hpc $hmi $pin:x14 $pin:x15 $hmem rfl hguard_800034c8 $hi"
+    },
+    {
+      "addr": "0x8000364c",
+      "site": "site_8000364c_bgeint_next",
+      "class": "alu",
+      "asm": "addi s0,s0,12",
+      "rd": "x8",
+      "rd_val": "(v8 + sign_extend (m := 64) (0x00c#12))",
+      "raw_val": "(v8 + sign_extend (m := 64) (0x00c#12))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003650",
+      "site": "site_80003650_bgeint_next",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1fe90c#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x800034c0",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

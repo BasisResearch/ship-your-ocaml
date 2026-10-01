@@ -105,6 +105,7 @@ python3 scripts/gen_ocaml_image.py | cmp -s - OCaml/Vm/ImageData.lean || fail "s
 python3 scripts/gen_unary_arms.py --check || fail "stage a5: unary arm bridge drift"
 python3 scripts/gen_field_arms.py --check || fail "stage a5: field arm bridge drift"
 python3 scripts/gen_conditional_arms.py --check || fail "stage a5: conditional arm bridge drift"
+python3 scripts/gen_compare_branch_arms.py --check || fail "stage a5: comparison branch bridge drift"
 python3 scripts/gen_binary_arms.py --check || fail "stage a5: binary arm bridge drift"
 python3 scripts/gen_acc_arms.py --check || fail "stage a5: stack arm bridge drift"
 python3 scripts/gen_const_arms.py --check || fail "stage a5: constant arm bridge drift"

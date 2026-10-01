@@ -91,6 +91,15 @@ for _op in ['LTINT', 'LEINT', 'GTINT', 'GEINT', 'ULTINT', 'UGEINT']:
         PATHS[_family] = (_op, [not _truth])
 
 
+for _op in ['BLTINT', 'BLEINT', 'BGTINT', 'BGEINT', 'BULTINT', 'BUGEINT']:
+    for _jumping in [True, False]:
+        _family = _op + ('_JUMP' if _jumping else '_NEXT')
+        FAMILIES[_family] = (_op.title() + ('Jump' if _jumping else 'Next'),
+            ['lw_tot', 'srai', 'branch_nottaken' if _jumping else 'branch_taken'] +
+            (['lw_tot', 'slli', 'alu_addi', 'alu_add', 'j'] if _jumping else ['alu_addi', 'j']))
+        PATHS[_family] = (_op, [not _jumping])
+
+
 def path_span(instructions, start, decisions):
     """Follow explicit branch outcomes; generated contracts retain every guard."""
     by_pc = {i[0]: i for i in instructions}

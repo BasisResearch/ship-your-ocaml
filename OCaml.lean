@@ -87,6 +87,12 @@ import OCaml.Vm.Sim.Gtint
 import OCaml.Vm.Sim.Geint
 import OCaml.Vm.Sim.Ultint
 import OCaml.Vm.Sim.Ugeint
+import OCaml.Vm.Sim.Bltint
+import OCaml.Vm.Sim.Bleint
+import OCaml.Vm.Sim.Bgtint
+import OCaml.Vm.Sim.Bgeint
+import OCaml.Vm.Sim.Bultint
+import OCaml.Vm.Sim.Bugeint
 import OCaml.Vm.Sim.OffsetWidth
 import OCaml.Vm.Sim.Envacc1
 import OCaml.Vm.Sim.Envacc2

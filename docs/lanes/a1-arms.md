@@ -28,6 +28,28 @@ Default-limit 24 GiB checks: OFFSETINT body/pins 5.56s (segment 2.1s),
 arithmetic witness 3.60s (module 2.3s), peak process RSS below 2 GiB.
 CONSTINT landed as `9786220` with the full gate passing.
 
+## Immediate integer comparison branches
+
+`gen_compare_branch_arms.py` emits both paths and the successful-step wrappers
+for BLTINT, BLEINT, BGTINT, BGEINT, BULTINT and BUGEINT. `longVal_native`
+(`BranchCompare.lean`) proves exact 64-bit arithmetic untagging, and
+`compare_code_word` reuses the signed relative-address law at operand 2.
+`brOp_accu` extracts the integer accumulator from semantic success. Native
+guards reuse `ComparisonArithmetic` and all restoration goes through
+`control_arm`; no new run algebra or per-site execution proof is introduced.
+
+Both operands use `OperandAt.read32`; the fallthrough path reads only the
+comparison operand and does not assume a successful relative target. The
+full-step wrapper carries both read geometries explicitly. The accumulator,
+VM payload, primitive bindings and complete platform state are preserved.
+
+Families build separately under 24 GiB at default limits. BLTINT's jump
+body takes 2.9s and its represented proof 1.2s; fallthrough body 1.3s,
+represented proof 1.1s, and composition 0.98s. There are now 47 conditional
+represented opcode bridges. Stack comparisons landed as `d0de539` with the
+full gate passing. Entry, full `ArmSim.next` and halt remain open; the
+OFFSETINT/REF semantic width correction is still needed from a2-sem.
+
 ## Signed and unsigned integer comparisons
 
 The `*_step_arm` theorems for LTINT, LEINT, GTINT, GEINT, ULTINT and UGEINT
