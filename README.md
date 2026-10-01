@@ -37,7 +37,7 @@ VALIDATION.md records all five successful Sail reruns.
 code both binaries share (`memcpy`, `memset`, `strlen`, `strcpy`,
 `__muldi3`, the division routines, …: 66 byte-identical functions) are
 retargeted to this ELF's addresses by `scripts/retarget_syi.py`; the
-39,312 code bytes they pin are checked against the ELF.
+39,600 code bytes they pin are checked against the ELF.
 
 `WhileMin.loaded_fillZero` proves `Loaded` for the complete captured
 while_min entry state, including its heap, collector invariant, platform
@@ -159,7 +159,7 @@ def endToEnd_ocaml_Statement S parse load boot L B : Prop :=   -- EndToEnd
 | `boot/ocamlc -version` on Sail | `4.14.4`, exit 0, 54.4M steps (cut at 48.8M) |
 | `boot/ocamlc -dinstr -c hello.ml` (`let () = print_int (6 * 7)`) on Sail | the compiler's bytecode listing, exit 0, 82.6M steps (cut at 48.8M); one collection, forced by a channel's custom-block accounting; none with `OCAMLRUNPARAM=M=1000` (77.4M steps) |
 | OS spec (`tcb/`) | 6,490 scripts, 101,621 calls on Linux: 0 traces rejected; the in-image file system: 6,410 accepted, 0 rejected (80 unconstrained) |
-| reused proofs | 66 functions retargeted, 39,312 pinned bytes = the ELF's |
+| reused proofs | 66 functions retargeted, 39,600 pinned bytes = the ELF's |
 | `BcSem` vs binary | identical output on `while`, `f2_closures` (118,120 ZINC steps), `while_min` (kernel-checked); never `.wrong` |
 | ELF census | 1,129 reachable functions, 78,529 instructions; `caml_interprete` 1,966 instructions, 147 arms, median 7; 93.9% in existing site classes; 130 functions identical to the WHILE ELF |
 | bytecode census | `boot/ocamlc` 412,087 instructions, 165 units; Translcore+Matching+Bytegen+Emitcode 23,678 |

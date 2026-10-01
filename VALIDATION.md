@@ -367,7 +367,7 @@ trace (`tcb/validation/RESULTS.md`, reproducible in ~3 s):
 `scripts/retarget_syi.py --refresh-report` revalidates the 66 byte-identical
 library functions against the source ELF. The fixed runtime's HTIF mailbox
 is `0x80061fc0`; both the machine layer and OCaml layout derive it from the
-ELF. `scripts/check_code_pins.py` checks 39,312 pinned bytes with no mismatch.
+ELF. `scripts/check_code_pins.py` checks 39,600 pinned bytes with no mismatch.
 
 The A0 library layer now includes regenerated strcmp/string-copy sites,
 `ssputs_fast_spec`, `ssprint_iov2_spec`, the complete `malloc_all` and

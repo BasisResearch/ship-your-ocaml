@@ -10,6 +10,11 @@ serves every program. All five Sail runs passed. The closed theorem
 while_min entry state. Its native provenance
 is checked byte-for-byte, but reset-to-cut execution is not kernel-proved.
 
+The closed witness landed via `scripts/integrate.sh` as `bc63ae6`. All
+gate stages passed: 972 theorem audits with standard axioms, generator
+drift checks, 39,600 pinned bytes with zero mismatches, the TCB quick
+suite and abstraction gate. The lane exit is met for the captured cut.
+
 ## Image migration
 
 * Pinned ELF rebuilt with `make -C c PROG=while.byte`; `make` now defaults
