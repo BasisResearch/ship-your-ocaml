@@ -1,0 +1,130 @@
+{
+  "theorem": "tr_getvectitem",
+  "doc": "GETVECTITEM arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.GetvectitemSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v9 v23 v21 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_8000226c : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_8000226c : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_8000226c : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hlo_80002284 : 0x80000000 ≤ (((shift_bits_left (shift_bits_right_arith (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (Sail.BitVec.extractLsb (0x01#6) 5 0)) (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v21) + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_80002284 : (((shift_bits_left (shift_bits_right_arith (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (Sail.BitVec.extractLsb (0x01#6) 5 0)) (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v21) + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80002284 : (((shift_bits_left (shift_bits_right_arith (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (Sail.BitVec.extractLsb (0x01#6) 5 0)) (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v21) + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (((shift_bits_left (shift_bits_right_arith (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (Sail.BitVec.extractLsb (0x01#6) 5 0)) (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v21) + sign_extend (m := 64) (0x000#12)).toNat)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlGetvectitemLoaded",
+  "pins": [
+    {
+      "reg": "x9",
+      "val": "v9",
+      "hyp": "hv9"
+    },
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x8000226c",
+      "site": "site_8000226c_getvectitem",
+      "class": "alu",
+      "asm": "ld a5,0(s1)",
+      "rd": "x15",
+      "rd_val": "(sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl hlo_8000226c hhi_8000226c hhtif_8000226c $hi",
+      "rw": "hmemeq"
+    },
+    {
+      "addr": "0x80002270",
+      "site": "site_80002270_getvectitem",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002274",
+      "site": "site_80002274_getvectitem",
+      "class": "alu",
+      "asm": "addi s1,s1,8",
+      "rd": "x9",
+      "rd_val": "(v9 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v9 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002278",
+      "site": "site_80002278_getvectitem",
+      "class": "alu",
+      "asm": "srai a5,a5,0x1",
+      "rd": "x15",
+      "rd_val": "(shift_bits_right_arith (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "raw_val": "(shift_bits_right_arith v15 (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000227c",
+      "site": "site_8000227c_getvectitem",
+      "class": "alu",
+      "asm": "slli a5,a5,0x3",
+      "rd": "x15",
+      "rd_val": "(shift_bits_left (shift_bits_right_arith (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (Sail.BitVec.extractLsb (0x01#6) 5 0)) (Sail.BitVec.extractLsb (0x03#6) 5 0))",
+      "raw_val": "(shift_bits_left v15 (Sail.BitVec.extractLsb (0x03#6) 5 0))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002280",
+      "site": "site_80002280_getvectitem",
+      "class": "alu",
+      "asm": "add a5,a5,s5",
+      "rd": "x15",
+      "rd_val": "((shift_bits_left (shift_bits_right_arith (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (Sail.BitVec.extractLsb (0x01#6) 5 0)) (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v21)",
+      "raw_val": "(v15 + v21)",
+      "call": "$vmi $v:x15 $v:x21 $hG $hpc $hmi $pin:x15 $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002284",
+      "site": "site_80002284_getvectitem",
+      "class": "alu",
+      "asm": "ld s5,0(a5)",
+      "rd": "x21",
+      "rd_val": "(sign_extend (m := 64) (bytesT8 m0 (((shift_bits_left (shift_bits_right_arith (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (Sail.BitVec.extractLsb (0x01#6) 5 0)) (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v21) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v15 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl hlo_80002284 hhi_80002284 hhtif_80002284 $hi",
+      "rw": "hmemE6"
+    },
+    {
+      "addr": "0x80002288",
+      "site": "site_80002288_getvectitem",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1ffcd4#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x8000226c",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

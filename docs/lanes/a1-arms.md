@@ -1,5 +1,20 @@
 # Lane a1-arms
 
+## Vector reads through general stack consumption
+
+`getvectitem_arm` (`Sim/Getvectitem.lean`) composes the generated eight-step
+body with `FieldSelection.read` and `consume_value_arm`. It consumes the
+integer stack index and keeps the selected field live as the new accumulator.
+`value_index_word` (`Sim/ValueIndex.lean`) proves native arithmetic untagging
+followed by scaling by eight equals the semantic unsigned-index offset
+modulo 2^64, for all 63-bit indices. No extra sign premise is required.
+Successful field selection and the stack/field RAM read windows are explicit.
+
+24 GiB/default-limit builds: index arithmetic 0.842s; body 2.2s; represented
+bridge 1.1s. The POP/general-consumption landing is `57ded25`, with the full
+gate passing. There are 54 conditional represented opcode bridges. Next:
+byte-indexed string/bytes reads; full invariant adapters and `ArmSim` remain open.
+
 ## General stack consumption and POP
 
 `ConsumeValuePost`, `consume_value_restore` and `consume_value_arm`
