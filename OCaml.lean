@@ -72,6 +72,7 @@ import OCaml.Vm.Sim.Const1
 import OCaml.Vm.Sim.Const2
 import OCaml.Vm.Sim.Const3
 import OCaml.Vm.Sim.Negint
+import OCaml.Vm.Sim.Boolnot
 import OCaml.Vm.Sim.PrimitiveBinding
 
 import OCaml.Vm.Primitives.CamlSysArgv

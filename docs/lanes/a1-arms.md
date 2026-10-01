@@ -40,6 +40,21 @@ NEGINT rebuild at 1.1s / 1.2s; targeted runs remain below 2.08 GiB under
 24 GiB. No proof budget changed. Drift, discipline and abstraction checks
 pass; the full integration gate passed and landed the repair as `9eeb667`.
 
+## Unary tagged subtraction
+
+`gen_unary_arms.py` emits both NEGINT and BOOLNOT represented bridges from
+one template over the census-generated four-instruction bodies. `tag_sub`
+proves the 63-bit modular subtraction identity once; `tag_neg` and `tag_not`
+instantiate it for machine constants 2 and 4. `boolnot_arm` restores the
+exact `stepI` result `1 - n` for every integer accumulator, without assuming
+it is a Boolean. It retains the existing explicit `ArmInput` / runtime-frame
+premises. All new body, image and bridge theorems are audited and generated
+artifacts are drift-checked.
+
+BOOLNOT builds in 8.14s (bridge 1.7s), under 2 GiB peak process RSS and the
+24 GiB cap. ACC0–ACC7 landed as `32025f5` with the full gate passing; BOOLNOT
+brings the represented conditional arm count to 15.
+
 ## ACC0–ACC7 representation bridges
 
 `accu_restore` and `accu_arm` (`OCaml/Vm/Sim/Immediate.lean`) generalize the

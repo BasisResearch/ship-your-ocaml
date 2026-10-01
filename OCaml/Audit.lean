@@ -565,6 +565,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.codePc_succ
 #print axioms OCaml.Vm.Sim.immediate_restore
 #print axioms OCaml.Vm.Sim.immediate_preserved
+#print axioms OCaml.Vm.Sim.tag_sub
+#print axioms OCaml.Vm.Sim.tag_not
+#print axioms Vsa.Sim.tr_boolnot
+#print axioms OCaml.Vm.Sim.boolnot_loaded
+#print axioms OCaml.Vm.Sim.boolnot_arm
 #print axioms OCaml.Vm.Sim.tag_neg
 #print axioms OCaml.Vm.Sim.untag_tag
 #print axioms OCaml.Vm.Sim.untag_neg

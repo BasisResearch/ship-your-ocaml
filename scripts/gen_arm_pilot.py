@@ -43,6 +43,7 @@ FAMILIES = {
     'CONST1': ('Const1', ['alu_addi', 'alu_addi', 'j']),
     'CONST2': ('Const2', ['alu_addi', 'alu_addi', 'j']),
     'CONST3': ('Const3', ['alu_addi', 'alu_addi', 'j']),
+    'BOOLNOT': ('Boolnot', ['alu_addi', 'alu_addi', 'sub', 'j']),
     'NEGINT': ('Negint', ['alu_addi', 'alu_addi', 'sub', 'j']),
     'ISINT': ('Isint', ['slli', 'andi', 'alu_addi', 'alu_addi', 'j']),
 }
