@@ -236,3 +236,14 @@ from ship-your-interpreter commit `d3be8dc07d15b806281966b6d0bdc96885f84076`
 (the local syi-refine checkout). The adapter reuses `segEval_sound`; its
 precondition has named fields. The unrelated demo, unused FrameCalc import
 and heartbeat setting are omitted. It contains no ELF-specific addresses.
+## A1 primitive summary adaptation
+
+`scripts/syi/gen_fn.py` adds an OCaml constant-leaf backend to the preserved
+whole-function generator. It reuses its CFG extraction and terminator decoding,
+then folds the landed `segEval_sound` result through `FnSummary`. It derives
+addresses and words from the pinned ELF and emits standard-budget certificates.
+Code-region predicates use the existing `gen_code_lemmas.py`; full-image
+projection proves their hypotheses. `ChainFactsTac` now prefers imported
+`ElfDecode.decode_<word>` certificates, retaining `decodeW` for generic clients.
+The `OCaml/Vm/Primitives/{Blocks,Leaf,Payload,ConstantContract,RuntimeFrame}`
+interfaces are new composition/frame adapters; they add no machine run law.

@@ -1,0 +1,427 @@
+[
+  {
+    "name": "caml_register_named_value",
+    "entry": "0x800213d0",
+    "end": "0x800214fc",
+    "instructions": 75,
+    "transfers": [
+      {
+        "pc": "0x80021430",
+        "op": "jal",
+        "target": "__umoddi3"
+      },
+      {
+        "pc": "0x80021468",
+        "op": "jal",
+        "target": "strcmp"
+      },
+      {
+        "pc": "0x80021478",
+        "op": "jal",
+        "target": "caml_modify_generational_global_root"
+      },
+      {
+        "pc": "0x80021484",
+        "op": "jal",
+        "target": "strlen"
+      },
+      {
+        "pc": "0x80021494",
+        "op": "jal",
+        "target": "caml_stat_alloc"
+      },
+      {
+        "pc": "0x800214b0",
+        "op": "jal",
+        "target": "memcpy"
+      },
+      {
+        "pc": "0x800214cc",
+        "op": "jal",
+        "target": "caml_register_generational_global_root"
+      }
+    ]
+  },
+  {
+    "name": "caml_ml_open_descriptor_out",
+    "entry": "0x80015f50",
+    "end": "0x80015fb4",
+    "instructions": 25,
+    "transfers": [
+      {
+        "pc": "0x80015f64",
+        "op": "jal",
+        "target": "caml_open_descriptor_in"
+      },
+      {
+        "pc": "0x80015f9c",
+        "op": "jal",
+        "target": "caml_alloc_custom_mem"
+      }
+    ]
+  },
+  {
+    "name": "caml_ml_open_descriptor_in",
+    "entry": "0x80015ef0",
+    "end": "0x80015f50",
+    "instructions": 24,
+    "transfers": [
+      {
+        "pc": "0x80015f04",
+        "op": "jal",
+        "target": "caml_open_descriptor_in"
+      },
+      {
+        "pc": "0x80015f38",
+        "op": "jal",
+        "target": "caml_alloc_custom_mem"
+      }
+    ]
+  },
+  {
+    "name": "caml_ml_out_channels_list",
+    "entry": "0x80016020",
+    "end": "0x80016134",
+    "instructions": 69,
+    "transfers": [
+      {
+        "pc": "0x800160cc",
+        "op": "jal",
+        "target": "caml_alloc_custom_mem"
+      },
+      {
+        "pc": "0x800160e8",
+        "op": "jal",
+        "target": "caml_alloc_small"
+      }
+    ]
+  },
+  {
+    "name": "caml_ml_flush",
+    "entry": "0x80016238",
+    "end": "0x800162e8",
+    "instructions": 44,
+    "transfers": [
+      {
+        "pc": "0x800162a0",
+        "op": "jalr",
+        "target": "a5"
+      },
+      {
+        "pc": "0x800162a8",
+        "op": "jal",
+        "target": "caml_flush_partial"
+      },
+      {
+        "pc": "0x800162c0",
+        "op": "jalr",
+        "target": "a5"
+      }
+    ]
+  },
+  {
+    "name": "caml_ml_output_char",
+    "entry": "0x80016350",
+    "end": "0x8001644c",
+    "instructions": 63,
+    "transfers": [
+      {
+        "pc": "0x800163b8",
+        "op": "jalr",
+        "target": "a4"
+      },
+      {
+        "pc": "0x800163f8",
+        "op": "jalr",
+        "target": "a5"
+      },
+      {
+        "pc": "0x80016424",
+        "op": "jal",
+        "target": "caml_flush_partial"
+      },
+      {
+        "pc": "0x80016430",
+        "op": "jal",
+        "target": "caml_flush_partial"
+      },
+      {
+        "pc": "0x80016440",
+        "op": "jal",
+        "target": "caml_flush_partial"
+      }
+    ]
+  },
+  {
+    "name": "caml_ml_output",
+    "entry": "0x800166cc",
+    "end": "0x800166d0",
+    "instructions": 1,
+    "transfers": [
+      {
+        "pc": "0x800166cc",
+        "op": "j",
+        "target": "caml_ml_output_bytes"
+      }
+    ]
+  },
+  {
+    "name": "caml_ml_output_bytes",
+    "entry": "0x8001652c",
+    "end": "0x800166cc",
+    "instructions": 104,
+    "transfers": [
+      {
+        "pc": "0x800165bc",
+        "op": "jalr",
+        "target": "a4"
+      },
+      {
+        "pc": "0x800165e4",
+        "op": "jal",
+        "target": "memmove"
+      },
+      {
+        "pc": "0x80016634",
+        "op": "jal",
+        "target": "memmove"
+      },
+      {
+        "pc": "0x8001664c",
+        "op": "jal",
+        "target": "caml_flush_partial"
+      },
+      {
+        "pc": "0x80016680",
+        "op": "jalr",
+        "target": "a5"
+      },
+      {
+        "pc": "0x800166b4",
+        "op": "jal",
+        "target": "caml_flush_partial"
+      },
+      {
+        "pc": "0x800166c0",
+        "op": "jal",
+        "target": "caml_flush_partial"
+      }
+    ]
+  },
+  {
+    "name": "caml_format_int",
+    "entry": "0x80010918",
+    "end": "0x80010998",
+    "instructions": 32,
+    "transfers": [
+      {
+        "pc": "0x80010934",
+        "op": "jal",
+        "target": "parse_format"
+      },
+      {
+        "pc": "0x80010968",
+        "op": "jal",
+        "target": "caml_alloc_sprintf"
+      },
+      {
+        "pc": "0x80010984",
+        "op": "jal",
+        "target": "caml_alloc_sprintf"
+      }
+    ]
+  },
+  {
+    "name": "caml_ml_string_length",
+    "entry": "0x80013590",
+    "end": "0x800135b8",
+    "instructions": 10,
+    "transfers": []
+  },
+  {
+    "name": "caml_ml_bytes_length",
+    "entry": "0x800135b8",
+    "end": "0x800135e0",
+    "instructions": 10,
+    "transfers": []
+  },
+  {
+    "name": "caml_string_equal",
+    "entry": "0x80013a90",
+    "end": "0x80013af0",
+    "instructions": 24,
+    "transfers": []
+  },
+  {
+    "name": "caml_string_notequal",
+    "entry": "0x80013af4",
+    "end": "0x80013b14",
+    "instructions": 8,
+    "transfers": [
+      {
+        "pc": "0x80013afc",
+        "op": "jal",
+        "target": "caml_string_equal"
+      }
+    ]
+  },
+  {
+    "name": "caml_int64_float_of_bits",
+    "entry": "0x80011a90",
+    "end": "0x80011a98",
+    "instructions": 2,
+    "transfers": [
+      {
+        "pc": "0x80011a94",
+        "op": "j",
+        "target": "caml_copy_double"
+      }
+    ]
+  },
+  {
+    "name": "caml_sys_const_naked_pointers_checked",
+    "entry": "0x8001d4b4",
+    "end": "0x8001d4bc",
+    "instructions": 2,
+    "transfers": []
+  },
+  {
+    "name": "caml_sys_const_big_endian",
+    "entry": "0x8001d260",
+    "end": "0x8001d268",
+    "instructions": 2,
+    "transfers": []
+  },
+  {
+    "name": "caml_sys_const_word_size",
+    "entry": "0x8001d268",
+    "end": "0x8001d270",
+    "instructions": 2,
+    "transfers": []
+  },
+  {
+    "name": "caml_sys_const_int_size",
+    "entry": "0x8001d270",
+    "end": "0x8001d278",
+    "instructions": 2,
+    "transfers": []
+  },
+  {
+    "name": "caml_sys_const_max_wosize",
+    "entry": "0x8001d278",
+    "end": "0x8001d284",
+    "instructions": 3,
+    "transfers": []
+  },
+  {
+    "name": "caml_sys_const_ostype_unix",
+    "entry": "0x8001d284",
+    "end": "0x8001d28c",
+    "instructions": 2,
+    "transfers": []
+  },
+  {
+    "name": "caml_sys_const_ostype_win32",
+    "entry": "0x8001d28c",
+    "end": "0x8001d294",
+    "instructions": 2,
+    "transfers": []
+  },
+  {
+    "name": "caml_sys_const_ostype_cygwin",
+    "entry": "0x8001d294",
+    "end": "0x8001d29c",
+    "instructions": 2,
+    "transfers": []
+  },
+  {
+    "name": "caml_sys_const_backend_type",
+    "entry": "0x8001d29c",
+    "end": "0x8001d2a4",
+    "instructions": 2,
+    "transfers": []
+  },
+  {
+    "name": "caml_sys_get_config",
+    "entry": "0x8001d2a4",
+    "end": "0x8001d358",
+    "instructions": 45,
+    "transfers": [
+      {
+        "pc": "0x8001d300",
+        "op": "jal",
+        "target": "caml_copy_string"
+      },
+      {
+        "pc": "0x8001d310",
+        "op": "jal",
+        "target": "caml_alloc_small"
+      }
+    ]
+  },
+  {
+    "name": "caml_sys_executable_name",
+    "entry": "0x8001cfec",
+    "end": "0x8001cff8",
+    "instructions": 3,
+    "transfers": [
+      {
+        "pc": "0x8001cff4",
+        "op": "j",
+        "target": "caml_copy_string"
+      }
+    ]
+  },
+  {
+    "name": "caml_sys_argv",
+    "entry": "0x8001cfb8",
+    "end": "0x8001cfc4",
+    "instructions": 3,
+    "transfers": []
+  },
+  {
+    "name": "caml_sys_get_argv",
+    "entry": "0x8001cf08",
+    "end": "0x8001cfb8",
+    "instructions": 44,
+    "transfers": [
+      {
+        "pc": "0x8001cf64",
+        "op": "jal",
+        "target": "caml_copy_string"
+      },
+      {
+        "pc": "0x8001cf74",
+        "op": "jal",
+        "target": "caml_alloc_small"
+      }
+    ]
+  },
+  {
+    "name": "caml_int_compare",
+    "entry": "0x800108d4",
+    "end": "0x800108ec",
+    "instructions": 6,
+    "transfers": []
+  },
+  {
+    "name": "caml_fresh_oo_id",
+    "entry": "0x80020d3c",
+    "end": "0x80020d54",
+    "instructions": 6,
+    "transfers": []
+  },
+  {
+    "name": "caml_sys_exit",
+    "entry": "0x8001c7ac",
+    "end": "0x8001c7c0",
+    "instructions": 5,
+    "transfers": [
+      {
+        "pc": "0x8001c7bc",
+        "op": "jal",
+        "target": "caml_do_exit"
+      }
+    ]
+  }
+]

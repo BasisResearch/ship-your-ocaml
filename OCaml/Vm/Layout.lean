@@ -40,6 +40,72 @@ def sym_caml_nativeint_ops : Nat := 0x80069038
 def sym_channel_operations : Nat := 0x80069078
 /-- `caml_all_opened_channels` -/
 def sym_caml_all_opened_channels : Nat := 0x8006a1a8
+/-- `caml_register_named_value` -/
+def sym_caml_register_named_value : Nat := 0x800213d0
+/-- `caml_ml_open_descriptor_out` -/
+def sym_caml_ml_open_descriptor_out : Nat := 0x80015f50
+/-- `caml_ml_open_descriptor_in` -/
+def sym_caml_ml_open_descriptor_in : Nat := 0x80015ef0
+/-- `caml_ml_out_channels_list` -/
+def sym_caml_ml_out_channels_list : Nat := 0x80016020
+/-- `caml_ml_flush` -/
+def sym_caml_ml_flush : Nat := 0x80016238
+/-- `caml_ml_output_char` -/
+def sym_caml_ml_output_char : Nat := 0x80016350
+/-- `caml_ml_output` -/
+def sym_caml_ml_output : Nat := 0x800166cc
+/-- `caml_ml_output_bytes` -/
+def sym_caml_ml_output_bytes : Nat := 0x8001652c
+/-- `caml_format_int` -/
+def sym_caml_format_int : Nat := 0x80010918
+/-- `caml_ml_string_length` -/
+def sym_caml_ml_string_length : Nat := 0x80013590
+/-- `caml_ml_bytes_length` -/
+def sym_caml_ml_bytes_length : Nat := 0x800135b8
+/-- `caml_string_equal` -/
+def sym_caml_string_equal : Nat := 0x80013a90
+/-- `caml_string_notequal` -/
+def sym_caml_string_notequal : Nat := 0x80013af4
+/-- `caml_int64_float_of_bits` -/
+def sym_caml_int64_float_of_bits : Nat := 0x80011a90
+/-- `caml_sys_const_naked_pointers_checked` -/
+def sym_caml_sys_const_naked_pointers_checked : Nat := 0x8001d4b4
+/-- `caml_sys_const_big_endian` -/
+def sym_caml_sys_const_big_endian : Nat := 0x8001d260
+/-- `caml_sys_const_word_size` -/
+def sym_caml_sys_const_word_size : Nat := 0x8001d268
+/-- `caml_sys_const_int_size` -/
+def sym_caml_sys_const_int_size : Nat := 0x8001d270
+/-- `caml_sys_const_max_wosize` -/
+def sym_caml_sys_const_max_wosize : Nat := 0x8001d278
+/-- `caml_sys_const_ostype_unix` -/
+def sym_caml_sys_const_ostype_unix : Nat := 0x8001d284
+/-- `caml_sys_const_ostype_win32` -/
+def sym_caml_sys_const_ostype_win32 : Nat := 0x8001d28c
+/-- `caml_sys_const_ostype_cygwin` -/
+def sym_caml_sys_const_ostype_cygwin : Nat := 0x8001d294
+/-- `caml_sys_const_backend_type` -/
+def sym_caml_sys_const_backend_type : Nat := 0x8001d29c
+/-- `caml_sys_get_config` -/
+def sym_caml_sys_get_config : Nat := 0x8001d2a4
+/-- `caml_sys_executable_name` -/
+def sym_caml_sys_executable_name : Nat := 0x8001cfec
+/-- `caml_sys_argv` -/
+def sym_caml_sys_argv : Nat := 0x8001cfb8
+/-- `caml_sys_get_argv` -/
+def sym_caml_sys_get_argv : Nat := 0x8001cf08
+/-- `caml_int_compare` -/
+def sym_caml_int_compare : Nat := 0x800108d4
+/-- `caml_fresh_oo_id` -/
+def sym_caml_fresh_oo_id : Nat := 0x80020d3c
+/-- `caml_sys_exit` -/
+def sym_caml_sys_exit : Nat := 0x8001c7ac
+/-- `main_argv` -/
+def sym_main_argv : Nat := 0x8006a278
+/-- `caml_exe_name` -/
+def sym_caml_exe_name : Nat := 0x8006a280
+/-- `oo_last_id` -/
+def sym_oo_last_id : Nat := 0x80069f00
 
 /-- `caml_interprete`'s dispatch loop head (fetch of the opcode word). -/
 def loopHead : Nat := 0x80001f5c

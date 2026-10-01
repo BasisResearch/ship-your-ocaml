@@ -445,3 +445,20 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 -- Ported adapter consumed by whole-function generation.
 #print axioms Vsa.Sim.segToTriple
+-- F1 primitive constant family and representation/frame composition.
+#print axioms OCaml.Vm.Primitives.block_summary
+#print axioms OCaml.Vm.Primitives.leaf_of_blocks
+#print axioms OCaml.Vm.Primitives.payload_of_repr
+#print axioms OCaml.Vm.Primitives.VmPayload.frame
+#print axioms OCaml.Vm.Primitives.VmPayload.accu_int
+#print axioms OCaml.Vm.Primitives.constant_contract
+#print axioms OCaml.Vm.Primitives.runtime_memory_stable
+#print axioms OCaml.Vm.Primitives.caml_sys_const_naked_pointers_checked_primitive
+#print axioms OCaml.Vm.Primitives.caml_sys_const_big_endian_primitive
+#print axioms OCaml.Vm.Primitives.caml_sys_const_word_size_primitive
+#print axioms OCaml.Vm.Primitives.caml_sys_const_int_size_primitive
+#print axioms OCaml.Vm.Primitives.caml_sys_const_max_wosize_primitive
+#print axioms OCaml.Vm.Primitives.caml_sys_const_ostype_unix_primitive
+#print axioms OCaml.Vm.Primitives.caml_sys_const_ostype_win32_primitive
+#print axioms OCaml.Vm.Primitives.caml_sys_const_ostype_cygwin_primitive
+#print axioms OCaml.Vm.Primitives.caml_sys_const_backend_type_primitive

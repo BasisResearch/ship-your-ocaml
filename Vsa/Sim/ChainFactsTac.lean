@@ -90,7 +90,16 @@ private def cfCloseLeaf (h : Term) (g : MVarId) (ty : Expr) (nm : Nat → String
 
 /-- A decode leaf: `decodeW` computes the instruction of the literal word by `rfl`. -/
 private def cfCloseDecode (g : MVarId) (ty : Expr) : TacticM Unit := do
-  let stx ← `(fun s h1 h2 h3 => Vsa.Sim.decodeW s h1 h2 h3)
+  -- Prefer the imported per-word ELF certificate; retain the generic fallback
+  -- for image-independent clients which do not import a generated table.
+  let mut decoder := ``Vsa.Sim.decodeW
+  if let some record ← cfLastArg? ty then
+    if let some word := cfStructField? record 1 then
+      if let some value ← cfBvLitNat? word then
+        let candidate := Name.mkStr `Vsa.Sim.ElfDecode ("decode_" ++ cfHexName value)
+        if (← getEnv).contains candidate then decoder := candidate
+  let name := mkIdent decoder
+  let stx ← `(fun s h1 h2 h3 => $name s h1 h2 h3)
   g.assign (← g.withContext (Term.elabTermEnsuringType stx ty))
 
 private partial def cfSolve (h : Term) (prefixStr : String) (g : MVarId)

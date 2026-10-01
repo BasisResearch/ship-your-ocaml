@@ -26,6 +26,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from gen_primitive_census import primitive_names
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = os.path.expanduser(
@@ -58,6 +59,8 @@ def main():
             "caml_something_to_do", "tohost", "_exit", "caml_main", "main",
             "caml_start_code", "caml_code_size", "caml_int64_ops", "caml_int32_ops",
             "caml_nativeint_ops", "channel_operations", "caml_all_opened_channels"]
+    need += primitive_names()
+    need += ["main_argv", "caml_exe_name", "oo_last_id"]
     for n in need:
         if n not in sym:
             die(f"symbol {n} not found")

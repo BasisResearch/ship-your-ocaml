@@ -50,3 +50,5 @@ import OCaml.Vm.Sim.AccSegment
 import OCaml.Vm.Sim.AccPins
 
 import OCaml.Vm.Gc.Barrier
+import OCaml.Vm.Primitives.Constants
+import OCaml.Vm.Primitives.RuntimeFrame
