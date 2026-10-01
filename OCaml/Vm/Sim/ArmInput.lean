@@ -1,5 +1,6 @@
 import OCaml.Refinement
 import OCaml.Vm.Sim.Dispatch
+import OCaml.Vm.Sim.ReadGeometry
 import OCaml.Vm.Primitives.Payload
 
 namespace OCaml.Vm.Sim
@@ -29,17 +30,11 @@ theorem ArmInput.running {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
 
 /-- Geometry for one bytecode-word read. These are architectural RAM limits;
 all program and image addresses are supplied by the representation/Layout. -/
-structure CodeReadAt (a : Nat) : Prop where
-  lower : 0x80000000 ≤ a
-  upper : a + 4 ≤ 0x100000000
-  htif : a + 4 ≤ Vsa.Sim.tohostAddr ∨ Vsa.Sim.tohostAddr + 8 ≤ a
+abbrev CodeReadAt (a : Nat) : Prop := RamReadAt a 4
 
 /-- Code RAM geometry also excludes 64-bit address wraparound. -/
 theorem CodeReadAt.toNat {a : Nat} (h : CodeReadAt a) :
-    (BitVec.ofNat 64 a).toNat = a := by
-  apply Nat.mod_eq_of_lt
-  have upper := h.upper
-  omega
+    (BitVec.ofNat 64 a).toNat = a := RamReadAt.toNat h
 
 /-- A fetched ordinary word is pinned by code representation. Method-cache
 slots require their separate F3 observation contract. -/
@@ -79,6 +74,15 @@ theorem ArmInput.of_repr {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
     exact code_read h.code fetch opcodeSlot
   · simpa only [ha] using geometry.lower
   · simpa only [ha] using geometry.upper
-  · simpa only [ha] using geometry.htif
+  · simpa only [ha, Vsa.Sim.tohostAddr, Vsa.Sim.LibraryLayout.tohostAddr,
+      Layout.sym_tohost] using geometry.htif
+
+/-- A represented register has the uniquely determined word of its value. -/
+theorem represented_register {pl : Place} {v : Val} {c : Config} {r : Nat} {w : BitVec 64}
+    (reg : ∃ x, gpr c r = some x ∧ valWord pl v = some x)
+    (value : valWord pl v = some w) : gpr c r = some w := by
+  obtain ⟨x, hx, hv⟩ := reg
+  have same := Option.some.inj (hv.symm.trans value)
+  exact same ▸ hx
 
 end OCaml.Vm.Sim

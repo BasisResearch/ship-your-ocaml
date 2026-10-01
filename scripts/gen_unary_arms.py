@@ -23,11 +23,8 @@ theorem @LOWER@_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s .@OP@ c pl cp sp high) (accu : s.accu = .int n) :
     ∃ c', Plus c c' ∧ Running L P {s with pc := s.pc + 1, accu := .int (@RESULT@)} c' := by
-@NORMALIZE@  have hc : gpr c Layout.reg_accu = some (tag64 n) := by
-    obtain ⟨w, hw, hv⟩ := h.accu
-    rw [accu] at hv
-    cases hv
-    exact hw
+@NORMALIZE@  have hc : gpr c Layout.reg_accu = some (tag64 n) :=
+    represented_register h.accu (by rw [accu]; rfl)
   apply immediate_arm stable h
   intro d dp
   have bp : SegSt (@ENTRY@#64)

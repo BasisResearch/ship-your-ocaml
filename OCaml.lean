@@ -71,6 +71,14 @@ import OCaml.Vm.Sim.Dispatch
 import OCaml.Vm.Sim.Const0
 import OCaml.Vm.Sim.Constint
 import OCaml.Vm.Sim.OffsetWidth
+import OCaml.Vm.Sim.Envacc1
+import OCaml.Vm.Sim.Envacc2
+import OCaml.Vm.Sim.Envacc3
+import OCaml.Vm.Sim.Envacc4
+import OCaml.Vm.Sim.Getfield0
+import OCaml.Vm.Sim.Getfield1
+import OCaml.Vm.Sim.Getfield2
+import OCaml.Vm.Sim.Getfield3
 import OCaml.Vm.Sim.Const1
 import OCaml.Vm.Sim.Const2
 import OCaml.Vm.Sim.Const3

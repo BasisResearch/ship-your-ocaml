@@ -28,6 +28,31 @@ Default-limit 24 GiB checks: OFFSETINT body/pins 5.56s (segment 2.1s),
 arithmetic witness 3.60s (module 2.3s), peak process RSS below 2 GiB.
 CONSTINT landed as `9786220` with the full gate passing.
 
+## Fixed environment and field loads
+
+`gen_field_arms.py` emits `envacc1_arm`–`envacc4_arm` and
+`getfield0_arm`–`getfield3_arm` over their census-generated total-load bodies.
+`field_selection` (`FieldRead.lean`) derives the source pointer and placement
+witness from successful abstract lookup plus `HeapRepr`. `FieldSelection.read`
+uses a1-prims' `VmPayload.object_at` to recover the selected word and proves
+it is an existing live root. Every bridge then uses `accu_arm` to restore the
+full data/platform/loop state.
+
+`RamReadAt` (`ReadGeometry.lean`) is the shared natural-address RAM/HTIF
+contract and projects to the existing `ReadWindow` interface. `CodeReadAt`
+is its four-byte specialization; load addresses and HTIF symbols use `Layout`
+or abstract placements. Field geometry is still an explicit premise.
+`represented_register` is shared in `ArmInput.lean`; field and unary bridges
+reuse its value-uniqueness proof. No `Running` or headline fields are weakened.
+
+All eight families pass separately under 24 GiB at default limits:
+ENVACC1–4 6.24/6.56/5.60/5.49s, GETFIELD0–3 6.52/6.16/6.48/5.75s.
+Each bridge elaborates in 1.2–1.5s; peak process RSS stays below 2 GiB.
+This brings the conditional represented arm count to 24. Unconditional
+`ArmSim` entry/next/halt and the machine `whileMin` result remain open.
+The OFFSETINT obstruction landed as `3a514fc`; main now includes A0-boot's
+`bc63ae6` captured-entry `Loaded` certificate, including primitive bindings.
+
 ## Primitive binding repair
 
 The obstruction landed as `2bb35a3`. `primitive_binding_obstruction` now

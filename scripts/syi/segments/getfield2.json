@@ -1,0 +1,71 @@
+{
+  "theorem": "tr_getfield2",
+  "doc": "GETFIELD2 arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.Getfield2Sites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v21 v23 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_8000245c : 0x80000000 ≤ (v21 + sign_extend (m := 64) (0x010#12)).toNat)",
+    "(hhi_8000245c : (v21 + sign_extend (m := 64) (0x010#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_8000245c : (v21 + sign_extend (m := 64) (0x010#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v21 + sign_extend (m := 64) (0x010#12)).toNat)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlGetfield2Loaded",
+  "pins": [
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    },
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x8000245c",
+      "site": "site_8000245c_getfield2",
+      "class": "alu",
+      "asm": "ld s5,16(s5)",
+      "rd": "x21",
+      "rd_val": "(sign_extend (m := 64) (bytesT8 m0 (v21 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v21 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl hlo_8000245c hhi_8000245c hhtif_8000245c $hi",
+      "rw": "hmemeq"
+    },
+    {
+      "addr": "0x80002460",
+      "site": "site_80002460_getfield2",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002464",
+      "site": "site_80002464_getfield2",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1ffaf8#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x8000245c",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}
