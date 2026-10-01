@@ -2,7 +2,12 @@
 
 ## Current status
 
-All four lane exit items are implemented; final integration gate pending:
+Lane exit criterion met. Implementation landed on main as `f442c8c` through
+`scripts/integrate.sh` on 2026-10-01. All integration stages passed, including
+784 theorem axiom reports, generator drift, 39,056 pinned bytes (zero
+mismatches), OS validation and the abstraction gate.
+
+Exit evidence:
 
 - 121 executed opcode kinds and 86 primitive names are ledgered, with finite
   kernel-checked coverage theorems.
@@ -11,8 +16,10 @@ All four lane exit items are implemented; final integration gate pending:
 - HTIF is reduced to named typed function premises with reproduced evidence.
 - PHASES rows distinguish executable status from remaining proof obligations.
 
-The pinned ELF migration is pending on main; no new machine data addresses
-are hard-coded. Rebase and regenerate when a0 lands it.
+The pinned ELF migration had not landed at the final main fetch. No new
+machine data addresses are hard-coded. If the lane is resumed after a0
+lands the migration, rebase and regenerate the lane census artifact with
+`python3 scripts/gen_executed_ledger.py`; machine pins remain Layout-derived.
 
 ## Implemented and validated
 
@@ -24,8 +31,9 @@ are hard-coded. Rebase and regenerate when a0 lands it.
 - F3 method lookups and object primitives. `VmReprAt.code` now identifies
   GETPUBMET cache operands by linear decoding and permits cache mutation;
   ordinary code words remain pinned. `CodeRepr` is shared with the newly
-  landed primitive `VmPayload` so its frame proofs use the same contract. Cache hit/miss simulation and method
-  table well-formedness remain machine-arm obligations.
+  landed primitive `VmPayload` so its frame proofs use the same contract.
+  Cache hit/miss simulation and method-table well-formedness remain
+  machine-arm obligations.
 - World state uses `TCB.Os.OsState`. File open/read/write/seek/close,
   rename/remove/existence, environment and time select transitions through
   `TCB.Os.allowed`. Channel representation includes input buffers/cursors
@@ -52,8 +60,8 @@ are hard-coded. Rebase and regenerate when a0 lands it.
 
 ## Open / next
 
-Land through the full audit/integration gate. The integer formatter now uses
-character-list parsing; the existing `whileMin_runTo` and `whileMin_bcSem`
+The lane exit is complete; the following are downstream Layer A obligations.
+The integer formatter uses character-list parsing; the existing `whileMin_runTo` and `whileMin_bcSem`
 kernel proofs pass again (125 seconds under the 24 GiB build cap).
 F4 currently supports caught exceptions and disabled raw-backtrace state;
 re-entrant callbacks and uncaught-exception handling remain open. The eleven
