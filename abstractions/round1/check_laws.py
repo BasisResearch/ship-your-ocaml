@@ -152,7 +152,7 @@ INFIX, FORWARD, LAZY, DOUBLE, NO_SCAN = 249, 250, 246, 253, 251
 
 def oldify_special(memory, roots, flat_float=True, value_area=None):
     mem = dict(memory)
-    todo = []
+    todo_head = 0
     next_addr = 30000
     def young(w):
         return w % 2 == 0 and Y0 <= w < Y1
@@ -164,7 +164,26 @@ def oldify_special(memory, roots, flat_float=True, value_area=None):
         next_addr += 8 * (size + 1)
         mem[a - 8] = size * 1024 + kind
         return a
+    def check_todo():
+        # Partial-relocation invariant of the C intrusive queue. A queued
+        # source has header 0, field 0 points at its copy, and copy field 1
+        # links to the next SOURCE. Links must not be scanned as OCaml values.
+        seen, source = set(), todo_head
+        while source:
+            assert source not in seen
+            seen.add(source)
+            assert mem[source - 8] == 0
+            target = mem[source]
+            assert not young(target)
+            assert mem[target - 8] // 1024 > 1
+            assert mem[target - 8] % 256 < INFIX
+            source = mem[target + 8]
     def oldify(v):
+        result = oldify_step(v)
+        check_todo()
+        return result
+    def oldify_step(v):
+        nonlocal todo_head
         if not young(v):
             return v
         hd = mem[v - 8]
@@ -195,15 +214,21 @@ def oldify_special(memory, roots, flat_float=True, value_area=None):
         elif size == 1:
             mem[a] = oldify(fields[0])
         else:
-            # Deferred scanning is observationally the mopup queue; the C
-            # stores the queue links in field 1 rather than a Python list.
-            todo.append((a, fields))
+            mem[a] = fields[0]
+            mem[a + 8] = todo_head
+            todo_head = v
         return a
     result = [oldify(v) for v in roots]
-    while todo:
-        a, fields = todo.pop()
-        for i, f in enumerate(fields):
-            mem[a + 8*i] = oldify(f)
+    while todo_head:
+        source = todo_head
+        target = mem[source]
+        # Remove BEFORE recursive oldify: it may enqueue more source blocks.
+        todo_head = mem[target + 8]
+        check_todo()
+        mem[target] = oldify(mem[target])
+        for i in range(1, mem[target - 8] // 1024):
+            mem[target + 8*i] = oldify(mem[source + 8*i])
+        check_todo()
     return result, mem
 
 # Every listed exception is checked both before and after its target has
@@ -251,3 +276,38 @@ mem = {a-8: 3*1024+247, a: 1000000, a+8: 1024, a+16: 85}
 rs, after = oldify_special(mem, [a, a+16])
 assert rs[1] != rs[0] + 16
 print("L3' Infix_tag: 12 affine cases pass; missing Infix header has a counterexample")
+
+
+# Intrusive mopup queue: aliasing, self/cross cycles, and enqueues during
+# scanning. All blocks are rooted so the final forwarding map is total here.
+# Check the queue after each recursive oldify and each completed scan.
+for _ in range(2000):
+    count = random.randint(1, 8)
+    bases = [Y0 + 8 + 128*i for i in range(count)]
+    fields = {a: [random.choice(bases + [1, 85, 101])
+                  for _ in range(random.randint(1, 6))] for a in bases}
+    mem = {a-8: len(fs)*1024 for a, fs in fields.items()}
+    mem.update({a+8*i: v for a, fs in fields.items() for i, v in enumerate(fs)})
+    for initial_roots in ([bases[0]], [bases[0]] + bases):
+        rs, after = oldify_special(mem, initial_roots)
+        reachable, work = set(), list(initial_roots)
+        while work:
+            source = work.pop()
+            if source in reachable:
+                continue
+            reachable.add(source)
+            work.extend(v for v in fields[source] if v in fields)
+        moved = {a: after[a] for a in bases if after[a-8] == 0}
+        assert set(moved) == reachable
+        assert rs == [moved[a] for a in initial_roots]
+        assert len(set(moved.values())) == len(reachable)
+        for source, fs in fields.items():
+            if source not in reachable:
+                assert after[source-8] == mem[source-8]
+                assert all(after[source+8*i] == v for i, v in enumerate(fs))
+                continue
+            target = moved[source]
+            assert after[source-8] == 0 and after[source] == target
+            assert after[target-8] == len(fs)*1024
+            assert [after[target+8*i] for i in range(len(fs))] == [moved.get(v, v) for v in fs]
+print("L3' intrusive oldify/mopup: 2000 cyclic/aliased heaps, two root policies, pass queue and final-image invariants")

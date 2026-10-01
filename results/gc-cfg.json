@@ -1,4 +1,5 @@
 {
+  "elf_sha256": "cecc68322fa55ccd75327a535915782e082c4e2d356077afdea0110a6c22fe31",
   "missing_generator_imports": [
     "Vsa/Sim/DeriveCaseRow.lean"
   ],
@@ -6,6 +7,7 @@
     "caml_oldify_one": {
       "entry": "0x80009a70",
       "instructions": 145,
+      "instruction_sha256": "843eea16eb8134862e31bff9f98f1fb4bb68763e0d9399e9d97bdda6d380c0b4",
       "blocks": [
         "Block(0x80009a70..0x80009a8c bnez kind=br succs=['0x80009b80', '0x80009a90'])",
         "Block(0x80009a90..0x80009ac8 fall kind=fallthrough succs=['0x80009acc'])",
@@ -51,11 +53,13 @@
     "caml_oldify_mopup": {
       "entry": "0x80009cb4",
       "instructions": 149,
+      "instruction_sha256": "1e08e3663544f6b7271248816784282913f29a99f5de33e2e356f3912222fb0e",
       "generator_rejection": "caml_oldify_mopup: 29 branches > 20 \u2014 refuse without --route. The branch conditions needing pins:\n  0x80009d04:beqz s2,80009d90 <caml_oldify_mopup+0xdc>\n  0x80009d1c:bnez a5,80009d34 <caml_oldify_mopup+0x80>\n  0x80009d28:bgeu a0,a4,80009d34 <caml_oldify_mopup+0x80>\n  0x80009d30:bltu a5,a0,80009e80 <caml_oldify_mopup+0x1cc>\n  0x80009d48:bgeu s8,a5,80009d00 <caml_oldify_mopup+0x4c>\n  0x80009d58:bnez a5,80009d70 <caml_oldify_mopup+0xbc>\n  0x80009d64:bgeu a0,a4,80009d70 <caml_oldify_mopup+0xbc>\n  0x80009d6c:bltu a5,a0,80009e78 <caml_oldify_mopup+0x1c4>\n  0x80009d84:bltu s1,a5,80009d4c <caml_oldify_mopup+0x98>\n  0x80009d8c:bnez s2,80009d08 <caml_oldify_mopup+0x54>\n  0x80009da0:bgeu s0,a4,80009e48 <caml_oldify_mopup+0x194>\n  0x80009dbc:bgeu s0,a4,80009e44 <caml_oldify_mopup+0x190>\n  0x80009dc4:bne a4,s8,80009dac <caml_oldify_mopup+0xf8>\n  0x80009dd8:beq a3,a0,80009dac <caml_oldify_mopup+0xf8>\n  0x80009de0:bnez a2,80009dac <caml_oldify_mopup+0xf8>\n  0x80009de8:bgeu a0,a6,80009dac <caml_oldify_mopup+0xf8>\n  0x80009df0:bgeu t4,a0,80009dac <caml_oldify_mopup+0xf8>\n  0x80009e04:bne t3,s5,80009e1c <caml_oldify_mopup+0x168>\n  0x80009e20:bnez a7,80009e8c <caml_oldify_mopup+0x1d8>\n  0x80009e40:bltu s0,a4,80009dc0 <caml_oldify_mopup+0x10c>\n  0x80009e44:bnez t1,80009d00 <caml_oldify_mopup+0x4c>\n  0x80009ea8:bgeu a7,a5,80009ed0 <caml_oldify_mopup+0x21c>\n  0x80009ec0:beq a3,a5,80009ecc <caml_oldify_mopup+0x218>\n  0x80009ec4:beqz a4,80009ecc <caml_oldify_mopup+0x218>\n  0x80009ec8:bltu t4,a5,80009edc <caml_oldify_mopup+0x228>\n  0x80009ecc:bne t3,a2,80009eac <caml_oldify_mopup+0x1f8>\n  0x80009ee4:bne a7,t5,80009ef8 <caml_oldify_mopup+0x244>\n  0x80009efc:bnez a5,80009dac <caml_oldify_mopup+0xf8>\n  0x80009f00:bne t3,a2,80009eac <caml_oldify_mopup+0x1f8>"
     },
     "caml_empty_minor_heap": {
       "entry": "0x80009f08",
       "instructions": 205,
+      "instruction_sha256": "1efdb1015f2a75327e7686e6a4b361241d6ced127b472ee285f0cae689df6863",
       "generator_rejection": "caml_empty_minor_heap: 205 instrs > 150 \u2014 refuse without a --route path restriction (pin the branch polarities)"
     }
   }

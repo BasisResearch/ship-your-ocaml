@@ -91,3 +91,30 @@ the one-line ocamlc run is covered by G2.
   one-line compiler Layer A budget theorem. The specification question at
   the top blocks the Forward-sensitive proof; generation/reclamation gaps
   remain explicit rather than being assumed away.
+
+
+## Fixed-address .embed migration preparation
+
+- Foreman notice received: .text entry addresses stay fixed, but data symbols
+  and gp/auipc-relative instruction immediates move. Concrete data references
+  in this lane use `OCaml/Vm/Layout.lean`; no hard-coded ELF data address was
+  found. Numerical addresses in the Forward counterexample are synthetic
+  witness addresses, not runtime symbols.
+- `scripts/gc_cfg.py` now records the pinned ELF SHA-256 and the exact
+  little-endian instruction SHA-256 for each collector function. CFG-only
+  comparison could miss changed immediates with unchanged control flow.
+- Current migration status: not yet present on origin/main at a22f2b9.
+  After the a0 landing: rebase, run `python3 scripts/gc_cfg.py >
+  results/gc-cfg.json`, then `python3 scripts/gc_cfg.py --check`, rebuild
+  the lane modules under the memory cap and run scripts/integrate.sh.
+  Layout/decode/code-pin regeneration is owned by a0's migration landing.
+- Independent progress: `oldify_special` in the law checker now uses the
+  actual intrusive queue representation (source header 0, source field 0
+  points at copy, copy field 1 points at next source). It removes a queued
+  source before recursive scanning, matching minor_gc.c. The queue invariant
+  is checked after each recursive oldify and each mopup scan.
+- Validation: 2,000 generated cyclic/aliased heaps under two root policies
+  (single root and all roots) satisfy queue invariants, exact reachable-set
+  forwarding, injective destinations, final typed payloads, and preservation
+  of unreachable sources. Existing Forward/Infix and 20,000-trial law checks
+  still pass. This is executable-model validation, not a machine proof.

@@ -4,6 +4,7 @@ No generator limits are overridden and no generated proofs are hand edited.
 The report distinguishes CFG coverage from unavailable proof dependencies.
 """
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -22,11 +23,16 @@ def report():
         f.flush()
         di = gen_fn.lib.parse_disasm(f.name)
         extents = gen_fn.function_extents(f.name)
-        result = {'missing_generator_imports': [p for p in ['Vsa/Sim/DeriveCaseRow.lean']
+        result = {'elf_sha256': hashlib.sha256((ROOT / 'c/ocamlrun-riscv-htif.elf').read_bytes()).hexdigest(),
+                  'missing_generator_imports': [p for p in ['Vsa/Sim/DeriveCaseRow.lean']
                                                 if not (ROOT / p).exists()], 'functions': {}}
         for name in ['caml_oldify_one', 'caml_oldify_mopup', 'caml_empty_minor_heap']:
             entry, end = extents[name]
-            item = {'entry': hex(entry), 'instructions': sum(entry <= a < end for a in di)}
+            words = [di[a].word for a in sorted(di) if entry <= a < end]
+            # CFG shape alone misses gp/auipc-immediate changes when text
+            # addresses are stable. Hash the real little-endian instructions.
+            digest = hashlib.sha256(b''.join(w.to_bytes(4, 'little') for w in words)).hexdigest()
+            item = {'entry': hex(entry), 'instructions': len(words), 'instruction_sha256': digest}
             try:
                 body, blocks = gen_fn.build_cfg(name, entry, di, extents)
                 item['blocks'] = [str(b) for b in blocks]
