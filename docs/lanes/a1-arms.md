@@ -1,5 +1,20 @@
 # Lane a1-arms
 
+## Composed global-field loads
+
+`getglobalfield_arm` and `pushgetglobalfield_arm` compose two represented
+field selections with `FieldSelection.read_reachable`. The old direct-root
+read API remains a specialization. `word_frame_reachable` and `load_frame`
+preserve reachable field observations through a separated write log, so the
+PUSH variant derives the intermediate pointer before applying its generated
+body. One new generator emits both variants and is checked by check_all.
+
+Separate 24 GiB/default-limit builds pass: bodies 5.6s/7.7s (12/14
+instructions), bridges 1.7s/1.6s. The preceding global-read landing is
+`8cd1244`, full gate passing. There are now 90 conditional represented opcode
+bridges. Next: remaining comparisons, stack/heap writes, allocation and calls.
+Full `ArmSim`, entry/halt, semantic-domain corrections and lane exits remain open.
+
 ## Global-root indexed loads
 
 `getglobal_arm` and `pushgetglobal_arm` reuse the indexed-read and push
@@ -884,7 +899,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 88 conditional represented opcode bridges,
+stack-writing families. There are 90 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 

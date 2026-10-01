@@ -111,6 +111,8 @@ import OCaml.Vm.Sim.Pushatom0
 import OCaml.Vm.Sim.Pushatom
 import OCaml.Vm.Sim.Getglobal
 import OCaml.Vm.Sim.Pushgetglobal
+import OCaml.Vm.Sim.Getglobalfield
+import OCaml.Vm.Sim.Pushgetglobalfield
 import OCaml.Vm.Sim.Pushenvacc1
 import OCaml.Vm.Sim.Pushenvacc2
 import OCaml.Vm.Sim.Pushenvacc3

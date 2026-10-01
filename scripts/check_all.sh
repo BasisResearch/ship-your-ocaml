@@ -111,6 +111,7 @@ python3 scripts/gen_push_arms.py --check || fail "stage a5: push arm bridge drif
 python3 scripts/gen_closure_offset_arms.py --check || fail "stage a5: closure-offset arm drift"
 python3 scripts/gen_byte_arms.py --check || fail "stage a5: byte arm bridge drift"
 python3 scripts/gen_indexed_arms.py --check || fail "stage a5: indexed arm bridge drift"
+python3 scripts/gen_global_field_arms.py --check || fail "stage a5: global field arm bridge drift"
 python3 scripts/gen_atom_arms.py --check || fail "stage a5: atom arm bridge drift"
 python3 scripts/gen_acc_arms.py --check || fail "stage a5: stack arm bridge drift"
 python3 scripts/gen_const_arms.py --check || fail "stage a5: constant arm bridge drift"

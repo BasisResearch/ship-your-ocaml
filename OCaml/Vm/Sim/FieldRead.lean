@@ -42,11 +42,12 @@ theorem FieldSelection.sourceWord {heap : Heap} {pl : Place} {source v : Val}
 
 /-- Resolve both the field word and its existing-root proof through the
 primitive lane's object lookup and the shared Live graph. -/
-theorem FieldSelection.read_payload {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+theorem FieldSelection.read_reachable {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp high i l a k : Nat} {source v : Val} (h : VmPayload P s c pl cp sp high)
-    (member : source ∈ roots P s) (f : FieldSelection s.heap pl source i v l a k) :
+    (reachable : ∀ loc, source.loc? = some loc → Live s.heap (roots P s) loc)
+    (f : FieldSelection s.heap pl source i v l a k) :
     FieldValue P s pl c v (a + 8 * (k + i)) := by
-  have live : Live s.heap (roots P s) l := Live.root member (by simp [f.pointer, Val.loc?])
+  have live : Live s.heap (roots P s) l := reachable l (by simp [f.pointer, Val.loc?])
   have selected := f.selected
   rw [f.pointer] at selected
   cases object : s.heap.get? l with
@@ -59,6 +60,13 @@ theorem FieldSelection.read_payload {P : Prog} {s : St} {c : Config} {pl : Place
         fun l' hl => Live.field live object (List.mem_of_getElem? selected) hl⟩
     all_goals cases selected
 
+/-- Direct roots specialize the reachable-value observation. -/
+theorem FieldSelection.read_payload {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high i l a k : Nat} {source v : Val} (h : VmPayload P s c pl cp sp high)
+    (member : source ∈ roots P s) (f : FieldSelection s.heap pl source i v l a k) :
+    FieldValue P s pl c v (a + 8 * (k + i)) :=
+  f.read_reachable h (fun _ hl => Live.root member hl)
+
 /-- Loop-head specialization of the common payload field observation. -/
 theorem FieldSelection.read {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp high i l a k : Nat} {source v : Val} (h : VmReprAt P s c pl cp sp high)
@@ -67,6 +75,20 @@ theorem FieldSelection.read {P : Prog} {s : St} {c : Config} {pl : Place} {cp : 
   f.read_payload (payload_of_repr h) member
 
 /-- The payload's write-log frame preserves the selected field's unique word. -/
+theorem FieldSelection.word_frame_reachable {P : Prog} {s : St} {c after : Config}
+    {pl : Place} {cp : ChanPlace} {sp high i l a k : Nat} {source v : Val} {log : List Vsa.Sim.WEntry}
+    (h : VmPayload P s c pl cp sp high)
+    (reachable : ∀ loc, source.loc? = some loc → Live s.heap (roots P s) loc)
+    (f : FieldSelection s.heap pl source i v l a k)
+    (outside : PayloadOutside log P s c pl cp sp)
+    (memory : after.σ.mem = Vsa.Sim.writeLog c.σ.mem log)
+    (output : after.σ.sailOutput = c.σ.sailOutput) :
+    word after (a + 8 * (k + i)) = word c (a + 8 * (k + i)) := by
+  have beforeValue := f.read_reachable h reachable
+  have afterValue := f.read_reachable (h.frame_log outside memory output) reachable
+  exact Option.some.inj (afterValue.word.symm.trans beforeValue.word)
+
+/-- Direct-root specialization retained for existing single-field arms. -/
 theorem FieldSelection.word_frame {P : Prog} {s : St} {c after : Config}
     {pl : Place} {cp : ChanPlace} {sp high i l a k : Nat} {source v : Val} {log : List Vsa.Sim.WEntry}
     (h : VmPayload P s c pl cp sp high) (member : source ∈ roots P s)
@@ -74,9 +96,24 @@ theorem FieldSelection.word_frame {P : Prog} {s : St} {c after : Config}
     (outside : PayloadOutside log P s c pl cp sp)
     (memory : after.σ.mem = Vsa.Sim.writeLog c.σ.mem log)
     (output : after.σ.sailOutput = c.σ.sailOutput) :
-    word after (a + 8 * (k + i)) = word c (a + 8 * (k + i)) := by
-  have beforeValue := f.read_payload h member
-  have afterValue := f.read_payload (h.frame_log outside memory output) member
-  exact Option.some.inj (afterValue.word.symm.trans beforeValue.word)
+    word after (a + 8 * (k + i)) = word c (a + 8 * (k + i)) :=
+  f.word_frame_reachable h (fun _ hl => Live.root member hl) outside memory output
+
+/-- A nested field load can use the framed word before the generated run is
+instantiated. Only its memory map is needed, not an execution-state premise. -/
+theorem FieldSelection.load_frame {P : Prog} {s : St} {c : Config}
+    {pl : Place} {cp : ChanPlace} {sp high i l a k : Nat} {source v : Val}
+    {log : List Vsa.Sim.WEntry} {memoryAfter : Std.ExtHashMap Nat (BitVec 8)}
+    (h : VmPayload P s c pl cp sp high)
+    (reachable : ∀ loc, source.loc? = some loc → Live s.heap (roots P s) loc)
+    (f : FieldSelection s.heap pl source i v l a k)
+    (outside : PayloadOutside log P s c pl cp sp)
+    (memory : memoryAfter = Vsa.Sim.writeLog c.σ.mem log) :
+    LeanRV64DExecutable.Functions.sign_extend (m := 64)
+      (Vsa.Sim.bytesT8 memoryAfter (a + 8 * (k + i))) = word c (a + 8 * (k + i)) := by
+  let after : Config := {c with σ := {c.σ with mem := memoryAfter}}
+  have same := f.word_frame_reachable (after := after) h reachable outside memory rfl
+  simpa only [word, after, Vsa.Sim.bytesT_eight_eq,
+    LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend, BitVec.signExtend_eq] using same
 
 end OCaml.Vm.Sim

@@ -126,6 +126,12 @@ FAMILIES['PUSHGETGLOBAL'] = ('Pushgetglobal', ['sd', 'alu_addi', 'lw_tot', 'auip
 for _op in ['GETGLOBAL', 'PUSHGETGLOBAL']:
     PATHS[_op] = (_op, [])
 
+for _push in [False, True]:
+    _op = ('PUSH' if _push else '') + 'GETGLOBALFIELD'
+    FAMILIES[_op] = (_op.title(), (['sd', 'alu_addi'] if _push else []) +
+        ['lw_tot', 'auipc', 'ld_tot', 'lw_tot', 'slli', 'alu_add', 'ld_tot', 'slli', 'alu_addi', 'alu_add', 'ld_tot', 'j'])
+    PATHS[_op] = (_op, [])
+
 
 # Integer comparisons branch to the false-result helper; fallthrough returns true.
 for _op in ['LTINT', 'LEINT', 'GTINT', 'GEINT', 'ULTINT', 'UGEINT']:
