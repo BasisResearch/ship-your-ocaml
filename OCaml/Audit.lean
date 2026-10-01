@@ -562,6 +562,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.const0_arm
 
 -- Shared immediate-result restoration and modular NEGINT.
+#print axioms OCaml.Vm.Sim.CodeReadAt.toNat
+#print axioms OCaml.Vm.Sim.code_read
+#print axioms OCaml.Vm.Sim.OperandAt.read
+#print axioms OCaml.Vm.Sim.codePc_add
+#print axioms OCaml.Vm.Sim.tag_word32
+#print axioms Vsa.Sim.tr_constint
+#print axioms OCaml.Vm.Sim.constint_loaded
+#print axioms OCaml.Vm.Sim.constint_arm
 #print axioms OCaml.Vm.Sim.codePc_succ
 #print axioms OCaml.Vm.Sim.immediate_restore
 #print axioms OCaml.Vm.Sim.immediate_preserved

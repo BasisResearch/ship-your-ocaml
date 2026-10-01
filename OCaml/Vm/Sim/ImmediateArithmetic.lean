@@ -3,6 +3,19 @@ import OCaml.Vm.Primitives.TagArithmetic
 namespace OCaml.Vm.Sim
 open OCaml.Bytecode OCaml.Vm.Primitives
 
+/-- Sign-extending a bytecode operand and tagging it agrees with the
+semantics' conversion of its signed 32-bit value to a 63-bit integer. -/
+theorem tag_word32 (w : BitVec 32) :
+    (w.signExtend 64 <<< (1 : Nat)) + 1#64 = tag64 (BitVec.ofInt 63 w.toInt) := by
+  have extend : (w.signExtend 63).signExtend 64 = w.signExtend 64 :=
+    congrArg (BitVec.ofInt 64) (BitVec.toInt_signExtend_of_le (by decide : 32 ≤ 63))
+  change (w.signExtend 64 <<< (1 : Nat)) + 1#64 =
+    (((w.signExtend 63).signExtend 64) <<< (1 : Nat)) ||| 1#64
+  rw [extend]
+  have tagged := @BitVec.shiftLeft_add_eq_shiftLeft_or 64 1#64 (w.signExtend 64)
+  rw [BitVec.shiftLeft_eq'] at tagged
+  exact tagged
+
 /-- Tagged modular subtraction, shared by unary and binary integer arms. -/
 theorem tag_sub (m n : BitVec 63) : tag64 m + 1#64 - tag64 n = tag64 (m - n) := by
   apply BitVec.eq_of_toNat_eq

@@ -61,6 +61,7 @@ ELF pin).
 | `tr_const0`, `const0_loaded` (first generated machine arm body and full-image pin projection) | `OCaml/Vm/Sim/Const0*.lean` | A1 | **proved**; represented composition below |
 | `const0_arm`, `ArmInput.of_repr` (represented dispatch/body composition) | `OCaml/Vm/Sim/Const0.lean`, `ArmInput.lean` | A1 | **proved conditionally** on code geometry, tick, non-cache opcode position and runtime memory frame; full `ArmSim.next` open |
 | `const1_arm`, `const2_arm`, `const3_arm`, `immediate_arm` | `OCaml/Vm/Sim/Const*.lean`, `Immediate.lean` | A1 | **proved conditionally**; generated constant family restores data/platform through one shared dispatch/body composition |
+| `constint_arm`, `tag_word32`, `OperandAt.read` | `OCaml/Vm/Sim/Constint*.lean`, `ArmInput.lean` | A1 | **proved conditionally**; signed operand load/tagging, PC +2 and represented restoration; ordinary-word/code-geometry premises explicit |
 | `tr_isint`, `isint_loaded` (generated five-instruction machine body with SLLI/ANDI) | `OCaml/Vm/Sim/Isint*.lean` | A1 | **proved**; full representation/frame bridge open |
 | `isint_arm`, `isintWord_repr`, `isint_not_valWord` | `OCaml/Vm/Sim/Isint*.lean` | A1 | **proved conditionally** on dispatch readiness, runtime frame, even placement and non-raw accumulator; checked value-level alignment obstruction retained |
 | `tr_negint`, `negint_loaded` (generated four-instruction tagged-negation body) | `OCaml/Vm/Sim/Negint*.lean` | A1 | **proved**; represented composition below |

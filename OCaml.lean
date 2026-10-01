@@ -68,6 +68,7 @@ import OCaml.Vm.Sim.DispatchPins
 import OCaml.Vm.Sim.DispatchTable
 import OCaml.Vm.Sim.Dispatch
 import OCaml.Vm.Sim.Const0
+import OCaml.Vm.Sim.Constint
 import OCaml.Vm.Sim.Const1
 import OCaml.Vm.Sim.Const2
 import OCaml.Vm.Sim.Const3

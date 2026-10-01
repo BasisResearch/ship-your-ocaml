@@ -34,6 +34,33 @@ structure CodeReadAt (a : Nat) : Prop where
   upper : a + 4 ≤ 0x100000000
   htif : a + 4 ≤ Vsa.Sim.tohostAddr ∨ Vsa.Sim.tohostAddr + 8 ≤ a
 
+/-- Code RAM geometry also excludes 64-bit address wraparound. -/
+theorem CodeReadAt.toNat {a : Nat} (h : CodeReadAt a) :
+    (BitVec.ofNat 64 a).toNat = a := by
+  apply Nat.mod_eq_of_lt
+  have upper := h.upper
+  omega
+
+/-- A fetched ordinary word is pinned by code representation. Method-cache
+slots require their separate F3 observation contract. -/
+theorem code_read {code : Code} {base i : Nat} {c : Config} {w : BitVec 32}
+    (repr : CodeRepr code base c) (fetch : code[i]? = some w)
+    (ordinary : methodCacheSlot code i = false) : word32 c (base + 4 * i) = w :=
+  (repr i w fetch).resolve_left (by simp only [ordinary, Bool.false_eq_true, not_false_eq_true])
+
+/-- Ordinary operand-read facts supplied by bytecode decoding and code
+placement. They do not assume a machine run or an arm postcondition. -/
+structure OperandAt (P : Prog) (pl : Place) (i : Nat) (w : BitVec 32) : Prop where
+  fetch : P.code[i]? = some w
+  ordinary : methodCacheSlot P.code i = false
+  geometry : CodeReadAt (pl.codeBase + 4 * i)
+
+theorem OperandAt.read {P : Prog} {pl : Place} {i : Nat} {w : BitVec 32} {c : Config}
+    (h : OperandAt P pl i w) (repr : CodeRepr P.code pl.codeBase c) :
+    word32 c (BitVec.ofNat 64 (pl.codeBase + 4 * i)).toNat = w := by
+  rw [h.geometry.toNat]
+  exact code_read repr h.fetch h.ordinary
+
 /-- The representation supplies every dispatch input except the explicitly
 named clock, code-placement, and non-cache opcode-position facts. -/
 theorem ArmInput.of_repr {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
@@ -45,14 +72,11 @@ theorem ArmInput.of_repr {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
     (opcodeSlot : methodCacheSlot P.code s.pc = false) :
     ArmInput L P s op c pl cp sp high := by
   have ha : (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)).toNat =
-      pl.codeBase + 4 * s.pc := by
-    apply Nat.mod_eq_of_lt
-    have upper := geometry.upper
-    omega
+      pl.codeBase + 4 * s.pc := geometry.toNat
   refine ⟨h, ⟨platform.control, platform.image, loop, h.atHead, h.pc,
     ?_, tick, ?_, ?_, ?_⟩, platform.runtime⟩
   · rw [ha]
-    exact (h.code _ _ fetch).resolve_left (by simp only [opcodeSlot, Bool.false_eq_true, not_false_eq_true])
+    exact code_read h.code fetch opcodeSlot
   · simpa only [ha] using geometry.lower
   · simpa only [ha] using geometry.upper
   · simpa only [ha] using geometry.htif

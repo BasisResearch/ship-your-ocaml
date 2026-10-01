@@ -27,10 +27,15 @@ structure AccuPost (before : Config) (pl : Place) (pc : Nat) (w : BitVec 64)
 abbrev ImmediatePost (before : Config) (pl : Place) (pc : Nat) (n : BitVec 63)
     (after : Config) : Prop := AccuPost before pl pc (tag64 n) after
 
+theorem codePc_add (pl : Place) (pc n : Nat) :
+    BitVec.ofNat 64 (pl.codeBase + 4 * pc) + BitVec.ofNat 64 (4 * n) =
+      BitVec.ofNat 64 (pl.codeBase + 4 * (pc + n)) := by
+  simp only [Nat.mul_add, ← Nat.add_assoc, BitVec.ofNat_add]
+
 theorem codePc_succ (pl : Place) (pc : Nat) :
     BitVec.ofNat 64 (pl.codeBase + 4 * pc) + 4#64 =
-      BitVec.ofNat 64 (pl.codeBase + 4 * (pc + 1)) := by
-  simp only [Nat.mul_add, Nat.mul_one, ← Nat.add_assoc, BitVec.ofNat_add]
+      BitVec.ofNat 64 (pl.codeBase + 4 * (pc + 1)) :=
+  codePc_add pl pc 1
 
 /-- One restoration proof for read-only accumulator replacements. -/
 theorem accu_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}

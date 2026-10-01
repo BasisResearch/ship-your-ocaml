@@ -40,6 +40,25 @@ NEGINT rebuild at 1.1s / 1.2s; targeted runs remain below 2.08 GiB under
 24 GiB. No proof budget changed. Drift, discipline and abstraction checks
 pass; the full integration gate passed and landed the repair as `9eeb667`.
 
+## CONSTINT and ordinary operand reads
+
+`constint_arm` (`OCaml/Vm/Sim/Constint.lean`) composes the generated
+five-instruction load/tag/advance body with dispatch and full representation
+restoration. It returns `.int (BitVec.ofInt 63 w.toInt)` and advances PC by
+two, exactly matching the signed bytecode operand. `tag_word32` uses the
+existing sign-extension and shift/add laws; no operand values are enumerated.
+
+`OperandAt` names the fetched code word, non-cache position and code RAM
+geometry. `code_read`, `CodeReadAt.toNat` and `OperandAt.read` give the common
+observation bridge; `ArmInput.of_repr` reuses the same facts. `codePc_add`
+generalizes the existing successor address identity. These remain explicit
+input facts, not a claim of unconditional `ArmSim.next`.
+
+Default-limit 24 GiB builds pass: body/pins/arithmetic 5.70s; represented
+bridge plus shared helpers 5.61s (bridge 1.6s), peak process RSS below 2 GiB.
+BOOLNOT landed as `5d473b0` with the full gate passing. CONSTINT brings the
+represented conditional arm count to 16.
+
 ## Unary tagged subtraction
 
 `gen_unary_arms.py` emits both NEGINT and BOOLNOT represented bridges from
