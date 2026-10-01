@@ -96,7 +96,7 @@ static int new_node(int d, const char *n, size_t k, int dir);
 
 /* OCAML: the files linked into the image by embed.S, NULL-terminated. */
 struct embedded_file { const char *path; const char *start; const char *end; };
-extern const struct embedded_file embedded_files[];
+extern const struct embedded_file *const embedded_files;  /* gen_embed.sh's fixed header */
 
 static void fs_init(void) {
     if (fs_ready) return;

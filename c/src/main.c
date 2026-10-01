@@ -1,8 +1,10 @@
 /* Bare-metal entry for ocamlrun (OCaml 4.14.4) under HTIF.
  *
  * Replaces runtime/main.c. The command line and OCAMLRUNPARAM are baked
- * in at build time (there is no host to pass them): argv is
- *   { "ocamlrun", "/prog", OCAML_ARGS... }
+ * in at build time (there is no host to pass them), in the `.embed` section
+ * with the program (gen_embed.sh, at a fixed address: src/link.ld), so the
+ * runtime's own code and data do not depend on them: argv is
+ *   { "ocamlrun", "/prog", args... }
  * where /prog is the bytecode executable embedded by embed.S, so
  * caml_main() takes its ordinary `ocamlrun prog args` path: it opens /prog
  * in htif.c's in-memory file system, reads the trailer and sections,
@@ -18,21 +20,15 @@
 #include "caml/sys.h"
 #include "caml/callback.h"
 
-#ifndef OCAML_ARGS
-#define OCAML_ARGS
-#endif
-#ifndef OCAMLRUNPARAM
-#define OCAMLRUNPARAM ""
-#endif
-
 extern char **environ;
 
-static char *baked_env[] = { "OCAMLRUNPARAM=" OCAMLRUNPARAM, NULL };
-static char *baked_argv[] = { "ocamlrun", "/prog", OCAML_ARGS NULL };
+/* gen_embed.sh: the baked command line and environment */
+extern char **const embedded_argv;
+extern char **const embedded_env;
 
 int main(void) {
-    environ = baked_env;
-    caml_main(baked_argv);
+    environ = embedded_env;
+    caml_main(embedded_argv);
     caml_do_exit(0);
     return 0; /* not reached */
 }

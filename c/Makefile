@@ -70,7 +70,7 @@ build/prog.byte: $(PROG_SRC)
 
 $(BUILD)/embed.S: src/gen_embed.sh $(PROG) FORCE
 	@mkdir -p $(BUILD)
-	src/gen_embed.sh /prog=$(abspath $(PROG)) $(FILES) > $@.tmp
+	src/gen_embed.sh --cargs '$(ARGS)' --runparam '$(RUNPARAM)' /prog=$(abspath $(PROG)) $(FILES) > $@.tmp
 	cmp -s $@.tmp $@ || mv $@.tmp $@; rm -f $@.tmp
 
 # The .S files are assembled to named objects first: assembling them inline
@@ -84,7 +84,7 @@ $(BUILD)/embed.o: $(BUILD)/embed.S
 	$(RISCV_CC) $(RISCV_CFLAGS) -c -o $@ $<
 
 $(ELF): $(RT_C) src/main.c $(BUILD)/crt0.o src/htif.c src/stubs.c src/link.ld $(BUILD)/embed.o $(BUILD)/prims.c src/config/caml/m.h src/config/caml/s.h
-	$(RISCV_CC) $(RISCV_CFLAGS) '-DOCAML_ARGS=$(ARGS)' '-DOCAMLRUNPARAM="$(RUNPARAM)"' \
+	$(RISCV_CC) $(RISCV_CFLAGS) \
 	    -nostartfiles -T src/link.ld -o $@ \
 	    $(BUILD)/crt0.o src/htif.c src/stubs.c $(BUILD)/embed.o src/main.c $(BUILD)/prims.c $(RT_C) -lm
 
