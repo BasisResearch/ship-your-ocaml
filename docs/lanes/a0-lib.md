@@ -1,5 +1,11 @@
 # A0 library lane
 
+## Current status
+
+All six requested functions now have compiled contracts at this ELF’s addresses.
+The final formatter axiom audit passed; the full integration gate is next.
+
+
 ## Proved
 
 - `Vsa.Sim.decodeW` (`Vsa/Sim/DecodeNF.lean:33`): generic Sail decode
@@ -55,7 +61,7 @@
   The new memmove region and stdio outputs are drift-checked by a5.
   `check_code_pins.py`: 36,856 pin occurrences, zero mismatches.
 
-## Open / next
+## Earlier checkpoints / remaining work at those checkpoints
 
 - `_svfprintf_r` is the remaining open function contract. `_free_r`
   (`free_body`, `FreeTop.lean:339`) and the free wrapper run contracts now
@@ -224,3 +230,52 @@ The complete iovec `ssprint_nw` contract (`SnpPrint`) now compiles. Its
 impossible error-return branch before driving the remaining instructions.
 The checked stdio manifest now contains 40 template modules (plus the generated
 byte-image module); formatter entry/conversion/loop templates remain pending.
+
+Stdio foundation checkpoint `1758f28` landed on main through the full gate.
+The first formatter-core build identified heartbeat limits in `svfPro_p4`,
+`svfPro2_p1`, `svf_litBody`, `svf_printSign0`, and `svf_epi`; no budget was raised.
+The next adaptation shortens their generated-instruction batches and separates
+the sign-flag branches with a generic checked-piece branch compositor.
+
+The formatter split resolved the previous `svfPro2`, sign-flag and epilogue
+budget failures. The next check restores the generic `Arm` 32-bit load
+normalizer (which had been omitted by the import cut), and reduces each
+byte-clear batch to two or three steps. Shared-memory pressure delayed this
+build for about thirteen minutes; the guard resumed it after memory recovered.
+`LibraryImageFacts` with the restored rules compiles.
+
+`SnpSvf` now builds in full (274 seconds under the 24 GB cap), including
+`svf_entry`, literal output, sign handling, and `svf_epi`. The checked manifest
+promotes it and the generic `LibraryProofBranches` compositor. Conversion,
+format-loop, and final entry-to-return composition are the remaining checks.
+
+The first conversion-module check reached eight declaration-level heartbeat
+limits. A direct ownership macro experiment regressed `SnpPrint` with recursion
+depth failures, so it was reverted. The conversion proofs now separate bounded
+instruction batches and positive/negative branches into kernel-checked pieces;
+the next build checks those compositions without increasing any budget.
+
+The conversion module now builds (234 seconds), followed by `SnpSvfLoop`,
+`SnpFormatSupport`, and `SnpFmt`. Bounded two-instruction pieces and separate
+sign cases stay within the default heartbeat budget. The eight split contracts
+were independently checked against their original types; none exports an extra
+body obligation. The local stack-ownership rule is confined to the conversion
+module. The missing `pieceBytes_zero` import-cut helper was restored from the
+preserved upstream source.
+
+`VsaIris.Sym.svfprintf_nw` (`VsaIris/Vsa/SnpFmt.lean:314`) proves execution
+from `_svfprintf_r` entry `0x8004789c` through its caller return. Its scope is
+literal text plus `%s` and signed 32-bit `%d`, an initialized string FILE
+(flags `0x208`), ASCII locale, at most five stack argument slots, disjoint
+bounded input/output, and rendered length plus 21 below `2^31`. It establishes
+the first `min(rendered length, n-1)` bytes, the full rendered length in `a0`,
+restored stack/callee-saves, and a memory frame. It does not add the terminating
+NUL; that belongs to the snprintf wrapper. `SvfRetK` is the ordinary caller
+continuation. All 46 stdio templates plus the generated image are now selected
+by the default generator and a5 drift check. The latest pin check reports
+37,048 bytes and zero mismatches; all 91 table targets validate.
+
+The root library build and `OCaml.Audit` pass (1,041 jobs). New entry,
+conversion, digit-loop, and final `svfprintf_nw` audits depend only on
+`{propext, Classical.choice, Quot.sound}`. Proof discipline, abstraction gate,
+whitespace, and 47-module generator drift checks pass. Final integration is next.

@@ -64,9 +64,55 @@ theorem imgM_store_img {Mt : Mem} {a : Nat} {img : Nat → BitVec 8} {j : Nat} (
   refine imgLE_inj (n := 8) ?_ j hj
   rw [imgLE_imgM_store, imgW_toNat]
 
+theorem toNat_append4 (f : Nat → BitVec 8) (a : Nat) :
+    (((((f (a + 3)).append (f (a + 2))).append (f (a + 1))).append (f a)) : BitVec (8 * 4)).toNat =
+      imgLE f a 4 := by
+  simp only [BitVec.append_eq, BitVec.toNat_append, imgLE]
+  have h0 := (f a).isLt; have h1 := (f (a + 1)).isLt; have h2 := (f (a + 1 + 1)).isLt
+  have h3 := (f (a + 1 + 1 + 1)).isLt
+  simp only [show a + 1 + 1 = a + 2 by omega, show a + 2 + 1 = a + 3 by omega] at *
+  rw [← Nat.shiftLeft_add_eq_or_of_lt (by omega),
+    ← Nat.shiftLeft_add_eq_or_of_lt (by omega),
+    ← Nat.shiftLeft_add_eq_or_of_lt (by omega)]
+  simp only [Nat.shiftLeft_eq, Nat.reducePow]
+  omega
+
+theorem bytesAt4 (f : Nat → BitVec 8) (a : Nat) :
+    bytesAt f a 4 = [f a, f (a + 1), f (a + 2), f (a + 3)] := rfl
+
 theorem bytesAt8 (f : Nat → BitVec 8) (a : Nat) :
     bytesAt f a 8 = [f a, f (a + 1), f (a + 2), f (a + 3), f (a + 4), f (a + 5), f (a + 6),
       f (a + 7)] := rfl
+
+theorem ldvf_lw_imgLE {f : Nat → BitVec 8} {a k : Nat} (h : imgLE f a 4 = k) (hk : k < 2 ^ 31) :
+    ldvf .lw f a = BitVec.ofNat 64 k := by
+  have hw := toNat_append4 f a
+  rw [h] at hw
+  simp only [ldvf, bytesAt4, bytesVal, widthOfM, List.getD_cons_zero, List.getD_cons_succ]
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show k < 2 ^ 64 by omega)]
+  simp only [LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend,
+    BitVec.toNat_signExtend]
+  have hmsb : ((((f (a + 3)).append (f (a + 2))).append (f (a + 1))).append (f a) :
+      BitVec (8 * 4)).msb = false := by
+    rw [BitVec.msb_eq_decide]
+    simp only [decide_eq_false_iff_not, Nat.not_le]
+    omega
+  rw [hmsb]
+  simp only [Bool.false_eq_true, if_false, Nat.add_zero, BitVec.toNat_setWidth]
+  rw [hw, Nat.mod_eq_of_lt (show k < 2 ^ 64 by omega)]
+
+theorem ldvf_lwu_imgLE {f : Nat → BitVec 8} {a k : Nat} (h : imgLE f a 4 = k) :
+    ldvf .lwu f a = BitVec.ofNat 64 k := by
+  have hw := toNat_append4 f a
+  rw [h] at hw
+  have hk : k < 2 ^ 32 := by have := imgLE_lt f a 4; omega
+  simp only [ldvf, bytesAt4, bytesVal, widthOfM, List.getD_cons_zero, List.getD_cons_succ]
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show k < 2 ^ 64 by omega)]
+  simp only [LeanRV64DExecutable.zero_extend, Sail.BitVec.zeroExtend,
+    BitVec.toNat_setWidth]
+  rw [hw, Nat.mod_eq_of_lt (show k < 2 ^ 64 by omega)]
 
 theorem toNat_append8 (f : Nat → BitVec 8) (a : Nat) :
     (((((((((f (a + 7)).append (f (a + 6))).append (f (a + 5))).append (f (a + 4))).append
@@ -96,6 +142,42 @@ theorem ldvf_ld_imgLE {f : Nat → BitVec 8} {a k : Nat} (h : imgLE f a 8 = k) :
   simp only [LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend]
   rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hk, ← hw]
   exact congrArg BitVec.toNat (BitVec.signExtend_eq _)
+
+theorem imgLE_split (img : Nat → BitVec 8) (a : Nat) :
+    ∀ n k, imgLE img a (n + k) = imgLE img a n + 256 ^ n * imgLE img (a + n) k
+  | 0, k => by simp [imgLE]
+  | n + 1, k => by
+    have := imgLE_split img (a + 1) n k
+    simp only [Nat.succ_add, imgLE, this, Nat.pow_succ,
+      show a + 1 + n = a + (n + 1) by omega, Nat.mul_add, Nat.mul_left_comm,
+      Nat.mul_assoc, Nat.add_assoc]
+
+theorem ldv_lw_read32 {m : Mem} {a k : Nat} (h : read32 m a = some k) (hk : k < 2 ^ 31) :
+    ldv .lw m a = BitVec.ofNat 64 k := ldvf_lw_imgLE (readLE_memImg h) hk
+
+theorem ldv_lwu_read32 {m : Mem} {a k : Nat} (h : read32 m a = some k) :
+    ldv .lwu m a = BitVec.ofNat 64 k := ldvf_lwu_imgLE (readLE_memImg h)
+
+theorem ldv_ld_read64 {m : Mem} {a k : Nat} (h : read64 m a = some k) :
+    ldv .ld m a = BitVec.ofNat 64 k := ldvf_ld_imgLE (readLE_memImg h)
+
+theorem ldv_lw_store8 (Mt : Mem) {a b : Nat} (v : BitVec 64) (h : a = b)
+    (hk : v.toNat % 2 ^ 32 < 2 ^ 31) :
+    ldv .lw (writeLog Mt [(b, 8, v)]) a = BitVec.ofNat 64 (v.toNat % 2 ^ 32) := by
+  subst h
+  refine ldvf_lw_imgLE ?_ hk
+  have h8 := imgLE_imgM_store Mt a v
+  have hs : imgLE (imgM (writeLog Mt [(a, 8, v)])) a 8 =
+      imgLE (imgM (writeLog Mt [(a, 8, v)])) a 4 +
+        256 ^ 4 * imgLE (imgM (writeLog Mt [(a, 8, v)])) (a + 4) 4 := imgLE_split _ a 4 4
+  have := imgLE_lt (imgM (writeLog Mt [(a, 8, v)])) a 4
+  have e : (256 : Nat) ^ 4 = 2 ^ 32 := by decide
+  rw [e] at hs this
+  omega
+
+macro_rules
+  | `(tactic| ix_mem) => `(tactic| simp (disch := sx_addr) only [ldv_store_hit, ldv_ld_hit_eq,
+      ldv_ld_miss, VsaIris.Sym.ldv_lw_miss, ldv_lw_store8] at *)
 
 theorem sext32_ofNat_toInt {a : Nat} (h : a < 2 ^ 31) :
     (BitVec.signExtend 64 (BitVec.extractLsb 31 0 (BitVec.ofNat 64 a))).toInt = a := by

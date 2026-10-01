@@ -1,3 +1,4 @@
+import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
 import VsaIris.Vsa.SnpStrlen
 import VsaIris.Vsa.SnpArith
@@ -400,3 +401,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms VsaIris.Interp.umod_nw
 #print axioms Vsa.Sim.digits_eq_natToString
 #print axioms VsaIris.Sym.ssprint_nw
+
+-- Formatter entry, sign branches and return at the relocated code addresses.
+#print axioms VsaIris.Interp.ldv_lw_store8
+#print axioms VsaIris.Sym.svf_entry
+#print axioms VsaIris.Sym.svf_printSign0
+#print axioms VsaIris.Sym.svf_epi
+
+-- Complete formatter conversion/loop and entry-to-return contracts.
+#print axioms VsaIris.Sym.svf_convS
+#print axioms VsaIris.Sym.svf_intQ
+#print axioms VsaIris.Sym.svf_intD
+#print axioms VsaIris.Sym.svf_digits
+#print axioms VsaIris.Sym.loop_fmt
+#print axioms VsaIris.Sym.svfprintf_nw

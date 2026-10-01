@@ -221,4 +221,11 @@ indirect-call, interpreter-driver, image, arithmetic, and formatting modules.
 interpreter and WHILE-image imports. Unused recursive run-law proofs are
 omitted; the existing OCaml run-kernel route remains authoritative.
 `LibraryStdioFoot` follows relocated ELF objects. The checked-modules manifest
-records the compositions already promoted; other templates remain work in progress.
+selects all 46 templates, including the formatter entry, conversions, loop, and
+entry-to-return contract. The generated image is the forty-seventh output.
+
+`LibraryProofBranches` adds `#ix_fork` to compose every continuation of an
+upstream-style checked piece with a separately checked branch. It checks each
+branch type and submits the assembled theorem to the Lean kernel; it introduces
+no run law or trusted proof primitive. The stdio image helpers also retain the
+upstream `Arm` load-normalization rule for 32-bit reads across word stores.

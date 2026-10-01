@@ -1,3 +1,4 @@
+import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
 import VsaIris.Vsa.SnpStrlen
 import VsaIris.Vsa.SnpArith

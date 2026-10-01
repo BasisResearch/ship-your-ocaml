@@ -223,8 +223,6 @@ theorem ssputs_nw {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
     (hwin.transport fun a h1 h2 => hM1 a (by omega)) (fun R' Mt' h10' h2' h8' h9' hkp hcp => ?_)
   all_goals (try simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false])
   · apply BitVec.eq_of_toNat_eq; simp only [BitVec.toNat_ofNat]; omega
-  · rw [ldv_store_miss .lw _ _ (by simp only [widthOfM]; rw [toNat_ofNat_lt (by omega)]; omega)]
-    exact hw'
   · exact h11
   · exact h12
   · exact h13
