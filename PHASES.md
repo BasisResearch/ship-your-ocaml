@@ -32,7 +32,7 @@ ELF pin).
 | `boot_meaning`, `endToEnd_ocaml` / `endToEnd_of_layers` (composition) | `OCaml/EndToEnd.lean`, `OCaml/Theorems.lean` | P0 | **proved** |
 | run kernel: run laws of every step relation (`iter`, presentations, lossy transport); R1–R3 re-proved through it | `OCaml/Run/`, `Semantics.lean`, `Refinement.lean`, `BcModel.lean` | round 1 | **proved** (adopted, `abstractions/ROUND-1.md`) |
 | `halts_iff_bcHalts`, `ocamlrun_refinement_exit`, `ocamlrun_refinement_bcModel` | `OCaml/Logic/BcModel.lean`, `OCaml/Theorems.lean` | round 1b | **proved** |
-| relocation invariance of value words, objects, stack, `HeapRepr`, globals (`Eqv` combinators) | `OCaml/Vm/Reloc.lean` | round 1 (A6 route) | **proved** under the typed relocation; the real-collector bridge `ScanCoherent` is open (A6) |
+| relocation invariance of all `VmReprAt` fields (`Eqv` combinators) | `OCaml/Vm/Reloc.lean` | round 1 (A6 route) | **proved** under the typed relocation; the real-collector bridge `ScanCoherent` is open (A6) |
 | symbolic stepping + `loop_rule`; a counting loop for any bound | `OCaml/Logic/Symbolic.lean`, `OCaml/Programs/CountLoop.lean` | round 1 (B′ route) | **proved** |
 | OS spec (SibylFS + CakeML port), executable checker `allowed_sound`/`allowed_complete`/`checkTrace_sound` | `tcb/TCB/Os/` | P0 | **proved**; spec **trusted** for Linux, validated on 6,490 Linux traces (0 rejected) |
 | library proofs of the 66 byte-identical functions retargeted to this ELF | `Vsa/`, `scripts/retarget_syi.py` | P0 | **done** (pins checked, `memcpy_bytepath_spec`/`muldi3_spec`/`udivdi3_spec` audited) |
@@ -176,13 +176,17 @@ A0 library projections can consume the shared `FixedBytesLoaded` interface.
   sweeps only non-`Live` blocks; compaction off (`O=1000000`).
 * Route (adopted, round 1): every `VmReprAt` component as an `Eqv` term
   (`OCaml/Vm/Reloc.lean`; done: value words, objects, stack, `HeapRepr`,
-  globals). The collector simulation must supply `ScanCoherent`, plus the
+  globals, registers, code, domain fields, channels/world: `vmReprAt_reloc`). The collector simulation must supply `ScanCoherent`, plus the
   premises the L3′ check found (`abstractions/ROUND-1.md` §2):
   * NoForgery: no scanned word looks young unless it is a young pointer;
   * RememberedComplete: every old→young field is in `ref_table`,
     maintained by `caml_modify`;
   * a lax clause for `Forward_tag` short-circuiting;
   * interior pointers only behind `Infix_tag`.
+* Law checks now include 42 `Forward_tag` cases and 12 valid infix cases
+  (`abstractions/round1/check_laws.py`). Strict object preservation fails
+  for short-circuiting Forward blocks; arbitrary interior pointers fail
+  without an Infix header. The lax representation bridge remains open.
 * **Exit**: `Fits` restated on live words; `ocamlc` compiling a one-line
   program is within Layer A.
 

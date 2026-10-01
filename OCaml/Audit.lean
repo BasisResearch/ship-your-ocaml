@@ -415,3 +415,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms VsaIris.Sym.svf_digits
 #print axioms VsaIris.Sym.loop_fmt
 #print axioms VsaIris.Sym.svfprintf_nw
+
+-- Complete conditional VM-data relocation (collector execution remains open).
+#print axioms OCaml.Vm.Reloc.vmReprAt_reloc

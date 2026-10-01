@@ -351,4 +351,114 @@ theorem globals_reloc {c c' : Config} {pl : Place} {μ : Nat → Nat} {g : Val}
   (Eqv.val g fun _ => Layout.sym_caml_global_data).transport μ pl 0 0 c c' h hi
 
 
+/-! ## 4. Remaining loop-head components
+
+`observe` frames machine facts that do not depend on placement. `atCode`
+uses the fixed code base; neither asks for the post-representation as its
+image. Registers holding values use the same typed word action as memory.
+-/
+
+namespace Eqv
+
+def observe {α : Type} (read : Config → α) (R : α → Prop) : Eqv :=
+  ⟨fun _ _ c => R (read c), fun _ _ _ _ c c' => read c' = read c,
+   fun _ _ _ _ _ _ h hi => by rw [hi]; exact h⟩
+
+def atCode (E : Eqv) : Eqv :=
+  ⟨fun pl _ c => E.P pl pl.codeBase c,
+   fun μ pl _ _ c c' => E.Img μ pl pl.codeBase pl.codeBase c c',
+   fun μ pl _ _ c c' h hi => E.transport μ pl pl.codeBase pl.codeBase c c' h hi⟩
+
+/-- An optional value observation, shared by all value registers. -/
+def valRead (v : Val) (read : Config → Option (BitVec 64)) : Eqv :=
+  ⟨fun pl _ c => ∃ w, read c = some w ∧ valWord pl v = some w,
+   fun μ pl _ _ c c' => read c' = (read c).map (relocWord μ pl v),
+   fun _ _ _ _ _ _ ⟨w, hr, hw⟩ hi =>
+     ⟨_, by rw [hi, hr]; rfl, valWord_reloc hw⟩⟩
+
+end Eqv
+
+/-- Channels are malloc'd structures, not moving OCaml heap blocks. -/
+def chanEqv (a : Nat) (ch : Chan) : Eqv :=
+  Eqv.and (Eqv.rawW32 (fun _ => a + chanOffFd) (·.toInt = ch.fd)) <|
+  Eqv.and (Eqv.rawW (fun _ => a + chanOffCurr)
+    (·.toNat = a + chanOffBuff + ch.buf.length)) <|
+  Eqv.list ch.buf fun i b => Eqv.rawB (fun _ => a + chanOffBuff + i)
+    (· = BitVec.ofNat 8 b.toNat)
+
+def worldEqv (cp : ChanPlace) (w : World) : Eqv :=
+  Eqv.and (Eqv.observe (fun c => output c.σ) (· = bytesToString w.console)) <|
+  Eqv.all fun id => Eqv.all fun ch => Eqv.guard (w.chans[id]? = some ch) <|
+  Eqv.ex fun a => Eqv.and (Eqv.pure fun _ => cp id = some a) (chanEqv a ch)
+
+def pcEqv (pc : Nat) : Eqv :=
+  Eqv.atCode <| Eqv.ex fun base =>
+    Eqv.and (Eqv.pure (· = base))
+      (Eqv.observe (fun c => gpr c Layout.reg_pc)
+        (· = some (BitVec.ofNat 64 (base + 4 * pc))))
+
+def codeBaseEqv : Eqv :=
+  Eqv.atCode <| Eqv.ex fun base =>
+    Eqv.and (Eqv.pure (· = base))
+      (Eqv.rawW (fun _ => Layout.sym_caml_start_code) (·.toNat = base))
+
+def codeEqv (P : Prog) : Eqv :=
+  Eqv.atCode <| Eqv.all fun i => Eqv.all fun w => Eqv.guard (P.code[i]? = some w) <|
+    Eqv.rawW32 (· + 4 * i) (· = w)
+
+/-- Caml_state is fixed during a minor collection; the observation includes
+both the pointer load and its selected field. -/
+def domainFieldEqv (off value : Nat) : Eqv :=
+  Eqv.observe (fun c => (word c ((word c Layout.sym_Caml_state).toNat + off)).toNat)
+    (· = value)
+
+/-- Images the machine collector must establish at its return to dispatch.
+This is a conditional transport interface, not a collector execution proof. -/
+structure VmImage (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
+    (sp high : Nat) (μ : Nat → Nat) (c c' : Config) : Prop where
+  atHead : (Eqv.observe pcOf (· = some (BitVec.ofNat 64 Layout.loopHead))).Img μ pl 0 0 c c'
+  pc : (pcEqv s.pc).Img μ pl 0 0 c c'
+  spReg : (Eqv.observe (fun c => gpr c Layout.reg_sp) (· = some (BitVec.ofNat 64 sp))).Img μ pl 0 0 c c'
+  accu : (Eqv.valRead s.accu (fun c => gpr c Layout.reg_accu)).Img μ pl 0 0 c c'
+  env : (Eqv.valRead s.env (fun c => gpr c Layout.reg_env)).Img μ pl 0 0 c c'
+  extra : (Eqv.observe (fun c => gpr c Layout.reg_extra) (· = some (BitVec.ofNat 64 s.extra))).Img μ pl 0 0 c c'
+  stackHigh : (domainFieldEqv Layout.off_stack_high high).Img μ pl 0 0 c c'
+  trapsp : (domainFieldEqv Layout.off_trapsp (high - 8 * s.trap)).Img μ pl 0 0 c c'
+  codeBase : codeBaseEqv.Img μ pl 0 0 c c'
+  code : (codeEqv P).Img μ pl 0 0 c c'
+  globals : (Eqv.val P.globals (fun _ => Layout.sym_caml_global_data)).Img μ pl 0 0 c c'
+  stack : (stackEqv high s.stack).Img μ pl sp sp c c'
+  heap : (heapEqv cp P s).Img μ pl 0 0 c c'
+  world : (worldEqv cp s.world).Img μ pl 0 0 c c'
+
+/-- All loop-head fields transport via Eqv, including code, registers,
+trap-stack metadata, channels, and console output. -/
+theorem vmReprAt_reloc {P s c c' pl cp sp high μ}
+    (h : VmReprAt P s c pl cp sp high) (hi : VmImage P s pl cp sp high μ c c') :
+    VmReprAt P s c' (reloc μ pl) cp sp high := by
+  have pcPre : (pcEqv s.pc).P pl 0 c := ⟨pl.codeBase, rfl, h.pc⟩
+  have basePre : codeBaseEqv.P pl 0 c := ⟨pl.codeBase, rfl, h.codeBase⟩
+  obtain ⟨base, hb, hp⟩ := (pcEqv s.pc).transport μ pl 0 0 c c' pcPre hi.pc
+  obtain ⟨base', hb', hp'⟩ := codeBaseEqv.transport μ pl 0 0 c c' basePre hi.codeBase
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact (Eqv.observe pcOf (· = some (BitVec.ofNat 64 Layout.loopHead))).transport μ pl 0 0 c c' h.atHead hi.atHead
+  · change (reloc μ pl).codeBase = base at hb
+    change gpr c' Layout.reg_pc = some (BitVec.ofNat 64 (base + 4 * s.pc)) at hp
+    rw [hb]; exact hp
+  · exact (Eqv.observe (fun c => gpr c Layout.reg_sp) (· = some (BitVec.ofNat 64 sp))).transport μ pl 0 0 c c' h.spReg hi.spReg
+  · exact (Eqv.valRead s.accu (fun c => gpr c Layout.reg_accu)).transport μ pl 0 0 c c' h.accu hi.accu
+  · exact (Eqv.valRead s.env (fun c => gpr c Layout.reg_env)).transport μ pl 0 0 c c' h.env hi.env
+  · exact (Eqv.observe (fun c => gpr c Layout.reg_extra) (· = some (BitVec.ofNat 64 s.extra))).transport μ pl 0 0 c c' h.extra hi.extra
+  · exact (domainFieldEqv Layout.off_stack_high high).transport μ pl 0 0 c c' h.stackHigh hi.stackHigh
+  · exact (domainFieldEqv Layout.off_trapsp (high - 8 * s.trap)).transport μ pl 0 0 c c' h.trapsp hi.trapsp
+  · change (reloc μ pl).codeBase = base' at hb'
+    change (word c' Layout.sym_caml_start_code).toNat = base' at hp'
+    rw [hb']; exact hp'
+  · exact (codeEqv P).transport μ pl 0 0 c c' h.code hi.code
+  · exact (Eqv.val P.globals (fun _ => Layout.sym_caml_global_data)).transport μ pl 0 0 c c' h.globals hi.globals
+  · exact (stackEqv high s.stack).transport μ pl sp sp c c' h.stack hi.stack
+  · exact (heapRepr_iff _ _ _ _ _).2 <|
+      (heapEqv cp P s).transport μ pl 0 0 c c' ((heapRepr_iff _ _ _ _ _).1 h.heap) hi.heap
+  · exact (worldEqv cp s.world).transport μ pl 0 0 c c' h.world hi.world
+
 end OCaml.Vm.Reloc

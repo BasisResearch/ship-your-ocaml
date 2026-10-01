@@ -140,3 +140,113 @@ for forge, refc, name in [(False, True, "no forged raw words, complete ref table
                           (False, False, "incomplete ref table (no RememberedComplete)")]:
     r = [gc_trial(forge, refc) for _ in range(20000)]
     print(f"L3' bit-true GC, {name}: {r.count(False)} counterexamples / 20000")
+
+# ---------- L3' special tags: minor_gc.c:caml_oldify_one ----------
+# A small executable transcription, including the zero-header forwarding
+# marker, deferred field scanning, Forward_tag exceptions, and Infix_tag.
+INFIX, FORWARD, LAZY, DOUBLE, NO_SCAN = 249, 250, 246, 253, 251
+
+def oldify_special(memory, roots, flat_float=True, value_area=None):
+    mem = dict(memory)
+    todo = []
+    next_addr = 30000
+    def young(w):
+        return w % 2 == 0 and Y0 <= w < Y1
+    def tag(w):
+        return mem[w - 8] % 256
+    def alloc(size, kind):
+        nonlocal next_addr
+        a = next_addr
+        next_addr += 8 * (size + 1)
+        mem[a - 8] = size * 1024 + kind
+        return a
+    def oldify(v):
+        if not young(v):
+            return v
+        hd = mem[v - 8]
+        if hd == 0:
+            return mem[v]
+        kind, size = hd % 256, hd // 1024
+        if kind == INFIX:
+            offset = size * 8
+            return oldify(v - offset) + offset
+        if kind == FORWARD:
+            f = mem[v]
+            ft, vv = 0, True
+            if f % 2 == 0:
+                if young(f):
+                    ft = tag(mem[f] if mem[f - 8] == 0 else f)
+                else:
+                    vv = f in value_area if value_area is not None else f - 8 in mem
+                    if vv:
+                        ft = tag(f)
+            if vv and ft not in ({FORWARD, LAZY, DOUBLE} if flat_float else {FORWARD, LAZY}):
+                return oldify(f)
+        a = alloc(size, kind)
+        fields = [mem[v + 8*i] for i in range(size)]
+        mem[v - 8], mem[v] = 0, a
+        if kind >= NO_SCAN:
+            for i, f in enumerate(fields):
+                mem[a + 8*i] = f
+        elif size == 1:
+            mem[a] = oldify(fields[0])
+        else:
+            # Deferred scanning is observationally the mopup queue; the C
+            # stores the queue links in field 1 rather than a Python list.
+            todo.append((a, fields))
+        return a
+    result = [oldify(v) for v in roots]
+    while todo:
+        a, fields = todo.pop()
+        for i, f in enumerate(fields):
+            mem[a + 8*i] = oldify(f)
+    return result, mem
+
+# Every listed exception is checked both before and after its target has
+# already acquired the collector's zero-header forwarding marker.
+special_cases = 0
+for flat in (False, True):
+    for target_tag in (0, LAZY, FORWARD, DOUBLE, NO_SCAN):
+        for target_young in (False, True):
+            for already in (False, True):
+                a, b = Y0 + 8, (Y0 + 136 if target_young else 1032)
+                mem = {a-8: 1024+FORWARD, a: b, b-8: 1024+target_tag, b: 85}
+                rs, after = oldify_special(mem, ([b] if already else []) + [a], flat)
+                copied = target_tag in ({FORWARD, LAZY, DOUBLE} if flat else {FORWARD, LAZY})
+                # A young Forward block itself shortcuts to 85 if scanned first.
+                if already and target_young and target_tag == FORWARD:
+                    copied = True  # no zero header installed by short-circuiting
+                if copied:
+                    assert after[rs[-1]-8] % 256 == FORWARD
+                else:
+                    assert rs[-1] != a
+                    assert after.get(rs[-1]-8, 0) % 256 != FORWARD
+                special_cases += 1
+# Immediate payload: a strict placement would still demand a Forward header
+# immediately before the new address. The real short-circuit returns 85.
+a = Y0 + 8
+rs, after = oldify_special({a-8: 1024+FORWARD, a: 85}, [a])
+assert rs == [85] and after.get(85-8, 0) != 1024+FORWARD
+# Outside the value area: preserve the Forward block, even though f is even.
+rs, after = oldify_special({a-8: 1024+FORWARD, a: 2000000}, [a])
+assert after[rs[0]-8] % 256 == FORWARD and after[rs[0]] == 2000000
+print(f"L3' Forward_tag: {special_cases + 2} cases pass; strict ObjAt preservation has a counterexample (Forward -> int 42)")
+
+# Interior closure pointers require a real Infix header at v[-1]. Include
+# both root orders, so the base may already have a zero header.
+for offset in range(2, 8):
+    a = Y0 + 8
+    fs = [1000000, 3] + [1] * offset
+    fs[offset-1] = offset * 1024 + INFIX
+    mem = {a-8: len(fs)*1024 + 247, **{a+8*i: f for i, f in enumerate(fs)}}
+    for roots in ([a, a+8*offset], [a+8*offset, a]):
+        rs, after = oldify_special(mem, roots)
+        base = rs[0] if roots[0] == a else rs[1]
+        interior = rs[1] if roots[0] == a else rs[0]
+        assert interior == base + 8*offset
+        assert after[interior-8] == offset*1024 + INFIX
+# Without Infix_tag a payload word is misread as an ordinary block header.
+mem = {a-8: 3*1024+247, a: 1000000, a+8: 1024, a+16: 85}
+rs, after = oldify_special(mem, [a, a+16])
+assert rs[1] != rs[0] + 16
+print("L3' Infix_tag: 12 affine cases pass; missing Infix header has a counterexample")
