@@ -308,5 +308,22 @@ premise. The result heap gains exactly `.double bits` and the world is
 unchanged. `BoundaryPost.then_write` factors the read-only-prefix/write-log
 composition so concrete memory maps remain opaque during elaboration.
 The generated headline and full regression/audit pass (2,103 targets, standard
-axioms only), with **17/30 G1 summaries proved**. Integration is next; the
+axioms only), with **17/30 G1 summaries proved**. The milestone landed at `8658c0d` through the complete gate; the
 collector-enabled extension remains A6.
+
+
+## Library call adapter
+
+The next library consumers use the landed `SnpW`/`LocalRun` certificates
+(strlen, formatting and allocator wrappers). A shared bridge is being built
+with `loopFromBody` and the existing machine run-kernel adapters. Its measure
+is the least remaining bounded certificate; it introduces no run induction.
+The post must retain total-byte/output observations, the facts these library
+specs provide, and must not claim exact optional-memory-map equality.
+
+`localRun_triple` and `symbolic_summary` now compile; `strlen_summary`
+instantiates the landed `strlen_nw` certificate, retaining return PC, length,
+non-scratch registers and unchanged total bytes (`strlen_memory`). Both
+modules compile at the default elaboration budget (about one second each).
+These are shared support, so the primitive count remains 17/30. The next
+step is observational VM framing and the generated string-allocation caller.

@@ -1,3 +1,4 @@
+import OCaml.Vm.Primitives.LibraryStrlen
 import OCaml.Vm.Boot.WhileMin
 import OCaml.Vm.Boot.WhileMinEntry
 import OCaml.Vm.Boot.WhileMinRuntime
@@ -1029,3 +1030,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.int64_float_machine
 #print axioms OCaml.Vm.Primitives.int64_float_contract
 #print axioms OCaml.Vm.Primitives.caml_int64_float_of_bits_primitive
+
+#print axioms OCaml.Vm.Primitives.boundedRank_spec
+#print axioms OCaml.Vm.Primitives.localRun_triple
+#print axioms OCaml.Vm.Primitives.symbolic_summary
+#print axioms OCaml.Vm.Primitives.strlen_symbolic
+#print axioms OCaml.Vm.Primitives.strlen_summary
+#print axioms OCaml.Vm.Primitives.strlen_memory

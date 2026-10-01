@@ -134,3 +134,5 @@ import OCaml.Vm.Primitives.DoubleLayout
 import OCaml.Bytecode.NamedValues
 
 import OCaml.Vm.Primitives.CamlInt64FloatOfBits
+
+import OCaml.Vm.Primitives.LibraryStrlen
