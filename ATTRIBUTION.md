@@ -238,7 +238,7 @@ precondition has named fields. The unrelated demo, unused FrameCalc import
 and heartbeat setting are omitted. It contains no ELF-specific addresses.
 ## A1 primitive summary adaptation
 
-`scripts/syi/gen_fn.py` adds an OCaml constant-leaf backend to the preserved
+`scripts/syi/gen_fn.py` adds an OCaml read-only-leaf backend to the preserved
 whole-function generator. It reuses its CFG extraction and terminator decoding,
 then folds the landed `segEval_sound` result through `FnSummary`. It derives
 addresses and words from the pinned ELF and emits standard-budget certificates.
@@ -247,3 +247,6 @@ projection proves their hypotheses. `ChainFactsTac` now prefers imported
 `ElfDecode.decode_<word>` certificates, retaining `decodeW` for generic clients.
 The `OCaml/Vm/Primitives/{Blocks,Leaf,Payload,ConstantContract,RuntimeFrame}`
 interfaces are new composition/frame adapters; they add no machine run law.
+`Register` and `ImmediateContract` generalize these adapters to ABI scratch
+registers and represented argument lists. `TagArithmetic` relates tagged
+63-bit signed values to the generated integer comparison.

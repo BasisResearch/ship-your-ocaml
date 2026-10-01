@@ -1,4 +1,4 @@
-import OCaml.Vm.Primitives.Blocks
+import OCaml.Vm.Primitives.Register
 import OCaml.Vm.Platform
 
 namespace OCaml.Vm.Primitives
@@ -37,17 +37,16 @@ theorem leaf_of_blocks {bs : List BBlock} {entry : BitVec 64} {before : Config}
       gprGet σ 10 = some value)
     (hwrites : ∀ n ∈ wrChain bs, n = 10) :
     FnSummary entry (fun c => c = before) (LeafPost before ra value) := by
-  apply S.weaken (fun _ h => h)
+  have S' := register_of_blocks (writes := [10]) image S hlog hpc hresult
+    (fun n hn => List.mem_singleton.mpr (hwrites n hn))
+  apply S'.weaken (fun _ h => h)
   intro after h
-  have hm : after.σ.mem = before.σ.mem := by simpa [hlog, writeLog] using h.memory
-  refine ⟨h.good, ?_, h.minstret, h.tick, ?_, hresult _ h.regs, hm, h.output, ?_⟩
-  · exact ⟨fun i hi => by rw [hm]; exact image.text i hi,
-      fun i hi => by rw [hm]; exact image.rodata i hi⟩
-  · exact h.pc.trans (congrArg some hpc)
-  · intro r hr hn
-    apply h.frame r hn
-    intro n hmem
-    rw [hwrites n hmem]
-    simpa only [gprReg, beq_eq_false_iff_ne] using Ne.symm hr
+  refine ⟨h.good, h.image, h.minstret, h.tick, h.pc, h.result, h.memory, h.output, ?_⟩
+  intro r hr hn
+  apply h.frame r _ hn
+  intro n hn
+  have he : n = 10 := List.mem_singleton.mp hn
+  subst n
+  exact Ne.symm hr
 
 end OCaml.Vm.Primitives

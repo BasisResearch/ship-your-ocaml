@@ -52,3 +52,5 @@ import OCaml.Vm.Sim.AccPins
 import OCaml.Vm.Gc.Barrier
 import OCaml.Vm.Primitives.Constants
 import OCaml.Vm.Primitives.RuntimeFrame
+
+import OCaml.Vm.Primitives.CamlIntCompare

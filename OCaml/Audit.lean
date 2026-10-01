@@ -462,3 +462,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.caml_sys_const_ostype_win32_primitive
 #print axioms OCaml.Vm.Primitives.caml_sys_const_ostype_cygwin_primitive
 #print axioms OCaml.Vm.Primitives.caml_sys_const_backend_type_primitive
+
+-- Read-only primitive frames and signed tagged comparison.
+#print axioms OCaml.Vm.Primitives.register_of_blocks
+#print axioms OCaml.Vm.Primitives.immediate_contract
+#print axioms OCaml.Vm.Primitives.tag_toNat
+#print axioms OCaml.Vm.Primitives.tag_toInt
+#print axioms OCaml.Vm.Primitives.tag_signed_lt
+#print axioms OCaml.Vm.Primitives.compareWord_tag
+#print axioms OCaml.Vm.Primitives.caml_int_compare_primitive
