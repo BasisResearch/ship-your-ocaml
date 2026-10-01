@@ -1,0 +1,107 @@
+{
+  "theorem": "tr_geint_false",
+  "doc": "GEINT_FALSE arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.GeintFalseSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v9 v23 v21 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80003258 : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_80003258 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80003258 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hguard_80003264 : zopz0zI_s v21 (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) = true)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlGeintFalseLoaded",
+  "pins": [
+    {
+      "reg": "x9",
+      "val": "v9",
+      "hyp": "hv9"
+    },
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80003258",
+      "site": "site_80003258_geint_false",
+      "class": "alu",
+      "asm": "ld a5,0(s1)",
+      "rd": "x15",
+      "rd_val": "(sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl hlo_80003258 hhi_80003258 hhtif_80003258 $hi",
+      "rw": "hmemeq"
+    },
+    {
+      "addr": "0x8000325c",
+      "site": "site_8000325c_geint_false",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003260",
+      "site": "site_80003260_geint_false",
+      "class": "alu",
+      "asm": "addi s1,s1,8",
+      "rd": "x9",
+      "rd_val": "(v9 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v9 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003264",
+      "site": "site_80003264_taken_geint_false",
+      "class": "btaken",
+      "asm": "blt s5,a5,8000362c <caml_interprete+0x1834>",
+      "imm": "0x03c8#13",
+      "target": "0x8000362c",
+      "pre_lines": [],
+      "call": "$vmi $v:x21 $v:x15 $hG $hpc $hmi $pin:x21 $pin:x15 $hmem rfl hguard_80003264 $hi"
+    },
+    {
+      "addr": "0x8000362c",
+      "site": "site_8000362c_geint_false",
+      "class": "alu",
+      "asm": "li s5,1",
+      "rd": "x21",
+      "rd_val": "((0#64) + sign_extend (m := 64) (0x001#12))",
+      "raw_val": "((0#64) + sign_extend (m := 64) (0x001#12))",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003630",
+      "site": "site_80003630_geint_false",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1fe92c#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80003258",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

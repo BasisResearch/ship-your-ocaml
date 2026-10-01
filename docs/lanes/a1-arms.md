@@ -28,6 +28,28 @@ Default-limit 24 GiB checks: OFFSETINT body/pins 5.56s (segment 2.1s),
 arithmetic witness 3.60s (module 2.3s), peak process RSS below 2 GiB.
 CONSTINT landed as `9786220` with the full gate passing.
 
+## Signed and unsigned integer comparisons
+
+The `*_step_arm` theorems for LTINT, LEINT, GTINT, GEINT, ULTINT and UGEINT
+(`OCaml/Vm/Sim/*int.lean`) cover both native paths of each successful
+semantic step. `ComparisonArithmetic.lean` supplies four shared native
+signed/unsigned guard identities and `cmpOp_next` extracts represented
+integer inputs from a successful semantic comparison. These proofs compare
+the actual tagged words, exactly as `stepI` does.
+
+The existing binary generator now emits guarded comparison paths and their
+composition. It reuses the same stack consumption, payload/root restoration,
+load observations and generated register assignment as arithmetic and shifts.
+The arm generator follows each physical branch to its false-result helper
+or true-result fallthrough, preserving the guard in the machine contract.
+
+All six families are checked separately under 24 GiB at default limits.
+LTINT's represented paths take 1.1s each and composition 0.84s after the
+machine bodies. There are now 41 conditional represented opcode bridges;
+dispatch readiness, runtime memory frame and stack-read geometry remain
+explicit. Integer shifts landed as `16c3654` with the full gate passing.
+Full `ArmSim` and its entry/halt fields remain open.
+
 ## Integer shifts
 
 `lslint_step_arm`, `lsrint_step_arm`, and `asrint_step_arm`

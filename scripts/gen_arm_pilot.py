@@ -81,6 +81,16 @@ PATHS = {
 }
 
 
+# Integer comparisons branch to the false-result helper; fallthrough returns true.
+for _op in ['LTINT', 'LEINT', 'GTINT', 'GEINT', 'ULTINT', 'UGEINT']:
+    for _truth in [True, False]:
+        _family = _op + ('_TRUE' if _truth else '_FALSE')
+        FAMILIES[_family] = (_op.title() + ('True' if _truth else 'False'),
+            ['ld_tot', 'alu_addi', 'alu_addi',
+             'branch_nottaken' if _truth else 'branch_taken', 'alu_addi', 'j'])
+        PATHS[_family] = (_op, [not _truth])
+
+
 def path_span(instructions, start, decisions):
     """Follow explicit branch outcomes; generated contracts retain every guard."""
     by_pc = {i[0]: i for i in instructions}

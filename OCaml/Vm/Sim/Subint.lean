@@ -16,7 +16,8 @@ theorem subint_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s .SUBINT c pl cp sp high)
     (accu : s.accu = .int m) (stack : s.stack = .int n :: rest)
-    (read : ReadWindow (BitVec.ofNat 64 sp) 8) :
+    (read : ReadWindow (BitVec.ofNat 64 sp) 8)
+    :
     ∃ c', Plus c c' ∧
       Running L P {s with pc := s.pc + 1, accu := .int (m - n), stack := rest} c' := by
   have selected : s.stack[0]? = some (.int n) := by simp only [stack, List.getElem?_cons_zero]
