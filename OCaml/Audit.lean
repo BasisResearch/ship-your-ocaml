@@ -669,6 +669,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.tr_atom0
 #print axioms Vsa.Sim.tr_atom
 
+-- Indexed operand loads through the common generated template.
+#print axioms OCaml.Vm.Sim.acc_arm
+#print axioms OCaml.Vm.Sim.envacc_arm
+#print axioms OCaml.Vm.Sim.getfield_arm
+#print axioms OCaml.Vm.Sim.envacc_loaded
+#print axioms OCaml.Vm.Sim.getfield_loaded
+#print axioms Vsa.Sim.tr_envacc
+#print axioms Vsa.Sim.tr_getfield
+
 -- Shared read-only payload restoration and stack-consuming integer arms.
 #print axioms OCaml.Vm.Sim.readOnly_restore
 #print axioms OCaml.Vm.Sim.stack_drop

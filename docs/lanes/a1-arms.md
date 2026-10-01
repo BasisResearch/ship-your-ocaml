@@ -1,5 +1,23 @@
 # Lane a1-arms
 
+## Indexed stack and field loads
+
+`acc_arm`, `envacc_arm` and `getfield_arm` (`Sim/Acc.lean`,
+`Envacc.lean`, `Getfield.lean`) connect the generic operand-indexed bodies
+to represented values. One `gen_indexed_arms.py` template handles all three,
+using `index_word`, `FieldSelection.read`, `stack_value_root` and `accu_arm`.
+Each requires an ordinary operand read, a nonnegative index, a successful
+selection and RAM/HTIF read geometry. These are explicit adapter obligations,
+not consequences currently claimed from `Running`.
+
+Separate 24 GiB/default-limit builds pass: ACC bridge 1.1s; ENVACC body
+1.5s and bridge 1.1s; GETFIELD body 1.6s and bridge 1.2s. Audits and drift
+checks include the new families. The preceding atom/AUIPC landing is
+`05312d5`, with the full gate passing. There are now 52 conditional represented
+opcode bridges. Next: stack-changing arms and their shared frame/restoration.
+Full `ArmSim`, entry/halt, semantic-domain corrections and the lane exits
+remain open.
+
 ## Atom arms and a negative-index semantic gap
 
 `atom0_arm` and `atom_arm` (`Sim/Atom0.lean`, `Atom.lean`) are generated
