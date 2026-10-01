@@ -94,6 +94,8 @@ import OCaml.Vm.Sim.Bgeint
 import OCaml.Vm.Sim.Bultint
 import OCaml.Vm.Sim.Bugeint
 import OCaml.Vm.Sim.AtomObstruction
+import OCaml.Vm.Sim.Atom0
+import OCaml.Vm.Sim.Atom
 import OCaml.Vm.Sim.OffsetWidth
 import OCaml.Vm.Sim.Envacc1
 import OCaml.Vm.Sim.Envacc2

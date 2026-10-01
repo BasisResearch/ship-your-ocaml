@@ -1,5 +1,31 @@
 # Lane a1-arms
 
+## Atom arms and a negative-index semantic gap
+
+`atom0_arm` and `atom_arm` (`Sim/Atom0.lean`, `Atom.lean`) are generated
+through `gen_atom_arms.py`, using the corrected runtime table binding.
+The table's global load geometry and AUIPC-relative effective address are
+proved from `Layout.sym_caml_atom_table`. `atom_word_of_binding` and the
+existing live-root restoration complete both bridges. The parameterized
+arm additionally takes an ordinary operand read and a nonnegative index.
+
+`atom_negative_index_obstruction` (`IndexWord.lean`) checks why that last
+premise cannot silently be dropped: ATOM's operand -1 gives a native offset
+of zero from the allocated table, whereas the current `Int.toNat` semantic
+conversion chooses atom 0, one word later. This is a word-level witness,
+not a complete Loaded/Sail counterexample. A2-sem needs to address this
+operand domain; the headline has not gained an exclusion premise.
+`index_word` factors the valid nonnegative scaling for later indexed arms.
+
+The shared ALU descriptor now handles AUIPC and LUI via the existing
+`execute_utype_*_char` theorems. Site and segment generators agree on the
+actual instruction PC, with no GPR source invented for upper immediates.
+Five generator tests pass, and all 18 ALU classes have kernel-checked ELF
+smoke sites. Default-limit, 24 GiB builds: ALU sites 1.2s; ATOM0 body 1.3s
+and represented bridge 1.0s; ATOM body 1.0s and bridge 1.1s. The atom-table repair landed as `89571a8` with
+the full gate passing. There are now 49 conditional represented opcode
+bridges; entry, complete `ArmSim.next`, halt and the semantic gaps remain open.
+
 ## Atom-table representation repair
 
 The pinned ATOM0/ATOM bodies load the pointer stored at `caml_atom_table`.

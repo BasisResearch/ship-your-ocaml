@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Kernel smoke sites for each additional ALU class, drawn from the real ELF.
 
-Shares the arm pilot's code-pin/site generator path. All 16 new classes must
+Shares the arm pilot's code-pin/site generator path. All 18 additional classes must
 occur in the pinned ELF; each generated theorem checks its exact Sail decode
 and generic execute characterization. This is not an arm-family proof.
 """

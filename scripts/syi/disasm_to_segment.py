@@ -110,7 +110,7 @@ class Instr:
         c, o = self.cls, self.ops
         v = lambda r: f"v{r}" if int(r) else "(0#64)"
         if c in alu_classes.CLASSES:
-            return alu_classes.value(c, o)
+            return alu_classes.value(c, o, pc=f'(0x{self.addr:08x}#64)')
         if c == "alu_addi":
             return f"({v(o[1])} + sign_extend (m := 64) (0x{o[2]}#12))"
         if c == "addiw":

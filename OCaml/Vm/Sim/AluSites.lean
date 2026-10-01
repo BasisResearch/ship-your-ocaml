@@ -1,5 +1,7 @@
 import Vsa.Sim.ValueSites
 import Vsa.Sim.Code.CamlAlu
+import Vsa.Sim.ElfDecode.Part000
+import Vsa.Sim.ElfDecode.Part009
 import Vsa.Sim.ElfDecode.Part019
 import Vsa.Sim.ElfDecode.Part020
 import Vsa.Sim.ElfDecode.Part023
@@ -32,6 +34,67 @@ open Vsa.Machine (MState Config Step Steps)
 -- site's `StepObs` conclusion (the landed shape), not new ∃/∧-tower posts.
 
 namespace Vsa.Sim
+
+/-- 0x800002c0: `lui`. -/
+-- discipline: allow(R1-site-battery) machine-emitted from a TSV by scripts/gen_sites.py; R1 targets HAND-written batteries
+theorem site_800002c0_alu (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret : BitVec 64)
+    (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
+    (hminstret : σ.regs.get? Register.minstret = some vminstret)
+    (hmem : Vsa.Sim.Code.CamlAluLoaded σ.mem)
+    (hpcv : pc = (0x800002c0#64 : BitVec 64)) (hi : i < 2) :
+    ∃ (σ' : MState) (i' : Nat),
+      Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧
+      σ'.mem = σ.mem ∧
+      ReadsLikePost σ' (sigmaPost_alu σ pc vminstret Register.x15 (sign_extend (m := 64) ((0x00004#20) +++ 0x000#12))) := by
+  subst hpcv
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := Vsa.Sim.Code.camlAlu_at_800002c0 hmem
+  exact stepObs_alu σ i u (0x800002c0#64) vminstret (0x000047b7#32)
+    (instruction.UTYPE ((0x00004#20), (regidx.Regidx 0x0f#5), uop.LUI))
+    Register.x15 (sign_extend (m := 64) ((0x00004#20) +++ 0x000#12))
+    (0xb7#8) (0x47#8) (0x00#8) (0x00#8)
+    hG hpc hminstret (by apply BitVec.eq_of_toNat_eq; decide)
+    (by apply BitVec.eq_of_toNat_eq; decide)
+    (Vsa.Sim.ElfDecode.decode_000047b7 (afterPrelude σ)
+      (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
+      (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
+      (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
+    (execute_utype_lui_char (0x00004#20) (regidx.Regidx 0x0f#5)
+      (afterNextPC (afterPrelude σ) (0x800002c0#64))
+      (sigma3_alu σ (0x800002c0#64) Register.x15 (sign_extend (m := 64) ((0x00004#20) +++ 0x000#12)))
+      (wX_bits_x15 _ (sign_extend (m := 64) ((0x00004#20) +++ 0x000#12))))
+    (by decide) (by decide) (by decide) (by decide) (by decide)
+    hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
+
+/-- 0x80001e38: `auipc`. -/
+-- discipline: allow(R1-site-battery) machine-emitted from a TSV by scripts/gen_sites.py; R1 targets HAND-written batteries
+theorem site_80001e38_alu (σ : MState) (i u : Nat) (pc : BitVec 64) (vminstret : BitVec 64)
+    (hG : GoodState σ) (hpc : σ.regs.get? Register.PC = some pc)
+    (hminstret : σ.regs.get? Register.minstret = some vminstret)
+    (hmem : Vsa.Sim.Code.CamlAluLoaded σ.mem)
+    (hpcv : pc = (0x80001e38#64 : BitVec 64)) (hi : i < 2) :
+    ∃ (σ' : MState) (i' : Nat),
+      Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧
+      σ'.mem = σ.mem ∧
+      ReadsLikePost σ' (sigmaPost_alu σ pc vminstret Register.x14 ((0x80001e38#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12)))) := by
+  subst hpcv
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := Vsa.Sim.Code.camlAlu_at_80001e38 hmem
+  exact stepObs_alu σ i u (0x80001e38#64) vminstret (0x00063717#32)
+    (instruction.UTYPE ((0x00063#20), (regidx.Regidx 0x0e#5), uop.AUIPC))
+    Register.x14 ((0x80001e38#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12)))
+    (0x17#8) (0x37#8) (0x06#8) (0x00#8)
+    hG hpc hminstret (by apply BitVec.eq_of_toNat_eq; decide)
+    (by apply BitVec.eq_of_toNat_eq; decide)
+    (Vsa.Sim.ElfDecode.decode_00063717 (afterPrelude σ)
+      (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
+      (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
+      (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
+    (execute_utype_auipc_char (0x00063#20) (regidx.Regidx 0x0e#5) (0x80001e38#64)
+      (afterNextPC (afterPrelude σ) (0x80001e38#64))
+      (sigma3_alu σ (0x80001e38#64) Register.x14 ((0x80001e38#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))))
+      (by rw [get?_afterNextPC σ (0x80001e38#64) Register.PC (by decide) (by decide)]; exact hpc)
+      (wX_bits_x14 _ ((0x80001e38#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12)))))
+    (by decide) (by decide) (by decide) (by decide) (by decide)
+    hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
 
 /-- 0x80001efc: `srai`. -/
 -- discipline: allow(R1-site-battery) machine-emitted from a TSV by scripts/gen_sites.py; R1 targets HAND-written batteries

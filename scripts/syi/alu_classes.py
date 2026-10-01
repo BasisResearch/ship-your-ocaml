@@ -10,7 +10,8 @@ SHIFT = {'slli': 'shift_bits_left', 'srli': 'shift_bits_right',
 IMM = {'andi': '&&&', 'ori': '|||', 'xori': '^^^'}
 REG = {'alu_and': '&&&', 'alu_or': '|||', 'alu_xor': '^^^',
        'sll': 'shift_bits_left', 'srl': 'shift_bits_right', 'sra': 'shift_bits_right_arith'}
-CLASSES = set(SHIFT) | set(IMM) | set(REG) | {'addw'}
+UPPER = {'lui', 'auipc'}
+CLASSES = set(SHIFT) | set(IMM) | set(REG) | {'addw'} | UPPER
 
 
 def classify(word):
@@ -19,6 +20,8 @@ def classify(word):
     rd, r1, r2 = ((word >> n) & 31 for n in (7, 15, 20))
     if rd == 0:
         return None
+    if op in (0x17, 0x37):
+        return ('auipc' if op == 0x17 else 'lui'), [rd, f'{word >> 12:05x}']
     if op == 0x13 and f3 in (4, 6, 7):
         return {4: 'xori', 6: 'ori', 7: 'andi'}[f3], [rd, r1, f'{word >> 20:03x}']
     if op in (0x13, 0x1b) and f3 in (1, 5):
@@ -41,11 +44,20 @@ def classify(word):
 
 
 def reads(cls, fields):
+    if cls in UPPER:
+        return []
     return list(dict.fromkeys(int(r) for r in fields[1:3 if cls in REG or cls == 'addw' else 2]
                               if int(r) != 0))
 
 
-def value(cls, fields, var=lambda r: f'v{r}' if int(r) else '(0#64)'):
+def value(cls, fields, var=lambda r: f'v{r}' if int(r) else '(0#64)', pc=None):
+    if cls in UPPER:
+        offset = f'(sign_extend (m := 64) ((0x{int(fields[1], 16):05x}#20) +++ 0x000#12))'
+        if cls == 'lui':
+            return offset
+        if pc is None:
+            raise ValueError('AUIPC needs the actual instruction PC')
+        return f'({pc} + {offset})'
     left = var(fields[1])
     if cls in SHIFT:
         width = 5 if cls.endswith('w') else 6
@@ -64,6 +76,11 @@ def value(cls, fields, var=lambda r: f'v{r}' if int(r) else '(0#64)'):
 
 
 def shape(cls, fields):
+    if cls in UPPER:
+        rd, imm = int(fields[0]), int(fields[1], 16)
+        operand, reg = f'(0x{imm:05x}#20)', f'(regidx.Regidx 0x{rd:02x}#5)'
+        return (f'instruction.UTYPE ({operand}, {reg}, uop.{cls.upper()})',
+                f'execute_utype_{cls}_char', f'{operand} {reg}')
     rd, r1 = map(int, fields[:2])
     ri = lambda r: f'(regidx.Regidx 0x{r:02x}#5)'
     if cls in SHIFT or cls in IMM:

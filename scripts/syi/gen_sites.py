@@ -233,18 +233,25 @@ class Emitter:
         if rd == 0:
             raise ValueError(f"line {s.lineno}: {s.cls} with rd=x0 unsupported")
         instr, helper, args = alu_classes.shape(s.cls, s.fields)
-        value = alu_classes.value(s.cls, s.fields)
+        value = alu_classes.value(s.cls, s.fields, pc=f'(0x{s.addr:08x}#64)')
         reads = alu_classes.reads(s.cls, s.fields)
-        # Execute helpers consume both operands, including x0 and repeated rs.
-        regs = [int(s.fields[1])]
-        if s.cls in alu_classes.REG or s.cls == "addw":
-            regs.append(int(s.fields[2]))
-        vals = " ".join(vname(r) for r in regs)
-        read_hyps = "\n      ".join(rx_read(r, s.addr) for r in regs)
-        proof = (f"    ({helper} {args} {vals}\n"
+        # Upper-immediate instructions have no GPR source; AUIPC reads the fixed PC.
+        if s.cls in alu_classes.UPPER:
+            vals = f'(0x{s.addr:08x}#64)' if s.cls == 'auipc' else ''
+            read_hyps = (f'(by rw [get?_afterNextPC σ (0x{s.addr:08x}#64) Register.PC '
+                         f'(by decide) (by decide)]; exact hpc)') if s.cls == 'auipc' else ''
+        else:
+            # Execute helpers consume both operands, including x0 and repeated rs.
+            regs = [int(s.fields[1])]
+            if s.cls in alu_classes.REG or s.cls == "addw":
+                regs.append(int(s.fields[2]))
+            vals = " ".join(vname(r) for r in regs)
+            read_hyps = "\n      ".join(rx_read(r, s.addr) for r in regs)
+        proof = (f"    ({helper} {args}{(' ' + vals) if vals else ''}\n"
                  f"      (afterNextPC (afterPrelude σ) (0x{s.addr:08x}#64))\n"
                  f"      (sigma3_alu σ (0x{s.addr:08x}#64) Register.x{rd} {value})\n"
-                 f"      {read_hyps}\n      (wX_bits_x{rd} _ {value}))")
+                 f"{('      ' + read_hyps + chr(10)) if read_hyps else ''}"
+                 f"      (wX_bits_x{rd} _ {value}))")
         head = self.head(self.site_name(s.addr), s.addr, f"`{s.cls}`.", reads, "",
                          "".join(reg_hyp(r) for r in reads), "", "σ'.mem = σ.mem",
                          f"sigmaPost_alu σ pc vminstret Register.x{rd} {value}")

@@ -312,7 +312,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms Vsa.Sim.site_800035c0_const0
 #print axioms Vsa.Sim.site_800035c4_const0
 #print axioms Vsa.Sim.site_800035c8_const0
-/-! Generated smoke sites for the 16 extended ALU classes. -/
+/-! Generated smoke sites for the 18 extended ALU classes. -/
+#print axioms Vsa.Sim.site_800002c0_alu
+#print axioms Vsa.Sim.site_80001e38_alu
 #print axioms Vsa.Sim.site_80001efc_alu
 #print axioms Vsa.Sim.site_80001f00_alu
 #print axioms Vsa.Sim.site_80002294_alu
@@ -657,6 +659,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinHeap.read_atom_table
 #print axioms OCaml.Vm.Sim.atom_word_of_binding
 #print axioms OCaml.Vm.Sim.captured_atom_not_legacy
+#print axioms OCaml.Vm.Sim.index_word
+#print axioms OCaml.Vm.Sim.atom_index_offset
+#print axioms OCaml.Vm.Sim.atom_negative_index_obstruction
+#print axioms OCaml.Vm.Sim.atom0_loaded
+#print axioms OCaml.Vm.Sim.atom_loaded
+#print axioms OCaml.Vm.Sim.atom0_arm
+#print axioms OCaml.Vm.Sim.atom_arm
+#print axioms Vsa.Sim.tr_atom0
+#print axioms Vsa.Sim.tr_atom
 
 -- Shared read-only payload restoration and stack-consuming integer arms.
 #print axioms OCaml.Vm.Sim.readOnly_restore

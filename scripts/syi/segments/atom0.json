@@ -1,0 +1,86 @@
+{
+  "theorem": "tr_atom0",
+  "doc": "ATOM0 arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.Atom0Sites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v23 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80001fd0 : 0x80000000 ≤ (((0x80001fcc#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0x9d4#12)).toNat)",
+    "(hhi_80001fd0 : (((0x80001fcc#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0x9d4#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80001fd0 : (((0x80001fcc#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0x9d4#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (((0x80001fcc#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0x9d4#12)).toNat)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlAtom0Loaded",
+  "pins": [
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80001fcc",
+      "site": "site_80001fcc_atom0",
+      "class": "alu",
+      "asm": "auipc s5,0x63",
+      "rd": "x21",
+      "rd_val": "((0x80001fcc#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12)))",
+      "raw_val": "((0x80001fcc#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12)))",
+      "call": "$vmi  $hG $hpc $hmi  $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80001fd0",
+      "site": "site_80001fd0_atom0",
+      "class": "alu",
+      "asm": "ld s5,-1580(s5) # 800649a0 <caml_atom_table>",
+      "rd": "x21",
+      "rd_val": "(sign_extend (m := 64) (bytesT8 m0 (((0x80001fcc#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0x9d4#12)).toNat : BitVec (8 * 8)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v21 + sign_extend (m := 64) (0x9d4#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl hlo_80001fd0 hhi_80001fd0 hhtif_80001fd0 $hi",
+      "rw": "hmemE1"
+    },
+    {
+      "addr": "0x80001fd4",
+      "site": "site_80001fd4_atom0",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80001fd8",
+      "site": "site_80001fd8_atom0",
+      "class": "alu",
+      "asm": "addi s5,s5,8",
+      "rd": "x21",
+      "rd_val": "((sign_extend (m := 64) (bytesT8 m0 (((0x80001fcc#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0x9d4#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v21 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80001fdc",
+      "site": "site_80001fdc_atom0",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1fff80#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80001fcc",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

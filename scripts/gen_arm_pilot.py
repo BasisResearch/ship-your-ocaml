@@ -68,6 +68,8 @@ FAMILIES = {
     'LSLINT': ('Lslint', ['ld_tot', 'alu_addi', 'alu_addi', 'srai', 'sll', 'alu_addi', 'alu_addi', 'j']),
     'LSRINT': ('Lsrint', ['ld_tot', 'alu_addi', 'alu_addi', 'srai', 'srl', 'ori', 'j']),
     'ASRINT': ('Asrint', ['ld_tot', 'alu_addi', 'alu_addi', 'srai', 'sra', 'ori', 'j']),
+    'ATOM0': ('Atom0', ['auipc', 'ld_tot', 'alu_addi', 'alu_addi', 'j']),
+    'ATOM': ('Atom', ['lw_tot', 'auipc', 'ld_tot', 'alu_addi', 'slli', 'alu_addi', 'alu_add', 'j']),
     'ISINT': ('Isint', ['slli', 'andi', 'alu_addi', 'alu_addi', 'j']),
 }
 

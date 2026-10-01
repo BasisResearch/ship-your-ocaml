@@ -36,6 +36,23 @@ class AluClasses(unittest.TestCase):
         self.assertEqual(alu.reads('slli', ['21', '0', '3f']), [])
         self.assertEqual(alu.reads('andi', ['21', '21', 'fff']), [21])
 
+    def test_upper_immediate_pc_and_sources(self):
+        for opcode, name in [(0x17, 'auipc'), (0x37, 'lui')]:
+            w = (0x80001 << 12) | (21 << 7) | opcode
+            cls, fields = alu.classify(w)
+            self.assertEqual((cls, fields), (name, [21, '80001']))
+            self.assertEqual(alu.reads(cls, fields), [])
+            row, = classify(0x80002000, w, '', {})
+            ins = Instr(row.addr, row.word, row.cls, list(map(str, row.ops)), '')
+            self.assertEqual(ins.reads(), [])
+            self.assertEqual(ins.writes(), 21)
+            self.assertIn('0x80001#20', ins.raw_val())
+            if name == 'auipc':
+                self.assertIn('0x80002000#64', ins.raw_val())
+                with self.assertRaises(ValueError):
+                    alu.value(cls, fields)
+            self.assertIsNone(alu.classify(w & ~(31 << 7)))
+
     def test_rewrite_tracking(self):
         words = [word(0x13, 1, 0, rs2=1), word(0x13, 7, 0, rs2=2)]
         instrs = []
