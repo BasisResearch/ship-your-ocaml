@@ -222,8 +222,11 @@ are open; see `docs/lanes/a2-sem.md`.
   instructions / 38 blocks, without a recognised counted-loop template;
   mopup exceeds the branch limit, empty-minor-heap the instruction limit.
   The generic `Vsa.Sim.DeriveCaseRow` adapter (`segToTriple`) is now ported
-  and checked. Collector code pins, concrete generated rows, call summaries
-  and the oldify/mopup loop invariants remain open.
+  and checked. `scripts/gen_gc_rows.py` generates oldify-one and caml_modify
+  segments with code pins; their 387 declarations are audited by
+  `#audit_gc_rows`. Register results and execution bookkeeping are retained
+  in named-field posts. Call summaries and the oldify/mopup loop invariants
+  remain open.
 * **Exit**: `Fits` restated on live words; `ocamlc` compiling a one-line
   program is within Layer A.
 

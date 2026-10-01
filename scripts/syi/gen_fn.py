@@ -411,10 +411,10 @@ def synth_arm(fn, b, pol=None):
     return a
 
 
-def emit_fn(fn, entry, out_path, verify=True, route=None):
-    di = lib.parse_disasm()
-    idx = lib.DecodeIndex()
-    extents = function_extents()
+def emit_fn(fn, entry, out_path, verify=True, route=None, disasm_path=None, decode_index=None):
+    di = lib.parse_disasm(disasm_path) if disasm_path else lib.parse_disasm()
+    idx = lib.DecodeIndex(decode_index) if decode_index else lib.DecodeIndex()
+    extents = function_extents(disasm_path)
     if fn not in extents:
         raise SystemExit(f"function {fn!r} not in disasm")
     body, blocks = build_cfg(fn, entry, di, extents, route=route)
@@ -441,7 +441,6 @@ def emit_fn(fn, entry, out_path, verify=True, route=None):
     E("open Vsa.Machine (MState Config Step Steps)")
     E("open Vsa.Logic (Triple)")
     E("")
-    E("set_option maxHeartbeats 800000")
     E("set_option maxRecDepth 100000")
     E("")
     E("namespace Vsa.Sim")
@@ -784,6 +783,8 @@ def main():
     p.add_argument("--entry")
     p.add_argument("-o", "--out")
     p.add_argument("--pin", action="append", default=[])
+    p.add_argument("--disasm", help="explicit ELF disassembly input")
+    p.add_argument("--decode-index", help="word-to-decoder index for this ELF")
     p.add_argument("--route", default=None,
                    help="resolved-path mode: comma list of PC:T|F|TF branch "
                         "polarity pins, e.g. 0x80006230:F,0x8000625c:TF — "
@@ -810,8 +811,8 @@ def main():
                 raise SystemExit(f"--route: bad polarity {pol!r} (T|F|TF)")
             route[lib.hexint(pc)] = pol
     if args.cfg_only:
-        di = lib.parse_disasm()
-        body, blocks = build_cfg(args.fn, entry, di, function_extents(), route=route)
+        di = lib.parse_disasm(args.disasm) if args.disasm else lib.parse_disasm()
+        body, blocks = build_cfg(args.fn, entry, di, function_extents(args.disasm), route=route)
         loop = classify_loop(blocks) if route is None else None
         for b in blocks:
             print(b)
@@ -824,14 +825,14 @@ def main():
     out = args.out or os.path.join(
         ROOT, "Vsa", "Sim", "rows", f"Fn{base[0].upper()}{base[1:]}.lean")
     blocks, loop = emit_fn(args.fn, entry, out, verify=not args.no_verify,
-                           route=route)
+                           route=route, disasm_path=args.disasm, decode_index=args.decode_index)
     if args.fold:
         if not loop:
             raise SystemExit(
                 "--fold: no recognised counted-byte-store loop; the fold for "
                 "this shape is not templated — write it beside the arms "
                 "following rows/FnWriteFold.lean and name any residual holes")
-        di = lib.parse_disasm()
+        di = lib.parse_disasm(args.disasm) if args.disasm else lib.parse_disasm()
         fold_out = out.replace(".lean", "Fold.lean")
         emit_fold(args.fn, entry, blocks, loop, di, fold_out,
                   verify=not args.no_verify)

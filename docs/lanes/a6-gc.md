@@ -103,7 +103,7 @@ the one-line ocamlc run is covered by G2.
 - `scripts/gc_cfg.py` now records the pinned ELF SHA-256 and the exact
   little-endian instruction SHA-256 for each collector function. CFG-only
   comparison could miss changed immediates with unchanged control flow.
-- Current migration status: not yet present on origin/main at a22f2b9.
+- Current migration status: not yet present on origin/main at c7989c8.
   After the a0 landing: rebase, run `python3 scripts/gc_cfg.py >
   results/gc-cfg.json`, then `python3 scripts/gc_cfg.py --check`, rebuild
   the lane modules under the memory cap and run scripts/integrate.sh.
@@ -168,3 +168,27 @@ the one-line ocamlc run is covered by G2.
   Python checks exercise both allocation colors and an absent next word;
   cyclic queue tests also vary the allocation color. The law checker and
   targeted Reloc/Invariant/Barrier builds pass.
+
+
+## Generated collector rows
+
+- `scripts/gen_gc_rows.py` prepares oldify-one (57 arms) and caml_modify
+  (29 arms) using gen_fn, the pinned ELF, and the generated decode table.
+  Every generated postcondition is a named-field structure, retaining
+  computed registers, tick bound and instruction-counter existence. Calls stop at
+  their call sites; these are segment proofs, not whole-function summaries.
+- The generated audit enumerates all 387 row, segment and code-pin
+  declarations. The capped build of `OCaml.Vm.Gc.Generated.Audit` passes,
+  and a separate capped Lean audit exits 0 with exactly those declarations
+  and only the three permitted standard axioms.
+- Reproduce the bundle with `python3 scripts/gen_gc_rows.py` and check
+  with `--check`. The strengthened postconditions pass the capped build
+  (554 jobs). The full gate imports the generated audit and checks both
+  row/code generation and CFG fingerprints. After the pending image
+  migration reaches main, regenerate both this bundle and
+  `results/gc-cfg.json` from their generators.
+- The header/payload correction passed the full gate; the push raced
+  with a1 dispatch work. Rebased keeping both audit additions. The
+  correction and generated rows are proceeding through integration together.
+- Concrete data addresses continue to come from Layout; instruction words
+  and code addresses come from the pinned ELF/decode generators.

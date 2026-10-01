@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.Generated.Audit
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -484,3 +485,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.dispatchTarget_clear
 -- Promotion may recolor a header without changing its representation.
 #print axioms OCaml.Vm.Reloc.headerView_color
+
+-- All generated collector/barrier segments, rows and code pins.
+#audit_gc_rows

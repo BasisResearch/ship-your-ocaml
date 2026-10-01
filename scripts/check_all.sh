@@ -72,6 +72,8 @@ python3 scripts/check_discipline.py || fail "stage a4: discipline violation"
 echo "stage a4: OK"
 
 echo "== stage a5: generated files are current"
+python3 scripts/gen_gc_rows.py --check || fail "stage a5: GC row/code drift"
+python3 scripts/gc_cfg.py --check || fail "stage a5: collector CFG drift"
 python3 scripts/gen_opcodes.py | cmp -s - OCaml/Bytecode/Opcode.lean || fail "stage a5: Opcode.lean differs from gen_opcodes.py"
 python3 scripts/gen_primitive_census.py --check || fail "stage a5: F1 primitive census drift"
 python3 scripts/syi/gen_fn.py --ocaml-constants --check || fail "stage a5: F1 constant summary drift"

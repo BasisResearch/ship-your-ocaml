@@ -335,12 +335,15 @@ def emit_post_and_row(E, a, end_pc, keys):
     E(f"/-- The `{name}` row post: parked at the computed end PC `{endS}`, "
       f"memory = the entry memory with the seg's write-log applied (computed "
       f"off `#derive_case`). -/")
-    E(f"def {Post}{pbind} (lds : List (List (BitVec 8)))")
-    E(f"    (m0 : Std.ExtHashMap Nat (BitVec 8)) (c : Config) : Prop :=")
-    E(f"  GoodState c.σ ∧")
-    E(f"  c.σ.mem = writeLog m0 (evalBlocks {seg}")
-    E(f"    (SegEvalState.init {Lapp} lds)).log ∧")
-    E(f"  c.σ.regs.get? Register.PC = some {endS}")
+    E(f"structure {Post}{pbind} (lds : List (List (BitVec 8)))")
+    E(f"    (m0 : Std.ExtHashMap Nat (BitVec 8)) (c : Config) : Prop where")
+    E(f"  good : GoodState c.σ")
+    E(f"  memory : c.σ.mem = writeLog m0 (evalBlocks {seg}")
+    E(f"    (SegEvalState.init {Lapp} lds)).log")
+    E(f"  pc : c.σ.regs.get? Register.PC = some {endS}")
+    E(f"  tick : c.tick < 2")
+    E(f"  minstret : ∃ w, c.σ.regs.get? Register.minstret = some w")
+    E(f"  registers : GHolds c.σ (evalBlocks {seg} (SegEvalState.init {Lapp} lds)).regs")
     E("")
 
     # ---- row ----
@@ -364,8 +367,8 @@ def emit_post_and_row(E, a, end_pc, keys):
         E(f"    ({Post} {pnames} lds m0)")
         E(f"    (by have h : keysG {Lapp} = {keylist} := rfl")
         E(f"        rw [h]; show ChainOK {lib.bv64(a['entry'])} {keylist} {seg}; decide)")
-    E(f"  intro σ' i' u' hG' _hi' hmem' hpc' _hmi' _hregs")
-    E(f"  refine ⟨hG', hmem', ?_⟩")
+    E(f"  intro σ' i' u' hG' hi' hmem' hpc' hmi' hregs")
+    E(f"  refine ⟨hG', hmem', ?_, hi', hmi', hregs⟩")
     E(f"  rw [hpc']")
     E(f"  show some (evalBlocksPC {lib.bv64(a['entry'])} "
       f"(SegEvalState.init {Lapp} lds) {seg})")
