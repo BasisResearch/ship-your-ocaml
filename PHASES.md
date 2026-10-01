@@ -60,6 +60,7 @@ ELF pin).
 | `tr_acc0`, `tr_acc`, `acc0_loaded`, `acc_loaded` (generated stack loads through total RAM reads) | `OCaml/Vm/Sim/Acc*.lean` | A1 | **proved**; address geometry and representation/frame bridge open |
 | F1 primitive summaries (`primsF1`, 30 entries) | `OCaml/Vm/Primitives/` | A1 | **10/30 proved**: system constants and signed integer comparison, generated ELF `FnSummary` plus represented VM payload/result and platform/ABI frame; runtime parameter uses `MemoryStable` (proved for `RuntimeOk` from its free-list frame law). Other 20 primitives open |
 | `tr_dispatch`, `dispatch_loaded` (in-range dispatch machine path) | `OCaml/Vm/Sim/Dispatch*.lean` | A1 | **proved**; Running/jump-table-to-arm bridge open |
+| `dispatchOffset_loaded`, `dispatchOffset_target`, opcode guard/target geometry | `OCaml/Vm/Sim/DispatchTable*.lean` | A1 | **proved** for all 149 pinned table entries; dispatch composition open |
 | F2/F3/F4/F5 arms and primitives | `OCaml/Vm/Sim/` | A2–A5 | open |
 | GC: `caml_empty_minor_heap` preserves `VmReprAt` up to a new placement (G2) | `OCaml/Vm/Gc/` | A6 | open: strict Forward bridge obstructed; machine oldify/mopup proof remains open |
 | Forward short-circuit obstruction / transparent-value ISINT incompatibility | `OCaml/Vm/Gc/Forward.lean` | A6 | **proved**; pinned host regression confirms `false true`; semantic safety precondition or revised semantics needs a decision |

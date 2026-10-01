@@ -475,3 +475,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.dispatch_loaded
 
 #print axioms Vsa.Sim.PinsHold.get
+
+-- Pinned dispatch-table entries and their checked indirect targets.
+#print axioms OCaml.Vm.Sim.dispatchOffset_loaded
+#print axioms OCaml.Vm.Sim.dispatchOffset_target
+#print axioms OCaml.Vm.Sim.dispatchOpcode_guard
+#print axioms OCaml.Vm.Sim.dispatchTarget_aligned
+#print axioms OCaml.Vm.Sim.dispatchTarget_clear

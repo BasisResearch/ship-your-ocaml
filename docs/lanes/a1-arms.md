@@ -9,6 +9,8 @@ when host memory recovered; all gates, including the 16 ALU smoke sites,
 passed. NEGINT subsequently landed as `e2777bc` with all gates passing.
 ACC/ACC0 subsequently landed as `dd48ca0` with all gates passing.
 Counted contracts landed as `a22f2b9`; register/console frames as `ee18571`.
+Dispatch and checked pin lookup landed as `2857cd0` / `7e2ae1a`, after
+a full gate and a rebase over the primitive lane’s signed comparison.
 The F1 exit remains open.
 
 F1 primitive machine summaries belong to **a1-prims**, including all
@@ -27,7 +29,7 @@ method caches, F4 callback simulation, and F5 OS interfaces.
 A0-boot is moving the embedded program to a fixed-address `.embed` section.
 Function addresses stay fixed; data symbols and gp/auipc immediates change.
 After that landing, rebase and regenerate `gen_ocaml_image.py`,
-`gen_arm_pilot.py`, and `gen_alu_pilot.py` against the pinned ELF, then run
+`gen_arm_pilot.py`, `gen_alu_pilot.py`, and `gen_dispatch_table.py` against the pinned ELF, then run
 integration. Use `Layout` for data symbols; the RAM bounds in generated
 load contracts are architectural limits, not data-symbol addresses.
 
@@ -150,7 +152,24 @@ added to the headline theorem.
   refer to `DataOnlyArmSim`, the legacy data-only loop contract, not the
   repaired production `ArmSim`.
 
+## Dispatch table
+
+`dispatchOffset_loaded` derives all 149 opcode table words from
+`ExecutableImage.rodata`; `dispatchOffset_target` checks their signed offsets
+against census targets. `dispatchOpcode_guard`, `dispatchTarget_aligned`, and
+`dispatchTarget_clear` check the branch bound and indirect-jump geometry.
+All are generated in `OCaml/Vm/Sim/DispatchTable.lean` and its seven chunks
+by `scripts/gen_dispatch_table.py`, with data addresses from `Layout.jumpTable`.
+Each literal byte is checked separately in the kernel; the full image is
+never evaluated as one proposition. The machine dispatch-to-`Running` bridge
+remains open.
+
 ## Validation
+
+* Dispatch table chunks pass separately under 24 GiB at default limits:
+  8.4s, 4.4s, 6.4s, 5.2s, 4.0s, 4.5s, 2.8s; peak process RSS below 1.86 GiB.
+  Aggregate target lemmas build in 1.9s (2.68s wall, 1.82 GiB peak RSS).
+  Generator drift, discipline, and abstraction checks pass.
 
 * All six segment families pass after the pin-lookup change, each built
   separately under 24 GiB: CONST0 15s, NEGINT 15s, ISINT 6.6s, ACC0 13s,
