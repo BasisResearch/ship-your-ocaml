@@ -6,7 +6,8 @@ The repair (`ef4e701`), CONST0 (`3229c53`), and ISINT/shared ALU adapter
 (`7994562`, integration head `dac2c19`) have landed through
 `scripts/integrate.sh`. The delayed integration completed successfully
 when host memory recovered; all gates, including the 16 ALU smoke sites,
-passed. The F1 exit remains open.
+passed. NEGINT subsequently landed as `e2777bc` with all gates passing.
+The F1 exit remains open.
 
 F1 primitive machine summaries belong to **a1-prims**, including all
 `primsF1` C_CALL targets. This lane will consume their represented
@@ -51,6 +52,17 @@ added to the headline theorem.
 
 ## Proved
 
+* `Vsa.Sim.tr_acc0` and `Vsa.Sim.tr_acc` in
+  `OCaml/Vm/Sim/Acc0Segment.lean:20` and `AccSegment.lean:20` prove the
+  three- and six-instruction stack-access bodies. `acc0_loaded` and
+  `acc_loaded` project the code pins from the full image.
+  The shared segment adapter now handles `ld_tot`, `lw_tot`, and `lbu_tot`;
+  the pilot selects total loads automatically. ACC checks a loaded index
+  flowing through ALU instructions into a later load address. The generated
+  proof uses existing `RamReadLoad` lemmas, without byte-presence or alignment
+  premises. RAM bounds and HTIF disjointness remain explicit obligations;
+  the representation bridge must establish them.
+
 * `Vsa.Sim.tr_negint` (`OCaml/Vm/Sim/NegintSegment.lean:20`) proves the
   four-instruction NEGINT body, including the subtraction of the incoming
   tagged accumulator from 2. `negint_loaded` projects its image pins.
@@ -93,6 +105,12 @@ added to the headline theorem.
   repaired production `ArmSim`.
 
 ## Validation
+
+* ACC0 targeted build: code 0.884s, sites 0.907s, image projection 0.855s,
+  segment 1.0s; wall 3.29s, peak process RSS 1.70 GiB.
+* ACC targeted build: code 1.0s, sites 1.4s, image projection 1.3s,
+  segment 1.8s; wall 4.79s, peak process RSS 1.71 GiB.
+  Each family was built separately under 24 GiB at default proof limits.
 
 * NEGINT targeted build passed under `MemoryMax=24G`, default Lean limits:
   code 4.8s, sites 3.7s, image projection 3.7s, segment 2.2s;

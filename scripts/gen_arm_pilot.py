@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate register-only F1 arm pilots through the existing site/segment pipeline.
+"""Generate F1 arm pilots through the existing site/segment pipeline.
 
 Census supplies the span, gen_code_lemmas supplies the pins, A0's ElfDecode
 supplies each decode, and disasm_to_segment -> gen_segment composes the run.
@@ -18,7 +18,7 @@ from gen_ocaml_image import sections
 
 sys.path.insert(0, str(ROOT / 'scripts/syi'))
 from disasm_to_sites import classify
-from disasm_to_segment import Instr, DraftBuilder
+from disasm_to_segment import Instr, DraftBuilder, TOTAL_LOAD_BYTES
 from gen_segment import SegmentEmitter
 
 spec = importlib.util.spec_from_file_location('code_lemmas', ROOT / 'experiments/syi/gen_code_lemmas.py')
@@ -27,6 +27,8 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'ACC': ('Acc', ['lw_tot', 'alu_addi', 'slli', 'alu_add', 'ld_tot', 'j']),
+    'ACC0': ('Acc0', ['ld_tot', 'alu_addi', 'j']),
     'CONST0': ('Const0', ['alu_addi', 'alu_addi', 'j']),
     'NEGINT': ('Negint', ['alu_addi', 'alu_addi', 'sub', 'j']),
     'ISINT': ('Isint', ['slli', 'andi', 'alu_addi', 'alu_addi', 'j']),
@@ -68,6 +70,9 @@ def outputs(family='CONST0'):
     insts = [i for i in disasm(ROOT / 'c/ocamlrun-riscv-htif.elf')['caml_interprete']['insts']
              if start <= i[0] < stop]
     rows = [row for a, w, m, ops in insts for row in classify(a, w, m + ' ' + ops, {})]
+    for row in rows:
+        if row.cls in ('ld', 'lw', 'lbu'):
+            row.cls += '_tot'
     if [r.cls for r in rows] != shape:
         raise ValueError(f'{family} shape changed; revisit the pilot contract')
     result = site_outputs(insts, rows, stem, lower)
@@ -77,17 +82,33 @@ def outputs(family='CONST0'):
     site_module = f'OCaml.Vm.Sim.{stem}Sites'
     instrs = [Instr(r.addr, r.word, r.cls, [str(x) for x in r.ops], r.raw) for r in rows]
     draft = DraftBuilder(instrs, '_' + lower, pred).build('tr_' + lower, [site_module, 'Vsa.Sim.SegState'])
-    draft['params'].pop(0)  # These register-only arms need no region/callee ghosts.
+    draft['params'].pop(0)  # Bounds are emitted below; no callee ghosts.
+    draft['prelude'] = []
     draft.update(boundary='segst', entry=hex(start), mem_param='m0', default_limits=True,
                  doc=f'{family} arm body, generated from the census. This is a machine segment, not yet ArmSim.next.')
     for k in ['pre', 'post', 'pre_bind', 'post_proof']:
         draft.pop(k)
     values = {}
-    for step in draft['steps']:
+    for index, step in enumerate(draft['steps']):
         if step['class'] == 'alu':
             step['rd_val'] = re.sub(r'\bv(\d+)\b', lambda m: values.get('x' + m[1], m[0]), step['raw_val'])
+            previous_values = dict(values)
             values[step['rd']] = step['rd_val']
-            step.pop('rw')
+            step.pop('rw', None)
+            cls = instrs[index].cls
+            if cls in TOTAL_LOAD_BYTES:
+                n = TOTAL_LOAD_BYTES[cls]
+                base, off = instrs[index].ops[1:]
+                ea = f"({previous_values.get('x' + base, 'v' + base)} + sign_extend (m := 64) (0x{off}#12))"
+                tag = step['addr'][2:]
+                draft['params'] += [
+                    f"(hlo_{tag} : 0x80000000 ≤ {ea}.toNat)",
+                    f"(hhi_{tag} : {ea}.toNat + {n} ≤ 0x100000000)",
+                    f"(hhtif_{tag} : {ea}.toNat + {n} ≤ tohostAddr ∨ tohostAddr + 8 ≤ {ea}.toNat)"]
+                step['call'] = step['call'].replace('TODO(hlo)', f'hlo_{tag}').replace('TODO(hhiram)', f'hhi_{tag}').replace('TODO(hhtif)', f'hhtif_{tag}')
+                step['rd_val'] = step['rd_val'].replace('σ.mem', 'm0')
+                values[step['rd']] = step['rd_val']
+                step['rw'] = 'hmemeq' if index == 0 else f'hmemE{index}'
     spec_text = json.dumps(draft, indent=2, ensure_ascii=False) + '\n'
     if 'TODO' in spec_text:
         raise ValueError('unfilled pilot residue')

@@ -60,6 +60,8 @@ SEG_CLASS = {"alu_addi": "alu", "addiw": "alu", "alu_add": "alu", "sub": "alu",
              "jal": "jal", "j": "j", "jr": "jr"}
 SEG_CLASS.update({cls: "alu" for cls in alu_classes.CLASSES})
 LOAD_BYTES = {"ld": 8, "lw": 4, "lbu": 1}
+TOTAL_LOAD_BYTES = {k + "_tot": v for k, v in LOAD_BYTES.items()}
+SEG_CLASS.update({k: "alu" for k in TOTAL_LOAD_BYTES})
 STORE_BYTES = {"sd": 8, "sw": 4, "sb": 1}
 
 
@@ -78,7 +80,7 @@ class Instr:
         c, o = self.cls, self.ops
         if c in alu_classes.CLASSES:
             return alu_classes.reads(c, o)
-        if c in ("alu_addi", "addiw", "ld", "lw", "lbu"):
+        if c in TOTAL_LOAD_BYTES or c in ("alu_addi", "addiw", "ld", "lw", "lbu"):
             rs = [int(o[1])]
         elif c in ("alu_add", "sub", "subw"):
             rs = [int(o[1]), int(o[2])]
@@ -96,7 +98,7 @@ class Instr:
         c, o = self.cls, self.ops
         if c in alu_classes.CLASSES:
             return int(o[0])
-        if c in ("alu_addi", "addiw", "alu_add", "sub", "subw",
+        if c in TOTAL_LOAD_BYTES or c in ("alu_addi", "addiw", "alu_add", "sub", "subw",
                  "ld", "lw", "lbu"):
             return int(o[0])
         if c == "jal":
@@ -121,6 +123,11 @@ class Instr:
         if c == "subw":
             return (f"(sign_extend (m := 64) ((Sail.BitVec.extractLsb "
                     f"{v(o[1])} 31 0) - (Sail.BitVec.extractLsb {v(o[2])} 31 0)))")
+        if c in TOTAL_LOAD_BYTES:
+            n = TOTAL_LOAD_BYTES[c]
+            ext = "zero_extend" if c == "lbu_tot" else "sign_extend"
+            ea = f"({v(o[1])} + sign_extend (m := 64) (0x{o[2]}#12))"
+            return f"({ext} (m := 64) (bytesT{n} σ.mem {ea}.toNat : BitVec (8 * {n})))"
         if c in ("ld", "lw"):
             return "(sign_extend (m := 64) <loaded bytes>)"
         if c == "lbu":
@@ -224,7 +231,7 @@ class DraftBuilder:
             [int(x) for x in (o[1:3] if c in ("alu_add", "sub", "subw",
                                               "branch_taken",
                                               "branch_nottaken")
-             else o[1:2] if c in ("alu_addi", "addiw", "ld", "lw", "lbu")
+             else o[1:2] if c in TOTAL_LOAD_BYTES or c in ("alu_addi", "addiw", "ld", "lw", "lbu")
              else [o[1], o[0]] if c in ("sd", "sw", "sb")
              else o[0:1] if c == "jr" else [])]) if r != 0]
         vals = " ".join(self.V(r) for r in vregs)
@@ -238,6 +245,10 @@ class DraftBuilder:
             st["rw"] = "TODO"
             st["raw_val"] = ins.raw_val()
             st["call"] = f"$vmi {vals}$hG $hpc $hmi {hyps}$hmem rfl $hi"
+        elif c in TOTAL_LOAD_BYTES:
+            st.update(rd=f"x{ins.writes()}", rd_val="TODO", raw_val=ins.raw_val(),
+                      call=f"$vmi {vals}$hG $hpc $hmi {hyps}$hmem rfl "
+                           "TODO(hlo) TODO(hhiram) TODO(hhtif) $hi")
         elif c in ("ld", "lw", "lbu"):
             n = LOAD_BYTES[c]
             bs = ("TODO(b)" if c == "lbu"
@@ -304,7 +315,7 @@ class DraftBuilder:
     def build(self, theorem: str, imports: list[str]):
         self.compute_pins()
         steps = self.build_steps()
-        has_mem = any(i.cls in LOAD_BYTES or i.cls in STORE_BYTES
+        has_mem = any(i.cls in LOAD_BYTES or i.cls in TOTAL_LOAD_BYTES or i.cls in STORE_BYTES
                       for i in self.instrs)
         params = ["TODO: extra ghost binders (region facts, callee params, ...)"]
         if self.pinned:

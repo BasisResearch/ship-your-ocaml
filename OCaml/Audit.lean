@@ -432,3 +432,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.liveWordsFrom_le
 #print axioms OCaml.Vm.Gc.liveWords_le_allocated
 #print axioms OCaml.Vm.Gc.fitsLive_of_fits
+#print axioms Vsa.Sim.tr_acc0
+#print axioms OCaml.Vm.Sim.acc0_loaded
+
+#print axioms Vsa.Sim.tr_acc
+#print axioms OCaml.Vm.Sim.acc_loaded

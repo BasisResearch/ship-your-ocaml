@@ -42,3 +42,9 @@ import OCaml.Vm.Sim.NegintPins
 import OCaml.Vm.Gc.Forward
 import OCaml.Vm.Gc.Invariant
 import OCaml.Vm.Gc.Budget
+
+import OCaml.Vm.Sim.Acc0Segment
+import OCaml.Vm.Sim.Acc0Pins
+
+import OCaml.Vm.Sim.AccSegment
+import OCaml.Vm.Sim.AccPins
