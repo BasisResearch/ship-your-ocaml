@@ -103,7 +103,7 @@ the one-line ocamlc run is covered by G2.
 - `scripts/gc_cfg.py` now records the pinned ELF SHA-256 and the exact
   little-endian instruction SHA-256 for each collector function. CFG-only
   comparison could miss changed immediates with unchanged control flow.
-- Current migration status: not yet present on origin/main at c7989c8.
+- Current migration status: not yet present on origin/main at 2615273.
   After the a0 landing: rebase, run `python3 scripts/gc_cfg.py >
   results/gc-cfg.json`, then `python3 scripts/gc_cfg.py --check`, rebuild
   the lane modules under the memory cap and run scripts/integrate.sh.
@@ -187,8 +187,13 @@ the one-line ocamlc run is covered by G2.
   row/code generation and CFG fingerprints. After the pending image
   migration reaches main, regenerate both this bundle and
   `results/gc-cfg.json` from their generators.
-- The header/payload correction passed the full gate; the push raced
-  with a1 dispatch work. Rebased keeping both audit additions. The
-  correction and generated rows are proceeding through integration together.
+- Landed `ae39c98` (promotion footprint) and `2615273` (generated machine
+  segments) through scripts/integrate.sh, exit 0. The final gate audits
+  779 theorems, including all 387 generated collector declarations;
+  generated-file checks, code-pin checks and abstraction gate pass.
+- G2 is still open: the Forward/ISINT specification decision at the top
+  remains pending, as do allocator/call summaries, concrete roots/table
+  linkage, the partial-relocation loop invariant, and major reclamation.
+  Neither production Fits nor the one-line ocamlc budget claim is changed.
 - Concrete data addresses continue to come from Layout; instruction words
   and code addresses come from the pinned ELF/decode generators.
