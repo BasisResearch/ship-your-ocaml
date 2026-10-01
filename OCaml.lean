@@ -117,6 +117,7 @@ import OCaml.Vm.Sim.Beq
 import OCaml.Vm.Sim.Bneq
 import OCaml.Vm.Sim.Eq
 import OCaml.Vm.Sim.Neq
+import OCaml.Vm.Sim.Vectlength
 import OCaml.Vm.Sim.Pushenvacc1
 import OCaml.Vm.Sim.Pushenvacc2
 import OCaml.Vm.Sim.Pushenvacc3

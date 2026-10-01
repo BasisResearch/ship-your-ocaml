@@ -817,6 +817,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.neq_false_arm
 #print axioms Vsa.Sim.tr_neq_false
 #print axioms OCaml.Vm.Sim.neq_false_loaded
+
+#print axioms OCaml.Vm.Sim.SizeSelection.of_object
+#print axioms OCaml.Vm.Sim.header_size_tag
+#print axioms OCaml.Vm.Sim.vectlength_arm
+#print axioms OCaml.Vm.Sim.vectlength_step_arm
+#print axioms OCaml.Vm.Sim.vectlength_loaded
+#print axioms Vsa.Sim.tr_vectlength
 #print axioms OCaml.Vm.Sim.PushWriteOk.stack_read
 #print axioms OCaml.Vm.Sim.pushacc1_arm
 #print axioms OCaml.Vm.Sim.pushacc2_arm

@@ -83,6 +83,7 @@ FAMILIES = {
     'ATOM0': ('Atom0', ['auipc', 'ld_tot', 'alu_addi', 'alu_addi', 'j']),
     'ATOM': ('Atom', ['lw_tot', 'auipc', 'ld_tot', 'alu_addi', 'slli', 'alu_addi', 'alu_add', 'j']),
     'ISINT': ('Isint', ['slli', 'andi', 'alu_addi', 'alu_addi', 'j']),
+    'VECTLENGTH': ('Vectlength', ['ld_tot', 'alu_addi', 'srli', 'slli', 'alu_addi', 'j']),
 }
 
 
@@ -93,6 +94,10 @@ for _n in range(1, 5):
 for _n in range(4):
     FAMILIES[f'PUSHCONST{_n}'] = (f'Pushconst{_n}', ['sd', 'alu_addi', 'alu_addi', 'alu_addi', 'j'])
 
+
+# Keep repeated shift/bit operations from reducing total-memory expressions.
+# These load parameters have exact equations; callers do not assume a result.
+OPAQUE_LOADS = {'VECTLENGTH'}
 
 PATHS = {
     'DISPATCH': (None, [True]),
@@ -293,6 +298,13 @@ def outputs(family='CONST0'):
                 step['rd_val'] = step['rd_val'].replace('σ.mem', f'({memory})' if memory != 'm0' else memory)
                 values[step['rd']] = step['rd_val']
                 step['rw'] = 'hmemeq' if index == 0 else f'hmemE{index}'
+                if family in OPAQUE_LOADS:
+                    alias = f'loaded_{tag}'
+                    draft['params'] += [f'({alias} : BitVec 64)',
+                                        f'(hvalue_{tag} : {alias} = {step["rd_val"]})']
+                    step['rd_val'] = alias
+                    values[step['rd']] = alias
+                    step['rw'] += f', ← hvalue_{tag}'
         elif cls == 'sd':
             src, base, off = ops
             ea = f"({value(base)} + sign_extend (m := 64) (0x{off}#12))"

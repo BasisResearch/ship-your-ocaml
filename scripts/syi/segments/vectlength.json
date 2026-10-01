@@ -1,0 +1,103 @@
+{
+  "theorem": "tr_vectlength",
+  "doc": "VECTLENGTH arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.VectlengthSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v21 v23 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_8000228c : 0x80000000 ≤ (v21 + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(hhi_8000228c : (v21 + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_8000228c : (v21 + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v21 + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(loaded_8000228c : BitVec 64)",
+    "(hvalue_8000228c : loaded_8000228c = (sign_extend (m := 64) (bytesT8 m0 (v21 + sign_extend (m := 64) (0xff8#12)).toNat : BitVec (8 * 8))))"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlVectlengthLoaded",
+  "pins": [
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    },
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x8000228c",
+      "site": "site_8000228c_vectlength",
+      "class": "alu",
+      "asm": "ld s5,-8(s5)",
+      "rd": "x21",
+      "rd_val": "loaded_8000228c",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v21 + sign_extend (m := 64) (0xff8#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl hlo_8000228c hhi_8000228c hhtif_8000228c $hi",
+      "rw": "hmemeq, ← hvalue_8000228c"
+    },
+    {
+      "addr": "0x80002290",
+      "site": "site_80002290_vectlength",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002294",
+      "site": "site_80002294_vectlength",
+      "class": "alu",
+      "asm": "srli s5,s5,0xa",
+      "rd": "x21",
+      "rd_val": "(shift_bits_right loaded_8000228c (Sail.BitVec.extractLsb (0x0a#6) 5 0))",
+      "raw_val": "(shift_bits_right v21 (Sail.BitVec.extractLsb (0x0a#6) 5 0))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002298",
+      "site": "site_80002298_vectlength",
+      "class": "alu",
+      "asm": "slli s5,s5,0x1",
+      "rd": "x21",
+      "rd_val": "(shift_bits_left (shift_bits_right loaded_8000228c (Sail.BitVec.extractLsb (0x0a#6) 5 0)) (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "raw_val": "(shift_bits_left v21 (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000229c",
+      "site": "site_8000229c_vectlength",
+      "class": "alu",
+      "asm": "addi s5,s5,1",
+      "rd": "x21",
+      "rd_val": "((shift_bits_left (shift_bits_right loaded_8000228c (Sail.BitVec.extractLsb (0x0a#6) 5 0)) (Sail.BitVec.extractLsb (0x01#6) 5 0)) + sign_extend (m := 64) (0x001#12))",
+      "raw_val": "(v21 + sign_extend (m := 64) (0x001#12))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800022a0",
+      "site": "site_800022a0_vectlength",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1ffcbc#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x8000228c",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

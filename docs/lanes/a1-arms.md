@@ -1,5 +1,25 @@
 # Lane a1-arms
 
+## Header size and VECTLENGTH
+
+`vectlength_arm` and `vectlength_step_arm` reuse `header_words` from the
+primitive lane and shared immediate restoration. `SizeSelection` records
+the represented accumulator, semantic size and header word count.
+`SizeSelection.of_object` derives it at an ordinary allocation base from
+`ObjAt`; atoms/infix pointers still require their own header agreement.
+
+The initial generated load/shift body expanded its total memory read and
+reached about 14 GiB after a minute; that owned build was stopped. The
+generator now supports opaque loaded-word parameters with exact equations
+via its existing rewrite interface. VECTLENGTH uses one, and the unchanged
+semantic body builds in 1.3s, with the represented bridge in 984ms, under
+24 GiB/default limits. Other families retain their existing generated output.
+
+The physical equality landing is `cd6591f`, full gate passing. There are
+now 95 conditional represented opcode bridges. Next: remaining stack/heap
+writes, allocation and primitive-call setup/restoration. Full `ArmSim`,
+entry/halt, semantic-domain corrections and lane exits remain open.
+
 ## Physical equality arms
 
 `eq_step_arm` and `neq_step_arm` consume successful physical-equality
@@ -940,7 +960,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 94 conditional represented opcode bridges,
+stack-writing families. There are 95 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 
