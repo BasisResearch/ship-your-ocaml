@@ -1,3 +1,8 @@
+import VsaIris.Vsa.MallocExtend
+import VsaIris.Vsa.HeapFree
+import VsaIris.Vsa.HeapCarve
+import VsaIris.Vsa.HeapMoveAt
+import VsaIris.Vsa.HeapClear
 import VsaIris.Vsa.AllocSteps
 import Vsa.Sim.SnprintfSpec20
 import Vsa.Sim.StrcmpSpecCond
@@ -341,3 +346,23 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms VsaIris.Sym.swp_jal
 #print axioms VsaIris.Sym.st_800375b8
 #print axioms VsaIris.Sym.st_80044868
+
+-- Allocator geometry and checked SWP paths at the OCaml ELF addresses.
+#print axioms Vsa.Sim.DlHeap.bin_base_alignment
+#print axioms Vsa.Sim.DlHeap.HeapAt.node_fields_ne
+#print axioms Vsa.Sim.DlHeap.HeapAt.node_header_disjoint
+#print axioms VsaIris.VsaHeap.PHeapAt.take
+#print axioms VsaIris.VsaHeap.PHeapAt.carve
+#print axioms VsaIris.VsaHeap.PHeapAt.splitFree
+#print axioms VsaIris.VsaHeap.PHeapAt.moveBinAt
+#print axioms VsaIris.VsaHeap.PHeapAt.release
+#print axioms VsaIris.VsaHeap.PHeapAt.coalNext
+#print axioms VsaIris.VsaHeap.PHeapAt.coalPrev
+#print axioms VsaIris.VsaHeap.MHeap.bin_off_stack
+#print axioms VsaIris.VsaHeap.sbrk_r_gen
+#print axioms VsaIris.VsaHeap.sbrk_r_run
+#print axioms VsaIris.VsaHeap.small_take
+#print axioms VsaIris.VsaHeap.lr_take
+#print axioms VsaIris.VsaHeap.top_split
+#print axioms VsaIris.VsaHeap.ext_grow
+#print axioms VsaIris.VsaHeap.extend_top

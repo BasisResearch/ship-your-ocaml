@@ -1,3 +1,8 @@
+import VsaIris.Vsa.MallocExtend
+import VsaIris.Vsa.HeapFree
+import VsaIris.Vsa.HeapCarve
+import VsaIris.Vsa.HeapMoveAt
+import VsaIris.Vsa.HeapClear
 import VsaIris.Vsa.AllocSteps
 import VsaIris.Adequacy
 import VsaIris.Call

@@ -173,3 +173,29 @@ the symbol/data sections, imports the generated full-ELF decode chunks,
 and supports drift checking. It emits 32 instruction sites per module.
 The `AllocRun` definition is copied from syi-exp `69939cfc`; `AllocCode`
 and `AllocSteps` are generated anew, never hand-retargeted.
+
+## A0 allocator composition templates
+
+`experiments/syi/allocator-template/` preserves adapted allocator proof
+sources from syi-exp `412ce9b2f9eae68892f58893805ae3be611a0ebc`.
+`scripts/retarget_allocator_specs.py` regenerates their `Vsa/` and `VsaIris/`
+outputs against this ELF. Instruction groups are matched by decoded
+operations and symbolic global targets; every emitted composition is then
+checked against the newly generated instruction steps. Decimal and hex
+addresses are relocated, including AUIPC expansions and the `_sbrk` error
+path scheduling change. `layout.json` records the source ELF symbol and
+instruction data, so regeneration does not require the upstream checkout.
+
+The templates cut WHILE-specific imports and initial-heap predicates,
+extract only the generic allocator arithmetic helpers into
+`LibraryAllocFacts`, and use the existing memory/read interfaces. They also
+adapt the heap geometry to this ELF's word-aligned bin sentinels and split
+the allocator's relocated global footprint into its actual objects.
+`HeapAt.node_fields_ne` and `HeapAt.node_header_disjoint` provide the shared
+field-separation facts. Read-only AUIPC loads in `gen_alloc_steps.py` use
+the pinned `_impure_ptr` bytes with a computed-address premise.
+
+`ProofPieces` extracts the generic `#ix_piece` / `#ix_chain` declaration
+combinators from `VsaIris/Interp/ITac.lean` at the same source commit.
+They split the small-allocation composition into kernel-checked pieces
+within the existing heartbeat limit, without importing interpreter steps.

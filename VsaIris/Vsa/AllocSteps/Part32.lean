@@ -256,14 +256,13 @@ theorem st_80042518 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_8004251c {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hea : LdOK ((R 10) + sign_extend (m := 64) (0xa48#12)).toNat 8)
-    (hLDS : ∀ b ∈ accAddrs ((R 10) + sign_extend (m := 64) (0xa48#12)).toNat 8, S b)
-    (hk : AW live S Q 0x80042520#64 (upd R 10 (ldv .ld Mt ((R 10) + sign_extend (m := 64) (0xa48#12)).toNat)) Mt) :
+    (hea : ((R 10) + sign_extend (m := 64) (0xa48#12)).toNat = 0x80069f60)
+    (hk : AW live S Q 0x80042520#64 (upd R 10 (bytesVal .ld [0xd0#8, 0x9c#8, 0x06#8, 0x80#8, 0x00#8, 0x00#8, 0x00#8, 0x00#8])) Mt) :
     AW live S Q 0x8004251c#64 R Mt :=
-  swp_step ax_8004251c [10] [bytesAt (imgM Mt) ((R 10) + sign_extend (m := 64) (0xa48#12)).toNat 8] (accAddrs ((R 10) + sign_extend (m := 64) (0xa48#12)).toNat 8) [] 0 rfl (by decide) (by decide) (by decide)
+  swp_step ax_8004251c [10] [[0xd0#8, 0x9c#8, 0x06#8, 0x80#8, 0x00#8, 0x00#8, 0x00#8, 0x00#8]] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
-    (fun m hm hLD => by unfold ax_8004251c ChainFacts; chain_facts hm with "VsaIris.Sym.alloc_at_"; exact ⟨hea, lpins8_img hLD⟩)
-    (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) hLDS
+    (fun m hm hLD => by unfold ax_8004251c ChainFacts; chain_facts hm with "VsaIris.Sym.alloc_at_"; change LdOK ((R 10) + sign_extend (m := 64) (0xa48#12)).toNat 8 ∧ LPins8 m ((R 10) + sign_extend (m := 64) (0xa48#12)).toNat [0xd0#8, 0x9c#8, 0x06#8, 0x80#8, 0x00#8, 0x00#8, 0x00#8, 0x00#8]; rw [hea]; exact ⟨(by decide), alloc_impure hm⟩)
+    (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) (fun a h => by cases h)
     (fun a h => by cases h) rfl
     (by intro x hx hg; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl <;> first | rfl | exact absurd rfl hg)
     (fun x _ _ hx => upd_other _ _ (fun e => hx (e ▸ (by decide : 10 ∈ [10])))) rfl hk

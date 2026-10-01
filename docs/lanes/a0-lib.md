@@ -89,3 +89,62 @@ Decode coverage and strcmp landed (`7e0668e`, `38d36d5`). The two stdio
 contracts and memmove dependency landed as `2d4953b`; the full integration
 gate passed, including 285 axiom audits. The three changed-layout
 function specs remain outstanding, so the lane exit criterion is not met.
+
+## Allocator composition in progress
+
+The symbolic-run infrastructure landed as `c51817f` with the full gate
+passing. The next composition templates come from syi-exp
+`412ce9b2f9eae68892f58893805ae3be611a0ebc` (before on-demand step generation).
+A generic import cut reduces the missing closure from 176 to 43 modules.
+`scripts/retarget_allocator_specs.py` currently emits those modules plus the generic proof-piece combinator
+from preserved templates; they are not all compiled yet.
+
+Two layout assumptions needed substantive correction:
+
+- The old allocator-global interval spanning `brk.0` and three statistics
+  now contains intervening OCaml globals. The footprint splits that interval
+  into the actual `brk.0` word and statistics range. `HeapShape` has compiled
+  with this narrower footprint.
+- `__malloc_av_` is `0x800691f8`, hence 8 modulo 16. The old `binAt_geo`
+  conclusion `% 16 = 0` failed in Lean. `DlHeap.bin_base_alignment` proves
+  the counterexample by kernel `decide`. Bin-node lemmas now require word
+  alignment, while arena chunks retain 16-byte alignment.
+  `HeapAt.node_fields_ne` separates forward/backward links using bin/arena
+  geometry; the adapted `HeapTake` has compiled. No false alignment premise
+  is added to function contracts.
+
+Regeneration maps 26 expanded global-access groups across the helper
+closure and one instruction scheduling move in `_sbrk`'s error epilogue.
+Static `_impure_ptr` bytes are read from this ELF. Driver fuel bounds with
+explicit stop PCs account for expansions; Lean heartbeat limits are unchanged.
+`Sbrk`, `MallocCtx`, `HeapClear`, `HeapSplit`, and `HeapGrow` now compile.
+The stack/global separation lemma now states disjointness from the two
+actual helper words (`brk.0` and `errno`); its old continuous-span conclusion
+was false after relocation because the new global layout has large gaps.
+Read-only AUIPC loads of `_impure_ptr` use the pinned image, with an explicit
+computed-address equality, rather than requiring ownership of that word.
+The retargeter also relocates decimal address literals. Remaining heap
+field-separation fixes reuse `HeapAt.node_fields_ne`; malloc/free function
+compositions are still being checked.
+
+`HeapCarve`, `HeapMoveAt`, `HeapFree`, and `MallocPaths` now compile.
+`HeapAt.node_header_disjoint` factors the shared link/header separation
+argument. The small-allocation proof reached the default 200,000-heartbeat
+limit after adaptation; upstream `#ix_piece` / `#ix_chain` now splits it into
+two declarations, which compile without increasing the limit. The pending
+build has advanced to the higher-level machine paths.
+
+The checked checkpoint now contains 28 generated modules, including
+`MallocTop.top_split` (namespace `VsaIris.VsaHeap`), `ext_grow`, and
+`extend_top`; both growth proof pieces compile within the default budget.
+`checked-modules.json` selects the promoted closure; `--include-pending`
+emits the remaining preserved composition templates for continued work.
+The a5 drift check uses the checked manifest. The next modules are
+`MallocSplit` through `MallocRunAll`, then the free paths; those full
+function contracts and `_svfprintf_r` remain open.
+
+Checkpoint audit passed for all 19 added headline facts: dependencies are
+only `{propext, Classical.choice, Quot.sound}` (the concrete alignment fact
+has no axioms). Entry points include `small_take` in `MallocPaths.lean`,
+`top_split` in `MallocTop.lean`, and `extend_top` in `MallocExtend.lean`.
+The full integration gate is the next check before landing this checkpoint.

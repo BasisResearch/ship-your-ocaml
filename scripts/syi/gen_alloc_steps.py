@@ -267,14 +267,21 @@ def emit(pc):
         ea, conc = ea_expr(d['rs1'], d['imm'])
         wd = d['width']
         ks = ks_of([d['rs1'], d['rd']])
-        if conc and (GPV + d['imm']) & M64 == IMPURE[0]:
+        previous = fields(W[pc-4]) if pc-4 in W and FN[pc-4] == FN[pc] else None
+        static_impure = (previous is not None and previous['op'] == 0x17
+                         and previous['rd'] == d['rs1']
+                         and (pc-4 + previous['immU'] + d['imm']) & M64 == IMPURE[0])
+        if wd == 8 and ((conc and (GPV + d['imm']) & M64 == IMPURE[0]) or static_impure):
+            address_hyp = '' if conc else f'\n    (hea : {ea} = 0x{IMPURE[0]:x})'
+            pins = f'exact ⟨(show LdOK {ea} 8 by decide), {P}_impure hm⟩' if conc else \
+                f"change LdOK {ea} 8 ∧ LPins8 m {ea} [" + ', '.join(f'0x{b:02x}#8' for b in IMPURE[1]) + f']; rw [hea]; exact ⟨(by decide), {P}_impure hm⟩'
             lds = '[[' + ', '.join(f'0x{b:02x}#8' for b in IMPURE[1]) + ']]'
             val = 'bytesVal .ld [' + ', '.join(f'0x{b:02x}#8' for b in IMPURE[1]) + ']'
-            thm.append(HDR.format(pc=pc) + f"""
+            thm.append(HDR.format(pc=pc) + f"""{address_hyp}
     (hk : {RUN} live S Q {nxt} (upd R {d['rd']} ({val})) Mt) :
     {RUN} live S Q 0x{pc:x}#64 R Mt :=
 """ + step(f'ax_{pc:08x}', ks, lds, '[]', '[]', NIL,
-           f'exact ⟨(show LdOK {ea} 8 by decide), {P}_impure hm⟩', hgp(ks), 'rfl', hR(ks),
+           pins, hgp(ks), 'rfl', hR(ks),
            hRo(ks, d['rd']), 'hk'))
         else:
             pin = {8: 'lpins8_img hLD', 4: 'lpins4_img hLD', 1: 'lpins1_img hLD', 2: 'lpins2_img hLD'}[wd]
