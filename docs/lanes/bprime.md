@@ -86,3 +86,20 @@ program proofs / other lanes.
 - All four measured builds passed. Measurements and source hashes are saved
   in `results/bprime_build.json`. Final landing uses `scripts/integrate.sh`,
   including the generated-rule audit and full a1–a8/t1 gates.
+
+## Fixed-address embedded-image migration (2026-10-01)
+
+The foreman announced that a0-boot will move the embedded program to a
+fixed-address `.embed` section and regenerate native data/code pins. Any
+native data address used by this lane must come from `OCaml/Vm/Layout.lean`.
+The bytecode generators and logic currently contain no native data addresses:
+their PCs are CODE word indices. The hexadecimal constant in `gen_bc_demo.py`
+is an OCaml Marshal format marker, not an address.
+
+Rebased onto main `a22f2b9` and reran `scripts/gen_bc_rules.py` and
+`scripts/gen_bc_demo.py`; both artefact sets are unchanged. The migration is
+not in that revision. Main's new BcSem opcode semantics require the ordinary
+integration build/audit even though the generated source is unchanged.
+After the migration lands, rebase again, rerun both generators, and validate
+through `scripts/integrate.sh`. Native Layout/decode/pin regeneration belongs
+to a0-boot's migration landing.
