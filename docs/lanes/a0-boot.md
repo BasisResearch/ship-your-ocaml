@@ -2,11 +2,11 @@
 
 ## Status
 
-Migration in progress on top of `elf-fix` (`11989b1`), authorized by the
-foreman. Program files, argv and environment now live behind the fixed
+Migration landed atomically as `7fa1750`, including the foreman's
+`elf-fix` (`11989b1`) and all regenerated artifacts. Program files, argv and environment now live behind the fixed
 three-pointer `.embed` header at `0x86800000`. One pinned runtime/Layout
-serves every program. The migration will land atomically after the proof
-and pin gates pass. The `Loaded` exit criterion remains open.
+serves every program. All five Sail runs passed. The `Loaded` exit
+criterion remains open; work has resumed on its concrete memory certificate.
 
 ## Image migration
 
@@ -53,12 +53,12 @@ and pin gates pass. The `Loaded` exit criterion remains open.
 * Native candidate inspection places all 29 abstract heap objects and
   matches all 191 code words; this is preparation for the kernel witness.
 * Core MMIO/load and allocator geometry builds passed after the layout
-  changes. Full build, 786 headline axiom audits, generator checks, ELF
+  changes. Full build, 790 headline axiom audits, generator checks, ELF
   and code pins all passed against the rebased main.
 * TCB and host-mirror harnesses now implement the three-pointer header
   interface. The 329-trace quick suite has zero rejections on both Linux
   and the memory file system. Host-mirror while and compiler hello-M1000
-  match the Sail outputs. Final integration is pending.
+  match the Sail outputs. `scripts/integrate.sh` landed the migration.
 
 ## Boot definitions and proofs
 
@@ -78,12 +78,39 @@ and pin gates pass. The `Loaded` exit criterion remains open.
 
 ## Next
 
-1. Finish the full proof migration and integrate it atomically, promptly so
-   other lanes can consume the new addresses. Do not notify other lanes;
-   the foreman handles that coordination.
-2. Build the concrete boot-state/reflection certificate, reusing the newly
+1. Build the concrete boot-state/reflection certificate, reusing the newly
    landed allocator and stdio function specs and run-kernel composition.
    Summarize the primitive-lookup loop instead of evaluating millions of
    Sail steps in a single kernel check.
-3. Establish code, heap, globals, world, registers, platform/runtime and
+2. Establish code, heap, globals, world, registers, platform/runtime and
    `fillZero` facts for the actual while_min entry; prove and audit `Loaded`.
+
+## Checked store-log certificate
+
+`WhileMinLog.logOk` and `WhileMinLog.memory_view` in
+`OCaml/Vm/Boot/WhileMinLogChecks.lean` are kernel-checked for all 35,304
+observed stores and 2,146 final runs (135,207 bytes). The build passed with
+no heartbeat or recursion-budget overrides. These prove the exact memory
+effect of the supplied store log for any initial memory. They do not prove
+that Sail executed the log or that `Loaded` holds.
+
+* `Vsa/Sim/Boot/Log.lean` ports the existing packed-log checker unchanged.
+* `Boot/Checks.lean` composes small checks using `StoresChecked.join` and
+  `RunTree.Checked.node`. `scripts/gen_boot_log.py` emits data and 128
+  certificate parts, with at most 64 stores or bytes per kernel check.
+* `Boot/Image.lean` ports the generic loader-memory lemmas.
+* `Boot/Bytes.lean` projects total machine reads through a certified view.
+* `OCaml/Vm/Boot/Heap.lean` gives finite closed-heap coverage through
+  `HeapClosed.live_defined` and `HeapImage.repr`.
+* `OCaml/Vm/Boot/FreeList.lean` defines the concrete startup singleton
+  best-fit shape. Native inspection finds empty small lists and one blue
+  large block, with self-linked list pointers, null tree children, and a
+  size matching `caml_fl_cur_wsz`. Its machine-memory proof remains open.
+* `gen_layout.py` extracts best-fit structure sizes and offsets from
+  `runtime/freelist.c` using the RV64 compiler, alongside ELF symbols.
+
+The certificate is reproducible from the compressed observed log in
+`results/boot/while_min-stores.jsonl.gz`; stage a5 checks generated drift.
+Full Sail reachability and the `Loaded` witness remain open. Next: instantiate
+the byte view for the 29 heap objects, code and runtime fields, then connect
+the concrete entry configuration and platform image.

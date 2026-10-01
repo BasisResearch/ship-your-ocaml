@@ -50,6 +50,7 @@ ELF pin).
 | `Layout.runtimeOk` concrete instance | `OCaml/Vm/Runtime.lean` | A0 | **defined**: `runtimeLayout freeList`, with ordinary nonempty-nursery bounds |
 | `Loaded` at real entry states (boot witnesses, small programs) | `OCaml/Vm/Boot/` | A0 | **open**: fixed `.embed` makes the runtime image identical across programs; execution/projection certificate remains open |
 | `WhileMinObservation.bounds`, `noPending`, `nursery_not_empty` | `OCaml/Vm/Boot/WhileMinObservation.lean` | A0 | **proved for the observed projection**; machine-to-projection certificate remains open |
+| `WhileMinLog.logOk`, `memory_view` | `OCaml/Vm/Boot/WhileMinLogChecks.lean` | A0 | **proved**: exact memory effect of 35,304 observed stores, checked in small chunks; Sail execution and `Loaded` remain open |
 | `ArmSim` entry + F1 arms (134 opcodes) + halt | `OCaml/Vm/Sim/` | A1 | open; strengthened `Running` contract excludes the HTIF obstruction |
 | **`ocamlrun_refinement_Statement L B`** (Layer A, F1) | `OCaml/Theorems.lean` | A1 (by `ocamlrun_refinement_of_arms`) | open; derives unchanged from the repaired arm contract |
 | `PlatformOk`, `Running`, `forceExit_not_running`, `platformOk_reloc`, `loopRegisters_reloc` | `OCaml/Vm/Platform*.lean`, `OCaml/Refinement.lean` | A1 | **contract repaired**; composition and regression/transport theorems proved |

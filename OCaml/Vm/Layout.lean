@@ -118,6 +118,16 @@ def sym_main_argv : Nat := 0x80064c10
 def sym_caml_exe_name : Nat := 0x80064c18
 /-- `oo_last_id` -/
 def sym_oo_last_id : Nat := 0x80064898
+/-- `bf_small_fl` -/
+def sym_bf_small_fl : Nat := 0x800662d8
+/-- `bf_small_map` -/
+def sym_bf_small_map : Nat := 0x80064a00
+/-- `bf_large_tree` -/
+def sym_bf_large_tree : Nat := 0x800649f8
+/-- `bf_large_least` -/
+def sym_bf_large_least : Nat := 0x800649f0
+/-- `caml_fl_cur_wsz` -/
+def sym_caml_fl_cur_wsz : Nat := 0x80064a40
 
 /-- `caml_interprete`'s dispatch loop head (fetch of the opcode word). -/
 def loopHead : Nat := 0x80001f5c
@@ -165,5 +175,21 @@ def off_backtrace_active : Nat := 232
 def off_requested_major_slice : Nat := 272
 def off_requested_minor_gc : Nat := 280
 def off_local_roots : Nat := 288
+
+/-! Collector structure offsets and constants, measured by the RV64 compiler
+from runtime/freelist.c. -/
+def bf_small_count : Nat := 16
+def bf_small_size : Nat := 16
+def off_bf_small_free : Nat := 0
+def off_bf_small_merge : Nat := 8
+def bf_large_size : Nat := 40
+def off_bf_isnode : Nat := 0
+def off_bf_left : Nat := 8
+def off_bf_right : Nat := 16
+def off_bf_prev : Nat := 24
+def off_bf_next : Nat := 32
+def gc_blue : Nat := 512
+def value_bytes : Nat := 8
+def header_bytes : Nat := 8
 
 end OCaml.Vm.Layout

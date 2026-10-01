@@ -28,6 +28,11 @@ layer applies to both.
 | `lakefile.toml`, `lean-toolchain`, `lake-manifest.json` | same | new package name, new `OCaml` library and `runbc` executable |
 | `CLAUDE.md` (the discipline) | `CLAUDE.md` | via ship-your-lua's adaptation; WHILE rows dropped, OCaml rows added |
 
+`Vsa/Sim/Boot/Log.lean` additionally ports the generic packed write-log
+checker unchanged from ship-your-interpreter. `Boot/Image.lean` ports its
+generic loader-memory lemmas, with the WHILE-specific image removed.
+`Boot/Checks.lean` adds balanced composition of small certificates here.
+
 The copied Lean modules are the import closure of the machine relation
 (`Vsa.Machine`, `Vsa.Elf`, `Vsa.Triple`), densification (`Vsa.Densify.*`),
 the instruction-level simulation layer and decode table (`Vsa.Sim.*`), the
@@ -42,10 +47,11 @@ every address inside the 66 functions that are byte-identical in the two
 ELFs (`memcpy`, `memset`, `memmove`, `strlen`, `strcpy`, `__muldi3`, the
 64-bit division routines, `setjmp`/`longjmp`, …) to the same offset in this
 ELF, maps function starts and data symbols by name, and moves the HTIF
-mailbox constant `Vsa.Sim.tohostAddr` (`0x8001ad00` → `0x80067600`). No
-proof text changed otherwise; the layer rebuilds, and
-`scripts/check_code_pins.py` checks all 2,560 bytes the ported code
-predicates pin against the ELF. The WHILE interpreter's own `value_*`
+mailbox constant `Vsa.Sim.tohostAddr` (`0x8001ad00` → the generated `LibraryLayout.tohostAddr`, currently
+`0x80061fc0`). Subsequent allocator/stdio ports and the fixed-embed migration
+regenerate address-dependent specifications as well. The layer rebuilds,
+and `scripts/check_code_pins.py` checks all 39,056 bytes currently pinned
+by the code predicates against the ELF. The WHILE interpreter's own `value_*`
 pins (`Vsa/Sim/Code/Value_*.lean`) remain facts about the WHILE ELF, which
 other copied proofs import; nothing here uses them.
 

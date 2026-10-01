@@ -1,3 +1,7 @@
+import OCaml.Vm.Boot.Heap
+import OCaml.Vm.Boot.FreeList
+import OCaml.Vm.Boot.WhileMinLogChecks
+import Vsa.Sim.Boot.Bytes
 import OCaml.Vm.Gc.Generated.Audit
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
@@ -524,3 +528,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 -- Primitive-name binding is necessary at the loaded cut.
 #print axioms OCaml.Vm.Sim.PrimitiveBinding.loaded_prims
 #print axioms OCaml.Vm.Sim.PrimitiveBinding.primitive_binding_obstruction
+#print axioms Vsa.Sim.Boot.writeLog_view
+#print axioms Vsa.Sim.Boot.loaderMem_get
+#print axioms Vsa.Sim.Boot.observedMem_get
+#print axioms Vsa.Sim.Boot.LogOk.of_checks
+#print axioms OCaml.Vm.Boot.WhileMinLog.logOk
+#print axioms OCaml.Vm.Boot.WhileMinLog.memory_view
+
+#print axioms Vsa.Sim.Boot.bytesT_view
+#print axioms Vsa.Sim.Boot.observedMem_bytes
+
+#print axioms OCaml.Vm.Boot.HeapClosed.live_defined
+#print axioms OCaml.Vm.Boot.HeapImage.repr
