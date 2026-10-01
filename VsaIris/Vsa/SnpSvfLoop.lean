@@ -27,7 +27,7 @@ theorem svf_head {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt
 
 structure DataOff (Dt : Mem) (DA : List Nat) (s dst n : Nat) : Prop where
   ram : ∀ a ∈ DA, 0x80000000 ≤ a ∧ a + 8 ≤ 0x100000000
-  htif : ∀ a ∈ DA, a + 8 ≤ 0x80067600 ∨ 0x800691f8 ≤ a
+  htif : ∀ a ∈ DA, a + 8 ≤ 0x80061fc0 ∨ 0x80063b90 ≤ a
   stack : ∀ a ∈ DA, a < s - 1024 ∨ s ≤ a
   dst : ∀ a ∈ DA, a < dst ∨ dst + n ≤ a
   tab : TabAt Dt DA
@@ -72,8 +72,8 @@ theorem pieceSrc_of_data {Dt : Mem} {DA : List Nat} {s dst n b l : Nat} (DO : Da
     · right; omega
   have hn := SG.n_pos
   have hdst : b + l ≤ dst ∨ dst + n ≤ b := iv _ _ (by omega) fun a h1 h2 => DO.dst a (hd a h1 h2)
-  have hht : b + l ≤ 0x80067600 ∨ 0x800691f8 ≤ b := by
-    have := iv 0x80067600 0x800691f8 (by decide) fun a h1 h2 => by
+  have hht : b + l ≤ 0x80061fc0 ∨ 0x80063b90 ≤ b := by
+    have := iv 0x80061fc0 0x80063b90 (by decide) fun a h1 h2 => by
       have h3 := DO.htif a (hd a h1 h2); omega
     omega
   have g1 : 0x80000000 ≤ b := r1.1
@@ -105,7 +105,7 @@ theorem svf_iterS {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     {R0 : Nat → BitVec 64} {Mt0 : Mem} {p ap : Nat} {total : List (BitVec 8)}
     (R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n) (DO : DataOff Dt DA s dst n)
-    (hmb : ldv .ld Mt0 0x80069bf0 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80069c68 = 1#64)
+    (hmb : ldv .ld Mt0 0x80064588 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80064600 = 1#64)
     (A : SvfAt s dst n R0 Mt0 p ap (BitVec.ofNat 64 total.length) total R Mt)
     (k : Nat) (FG : FmtGeom DA p (k + 1))
     (hb : ∀ i, i < k → imgM Dt (p + i) ≠ 0#8 ∧ imgM Dt (p + i) ≠ 37#8)
@@ -242,7 +242,7 @@ theorem svf_iterLLD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) 
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     {R0 : Nat → BitVec 64} {Mt0 : Mem} {p ap : Nat} {total : List (BitVec 8)}
     (R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n) (DO : DataOff Dt DA s dst n)
-    (hmb : ldv .ld Mt0 0x80069bf0 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80069c68 = 1#64)
+    (hmb : ldv .ld Mt0 0x80064588 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80064600 = 1#64)
     (A : SvfAt s dst n R0 Mt0 p ap (BitVec.ofNat 64 total.length) total R Mt)
     (k : Nat) (FG : FmtGeom DA p (k + 3))
     (hb : ∀ i, i < k → imgM Dt (p + i) ≠ 0#8 ∧ imgM Dt (p + i) ≠ 37#8)
@@ -280,7 +280,7 @@ theorem svf_iterLLD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) 
   rw [hd] at h24'
   have k26 : R6 26 = 90#64 := (hkp6 26 (by decide) (by decide) (by decide) (by decide)).trans
     ((hkp5 26 (by decide) (by decide) (by decide) (by decide)).trans CA.r26)
-  have k22 : R6 22 = 0x8005f9e0#64 := (hkp6 22 (by decide) (by decide) (by decide) (by decide)).trans
+  have k22 : R6 22 = 0x8005a398#64 := (hkp6 22 (by decide) (by decide) (by decide) (by decide)).trans
     ((hkp5 22 (by decide) (by decide) (by decide) (by decide)).trans CA.r22)
   refine svf_disp hlive (p + k + 2 + 1) 0x64 _ (.inr (.inl ⟨rfl, rfl⟩)) R6 Mt4 (by omega) h25' h24'
     k26 k22 DO.tab fun R7 h25'' _ hkp7 => ?_
@@ -314,7 +314,7 @@ theorem svf_iterD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     {R0 : Nat → BitVec 64} {Mt0 : Mem} {p ap : Nat} {total : List (BitVec 8)}
     (R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n) (DO : DataOff Dt DA s dst n)
-    (hmb : ldv .ld Mt0 0x80069bf0 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80069c68 = 1#64)
+    (hmb : ldv .ld Mt0 0x80064588 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80064600 = 1#64)
     (A : SvfAt s dst n R0 Mt0 p ap (BitVec.ofNat 64 total.length) total R Mt)
     (k : Nat) (FG : FmtGeom DA p (k + 1))
     (hb : ∀ i, i < k → imgM Dt (p + i) ≠ 0#8 ∧ imgM Dt (p + i) ≠ 37#8)
@@ -364,7 +364,7 @@ theorem svf_iterEnd {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) 
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     {R0 : Nat → BitVec 64} {Mt0 : Mem} {p ap : Nat} {total : List (BitVec 8)}
     (R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n) (DO : DataOff Dt DA s dst n)
-    (hmb : ldv .ld Mt0 0x80069bf0 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80069c68 = 1#64)
+    (hmb : ldv .ld Mt0 0x80064588 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80064600 = 1#64)
     (A : SvfAt s dst n R0 Mt0 p ap (BitVec.ofNat 64 total.length) total R Mt)
     (k : Nat) (FG : FmtGeom DA p k)
     (hb : ∀ i, i < k → imgM Dt (p + i) ≠ 0#8 ∧ imgM Dt (p + i) ≠ 37#8)

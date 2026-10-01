@@ -1,26 +1,26 @@
 {
- "elf": "build/nostdlib/while_min.elf",
+ "elf": "build/migration/while_min.elf",
  "exit": 0,
  "fuel_out": false,
- "steps": 4312956,
+ "steps": 4312978,
  "output": "55\n2500\n36\n",
- "cut_point_step": 4269235,
- "first_minor_gc_step": 4263465,
+ "cut_point_step": 4269257,
+ "first_minor_gc_step": 4263484,
  "first_minor_gc_after_cut": null,
  "minor_gcs": 1,
  "major_slices": 0,
  "minor_gcs_after_cut": 0,
  "first": {
-  "caml_main": 50216,
-  "caml_init_gc": 56436,
-  "caml_interprete": 124160,
-  "caml_load_code": 124515,
-  "caml_build_primitive_table": 181686,
-  "caml_input_val": 4252409,
-  "caml_oldify_mopup": 4263465,
-  "caml_do_exit": 4312883,
-  "_exit": 4312951,
-  "_exit.sd": 4312955
+  "caml_main": 50217,
+  "caml_init_gc": 56466,
+  "caml_interprete": 124219,
+  "caml_load_code": 124574,
+  "caml_build_primitive_table": 181745,
+  "caml_input_val": 4252428,
+  "caml_oldify_mopup": 4263484,
+  "caml_do_exit": 4312905,
+  "_exit": 4312973,
+  "_exit.sd": 4312977
  },
  "counts": {
   "caml_main": 1,
@@ -33,5 +33,6 @@
   "caml_do_exit": 1,
   "_exit": 1,
   "_exit.sd": 1
- }
+ },
+ "elf_sha256": "3042b1cd6df22ee3d70aeff2de67e4aa93c8479088cb6f2bf67ca847d5ce5e1c"
 }

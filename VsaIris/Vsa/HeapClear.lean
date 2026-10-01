@@ -27,7 +27,7 @@ theorem BlockHeapAt.transport_read_bb {m m' : Mem} {H : List (Nat × Nat)} {top 
   have hH := h.heap
   have hlo : heapStart ≤ top := hH.walk.le
   have hcb := hH.walk.chunk_bounds
-  have gAv : ∀ a, 0x800691f8 ≤ a → a + 8 ≤ 0x80069a08 →
+  have gAv : ∀ a, 0x80063b90 ≤ a → a + 8 ≤ 0x800643a0 →
       (a + 8 ≤ binblocksAddr ∨ binblocksAddr + 8 ≤ a) → read64 m a = read64 m' a := by
     intro a h1 h2 h3
     apply rd hag (gr fun k hk => ?_) (.inl (by omega)) h3
@@ -37,8 +37,8 @@ theorem BlockHeapAt.transport_read_bb {m m' : Mem} {H : List (Nat × Nat)} {top 
     apply rd hag (gr fun k hk => ?_) (.inr (.inl (by unfold sbrkBaseAddr; omega))) (by simp only [binblocksAddr, avAddr, sbrkBaseAddr, mallinfoAddr]; omega)
     unfold allocGlobal InRange sbrkBaseAddr
     omega
-  have gBrk : ∀ a, 0x80069f78 ≤ a → a + 8 ≤ 0x8006a3a0 →
-      (a + 8 ≤ 0x80069f78 + 8 ∨ 0x8006a388 ≤ a) → read64 m a = read64 m' a := by
+  have gBrk : ∀ a, 0x80064910 ≤ a → a + 8 ≤ 0x80064d38 →
+      (a + 8 ≤ 0x80064910 + 8 ∨ 0x80064d20 ≤ a) → read64 m a = read64 m' a := by
     intro a h1 h2 hpart
     apply rd hag (gr fun k hk => ?_) (.inr (.inl (by omega))) (by simp only [binblocksAddr, avAddr, sbrkBaseAddr, mallinfoAddr]; omega)
     unfold allocGlobal InRange

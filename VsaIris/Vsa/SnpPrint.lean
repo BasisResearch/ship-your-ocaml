@@ -20,19 +20,19 @@ structure BufAt (Mt : Mem) (s dst n : Nat) (total : List (BitVec 8)) : Prop wher
   bytes : ∀ i, i < min total.length (n - 1) → imgM Mt (dst + i) = total.getD i 0
 
 structure SnpGeom (s dst n : Nat) : Prop where
-  s_lo : 0x800827a0 + 1024 ≤ s
+  s_lo : 0x8007d138 + 1024 ≤ s
   s_hi : s ≤ 0x88000000
   s_al : s % 16 = 0
   n_pos : 0 < n
   n_hi : n < 2 ^ 31
-  d_lo : 0x800827a0 ≤ dst
+  d_lo : 0x8007d138 ≤ dst
   d_hi : dst + n ≤ 0x100000000
   d_sep : dst + n ≤ s - 1024 ∨ s ≤ dst
 
 structure PieceGeom (s dst n b l : Nat) : Prop where
   lo : 0x80000000 ≤ b
   hi : b + l ≤ 0x100000000
-  htif : b + l ≤ 0x80067600 ∨ 0x800691f8 ≤ b
+  htif : b + l ≤ 0x80061fc0 ∨ 0x80063b90 ≤ b
   dst : b + l ≤ dst ∨ dst + n ≤ b
   fp : b + l ≤ snpFP s ∨ snpFP s + 24 ≤ b
   frames : b + l ≤ s - 992 ∨ s - 864 ≤ b

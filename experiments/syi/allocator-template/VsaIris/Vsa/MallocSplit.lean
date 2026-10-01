@@ -54,7 +54,7 @@ theorem lr_split_ret {C : MCtx} {Mt : Mem} {brkv : Nat} {chunks : List Chunk}
   have hnb16 := hnb.al; have hnb32 := hnb.lo
   have hn8 := hnb.fits
   have hslo := hsp.lo
-  unfold mHead Vsa.Sim.tohostAddr at hslo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hslo
   have hFV := foot_free_span B hfree rfl
   simp only at hFV
   have hoff := Hp.off_stack_w (a := v + 8) (w := sz + 8) (by omega)
@@ -125,7 +125,7 @@ theorem lr_split {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
   unfold mHead binAt avAddr at hbo
   have hs2 := F.sp
   have hlo := O.sp.lo; have hhi := O.sp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hsal := O.sp.align
   have hs2n : (R 2).toNat = C.s.toNat - 96 := by rw [hs2]; sx_addr
   have hbnd := HH.walk.chunk_bounds _ hfree

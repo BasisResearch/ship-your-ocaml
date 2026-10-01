@@ -43,12 +43,12 @@ ELF pin).
 | `_malloc_r` and `malloc` function contracts for this ELF | `VsaIris/Vsa/MallocBlocks2.lean`, `MallocRunAll.lean` | A0 | **proved**: `malloc_all` at `_malloc_r` entry, plus `mallocChgRun_proved` and `mallocLocalRun_proved`; complete generated step/pin closure, audited |
 | `_free_r` and `free` function contracts for this ELF | `VsaIris/Vsa/FreeTop.lean`, `FreeRunAll.lean` | A0 | **proved**: `free_body` at `_free_r` entry, plus `freeChgRun_proved` and `freeLocalRun_proved`; coalescing, trimming and complete generated step/pin closure, audited |
 | `_svfprintf_r` function spec for this ELF | `VsaIris/Vsa/SnpFmt.lean` | A0 | **proved**: `svfprintf_nw` at `0x8004789c`, entry-to-return for literal text, `%s`, and `%d`; initialized string FILE, ASCII locale, bounded stack arguments/output, truncated bytes and full rendered-length return; 47 generated modules, pinned and audited, a5 drift check |
-| decode for every disassembled instruction word (via syi’s `decodeW`) | `Vsa/Sim/ElfDecode/`, `scripts/gen_elf_decode.py` | A0 | **proved**: 29,475 words, 231 chunks; covers all reachable words; a5 drift check |
+| decode for every disassembled instruction word (via syi’s `decodeW`) | `Vsa/Sim/ElfDecode/`, `scripts/gen_elf_decode.py` | A0 | **proved**: 29,473 words, 231 chunks; covers all reachable words; a5 drift check |
 | `HtifFsImplements` (the in-image file system meets the OS spec) | `OCaml/Os.lean` | F5 | reduced by `htifFsImplements_of_functions` to `HtifEntries` + `HtifFunctionObligations` (termination/partial correctness); premises open. Native trace evidence: 6,410 accepted, 80 special, zero rejected (`results/htif-fs.json`) |
 | `BcSem` world over `TCB.Os.OsState` (file/time/env primitives through `OsStep`) | `OCaml/Bytecode/Semantics.lean` | F5 | open |
 | Linux instantiation: `ecall` as an external step constrained by `OsStep` | `Vsa.Machine` extension | E | open |
 | `Layout.runtimeOk` concrete instance | `OCaml/Vm/Runtime.lean` | A0 | **defined**: `runtimeLayout freeList`, with ordinary nonempty-nursery bounds |
-| `Loaded` at real entry states (boot witnesses, small programs) | `OCaml/Vm/Boot/` | A0 | **open, stopped on ELF text mismatch**: 7,484 bytes / 5,954 words differ; execution/projection certificate remains open |
+| `Loaded` at real entry states (boot witnesses, small programs) | `OCaml/Vm/Boot/` | A0 | **open**: fixed `.embed` makes the runtime image identical across programs; execution/projection certificate remains open |
 | `WhileMinObservation.bounds`, `noPending`, `nursery_not_empty` | `OCaml/Vm/Boot/WhileMinObservation.lean` | A0 | **proved for the observed projection**; machine-to-projection certificate remains open |
 | `ArmSim` entry + F1 arms (134 opcodes) + halt | `OCaml/Vm/Sim/` | A1 | open; strengthened `Running` contract excludes the HTIF obstruction |
 | **`ocamlrun_refinement_Statement L B`** (Layer A, F1) | `OCaml/Theorems.lean` | A1 (by `ocamlrun_refinement_of_arms`) | open; derives unchanged from the repaired arm contract |
@@ -97,21 +97,18 @@ ELF pin).
 
 **Startup status (lane a0-boot):** `runtimeLayout freeList` now permits a
 nonempty nursery, as authorized by the foreman. At the measured `while_min`
-cut (step 4,269,235), `young_ptr = 0x80283ce0` and
-`young_alloc_end = 0x80284000`: 800 nursery bytes remain allocated.
+cut (step 4,269,257), `young_ptr = 0x80281ce0` and
+`young_alloc_end = 0x80282000`: 800 nursery bytes remain allocated.
 `startup_byt.c` promotes globals without resetting the nursery, then
 `caml_sys_init` allocates argv. The small projection checks are
 kernel-checked; the reachable Sail-state certificate is still open.
 
-**ELF stop:** `scripts/check_boot_text.py` and
-`results/boot/while_min-text.json` record 7,484 differing `.text` bytes
-across 5,954 instruction words between the pinned proof ELF and the
-standalone `while_min` ELF. Do not reuse a0-lib code/decode facts for that
-ELF. The second-layout path is stopped per the foreman's instruction;
-the pinned ELF is unchanged. `OCaml.Layout` currently parameterizes only
-`runtimeOk`, while representation addresses are global generated constants.
-The fallback is to move embedded program data after BSS, with approval
-before replacing the pinned ELF. See `docs/lanes/a0-boot.md`.
+**One runtime image:** program bytes, argv and environment are in a fixed
+`.embed` section. The while/while_min/compiler images have identical
+`.text`, `.rodata`, `.data` and `.tohost`, so all use one generated Layout
+and the same A0 library code facts. The migration regenerates decode tables,
+library layouts/pins/specifications, arm pilots and OCaml image pins. The
+boot projection is freshly observed; the `Loaded` witness remains open.
 
 * Done in P0: the 66 byte-identical library functions (`scripts/retarget_syi.py`).
 

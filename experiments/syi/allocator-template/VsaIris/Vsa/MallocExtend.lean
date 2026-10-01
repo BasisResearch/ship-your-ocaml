@@ -42,7 +42,7 @@ theorem ExtCall.of_post {C : MCtx} (O : MOK C) {R Rc R' : Nat → BitVec 64} {Mt
     (hc19 : Rc 19 = R 19) (Sp : ExtSpills C Mt Mp nb topsz) (P : SbrkPost Rc R' Mp M brk') :
     ExtCall C Mt nb topsz brk' R' M := by
   have hlo := O.sp.lo; have hhi := O.sp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   obtain ⟨hgo1, hgo2⟩ := Hp.glob_off
   simp only [mHead, brkAddr] at hgo1 hgo2
   have hs2 : (Rc 2).toNat = C.s.toNat - 96 := by rw [hc2, F.sp]; sx_addr
@@ -102,7 +102,7 @@ theorem ext_setup {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
   have ha4 := T.a4; have ha5 := T.a5; have ht1 := T.t1; have ha6 := G.a6
   have hs2 := F.sp
   have hlo := O.sp.lo; have hhi := O.sp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hsal := O.sp.align
   have hs2n : (R 2).toNat = C.s.toNat - 96 := by rw [hs2]; sx_addr
   obtain ⟨hgo1, hgo2⟩ := Hp.glob_off
@@ -142,7 +142,7 @@ theorem ext_setup {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
   · simpa only [brkAddr] using hbrk
   · omega
   · unfold heapEnd; omega
-  · unfold Vsa.Sim.tohostAddr; omega
+  · unfold Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · omega
   · omega
   · decide
@@ -225,7 +225,7 @@ theorem ext_top {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {M : Mem}
     AW C.live C.S C.Q 0x80004a8c#64 R M by
   have HH := Hp.heap.heap.heap
   have hlo := O.sp.lo; have hhi := O.sp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hsal := O.sp.align
   have hs2 := E.frame.sp
   have hs2n : (R 2).toNat = C.s.toNat - 96 := by rw [hs2]; sx_addr
@@ -362,7 +362,7 @@ theorem ext_null {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt M : Mem}
     AW C.live C.S C.Q 0x80004a8c#64 R M := by
   have HH := Hp.heap.heap.heap
   have hlo := O.sp.lo; have hhi := O.sp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hsal := O.sp.align
   have hs2 := E.frame.sp
   have hs2n : (R 2).toNat = C.s.toNat - 96 := by rw [hs2]; sx_addr

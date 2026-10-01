@@ -221,14 +221,14 @@ theorem spStackMem_s1 (m0 : Std.ExtHashMap Nat (BitVec 8)) (vsp r v8 v9 : BitVec
       (Pin8_writeMap8 _ _ _))
 
 theorem spStackMem_ssloaded (m0 : Std.ExtHashMap Nat (BitVec 8)) (vsp r v8 v9 : BitVec 64)
-    (hsp : 0x80067650 ≤ vsp.toNat) (h : Vsa.Sim.Code.__ssputs_rLoaded m0) :
+    (hsp : 0x80062010 ≤ vsp.toNat) (h : Vsa.Sim.Code.__ssputs_rLoaded m0) :
     Vsa.Sim.Code.__ssputs_rLoaded (spStackMem m0 vsp r v8 v9) := by
   unfold spStackMem
   exact ssputs_writeMap8_ss _ _ _ (by omega) (ssputs_writeMap8_ss _ _ _ (by omega)
     (ssputs_writeMap8_ss _ _ _ (by omega) h))
 
 theorem spStackMem_mvloaded (m0 : Std.ExtHashMap Nat (BitVec 8)) (vsp r v8 v9 : BitVec 64)
-    (hsp : 0x80067650 ≤ vsp.toNat) (h : MemmoveLoaded m0) :
+    (hsp : 0x80062010 ≤ vsp.toNat) (h : MemmoveLoaded m0) :
     MemmoveLoaded (spStackMem m0 vsp r v8 v9) := by
   unfold spStackMem
   exact memmove_writeMap8_ss _ _ _ (by omega) (memmove_writeMap8_ss _ _ _ (by omega)
@@ -383,7 +383,7 @@ theorem tr_ssputs_head (g : (R : Register) → Option (RegisterType R))
   intro c hPre
   obtain ⟨hgood, hloaded, hmvloaded, hpc, ⟨va0, ha0⟩, ha1, ha2, ha3, hra, hsp, hv8, hv9,
     ⟨vmi, hmi⟩, htick, hreg, hcursor, hcap4, hbs, hcaplt, hmemeq, hframe⟩ := hPre
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   have hn1 := hreg.mv.n1
   have hn31 := hreg.mv.n31
   have hplo := hreg.p_lo
@@ -755,7 +755,7 @@ theorem tr_ssputs_tail (g : (R : Register) → Option (RegisterType R))
   obtain ⟨hgood, hloaded, hpc, hsp, hx8p, hx9n, htick, hreg, hcopied, hcursor, hcap4,
     hsra, hss0, hss1, hmframe, hframe⟩ := hSt
   obtain ⟨vmi, hmi⟩ := hgood.minstret
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   have hn1 := hreg.mv.n1
   have hn31 := hreg.mv.n31
   have hplo := hreg.p_lo

@@ -78,7 +78,7 @@ theorem tr_ssprint_iter2 (g : (R : Register) → Option (RegisterType R))
     hsave_ra, hsave_s0, hsave_s1, hsave_s2, hsave_s3, hsave_s4, hsave_s5, hmframeS,
     hgframe⟩ := hSt
   obtain ⟨vmi, hmi⟩ := hgood.minstret
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   have hn11 := hreg.n1_1; have hn131 := hreg.n1_31
   have hn21 := hreg.n2_1; have hn231 := hreg.n2_31
   have hqlo := hreg.q_lo; have hqhi := hreg.q_hi

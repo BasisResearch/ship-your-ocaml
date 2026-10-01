@@ -5,10 +5,11 @@ import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.ElfDecode.Part001
 import Vsa.Sim.ElfDecode.Part002
 import Vsa.Sim.ElfDecode.Part004
+import Vsa.Sim.ElfDecode.Part005
 import Vsa.Sim.ElfDecode.Part019
 import Vsa.Sim.ElfDecode.Part029
 import Vsa.Sim.ElfDecode.Part037
-import Vsa.Sim.ElfDecode.Part040
+import Vsa.Sim.ElfDecode.Part039
 import Vsa.Sim.ElfDecode.Part041
 import Vsa.Sim.ElfDecode.Part042
 import Vsa.Sim.ElfDecode.Part044
@@ -18,12 +19,12 @@ import Vsa.Sim.ElfDecode.Part051
 import Vsa.Sim.ElfDecode.Part052
 import Vsa.Sim.ElfDecode.Part059
 import Vsa.Sim.ElfDecode.Part077
-import Vsa.Sim.ElfDecode.Part082
 import Vsa.Sim.ElfDecode.Part107
-import Vsa.Sim.ElfDecode.Part140
-import Vsa.Sim.ElfDecode.Part191
-import Vsa.Sim.ElfDecode.Part198
-import Vsa.Sim.ElfDecode.Part202
+import Vsa.Sim.ElfDecode.Part141
+import Vsa.Sim.ElfDecode.Part176
+import Vsa.Sim.ElfDecode.Part192
+import Vsa.Sim.ElfDecode.Part199
+import Vsa.Sim.ElfDecode.Part203
 import Vsa.Sim.ElfDecode.Part205
 import Vsa.Sim.ElfDecode.Part225
 import Vsa.Sim.ElfDecode.Part227
@@ -39,8 +40,8 @@ def ax_800381a8 : List BBlock := [{ body := [mkLine 0x800381a8#64 0x01043603#32]
 def ax_800381ac : List BBlock := [{ body := [mkLine 0x800381ac#64 0x00c73823#32], term := none }]
 def ax_800381b0 : List BBlock := [{ body := [mkLine 0x800381b0#64 0x00f30633#32], term := none }]
 def ax_800381b4 : List BBlock := [{ body := [mkLine 0x800381b4#64 0x40f80733#32], term := none }]
-def ax_800381b8 : List BBlock := [{ body := [mkLine 0x800381b8#64 0x00031597#32], term := none }]
-def ax_800381bc : List BBlock := [{ body := [mkLine 0x800381bc#64 0x04c5b823#32], term := none }]
+def ax_800381b8 : List BBlock := [{ body := [mkLine 0x800381b8#64 0x0002c597#32], term := none }]
+def ax_800381bc : List BBlock := [{ body := [mkLine 0x800381bc#64 0x9ec5b423#32], term := none }]
 def ax_800381c0 : List BBlock := [{ body := [mkLine 0x800381c0#64 0x00176713#32], term := none }]
 def ax_800381c4 : List BBlock := [{ body := [mkLine 0x800381c4#64 0x00e63423#32], term := none }]
 def ax_800381c8 : List BBlock := [{ body := [mkLine 0x800381c8#64 0x00833703#32], term := none }]
@@ -133,7 +134,7 @@ theorem st_800381b4 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_800381b8 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x800381bc#64 (upd R 11 ((0x800381b8#64) + (sign_extend (m := 64) ((0x00031#20) +++ (0x000#12))))) Mt) :
+    (hk : AW live S Q 0x800381bc#64 (upd R 11 ((0x800381b8#64) + (sign_extend (m := 64) ((0x0002c#20) +++ (0x000#12))))) Mt) :
     AW live S Q 0x800381b8#64 R Mt :=
   swp_step ax_800381b8 [11] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -146,11 +147,11 @@ theorem st_800381b8 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_800381bc {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hea : StOK ((R 11) + sign_extend (m := 64) (0x050#12)).toNat 8)
-    (hS : ∀ b ∈ accAddrs ((R 11) + sign_extend (m := 64) (0x050#12)).toNat 8, S b)
-    (hk : AW live S Q 0x800381c0#64 R (writeLog Mt [(((R 11) + sign_extend (m := 64) (0x050#12)).toNat, 8, (R 12))])) :
+    (hea : StOK ((R 11) + sign_extend (m := 64) (0x9e8#12)).toNat 8)
+    (hS : ∀ b ∈ accAddrs ((R 11) + sign_extend (m := 64) (0x9e8#12)).toNat 8, S b)
+    (hk : AW live S Q 0x800381c0#64 R (writeLog Mt [(((R 11) + sign_extend (m := 64) (0x9e8#12)).toNat, 8, (R 12))])) :
     AW live S Q 0x800381bc#64 R Mt :=
-  swp_step ax_800381bc [11, 12] [] [] (accAddrs ((R 11) + sign_extend (m := 64) (0x050#12)).toNat 8) 0 rfl (by decide) (by decide) (by decide)
+  swp_step ax_800381bc [11, 12] [] [] (accAddrs ((R 11) + sign_extend (m := 64) (0x9e8#12)).toNat 8) 0 rfl (by decide) (by decide) (by decide)
     (fun a ha => outL_single _ ha) hlive
     (fun m hm hLD => by unfold ax_800381bc ChainFacts; chain_facts hm with "VsaIris.Sym.alloc_at_"; exact hea)
     (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) (fun a h => by cases h)

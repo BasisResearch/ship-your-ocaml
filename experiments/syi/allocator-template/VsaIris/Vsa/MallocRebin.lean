@@ -245,7 +245,7 @@ theorem rebin {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt Mt' : Mem}
     have hA3 := binfd_toNat hj8 (by omega)
     have hglo := binAt_geo (sz / 8) hjn
     refine st_8000493c O.live ?_ ?_ ?_
-    · sx_norm; rw [hA3]; unfold LdOK Vsa.Sim.tohostAddr; omega
+    · sx_norm; rw [hA3]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · sx_norm; rw [hA3]; exact O.bin_link hjn (.inl rfl)
     sx_norm
     rw [hA3, ldv_at hfdJ' _ rfl]
@@ -301,7 +301,7 @@ theorem rebin {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt Mt' : Mem}
     sx_norm
 
     refine st_80004960 O.live ?_ ?_ ?_
-    · sx_norm; rw [hA3]; unfold StOK Vsa.Sim.tohostAddr; unfold binAt avAddr at hglo ⊢; omega
+    · sx_norm; rw [hA3]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; unfold binAt avAddr at hglo ⊢; omega
     · sx_norm; rw [hA3]; exact O.bin_link hjn (.inl rfl)
     sx_norm
     rw [hA3]
@@ -310,7 +310,7 @@ theorem rebin {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt Mt' : Mem}
       simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]
       unfold binAt avAddr at holoc; omega
     refine st_80004964 O.live ?_ ?_ ?_
-    · sx_norm; rw [hEo]; unfold StOK Vsa.Sim.tohostAddr; unfold binAt avAddr at holoc; omega
+    · sx_norm; rw [hEo]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; unfold binAt avAddr at holoc; omega
     · sx_norm; rw [hEo]; exact O.foot (fun k hk => by
         have := hof16 (24 + k) (by omega) (by omega)
         rwa [show oldfirst + (24 + k) = oldfirst + 24 + k by omega] at this)
@@ -321,7 +321,7 @@ theorem rebin {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt Mt' : Mem}
       (w0 := BitVec.ofNat 64 oldfirst) (w1 := BitVec.ofNat 64 (binAt (sz / 8))) (w3 := R 15)
       (by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hoflt])
       (by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hofflt]) hor ha5
-    have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+    have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
     have hoV := Hp.off_stack (fun k hk => hvf k (by omega))
     have hoV' := Hp.off_stack (fun k hk => by
       have := hvf (8 + k) (by omega); rwa [show v + 16 + (8 + k) = v + 24 + k by omega] at this)

@@ -23,10 +23,9 @@ import Vsa.Sim.ElfDecode.Part067
 import Vsa.Sim.ElfDecode.Part078
 import Vsa.Sim.ElfDecode.Part097
 import Vsa.Sim.ElfDecode.Part119
-import Vsa.Sim.ElfDecode.Part131
-import Vsa.Sim.ElfDecode.Part136
-import Vsa.Sim.ElfDecode.Part137
-import Vsa.Sim.ElfDecode.Part146
+import Vsa.Sim.ElfDecode.Part132
+import Vsa.Sim.ElfDecode.Part138
+import Vsa.Sim.ElfDecode.Part147
 import Vsa.Sim.ElfDecode.Part224
 import Vsa.Sim.ElfDecode.Part227
 

@@ -1,9 +1,9 @@
 image: {'functions': 1325, 'insts': 85031}
 reachable from main: {'functions': 1129, 'insts': 78529}
-interpreter-reachable: {'functions': 1010, 'insts': 70171, 'c_primitives': 403}
+interpreter-reachable: {'functions': 1010, 'insts': 70170, 'c_primitives': 403}
 address-taken functions: 484; indirect jump sites: 234
-site-classifier: 65315/78529 (83.2%) in an existing class
-  unsupported by mnemonic: auipc 3367, slli 2306, andi 1063, srli 1011, addw 846, lui 669, slliw 635, or 589, srai 473, and 372, srliw 237, xor 231, ori 188, jalr 164, zext.b 155
+site-classifier: 73754/78529 (93.9%) in an existing class
+  unsupported by mnemonic: auipc 3368, lui 669, jalr 164, lh 104, snez 83, lhu 78, sh 69, sllw 56, seqz 39, srlw 30, sltiu 26, sraw 21, slti 20, slt 16, lwu 11
 caml_interprete: 1966 insts, 149 opcodes, 147 distinct arm entries
   largest arms: CLOSUREREC 152, CLOSURE 94, MAKEBLOCK 86, MAKEFLOATBLOCK 74, RAISE 74, RERAISE 74, GRAB 72, RAISE_NOTRACE 63, APPTERM 58, APPLY3 51, APPTERM3 49, APPLY2 48
   median arm 7 insts; 1899 insts reachable from some arm, 111 shared by several (GC/raise/signal/callback paths)

@@ -6,7 +6,7 @@
     "text_sha256": "f2efeb0c0f9b3f22f40d591f32d830ca7888e69b869baa9035bcbd99e22afcfc"
   },
   "candidate": {
-    "elf_sha256": "3042b1cd6df22ee3d70aeff2de67e4aa93c8479088cb6f2bf67ca847d5ce5e1c",
+    "elf_sha256": "531bf31f37a6ed946d5be253ccad54d021ecada04869e5fa0681d66a27be0283",
     "text_base": 2147483648,
     "text_size": 340352,
     "text_sha256": "f2efeb0c0f9b3f22f40d591f32d830ca7888e69b869baa9035bcbd99e22afcfc"

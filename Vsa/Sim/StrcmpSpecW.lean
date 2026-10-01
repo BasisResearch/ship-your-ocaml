@@ -36,11 +36,11 @@ f20..f58: lane compare (slli ×3 probes, srli 0x30, sub, zext.b, bnez/ret)
 fa4/fac/fb8: NUL-word exits (addi a0/a1; bne a2,a3 → byte loop 0xf84; else li a0,0; ret)
 ```
 
-The mask at `0x80067578` (= auipc `0x80042b30 + 0x14000 = 0x80067b30`, then
-`ld ...,-560` = `-0x230` → `0x80067578`) holds the 8 bytes `7f 7f 7f 7f 7f 7f 7f 7f`
+The mask at `0x80061f30` (= auipc `0x80042b30 + 0x14000 = 0x80061b30`, then
+`ld ...,-560` = `-0x230` → `0x80061f30`) holds the 8 bytes `7f 7f 7f 7f 7f 7f 7f 7f`
 (`= magic7f`, the same constant `StrlenMagic` uses). This is BEYOND the strcmp code
 region `[0x80042b20,0x80042c4c)`, so `StrcmpLoaded` does NOT cover it — the word-path
-precondition carries 8 explicit byte-pin hypotheses at `0x80067578`.
+precondition carries 8 explicit byte-pin hypotheses at `0x80061f30`.
 -/
 
 open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail ConcurrencyInterfaceV1 Vsa
@@ -56,18 +56,18 @@ set_option maxRecDepth 1000000
 
 namespace Vsa.Sim
 
-/-! ## The rodata magic-mask constant (`0x80067578`)
+/-! ## The rodata magic-mask constant (`0x80061f30`)
 
 Address derivation: `auipc a5, 0x14` at `0x80042b30` gives
-`a5 = 0x80042b30 + (0x14 <<< 12) = 0x80042b30 + 0x14000 = 0x80067b30`.
-`ld a5, -560(a5)` reads at `0x80067b30 + sext(0xdd0) = 0x80067b30 - 560 = 0x80067578`.
+`a5 = 0x80042b30 + (0x14 <<< 12) = 0x80042b30 + 0x14000 = 0x80061b30`.
+`ld a5, -560(a5)` reads at `0x80061b30 + sext(0xdd0) = 0x80061b30 - 560 = 0x80061f30`.
 The 8 bytes there are all `0x7f`, so the loaded word is `magic7f`. -/
 
 /-- The rodata mask address. -/
-abbrev maskAddr : Nat := 0x80067578
+abbrev maskAddr : Nat := 0x80061f30
 
 /-- The 8 mask bytes at `maskAddr` are pinned to `0x7f` (extracted from the ELF
-`.rodata` at `0x80067578`: `7f 7f 7f 7f 7f 7f 7f 7f`). NOT implied by `StrcmpLoaded`
+`.rodata` at `0x80061f30`: `7f 7f 7f 7f 7f 7f 7f 7f`). NOT implied by `StrcmpLoaded`
 (the mask lives past the code region), so the word-path precondition carries it. -/
 def MaskPinned (m0 : Std.ExtHashMap Nat (BitVec 8)) : Prop :=
   m0[maskAddr]? = some (0x7f#8) ∧ m0[maskAddr + 1]? = some (0x7f#8) ∧
@@ -75,23 +75,23 @@ def MaskPinned (m0 : Std.ExtHashMap Nat (BitVec 8)) : Prop :=
   m0[maskAddr + 4]? = some (0x7f#8) ∧ m0[maskAddr + 5]? = some (0x7f#8) ∧
   m0[maskAddr + 6]? = some (0x7f#8) ∧ m0[maskAddr + 7]? = some (0x7f#8)
 
-/-- The `auipc`-computed base `0x80042b30 + (0x14 <<< 12)` equals `0x80067b30`. -/
+/-- The `auipc`-computed base `0x80042b30 + (0x14 <<< 12)` equals `0x80061b30`. -/
 theorem auipc_mask_base :
-    ((0x80042b30#64) + sign_extend (m := 64) ((0x00025#20) +++ 0x000#12)) = (0x80067b30#64 : BitVec 64) := by
+    ((0x80042b30#64) + sign_extend (m := 64) ((0x0001f#20) +++ 0x000#12)) = (0x80061b30#64 : BitVec 64) := by
   apply BitVec.eq_of_toNat_eq; decide
 
-/-- The `ld` effective address `0x80067b30 + sext(0xdd0) = 0x80067578`. -/
+/-- The `ld` effective address `0x80061b30 + sext(0xdd0) = 0x80061f30`. -/
 theorem mask_ld_addr :
-    ((0x80067b30#64 : BitVec 64) + sign_extend (m := 64) (0xa48#12)).toNat = maskAddr := by
+    ((0x80061b30#64 : BitVec 64) + sign_extend (m := 64) (0x400#12)).toNat = maskAddr := by
   decide
 
 /-- The total 8-byte load at `maskAddr` yields `magic7f`, given the 8 pinned bytes.
 Each byte of `ldBytesT` (`getD 0`) is `0x7f`; the little-endian assembly is `magic7f`. -/
 theorem ldBytesT_mask (σ : SequentialState RegisterType trivialChoiceSource)
     (hmask : MaskPinned σ.mem) :
-    ldBytesT σ (0x80067578#64) = magic7f := by
+    ldBytesT σ (0x80061f30#64) = magic7f := by
   obtain ⟨h0, h1, h2, h3, h4, h5, h6, h7⟩ := hmask
-  have hshow : ldBytesT σ (0x80067578#64) =
+  have hshow : ldBytesT σ (0x80061f30#64) =
     ((((((((σ.mem[maskAddr + 7]?).getD 0) +++ ((σ.mem[maskAddr + 6]?).getD 0)) +++
      ((σ.mem[maskAddr + 5]?).getD 0)) +++ ((σ.mem[maskAddr + 4]?).getD 0)) +++
      ((σ.mem[maskAddr + 3]?).getD 0)) +++ ((σ.mem[maskAddr + 2]?).getD 0)) +++
@@ -308,7 +308,7 @@ theorem wcmp_load_bounds (p : BitVec 64) (len n : Nat) (hreg : StrcmpWRegion p l
   have hhi := hreg.hi
   have hh := hreg.htif
   have halgn := hreg.align
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   refine ⟨htn, ?_, ?_, ?_, ?_⟩
   all_goals rw [sext0_add, htn]
   · omega
@@ -692,7 +692,7 @@ theorem wg0_dispatch (g : (R : Register) → Option (RegisterType R))
 **Complete & kernel-checked (`propext, Classical.choice, Quot.sound` only):**
 
 * **The rodata magic-mask finding.** The `auipc a5,0x14; ld a5,-560(a5)` pair loads
-  from `0x80067578` (= `0x80042b30 + 0x14000 - 0x230`), the label `<mask>` in the
+  from `0x80061f30` (= `0x80042b30 + 0x14000 - 0x230`), the label `<mask>` in the
   disassembly. Its 8 bytes are `7f 7f 7f 7f 7f 7f 7f 7f` (`= magic7f`, extracted from
   `c/while-riscv-htif.elf` `.rodata`). This address lies BEYOND the strcmp code region
   `[0x80042b20, 0x80042c4c)`, so `StrcmpLoaded` does NOT cover it — hence `MaskPinned`
@@ -782,7 +782,7 @@ strcmpSpecSign csa csb` target as the byte path), so it plugs into the SAME
    `Nat.le_trans`/`Nat.lt_or_ge`.
 2. The mask is a RODATA load, NOT ALU-built (unlike `StrlenSpec`'s `lui/addi/slli/add`
    `magic7f`). Its bytes are past the code region, so `StrcmpLoaded` does NOT pin them
-   — a dedicated `MaskPinned` (8 byte-pins at `0x80067578`) is MANDATORY in `P`.
+   — a dedicated `MaskPinned` (8 byte-pins at `0x80061f30`) is MANDATORY in `P`.
    `ldBytesT_mask`'s `hshow`-then-`decide` closes the little-endian assembly to
    `magic7f`.
 3. The site computes `t0 = ((wa&&&m)+m) ||| (wa|||m)`, but `strlenWordVal` is

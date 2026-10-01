@@ -14,17 +14,17 @@ namespace OCaml.Vm.Boot.WhileMinObservation
 open Vsa.Machine
 
 /-- SHA-256 of the measured ELF (not the pinned while.ml ELF). -/
-def elfSha256 : String := "d008c1189aa093505ac4d92e84e340f6467e65fd8d83eaf402ff810c0665d924"
+def elfSha256 : String := "3042b1cd6df22ee3d70aeff2de67e4aa93c8479088cb6f2bf67ca847d5ce5e1c"
 
-def cutStep : Nat := 4269235
+def cutStep : Nat := 4269257
 
 def observed : RuntimeFields where
-  youngStart := 0x80084000
-  youngEnd := 0x80284000
-  allocStart := 0x80084000
-  allocEnd := 0x80284000
-  youngPtr := 0x80283ce0
-  youngLimit := 0x80084000
+  youngStart := 0x80082000
+  youngEnd := 0x80282000
+  allocStart := 0x80082000
+  allocEnd := 0x80282000
+  youngPtr := 0x80281ce0
+  youngLimit := 0x80082000
   somethingToDo := 0
 
 theorem bounds : MinorHeapBounds observed := by

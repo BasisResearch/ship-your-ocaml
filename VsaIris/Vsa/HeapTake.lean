@@ -134,7 +134,7 @@ theorem _root_.Vsa.Sim.DlHeap.HeapAt.headers (h : HeapAt m H (fun e => e ∈ H) 
   exact (walk_next_of hw).1
 
 theorem binAt_geo (j : Nat) (hj : j < numBins) :
-    binAt j % 8 = 0 ∧ 0x800691f8 ≤ binAt j ∧ binAt j + 32 ≤ 0x80069a08 := by
+    binAt j % 8 = 0 ∧ 0x80063b90 ≤ binAt j ∧ binAt j + 32 ≤ 0x800643a0 := by
   unfold binAt avAddr; unfold numBins at hj; omega
 
 end Geo
@@ -341,7 +341,7 @@ theorem PHeapAt.take {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat} {chun
     fun a hf ha h1 h2 h3 => take_keep hag hf ha (by omega) (by omega) (by omega) h1 h2 h3
 
   have hloc : ∀ x, (x = binAt i ∨ ∃ cx ∈ chunks, cx.addr = x ∧ cx.inuse = false ∧ x ∈ bins i) →
-      (0x800691f8 + 16 ≤ x ∧ x + 32 ≤ 0x80069a08) ∨ (heapStart ≤ x ∧ x + 32 ≤ top) := by
+      (0x80063b90 + 16 ≤ x ∧ x + 32 ≤ 0x800643a0) ∨ (heapStart ≤ x ∧ x + 32 ≤ top) := by
     rintro x (rfl | ⟨cx, hcx, rfl, _, _⟩)
     · have := binAt_geo i hi; unfold binAt avAddr at *; exact .inl (by omega)
     · have := HH.walk.chunk_bounds cx hcx; exact .inr ⟨this.1, by omega⟩
@@ -350,14 +350,14 @@ theorem PHeapAt.take {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat} {chun
   have hnxlo : heapStart + 32 ≤ c.addr + c.size := by omega
 
   have gkeep : ∀ a, (∀ k, k < 8 → allocGlobal (a + k)) → a % 8 = 0 →
-      (a + 8 ≤ 0x800691f8 + 32 ∨ 0x80069a08 ≤ a) → a + 8 ≤ heapStart →
+      (a + 8 ≤ 0x80063b90 + 32 ∨ 0x800643a0 ≤ a) → a + 8 ≤ heapStart →
       read64 m' a = read64 m a := by
     intro a hg ha hr hh
     refine keep a (fun k hk => .inl (hg k hk)) ha ?_ ?_ ?_ <;> (unfold heapStart at *; omega)
-  have gAv : ∀ a, 0x800691f8 ≤ a → a + 8 ≤ 0x80069a08 → ∀ k, k < 8 → allocGlobal (a + k) :=
+  have gAv : ∀ a, 0x80063b90 ≤ a → a + 8 ≤ 0x800643a0 → ∀ k, k < 8 → allocGlobal (a + k) :=
     fun a h1 h2 k hk => .inl ⟨by omega, by omega⟩
-  have gHi : ∀ a, 0x80069f78 ≤ a → a + 8 ≤ 0x8006a3a0 →
-      (a + 8 ≤ 0x80069f78 + 8 ∨ 0x8006a388 ≤ a) → ∀ k, k < 8 → allocGlobal (a + k) := by
+  have gHi : ∀ a, 0x80064910 ≤ a → a + 8 ≤ 0x80064d38 →
+      (a + 8 ≤ 0x80064910 + 8 ∨ 0x80064d20 ≤ a) → ∀ k, k < 8 → allocGlobal (a + k) := by
     intro a h1 h2 hpart k hk
     unfold allocGlobal InRange
     omega

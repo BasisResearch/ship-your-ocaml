@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Compare the pinned runtime's .text to the standalone while_min runtime.
+"""Compare fixed runtime sections to a program-specific embedded image.
 
-Default mode requires identical text. --write-pin records the comparison;
+Default mode requires identical text/rodata/data/tohost. --write-pin records the comparison;
 --check-pin verifies that recorded evidence, including a recorded mismatch.
 Neither pin mode asserts that different binaries share machine-code proofs.
 """
@@ -16,15 +16,15 @@ ROOT = Path(__file__).resolve().parents[1]
 TOOLS = Path.home() / "toolchains/xpack-riscv-none-elf-gcc-15.2.0-1/bin"
 
 
-def text_section(elf):
+def text_section(elf, section=".text"):
     headers = subprocess.check_output(
         [str(TOOLS / "riscv-none-elf-objdump"), "-h", str(elf)], text=True)
     row = next(line.split() for line in headers.splitlines()
-               if len(line.split()) > 2 and line.split()[1] == ".text")
+               if len(line.split()) > 2 and line.split()[1] == section)
     with tempfile.TemporaryDirectory(prefix="boot-text-") as tmp:
         dst = Path(tmp) / "text.bin"
         subprocess.run([str(TOOLS / "riscv-none-elf-objcopy"), "--dump-section",
-                        f".text={dst}", str(elf), str(Path(tmp) / "copy.elf")], check=True)
+                        f"{section}={dst}", str(elf), str(Path(tmp) / "copy.elf")], check=True)
         data = dst.read_bytes()
     return int(row[3], 16), data
 
@@ -52,6 +52,18 @@ def main():
               "first_differences": [
                   {"offset": i, "proof": a[i], "candidate": b[i]}
                   for i in differences[:32]]}
+    record["fixed_data_sections"] = {}
+    for name in (".rodata", ".data", ".tohost"):
+        x, xs = text_section(args.proof, name)
+        y, ys = text_section(args.candidate, name)
+        record["fixed_data_sections"][name] = {
+            "proof_base": x, "candidate_base": y,
+            "proof_size": len(xs), "candidate_size": len(ys),
+            "proof_sha256": hashlib.sha256(xs).hexdigest(),
+            "candidate_sha256": hashlib.sha256(ys).hexdigest(),
+            "identical": x == y and xs == ys}
+    record["runtime_identical"] = record["identical"] and all(
+        row["identical"] for row in record["fixed_data_sections"].values())
     rendered = json.dumps(record, indent=2) + "\n"
     if args.write_pin:
         args.write_pin.parent.mkdir(parents=True, exist_ok=True)
@@ -59,9 +71,9 @@ def main():
     elif args.check_pin:
         if json.loads(args.check_pin.read_text()) != record:
             raise SystemExit("boot text comparison differs from pin")
-    elif not record["identical"]:
+    elif not record["runtime_identical"]:
         print(rendered, end="")
-        raise SystemExit("boot .text differs: do not reuse code facts for this ELF")
+        raise SystemExit("fixed runtime sections differ: do not reuse image facts for this ELF")
     print(rendered, end="")
 
 

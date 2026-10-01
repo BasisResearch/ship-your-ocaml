@@ -170,8 +170,8 @@ theorem PHeapAt.absorb {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
     Kg _ fun k hk => .inl ⟨by unfold binblocksAddr avAddr; omega, by unfold binblocksAddr avAddr; omega⟩
   have kTop : read64 m' topAddr = read64 m topAddr :=
     Kg _ fun k hk => .inl ⟨by unfold topAddr avAddr; omega, by unfold topAddr avAddr; omega⟩
-  have gHi : ∀ a, 0x80069f78 ≤ a → a + 8 ≤ 0x8006a3a0 →
-      (a + 8 ≤ 0x80069f78 + 8 ∨ 0x8006a388 ≤ a) → ∀ k, k < 8 → allocGlobal (a + k) := by
+  have gHi : ∀ a, 0x80064910 ≤ a → a + 8 ≤ 0x80064d38 →
+      (a + 8 ≤ 0x80064910 + 8 ∨ 0x80064d20 ≤ a) → ∀ k, k < 8 → allocGlobal (a + k) := by
     intro a h1 h2 hpart k hk
     unfold allocGlobal InRange
     omega
@@ -334,10 +334,10 @@ theorem PHeapAt.toTop {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
           (by unfold topAddr avAddr; omega),
         keep _ (fun k hk => by have := hff (8 + k) (by omega); rwa [show c.addr + 16 + (8 + k) =
           c.addr + 24 + k by omega] at this) (.inl (by omega)) (by unfold topAddr avAddr; omega)⟩
-  have gAv : ∀ w, 0x800691f8 ≤ w → w + 8 ≤ 0x80069a08 → ∀ k, k < 8 → allocGlobal (w + k) :=
+  have gAv : ∀ w, 0x80063b90 ≤ w → w + 8 ≤ 0x800643a0 → ∀ k, k < 8 → allocGlobal (w + k) :=
     fun w h1 h2 k hk => .inl ⟨by omega, by omega⟩
-  have gHi : ∀ w, 0x80069f78 ≤ w → w + 8 ≤ 0x8006a3a0 →
-      (w + 8 ≤ 0x80069f78 + 8 ∨ 0x8006a388 ≤ w) → ∀ k, k < 8 → allocGlobal (w + k) := by
+  have gHi : ∀ w, 0x80064910 ≤ w → w + 8 ≤ 0x80064d38 →
+      (w + 8 ≤ 0x80064910 + 8 ∨ 0x80064d20 ≤ w) → ∀ k, k < 8 → allocGlobal (w + k) := by
     intro w h1 h2 hpart k hk
     unfold allocGlobal InRange
     omega
@@ -527,8 +527,8 @@ theorem PHeapAt.release {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
     · exact .inl (List.mem_singleton.mp h1)
 
   have hnodeLoc : ∀ k, 0 < k → k < numBins → ∀ y, (y = binAt k ∨ y ∈ bins k) →
-      y % 8 = 0 ∧ ((y = binAt k ∧ 0x80069208 ≤ y ∧ y + 32 ≤ 0x80069a08) ∨
-        (0x800827a0 ≤ y ∧ (y + 32 ≤ v ∨ v + sz + d.size ≤ y) ∧
+      y % 8 = 0 ∧ ((y = binAt k ∧ 0x80063ba0 ≤ y ∧ y + 32 ≤ 0x800643a0) ∨
+        (0x8007d140 ≤ y ∧ (y + 32 ≤ v ∨ v + sz + d.size ≤ y) ∧
           ∀ o, 16 ≤ o → o < 32 → vsaFoot H (y + o))) := by
     intro k hk0 hk y hy
     rcases hy with rfl | hy
@@ -542,8 +542,8 @@ theorem PHeapAt.release {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
       rcases hfree_loc c hc hf with ⟨_, h1⟩ | ⟨_, h1⟩
       · exact .inl (by omega)
       · exact .inr h1
-  have hpN : pred % 8 = 0 ∧ ((0x80069208 ≤ pred ∧ pred + 32 ≤ 0x80069a08) ∨
-      (0x800827a0 ≤ pred ∧ (pred + 32 ≤ v ∨ v + sz + d.size ≤ pred))) := by
+  have hpN : pred % 8 = 0 ∧ ((0x80063ba0 ≤ pred ∧ pred + 32 ≤ 0x800643a0) ∨
+      (0x8007d140 ≤ pred ∧ (pred + 32 ≤ v ∨ v + sz + d.size ≤ pred))) := by
     obtain ⟨h16, ⟨_, h1, h2⟩ | ⟨h1, h2, _⟩⟩ := hnodeLoc j hj0 hj pred hpm
     · exact ⟨h16, .inl ⟨h1, h2⟩⟩
     · exact ⟨h16, .inr ⟨h1, h2⟩⟩
@@ -555,8 +555,8 @@ theorem PHeapAt.release {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
   have hbs : ∀ b', (b' = top ∨ ∃ c ∈ cs₁ ++ ⟨v, sz, true⟩ :: d :: cs₃, c.addr = b') →
       ∀ k, 0 < k → k < 32 → b' ≠ succ + k :=
     fun b' hb k hk0 hk => HH.bnd_ne_node hj hsnode hb k hk0 hk
-  have hsN : succ % 8 = 0 ∧ ((0x80069208 ≤ succ ∧ succ + 32 ≤ 0x80069a08) ∨
-      (0x800827a0 ≤ succ ∧ (succ + 32 ≤ v ∨ v + sz + d.size ≤ succ))) := by
+  have hsN : succ % 8 = 0 ∧ ((0x80063ba0 ≤ succ ∧ succ + 32 ≤ 0x800643a0) ∨
+      (0x8007d140 ≤ succ ∧ (succ + 32 ≤ v ∨ v + sz + d.size ≤ succ))) := by
     obtain ⟨h16, ⟨_, h1, h2⟩ | ⟨h1, h2, _⟩⟩ := hnodeLoc j hj0 hj succ hsm
     · exact ⟨h16, .inl ⟨h1, h2⟩⟩
     · exact ⟨h16, .inr ⟨h1, h2⟩⟩
@@ -571,13 +571,13 @@ theorem PHeapAt.release {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
     unfold RelW binblocksAddr avAddr
     unfold binblocksAddr avAddr at h5
     omega
-  have Kg : ∀ w, (∀ k, k < 8 → allocGlobal (w + k)) → w % 8 = 0 → w + 8 ≤ 0x800827a0 →
+  have Kg : ∀ w, (∀ k, k < 8 → allocGlobal (w + k)) → w % 8 = 0 → w + 8 ≤ 0x8007d140 →
       w ≠ pred + 16 → w ≠ succ + 24 → w ≠ binblocksAddr → read64 m' w = read64 m w := by
     intro w hg hw8 hw h3 h4 h5
     exact keep w (fun k hk => .inl (hg k hk)) hw8 (by omega) (by omega) h3 h4 h5 (by omega)
       (by omega)
-  have Kg' : ∀ w, (∀ k, k < 8 → allocGlobal (w + k)) → w % 8 = 0 → 0x80069a08 ≤ w →
-      w + 8 ≤ 0x800827a0 → read64 m' w = read64 m w := by
+  have Kg' : ∀ w, (∀ k, k < 8 → allocGlobal (w + k)) → w % 8 = 0 → 0x800643a0 ≤ w →
+      w + 8 ≤ 0x8007d140 → read64 m' w = read64 m w := by
     intro w hg hw8 h1 h2
     refine Kg w hg hw8 h2 ?_ ?_ (by unfold binblocksAddr avAddr; omega)
     · rcases hpN with ⟨_, ⟨_, _⟩ | ⟨_, _ | _⟩⟩ <;> (try unfold heapStart at *) <;> (try unfold topAddr avAddr at *) <;> omega
@@ -807,10 +807,10 @@ theorem PHeapAt.release {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
       exact ⟨Kfd k hk0 hk a (hnode a ha) (hoNe k hk0 hk hkj a (hnode a ha)).1,
         Kbk k hk0 hk b (hnode b hb) (hoNe k hk0 hk hkj b (hnode b hb)).2⟩
 
-  have gAv : ∀ w, 0x800691f8 ≤ w → w + 8 ≤ 0x80069a08 → ∀ k, k < 8 → allocGlobal (w + k) :=
+  have gAv : ∀ w, 0x80063b90 ≤ w → w + 8 ≤ 0x800643a0 → ∀ k, k < 8 → allocGlobal (w + k) :=
     fun w h1 h2 k hk => .inl ⟨by omega, by omega⟩
-  have gHi : ∀ w, 0x80069f78 ≤ w → w + 8 ≤ 0x8006a3a0 →
-      (w + 8 ≤ 0x80069f78 + 8 ∨ 0x8006a388 ≤ w) → ∀ k, k < 8 → allocGlobal (w + k) := by
+  have gHi : ∀ w, 0x80064910 ≤ w → w + 8 ≤ 0x80064d38 →
+      (w + 8 ≤ 0x80064910 + 8 ∨ 0x80064d20 ≤ w) → ∀ k, k < 8 → allocGlobal (w + k) := by
     intro w h1 h2 hpart k hk
     unfold allocGlobal InRange
     omega

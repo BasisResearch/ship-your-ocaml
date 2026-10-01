@@ -116,8 +116,8 @@ theorem caml_oldify_oneX9a70FRow (sp : BitVec 64) (s0 : BitVec 64) (s1 : BitVec 
    (0x80009aa4#64, 0x03713423#32),  -- sd s7,40(sp)
    (0x80009aa8#64, 0x03813023#32),  -- sd s8,32(sp)
    (0x80009aac#64, 0x01913c23#32),  -- sd s9,24(sp)
-   (0x80009ab0#64, 0x00061917#32),  -- auipc s2,0x61
-   (0x80009ab4#64, 0x8c090913#32),  -- addi s2,s2,-1856
+   (0x80009ab0#64, 0x0005b917#32),  -- auipc s2,0x5b
+   (0x80009ab4#64, 0x25890913#32),  -- addi s2,s2,600
    (0x80009ab8#64, 0x0f800993#32),  -- li s3,248
    (0x80009abc#64, 0x0fa00a13#32),  -- li s4,250
    (0x80009ac0#64, 0x0f900a93#32),  -- li s5,249
@@ -2108,11 +2108,11 @@ theorem caml_oldify_oneX9c8cRow (s1 : BitVec 64) (s2 : BitVec 64) (lds : List (L
 
 /- The `caml_oldify_oneX9c98` span body `0x80009c98 → 0x80009cb0` (j-terminated, 1 block(s)), decoded from the pinned runtime ELF. -/
 #derive_case caml_oldify_oneX9c98Seg chain
-  [(0x80009c98#64, 0x00060717#32),  -- auipc a4,0x60
-   (0x80009c9c#64, 0x4c873703#32),  -- ld a4,1224(a4)
+  [(0x80009c98#64, 0x0005b717#32),  -- auipc a4,0x5b
+   (0x80009c9c#64, 0xe6073703#32),  -- ld a4,-416(a4)
    (0x80009ca0#64, 0x00f53023#32),  -- sd a5,0(a0)
-   (0x80009ca4#64, 0x00060797#32),  -- auipc a5,0x60
-   (0x80009ca8#64, 0x4a87be23#32),  -- sd s0,1212(a5)
+   (0x80009ca4#64, 0x0005b797#32),  -- auipc a5,0x5b
+   (0x80009ca8#64, 0xe487ba23#32),  -- sd s0,-428(a5)
    (0x80009cac#64, 0x00e53423#32)]  -- sd a4,8(a0)
     terminator ⟨0x80009cb0#64, 0xf51ff06f#32, 0x6f#8, 0xf0#8, 0x1f#8, 0xf5#8, .j, 0, 0, 0#13, 0x1fff50#21, 0#12⟩
 

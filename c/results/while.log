@@ -2,25 +2,25 @@
  "elf": "ocamlrun-riscv-htif.elf",
  "exit": 0,
  "fuel_out": false,
- "steps": 4571586,
+ "steps": 4571381,
  "output": "55\n2500\n36\n",
- "cut_point_step": 4499328,
- "first_minor_gc_step": 4485844,
+ "cut_point_step": 4499123,
+ "first_minor_gc_step": 4485636,
  "first_minor_gc_after_cut": null,
  "minor_gcs": 1,
  "major_slices": 0,
  "minor_gcs_after_cut": 0,
  "first": {
-  "caml_main": 50216,
-  "caml_init_gc": 56409,
-  "caml_interprete": 124133,
-  "caml_load_code": 124488,
-  "caml_build_primitive_table": 389348,
-  "caml_input_val": 4460155,
-  "caml_oldify_mopup": 4485844,
-  "caml_do_exit": 4571513,
-  "_exit": 4571581,
-  "_exit.sd": 4571585
+  "caml_main": 50217,
+  "caml_init_gc": 56439,
+  "caml_interprete": 124192,
+  "caml_load_code": 124547,
+  "caml_build_primitive_table": 389407,
+  "caml_input_val": 4459947,
+  "caml_oldify_mopup": 4485636,
+  "caml_do_exit": 4571308,
+  "_exit": 4571376,
+  "_exit.sd": 4571380
  },
  "counts": {
   "caml_main": 1,
@@ -33,5 +33,6 @@
   "caml_do_exit": 1,
   "_exit": 1,
   "_exit.sd": 1
- }
+ },
+ "elf_sha256": "b055163e2280efbec1d16c255afccf31e23315f9f37a7ffcba5bbed0850b1c99"
 }

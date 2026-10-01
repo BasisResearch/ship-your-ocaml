@@ -51,7 +51,7 @@ structure StrRead (Dt : Mem) (DA : List Nat) (S : Nat → Prop) (Mt : Mem) (a le
   nul : g (a + len) = 0
   lo : 0x80000000 ≤ a
   hi : a + len + 8 ≤ 0x100000000
-  htif : a + len + 8 ≤ 0x80067600 ∨ 0x80067608 ≤ a
+  htif : a + len + 8 ≤ 0x80061fc0 ∨ 0x80061fc8 ≤ a
 
 def SLKeep (R' R : Nat → BitVec 64) : Prop :=
   ∀ z, z ≠ 10 → z ≠ 11 → z ≠ 12 → z ≠ 13 → z ≠ 14 → z ≠ 15 → R' z = R z

@@ -13,7 +13,7 @@ theorem mHeap_entry {C : MCtx} {m1 : Mem} {s : BitVec 64} {mv : Nat → BitVec 8
     MHeap C C.Mt0 brkv chunks bins := by
   subst hs0
   have hs : 512 ≤ C.s.toNat := by
-    have := hsp.lo; unfold allocHeadroom Vsa.Sim.tohostAddr at this; omega
+    have := hsp.lo; unfold allocHeadroom Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at this; omega
   have hag : ∀ a, vsaFoot C.H a → C.Mt0[a]? = m1[a]? := by
     intro a ha
     rw [hMt]; unfold mt0

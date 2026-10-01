@@ -12,8 +12,8 @@ structure BinNbrs (C : MCtx) (Mt : Mem) (chunks : List Chunk) (bins : Nat → Li
     (k x sz pred succ : Nat) : Prop where
   pred8 : pred % 8 = 0
   succ8 : succ % 8 = 0
-  predLoc : pred = binAt k ∨ (0x800827a0 ≤ pred ∧ pred + 32 ≤ C.top0)
-  succLoc : succ = binAt k ∨ (0x800827a0 ≤ succ ∧ succ + 32 ≤ C.top0)
+  predLoc : pred = binAt k ∨ (0x8007d140 ≤ pred ∧ pred + 32 ≤ C.top0)
+  succLoc : succ = binAt k ∨ (0x8007d140 ≤ succ ∧ succ + 32 ≤ C.top0)
   predFoot : ∀ o, 16 ≤ o → o < 32 → vsaFoot C.H (pred + o)
   succFoot : ∀ o, 16 ≤ o → o < 32 → vsaFoot C.H (succ + o)
   predNx : x + sz ≠ pred + 8
@@ -41,7 +41,7 @@ theorem binNbrs {C : MCtx} {Mt : Mem} {brkv : Nat} {chunks : List Chunk}
     · exact .inr (by rw [hmem]; exact List.mem_append_right _ (List.mem_cons_of_mem _ h1))
     · exact .inl (List.mem_singleton.mp h1)
   have hloc : ∀ y, (y = binAt k ∨ y ∈ bins k) →
-      y % 8 = 0 ∧ (y = binAt k ∨ (0x800827a0 ≤ y ∧ y + 32 ≤ C.top0)) := by
+      y % 8 = 0 ∧ (y = binAt k ∨ (0x8007d140 ≤ y ∧ y + 32 ≤ C.top0)) := by
     intro y hy
     obtain ⟨hy16, hyn⟩ := HH.node hk0 hk hy
     refine ⟨hy16, ?_⟩
@@ -103,7 +103,7 @@ theorem bw_take_ret {C : MCtx} {Mt : Mem} {brkv : Nat} {chunks : List Chunk}
   have N := binNbrs Hp hk0 hk hmem hfree hpred hsucc
   have hps := N.links_ne
   have hp16 := N.pred8; have hs16 := N.succ8; have hbp := N.predNx; have hbs := N.succNx
-  have hlo := hsp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := hsp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hb := HH.walk.chunk_bounds _ hfree
   have htle := HH.top_le; have hbrk := HH.brk_le
   unfold heapStart at hb; unfold heapEnd at hbrk
@@ -165,7 +165,7 @@ theorem bw_take_ret {C : MCtx} {Mt : Mem} {brkv : Nat} {chunks : List Chunk}
   have hps := N.links_ne
   have hp16 := N.pred8; have hs16 := N.succ8; have hpsep := N.predSep; have hssep := N.succSep
   have hploc := N.predLoc; have hsloc := N.succLoc
-  have hlo := hsp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := hsp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hxb := HH.walk.chunk_bounds _ hfree
   have htle := HH.top_le; have hbrk := HH.brk_le
   unfold heapStart at hxb; unfold heapEnd at hbrk
@@ -186,7 +186,7 @@ theorem bw_take_ret {C : MCtx} {Mt : Mem} {brkv : Nat} {chunks : List Chunk}
     Classical.byContradiction fun hc => Hp.disj a (by unfold mHead; omega) (by omega) ha
   have hoS := hns (succ + 24) (by have := N.succFoot 24 (by omega) (by omega); simpa using this)
   have hoP := hns (pred + 16) (by have := N.predFoot 16 (by omega) (by omega); simpa using this)
-  have hoB := hns (0x800691f8 + 16 * 1 + 16) (.inl (.inl ⟨by omega, by omega⟩))
+  have hoB := hns (0x80063b90 + 16 * 1 + 16) (.inl (.inl ⟨by omega, by omega⟩))
   unfold mHead at hoff
   obtain ⟨cs₁, cs₂, hsp'⟩ := List.append_of_mem hfree
   have Hp0 := Hp.heap
@@ -325,7 +325,7 @@ structure BW (C : MCtx) (Mt : Mem) (brkv : Nat) (chunks : List Chunk) (bins : Na
   nb31 : nb < 2 ^ 31
   b1 : bins 1 = []
   a4 : (R 14).toNat = nb
-  a6 : R 16 = 0x800691f8#64
+  a6 : R 16 = 0x80063b90#64
   t4 : (R 29).toNat = binAt 1
   s0 : R 8 = reentV
 
@@ -355,7 +355,7 @@ theorem bw_take {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem} {brkv 
   have hgk := binAt_geo k hk
   unfold binAt avAddr at hgk hploc hsloc
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := W.frame.sp
   have hs2n : (R 2).toNat = C.s.toNat - 96 := by rw [hs2]; sx_addr
   have hring := (binList_iff_ring.1 (HH.bins_list k (by omega) hk)).1
@@ -382,14 +382,14 @@ theorem bw_take {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem} {brkv 
   sx_norm
   have hEn : (R 15 + R 12 + 8#64).toNat = x + sz + 8 := by sx_addr
   refine st_800377fc O.live ?_ ?_ ?_
-  · sx_norm; rw [hEn]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hEn]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hEn]; exact O.foot_at hnxf _ rfl
   sx_norm
   rw [ldv_at hdr _ hEn]
 
   have hEf : (R 15 + 16#64).toNat = x + 16 := by sx_addr
   refine st_80037800 O.live ?_ ?_ ?_
-  · sx_norm; rw [hEf]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hEf]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hEf]; exact O.foot (fun k hk => hvf _ (by omega) (by omega))
   sx_norm
   rw [ldv_at hfd _ hEf]
@@ -397,7 +397,7 @@ theorem bw_take {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem} {brkv 
   refine st_80037808 O.live ?_
 
   refine st_8003780c O.live ?_ ?_ ?_
-  · sx_norm; rw [hEn]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hEn]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hEn]; exact O.foot_at hnxf _ rfl
   sx_norm
   rw [hEn]
@@ -405,7 +405,7 @@ theorem bw_take {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem} {brkv 
   have hEs : (BitVec.ofNat 64 succ + 24#64).toNat = succ + 24 := by
     rw [BitVec.toNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hsuccl]; simp; omega
   refine st_80037810 O.live ?_ ?_ ?_
-  · sx_norm; rw [hEs]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hEs]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hEs]; exact O.foot (fun k hk => by
       have := N.succFoot (24 + k) (by omega) (by omega)
       rwa [show succ + (24 + k) = succ + 24 + k by omega] at this)
@@ -413,7 +413,7 @@ theorem bw_take {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem} {brkv 
   rw [hEs]
   have hEp : (R 13 + 16#64).toNat = pred + 16 := by sx_addr
   refine st_80037814 O.live ?_ ?_ ?_
-  · sx_norm; rw [hEp]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hEp]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hEp]; exact O.foot (fun k hk => by
       have := N.predFoot (16 + k) (by omega) (by omega)
       rwa [show pred + (16 + k) = pred + 16 + k by omega] at this)
@@ -464,7 +464,7 @@ theorem bw_split2 {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem} {brk
   have hgk := binAt_geo k hk
   unfold binAt avAddr at hgk hploc hsloc
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := F1.sp
   have hs2n : (R 2).toNat = C.s.toNat - 96 := by rw [hs2]; sx_addr
   have hFV := foot_free_span B hfree rfl
@@ -540,10 +540,10 @@ theorem bw_split {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem} {brkv
   have ha4 := W.a4; have ha6 := W.a6; have ht4 := W.t4
   have hgk := binAt_geo k hk
   have hg1 := binAt_geo 1 (by unfold numBins; decide)
-  have hb1 : binAt 1 = 2147914248 := by unfold binAt avAddr; rfl
+  have hb1 : binAt 1 = 2147892128 := by unfold binAt avAddr; rfl
   unfold binAt avAddr at hgk hploc hsloc
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := W.frame.sp
   have hs2n : (R 2).toNat = C.s.toNat - 96 := by rw [hs2]; sx_addr
   have hring := (binList_iff_ring.1 (HH.bins_list k (by omega) hk)).1
@@ -555,7 +555,7 @@ theorem bw_split {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem} {brkv
 
   have hEf : ((R 15) + sign_extend (m := 64) (0x010#12)).toNat = x + 16 := by sx_addr
   refine st_80037b44 O.live ?_ ?_ ?_
-  · rw [hEf]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hEf]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEf]; exact O.foot (fun k hk => hFV _ (by omega) (by omega))
   rw [ldv_at hfd _ hEf]
 
@@ -568,14 +568,14 @@ theorem bw_split {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem} {brkv
   have hEs : (BitVec.ofNat 64 succ + 24#64).toNat = succ + 24 := by
     rw [BitVec.toNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hsuccl]; simp; omega
   refine st_80037b50 O.live ?_ ?_ ?_
-  · sx_norm; rw [hEs]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hEs]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hEs]; exact O.foot (fun k hk => by
       have := N.succFoot (24 + k) (by omega) (by omega)
       rwa [show succ + (24 + k) = succ + 24 + k by omega] at this)
   sx_norm
   have hEp : (R 13 + 16#64).toNat = pred + 16 := by sx_addr
   refine st_80037b54 O.live ?_ ?_ ?_
-  · sx_norm; rw [hEp]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hEp]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hEp]; exact O.foot (fun k hk => by
       have := N.predFoot (16 + k) (by omega) (by omega)
       rwa [show pred + (16 + k) = pred + 16 + k by omega] at this)
@@ -703,7 +703,7 @@ theorem bw_member {C : MCtx} (O : MOK C) {R0 : Nat → BitVec 64} {Mt : Mem} {br
       have := congrArg BitVec.toNat he; rw [h6', h13] at this; exact this.symm
     have hEh : ((R 13) + sign_extend (m := 64) (0x008#12)).toNat = cya + 8 := by sx_addr
     refine st_800377dc O.live ?_ ?_ ?_
-    · rw [hEh]; unfold LdOK Vsa.Sim.tohostAddr; omega
+    · rw [hEh]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [hEh]; exact O.foot (fun k hk => by
         have := hfoot (8 + k) (by omega) (by omega)
         rwa [show cya + (8 + k) = cya + 8 + k by omega] at this)
@@ -712,7 +712,7 @@ theorem bw_member {C : MCtx} (O : MOK C) {R0 : Nat → BitVec 64} {Mt : Mem} {br
     sx_norm
     have hEb : (R 13 + 24#64).toNat = cya + 24 := by sx_addr
     refine st_800377e4 O.live ?_ ?_ ?_
-    · sx_norm; rw [hEb]; unfold LdOK Vsa.Sim.tohostAddr; omega
+    · sx_norm; rw [hEb]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · sx_norm; rw [hEb]; exact O.foot (fun k hk => by
         have := hfoot (24 + k) (by omega) (by omega)
         rwa [show cya + (24 + k) = cya + 24 + k by omega] at this)

@@ -128,10 +128,10 @@ theorem addr_m1 {x : Nat} (h1 : 1 ≤ x) (h2 : x < 2 ^ 64) :
 theorem mm_byteLoop {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt : Mem}
     {DA : List Nat} {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     (d src len : Nat) (sb : Nat → BitVec 8) (R0 : Nat → BitVec 64) (Mt0 : Mem)
-    (hd1 : 0x800691f8 ≤ d) (hdd1 : dst ≤ d) (hdd2 : d + len ≤ dst + n)
+    (hd1 : 0x80063b90 ≤ d) (hdd1 : dst ≤ d) (hdd2 : d + len ≤ dst + n)
     (hdn : dst + n ≤ 0x100000000)
     (hs1 : 0x80000000 ≤ src) (hs2 : src + len ≤ 0x100000000)
-    (hs3 : src + len ≤ 0x80067600 ∨ 0x800691f8 ≤ src)
+    (hs3 : src + len ≤ 0x80061fc0 ∨ 0x80063b90 ≤ src)
     (hdisj : src + len ≤ d ∨ d + len ≤ src)
     (hsrc : ∀ i, i < len → ReadB Dt DA (snpS s dst n) Mt0 (src + i) (sb i))
     (hal : (R0 1).toNat % 4 = 0)
@@ -205,12 +205,12 @@ theorem ofNat_add_ofNat (x y : Nat) : BitVec.ofNat 64 x + BitVec.ofNat 64 y = Bi
   apply BitVec.eq_of_toNat_eq; simp only [BitVec.toNat_add, BitVec.toNat_ofNat]; omega
 
 structure MoveGeom (s dst n d src len : Nat) : Prop where
-  d_lo : 0x800691f8 ≤ d
+  d_lo : 0x80063b90 ≤ d
   d_in : dst ≤ d ∧ d + len ≤ dst + n
   dst_hi : dst + n ≤ 0x100000000
   s_lo : 0x80000000 ≤ src
   s_hi : src + len ≤ 0x100000000
-  s_htif : src + len ≤ 0x80067600 ∨ 0x800691f8 ≤ src
+  s_htif : src + len ≤ 0x80061fc0 ∨ 0x80063b90 ≤ src
   disj : src + len ≤ d ∨ d + len ≤ src
 
 theorem nw_gen {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat → Prop}

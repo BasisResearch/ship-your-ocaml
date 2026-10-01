@@ -59,7 +59,7 @@ theorem free_pro {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {q n brkv : Nat}
       AW C.live C.S C.Q 0x80007398#64 R' Mt) :
     AW C.live C.S C.Q 0x80007350#64 R C.Mt0 := by
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := E.sp
   have hs2n : (R 2).toNat = C.s.toNat := by rw [hs2]
   have HH := Hp.heap.heap.heap
@@ -96,7 +96,7 @@ theorem free_pro {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {q n brkv : Nat}
     rw [BitVec.toNat_add, hq]; simp; omega
   have hxf := fun k hk => vsaFoot_of_cons (foot_header Hp1.heap.heap (.inr ⟨c, hc, rfl⟩) k hk)
   refine st_8000737c O.live ?_ ?_ ?_
-  · sx_norm; rw [hE8]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hE8]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hE8]; exact O.foot hxf
   sx_norm
   rw [hE8, ldv_at hdr0r _ rfl]
@@ -111,7 +111,7 @@ theorem free_pro {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {q n brkv : Nat}
     rw [BitVec.toNat_add, hx, hsz]; omega
   have hnf := fun k hk => vsaFoot_of_cons (foot_header Hp1.heap.heap (HH1.end_bnd hc) k hk)
   refine st_8000738c O.live ?_ ?_ ?_
-  · sx_norm; rw [BitVec.toNat_add, hnx]; unfold LdOK Vsa.Sim.tohostAddr; simp; omega
+  · sx_norm; rw [BitVec.toNat_add, hnx]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; simp; omega
   · sx_norm; rw [BitVec.toNat_add, hnx]; simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]
     rw [Nat.mod_eq_of_lt (by omega)]; exact O.foot hnf
   sx_norm
@@ -162,7 +162,7 @@ theorem free_epi {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt : Mem} (F : 
     (hframe : ∀ a, ¬ MWin C.H C.s a → Mt[a]? = C.Mt0[a]?) :
     AW C.live C.S C.Q 0x80007434#64 R Mt := by
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := F.sp
   have hs2n : (R 2).toNat = C.s.toNat - 32 := by
     rw [hs2, BitVec.toNat_add]

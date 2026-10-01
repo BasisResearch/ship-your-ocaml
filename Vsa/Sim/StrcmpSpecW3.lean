@@ -1428,7 +1428,7 @@ theorem entry_word (g : (R : Register) → Option (RegisterType R))
   have hframe_4 : ∀ R, NotWrittenStrcmp R → σ4.regs.get? R = g R :=
     fun R hR => (sframe_bnottaken hobs4 R hR).trans (hframe_3 R hR)
   obtain ⟨vmi4, hmi4'⟩ := obs_bnottaken_minstret hobs4
-  -- eb0: auipc a5,0x14 → a5 = 0x80067b30
+  -- eb0: auipc a5,0x14 → a5 = 0x80061b30
   obtain ⟨σ5, i5, hs5, hi5, hG5, hmem5, hobs5⟩ :=
     site_80042b30 σ4 i4 (c.steps + 1 + 1 + 1 + 1) (0x80042b30#64) vmi4 hG4 hpc4 hmi4' (by rw [hmem4, hmem3, hmem2, hmem1]; exact hloaded) rfl hi4
   have hpc5 : σ5.regs.get? Register.PC = some (0x80042b34#64 : BitVec 64) := by
@@ -1437,7 +1437,7 @@ theorem entry_word (g : (R : Register) → Option (RegisterType R))
   have ha1_5 := obs_alu_other' hobs5 Register.x11 (by decide) ha1_4
   have ht2_5 := obs_alu_other' hobs5 Register.x7 (by decide) ht2_4
   have hra_5 := obs_alu_other' hobs5 Register.x1 (by decide) hra_4
-  have ha5_5 : σ5.regs.get? Register.x15 = some (0x80067b30#64 : BitVec 64) := by
+  have ha5_5 : σ5.regs.get? Register.x15 = some (0x80061b30#64 : BitVec 64) := by
     have := obs_alu_rd hobs5 (by decide) (by decide) (by decide) (by decide) (by decide)
     rwa [auipc_mask_base] at this
   have hframe_5 : ∀ R, NotWrittenStrcmp R → σ5.regs.get? R = g R :=
@@ -1447,7 +1447,7 @@ theorem entry_word (g : (R : Register) → Option (RegisterType R))
   -- eb4: ld a5,-560(a5) [mask] → a5 = magic7f
   have hloadbnds := mask_ld_addr
   obtain ⟨σ6, i6, hs6, hi6, hG6, hmem6, hobs6⟩ :=
-    site_80042b34 σ5 i5 (c.steps + 1 + 1 + 1 + 1 + 1) (0x80042b34#64) vmi5 (0x80067b30#64)
+    site_80042b34 σ5 i5 (c.steps + 1 + 1 + 1 + 1 + 1) (0x80042b34#64) vmi5 (0x80061b30#64)
       hG5 hpc5 hmi5' ha5_5 (by rw [hmem5, hmem4, hmem3, hmem2, hmem1]; exact hloaded) rfl
       (by rw [mask_ld_addr]; decide) (by rw [mask_ld_addr]; decide)
       (by rw [mask_ld_addr]; left; decide) (by rw [mask_ld_addr]; decide) hi5
@@ -1460,9 +1460,9 @@ theorem entry_word (g : (R : Register) → Option (RegisterType R))
   have ha5_6 : σ6.regs.get? Register.x15 = some magic7f := by
     have := obs_alu_rd hobs6 (by decide) (by decide) (by decide) (by decide) (by decide)
     rw [show (sign_extend (m := 64)
-        (ldBytesT (afterNextPC (afterPrelude σ5) (0x80042b34#64)) ((0x80067b30#64) + sign_extend (m := 64) (0xa48#12))))
+        (ldBytesT (afterNextPC (afterPrelude σ5) (0x80042b34#64)) ((0x80061b30#64) + sign_extend (m := 64) (0x400#12))))
         = magic7f from by
-      have haddr : ((0x80067b30#64 : BitVec 64) + sign_extend (m := 64) (0xa48#12)) = (0x80067578#64 : BitVec 64) := by
+      have haddr : ((0x80061b30#64 : BitVec 64) + sign_extend (m := 64) (0x400#12)) = (0x80061f30#64 : BitVec 64) := by
         apply BitVec.eq_of_toNat_eq; rw [mask_ld_addr]; decide
       rw [haddr, ldBytesT_mask _ (by
         rw [mem_afterNextPC, mem_afterPrelude, hmem5, hmem4, hmem3, hmem2, hmem1, hmem]; exact hmaskpin),
@@ -1569,7 +1569,7 @@ coincide ⇒ result `0`; different ⇒ the byte loop runs over the suffixes `csa
 -- discipline: allow(R6-anon-projection-tower) mechanically retargeted source projection
    `.2.2.2.2.2.2.2.2.1` — count per site.
 7. The mask's HTIF disjunct is the LEFT one (`maskAddr + 8 ≤ tohostAddr`): `maskAddr`
-   `0x80067578` is BELOW `tohostAddr` `0x80067600`.
+   `0x80061f30` is BELOW `tohostAddr` `0x80061fc0`.
 -/
 
 end Vsa.Sim

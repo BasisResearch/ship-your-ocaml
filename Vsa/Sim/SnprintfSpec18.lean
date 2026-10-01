@@ -851,7 +851,7 @@ theorem mv_src_bounds (dst src : BitVec 64) (n : Nat) (hreg : MvRegions dst src 
   have htn : (src + BitVec.ofNat 64 i).toNat = src.toNat + i :=
     ptr_toNat src i (by have := hreg.src_nowrap; omega)
   have hlo := hreg.src_lo; have hhi := hreg.src_hi; have hwin := hreg.src_win
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   refine ⟨htn, by rw [htn]; omega, by rw [htn]; omega, Or.inr (by rw [htn]; omega)⟩
 
 theorem mv_dst_bounds (dst src : BitVec 64) (n : Nat) (hreg : MvRegions dst src n)
@@ -864,7 +864,7 @@ theorem mv_dst_bounds (dst src : BitVec 64) (n : Nat) (hreg : MvRegions dst src 
       = dst.toNat + i := by
     rw [sbAddr_succ_raw dst i]; exact ptr_toNat dst i (by have := hreg.dst_nowrap; omega)
   have hlo := hreg.dst_lo; have hhi := hreg.dst_hi; have hwin := hreg.dst_win
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   refine ⟨by rw [hsb]; omega, by rw [hsb]; omega, by rw [hsb]; omega, hsb⟩
 
 /-- The write key `dst.toNat + i` is above the `memmove` code (dst is above the
@@ -872,7 +872,7 @@ HTIF window, which sits above `0x80042780`). -/
 theorem mv_key_above (dst src : BitVec 64) (n : Nat) (hreg : MvRegions dst src n) (i : Nat) :
     0x80042780 ≤ dst.toNat + i := by
   have := hreg.dst_win
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   omega
 
 /-! ## The config-level state predicate at the loop head `0x8004268c`

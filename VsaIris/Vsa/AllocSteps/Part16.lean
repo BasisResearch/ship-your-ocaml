@@ -3,7 +3,8 @@ import VsaIris.Vsa.AllocRun
 import Vsa.Sim.BridgeSeg
 import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.ElfDecode.Part000
-import Vsa.Sim.ElfDecode.Part005
+import Vsa.Sim.ElfDecode.Part004
+import Vsa.Sim.ElfDecode.Part006
 import Vsa.Sim.ElfDecode.Part016
 import Vsa.Sim.ElfDecode.Part018
 import Vsa.Sim.ElfDecode.Part019
@@ -15,20 +16,20 @@ import Vsa.Sim.ElfDecode.Part049
 import Vsa.Sim.ElfDecode.Part051
 import Vsa.Sim.ElfDecode.Part065
 import Vsa.Sim.ElfDecode.Part070
-import Vsa.Sim.ElfDecode.Part075
+import Vsa.Sim.ElfDecode.Part074
 import Vsa.Sim.ElfDecode.Part077
 import Vsa.Sim.ElfDecode.Part079
 import Vsa.Sim.ElfDecode.Part084
 import Vsa.Sim.ElfDecode.Part089
+import Vsa.Sim.ElfDecode.Part090
 import Vsa.Sim.ElfDecode.Part091
 import Vsa.Sim.ElfDecode.Part094
 import Vsa.Sim.ElfDecode.Part102
 import Vsa.Sim.ElfDecode.Part112
-import Vsa.Sim.ElfDecode.Part126
-import Vsa.Sim.ElfDecode.Part171
-import Vsa.Sim.ElfDecode.Part182
-import Vsa.Sim.ElfDecode.Part188
-import Vsa.Sim.ElfDecode.Part195
+import Vsa.Sim.ElfDecode.Part172
+import Vsa.Sim.ElfDecode.Part183
+import Vsa.Sim.ElfDecode.Part189
+import Vsa.Sim.ElfDecode.Part196
 
 /-! The allocator's step table, `0x80037d24` to `0x80037da0` (one lemma `st_<pc>` per
 instruction; see `scripts/syi/gen_alloc_steps.py`). -/
@@ -66,8 +67,8 @@ def ax_80037d7c : List BBlock := [{ body := [mkLine 0x80037d7c#64 0x0018951b#32]
 def ax_80037d80 : List BBlock := [{ body := [mkLine 0x80037d80#64 0x07778e1b#32], term := none }]
 def ax_80037d84 : List BBlock := [{ body := [mkLine 0x80037d84#64 0x00351513#32], term := none }]
 def ax_80037d88 : List BBlock := [⟨[], some (⟨0x80037d88#64, 0x931ff06f#32, 0x6f#8, 0xf0#8, 0x1f#8, 0x93#8, .j, 0, 0, 0x0#13, 0x1ff930#21, 0#12⟩ : TInstr)⟩]
-def ax_80037d8c : List BBlock := [{ body := [mkLine 0x80037d8c#64 0x0004ae97#32], term := none }]
-def ax_80037d90 : List BBlock := [{ body := [mkLine 0x80037d90#64 0x2c4e8e93#32], term := none }]
+def ax_80037d8c : List BBlock := [{ body := [mkLine 0x80037d8c#64 0x00045e97#32], term := none }]
+def ax_80037d90 : List BBlock := [{ body := [mkLine 0x80037d90#64 0xc5ce8e93#32], term := none }]
 def ax_80037d94 : List BBlock := [{ body := [mkLine 0x80037d94#64 0x000eb683#32], term := none }]
 def ax_80037d98 : List BBlock := [{ body := [mkLine 0x80037d98#64 0x00d586b3#32], term := none }]
 def ax_80037d9c : List BBlock := [{ body := [mkLine 0x80037d9c#64 0x00deb023#32], term := none }]
@@ -462,7 +463,7 @@ theorem st_80037d88 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_80037d8c {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x80037d90#64 (upd R 29 ((0x80037d8c#64) + (sign_extend (m := 64) ((0x0004a#20) +++ (0x000#12))))) Mt) :
+    (hk : AW live S Q 0x80037d90#64 (upd R 29 ((0x80037d8c#64) + (sign_extend (m := 64) ((0x00045#20) +++ (0x000#12))))) Mt) :
     AW live S Q 0x80037d8c#64 R Mt :=
   swp_step ax_80037d8c [29] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -475,7 +476,7 @@ theorem st_80037d8c {live : Nat → Prop} {S : Nat → Prop}
 theorem st_80037d90 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x80037d94#64 (upd R 29 ((R 29) + sign_extend (m := 64) (0x2c4#12))) Mt) :
+    (hk : AW live S Q 0x80037d94#64 (upd R 29 ((R 29) + sign_extend (m := 64) (0xc5c#12))) Mt) :
     AW live S Q 0x80037d90#64 R Mt :=
   swp_step ax_80037d90 [29] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive

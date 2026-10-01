@@ -11,74 +11,6 @@ variable (σ : SequentialState RegisterType trivialChoiceSource)
   (hsec : σ.regs.get? Register.mseccfg = some (0#64))
 include hmisa hpriv hsec
 
-theorem decode_0184b503 :
-    (Functions.ext_decode 25474307#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 9#5, regidx.Regidx 10#5, false, 8)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_0184b583 :
-    (Functions.ext_decode 25474435#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 9#5, regidx.Regidx 11#5, false, 8)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_0184b703 :
-    (Functions.ext_decode 25474819#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 9#5, regidx.Regidx 14#5, false, 8)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_0184b783 :
-    (Functions.ext_decode 25474947#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 9#5, regidx.Regidx 15#5, false, 8)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_0184b903 :
-    (Functions.ext_decode 25475331#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 9#5, regidx.Regidx 18#5, false, 8)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_0184ba83 :
-    (Functions.ext_decode 25475715#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 9#5, regidx.Regidx 21#5, false, 8)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_01850393 :
-    (Functions.ext_decode 25494419#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 10#5, regidx.Regidx 7#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_01850413 :
-    (Functions.ext_decode 25494547#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 10#5, regidx.Regidx 8#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_01850513 :
-    (Functions.ext_decode 25494803#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 10#5, regidx.Regidx 10#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_01850593 :
-    (Functions.ext_decode 25494931#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 10#5, regidx.Regidx 11#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_01850693 :
-    (Functions.ext_decode 25495187#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 10#5, regidx.Regidx 13#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_018507b3 :
-    (Functions.ext_decode 25495475#32).run σ = .ok (instruction.RTYPE (regidx.Regidx 24#5, regidx.Regidx 10#5, regidx.Regidx 15#5, rop.ADD)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_01850913 :
-    (Functions.ext_decode 25495827#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 10#5, regidx.Regidx 18#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_01850993 :
-    (Functions.ext_decode 25495955#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 10#5, regidx.Regidx 19#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_01850a13 :
-    (Functions.ext_decode 25496083#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 10#5, regidx.Regidx 20#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_01850e13 :
-    (Functions.ext_decode 25497107#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 10#5, regidx.Regidx 28#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_01851463 :
-    (Functions.ext_decode 25498723#32).run σ = .ok (instruction.BTYPE (8#13, regidx.Regidx 24#5, regidx.Regidx 10#5, bop.BNE)) σ :=
-  decodeW σ hmisa hpriv hsec
-
 theorem decode_01851713 :
     (Functions.ext_decode 25499411#32).run σ = .ok (instruction.SHIFTIOP (24#6, regidx.Regidx 10#5, regidx.Regidx 14#5, sop.SLLI)) σ :=
   decodeW σ hmisa hpriv hsec
@@ -521,6 +453,74 @@ theorem decode_01893683 :
 
 theorem decode_01893783 :
     (Functions.ext_decode 25769859#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 18#5, regidx.Regidx 15#5, false, 8)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_01898993 :
+    (Functions.ext_decode 25790867#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 19#5, regidx.Regidx 19#5, iop.ADDI)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_01898c3b :
+    (Functions.ext_decode 25791547#32).run σ = .ok (instruction.RTYPEW (regidx.Regidx 24#5, regidx.Regidx 19#5, regidx.Regidx 24#5, ropw.ADDW)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_0189b423 :
+    (Functions.ext_decode 25801763#32).run σ = .ok (instruction.STORE (8#12, regidx.Regidx 24#5, regidx.Regidx 19#5, 8)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_0189b583 :
+    (Functions.ext_decode 25802115#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 19#5, regidx.Regidx 11#5, false, 8)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_0189b683 :
+    (Functions.ext_decode 25802371#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 19#5, regidx.Regidx 13#5, false, 8)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_0189b783 :
+    (Functions.ext_decode 25802627#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 19#5, regidx.Regidx 15#5, false, 8)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_018a06b3 :
+    (Functions.ext_decode 25822899#32).run σ = .ok (instruction.RTYPE (regidx.Regidx 24#5, regidx.Regidx 20#5, regidx.Regidx 13#5, rop.ADD)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_018a3703 :
+    (Functions.ext_decode 25835267#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 20#5, regidx.Regidx 14#5, false, 8)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_018a8513 :
+    (Functions.ext_decode 25855251#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 21#5, regidx.Regidx 10#5, iop.ADDI)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_018aa683 :
+    (Functions.ext_decode 25863811#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 21#5, regidx.Regidx 13#5, false, 4)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_018aba83 :
+    (Functions.ext_decode 25868931#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 21#5, regidx.Regidx 21#5, false, 8)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_018b2683 :
+    (Functions.ext_decode 25896579#32).run σ = .ok (instruction.LOAD (24#12, regidx.Regidx 22#5, regidx.Regidx 13#5, false, 4)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_018b3023 :
+    (Functions.ext_decode 25899043#32).run σ = .ok (instruction.STORE (0#12, regidx.Regidx 24#5, regidx.Regidx 22#5, 8)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_018b8413 :
+    (Functions.ext_decode 25920531#32).run σ = .ok (instruction.ITYPE (24#12, regidx.Regidx 23#5, regidx.Regidx 8#5, iop.ADDI)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_018b86b3 :
+    (Functions.ext_decode 25921203#32).run σ = .ok (instruction.RTYPE (regidx.Regidx 24#5, regidx.Regidx 23#5, regidx.Regidx 13#5, rop.ADD)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_018b8bb3 :
+    (Functions.ext_decode 25922483#32).run σ = .ok (instruction.RTYPE (regidx.Regidx 24#5, regidx.Regidx 23#5, regidx.Regidx 23#5, rop.ADD)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_018bb023 :
+    (Functions.ext_decode 25931811#32).run σ = .ok (instruction.STORE (0#12, regidx.Regidx 24#5, regidx.Regidx 23#5, 8)) σ :=
   decodeW σ hmisa hpriv hsec
 
 end Vsa.Sim.ElfDecode

@@ -153,7 +153,7 @@ theorem StrArgs.tail {Dt : Mem} {DA : List Nat} {c : Conv} {cs : List Conv} {a :
 theorem svf_fmt {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt : Mem} {DA : List Nat}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     {R0 : Nat → BitVec 64} {Mt0 : Mem} (SG : SnpGeom s dst n) (DO : DataOff Dt DA s dst n)
-    (hmb : ldv .ld Mt0 0x80069bf0 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80069c68 = 1#64)
+    (hmb : ldv .ld Mt0 0x80064588 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80064600 = 1#64)
     (hal : (R0 1).toNat % 4 = 0) :
     ∀ (m : Nat) (bs : List (BitVec 8)) (q ap : Nat) (args : List (BitVec 64)) (cs : List Conv)
       (tot : List (BitVec 8)) (R : Nat → BitVec 64) (Mt : Mem), bs.length ≤ m →
@@ -242,7 +242,7 @@ theorem svf_fmt {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt 
 theorem loop_fmt {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt : Mem} {DA : List Nat}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     (R0 : Nat → BitVec 64) (Mt0 : Mem) (SG : SnpGeom s dst n) (DO : DataOff Dt DA s dst n)
-    (hmb : ldv .ld Mt0 0x80069bf0 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80069c68 = 1#64)
+    (hmb : ldv .ld Mt0 0x80064588 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80064600 = 1#64)
     (hal : (R0 1).toNat % 4 = 0) (p ap : Nat) (bs : List (BitVec 8)) (cs : List Conv)
     (args : List (BitVec 64)) (F : FmtAt Dt DA p bs) (hp : parseFmt bs = some cs)
     (hcs : cs.length ≤ args.length) (HA : ArgsAt Mt0 ap args) (hap1 : s - 40 ≤ ap)
@@ -315,8 +315,8 @@ theorem svfprintf_nw {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1)
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     (R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n) (DO : DataOff Dt DA s dst n)
     (h2 : R 2 = BitVec.ofNat 64 (s - 272)) (h11 : R 11 = BitVec.ofNat 64 (s - 264))
-    (hdp : ldv .ld Mt 0x80069c08 = 0x80053180#64) (hdot : DotAt Dt DA) (hB : BufAt Mt s dst n [])
-    (hmb : ldv .ld Mt 0x80069bf0 = 0x80045798#64) (hmx : ldv .lbu Mt 0x80069c68 = 1#64)
+    (hdp : ldv .ld Mt 0x800645a0 = 0x80053180#64) (hdot : DotAt Dt DA) (hB : BufAt Mt s dst n [])
+    (hmb : ldv .ld Mt 0x80064588 = 0x80045798#64) (hmx : ldv .lbu Mt 0x80064600 = 1#64)
     (hal : (R 1).toNat % 4 = 0) (bs : List (BitVec 8)) (cs : List Conv)
     (args : List (BitVec 64)) (F : FmtAt Dt DA (R 12).toNat bs) (hp : parseFmt bs = some cs)
     (hcs : cs.length ≤ args.length) (HA : ArgsAt Mt (R 13).toNat args)

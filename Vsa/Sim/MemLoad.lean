@@ -28,7 +28,7 @@ The `mem_read` chain is *identical* to fetch except the access type is
 
 ### Honest address-range side conditions for data loads
 
-Data lives *above* `tohost` (heap/stack are above `0x80067600`), so the fetch
+Data lives *above* `tohost` (heap/stack are above `0x80061fc0`), so the fetch
 constraint `a + w ≤ tohostAddr` is WRONG here. The real constraint is that the
 `[a, a+w)` window must:
 
@@ -44,7 +44,7 @@ constraint `a + w ≤ tohostAddr` is WRONG here. The real constraint is that the
   (heap/stack). Both discharge `within_mmio_readable = false`.
 
 So data in `[0x800691f8, 0x100000000)` (above the mailbox) passes, as does data
-in `[0x80000000, 0x80067600)` (below it).
+in `[0x80000000, 0x80061fc0)` (below it).
 
 Every link is read-only: `σ' = σ` syntactically throughout.
 -/
@@ -136,7 +136,7 @@ theorem within_mmio_readable_ram_false_eight
   simp only [within_mmio_readable, within_clint, within_sig, within_htif_readable,
     within_htif_writable, get_config_rvfi, plat_have_clint, plat_have_sig,
     zopz0zI_u, zopz0zK_u, LeanRV64DExecutable.Functions.not]
-  simp only [tohostAddr] at hhtif
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at hhtif
   have hcb : BitVec.toNat plat_clint_base = 33554432 := by decide
   have hcs : BitVec.toNat plat_clint_size = 786432 := by decide
   have hsb : BitVec.toNat plat_sig_base = 201326592 := by decide
@@ -144,23 +144,10 @@ theorem within_mmio_readable_ram_false_eight
   simp_all [simp_sail, bind, EStateM.bind, EStateM.run, pure, EStateM.pure,
     Sail.ConcurrencyInterfaceV1.PreSail.readReg, get, getThe, MonadStateOf.get,
     EStateM.get, BitVec.toNatInt, htif_tohost_size]
-  simp only [tohostAddr] at *
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at *
   have hadd : (a + 8#64).toNat = a.toNat + 8 := by
     have hw : ((8#64 : BitVec 64)).toNat = 8 := by decide
     rw [BitVec.toNat_add, hw, Nat.mod_eq_of_lt (by omega)]
-  refine ⟨fun _ => by omega, fun _ => by omega, fun _ => ?_⟩
-  rename_i hx
-  -- `hx : a.toNat < (tohost + 8)` (the readable HTIF mailbox end); `hhtif` then
-  -- forces the load window below `tohost`. The mailbox-end value is a closed
-  -- `BitVec` term at the symbolic `physaddrbits` width, so bridge it by defeq
-  -- (`Nat.lt_of_lt_of_eq`) rather than `rw`, which the width mismatch defeats.
-  have hxlt : a.toNat < 2147907080 := by
-    have hxv : (2147907072#64 + 8#64).toNat = 2147907080 := by decide
-    omega
-  have hle : (a + 8#64).toNat ≤ 2147907072 := by rw [hadd]; omega
-  have hrhs : ((2147907072 : Nat) : Int) % 18446744073709551616
-      = ((2147907072 : Nat) : Int) := by decide
-  rw [hrhs]
   omega
 
 /-- `within_mmio_readable a 4 = false` for a RAM `lw`/`lwu`. -/
@@ -174,7 +161,7 @@ theorem within_mmio_readable_ram_false_four'
   simp only [within_mmio_readable, within_clint, within_sig, within_htif_readable,
     within_htif_writable, get_config_rvfi, plat_have_clint, plat_have_sig,
     zopz0zI_u, zopz0zK_u, LeanRV64DExecutable.Functions.not]
-  simp only [tohostAddr] at hhtif
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at hhtif
   have hcb : BitVec.toNat plat_clint_base = 33554432 := by decide
   have hcs : BitVec.toNat plat_clint_size = 786432 := by decide
   have hsb : BitVec.toNat plat_sig_base = 201326592 := by decide
@@ -182,23 +169,10 @@ theorem within_mmio_readable_ram_false_four'
   simp_all [simp_sail, bind, EStateM.bind, EStateM.run, pure, EStateM.pure,
     Sail.ConcurrencyInterfaceV1.PreSail.readReg, get, getThe, MonadStateOf.get,
     EStateM.get, BitVec.toNatInt, htif_tohost_size]
-  simp only [tohostAddr] at *
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at *
   have hadd : (a + 4#64).toNat = a.toNat + 4 := by
     have hw : ((4#64 : BitVec 64)).toNat = 4 := by decide
     rw [BitVec.toNat_add, hw, Nat.mod_eq_of_lt (by omega)]
-  refine ⟨fun _ => by omega, fun _ => by omega, fun _ => ?_⟩
-  rename_i hx
-  -- `hx : a.toNat < (tohost + 8)` (the readable HTIF mailbox end); `hhtif` then
-  -- forces the load window below `tohost`. The mailbox-end value is a closed
-  -- `BitVec` term at the symbolic `physaddrbits` width, so bridge it by defeq
-  -- (`Nat.lt_of_lt_of_eq`) rather than `rw`, which the width mismatch defeats.
-  have hxlt : a.toNat < 2147907080 := by
-    have hxv : (2147907072#64 + 8#64).toNat = 2147907080 := by decide
-    omega
-  have hle : (a + 4#64).toNat ≤ 2147907072 := by rw [hadd]; omega
-  have hrhs : ((2147907072 : Nat) : Int) % 18446744073709551616
-      = ((2147907072 : Nat) : Int) := by decide
-  rw [hrhs]
   omega
 
 /-- `within_mmio_readable a 2 = false` for a RAM `lh`/`lhu`. -/
@@ -212,7 +186,7 @@ theorem within_mmio_readable_ram_false_two
   simp only [within_mmio_readable, within_clint, within_sig, within_htif_readable,
     within_htif_writable, get_config_rvfi, plat_have_clint, plat_have_sig,
     zopz0zI_u, zopz0zK_u, LeanRV64DExecutable.Functions.not]
-  simp only [tohostAddr] at hhtif
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at hhtif
   have hcb : BitVec.toNat plat_clint_base = 33554432 := by decide
   have hcs : BitVec.toNat plat_clint_size = 786432 := by decide
   have hsb : BitVec.toNat plat_sig_base = 201326592 := by decide
@@ -220,23 +194,10 @@ theorem within_mmio_readable_ram_false_two
   simp_all [simp_sail, bind, EStateM.bind, EStateM.run, pure, EStateM.pure,
     Sail.ConcurrencyInterfaceV1.PreSail.readReg, get, getThe, MonadStateOf.get,
     EStateM.get, BitVec.toNatInt, htif_tohost_size]
-  simp only [tohostAddr] at *
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at *
   have hadd : (a + 2#64).toNat = a.toNat + 2 := by
     have hw : ((2#64 : BitVec 64)).toNat = 2 := by decide
     rw [BitVec.toNat_add, hw, Nat.mod_eq_of_lt (by omega)]
-  refine ⟨fun _ => by omega, fun _ => by omega, fun _ => ?_⟩
-  rename_i hx
-  -- `hx : a.toNat < (tohost + 8)` (the readable HTIF mailbox end); `hhtif` then
-  -- forces the load window below `tohost`. The mailbox-end value is a closed
-  -- `BitVec` term at the symbolic `physaddrbits` width, so bridge it by defeq
-  -- (`Nat.lt_of_lt_of_eq`) rather than `rw`, which the width mismatch defeats.
-  have hxlt : a.toNat < 2147907080 := by
-    have hxv : (2147907072#64 + 8#64).toNat = 2147907080 := by decide
-    omega
-  have hle : (a + 2#64).toNat ≤ 2147907072 := by rw [hadd]; omega
-  have hrhs : ((2147907072 : Nat) : Int) % 18446744073709551616
-      = ((2147907072 : Nat) : Int) := by decide
-  rw [hrhs]
   omega
 
 /-- `within_mmio_readable a 1 = false` for a RAM `lb`/`lbu`. -/
@@ -250,7 +211,7 @@ theorem within_mmio_readable_ram_false_one
   simp only [within_mmio_readable, within_clint, within_sig, within_htif_readable,
     within_htif_writable, get_config_rvfi, plat_have_clint, plat_have_sig,
     zopz0zI_u, zopz0zK_u, LeanRV64DExecutable.Functions.not]
-  simp only [tohostAddr] at hhtif
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at hhtif
   have hcb : BitVec.toNat plat_clint_base = 33554432 := by decide
   have hcs : BitVec.toNat plat_clint_size = 786432 := by decide
   have hsb : BitVec.toNat plat_sig_base = 201326592 := by decide
@@ -258,23 +219,10 @@ theorem within_mmio_readable_ram_false_one
   simp_all [simp_sail, bind, EStateM.bind, EStateM.run, pure, EStateM.pure,
     Sail.ConcurrencyInterfaceV1.PreSail.readReg, get, getThe, MonadStateOf.get,
     EStateM.get, BitVec.toNatInt, htif_tohost_size]
-  simp only [tohostAddr] at *
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at *
   have hadd : (a + 1#64).toNat = a.toNat + 1 := by
     have hw : ((1#64 : BitVec 64)).toNat = 1 := by decide
     rw [BitVec.toNat_add, hw, Nat.mod_eq_of_lt (by omega)]
-  refine ⟨fun _ => by omega, fun _ => by omega, fun _ => ?_⟩
-  rename_i hx
-  -- `hx : a.toNat < (tohost + 8)` (the readable HTIF mailbox end); `hhtif` then
-  -- forces the load window below `tohost`. The mailbox-end value is a closed
-  -- `BitVec` term at the symbolic `physaddrbits` width, so bridge it by defeq
-  -- (`Nat.lt_of_lt_of_eq`) rather than `rw`, which the width mismatch defeats.
-  have hxlt : a.toNat < 2147907080 := by
-    have hxv : (2147907072#64 + 8#64).toNat = 2147907080 := by decide
-    omega
-  have hle : (a + 1#64).toNat ≤ 2147907072 := by rw [hadd]; omega
-  have hrhs : ((2147907072 : Nat) : Int) % 18446744073709551616
-      = ((2147907072 : Nat) : Int) := by decide
-  rw [hrhs]
   omega
 
 /-! ## Control-plane clones for the `Load Data` access type. -/

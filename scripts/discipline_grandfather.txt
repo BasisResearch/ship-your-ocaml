@@ -585,11 +585,9 @@ Vsa/Sim/SnprintfSitesWrap.lean
 Vsa/Sim/SnprintfSpec11.lean
 Vsa/Sim/SnprintfSpec16.lean
 Vsa/Sim/SnprintfSpec17.lean
-Vsa/Sim/SnprintfSpec18.lean
 Vsa/Sim/SnprintfSpec20.lean
 Vsa/Sim/SsprintSites.lean
 Vsa/Sim/SsputsSites.lean
-Vsa/Sim/StrcmpSites.lean
 Vsa/Sim/StrcpySites.lean
 Vsa/Sim/StrlenSites.lean
 Vsa/Sim/StrlenSpec.lean
@@ -627,7 +625,6 @@ Vsa/Sim/Code/Runtime_error.lean
 Vsa/Sim/Code/Setjmp.lean
 Vsa/Sim/Code/Snprintf.lean
 Vsa/Sim/Code/Stringify.lean
-Vsa/Sim/Code/Strcmp.lean
 Vsa/Sim/Code/Strcpy.lean
 Vsa/Sim/Code/Strlen.lean
 Vsa/Sim/Code/SvfprintfSlice.lean
@@ -698,7 +695,6 @@ Vsa/Sim/Muldi3Spec.lean
 Vsa/Sim/ObsAvoid.lean
 Vsa/Sim/SegFrameFactsAuto.lean
 Vsa/Sim/SnprintfProCommon.lean
-Vsa/Sim/SnprintfSpec19.lean
 Vsa/Sim/SnprintfSpec2.lean
 Vsa/Sim/SnprintfSpec21.lean
 Vsa/Sim/SnprintfSpec22.lean
@@ -718,10 +714,7 @@ Vsa/Sim/SnprintfSpec41.lean
 Vsa/Sim/SnprintfSpec5.lean
 Vsa/Sim/SnprintfSpec50.lean
 Vsa/Sim/SnprintfSpec6.lean
-Vsa/Sim/StrcmpSpec.lean
-Vsa/Sim/StrcmpSpecW.lean
 Vsa/Sim/StrcmpSpecW2.lean
-Vsa/Sim/StrcmpSpecW3.lean
 Vsa/Sim/StrcmpSpecW4.lean
 Vsa/Sim/StrcpySpec.lean
 Vsa/Sim/StrcpySpecW.lean

@@ -76,13 +76,13 @@ def caml_oldify_oneChunk0 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
 
 def caml_oldify_oneChunk1 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x80009ab0 : Nat)]? = some (0x17 : BitVec 8) ∧
-  mem[(0x80009ab1 : Nat)]? = some (0x19 : BitVec 8) ∧
-  mem[(0x80009ab2 : Nat)]? = some (0x06 : BitVec 8) ∧
+  mem[(0x80009ab1 : Nat)]? = some (0xb9 : BitVec 8) ∧
+  mem[(0x80009ab2 : Nat)]? = some (0x05 : BitVec 8) ∧
   mem[(0x80009ab3 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x80009ab4 : Nat)]? = some (0x13 : BitVec 8) ∧
   mem[(0x80009ab5 : Nat)]? = some (0x09 : BitVec 8) ∧
-  mem[(0x80009ab6 : Nat)]? = some (0x09 : BitVec 8) ∧
-  mem[(0x80009ab7 : Nat)]? = some (0x8c : BitVec 8) ∧
+  mem[(0x80009ab6 : Nat)]? = some (0x89 : BitVec 8) ∧
+  mem[(0x80009ab7 : Nat)]? = some (0x25 : BitVec 8) ∧
   mem[(0x80009ab8 : Nat)]? = some (0x93 : BitVec 8) ∧
   mem[(0x80009ab9 : Nat)]? = some (0x09 : BitVec 8) ∧
   mem[(0x80009aba : Nat)]? = some (0x80 : BitVec 8) ∧
@@ -578,25 +578,25 @@ def caml_oldify_oneChunk8 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x80009c96 : Nat)]? = some (0x9f : BitVec 8) ∧
   mem[(0x80009c97 : Nat)]? = some (0xf6 : BitVec 8) ∧
   mem[(0x80009c98 : Nat)]? = some (0x17 : BitVec 8) ∧
-  mem[(0x80009c99 : Nat)]? = some (0x07 : BitVec 8) ∧
-  mem[(0x80009c9a : Nat)]? = some (0x06 : BitVec 8) ∧
+  mem[(0x80009c99 : Nat)]? = some (0xb7 : BitVec 8) ∧
+  mem[(0x80009c9a : Nat)]? = some (0x05 : BitVec 8) ∧
   mem[(0x80009c9b : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x80009c9c : Nat)]? = some (0x03 : BitVec 8) ∧
   mem[(0x80009c9d : Nat)]? = some (0x37 : BitVec 8) ∧
-  mem[(0x80009c9e : Nat)]? = some (0x87 : BitVec 8) ∧
-  mem[(0x80009c9f : Nat)]? = some (0x4c : BitVec 8) ∧
+  mem[(0x80009c9e : Nat)]? = some (0x07 : BitVec 8) ∧
+  mem[(0x80009c9f : Nat)]? = some (0xe6 : BitVec 8) ∧
   mem[(0x80009ca0 : Nat)]? = some (0x23 : BitVec 8) ∧
   mem[(0x80009ca1 : Nat)]? = some (0x30 : BitVec 8) ∧
   mem[(0x80009ca2 : Nat)]? = some (0xf5 : BitVec 8) ∧
   mem[(0x80009ca3 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x80009ca4 : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x80009ca5 : Nat)]? = some (0x07 : BitVec 8) ∧
-  mem[(0x80009ca6 : Nat)]? = some (0x06 : BitVec 8) ∧
+  mem[(0x80009ca5 : Nat)]? = some (0xb7 : BitVec 8) ∧
+  mem[(0x80009ca6 : Nat)]? = some (0x05 : BitVec 8) ∧
   mem[(0x80009ca7 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x80009ca8 : Nat)]? = some (0x23 : BitVec 8) ∧
-  mem[(0x80009ca9 : Nat)]? = some (0xbe : BitVec 8) ∧
+  mem[(0x80009ca9 : Nat)]? = some (0xba : BitVec 8) ∧
   mem[(0x80009caa : Nat)]? = some (0x87 : BitVec 8) ∧
-  mem[(0x80009cab : Nat)]? = some (0x4a : BitVec 8) ∧
+  mem[(0x80009cab : Nat)]? = some (0xe4 : BitVec 8) ∧
   mem[(0x80009cac : Nat)]? = some (0x23 : BitVec 8) ∧
   mem[(0x80009cad : Nat)]? = some (0x34 : BitVec 8) ∧
   mem[(0x80009cae : Nat)]? = some (0xe5 : BitVec 8) ∧
@@ -821,8 +821,8 @@ theorem caml_oldify_one_at_80009aac {mem : ExtHashMap Nat (BitVec 8)}
 theorem caml_oldify_one_at_80009ab0 {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_oldify_oneLoaded mem) :
       mem[(0x80009ab0 : Nat)]? = some (0x17 : BitVec 8) ∧
-      mem[(0x80009ab1 : Nat)]? = some (0x19 : BitVec 8) ∧
-      mem[(0x80009ab2 : Nat)]? = some (0x06 : BitVec 8) ∧
+      mem[(0x80009ab1 : Nat)]? = some (0xb9 : BitVec 8) ∧
+      mem[(0x80009ab2 : Nat)]? = some (0x05 : BitVec 8) ∧
       mem[(0x80009ab3 : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := caml_oldify_one_chunk1 h
   ⟨hc.1, hc.2.1, hc.2.2.1, hc.2.2.2.1⟩
@@ -831,8 +831,8 @@ theorem caml_oldify_one_at_80009ab4 {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_oldify_oneLoaded mem) :
       mem[(0x80009ab4 : Nat)]? = some (0x13 : BitVec 8) ∧
       mem[(0x80009ab5 : Nat)]? = some (0x09 : BitVec 8) ∧
-      mem[(0x80009ab6 : Nat)]? = some (0x09 : BitVec 8) ∧
-      mem[(0x80009ab7 : Nat)]? = some (0x8c : BitVec 8) :=
+      mem[(0x80009ab6 : Nat)]? = some (0x89 : BitVec 8) ∧
+      mem[(0x80009ab7 : Nat)]? = some (0x25 : BitVec 8) :=
   have hc := caml_oldify_one_chunk1 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.1, hc.2.2.2.2.2.1, hc.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.1⟩
@@ -2033,8 +2033,8 @@ theorem caml_oldify_one_at_80009c94 {mem : ExtHashMap Nat (BitVec 8)}
 theorem caml_oldify_one_at_80009c98 {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_oldify_oneLoaded mem) :
       mem[(0x80009c98 : Nat)]? = some (0x17 : BitVec 8) ∧
-      mem[(0x80009c99 : Nat)]? = some (0x07 : BitVec 8) ∧
-      mem[(0x80009c9a : Nat)]? = some (0x06 : BitVec 8) ∧
+      mem[(0x80009c99 : Nat)]? = some (0xb7 : BitVec 8) ∧
+      mem[(0x80009c9a : Nat)]? = some (0x05 : BitVec 8) ∧
       mem[(0x80009c9b : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := caml_oldify_one_chunk8 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -2044,8 +2044,8 @@ theorem caml_oldify_one_at_80009c9c {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_oldify_oneLoaded mem) :
       mem[(0x80009c9c : Nat)]? = some (0x03 : BitVec 8) ∧
       mem[(0x80009c9d : Nat)]? = some (0x37 : BitVec 8) ∧
-      mem[(0x80009c9e : Nat)]? = some (0x87 : BitVec 8) ∧
-      mem[(0x80009c9f : Nat)]? = some (0x4c : BitVec 8) :=
+      mem[(0x80009c9e : Nat)]? = some (0x07 : BitVec 8) ∧
+      mem[(0x80009c9f : Nat)]? = some (0xe6 : BitVec 8) :=
   have hc := caml_oldify_one_chunk8 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
@@ -2063,8 +2063,8 @@ theorem caml_oldify_one_at_80009ca0 {mem : ExtHashMap Nat (BitVec 8)}
 theorem caml_oldify_one_at_80009ca4 {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_oldify_oneLoaded mem) :
       mem[(0x80009ca4 : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x80009ca5 : Nat)]? = some (0x07 : BitVec 8) ∧
-      mem[(0x80009ca6 : Nat)]? = some (0x06 : BitVec 8) ∧
+      mem[(0x80009ca5 : Nat)]? = some (0xb7 : BitVec 8) ∧
+      mem[(0x80009ca6 : Nat)]? = some (0x05 : BitVec 8) ∧
       mem[(0x80009ca7 : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := caml_oldify_one_chunk8 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -2073,9 +2073,9 @@ theorem caml_oldify_one_at_80009ca4 {mem : ExtHashMap Nat (BitVec 8)}
 theorem caml_oldify_one_at_80009ca8 {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_oldify_oneLoaded mem) :
       mem[(0x80009ca8 : Nat)]? = some (0x23 : BitVec 8) ∧
-      mem[(0x80009ca9 : Nat)]? = some (0xbe : BitVec 8) ∧
+      mem[(0x80009ca9 : Nat)]? = some (0xba : BitVec 8) ∧
       mem[(0x80009caa : Nat)]? = some (0x87 : BitVec 8) ∧
-      mem[(0x80009cab : Nat)]? = some (0x4a : BitVec 8) :=
+      mem[(0x80009cab : Nat)]? = some (0xe4 : BitVec 8) :=
   have hc := caml_oldify_one_chunk8 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩

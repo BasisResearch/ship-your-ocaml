@@ -11,42 +11,6 @@ variable (σ : SequentialState RegisterType trivialChoiceSource)
   (hsec : σ.regs.get? Register.mseccfg = some (0#64))
 include hmisa hpriv hsec
 
-theorem decode_001e5693 :
-    (Functions.ext_decode 1988243#32).run σ = .ok (instruction.SHIFTIOP (1#6, regidx.Regidx 28#5, regidx.Regidx 13#5, sop.SRLI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_001e581b :
-    (Functions.ext_decode 1988635#32).run σ = .ok (instruction.SHIFTIWOP (1#5, regidx.Regidx 28#5, regidx.Regidx 16#5, sopw.SRLIW)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_001e7693 :
-    (Functions.ext_decode 1996435#32).run σ = .ok (instruction.ITYPE (1#12, regidx.Regidx 28#5, regidx.Regidx 13#5, iop.ANDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_001e7713 :
-    (Functions.ext_decode 1996563#32).run σ = .ok (instruction.ITYPE (1#12, regidx.Regidx 28#5, regidx.Regidx 14#5, iop.ANDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_001e7793 :
-    (Functions.ext_decode 1996691#32).run σ = .ok (instruction.ITYPE (1#12, regidx.Regidx 28#5, regidx.Regidx 15#5, iop.ANDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_001e7e13 :
-    (Functions.ext_decode 1998355#32).run σ = .ok (instruction.ITYPE (1#12, regidx.Regidx 28#5, regidx.Regidx 28#5, iop.ANDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_001e8793 :
-    (Functions.ext_decode 2000787#32).run σ = .ok (instruction.ITYPE (1#12, regidx.Regidx 29#5, regidx.Regidx 15#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_001e8e93 :
-    (Functions.ext_decode 2002579#32).run σ = .ok (instruction.ITYPE (1#12, regidx.Regidx 29#5, regidx.Regidx 29#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_001e8e9b :
-    (Functions.ext_decode 2002587#32).run σ = .ok (instruction.ADDIW (1#12, regidx.Regidx 29#5, regidx.Regidx 29#5)) σ :=
-  decodeW σ hmisa hpriv hsec
-
 theorem decode_001e9a13 :
     (Functions.ext_decode 2005523#32).run σ = .ok (instruction.SHIFTIOP (1#6, regidx.Regidx 29#5, regidx.Regidx 20#5, sop.SLLI)) σ :=
   decodeW σ hmisa hpriv hsec
@@ -521,6 +485,42 @@ theorem decode_00268913 :
 
 theorem decode_0026941b :
     (Functions.ext_decode 2528283#32).run σ = .ok (instruction.SHIFTIWOP (2#5, regidx.Regidx 13#5, regidx.Regidx 8#5, sopw.SLLIW)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_0026959b :
+    (Functions.ext_decode 2528667#32).run σ = .ok (instruction.SHIFTIWOP (2#5, regidx.Regidx 13#5, regidx.Regidx 11#5, sopw.SLLIW)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_0026961b :
+    (Functions.ext_decode 2528795#32).run σ = .ok (instruction.SHIFTIWOP (2#5, regidx.Regidx 13#5, regidx.Regidx 12#5, sopw.SLLIW)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_00269693 :
+    (Functions.ext_decode 2528915#32).run σ = .ok (instruction.SHIFTIOP (2#6, regidx.Regidx 13#5, regidx.Regidx 13#5, sop.SLLI)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_0026969b :
+    (Functions.ext_decode 2528923#32).run σ = .ok (instruction.SHIFTIWOP (2#5, regidx.Regidx 13#5, regidx.Regidx 13#5, sopw.SLLIW)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_0026971b :
+    (Functions.ext_decode 2529051#32).run σ = .ok (instruction.SHIFTIWOP (2#5, regidx.Regidx 13#5, regidx.Regidx 14#5, sopw.SLLIW)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_0026979b :
+    (Functions.ext_decode 2529179#32).run σ = .ok (instruction.SHIFTIWOP (2#5, regidx.Regidx 13#5, regidx.Regidx 15#5, sopw.SLLIW)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_00269813 :
+    (Functions.ext_decode 2529299#32).run σ = .ok (instruction.SHIFTIOP (2#6, regidx.Regidx 13#5, regidx.Regidx 16#5, sop.SLLI)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_0026f793 :
+    (Functions.ext_decode 2553747#32).run σ = .ok (instruction.ITYPE (2#12, regidx.Regidx 13#5, regidx.Regidx 15#5, iop.ANDI)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_00270693 :
+    (Functions.ext_decode 2557587#32).run σ = .ok (instruction.ITYPE (2#12, regidx.Regidx 14#5, regidx.Regidx 13#5, iop.ADDI)) σ :=
   decodeW σ hmisa hpriv hsec
 
 end Vsa.Sim.ElfDecode

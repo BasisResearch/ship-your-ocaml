@@ -82,10 +82,10 @@ structure SvfPro (s : Nat) (R0 : Nat → BitVec 64) (Mt0 : Mem) (R : Nat → Bit
 
 #ix_piece svfPro_p1 {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt : Mem} {DA : List Nat}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
-    (R : Nat → BitVec 64) (Mt : Mem) (hs1 : 0x800827a0 + 1024 ≤ s) (hs2 : s ≤ 0x88000000)
+    (R : Nat → BitVec 64) (Mt : Mem) (hs1 : 0x8007d138 + 1024 ≤ s) (hs2 : s ≤ 0x88000000)
     (hsa : s % 16 = 0)
     (h2 : R 2 = BitVec.ofNat 64 (s - 272)) (h11 : R 11 = BitVec.ofNat 64 (s - 264))
-    (hdp : ldv .ld Mt 0x80069c08 = 0x80053180#64) (hdot : DotAt Dt DA)
+    (hdp : ldv .ld Mt 0x800645a0 = 0x80053180#64) (hdot : DotAt Dt DA)
     (hfl : ldv .lhu Mt (BitVec.ofNat 64 (s - 264 + 16)).toNat = 0x208#64)
     (eS : BitVec.ofNat 64 (s - 272 + 18446744073709551024) = BitVec.ofNat 64 (s - 864))
     (hK : ∀ R' Mt', SvfPro s R Mt R' Mt' → SnpW live Dt DA (snpS s dst n) Q 0x800478ec#64 R' Mt') :
@@ -176,7 +176,7 @@ structure SvfCore (s dst n : Nat) (R0 : Nat → BitVec 64) (Mt0 : Mem) (p ap : N
     (total : List (BitVec 8)) (R : Nat → BitVec 64) (Mt : Mem) : Prop where
   r2 : R 2 = BitVec.ofNat 64 (s - 864)
   r8 : R 8 = R0 10
-  r9 : R 9 = 0x80069b08#64
+  r9 : R 9 = 0x800644a0#64
   r18 : R 18 = 16#64
   r19 : R 19 = 37#64
   r21 : R 21 = BitVec.ofNat 64 (s - 864 + 352)
@@ -261,7 +261,7 @@ theorem svf_entry {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     (R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n)
     (h2 : R 2 = BitVec.ofNat 64 (s - 272)) (h11 : R 11 = BitVec.ofNat 64 (s - 264))
-    (hdp : ldv .ld Mt 0x80069c08 = 0x80053180#64) (hdot : DotAt Dt DA) (hB : BufAt Mt s dst n [])
+    (hdp : ldv .ld Mt 0x800645a0 = 0x80053180#64) (hdot : DotAt Dt DA) (hB : BufAt Mt s dst n [])
     (hK : ∀ R' Mt', SvfAt s dst n R Mt (R 12).toNat (R 13).toNat 0#64 [] R' Mt' →
       SnpW live Dt DA (snpS s dst n) Q 0x8004796c#64 R' Mt') :
     SnpW live Dt DA (snpS s dst n) Q 0x8004789c#64 R Mt := by
@@ -392,8 +392,8 @@ theorem svf_mbtowc {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {
     (q : Nat) (R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n)
     (A : SvfAt s dst n R0 Mt0 p ap rt total R Mt) (h22 : R 22 = BitVec.ofNat 64 q)
     (hq : InDA DA q (q + 1)) (hq1 : 0x80000000 ≤ q) (hq2 : q + 1 ≤ 0x100000000)
-    (hq3 : q + 1 ≤ 0x80067600 ∨ 0x80067608 ≤ q)
-    (hmb : ldv .ld Mt0 0x80069bf0 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80069c68 = 1#64)
+    (hq3 : q + 1 ≤ 0x80061fc0 ∨ 0x80061fc8 ≤ q)
+    (hmb : ldv .ld Mt0 0x80064588 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80064600 = 1#64)
     (hk : ∀ R' Mt', ScanAt Dt s dst n R0 Mt0 p ap rt total q R' Mt' →
       SnpW live Dt DA (snpS s dst n) Q 0x80047990#64 R' Mt') :
     SnpW live Dt DA (snpS s dst n) Q 0x80047970#64 R Mt := by
@@ -404,9 +404,9 @@ theorem svf_mbtowc {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {
   have h2 := A.core.r2
   have h8 := A.core.r8
   have h9 := A.core.r9
-  have hmb' : ldv .ld Mt 0x80069bf0 = 0x80045798#64 :=
+  have hmb' : ldv .ld Mt 0x80064588 = 0x80045798#64 :=
     (A.ld0 .ld fun i hi => by simp only [SvfW, snpFP, widthOfM] at hi ⊢; omega).trans hmb
-  have hmx' : ldv .lbu Mt 0x80069c68 = 1#64 :=
+  have hmx' : ldv .lbu Mt 0x80064600 = 1#64 :=
     (A.ld0 .lbu fun i hi => by simp only [SvfW, snpFP, widthOfM] at hi ⊢; omega).trans hmx
   have hbq := lbu_img_ofNat Dt q (by omega)
   snp_run hlive using [ofNat_add_ofNat, h2, h8, h9, h22, hmb', hmx', hbq] at 0x80047990
@@ -469,13 +469,13 @@ structure FmtGeom (DA : List Nat) (q k : Nat) : Prop where
   dom : InDA DA q (q + k + 1)
   lo : 0x80000000 ≤ q
   hi : q + k + 1 ≤ 0x100000000
-  htif : q + k + 1 ≤ 0x80067600 ∨ 0x80067608 ≤ q
+  htif : q + k + 1 ≤ 0x80061fc0 ∨ 0x80061fc8 ≤ q
 
 theorem svf_scan {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt : Mem} {DA : List Nat}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     {R0 : Nat → BitVec 64} {Mt0 : Mem} {p ap : Nat} {rt : BitVec 64} {total : List (BitVec 8)}
     (SG : SnpGeom s dst n)
-    (hmb : ldv .ld Mt0 0x80069bf0 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80069c68 = 1#64) :
+    (hmb : ldv .ld Mt0 0x80064588 = 0x80045798#64) (hmx : ldv .lbu Mt0 0x80064600 = 1#64) :
     ∀ k q (R : Nat → BitVec 64) (Mt : Mem), SvfAt s dst n R0 Mt0 p ap rt total R Mt →
       R 22 = BitVec.ofNat 64 q → FmtGeom DA q k →
       (∀ i, i < k → imgM Dt (q + i) ≠ 0#8 ∧ imgM Dt (q + i) ≠ 37#8) →

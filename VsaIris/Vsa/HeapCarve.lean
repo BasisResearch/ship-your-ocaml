@@ -123,7 +123,7 @@ theorem PHeapAt.carve {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
     intro a hf hr hb
     refine read64_keep fun k hk => hag _ (hf k hk) ?_
     unfold CarveW
-    by_cases hlow : a < 0x800827a0
+    by_cases hlow : a < 0x8007d140
     · have := hf k hk
       rcases this with hg | ⟨h1, _⟩
       · unfold allocGlobal InRange at hg; unfold binAt avAddr at hbin1 hb ⊢; omega
@@ -214,10 +214,10 @@ theorem PHeapAt.carve {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
     refine keep a (fun k hk => .inl (hg k hk)) (.inl ?_) hb
     have := hg 0 (by omega); have := hg 7 (by omega)
     unfold allocGlobal InRange at *; omega
-  have gAv : ∀ a, 0x800691f8 ≤ a → a + 8 ≤ 0x80069a08 → ∀ k, k < 8 → allocGlobal (a + k) :=
+  have gAv : ∀ a, 0x80063b90 ≤ a → a + 8 ≤ 0x800643a0 → ∀ k, k < 8 → allocGlobal (a + k) :=
     fun a h1 h2 k hk => .inl ⟨by omega, by omega⟩
-  have gHi : ∀ a, 0x80069f78 ≤ a → a + 8 ≤ 0x8006a3a0 →
-      (a + 8 ≤ 0x80069f78 + 8 ∨ 0x8006a388 ≤ a) → ∀ k, k < 8 → allocGlobal (a + k) := by
+  have gHi : ∀ a, 0x80064910 ≤ a → a + 8 ≤ 0x80064d38 →
+      (a + 8 ≤ 0x80064910 + 8 ∨ 0x80064d20 ≤ a) → ∀ k, k < 8 → allocGlobal (a + k) := by
     intro a h1 h2 hpart k hk
     unfold allocGlobal InRange
     omega

@@ -41,12 +41,12 @@ theorem checked_mem_write_tohost_8
       .ok (.Ok true) σ' := by
   have htmod :
       Int.tmod (BitVec.toNatInt (BitVec.ofNat 64 tohostAddr)) 8 = 0 := by
-    simp only [BitVec.toNatInt, tohostAddr]
+    simp only [BitVec.toNatInt, tohostAddr, LibraryLayout.tohostAddr]
     decide
   have hpmaC := pmaCheck_ram_write σ (BitVec.ofNat 64 tohostAddr) 8
     (BitVec.ofNat 64 8) hpma (by decide) (by decide) (by decide)
-    (by simp only [tohostAddr]; decide)
-    (by simp only [tohostAddr]; decide) htmod
+    (by simp only [tohostAddr, LibraryLayout.tohostAddr]; decide)
+    (by simp only [tohostAddr, LibraryLayout.tohostAddr]; decide) htmod
   have hpmp := pmp_allows σ
     (physaddr.Physaddr (BitVec.ofNat 64 tohostAddr)) 8
     (MemoryAccessType.Store mem_payload.Data) vpmpaddr hcfg haddr

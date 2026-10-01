@@ -43,6 +43,10 @@ theorem decode_fedfc06f :
     (Functions.ext_decode 4276076655#32).run σ = .ok (instruction.JAL (2084844#21, regidx.Regidx 0#5)) σ :=
   decodeW σ hmisa hpriv hsec
 
+theorem decode_fedfe0ef :
+    (Functions.ext_decode 4276084975#32).run σ = .ok (instruction.JAL (2093036#21, regidx.Regidx 1#5)) σ :=
+  decodeW σ hmisa hpriv hsec
+
 theorem decode_fedff06f :
     (Functions.ext_decode 4276088943#32).run σ = .ok (instruction.JAL (2097132#21, regidx.Regidx 0#5)) σ :=
   decodeW σ hmisa hpriv hsec
@@ -517,10 +521,6 @@ theorem decode_fefb1ce3 :
 
 theorem decode_fefb3c23 :
     (Functions.ext_decode 4277877795#32).run σ = .ok (instruction.STORE (4088#12, regidx.Regidx 15#5, regidx.Regidx 22#5, 8)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_fefb7793 :
-    (Functions.ext_decode 4277893011#32).run σ = .ok (instruction.ITYPE (4079#12, regidx.Regidx 22#5, regidx.Regidx 15#5, iop.ANDI)) σ :=
   decodeW σ hmisa hpriv hsec
 
 end Vsa.Sim.ElfDecode

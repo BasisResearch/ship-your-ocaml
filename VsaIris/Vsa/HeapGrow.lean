@@ -7,8 +7,8 @@ open Vsa.MemRepr Vsa.Sim Vsa.Sim.DlHeap VsaIris.MallocFast
 
 def GrowW (top : Nat) (a : Nat) : Prop :=
   (top + 8 ≤ a ∧ a < top + 16) ∨ (brkAddr ≤ a ∧ a < topPadAddr) ∨
-    (mallinfoAddr ≤ a ∧ a < mallinfoAddr + 8) ∨ (0x8006a3b0 ≤ a ∧ a < 0x8006a3b4) ∨
-    (0x80069cd0 ≤ a ∧ a < 0x80069cd4)
+    (mallinfoAddr ≤ a ∧ a < mallinfoAddr + 8) ∨ (0x80064d48 ≤ a ∧ a < 0x80064d4c) ∨
+    (0x80064668 ≤ a ∧ a < 0x8006466c)
 
 theorem grow_keep {m m' : Mem} {H : List (Nat × Nat)} {top a : Nat}
     (hag : ∀ b, vsaFoot H b → ¬ GrowW top b → m'[b]? = m[b]?)
@@ -34,15 +34,15 @@ theorem PHeapAt.topResize {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
   unfold heapStart at hlo
 
   have Kg : ∀ a, (∀ k, k < 8 → allocGlobal (a + k)) → (a + 8 ≤ brkAddr ∨ topPadAddr ≤ a) →
-      (a + 8 ≤ mallinfoAddr ∨ mallinfoAddr + 8 ≤ a) → a + 8 ≤ 0x8006a3b0 ∨ 0x8006a3b4 ≤ a →
-      a + 8 ≤ 0x80069cd0 ∨ 0x80069cd4 ≤ a →
+      (a + 8 ≤ mallinfoAddr ∨ mallinfoAddr + 8 ≤ a) → a + 8 ≤ 0x80064d48 ∨ 0x80064d4c ≤ a →
+      a + 8 ≤ 0x80064668 ∨ 0x8006466c ≤ a →
       a + 8 ≤ heapStart → read64 m' a = read64 m a := by
     intro a hg h1 h2 h3 h4 hs
     unfold heapStart at hs
     exact grow_keep hag (fun k hk => .inl (hg k hk)) fun k hk => by
       unfold GrowW brkAddr topPadAddr mallinfoAddr at *; omega
 
-  have Ka : ∀ a, (∀ k, k < 8 → vsaFoot H (a + k)) → 0x800827a0 ≤ a → a + 8 ≤ top + 8 →
+  have Ka : ∀ a, (∀ k, k < 8 → vsaFoot H (a + k)) → 0x8007d140 ≤ a → a + 8 ≤ top + 8 →
       read64 m' a = read64 m a := by
     intro a hf h1 h2
     exact grow_keep hag hf fun k hk => by
@@ -74,7 +74,7 @@ theorem PHeapAt.topResize {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
         (by unfold mallinfoAddr; omega) (by omega) (by omega) (by unfold heapStart; omega),
       Kg _ (hgl _ (by omega) (by omega)) (by unfold brkAddr; omega)
         (by unfold mallinfoAddr; omega) (by omega) (by omega) (by unfold heapStart; omega)⟩
-  have Kav : ∀ a, 0x800691f8 ≤ a → a + 8 ≤ 0x80069a08 → read64 m' a = read64 m a :=
+  have Kav : ∀ a, 0x80063b90 ≤ a → a + 8 ≤ 0x800643a0 → read64 m' a = read64 m a :=
     fun a h1 h2 => Kg _ (fun k hk => .inl ⟨by omega, by omega⟩) (by unfold brkAddr; omega)
       (by unfold mallinfoAddr; omega) (by omega) (by omega) (by unfold heapStart; omega)
   have Kbb : read64 m' binblocksAddr = read64 m binblocksAddr :=

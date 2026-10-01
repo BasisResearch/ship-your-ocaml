@@ -41,7 +41,7 @@ macro_rules
   | `(tactic| sx_pre) =>
     `(tactic| try simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false, reduceIte,
         LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend, BitVec.reduceSignExtend,
-        BitVec.add_zero, LdOK, StOK, StOKb, Vsa.Sim.tohostAddr, Vsa.Sim.DlHeap.heapStart,
+        BitVec.add_zero, LdOK, StOK, StOKb, Vsa.Sim.tohostAddr, Vsa.Sim.LibraryLayout.tohostAddr, Vsa.Sim.DlHeap.heapStart,
         Vsa.Sim.DlHeap.heapEnd, Vsa.Sim.DlHeap.brkAddr, Vsa.Sim.DlHeap.binAt, Vsa.Sim.DlHeap.avAddr,
         Vsa.Sim.DlHeap.chunkSize, and_true, true_and] at *)
 

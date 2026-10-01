@@ -13,16 +13,15 @@ import Vsa.Sim.ElfDecode.Part051
 import Vsa.Sim.ElfDecode.Part059
 import Vsa.Sim.ElfDecode.Part065
 import Vsa.Sim.ElfDecode.Part071
-import Vsa.Sim.ElfDecode.Part072
-import Vsa.Sim.ElfDecode.Part075
+import Vsa.Sim.ElfDecode.Part074
 import Vsa.Sim.ElfDecode.Part079
 import Vsa.Sim.ElfDecode.Part081
 import Vsa.Sim.ElfDecode.Part094
-import Vsa.Sim.ElfDecode.Part117
+import Vsa.Sim.ElfDecode.Part118
 import Vsa.Sim.ElfDecode.Part185
-import Vsa.Sim.ElfDecode.Part194
-import Vsa.Sim.ElfDecode.Part198
-import Vsa.Sim.ElfDecode.Part205
+import Vsa.Sim.ElfDecode.Part195
+import Vsa.Sim.ElfDecode.Part199
+import Vsa.Sim.ElfDecode.Part206
 import Vsa.Sim.ElfDecode.Part225
 
 /-! The allocator's step table, `0x80038428` to `0x800384a4` (one lemma `st_<pc>` per

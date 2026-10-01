@@ -76,7 +76,7 @@ theorem tr_ssprint_entry (g : (R : Register) → Option (RegisterType R))
   obtain ⟨hgood, hload, hsload, hmvload, hpc, hra, hsp, ha0, ha1, ha2, hcs0, hcs1, hcs2, hcs3,
     hcs4, hcs5, ⟨vmi, hmi⟩, htick, hreg, hviov, hcount, hresid, hiov0b, hiov0l, hiov1b, hiov1l,
     hcursor, hcap, hbs1, hbs2, hcaplt, hcap31, hmemeq, hgframe⟩ := hPre
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   have hn11 := hreg.n1_1; have hn131 := hreg.n1_31
   have hn21 := hreg.n2_1; have hn231 := hreg.n2_31
   have hqlo := hreg.q_lo; have hqhi := hreg.q_hi

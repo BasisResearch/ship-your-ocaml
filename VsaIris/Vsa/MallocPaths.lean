@@ -31,7 +31,7 @@ theorem nbOK_small {n : BitVec 64} {nb : Nat} (h : NbOK n nb) (hs : nb ≤ 503) 
 structure LRRegs (nb idx : Nat) (R : Nat → BitVec 64) : Prop where
   a4 : (R 14).toNat = nb
   a7 : (R 17).toNat = idx
-  a6 : R 16 = 0x800691f8#64
+  a6 : R 16 = 0x80063b90#64
 
 theorem ldv_eq_of_read {Mt : Mem} {a a' : Nat} {v : BitVec 64} (he : a = a')
     (h : read64 Mt a' = some v.toNat) : ldv .ld Mt a = v := by
@@ -80,19 +80,19 @@ theorem j_small {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
   refine st_800375f0 O.live ?_
   refine st_800375f4 O.live ?_
   sx_norm
-  have hEA : (2147914232#64 + R 13 + sign_extend (m := 64) (0x008#12)).toNat = binAt (nb / 8) + 24 := by
+  have hEA : (2147892112#64 + R 13 + sign_extend (m := 64) (0x008#12)).toNat = binAt (nb / 8) + 24 := by
     unfold binAt avAddr; sx_addr
   have hgeo := binAt_geo (nb / 8) (by unfold numBins; omega)
   refine st_800375f8 O.live ?_ ?_ ?_
-  · sx_norm; rw [hEA]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hEA]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hEA]; exact O.bin_link (j := nb / 8) (by unfold numBins; omega) (.inr rfl)
   sx_norm
-  have hv : ldv .ld Mt (2147914232#64 + R 13 + 8#64).toNat = BitVec.ofNat 64 last :=
+  have hv : ldv .ld Mt (2147892112#64 + R 13 + 8#64).toNat = BitVec.ofNat 64 last :=
     bin_link_ld (by unfold binAt avAddr; sx_addr) hbk hlastlt
   rw [hv]
   refine st_800375fc O.live ?_
   sx_norm
-  have hA2 : (2147914232#64 + R 13 + 18446744073709551600#64) = BitVec.ofNat 64 (binAt (nb / 8)) := by
+  have hA2 : (2147892112#64 + R 13 + 18446744073709551600#64) = BitVec.ofNat 64 (binAt (nb / 8)) := by
     apply BitVec.eq_of_toNat_eq; rw [BitVec.toNat_ofNat]; unfold binAt avAddr; sx_addr
   have hbinlt : binAt (nb / 8) < 2 ^ 64 := by omega
   refine st_80037600 O.live (fun heq => ?_) (fun hne => ?_)
@@ -104,19 +104,19 @@ theorem j_small {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
       rwa [BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hlastlt, Nat.mod_eq_of_lt hbinlt] at this
 
     have hgeo1 := binAt_geo (nb / 8 + 1) (by unfold numBins; omega)
-    have hEA1 : ((2147914232#64 + R 13) + sign_extend (m := 64) (0x018#12)).toNat =
+    have hEA1 : ((2147892112#64 + R 13) + sign_extend (m := 64) (0x018#12)).toNat =
         binAt (nb / 8 + 1) + 24 := by unfold binAt avAddr; sx_addr
     have hbkJlt := Vsa.Sim.read64_lt_eg4 _ _ _ hbkJ
     refine st_80037a90 O.live ?_ ?_ ?_
-    · sx_norm; rw [hEA1]; unfold LdOK Vsa.Sim.tohostAddr; omega
+    · sx_norm; rw [hEA1]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · sx_norm; rw [hEA1]; exact O.bin_link (j := nb / 8 + 1) (by unfold numBins; omega) (.inr rfl)
     sx_norm
-    have hv1 : ldv .ld Mt ((2147914232#64 + R 13) + 24#64).toNat = BitVec.ofNat 64 (binAt (nb / 8 + 1)) :=
+    have hv1 : ldv .ld Mt ((2147892112#64 + R 13) + 24#64).toNat = BitVec.ofNat 64 (binAt (nb / 8 + 1)) :=
       bin_link_ld (by unfold binAt avAddr; sx_addr) hbkJ hbkJlt
     rw [hv1]
     refine st_80037a94 O.live ?_
     sx_norm
-    have hA3 : 2147914232#64 + R 13 = BitVec.ofNat 64 (binAt (nb / 8 + 1)) := by
+    have hA3 : 2147892112#64 + R 13 = BitVec.ofNat 64 (binAt (nb / 8 + 1)) := by
       apply BitVec.eq_of_toNat_eq; rw [BitVec.toNat_ofNat]; unfold binAt avAddr; sx_addr
     refine st_80037a98 O.live (fun _ => ?_) (fun hne => absurd hA3 hne)
     refine hLR _ ⟨?_, ?_, ?_⟩ ?_ ?_ ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
@@ -203,7 +203,7 @@ theorem j_small {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
     · exact .inl h1
     · exact .inr (by rw [hbin]; exact List.mem_append_left _ h1)
   obtain ⟨hp16, _⟩ := HH.node (by omega) (by unfold numBins; omega) hpredm
-  have hpl : (0x800691f8 + 16 ≤ pred ∧ pred + 32 ≤ 0x80069a08) ∨ (heapStart ≤ pred ∧ pred + 32 ≤ C.top0) := by
+  have hpl : (0x80063b90 + 16 ≤ pred ∧ pred + 32 ≤ 0x800643a0) ∨ (heapStart ≤ pred ∧ pred + 32 ≤ C.top0) := by
     rcases hpredm with rfl | hm
     · have := binAt_geo (nb / 8) (by unfold numBins; omega); unfold binAt avAddr at *; exact .inl (by omega)
     · obtain ⟨cx, hcx, rfl, _⟩ := HH.member (by omega) (by unfold numBins; omega) hm
@@ -220,7 +220,7 @@ theorem j_small {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
   rw [show (BitVec.ofNat 64 (binAt (nb / 8)) + 24#64).toNat = binAt (nb / 8) + 24 by sx_addr]
 
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := F.sp
   refine st_80037620 O.live ?_ ?_ ?_
   · sx_norm; rw [hs2]; sx_addr

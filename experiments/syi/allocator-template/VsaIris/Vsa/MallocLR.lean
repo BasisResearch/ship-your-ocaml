@@ -65,7 +65,7 @@ theorem lr_check {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
   have hbo := Hp.bin_off_stack (i := 1) (by decide) (by unfold numBins; decide)
   unfold mHead binAt avAddr at hbo
   have hlo := O.sp.lo; have hhi := O.sp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hbinI := HH.bins_list 1 (by decide) (by unfold numBins; decide)
   have hring := (binList_iff_ring.1 hbinI).1
   have hnev := (binList_iff_ring.1 hbinI).2
@@ -87,7 +87,7 @@ theorem lr_check {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
   have hEA : ((R 16) + sign_extend (m := 64) (0x020#12)).toNat = binAt 1 + 16 := by
     rw [ha6]; unfold binAt avAddr; rfl
   refine st_800048ec O.live ?_ ?_ ?_
-  · rw [hEA]; unfold LdOK Vsa.Sim.tohostAddr binAt avAddr; omega
+  · rw [hEA]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr binAt avAddr; omega
   · rw [hEA]; exact O.bin_link (j := 1) (by unfold numBins; decide) (.inl rfl)
   rw [show ldv .ld Mt ((R 16) + sign_extend (m := 64) (0x020#12)).toNat =
     BitVec.ofNat 64 first from bin_link_ld hEA hfd hfirstlt]
@@ -134,7 +134,7 @@ theorem lr_check {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
     simp only at hhfoot
 
     refine st_800048fc O.live ?_ ?_ ?_
-    · sx_norm; unfold LdOK Vsa.Sim.tohostAddr; sx_addr
+    · sx_norm; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; sx_addr
     · sx_norm; exact O.foot_at hhfoot _ (by sx_addr)
     sx_norm
     rw [ldv_at hhr _ (by sx_addr)]
@@ -170,12 +170,12 @@ theorem lr_check {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
       have hEB : ((R 16) + sign_extend (m := 64) (0x028#12)).toNat = binAt 1 + 24 := by
         rw [ha6]; unfold binAt avAddr; rfl
       refine st_80004910 O.live ?_ ?_ ?_
-      · sx_norm; rw [hEB]; unfold StOK Vsa.Sim.tohostAddr binAt avAddr; omega
+      · sx_norm; rw [hEB]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr binAt avAddr; omega
       · sx_norm; rw [hEB]; exact O.bin_link (j := 1) (by unfold numBins; decide) (.inr rfl)
       sx_norm
       rw [hEB]
       refine st_80004914 O.live ?_ ?_ ?_
-      · sx_norm; rw [hEA]; unfold StOK Vsa.Sim.tohostAddr binAt avAddr; omega
+      · sx_norm; rw [hEA]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr binAt avAddr; omega
       · sx_norm; rw [hEA]; exact O.bin_link (j := 1) (by unfold numBins; decide) (.inl rfl)
       sx_norm
       rw [hEA]
@@ -237,7 +237,7 @@ theorem lr_take {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt Mt' : Mem}
   have hbo := Hp.bin_off_stack (i := 1) (by decide) (by unfold numBins; decide)
   unfold mHead binAt avAddr at hbo
   have hlo := O.sp.lo; have hhi := O.sp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hbnd := HH.walk.chunk_bounds _ hfree
   have htle := HH.top_le; have hbrk := HH.brk_le
   have hroom := Hp.heap.heap.top_room
@@ -263,21 +263,21 @@ theorem lr_take {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt Mt' : Mem}
   have hEN : ((R 15) + (R 6) + 8#64).toNat = v + sz + 8 := by sx_addr
 
   refine st_80004d7c O.live ?_ ?_ ?_
-  · sx_norm; rw [hEN]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hEN]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hEN]; exact O.foot_at hnx _ rfl
   sx_norm
   rw [ldv_at hdr' _ hEN]
   refine st_80004d80 O.live ?_
 
   refine st_80004d84 O.live ?_ ?_ ?_
-  · sx_norm; rw [hES]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hES]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hES]; exact O.stack (by unfold mHead; omega) (by omega)
   sx_norm
   rw [hES]
   refine st_80004d88 O.live ?_
 
   refine st_80004d8c O.live ?_ ?_ ?_
-  · sx_norm; rw [hEN]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hEN]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hEN]; exact O.foot_at hnx _ rfl
   sx_norm
   rw [hEN]

@@ -25,8 +25,8 @@ theorem within_mmio_writable_tohost_8
     zopz0zI_u, zopz0zK_u, LeanRV64DExecutable.Functions.not]
   simp only [simp_sail, bind, EStateM.bind, EStateM.run, pure, EStateM.pure,
     readReg, get, getThe, MonadStateOf.get, EStateM.get, BitVec.toNatInt,
-    htif_tohost_size, hbase, tohostAddr]
-  simp_all [simp_sail, EStateM.bind, EStateM.pure, EStateM.get, tohostAddr]
+    htif_tohost_size, hbase, tohostAddr, LibraryLayout.tohostAddr]
+  simp_all [simp_sail, EStateM.bind, EStateM.pure, EStateM.get, tohostAddr, LibraryLayout.tohostAddr]
 
 /-- An eight-byte write at `tohost` selects `htif_store` exactly. -/
 theorem mmio_write_tohost_8
@@ -62,10 +62,10 @@ theorem mmio_write_tohost_8
     simp only [within_htif_writable, zopz0zI_u, zopz0zK_u,
       bind, EStateM.bind, EStateM.run, pure, EStateM.pure,
       readReg, get, getThe, MonadStateOf.get, EStateM.get,
-      BitVec.toNatInt, htif_tohost_size, hbase, tohostAddr]
+      BitVec.toNatInt, htif_tohost_size, hbase, tohostAddr, LibraryLayout.tohostAddr]
     simp only [Sail.ConcurrencyInterfaceV1.PreSail.readReg, bind, EStateM.bind,
       get, getThe, MonadStateOf.get, EStateM.get, pure, EStateM.pure,
-      hbase, tohostAddr]
+      hbase, tohostAddr, LibraryLayout.tohostAddr]
     rfl
   change mmio_write
       (physaddr.Physaddr (BitVec.ofNat 64 tohostAddr)) 8 data σ =

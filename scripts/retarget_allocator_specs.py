@@ -21,6 +21,10 @@ def units(insts, syms):
     gp = syms['__global_pointer$'][0]
     addrnames = {a: n for n, (a, _) in syms.items()}
     def target(a):
+        # The fixed .embed boundary aliases __heap_end. Match its role,
+        # independent of nm's ordering of coincident linker symbols.
+        if a == syms.get('__heap_end', (None, 0))[0]:
+            return '__heap_end'
         if a in addrnames:
             return addrnames[a]
         owners = [(n, a-x) for n, (x,z) in syms.items() if x <= a < x+z]
@@ -133,6 +137,7 @@ def outputs(include_pending=False):
         if not include_pending and module not in checked:
             continue
         s = rewrite_auipc_values(p.read_text(), old_words, new_words, relocate)
+        s = s.replace('AV_ALIGNMENT', str(symbols(elf)['__malloc_av_'][0] % 16))
         oldbytes = '[' + ', '.join(f'0x{b:02x}#8' for b in old['impure_bytes']) + ']'
         newbytes = '[' + ', '.join(f'0x{b:02x}#8' for b in impure) + ']'
         s = s.replace(oldbytes, newbytes)

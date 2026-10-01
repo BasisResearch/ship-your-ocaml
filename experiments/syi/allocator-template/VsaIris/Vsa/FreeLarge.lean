@@ -152,7 +152,7 @@ theorem fl_exit {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
   have hEs : ((R 13) + sign_extend (m := 64) (0x018#12)).toNat = succ + 24 := by
     sx_norm; rw [BitVec.toNat_add, h13]; simp; omega
   refine st_800074e0 O.live ?_ ?_ ?_
-  · rw [hEs]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hEs]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEs]; exact O.foot (fun k hk => by
       have := hsf (24 + k) (by omega) (by omega)
       rwa [show succ + (24 + k) = succ + 24 + k by omega] at this)
@@ -196,7 +196,7 @@ theorem fl_cmp {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
     sx_norm; rw [BitVec.toNat_add, h13]; simp; omega
   have hhlt := Vsa.Sim.read64_lt_eg4 _ _ _ hr'
   refine st_800074d4 O.live ?_ ?_ ?_
-  · rw [hEh]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hEh]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEh]; exact O.foot (fun k hk => by
       have := M.foot (8 + k) (by omega) (by omega)
       rwa [show x + (8 + k) = x + 8 + k by omega] at this)
@@ -239,7 +239,7 @@ theorem fl_adv {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
   have hEf : ((R 13) + sign_extend (m := 64) (0x010#12)).toNat = x + 16 := by
     sx_norm; rw [BitVec.toNat_add, h13]; simp; omega
   refine st_800074cc O.live ?_ ?_ ?_
-  · rw [hEf]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hEf]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEf]; exact O.foot (fun k hk => by
       have := M.foot (16 + k) (by omega) (by omega)
       rwa [show x + (16 + k) = x + 16 + k by omega] at this)
@@ -328,7 +328,7 @@ theorem fl_empty {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
   refine st_80007600 O.live (by sx_norm; decide) (by sx_norm; sx_side) ?_
   sx_norm
   refine st_80007604 O.live ?_
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hoB := B.off_stack (a := 2147593496) (fun k hk => .inl (.inl ⟨by omega, by omega⟩))
   unfold mHead at hoB
   refine fl_link O ((L.frame.store (by omega)).of_regs ?_ ?_ ?_ ?_) B hj0 hj L.idx
@@ -467,7 +467,7 @@ theorem fl_head {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
     simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]; omega
   refine st_800074b8 O.live ?_
   refine st_800074bc O.live ?_ ?_ ?_
-  · sx_norm; rw [hA]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hA]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hA]; exact O.toWOK.bin_link hj (.inl rfl)
   sx_norm
   rw [hA, ldv_at hfdJ' _ rfl]

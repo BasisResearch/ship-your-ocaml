@@ -58,7 +58,9 @@ def main():
     need = ["caml_interprete", "Caml_state", "caml_global_data", "caml_atom_table",
             "caml_something_to_do", "tohost", "_exit", "caml_main", "main",
             "caml_start_code", "caml_code_size", "caml_int64_ops", "caml_int32_ops",
-            "caml_nativeint_ops", "channel_operations", "caml_all_opened_channels"]
+            "caml_nativeint_ops", "channel_operations", "caml_all_opened_channels",
+            "embedded_files", "embedded_argv", "embedded_env", "__embed_start",
+            "__heap_end", "__stack_top"]
     need += primitive_names()
     need += ["main_argv", "caml_exe_name", "oo_last_id"]
     for n in need:

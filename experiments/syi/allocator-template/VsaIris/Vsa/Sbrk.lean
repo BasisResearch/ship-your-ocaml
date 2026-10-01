@@ -80,7 +80,7 @@ theorem sbrk_r_gen {live S : Nat → Prop} {Q : (Nat → BitVec 64) → (Nat →
   have hsum := P.sum; have hbrk := P.brk; have hbp := P.brk_pos
   have hbl := P.brk_le; have hlo := P.sp_lo; have hhi := P.sp_hi; have hal := P.sp_al
   have hra := P.ra_al; have ho1 := P.off1; have ho2 := P.off2
-  unfold heapEnd at hbl; unfold Vsa.Sim.tohostAddr at hlo
+  unfold heapEnd at hbl; unfold Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   unfold brkAddr at hbrk
   sx_run [8] hlive at 0x8000011c
   simp (disch := decide) only [ldv_at hbrk]

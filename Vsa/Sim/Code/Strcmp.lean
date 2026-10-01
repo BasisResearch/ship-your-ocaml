@@ -26,13 +26,13 @@ def strcmpChunk0 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x80042b2e : Nat)]? = some (0x07 : BitVec 8) ∧
   mem[(0x80042b2f : Nat)]? = some (0x0c : BitVec 8) ∧
   mem[(0x80042b30 : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x80042b31 : Nat)]? = some (0x57 : BitVec 8) ∧
-  mem[(0x80042b32 : Nat)]? = some (0x02 : BitVec 8) ∧
+  mem[(0x80042b31 : Nat)]? = some (0xf7 : BitVec 8) ∧
+  mem[(0x80042b32 : Nat)]? = some (0x01 : BitVec 8) ∧
   mem[(0x80042b33 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x80042b34 : Nat)]? = some (0x83 : BitVec 8) ∧
   mem[(0x80042b35 : Nat)]? = some (0xb7 : BitVec 8) ∧
-  mem[(0x80042b36 : Nat)]? = some (0x87 : BitVec 8) ∧
-  mem[(0x80042b37 : Nat)]? = some (0xa4 : BitVec 8) ∧
+  mem[(0x80042b36 : Nat)]? = some (0x07 : BitVec 8) ∧
+  mem[(0x80042b37 : Nat)]? = some (0x40 : BitVec 8) ∧
   mem[(0x80042b38 : Nat)]? = some (0x03 : BitVec 8) ∧
   mem[(0x80042b39 : Nat)]? = some (0x36 : BitVec 8) ∧
   mem[(0x80042b3a : Nat)]? = some (0x05 : BitVec 8) ∧
@@ -386,8 +386,8 @@ theorem strcmp_at_80042b2c {mem : ExtHashMap Nat (BitVec 8)}
 theorem strcmp_at_80042b30 {mem : ExtHashMap Nat (BitVec 8)}
     (h : StrcmpLoaded mem) :
       mem[(0x80042b30 : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x80042b31 : Nat)]? = some (0x57 : BitVec 8) ∧
-      mem[(0x80042b32 : Nat)]? = some (0x02 : BitVec 8) ∧
+      mem[(0x80042b31 : Nat)]? = some (0xf7 : BitVec 8) ∧
+      mem[(0x80042b32 : Nat)]? = some (0x01 : BitVec 8) ∧
       mem[(0x80042b33 : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := strcmp_chunk0 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -397,8 +397,8 @@ theorem strcmp_at_80042b34 {mem : ExtHashMap Nat (BitVec 8)}
     (h : StrcmpLoaded mem) :
       mem[(0x80042b34 : Nat)]? = some (0x83 : BitVec 8) ∧
       mem[(0x80042b35 : Nat)]? = some (0xb7 : BitVec 8) ∧
-      mem[(0x80042b36 : Nat)]? = some (0x87 : BitVec 8) ∧
-      mem[(0x80042b37 : Nat)]? = some (0xa4 : BitVec 8) :=
+      mem[(0x80042b36 : Nat)]? = some (0x07 : BitVec 8) ∧
+      mem[(0x80042b37 : Nat)]? = some (0x40 : BitVec 8) :=
   have hc := strcmp_chunk0 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩

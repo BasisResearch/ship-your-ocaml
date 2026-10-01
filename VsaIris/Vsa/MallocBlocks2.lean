@@ -123,7 +123,7 @@ theorem bw_bins {C : MCtx} (O : MOK C) {Mt : Mem} {brkv : Nat} {chunks : List Ch
         rw [BitVec.toNat_add, BitVec.toNat_add, hk6]; unfold binAt avAddr at hgk ⊢
         simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]; omega
       refine st_80037b3c O.live ?_ ?_ ?_
-      · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr; omega
+      · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
       · sx_norm; rw [hE]; exact O.bin_link hk1n (.inr rfl)
       sx_norm
       rw [hE, ldv_at hbk _ rfl]
@@ -195,8 +195,8 @@ theorem bw_clear {C : MCtx} (O : MOK C) {Mt : Mem} {brkv : Nat} {chunks : List C
     obtain ⟨bb, hbb⟩ := Option.isSome_iff_exists.1 HH.binblocks_present
     have hbbl := W.heap.heap.bb_lt bb hbb
     have ha6 := W.a6
-    have hsplo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hsplo
-    have hbbA : binblocksAddr = 2147914240 := rfl
+    have hsplo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hsplo
+    have hbbA : binblocksAddr = 2147892120 := rfl
     rw [← upd_self_eq ha6]
     refine st_80037c78 O.live ?_
     refine st_80037c7c O.live ?_
@@ -215,9 +215,9 @@ theorem bw_clear {C : MCtx} (O : MOK C) {Mt : Mem} {brkv : Nat} {chunks : List C
     have hbv : (BitVec.ofNat 64 bb).toNat = bb := by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
     have hle := clr_le (x := BitVec.ofNat 64 bb) (m := R 10)
     rw [hbv] at hle
-    have hoB := W.heap.off_stack (a := 2147914240) (fun k hk => .inl (.inl ⟨by omega, by omega⟩))
+    have hoB := W.heap.off_stack (a := 2147892120) (fun k hk => .inl (.inl ⟨by omega, by omega⟩))
     unfold mHead at hoB
-    have hMH : MHeap C (writeLog Mt [(2147914240, 8, (R 10 ^^^ 18446744073709551615#64) &&&
+    have hMH : MHeap C (writeLog Mt [(2147892120, 8, (R 10 ^^^ 18446744073709551615#64) &&&
         BitVec.ofNat 64 bb)]) brkv chunks bins := by
       refine ⟨W.heap.heap.clearBlock (b := start / 4) ?_ (by rw [hbbA]; exact read64_store_hit _ _ _)
         ?_ (by omega) ?_, pres_store W.heap.pres, W.heap.disj,
@@ -269,7 +269,7 @@ theorem bw_clear {C : MCtx} (O : MOK C) {Mt : Mem} {brkv : Nat} {chunks : List C
       simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]
       unfold binAt avAddr at hg; omega
     refine st_80037c6c O.live ?_ ?_ ?_
-    · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr; omega
+    · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · sx_norm; rw [hE]; exact O.bin_link hi1n (.inl rfl)
     sx_norm
     rw [hE, ldv_at hfd _ rfl]
@@ -290,7 +290,7 @@ theorem bw_clear {C : MCtx} (O : MOK C) {Mt : Mem} {brkv : Nat} {chunks : List C
     ·
       obtain ⟨bb, hbb⟩ := Option.isSome_iff_exists.1 HH.binblocks_present
       have hbbl := W.heap.heap.bb_lt bb hbb
-      have hbbA : binblocksAddr = 2147914240 := rfl
+      have hbbA : binblocksAddr = 2147892120 := rfl
       rw [← upd_self_eq ha6]
       refine st_80037e94 O.live (by sx_norm; decide) (by sx_norm; exact O.glob (by decide) (by decide)) ?_
       sx_norm
@@ -506,7 +506,7 @@ theorem bw_block {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem} {brkv
     rw [BitVec.toNat_add, hT]; unfold binAt avAddr at hg ⊢
     simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]; omega
   refine st_800377d0 O.live ?_ ?_ ?_
-  · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hE]; exact O.bin_link hsn (.inr rfl)
   sx_norm
   rw [hE, ldv_at hbk _ rfl]

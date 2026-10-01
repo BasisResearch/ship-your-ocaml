@@ -21,7 +21,7 @@ theorem ssp_ret {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt 
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     (sp fp p c w : Nat) (ra s0 s1 : BitVec 64) (R : Nat → BitVec 64) (Mt : Mem)
     (hsp1 : s - 1024 ≤ sp) (hsp2 : sp + 64 ≤ s) (hsp8 : sp % 16 = 0) (hs : s ≤ 0x88000000)
-    (hs1 : 0x800691f8 + 1024 ≤ s)
+    (hs1 : 0x80063b90 + 1024 ≤ s)
     (hfp1 : s - 1024 ≤ fp) (hfp2 : fp + 24 ≤ s) (hfp8 : fp % 8 = 0) (hfps : fp + 24 ≤ sp ∨ sp + 64 ≤ fp)
     (h2 : R 2 = BitVec.ofNat 64 sp) (h8 : R 8 = BitVec.ofNat 64 fp)
     (h9 : R 9 = BitVec.ofNat 64 c) (hcw : c ≤ w) (hw31 : w < 2 ^ 31) (hp : p + c < 2 ^ 64)
@@ -65,7 +65,7 @@ theorem ssp_call {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     (sp fp p src c w : Nat) (g : Nat → BitVec 8) (ra s0 s1 : BitVec 64) (R : Nat → BitVec 64) (Mt : Mem)
     (hsp1 : s - 1024 ≤ sp) (hsp2 : sp + 64 ≤ s) (hsp8 : sp % 16 = 0) (hs : s ≤ 0x88000000)
-    (hs1 : 0x800691f8 + 1024 ≤ s)
+    (hs1 : 0x80063b90 + 1024 ≤ s)
     (hfp1 : s - 1024 ≤ fp) (hfp2 : fp + 24 ≤ s) (hfp8 : fp % 8 = 0) (hfps : fp + 24 ≤ sp ∨ sp + 64 ≤ fp)
     (G : MoveGeom s dst n p src c) (hpf : p + c ≤ fp ∨ fp + 24 ≤ p) (hps : p + c ≤ sp ∨ sp + 64 ≤ p)
     (h2 : R 2 = BitVec.ofNat 64 sp) (h8 : R 8 = BitVec.ofNat 64 fp) (h9 : R 9 = BitVec.ofNat 64 c)
@@ -127,7 +127,7 @@ theorem ssp_B {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt : 
     (sp fp p src len w : Nat) (g : Nat → BitVec 8) (ra s0 s1 : BitVec 64) (R : Nat → BitVec 64)
     (Mt : Mem)
     (hsp1 : s - 1024 ≤ sp) (hsp2 : sp + 64 ≤ s) (hsp8 : sp % 16 = 0) (hs : s ≤ 0x88000000)
-    (hs1 : 0x800691f8 + 1024 ≤ s)
+    (hs1 : 0x80063b90 + 1024 ≤ s)
     (hfp1 : s - 1024 ≤ fp) (hfp2 : fp + 24 ≤ s) (hfp8 : fp % 8 = 0) (hfps : fp + 24 ≤ sp ∨ sp + 64 ≤ fp)
     (G : MoveGeom s dst n p src (min len w)) (hpf : p + min len w ≤ fp ∨ fp + 24 ≤ p)
     (hps : p + min len w ≤ sp ∨ sp + 64 ≤ p)
@@ -178,7 +178,7 @@ theorem ssputs_nw {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
     (sp fp p src len w : Nat) (g : Nat → BitVec 8) (R : Nat → BitVec 64) (Mt : Mem)
     (hsp1 : s - 1024 + 64 ≤ sp) (hsp2 : sp ≤ s) (hsp8 : sp % 16 = 0) (hs : s ≤ 0x88000000)
-    (hs1 : 0x800691f8 + 1024 ≤ s)
+    (hs1 : 0x80063b90 + 1024 ≤ s)
     (hfp1 : s - 1024 ≤ fp) (hfp2 : fp + 24 ≤ s) (hfp8 : fp % 8 = 0)
     (hfps : fp + 24 ≤ sp - 64 ∨ sp ≤ fp)
     (G : MoveGeom s dst n p src (min len w)) (hpf : p + min len w ≤ fp ∨ fp + 24 ≤ p)

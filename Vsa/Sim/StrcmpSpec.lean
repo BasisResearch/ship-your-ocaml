@@ -153,7 +153,7 @@ structure StrcmpRegion (p : BitVec 64) (len : Nat) : Prop where
   nowrap : p.toNat + len + 1 < 2^64
   /-- disjoint from the strcmp code region `[0x80042b20, 0x80042c4c)` -/
   code : p.toNat + len + 1 ≤ 0x80042b20 ∨ 0x80042c4c ≤ p.toNat
-  /-- disjoint from the HTIF `tohost` window (`tohostAddr = 0x80067600`, ± 8) -/
+  /-- disjoint from the HTIF `tohost` window (`tohostAddr = 0x80061fc0`, ± 8) -/
   htif : p.toNat + len + 1 ≤ tohostAddr ∨ tohostAddr + 8 ≤ p.toNat
 
 /-- The byte `lbu` at address `p + k` (`k ≤ len`) is in RAM, above the HTIF window;
@@ -170,7 +170,7 @@ theorem byte_lbu_bounds (p : BitVec 64) (len k : Nat) (hreg : StrcmpRegion p len
   have hlo := hreg.lo
   have hhi := hreg.hi
   have hh := hreg.htif
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   refine ⟨htn, ?_, ?_, ?_⟩
   all_goals rw [sext0_add, htn]
   · omega

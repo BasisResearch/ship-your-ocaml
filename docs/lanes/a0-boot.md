@@ -2,118 +2,88 @@
 
 ## Status
 
-The exit criterion is **not met**. The foreman authorized a nonempty nursery
-at the existing cut. `RuntimeOk` now has heap bounds, no pending work, and
-an abstract free-list predicate; nursery allocations remain ordinary heap
-blocks handled by `HeapRepr`. There is no empty-nursery proof obligation.
+Migration in progress on top of `elf-fix` (`11989b1`), authorized by the
+foreman. Program files, argv and environment now live behind the fixed
+three-pointer `.embed` header at `0x86800000`. One pinned runtime/Layout
+serves every program. The migration will land atomically after the proof
+and pin gates pass. The `Loaded` exit criterion remains open.
 
-The foreman's prerequisite `.text` identity check **fails**: 7,484 bytes
-across 5,954 instruction words differ between the pinned proof ELF and the
-standalone `while_min` ELF. The second-layout path is stopped as instructed.
-`results/boot/while_min-text.json` pins both ELFs, text hashes/sizes, and
-first differences. No pinned ELF or a0-lib proof has been changed.
+## Image migration
 
-Both text sections start at `0x80000000` and have 340,352 bytes. Their hashes:
-
-* proof: `640e8ba050c4bb318805158198ffca365fabf1586d90788ea2d3badc41a4a591`
-* while_min: `b03f3b97a4bf8e1c2261a886a3e65763b7034977b873d0bac9da54eb4bf2ee40`
-
-The first instruction itself differs: `auipc gp,0x68` versus
-`auipc gp,0x65`; `_start` also embeds different BSS addresses. A second
-symbol layout alone therefore cannot make the existing code facts apply.
-`OCaml.Layout` currently contains only `runtimeOk`; `LoadedAt` and `VmRepr`
-still refer directly to the generated global address constants.
-
-## Defined and proved
-
-* `OCaml/Vm/Runtime.lean:58`: `RuntimeOk` supplies minor-heap bounds,
-  no pending work, and a named abstract `freeList` predicate.
-  `runtimeLayout` (line 64) is the concrete `OCaml.Layout`.
-* `OCaml/Vm/Runtime.lean:69`: `RuntimeOk.youngPtr_bounds`.
-* `OCaml/Refinement.lean`: `Loaded.runtime`, the named accessor for the
-  runtime part of the existing existential witness.
-* `OCaml/Vm/Boot/WhileMinObservation.lean:30`: `bounds`; line 33:
-  `noPending`; line 36: `nursery_not_empty`. These are facts about a small
-  observed projection, not a certificate of a reachable Sail state.
-  All are included in `OCaml/Audit.lean`.
-
-At step **4,269,235**, the Sail trace gives `young_ptr = 0x80283ce0` and
-`young_alloc_end = 0x80284000`: **800 bytes allocated**. Bounds hold and
-`caml_something_to_do = 0`. This is now a documented observation, not an
-obstruction. `startup_byt.c:575–578` promotes globals without resetting
-`young_ptr`, and `caml_sys_init` allocates argv. Counting `oldify_mopup`
-calls as minor collections is not evidence of an empty nursery.
-
-## Tooling and evidence
-
-`scripts/syi/gen_boot_witness.py ocaml-cut` now dispatches to
-`scripts/boot_cut.py`. It reads generated offsets, checks the ELF's key
-symbols against that layout, streams the ordered stores, and stops before
-applying the second interpreter entry row's instruction. It observed
-35,289 stores. Trace files stay in ignored `c/build/`; the compact
-observation is `results/boot/while_min-cut.json` (includes ELF SHA-256).
-
-`scripts/gen_boot_observation.py` emits the small kernel checks; stage a5
-checks drift. `check_all.sh` applies the lane's 24 GB cap and available
-memory check to both builds and audits.
-
-Reproduce from the validation `while_min.elf` at `c/build/nostdlib/`:
-
-```sh
-python3 scripts/census.py --elf c/build/nostdlib/while_min.elf --json c/build/nostdlib/census.json
-python3 scripts/gen_layout.py --elf c/build/nostdlib/while_min.elf --census c/build/nostdlib/census.json > c/build/nostdlib/Layout.lean
-python3 scripts/syi/gen_boot_witness.py ocaml-cut --elf c/build/nostdlib/while_min.elf --layout c/build/nostdlib/Layout.lean --work c/build/boot-while-min
-python3 scripts/gen_boot_observation.py results/boot/while_min-cut.json
-```
-
-The measured ELF was copied read-only from the original validation build
-into this lane's ignored build directory. Its SHA-256 is
-`d008c1189aa093505ac4d92e84e340f6467e65fd8d83eaf402ff810c0665d924`.
-It is not the pinned `while.ml` ELF. For example, its `Caml_state` symbol
-is `0x80067230`, while `OCaml/Vm/Layout.lean` has `0x8006a370`.
-All these addresses were read from the ELF/generated layout, not invented.
-
-Reproduce the ELF comparison (default mode deliberately fails on this pair;
-`--check-pin` succeeds if the recorded mismatch is unchanged):
-
-```sh
-python3 scripts/check_boot_text.py --candidate c/build/nostdlib/while_min.elf
-python3 scripts/check_boot_text.py --candidate c/build/nostdlib/while_min.elf --check-pin results/boot/while_min-text.json
-```
-
-## Open and next
-
-1. `.text` differs: stopped and logged per foreman direction. The named
-   fallback is relocating the embedded program after BSS; do not replace
-   the pinned ELF without approval. Coordinate resulting addresses with
-   a0-lib before consuming its code and decode facts.
-2. Consume a1-arms' running-platform invariant repair through main; entry
-   must establish the appropriate running state, intact code and entry
-   registers. The cut is before interpreter prologue, so dispatch-register
-   initialization belongs to the entry simulation.
-3. Port the boot memory reflection dependency closure. The inherited
-   generator's legacy commands still target WHILE ASTs and absent
-   `Vsa.Sim.Boot.*`/`WriteLogRead` modules. Checking store-log effects alone
-   does not prove Sail reachability.
-4. Certify startup via generated function summaries/step tables and run-kernel
-   composition, consuming a0-lib's landed allocator/stdio specs. No such
-   specs are duplicated here. Summarize the primitive-lookup loop rather
-   than kernel-evaluating 4.27 million Sail steps.
-5. Prove the concrete entry's code, heap, globals, world, registers, runtime
-   and `fillZero` facts, audit `Loaded`, then discharge the exit row.
+* Pinned ELF rebuilt with `make -C c PROG=while.byte`; `make` now defaults
+  to the committed `while.byte`. `c/ELF.sha256` pins the new 528,520-byte
+  image: `b055163e2280efbec1d16c255afccf31e23315f9f37a7ffcba5bbed0850b1c99`.
+* Census ran before layout generation. The decode table has 29,473 words
+  in 231 chunks. The 1,459 allocator step lemmas remain covered. Library layout/pins,
+  allocator steps/compositions, stdio and strcmp/string-copy specs, arm
+  pilots and `OCaml/Vm/ImageData.lean` are regenerated by their generators.
+* `.text`, `.rodata`, `.data` and `.tohost` match byte-for-byte across
+  while, while_min, ocamlc-version, ocamlc-hello and ocamlc-hello-M1000.
+  `scripts/check_boot_text.py` checks all four sections; the small-program
+  and compiler-with-environment comparison pins are in `results/boot/`.
+* The 31 early startup/HTIF function entries (including `_exit`, `_write`,
+  `_sbrk` and `main`) move back four bytes; `caml_interprete` and newlib
+  entries stay fixed. All regenerated addresses come from symbols.
+* Mailbox migration uses `scripts/retarget_syi.py --mailbox-from` and is
+  recorded in `results/retarget-mailbox.json`. `Vsa.Sim.tohostAddr` now
+  references generated `LibraryLayout.tohostAddr`, with MMIO arithmetic
+  proofs normalized through that layout rather than a stale literal.
+* Allocator retargeting canonically matches `__heap_end`, which aliases
+  `__embed_start`. The bin-header alignment theorem is generated from the
+  actual ELF alignment (now 0 modulo 16), not the old image's 8.
+* Main's primitive-summary generators, collector instruction fingerprints,
+  collector/barrier segments and dispatch-table byte proofs are refreshed
+  for the new image. Code-pin coverage is 39,056 bytes with no mismatch. Allocator address normalization unfolds
+  the generated mailbox constant in both tactics and source templates.
 
 ## Validation
 
-* Read COMMON, CLAUDE, PHASES, PLAN; ran the abstraction inventory.
-* Ran census before layout generation; pinned generated layout is unchanged.
-* Actual Sail trace reproduces the documented cut-step count.
-* Targeted runtime and observation builds pass under `MemoryMax=24G`.
-* The first progress commit `f328a83` passed all integration stages and landed.
-* Updated nursery contract and ELF mismatch pin landed as `ee2d145` through
-  `scripts/integrate.sh`; all stages passed, including standard-axiom audit,
-  generated-file drift, code/ELF pins, TCB validation and abstraction gate.
-* Consumed main's `7e0668e`: a0-lib's 29,475-word decode table and three
-  retargeted site batteries. Its whole-function specs remain open; no code
-  facts are transferred to the differing standalone ELF.
-* Text identity check exits 1 as expected; `--check-pin` verifies the exact
-  recorded mismatch. The pinned ELF's SHA-256 remains unchanged.
+* Sail while: exit 0, expected output, 4,571,381 steps; cut 4,499,123.
+* Sail while_min: exit 0, expected output, 4,312,978 steps; cut 4,269,257.
+* Compiler version: exit 0, `4.14.4`, 54,416,092 steps; cut 48,827,370.
+* Compiler hello-M1000: expected listing, exit 0, 77,438,363 steps; cut
+  48,834,064. No collection after the cut.
+* Compiler hello: expected listing, exit 0, 82,642,170 steps; cut 48,831,879.
+  One minor collection and one major slice after the cut. All five Sail
+  reruns are complete and recorded with ELF hashes in `c/results/`.
+* Fresh while_min boot trace: 35,304 ordered stores; the same pinned layout
+  is used. `young_ptr = 0x80281ce0`, `young_alloc_end = 0x80282000` (800
+  allocated bytes); no pending work. The observation and generated small
+  kernel checks are refreshed.
+* Native candidate inspection places all 29 abstract heap objects and
+  matches all 191 code words; this is preparation for the kernel witness.
+* Core MMIO/load and allocator geometry builds passed after the layout
+  changes. Full build, 786 headline axiom audits, generator checks, ELF
+  and code pins all passed against the rebased main.
+* TCB and host-mirror harnesses now implement the three-pointer header
+  interface. The 329-trace quick suite has zero rejections on both Linux
+  and the memory file system. Host-mirror while and compiler hello-M1000
+  match the Sail outputs. Final integration is pending.
+
+## Boot definitions and proofs
+
+* `OCaml/Vm/Runtime.lean`: `RuntimeOk`, `runtimeLayout`, and
+  `RuntimeOk.youngPtr_bounds`. Nonempty nursery allocations are ordinary
+  heap blocks covered by `HeapRepr`. The free-list shape is a named
+  parameter, not an arbitrary `True` instance.
+* `OCaml/Refinement.lean`: `Loaded.platform` and `Loaded.runtime`; the cut
+  must establish a running `GoodState`, intact executable image and runtime
+  invariant. Dispatch-register initialization belongs to the prologue.
+* `OCaml/Vm/Boot/WhileMinObservation.lean`: `bounds`, `noPending`, and
+  `nursery_not_empty` are small, audited kernel facts about the observed
+  projection. They do not certify machine reachability.
+* `scripts/syi/gen_boot_witness.py ocaml-cut` streams stores and extracts
+  the pre-step second interpreter entry. `scripts/gen_boot_observation.py`
+  generates the scalar checks; check_all a5 checks drift.
+
+## Next
+
+1. Finish the full proof migration and integrate it atomically, promptly so
+   other lanes can consume the new addresses. Do not notify other lanes;
+   the foreman handles that coordination.
+2. Build the concrete boot-state/reflection certificate, reusing the newly
+   landed allocator and stdio function specs and run-kernel composition.
+   Summarize the primitive-lookup loop instead of evaluating millions of
+   Sail steps in a single kernel check.
+3. Establish code, heap, globals, world, registers, platform/runtime and
+   `fillZero` facts for the actual while_min entry; prove and audit `Loaded`.

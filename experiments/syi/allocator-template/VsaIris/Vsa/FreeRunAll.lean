@@ -65,7 +65,7 @@ theorem fHeap_entry {C : MCtx} {m1 : Mem} {q : BitVec 64} {n : Nat} {s : BitVec 
     FHeap C C.Mt0 q.toNat n brkv chunks bins := by
   subst hs0
   have hs : 512 ≤ C.s.toNat := by
-    have := hsp.lo; unfold allocHeadroom Vsa.Sim.tohostAddr at this; omega
+    have := hsp.lo; unfold allocHeadroom Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at this; omega
   have hwin : ∀ a, C.s.toNat - allocHeadroom ≤ a → a < C.s.toNat - allocHeadroom + allocHeadroom →
       ¬ vsaFoot C.H a := fun a h1 h2 hf => by
     exact hdisj a ⟨h1, by simp only; omega⟩ (foot_block hf)

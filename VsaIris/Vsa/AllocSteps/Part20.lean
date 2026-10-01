@@ -4,7 +4,7 @@ import Vsa.Sim.BridgeSeg
 import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.ElfDecode.Part001
 import Vsa.Sim.ElfDecode.Part002
-import Vsa.Sim.ElfDecode.Part004
+import Vsa.Sim.ElfDecode.Part005
 import Vsa.Sim.ElfDecode.Part018
 import Vsa.Sim.ElfDecode.Part019
 import Vsa.Sim.ElfDecode.Part029
@@ -16,15 +16,15 @@ import Vsa.Sim.ElfDecode.Part044
 import Vsa.Sim.ElfDecode.Part046
 import Vsa.Sim.ElfDecode.Part054
 import Vsa.Sim.ElfDecode.Part055
-import Vsa.Sim.ElfDecode.Part067
+import Vsa.Sim.ElfDecode.Part066
 import Vsa.Sim.ElfDecode.Part104
 import Vsa.Sim.ElfDecode.Part109
 import Vsa.Sim.ElfDecode.Part111
-import Vsa.Sim.ElfDecode.Part117
+import Vsa.Sim.ElfDecode.Part118
 import Vsa.Sim.ElfDecode.Part125
-import Vsa.Sim.ElfDecode.Part127
 import Vsa.Sim.ElfDecode.Part130
-import Vsa.Sim.ElfDecode.Part137
+import Vsa.Sim.ElfDecode.Part138
+import Vsa.Sim.ElfDecode.Part190
 import Vsa.Sim.ElfDecode.Part201
 import Vsa.Sim.ElfDecode.Part224
 import Vsa.Sim.ElfDecode.Part227
@@ -38,8 +38,8 @@ namespace Vsa.Sim
 
 def axT_80037f28 : List BBlock := [⟨[], some (⟨0x80037f28#64, 0x12f75463#32, 0x63#8, 0x54#8, 0xf7#8, 0x12#8, .br bop.BGE true, 14, 15, 0x128#13, 0x0#21, 0#12⟩ : TInstr)⟩]
 def axF_80037f28 : List BBlock := [⟨[], some (⟨0x80037f28#64, 0x12f75463#32, 0x63#8, 0x54#8, 0xf7#8, 0x12#8, .br bop.BGE false, 14, 15, 0x128#13, 0x0#21, 0#12⟩ : TInstr)⟩]
-def ax_80037f2c : List BBlock := [{ body := [mkLine 0x80037f2c#64 0x00031897#32], term := none }]
-def ax_80037f30 : List BBlock := [{ body := [mkLine 0x80037f30#64 0x2dc8b883#32], term := none }]
+def ax_80037f2c : List BBlock := [{ body := [mkLine 0x80037f2c#64 0x0002c897#32], term := none }]
+def ax_80037f30 : List BBlock := [{ body := [mkLine 0x80037f30#64 0xc748b883#32], term := none }]
 def ax_80037f34 : List BBlock := [{ body := [mkLine 0x80037f34#64 0x00e60833#32], term := none }]
 def ax_80037f38 : List BBlock := [{ body := [mkLine 0x80037f38#64 0x00883503#32], term := none }]
 def axT_80037f3c : List BBlock := [⟨[], some (⟨0x80037f3c#64, 0x1d088e63#32, 0x63#8, 0x8e#8, 0x08#8, 0x1d#8, .br bop.BEQ true, 17, 16, 0x1dc#13, 0x0#21, 0#12⟩ : TInstr)⟩]
@@ -107,7 +107,7 @@ theorem st_80037f28 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_80037f2c {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x80037f30#64 (upd R 17 ((0x80037f2c#64) + (sign_extend (m := 64) ((0x00031#20) +++ (0x000#12))))) Mt) :
+    (hk : AW live S Q 0x80037f30#64 (upd R 17 ((0x80037f2c#64) + (sign_extend (m := 64) ((0x0002c#20) +++ (0x000#12))))) Mt) :
     AW live S Q 0x80037f2c#64 R Mt :=
   swp_step ax_80037f2c [17] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -120,11 +120,11 @@ theorem st_80037f2c {live : Nat → Prop} {S : Nat → Prop}
 theorem st_80037f30 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hea : LdOK ((R 17) + sign_extend (m := 64) (0x2dc#12)).toNat 8)
-    (hLDS : ∀ b ∈ accAddrs ((R 17) + sign_extend (m := 64) (0x2dc#12)).toNat 8, S b)
-    (hk : AW live S Q 0x80037f34#64 (upd R 17 (ldv .ld Mt ((R 17) + sign_extend (m := 64) (0x2dc#12)).toNat)) Mt) :
+    (hea : LdOK ((R 17) + sign_extend (m := 64) (0xc74#12)).toNat 8)
+    (hLDS : ∀ b ∈ accAddrs ((R 17) + sign_extend (m := 64) (0xc74#12)).toNat 8, S b)
+    (hk : AW live S Q 0x80037f34#64 (upd R 17 (ldv .ld Mt ((R 17) + sign_extend (m := 64) (0xc74#12)).toNat)) Mt) :
     AW live S Q 0x80037f30#64 R Mt :=
-  swp_step ax_80037f30 [17] [bytesAt (imgM Mt) ((R 17) + sign_extend (m := 64) (0x2dc#12)).toNat 8] (accAddrs ((R 17) + sign_extend (m := 64) (0x2dc#12)).toNat 8) [] 0 rfl (by decide) (by decide) (by decide)
+  swp_step ax_80037f30 [17] [bytesAt (imgM Mt) ((R 17) + sign_extend (m := 64) (0xc74#12)).toNat 8] (accAddrs ((R 17) + sign_extend (m := 64) (0xc74#12)).toNat 8) [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
     (fun m hm hLD => by unfold ax_80037f30 ChainFacts; chain_facts hm with "VsaIris.Sym.alloc_at_"; exact ⟨hea, lpins8_img hLD⟩)
     (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) hLDS

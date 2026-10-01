@@ -22,8 +22,8 @@ namespace Vsa.Sim
 
 /- The `caml_modifyXa9a8T` span body `0x8000a9a8 → 0x8000a9b8` (br-terminated, 1 block(s)), decoded from the pinned runtime ELF. -/
 #derive_case caml_modifyXa9a8TSeg chain
-  [(0x8000a9a8#64, 0x00060697#32),  -- auipc a3,0x60
-   (0x8000a9ac#64, 0x9c868693#32),  -- addi a3,a3,-1592
+  [(0x8000a9a8#64, 0x0005a697#32),  -- auipc a3,0x5a
+   (0x8000a9ac#64, 0x36068693#32),  -- addi a3,a3,864
    (0x8000a9b0#64, 0x0006b783#32),  -- ld a5,0(a3)
    (0x8000a9b4#64, 0x0287b703#32)]  -- ld a4,40(a5)
     terminator ⟨0x8000a9b8#64, 0x00e57a63#32, 0x63#8, 0x7a#8, 0xe5#8, 0x00#8, .br bop.BGEU true, 10, 14, 0x0014#13, 0#21, 0#12⟩
@@ -61,8 +61,8 @@ theorem caml_modifyXa9a8TRow (a0 : BitVec 64) (lds : List (List (BitVec 8)))
 
 /- The `caml_modifyXa9a8F` span body `0x8000a9a8 → 0x8000a9b8` (br-terminated, 1 block(s)), decoded from the pinned runtime ELF. -/
 #derive_case caml_modifyXa9a8FSeg chain
-  [(0x8000a9a8#64, 0x00060697#32),  -- auipc a3,0x60
-   (0x8000a9ac#64, 0x9c868693#32),  -- addi a3,a3,-1592
+  [(0x8000a9a8#64, 0x0005a697#32),  -- auipc a3,0x5a
+   (0x8000a9ac#64, 0x36068693#32),  -- addi a3,a3,864
    (0x8000a9b0#64, 0x0006b783#32),  -- ld a5,0(a3)
    (0x8000a9b4#64, 0x0287b703#32)]  -- ld a4,40(a5)
     terminator ⟨0x8000a9b8#64, 0x00e57a63#32, 0x63#8, 0x7a#8, 0xe5#8, 0x00#8, .br bop.BGEU false, 10, 14, 0x0014#13, 0#21, 0#12⟩
@@ -418,8 +418,8 @@ theorem caml_modifyXa9f8FRow (a2 : BitVec 64) (a0 : BitVec 64) (lds : List (List
 
 /- The `caml_modifyXaa00T` span body `0x8000aa00 → 0x8000aa08` (br-terminated, 1 block(s)), decoded from the pinned runtime ELF. -/
 #derive_case caml_modifyXaa00TSeg chain
-  [(0x8000aa00#64, 0x0005f617#32),  -- auipc a2,0x5f
-   (0x8000aa04#64, 0x72862603#32)]  -- lw a2,1832(a2)
+  [(0x8000aa00#64, 0x0005a617#32),  -- auipc a2,0x5a
+   (0x8000aa04#64, 0x0c062603#32)]  -- lw a2,192(a2)
     terminator ⟨0x8000aa08#64, 0x04060463#32, 0x63#8, 0x04#8, 0x06#8, 0x04#8, .br bop.BEQ true, 12, 0, 0x0048#13, 0#21, 0#12⟩
 
 /-- The `caml_modifyXaa00T` entry pin list — the registers the body reads: . -/
@@ -455,8 +455,8 @@ theorem caml_modifyXaa00TRow (lds : List (List (BitVec 8)))
 
 /- The `caml_modifyXaa00F` span body `0x8000aa00 → 0x8000aa08` (br-terminated, 1 block(s)), decoded from the pinned runtime ELF. -/
 #derive_case caml_modifyXaa00FSeg chain
-  [(0x8000aa00#64, 0x0005f617#32),  -- auipc a2,0x5f
-   (0x8000aa04#64, 0x72862603#32)]  -- lw a2,1832(a2)
+  [(0x8000aa00#64, 0x0005a617#32),  -- auipc a2,0x5a
+   (0x8000aa04#64, 0x0c062603#32)]  -- lw a2,192(a2)
     terminator ⟨0x8000aa08#64, 0x04060463#32, 0x63#8, 0x04#8, 0x06#8, 0x04#8, .br bop.BEQ false, 12, 0, 0x0048#13, 0#21, 0#12⟩
 
 /-- The `caml_modifyXaa00F` entry pin list — the registers the body reads: . -/
@@ -877,8 +877,8 @@ theorem caml_modifyXaa50Row (a4 : BitVec 64) (sp : BitVec 64) (a5 : BitVec 64) (
 #derive_case caml_modifyXaa60TSeg chain
   [(0x8000aa60#64, 0x00813703#32),  -- ld a4,8(sp)
    (0x8000aa64#64, 0x00013783#32),  -- ld a5,0(sp)
-   (0x8000aa68#64, 0x00060697#32),  -- auipc a3,0x60
-   (0x8000aa6c#64, 0x90868693#32),  -- addi a3,a3,-1784
+   (0x8000aa68#64, 0x0005a697#32),  -- auipc a3,0x5a
+   (0x8000aa6c#64, 0x2a068693#32),  -- addi a3,a3,672
    (0x8000aa70#64, 0x00177613#32)]  -- andi a2,a4,1
     terminator ⟨0x8000aa74#64, 0xfc0618e3#32, 0xe3#8, 0x18#8, 0x06#8, 0xfc#8, .br bop.BNE true, 12, 0, 0x1fd0#13, 0#21, 0#12⟩
 
@@ -917,8 +917,8 @@ theorem caml_modifyXaa60TRow (sp : BitVec 64) (lds : List (List (BitVec 8)))
 #derive_case caml_modifyXaa60FSeg chain
   [(0x8000aa60#64, 0x00813703#32),  -- ld a4,8(sp)
    (0x8000aa64#64, 0x00013783#32),  -- ld a5,0(sp)
-   (0x8000aa68#64, 0x00060697#32),  -- auipc a3,0x60
-   (0x8000aa6c#64, 0x90868693#32),  -- addi a3,a3,-1784
+   (0x8000aa68#64, 0x0005a697#32),  -- auipc a3,0x5a
+   (0x8000aa6c#64, 0x2a068693#32),  -- addi a3,a3,672
    (0x8000aa70#64, 0x00177613#32)]  -- andi a2,a4,1
     terminator ⟨0x8000aa74#64, 0xfc0618e3#32, 0xe3#8, 0x18#8, 0x06#8, 0xfc#8, .br bop.BNE false, 12, 0, 0x1fd0#13, 0#21, 0#12⟩
 

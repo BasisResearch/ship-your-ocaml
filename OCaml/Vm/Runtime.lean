@@ -14,6 +14,9 @@ namespace OCaml.Vm
 
 open Vsa.Machine
 
+/-- Machine-site and OCaml startup proofs use the same generated mailbox. -/
+theorem mailbox_layout : Vsa.Sim.tohostAddr = Layout.sym_tohost := rfl
+
 /-- A small first-order projection, suitable for checking trace candidates
 without reducing an entire Sail state in the kernel. -/
 structure RuntimeFields where

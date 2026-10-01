@@ -46,7 +46,7 @@ RT_SRC := interp misc stacks fix_code startup_aux startup_byt freelist \
 RT_C := $(patsubst %,$(RT)/%.c,$(RT_SRC))
 
 PROG_SRC ?= tests/while.ml
-PROG     ?= build/prog.byte
+PROG     ?= while.byte
 # Extra command-line arguments, as C string literals each followed by a
 # comma, e.g. ARGS='"-version",'.
 ARGS     ?=

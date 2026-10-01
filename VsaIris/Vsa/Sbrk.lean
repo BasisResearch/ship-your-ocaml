@@ -8,8 +8,8 @@ open Vsa.MemRepr Vsa.Sim Vsa.Sim.DlHeap VsaIris.Inst VsaIris.Sym
 open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail
 
 def SbrkW (sp : Nat) (a : Nat) : Prop :=
-  (sp - 32 ≤ a ∧ a < sp) ∨ (brkAddr ≤ a ∧ a < brkAddr + 8) ∨ (0x8006a3b0 ≤ a ∧ a < 0x8006a3b4) ∨
-    (0x80069cd0 ≤ a ∧ a < 0x80069cd4)
+  (sp - 32 ≤ a ∧ a < sp) ∨ (brkAddr ≤ a ∧ a < brkAddr + 8) ∨ (0x80064d48 ≤ a ∧ a < 0x80064d4c) ∨
+    (0x80064668 ≤ a ∧ a < 0x8006466c)
 
 structure SbrkPre (S : Nat → Prop) (R : Nat → BitVec 64) (Mt : Mem) (brkv sb : Nat) : Prop where
   a1 : (R 11).toNat = sb
@@ -21,9 +21,9 @@ structure SbrkPre (S : Nat → Prop) (R : Nat → BitVec 64) (Mt : Mem) (brkv sb
   sp_hi : (R 2).toNat ≤ 0x100000000
   sp_al : (R 2).toNat % 16 = 0
   ra_al : (R 1).toNat % 4 = 0
-  off1 : (R 2).toNat ≤ 0x80069cd0 ∨ 0x80069cd4 + 32 ≤ (R 2).toNat
+  off1 : (R 2).toNat ≤ 0x80064668 ∨ 0x8006466c + 32 ≤ (R 2).toNat
   off2 : ((R 2).toNat ≤ brkAddr ∨ brkAddr + 8 + 32 ≤ (R 2).toNat) ∧
-    ((R 2).toNat ≤ 0x8006a3b0 ∨ 0x8006a3b4 + 32 ≤ (R 2).toNat)
+    ((R 2).toNat ≤ 0x80064d48 ∨ 0x80064d4c + 32 ≤ (R 2).toNat)
   own : ∀ a, SbrkW (R 2).toNat a → S a
 
 structure SbrkPost (R R' : Nat → BitVec 64) (Mt Mt' : Mem) (brk' : Nat) : Prop where
@@ -43,7 +43,7 @@ macro_rules
   | `(tactic| sx_side) => `(tactic| (refine VsaIris.VsaHeap.SbrkPre.acc ‹VsaIris.VsaHeap.SbrkPre _ _ _ _ _› ?_; intro b hb1 hb2; unfold VsaIris.VsaHeap.SbrkW Vsa.Sim.DlHeap.brkAddr; sx_addr))
 
 theorem impure_val :
-    bytesVal .ld [0xd0#8, 0x9c#8, 0x06#8, 0x80#8, 0x00#8, 0x00#8, 0x00#8, 0x00#8] = 0x80069cd0#64 := by
+    bytesVal .ld [0x68#8, 0x46#8, 0x06#8, 0x80#8, 0x00#8, 0x00#8, 0x00#8, 0x00#8] = 0x80064668#64 := by
   decide
 
 structure SbrkPreG (S : Nat → Prop) (R : Nat → BitVec 64) (Mt : Mem) (brkv nbrk : Nat) : Prop where
@@ -55,9 +55,9 @@ structure SbrkPreG (S : Nat → Prop) (R : Nat → BitVec 64) (Mt : Mem) (brkv n
   sp_hi : (R 2).toNat ≤ 0x100000000
   sp_al : (R 2).toNat % 16 = 0
   ra_al : (R 1).toNat % 4 = 0
-  off1 : (R 2).toNat ≤ 0x80069cd0 ∨ 0x80069cd4 + 32 ≤ (R 2).toNat
+  off1 : (R 2).toNat ≤ 0x80064668 ∨ 0x8006466c + 32 ≤ (R 2).toNat
   off2 : ((R 2).toNat ≤ brkAddr ∨ brkAddr + 8 + 32 ≤ (R 2).toNat) ∧
-    ((R 2).toNat ≤ 0x8006a3b0 ∨ 0x8006a3b4 + 32 ≤ (R 2).toNat)
+    ((R 2).toNat ≤ 0x80064d48 ∨ 0x80064d4c + 32 ≤ (R 2).toNat)
   own : ∀ a, SbrkW (R 2).toNat a → S a
 
 theorem SbrkPreG.acc {S : Nat → Prop} {R : Nat → BitVec 64} {Mt : Mem} {brkv nbrk : Nat}
@@ -81,20 +81,20 @@ theorem sbrk_r_gen {live S : Nat → Prop} {Q : (Nat → BitVec 64) → (Nat →
   have hsum := P.sum; have hbrk := P.brk; have hbp := P.brk_pos
   have hbl := P.brk_le; have hlo := P.sp_lo; have hhi := P.sp_hi; have hal := P.sp_al
   have hra := P.ra_al; have ho1 := P.off1; have ho2 := P.off2
-  unfold heapEnd at hbl; unfold Vsa.Sim.tohostAddr at hlo
+  unfold heapEnd at hbl; unfold Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   unfold brkAddr at hbrk
-  sx_run [16] hlive at 0x80001c94
+  sx_run [16] hlive at 0x80001c90
   simp (disch := decide) only [ldv_at hbrk]
-  refine st_80001c94 hlive (fun h => ?_) (fun _ => ?_)
+  refine st_80001c90 hlive (fun h => ?_) (fun _ => ?_)
   · exfalso
     simp only [upd_apply, Nat.reduceEqDiff, ite_true] at h
     have := congrArg BitVec.toNat h
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)] at this
     simp at this; omega
-  sx_run [8] hlive at 0x80001ca4
-  refine st_80001ca4 hlive (fun hbad => ?_) (fun hok' => ?_)
+  sx_run [8] hlive at 0x80001ca0
+  refine st_80001ca0 hlive (fun hbad => ?_) (fun hok' => ?_)
   · simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false] at hbad
-    sx_run [60] hlive at 0x80001ce8
+    sx_run [60] hlive at 0x80001ce4
     simp only [impure_val] at *
     sx_run [30] hlive
     have hlt : heapEnd < nbrk := by rw [← hsum]; unfold heapEnd; simpa using hbad

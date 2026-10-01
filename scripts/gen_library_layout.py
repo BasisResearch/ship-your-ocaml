@@ -17,6 +17,7 @@ end Vsa.Alloc
 
 namespace Vsa.Sim.LibraryLayout
 def gpV : BitVec 64 := 0x{syms['__global_pointer$'][0]:x}#64
+abbrev tohostAddr : Nat := 0x{syms['tohost'][0]:x}
 end Vsa.Sim.LibraryLayout
 '''
 

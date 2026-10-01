@@ -2,9 +2,9 @@
 import VsaIris.Vsa.AllocRun
 import Vsa.Sim.BridgeSeg
 import Vsa.Sim.ChainFactsTac
-import Vsa.Sim.ElfDecode.Part002
+import Vsa.Sim.ElfDecode.Part001
 import Vsa.Sim.ElfDecode.Part010
-import Vsa.Sim.ElfDecode.Part018
+import Vsa.Sim.ElfDecode.Part017
 import Vsa.Sim.ElfDecode.Part019
 import Vsa.Sim.ElfDecode.Part021
 import Vsa.Sim.ElfDecode.Part023
@@ -14,18 +14,16 @@ import Vsa.Sim.ElfDecode.Part031
 import Vsa.Sim.ElfDecode.Part036
 import Vsa.Sim.ElfDecode.Part041
 import Vsa.Sim.ElfDecode.Part042
-import Vsa.Sim.ElfDecode.Part043
 import Vsa.Sim.ElfDecode.Part048
-import Vsa.Sim.ElfDecode.Part053
+import Vsa.Sim.ElfDecode.Part052
 import Vsa.Sim.ElfDecode.Part060
 import Vsa.Sim.ElfDecode.Part092
 import Vsa.Sim.ElfDecode.Part098
 import Vsa.Sim.ElfDecode.Part111
-import Vsa.Sim.ElfDecode.Part114
 import Vsa.Sim.ElfDecode.Part115
 import Vsa.Sim.ElfDecode.Part119
-import Vsa.Sim.ElfDecode.Part137
-import Vsa.Sim.ElfDecode.Part171
+import Vsa.Sim.ElfDecode.Part127
+import Vsa.Sim.ElfDecode.Part138
 import Vsa.Sim.ElfDecode.Part224
 import Vsa.Sim.ElfDecode.Part227
 
@@ -47,8 +45,8 @@ def ax_800448c0 : List BBlock := [{ body := [mkLine 0x800448c0#64 0x00187813#32]
 def axT_800448c4 : List BBlock := [⟨[], some (⟨0x800448c4#64, 0x08031e63#32, 0x63#8, 0x1e#8, 0x03#8, 0x08#8, .br bop.BNE true, 6, 0, 0x9c#13, 0x0#21, 0#12⟩ : TInstr)⟩]
 def axF_800448c4 : List BBlock := [⟨[], some (⟨0x800448c4#64, 0x08031e63#32, 0x63#8, 0x1e#8, 0x03#8, 0x08#8, .br bop.BNE false, 6, 0, 0x9c#13, 0x0#21, 0#12⟩ : TInstr)⟩]
 def ax_800448c8 : List BBlock := [{ body := [mkLine 0x800448c8#64 0xff05b303#32], term := none }]
-def ax_800448cc : List BBlock := [{ body := [mkLine 0x800448cc#64 0x00025517#32], term := none }]
-def ax_800448d0 : List BBlock := [{ body := [mkLine 0x800448d0#64 0x93c50513#32], term := none }]
+def ax_800448cc : List BBlock := [{ body := [mkLine 0x800448cc#64 0x0001f517#32], term := none }]
+def ax_800448d0 : List BBlock := [{ body := [mkLine 0x800448d0#64 0x2d450513#32], term := none }]
 def ax_800448d4 : List BBlock := [{ body := [mkLine 0x800448d4#64 0x40670733#32], term := none }]
 def ax_800448d8 : List BBlock := [{ body := [mkLine 0x800448d8#64 0x01073583#32], term := none }]
 def ax_800448dc : List BBlock := [{ body := [mkLine 0x800448dc#64 0x006787b3#32], term := none }]
@@ -226,7 +224,7 @@ theorem st_800448c8 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_800448cc {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x800448d0#64 (upd R 10 ((0x800448cc#64) + (sign_extend (m := 64) ((0x00025#20) +++ (0x000#12))))) Mt) :
+    (hk : AW live S Q 0x800448d0#64 (upd R 10 ((0x800448cc#64) + (sign_extend (m := 64) ((0x0001f#20) +++ (0x000#12))))) Mt) :
     AW live S Q 0x800448cc#64 R Mt :=
   swp_step ax_800448cc [10] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -239,7 +237,7 @@ theorem st_800448cc {live : Nat → Prop} {S : Nat → Prop}
 theorem st_800448d0 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x800448d4#64 (upd R 10 ((R 10) + sign_extend (m := 64) (0x93c#12))) Mt) :
+    (hk : AW live S Q 0x800448d4#64 (upd R 10 ((R 10) + sign_extend (m := 64) (0x2d4#12))) Mt) :
     AW live S Q 0x800448d0#64 R Mt :=
   swp_step ax_800448d0 [10] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive

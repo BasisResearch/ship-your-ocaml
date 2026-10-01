@@ -154,8 +154,8 @@ theorem fb_small_heap {C : MCtx} {Mt M2 : Mem} {X S top brkv : Nat} {cs₁ cs₂
   unfold heapStart binAt avAddr at hoLoc
 
   generalize hMf : writeLog (writeLog (writeLog (writeLog (writeLog Mt
-      [(X + 16, 8, w0)]) [(X + 24, 8, w1)]) [(0x800691f8 + 8, 8, w2)])
-      [(0x800691f8 + 16 * j + 16, 8, w3)]) [(first + 24, 8, w3)] = Mf
+      [(X + 16, 8, w0)]) [(X + 24, 8, w1)]) [(0x80063b90 + 8, 8, w2)])
+      [(0x80063b90 + 16 * j + 16, 8, w3)]) [(first + 24, 8, w3)] = Mf
   have eV1 : fdOf Mf X = some first := by
     show read64 _ (X + 16) = _
     rw [← hMf, read64_miss' (by omega), read64_miss' (by omega), read64_miss' (by omega),
@@ -209,7 +209,7 @@ theorem fb_small_heap {C : MCtx} {Mt M2 : Mem} {X S top brkv : Nat} {cs₁ cs₂
 theorem fb_small {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
     {X S top brkv : Nat} {cs₁ cs₂ : List Chunk} {bins : Nat → List Nat}
     (F : FFrame C R Mt) (B : FBin C Mt M2 X S top brkv cs₁ cs₂ bins) (hS : S ≤ 511)
-    (h17 : R 17 = 0x800691f8#64) (h14 : (R 14).toNat = X) (h15 : (R 15).toNat = S) :
+    (h17 : R 17 = 0x80063b90#64) (h14 : (R 14).toNat = X) (h15 : (R 15).toNat = S) :
     AW C.live C.S C.Q 0x80044908#64 R Mt := by
   have Hh := B.heap
   have BB := Hh.heap
@@ -256,7 +256,7 @@ theorem fb_small {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
   have hA3 := binfd_toNat hj8 (by omega)
   refine st_8004491c O.live ?_
   refine st_80044920 O.live ?_ ?_ ?_
-  · sx_norm; rw [hA3]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hA3]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hA3]; exact O.toWOK.bin_link hjn (.inl rfl)
   sx_norm
   rw [hA3, ldv_at hfdJ' _ rfl]
@@ -272,7 +272,7 @@ theorem fb_small {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
       (shift_bits_right_arith (BitVec.extractLsb 31 0 (R 15 >>> 3)) 2#5))).toNat |||
       BitVec.ofNat 64 bb).toNat = bb ||| 2 ^ (S / 8 / 4) := by
     rw [BitVec.toNat_or, hbbv, hbit, Nat.or_comm]
-  have hA2 : (2147914232#64 + BitVec.signExtend 64 (BitVec.extractLsb 31 0 (R 15 >>> 3 <<< 1 + 2#64))
+  have hA2 : (2147892112#64 + BitVec.signExtend 64 (BitVec.extractLsb 31 0 (R 15 >>> 3 <<< 1 + 2#64))
       <<< 3 + 18446744073709551600#64) = BitVec.ofNat 64 (binAt (S / 8)) := by
     apply BitVec.eq_of_toNat_eq
     rw [BitVec.toNat_add, hA3, BitVec.toNat_ofNat, BitVec.toNat_ofNat]
@@ -287,20 +287,20 @@ theorem fb_small {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
   have hXo := HH.chunk_node_fields_ne hX (by omega) hjn hofm
   have hoHdr := HH.node_header_span_disjoint (by omega) hjn hofm (HH.end_bnd hX)
   simp only at hXo hoHdr
-  have holoc : first = binAt (S / 8) ∨ (0x800827a0 ≤ first ∧ first + 32 ≤ top) := by
+  have holoc : first = binAt (S / 8) ∨ (0x8007d140 ≤ first ∧ first + 32 ≤ top) := by
     rcases honode with h | ⟨cx, hcx, rfl, _, _⟩
     · exact .inl h
     · have := HH.walk.chunk_bounds cx hcx; unfold heapStart at this; exact .inr ⟨this.1, by omega⟩
   have hvf : ∀ k, k < 16 → vsaFoot C.H (X + 16 + k) := fun k hk => B.foot_chunk (by omega) (by omega)
 
   refine st_80044938 O.live ?_ ?_ ?_
-  · sx_norm; rw [BitVec.toNat_add, h14]; unfold StOK Vsa.Sim.tohostAddr; simp; omega
+  · sx_norm; rw [BitVec.toNat_add, h14]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; simp; omega
   · sx_norm; rw [BitVec.toNat_add, h14]; simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]
     rw [Nat.mod_eq_of_lt (by omega)]; exact O.foot (fun k hk => hvf k (by omega))
   sx_norm
   rw [show (R 14 + 16#64).toNat = X + 16 by rw [BitVec.toNat_add, h14]; simp; omega]
   refine st_8004493c O.live ?_ ?_ ?_
-  · sx_norm; rw [BitVec.toNat_add, h14]; unfold StOK Vsa.Sim.tohostAddr; simp; omega
+  · sx_norm; rw [BitVec.toNat_add, h14]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; simp; omega
   · sx_norm; rw [BitVec.toNat_add, h14]; simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]
     rw [Nat.mod_eq_of_lt (by omega)]
     exact O.foot (fun k hk => by have := hvf (8 + k) (by omega); rwa [show X + 16 + (8 + k) = X + 24 + k by omega] at this)
@@ -311,7 +311,7 @@ theorem fb_small {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
   sx_norm
 
   refine st_80044944 O.live ?_ ?_ ?_
-  · sx_norm; rw [hA3]; unfold StOK Vsa.Sim.tohostAddr; unfold binAt avAddr at hgj ⊢; omega
+  · sx_norm; rw [hA3]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; unfold binAt avAddr at hgj ⊢; omega
   · sx_norm; rw [hA3]; exact O.toWOK.bin_link hjn (.inl rfl)
   sx_norm
   rw [hA3]
@@ -320,7 +320,7 @@ theorem fb_small {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
     simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]
     unfold binAt avAddr at holoc; omega
   refine st_80044948 O.live ?_ ?_ ?_
-  · sx_norm; rw [hEo]; unfold StOK Vsa.Sim.tohostAddr; unfold binAt avAddr at holoc; omega
+  · sx_norm; rw [hEo]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; unfold binAt avAddr at holoc; omega
   · sx_norm; rw [hEo]; exact O.foot (fun k hk => by
       have := hof16 (24 + k) (by omega) (by omega)
       rwa [show first + (24 + k) = first + 24 + k by omega] at this)
@@ -331,7 +331,7 @@ theorem fb_small {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
     (w0 := BitVec.ofNat 64 first) (w1 := BitVec.ofNat 64 (binAt (S / 8))) (w3 := R 14)
     (by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hoflt])
     (by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hofflt]) hor h14
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hoV := B.off_stack (fun k hk => hvf k (by omega))
   have hoV' := B.off_stack (a := X + 24) (fun k hk => by
     have := hvf (8 + k) (by omega); rwa [show X + 16 + (8 + k) = X + 24 + k by omega] at this)
@@ -339,7 +339,7 @@ theorem fb_small {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt M2 : Mem}
   have hoO := B.off_stack (a := first + 24) (fun k hk => by
     have := hof16 (24 + k) (by omega) (by omega)
     rwa [show first + (24 + k) = first + 24 + k by omega] at this)
-  have hoB := B.off_stack (a := 2147914240) (fun k hk => .inl (.inl ⟨by omega, by omega⟩))
+  have hoB := B.off_stack (a := 2147892120) (fun k hk => .inl (.inl ⟨by omega, by omega⟩))
   unfold mHead at hoV hoV' hoJ hoO hoB
   have h9 := F.s1; have h18 := F.s2; have h19 := F.s3; have h2 := F.sp
   exact free_epi O ((((((F.store (by omega)).store (by omega)).store (by omega)).store (by omega)).store
@@ -414,7 +414,7 @@ open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail
   have hpX := hXJ pred hpm
   have hsX := hXJ succ hsm
   have hloc : ∀ y, (y = binAt j ∨ ∃ cx ∈ cs₁ ++ ⟨X, S, true⟩ :: cs₂, cx.addr = y ∧ cx.inuse = false ∧ y ∈ bins j) →
-      (0x80069208 ≤ y ∧ y + 32 ≤ 0x80069a08) ∨ (0x800827a0 ≤ y ∧ y + 32 ≤ top) := by
+      (0x80063ba0 ≤ y ∧ y + 32 ≤ 0x800643a0) ∨ (0x8007d140 ≤ y ∧ y + 32 ≤ top) := by
     rintro y (rfl | ⟨cx, hcx, rfl, _, _⟩)
     · unfold binAt avAddr at hgj ⊢; exact .inl ⟨by omega, by omega⟩
     · have := HH.walk.chunk_bounds cx hcx; unfold heapStart at this; exact .inr ⟨this.1, by omega⟩
@@ -423,7 +423,7 @@ open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail
   have hbp := HH.bnd_ne_node hj hpnode (HH.end_bnd hX)
   have hbs := HH.bnd_ne_node hj hsnode (HH.end_bnd hX)
   have hvf : ∀ k, k < 16 → vsaFoot C.H (X + 16 + k) := fun k hk => B.foot_chunk (by omega) (by omega)
-  have hlo := O.sp.lo; have hhi := O.sp.hi; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; have hhi := O.sp.hi; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := F.sp
   have hs2n : (R 2).toNat = C.s.toNat - 32 := by
     rw [hs2, BitVec.toNat_add]
@@ -447,12 +447,12 @@ open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail
     have := hsf (24 + k) (by omega) (by omega); rwa [show succ + (24 + k) = succ + 24 + k by omega] at this)
   unfold mHead at hoX hoX' hoP hoS
   refine st_800449fc O.live ?_ ?_ ?_
-  · rw [hEx24]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · rw [hEx24]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEx24]; exact O.foot (fun k hk => by
       have := hvf (8 + k) (by omega); rwa [show X + 16 + (8 + k) = X + 24 + k by omega] at this)
   rw [hEx24]
   refine st_80044a00 O.live ?_ ?_ ?_
-  · rw [hEx16]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · rw [hEx16]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEx16]; exact O.foot (fun k hk => hvf k (by omega))
   rw [hEx16]
   have F2 := (F.store (a := X + 24) (w := 8) (v := R 11) (by omega)).store (a := X + 16) (w := 8)
@@ -471,13 +471,13 @@ open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail
   rw [upd_other _ _ (by decide : (2 : Nat) ≠ 8), upd_other _ _ (by decide : (2 : Nat) ≠ 10), hl24]
   refine st_80044a10 O.live ?_ ?_ ?_ <;>
     simp only [upd_apply, Nat.reduceEqDiff, ite_false]
-  · rw [hEp]; unfold StOK Vsa.Sim.tohostAddr; rcases hpl with h | h <;> omega
+  · rw [hEp]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; rcases hpl with h | h <;> omega
   · rw [hEp]; exact O.foot (fun k hk => by
       have := hpf (16 + k) (by omega) (by omega); rwa [show pred + (16 + k) = pred + 16 + k by omega] at this)
   rw [hEp]
   refine st_80044a14 O.live ?_ ?_ ?_ <;>
     simp only [upd_apply, Nat.reduceEqDiff, ite_false]
-  · rw [hEs]; unfold StOK Vsa.Sim.tohostAddr; rcases hsl with h | h <;> omega
+  · rw [hEs]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; rcases hsl with h | h <;> omega
   · rw [hEs]; exact O.foot (fun k hk => by
       have := hsf (24 + k) (by omega) (by omega); rwa [show succ + (24 + k) = succ + 24 + k by omega] at this)
   rw [hEs]
@@ -486,7 +486,7 @@ open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail
   generalize hMf : writeLog (writeLog (writeLog (writeLog Mb [(X + 24, 8, R 11)]) [(X + 16, 8, R 13)])
     [(pred + 16, 8, R 14)]) [(succ + 24, 8, R 14)] = Mf
 #ix_piece flLink_p2 from flLink_p1 by
-  have hbA : binblocksAddr = 0x80069200 := rfl
+  have hbA : binblocksAddr = 0x80063b98 := rfl
   have eV1 : fdOf Mf X = some succ := by
     show read64 _ (X + 16) = _
     rw [← hMf, read64_miss' (by omega), read64_miss' (by omega), read64_store_hit, h13]

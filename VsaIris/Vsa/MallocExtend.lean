@@ -11,8 +11,8 @@ open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail
 def sbReq (nb : Nat) : Nat := (nb + 4127) / 4096 * 4096
 
 def SbrkG (a : Nat) : Prop :=
-  (brkAddr ≤ a ∧ a < brkAddr + 8) ∨ (0x8006a3b0 ≤ a ∧ a < 0x8006a3b4) ∨
-    (0x80069cd0 ≤ a ∧ a < 0x80069cd4)
+  (brkAddr ≤ a ∧ a < brkAddr + 8) ∨ (0x80064d48 ≤ a ∧ a < 0x80064d4c) ∨
+    (0x80064668 ≤ a ∧ a < 0x8006466c)
 
 structure ExtCall (C : MCtx) (Mt : Mem) (nb topsz brk' : Nat) (R : Nat → BitVec 64)
     (M : Mem) : Prop where
@@ -22,7 +22,7 @@ structure ExtCall (C : MCtx) (Mt : Mem) (nb topsz brk' : Nat) (R : Nat → BitVe
   t1 : read64 M (C.s.toNat - 96 + 16) = some topsz
   a4 : read64 M (C.s.toNat - 96 + 24) = some nb
   a5 : read64 M (C.s.toNat - 96 + 32) = some C.top0
-  a6 : read64 M (C.s.toNat - 96 + 40) = some 0x800691f8
+  a6 : read64 M (C.s.toNat - 96 + 40) = some 0x80063b90
   brk : read64 M brkAddr = some brk'
   agree : ∀ a : Nat, ¬ (C.s.toNat - mHead ≤ a ∧ a < C.s.toNat) → ¬ SbrkG a → M[a]? = Mt[a]?
   pres : ∀ a : Nat, (Mt[a]?).isSome → (M[a]?).isSome
@@ -32,7 +32,7 @@ structure ExtSpills (C : MCtx) (Mt Mp : Mem) (nb topsz : Nat) : Prop where
   t1 : read64 Mp (C.s.toNat - 96 + 16) = some topsz
   a4 : read64 Mp (C.s.toNat - 96 + 24) = some nb
   a5 : read64 Mp (C.s.toNat - 96 + 32) = some C.top0
-  a6 : read64 Mp (C.s.toNat - 96 + 40) = some 0x800691f8
+  a6 : read64 Mp (C.s.toNat - 96 + 40) = some 0x80063b90
   agree : ∀ a : Nat, ¬ (C.s.toNat - 96 + 8 ≤ a ∧ a < C.s.toNat - 96 + 48) → Mp[a]? = Mt[a]?
   pres : ∀ a : Nat, (Mt[a]?).isSome → (Mp[a]?).isSome
 
@@ -43,7 +43,7 @@ theorem ExtCall.of_post {C : MCtx} (O : MOK C) {R Rc R' : Nat → BitVec 64} {Mt
     (hc19 : Rc 19 = R 19) (Sp : ExtSpills C Mt Mp nb topsz) (P : SbrkPost Rc R' Mp M brk') :
     ExtCall C Mt nb topsz brk' R' M := by
   have hlo := O.sp.lo; have hhi := O.sp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   obtain ⟨hgo1, hgo2⟩ := Hp.glob_off
   simp only [mHead, brkAddr] at hgo1 hgo2
   have hs2 : (Rc 2).toNat = C.s.toNat - 96 := by rw [hc2, F.sp]; sx_addr
@@ -103,7 +103,7 @@ theorem ext_setup {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
   have ha4 := T.a4; have ha5 := T.a5; have ht1 := T.t1; have ha6 := G.a6
   have hs2 := F.sp
   have hlo := O.sp.lo; have hhi := O.sp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hsal := O.sp.align
   have hs2n : (R 2).toNat = C.s.toNat - 96 := by rw [hs2]; sx_addr
   obtain ⟨hgo1, hgo2⟩ := Hp.glob_off
@@ -143,7 +143,7 @@ theorem ext_setup {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
   · simpa only [brkAddr] using hbrk
   · omega
   · unfold heapEnd; omega
-  · unfold Vsa.Sim.tohostAddr; omega
+  · unfold Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · omega
   · omega
   · decide
@@ -158,7 +158,7 @@ theorem ext_setup {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
 
 theorem ext_stats2 {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {M : Mem}
     (hk : ∀ R' M', (∀ x, x ≠ 15 → R' x = R x) →
-      (∀ a : Nat, ¬ (0x8006a388 ≤ a ∧ a < 0x8006a390) → M'[a]? = M[a]?) →
+      (∀ a : Nat, ¬ (0x80064d20 ≤ a ∧ a < 0x80064d28) → M'[a]? = M[a]?) →
       (∀ a : Nat, (M[a]?).isSome → (M'[a]?).isSome) → AW C.live C.S C.Q 0x80037a10#64 R' M') :
     AW C.live C.S C.Q 0x800379fc#64 R M := by
   refine st_800379fc O.live ?_
@@ -174,7 +174,7 @@ theorem ext_stats2 {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {M : Mem}
 theorem ext_stats {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {M : Mem}
     (hms : (read64 M maxSbrkedAddr).isSome)
     (hk : ∀ R' M', (∀ x, x ≠ 15 → R' x = R x) →
-      (∀ a : Nat, ¬ (0x8006a388 ≤ a ∧ a < 0x8006a398) → M'[a]? = M[a]?) →
+      (∀ a : Nat, ¬ (0x80064d20 ≤ a ∧ a < 0x80064d30) → M'[a]? = M[a]?) →
       (read64 M' maxSbrkedAddr).isSome → (∀ a : Nat, (M[a]?).isSome → (M'[a]?).isSome) →
       AW C.live C.S C.Q 0x80037a10#64 R' M') :
     AW C.live C.S C.Q 0x800379e8#64 R M := by
@@ -197,7 +197,7 @@ theorem ext_top {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {M : Mem}
     {brk' : Nat} {chunks : List Chunk} {bins : Nat → List Nat} {nb : Nat}
     (F : MFrame C R M) (Hp : MHeap C M brk' chunks bins) (hnb : NbOK C.n nb) (hnb31 : nb < 2 ^ 31)
     (h28 : (R 28).toNat = C.top0) (h12 : (R 12).toNat = brk' - C.top0 + 1)
-    (h14 : (R 14).toNat = nb) (h16 : R 16 = 0x800691f8#64) (hroom : C.top0 + nb + 32 ≤ brk') :
+    (h14 : (R 14).toNat = nb) (h16 : R 16 = 0x80063b90#64) (hroom : C.top0 + nb + 32 ≤ brk') :
     AW C.live C.S C.Q 0x80037a10#64 R M := by
   have HH := Hp.heap.heap.heap
   have hbrkle := HH.brk_le; have hstart := HH.walk.le; have htle := HH.top_le
@@ -230,7 +230,7 @@ theorem ext_top {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {M : Mem}
     AW C.live C.S C.Q 0x800378a4#64 R M by
   have HH := Hp.heap.heap.heap
   have hlo := O.sp.lo; have hhi := O.sp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hsal := O.sp.align
   have hs2 := E.frame.sp
   have hs2n : (R 2).toNat = C.s.toNat - 96 := by rw [hs2]; sx_addr
@@ -294,11 +294,11 @@ theorem ext_top {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {M : Mem}
   have hts := HH.top_size
   have hv : (BitVec.ofNat 64 (brkv - C.top0) + BitVec.ofNat 64 (sbReq nb) ||| 1#64).toNat =
       brkv + sbReq nb - C.top0 + 1 := or1_toNat (by sx_addr) (by omega)
-  have hM' : ∀ a : Nat, ¬ (0x8006a388 ≤ a ∧ a < 0x8006a398) → ¬ (0x80082050 ≤ a ∧ a < 0x80082058) →
+  have hM' : ∀ a : Nat, ¬ (0x80064d20 ≤ a ∧ a < 0x80064d30) → ¬ (0x8007c9e8 ≤ a ∧ a < 0x8007c9f0) →
       ¬ (C.top0 + 8 ≤ a ∧ a < C.top0 + 16) → M'[a]? = M[a]? := by
     intro a h1 h2 h3
     rw [hM a h1, writeLog_out, writeLog_out] <;> simp only [OutL, and_true] <;> omega
-  have hstatsOff := Hp.off_stack_w (a := 0x8006a388) (w := 16) (by omega)
+  have hstatsOff := Hp.off_stack_w (a := 0x80064d20) (w := 16) (by omega)
     (fun k hk => by apply Or.inl; unfold allocGlobal InRange; omega)
   have hmiOff := Hp.off_stack (a := mallinfoAddr)
     (fun k hk => by apply Or.inl; unfold allocGlobal InRange mallinfoAddr; omega)
@@ -313,7 +313,7 @@ theorem ext_top {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {M : Mem}
     · rw [hR 9 (by decide)]; simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]; exact E.frame.s1
     · rw [hR 18 (by decide)]; simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]; exact E.frame.s2
     · rw [hR 19 (by decide)]; simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]; exact E.frame.s3
-  have hgw : ∀ a, 0x8006a388 ≤ a ∧ a < 0x8006a398 ∨ 0x80082050 ≤ a ∧ a < 0x80082058 → allocGlobal a := by
+  have hgw : ∀ a, 0x80064d20 ≤ a ∧ a < 0x80064d30 ∨ 0x8007c9e8 ≤ a ∧ a < 0x8007c9f0 → allocGlobal a := by
     intro a h; unfold allocGlobal InRange; omega
   have Hp' : MHeap C M' (brkv + sbReq nb) chunks bins := by
     refine ⟨Hp.heap.topGrow (m' := M') (by omega) (by unfold heapEnd; omega) (by omega) ?_ ?_ ?_ hms' ?_,
@@ -367,7 +367,7 @@ theorem ext_null {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt M : Mem}
     AW C.live C.S C.Q 0x800378a4#64 R M := by
   have HH := Hp.heap.heap.heap
   have hlo := O.sp.lo; have hhi := O.sp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hsal := O.sp.align
   have hs2 := E.frame.sp
   have hs2n : (R 2).toNat = C.s.toNat - 96 := by rw [hs2]; sx_addr

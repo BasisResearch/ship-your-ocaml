@@ -22,7 +22,7 @@ def snpCodeRanges : List (Nat × Nat) :=
    (0x80045798, 0x80045800), (0x800527d0, 0x80052964)]
 
 def snpRORanges : List (Nat × Nat) :=
-  [(0x8005f9e0, 0x8005fb50)]
+  [(0x8005a398, 0x8005a508)]
 
 def snpPieces : List TextPiece := [⟨snpCodeImg, snpCodeRanges⟩]
 

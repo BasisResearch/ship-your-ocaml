@@ -74,12 +74,47 @@ def words(elf, start, size):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true")
+    ap.add_argument("--mailbox-from", help="migrate only mailbox literals from this previous ELF")
+    ap.add_argument("--refresh-report", action="store_true",
+                    help="revalidate the existing ported functions and refresh their target addresses")
     ap.add_argument("--reset", action="store_true",
                     help="first restore the files a previous run rewrote (listed in the "
                          "report) from ship-your-interpreter's originals, so the tool can "
                          "be re-run after the ELF changes")
     ap.add_argument("--report", default=str(ROOT / "results/retarget.json"))
     a = ap.parse_args()
+
+    if a.refresh_report:
+        report = json.loads(Path(a.report).read_text())
+        old, new = funcs(OLD_ELF), funcs(NEW_ELF)
+        for name, row in report["ported_functions"].items():
+            s, size = old[name]
+            dest, new_size = new[name]
+            if size != new_size or words(OLD_ELF, s, size) != words(NEW_ELF, dest, size):
+                raise SystemExit(f"ported function is no longer byte-identical: {name}")
+            row.update(old=hex(s), new=hex(dest), size=size)
+        ot, nt = symbol(OLD_ELF, "tohost"), symbol(NEW_ELF, "tohost")
+        report["mailbox"] = {f"0x{ot:08x}": f"0x{nt:08x}", str(ot): str(nt), str(ot+8): str(nt+8)}
+        Path(a.report).write_text(json.dumps(report, indent=1))
+        print(f"Revalidated {len(report['ported_functions'])} ported functions and mailbox")
+        return
+
+    if a.mailbox_from:
+        ot, nt = symbol(a.mailbox_from, "tohost"), symbol(NEW_ELF, "tohost")
+        replacements = {f"0x{ot:08x}": f"0x{nt:08x}", str(ot): str(nt), str(ot+8): str(nt+8)}
+        pat = re.compile(r"\b(" + "|".join(map(re.escape, replacements)) + r")\b")
+        changed = []
+        for folder in ("Vsa", "VsaIris"):
+            for p in (ROOT / folder).rglob("*.lean"):
+                s = p.read_text()
+                out = pat.sub(lambda m: replacements[m[0]], s)
+                if out != s:
+                    changed.append(str(p.relative_to(ROOT)))
+                    if a.apply:
+                        p.write_text(out)
+        Path(a.report).write_text(json.dumps({"mailbox": replacements, "mailbox_files": sorted(changed)}, indent=2) + "\n")
+        print(f"Mailbox migration: {len(changed)} files ({ot:#x} -> {nt:#x})")
+        return
 
     if a.reset:
         prev = json.loads(Path(a.report).read_text())

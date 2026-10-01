@@ -16,7 +16,7 @@ theorem within_mmio_readable_ram_false_width
   simp only [within_mmio_readable, within_clint, within_sig, within_htif_readable,
     within_htif_writable, get_config_rvfi, plat_have_clint, plat_have_sig,
     zopz0zI_u, zopz0zK_u, LeanRV64DExecutable.Functions.not]
-  simp only [tohostAddr] at hhtif
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at hhtif
   have hcb : BitVec.toNat plat_clint_base = 33554432 := by decide
   have hcs : BitVec.toNat plat_clint_size = 786432 := by decide
   have hsb : BitVec.toNat plat_sig_base = 201326592 := by decide
@@ -24,21 +24,11 @@ theorem within_mmio_readable_ram_false_width
   simp_all [simp_sail, bind, EStateM.bind, EStateM.run, pure, EStateM.pure,
     Sail.ConcurrencyInterfaceV1.PreSail.readReg, get, getThe, MonadStateOf.get,
     EStateM.get, BitVec.toNatInt, htif_tohost_size]
-  simp only [tohostAddr] at *
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at *
   have hadd : (a + BitVec.ofNat 64 w).toNat = a.toNat + w := by
     have hw : (BitVec.ofNat 64 w).toNat = w := by
       rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
     rw [BitVec.toNat_add, hw, Nat.mod_eq_of_lt (by omega)]
-  refine ⟨fun _ => by omega, fun _ => by omega, fun _ => ?_⟩
-  rename_i hx
-  have hxlt : a.toNat < 2147907080 := by
-    have hxv : (2147907072#64 + 8#64).toNat = 2147907080 := by decide
-    omega
-  have hle : (a + BitVec.ofNat 64 w).toNat ≤ 2147907072 := by rw [hadd]; omega
-  have hrhs : ((2147907072 : Nat) : Int) % 18446744073709551616
-      = ((2147907072 : Nat) : Int) := by decide
-  rw [hrhs]
-  intro hbad
   omega
 
 

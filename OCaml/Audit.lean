@@ -41,6 +41,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.ocamlrun_refinement_fillZero
 #print axioms OCaml.Loaded.runtime
 #print axioms OCaml.Vm.RuntimeOk.youngPtr_bounds
+#print axioms OCaml.Vm.mailbox_layout
 #print axioms OCaml.Vm.Boot.WhileMinObservation.bounds
 #print axioms OCaml.Vm.Boot.WhileMinObservation.noPending
 #print axioms OCaml.Vm.Boot.WhileMinObservation.nursery_not_empty

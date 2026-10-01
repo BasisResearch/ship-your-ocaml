@@ -3,7 +3,7 @@ import VsaIris.Vsa.AllocRun
 import Vsa.Sim.BridgeSeg
 import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.ElfDecode.Part003
-import Vsa.Sim.ElfDecode.Part005
+import Vsa.Sim.ElfDecode.Part006
 import Vsa.Sim.ElfDecode.Part016
 import Vsa.Sim.ElfDecode.Part018
 import Vsa.Sim.ElfDecode.Part029
@@ -16,20 +16,20 @@ import Vsa.Sim.ElfDecode.Part059
 import Vsa.Sim.ElfDecode.Part063
 import Vsa.Sim.ElfDecode.Part065
 import Vsa.Sim.ElfDecode.Part069
-import Vsa.Sim.ElfDecode.Part070
+import Vsa.Sim.ElfDecode.Part072
 import Vsa.Sim.ElfDecode.Part073
-import Vsa.Sim.ElfDecode.Part075
+import Vsa.Sim.ElfDecode.Part074
 import Vsa.Sim.ElfDecode.Part076
 import Vsa.Sim.ElfDecode.Part077
 import Vsa.Sim.ElfDecode.Part078
 import Vsa.Sim.ElfDecode.Part079
 import Vsa.Sim.ElfDecode.Part081
 import Vsa.Sim.ElfDecode.Part084
-import Vsa.Sim.ElfDecode.Part086
+import Vsa.Sim.ElfDecode.Part085
 import Vsa.Sim.ElfDecode.Part128
-import Vsa.Sim.ElfDecode.Part141
 import Vsa.Sim.ElfDecode.Part142
-import Vsa.Sim.ElfDecode.Part146
+import Vsa.Sim.ElfDecode.Part143
+import Vsa.Sim.ElfDecode.Part147
 import Vsa.Sim.ElfDecode.Part228
 
 /-! The allocator's step table, `0x80037924` to `0x800379a0` (one lemma `st_<pc>` per

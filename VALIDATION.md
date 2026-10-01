@@ -43,16 +43,16 @@ The emulator runs at about 49,000 steps/s.
   function for function; the OCaml-only parts are marked `OCAML`.
   `caml_main` then opens the embedded executable `/prog` through its
   ordinary `ocamlrun prog args` path; the runtime is not patched.
-  `c/src/main.c` bakes in `argv = { "ocamlrun", "/prog", ARGS… }` and
-  `OCAMLRUNPARAM`. There is no clock: `_gettimeofday`/`_times` return 0.
+  `c/src/gen_embed.sh` places `argv = { "ocamlrun", "/prog", ARGS… }`
+  and `OCAMLRUNPARAM` in `.embed`; `main.c` reads its fixed header. There is no clock: `_gettimeofday`/`_times` return 0.
   They must be provided, because newlib's libgloss versions execute
   `ecall`, which on the bare Sail machine traps with no handler and never
   returns; the compiler reaches them through `Sys.time` (its `Profile`
   timers); a first Sail compile run was stuck there (at about step 75M)
   when it was stopped after 3.5 hours, while the host mirror (§8, which uses the host's clock) finished. The image now
   contains no `ecall` (`scripts/check_all.sh` stage a6 checks this).
-* **The proof ELF**: `c/ocamlrun-riscv-htif.elf` (526,360 bytes, sha256
-  `cecc68322fa55ccd75327a535915782e082c4e2d356077afdea0110a6c22fe31`,
+* **The proof ELF**: `c/ocamlrun-riscv-htif.elf` (528,520 bytes, sha256
+  `b055163e2280efbec1d16c255afccf31e23315f9f37a7ffcba5bbed0850b1c99`,
   `c/ELF.sha256`) with `c/tests/while.ml` embedded: `c/while.byte`, the
   21,993-byte bytecode executable from the host `ocamlc` (sha256 in
   `c/ELF.sha256`).
@@ -61,13 +61,20 @@ The emulator runs at about 49,000 steps/s.
 
 ### 2.1 Programs
 
+The fixed-image migration places program files, argv and environment in
+`.embed` at `0x86800000`, behind a three-pointer header. `.text`, `.rodata`,
+`.data` and `.tohost` are byte-identical for all five images below, including
+`-dinstr`/`M=1000` variants (`scripts/check_boot_text.py`; comparison pins
+in `results/boot/`). All five Sail runs have been remeasured for the fixed image; each exits 0
+with the expected output. The JSON results include their ELF SHA256 hashes.
+
 | program | output | exit | steps | cut point (2nd `caml_interprete` call) | after the cut |
 |---|---|---|---|---|---|
-| `while.ml` (proof ELF) | `55\n2500\n36\n` | 0 | 4,571,586 | 4,499,328 | 72,258 |
-| `while_min.ml` (no Stdlib) | `55\n2500\n36\n` | 0 | 4,312,956 | 4,269,235 | 43,721 |
-| `boot/ocamlc -version` | `4.14.4\n` | 0 | 54,416,058 | 48,827,336 | 5,588,722 |
-| `boot/ocamlc -nostdlib -I /lib/ocaml -dinstr -c /src/hello.ml` | the bytecode listing (below) | 0 | 82,642,691 | 48,831,922 | 33,810,769 |
-| same, `OCAMLRUNPARAM=M=1000` | the same listing | 0 | 77,438,635 | 48,834,107 | 28,604,528 |
+| `while.ml` (proof ELF) | `55\n2500\n36\n` | 0 | 4,571,381 | 4,499,123 | 72,258 |
+| `while_min.ml` (no Stdlib) | `55\n2500\n36\n` | 0 | 4,312,978 | 4,269,257 | 43,721 |
+| `boot/ocamlc -version` | `4.14.4\n` | 0 | 54,416,092 | 48,827,370 | 5,588,722 |
+| `boot/ocamlc -nostdlib -I /lib/ocaml -dinstr -c /src/hello.ml` | the bytecode listing (below) | 0 | 82,642,170 | 48,831,879 | 33,810,291 |
+| same, `OCAMLRUNPARAM=M=1000` | the same listing | 0 | 77,438,363 | 48,834,064 | 28,604,299 |
 
 `while.ml` is the OCaml port of ship-your-interpreter's `c/tests/while.wl`
 (while loops, `break` as an exception, nesting). `hello.ml` is
@@ -105,9 +112,9 @@ clock it hung in libgloss's `ecall` (§1).
 
 | phase | `while.ml` | `boot/ocamlc -version` |
 |---|---|---|
-| crt0 (`.bss` clear), `caml_init_gc` | 0 → 123k | 0 → 123k |
-| `caml_load_code`: read CODE through the in-memory file system, MD5 of the code | 123k → 388k | 123k → 37.01M |
-| `caml_build_primitive_table`: linear `strcmp` over the 403 builtin names per required primitive | 388k → 4.46M | 37.01M → 41.08M |
+| crt0 (`.bss` clear), `caml_init_gc` | 0 → 124k | 0 → 124k |
+| `caml_load_code`: read CODE through the in-memory file system, MD5 of the code | 124k → 389k | 124k → 37.01M |
+| `caml_build_primitive_table`: linear `strcmp` over the 403 builtin names per required primitive | 389k → 4.46M | 37.01M → 41.08M |
 | `caml_input_val` (unmarshal DATA), promotion (one minor collection), `caml_sys_init` | 4.46M → 4.50M | 41.08M → 48.83M |
 
 All of it is before the cut point: it costs emulator time and boot-witness
@@ -117,6 +124,8 @@ length, not proof (PLAN.md §7).
 
 `c/tests/difftest.sh`: host `ocamlrun` vs the ELF on Sail, same bytecode
 (host `ocamlc -o x.byte x.ml`), comparing stdout and exit code.
+The table below records the pre-migration image; the fixed-image smoke runs
+are recorded separately in §2.1.
 
 | test | result | Sail steps | after the cut | minor GCs after the cut |
 |---|---|---|---|---|
@@ -134,8 +143,8 @@ length, not proof (PLAN.md §7).
 
 * Every program has exactly one minor collection before the cut point:
   `caml_main` promotes the unmarshalled global data (`caml_oldify_one` +
-  `caml_oldify_mopup`, `startup_byt.c`) at step 4,485,844 for `while.ml`,
-  13,484 steps before the cut.
+  `caml_oldify_mopup`, `startup_byt.c`) at step 4,485,636 for the fixed-image `while.ml`,
+  13,487 steps before the cut.
 * **After the cut point, with the default 256k-word minor heap, eight of
   the nine difftests run no minor collection and no major slice** (table
   above): they stay in PLAN.md's G1 regime. `f6_alloc` (allocation
@@ -144,7 +153,7 @@ length, not proof (PLAN.md §7).
   all. `boot/ocamlc -version`: none after the cut.
 * **`boot/ocamlc` compiling `hello.ml` collects once, whatever the minor
   heap size**: on Sail, one minor collection and one major slice after the
-  cut, the minor collection at step 76,769,749 (27.9M steps after the
+  cut, the minor collection at step 76,769,662 (27.9M steps after the
   cut). In the host mirror (§8: same runtime, same heap parameters, so the
   same collection points) the run allocates 206,018 minor words, below the
   256k-word minor heap, and still collects once at the default size, at
@@ -156,7 +165,7 @@ length, not proof (PLAN.md §7).
   (`caml_alloc_small_dispatch` → `caml_check_urgent_gc` →
   `caml_gc_dispatch`). Raising the custom-block ratio removes it:
   **with `OCAMLRUNPARAM=M=1000` the compile runs no minor or major
-  collection at all** — on Sail (77,438,635 steps; the collection had cost
+  collection after the cut** — on Sail (77,438,363 steps; the collection had cost
   5.2M steps) and in the mirror (also with `s=4M`). So G1 (PLAN.md §3) is a runtime
   configuration: a large `s`, `M=1000`, and `O=1000000` against
   compaction; `Fits` must also bound custom-block memory.
@@ -215,11 +224,10 @@ length, not proof (PLAN.md §7).
   raise, signal and callback paths). Loop-head registers: pc `s0`, sp
   `s1`, accu `s5`, env `s9`, extra_args `s2`.
 * **Site classes** (ship-your-interpreter's `disasm_to_sites.py`
-  classifier): 65,315 of 78,529 reachable instructions (83.2%) fall in a
-  class its generators handle. The rest by mnemonic: `auipc` 3,367,
-  `slli` 2,306, `andi` 1,063, `srli` 1,011, `addw` 846, `lui` 669, `slliw`
-  635, `or` 589, `srai` 473, `and` 372 — the tagged-integer idiom
-  (`slli`/`srai`/`ori 1`) is the main new family.
+  classifier): 73,754 of 78,529 reachable instructions (93.9%) fall in a
+  class its generators handle. The remaining classes are headed by `auipc`
+  (3,368), `lui` (669), `jalr` (164), `lh` (104), `snez` (83), `lhu` (78),
+  `sh` (69) and `sllw` (56); `results/census.txt` records the full counts.
 * **New C constructs** beyond the WHILE interpreter: the switch jump table;
   calls through the primitive table (`jalr`); `setjmp`/`longjmp` for
   exceptions raised in C; soft-float on the GC pacing path even for integer
@@ -316,25 +324,18 @@ trace (`tcb/validation/RESULTS.md`, reproducible in ~3 s):
 
 ## 7. The reused machine proofs
 
-`scripts/retarget_syi.py` retargets ship-your-interpreter's proofs of the
-66 library functions that are byte-identical in the two ELFs (30 files,
-5,084 addresses, plus the HTIF mailbox `0x8001ad00` → `0x80067600`). The
-whole `Vsa`/`VsaIris` layer rebuilds; `scripts/check_code_pins.py` finds
-all 2,560 bytes pinned by the ported code predicates equal to the ELF's;
-`memcpy_bytepath_spec`, `muldi3_spec` and `udivdi3_spec` (now at this
-ELF's addresses, e.g. `memcpy`'s precondition PC `0x800428d8`) depend only
-on the standard axioms. Not ported, and why:
+`scripts/retarget_syi.py --refresh-report` revalidates the 66 byte-identical
+library functions against the source ELF. The fixed runtime's HTIF mailbox
+is `0x80061fc0`; both the machine layer and OCaml layout derive it from the
+ELF. `scripts/check_code_pins.py` checks 39,056 pinned bytes with no mismatch.
 
-* `strcmp`, `__ssprint_r`, `__ssputs_r`: identical except for 8
-  instruction words (6 `jal`s, and the `auipc`/`ld` of `strcmp`'s `mask`);
-  their decode ASTs are dumped (`results/port_new_words.dump`,
-  `experiments/DecodeDump.lean`); regenerating their code lemmas and sites
-  is A0.
-* `_malloc_r`, `_free_r`, `_svfprintf_r`, `snprintf`: the code differs
-  (linker relaxation, configuration); regenerated, not ported.
-* The 20,457 reachable instruction words of this ELF without a decode
-  lemma: A0, where ship-your-interpreter's new one-shot decoder
-  (`decodeW`, any word) replaces per-word lemmas.
+The A0 library layer now includes regenerated strcmp/string-copy sites,
+`ssputs_fast_spec`, `ssprint_iov2_spec`, the complete `malloc_all` and
+`free_body` compositions, and the stdio `svfprintf_nw` composition.
+Their generators and source templates are drift-checked; `OCaml/Audit.lean`
+audits the headline theorems. The complete ELF decode table covers all
+29,473 distinct disassembled words in 231 chunks. The migration gate
+rechecks this entire layer against the new image.
 
 ## 8. Host mirror
 
@@ -354,5 +355,6 @@ show the `ecall` hang (§1). The Sail numbers above are authoritative.
   more than ~100 steps within 30 GB (§3).
 * Startup is expensive on Sail (§2.1); boot witnesses beyond small
   programs are impractical (PLAN.md §7).
-* The difftest ELFs are separate builds of the same sources with other
-  embedded programs; the proof ELF is `c/ocamlrun-riscv-htif.elf` only.
+* Program-specific builds share the fixed runtime sections and layout;
+  their `.embed` contents differ. A `Loaded` witness still needs to establish
+  each program's code, heap, world and platform state at the cut.

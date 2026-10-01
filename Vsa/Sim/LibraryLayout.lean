@@ -7,5 +7,6 @@ def freeEntry : Nat := 0x800375a8
 end Vsa.Alloc
 
 namespace Vsa.Sim.LibraryLayout
-def gpV : BitVec 64 := 0x80067e10#64
+def gpV : BitVec 64 := 0x800627d0#64
+abbrev tohostAddr : Nat := 0x80061fc0
 end Vsa.Sim.LibraryLayout

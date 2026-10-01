@@ -27,12 +27,12 @@ theorem malloc_errno {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
     AW C.live C.S C.Q 0x80004840#64 R Mt := by
   have hoff := Hp.off_stack_w (by decide) errno_foot
   have hlo := O.sp.lo
-  unfold mHead at hlo hoff; unfold Vsa.Sim.tohostAddr at hlo
+  unfold mHead at hlo hoff; unfold Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have he : ((R 8) + sign_extend (m := 64) (0x000#12)).toNat = 0x8001b538 := by
     rw [h8]; decide
   refine st_80004840 O.live ?_
   refine st_80004844 O.live ?_ ?_ ?_
-  · simp only [upd_apply, Nat.reduceEqDiff, ite_false]; rw [he]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · simp only [upd_apply, Nat.reduceEqDiff, ite_false]; rw [he]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · simp only [upd_apply, Nat.reduceEqDiff, ite_false]; rw [he]; exact O.foot errno_foot
   simp only [upd_apply, Nat.reduceEqDiff, ite_false]
   rw [he]
@@ -51,7 +51,7 @@ theorem malloc_pro {C : MCtx} (O : MOK C) {R : Nat → BitVec 64}
       nb < 2 ^ 31 → (R 14).toNat = nb → R 8 = reentV → AW C.live C.S C.Q 0x80004884#64 R Mt) :
     AW C.live C.S C.Q 0x800047a8#64 R C.Mt0 := by
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := E.sp
   have hs2n : (R 2).toNat = C.s.toNat := by rw [hs2]
   sx_run [8] O.live at 0x800047c0

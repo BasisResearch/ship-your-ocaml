@@ -3,7 +3,7 @@ import VsaIris.Vsa.AllocRun
 import Vsa.Sim.BridgeSeg
 import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.ElfDecode.Part000
-import Vsa.Sim.ElfDecode.Part005
+import Vsa.Sim.ElfDecode.Part006
 import Vsa.Sim.ElfDecode.Part007
 import Vsa.Sim.ElfDecode.Part008
 import Vsa.Sim.ElfDecode.Part018
@@ -24,7 +24,7 @@ import Vsa.Sim.ElfDecode.Part222
 import Vsa.Sim.ElfDecode.Part223
 import Vsa.Sim.ElfDecode.Part224
 import Vsa.Sim.ElfDecode.Part225
-import Vsa.Sim.ElfDecode.Part229
+import Vsa.Sim.ElfDecode.Part228
 
 /-! The allocator's step table, `0x80042684` to `0x80042700` (one lemma `st_<pc>` per
 instruction; see `scripts/syi/gen_alloc_steps.py`). -/

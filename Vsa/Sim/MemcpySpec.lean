@@ -137,7 +137,7 @@ structure Regions (dst src : BitVec 64) (n : Nat) : Prop where
   dst_hi : dst.toNat + n ≤ 0x100000000
   src_lo : 0x80000000 ≤ src.toNat
   src_hi : src.toNat + n ≤ 0x100000000
-  -- both regions above the HTIF window (`tohostAddr = 0x80067600`, ± 16)
+  -- both regions above the HTIF window (`tohostAddr = 0x80061fc0`, ± 16)
   dst_win : tohostAddr + 16 ≤ dst.toNat
   src_win : tohostAddr + 16 ≤ src.toNat
 
@@ -345,7 +345,7 @@ theorem src_ptr_bounds (dst src : BitVec 64) (n : Nat) (hreg : Regions dst src n
   have hlo := hreg.src_lo
   have hhi := hreg.src_hi
   have hwin := hreg.src_win
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = LibraryLayout.tohostAddr := rfl
   refine ⟨htn, ?_, ?_, ?_⟩
   · rw [htn]; omega
   · rw [htn]; omega
@@ -365,7 +365,7 @@ theorem dst_ptr_bounds (dst src : BitVec 64) (n : Nat) (hreg : Regions dst src n
   have hlo := hreg.dst_lo
   have hhi := hreg.dst_hi
   have hwin := hreg.dst_win
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = LibraryLayout.tohostAddr := rfl
   refine ⟨htn, ?_, ?_, ?_, hsb⟩
   · rw [hsb]; omega
   · rw [hsb]; omega

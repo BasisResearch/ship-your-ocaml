@@ -10,9 +10,9 @@ open Vsa.MemRepr Vsa.Sim Vsa.Sim.DlHeap
 def InRange (lo hi a : Nat) : Prop := lo ≤ a ∧ a < hi
 
 def allocGlobal (a : Nat) : Prop :=
-  InRange 0x800691f8 0x80069a08 a ∨ InRange 0x80069cd0 0x80069cd4 a ∨
-  InRange 0x80069f50 0x80069f60 a ∨ (InRange 0x80069f78 (0x80069f78 + 8) a ∨ InRange 0x8006a388 0x8006a3a0 a) ∨
-  InRange 0x8006a3b0 0x8006a3b4 a ∨ InRange 0x80082050 0x800820a0 a
+  InRange 0x80063b90 0x800643a0 a ∨ InRange 0x80064668 0x8006466c a ∨
+  InRange 0x800648e8 0x800648f8 a ∨ (InRange 0x80064910 (0x80064910 + 8) a ∨ InRange 0x80064d20 0x80064d38 a) ∨
+  InRange 0x80064d48 0x80064d4c a ∨ InRange 0x8007c9e8 0x8007ca38 a
 
 theorem allocGlobal_off_arena (a : Nat) (h : allocGlobal a) :
     a < heapStart ∨ heapEnd ≤ a := by
@@ -153,10 +153,10 @@ theorem foot_free (h : BlockHeapAt m H top brkv chunks bins) {c' : Chunk}
 end Reads
 
 def vsaRead (H : List (Nat × Nat)) (a : Nat) : Prop :=
-  vsaFoot H a ∧ ¬ InRange 0x80069cd0 0x80069cd4 a ∧ ¬ InRange 0x8006a3b0 0x8006a3b4 a
+  vsaFoot H a ∧ ¬ InRange 0x80064668 0x8006466c a ∧ ¬ InRange 0x80064d48 0x80064d4c a
 
 def NotErr (a : Nat) : Prop :=
-  a + 8 ≤ 0x80069cd0 ∨ (0x80069cd4 ≤ a ∧ a + 8 ≤ 0x8006a3b0) ∨ 0x8006a3b4 ≤ a
+  a + 8 ≤ 0x80064668 ∨ (0x8006466c ≤ a ∧ a + 8 ≤ 0x80064d48) ∨ 0x80064d4c ≤ a
 
 private theorem read64_of_foot {H : List (Nat × Nat)} {m m' : Mem}
     (hag : AgreeP (vsaRead H) m m') {a : Nat} (hf : ∀ k, k < 8 → vsaFoot H (a + k))
@@ -175,7 +175,7 @@ theorem BlockHeapAt.transport_read {m m' : Mem} {H : List (Nat × Nat)} {top brk
   have hH := h.heap
   have hlo : heapStart ≤ top := hH.walk.le
   have hcb := hH.walk.chunk_bounds
-  have gAv : ∀ a, 0x800691f8 ≤ a → a + 8 ≤ 0x80069a08 → read64 m a = read64 m' a := by
+  have gAv : ∀ a, 0x80063b90 ≤ a → a + 8 ≤ 0x800643a0 → read64 m a = read64 m' a := by
     intro a h1 h2
     apply read64_of_foot hag (global_read fun k hk => ?_) (.inl (by omega))
     unfold allocGlobal InRange
@@ -184,8 +184,8 @@ theorem BlockHeapAt.transport_read {m m' : Mem} {H : List (Nat × Nat)} {top brk
     apply read64_of_foot hag (global_read fun k hk => ?_) (.inr (.inl (by unfold sbrkBaseAddr; omega)))
     unfold allocGlobal InRange sbrkBaseAddr
     omega
-  have gBrk : ∀ a, 0x80069f78 ≤ a → a + 8 ≤ 0x8006a3a0 →
-      (a + 8 ≤ 0x80069f78 + 8 ∨ 0x8006a388 ≤ a) → read64 m a = read64 m' a := by
+  have gBrk : ∀ a, 0x80064910 ≤ a → a + 8 ≤ 0x80064d38 →
+      (a + 8 ≤ 0x80064910 + 8 ∨ 0x80064d20 ≤ a) → read64 m a = read64 m' a := by
     intro a h1 h2 hpart
     apply read64_of_foot hag (global_read fun k hk => ?_) (.inr (.inl (by omega)))
     unfold allocGlobal InRange

@@ -7,24 +7,24 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable.Functions
 
 theorem dispatchOffset_event {c : Config} (h : ExecutableImage c) :
     word32 c (Layout.jumpTable + 4 * Opcode.EVENT.toNat) = dispatchOffset .EVENT := by
-  have h0 : c.σ.mem[(Layout.jumpTable + 4 * Opcode.EVENT.toNat)]? = some (0x68#8) := by
-    have hb := h.rodata 45488 (by decide)
-    have he : Image.rodataByte 45488 = (0x68#8) := by decide +kernel
+  have h0 : c.σ.mem[(Layout.jumpTable + 4 * Opcode.EVENT.toNat)]? = some (0xb0#8) := by
+    have hb := h.rodata 23400 (by decide)
+    have he : Image.rodataByte 23400 = (0xb0#8) := by decide +kernel
     rw [he] at hb
     exact hb
-  have h1 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.EVENT.toNat) + 1)]? = some (0x53#8) := by
-    have hb := h.rodata 45489 (by decide)
-    have he : Image.rodataByte 45489 = (0x53#8) := by decide +kernel
+  have h1 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.EVENT.toNat) + 1)]? = some (0xa9#8) := by
+    have hb := h.rodata 23401 (by decide)
+    have he : Image.rodataByte 23401 = (0xa9#8) := by decide +kernel
     rw [he] at hb
     exact hb
   have h2 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.EVENT.toNat) + 2)]? = some (0xfa#8) := by
-    have hb := h.rodata 45490 (by decide)
-    have he : Image.rodataByte 45490 = (0xfa#8) := by decide +kernel
+    have hb := h.rodata 23402 (by decide)
+    have he : Image.rodataByte 23402 = (0xfa#8) := by decide +kernel
     rw [he] at hb
     exact hb
   have h3 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.EVENT.toNat) + 3)]? = some (0xff#8) := by
-    have hb := h.rodata 45491 (by decide)
-    have he : Image.rodataByte 45491 = (0xff#8) := by decide +kernel
+    have hb := h.rodata 23403 (by decide)
+    have he : Image.rodataByte 23403 = (0xff#8) := by decide +kernel
     rw [he] at hb
     exact hb
   simp only [word32, bytesT_four_eq, bytesT4, h0, h1, h2, h3, Option.getD_some] <;> decide
@@ -40,24 +40,24 @@ theorem dispatchIndex_event :
 
 theorem dispatchOffset_break {c : Config} (h : ExecutableImage c) :
     word32 c (Layout.jumpTable + 4 * Opcode.BREAK.toNat) = dispatchOffset .BREAK := by
-  have h0 : c.σ.mem[(Layout.jumpTable + 4 * Opcode.BREAK.toNat)]? = some (0x9c#8) := by
-    have hb := h.rodata 45492 (by decide)
-    have he : Image.rodataByte 45492 = (0x9c#8) := by decide +kernel
+  have h0 : c.σ.mem[(Layout.jumpTable + 4 * Opcode.BREAK.toNat)]? = some (0xe4#8) := by
+    have hb := h.rodata 23404 (by decide)
+    have he : Image.rodataByte 23404 = (0xe4#8) := by decide +kernel
     rw [he] at hb
     exact hb
-  have h1 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.BREAK.toNat) + 1)]? = some (0x4b#8) := by
-    have hb := h.rodata 45493 (by decide)
-    have he : Image.rodataByte 45493 = (0x4b#8) := by decide +kernel
+  have h1 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.BREAK.toNat) + 1)]? = some (0xa1#8) := by
+    have hb := h.rodata 23405 (by decide)
+    have he : Image.rodataByte 23405 = (0xa1#8) := by decide +kernel
     rw [he] at hb
     exact hb
   have h2 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.BREAK.toNat) + 2)]? = some (0xfa#8) := by
-    have hb := h.rodata 45494 (by decide)
-    have he : Image.rodataByte 45494 = (0xfa#8) := by decide +kernel
+    have hb := h.rodata 23406 (by decide)
+    have he : Image.rodataByte 23406 = (0xfa#8) := by decide +kernel
     rw [he] at hb
     exact hb
   have h3 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.BREAK.toNat) + 3)]? = some (0xff#8) := by
-    have hb := h.rodata 45495 (by decide)
-    have he : Image.rodataByte 45495 = (0xff#8) := by decide +kernel
+    have hb := h.rodata 23407 (by decide)
+    have he : Image.rodataByte 23407 = (0xff#8) := by decide +kernel
     rw [he] at hb
     exact hb
   simp only [word32, bytesT_four_eq, bytesT4, h0, h1, h2, h3, Option.getD_some] <;> decide
@@ -73,24 +73,24 @@ theorem dispatchIndex_break :
 
 theorem dispatchOffset_reraise {c : Config} (h : ExecutableImage c) :
     word32 c (Layout.jumpTable + 4 * Opcode.RERAISE.toNat) = dispatchOffset .RERAISE := by
-  have h0 : c.σ.mem[(Layout.jumpTable + 4 * Opcode.RERAISE.toNat)]? = some (0x58#8) := by
-    have hb := h.rodata 45496 (by decide)
-    have he : Image.rodataByte 45496 = (0x58#8) := by decide +kernel
+  have h0 : c.σ.mem[(Layout.jumpTable + 4 * Opcode.RERAISE.toNat)]? = some (0xa0#8) := by
+    have hb := h.rodata 23408 (by decide)
+    have he : Image.rodataByte 23408 = (0xa0#8) := by decide +kernel
     rw [he] at hb
     exact hb
-  have h1 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.RERAISE.toNat) + 1)]? = some (0x4b#8) := by
-    have hb := h.rodata 45497 (by decide)
-    have he : Image.rodataByte 45497 = (0x4b#8) := by decide +kernel
+  have h1 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.RERAISE.toNat) + 1)]? = some (0xa1#8) := by
+    have hb := h.rodata 23409 (by decide)
+    have he : Image.rodataByte 23409 = (0xa1#8) := by decide +kernel
     rw [he] at hb
     exact hb
   have h2 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.RERAISE.toNat) + 2)]? = some (0xfa#8) := by
-    have hb := h.rodata 45498 (by decide)
-    have he : Image.rodataByte 45498 = (0xfa#8) := by decide +kernel
+    have hb := h.rodata 23410 (by decide)
+    have he : Image.rodataByte 23410 = (0xfa#8) := by decide +kernel
     rw [he] at hb
     exact hb
   have h3 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.RERAISE.toNat) + 3)]? = some (0xff#8) := by
-    have hb := h.rodata 45499 (by decide)
-    have he : Image.rodataByte 45499 = (0xff#8) := by decide +kernel
+    have hb := h.rodata 23411 (by decide)
+    have he : Image.rodataByte 23411 = (0xff#8) := by decide +kernel
     rw [he] at hb
     exact hb
   simp only [word32, bytesT_four_eq, bytesT4, h0, h1, h2, h3, Option.getD_some] <;> decide
@@ -106,24 +106,24 @@ theorem dispatchIndex_reraise :
 
 theorem dispatchOffset_raise_notrace {c : Config} (h : ExecutableImage c) :
     word32 c (Layout.jumpTable + 4 * Opcode.RAISE_NOTRACE.toNat) = dispatchOffset .RAISE_NOTRACE := by
-  have h0 : c.σ.mem[(Layout.jumpTable + 4 * Opcode.RAISE_NOTRACE.toNat)]? = some (0x3c#8) := by
-    have hb := h.rodata 45500 (by decide)
-    have he : Image.rodataByte 45500 = (0x3c#8) := by decide +kernel
+  have h0 : c.σ.mem[(Layout.jumpTable + 4 * Opcode.RAISE_NOTRACE.toNat)]? = some (0x84#8) := by
+    have hb := h.rodata 23412 (by decide)
+    have he : Image.rodataByte 23412 = (0x84#8) := by decide +kernel
     rw [he] at hb
     exact hb
-  have h1 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.RAISE_NOTRACE.toNat) + 1)]? = some (0x42#8) := by
-    have hb := h.rodata 45501 (by decide)
-    have he : Image.rodataByte 45501 = (0x42#8) := by decide +kernel
+  have h1 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.RAISE_NOTRACE.toNat) + 1)]? = some (0x98#8) := by
+    have hb := h.rodata 23413 (by decide)
+    have he : Image.rodataByte 23413 = (0x98#8) := by decide +kernel
     rw [he] at hb
     exact hb
   have h2 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.RAISE_NOTRACE.toNat) + 2)]? = some (0xfa#8) := by
-    have hb := h.rodata 45502 (by decide)
-    have he : Image.rodataByte 45502 = (0xfa#8) := by decide +kernel
+    have hb := h.rodata 23414 (by decide)
+    have he : Image.rodataByte 23414 = (0xfa#8) := by decide +kernel
     rw [he] at hb
     exact hb
   have h3 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.RAISE_NOTRACE.toNat) + 3)]? = some (0xff#8) := by
-    have hb := h.rodata 45503 (by decide)
-    have he : Image.rodataByte 45503 = (0xff#8) := by decide +kernel
+    have hb := h.rodata 23415 (by decide)
+    have he : Image.rodataByte 23415 = (0xff#8) := by decide +kernel
     rw [he] at hb
     exact hb
   simp only [word32, bytesT_four_eq, bytesT4, h0, h1, h2, h3, Option.getD_some] <;> decide
@@ -139,24 +139,24 @@ theorem dispatchIndex_raise_notrace :
 
 theorem dispatchOffset_getstringchar {c : Config} (h : ExecutableImage c) :
     word32 c (Layout.jumpTable + 4 * Opcode.GETSTRINGCHAR.toNat) = dispatchOffset .GETSTRINGCHAR := by
-  have h0 : c.σ.mem[(Layout.jumpTable + 4 * Opcode.GETSTRINGCHAR.toNat)]? = some (0xd4#8) := by
-    have hb := h.rodata 45504 (by decide)
-    have he : Image.rodataByte 45504 = (0xd4#8) := by decide +kernel
+  have h0 : c.σ.mem[(Layout.jumpTable + 4 * Opcode.GETSTRINGCHAR.toNat)]? = some (0x1c#8) := by
+    have hb := h.rodata 23416 (by decide)
+    have he : Image.rodataByte 23416 = (0x1c#8) := by decide +kernel
     rw [he] at hb
     exact hb
-  have h1 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.GETSTRINGCHAR.toNat) + 1)]? = some (0x3f#8) := by
-    have hb := h.rodata 45505 (by decide)
-    have he : Image.rodataByte 45505 = (0x3f#8) := by decide +kernel
+  have h1 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.GETSTRINGCHAR.toNat) + 1)]? = some (0x96#8) := by
+    have hb := h.rodata 23417 (by decide)
+    have he : Image.rodataByte 23417 = (0x96#8) := by decide +kernel
     rw [he] at hb
     exact hb
   have h2 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.GETSTRINGCHAR.toNat) + 2)]? = some (0xfa#8) := by
-    have hb := h.rodata 45506 (by decide)
-    have he : Image.rodataByte 45506 = (0xfa#8) := by decide +kernel
+    have hb := h.rodata 23418 (by decide)
+    have he : Image.rodataByte 23418 = (0xfa#8) := by decide +kernel
     rw [he] at hb
     exact hb
   have h3 : c.σ.mem[((Layout.jumpTable + 4 * Opcode.GETSTRINGCHAR.toNat) + 3)]? = some (0xff#8) := by
-    have hb := h.rodata 45507 (by decide)
-    have he : Image.rodataByte 45507 = (0xff#8) := by decide +kernel
+    have hb := h.rodata 23419 (by decide)
+    have he : Image.rodataByte 23419 = (0xff#8) := by decide +kernel
     rw [he] at hb
     exact hb
   simp only [word32, bytesT_four_eq, bytesT4, h0, h1, h2, h3, Option.getD_some] <;> decide

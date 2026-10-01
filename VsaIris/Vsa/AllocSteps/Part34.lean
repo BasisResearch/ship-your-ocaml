@@ -3,9 +3,10 @@ import VsaIris.Vsa.AllocRun
 import Vsa.Sim.BridgeSeg
 import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.ElfDecode.Part000
-import Vsa.Sim.ElfDecode.Part005
+import Vsa.Sim.ElfDecode.Part006
 import Vsa.Sim.ElfDecode.Part007
-import Vsa.Sim.ElfDecode.Part009
+import Vsa.Sim.ElfDecode.Part008
+import Vsa.Sim.ElfDecode.Part010
 import Vsa.Sim.ElfDecode.Part027
 import Vsa.Sim.ElfDecode.Part028
 import Vsa.Sim.ElfDecode.Part030
@@ -15,17 +16,16 @@ import Vsa.Sim.ElfDecode.Part042
 import Vsa.Sim.ElfDecode.Part048
 import Vsa.Sim.ElfDecode.Part052
 import Vsa.Sim.ElfDecode.Part060
-import Vsa.Sim.ElfDecode.Part063
+import Vsa.Sim.ElfDecode.Part062
 import Vsa.Sim.ElfDecode.Part064
 import Vsa.Sim.ElfDecode.Part067
 import Vsa.Sim.ElfDecode.Part070
 import Vsa.Sim.ElfDecode.Part080
+import Vsa.Sim.ElfDecode.Part086
 import Vsa.Sim.ElfDecode.Part087
-import Vsa.Sim.ElfDecode.Part141
-import Vsa.Sim.ElfDecode.Part208
+import Vsa.Sim.ElfDecode.Part142
 import Vsa.Sim.ElfDecode.Part209
 import Vsa.Sim.ElfDecode.Part223
-import Vsa.Sim.ElfDecode.Part225
 import Vsa.Sim.ElfDecode.Part226
 import Vsa.Sim.ElfDecode.Part228
 

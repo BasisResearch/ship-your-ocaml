@@ -146,7 +146,7 @@ theorem split_misaligned_aligned
 /-- `within_mmio_readable a 4 = false` for a code-region address: above the
 CLINT `[0x2000000,0x20c0000)` and SIG `[0xc000000,0xc000020)` windows, and
 below the HTIF `tohost` mailbox (pinned `htif_tohost_base = some tohostAddr`).
-A code pc `0x80000000 ≤ pc < 0x80067600` (code lives below `tohost`)
+A code pc `0x80000000 ≤ pc < 0x80061fc0` (code lives below `tohost`)
 satisfies these by `omega`. `get_config_rvfi () = false`. -/
 theorem within_mmio_readable_ram_false
     (σ : SequentialState RegisterType trivialChoiceSource)
@@ -159,7 +159,7 @@ theorem within_mmio_readable_ram_false
   simp only [within_mmio_readable, within_clint, within_sig, within_htif_readable,
     within_htif_writable, get_config_rvfi, plat_have_clint, plat_have_sig,
     zopz0zI_u, zopz0zK_u, LeanRV64DExecutable.Functions.not]
-  simp only [tohostAddr] at hhi
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at hhi
   have hcb : BitVec.toNat plat_clint_base = 33554432 := by decide
   have hcs : BitVec.toNat plat_clint_size = 786432 := by decide
   have hsb : BitVec.toNat plat_sig_base = 201326592 := by decide
@@ -167,15 +167,12 @@ theorem within_mmio_readable_ram_false
   simp_all [simp_sail, bind, EStateM.bind, EStateM.run, pure, EStateM.pure,
     readReg, get, getThe, MonadStateOf.get, EStateM.get, BitVec.toNatInt,
     htif_tohost_size]
-  simp only [tohostAddr] at *
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at *
   have hadd : (a + 4#64).toNat = a.toNat + 4 := by
     have h4 : (4#64).toNat = 4 := by decide
     rw [BitVec.toNat_add, h4, Nat.mod_eq_of_lt (by omega)]
   refine ⟨fun _ => by omega, fun _ => by omega, fun _ => ?_⟩
-  have hle : (a + 4#64).toNat ≤ 2147907072 := by rw [hadd]; omega
-  have hrhs : ((2147907072 : Nat) : Int) % 18446744073709551616 = ((2147907072 : Nat) : Int) := by
-    decide
-  rw [hrhs]
+
   omega
 
 open MemoryRegionType AtomicSupport Reservability misaligned_exception in

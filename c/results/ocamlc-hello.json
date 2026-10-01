@@ -1,29 +1,29 @@
 {
- "elf": "build/ocamlc-hello.elf",
+ "elf": "build/migration/ocamlc-hello.elf",
  "exit": 0,
  "fuel_out": false,
- "steps": 82642691,
+ "steps": 82642170,
  "output": "\tconst 7\n\tpush\n\tconst 6\n\tmulint\n\tpush\n\tgetglobal Stdlib!\n\tgetfield 43\n\tapply 1\n\tpush\n\tmakeblock 0, 0\n\tpop 1\n\tsetglobal Hello!\n\n",
- "cut_point_step": 48831922,
- "first_minor_gc_step": 48830570,
- "first_minor_gc_after_cut": 76769749,
+ "cut_point_step": 48831879,
+ "first_minor_gc_step": 48830424,
+ "first_minor_gc_after_cut": 76769662,
  "minor_gcs": 2,
  "major_slices": 1,
  "minor_gcs_after_cut": 1,
  "first": {
-  "caml_main": 50216,
-  "caml_init_gc": 59736,
-  "caml_interprete": 127408,
-  "caml_load_code": 127763,
-  "caml_build_primitive_table": 37011118,
-  "caml_input_val": 41082275,
-  "caml_oldify_mopup": 48830570,
-  "caml_raise": 49013340,
-  "caml_gc_dispatch": 76528473,
-  "caml_major_collection_slice": 81707309,
-  "caml_do_exit": 82642618,
-  "_exit": 82642686,
-  "_exit.sd": 82642690
+  "caml_main": 50217,
+  "caml_init_gc": 59731,
+  "caml_interprete": 127432,
+  "caml_load_code": 127787,
+  "caml_build_primitive_table": 37011142,
+  "caml_input_val": 41082129,
+  "caml_oldify_mopup": 48830424,
+  "caml_raise": 49013297,
+  "caml_gc_dispatch": 76528393,
+  "caml_major_collection_slice": 81707222,
+  "caml_do_exit": 82642097,
+  "_exit": 82642165,
+  "_exit.sd": 82642169
  },
  "counts": {
   "caml_main": 1,
@@ -39,5 +39,6 @@
   "caml_do_exit": 1,
   "_exit": 1,
   "_exit.sd": 1
- }
+ },
+ "elf_sha256": "f9e44cf5f8f840099d36c785990fda8d7a0f34e8d857891944f8566c8d13c165"
 }

@@ -6,7 +6,7 @@ namespace VsaIris.VsaHeap
 open Vsa.MemRepr Vsa.Sim Vsa.Sim.DlHeap VsaIris.Inst VsaIris.Sym VsaIris.MallocFast
 open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail
 
-abbrev reentV : BitVec 64 := 0x80069cd0#64
+abbrev reentV : BitVec 64 := 0x80064668#64
 
 structure MEntry (C : MCtx) (R : Nat → BitVec 64) : Prop where
   ra : R 1 = C.r
@@ -18,7 +18,7 @@ structure MEntry (C : MCtx) (R : Nat → BitVec 64) : Prop where
   s2 : R 18 = C.rv0 18
   s3 : R 19 = C.rv0 19
 
-theorem errno_foot {H : List (Nat × Nat)} : ∀ k, k < 4 → vsaFoot H (0x80069cd0 + k) :=
+theorem errno_foot {H : List (Nat × Nat)} : ∀ k, k < 4 → vsaFoot H (0x80064668 + k) :=
   fun k hk => .inl (.inr (.inl ⟨by omega, by omega⟩))
 
 theorem malloc_errno {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
@@ -28,18 +28,18 @@ theorem malloc_errno {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
     AW C.live C.S C.Q 0x80037650#64 R Mt := by
   have hoff := Hp.off_stack_w (by decide) errno_foot
   have hlo := O.sp.lo
-  unfold mHead at hlo hoff; unfold Vsa.Sim.tohostAddr at hlo
-  have he : ((R 8) + sign_extend (m := 64) (0x000#12)).toNat = 0x80069cd0 := by
+  unfold mHead at hlo hoff; unfold Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
+  have he : ((R 8) + sign_extend (m := 64) (0x000#12)).toNat = 0x80064668 := by
     rw [h8]; decide
   refine st_80037650 O.live ?_
   refine st_80037654 O.live ?_ ?_ ?_
-  · simp only [upd_apply, Nat.reduceEqDiff, ite_false]; rw [he]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · simp only [upd_apply, Nat.reduceEqDiff, ite_false]; rw [he]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · simp only [upd_apply, Nat.reduceEqDiff, ite_false]; rw [he]; exact O.foot errno_foot
   simp only [upd_apply, Nat.reduceEqDiff, ite_false]
   rw [he]
   refine st_80037658 O.live ?_
   have Hp' := Hp.store_errno (v := upd R 15 ((0#64) + sign_extend (m := 64) (0x00c#12)) 15)
-  exact epi_8003765c O (((F.store (a := 0x80069cd0) (w := 4) (by omega)).upd (k := 15) (by decide)).upd
+  exact epi_8003765c O (((F.store (a := 0x80064668) (w := 4) (by omega)).upd (k := 15) (by decide)).upd
     (k := 10) (by decide)) (O.fin_null (by simp only [upd_apply, ite_true]; decide)
     ⟨_, _, _, _, Hp'.heap⟩ Hp'.pres Hp'.frame hst)
 
@@ -52,7 +52,7 @@ theorem malloc_pro {C : MCtx} (O : MOK C) {R : Nat → BitVec 64}
       nb < 2 ^ 31 → (R 14).toNat = nb → R 8 = reentV → AW C.live C.S C.Q 0x80037694#64 R Mt) :
     AW C.live C.S C.Q 0x800375b8#64 R C.Mt0 := by
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := E.sp
   have hs2n : (R 2).toNat = C.s.toNat := by rw [hs2]
   sx_run [16] O.live at 0x800375d0

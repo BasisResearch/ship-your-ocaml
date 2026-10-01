@@ -11,14 +11,6 @@ variable (σ : SequentialState RegisterType trivialChoiceSource)
   (hsec : σ.regs.get? Register.mseccfg = some (0#64))
 include hmisa hpriv hsec
 
-theorem decode_ffff07b7 :
-    (Functions.ext_decode 4294903735#32).run σ = .ok (instruction.UTYPE (1048560#20, regidx.Regidx 15#5, uop.LUI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_ffff0837 :
-    (Functions.ext_decode 4294903863#32).run σ = .ok (instruction.UTYPE (1048560#20, regidx.Regidx 16#5, uop.LUI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
 theorem decode_ffff0e37 :
     (Functions.ext_decode 4294905399#32).run σ = .ok (instruction.UTYPE (1048560#20, regidx.Regidx 28#5, uop.LUI)) σ :=
   decodeW σ hmisa hpriv hsec

@@ -78,7 +78,7 @@ theorem trim_head {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt : Mem} {Y b
       4096 ≤ trimExtra (brkv - Y) → AW C.live C.S C.Q 0x80007284#64 R' M) :
     AW C.live C.S C.Q 0x8000722c#64 R Mt := by
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := T.frame.sp
   have hs2n : (R 2).toNat = C.s.toNat - 32 := by
     rw [hs2, BitVec.toNat_add]; simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]; omega
@@ -112,7 +112,7 @@ theorem trim_head {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt : Mem} {Y b
     sx_norm; rw [BitVec.toNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hYlt]; simp; omega
   have hYf := fun k hk => foot_header Hp1.heap (.inl rfl) k hk
   refine st_80007260 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-  · rw [hEY]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hEY]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEY]; exact O.foot hYf
   rw [hEY, ldv_at hth _ rfl]
   refine st_80007264 O.live ?_
@@ -179,7 +179,7 @@ theorem trim_ret {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {M : Mem} {Y brk
     (hk : ∀ R' M', FFrame C R' M' → R' 8 = reentV → FDone C M' → AW C.live C.S C.Q 0x80007578#64 R' M') :
     AW C.live C.S C.Q 0x8000729c#64 R M := by
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := S.sp
   have hs2n : (R 2).toNat = C.s.toNat - 80 := by
     rw [hs2, BitVec.toNat_add]; simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]; omega
@@ -257,7 +257,7 @@ theorem TrimSt.sbrkPre {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {M : Mem} 
     SbrkPreG C.S Rc M brkv nbrk := by
   have HH := S.heap.heap.heap
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 : (Rc 2).toNat = C.s.toNat - 80 := by
     rw [h2, S.sp, BitVec.toNat_add]; simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]; omega
   have hbrkle := HH.brk_le; have hlo' := HH.walk.le; have htle := HH.top_le
@@ -265,7 +265,7 @@ theorem TrimSt.sbrkPre {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {M : Mem} 
   obtain ⟨g1, g2⟩ := glob_off_of S.disj
   unfold mHead at g1 g2
   refine ⟨hsum, HH.brk, by omega, HH.brk_le, ?_, ?_, ?_, h1, ?_, ?_, ?_⟩
-  all_goals try (rw [hs2]; (try unfold Vsa.Sim.tohostAddr); omega)
+  all_goals try (rw [hs2]; (try unfold Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr); omega)
   intro a ha
   rw [hs2] at ha
   unfold SbrkW brkAddr at ha
@@ -288,7 +288,7 @@ theorem trim_sb0 {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {M : Mem} {Y brk
       AW C.live C.S C.Q 0x800072c4#64 R' M') :
     AW C.live C.S C.Q 0x80007284#64 R M := by
   have HH := S.heap.heap.heap
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hbrkle := HH.brk_le; have htle := HH.top_le; have hY := HH.walk.le
   unfold heapEnd at hbrkle; unfold heapStart at hY
   have hs2 : (R 2).toNat = C.s.toNat - 80 := by
@@ -348,7 +348,7 @@ theorem trim_sb1 {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {M : Mem} {Y brk
     (hk : ∀ R' M', TrimMid C R' M M' Y brkv chunks bins → AW C.live C.S C.Q 0x800072d0#64 R' M') :
     AW C.live C.S C.Q 0x800072c4#64 R M := by
   have HH := S.heap.heap.heap
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hbrkle := HH.brk_le; have htle := HH.top_le; have hY := HH.walk.le
   unfold heapEnd at hbrkle; unfold heapStart at hY
   have hle := trimExtra_le (ts := brkv - Y) (by have := HH.top_size; omega) hE4
@@ -397,7 +397,7 @@ theorem trim_out {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {M : Mem} (S : T
     (hk : ∀ R' M', FFrame C R' M' → R' 8 = reentV → FDone C M' → AW C.live C.S C.Q 0x80007578#64 R' M') :
     AW C.live C.S C.Q 0x800072f8#64 R M := by
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := S.sp
   have hs2n : (R 2).toNat = C.s.toNat - 80 := by
     rw [hs2, BitVec.toNat_add]; simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]; omega
@@ -423,7 +423,7 @@ theorem trim_out {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {M : Mem} (S : T
   have S := T.st
   have HH := S.heap.heap.heap
   have hlo := O.sp.lo; have hhi := O.sp.hi; have hsal := O.sp.align
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hbrkle := HH.brk_le; have htle := HH.top_le; have hY := HH.walk.le
   unfold heapEnd at hbrkle; unfold heapStart at hY
   have hts := HH.top_size

@@ -6,22 +6,22 @@ def InRange (lo hi a : Nat) : Prop := lo ≤ a ∧ a < hi
 
 -- Generated from the relocated stdio objects; errno remains separate.
 def stdioFoot (a : Nat) : Prop :=
-  InRange 0x80069a08 0x80069b07 a ∨
-  InRange 0x80069b08 0x80069cd0 a ∨
-  InRange 0x80069cd4 0x80069e48 a ∨
-  InRange 0x80069f48 0x80069f50 a ∨
-  InRange 0x80069f60 0x80069f70 a ∨
-  InRange 0x8006a380 0x8006a388 a ∨
-  InRange 0x8006a3a0 0x8006a3b0 a ∨
-  InRange 0x8006a3b8 0x8006a3b9 a ∨
-  InRange 0x8006a3c0 0x8006a3c1 a ∨
-  InRange 0x8006a3c8 0x8006a3c9 a ∨
-  InRange 0x8006a3d0 0x8006a3d1 a ∨
-  InRange 0x8006a3d8 0x8006a3d9 a ∨
-  InRange 0x8006a3e0 0x8006a3e1 a ∨
-  InRange 0x8006a3e8 0x8006a3e9 a ∨
-  InRange 0x8006a3f0 0x8006a3f1 a ∨
-  InRange 0x8006a3f8 0x8006a400 a ∨
-  InRange 0x800820a0 0x800827a0 a
+  InRange 0x800643a0 0x8006449f a ∨
+  InRange 0x800644a0 0x80064668 a ∨
+  InRange 0x8006466c 0x800647e0 a ∨
+  InRange 0x800648e0 0x800648e8 a ∨
+  InRange 0x800648f8 0x80064908 a ∨
+  InRange 0x80064d18 0x80064d20 a ∨
+  InRange 0x80064d38 0x80064d48 a ∨
+  InRange 0x80064d50 0x80064d51 a ∨
+  InRange 0x80064d58 0x80064d59 a ∨
+  InRange 0x80064d60 0x80064d61 a ∨
+  InRange 0x80064d68 0x80064d69 a ∨
+  InRange 0x80064d70 0x80064d71 a ∨
+  InRange 0x80064d78 0x80064d79 a ∨
+  InRange 0x80064d80 0x80064d81 a ∨
+  InRange 0x80064d88 0x80064d89 a ∨
+  InRange 0x80064d90 0x80064d98 a ∨
+  InRange 0x8007ca38 0x8007d138 a
 
 end VsaIris.Stdio

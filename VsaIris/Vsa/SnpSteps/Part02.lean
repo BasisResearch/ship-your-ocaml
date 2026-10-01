@@ -75,7 +75,7 @@ def nx_80047948 : List BBlock := [{ body := [mkLine 0x80047948#64 0x06013423#32]
 def nx_8004794c : List BBlock := [{ body := [mkLine 0x8004794c#64 0x08013023#32], term := none }]
 def nx_80047950 : List BBlock := [{ body := [mkLine 0x80047950#64 0x06013023#32], term := none }]
 def nx_80047954 : List BBlock := [{ body := [mkLine 0x80047954#64 0x00013823#32], term := none }]
-def nx_80047958 : List BBlock := [{ body := [mkLine 0x80047958#64 0x00022497#32, mkLine 0x8004795c#64 0x1b048493#32], term := none }]
+def nx_80047958 : List BBlock := [{ body := [mkLine 0x80047958#64 0x0001d497#32, mkLine 0x8004795c#64 0xb4848493#32], term := none }]
 def nx_80047960 : List BBlock := [{ body := [mkLine 0x80047960#64 0x02500993#32], term := none }]
 def nx_80047964 : List BBlock := [{ body := [mkLine 0x80047964#64 0x01000913#32], term := none }]
 def nx_80047968 : List BBlock := [{ body := [mkLine 0x80047968#64 0x01613023#32], term := none }]
@@ -107,8 +107,8 @@ def nx_800479c4 : List BBlock := [{ body := [mkLine 0x800479c4#64 0x00f13023#32]
 def nx_800479c8 : List BBlock := [{ body := [mkLine 0x800479c8#64 0xfff00a13#32], term := none }]
 def nx_800479cc : List BBlock := [{ body := [mkLine 0x800479cc#64 0x00000313#32], term := none }]
 def nx_800479d0 : List BBlock := [{ body := [mkLine 0x800479d0#64 0x05a00d13#32], term := none }]
-def nx_800479d4 : List BBlock := [{ body := [mkLine 0x800479d4#64 0x00018b17#32], term := none }]
-def nx_800479d8 : List BBlock := [{ body := [mkLine 0x800479d8#64 0x00cb0b13#32], term := none }]
+def nx_800479d4 : List BBlock := [{ body := [mkLine 0x800479d4#64 0x00013b17#32], term := none }]
+def nx_800479d8 : List BBlock := [{ body := [mkLine 0x800479d8#64 0x9c4b0b13#32], term := none }]
 def nx_800479dc : List BBlock := [{ body := [mkLine 0x800479dc#64 0x00000d93#32], term := none }]
 def nx_800479e0 : List BBlock := [{ body := [mkLine 0x800479e0#64 0x00078c93#32], term := none }]
 def nx_800479e4 : List BBlock := [{ body := [mkLine 0x800479e4#64 0x001c8c93#32], term := none }]
@@ -1227,7 +1227,7 @@ theorem nt_80047954 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat �
 theorem nt_80047958 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ snpText, live p.1)
-    (hk : SnpW live Dt DA S Q 0x80047960#64 (upd R 9 (((0x80047958#64) + (sign_extend (m := 64) ((0x00022#20) +++ (0x000#12)))) + sign_extend (m := 64) (0x1b0#12))) Mt) :
+    (hk : SnpW live Dt DA S Q 0x80047960#64 (upd R 9 (((0x80047958#64) + (sign_extend (m := 64) ((0x0001d#20) +++ (0x000#12)))) + sign_extend (m := 64) (0xb48#12))) Mt) :
     SnpW live Dt DA S Q 0x80047958#64 R Mt :=
   swp_stepD nx_80047958 [3, 9] [] [] [] 1 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -1726,7 +1726,7 @@ theorem nt_800479d0 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat �
 theorem nt_800479d4 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ snpText, live p.1)
-    (hk : SnpW live Dt DA S Q 0x800479d8#64 (upd R 22 ((0x800479d4#64) + (sign_extend (m := 64) ((0x00018#20) +++ (0x000#12))))) Mt) :
+    (hk : SnpW live Dt DA S Q 0x800479d8#64 (upd R 22 ((0x800479d4#64) + (sign_extend (m := 64) ((0x00013#20) +++ (0x000#12))))) Mt) :
     SnpW live Dt DA S Q 0x800479d4#64 R Mt :=
   swp_stepD nx_800479d4 [22] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -1739,7 +1739,7 @@ theorem nt_800479d4 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat �
 theorem nt_800479d8 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ snpText, live p.1)
-    (hk : SnpW live Dt DA S Q 0x800479dc#64 (upd R 22 ((R 22) + sign_extend (m := 64) (0x00c#12))) Mt) :
+    (hk : SnpW live Dt DA S Q 0x800479dc#64 (upd R 22 ((R 22) + sign_extend (m := 64) (0x9c4#12))) Mt) :
     SnpW live Dt DA S Q 0x800479d8#64 R Mt :=
   swp_stepD nx_800479d8 [22] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive

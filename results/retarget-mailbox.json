@@ -1,0 +1,15 @@
+{
+  "mailbox": {
+    "0x80067600": "0x80061fc0",
+    "2147907072": "2147884992",
+    "2147907080": "2147885000"
+  },
+  "mailbox_files": [
+    "Vsa/Sim/Hooks.lean",
+    "Vsa/Sim/InitValues.lean",
+    "Vsa/Sim/MemLoad.lean",
+    "Vsa/Sim/MemcpySpec.lean",
+    "Vsa/Sim/Muldi3Sites.lean",
+    "Vsa/Sim/RamReadData.lean"
+  ]
+}

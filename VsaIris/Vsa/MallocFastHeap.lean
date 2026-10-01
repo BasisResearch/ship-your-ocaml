@@ -169,7 +169,7 @@ theorem FastAt.split {m : Mem} {H : List (Nat × Nat)} {maxReq k top brkv : Nat}
     split_read_victim (by unfold heapStart; omega) hnb32 (by omega)
   have Rt : read64 (splitMem m top nb brkv) topAddr = some (top + nb) := split_read_top (by unfold heapStart; omega) (by omega)
   have Rr : read64 (splitMem m top nb brkv) (top + nb + 8) = some (brkv - top - nb + 1) := split_read_rem (by omega)
-  have Rg : ∀ a, a + 8 ≤ 0x800827a0 → a + 8 ≤ topAddr ∨ topAddr + 8 ≤ a →
+  have Rg : ∀ a, a + 8 ≤ 0x8007d140 → a + 8 ≤ topAddr ∨ topAddr + 8 ≤ a →
       read64 (splitMem m top nb brkv) a = read64 m a := fun a ha hg =>
     split_read_off hg (by omega) (by omega)
   have hb := hH.walk.chunk_bounds
@@ -201,7 +201,7 @@ theorem FastAt.split {m : Mem} {H : List (Nat × Nat)} {maxReq k top brkv : Nat}
       (h' := brkv - top - nb + 1) Rv (by omega) (by rw [hcs]; omega) (by rw [hcs]; omega)
       (by rw [hcs]; exact Rr) (by rw [hcs]; exact .top)
     rwa [hcs, hpi] at w
-  have hwalk : ChunkWalk (splitMem m top nb brkv) 0x800827a0 (top + nb) (chunks ++ [⟨top, nb, true⟩]) := by
+  have hwalk : ChunkWalk (splitMem m top nb brkv) 0x8007d140 (top + nb) (chunks ++ [⟨top, nb, true⟩]) := by
     refine hH.walk.extend Rc (fun h1 hh1 => ⟨nb + 1, Rv, ?_⟩) hnew
     rw [hH.top_header] at hh1
     cases hh1

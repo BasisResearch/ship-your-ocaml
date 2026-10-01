@@ -16,7 +16,7 @@ structure MSp (s : BitVec 64) : Prop where
 theorem MSp.of_spOKA {s : BitVec 64} (h : SpOKA s) : MSp s where
   lo := by
     have := h.lo
-    simp only [allocHeadroom, mHead, Vsa.Sim.tohostAddr] at *
+    simp only [allocHeadroom, mHead, Vsa.Sim.tohostAddr, Vsa.Sim.LibraryLayout.tohostAddr] at *
     omega
   hi := h.hi
   align := h.align
@@ -151,7 +151,7 @@ theorem WOK.foot_at {C : MCtx} (O : WOK C) {a' : Nat} (h : ∀ k, k < 8 → vsaF
     ∀ a, a = a' → ∀ b ∈ accAddrs a 8, C.S b := by
   intro a he; subst he; exact O.foot h
 
-theorem WOK.glob {C : MCtx} (O : WOK C) {a : Nat} (h1 : 0x800691f8 ≤ a) (h2 : a + 8 ≤ 0x80069a08) :
+theorem WOK.glob {C : MCtx} (O : WOK C) {a : Nat} (h1 : 0x80063b90 ≤ a) (h2 : a + 8 ≤ 0x800643a0) :
     ∀ b ∈ accAddrs a 8, C.S b :=
   O.foot fun k hk => .inl (.inl ⟨by omega, by omega⟩)
 
@@ -183,28 +183,28 @@ theorem MHeap.off_stack {C : MCtx} {Mt : Mem} {brkv : Nat} {chunks : List Chunk}
 
 theorem glob_off_of {H : List (Nat × Nat)} {s : BitVec 64}
     (hd : ∀ a, s.toNat - mHead ≤ a → a < s.toNat → ¬ vsaFoot H a) :
-    (s.toNat ≤ 0x80069cd0 ∨ 0x80069cd4 + mHead ≤ s.toNat) ∧
+    (s.toNat ≤ 0x80064668 ∨ 0x8006466c + mHead ≤ s.toNat) ∧
       ((s.toNat ≤ brkAddr ∨ brkAddr + 8 + mHead ≤ s.toNat) ∧
-       (s.toNat ≤ 0x8006a3b0 ∨ 0x8006a3b4 + mHead ≤ s.toNat)) := by
+       (s.toNat ≤ 0x80064d48 ∨ 0x80064d4c + mHead ≤ s.toNat)) := by
   have g : ∀ a, allocGlobal a → ¬ (s.toNat - mHead ≤ a ∧ a < s.toNat) :=
     fun a ha hw => hd a hw.1 hw.2 (.inl ha)
-  have h1 := g 0x80069cd0 (by unfold allocGlobal InRange; omega)
-  have h2 := g 0x80069cd3 (by unfold allocGlobal InRange; omega)
-  have h3 := g 0x80069f50 (by unfold allocGlobal InRange; omega)
-  have h4 := g 0x80069f78 (by unfold allocGlobal InRange; omega)
-  have h5 := g 0x8006a3b0 (by unfold allocGlobal InRange; omega)
-  have h6 := g 0x80082050 (by unfold allocGlobal InRange; omega)
-  have h7 := g 0x8008209f (by unfold allocGlobal InRange; omega)
+  have h1 := g 0x80064668 (by unfold allocGlobal InRange; omega)
+  have h2 := g 0x8006466b (by unfold allocGlobal InRange; omega)
+  have h3 := g 0x800648e8 (by unfold allocGlobal InRange; omega)
+  have h4 := g 0x80064910 (by unfold allocGlobal InRange; omega)
+  have h5 := g 0x80064d48 (by unfold allocGlobal InRange; omega)
+  have h6 := g 0x8007c9e8 (by unfold allocGlobal InRange; omega)
+  have h7 := g 0x8007ca37 (by unfold allocGlobal InRange; omega)
   have hbrkEnd := g (brkAddr + 7) (by unfold allocGlobal InRange brkAddr; omega)
-  have herrEnd := g 0x8006a3b3 (by unfold allocGlobal InRange; omega)
+  have herrEnd := g 0x80064d4b (by unfold allocGlobal InRange; omega)
   unfold mHead brkAddr at *
   omega
 
 theorem MHeap.glob_off {C : MCtx} {Mt : Mem} {brkv : Nat} {chunks : List Chunk}
     {bins : Nat → List Nat} (Hp : MHeap C Mt brkv chunks bins) :
-    (C.s.toNat ≤ 0x80069cd0 ∨ 0x80069cd4 + mHead ≤ C.s.toNat) ∧
+    (C.s.toNat ≤ 0x80064668 ∨ 0x8006466c + mHead ≤ C.s.toNat) ∧
       ((C.s.toNat ≤ brkAddr ∨ brkAddr + 8 + mHead ≤ C.s.toNat) ∧
-       (C.s.toNat ≤ 0x8006a3b0 ∨ 0x8006a3b4 + mHead ≤ C.s.toNat)) :=
+       (C.s.toNat ≤ 0x80064d48 ∨ 0x80064d4c + mHead ≤ C.s.toNat)) :=
   glob_off_of Hp.disj
 
 theorem MHeap.off_stack_w {C : MCtx} {Mt : Mem} {brkv : Nat} {chunks : List Chunk}
@@ -280,9 +280,9 @@ theorem MHeap.store_stack {C : MCtx} {Mt : Mem} {brkv : Nat} {chunks : List Chun
 
 theorem MHeap.store_errno {C : MCtx} {Mt : Mem} {brkv : Nat} {chunks : List Chunk}
     {bins : Nat → List Nat} (Hp : MHeap C Mt brkv chunks bins) {v : BitVec 64} :
-    MHeap C (writeLog Mt [(0x80069cd0, 4, v)]) brkv chunks bins where
+    MHeap C (writeLog Mt [(0x80064668, 4, v)]) brkv chunks bins where
   heap := Hp.heap.transport_read fun x hx => by
-    have ho : OutL [(0x80069cd0, 4, v)] x := ⟨Classical.byContradiction fun hc => by
+    have ho : OutL [(0x80064668, 4, v)] x := ⟨Classical.byContradiction fun hc => by
       simp only at hc
       exact hx.2.1 ⟨by omega, by omega⟩, trivial⟩
     rw [writeLog_out _ _ _ ho]
@@ -342,7 +342,7 @@ theorem epi_core {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
     AW C.live C.S C.Q pc1 R Mt := by
   have hsp := O.sp
   have hlo := hsp.lo; have hhi := hsp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := F.sp
   refine st1 (by rw [hs2]; sx_addr) (O.stack (by rw [hs2]; unfold mHead; sx_addr)
     (by rw [hs2]; sx_addr)) ?_
@@ -445,7 +445,7 @@ theorem mChg_own {H : List (Nat × Nat)} {s : BitVec 64} (hsp : SpOKA s) (a : Na
   · exact .inr hf
   · have hl := hsp.lo
     unfold mHead at h1
-    unfold allocHeadroom Vsa.Sim.tohostAddr at hl
+    unfold allocHeadroom Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hl
 
     have hs : 512 ≤ s.toNat := by omega
     refine .inl ⟨?_, ?_⟩ <;> simp only [allocHeadroom]

@@ -12,10 +12,10 @@ import Vsa.Sim.ElfDecode.Part060
 import Vsa.Sim.ElfDecode.Part066
 import Vsa.Sim.ElfDecode.Part070
 import Vsa.Sim.ElfDecode.Part075
-import Vsa.Sim.ElfDecode.Part078
+import Vsa.Sim.ElfDecode.Part077
 import Vsa.Sim.ElfDecode.Part080
-import Vsa.Sim.ElfDecode.Part082
-import Vsa.Sim.ElfDecode.Part139
+import Vsa.Sim.ElfDecode.Part081
+import Vsa.Sim.ElfDecode.Part140
 import Vsa.Sim.ElfDecode.Part208
 import Vsa.Sim.ElfDecode.Part210
 import Vsa.Sim.ElfDecode.Part215

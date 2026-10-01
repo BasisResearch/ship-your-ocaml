@@ -323,14 +323,14 @@ theorem PHeapAt.moveBinAt {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
               (hoNe k hk0 hk hkj x hx).2).symm,
             (Kfd k x hk0 hk (.inr hx) hxf hxv hxi (hoNe k hk0 hk hkj x hx).1).symm⟩
 
-  have hnloc : ∀ y, (y = binAt j ∨ heapStart ≤ y) → y + 32 ≤ 0x80069a08 ∨ heapStart ≤ y := by
+  have hnloc : ∀ y, (y = binAt j ∨ heapStart ≤ y) → y + 32 ≤ 0x800643a0 ∨ heapStart ≤ y := by
     rintro y (rfl | h1)
     · exact .inl (by omega)
     · exact .inr h1
   have hpl := hnloc pred hploc
   have hsl := hnloc succ hsloc
   have Kout : ∀ a, (∀ k, k < 8 → allocGlobal (a + k)) → a % 8 = 0 →
-      0x80069a08 ≤ a → a + 8 ≤ 0x800827a0 → read64 m' a = read64 m a := by
+      0x800643a0 ≤ a → a + 8 ≤ 0x8007d140 → read64 m' a = read64 m a := by
     intro a hg ha h1 h2
     refine Kglob a hg ha (by unfold heapStart; omega) (by omega) (by omega) ?_ ?_
       (by unfold binblocksAddr avAddr; omega)
@@ -353,7 +353,7 @@ theorem PHeapAt.moveBinAt {m m' : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
     · rcases hsloc with rfl | hs
       · unfold topAddr binAt avAddr; omega
       · unfold topAddr avAddr heapStart at *; omega
-  have hglob : ∀ a, 0x80069a08 ≤ a → a + 8 ≤ 0x800827a0 →
+  have hglob : ∀ a, 0x800643a0 ≤ a → a + 8 ≤ 0x8007d140 →
       (∀ k, k < 8 → allocGlobal (a + k)) → a % 8 = 0 → read64 m' a = read64 m a :=
     fun a h1 h2 hg ha => Kout a hg ha h1 h2
   refine ⟨⟨{ sbrk_base := ?_, brk := ?_, brk_le := hbrk, top_ptr := by rw [Ktop]; exact HH.top_ptr

@@ -72,11 +72,11 @@ theorem free_nt {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt : Mem} {q n b
   have ha2 := D.a2; have ha3 := D.a3
   have hnf := fun k hk => vsaFoot_of_cons (foot_header Hp.heap.heap (HH.end_bnd K.mem) k hk)
   simp only at hnf
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hEn : (R 12 + sign_extend (m := 64) (0x008#12)).toNat = x + sz + 8 := by
     sx_norm; rw [BitVec.toNat_add, ha2]; simp; omega
   refine st_8000739c O.live ?_ ?_ ?_
-  · rw [hEn]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · rw [hEn]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEn]; exact O.foot hnf
   rw [hEn]
   refine st_800073a0 O.live ?_
@@ -87,7 +87,7 @@ theorem free_nt {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt : Mem} {q n b
   have hnnr' : read64 (writeLog Mt [(x + sz + 8, 8, R 13)]) (x + sz + d.size + 8) = some hnn := by
     rw [read64_store_miss _ _ (by omega)]; exact hnnr
   refine st_800073a4 O.live ?_ ?_ ?_
-  · simp only [upd_apply, ite_true]; rw [hEnn]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · simp only [upd_apply, ite_true]; rw [hEnn]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · simp only [upd_apply, ite_true]; rw [hEnn]; exact O.foot hnnF
   simp only [upd_apply, ite_true]
   rw [hEnn, ldv_at hnnr' _ rfl]
@@ -176,7 +176,7 @@ theorem free_b1a {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} {
   have hx16 := G.x16; have hxlo := G.xlo; have hs16 := G.sz16; have hs32 := G.sz32
   have hdend := G.dend; have htop := G.top; have hds32 := G.dsz32
   unfold heapEnd at htop
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   obtain ⟨hd0, hd0r, hd0s, _⟩ := G.dhdr
   have ha1 := N.a1; have ha2 := N.a2; have ha0 := N.a0
   have hdrlt := Vsa.Sim.read64_lt_eg4 _ _ _ N.hdr
@@ -194,11 +194,11 @@ theorem free_b1a {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} {
   have hof := off_stack_of N.disj G.hfoot
   have hoF := off_stack_of (a := x + sz) N.disj (fun k hk => G.xfoot _ (by omega) (by omega))
   refine st_80007488 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_false]
-  · rw [hE8]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · rw [hE8]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hE8]; exact O.foot G.hfoot
   rw [hE8]
   refine st_8000748c O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-  · rw [hEn]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · rw [hEn]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEn]; exact O.foot (fun k hk => G.xfoot _ (by omega) (by omega))
   rw [hEn]
   have hval : (R 10 ||| sign_extend (m := 64) (0x001#12)).toNat = hdr0 := by
@@ -690,14 +690,14 @@ theorem free_fwd {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mc Mv : Mem} {b
       have := hnf (24 + k) (by omega) (by omega); rwa [show Y + a + (24 + k) = Y + a + 24 + k by omega] at this)
       (by omega) (by omega))]
     exact hbkN
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have ha2 := V.a2; have ha4 := V.a4; have ha5 := V.a5; have ha0 := V.a0
   have hE16 : (R 12 + sign_extend (m := 64) (0x010#12)).toNat = Y + a + 16 := by
     sx_norm; rw [BitVec.toNat_add, ha2]; simp; omega
   have hE24 : (R 12 + sign_extend (m := 64) (0x018#12)).toNat = Y + a + 24 := by
     sx_norm; rw [BitVec.toNat_add, ha2]; simp; omega
   refine st_80007458 O.live ?_ ?_ ?_
-  · rw [hE16]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hE16]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hE16]; exact O.foot (fun k hk => by
       have := hnf (16 + k) (by omega) (by omega); rwa [show Y + a + (16 + k) = Y + a + 16 + k by omega] at this)
   rw [ldv_at hfd' _ hE16]
@@ -747,27 +747,27 @@ theorem free_fwd {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mc Mv : Mem} {b
     have hglob : ∀ o, 16 ≤ o → o < 32 → ∀ k, k < 8 → vsaFoot C.H (binAt 1 + o + k - k + k) := by
       intro o h1 h2 k hk; exact .inl (.inl ⟨by rw [hb1]; omega, by rw [hb1]; omega⟩)
     refine st_800075d0 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_false]
-    · rw [e40, hb1]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [e40, hb1]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [e40]; exact O.foot (fun k hk => .inl (.inl ⟨by rw [hb1]; omega, by rw [hb1]; omega⟩))
     rw [e40]
     refine st_800075d4 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_false]
-    · rw [e32, hb1]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [e32, hb1]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [e32]; exact O.foot (fun k hk => .inl (.inl ⟨by rw [hb1]; omega, by rw [hb1]; omega⟩))
     rw [e32]
     refine st_800075d8 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_false]
-    · rw [eY24]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eY24]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eY24]; exact O.foot (fun k hk => hYf _ (by omega) (by omega))
     rw [eY24]
     refine st_800075dc O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_false]
-    · rw [eY16]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eY16]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eY16]; exact O.foot (fun k hk => hYf _ (by omega) (by omega))
     rw [eY16]
     refine st_800075e0 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_false]
-    · rw [eY8]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eY8]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eY8]; exact O.foot (fun k hk => hYf _ (by omega) (by omega))
     rw [eY8]
     refine st_800075e4 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eN]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eN]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eN]; exact O.foot (fun k hk => hYf _ (by omega) (by omega))
     rw [eN]
     refine st_800075e8 O.live ?_
@@ -811,7 +811,7 @@ theorem free_fwd {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mc Mv : Mem} {b
     have hYf : ∀ x, Y + 8 ≤ x → x < Y + (a + b) + 8 → vsaFoot C.H x :=
       fun x h1 h2 => B.foot_chunk h1 h2
     refine st_80007468 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_false]
-    · rw [hE24]; unfold LdOK Vsa.Sim.tohostAddr; omega
+    · rw [hE24]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [hE24]; exact O.foot (fun k hk => by
         have := hnf (24 + k) (by omega) (by omega); rwa [show Y + a + (24 + k) = Y + a + 24 + k by omega] at this)
     rw [ldv_at hbk' _ hE24]
@@ -825,21 +825,21 @@ theorem free_fwd {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mc Mv : Mem} {b
       sx_norm; rw [BitVec.toNat_add, ha4, ha5]; simp; omega
     have hsf := G.sfoot; have hpf := G.pfoot
     refine st_8000746c O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eS]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eS]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eS]; exact O.foot (fun k hk => by
         have := hsf (24 + k) (by omega) (by omega); rwa [show succ + (24 + k) = succ + 24 + k by omega] at this)
     rw [eS]
     refine st_80007470 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eP]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eP]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eP]; exact O.foot (fun k hk => by
         have := hpf (16 + k) (by omega) (by omega); rwa [show pred + (16 + k) = pred + 16 + k by omega] at this)
     rw [eP]
     refine st_80007474 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eY8]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eY8]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eY8]; exact O.foot (fun k hk => hYf _ (by omega) (by omega))
     rw [eY8]
     refine st_80007478 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eN]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eN]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eN]; exact O.foot (fun k hk => hYf _ (by omega) (by omega))
     rw [eN]
     refine st_8000747c O.live ?_
@@ -1016,12 +1016,12 @@ theorem free_b2 {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} {b
     rw [← hpend]; exact this.2 k hk
   have hpf16 : ∀ k, k < 16 → vsaFoot C.H (p + 16 + k) := fun k hk => by
     have := foot_free N.heap.heap hpm rfl; simp only at this; exact this.1 k hk
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have ha1 := N.a1; have ha4 := N.a4; have ha5 := N.a5
   have hEx : (R 11 + sign_extend (m := 64) (0xff0#12)).toNat = x := by
     sx_norm; rw [BitVec.toNat_add, ha1]; simp; omega
   refine st_800073b0 O.live ?_ ?_ ?_
-  · rw [hEx]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hEx]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEx]; exact O.foot hxf
   rw [hEx, ldv_at hfoot _ rfl]
   refine st_800073b4 O.live ?_
@@ -1032,7 +1032,7 @@ theorem free_b2 {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} {b
   have hEpf : (R 14 - BitVec.ofNat 64 psz + sign_extend (m := 64) (0x010#12)).toNat = p + 16 := by
     sx_norm; rw [BitVec.toNat_add, hEp]; simp; omega
   refine st_800073c0 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-  · rw [hEpf]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hEpf]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEpf]; exact O.foot (fun k hk => hpf16 k (by omega))
   rw [hEpf, ldv_at hfd _ rfl]
   refine st_800073c4 O.live ?_
@@ -1342,7 +1342,7 @@ theorem free_b2nl {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} 
   have hbk : read64 Mt1 (p + 24) = some predP := by rw [hM1, rd_miss (by omega)]; exact P.bk
   have hpv := Vsa.Sim.read64_lt_eg4 _ _ _ hbk
   have hsv : succP < 2 ^ 64 := by omega
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have ha4 := B.a4; have ha1 := B.a1; have ha5 := B.a5; have ha2 := B.a2; have ha3 := B.a3
   have hE24 : (R 14 + sign_extend (m := 64) (0x018#12)).toNat = p + 24 := by
     sx_norm; rw [BitVec.toNat_add, ha4]; simp; omega
@@ -1350,7 +1350,7 @@ theorem free_b2nl {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} 
     have hpm : (⟨p, psz, false⟩ : Chunk) ∈ (cs₀ ++ [⟨p, psz, false⟩]) ++ ⟨p + psz, sz, true⟩ :: d :: cs₃ := by simp
     have := foot_free B.heap.heap hpm rfl; simp only at this; exact this.1 k hk
   refine st_800073cc O.live ?_ ?_ ?_
-  · rw [hE24]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hE24]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hE24]; exact O.foot (fun k hk => by
       have := hpf16 (8 + k) (by omega); rwa [show p + 16 + (8 + k) = p + 24 + k by omega] at this)
   rw [ldv_at hbk _ hE24]
@@ -1363,12 +1363,12 @@ theorem free_b2nl {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} 
   have o2 := off_stack_of (a := predP + 16) B.disj (fun k hk => by
     have := hppf (16 + k) (by omega) (by omega); rwa [show predP + (16 + k) = predP + 16 + k by omega] at this)
   refine st_800073d0 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-  · rw [eS]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · rw [eS]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [eS]; exact O.foot (fun k hk => by
       have := hspf (24 + k) (by omega) (by omega); rwa [show succP + (24 + k) = succP + 24 + k by omega] at this)
   rw [eS]
   refine st_800073d4 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-  · rw [eP]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · rw [eP]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [eP]; exact O.foot (fun k hk => by
       have := hppf (16 + k) (by omega) (by omega); rwa [show predP + (16 + k) = predP + 16 + k by omega] at this)
   rw [eP]
@@ -1424,11 +1424,11 @@ theorem free_b2nl {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} 
     have eN : (R 12 + sign_extend (m := 64) (0x000#12)).toNat = p + psz + sz := by
       sx_norm; rw [ha2]
     refine st_800073e0 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eP8]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eP8]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eP8]; exact O.foot (fun k hk => hPf _ (by omega) (by omega))
     rw [eP8]
     refine st_800073e4 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eN]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eN]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eN]; exact O.foot (fun k hk => hPf _ (by omega) (by omega))
     rw [eN]
     have hv3 : (R 15 ||| sign_extend (m := 64) (0x001#12)).toNat = psz + sz + 1 := by
@@ -1798,7 +1798,7 @@ theorem free_b2lr {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} 
   have HP := B.coal
   have hPf : ∀ a, p + 8 ≤ a → a < p + (psz + sz) + 8 → vsaFoot C.H a :=
     fun a h1 h2 => foot_of_chunk HP (by simp) hno h1 h2
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have ha4 := B.a4; have ha5 := B.a5; have ha2 := B.a2; have ha3 := B.a3
   have hv3 : (R 15 ||| sign_extend (m := 64) (0x001#12)).toNat = psz + sz + 1 := by
     sx_norm
@@ -1819,11 +1819,11 @@ theorem free_b2lr {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} 
     have eN : (R 12 + sign_extend (m := 64) (0x000#12)).toNat = p + psz + sz := by
       sx_norm; rw [ha2]
     refine st_800075b0 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eP8]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eP8]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eP8]; exact O.foot (fun k hk => hPf _ (by omega) (by omega))
     rw [eP8]
     refine st_800075b4 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eN]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eN]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eN]; exact O.foot (fun k hk => hPf _ (by omega) (by omega))
     rw [eN]
     refine st_800075b8 O.live ?_
@@ -1860,12 +1860,12 @@ theorem free_b2lr {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} 
     have hE16 : (R 12 + sign_extend (m := 64) (0x010#12)).toNat = p + psz + sz + 16 := by
       sx_norm; rw [BitVec.toNat_add, ha2]; simp; omega
     refine st_8000750c O.live ?_ ?_ ?_
-    · rw [hE24]; unfold LdOK Vsa.Sim.tohostAddr; omega
+    · rw [hE24]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [hE24]; exact O.foot (fun k hk => by
         have := hdF.1 (8 + k) (by omega); rwa [show p + psz + sz + 16 + (8 + k) = p + psz + sz + 24 + k by omega] at this)
     rw [ldv_at hbk' _ hE24]
     refine st_80007510 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_false]
-    · rw [hE16]; unfold LdOK Vsa.Sim.tohostAddr; omega
+    · rw [hE16]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [hE16]; exact O.foot (fun k hk => hdF.1 k (by omega))
     rw [hE16, ldv_at hfd' _ rfl]
     refine st_80007514 O.live ?_
@@ -1891,22 +1891,22 @@ theorem free_b2lr {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt Mt1 : Mem} 
     have hfdF := L.fdfoot; have hbkF := L.bkfoot; have hfdlo := L.fdlo; have hbklo := L.bklo
     have hfdhi := L.fdhi; have hbkhi := L.bkhi; have hfd16 := L.fd8; have hbk16 := L.bk8
     refine st_8000751c O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eS]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eS]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eS]; exact O.foot (fun k hk => by
         have := hfdF (24 + k) (by omega) (by omega); rwa [show succD + (24 + k) = succD + 24 + k by omega] at this)
     rw [eS]
     refine st_80007520 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eP]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eP]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eP]; exact O.foot (fun k hk => by
         have := hbkF (16 + k) (by omega) (by omega); rwa [show predD + (16 + k) = predD + 16 + k by omega] at this)
     rw [eP]
     refine st_80007524 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eP8]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eP8]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eP8]; exact O.foot (fun k hk => hPf _ (by omega) (by omega))
     rw [eP8]
     refine st_80007528 O.live ?_
     refine st_8000752c O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-    · rw [eN]; unfold StOK Vsa.Sim.tohostAddr; omega
+    · rw [eN]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · rw [eN]; exact O.foot (fun k hk => by
         have := hdF.2 k hk; rwa [show p + psz + sz + ds + k = p + (psz + sz) + ds + k by omega] at this)
     rw [eN]

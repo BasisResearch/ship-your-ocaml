@@ -11,6 +11,10 @@ variable (σ : SequentialState RegisterType trivialChoiceSource)
   (hsec : σ.regs.get? Register.mseccfg = some (0#64))
 include hmisa hpriv hsec
 
+theorem decode_ffb6e8e3 :
+    (Functions.ext_decode 4290177251#32).run σ = .ok (instruction.BTYPE (8176#13, regidx.Regidx 27#5, regidx.Regidx 13#5, bop.BLTU)) σ :=
+  decodeW σ hmisa hpriv hsec
+
 theorem decode_ffb74783 :
     (Functions.ext_decode 4290201475#32).run σ = .ok (instruction.LOAD (4091#12, regidx.Regidx 14#5, regidx.Regidx 15#5, true, 1)) σ :=
   decodeW σ hmisa hpriv hsec
@@ -59,10 +63,6 @@ theorem decode_ffc4f493 :
     (Functions.ext_decode 4291097747#32).run σ = .ok (instruction.ITYPE (4092#12, regidx.Regidx 9#5, regidx.Regidx 9#5, iop.ANDI)) σ :=
   decodeW σ hmisa hpriv hsec
 
-theorem decode_ffc53503 :
-    (Functions.ext_decode 4291114243#32).run σ = .ok (instruction.LOAD (4092#12, regidx.Regidx 10#5, regidx.Regidx 10#5, false, 8)) σ :=
-  decodeW σ hmisa hpriv hsec
-
 theorem decode_ffc57513 :
     (Functions.ext_decode 4291130643#32).run σ = .ok (instruction.ITYPE (4092#12, regidx.Regidx 10#5, regidx.Regidx 10#5, iop.ANDI)) σ :=
   decodeW σ hmisa hpriv hsec
@@ -97,10 +97,6 @@ theorem decode_ffc68513 :
 
 theorem decode_ffc68693 :
     (Functions.ext_decode 4291200659#32).run σ = .ok (instruction.ITYPE (4092#12, regidx.Regidx 13#5, regidx.Regidx 13#5, iop.ADDI)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_ffc6b683 :
-    (Functions.ext_decode 4291212931#32).run σ = .ok (instruction.LOAD (4092#12, regidx.Regidx 13#5, regidx.Regidx 13#5, false, 8)) σ :=
   decodeW σ hmisa hpriv hsec
 
 theorem decode_ffc6f693 :
@@ -305,10 +301,6 @@ theorem decode_ffd7f793 :
 
 theorem decode_ffd9071b :
     (Functions.ext_decode 4292413211#32).run σ = .ok (instruction.ADDIW (4093#12, regidx.Regidx 18#5, regidx.Regidx 14#5)) σ :=
-  decodeW σ hmisa hpriv hsec
-
-theorem decode_ffd98993 :
-    (Functions.ext_decode 4292446611#32).run σ = .ok (instruction.ITYPE (4093#12, regidx.Regidx 19#5, regidx.Regidx 19#5, iop.ADDI)) σ :=
   decodeW σ hmisa hpriv hsec
 
 theorem decode_ffde40ef :
@@ -521,6 +513,14 @@ theorem decode_fff00393 :
 
 theorem decode_fff00413 :
     (Functions.ext_decode 4293919763#32).run σ = .ok (instruction.ITYPE (4095#12, regidx.Regidx 0#5, regidx.Regidx 8#5, iop.ADDI)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_fff00493 :
+    (Functions.ext_decode 4293919891#32).run σ = .ok (instruction.ITYPE (4095#12, regidx.Regidx 0#5, regidx.Regidx 9#5, iop.ADDI)) σ :=
+  decodeW σ hmisa hpriv hsec
+
+theorem decode_fff00513 :
+    (Functions.ext_decode 4293920019#32).run σ = .ok (instruction.ITYPE (4095#12, regidx.Regidx 0#5, regidx.Regidx 10#5, iop.ADDI)) σ :=
   decodeW σ hmisa hpriv hsec
 
 end Vsa.Sim.ElfDecode

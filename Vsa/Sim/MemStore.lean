@@ -196,7 +196,7 @@ theorem within_mmio_writable_ram_false
   simp only [within_mmio_writable, within_clint, within_sig, within_htif_writable,
     get_config_rvfi, plat_have_clint, plat_have_sig,
     zopz0zI_u, zopz0zK_u, LeanRV64DExecutable.Functions.not]
-  simp only [tohostAddr] at hhiwin
+  simp only [tohostAddr, LibraryLayout.tohostAddr] at hhiwin
   have hcb : BitVec.toNat plat_clint_base = 33554432 := by decide
   have hcs : BitVec.toNat plat_clint_size = 786432 := by decide
   have hsb : BitVec.toNat plat_sig_base = 201326592 := by decide
@@ -205,7 +205,6 @@ theorem within_mmio_writable_ram_false
     LeanRV64DExecutable.readReg, Sail.ConcurrencyInterfaceV1.PreSail.readReg,
     get, getThe, MonadStateOf.get, EStateM.get, BitVec.toNatInt,
     htif_tohost_size]
-  simp only [tohostAddr]
   refine ⟨fun _ => by push_cast; omega, fun _ => by push_cast; omega,
     fun hcontra => by omega⟩
 

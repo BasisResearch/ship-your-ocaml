@@ -2,26 +2,27 @@
 import VsaIris.Vsa.AllocRun
 import Vsa.Sim.BridgeSeg
 import Vsa.Sim.ChainFactsTac
-import Vsa.Sim.ElfDecode.Part003
+import Vsa.Sim.ElfDecode.Part002
 import Vsa.Sim.ElfDecode.Part016
 import Vsa.Sim.ElfDecode.Part018
 import Vsa.Sim.ElfDecode.Part019
 import Vsa.Sim.ElfDecode.Part031
 import Vsa.Sim.ElfDecode.Part032
-import Vsa.Sim.ElfDecode.Part038
+import Vsa.Sim.ElfDecode.Part037
 import Vsa.Sim.ElfDecode.Part039
 import Vsa.Sim.ElfDecode.Part040
-import Vsa.Sim.ElfDecode.Part041
 import Vsa.Sim.ElfDecode.Part042
 import Vsa.Sim.ElfDecode.Part043
 import Vsa.Sim.ElfDecode.Part054
 import Vsa.Sim.ElfDecode.Part064
 import Vsa.Sim.ElfDecode.Part075
 import Vsa.Sim.ElfDecode.Part121
-import Vsa.Sim.ElfDecode.Part137
-import Vsa.Sim.ElfDecode.Part144
-import Vsa.Sim.ElfDecode.Part173
-import Vsa.Sim.ElfDecode.Part195
+import Vsa.Sim.ElfDecode.Part129
+import Vsa.Sim.ElfDecode.Part130
+import Vsa.Sim.ElfDecode.Part131
+import Vsa.Sim.ElfDecode.Part138
+import Vsa.Sim.ElfDecode.Part145
+import Vsa.Sim.ElfDecode.Part196
 import Vsa.Sim.ElfDecode.Part221
 import Vsa.Sim.ElfDecode.Part224
 
@@ -52,18 +53,18 @@ def ax_800379dc : List BBlock := [{ body := [mkLine 0x800379dc#64 0x0115b823#32]
 def axT_800379e0 : List BBlock := [⟨[], some (⟨0x800379e0#64, 0x44c56263#32, 0x63#8, 0x62#8, 0xc5#8, 0x44#8, .br bop.BLTU true, 10, 12, 0x444#13, 0x0#21, 0#12⟩ : TInstr)⟩]
 def axF_800379e0 : List BBlock := [⟨[], some (⟨0x800379e0#64, 0x44c56263#32, 0x63#8, 0x62#8, 0xc5#8, 0x44#8, .br bop.BLTU false, 10, 12, 0x444#13, 0x0#21, 0#12⟩ : TInstr)⟩]
 def ax_800379e4 : List BBlock := [{ body := [mkLine 0x800379e4#64 0x008e3603#32], term := none }]
-def ax_800379e8 : List BBlock := [{ body := [mkLine 0x800379e8#64 0x00033797#32], term := none }]
-def ax_800379ec : List BBlock := [{ body := [mkLine 0x800379ec#64 0x9a87b783#32], term := none }]
+def ax_800379e8 : List BBlock := [{ body := [mkLine 0x800379e8#64 0x0002d797#32], term := none }]
+def ax_800379ec : List BBlock := [{ body := [mkLine 0x800379ec#64 0x3407b783#32], term := none }]
 def axT_800379f0 : List BBlock := [⟨[], some (⟨0x800379f0#64, 0x00d7f663#32, 0x63#8, 0xf6#8, 0xd7#8, 0x00#8, .br bop.BGEU true, 15, 13, 0xc#13, 0x0#21, 0#12⟩ : TInstr)⟩]
 def axF_800379f0 : List BBlock := [⟨[], some (⟨0x800379f0#64, 0x00d7f663#32, 0x63#8, 0xf6#8, 0xd7#8, 0x00#8, .br bop.BGEU false, 15, 13, 0xc#13, 0x0#21, 0#12⟩ : TInstr)⟩]
-def ax_800379f4 : List BBlock := [{ body := [mkLine 0x800379f4#64 0x00033797#32], term := none }]
-def ax_800379f8 : List BBlock := [{ body := [mkLine 0x800379f8#64 0x98d7be23#32], term := none }]
-def ax_800379fc : List BBlock := [{ body := [mkLine 0x800379fc#64 0x00033797#32], term := none }]
-def ax_80037a00 : List BBlock := [{ body := [mkLine 0x80037a00#64 0x98c7b783#32], term := none }]
+def ax_800379f4 : List BBlock := [{ body := [mkLine 0x800379f4#64 0x0002d797#32], term := none }]
+def ax_800379f8 : List BBlock := [{ body := [mkLine 0x800379f8#64 0x32d7ba23#32], term := none }]
+def ax_800379fc : List BBlock := [{ body := [mkLine 0x800379fc#64 0x0002d797#32], term := none }]
+def ax_80037a00 : List BBlock := [{ body := [mkLine 0x80037a00#64 0x3247b783#32], term := none }]
 def axT_80037a04 : List BBlock := [⟨[], some (⟨0x80037a04#64, 0x00d7f663#32, 0x63#8, 0xf6#8, 0xd7#8, 0x00#8, .br bop.BGEU true, 15, 13, 0xc#13, 0x0#21, 0#12⟩ : TInstr)⟩]
 def axF_80037a04 : List BBlock := [⟨[], some (⟨0x80037a04#64, 0x00d7f663#32, 0x63#8, 0xf6#8, 0xd7#8, 0x00#8, .br bop.BGEU false, 15, 13, 0xc#13, 0x0#21, 0#12⟩ : TInstr)⟩]
-def ax_80037a08 : List BBlock := [{ body := [mkLine 0x80037a08#64 0x00033797#32], term := none }]
-def ax_80037a0c : List BBlock := [{ body := [mkLine 0x80037a0c#64 0x98d7b023#32], term := none }]
+def ax_80037a08 : List BBlock := [{ body := [mkLine 0x80037a08#64 0x0002d797#32], term := none }]
+def ax_80037a0c : List BBlock := [{ body := [mkLine 0x80037a0c#64 0x30d7bc23#32], term := none }]
 def ax_80037a10 : List BBlock := [{ body := [mkLine 0x80037a10#64 0x000e0793#32], term := none }]
 def ax_80037a14 : List BBlock := [⟨[], some (⟨0x80037a14#64, 0x2240006f#32, 0x6f#8, 0x00#8, 0x40#8, 0x22#8, .j, 0, 0, 0x0#13, 0x224#21, 0#12⟩ : TInstr)⟩]
 def ax_80037a18 : List BBlock := [{ body := [mkLine 0x80037a18#64 0x00883583#32], term := none }]
@@ -344,7 +345,7 @@ theorem st_800379e4 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_800379e8 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x800379ec#64 (upd R 15 ((0x800379e8#64) + (sign_extend (m := 64) ((0x00033#20) +++ (0x000#12))))) Mt) :
+    (hk : AW live S Q 0x800379ec#64 (upd R 15 ((0x800379e8#64) + (sign_extend (m := 64) ((0x0002d#20) +++ (0x000#12))))) Mt) :
     AW live S Q 0x800379e8#64 R Mt :=
   swp_step ax_800379e8 [15] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -357,11 +358,11 @@ theorem st_800379e8 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_800379ec {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hea : LdOK ((R 15) + sign_extend (m := 64) (0x9a8#12)).toNat 8)
-    (hLDS : ∀ b ∈ accAddrs ((R 15) + sign_extend (m := 64) (0x9a8#12)).toNat 8, S b)
-    (hk : AW live S Q 0x800379f0#64 (upd R 15 (ldv .ld Mt ((R 15) + sign_extend (m := 64) (0x9a8#12)).toNat)) Mt) :
+    (hea : LdOK ((R 15) + sign_extend (m := 64) (0x340#12)).toNat 8)
+    (hLDS : ∀ b ∈ accAddrs ((R 15) + sign_extend (m := 64) (0x340#12)).toNat 8, S b)
+    (hk : AW live S Q 0x800379f0#64 (upd R 15 (ldv .ld Mt ((R 15) + sign_extend (m := 64) (0x340#12)).toNat)) Mt) :
     AW live S Q 0x800379ec#64 R Mt :=
-  swp_step ax_800379ec [15] [bytesAt (imgM Mt) ((R 15) + sign_extend (m := 64) (0x9a8#12)).toNat 8] (accAddrs ((R 15) + sign_extend (m := 64) (0x9a8#12)).toNat 8) [] 0 rfl (by decide) (by decide) (by decide)
+  swp_step ax_800379ec [15] [bytesAt (imgM Mt) ((R 15) + sign_extend (m := 64) (0x340#12)).toNat 8] (accAddrs ((R 15) + sign_extend (m := 64) (0x340#12)).toNat 8) [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
     (fun m hm hLD => by unfold ax_800379ec ChainFacts; chain_facts hm with "VsaIris.Sym.alloc_at_"; exact ⟨hea, lpins8_img hLD⟩)
     (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) hLDS
@@ -395,7 +396,7 @@ theorem st_800379f0 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_800379f4 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x800379f8#64 (upd R 15 ((0x800379f4#64) + (sign_extend (m := 64) ((0x00033#20) +++ (0x000#12))))) Mt) :
+    (hk : AW live S Q 0x800379f8#64 (upd R 15 ((0x800379f4#64) + (sign_extend (m := 64) ((0x0002d#20) +++ (0x000#12))))) Mt) :
     AW live S Q 0x800379f4#64 R Mt :=
   swp_step ax_800379f4 [15] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -408,11 +409,11 @@ theorem st_800379f4 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_800379f8 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hea : StOK ((R 15) + sign_extend (m := 64) (0x99c#12)).toNat 8)
-    (hS : ∀ b ∈ accAddrs ((R 15) + sign_extend (m := 64) (0x99c#12)).toNat 8, S b)
-    (hk : AW live S Q 0x800379fc#64 R (writeLog Mt [(((R 15) + sign_extend (m := 64) (0x99c#12)).toNat, 8, (R 13))])) :
+    (hea : StOK ((R 15) + sign_extend (m := 64) (0x334#12)).toNat 8)
+    (hS : ∀ b ∈ accAddrs ((R 15) + sign_extend (m := 64) (0x334#12)).toNat 8, S b)
+    (hk : AW live S Q 0x800379fc#64 R (writeLog Mt [(((R 15) + sign_extend (m := 64) (0x334#12)).toNat, 8, (R 13))])) :
     AW live S Q 0x800379f8#64 R Mt :=
-  swp_step ax_800379f8 [13, 15] [] [] (accAddrs ((R 15) + sign_extend (m := 64) (0x99c#12)).toNat 8) 0 rfl (by decide) (by decide) (by decide)
+  swp_step ax_800379f8 [13, 15] [] [] (accAddrs ((R 15) + sign_extend (m := 64) (0x334#12)).toNat 8) 0 rfl (by decide) (by decide) (by decide)
     (fun a ha => outL_single _ ha) hlive
     (fun m hm hLD => by unfold ax_800379f8 ChainFacts; chain_facts hm with "VsaIris.Sym.alloc_at_"; exact hea)
     (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) (fun a h => by cases h)
@@ -423,7 +424,7 @@ theorem st_800379f8 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_800379fc {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x80037a00#64 (upd R 15 ((0x800379fc#64) + (sign_extend (m := 64) ((0x00033#20) +++ (0x000#12))))) Mt) :
+    (hk : AW live S Q 0x80037a00#64 (upd R 15 ((0x800379fc#64) + (sign_extend (m := 64) ((0x0002d#20) +++ (0x000#12))))) Mt) :
     AW live S Q 0x800379fc#64 R Mt :=
   swp_step ax_800379fc [15] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -436,11 +437,11 @@ theorem st_800379fc {live : Nat → Prop} {S : Nat → Prop}
 theorem st_80037a00 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hea : LdOK ((R 15) + sign_extend (m := 64) (0x98c#12)).toNat 8)
-    (hLDS : ∀ b ∈ accAddrs ((R 15) + sign_extend (m := 64) (0x98c#12)).toNat 8, S b)
-    (hk : AW live S Q 0x80037a04#64 (upd R 15 (ldv .ld Mt ((R 15) + sign_extend (m := 64) (0x98c#12)).toNat)) Mt) :
+    (hea : LdOK ((R 15) + sign_extend (m := 64) (0x324#12)).toNat 8)
+    (hLDS : ∀ b ∈ accAddrs ((R 15) + sign_extend (m := 64) (0x324#12)).toNat 8, S b)
+    (hk : AW live S Q 0x80037a04#64 (upd R 15 (ldv .ld Mt ((R 15) + sign_extend (m := 64) (0x324#12)).toNat)) Mt) :
     AW live S Q 0x80037a00#64 R Mt :=
-  swp_step ax_80037a00 [15] [bytesAt (imgM Mt) ((R 15) + sign_extend (m := 64) (0x98c#12)).toNat 8] (accAddrs ((R 15) + sign_extend (m := 64) (0x98c#12)).toNat 8) [] 0 rfl (by decide) (by decide) (by decide)
+  swp_step ax_80037a00 [15] [bytesAt (imgM Mt) ((R 15) + sign_extend (m := 64) (0x324#12)).toNat 8] (accAddrs ((R 15) + sign_extend (m := 64) (0x324#12)).toNat 8) [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
     (fun m hm hLD => by unfold ax_80037a00 ChainFacts; chain_facts hm with "VsaIris.Sym.alloc_at_"; exact ⟨hea, lpins8_img hLD⟩)
     (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) hLDS
@@ -474,7 +475,7 @@ theorem st_80037a04 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_80037a08 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x80037a0c#64 (upd R 15 ((0x80037a08#64) + (sign_extend (m := 64) ((0x00033#20) +++ (0x000#12))))) Mt) :
+    (hk : AW live S Q 0x80037a0c#64 (upd R 15 ((0x80037a08#64) + (sign_extend (m := 64) ((0x0002d#20) +++ (0x000#12))))) Mt) :
     AW live S Q 0x80037a08#64 R Mt :=
   swp_step ax_80037a08 [15] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -487,11 +488,11 @@ theorem st_80037a08 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_80037a0c {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hea : StOK ((R 15) + sign_extend (m := 64) (0x980#12)).toNat 8)
-    (hS : ∀ b ∈ accAddrs ((R 15) + sign_extend (m := 64) (0x980#12)).toNat 8, S b)
-    (hk : AW live S Q 0x80037a10#64 R (writeLog Mt [(((R 15) + sign_extend (m := 64) (0x980#12)).toNat, 8, (R 13))])) :
+    (hea : StOK ((R 15) + sign_extend (m := 64) (0x318#12)).toNat 8)
+    (hS : ∀ b ∈ accAddrs ((R 15) + sign_extend (m := 64) (0x318#12)).toNat 8, S b)
+    (hk : AW live S Q 0x80037a10#64 R (writeLog Mt [(((R 15) + sign_extend (m := 64) (0x318#12)).toNat, 8, (R 13))])) :
     AW live S Q 0x80037a0c#64 R Mt :=
-  swp_step ax_80037a0c [13, 15] [] [] (accAddrs ((R 15) + sign_extend (m := 64) (0x980#12)).toNat 8) 0 rfl (by decide) (by decide) (by decide)
+  swp_step ax_80037a0c [13, 15] [] [] (accAddrs ((R 15) + sign_extend (m := 64) (0x318#12)).toNat 8) 0 rfl (by decide) (by decide) (by decide)
     (fun a ha => outL_single _ ha) hlive
     (fun m hm hLD => by unfold ax_80037a0c ChainFacts; chain_facts hm with "VsaIris.Sym.alloc_at_"; exact hea)
     (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) (fun a h => by cases h)

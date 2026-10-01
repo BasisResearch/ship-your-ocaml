@@ -99,7 +99,7 @@ theorem checked_mem_read_four
       (Int.ofNat_tmod _ _).symm
     rw [show (4 : Int) = Int.ofNat 4 from rfl, this, halign]; rfl
   have hhi' : a.toNat + 4 ≤ 0x100000000 := by
-    simp only [tohostAddr] at hhi; omega
+    simp only [tohostAddr, LibraryLayout.tohostAddr] at hhi; omega
   have hpmaC := pmaCheck_ram_exec σ a hpma hlo hhi' htmod
   have hpmp := pmp_allows σ (physaddr.Physaddr a) 4
     (MemoryAccessType.InstructionFetch ()) vpmpaddr hcfg haddr

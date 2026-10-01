@@ -15,7 +15,7 @@ structure MSp (s : BitVec 64) : Prop where
 theorem MSp.of_spOKA {s : BitVec 64} (h : SpOKA s) : MSp s where
   lo := by
     have := h.lo
-    simp only [allocHeadroom, mHead, Vsa.Sim.tohostAddr] at *
+    simp only [allocHeadroom, mHead, Vsa.Sim.tohostAddr, Vsa.Sim.LibraryLayout.tohostAddr] at *
     omega
   hi := h.hi
   align := h.align
@@ -341,7 +341,7 @@ theorem epi_core {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem}
     AW C.live C.S C.Q pc1 R Mt := by
   have hsp := O.sp
   have hlo := hsp.lo; have hhi := hsp.hi
-  unfold mHead Vsa.Sim.tohostAddr at hlo
+  unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hs2 := F.sp
   refine st1 (by rw [hs2]; sx_addr) (O.stack (by rw [hs2]; unfold mHead; sx_addr)
     (by rw [hs2]; sx_addr)) ?_
@@ -444,7 +444,7 @@ theorem mChg_own {H : List (Nat × Nat)} {s : BitVec 64} (hsp : SpOKA s) (a : Na
   · exact .inr hf
   · have hl := hsp.lo
     unfold mHead at h1
-    unfold allocHeadroom Vsa.Sim.tohostAddr at hl
+    unfold allocHeadroom Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hl
 
     have hs : 512 ≤ s.toNat := by omega
     refine .inl ⟨?_, ?_⟩ <;> simp only [allocHeadroom]

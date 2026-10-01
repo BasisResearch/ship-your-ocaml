@@ -87,10 +87,10 @@ def snpCodeImgLLLLLLRLRLRR (a : Nat) : BitVec 8 := if a = 0x8003fe5b then 0x11#8
 def snpCodeImgLLLLLLRLRLR (a : Nat) : BitVec 8 := if a < 0x8003fe5b then snpCodeImgLLLLLLRLRLRL a else snpCodeImgLLLLLLRLRLRR a
 def snpCodeImgLLLLLLRLRL (a : Nat) : BitVec 8 := if a < 0x8003fe58 then snpCodeImgLLLLLLRLRLL a else snpCodeImgLLLLLLRLRLR a
 def snpCodeImgLLLLLLRLRRLL (a : Nat) : BitVec 8 := if a = 0x8003fe5f then 0x11#8 else if a = 0x8003fe60 then 0x13#8 else if a = 0x8003fe61 then 0x43#8 else 0#8
-def snpCodeImgLLLLLLRLRRLR (a : Nat) : BitVec 8 := if a = 0x8003fe62 then 0xf3#8 else if a = 0x8003fe63 then 0xff#8 else if a = 0x8003fe64 then 0x97#8 else if a = 0x8003fe65 then 0xa4#8 else 0#8
+def snpCodeImgLLLLLLRLRRLR (a : Nat) : BitVec 8 := if a = 0x8003fe62 then 0xf3#8 else if a = 0x8003fe63 then 0xff#8 else if a = 0x8003fe64 then 0x97#8 else if a = 0x8003fe65 then 0x54#8 else 0#8
 def snpCodeImgLLLLLLRLRRL (a : Nat) : BitVec 8 := if a < 0x8003fe62 then snpCodeImgLLLLLLRLRRLL a else snpCodeImgLLLLLLRLRRLR a
 def snpCodeImgLLLLLLRLRRRL (a : Nat) : BitVec 8 := if a = 0x8003fe66 then 0x02#8 else if a = 0x8003fe67 then 0x00#8 else if a = 0x8003fe68 then 0x83#8 else if a = 0x8003fe69 then 0xb4#8 else 0#8
-def snpCodeImgLLLLLLRLRRRR (a : Nat) : BitVec 8 := if a = 0x8003fe6a then 0xc4#8 else if a = 0x8003fe6b then 0x0f#8 else if a = 0x8003fe6c then 0x63#8 else if a = 0x8003fe6d then 0x6c#8 else 0#8
+def snpCodeImgLLLLLLRLRRRR (a : Nat) : BitVec 8 := if a = 0x8003fe6a then 0x44#8 else if a = 0x8003fe6b then 0xa9#8 else if a = 0x8003fe6c then 0x63#8 else if a = 0x8003fe6d then 0x6c#8 else 0#8
 def snpCodeImgLLLLLLRLRRR (a : Nat) : BitVec 8 := if a < 0x8003fe6a then snpCodeImgLLLLLLRLRRRL a else snpCodeImgLLLLLLRLRRRR a
 def snpCodeImgLLLLLLRLRR (a : Nat) : BitVec 8 := if a < 0x8003fe66 then snpCodeImgLLLLLLRLRRL a else snpCodeImgLLLLLLRLRRR a
 def snpCodeImgLLLLLLRLR (a : Nat) : BitVec 8 := if a < 0x8003fe5f then snpCodeImgLLLLLLRLRL a else snpCodeImgLLLLLLRLRR a
@@ -291,14 +291,14 @@ def snpCodeImgLLLLRLLRLLLL (a : Nat) : BitVec 8 := if a = 0x8004068f then 0x00#8
 def snpCodeImgLLLLRLLRLLLR (a : Nat) : BitVec 8 := if a = 0x80040692 then 0x00#8 else if a = 0x80040693 then 0x00#8 else if a = 0x80040694 then 0x67#8 else if a = 0x80040695 then 0x80#8 else 0#8
 def snpCodeImgLLLLRLLRLLL (a : Nat) : BitVec 8 := if a < 0x80040692 then snpCodeImgLLLLRLLRLLLL a else snpCodeImgLLLLRLLRLLLR a
 def snpCodeImgLLLLRLLRLLRL (a : Nat) : BitVec 8 := if a = 0x80040696 then 0x00#8 else if a = 0x80040697 then 0x00#8 else if a = 0x80042144 then 0x17#8 else 0#8
-def snpCodeImgLLLLRLLRLLRR (a : Nat) : BitVec 8 := if a = 0x80042145 then 0x85#8 else if a = 0x80042146 then 0x02#8 else if a = 0x80042147 then 0x00#8 else if a = 0x80042148 then 0x03#8 else 0#8
+def snpCodeImgLLLLRLLRLLRR (a : Nat) : BitVec 8 := if a = 0x80042145 then 0x25#8 else if a = 0x80042146 then 0x02#8 else if a = 0x80042147 then 0x00#8 else if a = 0x80042148 then 0x03#8 else 0#8
 def snpCodeImgLLLLRLLRLLR (a : Nat) : BitVec 8 := if a < 0x80042145 then snpCodeImgLLLLRLLRLLRL a else snpCodeImgLLLLRLLRLLRR a
 def snpCodeImgLLLLRLLRLL (a : Nat) : BitVec 8 := if a < 0x80040696 then snpCodeImgLLLLRLLRLLL a else snpCodeImgLLLLRLLRLLR a
-def snpCodeImgLLLLRLLRLRLL (a : Nat) : BitVec 8 := if a = 0x80042149 then 0x45#8 else if a = 0x8004214a then 0x45#8 else if a = 0x8004214b then 0xb2#8 else 0#8
+def snpCodeImgLLLLRLLRLRLL (a : Nat) : BitVec 8 := if a = 0x80042149 then 0x45#8 else if a = 0x8004214a then 0xc5#8 else if a = 0x8004214b then 0x4b#8 else 0#8
 def snpCodeImgLLLLRLLRLRLR (a : Nat) : BitVec 8 := if a = 0x8004214c then 0x67#8 else if a = 0x8004214d then 0x80#8 else if a = 0x8004214e then 0x00#8 else if a = 0x8004214f then 0x00#8 else 0#8
 def snpCodeImgLLLLRLLRLRL (a : Nat) : BitVec 8 := if a < 0x8004214c then snpCodeImgLLLLRLLRLRLL a else snpCodeImgLLLLRLLRLRLR a
-def snpCodeImgLLLLRLLRLRRL (a : Nat) : BitVec 8 := if a = 0x80042170 then 0x17#8 else if a = 0x80042171 then 0x85#8 else if a = 0x80042172 then 0x02#8 else if a = 0x80042173 then 0x00#8 else 0#8
-def snpCodeImgLLLLRLLRLRRR (a : Nat) : BitVec 8 := if a = 0x80042174 then 0x13#8 else if a = 0x80042175 then 0x05#8 else if a = 0x80042176 then 0x85#8 else if a = 0x80042177 then 0xa9#8 else 0#8
+def snpCodeImgLLLLRLLRLRRL (a : Nat) : BitVec 8 := if a = 0x80042170 then 0x17#8 else if a = 0x80042171 then 0x25#8 else if a = 0x80042172 then 0x02#8 else if a = 0x80042173 then 0x00#8 else 0#8
+def snpCodeImgLLLLRLLRLRRR (a : Nat) : BitVec 8 := if a = 0x80042174 then 0x13#8 else if a = 0x80042175 then 0x05#8 else if a = 0x80042176 then 0x05#8 else if a = 0x80042177 then 0x43#8 else 0#8
 def snpCodeImgLLLLRLLRLRR (a : Nat) : BitVec 8 := if a < 0x80042174 then snpCodeImgLLLLRLLRLRRL a else snpCodeImgLLLLRLLRLRRR a
 def snpCodeImgLLLLRLLRLR (a : Nat) : BitVec 8 := if a < 0x80042170 then snpCodeImgLLLLRLLRLRL a else snpCodeImgLLLLRLLRLRR a
 def snpCodeImgLLLLRLLRL (a : Nat) : BitVec 8 := if a < 0x80042149 then snpCodeImgLLLLRLLRLL a else snpCodeImgLLLLRLLRLR a
@@ -864,11 +864,11 @@ def snpCodeImgLLLRRLRL (a : Nat) : BitVec 8 := if a < 0x80047934 then snpCodeImg
 def snpCodeImgLLLRRLRRLLLL (a : Nat) : BitVec 8 := if a = 0x80047951 then 0x30#8 else if a = 0x80047952 then 0x01#8 else if a = 0x80047953 then 0x06#8 else 0#8
 def snpCodeImgLLLRRLRRLLLR (a : Nat) : BitVec 8 := if a = 0x80047954 then 0x23#8 else if a = 0x80047955 then 0x38#8 else if a = 0x80047956 then 0x01#8 else if a = 0x80047957 then 0x00#8 else 0#8
 def snpCodeImgLLLRRLRRLLL (a : Nat) : BitVec 8 := if a < 0x80047954 then snpCodeImgLLLRRLRRLLLL a else snpCodeImgLLLRRLRRLLLR a
-def snpCodeImgLLLRRLRRLLRL (a : Nat) : BitVec 8 := if a = 0x80047958 then 0x97#8 else if a = 0x80047959 then 0x24#8 else if a = 0x8004795a then 0x02#8 else 0#8
-def snpCodeImgLLLRRLRRLLRR (a : Nat) : BitVec 8 := if a = 0x8004795b then 0x00#8 else if a = 0x8004795c then 0x93#8 else if a = 0x8004795d then 0x84#8 else if a = 0x8004795e then 0x04#8 else 0#8
+def snpCodeImgLLLRRLRRLLRL (a : Nat) : BitVec 8 := if a = 0x80047958 then 0x97#8 else if a = 0x80047959 then 0xd4#8 else if a = 0x8004795a then 0x01#8 else 0#8
+def snpCodeImgLLLRRLRRLLRR (a : Nat) : BitVec 8 := if a = 0x8004795b then 0x00#8 else if a = 0x8004795c then 0x93#8 else if a = 0x8004795d then 0x84#8 else if a = 0x8004795e then 0x84#8 else 0#8
 def snpCodeImgLLLRRLRRLLR (a : Nat) : BitVec 8 := if a < 0x8004795b then snpCodeImgLLLRRLRRLLRL a else snpCodeImgLLLRRLRRLLRR a
 def snpCodeImgLLLRRLRRLL (a : Nat) : BitVec 8 := if a < 0x80047958 then snpCodeImgLLLRRLRRLLL a else snpCodeImgLLLRRLRRLLR a
-def snpCodeImgLLLRRLRRLRLL (a : Nat) : BitVec 8 := if a = 0x8004795f then 0x1b#8 else if a = 0x80047960 then 0x93#8 else if a = 0x80047961 then 0x09#8 else 0#8
+def snpCodeImgLLLRRLRRLRLL (a : Nat) : BitVec 8 := if a = 0x8004795f then 0xb4#8 else if a = 0x80047960 then 0x93#8 else if a = 0x80047961 then 0x09#8 else 0#8
 def snpCodeImgLLLRRLRRLRLR (a : Nat) : BitVec 8 := if a = 0x80047962 then 0x50#8 else if a = 0x80047963 then 0x02#8 else if a = 0x80047964 then 0x13#8 else if a = 0x80047965 then 0x09#8 else 0#8
 def snpCodeImgLLLRRLRRLRL (a : Nat) : BitVec 8 := if a < 0x80047962 then snpCodeImgLLLRRLRRLRLL a else snpCodeImgLLLRRLRRLRLR a
 def snpCodeImgLLLRRLRRLRRL (a : Nat) : BitVec 8 := if a = 0x80047966 then 0x00#8 else if a = 0x80047967 then 0x01#8 else if a = 0x80047968 then 0x23#8 else if a = 0x80047969 then 0x30#8 else 0#8
@@ -932,10 +932,10 @@ def snpCodeImgLLLRRRLRLLRL (a : Nat) : BitVec 8 := if a = 0x800479cc then 0x13#8
 def snpCodeImgLLLRRRLRLLRR (a : Nat) : BitVec 8 := if a = 0x800479cf then 0x00#8 else if a = 0x800479d0 then 0x13#8 else if a = 0x800479d1 then 0x0d#8 else if a = 0x800479d2 then 0xa0#8 else 0#8
 def snpCodeImgLLLRRRLRLLR (a : Nat) : BitVec 8 := if a < 0x800479cf then snpCodeImgLLLRRRLRLLRL a else snpCodeImgLLLRRRLRLLRR a
 def snpCodeImgLLLRRRLRLL (a : Nat) : BitVec 8 := if a < 0x800479cc then snpCodeImgLLLRRRLRLLL a else snpCodeImgLLLRRRLRLLR a
-def snpCodeImgLLLRRRLRLRLL (a : Nat) : BitVec 8 := if a = 0x800479d3 then 0x05#8 else if a = 0x800479d4 then 0x17#8 else if a = 0x800479d5 then 0x8b#8 else 0#8
+def snpCodeImgLLLRRRLRLRLL (a : Nat) : BitVec 8 := if a = 0x800479d3 then 0x05#8 else if a = 0x800479d4 then 0x17#8 else if a = 0x800479d5 then 0x3b#8 else 0#8
 def snpCodeImgLLLRRRLRLRLR (a : Nat) : BitVec 8 := if a = 0x800479d6 then 0x01#8 else if a = 0x800479d7 then 0x00#8 else if a = 0x800479d8 then 0x13#8 else if a = 0x800479d9 then 0x0b#8 else 0#8
 def snpCodeImgLLLRRRLRLRL (a : Nat) : BitVec 8 := if a < 0x800479d6 then snpCodeImgLLLRRRLRLRLL a else snpCodeImgLLLRRRLRLRLR a
-def snpCodeImgLLLRRRLRLRRL (a : Nat) : BitVec 8 := if a = 0x800479da then 0xcb#8 else if a = 0x800479db then 0x00#8 else if a = 0x800479dc then 0x93#8 else if a = 0x800479dd then 0x0d#8 else 0#8
+def snpCodeImgLLLRRRLRLRRL (a : Nat) : BitVec 8 := if a = 0x800479da then 0x4b#8 else if a = 0x800479db then 0x9c#8 else if a = 0x800479dc then 0x93#8 else if a = 0x800479dd then 0x0d#8 else 0#8
 def snpCodeImgLLLRRRLRLRRR (a : Nat) : BitVec 8 := if a = 0x800479de then 0x00#8 else if a = 0x800479df then 0x00#8 else if a = 0x800479e0 then 0x93#8 else if a = 0x800479e1 then 0x8c#8 else 0#8
 def snpCodeImgLLLRRRLRLRR (a : Nat) : BitVec 8 := if a < 0x800479de then snpCodeImgLLLRRRLRLRRL a else snpCodeImgLLLRRRLRLRRR a
 def snpCodeImgLLLRRRLRLR (a : Nat) : BitVec 8 := if a < 0x800479da then snpCodeImgLLLRRRLRLRL a else snpCodeImgLLLRRRLRLRR a
@@ -1329,11 +1329,11 @@ def snpCodeImgLLRLRLLRRLLL (a : Nat) : BitVec 8 := if a = 0x80047c9c then 0x93#8
 def snpCodeImgLLRLRLLRRLLR (a : Nat) : BitVec 8 := if a = 0x80047c9f then 0x00#8 else if a = 0x80047ca0 then 0x23#8 else if a = 0x80047ca1 then 0x3c#8 else if a = 0x80047ca2 then 0xf1#8 else 0#8
 def snpCodeImgLLRLRLLRRLL (a : Nat) : BitVec 8 := if a < 0x80047c9f then snpCodeImgLLRLRLLRRLLL a else snpCodeImgLLRLRLLRRLLR a
 def snpCodeImgLLRLRLLRRLRL (a : Nat) : BitVec 8 := if a = 0x80047ca3 then 0x00#8 else if a = 0x80047ca4 then 0x83#8 else if a = 0x80047ca5 then 0x3c#8 else 0#8
-def snpCodeImgLLRLRLLRRLRR (a : Nat) : BitVec 8 := if a = 0x80047ca6 then 0x01#8 else if a = 0x80047ca7 then 0x04#8 else if a = 0x80047ca8 then 0x17#8 else if a = 0x80047ca9 then 0xfd#8 else 0#8
+def snpCodeImgLLRLRLLRRLRR (a : Nat) : BitVec 8 := if a = 0x80047ca6 then 0x01#8 else if a = 0x80047ca7 then 0x04#8 else if a = 0x80047ca8 then 0x17#8 else if a = 0x80047ca9 then 0xad#8 else 0#8
 def snpCodeImgLLRLRLLRRLR (a : Nat) : BitVec 8 := if a < 0x80047ca6 then snpCodeImgLLRLRLLRRLRL a else snpCodeImgLLRLRLLRRLRR a
 def snpCodeImgLLRLRLLRRL (a : Nat) : BitVec 8 := if a < 0x80047ca3 then snpCodeImgLLRLRLLRRLL a else snpCodeImgLLRLRLLRRLR a
 def snpCodeImgLLRLRLLRRRLL (a : Nat) : BitVec 8 := if a = 0x80047caa then 0x01#8 else if a = 0x80047cab then 0x00#8 else if a = 0x80047cac then 0x03#8 else 0#8
-def snpCodeImgLLRLRLLRRRLR (a : Nat) : BitVec 8 := if a = 0x80047cad then 0x3d#8 else if a = 0x80047cae then 0x8d#8 else if a = 0x80047caf then 0x5f#8 else if a = 0x80047cb0 then 0x23#8 else 0#8
+def snpCodeImgLLRLRLLRRRLR (a : Nat) : BitVec 8 := if a = 0x80047cad then 0x3d#8 else if a = 0x80047cae then 0x0d#8 else if a = 0x80047caf then 0xfb#8 else if a = 0x80047cb0 then 0x23#8 else 0#8
 def snpCodeImgLLRLRLLRRRL (a : Nat) : BitVec 8 := if a < 0x80047cad then snpCodeImgLLRLRLLRRRLL a else snpCodeImgLLRLRLLRRRLR a
 def snpCodeImgLLRLRLLRRRRL (a : Nat) : BitVec 8 := if a = 0x80047cb1 then 0x38#8 else if a = 0x80047cb2 then 0x61#8 else if a = 0x80047cb3 then 0x02#8 else if a = 0x80047cb4 then 0x13#8 else 0#8
 def snpCodeImgLLRLRLLRRRRR (a : Nat) : BitVec 8 := if a = 0x80047cb5 then 0x9b#8 else if a = 0x80047cb6 then 0x1c#8 else if a = 0x80047cb7 then 0x00#8 else if a = 0x80047cb8 then 0x13#8 else 0#8
@@ -1406,7 +1406,7 @@ def snpCodeImgLLRLRLRRR (a : Nat) : BitVec 8 := if a < 0x80047d1e then snpCodeIm
 def snpCodeImgLLRLRLRR (a : Nat) : BitVec 8 := if a < 0x80047d10 then snpCodeImgLLRLRLRRL a else snpCodeImgLLRLRLRRR a
 def snpCodeImgLLRLRLR (a : Nat) : BitVec 8 := if a < 0x80047cf3 then snpCodeImgLLRLRLRL a else snpCodeImgLLRLRLRR a
 def snpCodeImgLLRLRL (a : Nat) : BitVec 8 := if a < 0x80047cb9 then snpCodeImgLLRLRLL a else snpCodeImgLLRLRLR a
-def snpCodeImgLLRLRRLLLLLL (a : Nat) : BitVec 8 := if a = 0x80047d2d then 0x0d#8 else if a = 0x80047d2e then 0x8d#8 else if a = 0x80047d2f then 0x17#8 else 0#8
+def snpCodeImgLLRLRRLLLLLL (a : Nat) : BitVec 8 := if a = 0x80047d2d then 0x0d#8 else if a = 0x80047d2e then 0x0d#8 else if a = 0x80047d2f then 0x15#8 else 0#8
 def snpCodeImgLLRLRRLLLLLR (a : Nat) : BitVec 8 := if a = 0x80047d30 then 0x63#8 else if a = 0x80047d31 then 0xd4#8 else if a = 0x80047d32 then 0x86#8 else if a = 0x80047d33 then 0x01#8 else 0#8
 def snpCodeImgLLRLRRLLLLL (a : Nat) : BitVec 8 := if a < 0x80047d30 then snpCodeImgLLRLRRLLLLLL a else snpCodeImgLLRLRRLLLLLR a
 def snpCodeImgLLRLRRLLLLRL (a : Nat) : BitVec 8 := if a = 0x80047d34 then 0x6f#8 else if a = 0x80047d35 then 0x20#8 else if a = 0x80047d36 then 0x80#8 else 0#8
@@ -1463,7 +1463,7 @@ def snpCodeImgLLRLRRLRRRLL (a : Nat) : BitVec 8 := if a = 0x80047d92 then 0x5f#8
 def snpCodeImgLLRLRRLRRRLR (a : Nat) : BitVec 8 := if a = 0x80047d95 then 0x27#8 else if a = 0x80047d96 then 0x81#8 else if a = 0x80047d97 then 0x0e#8 else if a = 0x80047d98 then 0x97#8 else 0#8
 def snpCodeImgLLRLRRLRRRL (a : Nat) : BitVec 8 := if a < 0x80047d95 then snpCodeImgLLRLRRLRRRLL a else snpCodeImgLLRLRRLRRRLR a
 def snpCodeImgLLRLRRLRRRRL (a : Nat) : BitVec 8 := if a = 0x80047d99 then 0x06#8 else if a = 0x80047d9a then 0x01#8 else if a = 0x80047d9b then 0x00#8 else if a = 0x80047d9c then 0x93#8 else 0#8
-def snpCodeImgLLRLRRLRRRRR (a : Nat) : BitVec 8 := if a = 0x80047d9d then 0x86#8 else if a = 0x80047d9e then 0x86#8 else if a = 0x80047d9f then 0x15#8 else if a = 0x80047da0 then 0x23#8 else 0#8
+def snpCodeImgLLRLRRLRRRRR (a : Nat) : BitVec 8 := if a = 0x80047d9d then 0x86#8 else if a = 0x80047d9e then 0x06#8 else if a = 0x80047d9f then 0x13#8 else if a = 0x80047da0 then 0x23#8 else 0#8
 def snpCodeImgLLRLRRLRRRR (a : Nat) : BitVec 8 := if a < 0x80047d9d then snpCodeImgLLRLRRLRRRRL a else snpCodeImgLLRLRRLRRRRR a
 def snpCodeImgLLRLRRLRRR (a : Nat) : BitVec 8 := if a < 0x80047d99 then snpCodeImgLLRLRRLRRRL a else snpCodeImgLLRLRRLRRRR a
 def snpCodeImgLLRLRRLRR (a : Nat) : BitVec 8 := if a < 0x80047d92 then snpCodeImgLLRLRRLRRL a else snpCodeImgLLRLRRLRRR a
@@ -1694,10 +1694,10 @@ def snpCodeImgLLRRLRLLRR (a : Nat) : BitVec 8 := if a < 0x80047f30 then snpCodeI
 def snpCodeImgLLRRLRLLR (a : Nat) : BitVec 8 := if a < 0x80047f29 then snpCodeImgLLRRLRLLRL a else snpCodeImgLLRRLRLLRR a
 def snpCodeImgLLRRLRLL (a : Nat) : BitVec 8 := if a < 0x80047f1b then snpCodeImgLLRRLRLLL a else snpCodeImgLLRRLRLLR a
 def snpCodeImgLLRRLRLRLLLL (a : Nat) : BitVec 8 := if a = 0x80047f38 then 0x83#8 else if a = 0x80047f39 then 0x25#8 else if a = 0x80047f3a then 0x81#8 else 0#8
-def snpCodeImgLLRRLRLRLLLR (a : Nat) : BitVec 8 := if a = 0x80047f3b then 0x0e#8 else if a = 0x80047f3c then 0x97#8 else if a = 0x80047f3d then 0x8d#8 else if a = 0x80047f3e then 0x01#8 else 0#8
+def snpCodeImgLLRRLRLRLLLR (a : Nat) : BitVec 8 := if a = 0x80047f3b then 0x0e#8 else if a = 0x80047f3c then 0x97#8 else if a = 0x80047f3d then 0x2d#8 else if a = 0x80047f3e then 0x01#8 else 0#8
 def snpCodeImgLLRRLRLRLLL (a : Nat) : BitVec 8 := if a < 0x80047f3b then snpCodeImgLLRRLRLRLLLL a else snpCodeImgLLRRLRLRLLLR a
 def snpCodeImgLLRRLRLRLLRL (a : Nat) : BitVec 8 := if a = 0x80047f3f then 0x00#8 else if a = 0x80047f40 then 0x93#8 else if a = 0x80047f41 then 0x8d#8 else 0#8
-def snpCodeImgLLRRLRLRLLRR (a : Nat) : BitVec 8 := if a = 0x80047f42 then 0x4d#8 else if a = 0x80047f43 then 0xc1#8 else if a = 0x80047f44 then 0x63#8 else if a = 0x80047f45 then 0x50#8 else 0#8
+def snpCodeImgLLRRLRLRLLRR (a : Nat) : BitVec 8 := if a = 0x80047f42 then 0xcd#8 else if a = 0x80047f43 then 0x5c#8 else if a = 0x80047f44 then 0x63#8 else if a = 0x80047f45 then 0x50#8 else 0#8
 def snpCodeImgLLRRLRLRLLR (a : Nat) : BitVec 8 := if a < 0x80047f42 then snpCodeImgLLRRLRLRLLRL a else snpCodeImgLLRRLRLRLLRR a
 def snpCodeImgLLRRLRLRLL (a : Nat) : BitVec 8 := if a < 0x80047f3f then snpCodeImgLLRRLRLRLLL a else snpCodeImgLLRRLRLRLLR a
 def snpCodeImgLLRRLRLRLRLL (a : Nat) : BitVec 8 := if a = 0x80047f46 then 0x49#8 else if a = 0x80047f47 then 0x0b#8 else if a = 0x80047f48 then 0x93#8 else 0#8
@@ -1715,10 +1715,10 @@ def snpCodeImgLLRRLRLRRLRL (a : Nat) : BitVec 8 := if a = 0x80047f5c then 0x23#8
 def snpCodeImgLLRRLRLRRLRR (a : Nat) : BitVec 8 := if a = 0x80047f5f then 0x06#8 else if a = 0x80047f60 then 0x93#8 else if a = 0x80047f61 then 0x0b#8 else if a = 0x80047f62 then 0x08#8 else 0#8
 def snpCodeImgLLRRLRLRRLR (a : Nat) : BitVec 8 := if a < 0x80047f5f then snpCodeImgLLRRLRLRRLRL a else snpCodeImgLLRRLRLRRLRR a
 def snpCodeImgLLRRLRLRRL (a : Nat) : BitVec 8 := if a < 0x80047f5c then snpCodeImgLLRRLRLRRLL a else snpCodeImgLLRRLRLRRLR a
-def snpCodeImgLLRRLRLRRRLL (a : Nat) : BitVec 8 := if a = 0x80047f63 then 0x00#8 else if a = 0x80047f64 then 0x17#8 else if a = 0x80047f65 then 0x8b#8 else 0#8
+def snpCodeImgLLRRLRLRRRLL (a : Nat) : BitVec 8 := if a = 0x80047f63 then 0x00#8 else if a = 0x80047f64 then 0x17#8 else if a = 0x80047f65 then 0x2b#8 else 0#8
 def snpCodeImgLLRRLRLRRRLR (a : Nat) : BitVec 8 := if a = 0x80047f66 then 0x01#8 else if a = 0x80047f67 then 0x00#8 else if a = 0x80047f68 then 0x13#8 else if a = 0x80047f69 then 0x0b#8 else 0#8
 def snpCodeImgLLRRLRLRRRL (a : Nat) : BitVec 8 := if a < 0x80047f66 then snpCodeImgLLRRLRLRRRLL a else snpCodeImgLLRRLRLRRRLR a
-def snpCodeImgLLRRLRLRRRRL (a : Nat) : BitVec 8 := if a = 0x80047f6a then 0xcb#8 else if a = 0x80047f6b then 0xbe#8 else if a = 0x80047f6c then 0x6f#8 else if a = 0x80047f6d then 0x00#8 else 0#8
+def snpCodeImgLLRRLRLRRRRL (a : Nat) : BitVec 8 := if a = 0x80047f6a then 0x4b#8 else if a = 0x80047f6b then 0x5a#8 else if a = 0x80047f6c then 0x6f#8 else if a = 0x80047f6d then 0x00#8 else 0#8
 def snpCodeImgLLRRLRLRRRRR (a : Nat) : BitVec 8 := if a = 0x80047f6e then 0xc0#8 else if a = 0x80047f6f then 0x00#8 else if a = 0x80047f70 then 0x1b#8 else if a = 0x80047f71 then 0x0a#8 else 0#8
 def snpCodeImgLLRRLRLRRRR (a : Nat) : BitVec 8 := if a < 0x80047f6e then snpCodeImgLLRRLRLRRRRL a else snpCodeImgLLRRLRLRRRRR a
 def snpCodeImgLLRRLRLRRR (a : Nat) : BitVec 8 := if a < 0x80047f6a then snpCodeImgLLRRLRLRRRL a else snpCodeImgLLRRLRLRRRR a
@@ -1884,7 +1884,7 @@ def snpCodeImgLLRRRLRLRRR (a : Nat) : BitVec 8 := if a < 0x80048091 then snpCode
 def snpCodeImgLLRRRLRLRR (a : Nat) : BitVec 8 := if a < 0x8004808d then snpCodeImgLLRRRLRLRRL a else snpCodeImgLLRRRLRLRRR a
 def snpCodeImgLLRRRLRLR (a : Nat) : BitVec 8 := if a < 0x80048086 then snpCodeImgLLRRRLRLRL a else snpCodeImgLLRRRLRLRR a
 def snpCodeImgLLRRRLRL (a : Nat) : BitVec 8 := if a < 0x80048078 then snpCodeImgLLRRRLRLL a else snpCodeImgLLRRRLRLR a
-def snpCodeImgLLRRRLRRLLLL (a : Nat) : BitVec 8 := if a = 0x80048095 then 0x07#8 else if a = 0x80048096 then 0x07#8 else if a = 0x80048097 then 0xe6#8 else 0#8
+def snpCodeImgLLRRRLRRLLLL (a : Nat) : BitVec 8 := if a = 0x80048095 then 0x07#8 else if a = 0x80048096 then 0x87#8 else if a = 0x80048097 then 0xe3#8 else 0#8
 def snpCodeImgLLRRRLRRLLLR (a : Nat) : BitVec 8 := if a = 0x80048098 then 0x23#8 else if a = 0x80048099 then 0xb0#8 else if a = 0x8004809a then 0xeb#8 else if a = 0x8004809b then 0x00#8 else 0#8
 def snpCodeImgLLRRRLRRLLL (a : Nat) : BitVec 8 := if a < 0x80048098 then snpCodeImgLLRRRLRRLLLL a else snpCodeImgLLRRRLRRLLLR a
 def snpCodeImgLLRRRLRRLLRL (a : Nat) : BitVec 8 := if a = 0x8004809c then 0x13#8 else if a = 0x8004809d then 0x06#8 else if a = 0x8004809e then 0x16#8 else 0#8
@@ -1971,9 +1971,9 @@ def snpCodeImgLLRRRRLRRLRR (a : Nat) : BitVec 8 := if a = 0x80048131 then 0x0d#8
 def snpCodeImgLLRRRRLRRLR (a : Nat) : BitVec 8 := if a < 0x80048131 then snpCodeImgLLRRRRLRRLRL a else snpCodeImgLLRRRRLRRLRR a
 def snpCodeImgLLRRRRLRRL (a : Nat) : BitVec 8 := if a < 0x8004812e then snpCodeImgLLRRRRLRRLL a else snpCodeImgLLRRRRLRRLR a
 def snpCodeImgLLRRRRLRRRLL (a : Nat) : BitVec 8 := if a = 0x80048135 then 0x0b#8 else if a = 0x80048136 then 0x08#8 else if a = 0x80048137 then 0x00#8 else 0#8
-def snpCodeImgLLRRRRLRRRLR (a : Nat) : BitVec 8 := if a = 0x80048138 then 0x97#8 else if a = 0x80048139 then 0x8c#8 else if a = 0x8004813a then 0x01#8 else if a = 0x8004813b then 0x00#8 else 0#8
+def snpCodeImgLLRRRRLRRRLR (a : Nat) : BitVec 8 := if a = 0x80048138 then 0x97#8 else if a = 0x80048139 then 0x2c#8 else if a = 0x8004813a then 0x01#8 else if a = 0x8004813b then 0x00#8 else 0#8
 def snpCodeImgLLRRRRLRRRL (a : Nat) : BitVec 8 := if a < 0x80048138 then snpCodeImgLLRRRRLRRRLL a else snpCodeImgLLRRRRLRRRLR a
-def snpCodeImgLLRRRRLRRRRL (a : Nat) : BitVec 8 := if a = 0x8004813c then 0x93#8 else if a = 0x8004813d then 0x8c#8 else if a = 0x8004813e then 0x8c#8 else if a = 0x8004813f then 0xa1#8 else 0#8
+def snpCodeImgLLRRRRLRRRRL (a : Nat) : BitVec 8 := if a = 0x8004813c then 0x93#8 else if a = 0x8004813d then 0x8c#8 else if a = 0x8004813e then 0x0c#8 else if a = 0x8004813f then 0x3d#8 else 0#8
 def snpCodeImgLLRRRRLRRRRR (a : Nat) : BitVec 8 := if a = 0x80048140 then 0x13#8 else if a = 0x80048141 then 0x0a#8 else if a = 0x80048142 then 0x03#8 else if a = 0x80048143 then 0x00#8 else 0#8
 def snpCodeImgLLRRRRLRRRR (a : Nat) : BitVec 8 := if a < 0x80048140 then snpCodeImgLLRRRRLRRRRL a else snpCodeImgLLRRRRLRRRRR a
 def snpCodeImgLLRRRRLRRR (a : Nat) : BitVec 8 := if a < 0x8004813c then snpCodeImgLLRRRRLRRRL a else snpCodeImgLLRRRRLRRRR a
@@ -2878,10 +2878,10 @@ def snpCodeImgLRLRRLLRR (a : Nat) : BitVec 8 := if a < 0x80048791 then snpCodeIm
 def snpCodeImgLRLRRLLR (a : Nat) : BitVec 8 := if a < 0x80048783 then snpCodeImgLRLRRLLRL a else snpCodeImgLRLRRLLRR a
 def snpCodeImgLRLRRLL (a : Nat) : BitVec 8 := if a < 0x80048766 then snpCodeImgLRLRRLLL a else snpCodeImgLRLRRLLR a
 def snpCodeImgLRLRRLRLLLLL (a : Nat) : BitVec 8 := if a = 0x800487a0 then 0x83#8 else if a = 0x800487a1 then 0x25#8 else if a = 0x800487a2 then 0x81#8 else 0#8
-def snpCodeImgLRLRRLRLLLLR (a : Nat) : BitVec 8 := if a = 0x800487a3 then 0x0e#8 else if a = 0x800487a4 then 0x97#8 else if a = 0x800487a5 then 0x7d#8 else if a = 0x800487a6 then 0x01#8 else 0#8
+def snpCodeImgLRLRRLRLLLLR (a : Nat) : BitVec 8 := if a = 0x800487a3 then 0x0e#8 else if a = 0x800487a4 then 0x97#8 else if a = 0x800487a5 then 0x2d#8 else if a = 0x800487a6 then 0x01#8 else 0#8
 def snpCodeImgLRLRRLRLLLL (a : Nat) : BitVec 8 := if a < 0x800487a3 then snpCodeImgLRLRRLRLLLLL a else snpCodeImgLRLRRLRLLLLR a
 def snpCodeImgLRLRRLRLLLRL (a : Nat) : BitVec 8 := if a = 0x800487a7 then 0x00#8 else if a = 0x800487a8 then 0x93#8 else if a = 0x800487a9 then 0x8d#8 else 0#8
-def snpCodeImgLRLRRLRLLLRR (a : Nat) : BitVec 8 := if a = 0x800487aa then 0xcd#8 else if a = 0x800487ab then 0x3a#8 else if a = 0x800487ac then 0x63#8 else if a = 0x800487ad then 0x5a#8 else 0#8
+def snpCodeImgLRLRRLRLLLRR (a : Nat) : BitVec 8 := if a = 0x800487aa then 0x4d#8 else if a = 0x800487ab then 0xd6#8 else if a = 0x800487ac then 0x63#8 else if a = 0x800487ad then 0x5a#8 else 0#8
 def snpCodeImgLRLRRLRLLLR (a : Nat) : BitVec 8 := if a < 0x800487aa then snpCodeImgLRLRRLRLLLRL a else snpCodeImgLRLRRLRLLLRR a
 def snpCodeImgLRLRRLRLLL (a : Nat) : BitVec 8 := if a < 0x800487a7 then snpCodeImgLRLRRLRLLLL a else snpCodeImgLRLRRLRLLLR a
 def snpCodeImgLRLRRLRLLRLL (a : Nat) : BitVec 8 := if a = 0x800487ae then 0xdf#8 else if a = 0x800487af then 0x0b#8 else if a = 0x800487b0 then 0x93#8 else 0#8
@@ -2902,13 +2902,13 @@ def snpCodeImgLRLRRLRLRL (a : Nat) : BitVec 8 := if a < 0x800487c4 then snpCodeI
 def snpCodeImgLRLRRLRLRRLL (a : Nat) : BitVec 8 := if a = 0x800487cb then 0x06#8 else if a = 0x800487cc then 0x13#8 else if a = 0x800487cd then 0x8a#8 else 0#8
 def snpCodeImgLRLRRLRLRRLR (a : Nat) : BitVec 8 := if a = 0x800487ce then 0x0e#8 else if a = 0x800487cf then 0x00#8 else if a = 0x800487d0 then 0x93#8 else if a = 0x800487d1 then 0x0b#8 else 0#8
 def snpCodeImgLRLRRLRLRRL (a : Nat) : BitVec 8 := if a < 0x800487ce then snpCodeImgLRLRRLRLRRLL a else snpCodeImgLRLRRLRLRRLR a
-def snpCodeImgLRLRRLRLRRRL (a : Nat) : BitVec 8 := if a = 0x800487d2 then 0x08#8 else if a = 0x800487d3 then 0x00#8 else if a = 0x800487d4 then 0x17#8 else if a = 0x800487d5 then 0x7b#8 else 0#8
+def snpCodeImgLRLRRLRLRRRL (a : Nat) : BitVec 8 := if a = 0x800487d2 then 0x08#8 else if a = 0x800487d3 then 0x00#8 else if a = 0x800487d4 then 0x17#8 else if a = 0x800487d5 then 0x2b#8 else 0#8
 def snpCodeImgLRLRRLRLRRRR (a : Nat) : BitVec 8 := if a = 0x800487d6 then 0x01#8 else if a = 0x800487d7 then 0x00#8 else if a = 0x800487d8 then 0x13#8 else if a = 0x800487d9 then 0x0b#8 else 0#8
 def snpCodeImgLRLRRLRLRRR (a : Nat) : BitVec 8 := if a < 0x800487d6 then snpCodeImgLRLRRLRLRRRL a else snpCodeImgLRLRRLRLRRRR a
 def snpCodeImgLRLRRLRLRR (a : Nat) : BitVec 8 := if a < 0x800487d2 then snpCodeImgLRLRRLRLRRL a else snpCodeImgLRLRRLRLRRR a
 def snpCodeImgLRLRRLRLR (a : Nat) : BitVec 8 := if a < 0x800487cb then snpCodeImgLRLRRLRLRL a else snpCodeImgLRLRRLRLRR a
 def snpCodeImgLRLRRLRL (a : Nat) : BitVec 8 := if a < 0x800487bd then snpCodeImgLRLRRLRLL a else snpCodeImgLRLRRLRLR a
-def snpCodeImgLRLRRLRRLLLL (a : Nat) : BitVec 8 := if a = 0x800487da then 0xcb#8 else if a = 0x800487db then 0x37#8 else if a = 0x800487dc then 0x6f#8 else 0#8
+def snpCodeImgLRLRRLRRLLLL (a : Nat) : BitVec 8 := if a = 0x800487da then 0x4b#8 else if a = 0x800487db then 0xd3#8 else if a = 0x800487dc then 0x6f#8 else 0#8
 def snpCodeImgLRLRRLRRLLLR (a : Nat) : BitVec 8 := if a = 0x800487dd then 0x00#8 else if a = 0x800487de then 0xc0#8 else if a = 0x800487df then 0x00#8 else if a = 0x800487e0 then 0x1b#8 else 0#8
 def snpCodeImgLRLRRLRRLLL (a : Nat) : BitVec 8 := if a < 0x800487dd then snpCodeImgLRLRRLRRLLLL a else snpCodeImgLRLRRLRRLLLR a
 def snpCodeImgLRLRRLRRLLRL (a : Nat) : BitVec 8 := if a = 0x800487e1 then 0x0a#8 else if a = 0x800487e2 then 0x0a#8 else if a = 0x800487e3 then 0xff#8 else 0#8
@@ -3286,13 +3286,13 @@ def snpCodeImgLRRLLRRLRL (a : Nat) : BitVec 8 := if a < 0x80048a7d then snpCodeI
 def snpCodeImgLRRLLRRLRRLL (a : Nat) : BitVec 8 := if a = 0x80048a84 then 0x13#8 else if a = 0x80048a85 then 0x0b#8 else if a = 0x80048a86 then 0x00#8 else 0#8
 def snpCodeImgLRRLLRRLRRLR (a : Nat) : BitVec 8 := if a = 0x80048a87 then 0x01#8 else if a = 0x80048a88 then 0x83#8 else if a = 0x80048a89 then 0x27#8 else if a = 0x80048a8a then 0x81#8 else 0#8
 def snpCodeImgLRRLLRRLRRL (a : Nat) : BitVec 8 := if a < 0x80048a87 then snpCodeImgLRRLLRRLRRLL a else snpCodeImgLRRLLRRLRRLR a
-def snpCodeImgLRRLLRRLRRRL (a : Nat) : BitVec 8 := if a = 0x80048a8b then 0x0e#8 else if a = 0x80048a8c then 0x97#8 else if a = 0x80048a8d then 0x7d#8 else if a = 0x80048a8e then 0x01#8 else 0#8
-def snpCodeImgLRRLLRRLRRRR (a : Nat) : BitVec 8 := if a = 0x80048a8f then 0x00#8 else if a = 0x80048a90 then 0x93#8 else if a = 0x80048a91 then 0x8d#8 else if a = 0x80048a92 then 0x4d#8 else 0#8
+def snpCodeImgLRRLLRRLRRRL (a : Nat) : BitVec 8 := if a = 0x80048a8b then 0x0e#8 else if a = 0x80048a8c then 0x97#8 else if a = 0x80048a8d then 0x2d#8 else if a = 0x80048a8e then 0x01#8 else 0#8
+def snpCodeImgLRRLLRRLRRRR (a : Nat) : BitVec 8 := if a = 0x80048a8f then 0x00#8 else if a = 0x80048a90 then 0x93#8 else if a = 0x80048a91 then 0x8d#8 else if a = 0x80048a92 then 0xcd#8 else 0#8
 def snpCodeImgLRRLLRRLRRR (a : Nat) : BitVec 8 := if a < 0x80048a8f then snpCodeImgLRRLLRRLRRRL a else snpCodeImgLRRLLRRLRRRR a
 def snpCodeImgLRRLLRRLRR (a : Nat) : BitVec 8 := if a < 0x80048a8b then snpCodeImgLRRLLRRLRRL a else snpCodeImgLRRLLRRLRRR a
 def snpCodeImgLRRLLRRLR (a : Nat) : BitVec 8 := if a < 0x80048a84 then snpCodeImgLRRLLRRLRL a else snpCodeImgLRRLLRRLRR a
 def snpCodeImgLRRLLRRL (a : Nat) : BitVec 8 := if a < 0x80048a76 then snpCodeImgLRRLLRRLL a else snpCodeImgLRRLLRRLR a
-def snpCodeImgLRRLLRRRLLLL (a : Nat) : BitVec 8 := if a = 0x80048a93 then 0x0d#8 else if a = 0x80048a94 then 0x63#8 else if a = 0x80048a95 then 0x50#8 else 0#8
+def snpCodeImgLRRLLRRRLLLL (a : Nat) : BitVec 8 := if a = 0x80048a93 then 0xa8#8 else if a = 0x80048a94 then 0x63#8 else if a = 0x80048a95 then 0x50#8 else 0#8
 def snpCodeImgLRRLLRRRLLLR (a : Nat) : BitVec 8 := if a = 0x80048a96 then 0x4b#8 else if a = 0x80048a97 then 0x09#8 else if a = 0x80048a98 then 0x93#8 else if a = 0x80048a99 then 0x0d#8 else 0#8
 def snpCodeImgLRRLLRRRLLL (a : Nat) : BitVec 8 := if a < 0x80048a96 then snpCodeImgLRRLLRRRLLLL a else snpCodeImgLRRLLRRRLLLR a
 def snpCodeImgLRRLLRRRLLRL (a : Nat) : BitVec 8 := if a = 0x80048a9a then 0x0a#8 else if a = 0x80048a9b then 0x00#8 else if a = 0x80048a9c then 0x13#8 else 0#8
@@ -3300,9 +3300,9 @@ def snpCodeImgLRRLLRRRLLRR (a : Nat) : BitVec 8 := if a = 0x80048a9d then 0x0c#8
 def snpCodeImgLRRLLRRRLLR (a : Nat) : BitVec 8 := if a < 0x80048a9d then snpCodeImgLRRLLRRRLLRL a else snpCodeImgLRRLLRRRLLRR a
 def snpCodeImgLRRLLRRRLL (a : Nat) : BitVec 8 := if a < 0x80048a9a then snpCodeImgLRRLLRRRLLL a else snpCodeImgLRRLLRRRLLR a
 def snpCodeImgLRRLLRRRLRLL (a : Nat) : BitVec 8 := if a = 0x80048aa1 then 0x0d#8 else if a = 0x80048aa2 then 0x0e#8 else if a = 0x80048aa3 then 0x00#8 else 0#8
-def snpCodeImgLRRLLRRRLRLR (a : Nat) : BitVec 8 := if a = 0x80048aa4 then 0x97#8 else if a = 0x80048aa5 then 0x7c#8 else if a = 0x80048aa6 then 0x01#8 else if a = 0x80048aa7 then 0x00#8 else 0#8
+def snpCodeImgLRRLLRRRLRLR (a : Nat) : BitVec 8 := if a = 0x80048aa4 then 0x97#8 else if a = 0x80048aa5 then 0x2c#8 else if a = 0x80048aa6 then 0x01#8 else if a = 0x80048aa7 then 0x00#8 else 0#8
 def snpCodeImgLRRLLRRRLRL (a : Nat) : BitVec 8 := if a < 0x80048aa4 then snpCodeImgLRRLLRRRLRLL a else snpCodeImgLRRLLRRRLRLR a
-def snpCodeImgLRRLLRRRLRRL (a : Nat) : BitVec 8 := if a = 0x80048aa8 then 0x93#8 else if a = 0x80048aa9 then 0x8c#8 else if a = 0x80048aaa then 0xcc#8 else if a = 0x80048aab then 0x0b#8 else 0#8
+def snpCodeImgLRRLLRRRLRRL (a : Nat) : BitVec 8 := if a = 0x80048aa8 then 0x93#8 else if a = 0x80048aa9 then 0x8c#8 else if a = 0x80048aaa then 0x4c#8 else if a = 0x80048aab then 0xa7#8 else 0#8
 def snpCodeImgLRRLLRRRLRRR (a : Nat) : BitVec 8 := if a = 0x80048aac then 0x13#8 else if a = 0x80048aad then 0x0a#8 else if a = 0x80048aae then 0x08#8 else if a = 0x80048aaf then 0x00#8 else 0#8
 def snpCodeImgLRRLLRRRLRR (a : Nat) : BitVec 8 := if a < 0x80048aac then snpCodeImgLRRLLRRRLRRL a else snpCodeImgLRRLLRRRLRRR a
 def snpCodeImgLRRLLRRRLR (a : Nat) : BitVec 8 := if a < 0x80048aa8 then snpCodeImgLRRLLRRRLRL a else snpCodeImgLRRLLRRRLRR a
@@ -3632,11 +3632,11 @@ def snpCodeImgLRRRLLLRRLLL (a : Nat) : BitVec 8 := if a = 0x80048cf6 then 0x70#8
 def snpCodeImgLRRRLLLRRLLR (a : Nat) : BitVec 8 := if a = 0x80048cf9 then 0x0d#8 else if a = 0x80048cfa then 0x0e#8 else if a = 0x80048cfb then 0x00#8 else if a = 0x80048cfc then 0x93#8 else 0#8
 def snpCodeImgLRRRLLLRRLL (a : Nat) : BitVec 8 := if a < 0x80048cf9 then snpCodeImgLRRRLLLRRLLL a else snpCodeImgLRRRLLLRRLLR a
 def snpCodeImgLRRRLLLRRLRL (a : Nat) : BitVec 8 := if a = 0x80048cfd then 0x0b#8 else if a = 0x80048cfe then 0x08#8 else if a = 0x80048cff then 0x00#8 else 0#8
-def snpCodeImgLRRRLLLRRLRR (a : Nat) : BitVec 8 := if a = 0x80048d00 then 0x97#8 else if a = 0x80048d01 then 0x7c#8 else if a = 0x80048d02 then 0x01#8 else if a = 0x80048d03 then 0x00#8 else 0#8
+def snpCodeImgLRRRLLLRRLRR (a : Nat) : BitVec 8 := if a = 0x80048d00 then 0x97#8 else if a = 0x80048d01 then 0x2c#8 else if a = 0x80048d02 then 0x01#8 else if a = 0x80048d03 then 0x00#8 else 0#8
 def snpCodeImgLRRRLLLRRLR (a : Nat) : BitVec 8 := if a < 0x80048d00 then snpCodeImgLRRRLLLRRLRL a else snpCodeImgLRRRLLLRRLRR a
 def snpCodeImgLRRRLLLRRL (a : Nat) : BitVec 8 := if a < 0x80048cfd then snpCodeImgLRRRLLLRRLL a else snpCodeImgLRRRLLLRRLR a
-def snpCodeImgLRRRLLLRRRLL (a : Nat) : BitVec 8 := if a = 0x80048d04 then 0x93#8 else if a = 0x80048d05 then 0x8c#8 else if a = 0x80048d06 then 0x0c#8 else 0#8
-def snpCodeImgLRRRLLLRRRLR (a : Nat) : BitVec 8 := if a = 0x80048d07 then 0xe5#8 else if a = 0x80048d08 then 0x13#8 else if a = 0x80048d09 then 0x0a#8 else if a = 0x80048d0a then 0x03#8 else 0#8
+def snpCodeImgLRRRLLLRRRLL (a : Nat) : BitVec 8 := if a = 0x80048d04 then 0x93#8 else if a = 0x80048d05 then 0x8c#8 else if a = 0x80048d06 then 0x8c#8 else 0#8
+def snpCodeImgLRRRLLLRRRLR (a : Nat) : BitVec 8 := if a = 0x80048d07 then 0x80#8 else if a = 0x80048d08 then 0x13#8 else if a = 0x80048d09 then 0x0a#8 else if a = 0x80048d0a then 0x03#8 else 0#8
 def snpCodeImgLRRRLLLRRRL (a : Nat) : BitVec 8 := if a < 0x80048d07 then snpCodeImgLRRRLLLRRRLL a else snpCodeImgLRRRLLLRRRLR a
 def snpCodeImgLRRRLLLRRRRL (a : Nat) : BitVec 8 := if a = 0x80048d0b then 0x00#8 else if a = 0x80048d0c then 0x6f#8 else if a = 0x80048d0d then 0x00#8 else if a = 0x80048d0e then 0xc0#8 else 0#8
 def snpCodeImgLRRRLLLRRRRR (a : Nat) : BitVec 8 := if a = 0x80048d0f then 0x00#8 else if a = 0x80048d10 then 0x9b#8 else if a = 0x80048d11 then 0x8d#8 else if a = 0x80048d12 then 0x0d#8 else 0#8
@@ -3702,7 +3702,7 @@ def snpCodeImgLRRRLLRRRRLL (a : Nat) : BitVec 8 := if a = 0x80048d78 then 0x6f#8
 def snpCodeImgLRRRLLRRRRLR (a : Nat) : BitVec 8 := if a = 0x80048d7b then 0xd0#8 else if a = 0x80048d7c then 0x93#8 else if a = 0x80048d7d then 0x02#8 else if a = 0x80048d7e then 0x20#8 else 0#8
 def snpCodeImgLRRRLLRRRRL (a : Nat) : BitVec 8 := if a < 0x80048d7b then snpCodeImgLRRRLLRRRRLL a else snpCodeImgLRRRLLRRRRLR a
 def snpCodeImgLRRRLLRRRRRL (a : Nat) : BitVec 8 := if a = 0x80048d7f then 0x00#8 else if a = 0x80048d80 then 0x93#8 else if a = 0x80048d81 then 0x0e#8 else if a = 0x80048d82 then 0x00#8 else 0#8
-def snpCodeImgLRRRLLRRRRRR (a : Nat) : BitVec 8 := if a = 0x80048d83 then 0x01#8 else if a = 0x80048d84 then 0x97#8 else if a = 0x80048d85 then 0x7d#8 else if a = 0x80048d86 then 0x01#8 else 0#8
+def snpCodeImgLRRRLLRRRRRR (a : Nat) : BitVec 8 := if a = 0x80048d83 then 0x01#8 else if a = 0x80048d84 then 0x97#8 else if a = 0x80048d85 then 0x1d#8 else if a = 0x80048d86 then 0x01#8 else 0#8
 def snpCodeImgLRRRLLRRRRR (a : Nat) : BitVec 8 := if a < 0x80048d83 then snpCodeImgLRRRLLRRRRRL a else snpCodeImgLRRRLLRRRRRR a
 def snpCodeImgLRRRLLRRRR (a : Nat) : BitVec 8 := if a < 0x80048d7f then snpCodeImgLRRRLLRRRRL a else snpCodeImgLRRRLLRRRRR a
 def snpCodeImgLRRRLLRRR (a : Nat) : BitVec 8 := if a < 0x80048d78 then snpCodeImgLRRRLLRRRL a else snpCodeImgLRRRLLRRRR a
@@ -3710,7 +3710,7 @@ def snpCodeImgLRRRLLRR (a : Nat) : BitVec 8 := if a < 0x80048d6a then snpCodeImg
 def snpCodeImgLRRRLLR (a : Nat) : BitVec 8 := if a < 0x80048d4d then snpCodeImgLRRRLLRL a else snpCodeImgLRRRLLRR a
 def snpCodeImgLRRRLL (a : Nat) : BitVec 8 := if a < 0x80048d13 then snpCodeImgLRRRLLL a else snpCodeImgLRRRLLR a
 def snpCodeImgLRRRLRLLLLLL (a : Nat) : BitVec 8 := if a = 0x80048d87 then 0x00#8 else if a = 0x80048d88 then 0x93#8 else if a = 0x80048d89 then 0x8d#8 else 0#8
-def snpCodeImgLRRRLRLLLLLR (a : Nat) : BitVec 8 := if a = 0x80048d8a then 0xcd#8 else if a = 0x80048d8b then 0xdd#8 else if a = 0x80048d8c then 0x63#8 else if a = 0x80048d8d then 0xde#8 else 0#8
+def snpCodeImgLRRRLRLLLLLR (a : Nat) : BitVec 8 := if a = 0x80048d8a then 0x4d#8 else if a = 0x80048d8b then 0x79#8 else if a = 0x80048d8c then 0x63#8 else if a = 0x80048d8d then 0xde#8 else 0#8
 def snpCodeImgLRRRLRLLLLL (a : Nat) : BitVec 8 := if a < 0x80048d8a then snpCodeImgLRRRLRLLLLLL a else snpCodeImgLRRRLRLLLLLR a
 def snpCodeImgLRRRLRLLLLRL (a : Nat) : BitVec 8 := if a = 0x80048d8e then 0xee#8 else if a = 0x80048d8f then 0x0a#8 else if a = 0x80048d90 then 0x93#8 else 0#8
 def snpCodeImgLRRRLRLLLLRR (a : Nat) : BitVec 8 := if a = 0x80048d91 then 0x87#8 else if a = 0x80048d92 then 0x0b#8 else if a = 0x80048d93 then 0x00#8 else if a = 0x80048d94 then 0x23#8 else 0#8
@@ -3734,8 +3734,8 @@ def snpCodeImgLRRRLRLLRL (a : Nat) : BitVec 8 := if a < 0x80048dab then snpCodeI
 def snpCodeImgLRRRLRLLRRLL (a : Nat) : BitVec 8 := if a = 0x80048db2 then 0x07#8 else if a = 0x80048db3 then 0x00#8 else if a = 0x80048db4 then 0x93#8 else 0#8
 def snpCodeImgLRRRLRLLRRLR (a : Nat) : BitVec 8 := if a = 0x80048db5 then 0x0b#8 else if a = 0x80048db6 then 0x08#8 else if a = 0x80048db7 then 0x00#8 else if a = 0x80048db8 then 0x17#8 else 0#8
 def snpCodeImgLRRRLRLLRRL (a : Nat) : BitVec 8 := if a < 0x80048db5 then snpCodeImgLRRRLRLLRRLL a else snpCodeImgLRRRLRLLRRLR a
-def snpCodeImgLRRRLRLLRRRL (a : Nat) : BitVec 8 := if a = 0x80048db9 then 0x7b#8 else if a = 0x80048dba then 0x01#8 else if a = 0x80048dbb then 0x00#8 else if a = 0x80048dbc then 0x13#8 else 0#8
-def snpCodeImgLRRRLRLLRRRR (a : Nat) : BitVec 8 := if a = 0x80048dbd then 0x0b#8 else if a = 0x80048dbe then 0x8b#8 else if a = 0x80048dbf then 0xda#8 else if a = 0x80048dc0 then 0x6f#8 else 0#8
+def snpCodeImgLRRRLRLLRRRL (a : Nat) : BitVec 8 := if a = 0x80048db9 then 0x1b#8 else if a = 0x80048dba then 0x01#8 else if a = 0x80048dbb then 0x00#8 else if a = 0x80048dbc then 0x13#8 else 0#8
+def snpCodeImgLRRRLRLLRRRR (a : Nat) : BitVec 8 := if a = 0x80048dbd then 0x0b#8 else if a = 0x80048dbe then 0x0b#8 else if a = 0x80048dbf then 0x76#8 else if a = 0x80048dc0 then 0x6f#8 else 0#8
 def snpCodeImgLRRRLRLLRRR (a : Nat) : BitVec 8 := if a < 0x80048dbd then snpCodeImgLRRRLRLLRRRL a else snpCodeImgLRRRLRLLRRRR a
 def snpCodeImgLRRRLRLLRR (a : Nat) : BitVec 8 := if a < 0x80048db9 then snpCodeImgLRRRLRLLRRL a else snpCodeImgLRRRLRLLRRR a
 def snpCodeImgLRRRLRLLR (a : Nat) : BitVec 8 := if a < 0x80048db2 then snpCodeImgLRRRLRLLRL a else snpCodeImgLRRRLRLLRR a
@@ -3910,8 +3910,8 @@ def snpCodeImgLRRRRLRLLL (a : Nat) : BitVec 8 := if a < 0x80048eeb then snpCodeI
 def snpCodeImgLRRRRLRLLRLL (a : Nat) : BitVec 8 := if a = 0x80048ef2 then 0xe7#8 else if a = 0x80048ef3 then 0xae#8 else if a = 0x80048ef4 then 0x93#8 else 0#8
 def snpCodeImgLRRRRLRLLRLR (a : Nat) : BitVec 8 := if a = 0x80048ef5 then 0x07#8 else if a = 0x80048ef6 then 0x10#8 else if a = 0x80048ef7 then 0x01#8 else if a = 0x80048ef8 then 0x97#8 else 0#8
 def snpCodeImgLRRRRLRLLRL (a : Nat) : BitVec 8 := if a < 0x80048ef5 then snpCodeImgLRRRRLRLLRLL a else snpCodeImgLRRRRLRLLRLR a
-def snpCodeImgLRRRRLRLLRRL (a : Nat) : BitVec 8 := if a = 0x80048ef9 then 0x7d#8 else if a = 0x80048efa then 0x01#8 else if a = 0x80048efb then 0x00#8 else if a = 0x80048efc then 0x93#8 else 0#8
-def snpCodeImgLRRRRLRLLRRR (a : Nat) : BitVec 8 := if a = 0x80048efd then 0x8d#8 else if a = 0x80048efe then 0x8d#8 else if a = 0x80048eff then 0xc5#8 else if a = 0x80048f00 then 0x63#8 else 0#8
+def snpCodeImgLRRRRLRLLRRL (a : Nat) : BitVec 8 := if a = 0x80048ef9 then 0x1d#8 else if a = 0x80048efa then 0x01#8 else if a = 0x80048efb then 0x00#8 else if a = 0x80048efc then 0x93#8 else 0#8
+def snpCodeImgLRRRRLRLLRRR (a : Nat) : BitVec 8 := if a = 0x80048efd then 0x8d#8 else if a = 0x80048efe then 0x0d#8 else if a = 0x80048eff then 0x61#8 else if a = 0x80048f00 then 0x63#8 else 0#8
 def snpCodeImgLRRRRLRLLRR (a : Nat) : BitVec 8 := if a < 0x80048efd then snpCodeImgLRRRRLRLLRRL a else snpCodeImgLRRRRLRLLRRR a
 def snpCodeImgLRRRRLRLLR (a : Nat) : BitVec 8 := if a < 0x80048ef9 then snpCodeImgLRRRRLRLLRL a else snpCodeImgLRRRRLRLLRR a
 def snpCodeImgLRRRRLRLL (a : Nat) : BitVec 8 := if a < 0x80048ef2 then snpCodeImgLRRRRLRLLL a else snpCodeImgLRRRRLRLLR a
@@ -3932,9 +3932,9 @@ def snpCodeImgLRRRRLRLRR (a : Nat) : BitVec 8 := if a < 0x80048f16 then snpCodeI
 def snpCodeImgLRRRRLRLR (a : Nat) : BitVec 8 := if a < 0x80048f0f then snpCodeImgLRRRRLRLRL a else snpCodeImgLRRRRLRLRR a
 def snpCodeImgLRRRRLRL (a : Nat) : BitVec 8 := if a < 0x80048f01 then snpCodeImgLRRRRLRLL a else snpCodeImgLRRRRLRLR a
 def snpCodeImgLRRRRLRRLLLL (a : Nat) : BitVec 8 := if a = 0x80048f1e then 0x03#8 else if a = 0x80048f1f then 0x00#8 else if a = 0x80048f20 then 0x97#8 else 0#8
-def snpCodeImgLRRRRLRRLLLR (a : Nat) : BitVec 8 := if a = 0x80048f21 then 0x7b#8 else if a = 0x80048f22 then 0x01#8 else if a = 0x80048f23 then 0x00#8 else if a = 0x80048f24 then 0x93#8 else 0#8
+def snpCodeImgLRRRRLRRLLLR (a : Nat) : BitVec 8 := if a = 0x80048f21 then 0x1b#8 else if a = 0x80048f22 then 0x01#8 else if a = 0x80048f23 then 0x00#8 else if a = 0x80048f24 then 0x93#8 else 0#8
 def snpCodeImgLRRRRLRRLLL (a : Nat) : BitVec 8 := if a < 0x80048f21 then snpCodeImgLRRRRLRRLLLL a else snpCodeImgLRRRRLRRLLLR a
-def snpCodeImgLRRRRLRRLLRL (a : Nat) : BitVec 8 := if a = 0x80048f25 then 0x8b#8 else if a = 0x80048f26 then 0x0b#8 else if a = 0x80048f27 then 0xc3#8 else 0#8
+def snpCodeImgLRRRRLRRLLRL (a : Nat) : BitVec 8 := if a = 0x80048f25 then 0x8b#8 else if a = 0x80048f26 then 0x8b#8 else if a = 0x80048f27 then 0x5e#8 else 0#8
 def snpCodeImgLRRRRLRRLLRR (a : Nat) : BitVec 8 := if a = 0x80048f28 then 0x93#8 else if a = 0x80048f29 then 0x0d#8 else if a = 0x80048f2a then 0x08#8 else if a = 0x80048f2b then 0x00#8 else 0#8
 def snpCodeImgLRRRRLRRLLR (a : Nat) : BitVec 8 := if a < 0x80048f28 then snpCodeImgLRRRRLRRLLRL a else snpCodeImgLRRRRLRRLLRR a
 def snpCodeImgLRRRRLRRLL (a : Nat) : BitVec 8 := if a < 0x80048f25 then snpCodeImgLRRRRLRRLLL a else snpCodeImgLRRRRLRRLLR a
@@ -4213,7 +4213,7 @@ def snpCodeImgRLLLLLRRRLRR (a : Nat) : BitVec 8 := if a = 0x80049117 then 0x00#8
 def snpCodeImgRLLLLLRRRLR (a : Nat) : BitVec 8 := if a < 0x80049117 then snpCodeImgRLLLLLRRRLRL a else snpCodeImgRLLLLLRRRLRR a
 def snpCodeImgRLLLLLRRRL (a : Nat) : BitVec 8 := if a < 0x80049114 then snpCodeImgRLLLLLRRRLL a else snpCodeImgRLLLLLRRRLR a
 def snpCodeImgRLLLLLRRRRLL (a : Nat) : BitVec 8 := if a = 0x8004911b then 0x00#8 else if a = 0x8004911c then 0x13#8 else if a = 0x8004911d then 0x06#8 else 0#8
-def snpCodeImgRLLLLLRRRRLR (a : Nat) : BitVec 8 := if a = 0x8004911e then 0x06#8 else if a = 0x8004911f then 0xda#8 else if a = 0x80049120 then 0x13#8 else if a = 0x80049121 then 0x0c#8 else 0#8
+def snpCodeImgRLLLLLRRRRLR (a : Nat) : BitVec 8 := if a = 0x8004911e then 0x86#8 else if a = 0x8004911f then 0xd7#8 else if a = 0x80049120 then 0x13#8 else if a = 0x80049121 then 0x0c#8 else 0#8
 def snpCodeImgRLLLLLRRRRL (a : Nat) : BitVec 8 := if a < 0x8004911e then snpCodeImgRLLLLLRRRRLL a else snpCodeImgRLLLLLRRRRLR a
 def snpCodeImgRLLLLLRRRRRL (a : Nat) : BitVec 8 := if a = 0x80049122 then 0x80#8 else if a = 0x80049123 then 0x07#8 else if a = 0x80049124 then 0x13#8 else if a = 0x80049125 then 0x0b#8 else 0#8
 def snpCodeImgRLLLLLRRRRRR (a : Nat) : BitVec 8 := if a = 0x80049126 then 0xc1#8 else if a = 0x80049127 then 0x15#8 else if a = 0x80049128 then 0x13#8 else if a = 0x80049129 then 0x0d#8 else 0#8
@@ -4355,7 +4355,7 @@ def snpCodeImgRLLLRLLLLLLL (a : Nat) : BitVec 8 := if a = 0x80049213 then 0x00#8
 def snpCodeImgRLLLRLLLLLLR (a : Nat) : BitVec 8 := if a = 0x80049216 then 0x91#8 else if a = 0x80049217 then 0x01#8 else if a = 0x80049218 then 0x17#8 else if a = 0x80049219 then 0xf6#8 else 0#8
 def snpCodeImgRLLLRLLLLLL (a : Nat) : BitVec 8 := if a < 0x80049216 then snpCodeImgRLLLRLLLLLLL a else snpCodeImgRLLLRLLLLLLR a
 def snpCodeImgRLLLRLLLLLRL (a : Nat) : BitVec 8 := if a = 0x8004921a then 0x00#8 else if a = 0x8004921b then 0x00#8 else if a = 0x8004921c then 0x13#8 else 0#8
-def snpCodeImgRLLLRLLLLLRR (a : Nat) : BitVec 8 := if a = 0x8004921d then 0x06#8 else if a = 0x8004921e then 0x86#8 else if a = 0x8004921f then 0xcb#8 else if a = 0x80049220 then 0x03#8 else 0#8
+def snpCodeImgRLLLRLLLLLRR (a : Nat) : BitVec 8 := if a = 0x8004921d then 0x06#8 else if a = 0x8004921e then 0x06#8 else if a = 0x8004921f then 0xc9#8 else if a = 0x80049220 then 0x03#8 else 0#8
 def snpCodeImgRLLLRLLLLLR (a : Nat) : BitVec 8 := if a < 0x8004921d then snpCodeImgRLLLRLLLLLRL a else snpCodeImgRLLLRLLLLLRR a
 def snpCodeImgRLLLRLLLLL (a : Nat) : BitVec 8 := if a < 0x8004921a then snpCodeImgRLLLRLLLLLL a else snpCodeImgRLLLRLLLLLR a
 def snpCodeImgRLLLRLLLLRLL (a : Nat) : BitVec 8 := if a = 0x80049221 then 0x37#8 else if a = 0x80049222 then 0x81#8 else if a = 0x80049223 then 0x01#8 else 0#8
@@ -4448,8 +4448,8 @@ def snpCodeImgRLLLRLRL (a : Nat) : BitVec 8 := if a < 0x800492a4 then snpCodeImg
 def snpCodeImgRLLLRLRRLLLL (a : Nat) : BitVec 8 := if a = 0x800492c1 then 0x30#8 else if a = 0x800492c2 then 0x91#8 else if a = 0x800492c3 then 0x01#8 else 0#8
 def snpCodeImgRLLLRLRRLLLR (a : Nat) : BitVec 8 := if a = 0x800492c4 then 0x17#8 else if a = 0x800492c5 then 0xf6#8 else if a = 0x800492c6 then 0x00#8 else if a = 0x800492c7 then 0x00#8 else 0#8
 def snpCodeImgRLLLRLRRLLL (a : Nat) : BitVec 8 := if a < 0x800492c4 then snpCodeImgRLLLRLRRLLLL a else snpCodeImgRLLLRLRRLLLR a
-def snpCodeImgRLLLRLRRLLRL (a : Nat) : BitVec 8 := if a = 0x800492c8 then 0x13#8 else if a = 0x800492c9 then 0x06#8 else if a = 0x800492ca then 0x46#8 else 0#8
-def snpCodeImgRLLLRLRRLLRR (a : Nat) : BitVec 8 := if a = 0x800492cb then 0xbf#8 else if a = 0x800492cc then 0x6f#8 else if a = 0x800492cd then 0xf0#8 else if a = 0x800492ce then 0x5f#8 else 0#8
+def snpCodeImgRLLLRLRRLLRL (a : Nat) : BitVec 8 := if a = 0x800492c8 then 0x13#8 else if a = 0x800492c9 then 0x06#8 else if a = 0x800492ca then 0xc6#8 else 0#8
+def snpCodeImgRLLLRLRRLLRR (a : Nat) : BitVec 8 := if a = 0x800492cb then 0xbc#8 else if a = 0x800492cc then 0x6f#8 else if a = 0x800492cd then 0xf0#8 else if a = 0x800492ce then 0x5f#8 else 0#8
 def snpCodeImgRLLLRLRRLLR (a : Nat) : BitVec 8 := if a < 0x800492cb then snpCodeImgRLLLRLRRLLRL a else snpCodeImgRLLLRLRRLLRR a
 def snpCodeImgRLLLRLRRLL (a : Nat) : BitVec 8 := if a < 0x800492c8 then snpCodeImgRLLLRLRRLLL a else snpCodeImgRLLLRLRRLLR a
 def snpCodeImgRLLLRLRRLRLL (a : Nat) : BitVec 8 := if a = 0x800492cf then 0xf5#8 else if a = 0x800492d0 then 0x13#8 else if a = 0x800492d1 then 0x0a#8 else 0#8
@@ -4527,21 +4527,21 @@ def snpCodeImgRLLLRRLRL (a : Nat) : BitVec 8 := if a < 0x80049343 then snpCodeIm
 def snpCodeImgRLLLRRLRRLLL (a : Nat) : BitVec 8 := if a = 0x80049352 then 0x00#8 else if a = 0x80049353 then 0x00#8 else if a = 0x80049354 then 0x17#8 else 0#8
 def snpCodeImgRLLLRRLRRLLR (a : Nat) : BitVec 8 := if a = 0x80049355 then 0xfd#8 else if a = 0x80049356 then 0x00#8 else if a = 0x80049357 then 0x00#8 else if a = 0x80049358 then 0x13#8 else 0#8
 def snpCodeImgRLLLRRLRRLL (a : Nat) : BitVec 8 := if a < 0x80049355 then snpCodeImgRLLLRRLRRLLL a else snpCodeImgRLLLRRLRRLLR a
-def snpCodeImgRLLLRRLRRLRL (a : Nat) : BitVec 8 := if a = 0x80049359 then 0x0d#8 else if a = 0x8004935a then 0x4d#8 else if a = 0x8004935b then 0xb9#8 else 0#8
+def snpCodeImgRLLLRRLRRLRL (a : Nat) : BitVec 8 := if a = 0x80049359 then 0x0d#8 else if a = 0x8004935a then 0xcd#8 else if a = 0x8004935b then 0xb6#8 else 0#8
 def snpCodeImgRLLLRRLRRLRR (a : Nat) : BitVec 8 := if a = 0x8004935c then 0x6f#8 else if a = 0x8004935d then 0xe0#8 else if a = 0x8004935e then 0xcf#8 else if a = 0x8004935f then 0xf1#8 else 0#8
 def snpCodeImgRLLLRRLRRLR (a : Nat) : BitVec 8 := if a < 0x8004935c then snpCodeImgRLLLRRLRRLRL a else snpCodeImgRLLLRRLRRLRR a
 def snpCodeImgRLLLRRLRRL (a : Nat) : BitVec 8 := if a < 0x80049359 then snpCodeImgRLLLRRLRRLL a else snpCodeImgRLLLRRLRRLR a
 def snpCodeImgRLLLRRLRRRLL (a : Nat) : BitVec 8 := if a = 0x80049360 then 0x13#8 else if a = 0x80049361 then 0x0c#8 else if a = 0x80049362 then 0x00#8 else 0#8
 def snpCodeImgRLLLRRLRRRLR (a : Nat) : BitVec 8 := if a = 0x80049363 then 0x01#8 else if a = 0x80049364 then 0x83#8 else if a = 0x80049365 then 0x25#8 else if a = 0x80049366 then 0x81#8 else 0#8
 def snpCodeImgRLLLRRLRRRL (a : Nat) : BitVec 8 := if a < 0x80049363 then snpCodeImgRLLLRRLRRRLL a else snpCodeImgRLLLRRLRRRLR a
-def snpCodeImgRLLLRRLRRRRL (a : Nat) : BitVec 8 := if a = 0x80049367 then 0x0e#8 else if a = 0x80049368 then 0x97#8 else if a = 0x80049369 then 0x6d#8 else if a = 0x8004936a then 0x01#8 else 0#8
-def snpCodeImgRLLLRRLRRRRR (a : Nat) : BitVec 8 := if a = 0x8004936b then 0x00#8 else if a = 0x8004936c then 0x93#8 else if a = 0x8004936d then 0x8d#8 else if a = 0x8004936e then 0x8d#8 else 0#8
+def snpCodeImgRLLLRRLRRRRL (a : Nat) : BitVec 8 := if a = 0x80049367 then 0x0e#8 else if a = 0x80049368 then 0x97#8 else if a = 0x80049369 then 0x1d#8 else if a = 0x8004936a then 0x01#8 else 0#8
+def snpCodeImgRLLLRRLRRRRR (a : Nat) : BitVec 8 := if a = 0x8004936b then 0x00#8 else if a = 0x8004936c then 0x93#8 else if a = 0x8004936d then 0x8d#8 else if a = 0x8004936e then 0x0d#8 else 0#8
 def snpCodeImgRLLLRRLRRRR (a : Nat) : BitVec 8 := if a < 0x8004936b then snpCodeImgRLLLRRLRRRRL a else snpCodeImgRLLLRRLRRRRR a
 def snpCodeImgRLLLRRLRRR (a : Nat) : BitVec 8 := if a < 0x80049367 then snpCodeImgRLLLRRLRRRL a else snpCodeImgRLLLRRLRRRR a
 def snpCodeImgRLLLRRLRR (a : Nat) : BitVec 8 := if a < 0x80049360 then snpCodeImgRLLLRRLRRL a else snpCodeImgRLLLRRLRRR a
 def snpCodeImgRLLLRRLR (a : Nat) : BitVec 8 := if a < 0x80049352 then snpCodeImgRLLLRRLRL a else snpCodeImgRLLLRRLRR a
 def snpCodeImgRLLLRRL (a : Nat) : BitVec 8 := if a < 0x80049335 then snpCodeImgRLLLRRLL a else snpCodeImgRLLLRRLR a
-def snpCodeImgRLLLRRRLLLLL (a : Nat) : BitVec 8 := if a = 0x8004936f then 0x7e#8 else if a = 0x80049370 then 0xe3#8 else if a = 0x80049371 then 0x56#8 else 0#8
+def snpCodeImgRLLLRRRLLLLL (a : Nat) : BitVec 8 := if a = 0x8004936f then 0x1a#8 else if a = 0x80049370 then 0xe3#8 else if a = 0x80049371 then 0x56#8 else 0#8
 def snpCodeImgRLLLRRRLLLLR (a : Nat) : BitVec 8 := if a = 0x80049372 then 0x4c#8 else if a = 0x80049373 then 0x27#8 else if a = 0x80049374 then 0x93#8 else if a = 0x80049375 then 0x87#8 else 0#8
 def snpCodeImgRLLLRRRLLLL (a : Nat) : BitVec 8 := if a < 0x80049372 then snpCodeImgRLLLRRRLLLLL a else snpCodeImgRLLLRRRLLLLR a
 def snpCodeImgRLLLRRRLLLRL (a : Nat) : BitVec 8 := if a = 0x80049376 then 0x0b#8 else if a = 0x80049377 then 0x00#8 else if a = 0x80049378 then 0x83#8 else 0#8
@@ -4556,10 +4556,10 @@ def snpCodeImgRLLLRRRLLRRR (a : Nat) : BitVec 8 := if a = 0x80049388 then 0x23#8
 def snpCodeImgRLLLRRRLLRR (a : Nat) : BitVec 8 := if a < 0x80049388 then snpCodeImgRLLLRRRLLRRL a else snpCodeImgRLLLRRRLLRRR a
 def snpCodeImgRLLLRRRLLR (a : Nat) : BitVec 8 := if a < 0x80049384 then snpCodeImgRLLLRRRLLRL a else snpCodeImgRLLLRRRLLRR a
 def snpCodeImgRLLLRRRLL (a : Nat) : BitVec 8 := if a < 0x8004937d then snpCodeImgRLLLRRRLLL a else snpCodeImgRLLLRRRLLR a
-def snpCodeImgRLLLRRRLRLLL (a : Nat) : BitVec 8 := if a = 0x8004938c then 0x97#8 else if a = 0x8004938d then 0x6b#8 else if a = 0x8004938e then 0x01#8 else 0#8
-def snpCodeImgRLLLRRRLRLLR (a : Nat) : BitVec 8 := if a = 0x8004938f then 0x00#8 else if a = 0x80049390 then 0x93#8 else if a = 0x80049391 then 0x8b#8 else if a = 0x80049392 then 0x4b#8 else 0#8
+def snpCodeImgRLLLRRRLRLLL (a : Nat) : BitVec 8 := if a = 0x8004938c then 0x97#8 else if a = 0x8004938d then 0x1b#8 else if a = 0x8004938e then 0x01#8 else 0#8
+def snpCodeImgRLLLRRRLRLLR (a : Nat) : BitVec 8 := if a = 0x8004938f then 0x00#8 else if a = 0x80049390 then 0x93#8 else if a = 0x80049391 then 0x8b#8 else if a = 0x80049392 then 0xcb#8 else 0#8
 def snpCodeImgRLLLRRRLRLL (a : Nat) : BitVec 8 := if a < 0x8004938f then snpCodeImgRLLLRRRLRLLL a else snpCodeImgRLLLRRRLRLLR a
-def snpCodeImgRLLLRRRLRLRL (a : Nat) : BitVec 8 := if a = 0x80049393 then 0x7c#8 else if a = 0x80049394 then 0x93#8 else if a = 0x80049395 then 0x0d#8 else 0#8
+def snpCodeImgRLLLRRRLRLRL (a : Nat) : BitVec 8 := if a = 0x80049393 then 0x17#8 else if a = 0x80049394 then 0x93#8 else if a = 0x80049395 then 0x0d#8 else 0#8
 def snpCodeImgRLLLRRRLRLRR (a : Nat) : BitVec 8 := if a = 0x80049396 then 0x08#8 else if a = 0x80049397 then 0x00#8 else if a = 0x80049398 then 0x6f#8 else if a = 0x80049399 then 0x00#8 else 0#8
 def snpCodeImgRLLLRRRLRLR (a : Nat) : BitVec 8 := if a < 0x80049396 then snpCodeImgRLLLRRRLRLRL a else snpCodeImgRLLLRRRLRLRR a
 def snpCodeImgRLLLRRRLRL (a : Nat) : BitVec 8 := if a < 0x80049393 then snpCodeImgRLLLRRRLRLL a else snpCodeImgRLLLRRRLRLR a
@@ -4642,11 +4642,11 @@ def snpCodeImgRLLRLLLRLLLL (a : Nat) : BitVec 8 := if a = 0x8004941e then 0x70#8
 def snpCodeImgRLLRLLLRLLLR (a : Nat) : BitVec 8 := if a = 0x80049421 then 0x3c#8 else if a = 0x80049422 then 0x81#8 else if a = 0x80049423 then 0x02#8 else if a = 0x80049424 then 0x13#8 else 0#8
 def snpCodeImgRLLRLLLRLLL (a : Nat) : BitVec 8 := if a < 0x80049421 then snpCodeImgRLLRLLLRLLLL a else snpCodeImgRLLRLLLRLLLR a
 def snpCodeImgRLLRLLLRLLRL (a : Nat) : BitVec 8 := if a = 0x80049425 then 0x0c#8 else if a = 0x80049426 then 0x00#8 else if a = 0x80049427 then 0x01#8 else 0#8
-def snpCodeImgRLLRLLLRLLRR (a : Nat) : BitVec 8 := if a = 0x80049428 then 0x17#8 else if a = 0x80049429 then 0x6b#8 else if a = 0x8004942a then 0x01#8 else if a = 0x8004942b then 0x00#8 else 0#8
+def snpCodeImgRLLRLLLRLLRR (a : Nat) : BitVec 8 := if a = 0x80049428 then 0x17#8 else if a = 0x80049429 then 0x1b#8 else if a = 0x8004942a then 0x01#8 else if a = 0x8004942b then 0x00#8 else 0#8
 def snpCodeImgRLLRLLLRLLR (a : Nat) : BitVec 8 := if a < 0x80049428 then snpCodeImgRLLRLLLRLLRL a else snpCodeImgRLLRLLLRLLRR a
 def snpCodeImgRLLRLLLRLL (a : Nat) : BitVec 8 := if a < 0x80049425 then snpCodeImgRLLRLLLRLLL a else snpCodeImgRLLRLLLRLLR a
-def snpCodeImgRLLRLLLRLRLL (a : Nat) : BitVec 8 := if a = 0x8004942c then 0x13#8 else if a = 0x8004942d then 0x0b#8 else if a = 0x8004942e then 0x8b#8 else 0#8
-def snpCodeImgRLLRLLLRLRLR (a : Nat) : BitVec 8 := if a = 0x8004942f then 0x72#8 else if a = 0x80049430 then 0x23#8 else if a = 0x80049431 then 0x3c#8 else if a = 0x80049432 then 0xc1#8 else 0#8
+def snpCodeImgRLLRLLLRLRLL (a : Nat) : BitVec 8 := if a = 0x8004942c then 0x13#8 else if a = 0x8004942d then 0x0b#8 else if a = 0x8004942e then 0x0b#8 else 0#8
+def snpCodeImgRLLRLLLRLRLR (a : Nat) : BitVec 8 := if a = 0x8004942f then 0x0e#8 else if a = 0x80049430 then 0x23#8 else if a = 0x80049431 then 0x3c#8 else if a = 0x80049432 then 0xc1#8 else 0#8
 def snpCodeImgRLLRLLLRLRL (a : Nat) : BitVec 8 := if a < 0x8004942f then snpCodeImgRLLRLLLRLRLL a else snpCodeImgRLLRLLLRLRLR a
 def snpCodeImgRLLRLLLRLRRL (a : Nat) : BitVec 8 := if a = 0x80049433 then 0x07#8 else if a = 0x80049434 then 0x23#8 else if a = 0x80049435 then 0x38#8 else if a = 0x80049436 then 0x61#8 else 0#8
 def snpCodeImgRLLRLLLRLRRR (a : Nat) : BitVec 8 := if a = 0x80049437 then 0x08#8 else if a = 0x80049438 then 0x23#8 else if a = 0x80049439 then 0x3c#8 else if a = 0x8004943a then 0x01#8 else 0#8
@@ -4780,10 +4780,10 @@ def snpCodeImgRLLRLRLRLRRR (a : Nat) : BitVec 8 := if a = 0x8004951f then 0xc0#8
 def snpCodeImgRLLRLRLRLRR (a : Nat) : BitVec 8 := if a < 0x8004951f then snpCodeImgRLLRLRLRLRRL a else snpCodeImgRLLRLRLRLRRR a
 def snpCodeImgRLLRLRLRLR (a : Nat) : BitVec 8 := if a < 0x8004951b then snpCodeImgRLLRLRLRLRL a else snpCodeImgRLLRLRLRLRR a
 def snpCodeImgRLLRLRLRL (a : Nat) : BitVec 8 := if a < 0x80049514 then snpCodeImgRLLRLRLRLL a else snpCodeImgRLLRLRLRLR a
-def snpCodeImgRLLRLRLRRLLL (a : Nat) : BitVec 8 := if a = 0x80049523 then 0x0e#8 else if a = 0x80049524 then 0x97#8 else if a = 0x80049525 then 0x6f#8 else 0#8
+def snpCodeImgRLLRLRLRRLLL (a : Nat) : BitVec 8 := if a = 0x80049523 then 0x0e#8 else if a = 0x80049524 then 0x97#8 else if a = 0x80049525 then 0x1f#8 else 0#8
 def snpCodeImgRLLRLRLRRLLR (a : Nat) : BitVec 8 := if a = 0x80049526 then 0x01#8 else if a = 0x80049527 then 0x00#8 else if a = 0x80049528 then 0x93#8 else if a = 0x80049529 then 0x8f#8 else 0#8
 def snpCodeImgRLLRLRLRRLL (a : Nat) : BitVec 8 := if a < 0x80049526 then snpCodeImgRLLRLRLRRLLL a else snpCodeImgRLLRLRLRRLLR a
-def snpCodeImgRLLRLRLRRLRL (a : Nat) : BitVec 8 := if a = 0x8004952a then 0xcf#8 else if a = 0x8004952b then 0x62#8 else if a = 0x8004952c then 0x63#8 else 0#8
+def snpCodeImgRLLRLRLRRLRL (a : Nat) : BitVec 8 := if a = 0x8004952a then 0x4f#8 else if a = 0x8004952b then 0xfe#8 else if a = 0x8004952c then 0x63#8 else 0#8
 def snpCodeImgRLLRLRLRRLRR (a : Nat) : BitVec 8 := if a = 0x8004952d then 0x52#8 else if a = 0x8004952e then 0x9c#8 else if a = 0x8004952f then 0x09#8 else if a = 0x80049530 then 0x23#8 else 0#8
 def snpCodeImgRLLRLRLRRLR (a : Nat) : BitVec 8 := if a < 0x8004952d then snpCodeImgRLLRLRLRRLRL a else snpCodeImgRLLRLRLRRLRR a
 def snpCodeImgRLLRLRLRRL (a : Nat) : BitVec 8 := if a < 0x8004952a then snpCodeImgRLLRLRLRRLL a else snpCodeImgRLLRLRLRRLR a
@@ -5031,12 +5031,12 @@ def snpCodeImgRLLRRRLRLRLL (a : Nat) : BitVec 8 := if a = 0x800496e5 then 0x34#8
 def snpCodeImgRLLRRRLRLRLR (a : Nat) : BitVec 8 := if a = 0x800496e8 then 0x23#8 else if a = 0x800496e9 then 0x38#8 else if a = 0x800496ea then 0xf1#8 else if a = 0x800496eb then 0x02#8 else 0#8
 def snpCodeImgRLLRRRLRLRL (a : Nat) : BitVec 8 := if a < 0x800496e8 then snpCodeImgRLLRRRLRLRLL a else snpCodeImgRLLRRRLRLRLR a
 def snpCodeImgRLLRRRLRLRRL (a : Nat) : BitVec 8 := if a = 0x800496ec then 0xef#8 else if a = 0x800496ed then 0x30#8 else if a = 0x800496ee then 0x5e#8 else if a = 0x800496ef then 0xa1#8 else 0#8
-def snpCodeImgRLLRRRLRLRRR (a : Nat) : BitVec 8 := if a = 0x800496f0 then 0x97#8 else if a = 0x800496f1 then 0xe5#8 else if a = 0x800496f2 then 0x01#8 else if a = 0x800496f3 then 0x00#8 else 0#8
+def snpCodeImgRLLRRRLRLRRR (a : Nat) : BitVec 8 := if a = 0x800496f0 then 0x97#8 else if a = 0x800496f1 then 0x85#8 else if a = 0x800496f2 then 0x01#8 else if a = 0x800496f3 then 0x00#8 else 0#8
 def snpCodeImgRLLRRRLRLRR (a : Nat) : BitVec 8 := if a < 0x800496f0 then snpCodeImgRLLRRRLRLRRL a else snpCodeImgRLLRRRLRLRRR a
 def snpCodeImgRLLRRRLRLR (a : Nat) : BitVec 8 := if a < 0x800496ec then snpCodeImgRLLRRRLRLRL a else snpCodeImgRLLRRRLRLRR a
 def snpCodeImgRLLRRRLRL (a : Nat) : BitVec 8 := if a < 0x800496e5 then snpCodeImgRLLRRRLRLL a else snpCodeImgRLLRRRLRLR a
-def snpCodeImgRLLRRRLRRLLL (a : Nat) : BitVec 8 := if a = 0x800496f4 then 0x83#8 else if a = 0x800496f5 then 0xb5#8 else if a = 0x800496f6 then 0x05#8 else 0#8
-def snpCodeImgRLLRRRLRRLLR (a : Nat) : BitVec 8 := if a = 0x800496f7 then 0x8c#8 else if a = 0x800496f8 then 0xef#8 else if a = 0x800496f9 then 0xb0#8 else if a = 0x800496fa then 0xce#8 else 0#8
+def snpCodeImgRLLRRRLRRLLL (a : Nat) : BitVec 8 := if a = 0x800496f4 then 0x83#8 else if a = 0x800496f5 then 0xb5#8 else if a = 0x800496f6 then 0x85#8 else 0#8
+def snpCodeImgRLLRRRLRRLLR (a : Nat) : BitVec 8 := if a = 0x800496f7 then 0x27#8 else if a = 0x800496f8 then 0xef#8 else if a = 0x800496f9 then 0xb0#8 else if a = 0x800496fa then 0xce#8 else 0#8
 def snpCodeImgRLLRRRLRRLL (a : Nat) : BitVec 8 := if a < 0x800496f7 then snpCodeImgRLLRRRLRRLLL a else snpCodeImgRLLRRRLRRLLR a
 def snpCodeImgRLLRRRLRRLRL (a : Nat) : BitVec 8 := if a = 0x800496fb then 0x9f#8 else if a = 0x800496fc then 0x93#8 else if a = 0x800496fd then 0x05#8 else 0#8
 def snpCodeImgRLLRRRLRRLRR (a : Nat) : BitVec 8 := if a = 0x800496fe then 0x00#8 else if a = 0x800496ff then 0x00#8 else if a = 0x80049700 then 0x23#8 else if a = 0x80049701 then 0x3c#8 else 0#8
@@ -5056,10 +5056,10 @@ def snpCodeImgRLLRRRRLLLLL (a : Nat) : BitVec 8 := if a = 0x80049711 then 0x07#8
 def snpCodeImgRLLRRRRLLLLR (a : Nat) : BitVec 8 := if a = 0x80049714 then 0x23#8 else if a = 0x80049715 then 0x28#8 else if a = 0x80049716 then 0xe1#8 else if a = 0x80049717 then 0x0a#8 else 0#8
 def snpCodeImgRLLRRRRLLLL (a : Nat) : BitVec 8 := if a < 0x80049714 then snpCodeImgRLLRRRRLLLLL a else snpCodeImgRLLRRRRLLLLR a
 def snpCodeImgRLLRRRRLLLRL (a : Nat) : BitVec 8 := if a = 0x80049718 then 0x97#8 else if a = 0x80049719 then 0xe7#8 else if a = 0x8004971a then 0x00#8 else 0#8
-def snpCodeImgRLLRRRRLLLRR (a : Nat) : BitVec 8 := if a = 0x8004971b then 0x00#8 else if a = 0x8004971c then 0x93#8 else if a = 0x8004971d then 0x87#8 else if a = 0x8004971e then 0x87#8 else 0#8
+def snpCodeImgRLLRRRRLLLRR (a : Nat) : BitVec 8 := if a = 0x8004971b then 0x00#8 else if a = 0x8004971c then 0x93#8 else if a = 0x8004971d then 0x87#8 else if a = 0x8004971e then 0x07#8 else 0#8
 def snpCodeImgRLLRRRRLLLR (a : Nat) : BitVec 8 := if a < 0x8004971b then snpCodeImgRLLRRRRLLLRL a else snpCodeImgRLLRRRRLLLRR a
 def snpCodeImgRLLRRRRLLL (a : Nat) : BitVec 8 := if a < 0x80049718 then snpCodeImgRLLRRRRLLLL a else snpCodeImgRLLRRRRLLLR a
-def snpCodeImgRLLRRRRLLRLL (a : Nat) : BitVec 8 := if a = 0x8004971f then 0x7b#8 else if a = 0x80049720 then 0x13#8 else if a = 0x80049721 then 0x07#8 else 0#8
+def snpCodeImgRLLRRRRLLRLL (a : Nat) : BitVec 8 := if a = 0x8004971f then 0x79#8 else if a = 0x80049720 then 0x13#8 else if a = 0x80049721 then 0x07#8 else 0#8
 def snpCodeImgRLLRRRRLLRLR (a : Nat) : BitVec 8 := if a = 0x80049722 then 0x10#8 else if a = 0x80049723 then 0x06#8 else if a = 0x80049724 then 0x23#8 else if a = 0x80049725 then 0x34#8 else 0#8
 def snpCodeImgRLLRRRRLLRL (a : Nat) : BitVec 8 := if a < 0x80049722 then snpCodeImgRLLRRRRLLRLL a else snpCodeImgRLLRRRRLLRLR a
 def snpCodeImgRLLRRRRLLRRL (a : Nat) : BitVec 8 := if a = 0x80049726 then 0xf1#8 else if a = 0x80049727 then 0x02#8 else if a = 0x80049728 then 0x63#8 else if a = 0x80049729 then 0x18#8 else 0#8
@@ -5068,7 +5068,7 @@ def snpCodeImgRLLRRRRLLRR (a : Nat) : BitVec 8 := if a < 0x8004972a then snpCode
 def snpCodeImgRLLRRRRLLR (a : Nat) : BitVec 8 := if a < 0x80049726 then snpCodeImgRLLRRRRLLRL a else snpCodeImgRLLRRRRLLRR a
 def snpCodeImgRLLRRRRLL (a : Nat) : BitVec 8 := if a < 0x8004971f then snpCodeImgRLLRRRRLLL a else snpCodeImgRLLRRRRLLR a
 def snpCodeImgRLLRRRRLRLLL (a : Nat) : BitVec 8 := if a = 0x8004972e then 0x00#8 else if a = 0x8004972f then 0x00#8 else if a = 0x80049730 then 0x93#8 else 0#8
-def snpCodeImgRLLRRRRLRLLR (a : Nat) : BitVec 8 := if a = 0x80049731 then 0x87#8 else if a = 0x80049732 then 0xc7#8 else if a = 0x80049733 then 0x78#8 else if a = 0x80049734 then 0x23#8 else 0#8
+def snpCodeImgRLLRRRRLRLLR (a : Nat) : BitVec 8 := if a = 0x80049731 then 0x87#8 else if a = 0x80049732 then 0x47#8 else if a = 0x80049733 then 0x76#8 else if a = 0x80049734 then 0x23#8 else 0#8
 def snpCodeImgRLLRRRRLRLL (a : Nat) : BitVec 8 := if a < 0x80049731 then snpCodeImgRLLRRRRLRLLL a else snpCodeImgRLLRRRRLRLLR a
 def snpCodeImgRLLRRRRLRLRL (a : Nat) : BitVec 8 := if a = 0x80049735 then 0x34#8 else if a = 0x80049736 then 0xf1#8 else if a = 0x80049737 then 0x02#8 else 0#8
 def snpCodeImgRLLRRRRLRLRR (a : Nat) : BitVec 8 := if a = 0x80049738 then 0x93#8 else if a = 0x80049739 then 0x0d#8 else if a = 0x8004973a then 0x0d#8 else if a = 0x8004973b then 0x00#8 else 0#8
@@ -5099,10 +5099,10 @@ def snpCodeImgRLLRRRRRLRR (a : Nat) : BitVec 8 := if a < 0x80049764 then snpCode
 def snpCodeImgRLLRRRRRLR (a : Nat) : BitVec 8 := if a < 0x80049760 then snpCodeImgRLLRRRRRLRL a else snpCodeImgRLLRRRRRLRR a
 def snpCodeImgRLLRRRRRL (a : Nat) : BitVec 8 := if a < 0x80049759 then snpCodeImgRLLRRRRRLL a else snpCodeImgRLLRRRRRLR a
 def snpCodeImgRLLRRRRRRLLL (a : Nat) : BitVec 8 := if a = 0x80049768 then 0x1b#8 else if a = 0x80049769 then 0x0a#8 else if a = 0x8004976a then 0xfa#8 else 0#8
-def snpCodeImgRLLRRRRRRLLR (a : Nat) : BitVec 8 := if a = 0x8004976b then 0xff#8 else if a = 0x8004976c then 0x97#8 else if a = 0x8004976d then 0xe5#8 else if a = 0x8004976e then 0x01#8 else 0#8
+def snpCodeImgRLLRRRRRRLLR (a : Nat) : BitVec 8 := if a = 0x8004976b then 0xff#8 else if a = 0x8004976c then 0x97#8 else if a = 0x8004976d then 0x85#8 else if a = 0x8004976e then 0x01#8 else 0#8
 def snpCodeImgRLLRRRRRRLL (a : Nat) : BitVec 8 := if a < 0x8004976b then snpCodeImgRLLRRRRRRLLL a else snpCodeImgRLLRRRRRRLLR a
-def snpCodeImgRLLRRRRRRLRL (a : Nat) : BitVec 8 := if a = 0x8004976f then 0x00#8 else if a = 0x80049770 then 0x83#8 else if a = 0x80049771 then 0xb5#8 else if a = 0x80049772 then 0x45#8 else 0#8
-def snpCodeImgRLLRRRRRRLRR (a : Nat) : BitVec 8 := if a = 0x80049773 then 0xe0#8 else if a = 0x80049774 then 0x13#8 else if a = 0x80049775 then 0x05#8 else if a = 0x80049776 then 0x04#8 else 0#8
+def snpCodeImgRLLRRRRRRLRL (a : Nat) : BitVec 8 := if a = 0x8004976f then 0x00#8 else if a = 0x80049770 then 0x83#8 else if a = 0x80049771 then 0xb5#8 else if a = 0x80049772 then 0xc5#8 else 0#8
+def snpCodeImgRLLRRRRRRLRR (a : Nat) : BitVec 8 := if a = 0x80049773 then 0x7b#8 else if a = 0x80049774 then 0x13#8 else if a = 0x80049775 then 0x05#8 else if a = 0x80049776 then 0x04#8 else 0#8
 def snpCodeImgRLLRRRRRRLR (a : Nat) : BitVec 8 := if a < 0x80049773 then snpCodeImgRLLRRRRRRLRL a else snpCodeImgRLLRRRRRRLRR a
 def snpCodeImgRLLRRRRRRL (a : Nat) : BitVec 8 := if a < 0x8004976f then snpCodeImgRLLRRRRRRLL a else snpCodeImgRLLRRRRRRLR a
 def snpCodeImgRLLRRRRRRRLL (a : Nat) : BitVec 8 := if a = 0x80049777 then 0x00#8 else if a = 0x80049778 then 0xef#8 else if a = 0x80049779 then 0xb0#8 else 0#8
@@ -5144,8 +5144,8 @@ def snpCodeImgRLRLLLLLRL (a : Nat) : BitVec 8 := if a < 0x800497aa then snpCodeI
 def snpCodeImgRLRLLLLLRRLL (a : Nat) : BitVec 8 := if a = 0x800497b1 then 0x0b#8 else if a = 0x800497b2 then 0x1b#8 else if a = 0x800497b3 then 0x00#8 else 0#8
 def snpCodeImgRLRLLLLLRRLR (a : Nat) : BitVec 8 := if a = 0x800497b4 then 0xe3#8 else if a = 0x800497b5 then 0x14#8 else if a = 0x800497b6 then 0x0a#8 else if a = 0x800497b7 then 0xfa#8 else 0#8
 def snpCodeImgRLRLLLLLRRL (a : Nat) : BitVec 8 := if a < 0x800497b4 then snpCodeImgRLRLLLLLRRLL a else snpCodeImgRLRLLLLLRRLR a
-def snpCodeImgRLRLLLLLRRRL (a : Nat) : BitVec 8 := if a = 0x800497b8 then 0x17#8 else if a = 0x800497b9 then 0xda#8 else if a = 0x800497ba then 0x01#8 else if a = 0x800497bb then 0x00#8 else 0#8
-def snpCodeImgRLRLLLLLRRRR (a : Nat) : BitVec 8 := if a = 0x800497bc then 0x03#8 else if a = 0x800497bd then 0x3a#8 else if a = 0x800497be then 0x0a#8 else if a = 0x800497bf then 0x6f#8 else 0#8
+def snpCodeImgRLRLLLLLRRRL (a : Nat) : BitVec 8 := if a = 0x800497b8 then 0x17#8 else if a = 0x800497b9 then 0x8a#8 else if a = 0x800497ba then 0x01#8 else if a = 0x800497bb then 0x00#8 else 0#8
+def snpCodeImgRLRLLLLLRRRR (a : Nat) : BitVec 8 := if a = 0x800497bc then 0x03#8 else if a = 0x800497bd then 0x3a#8 else if a = 0x800497be then 0x8a#8 else if a = 0x800497bf then 0x0a#8 else 0#8
 def snpCodeImgRLRLLLLLRRR (a : Nat) : BitVec 8 := if a < 0x800497bc then snpCodeImgRLRLLLLLRRRL a else snpCodeImgRLRLLLLLRRRR a
 def snpCodeImgRLRLLLLLRR (a : Nat) : BitVec 8 := if a < 0x800497b8 then snpCodeImgRLRLLLLLRRL a else snpCodeImgRLRLLLLLRRR a
 def snpCodeImgRLRLLLLLR (a : Nat) : BitVec 8 := if a < 0x800497b1 then snpCodeImgRLRLLLLLRL a else snpCodeImgRLRLLLLLRR a
@@ -5703,7 +5703,7 @@ def snpCodeImgRLRRLLRLLL (a : Nat) : BitVec 8 := if a < 0x80049ba3 then snpCodeI
 def snpCodeImgRLRRLLRLLRLL (a : Nat) : BitVec 8 := if a = 0x80049baa then 0x5f#8 else if a = 0x80049bab then 0x92#8 else if a = 0x80049bac then 0x17#8 else 0#8
 def snpCodeImgRLRRLLRLLRLR (a : Nat) : BitVec 8 := if a = 0x80049bad then 0xe6#8 else if a = 0x80049bae then 0x00#8 else if a = 0x80049baf then 0x00#8 else if a = 0x80049bb0 then 0x13#8 else 0#8
 def snpCodeImgRLRRLLRLLRL (a : Nat) : BitVec 8 := if a < 0x80049bad then snpCodeImgRLRRLLRLLRLL a else snpCodeImgRLRRLLRLLRLR a
-def snpCodeImgRLRRLLRLLRRL (a : Nat) : BitVec 8 := if a = 0x80049bb1 then 0x06#8 else if a = 0x80049bb2 then 0xc6#8 else if a = 0x80049bb3 then 0x30#8 else if a = 0x80049bb4 then 0x93#8 else 0#8
+def snpCodeImgRLRRLLRLLRRL (a : Nat) : BitVec 8 := if a = 0x80049bb1 then 0x06#8 else if a = 0x80049bb2 then 0x46#8 else if a = 0x80049bb3 then 0x2e#8 else if a = 0x80049bb4 then 0x93#8 else 0#8
 def snpCodeImgRLRRLLRLLRRR (a : Nat) : BitVec 8 := if a = 0x80049bb5 then 0x0f#8 else if a = 0x80049bb6 then 0x20#8 else if a = 0x80049bb7 then 0x00#8 else if a = 0x80049bb8 then 0x13#8 else 0#8
 def snpCodeImgRLRRLLRLLRR (a : Nat) : BitVec 8 := if a < 0x80049bb5 then snpCodeImgRLRRLLRLLRRL a else snpCodeImgRLRRLLRLLRRR a
 def snpCodeImgRLRRLLRLLR (a : Nat) : BitVec 8 := if a < 0x80049bb1 then snpCodeImgRLRRLLRLLRL a else snpCodeImgRLRRLLRLLRR a
@@ -6091,7 +6091,7 @@ def snpCodeImgRLRRRRRLLRR (a : Nat) : BitVec 8 := if a < 0x80049e6f then snpCode
 def snpCodeImgRLRRRRRLLR (a : Nat) : BitVec 8 := if a < 0x80049e6b then snpCodeImgRLRRRRRLLRL a else snpCodeImgRLRRRRRLLRR a
 def snpCodeImgRLRRRRRLL (a : Nat) : BitVec 8 := if a < 0x80049e64 then snpCodeImgRLRRRRRLLL a else snpCodeImgRLRRRRRLLR a
 def snpCodeImgRLRRRRRLRLLL (a : Nat) : BitVec 8 := if a = 0x80049e73 then 0x00#8 else if a = 0x80049e74 then 0x13#8 else if a = 0x80049e75 then 0x0d#8 else 0#8
-def snpCodeImgRLRRRRRLRLLR (a : Nat) : BitVec 8 := if a = 0x80049e76 then 0x0d#8 else if a = 0x80049e77 then 0x03#8 else if a = 0x80049e78 then 0x13#8 else if a = 0x80049e79 then 0x08#8 else 0#8
+def snpCodeImgRLRRRRRLRLLR (a : Nat) : BitVec 8 := if a = 0x80049e76 then 0x8d#8 else if a = 0x80049e77 then 0x00#8 else if a = 0x80049e78 then 0x13#8 else if a = 0x80049e79 then 0x08#8 else 0#8
 def snpCodeImgRLRRRRRLRLL (a : Nat) : BitVec 8 := if a < 0x80049e76 then snpCodeImgRLRRRRRLRLLL a else snpCodeImgRLRRRRRLRLLR a
 def snpCodeImgRLRRRRRLRLRL (a : Nat) : BitVec 8 := if a = 0x80049e7a then 0x40#8 else if a = 0x80049e7b then 0x00#8 else if a = 0x80049e7c then 0x6f#8 else 0#8
 def snpCodeImgRLRRRRRLRLRR (a : Nat) : BitVec 8 := if a = 0x80049e7d then 0xd0#8 else if a = 0x80049e7e then 0xdf#8 else if a = 0x80049e7f then 0xbf#8 else if a = 0x80049e80 then 0x13#8 else 0#8
@@ -6248,7 +6248,7 @@ def snpCodeImgRRLLLLRRLRLL (a : Nat) : BitVec 8 := if a = 0x80049f87 then 0x00#8
 def snpCodeImgRRLLLLRRLRLR (a : Nat) : BitVec 8 := if a = 0x80049f8a then 0xdf#8 else if a = 0x80049f8b then 0xc7#8 else if a = 0x80049f8c then 0x17#8 else if a = 0x80049f8d then 0xed#8 else 0#8
 def snpCodeImgRRLLLLRRLRL (a : Nat) : BitVec 8 := if a < 0x80049f8a then snpCodeImgRRLLLLRRLRLL a else snpCodeImgRRLLLLRRLRLR a
 def snpCodeImgRRLLLLRRLRRL (a : Nat) : BitVec 8 := if a = 0x80049f8e then 0x00#8 else if a = 0x80049f8f then 0x00#8 else if a = 0x80049f90 then 0x13#8 else if a = 0x80049f91 then 0x0d#8 else 0#8
-def snpCodeImgRRLLLLRRLRRR (a : Nat) : BitVec 8 := if a = 0x80049f92 then 0xcd#8 else if a = 0x80049f93 then 0xf1#8 else if a = 0x80049f94 then 0x6f#8 else if a = 0x80049f95 then 0xd0#8 else 0#8
+def snpCodeImgRRLLLLRRLRRR (a : Nat) : BitVec 8 := if a = 0x80049f92 then 0x4d#8 else if a = 0x80049f93 then 0xef#8 else if a = 0x80049f94 then 0x6f#8 else if a = 0x80049f95 then 0xd0#8 else 0#8
 def snpCodeImgRRLLLLRRLRR (a : Nat) : BitVec 8 := if a < 0x80049f92 then snpCodeImgRRLLLLRRLRRL a else snpCodeImgRRLLLLRRLRRR a
 def snpCodeImgRRLLLLRRLR (a : Nat) : BitVec 8 := if a < 0x80049f8e then snpCodeImgRRLLLLRRLRL a else snpCodeImgRRLLLLRRLRR a
 def snpCodeImgRRLLLLRRL (a : Nat) : BitVec 8 := if a < 0x80049f87 then snpCodeImgRRLLLLRRLL a else snpCodeImgRRLLLLRRLR a
@@ -6408,7 +6408,7 @@ def snpCodeImgRRLLRLLLLL (a : Nat) : BitVec 8 := if a < 0x8004a0a3 then snpCodeI
 def snpCodeImgRRLLRLLLLRLL (a : Nat) : BitVec 8 := if a = 0x8004a0aa then 0xdf#8 else if a = 0x8004a0ab then 0xb6#8 else if a = 0x8004a0ac then 0x17#8 else 0#8
 def snpCodeImgRRLLRLLLLRLR (a : Nat) : BitVec 8 := if a = 0x8004a0ad then 0xed#8 else if a = 0x8004a0ae then 0x00#8 else if a = 0x8004a0af then 0x00#8 else if a = 0x8004a0b0 then 0x13#8 else 0#8
 def snpCodeImgRRLLRLLLLRL (a : Nat) : BitVec 8 := if a < 0x8004a0ad then snpCodeImgRRLLRLLLLRLL a else snpCodeImgRRLLRLLLLRLR a
-def snpCodeImgRRLLRLLLLRRL (a : Nat) : BitVec 8 := if a = 0x8004a0b1 then 0x0d#8 else if a = 0x8004a0b2 then 0xcd#8 else if a = 0x8004a0b3 then 0xdf#8 else if a = 0x8004a0b4 then 0x13#8 else 0#8
+def snpCodeImgRRLLRLLLLRRL (a : Nat) : BitVec 8 := if a = 0x8004a0b1 then 0x0d#8 else if a = 0x8004a0b2 then 0x4d#8 else if a = 0x8004a0b3 then 0xdd#8 else if a = 0x8004a0b4 then 0x13#8 else 0#8
 def snpCodeImgRRLLRLLLLRRR (a : Nat) : BitVec 8 := if a = 0x8004a0b5 then 0x08#8 else if a = 0x8004a0b6 then 0x40#8 else if a = 0x8004a0b7 then 0x00#8 else if a = 0x8004a0b8 then 0x6f#8 else 0#8
 def snpCodeImgRRLLRLLLLRR (a : Nat) : BitVec 8 := if a < 0x8004a0b5 then snpCodeImgRRLLRLLLLRRL a else snpCodeImgRRLLRLLLLRRR a
 def snpCodeImgRRLLRLLLLR (a : Nat) : BitVec 8 := if a < 0x8004a0b1 then snpCodeImgRRLLRLLLLRL a else snpCodeImgRRLLRLLLLRR a
@@ -6935,13 +6935,13 @@ def snpCodeImgRRLRRLLLRRLL (a : Nat) : BitVec 8 := if a = 0x8004a469 then 0xf0#8
 def snpCodeImgRRLRRLLLRRLR (a : Nat) : BitVec 8 := if a = 0x8004a46c then 0x13#8 else if a = 0x8004a46d then 0x07#8 else if a = 0x8004a46e then 0x00#8 else if a = 0x8004a46f then 0xff#8 else 0#8
 def snpCodeImgRRLRRLLLRRL (a : Nat) : BitVec 8 := if a < 0x8004a46c then snpCodeImgRRLRRLLLRRLL a else snpCodeImgRRLRRLLLRRLR a
 def snpCodeImgRRLRRLLLRRRL (a : Nat) : BitVec 8 := if a = 0x8004a470 then 0x3b#8 else if a = 0x8004a471 then 0x0a#8 else if a = 0x8004a472 then 0xb0#8 else if a = 0x8004a473 then 0x40#8 else 0#8
-def snpCodeImgRRLRRLLLRRRR (a : Nat) : BitVec 8 := if a = 0x8004a474 then 0x97#8 else if a = 0x8004a475 then 0x5d#8 else if a = 0x8004a476 then 0x01#8 else if a = 0x8004a477 then 0x00#8 else 0#8
+def snpCodeImgRRLRRLLLRRRR (a : Nat) : BitVec 8 := if a = 0x8004a474 then 0x97#8 else if a = 0x8004a475 then 0x0d#8 else if a = 0x8004a476 then 0x01#8 else if a = 0x8004a477 then 0x00#8 else 0#8
 def snpCodeImgRRLRRLLLRRR (a : Nat) : BitVec 8 := if a < 0x8004a474 then snpCodeImgRRLRRLLLRRRL a else snpCodeImgRRLRRLLLRRRR a
 def snpCodeImgRRLRRLLLRR (a : Nat) : BitVec 8 := if a < 0x8004a470 then snpCodeImgRRLRRLLLRRL a else snpCodeImgRRLRRLLLRRR a
 def snpCodeImgRRLRRLLLR (a : Nat) : BitVec 8 := if a < 0x8004a469 then snpCodeImgRRLRRLLLRL a else snpCodeImgRRLRRLLLRR a
 def snpCodeImgRRLRRLLL (a : Nat) : BitVec 8 := if a < 0x8004a45b then snpCodeImgRRLRRLLLL a else snpCodeImgRRLRRLLLR a
-def snpCodeImgRRLRRLLRLLLL (a : Nat) : BitVec 8 := if a = 0x8004a478 then 0x93#8 else if a = 0x8004a479 then 0x8d#8 else if a = 0x8004a47a then 0xcd#8 else 0#8
-def snpCodeImgRRLRRLLRLLLR (a : Nat) : BitVec 8 := if a = 0x8004a47b then 0x6d#8 else if a = 0x8004a47c then 0x63#8 else if a = 0x8004a47d then 0xdc#8 else if a = 0x8004a47e then 0xe5#8 else 0#8
+def snpCodeImgRRLRRLLRLLLL (a : Nat) : BitVec 8 := if a = 0x8004a478 then 0x93#8 else if a = 0x8004a479 then 0x8d#8 else if a = 0x8004a47a then 0x4d#8 else 0#8
+def snpCodeImgRRLRRLLRLLLR (a : Nat) : BitVec 8 := if a = 0x8004a47b then 0x09#8 else if a = 0x8004a47c then 0x63#8 else if a = 0x8004a47d then 0xdc#8 else if a = 0x8004a47e then 0xe5#8 else 0#8
 def snpCodeImgRRLRRLLRLLL (a : Nat) : BitVec 8 := if a < 0x8004a47b then snpCodeImgRRLRRLLRLLLL a else snpCodeImgRRLRRLLRLLLR a
 def snpCodeImgRRLRRLLRLLRL (a : Nat) : BitVec 8 := if a = 0x8004a47f then 0x08#8 else if a = 0x8004a480 then 0x93#8 else if a = 0x8004a481 then 0x87#8 else 0#8
 def snpCodeImgRRLRRLLRLLRR (a : Nat) : BitVec 8 := if a = 0x8004a482 then 0x0b#8 else if a = 0x8004a483 then 0x00#8 else if a = 0x8004a484 then 0x93#8 else if a = 0x8004a485 then 0x0d#8 else 0#8
@@ -6958,11 +6958,11 @@ def snpCodeImgRRLRRLLRL (a : Nat) : BitVec 8 := if a < 0x8004a486 then snpCodeIm
 def snpCodeImgRRLRRLLRRLLL (a : Nat) : BitVec 8 := if a = 0x8004a495 then 0x38#8 else if a = 0x8004a496 then 0x61#8 else if a = 0x8004a497 then 0x02#8 else 0#8
 def snpCodeImgRRLRRLLRRLLR (a : Nat) : BitVec 8 := if a = 0x8004a498 then 0x93#8 else if a = 0x8004a499 then 0x0b#8 else if a = 0x8004a49a then 0x08#8 else if a = 0x8004a49b then 0x00#8 else 0#8
 def snpCodeImgRRLRRLLRRLL (a : Nat) : BitVec 8 := if a < 0x8004a498 then snpCodeImgRRLRRLLRRLLL a else snpCodeImgRRLRRLLRRLLR a
-def snpCodeImgRRLRRLLRRLRL (a : Nat) : BitVec 8 := if a = 0x8004a49c then 0x17#8 else if a = 0x8004a49d then 0x5a#8 else if a = 0x8004a49e then 0x01#8 else 0#8
-def snpCodeImgRRLRRLLRRLRR (a : Nat) : BitVec 8 := if a = 0x8004a49f then 0x00#8 else if a = 0x8004a4a0 then 0x13#8 else if a = 0x8004a4a1 then 0x0a#8 else if a = 0x8004a4a2 then 0x4a#8 else 0#8
+def snpCodeImgRRLRRLLRRLRL (a : Nat) : BitVec 8 := if a = 0x8004a49c then 0x17#8 else if a = 0x8004a49d then 0x0a#8 else if a = 0x8004a49e then 0x01#8 else 0#8
+def snpCodeImgRRLRRLLRRLRR (a : Nat) : BitVec 8 := if a = 0x8004a49f then 0x00#8 else if a = 0x8004a4a0 then 0x13#8 else if a = 0x8004a4a1 then 0x0a#8 else if a = 0x8004a4a2 then 0xca#8 else 0#8
 def snpCodeImgRRLRRLLRRLR (a : Nat) : BitVec 8 := if a < 0x8004a49f then snpCodeImgRRLRRLLRRLRL a else snpCodeImgRRLRRLLRRLRR a
 def snpCodeImgRRLRRLLRRL (a : Nat) : BitVec 8 := if a < 0x8004a49c then snpCodeImgRRLRRLLRRLL a else snpCodeImgRRLRRLLRRLR a
-def snpCodeImgRRLRRLLRRRLL (a : Nat) : BitVec 8 := if a = 0x8004a4a3 then 0x6b#8 else if a = 0x8004a4a4 then 0x6f#8 else if a = 0x8004a4a5 then 0x00#8 else 0#8
+def snpCodeImgRRLRRLLRRRLL (a : Nat) : BitVec 8 := if a = 0x8004a4a3 then 0x06#8 else if a = 0x8004a4a4 then 0x6f#8 else if a = 0x8004a4a5 then 0x00#8 else 0#8
 def snpCodeImgRRLRRLLRRRLR (a : Nat) : BitVec 8 := if a = 0x8004a4a6 then 0xc0#8 else if a = 0x8004a4a7 then 0x00#8 else if a = 0x8004a4a8 then 0x9b#8 else if a = 0x8004a4a9 then 0x8d#8 else 0#8
 def snpCodeImgRRLRRLLRRRL (a : Nat) : BitVec 8 := if a < 0x8004a4a6 then snpCodeImgRRLRRLLRRRLL a else snpCodeImgRRLRRLLRRRLR a
 def snpCodeImgRRLRRLLRRRRL (a : Nat) : BitVec 8 := if a = 0x8004a4aa then 0x0d#8 else if a = 0x8004a4ab then 0xff#8 else if a = 0x8004a4ac then 0x63#8 else if a = 0x8004a4ad then 0x56#8 else 0#8
@@ -7248,7 +7248,7 @@ def snpCodeImgRRRLLLRLRLLL (a : Nat) : BitVec 8 := if a = 0x8004a6a0 then 0x63#8
 def snpCodeImgRRRLLLRLRLLR (a : Nat) : BitVec 8 := if a = 0x8004a6a3 then 0x29#8 else if a = 0x8004a6a4 then 0x17#8 else if a = 0x8004a6a5 then 0xcd#8 else if a = 0x8004a6a6 then 0x00#8 else 0#8
 def snpCodeImgRRRLLLRLRLL (a : Nat) : BitVec 8 := if a < 0x8004a6a3 then snpCodeImgRRRLLLRLRLLL a else snpCodeImgRRRLLLRLRLLR a
 def snpCodeImgRRRLLLRLRLRL (a : Nat) : BitVec 8 := if a = 0x8004a6a7 then 0x00#8 else if a = 0x8004a6a8 then 0x13#8 else if a = 0x8004a6a9 then 0x0d#8 else 0#8
-def snpCodeImgRRRLLLRLRLRR (a : Nat) : BitVec 8 := if a = 0x8004a6aa then 0x4d#8 else if a = 0x8004a6ab then 0x35#8 else if a = 0x8004a6ac then 0x13#8 else if a = 0x8004a6ad then 0x08#8 else 0#8
+def snpCodeImgRRRLLLRLRLRR (a : Nat) : BitVec 8 := if a = 0x8004a6aa then 0xcd#8 else if a = 0x8004a6ab then 0x32#8 else if a = 0x8004a6ac then 0x13#8 else if a = 0x8004a6ad then 0x08#8 else 0#8
 def snpCodeImgRRRLLLRLRLR (a : Nat) : BitVec 8 := if a < 0x8004a6aa then snpCodeImgRRRLLLRLRLRL a else snpCodeImgRRRLLLRLRLRR a
 def snpCodeImgRRRLLLRLRL (a : Nat) : BitVec 8 := if a < 0x8004a6a7 then snpCodeImgRRRLLLRLRLL a else snpCodeImgRRRLLLRLRLR a
 def snpCodeImgRRRLLLRLRRLL (a : Nat) : BitVec 8 := if a = 0x8004a6ae then 0x40#8 else if a = 0x8004a6af then 0x00#8 else if a = 0x8004a6b0 then 0x6f#8 else 0#8
@@ -7548,10 +7548,10 @@ def snpCodeImgRRRLRLRRR (a : Nat) : BitVec 8 := if a < 0x8004a8b9 then snpCodeIm
 def snpCodeImgRRRLRLRR (a : Nat) : BitVec 8 := if a < 0x8004a8ab then snpCodeImgRRRLRLRRL a else snpCodeImgRRRLRLRRR a
 def snpCodeImgRRRLRLR (a : Nat) : BitVec 8 := if a < 0x8004a88e then snpCodeImgRRRLRLRL a else snpCodeImgRRRLRLRR a
 def snpCodeImgRRRLRL (a : Nat) : BitVec 8 := if a < 0x8004a854 then snpCodeImgRRRLRLL a else snpCodeImgRRRLRLR a
-def snpCodeImgRRRLRRLLLLLL (a : Nat) : BitVec 8 := if a = 0x8004a8c8 then 0x97#8 else if a = 0x8004a8c9 then 0x5d#8 else if a = 0x8004a8ca then 0x01#8 else 0#8
-def snpCodeImgRRRLRRLLLLLR (a : Nat) : BitVec 8 := if a = 0x8004a8cb then 0x00#8 else if a = 0x8004a8cc then 0x93#8 else if a = 0x8004a8cd then 0x8d#8 else if a = 0x8004a8ce then 0x8d#8 else 0#8
+def snpCodeImgRRRLRRLLLLLL (a : Nat) : BitVec 8 := if a = 0x8004a8c8 then 0x97#8 else if a = 0x8004a8c9 then 0x0d#8 else if a = 0x8004a8ca then 0x01#8 else 0#8
+def snpCodeImgRRRLRRLLLLLR (a : Nat) : BitVec 8 := if a = 0x8004a8cb then 0x00#8 else if a = 0x8004a8cc then 0x93#8 else if a = 0x8004a8cd then 0x8d#8 else if a = 0x8004a8ce then 0x0d#8 else 0#8
 def snpCodeImgRRRLRRLLLLL (a : Nat) : BitVec 8 := if a < 0x8004a8cb then snpCodeImgRRRLRRLLLLLL a else snpCodeImgRRRLRRLLLLLR a
-def snpCodeImgRRRLRRLLLLRL (a : Nat) : BitVec 8 := if a = 0x8004a8cf then 0x28#8 else if a = 0x8004a8d0 then 0x6f#8 else if a = 0x8004a8d1 then 0xf0#8 else 0#8
+def snpCodeImgRRRLRRLLLLRL (a : Nat) : BitVec 8 := if a = 0x8004a8cf then 0xc4#8 else if a = 0x8004a8d0 then 0x6f#8 else if a = 0x8004a8d1 then 0xf0#8 else 0#8
 def snpCodeImgRRRLRRLLLLRR (a : Nat) : BitVec 8 := if a = 0x8004a8d2 then 0x0f#8 else if a = 0x8004a8d3 then 0xa8#8 else if a = 0x8004a8d4 then 0x93#8 else if a = 0x8004a8d5 then 0x06#8 else 0#8
 def snpCodeImgRRRLRRLLLLR (a : Nat) : BitVec 8 := if a < 0x8004a8d2 then snpCodeImgRRRLRRLLLLRL a else snpCodeImgRRRLRRLLLLRR a
 def snpCodeImgRRRLRRLLLL (a : Nat) : BitVec 8 := if a < 0x8004a8cf then snpCodeImgRRRLRRLLLLL a else snpCodeImgRRRLRRLLLLR a
@@ -7559,15 +7559,15 @@ def snpCodeImgRRRLRRLLLRLL (a : Nat) : BitVec 8 := if a = 0x8004a8d6 then 0x70#8
 def snpCodeImgRRRLRRLLLRLR (a : Nat) : BitVec 8 := if a = 0x8004a8d9 then 0x47#8 else if a = 0x8004a8da then 0x71#8 else if a = 0x8004a8db then 0x0a#8 else if a = 0x8004a8dc then 0x17#8 else 0#8
 def snpCodeImgRRRLRRLLLRL (a : Nat) : BitVec 8 := if a < 0x8004a8d9 then snpCodeImgRRRLRRLLLRLL a else snpCodeImgRRRLRRLLLRLR a
 def snpCodeImgRRRLRRLLLRRL (a : Nat) : BitVec 8 := if a = 0x8004a8dd then 0xdd#8 else if a = 0x8004a8de then 0x00#8 else if a = 0x8004a8df then 0x00#8 else if a = 0x8004a8e0 then 0x13#8 else 0#8
-def snpCodeImgRRRLRRLLLRRR (a : Nat) : BitVec 8 := if a = 0x8004a8e1 then 0x0d#8 else if a = 0x8004a8e2 then 0x4d#8 else if a = 0x8004a8e3 then 0x5d#8 else if a = 0x8004a8e4 then 0x63#8 else 0#8
+def snpCodeImgRRRLRRLLLRRR (a : Nat) : BitVec 8 := if a = 0x8004a8e1 then 0x0d#8 else if a = 0x8004a8e2 then 0xcd#8 else if a = 0x8004a8e3 then 0x5a#8 else if a = 0x8004a8e4 then 0x63#8 else 0#8
 def snpCodeImgRRRLRRLLLRR (a : Nat) : BitVec 8 := if a < 0x8004a8e1 then snpCodeImgRRRLRRLLLRRL a else snpCodeImgRRRLRRLLLRRR a
 def snpCodeImgRRRLRRLLLR (a : Nat) : BitVec 8 := if a < 0x8004a8dd then snpCodeImgRRRLRRLLLRL a else snpCodeImgRRRLRRLLLRR a
 def snpCodeImgRRRLRRLLL (a : Nat) : BitVec 8 := if a < 0x8004a8d6 then snpCodeImgRRRLRRLLLL a else snpCodeImgRRRLRRLLLR a
 def snpCodeImgRRRLRRLLRLLL (a : Nat) : BitVec 8 := if a = 0x8004a8e5 then 0xd6#8 else if a = 0x8004a8e6 then 0x86#8 else if a = 0x8004a8e7 then 0x01#8 else 0#8
 def snpCodeImgRRRLRRLLRLLR (a : Nat) : BitVec 8 := if a = 0x8004a8e8 then 0x17#8 else if a = 0x8004a8e9 then 0xcd#8 else if a = 0x8004a8ea then 0x00#8 else if a = 0x8004a8eb then 0x00#8 else 0#8
 def snpCodeImgRRRLRRLLRLL (a : Nat) : BitVec 8 := if a < 0x8004a8e8 then snpCodeImgRRRLRRLLRLLL a else snpCodeImgRRRLRRLLRLLR a
-def snpCodeImgRRRLRRLLRLRL (a : Nat) : BitVec 8 := if a = 0x8004a8ec then 0x13#8 else if a = 0x8004a8ed then 0x0d#8 else if a = 0x8004a8ee then 0x0d#8 else 0#8
-def snpCodeImgRRRLRRLLRLRR (a : Nat) : BitVec 8 := if a = 0x8004a8ef then 0x11#8 else if a = 0x8004a8f0 then 0x63#8 else if a = 0x8004a8f1 then 0x14#8 else if a = 0x8004a8f2 then 0x07#8 else 0#8
+def snpCodeImgRRRLRRLLRLRL (a : Nat) : BitVec 8 := if a = 0x8004a8ec then 0x13#8 else if a = 0x8004a8ed then 0x0d#8 else if a = 0x8004a8ee then 0x8d#8 else 0#8
+def snpCodeImgRRRLRRLLRLRR (a : Nat) : BitVec 8 := if a = 0x8004a8ef then 0x0e#8 else if a = 0x8004a8f0 then 0x63#8 else if a = 0x8004a8f1 then 0x14#8 else if a = 0x8004a8f2 then 0x07#8 else 0#8
 def snpCodeImgRRRLRRLLRLR (a : Nat) : BitVec 8 := if a < 0x8004a8ef then snpCodeImgRRRLRRLLRLRL a else snpCodeImgRRRLRRLLRLRR a
 def snpCodeImgRRRLRRLLRL (a : Nat) : BitVec 8 := if a < 0x8004a8ec then snpCodeImgRRRLRRLLRLL a else snpCodeImgRRRLRRLLRLR a
 def snpCodeImgRRRLRRLLRRLL (a : Nat) : BitVec 8 := if a = 0x8004a8f3 then 0x12#8 else if a = 0x8004a8f4 then 0x13#8 else if a = 0x8004a8f5 then 0x0b#8 else 0#8
@@ -7602,7 +7602,7 @@ def snpCodeImgRRRLRRLRRLRR (a : Nat) : BitVec 8 := if a = 0x8004a929 then 0xd0#8
 def snpCodeImgRRRLRRLRRLR (a : Nat) : BitVec 8 := if a < 0x8004a929 then snpCodeImgRRRLRRLRRLRL a else snpCodeImgRRRLRRLRRLRR a
 def snpCodeImgRRRLRRLRRL (a : Nat) : BitVec 8 := if a < 0x8004a926 then snpCodeImgRRRLRRLRRLL a else snpCodeImgRRRLRRLRRLR a
 def snpCodeImgRRRLRRLRRRLL (a : Nat) : BitVec 8 := if a = 0x8004a92d then 0xdd#8 else if a = 0x8004a92e then 0x00#8 else if a = 0x8004a92f then 0x00#8 else 0#8
-def snpCodeImgRRRLRRLRRRLR (a : Nat) : BitVec 8 := if a = 0x8004a930 then 0x13#8 else if a = 0x8004a931 then 0x0d#8 else if a = 0x8004a932 then 0x4d#8 else if a = 0x8004a933 then 0x58#8 else 0#8
+def snpCodeImgRRRLRRLRRRLR (a : Nat) : BitVec 8 := if a = 0x8004a930 then 0x13#8 else if a = 0x8004a931 then 0x0d#8 else if a = 0x8004a932 then 0xcd#8 else if a = 0x8004a933 then 0x55#8 else 0#8
 def snpCodeImgRRRLRRLRRRL (a : Nat) : BitVec 8 := if a < 0x8004a930 then snpCodeImgRRRLRRLRRRLL a else snpCodeImgRRRLRRLRRRLR a
 def snpCodeImgRRRLRRLRRRRL (a : Nat) : BitVec 8 := if a = 0x8004a934 then 0x13#8 else if a = 0x8004a935 then 0x08#8 else if a = 0x8004a936 then 0x40#8 else if a = 0x8004a937 then 0x00#8 else 0#8
 def snpCodeImgRRRLRRLRRRRR (a : Nat) : BitVec 8 := if a = 0x8004a938 then 0x6f#8 else if a = 0x8004a939 then 0xd0#8 else if a = 0x8004a93a then 0x0f#8 else if a = 0x8004a93b then 0x94#8 else 0#8
@@ -8192,259 +8192,259 @@ def snpCodeImgRRR (a : Nat) : BitVec 8 := if a < 0x8004a9b1 then snpCodeImgRRRL 
 def snpCodeImgRR (a : Nat) : BitVec 8 := if a < 0x8004a60f then snpCodeImgRRL a else snpCodeImgRRR a
 def snpCodeImgR (a : Nat) : BitVec 8 := if a < 0x80049ecb then snpCodeImgRL a else snpCodeImgRR a
 def snpCodeImg (a : Nat) : BitVec 8 := if a < 0x80049042 then snpCodeImgL a else snpCodeImgR a
-def snpTableImgLLLLLLL (a : Nat) : BitVec 8 := if a = 0x8005f9e0 then 0xa4#8 else if a = 0x8005f9e1 then 0x8a#8 else 0#8
-def snpTableImgLLLLLLR (a : Nat) : BitVec 8 := if a = 0x8005f9e2 then 0xfe#8 else if a = 0x8005f9e3 then 0xff#8 else if a = 0x8005f9e4 then 0x64#8 else 0#8
-def snpTableImgLLLLLL (a : Nat) : BitVec 8 := if a < 0x8005f9e2 then snpTableImgLLLLLLL a else snpTableImgLLLLLLR a
-def snpTableImgLLLLLRL (a : Nat) : BitVec 8 := if a = 0x8005f9e5 then 0x80#8 else if a = 0x8005f9e6 then 0xfe#8 else if a = 0x8005f9e7 then 0xff#8 else 0#8
-def snpTableImgLLLLLRR (a : Nat) : BitVec 8 := if a = 0x8005f9e8 then 0x64#8 else if a = 0x8005f9e9 then 0x80#8 else if a = 0x8005f9ea then 0xfe#8 else 0#8
-def snpTableImgLLLLLR (a : Nat) : BitVec 8 := if a < 0x8005f9e8 then snpTableImgLLLLLRL a else snpTableImgLLLLLRR a
-def snpTableImgLLLLL (a : Nat) : BitVec 8 := if a < 0x8005f9e5 then snpTableImgLLLLLL a else snpTableImgLLLLLR a
-def snpTableImgLLLLRLL (a : Nat) : BitVec 8 := if a = 0x8005f9eb then 0xff#8 else if a = 0x8005f9ec then 0x98#8 else if a = 0x8005f9ed then 0x8a#8 else 0#8
-def snpTableImgLLLLRLR (a : Nat) : BitVec 8 := if a = 0x8005f9ee then 0xfe#8 else if a = 0x8005f9ef then 0xff#8 else if a = 0x8005f9f0 then 0x64#8 else 0#8
-def snpTableImgLLLLRL (a : Nat) : BitVec 8 := if a < 0x8005f9ee then snpTableImgLLLLRLL a else snpTableImgLLLLRLR a
-def snpTableImgLLLLRRL (a : Nat) : BitVec 8 := if a = 0x8005f9f1 then 0x80#8 else if a = 0x8005f9f2 then 0xfe#8 else if a = 0x8005f9f3 then 0xff#8 else 0#8
-def snpTableImgLLLLRRR (a : Nat) : BitVec 8 := if a = 0x8005f9f4 then 0x64#8 else if a = 0x8005f9f5 then 0x80#8 else if a = 0x8005f9f6 then 0xfe#8 else 0#8
-def snpTableImgLLLLRR (a : Nat) : BitVec 8 := if a < 0x8005f9f4 then snpTableImgLLLLRRL a else snpTableImgLLLLRRR a
-def snpTableImgLLLLR (a : Nat) : BitVec 8 := if a < 0x8005f9f1 then snpTableImgLLLLRL a else snpTableImgLLLLRR a
-def snpTableImgLLLL (a : Nat) : BitVec 8 := if a < 0x8005f9eb then snpTableImgLLLLL a else snpTableImgLLLLR a
-def snpTableImgLLLRLLL (a : Nat) : BitVec 8 := if a = 0x8005f9f7 then 0xff#8 else if a = 0x8005f9f8 then 0x64#8 else 0#8
-def snpTableImgLLLRLLR (a : Nat) : BitVec 8 := if a = 0x8005f9f9 then 0x80#8 else if a = 0x8005f9fa then 0xfe#8 else if a = 0x8005f9fb then 0xff#8 else 0#8
-def snpTableImgLLLRLL (a : Nat) : BitVec 8 := if a < 0x8005f9f9 then snpTableImgLLLRLLL a else snpTableImgLLLRLLR a
-def snpTableImgLLLRLRL (a : Nat) : BitVec 8 := if a = 0x8005f9fc then 0x44#8 else if a = 0x8005f9fd then 0x8a#8 else if a = 0x8005f9fe then 0xfe#8 else 0#8
-def snpTableImgLLLRLRR (a : Nat) : BitVec 8 := if a = 0x8005f9ff then 0xff#8 else if a = 0x8005fa00 then 0x64#8 else if a = 0x8005fa01 then 0x80#8 else 0#8
-def snpTableImgLLLRLR (a : Nat) : BitVec 8 := if a < 0x8005f9ff then snpTableImgLLLRLRL a else snpTableImgLLLRLRR a
-def snpTableImgLLLRL (a : Nat) : BitVec 8 := if a < 0x8005f9fc then snpTableImgLLLRLL a else snpTableImgLLLRLR a
-def snpTableImgLLLRRLL (a : Nat) : BitVec 8 := if a = 0x8005fa02 then 0xfe#8 else if a = 0x8005fa03 then 0xff#8 else if a = 0x8005fa04 then 0x64#8 else 0#8
-def snpTableImgLLLRRLR (a : Nat) : BitVec 8 := if a = 0x8005fa05 then 0x80#8 else if a = 0x8005fa06 then 0xfe#8 else if a = 0x8005fa07 then 0xff#8 else 0#8
-def snpTableImgLLLRRL (a : Nat) : BitVec 8 := if a < 0x8005fa05 then snpTableImgLLLRRLL a else snpTableImgLLLRRLR a
-def snpTableImgLLLRRRL (a : Nat) : BitVec 8 := if a = 0x8005fa08 then 0xa4#8 else if a = 0x8005fa09 then 0x89#8 else if a = 0x8005fa0a then 0xfe#8 else 0#8
-def snpTableImgLLLRRRR (a : Nat) : BitVec 8 := if a = 0x8005fa0b then 0xff#8 else if a = 0x8005fa0c then 0xcc#8 else if a = 0x8005fa0d then 0x89#8 else 0#8
-def snpTableImgLLLRRR (a : Nat) : BitVec 8 := if a < 0x8005fa0b then snpTableImgLLLRRRL a else snpTableImgLLLRRRR a
-def snpTableImgLLLRR (a : Nat) : BitVec 8 := if a < 0x8005fa08 then snpTableImgLLLRRL a else snpTableImgLLLRRR a
-def snpTableImgLLLR (a : Nat) : BitVec 8 := if a < 0x8005fa02 then snpTableImgLLLRL a else snpTableImgLLLRR a
-def snpTableImgLLL (a : Nat) : BitVec 8 := if a < 0x8005f9f7 then snpTableImgLLLL a else snpTableImgLLLR a
-def snpTableImgLLRLLLL (a : Nat) : BitVec 8 := if a = 0x8005fa0e then 0xfe#8 else if a = 0x8005fa0f then 0xff#8 else 0#8
-def snpTableImgLLRLLLR (a : Nat) : BitVec 8 := if a = 0x8005fa10 then 0x64#8 else if a = 0x8005fa11 then 0x80#8 else if a = 0x8005fa12 then 0xfe#8 else 0#8
-def snpTableImgLLRLLL (a : Nat) : BitVec 8 := if a < 0x8005fa10 then snpTableImgLLRLLLL a else snpTableImgLLRLLLR a
-def snpTableImgLLRLLRL (a : Nat) : BitVec 8 := if a = 0x8005fa13 then 0xff#8 else if a = 0x8005fa14 then 0xc0#8 else if a = 0x8005fa15 then 0x89#8 else 0#8
-def snpTableImgLLRLLRR (a : Nat) : BitVec 8 := if a = 0x8005fa16 then 0xfe#8 else if a = 0x8005fa17 then 0xff#8 else if a = 0x8005fa18 then 0xe8#8 else 0#8
-def snpTableImgLLRLLR (a : Nat) : BitVec 8 := if a < 0x8005fa16 then snpTableImgLLRLLRL a else snpTableImgLLRLLRR a
-def snpTableImgLLRLL (a : Nat) : BitVec 8 := if a < 0x8005fa13 then snpTableImgLLRLLL a else snpTableImgLLRLLR a
-def snpTableImgLLRLRLL (a : Nat) : BitVec 8 := if a = 0x8005fa19 then 0x89#8 else if a = 0x8005fa1a then 0xfe#8 else if a = 0x8005fa1b then 0xff#8 else 0#8
-def snpTableImgLLRLRLR (a : Nat) : BitVec 8 := if a = 0x8005fa1c then 0x64#8 else if a = 0x8005fa1d then 0x80#8 else if a = 0x8005fa1e then 0xfe#8 else 0#8
-def snpTableImgLLRLRL (a : Nat) : BitVec 8 := if a < 0x8005fa1c then snpTableImgLLRLRLL a else snpTableImgLLRLRLR a
-def snpTableImgLLRLRRL (a : Nat) : BitVec 8 := if a = 0x8005fa1f then 0xff#8 else if a = 0x8005fa20 then 0xdc#8 else if a = 0x8005fa21 then 0x89#8 else 0#8
-def snpTableImgLLRLRRR (a : Nat) : BitVec 8 := if a = 0x8005fa22 then 0xfe#8 else if a = 0x8005fa23 then 0xff#8 else if a = 0x8005fa24 then 0x2c#8 else 0#8
-def snpTableImgLLRLRR (a : Nat) : BitVec 8 := if a < 0x8005fa22 then snpTableImgLLRLRRL a else snpTableImgLLRLRRR a
-def snpTableImgLLRLR (a : Nat) : BitVec 8 := if a < 0x8005fa1f then snpTableImgLLRLRL a else snpTableImgLLRLRR a
-def snpTableImgLLRL (a : Nat) : BitVec 8 := if a < 0x8005fa19 then snpTableImgLLRLL a else snpTableImgLLRLR a
-def snpTableImgLLRRLLL (a : Nat) : BitVec 8 := if a = 0x8005fa25 then 0x80#8 else if a = 0x8005fa26 then 0xfe#8 else 0#8
-def snpTableImgLLRRLLR (a : Nat) : BitVec 8 := if a = 0x8005fa27 then 0xff#8 else if a = 0x8005fa28 then 0x2c#8 else if a = 0x8005fa29 then 0x80#8 else 0#8
-def snpTableImgLLRRLL (a : Nat) : BitVec 8 := if a < 0x8005fa27 then snpTableImgLLRRLLL a else snpTableImgLLRRLLR a
-def snpTableImgLLRRLRL (a : Nat) : BitVec 8 := if a = 0x8005fa2a then 0xfe#8 else if a = 0x8005fa2b then 0xff#8 else if a = 0x8005fa2c then 0x2c#8 else 0#8
-def snpTableImgLLRRLRR (a : Nat) : BitVec 8 := if a = 0x8005fa2d then 0x80#8 else if a = 0x8005fa2e then 0xfe#8 else if a = 0x8005fa2f then 0xff#8 else 0#8
-def snpTableImgLLRRLR (a : Nat) : BitVec 8 := if a < 0x8005fa2d then snpTableImgLLRRLRL a else snpTableImgLLRRLRR a
-def snpTableImgLLRRL (a : Nat) : BitVec 8 := if a < 0x8005fa2a then snpTableImgLLRRLL a else snpTableImgLLRRLR a
-def snpTableImgLLRRRLL (a : Nat) : BitVec 8 := if a = 0x8005fa30 then 0x2c#8 else if a = 0x8005fa31 then 0x80#8 else if a = 0x8005fa32 then 0xfe#8 else 0#8
-def snpTableImgLLRRRLR (a : Nat) : BitVec 8 := if a = 0x8005fa33 then 0xff#8 else if a = 0x8005fa34 then 0x2c#8 else if a = 0x8005fa35 then 0x80#8 else 0#8
-def snpTableImgLLRRRL (a : Nat) : BitVec 8 := if a < 0x8005fa33 then snpTableImgLLRRRLL a else snpTableImgLLRRRLR a
-def snpTableImgLLRRRRL (a : Nat) : BitVec 8 := if a = 0x8005fa36 then 0xfe#8 else if a = 0x8005fa37 then 0xff#8 else if a = 0x8005fa38 then 0x2c#8 else 0#8
-def snpTableImgLLRRRRR (a : Nat) : BitVec 8 := if a = 0x8005fa39 then 0x80#8 else if a = 0x8005fa3a then 0xfe#8 else if a = 0x8005fa3b then 0xff#8 else 0#8
-def snpTableImgLLRRRR (a : Nat) : BitVec 8 := if a < 0x8005fa39 then snpTableImgLLRRRRL a else snpTableImgLLRRRRR a
-def snpTableImgLLRRR (a : Nat) : BitVec 8 := if a < 0x8005fa36 then snpTableImgLLRRRL a else snpTableImgLLRRRR a
-def snpTableImgLLRR (a : Nat) : BitVec 8 := if a < 0x8005fa30 then snpTableImgLLRRL a else snpTableImgLLRRR a
-def snpTableImgLLR (a : Nat) : BitVec 8 := if a < 0x8005fa25 then snpTableImgLLRL a else snpTableImgLLRR a
-def snpTableImgLL (a : Nat) : BitVec 8 := if a < 0x8005fa0e then snpTableImgLLL a else snpTableImgLLR a
-def snpTableImgLRLLLLL (a : Nat) : BitVec 8 := if a = 0x8005fa3c then 0x2c#8 else if a = 0x8005fa3d then 0x80#8 else 0#8
-def snpTableImgLRLLLLR (a : Nat) : BitVec 8 := if a = 0x8005fa3e then 0xfe#8 else if a = 0x8005fa3f then 0xff#8 else if a = 0x8005fa40 then 0x2c#8 else 0#8
-def snpTableImgLRLLLL (a : Nat) : BitVec 8 := if a < 0x8005fa3e then snpTableImgLRLLLLL a else snpTableImgLRLLLLR a
-def snpTableImgLRLLLRL (a : Nat) : BitVec 8 := if a = 0x8005fa41 then 0x80#8 else if a = 0x8005fa42 then 0xfe#8 else if a = 0x8005fa43 then 0xff#8 else 0#8
-def snpTableImgLRLLLRR (a : Nat) : BitVec 8 := if a = 0x8005fa44 then 0x2c#8 else if a = 0x8005fa45 then 0x80#8 else if a = 0x8005fa46 then 0xfe#8 else 0#8
-def snpTableImgLRLLLR (a : Nat) : BitVec 8 := if a < 0x8005fa44 then snpTableImgLRLLLRL a else snpTableImgLRLLLRR a
-def snpTableImgLRLLL (a : Nat) : BitVec 8 := if a < 0x8005fa41 then snpTableImgLRLLLL a else snpTableImgLRLLLR a
-def snpTableImgLRLLRLL (a : Nat) : BitVec 8 := if a = 0x8005fa47 then 0xff#8 else if a = 0x8005fa48 then 0x64#8 else if a = 0x8005fa49 then 0x80#8 else 0#8
-def snpTableImgLRLLRLR (a : Nat) : BitVec 8 := if a = 0x8005fa4a then 0xfe#8 else if a = 0x8005fa4b then 0xff#8 else if a = 0x8005fa4c then 0x64#8 else 0#8
-def snpTableImgLRLLRL (a : Nat) : BitVec 8 := if a < 0x8005fa4a then snpTableImgLRLLRLL a else snpTableImgLRLLRLR a
-def snpTableImgLRLLRRL (a : Nat) : BitVec 8 := if a = 0x8005fa4d then 0x80#8 else if a = 0x8005fa4e then 0xfe#8 else if a = 0x8005fa4f then 0xff#8 else 0#8
-def snpTableImgLRLLRRR (a : Nat) : BitVec 8 := if a = 0x8005fa50 then 0x64#8 else if a = 0x8005fa51 then 0x80#8 else if a = 0x8005fa52 then 0xfe#8 else 0#8
-def snpTableImgLRLLRR (a : Nat) : BitVec 8 := if a < 0x8005fa50 then snpTableImgLRLLRRL a else snpTableImgLRLLRRR a
-def snpTableImgLRLLR (a : Nat) : BitVec 8 := if a < 0x8005fa4d then snpTableImgLRLLRL a else snpTableImgLRLLRR a
-def snpTableImgLRLL (a : Nat) : BitVec 8 := if a < 0x8005fa47 then snpTableImgLRLLL a else snpTableImgLRLLR a
-def snpTableImgLRLRLLL (a : Nat) : BitVec 8 := if a = 0x8005fa53 then 0xff#8 else if a = 0x8005fa54 then 0x64#8 else 0#8
-def snpTableImgLRLRLLR (a : Nat) : BitVec 8 := if a = 0x8005fa55 then 0x80#8 else if a = 0x8005fa56 then 0xfe#8 else if a = 0x8005fa57 then 0xff#8 else 0#8
-def snpTableImgLRLRLL (a : Nat) : BitVec 8 := if a < 0x8005fa55 then snpTableImgLRLRLLL a else snpTableImgLRLRLLR a
-def snpTableImgLRLRLRL (a : Nat) : BitVec 8 := if a = 0x8005fa58 then 0x64#8 else if a = 0x8005fa59 then 0x80#8 else if a = 0x8005fa5a then 0xfe#8 else 0#8
-def snpTableImgLRLRLRR (a : Nat) : BitVec 8 := if a = 0x8005fa5b then 0xff#8 else if a = 0x8005fa5c then 0x64#8 else if a = 0x8005fa5d then 0x80#8 else 0#8
-def snpTableImgLRLRLR (a : Nat) : BitVec 8 := if a < 0x8005fa5b then snpTableImgLRLRLRL a else snpTableImgLRLRLRR a
-def snpTableImgLRLRL (a : Nat) : BitVec 8 := if a < 0x8005fa58 then snpTableImgLRLRLL a else snpTableImgLRLRLR a
-def snpTableImgLRLRRLL (a : Nat) : BitVec 8 := if a = 0x8005fa5e then 0xfe#8 else if a = 0x8005fa5f then 0xff#8 else if a = 0x8005fa60 then 0x64#8 else 0#8
-def snpTableImgLRLRRLR (a : Nat) : BitVec 8 := if a = 0x8005fa61 then 0x80#8 else if a = 0x8005fa62 then 0xfe#8 else if a = 0x8005fa63 then 0xff#8 else 0#8
-def snpTableImgLRLRRL (a : Nat) : BitVec 8 := if a < 0x8005fa61 then snpTableImgLRLRRLL a else snpTableImgLRLRRLR a
-def snpTableImgLRLRRRL (a : Nat) : BitVec 8 := if a = 0x8005fa64 then 0x98#8 else if a = 0x8005fa65 then 0x82#8 else if a = 0x8005fa66 then 0xfe#8 else 0#8
-def snpTableImgLRLRRRR (a : Nat) : BitVec 8 := if a = 0x8005fa67 then 0xff#8 else if a = 0x8005fa68 then 0x64#8 else if a = 0x8005fa69 then 0x80#8 else 0#8
-def snpTableImgLRLRRR (a : Nat) : BitVec 8 := if a < 0x8005fa67 then snpTableImgLRLRRRL a else snpTableImgLRLRRRR a
-def snpTableImgLRLRR (a : Nat) : BitVec 8 := if a < 0x8005fa64 then snpTableImgLRLRRL a else snpTableImgLRLRRR a
-def snpTableImgLRLR (a : Nat) : BitVec 8 := if a < 0x8005fa5e then snpTableImgLRLRL a else snpTableImgLRLRR a
-def snpTableImgLRL (a : Nat) : BitVec 8 := if a < 0x8005fa53 then snpTableImgLRLL a else snpTableImgLRLR a
-def snpTableImgLRRLLLL (a : Nat) : BitVec 8 := if a = 0x8005fa6a then 0xfe#8 else if a = 0x8005fa6b then 0xff#8 else 0#8
-def snpTableImgLRRLLLR (a : Nat) : BitVec 8 := if a = 0x8005fa6c then 0x98#8 else if a = 0x8005fa6d then 0x84#8 else if a = 0x8005fa6e then 0xfe#8 else 0#8
-def snpTableImgLRRLLL (a : Nat) : BitVec 8 := if a < 0x8005fa6c then snpTableImgLRRLLLL a else snpTableImgLRRLLLR a
-def snpTableImgLRRLLRL (a : Nat) : BitVec 8 := if a = 0x8005fa6f then 0xff#8 else if a = 0x8005fa70 then 0x30#8 else if a = 0x8005fa71 then 0x89#8 else 0#8
-def snpTableImgLRRLLRR (a : Nat) : BitVec 8 := if a = 0x8005fa72 then 0xfe#8 else if a = 0x8005fa73 then 0xff#8 else if a = 0x8005fa74 then 0x98#8 else 0#8
-def snpTableImgLRRLLR (a : Nat) : BitVec 8 := if a < 0x8005fa72 then snpTableImgLRRLLRL a else snpTableImgLRRLLRR a
-def snpTableImgLRRLL (a : Nat) : BitVec 8 := if a < 0x8005fa6f then snpTableImgLRRLLL a else snpTableImgLRRLLR a
-def snpTableImgLRRLRLL (a : Nat) : BitVec 8 := if a = 0x8005fa75 then 0x82#8 else if a = 0x8005fa76 then 0xfe#8 else if a = 0x8005fa77 then 0xff#8 else 0#8
-def snpTableImgLRRLRLR (a : Nat) : BitVec 8 := if a = 0x8005fa78 then 0x98#8 else if a = 0x8005fa79 then 0x82#8 else if a = 0x8005fa7a then 0xfe#8 else 0#8
-def snpTableImgLRRLRL (a : Nat) : BitVec 8 := if a < 0x8005fa78 then snpTableImgLRRLRLL a else snpTableImgLRRLRLR a
-def snpTableImgLRRLRRL (a : Nat) : BitVec 8 := if a = 0x8005fa7b then 0xff#8 else if a = 0x8005fa7c then 0x98#8 else if a = 0x8005fa7d then 0x82#8 else 0#8
-def snpTableImgLRRLRRR (a : Nat) : BitVec 8 := if a = 0x8005fa7e then 0xfe#8 else if a = 0x8005fa7f then 0xff#8 else if a = 0x8005fa80 then 0x64#8 else 0#8
-def snpTableImgLRRLRR (a : Nat) : BitVec 8 := if a < 0x8005fa7e then snpTableImgLRRLRRL a else snpTableImgLRRLRRR a
-def snpTableImgLRRLR (a : Nat) : BitVec 8 := if a < 0x8005fa7b then snpTableImgLRRLRL a else snpTableImgLRRLRR a
-def snpTableImgLRRL (a : Nat) : BitVec 8 := if a < 0x8005fa75 then snpTableImgLRRLL a else snpTableImgLRRLR a
-def snpTableImgLRRRLLL (a : Nat) : BitVec 8 := if a = 0x8005fa81 then 0x80#8 else if a = 0x8005fa82 then 0xfe#8 else 0#8
-def snpTableImgLRRRLLR (a : Nat) : BitVec 8 := if a = 0x8005fa83 then 0xff#8 else if a = 0x8005fa84 then 0x64#8 else if a = 0x8005fa85 then 0x80#8 else 0#8
-def snpTableImgLRRRLL (a : Nat) : BitVec 8 := if a < 0x8005fa83 then snpTableImgLRRRLLL a else snpTableImgLRRRLLR a
-def snpTableImgLRRRLRL (a : Nat) : BitVec 8 := if a = 0x8005fa86 then 0xfe#8 else if a = 0x8005fa87 then 0xff#8 else if a = 0x8005fa88 then 0x64#8 else 0#8
-def snpTableImgLRRRLRR (a : Nat) : BitVec 8 := if a = 0x8005fa89 then 0x80#8 else if a = 0x8005fa8a then 0xfe#8 else if a = 0x8005fa8b then 0xff#8 else 0#8
-def snpTableImgLRRRLR (a : Nat) : BitVec 8 := if a < 0x8005fa89 then snpTableImgLRRRLRL a else snpTableImgLRRRLRR a
-def snpTableImgLRRRL (a : Nat) : BitVec 8 := if a < 0x8005fa86 then snpTableImgLRRRLL a else snpTableImgLRRRLR a
-def snpTableImgLRRRRLL (a : Nat) : BitVec 8 := if a = 0x8005fa8c then 0x64#8 else if a = 0x8005fa8d then 0x80#8 else if a = 0x8005fa8e then 0xfe#8 else 0#8
-def snpTableImgLRRRRLR (a : Nat) : BitVec 8 := if a = 0x8005fa8f then 0xff#8 else if a = 0x8005fa90 then 0x04#8 else if a = 0x8005fa91 then 0x8c#8 else 0#8
-def snpTableImgLRRRRL (a : Nat) : BitVec 8 := if a < 0x8005fa8f then snpTableImgLRRRRLL a else snpTableImgLRRRRLR a
-def snpTableImgLRRRRRL (a : Nat) : BitVec 8 := if a = 0x8005fa92 then 0xfe#8 else if a = 0x8005fa93 then 0xff#8 else if a = 0x8005fa94 then 0x64#8 else 0#8
-def snpTableImgLRRRRRR (a : Nat) : BitVec 8 := if a = 0x8005fa95 then 0x80#8 else if a = 0x8005fa96 then 0xfe#8 else if a = 0x8005fa97 then 0xff#8 else 0#8
-def snpTableImgLRRRRR (a : Nat) : BitVec 8 := if a < 0x8005fa95 then snpTableImgLRRRRRL a else snpTableImgLRRRRRR a
-def snpTableImgLRRRR (a : Nat) : BitVec 8 := if a < 0x8005fa92 then snpTableImgLRRRRL a else snpTableImgLRRRRR a
-def snpTableImgLRRR (a : Nat) : BitVec 8 := if a < 0x8005fa8c then snpTableImgLRRRL a else snpTableImgLRRRR a
-def snpTableImgLRR (a : Nat) : BitVec 8 := if a < 0x8005fa81 then snpTableImgLRRL a else snpTableImgLRRR a
-def snpTableImgLR (a : Nat) : BitVec 8 := if a < 0x8005fa6a then snpTableImgLRL a else snpTableImgLRR a
-def snpTableImgL (a : Nat) : BitVec 8 := if a < 0x8005fa3c then snpTableImgLL a else snpTableImgLR a
-def snpTableImgRLLLLLL (a : Nat) : BitVec 8 := if a = 0x8005fa98 then 0x64#8 else if a = 0x8005fa99 then 0x80#8 else 0#8
-def snpTableImgRLLLLLR (a : Nat) : BitVec 8 := if a = 0x8005fa9a then 0xfe#8 else if a = 0x8005fa9b then 0xff#8 else if a = 0x8005fa9c then 0x10#8 else 0#8
-def snpTableImgRLLLLL (a : Nat) : BitVec 8 := if a < 0x8005fa9a then snpTableImgRLLLLLL a else snpTableImgRLLLLLR a
-def snpTableImgRLLLLRL (a : Nat) : BitVec 8 := if a = 0x8005fa9d then 0x8c#8 else if a = 0x8005fa9e then 0xfe#8 else if a = 0x8005fa9f then 0xff#8 else 0#8
-def snpTableImgRLLLLRR (a : Nat) : BitVec 8 := if a = 0x8005faa0 then 0x64#8 else if a = 0x8005faa1 then 0x80#8 else if a = 0x8005faa2 then 0xfe#8 else 0#8
-def snpTableImgRLLLLR (a : Nat) : BitVec 8 := if a < 0x8005faa0 then snpTableImgRLLLLRL a else snpTableImgRLLLLRR a
-def snpTableImgRLLLL (a : Nat) : BitVec 8 := if a < 0x8005fa9d then snpTableImgRLLLLL a else snpTableImgRLLLLR a
-def snpTableImgRLLLRLL (a : Nat) : BitVec 8 := if a = 0x8005faa3 then 0xff#8 else if a = 0x8005faa4 then 0x64#8 else if a = 0x8005faa5 then 0x80#8 else 0#8
-def snpTableImgRLLLRLR (a : Nat) : BitVec 8 := if a = 0x8005faa6 then 0xfe#8 else if a = 0x8005faa7 then 0xff#8 else if a = 0x8005faa8 then 0x64#8 else 0#8
-def snpTableImgRLLLRL (a : Nat) : BitVec 8 := if a < 0x8005faa6 then snpTableImgRLLLRLL a else snpTableImgRLLLRLR a
-def snpTableImgRLLLRRL (a : Nat) : BitVec 8 := if a = 0x8005faa9 then 0x80#8 else if a = 0x8005faaa then 0xfe#8 else if a = 0x8005faab then 0xff#8 else 0#8
-def snpTableImgRLLLRRR (a : Nat) : BitVec 8 := if a = 0x8005faac then 0xb8#8 else if a = 0x8005faad then 0x87#8 else if a = 0x8005faae then 0xfe#8 else 0#8
-def snpTableImgRLLLRR (a : Nat) : BitVec 8 := if a < 0x8005faac then snpTableImgRLLLRRL a else snpTableImgRLLLRRR a
-def snpTableImgRLLLR (a : Nat) : BitVec 8 := if a < 0x8005faa9 then snpTableImgRLLLRL a else snpTableImgRLLLRR a
-def snpTableImgRLLL (a : Nat) : BitVec 8 := if a < 0x8005faa3 then snpTableImgRLLLL a else snpTableImgRLLLR a
-def snpTableImgRLLRLLL (a : Nat) : BitVec 8 := if a = 0x8005faaf then 0xff#8 else if a = 0x8005fab0 then 0x64#8 else 0#8
-def snpTableImgRLLRLLR (a : Nat) : BitVec 8 := if a = 0x8005fab1 then 0x80#8 else if a = 0x8005fab2 then 0xfe#8 else if a = 0x8005fab3 then 0xff#8 else 0#8
-def snpTableImgRLLRLL (a : Nat) : BitVec 8 := if a < 0x8005fab1 then snpTableImgRLLRLLL a else snpTableImgRLLRLLR a
-def snpTableImgRLLRLRL (a : Nat) : BitVec 8 := if a = 0x8005fab4 then 0xbc#8 else if a = 0x8005fab5 then 0x8a#8 else if a = 0x8005fab6 then 0xfe#8 else 0#8
-def snpTableImgRLLRLRR (a : Nat) : BitVec 8 := if a = 0x8005fab7 then 0xff#8 else if a = 0x8005fab8 then 0x64#8 else if a = 0x8005fab9 then 0x80#8 else 0#8
-def snpTableImgRLLRLR (a : Nat) : BitVec 8 := if a < 0x8005fab7 then snpTableImgRLLRLRL a else snpTableImgRLLRLRR a
-def snpTableImgRLLRL (a : Nat) : BitVec 8 := if a < 0x8005fab4 then snpTableImgRLLRLL a else snpTableImgRLLRLR a
-def snpTableImgRLLRRLL (a : Nat) : BitVec 8 := if a = 0x8005faba then 0xfe#8 else if a = 0x8005fabb then 0xff#8 else if a = 0x8005fabc then 0x64#8 else 0#8
-def snpTableImgRLLRRLR (a : Nat) : BitVec 8 := if a = 0x8005fabd then 0x80#8 else if a = 0x8005fabe then 0xfe#8 else if a = 0x8005fabf then 0xff#8 else 0#8
-def snpTableImgRLLRRL (a : Nat) : BitVec 8 := if a < 0x8005fabd then snpTableImgRLLRRLL a else snpTableImgRLLRRLR a
-def snpTableImgRLLRRRL (a : Nat) : BitVec 8 := if a = 0x8005fac0 then 0x30#8 else if a = 0x8005fac1 then 0x98#8 else if a = 0x8005fac2 then 0xfe#8 else 0#8
-def snpTableImgRLLRRRR (a : Nat) : BitVec 8 := if a = 0x8005fac3 then 0xff#8 else if a = 0x8005fac4 then 0x64#8 else if a = 0x8005fac5 then 0x80#8 else 0#8
-def snpTableImgRLLRRR (a : Nat) : BitVec 8 := if a < 0x8005fac3 then snpTableImgRLLRRRL a else snpTableImgRLLRRRR a
-def snpTableImgRLLRR (a : Nat) : BitVec 8 := if a < 0x8005fac0 then snpTableImgRLLRRL a else snpTableImgRLLRRR a
-def snpTableImgRLLR (a : Nat) : BitVec 8 := if a < 0x8005faba then snpTableImgRLLRL a else snpTableImgRLLRR a
-def snpTableImgRLL (a : Nat) : BitVec 8 := if a < 0x8005faaf then snpTableImgRLLL a else snpTableImgRLLR a
-def snpTableImgRLRLLLL (a : Nat) : BitVec 8 := if a = 0x8005fac6 then 0xfe#8 else if a = 0x8005fac7 then 0xff#8 else 0#8
-def snpTableImgRLRLLLR (a : Nat) : BitVec 8 := if a = 0x8005fac8 then 0x64#8 else if a = 0x8005fac9 then 0x80#8 else if a = 0x8005faca then 0xfe#8 else 0#8
-def snpTableImgRLRLLL (a : Nat) : BitVec 8 := if a < 0x8005fac8 then snpTableImgRLRLLLL a else snpTableImgRLRLLLR a
-def snpTableImgRLRLLRL (a : Nat) : BitVec 8 := if a = 0x8005facb then 0xff#8 else if a = 0x8005facc then 0x64#8 else if a = 0x8005facd then 0x80#8 else 0#8
-def snpTableImgRLRLLRR (a : Nat) : BitVec 8 := if a = 0x8005face then 0xfe#8 else if a = 0x8005facf then 0xff#8 else if a = 0x8005fad0 then 0x64#8 else 0#8
-def snpTableImgRLRLLR (a : Nat) : BitVec 8 := if a < 0x8005face then snpTableImgRLRLLRL a else snpTableImgRLRLLRR a
-def snpTableImgRLRLL (a : Nat) : BitVec 8 := if a < 0x8005facb then snpTableImgRLRLLL a else snpTableImgRLRLLR a
-def snpTableImgRLRLRLL (a : Nat) : BitVec 8 := if a = 0x8005fad1 then 0x80#8 else if a = 0x8005fad2 then 0xfe#8 else if a = 0x8005fad3 then 0xff#8 else 0#8
-def snpTableImgRLRLRLR (a : Nat) : BitVec 8 := if a = 0x8005fad4 then 0x64#8 else if a = 0x8005fad5 then 0x80#8 else if a = 0x8005fad6 then 0xfe#8 else 0#8
-def snpTableImgRLRLRL (a : Nat) : BitVec 8 := if a < 0x8005fad4 then snpTableImgRLRLRLL a else snpTableImgRLRLRLR a
-def snpTableImgRLRLRRL (a : Nat) : BitVec 8 := if a = 0x8005fad7 then 0xff#8 else if a = 0x8005fad8 then 0x64#8 else if a = 0x8005fad9 then 0x80#8 else 0#8
-def snpTableImgRLRLRRR (a : Nat) : BitVec 8 := if a = 0x8005fada then 0xfe#8 else if a = 0x8005fadb then 0xff#8 else if a = 0x8005fadc then 0x64#8 else 0#8
-def snpTableImgRLRLRR (a : Nat) : BitVec 8 := if a < 0x8005fada then snpTableImgRLRLRRL a else snpTableImgRLRLRRR a
-def snpTableImgRLRLR (a : Nat) : BitVec 8 := if a < 0x8005fad7 then snpTableImgRLRLRL a else snpTableImgRLRLRR a
-def snpTableImgRLRL (a : Nat) : BitVec 8 := if a < 0x8005fad1 then snpTableImgRLRLL a else snpTableImgRLRLR a
-def snpTableImgRLRRLLL (a : Nat) : BitVec 8 := if a = 0x8005fadd then 0x80#8 else if a = 0x8005fade then 0xfe#8 else 0#8
-def snpTableImgRLRRLLR (a : Nat) : BitVec 8 := if a = 0x8005fadf then 0xff#8 else if a = 0x8005fae0 then 0x64#8 else if a = 0x8005fae1 then 0x80#8 else 0#8
-def snpTableImgRLRRLL (a : Nat) : BitVec 8 := if a < 0x8005fadf then snpTableImgRLRRLLL a else snpTableImgRLRRLLR a
-def snpTableImgRLRRLRL (a : Nat) : BitVec 8 := if a = 0x8005fae2 then 0xfe#8 else if a = 0x8005fae3 then 0xff#8 else if a = 0x8005fae4 then 0x98#8 else 0#8
-def snpTableImgRLRRLRR (a : Nat) : BitVec 8 := if a = 0x8005fae5 then 0x82#8 else if a = 0x8005fae6 then 0xfe#8 else if a = 0x8005fae7 then 0xff#8 else 0#8
-def snpTableImgRLRRLR (a : Nat) : BitVec 8 := if a < 0x8005fae5 then snpTableImgRLRRLRL a else snpTableImgRLRRLRR a
-def snpTableImgRLRRL (a : Nat) : BitVec 8 := if a < 0x8005fae2 then snpTableImgRLRRLL a else snpTableImgRLRRLR a
-def snpTableImgRLRRRLL (a : Nat) : BitVec 8 := if a = 0x8005fae8 then 0x64#8 else if a = 0x8005fae9 then 0x80#8 else if a = 0x8005faea then 0xfe#8 else 0#8
-def snpTableImgRLRRRLR (a : Nat) : BitVec 8 := if a = 0x8005faeb then 0xff#8 else if a = 0x8005faec then 0x98#8 else if a = 0x8005faed then 0x84#8 else 0#8
-def snpTableImgRLRRRL (a : Nat) : BitVec 8 := if a < 0x8005faeb then snpTableImgRLRRRLL a else snpTableImgRLRRRLR a
-def snpTableImgRLRRRRL (a : Nat) : BitVec 8 := if a = 0x8005faee then 0xfe#8 else if a = 0x8005faef then 0xff#8 else if a = 0x8005faf0 then 0x74#8 else 0#8
-def snpTableImgRLRRRRR (a : Nat) : BitVec 8 := if a = 0x8005faf1 then 0x88#8 else if a = 0x8005faf2 then 0xfe#8 else if a = 0x8005faf3 then 0xff#8 else 0#8
-def snpTableImgRLRRRR (a : Nat) : BitVec 8 := if a < 0x8005faf1 then snpTableImgRLRRRRL a else snpTableImgRLRRRRR a
-def snpTableImgRLRRR (a : Nat) : BitVec 8 := if a < 0x8005faee then snpTableImgRLRRRL a else snpTableImgRLRRRR a
-def snpTableImgRLRR (a : Nat) : BitVec 8 := if a < 0x8005fae8 then snpTableImgRLRRL a else snpTableImgRLRRR a
-def snpTableImgRLR (a : Nat) : BitVec 8 := if a < 0x8005fadd then snpTableImgRLRL a else snpTableImgRLRR a
-def snpTableImgRL (a : Nat) : BitVec 8 := if a < 0x8005fac6 then snpTableImgRLL a else snpTableImgRLR a
-def snpTableImgRRLLLLL (a : Nat) : BitVec 8 := if a = 0x8005faf4 then 0x98#8 else if a = 0x8005faf5 then 0x82#8 else 0#8
-def snpTableImgRRLLLLR (a : Nat) : BitVec 8 := if a = 0x8005faf6 then 0xfe#8 else if a = 0x8005faf7 then 0xff#8 else if a = 0x8005faf8 then 0x98#8 else 0#8
-def snpTableImgRRLLLL (a : Nat) : BitVec 8 := if a < 0x8005faf6 then snpTableImgRRLLLLL a else snpTableImgRRLLLLR a
-def snpTableImgRRLLLRL (a : Nat) : BitVec 8 := if a = 0x8005faf9 then 0x82#8 else if a = 0x8005fafa then 0xfe#8 else if a = 0x8005fafb then 0xff#8 else 0#8
-def snpTableImgRRLLLRR (a : Nat) : BitVec 8 := if a = 0x8005fafc then 0x98#8 else if a = 0x8005fafd then 0x82#8 else if a = 0x8005fafe then 0xfe#8 else 0#8
-def snpTableImgRRLLLR (a : Nat) : BitVec 8 := if a < 0x8005fafc then snpTableImgRRLLLRL a else snpTableImgRRLLLRR a
-def snpTableImgRRLLL (a : Nat) : BitVec 8 := if a < 0x8005faf9 then snpTableImgRRLLLL a else snpTableImgRRLLLR a
-def snpTableImgRRLLRLL (a : Nat) : BitVec 8 := if a = 0x8005faff then 0xff#8 else if a = 0x8005fb00 then 0x78#8 else if a = 0x8005fb01 then 0x8c#8 else 0#8
-def snpTableImgRRLLRLR (a : Nat) : BitVec 8 := if a = 0x8005fb02 then 0xfe#8 else if a = 0x8005fb03 then 0xff#8 else if a = 0x8005fb04 then 0x74#8 else 0#8
-def snpTableImgRRLLRL (a : Nat) : BitVec 8 := if a < 0x8005fb02 then snpTableImgRRLLRLL a else snpTableImgRRLLRLR a
-def snpTableImgRRLLRRL (a : Nat) : BitVec 8 := if a = 0x8005fb05 then 0x88#8 else if a = 0x8005fb06 then 0xfe#8 else if a = 0x8005fb07 then 0xff#8 else 0#8
-def snpTableImgRRLLRRR (a : Nat) : BitVec 8 := if a = 0x8005fb08 then 0xa4#8 else if a = 0x8005fb09 then 0x81#8 else if a = 0x8005fb0a then 0xfe#8 else 0#8
-def snpTableImgRRLLRR (a : Nat) : BitVec 8 := if a < 0x8005fb08 then snpTableImgRRLLRRL a else snpTableImgRRLLRRR a
-def snpTableImgRRLLR (a : Nat) : BitVec 8 := if a < 0x8005fb05 then snpTableImgRRLLRL a else snpTableImgRRLLRR a
-def snpTableImgRRLL (a : Nat) : BitVec 8 := if a < 0x8005faff then snpTableImgRRLLL a else snpTableImgRRLLR a
-def snpTableImgRRLRLLL (a : Nat) : BitVec 8 := if a = 0x8005fb0b then 0xff#8 else if a = 0x8005fb0c then 0x64#8 else 0#8
-def snpTableImgRRLRLLR (a : Nat) : BitVec 8 := if a = 0x8005fb0d then 0x80#8 else if a = 0x8005fb0e then 0xfe#8 else if a = 0x8005fb0f then 0xff#8 else 0#8
-def snpTableImgRRLRLL (a : Nat) : BitVec 8 := if a < 0x8005fb0d then snpTableImgRRLRLLL a else snpTableImgRRLRLLR a
-def snpTableImgRRLRLRL (a : Nat) : BitVec 8 := if a = 0x8005fb10 then 0xa0#8 else if a = 0x8005fb11 then 0x8d#8 else if a = 0x8005fb12 then 0xfe#8 else 0#8
-def snpTableImgRRLRLRR (a : Nat) : BitVec 8 := if a = 0x8005fb13 then 0xff#8 else if a = 0x8005fb14 then 0x64#8 else if a = 0x8005fb15 then 0x80#8 else 0#8
-def snpTableImgRRLRLR (a : Nat) : BitVec 8 := if a < 0x8005fb13 then snpTableImgRRLRLRL a else snpTableImgRRLRLRR a
-def snpTableImgRRLRL (a : Nat) : BitVec 8 := if a < 0x8005fb10 then snpTableImgRRLRLL a else snpTableImgRRLRLR a
-def snpTableImgRRLRRLL (a : Nat) : BitVec 8 := if a = 0x8005fb16 then 0xfe#8 else if a = 0x8005fb17 then 0xff#8 else if a = 0x8005fb18 then 0x48#8 else 0#8
-def snpTableImgRRLRRLR (a : Nat) : BitVec 8 := if a = 0x8005fb19 then 0x8d#8 else if a = 0x8005fb1a then 0xfe#8 else if a = 0x8005fb1b then 0xff#8 else 0#8
-def snpTableImgRRLRRL (a : Nat) : BitVec 8 := if a < 0x8005fb19 then snpTableImgRRLRRLL a else snpTableImgRRLRRLR a
-def snpTableImgRRLRRRL (a : Nat) : BitVec 8 := if a = 0x8005fb1c then 0x00#8 else if a = 0x8005fb1d then 0x8d#8 else if a = 0x8005fb1e then 0xfe#8 else 0#8
-def snpTableImgRRLRRRR (a : Nat) : BitVec 8 := if a = 0x8005fb1f then 0xff#8 else if a = 0x8005fb20 then 0x98#8 else if a = 0x8005fb21 then 0x8c#8 else 0#8
-def snpTableImgRRLRRR (a : Nat) : BitVec 8 := if a < 0x8005fb1f then snpTableImgRRLRRRL a else snpTableImgRRLRRRR a
-def snpTableImgRRLRR (a : Nat) : BitVec 8 := if a < 0x8005fb1c then snpTableImgRRLRRL a else snpTableImgRRLRRR a
-def snpTableImgRRLR (a : Nat) : BitVec 8 := if a < 0x8005fb16 then snpTableImgRRLRL a else snpTableImgRRLRR a
-def snpTableImgRRL (a : Nat) : BitVec 8 := if a < 0x8005fb0b then snpTableImgRRLL a else snpTableImgRRLR a
-def snpTableImgRRRLLLL (a : Nat) : BitVec 8 := if a = 0x8005fb22 then 0xfe#8 else if a = 0x8005fb23 then 0xff#8 else 0#8
-def snpTableImgRRRLLLR (a : Nat) : BitVec 8 := if a = 0x8005fb24 then 0x8c#8 else if a = 0x8005fb25 then 0x8c#8 else if a = 0x8005fb26 then 0xfe#8 else 0#8
-def snpTableImgRRRLLL (a : Nat) : BitVec 8 := if a < 0x8005fb24 then snpTableImgRRRLLLL a else snpTableImgRRRLLLR a
-def snpTableImgRRRLLRL (a : Nat) : BitVec 8 := if a = 0x8005fb27 then 0xff#8 else if a = 0x8005fb28 then 0x64#8 else if a = 0x8005fb29 then 0x80#8 else 0#8
-def snpTableImgRRRLLRR (a : Nat) : BitVec 8 := if a = 0x8005fb2a then 0xfe#8 else if a = 0x8005fb2b then 0xff#8 else if a = 0x8005fb2c then 0xb8#8 else 0#8
-def snpTableImgRRRLLR (a : Nat) : BitVec 8 := if a < 0x8005fb2a then snpTableImgRRRLLRL a else snpTableImgRRRLLRR a
-def snpTableImgRRRLL (a : Nat) : BitVec 8 := if a < 0x8005fb27 then snpTableImgRRRLLL a else snpTableImgRRRLLR a
-def snpTableImgRRRLRLL (a : Nat) : BitVec 8 := if a = 0x8005fb2d then 0x87#8 else if a = 0x8005fb2e then 0xfe#8 else if a = 0x8005fb2f then 0xff#8 else 0#8
-def snpTableImgRRRLRLR (a : Nat) : BitVec 8 := if a = 0x8005fb30 then 0xa4#8 else if a = 0x8005fb31 then 0x81#8 else if a = 0x8005fb32 then 0xfe#8 else 0#8
-def snpTableImgRRRLRL (a : Nat) : BitVec 8 := if a < 0x8005fb30 then snpTableImgRRRLRLL a else snpTableImgRRRLRLR a
-def snpTableImgRRRLRRL (a : Nat) : BitVec 8 := if a = 0x8005fb33 then 0xff#8 else if a = 0x8005fb34 then 0x00#8 else if a = 0x8005fb35 then 0x8b#8 else 0#8
-def snpTableImgRRRLRRR (a : Nat) : BitVec 8 := if a = 0x8005fb36 then 0xfe#8 else if a = 0x8005fb37 then 0xff#8 else if a = 0x8005fb38 then 0x64#8 else 0#8
-def snpTableImgRRRLRR (a : Nat) : BitVec 8 := if a < 0x8005fb36 then snpTableImgRRRLRRL a else snpTableImgRRRLRRR a
-def snpTableImgRRRLR (a : Nat) : BitVec 8 := if a < 0x8005fb33 then snpTableImgRRRLRL a else snpTableImgRRRLRR a
-def snpTableImgRRRL (a : Nat) : BitVec 8 := if a < 0x8005fb2d then snpTableImgRRRLL a else snpTableImgRRRLR a
-def snpTableImgRRRRLLL (a : Nat) : BitVec 8 := if a = 0x8005fb39 then 0x80#8 else if a = 0x8005fb3a then 0xfe#8 else 0#8
-def snpTableImgRRRRLLR (a : Nat) : BitVec 8 := if a = 0x8005fb3b then 0xff#8 else if a = 0x8005fb3c then 0x64#8 else if a = 0x8005fb3d then 0x80#8 else 0#8
-def snpTableImgRRRRLL (a : Nat) : BitVec 8 := if a < 0x8005fb3b then snpTableImgRRRRLLL a else snpTableImgRRRRLLR a
-def snpTableImgRRRRLRL (a : Nat) : BitVec 8 := if a = 0x8005fb3e then 0xfe#8 else if a = 0x8005fb3f then 0xff#8 else if a = 0x8005fb40 then 0xdc#8 else 0#8
-def snpTableImgRRRRLRR (a : Nat) : BitVec 8 := if a = 0x8005fb41 then 0x98#8 else if a = 0x8005fb42 then 0xfe#8 else if a = 0x8005fb43 then 0xff#8 else 0#8
-def snpTableImgRRRRLR (a : Nat) : BitVec 8 := if a < 0x8005fb41 then snpTableImgRRRRLRL a else snpTableImgRRRRLRR a
-def snpTableImgRRRRL (a : Nat) : BitVec 8 := if a < 0x8005fb3e then snpTableImgRRRRLL a else snpTableImgRRRRLR a
-def snpTableImgRRRRRLL (a : Nat) : BitVec 8 := if a = 0x8005fb44 then 0x64#8 else if a = 0x8005fb45 then 0x80#8 else if a = 0x8005fb46 then 0xfe#8 else 0#8
-def snpTableImgRRRRRLR (a : Nat) : BitVec 8 := if a = 0x8005fb47 then 0xff#8 else if a = 0x8005fb48 then 0xa4#8 else if a = 0x8005fb49 then 0x81#8 else 0#8
-def snpTableImgRRRRRL (a : Nat) : BitVec 8 := if a < 0x8005fb47 then snpTableImgRRRRRLL a else snpTableImgRRRRRLR a
-def snpTableImgRRRRRRL (a : Nat) : BitVec 8 := if a = 0x8005fb4a then 0xfe#8 else if a = 0x8005fb4b then 0xff#8 else if a = 0x8005fb4c then 0x00#8 else 0#8
-def snpTableImgRRRRRRR (a : Nat) : BitVec 8 := if a = 0x8005fb4d then 0x00#8 else if a = 0x8005fb4e then 0x00#8 else if a = 0x8005fb4f then 0x00#8 else 0#8
-def snpTableImgRRRRRR (a : Nat) : BitVec 8 := if a < 0x8005fb4d then snpTableImgRRRRRRL a else snpTableImgRRRRRRR a
-def snpTableImgRRRRR (a : Nat) : BitVec 8 := if a < 0x8005fb4a then snpTableImgRRRRRL a else snpTableImgRRRRRR a
-def snpTableImgRRRR (a : Nat) : BitVec 8 := if a < 0x8005fb44 then snpTableImgRRRRL a else snpTableImgRRRRR a
-def snpTableImgRRR (a : Nat) : BitVec 8 := if a < 0x8005fb39 then snpTableImgRRRL a else snpTableImgRRRR a
-def snpTableImgRR (a : Nat) : BitVec 8 := if a < 0x8005fb22 then snpTableImgRRL a else snpTableImgRRR a
-def snpTableImgR (a : Nat) : BitVec 8 := if a < 0x8005faf4 then snpTableImgRL a else snpTableImgRR a
-def snpTableImg (a : Nat) : BitVec 8 := if a < 0x8005fa98 then snpTableImgL a else snpTableImgR a
+def snpTableImgLLLLLLL (a : Nat) : BitVec 8 := if a = 0x8005a398 then 0xec#8 else if a = 0x8005a399 then 0xe0#8 else 0#8
+def snpTableImgLLLLLLR (a : Nat) : BitVec 8 := if a = 0x8005a39a then 0xfe#8 else if a = 0x8005a39b then 0xff#8 else if a = 0x8005a39c then 0xac#8 else 0#8
+def snpTableImgLLLLLL (a : Nat) : BitVec 8 := if a < 0x8005a39a then snpTableImgLLLLLLL a else snpTableImgLLLLLLR a
+def snpTableImgLLLLLRL (a : Nat) : BitVec 8 := if a = 0x8005a39d then 0xd6#8 else if a = 0x8005a39e then 0xfe#8 else if a = 0x8005a39f then 0xff#8 else 0#8
+def snpTableImgLLLLLRR (a : Nat) : BitVec 8 := if a = 0x8005a3a0 then 0xac#8 else if a = 0x8005a3a1 then 0xd6#8 else if a = 0x8005a3a2 then 0xfe#8 else 0#8
+def snpTableImgLLLLLR (a : Nat) : BitVec 8 := if a < 0x8005a3a0 then snpTableImgLLLLLRL a else snpTableImgLLLLLRR a
+def snpTableImgLLLLL (a : Nat) : BitVec 8 := if a < 0x8005a39d then snpTableImgLLLLLL a else snpTableImgLLLLLR a
+def snpTableImgLLLLRLL (a : Nat) : BitVec 8 := if a = 0x8005a3a3 then 0xff#8 else if a = 0x8005a3a4 then 0xe0#8 else if a = 0x8005a3a5 then 0xe0#8 else 0#8
+def snpTableImgLLLLRLR (a : Nat) : BitVec 8 := if a = 0x8005a3a6 then 0xfe#8 else if a = 0x8005a3a7 then 0xff#8 else if a = 0x8005a3a8 then 0xac#8 else 0#8
+def snpTableImgLLLLRL (a : Nat) : BitVec 8 := if a < 0x8005a3a6 then snpTableImgLLLLRLL a else snpTableImgLLLLRLR a
+def snpTableImgLLLLRRL (a : Nat) : BitVec 8 := if a = 0x8005a3a9 then 0xd6#8 else if a = 0x8005a3aa then 0xfe#8 else if a = 0x8005a3ab then 0xff#8 else 0#8
+def snpTableImgLLLLRRR (a : Nat) : BitVec 8 := if a = 0x8005a3ac then 0xac#8 else if a = 0x8005a3ad then 0xd6#8 else if a = 0x8005a3ae then 0xfe#8 else 0#8
+def snpTableImgLLLLRR (a : Nat) : BitVec 8 := if a < 0x8005a3ac then snpTableImgLLLLRRL a else snpTableImgLLLLRRR a
+def snpTableImgLLLLR (a : Nat) : BitVec 8 := if a < 0x8005a3a9 then snpTableImgLLLLRL a else snpTableImgLLLLRR a
+def snpTableImgLLLL (a : Nat) : BitVec 8 := if a < 0x8005a3a3 then snpTableImgLLLLL a else snpTableImgLLLLR a
+def snpTableImgLLLRLLL (a : Nat) : BitVec 8 := if a = 0x8005a3af then 0xff#8 else if a = 0x8005a3b0 then 0xac#8 else 0#8
+def snpTableImgLLLRLLR (a : Nat) : BitVec 8 := if a = 0x8005a3b1 then 0xd6#8 else if a = 0x8005a3b2 then 0xfe#8 else if a = 0x8005a3b3 then 0xff#8 else 0#8
+def snpTableImgLLLRLL (a : Nat) : BitVec 8 := if a < 0x8005a3b1 then snpTableImgLLLRLLL a else snpTableImgLLLRLLR a
+def snpTableImgLLLRLRL (a : Nat) : BitVec 8 := if a = 0x8005a3b4 then 0x8c#8 else if a = 0x8005a3b5 then 0xe0#8 else if a = 0x8005a3b6 then 0xfe#8 else 0#8
+def snpTableImgLLLRLRR (a : Nat) : BitVec 8 := if a = 0x8005a3b7 then 0xff#8 else if a = 0x8005a3b8 then 0xac#8 else if a = 0x8005a3b9 then 0xd6#8 else 0#8
+def snpTableImgLLLRLR (a : Nat) : BitVec 8 := if a < 0x8005a3b7 then snpTableImgLLLRLRL a else snpTableImgLLLRLRR a
+def snpTableImgLLLRL (a : Nat) : BitVec 8 := if a < 0x8005a3b4 then snpTableImgLLLRLL a else snpTableImgLLLRLR a
+def snpTableImgLLLRRLL (a : Nat) : BitVec 8 := if a = 0x8005a3ba then 0xfe#8 else if a = 0x8005a3bb then 0xff#8 else if a = 0x8005a3bc then 0xac#8 else 0#8
+def snpTableImgLLLRRLR (a : Nat) : BitVec 8 := if a = 0x8005a3bd then 0xd6#8 else if a = 0x8005a3be then 0xfe#8 else if a = 0x8005a3bf then 0xff#8 else 0#8
+def snpTableImgLLLRRL (a : Nat) : BitVec 8 := if a < 0x8005a3bd then snpTableImgLLLRRLL a else snpTableImgLLLRRLR a
+def snpTableImgLLLRRRL (a : Nat) : BitVec 8 := if a = 0x8005a3c0 then 0xec#8 else if a = 0x8005a3c1 then 0xdf#8 else if a = 0x8005a3c2 then 0xfe#8 else 0#8
+def snpTableImgLLLRRRR (a : Nat) : BitVec 8 := if a = 0x8005a3c3 then 0xff#8 else if a = 0x8005a3c4 then 0x14#8 else if a = 0x8005a3c5 then 0xe0#8 else 0#8
+def snpTableImgLLLRRR (a : Nat) : BitVec 8 := if a < 0x8005a3c3 then snpTableImgLLLRRRL a else snpTableImgLLLRRRR a
+def snpTableImgLLLRR (a : Nat) : BitVec 8 := if a < 0x8005a3c0 then snpTableImgLLLRRL a else snpTableImgLLLRRR a
+def snpTableImgLLLR (a : Nat) : BitVec 8 := if a < 0x8005a3ba then snpTableImgLLLRL a else snpTableImgLLLRR a
+def snpTableImgLLL (a : Nat) : BitVec 8 := if a < 0x8005a3af then snpTableImgLLLL a else snpTableImgLLLR a
+def snpTableImgLLRLLLL (a : Nat) : BitVec 8 := if a = 0x8005a3c6 then 0xfe#8 else if a = 0x8005a3c7 then 0xff#8 else 0#8
+def snpTableImgLLRLLLR (a : Nat) : BitVec 8 := if a = 0x8005a3c8 then 0xac#8 else if a = 0x8005a3c9 then 0xd6#8 else if a = 0x8005a3ca then 0xfe#8 else 0#8
+def snpTableImgLLRLLL (a : Nat) : BitVec 8 := if a < 0x8005a3c8 then snpTableImgLLRLLLL a else snpTableImgLLRLLLR a
+def snpTableImgLLRLLRL (a : Nat) : BitVec 8 := if a = 0x8005a3cb then 0xff#8 else if a = 0x8005a3cc then 0x08#8 else if a = 0x8005a3cd then 0xe0#8 else 0#8
+def snpTableImgLLRLLRR (a : Nat) : BitVec 8 := if a = 0x8005a3ce then 0xfe#8 else if a = 0x8005a3cf then 0xff#8 else if a = 0x8005a3d0 then 0x30#8 else 0#8
+def snpTableImgLLRLLR (a : Nat) : BitVec 8 := if a < 0x8005a3ce then snpTableImgLLRLLRL a else snpTableImgLLRLLRR a
+def snpTableImgLLRLL (a : Nat) : BitVec 8 := if a < 0x8005a3cb then snpTableImgLLRLLL a else snpTableImgLLRLLR a
+def snpTableImgLLRLRLL (a : Nat) : BitVec 8 := if a = 0x8005a3d1 then 0xe0#8 else if a = 0x8005a3d2 then 0xfe#8 else if a = 0x8005a3d3 then 0xff#8 else 0#8
+def snpTableImgLLRLRLR (a : Nat) : BitVec 8 := if a = 0x8005a3d4 then 0xac#8 else if a = 0x8005a3d5 then 0xd6#8 else if a = 0x8005a3d6 then 0xfe#8 else 0#8
+def snpTableImgLLRLRL (a : Nat) : BitVec 8 := if a < 0x8005a3d4 then snpTableImgLLRLRLL a else snpTableImgLLRLRLR a
+def snpTableImgLLRLRRL (a : Nat) : BitVec 8 := if a = 0x8005a3d7 then 0xff#8 else if a = 0x8005a3d8 then 0x24#8 else if a = 0x8005a3d9 then 0xe0#8 else 0#8
+def snpTableImgLLRLRRR (a : Nat) : BitVec 8 := if a = 0x8005a3da then 0xfe#8 else if a = 0x8005a3db then 0xff#8 else if a = 0x8005a3dc then 0x74#8 else 0#8
+def snpTableImgLLRLRR (a : Nat) : BitVec 8 := if a < 0x8005a3da then snpTableImgLLRLRRL a else snpTableImgLLRLRRR a
+def snpTableImgLLRLR (a : Nat) : BitVec 8 := if a < 0x8005a3d7 then snpTableImgLLRLRL a else snpTableImgLLRLRR a
+def snpTableImgLLRL (a : Nat) : BitVec 8 := if a < 0x8005a3d1 then snpTableImgLLRLL a else snpTableImgLLRLR a
+def snpTableImgLLRRLLL (a : Nat) : BitVec 8 := if a = 0x8005a3dd then 0xd6#8 else if a = 0x8005a3de then 0xfe#8 else 0#8
+def snpTableImgLLRRLLR (a : Nat) : BitVec 8 := if a = 0x8005a3df then 0xff#8 else if a = 0x8005a3e0 then 0x74#8 else if a = 0x8005a3e1 then 0xd6#8 else 0#8
+def snpTableImgLLRRLL (a : Nat) : BitVec 8 := if a < 0x8005a3df then snpTableImgLLRRLLL a else snpTableImgLLRRLLR a
+def snpTableImgLLRRLRL (a : Nat) : BitVec 8 := if a = 0x8005a3e2 then 0xfe#8 else if a = 0x8005a3e3 then 0xff#8 else if a = 0x8005a3e4 then 0x74#8 else 0#8
+def snpTableImgLLRRLRR (a : Nat) : BitVec 8 := if a = 0x8005a3e5 then 0xd6#8 else if a = 0x8005a3e6 then 0xfe#8 else if a = 0x8005a3e7 then 0xff#8 else 0#8
+def snpTableImgLLRRLR (a : Nat) : BitVec 8 := if a < 0x8005a3e5 then snpTableImgLLRRLRL a else snpTableImgLLRRLRR a
+def snpTableImgLLRRL (a : Nat) : BitVec 8 := if a < 0x8005a3e2 then snpTableImgLLRRLL a else snpTableImgLLRRLR a
+def snpTableImgLLRRRLL (a : Nat) : BitVec 8 := if a = 0x8005a3e8 then 0x74#8 else if a = 0x8005a3e9 then 0xd6#8 else if a = 0x8005a3ea then 0xfe#8 else 0#8
+def snpTableImgLLRRRLR (a : Nat) : BitVec 8 := if a = 0x8005a3eb then 0xff#8 else if a = 0x8005a3ec then 0x74#8 else if a = 0x8005a3ed then 0xd6#8 else 0#8
+def snpTableImgLLRRRL (a : Nat) : BitVec 8 := if a < 0x8005a3eb then snpTableImgLLRRRLL a else snpTableImgLLRRRLR a
+def snpTableImgLLRRRRL (a : Nat) : BitVec 8 := if a = 0x8005a3ee then 0xfe#8 else if a = 0x8005a3ef then 0xff#8 else if a = 0x8005a3f0 then 0x74#8 else 0#8
+def snpTableImgLLRRRRR (a : Nat) : BitVec 8 := if a = 0x8005a3f1 then 0xd6#8 else if a = 0x8005a3f2 then 0xfe#8 else if a = 0x8005a3f3 then 0xff#8 else 0#8
+def snpTableImgLLRRRR (a : Nat) : BitVec 8 := if a < 0x8005a3f1 then snpTableImgLLRRRRL a else snpTableImgLLRRRRR a
+def snpTableImgLLRRR (a : Nat) : BitVec 8 := if a < 0x8005a3ee then snpTableImgLLRRRL a else snpTableImgLLRRRR a
+def snpTableImgLLRR (a : Nat) : BitVec 8 := if a < 0x8005a3e8 then snpTableImgLLRRL a else snpTableImgLLRRR a
+def snpTableImgLLR (a : Nat) : BitVec 8 := if a < 0x8005a3dd then snpTableImgLLRL a else snpTableImgLLRR a
+def snpTableImgLL (a : Nat) : BitVec 8 := if a < 0x8005a3c6 then snpTableImgLLL a else snpTableImgLLR a
+def snpTableImgLRLLLLL (a : Nat) : BitVec 8 := if a = 0x8005a3f4 then 0x74#8 else if a = 0x8005a3f5 then 0xd6#8 else 0#8
+def snpTableImgLRLLLLR (a : Nat) : BitVec 8 := if a = 0x8005a3f6 then 0xfe#8 else if a = 0x8005a3f7 then 0xff#8 else if a = 0x8005a3f8 then 0x74#8 else 0#8
+def snpTableImgLRLLLL (a : Nat) : BitVec 8 := if a < 0x8005a3f6 then snpTableImgLRLLLLL a else snpTableImgLRLLLLR a
+def snpTableImgLRLLLRL (a : Nat) : BitVec 8 := if a = 0x8005a3f9 then 0xd6#8 else if a = 0x8005a3fa then 0xfe#8 else if a = 0x8005a3fb then 0xff#8 else 0#8
+def snpTableImgLRLLLRR (a : Nat) : BitVec 8 := if a = 0x8005a3fc then 0x74#8 else if a = 0x8005a3fd then 0xd6#8 else if a = 0x8005a3fe then 0xfe#8 else 0#8
+def snpTableImgLRLLLR (a : Nat) : BitVec 8 := if a < 0x8005a3fc then snpTableImgLRLLLRL a else snpTableImgLRLLLRR a
+def snpTableImgLRLLL (a : Nat) : BitVec 8 := if a < 0x8005a3f9 then snpTableImgLRLLLL a else snpTableImgLRLLLR a
+def snpTableImgLRLLRLL (a : Nat) : BitVec 8 := if a = 0x8005a3ff then 0xff#8 else if a = 0x8005a400 then 0xac#8 else if a = 0x8005a401 then 0xd6#8 else 0#8
+def snpTableImgLRLLRLR (a : Nat) : BitVec 8 := if a = 0x8005a402 then 0xfe#8 else if a = 0x8005a403 then 0xff#8 else if a = 0x8005a404 then 0xac#8 else 0#8
+def snpTableImgLRLLRL (a : Nat) : BitVec 8 := if a < 0x8005a402 then snpTableImgLRLLRLL a else snpTableImgLRLLRLR a
+def snpTableImgLRLLRRL (a : Nat) : BitVec 8 := if a = 0x8005a405 then 0xd6#8 else if a = 0x8005a406 then 0xfe#8 else if a = 0x8005a407 then 0xff#8 else 0#8
+def snpTableImgLRLLRRR (a : Nat) : BitVec 8 := if a = 0x8005a408 then 0xac#8 else if a = 0x8005a409 then 0xd6#8 else if a = 0x8005a40a then 0xfe#8 else 0#8
+def snpTableImgLRLLRR (a : Nat) : BitVec 8 := if a < 0x8005a408 then snpTableImgLRLLRRL a else snpTableImgLRLLRRR a
+def snpTableImgLRLLR (a : Nat) : BitVec 8 := if a < 0x8005a405 then snpTableImgLRLLRL a else snpTableImgLRLLRR a
+def snpTableImgLRLL (a : Nat) : BitVec 8 := if a < 0x8005a3ff then snpTableImgLRLLL a else snpTableImgLRLLR a
+def snpTableImgLRLRLLL (a : Nat) : BitVec 8 := if a = 0x8005a40b then 0xff#8 else if a = 0x8005a40c then 0xac#8 else 0#8
+def snpTableImgLRLRLLR (a : Nat) : BitVec 8 := if a = 0x8005a40d then 0xd6#8 else if a = 0x8005a40e then 0xfe#8 else if a = 0x8005a40f then 0xff#8 else 0#8
+def snpTableImgLRLRLL (a : Nat) : BitVec 8 := if a < 0x8005a40d then snpTableImgLRLRLLL a else snpTableImgLRLRLLR a
+def snpTableImgLRLRLRL (a : Nat) : BitVec 8 := if a = 0x8005a410 then 0xac#8 else if a = 0x8005a411 then 0xd6#8 else if a = 0x8005a412 then 0xfe#8 else 0#8
+def snpTableImgLRLRLRR (a : Nat) : BitVec 8 := if a = 0x8005a413 then 0xff#8 else if a = 0x8005a414 then 0xac#8 else if a = 0x8005a415 then 0xd6#8 else 0#8
+def snpTableImgLRLRLR (a : Nat) : BitVec 8 := if a < 0x8005a413 then snpTableImgLRLRLRL a else snpTableImgLRLRLRR a
+def snpTableImgLRLRL (a : Nat) : BitVec 8 := if a < 0x8005a410 then snpTableImgLRLRLL a else snpTableImgLRLRLR a
+def snpTableImgLRLRRLL (a : Nat) : BitVec 8 := if a = 0x8005a416 then 0xfe#8 else if a = 0x8005a417 then 0xff#8 else if a = 0x8005a418 then 0xac#8 else 0#8
+def snpTableImgLRLRRLR (a : Nat) : BitVec 8 := if a = 0x8005a419 then 0xd6#8 else if a = 0x8005a41a then 0xfe#8 else if a = 0x8005a41b then 0xff#8 else 0#8
+def snpTableImgLRLRRL (a : Nat) : BitVec 8 := if a < 0x8005a419 then snpTableImgLRLRRLL a else snpTableImgLRLRRLR a
+def snpTableImgLRLRRRL (a : Nat) : BitVec 8 := if a = 0x8005a41c then 0xe0#8 else if a = 0x8005a41d then 0xd8#8 else if a = 0x8005a41e then 0xfe#8 else 0#8
+def snpTableImgLRLRRRR (a : Nat) : BitVec 8 := if a = 0x8005a41f then 0xff#8 else if a = 0x8005a420 then 0xac#8 else if a = 0x8005a421 then 0xd6#8 else 0#8
+def snpTableImgLRLRRR (a : Nat) : BitVec 8 := if a < 0x8005a41f then snpTableImgLRLRRRL a else snpTableImgLRLRRRR a
+def snpTableImgLRLRR (a : Nat) : BitVec 8 := if a < 0x8005a41c then snpTableImgLRLRRL a else snpTableImgLRLRRR a
+def snpTableImgLRLR (a : Nat) : BitVec 8 := if a < 0x8005a416 then snpTableImgLRLRL a else snpTableImgLRLRR a
+def snpTableImgLRL (a : Nat) : BitVec 8 := if a < 0x8005a40b then snpTableImgLRLL a else snpTableImgLRLR a
+def snpTableImgLRRLLLL (a : Nat) : BitVec 8 := if a = 0x8005a422 then 0xfe#8 else if a = 0x8005a423 then 0xff#8 else 0#8
+def snpTableImgLRRLLLR (a : Nat) : BitVec 8 := if a = 0x8005a424 then 0xe0#8 else if a = 0x8005a425 then 0xda#8 else if a = 0x8005a426 then 0xfe#8 else 0#8
+def snpTableImgLRRLLL (a : Nat) : BitVec 8 := if a < 0x8005a424 then snpTableImgLRRLLLL a else snpTableImgLRRLLLR a
+def snpTableImgLRRLLRL (a : Nat) : BitVec 8 := if a = 0x8005a427 then 0xff#8 else if a = 0x8005a428 then 0x78#8 else if a = 0x8005a429 then 0xdf#8 else 0#8
+def snpTableImgLRRLLRR (a : Nat) : BitVec 8 := if a = 0x8005a42a then 0xfe#8 else if a = 0x8005a42b then 0xff#8 else if a = 0x8005a42c then 0xe0#8 else 0#8
+def snpTableImgLRRLLR (a : Nat) : BitVec 8 := if a < 0x8005a42a then snpTableImgLRRLLRL a else snpTableImgLRRLLRR a
+def snpTableImgLRRLL (a : Nat) : BitVec 8 := if a < 0x8005a427 then snpTableImgLRRLLL a else snpTableImgLRRLLR a
+def snpTableImgLRRLRLL (a : Nat) : BitVec 8 := if a = 0x8005a42d then 0xd8#8 else if a = 0x8005a42e then 0xfe#8 else if a = 0x8005a42f then 0xff#8 else 0#8
+def snpTableImgLRRLRLR (a : Nat) : BitVec 8 := if a = 0x8005a430 then 0xe0#8 else if a = 0x8005a431 then 0xd8#8 else if a = 0x8005a432 then 0xfe#8 else 0#8
+def snpTableImgLRRLRL (a : Nat) : BitVec 8 := if a < 0x8005a430 then snpTableImgLRRLRLL a else snpTableImgLRRLRLR a
+def snpTableImgLRRLRRL (a : Nat) : BitVec 8 := if a = 0x8005a433 then 0xff#8 else if a = 0x8005a434 then 0xe0#8 else if a = 0x8005a435 then 0xd8#8 else 0#8
+def snpTableImgLRRLRRR (a : Nat) : BitVec 8 := if a = 0x8005a436 then 0xfe#8 else if a = 0x8005a437 then 0xff#8 else if a = 0x8005a438 then 0xac#8 else 0#8
+def snpTableImgLRRLRR (a : Nat) : BitVec 8 := if a < 0x8005a436 then snpTableImgLRRLRRL a else snpTableImgLRRLRRR a
+def snpTableImgLRRLR (a : Nat) : BitVec 8 := if a < 0x8005a433 then snpTableImgLRRLRL a else snpTableImgLRRLRR a
+def snpTableImgLRRL (a : Nat) : BitVec 8 := if a < 0x8005a42d then snpTableImgLRRLL a else snpTableImgLRRLR a
+def snpTableImgLRRRLLL (a : Nat) : BitVec 8 := if a = 0x8005a439 then 0xd6#8 else if a = 0x8005a43a then 0xfe#8 else 0#8
+def snpTableImgLRRRLLR (a : Nat) : BitVec 8 := if a = 0x8005a43b then 0xff#8 else if a = 0x8005a43c then 0xac#8 else if a = 0x8005a43d then 0xd6#8 else 0#8
+def snpTableImgLRRRLL (a : Nat) : BitVec 8 := if a < 0x8005a43b then snpTableImgLRRRLLL a else snpTableImgLRRRLLR a
+def snpTableImgLRRRLRL (a : Nat) : BitVec 8 := if a = 0x8005a43e then 0xfe#8 else if a = 0x8005a43f then 0xff#8 else if a = 0x8005a440 then 0xac#8 else 0#8
+def snpTableImgLRRRLRR (a : Nat) : BitVec 8 := if a = 0x8005a441 then 0xd6#8 else if a = 0x8005a442 then 0xfe#8 else if a = 0x8005a443 then 0xff#8 else 0#8
+def snpTableImgLRRRLR (a : Nat) : BitVec 8 := if a < 0x8005a441 then snpTableImgLRRRLRL a else snpTableImgLRRRLRR a
+def snpTableImgLRRRL (a : Nat) : BitVec 8 := if a < 0x8005a43e then snpTableImgLRRRLL a else snpTableImgLRRRLR a
+def snpTableImgLRRRRLL (a : Nat) : BitVec 8 := if a = 0x8005a444 then 0xac#8 else if a = 0x8005a445 then 0xd6#8 else if a = 0x8005a446 then 0xfe#8 else 0#8
+def snpTableImgLRRRRLR (a : Nat) : BitVec 8 := if a = 0x8005a447 then 0xff#8 else if a = 0x8005a448 then 0x4c#8 else if a = 0x8005a449 then 0xe2#8 else 0#8
+def snpTableImgLRRRRL (a : Nat) : BitVec 8 := if a < 0x8005a447 then snpTableImgLRRRRLL a else snpTableImgLRRRRLR a
+def snpTableImgLRRRRRL (a : Nat) : BitVec 8 := if a = 0x8005a44a then 0xfe#8 else if a = 0x8005a44b then 0xff#8 else if a = 0x8005a44c then 0xac#8 else 0#8
+def snpTableImgLRRRRRR (a : Nat) : BitVec 8 := if a = 0x8005a44d then 0xd6#8 else if a = 0x8005a44e then 0xfe#8 else if a = 0x8005a44f then 0xff#8 else 0#8
+def snpTableImgLRRRRR (a : Nat) : BitVec 8 := if a < 0x8005a44d then snpTableImgLRRRRRL a else snpTableImgLRRRRRR a
+def snpTableImgLRRRR (a : Nat) : BitVec 8 := if a < 0x8005a44a then snpTableImgLRRRRL a else snpTableImgLRRRRR a
+def snpTableImgLRRR (a : Nat) : BitVec 8 := if a < 0x8005a444 then snpTableImgLRRRL a else snpTableImgLRRRR a
+def snpTableImgLRR (a : Nat) : BitVec 8 := if a < 0x8005a439 then snpTableImgLRRL a else snpTableImgLRRR a
+def snpTableImgLR (a : Nat) : BitVec 8 := if a < 0x8005a422 then snpTableImgLRL a else snpTableImgLRR a
+def snpTableImgL (a : Nat) : BitVec 8 := if a < 0x8005a3f4 then snpTableImgLL a else snpTableImgLR a
+def snpTableImgRLLLLLL (a : Nat) : BitVec 8 := if a = 0x8005a450 then 0xac#8 else if a = 0x8005a451 then 0xd6#8 else 0#8
+def snpTableImgRLLLLLR (a : Nat) : BitVec 8 := if a = 0x8005a452 then 0xfe#8 else if a = 0x8005a453 then 0xff#8 else if a = 0x8005a454 then 0x58#8 else 0#8
+def snpTableImgRLLLLL (a : Nat) : BitVec 8 := if a < 0x8005a452 then snpTableImgRLLLLLL a else snpTableImgRLLLLLR a
+def snpTableImgRLLLLRL (a : Nat) : BitVec 8 := if a = 0x8005a455 then 0xe2#8 else if a = 0x8005a456 then 0xfe#8 else if a = 0x8005a457 then 0xff#8 else 0#8
+def snpTableImgRLLLLRR (a : Nat) : BitVec 8 := if a = 0x8005a458 then 0xac#8 else if a = 0x8005a459 then 0xd6#8 else if a = 0x8005a45a then 0xfe#8 else 0#8
+def snpTableImgRLLLLR (a : Nat) : BitVec 8 := if a < 0x8005a458 then snpTableImgRLLLLRL a else snpTableImgRLLLLRR a
+def snpTableImgRLLLL (a : Nat) : BitVec 8 := if a < 0x8005a455 then snpTableImgRLLLLL a else snpTableImgRLLLLR a
+def snpTableImgRLLLRLL (a : Nat) : BitVec 8 := if a = 0x8005a45b then 0xff#8 else if a = 0x8005a45c then 0xac#8 else if a = 0x8005a45d then 0xd6#8 else 0#8
+def snpTableImgRLLLRLR (a : Nat) : BitVec 8 := if a = 0x8005a45e then 0xfe#8 else if a = 0x8005a45f then 0xff#8 else if a = 0x8005a460 then 0xac#8 else 0#8
+def snpTableImgRLLLRL (a : Nat) : BitVec 8 := if a < 0x8005a45e then snpTableImgRLLLRLL a else snpTableImgRLLLRLR a
+def snpTableImgRLLLRRL (a : Nat) : BitVec 8 := if a = 0x8005a461 then 0xd6#8 else if a = 0x8005a462 then 0xfe#8 else if a = 0x8005a463 then 0xff#8 else 0#8
+def snpTableImgRLLLRRR (a : Nat) : BitVec 8 := if a = 0x8005a464 then 0x00#8 else if a = 0x8005a465 then 0xde#8 else if a = 0x8005a466 then 0xfe#8 else 0#8
+def snpTableImgRLLLRR (a : Nat) : BitVec 8 := if a < 0x8005a464 then snpTableImgRLLLRRL a else snpTableImgRLLLRRR a
+def snpTableImgRLLLR (a : Nat) : BitVec 8 := if a < 0x8005a461 then snpTableImgRLLLRL a else snpTableImgRLLLRR a
+def snpTableImgRLLL (a : Nat) : BitVec 8 := if a < 0x8005a45b then snpTableImgRLLLL a else snpTableImgRLLLR a
+def snpTableImgRLLRLLL (a : Nat) : BitVec 8 := if a = 0x8005a467 then 0xff#8 else if a = 0x8005a468 then 0xac#8 else 0#8
+def snpTableImgRLLRLLR (a : Nat) : BitVec 8 := if a = 0x8005a469 then 0xd6#8 else if a = 0x8005a46a then 0xfe#8 else if a = 0x8005a46b then 0xff#8 else 0#8
+def snpTableImgRLLRLL (a : Nat) : BitVec 8 := if a < 0x8005a469 then snpTableImgRLLRLLL a else snpTableImgRLLRLLR a
+def snpTableImgRLLRLRL (a : Nat) : BitVec 8 := if a = 0x8005a46c then 0x04#8 else if a = 0x8005a46d then 0xe1#8 else if a = 0x8005a46e then 0xfe#8 else 0#8
+def snpTableImgRLLRLRR (a : Nat) : BitVec 8 := if a = 0x8005a46f then 0xff#8 else if a = 0x8005a470 then 0xac#8 else if a = 0x8005a471 then 0xd6#8 else 0#8
+def snpTableImgRLLRLR (a : Nat) : BitVec 8 := if a < 0x8005a46f then snpTableImgRLLRLRL a else snpTableImgRLLRLRR a
+def snpTableImgRLLRL (a : Nat) : BitVec 8 := if a < 0x8005a46c then snpTableImgRLLRLL a else snpTableImgRLLRLR a
+def snpTableImgRLLRRLL (a : Nat) : BitVec 8 := if a = 0x8005a472 then 0xfe#8 else if a = 0x8005a473 then 0xff#8 else if a = 0x8005a474 then 0xac#8 else 0#8
+def snpTableImgRLLRRLR (a : Nat) : BitVec 8 := if a = 0x8005a475 then 0xd6#8 else if a = 0x8005a476 then 0xfe#8 else if a = 0x8005a477 then 0xff#8 else 0#8
+def snpTableImgRLLRRL (a : Nat) : BitVec 8 := if a < 0x8005a475 then snpTableImgRLLRRLL a else snpTableImgRLLRRLR a
+def snpTableImgRLLRRRL (a : Nat) : BitVec 8 := if a = 0x8005a478 then 0x78#8 else if a = 0x8005a479 then 0xee#8 else if a = 0x8005a47a then 0xfe#8 else 0#8
+def snpTableImgRLLRRRR (a : Nat) : BitVec 8 := if a = 0x8005a47b then 0xff#8 else if a = 0x8005a47c then 0xac#8 else if a = 0x8005a47d then 0xd6#8 else 0#8
+def snpTableImgRLLRRR (a : Nat) : BitVec 8 := if a < 0x8005a47b then snpTableImgRLLRRRL a else snpTableImgRLLRRRR a
+def snpTableImgRLLRR (a : Nat) : BitVec 8 := if a < 0x8005a478 then snpTableImgRLLRRL a else snpTableImgRLLRRR a
+def snpTableImgRLLR (a : Nat) : BitVec 8 := if a < 0x8005a472 then snpTableImgRLLRL a else snpTableImgRLLRR a
+def snpTableImgRLL (a : Nat) : BitVec 8 := if a < 0x8005a467 then snpTableImgRLLL a else snpTableImgRLLR a
+def snpTableImgRLRLLLL (a : Nat) : BitVec 8 := if a = 0x8005a47e then 0xfe#8 else if a = 0x8005a47f then 0xff#8 else 0#8
+def snpTableImgRLRLLLR (a : Nat) : BitVec 8 := if a = 0x8005a480 then 0xac#8 else if a = 0x8005a481 then 0xd6#8 else if a = 0x8005a482 then 0xfe#8 else 0#8
+def snpTableImgRLRLLL (a : Nat) : BitVec 8 := if a < 0x8005a480 then snpTableImgRLRLLLL a else snpTableImgRLRLLLR a
+def snpTableImgRLRLLRL (a : Nat) : BitVec 8 := if a = 0x8005a483 then 0xff#8 else if a = 0x8005a484 then 0xac#8 else if a = 0x8005a485 then 0xd6#8 else 0#8
+def snpTableImgRLRLLRR (a : Nat) : BitVec 8 := if a = 0x8005a486 then 0xfe#8 else if a = 0x8005a487 then 0xff#8 else if a = 0x8005a488 then 0xac#8 else 0#8
+def snpTableImgRLRLLR (a : Nat) : BitVec 8 := if a < 0x8005a486 then snpTableImgRLRLLRL a else snpTableImgRLRLLRR a
+def snpTableImgRLRLL (a : Nat) : BitVec 8 := if a < 0x8005a483 then snpTableImgRLRLLL a else snpTableImgRLRLLR a
+def snpTableImgRLRLRLL (a : Nat) : BitVec 8 := if a = 0x8005a489 then 0xd6#8 else if a = 0x8005a48a then 0xfe#8 else if a = 0x8005a48b then 0xff#8 else 0#8
+def snpTableImgRLRLRLR (a : Nat) : BitVec 8 := if a = 0x8005a48c then 0xac#8 else if a = 0x8005a48d then 0xd6#8 else if a = 0x8005a48e then 0xfe#8 else 0#8
+def snpTableImgRLRLRL (a : Nat) : BitVec 8 := if a < 0x8005a48c then snpTableImgRLRLRLL a else snpTableImgRLRLRLR a
+def snpTableImgRLRLRRL (a : Nat) : BitVec 8 := if a = 0x8005a48f then 0xff#8 else if a = 0x8005a490 then 0xac#8 else if a = 0x8005a491 then 0xd6#8 else 0#8
+def snpTableImgRLRLRRR (a : Nat) : BitVec 8 := if a = 0x8005a492 then 0xfe#8 else if a = 0x8005a493 then 0xff#8 else if a = 0x8005a494 then 0xac#8 else 0#8
+def snpTableImgRLRLRR (a : Nat) : BitVec 8 := if a < 0x8005a492 then snpTableImgRLRLRRL a else snpTableImgRLRLRRR a
+def snpTableImgRLRLR (a : Nat) : BitVec 8 := if a < 0x8005a48f then snpTableImgRLRLRL a else snpTableImgRLRLRR a
+def snpTableImgRLRL (a : Nat) : BitVec 8 := if a < 0x8005a489 then snpTableImgRLRLL a else snpTableImgRLRLR a
+def snpTableImgRLRRLLL (a : Nat) : BitVec 8 := if a = 0x8005a495 then 0xd6#8 else if a = 0x8005a496 then 0xfe#8 else 0#8
+def snpTableImgRLRRLLR (a : Nat) : BitVec 8 := if a = 0x8005a497 then 0xff#8 else if a = 0x8005a498 then 0xac#8 else if a = 0x8005a499 then 0xd6#8 else 0#8
+def snpTableImgRLRRLL (a : Nat) : BitVec 8 := if a < 0x8005a497 then snpTableImgRLRRLLL a else snpTableImgRLRRLLR a
+def snpTableImgRLRRLRL (a : Nat) : BitVec 8 := if a = 0x8005a49a then 0xfe#8 else if a = 0x8005a49b then 0xff#8 else if a = 0x8005a49c then 0xe0#8 else 0#8
+def snpTableImgRLRRLRR (a : Nat) : BitVec 8 := if a = 0x8005a49d then 0xd8#8 else if a = 0x8005a49e then 0xfe#8 else if a = 0x8005a49f then 0xff#8 else 0#8
+def snpTableImgRLRRLR (a : Nat) : BitVec 8 := if a < 0x8005a49d then snpTableImgRLRRLRL a else snpTableImgRLRRLRR a
+def snpTableImgRLRRL (a : Nat) : BitVec 8 := if a < 0x8005a49a then snpTableImgRLRRLL a else snpTableImgRLRRLR a
+def snpTableImgRLRRRLL (a : Nat) : BitVec 8 := if a = 0x8005a4a0 then 0xac#8 else if a = 0x8005a4a1 then 0xd6#8 else if a = 0x8005a4a2 then 0xfe#8 else 0#8
+def snpTableImgRLRRRLR (a : Nat) : BitVec 8 := if a = 0x8005a4a3 then 0xff#8 else if a = 0x8005a4a4 then 0xe0#8 else if a = 0x8005a4a5 then 0xda#8 else 0#8
+def snpTableImgRLRRRL (a : Nat) : BitVec 8 := if a < 0x8005a4a3 then snpTableImgRLRRRLL a else snpTableImgRLRRRLR a
+def snpTableImgRLRRRRL (a : Nat) : BitVec 8 := if a = 0x8005a4a6 then 0xfe#8 else if a = 0x8005a4a7 then 0xff#8 else if a = 0x8005a4a8 then 0xbc#8 else 0#8
+def snpTableImgRLRRRRR (a : Nat) : BitVec 8 := if a = 0x8005a4a9 then 0xde#8 else if a = 0x8005a4aa then 0xfe#8 else if a = 0x8005a4ab then 0xff#8 else 0#8
+def snpTableImgRLRRRR (a : Nat) : BitVec 8 := if a < 0x8005a4a9 then snpTableImgRLRRRRL a else snpTableImgRLRRRRR a
+def snpTableImgRLRRR (a : Nat) : BitVec 8 := if a < 0x8005a4a6 then snpTableImgRLRRRL a else snpTableImgRLRRRR a
+def snpTableImgRLRR (a : Nat) : BitVec 8 := if a < 0x8005a4a0 then snpTableImgRLRRL a else snpTableImgRLRRR a
+def snpTableImgRLR (a : Nat) : BitVec 8 := if a < 0x8005a495 then snpTableImgRLRL a else snpTableImgRLRR a
+def snpTableImgRL (a : Nat) : BitVec 8 := if a < 0x8005a47e then snpTableImgRLL a else snpTableImgRLR a
+def snpTableImgRRLLLLL (a : Nat) : BitVec 8 := if a = 0x8005a4ac then 0xe0#8 else if a = 0x8005a4ad then 0xd8#8 else 0#8
+def snpTableImgRRLLLLR (a : Nat) : BitVec 8 := if a = 0x8005a4ae then 0xfe#8 else if a = 0x8005a4af then 0xff#8 else if a = 0x8005a4b0 then 0xe0#8 else 0#8
+def snpTableImgRRLLLL (a : Nat) : BitVec 8 := if a < 0x8005a4ae then snpTableImgRRLLLLL a else snpTableImgRRLLLLR a
+def snpTableImgRRLLLRL (a : Nat) : BitVec 8 := if a = 0x8005a4b1 then 0xd8#8 else if a = 0x8005a4b2 then 0xfe#8 else if a = 0x8005a4b3 then 0xff#8 else 0#8
+def snpTableImgRRLLLRR (a : Nat) : BitVec 8 := if a = 0x8005a4b4 then 0xe0#8 else if a = 0x8005a4b5 then 0xd8#8 else if a = 0x8005a4b6 then 0xfe#8 else 0#8
+def snpTableImgRRLLLR (a : Nat) : BitVec 8 := if a < 0x8005a4b4 then snpTableImgRRLLLRL a else snpTableImgRRLLLRR a
+def snpTableImgRRLLL (a : Nat) : BitVec 8 := if a < 0x8005a4b1 then snpTableImgRRLLLL a else snpTableImgRRLLLR a
+def snpTableImgRRLLRLL (a : Nat) : BitVec 8 := if a = 0x8005a4b7 then 0xff#8 else if a = 0x8005a4b8 then 0xc0#8 else if a = 0x8005a4b9 then 0xe2#8 else 0#8
+def snpTableImgRRLLRLR (a : Nat) : BitVec 8 := if a = 0x8005a4ba then 0xfe#8 else if a = 0x8005a4bb then 0xff#8 else if a = 0x8005a4bc then 0xbc#8 else 0#8
+def snpTableImgRRLLRL (a : Nat) : BitVec 8 := if a < 0x8005a4ba then snpTableImgRRLLRLL a else snpTableImgRRLLRLR a
+def snpTableImgRRLLRRL (a : Nat) : BitVec 8 := if a = 0x8005a4bd then 0xde#8 else if a = 0x8005a4be then 0xfe#8 else if a = 0x8005a4bf then 0xff#8 else 0#8
+def snpTableImgRRLLRRR (a : Nat) : BitVec 8 := if a = 0x8005a4c0 then 0xec#8 else if a = 0x8005a4c1 then 0xd7#8 else if a = 0x8005a4c2 then 0xfe#8 else 0#8
+def snpTableImgRRLLRR (a : Nat) : BitVec 8 := if a < 0x8005a4c0 then snpTableImgRRLLRRL a else snpTableImgRRLLRRR a
+def snpTableImgRRLLR (a : Nat) : BitVec 8 := if a < 0x8005a4bd then snpTableImgRRLLRL a else snpTableImgRRLLRR a
+def snpTableImgRRLL (a : Nat) : BitVec 8 := if a < 0x8005a4b7 then snpTableImgRRLLL a else snpTableImgRRLLR a
+def snpTableImgRRLRLLL (a : Nat) : BitVec 8 := if a = 0x8005a4c3 then 0xff#8 else if a = 0x8005a4c4 then 0xac#8 else 0#8
+def snpTableImgRRLRLLR (a : Nat) : BitVec 8 := if a = 0x8005a4c5 then 0xd6#8 else if a = 0x8005a4c6 then 0xfe#8 else if a = 0x8005a4c7 then 0xff#8 else 0#8
+def snpTableImgRRLRLL (a : Nat) : BitVec 8 := if a < 0x8005a4c5 then snpTableImgRRLRLLL a else snpTableImgRRLRLLR a
+def snpTableImgRRLRLRL (a : Nat) : BitVec 8 := if a = 0x8005a4c8 then 0xe8#8 else if a = 0x8005a4c9 then 0xe3#8 else if a = 0x8005a4ca then 0xfe#8 else 0#8
+def snpTableImgRRLRLRR (a : Nat) : BitVec 8 := if a = 0x8005a4cb then 0xff#8 else if a = 0x8005a4cc then 0xac#8 else if a = 0x8005a4cd then 0xd6#8 else 0#8
+def snpTableImgRRLRLR (a : Nat) : BitVec 8 := if a < 0x8005a4cb then snpTableImgRRLRLRL a else snpTableImgRRLRLRR a
+def snpTableImgRRLRL (a : Nat) : BitVec 8 := if a < 0x8005a4c8 then snpTableImgRRLRLL a else snpTableImgRRLRLR a
+def snpTableImgRRLRRLL (a : Nat) : BitVec 8 := if a = 0x8005a4ce then 0xfe#8 else if a = 0x8005a4cf then 0xff#8 else if a = 0x8005a4d0 then 0x90#8 else 0#8
+def snpTableImgRRLRRLR (a : Nat) : BitVec 8 := if a = 0x8005a4d1 then 0xe3#8 else if a = 0x8005a4d2 then 0xfe#8 else if a = 0x8005a4d3 then 0xff#8 else 0#8
+def snpTableImgRRLRRL (a : Nat) : BitVec 8 := if a < 0x8005a4d1 then snpTableImgRRLRRLL a else snpTableImgRRLRRLR a
+def snpTableImgRRLRRRL (a : Nat) : BitVec 8 := if a = 0x8005a4d4 then 0x48#8 else if a = 0x8005a4d5 then 0xe3#8 else if a = 0x8005a4d6 then 0xfe#8 else 0#8
+def snpTableImgRRLRRRR (a : Nat) : BitVec 8 := if a = 0x8005a4d7 then 0xff#8 else if a = 0x8005a4d8 then 0xe0#8 else if a = 0x8005a4d9 then 0xe2#8 else 0#8
+def snpTableImgRRLRRR (a : Nat) : BitVec 8 := if a < 0x8005a4d7 then snpTableImgRRLRRRL a else snpTableImgRRLRRRR a
+def snpTableImgRRLRR (a : Nat) : BitVec 8 := if a < 0x8005a4d4 then snpTableImgRRLRRL a else snpTableImgRRLRRR a
+def snpTableImgRRLR (a : Nat) : BitVec 8 := if a < 0x8005a4ce then snpTableImgRRLRL a else snpTableImgRRLRR a
+def snpTableImgRRL (a : Nat) : BitVec 8 := if a < 0x8005a4c3 then snpTableImgRRLL a else snpTableImgRRLR a
+def snpTableImgRRRLLLL (a : Nat) : BitVec 8 := if a = 0x8005a4da then 0xfe#8 else if a = 0x8005a4db then 0xff#8 else 0#8
+def snpTableImgRRRLLLR (a : Nat) : BitVec 8 := if a = 0x8005a4dc then 0xd4#8 else if a = 0x8005a4dd then 0xe2#8 else if a = 0x8005a4de then 0xfe#8 else 0#8
+def snpTableImgRRRLLL (a : Nat) : BitVec 8 := if a < 0x8005a4dc then snpTableImgRRRLLLL a else snpTableImgRRRLLLR a
+def snpTableImgRRRLLRL (a : Nat) : BitVec 8 := if a = 0x8005a4df then 0xff#8 else if a = 0x8005a4e0 then 0xac#8 else if a = 0x8005a4e1 then 0xd6#8 else 0#8
+def snpTableImgRRRLLRR (a : Nat) : BitVec 8 := if a = 0x8005a4e2 then 0xfe#8 else if a = 0x8005a4e3 then 0xff#8 else if a = 0x8005a4e4 then 0x00#8 else 0#8
+def snpTableImgRRRLLR (a : Nat) : BitVec 8 := if a < 0x8005a4e2 then snpTableImgRRRLLRL a else snpTableImgRRRLLRR a
+def snpTableImgRRRLL (a : Nat) : BitVec 8 := if a < 0x8005a4df then snpTableImgRRRLLL a else snpTableImgRRRLLR a
+def snpTableImgRRRLRLL (a : Nat) : BitVec 8 := if a = 0x8005a4e5 then 0xde#8 else if a = 0x8005a4e6 then 0xfe#8 else if a = 0x8005a4e7 then 0xff#8 else 0#8
+def snpTableImgRRRLRLR (a : Nat) : BitVec 8 := if a = 0x8005a4e8 then 0xec#8 else if a = 0x8005a4e9 then 0xd7#8 else if a = 0x8005a4ea then 0xfe#8 else 0#8
+def snpTableImgRRRLRL (a : Nat) : BitVec 8 := if a < 0x8005a4e8 then snpTableImgRRRLRLL a else snpTableImgRRRLRLR a
+def snpTableImgRRRLRRL (a : Nat) : BitVec 8 := if a = 0x8005a4eb then 0xff#8 else if a = 0x8005a4ec then 0x48#8 else if a = 0x8005a4ed then 0xe1#8 else 0#8
+def snpTableImgRRRLRRR (a : Nat) : BitVec 8 := if a = 0x8005a4ee then 0xfe#8 else if a = 0x8005a4ef then 0xff#8 else if a = 0x8005a4f0 then 0xac#8 else 0#8
+def snpTableImgRRRLRR (a : Nat) : BitVec 8 := if a < 0x8005a4ee then snpTableImgRRRLRRL a else snpTableImgRRRLRRR a
+def snpTableImgRRRLR (a : Nat) : BitVec 8 := if a < 0x8005a4eb then snpTableImgRRRLRL a else snpTableImgRRRLRR a
+def snpTableImgRRRL (a : Nat) : BitVec 8 := if a < 0x8005a4e5 then snpTableImgRRRLL a else snpTableImgRRRLR a
+def snpTableImgRRRRLLL (a : Nat) : BitVec 8 := if a = 0x8005a4f1 then 0xd6#8 else if a = 0x8005a4f2 then 0xfe#8 else 0#8
+def snpTableImgRRRRLLR (a : Nat) : BitVec 8 := if a = 0x8005a4f3 then 0xff#8 else if a = 0x8005a4f4 then 0xac#8 else if a = 0x8005a4f5 then 0xd6#8 else 0#8
+def snpTableImgRRRRLL (a : Nat) : BitVec 8 := if a < 0x8005a4f3 then snpTableImgRRRRLLL a else snpTableImgRRRRLLR a
+def snpTableImgRRRRLRL (a : Nat) : BitVec 8 := if a = 0x8005a4f6 then 0xfe#8 else if a = 0x8005a4f7 then 0xff#8 else if a = 0x8005a4f8 then 0x24#8 else 0#8
+def snpTableImgRRRRLRR (a : Nat) : BitVec 8 := if a = 0x8005a4f9 then 0xef#8 else if a = 0x8005a4fa then 0xfe#8 else if a = 0x8005a4fb then 0xff#8 else 0#8
+def snpTableImgRRRRLR (a : Nat) : BitVec 8 := if a < 0x8005a4f9 then snpTableImgRRRRLRL a else snpTableImgRRRRLRR a
+def snpTableImgRRRRL (a : Nat) : BitVec 8 := if a < 0x8005a4f6 then snpTableImgRRRRLL a else snpTableImgRRRRLR a
+def snpTableImgRRRRRLL (a : Nat) : BitVec 8 := if a = 0x8005a4fc then 0xac#8 else if a = 0x8005a4fd then 0xd6#8 else if a = 0x8005a4fe then 0xfe#8 else 0#8
+def snpTableImgRRRRRLR (a : Nat) : BitVec 8 := if a = 0x8005a4ff then 0xff#8 else if a = 0x8005a500 then 0xec#8 else if a = 0x8005a501 then 0xd7#8 else 0#8
+def snpTableImgRRRRRL (a : Nat) : BitVec 8 := if a < 0x8005a4ff then snpTableImgRRRRRLL a else snpTableImgRRRRRLR a
+def snpTableImgRRRRRRL (a : Nat) : BitVec 8 := if a = 0x8005a502 then 0xfe#8 else if a = 0x8005a503 then 0xff#8 else if a = 0x8005a504 then 0x00#8 else 0#8
+def snpTableImgRRRRRRR (a : Nat) : BitVec 8 := if a = 0x8005a505 then 0x00#8 else if a = 0x8005a506 then 0x00#8 else if a = 0x8005a507 then 0x00#8 else 0#8
+def snpTableImgRRRRRR (a : Nat) : BitVec 8 := if a < 0x8005a505 then snpTableImgRRRRRRL a else snpTableImgRRRRRRR a
+def snpTableImgRRRRR (a : Nat) : BitVec 8 := if a < 0x8005a502 then snpTableImgRRRRRL a else snpTableImgRRRRRR a
+def snpTableImgRRRR (a : Nat) : BitVec 8 := if a < 0x8005a4fc then snpTableImgRRRRL a else snpTableImgRRRRR a
+def snpTableImgRRR (a : Nat) : BitVec 8 := if a < 0x8005a4f1 then snpTableImgRRRL a else snpTableImgRRRR a
+def snpTableImgRR (a : Nat) : BitVec 8 := if a < 0x8005a4da then snpTableImgRRL a else snpTableImgRRR a
+def snpTableImgR (a : Nat) : BitVec 8 := if a < 0x8005a4ac then snpTableImgRL a else snpTableImgRR a
+def snpTableImg (a : Nat) : BitVec 8 := if a < 0x8005a450 then snpTableImgL a else snpTableImgR a
 end VsaIris.Sym

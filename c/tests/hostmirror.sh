@@ -14,15 +14,19 @@ RT=../vendor/ocaml-4.14.4/runtime
 D=build/mirror-$(basename $OUT); mkdir -p $D
 src/gen_prims.sh $RT $(realpath $D)/prims.c
 # embedded files as a C table instead of .incbin
-python3 - "$D/embed.c" /prog=$PROG $FILES <<'PY'
-import sys
+python3 - "$D/embed.c" "$ARGS" "$RP" /prog=$PROG $FILES <<'PY'
+import json, sys
 out=open(sys.argv[1],'w'); ent=[]
-for i,spec in enumerate(sys.argv[2:]):
+for i,spec in enumerate(sys.argv[4:]):
     path,f=spec.split('=',1); b=open(f,'rb').read()
     out.write(f"static const char f{i}[] = {{{','.join(str(x) for x in b)},0}};\n")
     ent.append(f'{{"{path}", f{i}, f{i}+{len(b)}}}')
 out.write("struct embedded_file { const char *path; const char *start; const char *end; };\n")
-out.write("const struct embedded_file embedded_files[] = {"+",".join(ent)+",{0,0,0}};\n")
+out.write("static const struct embedded_file files_table[] = {"+",".join(ent)+",{0,0,0}};\n")
+out.write("const struct embedded_file *const embedded_files = files_table;\n")
+out.write('static char *argv_table[] = {"ocamlrun", "/prog", '+sys.argv[2]+'0};\n')
+out.write('static char *env_table[] = {'+json.dumps('OCAMLRUNPARAM='+sys.argv[3])+',0};\n')
+out.write('char **const embedded_argv = argv_table;\nchar **const embedded_env = env_table;\n')
 PY
 RTS=$(python3 -c "
 s=open('Makefile').read(); a=s.index('RT_SRC :='); b=s.index('RT_C :=')
@@ -32,6 +36,6 @@ H=$(realpath tests/hostmirror.h)
 sed 's/^void _exit/void mf_exit_unused/; s/^int _getpid/int mf_getpid_unused/; s/^int _isatty/int mf_isatty/; s/^int rename(/int mf_rename(/; s/^void \*_sbrk(/static void *mf_sbrk_unused(/' src/htif.c > $D/htif.c
 gcc $CF -include $H -DMIRROR_WRITE -c -o $D/unix.o $RT/unix.c
 gcc $CF -c -o $D/extern.o $RT/extern.c   # no FS calls; has its own static write()
-gcc $CF -include $H "-DOCAML_ARGS=$ARGS" "-DOCAMLRUNPARAM=\"$RP\"" -o $OUT \
+gcc $CF -include $H -o $OUT \
   src/main.c src/stubs.c $D/prims.c $D/embed.c $D/unix.o $D/extern.o $(echo $RTS | sed "s|$RT/unix.c||; s|$RT/extern.c||") \
   -DHOST_MIRROR -Isrc $D/htif.c -lm

@@ -10,7 +10,7 @@ open Vsa.MemRepr Vsa.Sim VsaIris.Stdio
 abbrev snpNeed : Nat := 1024
 
 def snpS (s dst n : Nat) (a : Nat) : Prop :=
-  (stdioFoot a ∧ ¬ (0x80069f60 ≤ a ∧ a < 0x80069f68)) ∨ (s - snpNeed ≤ a ∧ a < s) ∨
+  (stdioFoot a ∧ ¬ (0x800648f8 ≤ a ∧ a < 0x80064900)) ∨ (s - snpNeed ≤ a ∧ a < s) ∨
     (dst ≤ a ∧ a < dst + n)
 
 def InDA (DA : List Nat) (lo hi : Nat) : Prop := ∀ b, lo ≤ b → b < hi → b ∈ DA

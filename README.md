@@ -28,11 +28,16 @@ run on Linux (every trace accepted). On this bare-metal build the "OS" is
 (`OCaml.Os.HtifFsImplements`) rather than an assumption; on Linux it is
 the assumption about the kernel (PLAN.md §6).
 
+**One runtime image.** Program files, argv and environment live in a fixed
+`.embed` region, so changing the program does not relocate runtime code or
+data. The migration rechecks all generated image/library pins and proofs;
+VALIDATION.md records all five successful Sail reruns.
+
 **Reused machine proofs.** ship-your-interpreter's proofs of the library
 code both binaries share (`memcpy`, `memset`, `strlen`, `strcpy`,
 `__muldi3`, the division routines, …: 66 byte-identical functions) are
 retargeted to this ELF's addresses by `scripts/retarget_syi.py`; the
-2,560 code bytes they pin are checked against the ELF.
+39,056 code bytes they pin are checked against the ELF.
 
 ## The plan
 
@@ -144,14 +149,14 @@ def endToEnd_ocaml_Statement S parse load boot L B : Prop :=   -- EndToEnd
 
 | | |
 |---|---|
-| `while.ml` on Sail | `55\n2500\n36\n`, exit 0, 4,571,586 steps; cut point at 4,499,328 (startup: code MD5 and primitive resolution) |
+| `while.ml` on Sail | `55\n2500\n36\n`, exit 0, 4,571,381 steps; cut point at 4,499,123 (startup: code MD5 and primitive resolution) |
 | difftests (host `ocamlrun` vs Sail) | 9/9 pass (ints, closures, data, exceptions, strings/`Printf`, allocation, soft-float, objects); 4.6M–222M steps |
 | `boot/ocamlc -version` on Sail | `4.14.4`, exit 0, 54.4M steps (cut at 48.8M) |
 | `boot/ocamlc -dinstr -c hello.ml` (`let () = print_int (6 * 7)`) on Sail | the compiler's bytecode listing, exit 0, 82.6M steps (cut at 48.8M); one collection, forced by a channel's custom-block accounting; none with `OCAMLRUNPARAM=M=1000` (77.4M steps) |
 | OS spec (`tcb/`) | 6,490 scripts, 101,621 calls on Linux: 0 traces rejected; the in-image file system: 6,410 accepted, 0 rejected (80 unconstrained) |
-| reused proofs | 66 functions retargeted, 2,560 pinned bytes = the ELF's |
+| reused proofs | 66 functions retargeted, 39,056 pinned bytes = the ELF's |
 | `BcSem` vs binary | identical output on `while`, `f2_closures` (118,120 ZINC steps), `while_min` (kernel-checked); never `.wrong` |
-| ELF census | 1,129 reachable functions, 78,529 instructions; `caml_interprete` 1,966 instructions, 147 arms, median 7; 83% in existing site classes; 130 functions identical to the WHILE ELF |
+| ELF census | 1,129 reachable functions, 78,529 instructions; `caml_interprete` 1,966 instructions, 147 arms, median 7; 93.9% in existing site classes; 130 functions identical to the WHILE ELF |
 | bytecode census | `boot/ocamlc` 412,087 instructions, 165 units; Translcore+Matching+Bytegen+Emitcode 23,678 |
 | fixpoint | rebuilt `ocamlc` = `boot/ocamlc` on CODE/PRIM/SYMB/CRCS; DATA up to install paths |
 

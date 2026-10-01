@@ -6,24 +6,24 @@ import Vsa.Sim.ElfDecode.Part000
 import Vsa.Sim.ElfDecode.Part002
 import Vsa.Sim.ElfDecode.Part006
 import Vsa.Sim.ElfDecode.Part007
-import Vsa.Sim.ElfDecode.Part013
+import Vsa.Sim.ElfDecode.Part012
 import Vsa.Sim.ElfDecode.Part018
 import Vsa.Sim.ElfDecode.Part031
 import Vsa.Sim.ElfDecode.Part032
 import Vsa.Sim.ElfDecode.Part033
 import Vsa.Sim.ElfDecode.Part038
 import Vsa.Sim.ElfDecode.Part043
-import Vsa.Sim.ElfDecode.Part054
+import Vsa.Sim.ElfDecode.Part053
 import Vsa.Sim.ElfDecode.Part055
 import Vsa.Sim.ElfDecode.Part056
+import Vsa.Sim.ElfDecode.Part068
 import Vsa.Sim.ElfDecode.Part069
-import Vsa.Sim.ElfDecode.Part070
-import Vsa.Sim.ElfDecode.Part074
-import Vsa.Sim.ElfDecode.Part137
-import Vsa.Sim.ElfDecode.Part164
+import Vsa.Sim.ElfDecode.Part073
+import Vsa.Sim.ElfDecode.Part138
+import Vsa.Sim.ElfDecode.Part145
 import Vsa.Sim.ElfDecode.Part165
-import Vsa.Sim.ElfDecode.Part179
-import Vsa.Sim.ElfDecode.Part191
+import Vsa.Sim.ElfDecode.Part166
+import Vsa.Sim.ElfDecode.Part192
 import Vsa.Sim.ElfDecode.Part208
 import Vsa.Sim.ElfDecode.Part210
 import Vsa.Sim.ElfDecode.Part217
@@ -50,8 +50,8 @@ def ax_80044744 : List BBlock := [{ body := [mkLine 0x80044744#64 0x01313423#32]
 def ax_80044748 : List BBlock := [{ body := [mkLine 0x80044748#64 0x00058413#32], term := none }]
 def ax_8004474c : List BBlock := [{ body := [mkLine 0x8004474c#64 0x02113423#32], term := none }]
 def ax_80044750 : List BBlock := [{ body := [mkLine 0x80044750#64 0x00050913#32], term := none }]
-def ax_80044754 : List BBlock := [{ body := [mkLine 0x80044754#64 0x00025997#32], term := none }]
-def ax_80044758 : List BBlock := [{ body := [mkLine 0x80044758#64 0xaa498993#32], term := none }]
+def ax_80044754 : List BBlock := [{ body := [mkLine 0x80044754#64 0x0001f997#32], term := none }]
+def ax_80044758 : List BBlock := [{ body := [mkLine 0x80044758#64 0x43c98993#32], term := none }]
 def ax_80044760 : List BBlock := [{ body := [mkLine 0x80044760#64 0x0109b783#32], term := none }]
 def ax_80044764 : List BBlock := [{ body := [mkLine 0x80044764#64 0x00001737#32], term := none }]
 def ax_80044768 : List BBlock := [{ body := [mkLine 0x80044768#64 0x0087b483#32], term := none }]
@@ -244,7 +244,7 @@ theorem st_80044750 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_80044754 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x80044758#64 (upd R 19 ((0x80044754#64) + (sign_extend (m := 64) ((0x00025#20) +++ (0x000#12))))) Mt) :
+    (hk : AW live S Q 0x80044758#64 (upd R 19 ((0x80044754#64) + (sign_extend (m := 64) ((0x0001f#20) +++ (0x000#12))))) Mt) :
     AW live S Q 0x80044754#64 R Mt :=
   swp_step ax_80044754 [19] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -257,7 +257,7 @@ theorem st_80044754 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_80044758 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x8004475c#64 (upd R 19 ((R 19) + sign_extend (m := 64) (0xaa4#12))) Mt) :
+    (hk : AW live S Q 0x8004475c#64 (upd R 19 ((R 19) + sign_extend (m := 64) (0x43c#12))) Mt) :
     AW live S Q 0x80044758#64 R Mt :=
   swp_step ax_80044758 [19] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive

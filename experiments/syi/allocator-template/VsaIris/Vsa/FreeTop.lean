@@ -31,7 +31,7 @@ theorem top_tail {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt V : Mem} {br
   simp only at hpb hp16
   have hbrk := HH.brk_le; have htle := HH.top_le; have hts := HH.top_size
   unfold heapStart heapEnd at *
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   have hhd := foot_header T.heap.heap (.inr ⟨_, hpm, rfl⟩)
   simp only at hhd
   have hoffH := off_stack_of T.disj hhd
@@ -45,7 +45,7 @@ theorem top_tail {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt V : Mem} {br
   have hthr := O.foot (a := 0x8001b968) (w := 8) (fun k hk => .inl (by unfold allocGlobal InRange; omega))
   refine st_8000755c O.live (by sx_norm; exact hthr) ?_
   refine st_80007560 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-  · rw [hE8]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · rw [hE8]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hE8]; exact O.foot hhd
   rw [hE8]
   have h17 := T.a7
@@ -228,7 +228,7 @@ theorem free_top {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt : Mem} {q n 
   have hno : ∀ e ∈ C.H, e.1 ≠ x + 16 := fun e he heq => hst.1 (List.mem_map.2 ⟨e, he, by rw [heq, K.addr]⟩)
   have Hd := Hp.heap.drop
   rw [hsplit] at Hd
-  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hlo
+  have hlo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hlo
   refine st_80007534 O.live ?_
   have hsum : (R 15 + R 13).toNat = brkv - x := by rw [BitVec.toNat_add, ha5, ha3]; omega
   refine st_80007538 O.live (fun h1 => ?_) (fun h0 => ?_)
@@ -269,7 +269,7 @@ theorem free_top {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt : Mem} {q n 
   have hEx : (R 11 + sign_extend (m := 64) (0xff0#12)).toNat = p + psz := by
     sx_norm; rw [BitVec.toNat_add, ha1, ← K.addr]; simp; omega
   refine st_8000753c O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-  · rw [hEx]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hEx]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEx]; exact O.foot hff.2
   rw [hEx, ldv_at P.foot _ rfl]
   refine st_80007540 O.live ?_
@@ -280,12 +280,12 @@ theorem free_top {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt : Mem} {q n 
   have hEpb : (R 14 - BitVec.ofNat 64 psz + sign_extend (m := 64) (0x018#12)).toNat = p + 24 := by
     sx_norm; rw [BitVec.toNat_add, hEp]; simp; omega
   refine st_80007544 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-  · rw [hEpf]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hEpf]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEpf]; exact O.foot (fun k hk => hff.1 k (by omega))
   rw [hEpf, ldv_at P.fd _ rfl]
   refine st_80007548 O.live ?_
   refine st_8000754c O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-  · rw [hEpb]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · rw [hEpb]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [hEpb]; exact O.foot (fun k hk => by
       have := hff.1 (8 + k) (by omega); rwa [show p + 16 + (8 + k) = p + 24 + k by omega] at this)
   rw [hEpb, ldv_at P.bk _ rfl]
@@ -300,11 +300,11 @@ theorem free_top {C : MCtx} (O : FOK C) {R : Nat → BitVec 64} {Mt : Mem} {q n 
   have o1 := off_stack_of D.heap.disj fS
   have o2 := off_stack_of D.heap.disj fP
   refine st_80007550 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-  · rw [eS]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · rw [eS]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [eS]; exact O.foot fS
   rw [eS]
   refine st_80007554 O.live ?_ ?_ ?_ <;> simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]
-  · rw [eP]; unfold StOK Vsa.Sim.tohostAddr; omega
+  · rw [eP]; unfold StOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · rw [eP]; exact O.foot fP
   rw [eP]
   have hv1 : (BitVec.ofNat 64 predP).toNat = predP := by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hpl]

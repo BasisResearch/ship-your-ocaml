@@ -62,13 +62,13 @@ def _malloc_rChunk0 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x800375ea : Nat)]? = some (0x40 : BitVec 8) ∧
   mem[(0x800375eb : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x800375ec : Nat)]? = some (0x17 : BitVec 8) ∧
-  mem[(0x800375ed : Nat)]? = some (0x28 : BitVec 8) ∧
-  mem[(0x800375ee : Nat)]? = some (0x03 : BitVec 8) ∧
+  mem[(0x800375ed : Nat)]? = some (0xc8 : BitVec 8) ∧
+  mem[(0x800375ee : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x800375ef : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x800375f0 : Nat)]? = some (0x13 : BitVec 8) ∧
   mem[(0x800375f1 : Nat)]? = some (0x08 : BitVec 8) ∧
-  mem[(0x800375f2 : Nat)]? = some (0xc8 : BitVec 8) ∧
-  mem[(0x800375f3 : Nat)]? = some (0xc0 : BitVec 8) ∧
+  mem[(0x800375f2 : Nat)]? = some (0x48 : BitVec 8) ∧
+  mem[(0x800375f3 : Nat)]? = some (0x5a : BitVec 8) ∧
   mem[(0x800375f4 : Nat)]? = some (0xb3 : BitVec 8) ∧
   mem[(0x800375f5 : Nat)]? = some (0x06 : BitVec 8) ∧
   mem[(0x800375f6 : Nat)]? = some (0xd8 : BitVec 8) ∧
@@ -274,13 +274,13 @@ def _malloc_rChunk3 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
 
 def _malloc_rChunk4 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x800376b8 : Nat)]? = some (0x17 : BitVec 8) ∧
-  mem[(0x800376b9 : Nat)]? = some (0x28 : BitVec 8) ∧
-  mem[(0x800376ba : Nat)]? = some (0x03 : BitVec 8) ∧
+  mem[(0x800376b9 : Nat)]? = some (0xc8 : BitVec 8) ∧
+  mem[(0x800376ba : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x800376bb : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x800376bc : Nat)]? = some (0x13 : BitVec 8) ∧
   mem[(0x800376bd : Nat)]? = some (0x08 : BitVec 8) ∧
-  mem[(0x800376be : Nat)]? = some (0x08 : BitVec 8) ∧
-  mem[(0x800376bf : Nat)]? = some (0xb4 : BitVec 8) ∧
+  mem[(0x800376be : Nat)]? = some (0x88 : BitVec 8) ∧
+  mem[(0x800376bf : Nat)]? = some (0x4d : BitVec 8) ∧
   mem[(0x800376c0 : Nat)]? = some (0x33 : BitVec 8) ∧
   mem[(0x800376c1 : Nat)]? = some (0x05 : BitVec 8) ∧
   mem[(0x800376c2 : Nat)]? = some (0xa8 : BitVec 8) ∧
@@ -348,13 +348,13 @@ def _malloc_rChunk5 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x800376fe : Nat)]? = some (0x08 : BitVec 8) ∧
   mem[(0x800376ff : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x80037700 : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x80037701 : Nat)]? = some (0x2e : BitVec 8) ∧
-  mem[(0x80037702 : Nat)]? = some (0x03 : BitVec 8) ∧
+  mem[(0x80037701 : Nat)]? = some (0xce : BitVec 8) ∧
+  mem[(0x80037702 : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x80037703 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x80037704 : Nat)]? = some (0x93 : BitVec 8) ∧
   mem[(0x80037705 : Nat)]? = some (0x8e : BitVec 8) ∧
-  mem[(0x80037706 : Nat)]? = some (0x8e : BitVec 8) ∧
-  mem[(0x80037707 : Nat)]? = some (0xb0 : BitVec 8) ∧
+  mem[(0x80037706 : Nat)]? = some (0x0e : BitVec 8) ∧
+  mem[(0x80037707 : Nat)]? = some (0x4a : BitVec 8) ∧
   mem[(0x80037708 : Nat)]? = some (0x63 : BitVec 8) ∧
   mem[(0x80037709 : Nat)]? = some (0x88 : BitVec 8) ∧
   mem[(0x8003770a : Nat)]? = some (0xd7 : BitVec 8) ∧
@@ -702,21 +702,21 @@ def _malloc_rChunk10 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x80037856 : Nat)]? = some (0x06 : BitVec 8) ∧
   mem[(0x80037857 : Nat)]? = some (0x1c : BitVec 8) ∧
   mem[(0x80037858 : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x80037859 : Nat)]? = some (0x35 : BitVec 8) ∧
-  mem[(0x8003785a : Nat)]? = some (0x03 : BitVec 8) ∧
+  mem[(0x80037859 : Nat)]? = some (0xd5 : BitVec 8) ∧
+  mem[(0x8003785a : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x8003785b : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x8003785c : Nat)]? = some (0x83 : BitVec 8) ∧
   mem[(0x8003785d : Nat)]? = some (0xb5 : BitVec 8) ∧
-  mem[(0x8003785e : Nat)]? = some (0x05 : BitVec 8) ∧
-  mem[(0x8003785f : Nat)]? = some (0xb4 : BitVec 8) ∧
+  mem[(0x8003785e : Nat)]? = some (0x85 : BitVec 8) ∧
+  mem[(0x8003785f : Nat)]? = some (0x4d : BitVec 8) ∧
   mem[(0x80037860 : Nat)]? = some (0x17 : BitVec 8) ∧
-  mem[(0x80037861 : Nat)]? = some (0x26 : BitVec 8) ∧
-  mem[(0x80037862 : Nat)]? = some (0x03 : BitVec 8) ∧
+  mem[(0x80037861 : Nat)]? = some (0xd6 : BitVec 8) ∧
+  mem[(0x80037862 : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x80037863 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x80037864 : Nat)]? = some (0x03 : BitVec 8) ∧
   mem[(0x80037865 : Nat)]? = some (0x36 : BitVec 8) ∧
-  mem[(0x80037866 : Nat)]? = some (0x06 : BitVec 8) ∧
-  mem[(0x80037867 : Nat)]? = some (0x6f : BitVec 8) ∧
+  mem[(0x80037866 : Nat)]? = some (0x86 : BitVec 8) ∧
+  mem[(0x80037867 : Nat)]? = some (0x08 : BitVec 8) ∧
   mem[(0x80037868 : Nat)]? = some (0x93 : BitVec 8) ∧
   mem[(0x80037869 : Nat)]? = some (0x06 : BitVec 8) ∧
   mem[(0x8003786a : Nat)]? = some (0xf0 : BitVec 8) ∧
@@ -810,13 +810,13 @@ def _malloc_rChunk12 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x800378be : Nat)]? = some (0x05 : BitVec 8) ∧
   mem[(0x800378bf : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x800378c0 : Nat)]? = some (0x17 : BitVec 8) ∧
-  mem[(0x800378c1 : Nat)]? = some (0x2f : BitVec 8) ∧
-  mem[(0x800378c2 : Nat)]? = some (0x03 : BitVec 8) ∧
+  mem[(0x800378c1 : Nat)]? = some (0xdf : BitVec 8) ∧
+  mem[(0x800378c2 : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x800378c3 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x800378c4 : Nat)]? = some (0x13 : BitVec 8) ∧
   mem[(0x800378c5 : Nat)]? = some (0x0f : BitVec 8) ∧
-  mem[(0x800378c6 : Nat)]? = some (0x0f : BitVec 8) ∧
-  mem[(0x800378c7 : Nat)]? = some (0x69 : BitVec 8) ∧
+  mem[(0x800378c6 : Nat)]? = some (0x8f : BitVec 8) ∧
+  mem[(0x800378c7 : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x800378c8 : Nat)]? = some (0x63 : BitVec 8) ∧
   mem[(0x800378c9 : Nat)]? = some (0x04 : BitVec 8) ∧
   mem[(0x800378ca : Nat)]? = some (0xd5 : BitVec 8) ∧
@@ -830,13 +830,13 @@ def _malloc_rChunk12 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x800378d2 : Nat)]? = some (0xc5 : BitVec 8) ∧
   mem[(0x800378d3 : Nat)]? = some (0x34 : BitVec 8) ∧
   mem[(0x800378d4 : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x800378d5 : Nat)]? = some (0xae : BitVec 8) ∧
+  mem[(0x800378d5 : Nat)]? = some (0x5e : BitVec 8) ∧
   mem[(0x800378d6 : Nat)]? = some (0x04 : BitVec 8) ∧
   mem[(0x800378d7 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x800378d8 : Nat)]? = some (0x93 : BitVec 8) ∧
   mem[(0x800378d9 : Nat)]? = some (0x8e : BitVec 8) ∧
-  mem[(0x800378da : Nat)]? = some (0xce : BitVec 8) ∧
-  mem[(0x800378db : Nat)]? = some (0x77 : BitVec 8) ∧
+  mem[(0x800378da : Nat)]? = some (0x4e : BitVec 8) ∧
+  mem[(0x800378db : Nat)]? = some (0x11 : BitVec 8) ∧
   mem[(0x800378dc : Nat)]? = some (0x83 : BitVec 8) ∧
   mem[(0x800378dd : Nat)]? = some (0xb6 : BitVec 8) ∧
   mem[(0x800378de : Nat)]? = some (0x0e : BitVec 8) ∧
@@ -1114,47 +1114,47 @@ def _malloc_rChunk16 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x800379e6 : Nat)]? = some (0x8e : BitVec 8) ∧
   mem[(0x800379e7 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x800379e8 : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x800379e9 : Nat)]? = some (0x37 : BitVec 8) ∧
-  mem[(0x800379ea : Nat)]? = some (0x03 : BitVec 8) ∧
+  mem[(0x800379e9 : Nat)]? = some (0xd7 : BitVec 8) ∧
+  mem[(0x800379ea : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x800379eb : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x800379ec : Nat)]? = some (0x83 : BitVec 8) ∧
   mem[(0x800379ed : Nat)]? = some (0xb7 : BitVec 8) ∧
-  mem[(0x800379ee : Nat)]? = some (0x87 : BitVec 8) ∧
-  mem[(0x800379ef : Nat)]? = some (0x9a : BitVec 8) ∧
+  mem[(0x800379ee : Nat)]? = some (0x07 : BitVec 8) ∧
+  mem[(0x800379ef : Nat)]? = some (0x34 : BitVec 8) ∧
   mem[(0x800379f0 : Nat)]? = some (0x63 : BitVec 8) ∧
   mem[(0x800379f1 : Nat)]? = some (0xf6 : BitVec 8) ∧
   mem[(0x800379f2 : Nat)]? = some (0xd7 : BitVec 8) ∧
   mem[(0x800379f3 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x800379f4 : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x800379f5 : Nat)]? = some (0x37 : BitVec 8) ∧
-  mem[(0x800379f6 : Nat)]? = some (0x03 : BitVec 8) ∧
+  mem[(0x800379f5 : Nat)]? = some (0xd7 : BitVec 8) ∧
+  mem[(0x800379f6 : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x800379f7 : Nat)]? = some (0x00 : BitVec 8)
 
 def _malloc_rChunk17 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x800379f8 : Nat)]? = some (0x23 : BitVec 8) ∧
-  mem[(0x800379f9 : Nat)]? = some (0xbe : BitVec 8) ∧
+  mem[(0x800379f9 : Nat)]? = some (0xba : BitVec 8) ∧
   mem[(0x800379fa : Nat)]? = some (0xd7 : BitVec 8) ∧
-  mem[(0x800379fb : Nat)]? = some (0x98 : BitVec 8) ∧
+  mem[(0x800379fb : Nat)]? = some (0x32 : BitVec 8) ∧
   mem[(0x800379fc : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x800379fd : Nat)]? = some (0x37 : BitVec 8) ∧
-  mem[(0x800379fe : Nat)]? = some (0x03 : BitVec 8) ∧
+  mem[(0x800379fd : Nat)]? = some (0xd7 : BitVec 8) ∧
+  mem[(0x800379fe : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x800379ff : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x80037a00 : Nat)]? = some (0x83 : BitVec 8) ∧
   mem[(0x80037a01 : Nat)]? = some (0xb7 : BitVec 8) ∧
-  mem[(0x80037a02 : Nat)]? = some (0xc7 : BitVec 8) ∧
-  mem[(0x80037a03 : Nat)]? = some (0x98 : BitVec 8) ∧
+  mem[(0x80037a02 : Nat)]? = some (0x47 : BitVec 8) ∧
+  mem[(0x80037a03 : Nat)]? = some (0x32 : BitVec 8) ∧
   mem[(0x80037a04 : Nat)]? = some (0x63 : BitVec 8) ∧
   mem[(0x80037a05 : Nat)]? = some (0xf6 : BitVec 8) ∧
   mem[(0x80037a06 : Nat)]? = some (0xd7 : BitVec 8) ∧
   mem[(0x80037a07 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x80037a08 : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x80037a09 : Nat)]? = some (0x37 : BitVec 8) ∧
-  mem[(0x80037a0a : Nat)]? = some (0x03 : BitVec 8) ∧
+  mem[(0x80037a09 : Nat)]? = some (0xd7 : BitVec 8) ∧
+  mem[(0x80037a0a : Nat)]? = some (0x02 : BitVec 8) ∧
   mem[(0x80037a0b : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x80037a0c : Nat)]? = some (0x23 : BitVec 8) ∧
-  mem[(0x80037a0d : Nat)]? = some (0xb0 : BitVec 8) ∧
+  mem[(0x80037a0d : Nat)]? = some (0xbc : BitVec 8) ∧
   mem[(0x80037a0e : Nat)]? = some (0xd7 : BitVec 8) ∧
-  mem[(0x80037a0f : Nat)]? = some (0x98 : BitVec 8) ∧
+  mem[(0x80037a0f : Nat)]? = some (0x30 : BitVec 8) ∧
   mem[(0x80037a10 : Nat)]? = some (0x93 : BitVec 8) ∧
   mem[(0x80037a11 : Nat)]? = some (0x07 : BitVec 8) ∧
   mem[(0x80037a12 : Nat)]? = some (0x0e : BitVec 8) ∧
@@ -2076,13 +2076,13 @@ def _malloc_rChunk31 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x80037d8a : Nat)]? = some (0x1f : BitVec 8) ∧
   mem[(0x80037d8b : Nat)]? = some (0x93 : BitVec 8) ∧
   mem[(0x80037d8c : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x80037d8d : Nat)]? = some (0xae : BitVec 8) ∧
+  mem[(0x80037d8d : Nat)]? = some (0x5e : BitVec 8) ∧
   mem[(0x80037d8e : Nat)]? = some (0x04 : BitVec 8) ∧
   mem[(0x80037d8f : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x80037d90 : Nat)]? = some (0x93 : BitVec 8) ∧
   mem[(0x80037d91 : Nat)]? = some (0x8e : BitVec 8) ∧
-  mem[(0x80037d92 : Nat)]? = some (0x4e : BitVec 8) ∧
-  mem[(0x80037d93 : Nat)]? = some (0x2c : BitVec 8) ∧
+  mem[(0x80037d92 : Nat)]? = some (0xce : BitVec 8) ∧
+  mem[(0x80037d93 : Nat)]? = some (0xc5 : BitVec 8) ∧
   mem[(0x80037d94 : Nat)]? = some (0x83 : BitVec 8) ∧
   mem[(0x80037d95 : Nat)]? = some (0xb6 : BitVec 8) ∧
   mem[(0x80037d96 : Nat)]? = some (0x0e : BitVec 8) ∧
@@ -2669,8 +2669,8 @@ theorem _malloc_r_at_800375e8 {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_800375ec {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800375ec : Nat)]? = some (0x17 : BitVec 8) ∧
-      mem[(0x800375ed : Nat)]? = some (0x28 : BitVec 8) ∧
-      mem[(0x800375ee : Nat)]? = some (0x03 : BitVec 8) ∧
+      mem[(0x800375ed : Nat)]? = some (0xc8 : BitVec 8) ∧
+      mem[(0x800375ee : Nat)]? = some (0x02 : BitVec 8) ∧
       mem[(0x800375ef : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk0 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -2680,8 +2680,8 @@ theorem _malloc_r_at_800375f0 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800375f0 : Nat)]? = some (0x13 : BitVec 8) ∧
       mem[(0x800375f1 : Nat)]? = some (0x08 : BitVec 8) ∧
-      mem[(0x800375f2 : Nat)]? = some (0xc8 : BitVec 8) ∧
-      mem[(0x800375f3 : Nat)]? = some (0xc0 : BitVec 8) :=
+      mem[(0x800375f2 : Nat)]? = some (0x48 : BitVec 8) ∧
+      mem[(0x800375f3 : Nat)]? = some (0x5a : BitVec 8) :=
   have hc := _malloc_r_chunk0 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
@@ -3176,8 +3176,8 @@ theorem _malloc_r_at_800376b4 {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_800376b8 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800376b8 : Nat)]? = some (0x17 : BitVec 8) ∧
-      mem[(0x800376b9 : Nat)]? = some (0x28 : BitVec 8) ∧
-      mem[(0x800376ba : Nat)]? = some (0x03 : BitVec 8) ∧
+      mem[(0x800376b9 : Nat)]? = some (0xc8 : BitVec 8) ∧
+      mem[(0x800376ba : Nat)]? = some (0x02 : BitVec 8) ∧
       mem[(0x800376bb : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk4 h
   ⟨hc.1, hc.2.1, hc.2.2.1, hc.2.2.2.1⟩
@@ -3186,8 +3186,8 @@ theorem _malloc_r_at_800376bc {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800376bc : Nat)]? = some (0x13 : BitVec 8) ∧
       mem[(0x800376bd : Nat)]? = some (0x08 : BitVec 8) ∧
-      mem[(0x800376be : Nat)]? = some (0x08 : BitVec 8) ∧
-      mem[(0x800376bf : Nat)]? = some (0xb4 : BitVec 8) :=
+      mem[(0x800376be : Nat)]? = some (0x88 : BitVec 8) ∧
+      mem[(0x800376bf : Nat)]? = some (0x4d : BitVec 8) :=
   have hc := _malloc_r_chunk4 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.1, hc.2.2.2.2.2.1, hc.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.1⟩
@@ -3354,8 +3354,8 @@ theorem _malloc_r_at_800376fc {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_80037700 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x80037700 : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x80037701 : Nat)]? = some (0x2e : BitVec 8) ∧
-      mem[(0x80037702 : Nat)]? = some (0x03 : BitVec 8) ∧
+      mem[(0x80037701 : Nat)]? = some (0xce : BitVec 8) ∧
+      mem[(0x80037702 : Nat)]? = some (0x02 : BitVec 8) ∧
       mem[(0x80037703 : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk5 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -3365,8 +3365,8 @@ theorem _malloc_r_at_80037704 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x80037704 : Nat)]? = some (0x93 : BitVec 8) ∧
       mem[(0x80037705 : Nat)]? = some (0x8e : BitVec 8) ∧
-      mem[(0x80037706 : Nat)]? = some (0x8e : BitVec 8) ∧
-      mem[(0x80037707 : Nat)]? = some (0xb0 : BitVec 8) :=
+      mem[(0x80037706 : Nat)]? = some (0x0e : BitVec 8) ∧
+      mem[(0x80037707 : Nat)]? = some (0x4a : BitVec 8) :=
   have hc := _malloc_r_chunk5 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
@@ -4209,8 +4209,8 @@ theorem _malloc_r_at_80037854 {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_80037858 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x80037858 : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x80037859 : Nat)]? = some (0x35 : BitVec 8) ∧
-      mem[(0x8003785a : Nat)]? = some (0x03 : BitVec 8) ∧
+      mem[(0x80037859 : Nat)]? = some (0xd5 : BitVec 8) ∧
+      mem[(0x8003785a : Nat)]? = some (0x02 : BitVec 8) ∧
       mem[(0x8003785b : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk10 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -4220,8 +4220,8 @@ theorem _malloc_r_at_8003785c {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x8003785c : Nat)]? = some (0x83 : BitVec 8) ∧
       mem[(0x8003785d : Nat)]? = some (0xb5 : BitVec 8) ∧
-      mem[(0x8003785e : Nat)]? = some (0x05 : BitVec 8) ∧
-      mem[(0x8003785f : Nat)]? = some (0xb4 : BitVec 8) :=
+      mem[(0x8003785e : Nat)]? = some (0x85 : BitVec 8) ∧
+      mem[(0x8003785f : Nat)]? = some (0x4d : BitVec 8) :=
   have hc := _malloc_r_chunk10 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
@@ -4229,8 +4229,8 @@ theorem _malloc_r_at_8003785c {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_80037860 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x80037860 : Nat)]? = some (0x17 : BitVec 8) ∧
-      mem[(0x80037861 : Nat)]? = some (0x26 : BitVec 8) ∧
-      mem[(0x80037862 : Nat)]? = some (0x03 : BitVec 8) ∧
+      mem[(0x80037861 : Nat)]? = some (0xd6 : BitVec 8) ∧
+      mem[(0x80037862 : Nat)]? = some (0x02 : BitVec 8) ∧
       mem[(0x80037863 : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk10 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -4240,8 +4240,8 @@ theorem _malloc_r_at_80037864 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x80037864 : Nat)]? = some (0x03 : BitVec 8) ∧
       mem[(0x80037865 : Nat)]? = some (0x36 : BitVec 8) ∧
-      mem[(0x80037866 : Nat)]? = some (0x06 : BitVec 8) ∧
-      mem[(0x80037867 : Nat)]? = some (0x6f : BitVec 8) :=
+      mem[(0x80037866 : Nat)]? = some (0x86 : BitVec 8) ∧
+      mem[(0x80037867 : Nat)]? = some (0x08 : BitVec 8) :=
   have hc := _malloc_r_chunk10 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
@@ -4467,8 +4467,8 @@ theorem _malloc_r_at_800378bc {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_800378c0 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800378c0 : Nat)]? = some (0x17 : BitVec 8) ∧
-      mem[(0x800378c1 : Nat)]? = some (0x2f : BitVec 8) ∧
-      mem[(0x800378c2 : Nat)]? = some (0x03 : BitVec 8) ∧
+      mem[(0x800378c1 : Nat)]? = some (0xdf : BitVec 8) ∧
+      mem[(0x800378c2 : Nat)]? = some (0x02 : BitVec 8) ∧
       mem[(0x800378c3 : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk12 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -4478,8 +4478,8 @@ theorem _malloc_r_at_800378c4 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800378c4 : Nat)]? = some (0x13 : BitVec 8) ∧
       mem[(0x800378c5 : Nat)]? = some (0x0f : BitVec 8) ∧
-      mem[(0x800378c6 : Nat)]? = some (0x0f : BitVec 8) ∧
-      mem[(0x800378c7 : Nat)]? = some (0x69 : BitVec 8) :=
+      mem[(0x800378c6 : Nat)]? = some (0x8f : BitVec 8) ∧
+      mem[(0x800378c7 : Nat)]? = some (0x02 : BitVec 8) :=
   have hc := _malloc_r_chunk12 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
@@ -4517,7 +4517,7 @@ theorem _malloc_r_at_800378d0 {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_800378d4 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800378d4 : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x800378d5 : Nat)]? = some (0xae : BitVec 8) ∧
+      mem[(0x800378d5 : Nat)]? = some (0x5e : BitVec 8) ∧
       mem[(0x800378d6 : Nat)]? = some (0x04 : BitVec 8) ∧
       mem[(0x800378d7 : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk12 h
@@ -4528,8 +4528,8 @@ theorem _malloc_r_at_800378d8 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800378d8 : Nat)]? = some (0x93 : BitVec 8) ∧
       mem[(0x800378d9 : Nat)]? = some (0x8e : BitVec 8) ∧
-      mem[(0x800378da : Nat)]? = some (0xce : BitVec 8) ∧
-      mem[(0x800378db : Nat)]? = some (0x77 : BitVec 8) :=
+      mem[(0x800378da : Nat)]? = some (0x4e : BitVec 8) ∧
+      mem[(0x800378db : Nat)]? = some (0x11 : BitVec 8) :=
   have hc := _malloc_r_chunk12 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
@@ -5203,8 +5203,8 @@ theorem _malloc_r_at_800379e4 {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_800379e8 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800379e8 : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x800379e9 : Nat)]? = some (0x37 : BitVec 8) ∧
-      mem[(0x800379ea : Nat)]? = some (0x03 : BitVec 8) ∧
+      mem[(0x800379e9 : Nat)]? = some (0xd7 : BitVec 8) ∧
+      mem[(0x800379ea : Nat)]? = some (0x02 : BitVec 8) ∧
       mem[(0x800379eb : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk16 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -5214,8 +5214,8 @@ theorem _malloc_r_at_800379ec {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800379ec : Nat)]? = some (0x83 : BitVec 8) ∧
       mem[(0x800379ed : Nat)]? = some (0xb7 : BitVec 8) ∧
-      mem[(0x800379ee : Nat)]? = some (0x87 : BitVec 8) ∧
-      mem[(0x800379ef : Nat)]? = some (0x9a : BitVec 8) :=
+      mem[(0x800379ee : Nat)]? = some (0x07 : BitVec 8) ∧
+      mem[(0x800379ef : Nat)]? = some (0x34 : BitVec 8) :=
   have hc := _malloc_r_chunk16 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
@@ -5233,8 +5233,8 @@ theorem _malloc_r_at_800379f0 {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_800379f4 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800379f4 : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x800379f5 : Nat)]? = some (0x37 : BitVec 8) ∧
-      mem[(0x800379f6 : Nat)]? = some (0x03 : BitVec 8) ∧
+      mem[(0x800379f5 : Nat)]? = some (0xd7 : BitVec 8) ∧
+      mem[(0x800379f6 : Nat)]? = some (0x02 : BitVec 8) ∧
       mem[(0x800379f7 : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk16 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -5243,17 +5243,17 @@ theorem _malloc_r_at_800379f4 {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_800379f8 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800379f8 : Nat)]? = some (0x23 : BitVec 8) ∧
-      mem[(0x800379f9 : Nat)]? = some (0xbe : BitVec 8) ∧
+      mem[(0x800379f9 : Nat)]? = some (0xba : BitVec 8) ∧
       mem[(0x800379fa : Nat)]? = some (0xd7 : BitVec 8) ∧
-      mem[(0x800379fb : Nat)]? = some (0x98 : BitVec 8) :=
+      mem[(0x800379fb : Nat)]? = some (0x32 : BitVec 8) :=
   have hc := _malloc_r_chunk17 h
   ⟨hc.1, hc.2.1, hc.2.2.1, hc.2.2.2.1⟩
 
 theorem _malloc_r_at_800379fc {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x800379fc : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x800379fd : Nat)]? = some (0x37 : BitVec 8) ∧
-      mem[(0x800379fe : Nat)]? = some (0x03 : BitVec 8) ∧
+      mem[(0x800379fd : Nat)]? = some (0xd7 : BitVec 8) ∧
+      mem[(0x800379fe : Nat)]? = some (0x02 : BitVec 8) ∧
       mem[(0x800379ff : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk17 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -5263,8 +5263,8 @@ theorem _malloc_r_at_80037a00 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x80037a00 : Nat)]? = some (0x83 : BitVec 8) ∧
       mem[(0x80037a01 : Nat)]? = some (0xb7 : BitVec 8) ∧
-      mem[(0x80037a02 : Nat)]? = some (0xc7 : BitVec 8) ∧
-      mem[(0x80037a03 : Nat)]? = some (0x98 : BitVec 8) :=
+      mem[(0x80037a02 : Nat)]? = some (0x47 : BitVec 8) ∧
+      mem[(0x80037a03 : Nat)]? = some (0x32 : BitVec 8) :=
   have hc := _malloc_r_chunk17 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.1⟩
@@ -5282,8 +5282,8 @@ theorem _malloc_r_at_80037a04 {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_80037a08 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x80037a08 : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x80037a09 : Nat)]? = some (0x37 : BitVec 8) ∧
-      mem[(0x80037a0a : Nat)]? = some (0x03 : BitVec 8) ∧
+      mem[(0x80037a09 : Nat)]? = some (0xd7 : BitVec 8) ∧
+      mem[(0x80037a0a : Nat)]? = some (0x02 : BitVec 8) ∧
       mem[(0x80037a0b : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk17 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
@@ -5292,9 +5292,9 @@ theorem _malloc_r_at_80037a08 {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_80037a0c {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x80037a0c : Nat)]? = some (0x23 : BitVec 8) ∧
-      mem[(0x80037a0d : Nat)]? = some (0xb0 : BitVec 8) ∧
+      mem[(0x80037a0d : Nat)]? = some (0xbc : BitVec 8) ∧
       mem[(0x80037a0e : Nat)]? = some (0xd7 : BitVec 8) ∧
-      mem[(0x80037a0f : Nat)]? = some (0x98 : BitVec 8) :=
+      mem[(0x80037a0f : Nat)]? = some (0x30 : BitVec 8) :=
   have hc := _malloc_r_chunk17 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
@@ -7518,7 +7518,7 @@ theorem _malloc_r_at_80037d88 {mem : ExtHashMap Nat (BitVec 8)}
 theorem _malloc_r_at_80037d8c {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x80037d8c : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x80037d8d : Nat)]? = some (0xae : BitVec 8) ∧
+      mem[(0x80037d8d : Nat)]? = some (0x5e : BitVec 8) ∧
       mem[(0x80037d8e : Nat)]? = some (0x04 : BitVec 8) ∧
       mem[(0x80037d8f : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := _malloc_r_chunk31 h
@@ -7529,8 +7529,8 @@ theorem _malloc_r_at_80037d90 {mem : ExtHashMap Nat (BitVec 8)}
     (h : _malloc_rLoaded mem) :
       mem[(0x80037d90 : Nat)]? = some (0x93 : BitVec 8) ∧
       mem[(0x80037d91 : Nat)]? = some (0x8e : BitVec 8) ∧
-      mem[(0x80037d92 : Nat)]? = some (0x4e : BitVec 8) ∧
-      mem[(0x80037d93 : Nat)]? = some (0x2c : BitVec 8) :=
+      mem[(0x80037d92 : Nat)]? = some (0xce : BitVec 8) ∧
+      mem[(0x80037d93 : Nat)]? = some (0xc5 : BitVec 8) :=
   have hc := _malloc_r_chunk31 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩

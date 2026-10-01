@@ -170,16 +170,16 @@ theorem exec_andi_a4_7 (σ : MState) (pc : BitVec 64) (v14 : BitVec 64)
 /-- `execute (UTYPE auipc a5,0x14)` = `auipc x15,0x14`. Writes `x15 := pc + sext(0x14000)`. -/
 theorem exec_auipc_a5 (σ : MState) (pc : BitVec 64)
     (hpc : σ.regs.get? Register.PC = some pc) :
-    (execute (instruction.UTYPE (0x00025#20, regidx.Regidx 0x0f#5, uop.AUIPC))).run
+    (execute (instruction.UTYPE (0x0001f#20, regidx.Regidx 0x0f#5, uop.AUIPC))).run
         (afterNextPC (afterPrelude σ) pc)
       = .ok RETIRE_SUCCESS
-          (sigma3_alu σ pc Register.x15 (pc + sign_extend (m := 64) ((0x00025#20) +++ 0x000#12))) := by
+          (sigma3_alu σ pc Register.x15 (pc + sign_extend (m := 64) ((0x0001f#20) +++ 0x000#12))) := by
   have hpc₂ : (afterNextPC (afterPrelude σ) pc).regs.get? Register.PC = some pc := by
     rw [get?_afterNextPC σ pc _ (by decide) (by decide)]; exact hpc
-  exact execute_utype_auipc_char (0x00025#20) (regidx.Regidx 0x0f#5) pc
+  exact execute_utype_auipc_char (0x0001f#20) (regidx.Regidx 0x0f#5) pc
     (afterNextPC (afterPrelude σ) pc)
-    (sigma3_alu σ pc Register.x15 (pc + sign_extend (m := 64) ((0x00025#20) +++ 0x000#12))) hpc₂
-    (wX_bits_x15 _ (pc + sign_extend (m := 64) ((0x00025#20) +++ 0x000#12)))
+    (sigma3_alu σ pc Register.x15 (pc + sign_extend (m := 64) ((0x0001f#20) +++ 0x000#12))) hpc₂
+    (wX_bits_x15 _ (pc + sign_extend (m := 64) ((0x0001f#20) +++ 0x000#12)))
 
 /-- Generic `execute (LOAD ld rd, imm(rs1))` via the TOTAL 8-byte chain. Takes the
 `rs1`-read and `rd`-write run facts abstractly (write target `σ'`), so one helper
@@ -561,10 +561,10 @@ theorem site_80006eac_nottaken
 
 /-! ### Site 0x80042b30 — `auipc a5,0x14` -/
 theorem auipc_a5_word :
-    (((0x00#8).append (0x02#8)).append (0x57#8)).append (0x97#8) = (0x00025797#32 : BitVec 32) := by
+    (((0x00#8).append (0x01#8)).append (0xf7#8)).append (0x97#8) = (0x0001f797#32 : BitVec 32) := by
   apply BitVec.eq_of_toNat_eq; decide
 theorem auipc_a5_notrvc :
-    Sail.BitVec.extractLsb ((((0x00#8).append (0x02#8)).append (0x57#8)).append (0x97#8)) 1 0
+    Sail.BitVec.extractLsb ((((0x00#8).append (0x01#8)).append (0xf7#8)).append (0x97#8)) 1 0
       = (0b11#2 : BitVec 2) := by
   apply BitVec.eq_of_toNat_eq; decide
 -- discipline: allow(R1-site-battery) mechanically retargeted source theorem
@@ -576,14 +576,14 @@ theorem site_80042b30
     (hpcv : pc = (0x80042b30#64 : BitVec 64)) (hi : i < 2) :
     ∃ (σ' : MState) (i' : Nat),
       Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧ σ'.mem = σ.mem ∧
-      ReadsLikePost σ' (sigmaPost_alu σ pc vminstret Register.x15 ((0x80042b30#64) + sign_extend (m := 64) ((0x00025#20) +++ 0x000#12))) := by
+      ReadsLikePost σ' (sigmaPost_alu σ pc vminstret Register.x15 ((0x80042b30#64) + sign_extend (m := 64) ((0x0001f#20) +++ 0x000#12))) := by
   subst hpcv
   obtain ⟨hb0, hb1, hb2, hb3⟩ := Vsa.Sim.Code.strcmp_at_80042b30 hmem
-  exact stepObs_alu σ i u (0x80042b30#64) vminstret (0x00025797#32)
-    (instruction.UTYPE (0x00025#20, regidx.Regidx 0x0f#5, uop.AUIPC))
-    Register.x15 ((0x80042b30#64) + sign_extend (m := 64) ((0x00025#20) +++ 0x000#12)) (0x97#8) (0x57#8) (0x02#8) (0x00#8)
+  exact stepObs_alu σ i u (0x80042b30#64) vminstret (0x0001f797#32)
+    (instruction.UTYPE (0x0001f#20, regidx.Regidx 0x0f#5, uop.AUIPC))
+    Register.x15 ((0x80042b30#64) + sign_extend (m := 64) ((0x0001f#20) +++ 0x000#12)) (0x97#8) (0xf7#8) (0x01#8) (0x00#8)
     hG hpc hminstret auipc_a5_word auipc_a5_notrvc
-    (Vsa.Sim.ElfDecode.decode_00025797 (afterPrelude σ)
+    (Vsa.Sim.ElfDecode.decode_0001f797 (afterPrelude σ)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
@@ -593,10 +593,10 @@ theorem site_80042b30
 
 /-! ### Site 0x80042b34 — `ld a5,-560(a5)` (load mask) (TOTAL 8-byte load) -/
 theorem ld_mask_word :
-    (((0xa4#8).append (0x87#8)).append (0xb7#8)).append (0x83#8) = (0xa487b783#32 : BitVec 32) := by
+    (((0x40#8).append (0x07#8)).append (0xb7#8)).append (0x83#8) = (0x4007b783#32 : BitVec 32) := by
   apply BitVec.eq_of_toNat_eq; decide
 theorem ld_mask_notrvc :
-    Sail.BitVec.extractLsb ((((0xa4#8).append (0x87#8)).append (0xb7#8)).append (0x83#8)) 1 0
+    Sail.BitVec.extractLsb ((((0x40#8).append (0x07#8)).append (0xb7#8)).append (0x83#8)) 1 0
       = (0b11#2 : BitVec 2) := by
   apply BitVec.eq_of_toNat_eq; decide
 -- discipline: allow(R1-site-battery) mechanically retargeted source theorem
@@ -607,34 +607,34 @@ theorem site_80042b34
     (hx15 : σ.regs.get? Register.x15 = some v15)
     (hmem : StrcmpLoaded σ.mem)
     (hpcv : pc = (0x80042b34#64 : BitVec 64))
-    (hlo : 0x80000000 ≤ (v15 + sign_extend (m := 64) (0xa48#12)).toNat)
-    (hhiram : (v15 + sign_extend (m := 64) (0xa48#12)).toNat + 8 ≤ 0x100000000)
-    (hhtif : (v15 + sign_extend (m := 64) (0xa48#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v15 + sign_extend (m := 64) (0xa48#12)).toNat)
-    (halign : (v15 + sign_extend (m := 64) (0xa48#12)).toNat % 8 = 0) (hi : i < 2) :
+    (hlo : 0x80000000 ≤ (v15 + sign_extend (m := 64) (0x400#12)).toNat)
+    (hhiram : (v15 + sign_extend (m := 64) (0x400#12)).toNat + 8 ≤ 0x100000000)
+    (hhtif : (v15 + sign_extend (m := 64) (0x400#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v15 + sign_extend (m := 64) (0x400#12)).toNat)
+    (halign : (v15 + sign_extend (m := 64) (0x400#12)).toNat % 8 = 0) (hi : i < 2) :
     ∃ (σ' : MState) (i' : Nat),
       Vsa.Machine.Step ⟨σ, i, u⟩ ⟨σ', i', u + 1⟩ ∧ i' < 2 ∧ GoodState σ' ∧ σ'.mem = σ.mem ∧
       ReadsLikePost σ'
         (sigmaPost_alu σ pc vminstret Register.x15
           (sign_extend (m := 64)
-          (ldBytesT (afterNextPC (afterPrelude σ) (0x80042b34#64)) (v15 + sign_extend (m := 64) (0xa48#12))))) := by
+          (ldBytesT (afterNextPC (afterPrelude σ) (0x80042b34#64)) (v15 + sign_extend (m := 64) (0x400#12))))) := by
   subst hpcv
   obtain ⟨hb0, hb1, hb2, hb3⟩ := Vsa.Sim.Code.strcmp_at_80042b34 hmem
-  exact stepObs_alu σ i u (0x80042b34#64) vminstret (0xa487b783#32)
-    (instruction.LOAD (0xa48#12, regidx.Regidx 0x0f#5, regidx.Regidx 0x0f#5, false, 8))
+  exact stepObs_alu σ i u (0x80042b34#64) vminstret (0x4007b783#32)
+    (instruction.LOAD (0x400#12, regidx.Regidx 0x0f#5, regidx.Regidx 0x0f#5, false, 8))
     Register.x15
     (sign_extend (m := 64)
-          (ldBytesT (afterNextPC (afterPrelude σ) (0x80042b34#64)) (v15 + sign_extend (m := 64) (0xa48#12))))
-    (0x83#8) (0xb7#8) (0x87#8) (0xa4#8)
+          (ldBytesT (afterNextPC (afterPrelude σ) (0x80042b34#64)) (v15 + sign_extend (m := 64) (0x400#12))))
+    (0x83#8) (0xb7#8) (0x07#8) (0x40#8)
     hG hpc hminstret ld_mask_word ld_mask_notrvc
-    (Vsa.Sim.ElfDecode.decode_a487b783 (afterPrelude σ)
+    (Vsa.Sim.ElfDecode.decode_4007b783 (afterPrelude σ)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.misa)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.cur_privilege)
       (by rw [get?_afterPrelude σ _ (by decide)]; exact hG.mseccfg))
-    (exec_ld_total σ (0x80042b34#64) (0xa48#12) (regidx.Regidx 0x0f#5) (regidx.Regidx 0x0f#5) v15 _ hG
+    (exec_ld_total σ (0x80042b34#64) (0x400#12) (regidx.Regidx 0x0f#5) (regidx.Regidx 0x0f#5) v15 _ hG
       (rX_bits_x15 _ v15
       (by rw [get?_afterNextPC σ (0x80042b34#64) _ (by decide) (by decide)]; exact hx15))
       (wX_bits_x15 _ (sign_extend (m := 64)
-          (ldBytesT (afterNextPC (afterPrelude σ) (0x80042b34#64)) (v15 + sign_extend (m := 64) (0xa48#12))))) hlo hhiram hhtif halign)
+          (ldBytesT (afterNextPC (afterPrelude σ) (0x80042b34#64)) (v15 + sign_extend (m := 64) (0x400#12))))) hlo hhiram hhtif halign)
     (by decide) (by decide) (by decide) (by decide) (by decide)
     hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide) hi
 

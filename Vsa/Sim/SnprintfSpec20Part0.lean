@@ -199,7 +199,7 @@ theorem swData_zero_sr' : swData (0#64) = 0#32 := by
 
 `__ssprint_r` spans `[0x8004cd78, 0x8004ce68)`; `__ssputs_r` ends at
 `0x80052964`; `memmove` ends at `0x80042780`.  All data windows on this path
-sit above `tohostAddr + 16 = 0x80067610`, above all three code regions. -/
+sit above `tohostAddr + 16 = 0x80061fd0`, above all three code regions. -/
 
 /- Pointwise low-memory frame (`< 0x8004ce68`) transports `__ssprint_rLoaded`. -/
 theorem ssprint_frame_sr (mem mem' : Std.ExtHashMap Nat (BitVec 8))
@@ -360,7 +360,7 @@ theorem srStackMem_ssprintloaded (m0 : Std.ExtHashMap Nat (BitVec 8))
     (vsp r v8 v9 v18 v19 v20 v21 : BitVec 64)
     (hsp : tohostAddr + 16 + 128 ≤ vsp.toNat) (h : __ssprint_rLoaded m0) :
     __ssprint_rLoaded (srStackMem m0 vsp r v8 v9 v18 v19 v20 v21) := by
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   unfold srStackMem
   exact ssprint_writeMap8_ss _ _ _ (by omega) (ssprint_writeMap8_ss _ _ _ (by omega)
     (ssprint_writeMap8_ss _ _ _ (by omega) (ssprint_writeMap8_ss _ _ _ (by omega)
@@ -371,7 +371,7 @@ theorem srStackMem_ssloaded (m0 : Std.ExtHashMap Nat (BitVec 8))
     (vsp r v8 v9 v18 v19 v20 v21 : BitVec 64)
     (hsp : tohostAddr + 16 + 128 ≤ vsp.toNat) (h : Vsa.Sim.Code.__ssputs_rLoaded m0) :
     Vsa.Sim.Code.__ssputs_rLoaded (srStackMem m0 vsp r v8 v9 v18 v19 v20 v21) := by
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   unfold srStackMem
   exact ssputs_writeMap8_ss _ _ _ (by omega) (ssputs_writeMap8_ss _ _ _ (by omega)
     (ssputs_writeMap8_ss _ _ _ (by omega) (ssputs_writeMap8_ss _ _ _ (by omega)
@@ -382,7 +382,7 @@ theorem srStackMem_mvloaded (m0 : Std.ExtHashMap Nat (BitVec 8))
     (vsp r v8 v9 v18 v19 v20 v21 : BitVec 64)
     (hsp : tohostAddr + 16 + 128 ≤ vsp.toNat) (h : MemmoveLoaded m0) :
     MemmoveLoaded (srStackMem m0 vsp r v8 v9 v18 v19 v20 v21) := by
-  have htoh : tohostAddr = 0x80067600 := rfl
+  have htoh : tohostAddr = 0x80061fc0 := rfl
   unfold srStackMem
   exact memmove_writeMap8_ss _ _ _ (by omega) (memmove_writeMap8_ss _ _ _ (by omega)
     (memmove_writeMap8_ss _ _ _ (by omega) (memmove_writeMap8_ss _ _ _ (by omega)

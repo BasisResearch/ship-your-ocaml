@@ -122,7 +122,7 @@ theorem bw_bins {C : MCtx} (O : MOK C) {Mt : Mem} {brkv : Nat} {chunks : List Ch
         rw [BitVec.toNat_add, BitVec.toNat_add, hk6]; unfold binAt avAddr at hgk ⊢
         simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]; omega
       refine st_80004d0c O.live ?_ ?_ ?_
-      · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr; omega
+      · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
       · sx_norm; rw [hE]; exact O.bin_link hk1n (.inr rfl)
       sx_norm
       rw [hE, ldv_at hbk _ rfl]
@@ -194,7 +194,7 @@ theorem bw_clear {C : MCtx} (O : MOK C) {Mt : Mem} {brkv : Nat} {chunks : List C
     obtain ⟨bb, hbb⟩ := Option.isSome_iff_exists.1 HH.binblocks_present
     have hbbl := W.heap.heap.bb_lt bb hbb
     have ha6 := W.a6
-    have hsplo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr at hsplo
+    have hsplo := O.sp.lo; unfold mHead Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr at hsplo
     have hbbA : binblocksAddr = 2147593496 := rfl
     rw [← upd_self_eq ha6]
     refine st_80004e48 O.live ?_
@@ -268,7 +268,7 @@ theorem bw_clear {C : MCtx} (O : MOK C) {Mt : Mem} {brkv : Nat} {chunks : List C
       simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]
       unfold binAt avAddr at hg; omega
     refine st_80004e3c O.live ?_ ?_ ?_
-    · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr; omega
+    · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
     · sx_norm; rw [hE]; exact O.bin_link hi1n (.inl rfl)
     sx_norm
     rw [hE, ldv_at hfd _ rfl]
@@ -505,7 +505,7 @@ theorem bw_block {C : MCtx} (O : MOK C) {R : Nat → BitVec 64} {Mt : Mem} {brkv
     rw [BitVec.toNat_add, hT]; unfold binAt avAddr at hg ⊢
     simp only [BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod]; omega
   refine st_800049c0 O.live ?_ ?_ ?_
-  · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr; omega
+  · sx_norm; rw [hE]; unfold LdOK Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
   · sx_norm; rw [hE]; exact O.bin_link hsn (.inr rfl)
   sx_norm
   rw [hE, ldv_at hbk _ rfl]

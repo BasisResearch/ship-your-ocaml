@@ -69,9 +69,9 @@ def nx_8004ce58 : List BBlock := [{ body := [mkLine 0x8004ce58#64 0x0004a423#32]
 def nx_8004ce5c : List BBlock := [{ body := [mkLine 0x8004ce5c#64 0x02813483#32], term := none }]
 def nx_8004ce60 : List BBlock := [{ body := [mkLine 0x8004ce60#64 0x04010113#32], term := none }]
 def nx_8004ce64 : List BBlock := [⟨[], some (⟨0x8004ce64#64, 0x00008067#32, 0x67#8, 0x80#8, 0x00#8, 0x00#8, .jr, 1, 0, 0x0#13, 0x0#21, 0#12⟩ : TInstr)⟩]
-def nx_80042144 : List BBlock := [{ body := [mkLine 0x80042144#64 0x00028517#32, mkLine 0x80042148#64 0xb2454503#32], term := none }]
+def nx_80042144 : List BBlock := [{ body := [mkLine 0x80042144#64 0x00022517#32, mkLine 0x80042148#64 0x4bc54503#32], term := none }]
 def nx_8004214c : List BBlock := [⟨[], some (⟨0x8004214c#64, 0x00008067#32, 0x67#8, 0x80#8, 0x00#8, 0x00#8, .jr, 1, 0, 0x0#13, 0x0#21, 0#12⟩ : TInstr)⟩]
-def nx_80042170 : List BBlock := [{ body := [mkLine 0x80042170#64 0x00028517#32, mkLine 0x80042174#64 0xa9850513#32], term := none }]
+def nx_80042170 : List BBlock := [{ body := [mkLine 0x80042170#64 0x00022517#32, mkLine 0x80042174#64 0x43050513#32], term := none }]
 def nx_80042178 : List BBlock := [⟨[], some (⟨0x80042178#64, 0x00008067#32, 0x67#8, 0x80#8, 0x00#8, 0x00#8, .jr, 1, 0, 0x0#13, 0x0#21, 0#12⟩ : TInstr)⟩]
 def nxT_80045798 : List BBlock := [⟨[], some (⟨0x80045798#64, 0x02058063#32, 0x63#8, 0x80#8, 0x05#8, 0x02#8, .br bop.BEQ true, 11, 0, 0x20#13, 0x0#21, 0#12⟩ : TInstr)⟩]
 def nxF_80045798 : List BBlock := [⟨[], some (⟨0x80045798#64, 0x02058063#32, 0x63#8, 0x80#8, 0x05#8, 0x02#8, .br bop.BEQ false, 11, 0, 0x20#13, 0x0#21, 0#12⟩ : TInstr)⟩]
@@ -982,11 +982,11 @@ theorem nt_8004ce64 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat �
 theorem nt_80042144 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ snpText, live p.1)
-    (hea : LdOK (((0x80042144#64) + (sign_extend (m := 64) ((0x00028#20) +++ (0x000#12)))) + sign_extend (m := 64) (0xb24#12)).toNat 1)
-    (hLDS : ∀ b ∈ accAddrs (((0x80042144#64) + (sign_extend (m := 64) ((0x00028#20) +++ (0x000#12)))) + sign_extend (m := 64) (0xb24#12)).toNat 1, S b)
-    (hk : SnpW live Dt DA S Q 0x8004214c#64 (upd R 10 (ldv .lbu Mt (((0x80042144#64) + (sign_extend (m := 64) ((0x00028#20) +++ (0x000#12)))) + sign_extend (m := 64) (0xb24#12)).toNat)) Mt) :
+    (hea : LdOK (((0x80042144#64) + (sign_extend (m := 64) ((0x00022#20) +++ (0x000#12)))) + sign_extend (m := 64) (0x4bc#12)).toNat 1)
+    (hLDS : ∀ b ∈ accAddrs (((0x80042144#64) + (sign_extend (m := 64) ((0x00022#20) +++ (0x000#12)))) + sign_extend (m := 64) (0x4bc#12)).toNat 1, S b)
+    (hk : SnpW live Dt DA S Q 0x8004214c#64 (upd R 10 (ldv .lbu Mt (((0x80042144#64) + (sign_extend (m := 64) ((0x00022#20) +++ (0x000#12)))) + sign_extend (m := 64) (0x4bc#12)).toNat)) Mt) :
     SnpW live Dt DA S Q 0x80042144#64 R Mt :=
-  swp_stepD nx_80042144 [3, 10] [bytesAt (imgM Mt) (((0x80042144#64) + (sign_extend (m := 64) ((0x00028#20) +++ (0x000#12)))) + sign_extend (m := 64) (0xb24#12)).toNat 1] (accAddrs (((0x80042144#64) + (sign_extend (m := 64) ((0x00028#20) +++ (0x000#12)))) + sign_extend (m := 64) (0xb24#12)).toNat 1) [] 1 rfl (by decide) (by decide) (by decide)
+  swp_stepD nx_80042144 [3, 10] [bytesAt (imgM Mt) (((0x80042144#64) + (sign_extend (m := 64) ((0x00022#20) +++ (0x000#12)))) + sign_extend (m := 64) (0x4bc#12)).toNat 1] (accAddrs (((0x80042144#64) + (sign_extend (m := 64) ((0x00022#20) +++ (0x000#12)))) + sign_extend (m := 64) (0x4bc#12)).toNat 1) [] 1 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
     (fun m hm hD hLD => by unfold nx_80042144 ChainFacts; chain_facts hm; exact ⟨hea, lpins1_img hLD⟩)
     (by decide) (by decide) (fun _ => rfl) (by decide) hLDS
@@ -1010,7 +1010,7 @@ theorem nt_8004214c {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat �
 theorem nt_80042170 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ snpText, live p.1)
-    (hk : SnpW live Dt DA S Q 0x80042178#64 (upd R 10 (((0x80042170#64) + (sign_extend (m := 64) ((0x00028#20) +++ (0x000#12)))) + sign_extend (m := 64) (0xa98#12))) Mt) :
+    (hk : SnpW live Dt DA S Q 0x80042178#64 (upd R 10 (((0x80042170#64) + (sign_extend (m := 64) ((0x00022#20) +++ (0x000#12)))) + sign_extend (m := 64) (0x430#12))) Mt) :
     SnpW live Dt DA S Q 0x80042170#64 R Mt :=
   swp_stepD nx_80042170 [3, 10] [] [] [] 1 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive

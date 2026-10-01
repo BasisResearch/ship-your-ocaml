@@ -10,13 +10,13 @@ namespace Vsa.Sim.Code
 
 def caml_modifyChunk0 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x8000a9a8 : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x8000a9a9 : Nat)]? = some (0x06 : BitVec 8) ∧
-  mem[(0x8000a9aa : Nat)]? = some (0x06 : BitVec 8) ∧
+  mem[(0x8000a9a9 : Nat)]? = some (0xa6 : BitVec 8) ∧
+  mem[(0x8000a9aa : Nat)]? = some (0x05 : BitVec 8) ∧
   mem[(0x8000a9ab : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x8000a9ac : Nat)]? = some (0x93 : BitVec 8) ∧
   mem[(0x8000a9ad : Nat)]? = some (0x86 : BitVec 8) ∧
-  mem[(0x8000a9ae : Nat)]? = some (0x86 : BitVec 8) ∧
-  mem[(0x8000a9af : Nat)]? = some (0x9c : BitVec 8) ∧
+  mem[(0x8000a9ae : Nat)]? = some (0x06 : BitVec 8) ∧
+  mem[(0x8000a9af : Nat)]? = some (0x36 : BitVec 8) ∧
   mem[(0x8000a9b0 : Nat)]? = some (0x83 : BitVec 8) ∧
   mem[(0x8000a9b1 : Nat)]? = some (0xb7 : BitVec 8) ∧
   mem[(0x8000a9b2 : Nat)]? = some (0x06 : BitVec 8) ∧
@@ -100,13 +100,13 @@ def caml_modifyChunk1 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x8000a9fe : Nat)]? = some (0xa6 : BitVec 8) ∧
   mem[(0x8000a9ff : Nat)]? = some (0x04 : BitVec 8) ∧
   mem[(0x8000aa00 : Nat)]? = some (0x17 : BitVec 8) ∧
-  mem[(0x8000aa01 : Nat)]? = some (0xf6 : BitVec 8) ∧
+  mem[(0x8000aa01 : Nat)]? = some (0xa6 : BitVec 8) ∧
   mem[(0x8000aa02 : Nat)]? = some (0x05 : BitVec 8) ∧
   mem[(0x8000aa03 : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x8000aa04 : Nat)]? = some (0x03 : BitVec 8) ∧
   mem[(0x8000aa05 : Nat)]? = some (0x26 : BitVec 8) ∧
-  mem[(0x8000aa06 : Nat)]? = some (0x86 : BitVec 8) ∧
-  mem[(0x8000aa07 : Nat)]? = some (0x72 : BitVec 8) ∧
+  mem[(0x8000aa06 : Nat)]? = some (0x06 : BitVec 8) ∧
+  mem[(0x8000aa07 : Nat)]? = some (0x0c : BitVec 8) ∧
   mem[(0x8000aa08 : Nat)]? = some (0x63 : BitVec 8) ∧
   mem[(0x8000aa09 : Nat)]? = some (0x04 : BitVec 8) ∧
   mem[(0x8000aa0a : Nat)]? = some (0x06 : BitVec 8) ∧
@@ -208,13 +208,13 @@ def caml_modifyChunk2 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
 
 def caml_modifyChunk3 (mem : ExtHashMap Nat (BitVec 8)) : Prop :=
   mem[(0x8000aa68 : Nat)]? = some (0x97 : BitVec 8) ∧
-  mem[(0x8000aa69 : Nat)]? = some (0x06 : BitVec 8) ∧
-  mem[(0x8000aa6a : Nat)]? = some (0x06 : BitVec 8) ∧
+  mem[(0x8000aa69 : Nat)]? = some (0xa6 : BitVec 8) ∧
+  mem[(0x8000aa6a : Nat)]? = some (0x05 : BitVec 8) ∧
   mem[(0x8000aa6b : Nat)]? = some (0x00 : BitVec 8) ∧
   mem[(0x8000aa6c : Nat)]? = some (0x93 : BitVec 8) ∧
   mem[(0x8000aa6d : Nat)]? = some (0x86 : BitVec 8) ∧
-  mem[(0x8000aa6e : Nat)]? = some (0x86 : BitVec 8) ∧
-  mem[(0x8000aa6f : Nat)]? = some (0x90 : BitVec 8) ∧
+  mem[(0x8000aa6e : Nat)]? = some (0x06 : BitVec 8) ∧
+  mem[(0x8000aa6f : Nat)]? = some (0x2a : BitVec 8) ∧
   mem[(0x8000aa70 : Nat)]? = some (0x13 : BitVec 8) ∧
   mem[(0x8000aa71 : Nat)]? = some (0x76 : BitVec 8) ∧
   mem[(0x8000aa72 : Nat)]? = some (0x17 : BitVec 8) ∧
@@ -280,8 +280,8 @@ theorem caml_modify_chunk3 {mem : ExtHashMap Nat (BitVec 8)}
 theorem caml_modify_at_8000a9a8 {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_modifyLoaded mem) :
       mem[(0x8000a9a8 : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x8000a9a9 : Nat)]? = some (0x06 : BitVec 8) ∧
-      mem[(0x8000a9aa : Nat)]? = some (0x06 : BitVec 8) ∧
+      mem[(0x8000a9a9 : Nat)]? = some (0xa6 : BitVec 8) ∧
+      mem[(0x8000a9aa : Nat)]? = some (0x05 : BitVec 8) ∧
       mem[(0x8000a9ab : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := caml_modify_chunk0 h
   ⟨hc.1, hc.2.1, hc.2.2.1, hc.2.2.2.1⟩
@@ -290,8 +290,8 @@ theorem caml_modify_at_8000a9ac {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_modifyLoaded mem) :
       mem[(0x8000a9ac : Nat)]? = some (0x93 : BitVec 8) ∧
       mem[(0x8000a9ad : Nat)]? = some (0x86 : BitVec 8) ∧
-      mem[(0x8000a9ae : Nat)]? = some (0x86 : BitVec 8) ∧
-      mem[(0x8000a9af : Nat)]? = some (0x9c : BitVec 8) :=
+      mem[(0x8000a9ae : Nat)]? = some (0x06 : BitVec 8) ∧
+      mem[(0x8000a9af : Nat)]? = some (0x36 : BitVec 8) :=
   have hc := caml_modify_chunk0 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.1, hc.2.2.2.2.2.1, hc.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.1⟩
@@ -498,7 +498,7 @@ theorem caml_modify_at_8000a9fc {mem : ExtHashMap Nat (BitVec 8)}
 theorem caml_modify_at_8000aa00 {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_modifyLoaded mem) :
       mem[(0x8000aa00 : Nat)]? = some (0x17 : BitVec 8) ∧
-      mem[(0x8000aa01 : Nat)]? = some (0xf6 : BitVec 8) ∧
+      mem[(0x8000aa01 : Nat)]? = some (0xa6 : BitVec 8) ∧
       mem[(0x8000aa02 : Nat)]? = some (0x05 : BitVec 8) ∧
       mem[(0x8000aa03 : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := caml_modify_chunk1 h
@@ -509,8 +509,8 @@ theorem caml_modify_at_8000aa04 {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_modifyLoaded mem) :
       mem[(0x8000aa04 : Nat)]? = some (0x03 : BitVec 8) ∧
       mem[(0x8000aa05 : Nat)]? = some (0x26 : BitVec 8) ∧
-      mem[(0x8000aa06 : Nat)]? = some (0x86 : BitVec 8) ∧
-      mem[(0x8000aa07 : Nat)]? = some (0x72 : BitVec 8) :=
+      mem[(0x8000aa06 : Nat)]? = some (0x06 : BitVec 8) ∧
+      mem[(0x8000aa07 : Nat)]? = some (0x0c : BitVec 8) :=
   have hc := caml_modify_chunk1 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1⟩
@@ -757,8 +757,8 @@ theorem caml_modify_at_8000aa64 {mem : ExtHashMap Nat (BitVec 8)}
 theorem caml_modify_at_8000aa68 {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_modifyLoaded mem) :
       mem[(0x8000aa68 : Nat)]? = some (0x97 : BitVec 8) ∧
-      mem[(0x8000aa69 : Nat)]? = some (0x06 : BitVec 8) ∧
-      mem[(0x8000aa6a : Nat)]? = some (0x06 : BitVec 8) ∧
+      mem[(0x8000aa69 : Nat)]? = some (0xa6 : BitVec 8) ∧
+      mem[(0x8000aa6a : Nat)]? = some (0x05 : BitVec 8) ∧
       mem[(0x8000aa6b : Nat)]? = some (0x00 : BitVec 8) :=
   have hc := caml_modify_chunk3 h
   ⟨hc.1, hc.2.1, hc.2.2.1, hc.2.2.2.1⟩
@@ -767,8 +767,8 @@ theorem caml_modify_at_8000aa6c {mem : ExtHashMap Nat (BitVec 8)}
     (h : Caml_modifyLoaded mem) :
       mem[(0x8000aa6c : Nat)]? = some (0x93 : BitVec 8) ∧
       mem[(0x8000aa6d : Nat)]? = some (0x86 : BitVec 8) ∧
-      mem[(0x8000aa6e : Nat)]? = some (0x86 : BitVec 8) ∧
-      mem[(0x8000aa6f : Nat)]? = some (0x90 : BitVec 8) :=
+      mem[(0x8000aa6e : Nat)]? = some (0x06 : BitVec 8) ∧
+      mem[(0x8000aa6f : Nat)]? = some (0x2a : BitVec 8) :=
   have hc := caml_modify_chunk3 h
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.1, hc.2.2.2.2.2.1, hc.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.1⟩

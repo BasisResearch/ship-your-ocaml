@@ -17,11 +17,11 @@ macro_rules
     `(tactic| (intro b hb; rw [mem_accAddrs_iff] at hb; apply svf_stack_owned; sx_addr))
 
 structure TabAt (Dt : Mem) (DA : List Nat) : Prop where
-  dom : InDA DA 0x8005f9e0 0x8005fb50
-  img : ∀ a, 0x8005f9e0 ≤ a → a < 0x8005fb50 → imgM Dt a = snpROImg a
+  dom : InDA DA 0x8005a398 0x8005a508
+  img : ∀ a, 0x8005a398 ≤ a → a < 0x8005a508 → imgM Dt a = snpROImg a
 
-theorem TabAt.lw {Dt : Mem} {DA : List Nat} (h : TabAt Dt DA) {a : Nat} (h1 : 0x8005f9e0 ≤ a)
-    (h2 : a + 4 ≤ 0x8005fb50) : ldv .lw Dt a = ldvf .lw snpROImg a := by
+theorem TabAt.lw {Dt : Mem} {DA : List Nat} (h : TabAt Dt DA) {a : Nat} (h1 : 0x8005a398 ≤ a)
+    (h2 : a + 4 ≤ 0x8005a508) : ldv .lw Dt a = ldvf .lw snpROImg a := by
   have e : bytesAt (imgM Dt) a (widthOfM .lw) = bytesAt snpROImg a (widthOfM .lw) :=
     List.map_congr_left fun j hj => by
       have := List.mem_range.mp hj
@@ -35,14 +35,14 @@ theorem svf_disp {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt
     (hc : c = 0x73 ∧ tgt = 0x80048198#64 ∨ c = 0x64 ∧ tgt = 0x80048254#64 ∨ c = 0x6c ∧ tgt = 0x80048780#64)
     (R : Nat → BitVec 64) (Mt : Mem) (hx : x + 1 < 2 ^ 64)
     (h25 : R 25 = BitVec.ofNat 64 x) (h24 : R 24 = BitVec.ofNat 64 c) (h26 : R 26 = 90#64)
-    (h22 : R 22 = 0x8005f9e0#64) (hT : TabAt Dt DA)
+    (h22 : R 22 = 0x8005a398#64) (hT : TabAt Dt DA)
     (hk : ∀ R', R' 25 = BitVec.ofNat 64 (x + 1) → R' 24 = BitVec.ofNat 64 c →
       (∀ z, z ≠ 14 → z ≠ 15 → z ≠ 24 → z ≠ 25 → R' z = R z) → SnpW live Dt DA S Q tgt R' Mt) :
     SnpW live Dt DA S Q 0x800479e4#64 R Mt := by
   have hTd := hT.dom
-  have ts := (hT.lw (a := 0x8005fb2c) (by decide) (by decide)).trans (show ldvf .lw snpROImg 0x8005fb2c = 0xfffffffffffe87b8#64 by simp only [imgLoad])
-  have td := (hT.lw (a := 0x8005faf0) (by decide) (by decide)).trans (show ldvf .lw snpROImg 0x8005faf0 = 0xfffffffffffe8874#64 by simp only [imgLoad])
-  have tl := (hT.lw (a := 0x8005fb10) (by decide) (by decide)).trans (show ldvf .lw snpROImg 0x8005fb10 = 0xfffffffffffe8da0#64 by simp only [imgLoad])
+  have ts := (hT.lw (a := 0x8005a4e4) (by decide) (by decide)).trans (show ldvf .lw snpROImg 0x8005a4e4 = 0xfffffffffffede00#64 by simp only [imgLoad])
+  have td := (hT.lw (a := 0x8005a4a8) (by decide) (by decide)).trans (show ldvf .lw snpROImg 0x8005a4a8 = 0xfffffffffffedebc#64 by simp only [imgLoad])
+  have tl := (hT.lw (a := 0x8005a4c8) (by decide) (by decide)).trans (show ldvf .lw snpROImg 0x8005a4c8 = 0xfffffffffffee3e8#64 by simp only [imgLoad])
   rcases hc with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
   all_goals snp_runF hlive using [ofNat_add_ofNat, h22, h24, h25, h26, sext_zero, BitVec.add_zero,
     BitVec.reduceToNat, ts, td, tl] at 0x80048198 0x80048254 0x80048780 0x80047a44
@@ -110,7 +110,7 @@ structure ConvAt (DA : List Nat) (s dst n : Nat) (R0 : Nat → BitVec 64) (Mt0 :
   r20 : R 20 = 18446744073709551615#64
   r27 : R 27 = 0#64
   r26 : R 26 = 90#64
-  r22 : R 22 = 0x8005f9e0#64
+  r22 : R 22 = 0x8005a398#64
 
 theorem svf_convStart {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt : Mem} {DA : List Nat}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
@@ -118,7 +118,7 @@ theorem svf_convStart {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1
     {L : List (Nat × Nat)} (q : Nat) (R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n)
     (St : SvfSt DA s dst n R0 Mt0 p ap rt total L R Mt) (h22 : R 22 = BitVec.ofNat 64 q)
     (hq : InDA DA (q + 1) (q + 2)) (hq1 : 0x80000000 ≤ q) (hq2 : q + 2 ≤ 0x100000000)
-    (hq3 : q + 2 ≤ 0x80067600 ∨ 0x80067608 ≤ q)
+    (hq3 : q + 2 ≤ 0x80061fc0 ∨ 0x80061fc8 ≤ q)
     (hk : ∀ R' Mt', ConvAt DA s dst n R0 Mt0 (q + 1) ap rt total L (q + 1) (imgM Dt (q + 1)).toNat R' Mt' →
       SnpW live Dt DA (snpS s dst n) Q 0x800479e4#64 R' Mt') :
     SnpW live Dt DA (snpS s dst n) Q 0x800479b8#64 R Mt := by
@@ -227,7 +227,7 @@ structure DStr (Dt : Mem) (DA : List Nat) (a len : Nat) : Prop where
   nul : imgM Dt (a + len) = 0
   lo : 0x80000000 ≤ a
   hi : a + len + 8 ≤ 0x100000000
-  htif : a + len + 8 ≤ 0x80067600 ∨ 0x80067608 ≤ a
+  htif : a + len + 8 ≤ 0x80061fc0 ∨ 0x80061fc8 ≤ a
 
 theorem DStr.read {Dt : Mem} {DA : List Nat} {a len : Nat} (h : DStr Dt DA a len) (S : Nat → Prop)
     (Mt : Mem) : StrRead Dt DA S Mt a len (imgM Dt) where
@@ -338,7 +338,7 @@ theorem svf_convLL {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat} (x : Nat)
     (R : Nat → BitVec 64) (Mt : Mem)
     (hx : InDA DA x (x + 2)) (hx1 : 0x80000000 ≤ x) (hx2 : x + 2 ≤ 0x100000000)
-    (hx3 : x + 2 ≤ 0x80067600 ∨ 0x80067608 ≤ x)
+    (hx3 : x + 2 ≤ 0x80061fc0 ∨ 0x80061fc8 ≤ x)
     (hl : imgM Dt x = 0x6c#8) (h25 : R 25 = BitVec.ofNat 64 x) (h6 : R 6 = 0#64)
     (hk : ∀ R', R' 25 = BitVec.ofNat 64 (x + 1) → R' 24 = BitVec.ofNat 64 (imgM Dt (x + 1)).toNat →
       R' 6 = 32#64 → (∀ z, z ≠ 6 → z ≠ 15 → z ≠ 24 → z ≠ 25 → R' z = R z) →

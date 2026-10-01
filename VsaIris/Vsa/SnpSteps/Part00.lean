@@ -44,7 +44,7 @@ def nx_8003fe54 : List BBlock := [{ body := [mkLine 0x8003fe54#64 0x0ef13c23#32]
 def nx_8003fe58 : List BBlock := [{ body := [mkLine 0x8003fe58#64 0x11013023#32], term := none }]
 def nx_8003fe5c : List BBlock := [{ body := [mkLine 0x8003fe5c#64 0x11113423#32], term := none }]
 def nx_8003fe60 : List BBlock := [{ body := [mkLine 0x8003fe60#64 0xfff34313#32], term := none }]
-def nx_8003fe64 : List BBlock := [{ body := [mkLine 0x8003fe64#64 0x0002a497#32, mkLine 0x8003fe68#64 0x0fc4b483#32], term := none }]
+def nx_8003fe64 : List BBlock := [{ body := [mkLine 0x8003fe64#64 0x00025497#32, mkLine 0x8003fe68#64 0xa944b483#32], term := none }]
 def nxT_8003fe6c : List BBlock := [⟨[], some (⟨0x8003fe6c#64, 0x08b36c63#32, 0x63#8, 0x6c#8, 0xb3#8, 0x08#8, .br bop.BLTU true, 6, 11, 0x98#13, 0x0#21, 0#12⟩ : TInstr)⟩]
 def nxF_8003fe6c : List BBlock := [⟨[], some (⟨0x8003fe6c#64, 0x08b36c63#32, 0x63#8, 0x6c#8, 0xb3#8, 0x08#8, .br bop.BLTU false, 6, 11, 0x98#13, 0x0#21, 0#12⟩ : TInstr)⟩]
 def nx_8003fe74 : List BBlock := [{ body := [mkLine 0x8003fe74#64 0xffff0837#32], term := none }]
@@ -635,11 +635,11 @@ theorem nt_8003fe60 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat �
 theorem ntD_8003fe64 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ snpText, live p.1)
-    (hea : LdOK (((0x8003fe64#64) + (sign_extend (m := 64) ((0x0002a#20) +++ (0x000#12)))) + sign_extend (m := 64) (0x0fc#12)).toNat 8)
-    (hLDD : ∀ b ∈ accAddrs (((0x8003fe64#64) + (sign_extend (m := 64) ((0x0002a#20) +++ (0x000#12)))) + sign_extend (m := 64) (0x0fc#12)).toNat 8, b ∈ DA)
-    (hk : SnpW live Dt DA S Q 0x8003fe6c#64 (upd R 9 (ldv .ld Dt (((0x8003fe64#64) + (sign_extend (m := 64) ((0x0002a#20) +++ (0x000#12)))) + sign_extend (m := 64) (0x0fc#12)).toNat)) Mt) :
+    (hea : LdOK (((0x8003fe64#64) + (sign_extend (m := 64) ((0x00025#20) +++ (0x000#12)))) + sign_extend (m := 64) (0xa94#12)).toNat 8)
+    (hLDD : ∀ b ∈ accAddrs (((0x8003fe64#64) + (sign_extend (m := 64) ((0x00025#20) +++ (0x000#12)))) + sign_extend (m := 64) (0xa94#12)).toNat 8, b ∈ DA)
+    (hk : SnpW live Dt DA S Q 0x8003fe6c#64 (upd R 9 (ldv .ld Dt (((0x8003fe64#64) + (sign_extend (m := 64) ((0x00025#20) +++ (0x000#12)))) + sign_extend (m := 64) (0xa94#12)).toNat)) Mt) :
     SnpW live Dt DA S Q 0x8003fe64#64 R Mt :=
-  swp_stepD nx_8003fe64 [3, 9] [bytesAt (imgM Dt) (((0x8003fe64#64) + (sign_extend (m := 64) ((0x0002a#20) +++ (0x000#12)))) + sign_extend (m := 64) (0x0fc#12)).toNat 8] [] [] 1 rfl (by decide) (by decide) (by decide)
+  swp_stepD nx_8003fe64 [3, 9] [bytesAt (imgM Dt) (((0x8003fe64#64) + (sign_extend (m := 64) ((0x00025#20) +++ (0x000#12)))) + sign_extend (m := 64) (0xa94#12)).toNat 8] [] [] 1 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
     (fun m hm hD hLD => by unfold nx_8003fe64 ChainFacts; chain_facts hm; exact ⟨hea, lpins8_img (fun b hb => dataReads_view hD b (hLDD b hb))⟩)
     (by decide) (by decide) (fun _ => rfl) (by decide) (fun a h => by cases h)

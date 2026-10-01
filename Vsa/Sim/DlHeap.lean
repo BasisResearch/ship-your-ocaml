@@ -5,21 +5,21 @@ namespace Vsa.Sim.DlHeap
 
 open Vsa.MemRepr
 
-def avAddr : Nat := 0x800691f8
+def avAddr : Nat := 0x80063b90
 
 def binblocksAddr : Nat := avAddr + 8
 
 def topAddr : Nat := avAddr + 16
-def sbrkBaseAddr : Nat := 0x80069f50
-def maxSbrkedAddr : Nat := 0x8006a390
-def topPadAddr : Nat := 0x8006a398
+def sbrkBaseAddr : Nat := 0x800648e8
+def maxSbrkedAddr : Nat := 0x80064d28
+def topPadAddr : Nat := 0x80064d30
 
-def brkAddr : Nat := 0x80069f78
-def mallinfoAddr : Nat := 0x80082050
+def brkAddr : Nat := 0x80064910
+def mallinfoAddr : Nat := 0x8007c9e8
 
-def heapStart : Nat := 0x800827a0
+def heapStart : Nat := 0x8007d140
 
-def heapEnd : Nat := 0x87800000
+def heapEnd : Nat := 0x86800000
 def numBins : Nat := 128
 
 def binAt (i : Nat) : Nat := avAddr + 16 * i
@@ -107,7 +107,7 @@ theorem ChunkWalk.le {m : Mem} {p top : Nat} {cs : List Chunk}
   | top => exact Nat.le_refl _
   | chunk _ _ _ _ _ _ ih => omega
 
-/-- This ELF refutes the old bin-header 16-byte alignment assumption. -/
-theorem bin_base_alignment : avAddr % 16 = 8 := by decide
+/-- Bin-header alignment extracted from the selected ELF. -/
+theorem bin_base_alignment : avAddr % 16 = 0 := by decide
 
 end Vsa.Sim.DlHeap

@@ -20,12 +20,14 @@ import Vsa.Sim.ElfDecode.Part072
 import Vsa.Sim.ElfDecode.Part091
 import Vsa.Sim.ElfDecode.Part105
 import Vsa.Sim.ElfDecode.Part122
-import Vsa.Sim.ElfDecode.Part150
-import Vsa.Sim.ElfDecode.Part164
-import Vsa.Sim.ElfDecode.Part166
+import Vsa.Sim.ElfDecode.Part151
+import Vsa.Sim.ElfDecode.Part165
+import Vsa.Sim.ElfDecode.Part167
 import Vsa.Sim.ElfDecode.Part184
 import Vsa.Sim.ElfDecode.Part188
-import Vsa.Sim.ElfDecode.Part199
+import Vsa.Sim.ElfDecode.Part189
+import Vsa.Sim.ElfDecode.Part200
+import Vsa.Sim.ElfDecode.Part206
 
 /-! The allocator's step table, `0x80037e24` to `0x80037ea0` (one lemma `st_<pc>` per
 instruction; see `scripts/syi/gen_alloc_steps.py`). -/
@@ -64,8 +66,8 @@ def ax_80037e8c : List BBlock := [{ body := [mkLine 0x80037e8c#64 0x07e00613#32]
 def ax_80037e90 : List BBlock := [⟨[], some (⟨0x80037e90#64, 0xc35ff06f#32, 0x6f#8, 0xf0#8, 0x5f#8, 0xc3#8, .j, 0, 0, 0x0#13, 0x1ffc34#21, 0#12⟩ : TInstr)⟩]
 def ax_80037e94 : List BBlock := [{ body := [mkLine 0x80037e94#64 0x00883783#32], term := none }]
 def ax_80037e98 : List BBlock := [⟨[], some (⟨0x80037e98#64, 0xdfdff06f#32, 0x6f#8, 0xf0#8, 0xdf#8, 0xdf#8, .j, 0, 0, 0x0#13, 0x1ffdfc#21, 0#12⟩ : TInstr)⟩]
-def ax_80037e9c : List BBlock := [{ body := [mkLine 0x80037e9c#64 0x00032517#32], term := none }]
-def ax_80037ea0 : List BBlock := [{ body := [mkLine 0x80037ea0#64 0x53c50513#32], term := none }]
+def ax_80037e9c : List BBlock := [{ body := [mkLine 0x80037e9c#64 0x0002d517#32], term := none }]
+def ax_80037ea0 : List BBlock := [{ body := [mkLine 0x80037ea0#64 0xed450513#32], term := none }]
 
 end Vsa.Sim
 
@@ -523,7 +525,7 @@ theorem st_80037e98 {live : Nat → Prop} {S : Nat → Prop}
 theorem st_80037e9c {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x80037ea0#64 (upd R 10 ((0x80037e9c#64) + (sign_extend (m := 64) ((0x00032#20) +++ (0x000#12))))) Mt) :
+    (hk : AW live S Q 0x80037ea0#64 (upd R 10 ((0x80037e9c#64) + (sign_extend (m := 64) ((0x0002d#20) +++ (0x000#12))))) Mt) :
     AW live S Q 0x80037e9c#64 R Mt :=
   swp_step ax_80037e9c [10] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
@@ -536,7 +538,7 @@ theorem st_80037e9c {live : Nat → Prop} {S : Nat → Prop}
 theorem st_80037ea0 {live : Nat → Prop} {S : Nat → Prop}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
     (hlive : ∀ p ∈ allocText, live p.1)
-    (hk : AW live S Q 0x80037ea4#64 (upd R 10 ((R 10) + sign_extend (m := 64) (0x53c#12))) Mt) :
+    (hk : AW live S Q 0x80037ea4#64 (upd R 10 ((R 10) + sign_extend (m := 64) (0xed4#12))) Mt) :
     AW live S Q 0x80037ea0#64 R Mt :=
   swp_step ax_80037ea0 [10] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive

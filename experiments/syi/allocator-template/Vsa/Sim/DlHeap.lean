@@ -106,7 +106,7 @@ theorem ChunkWalk.le {m : Mem} {p top : Nat} {cs : List Chunk}
   | top => exact Nat.le_refl _
   | chunk _ _ _ _ _ _ ih => omega
 
-/-- This ELF refutes the old bin-header 16-byte alignment assumption. -/
-theorem bin_base_alignment : avAddr % 16 = 8 := by decide
+/-- Bin-header alignment extracted from the selected ELF. -/
+theorem bin_base_alignment : avAddr % 16 = AV_ALIGNMENT := by decide
 
 end Vsa.Sim.DlHeap

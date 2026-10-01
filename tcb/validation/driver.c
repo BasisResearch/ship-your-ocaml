@@ -40,7 +40,8 @@
 #include "../../c/src/htif.c"
 #undef _sbrk
 char _end[1], __heap_end[1];
-const struct embedded_file embedded_files[] = {{0, 0, 0}};
+static const struct embedded_file empty_embedded_files[] = {{0, 0, 0}};
+const struct embedded_file *const embedded_files = empty_embedded_files;
 static void backend_reset(void) {
     memset(files, 0, sizeof files);
     memset(fds, 0, sizeof fds);
