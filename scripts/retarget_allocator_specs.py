@@ -94,10 +94,36 @@ def address_map(old, new, syms):
     return relocate, expansions, moves
 
 
+def rewrite_auipc_values(source, old_words, new_words, relocate):
+    """Retarget explicit AUIPC/offset register expressions from decoded fields."""
+    pattern = (r'0x([0-9a-fA-F]+)#64 \+ sign_extend \(m := 64\) '
+               r'\(\(0x([0-9a-fA-F]+)#20\) \+\+\+ \(0x000#12\)\)'
+               r'(?: \+\s+sign_extend \(m := 64\) \(0x([0-9a-fA-F]+)#12\))?')
+    def replace(m):
+        pc = int(m[1], 16)
+        a, b = fields(old_words[pc]), fields(new_words[relocate(pc)])
+        assert a['op'] == b['op'] == 0x17 and a['rd'] == b['rd']
+        assert (old_words[pc] >> 12) == int(m[2], 16), (pc, m[0])
+        result = (f'0x{pc:08x}#64 + sign_extend (m := 64) '
+                  f'((0x{new_words[relocate(pc)] >> 12:05x}#20) +++ (0x000#12))')
+        if m[3] is not None:
+            c, d = fields(old_words[pc+4]), fields(new_words[relocate(pc+4)])
+            assert c['op'] == d['op'] and c['op'] in (3, 0x13, 0x23)
+            assert c['rs1'] == a['rd'] and d['rs1'] == b['rd']
+            field = 'immS' if c['op'] == 0x23 else 'immI'
+            assert c[field] % 4096 == int(m[3], 16), (pc, m[0])
+            result += f' + sign_extend (m := 64) (0x{d[field] % 4096:03x}#12)'
+        return result
+    return re.sub(pattern, replace, source)
+
+
 def outputs(include_pending=False):
     old = json.loads((TEMPLATES/'layout.json').read_text())
     elf = ROOT/'c/ocamlrun-riscv-htif.elf'
-    relocate, expansions, moves = address_map(old, disasm(elf), symbols(elf))
+    fresh = disasm(elf)
+    relocate, expansions, moves = address_map(old, fresh, symbols(elf))
+    old_words = {i[0]: i[1] for f in old['functions'].values() for i in f['insts']}
+    new_words = {i[0]: i[1] for f in fresh.values() for i in f['insts']}
     impure = read_mem(sections(elf), symbols(elf)['_impure_ptr'][0], 8)
     assert impure is not None
     files = {}
@@ -106,7 +132,7 @@ def outputs(include_pending=False):
         module = '.'.join(p.relative_to(TEMPLATES).with_suffix('').parts)
         if not include_pending and module not in checked:
             continue
-        s = p.read_text()
+        s = rewrite_auipc_values(p.read_text(), old_words, new_words, relocate)
         oldbytes = '[' + ', '.join(f'0x{b:02x}#8' for b in old['impure_bytes']) + ']'
         newbytes = '[' + ', '.join(f'0x{b:02x}#8' for b in impure) + ']'
         s = s.replace(oldbytes, newbytes)

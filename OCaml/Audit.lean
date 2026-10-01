@@ -1,3 +1,4 @@
+import VsaIris.Vsa.FreeRunAll
 import VsaIris.Vsa.MallocRunAll
 import VsaIris.Vsa.MallocExtend
 import VsaIris.Vsa.HeapFree
@@ -375,3 +376,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms VsaIris.VsaHeap.malloc_all
 #print axioms VsaIris.VsaHeap.mallocChgRun_proved
 #print axioms VsaIris.VsaHeap.mallocLocalRun_proved
+
+-- Free, coalescing and trimming at the current ELF addresses.
+#print axioms Vsa.Sim.DlHeap.HeapAt.chunk_node_fields_ne
+#print axioms Vsa.Sim.DlHeap.HeapAt.node_header_span_disjoint
+#print axioms VsaIris.VsaHeap.trim_run
+#print axioms VsaIris.VsaHeap.free_body
+#print axioms VsaIris.VsaHeap.freeChgRun_proved
+#print axioms VsaIris.VsaHeap.freeLocalRun_proved

@@ -183,7 +183,9 @@ outputs against this ELF. Instruction groups are matched by decoded
 operations and symbolic global targets; every emitted composition is then
 checked against the newly generated instruction steps. Decimal and hex
 addresses are relocated, including AUIPC expansions and the `_sbrk` error
-path scheduling change. `layout.json` records the source ELF symbol and
+path scheduling change. Explicit AUIPC register expressions are validated
+against their source instruction fields and regenerated from the new ELF
+immediates. `layout.json` records the source ELF symbol and
 instruction data, so regeneration does not require the upstream checkout.
 
 The templates cut WHILE-specific imports and initial-heap predicates,
@@ -191,8 +193,10 @@ extract only the generic allocator arithmetic helpers into
 `LibraryAllocFacts`, and use the existing memory/read interfaces. They also
 adapt the heap geometry to this ELF's word-aligned bin sentinels and split
 the allocator's relocated global footprint into its actual objects.
-`HeapAt.node_fields_ne` and `HeapAt.node_header_disjoint` provide the shared
-field-separation facts. Read-only AUIPC loads in `gen_alloc_steps.py` use
+`HeapAt.node_fields_ne`, `HeapAt.chunk_node_fields_ne`, and the header
+disjointness lemmas provide shared field-separation facts.
+`VsaIris.Sym.read64_word_log` in `AlignedWordLog.lean` reflects aligned word writes into address
+lookup; the malloc split-return proof instantiates it in checked pieces. Read-only AUIPC loads in `gen_alloc_steps.py` use
 the pinned `_impure_ptr` bytes with a computed-address premise.
 
 `ProofPieces` extracts the generic `#ix_piece` / `#ix_chain` declaration

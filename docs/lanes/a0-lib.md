@@ -57,7 +57,11 @@
 
 ## Open / next
 
-- `_malloc_r`, `_free_r`, `_svfprintf_r` function contracts remain open.
+- `_svfprintf_r` is the remaining open function contract. `_free_r`
+  (`free_body`, `FreeTop.lean:339`) and the free wrapper run contracts now
+  build and pass the axiom audit; their integration checkpoint is in progress. `_malloc_r`
+  is proved and audited (`malloc_all`, `MallocBlocks2.lean:718`), and its
+  malloc wrapper run contracts landed as `270ae83`.
   Instruction census (old -> this ELF): 560 -> 569, 193 -> 195,
   3212 -> 3213. The added instructions expand GP-relative global accesses
   into AUIPC/load/store sequences; svfprintf expands `__global_locale`.
@@ -172,4 +176,26 @@ The complete malloc composition now builds: `malloc_all` at
 reflection is composed from kernel-checked pieces at the default budget.
 The checked manifest now selects 37 modules. All six newly added audit
 entries passed with only `{propext, Classical.choice, Quot.sound}`; the
-integration gate is next. `_free_r` and `_svfprintf_r` remain open.
+integration gate passed and landed `270ae83`. `_free_r` and `_svfprintf_r`
+remain open.
+
+Malloc checkpoint `270ae83` landed through `scripts/integrate.sh`; the full
+gate passed (37,048 pinned bytes, zero mismatches). Free setup/prologue
+compile; `FreeBin` requires link-field and whole-header separation under
+the relocated sentinel alignment. Two shared geometry lemmas now express
+those obligations and are being checked with the free composition.
+
+`FreeBin`, `FreeLarge`, and `FreePaths` now compile. Forward/backward
+coalescing uses word-aligned neighbor records with explicit link/header
+separation. An old explicit AUIPC register expression failed its address
+equality; the retargeter now checks its source fields and regenerates both
+immediates from the new ELF. The current build is checking trim/top/entry.
+
+The complete free composition builds: `free_body` in `FreeTop.lean:339`
+starts at `_free_r` (`0x80044868`); `freeChgRun_proved` and
+`freeLocalRun_proved` in `FreeRunAll.lean` establish the wrapper contracts.
+`trim_fin` is composed from two checked pieces after adding the actual
+mallinfo/stack disjointness fact. The checked manifest selects all 45
+allocator-template modules. All six new headline audits passed with only
+`{propext, Classical.choice, Quot.sound}`; integration is next. Only the
+`_svfprintf_r` function composition remains open.

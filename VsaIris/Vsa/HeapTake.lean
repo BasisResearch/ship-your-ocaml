@@ -230,6 +230,41 @@ theorem _root_.Vsa.Sim.DlHeap.HeapAt.node_header_disjoint {m : Mem} {H : List (N
   have hn16 := h.bnd_ne_node hi hxn hb 16 (by omega) (by omega)
   constructor <;> omega
 
+/-- An arena chunk's link fields cannot alias a free node's opposite fields. -/
+theorem _root_.Vsa.Sim.DlHeap.HeapAt.chunk_node_fields_ne {m : Mem} {H : List (Nat × Nat)}
+    {top brkv : Nat} {chunks : List Chunk} {bins : Nat → List Nat}
+    (h : HeapAt m H (fun e => e ∈ H) top brkv chunks bins) {c : Chunk} {j y : Nat}
+    (hc : c ∈ chunks) (hj0 : 0 < j) (hj : j < numBins)
+    (hy : y = binAt j ∨ y ∈ bins j) :
+    c.addr + 16 ≠ y + 24 ∧ c.addr + 24 ≠ y + 16 := by
+  have hx16 := h.aligned.1 c hc
+  rcases hy with rfl | hy
+  · have hb := binAt_geo j hj
+    have hx := (h.walk.chunk_bounds c hc).1
+    unfold heapStart at hx
+    constructor <;> omega
+  · obtain ⟨cy, hcy, rfl, _⟩ := h.member hj0 hj hy
+    have hy16 := h.aligned.1 cy hcy
+    constructor <;> omega
+
+/-- Free-list link words avoid the entire two-word chunk header. -/
+theorem _root_.Vsa.Sim.DlHeap.HeapAt.node_header_span_disjoint {m : Mem} {H : List (Nat × Nat)}
+    {top brkv : Nat} {chunks : List Chunk} {bins : Nat → List Nat}
+    (h : HeapAt m H (fun e => e ∈ H) top brkv chunks bins) {i x b : Nat}
+    (hi0 : 0 < i) (hi : i < numBins) (hx : x = binAt i ∨ x ∈ bins i)
+    (hb : b = top ∨ ∃ c ∈ chunks, c.addr = b) :
+    (x + 24 ≤ b ∨ b + 16 ≤ x + 16) ∧
+    (x + 32 ≤ b ∨ b + 16 ≤ x + 24) := by
+  obtain ⟨hx8, hxn⟩ := h.node hi0 hi hx
+  have hb16 : b % 16 = 0 := by
+    rcases hb with rfl | ⟨c, hc, rfl⟩
+    · exact h.aligned.2
+    · exact h.aligned.1 c hc
+  have hn8 := h.bnd_ne_node hi hxn hb 8 (by omega) (by omega)
+  have hn16 := h.bnd_ne_node hi hxn hb 16 (by omega) (by omega)
+  have hn24 := h.bnd_ne_node hi hxn hb 24 (by omega) (by omega)
+  constructor <;> omega
+
 theorem BlockHeapAt.node_foot {m : Mem} {H : List (Nat × Nat)} {top brkv : Nat}
     {chunks : List Chunk} {bins : Nat → List Nat} (B : BlockHeapAt m H top brkv chunks bins)
     {j x : Nat} (hj0 : 0 < j) (hj : j < numBins) (hx : x = binAt j ∨ x ∈ bins j) :
