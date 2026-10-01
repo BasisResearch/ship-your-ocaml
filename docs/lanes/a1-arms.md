@@ -28,6 +28,26 @@ Default-limit 24 GiB checks: OFFSETINT body/pins 5.56s (segment 2.1s),
 arithmetic witness 3.60s (module 2.3s), peak process RSS below 2 GiB.
 CONSTINT landed as `9786220` with the full gate passing.
 
+## Conditional branches
+
+`branchif_arm` and `branchifnot_arm` (`OCaml/Vm/Sim/Branchif*.lean`)
+compose both generated machine paths from a successful `stepI` result.
+`false_word_iff` (`IsintArithmetic.lean`) identifies the native false word
+using even placement and a non-raw accumulator. These remain explicit
+premises, alongside operand/dispatch readiness and the runtime memory frame.
+The fallthrough path does not require a successful relative target.
+
+`control_arm` (`Immediate.lean`) shares accumulator/root restoration across
+BRANCH and both conditional opcodes. `gen_arm_pilot.py` now walks explicitly
+guarded disassembly paths, including branches into shared helper blocks;
+dispatch uses the same walker with unchanged generated output.
+`gen_conditional_arms.py` generates path bridges and semantic composition,
+with drift checking in the full gate. Four machine paths and all four
+represented path bridges pass under 24 GiB at default limits. Machine
+paths take 3.4–3.9s separately; represented paths take 4.3s each in a combined
+build. Semantic composition builds separately in 2.3s/1.5s. There are now 27 conditional represented opcode bridges; full
+`ArmSim.next`, entry and halt remain open. BRANCH landed as `e66d024`.
+
 ## Signed relative branch
 
 `branch_arm` (`OCaml/Vm/Sim/Branch.lean`) composes the generated four-step

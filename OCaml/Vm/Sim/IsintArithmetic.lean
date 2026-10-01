@@ -64,6 +64,38 @@ theorem isintWord_repr {pl : Place} (aligned : EvenPlace pl) {v : Val} {w : BitV
   rw [isintWord_eq, valWord_parity aligned repr notRaw]
   cases v.isInt <;> rfl
 
+/-- Tagged integer zero is exactly the runtime's false word. -/
+theorem tag_eq_false (n : BitVec 63) : tag64 n = 1#64 ↔ n = 0 := by
+  constructor
+  · intro h
+    have value := congrArg BitVec.toNat h
+    rw [tag_toNat] at value
+    change 2 * n.toNat + 1 = 1 at value
+    apply BitVec.eq_of_toNat_eq
+    change n.toNat = 0
+    omega
+  · rintro rfl
+    rfl
+
+/-- Even placements distinguish false from every non-integer, non-raw value. -/
+theorem false_word_iff {pl : Place} (aligned : EvenPlace pl) {v : Val} {w : BitVec 64}
+    (repr : valWord pl v = some w) (notRaw : ∀ x, v ≠ .raw x) :
+    w = 1#64 ↔ v = .int 0 := by
+  constructor
+  · intro hw
+    have parity := valWord_parity aligned repr notRaw
+    rw [hw] at parity
+    have integer : v.isInt = true := by
+      cases hv : v.isInt <;> simp_all
+    cases v <;> simp only [Val.isInt, Bool.false_eq_true] at integer
+    case int n =>
+      have tag : tag64 n = 1#64 := (Option.some.inj repr).trans hw
+      rw [(tag_eq_false n).mp tag]
+    all_goals contradiction
+  · intro hv
+    rw [hv] at repr
+    exact (Option.some.inj repr).symm
+
 /-- Value representation alone does not exclude odd pointer addresses. This
 checked alias explains the explicit alignment premise in the ISINT bridge. -/
 theorem isint_not_valWord : ¬ (∀ (pl : Place) (v : Val) (w : BitVec 64),

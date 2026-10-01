@@ -71,6 +71,8 @@ import OCaml.Vm.Sim.Dispatch
 import OCaml.Vm.Sim.Const0
 import OCaml.Vm.Sim.Constint
 import OCaml.Vm.Sim.Branch
+import OCaml.Vm.Sim.Branchif
+import OCaml.Vm.Sim.Branchifnot
 import OCaml.Vm.Sim.OffsetWidth
 import OCaml.Vm.Sim.Envacc1
 import OCaml.Vm.Sim.Envacc2

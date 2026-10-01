@@ -108,6 +108,20 @@ theorem accu_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
       fun r hr => (post.preserved r hr).trans
         (immediate_preserved dp.frame (by decide) r hr)⟩
 
+/-- A control-flow arm retains the represented accumulator. Its generated
+body receives the preserved accumulator word at the dispatch boundary. -/
+theorem control_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
+    {c : Config} {pl : Place} {cp : ChanPlace} {sp high pc : Nat}
+    (stable : MemoryStable L.runtimeOk) (h : ArmInput L P s op c pl cp sp high)
+    (body : ∀ d, DispatchPost c op (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d →
+      ∀ w, gpr d Layout.reg_accu = some w → valWord pl s.accu = some w →
+      ∃ nb after, StepsN nb d after ∧ AccuPost d pl pc w after) :
+    ∃ after, Plus c after ∧ Running L P {s with pc := pc} after := by
+  obtain ⟨w, hw, value⟩ := h.accu
+  apply accu_arm stable h value (fun _ hl => Live.root (by simp [roots]) hl)
+  intro d dp
+  exact body d dp w ((dp.frame.frame Register.x21 (by decide)).trans hw) value
+
 /-- Compose an immediate-result arm through the general accumulator rule. -/
 theorem immediate_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
     {c : Config} {pl : Place} {cp : ChanPlace} {sp high pc : Nat} {n : BitVec 63}

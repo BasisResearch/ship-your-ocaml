@@ -47,6 +47,10 @@ FAMILIES = {
     'GETFIELD1': ('Getfield1', ['ld_tot', 'alu_addi', 'j']),
     'GETFIELD2': ('Getfield2', ['ld_tot', 'alu_addi', 'j']),
     'GETFIELD3': ('Getfield3', ['ld_tot', 'alu_addi', 'j']),
+    'BRANCHIF_JUMP': ('BranchifJump', ['alu_addi', 'branch_nottaken', 'lw_tot', 'slli', 'alu_add', 'j']),
+    'BRANCHIF_NEXT': ('BranchifNext', ['alu_addi', 'branch_taken', 'alu_addi', 'j']),
+    'BRANCHIFNOT_JUMP': ('BranchifnotJump', ['alu_addi', 'branch_taken', 'lw_tot', 'slli', 'alu_add', 'j']),
+    'BRANCHIFNOT_NEXT': ('BranchifnotNext', ['alu_addi', 'branch_nottaken', 'alu_addi', 'j']),
     'BRANCH': ('Branch', ['lw_tot', 'slli', 'alu_add', 'j']),
     'OFFSETINT': ('Offsetint', ['lw_tot', 'alu_addi', 'slliw', 'alu_add', 'j']),
     'CONSTINT': ('Constint', ['lw_tot', 'alu_addi', 'slli', 'alu_addi', 'j']),
@@ -58,6 +62,40 @@ FAMILIES = {
     'NEGINT': ('Negint', ['alu_addi', 'alu_addi', 'sub', 'j']),
     'ISINT': ('Isint', ['slli', 'andi', 'alu_addi', 'alu_addi', 'j']),
 }
+
+
+PATHS = {
+    'DISPATCH': (None, [True]),
+    'BRANCHIF_JUMP': ('BRANCHIF', [False]),
+    'BRANCHIF_NEXT': ('BRANCHIF', [True]),
+    'BRANCHIFNOT_JUMP': ('BRANCHIFNOT', [True]),
+    'BRANCHIFNOT_NEXT': ('BRANCHIFNOT', [False]),
+}
+
+
+def path_span(instructions, start, decisions):
+    """Follow explicit branch outcomes; generated contracts retain every guard."""
+    by_pc = {i[0]: i for i in instructions}
+    pc, insts, rows, branch = start, [], [], 0
+    for _ in range(32):
+        ins = by_pc[pc]
+        choices = classify(ins[0], ins[1], ins[2] + ' ' + ins[3], {})
+        if any(r.cls == 'branch_taken' for r in choices):
+            if branch >= len(decisions):
+                raise ValueError('path needs another explicit branch decision')
+            cls = 'branch_taken' if decisions[branch] else 'branch_nottaken'
+            row = next(r for r in choices if r.cls == cls)
+            branch += 1
+        else:
+            row = choices[0]
+        insts.append(ins)
+        rows.append(row)
+        if row.cls in ('j', 'jr'):
+            if branch != len(decisions):
+                raise ValueError('unused branch decision')
+            return insts, rows
+        pc = pc + sext(int(row.ops[3], 16), 13) if row.cls == 'branch_taken' else pc + 4
+    raise ValueError('path did not terminate at a jump')
 
 
 def site_outputs(insts, rows, stem, lower):
@@ -91,22 +129,10 @@ def outputs(family='CONST0'):
     text_base = sections((ROOT / 'c/ocamlrun-riscv-htif.elf').read_bytes())['.text'][0]
     census = json.loads((ROOT / 'results/census.json').read_text())['caml_interprete']
     instructions = disasm(ROOT / 'c/ocamlrun-riscv-htif.elf')['caml_interprete']['insts']
-    if family == 'DISPATCH':
-        start = int(census['loop_head'], 16)
-        by_pc = {i[0]: i for i in instructions}
-        pc, insts, rows = start, [], []
-        # Select the in-range branch path. The generated theorem carries its guard.
-        for _ in range(16):
-            ins = by_pc[pc]
-            choices = classify(ins[0], ins[1], ins[2] + ' ' + ins[3], {})
-            row = next((r for r in choices if r.cls == 'branch_taken'), choices[0])
-            insts.append(ins)
-            rows.append(row)
-            if row.cls == 'jr':
-                break
-            pc = pc + sext(int(row.ops[3], 16), 13) if row.cls == 'branch_taken' else pc + 4
-        else:
-            raise ValueError('dispatch path did not terminate at an indirect jump')
+    if family in PATHS:
+        opcode, decisions = PATHS[family]
+        start = int(census['loop_head'] if opcode is None else census['arms'][opcode]['addr'], 16)
+        insts, rows = path_span(instructions, start, decisions)
     else:
         arm = census['arms'][family]
         start = int(arm['addr'], 16)

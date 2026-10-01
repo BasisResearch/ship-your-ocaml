@@ -602,6 +602,25 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.tr_branch
 #print axioms OCaml.Vm.Sim.branch_loaded
 #print axioms OCaml.Vm.Sim.branch_arm
+
+-- Shared control restoration and both guarded conditional paths.
+#print axioms OCaml.Vm.Sim.control_arm
+#print axioms OCaml.Vm.Sim.tag_eq_false
+#print axioms OCaml.Vm.Sim.false_word_iff
+#print axioms Vsa.Sim.tr_branchif_jump
+#print axioms OCaml.Vm.Sim.branchif_jump_loaded
+#print axioms OCaml.Vm.Sim.branchif_jump_arm
+#print axioms Vsa.Sim.tr_branchif_next
+#print axioms OCaml.Vm.Sim.branchif_next_loaded
+#print axioms OCaml.Vm.Sim.branchif_next_arm
+#print axioms OCaml.Vm.Sim.branchif_arm
+#print axioms Vsa.Sim.tr_branchifnot_jump
+#print axioms OCaml.Vm.Sim.branchifnot_jump_loaded
+#print axioms OCaml.Vm.Sim.branchifnot_jump_arm
+#print axioms Vsa.Sim.tr_branchifnot_next
+#print axioms OCaml.Vm.Sim.branchifnot_next_loaded
+#print axioms OCaml.Vm.Sim.branchifnot_next_arm
+#print axioms OCaml.Vm.Sim.branchifnot_arm
 #print axioms OCaml.Vm.Sim.codePc_add
 #print axioms OCaml.Vm.Sim.tag_word32
 #print axioms Vsa.Sim.tr_constint

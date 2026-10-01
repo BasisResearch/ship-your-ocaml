@@ -17,9 +17,8 @@ theorem branch_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     (operand : OperandAt P pl (s.pc + 1) w)
     (jump : target s.pc 0 w.toInt = some dest) :
     ∃ c', Plus c c' ∧ Running L P {s with pc := dest} c' := by
-  obtain ⟨accu, haccu, value⟩ := h.accu
-  apply accu_arm stable h value (fun _ hl => Live.root (by simp [roots]) hl)
-  intro d dp
+  apply control_arm stable h
+  intro d dp accu haccu _value
   have read : bytesT4 d.σ.mem (pl.codeBase + 4 * (s.pc + 1)) = w :=
     operand.read32 h.code dp.memory
   have bp : SegSt (0x80003104#64)
@@ -44,7 +43,6 @@ theorem branch_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
         (BitVec.ofInt 64 w.toInt <<< (2 : Nat)) = BitVec.ofNat 64 (pl.codeBase + 4 * dest) := by
       simpa only [Nat.add_zero] using relative_code_word pl jump
     simpa only [address] using hp
-  · exact (frame.frame Register.x21 (by decide)).trans
-      ((dp.frame.frame Register.x21 (by decide)).trans haccu)
+  · exact (frame.frame Register.x21 (by decide)).trans haccu
 
 end OCaml.Vm.Sim

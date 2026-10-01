@@ -1,0 +1,78 @@
+{
+  "theorem": "tr_branchif_next",
+  "doc": "BRANCHIF_NEXT arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.BranchifNextSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v21 v8 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hguard_800030f0 : (v21 == ((0#64) + sign_extend (m := 64) (0x001#12))) = true)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlBranchifNextLoaded",
+  "pins": [
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    },
+    {
+      "reg": "x8",
+      "val": "v8",
+      "hyp": "hv8"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x800030ec",
+      "site": "site_800030ec_branchif_next",
+      "class": "alu",
+      "asm": "li a5,1",
+      "rd": "x15",
+      "rd_val": "((0#64) + sign_extend (m := 64) (0x001#12))",
+      "raw_val": "((0#64) + sign_extend (m := 64) (0x001#12))",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800030f0",
+      "site": "site_800030f0_taken_branchif_next",
+      "class": "btaken",
+      "asm": "beq s5,a5,80003820 <caml_interprete+0x1a28>",
+      "imm": "0x0730#13",
+      "target": "0x80003820",
+      "pre_lines": [],
+      "call": "$vmi $v:x21 $v:x15 $hG $hpc $hmi $pin:x21 $pin:x15 $hmem rfl hguard_800030f0 $hi"
+    },
+    {
+      "addr": "0x80003820",
+      "site": "site_80003820_branchif_next",
+      "class": "alu",
+      "asm": "addi s0,s0,8",
+      "rd": "x8",
+      "rd_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003824",
+      "site": "site_80003824_branchif_next",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1fe738#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x800030ec",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

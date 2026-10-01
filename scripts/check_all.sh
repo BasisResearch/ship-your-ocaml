@@ -102,6 +102,7 @@ python3 scripts/retarget_library_sites.py --check || fail "stage a5: A0 library 
 python3 scripts/gen_ocaml_image.py | cmp -s - OCaml/Vm/ImageData.lean || fail "stage a5: OCaml image pins differ from generator"
 python3 scripts/gen_unary_arms.py --check || fail "stage a5: unary arm bridge drift"
 python3 scripts/gen_field_arms.py --check || fail "stage a5: field arm bridge drift"
+python3 scripts/gen_conditional_arms.py --check || fail "stage a5: conditional arm bridge drift"
 python3 scripts/gen_acc_arms.py --check || fail "stage a5: stack arm bridge drift"
 python3 scripts/gen_const_arms.py --check || fail "stage a5: constant arm bridge drift"
 python3 scripts/gen_arm_pilot.py --check || fail "stage a5: arm pilot drift"
