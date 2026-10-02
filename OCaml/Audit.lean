@@ -1,4 +1,6 @@
 import OCaml.Vm.Primitives.StringCopyReadback
+import OCaml.Programs.LazyForce
+import OCaml.Vm.Gc.Observed
 import OCaml.Vm.Primitives.StringCopyFast
 import OCaml.Vm.GcObservation
 import OCaml.Vm.Primitives.StringConstructorLayout
@@ -1442,3 +1444,22 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.setupElf_congr
 #print axioms OCaml.Vm.Boot.Startup.setupElf_pc
 #print axioms OCaml.Vm.Boot.Startup.ElfReset.pc
+#print axioms OCaml.Run.halts_after_iter
+#print axioms OCaml.Run.div_after_iter
+#print axioms OCaml.Bytecode.FwdReduction.equivalent
+#print axioms OCaml.Bytecode.FwdObservations.of_common_result
+#print axioms OCaml.Bytecode.FwdObservations.trans
+#print axioms OCaml.Vm.Gc.ObservedAt.collect
+#print axioms OCaml.Programs.LazyForce.tag_primitive
+#print axioms OCaml.Programs.LazyForce.forward_get
+#print axioms OCaml.Programs.LazyForce.force_tag
+#print axioms OCaml.Programs.LazyForce.force_forward_test
+#print axioms OCaml.Programs.LazyForce.force_forward_return
+#print axioms OCaml.Programs.LazyForce.force_forward
+#print axioms OCaml.Programs.LazyForce.force_value_test
+#print axioms OCaml.Programs.LazyForce.force_value_return
+#print axioms OCaml.Programs.LazyForce.force_value
+#print axioms OCaml.Programs.LazyForce.force_observations
+#print axioms OCaml.Programs.LazyForce.force_argument_edit
+#print axioms OCaml.Programs.LazyForce.force_integer_observations
+#print axioms OCaml.Programs.LazyForce.checked

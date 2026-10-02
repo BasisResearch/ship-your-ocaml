@@ -5,7 +5,8 @@
 Kiran chose option (a): a `GcSafe` precondition beside `Good` and `Fits`;
 `BcSem` stays deterministic. The earlier decision request is resolved.
 `OCaml/Bytecode/GcSafe.lean` defines contextual Forward edits/equivalence,
-collection-closed reachability, conservative collection boundaries, and
+collection-closed reachability through directed shortcuts (never inverse
+reboxing), conservative collection boundaries, and
 halting/output/divergence equivalence of continuations. The safety premise
 is threaded through Layer A and end-to-end statements; their targeted
 build passes. The concrete boundary classifier remains a machine obligation.
@@ -25,15 +26,31 @@ this scan does not discharge type/alias/control-flow obligations.
 `GcSafe boot/ocamlc` remains OPEN.
 
 The real CamlinternalLazy.force bytes are extracted via runbc --lean by
-`scripts/gen_lazy_force.py`. The symbolic already-forced path proof is in
-progress. Its tag read and non-float-array payload read do not allocate;
+`scripts/gen_lazy_force.py`. `force_forward` and `force_value` prove the already-forced paths in
+twelve and fourteen real BcSem steps. `force_observations` proves identical
+continuation halt/output/divergence; `force_argument_edit` exhibits their
+forwarding edit, and `force_integer_observations` discharges the primitive
+precondition for integer payloads. The generic value theorem explicitly
+requires a successful tag read with non-Forward/non-Lazy result. Its tag read and non-float-array payload read do not allocate;
 forwarding between a cached tag test and its payload read is not a runtime
 collection boundary. The bytecode semantics has not been changed.
+
+The host/BcSem force regression agrees (1145 steps, exit 0). The generated
+bytecode is pinned by `scripts/gen_lazy_force.py --check`; the full gate
+checks both extraction and regression. `Run.halts_after_iter` and
+`Run.div_after_iter` supply the different-length continuation reasoning.
+`Gc.ObservedAt.collect` composes a named `CollectionEffect` with GcSafe;
+its actual oldify/mopup machine run and post-representation remain open.
+`Theorems.boot_ocamlc_gcSafe_Statement` names the compiler obligation.
 
 ## Status
 
 G2 remains open. `Fits` still measures total allocated words; no claim that
 the one-line ocamlc run is covered by G2.
+
+Latest targeted build: LazyForce, Gc.Observed and Theorems passed. The axiom
+audit passes with only propext/Classical.choice/Quot.sound. Landing uses the
+full integration gate.
 
 ## Checked progress
 

@@ -17,6 +17,12 @@ open OCaml.Bytecode
 (`OCaml/Refinement.lean`: `OcamlrunRefinement`). -/
 def ocamlrun_refinement_Statement (L : Layout) (B : Budget) : Prop := OcamlrunRefinement L B
 
+/-- Open GC-safety obligation for the pinned compiler, for each loaded input
+inside the supported fragment. The static scan and small-heap differential
+runs are validation evidence, not inhabitants of this proposition. -/
+def boot_ocamlc_gcSafe_Statement (load : Loader) (boot : List UInt8) : Prop :=
+  ∀ argv fs P, load boot argv fs = some P → Good P → GcSafe P
+
 /-- **Layer B′.** Adequacy of the machine-level program logic over `BcSem`
 (`OCaml/Logic/BcModel.lean`). PROVED: `bytecode_logic_adequacy`. -/
 def bytecode_logic_adequacy_Statement : Prop := Logic.BytecodeLogicAdequacy

@@ -50,6 +50,20 @@ inductive FwdEq : St → St → Prop where
 
 infix:50 " ≈fwd " => FwdEq
 
+/-- Actual collection may only REMOVE wrappers. Its finite contextual edits
+form a directed subrelation of FwdEq. Closing execution under the inverse
+would spuriously box ordinary integers in unrelated, non-lazy positions. -/
+inductive FwdReduction : St → St → Prop where
+  | refl (s : St) : FwdReduction s s
+  | tail {s t u} : FwdReduction s t → FwdEdit t u → FwdReduction s u
+
+/-- Every permitted directed collection edit relates forwarding-equivalent
+states. Induction is on a finite edit certificate, not a BcSem run. -/
+theorem FwdReduction.equivalent {s t : St} (edits : FwdReduction s t) : s ≈fwd t := by
+  induction edits with
+  | refl => exact .refl _
+  | tail _ edit ih => exact .trans ih (.edit edit)
+
 /-- Source-checked non-collecting primitive cases used by the force path:
 obj.c:caml_obj_tag never allocates; array.c:caml_array_unsafe_get allocates
 only for a Double_array_tag argument. The machine boundary proof must justify
@@ -78,7 +92,7 @@ to the original deterministic run would miss the states after the first GC. -/
 inductive GcReach (P : Prog) : St → Prop where
   | init : GcReach P P.init
   | next {s t} : GcReach P s → Step P s t → GcReach P t
-  | collect {s t} : GcReach P s → CollectionPoint P s → s ≈fwd t → GcReach P t
+  | collect {s t} : GcReach P s → CollectionPoint P s → FwdReduction s t → GcReach P t
 
 /-- A continuation's externally visible halting observation. -/
 def HaltsFrom (P : Prog) (s : St) (out : String) (e : Nat) : Prop :=
@@ -90,16 +104,19 @@ structure FwdObservations (P : Prog) (s t : St) : Prop where
   diverge : Run.DivK (bcK P) s ↔ Run.DivK (bcK P) t
 
 /-- GC-safety, beside Good and Fits: at every reachable collection boundary,
-forwarding-equivalent states have the same exit code, console output and
+a state and any forwarding-equivalent state produced by a directed collection
+edit have the same exit code, console output and
 divergence. This is observational, not a lockstep/bisimulation requirement:
 forcing a wrapper and forcing its payload can take different numbers of steps.
 It restricts only actual collection boundaries (conservatively classified above)
 and only the runtime's permitted shortcut, rather than banning Forward blocks,
-ISINT or Obj operations globally. Reachability includes previous collections.
+ISINT or Obj operations globally. Reachability includes previous collections,
+but never fictitious inverse edits. The observation comparison is symmetric
+(an iff); the permitted runtime effect is directional.
 These are the weakest *observations* required by the current Layer A headline;
 the boundary classifier is an explicit conservative approximation. The concrete
 collector must separately justify its boundary, representation and progress. -/
 def GcSafe (P : Prog) : Prop :=
-  ∀ s t, GcReach P s → CollectionPoint P s → s ≈fwd t → FwdObservations P s t
+  ∀ s t, GcReach P s → CollectionPoint P s → FwdReduction s t → FwdObservations P s t
 
 end OCaml.Bytecode
