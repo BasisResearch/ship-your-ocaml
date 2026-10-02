@@ -106,3 +106,70 @@ The image migration is not in that revision, so its follow-up remains open.
 After the migration lands, rebase again, rerun both generators, and validate
 through `scripts/integrate.sh`. Native Layout/decode/pin regeneration belongs
 to a0-boot's migration landing.
+
+## Round 2: stopped at the required abstraction gate (2026-10-02)
+
+**Discovery round required before further C4 proof expansion.** Running
+`python3 scripts/check_abstraction_gate.py` after registering the new hand
+proofs produced:
+
+```
+C4-bytecode-specs: 10 hand proofs, first-quarter mean 7.5 lines, last-quarter mean 18.0: FLAT
+gate: cluster(s) C4-bytecode-specs reached 8 hand proofs without the per-case cost falling by a third — run /abstraction-discovery
+```
+
+The seven added census entries are `length_loop`, `length_application`,
+`abs_runFact`, `abs_haltFact`, `abs_wp`, `abs_hyp`, and
+`compiler_abs_adequacy`, alongside the three existing CountLoop entries.
+The lane brief explicitly requires stopping for a separately run discovery
+round. Proof expansion has stopped. The gate has not been bypassed; Round 2
+exit is **not met**, and the proof changes below are a preserved local draft,
+not landed proofs. This log is being landed separately so the foreman can
+see the obstruction without accepting proof changes that fail a8.
+
+Completed and locally checked before the gate fired:
+
+- Rebased through `1cfce0b`, including fixed `.embed` migration `7fa1750`;
+  reran existing bytecode generators, with unchanged artifacts. Native data
+  addresses still come from Layout; this lane introduces none.
+- `gen_bc_all.py`: exact coverage of 412,087 instructions / 655,922 CODE
+  words in 202 shards (limit 2,048 instructions), with 92,543 block rules.
+  This includes initialization and the final STOP. `decodeAt_extract_tight`
+  fixes the unnecessary lookahead requirement for fixed-length instructions.
+- `gen_bc_functions.py`: conservative CFG census of 11,292 closure entries;
+  all 6,172 generated normal/over/under application-case theorems built and
+  passed standard-axiom audits across 47 shards. Per-shard measurements are
+  in the draft `results/bprime_functions_build.json`.
+- `gen_bc_loops.py`: both matched length-accumulator loops (entries 8372 and
+  20141) built. `length_loop` uses `loop_rule` and a finite `ListSpine`
+  invariant; generated summaries return the initial count plus spine length,
+  preserving heap/world and restoring the caller frame.
+- `gen_bc_abs.py`: finds actual Stdlib.Int.abs at CODE words [12349,12360),
+  copies those bytes unchanged into a runbc-generated harness, and proves a
+  functional `absWord` postcondition for every signed machine integer.
+  `CompilerFunctionAdequacy.compiler_abs_adequacy` builds through
+  `bytecode_adequacy`; `harness_run` proves the returned value is seven on -7.
+  This is a compiler-helper harness, not termination of boot/ocamlc.
+- `bcModel` adds the missing extra-argument representation bound; the
+  draft `extra_alias_excluded` checks why ghost-word zero alone cannot rule
+  out over-application at `extra = 2^64`. The earlier adequacy fixture builds
+  with the strengthened bound.
+- Draft coverage: 285/11,292 normal function summaries (2.52%), 282 over
+  cases, 5,608/5,608 GRAB under cases (49.66% of all entries), two ranked list
+  loops. General higher-order callees remain unresolved: 34,125 unique call
+  sites. The census does not miscount partial-closure returns as saturated
+  function proofs or CFG back edges as dynamic tail-recursive loops.
+- Hole and discipline checks passed. Full compiler shard measurement is
+  incomplete: six shards have sequential build/audit/resource records in
+  `results/bprime_all_build.json`. A batching prototype did not invoke its
+  timing wrapper and was discarded; no fabricated timings were recorded.
+
+Next, after the separate discovery round: adopt its C4 abstraction, finish
+all 202 shard measurements using `check_bc_all.py --measure --resume`, rerun
+all generator and axiom gates, and land the proof changes with
+`scripts/integrate.sh`. PHASES Round 2 remains open in the draft.
+
+Recovery snapshot: git stash `f94e122806aa291761f8f0560015f789ab85426d`
+(`bprime Round 2 draft stopped by C4 abstraction gate; preserve for discovery`).
+The draft will be restored in this worktree after the log-only integration;
+the snapshot is retained as a recovery copy.
