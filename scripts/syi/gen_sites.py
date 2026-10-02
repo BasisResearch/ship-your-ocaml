@@ -34,7 +34,8 @@ Classes (registers are decimal x-register numbers, immediates hex):
     sd  rs2 rs1 imm12              # 8-byte store (exec_sd_val / writeMap8)
     sw  rs2 rs1 imm12              # 4-byte store (exec_sw / writeMap4)
     sb  rs2 rs1 imm12              # 1-byte store (exec_sb / insert)
-    jal rd imm21                   # call (stepObs_jal)
+    jal rd imm21                   # direct call (stepObs_jal)
+    jalr rd rs1 imm12              # indirect call (stepObs_jalr)
     j   imm21                      # jal x0 (stepObs_j)
     jr  rs1                        # ret / jr (stepObs_jr, imm 0)
 

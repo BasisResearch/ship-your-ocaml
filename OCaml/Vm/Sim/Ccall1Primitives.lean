@@ -12,11 +12,8 @@ theorem c_call1_resume {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     {cp : ChanPlace} {sp high : Nat} {domain frameSp result env entry : BitVec 64}
     {Pre : Config → Prop} (stable : MemoryStable L.runtimeOk)
     (S : FnSummary entry Pre (Ccall1Return L P s pl cp sp high domain frameSp result env)) :
-    FnSummary entry Pre (Running L P s) := by
-  refine ⟨Triple.seq S.run ?_⟩
-  intro c h
-  obtain ⟨after, ⟨n, steps⟩, repr⟩ := c_call1_return stable h
-  exact ⟨after, steps.toSteps, repr⟩
+    FnSummary entry Pre (Running L P s) :=
+  ⟨Triple.seq S.run (c_call1_return_triple stable)⟩
 
 /-- Consume the landed Sys.argv primitive summary and restore the loop state.
 The caller still supplies its generated setup and the world/global link. -/

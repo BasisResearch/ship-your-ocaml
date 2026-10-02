@@ -137,4 +137,13 @@ theorem c_call1_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
   · exact loopRegisters_frame
       (fun r hr => frame.frame r (by revert r; decide)) h.loop
 
+/-- Triple interface for the generated represented return, for callSeg splices. -/
+theorem c_call1_return_triple {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
+    {cp : ChanPlace} {sp high : Nat} {domain frameSp result env : BitVec 64}
+    (stable : MemoryStable L.runtimeOk) :
+    Vsa.Logic.Triple (Ccall1Return L P s pl cp sp high domain frameSp result env) (Running L P s) := by
+  intro c h
+  obtain ⟨after, ⟨n, steps⟩, repr⟩ := c_call1_return stable h
+  exact ⟨after, steps.toSteps, repr⟩
+
 end OCaml.Vm.Sim

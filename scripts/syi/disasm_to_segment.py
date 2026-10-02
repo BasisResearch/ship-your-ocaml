@@ -29,7 +29,8 @@ core segment spec with everything mechanical filled in:
         replace the two TODOs with that option and `$guard` in the call),
       - jal: the link step is emitted complete, followed by a
         `class: call` placeholder step for the callee glue,
-      - jr: `pc_val`/`pc_rw`/`htgt`;
+      - jr/jalr: `pc_val`/`pc_rw`/`htgt`; jalr exports its link register
+        and terminates at callee entry (compose the callee summary separately);
   * `pre`/`post`/`pre_bind.obtain`/`post_proof` stay segment-specific:
     `pre`/`post` are TODO, `pre_bind` is emitted with the standard names
     and a TODO obtain pattern.  (Alternatively switch the draft to

@@ -1,5 +1,24 @@
 # Lane a1-arms
 
+## C_CALL1 arm composition
+
+`c_call1_arm` and `c_call1_step_arm` compose dispatch, the proved generated
+setup, `Ccall1Callee.summary`, and generated represented restoration via
+`callSeg`. `Ccall1Callee` is a named returning-primitive obligation: an F1
+semantic `.ok` result and a represented machine call summary retaining the
+saved caller frame. It does not assume execution of the opcode arm.
+`c_call1_callee_of_readOnly` consumes the existing a1-prims postcondition;
+`c_call1_sys_argv_callee` cites the landed Sys.argv summary with an explicit
+runtime/world argv-global binding. Primitive exceptions and exits remain open.
+
+Default-limit/24 GiB build: 2.5s. Setup landed as `c65fa8c`, full gate passing
+after rebasing a1-prims' nursery-layout and copy-string boundary landings.
+There are now 97 conditional represented opcode bridges, counting C_CALL1
+for successful returning primitives. Next: generalize the call family to
+C_CALL2–C_CALL5 (same saved frame, additional arguments and stack consumption),
+then C_CALLN; also adopt the approved GcSafe threading when it lands.
+
+
 ## C_CALL1 represented setup
 
 `c_call1_setup` derives the represented `ImmediateInput`, saved caller frame
@@ -1041,7 +1060,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 
 ## Open / next
 
-Continue with generated F1 families and measured builds, starting with C_CALL1 primitive-call setup and restoration. There are 96 conditional represented opcode bridges,
+Continue with generated F1 families and measured builds, starting with C_CALL2–C_CALL5 and then C_CALLN. There are 97 conditional represented opcode bridges (C_CALL1 covers returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 

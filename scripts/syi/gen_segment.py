@@ -21,7 +21,7 @@ Modes
                     via `slot_reload_bytes`/`slot_reassemble`, `addi sp,sp,K`,
                     `ret` (via `ret_tgt`).  Emits inline Pre/Post structures.
   --mode call       same core format as straight; requires >= 1 step of
-                    class "call" (jal + callee-spec glue via `pins_of_frame`).
+                    class "call" (jal/jalr + callee-spec glue via `pins_of_frame`).
   --mode loop       whole `Triple.loop` instantiation from a loop-spec JSON
                     (see LOOP-SPEC below): AtHead/LoopI defs, the measure,
                     the loopmu_head lemma, loop_body, loop_to_done — the
@@ -93,6 +93,7 @@ Core segment-spec JSON
   },
   "pins": [ {"reg": "x10", "val": "dst", "hyp": "ha0"}, ... ],
   "frame_origin": "σ0",            # SegSt: incoming state, export StepFrameOut; import ChainFrameOut
+  "frame_compact": true,           # optional finite certificate removes repeated writes/noise
   "counted": true,                  # SegSt only: TripleN via StepCount (import it)
   "frame": {                       # optional ghost register-frame threading
     "pred": "NotWrittenMv", "rhs": "g R", "init": "hframe",
@@ -107,7 +108,7 @@ Core segment-spec JSON
 Step dict (site step):
   { "addr": "0x800069f0", "site": "site_69f0",
     "class": "alu" | "sd" | "sw" | "sb" | "btaken" | "bnottaken"
-           | "jal" | "jr" | "j" | "call",
+           | "jal" | "jalr" | "jr" | "j" | "call",
     "call": "$vmi ... $hG $hpc $hmi $pin:x12 $hmem rfl $hi",
     "pre_lines": ["...raw Lean before the obtain..."],
     # branch steps whose operands are CONCRETE at spec time (constant
@@ -116,11 +117,11 @@ Step dict (site step):
     # placeholder in "call" expand to `(by decide)` — no pre_lines
     # guard fact needed.  Using `$guard` without the option is an error.
     "guard": "decide",
-    # register write (alu/jal):
+    # register write (alu/jal/jalr):
     "rd": "x15", "rd_val": "(0x1f#64)", "rw": "li31_val",
     # branches / jumps:
     "imm": "0x0030#13", "target": "0x800069f8",     # btaken / j / jal
-    "pc_rw": "ret_tgt r halign", "pc_val": "r",     # jr (raw)
+    "pc_rw": "ret_tgt r halign", "pc_val": "r",     # jr/jalr (raw)
     # stores (sd/sw/sb):
     "key": "vsp.toNat - 24", "key_rw": "hkey40",    # EA.toNat normalization
     "src_val": "v9",                                # stored value expression
