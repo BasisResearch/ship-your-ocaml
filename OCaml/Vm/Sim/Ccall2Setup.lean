@@ -66,6 +66,9 @@ theorem c_call2_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   have spNat : (BitVec.ofNat 64 sp).toNat = sp := Nat.mod_eq_of_lt space.stackNat
   have arg0 := arguments.read 0 (by decide)
   have load0 := ccall_argument_load space memory3 0 (by have := arguments.bound; omega)
+  have envStore := writeWindow_nat space.envWindow sp16Nat
+  have pcStore := writeWindow_nat space.pcWindow sp8Nat
+  have externStore := writeWindow_nat space.externWindow domainNat
   have domainWindow : RamReadAt Layout.sym_Caml_state 8 := ⟨by decide, by decide, by decide⟩
   have tableWindow : RamReadAt (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8 := ⟨by decide, by decide, by decide⟩
   have codeWindow (a : Nat) (w : BitVec 64)
@@ -90,13 +93,13 @@ theorem c_call2_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     show sign_extend (m := 64) (0x008#12) = 8#64 from by decide,
     show sign_extend (m := 64) (0x0a0#12) = BitVec.ofNat 64 Layout.off_extern_sp from by decide,
     BitVec.add_zero, domainWindow.toNat, tableWindow.toNat, nextPC, codePc_succ, operand.geometry.toNat] at run
-  have first := run (by simpa only [sp16Nat] using space.envWindow.lower) (by simpa only [sp16Nat] using space.envWindow.upper) (by simpa only [sp16Nat, tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using space.envWindow.htif) (by simpa only [sp16Nat] using space.envWindow.aligned)
+  have first := run envStore.lower envStore.upper envStore.htif envStore.aligned
     (codeWindow _ env (by simp [ccall1Log])) m1 hm1
-    (by simpa only [sp8Nat] using space.pcWindow.lower) (by simpa only [sp8Nat] using space.pcWindow.upper) (by simpa only [sp8Nat, tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using space.pcWindow.htif) (by simpa only [sp8Nat] using space.pcWindow.aligned)
+    pcStore.lower pcStore.upper pcStore.htif pcStore.aligned
     (codeWindow _ (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) (by simp [ccall1Log])) m2 hm2
     domainWindow.lower domainWindow.upper domainWindow.htif (BitVec.ofNat 64 domain) domainLoad.symm
   simp only [domainAddress, domainNat] at first
-  have second := first (by simpa only [domainNat] using space.externWindow.lower) (by simpa only [domainNat] using space.externWindow.upper) (by simpa only [domainNat, tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using space.externWindow.htif) (by simpa only [domainNat] using space.externWindow.aligned)
+  have second := first externStore.lower externStore.upper externStore.htif externStore.aligned
     (codeWindow _ (BitVec.ofNat 64 (sp - 16)) (by simp [ccall1Log])) m3 hm3
     operand.geometry.lower operand.geometry.upper operand.geometry.htif (sign_extend (m := 64) index)
     (by rw [operandLoad]) tableWindow.lower tableWindow.upper tableWindow.htif (BitVec.ofNat 64 table) tableLoad.symm

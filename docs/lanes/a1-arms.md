@@ -1,5 +1,34 @@
 # Lane a1-arms
 
+## Returning C_CALLN arm
+
+`c_calln_setup` establishes the stack-array ABI from the generated 21-step
+prefix: two operand reads, five exact stores, preserved represented payload,
+argument array, saved native/VM frame and ELF-bound target. `CcallnWriteOk.stored`
+and `ccalln_array` derive the stored words and argument representation through
+shared write-log and stack predicates. `writeWindow_nat` now factors native
+store geometry in both fixed-arity and N setup adapters.
+
+`c_calln_arm` and `c_calln_step_arm` compose dispatch/setup, the named
+`CcallnCallee` primitive summary and the represented return through callSeg.
+`c_calln_callee_of_readOnly` adapts a represented stack-array ABI summary;
+it does not assert that fixed-arity primitive summaries implement that ABI.
+The actual callee summary remains a1-prims' named obligation. Setup geometry,
+runtime frame laws and positive/count bounds remain explicit.
+
+Capped/default-limit builds pass: store/array facts about 1.0s, input about
+0.8s, setup 2.7s, full arm about 1.0s. All new headlines are audited; generator
+and discipline checks pass. The represented N return landed as `8f2bdb8`,
+full gate passing. There are **102 conditional represented opcode bridges**.
+Entry/halt, exception/exit continuations, invariant adapters and the lane
+exit are still open.
+
+Next: OFFSETINT against the landed corrected 32-bit operand shift, then
+remaining arithmetic, heap mutation/allocation and control families. The
+old `OffsetWidth` obstruction remains a checked regression witness against
+the previous operand interpretation; it no longer describes the current
+OFFSETINT/OFFSETREF semantics.
+
 ## C_CALLN represented return
 
 `CcallResult` now holds the represented primitive result separately from
@@ -1185,11 +1214,11 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 
 ## Open / next
 
-Continue with represented C_CALLN stack-array setup and named callee
-composition; its machine prefix/suffix and represented return are checked. Then
-continue the remaining arm families. C_CALL1–C_CALL5 have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 101 conditional
-represented opcode bridges (fixed-arity calls cover returning `.ok` primitives),
+Continue with OFFSETINT against the corrected 32-bit operand semantics,
+then remaining arithmetic, heap mutation/allocation and control families.
+All six C_CALL opcodes have generated machine boundaries, represented
+setup/return bridges and named callee composition. There are 102 conditional
+represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 
@@ -1197,8 +1226,9 @@ The full captured boot `Loaded` witness has landed (`bc63ae6`) and consumes
 the strengthened platform, primitive and atom-table bindings. The arm adapters
 still need to derive dispatch clock/geometry and operand/heap access conditions
 from an invariant preserved by every family. Runtime preservation remains
-explicit. The OFFSETINT/OFFSETREF width and negative operand semantic gaps
-are recorded above for a2-sem. The approved `GcSafe P` premise is now in
+explicit. The OFFSETINT/OFFSETREF width correction has landed; its old obstruction
+stays as a regression witness. Negative-ATOM and pointer-branch domain gaps
+remain recorded above. The approved `GcSafe P` premise is now in
 ArmSim and the headline; concrete GC-boundary and whileMin safety proofs
 remain to be supplied. Primitives
 remain a1-prims' responsibility; C_CALL bodies must consume their named machine

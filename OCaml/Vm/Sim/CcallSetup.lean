@@ -2,6 +2,7 @@ import OCaml.Vm.Sim.Ccall1Store
 import OCaml.Vm.Sim.CcallReturn
 import OCaml.Vm.Sim.StackStore
 import OCaml.Vm.Sim.IndexWord
+import OCaml.Vm.Sim.WriteGeometry
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false

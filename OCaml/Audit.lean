@@ -875,6 +875,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.c_calln_readOnly_summary
 #print axioms OCaml.Vm.Sim.c_calln_return
 #print axioms OCaml.Vm.Sim.c_calln_return_triple
+#print axioms OCaml.Vm.Sim.writeWindow_nat
+#print axioms OCaml.Vm.Sim.CcallnWriteOk.stored
+#print axioms OCaml.Vm.Sim.ccalln_log_in
+#print axioms OCaml.Vm.Sim.ccalln_runtime
+#print axioms OCaml.Vm.Sim.ccalln_array
+#print axioms OCaml.Vm.Sim.ccalln_frame_address
+#print axioms OCaml.Vm.Sim.ccalln_count_word
+#print axioms OCaml.Vm.Sim.c_calln_setup
+#print axioms OCaml.Vm.Sim.c_calln_arm
+#print axioms OCaml.Vm.Sim.c_calln_step_arm
+#print axioms OCaml.Vm.Sim.c_calln_callee_of_readOnly
 #print axioms OCaml.Vm.Sim.c_call2_return
 #print axioms OCaml.Vm.Sim.c_call2_return_triple
 #print axioms OCaml.Vm.Sim.c_call3_return
