@@ -109,7 +109,9 @@ ELF pin).
 | `dispatch_run` (named dispatch-to-arm boundary and complete frame) | `OCaml/Vm/Sim/Dispatch.lean` | A1 | **proved**; bytecode RAM/HTIF geometry and tick premises remain explicit |
 | F2/F3/F4/F5 arms and primitives | `OCaml/Vm/Sim/` | A2–A5 | open |
 | GC: `caml_empty_minor_heap` preserves `VmReprAt` up to a new placement (G2) | `OCaml/Vm/Gc/` | A6 | open: strict Forward bridge obstructed; machine oldify/mopup proof remains open |
-| Forward short-circuit obstruction / transparent-value ISINT incompatibility | `OCaml/Vm/Gc/Forward.lean` | A6 | **proved**; pinned host regression confirms `false true`; semantic safety precondition or revised semantics needs a decision |
+| Forward short-circuit obstruction / transparent-value ISINT incompatibility | `OCaml/Vm/Gc/Forward.lean` | A6 | **proved**; pinned host regression confirms `false true`; option (a) chosen: GcSafe is now an explicit precondition; BcSem remains deterministic |
+| GC-observation safety / Layer A premise | `OCaml/Bytecode/GcSafe.lean`, `Refinement.lean`, `EndToEnd.lean` | A6 round 2 | `GcSafe` defined on collection-closed forwarding equivalence; threaded through headline statements; existing composition proofs rebuilt; concrete collection-boundary coverage open |
+| `GcSafe boot/ocamlc` | `scripts/check_gc_safety.py`, `results/gc-safety.json` | A6 / C | **open**: 5741 conservative observation sites need lazy-flow analysis; hello.cmo/output identical at default and 4K/8K/16K heaps (1/61/32/17 minor collections); typing alone insufficient, as checked typed physical-equality regression shows |
 | NoForgery / remembered completeness / writing-arm barrier interface | `OCaml/Vm/Gc/Invariant.lean` | A6 / a1-arms | named `LoopHead` and `WritingArmBarrier`; `LoopHead.reloc` and empty-table reset rule **proved conditionally**; concrete table linkage, startup and arm suppliers open |
 | Remembered-set logical store rule | `OCaml/Vm/Gc/Barrier.lean` | A6 / a1-arms | `slotComplete_store`, `rememberedComplete_of_slots` **proved**; machine caml_modify, concrete table linkage and major darkening remain open |
 | Candidate live-word budget | `OCaml/Vm/Gc/Budget.lean` | A6 | `liveWords_le_allocated`, `fitsLive_of_fits` **proved**; production `Fits` unchanged pending GC/reclamation proof |
@@ -250,6 +252,18 @@ work; passing executable difftests does not discharge Layer A.
 
 ## A6: the collector (exit: Layer A without the G1 budget)
 
+* Round 2: Kiran chose observational `GcSafe` beside unchanged `Good` and
+  `Fits`; BcSem stays deterministic. Forward edits cover roots and heap
+  fields independently, under minor_gc.c's payload-tag guard. `GcReach`
+  includes prior collection edits. Safety compares halt code/console and
+  divergence at conservative collection boundaries, not intermediate-step
+  lockstep. Boundary completeness is a named machine-proof obligation.
+* `GcSafe boot/ocamlc` is open. The host compiler comparison passes at
+  default and small minor heaps; the static observation scan is deliberately
+  conservative and does not certify lazy-flow reachability. Typed OCaml can
+  observe lazies with physical equality without Obj: the host regression
+  prints `false true` across collection. The real CamlinternalLazy.force
+  bytecode proof is being developed separately; it is not a typing theorem.
 * G2: the minor collection preserves `VmReprAt` up to a new placement
   (oldify/mopup + remembered set); the major heap is non-moving and
   sweeps only non-`Live` blocks; compaction off (`O=1000000`).

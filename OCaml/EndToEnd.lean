@@ -129,7 +129,7 @@ def EndToEnd (S : SourceSem) (parse : List UInt8 → Option S.Program) (load : L
     parse src = some sp →
     load boot compileArgv (srcFiles src) = some Pc →
     BcRun Pc out 0 fs' → lookupFile fs' "/out/a.out" = some b →
-    load b [] [] = some P → Loaded L P c → Good P → Fits B P →
+    load b [] [] = some P → Loaded L P c → Good P → Fits B P → GcSafe P →
       (∀ o e, (∃ fs'', S.Run sp [] [] o e fs'') ↔ Halts c o e) ∧
       (S.Div sp [] [] ↔ Diverges c)
 
@@ -142,13 +142,13 @@ theorem endToEnd_ocaml {S : SourceSem} {ocamlc : S.Program}
     (hCself : BackendCorrectFor S ocamlc load bs.argv bs.sources bs.output ocamlc)
     (hF : SelfCompiles S ocamlc bs boot) :
     EndToEnd S parse load boot L B := by
-  intro src sp Pc out fs' b P c hp hlc hrun hb hl hL hg hf
+  intro src sp Pc out fs' b P c hp hlc hrun hb hl hL hg hf hgc
   have hM := boot_meaning hCself hF
   -- the compile run, read at the source level
   have hsrc : S.Run ocamlc compileArgv (srcFiles src) out 0 fs' :=
     ((hM compileArgv (srcFiles src) Pc hlc).1 out 0 fs').1 hrun
   obtain ⟨hbeh, hdiv⟩ := hC src sp out fs' b hp hsrc hb [] [] P hl
-  obtain ⟨hA1, hA2⟩ := hA P c hL hg hf
+  obtain ⟨hA1, hA2⟩ := hA P c hL hg hf hgc
   refine ⟨fun o e => ⟨fun ⟨fs'', h⟩ => ?_, fun h => ?_⟩, ⟨fun h => ?_, fun h => ?_⟩⟩
   · exact (hA1 o e).1 (BcRun.halts ((hbeh o e fs'').2 h))
   · obtain ⟨fs'', hr⟩ := ((hA1 o e).2 h).run
@@ -164,8 +164,8 @@ def EndToEndMachine (S : SourceSem) (parse : List UInt8 → Option S.Program) (l
     (Written : Config → String → List UInt8 → Prop) : Prop :=
   ∀ src sp Pc cc out b P c,
     parse src = some sp → load boot compileArgv (srcFiles src) = some Pc →
-    Loaded L Pc cc → Halts cc out 0 → Written cc "/out/a.out" b →
-    load b [] [] = some P → Loaded L P c → Good P → Fits B P →
+    Loaded L Pc cc → Good Pc → Fits B Pc → GcSafe Pc → Halts cc out 0 → Written cc "/out/a.out" b →
+    load b [] [] = some P → Loaded L P c → Good P → Fits B P → GcSafe P →
       (∀ o e, (∃ fs'', S.Run sp [] [] o e fs'') ↔ Halts c o e) ∧
       (S.Div sp [] [] ↔ Diverges c)
 

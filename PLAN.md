@@ -76,7 +76,7 @@ transcription bugs on the way (VALIDATION §BcSem).
 
 **The statement** (`OcamlrunRefinement L B`): for every loaded program that
 never leaves the fragment and never goes `wrong` (`Good`) and fits the
-budget (`Fits B`), `BcHalts P out e ↔ Halts c out e` and
+budget (`Fits B`) and is observationally GC-safe (`GcSafe`), `BcHalts P out e ↔ Halts c out e` and
 `BcDiverges P ↔ Diverges c`. `Good` excludes states whose behaviour depends
 on what `BcSem` abstracts (e.g. ordered comparison of pointers); `ocamlc`
 output of well-typed programs never reaches one, which is Layer C's
@@ -265,7 +265,7 @@ Layer A and C statements are the same for both instantiations.
 **Other trusted items** (all listed in `tcb/README.md`): the Sail RISC-V
 model and the HTIF convention (validated by ship-your-interpreter's
 cross-checks against the emulator); the Lean kernel; the Layer A
-hypotheses `Layout.runtimeOk`, `Fits`, `Good` (hypotheses of the theorem,
+hypotheses `Layout.runtimeOk`, `Fits`, `Good`, `GcSafe` (hypotheses of the theorem,
 established per program — by the boot witness, the budget check and the
 fragment check); Layer C's front end `parse` and the `Loader`. The
 executable loader (`OCaml/Bytecode/Load.lean`) and `runbc` are validation

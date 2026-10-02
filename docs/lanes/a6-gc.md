@@ -1,14 +1,34 @@
 # Lane a6-gc
 
-## NEEDS KIRAN
+## Round 2: GC-safety (2026-10-02)
 
-Choose the G2 specification repair for observable Forward short-circuiting:
-add a semantic GC-safety precondition excluding observations that distinguish
-a Forward block from its payload, or revise BcSem/refinement to model those
-GC-visible changes. A transparent value relation alone is insufficient.
-`python3 scripts/check_gc_forward.py` runs the pinned host OCaml 4.14.4 and
-checks `false true` for ISINT before/after a minor collection. A question is
-pending in the lane session; independent interfaces and checks continue.
+Kiran chose option (a): a `GcSafe` precondition beside `Good` and `Fits`;
+`BcSem` stays deterministic. The earlier decision request is resolved.
+`OCaml/Bytecode/GcSafe.lean` defines contextual Forward edits/equivalence,
+collection-closed reachability, conservative collection boundaries, and
+halting/output/divergence equivalence of continuations. The safety premise
+is threaded through Layer A and end-to-end statements; their targeted
+build passes. The concrete boundary classifier remains a machine obligation.
+
+The proposed general argument from typing is false: a well-typed program
+using only Lazy.force, Lazy.from_val, physical equality and Gc.minor prints
+`false true`. See `c/tests/gc/lazy_physical_equality.ml` and
+`scripts/check_gc_safety.py`. Thus GcSafe must be established for each
+program; neither typing nor the local force-path proof establishes it.
+
+Host validation of the pinned boot/ocamlc compiling hello.ml gives identical
+stdout, stderr and .cmo under default, 4096-, 8192- and 16384-word minor
+heaps; instrumented counts are 1, 61, 32 and 17 minor collections.
+`results/gc-safety.json` records hashes and the static scan's 5741 potential
+observation sites. All sites conservatively remain potentially lazy-reachable:
+this scan does not discharge type/alias/control-flow obligations.
+`GcSafe boot/ocamlc` remains OPEN.
+
+The real CamlinternalLazy.force bytes are extracted via runbc --lean by
+`scripts/gen_lazy_force.py`. The symbolic already-forced path proof is in
+progress. Its tag read and non-float-array payload read do not allocate;
+forwarding between a cached tag test and its payload read is not a runtime
+collection boundary. The bytecode semantics has not been changed.
 
 ## Status
 

@@ -1,3 +1,4 @@
+import OCaml.Bytecode.GcSafe
 import OCaml.Vm.Platform
 import Vsa.Densify
 import OCaml.Run.Machine
@@ -109,25 +110,26 @@ structure Running (L : Layout) (P : Prog) (s : St) (c : Config) : Prop where
   loop : LoopRegisters c
 
 /-- **Layer A (statement).** `ocamlrun` refines `BcSem`: for every loaded
-program inside the fragment (`Good`) and the budget (`Fits`), the machine
+program inside the fragment (`Good`), budget (`Fits`) and observational
+GC-safety domain (`GcSafe`), the machine
 halts with `(out, e)` iff `BcSem` does, and diverges iff `BcSem` does. -/
 def OcamlrunRefinement (L : Layout) (B : Budget) : Prop :=
-  ∀ P c, Loaded L P c → Good P → Fits B P →
+  ∀ P c, Loaded L P c → Good P → Fits B P → GcSafe P →
     (∀ out e, BcHalts P out e ↔ Halts c out e) ∧ (BcDiverges P ↔ Diverges c)
 
 /-- **Forward simulation obligations** (the part that needs the binary). -/
 structure OcamlrunSim (L : Layout) (B : Budget) : Prop where
-  term_sim : ∀ P c, Loaded L P c → Good P → Fits B P →
+  term_sim : ∀ P c, Loaded L P c → Good P → Fits B P → GcSafe P →
     ∀ out e, BcHalts P out e → Halts c out e
-  div_sim : ∀ P c, Loaded L P c → Good P → Fits B P → BcDiverges P → Diverges c
+  div_sim : ∀ P c, Loaded L P c → Good P → Fits B P → GcSafe P → BcDiverges P → Diverges c
 
 /-- **Layer A from forward simulation**, by determinism of both sides and
 `halts_or_diverges` (a `Good` program halts or diverges). -/
 theorem ocamlrun_refinement_of_sim {L : Layout} {B : Budget} (H : OcamlrunSim L B) :
     OcamlrunRefinement L B := by
-  intro P c hL hg hf
-  have fwd := H.term_sim P c hL hg hf
-  have dv := H.div_sim P c hL hg hf
+  intro P c hL hg hf hgc
+  have fwd := H.term_sim P c hL hg hf hgc
+  have dv := H.div_sim P c hL hg hf hgc
   rcases halts_or_diverges P hg with ⟨out', e', hb⟩ | hbd
   · refine ⟨fun out e => ⟨fwd out e, fun hm => ?_⟩, dv, fun hd => (Diverges.not_halts hd (fwd out' e' hb)).elim⟩
     obtain ⟨rfl, rfl⟩ := hm.deterministic (fwd out' e' hb); exact hb
@@ -136,10 +138,10 @@ theorem ocamlrun_refinement_of_sim {L : Layout} {B : Budget} (H : OcamlrunSim L 
 /-- The dense-memory form, as ship-your-interpreter states its headline
 (`Loaded` of `fillZero c`: absent RAM bytes read as the zero they are). -/
 theorem ocamlrun_refinement_fillZero {L : Layout} {B : Budget} (H : OcamlrunSim L B) :
-    ∀ P c, Loaded L P (Vsa.Densify.fillZero c) → Good P → Fits B P →
+    ∀ P c, Loaded L P (Vsa.Densify.fillZero c) → Good P → Fits B P → GcSafe P →
       (∀ out e, BcHalts P out e ↔ Halts c out e) ∧ (BcDiverges P ↔ Diverges c) := by
-  intro P c hL hg hf
-  obtain ⟨h1, h2⟩ := ocamlrun_refinement_of_sim H P _ hL hg hf
+  intro P c hL hg hf hgc
+  obtain ⟨h1, h2⟩ := ocamlrun_refinement_of_sim H P _ hL hg hf hgc
   exact ⟨fun out e => (h1 out e).trans (Vsa.Densify.halts_fillZero c out e).symm,
     h2.trans (Vsa.Densify.diverges_fillZero c).symm⟩
 
@@ -152,10 +154,10 @@ def Plus (c c' : Config) : Prop := ∃ n, StepsN (n + 1) c c'
 `step` outcome. Each field is what one family of generated segment proofs
 discharges (the `.next` field splits by `caml_interprete` arm). -/
 structure ArmSim (L : Layout) (B : Budget) (P : Prog) : Prop where
-  entry : ∀ c, Loaded L P c → Good P → Fits B P → ∃ c', Plus c c' ∧ Running L P P.init c'
-  next : ∀ s s' c, Reach P s → Good P → Fits B P → Running L P s c → step P s = .next s' →
+  entry : ∀ c, Loaded L P c → Good P → Fits B P → GcSafe P → ∃ c', Plus c c' ∧ Running L P P.init c'
+  next : ∀ s s' c, Reach P s → Good P → Fits B P → GcSafe P → Running L P s c → step P s = .next s' →
     ∃ c', Plus c c' ∧ Running L P s' c'
-  halt : ∀ s e w c, Reach P s → Good P → Fits B P → Running L P s c → step P s = .halt e w →
+  halt : ∀ s e w c, Reach P s → Good P → Fits B P → GcSafe P → Running L P s c → step P s = .halt e w →
     Halts c (bytesToString w.console) e
 
 /-! Machine run laws: corollaries of the run kernel (`OCaml/Run/Machine.lean`). -/
@@ -177,7 +179,7 @@ theorem _root_.Vsa.Machine.StepsN.prefix' : ∀ {m k : Nat} {a c : Config}, Step
 /-- Along a `BcSem` run of `k` steps from a represented state, the machine
 runs at least `k` steps to a configuration representing the end state. -/
 theorem run_sim {L : Layout} {B : Budget} {P : Prog} (A : ArmSim L B P) (hg : Good P)
-    (hf : Fits B P) :
+    (hf : Fits B P) (hgc : GcSafe P) :
     ∀ {k : Nat} {s s' : St} {c : Config}, Reach P s → StepsN P k s s' → Running L P s c →
       ∃ n c', k ≤ n ∧ StepsN n c c' ∧ Running L P s' c' := by
   intro k s s' c hr hs hv
@@ -186,7 +188,7 @@ theorem run_sim {L : Layout} {B : Budget} {P : Prog} (A : ArmSim L B P) (hg : Go
   | zero => exact ⟨0, c, Nat.le_refl _, .zero _, hv⟩
   | @succ k a b d st _ ih =>
     obtain ⟨e⟩ := st
-    obtain ⟨c1, ⟨n1, h1⟩, hv1⟩ := A.next a b c hr hg hf hv e
+    obtain ⟨c1, ⟨n1, h1⟩, hv1⟩ := A.next a b c hr hg hf hgc hv e
     obtain ⟨hn, hk⟩ := hr
     obtain ⟨n2, c2, hle, h2, hv2⟩ := ih ⟨hn + 1, hk.snoc (.mk e)⟩ hv1
     exact ⟨n1 + 1 + n2, c2, by omega, h1.append h2, hv2⟩
@@ -194,15 +196,15 @@ theorem run_sim {L : Layout} {B : Budget} {P : Prog} (A : ArmSim L B P) (hg : Go
 /-- **Forward simulation from the per-arm obligations.** -/
 theorem simOfArms {L : Layout} {B : Budget} (A : ∀ P, ArmSim L B P) : OcamlrunSim L B where
   term_sim := by
-    intro P c hL hg hf out e ⟨s, w, ⟨k, hk⟩, hst, ho⟩
-    obtain ⟨c0, ⟨n0, h0⟩, hv0⟩ := (A P).entry c hL hg hf
-    obtain ⟨n, c', -, hn, hv⟩ := run_sim (A P) hg hf ⟨0, .zero _⟩ hk hv0
-    exact Halts.of_steps (h0.toSteps.trans' hn.toSteps) (ho ▸ (A P).halt s e w c' ⟨k, hk⟩ hg hf hv hst)
+    intro P c hL hg hf hgc out e ⟨s, w, ⟨k, hk⟩, hst, ho⟩
+    obtain ⟨c0, ⟨n0, h0⟩, hv0⟩ := (A P).entry c hL hg hf hgc
+    obtain ⟨n, c', -, hn, hv⟩ := run_sim (A P) hg hf hgc ⟨0, .zero _⟩ hk hv0
+    exact Halts.of_steps (h0.toSteps.trans' hn.toSteps) (ho ▸ (A P).halt s e w c' ⟨k, hk⟩ hg hf hgc hv hst)
   div_sim := by
-    intro P c hL hg hf hd m
-    obtain ⟨c0, ⟨n0, h0⟩, hv0⟩ := (A P).entry c hL hg hf
+    intro P c hL hg hf hgc hd m
+    obtain ⟨c0, ⟨n0, h0⟩, hv0⟩ := (A P).entry c hL hg hf hgc
     obtain ⟨s, hs⟩ := hd m
-    obtain ⟨n, c', hle, hn, -⟩ := run_sim (A P) hg hf ⟨0, .zero _⟩ hs hv0
+    obtain ⟨n, c', hle, hn, -⟩ := run_sim (A P) hg hf hgc ⟨0, .zero _⟩ hs hv0
     obtain ⟨d, hd'⟩ := Nat.exists_eq_add_of_le (show m ≤ n0 + 1 + n by omega)
     exact Vsa.Machine.StepsN.prefix' (hd' ▸ h0.append hn)
 
