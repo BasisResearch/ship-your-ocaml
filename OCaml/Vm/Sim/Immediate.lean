@@ -54,10 +54,8 @@ theorem accu_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     · obtain ⟨w, hw, hv⟩ := data.env
       exact ⟨w, (post.preserved _ (by decide)).trans hw, hv⟩
     · exact (post.preserved _ (by decide)).trans data.extra
-  · exact ⟨(post.preserved _ (by decide)).trans loop.dispatchTable,
-      (post.preserved _ (by decide)).trans loop.opcodeBound,
-      (post.preserved _ (by decide)).trans loop.pending,
-      (post.preserved _ (by decide)).trans loop.domain⟩
+  · exact loopRegisters_frame
+      (fun r hr => post.preserved r (by revert r; decide)) loop
 
 /-- Immediate results introduce no heap root. -/
 theorem immediate_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}

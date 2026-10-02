@@ -1,5 +1,23 @@
 # Lane a1-arms
 
+## C_CALL1 represented return and primitive consumption
+
+`c_call1_return` restores `Running` through the six-instruction generated
+suffix from `Ccall1Return`. Its caller-owned `Ccall1Saved` frame is separate
+from the primitive result payload/platform. `c_call1_primitive_return` consumes
+a1-prims' `PrimitivePost`; the read-only adapter proves saved-word/register
+preservation from the callee memory/frame contract. `c_call1_sys_argv` cites
+the landed `caml_sys_argv_primitive` and composes it with return restoration
+using the shared `c_call1_resume`. No primitive body is reproved.
+
+`loopRegisters_frame` factors the fixed-register reconstruction out of the
+existing accumulator, stack and new C-call restorations. Default-limit builds
+pass (return and adapter: 1.2–1.4s). Machine boundaries landed as `38b639a`,
+full gate passing. The represented opcode count remains 96: C_CALL1 still
+needs its prefix-to-primitive payload/saved-frame adapter and full dispatch
+composition. Read/write geometry and runtime frame assumptions remain explicit.
+
+
 ## Generated C_CALL1 machine boundaries
 
 Rebased against main and regenerated the image, arm, ALU and dispatch artifacts;

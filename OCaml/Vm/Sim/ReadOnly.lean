@@ -5,6 +5,20 @@ set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable
 open OCaml.Vm.Primitives
 
+/-- Fixed loop registers, independent of the current opcode's data registers. -/
+def loopPreserved : List Register :=
+  [gprReg Layout.reg_dispatchTable, gprReg Layout.reg_opcodeBound,
+   gprReg Layout.reg_pending, gprReg Layout.reg_domain]
+
+/-- Reconstruct all fixed loop registers from one finite frame check. -/
+theorem loopRegisters_frame {before after : Config}
+    (frame : ∀ r ∈ loopPreserved, after.σ.regs.get? r = before.σ.regs.get? r)
+    (loop : LoopRegisters before) : LoopRegisters after :=
+  ⟨(frame _ (by decide)).trans loop.dispatchTable,
+   (frame _ (by decide)).trans loop.opcodeBound,
+   (frame _ (by decide)).trans loop.pending,
+   (frame _ (by decide)).trans loop.domain⟩
+
 /-- Register observations common to all read-only arm results. Memory payload
 and platform preservation are separate so stack-consuming arms can reuse them. -/
 structure VmRegisters (s : St) (pl : Place) (sp : Nat) (c : Config) : Prop where

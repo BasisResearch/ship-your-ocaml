@@ -43,10 +43,7 @@ theorem StackPost.loopRegisters {c after : Config} {pl : Place} {pc sp : Nat} {w
     {memoryAfter : Std.ExtHashMap Nat (BitVec 8)}
     (post : StackPost c pl pc sp w memoryAfter after) (loop : LoopRegisters c) :
     LoopRegisters after :=
-  ⟨(post.preserved _ (by decide)).trans loop.dispatchTable,
-   (post.preserved _ (by decide)).trans loop.opcodeBound,
-   (post.preserved _ (by decide)).trans loop.pending,
-   (post.preserved _ (by decide)).trans loop.domain⟩
+  loopRegisters_frame (fun r hr => post.preserved r (by revert r; decide)) loop
 
 /-- Transport the shared body observations through dispatch's complete frame. -/
 theorem StackPost.after_dispatch {before d after : Config} {op : Opcode} {a : BitVec 64}
