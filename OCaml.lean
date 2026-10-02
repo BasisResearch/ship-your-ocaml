@@ -257,3 +257,7 @@ import OCaml.Vm.Primitives.SmallLayout
 import OCaml.Vm.Primitives.ArgvTuple
 
 import OCaml.Vm.Primitives.ArgvTupleFast
+import OCaml.Vm.Boot.Startup.InitializeRegisters
+import OCaml.Vm.Boot.Startup.PrimitiveLookupRows
+import OCaml.Vm.Boot.Startup.PrimitiveLookupCalls
+import OCaml.Vm.Boot.Startup.CompareNames

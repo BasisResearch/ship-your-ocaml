@@ -40,7 +40,36 @@ captured register table. `ElfReset.pc` proves every successful reset ends
 at the ELF entry. Existence/GoodState, loader correspondence and startup
 callees remain open in `whileMin_reset_loaded_Statement`.
 
-Reset still must supply the initial platform/code facts. Remaining startup functions include `caml_main`, GC
+The reset metadata increment landed as `5768425`, full gate passed.
+
+New checked initialization progress:
+
+* `initializeRegisters_program` and `initializeRegisters_run` in
+  `Startup/InitializeRegisters.lean` cover the complete register initializer,
+  for arbitrary input states and valid tohost metadata; its memory frame is
+  `initializeRegisters_preserves_memory`.
+* `NormalizeSail` reuses `Vsa.Meta.SimpNF` on the 101 factored fragments.
+  `ReifyRegisterWrites` proposes typed assignment lists and checks program
+  equalities; `RegisterWrites.run` supplies execution by one generic induction.
+  All three layers retain kernel certificates and default proof budgets.
+* Direct state-normal-form certificates elaborated but their final Lean checks
+  remained unfinished after several minutes. They were stopped and are not
+  claimed. The write-list abstraction checks the complete tail in about 1.2 s.
+  The assignment list is proof-only (`noncomputable`); native compilation of
+  this generated dependent list hit a Lean compiler IR error, while kernel
+  checking the definition and its theorems succeeds.
+* The primitive lookup region (16 instructions, six CFG blocks) and its
+  strcmp call now have generated, checked rows. `gen_fn --region-end` validates
+  bounds within the original function and keeps existing budgets. Invalid
+  and oversized regions are rejected; the old startup output is unchanged.
+* `Startup.strcmpSpecSign_zero_iff` in `CompareNames.lean` derives
+  name equality from the landed strcmp sign spec and represented C strings.
+  `strcmpSign_zero_iff` connects that observation to the zero-register branch.
+  The counted lookup loop and the caller composition are still open.
+
+Reset still must supply successful `sail_model_init` / `init_model`, the initial
+GoodState/code facts and loader correspondence. Register setup is now proved.
+Remaining startup functions include `caml_main`, GC
 initialization, file/code loading, primitive lookup, unmarshalling,
 oldify/mopup and argv initialization. The first CFG inspection finds that
 `caml_main` (482 instructions), `caml_init_gc` (160) and primitive-table

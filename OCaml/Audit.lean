@@ -11,6 +11,10 @@ import OCaml.Vm.Primitives.StringAllocationLayout
 import OCaml.Vm.Primitives.LibraryEffects
 import OCaml.Vm.Boot.Startup.ToCamlMain
 import OCaml.Vm.Boot.Startup.Reset
+import OCaml.Vm.Boot.Startup.InitializeRegisters
+import OCaml.Vm.Boot.Startup.PrimitiveLookupRows
+import OCaml.Vm.Boot.Startup.PrimitiveLookupCalls
+import OCaml.Vm.Boot.Startup.CompareNames
 import OCaml.Vm.Primitives.LibraryMemcpy
 import OCaml.Vm.Primitives.StringReadback
 import OCaml.Vm.Primitives.SmallAllocation
@@ -1564,3 +1568,34 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ArgvTuple.finish_fast
 
 #print axioms Vsa.Sim.segmentSummary
+-- Register initialization and primitive-lookup foundations.
+#print axioms OCaml.Vm.Boot.Startup.choose_pure
+#print axioms OCaml.Vm.Boot.Startup.initializeRegisters_values
+#print axioms OCaml.Vm.Boot.Startup.registerWrites.program100
+#print axioms OCaml.Vm.Boot.Startup.register_tail_run
+#print axioms OCaml.Vm.Boot.Startup.initializeRegisters_program
+#print axioms OCaml.Vm.Boot.Startup.initializeRegisters_run
+#print axioms OCaml.Vm.Boot.Startup.initializeRegisters_preserves_memory
+#print axioms OCaml.Vm.Boot.Startup.first_difference
+#print axioms OCaml.Vm.Boot.Startup.isign_zero_iff
+#print axioms OCaml.Vm.Boot.Startup.strcmpSign_zero_iff
+#print axioms OCaml.Vm.Boot.Startup.spec_zero_streams
+#print axioms OCaml.Vm.Boot.Startup.cstr_eq_of_streams
+#print axioms OCaml.Vm.Boot.Startup.strcmpSpecSign_zero_iff
+#print axioms OCaml.Vm.Boot.Startup.call_80024e34
+#print axioms Vsa.Sim.RegisterWrites.run
+#print axioms Vsa.Sim.RegisterWrites.run_apply
+#print axioms Vsa.Sim.RegisterWrites.memory
+#print axioms Vsa.Sim.RegisterWrites.output
+#print axioms Vsa.Sim.RegisterWrites.cycles
+#print axioms Vsa.Sim.Code.caml_build_primitive_table_transport
+#print axioms Vsa.Sim.caml_build_primitive_tableX4e0cTRow
+#print axioms Vsa.Sim.caml_build_primitive_tableX4e0cFRow
+#print axioms Vsa.Sim.caml_build_primitive_tableX4e18Row
+#print axioms Vsa.Sim.caml_build_primitive_tableX4e1cTRow
+#print axioms Vsa.Sim.caml_build_primitive_tableX4e1cFRow
+#print axioms Vsa.Sim.caml_build_primitive_tableX4e30Row
+#print axioms Vsa.Sim.caml_build_primitive_tableX4e38TRow
+#print axioms Vsa.Sim.caml_build_primitive_tableX4e38FRow
+#print axioms Vsa.Sim.caml_build_primitive_tableX4e3cTRow
+#print axioms Vsa.Sim.caml_build_primitive_tableX4e3cFRow

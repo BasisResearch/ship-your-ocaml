@@ -138,17 +138,27 @@ def _branch_target(ins):
     return None
 
 
-def build_cfg(fn, entry, di, extents, route=None, region_exits=None):
+def build_cfg(fn, entry, di, extents, route=None, region_exits=None, region_end=None):
     """Extract the function body and partition into classified basic blocks.
 
     `route` (dict pc -> 'T'|'F'|'TF') is the RESOLVED-PATH mode for functions
     over budget: only blocks reachable from the entry under the pinned branch
     polarities are emitted (a branch pinned 'T' keeps only its taken twin,
     'F' only the fall twin, 'TF' both — an unrolled two-visit head).  Budgets
-    are then enforced on the PRUNED subgraph."""
+    are then enforced on the PRUNED subgraph. `region_end` restricts the
+    extraction to a validated subregion of the named function; its rows
+    retain their actual PCs and the same instruction/branch budgets."""
     start, end = extents[fn]
-    if region_exits is not None and route is not None:
-        raise SystemExit("--region-exits and --route are mutually exclusive")
+    if region_exits is not None and (route is not None or region_end is not None):
+        raise SystemExit("--region-exits cannot be combined with --route or --region-end")
+    if region_end is not None:
+        if end is None or not (start <= entry < region_end <= end):
+            raise SystemExit(f"--region-end: [{entry:#x}, {region_end:#x}) is not inside {fn}")
+        if entry not in di or entry % 4 or region_end % 4:
+            raise SystemExit("--region-end: region boundaries must be instruction-aligned")
+        if any(a not in di for a in range(entry, region_end, 4)):
+            raise SystemExit("--region-end: region contains a disassembly gap")
+        start, end = entry, region_end
     if entry != start and region_exits is None:
         raise SystemExit(f"--entry 0x{entry:x} != disasm start of {fn} "
                          f"(0x{start:x})")
@@ -442,13 +452,13 @@ def synth_arm(fn, b, pol=None):
     return a
 
 
-def emit_fn(fn, entry, out_path, verify=True, route=None, disasm_path=None, decode_index=None, region_exits=None):
+def emit_fn(fn, entry, out_path, verify=True, route=None, disasm_path=None, decode_index=None, region_exits=None, region_end=None):
     di = lib.parse_disasm(disasm_path) if disasm_path else lib.parse_disasm()
     idx = lib.DecodeIndex(decode_index) if decode_index else lib.DecodeIndex()
     extents = function_extents(disasm_path)
     if fn not in extents:
         raise SystemExit(f"function {fn!r} not in disasm")
-    body, blocks = build_cfg(fn, entry, di, extents, route=route, region_exits=region_exits)
+    body, blocks = build_cfg(fn, entry, di, extents, route=route, region_exits=region_exits, region_end=region_end)
     loop = classify_loop(blocks) if route is None and region_exits is None else None
 
     E = lib.Emitter()
@@ -457,7 +467,8 @@ def emit_fn(fn, entry, out_path, verify=True, route=None, disasm_path=None, deco
     E(f"import Vsa.Sim.Code.{re.sub(r'[^A-Za-z0-9_]', '_', fn)[0].upper() + re.sub(r'[^A-Za-z0-9_]', '_', fn)[1:]}")
     E("")
     E(f"/-!")
-    E(f"# `{fn}` — GENERATED whole-function summary blocks (scripts/gen_fn.py)")
+    scope = "whole-function" if region_end is None else f"region [{entry:#x}, {region_end:#x})"
+    E(f"# `{fn}` — GENERATED {scope} summary blocks (scripts/gen_fn.py)")
     E(f"")
     if region_exits is not None:
         E("Region exits: " + ", ".join(hex(pc) for pc in sorted(region_exits)) + ".")
@@ -1138,6 +1149,7 @@ def main():
     p.add_argument("--disasm", help="explicit ELF disassembly input")
     p.add_argument("--decode-index", help="word-to-decoder index for this ELF")
     p.add_argument("--region-exits", help="comma-separated control boundaries; retain both branch arms, enforce budgets per region")
+    p.add_argument("--region-end", help="emit the bounded region [entry, end) inside --fn; unchanged per-region budgets")
     p.add_argument("--route", default=None,
                    help="resolved-path mode: comma list of PC:T|F|TF branch "
                         "polarity pins, e.g. 0x80006230:F,0x8000625c:TF — "
@@ -1155,6 +1167,9 @@ def main():
     if not args.fn or not args.entry:
         p.error("--fn and --entry are required outside --ocaml-constants")
     entry = lib.hexint(args.entry)
+    region_end = lib.hexint(args.region_end) if args.region_end else None
+    if region_end is not None and args.fold:
+        p.error("--fold requires a whole function; compose region rows with loopFromBody")
     route = None
     if args.route:
         route = {}
@@ -1166,7 +1181,7 @@ def main():
     region_exits = None if args.region_exits is None else [lib.hexint(pc) for pc in args.region_exits.split(",") if pc]
     if args.cfg_only:
         di = lib.parse_disasm(args.disasm) if args.disasm else lib.parse_disasm()
-        body, blocks = build_cfg(args.fn, entry, di, function_extents(args.disasm), route=route, region_exits=region_exits)
+        body, blocks = build_cfg(args.fn, entry, di, function_extents(args.disasm), route=route, region_exits=region_exits, region_end=region_end)
         loop = classify_loop(blocks) if route is None and region_exits is None else None
         for b in blocks:
             print(b)
@@ -1179,7 +1194,7 @@ def main():
     out = args.out or os.path.join(
         ROOT, "Vsa", "Sim", "rows", f"Fn{base[0].upper()}{base[1:]}.lean")
     blocks, loop = emit_fn(args.fn, entry, out, verify=not args.no_verify,
-                           route=route, disasm_path=args.disasm, decode_index=args.decode_index, region_exits=region_exits)
+                           route=route, disasm_path=args.disasm, decode_index=args.decode_index, region_exits=region_exits, region_end=region_end)
     if args.fold:
         if not loop:
             raise SystemExit(
