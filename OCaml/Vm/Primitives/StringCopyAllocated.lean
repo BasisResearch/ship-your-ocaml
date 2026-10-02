@@ -47,10 +47,11 @@ structure AllocatedPost (live : Nat → Prop) (ra sp : BitVec 64) (a len : Nat)
 
 /-- Compose the computed length, generated JAL and complete nursery constructor. -/
 theorem copy_string_allocated {live Dt DA ra sp a len g domain young limit} (c : Config)
-    (h : AllocateInput live Dt DA ra sp a len g domain young limit c) :
+    (h : AllocateInput live Dt DA ra sp a len g domain young limit c)
+    (source : gpr c 10 = some (BitVec.ofNat 64 a)) :
     FnSummary 0x8000c254#64 (fun d => d = c)
       (AllocatedPost live ra sp a len domain young c) := by
-  apply summary_bind (copy_string_sized c h.toSizedInput) (fun _ p => p.pc)
+  apply summary_bind (copy_string_sized c h.toSizedInput source) (fun _ p => p.pc)
   intro sized s
   let R := lengthRegisters sp len
   have regs : GHolds sized.σ (size_input R) := ⟨s.raReg, s.stack, s.result, True.intro⟩

@@ -1477,3 +1477,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Programs.LazyForce.checked
 
 #print axioms Vsa.Sim.pin8_of_last_write
+#print axioms OCaml.Vm.Primitives.readonly_transport
+#print axioms OCaml.Vm.Primitives.VmPayload.frame_outsideLog
+#print axioms OCaml.Vm.Primitives.bindings_frame_outsideLog
+#print axioms OCaml.Vm.Primitives.StringCopy.copy_string_finish
+#print axioms OCaml.Vm.Primitives.StringCopy.copy_string_machine
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyPost.footprint
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyPost.memory_complete
+#print axioms OCaml.Vm.Primitives.loop_of_abi_frame
+#print axioms OCaml.Vm.Primitives.executable_name_machine
+#print axioms OCaml.Vm.Primitives.executable_name_contract
+#print axioms OCaml.Vm.Primitives.caml_sys_executable_name_primitive

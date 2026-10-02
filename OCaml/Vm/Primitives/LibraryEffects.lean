@@ -54,6 +54,15 @@ theorem RegistersPost.vsaOk {live writes log before after pc value regs}
       exact fun eq => by rw [eq, beq_self_eq_true] at h; contradiction) (by decide)]
     exact pre.htifIdle
 
+/-- Read-only library cells depend only on their register and byte observations. -/
+theorem readonly_transport {live before after ro text}
+    (h : VsaIris.ROHolds (vsaModel live) before ro text)
+    (registers : ∀ p ∈ ro, (vsaModel live).reg after p.1 = (vsaModel live).reg before p.1)
+    (memory : Vsa.Densify.MemEqv after.σ.mem before.σ.mem) :
+    VsaIris.ROHolds (vsaModel live) after ro text :=
+  ⟨fun p hp => (registers p hp).trans (h.1 p hp),
+   fun p hp => (memory p.1).trans (h.2 p hp)⟩
+
 /-- Stack or nursery stores outside a library's pinned bytes preserve its
 read-only precondition; the scalar ABI check protects the global pointer. -/
 theorem EffectPost.readOnly_log {live writes log text before after pc value}

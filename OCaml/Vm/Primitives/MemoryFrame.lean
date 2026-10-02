@@ -9,6 +9,23 @@ with the identity action. -/
 namespace OCaml.Vm.Primitives
 open OCaml.Bytecode Vsa.Machine Vsa.Sim
 
+/-- A footprint frame supplies every disjoint observation window. Values in
+this log are irrelevant: only the recorded addresses and widths are used. -/
+theorem copied_of_outsideLog {c c' : Config} {log : List WEntry} {a n : Nat}
+    (memory : ∀ x, OutL log x → byte c' x = byte c x) (outside : OutLRange log a n) :
+    Reloc.Copied c c' a a n :=
+  fun i hi => memory _ (outL_of_range outside (by omega) (by omega))
+
+/-- An exact observed write log supplies a footprint frame. -/
+theorem outsideLog_of_observedLog {c c' : Config} {log : List WEntry}
+    (memory : Vsa.Densify.MemEqv c'.σ.mem (writeLog c.σ.mem log)) :
+    ∀ x, OutL log x → byte c' x = byte c x := by
+  intro x outside
+  rw [byte_total, byte_total]
+  have same : (c'.σ.mem[x]?).getD 0 = ((writeLog c.σ.mem log)[x]?).getD 0 := memory x
+  rw [writeLog_out _ _ _ outside] at same
+  exact same
+
 /-- A write log preserves every byte of a disjoint observation window. -/
 theorem copied_of_writeLog {c c' : Config} {log : List WEntry} {a n : Nat}
     (memory : c'.σ.mem = writeLog c.σ.mem log) (outside : OutLRange log a n) :
@@ -99,13 +116,13 @@ structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
     OutLRange log a (chanOffBuff + ch.buffer.length)
 
-/-- Transport the complete VM payload using only the checked write log. -/
-theorem VmPayload.frame_observedLog {P s c c' pl cp sp high log}
+/-- Transport the complete VM payload across a checked write footprint. -/
+theorem VmPayload.frame_outsideLog {P s c c' pl cp sp high log}
     (h : VmPayload P s c pl cp sp high) (outside : PayloadOutside log P s c pl cp sp)
-    (memory : Vsa.Densify.MemEqv c'.σ.mem (writeLog c.σ.mem log))
+    (memory : ∀ x, OutL log x → byte c' x = byte c x)
     (outputEq : output c'.σ = output c.σ) :
     VmPayload P s c' pl cp sp high := by
-  have copy := fun a n (ho : OutLRange log a n) => copied_of_observedLog memory ho
+  have copy := fun a n (ho : OutLRange log a n) => copied_of_outsideLog memory ho
   have hw : ∀ a, OutLRange log a 8 → word c' a = word c a :=
     fun a ho => Reloc.bytesT_congr (copy a 8 ho)
   have domain := hw Layout.sym_Caml_state outside.domain
@@ -140,6 +157,13 @@ theorem VmPayload.frame_observedLog {P s c c' pl cp sp high log}
   · rw [hw _ outside.atomBase]
     exact h.atomBase
 
+/-- Total-byte agreement with a write log specializes the footprint frame. -/
+theorem VmPayload.frame_observedLog {P s c c' pl cp sp high log}
+    (h : VmPayload P s c pl cp sp high) (outside : PayloadOutside log P s c pl cp sp)
+    (memory : Vsa.Densify.MemEqv c'.σ.mem (writeLog c.σ.mem log))
+    (outputEq : output c'.σ = output c.σ) : VmPayload P s c' pl cp sp high :=
+  h.frame_outsideLog outside (outsideLog_of_observedLog memory) outputEq
+
 /-- Exact write logs are a specialization of the observational frame. -/
 theorem VmPayload.frame_log {P s c c' pl cp sp high log}
     (h : VmPayload P s c pl cp sp high) (outside : PayloadOutside log P s c pl cp sp)
@@ -168,18 +192,24 @@ structure BindingsOutside (log : List WEntry) (P : Prog) (c : Config) : Prop whe
     OutLRange log ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
 
 /-- Preserve the ELF binding of bytecode primitive names across disjoint writes. -/
-theorem bindings_frame_log {P c c' log} (h : PrimitiveBindings P c)
+theorem bindings_frame_outsideLog {P c c' log} (h : PrimitiveBindings P c)
     (outside : BindingsOutside log P c)
-    (memory : c'.σ.mem = writeLog c.σ.mem log) : PrimitiveBindings P c' := by
+    (memory : ∀ x, OutL log x → byte c' x = byte c x) : PrimitiveBindings P c' := by
   have contents : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
       word c (Layout.sym_caml_prim_table + Layout.off_prim_contents) :=
-    Reloc.bytesT_congr (copied_of_writeLog memory outside.contents)
+    Reloc.bytesT_congr (copied_of_outsideLog memory outside.contents)
   constructor
   intro i name hi
   obtain ⟨entry, he, target⟩ := h.targets i name hi
   refine ⟨entry, he, ?_⟩
   unfold primitiveTarget
   rw [contents]
-  exact (Reloc.bytesT_congr (copied_of_writeLog memory (outside.entries i name hi))).trans target
+  exact (Reloc.bytesT_congr (copied_of_outsideLog memory (outside.entries i name hi))).trans target
+
+/-- Exact memory effects retain the existing primitive-table frame API. -/
+theorem bindings_frame_log {P c c' log} (h : PrimitiveBindings P c)
+    (outside : BindingsOutside log P c) (memory : c'.σ.mem = writeLog c.σ.mem log) :
+    PrimitiveBindings P c' :=
+  bindings_frame_outsideLog h outside (outsideLog_of_observedLog (fun x => by rw [memory]))
 
 end OCaml.Vm.Primitives

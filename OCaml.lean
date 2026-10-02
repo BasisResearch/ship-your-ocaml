@@ -233,3 +233,5 @@ import OCaml.Vm.Boot.Startup.ToCamlMain
 
 import OCaml.Vm.Primitives.StringCopyReadback
 import OCaml.Vm.Boot.Startup.Reset
+
+import OCaml.Vm.Primitives.CamlSysExecutableName

@@ -2,6 +2,11 @@
 
 ## Current status
 
+Executable-name allocation now passes its focused build: 18/30 summaries
+proved, with full copy-string/memcpy execution and represented fresh bytes.
+The complete 2,023-target build and axiom audit pass (standard axioms only);
+integration is in progress. Twelve remain.
+
 Started `lane/a1-prims` from origin/main (`bf5d5df`) in the reused a0-lib
 worktree. Read the lane brief, COMMON.md, CLAUDE.md, PLAN.md and PHASES.md;
 ran the abstraction inventory. The landed `PlatformOk`/`Running` contract is
@@ -443,3 +448,23 @@ static RAM/guard/image conditions from per-state inputs, and the constructor
 post retains the restored `ra`. Focused builds all pass. The next step is
 memcpy plus restore, then the executable-name tail and represented allocation
 contract. The primitive count remains 17/30 until that contract is landed.
+
+
+The complete native string copy now composes all three calls and the return:
+`StringCopy.copy_string_finish` and `StringCopy.copy_string_machine` preserve
+byte observations, the string shell, ABI registers and the native stack.
+The generated executable-name tail loads `Layout.sym_caml_exe_name`.
+`executable_name_contract` extends the represented heap with its copied bytes,
+frames the old payload/bindings and preserves the running platform. Explicit
+G1 nursery-room, placement/separation and memory-observation runtime premises
+are supplied by callers; none assumes execution or the desired postcondition.
+`MemoryFrame` now supports pointwise footprint frames while retaining its old
+exact/observational log APIs. Focused builds pass at default proof budgets.
+
+| Primitive | Theorem | Location |
+| --- | --- | --- |
+| `caml_sys_executable_name` | `caml_sys_executable_name_primitive` | `CamlSysExecutableName.lean:7` |
+
+Next: allocating configuration/argv and channel primitives, named-value
+registration, output/formatting and process exit. The exit remains 30/30 landed
+and audited; this milestone does not close the lane.

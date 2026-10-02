@@ -14,7 +14,6 @@ structure SizedInput (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat
     extends LeafInput ra c where
   libraryGood : VsaOk live c
   stack : gpr c 2 = some sp
-  source : gpr c 10 = some (BitVec.ofNat 64 a)
   returnSlot : WriteWindow (sp - 8#64) 8
   sourceSlot : WriteWindow (sp - 24#64) 8
   saveImage : ImageOutside (saveLog (entryRegisters ra sp a))
@@ -39,10 +38,11 @@ structure SizedPost (live : Nat → Prop) (ra sp : BitVec 64) (a len : Nat)
 
 /-- Compose the generated save/JAL boundaries with the proved strlen call. -/
 theorem copy_string_sized {live Dt DA ra sp a len g} (c : Config)
-    (h : SizedInput live Dt DA ra sp a len g c) :
+    (h : SizedInput live Dt DA ra sp a len g c)
+    (source : gpr c 10 = some (BitVec.ofNat 64 a)) :
     FnSummary 0x8000c254#64 (fun d => d = c) (SizedPost live ra sp a len c) := by
   let R := entryRegisters ra sp a
-  have regs : GHolds c.σ (save_input R) := ⟨h.raReg, h.stack, h.source, True.intro⟩
+  have regs : GHolds c.σ (save_input R) := ⟨h.raReg, h.stack, source, True.intro⟩
   have S := save_fast c R h.toLeafInput regs h.returnSlot h.sourceSlot h.saveImage
   apply summary_bind S (fun _ p => p.pc)
   intro saved p
