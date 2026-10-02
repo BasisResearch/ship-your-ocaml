@@ -1,5 +1,25 @@
 # Lane a1-arms
 
+## Generated C_CALL1 machine boundaries
+
+Rebased against main and regenerated the image, arm, ALU and dispatch artifacts;
+the fixed `.embed` migration was already included and regeneration had no drift.
+`GcSafe P` threading has not landed yet; adopt it on the next rebase.
+
+`tr_c_call1_prefix` proves the 17-instruction setup through the indirect call,
+including the saved environment/PC and extern_sp stores. `tr_c_call1_suffix`
+proves the six-instruction restoration after return. Both are generated from
+the census with exact memory effects, output and register frames, and full-image
+pin projections. JALR now flows through the classifier, site generator, segment
+generator and `chain_frame_out`; `pins_jalr` reuses `pins_of_frame`. The prefix
+uses opaque load words with exact equations and fetch pins spanning two chunks.
+
+The generated prefix builds in 7.3s and suffix in 9.3s under default limits
+and the 24 GiB cap. These are machine boundaries, not a represented C_CALL1
+bridge: 96 conditional represented opcodes remain. Next connect the boundaries
+through named a1-prims contracts, restoring the represented state after return.
+
+
 ## ASSIGN and shared stack-edit frames
 
 `assign_arm` and `assign_step_arm` prove the in-place stack update and unit
@@ -981,8 +1001,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 
 ## Open / next
 
-Continue with generated F1 families and measured builds, starting with the
-stack-writing families. There are 96 conditional represented opcode bridges,
+Continue with generated F1 families and measured builds, starting with C_CALL1 primitive-call setup and restoration. There are 96 conditional represented opcode bridges,
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 

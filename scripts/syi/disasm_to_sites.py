@@ -204,11 +204,12 @@ def classify(addr: int, word: int, raw: str, path: dict) -> list[Row]:
         return [Row(addr, word, "jal", [f["rd"], f"{imm:06x}"], raw=raw)]
 
     if op == 0b1100111:                                   # JALR
-        if f["funct3"] != 0 or f["rd"] != 0 or f["imm_i"] != 0:
-            return [unsupported(addr, word, raw,
-                                "jalr shape != jr rs1 (rd=x0, imm=0)")]
-        if f["rs1"] == 0:
-            return [unsupported(addr, word, raw, "jr with rs1=x0")]
+        if f["funct3"] != 0 or f["rs1"] == 0:
+            return [unsupported(addr, word, raw, "jalr requires funct3=0 and nonzero rs1")]
+        if f["rd"] != 0:
+            return [Row(addr, word, "jalr", [f["rd"], f["rs1"], f"{f['imm_i']:03x}"], raw=raw)]
+        if f["imm_i"] != 0:
+            return [unsupported(addr, word, raw, "jr requires imm=0")]
         return [Row(addr, word, "jr", [f["rs1"]], raw=raw)]
 
     return [unsupported(addr, word, raw, f"opcode 0x{op:02x}")]

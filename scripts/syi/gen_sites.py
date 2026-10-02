@@ -740,6 +740,32 @@ class Emitter:
         )
         return head + body
 
+    def emit_jalr(self, s: Site) -> str:
+        rd, rs1, imm = int(s.fields[0]), int(s.fields[1]), int(s.fields[2], 16)
+        if rd == 0 or rs1 == 0:
+            raise ValueError(f"line {s.lineno}: jalr requires nonzero rd and rs1")
+        b = word_bytes(s.word)
+        upd = f"(BitVec.update (v{rs1} + sign_extend (m := 64) (0x{imm:03x}#12)) 0 0#1)"
+        head = self.head(
+            self.site_name(s.addr), s.addr, f"`jalr x{rd},x{rs1},0x{imm:03x}`.",
+            [rs1], "", reg_hyp(rs1), f"\n    (htgt : {upd}.toNat % 4 = 0)",
+            "σ'.mem = σ.mem",
+            f"sigmaPost_jalr σ pc vminstret {upd} Register.x{rd} (BitVec.addInt pc 4)")
+        body = (
+            f"  refine stepObs_jalr σ i u (0x{s.addr:08x}#64) vminstret v{rs1} "
+            f"(0x{s.word:08x}#32) (0x{imm:03x}#12)\n"
+            f"    ({regidx(rs1)}) ({regidx(rd)}) Register.x{rd} (BitVec.addInt (0x{s.addr:08x}#64) 4)\n"
+            f"    {b[0]} {b[1]} {b[2]} {b[3]}\n"
+            "    hG hpc hminstret hb0 hb1 hb2 hb3 (by decide) (by decide) (by decide)\n"
+            "    (by apply BitVec.eq_of_toNat_eq; decide) (by apply BitVec.eq_of_toNat_eq; decide)\n"
+            f"{self.decode_block(s.word)}\n"
+            f"    (rX_bits_x{rs1} _ v{rs1}\n"
+            f"      (by rw [get?_afterNextPC σ (0x{s.addr:08x}#64) _ (by decide) "
+            f"(by decide)]; exact hx{rs1}))\n"
+            "    htgt (by decide) (by decide) (by decide) (by decide) (by decide) ?_ hi\n"
+            f"  exact wX_bits_x{rd} _ (BitVec.addInt (0x{s.addr:08x}#64) 4)\n")
+        return head + body
+
     def emit_jr(self, s: Site) -> str:
         rs1 = int(s.fields[0])
         if rs1 == 0:
@@ -789,6 +815,7 @@ CLASS_EMITTERS = {
     "sw": "emit_sw",
     "sb": "emit_sb",
     "jal": "emit_jal",
+    "jalr": "emit_jalr",
     "j": "emit_j",
     "jr": "emit_jr",
 }
@@ -877,6 +904,8 @@ def main() -> int:
         imports.append("Vsa.Sim.ExecLoadTotal")
     if any(s.cls in NEEDS_STRCPY_SITES for s in sites):
         imports.append("Vsa.Sim.StrcpySites")
+    if any(s.cls == "jalr" for s in sites):
+        imports.append("Vsa.Sim.LibraryJalrFacts")
     imports.append(code_import)
     imports.extend(sorted(decode_imports))
 

@@ -57,7 +57,7 @@ SEG_CLASS = {"alu_addi": "alu", "addiw": "alu", "alu_add": "alu", "sub": "alu",
              "subw": "alu", "ld": "alu", "lw": "alu", "lbu": "alu",
              "sd": "sd", "sw": "sw", "sb": "sb",
              "branch_taken": "btaken", "branch_nottaken": "bnottaken",
-             "jal": "jal", "j": "j", "jr": "jr"}
+             "jal": "jal", "jalr": "jalr", "j": "j", "jr": "jr"}
 SEG_CLASS.update({cls: "alu" for cls in alu_classes.CLASSES})
 LOAD_BYTES = {"ld": 8, "lw": 4, "lbu": 1}
 TOTAL_LOAD_BYTES = {k + "_tot": v for k, v in LOAD_BYTES.items()}
@@ -88,6 +88,8 @@ class Instr:
             rs = [int(o[1]), int(o[2])]
         elif c in ("sd", "sw", "sb"):
             rs = [int(o[1]), int(o[0])]     # address base, stored value
+        elif c == "jalr":
+            rs = [int(o[1])]
         elif c == "jr":
             rs = [int(o[0])]
         else:                               # jal / j
@@ -101,7 +103,7 @@ class Instr:
         if c in TOTAL_LOAD_BYTES or c in ("alu_addi", "addiw", "alu_add", "sub", "subw",
                  "ld", "lw", "lbu"):
             return int(o[0])
-        if c == "jal":
+        if c in ("jal", "jalr"):
             return int(o[0])
         return None
 
@@ -227,13 +229,7 @@ class DraftBuilder:
             st.update(rd=f"x{ins.writes()}", rd_val="TODO", rw="TODO", raw_val=ins.raw_val(),
                       call=f"$vmi {vals} $hG $hpc $hmi {hyps} $hmem rfl $hi")
             return [st]
-        vregs = [r for r in dict.fromkeys(
-            [int(x) for x in (o[1:3] if c in ("alu_add", "sub", "subw",
-                                              "branch_taken",
-                                              "branch_nottaken")
-             else o[1:2] if c in TOTAL_LOAD_BYTES or c in ("alu_addi", "addiw", "ld", "lw", "lbu")
-             else [o[1], o[0]] if c in ("sd", "sw", "sb")
-             else o[0:1] if c == "jr" else [])]) if r != 0]
+        vregs = ins.reads()
         vals = " ".join(self.V(r) for r in vregs)
         hyps = " ".join(self.H(r) for r in vregs)
         vals = (vals + " ") if vals else ""
@@ -305,7 +301,9 @@ class DraftBuilder:
             st["target"] = f"0x{(ins.addr + sext(imm, 21)) % 2**64:08x}"
             # htgt is over the literal pc: decidable
             st["call"] = "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
-        elif c == "jr":
+        elif c in ("jr", "jalr"):
+            if c == "jalr":
+                st["rd"] = f"x{int(o[0])}"
             st["pc_val"] = "TODO"
             st["pc_rw"] = "TODO"
             st["call"] = (f"$vmi {vals}$hG $hpc $hmi {hyps}$hmem rfl "

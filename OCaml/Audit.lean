@@ -840,6 +840,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.assign_loaded
 #print axioms Vsa.Sim.assign_code_store
 #print axioms Vsa.Sim.tr_assign
+#print axioms Vsa.Sim.StepFrameOut.of_jalr
+#print axioms Vsa.Sim.pins_jalr
+#print axioms Vsa.Sim.tr_c_call1_prefix
+#print axioms Vsa.Sim.tr_c_call1_suffix
+#print axioms OCaml.Vm.Sim.c_call1_prefix_loaded
+#print axioms OCaml.Vm.Sim.c_call1_suffix_loaded
 #print axioms OCaml.Vm.Sim.PushWriteOk.stack_read
 #print axioms OCaml.Vm.Sim.pushacc1_arm
 #print axioms OCaml.Vm.Sim.pushacc2_arm

@@ -1,4 +1,4 @@
-import Vsa.Sim.StepFrameOut
+import Vsa.Sim.JalrFrame
 
 /-!
 # `chain_frame_out` — fold a run's per-step `ReadsLikePost` hyps into ONE `StepFrameOut`
@@ -113,6 +113,7 @@ name.  Returns `none` for a non-`sigmaPost` head so the caller can fail with the
 offending hyp's name. -/
 private def cfoCtorOf? : Name → Option Name
   | ``sigmaPost_alu             => some ``StepFrameOut.of_alu
+  | ``sigmaPost_jalr            => some ``StepFrameOut.of_jalr
   | ``sigmaPost_jal             => some ``StepFrameOut.of_jal
   | ``sigmaPost_jump_x0         => some ``StepFrameOut.of_jr
   | ``sigmaPost_branch_taken    => some ``StepFrameOut.of_branch_taken

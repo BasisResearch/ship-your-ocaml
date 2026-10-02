@@ -173,10 +173,10 @@ from pathlib import Path
 
 PIN_FAM = {"alu": "alu", "sd": "store", "sw": "store", "sb": "store",
            "btaken": "btaken", "bnottaken": "bnottaken",
-           "jal": "jal", "jr": "jr", "j": "jr"}
+           "jal": "jal", "jalr": "jalr", "jr": "jr", "j": "jr"}
 OBS_FAM = {"alu": "alu", "sd": "store", "sw": "store", "sb": "store",
            "btaken": "btaken", "bnottaken": "bnottaken",
-           "jal": "jal", "jr": "jr", "j": "jr"}
+           "jal": "jal", "jalr": "jalr", "jr": "jr", "j": "jr"}
 STORE_FN = {"sd": ("writeMap8", "sdData_val"), "sw": ("writeMap4", "swData"),
             "sb": (None, None)}  # sb handled specially (insert)
 SEXT_K = {8: "sext_ff8_toNat", 16: "sext_ff0_toNat", 32: "sext_fe0_toNat",
@@ -209,6 +209,8 @@ class SpecError(Exception):
 
 def file_header(spec: dict) -> str:
     imports = list(dict.fromkeys([*spec["imports"], "Vsa.Sim.PinLookup"]))
+    if any(st["class"] == "jalr" for st in spec.get("steps", [])):
+        imports.append("Vsa.Sim.JalrFrame")
     header = "\n".join(f"import {m}" for m in imports)
     limits = "" if spec.get("default_limits", False) else "set_option maxHeartbeats 8000000\nset_option maxRecDepth 1000000"
     header += f"""
@@ -397,13 +399,13 @@ class SegmentEmitter:
                 f"sign_extend (m := 64) ({imm}) = ({bv64(tgt)[1:-1]} : BitVec 64)"
                 f" from by apply BitVec.eq_of_toNat_eq; decide]")
             end_pc = bv64(tgt)[1:-1]
-        elif cls == "jr":
+        elif cls in ("jr", "jalr"):
             pc_val = self.subst(st["pc_val"], k)
             if st.get("pc_rw"):
                 pc_rw = self.subst(st["pc_rw"], k)
-                proof = f"by\n    rw [obs_jr_pc hobs{k}, {pc_rw}]"
+                proof = f"by\n    rw [obs_{obs}_pc hobs{k}, {pc_rw}]"
             else:
-                proof = f"obs_jr_pc hobs{k}"
+                proof = f"obs_{obs}_pc hobs{k}"
             self.lines.append(
                 f"  have hpc{k} : σ{k}.regs.get? Register.PC = some {pc_val} := {proof}")
             end_pc = pc_val
@@ -413,13 +415,13 @@ class SegmentEmitter:
         # rd
         rd = st.get("rd")
         rd_val = st.get("rd_val")
-        if cls == "jal" and rd_val is None and rd is not None:
+        if cls in ("jal", "jalr") and rd_val is None and rd is not None:
             ret = addr + 4
             rd_val = f"({bv64(ret)[1:-1]} : BitVec 64)"
             st.setdefault("rw", f"show BitVec.addInt {bv64(addr)} 4 = "
                                 f"({bv64(ret)[1:-1]} : BitVec 64) from by decide")
         if rd is not None:
-            rdfam = "jal" if cls == "jal" else "alu"
+            rdfam = cls if cls in ("jal", "jalr") else "alu"
             dec5 = "(by decide) " * 5
             if st.get("rw"):
                 self.lines.append(
@@ -597,7 +599,7 @@ class SegmentEmitter:
         """Value-free write log consumed by the existing chain_frame_out fold."""
         parts = []
         for step in self.spec['steps']:
-            if step['class'] in ('alu', 'jal'):
+            if step['class'] in ('alu', 'jal', 'jalr'):
                 parts.append(f"(Register.{step['rd']} :: noiseRegs)")
             else:
                 parts.append('noiseRegs')

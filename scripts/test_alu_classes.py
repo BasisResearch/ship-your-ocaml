@@ -53,6 +53,25 @@ class AluClasses(unittest.TestCase):
                     alu.value(cls, fields)
             self.assertIsNone(alu.classify(w & ~(31 << 7)))
 
+    def test_indirect_call_alias_and_immediate(self):
+        # Read the original target even when jalr overwrites that register.
+        w = (0xffc << 20) | (1 << 15) | (1 << 7) | 0x67
+        row, = classify(0x8000305c, w, '', {})
+        self.assertEqual((row.cls, row.ops), ('jalr', [1, 1, 'ffc']))
+        ins = Instr(row.addr, row.word, row.cls, list(map(str, row.ops)), '')
+        draft = DraftBuilder([ins], '', 'Pins').build('test', [])
+        self.assertEqual([p['reg'] for p in draft['pins']], ['x1'])
+        self.assertEqual(len(draft['steps']), 1)  # ends at callee entry
+        step = draft['steps'][0]
+        self.assertEqual(step['rd'], 'x1')
+        self.assertIn('$v:x1', step['call'])
+        self.assertIn('$pin:x1', step['call'])
+        for bad in [w | (1 << 12), w & ~(31 << 15)]:
+            rejected, = classify(0x8000305c, bad, '', {})
+            self.assertNotEqual(rejected.cls, 'jalr')
+        ret, = classify(0x8000305c, 0x8067, '', {})
+        self.assertEqual((ret.cls, ret.ops), ('jr', [1]))
+
     def test_rewrite_tracking(self):
         words = [word(0x13, 1, 0, rs2=1), word(0x13, 7, 0, rs2=2)]
         instrs = []
