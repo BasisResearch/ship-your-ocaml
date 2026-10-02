@@ -1,4 +1,5 @@
 import OCaml.Vm.Primitives.StringFast
+import OCaml.Vm.Primitives.LibraryEffects
 
 namespace OCaml.Vm.Primitives.StringAllocation
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable
@@ -56,14 +57,21 @@ structure NurseryInput (ra sp length domain young limit : BitVec 64) (c : Config
   initializeImage : ImageOutside
     (initializationLog (reservedRegisters ra sp length (nurseryHeader young length)) (nurseryHeader young length))
 
+/-- Exact constructor effects together with preservation of library entry
+well-formedness for any live-byte set supplied by the caller. -/
+structure NurseryPost (ra sp length domain young : BitVec 64)
+    (before after : Config) : Prop extends
+    WriteRegistersPost [1, 2, 10, 11, 12, 13, 14, 15, 16, 17]
+      (constructorLog ra sp length domain young) before ra
+      (nurseryHeader young length + 8#64) [(2, sp)] after where
+  libraryGood : ∀ live, VsaIris.Inst.VsaOk live before → VsaIris.Inst.VsaOk live after
+
 /-- The successful nursery path is one machine function summary, with an
 exact allocation log and restoration of the native stack pointer. -/
 theorem alloc_string_nursery (c : Config) (ra sp length domain young limit : BitVec 64)
     (h : NurseryInput ra sp length domain young limit c) :
     FnSummary 0x8000c174#64 (fun d => d = c)
-      (WriteRegistersPost [1, 2, 10, 11, 12, 13, 14, 15, 16, 17]
-        (constructorLog ra sp length domain young) c ra (nurseryHeader young length + 8#64)
-        [(2, sp)]) := by
+      (NurseryPost ra sp length domain young c) := by
   let R0 := entryRegisters ra sp length
   let R1 := preparedRegisters ra sp length
   let R2 := reservedRegisters ra sp length (nurseryHeader young length)
@@ -139,7 +147,12 @@ theorem alloc_string_nursery (c : Config) (ra sp length domain young limit : Bit
   have effect := (p.toEffectPost.trans q.toEffectPost).trans finish.toEffectPost
   rw [memory, ← writeLog_append] at effect
   have framed := effect.widen (writes' := [1, 2, 10, 11, 12, 13, 14, 15, 16, 17]) (by decide)
-  refine ⟨framed, ?_⟩
+  have preserved : ∀ live, VsaIris.Inst.VsaOk live c → VsaIris.Inst.VsaOk live after := by
+    intro live good
+    have good1 := p.vsaOk good (by decide) (by simp [prepare_regs, keysG])
+    have good2 := q.vsaOk good1 (by decide) (by simp [reserve_regs, keysG])
+    exact finish.vsaOk good2 (by decide) (by simp [initialize_regs, keysG])
+  refine ⟨⟨framed, ?_⟩, preserved⟩
   have spValue := gholds_lookup _ finish.regs (n := 2) rfl
   change gpr after 2 = some sp ∧ True
   constructor

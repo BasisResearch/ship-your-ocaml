@@ -1,3 +1,6 @@
+import OCaml.Vm.Primitives.StringConstructorLayout
+import OCaml.Vm.Primitives.StringAllocationLayout
+import OCaml.Vm.Primitives.LibraryEffects
 import OCaml.Vm.Primitives.LibraryMemcpy
 import OCaml.Vm.Primitives.StringReadback
 import OCaml.Vm.Primitives.SmallAllocation
@@ -1333,3 +1336,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.image_local
 #print axioms OCaml.Vm.Primitives.copyResult_of_library
 #print axioms OCaml.Vm.Primitives.memcpy_summary
+
+#print axioms OCaml.Vm.Primitives.RegistersPost.vsaOk
+#print axioms OCaml.Vm.Primitives.StringAllocation.stringWords_toNat
+#print axioms OCaml.Vm.Primitives.StringAllocation.stringSpan_toNat
+#print axioms OCaml.Vm.Primitives.StringAllocation.stringHeader_ok
+#print axioms OCaml.Vm.Primitives.StringAllocation.paddingWord_toNat
+#print axioms OCaml.Vm.Primitives.StringAllocation.shell_layout
+#print axioms OCaml.Vm.Primitives.StringAllocation.StringShell.object
+#print axioms OCaml.Vm.Primitives.StringAllocation.StringShell.padded
+
+#print axioms OCaml.Vm.Primitives.StringAllocation.initialization_shell_log
+#print axioms OCaml.Vm.Primitives.StringAllocation.NurseryPost.shell
+#print axioms OCaml.Vm.Primitives.StringAllocation.StringShell.frame_payload

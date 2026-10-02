@@ -196,3 +196,8 @@ import OCaml.Vm.Primitives.StringFast
 import OCaml.Vm.Primitives.StringReadback
 
 import OCaml.Vm.Primitives.LibraryMemcpy
+
+import OCaml.Vm.Primitives.LibraryEffects
+import OCaml.Vm.Primitives.StringAllocationLayout
+
+import OCaml.Vm.Primitives.StringConstructorLayout

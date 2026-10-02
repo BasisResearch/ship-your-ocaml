@@ -191,7 +191,8 @@ theorem gprGet_none {σ : MState} {k : Nat} (h : k = 0 ∨ 32 ≤ k) : gprGet σ
   · obtain ⟨j, rfl⟩ : ∃ j, k = j + 32 := ⟨k - 32, by omega⟩
     rfl
 
-private theorem gpr_avoids_noise : ∀ n, n < 32 → 1 ≤ n →
+/-- Architectural GPRs are disjoint from the execution bookkeeping registers. -/
+theorem gpr_avoids_noise : ∀ n, n < 32 → 1 ≤ n →
     ∀ R ∈ noiseRegs, (R == gprReg n) = false := by decide
 
 theorem vsaReg_gpr {c : Config} {n : Nat} (h : n ≠ VsaIris.PC) :

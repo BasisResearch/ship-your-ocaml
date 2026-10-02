@@ -387,3 +387,33 @@ frame. The import cut now reuses `MemcpySites2.ldData8`, avoiding a duplicate
 definition in `LibraryByteFacts`; its users remain source-generated.
 Discipline and a8 pass unchanged. This closes library support, not a new
 primitive count. Next is the string layout/copy-string represented caller.
+
+
+2026-10-02 resume: full memcpy landed at `6d1b6b7`; rebased on current
+main and regenerated every F1 family, census and library template. The
+fixed-embed ELF migration is included and regeneration introduces no drift.
+
+Library composition now preserves presence through generated writes:
+`LibraryEffects.lean:10` (`RegistersPost.vsaOk`) reuses the existing write-log
+presence and register frame laws. `StringNursery.NurseryPost` retains this
+invariant universally for any caller-supplied live-byte set; no additional
+execution assumption was introduced. The previously private
+`VsaIris.Inst.gpr_avoids_noise` certificate is public for reuse.
+
+`StringAllocationArithmetic.lean` proves word count, rounded span, header
+encoding and padding subtraction at the default budget. `StringAllocationLayout.lean`
+proves `shell_layout` from the canonical three-store log, then
+`StringShell.object` and `.padded` complete the representation once the
+payload bytes are supplied. Splitting the write log explicitly avoids a
+unification timeout without changing any proof budget. Focused builds pass.
+
+Still 17/30 primitive summaries. Next: relate the actual initializer log to
+`shellLog`, preserve the shell across the confined memcpy write, generate the
+copy-string caller boundaries and compose the executable-name primitive.
+
+The actual initializer log is now normalized by `initialization_shell_log`
+(`StringConstructorLayout.lean:9`), and `NurseryPost.shell` supplies the layout
+directly from the machine constructor's postcondition. `StringShell.frame_payload`
+preserves header/padding across a copy confined to the data bytes. The full
+1974-target audit rebuild passed; the final layout bridge is included in the
+next audit. Next is the generated copy-string call composition.
