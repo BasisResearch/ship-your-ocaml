@@ -1475,3 +1475,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Programs.LazyForce.force_argument_edit
 #print axioms OCaml.Programs.LazyForce.force_integer_observations
 #print axioms OCaml.Programs.LazyForce.checked
+
+#print axioms Vsa.Sim.pin8_of_last_write

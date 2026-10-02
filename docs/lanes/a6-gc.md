@@ -43,6 +43,22 @@ checks both extraction and regression. `Run.halts_after_iter` and
 its actual oldify/mopup machine run and post-representation remain open.
 `Theorems.boot_ocamlc_gcSafe_Statement` names the compiler obligation.
 
+## Immediate-value oldify composition
+
+- Round 2 landed with full gates: `025786c` (GcSafe interface/compiler
+  validation) and `98f4e0b` (real force proof/observational composition).
+- `Gc.Generated.Immediate.run` composes the two generated machine segments
+  from oldify entry through the immediate-value return. `Post.root_value`
+  proves the final root contains the unchanged word. `stack_restored` checks
+  the prologue/epilogue arithmetic; `Post.returns` identifies the caller target
+  under its explicit saved-word readback premise. The exact write log and
+  register outcome remain available. No caller supplies a machine run.
+- Its `SegPre` still requires concrete code, branch, load/store and platform
+  facts. A LoopHead-to-SegPre supplier, heap-pointer paths, recursive call
+  splicing and the mopup invariant remain open. This is one route, not G2.
+- CollectionPoint includes APPLY/APPTERM and POPTRAP, whose interp.c paths
+  enter pending-action processing as well as explicit CHECK_SIGNALS.
+
 ## Status
 
 G2 remains open. `Fits` still measures total allocated words; no claim that
@@ -125,9 +141,8 @@ full integration gate.
 - Log-only landing follows these checked commits; no proof claim changed.
 - Exit remains unmet: no oldify machine loop proof, no lax bridge compatible
   with all admitted observations, no production live-word Fits, and no
-  one-line compiler Layer A budget theorem. The specification question at
-  the top blocks the Forward-sensitive proof; generation/reclamation gaps
-  remain explicit rather than being assumed away.
+  one-line compiler Layer A budget theorem. The Forward decision is resolved by GcSafe; machine execution and
+  reclamation gaps remain explicit.
 
 
 ## Fixed-address .embed migration preparation
@@ -140,11 +155,9 @@ full integration gate.
 - `scripts/gc_cfg.py` now records the pinned ELF SHA-256 and the exact
   little-endian instruction SHA-256 for each collector function. CFG-only
   comparison could miss changed immediates with unchanged control flow.
-- Current migration status: not yet present on origin/main at 2615273.
-  After the a0 landing: rebase, run `python3 scripts/gc_cfg.py >
-  results/gc-cfg.json`, then `python3 scripts/gc_cfg.py --check`, rebuild
-  the lane modules under the memory cap and run scripts/integrate.sh.
-  Layout/decode/code-pin regeneration is owned by a0's migration landing.
+- The fixed-address .embed migration is on main. This worktree rebased on
+  its regenerated Layout/decode/code pins; `gen_gc_rows.py --check` and
+  `gc_cfg.py --check` pass on the migrated image.
 - Independent progress: `oldify_special` in the law checker now uses the
   actual intrusive queue representation (source header 0, source field 0
   points at copy, copy field 1 points at next source). It removes a queued
@@ -221,15 +234,13 @@ full integration gate.
 - Reproduce the bundle with `python3 scripts/gen_gc_rows.py` and check
   with `--check`. The strengthened postconditions pass the capped build
   (554 jobs). The full gate imports the generated audit and checks both
-  row/code generation and CFG fingerprints. After the pending image
-  migration reaches main, regenerate both this bundle and
-  `results/gc-cfg.json` from their generators.
+  row/code generation and CFG fingerprints on the migrated image.
 - Landed `ae39c98` (promotion footprint) and `2615273` (generated machine
   segments) through scripts/integrate.sh, exit 0. The final gate audits
   779 theorems, including all 387 generated collector declarations;
   generated-file checks, code-pin checks and abstraction gate pass.
-- G2 is still open: the Forward/ISINT specification decision at the top
-  remains pending, as do allocator/call summaries, concrete roots/table
+- G2 is still open: GcSafe resolves the Forward specification choice;
+  remaining obligations include allocator/call summaries, concrete roots/table
   linkage, the partial-relocation loop invariant, and major reclamation.
   Neither production Fits nor the one-line ocamlc budget claim is changed.
 - Concrete data addresses continue to come from Layout; instruction words

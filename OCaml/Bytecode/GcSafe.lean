@@ -75,6 +75,8 @@ def NonCollectingCall (P : Prog) (s : St) (i : Instr) : Prop :=
 
 /-- Conservative interpreter collection boundaries: allocating bytecodes,
 primitive calls (except the source-checked cases above) and signal checks.
+APPLY/APPTERM fall through check_stacks into CHECK_SIGNALS; POPTRAP may
+process pending actions before retrying (interp.c).
 The machine G2 proof must show that every collection is represented at one
 of these boundaries. Tag-test/field-read spans inside Lazy.force do not
 allocate; allowing a shortcut in the middle would incorrectly reject the
@@ -84,7 +86,8 @@ def CollectionPoint (P : Prog) (s : St) : Prop :=
   ∃ i, decodeAt P.code s.pc = some i ∧ i.op ∈
     [.GRAB, .CLOSURE, .CLOSUREREC, .MAKEBLOCK, .MAKEBLOCK1, .MAKEBLOCK2,
      .MAKEBLOCK3, .MAKEFLOATBLOCK, .GETFLOATFIELD, .C_CALL1, .C_CALL2,
-     .C_CALL3, .C_CALL4, .C_CALL5, .C_CALLN, .CHECK_SIGNALS] ∧
+     .C_CALL3, .C_CALL4, .C_CALL5, .C_CALLN, .CHECK_SIGNALS, .POPTRAP,
+     .APPLY, .APPLY1, .APPLY2, .APPLY3, .APPTERM, .APPTERM1, .APPTERM2, .APPTERM3] ∧
     ¬ NonCollectingCall P s i
 
 /-- Reachability closed under earlier collection shortcuts. Restricting safety
