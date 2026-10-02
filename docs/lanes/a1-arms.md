@@ -1,5 +1,26 @@
 # Lane a1-arms
 
+## Fixed-arity represented setup
+
+`CcallSetupPost` names the represented primitive input, saved caller frame,
+and bound target at any fixed-arity return PC. `CcallArguments` records the
+finite stack-length/read-window obligation. `ccall_argument_load` frames
+argument words through the exact saved-frame writes; `ccall_arguments_repr`
+assembles accumulator plus stack-prefix arguments in consecutive ABI registers.
+
+`scripts/gen_ccall_setups.py` now generates setup adapters for arities 1–5,
+deriving load order and register positions from the machine segment JSON.
+`c_call2_setup` through `c_call5_setup` establish the represented boundary
+without assuming any primitive execution. Separate capped builds pass at
+default limits (roughly 3–4 seconds per adapter), including the existing
+unary arm after factoring. The generator has a gate drift check; shared
+lemmas and each setup theorem are in the axiom audit.
+
+The shared return family landed as `bef25f2`, full gate passing. Next:
+compose C_CALL2–C_CALL5 setup, named returning primitive summaries and
+restoration with callSeg; then handle C_CALLN. Coverage is still 97 conditional
+complete opcode bridges until those compositions land.
+
 ## Fixed-arity represented returns
 
 `CcallReturn` separates the common represented primitive postcondition from
@@ -1105,9 +1126,9 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 
 ## Open / next
 
-Continue with represented C_CALL2–C_CALL5 setup/argument bundles and named
-callee composition, then C_CALLN. Their machine boundaries and represented
-return restoration are now generated and checked. There are 97 conditional
+Continue with C_CALL2–C_CALL5 named callee composition, then C_CALLN. Their
+machine boundaries, represented setup/argument bundles and return restoration
+are now generated and checked. There are 97 conditional
 represented opcode bridges (C_CALL1 covers returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.

@@ -877,6 +877,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ccall1_savedStack
 #print axioms OCaml.Vm.Sim.ccall1_runtime
 #print axioms OCaml.Vm.Sim.c_call1_setup
+#print axioms OCaml.Vm.Sim.ccall_argument_load
+#print axioms OCaml.Vm.Sim.ccall_arguments_repr
+#print axioms OCaml.Vm.Sim.c_call2_setup
+#print axioms OCaml.Vm.Sim.c_call3_setup
+#print axioms OCaml.Vm.Sim.c_call4_setup
+#print axioms OCaml.Vm.Sim.c_call5_setup
 #print axioms OCaml.Vm.Sim.c_call1_return_triple
 #print axioms OCaml.Vm.Sim.c_call1_arm
 #print axioms OCaml.Vm.Sim.c_call1_step_arm
