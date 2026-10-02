@@ -9,11 +9,9 @@ def entryRegisters (ra sp : BitVec 64) (a : Nat) : Nat → BitVec 64
 
 /-- Ordinary memory and ABI facts at the copy-string entry. The read-only
 library image comes from the fixed ELF and the supplied C-string bytes. -/
-structure SizedInput (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat)
+structure SizedMemory (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat)
     (ra sp : BitVec 64) (a len : Nat) (g : Nat → BitVec 8) (c : Config) : Prop
-    extends LeafInput ra c where
-  libraryGood : VsaOk live c
-  stack : gpr c 2 = some sp
+    where
   returnSlot : WriteWindow (sp - 8#64) 8
   sourceSlot : WriteWindow (sp - 24#64) 8
   saveImage : ImageOutside (saveLog (entryRegisters ra sp a))
@@ -22,6 +20,13 @@ structure SizedInput (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat
   codeLive : ∀ p ∈ snpText, live p.1
   readOnly : ROHolds (vsaModel live) c roR (snpText ++ dataOf Dt DA)
   string : StrRead Dt DA (fun _ => False) c.σ.mem a len g
+
+/-- Dynamic ABI facts are supplied by the preceding generated call boundary. -/
+structure SizedInput (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat)
+    (ra sp : BitVec 64) (a len : Nat) (g : Nat → BitVec 8) (c : Config) : Prop
+    extends LeafInput ra c, SizedMemory live Dt DA ra sp a len g c where
+  libraryGood : VsaOk live c
+  stack : gpr c 2 = some sp
 
 /-- The first native call has computed the length while retaining its stack
 frame, source bytes, output and all non-scratch ABI registers. -/

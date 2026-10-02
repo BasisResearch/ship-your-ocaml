@@ -1538,3 +1538,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 
 #print axioms Vsa.Sim.execute_compare_char
+#print axioms Vsa.Sim.runGM_append
+#print axioms Vsa.Sim.wlogM_append
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyMemory.memory_transport
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyMemory.input
+#print axioms OCaml.Vm.Primitives.ArgvTuple.prepare_log
+#print axioms OCaml.Vm.Primitives.ArgvTuple.prepare_fast
+#print axioms OCaml.Vm.Primitives.ArgvTuple.allocate_fast
+#print axioms OCaml.Vm.Primitives.ArgvTuple.finish_fast

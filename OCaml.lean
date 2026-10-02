@@ -253,3 +253,5 @@ import OCaml.Vm.Primitives.CamlSysExecutableName
 
 import OCaml.Vm.Primitives.SmallLayout
 import OCaml.Vm.Primitives.ArgvTuple
+
+import OCaml.Vm.Primitives.ArgvTupleFast

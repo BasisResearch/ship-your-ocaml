@@ -488,3 +488,18 @@ JAL adapters in `ArgvTuple.lean`. Call-pin emission moved into the shared
 byte-for-byte unchanged. Full caller composition and represented two-object
 allocation are still open. No additional primitive is counted (18/30).
 Discipline and a8 pass: C1=0, C2=7, C3=7, C4=3.
+
+
+Small allocation and argv boundaries landed as `2826b17`, after a complete
+gate and one push race. The three argv boundary effect wrappers now compile
+in `ArgvTupleFast.lean`. Generated store-log certificates use bounded chunks
+and `Vsa.Sim.wlogM_append`; unrestricted simplification of the full stack log
+caused rapid memory growth, so those exact processes were stopped and the
+proof was factored. Raw base-plus-offset addresses and definitional store
+certificates keep the checked replacement within the default budgets.
+
+`SizedMemory`, `AllocateMemory`, and `CopyMemory` separate static memory
+requirements from dynamic leaf/stack/library entry facts. The existing
+`CopyInput` interface remains compatible, and the executable-name contract
+rebuilds successfully. Next is full argv call composition and its represented
+two-object allocation; the landed primitive count remains 18/30.

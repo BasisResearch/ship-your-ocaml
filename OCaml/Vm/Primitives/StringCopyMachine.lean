@@ -5,10 +5,10 @@ open Vsa.Machine Vsa.Sim VsaIris VsaIris.Inst VsaIris.Memcpy StringAllocation
 
 /-- Static source/code separation and nursery space for the complete C-string
 copy. The fixed image and source bytes supply the read-only library cells. -/
-structure CopyInput (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat)
+structure CopyMemory (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat)
     (ra sp : BitVec 64) (a len : Nat) (g : Nat → BitVec 8)
     (domain young limit : BitVec 64) (c : Config) : Prop
-    extends AllocateInput live Dt DA ra sp a len g domain young limit c where
+    extends AllocateMemory live Dt DA ra sp a len g domain young limit c where
   callerSeparate : CallerSeparation ra sp a len domain young
   copyGeometry : Geo (resultWord young len) (BitVec.ofNat 64 a) arguments_call.link len
   copyCodeLive : ∀ p ∈ mText, live p.1
@@ -19,13 +19,19 @@ structure CopyInput (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat)
   returnOutsideCopy : (sp - 8#64).toNat + 8 ≤ (resultWord young len).toNat ∨
     (resultWord young len).toNat + len ≤ (sp - 8#64).toNat
 
+structure CopyInput (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat)
+    (ra sp : BitVec 64) (a len : Nat) (g : Nat → BitVec 8)
+    (domain young limit : BitVec 64) (c : Config) : Prop
+    extends AllocateInput live Dt DA ra sp a len g domain young limit c,
+      CopyMemory live Dt DA ra sp a len g domain young limit c
+
 /-- A read-only tail prefix can install the source argument while transporting
 all copy requirements; only gp, native sp and the return ABI are needed. -/
-theorem CopyInput.memory_transport {live Dt DA ra sp a len g domain young limit before after}
-    (h : CopyInput live Dt DA ra sp a len g domain young limit before)
+theorem CopyMemory.memory_transport {live Dt DA ra sp a len g domain young limit before after}
+    (h : CopyMemory live Dt DA ra sp a len g domain young limit before)
     (memory : after.σ.mem = before.σ.mem) (gp : gpr after 3 = gpr before 3)
-    (leaf : LeafInput ra after) (good : VsaOk live after) (stack : gpr after 2 = some sp) :
-    CopyInput live Dt DA ra sp a len g domain young limit after := by
+    :
+    CopyMemory live Dt DA ra sp a len g domain young limit after := by
   have observations : Vsa.Densify.MemEqv after.σ.mem before.σ.mem := fun x => by rw [memory]
   have gpObserved : (vsaModel live).reg after 3 = (vsaModel live).reg before 3 := by
     change (gpr after 3).getD 0 = (gpr before 3).getD 0
@@ -40,13 +46,25 @@ theorem CopyInput.memory_transport {live Dt DA ra sp a len g domain young limit 
     · simpa only [word, memory] using h.metadata.youngValue
     · simpa only [word, memory] using h.metadata.limitValue
   exact { h with
-    toLeafInput := leaf
-    libraryGood := good
-    stack := stack
     readOnly := ro
     string := strlen_readOnly_memory h.string after.σ.mem
     metadata := metadata
     copyReadOnly := copyRo }
+
+/-- Attach execution-proved entry facts to memory-only call requirements. -/
+theorem CopyMemory.input {live Dt DA ra sp a len g domain young limit c}
+    (h : CopyMemory live Dt DA ra sp a len g domain young limit c)
+    (leaf : LeafInput ra c) (good : VsaOk live c) (stack : gpr c 2 = some sp) :
+    CopyInput live Dt DA ra sp a len g domain young limit c :=
+  { h with toLeafInput := leaf, libraryGood := good, stack := stack }
+
+/-- Preserve the existing read-only-tail interface. -/
+theorem CopyInput.memory_transport {live Dt DA ra sp a len g domain young limit before after}
+    (h : CopyInput live Dt DA ra sp a len g domain young limit before)
+    (memory : after.σ.mem = before.σ.mem) (gp : gpr after 3 = gpr before 3)
+    (leaf : LeafInput ra after) (good : VsaOk live after) (stack : gpr after 2 = some sp) :
+    CopyInput live Dt DA ra sp a len g domain young limit after :=
+  (h.toCopyMemory.memory_transport memory gp).input leaf good stack
 
 /-- Whole native copy result, with its explicit allocation footprint and
 payload-only copy frame. Neither output nor the abstract byte string changes. -/

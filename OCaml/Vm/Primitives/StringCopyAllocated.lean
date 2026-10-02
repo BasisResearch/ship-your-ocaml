@@ -21,16 +21,22 @@ def resultWord (young : BitVec 64) (len : Nat) : BitVec 64 :=
   nurseryHeader young (BitVec.ofNat 64 len) + 8#64
 
 /-- Static nursery space, stack and metadata facts for the second native call. -/
-structure AllocateInput (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat)
+structure AllocateMemory (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat)
     (ra sp : BitVec 64) (a len : Nat) (g : Nat → BitVec 8)
     (domain young limit : BitVec 64) (c : Config) : Prop
-    extends SizedInput live Dt DA ra sp a len g c where
+    extends SizedMemory live Dt DA ra sp a len g c where
   lengthSlot : WriteWindow (sp - 32#64) 8
   lengthImage : ImageOutside (sizeLog (lengthRegisters sp len))
   metadata : NurseryMetadata domain young limit c
   metadataOutside : MetadataOutside (prefixLog ra sp a len) domain
   geometry : NurseryGeometry size_call.link (sp - 32#64) (BitVec.ofNat 64 len) domain young limit
   separate : NurserySeparation size_call.link (sp - 32#64) (BitVec.ofNat 64 len) domain young
+
+structure AllocateInput (live : Nat → Prop) (Dt : Vsa.MemRepr.Mem) (DA : List Nat)
+    (ra sp : BitVec 64) (a len : Nat) (g : Nat → BitVec 8)
+    (domain young limit : BitVec 64) (c : Config) : Prop
+    extends SizedInput live Dt DA ra sp a len g c,
+      AllocateMemory live Dt DA ra sp a len g domain young limit c
 
 /-- The string object is allocated and its shell initialized, ready for memcpy. -/
 structure AllocatedPost (live : Nat → Prop) (ra sp : BitVec 64) (a len : Nat)

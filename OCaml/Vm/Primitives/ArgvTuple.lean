@@ -1,6 +1,7 @@
 import OCaml.Vm.Primitives.AccessPlan
 import OCaml.Vm.Primitives.Call
 import OCaml.Vm.Primitives.DoubleAllocation
+import OCaml.Vm.Primitives.SymbolicAppend
 import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.Code.Caml_sys_get_argv
 import Vsa.Sim.ElfDecode.Part000
@@ -805,6 +806,117 @@ theorem prepare_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
     wvalM, srcVal, lookupG, eraseG, imm20Of, DoubleAllocation.domainGlobal, Layout.sym_Caml_state,
     Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?, BitVec.add_assoc]
 
+def prepare_piece0 : List MInstr := [
+  ⟨0x8001cf08#64, 0xf9010113#32, 0x13#8, 0x01#8, 0x01#8, 0xf9#8, .addi, 2, 2, 0, 0xf90#12⟩,
+  ⟨0x8001cf0c#64, 0x06113423#32, 0x23#8, 0x34#8, 0x11#8, 0x06#8, .sd, 0, 2, 1, 0x068#12⟩,
+  ⟨0x8001cf10#64, 0x04913c23#32, 0x23#8, 0x3c#8, 0x91#8, 0x04#8, .sd, 0, 2, 9, 0x058#12⟩,
+  ⟨0x8001cf14#64, 0x05213823#32, 0x23#8, 0x38#8, 0x21#8, 0x05#8, .sd, 0, 2, 18, 0x050#12⟩,
+  ⟨0x8001cf18#64, 0x06813023#32, 0x23#8, 0x30#8, 0x81#8, 0x06#8, .sd, 0, 2, 8, 0x060#12⟩
+]
+def prepare_piece0_input (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(1, R 1), (2, R 2), (8, R 8), (9, R 9), (18, R 18)]
+def prepare_piece0_output (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(2, (R 2 + 18446744073709551504#64)), (1, R 1), (8, R 8), (9, R 9), (18, R 18)]
+def prepare_piece0_log (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry := [((((R 2 + 18446744073709551504#64) + 104#64)).toNat, 8, R 1), ((((R 2 + 18446744073709551504#64) + 88#64)).toNat, 8, R 9), ((((R 2 + 18446744073709551504#64) + 80#64)).toNat, 8, R 18), ((((R 2 + 18446744073709551504#64) + 96#64)).toNat, 8, R 8)]
+theorem prepare_piece0_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM prepare_piece0 (prepare_piece0_input R loads) (loads) = prepare_piece0_output R loads := by
+  simp [prepare_piece0, prepare_piece0_input, prepare_piece0_output, prepare_piece0_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem prepare_piece0_loads (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    ldsRunM prepare_piece0 (loads) = loads := by
+  simp [prepare_piece0, prepare_piece0_input, prepare_piece0_output, prepare_piece0_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem prepare_piece0_stores (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    wlogM prepare_piece0 (prepare_piece0_input R loads) (loads) = prepare_piece0_log R loads := by
+  rfl
+
+def prepare_piece1 : List MInstr := [
+  ⟨0x8001cf1c#64, 0x00048497#32, 0x97#8, 0x84#8, 0x04#8, 0x00#8, .auipc, 9, 0, 0, 0x000#12⟩,
+  ⟨0x8001cf20#64, 0xdec48493#32, 0x93#8, 0x84#8, 0xc4#8, 0xde#8, .addi, 9, 9, 0, 0xdec#12⟩,
+  ⟨0x8001cf24#64, 0x0004b703#32, 0x03#8, 0xb7#8, 0x04#8, 0x00#8, .ld, 14, 9, 0, 0x000#12⟩,
+  ⟨0x8001cf28#64, 0x00048517#32, 0x17#8, 0x85#8, 0x04#8, 0x00#8, .auipc, 10, 0, 0, 0x000#12⟩,
+  ⟨0x8001cf2c#64, 0xcf053503#32, 0x03#8, 0x35#8, 0x05#8, 0xcf#8, .ld, 10, 10, 0, 0xcf0#12⟩
+]
+def prepare_piece1_input (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(2, (R 2 + 18446744073709551504#64)), (1, R 1), (8, R 8), (9, R 9), (18, R 18)]
+def prepare_piece1_output (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(10, bytesVal .ld (loads.getD 1 [])), (14, bytesVal .ld (loads.getD 0 [])), (9, ((2147602204#64 + 294912#64) + 18446744073709551084#64)), (2, (R 2 + 18446744073709551504#64)), (1, R 1), (8, R 8), (18, R 18)]
+def prepare_piece1_log (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry := []
+theorem prepare_piece1_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM prepare_piece1 (prepare_piece1_input R loads) (loads) = prepare_piece1_output R loads := by
+  simp [prepare_piece1, prepare_piece1_input, prepare_piece1_output, prepare_piece1_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem prepare_piece1_loads (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    ldsRunM prepare_piece1 (loads) = loads.tail.tail := by
+  simp [prepare_piece1, prepare_piece1_input, prepare_piece1_output, prepare_piece1_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem prepare_piece1_stores (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    wlogM prepare_piece1 (prepare_piece1_input R loads) (loads) = prepare_piece1_log R loads := by
+  rfl
+
+def prepare_piece2 : List MInstr := [
+  ⟨0x8001cf30#64, 0x01010693#32, 0x93#8, 0x06#8, 0x01#8, 0x01#8, .addi, 13, 2, 0, 0x010#12⟩,
+  ⟨0x8001cf34#64, 0x12073403#32, 0x03#8, 0x34#8, 0x07#8, 0x12#8, .ld, 8, 14, 0, 0x120#12⟩,
+  ⟨0x8001cf38#64, 0x00100793#32, 0x93#8, 0x07#8, 0x10#8, 0x00#8, .addi, 15, 0, 0, 0x001#12⟩,
+  ⟨0x8001cf3c#64, 0x12d73023#32, 0x23#8, 0x30#8, 0xd7#8, 0x12#8, .sd, 0, 14, 13, 0x120#12⟩,
+  ⟨0x8001cf40#64, 0x00200913#32, 0x13#8, 0x09#8, 0x20#8, 0x00#8, .addi, 18, 0, 0, 0x002#12⟩
+]
+def prepare_piece2_input (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(10, bytesVal .ld (loads.getD 1 [])), (14, bytesVal .ld (loads.getD 0 [])), (9, ((2147602204#64 + 294912#64) + 18446744073709551084#64)), (2, (R 2 + 18446744073709551504#64)), (1, R 1), (8, R 8), (18, R 18)]
+def prepare_piece2_output (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(18, (0#64 + 2#64)), (15, (0#64 + 1#64)), (8, bytesVal .ld (loads.getD 2 [])), (13, ((R 2 + 18446744073709551504#64) + 16#64)), (10, bytesVal .ld (loads.getD 1 [])), (14, bytesVal .ld (loads.getD 0 [])), (9, ((2147602204#64 + 294912#64) + 18446744073709551084#64)), (2, (R 2 + 18446744073709551504#64)), (1, R 1)]
+def prepare_piece2_log (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry := [(((bytesVal .ld (loads.getD 0 []) + 288#64)).toNat, 8, ((R 2 + 18446744073709551504#64) + 16#64))]
+theorem prepare_piece2_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM prepare_piece2 (prepare_piece2_input R loads) (loads.tail.tail) = prepare_piece2_output R loads := by
+  simp [prepare_piece2, prepare_piece2_input, prepare_piece2_output, prepare_piece2_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem prepare_piece2_loads (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    ldsRunM prepare_piece2 (loads.tail.tail) = loads.tail.tail.tail := by
+  simp [prepare_piece2, prepare_piece2_input, prepare_piece2_output, prepare_piece2_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem prepare_piece2_stores (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    wlogM prepare_piece2 (prepare_piece2_input R loads) (loads.tail.tail) = prepare_piece2_log R loads := by
+  rfl
+
+def prepare_piece3 : List MInstr := [
+  ⟨0x8001cf44#64, 0x00810713#32, 0x13#8, 0x07#8, 0x81#8, 0x00#8, .addi, 14, 2, 0, 0x008#12⟩,
+  ⟨0x8001cf48#64, 0x00f13023#32, 0x23#8, 0x30#8, 0xf1#8, 0x00#8, .sd, 0, 2, 15, 0x000#12⟩,
+  ⟨0x8001cf4c#64, 0x00f13423#32, 0x23#8, 0x34#8, 0xf1#8, 0x00#8, .sd, 0, 2, 15, 0x008#12⟩,
+  ⟨0x8001cf50#64, 0x02f13023#32, 0x23#8, 0x30#8, 0xf1#8, 0x02#8, .sd, 0, 2, 15, 0x020#12⟩,
+  ⟨0x8001cf54#64, 0x02e13823#32, 0x23#8, 0x38#8, 0xe1#8, 0x02#8, .sd, 0, 2, 14, 0x030#12⟩
+]
+def prepare_piece3_input (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(18, (0#64 + 2#64)), (15, (0#64 + 1#64)), (8, bytesVal .ld (loads.getD 2 [])), (13, ((R 2 + 18446744073709551504#64) + 16#64)), (10, bytesVal .ld (loads.getD 1 [])), (14, bytesVal .ld (loads.getD 0 [])), (9, ((2147602204#64 + 294912#64) + 18446744073709551084#64)), (2, (R 2 + 18446744073709551504#64)), (1, R 1)]
+def prepare_piece3_output (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(14, ((R 2 + 18446744073709551504#64) + 8#64)), (18, (0#64 + 2#64)), (15, (0#64 + 1#64)), (8, bytesVal .ld (loads.getD 2 [])), (13, ((R 2 + 18446744073709551504#64) + 16#64)), (10, bytesVal .ld (loads.getD 1 [])), (9, ((2147602204#64 + 294912#64) + 18446744073709551084#64)), (2, (R 2 + 18446744073709551504#64)), (1, R 1)]
+def prepare_piece3_log (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry := [((((R 2 + 18446744073709551504#64) + 0#64)).toNat, 8, (0#64 + 1#64)), ((((R 2 + 18446744073709551504#64) + 8#64)).toNat, 8, (0#64 + 1#64)), ((((R 2 + 18446744073709551504#64) + 32#64)).toNat, 8, (0#64 + 1#64)), ((((R 2 + 18446744073709551504#64) + 48#64)).toNat, 8, ((R 2 + 18446744073709551504#64) + 8#64))]
+theorem prepare_piece3_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM prepare_piece3 (prepare_piece3_input R loads) (loads.tail.tail.tail) = prepare_piece3_output R loads := by
+  simp [prepare_piece3, prepare_piece3_input, prepare_piece3_output, prepare_piece3_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem prepare_piece3_loads (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    ldsRunM prepare_piece3 (loads.tail.tail.tail) = loads.tail.tail.tail := by
+  simp [prepare_piece3, prepare_piece3_input, prepare_piece3_output, prepare_piece3_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem prepare_piece3_stores (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    wlogM prepare_piece3 (prepare_piece3_input R loads) (loads.tail.tail.tail) = prepare_piece3_log R loads := by
+  rfl
+
+def prepare_piece4 : List MInstr := [
+  ⟨0x8001cf58#64, 0x00813823#32, 0x23#8, 0x38#8, 0x81#8, 0x00#8, .sd, 0, 2, 8, 0x010#12⟩,
+  ⟨0x8001cf5c#64, 0x01213c23#32, 0x23#8, 0x3c#8, 0x21#8, 0x01#8, .sd, 0, 2, 18, 0x018#12⟩,
+  ⟨0x8001cf60#64, 0x02213423#32, 0x23#8, 0x34#8, 0x21#8, 0x02#8, .sd, 0, 2, 2, 0x028#12⟩
+]
+def prepare_piece4_input (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(14, ((R 2 + 18446744073709551504#64) + 8#64)), (18, (0#64 + 2#64)), (15, (0#64 + 1#64)), (8, bytesVal .ld (loads.getD 2 [])), (13, ((R 2 + 18446744073709551504#64) + 16#64)), (10, bytesVal .ld (loads.getD 1 [])), (9, ((2147602204#64 + 294912#64) + 18446744073709551084#64)), (2, (R 2 + 18446744073709551504#64)), (1, R 1)]
+def prepare_piece4_output (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(14, ((R 2 + 18446744073709551504#64) + 8#64)), (18, (0#64 + 2#64)), (15, (0#64 + 1#64)), (8, bytesVal .ld (loads.getD 2 [])), (13, ((R 2 + 18446744073709551504#64) + 16#64)), (10, bytesVal .ld (loads.getD 1 [])), (9, ((2147602204#64 + 294912#64) + 18446744073709551084#64)), (2, (R 2 + 18446744073709551504#64)), (1, R 1)]
+def prepare_piece4_log (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry := [((((R 2 + 18446744073709551504#64) + 16#64)).toNat, 8, bytesVal .ld (loads.getD 2 [])), ((((R 2 + 18446744073709551504#64) + 24#64)).toNat, 8, (0#64 + 2#64)), ((((R 2 + 18446744073709551504#64) + 40#64)).toNat, 8, (R 2 + 18446744073709551504#64))]
+theorem prepare_piece4_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM prepare_piece4 (prepare_piece4_input R loads) (loads.tail.tail.tail) = prepare_piece4_output R loads := by
+  simp [prepare_piece4, prepare_piece4_input, prepare_piece4_output, prepare_piece4_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem prepare_piece4_loads (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    ldsRunM prepare_piece4 (loads.tail.tail.tail) = loads.tail.tail.tail := by
+  simp [prepare_piece4, prepare_piece4_input, prepare_piece4_output, prepare_piece4_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem prepare_piece4_stores (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    wlogM prepare_piece4 (prepare_piece4_input R loads) (loads.tail.tail.tail) = prepare_piece4_log R loads := by
+  rfl
+
+theorem prepare_log_chunks (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    wlogM prepare_body (prepare_input R) loads = (prepare_piece0_log R loads ++ (prepare_piece1_log R loads ++ (prepare_piece2_log R loads ++ (prepare_piece3_log R loads ++ prepare_piece4_log R loads)))) := by
+  change wlogM (prepare_piece0 ++ (prepare_piece1 ++ (prepare_piece2 ++ (prepare_piece3 ++ prepare_piece4)))) (prepare_piece0_input R loads) loads = _
+  rw [wlogM_append, prepare_piece0_regs R loads, prepare_piece0_loads R loads, prepare_piece0_stores R loads]
+  change (prepare_piece0_log R loads ++ wlogM (prepare_piece1 ++ (prepare_piece2 ++ (prepare_piece3 ++ prepare_piece4))) (prepare_piece1_input R loads) (loads)) = _
+  rw [wlogM_append, prepare_piece1_regs R loads, prepare_piece1_loads R loads, prepare_piece1_stores R loads]
+  change (prepare_piece0_log R loads ++ (prepare_piece1_log R loads ++ wlogM (prepare_piece2 ++ (prepare_piece3 ++ prepare_piece4)) (prepare_piece2_input R loads) (loads.tail.tail))) = _
+  rw [wlogM_append, prepare_piece2_regs R loads, prepare_piece2_loads R loads, prepare_piece2_stores R loads]
+  change (prepare_piece0_log R loads ++ (prepare_piece1_log R loads ++ (prepare_piece2_log R loads ++ wlogM (prepare_piece3 ++ prepare_piece4) (prepare_piece3_input R loads) (loads.tail.tail.tail)))) = _
+  rw [wlogM_append, prepare_piece3_regs R loads, prepare_piece3_loads R loads, prepare_piece3_stores R loads]
+  change (prepare_piece0_log R loads ++ (prepare_piece1_log R loads ++ (prepare_piece2_log R loads ++ (prepare_piece3_log R loads ++ wlogM prepare_piece4 (prepare_piece4_input R loads) (loads.tail.tail.tail))))) = _
+  rw [prepare_piece4_stores R loads]
+
 def prepare_call : CallInstr := ⟨0x8001cf64#64, 0xaf0ef0ef#32, 0xef#8, 0xf0#8, 0x0e#8, 0xaf#8, 0x1ef2f0#21⟩
 theorem prepare_call_shape : CallShape prepare_call := by constructor <;> decide
 theorem prepare_call_decode : CallDecode prepare_call := by
@@ -916,5 +1028,77 @@ theorem finish_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
   simp [finish_body, finish_input, finish_regs, runGM, stepGM, stepLdsM,
     wvalM, srcVal, lookupG, eraseG, imm20Of, DoubleAllocation.domainGlobal, Layout.sym_Caml_state,
     Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?, BitVec.add_assoc]
+
+def finish_piece0 : List MInstr := [
+  ⟨0x8001cf78#64, 0x00013783#32, 0x83#8, 0x37#8, 0x01#8, 0x00#8, .ld, 15, 2, 0, 0x000#12⟩,
+  ⟨0x8001cf7c#64, 0x00a13423#32, 0x23#8, 0x34#8, 0xa1#8, 0x00#8, .sd, 0, 2, 10, 0x008#12⟩,
+  ⟨0x8001cf80#64, 0x00f53023#32, 0x23#8, 0x30#8, 0xf5#8, 0x00#8, .sd, 0, 10, 15, 0x000#12⟩,
+  ⟨0x8001cf84#64, 0x00813783#32, 0x83#8, 0x37#8, 0x81#8, 0x00#8, .ld, 15, 2, 0, 0x008#12⟩,
+  ⟨0x8001cf88#64, 0x00048717#32, 0x17#8, 0x87#8, 0x04#8, 0x00#8, .auipc, 14, 0, 0, 0x000#12⟩
+]
+def finish_piece0_input (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(2, R 2), (8, R 8), (9, R 9), (10, R 10)]
+def finish_piece0_output (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(14, (2147602312#64 + 294912#64)), (15, bytesVal .ld (loads.getD 1 [])), (2, R 2), (8, R 8), (9, R 9), (10, R 10)]
+def finish_piece0_log (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry := [(((R 2 + 8#64)).toNat, 8, R 10), (((R 10 + 0#64)).toNat, 8, bytesVal .ld (loads.getD 0 []))]
+theorem finish_piece0_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM finish_piece0 (finish_piece0_input R loads) (loads) = finish_piece0_output R loads := by
+  simp [finish_piece0, finish_piece0_input, finish_piece0_output, finish_piece0_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem finish_piece0_loads (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    ldsRunM finish_piece0 (loads) = loads.tail.tail := by
+  simp [finish_piece0, finish_piece0_input, finish_piece0_output, finish_piece0_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem finish_piece0_stores (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    wlogM finish_piece0 (finish_piece0_input R loads) (loads) = finish_piece0_log R loads := by
+  simp only [finish_piece0, finish_piece0_input, finish_piece0_log, wlogM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getElem?_tail, List.getD_eq_getElem?_getD, Nat.reduceAdd]
+  all_goals rfl
+
+def finish_piece1 : List MInstr := [
+  ⟨0x8001cf8c#64, 0xc8873703#32, 0x03#8, 0x37#8, 0x87#8, 0xc8#8, .ld, 14, 14, 0, 0xc88#12⟩,
+  ⟨0x8001cf90#64, 0x00e7b423#32, 0x23#8, 0xb4#8, 0xe7#8, 0x00#8, .sd, 0, 15, 14, 0x008#12⟩,
+  ⟨0x8001cf94#64, 0x0004b783#32, 0x83#8, 0xb7#8, 0x04#8, 0x00#8, .ld, 15, 9, 0, 0x000#12⟩,
+  ⟨0x8001cf98#64, 0x00813503#32, 0x03#8, 0x35#8, 0x81#8, 0x00#8, .ld, 10, 2, 0, 0x008#12⟩,
+  ⟨0x8001cf9c#64, 0x1287b023#32, 0x23#8, 0xb0#8, 0x87#8, 0x12#8, .sd, 0, 15, 8, 0x120#12⟩
+]
+def finish_piece1_input (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(14, (2147602312#64 + 294912#64)), (15, bytesVal .ld (loads.getD 1 [])), (2, R 2), (8, R 8), (9, R 9), (10, R 10)]
+def finish_piece1_output (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(10, bytesVal .ld (loads.getD 4 [])), (15, bytesVal .ld (loads.getD 3 [])), (14, bytesVal .ld (loads.getD 2 [])), (2, R 2), (8, R 8), (9, R 9)]
+def finish_piece1_log (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry := [(((bytesVal .ld (loads.getD 1 []) + 8#64)).toNat, 8, bytesVal .ld (loads.getD 2 [])), (((bytesVal .ld (loads.getD 3 []) + 288#64)).toNat, 8, R 8)]
+theorem finish_piece1_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM finish_piece1 (finish_piece1_input R loads) (loads.tail.tail) = finish_piece1_output R loads := by
+  simp [finish_piece1, finish_piece1_input, finish_piece1_output, finish_piece1_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem finish_piece1_loads (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    ldsRunM finish_piece1 (loads.tail.tail) = loads.tail.tail.tail.tail.tail := by
+  simp [finish_piece1, finish_piece1_input, finish_piece1_output, finish_piece1_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem finish_piece1_stores (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    wlogM finish_piece1 (finish_piece1_input R loads) (loads.tail.tail) = finish_piece1_log R loads := by
+  simp only [finish_piece1, finish_piece1_input, finish_piece1_log, wlogM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getElem?_tail, List.getD_eq_getElem?_getD, Nat.reduceAdd]
+  all_goals rfl
+
+def finish_piece2 : List MInstr := [
+  ⟨0x8001cfa0#64, 0x06813083#32, 0x83#8, 0x30#8, 0x81#8, 0x06#8, .ld, 1, 2, 0, 0x068#12⟩,
+  ⟨0x8001cfa4#64, 0x06013403#32, 0x03#8, 0x34#8, 0x01#8, 0x06#8, .ld, 8, 2, 0, 0x060#12⟩,
+  ⟨0x8001cfa8#64, 0x05813483#32, 0x83#8, 0x34#8, 0x81#8, 0x05#8, .ld, 9, 2, 0, 0x058#12⟩,
+  ⟨0x8001cfac#64, 0x05013903#32, 0x03#8, 0x39#8, 0x01#8, 0x05#8, .ld, 18, 2, 0, 0x050#12⟩,
+  ⟨0x8001cfb0#64, 0x07010113#32, 0x13#8, 0x01#8, 0x01#8, 0x07#8, .addi, 2, 2, 0, 0x070#12⟩
+]
+def finish_piece2_input (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(10, bytesVal .ld (loads.getD 4 [])), (15, bytesVal .ld (loads.getD 3 [])), (14, bytesVal .ld (loads.getD 2 [])), (2, R 2), (8, R 8), (9, R 9)]
+def finish_piece2_output (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs := [(2, (R 2 + 112#64)), (18, bytesVal .ld (loads.getD 8 [])), (9, bytesVal .ld (loads.getD 7 [])), (8, bytesVal .ld (loads.getD 6 [])), (1, bytesVal .ld (loads.getD 5 [])), (10, bytesVal .ld (loads.getD 4 [])), (15, bytesVal .ld (loads.getD 3 [])), (14, bytesVal .ld (loads.getD 2 []))]
+def finish_piece2_log (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry := []
+theorem finish_piece2_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM finish_piece2 (finish_piece2_input R loads) (loads.tail.tail.tail.tail.tail) = finish_piece2_output R loads := by
+  simp [finish_piece2, finish_piece2_input, finish_piece2_output, finish_piece2_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem finish_piece2_loads (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    ldsRunM finish_piece2 (loads.tail.tail.tail.tail.tail) = loads.tail.tail.tail.tail.tail.tail.tail.tail.tail := by
+  simp [finish_piece2, finish_piece2_input, finish_piece2_output, finish_piece2_log, runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?]
+theorem finish_piece2_stores (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    wlogM finish_piece2 (finish_piece2_input R loads) (loads.tail.tail.tail.tail.tail) = finish_piece2_log R loads := by
+  simp only [finish_piece2, finish_piece2_input, finish_piece2_log, wlogM, wentryM, widthOfM, stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getElem?_tail, List.getD_eq_getElem?_getD, Nat.reduceAdd]
+  all_goals rfl
+
+theorem finish_log_chunks (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    wlogM finish_body (finish_input R) loads = (finish_piece0_log R loads ++ (finish_piece1_log R loads ++ finish_piece2_log R loads)) := by
+  change wlogM (finish_piece0 ++ (finish_piece1 ++ finish_piece2)) (finish_piece0_input R loads) loads = _
+  rw [wlogM_append, finish_piece0_regs R loads, finish_piece0_loads R loads, finish_piece0_stores R loads]
+  change (finish_piece0_log R loads ++ wlogM (finish_piece1 ++ finish_piece2) (finish_piece1_input R loads) (loads.tail.tail)) = _
+  rw [wlogM_append, finish_piece1_regs R loads, finish_piece1_loads R loads, finish_piece1_stores R loads]
+  change (finish_piece0_log R loads ++ (finish_piece1_log R loads ++ wlogM finish_piece2 (finish_piece2_input R loads) (loads.tail.tail.tail.tail.tail))) = _
+  rw [finish_piece2_stores R loads]
 
 end OCaml.Vm.Primitives.ArgvTuple
