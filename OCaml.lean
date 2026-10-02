@@ -201,3 +201,5 @@ import OCaml.Vm.Primitives.LibraryEffects
 import OCaml.Vm.Primitives.StringAllocationLayout
 
 import OCaml.Vm.Primitives.StringConstructorLayout
+
+import OCaml.Vm.Primitives.StringCopyFast

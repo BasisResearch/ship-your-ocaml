@@ -1,3 +1,4 @@
+import OCaml.Vm.Primitives.StringCopyFast
 import OCaml.Vm.Primitives.StringConstructorLayout
 import OCaml.Vm.Primitives.StringAllocationLayout
 import OCaml.Vm.Primitives.LibraryEffects
@@ -1349,3 +1350,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.StringAllocation.initialization_shell_log
 #print axioms OCaml.Vm.Primitives.StringAllocation.NurseryPost.shell
 #print axioms OCaml.Vm.Primitives.StringAllocation.StringShell.frame_payload
+
+#print axioms OCaml.Vm.Primitives.StringCopy.save_fast
+#print axioms OCaml.Vm.Primitives.StringCopy.size_fast
+#print axioms OCaml.Vm.Primitives.StringCopy.arguments_fast
+#print axioms OCaml.Vm.Primitives.StringCopy.restore_fast

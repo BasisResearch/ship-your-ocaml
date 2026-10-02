@@ -1,5 +1,6 @@
 """Common block certificates for the nursery allocation families."""
 from ocaml_certificates import emit_loaded
+from ocaml_block_certificates import emit_block
 
 
 def emit_nursery(root, functions, decode, code, text_base, lib, build_cfg, literal):
@@ -46,31 +47,7 @@ def emit_nursery(root, functions, decode, code, text_base, lib, build_cfg, liter
           'open Vsa.Machine Vsa.Sim LeanRV64DExecutable', '')
         emit_loaded(E, fn, ins, pred, text_base)
         for (name, keys), b in zip(selected, blocks):
-            term = lib.decode_terminator(b.term, taken=False)['record']
-            keylist = str(keys)
-            E(f'def {name}_body : List MInstr := [', ',\n'.join('  ' + literal(i.addr, i.word) for i in b.instrs), ']',
-              f'def {name}_term : TInstr := {term}',
-              f'def {name}_blocks : List BBlock := [{{ body := {name}_body, term := some {name}_term }}]',
-              f'def {name}_input (R : Nat → BitVec 64) : GRegs := [' + ', '.join(f'({k}, R {k})' for k in keys) + ']', '')
-            E(f'theorem {name}_code {{c : Config}} (image : ExecutableImage c) : CodeFacts c.σ.mem {name}_body := by',
-              '  have hc := loaded image', f'  simp only [CodeFacts, {name}_body]',
-              f'  chain_facts hc with "Vsa.Sim.Code.{fn}_at_"', '',
-              f'theorem {name}_shape : ChainOK 0x{b.start:08x}#64 {keylist} {name}_blocks := by',
-              f'  simp only [ChainOK, BBlockOK, {name}_blocks, {name}_body, {name}_term, BlockOKM]',
-              "  repeat' apply And.intro", '  all_goals decide', '',
-              f'theorem {name}_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)',
-              '    (loads : List (List (BitVec 8))) (h : LeafInput ra c)',
-              f'    (regs : GHolds c.σ ({name}_input R))',
-              f'    (access : AccessPlan c.σ.mem ({name}_input R) loads {name}_body)',
-              f'    (control : TermFactsO (runGM {name}_body ({name}_input R) loads) (some {name}_term)) :',
-              f'    FnSummary 0x{b.start:08x}#64 (fun d => d = c)',
-              f'      (BlockPost {name}_blocks 0x{b.start:08x}#64 ({name}_input R) loads c) := by',
-              f'  apply block_summary {name}_blocks _ _ _ c',
-              f'  refine ⟨h.good, h.minstret, regs, ?_, ?_, {name}_shape, h.tick⟩',
-              f'  · change KeysOK {keylist}; decide',
-              f'  · apply singleton_chain_facts (accessPlan_facts ({name}_code h.image) access) ?_ control',
-              '    have hc := loaded h.image',
-              f'    chain_facts hc with "Vsa.Sim.Code.{fn}_at_"', '')
+            emit_block(E, fn, b, name, keys, lib, literal)
         if namespace == 'StringAllocation':
             E('def reserve_regs (R : Nat → BitVec 64) (bd byoung blimit : List (BitVec 8)) : GRegs :=',
               '  [(13, bytesVal .ld byoung - 8#64 - R 15), (17, bytesVal .ld blimit),',

@@ -417,3 +417,13 @@ directly from the machine constructor's postcondition. `StringShell.frame_payloa
 preserves header/padding across a copy confined to the data bytes. The full
 1974-target audit rebuild passed; the final layout bridge is included in the
 next audit. Next is the generated copy-string call composition.
+
+
+String layout/invariant support landed as `55667f5`. The copy-string generator
+now emits four CFG boundary certificates and all three direct-call pins,
+shapes and ElfDecode adapters. `ocaml_block_certificates.emit_block` is shared
+with the nursery generator; its existing outputs are byte-for-byte unchanged.
+`StringCopyFast.{save,size,arguments,restore}_fast` supply the four boundaries
+from stack windows and memory pins, with exact effects and register interfaces.
+All focused builds pass without increased budgets. The whole copy-string
+composition and represented primitive contract are next; the count is 17/30.

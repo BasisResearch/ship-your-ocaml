@@ -1,5 +1,6 @@
 """Generated native-stack and direct-call certificates for F1 wrappers."""
 from ocaml_certificates import emit_loaded
+from ocaml_string_copy import emit_string_copy
 
 
 def emit_wrapper(root, functions, decode, code, text_base, lib, build_cfg, literal):
@@ -106,4 +107,5 @@ theorem caml_string_notequal_primitive {runtimeOk P s pl cp sp high ra nativeSp 
 
 end OCaml.Vm.Primitives
 """
+    result.update(emit_string_copy(root, functions, decode, code, text_base, lib, build_cfg, literal))
     return result
