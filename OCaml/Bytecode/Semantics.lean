@@ -1151,10 +1151,10 @@ def stepI (i : Instr) : Res :=
   | .ULTINT, [] => cmpOp s fun a b => a.ult b
   | .UGEINT, [] => cmpOp s fun a b => b.ule a
   | .OFFSETINT, [n] => match s.accu with
-      | .int a => .next { (s.adv 2) with accu := .int (untag (tag64 a + (BitVec.ofInt 64 n <<< 1))) }
+      | .int a => .next { (s.adv 2) with accu := .int (untag (tag64 a + ((BitVec.ofInt 32 n <<< 1).signExtend 64))) }
       | _ => .wrong
   | .OFFSETREF, [n] => opt (field? s.heap s.accu 0) fun
-      | .int a => opt (setField? s.heap s.accu 0 (.int (untag (tag64 a + (BitVec.ofInt 64 n <<< 1)))))
+      | .int a => opt (setField? s.heap s.accu 0 (.int (untag (tag64 a + ((BitVec.ofInt 32 n <<< 1).signExtend 64)))))
           fun h => .next { (s.adv 2) with heap := h, accu := .unit }
       | _ => .wrong
   | .ISINT, [] => match s.accu with

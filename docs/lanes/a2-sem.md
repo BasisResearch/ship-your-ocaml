@@ -2,6 +2,20 @@
 
 ## Current status
 
+Round 2 active (2026-10-02): rebased onto the fixed `.embed` image migration.
+Working in brief order: OFFSET widths, initialized bytes, eleven compiler
+primitive boundaries, callbacks/uncaught exceptions, concrete HTIF relation.
+The Round 2 compiler differential exit is not yet met.
+
+OFFSETINT/OFFSETREF now shift operands in 32 bits before sign extension,
+matching the pinned runtime. `scripts/difftest_offsets.py` passes 16
+host/runbc cases including negative operands and 32-bit shift overflow;
+results are in `results/bc-offsets.json`. The original width probe passes
+with `--expect-model 2`. Symbolic and CountLoop builds pass. The executed
+ledger was regenerated after migration (no drift).
+
+## Round 1 evidence
+
 Lane exit criterion met. Implementation landed on main as `f442c8c` through
 `scripts/integrate.sh` on 2026-10-01. All integration stages passed, including
 784 theorem axiom reports, generator drift, 39,056 pinned bytes (zero

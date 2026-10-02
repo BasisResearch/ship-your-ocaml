@@ -1,0 +1,114 @@
+[
+  {
+    "arm": "OFFSETINT",
+    "operand": 1,
+    "host_exit": 1,
+    "model_exit": 1,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETINT",
+    "operand": -1,
+    "host_exit": 1,
+    "model_exit": 1,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETINT",
+    "operand": -65,
+    "host_exit": 2,
+    "model_exit": 2,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETINT",
+    "operand": 1073741823,
+    "host_exit": 1,
+    "model_exit": 1,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETINT",
+    "operand": 1073741824,
+    "host_exit": 2,
+    "model_exit": 2,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETINT",
+    "operand": 2147483647,
+    "host_exit": 1,
+    "model_exit": 1,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETINT",
+    "operand": -1073741824,
+    "host_exit": 2,
+    "model_exit": 2,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETINT",
+    "operand": -2147483648,
+    "host_exit": 1,
+    "model_exit": 1,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETREF",
+    "operand": 1,
+    "host_exit": 1,
+    "model_exit": 1,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETREF",
+    "operand": -1,
+    "host_exit": 1,
+    "model_exit": 1,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETREF",
+    "operand": -65,
+    "host_exit": 2,
+    "model_exit": 2,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETREF",
+    "operand": 1073741823,
+    "host_exit": 1,
+    "model_exit": 1,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETREF",
+    "operand": 1073741824,
+    "host_exit": 2,
+    "model_exit": 2,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETREF",
+    "operand": 2147483647,
+    "host_exit": 1,
+    "model_exit": 1,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETREF",
+    "operand": -1073741824,
+    "host_exit": 2,
+    "model_exit": 2,
+    "passed": true
+  },
+  {
+    "arm": "OFFSETREF",
+    "operand": -2147483648,
+    "host_exit": 1,
+    "model_exit": 1,
+    "passed": true
+  }
+]
