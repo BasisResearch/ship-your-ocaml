@@ -44,12 +44,10 @@ theorem Ccall1Saved.frame {s : St} {pl : Place} {sp : Nat}
     savedStack := by rw [reads]; exact h.savedStack
     savedEnv := by rw [reads]; exact h.savedEnv }
 
-/-- Return boundary shared by successful fixed-arity C primitives. Data/platform
-come from the primitive summary; the caller-owned saved frame stays separate. -/
-structure CcallReturn (ra : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St)
+/-- Represented successful primitive result, independent of the caller-owned frame. -/
+structure CcallResult (ra : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St)
     (pl : Place) (cp : ChanPlace) (sp high : Nat)
-    (domain frameSp result env : BitVec 64) (c : Config) : Prop
-    extends Ccall1Saved s pl sp domain frameSp env c where
+    (result : BitVec 64) (c : Config) : Prop where
   data : VmPayload P s c pl cp sp high
   primitives : PrimitiveBindings P c
   platform : PlatformOk L.runtimeOk c
@@ -59,11 +57,38 @@ structure CcallReturn (ra : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St)
   resultReg : gpr c 10 = some result
   resultRepr : valWord pl s.accu = some result
 
+/-- Fixed-arity return combines the represented result and the saved frame. -/
+structure CcallReturn (ra : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St)
+    (pl : Place) (cp : ChanPlace) (sp high : Nat)
+    (domain frameSp result env : BitVec 64) (c : Config) : Prop
+    extends Ccall1Saved s pl sp domain frameSp env c,
+      CcallResult ra L P s pl cp sp high result c
+
 /-- Retain the unary return interface while sharing its saved-frame contract. -/
 abbrev Ccall1Return (L : OCaml.Layout) (P : Prog) (s : St)
     (pl : Place) (cp : ChanPlace) (sp high : Nat)
     (domain frameSp result env : BitVec 64) :=
   CcallReturn (0x80003060#64) L P s pl cp sp high domain frameSp result env
+
+/-- Consume a1-prims' represented postcondition without reproving a primitive.
+The caller chooses the next bytecode PC; return restoration consumes stack arguments. -/
+theorem ccall_primitive_result {L : OCaml.Layout} {P : Prog} {s : St}
+    {pl : Place} {cp : ChanPlace} {sp high : Nat} {name : String} {v : Val}
+    {result : BitVec 64} {heap : Heap} {world : World}
+    {ra : BitVec 64} {args : List Val} {writes : List Nat} {memory : Std.ExtHashMap Nat (BitVec 8)} {before after : Config}
+    (pc : Nat)
+    (post : PrimitivePost L.runtimeOk P s pl cp sp high name args
+      v result heap world writes memory before ra after) :
+    CcallResult ra L P {s with pc := pc, accu := v, heap := heap, world := world}
+      pl cp sp high result after :=
+  { data := payload_pc post.data pc
+    primitives := post.primitives
+    platform := post.platform
+    loop := post.loop
+    tick := post.call.tick
+    returnPC := post.call.pc
+    resultReg := post.call.result
+    resultRepr := post.resultRepr }
 
 /-- Consume a1-prims' represented postcondition without reproving a primitive.
 The caller chooses the next bytecode PC; return restoration consumes stack arguments. -/
@@ -77,14 +102,7 @@ theorem ccall_primitive_return {L : OCaml.Layout} {P : Prog} {s : St}
     CcallReturn ra L P {s with pc := pc, accu := v, heap := heap, world := world}
       pl cp sp high domain frameSp result env after :=
   { toCcall1Saved := { saved with pc := saved.pc }
-    data := payload_pc post.data pc
-    primitives := post.primitives
-    platform := post.platform
-    loop := post.loop
-    tick := post.call.tick
-    returnPC := post.call.pc
-    resultReg := post.call.result
-    resultRepr := post.resultRepr }
+    toCcallResult := ccall_primitive_result pc post }
 
 /-- Consume a1-prims' represented postcondition without reproving a primitive.
 C_CALL1 advances two code words and leaves its argument stack unchanged. -/
@@ -140,6 +158,20 @@ theorem ccall_return_sp {frameSp : BitVec 64} {sp : Nat}
 
 /-- Shared restoration for every fixed-arity primitive return. Preserve the
 returned accumulator as a root, then discard only consumed stack arguments. -/
+theorem ccall_result_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
+    {cp : ChanPlace} {sp high count : Nat} {ra result : BitVec 64}
+    {c after : Config} (stable : MemoryStable L.runtimeOk)
+    (h : CcallResult ra L P s pl cp sp high result c)
+    (bound : count ≤ s.stack.length)
+    (regs : VmRegisters {s with stack := s.stack.drop count} pl (sp + 8 * count) after)
+    (loop : LoopRegisters after) (good : GoodState after.σ)
+    (memory : after.σ.mem = c.σ.mem) (output : after.σ.sailOutput = c.σ.sailOutput) :
+    Running L P {s with stack := s.stack.drop count} after :=
+  readOnly_restore stable (payload_stack_drop h.data bound) h.primitives h.platform
+    regs loop good memory output
+
+/-- Shared restoration for every fixed-arity primitive return. Preserve the
+returned accumulator as a root, then discard only consumed stack arguments. -/
 theorem ccall_return_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     {cp : ChanPlace} {sp high count : Nat} {ra domain frameSp result env : BitVec 64}
     {c after : Config} (stable : MemoryStable L.runtimeOk)
@@ -149,7 +181,6 @@ theorem ccall_return_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     (loop : LoopRegisters after) (good : GoodState after.σ)
     (memory : after.σ.mem = c.σ.mem) (output : after.σ.sailOutput = c.σ.sailOutput) :
     Running L P {s with stack := s.stack.drop count} after :=
-  readOnly_restore stable (payload_stack_drop h.data bound) h.primitives h.platform
-    regs loop good memory output
+  ccall_result_restore stable h.toCcallResult bound regs loop good memory output
 
 end OCaml.Vm.Sim

@@ -1,5 +1,27 @@
 # Lane a1-arms
 
+## C_CALLN represented return
+
+`CcallResult` now holds the represented primitive result separately from
+caller-owned frames. `ccall_primitive_result` consumes a1-prims' postcondition;
+`ccall_result_restore` performs the shared payload/root/platform restoration.
+The fixed-arity contracts and theorem interfaces are retained.
+
+`CcallnSaved` names the native saved-PC slot, ABI-preserved argument count,
+native stack pointer, VM saved environment/extern_sp and read geometry.
+`CcallnSaved.frame` preserves these across read-only callees;
+`c_calln_primitive_return` and `c_calln_readOnly_summary` adapt represented
+primitive summaries. `c_calln_return` runs the generated eight-instruction
+suffix and restores Running with count-minus-one stack values dropped,
+under positive-count and stack-length bounds. Its Triple adapter supports
+the forthcoming callSeg composition. The capped/default-limit targeted
+build passes in 1.1 seconds, and all new headlines are audited.
+
+The C_CALLN machine boundary landed as `0eb285d`, full gate passing after
+adopting callback semantics and primitive allocation work. Coverage remains
+101 conditional complete opcode bridges. Next: the five-store represented
+setup and stack-array ABI input, then named callee composition.
+
 ## C_CALLN machine boundary
 
 `tr_c_calln_prefix` runs the 21-instruction stack-array setup through JALR;
@@ -1163,8 +1185,8 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 
 ## Open / next
 
-Continue with represented C_CALLN stack-array setup/return and named callee
-composition; its machine prefix/suffix are now generated and checked. Then
+Continue with represented C_CALLN stack-array setup and named callee
+composition; its machine prefix/suffix and represented return are checked. Then
 continue the remaining arm families. C_CALL1–C_CALL5 have generated machine boundaries, represented
 setup/return bridges and named callee composition. There are 101 conditional
 represented opcode bridges (fixed-arity calls cover returning `.ok` primitives),
