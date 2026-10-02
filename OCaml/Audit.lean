@@ -1167,6 +1167,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.offsetint_loaded
 #print axioms OCaml.Vm.Sim.offsetintOperand_large
 #print axioms OCaml.Vm.Sim.offsetint_width_obstruction
+#print axioms OCaml.Vm.Sim.offsetintOperand_eq
+#print axioms OCaml.Vm.Sim.tag_offsetint
+#print axioms OCaml.Vm.Sim.offsetintOperand_model
+#print axioms OCaml.Vm.Sim.offsetint_arm
+#print axioms OCaml.Vm.Sim.offsetint_step_arm
 #print axioms OCaml.Vm.Sim.tag_sub
 #print axioms OCaml.Vm.Sim.tag_not
 #print axioms Vsa.Sim.tr_boolnot

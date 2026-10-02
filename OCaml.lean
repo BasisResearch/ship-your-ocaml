@@ -197,6 +197,7 @@ import OCaml.Vm.Sim.Offsetclosure
 import OCaml.Vm.Sim.Envacc
 import OCaml.Vm.Sim.Getfield
 import OCaml.Vm.Sim.OffsetWidth
+import OCaml.Vm.Sim.Offsetint
 import OCaml.Vm.Sim.Envacc1
 import OCaml.Vm.Sim.Envacc2
 import OCaml.Vm.Sim.Envacc3

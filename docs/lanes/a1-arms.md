@@ -1,5 +1,23 @@
 # Lane a1-arms
 
+## OFFSETINT with corrected operand width
+
+`offsetintOperand_eq` proves the generated LW/SLLIW operand contribution is
+exactly the sign-extended 32-bit shifted word. `tag_offsetint` reuses
+`tag_untag_odd` and the operand's low bit to recover the exact native tagged
+result. `offsetint_arm` and `offsetint_step_arm` now simulate the corrected
+semantics through the generated body and shared immediate restoration;
+no narrow-operand restriction is needed. `offsetint_width_obstruction`
+remains as a regression witness against the previous 64-bit-shift model.
+
+The targeted capped/default-limit build passes (about 1 second for the arm),
+and all new headlines are audited. C_CALLN setup/composition landed as
+`bad2825`, full gate passing after rebases onto shared GC comparison facts,
+argv caller effects and mopup queue work. There are now **103 conditional
+represented opcode bridges**; entry/halt and full invariant adapters remain
+open. Next: remaining arithmetic and memory-update families, starting with
+MULINT's generated call boundaries and the landed libgcc summary.
+
 ## Returning C_CALLN arm
 
 `c_calln_setup` establishes the stack-array ABI from the generated 21-step
@@ -1214,10 +1232,11 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 
 ## Open / next
 
-Continue with OFFSETINT against the corrected 32-bit operand semantics,
-then remaining arithmetic, heap mutation/allocation and control families.
+Continue with remaining arithmetic, heap mutation/allocation and control
+families: MULINT via generated call boundaries and the landed libgcc summary
+is next; OFFSETREF can reuse the proved operand-width arithmetic.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 102 conditional
+setup/return bridges and named callee composition. There are 103 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
