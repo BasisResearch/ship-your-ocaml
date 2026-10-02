@@ -5,7 +5,8 @@
 Round 2 active (2026-10-02): rebased onto the fixed `.embed` image migration.
 Working in brief order: OFFSET widths, initialized bytes, eleven compiler
 primitive boundaries, callbacks/uncaught exceptions, concrete HTIF relation.
-The Round 2 compiler differential exit is not yet met.
+The compiler differential now passes with explicit GC observations;
+full integration and the remaining F4/F5 interfaces are still pending.
 
 OFFSETINT/OFFSETREF now shift operands in 32 bits before sign extension,
 matching the pinned runtime. `scripts/difftest_offsets.py` passes 16
@@ -15,6 +16,33 @@ passed for the OFFSET commit; its push raced with other lanes, so the
 rebased correction is pending integration alongside the bytes change. The original width probe passes
 with `--expect-model 2`. Symbolic and CountLoop builds pass. The executed
 ledger was regenerated after migration (no drift).
+
+## Round 2 compiler milestone (pending integration)
+
+`results/bc-compiler.json`: boot/ocamlc now finishes in 1,650,759 BcSem
+steps, exit 0. Output, hello.cmo and hello.cmi are identical to host
+ocamlrun. The 86 executed primitive names match the original census.
+`primitiveOpen` is empty; `executed_primitives_implemented` checks coverage.
+
+Collector observations are explicit: the validation wrapper records 16
+quick_stat results and verifies that instrumentation leaves host output and
+artifacts unchanged. `runbc --fs ... --gc-stats ... -- ...` consumes them.
+No counters are invented from the abstract heap. `GcSnapshotAt` and
+`GcObservationInput` name the remaining concrete collector correspondence;
+the host capture does not prove that premise for the pinned machine.
+
+The eleven compiler primitives are transcribed: dummy blocks, stack
+capacity, quick_stat, Marshal channels, MD5, lexer position memory, Unix
+random-seed acquisition, and directory enumeration. The compiler also
+required structured hashing beyond the prior integer-only domain.
+
+Focused evidence: `results/bc-compiler-data.json` covers exact marshalled
+digests, sharing/cycles, boxed values, MD5 boundaries, and hash queue limits;
+`results/bc-lexer.json` covers submatch captures and channel refills.
+All ten regression programs pass (`results/bc-round2-primitives.json`),
+including the 8,274,724-step allocation test. F4 callbacks/uncaught handling and the F5
+concrete memory/entry relation are the next work; their machine function
+proofs remain owned by a1-prims.
 
 ## Round 1 evidence
 
@@ -81,8 +109,8 @@ concrete HTIF entry/memory relation.
 The integer formatter uses character-list parsing; the existing `whileMin_runTo` and `whileMin_bcSem`
 kernel proofs pass again (125 seconds under the 24 GiB build cap).
 F4 currently supports caught exceptions and disabled raw-backtrace state;
-re-entrant callbacks and uncaught-exception handling remain open. The eleven
-compiler primitive boundaries in `primitiveOpen` are ledgered, not implemented.
+re-entrant callbacks and uncaught-exception handling remain open. The compiler primitive boundaries are now implemented on their recorded
+domains; quick_stat requires explicit collector observations.
 The concrete HTIF entry classification, memory relation and generated machine
 function proofs are open; trace validation does not discharge them.
 

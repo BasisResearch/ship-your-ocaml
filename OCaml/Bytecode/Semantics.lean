@@ -1,3 +1,8 @@
+import OCaml.Bytecode.GcSnapshot
+import OCaml.Bytecode.Lexing
+import OCaml.Bytecode.Md5
+import OCaml.Bytecode.MarshalIn
+import OCaml.Bytecode.MarshalOut
 import OCaml.Bytecode.Syntax
 import OCaml.Bytecode.Data
 import OCaml.Bytecode.FloatOps
@@ -12,8 +17,9 @@ selected C primitives. `Fragment.lean` records implemented argument domains
 and open compiler boundaries; a listed primitive need not support every
 possible argument. Core execution includes data, objects, caught exceptions,
 formatting and buffered file/environment/time operations through `osCall`.
-Re-entrant callbacks, marshalling, lexer/digest helpers and collector
-statistics remain explicit boundaries. Machine-arm simulation is separate
+Marshalling, lexing and digests are implemented. Collector statistics
+consume explicit runtime observations; their machine correspondence is
+GcObservationInput. Re-entrant callbacks remain an explicit boundary. Machine-arm simulation is separate
 from this executable semantics and its host differential validation.
 
 Faithfulness conventions:
@@ -27,9 +33,10 @@ Faithfulness conventions:
 * Integer operations are computed on the TAGGED 64-bit word exactly as the
   C does (`tag64`/`untag`), so wrapping and shift amounts (`sll`/`srl`/`sra`
   use the low 6 bits on RV64) are the binary's.
-* The heap is abstract (`Value.lean`): no collection is ever observable in
-  `BcSem`. The machine's collections are the representation predicate's
-  business (`OCaml/Vm/Repr.lean`).
+* Heap locations are abstract and never move (`Value.lean`); machine
+  collection changes their representation (`OCaml/Vm/Repr.lean`).
+  `caml_gc_quick_stat` observes explicit collector snapshots, independently
+  of these abstract locations.
 * A state for which the binary's behaviour depends on something `BcSem`
   abstracts away (an ordered comparison of pointers, a field read from an
   integer) steps to `.wrong`. Bytecode produced by `ocamlc` from well-typed
@@ -59,6 +66,8 @@ structure Prog where
   argv : Val
   /-- The files embedded in the image (`src/gen_embed.sh`), `/prog` included. -/
   files0 : List (String × List UInt8)
+  /-- Concrete collector observations, supplied explicitly by the environment. -/
+  gcSnapshots : List GcSnapshot := []
 
 /-- A channel (`struct channel`, `runtime/caml/io.h`): its fd, whether it is
 an output channel (`max == NULL`), and the pending bytes of its buffer. -/
@@ -87,6 +96,7 @@ structure World where
   argv : Val
   /-- Files, descriptors, streams, environment, clock and exit state. -/
   os : TCB.Os.OsState
+  gcSnapshots : List GcSnapshot := []
   deriving DecidableEq, Repr
 
 /-- HTIF console interleaving, observed from the OS state. -/
@@ -109,7 +119,7 @@ structure St where
 /-- `caml_interprete`'s initial registers for the main program:
 `accu = Val_int(0)`, `env = Atom(0)`, `extra_args = 0`, empty stack. -/
 def Prog.init (P : Prog) : St :=
-  ⟨0, .int 0, [], .atom 0, 0, 0, P.heap0, ⟨[], [], 0, P.exeName, P.argv, osInitial P.files0⟩⟩
+  ⟨0, .int 0, [], .atom 0, 0, 0, P.heap0, ⟨[], [], 0, P.exeName, P.argv, osInitial P.files0, P.gcSnapshots⟩⟩
 
 /-- Result of one step. -/
 inductive Res where
@@ -429,9 +439,9 @@ def primF2 (globals : Val) (name : String) (args : List Val) (h : Heap) (w : Wor
     match parseInteger bs with
     | .some n => .ok n h w
     | .none => primException globals h w 2 "int_of_string"
-  | "caml_hash", [.int count, .int _, .int seed, .int v] =>
-    let hsh := if count.toInt > 0 then hashIntnat (seed.setWidth 32) (tag64 v) else seed.setWidth 32
-    .ok (Val.ofInt (hashFinish hsh).toNat) h w
+  | "caml_hash", [.int count, .int limit, .int seed, v] =>
+    some (hashData h count.toInt limit.toInt (seed.setWidth 32) v) fun hash =>
+    .ok (Val.ofInt hash.toNat) h w
   | "caml_string_of_bytes", [v] | "caml_bytes_of_string", [v] => .ok v h w
   | "caml_create_bytes", [.int n] =>
     if n.toInt < 0 ∨ n.toNat > (2^54 - 1)*8 - 1 then primException globals h w 3 "Bytes.create"
@@ -748,7 +758,148 @@ def primOs (P : Prog) (name : String) (args : List Val) (h : Heap) (w : World) :
       | _ => .unsupported
   | _, _ => .unsupported
 
-/-- Fragment dispatcher. An unsupported argument domain remains explicit. -/
+/-- Read an exact byte count through the channel's read-ahead buffer. -/
+def readExact (w : World) (id n : Nat) : Option (TCB.Os.Ret × World) :=
+  let rec go : Nat → World → Nat → List UInt8 → Option (TCB.Os.Ret × World)
+    | 0, _, _, _ => none
+    | fuel + 1, w, left, acc => do
+      if left = 0 then some (.bytes acc.reverse, w) else do
+      let (r, w) ← readChan w id left
+      match r with
+      | .bytes [] => some (.none, w)
+      | .bytes bs => go fuel w (left - bs.length) (bs.reverse ++ acc)
+      | _ => some (r, w)
+  go (n + 1) w n []
+
+/-- Read a whole channel or a specified count for md5.c. -/
+def digestChannel (w : World) (id : Nat) (n : Int) : Option (TCB.Os.Ret × World) :=
+  if n ≥ 0 then readExact w id n.toNat else
+  let available := w.os.fs.files.foldl (fun a (_, b) => a + b.length) 0 +
+    w.chans.foldl (fun a c => a + c.inBuf.length) 0 + 1
+  let rec go : Nat → World → List UInt8 → Option (TCB.Os.Ret × World)
+    | 0, _, _ => none
+    | fuel + 1, w, acc => do
+      let (r, w) ← readChan w id 4096
+      match r with
+      | .bytes [] => some (.bytes acc.reverse, w)
+      | .bytes bs => go fuel w (bs.reverse ++ acc)
+      | _ => some (r, w)
+  go available w []
+
+/-- Directory enumeration through the specified OS calls, omitting dot
+entries as caml_read_directory does. -/
+def readDirectory (w : World) (path : String) :
+    Option (Except TCB.Os.Errno (List (List UInt8)) × World) := do
+  let (r, os) ← osCall w.os (.opendir path)
+  let w := { w with os := os }
+  match r with
+  | .err e => some (.error e, w)
+  | .num id =>
+    let fuel := w.os.fs.dirs.foldl (fun n (_, d) => n + d.entries.length + 2) 1
+    let rec go : Nat → World → List (List UInt8) →
+        Option (Except TCB.Os.Errno (List (List UInt8)) × World)
+      | 0, _, _ => none
+      | fuel + 1, w, acc => do
+        let (r, os) ← osCall w.os (.readdir id.toNat)
+        let w := { w with os := os }
+        match r with
+        | .bytes b => go fuel w (if b = [46] ∨ b = [46, 46] then acc else b :: acc)
+        | .none | .err _ =>
+          let (_, os) ← osCall w.os (.closedir id.toNat)
+          some ((match r with | .err e => .error e | _ => .ok acc.reverse), { w with os := os })
+        | _ => none
+    go fuel w []
+  | _ => none
+
+/-- Unix random seed acquisition. The fallback uses HTIF's clock and
+single-process getpid/getppid values, not a fabricated entropy source. -/
+def randomSeed (w : World) : Option (List Val × World) := do
+  let (r, os) ← osCall w.os (.open "/dev/urandom" { access := .rdonly })
+  let (data, os) ← match r with
+    | .num fd => do
+      let (r, os) ← osCall os (.read fd.toNat 12)
+      let (_, os) ← osCall os (.close fd.toNat)
+      some ((match r with | .bytes b => b.reverse.map (fun x => Val.ofInt x.toNat) | _ => []), os)
+    | .err _ => some ([], os)
+    | _ => none
+  if data.length ≥ 12 then some (data, { w with os := os }) else do
+  let (r, os) ← osCall os .clock
+  match r with
+  | .num micros => some ((data ++ [Val.ofInt (micros % 1000000),
+      Val.ofInt (micros / 1000000), Val.ofInt 1, Val.ofInt 0]).take 16, { w with os := os })
+  | _ => none
+
+/-- Compiler data primitives, transcribed from alloc.c, stacks.c,
+lexing.c, md5.c, intern.c, extern.c and sys.c. -/
+def primCompiler (P : Prog) (name : String) (args : List Val) (h : Heap) (w : World) : PRes :=
+  let some := fun {α} (o : Option α) (k : α → PRes) => o.elim .unsupported k
+  let eof := fun h w => some (field? h P.globals 4) fun e => .raise e h w
+  match name, args with
+  | "caml_gc_quick_stat", [.int 0] => match w.gcSnapshots with
+    | snapshot :: rest =>
+      if !snapshot.valid then .unsupported else
+      let (v, h) := snapshot.allocate h
+      .ok v h { w with gcSnapshots := rest }
+    | [] => .unsupported
+  | "caml_alloc_dummy", [.int n] =>
+    if n.toInt < 0 then .unsupported else if n = 0 then .ok (.atom 0) h w
+    else primAlloc h w (.block 0 (List.replicate n.toNat .unit))
+  | "caml_update_dummy", [.ptr dst 0, .ptr src 0] =>
+    some (h.get? dst) fun old => some (h.get? src) fun obj =>
+    if old.wosize ≠ obj.wosize then .unsupported else
+    match obj with
+    | .block t _ => if t < noScanTag then .ok .unit (h.set dst obj) w else .unsupported
+    | .doubleArray _ => .ok .unit (h.set dst obj) w
+    | _ => .unsupported
+  | "caml_ensure_stack_capacity", [.int n] =>
+    if n.toInt < 0 then .unsupported else .ok .unit h w
+  | "caml_new_lex_engine", [tbl, .int start, buf] =>
+    some (newLexEngine h tbl start.toInt buf) fun (action, h) =>
+    match action with
+    | .some n => .ok (Val.ofInt n) h w
+    | .none => primException P.globals h w 2 "lexing: empty token"
+  | "caml_md5_string", [s, .int off, .int len] =>
+    if off.toInt < 0 ∨ len.toInt < 0 then .unsupported else
+    some (byteSlice? h s off.toNat len.toNat) fun bs => primAlloc h w (.bytes (md5 bs))
+  | "caml_md5_chan", [ch, .int len] =>
+    some (chanOf? h ch) fun id => some (digestChannel w id len.toInt) fun (r, w) =>
+    match r with
+    | .bytes b => primAlloc h w (.bytes (md5 b))
+    | .none => eof h w
+    | .err e => sysError P h w e
+    | _ => .unsupported
+  | "caml_input_value", [ch] =>
+    some (chanOf? h ch) fun id => some (readExact w id 20) fun (r, w) =>
+    match r with
+    | .none => eof h w
+    | .err e => sysError P h w e
+    | .bytes header =>
+      let number := fun bs => (bs : List UInt8).foldl (fun n b => 256 * n + b.toNat) 0
+      if number (header.take 4) ≠ 0x8495a6be then primException P.globals h w 2 "input_value: bad object" else
+      let len := number ((header.drop 4).take 4)
+      some (readExact w id len) fun (r, w) =>
+      match r with
+      | .bytes data => some (unmarshal ⟨(header ++ data).toArray⟩ h) fun (v, h) => .ok v h w
+      | .none => primException P.globals h w 2 "input_value: truncated object"
+      | .err e => sysError P h w e
+      | _ => .unsupported
+    | _ => .unsupported
+  | "caml_output_value", [ch, v, .int 0] =>
+    some (chanOf? h ch) fun id => some (marshal h v) fun bs =>
+    some (putBlock w id bs (bs.length + 1)) fun w => .ok .unit h w
+  | "caml_sys_read_directory", [path] =>
+    some (strOf? h path) fun path => some (readDirectory w (String.ofList (path.map (fun b => Char.ofNat b.toNat)))) fun (r, w) =>
+    match r with
+    | .error e => sysError P h w e
+    | .ok names =>
+      let (h, vals) := names.foldl (fun (h, vals) b =>
+        let (h, l) := h.alloc (.bytes b); (h, Val.ptr l 0 :: vals)) (h, [])
+      if vals.isEmpty then .ok (.atom 0) h w else primAlloc h w (.block 0 vals.reverse)
+  | "caml_sys_random_seed", [.int 0] =>
+    some (randomSeed w) fun (data, w) => primAlloc h w (.block 0 data)
+  | _, _ => .unsupported
+
+/-- Fragment dispatcher. Unsupported argument domains remain explicit. -/
 def prim (P : Prog) (name : String) (args : List Val) (h : Heap) (w : World) : PRes :=
   if name ∈ primsF1 then primF1 name args h w
   else if name ∈ primsF2 then primF2 P.globals name args h w
@@ -758,7 +909,9 @@ def prim (P : Prog) (name : String) (args : List Val) (h : Heap) (w : World) : P
   else if name = "caml_backtrace_status" && args == [.unit] then .ok (Val.ofBool false) h w
   else match primBoxed name args h w with
     | .unsupported => match primFloat name args h w with
-      | .unsupported => primOs P name args h w
+      | .unsupported => match primCompiler P name args h w with
+        | .unsupported => primOs P name args h w
+        | r => r
       | r => r
     | r => r
 

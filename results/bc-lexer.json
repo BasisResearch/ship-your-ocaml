@@ -1,0 +1,9 @@
+[
+  {
+    "test": "lexer",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 138960 prims 403 heap0 568"
+  }
+]

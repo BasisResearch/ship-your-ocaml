@@ -96,14 +96,28 @@ theorem primF1_unsupported (name : String) (h : name ∉ primsF1) (args : List V
 
 /-- An entry records executable-domain coverage or an explicit open boundary.
 Implemented domains may reject malformed/unsupported arguments; this is not
-an arm-simulation theorem or a claim that the compiler runs under BcSem. -/
+an arm-simulation theorem. The compiler differential is separate evidence. -/
 inductive PrimitiveCoverage where
   | domain | openBoundary (reason : String)
   deriving DecidableEq, Repr
 
 /-- Primitive names with executable cases, including partial domains such as
-integer-only hash and ordinary-block comparison. -/
+address-independent hashing and ordinary-block comparison. GC statistics
+consume explicit GcSnapshot observations; machine correspondence is
+GcObservationInput, not supplied by differential validation. -/
 def primitiveDomains : List String := [
+  "caml_alloc_dummy",
+  "caml_update_dummy",
+  "caml_ensure_stack_capacity",
+  "caml_gc_quick_stat",
+  "caml_input_value",
+  "caml_output_value",
+  "caml_md5_chan",
+  "caml_md5_string",
+  "caml_new_lex_engine",
+  "caml_sys_random_seed",
+  "caml_sys_read_directory",
+
   "caml_abs_float",
   "caml_add_float",
   "caml_array_append",
@@ -244,18 +258,7 @@ def primitiveDomains : List String := [
   "caml_sys_time_include_children"]
 
 /-- Remaining measured compiler primitive boundaries and their owners. -/
-def primitiveOpen : List (String × String) := [
-  ("caml_alloc_dummy", "F2 recursive module initialization"),
-  ("caml_update_dummy", "F2 recursive module initialization"),
-  ("caml_ensure_stack_capacity", "runtime stack capacity"),
-  ("caml_gc_quick_stat", "collector statistics are not represented in the abstract heap"),
-  ("caml_input_value", "F5 unmarshalling from a channel"),
-  ("caml_output_value", "F5 marshalling to a channel"),
-  ("caml_md5_chan", "F5 channel digest"),
-  ("caml_md5_string", "F2 string digest"),
-  ("caml_new_lex_engine", "F2 lexer engine"),
-  ("caml_sys_random_seed", "F5 entropy source"),
-  ("caml_sys_read_directory", "F5 directory streams")]
+def primitiveOpen : List (String × String) := []
 
 def primitiveLedger : List (String × PrimitiveCoverage) :=
   primitiveDomains.map (fun n => (n, .domain)) ++
@@ -271,5 +274,9 @@ theorem executed_opcodes_ledgered :
 
 theorem executed_primitives_ledgered :
     ∀ n ∈ ocamlcExecutedPrimitives, n ∈ primitiveLedger.map (·.1) := by decide
+
+/-- Every primitive in the measured compiler run has an executable domain. -/
+theorem executed_primitives_implemented :
+    ∀ n ∈ ocamlcExecutedPrimitives, n ∈ primitiveDomains := by decide
 
 end OCaml.Bytecode

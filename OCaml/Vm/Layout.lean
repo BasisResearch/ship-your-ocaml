@@ -124,6 +124,10 @@ def sym_caml_int_compare : Nat := 0x800108d4
 def sym_caml_fresh_oo_id : Nat := 0x80020d3c
 /-- `caml_sys_exit` -/
 def sym_caml_sys_exit : Nat := 0x8001c7ac
+/-- `caml_allocated_words` -/
+def sym_caml_allocated_words : Nat := 0x80064ab8
+/-- `caml_stack_usage_hook` -/
+def sym_caml_stack_usage_hook : Nat := 0x80064968
 /-- `main_argv` -/
 def sym_main_argv : Nat := 0x80064c10
 /-- `caml_exe_name` -/
@@ -192,6 +196,16 @@ def off_backtrace_active : Nat := 232
 def off_requested_major_slice : Nat := 272
 def off_requested_minor_gc : Nat := 280
 def off_local_roots : Nat := 288
+def off_stat_minor_words : Nat := 296
+def off_stat_promoted_words : Nat := 304
+def off_stat_major_words : Nat := 312
+def off_stat_minor_collections : Nat := 320
+def off_stat_major_collections : Nat := 328
+def off_stat_heap_wsz : Nat := 336
+def off_stat_top_heap_wsz : Nat := 344
+def off_stat_compactions : Nat := 352
+def off_stat_forced_major_collections : Nat := 360
+def off_stat_heap_chunks : Nat := 368
 
 /-! Collector structure offsets and constants, measured by the RV64 compiler
 from runtime/freelist.c. -/

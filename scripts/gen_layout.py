@@ -102,6 +102,7 @@ def main():
             "__heap_end", "__stack_top", "caml_prim_table", "_start",
             "__bss_start", "__bss_end", "__global_pointer$", "environ"]
     need += primitive_names()
+    need += ["caml_allocated_words", "caml_stack_usage_hook"]
     need += ["main_argv", "caml_exe_name", "oo_last_id", "caml_copy_double"]
     need += ["bf_small_fl", "bf_small_map", "bf_large_tree", "bf_large_least",
              "caml_fl_cur_wsz"]
@@ -214,7 +215,11 @@ def main():
     for f in ["young_limit", "young_ptr", "young_start", "young_end", "young_alloc_start",
               "young_alloc_end", "stack_low", "stack_high", "stack_threshold", "extern_sp",
               "trapsp", "external_raise", "exn_bucket", "backtrace_active",
-              "requested_major_slice", "requested_minor_gc", "local_roots"]:
+              "requested_major_slice", "requested_minor_gc", "local_roots",
+              "stat_minor_words", "stat_promoted_words", "stat_major_words",
+              "stat_minor_collections", "stat_major_collections", "stat_heap_wsz",
+              "stat_top_heap_wsz", "stat_compactions", "stat_forced_major_collections",
+              "stat_heap_chunks"]:
         w(f"def off_{f} : Nat := {off[f]}\n")
     w("\n/-! Collector structure offsets and constants, measured by the RV64 compiler\n"
       "from runtime/freelist.c. -/\n")

@@ -1,5 +1,6 @@
 import OCaml.Vm.Primitives.StringCopyReadback
 import OCaml.Vm.Primitives.StringCopyFast
+import OCaml.Vm.GcObservation
 import OCaml.Vm.Primitives.StringConstructorLayout
 import OCaml.Vm.Primitives.StringAllocationLayout
 import OCaml.Vm.Primitives.LibraryEffects
@@ -1416,3 +1417,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.StringCopy.copy_string_allocated
 #print axioms OCaml.Vm.Primitives.StringCopy.caller_readback
 #print axioms OCaml.Vm.Reloc.bytePayload_copyIn
+
+#print axioms OCaml.Bytecode.executed_primitives_implemented

@@ -1,0 +1,16 @@
+[
+  {
+    "test": "hash_data",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 19972 prims 403 heap0 569"
+  },
+  {
+    "test": "compiler_prims",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 11258 prims 403 heap0 613"
+  }
+]

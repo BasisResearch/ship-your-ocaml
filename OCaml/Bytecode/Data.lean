@@ -146,6 +146,71 @@ def hashFinish (h : BitVec 32) : BitVec 32 :=
 def hashIntnat (h : BitVec 32) (v : BitVec 64) : BitVec 32 :=
   hashMix h ((v.sshiftRight 32 ^^^ v.sshiftRight 63 ^^^ v).setWidth 32)
 
+/-- String mixing from hash.c, including the final length xor. -/
+def hashString (seed : BitVec 32) (bs : List UInt8) : BitVec 32 :=
+  let blocks := (List.range ((bs.length + 3) / 4)).foldl (fun h i =>
+    let bytes := (bs.drop (4 * i)).take 4
+    let word := bytes.reverse.foldl (fun n b => 256 * n + b.toNat) 0
+    hashMix h (BitVec.ofNat 32 word)) seed
+  blocks ^^^ BitVec.ofNat 32 bs.length
+
+def hashDouble (seed : BitVec 32) (d : BitVec 64) : BitVec 32 :=
+  let hi := (d >>> 32).setWidth 32
+  let lo := d.setWidth 32
+  let (hi, lo) := if hi &&& 0x7ff00000 = 0x7ff00000 ∧ (lo ||| (hi &&& 0xfffff)) ≠ 0 then
+      (0x7ff00000, 1)
+    else if hi = 0x80000000 ∧ lo = 0 then (0, lo) else (hi, lo)
+  hashMix (hashMix seed lo) hi
+
+/-- Forward links are bounded exactly as hash.c's MAX_FORWARD_DEREFERENCE. -/
+private def hashForward (h : Heap) : Nat → Val → Option Val
+  | 0, _ => none
+  | fuel + 1, v => match v with
+    | .ptr l 0 => match h.get? l with
+      | some (.block 250 (x :: _)) => hashForward h fuel x
+      | _ => some v
+    | _ => some v
+
+/-- Bounded breadth-first structural hash. Code pointers/closures remain
+outside the address-independent domain; ordinary blocks may contain cycles. -/
+def hashData (h : Heap) (count limit : Int) (seed : BitVec 32) (value : Val) : Option (BitVec 32) :=
+  let capacity := if limit < 0 ∨ limit > 256 then 256 else limit.toNat
+  let rec go : Nat → Nat → BitVec 32 → List Val → Nat → Option (BitVec 32)
+    | 0, _, _, _, _ => none
+    | fuel + 1, num, acc, queue, written => do
+      if num = 0 then some (hashFinish acc) else
+      match queue with
+      | [] => some (hashFinish acc)
+      | v :: queue =>
+        match hashForward h 1001 v with
+        | none => go fuel num acc queue written
+        | some v =>
+          let again := fun acc => go fuel (num - 1) acc queue written
+          let block := fun tag (fields : List Val) =>
+            let added := fields.take (capacity - written)
+            go fuel num (hashMix acc (BitVec.ofNat 32 (fields.length * 1024 + tag)))
+              (queue ++ added) (written + added.length)
+          match v with
+          | .int n => again (hashIntnat acc ((n.signExtend 64 <<< 1) ||| 1))
+          | .atom t => block t []
+          | .ptr l 0 => match ← h.get? l with
+            | .bytes b => again (hashString acc b)
+            | .partialBytes b => do let b ← b.mapM id; again (hashString acc b)
+            | .double d => again (hashDouble acc d)
+            | .doubleArray ds =>
+              let used := ds.take num
+              go fuel (num - used.length) (used.foldl hashDouble acc) queue written
+            | .int32 n => again (hashMix acc n)
+            | .int64 n => again (hashMix acc ((n ^^^ (n >>> 32)).setWidth 32))
+            | .nativeint n => again (hashIntnat acc n)
+            | .channel _ => none
+            | .block 251 _ => go fuel num acc queue written
+            | .block 248 (_ :: .int oid :: _) =>
+              again (hashIntnat acc ((oid.signExtend 64 <<< 1) ||| 1))
+            | .block t fs => if t ≥ 247 then none else block t fs
+          | _ => none
+  go 258 count.toNat seed [value] 1
+
 /-- IEEE binary64 payload as a nonnegative rational, before decimal printf.
 `none` denotes infinity or NaN. -/
 def doubleRatio (d : BitVec 64) : Option (Nat × Nat) :=

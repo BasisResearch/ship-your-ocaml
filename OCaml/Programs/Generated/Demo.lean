@@ -15,7 +15,7 @@ def jumpStopHeap : List Obj := [
 table is left empty: F1 programs do not read files. -/
 def jumpStop : Prog :=
   ⟨(jumpStopCode.map (BitVec.ofNat 32)).toArray, jumpStopPrims, ⟨jumpStopHeap⟩, (.int 0#63),
-   [47, 112, 114, 111, 103], (.ptr 1 0), []⟩
+   [47, 112, 114, 111, 103], (.ptr 1 0), [], []⟩
 
 def captureCode : List Nat := [43, 1, 3, 69, 143, 143]
 
@@ -29,7 +29,7 @@ def captureHeap : List Obj := [
 table is left empty: F1 programs do not read files. -/
 def capture : Prog :=
   ⟨(captureCode.map (BitVec.ofNat 32)).toArray, capturePrims, ⟨captureHeap⟩, (.int 0#63),
-   [47, 112, 114, 111, 103], (.ptr 1 0), []⟩
+   [47, 112, 114, 111, 103], (.ptr 1 0), [], []⟩
 
 
 def branchBlock : CertifiedBlock :=

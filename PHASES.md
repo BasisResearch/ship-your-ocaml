@@ -45,7 +45,7 @@ ELF pin).
 | `_svfprintf_r` function spec for this ELF | `VsaIris/Vsa/SnpFmt.lean` | A0 | **proved**: `svfprintf_nw` at `0x8004789c`, entry-to-return for literal text, `%s`, and `%d`; initialized string FILE, ASCII locale, bounded stack arguments/output, truncated bytes and full rendered-length return; 47 generated modules, pinned and audited, a5 drift check |
 | decode for every disassembled instruction word (via syi’s `decodeW`) | `Vsa/Sim/ElfDecode/`, `scripts/gen_elf_decode.py` | A0 | **proved**: 29,473 words, 231 chunks; covers all reachable words; a5 drift check |
 | `HtifFsImplements` (the in-image file system meets the OS spec) | `OCaml/Os.lean` | F5 | reduced by `htifFsImplements_of_functions` to `HtifEntries` + `HtifFunctionObligations` (termination/partial correctness); premises open. Native trace evidence: 6,410 accepted, 80 special, zero rejected (`results/htif-fs.json`) |
-| `BcSem` world over `TCB.Os.OsState` (file/time/env primitives through `OsStep`) | `OCaml/Bytecode/Semantics.lean` | F5 | open |
+| `BcSem` world over `TCB.Os.OsState` (file/time/env primitives through `OsStep`) | `OCaml/Bytecode/Semantics.lean` | F5 | **implemented and differential-tested**; includes directory streams, channel Marshal and MD5; selected calls inherit `osCall_sound` |
 | Linux instantiation: `ecall` as an external step constrained by `OsStep` | `Vsa.Machine` extension | E | open |
 | `Layout.runtimeOk` concrete instance | `OCaml/Vm/Runtime.lean` | A0 | **defined**: `runtimeLayout freeList`, with ordinary nonempty-nursery bounds |
 | `Loaded` at real entry states (boot witnesses, small programs) | `OCaml/Vm/Boot/` | A0 | **proved for the complete captured while_min cut**: `WhileMin.loaded_fillZero`, no premises; full native-state comparison; kernel reset-to-cut execution remains open |
@@ -228,7 +228,7 @@ measured name. The measurement is host evidence, not a BcSem compiler run.
 
 | Semantics slice | Current status / remaining boundary |
 |---|---|
-| F2 data | Ten opcode arms; data/format/float/boxed-integer subsets. Bytes carry initialization state: observations require initialized cells and relocation constrains only known payload bytes. Primitive domains and eleven remaining compiler boundaries are explicit in `Fragment.lean`; universal primitive refinement remains open. |
+| F2 data | Ten opcode arms; data/format/float/boxed-integer subsets. Bytes carry initialization state: observations require initialized cells and relocation constrains only known payload bytes. All 86 measured compiler primitives have executable domains; `primitiveOpen = []`. Compiler differential matches both `.cmo`/`.cmi` bytes and output, with 16 explicit host GC snapshots. `GcObservationInput` is the remaining machine observation premise; universal primitive refinement remains open. |
 | F3 objects | Object/method semantics validated; `CodeWordOk` relaxes only linearly decoded GETPUBMET cache slots. Cache hit/miss simulation and method-table invariants remain open. |
 | F4 callbacks | Caught exceptions and disabled-backtrace primitives validated. Re-entrant callbacks, uncaught exceptions, signals and finalisers remain open; the nine-test exit does not certify them. |
 | F5 files | World uses `TCB.Os.OsState`; buffered file/env/time primitives use `osCall_sound`. HTIF reduced to named typed function premises with trace evidence; concrete FS memory relation and ELF function proofs remain open. |
@@ -352,3 +352,9 @@ work; passing executable difftests does not discharge Layer A.
 
 * `EndToEndMachine`: `boot/ocamlc` itself runs under Layer A (F1–F5 + GC)
   on the machine and writes `/out/a.out` into the in-memory file system.
+
+Collector observations: `OCaml/Vm/GcObservation.lean` defines `GcSnapshotAt`
+and `GcObservationInput` at the C entry using generated Layout symbols and
+Caml_state offsets. The compiler differential supplies 16 observations from
+a host linker wrapper and checks unchanged host artifacts. This does not
+discharge their correspondence to the pinned ELF's collector.

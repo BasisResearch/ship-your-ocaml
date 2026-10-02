@@ -41,7 +41,7 @@ def wordProbeHeap : List Obj := [
 table is left empty: F1 programs do not read files. -/
 def wordProbe : Prog :=
   ⟨(wordProbeCode.map (BitVec.ofNat 32)).toArray, wordProbePrims, ⟨wordProbeHeap⟩, (.ptr 0 0),
-   [47, 112, 114, 111, 103], (.ptr 26 0), []⟩
+   [47, 112, 114, 111, 103], (.ptr 26 0), [], []⟩
 
 
 def swappedProbeCode : List Nat := [99, 93, 370, 93, 372, 9, 58, 19, 1, 57, 12, 143]
@@ -81,7 +81,7 @@ def swappedProbeHeap : List Obj := [
 table is left empty: F1 programs do not read files. -/
 def swappedProbe : Prog :=
   ⟨(swappedProbeCode.map (BitVec.ofNat 32)).toArray, swappedProbePrims, ⟨swappedProbeHeap⟩, (.ptr 0 0),
-   [47, 112, 114, 111, 103], (.ptr 26 0), []⟩
+   [47, 112, 114, 111, 103], (.ptr 26 0), [], []⟩
 
 
 end OCaml.Vm.Sim.PrimitiveBinding

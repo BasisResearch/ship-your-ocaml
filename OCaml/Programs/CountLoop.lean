@@ -22,7 +22,7 @@ def enc (is : List (Opcode × List Int)) : Code :=
 def loopN (N : Nat) : Prog :=
   ⟨enc [(.ACC0, []), (.BLEINT, [(N : Int), 8]), (.ACC0, []), (.OFFSETINT, [1]), (.ASSIGN, [0]),
         (.BRANCH, [-10]), (.ACC0, []), (.STOP, [])],
-   #[], ⟨#[]⟩, .atom 0, [], .atom 0, []⟩
+   #[], ⟨#[]⟩, .atom 0, [], .atom 0, [], []⟩
 
 /-- A code operand read back (`Code.arg` of `BitVec.ofInt 32 N`). -/
 theorem arg_natCast (N : Nat) (hN : N < 2^31) : (BitVec.ofInt 32 (N : Int)).toInt = N := by

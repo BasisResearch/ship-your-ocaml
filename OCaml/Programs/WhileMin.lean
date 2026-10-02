@@ -45,6 +45,7 @@ def whileMinHeap : List Obj := [
 table is left empty: F1 programs do not read files. -/
 def whileMin : Prog :=
   ⟨(whileMinCode.map (BitVec.ofNat 32)).toArray, whileMinPrims, ⟨whileMinHeap⟩, (.ptr 0 0),
-   [47, 112, 114, 111, 103], (.ptr 28 0), []⟩
+   [47, 112, 114, 111, 103], (.ptr 28 0), [], []⟩
+
 
 end OCaml.Programs

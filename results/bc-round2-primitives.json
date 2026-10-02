@@ -1,0 +1,72 @@
+[
+  {
+    "test": "f1_arith",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 4128 prims 403 heap0 103"
+  },
+  {
+    "test": "f1_named",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 791 prims 403 heap0 86"
+  },
+  {
+    "test": "f1_while",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 2602 prims 403 heap0 67"
+  },
+  {
+    "test": "f2_closures",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 118120 prims 403 heap0 108"
+  },
+  {
+    "test": "f3_data",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 3140 prims 403 heap0 126"
+  },
+  {
+    "test": "f4_exn",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 2893 prims 403 heap0 650"
+  },
+  {
+    "test": "f5_strings",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 4813 prims 403 heap0 515"
+  },
+  {
+    "test": "f6_alloc",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 8274724 prims 403 heap0 224"
+  },
+  {
+    "test": "f7_float",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 4903 prims 403 heap0 523"
+  },
+  {
+    "test": "f8_objects",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 3887 prims 403 heap0 157"
+  }
+]
