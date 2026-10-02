@@ -1,0 +1,32 @@
+[
+  {
+    "module": "MopupEntry",
+    "entry": "0x80009cb4",
+    "instructions": 19,
+    "blocks": 1,
+    "branches": 0,
+    "exits": [
+      "0x80009d00"
+    ]
+  },
+  {
+    "module": "MopupDeferred",
+    "entry": "0x80009d00",
+    "instructions": 41,
+    "blocks": 15,
+    "branches": 10,
+    "exits": [
+      "0x80009d90"
+    ]
+  },
+  {
+    "module": "MopupEphemerons",
+    "entry": "0x80009d90",
+    "instructions": 89,
+    "blocks": 26,
+    "branches": 19,
+    "exits": [
+      "0x80009d00"
+    ]
+  }
+]

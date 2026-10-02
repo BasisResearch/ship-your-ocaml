@@ -32,6 +32,7 @@ def decodeM (w : BitVec 32) : Option (MKind × Nat × Nat × Nat × BitVec 12) :
        else if funct7 = 0x20 then some (.sub, rd, rs1, rs2, 0#12)
        else none)
      else if funct3 = 2 then some (.slt, rd, rs1, rs2, 0#12)
+     else if funct3 = 3 then (if funct7 = 0 then some (.slt true, rd, rs1, rs2, 0#12) else none)
      else if funct3 = 6 then (if funct7 = 0x00 then some (.or, rd, rs1, rs2, 0#12) else none)
      else if funct3 = 7 then (if funct7 = 0x00 then some (.and, rd, rs1, rs2, 0#12) else none)
      else if funct3 = 5 then (if funct7 = 0x00 then some (.srl, rd, rs1, rs2, 0#12) else none)

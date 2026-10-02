@@ -1536,3 +1536,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ArgvTuple.allocate_call_decode
 #print axioms OCaml.Vm.Primitives.ArgvTuple.finish_summary
 
+
+#print axioms Vsa.Sim.execute_compare_char

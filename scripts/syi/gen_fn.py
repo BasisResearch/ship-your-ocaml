@@ -44,6 +44,10 @@ recognised and folded with the `loopFromBody` invariant template.  Any OTHER
 back-edge emits a NAMED invariant-hole hypothesis with a doc comment (graceful
 degradation, not failure).
 
+Region mode (--region-exits) retains both branch arms and stops graph traversal
+at named control boundaries. It does not supply loop invariants or compose the
+regions: those remain explicit obligations. Each region obeys the SAME budgets.
+
 Hard budgets (enforced here, fail loudly):
   * emitted source ≤ 40 + 18·blocks + 1·instrs + 12·joins lines — expanded
     terms live in the kernel only, never in source;
@@ -134,7 +138,7 @@ def _branch_target(ins):
     return None
 
 
-def build_cfg(fn, entry, di, extents, route=None):
+def build_cfg(fn, entry, di, extents, route=None, region_exits=None):
     """Extract the function body and partition into classified basic blocks.
 
     `route` (dict pc -> 'T'|'F'|'TF') is the RESOLVED-PATH mode for functions
@@ -143,7 +147,9 @@ def build_cfg(fn, entry, di, extents, route=None):
     'F' only the fall twin, 'TF' both — an unrolled two-visit head).  Budgets
     are then enforced on the PRUNED subgraph."""
     start, end = extents[fn]
-    if entry != start:
+    if region_exits is not None and route is not None:
+        raise SystemExit("--region-exits and --route are mutually exclusive")
+    if entry != start and region_exits is None:
         raise SystemExit(f"--entry 0x{entry:x} != disasm start of {fn} "
                          f"(0x{start:x})")
     body = []
@@ -151,7 +157,7 @@ def build_cfg(fn, entry, di, extents, route=None):
     while a in di and (end is None or a < end):
         body.append(di[a])
         a += 4
-    if route is None:
+    if route is None and region_exits is None:
         if len(body) > MAX_INSTRS:
             raise SystemExit(
                 f"{fn}: {len(body)} instrs > {MAX_INSTRS} — refuse without a "
@@ -167,6 +173,12 @@ def build_cfg(fn, entry, di, extents, route=None):
     # leaders: entry + in-fn branch/jump targets + successor of any terminator
     # + the instruction AFTER a tohost-store or jal seam (block resumption).
     leaders = {start}
+    if region_exits is not None:
+        if entry not in inside or any(pc not in inside for pc in region_exits):
+            raise SystemExit("--region-exits: entry and cuts must be instruction addresses in the function")
+        if entry in region_exits:
+            raise SystemExit("--region-exits: entry cannot also be an exit")
+        leaders.update([entry, *region_exits])
     for i in body:
         if i.is_branch or i.mnem == "j":
             t = _branch_target(i)
@@ -233,6 +245,25 @@ def build_cfg(fn, entry, di, extents, route=None):
             if s in blocks and s <= b.term_addr:
                 blocks[s].is_loop_head = True
                 blocks[s].back_edge_from = b.start
+    if region_exits is not None:
+        # Keep both branch successors; cut only at explicit control boundaries.
+        # Edges leaving a region remain unchanged in the generated segments.
+        cuts, keep, work = set(region_exits), set(), [entry]
+        while work:
+            pc = work.pop()
+            if pc in cuts or pc in keep or pc not in blocks:
+                continue
+            keep.add(pc)
+            work.extend(blocks[pc].succs)
+        selected = [blocks[pc] for pc in sorted(keep)]
+        ni = sum(len(b.instrs) + (1 if b.term else 0) for b in selected)
+        nbr = sum(b.kind == "br" for b in selected)
+        if ni > MAX_INSTRS or nbr > MAX_BRANCHES:
+            raise SystemExit(f"--region-exits: {ni} instrs/{nbr} branches exceed "
+                             f"{MAX_INSTRS}/{MAX_BRANCHES}; add a control boundary")
+        covered = {i.addr for b in selected for i in b.instrs}
+        covered.update(b.term.addr for b in selected if b.term)
+        return [i for i in body if i.addr in covered], selected
     if route is not None:
         # resolved-path pruning: walk from the entry under the polarity pins
         for pc in route:
@@ -411,14 +442,14 @@ def synth_arm(fn, b, pol=None):
     return a
 
 
-def emit_fn(fn, entry, out_path, verify=True, route=None, disasm_path=None, decode_index=None):
+def emit_fn(fn, entry, out_path, verify=True, route=None, disasm_path=None, decode_index=None, region_exits=None):
     di = lib.parse_disasm(disasm_path) if disasm_path else lib.parse_disasm()
     idx = lib.DecodeIndex(decode_index) if decode_index else lib.DecodeIndex()
     extents = function_extents(disasm_path)
     if fn not in extents:
         raise SystemExit(f"function {fn!r} not in disasm")
-    body, blocks = build_cfg(fn, entry, di, extents, route=route)
-    loop = classify_loop(blocks) if route is None else None
+    body, blocks = build_cfg(fn, entry, di, extents, route=route, region_exits=region_exits)
+    loop = classify_loop(blocks) if route is None and region_exits is None else None
 
     E = lib.Emitter()
     E(f"import Vsa.Sim.DeriveCaseRow")
@@ -428,6 +459,8 @@ def emit_fn(fn, entry, out_path, verify=True, route=None, disasm_path=None, deco
     E(f"/-!")
     E(f"# `{fn}` — GENERATED whole-function summary blocks (scripts/gen_fn.py)")
     E(f"")
+    if region_exits is not None:
+        E("Region exits: " + ", ".join(hex(pc) for pc in sorted(region_exits)) + ".")
     E(f"{len(body)} instrs, {len(blocks)} blocks"
       + (", counted byte-store loop recognised" if loop else "") + ".")
     E(f"GENERATED by `scripts/gen_fn.py --fn {fn} --entry 0x{entry:x}`."
@@ -1005,7 +1038,7 @@ def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False, 
               f'  simp [{fn}_blocks, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM,',
               '    mkLine, decodeM, wvalM, srcVal, lookupG, eraseG, stepLdsM, shamtOf,',
               '    LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend,',
-              '    Sail.BitVec.extractLsb, Sail.shift_bits_left, compareWord, signedBit]', '')
+              '    Sail.BitVec.extractLsb, Sail.shift_bits_left, compareWord, signedBit, compareValue]', '')
             emit_ocaml_register_return(E, fn, '(c : Config) (ra x y : BitVec 64) (h : LeafInput ra c)',
                 ['    (hx : gprGet c.σ 10 = some x) (hy : gprGet c.σ 11 = some y)'],
                 '[10, 15]', 'compareWord x y',
@@ -1104,6 +1137,7 @@ def main():
     p.add_argument("--pin", action="append", default=[])
     p.add_argument("--disasm", help="explicit ELF disassembly input")
     p.add_argument("--decode-index", help="word-to-decoder index for this ELF")
+    p.add_argument("--region-exits", help="comma-separated control boundaries; retain both branch arms, enforce budgets per region")
     p.add_argument("--route", default=None,
                    help="resolved-path mode: comma list of PC:T|F|TF branch "
                         "polarity pins, e.g. 0x80006230:F,0x8000625c:TF — "
@@ -1129,10 +1163,11 @@ def main():
             if pol not in ("T", "F", "TF"):
                 raise SystemExit(f"--route: bad polarity {pol!r} (T|F|TF)")
             route[lib.hexint(pc)] = pol
+    region_exits = None if args.region_exits is None else [lib.hexint(pc) for pc in args.region_exits.split(",") if pc]
     if args.cfg_only:
         di = lib.parse_disasm(args.disasm) if args.disasm else lib.parse_disasm()
-        body, blocks = build_cfg(args.fn, entry, di, function_extents(args.disasm), route=route)
-        loop = classify_loop(blocks) if route is None else None
+        body, blocks = build_cfg(args.fn, entry, di, function_extents(args.disasm), route=route, region_exits=region_exits)
+        loop = classify_loop(blocks) if route is None and region_exits is None else None
         for b in blocks:
             print(b)
         if loop:
@@ -1144,7 +1179,7 @@ def main():
     out = args.out or os.path.join(
         ROOT, "Vsa", "Sim", "rows", f"Fn{base[0].upper()}{base[1:]}.lean")
     blocks, loop = emit_fn(args.fn, entry, out, verify=not args.no_verify,
-                           route=route, disasm_path=args.disasm, decode_index=args.decode_index)
+                           route=route, disasm_path=args.disasm, decode_index=args.decode_index, region_exits=region_exits)
     if args.fold:
         if not loop:
             raise SystemExit(

@@ -59,6 +59,26 @@ its actual oldify/mopup machine run and post-representation remain open.
 - CollectionPoint includes APPLY/APPTERM and POPTRAP, whose interp.c paths
   enter pending-action processing as well as explicit CHECK_SIGNALS.
 
+## Mopup regions and unsigned comparison
+
+- `gen_fn.py --region-exits` preserves both branch arms and cuts only at
+  explicit control boundaries. Limits remain 150 instructions/20 branches
+  per region; region extraction supplies neither loop invariants nor calls.
+- `gen_gc_rows.py` partitions all 149 mopup instructions without overlap or
+  gaps: Entry 19 instructions/0 branches, Deferred 41/10, Ephemerons 89/19.
+  `results/gc-mopup-regions.json` records the boundaries and counts. Every
+  region, code pin and row is generated and included in the audit.
+- The first ephemeron-row check exposed unsupported SLTU in the reflected
+  decoder. `CompareAlu.execute_compare_char` factors the existing signed and
+  unsigned Sail equations; the existing MKind.slt constructor now takes an
+  unsigned flag defaulting to false. BlockMem/BlockTerm reuse the same
+  comparison proof and retain their existing budgets. Modified copied files
+  were removed from the discipline grandfather list; discipline passes.
+- The capped generated-audit build now passes with all mopup regions.
+  Deferred-list and ephemeron invariants, oldify call splicing, and the
+  complete CollectionEffect are still open. The next composition step is
+  the deferred-work body and its intrusive queue/partial-relocation invariant.
+
 ## Status
 
 G2 remains open. `Fits` still measures total allocated words; no claim that
@@ -227,8 +247,8 @@ full integration gate.
   Every generated postcondition is a named-field structure, retaining
   computed registers, tick bound and instruction-counter existence. Calls stop at
   their call sites; these are segment proofs, not whole-function summaries.
-- The generated audit enumerates all 387 row, segment and code-pin
-  declarations. The capped build of `OCaml.Vm.Gc.Generated.Audit` passes,
+- The generated audit enumerates 695 row, segment, composed-route and
+  code-pin declarations, including the new mopup regions. The capped build of `OCaml.Vm.Gc.Generated.Audit` passes,
   and a separate capped Lean audit exits 0 with exactly those declarations
   and only the three permitted standard axioms.
 - Reproduce the bundle with `python3 scripts/gen_gc_rows.py` and check

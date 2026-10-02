@@ -380,7 +380,7 @@ theorem domRun_keys_bt : ∀ (is : List MInstr) (L : GRegs)
     | srli => exact dom_cons_erase h
     | srai => exact dom_cons_erase h
     | slti => exact dom_cons_erase h
-    | slt => exact dom_cons_erase h
+    | slt unsigned => exact dom_cons_erase h
     | subw => exact dom_cons_erase h
     | addw => exact dom_cons_erase h
     | auipc => exact dom_cons_erase h
@@ -466,8 +466,8 @@ theorem keysOK_runGM_bt : ∀ (is : List MInstr) (pc0 : BitVec 64) (dom : List N
     | slti =>
       obtain ⟨⟨hrd1, hrd31⟩, _⟩ := (hkok : KindOK dom .slti ard ars1 ars2)
       exact ih _ _ _ _ hwfr (keysOK_cons_erase hrd1 hrd31 L hkeys)
-    | slt =>
-      obtain ⟨⟨hrd1, hrd31⟩, _⟩ := (hkok : KindOK dom .slt ard ars1 ars2)
+    | slt unsigned =>
+      obtain ⟨⟨hrd1, hrd31⟩, _⟩ := (hkok : KindOK dom (.slt unsigned) ard ars1 ars2)
       exact ih _ _ _ _ hwfr (keysOK_cons_erase hrd1 hrd31 L hkeys)
     | subw =>
       obtain ⟨⟨hrd1, hrd31⟩, _⟩ := (hkok : KindOK dom .subw ard ars1 ars2)
@@ -556,7 +556,7 @@ theorem writeLog_wlog_low_bt (mc : Std.ExtHashMap Nat (BitVec 8)) :
     | srli => exact ih m _ _ hfr j hj
     | srai => exact ih m _ _ hfr j hj
     | slti => exact ih m _ _ hfr j hj
-    | slt => exact ih m _ _ hfr j hj
+    | slt unsigned => exact ih m _ _ hfr j hj
     | subw => exact ih m _ _ hfr j hj
     | addw => exact ih m _ _ hfr j hj
     | auipc => exact ih m _ _ hfr j hj

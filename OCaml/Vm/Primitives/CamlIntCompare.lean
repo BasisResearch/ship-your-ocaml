@@ -152,7 +152,7 @@ theorem caml_int_compare_regs (ra x y : BitVec 64) :
   simp [caml_int_compare_blocks, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM,
     mkLine, decodeM, wvalM, srcVal, lookupG, eraseG, stepLdsM, shamtOf,
     LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend,
-    Sail.BitVec.extractLsb, Sail.shift_bits_left, compareWord, signedBit]
+    Sail.BitVec.extractLsb, Sail.shift_bits_left, compareWord, signedBit, compareValue]
 
 theorem caml_int_compare_summary (c : Config) (ra x y : BitVec 64) (h : LeafInput ra c)
     (hx : gprGet c.σ 10 = some x) (hy : gprGet c.σ 11 = some y) :

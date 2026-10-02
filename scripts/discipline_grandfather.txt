@@ -3,7 +3,6 @@
 # as legacy proofs are re-seated on the layer.
 Vsa/Sim/AddTailSites.lean
 Vsa/Sim/BinHeadSites.lean
-Vsa/Sim/BlockMem.lean
 Vsa/Sim/CmpTailSites.lean
 Vsa/Sim/CmpTailSitesGen.lean
 Vsa/Sim/DecodePilot.lean
@@ -600,7 +599,6 @@ Vsa/Sim/rows/ExecRetNullGlue.lean
 Vsa/Sim/BinopChainGen.lean
 Vsa/Sim/BlockLogic.lean
 Vsa/Sim/BlockPilot.lean
-Vsa/Sim/BlockTerm.lean
 Vsa/Sim/BlockTermDemo.lean
 Vsa/Sim/Code/ArmPins.lean
 Vsa/Sim/Code/Env_define.lean
