@@ -99,7 +99,8 @@ def main():
             "caml_start_code", "caml_code_size", "caml_int64_ops", "caml_int32_ops",
             "caml_nativeint_ops", "channel_operations", "caml_all_opened_channels",
             "embedded_files", "embedded_argv", "embedded_env", "__embed_start",
-            "__heap_end", "__stack_top", "caml_prim_table"]
+            "__heap_end", "__stack_top", "caml_prim_table", "_start",
+            "__bss_start", "__bss_end", "__global_pointer$", "environ"]
     need += primitive_names()
     need += ["main_argv", "caml_exe_name", "oo_last_id", "caml_copy_double"]
     need += ["bf_small_fl", "bf_small_map", "bf_large_tree", "bf_large_least",
@@ -197,7 +198,7 @@ def main():
       "`runtime/caml/domain_state.tbl` (`Caml_state` field offsets). Do not edit.\n-/\n\n"
       "namespace OCaml.Vm.Layout\n\n")
     for n in need:
-        w(f"/-- `{n}` -/\ndef sym_{n.lstrip('_')} : Nat := 0x{sym[n]:x}\n")
+        w(f"/-- `{n}` -/\ndef sym_{n.lstrip('_').replace('$', '')} : Nat := 0x{sym[n]:x}\n")
     w(f"\n/-- `caml_interprete`'s dispatch loop head (fetch of the opcode word). -/\n"
       f"def loopHead : Nat := 0x{head:x}\n")
     w(f"/-- The switch jump table (`int32` offsets from its own base). -/\n"

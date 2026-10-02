@@ -1,6 +1,37 @@
 # Lane a0-boot
 
-## Status
+## Round 2 status (2026-10-02)
+
+The reset-to-cut execution proof is now the active exit criterion. Round 1
+proved only `Loaded` for the complete captured cut; the native run is not
+a substitute for a kernel execution theorem.
+
+Checked startup progress (default proof budgets):
+
+* `Startup.crt0_to_main` in `OCaml/Vm/Boot/Startup/ToMain.lean` proves
+  execution from `_start` through the BSS loop and call to `main`, given
+  the platform and code pins. Its post supplies `main`'s stack/link pins,
+  global pointer, exact cleared memory, zero arguments and console frame.
+* `Startup.clear_loop` uses `loopFromBody` with an indexed invariant and
+  one generated guard/store/back-edge iteration. Its region and memory
+  inputs are arbitrary, so it is reusable across embedded programs.
+* `Startup.main_prefix` executes the actual two header loads, stack save
+  and environment store. The generated `call_80001dec` supplies the call
+  into `caml_main`; its caller/callee seam remains to be assembled.
+* `gen_startup_rows.py` reuses `gen_fn.py`, `gen_sites.py` and the existing
+  code-pin emitter. The call adapter retains named memory/register/output
+  frames. Generator output is drift-checked; summaries are audited.
+* BSS bounds, `_start`, global pointer and `environ` are extracted by the
+  Layout generator. No data-address premise is a hand-written literal.
+
+Reset still must supply the initial platform/code facts. Remaining startup functions include `caml_main`, GC
+initialization, file/code loading, primitive lookup, unmarshalling,
+oldify/mopup and argv initialization. The first CFG inspection finds that
+`caml_main` (482 instructions), `caml_init_gc` (160) and primitive-table
+construction (160) exceed gen_fn's current whole-function budget. Their
+summaries must compose smaller blocks/callees; the budget is unchanged.
+
+## Round 1 status
 
 Migration landed atomically as `7fa1750`, including the foreman's
 `elf-fix` (`11989b1`) and all regenerated artifacts. Program files, argv and environment now live behind the fixed

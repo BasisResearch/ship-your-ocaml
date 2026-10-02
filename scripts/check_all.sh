@@ -93,6 +93,7 @@ python3 scripts/gen_boot_entry.py --check || fail "stage a5: boot entry certific
 python3 scripts/gen_boot_image.py --check || fail "stage a5: boot image drift"
 python3 scripts/gen_boot_dump.py --check || fail "stage a5: boot capture utility drift"
 python3 scripts/gen_boot_registers.py --check || fail "stage a5: boot register/snapshot drift"
+python3 scripts/gen_startup_rows.py --check || fail "stage a5: startup row/call drift"
 python3 scripts/gen_boot_primitives.py --check || fail "stage a5: boot primitive binding drift"
 python3 scripts/gen_elf_decode.py --check || fail "stage a5: ELF decode table drift"
 python3 scripts/gen_library_pins.py --check || fail "stage a5: A0 library code pin drift"

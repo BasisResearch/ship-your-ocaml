@@ -204,3 +204,4 @@ import OCaml.Vm.Primitives.StringAllocationLayout
 import OCaml.Vm.Primitives.StringConstructorLayout
 
 import OCaml.Vm.Primitives.StringCopyFast
+import OCaml.Vm.Boot.Startup.ToMain

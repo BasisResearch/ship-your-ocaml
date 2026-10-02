@@ -54,6 +54,16 @@ def sym_heap_end : Nat := 0x86800000
 def sym_stack_top : Nat := 0x88000000
 /-- `caml_prim_table` -/
 def sym_caml_prim_table : Nat := 0x8006c0b8
+/-- `_start` -/
+def sym_start : Nat := 0x80000000
+/-- `__bss_start` -/
+def sym_bss_start : Nat := 0x80064910
+/-- `__bss_end` -/
+def sym_bss_end : Nat := 0x8007d138
+/-- `__global_pointer$` -/
+def sym_global_pointer : Nat := 0x800627d0
+/-- `environ` -/
+def sym_environ : Nat := 0x800648e0
 /-- `caml_register_named_value` -/
 def sym_caml_register_named_value : Nat := 0x800213d0
 /-- `caml_ml_open_descriptor_out` -/

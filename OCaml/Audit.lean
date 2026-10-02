@@ -2,6 +2,7 @@ import OCaml.Vm.Primitives.StringCopyFast
 import OCaml.Vm.Primitives.StringConstructorLayout
 import OCaml.Vm.Primitives.StringAllocationLayout
 import OCaml.Vm.Primitives.LibraryEffects
+import OCaml.Vm.Boot.Startup.ToMain
 import OCaml.Vm.Primitives.LibraryMemcpy
 import OCaml.Vm.Primitives.StringReadback
 import OCaml.Vm.Primitives.SmallAllocation
@@ -1363,3 +1364,33 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.StringCopy.size_fast
 #print axioms OCaml.Vm.Primitives.StringCopy.arguments_fast
 #print axioms OCaml.Vm.Primitives.StringCopy.restore_fast
+-- Startup summaries: generated blocks/calls and counted BSS loop.
+#print axioms OCaml.Vm.Boot.Startup.setup_input
+#print axioms OCaml.Vm.Boot.Startup.setup_summary
+#print axioms OCaml.Vm.Boot.Startup.clear_input
+#print axioms OCaml.Vm.Boot.Startup.clear_summary
+#print axioms OCaml.Vm.Boot.Startup.clear_log
+#print axioms OCaml.Vm.Boot.Startup.clear_regs
+#print axioms OCaml.Vm.Boot.Startup.clear_body
+#print axioms OCaml.Vm.Boot.Startup.guard_input
+#print axioms OCaml.Vm.Boot.Startup.guard_summary
+#print axioms OCaml.Vm.Boot.Startup.ClearRegion.cursor_nat
+#print axioms OCaml.Vm.Boot.Startup.ClearRegion.window
+#print axioms OCaml.Vm.Boot.Startup.ClearAt.index
+#print axioms OCaml.Vm.Boot.Startup.clearWords_below
+#print axioms OCaml.Vm.Boot.Startup.clear_iteration
+#print axioms OCaml.Vm.Boot.Startup.clear_loop
+#print axioms OCaml.Vm.Boot.Startup.bss_region
+#print axioms OCaml.Vm.Boot.Startup.bss_end
+#print axioms OCaml.Vm.Boot.Startup.setup_clear
+#print axioms OCaml.Vm.Boot.Startup.args_input
+#print axioms OCaml.Vm.Boot.Startup.crt0_to_call
+#print axioms OCaml.Vm.Boot.Startup.crt0_to_main
+#print axioms OCaml.Vm.Boot.Startup.CallPost.of_obs
+#print axioms OCaml.Vm.Boot.Startup.call_80000038
+#print axioms OCaml.Vm.Boot.Startup.call_80001dec
+#print axioms OCaml.Vm.Boot.Startup.call_80001df4
+#print axioms OCaml.Vm.Boot.Startup.main_input_bytes
+#print axioms OCaml.Vm.Boot.Startup.main_prefix
+#print axioms Vsa.Sim.Code._start_transport
+#print axioms Vsa.Sim.Code.main_transport
