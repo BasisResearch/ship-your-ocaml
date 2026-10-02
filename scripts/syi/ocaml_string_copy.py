@@ -1,6 +1,6 @@
 """Generated call boundaries for the native C-string constructor."""
 from ocaml_certificates import emit_loaded
-from ocaml_block_certificates import emit_block
+from ocaml_block_certificates import emit_block, emit_call
 
 
 def emit_string_copy(root, functions, decode, code, text_base, lib, build_cfg, literal):
@@ -42,17 +42,7 @@ def emit_string_copy(root, functions, decode, code, text_base, lib, build_cfg, l
           '    Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?]', '')
         if b.kind != 'jal':
             continue
-        pc, word = b.term.addr, b.term.word
-        call = name + '_call'
-        E(f'def {call} : CallInstr := ⟨' + ', '.join([
-            f'0x{pc:08x}#64', f'0x{word:08x}#32'] + lib.le_bytes(word) + [f'0x{lib._jal_imm(word):06x}#21']) + '⟩',
-          f'theorem {call}_shape : CallShape {call} := by constructor <;> decide',
-          f'theorem {call}_decode : CallDecode {call} := by',
-          '  intro s hm hp he', f'  exact Vsa.Sim.ElfDecode.decode_{word:08x} s hm hp he',
-          f'theorem {call}_target : {call}.target = 0x{functions[b.callee]["insts"][0][0]:08x}#64 := by decide',
-          f'theorem {call}_pins {{c : Config}} (h : ExecutableImage c) : CallPins {call} c := by',
-          f'  obtain ⟨h0, h1, h2, h3⟩ := Vsa.Sim.Code.{fn}_at_{pc:08x} (loaded h)',
-          '  exact ⟨h0, h1, h2, h3⟩', '')
+        emit_call(E, fn, b, name, functions, lib)
     E('end OCaml.Vm.Primitives.StringCopy', '')
     result[root / 'OCaml/Vm/Primitives/StringCopy.lean'] = E.text()
     return result

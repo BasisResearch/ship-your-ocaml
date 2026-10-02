@@ -5,7 +5,7 @@
 Executable-name allocation now passes its focused build: 18/30 summaries
 proved, with full copy-string/memcpy execution and represented fresh bytes.
 The complete 2,023-target build and axiom audit pass (standard axioms only);
-integration is in progress. Twelve remain.
+landed at `9ba7eef` after the complete integration gate. Twelve remain.
 
 Started `lane/a1-prims` from origin/main (`bf5d5df`) in the reused a0-lib
 worktree. Read the lane brief, COMMON.md, CLAUDE.md, PLAN.md and PHASES.md;
@@ -468,3 +468,23 @@ exact/observational log APIs. Focused builds pass at default proof budgets.
 Next: allocating configuration/argv and channel primitives, named-value
 registration, output/formatting and process exit. The exit remains 30/30 landed
 and audited; this milestone does not close the lane.
+
+Small-block nursery composition is next, shared by configuration/argv tuple
+allocation. The generated two-block certificates already exist; register
+evaluations and scalar effect adapters are under construction.
+
+
+`SmallAllocation.alloc_small_nursery` (`SmallNursery.lean:45`) now proves
+reservation, header initialization and return for the G1 path. It exposes
+an exact two-store log, preserves the return address, and transports the
+library presence invariant. `blockHeader_ok` and `NurseryPost.header`
+(`SmallLayout.lean:17,26`) connect its initialized header to object layout.
+The two generated blocks share scalar access-plan/effect adapters in
+`SmallFast.lean`; all focused builds pass at default budgets.
+
+The argv-pair caller now has three generated boundary summaries and two
+JAL adapters in `ArgvTuple.lean`. Call-pin emission moved into the shared
+`ocaml_block_certificates.emit_call`; existing string-copy artifacts remain
+byte-for-byte unchanged. Full caller composition and represented two-object
+allocation are still open. No additional primitive is counted (18/30).
+Discipline and a8 pass: C1=0, C2=7, C3=7, C4=3.

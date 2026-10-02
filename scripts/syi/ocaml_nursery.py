@@ -48,6 +48,28 @@ def emit_nursery(root, functions, decode, code, text_base, lib, build_cfg, liter
         emit_loaded(E, fn, ins, pred, text_base)
         for (name, keys), b in zip(selected, blocks):
             emit_block(E, fn, b, name, keys, lib, literal)
+        if namespace == 'SmallAllocation':
+            E('def reserve_regs (R : Nat → BitVec 64) (bd byoung blimit : List (BitVec 8)) : GRegs :=',
+              '  [(14, bytesVal .ld byoung - 8#64 - (R 10 <<< 3)), (6, bytesVal .ld blimit),',
+              '   (12, -8#64 - (R 10 <<< 3)), (16, R 10 <<< 3), (13, bytesVal .ld bd),',
+              '   (17, DoubleAllocation.domainGlobal), (1, R 1), (10, R 10), (11, R 11)]',
+              'theorem reserve_eval (R : Nat → BitVec 64) (bd byoung blimit : List (BitVec 8)) :',
+              '    runGM reserve_body (reserve_input R) [bd, byoung, blimit] = reserve_regs R bd byoung blimit := by',
+              '  simp [reserve_body, reserve_input, reserve_regs, runGM, stepGM, stepLdsM,',
+              '    wvalM, srcVal, lookupG, eraseG, imm20Of, DoubleAllocation.domainGlobal, Layout.sym_Caml_state,',
+              '    LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg,',
+              '    shamtOf, Sail.BitVec.extractLsb, Sail.shift_bits_right, Sail.shift_bits_left]',
+              '  bv_omega', '',
+              'def tagWord (tag : BitVec 64) : BitVec 64 := (tag <<< 32) >>> 32',
+              'def initialize_regs (R : Nat → BitVec 64) (bd byoung : List (BitVec 8)) : GRegs :=',
+              '  [(10, bytesVal .ld byoung + 8#64), (15, bytesVal .ld bd), (16, tagWord (R 11)),',
+              '   (1, R 1), (11, R 11), (14, R 14), (17, R 17)]',
+              'theorem initialize_eval (R : Nat → BitVec 64) (bd byoung : List (BitVec 8)) :',
+              '    runGM initialize_body (initialize_input R) [bd, byoung] = initialize_regs R bd byoung := by',
+              '  simp [initialize_body, initialize_input, initialize_regs, tagWord, runGM, stepGM, stepLdsM,',
+              '    wvalM, srcVal, lookupG, eraseG,',
+              '    LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg,',
+              '    shamtOf, Sail.BitVec.extractLsb, Sail.shift_bits_right, Sail.shift_bits_left]', '')
         if namespace == 'StringAllocation':
             E('def reserve_regs (R : Nat → BitVec 64) (bd byoung blimit : List (BitVec 8)) : GRegs :=',
               '  [(13, bytesVal .ld byoung - 8#64 - R 15), (17, bytesVal .ld blimit),',

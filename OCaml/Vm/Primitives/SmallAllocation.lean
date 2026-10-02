@@ -829,4 +829,27 @@ theorem initialize_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)
     have hc := loaded h.image
     chain_facts hc with "Vsa.Sim.Code.caml_alloc_small_at_"
 
+def reserve_regs (R : Nat → BitVec 64) (bd byoung blimit : List (BitVec 8)) : GRegs :=
+  [(14, bytesVal .ld byoung - 8#64 - (R 10 <<< 3)), (6, bytesVal .ld blimit),
+   (12, -8#64 - (R 10 <<< 3)), (16, R 10 <<< 3), (13, bytesVal .ld bd),
+   (17, DoubleAllocation.domainGlobal), (1, R 1), (10, R 10), (11, R 11)]
+theorem reserve_eval (R : Nat → BitVec 64) (bd byoung blimit : List (BitVec 8)) :
+    runGM reserve_body (reserve_input R) [bd, byoung, blimit] = reserve_regs R bd byoung blimit := by
+  simp [reserve_body, reserve_input, reserve_regs, runGM, stepGM, stepLdsM,
+    wvalM, srcVal, lookupG, eraseG, imm20Of, DoubleAllocation.domainGlobal, Layout.sym_Caml_state,
+    LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg,
+    shamtOf, Sail.BitVec.extractLsb, Sail.shift_bits_right, Sail.shift_bits_left]
+  bv_omega
+
+def tagWord (tag : BitVec 64) : BitVec 64 := (tag <<< 32) >>> 32
+def initialize_regs (R : Nat → BitVec 64) (bd byoung : List (BitVec 8)) : GRegs :=
+  [(10, bytesVal .ld byoung + 8#64), (15, bytesVal .ld bd), (16, tagWord (R 11)),
+   (1, R 1), (11, R 11), (14, R 14), (17, R 17)]
+theorem initialize_eval (R : Nat → BitVec 64) (bd byoung : List (BitVec 8)) :
+    runGM initialize_body (initialize_input R) [bd, byoung] = initialize_regs R bd byoung := by
+  simp [initialize_body, initialize_input, initialize_regs, tagWord, runGM, stepGM, stepLdsM,
+    wvalM, srcVal, lookupG, eraseG,
+    LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg,
+    shamtOf, Sail.BitVec.extractLsb, Sail.shift_bits_right, Sail.shift_bits_left]
+
 end OCaml.Vm.Primitives.SmallAllocation

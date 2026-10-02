@@ -1504,3 +1504,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.executable_name_machine
 #print axioms OCaml.Vm.Primitives.executable_name_contract
 #print axioms OCaml.Vm.Primitives.caml_sys_executable_name_primitive
+
+#print axioms OCaml.Vm.Primitives.SmallAllocation.reserve_fast
+#print axioms OCaml.Vm.Primitives.SmallAllocation.initialize_fast
+#print axioms OCaml.Vm.Primitives.SmallAllocation.alloc_small_nursery
+#print axioms OCaml.Vm.Primitives.SmallAllocation.blockHeader_ok
+#print axioms OCaml.Vm.Primitives.SmallAllocation.NurseryPost.header
+#print axioms OCaml.Vm.Primitives.ArgvTuple.prepare_summary
+#print axioms OCaml.Vm.Primitives.ArgvTuple.prepare_call_decode
+#print axioms OCaml.Vm.Primitives.ArgvTuple.allocate_summary
+#print axioms OCaml.Vm.Primitives.ArgvTuple.allocate_call_decode
+#print axioms OCaml.Vm.Primitives.ArgvTuple.finish_summary

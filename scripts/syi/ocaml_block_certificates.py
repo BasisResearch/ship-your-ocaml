@@ -26,3 +26,17 @@ def emit_block(E, fn, b, name, keys, lib, literal):
       f'  · change KeysOK {keylist}; decide',
       f'  · apply singleton_chain_facts (accessPlan_facts ({name}_code h.image) access) ?_ control',
       *(['    have hc := loaded h.image', f'    chain_facts hc with "Vsa.Sim.Code.{fn}_at_"'] if term else ['    trivial']), '')
+
+
+def emit_call(E, fn, b, name, functions, lib):
+    pc, word = b.term.addr, b.term.word
+    call = name + '_call'
+    E(f'def {call} : CallInstr := ⟨' + ', '.join([
+        f'0x{pc:08x}#64', f'0x{word:08x}#32'] + lib.le_bytes(word) + [f'0x{lib._jal_imm(word):06x}#21']) + '⟩',
+      f'theorem {call}_shape : CallShape {call} := by constructor <;> decide',
+      f'theorem {call}_decode : CallDecode {call} := by',
+      '  intro s hm hp he', f'  exact Vsa.Sim.ElfDecode.decode_{word:08x} s hm hp he',
+      f'theorem {call}_target : {call}.target = 0x{functions[b.callee]["insts"][0][0]:08x}#64 := by decide',
+      f'theorem {call}_pins {{c : Config}} (h : ExecutableImage c) : CallPins {call} c := by',
+      f'  obtain ⟨h0, h1, h2, h3⟩ := Vsa.Sim.Code.{fn}_at_{pc:08x} (loaded h)',
+      '  exact ⟨h0, h1, h2, h3⟩', '')
