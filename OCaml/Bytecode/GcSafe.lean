@@ -5,9 +5,12 @@ stays deterministic; the relations here describe representation changes only. -/
 namespace OCaml.Bytecode
 
 /-- A value-bearing position, including roots and arbitrary heap fields.
+Suspended callback roots and the pending exception are included.
 Code, raw payloads and control metadata are not scanned values. -/
 inductive FwdSlot where
   | accu | env | stack (i : Nat) | field (l i : Nat) | named (i : Nat) | argv
+  | callbackAccu (frame : Nat) | callbackEnv (frame : Nat)
+  | callbackStack (frame slot : Nat) | pendingException
 
 def FwdSlot.read (s : St) : FwdSlot → Option Val
   | .accu => some s.accu
@@ -16,6 +19,10 @@ def FwdSlot.read (s : St) : FwdSlot → Option Val
   | .field l i => field? s.heap (.ptr l 0) i
   | .named i => (s.world.named[i]?).map Prod.snd
   | .argv => some s.world.argv
+  | .callbackAccu f => (s.world.callbacks[f]?).map (·.accu)
+  | .callbackEnv f => (s.world.callbacks[f]?).map (·.env)
+  | .callbackStack f i => (s.world.callbacks[f]?).bind (fun c => c.stack[i]?)
+  | .pendingException => s.world.pendingException
 
 def FwdSlot.write (s : St) (v : Val) : FwdSlot → St
   | .accu => { s with accu := v }
@@ -24,6 +31,13 @@ def FwdSlot.write (s : St) (v : Val) : FwdSlot → St
   | .field l i => { s with heap := (setField? s.heap (.ptr l 0) i v).getD s.heap }
   | .named i => { s with world := { s.world with named := s.world.named.modify i (fun p => (p.1, v)) } }
   | .argv => { s with world := { s.world with argv := v } }
+  | .callbackAccu f => { s with world := { s.world with
+      callbacks := s.world.callbacks.modify f (fun c => { c with accu := v }) } }
+  | .callbackEnv f => { s with world := { s.world with
+      callbacks := s.world.callbacks.modify f (fun c => { c with env := v }) } }
+  | .callbackStack f i => { s with world := { s.world with
+      callbacks := s.world.callbacks.modify f (fun c => { c with stack := c.stack.set i v }) } }
+  | .pendingException => { s with world := { s.world with pendingException := some v } }
 
 /-- minor_gc.c deliberately retains wrappers around Forward, Lazy and (with
 FLAT_FLOAT_ARRAY) Double payloads. In particular a lazy returning another lazy

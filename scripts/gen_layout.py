@@ -49,10 +49,17 @@ def collector_layout():
         "gc_blue": "Caml_blue",
         "value_bytes": "sizeof(value)",
         "header_bytes": "sizeof(header_t)",
+        **{f"off_ref_table_{name}": f"offsetof(struct caml_ref_table, {name})"
+           for name in ("base", "end", "threshold", "ptr", "limit", "size", "reserve")},
+        **{f"off_ephe_ref_table_{name}": f"offsetof(struct caml_ephe_ref_table, {name})"
+           for name in ("base", "end", "threshold", "ptr", "limit", "size", "reserve")},
+        "ephe_ref_elt_size": "sizeof(struct caml_ephe_ref_elt)",
+        "off_ephe_ref_ephe": "offsetof(struct caml_ephe_ref_elt, ephe)",
+        "off_ephe_ref_offset": "offsetof(struct caml_ephe_ref_elt, offset)",
     }
     source = ('#include <stddef.h>\n#include ' +
               json.dumps(str(ROOT / "vendor/ocaml-4.14.4/runtime/freelist.c")) +
-              '\nconst unsigned long boot_offsets[] '
+              '\n#include \"caml/minor_gc.h\"\nconst unsigned long boot_offsets[] '
               '__attribute__((section(".boot_offsets"), used)) = {\n' +
               ',\n'.join(fields.values()) + '\n};\n')
     with tempfile.TemporaryDirectory(prefix="ocaml-layout-") as tmp:
@@ -137,7 +144,7 @@ def main():
              "_unlink", "rename", "opendir", "readdir", "closedir", "_gettimeofday",
              "_times", "files", "fds", "dirs", "fs_ready"]
     need += primitive_names()
-    need += ["caml_allocated_words", "caml_stack_usage_hook"]
+    need += ["caml_allocated_words", "caml_stack_usage_hook", "oldify_todo_list", "caml_ephe_none"]
     need += ["main_argv", "caml_exe_name", "oo_last_id", "caml_copy_double"]
     need += ["bf_small_fl", "bf_small_map", "bf_large_tree", "bf_large_least",
              "caml_fl_cur_wsz"]
@@ -254,7 +261,8 @@ def main():
               "stat_minor_words", "stat_promoted_words", "stat_major_words",
               "stat_minor_collections", "stat_major_collections", "stat_heap_wsz",
               "stat_top_heap_wsz", "stat_compactions", "stat_forced_major_collections",
-              "stat_heap_chunks"]:
+              "stat_heap_chunks", "ref_table", "ephe_ref_table", "custom_table",
+              "in_minor_collection"]:
         w(f"def off_{f} : Nat := {off[f]}\n")
     w("\n/-! Collector structure offsets and constants, measured by the RV64 compiler\n"
       "from runtime/freelist.c. -/\n")

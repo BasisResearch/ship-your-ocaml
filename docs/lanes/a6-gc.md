@@ -1,5 +1,29 @@
 # Lane a6-gc
 
+## Mopup queue entry and pop (2026-10-02)
+
+- `Generated/MopupControl.lean:entry_registers` proves the actual prologue
+  establishes the todo-list, Caml_state and ephemeron-sentinel registers,
+  plus the two loop constants. Every data symbol comes from generated Layout.
+- `Generated/MopupPop.lean:run` composes the nonempty-head path through the
+  first-field branch. `queue_write` and `Post.todo` prove its single store
+  replaces the todo-list head with the next-source pointer loaded from the
+  copied block. Both immediate and pointer first-field branches are checked.
+  The concrete load/branch/platform SegPre and ghost queue preservation remain
+  obligations; this is not yet a whole-loop or collection theorem.
+- `Vsa/Sim/SegmentSummary.lean:segmentSummary` shares the named reflected
+  postcondition and FnSummary adapter for composed generated routes; the
+  existing immediate route now reuses it.
+- Layout's target-compiler measurements now include minor-collector tables,
+  ephemeron element fields, and domain-state collector offsets. The symbol
+  generator supplies the todo list and ephemeron sentinel addresses.
+- Forward edits cover saved callback accu/env/stack slots and the pending
+  exception root introduced on main; these use the same directed-edit law.
+- Targeted capped builds of GcSafe, Layout, LazyForce, Immediate, MopupControl
+  and MopupPop pass. Earlier segment coverage landed as `b638f22` through
+  scripts/integrate.sh. Next: supply the queue invariant and concrete load
+  witnesses, then compose oldify calls. G2 and production Fits remain open.
+
 ## Round 2: GC-safety (2026-10-02)
 
 Kiran chose option (a): a `GcSafe` precondition beside `Good` and `Fits`;

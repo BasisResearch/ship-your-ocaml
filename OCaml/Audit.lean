@@ -1546,3 +1546,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ArgvTuple.prepare_fast
 #print axioms OCaml.Vm.Primitives.ArgvTuple.allocate_fast
 #print axioms OCaml.Vm.Primitives.ArgvTuple.finish_fast
+
+#print axioms Vsa.Sim.segmentSummary

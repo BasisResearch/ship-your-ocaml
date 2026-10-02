@@ -164,6 +164,10 @@ def sym_caml_sys_exit : Nat := 0x8001c7ac
 def sym_caml_allocated_words : Nat := 0x80064ab8
 /-- `caml_stack_usage_hook` -/
 def sym_caml_stack_usage_hook : Nat := 0x80064968
+/-- `oldify_todo_list` -/
+def sym_oldify_todo_list : Nat := 0x80064af8
+/-- `caml_ephe_none` -/
+def sym_caml_ephe_none : Nat := 0x800648a8
 /-- `main_argv` -/
 def sym_main_argv : Nat := 0x80064c10
 /-- `caml_exe_name` -/
@@ -242,6 +246,10 @@ def off_stat_top_heap_wsz : Nat := 344
 def off_stat_compactions : Nat := 352
 def off_stat_forced_major_collections : Nat := 360
 def off_stat_heap_chunks : Nat := 368
+def off_ref_table : Nat := 104
+def off_ephe_ref_table : Nat := 112
+def off_custom_table : Nat := 120
+def off_in_minor_collection : Nat := 88
 
 /-! Collector structure offsets and constants, measured by the RV64 compiler
 from runtime/freelist.c. -/
@@ -258,6 +266,23 @@ def off_bf_next : Nat := 32
 def gc_blue : Nat := 512
 def value_bytes : Nat := 8
 def header_bytes : Nat := 8
+def off_ref_table_base : Nat := 0
+def off_ref_table_end : Nat := 8
+def off_ref_table_threshold : Nat := 16
+def off_ref_table_ptr : Nat := 24
+def off_ref_table_limit : Nat := 32
+def off_ref_table_size : Nat := 40
+def off_ref_table_reserve : Nat := 48
+def off_ephe_ref_table_base : Nat := 0
+def off_ephe_ref_table_end : Nat := 8
+def off_ephe_ref_table_threshold : Nat := 16
+def off_ephe_ref_table_ptr : Nat := 24
+def off_ephe_ref_table_limit : Nat := 32
+def off_ephe_ref_table_size : Nat := 40
+def off_ephe_ref_table_reserve : Nat := 48
+def ephe_ref_elt_size : Nat := 16
+def off_ephe_ref_ephe : Nat := 0
+def off_ephe_ref_offset : Nat := 8
 
 /-! HTIF table layout measured from c/src/htif.c by the RV64 compiler. -/
 def htif_max_files : Nat := 64
