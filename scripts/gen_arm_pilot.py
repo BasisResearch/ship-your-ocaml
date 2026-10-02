@@ -113,6 +113,22 @@ PATHS = {
 }
 
 
+# Fixed-arity C calls share their saved frame and six-instruction return.
+# Check each native shape explicitly; the callee is composed separately.
+for _arity in range(2, 6):
+    _op = f'C_CALL{_arity}'
+    _prefix, _suffix = _op + '_PREFIX', _op + '_SUFFIX'
+    FAMILIES[_prefix] = (f'Ccall{_arity}Prefix',
+        ['alu_addi', 'sd', 'sd', 'auipc', 'alu_addi', 'ld_tot', 'alu_addi',
+         'alu_addi', 'sd', 'lw_tot', 'auipc', 'ld_tot', 'ld_tot', 'slli',
+         'alu_add', 'ld_tot'] + ['ld_tot'] * (_arity - 2) + ['alu_addi', 'jalr'])
+    FAMILIES[_suffix] = (f'Ccall{_arity}Suffix',
+        ['ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'j'])
+    PATHS[_prefix] = (_op, [])
+    PATHS[_suffix] = (_op, [])
+    OPAQUE_LOADS.update([_prefix, _suffix])
+
+
 for _suffix in ['M3', '0', '3']:
     _op = 'PUSHOFFSETCLOSURE' + _suffix
     FAMILIES[_op] = (_op.title(), ['sd', 'alu_addi', 'alu_addi', 'alu_addi', 'j'])
@@ -286,7 +302,7 @@ def outputs(family='CONST0'):
         draft['imports'].append(f'OCaml.Vm.Sim.{stem}StoreFrame')
     draft.update(boundary='segst', entry=hex(start), mem_param='m0', default_limits=True, counted=True, frame_origin='σ0',
                  doc=f'{family} arm body, generated from the census. This is a machine segment, not yet ArmSim.next.')
-    if family == 'C_CALL1_PREFIX':
+    if family.startswith('C_CALL') and family.endswith('_PREFIX'):
         draft['frame_compact'] = True
     for k in ['pre', 'post', 'pre_bind', 'post_proof']:
         draft.pop(k)
@@ -360,9 +376,10 @@ def outputs(family='CONST0'):
             step['call'] = step['call'].replace('TODO(htgt)', f'htgt_{tag}')
             step['pc_val'] = target
             step.pop('pc_rw')
-    if family == 'C_CALL1_PREFIX':
+    if family.startswith('C_CALL') and family.endswith('_PREFIX'):
         domain_value = draft['steps'][4]['rd_val']
-        table_address = next(p for p in draft['params'] if p.startswith('(hlo_80003048')).split(' ≤ ', 1)[1].removesuffix('.toNat)')
+        table_tag = draft['steps'][11]['addr'][2:]
+        table_address = next(p for p in draft['params'] if p.startswith(f'(hlo_{table_tag}')).split(' ≤ ', 1)[1].removesuffix('.toNat)')
         result[ROOT / f'OCaml/Vm/Sim/{stem}Layout.lean'] = f"""import OCaml.Vm.Layout
 import {site_module}
 
@@ -370,9 +387,9 @@ import {site_module}
 namespace OCaml.Vm.Sim
 open LeanRV64DExecutable.Functions Sail
 
-theorem c_call1_prefix_domain : {domain_value} = BitVec.ofNat 64 Layout.sym_Caml_state := by decide
+theorem {lower}_domain : {domain_value} = BitVec.ofNat 64 Layout.sym_Caml_state := by decide
 
-theorem c_call1_prefix_prim_contents : {table_address} =
+theorem {lower}_prim_contents : {table_address} =
     BitVec.ofNat 64 (Layout.sym_caml_prim_table + Layout.off_prim_contents) := by decide
 
 end OCaml.Vm.Sim

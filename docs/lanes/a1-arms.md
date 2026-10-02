@@ -1,5 +1,27 @@
 # Lane a1-arms
 
+## C_CALL2–C_CALL5 machine families and GcSafe rebase
+
+`gen_arm_pilot.py` now generates each fixed-arity call's prefix through JALR
+and its six-instruction return suffix, including local/full-image pins, store
+frames and Layout address checks. A single arity-driven shape covers 2–5;
+opaque load observations and compact register frames reuse the C_CALL1 route.
+Separate capped/default-limit builds pass: prefixes 4.3s, 4.5s, 4.7s and
+5.9s; suffixes 1.3–1.4s. These are machine certificates, not additional
+represented arm bridges.
+
+The returning C_CALL1 arm landed as `8e2eb02`, full gate passing after
+automatic rebases onto boot startup, primitive copy-string summaries, and
+the approved GC contract (`025786c`). `ArmSim`, refinement and headline
+statements now carry `GcSafe P`; Good and Fits are unchanged. No local
+weakening of those statements was introduced.
+
+There are still 97 conditional represented opcode bridges. Next: factor
+the represented return contract/template across arities 1–5, including
+bounded stack consumption, then generalize setup and named callee composition.
+C_CALLN, primitive exceptions/exits, entry/halt and lane exits remain open.
+
+
 ## C_CALL1 arm composition
 
 `c_call1_arm` and `c_call1_step_arm` compose dispatch, the proved generated
@@ -16,7 +38,7 @@ after rebasing a1-prims' nursery-layout and copy-string boundary landings.
 There are now 97 conditional represented opcode bridges, counting C_CALL1
 for successful returning primitives. Next: generalize the call family to
 C_CALL2–C_CALL5 (same saved frame, additional arguments and stack consumption),
-then C_CALLN; also adopt the approved GcSafe threading when it lands.
+then C_CALLN. The approved GcSafe threading has since been adopted.
 
 
 ## C_CALL1 represented setup
@@ -63,7 +85,7 @@ composition. Read/write geometry and runtime frame assumptions remain explicit.
 
 Rebased against main and regenerated the image, arm, ALU and dispatch artifacts;
 the fixed `.embed` migration was already included and regeneration had no drift.
-`GcSafe P` threading has not landed yet; adopt it on the next rebase.
+`GcSafe P` threading was adopted at `025786c` in the subsequent call-arm landing.
 
 `tr_c_call1_prefix` proves the 17-instruction setup through the indirect call,
 including the saved environment/PC and extern_sp stores. `tr_c_call1_suffix`
@@ -153,7 +175,7 @@ equality is false, and `beq_pointer_falls_through` checks the actual pointer
 BEQ rule. This is a word/semantic-rule discrepancy, not a full Loaded/run
 counterexample. The arbitrary pointer word is not a fixed ELF data address.
 A2-sem needs to resolve this non-integer domain alongside the OFFSETINT/REF
-width and negative-index gaps; the headline theorem is unchanged.
+width and negative-index gaps; those gaps were not hidden by changing the statement.
 
 Separate 24 GiB/default-limit builds pass: BEQ bodies 1.9s/2.8s, path
 bridges 1.5s; BNEQ path bridges 1.2s/1.6s and composition 1.2s. The
@@ -1060,7 +1082,9 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 
 ## Open / next
 
-Continue with generated F1 families and measured builds, starting with C_CALL2–C_CALL5 and then C_CALLN. There are 97 conditional represented opcode bridges (C_CALL1 covers returning `.ok` primitives),
+Continue with represented C_CALL2–C_CALL5 and then C_CALLN; their fixed-arity
+machine boundaries are now generated and checked. There are 97 conditional
+represented opcode bridges (C_CALL1 covers returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 
@@ -1069,6 +1093,8 @@ the strengthened platform, primitive and atom-table bindings. The arm adapters
 still need to derive dispatch clock/geometry and operand/heap access conditions
 from an invariant preserved by every family. Runtime preservation remains
 explicit. The OFFSETINT/OFFSETREF width and negative operand semantic gaps
-are recorded above for a2-sem; the headline theorem is unchanged. Primitives
+are recorded above for a2-sem. The approved `GcSafe P` premise is now in
+ArmSim and the headline; concrete GC-boundary and whileMin safety proofs
+remain to be supplied. Primitives
 remain a1-prims' responsibility; C_CALL bodies must consume their named machine
 summaries. Allocation slow paths and relocation are a6-gc's responsibility.
