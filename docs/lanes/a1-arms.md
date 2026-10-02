@@ -1,5 +1,27 @@
 # Lane a1-arms
 
+## C_CALL1 represented setup
+
+`c_call1_setup` derives the represented `ImmediateInput`, saved caller frame
+and ELF-bound primitive target from the generated prefix. `Ccall1WriteOk`
+names the static three-store geometry/separation. The payload, image and
+primitive bindings use existing write-log frames; saved words reuse
+`read64_of_writeLog_at`. Domain and primitive-table addresses are checked
+against Layout by generated equalities. All data addresses come from Layout.
+
+The first adapter exposed the cost of repeated register-noise lists in long
+segments. The generator can now compact exported frames using
+`StepFrameOut.widenChecked`, a finite reflected inclusion certificate. An
+initial propositional normalization timed out; the checked list inclusion
+builds at default limits. The prefix is 9.8s and represented setup 13s,
+under the 24 GiB cap. `LogRead` shares total-word observations with PUSH.
+
+The return bridge landed as `8ab381c`, full gate passing. Next compose
+dispatch/setup, a named represented callee obligation and generated return
+with `callSeg`. The opcode count is still 96 pending that composition;
+primitive exceptions/exits, the rest of F1 and all lane exits remain open.
+
+
 ## C_CALL1 represented return and primitive consumption
 
 `c_call1_return` restores `Running` through the six-instruction generated

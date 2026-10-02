@@ -266,5 +266,6 @@
   "mem_param": "m0",
   "default_limits": true,
   "counted": true,
-  "frame_origin": "σ0"
+  "frame_origin": "σ0",
+  "frame_compact": true
 }

@@ -1,4 +1,5 @@
 import OCaml.Vm.Sim.StackConsume
+import OCaml.Vm.Sim.LogRead
 import OCaml.Vm.Sim.StackPush
 import OCaml.Vm.Primitives.ImageFrame
 
@@ -40,15 +41,12 @@ theorem PushWriteOk.code {P s c pl cp sp w lo hi} (h : PushWriteOk P s c pl cp s
 
 /-- Every separated word retains its total native load observation. -/
 theorem PushWriteOk.word_read {P s c pl cp sp w a}
-    {memoryAfter : Std.ExtHashMap Nat (BitVec 8)} (h : PushWriteOk P s c pl cp sp w)
+    {memoryAfter : Std.ExtHashMap Nat (BitVec 8)} (_h : PushWriteOk P s c pl cp sp w)
     (outside : OutLRange (pushLog sp w) a 8)
     (memory : memoryAfter = writeLog c.σ.mem (pushLog sp w)) :
     LeanRV64DExecutable.Functions.sign_extend (m := 64)
-      (bytesT8 memoryAfter a) = word c a := by
-  have frame := bytesT_writeLog_out c.σ.mem outside
-  rw [memory]
-  simpa only [word, bytesT_eight_eq, LeanRV64DExecutable.Functions.sign_extend,
-    Sail.BitVec.signExtend, BitVec.signExtend_eq] using frame
+      (bytesT8 memoryAfter a) = word c a :=
+  word_read_writeLog_out outside memory
 
 /-- Every old stack slot outside the push log has its original total word. -/
 theorem PushWriteOk.stack_read {P s c pl cp sp w i v}

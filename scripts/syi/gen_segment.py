@@ -211,6 +211,8 @@ def file_header(spec: dict) -> str:
     imports = list(dict.fromkeys([*spec["imports"], "Vsa.Sim.PinLookup"]))
     if any(st["class"] == "jalr" for st in spec.get("steps", [])):
         imports.append("Vsa.Sim.JalrFrame")
+    if spec.get("frame_compact"):
+        imports.append("Vsa.Sim.FrameWriteSet")
     header = "\n".join(f"import {m}" for m in imports)
     limits = "" if spec.get("default_limits", False) else "set_option maxHeartbeats 8000000\nset_option maxRecDepth 1000000"
     header += f"""
@@ -595,8 +597,11 @@ class SegmentEmitter:
 
     # -- segst boundaries ----------------------------------------------------
 
-    def _frame_writes(self) -> str:
-        """Value-free write log consumed by the existing chain_frame_out fold."""
+    def _frame_writes(self, raw=False) -> str:
+        """Export the composed write list, optionally compacting repeated writes."""
+        if self.spec.get("frame_compact") and not raw:
+            regs = list(dict.fromkeys(st["rd"] for st in self.spec["steps"] if st.get("rd")))
+            return "([" + ", ".join("Register." + r for r in regs) + "] ++ noiseRegs)"
         parts = []
         for step in self.spec['steps']:
             if step['class'] in ('alu', 'jal', 'jalr'):
@@ -701,9 +706,13 @@ class SegmentEmitter:
             if self.frame_origin:
                 observations = ', '.join(f'hobs{k}' for k in range(1, N + 1))
                 self.lines.append(
-                    f"  have hwhole : StepFrameOut {self._frame_writes()} {self.frame_origin} σ{N} := by\n"
+                    f"  have hwhole : StepFrameOut {self._frame_writes(raw=True)} {self.frame_origin} σ{N} := by\n"
                     f"    rw [← hinitial]\n"
                     f"    chain_frame_out [{observations}]")
+                if self.spec.get('frame_compact'):
+                    self.lines.append(
+                        f"  have hwhole : StepFrameOut {self._frame_writes()} {self.frame_origin} σ{N} :=\n"
+                        "    hwhole.widenChecked (by decide)")
             if self.counted:
                 self.lines.append(
                     f"  have hcount : Vsa.Machine.StepsN {N} c {cfg} :=\n"

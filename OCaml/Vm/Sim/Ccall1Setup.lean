@@ -1,0 +1,154 @@
+import OCaml.Vm.Sim.Ccall1Store
+import OCaml.Vm.Sim.Ccall1Return
+import OCaml.Vm.Sim.Ccall1PrefixSegment
+import OCaml.Vm.Sim.Ccall1PrefixPins
+import OCaml.Vm.Sim.Ccall1PrefixLayout
+import OCaml.Vm.Sim.StackStore
+import OCaml.Vm.Sim.IndexWord
+
+namespace OCaml.Vm.Sim
+set_option autoImplicit false
+open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable LeanRV64DExecutable.Functions
+open OCaml.Vm.Primitives
+
+/-- The generated prefix establishes the represented unary primitive boundary,
+the caller-owned saved frame, and the ELF-bound callee entry. -/
+structure Ccall1SetupPost (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place)
+    (cp : ChanPlace) (sp high domain entry : Nat) (env : BitVec 64) (c : Config) : Prop where
+  input : ImmediateInput L.runtimeOk P s pl cp sp high (0x80003060#64) [s.accu] c
+  saved : Ccall1Saved {s with pc := s.pc + 2} pl sp (BitVec.ofNat 64 domain)
+    (BitVec.ofNat 64 (sp - 16)) env c
+  target : pcOf c = some (BitVec.ofNat 64 entry)
+
+/-- Setup_for_c_call decrements the VM stack by two words. -/
+theorem ccall1_frame_address {sp : Nat} (room : 16 ≤ sp) :
+    BitVec.ofNat 64 sp + sign_extend (m := 64) (0xff0#12) = BitVec.ofNat 64 (sp - 16) := by
+  rw [show sign_extend (m := 64) (0xff0#12) = -(16#64) from by decide,
+    ← BitVec.sub_eq_add_neg]
+  exact BitVec.ofNat_sub_ofNat_of_le sp 16 (by decide) room
+
+/-- The represented prefix is proved from generated machine execution and
+static separation/read bounds. Primitive execution is a separate summary. -/
+theorem c_call1_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
+    {pl : Place} {cp : ChanPlace} {sp high domain table entry : Nat}
+    {value env : BitVec 64} {index : BitVec 32} {name : String}
+    (stable : WindowStable L.runtimeOk (ccall1Windows sp domain))
+    (h : ArmInput L P s .C_CALL1 c pl cp sp high)
+    (operand : OperandAt P pl (s.pc + 1) index) (nonnegative : 0 ≤ index.toInt)
+    (primitive : P.prims[index.toInt.toNat]? = some name)
+    (entryName : PrimitiveEntries.lookup name = some entry)
+    (aligned : (BitVec.ofNat 64 entry).toNat % 4 = 0)
+    (domainWord : word c Layout.sym_Caml_state = BitVec.ofNat 64 domain)
+    (tableWord : word c (Layout.sym_caml_prim_table + Layout.off_prim_contents) = BitVec.ofNat 64 table)
+    (targetRead : RamReadAt (table + 8 * index.toInt.toNat) 8)
+    (accu : valWord pl s.accu = some value) (environment : valWord pl s.env = some env)
+    (space : Ccall1WriteOk P s c pl cp sp domain (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) env)
+    (dp : DispatchPost c .C_CALL1 (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d) :
+    ∃ n after, StepsN n d after ∧ Ccall1SetupPost L P s pl cp sp high domain entry env after := by
+  have room8 : 8 ≤ sp := by have := space.room; omega
+  have sp16Nat : (BitVec.ofNat 64 (sp - 16)).toNat = sp - 16 := Nat.mod_eq_of_lt (by have := space.stackNat; omega)
+  have sp8Nat : (BitVec.ofNat 64 (sp - 8)).toNat = sp - 8 := Nat.mod_eq_of_lt (by have := space.stackNat; omega)
+  have domainNat : (BitVec.ofNat 64 (domain + Layout.off_extern_sp)).toNat = domain + Layout.off_extern_sp :=
+    Nat.mod_eq_of_lt space.domainNat
+  have tableNat : (BitVec.ofNat 64 table).toNat = table := Nat.mod_eq_of_lt (by have := targetRead.upper; omega)
+  have domainAddress : BitVec.ofNat 64 domain + BitVec.ofNat 64 Layout.off_extern_sp =
+      BitVec.ofNat 64 (domain + Layout.off_extern_sp) := (BitVec.ofNat_add _ _).symm
+  have entryAddress : BitVec.ofNat 64 table + BitVec.ofNat 64 (8 * index.toInt.toNat) =
+      BitVec.ofNat 64 (table + 8 * index.toInt.toNat) := (BitVec.ofNat_add _ _).symm
+  have nextPC := codePc_add pl s.pc 2
+  obtain ⟨m1, hm1⟩ : ∃ m : Std.ExtHashMap Nat (BitVec 8), m = writeMap8 d.σ.mem (sp - 16) (sdData_val env) := ⟨_, rfl⟩
+  obtain ⟨m2, hm2⟩ : ∃ m : Std.ExtHashMap Nat (BitVec 8), m = writeMap8 m1 (sp - 8)
+      (sdData_val (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2)))) := ⟨_, rfl⟩
+  obtain ⟨m3, hm3⟩ : ∃ m : Std.ExtHashMap Nat (BitVec 8), m = writeMap8 m2 (domain + Layout.off_extern_sp)
+      (sdData_val (BitVec.ofNat 64 (sp - 16))) := ⟨_, rfl⟩
+  have memory2 : m2 = writeLog c.σ.mem [(sp - 16, 8, env),
+      (sp - 8, 8, BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2)))] := by rw [hm2, hm1, dp.memory]; rfl
+  have memory3 : m3 = writeLog c.σ.mem
+      (ccall1Log sp domain (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) env) := by rw [hm3, hm2, hm1, dp.memory]; rfl
+  have prefixSub : [(sp - 16, 8, env), (sp - 8, 8, BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2)))].Sublist
+      (ccall1Log sp domain (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) env) := by simp [ccall1Log]
+  have domainLoad := (word_read_writeLog_out (outLRange_sublist prefixSub space.payload.domain) memory2).trans domainWord
+  have tableLoad := (word_read_writeLog_out space.bindings.contents memory3).trans tableWord
+  have boundTarget := h.primitives.get primitive entryName
+  have targetWord : word c (table + 8 * index.toInt.toNat) = BitVec.ofNat 64 entry := by
+    simpa only [primitiveTarget, tableWord, tableNat] using boundTarget
+  have entryOutside := space.bindings.entries _ _ primitive
+  simp only [tableWord, tableNat] at entryOutside
+  have entryLoad := (word_read_writeLog_out entryOutside memory3).trans targetWord
+  have operandLoad : bytesT4 m3 (pl.codeBase + 4 * (s.pc + 1)) = index := by
+    have frame := bytesT_writeLog_out c.σ.mem (space.payload.code _ _ operand.fetch)
+    rw [bytesT_four_eq] at frame
+    rw [memory3, frame]
+    simpa only [bytesT_four_eq] using operand.read32 (d := c) h.code rfl
+  have domainWindow : RamReadAt Layout.sym_Caml_state 8 := ⟨by decide, by decide, by decide⟩
+  have tableWindow : RamReadAt (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8 := ⟨by decide, by decide, by decide⟩
+  have codeWindow (a : Nat) (w : BitVec 64)
+      (member : (a, 8, w) ∈ ccall1Log sp domain (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) env) :
+      a + 8 ≤ 0x8000301c ∨ 0x80003060 ≤ a :=
+    image_word_code (imageOutside_sublist (List.singleton_sublist.mpr member) space.image) (by decide) (by decide)
+  have bp : SegSt (0x8000301c#64)
+      [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩, ⟨Register.x9, BitVec.ofNat 64 sp⟩,
+       ⟨Register.x25, env⟩, ⟨Register.x21, value⟩]
+      (fun σ => Vsa.Sim.Code.CamlCcall1PrefixLoaded σ.mem ∧ σ.mem = d.σ.mem ∧ σ = d.σ) d :=
+    ⟨dp.good, dp.pc, ⟨(dp.frame.frame Register.x8 (by decide)).trans h.pc,
+      (dp.frame.frame Register.x9 (by decide)).trans h.spReg,
+      (dp.frame.frame Register.x25 (by decide)).trans (represented_register h.env environment),
+      (dp.frame.frame Register.x21 (by decide)).trans (represented_register h.accu accu), trivial⟩,
+      dp.good.minstret, dp.tick, c_call1_prefix_loaded (dp.image h.dispatch.image), rfl, rfl⟩
+  have run := tr_c_call1_prefix (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) (BitVec.ofNat 64 sp)
+    env value d.σ.mem d.σ
+  simp only [ccall1_frame_address space.room, push_address room8, sp16Nat, sp8Nat,
+    c_call1_prefix_domain, c_call1_prefix_prim_contents,
+    show sign_extend (m := 64) (0x000#12) = 0#64 from by decide,
+    show sign_extend (m := 64) (0x004#12) = 4#64 from by decide,
+    show sign_extend (m := 64) (0x008#12) = 8#64 from by decide,
+    show sign_extend (m := 64) (0x0a0#12) = BitVec.ofNat 64 Layout.off_extern_sp from by decide,
+    BitVec.add_zero, domainWindow.toNat, tableWindow.toNat, nextPC, codePc_succ, operand.geometry.toNat] at run
+  have first := run (by simpa only [sp16Nat] using space.envWindow.lower) (by simpa only [sp16Nat] using space.envWindow.upper) (by simpa only [sp16Nat, tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using space.envWindow.htif) (by simpa only [sp16Nat] using space.envWindow.aligned)
+    (codeWindow _ env (by simp [ccall1Log])) m1 hm1
+    (by simpa only [sp8Nat] using space.pcWindow.lower) (by simpa only [sp8Nat] using space.pcWindow.upper) (by simpa only [sp8Nat, tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using space.pcWindow.htif) (by simpa only [sp8Nat] using space.pcWindow.aligned)
+    (codeWindow _ (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) (by simp [ccall1Log])) m2 hm2
+    domainWindow.lower domainWindow.upper domainWindow.htif (BitVec.ofNat 64 domain) domainLoad.symm
+  simp only [domainAddress, domainNat] at first
+  have second := first (by simpa only [domainNat] using space.externWindow.lower) (by simpa only [domainNat] using space.externWindow.upper) (by simpa only [domainNat, tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using space.externWindow.htif) (by simpa only [domainNat] using space.externWindow.aligned)
+    (codeWindow _ (BitVec.ofNat 64 (sp - 16)) (by simp [ccall1Log])) m3 hm3
+    operand.geometry.lower operand.geometry.upper operand.geometry.htif (sign_extend (m := 64) index)
+    (by rw [operandLoad]) tableWindow.lower tableWindow.upper tableWindow.htif (BitVec.ofNat 64 table) tableLoad.symm
+  simp only [index_word index nonnegative, entryAddress, targetRead.toNat] at second
+  have last := second targetRead.lower targetRead.upper targetRead.htif (BitVec.ofNat 64 entry) entryLoad.symm
+  have clear := ret_tgt (BitVec.ofNat 64 entry) aligned
+  simp only [show sign_extend (m := 64) (0x000#12) = 0#64 from by decide, BitVec.add_zero] at clear
+  simp only [clear] at last
+  obtain ⟨n, after, _, steps, post⟩ := last aligned d bp
+  obtain ⟨_, memory, frame⟩ := post.extra
+  have written := memory.trans memory3
+  have image := image_of_writeLog h.dispatch.image space.image written
+  have loop : LoopRegisters after := loopRegisters_frame (fun r hr =>
+    (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))) h.dispatch.loop
+  have argument : gpr after 10 = some value := PinsHold.get post.pins ⟨4, by simp⟩
+  refine ⟨n, after, steps, ?_⟩
+  constructor
+  · refine ⟨⟨post.good, image, post.good.minstret, PinsHold.get post.pins ⟨0, by simp⟩,
+      by decide, post.tick⟩,
+      (payload_of_repr h.toVmReprAt).frame_log space.payload written (frame.out.trans dp.frame.out),
+      bindings_frame_log h.primitives space.bindings written,
+      ccall1_runtime stable h.runtime space.room written, loop, ?_⟩
+    intro i v selected
+    cases i with
+    | zero => cases Option.some.inj selected; exact ⟨value, accu, argument⟩
+    | succ i => simp at selected
+  · refine ⟨PinsHold.get post.pins ⟨6, by simp⟩, PinsHold.get post.pins ⟨3, by simp⟩,
+      (frame.frame (gprReg Layout.reg_extra) (by decide)).trans ((dp.frame.frame (gprReg Layout.reg_extra) (by decide)).trans h.extra),
+      environment, ?_, ?_, ?_, ?_, domainWindow.window, ?_, space.envWindow.read⟩
+    · have obs := bytesT_writeLog_out c.σ.mem space.payload.domain
+      simpa only [word, written, obs] using domainWord.symm
+    · simpa only [domainAddress, domainNat] using (ccall1_savedStack written).symm
+    · simpa only [sp16Nat] using (space.savedEnv written).symm
+    · rw [← BitVec.ofNat_add]
+      congr 1
+      have room := space.room
+      omega
+    · simpa only [domainAddress] using space.externWindow.read
+  · exact post.pcAt
+
+end OCaml.Vm.Sim

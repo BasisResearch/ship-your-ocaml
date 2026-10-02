@@ -124,6 +124,7 @@ import OCaml.Vm.Sim.Ccall1PrefixPins
 import OCaml.Vm.Sim.Ccall1SuffixSegment
 import OCaml.Vm.Sim.Ccall1SuffixPins
 import OCaml.Vm.Sim.Ccall1Primitives
+import OCaml.Vm.Sim.Ccall1Setup
 import OCaml.Vm.Sim.Pushenvacc1
 import OCaml.Vm.Sim.Pushenvacc2
 import OCaml.Vm.Sim.Pushenvacc3
