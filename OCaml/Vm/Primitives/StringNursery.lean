@@ -39,11 +39,9 @@ structure NurseryReadback (ra sp length domain young limit : BitVec 64) (c : Con
     (DoubleAllocation.youngSlot domain).toNat 8 = nurseryHeader young length
   savedRaValue : bytesT (writeLog c.σ.mem (constructorLog ra sp length domain young)) (sp - 8#64).toNat 8 = ra
 
-/-- Nursery geometry and input registers for a G1 string allocation. -/
-structure NurseryInput (ra sp length domain young limit : BitVec 64) (c : Config) : Prop
-    extends LeafInput ra c, NurseryReadback ra sp length domain young limit c where
-  stackReg : gpr c 2 = some sp
-  lengthReg : gpr c 10 = some length
+/-- Pure RAM geometry, branch guards and immutable-image separation for
+one successful nursery string allocation. -/
+structure NurseryGeometry (ra sp length domain young limit : BitVec 64) : Prop where
   stackWrite : WriteWindow (sp - 8#64) 8
   youngWrite : WriteWindow (DoubleAllocation.youngSlot domain) 8
   limitRead : ReadWindow (DoubleAllocation.limitSlot domain) 8
@@ -57,6 +55,13 @@ structure NurseryInput (ra sp length domain young limit : BitVec 64) (c : Config
   initializeImage : ImageOutside
     (initializationLog (reservedRegisters ra sp length (nurseryHeader young length)) (nurseryHeader young length))
 
+/-- Nursery geometry and input registers for a G1 string allocation. -/
+structure NurseryInput (ra sp length domain young limit : BitVec 64) (c : Config) : Prop
+    extends LeafInput ra c, NurseryReadback ra sp length domain young limit c,
+      NurseryGeometry ra sp length domain young limit where
+  stackReg : gpr c 2 = some sp
+  lengthReg : gpr c 10 = some length
+
 /-- Exact constructor effects together with preservation of library entry
 well-formedness for any live-byte set supplied by the caller. -/
 structure NurseryPost (ra sp length domain young : BitVec 64)
@@ -64,6 +69,7 @@ structure NurseryPost (ra sp length domain young : BitVec 64)
     WriteRegistersPost [1, 2, 10, 11, 12, 13, 14, 15, 16, 17]
       (constructorLog ra sp length domain young) before ra
       (nurseryHeader young length + 8#64) [(2, sp)] after where
+  returnReg : gpr after 1 = some ra
   libraryGood : ∀ live, VsaIris.Inst.VsaOk live before → VsaIris.Inst.VsaOk live after
 
 /-- The successful nursery path is one machine function summary, with an
@@ -152,7 +158,11 @@ theorem alloc_string_nursery (c : Config) (ra sp length domain young limit : Bit
     have good1 := p.vsaOk good (by decide) (by simp [prepare_regs, keysG])
     have good2 := q.vsaOk good1 (by decide) (by simp [reserve_regs, keysG])
     exact finish.vsaOk good2 (by decide) (by simp [initialize_regs, keysG])
-  refine ⟨⟨framed, ?_⟩, preserved⟩
+  have returned : gpr after 1 = some ra := by
+    have value := gholds_lookup _ finish.regs (n := 1) rfl
+    change gprGet after.σ 1 = some ra
+    simpa only [initialize_regs, List.getD_cons_zero, vra] using value
+  refine ⟨⟨framed, ?_⟩, returned, preserved⟩
   have spValue := gholds_lookup _ finish.regs (n := 2) rfl
   change gpr after 2 = some sp ∧ True
   constructor

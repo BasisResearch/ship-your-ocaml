@@ -427,3 +427,19 @@ with the nursery generator; its existing outputs are byte-for-byte unchanged.
 from stack windows and memory pins, with exact effects and register interfaces.
 All focused builds pass without increased budgets. The whole copy-string
 composition and represented primitive contract are next; the count is 17/30.
+
+
+Copy-string boundaries landed at `c0f2125`. The actual composition now covers
+entry through `strlen` (`StringCopySized.copy_string_sized`), the length store,
+the allocation JAL, and the complete G1 constructor
+(`StringCopyAllocated.copy_string_allocated`). It returns the allocated shell
+at the memcpy-argument boundary. `caller_readback` proves all three native
+save slots from the combined write log and explicit later-store separation.
+
+Shared adapters now expose generated GPR/RO frames and transport total-byte
+equality through write logs. `strlen_call` instantiates the landed symbolic
+reader at actual caller register observations. `NurseryGeometry` separates
+static RAM/guard/image conditions from per-state inputs, and the constructor
+post retains the restored `ra`. Focused builds all pass. The next step is
+memcpy plus restore, then the executable-name tail and represented allocation
+contract. The primitive count remains 17/30 until that contract is landed.

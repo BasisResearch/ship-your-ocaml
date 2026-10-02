@@ -1,3 +1,4 @@
+import OCaml.Vm.Primitives.StringCopyReadback
 import OCaml.Vm.Primitives.StringCopyFast
 import OCaml.Vm.Primitives.StringConstructorLayout
 import OCaml.Vm.Primitives.StringAllocationLayout
@@ -1400,3 +1401,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.clearWords_above
 #print axioms OCaml.Vm.Boot.Startup.read8_clearWords_above
 #print axioms OCaml.Vm.Boot.Startup.crt0_to_caml_main
+#print axioms OCaml.Vm.Primitives.EffectPost.gpr_frame
+#print axioms OCaml.Vm.Primitives.EffectPost.observed_gpr
+#print axioms OCaml.Vm.Primitives.EffectPost.readOnly_log
+#print axioms Vsa.Densify.MemEqv.writeLog
+#print axioms OCaml.Vm.Primitives.strlen_call
+#print axioms OCaml.Vm.Primitives.StringAllocation.NurseryMetadata.frame_observedLog
+#print axioms OCaml.Vm.Primitives.StringCopy.copy_string_sized
+#print axioms OCaml.Vm.Primitives.StringCopy.copy_string_allocated
+#print axioms OCaml.Vm.Primitives.StringCopy.caller_readback

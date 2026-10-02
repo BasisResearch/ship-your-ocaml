@@ -9,6 +9,24 @@ structure NurseryMetadata (domain young limit : BitVec 64) (c : Config) : Prop w
   youngValue : word c (DoubleAllocation.youngSlot domain).toNat = young
   limitValue : word c (DoubleAllocation.limitSlot domain).toNat = limit
 
+/-- A caller's preceding writes avoid the three nursery metadata words. -/
+structure MetadataOutside (log : List WEntry) (domain : BitVec 64) : Prop where
+  domainSlot : OutLRange log DoubleAllocation.domainGlobal.toNat 8
+  young : OutLRange log (DoubleAllocation.youngSlot domain).toNat 8
+  limit : OutLRange log (DoubleAllocation.limitSlot domain).toNat 8
+
+/-- Transport entry metadata across a library observation and caller stores. -/
+theorem NurseryMetadata.frame_observedLog {domain young limit c after log}
+    (h : NurseryMetadata domain young limit c) (outside : MetadataOutside log domain)
+    (memory : Vsa.Densify.MemEqv after.σ.mem (writeLog c.σ.mem log)) :
+    NurseryMetadata domain young limit after := by
+  have wordFrame : ∀ a, OutLRange log a 8 → word after a = word c a := by
+    intro a out
+    exact (Vsa.Sim.Boot.bytesT_memEqv memory a 8).trans (bytesT_writeLog_out _ out)
+  exact ⟨(wordFrame _ outside.domainSlot).trans h.domainValue,
+    (wordFrame _ outside.young).trans h.youngValue,
+    (wordFrame _ outside.limit).trans h.limitValue⟩
+
 /-- Disjoint stack, nursery and metadata cells supply every intermediate
 readback required by the generated string constructor. -/
 structure NurserySeparation (ra sp length domain young : BitVec 64) : Prop where
