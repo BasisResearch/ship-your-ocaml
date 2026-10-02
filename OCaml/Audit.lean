@@ -1,3 +1,6 @@
+import OCaml.Os.HtifMemory
+import OCaml.Os.DirectoryObstruction
+import OCaml.Bytecode.Callback
 import OCaml.Vm.Primitives.StringCopyReadback
 import OCaml.Programs.LazyForce
 import OCaml.Vm.Gc.Observed
@@ -50,6 +53,11 @@ import Vsa.Sim.DivLoops
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
 `Quot.sound`). -/
+
+#print axioms OCaml.Os.htif_addresses_distinct
+#print axioms OCaml.Os.longName_eof_rejected
+#print axioms OCaml.Os.longName_not_special
+#print axioms OCaml.Os.htifEntries
 
 #print axioms OCaml.Bytecode.halts_or_diverges
 #print axioms OCaml.Bytecode.BcHalts.det
@@ -1515,3 +1523,4 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ArgvTuple.allocate_summary
 #print axioms OCaml.Vm.Primitives.ArgvTuple.allocate_call_decode
 #print axioms OCaml.Vm.Primitives.ArgvTuple.finish_summary
+

@@ -64,6 +64,42 @@ def sym_bss_end : Nat := 0x8007d138
 def sym_global_pointer : Nat := 0x800627d0
 /-- `environ` -/
 def sym_environ : Nat := 0x800648e0
+/-- `_open` -/
+def sym_open : Nat := 0x800008b8
+/-- `_read` -/
+def sym_read : Nat := 0x80000bf8
+/-- `_write` -/
+def sym_write : Nat := 0x80000d54
+/-- `_lseek` -/
+def sym_lseek : Nat := 0x80001098
+/-- `_close` -/
+def sym_close : Nat := 0x80000b28
+/-- `_fstat` -/
+def sym_fstat : Nat := 0x800011a8
+/-- `_stat` -/
+def sym_stat : Nat := 0x80001258
+/-- `_unlink` -/
+def sym_unlink : Nat := 0x800012dc
+/-- `rename` -/
+def sym_rename : Nat := 0x80001530
+/-- `opendir` -/
+def sym_opendir : Nat := 0x8000189c
+/-- `readdir` -/
+def sym_readdir : Nat := 0x800019ac
+/-- `closedir` -/
+def sym_closedir : Nat := 0x80001b04
+/-- `_gettimeofday` -/
+def sym_gettimeofday : Nat := 0x80001cfc
+/-- `_times` -/
+def sym_times : Nat := 0x80001d10
+/-- `files` -/
+def sym_files : Nat := 0x800654c8
+/-- `fds` -/
+def sym_fds : Nat := 0x80064d98
+/-- `dirs` -/
+def sym_dirs : Nat := 0x80065098
+/-- `fs_ready` -/
+def sym_fs_ready : Nat := 0x80064918
 /-- `caml_register_named_value` -/
 def sym_caml_register_named_value : Nat := 0x800213d0
 /-- `caml_ml_open_descriptor_out` -/
@@ -222,5 +258,47 @@ def off_bf_next : Nat := 32
 def gc_blue : Nat := 512
 def value_bytes : Nat := 8
 def header_bytes : Nat := 8
+
+/-! HTIF table layout measured from c/src/htif.c by the RV64 compiler. -/
+def htif_max_files : Nat := 64
+def htif_max_fds : Nat := 32
+def htif_max_dirs : Nat := 4
+def htif_size_mfile : Nat := 56
+def htif_off_mfile_used : Nat := 0
+def htif_off_mfile_dir : Nat := 1
+def htif_off_mfile_linked : Nat := 2
+def htif_off_mfile_parent : Nat := 4
+def htif_off_mfile_name : Nat := 8
+def htif_off_mfile_nlen : Nat := 16
+def htif_off_mfile_data : Nat := 24
+def htif_off_mfile_size : Nat := 32
+def htif_off_mfile_cap : Nat := 40
+def htif_off_mfile_opens : Nat := 48
+def htif_off_mfile_ro : Nat := 52
+def htif_size_mfd : Nat := 24
+def htif_off_mfd_kind : Nat := 0
+def htif_off_mfd_node : Nat := 4
+def htif_off_mfd_pos : Nat := 8
+def htif_off_mfd_flags : Nat := 16
+def htif_size_baremetal_dir : Nat := 268
+def htif_off_baremetal_dir_used : Nat := 0
+def htif_off_baremetal_dir_node : Nat := 4
+def htif_off_baremetal_dir_pos : Nat := 8
+def htif_off_baremetal_dir_ent : Nat := 12
+def htif_off_direct_name : Nat := 0
+def htif_name_capacity : Nat := 256
+def htif_fd_free : Nat := 0
+def htif_fd_stdin : Nat := 1
+def htif_fd_stdout : Nat := 2
+def htif_fd_stderr : Nat := 3
+def htif_fd_file : Nat := 4
+def htif_o_accmode : Nat := 3
+def htif_o_wronly : Nat := 1
+def htif_o_rdwr : Nat := 2
+def htif_o_creat : Nat := 512
+def htif_o_excl : Nat := 2048
+def htif_o_trunc : Nat := 1024
+def htif_o_append : Nat := 8
+def htif_o_directory : Nat := 2097152
 
 end OCaml.Vm.Layout

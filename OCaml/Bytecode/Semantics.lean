@@ -19,7 +19,8 @@ possible argument. Core execution includes data, objects, caught exceptions,
 formatting and buffered file/environment/time operations through `osCall`.
 Marshalling, lexing and digests are implemented. Collector statistics
 consume explicit runtime observations; their machine correspondence is
-GcObservationInput. Re-entrant callbacks remain an explicit boundary. Machine-arm simulation is separate
+GcObservationInput. Re-entrant callbacks save interpreter frames; uncaught exceptions
+run the registered handler or the C fallback. Machine-arm simulation is separate
 from this executable semantics and its host differential validation.
 
 Faithfulness conventions:
@@ -82,6 +83,25 @@ structure Chan where
   offset : Int := 0
   deriving DecidableEq, Repr
 
+/-- Continuations of a nested caml_interprete invocation. -/
+inductive CallbackKind where
+  | primitive
+  | fatalHandler
+  | fatalAtExit (message : List UInt8)
+  | boundary
+  deriving DecidableEq, Repr
+
+/-- Suspended bytecode caller. Heap and world effects are shared, not saved. -/
+structure CallbackFrame where
+  pc : Nat
+  accu : Val
+  stack : List Val
+  env : Val
+  extra : Nat
+  trap : Nat
+  kind : CallbackKind
+  deriving DecidableEq, Repr
+
 /-- The C-side world the primitives act on. -/
 structure World where
   /-- `caml_all_opened_channels`, in creation order (id = index). -/
@@ -97,6 +117,8 @@ structure World where
   /-- Files, descriptors, streams, environment, clock and exit state. -/
   os : TCB.Os.OsState
   gcSnapshots : List GcSnapshot := []
+  callbacks : List CallbackFrame := []
+  pendingException : Option Val := none
   deriving DecidableEq, Repr
 
 /-- HTIF console interleaving, observed from the OS state. -/
@@ -119,7 +141,7 @@ structure St where
 /-- `caml_interprete`'s initial registers for the main program:
 `accu = Val_int(0)`, `env = Atom(0)`, `extra_args = 0`, empty stack. -/
 def Prog.init (P : Prog) : St :=
-  ⟨0, .int 0, [], .atom 0, 0, 0, P.heap0, ⟨[], [], 0, P.exeName, P.argv, osInitial P.files0, P.gcSnapshots⟩⟩
+  ⟨0, .int 0, [], .atom 0, 0, 0, P.heap0, ⟨[], [], 0, P.exeName, P.argv, osInitial P.files0, P.gcSnapshots, [], none⟩⟩
 
 /-- Result of one step. -/
 inductive Res where
@@ -214,6 +236,7 @@ inductive PRes where
   | ok (accu : Val) (h : Heap) (w : World)
   | raise (exn : Val) (h : Heap) (w : World)
   | exit (code : Nat) (w : World)
+  | callback (closure : Val) (args : List Val) (h : Heap) (w : World)
   | unsupported
 
 def strOf? (h : Heap) : Val → Option (List UInt8)
@@ -835,6 +858,9 @@ def primCompiler (P : Prog) (name : String) (args : List Val) (h : Heap) (w : Wo
   let some := fun {α} (o : Option α) (k : α → PRes) => o.elim .unsupported k
   let eof := fun h w => some (field? h P.globals 4) fun e => .raise e h w
   match name, args with
+  | "caml_callback", [closure, arg] => .callback closure [arg] h w
+  | "caml_callback2", [closure, a, b] => .callback closure [a, b] h w
+  | "caml_callback3", [closure, a, b, c] => .callback closure [a, b, c] h w
   | "caml_gc_quick_stat", [.int 0] => match w.gcSnapshots with
     | snapshot :: rest =>
       if !snapshot.valid then .unsupported else
@@ -906,6 +932,8 @@ def prim (P : Prog) (name : String) (args : List Val) (h : Heap) (w : World) : P
   else if name ∈ primsF3 then primF3 P.globals name args h w
   else if name = "caml_get_exception_raw_backtrace" && args == [.unit] then .ok (.atom 0) h w
   else if name = "caml_restore_raw_backtrace" && args.length == 2 && args[1]? == .some (.atom 0) then .ok .unit h w
+  else if name = "caml_convert_raw_backtrace" && args == [.atom 0] then .ok (.atom 0) h w
+  else if name = "caml_ml_debug_info_status" && args == [.unit] then .ok .unit h w
   else if name = "caml_backtrace_status" && args == [.unit] then .ok (Val.ofBool false) h w
   else match primBoxed name args h w with
     | .unsupported => match primFloat name args h w with
@@ -930,8 +958,8 @@ def target (pc k : Nat) (ofs : Int) : Option Nat :=
 
 /-- The exception-raising path (`raise_notrace:` in `interp.c`): unwind to
 the innermost trap frame. An exception reaching the top is not in F1. -/
-def raiseTo (s : St) (exn : Val) : Res :=
-  if s.trap = 0 then .unsupported else
+def raiseTo (P : Prog) (s : St) (exn : Val) : Res :=
+  if s.trap = 0 then .next { s with pc := P.code.size, world := { s.world with pendingException := some exn } } else
   let len := s.stack.length
   if len < s.trap then .wrong else
   match s.stack.drop (len - s.trap) with
@@ -947,6 +975,92 @@ def enter (s : St) (stack : List Val) (extra : Nat) : Res :=
     | .code c => .next { s with pc := c, env := s.accu, stack := stack, extra := extra }
     | _ => .wrong
 
+/-- callback.c's n-argument entry, after ACC/APPLY of its private bytecode.
+The private return PC is represented by the end of the main code array;
+`step` interprets this boundary only when decoding the main code fails. -/
+def startCallback (P : Prog) (s : St) (closure : Val) (args : List Val)
+    (kind : CallbackKind) : Res :=
+  if args.isEmpty ∨ args.length + 4 > 256 then .wrong else
+  match field? s.heap closure 0 with
+  | some (.code pc) =>
+    let frame : CallbackFrame := ⟨s.pc, s.accu, s.stack, s.env, s.extra, s.trap, kind⟩
+    .next { s with pc := pc, accu := closure, env := closure, extra := args.length - 1, trap := 0, stack := args ++ [.code P.code.size, .unit, .unit, closure], world := { s.world with callbacks := frame :: s.world.callbacks, pendingException := none } }
+  | _ => .wrong
+
+/-- Restore caller registers, retaining all nested heap and world effects. -/
+def restoreCallback (s : St) (frame : CallbackFrame) (rest : List CallbackFrame) : St :=
+  { s with pc := frame.pc, accu := frame.accu, stack := frame.stack, env := frame.env, extra := frame.extra, trap := frame.trap, world := { s.world with callbacks := rest, pendingException := none } }
+
+/-- The bounded C fallback printer in runtime/printexc.c. -/
+def formatUncaught (P : Prog) (h : Heap) (exn : Val) : Option (List UInt8) := do
+  let cstr := fun v => (strOf? h v).map (fun bs => bs.takeWhile (· != 0))
+  let argument := fun v => match v with
+    | .int n => (toString n.toInt).toList.map (fun c => c.toNat.toUInt8)
+    | _ => match cstr v with
+      | some b => [34] ++ b ++ [34]
+      | none => [95]
+  let tag ← tag? h exn
+  let bytes ← if tag = 0 then do
+    let ctor ← field? h exn 0
+    let name ← field? h ctor 0 >>= cstr
+    let .ptr l 0 := exn | none
+    let some (.block _ fields) := h.get? l | none
+    let special := [7, 10, 11].any (fun i => field? h P.globals i == some ctor)
+    let args ← if fields.length = 2 ∧ special then do
+        let .ptr b 0 ← fields[1]? | none
+        let some (.block 0 fs) := h.get? b | none
+        some fs
+      else some (fields.drop 1)
+    some (name ++ [40] ++ List.intercalate [44, 32] (args.map argument) ++ [41])
+  else field? h exn 0 >>= cstr
+  some (bytes.take 255)
+
+/-- Native fatal-exception exit, after the OCaml handler/at_exit callback. -/
+def fatalExit (w : World) (message : Option (List UInt8) := none) : Res :=
+  let result := do
+    let os ← match message with
+      | none => some w.os
+      | some msg => do
+        let text := ("Fatal error: exception ".toList.map (fun c => c.toNat.toUInt8)) ++ msg ++ [10]
+        let (_, os) ← osCall w.os (.write 2 text text.length)
+        some os
+    let (_, os) ← osCall os (.exit 2)
+    some { w with os := os }
+  match result with
+  | some w => .halt 2 w
+  | none => .unsupported
+
+/-- printexc.c first invokes the registered OCaml handler; its C fallback
+formats before invoking at_exit and ignores exceptions from that callback. -/
+def startUncaught (P : Prog) (s : St) (exn : Val) : Res :=
+  let find := fun name => (s.world.named.find? (fun p => p.1 == name)).map (·.2)
+  match find "Printexc.handle_uncaught_exception" with
+  | some handler => startCallback P s handler [exn, Val.ofBool false] .fatalHandler
+  | none => match formatUncaught P s.heap exn with
+    | none => .wrong
+    | some message => match find "Pervasives.do_at_exit" with
+      | some handler => startCallback P s handler [.unit] (.fatalAtExit message)
+      | none => fatalExit s.world (some message)
+
+/-- Private callback return/exception boundary. This is not an ordinary
+instruction or an in-bounds main-program PC. -/
+def callbackBoundary (P : Prog) (s : St) : Res :=
+  if s.pc ≠ P.code.size then .wrong else
+  match s.world.callbacks with
+  | frame :: rest =>
+    let restored := restoreCallback s frame rest
+    match frame.kind with
+    | .primitive => match s.world.pendingException with
+      | none => .next { restored with accu := s.accu }
+      | some exn => raiseTo P restored exn
+    | .fatalHandler =>
+      if s.world.pendingException.isSome then .wrong else fatalExit restored.world
+    | .fatalAtExit message => fatalExit restored.world (some message)
+    | .boundary => .wrong -- callbackN_exn's driver observes this boundary.
+  | [] => match s.world.pendingException with
+    | some exn => startUncaught P { s with world := { s.world with pendingException := none } } exn
+    | none => .wrong
+
 /-- Run a C primitive (`C_CALLn`, `n = args.length`): pops `n - 1` stack
 words. -/
 def cCall (P : Prog) (s : St) (len : Nat) (name : String) (args : List Val) : Res :=
@@ -957,8 +1071,10 @@ def cCall (P : Prog) (s : St) (len : Nat) (name : String) (args : List Val) : Re
   | .ok a h w => .next { s with pc := s.pc + len, accu := a, heap := h, world := w, stack := s.stack.drop (args.length - 1) }
   | .raise e h w =>
       let s' : St := { s with heap := h, world := w, stack := s.stack.drop (args.length - 1) }
-      raiseTo s' e
+      raiseTo P s' e
   | .exit c w => .halt c w
+  | .callback closure cbargs h w => startCallback P
+      { s with pc := s.pc + len, heap := h, world := w, stack := s.stack.drop (args.length - 1) } closure cbargs .primitive
   | .unsupported => .unsupported
 
 /-- Integer binary operation computed on the tagged words (`accu` op `sp[0]`). -/
@@ -1242,7 +1358,7 @@ def stepI (i : Instr) : Res :=
           if link.toNat > stk.length then .wrong else
           .next { (s.adv 1) with trap := stk.length - link.toNat, stack := rest }
       | _ => .wrong
-  | .RAISE, [] | .RERAISE, [] | .RAISE_NOTRACE, [] => raiseTo s s.accu
+  | .RAISE, [] | .RERAISE, [] | .RAISE_NOTRACE, [] => raiseTo P s s.accu
   | .CHECK_SIGNALS, [] => .next (s.adv 1)
   -- C calls
   | .C_CALL1, [p] => opt P.prims[p.toNat]? fun nm => cCall P s 2 nm [s.accu]
@@ -1274,7 +1390,7 @@ def stepI (i : Instr) : Res :=
       | b :: rest => opt (ints? s.accu b) fun (x, y) =>
           if y = 0 then
             -- `caml_raise_zero_divide`: Field(caml_global_data, ZERO_DIVIDE_EXN = 5)
-            opt (field? s.heap P.globals 5) fun e => raiseTo { s with stack := rest } e
+            opt (field? s.heap P.globals 5) fun e => raiseTo P { s with stack := rest } e
           else
             let r := if i.op = .DIVINT then x.sdiv y else x.srem y
             .next { (s.adv 1) with accu := .int r, stack := rest }
@@ -1326,7 +1442,7 @@ def stepI (i : Instr) : Res :=
 def step : Res :=
   match decodeAt P.code s.pc with
   | some i => stepI P s i
-  | none => .wrong
+  | none => callbackBoundary P s
 
 end
 

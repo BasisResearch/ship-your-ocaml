@@ -1,0 +1,8 @@
+## long-directory-name
+open "/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" O_WRONLY|O_CREAT => num 3
+close 3 => none
+opendir "/" => num 1
+readdir 1 => bytes "."
+readdir 1 => bytes ".."
+readdir 1 => none
+closedir 1 => none

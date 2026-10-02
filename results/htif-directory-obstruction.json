@@ -1,0 +1,7 @@
+{
+  "scope": "native HTIF counterexample; specification side kernel-checked in DirectoryObstruction.lean",
+  "name_bytes": 256,
+  "summary": "traces 1 steps 7 accepted 0 rejected 1 special 0 unsupported 0",
+  "rejection": "long-directory-name\trejected\t5\treaddir 1\tnone\tbytes \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
+  "htif_sha256": "94080bc699e543af727b7df236ac8edf05da8634ad8c7ee960cc04d0b5a36d15"
+}

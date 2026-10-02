@@ -2,22 +2,28 @@
 
 ## Current status
 
-Round 2 active (2026-10-02): rebased onto the fixed `.embed` image migration.
-Working in brief order: OFFSET widths, initialized bytes, eleven compiler
-primitive boundaries, callbacks/uncaught exceptions, concrete HTIF relation.
-The compiler differential now passes with explicit GC observations;
-full integration and the remaining F4/F5 interfaces are still pending.
+Round 2 executable exit met (2026-10-02), after rebasing on the fixed
+`.embed` image. Compiler/bytes/offset work landed as `ecf3253` through
+`scripts/integrate.sh`. Callback and HTIF interface changes accompany this log through
+the same integration workflow. The compiler matches output and both artifacts;
+all measured primitives have executable domains. GC observations remain
+explicit external inputs, with a named machine-correspondence premise.
+All ten standard regressions and all seven callback cases pass after the changes.
+The full `OCaml OCaml.Audit runbc` build passes (2,049 jobs); new theorem
+axiom reports use only the allowed standard axioms. The complete integration
+gate also passed (1,696 audited declarations, generator drift, code pins, OS
+validation and abstraction gate); a concurrent landing required rebase/retry.
 
 OFFSETINT/OFFSETREF now shift operands in 32 bits before sign extension,
 matching the pinned runtime. `scripts/difftest_offsets.py` passes 16
 host/runbc cases including negative operands and 32-bit shift overflow;
 results are in `results/bc-offsets.json`. The complete integration gate
-passed for the OFFSET commit; its push raced with other lanes, so the
-rebased correction is pending integration alongside the bytes change. The original width probe passes
+passed; the correction and bytes change landed in the compiler milestone.
+The original width probe passes
 with `--expect-model 2`. Symbolic and CountLoop builds pass. The executed
 ledger was regenerated after migration (no drift).
 
-## Round 2 compiler milestone (pending integration)
+## Round 2 compiler milestone (`ecf3253`)
 
 `results/bc-compiler.json`: boot/ocamlc now finishes in 1,650,759 BcSem
 steps, exit 0. Output, hello.cmo and hello.cmi are identical to host
@@ -40,9 +46,9 @@ Focused evidence: `results/bc-compiler-data.json` covers exact marshalled
 digests, sharing/cycles, boxed values, MD5 boundaries, and hash queue limits;
 `results/bc-lexer.json` covers submatch captures and channel refills.
 All ten regression programs pass (`results/bc-round2-primitives.json`),
-including the 8,274,724-step allocation test. F4 callbacks/uncaught handling and the F5
-concrete memory/entry relation are the next work; their machine function
-proofs remain owned by a1-prims.
+including the 8,274,724-step allocation test. The compiler differential was
+rerun successfully after adding callbacks. Machine function proofs remain
+owned by a1-prims.
 
 ## Round 1 evidence
 
@@ -70,7 +76,7 @@ data addresses remain Layout-derived.
   primitives, integer formatting/parsing, rational decimal float formatting,
   fdlibm atan, boxed integer operations, and integer hash. Argument-domain
   gaps remain explicit (`compareVal` excludes custom/float values; hashing
-  currently handles integers).
+  now also handles compiler data (Round 2)).
 - F3 method lookups and object primitives. `VmReprAt.code` now identifies
   GETPUBMET cache operands by linear decoding and permits cache mutation;
   ordinary code words remain pinned. `CodeRepr` is shared with the newly
@@ -94,25 +100,59 @@ data addresses remain Layout-derived.
 - Successful host boot/ocamlc hello compile measured 121 opcode kinds and
   86 primitives (`results/ocamlc-executed.json`). The generated finite census
   and `executed_{opcodes,primitives}_ledgered` account for every name, with
-  explicit open primitive reasons. This is not a BcSem compiler run proof.
+  explicit argument domains. This is not a BcSem compiler run proof.
 - Native HTIF validation reproduced 6,490 traces / 101,621 calls: 6,410
   accepted, 80 special, zero rejected/unsupported. Reproducer:
   `scripts/validate_htif_fs.py`; hashes and scope: `results/htif-fs.json`.
   `HtifFunctionObligations` names remaining per-function termination and
   partial-correctness premises; `htifFsImplements_of_functions` composes them.
 
-## Open / next
+## Round 2 callbacks and HTIF handoff
 
-The Round 1 exit is complete; Round 2 remains active. Next are the eleven
-compiler primitives, re-entrant callbacks/uncaught exceptions, and the
-concrete HTIF entry/memory relation.
-The integer formatter uses character-list parsing; the existing `whileMin_runTo` and `whileMin_bcSem`
-kernel proofs pass again (125 seconds under the 24 GiB build cap).
-F4 currently supports caught exceptions and disabled raw-backtrace state;
-re-entrant callbacks and uncaught-exception handling remain open. The compiler primitive boundaries are now implemented on their recorded
-domains; quick_stat requires explicit collector observations.
-The concrete HTIF entry classification, memory relation and generated machine
-function proofs are open; trace validation does not discharge them.
+`results/bc-callbacks.json`: seven host/model cases pass. Callback frames
+preserve the outer interpreter registers, stack and trap state while retaining
+heap/world effects. Tests cover one/two/three/N arguments, partial application,
+nested calls, exceptions crossing callback boundaries, `_exn` exception
+results, registered uncaught handlers/printers, and failing at_exit cleanup.
+`Callback.lean` provides the typed embedding API; `runbc --callbacks` validates
+it against the real C callback APIs. Saved callback values and pending
+exceptions are now heap roots. `CodeSlice.Covers.instruction` now excludes
+decoder failure from certified instruction regions; the private callback
+boundary is not an ordinary sliced instruction. Disabled backtrace behavior is modeled;
+active backtraces, signals, finalisers and the machine callback simulation
+remain open.
+
+`OCaml/Os/HtifMemory.lean` supplies the concrete fourteen-function ELF entry
+classifier (`htif_addresses_distinct`, `htifEntries`) and `HtifMemoryAt`.
+The relation covers reusable inode slots, names/content, parent links,
+descriptor flags/positions, live directory handles, observer-adjusted cursor
+obligations, open counts, console and frozen clock. It is a candidate
+invariant, not a preservation proof. `scripts/gen_layout.py` measures all
+static table symbols and structure offsets with the RV64 compiler.
+`CallConv.retOf` now takes entry and return states so buffer results can use
+the original argument pointers. ABI argument/result decoders, startup
+establishment, resource-exhaustion behavior, and generated function proofs
+remain open; a1-prims can instantiate `htifEntries` with its ABI decoder.
+
+**Concrete obstruction:** `_open` accepts a 256-byte basename and `readdir`
+silently skips it because its return buffer is 256 bytes including NUL.
+`scripts/probe_htif_directory_name.py` reproduces the rejected seven-call
+native trace (`results/htif-directory-obstruction.{json,trace}`).
+`longName_eof_rejected` and `longName_not_special` kernel-check that the
+observed EOF is forbidden and not an unconstrained spec case. This is
+spec-side proof plus native evidence, not a Sail execution proof. The
+memory relation deliberately does not restrict filenames to hide this bug.
+The pinned runtime requires an image-lane fix before general readdir
+refinement can be claimed. The old 6,490-script validation corpus did not
+cover this case.
+
+## Remaining proof boundaries
+
+Round 2's executable exit does not discharge Layer A. `GcObservationInput`,
+callback machine simulation, ABI decoding and `HtifFunctionObligations`
+remain named proof boundaries. The HTIF obstruction above must be fixed in
+the runtime, with regenerated image artifacts, before proving the general
+filesystem boundary. The lane does not modify the pinned ELF unilaterally.
 
 Bytes now carry initialization state (`Obj.partialBytes`); reads reject
 unknown cells, copies propagate their state, and writes initialize only
@@ -134,3 +174,7 @@ still needs the concrete HTIF memory relation beyond console/channel layout.
 
 All are included in `OCaml/Audit.lean`. The HTIF theorem is conditional;
 its named premises are not supplied by the native-C trace evidence.
+
+Round 2 theorem index (all audited): `htif_addresses_distinct` and
+`htifEntries` in `OCaml/Os/HtifMemory.lean`; `longName_eof_rejected` and
+`longName_not_special` in `OCaml/Os/DirectoryObstruction.lean`.

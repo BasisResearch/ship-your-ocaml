@@ -70,6 +70,38 @@ def collector_layout():
         values = struct.unpack("<" + "Q" * len(fields), raw.read_bytes())
     return dict(zip(fields, values))
 
+def htif_layout():
+    """Measure htif.c tables and flags with the same RV64 ABI as the image."""
+    fields = {"htif_max_files": "MAX_FILES", "htif_max_fds": "MAX_FDS",
+              "htif_max_dirs": "MAX_DIRS"}
+    for typ, members in {
+        "mfile": "used dir linked parent name nlen data size cap opens ro",
+        "mfd": "kind node pos flags",
+        "baremetal_dir": "used node pos ent",
+    }.items():
+        fields[f"htif_size_{typ}"] = f"sizeof(struct {typ})"
+        for member in members.split():
+            fields[f"htif_off_{typ}_{member}"] = f"offsetof(struct {typ}, {member})"
+    fields["htif_off_direct_name"] = "offsetof(struct direct, d_name)"
+    fields["htif_name_capacity"] = "sizeof(((struct direct *)0)->d_name)"
+    for constant in "FD_FREE FD_STDIN FD_STDOUT FD_STDERR FD_FILE O_ACCMODE O_WRONLY O_RDWR O_CREAT O_EXCL O_TRUNC O_APPEND O_DIRECTORY".split():
+        fields["htif_" + constant.lower()] = constant
+    source = ('#define OCAML_HTIF 1\n#include ' +
+              json.dumps(str(ROOT / "c/src/htif.c")) +
+              '\nconst unsigned long htif_offsets[] '
+              '__attribute__((section(".htif_offsets"), used)) = {\n' +
+              ',\n'.join(fields.values()) + '\n};\n')
+    with tempfile.TemporaryDirectory(prefix="htif-layout-") as tmp:
+        obj, raw = Path(tmp) / "offsets.o", Path(tmp) / "offsets.bin"
+        subprocess.run([TOOLS + "gcc", "-x", "c", "-std=gnu11", "-O0",
+                        "-march=rv64i", "-mabi=lp64",
+                        "-I" + str(ROOT / "c/src/config"),
+                        "-c", "-", "-o", str(obj)], input=source, text=True, check=True)
+        subprocess.run([TOOLS + "objcopy", "--dump-section", f".htif_offsets={raw}",
+                        str(obj), str(Path(tmp) / "copy.o")], check=True)
+        values = struct.unpack("<" + "Q" * len(fields), raw.read_bytes())
+    return dict(zip(fields, values))
+
 ABI = {"zero": 0, "ra": 1, "sp": 2, "gp": 3, "tp": 4, "t0": 5, "t1": 6, "t2": 7,
        "s0": 8, "s1": 9, "a0": 10, "a1": 11, "a2": 12, "a3": 13, "a4": 14, "a5": 15,
        "a6": 16, "a7": 17, "s2": 18, "s3": 19, "s4": 20, "s5": 21, "s6": 22,
@@ -101,6 +133,9 @@ def main():
             "embedded_files", "embedded_argv", "embedded_env", "__embed_start",
             "__heap_end", "__stack_top", "caml_prim_table", "_start",
             "__bss_start", "__bss_end", "__global_pointer$", "environ"]
+    need += ["_open", "_read", "_write", "_lseek", "_close", "_fstat", "_stat",
+             "_unlink", "rename", "opendir", "readdir", "closedir", "_gettimeofday",
+             "_times", "files", "fds", "dirs", "fs_ready"]
     need += primitive_names()
     need += ["caml_allocated_words", "caml_stack_usage_hook"]
     need += ["main_argv", "caml_exe_name", "oo_last_id", "caml_copy_double"]
@@ -224,6 +259,9 @@ def main():
     w("\n/-! Collector structure offsets and constants, measured by the RV64 compiler\n"
       "from runtime/freelist.c. -/\n")
     for name, value in collector.items():
+        w(f"def {name} : Nat := {value}\n")
+    w("\n/-! HTIF table layout measured from c/src/htif.c by the RV64 compiler. -/\n")
+    for name, value in htif_layout().items():
         w(f"def {name} : Nat := {value}\n")
     w("\nend OCaml.Vm.Layout\n")
 

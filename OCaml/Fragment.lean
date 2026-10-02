@@ -106,6 +106,7 @@ address-independent hashing and ordinary-block comparison. GC statistics
 consume explicit GcSnapshot observations; machine correspondence is
 GcObservationInput, not supplied by differential validation. -/
 def primitiveDomains : List String := [
+  "caml_callback", "caml_callback2", "caml_callback3", "caml_convert_raw_backtrace", "caml_ml_debug_info_status",
   "caml_alloc_dummy",
   "caml_update_dummy",
   "caml_ensure_stack_capacity",

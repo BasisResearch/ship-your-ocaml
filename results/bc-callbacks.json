@@ -1,0 +1,51 @@
+[
+  {
+    "test": "callbacks",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": "halt exit (some 0) steps 3752 prims 406 heap0 526"
+  },
+  {
+    "test": "uncaught_fallback",
+    "passed": true,
+    "host_exit": 2,
+    "model_exit": 2,
+    "status": "halt exit (some 2) steps 516 prims 403 heap0 69"
+  },
+  {
+    "test": "uncaught_printer",
+    "passed": true,
+    "host_exit": 2,
+    "model_exit": 2,
+    "status": "halt exit (some 2) steps 2807 prims 403 heap0 629"
+  },
+  {
+    "test": "uncaught_handler",
+    "passed": true,
+    "host_exit": 2,
+    "model_exit": 2,
+    "status": "halt exit (some 2) steps 3144 prims 403 heap0 628"
+  },
+  {
+    "test": "uncaught_at_exit_raises",
+    "passed": true,
+    "host_exit": 2,
+    "model_exit": 2,
+    "status": "halt exit (some 2) steps 459 prims 403 heap0 69"
+  },
+  {
+    "test": "uncaught_callback",
+    "passed": true,
+    "host_exit": 2,
+    "model_exit": 2,
+    "status": "halt exit (some 2) steps 431 prims 404 heap0 67"
+  },
+  {
+    "test": "callback_exn_api",
+    "passed": true,
+    "host_exit": 0,
+    "model_exit": 0,
+    "status": ""
+  }
+]

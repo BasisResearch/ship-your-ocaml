@@ -1,4 +1,5 @@
 import OCaml.Bytecode.Load
+import OCaml.Bytecode.Callback
 
 /-! `runbc FILE [FUEL] [TRACEFROM]`: run `BcSem` (the step function of
 `OCaml/Bytecode/Semantics.lean`) on a bytecode executable, loaded by
@@ -75,8 +76,43 @@ def exportTree (root : System.FilePath) (w : World) : IO Unit := do
       if let some parent := path.parent then IO.FS.createDirAll parent
       IO.FS.writeBinFile path ⟨bytes.toArray⟩
 
+/-- Run initialization for a named-callback probe without exiting C's caller. -/
+def runUntilStop (P : Prog) : Nat → St → Option St
+  | 0, _ => none
+  | fuel + 1, s =>
+    if (decodeAt P.code s.pc).map (·.op) == some .STOP then some s else
+    match step P s with
+    | .next next => runUntilStop P fuel next
+    | _ => none
+
+def namedCallbacks (P : Prog) (probes : List String) : IO UInt32 := do
+  let some initial := runUntilStop P 100000 P.init | throw (IO.userError "initialization did not reach STOP")
+  let mut state := initial
+  for probe in probes do
+    let [name, numbers] := probe.splitOn ":" | throw (IO.userError "expected NAME:INT,INT,...")
+    let some args := (numbers.splitOn ",").mapM String.toInt? | throw (IO.userError "invalid callback arguments")
+    let some closure := (state.world.named.find? (fun p => p.1 == name)).map (·.2)
+      | throw (IO.userError "unregistered callback")
+    match callbackN_exn P 100000 state closure (args.map Val.ofInt) with
+    | .returned result next =>
+      if next.pc != state.pc || next.accu != state.accu || next.stack != state.stack ||
+          next.env != state.env || next.extra != state.extra || next.trap != state.trap then
+        throw (IO.userError "callback did not restore caller registers")
+      state := next
+      match result with
+      | .ok (.int n) => IO.println s!"{name} ok:{n.toInt}"
+      | .error exn => match field? state.heap exn 1 with
+        | some (.int n) => IO.println s!"{name} exception:{n.toInt}"
+        | _ => throw (IO.userError "unexpected exception payload")
+      | _ => throw (IO.userError "unexpected callback result")
+    | _ => throw (IO.userError "callback did not return")
+  pure 0
+
 def main (args : List String) : IO UInt32 := do
   match args with
+  | "--callbacks" :: f :: probes =>
+    let some P := loadExe (← IO.FS.readBinFile f) | throw (IO.userError "load failed")
+    namedCallbacks P probes
   | ["--lean", f, name] =>
     match loadExe (← IO.FS.readBinFile f) with
     | none => IO.eprintln "load failed"; pure 2

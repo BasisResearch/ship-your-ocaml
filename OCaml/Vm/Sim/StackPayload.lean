@@ -12,13 +12,9 @@ theorem live_stack_of_root {P : Prog} {s : St} {stack : List Val} {l : Nat}
   apply live_of_roots h
   intro v loc hv hl
   simp only [roots, List.mem_cons, List.mem_append] at hv
-  rcases hv with (hv | hv | hv | hv | hv) | hv
-  · exact Live.root (by simp [roots, hv]) hl
-  · exact Live.root (by simp [roots, hv]) hl
-  · exact Live.root (by simp [roots, hv]) hl
-  · exact Live.root (by simp [roots, hv]) hl
-  · exact root v hv loc hl
-  · exact Live.root (by simp [roots, hv]) hl
+  rcases hv with (((hv | hv | hv | hv | hv) | hv) | hv) | hv <;>
+    first | exact root v hv loc hl | exact Live.root (by simp [roots, hv]) hl
+
 
 /-- One heap-root restriction for all stack edits made from already live values.
 The caller separately supplies the new stack's concrete words and shape. -/

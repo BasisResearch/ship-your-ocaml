@@ -18,9 +18,9 @@ represents the abstract state `st` (the relation `R`, over the machine's
 memory), the function returns after finitely many steps with a result the
 spec allows, and the new memory represents the new abstract state.
 
-`CallConv` (how arguments and results sit in registers and memory at the
-entry and return of those functions) is a parameter here; its instance is
-generated from the ELF like `OCaml/Vm/Layout.lean` (PHASES F5).
+`CallConv` retains both entry and return configurations for decoding buffer
+results. `OCaml/Os/HtifMemory.lean` supplies concrete ELF entry classification
+and a candidate memory relation; ABI decoders and execution proofs remain open.
 
 The trace validation in `tcb/validation/` (RESULTS.md) is the empirical
 side: `htif.c` (the file system shared with ship-your-lua, plus embedded
@@ -41,7 +41,7 @@ structure CallConv where
   address reached with the callee's stack frame popped) -/
   returnsTo : Config → Config → Prop
   /-- the result as the C library sees it (return value, `errno`) -/
-  retOf : Config → TCB.Os.Ret
+  retOf : Config → Config → TCB.Os.Ret
 
 /-- **The in-image file system implements the OS spec (statement).** Where
 the spec leaves a call unconstrained (`OsSpecial`, e.g. `lseek` on the
@@ -52,7 +52,7 @@ there would be unsatisfiable (pointed out by ship-your-lua). -/
 def HtifFsImplements (cc : CallConv) (R : Config → TCB.Os.OsState → Prop) : Prop :=
   ∀ c st call, R c st → cc.callAt c = some call →
     ∃ c' st', Steps c c' ∧ cc.returnsTo c c' ∧
-      (TCB.Os.OsStep st call (cc.retOf c') st' ∨ TCB.Os.OsSpecial st call) ∧ R c' st'
+      (TCB.Os.OsStep st call (cc.retOf c c') st' ∨ TCB.Os.OsSpecial st call) ∧ R c' st'
 
 /-- The C functions covered by the file-system validation driver. -/
 inductive HtifFunction where
@@ -71,14 +71,16 @@ structure HtifEntries (cc : CallConv) where
 correctness for each C function. Supply these fields with generated function
 summaries (`gen_fn.py`/MachWP), using the pinned ELF and a concrete FS memory
 relation R. The native-C trace evidence in results/htif-fs.json validates
-behaviour but does not establish either universal machine field. -/
+behaviour but does not establish either universal machine field. The additional
+256-byte-name trace is rejected (DirectoryObstruction); a general readdir
+refinement for the current image is therefore not justified. -/
 structure HtifFunctionObligations (cc : CallConv)
     (R : Config → TCB.Os.OsState → Prop) (entries : HtifEntries cc) : Prop where
   terminates : ∀ f c st call, entries.entry f c → R c st → cc.callAt c = some call →
     ∃ c', Steps c c' ∧ cc.returnsTo c c'
   refines : ∀ f c st call c', entries.entry f c → R c st → cc.callAt c = some call →
     Steps c c' → cc.returnsTo c c' →
-    ∃ st', (TCB.Os.OsStep st call (cc.retOf c') st' ∨ TCB.Os.OsSpecial st call) ∧ R c' st'
+    ∃ st', (TCB.Os.OsStep st call (cc.retOf c c') st' ∨ TCB.Os.OsSpecial st call) ∧ R c' st'
 
 /-- Reduction of the whole HTIF boundary to the named per-function machine
 obligations. This theorem deliberately does not claim those premises are

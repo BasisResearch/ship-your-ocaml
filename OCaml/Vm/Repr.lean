@@ -170,7 +170,9 @@ inductive Live (h : Heap) (roots : List Val) : Nat → Prop where
 /-- The roots of a state: registers, stack, globals, argv, named values,
 and the channel blocks (the runtime's own roots; `roots_byt.c`). -/
 def roots (P : Prog) (s : St) : List Val :=
-  s.accu :: s.env :: P.globals :: s.world.argv :: s.stack ++ s.world.named.map (·.2)
+  s.accu :: s.env :: P.globals :: s.world.argv :: s.stack ++ s.world.named.map (·.2) ++
+    s.world.callbacks.flatMap (fun f => f.accu :: f.env :: f.stack) ++
+    s.world.pendingException.toList
 
 /-- The heap is laid out: every LIVE block is placed, laid out, and distinct
 live blocks do not overlap. -/

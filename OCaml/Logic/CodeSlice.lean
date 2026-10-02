@@ -86,6 +86,9 @@ def CodeSlice.decode (c : CodeSlice) (pc : Nat) : Option Instr :=
 supply this at instruction boundaries; operands must fit inside the slice. -/
 structure CodeSlice.Covers (c : CodeSlice) (P : Prog) (region : Nat → Prop) : Prop where
   decode_eq : ∀ pc, region pc → decodeAt P.code pc = c.decode pc
+  /-- A covered region contains real instructions. Decoder failure at the
+  private callback boundary can now return to a suspended interpreter. -/
+  instruction : ∀ pc, region pc → (c.decode pc).isSome = true
 
 /-- A run confined to certified instruction boundaries is identical on the
 code slice. This includes halted, wrong and unsupported outcomes and permits
@@ -97,8 +100,11 @@ theorem CodeSlice.iter_eq (c : CodeSlice) (P : Prog) (region : Nat → Prop)
   apply Run.iter_eq_of_agree
   intro k hk t ht
   unfold bcK step decodedK
+  have hin := cover.instruction t.pc (confined k hk t ht)
   rw [cover.decode_eq t.pc (confined k hk t ht)]
-  rfl
+  cases hd : c.decode t.pc with
+  | none => simp [hd] at hin
+  | some i => rfl
 
 /-- A successful local run needs decoder agreement only where it decoded
 an instruction. The successful-run premise rules out all window escapes
