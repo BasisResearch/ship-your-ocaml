@@ -6,6 +6,7 @@ The reset-to-cut execution proof is now the active exit criterion. Round 1
 proved only `Loaded` for the complete captured cut; the native run is not
 a substitute for a kernel execution theorem.
 
+The first startup increment landed as `917d0aa` after the full gate passed.
 Checked startup progress (default proof budgets):
 
 * `Startup.crt0_to_main` in `OCaml/Vm/Boot/Startup/ToMain.lean` proves
@@ -15,14 +16,22 @@ Checked startup progress (default proof budgets):
 * `Startup.clear_loop` uses `loopFromBody` with an indexed invariant and
   one generated guard/store/back-edge iteration. Its region and memory
   inputs are arbitrary, so it is reusable across embedded programs.
-* `Startup.main_prefix` executes the actual two header loads, stack save
-  and environment store. The generated `call_80001dec` supplies the call
-  into `caml_main`; its caller/callee seam remains to be assembled.
+* `Startup.crt0_to_caml_main` in `Startup/ToCamlMain.lean` composes crt0
+  with the complete `main` entry path and its call to `caml_main`. It
+  supplies the exact two-write log, argv, stack and return link. The
+  embedded header is preserved across BSS clearing (`clearWords_above`).
+  `main_to_caml_main` is also reusable on its own with arbitrary argv/env.
 * `gen_startup_rows.py` reuses `gen_fn.py`, `gen_sites.py` and the existing
   code-pin emitter. The call adapter retains named memory/register/output
   frames. Generator output is drift-checked; summaries are audited.
 * BSS bounds, `_start`, global pointer and `environ` are extracted by the
   Layout generator. No data-address premise is a hand-written literal.
+
+Reset proof investigation: reducing the complete `setupElf` initializer
+exceeds the default recursion bound even before running an instruction.
+It needs compositional initialization lemmas; no budget was increased.
+The exact reset interface uses the runner's `initializeMemory` and `setupElf`,
+not the captured register table.
 
 Reset still must supply the initial platform/code facts. Remaining startup functions include `caml_main`, GC
 initialization, file/code loading, primitive lookup, unmarshalling,

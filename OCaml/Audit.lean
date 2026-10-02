@@ -2,7 +2,7 @@ import OCaml.Vm.Primitives.StringCopyFast
 import OCaml.Vm.Primitives.StringConstructorLayout
 import OCaml.Vm.Primitives.StringAllocationLayout
 import OCaml.Vm.Primitives.LibraryEffects
-import OCaml.Vm.Boot.Startup.ToMain
+import OCaml.Vm.Boot.Startup.ToCamlMain
 import OCaml.Vm.Primitives.LibraryMemcpy
 import OCaml.Vm.Primitives.StringReadback
 import OCaml.Vm.Primitives.SmallAllocation
@@ -1394,3 +1394,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.main_prefix
 #print axioms Vsa.Sim.Code._start_transport
 #print axioms Vsa.Sim.Code.main_transport
+
+#print axioms OCaml.Vm.Boot.Startup.main_log
+#print axioms OCaml.Vm.Boot.Startup.main_to_caml_main
+#print axioms OCaml.Vm.Boot.Startup.clearWords_above
+#print axioms OCaml.Vm.Boot.Startup.read8_clearWords_above
+#print axioms OCaml.Vm.Boot.Startup.crt0_to_caml_main
