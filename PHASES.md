@@ -228,7 +228,7 @@ measured name. The measurement is host evidence, not a BcSem compiler run.
 
 | Semantics slice | Current status / remaining boundary |
 |---|---|
-| F2 data | Ten opcode arms; data/format/float/boxed-integer subsets. Primitive domains and eleven remaining compiler boundaries are explicit in `Fragment.lean`; universal primitive refinement remains open. |
+| F2 data | Ten opcode arms; data/format/float/boxed-integer subsets. Bytes carry initialization state: observations require initialized cells and relocation constrains only known payload bytes. Primitive domains and eleven remaining compiler boundaries are explicit in `Fragment.lean`; universal primitive refinement remains open. |
 | F3 objects | Object/method semantics validated; `CodeWordOk` relaxes only linearly decoded GETPUBMET cache slots. Cache hit/miss simulation and method-table invariants remain open. |
 | F4 callbacks | Caught exceptions and disabled-backtrace primitives validated. Re-entrant callbacks, uncaught exceptions, signals and finalisers remain open; the nine-test exit does not certify them. |
 | F5 files | World uses `TCB.Os.OsState`; buffered file/env/time primitives use `osCall_sound`. HTIF reduced to named typed function premises with trace evidence; concrete FS memory relation and ELF function proofs remain open. |

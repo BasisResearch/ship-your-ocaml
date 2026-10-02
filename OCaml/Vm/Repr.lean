@@ -143,6 +143,9 @@ def ObjAt (c : Config) (pl : Place) (cp : ChanPlace) (a : Nat) (o : Obj) : Prop 
       (∀ i (x : UInt8), b[i]? = some x → byte c (a + i) = BitVec.ofNat 8 x.toNat) ∧
       -- `caml_alloc_string` padding: the last byte is `wosize*8 - 1 - len`
       (byte c (a + 8 * o.wosize - 1)).toNat = 8 * o.wosize - 1 - b.length
+  | .partialBytes b =>
+      (∀ i x, b[i]? = some x → ∀ v, x = some v → byte c (a + i) = BitVec.ofNat 8 v.toNat) ∧
+      (byte c (a + 8 * o.wosize - 1)).toNat = 8 * o.wosize - 1 - b.length
   | .double d => word c a = d
   | .doubleArray ds => ∀ i d, ds[i]? = some d → word c (a + 8 * i) = d
   | .int64 n => (word c a).toNat = Layout.sym_caml_int64_ops ∧ word c (a + 8) = n

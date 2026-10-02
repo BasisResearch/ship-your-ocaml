@@ -10,7 +10,9 @@ The Round 2 compiler differential exit is not yet met.
 OFFSETINT/OFFSETREF now shift operands in 32 bits before sign extension,
 matching the pinned runtime. `scripts/difftest_offsets.py` passes 16
 host/runbc cases including negative operands and 32-bit shift overflow;
-results are in `results/bc-offsets.json`. The original width probe passes
+results are in `results/bc-offsets.json`. The complete integration gate
+passed for the OFFSET commit; its push raced with other lanes, so the
+rebased correction is pending integration alongside the bytes change. The original width probe passes
 with `--expect-model 2`. Symbolic and CountLoop builds pass. The executed
 ledger was regenerated after migration (no drift).
 
@@ -30,10 +32,9 @@ Exit evidence:
 - HTIF is reduced to named typed function premises with reproduced evidence.
 - PHASES rows distinguish executable status from remaining proof obligations.
 
-The pinned ELF migration had not landed at the final main fetch. No new
-machine data addresses are hard-coded. If the lane is resumed after a0
-lands the migration, rebase and regenerate the lane census artifact with
-`python3 scripts/gen_executed_ledger.py`; machine pins remain Layout-derived.
+The pinned ELF migration is on main and the lane has rebased and
+regenerated `scripts/gen_executed_ledger.py` without drift. All machine
+data addresses remain Layout-derived.
 
 ## Implemented and validated
 
@@ -74,7 +75,9 @@ lands the migration, rebase and regenerate the lane census artifact with
 
 ## Open / next
 
-The lane exit is complete; the following are downstream Layer A obligations.
+The Round 1 exit is complete; Round 2 remains active. Next are the eleven
+compiler primitives, re-entrant callbacks/uncaught exceptions, and the
+concrete HTIF entry/memory relation.
 The integer formatter uses character-list parsing; the existing `whileMin_runTo` and `whileMin_bcSem`
 kernel proofs pass again (125 seconds under the 24 GiB build cap).
 F4 currently supports caught exceptions and disabled raw-backtrace state;
@@ -83,9 +86,12 @@ compiler primitive boundaries in `primitiveOpen` are ledgered, not implemented.
 The concrete HTIF entry classification, memory relation and generated machine
 function proofs are open; trace validation does not discharge them.
 
-Representation caveat: bytes allocation chooses zero for C's uninitialized
-payload. A defined-read discipline or initialization state is needed for
-machine refinement. Float execution and formatting are differential-tested
+Bytes now carry initialization state (`Obj.partialBytes`); reads reject
+unknown cells, copies propagate their state, and writes initialize only
+their range. `ObjAt` constrains only known cells. The common
+`Reloc.bytePayload_copyIn` law covers both byte representations.
+Focused differential evidence: `results/bc-bytes-init.json`; five
+defined-read boundary probes: `results/bc-initialization-boundary.json`. Float execution and formatting are differential-tested
 subsets, not a universal soft-float/newlib correctness theorem. WorldRepr
 still needs the concrete HTIF memory relation beyond console/channel layout.
 

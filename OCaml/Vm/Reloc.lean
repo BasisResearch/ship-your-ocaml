@@ -230,12 +230,25 @@ theorem valWord_relocates :
     | none => cases v <;> simp [valWord, Val.loc?] at h hv
     | some w => rw [valWord_reloc h, relocWord_fix w hv]⟩
 
+/-- Both ordinary and partially initialized byte payloads use the same
+byte-range framing law. The predicate decides which cell values are known. -/
+def bytePayload {α : Type} (b : List α) (p : α → BitVec 8 → Prop) : Eqv :=
+  Eqv.and (Eqv.list b fun i x => Eqv.rawB (· + i) (p x))
+    (Eqv.rawB (fun a => a + 8 * (b.length / 8 + 1) - 1)
+      fun y => y.toNat = 8 * (b.length / 8 + 1) - 1 - b.length)
+
+theorem bytePayload_copyIn {α : Type} (b : List α) (p : α → BitVec 8 → Prop) :
+    (bytePayload b p).CopyIn (8 * (b.length / 8 + 1)) := by
+  refine Eqv.and_copyIn (Eqv.list_copyIn fun i x hx => ?_)
+    (Eqv.rawB_copyIn (8 * (b.length / 8 + 1) - 1) (fun _ => by omega) (by omega))
+  have := (List.getElem?_eq_some_iff.1 hx).1
+  exact Eqv.rawB_copyIn i (fun _ => rfl) (by omega)
+
 /-- An object's payload as a combinator term (mirrors `ObjAt`'s match). -/
 def payload (cp : ChanPlace) : Obj → Eqv
   | .block _ fs => Eqv.list fs fun i v => Eqv.val v (· + 8 * i)
-  | .bytes b => Eqv.and (Eqv.list b fun i x => Eqv.rawB (· + i) (· = BitVec.ofNat 8 x.toNat))
-      (Eqv.rawB (fun a => a + 8 * (Obj.bytes b).wosize - 1)
-        fun y => y.toNat = 8 * (Obj.bytes b).wosize - 1 - b.length)
+  | .bytes b => bytePayload b fun x y => y = BitVec.ofNat 8 x.toNat
+  | .partialBytes b => bytePayload b fun x y => ∀ v, x = some v → y = BitVec.ofNat 8 v.toNat
   | .double d => Eqv.rawW (fun a => a) (· = d)
   | .doubleArray ds => Eqv.list ds fun i d => Eqv.rawW (· + 8 * i) (· = d)
   | .int64 n => Eqv.and (Eqv.rawW (fun a => a) (·.toNat = Layout.sym_caml_int64_ops))
@@ -268,11 +281,8 @@ theorem payload_copyIn (cp : ChanPlace) (o : Obj) (hnb : ∀ t fs, o ≠ .block 
     (payload cp o).CopyIn (8 * o.wosize) := by
   cases o with
   | block t fs => exact absurd rfl (hnb t fs)
-  | bytes b =>
-    refine Eqv.and_copyIn (Eqv.list_copyIn fun i x hx => ?_) (Eqv.rawB_copyIn (8 * (Obj.bytes b).wosize - 1)
-      (fun _ => by simp only [Obj.wosize]; omega) (by simp only [Obj.wosize]; omega))
-    have := (List.getElem?_eq_some_iff.1 hx).1
-    exact Eqv.rawB_copyIn i (fun _ => rfl) (by simp only [Obj.wosize]; omega)
+  | bytes b => exact bytePayload_copyIn b _
+  | partialBytes b => exact bytePayload_copyIn b _
   | double d =>
     show (Eqv.rawW (fun a => a) (· = d)).CopyIn (8 * 1)
     exact Eqv.rawW_copyIn 0 (fun _ => rfl) (by omega)

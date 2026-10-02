@@ -1,0 +1,32 @@
+[
+  {
+    "test": "fresh",
+    "defined": false,
+    "passed": true,
+    "status": "unsupported at pc 13273: some (OCaml.Bytecode.Opcode.C_CALL2) caml_bytes_get exit none steps 1435 prims 403 heap0 132"
+  },
+  {
+    "test": "copied_unknown",
+    "defined": false,
+    "passed": true,
+    "status": "unsupported at pc 13278: some (OCaml.Bytecode.Opcode.C_CALL2) caml_bytes_get exit none steps 1450 prims 403 heap0 132"
+  },
+  {
+    "test": "string_alias_unknown",
+    "defined": false,
+    "passed": true,
+    "status": "unsupported at pc 13277: some (OCaml.Bytecode.Opcode.C_CALL2) caml_string_get exit none steps 1440 prims 403 heap0 132"
+  },
+  {
+    "test": "known_cell",
+    "defined": true,
+    "passed": true,
+    "status": "halt exit (some 0) steps 1504 prims 403 heap0 132"
+  },
+  {
+    "test": "copied_known_cell",
+    "defined": true,
+    "passed": true,
+    "status": "halt exit (some 0) steps 1519 prims 403 heap0 132"
+  }
+]

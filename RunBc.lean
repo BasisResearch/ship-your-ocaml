@@ -32,6 +32,7 @@ def leanVal : Val → String
 def leanObj : Obj → String
   | .block t fs => s!"(.block {t} [" ++ ", ".intercalate (fs.map leanVal) ++ "])"
   | .bytes b => s!"(.bytes {leanBytes b})"
+  | .partialBytes b => s!"(.partialBytes {reprStr b})"
   | .double d => s!"(.double {d.toNat}#64)"
   | .doubleArray ds => "(.doubleArray [" ++ ", ".intercalate (ds.map fun d => s!"{d.toNat}#64") ++ "])"
   | .int64 n => s!"(.int64 {n.toNat}#64)"

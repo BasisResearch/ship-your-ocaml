@@ -209,6 +209,7 @@ inductive PRes where
 def strOf? (h : Heap) : Val → Option (List UInt8)
   | .ptr l 0 => match h.get? l with
     | some (.bytes b) => some b
+    | some (.partialBytes b) => b.mapM id
     | _ => none
   | _ => none
 
@@ -279,17 +280,20 @@ def primF1Impl (name : String) (args : List Val) (h : Heap) (w : World) : PRes :
         some (putChar w id (c % 256).toNat.toUInt8) fun w' => .ok .unit h w'
   | "caml_ml_output", [ch, s, ofs, len]
   | "caml_ml_output_bytes", [ch, s, ofs, len] =>
-      some (chanOf? h ch) fun id => some (strOf? h s) fun b =>
+      some (chanOf? h ch) fun id =>
       some (intArg? ofs) fun o => some (intArg? len) fun n =>
-        if 0 ≤ o ∧ 0 ≤ n ∧ o + n ≤ b.length then
-          some (putBlock w id ((b.drop o.toNat).take n.toNat) (n.toNat + 1)) fun w' => .ok .unit h w'
+        if 0 ≤ o ∧ 0 ≤ n then
+          some (byteSlice? h s o.toNat n.toNat) fun b =>
+          some (putBlock w id b (n.toNat + 1)) fun w' => .ok .unit h w'
         else .unsupported
   | "caml_format_int", [fmt, .int n] =>
       some (strOf? h fmt) fun f => some (formatInteger f n) fun bs =>
       let (h', l) := h.alloc (.bytes bs)
       .ok (.ptr l 0) h' w
   | "caml_ml_string_length", [s] | "caml_ml_bytes_length", [s] =>
-      some (strOf? h s) fun b => .ok (Val.ofInt b.length) h w
+      match strOf? h s with
+      | .some b => .ok (Val.ofInt b.length) h w
+      | none => some (byteCells? h s) fun b => .ok (Val.ofInt b.length) h w
   | "caml_string_equal", [a, b] =>
       some (strOf? h a) fun a => some (strOf? h b) fun b => .ok (Val.ofBool (a == b)) h w
   | "caml_string_notequal", [a, b] =>
@@ -431,34 +435,23 @@ def primF2 (globals : Val) (name : String) (args : List Val) (h : Heap) (w : Wor
   | "caml_string_of_bytes", [v] | "caml_bytes_of_string", [v] => .ok v h w
   | "caml_create_bytes", [.int n] =>
     if n.toInt < 0 ∨ n.toNat > (2^54 - 1)*8 - 1 then primException globals h w 3 "Bytes.create"
-    else primAlloc h w (.bytes (List.replicate n.toNat 0))
+    else primAlloc h w (Obj.ofByteCells (List.replicate n.toNat none))
   | "caml_blit_bytes", [src, .int off, dst, .int to, .int len]
   | "caml_blit_string", [src, .int off, dst, .int to, .int len] =>
-    some (strOf? h src) fun bs => some (strOf? h dst) fun ds =>
-    match dst with
-    | .ptr l 0 =>
-      if off.toInt < 0 ∨ to.toInt < 0 ∨ len.toInt < 0 ∨
-          off.toNat + len.toNat > bs.length ∨ to.toNat + len.toNat > ds.length then .unsupported
-      else .ok .unit (h.set l (.bytes (ds.take to.toNat ++
-        (bs.drop off.toNat).take len.toNat ++ ds.drop (to.toNat + len.toNat)))) w
-    | _ => .unsupported
+    some (byteCells? h src) fun bs =>
+    if off.toInt < 0 ∨ to.toInt < 0 ∨ len.toInt < 0 ∨ off.toNat + len.toNat > bs.length then .unsupported
+    else some (writeByteCells? h dst to.toNat ((bs.drop off.toNat).take len.toNat)) fun h => .ok .unit h w
   | "caml_fill_bytes", [dst, .int off, .int len, .int v] =>
-    some (strOf? h dst) fun ds => match dst with
-    | .ptr l 0 =>
-      if off.toInt < 0 ∨ len.toInt < 0 ∨ off.toNat + len.toNat > ds.length then .unsupported
-      else .ok .unit (h.set l (.bytes (ds.take off.toNat ++
-        List.replicate len.toNat v.toNat.toUInt8 ++ ds.drop (off.toNat + len.toNat)))) w
-    | _ => .unsupported
+    if off.toInt < 0 ∨ len.toInt < 0 then .unsupported else
+    some (writeByteCells? h dst off.toNat (List.replicate len.toNat (.some v.toNat.toUInt8))) fun h => .ok .unit h w
   | "caml_bytes_get", [a, .int n] | "caml_string_get", [a, .int n] =>
-    some (strOf? h a) fun bs =>
+    some (byteCells? h a) fun bs =>
     if n.toInt < 0 ∨ n.toNat ≥ bs.length then bounds
-    else .ok (Val.ofInt (bs[n.toNat]!).toNat) h w
+    else some (bs[n.toNat]?.bind id) fun b => .ok (Val.ofInt b.toNat) h w
   | "caml_bytes_set", [a, .int n, .int v] =>
-    some (strOf? h a) fun bs =>
+    some (byteCells? h a) fun bs =>
     if n.toInt < 0 ∨ n.toNat ≥ bs.length then bounds else
-    match a with
-    | .ptr l 0 => .ok .unit (h.set l (.bytes (bs.set n.toNat v.toNat.toUInt8))) w
-    | _ => .unsupported
+    some (writeByteCells? h a n.toNat [.some v.toNat.toUInt8]) fun h => .ok .unit h w
   | nm, [a, b] =>
     if nm ∈ ["caml_compare", "caml_equal", "caml_notequal", "caml_lessthan", "caml_lessequal",
         "caml_greaterthan", "caml_greaterequal"] then
@@ -713,13 +706,13 @@ def primOs (P : Prog) (name : String) (args : List Val) (h : Heap) (w : World) :
     match r with
     | .none => .ok .unit h w | .err e => sysError P h w e | _ => .unsupported
   | "caml_ml_input", [ch, dst, .int start, .int len] =>
-    some (chanOf? h ch) fun id => some (strOf? h dst) fun buf =>
+    some (chanOf? h ch) fun id => some (byteCells? h dst) fun buf =>
     if start.toInt < 0 ∨ len.toInt < 0 ∨ start.toNat + len.toNat > buf.length then .unsupported else
     some (readChan w id len.toNat) fun (r, w) =>
     match r, dst with
     | .bytes bs, .ptr l 0 =>
-      let out := buf.take start.toNat ++ bs ++ buf.drop (start.toNat + bs.length)
-      .ok (Val.ofInt bs.length) (h.set l (.bytes out)) w
+      some (writeByteCells? h (.ptr l 0) start.toNat (bs.map Option.some)) fun h =>
+      .ok (Val.ofInt bs.length) h w
     | .err e, _ => sysError P h w e
     | _, _ => .unsupported
   | "caml_ml_input_char", [ch] => some (chanOf? h ch) fun id =>
@@ -1051,15 +1044,14 @@ def stepI (i : Instr) : Res :=
           .next { (s.adv 1) with accu := .unit, heap := h, stack := rest }
       | _ => .wrong
   | .GETBYTESCHAR, [] | .GETSTRINGCHAR, [] => match stk with
-      | .int n :: rest => opt (strOf? s.heap s.accu) fun bs => opt bs[n.toNat]? fun b =>
+      | .int n :: rest => opt (byteCells? s.heap s.accu) fun bs => opt (bs[n.toNat]?.bind id) fun b =>
           .next { (s.adv 1) with accu := Val.ofInt b.toNat, stack := rest }
       | _ => .wrong
-  | .SETBYTESCHAR, [] => match s.accu, stk with
-      | .ptr l 0, .int n :: .int b :: rest => opt (strOf? s.heap s.accu) fun bs =>
-          if n.toNat < bs.length then
-            .next { (s.adv 1) with accu := .unit, stack := rest, heap := s.heap.set l (.bytes (bs.set n.toNat b.toNat.toUInt8)) }
-          else .wrong
-      | _, _ => .wrong
+  | .SETBYTESCHAR, [] => match stk with
+      | .int n :: .int b :: rest =>
+          opt (writeByteCells? s.heap s.accu n.toNat [some b.toNat.toUInt8]) fun h =>
+          .next { (s.adv 1) with accu := .unit, stack := rest, heap := h }
+      | _ => .wrong
   -- F3: the uncached lookup path of interp.c. Cache correctness is a
   -- separate representation obligation; semantic lookup checks the label.
   | .GETMETHOD, [] => match s.accu, stk with

@@ -1415,3 +1415,4 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.StringCopy.copy_string_sized
 #print axioms OCaml.Vm.Primitives.StringCopy.copy_string_allocated
 #print axioms OCaml.Vm.Primitives.StringCopy.caller_readback
+#print axioms OCaml.Vm.Reloc.bytePayload_copyIn

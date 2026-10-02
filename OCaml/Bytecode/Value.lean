@@ -71,6 +71,8 @@ operations the runtime installs (`caml_int64_ops` `_j`, `caml_int32_ops`
 inductive Obj where
   | block (tag : Nat) (fields : List Val)
   | bytes (b : List UInt8)
+  /-- Allocated byte payload: `none` has not been initialized and cannot be read. -/
+  | partialBytes (b : List (Option UInt8))
   | double (d : BitVec 64)
   | doubleArray (ds : List (BitVec 64))
   | int64 (n : BitVec 64)
@@ -84,7 +86,7 @@ namespace Obj
 /-- `Tag_val`. -/
 def tag : Obj → Nat
   | .block t _ => t
-  | .bytes _ => stringTag
+  | .bytes _ | .partialBytes _ => stringTag
   | .double _ => doubleTag
   | .doubleArray _ => doubleArrayTag
   | _ => customTag
@@ -93,6 +95,7 @@ def tag : Obj → Nat
 def wosize : Obj → Nat
   | .block _ fs => fs.length
   | .bytes b => b.length / 8 + 1
+  | .partialBytes b => b.length / 8 + 1
   | .double _ => 1
   | .doubleArray ds => ds.length
   | .int64 _ | .nativeint _ => 2   -- ops pointer + payload
@@ -187,6 +190,41 @@ def setFloatField? (h : Heap) : Val → Nat → BitVec 64 → Option Heap
         if i < ds.length then some (h.set l (.doubleArray (ds.set i d))) else none
     | _ => none
   | _, _, _ => none
+
+/-- Bytes with explicit initialization state. Length and writes do not read
+uninitialized payload; observations require `some` at every observed cell. -/
+def byteCells? (h : Heap) : Val → Option (List (Option UInt8))
+  | .ptr l 0 => match h.get? l with
+    | some (.bytes b) => some (b.map some)
+    | some (.partialBytes b) => some b
+    | _ => none
+  | _ => none
+
+/-- Normalize fully initialized buffers back to ordinary strings. -/
+def Obj.ofByteCells (b : List (Option UInt8)) : Obj :=
+  match b.mapM id with
+  | some bs => .bytes bs
+  | none => .partialBytes b
+
+/-- Read only the requested range, rejecting any uninitialized cell. -/
+def byteSlice? (h : Heap) (v : Val) (off len : Nat) : Option (List UInt8) := do
+  match v with
+  | .ptr l 0 => match ← h.get? l with
+    | .bytes b => if off + len ≤ b.length then some ((b.drop off).take len) else none
+    | .partialBytes b => if off + len ≤ b.length then ((b.drop off).take len).mapM id else none
+    | _ => none
+  | _ => none
+
+/-- Writes preserve the initialization state of untouched bytes. -/
+def writeByteCells? (h : Heap) (v : Val) (off : Nat)
+    (src : List (Option UInt8)) : Option Heap := do
+  let cells ← byteCells? h v
+  match v with
+  | .ptr l 0 =>
+    if off + src.length ≤ cells.length then
+      some (h.set l (Obj.ofByteCells (cells.take off ++ src ++ cells.drop (off + src.length))))
+    else none
+  | _ => none
 
 /-- `Wosize_val`, including static atoms and infix pointers. -/
 def size? (h : Heap) : Val → Option Nat
