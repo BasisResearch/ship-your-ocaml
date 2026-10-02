@@ -1,5 +1,28 @@
 # Lane a1-arms
 
+## Fixed-arity represented returns
+
+`CcallReturn` separates the common represented primitive postcondition from
+its return PC. `ccall_primitive_return` and `ccall_readOnly_summary` consume
+a1-prims contracts at any fixed-arity call boundary. `ccall_return_restore`
+uses `payload_stack_drop` to retain the returned accumulator as a root while
+removing consumed arguments. The saved-frame interface remains compatible
+with the landed unary setup and primitive summaries.
+
+`scripts/gen_ccall_returns.py` emits `c_call1_return` through
+`c_call5_return` and their Triple interfaces from the generated suffix
+specifications. These run the pinned six-instruction suffixes, restore
+Running, and drop exactly arity-minus-one stack words under an explicit
+length bound. The C_CALL1 theorem keeps its existing interface. Separate
+capped builds pass at default limits (about one second per return adapter);
+the complete C_CALL1 setup/callee composition also rebuilds successfully.
+Generator drift, discipline and abstraction checks pass; headline audits
+are included. Machine families landed as `155074a` with the full gate.
+
+There remain 97 conditional represented opcode bridges: returns alone do
+not discharge C_CALL2–C_CALL5. Next: generate their represented setup and
+argument register bundles, then compose them with named callee contracts.
+
 ## C_CALL2–C_CALL5 machine families and GcSafe rebase
 
 `gen_arm_pilot.py` now generates each fixed-arity call's prefix through JALR
@@ -1082,8 +1105,9 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 
 ## Open / next
 
-Continue with represented C_CALL2–C_CALL5 and then C_CALLN; their fixed-arity
-machine boundaries are now generated and checked. There are 97 conditional
+Continue with represented C_CALL2–C_CALL5 setup/argument bundles and named
+callee composition, then C_CALLN. Their machine boundaries and represented
+return restoration are now generated and checked. There are 97 conditional
 represented opcode bridges (C_CALL1 covers returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.

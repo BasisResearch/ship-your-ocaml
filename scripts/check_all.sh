@@ -120,6 +120,7 @@ python3 scripts/gen_atom_arms.py --check || fail "stage a5: atom arm bridge drif
 python3 scripts/gen_acc_arms.py --check || fail "stage a5: stack arm bridge drift"
 python3 scripts/gen_const_arms.py --check || fail "stage a5: constant arm bridge drift"
 python3 scripts/gen_arm_pilot.py --check || fail "stage a5: arm pilot drift"
+python3 scripts/gen_ccall_returns.py --check || fail "stage a5: represented C_CALL return drift"
 python3 scripts/gen_dispatch_table.py --check || fail "stage a5: dispatch table drift"
 python3 scripts/gen_primitive_binding_probe.py --check || fail "stage a5: primitive binding probe drift"
 python3 scripts/gen_primitive_entries.py --check || fail "stage a5: primitive entry lookup drift"
