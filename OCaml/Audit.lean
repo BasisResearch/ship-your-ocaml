@@ -5,6 +5,7 @@ import OCaml.Vm.Primitives.StringConstructorLayout
 import OCaml.Vm.Primitives.StringAllocationLayout
 import OCaml.Vm.Primitives.LibraryEffects
 import OCaml.Vm.Boot.Startup.ToCamlMain
+import OCaml.Vm.Boot.Startup.Reset
 import OCaml.Vm.Primitives.LibraryMemcpy
 import OCaml.Vm.Primitives.StringReadback
 import OCaml.Vm.Primitives.SmallAllocation
@@ -1419,3 +1420,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Reloc.bytePayload_copyIn
 
 #print axioms OCaml.Bytecode.executed_primitives_implemented
+
+#print axioms OCaml.Vm.Boot.Startup.registersFactored.eq
+#print axioms OCaml.Vm.Boot.Startup.registers_metadata
+#print axioms OCaml.Vm.Boot.Startup.setupElf_congr
+#print axioms OCaml.Vm.Boot.Startup.setupElf_pc
+#print axioms OCaml.Vm.Boot.Startup.ElfReset.pc

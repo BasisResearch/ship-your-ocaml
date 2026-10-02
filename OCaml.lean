@@ -208,3 +208,4 @@ import OCaml.Vm.Primitives.StringCopyFast
 import OCaml.Vm.Boot.Startup.ToCamlMain
 
 import OCaml.Vm.Primitives.StringCopyReadback
+import OCaml.Vm.Boot.Startup.Reset

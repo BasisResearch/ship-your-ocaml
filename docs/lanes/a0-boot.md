@@ -27,11 +27,18 @@ Checked startup progress (default proof budgets):
 * BSS bounds, `_start`, global pointer and `environ` are extracted by the
   Layout generator. No data-address premise is a hand-written literal.
 
-Reset proof investigation: reducing the complete `setupElf` initializer
-exceeds the default recursion bound even before running an instruction.
-It needs compositional initialization lemmas; no budget was increased.
-The exact reset interface uses the runner's `initializeMemory` and `setupElf`,
-not the captured register table.
+The main call-seam increment landed as `bb08069`, full gate passed.
+
+Reset proof investigation: directly unfolding the complete `setupElf`
+initializer exceeds the default recursion bound. `Vsa.Sim.FactorSail`
+now factors closed bind syntax and emits a kernel-checked reflexivity
+certificate; it does not execute Sail. The factored register initializer
+supports `registers_metadata` and `setupElf_congr`, proving setup depends
+only on entry PC and tohost metadata, without changing source or budgets.
+`ElfReset` uses the runner's `initializeMemory` and `setupElf`, not the
+captured register table. `ElfReset.pc` proves every successful reset ends
+at the ELF entry. Existence/GoodState, loader correspondence and startup
+callees remain open in `whileMin_reset_loaded_Statement`.
 
 Reset still must supply the initial platform/code facts. Remaining startup functions include `caml_main`, GC
 initialization, file/code loading, primitive lookup, unmarshalling,
