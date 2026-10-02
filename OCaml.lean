@@ -133,6 +133,8 @@ import OCaml.Vm.Sim.Ccall2SuffixSegment
 import OCaml.Vm.Sim.Ccall2SuffixPins
 import OCaml.Vm.Sim.Ccall2Return
 import OCaml.Vm.Sim.Ccall2Setup
+import OCaml.Vm.Sim.Ccall2
+import OCaml.Vm.Sim.Ccall2Primitives
 import OCaml.Vm.Sim.Ccall3PrefixSegment
 import OCaml.Vm.Sim.Ccall3PrefixPins
 import OCaml.Vm.Sim.Ccall3PrefixLayout
@@ -140,6 +142,7 @@ import OCaml.Vm.Sim.Ccall3SuffixSegment
 import OCaml.Vm.Sim.Ccall3SuffixPins
 import OCaml.Vm.Sim.Ccall3Return
 import OCaml.Vm.Sim.Ccall3Setup
+import OCaml.Vm.Sim.Ccall3
 import OCaml.Vm.Sim.Ccall4PrefixSegment
 import OCaml.Vm.Sim.Ccall4PrefixPins
 import OCaml.Vm.Sim.Ccall4PrefixLayout
@@ -147,6 +150,7 @@ import OCaml.Vm.Sim.Ccall4SuffixSegment
 import OCaml.Vm.Sim.Ccall4SuffixPins
 import OCaml.Vm.Sim.Ccall4Return
 import OCaml.Vm.Sim.Ccall4Setup
+import OCaml.Vm.Sim.Ccall4
 import OCaml.Vm.Sim.Ccall5PrefixSegment
 import OCaml.Vm.Sim.Ccall5PrefixPins
 import OCaml.Vm.Sim.Ccall5PrefixLayout
@@ -154,6 +158,7 @@ import OCaml.Vm.Sim.Ccall5SuffixSegment
 import OCaml.Vm.Sim.Ccall5SuffixPins
 import OCaml.Vm.Sim.Ccall5Return
 import OCaml.Vm.Sim.Ccall5Setup
+import OCaml.Vm.Sim.Ccall5
 import OCaml.Vm.Sim.Pushenvacc1
 import OCaml.Vm.Sim.Pushenvacc2
 import OCaml.Vm.Sim.Pushenvacc3

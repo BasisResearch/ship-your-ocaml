@@ -1,5 +1,27 @@
 # Lane a1-arms
 
+## C_CALL2–C_CALL5 represented arm composition
+
+`c_call2_arm` through `c_call5_arm` and their `step_arm` adapters compose
+dispatch, the generated represented setup, `CcallCallee.summary`, and the
+generated return bridge through callSeg. The bytecode adapters use the
+explicit stack-length bound to match the model's consumed argument count.
+The shared `CcallReady` and `CcallCallee` contracts retain the unary API;
+`ccall_callee_of_readOnly` adapts a1-prims' represented read-only summaries
+for every fixed arity. `c_call2_int_compare_callee` supplies a concrete
+binary instance using the landed integer-comparison summary.
+
+Separate capped/default-limit builds pass (1–2 seconds per arm composition),
+as do regeneration and discipline checks. The headline theorems and concrete
+callee instance are audited. Represented setup landed as `fef53a2` with the
+full gate, after preserving a1-prims' executable-name ledger update.
+
+There are now **101 conditional represented opcode bridges**. Fixed-arity
+C_CALL arms cover returning `.ok` primitives under named callee and call-site
+premises. C_CALLN, primitive exception/exit continuations, remaining arm
+families, invariant adapters, entry/halt and the lane exits remain open.
+Next: generate C_CALLN's distinct stack-array ABI prefix and return boundary.
+
 ## Fixed-arity represented setup
 
 `CcallSetupPost` names the represented primitive input, saved caller frame,
@@ -1126,10 +1148,10 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 
 ## Open / next
 
-Continue with C_CALL2–C_CALL5 named callee composition, then C_CALLN. Their
-machine boundaries, represented setup/argument bundles and return restoration
-are now generated and checked. There are 97 conditional
-represented opcode bridges (C_CALL1 covers returning `.ok` primitives),
+Continue with C_CALLN and its stack-array ABI, then the remaining arm
+families. C_CALL1–C_CALL5 have generated machine boundaries, represented
+setup/return bridges and named callee composition. There are 101 conditional
+represented opcode bridges (fixed-arity calls cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
 

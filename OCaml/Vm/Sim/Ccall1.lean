@@ -1,43 +1,17 @@
 import OCaml.Vm.Sim.Ccall1Setup
 import OCaml.Vm.Sim.Ccall1Primitives
-import OCaml.Logic.Symbolic
+import OCaml.Vm.Sim.Ccall
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim Vsa.Logic
 open OCaml.Vm.Primitives
 
-/-- Static represented inputs for the unary primitive-call arm. The eventual
-loop invariant supplies the geometry, separation and nonnegative operand. -/
-structure Ccall1Ready (L : OCaml.Layout) (P : Prog) (s : St) (c : Config)
-    (pl : Place) (cp : ChanPlace) (sp high domain table entry : Nat)
-    (accuWord envWord : BitVec 64) (index : BitVec 32) (name : String) : Prop
-    extends ArmInput L P s .C_CALL1 c pl cp sp high where
-  operand : OperandAt P pl (s.pc + 1) index
-  nonnegative : 0 ≤ index.toInt
-  primitive : P.prims[index.toInt.toNat]? = some name
-  entryName : PrimitiveEntries.lookup name = some entry
-  aligned : (BitVec.ofNat 64 entry).toNat % 4 = 0
-  domainWord : word c Layout.sym_Caml_state = BitVec.ofNat 64 domain
-  tableWord : word c (Layout.sym_caml_prim_table + Layout.off_prim_contents) = BitVec.ofNat 64 table
-  targetRead : RamReadAt (table + 8 * index.toInt.toNat) 8
-  value : valWord pl s.accu = some accuWord
-  environment : valWord pl s.env = some envWord
-  space : Ccall1WriteOk P s c pl cp sp domain (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) envWord
+/-- Unary instance of the shared call-site and returning-callee contracts. -/
+abbrev Ccall1Ready := CcallReady .C_CALL1
 
-/-- Named obligation for a returning F1 primitive. a1-prims supplies the
-represented machine summary; its frame must retain the caller-owned saved
-words/registers. This obligation contains only the callee, not arm execution.
-Exceptions and exits require different continuations and remain separate. -/
-structure Ccall1Callee (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place)
-    (cp : ChanPlace) (sp high domain entry : Nat) (env : BitVec 64) (name : String)
-    (v : Val) (result : BitVec 64) (heap : Heap) (world : World) : Prop where
-  fragment : name ∈ primsF1
-  semantics : primF1Impl name [s.accu] s.heap s.world = .ok v heap world
-  summary : ∀ c, Ccall1SetupPost L P s pl cp sp high domain entry env c →
-    FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
-      (Ccall1Return L P {s with pc := s.pc + 2, accu := v, heap := heap, world := world}
-        pl cp sp high (BitVec.ofNat 64 domain) (BitVec.ofNat 64 (sp - 16)) result env)
+abbrev Ccall1Callee (L : OCaml.Layout) (P : Prog) (s : St) :=
+  CcallCallee (0x80003060#64) [s.accu] L P s
 
 /-- Unary C_CALL with a successful F1 primitive result. Dispatch, native setup,
 the named callee summary and native restoration compose through callSeg. -/
@@ -91,8 +65,7 @@ theorem c_call1_callee_of_readOnly {L : OCaml.Layout} {P : Prog} {s : St}
       FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
         (ReadOnlyPost L.runtimeOk P s pl cp sp high name [s.accu] v result writes c (0x80003060#64))) :
     Ccall1Callee L P s pl cp sp high domain entry env name v result s.heap s.world :=
-  ⟨fragment, model, fun c setup =>
-    c_call1_readOnly_summary (summary c setup.input) preserved setup.saved⟩
+  ccall_callee_of_readOnly fragment model preserved summary
 
 /-- The landed Sys.argv machine summary supplies the returning-callee obligation.
 The runtime/world invariant must supply the global argv binding at call sites. -/
