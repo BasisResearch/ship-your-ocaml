@@ -921,6 +921,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.tr_c_call5_prefix
 #print axioms OCaml.Vm.Sim.c_call5_prefix_loaded
 #print axioms Vsa.Sim.tr_c_call5_suffix
+#print axioms Vsa.Sim.tr_c_calln_prefix
+#print axioms OCaml.Vm.Sim.c_calln_prefix_loaded
+#print axioms Vsa.Sim.tr_c_calln_suffix
+#print axioms OCaml.Vm.Sim.c_calln_suffix_loaded
 #print axioms OCaml.Vm.Sim.c_call5_suffix_loaded
 #print axioms Vsa.Sim.StepFrameOut.of_jalr
 #print axioms Vsa.Sim.pins_jalr

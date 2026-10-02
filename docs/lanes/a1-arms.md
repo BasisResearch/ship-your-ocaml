@@ -1,5 +1,20 @@
 # Lane a1-arms
 
+## C_CALLN machine boundary
+
+`tr_c_calln_prefix` runs the 21-instruction stack-array setup through JALR;
+`tr_c_calln_suffix` runs the eight-instruction return. Both come from the
+existing arm generator, with exact memory effects, compact prefix register
+frames, full-image pins and Layout checks. Address-construction discovery
+now follows instruction shape, supporting both fixed-arity and N calls.
+The prefix's capped/default-limit build passes in 8.0 seconds; the suffix
+also passes separately. These add no represented opcode bridge yet.
+
+Fixed-arity arm composition landed as `5e05c63`, with the full gate passing.
+Coverage remains 101 conditional represented bridges. Next: describe the
+C_CALLN stack-array input and saved native-PC/count frame, prove represented
+return/setup, then consume its named primitive summary premise.
+
 ## C_CALL2–C_CALL5 represented arm composition
 
 `c_call2_arm` through `c_call5_arm` and their `step_arm` adapters compose
@@ -1148,8 +1163,9 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 
 ## Open / next
 
-Continue with C_CALLN and its stack-array ABI, then the remaining arm
-families. C_CALL1–C_CALL5 have generated machine boundaries, represented
+Continue with represented C_CALLN stack-array setup/return and named callee
+composition; its machine prefix/suffix are now generated and checked. Then
+continue the remaining arm families. C_CALL1–C_CALL5 have generated machine boundaries, represented
 setup/return bridges and named callee composition. There are 101 conditional
 represented opcode bridges (fixed-arity calls cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`

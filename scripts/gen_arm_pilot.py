@@ -100,11 +100,21 @@ for _n in range(4):
 
 # Keep repeated shift/bit operations from reducing total-memory expressions.
 # These load parameters have exact equations; callers do not assume a result.
-OPAQUE_LOADS = {'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX'}
+FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
+    'alu_addi', 'lw_tot', 'sd', 'sd', 'sd', 'auipc', 'alu_addi', 'ld_tot',
+    'alu_addi', 'alu_addi', 'sd', 'lw_tot', 'auipc', 'ld_tot', 'alu_addi',
+    'slli', 'alu_add', 'ld_tot', 'sd', 'slli', 'jalr'])
+FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
+    'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
+
+OPAQUE_LOADS = {'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+                'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 PATHS = {
     'C_CALL1_PREFIX': ('C_CALL1', []),
     'C_CALL1_SUFFIX': ('C_CALL1', []),
+    'C_CALLN_PREFIX': ('C_CALLN', []),
+    'C_CALLN_SUFFIX': ('C_CALLN', []),
     'DISPATCH': (None, [True]),
     'BRANCHIF_JUMP': ('BRANCHIF', [False]),
     'BRANCHIF_NEXT': ('BRANCHIF', [True]),
@@ -377,8 +387,15 @@ def outputs(family='CONST0'):
             step['pc_val'] = target
             step.pop('pc_rw')
     if family.startswith('C_CALL') and family.endswith('_PREFIX'):
-        domain_value = draft['steps'][4]['rd_val']
-        table_tag = draft['steps'][11]['addr'][2:]
+        # Locate the domain and primitive-table address constructions by shape;
+        # C_CALLN inserts an argument push and has a distinct native-stack save.
+        domain_index = next(i for i, ins in enumerate(instrs)
+                            if ins.cls == 'alu_addi' and ins.ops[0] == '25')
+        table_index = next(i for i, ins in enumerate(instrs)
+                           if ins.cls == 'ld_tot' and ins.ops[1] == '15'
+                           and instrs[i - 1].cls == 'auipc')
+        domain_value = draft['steps'][domain_index]['rd_val']
+        table_tag = draft['steps'][table_index]['addr'][2:]
         table_address = next(p for p in draft['params'] if p.startswith(f'(hlo_{table_tag}')).split(' ≤ ', 1)[1].removesuffix('.toNat)')
         result[ROOT / f'OCaml/Vm/Sim/{stem}Layout.lean'] = f"""import OCaml.Vm.Layout
 import {site_module}

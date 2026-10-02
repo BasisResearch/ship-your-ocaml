@@ -159,6 +159,11 @@ import OCaml.Vm.Sim.Ccall5SuffixPins
 import OCaml.Vm.Sim.Ccall5Return
 import OCaml.Vm.Sim.Ccall5Setup
 import OCaml.Vm.Sim.Ccall5
+import OCaml.Vm.Sim.CcallnPrefixSegment
+import OCaml.Vm.Sim.CcallnPrefixPins
+import OCaml.Vm.Sim.CcallnPrefixLayout
+import OCaml.Vm.Sim.CcallnSuffixSegment
+import OCaml.Vm.Sim.CcallnSuffixPins
 import OCaml.Vm.Sim.Pushenvacc1
 import OCaml.Vm.Sim.Pushenvacc2
 import OCaml.Vm.Sim.Pushenvacc3
