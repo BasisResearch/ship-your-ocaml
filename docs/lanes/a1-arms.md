@@ -1,5 +1,21 @@
 # Lane a1-arms
 
+## OFFSETREF and PUSH_RETADDR machine bodies
+
+`tr_offsetref` proves the eight-step read/modify/write body with exact opaque
+load equations and one store. `tr_push_retaddr` proves the eleven-step return
+frame push, with all three stores in the generated memory log. Both include
+full-image code projections and generated code-store frame proofs. Separate
+capped/default-limit builds pass: OFFSETREF 1.5s, PUSH_RETADDR 2.6s.
+
+`stack_prepend` and `payload_stack_prepend` factor finite return/application
+frame indexing and root transport through the existing stack-payload rule;
+the capped build passes in 0.8s. All new headlines are audited. The block
+SWITCH bridge landed as `14842e3`, full gate passing. Coverage remains 106
+conditional represented opcode bridges. Next: instantiate the shared stack
+prefix with PUSH_RETADDR readbacks, then restore its represented state; heap
+update/root framing for OFFSETREF follows.
+
 ## Represented block SWITCH path
 
 `SwitchTag.of_object` derives the semantic tag and native header byte from
@@ -1333,8 +1349,10 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: OFFSETREF and PUSH_RETADDR machine families are next. OFFSETREF
-can reuse the proved operand-width arithmetic. MULINT consumes the proved libgcc summary, and
+families: PUSH_RETADDR represented frame restoration is next, using the
+landed generated body and shared finite stack-prefix facts. OFFSETREF has a
+generated body and proved operand-width arithmetic; heap-update framing is
+open. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
 setup/return bridges and named callee composition. There are 106 conditional
