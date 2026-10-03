@@ -300,3 +300,6 @@ import OCaml.Vm.Boot.Startup.ResetMisa
 import OCaml.Vm.Boot.Startup.ResetPmp
 
 import OCaml.Vm.Boot.Startup.SetupElf
+
+import OCaml.Vm.Boot.Startup.ResetToCamlMain
+import OCaml.Vm.Boot.Startup.PrimitiveLookupImage

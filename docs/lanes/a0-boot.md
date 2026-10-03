@@ -12,7 +12,7 @@ when `pmpcfg_n` is the initializer's zero vector. `Vsa.Sim.Stays.forIn`
 reuses `Vsa.Densify.forIn_range_of`; its body proof works for every index,
 including out-of-bounds vector accesses, without replaying 64 iterations.
 `writeReg_present` supplies the reusable idempotent register-write law.
-The complete architectural reset and ELF setup are now checked:
+The complete architectural reset and ELF setup landed as `f526441` after the full gate passed:
 
 * `reset_tvecs_run` (`Startup/ResetTvec.lean`) preserves the zero trap vectors.
 * `reset_misa_effect` (`Startup/ResetMisaEffect.lean`) turns the existing
@@ -34,9 +34,17 @@ The complete architectural reset and ELF setup are now checked:
   for every successful reset. `whileMin_reset_exists` specializes to the
   named `WhileMinElf` metadata/loader contract, whose supplier is still open.
 
-Next: establish the pinned ELF loader/code facts and compose with the crt0
-summary, then continue the remaining startup callees. Reset-to-cut
-reachability and the lane exit remain open.
+`reset_to_caml_main` (`Startup/ResetToCamlMain.lean`) now proves actual
+machine steps from `fillZero` of an `ElfReset` configuration to `caml_main`.
+Its `WhileMinElf` premise describes only loader bytes and metadata; platform
+and code premises are discharged. `gen_startup_rows.py` reuses
+`gen_arm_pilot.image_projection` for the crt0, main and primitive-table code
+pins; all three projections check from the fixed executable image. The
+result carries exact BSS/main memory effects, argv, stack/link and output.
+
+Next: establish the concrete pinned ELF's `WhileMinElf` loader contract,
+then continue the remaining startup callees. Reset-to-cut reachability and
+the lane exit remain open.
 
 The first startup increment landed as `917d0aa` after the full gate passed.
 Checked startup progress (default proof budgets):

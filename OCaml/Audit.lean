@@ -1865,3 +1865,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.WorkQueue.empty_access
 #print axioms OCaml.Vm.Gc.WorkQueue.empty_machine
 #print axioms OCaml.Vm.Gc.WorkQueue.PopScanPost.empty_input
+-- Startup image projections and execution from reset through C entry.
+#print axioms OCaml.Vm.Boot.Startup.crt0_code
+#print axioms OCaml.Vm.Boot.Startup.main_code
+#print axioms OCaml.Vm.Boot.Startup.primitiveLookup_code
+#print axioms OCaml.Vm.Boot.Startup.reset_image
+#print axioms OCaml.Vm.Boot.Startup.reset_image_fillZero
+#print axioms OCaml.Vm.Boot.Startup.reset_to_caml_main
