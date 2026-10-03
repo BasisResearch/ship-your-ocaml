@@ -1,5 +1,21 @@
 # Lane a1-arms
 
+## SWITCH machine paths and total LHU
+
+`tr_switch_int` and `tr_switch_block` prove the census-derived 10- and
+12-instruction native paths, retaining guards, read geometry and complete
+frames. The shared unsigned-load emitter now supports LHU through the landed
+`exec_lhu_ramv`; the classifier and segment def/use logic retain its 16-bit
+zero extension. A regression test covers width, repeated source/destination
+and rejected x0 operands. All seven generator tests pass.
+
+Separate capped/default-limit builds pass: integer body 1.8s, block body 2.0s.
+The block path uses the existing exact opaque-load equations; expanding its
+nested loads was stopped after about a minute at 14 GiB and replaced by this
+existing abstraction, with no budget increase. Represented SWITCH selection
+and target adapters remain next. CHECK_SIGNALS landed as `45d4a42`, full gate
+passing. Coverage remains 105 conditional represented opcode bridges.
+
 ## Represented CHECK_SIGNALS arm
 
 `check_signals_arm` and `check_signals_step_arm` cover the no-pending path
@@ -1287,7 +1303,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: SWITCH path generation is next; OFFSETREF can reuse the proved
+families: represented SWITCH selection and target adapters are next; OFFSETREF can reuse the proved
 operand-width arithmetic. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented

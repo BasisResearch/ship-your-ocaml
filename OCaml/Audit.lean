@@ -1170,6 +1170,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.codePc_succ
 #print axioms OCaml.Vm.Sim.immediate_restore
 #print axioms OCaml.Vm.Sim.immediate_preserved
+#print axioms Vsa.Sim.tr_switch_int
+#print axioms Vsa.Sim.tr_switch_block
+#print axioms OCaml.Vm.Sim.switch_int_loaded
+#print axioms OCaml.Vm.Sim.switch_block_loaded
+
 #print axioms Vsa.Sim.tr_check_signals
 #print axioms OCaml.Vm.Sim.check_signals_loaded
 #print axioms OCaml.Vm.Sim.signalCheckReady_of_runtime

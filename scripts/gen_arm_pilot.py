@@ -29,6 +29,8 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'SWITCH_INT': ('SwitchInt', ['andi', 'alu_addi', 'branch_taken', 'srai', 'slli', 'alu_add', 'lw_tot', 'slli', 'alu_add', 'j']),
+    'SWITCH_BLOCK': ('SwitchBlock', ['andi', 'alu_addi', 'branch_nottaken', 'lhu_tot', 'lbu_tot', 'alu_add', 'slli', 'alu_add', 'lw_tot', 'slli', 'alu_add', 'j']),
     'CHECK_SIGNALS': ('CheckSignals', ['alu_addi', 'j', 'lw_tot', 'branch_taken']),
     'MULINT_PREFIX': ('MulintPrefix', ['ld_tot', 'srai', 'alu_addi', 'srai', 'jal']),
     'MULINT_SUFFIX': ('MulintSuffix', ['slli', 'alu_addi', 'alu_addi', 'j']),
@@ -110,10 +112,12 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 PATHS = {
+    'SWITCH_INT': ('SWITCH', [True]),
+    'SWITCH_BLOCK': ('SWITCH', [False]),
     'CHECK_SIGNALS': ('CHECK_SIGNALS', [True]),
     'MULINT_PREFIX': ('MULINT', []),
     'MULINT_SUFFIX': ('MULINT', []),
@@ -327,7 +331,7 @@ def outputs(family='CONST0'):
         insts = [i for i in instructions if start <= i[0] < stop]
         rows = [row for a, w, m, ops in insts for row in classify(a, w, m + ' ' + ops, {})]
     for row in rows:
-        if row.cls in ('ld', 'lw', 'lbu'):
+        if row.cls in ('ld', 'lw', 'lbu', 'lhu'):
             row.cls += '_tot'
     if [r.cls for r in rows] != shape:
         raise ValueError(f'{family} shape changed; revisit the pilot contract')

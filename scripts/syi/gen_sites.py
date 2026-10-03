@@ -29,6 +29,7 @@ Classes (registers are decimal x-register numbers, immediates hex):
     ld_tot  rd rs1 imm12           # 8-byte load, TOTAL: value = bytesT8, no byte hyps
     lw_tot  rd rs1 imm12           # 4-byte load, TOTAL: value = bytesT4, no byte hyps
     lbu_tot rd rs1 imm12           # 1-byte load, TOTAL: value = bytesT1, no byte hyps
+    lhu_tot rd rs1 imm12           # 2-byte unsigned load, TOTAL: value = bytesT2
     lw  rd rs1 imm12               # 4-byte RAM load (exec_lw_ram_bytes)
     lbu rd rs1 imm12               # 1-byte load  (exec_lbu_gen)
     sd  rs2 rs1 imm12              # 8-byte store (exec_sd_val / writeMap8)
@@ -530,36 +531,44 @@ class Emitter:
     def emit_lw_tot(self, s: Site) -> str:
         return self._load_wide_tot(s, 4)
 
-    def emit_lbu_tot(self, s: Site) -> str:
+    def _load_unsigned_tot(self, s: Site, nbytes: int) -> str:
+        mn = {1: "lbu", 2: "lhu"}[nbytes]
+        helper = "exec_lbu_tot" if nbytes == 1 else "exec_lhu_ramv"
         rd, rs1, imm = int(s.fields[0]), int(s.fields[1]), int(s.fields[2], 16)
         if rd == 0 or rs1 == 0:
-            raise ValueError(f"line {s.lineno}: lbu with x0 operand unsupported")
+            raise ValueError(f"line {s.lineno}: {mn} with x0 operand unsupported")
         ea = f"(v{rs1} + sign_extend (m := 64) (0x{imm:03x}#12))"
-        tot = f"(bytesT1 σ.mem {ea}.toNat : BitVec (8 * 1))"
+        tot = f"(bytesT{nbytes} σ.mem {ea}.toNat : BitVec (8 * {nbytes}))"
         value = f"(zero_extend (m := 64) {tot})"
         extra_hyps = (
             f"\n    (hlo : 0x80000000 ≤ {ea}.toNat)\n"
-            f"    (hhiram : {ea}.toNat + 1 ≤ 0x100000000)\n"
-            f"    (hhtif : {ea}.toNat + 1 ≤ tohostAddr\n"
+            f"    (hhiram : {ea}.toNat + {nbytes} ≤ 0x100000000)\n"
+            f"    (hhtif : {ea}.toNat + {nbytes} ≤ tohostAddr\n"
             f"      ∨ tohostAddr + 8 ≤ {ea}.toNat)\n   ")
         instr = (f"instruction.LOAD (0x{imm:03x}#12, {regidx(rs1)}, "
-                 f"{regidx(rd)}, true, 1)")
+                 f"{regidx(rd)}, true, {nbytes})")
         exec_proof = (
-            f"    (exec_lbu_tot σ (0x{s.addr:08x}#64) (0x{imm:03x}#12) ({regidx(rs1)}) "
+            f"    ({helper} σ (0x{s.addr:08x}#64) (0x{imm:03x}#12) ({regidx(rs1)}) "
             f"({regidx(rd)})\n"
             f"      (sigma3_alu σ (0x{s.addr:08x}#64) Register.x{rd} {value})\n"
-            f"      v{rs1} hG\n"
-            f"      {rx_read(rs1, s.addr)}\n"
+            f"      v{rs1}{' ' + value if nbytes == 2 else ''} hG\n"
+            f"      {rx_read(rs1, s.addr)}{' rfl' if nbytes == 2 else ''}\n"
             f"      (wX_bits_x{rd} _ {value})\n"
             "      hlo hhiram hhtif)")
         head = self.head(
             self.site_name(s.addr), s.addr,
-            f"`lbu x{rd},0x{imm:x}(x{rs1})` — TOTAL (no byte-presence hypothesis).",
+            f"`{mn} x{rd},0x{imm:x}(x{rs1})` — TOTAL (no byte-presence hypothesis).",
             [rs1], "", reg_hyp(rs1), extra_hyps,
             "σ'.mem = σ.mem",
             f"sigmaPost_alu σ pc vminstret Register.x{rd} {value}")
         return head + self.alu_body(s, instr, rd, value, exec_proof)
 
+
+    def emit_lbu_tot(self, s: Site) -> str:
+        return self._load_unsigned_tot(s, 1)
+
+    def emit_lhu_tot(self, s: Site) -> str:
+        return self._load_unsigned_tot(s, 2)
 
     # -- TOTAL, byte-parameterized (`_totb`) --------------------------------
     #
@@ -810,6 +819,7 @@ CLASS_EMITTERS = {
     "ld_tot": "emit_ld_tot",
     "lw_tot": "emit_lw_tot",
     "lbu_tot": "emit_lbu_tot",
+    "lhu_tot": "emit_lhu_tot",
     "ld_totb": "emit_ld_totb",
     "lw_totb": "emit_lw_totb",
     "sd": "emit_sd",
@@ -907,6 +917,8 @@ def main() -> int:
         imports.append("Vsa.Sim.StrcpySites")
     if any(s.cls == "jalr" for s in sites):
         imports.append("Vsa.Sim.LibraryJalrFacts")
+    if any(s.cls == "lhu_tot" for s in sites):
+        imports.append("Vsa.Sim.RamReadValue")
     imports.append(code_import)
     imports.extend(sorted(decode_imports))
 

@@ -14,6 +14,22 @@ def word(op, f3, top, rd=21, rs1=21, rs2=23):
 
 
 class AluClasses(unittest.TestCase):
+    def test_unsigned_halfword_load(self):
+        # Alias destination/base: the source must be read before its write.
+        w = (0xffe << 20) | (15 << 15) | (5 << 12) | (15 << 7) | 3
+        row, = classify(0x80003158, w, '', {})
+        self.assertEqual((row.cls, row.ops), ('lhu', [15, 15, 'ffe']))
+        ins = Instr(row.addr, row.word, 'lhu_tot', list(map(str, row.ops)), '')
+        self.assertEqual(ins.reads(), [15])
+        self.assertEqual(ins.writes(), 15)
+        self.assertIn('zero_extend', ins.raw_val())
+        self.assertIn('bytesT2', ins.raw_val())
+        draft = DraftBuilder([ins], '', 'Pins').build('test', [])
+        self.assertEqual([p['reg'] for p in draft['pins']], ['x15'])
+        for bad in [w & ~(31 << 7), w & ~(31 << 15)]:
+            rejected, = classify(0x80003158, bad, '', {})
+            self.assertNotEqual(rejected.cls, 'lhu')
+
     def test_shift_high_bit_and_reserved(self):
         for f3, top, name in [(1, 0, 'slli'), (5, 0, 'srli'), (5, 32, 'srai')]:
             w = word(0x13, f3, top | 1, rs2=31)

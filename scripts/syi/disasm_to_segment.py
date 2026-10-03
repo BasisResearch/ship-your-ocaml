@@ -62,6 +62,7 @@ SEG_CLASS = {"alu_addi": "alu", "addiw": "alu", "alu_add": "alu", "sub": "alu",
 SEG_CLASS.update({cls: "alu" for cls in alu_classes.CLASSES})
 LOAD_BYTES = {"ld": 8, "lw": 4, "lbu": 1}
 TOTAL_LOAD_BYTES = {k + "_tot": v for k, v in LOAD_BYTES.items()}
+TOTAL_LOAD_BYTES["lhu_tot"] = 2
 SEG_CLASS.update({k: "alu" for k in TOTAL_LOAD_BYTES})
 STORE_BYTES = {"sd": 8, "sw": 4, "sb": 1}
 
@@ -128,7 +129,7 @@ class Instr:
                     f"{v(o[1])} 31 0) - (Sail.BitVec.extractLsb {v(o[2])} 31 0)))")
         if c in TOTAL_LOAD_BYTES:
             n = TOTAL_LOAD_BYTES[c]
-            ext = "zero_extend" if c == "lbu_tot" else "sign_extend"
+            ext = "zero_extend" if c in ("lbu_tot", "lhu_tot") else "sign_extend"
             ea = f"({v(o[1])} + sign_extend (m := 64) (0x{o[2]}#12))"
             return f"({ext} (m := 64) (bytesT{n} σ.mem {ea}.toNat : BitVec (8 * {n})))"
         if c in ("ld", "lw"):

@@ -51,7 +51,7 @@ DEFAULT_OBJDUMP = "riscv64-elf-objdump"
 
 BRANCH_F3 = {0b000: "BEQ", 0b001: "BNE", 0b100: "BLT", 0b101: "BGE",
              0b110: "BLTU", 0b111: "BGEU"}
-LOAD_F3 = {0b011: "ld", 0b010: "lw", 0b100: "lbu"}   # width/signedness key
+LOAD_F3 = {0b011: "ld", 0b010: "lw", 0b100: "lbu", 0b101: "lhu"}   # width/signedness key
 STORE_F3 = {0b011: "sd", 0b010: "sw", 0b000: "sb"}
 
 DISASM_RE = re.compile(r"^\s*([0-9a-f]+):\s+([0-9a-f]{8})\s+(.*?)\s*$")

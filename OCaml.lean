@@ -201,6 +201,10 @@ import OCaml.Vm.Sim.Offsetint
 import OCaml.Vm.Sim.Muldi3
 import OCaml.Vm.Sim.Mulint
 import OCaml.Vm.Sim.CheckSignals
+import OCaml.Vm.Sim.SwitchIntSegment
+import OCaml.Vm.Sim.SwitchIntPins
+import OCaml.Vm.Sim.SwitchBlockSegment
+import OCaml.Vm.Sim.SwitchBlockPins
 import OCaml.Vm.Sim.MulArithmetic
 import OCaml.Vm.Sim.MulintPrefixSegment
 import OCaml.Vm.Sim.MulintPrefixPins
