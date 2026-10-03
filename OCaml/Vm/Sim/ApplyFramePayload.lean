@@ -47,18 +47,10 @@ theorem apply_frame_payload {P : Prog} {s : St} {before after : Config}
   apply payload_replace_prefix h bound outside inside memory out
   · simp only [List.length_append, List.length_take, List.length_cons, List.length_nil]
     omega
-  · intro i v selected
-    have index := (List.getElem?_eq_some_iff.mp selected).1
-    have wordsBound : i < (applyFrameWords args (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 1)))
-        env (tag64 (BitVec.ofNat 63 s.extra))).length := by rw [represented.length]; exact index
-    have wordAt := List.getElem?_eq_getElem wordsBound
-    have value := represented.slots i v selected
-    rw [wordAt] at value
-    rw [value]
-    congr 1
-    symm
-    apply indexed_stored (apply_entries_distinct _ _ _ positive small)
-      (apply_entries_selected positive small wordAt) memory
+  · apply represented.readback
+    intro i w selected
+    exact indexed_stored (apply_entries_distinct _ _ _ positive small)
+      (apply_entries_selected positive small selected) memory
   · exact apply_frame_roots args.length
 
 end OCaml.Vm.Sim

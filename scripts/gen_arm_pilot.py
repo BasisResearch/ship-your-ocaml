@@ -29,6 +29,10 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'APPTERM_PREFIX': ('ApptermPrefix', ['lw_tot', 'lw_tot', 'addiw', 'sub', 'slli', 'alu_add', 'branch_nottaken', 'slli', 'alu_add', 'alu_addi', 'alu_add', 'alu_addi']),
+    'APPTERM_COPY_MORE': ('ApptermCopyMore', ['ld_tot', 'addiw', 'alu_addi', 'sd', 'alu_addi', 'branch_taken']),
+    'APPTERM_COPY_LAST': ('ApptermCopyLast', ['ld_tot', 'addiw', 'alu_addi', 'sd', 'alu_addi', 'branch_nottaken']),
+    'APPTERM_SUFFIX': ('ApptermSuffix', ['ld_tot', 'alu_add', 'alu_addi', 'j', 'ld_tot', 'alu_addi', 'ld_tot', 'branch_nottaken', 'lw_tot', 'branch_taken']),
     'GRAB_FAST': ('GrabFast', ['lw_tot', 'alu_addi', 'branch_nottaken', 'sub', 'alu_addi', 'j']),
     'RETURN_MORE': ('ReturnMore', ['lw_tot', 'slli', 'alu_add', 'branch_nottaken', 'ld_tot', 'alu_addi', 'alu_addi', 'j']),
     'RETURN_FRAME': ('ReturnFrame', ['lw_tot', 'slli', 'alu_add', 'branch_taken', 'ld_tot', 'ld_tot', 'ld_tot', 'srai', 'alu_addi', 'j']),
@@ -131,8 +135,17 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
+
+# Explicit loop cuts: entry, exit, and native branch decisions. These are text
+# instruction addresses; all runtime data addresses still come from Layout.
+CUTS = {
+    'APPTERM_PREFIX': (0x80002a88, 0x80002ab8, [False]),
+    'APPTERM_COPY_MORE': (0x80002ab8, 0x80002ab8, [True]),
+    'APPTERM_COPY_LAST': (0x80002ab8, 0x80002ad0, [False]),
+    'APPTERM_SUFFIX': (0x80002ad0, 0x80001f5c, [False, True]),
+}
 
 PATHS = {
     'GRAB_FAST': ('GRAB', [False]),
@@ -346,7 +359,10 @@ def outputs(family='CONST0'):
     text_base = sections((ROOT / 'c/ocamlrun-riscv-htif.elf').read_bytes())['.text'][0]
     census = json.loads((ROOT / 'results/census.json').read_text())['caml_interprete']
     instructions = disasm(ROOT / 'c/ocamlrun-riscv-htif.elf')['caml_interprete']['insts']
-    if family in PATHS:
+    if family in CUTS:
+        start, stop, decisions = CUTS[family]
+        insts, rows = path_span(instructions, start, decisions, stop)
+    elif family in PATHS:
         opcode, decisions = PATHS[family]
         start = int(census['loop_head'] if opcode is None else census['arms'][opcode]['addr'], 16)
         if family.endswith('_SUFFIX'):

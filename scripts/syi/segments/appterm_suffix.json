@@ -1,0 +1,181 @@
+{
+  "theorem": "tr_appterm_suffix",
+  "doc": "APPTERM_SUFFIX arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.ApptermSuffixSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v21 v18 v10 v11 v19 v20 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80002ad0 : 0x80000000 ≤ (v21 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_80002ad0 : (v21 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80002ad0 : (v21 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v21 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(loaded_80002ad0 : BitVec 64)",
+    "(hvalue_80002ad0 : loaded_80002ad0 = (sign_extend (m := 64) (bytesT8 m0 (v21 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))))",
+    "(hlo_8000277c : 0x80000000 ≤ (v19 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_8000277c : (v19 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_8000277c : (v19 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v19 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(loaded_8000277c : BitVec 64)",
+    "(hvalue_8000277c : loaded_8000277c = (sign_extend (m := 64) (bytesT8 m0 (v19 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))))",
+    "(hlo_80002784 : 0x80000000 ≤ (loaded_8000277c + sign_extend (m := 64) (0x098#12)).toNat)",
+    "(hhi_80002784 : (loaded_8000277c + sign_extend (m := 64) (0x098#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80002784 : (loaded_8000277c + sign_extend (m := 64) (0x098#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (loaded_8000277c + sign_extend (m := 64) (0x098#12)).toNat)",
+    "(loaded_80002784 : BitVec 64)",
+    "(hvalue_80002784 : loaded_80002784 = (sign_extend (m := 64) (bytesT8 m0 (loaded_8000277c + sign_extend (m := 64) (0x098#12)).toNat : BitVec (8 * 8))))",
+    "(hguard_80002788 : zopz0zI_u (v11 + sign_extend (m := 64) (0x000#12)) loaded_80002784 = false)",
+    "(hlo_8000278c : 0x80000000 ≤ (v20 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_8000278c : (v20 + sign_extend (m := 64) (0x000#12)).toNat + 4 ≤ 0x100000000)",
+    "(hhtif_8000278c : (v20 + sign_extend (m := 64) (0x000#12)).toNat + 4 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v20 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(loaded_8000278c : BitVec 64)",
+    "(hvalue_8000278c : loaded_8000278c = (sign_extend (m := 64) (bytesT4 m0 (v20 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 4))))",
+    "(hguard_80002790 : (loaded_8000278c == (0#64)) = true)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlApptermSuffixLoaded",
+  "pins": [
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    },
+    {
+      "reg": "x18",
+      "val": "v18",
+      "hyp": "hv18"
+    },
+    {
+      "reg": "x10",
+      "val": "v10",
+      "hyp": "hv10"
+    },
+    {
+      "reg": "x11",
+      "val": "v11",
+      "hyp": "hv11"
+    },
+    {
+      "reg": "x19",
+      "val": "v19",
+      "hyp": "hv19"
+    },
+    {
+      "reg": "x20",
+      "val": "v20",
+      "hyp": "hv20"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80002ad0",
+      "site": "site_80002ad0_appterm_suffix",
+      "class": "alu",
+      "asm": "ld s0,0(s5)",
+      "rd": "x8",
+      "rd_val": "loaded_80002ad0",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v21 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl hlo_80002ad0 hhi_80002ad0 hhtif_80002ad0 $hi",
+      "rw": "hmemeq, ← hvalue_80002ad0"
+    },
+    {
+      "addr": "0x80002ad4",
+      "site": "site_80002ad4_appterm_suffix",
+      "class": "alu",
+      "asm": "add s2,s2,a0",
+      "rd": "x18",
+      "rd_val": "(v18 + v10)",
+      "raw_val": "(v18 + v10)",
+      "call": "$vmi $v:x18 $v:x10 $hG $hpc $hmi $pin:x18 $pin:x10 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002ad8",
+      "site": "site_80002ad8_appterm_suffix",
+      "class": "alu",
+      "asm": "mv s1,a1",
+      "rd": "x9",
+      "rd_val": "(v11 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v11 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x11 $hG $hpc $hmi $pin:x11 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002adc",
+      "site": "site_80002adc_appterm_suffix",
+      "class": "j",
+      "asm": "j 8000277c <caml_interprete+0x984>",
+      "imm": "0x1ffca0#21",
+      "target": "0x8000277c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    },
+    {
+      "addr": "0x8000277c",
+      "site": "site_8000277c_appterm_suffix",
+      "class": "alu",
+      "asm": "ld a5,0(s3)",
+      "rd": "x15",
+      "rd_val": "loaded_8000277c",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v19 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x19 $hG $hpc $hmi $pin:x19 $hmem rfl hlo_8000277c hhi_8000277c hhtif_8000277c $hi",
+      "rw": "hmemE4, ← hvalue_8000277c"
+    },
+    {
+      "addr": "0x80002780",
+      "site": "site_80002780_appterm_suffix",
+      "class": "alu",
+      "asm": "mv s9,s5",
+      "rd": "x25",
+      "rd_val": "(v21 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v21 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002784",
+      "site": "site_80002784_appterm_suffix",
+      "class": "alu",
+      "asm": "ld a4,152(a5)",
+      "rd": "x14",
+      "rd_val": "loaded_80002784",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v15 + sign_extend (m := 64) (0x098#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl hlo_80002784 hhi_80002784 hhtif_80002784 $hi",
+      "rw": "hmemE6, ← hvalue_80002784"
+    },
+    {
+      "addr": "0x80002788",
+      "site": "site_80002788_nottaken_appterm_suffix",
+      "class": "bnottaken",
+      "asm": "bltu s1,a4,8000284c <caml_interprete+0xa54>",
+      "pre_lines": [],
+      "call": "$vmi $v:x9 $v:x14 $hG $hpc $hmi $pin:x9 $pin:x14 $hmem rfl hguard_80002788 $hi"
+    },
+    {
+      "addr": "0x8000278c",
+      "site": "site_8000278c_appterm_suffix",
+      "class": "alu",
+      "asm": "lw a5,0(s4)",
+      "rd": "x15",
+      "rd_val": "loaded_8000278c",
+      "raw_val": "(sign_extend (m := 64) (bytesT4 σ.mem (v20 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 4)))",
+      "call": "$vmi $v:x20 $hG $hpc $hmi $pin:x20 $hmem rfl hlo_8000278c hhi_8000278c hhtif_8000278c $hi",
+      "rw": "hmemE8, ← hvalue_8000278c"
+    },
+    {
+      "addr": "0x80002790",
+      "site": "site_80002790_taken_appterm_suffix",
+      "class": "btaken",
+      "asm": "beqz a5,80001f5c <caml_interprete+0x164>",
+      "imm": "0x17cc#13",
+      "target": "0x80001f5c",
+      "pre_lines": [],
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl hguard_80002790 $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80002ad0",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

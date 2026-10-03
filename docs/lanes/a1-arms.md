@@ -1524,6 +1524,18 @@ indexed loads and C_CALLN. Operand nonnegativity, bounded extra count and
 runtime framing remain explicit; GRAB partial-application allocation is open.
 Fixed-arity tail calls landed as `bdedeb8`, all gates passing.
 
+## Generic tail-call loop cuts and memory invariant
+
+Generated `tr_appterm_prefix`, `tr_appterm_copy_more`,
+`tr_appterm_copy_last`, `tr_appterm_suffix` check in 2.3/1.3/1.3/1.9 s.
+The new explicit text cuts in `gen_arm_pilot.py` stop at loop boundaries.
+`ReverseCopyLog.lean` proves one-store extension, empty initial log, final
+represented readbacks, suffix footprint and unread-source preservation even
+when destination/source overlap. `ValueWords.readback` now shares the slot
+proof used by APPLY frames and both copy directions. Counted loop execution
+through `loopFromBody`, then prefix/suffix composition, is next.
+GRAB’s satisfied-arity path landed as `41a698a`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

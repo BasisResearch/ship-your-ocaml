@@ -36,14 +36,9 @@ theorem value_log_words {pl : Place} {values : List Val} {words : List (BitVec 6
     {before after : Config} {base : Nat} (represented : ValueWords pl values words)
     (memory : after.σ.mem = writeLog before.σ.mem (valueLog base words)) :
     ∀ i v, values[i]? = some v → valWord pl v = some (word after (base + 8 * i)) := by
-  intro i v selected
-  have bound : i < words.length := by
-    rw [represented.length]
-    exact (List.getElem?_eq_some_iff.mp selected).1
-  have hw : words[i]? = some words[i] := List.getElem?_eq_some_iff.mpr ⟨bound, rfl⟩
-  have stored := indexed_stored (value_entries_distinct words) (value_entries_selected hw) memory
-  rw [stored]
-  exact (represented.slots i v selected).trans hw
+  apply represented.readback
+  intro i w selected
+  exact indexed_stored (value_entries_distinct words) (value_entries_selected selected) memory
 
 /-- Tail calls and restart copies replace a stack prefix through one word-log
 certificate; all geometry and source-root obligations are separate. -/

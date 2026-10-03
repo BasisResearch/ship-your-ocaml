@@ -38,6 +38,20 @@ theorem ValueWords.append {pl : Place} {xs ys : List Val} {ws zs : List (BitVec 
     rw [List.getElem?_append_right (by rw [left.length]; omega), left.length]
     exact right.slots _ v selected
 
+/-- Turn exact native readbacks into represented values without rebuilding
+the list’s per-slot representation proof. -/
+theorem ValueWords.readback {pl : Place} {values : List Val} {words : List (BitVec 64)}
+    {after : Config} {base : Nat} (h : ValueWords pl values words)
+    (read : ∀ i w, words[i]? = some w → word after (base + 8 * i) = w) :
+    ∀ i v, values[i]? = some v → valWord pl v = some (word after (base + 8 * i)) := by
+  intro i v selected
+  have bound : i < words.length := by
+    rw [h.length]
+    exact (List.getElem?_eq_some_iff.mp selected).1
+  have hw := List.getElem?_eq_getElem bound
+  rw [read i words[i] hw]
+  exact (h.slots i v selected).trans hw
+
 /-- Native words read from the first n slots of an existing represented stack. -/
 def stackWords (c : Config) (sp n : Nat) : List (BitVec 64) :=
   (List.range n).map fun i => word c (sp + 8 * i)

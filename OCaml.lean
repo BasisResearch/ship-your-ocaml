@@ -235,6 +235,15 @@ import OCaml.Vm.Sim.Apply1
 import OCaml.Vm.Sim.Apply2
 import OCaml.Vm.Sim.Apply3
 import OCaml.Vm.Sim.GrabFast
+import OCaml.Vm.Sim.ApptermPrefixSegment
+import OCaml.Vm.Sim.ApptermPrefixPins
+import OCaml.Vm.Sim.ApptermCopyMoreSegment
+import OCaml.Vm.Sim.ApptermCopyMorePins
+import OCaml.Vm.Sim.ApptermCopyLastSegment
+import OCaml.Vm.Sim.ApptermCopyLastPins
+import OCaml.Vm.Sim.ApptermSuffixSegment
+import OCaml.Vm.Sim.ApptermSuffixPins
+import OCaml.Vm.Sim.ReverseCopyLog
 import OCaml.Vm.Sim.Appterm1Segment
 import OCaml.Vm.Sim.Appterm1Pins
 import OCaml.Vm.Sim.Appterm2Segment

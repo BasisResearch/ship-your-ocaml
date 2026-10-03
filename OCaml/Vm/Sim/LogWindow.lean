@@ -4,6 +4,14 @@ namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open Vsa.Sim
 
+/-- A per-entry certificate constructs the inductive write-window predicate. -/
+theorem log_in_windows_of_mem {windows : List W} {log : List WEntry}
+    (inside : ∀ e ∈ log, InsideW windows e.1 e.2.1) : LogInW windows log := by
+  induction log with
+  | nil => trivial
+  | cons entry log ih =>
+    exact ⟨inside entry (by simp), ih (fun e he => inside e (by simp [he]))⟩
+
 /-- A range outside every allowed window is disjoint from each allowed store. -/
 theorem range_disjoint_inside {windows : List W} {a n address width : Nat}
     (outside : OutWRange windows a n) (inside : InsideW windows address width) :
