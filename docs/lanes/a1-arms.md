@@ -1,5 +1,18 @@
 # Lane a1-arms
 
+## Represented integer SWITCH path
+
+`switch_int_arm` reads the selected represented table word and follows its
+signed displacement relative to the table start. `switch_int_step_arm`
+extracts nonnegativity, bounds and target success from the actual semantic
+step; decoded table/represented operand agreement remains explicit.
+`switch_int_scale` reuses `longVal_native`, and `switch_table_word` factors
+the table addressing algebra. The capped/default-limit bridge build passes
+in 1.0s, with arithmetic 0.8s; all new headlines are audited. Machine paths
+landed as `9132dc1`, full gate passing. The block-tag path is next. Coverage
+is 105 conditional opcode bridges plus the integer SWITCH case; the full
+SWITCH bridge and lane exit remain open.
+
 ## SWITCH machine paths and total LHU
 
 `tr_switch_int` and `tr_switch_block` prove the census-derived 10- and
@@ -1303,7 +1316,7 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: represented SWITCH selection and target adapters are next; OFFSETREF can reuse the proved
+families: the represented SWITCH block-tag path is next; OFFSETREF can reuse the proved
 operand-width arithmetic. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
