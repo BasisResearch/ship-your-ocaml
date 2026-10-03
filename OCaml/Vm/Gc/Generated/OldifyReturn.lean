@@ -41,6 +41,8 @@ def returnWord (sp : BitVec 64) (c : Config) : BitVec 64 :=
 
 theorem slot_offset : ∀ cell ∈ slots, cell.2 ∈ offsets := by decide
 
+theorem offsets_eq : offsets = slots.map Prod.snd := rfl
+
 theorem chain_ok : ChainOK pc [2] blocks := by decide
 
 theorem code_facts {mem : Std.ExtHashMap Nat (BitVec 8)}

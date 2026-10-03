@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.ForwardedCall
 import OCaml.Vm.Gc.OldifySaved
 import OCaml.Vm.Boot.Startup.StatAlloc
 import OCaml.Vm.Boot.Startup.StatAllocCalls
@@ -2193,3 +2194,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.caml_stat_alloc_noexcXab4cFRow
 #print axioms Vsa.Sim.caml_stat_alloc_noexcXab50Row
 #print axioms Vsa.Sim.caml_stat_alloc_noexcXab7cRow
+
+#print axioms OCaml.Vm.Gc.OldifyYoung.upper_access
+#print axioms OCaml.Vm.Gc.OldifyYoung.lower_access
+#print axioms OCaml.Vm.Gc.OldifyYoung.upper_control
+#print axioms OCaml.Vm.Gc.OldifyYoung.lower_control
+#print axioms OCaml.Vm.Gc.OldifyYoung.access
+#print axioms OCaml.Vm.Gc.OldifyYoung.young_machine
+#print axioms OCaml.Vm.Gc.OldifyEntry.Post.word_unchanged
+#print axioms OCaml.Vm.Gc.OldifyEntry.Post.young_input
+#print axioms OCaml.Vm.Gc.OldifyEntry.Input.return_windows
+#print axioms OCaml.Vm.Gc.OldifyEntry.Post.carried
+#print axioms OCaml.Vm.Gc.OldifyEntry.carried_after_young
+#print axioms OCaml.Vm.Gc.ForwardedCall.after_entry
+#print axioms OCaml.Vm.Gc.ForwardedCall.forwarded_call

@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Whole already-forwarded oldify invocation (2026-10-03)
+
+- `ForwardedCall.lean:forwarded_call` composes the concrete pointer-entry
+  prologue, both nursery-bound tests, zero-header path, root store and
+  native return. It proves the original return PC/caller registers, exact
+  native-save-plus-root log, updated root and platform/code/output frames.
+  No callee-run or saved-load identity is assumed.
+- `OldifyYoung.lean:young_machine` discharges both strict-young branches
+  from actual Layout-based domain reads and bounds. `OldifyCallSeams`
+  carries the root/stack registers and supplies its input from the prologue.
+- `ForwardedCall.Input` names the native/domain/source/root separation
+  footprints. The caller must supply these geometric facts, source header
+  zero and young/even classification; allocation is not part of this route.
+- Targeted capped build passes (642 jobs). Prologue/saved frame landed as
+  `b3b23f4`. Next: splice this callee into the mopup young-field call and
+  handle its relocated field result. Fresh copying/allocation, general
+  partial relocation, roots, ephemerons, major reclamation and G2 remain open.
+
 ## Concrete oldify pointer entry and saved frame (2026-10-03)
 
 - `OldifyEntry.lean:entry_machine` executes the non-immediate prologue
