@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.FirstPayload
+import OCaml.Vm.Boot.Startup.MallocBootHeap
 import OCaml.Vm.Gc.FirstYoungAccess
 import OCaml.Vm.Gc.FirstForwarded
 import OCaml.Vm.Boot.Startup.MallocBootAlign
@@ -2543,3 +2544,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.FirstField.Post.word_frame
 #print axioms OCaml.Vm.Gc.FirstField.Post.first_relocates
 #print axioms OCaml.Vm.Gc.FirstField.Post.relocating_grey
+#print axioms OCaml.Vm.Boot.Startup.malloc_morecore_pre
+#print axioms OCaml.Vm.Boot.Startup.morecore_spill_value
+#print axioms OCaml.Vm.Boot.Startup.malloc_alignment_morecore
+#print axioms OCaml.Vm.Boot.Startup.malloc_boot_top
+#print axioms OCaml.Vm.Boot.Startup.FreshArena.heap
+#print axioms OCaml.Vm.Boot.Startup.malloc_boot_fresh
+#print axioms OCaml.Vm.Boot.Startup.malloc_boot_initialize

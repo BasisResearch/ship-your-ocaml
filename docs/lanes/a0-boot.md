@@ -2,6 +2,30 @@
 
 ## Round 2 status (2026-10-03)
 
+`Startup/MallocBootHeap.lean` (`malloc_boot_initialize`) now composes the
+first malloc prefix, both morecore summaries, and source top initialization.
+It reaches the statistics pass at `0x800379e8` with ordinary `PHeapAt`:
+top `heapStart`, page-aligned break `heapStart + 3776`, header 3777,
+zero binblocks and all 127 empty bins. Saved registers, memory outside the
+malloc ownership window, and byte presence are retained. Its inputs are
+`InitialArena`, the 928-byte request, stack/ownership geometry and no prior
+allocations; it does **not** assume an initialized heap.
+
+`MallocBootAligned.lean` consumes the landed `sbrk_r_run` for the second
+2800-byte request. `MallocBootTop.lean` certifies the three initialization
+stores. `AllocatorFresh.lean` assembles the empty arena into `PHeapAt`, and
+`malloc_boot_fresh` supplies its fields from both call frames and the exact
+logs. A direct header-bit rewrite hit kernel recursion while unfolding a
+symbolic read; the generic option-word lemma checks without raising limits.
+Shared `malloc_morecore_pre`, `malloc_sbrk_window` and `morecore_spill_value`
+avoid repeating call geometry, ownership and spill recovery.
+
+Next: consume existing `ext_stats`, `ext_top`/`top_split` to finish malloc,
+bridge its SWP contract to the actual reset witness, then continue startup.
+The complete reset-to-cut run and Round 2 exit remain open. The preceding
+first-morecore/alignment increment landed as `b8041a0`, full gate passed.
+
+
 `Startup/MallocBootMorecore.lean` (`malloc_boot_morecore`) now composes the
 first malloc prefix with `_sbrk_r`'s bootstrap summary. The zero-break and
 ownership preconditions are discharged from `InitialArena` and the exact

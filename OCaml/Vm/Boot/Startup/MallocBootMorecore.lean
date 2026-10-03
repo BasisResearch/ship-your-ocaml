@@ -14,38 +14,48 @@ theorem MallocBootAtCall.read_below {C : MCtx} {R : Nat → BitVec 64} {m : Mem}
   simp only [mallocBootLog, OutL, and_true]
   omega
 
+/-- Morecore writes only inside malloc's existing ownership window. -/
+theorem malloc_sbrk_window (C : MCtx) (a : Nat)
+    (h : SbrkW (C.s.toNat - 96) a) : MWin C.H C.s a := by
+  unfold SbrkW brkAddr at h
+  rcases h with h | h | h | h
+  · exact .inr ⟨by unfold mHead; omega, by omega⟩
+  all_goals exact .inl (.inl (by unfold allocGlobal InRange; omega))
+
+/-- Shared call geometry for morecore calls inside malloc's native frame. -/
+theorem malloc_morecore_pre {C : MCtx} (O : WOK C)
+    {R : Nat → BitVec 64} {m : Mem} {brkv size : Nat}
+    (stackHigh : heapEnd + mHead ≤ C.s.toNat)
+    (hsp : R 2 = C.s + 18446744073709551520#64)
+    (hsize : (R 11).toNat = size) (sizeLt : size < 2^32)
+    (read : read64 m brkAddr = some brkv) (positive : 0 < brkv)
+    (bound : brkv ≤ heapEnd) (link : (R 1).toNat % 4 = 0) :
+    SbrkPre C.S R m brkv size := by
+  have hlo := O.sp.lo
+  have hhi := O.sp.hi
+  have hal := O.sp.align
+  have sp : (R 2).toNat = C.s.toNat - 96 := by rw [hsp]; sx_addr
+  unfold heapEnd mHead at stackHigh
+  refine ⟨hsize, sizeLt, read, positive, bound, ?_, ?_, ?_, link, ?_, ?_, ?_⟩
+  · rw [sp]; unfold Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
+  · rw [sp]; omega
+  · rw [sp]; omega
+  · rw [sp]; omega
+  · rw [sp]; unfold brkAddr; omega
+  · intro a ha
+    exact O.own a (malloc_sbrk_window C a (sp ▸ ha))
+
 /-- The prefix supplies every precondition of the source zero-break morecore
 summary; no initialized heap is required. -/
 theorem MallocBootAtCall.sbrk_pre {C : MCtx} (O : WOK C)
     {R : Nat → BitVec 64} {m : Mem} (p : MallocBootAtCall C R m)
     (arena : InitialArena C.Mt0) (stackHigh : heapEnd + mHead ≤ C.s.toNat) :
     SbrkBootPre C.S R m 976 := by
-  have hlo := O.sp.lo
-  have hhi := O.sp.hi
-  have hal := O.sp.align
-  have sp : (R 2).toNat = C.s.toNat - 96 := by rw [p.frame.sp]; sx_addr
-  unfold heapEnd mHead at stackHigh
-  refine ⟨?_, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, by decide⟩
-  · rw [p.read_below (by unfold brkAddr; omega)]
-    exact arena.brk
-  · rw [p.a1]; rfl
-  · decide
-  · rw [read64_store_hit]; rfl
-  · decide
-  · decide
-  · rw [sp]; unfold Vsa.Sim.tohostAddr Vsa.Sim.LibraryLayout.tohostAddr; omega
-  · rw [sp]; omega
-  · rw [sp]; omega
-  · rw [p.ra]; decide
-  · rw [sp]; omega
-  · rw [sp]; unfold brkAddr; omega
-  · intro a ha
-    unfold SbrkW brkAddr at ha
-    rw [sp] at ha
-    refine O.own a ?_
-    rcases ha with h | h | h | h
-    · exact .inr ⟨by unfold mHead; omega, by omega⟩
-    all_goals exact .inl (.inl (by unfold allocGlobal InRange; omega))
+  refine ⟨?_, malloc_morecore_pre O stackHigh p.frame.sp
+    (by rw [p.a1]; rfl) (by decide) (by rw [read64_store_hit]; rfl)
+    (by decide) (by decide) (by rw [p.ra]; decide), by decide⟩
+  rw [p.read_below (by unfold brkAddr heapEnd mHead at *; omega)]
+  exact arena.brk
 
 /-- Morecore preserves the enclosing malloc frame above its own native stack. -/
 theorem MFrame.after_sbrk {C : MCtx} (O : WOK C) {R R' : Nat → BitVec 64}
@@ -75,6 +85,7 @@ structure MallocBootAfterMorecore (C : MCtx) (R : Nat → BitVec 64) (m : Mem) :
   read : ∀ a, (∀ k, k < 8 → ¬ SbrkW (C.s.toNat - 96) (a + k)) →
     read64 m a = read64 (writeLog C.Mt0 (mallocBootLog C.s C.r (C.rv0 8))) a
   present : ∀ a : Nat, (C.Mt0[a]?).isSome → (m[a]?).isSome
+  agree : ∀ a, ¬ MWin C.H C.s a → m[a]? = C.Mt0[a]?
 
 /-- Compose the generated malloc prefix with the proved source bootstrap call. -/
 theorem malloc_boot_morecore {C : MCtx} (O : WOK C) {R : Nat → BitVec 64}
@@ -90,7 +101,7 @@ theorem malloc_boot_morecore {C : MCtx} (O : WOK C) {R : Nat → BitVec 64}
   rw [call.ra]
   apply next
   refine ⟨MFrame.after_sbrk O call.frame stackHigh post, result,
-    (post.regs 8 (by decide) (by decide) (by decide)).trans call.s0, post.brk, ?_, ?_⟩
+    (post.regs 8 (by decide) (by decide) (by decide)).trans call.s0, post.brk, ?_, ?_, ?_⟩
   · intro a ha
     rw [← call.memory]
     have hlo := O.sp.lo
@@ -101,6 +112,17 @@ theorem malloc_boot_morecore {C : MCtx} (O : WOK C) {R : Nat → BitVec 64}
     apply post.pres
     rw [call.memory]
     exact writeLog_present _ _ _ ha
+  · intro a ha
+    have hlo := O.sp.lo
+    have hhi := O.sp.hi
+    have sp : (Rc 2).toNat = C.s.toNat - 96 := by rw [call.frame.sp]; sx_addr
+    rw [post.agree a (by rw [sp]; exact fun h => ha (malloc_sbrk_window C a h)), call.memory]
+    apply writeLog_out
+    have outside : ¬ (C.s.toNat - mHead ≤ a ∧ a < C.s.toNat) := fun h => ha (.inr h)
+    simp only [mallocBootLog, OutL, and_true]
+    unfold mHead at outside
+    unfold heapEnd mHead at stackHigh
+    omega
 
 /-- Word reads in the enclosing malloc frame survive the nested call. -/
 theorem MallocBootAfterMorecore.spill {C : MCtx} {R : Nat → BitVec 64} {m : Mem}
@@ -131,6 +153,17 @@ theorem MallocBootAfterMorecore.initial_read {C : MCtx} {R : Nat → BitVec 64} 
   unfold mHead at stackHigh
   omega
 
+/-- Shared spill recovery for either nested morecore call. -/
+theorem morecore_spill_value {sp : BitVec 64} {before m : Mem} {log : List WEntry}
+    (read : ∀ a, (∀ k, k < 8 → ¬ SbrkW (sp.toNat - 96) (a + k)) →
+      read64 m a = read64 (writeLog before log) a)
+    (stackHigh : heapEnd + mHead ≤ sp.toNat) (off index : Nat) (v : BitVec 64)
+    (ho : off + 8 ≤ 96) (atWord : log[index]? = some (sp.toNat - 96 + off, 8, v))
+    (afterWord : OutLRange (log.drop (index + 1)) (sp.toNat - 96 + off) 8) :
+    read64 m (sp.toNat - 96 + off) = some v.toNat := by
+  rw [read _ (by intro k hk; unfold SbrkW brkAddr heapEnd mHead at *; omega)]
+  exact read64_of_writeLog_at _ _ index _ v atWord afterWord
+
 /-- Select a saved word through the generic last-write certificate. -/
 theorem MallocBootAfterMorecore.spill_value {C : MCtx} {R : Nat → BitVec 64} {m : Mem}
     (p : MallocBootAfterMorecore C R m) (stackHigh : heapEnd + mHead ≤ C.s.toNat)
@@ -139,7 +172,6 @@ theorem MallocBootAfterMorecore.spill_value {C : MCtx} {R : Nat → BitVec 64} {
       some (C.s.toNat - 96 + off, 8, v))
     (afterWord : OutLRange ((mallocBootLog C.s C.r (C.rv0 8)).drop (index + 1))
       (C.s.toNat - 96 + off) 8) :
-    read64 m (C.s.toNat - 96 + off) = some v.toNat := by
-  rw [p.spill stackHigh off ho]
-  exact read64_of_writeLog_at _ _ index _ v atWord afterWord
+    read64 m (C.s.toNat - 96 + off) = some v.toNat :=
+  morecore_spill_value p.read stackHigh off index v ho atWord afterWord
 end OCaml.Vm.Boot.Startup
