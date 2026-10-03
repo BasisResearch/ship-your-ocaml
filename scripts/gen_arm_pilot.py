@@ -29,6 +29,11 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'RESTART_PREFIX_MORE': ('RestartPrefixMore', ['ld_tot', 'alu_addi', 'srli', 'addiw', 'slli', 'sub', 'addiw', 'alu_addi', 'branch_nottaken']),
+    'RESTART_PREFIX_EMPTY': ('RestartPrefixEmpty', ['ld_tot', 'alu_addi', 'srli', 'addiw', 'slli', 'sub', 'addiw', 'alu_addi', 'branch_taken']),
+    'RESTART_COPY_MORE': ('RestartCopyMore', ['slli', 'alu_add', 'ld_tot', 'addiw', 'alu_addi', 'sd', 'branch_taken']),
+    'RESTART_COPY_LAST': ('RestartCopyLast', ['slli', 'alu_add', 'ld_tot', 'addiw', 'alu_addi', 'sd', 'branch_nottaken']),
+    'RESTART_SUFFIX': ('RestartSuffix', ['ld_tot', 'alu_add', 'alu_addi', 'j']),
     'APPTERM_PREFIX': ('ApptermPrefix', ['lw_tot', 'lw_tot', 'addiw', 'sub', 'slli', 'alu_add', 'branch_nottaken', 'slli', 'alu_add', 'alu_addi', 'alu_add', 'alu_addi']),
     'APPTERM_COPY_MORE': ('ApptermCopyMore', ['ld_tot', 'addiw', 'alu_addi', 'sd', 'alu_addi', 'branch_taken']),
     'APPTERM_COPY_LAST': ('ApptermCopyLast', ['ld_tot', 'addiw', 'alu_addi', 'sd', 'alu_addi', 'branch_nottaken']),
@@ -135,12 +140,17 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 # Explicit loop cuts: entry, exit, and native branch decisions. These are text
 # instruction addresses; all runtime data addresses still come from Layout.
 CUTS = {
+    'RESTART_PREFIX_MORE': (0x80002b70, 0x80002b94, [False]),
+    'RESTART_PREFIX_EMPTY': (0x80002b70, 0x80002bb0, [True]),
+    'RESTART_COPY_MORE': (0x80002b94, 0x80002b94, [True]),
+    'RESTART_COPY_LAST': (0x80002b94, 0x80002bb0, [False]),
+    'RESTART_SUFFIX': (0x80002bb0, 0x80001f5c, []),
     'APPTERM_PREFIX': (0x80002a88, 0x80002ab8, [False]),
     'APPTERM_COPY_MORE': (0x80002ab8, 0x80002ab8, [True]),
     'APPTERM_COPY_LAST': (0x80002ab8, 0x80002ad0, [False]),

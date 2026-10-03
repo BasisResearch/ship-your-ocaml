@@ -1558,6 +1558,16 @@ adapters recheck against the generalized restoration. No copy-loop premise
 remains. Capacity, geometry and runtime framing are still explicit.
 The counted copy loop landed as `e7fe774`, all gates passing.
 
+## RESTART cuts and represented closure fields
+
+Generated RESTART prefix paths, copy-loop branches and suffix are checked
+(9/9/7/7/4 instructions). `BlockRead.lean` supplies ordinary block headers,
+represented field suffixes and their live roots. `RestartRestore.lean:40`
+(`restart_restore`) installs saved arguments, recovers the captured environment
+and restores data/platform; it checks in 0.93 s. The counted forward-copy
+loop and represented native composition are next. Generic APPTERM landed
+as `47c7779`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

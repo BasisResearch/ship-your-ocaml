@@ -1,0 +1,135 @@
+{
+  "theorem": "tr_restart_copy_more",
+  "doc": "RESTART_COPY_MORE arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.RestartCopyMoreSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut",
+    "OCaml.Vm.Sim.RestartCopyMoreStoreFrame"
+  ],
+  "params": [
+    "(v15 v25 v13 v12 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80002b9c : 0x80000000 ≤ (((shift_bits_left v15 (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v25) + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_80002b9c : (((shift_bits_left v15 (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v25) + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80002b9c : (((shift_bits_left v15 (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v25) + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (((shift_bits_left v15 (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v25) + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(loaded_80002b9c : BitVec 64)",
+    "(hvalue_80002b9c : loaded_80002b9c = (sign_extend (m := 64) (bytesT8 m0 (((shift_bits_left v15 (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v25) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))))",
+    "(hlo_80002ba8 : 0x80000000 ≤ ((v13 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(hhi_80002ba8 : ((v13 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80002ba8 : tohostAddr + 16 ≤ ((v13 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(halign_80002ba8 : ((v13 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat % 8 = 0)",
+    "(hcode_80002ba8 : ((v13 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x80002b94 ∨ 0x80002bb0 ≤ ((v13 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(m_80002ba8 : Std.ExtHashMap Nat (BitVec 8))",
+    "(hstore_80002ba8 : m_80002ba8 = writeMap8 (m0) (((v13 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat) (sdData_val loaded_80002b9c))",
+    "(hguard_80002bac : (v12 != (sign_extend (m := 64) (Sail.BitVec.extractLsb (v15 + sign_extend (m := 64) (0x001#12)) 31 0))) = true)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlRestartCopyMoreLoaded",
+  "pins": [
+    {
+      "reg": "x15",
+      "val": "v15",
+      "hyp": "hv15"
+    },
+    {
+      "reg": "x25",
+      "val": "v25",
+      "hyp": "hv25"
+    },
+    {
+      "reg": "x13",
+      "val": "v13",
+      "hyp": "hv13"
+    },
+    {
+      "reg": "x12",
+      "val": "v12",
+      "hyp": "hv12"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80002b94",
+      "site": "site_80002b94_restart_copy_more",
+      "class": "alu",
+      "asm": "slli a4,a5,0x3",
+      "rd": "x14",
+      "rd_val": "(shift_bits_left v15 (Sail.BitVec.extractLsb (0x03#6) 5 0))",
+      "raw_val": "(shift_bits_left v15 (Sail.BitVec.extractLsb (0x03#6) 5 0))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002b98",
+      "site": "site_80002b98_restart_copy_more",
+      "class": "alu",
+      "asm": "add a4,a4,s9",
+      "rd": "x14",
+      "rd_val": "((shift_bits_left v15 (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v25)",
+      "raw_val": "(v14 + v25)",
+      "call": "$vmi $v:x14 $v:x25 $hG $hpc $hmi $pin:x14 $pin:x25 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002b9c",
+      "site": "site_80002b9c_restart_copy_more",
+      "class": "alu",
+      "asm": "ld a4,0(a4)",
+      "rd": "x14",
+      "rd_val": "loaded_80002b9c",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v14 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x14 $hG $hpc $hmi $pin:x14 $hmem rfl hlo_80002b9c hhi_80002b9c hhtif_80002b9c $hi",
+      "rw": "hmemE2, ← hvalue_80002b9c"
+    },
+    {
+      "addr": "0x80002ba0",
+      "site": "site_80002ba0_restart_copy_more",
+      "class": "alu",
+      "asm": "addiw a5,a5,1",
+      "rd": "x15",
+      "rd_val": "(sign_extend (m := 64) (Sail.BitVec.extractLsb (v15 + sign_extend (m := 64) (0x001#12)) 31 0))",
+      "raw_val": "(sign_extend (m := 64) (Sail.BitVec.extractLsb (v15 + sign_extend (m := 64) (0x001#12)) 31 0))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002ba4",
+      "site": "site_80002ba4_restart_copy_more",
+      "class": "alu",
+      "asm": "addi a3,a3,8",
+      "rd": "x13",
+      "rd_val": "(v13 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v13 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x13 $hG $hpc $hmi $pin:x13 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002ba8",
+      "site": "site_80002ba8_restart_copy_more",
+      "class": "sd",
+      "asm": "sd a4,-8(a3)",
+      "key": "((v13 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat",
+      "src_val": "loaded_80002b9c",
+      "loaded_via": "restart_copy_more_code_store _ _ _ hcode_80002ba8 $prev",
+      "call": "$vmi $v:x13 $v:x14 $hG $hpc $hmi $pin:x13 $pin:x14 $hmem rfl hlo_80002ba8 hhi_80002ba8 hhtif_80002ba8 halign_80002ba8 $hi",
+      "mem_alias": "m_80002ba8",
+      "mem_alias_eq": "hstore_80002ba8"
+    },
+    {
+      "addr": "0x80002bac",
+      "site": "site_80002bac_taken_restart_copy_more",
+      "class": "btaken",
+      "asm": "bne a2,a5,80002b94 <caml_interprete+0xd9c>",
+      "imm": "0x1fe8#13",
+      "target": "0x80002b94",
+      "pre_lines": [],
+      "call": "$vmi $v:x12 $v:x15 $hG $hpc $hmi $pin:x12 $pin:x15 $hmem rfl hguard_80002bac $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80002b94",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

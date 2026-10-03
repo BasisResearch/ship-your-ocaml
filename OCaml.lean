@@ -246,6 +246,17 @@ import OCaml.Vm.Sim.ApptermSuffixPins
 import OCaml.Vm.Sim.ReverseCopyLog
 import OCaml.Vm.Sim.BackwardCopy
 import OCaml.Vm.Sim.Appterm
+import OCaml.Vm.Sim.RestartPrefixMoreSegment
+import OCaml.Vm.Sim.RestartPrefixMorePins
+import OCaml.Vm.Sim.RestartPrefixEmptySegment
+import OCaml.Vm.Sim.RestartPrefixEmptyPins
+import OCaml.Vm.Sim.RestartCopyMoreSegment
+import OCaml.Vm.Sim.RestartCopyMorePins
+import OCaml.Vm.Sim.RestartCopyLastSegment
+import OCaml.Vm.Sim.RestartCopyLastPins
+import OCaml.Vm.Sim.RestartSuffixSegment
+import OCaml.Vm.Sim.RestartSuffixPins
+import OCaml.Vm.Sim.RestartRestore
 import OCaml.Vm.Sim.Appterm1Segment
 import OCaml.Vm.Sim.Appterm1Pins
 import OCaml.Vm.Sim.Appterm2Segment
