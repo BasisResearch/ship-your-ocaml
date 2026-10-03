@@ -34,12 +34,9 @@ theorem lpins8_writeLog {m : Std.ExtHashMap Nat (BitVec 8)} {a : Nat}
     {bytes : List (BitVec 8)} {log : List WEntry}
     (pins : LPins8 m a bytes) (outside : OutLRange log a 8) :
     LPins8 (writeLog m log) a bytes := by
-  have same (i : Nat) (hi : i < 8) : (writeLog m log)[a + i]? = m[a + i]? :=
-    writeLog_out _ _ _ (outL_of_range outside (by omega) (by omega))
-  simp only [LPins8] at pins ⊢
-  simpa only [show (writeLog m log)[a]? = m[a]? from by simpa using same 0 (by decide),
-    same 1 (by decide), same 2 (by decide), same 3 (by decide), same 4 (by decide),
-    same 5 (by decide), same 6 (by decide), same 7 (by decide)] using pins
+  apply lpins8_observed pins
+  intro i hi
+  rw [writeLog_out _ _ _ (outL_of_range outside (by omega) (by omega))]
 
 /-- Observe the value stored by one full-word write-log entry. -/
 theorem word_writeLog (m : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) (value : BitVec 64) :

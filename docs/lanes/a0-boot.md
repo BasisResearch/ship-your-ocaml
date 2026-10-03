@@ -2,6 +2,24 @@
 
 ## Round 2 status (2026-10-03)
 
+`Startup/TableAllocation.lean` closes `reset_table_allocation_exists`: actual
+reset returns from the first 56-byte minor-table malloc, with a fresh aligned
+block, the original domain allocation retained, and remaining allocator
+credits. It consumes `allocator_summary` without any new allocator execution
+proof. `TableAllocatorInput.lean` transports the library platform, read-only
+pins and capacity through the saving prefix and disabled-pool tail wrapper.
+`PoolFrame.lean` proves the pooling switch remains zero through both the
+initial malloc and subsequent startup writes. Shared `lpins8_observed`
+transports total scalar pins; the existing write-log pin helper now reuses it.
+The allocator-input and allocation modules check in 1 s and 2 s.
+
+The first table-request prefix landed as `59e520d`; its generated code-pin
+file was accidentally omitted from that commit and landed immediately as
+`d00cb44`, full gate passed. The generated dependency set is now complete.
+Next: publish the table pointer, prove its memset zeroing, then compose the
+remaining two table allocations and domain epilogue. Round 2 exit is open.
+
+
 `Startup/MinorTablesPrefix.lean` closes `reset_table_alloc_exists`: the
 actual reset reaches the first 56-byte minor-table stat-allocation request.
 `minorTables_prefix` and `minorTables_allocate` certify the source stack

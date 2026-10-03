@@ -19,6 +19,16 @@ theorem read8_pins (m : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) :
     LPins8 m a (read8 m a) := by
   simp [LPins8, read8]
 
+/-- Total-byte agreement transports scalar load pins, without requiring
+presence of either memory map. -/
+theorem lpins8_observed {m m' : Std.ExtHashMap Nat (BitVec 8)} {a : Nat}
+    {bytes : List (BitVec 8)} (pins : LPins8 m a bytes)
+    (same : ∀ i, i < 8 → (m'[a + i]?).getD 0 = (m[a + i]?).getD 0) : LPins8 m' a bytes := by
+  simp only [LPins8] at pins ⊢
+  simpa only [show (m'[a]?).getD 0 = (m[a]?).getD 0 from by simpa using same 0 (by decide),
+    same 1 (by decide), same 2 (by decide), same 3 (by decide), same 4 (by decide),
+    same 5 (by decide), same 6 (by decide), same 7 (by decide)] using pins
+
 theorem read8_value (m : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) :
     bytesVal .ld (read8 m a) = bytesT m a 8 := by
   rw [bytesT_eight_eq]
