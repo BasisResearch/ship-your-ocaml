@@ -28,6 +28,14 @@ theorem word_writeLog_at (m : Std.ExtHashMap Nat (BitVec 8)) (log : List WEntry)
   change bytesVal .ld (read8 (writeLog m log) a) = w at value
   simpa only [read8_value] using value
 
+/-- Configuration-level readback for a selected store in an exact memory log. -/
+theorem word_after_writeLog_at {before after : Config} {log : List WEntry}
+    (memory : after.σ.mem = writeLog before.σ.mem log)
+    (i a : Nat) (w : BitVec 64) (selected : log[i]? = some (a, 8, w))
+    (outside : OutLRange (log.drop (i + 1)) a 8) : word after a = w := by
+  rw [word, memory]
+  exact word_writeLog_at _ _ i a w selected outside
+
 /-- An outside-range certificate also covers any sub-log, such as a prefix. -/
 theorem outLRange_sublist {small large : List WEntry} {a n : Nat}
     (sub : small.Sublist large) (outside : OutLRange large a n) : OutLRange small a n := by

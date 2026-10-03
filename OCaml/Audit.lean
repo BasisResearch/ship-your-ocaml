@@ -1193,6 +1193,18 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.switch_int_loaded
 #print axioms OCaml.Vm.Sim.switch_block_loaded
 
+#print axioms OCaml.Vm.Sim.word_after_writeLog_at
+#print axioms OCaml.Vm.Sim.image_entry_code
+#print axioms OCaml.Vm.Sim.stack_decrement
+#print axioms OCaml.Vm.Sim.retaddr_stored
+#print axioms OCaml.Vm.Sim.retaddr_roots
+#print axioms OCaml.Vm.Sim.retaddr_payload
+#print axioms OCaml.Vm.Sim.retaddr_extra_word
+#print axioms OCaml.Vm.Sim.retaddr_log_in
+#print axioms OCaml.Vm.Sim.retaddr_restore
+#print axioms OCaml.Vm.Sim.push_retaddr_arm
+#print axioms OCaml.Vm.Sim.push_retaddr_step_arm
+
 #print axioms Vsa.Sim.tr_offsetref
 #print axioms OCaml.Vm.Sim.offsetref_loaded
 #print axioms Vsa.Sim.tr_push_retaddr

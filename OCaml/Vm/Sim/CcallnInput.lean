@@ -36,10 +36,8 @@ structure CcallnSetupPost (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place)
 
 /-- Native decrement for the accumulator plus the two-word saved VM frame. -/
 theorem ccalln_frame_address {sp : Nat} (room : 24 ≤ sp) :
-    BitVec.ofNat 64 sp + sign_extend (m := 64) (0xfe8#12) = BitVec.ofNat 64 (sp - 24) := by
-  rw [show sign_extend (m := 64) (0xfe8#12) = -(24#64) from by decide,
-    ← BitVec.sub_eq_add_neg]
-  exact BitVec.ofNat_sub_ofNat_of_le sp 24 (by decide) room
+    BitVec.ofNat 64 sp + sign_extend (m := 64) (0xfe8#12) = BitVec.ofNat 64 (sp - 24) :=
+  stack_decrement room (by decide) (by decide)
 
 /-- Positive bytecode counts use their natural value in the C ABI register. -/
 theorem ccalln_count_word (count : BitVec 32) (nonnegative : 0 ≤ count.toInt) :

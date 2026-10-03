@@ -33,6 +33,13 @@ theorem image_word_code {a : Nat} {w : BitVec 64} {lo hi : Nat}
   change (Image.textBase + Image.textSize ≤ a ∨ a + 8 ≤ Image.textBase) ∧ True at outside
   rcases outside.1 with left | right <;> omega
 
+/-- Every selected word store in a separated log preserves an arm's code pins. -/
+theorem image_entry_code {log : List WEntry} {a : Nat} {w : BitVec 64} {lo hi : Nat}
+    (image : ImageOutside log) (member : (a, 8, w) ∈ log)
+    (lower : Image.textBase ≤ lo) (upper : hi ≤ Image.textBase + Image.textSize) :
+    a + 8 ≤ lo ∨ hi ≤ a :=
+  image_word_code (imageOutside_sublist (List.singleton_sublist.mpr member) image) lower upper
+
 /-- Global image separation supplies every generated arm's local fetch window. -/
 theorem PushWriteOk.code {P s c pl cp sp w lo hi} (h : PushWriteOk P s c pl cp sp w)
     (lower : Image.textBase ≤ lo) (upper : hi ≤ Image.textBase + Image.textSize) :

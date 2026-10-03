@@ -24,10 +24,8 @@ abbrev Ccall1SetupPost (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place)
 
 /-- Setup_for_c_call decrements the VM stack by two words. -/
 theorem ccall1_frame_address {sp : Nat} (room : 16 ≤ sp) :
-    BitVec.ofNat 64 sp + sign_extend (m := 64) (0xff0#12) = BitVec.ofNat 64 (sp - 16) := by
-  rw [show sign_extend (m := 64) (0xff0#12) = -(16#64) from by decide,
-    ← BitVec.sub_eq_add_neg]
-  exact BitVec.ofNat_sub_ofNat_of_le sp 16 (by decide) room
+    BitVec.ofNat 64 sp + sign_extend (m := 64) (0xff0#12) = BitVec.ofNat 64 (sp - 16) :=
+  stack_decrement room (by decide) (by decide)
 
 /-- Stack arguments must exist and their native loads must be readable.
 The loop invariant supplies these finite bounds at each call site. -/

@@ -203,6 +203,7 @@ import OCaml.Vm.Sim.Mulint
 import OCaml.Vm.Sim.CheckSignals
 import OCaml.Vm.Sim.OffsetrefSegment
 import OCaml.Vm.Sim.OffsetrefPins
+import OCaml.Vm.Sim.PushRetaddr
 import OCaml.Vm.Sim.PushRetaddrSegment
 import OCaml.Vm.Sim.PushRetaddrPins
 import OCaml.Vm.Sim.StackPrefix

@@ -97,7 +97,7 @@ theorem c_calln_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   have codeWindow (a : Nat) (w : BitVec 64)
       (member : (a, 8, w) ∈ ccallnLog sp domain nativeSp (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 3))) env value) :
       a + 8 ≤ 0x80002e10 ∨ 0x80002e64 ≤ a :=
-    image_word_code (imageOutside_sublist (List.singleton_sublist.mpr member) space.image) (by decide) (by decide)
+    image_entry_code space.image member (by decide) (by decide)
   have bp : SegSt (0x80002e10#64)
       [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩, ⟨Register.x9, BitVec.ofNat 64 sp⟩,
        ⟨Register.x21, value⟩, ⟨Register.x25, env⟩, ⟨Register.x2, BitVec.ofNat 64 nativeSp⟩]

@@ -58,8 +58,7 @@ theorem CcallnWriteOk.stored {P s c pl cp sp domain nativeSp next env accu}
       (selected : (ccallnLog sp domain nativeSp next env accu)[i]? = some (a, 8, w))
       (later : OutLRange ((ccallnLog sp domain nativeSp next env accu).drop (i + 1)) a 8) :
       word after a = w := by
-    rw [word, memory]
-    exact word_writeLog_at _ _ i _ _ selected later
+    exact word_after_writeLog_at memory i a w selected later
   constructor
   · apply read 0 _ _ rfl
     simp only [ccallnLog, List.drop, OutLRange, and_true]

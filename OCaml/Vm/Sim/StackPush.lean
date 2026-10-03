@@ -47,13 +47,21 @@ theorem live_stack_push {P : Prog} {s : St} {l : Nat}
   simpa only [roots, List.mem_cons, List.mem_append, or_assoc, or_left_comm, or_comm,
     or_self, or_self_left] using hv
 
+/-- Signed native stack decrements share one non-wrapping address identity. -/
+theorem stack_decrement {sp n : Nat} {offset : BitVec 12}
+    (room : n ≤ sp) (small : n < 2^64)
+    (encoded : LeanRV64DExecutable.Functions.sign_extend (m := 64) offset =
+      -BitVec.ofNat 64 n) :
+    BitVec.ofNat 64 sp + LeanRV64DExecutable.Functions.sign_extend (m := 64) offset =
+      BitVec.ofNat 64 (sp - n) := by
+  rw [encoded, ← BitVec.sub_eq_add_neg]
+  exact BitVec.ofNat_sub_ofNat_of_le sp n small room
+
 /-- The native decrement agrees with natural stack arithmetic when space exists. -/
 theorem push_address {sp : Nat} (room : 8 ≤ sp)
     :
     BitVec.ofNat 64 sp + LeanRV64DExecutable.Functions.sign_extend (m := 64) (0xff8#12) =
-      BitVec.ofNat 64 (sp - 8) := by
-  rw [show LeanRV64DExecutable.Functions.sign_extend (m := 64) (0xff8#12) =
-    -(8#64) from by decide, ← BitVec.sub_eq_add_neg]
-  exact BitVec.ofNat_sub_ofNat_of_le sp 8 (by decide) room
+      BitVec.ofNat 64 (sp - 8) :=
+  stack_decrement room (by decide) (by decide)
 
 end OCaml.Vm.Sim

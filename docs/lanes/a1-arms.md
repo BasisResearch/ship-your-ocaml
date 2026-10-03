@@ -1,5 +1,23 @@
 # Lane a1-arms
 
+## Represented PUSH_RETADDR arm
+
+`retaddr_stored` proves the three write-log readbacks; `retaddr_payload`
+uses the shared finite stack prefix and root transport. `retaddr_restore`
+restores image, primitive bindings, runtime, loop registers and represented
+data. `push_retaddr_arm` and `push_retaddr_step_arm` connect that restoration
+to the generated eleven-instruction body and the real semantic transition.
+Return-target, stack-space/separation and runtime-window premises remain
+explicit; saved extra arguments are tagged correctly for every Nat value.
+
+`stack_decrement`, `image_entry_code` and `word_after_writeLog_at` factor the
+repeated address, code-frame and readback adaptations. Fixed C_CALL setup
+generation and C_CALLN now reuse them. Capped/default-limit builds pass:
+return-frame restoration 0.9s, full arm 1.2s. New headlines are audited.
+Machine bodies/stack-prefix facts landed as `ff3c5f6`, full gate passing.
+There are **107 conditional represented opcode bridges**. Next: heap update
+and root framing for OFFSETREF, then the remaining control/allocation arms.
+
 ## OFFSETREF and PUSH_RETADDR machine bodies
 
 `tr_offsetref` proves the eight-step read/modify/write body with exact opaque
@@ -1349,13 +1367,12 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: PUSH_RETADDR represented frame restoration is next, using the
-landed generated body and shared finite stack-prefix facts. OFFSETREF has a
-generated body and proved operand-width arithmetic; heap-update framing is
-open. MULINT consumes the proved libgcc summary, and
+families: OFFSETREF heap-update and root framing are next, using its
+landed generated body and operand-width arithmetic. PUSH_RETADDR now has
+represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 106 conditional
+setup/return bridges and named callee composition. There are 107 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
