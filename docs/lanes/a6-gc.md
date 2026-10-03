@@ -1,5 +1,20 @@
 # Lane a6-gc
 
+## Machine setup through represented scan (2026-10-03)
+
+- `ScanSetup.lean:setup_scan` composes the actual mopup setup block with the
+  complete integer-suffix loop and its ObjAt result. `setup_access` derives
+  the header load and unsigned size branch from RAM geometry and the represented
+  multi-field header. `setup_machine` establishes every initial scan pin.
+- `ScannedObject` retains the resulting platform/code state, exit PC, object,
+  memory frame outside the destination suffix, unchanged output and composed
+  register frame. The generator emits setup shape, code, no-store, register
+  and exit certificates directly from the ELF CFG.
+- This starts after the saved first field is handled. Queue-pop composition,
+  pointer classifiers and oldify calls, allocator freshness and full G2 remain
+  open. Production Fits still counts allocated words; compiler GcSafe is open.
+- The typed payload bridge landed as `ef15613`.
+
 ## Typed scan result (2026-10-03)
 
 - `ScanPayload.lean:scan_grey` combines the concrete suffix loop with

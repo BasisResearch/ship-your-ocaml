@@ -759,7 +759,13 @@ private def gcAuditNames : Array Name := #[
   ``OCaml.Vm.Gc.FieldCopy.end_pc,
   ``OCaml.Vm.Gc.FieldCopy.Post.scan_regs,
   ``OCaml.Vm.Gc.FieldCopy.Post.advance,
-  ``OCaml.Vm.Gc.FieldCopy.run
+  ``OCaml.Vm.Gc.FieldCopy.run,
+  ``OCaml.Vm.Gc.FieldCopy.setup_shape,
+  ``OCaml.Vm.Gc.FieldCopy.setup_written,
+  ``OCaml.Vm.Gc.FieldCopy.setup_code,
+  ``OCaml.Vm.Gc.FieldCopy.setup_log,
+  ``OCaml.Vm.Gc.FieldCopy.setup_pc,
+  ``OCaml.Vm.Gc.FieldCopy.setup_registers
 ]
 
 elab "#audit_gc_rows" : command => do

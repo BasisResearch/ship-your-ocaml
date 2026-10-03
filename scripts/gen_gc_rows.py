@@ -126,15 +126,18 @@ def outputs():
                     pop = pop.replace('@'+key+'@', val)
                 result[ROOT / 'OCaml/Vm/Gc/Generated/MopupPop.lean'] = pop
                 pop_audits = re.findall(r'^theorem ([\w.]+)', pop, re.M)
+                field_setup = next(b for b in deferred if b.start == child.succs[0])
                 field_head = next(b for b in deferred if b.start == entry + 0x98)
                 field_store = next(b for b in deferred if b.start == field_head.succs[0])
                 field_tail = next(b for b in deferred if b.start == field_store.succs[0])
                 assert field_head.kind == field_tail.kind == 'br'
-                field_words = {f'{ins.word:08x}' for block in (field_head, field_store, field_tail)
+                field_words = {f'{ins.word:08x}' for block in (field_setup, field_head, field_store, field_tail)
                                for ins in [*block.instrs, *([block.term] if block.term else [])]}
                 field = FIELD_COPY_TEMPLATE.replace('@DECODE_IMPORTS@', '\n'.join(
                     'import ' + module for module in sorted({decode_modules[w] for w in field_words})))
-                for key, val in {'HEAD': gen_fn.block_name(name, field_head, True)+'Seg',
+                for key, val in {'SETUP': gen_fn.block_name(name, field_setup, False)+'Seg',
+                                 'SETUPPC': hex(field_setup.start),
+                                 'HEAD': gen_fn.block_name(name, field_head, True)+'Seg',
                                  'STORE': gen_fn.block_name(name, field_store)+'Seg',
                                  'TAKEN': gen_fn.block_name(name, field_tail, True)+'Seg',
                                  'FALL': gen_fn.block_name(name, field_tail, False)+'Seg',
@@ -452,6 +455,39 @@ theorem run (again : Bool) (slot delta target index : BitVec 64)
     FnSummary pc (SegPre (blocks again) (regs slot delta target index) lds pc mem)
       (Post again slot delta target index lds mem) :=
   segmentSummary (blocks again) (regs slot delta target index) lds pc mem (chain_ok again)
+
+/-- Setup after the saved first field has been handled. Queued blocks have
+at least two fields, so the size branch enters the suffix scan. -/
+def setupBlocks := @SETUP@
+def setupPc : BitVec 64 := @SETUPPC@#64
+def setupRegs (source target : BitVec 64) : GRegs := [(19, target), (18, source), (24, 1)]
+
+theorem setup_shape : ChainOK setupPc [19, 18, 24] setupBlocks := by decide
+
+theorem setup_written : ∀ r ∈ wrChain setupBlocks, r ∈ [8, 9, 10, 11, 15, 18] := by decide
+
+theorem setup_code {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (hc : Code.Caml_oldify_mopupLoaded mem) : ChainCode mem setupBlocks := by
+  intro b hb
+  simp only [setupBlocks, @SETUP@, List.mem_cons, List.not_mem_nil, or_false] at hb
+  subst b
+  constructor <;> simp only [CodeFacts]
+  all_goals chain_facts hc with "Vsa.Sim.Code.caml_oldify_mopup_at_"
+
+theorem setup_log (source target : BitVec 64) (lds : List (List (BitVec 8))) :
+    (evalBlocks setupBlocks (SegEvalState.init (setupRegs source target) lds)).log = [] := rfl
+
+theorem setup_pc (source target : BitVec 64) (lds : List (List (BitVec 8))) :
+    evalBlocksPC setupPc (SegEvalState.init (setupRegs source target) lds) setupBlocks = pc := rfl
+
+theorem setup_registers {source target lds mem c}
+    (post : SegmentPost setupBlocks (setupRegs source target) lds setupPc mem c) :
+    GHolds c.σ (regs (source + 8#64) (target - source) target 1) := by
+  refine ⟨?_, ?_, ?_, ?_, True.intro⟩
+  all_goals apply gholds_lookup _ post.registers
+  all_goals simp [setupBlocks, @SETUP@, setupRegs, evalBlocks, evalBlock, SegEvalState.init,
+    runGM, ldsRunM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, mkLine, decodeM,
+    LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend]
 
 end OCaml.Vm.Gc.FieldCopy
 """

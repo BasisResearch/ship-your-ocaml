@@ -4,12 +4,15 @@ import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.SegmentSummary
 import Vsa.Sim.ElfDecode.Part004
 import Vsa.Sim.ElfDecode.Part011
+import Vsa.Sim.ElfDecode.Part016
 import Vsa.Sim.ElfDecode.Part017
 import Vsa.Sim.ElfDecode.Part018
 import Vsa.Sim.ElfDecode.Part029
 import Vsa.Sim.ElfDecode.Part031
 import Vsa.Sim.ElfDecode.Part034
 import Vsa.Sim.ElfDecode.Part035
+import Vsa.Sim.ElfDecode.Part142
+import Vsa.Sim.ElfDecode.Part216
 import Vsa.Sim.ElfDecode.Part218
 import Vsa.Sim.ElfDecode.Part226
 
@@ -114,5 +117,38 @@ theorem run (again : Bool) (slot delta target index : BitVec 64)
     FnSummary pc (SegPre (blocks again) (regs slot delta target index) lds pc mem)
       (Post again slot delta target index lds mem) :=
   segmentSummary (blocks again) (regs slot delta target index) lds pc mem (chain_ok again)
+
+/-- Setup after the saved first field has been handled. Queued blocks have
+at least two fields, so the size branch enters the suffix scan. -/
+def setupBlocks := caml_oldify_mopupX9d34FSeg
+def setupPc : BitVec 64 := 0x80009d34#64
+def setupRegs (source target : BitVec 64) : GRegs := [(19, target), (18, source), (24, 1)]
+
+theorem setup_shape : ChainOK setupPc [19, 18, 24] setupBlocks := by decide
+
+theorem setup_written : ∀ r ∈ wrChain setupBlocks, r ∈ [8, 9, 10, 11, 15, 18] := by decide
+
+theorem setup_code {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (hc : Code.Caml_oldify_mopupLoaded mem) : ChainCode mem setupBlocks := by
+  intro b hb
+  simp only [setupBlocks, caml_oldify_mopupX9d34FSeg, List.mem_cons, List.not_mem_nil, or_false] at hb
+  subst b
+  constructor <;> simp only [CodeFacts]
+  all_goals chain_facts hc with "Vsa.Sim.Code.caml_oldify_mopup_at_"
+
+theorem setup_log (source target : BitVec 64) (lds : List (List (BitVec 8))) :
+    (evalBlocks setupBlocks (SegEvalState.init (setupRegs source target) lds)).log = [] := rfl
+
+theorem setup_pc (source target : BitVec 64) (lds : List (List (BitVec 8))) :
+    evalBlocksPC setupPc (SegEvalState.init (setupRegs source target) lds) setupBlocks = pc := rfl
+
+theorem setup_registers {source target lds mem c}
+    (post : SegmentPost setupBlocks (setupRegs source target) lds setupPc mem c) :
+    GHolds c.σ (regs (source + 8#64) (target - source) target 1) := by
+  refine ⟨?_, ?_, ?_, ?_, True.intro⟩
+  all_goals apply gholds_lookup _ post.registers
+  all_goals simp [setupBlocks, caml_oldify_mopupX9d34FSeg, setupRegs, evalBlocks, evalBlock, SegEvalState.init,
+    runGM, ldsRunM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, mkLine, decodeM,
+    LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend]
 
 end OCaml.Vm.Gc.FieldCopy
