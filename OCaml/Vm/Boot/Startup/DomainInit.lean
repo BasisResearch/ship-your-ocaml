@@ -101,6 +101,21 @@ theorem domainInit_image_outside : ImageOutside domainInitLog := by
   all_goals simp only [List.cons_append, List.nil_append, OutLRange]
   all_goals decide
 
+/-- All initialization stores are confined to the domain publication word
+and the allocated payload. This footprint protects allocator metadata. -/
+def domainInitWindows : List W :=
+  [⟨Layout.sym_Caml_state, Layout.sym_Caml_state + 8⟩,
+   ⟨firstDomainPtr.toNat, firstDomainPtr.toNat + 928⟩]
+
+theorem domainInit_log_inside : LogInW domainInitWindows domainInitLog := by
+  simp only [domainInitLog, domainInitBlocks, caml_init_domainXa8ecFSeg,
+    caml_init_domainXa8fcSeg, List.cons_append, List.nil_append, evalBlocks, evalBlock, SegEvalState.init]
+  domain_init_nf
+  rw [domainPtrBytes_value]
+  simp only [List.cons_append, List.nil_append, LogInW, InsideW, domainInitWindows]
+  repeat' apply And.intro
+  all_goals decide
+
 /-- Publish the first domain and clear its minor-heap fields, reaching the
 minor-table allocation call with an exact source-derived write log. -/
 theorem domain_initialize (c : Config) (h : LeafInput jal_8002a8e8_call.link c)

@@ -2,6 +2,24 @@
 
 ## Round 2 status (2026-10-03)
 
+`Startup/DomainHeap.lean` now supplies allocator capacity, the complete
+`VsaOk` platform invariant, and all allocator read-only pins at the actual
+minor-table call. `FirstMallocEnd.room` retains any credit bound justified
+by `top <= heapStart + 944`; `domainInit_log_inside` confines the following
+stores to the domain payload and publication word. The landed
+`RegistersPost.vsaOk`, `frameOn_writeLog` and `roomLocal_vsaRoomB` transport
+these invariants without reproving allocator behavior.
+
+`Startup/AllocatorRun.lean` (`allocator_summary`) bridges the landed
+`mallocChgRun_proved` to `FnSummary` for arbitrary later startup requests,
+with fresh non-null allocation and remaining credits. `allocator_separate`
+and `allocator_stack_disjoint` cover any startup stack above the heap.
+The initial-domain increment landed as `9ec0c5e`, full gate passed.
+Next: generate and compose the minor-table allocator's three 56-byte
+allocations and zeroing calls, then finish domain initialization. The
+full reset-to-cut run remains open.
+
+
 `Startup/DomainInit.lean` now closes `reset_minor_tables_exists`: actual
 reset reaches `caml_alloc_minor_tables` after publishing the first allocated
 domain and performing the source's thirteen minor-heap field zero stores.

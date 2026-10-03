@@ -1,3 +1,5 @@
+import OCaml.Vm.Boot.Startup.DomainHeap
+import OCaml.Vm.Boot.Startup.AllocatorRun
 import OCaml.Vm.Gc.PopMixed
 import OCaml.Vm.Boot.Startup.DomainInit
 import OCaml.Vm.Boot.Startup.MallocRun
@@ -2754,3 +2756,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.domain_initialize
 #print axioms OCaml.Vm.Boot.Startup.domain_init_tables
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_minor_tables_exists
+
+#print axioms OCaml.Vm.Boot.Startup.domainInit_log_inside
+#print axioms OCaml.Vm.Boot.Startup.domainInit_heap_outside
+#print axioms OCaml.Vm.Boot.Startup.domainInit_allocator_outside
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMinorTables.vsaOk
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMinorTables.readOnly
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMinorTables.room
+#print axioms OCaml.Vm.Boot.Startup.room_shape
+#print axioms OCaml.Vm.Boot.Startup.allocator_separate
+#print axioms OCaml.Vm.Boot.Startup.allocator_stack_disjoint
+#print axioms OCaml.Vm.Boot.Startup.allocator_summary
