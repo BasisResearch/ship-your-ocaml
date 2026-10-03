@@ -1,5 +1,4 @@
-import OCaml.Vm.Gc.ScanProgress
-import OCaml.Vm.Gc.CopyEffect
+import OCaml.Vm.Gc.CopyProgress
 
 namespace OCaml.Vm.Gc.FieldCopy
 open Vsa.Machine Vsa.Sim Primitives Vsa.Logic LeanRV64DExecutable
@@ -14,10 +13,6 @@ theorem ScanAtWith.advance {writes a b count start initial i c d}
     (post : CopyEffect writes (scanPtr a i) (BitVec.ofNat 64 b - BitVec.ofNat 64 a)
       (BitVec.ofNat 64 b) (BitVec.ofNat 64 i) c d) :
     ScanAtWith writes a b count start initial (i + 1) d := by
-  let slot := scanPtr a i
-  let delta := BitVec.ofNat 64 b - BitVec.ofNat 64 a
-  let target := BitVec.ofNat 64 b
-  let index := BitVec.ofNat 64 i
   have source : word c (a + 8 * i) = word initial (a + 8 * i) := by
     apply word_frame h.memory
     have separate := geometry.separate
@@ -25,31 +20,7 @@ theorem ScanAtWith.advance {writes a b count start initial i c d}
   have sameHeader : word c (b - 8) = word initial (b - 8) := by
     apply word_frame h.memory
     exact Or.inl (by have lower := geometry.targetRange.lower; omega)
-  have log : copyLog slot delta c = [(b + 8 * i, 8, word c (a + 8 * i))] := by
-    simp only [copyLog, slot, delta, BitVec.add_comm _ (scanPtr a i), scanPtr_delta,
-      geometry.targetRange.ptr_nat (Nat.le_of_lt bound), geometry.sourceRange.ptr_nat (Nat.le_of_lt bound)]
-  have memory : d.σ.mem = writeLog c.σ.mem [(b + 8 * i, 8, word c (a + 8 * i))] := by
-    rw [post.memory, log]
-  have frame : FrameOn (scanWindow b start count) c.σ.mem d.σ.mem := by
-    rw [memory]
-    apply frameOn_writeLog
-    change ((b + 8 * start ≤ b + 8 * i ∧ b + 8 * i + 8 ≤ b + 8 * count) ∨ False) ∧ True
-    exact ⟨Or.inl ⟨by have := h.lower; omega, by omega⟩, True.intro⟩
-  apply h.advance_progress bound
-  refine ⟨post.good, post.minstret, post.tick, post.code, ?_, ?_, frame, ?_, ?_,
-    post.output, post.native⟩
-  · have next := post.pc
-    rw [again_eq geometry bound (sameHeader ▸ header)] at next
-    simpa only [decide_eq_true_eq] using next
-  · simpa only [slot, delta, target, index, scanPtr_succ, BitVec.ofNat_add] using post.registers
-  · have copied := post.destination
-    simpa only [slot, delta, BitVec.add_comm _ (scanPtr a i), scanPtr_delta,
-      geometry.targetRange.ptr_nat (Nat.le_of_lt bound),
-      geometry.sourceRange.ptr_nat (Nat.le_of_lt bound), source] using copied
-  · intro j _ old
-    change bytesT d.σ.mem _ 8 = bytesT c.σ.mem _ 8
-    rw [memory]
-    apply bytesT_writeLog_out
-    exact ⟨Or.inl (by omega), True.intro⟩
+  exact h.advance_progress bound (post.progress geometry h.lower bound
+    (sameHeader ▸ header) (fun _ h => h) source)
 
 end OCaml.Vm.Gc.FieldCopy

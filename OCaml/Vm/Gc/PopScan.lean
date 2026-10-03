@@ -1,3 +1,4 @@
+import Vsa.Sim.FrameComposition
 import OCaml.Vm.Gc.ScanSetup
 import OCaml.Vm.Gc.QueueObserved
 
@@ -159,8 +160,7 @@ theorem scan_after_pop {q qs fields pl cp tag c}
   refine ⟨after, run, ⟨post.good, post.minstret, post.tick, post.code, post.pc, post.object,
     popped.queue.scan_frame queueOutside post.memory, ?_,
     post.output.trans popped.effects.output, ?_⟩⟩
-  · intro a outside
-    exact (post.memory a outside.2).trans (popped.memory_frame a ⟨outside.1, True.intro⟩)
+  · exact frameOn_comp popped.memory_frame post.memory
   · intro r noise untouched
     apply (post.native r noise ?_).trans
       (popped.effects.frame r noise (fun n hn => untouched n (MopupPop.written _ n hn)))

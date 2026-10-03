@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.QueueForwarded
 import OCaml.Vm.Gc.PopForwarded
 import OCaml.Vm.Gc.ForwardedSetup
 import OCaml.Vm.Boot.Startup.MallocPlatform
@@ -2646,3 +2647,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.WorkQueue.PopFirstPost.grey_frame
 #print axioms OCaml.Vm.Gc.WorkQueue.first_outside
 #print axioms OCaml.Vm.Gc.WorkQueue.pop_forwarded
+
+#print axioms OCaml.Vm.Gc.FieldCopy.CopyEffect.progress
+#print axioms OCaml.Vm.Gc.WorkQueue.first_after_pop
+#print axioms OCaml.Vm.Gc.WorkQueue.forwarded_after_first
+#print axioms OCaml.Vm.Gc.WorkQueue.resume_first
+#print axioms OCaml.Vm.Gc.WorkQueue.resume_forwarded

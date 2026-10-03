@@ -33,14 +33,10 @@ structure PopFirstPost (R : Nat → BitVec 64) (q : PendingCopy) (qs : List Pend
     (∀ n ∈ [1,10,11,12,14,15,18,19], (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
 
-/-- Actual queue pop, child-parity branch, nursery classifier and complete
-forwarded first-field call. The remainder of the queue survives by its Eqv
-frame; the exact log includes both the head update and native/first stores. -/
-theorem pop_first {R domain q qs pl c} (input : PopInput q qs pl c)
+/-- Shared continuation after either concrete queue-pop entry. -/
+theorem first_after_pop {R domain q qs pl c} (input : PopInput q qs pl c)
     (ready : FirstReady R domain q c) (separate : FirstSeparation R q qs c) :
-    FnSummary MopupPop.pc (fun d => d = c) (PopFirstPost R q qs pl c) := by
-  constructor
-  apply Vsa.Logic.Triple.seq (pop_machine input).run
+    Vsa.Logic.Triple (PopPost q qs pl c) (PopFirstPost R q qs pl c) := by
   intro middle popped
   have child := frame_word popped.memory_frame separate.forwarding
   have callInput := popped.first_input input ready
@@ -67,5 +63,11 @@ theorem pop_first {R domain q qs pl c} (input : PopInput q qs pl c)
     · intro n member
       simp only [List.mem_cons, List.not_mem_nil, or_false] at member
       rcases member with rfl | rfl | rfl | rfl <;> exact untouched _ (by decide)
+
+/-- Initial queue pop followed by the shared first-field continuation. -/
+theorem pop_first {R domain q qs pl c} (input : PopInput q qs pl c)
+    (ready : FirstReady R domain q c) (separate : FirstSeparation R q qs c) :
+    FnSummary MopupPop.pc (fun d => d = c) (PopFirstPost R q qs pl c) :=
+  ⟨Vsa.Logic.Triple.seq (pop_machine input).run (first_after_pop input ready separate)⟩
 
 end OCaml.Vm.Gc.WorkQueue

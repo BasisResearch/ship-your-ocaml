@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Forwarded traversal from the queue backedge (2026-10-03)
+
+- `QueueForwarded.lean:resume_forwarded` executes a subsequent queue visit
+  through the complete already-forwarded object traversal. Initial and
+  backedge entries share `first_after_pop` and `forwarded_after_first`;
+  each retains its own generated pop certificate.
+- `CopyProgress.lean:CopyEffect.progress` normalizes either verbatim-copy
+  route into the shared progress interface with arbitrary containing
+  footprint and expected values. The existing scan update now uses it;
+  integer queue composition also reuses `frameOn_comp`.
+- Capped targeted build (718 jobs), full Audit (2645 jobs), discipline and
+  abstraction gates pass. New headlines use only permitted axioms.
+  Whole initial traversal landed
+  as `5464f8e`. Next: combine verbatim and forwarded field routes under one
+  loop invariant. Fresh-copy/allocator paths, outer roots, ephemerons,
+  major reclamation and G2 remain open.
+
 ## Complete forwarded pending-object traversal (2026-10-03)
 
 - `PopForwarded.lean:pop_forwarded` composes queue pop, first-child oldify,

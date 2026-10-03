@@ -40,12 +40,9 @@ structure PopForwardedPost (R : Nat → BitVec 64) (q : PendingCopy) (qs : List 
     (∀ n ∈ [1,8,9,10,11,12,14,15,18,19], (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
 
-/-- Complete real pending-object traversal when its first child and suffix
-children are already-forwarded young values. Every intermediate input comes
-from executed code plus initial heap/native observations and separation. -/
-theorem pop_forwarded {R domain q qs fields pl μ cp tag c expected}
-    (input : PopInput q qs pl c) (ready : FirstReady R domain q c)
-    (separate : FirstSeparation R q qs c)
+/-- Shared typed suffix continuation after the complete first-field update. -/
+theorem forwarded_after_first {R domain q qs fields pl μ cp tag c expected}
+    (ready : FirstReady R domain q c)
     (data : ForwardedField.LoopData (suffixRegs R q c) domain q.source.toNat q.target.toNat fields.length 1 c expected)
     (outside : ForwardedField.LoopOutside (suffixRegs R q c) domain q.source.toNat q.target.toNat fields.length 1 c
       (firstFootprint R q))
@@ -57,9 +54,7 @@ theorem pop_forwarded {R domain q qs fields pl μ cp tag c expected}
       word c (word c q.target.toNat).toNat = relocWord μ pl v (word c q.target.toNat))
     (observed : ∀ i v, fields[i]? = some v → 1 ≤ i →
       expected i = relocWord μ pl v (word c (q.source.toNat + 8 * i))) :
-    FnSummary MopupPop.pc (fun d => d = c) (PopForwardedPost R q qs fields pl μ cp tag c) := by
-  constructor
-  apply Vsa.Logic.Triple.seq (pop_first input ready separate).run
+    Vsa.Logic.Triple (PopFirstPost R q qs pl c) (PopForwardedPost R q qs fields pl μ cp tag c) := by
   intro middle poppedFirst
   have memory := poppedFirst.memory_frame ready
   have setupInput := poppedFirst.setup_input ready data.geometry large one data.header outside.header
@@ -92,5 +87,25 @@ theorem pop_forwarded {R domain q qs fields pl μ cp tag c expected}
   · intro n member
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact untouched _ (by decide)
+
+/-- Complete real pending-object traversal when every child is already
+forwarded. All continuation inputs follow from initial observations. -/
+theorem pop_forwarded {R domain q qs fields pl μ cp tag c expected}
+    (input : PopInput q qs pl c) (ready : FirstReady R domain q c)
+    (separate : FirstSeparation R q qs c)
+    (data : ForwardedField.LoopData (suffixRegs R q c) domain q.source.toNat q.target.toNat fields.length 1 c expected)
+    (outside : ForwardedField.LoopOutside (suffixRegs R q c) domain q.source.toNat q.target.toNat fields.length 1 c
+      (firstFootprint R q))
+    (queueOutside : OutsideWindows qs (MopupCall.scanFootprint R q.target.toNat 1 fields.length))
+    (large : 1 < fields.length) (one : R 24 = 1#64)
+    (header : HeaderOk (word c (q.target.toNat - 8)) fields.length tag)
+    (grey : (pendingPayload q fields).P pl q.target.toNat c)
+    (firstForwarding : ∀ v, fields[0]? = some v →
+      word c (word c q.target.toNat).toNat = relocWord μ pl v (word c q.target.toNat))
+    (observed : ∀ i v, fields[i]? = some v → 1 ≤ i →
+      expected i = relocWord μ pl v (word c (q.source.toNat + 8 * i))) :
+    FnSummary MopupPop.pc (fun d => d = c) (PopForwardedPost R q qs fields pl μ cp tag c) :=
+  ⟨Vsa.Logic.Triple.seq (pop_first input ready separate).run
+    (forwarded_after_first ready data outside queueOutside large one header grey firstForwarding observed)⟩
 
 end OCaml.Vm.Gc.WorkQueue
