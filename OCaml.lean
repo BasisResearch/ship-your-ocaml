@@ -319,3 +319,5 @@ import OCaml.Vm.Boot.Startup.PrimitiveLookupImage
 import Vsa.Sim.Boot.LoaderPieces
 
 import OCaml.Vm.Boot.WhileMinElfHeader
+
+import OCaml.Vm.Boot.WhileMinElfTables

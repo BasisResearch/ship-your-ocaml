@@ -52,7 +52,8 @@ The proof uses abstract array/list induction, not a concrete memory-map
 computation. Both modules check in under one second each. Concrete parsed-ELF
 piece geometry and byte-view certificates must still instantiate the theorem.
 
-The exact 515,920-byte while_min ELF is now archived under its existing SHA256
+The bounded-header increment landed as `d29b321`, full gate passed.
+The exact 515,920-byte while_min ELF is archived under its existing SHA256
 pin (`results/boot/while_min-elf.bin.gz`). `gen_boot_elf.py` verifies that pin
 and the emulator's archived pieces, reuses `WhileMinImage.imageByte` for
 loader-covered ranges, and emits only the remaining file bytes as sparse
@@ -66,9 +67,16 @@ to its generated header, and `header_entry` agrees with pinned Layout.
 Direct header simplification tried to expand the full array (one owned
 check was stopped); early concrete prefix rewriting also hit kernel recursion.
 The checked replacement proves view/header locality with an arbitrary size,
-then instantiates that theorem. No budget was increased. Program-header,
-section-header/name and gap-parser correspondence still need proofs before
-constructing the actual parsed `ELF64File` and its `WhileMinElf` witness.
+then instantiates that theorem. No budget was increased. The program and section header tables are now checked as well:
+`Vsa/Sim/Boot/ElfEntries.lean` proves 56-byte/64-byte entry locality,
+using the shared `parser_view_of_slice` and scalar-byte simplifier.
+`gen_boot_elf.py` emits all four program and thirteen section records and
+bounded entry certificates in `WhileMinElfTables.lean`; its two
+`program_table_parse` / `section_table_parse` theorems compose the actual
+source table parsers. The complete generated module checks in 4.5 s.
+Interpreted segment/section construction, section names and gap-parser
+correspondence remain before constructing the actual parsed `ELF64File`
+and its `WhileMinElf` witness.
 
 Next: establish the concrete pinned ELF's `WhileMinElf` loader contract,
 then continue the remaining startup callees. Reset-to-cut reachability and

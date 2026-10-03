@@ -388,4 +388,221 @@ def expectedHeader : ELF64Header := {
   e_shstrndx := 12
 }
 
+def program0 : ELF64ProgramHeaderTableEntry := {
+  p_type := 1879048195
+  p_flags := 4
+  p_offset := 427331
+  p_vaddr := 0
+  p_paddr := 0
+  p_filesz := 28
+  p_memsz := 0
+  p_align := 1
+}
+
+def program1 : ELF64ProgramHeaderTableEntry := {
+  p_type := 1
+  p_flags := 7
+  p_offset := 4096
+  p_vaddr := 2147483648
+  p_paddr := 2147483648
+  p_filesz := 411920
+  p_memsz := 512312
+  p_align := 4096
+}
+
+def program2 : ELF64ProgramHeaderTableEntry := {
+  p_type := 1
+  p_flags := 6
+  p_offset := 417792
+  p_vaddr := 2256535552
+  p_paddr := 2256535552
+  p_filesz := 9539
+  p_memsz := 9539
+  p_align := 4096
+}
+
+def program3 : ELF64ProgramHeaderTableEntry := {
+  p_type := 1685382481
+  p_flags := 6
+  p_offset := 0
+  p_vaddr := 0
+  p_paddr := 0
+  p_filesz := 0
+  p_memsz := 0
+  p_align := 16
+}
+
+def programs : List ELF64ProgramHeaderTableEntry := [program0, program1, program2, program3]
+
+def section0 : ELF64SectionHeaderTableEntry := {
+  sh_name := 0
+  sh_type := 0
+  sh_flags := 0
+  sh_addr := 0
+  sh_offset := 0
+  sh_size := 0
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 0
+  sh_entsize := 0
+}
+
+def section1 : ELF64SectionHeaderTableEntry := {
+  sh_name := 27
+  sh_type := 1
+  sh_flags := 6
+  sh_addr := 2147483648
+  sh_offset := 4096
+  sh_size := 340352
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 4
+  sh_entsize := 0
+}
+
+def section2 : ELF64SectionHeaderTableEntry := {
+  sh_name := 33
+  sh_type := 1
+  sh_flags := 2
+  sh_addr := 2147824000
+  sh_offset := 344448
+  sh_size := 60976
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 8
+  sh_entsize := 0
+}
+
+def section3 : ELF64SectionHeaderTableEntry := {
+  sh_name := 41
+  sh_type := 1
+  sh_flags := 3
+  sh_addr := 2147884992
+  sh_offset := 405440
+  sh_size := 16
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 64
+  sh_entsize := 0
+}
+
+def section4 : ELF64SectionHeaderTableEntry := {
+  sh_name := 49
+  sh_type := 1
+  sh_flags := 3
+  sh_addr := 2147885008
+  sh_offset := 405456
+  sh_size := 10552
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 8
+  sh_entsize := 0
+}
+
+def section5 : ELF64SectionHeaderTableEntry := {
+  sh_name := 55
+  sh_type := 14
+  sh_flags := 3
+  sh_addr := 2147895560
+  sh_offset := 416008
+  sh_size := 8
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 8
+  sh_entsize := 8
+}
+
+def section6 : ELF64SectionHeaderTableEntry := {
+  sh_name := 73
+  sh_type := 8
+  sh_flags := 3
+  sh_addr := 2147895568
+  sh_offset := 416016
+  sh_size := 100392
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 8
+  sh_entsize := 0
+}
+
+def section7 : ELF64SectionHeaderTableEntry := {
+  sh_name := 78
+  sh_type := 1
+  sh_flags := 3
+  sh_addr := 2256535552
+  sh_offset := 417792
+  sh_size := 9539
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 8
+  sh_entsize := 0
+}
+
+def section8 : ELF64SectionHeaderTableEntry := {
+  sh_name := 85
+  sh_type := 1879048195
+  sh_flags := 0
+  sh_addr := 0
+  sh_offset := 427331
+  sh_size := 28
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 1
+  sh_entsize := 0
+}
+
+def section9 : ELF64SectionHeaderTableEntry := {
+  sh_name := 103
+  sh_type := 1
+  sh_flags := 48
+  sh_addr := 0
+  sh_offset := 427359
+  sh_size := 51
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 1
+  sh_entsize := 1
+}
+
+def section10 : ELF64SectionHeaderTableEntry := {
+  sh_name := 1
+  sh_type := 2
+  sh_flags := 0
+  sh_addr := 0
+  sh_offset := 427416
+  sh_size := 56232
+  sh_link := 11
+  sh_info := 1005
+  sh_addralign := 8
+  sh_entsize := 24
+}
+
+def section11 : ELF64SectionHeaderTableEntry := {
+  sh_name := 9
+  sh_type := 3
+  sh_flags := 0
+  sh_addr := 0
+  sh_offset := 483648
+  sh_size := 31324
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 1
+  sh_entsize := 0
+}
+
+def section12 : ELF64SectionHeaderTableEntry := {
+  sh_name := 17
+  sh_type := 3
+  sh_flags := 0
+  sh_addr := 0
+  sh_offset := 514972
+  sh_size := 112
+  sh_link := 0
+  sh_info := 0
+  sh_addralign := 1
+  sh_entsize := 0
+}
+
+def sections : List ELF64SectionHeaderTableEntry := [section0, section1, section2, section3, section4, section5, section6, section7, section8, section9, section10, section11, section12]
+
 end OCaml.Vm.Boot.WhileMinElfData
