@@ -1,0 +1,104 @@
+{
+  "theorem": "tr_closure_prefix_zero",
+  "doc": "CLOSURE_PREFIX_ZERO arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.ClosurePrefixZeroSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v8 v9 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_800029c4 : 0x80000000 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
+    "(hhi_800029c4 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ 0x100000000)",
+    "(hhtif_800029c4 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
+    "(loaded_800029c4 : BitVec 64)",
+    "(hvalue_800029c4 : loaded_800029c4 = (sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4))))",
+    "(hguard_800029d0 : zopz0zKzJ_s (0#64) loaded_800029c4 = true)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlClosurePrefixZeroLoaded",
+  "pins": [
+    {
+      "reg": "x8",
+      "val": "v8",
+      "hyp": "hv8"
+    },
+    {
+      "reg": "x9",
+      "val": "v9",
+      "hyp": "hv9"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x800029c4",
+      "site": "site_800029c4_closure_prefix_zero",
+      "class": "alu",
+      "asm": "lw a7,4(s0)",
+      "rd": "x17",
+      "rd_val": "loaded_800029c4",
+      "raw_val": "(sign_extend (m := 64) (bytesT4 σ.mem (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4)))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl hlo_800029c4 hhi_800029c4 hhtif_800029c4 $hi",
+      "rw": "hmemeq, ← hvalue_800029c4"
+    },
+    {
+      "addr": "0x800029c8",
+      "site": "site_800029c8_closure_prefix_zero",
+      "class": "alu",
+      "asm": "addi s11,s0,8",
+      "rd": "x27",
+      "rd_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800029cc",
+      "site": "site_800029cc_closure_prefix_zero",
+      "class": "alu",
+      "asm": "addiw s10,a7,2",
+      "rd": "x26",
+      "rd_val": "(sign_extend (m := 64) (Sail.BitVec.extractLsb (loaded_800029c4 + sign_extend (m := 64) (0x002#12)) 31 0))",
+      "raw_val": "(sign_extend (m := 64) (Sail.BitVec.extractLsb (v17 + sign_extend (m := 64) (0x002#12)) 31 0))",
+      "call": "$vmi $v:x17 $hG $hpc $hmi $pin:x17 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800029d0",
+      "site": "site_800029d0_taken_closure_prefix_zero",
+      "class": "btaken",
+      "asm": "blez a7,800037d4 <caml_interprete+0x19dc>",
+      "imm": "0x0e04#13",
+      "target": "0x800037d4",
+      "pre_lines": [],
+      "call": "$vmi $v:x17 $hG $hpc $hmi $pin:x17 $hmem rfl hguard_800029d0 $hi"
+    },
+    {
+      "addr": "0x800037d4",
+      "site": "site_800037d4_closure_prefix_zero",
+      "class": "alu",
+      "asm": "mv s7,s1",
+      "rd": "x23",
+      "rd_val": "(v9 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v9 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800037d8",
+      "site": "site_800037d8_closure_prefix_zero",
+      "class": "j",
+      "asm": "j 800029e8 <caml_interprete+0xbf0>",
+      "imm": "0x1ff210#21",
+      "target": "0x800029e8",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x800029c4",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

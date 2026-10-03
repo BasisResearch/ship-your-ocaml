@@ -17,6 +17,23 @@ theorem value_log_getElem (base : Nat) (words : List (BitVec 64)) (i : Nat)
     (valueLog base words)[i]'(by rw [value_log_length]; exact bound) = (base + 8 * i, 8, words[i]) := by
   simp [valueLog, indexedLog, valueEntries, List.getElem?_eq_getElem bound]
 
+/-- Split the first initialized field from the generated forward copy. -/
+theorem value_log_cons (a : Nat) (word : BitVec 64) (words : List (BitVec 64)) :
+    valueLog a (word :: words) = (a, 8, word) :: valueLog (a + 8) words := by
+  apply List.ext_getElem
+  · simp only [value_log_length, List.length_cons]
+  · intro i hi hj
+    simp only [value_log_length, List.length_cons] at hi hj
+    cases i with
+    | zero => simp [value_log_getElem]
+    | succ i =>
+      have bound : i < words.length := by omega
+      rw [value_log_getElem a (word :: words) (i + 1) (by simp only [List.length_cons]; omega),
+        List.getElem_cons_succ, List.getElem_cons_succ,
+        value_log_getElem (a + 8) words i bound]
+      congr 1
+      omega
+
 /-- One more native reverse-copy store extends the exact partial write log. -/
 theorem reverse_copy_log_step (base : Nat) (words : List (BitVec 64)) (i : Nat)
     (bound : i < words.length) :

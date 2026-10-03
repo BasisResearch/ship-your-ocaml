@@ -1727,6 +1727,19 @@ runtime preservation remain explicit. Larger major-heap allocation remains
 open. Initializers landed as `22d5d10`, all gates passing. Next: CLOSURE and
 CLOSUREREC, then remaining control, mutation and signed division families.
 
+## Ordinary CLOSURE foundations
+
+Generated zero/nonzero capture prefixes, nursery reservation, zero/nonzero
+initializers, both seven-instruction copy branches and the metadata/return
+suffix now check. Native costs are 1.4 s for the nonzero prefix, 1.8 s for
+reservation, 1.8/2.4 s for initializers, 1.4 s per copy branch and 2.1 s for
+the suffix. `ClosureLayout.lean` (`closure_log_layout`) now handles arbitrary
+captures; `partial_closure_layout` specializes it with GRAB's environment as
+the first capture. `value_log_cons` moved into shared `ReverseCopyLog.lean`.
+Both complete GRAB and MAKEBLOCK bridges rebuild successfully. Generic
+MAKEBLOCK landed as `1473dcf`, all gates passing. Next: share the indexed-copy
+state with RESTART, then connect CLOSURE's represented nursery stages.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

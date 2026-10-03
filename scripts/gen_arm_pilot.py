@@ -29,6 +29,14 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'CLOSURE_SUFFIX': ('ClosureSuffix', ['lw_tot', 'slli', 'alu_add', 'slli', 'alu_add', 'alu_addi', 'sd', 'alu_addi', 'sd', 'j']),
+    'CLOSURE_COPY_LAST': ('ClosureCopyLast', ['ld_tot', 'slli', 'alu_add', 'addiw', 'sd', 'alu_addi', 'branch_nottaken']),
+    'CLOSURE_COPY_MORE': ('ClosureCopyMore', ['ld_tot', 'slli', 'alu_add', 'addiw', 'sd', 'alu_addi', 'branch_taken']),
+    'CLOSURE_INIT_ZERO': ('ClosureInitZero', ['slli', 'alu_addi', 'sd', 'auipc', 'ld_tot', 'ld_tot', 'alu_addi', 'alu_addi', 'alu_addi', 'branch_taken']),
+    'CLOSURE_INIT_MORE': ('ClosureInitMore', ['slli', 'alu_addi', 'sd', 'auipc', 'ld_tot', 'ld_tot', 'alu_addi', 'alu_addi', 'alu_addi', 'branch_nottaken', 'alu_addi', 'addiw', 'alu_addi']),
+    'CLOSURE_RESERVE': ('ClosureReserve', ['auipc', 'alu_addi', 'ld_tot', 'addiw', 'slli', 'ld_tot', 'ld_tot', 'sub', 'sd', 'branch_nottaken']),
+    'CLOSURE_PREFIX_ZERO': ('ClosurePrefixZero', ['lw_tot', 'alu_addi', 'addiw', 'branch_taken', 'alu_addi', 'j']),
+    'CLOSURE_PREFIX_MORE': ('ClosurePrefixMore', ['lw_tot', 'alu_addi', 'addiw', 'branch_nottaken', 'sd', 'alu_addi', 'alu_addi', 'branch_taken']),
     'MAKEBLOCK_ONE_SUFFIX': ('MakeblockOneSuffix', ['alu_addi', 'alu_addi', 'j']),
     'MAKEBLOCK_SUFFIX': ('MakeblockSuffix', ['alu_add', 'alu_addi', 'alu_addi', 'j']),
     'MAKEBLOCK_INIT_ONE': ('MakeblockInitOne', ['slli', 'srli', 'slli', 'alu_add', 'sd', 'auipc', 'ld_tot', 'alu_addi', 'ld_tot', 'sd', 'branch_nottaken', 'j']),
@@ -155,12 +163,20 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'MAKEBLOCK_ONE_SUFFIX', 'MAKEBLOCK_SUFFIX', 'MAKEBLOCK_INIT_ONE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_COPY_MORE', 'MAKEBLOCK_COPY_LAST', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'CLOSURE_SUFFIX', 'CLOSURE_COPY_LAST', 'CLOSURE_COPY_MORE', 'CLOSURE_INIT_ZERO', 'CLOSURE_INIT_MORE', 'CLOSURE_RESERVE', 'CLOSURE_PREFIX_ZERO', 'CLOSURE_PREFIX_MORE', 'MAKEBLOCK_ONE_SUFFIX', 'MAKEBLOCK_SUFFIX', 'MAKEBLOCK_INIT_ONE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_COPY_MORE', 'MAKEBLOCK_COPY_LAST', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 # Explicit loop cuts: entry, exit, and native branch decisions. These are text
 # instruction addresses; all runtime data addresses still come from Layout.
 CUTS = {
+    'CLOSURE_SUFFIX': (0x80002a60, 0x80001f5c, []),
+    'CLOSURE_COPY_LAST': (0x80002a44, 0x80002a60, [False]),
+    'CLOSURE_COPY_MORE': (0x80002a44, 0x80002a44, [True]),
+    'CLOSURE_INIT_ZERO': (0x80002a10, 0x80002a60, [True]),
+    'CLOSURE_INIT_MORE': (0x80002a10, 0x80002a44, [False]),
+    'CLOSURE_RESERVE': (0x800029e8, 0x80002a10, [False]),
+    'CLOSURE_PREFIX_ZERO': (0x800029c4, 0x800029e8, [True]),
+    'CLOSURE_PREFIX_MORE': (0x800029c4, 0x800029e8, [False, True]),
     'MAKEBLOCK_ONE_SUFFIX': (0x80003c74, 0x80001f5c, []),
     'MAKEBLOCK_SUFFIX': (0x800026e0, 0x80001f5c, []),
     'MAKEBLOCK_INIT_ONE': (0x80002688, 0x80003c74, [False]),
@@ -538,7 +554,7 @@ theorem {lower}_prim_contents : {table_address} =
 
 end OCaml.Vm.Sim
 """
-    if family in {'MAKEBLOCK_RESERVE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_INIT_ONE', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST'}:
+    if family in {'CLOSURE_RESERVE', 'CLOSURE_INIT_MORE', 'CLOSURE_INIT_ZERO', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_INIT_ONE', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST'}:
         domains = []
         for index, (address, _, op, args) in enumerate(insts):
             if '<Caml_state>' not in args:

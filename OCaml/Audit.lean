@@ -2461,6 +2461,28 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.makeblock_arm
 #print axioms OCaml.Vm.Sim.makeblock_step_arm
 
+-- Ordinary closure allocation cuts and shared ordinary/partial layout.
+#print axioms OCaml.Vm.Sim.closure_log_layout
+#print axioms Vsa.Sim.tr_closure_prefix_more
+#print axioms OCaml.Vm.Sim.closure_prefix_more_loaded
+#print axioms Vsa.Sim.tr_closure_prefix_zero
+#print axioms OCaml.Vm.Sim.closure_prefix_zero_loaded
+#print axioms Vsa.Sim.tr_closure_reserve
+#print axioms OCaml.Vm.Sim.closure_reserve_loaded
+#print axioms Vsa.Sim.tr_closure_init_more
+#print axioms OCaml.Vm.Sim.closure_init_more_loaded
+#print axioms Vsa.Sim.tr_closure_init_zero
+#print axioms OCaml.Vm.Sim.closure_init_zero_loaded
+#print axioms Vsa.Sim.tr_closure_copy_more
+#print axioms OCaml.Vm.Sim.closure_copy_more_loaded
+#print axioms Vsa.Sim.tr_closure_copy_last
+#print axioms OCaml.Vm.Sim.closure_copy_last_loaded
+#print axioms Vsa.Sim.tr_closure_suffix
+#print axioms OCaml.Vm.Sim.closure_suffix_loaded
+#print axioms OCaml.Vm.Sim.closure_reserve_domain
+#print axioms OCaml.Vm.Sim.closure_init_more_domain
+#print axioms OCaml.Vm.Sim.closure_init_zero_domain
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

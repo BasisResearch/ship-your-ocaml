@@ -431,3 +431,23 @@ import OCaml.Vm.Sim.MakeblockInitializeMore
 import OCaml.Vm.Sim.MakeblockInitializeOne
 
 import OCaml.Vm.Sim.Makeblock
+
+import OCaml.Vm.Sim.ClosurePrefixMoreSegment
+import OCaml.Vm.Sim.ClosurePrefixMorePins
+import OCaml.Vm.Sim.ClosurePrefixZeroSegment
+import OCaml.Vm.Sim.ClosurePrefixZeroPins
+import OCaml.Vm.Sim.ClosureReserveSegment
+import OCaml.Vm.Sim.ClosureReservePins
+import OCaml.Vm.Sim.ClosureReserveLayout
+import OCaml.Vm.Sim.ClosureInitMoreSegment
+import OCaml.Vm.Sim.ClosureInitMorePins
+import OCaml.Vm.Sim.ClosureInitMoreLayout
+import OCaml.Vm.Sim.ClosureInitZeroSegment
+import OCaml.Vm.Sim.ClosureInitZeroPins
+import OCaml.Vm.Sim.ClosureInitZeroLayout
+import OCaml.Vm.Sim.ClosureCopyMoreSegment
+import OCaml.Vm.Sim.ClosureCopyMorePins
+import OCaml.Vm.Sim.ClosureCopyLastSegment
+import OCaml.Vm.Sim.ClosureCopyLastPins
+import OCaml.Vm.Sim.ClosureSuffixSegment
+import OCaml.Vm.Sim.ClosureSuffixPins

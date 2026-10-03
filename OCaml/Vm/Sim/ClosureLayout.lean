@@ -34,35 +34,33 @@ theorem outLRange_append {left right : List WEntry} {a n : Nat}
   | nil => exact hr
   | cons entry left ih => exact ⟨hl.1, ih hl.2⟩
 
-/-- The actual partial-closure write order establishes code, environment and
-saved arguments without commuting memory stores. -/
-theorem partial_closure_layout {pl : Place} {cp : ChanPlace} {before after : Config}
-    {a pc : Nat} {env : Val} {envWord : BitVec 64} {args : List Val} {words : List (BitVec 64)}
-    (room : 8 ≤ a) (small : words.length + 3 < 2^32)
-    (environment : valWord pl env = some envWord) (arguments : ValueWords pl args words)
+/-- Ordinary closures initialize captured fields before installing code and arity. -/
+def closureLog (a : Nat) (code : BitVec 64) (captures : List (BitVec 64)) : List WEntry :=
+  [(a - 8, 8, blockHeader (captures.length + 2) closureTag)] ++
+    valueLog (a + 16) captures ++ [(a, 8, code), (a + 8, 8, 5#64)]
+
+/-- The native closure write order establishes metadata and arbitrary captures
+without commuting memory stores. -/
+theorem closure_log_layout {pl : Place} {cp : ChanPlace} {before after : Config}
+    {a pc : Nat} {args : List Val} {words : List (BitVec 64)}
+    (room : 8 ≤ a) (small : words.length + 2 < 2^32)
+    (arguments : ValueWords pl args words)
     (memory : after.σ.mem = writeLog before.σ.mem
-      (partialClosureLog a (BitVec.ofNat 64 (pl.codeBase + 4 * pc)) envWord words)) :
-    ObjAt after pl cp a (.block closureTag ([.code pc, Val.ofInt 2, env] ++ args)) := by
-  have headerCopy : OutLRange (valueLog (a + 24) words) (a - 8) 8 := by
-    apply outLRange_of_windows (value_log_in (a + 24) words)
-    exact ⟨Or.inl (by dsimp only; omega), trivial⟩
-  have envCopy : OutLRange (valueLog (a + 24) words) (a + 16) 8 := by
-    apply outLRange_of_windows (value_log_in (a + 24) words)
+      (closureLog a (BitVec.ofNat 64 (pl.codeBase + 4 * pc)) words)) :
+    ObjAt after pl cp a (.block closureTag ([.code pc, Val.ofInt 2] ++ args)) := by
+  have headerCopy : OutLRange (valueLog (a + 16) words) (a - 8) 8 := by
+    apply outLRange_of_windows (value_log_in (a + 16) words)
     exact ⟨Or.inl (by dsimp only; omega), trivial⟩
   have header := word_after_writeLog_at memory 0 (a - 8)
-    (blockHeader (words.length + 3) closureTag) rfl
-    (show OutLRange ((a + 16, 8, envWord) ::
-        (valueLog (a + 24) words ++ [(a, 8, BitVec.ofNat 64 (pl.codeBase + 4 * pc)), (a + 8, 8, 5#64)])) (a - 8) 8 from
-      ⟨Or.inl (by omega), outLRange_append headerCopy ⟨Or.inl (by omega), Or.inl (by omega), trivial⟩⟩)
-  have envRead := word_after_writeLog_at memory 1 (a + 16) envWord rfl
-    (outLRange_append envCopy ⟨Or.inr (by dsimp only; omega), Or.inr (by dsimp only; omega), trivial⟩)
+    (blockHeader (words.length + 2) closureTag) rfl
+    (outLRange_append headerCopy ⟨Or.inl (by omega), Or.inl (by omega), trivial⟩)
   have tailMemory : after.σ.mem = writeLog before.σ.mem
-      (([(a - 8, 8, blockHeader (words.length + 3) closureTag), (a + 16, 8, envWord)] ++
-        valueLog (a + 24) words) ++ [(a, 8, BitVec.ofNat 64 (pl.codeBase + 4 * pc)), (a + 8, 8, 5#64)]) := by
-    simpa only [partialClosureLog, List.append_assoc] using memory
+      (([(a - 8, 8, blockHeader (words.length + 2) closureTag)] ++
+        valueLog (a + 16) words) ++ [(a, 8, BitVec.ofNat 64 (pl.codeBase + 4 * pc)), (a + 8, 8, 5#64)]) := by
+    simpa only [closureLog, List.append_assoc] using memory
   have argsRead := value_log_framed arguments tailMemory
     (show OutLRange [(a, 8, BitVec.ofNat 64 (pl.codeBase + 4 * pc)), (a + 8, 8, 5#64)]
-      (a + 24) (8 * words.length) from ⟨Or.inr (by dsimp only; omega), Or.inr (by dsimp only; omega), trivial⟩)
+      (a + 16) (8 * words.length) from ⟨Or.inr (by dsimp only; omega), Or.inr (by dsimp only; omega), trivial⟩)
   have suffixRead (i address : Nat) (w : BitVec 64)
       (selected : [(a, 8, BitVec.ofNat 64 (pl.codeBase + 4 * pc)), (a + 8, 8, 5#64)][i]? = some (address, 8, w))
       (outside : OutLRange ([(a, 8, BitVec.ofNat 64 (pl.codeBase + 4 * pc)), (a + 8, 8, 5#64)].drop (i + 1)) address 8) :
@@ -70,10 +68,10 @@ theorem partial_closure_layout {pl : Place} {cp : ChanPlace} {before after : Con
     rw [word, tailMemory, writeLog_append]
     exact word_writeLog_at _ _ i address w selected outside
   constructor
-  · change HeaderOk (word after (a - 8)) (([.code pc, Val.ofInt 2, env] ++ args).length) closureTag
+  · change HeaderOk (word after (a - 8)) (([.code pc, Val.ofInt 2] ++ args).length) closureTag
     rw [header]
     simpa only [List.length_append, List.length_cons, List.length_nil, arguments.length, Nat.add_comm] using
-      block_header_ok (words.length + 3) closureTag small (by decide)
+      block_header_ok (words.length + 2) closureTag small (by decide)
   · intro i v selected
     cases i with
     | zero =>
@@ -86,13 +84,21 @@ theorem partial_closure_layout {pl : Place} {cp : ChanPlace} {before after : Con
         change valWord pl (Val.ofInt 2) = some (word after (a + 8))
         rw [suffixRead 1 (a + 8) _ rfl trivial]
         rfl
-      | succ i => cases i with
-        | zero =>
-          cases selected
-          change valWord pl env = some (word after (a + 16))
-          rw [envRead]; exact environment
-        | succ i =>
-          have read := argsRead i v selected
-          simpa only [Nat.mul_add, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using read
+      | succ i =>
+        have read := argsRead i v selected
+        simpa only [Nat.mul_add, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using read
+
+/-- GRAB is the common closure layout with its environment as the first capture. -/
+theorem partial_closure_layout {pl : Place} {cp : ChanPlace} {before after : Config}
+    {a pc : Nat} {env : Val} {envWord : BitVec 64} {args : List Val} {words : List (BitVec 64)}
+    (room : 8 ≤ a) (small : words.length + 3 < 2^32)
+    (environment : valWord pl env = some envWord) (arguments : ValueWords pl args words)
+    (memory : after.σ.mem = writeLog before.σ.mem
+      (partialClosureLog a (BitVec.ofNat 64 (pl.codeBase + 4 * pc)) envWord words)) :
+    ObjAt after pl cp a (.block closureTag ([.code pc, Val.ofInt 2, env] ++ args)) := by
+  apply closure_log_layout room (words := envWord :: words) (by simpa using small)
+    (ValueWords.cons environment arguments)
+  simpa only [closureLog, partialClosureLog, List.length_cons, value_log_cons,
+    Nat.add_assoc, List.cons_append, List.nil_append] using memory
 
 end OCaml.Vm.Sim
