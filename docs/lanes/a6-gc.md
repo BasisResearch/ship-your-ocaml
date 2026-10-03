@@ -1,5 +1,25 @@
 # Lane a6-gc
 
+## Concrete enqueue and grey payload (2026-10-03)
+
+- `EnqueueAccess.lean:enqueue_machine` discharges the real allocation-return
+  path's scalar loads, stores and unsigned size branch. Its inputs are
+  platform/code/register pins, RAM geometry, the old queue view and write
+  separation. Both load byte lists are total reads of memory after the
+  preceding stores. The original first-field read follows from separation
+  already needed to preserve the caller root; no additional alias premise.
+- `EnqueueRunPost` retains the segment kernel's register/output frame for
+  later epilogue composition and proves the copied first word equals the
+  original source word. Allocation execution and freshness remain open.
+- `PendingPayload.lean:pendingPayload_enqueue` establishes the typed grey
+  payload assertion using Eqv.list/Eqv.val and Eqv.transport: first field at
+  the copy, remaining fields at the source, all under the original placement.
+  Its source-suffix footprint supplier remains explicit. The intrusive next
+  link in the copy's second word is never treated as a payload value.
+- Targeted capped builds pass. The prior six-store effect landed as `7d04d6a`
+  via scripts/integrate.sh, exit 0. Next: scanning/blackening invariants and
+  oldify/mopup call composition; G2, live-word Fits and compiler safety are open.
+
 ## Allocation-return enqueue effect (2026-10-03)
 
 - `Generated/Enqueue.lean:writes` proves all six stores on the real
@@ -314,7 +334,7 @@ full integration gate.
   Every generated postcondition is a named-field structure, retaining
   computed registers, tick bound and instruction-counter existence. Calls stop at
   their call sites; these are segment proofs, not whole-function summaries.
-- The generated audit enumerates 695 row, segment, composed-route and
+- The generated audit enumerates all row, segment, composed-route and
   code-pin declarations, including the new mopup regions. The capped build of `OCaml.Vm.Gc.Generated.Audit` passes,
   and a separate capped Lean audit exits 0 with exactly those declarations
   and only the three permitted standard axioms.

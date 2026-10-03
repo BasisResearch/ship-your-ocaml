@@ -15,6 +15,13 @@ structure EnqueueSeparated (q : PendingCopy) (root first next : BitVec 64) : Pro
   firstPreserved : OutLRange ((Enqueue.effect q.source q.target root first next).drop 4) q.target.toNat 8
   todo : OutLRange ((Enqueue.effect q.source q.target root first next).drop 5) Layout.sym_oldify_todo_list 8
 
+/-- Root/source separation already required by final root preservation also
+protects the earlier read of the original source first field. -/
+theorem EnqueueSeparated.sourceOutsideRoot {q root first next}
+    (h : EnqueueSeparated q root first next) :
+    OutLRange [(root.toNat, 8, q.target)] q.source.toNat 8 :=
+  ⟨Or.symm h.rootPreserved.2.1, True.intro⟩
+
 /-- New work-list node plus the caller root and first copied field. The
 remaining fields intentionally stay pending for mopup. -/
 structure EnqueuePost (q : PendingCopy) (qs : List PendingCopy) (pl : Place)

@@ -714,7 +714,11 @@ private def gcAuditNames : Array Name := #[
   ``OCaml.Vm.Gc.MopupPop.queue_write,
   ``OCaml.Vm.Gc.MopupPop.Post.todo,
   ``OCaml.Vm.Gc.MopupPop.run,
+  ``OCaml.Vm.Gc.Enqueue.blocks_eq,
+  ``OCaml.Vm.Gc.Enqueue.code_facts,
   ``OCaml.Vm.Gc.Enqueue.chain_ok,
+  ``OCaml.Vm.Gc.Enqueue.prefix_log,
+  ``OCaml.Vm.Gc.Enqueue.prefix_regs,
   ``OCaml.Vm.Gc.Enqueue.writes,
   ``OCaml.Vm.Gc.Enqueue.run
 ]

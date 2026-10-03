@@ -30,6 +30,7 @@ import Vsa.Sim.Boot.Bytes
 import OCaml.Vm.Gc.Generated.Audit
 import OCaml.Vm.Gc.QueueAccess
 import OCaml.Vm.Gc.QueueEnqueue
+import OCaml.Vm.Gc.PendingPayload
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1666,3 +1667,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.lookup_start_input
 #print axioms OCaml.Vm.Boot.Startup.lookup_finish_input
 #print axioms OCaml.Vm.Boot.Startup.lookup_run
+
+#print axioms OCaml.Vm.Gc.WorkQueue.EnqueueSeparated.sourceOutsideRoot
+#print axioms OCaml.Vm.Gc.pendingPayload_before
+#print axioms OCaml.Vm.Gc.pendingPayload_enqueue
+#print axioms OCaml.Vm.Gc.WorkQueue.enqueue_prefix_access
+#print axioms OCaml.Vm.Gc.WorkQueue.enqueue_prefix_control
+#print axioms OCaml.Vm.Gc.WorkQueue.enqueue_loadedNext
+#print axioms OCaml.Vm.Gc.WorkQueue.enqueue_push_access
+#print axioms OCaml.Vm.Gc.WorkQueue.enqueue_access
+#print axioms OCaml.Vm.Gc.WorkQueue.enqueue_loadedFirst
+#print axioms OCaml.Vm.Gc.WorkQueue.enqueue_machine
