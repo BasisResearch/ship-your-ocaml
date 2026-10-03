@@ -18,7 +18,7 @@ structure Input (R : Nat → BitVec 64) (domain : BitVec 64) (c : Config) : Prop
   tick : c.tick < 2
   code : Code.Caml_oldify_mopupLoaded c.σ.mem
   oldifyCode : Code.Caml_oldify_oneLoaded c.σ.mem
-  registers : GHolds c.σ (OldifyEntry.regs R)
+  registers : GHolds c.σ (carried R)
   source : ReadWindow (R 8) 8
   header : ReadWindow (R 19 - 8#64) 8
   domainReg : gprGet c.σ 22 = some (BitVec.ofNat 64 Layout.sym_Caml_state)
@@ -33,11 +33,8 @@ theorem Input.read_input {R domain c} (input : Input R domain c) :
   exact ⟨gholds_lookup _ input.registers rfl, gholds_lookup _ input.registers rfl,
     gholds_lookup _ input.registers rfl, gholds_lookup _ input.registers rfl, True.intro⟩
 
-theorem Input.carried {R domain c} (input : Input R domain c) : GHolds c.σ (carried R) := by
-  apply gholds_select input.registers
-  intro n v member
-  simp only [ForwardedField.carried, List.mem_cons, List.not_mem_nil, or_false] at member
-  rcases member with h | h | h | h | h | h | h | h | h | h | h | h <;> cases h <;> rfl
+theorem Input.carried {R domain c} (input : Input R domain c) : GHolds c.σ (carried R) :=
+  input.registers
 
 theorem classifier_carried {R domain before after}
     (post : FieldCopy.ClassifiedPost (R 8) (R 18) (R 19) (R 9) domain before after)

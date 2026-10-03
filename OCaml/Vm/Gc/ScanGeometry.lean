@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.FieldCopyAccess
 import OCaml.Vm.Primitives.ScanArithmetic
+import OCaml.Vm.Gc.ObservationFrame
 
 namespace OCaml.Vm.Gc.FieldCopy
 open Vsa.Machine Vsa.Sim Primitives OCaml.Bytecode
@@ -48,10 +49,7 @@ theorem word_frame {before after : Config} {b start count a : Nat}
     (frame : FrameOn (scanWindow b start count) before.σ.mem after.σ.mem)
     (outside : a + 8 ≤ b + 8 * start ∨ b + 8 * count ≤ a) :
     word after a = word before a := by
-  apply Reloc.bytesT_congr
-  intro j hj
-  change byte after (a + j) = byte before (a + j)
-  rw [byte_total, byte_total, frame (a + j) ⟨by change a + j < b + 8 * start ∨ b + 8 * count ≤ a + j; omega, True.intro⟩]
+  exact frame_word frame ⟨outside, True.intro⟩
 
 /-- One represented integer selects the immediate classifier. -/
 theorem immediate_tag (value : BitVec 63) :

@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Forwarded iteration context preservation (2026-10-03)
+
+- `ForwardedContext.lean:Input.oldifyCode_after` preserves the oldify image
+  from actual native/destination windows. `Input.next_registers` supplies
+  the next field boundary with advanced source/index, installed return link
+  and restored native values. Input no longer asks for x10/x11 pins that
+  the classifier overwrites.
+- `ObservationFrame.lean:frame_word` shares observation preservation for
+  arbitrary write windows; the old singleton scan helper now uses it.
+  `ForwardedObservations.lean:Conditions.frame` preserves the four runtime/
+  forwarding-header reads needed by the call under this frame.
+- Targeted capped builds pass (672 jobs for context, 644 for observation
+  transport). Concrete iteration landed as `c08c9e3`. Next: construct a
+  loop invariant retaining this context and derive each field input from
+  initial observations, then fold the actual forwarded-field iterations.
+  Fresh-copy/allocator paths, roots, ephemerons, major reclamation and
+  G2/live-word Fits remain open.
+
 ## Concrete forwarded scan iteration (2026-10-03)
 
 - `ScanFootprint.lean:effect_entry` bounds every native save with the
