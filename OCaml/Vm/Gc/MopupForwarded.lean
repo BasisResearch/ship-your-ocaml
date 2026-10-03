@@ -91,4 +91,40 @@ theorem forwarded {R domain c} (input : ForwardedCall.Input R domain c)
     apply called.frame r noise (by simp [wrChain])
     exact untouched 1 (by decide)
 
+/-- Callee-saved native registers; the JAL deliberately replaces ra. -/
+def preserved (R : Nat → BitVec 64) : GRegs :=
+  [(2,R 2),(8,R 8),(9,R 9),(18,R 18),(19,R 19),(20,R 20),
+   (21,R 21),(22,R 22),(23,R 23),(24,R 24),(25,R 25)]
+
+/-- Two finite pin views used to recover the actual ABI frame. -/
+structure PreservedPins (R : Nat → BitVec 64) (before after : Config) : Prop where
+  beforePins : GHolds before.σ (preserved R)
+  afterPins : GHolds after.σ (preserved R)
+
+theorem preserved_pins {R before after exitPC}
+    (post : ForwardedCall.Post (linked R) before after exitPC)
+    (registers : GHolds before.σ (OldifyEntry.regs R)) :
+    PreservedPins R before after := by
+  constructor
+  · apply gholds_select registers
+    intro n v member
+    simp only [preserved, List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with h | h | h | h | h | h | h | h | h | h | h <;> cases h <;> rfl
+  · apply gholds_select post.registers
+    intro n v member
+    simp only [preserved, List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with h | h | h | h | h | h | h | h | h | h | h <;> cases h <;> rfl
+
+theorem abi_frame {R before after exitPC}
+    (post : ForwardedCall.Post (linked R) before after exitPC)
+    (registers : GHolds before.σ (OldifyEntry.regs R)) :
+    ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
+      (∀ n ∈ [1,12,14,15], (gprReg n == r) = false) →
+      after.σ.regs.get? r = before.σ.regs.get? r := by
+  have pins := preserved_pins post registers
+  apply frame_of_restored post.native (preserved R)
+    (by change KeysOK [2,8,9,18,19,20,21,22,23,24,25]; decide) pins.beforePins pins.afterPins
+  change ∀ n ∈ ForwardedCall.writes, n ∈ [1,12,14,15] ∨ n ∈ [2,8,9,18,19,20,21,22,23,24,25]
+  decide
+
 end OCaml.Vm.Gc.MopupCall

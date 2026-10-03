@@ -1,5 +1,25 @@
 # Lane a6-gc
 
+## Forwarded-field header advance and ABI frame (2026-10-03)
+
+- `ForwardedAdvance.lean:forwarded_advance` runs the actual mopup JAL,
+  forwarded callee, return jump and header/counter advance. The destination
+  contains the forwarding target; source/index increase once; the branch
+  uses the actual post-call header. Its exact log includes native saves.
+- `Advance.lean:advance_machine` shares the advance independently of a
+  preceding copy. Existing copy proofs now use the same generic header-load
+  certificate and generated control equivalence; no duplicate store is run.
+- Shared `lookupG_eraseG_ne` normalizes reflected symbolic register tails.
+  `frame_of_restored` recovers an ABI frame from original/restored pins;
+  `MopupCall.abi_frame` reduces the whole call to x1/x12/x14/x15 clobbers.
+  The advanced result additionally permits only x8/x9, so the scan can retain
+  its callee-saved domain and payload registers.
+- Targeted capped build passes (655 jobs). Mopup call/resume landed as
+  `16d9a00`. Next: compose the field read/classifier with this call route,
+  supply size preservation from footprints, and connect typed relocation.
+  Fresh copying/allocation, general relocation loop, roots, ephemerons,
+  major reclamation and G2/live-word Fits remain open.
+
 ## Mopup call and returned forwarded field (2026-10-03)
 
 - `MopupForwarded.lean:forwarded` uses the shared direct-call bridge and

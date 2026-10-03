@@ -1,6 +1,7 @@
 import OCaml.Vm.Gc.Generated.MopupDeferred
 import OCaml.Vm.Gc.ChainPlan
 import Vsa.Sim.ChainFactsTac
+import Vsa.Sim.GRegsLookup
 import Vsa.Sim.SegmentSummary
 import Vsa.Sim.ElfDecode.Part004
 import Vsa.Sim.ElfDecode.Part011
@@ -236,5 +237,53 @@ theorem store_registers {again slot delta target index value lds mem c}
       evalBlocks, evalBlock, SegEvalState.init, continuationRegs, runGM, ldsRunM,
       stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, mkLine, decodeM,
       LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend]
+
+/-- The advance block observes only its header load and incoming index for
+control. Register tails are normalized by the shared lookup-erasure laws. -/
+theorem tail_control_iff (back : Bool) (L : GRegs) (lds : List (List (BitVec 8))) :
+    TermFactsO (runGM (tailBlock back).body L lds) (tailBlock back).term ↔
+      guardB .BLTU (srcVal 9 L + 1#64) (bytesVal .ld (lds.headD []) >>> (10 : Nat)) = back := by
+  cases back <;> simp [tailBlock, caml_oldify_mopupX9d74TSeg, caml_oldify_mopupX9d74FSeg, TermFactsO, TermFactsT,
+    runGM, stepGM, stepLdsM, mkLine, decodeM, srcVal, lookupG,
+    lookupG_eraseG_ne, wvalM, shamtOf, LeanRV64DExecutable.Functions.sign_extend,
+    Sail.BitVec.signExtend, Sail.BitVec.extractLsb, Sail.shift_bits_right]
+
+def advanceBlocks (back : Bool) : List BBlock := [tailBlock back]
+def advancePc : BitVec 64 := 0x80009d74#64
+
+theorem advance_ok (back : Bool) : ChainOK advancePc [8,18,19,9] (advanceBlocks back) := by
+  cases back <;> decide
+
+theorem advance_code (back : Bool) {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (hc : Code.Caml_oldify_mopupLoaded mem) : ChainCode mem (advanceBlocks back) := by
+  cases back <;> intro b hb
+  all_goals simp only [advanceBlocks, tailBlock, Bool.false_eq_true, ite_false, ite_true,
+    caml_oldify_mopupX9d74TSeg, caml_oldify_mopupX9d74FSeg, List.getD_cons_zero, List.mem_cons, List.not_mem_nil, or_false] at hb
+  all_goals subst b
+  all_goals constructor
+  all_goals simp only [CodeFacts]
+  all_goals chain_facts hc with "Vsa.Sim.Code.caml_oldify_mopup_at_"
+
+theorem advance_log (back : Bool) (L : GRegs) (lds : List (List (BitVec 8))) :
+    (evalBlocks (advanceBlocks back) (SegEvalState.init L lds)).log = [] := by
+  cases back <;> rfl
+
+theorem advance_pc (back : Bool) (L : GRegs) (lds : List (List (BitVec 8))) :
+    evalBlocksPC advancePc (SegEvalState.init L lds) (advanceBlocks back) =
+      if back then pc else exitPc := by
+  cases back <;> rfl
+
+theorem advance_regs {back slot delta target index lds mem c}
+    (post : SegmentPost (advanceBlocks back) (regs slot delta target index) lds advancePc mem c) :
+    GHolds c.σ (regs (slot + 8#64) delta target (index + 1#64)) := by
+  refine ⟨?_, ?_, ?_, ?_, True.intro⟩
+  all_goals apply gholds_lookup _ post.registers
+  all_goals cases back <;>
+    simp [advanceBlocks, tailBlock, caml_oldify_mopupX9d74TSeg, caml_oldify_mopupX9d74FSeg, evalBlocks, evalBlock, SegEvalState.init,
+      regs, runGM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, mkLine, decodeM,
+      LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend]
+
+theorem advance_written (back : Bool) : ∀ n ∈ wrChain (advanceBlocks back), n ∈ [8,9,15] := by
+  cases back <;> decide
 
 end OCaml.Vm.Gc.FieldCopy

@@ -60,27 +60,32 @@ theorem store_access (slot delta target index : BitVec 64) (c : Config)
   apply window.sd rfl
   field_copy_address
 
+/-- The header-load certificate is independent of preceding stores and of
+unrelated register bindings. Both copy and returned-call paths reuse it. -/
+theorem tail_access_bytes (L : GRegs) (mem : Std.ExtHashMap Nat (BitVec 8))
+    (lds : List (List (BitVec 8))) (target : BitVec 64) (back : Bool)
+    (source : srcVal 19 L = target) (window : ReadWindow (target - 8#64) 8)
+    (pins : LPins8 mem (target - 8#64).toNat (lds.headD [])) :
+    AccessPlan mem L lds (tailBlock back).body := by
+  cases back <;> simp only [AccessPlan, tailBlock, Bool.false_eq_true, ite_false, ite_true,
+    caml_oldify_mopupX9d74TSeg, caml_oldify_mopupX9d74FSeg, List.getD_cons_zero]
+  all_goals chain_facts True.intro
+  all_goals apply window.ld rfl ?_ pins
+  all_goals simp [eaddrM, mkLine, decodeM, source, Functions.sign_extend,
+    Sail.BitVec.signExtend, BitVec.sub_eq_add_neg]
+
 theorem tail_access (slot delta target index : BitVec 64) (c : Config)
     (window : ReadWindow (target - 8#64) 8) (back : Bool) :
     AccessPlan (writeLog c.σ.mem (copyLog slot delta c))
       (afterHeadRegs slot delta target index (word c slot.toNat))
-      (loads slot delta target c).tail (tailBlock back).body := by
-  cases back <;> simp only [AccessPlan, tailBlock, Bool.false_eq_true, ite_false, ite_true,
-    caml_oldify_mopupX9d74TSeg, caml_oldify_mopupX9d74FSeg, List.getD_cons_zero]
-  all_goals chain_facts True.intro
-  all_goals apply window.ld rfl ?_ (read8_pins _ (target - 8#64).toNat)
-  all_goals field_copy_address
-  all_goals simp [BitVec.sub_eq_add_neg]
+      (loads slot delta target c).tail (tailBlock back).body :=
+  tail_access_bytes _ _ _ target back rfl window (read8_pins _ _)
 
 theorem tail_control (slot delta target index : BitVec 64) (c : Config) :
     TermFactsO (runGM (tailBlock (again slot delta target index c)).body
       (afterHeadRegs slot delta target index (word c slot.toNat)) (loads slot delta target c).tail)
-      (tailBlock (again slot delta target index c)).term := by
-  generalize choice : again slot delta target index c = back
-  cases back <;> simpa [again, tailBlock, caml_oldify_mopupX9d74TSeg, caml_oldify_mopupX9d74FSeg,
-    TermFactsO, TermFactsT, runGM, stepGM, stepLdsM, mkLine, decodeM, afterHeadRegs,
-    srcVal, lookupG, eraseG, wvalM, shamtOf, Functions.sign_extend, Sail.BitVec.signExtend,
-    Sail.BitVec.extractLsb, Sail.shift_bits_right] using choice
+      (tailBlock (again slot delta target index c)).term :=
+  (tail_control_iff _ _ _).mpr rfl
 
 theorem copy_access (slot delta target index : BitVec 64) (c : Config)
     (windows : Windows slot delta target)

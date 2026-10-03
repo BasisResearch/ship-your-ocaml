@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.ForwardedAdvance
 import OCaml.Vm.Gc.MopupResume
 import OCaml.Vm.Gc.ForwardedCall
 import OCaml.Vm.Boot.Startup.AllocatorBootstrap
@@ -2292,3 +2293,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.call_8002a8e8
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCamlMainWitness.sbrk_base
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCamlMainWitness.heap_not_initialized
+
+#print axioms Vsa.Sim.lookupG_eraseG_ne
+#print axioms Vsa.Sim.srcVal_eraseG_ne
+#print axioms Vsa.Sim.gholds_key_eq
+#print axioms Vsa.Sim.regGet_of_gprGet_eq
+#print axioms Vsa.Sim.frame_of_restored
+#print axioms OCaml.Vm.Gc.FieldCopy.tail_access_bytes
+#print axioms OCaml.Vm.Gc.FieldCopy.advance_access
+#print axioms OCaml.Vm.Gc.FieldCopy.advance_machine
+#print axioms OCaml.Vm.Gc.MopupCall.preserved_pins
+#print axioms OCaml.Vm.Gc.MopupCall.abi_frame
+#print axioms OCaml.Vm.Gc.MopupCall.ResumedPost.advance_input
+#print axioms OCaml.Vm.Gc.MopupCall.forwarded_advance
