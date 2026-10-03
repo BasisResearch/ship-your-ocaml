@@ -1752,6 +1752,18 @@ RESTART, allocating GRAB and generic MAKEBLOCK rebuild successfully against
 the shared abstractions. CLOSURE cuts/layout landed as `a1aa6fb`, all gates
 passing. Next: represented CLOSURE nursery stages and allocation restoration.
 
+## Represented ordinary closure restoration
+
+`ClosureRestore.lean` (`closure_allocation_roots`, `closure_restore`) now
+assembles captured-value layout, fresh allocation, stack consumption and the
+platform invariant from the exact native log. The restoration checks in 0.93 s.
+`NurseryInput.lean` shares scalar reservation observations by allocated field
+count; GRAB is its specialization. `NurseryInput.frame` transports these facts
+through a disjoint prefix, for CLOSURE's accumulator push. Existing GRAB and
+MAKEBLOCK bridges rebuild successfully. The shared indexed loop landed as
+`47d6c46`, all gates passing. Next: represented CLOSURE prefix, reservation,
+initialization and suffix, using the already proved capture loop/restoration.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

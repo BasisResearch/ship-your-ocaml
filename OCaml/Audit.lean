@@ -2496,6 +2496,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closure_copy_last
 #print axioms OCaml.Vm.Sim.closure_copy_run
 
+-- Represented ordinary closure allocation and shared nursery observations.
+#print axioms OCaml.Vm.Sim.closure_allocation_roots
+#print axioms OCaml.Vm.Sim.closure_words_length
+#print axioms OCaml.Vm.Sim.closure_restore
+#print axioms OCaml.Vm.Sim.NurseryInput.frame
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

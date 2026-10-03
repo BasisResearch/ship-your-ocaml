@@ -453,3 +453,5 @@ import OCaml.Vm.Sim.ClosureSuffixSegment
 import OCaml.Vm.Sim.ClosureSuffixPins
 
 import OCaml.Vm.Sim.ClosureCopy
+
+import OCaml.Vm.Sim.ClosureRestore
