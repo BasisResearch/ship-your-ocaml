@@ -1,3 +1,5 @@
+import OCaml.Vm.Gc.RelocatedPayload
+import OCaml.Vm.Gc.ForwardedInitial
 import OCaml.Vm.Gc.ForwardedLoop
 import OCaml.Vm.Gc.ForwardedContext
 import OCaml.Vm.Gc.ForwardedObservations
@@ -2449,3 +2451,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.ForwardedField.LoopAt.input
 #print axioms OCaml.Vm.Gc.ForwardedField.LoopAt.step
 #print axioms OCaml.Vm.Gc.ForwardedField.forwarded_scan
+
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAtWith.relocated_payload
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAtWith.relocated_object
+#print axioms OCaml.Vm.Gc.ForwardedField.scan_relocated
+#print axioms OCaml.Vm.Gc.ForwardedField.LoopAt.initial

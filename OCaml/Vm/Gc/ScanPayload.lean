@@ -6,7 +6,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim Primitives Reloc
 
 /-- The scan invariant starts with an empty copied prefix and reflexive frames.
 The mopup setup blocks supply the platform and register pins. -/
-theorem ScanAtWith.initial {writes : List Nat} {a b count start c}
+theorem ScanAtWith.initial {writes : List Nat} {a b count start c footprint expected}
     (good : GoodState c.σ)
     (minstret : ∃ v, c.σ.regs.get? LeanRV64DExecutable.Register.minstret = some v)
     (tick : c.tick < 2) (code : Code.Caml_oldify_mopupLoaded c.σ.mem)
@@ -14,7 +14,7 @@ theorem ScanAtWith.initial {writes : List Nat} {a b count start c}
     (pc : PCAt (if start < count then FieldCopy.pc else exitPc) c)
     (registers : GHolds c.σ (regs (scanPtr a start) (BitVec.ofNat 64 b - BitVec.ofNat 64 a)
       (BitVec.ofNat 64 b) (BitVec.ofNat 64 start))) :
-    ScanAtWith writes a b count start c start c :=
+    ScanAtWith writes a b count start c start c footprint expected :=
   ⟨good, minstret, tick, code, Nat.le_refl _, bound, pc, registers,
     fun _ _ => rfl, fun _ lo hi => False.elim (by omega), rfl, fun _ _ _ => rfl⟩
 

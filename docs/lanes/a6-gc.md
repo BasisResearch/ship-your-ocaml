@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Typed relocated payload and initialization (2026-10-03)
+
+- `RelocatedPayload.lean:ScanAtWith.relocated_payload` transports completed
+  suffix words through Eqv to the new placement; `relocated_object` adds
+  the framed target header. `RelocatingGrey` names the already-handled
+  first field and original-placement source suffix boundary.
+- `ForwardedField.scan_relocated` composes the actual forwarded loop with
+  that typed result, yielding ObjAt at the relocated placement. The typed
+  forwarding action and first-field boundary remain heap obligations.
+- `ForwardedInitial.lean:LoopAt.initial` derives the starting invariant
+  from concrete platform/code/register pins. The existing generic scan
+  initializer now accepts arbitrary footprints and expected field words.
+- Capped targeted builds pass (689 jobs). Full forwarded loop landed as
+  `47bcf2a`; PHASES records the typed completion. Next: mixed field routes,
+  first-field handling, and fresh copying/allocation. Outer roots,
+  ephemerons, major reclamation and G2/live-word Fits remain open.
+
 ## Complete already-forwarded suffix loop (2026-10-03)
 
 - `ForwardedLoop.lean:forwarded_scan` executes every loaded-field/classifier/
