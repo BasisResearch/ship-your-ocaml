@@ -129,10 +129,7 @@ theorem effect_high {R c} (rootWrite : WriteWindow (R 11) 8)
     ∀ e ∈ effect R c, tohostAddr ≤ e.1 := by
   intro e member
   rcases List.mem_append.mp member with saved | root
-  · obtain ⟨cell, hc, rfl⟩ := List.mem_map.mp saved
-    have high := (windows cell hc).htif
-    simpa only [tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using
-      Nat.le_trans (Nat.le_add_right Layout.sym_tohost 16) high
+  · exact OldifyEntry.saveLog_high windows e saved
   · have same : e = ((R 11).toNat, 8, word c (R 10).toNat) := List.mem_singleton.mp root
     subst e
     have high := rootWrite.htif

@@ -144,6 +144,7 @@ def main():
              "_unlink", "rename", "opendir", "readdir", "closedir", "_gettimeofday",
              "_times", "files", "fds", "dirs", "fs_ready"]
     need += primitive_names()
+    need += ["caml_fl_p_allocate", "caml_fl_p_add_blocks", "caml_gc_phase", "caml_gc_sweep_hp"]
     need += ["caml_allocated_words", "caml_stack_usage_hook", "oldify_todo_list", "caml_ephe_none"]
     need += ["pool", "caml_stat_alloc_noexc", "malloc", "caml_init_domain"]
     need += ["main_argv", "caml_exe_name", "oo_last_id", "caml_copy_double"]
@@ -256,7 +257,7 @@ def main():
     w(f"\n/-- `caml_prim_table.contents`, recovered from C_CALL1. -/\ndef off_prim_contents : Nat := {prim_offsets[0]}\n")
     w("\n/-! `Caml_state` field offsets (bytes). -/\n")
     for f in ["young_limit", "young_ptr", "young_start", "young_end", "young_alloc_start",
-              "young_alloc_end", "stack_low", "stack_high", "stack_threshold", "extern_sp",
+              "young_alloc_end", "minor_heap_wsz", "stack_low", "stack_high", "stack_threshold", "extern_sp",
               "trapsp", "external_raise", "exn_bucket", "backtrace_active",
               "requested_major_slice", "requested_minor_gc", "local_roots",
               "stat_minor_words", "stat_promoted_words", "stat_major_words",

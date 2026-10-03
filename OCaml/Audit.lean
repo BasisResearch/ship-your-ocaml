@@ -1,5 +1,6 @@
 import OCaml.Vm.Boot.Startup.TableAllocation
 import OCaml.Vm.Boot.Startup.MinorTablesPrefix
+import OCaml.Vm.Gc.FreshAllocator
 import OCaml.Vm.Boot.Startup.DomainHeap
 import OCaml.Vm.Boot.Startup.AllocatorRun
 import OCaml.Vm.Gc.FreshCall
@@ -2827,3 +2828,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.startupAllocatorCredits_capacity
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_table_malloc_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_table_allocation_exists
+#print axioms OCaml.Vm.Gc.AllocEntry.pointer_window
+#print axioms OCaml.Vm.Gc.AllocEntry.head_control
+#print axioms OCaml.Vm.Gc.AllocEntry.lookup_access
+#print axioms OCaml.Vm.Gc.AllocEntry.access
+#print axioms OCaml.Vm.Gc.AllocEntry.prepare
+#print axioms OCaml.Vm.Gc.OldifyEntry.saveLog_high
+#print axioms OCaml.Vm.Gc.Fresh.allocator_size
+#print axioms OCaml.Vm.Gc.Fresh.Prepared.allocator_code
+#print axioms OCaml.Vm.Gc.Fresh.Prepared.word_frame
+#print axioms OCaml.Vm.Gc.Fresh.AllocationEntry.allocator_input
+#print axioms OCaml.Vm.Gc.Fresh.prepare_free_list

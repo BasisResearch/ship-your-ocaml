@@ -160,6 +160,14 @@ def sym_caml_int_compare : Nat := 0x800108d4
 def sym_caml_fresh_oo_id : Nat := 0x80020d3c
 /-- `caml_sys_exit` -/
 def sym_caml_sys_exit : Nat := 0x8001c7ac
+/-- `caml_fl_p_allocate` -/
+def sym_caml_fl_p_allocate : Nat := 0x800649e8
+/-- `caml_fl_p_add_blocks` -/
+def sym_caml_fl_p_add_blocks : Nat := 0x800649c0
+/-- `caml_gc_phase` -/
+def sym_caml_gc_phase : Nat := 0x80064ac0
+/-- `caml_gc_sweep_hp` -/
+def sym_caml_gc_sweep_hp : Nat := 0x80064ac8
 /-- `caml_allocated_words` -/
 def sym_caml_allocated_words : Nat := 0x80064ab8
 /-- `caml_stack_usage_hook` -/
@@ -233,6 +241,7 @@ def off_young_start : Nat := 32
 def off_young_end : Nat := 40
 def off_young_alloc_start : Nat := 48
 def off_young_alloc_end : Nat := 56
+def off_minor_heap_wsz : Nat := 80
 def off_stack_low : Nat := 136
 def off_stack_high : Nat := 144
 def off_stack_threshold : Nat := 152

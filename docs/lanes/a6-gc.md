@@ -1,5 +1,29 @@
 # Lane a6-gc
 
+## Fresh entry through the free-list call boundary (2026-10-03)
+
+- `FreshAllocator.lean:prepare_free_list` composes real oldify entry, its
+  allocating JAL and the allocating wrapper's prologue. It yields the
+  exact combined native-save/tag log, loaded free-list target and outgoing
+  register interface, preserving both code images and output/native frames.
+  `AllocationEntry.allocator_input` derives the wrapper input from initial
+  windows and framed global observations; `allocator_size` discharges the
+  maximum-size branch for any source header.
+- `AllocEntryAccess.lean:prepare` executes the size branch, native stores
+  and actual function-pointer load. `gen_gc_rows.py` emits all allocator
+  segments/code pins plus the selected prefix certificates. Per-block
+  register/log equations keep save-log certification small.
+- `gen_layout.py` supplies the free-list function-pointer and GC-phase/sweep
+  symbols and minor-heap-size offset. All accesses use Layout.
+  `OldifyEntry.saveLog_high` shares the store-policy argument with the
+  existing whole forwarded call.
+- Capped targeted build (649 jobs), full Audit (2734 jobs), generator drift,
+  discipline and abstraction gates pass; new headlines use only permitted
+  axioms. Fresh allocation-entry proof
+  landed as `af7e654`. Next: execute the indirect free-list call and prove
+  allocation/header/accounting/native-return paths. Fresh-copy completion,
+  full queue/root closure, ephemerons, major reclamation and G2 remain open.
+
 ## Fresh scanned-object entry reaches allocation (2026-10-03)
 
 - `FreshCall.lean:prepare_allocation` executes the actual oldify prologue,

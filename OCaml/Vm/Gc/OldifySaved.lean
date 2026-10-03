@@ -6,6 +6,17 @@ import OCaml.Vm.Gc.StackArithmetic
 namespace OCaml.Vm.Gc.OldifyEntry
 open Vsa.Machine Vsa.Sim Primitives
 
+/-- Every native-save address obeys the scalar store policy, independent
+of the saved register values. Shared by complete-call and prefix images. -/
+theorem saveLog_high {R slots}
+    (windows : ∀ cell ∈ slots, WriteWindow (frameSp R + BitVec.ofNat 64 cell.2) 8) :
+    ∀ e ∈ saveLog slots R, tohostAddr ≤ e.1 := by
+  intro e member
+  obtain ⟨cell,hc,rfl⟩ := List.mem_map.mp member
+  have high := (windows cell hc).htif
+  simpa only [tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using
+    Nat.le_trans (Nat.le_add_right Layout.sym_tohost 16) high
+
 /-- A real high saved-slot RAM window rules out modular stack wraparound. -/
 theorem Input.frame_bound {R c} (input : Input R c) :
     (frameSp R).toNat + maxSlot.2 + 8 ≤ 0x100000000 :=
