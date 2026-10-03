@@ -1205,6 +1205,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.push_retaddr_arm
 #print axioms OCaml.Vm.Sim.push_retaddr_step_arm
 
+#print axioms OCaml.Vm.Sim.heap_set_here
+#print axioms OCaml.Vm.Sim.heap_set_other
+#print axioms OCaml.Vm.Sim.live_field_edit
+#print axioms OCaml.Vm.Sim.heap_set_size
+#print axioms OCaml.Vm.Sim.heap_field_edit
+#print axioms OCaml.Vm.Sim.block_field_written
+#print axioms OCaml.Vm.Sim.field_log_outside
+#print axioms OCaml.Vm.Sim.heap_field_written
+
 #print axioms Vsa.Sim.tr_offsetref
 #print axioms OCaml.Vm.Sim.offsetref_loaded
 #print axioms Vsa.Sim.tr_push_retaddr

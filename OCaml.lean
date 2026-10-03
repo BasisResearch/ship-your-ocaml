@@ -201,6 +201,7 @@ import OCaml.Vm.Sim.Offsetint
 import OCaml.Vm.Sim.Muldi3
 import OCaml.Vm.Sim.Mulint
 import OCaml.Vm.Sim.CheckSignals
+import OCaml.Vm.Sim.FieldStore
 import OCaml.Vm.Sim.OffsetrefSegment
 import OCaml.Vm.Sim.OffsetrefPins
 import OCaml.Vm.Sim.PushRetaddr

@@ -1,5 +1,22 @@
 # Lane a1-arms
 
+## Shared heap-field update facts
+
+`live_field_edit` proves that writing an already-live value introduces no new
+reachable objects. `heap_set_size` and `heap_field_edit` factor unchanged
+footprint sizes and heap separation from concrete object readbacks.
+`block_field_written` proves the exact one-word update, retaining the header
+and other fields. `field_log_outside` derives neighbour separation from the
+represented heap; `heap_field_written` combines those observations with the
+shared heap-graph law and existing object-copy combinators. These facts cover
+integer OFFSETREF updates and later pointer-field writes.
+
+Capped/default-limit builds pass: heap graph 0.8s, concrete field store 0.9s.
+All new headlines are audited. PUSH_RETADDR landed as `4296303`, full gate
+passing. Coverage remains 107 conditional opcode bridges. Next: frame the
+non-heap payload around OFFSETREF, then compose its generated body and
+corrected operand-width arithmetic.
+
 ## Represented PUSH_RETADDR arm
 
 `retaddr_stored` proves the three write-log readbacks; `retaddr_payload`
@@ -1367,8 +1384,9 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: OFFSETREF heap-update and root framing are next, using its
-landed generated body and operand-width arithmetic. PUSH_RETADDR now has
+families: OFFSETREF non-heap payload restoration and generated-body
+composition are next. Its heap-update/root facts, generated body and
+operand-width arithmetic are proved. PUSH_RETADDR now has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
