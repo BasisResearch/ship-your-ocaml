@@ -2,6 +2,23 @@
 
 ## Round 2 status (2026-10-03)
 
+`Startup/MallocBootstrap.lean` now proves the complete first allocator call:
+`malloc_bootstrap` consumes the initial arena, and `malloc_bootstrap_entry`
+includes the public malloc wrapper. After initialization it uses the landed
+`ext_stats`, `PHeapAt.topResize` (unchanged break), and `ext_top`/`top_split`
+proofs; it does not duplicate the normal allocation/split implementation.
+`MRet.first_pointer` derives the exact returned pointer `heapStart + 16`
+from the library's aligned allocation and top bound. The module checks in
+1.1 s. The initialized-heap increment landed as `d025bb3`, full gate passed.
+
+Next: instantiate the symbolic contract at `ResetMallocWitness`, using the
+existing `Primitives.symbolic_summary` bridge. The remaining platform inputs
+are complete GPR presence and the idle HTIF payload counter at the first
+call; RAM presence and initial allocator metadata are already closed.
+Then continue domain initialization and subsequent startup. The complete
+reset-to-cut run and Round 2 exit remain open.
+
+
 `Startup/MallocBootHeap.lean` (`malloc_boot_initialize`) now composes the
 first malloc prefix, both morecore summaries, and source top initialization.
 It reaches the statistics pass at `0x800379e8` with ordinary `PHeapAt`:

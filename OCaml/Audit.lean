@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.PopFirstPayload
+import OCaml.Vm.Boot.Startup.MallocBootstrap
 import OCaml.Vm.Gc.FirstPayload
 import OCaml.Vm.Boot.Startup.MallocBootHeap
 import OCaml.Vm.Gc.FirstYoungAccess
@@ -2580,3 +2581,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.WorkQueue.pop_first
 #print axioms OCaml.Vm.Gc.WorkQueue.PopFirstPost.word_frame
 #print axioms OCaml.Vm.Gc.WorkQueue.PopFirstPost.relocating_grey
+#print axioms OCaml.Vm.Boot.Startup.malloc_bootstrap
+#print axioms OCaml.Vm.Boot.Startup.malloc_bootstrap_entry
+#print axioms OCaml.Vm.Boot.Startup.MRet.first_pointer
