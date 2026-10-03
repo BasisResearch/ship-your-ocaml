@@ -6,14 +6,37 @@ The reset-to-cut execution proof is now the active exit criterion. Round 1
 proved only `Loaded` for the complete captured cut; the native run is not
 a substitute for a kernel execution theorem.
 
-PMP reset is now checked in `Startup/ResetPmp.lean`: `reset_pmp_run`
+PMP reset landed as `d6760e8` after the full gate passed. It is checked in `Startup/ResetPmp.lean`: `reset_pmp_run`
 proves the actual source loop leaves the complete machine state unchanged
 when `pmpcfg_n` is the initializer's zero vector. `Vsa.Sim.Stays.forIn`
 reuses `Vsa.Densify.forIn_range_of`; its body proof works for every index,
 including out-of-bounds vector accesses, without replaying 64 iterations.
 `writeReg_present` supplies the reusable idempotent register-write law.
-The remaining architectural reset composition and `GoodState` are next;
-reset-to-cut reachability and the lane exit remain open.
+The complete architectural reset and ELF setup are now checked:
+
+* `reset_tvecs_run` (`Startup/ResetTvec.lean`) preserves the zero trap vectors.
+* `reset_misa_effect` (`Startup/ResetMisaEffect.lean`) turns the existing
+  ISA summary into one exact register update, using `Vsa.Sim.state_eq`.
+* `reset_sys_run` (`Startup/ResetSys.lean`) composes the system-reset source,
+  preserving memory/output/cycles and registers outside `sysResetWrites`.
+  A broad `simp_all` frame proof exceeded default heartbeats. The replacement
+  uses `register_insert_frame` and finite footprint membership certificates;
+  the complete module checks in 2.7 s without a budget increase.
+* `initializer_host` proves the source-derived register tail preserves the
+  ELF's HTIF header. `RunnerSetupPost.host` now carries those exact pins.
+* `reset_run` and `init_model_run` (`Startup/ResetPlatform.lean`,
+  `Startup/InitModel.lean`) establish all of `GoodState`, through hart,
+  system, TLB and landing-pad reset and configuration validation.
+* `setupElf_run` (`Startup/SetupElf.lean`) proves complete Sail setup for any
+  ELF with the pinned tohost metadata. It preserves loader memory and output,
+  increments cycle count once and sets the ELF entry PC. `elf_reset_exists`
+  constructs a step-zero `ElfResetReady`; `ElfReset.ready` gives these facts
+  for every successful reset. `whileMin_reset_exists` specializes to the
+  named `WhileMinElf` metadata/loader contract, whose supplier is still open.
+
+Next: establish the pinned ELF loader/code facts and compose with the crt0
+summary, then continue the remaining startup callees. Reset-to-cut
+reachability and the lane exit remain open.
 
 The first startup increment landed as `917d0aa` after the full gate passed.
 Checked startup progress (default proof budgets):
@@ -46,8 +69,8 @@ supports `registers_metadata` and `setupElf_congr`, proving setup depends
 only on entry PC and tohost metadata, without changing source or budgets.
 `ElfReset` uses the runner's `initializeMemory` and `setupElf`, not the
 captured register table. `ElfReset.pc` proves every successful reset ends
-at the ELF entry. Existence/GoodState, loader correspondence and startup
-callees remain open in `whileMin_reset_loaded_Statement`.
+at the ELF entry. Loader correspondence and startup
+callees remain open; existence/GoodState are now proved in `whileMin_reset_loaded_Statement`.
 
 The reset metadata increment landed as `5768425`, full gate passed.
 
@@ -135,9 +158,8 @@ Checked configuration and ISA-reset progress:
   installs `initMisa` from the seed, preserves memory/output/cycles and
   frames every other register. This is one component of architectural reset.
 
-Reset still must supply the remaining architectural reset components and
-composition into `init_model`, initial GoodState/code facts, and loader correspondence.
-The first two setup stages now have a composed execution proof.
+All setup stages now have a composed execution proof and supply initial
+GoodState. Initial executable-image facts and loader correspondence remain open.
 Remaining startup functions include `caml_main`, GC
 initialization, file/code loading, outer primitive-table construction, unmarshalling,
 oldify/mopup and argv initialization. The first CFG inspection finds that

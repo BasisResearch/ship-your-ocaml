@@ -294,3 +294,5 @@ import OCaml.Vm.Boot.Startup.ConfigValid
 import OCaml.Vm.Boot.Startup.ResetMisa
 
 import OCaml.Vm.Boot.Startup.ResetPmp
+
+import OCaml.Vm.Boot.Startup.SetupElf

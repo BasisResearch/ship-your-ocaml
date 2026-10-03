@@ -1842,3 +1842,18 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.WorkQueue.resume_access
 #print axioms OCaml.Vm.Gc.WorkQueue.resume_machine
 #print axioms OCaml.Vm.Gc.WorkQueue.resume_scan
+-- Complete source reset and the platform invariant of the ELF entry state.
+#print axioms Vsa.Sim.state_eq
+#print axioms Vsa.Sim.register_insert_frame
+#print axioms OCaml.Vm.Boot.Startup.initializer_host
+#print axioms OCaml.Vm.Boot.Startup.MisaResetPost.effect
+#print axioms OCaml.Vm.Boot.Startup.reset_misa_effect
+#print axioms OCaml.Vm.Boot.Startup.reset_tvecs_run
+#print axioms OCaml.Vm.Boot.Startup.reset_sys_run
+#print axioms OCaml.Vm.Boot.Startup.reset_run
+#print axioms OCaml.Vm.Boot.Startup.init_model_run
+#print axioms OCaml.Vm.Boot.Startup.setupElf_program
+#print axioms OCaml.Vm.Boot.Startup.setupElf_run
+#print axioms OCaml.Vm.Boot.Startup.elf_reset_exists
+#print axioms OCaml.Vm.Boot.Startup.ElfReset.ready
+#print axioms OCaml.Vm.Boot.Startup.whileMin_reset_exists
