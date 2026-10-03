@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.OldifySaved
 import OCaml.Vm.Gc.EnqueueReturn
 import OCaml.Vm.Boot.WhileMinElfLoaded
 import OCaml.Vm.Gc.ForwardedReturn
@@ -2130,3 +2131,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.appterm2_step_arm
 #print axioms OCaml.Vm.Sim.appterm3_arm
 #print axioms OCaml.Vm.Sim.appterm3_step_arm
+
+#print axioms OCaml.Vm.Gc.outLRange_of_forall
+#print axioms OCaml.Vm.Gc.word_writeLog_cells
+#print axioms OCaml.Vm.Gc.stack_bound
+#print axioms OCaml.Vm.Gc.stack_address
+#print axioms OCaml.Vm.Gc.OldifyEntry.head_control
+#print axioms OCaml.Vm.Gc.OldifyEntry.access
+#print axioms OCaml.Vm.Gc.OldifyEntry.entry_machine
+#print axioms OCaml.Vm.Gc.OldifyEntry.Input.frame_bound
+#print axioms OCaml.Vm.Gc.OldifyEntry.saved_address
+#print axioms OCaml.Vm.Gc.OldifyEntry.Post.saved
+#print axioms OCaml.Vm.Gc.OldifyEntry.Post.restored_caller
+#print axioms OCaml.Vm.Gc.OldifyEntry.Post.returnWord

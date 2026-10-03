@@ -1,5 +1,26 @@
 # Lane a6-gc
 
+## Concrete oldify pointer entry and saved frame (2026-10-03)
+
+- `OldifyEntry.lean:entry_machine` executes the non-immediate prologue
+  through the nursery-range-test PC: all eleven native saves, argument
+  moves and runtime constants, with exact log and complete machine frame.
+  The parity branch follows from the concrete argument, and all writes
+  follow from decoded-slot RAM windows.
+- `OldifySaved.lean:Post.saved` reads back each original caller register.
+  `Post.restored_caller` and `Post.returnWord` identify the common epilogue
+  interface and return target with the caller values. The generator checks
+  that save/restore slots agree and proves their finite separation.
+- `word_writeLog_cells` shares separated-bank readback; `stack_bound` and
+  `stack_address` keep modular arithmetic over an abstract pointer. The
+  frame bound follows from an actual RAM window. Direct generated log
+  certificates avoid expensive simplification of the decoded negative
+  adjustment; default proof budgets are unchanged.
+- Targeted capped build passes (614 jobs). Queue insertion/return landed
+  as `acdad34`. Next: oldify nursery-range tests and whole forwarded-call
+  composition, then young-field caller splicing. Allocation, full partial
+  relocation, roots, ephemerons, major reclamation and G2 remain open.
+
 ## Queue insertion through native return (2026-10-03)
 
 - `EnqueueReturn.lean:enqueue_return` composes the concrete six-store
