@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Loaded-field classification (2026-10-03)
+
+- `FieldClassify.lean:classify_field` composes the actual field read, parity
+  branch and range classifier. The result selects the copy or oldify PC from
+  concrete bounds and preserves the loaded value, destination pointer and
+  loop-carried registers, with exact memory/output/native frames.
+- `FieldRead.lean:read_machine` covers both low-bit outcomes with a single
+  total source read. `ReadPost.young_input` supplies the range classifier
+  from the preserved runtime register and domain memory.
+- `ClassifiedPost.copy_nonpointer` derives the copy route from NoForgery.
+  Evenness supplies the first branch; no branch/run oracle is introduced.
+- `Vsa/Sim/GRegsFrame.lean` shares register-interface selection and transport
+  through the existing complete frame; this avoids new per-register cases.
+  `head_access_bytes` shares the first-read access certificate with the
+  already-landed integer-copy path.
+- Targeted capped builds pass. Young-range classification landed as `a4046ad`.
+  Next: compose the store/advance continuation and oldify call. Full outer
+  queue termination, allocation, ephemerons and G2/live-word Fits remain open.
+
 ## Concrete young-range classifier (2026-10-03)
 
 - `YoungAccess.lean:117` (`Young.classify`) runs both range-test blocks from

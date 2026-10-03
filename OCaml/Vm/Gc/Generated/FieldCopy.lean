@@ -151,4 +151,45 @@ theorem setup_registers {source target lds mem c}
     runGM, ldsRunM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, mkLine, decodeM,
     LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend]
 
+/-- Read and tag-test only, before either the copy store or young-range test. -/
+def readBlocks (immediate : Bool) := if immediate then caml_oldify_mopupX9d4cTSeg else caml_oldify_mopupX9d4cFSeg
+def pointerPc : BitVec 64 := 0x80009d5c#64
+def storePc : BitVec 64 := 0x80009d70#64
+
+theorem read_ok (immediate : Bool) : ChainOK pc [8,18,19,9] (readBlocks immediate) := by
+  cases immediate <;> decide
+
+theorem read_code (immediate : Bool) {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (hc : Code.Caml_oldify_mopupLoaded mem) : ChainCode mem (readBlocks immediate) := by
+  cases immediate <;> intro b hb
+  all_goals simp only [readBlocks, Bool.false_eq_true, ite_false, ite_true,
+    caml_oldify_mopupX9d4cTSeg, caml_oldify_mopupX9d4cFSeg, List.mem_cons, List.not_mem_nil, or_false] at hb
+  all_goals subst b
+  all_goals constructor
+  all_goals simp only [CodeFacts]
+  all_goals chain_facts hc with "Vsa.Sim.Code.caml_oldify_mopup_at_"
+
+theorem read_written (immediate : Bool) : ∀ n ∈ wrChain (readBlocks immediate), n ∈ [10,11,15] := by
+  cases immediate <;> decide
+
+theorem read_log (immediate : Bool) (slot delta target index : BitVec 64)
+    (lds : List (List (BitVec 8))) :
+    (evalBlocks (readBlocks immediate) (SegEvalState.init (regs slot delta target index) lds)).log = [] := by
+  cases immediate <;> rfl
+
+theorem read_pc (immediate : Bool) (slot delta target index : BitVec 64)
+    (lds : List (List (BitVec 8))) :
+    evalBlocksPC pc (SegEvalState.init (regs slot delta target index) lds) (readBlocks immediate) =
+      if immediate then storePc else pointerPc := by
+  cases immediate <;> rfl
+
+theorem read_registers {immediate slot delta target index lds mem c}
+    (post : SegmentPost (readBlocks immediate) (regs slot delta target index) lds pc mem c) :
+    GHolds c.σ (afterHeadRegs slot delta target index (bytesVal .ld (lds.headD []))) := by
+  have registers := post.registers
+  cases immediate <;>
+    simpa [readBlocks, caml_oldify_mopupX9d4cTSeg, caml_oldify_mopupX9d4cFSeg, regs, afterHeadRegs, evalBlocks, evalBlock,
+      SegEvalState.init, runGM, ldsRunM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG,
+      mkLine, decodeM, LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend] using registers
+
 end OCaml.Vm.Gc.FieldCopy

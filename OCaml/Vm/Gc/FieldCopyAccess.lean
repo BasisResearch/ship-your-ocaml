@@ -28,13 +28,20 @@ macro "field_copy_address" : tactic => `(tactic|
   simp [eaddrM, mkLine, decodeM, regs, afterHeadRegs, stepGM, stepLdsM,
     wvalM, srcVal, lookupG, eraseG, loads, Functions.sign_extend, Sail.BitVec.signExtend])
 
-theorem head_access (slot delta target index : BitVec 64) (c : Config)
-    (window : ReadWindow slot 8) :
-    AccessPlan c.σ.mem (regs slot delta target index) (loads slot delta target c) headBlock.body := by
+/-- The head's data certificate depends only on its first scalar load. -/
+theorem head_access_bytes (slot delta target index : BitVec 64) (c : Config)
+    (lds : List (List (BitVec 8))) (window : ReadWindow slot 8)
+    (pins : LPins8 c.σ.mem slot.toNat (lds.headD [])) :
+    AccessPlan c.σ.mem (regs slot delta target index) lds headBlock.body := by
   simp only [AccessPlan, headBlock, caml_oldify_mopupX9d4cTSeg, List.getD_cons_zero]
   chain_facts True.intro
-  apply window.ld rfl ?_ (read8_pins _ slot.toNat)
+  apply window.ld rfl ?_ pins
   field_copy_address
+
+theorem head_access (slot delta target index : BitVec 64) (c : Config)
+    (window : ReadWindow slot 8) :
+    AccessPlan c.σ.mem (regs slot delta target index) (loads slot delta target c) headBlock.body :=
+  head_access_bytes slot delta target index c _ window (read8_pins _ _)
 
 theorem head_control (slot delta target index : BitVec 64) (c : Config)
     (immediate : guardB .BNE (word c slot.toNat &&& 1#64) 0 = true) :

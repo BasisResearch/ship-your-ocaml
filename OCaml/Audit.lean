@@ -32,7 +32,7 @@ import OCaml.Vm.Gc.QueueAccess
 import OCaml.Vm.Gc.QueueEnqueue
 import OCaml.Vm.Gc.PendingPayload
 import OCaml.Vm.Gc.QueueEmpty
-import OCaml.Vm.Gc.YoungAccess
+import OCaml.Vm.Gc.FieldClassify
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1912,3 +1912,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.Boot.initializeMemory_pieces
 #print axioms Vsa.Sim.Boot.loadPieces_eq
 #print axioms Vsa.Sim.Boot.initializeMemory_eq
+
+#print axioms Vsa.Sim.gholds_select
+#print axioms Vsa.Sim.gholds_of_frame
+#print axioms OCaml.Vm.Gc.FieldCopy.head_access_bytes
+#print axioms OCaml.Vm.Gc.FieldCopy.read_access
+#print axioms OCaml.Vm.Gc.FieldCopy.read_machine
+#print axioms OCaml.Vm.Gc.FieldCopy.ReadPost.young_input
+#print axioms OCaml.Vm.Gc.FieldCopy.ReadPost.continuation
+#print axioms OCaml.Vm.Gc.FieldCopy.classifier_continuation
+#print axioms OCaml.Vm.Gc.FieldCopy.immediate_of_even
+#print axioms OCaml.Vm.Gc.FieldCopy.classify_field
+#print axioms OCaml.Vm.Gc.FieldCopy.ClassifiedPost.copy_nonpointer

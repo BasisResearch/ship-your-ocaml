@@ -146,6 +146,9 @@ def outputs():
                 for key, val in {'SETUP': gen_fn.block_name(name, field_setup, False)+'Seg',
                                  'SETUPPC': hex(field_setup.start),
                                  'HEAD': gen_fn.block_name(name, field_head, True)+'Seg',
+                                 'HEADF': gen_fn.block_name(name, field_head, False)+'Seg',
+                                 'POINTERPC': hex(field_head.succs[1]),
+                                 'STOREPC': hex(field_store.start),
                                  'STORE': gen_fn.block_name(name, field_store)+'Seg',
                                  'TAKEN': gen_fn.block_name(name, field_tail, True)+'Seg',
                                  'FALL': gen_fn.block_name(name, field_tail, False)+'Seg',
@@ -580,6 +583,47 @@ theorem setup_registers {source target lds mem c}
   all_goals simp [setupBlocks, @SETUP@, setupRegs, evalBlocks, evalBlock, SegEvalState.init,
     runGM, ldsRunM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, mkLine, decodeM,
     LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend]
+
+/-- Read and tag-test only, before either the copy store or young-range test. -/
+def readBlocks (immediate : Bool) := if immediate then @HEAD@ else @HEADF@
+def pointerPc : BitVec 64 := @POINTERPC@#64
+def storePc : BitVec 64 := @STOREPC@#64
+
+theorem read_ok (immediate : Bool) : ChainOK pc [8,18,19,9] (readBlocks immediate) := by
+  cases immediate <;> decide
+
+theorem read_code (immediate : Bool) {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (hc : Code.Caml_oldify_mopupLoaded mem) : ChainCode mem (readBlocks immediate) := by
+  cases immediate <;> intro b hb
+  all_goals simp only [readBlocks, Bool.false_eq_true, ite_false, ite_true,
+    @HEAD@, @HEADF@, List.mem_cons, List.not_mem_nil, or_false] at hb
+  all_goals subst b
+  all_goals constructor
+  all_goals simp only [CodeFacts]
+  all_goals chain_facts hc with "Vsa.Sim.Code.caml_oldify_mopup_at_"
+
+theorem read_written (immediate : Bool) : ∀ n ∈ wrChain (readBlocks immediate), n ∈ [10,11,15] := by
+  cases immediate <;> decide
+
+theorem read_log (immediate : Bool) (slot delta target index : BitVec 64)
+    (lds : List (List (BitVec 8))) :
+    (evalBlocks (readBlocks immediate) (SegEvalState.init (regs slot delta target index) lds)).log = [] := by
+  cases immediate <;> rfl
+
+theorem read_pc (immediate : Bool) (slot delta target index : BitVec 64)
+    (lds : List (List (BitVec 8))) :
+    evalBlocksPC pc (SegEvalState.init (regs slot delta target index) lds) (readBlocks immediate) =
+      if immediate then storePc else pointerPc := by
+  cases immediate <;> rfl
+
+theorem read_registers {immediate slot delta target index lds mem c}
+    (post : SegmentPost (readBlocks immediate) (regs slot delta target index) lds pc mem c) :
+    GHolds c.σ (afterHeadRegs slot delta target index (bytesVal .ld (lds.headD []))) := by
+  have registers := post.registers
+  cases immediate <;>
+    simpa [readBlocks, @HEAD@, @HEADF@, regs, afterHeadRegs, evalBlocks, evalBlock,
+      SegEvalState.init, runGM, ldsRunM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG,
+      mkLine, decodeM, LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend] using registers
 
 end OCaml.Vm.Gc.FieldCopy
 """
