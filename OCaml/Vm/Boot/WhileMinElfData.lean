@@ -605,4 +605,8 @@ def section12 : ELF64SectionHeaderTableEntry := {
 
 def sections : List ELF64SectionHeaderTableEntry := [section0, section1, section2, section3, section4, section5, section6, section7, section8, section9, section10, section11, section12]
 
+def inhabitedSorted : List (Nat × Nat) := [(0, 0), (0, 0), (0, 64), (64, 288), (4096, 344448), (4096, 416016), (344448, 405424), (405440, 405456), (405456, 416008), (416008, 416016), (416016, 516408), (417792, 427331), (417792, 427331), (427331, 427359), (427331, 427359), (427359, 427410), (427416, 483648), (483648, 514972), (514972, 515084), (515088, 515920)]
+
+def gapRanges : List (Nat × Nat) := [(288, 3808)]
+
 end OCaml.Vm.Boot.WhileMinElfData

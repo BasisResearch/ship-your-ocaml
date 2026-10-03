@@ -74,9 +74,28 @@ using the shared `parser_view_of_slice` and scalar-byte simplifier.
 bounded entry certificates in `WhileMinElfTables.lean`; its two
 `program_table_parse` / `section_table_parse` theorems compose the actual
 source table parsers. The complete generated module checks in 4.5 s.
-Interpreted segment/section construction, section names and gap-parser
-correspondence remain before constructing the actual parsed `ELF64File`
-and its `WhileMinElf` witness.
+The complete parser and metadata increment now checks:
+
+* `Vsa/Sim/Boot/ElfSegments.lean` and `ElfSections.lean` prove actual
+  segment/section/name-table interpretation as bounded views, sharing
+  `Parser.mapM_ok`. NOBITS sections correctly require no file-backed extent.
+* `WhileMinElfInterpret.lean` instantiates these summaries for all four
+  segments and thirteen sections. `WhileMinElfFile.file_parse` constructs
+  the actual `ELF64File`; `WhileMinElfMetadata.raw_file_parse` also proves
+  the raw ELF class dispatcher accepts the exact archived full file.
+* `gaps_geometry` proves the actual source gap calculation from its twenty
+  metadata ranges. A generated `WhileMinElfSort` certificate uses quicksort's
+  equations via `import all`, because its private well-founded recursion
+  proofs prevent direct kernel reduction through the normal module interface.
+  Only metadata is sorted; no byte array is materialized.
+* `entry_metadata` and `tohost_metadata` establish the pinned Layout values;
+  the latter checks the actual section-name search on the 112-byte table.
+
+Direct full-file parser composition and concrete index elaboration hit the
+existing recursion limit. Generic `elf64File_parse` / `rawElf64_view`
+compose the parsers before specializing to the large view. The checked
+replacement takes 0.8 s for the file proof and 1.2 s for metadata, with no
+budget increase. The concrete loader-byte certificate remains open.
 
 Next: establish the concrete pinned ELF's `WhileMinElf` loader contract,
 then continue the remaining startup callees. Reset-to-cut reachability and

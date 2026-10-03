@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.WhileMinElfSort
 import OCaml.Vm.Boot.WhileMinElfHeader
 import Vsa.Sim.Boot.ElfEntries
 
@@ -126,5 +127,9 @@ theorem section_table_parse : expectedHeader.mkELF64SectionHeaderTable? fileByte
   rw [endian, offsets]
   simp [sections, section0_parse, section1_parse, section2_parse, section3_parse, section4_parse, section5_parse, section6_parse, section7_parse, section8_parse, section9_parse, section10_parse, section11_parse, section12_parse]
   rfl
+
+theorem ranges_sorted :
+    ((getInhabitedRanges expectedHeader sections programs).toArray.qsort
+      (fun a b => a.1 < b.1)).toList = inhabitedSorted := WhileMinElfSort.ranges_sorted
 
 end OCaml.Vm.Boot.WhileMinElfParse

@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.ForwardedReturn
 import OCaml.Vm.Gc.ForwardedAccess
+import OCaml.Vm.Boot.WhileMinElfMetadata
 import OCaml.Os.HtifMemory
 import OCaml.Os.DirectoryObstruction
 import OCaml.Bytecode.Callback
@@ -2054,3 +2055,27 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Forwarded.Post.saved_same
 #print axioms OCaml.Vm.Gc.Forwarded.Post.return_input
 #print axioms OCaml.Vm.Gc.Forwarded.forwarded_return
+-- Actual ELF interpretation, complete parser, and startup metadata.
+#print axioms Vsa.Sim.Boot.mapM_ok
+#print axioms Vsa.Sim.Boot.segment_view
+#print axioms Vsa.Sim.Boot.segments_view
+#print axioms Vsa.Sim.Boot.sectionNames_view
+#print axioms Vsa.Sim.Boot.section_view
+#print axioms Vsa.Sim.Boot.sections_view
+#print axioms Vsa.Sim.Boot.elf64File_parse
+#print axioms Vsa.Sim.Boot.rawElf64_parse
+#print axioms Vsa.Sim.Boot.rawElf64_view
+#print axioms Vsa.Sim.Boot.rangeViews
+#print axioms OCaml.Vm.Boot.WhileMinElfSort.ranges_sorted
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ranges_sorted
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.program_bounds
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.section_bounds
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.segments_parse
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.names_parse
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.interpreted_sections_parse
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.gaps_geometry
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.gaps_parse
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.file_parse
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.raw_file_parse
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.entry_metadata
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.tohost_metadata
