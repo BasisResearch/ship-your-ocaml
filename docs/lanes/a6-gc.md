@@ -1,5 +1,26 @@
 # Lane a6-gc
 
+## Fresh scanned-object entry reaches allocation (2026-10-03)
+
+- `FreshCall.lean:prepare_allocation` executes the actual oldify prologue,
+  strict nursery tests, nonzero-header/scanned-tag classifier, argument
+  setup and JAL into `caml_alloc_shr_for_minor_gc`. It preserves the exact
+  native save log, original caller values, output/native frames and update
+  context, and establishes the allocator's actual return link.
+- `FreshAccess.lean:header_conditions` derives the branch facts from
+  HeaderOk, positive size and a tag below Infix_tag.
+  `Prepared.typed_arguments` identifies the real ABI size/tag/header words.
+  `FreshEntry.lean:prepare_entry` retains the separately usable pre-JAL cut.
+- `scripts/gen_gc_rows.py` now emits the fresh prefix and allocating call
+  certificates from the pinned ELF, including the prologue's tag limit.
+  Targeted build (644 jobs), full Audit (2713 jobs), generator drift,
+  discipline and abstraction gates pass; new headlines use only permitted
+  axioms. Mixed queue traversal landed as `d9ee4b8`.
+- The allocation body is still open: reaching its entry is not a completed
+  fresh copy. Next: connect its real allocation/update result to the proved
+  enqueue/native-return path. Other first-child cases, full queue/root
+  closure, ephemerons, major reclamation and G2 remain open.
+
 ## Pending-object traversal with a mixed suffix (2026-10-03)
 
 - `PopMixed.lean:pop_mixed` and `resume_mixed` execute initial/backedge

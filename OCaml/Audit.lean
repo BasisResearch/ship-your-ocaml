@@ -1,5 +1,6 @@
 import OCaml.Vm.Boot.Startup.DomainHeap
 import OCaml.Vm.Boot.Startup.AllocatorRun
+import OCaml.Vm.Gc.FreshCall
 import OCaml.Vm.Gc.PopMixed
 import OCaml.Vm.Boot.Startup.DomainInit
 import OCaml.Vm.Boot.Startup.MallocRun
@@ -2772,3 +2773,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.allocator_separate
 #print axioms OCaml.Vm.Boot.Startup.allocator_stack_disjoint
 #print axioms OCaml.Vm.Boot.Startup.allocator_summary
+#print axioms OCaml.Vm.Gc.Fresh.access
+#print axioms OCaml.Vm.Gc.Fresh.prepare
+#print axioms OCaml.Vm.Gc.Fresh.tagWord_nat
+#print axioms OCaml.Vm.Gc.Fresh.sizeWord_nat
+#print axioms OCaml.Vm.Gc.Fresh.arguments_of_header
+#print axioms OCaml.Vm.Gc.Fresh.header_conditions
+#print axioms OCaml.Vm.Gc.Fresh.entry_carried
+#print axioms OCaml.Vm.Gc.Fresh.allocation_carried_after
+#print axioms OCaml.Vm.Gc.Fresh.prepare_entry
+#print axioms OCaml.Vm.Gc.Fresh.Prepared.typed_arguments
+#print axioms OCaml.Vm.Gc.Fresh.Prepared.enter_allocator
+#print axioms OCaml.Vm.Gc.Fresh.prepare_allocation
