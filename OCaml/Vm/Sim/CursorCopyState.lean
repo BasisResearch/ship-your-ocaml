@@ -19,6 +19,22 @@ structure CursorCopyRegion (source target : Nat) (words : List (BitVec 64)) (ini
   separate : OutLRange (valueLog target words) source (8 * words.length)
   snapshot : ∀ i w, words[i]? = some w → word initial (source + 8 * i) = w
 
+/-- A setup log disjoint from the source transports all cursor-copy observations. -/
+theorem CursorCopyRegion.frame {source target : Nat} {words : List (BitVec 64)}
+    {before after : Config} {log : List WEntry}
+    (region : CursorCopyRegion source target words before)
+    (outside : OutLRange log source (8 * words.length))
+    (memory : after.σ.mem = writeLog before.σ.mem log) :
+    CursorCopyRegion source target words after := by
+  refine ⟨region.upper, region.reads, region.writes, region.image, region.separate, ?_⟩
+  intro i w selected
+  have bound := (List.getElem?_eq_some_iff.mp selected).1
+  have disjoint := outLRange_subrange outside (show source ≤ source + 8 * i by omega)
+    (show source + 8 * i + 8 ≤ source + 8 * words.length by omega)
+  change bytesT after.σ.mem (source + 8 * i) 8 = w
+  rw [memory, bytesT_writeLog_out _ disjoint]
+  exact region.snapshot i w selected
+
 /-- A cursor loop counts by advancing its source pointer one word at a time. -/
 structure CursorCopyAtPc (entry exit : BitVec 64) (source target : Nat) (words : List (BitVec 64)) (initial : Config)
     (copied : Nat) (c : Config) : Prop where

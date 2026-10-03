@@ -2439,6 +2439,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.makeblock_init_more_domain
 #print axioms OCaml.Vm.Sim.makeblock_init_one_domain
 
+-- Represented generic nursery reservation and shared initialization-log laws.
+#print axioms OCaml.Vm.Sim.makeblock_reserve
+#print axioms OCaml.Vm.Sim.value_log_cons
+#print axioms OCaml.Vm.Sim.makeblock_log_parts
+#print axioms OCaml.Vm.Sim.CursorCopyRegion.frame
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

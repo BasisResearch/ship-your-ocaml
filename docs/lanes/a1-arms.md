@@ -1691,6 +1691,18 @@ Reservation checks in 3.5 s, initializers in 3.4/2.1 s and suffixes in
 reservation and initialization adapters are next. The actual arbitrary-count
 copy loop landed as `94b214f`, all gates passing.
 
+## Represented generic MAKEBLOCK reservation
+
+`MakeblockReserve.lean:14` (`makeblock_reserve`) decodes both operands,
+checks the nursery-size/capacity guards and establishes `MakeblockReserved`
+from the actual generated prefix. It checks in 1.1 s. `MakeblockLog.lean`
+(`value_log_cons`, `makeblock_log_parts`) joins the setup stores and arbitrary
+field copy into the canonical allocation log. `CursorCopyRegion.frame` now
+shares setup-log source preservation with GRAB; the complete GRAB bridge
+rebuilds successfully. Nursery cuts landed as `5741911`, all gates passing.
+Next: represented initialization, both return suffixes, and generic MAKEBLOCK
+composition. Capacity, memory separation and runtime preservation remain explicit.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

@@ -43,15 +43,7 @@ structure GrabCopyStart (before : Config) (sp extra a domain : Nat) (env : BitVe
 theorem GrabInitInput.copy_after {sp extra a domain : Nat} {env : BitVec 64} {c after : Config}
     (space : GrabInitInput sp extra a domain env c) (front : GrabCopyStart c sp extra a domain env after) :
     CursorCopyRegion sp (a + 24) (stackWords c sp (1 + extra)) after := by
-  refine ⟨space.copy.upper, space.copy.reads, space.copy.writes, space.copy.image, space.copy.separate, ?_⟩
-  intro i w selected
-  have bound : i < 1 + extra := by
-    have b := (List.getElem?_eq_some_iff.mp selected).1
-    simpa only [stackWords, List.length_map, List.length_range] using b
-  have outside := outLRange_subrange space.sourceOutside (show sp ≤ sp + 8 * i by omega)
-    (show sp + 8 * i + 8 ≤ sp + 8 * (1 + extra) by omega)
-  change bytesT after.σ.mem (sp + 8 * i) 8 = w
-  rw [front.memory, bytesT_writeLog_out _ outside]
-  exact space.copy.snapshot i w selected
+  apply space.copy.frame _ front.memory
+  simpa only [stackWords, List.length_map, List.length_range] using space.sourceOutside
 
 end OCaml.Vm.Sim

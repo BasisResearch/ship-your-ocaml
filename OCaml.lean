@@ -423,3 +423,6 @@ import OCaml.Vm.Sim.MakeblockSuffixSegment
 import OCaml.Vm.Sim.MakeblockSuffixPins
 import OCaml.Vm.Sim.MakeblockOneSuffixSegment
 import OCaml.Vm.Sim.MakeblockOneSuffixPins
+
+import OCaml.Vm.Sim.MakeblockReserve
+import OCaml.Vm.Sim.MakeblockLog
