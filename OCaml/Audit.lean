@@ -2347,14 +2347,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.forward_copy_load
 #print axioms OCaml.Vm.Sim.copy_store_entry
 #print axioms OCaml.Vm.Sim.forward_copy_memory_step
-#print axioms OCaml.Vm.Sim.CursorCopyAt.index
-#print axioms OCaml.Vm.Sim.CursorCopyAt.read
+#print axioms OCaml.Vm.Sim.CursorCopyAtPc.index
+#print axioms OCaml.Vm.Sim.CursorCopyAtPc.read
 #print axioms OCaml.Vm.Sim.cursor_copy_guard
-#print axioms OCaml.Vm.Sim.CursorCopyAt.advance
-#print axioms OCaml.Vm.Sim.cursor_copy_loop
+#print axioms OCaml.Vm.Sim.CursorCopyAtPc.advance
+#print axioms OCaml.Vm.Sim.cursor_copy_loop_at
 #print axioms OCaml.Vm.Sim.cursor_copy_more
 #print axioms OCaml.Vm.Sim.cursor_copy_last
-#print axioms OCaml.Vm.Sim.cursor_copy_iteration
+#print axioms OCaml.Vm.Sim.cursor_copy_run_of_branches
 #print axioms OCaml.Vm.Sim.cursor_copy_run
 
 
@@ -2414,6 +2414,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.makeblock2_step_arm
 #print axioms OCaml.Vm.Sim.makeblock3_arm
 #print axioms OCaml.Vm.Sim.makeblock3_step_arm
+
+-- MAKEBLOCK cursor copy, using the shared pointer-loop invariant.
+#print axioms Vsa.Sim.tr_makeblock_copy_more
+#print axioms Vsa.Sim.tr_makeblock_copy_last
+#print axioms OCaml.Vm.Sim.makeblock_copy_more
+#print axioms OCaml.Vm.Sim.makeblock_copy_last
+#print axioms OCaml.Vm.Sim.makeblock_copy_run
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes

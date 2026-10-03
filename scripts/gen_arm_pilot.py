@@ -34,6 +34,8 @@ FAMILIES = {
     'MAKEBLOCK3_FAST': ('Makeblock3Fast', ['auipc', 'alu_addi', 'ld_tot', 'lw_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'sd', 'branch_taken', 'slli', 'srli', 'alu_addi', 'alu_addi', 'sd', 'auipc', 'ld_tot', 'alu_addi', 'ld_tot', 'sd', 'ld_tot', 'alu_addi', 'sd', 'ld_tot', 'sd', 'j']),
     'GRAB_ALLOC_PREFIX': ('GrabAllocPrefix', ['lw_tot', 'alu_addi', 'branch_taken', 'auipc', 'alu_addi', 'ld_tot', 'alu_addi', 'slli', 'ld_tot', 'alu_addi', 'sub', 'alu_add', 'ld_tot', 'sd', 'alu_addi', 'branch_nottaken']),
     'GRAB_ALLOC_INIT': ('GrabAllocInit', ['slli', 'alu_addi', 'sd', 'auipc', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_addi', 'sd', 'alu_addi', 'branch_nottaken', 'slli', 'alu_addi', 'alu_add', 'alu_addi', 'alu_addi']),
+    'MAKEBLOCK_COPY_MORE': ('MakeblockCopyMore', ['ld_tot', 'alu_addi', 'alu_addi', 'sd', 'branch_taken']),
+    'MAKEBLOCK_COPY_LAST': ('MakeblockCopyLast', ['ld_tot', 'alu_addi', 'alu_addi', 'sd', 'branch_nottaken']),
     'GRAB_COPY_MORE': ('GrabCopyMore', ['ld_tot', 'alu_addi', 'alu_addi', 'sd', 'branch_taken']),
     'GRAB_COPY_LAST': ('GrabCopyLast', ['ld_tot', 'alu_addi', 'alu_addi', 'sd', 'branch_nottaken']),
     'GRAB_ALLOC_SUFFIX': ('GrabAllocSuffix', ['alu_addi', 'sd', 'alu_addi', 'alu_add', 'sd', 'ld_tot', 'ld_tot', 'ld_tot', 'alu_add', 'srai', 'j']),
@@ -148,7 +150,7 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'MAKEBLOCK_COPY_MORE', 'MAKEBLOCK_COPY_LAST', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 # Explicit loop cuts: entry, exit, and native branch decisions. These are text
@@ -159,6 +161,8 @@ CUTS = {
     'MAKEBLOCK3_FAST': (0x80002540, 0x80001f5c, [True]),
     'GRAB_ALLOC_PREFIX': (0x800027f4, 0x800036c0, [True, False]),
     'GRAB_ALLOC_INIT': (0x800036c0, 0x80003700, [False]),
+    'MAKEBLOCK_COPY_MORE': (0x800026cc, 0x800026cc, [True]),
+    'MAKEBLOCK_COPY_LAST': (0x800026cc, 0x800026e0, [False]),
     'GRAB_COPY_MORE': (0x80003700, 0x80003700, [True]),
     'GRAB_COPY_LAST': (0x80003700, 0x80003714, [False]),
     'GRAB_ALLOC_SUFFIX': (0x80003714, 0x80001f5c, []),

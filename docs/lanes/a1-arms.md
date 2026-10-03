@@ -1671,6 +1671,17 @@ explicit. There are now 124 conditional represented opcode bridges.
 The native bodies and shared restoration landed as `c367baf`, all gates passing.
 Next: generic MAKEBLOCK, sharing the cursor-copy invariant and proof with GRAB.
 
+## Generic MAKEBLOCK copy loop
+
+`CursorCopyAtPc` and `cursor_copy_run_of_branches` share the pointer-loop
+invariant, memory restoration and termination fold across GRAB and MAKEBLOCK.
+`MakeblockCopy.lean` (`makeblock_copy_run`) consumes its actual generated
+five-instruction branches; each native branch checks in 1.1 s and each adapter
+in 0.9 s. GRAB's complete allocating bridge rebuilds successfully against the
+shared abstraction. No copy-execution premise remains. Generic MAKEBLOCK still
+needs its reservation/initialization and suffix composition. Fixed-arity arms
+landed as `96fe151`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

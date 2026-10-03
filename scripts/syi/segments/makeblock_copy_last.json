@@ -1,0 +1,108 @@
+{
+  "theorem": "tr_makeblock_copy_last",
+  "doc": "MAKEBLOCK_COPY_LAST arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.MakeblockCopyLastSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut",
+    "OCaml.Vm.Sim.MakeblockCopyLastStoreFrame"
+  ],
+  "params": [
+    "(v15 v14 v12 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_800026cc : 0x80000000 ≤ (v15 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_800026cc : (v15 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_800026cc : (v15 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v15 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(loaded_800026cc : BitVec 64)",
+    "(hvalue_800026cc : loaded_800026cc = (sign_extend (m := 64) (bytesT8 m0 (v15 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))))",
+    "(hlo_800026d8 : 0x80000000 ≤ ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(hhi_800026d8 : ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_800026d8 : tohostAddr + 16 ≤ ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(halign_800026d8 : ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat % 8 = 0)",
+    "(hcode_800026d8 : ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x800026cc ∨ 0x800026e0 ≤ ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(m_800026d8 : Std.ExtHashMap Nat (BitVec 8))",
+    "(hstore_800026d8 : m_800026d8 = writeMap8 (m0) (((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat) (sdData_val loaded_800026cc))",
+    "(hguard_800026dc : (v12 != (v15 + sign_extend (m := 64) (0x008#12))) = false)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlMakeblockCopyLastLoaded",
+  "pins": [
+    {
+      "reg": "x15",
+      "val": "v15",
+      "hyp": "hv15"
+    },
+    {
+      "reg": "x14",
+      "val": "v14",
+      "hyp": "hv14"
+    },
+    {
+      "reg": "x12",
+      "val": "v12",
+      "hyp": "hv12"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x800026cc",
+      "site": "site_800026cc_makeblock_copy_last",
+      "class": "alu",
+      "asm": "ld a3,0(a5)",
+      "rd": "x13",
+      "rd_val": "loaded_800026cc",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v15 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl hlo_800026cc hhi_800026cc hhtif_800026cc $hi",
+      "rw": "hmemeq, ← hvalue_800026cc"
+    },
+    {
+      "addr": "0x800026d0",
+      "site": "site_800026d0_makeblock_copy_last",
+      "class": "alu",
+      "asm": "addi a5,a5,8",
+      "rd": "x15",
+      "rd_val": "(v15 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v15 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800026d4",
+      "site": "site_800026d4_makeblock_copy_last",
+      "class": "alu",
+      "asm": "addi a4,a4,8",
+      "rd": "x14",
+      "rd_val": "(v14 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v14 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x14 $hG $hpc $hmi $pin:x14 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800026d8",
+      "site": "site_800026d8_makeblock_copy_last",
+      "class": "sd",
+      "asm": "sd a3,-8(a4)",
+      "key": "((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat",
+      "src_val": "loaded_800026cc",
+      "loaded_via": "makeblock_copy_last_code_store _ _ _ hcode_800026d8 $prev",
+      "call": "$vmi $v:x14 $v:x13 $hG $hpc $hmi $pin:x14 $pin:x13 $hmem rfl hlo_800026d8 hhi_800026d8 hhtif_800026d8 halign_800026d8 $hi",
+      "mem_alias": "m_800026d8",
+      "mem_alias_eq": "hstore_800026d8"
+    },
+    {
+      "addr": "0x800026dc",
+      "site": "site_800026dc_nottaken_makeblock_copy_last",
+      "class": "bnottaken",
+      "asm": "bne a2,a5,800026cc <caml_interprete+0x8d4>",
+      "pre_lines": [],
+      "call": "$vmi $v:x12 $v:x15 $hG $hpc $hmi $pin:x12 $pin:x15 $hmem rfl hguard_800026dc $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x800026cc",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

@@ -407,3 +407,5 @@ import OCaml.Vm.Sim.GrabAllocInitLayout
 import OCaml.Vm.Sim.Makeblock1
 import OCaml.Vm.Sim.Makeblock2
 import OCaml.Vm.Sim.Makeblock3
+
+import OCaml.Vm.Sim.MakeblockCopy
