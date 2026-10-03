@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.QueueForwarded
 import OCaml.Vm.Gc.PopForwarded
+import OCaml.Vm.Boot.Startup.AllocatorImage
 import OCaml.Vm.Gc.ForwardedSetup
 import OCaml.Vm.Boot.Startup.MallocPlatform
 import OCaml.Vm.Gc.PopFirstPayload
@@ -2653,3 +2654,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.WorkQueue.forwarded_after_first
 #print axioms OCaml.Vm.Gc.WorkQueue.resume_first
 #print axioms OCaml.Vm.Gc.WorkQueue.resume_forwarded
+#print axioms OCaml.Vm.Boot.Startup.allocator_sources
+#print axioms OCaml.Vm.Boot.Startup.allocator_initial_impure
+#print axioms OCaml.Vm.Boot.Startup.AllocatorByteSource.geometry
+#print axioms OCaml.Vm.Boot.Startup.allocator_loaded
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.initial_byte
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.impure
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.allocator_loaded

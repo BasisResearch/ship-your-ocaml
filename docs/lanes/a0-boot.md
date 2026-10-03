@@ -2,6 +2,22 @@
 
 ## Round 2 status (2026-10-03)
 
+`Startup/AllocatorImage.lean` (`ResetMallocWitness.allocator_loaded`) now
+supplies the entire landed allocator read-only table at the actual first
+call. `gen_boot_allocator_pins.py` certifies 366 bounded chunks against the
+executable image and the loader's `_impure_ptr` word; the existing balanced
+append tree assembles them. This checks in 11 s without evaluating the
+memory map. `AllocatorByteSource.geometry` places every pin in RAM, below
+the heap, outside mutable allocator globals. `initial_byte` transports any
+untouched pre-BSS byte through the complete startup prefix. The generator
+is checked by stage a5.
+
+The full-platform increment landed as `367e880`, full gate passed. Next:
+instantiate ownership and the return predicate, apply `symbolic_summary`,
+and extend the actual reset witness through the first malloc. Runtime
+startup after that return and the Round 2 exit remain open.
+
+
 `Startup/MallocPlatform.lean` (`ResetMallocWitness.vsaOk`) now supplies the
 library's full platform invariant at the actual first malloc: `GoodState`,
 valid tick, all 31 GPRs present, RAM presence for any contained live footprint,
