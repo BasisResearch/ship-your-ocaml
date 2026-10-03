@@ -1800,3 +1800,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.FieldCopy.setup_access
 #print axioms OCaml.Vm.Gc.FieldCopy.setup_machine
 #print axioms OCaml.Vm.Gc.FieldCopy.setup_scan
+-- Zero-state preservation through the architectural PMP reset loop.
+#print axioms Vsa.Sim.Stays.pure
+#print axioms Vsa.Sim.Stays.bind
+#print axioms Vsa.Sim.Stays.forIn
+#print axioms Vsa.Sim.Stays.unit
+#print axioms Vsa.Sim.insert_present
+#print axioms Vsa.Sim.writeReg_present
+#print axioms OCaml.Vm.Boot.Startup.pmp_get
+#print axioms OCaml.Vm.Boot.Startup.pmp_set
+#print axioms OCaml.Vm.Boot.Startup.reset_pmp_run

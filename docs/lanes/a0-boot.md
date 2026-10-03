@@ -6,6 +6,15 @@ The reset-to-cut execution proof is now the active exit criterion. Round 1
 proved only `Loaded` for the complete captured cut; the native run is not
 a substitute for a kernel execution theorem.
 
+PMP reset is now checked in `Startup/ResetPmp.lean`: `reset_pmp_run`
+proves the actual source loop leaves the complete machine state unchanged
+when `pmpcfg_n` is the initializer's zero vector. `Vsa.Sim.Stays.forIn`
+reuses `Vsa.Densify.forIn_range_of`; its body proof works for every index,
+including out-of-bounds vector accesses, without replaying 64 iterations.
+`writeReg_present` supplies the reusable idempotent register-write law.
+The remaining architectural reset composition and `GoodState` are next;
+reset-to-cut reachability and the lane exit remain open.
+
 The first startup increment landed as `917d0aa` after the full gate passed.
 Checked startup progress (default proof budgets):
 
