@@ -1,5 +1,25 @@
 # Lane a6-gc
 
+## Complete forwarded pending-object traversal (2026-10-03)
+
+- `PopForwarded.lean:pop_forwarded` composes queue pop, first-child oldify,
+  native return, suffix setup and the terminating forwarded suffix. It
+  yields ObjAt at the relocated placement, preserves the remaining queue,
+  and supplies memory, native, code and output frames. Intermediate inputs
+  are derived from execution and initial observations.
+- `PopFirstFootprint.lean` bounds the concrete prefix log by the queue-head,
+  native-save and first-slot windows. `PopFirstSetup.lean` derives setup and
+  typed grey inputs; `QueueWindows.lean:View.frame_windows` and shared
+  `Vsa.Sim.frameOn_comp` compose the memory/queue frames.
+- Capped targeted build (713 jobs) and full Audit (2635 jobs) pass; new
+  headlines use only permitted axioms. Discipline and abstraction gates pass.
+  Setup landed as `76bf838`.
+  This covers objects with more than one field whose children are all
+  already-forwarded young values. Mixed/fresh-copy cases, allocator
+  suppliers, outer roots, ephemerons, major reclamation and G2 remain open.
+  Next: share this continuation with the outer queue backedge, then extend
+  the collector coverage.
+
 ## Suffix setup through typed forwarded scan (2026-10-03)
 
 - `ForwardedSetupContext.lean:setup_initial` derives the complete loop

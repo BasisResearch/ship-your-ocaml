@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.PopForwarded
 import OCaml.Vm.Gc.ForwardedSetup
 import OCaml.Vm.Boot.Startup.MallocPlatform
 import OCaml.Vm.Gc.PopFirstPayload
@@ -2627,3 +2628,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.gprs
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.idle
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.vsaOk
+
+#print axioms Vsa.Sim.outW_append
+#print axioms Vsa.Sim.frameOn_comp
+#print axioms OCaml.Vm.Gc.MopupCall.effect_entry_of_bound
+#print axioms OCaml.Vm.Gc.WorkQueue.first_log_inside
+#print axioms OCaml.Vm.Gc.WorkQueue.PopFirstPost.memory_frame
+#print axioms OCaml.Vm.Gc.WorkQueue.View.frame_windows
+#print axioms OCaml.Vm.Gc.WorkQueue.PopFirstPost.setup_carried
+#print axioms OCaml.Vm.Gc.WorkQueue.PopFirstPost.setup_input
+#print axioms OCaml.Vm.Gc.WorkQueue.PopFirstPost.grey_frame
+#print axioms OCaml.Vm.Gc.WorkQueue.first_outside
+#print axioms OCaml.Vm.Gc.WorkQueue.pop_forwarded

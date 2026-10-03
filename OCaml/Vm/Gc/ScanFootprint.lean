@@ -13,10 +13,10 @@ def scanFootprint (R : Nat → BitVec 64) (b start count : Nat) : List W :=
 
 /-- Every actual callee write is in the native save interval or is the
 single destination store. Saved-register values play no role in separation. -/
-theorem effect_entry {R c b i}
-    (bound : (OldifyEntry.frameSp (linked R)).toNat + OldifyEntry.maxSlot.2 + 8 ≤ 0x100000000)
+theorem effect_entry_of_bound {R c b i}
+    (bound : (OldifyEntry.frameSp R).toNat + OldifyEntry.maxSlot.2 + 8 ≤ 0x100000000)
     (destination : (R 11).toNat = b + 8 * i)
-    {e : WEntry} (member : e ∈ ForwardedCall.effect (linked R) c) :
+    {e : WEntry} (member : e ∈ ForwardedCall.effect R c) :
     ((nativeWindow R).lo ≤ e.1 ∧ e.1 + e.2.1 ≤ (nativeWindow R).hi) ∨
       (e.1 = b + 8 * i ∧ e.2.1 = 8) := by
   simp only [ForwardedCall.effect, List.mem_append, List.mem_singleton] at member
@@ -25,8 +25,8 @@ theorem effect_entry {R c b i}
     have addr := OldifyEntry.saved_address bound hc
     have offset := OldifyEntry.slots_bounded cell hc
     left
-    change (nativeWindow R).lo ≤ (OldifyEntry.frameSp (linked R) + BitVec.ofNat 64 cell.2).toNat ∧
-      (OldifyEntry.frameSp (linked R) + BitVec.ofNat 64 cell.2).toNat + 8 ≤ (nativeWindow R).hi
+    change (nativeWindow R).lo ≤ (OldifyEntry.frameSp R + BitVec.ofNat 64 cell.2).toNat ∧
+      (OldifyEntry.frameSp R + BitVec.ofNat 64 cell.2).toNat + 8 ≤ (nativeWindow R).hi
     rw [addr]
     change (OldifyEntry.frameSp R).toNat ≤ (OldifyEntry.frameSp R).toNat + cell.2 ∧
       (OldifyEntry.frameSp R).toNat + cell.2 + 8 ≤
@@ -34,6 +34,15 @@ theorem effect_entry {R c b i}
     omega
   · subst e
     exact Or.inr ⟨destination, rfl⟩
+
+/-- The suffix JAL changes only the saved return value, not save addresses. -/
+theorem effect_entry {R c b i}
+    (bound : (OldifyEntry.frameSp (linked R)).toNat + OldifyEntry.maxSlot.2 + 8 ≤ 0x100000000)
+    (destination : (R 11).toNat = b + 8 * i)
+    {e : WEntry} (member : e ∈ ForwardedCall.effect (linked R) c) :
+    ((nativeWindow R).lo ≤ e.1 ∧ e.1 + e.2.1 ≤ (nativeWindow R).hi) ∨
+      (e.1 = b + 8 * i ∧ e.2.1 = 8) :=
+  effect_entry_of_bound bound destination member
 
 /-- A natural interval description supplies all header and scanned-prefix
 separation obligations. The native frame is disjoint from the whole object,
