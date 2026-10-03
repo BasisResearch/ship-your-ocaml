@@ -764,6 +764,8 @@ private def gcAuditNames : Array Name := #[
   ``OCaml.Vm.Gc.Enqueue.prefix_regs,
   ``OCaml.Vm.Gc.Enqueue.writes,
   ``OCaml.Vm.Gc.Enqueue.run,
+  ``OCaml.Vm.Gc.Enqueue.endpoint,
+  ``OCaml.Vm.Gc.Enqueue.written,
   ``OCaml.Vm.Gc.Forwarded.chain_ok,
   ``OCaml.Vm.Gc.Forwarded.code_facts,
   ``OCaml.Vm.Gc.Forwarded.writes,

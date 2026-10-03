@@ -86,7 +86,7 @@ def outputs():
                     'import ' + module for module in sorted({decode_modules[w] for w in enqueue_words})))
                 for key, val in {'PREFIX': gen_fn.block_name(name, prefix, True)+'Seg',
                                  'PUSH': gen_fn.block_name(name, push)+'Seg',
-                                 'PC': hex(prefix.start)}.items():
+                                 'PC': hex(prefix.start), 'EXIT': hex(push.succs[0])}.items():
                     enqueue = enqueue.replace('@'+key+'@', val)
                 result[ROOT / 'OCaml/Vm/Gc/Generated/Enqueue.lean'] = enqueue
                 enqueue_audits = re.findall(r'^theorem ([\w.]+)', enqueue, re.M)
@@ -614,6 +614,11 @@ theorem run (source target root size : BitVec 64) (lds : List (List (BitVec 8)))
     FnSummary pc (SegPre blocks (regs source target root size) lds pc mem)
       (Post source target root size lds mem) :=
   segmentSummary blocks (regs source target root size) lds pc mem chain_ok
+
+theorem endpoint (source target root size : BitVec 64) (lds : List (List (BitVec 8))) :
+    evalBlocksPC pc (SegEvalState.init (regs source target root size) lds) blocks = @EXIT@#64 := rfl
+
+theorem written : ∀ n ∈ wrChain blocks, n ∈ [9,14,15] := by decide
 
 end OCaml.Vm.Gc.Enqueue
 """

@@ -8,10 +8,8 @@ theorem Post.saved_same {source root sp before after}
     (post : Post source root before after)
     (outside : ∀ off ∈ OldifyReturn.offsets,
       OutLRange [(root.toNat, 8, word before source.toNat)]
-        (sp + BitVec.ofNat 64 off).toNat 8) : OldifyReturn.SavedSame sp before after := by
-  intro off member
-  rw [post.memory]
-  exact bytesT_writeLog_out _ (outside off member)
+        (sp + BitVec.ofNat 64 off).toNat 8) : OldifyReturn.SavedSame sp before after :=
+  OldifyReturn.SavedSame.of_writeLog post.memory outside
 
 theorem Post.return_input {source root sp before after}
     (post : Post source root before after)

@@ -30,6 +30,13 @@ structure EnqueuePost (q : PendingCopy) (qs : List PendingCopy) (pl : Place)
   root : word c root.toNat = q.target
   first : word c q.target.toNat = first
 
+theorem EnqueuePost.memory_eq {q qs pl root first before after}
+    (post : EnqueuePost q qs pl root first before) (memory : after.σ.mem = before.σ.mem) :
+    EnqueuePost q qs pl root first after := by
+  refine ⟨post.queue.memory_eq memory, ?_, ?_⟩
+  · simpa only [word, memory] using post.root
+  · simpa only [word, memory] using post.first
+
 /-- The exact generated six-store effect installs the new intrusive head.
 Allocator freshness and other queue links enter only as explicit footprint
 facts; they remain to be supplied by the allocating call summary. -/

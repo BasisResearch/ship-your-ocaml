@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.EnqueueReturn
 import OCaml.Vm.Gc.ForwardedReturn
 import OCaml.Vm.Gc.ForwardedAccess
 import OCaml.Vm.Boot.WhileMinElfMetadata
@@ -2079,3 +2080,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.raw_file_parse
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.entry_metadata
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.tohost_metadata
+
+#print axioms OCaml.Vm.Gc.OldifyReturn.SavedSame.of_writeLog
+#print axioms OCaml.Vm.Gc.WorkQueue.View.memory_eq
+#print axioms OCaml.Vm.Gc.WorkQueue.EnqueuePost.memory_eq
+#print axioms OCaml.Vm.Gc.WorkQueue.EnqueueRunPost.memory_effect
+#print axioms OCaml.Vm.Gc.WorkQueue.EnqueueRunPost.code
+#print axioms OCaml.Vm.Gc.WorkQueue.EnqueueRunPost.return_input
+#print axioms OCaml.Vm.Gc.WorkQueue.enqueue_return

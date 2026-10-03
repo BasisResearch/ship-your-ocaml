@@ -117,6 +117,14 @@ theorem body_frame_words {qs pl c c'}
   have image : (body qs).Img id pl 0 0 c c' := same
   simpa only [placement_identity] using (body qs).transport id pl 0 0 c c' h image
 
+/-- A read-only native epilogue preserves the queue's memory observations. -/
+theorem View.memory_eq {qs pl before after} (queue : View qs pl before)
+    (memory : after.σ.mem = before.σ.mem) : View qs pl after := by
+  refine ⟨?_, body_frame_words queue.links ?_⟩
+  · simpa only [word, memory] using queue.root
+  · intro i p hp j cell hc
+    simp only [word, memory]
+
 /-- Any disjoint write log transports the queue links by the identity action. -/
 theorem body_frame_log {qs pl c c' log}
     (h : (body qs).P pl 0 c) (outside : LinksOutside qs log)

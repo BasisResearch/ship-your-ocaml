@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.Generated.OldifyReturn
 import OCaml.Vm.Gc.CodeFrame
+import OCaml.Vm.Primitives.MemoryFrame
 
 namespace OCaml.Vm.Gc.OldifyReturn
 open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
@@ -44,6 +45,15 @@ writes preserve these observations when separated from the native frame. -/
 def SavedSame (sp : BitVec 64) (before after : Config) : Prop :=
   ∀ off ∈ offsets, bytesT after.σ.mem (sp + BitVec.ofNat 64 off).toNat 8 =
     bytesT before.σ.mem (sp + BitVec.ofNat 64 off).toNat 8
+
+/-- Every oldify writing path uses the same native-stack observation frame. -/
+theorem SavedSame.of_writeLog {sp before after log}
+    (memory : after.σ.mem = writeLog before.σ.mem log)
+    (outside : ∀ off ∈ offsets, OutLRange log (sp + BitVec.ofNat 64 off).toNat 8) :
+    SavedSame sp before after := by
+  intro off member
+  rw [memory]
+  exact bytesT_writeLog_out _ (outside off member)
 
 theorem SavedSame.returnWord {sp before after} (same : SavedSame sp before after) :
     returnWord sp after = returnWord sp before := same _ (by decide)

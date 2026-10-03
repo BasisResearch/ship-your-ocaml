@@ -92,4 +92,9 @@ theorem run (source target root size : BitVec 64) (lds : List (List (BitVec 8)))
       (Post source target root size lds mem) :=
   segmentSummary blocks (regs source target root size) lds pc mem chain_ok
 
+theorem endpoint (source target root size : BitVec 64) (lds : List (List (BitVec 8))) :
+    evalBlocksPC pc (SegEvalState.init (regs source target root size) lds) blocks = 0x80009c00#64 := rfl
+
+theorem written : ∀ n ∈ wrChain blocks, n ∈ [9,14,15] := by decide
+
 end OCaml.Vm.Gc.Enqueue

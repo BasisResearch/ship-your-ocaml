@@ -1,5 +1,21 @@
 # Lane a6-gc
 
+## Queue insertion through native return (2026-10-03)
+
+- `EnqueueReturn.lean:enqueue_return` composes the concrete six-store
+  insertion with the common epilogue. The result retains the new queue node,
+  root and saved first field, exact write log, restored native registers,
+  caller return address and output/code/platform frames. The allocating
+  call itself remains open.
+- `EnqueueRunPost.memory_effect` identifies the actual scalar reads with
+  the original source first word and queue head. `SavedSame.of_writeLog`
+  shares the native-stack framing argument across both writing paths;
+  the read-only epilogue transports queue observations through Eqv.
+- Targeted capped build passes (622 jobs). Native return landed as
+  `680ec74`. Next: concrete oldify prologue and range-entry seams, then
+  young-field caller composition. Allocator/freshness, full partial
+  relocation, roots, ephemerons, major reclamation and G2 remain open.
+
 ## Oldify native return and forwarded composition (2026-10-03)
 
 - `OldifyReturn.lean:return_machine` proves the common native epilogue
