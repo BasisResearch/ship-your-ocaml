@@ -1,5 +1,20 @@
 # Lane a6-gc
 
+## First-field nursery classifier (2026-10-03)
+
+- `FirstYoungAccess.lean:classify` proves the actual first-field strict
+  nursery tests. It shares `Young.classify_site` with the suffix site,
+  retaining each site's generated fetch/decode and endpoint certificates.
+- `AccessRetarget.lean:ChainAccess.retarget` folds finite scalar certificates
+  across reflected block equivalence. The generator proves first/suffix
+  access, control and symbolic-data equivalence by reduction; there is no
+  duplicated scalar-load or branch proof and no assumed machine run.
+- Capped targeted build passes (683 jobs), including the full typed suffix
+  proof after refactoring. Shared call/return work landed as `e90d6c9`.
+  Next: first-field destination argument setup and classifier/call composition.
+  Fresh-copy/allocator routes, mixed fields, outer roots, ephemerons, major
+  reclamation and G2/live-word Fits remain open.
+
 ## Shared oldify bridge and first-field call (2026-10-03)
 
 - `OldifyBridge.lean:forwarded` and `OldifyResume.lean:forwarded_resume`

@@ -114,19 +114,55 @@ theorem decision (value domain : BitVec 64) (c : Config) :
     Sail.BitVec.toNatInt]
   omega
 
-theorem classify {value domain c} (input : Input value domain c) :
-    FnSummary pc (fun d => d = c) (Result value domain c) := by
-  have summary := block_summary (blocks (above value domain c) (aboveLower value domain c)) pc
+/-- Reflected code and scalar-access certificates for an Is_young site.
+The first-field and suffix classifiers differ in code addresses but share
+runtime observations, decision semantics and the machine-summary fold. -/
+structure Site where
+  entry : BitVec 64
+  copy : BitVec 64
+  oldify : BitVec 64
+  blocks : Bool → Bool → List BBlock
+  code : ∀ upper lower {mem}, Code.Caml_oldify_mopupLoaded mem → ChainCode mem (blocks upper lower)
+  shape : ∀ upper lower, ChainOK entry [22,10] (blocks upper lower)
+  access : ∀ {value domain c}, word c Layout.sym_Caml_state = domain → Windows domain →
+    ChainAccess c.σ.mem (regs value) (loads domain c) (blocks (above value domain c) (aboveLower value domain c))
+  log : ∀ upper lower value lds,
+    (evalBlocks (blocks upper lower) (SegEvalState.init (regs value) lds)).log = []
+  endpoint : ∀ upper lower value lds,
+    evalBlocksPC entry (SegEvalState.init (regs value) lds) (blocks upper lower) =
+      if !upper && lower then oldify else copy
+
+structure SiteResult (site : Site) (value domain : BitVec 64) (before after : Config) : Prop where
+  machine : BlockPost (site.blocks (above value domain before) (aboveLower value domain before)) site.entry
+    (regs value) (loads domain before) before after
+  memory : after.σ.mem = before.σ.mem
+  pc : PCAt (if (lowerWord domain before).toNat < value.toNat ∧
+      value.toNat < (upperWord domain before).toNat then site.oldify else site.copy) after
+  code : Code.Caml_oldify_mopupLoaded after.σ.mem
+
+theorem classify_site (site : Site) {value domain c} (input : Input value domain c) :
+    FnSummary site.entry (fun d => d = c) (SiteResult site value domain c) := by
+  have summary := block_summary (site.blocks (above value domain c) (aboveLower value domain c)) site.entry
     (regs value) (loads domain c) c
     ⟨input.good, input.minstret, input.registers, by change KeysOK [22,10]; decide,
-      chainPlan_facts (code_facts _ _ input.code) (access input.root input.windows),
-      chain_ok _ _, input.tick⟩
+      chainPlan_facts (site.code _ _ input.code) (site.access input.root input.windows),
+      site.shape _ _, input.tick⟩
   apply summary.weaken (fun _ h => h)
   intro after post
-  have memory : after.σ.mem = c.σ.mem := by rw [post.memory, no_writes]; rfl
+  have memory : after.σ.mem = c.σ.mem := by rw [post.memory, site.log]; rfl
   refine ⟨post, memory, ?_, memory ▸ input.code⟩
-  rw [PCAt, post.pc, end_pc, decision]
+  rw [PCAt, post.pc, site.endpoint, decision]
   simp only [decide_eq_true_eq]
+
+/-- The suffix-field site's generated certificates. -/
+def suffixSite : Site :=
+  ⟨pc, copyPc, oldifyPc, blocks, code_facts, chain_ok, access, no_writes, end_pc⟩
+
+theorem classify {value domain c} (input : Input value domain c) :
+    FnSummary pc (fun d => d = c) (Result value domain c) := by
+  apply (classify_site suffixSite input).weaken (fun _ h => h)
+  intro after post
+  exact ⟨post.machine, post.memory, post.pc, post.code⟩
 
 /-- Both nursery endpoints are excluded by the real Is_young classifier. -/
 theorem decision_at_start (domain : BitVec 64) (c : Config) :

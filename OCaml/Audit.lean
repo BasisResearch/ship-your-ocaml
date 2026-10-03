@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.FirstYoungAccess
 import OCaml.Vm.Gc.FirstForwarded
 import OCaml.Vm.Gc.RelocatedPayload
 import OCaml.Vm.Gc.ForwardedInitial
@@ -2491,3 +2492,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.OldifyBridge.forwarded_resume
 #print axioms OCaml.Vm.Gc.FirstCall.forwarded
 #print axioms OCaml.Vm.Gc.FirstCall.forwarded_resume
+
+#print axioms OCaml.Vm.Gc.ChainAccess.retarget
+#print axioms OCaml.Vm.Gc.Young.classify_site
+#print axioms OCaml.Vm.Gc.FirstYoung.access
+#print axioms OCaml.Vm.Gc.FirstYoung.classify
