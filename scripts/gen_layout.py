@@ -145,6 +145,7 @@ def main():
              "_times", "files", "fds", "dirs", "fs_ready"]
     need += primitive_names()
     need += ["caml_allocated_words", "caml_stack_usage_hook", "oldify_todo_list", "caml_ephe_none"]
+    need += ["pool", "caml_stat_alloc_noexc", "malloc", "caml_init_domain"]
     need += ["main_argv", "caml_exe_name", "oo_last_id", "caml_copy_double"]
     need += ["bf_small_fl", "bf_small_map", "bf_large_tree", "bf_large_least",
              "caml_fl_cur_wsz"]

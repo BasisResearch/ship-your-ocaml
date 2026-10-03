@@ -168,6 +168,14 @@ def sym_caml_stack_usage_hook : Nat := 0x80064968
 def sym_oldify_todo_list : Nat := 0x80064af8
 /-- `caml_ephe_none` -/
 def sym_caml_ephe_none : Nat := 0x800648a8
+/-- `pool` -/
+def sym_pool : Nat := 0x80064b00
+/-- `caml_stat_alloc_noexc` -/
+def sym_caml_stat_alloc_noexc : Nat := 0x8000ab2c
+/-- `malloc` -/
+def sym_malloc : Nat := 0x80037598
+/-- `caml_init_domain` -/
+def sym_caml_init_domain : Nat := 0x8002a8cc
 /-- `main_argv` -/
 def sym_main_argv : Nat := 0x80064c10
 /-- `caml_exe_name` -/

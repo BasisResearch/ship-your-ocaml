@@ -1,4 +1,7 @@
 import OCaml.Vm.Gc.OldifySaved
+import OCaml.Vm.Boot.Startup.StatAlloc
+import OCaml.Vm.Boot.Startup.StatAllocCalls
+import OCaml.Vm.Boot.Startup.BssReads
 import OCaml.Vm.Gc.EnqueueReturn
 import OCaml.Vm.Boot.WhileMinElfLoaded
 import OCaml.Vm.Gc.ForwardedReturn
@@ -2151,3 +2154,24 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.OldifyEntry.Post.saved
 #print axioms OCaml.Vm.Gc.OldifyEntry.Post.restored_caller
 #print axioms OCaml.Vm.Gc.OldifyEntry.Post.returnWord
+-- Startup allocation dispatch and abstract BSS readback.
+#print axioms OCaml.Vm.Boot.Startup.statAlloc_code
+#print axioms OCaml.Vm.Boot.Startup.statAlloc_input
+#print axioms OCaml.Vm.Boot.Startup.statAlloc_dispatch
+#print axioms OCaml.Vm.Boot.Startup.statAlloc_with_malloc
+#print axioms OCaml.Vm.Boot.Startup.zeroWord_byte
+#print axioms OCaml.Vm.Boot.Startup.clearWords_inside
+#print axioms OCaml.Vm.Boot.Startup.clearWords_pins
+#print axioms OCaml.Vm.Boot.Startup.clearWords_log_pins
+#print axioms OCaml.Vm.Boot.Startup.CrtCamlMainPost.bss_pins
+#print axioms OCaml.Vm.Boot.Startup.mainWrites_between
+#print axioms OCaml.Vm.Boot.Startup.CrtCamlMainPost.pool_zero
+#print axioms OCaml.Vm.Boot.Startup.CrtCamlMainPost.domain_zero
+#print axioms OCaml.Vm.Boot.Startup.call_8000ab48
+#print axioms Vsa.Sim.caml_stat_alloc_noexcXab2cTRow
+#print axioms Vsa.Sim.caml_stat_alloc_noexcXab2cFRow
+#print axioms Vsa.Sim.caml_stat_alloc_noexcXab38Row
+#print axioms Vsa.Sim.caml_stat_alloc_noexcXab4cTRow
+#print axioms Vsa.Sim.caml_stat_alloc_noexcXab4cFRow
+#print axioms Vsa.Sim.caml_stat_alloc_noexcXab50Row
+#print axioms Vsa.Sim.caml_stat_alloc_noexcXab7cRow

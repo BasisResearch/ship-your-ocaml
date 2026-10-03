@@ -97,7 +97,8 @@ compose the parsers before specializing to the large view. The checked
 replacement takes 0.8 s for the file proof and 1.2 s for metadata, with no
 budget increase.
 
-The concrete loader and closed reset-to-C-entry increment now checks in
+The concrete loader and closed reset-to-C-entry increment landed as `3535c09`,
+full gate passed, in
 `WhileMinElfLoaded.lean`: `loaded_memory` proves the actual source loader
 builds `WhileMinImage.initialMem`, `whileMin_elf` supplies the complete
 image/metadata contract, and `reset_caml_main_exists` gives the machine's
@@ -109,6 +110,24 @@ separation and symbolic byte aliases; no payload bytes are enumerated.
 A direct concrete memory rewrite hit kernel recursion; `initializeMemory_views`
 composes the abstract fold and removes empty ranges before instantiation.
 The concrete loader/reset witness module checks in 0.8 s at default limits.
+
+The first allocation-wrapper increment checks in `Startup/StatAlloc.lean`:
+`statAlloc_dispatch` proves the generated nonpooling branch and tail jump
+reach malloc, preserving memory/output and all general registers except a5.
+`statAlloc_with_malloc` uses the existing `boundary_bind` rule to consume a
+callee summary; it does not supply the allocator heap contract yet.
+The generator emits the source blocks, call site and fixed-image projection.
+New symbol pins (`pool`, stat allocator, malloc, domain initializer) come
+from `gen_layout.py`, not handwritten data addresses.
+
+`Startup/BssReads.lean` proves `clearWords_inside` / `clearWords_pins` by
+induction over the abstract zeroing effect. `CrtCamlMainPost.pool_zero` and
+`domain_zero` then derive the actual initial branch inputs through main's
+two framed stores. The 12,549-word loop is never evaluated. A generic
+`clearWords_log_pins` bridge keeps the full memory term opaque when supplying
+these concrete facts. Both modules check in under two seconds.
+Regenerating the required census also records the now-landed classifier
+support (78,033 supported instructions); no ELF bytes changed.
 
 Next: continue startup after `caml_main`, composing generated summaries
 with the landed library and GC work. Reset-to-cut reachability and
