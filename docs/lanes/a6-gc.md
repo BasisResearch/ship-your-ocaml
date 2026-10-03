@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Complete already-forwarded suffix loop (2026-10-03)
+
+- `ForwardedLoop.lean:forwarded_scan` executes every loaded-field/classifier/
+  oldify/advance iteration to suffix completion. `LoopAt.step` preserves
+  the relocated scan, oldify image and next native register view.
+- `ForwardedLoopState.lean:LoopAt.input` derives each call input from
+  fixed initial field/domain/header observations and the accumulated write
+  frame. `LoopData` contains geometric and value facts, not machine-run
+  premises. The loop covers already-forwarded young fields only.
+- Shared `Vsa.Sim.indexedLoop` factors the observed-counter termination
+  proof, and the original `ScanAtWith.loop` now instantiates it. Existing
+  mixed-copy payload still builds. `Input.scan_progress` shares the
+  concrete iteration adapter between the bare and context-carrying proofs.
+- Capped targeted builds pass (677 jobs for the full forwarded loop; 688
+  for loop state plus existing mixed payload). Context work landed as
+  `f3af688`. PHASES records this discharged subcase. Next: typed relocated
+  payload, mixed young/non-young fields, and fresh-copy/allocator routes.
+  Roots, ephemerons, major reclamation and G2/live-word Fits remain open.
+
 ## Forwarded iteration context preservation (2026-10-03)
 
 - `ForwardedContext.lean:Input.oldifyCode_after` preserves the oldify image

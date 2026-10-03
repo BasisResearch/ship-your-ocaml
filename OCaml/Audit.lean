@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.ForwardedLoop
 import OCaml.Vm.Gc.ForwardedContext
 import OCaml.Vm.Gc.ForwardedObservations
 import OCaml.Vm.Gc.ForwardedIteration
@@ -2424,3 +2425,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.bss_read
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.empty_bins
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.initial_arena
+
+#print axioms Vsa.Sim.indexedLoop
+#print axioms OCaml.Vm.Gc.ForwardedField.Input.scan_progress
+#print axioms OCaml.Vm.Gc.ForwardedField.cursor_next
+#print axioms OCaml.Vm.Gc.ForwardedField.LoopAt.source
+#print axioms OCaml.Vm.Gc.ForwardedField.LoopAt.input
+#print axioms OCaml.Vm.Gc.ForwardedField.LoopAt.step
+#print axioms OCaml.Vm.Gc.ForwardedField.forwarded_scan
