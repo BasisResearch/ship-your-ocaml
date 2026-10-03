@@ -1,5 +1,21 @@
 # Lane a6-gc
 
+## Shared oldify bridge and first-field call (2026-10-03)
+
+- `OldifyBridge.lean:forwarded` and `OldifyResume.lean:forwarded_resume`
+  share the actual JAL/callee/return-jump proof across generated call sites.
+  The existing suffix APIs instantiate these certificates and the complete
+  typed suffix proof still builds. Native restoration/ABI framing is shared.
+- `Generated/FirstCall.lean` is emitted by `gen_gc_rows.py` from the
+  distinct first-field JAL and its jump to suffix setup.
+  `FirstForwarded.lean:forwarded_resume` proves that complete call route
+  for an already-forwarded child, with exact writes/restored registers.
+- Capped targeted build passes (682 jobs); generator check passes. Typed
+  relocated object result landed as `9f16402`. Next: first-field nursery
+  classifier and argument setup, then the first-field representation seam.
+  Fresh copying/allocation, mixed routes, outer roots, ephemerons, major
+  reclamation and G2/live-word Fits remain open.
+
 ## Typed relocated payload and initialization (2026-10-03)
 
 - `RelocatedPayload.lean:ScanAtWith.relocated_payload` transports completed

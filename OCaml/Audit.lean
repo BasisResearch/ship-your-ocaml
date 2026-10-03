@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.FirstForwarded
 import OCaml.Vm.Gc.RelocatedPayload
 import OCaml.Vm.Gc.ForwardedInitial
 import OCaml.Vm.Gc.ForwardedLoop
@@ -2472,3 +2473,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.ForwardedField.LoopAt.initial
 #print axioms OCaml.Vm.Boot.Startup.InitialArena.bin_links
 #print axioms OCaml.Vm.Boot.Startup.malloc_boot_prefix
+
+#print axioms OCaml.Vm.Gc.OldifyBridge.carried_regs
+#print axioms OCaml.Vm.Gc.OldifyBridge.linked_regs
+#print axioms OCaml.Vm.Gc.OldifyBridge.linked_input
+#print axioms OCaml.Vm.Gc.OldifyBridge.forwarded
+#print axioms OCaml.Vm.Gc.OldifyBridge.preserved_pins
+#print axioms OCaml.Vm.Gc.OldifyBridge.abi_frame
+#print axioms OCaml.Vm.Gc.OldifyBridge.resume_forwarded
+#print axioms OCaml.Vm.Gc.OldifyBridge.forwarded_resume
+#print axioms OCaml.Vm.Gc.FirstCall.forwarded
+#print axioms OCaml.Vm.Gc.FirstCall.forwarded_resume

@@ -47,12 +47,12 @@ theorem forwarded_advance {R domain c} (input : ForwardedCall.Input R domain c)
   constructor
   apply Vsa.Logic.Triple.seq (forwarded_resume input code).run
   intro middle returned
-  obtain ⟨after, run, advanced⟩ := (FieldCopy.advance_machine (returned.advance_input header)).run
+  obtain ⟨after, run, advanced⟩ := (FieldCopy.advance_machine (ResumedPost.advance_input returned header)).run
     middle ⟨returned.body.pc, rfl⟩
   refine ⟨after, run, ⟨advanced.machine.good, advanced.machine.minstret, advanced.machine.tick,
     advanced.code, advanced.memory.trans returned.body.memory, ?_, ?_, advanced.registers, ?_,
     advanced.machine.output.trans returned.body.output, ?_⟩⟩
-  · simpa [word, linked, advanced.memory] using returned.body.root
+  · simpa [word, linked, OldifyBridge.linked, advanced.memory] using returned.body.root
   · have same : FieldCopy.advanceAgain (R 19) (R 9) middle = againAfterCall R c := by
       unfold FieldCopy.advanceAgain againAfterCall word
       rw [returned.body.memory]
