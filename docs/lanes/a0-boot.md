@@ -2,6 +2,23 @@
 
 ## Round 2 status (2026-10-03)
 
+`Startup/MallocBootMorecore.lean` (`malloc_boot_morecore`) now composes the
+first malloc prefix with `_sbrk_r`'s bootstrap summary. The zero-break and
+ownership preconditions are discharged from `InitialArena` and the exact
+call log. Its return has `a0 = heapStart`, break `heapStart + 976`, preserved
+malloc frame and spills, and word/presence frames. `MFrame.after_sbrk`
+shares the nested-call frame transport.
+
+`Startup/MallocBootAlign.lean` (`malloc_boot_alignment`) checks the source
+path from that return through mallinfo update, sbrk-base initialization and
+the second `_sbrk_r` call. The request is 2800 bytes (page padding computed
+from generated `heapStart`), with an exact ten-store log and preserved
+saved registers. It reuses the generic spill/read certificates and generated
+allocator steps. Next: second call, top initialization/split, `HeapAt`, and
+the remaining startup summaries. Full reset-to-cut remains open.
+
+The first malloc prefix landed as `aaad58e`, full gate passed.
+
 `Startup/MallocBootPrefix.lean` now proves `malloc_boot_prefix`: starting
 from the actual first request (928 bytes) and `InitialArena`, the generated
 allocator steps round the request to 944, search the empty bins, inspect

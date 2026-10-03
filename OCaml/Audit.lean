@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.FirstYoungAccess
 import OCaml.Vm.Gc.FirstForwarded
+import OCaml.Vm.Boot.Startup.MallocBootAlign
 import OCaml.Vm.Gc.RelocatedPayload
 import OCaml.Vm.Gc.ForwardedInitial
 import OCaml.Vm.Gc.ForwardedLoop
@@ -2497,3 +2498,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Young.classify_site
 #print axioms OCaml.Vm.Gc.FirstYoung.access
 #print axioms OCaml.Vm.Gc.FirstYoung.classify
+#print axioms OCaml.Vm.Boot.Startup.malloc_boot_morecore
+#print axioms OCaml.Vm.Boot.Startup.malloc_boot_alignment
+#print axioms OCaml.Vm.Boot.Startup.MallocBootAtCall.sbrk_pre
+#print axioms OCaml.Vm.Boot.Startup.MFrame.after_sbrk
