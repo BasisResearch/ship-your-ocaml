@@ -1601,6 +1601,17 @@ the saved caller through the existing allocation and RETURN payload rules;
 it checks in 0.89 s. Native loop composition and nursery-side conditions remain
 open. Full represented RESTART landed as `8eb35e2`, all gates passing.
 
+## GRAB counted source-cursor copy
+
+`CursorCopy.lean` (`cursor_copy_run`) proves the actual GRAB copy loop for
+arbitrary bounded argument lists from its two generated five-instruction
+branches. `OCaml/Run/CountedLoop.lean` shares the termination fold with RESTART;
+`CopyLogFrame.lean` shares prefix-memory and image preservation. One generator,
+`gen_forward_copy.py`, now instantiates both field-indexed and pointer-cursor
+copy branches. The loop checks in 0.77 s, and full RESTART rechecks in 0.83 s.
+GRAB cuts and restoration landed as `f447142`, all gates passing. Remaining
+GRAB work is the nursery prefix, initializer/copy composition and caller suffix.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

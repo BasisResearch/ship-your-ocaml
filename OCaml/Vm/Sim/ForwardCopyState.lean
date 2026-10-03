@@ -1,9 +1,9 @@
 import OCaml.Vm.Sim.ForwardCopyArithmetic
-import OCaml.Vm.Sim.ForwardCopyLog
+import OCaml.Vm.Sim.CopyLogFrame
 import OCaml.Vm.Sim.WriteGeometry
 import OCaml.Vm.Sim.StackStore
 import Vsa.Sim.FrameWriteSet
-import Vsa.Sim.DeriveLoop
+import OCaml.Run.CountedLoop
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -49,15 +49,14 @@ theorem ForwardCopyAt.read {a target copied i : Nat} {words : List (BitVec 64)} 
     {value : BitVec 64} (region : ForwardCopyRegion a target words initial)
     (h : ForwardCopyAt a target words initial copied c) (selected : words[i]? = some value) :
     LeanRV64DExecutable.Functions.sign_extend (m := 64) (bytesT8 c.σ.mem (a + 24 + 8 * i)) = value :=
-  (word_read_writeLog_out (forward_copy_source_outside region.separate
-    (List.getElem?_eq_some_iff.mp selected).1) h.memory).trans (region.snapshot i value selected)
+  forward_copy_load region.separate h.memory (region.snapshot i value selected)
+    (List.getElem?_eq_some_iff.mp selected).1
 
 /-- Every loop store belongs to the final, image-separated write log. -/
 theorem ForwardCopyRegion.entry {a target i : Nat} {words : List (BitVec 64)} {initial : Config}
     (region : ForwardCopyRegion a target words initial) (bound : i < words.length) :
     (target + 8 * i, 8, words[i]) ∈ valueLog target words :=
-  List.mem_iff_getElem.mpr ⟨i, by rw [value_log_length]; exact bound,
-    value_log_getElem target words i bound⟩
+  copy_store_entry bound
 
 /-- Observations supplied by either generated branch of a forward-copy iteration. -/
 structure ForwardCopyPost (a target count copied : Nat) (value : BitVec 64) (before after : Config) : Prop where
@@ -76,11 +75,10 @@ theorem ForwardCopyAt.advance {a target i : Nat} {words : List (BitVec 64)} {ini
     (region : ForwardCopyRegion a target words initial) (h : ForwardCopyAt a target words initial i c)
     (bound : i < words.length) (post : ForwardCopyPost a target words.length i words[i] c d) :
     ForwardCopyAt a target words initial (i + 1) d := by
-  have image := imageOutside_sublist (List.singleton_sublist.mpr (region.entry bound)) region.image
-  refine ⟨post.good, post.tick, image_of_writeLog h.image image post.memory, by omega,
-    post.pc, post.sourceReg, post.targetReg, post.counter, post.limit, ?_, ?_⟩
-  · rw [post.memory, h.memory, forward_copy_log_step target words i bound, writeLog_append]
-  · exact (h.frame.trans post.frame).widenChecked (allowed := forwardWrites) (by decide)
+  obtain ⟨image, memory⟩ := forward_copy_memory_step bound h.image region.image h.memory post.memory
+  exact ⟨post.good, post.tick, image, by omega, post.pc, post.sourceReg, post.targetReg,
+    post.counter, post.limit, memory,
+    (h.frame.trans post.frame).widenChecked (allowed := forwardWrites) (by decide)⟩
 
 /-- Fold a forward-copy invariant over a proved native iteration. -/
 theorem forward_copy_loop {a target : Nat} {words : List (BitVec 64)} {initial : Config}
@@ -88,25 +86,8 @@ theorem forward_copy_loop {a target : Nat} {words : List (BitVec 64)} {initial :
     (body : ∀ i, Vsa.Logic.Triple (fun c => ForwardCopyAt a target words initial i c ∧ i < words.length)
       (ForwardCopyAt a target words initial (i + 1))) :
     Vsa.Logic.Triple (ForwardCopyAt a target words initial 0)
-      (ForwardCopyAt a target words initial words.length) := by
-  let I := fun c => ForwardCopyAt a target words initial (forwardIndex c) c
-  let B := fun c => forwardIndex c < words.length
-  have iteration : ∀ n, Vsa.Logic.Triple (fun c => I c ∧ B c ∧ words.length - forwardIndex c = n)
-      (fun c => I c ∧ words.length - forwardIndex c < n) := by
-    intro n c ⟨h, more, rank⟩
-    obtain ⟨d, steps, post⟩ := body (forwardIndex c) c ⟨h, more⟩
-    have index := post.index region
-    refine ⟨d, steps, ?_, ?_⟩
-    · change ForwardCopyAt a target words initial (forwardIndex d) d
-      rw [index]; exact post
-    · rw [index]; dsimp [B] at more; omega
-  apply (loopFromBody (fun c => words.length - forwardIndex c) iteration).conseq
-  · intro c h
-    change ForwardCopyAt a target words initial (forwardIndex c) c
-    rw [h.index region]; exact h
-  · intro c ⟨h, stop⟩
-    have bound := h.bound
-    have final : forwardIndex c = words.length := by dsimp [B] at stop; omega
-    simpa only [I, final] using h
+      (ForwardCopyAt a target words initial words.length) :=
+  OCaml.Run.counted_loop words.length forwardIndex (ForwardCopyAt a target words initial)
+    (fun _ _ h => h.index region) (fun _ _ h => h.bound) body
 
 end OCaml.Vm.Sim

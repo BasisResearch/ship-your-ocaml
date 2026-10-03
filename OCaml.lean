@@ -386,3 +386,4 @@ import OCaml.Vm.Sim.GrabCopyLastPins
 import OCaml.Vm.Sim.GrabAllocSuffixSegment
 import OCaml.Vm.Sim.GrabAllocSuffixPins
 import OCaml.Vm.Sim.GrabRestore
+import OCaml.Vm.Sim.CursorCopy

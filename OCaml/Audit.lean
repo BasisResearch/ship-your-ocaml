@@ -2332,6 +2332,22 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.grab_allocation_roots
 #print axioms OCaml.Vm.Sim.grab_restore
 
+
+-- Shared counted-loop fold and the actual GRAB source-cursor loop.
+#print axioms OCaml.Run.counted_loop
+#print axioms OCaml.Vm.Sim.forward_copy_load
+#print axioms OCaml.Vm.Sim.copy_store_entry
+#print axioms OCaml.Vm.Sim.forward_copy_memory_step
+#print axioms OCaml.Vm.Sim.CursorCopyAt.index
+#print axioms OCaml.Vm.Sim.CursorCopyAt.read
+#print axioms OCaml.Vm.Sim.cursor_copy_guard
+#print axioms OCaml.Vm.Sim.CursorCopyAt.advance
+#print axioms OCaml.Vm.Sim.cursor_copy_loop
+#print axioms OCaml.Vm.Sim.cursor_copy_more
+#print axioms OCaml.Vm.Sim.cursor_copy_last
+#print axioms OCaml.Vm.Sim.cursor_copy_iteration
+#print axioms OCaml.Vm.Sim.cursor_copy_run
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

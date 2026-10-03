@@ -8,7 +8,7 @@ set_option autoImplicit false
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable LeanRV64DExecutable.Functions
 open OCaml.Vm.Primitives
 
-/-- Concrete generated more branch of RESTART's counted forward-copy loop. -/
+/-- Concrete generated more branch of the RESTART counted word copy. -/
 theorem forward_copy_more {a target i : Nat} {words : List (BitVec 64)} {initial c : Config}
     (region : ForwardCopyRegion a target words initial)
     (h : ForwardCopyAt a target words initial i c) (bound : i < words.length) (more : i + 1 < words.length) :
@@ -22,27 +22,29 @@ theorem forward_copy_more {a target i : Nat} {words : List (BitVec 64)} {initial
   have guard : (BitVec.ofNat 64 (words.length + 3) != BitVec.ofNat 64 (3 + i + 1)) = true :=
     forward_copy_guard words.length i more region.small
   have loaded := h.read region (List.getElem?_eq_getElem bound)
+  have entry : (target + 8 * i, 8, words[i]) ∈ valueLog target words :=
+    copy_store_entry bound
   obtain ⟨nextMemory, written⟩ : ∃ m : Std.ExtHashMap Nat (BitVec 8),
       m = writeMap8 c.σ.mem (target + 8 * i) (sdData_val words[i]) := ⟨_, rfl⟩
   have bp : SegSt (0x80002b94#64)
-      [⟨Register.x15, BitVec.ofNat 64 (3 + i)⟩, ⟨Register.x25, BitVec.ofNat 64 a⟩,
-       ⟨Register.x13, BitVec.ofNat 64 (target + 8 * i)⟩, ⟨Register.x12, BitVec.ofNat 64 (words.length + 3)⟩]
+      [⟨Register.x15, BitVec.ofNat 64 (3 + i)⟩,
+       ⟨Register.x25, BitVec.ofNat 64 (a)⟩,
+       ⟨Register.x13, BitVec.ofNat 64 (target + 8 * i)⟩,
+       ⟨Register.x12, BitVec.ofNat 64 (words.length + 3)⟩]
       (fun σ => Vsa.Sim.Code.CamlRestartCopyMoreLoaded σ.mem ∧ σ.mem = c.σ.mem ∧ σ = c.σ) c :=
     ⟨h.good, by change pcOf c = some (0x80002b94#64); simpa only [bound, ite_true] using h.pc,
       ⟨h.counter, h.sourceReg, h.targetReg, h.limit, trivial⟩,
       h.good.minstret, h.tick, restart_copy_more_loaded h.image, rfl, rfl⟩
-  have run := tr_restart_copy_more (BitVec.ofNat 64 (3 + i)) (BitVec.ofNat 64 a)
-    (BitVec.ofNat 64 (target + 8 * i)) (BitVec.ofNat 64 (words.length + 3)) c.σ.mem c.σ
+  have run := tr_restart_copy_more (BitVec.ofNat 64 (3 + i)) (BitVec.ofNat 64 (a)) (BitVec.ofNat 64 (target + 8 * i)) (BitVec.ofNat 64 (words.length + 3)) c.σ.mem c.σ
   simp only [forward_store_address] at run
   simp only [forward_source_address, show sign_extend (m := 64) (0x000#12) = 0#64 from by decide,
     BitVec.add_zero, sourceNat, targetNat, counterStep, forward_cursor_step] at run
   obtain ⟨nb, after, _, steps, post⟩ := run read.lower read.upper read.htif words[i] loaded.symm
     store.lower store.upper store.htif store.aligned
-    (image_entry_code region.image (region.entry bound) (by decide) (by decide)) nextMemory written guard c bp
+    (image_entry_code region.image entry (by decide) (by decide)) nextMemory written guard c bp
   obtain ⟨_, memory, rawFrame⟩ := post.extra
   have observed : ForwardCopyPost a target words.length i words[i] c after := by
-    refine ⟨post.good, post.tick, ?_, PinsHold.get post.pins ⟨3, by simp⟩, PinsHold.get post.pins ⟨0, by simp⟩, ?_,
-      PinsHold.get post.pins ⟨4, by simp⟩, ?_, ?_⟩
+    refine ⟨post.good, post.tick, ?_, PinsHold.get post.pins ⟨3, by simp⟩, PinsHold.get post.pins ⟨0, by simp⟩, ?_, PinsHold.get post.pins ⟨4, by simp⟩, ?_, ?_⟩
     · simp only [more, ite_true]; exact post.pcAt
     · have counter : gpr after 15 = some (BitVec.ofNat 64 (3 + i + 1)) := PinsHold.get post.pins ⟨1, by simp⟩
       simpa only [Nat.add_assoc] using counter
