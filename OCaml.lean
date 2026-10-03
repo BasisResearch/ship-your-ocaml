@@ -245,6 +245,7 @@ import OCaml.Vm.Sim.ApptermSuffixSegment
 import OCaml.Vm.Sim.ApptermSuffixPins
 import OCaml.Vm.Sim.ReverseCopyLog
 import OCaml.Vm.Sim.BackwardCopy
+import OCaml.Vm.Sim.Appterm
 import OCaml.Vm.Sim.Appterm1Segment
 import OCaml.Vm.Sim.Appterm1Pins
 import OCaml.Vm.Sim.Appterm2Segment

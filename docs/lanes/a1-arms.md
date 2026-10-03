@@ -1538,7 +1538,7 @@ GRAB’s satisfied-arity path landed as `41a698a`, all gates passing.
 
 ## Counted backward-copy machine loop
 
-`BackwardCopy.backward_copy_run` proves the actual APPTERM loop for every
+`BackwardCopy.lean` (`backward_copy_run`) proves the actual APPTERM loop for every
 31-bit bounded word count, including overlapping ranges. It folds the two
 generated branch adapters with `loopFromBody`; there is no assumed iteration
 premise. `BackwardCopyState.lean` supplies the cursor-derived measure,
@@ -1546,6 +1546,17 @@ exact log invariant, image preservation and register frame. Counter and cursor
 arithmetic share `BackwardCopyArithmetic.lean`; `low32_nat` also simplifies
 APPLY’s operand arithmetic. Full represented prefix/loop/suffix composition
 is next. Loop cuts and log certificates landed as `039539b`, all gates passing.
+
+## Generic represented APPTERM
+
+`Appterm.lean:10` (`appterm_arm`, `appterm_step_arm`) composes the generated
+prefix, proved arbitrary-length backward-copy loop and closure-entry suffix.
+The final bridge checks in 0.85 s; setup in 1.0 s. `ApptermInput.lean` names
+concrete access/separation requirements, and `TailcallPostWith` plus
+`tailcall_restore_of_log` support either copy order. Fixed-arity tail-call
+adapters recheck against the generalized restoration. No copy-loop premise
+remains. Capacity, geometry and runtime framing are still explicit.
+The counted copy loop landed as `e7fe774`, all gates passing.
 
 ## Open / next
 
@@ -1558,13 +1569,13 @@ the generated-body compositions are now checked. The indexed frame payload
 facts landed as `f882a65`, all gates passing.
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: tail calls, restart/grab, allocation and
+families: RESTART, GRAB allocation, heap allocation and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 119 conditional
+setup/return bridges and named callee composition. There are 120 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.

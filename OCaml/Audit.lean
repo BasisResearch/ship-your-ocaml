@@ -1334,6 +1334,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.backward_copy_last
 #print axioms OCaml.Vm.Sim.backward_copy_iteration
 #print axioms OCaml.Vm.Sim.backward_copy_run
+#print axioms OCaml.Vm.Sim.tailcall_restore_of_log
+#print axioms OCaml.Vm.Sim.word32_nat_small
+#print axioms OCaml.Vm.Sim.appterm_base_word
+#print axioms OCaml.Vm.Sim.appterm_cursor_word
+#print axioms OCaml.Vm.Sim.appterm_counter_word
+#print axioms OCaml.Vm.Sim.appterm_prefix_guard
+#print axioms OCaml.Vm.Sim.ApptermWriteOk.copy_after
+#print axioms OCaml.Vm.Sim.appterm_setup
+#print axioms OCaml.Vm.Sim.appterm_finish
+#print axioms OCaml.Vm.Sim.appterm_arm
+#print axioms OCaml.Vm.Sim.appterm_step_arm
 #print axioms OCaml.Vm.Sim.payload_replace_prefix
 #print axioms OCaml.Vm.Sim.return_payload
 #print axioms OCaml.Vm.Sim.return_frame_values

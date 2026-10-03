@@ -28,17 +28,60 @@ structure TailcallWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   image : ImageOutside (valueLog (tailcallStart sp args.length slots) args)
   bindings : BindingsOutside (valueLog (tailcallStart sp args.length slots) args) P c
 
-/-- Concrete observations exported by generated tail-call bodies. -/
-structure TailcallPost (before : Config) (s : St) (pl : Place) (sp slots dest : Nat)
-    (args : List (BitVec 64)) (after : Config) : Prop
-    extends VmRegisters (tailcallState s args.length slots dest) pl
-      (tailcallStart sp args.length slots) after where
+/-- Memory-side facts independent of the concrete argument-copy order. -/
+structure TailcallMemoryOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace)
+    (sp high arity slots : Nat) (log : List WEntry) : Prop where
+  fits : arity ≤ slots
+  bound : slots ≤ s.stack.length
+  payload : StackEditOutside log P s c pl cp high
+  image : ImageOutside log
+  bindings : BindingsOutside log P c
+  inside : LogInW [⟨tailcallStart sp arity slots, sp + 8 * slots⟩] log
+
+/-- Concrete final observations, with the actual forward or backward write log. -/
+structure TailcallPostWith (log : List WEntry) (before : Config) (s : St) (pl : Place)
+    (sp slots dest arity : Nat) (after : Config) : Prop
+    extends VmRegisters (tailcallState s arity slots dest) pl
+      (tailcallStart sp arity slots) after where
   good : GoodState after.σ
-  memory : after.σ.mem = writeLog before.σ.mem (valueLog (tailcallStart sp args.length slots) args)
+  memory : after.σ.mem = writeLog before.σ.mem log
   output : after.σ.sailOutput = before.σ.sailOutput
   loop : LoopRegisters after
 
-/-- Every tail-call arity shares argument-copy and platform restoration. -/
+/-- Fixed-arity forward copies specialize the order-independent observations. -/
+abbrev TailcallPost (before : Config) (s : St) (pl : Place) (sp slots dest : Nat)
+    (args : List (BitVec 64)) (after : Config) : Prop :=
+  TailcallPostWith (valueLog (tailcallStart sp args.length slots) args)
+    before s pl sp slots dest args.length after
+
+/-- Restore a tail call from checked argument readbacks in any native store order. -/
+theorem tailcall_restore_of_log {L : OCaml.Layout} {P : Prog} {s : St} {before after : Config}
+    {pl : Place} {cp : ChanPlace} {sp high slots dest arity : Nat} {log : List WEntry}
+    (stable : WindowStable L.runtimeOk [⟨tailcallStart sp arity slots, sp + 8 * slots⟩])
+    (data : VmReprAt P s before pl cp sp high) (platform : PlatformOk L.runtimeOk before)
+    (space : TailcallMemoryOk P s before pl cp sp high arity slots log)
+    (values : ∀ i v, (s.stack.take arity)[i]? = some v →
+      valWord pl v = some (word after (tailcallStart sp arity slots + 8 * i)))
+    (post : TailcallPostWith log before s pl sp slots dest arity after) :
+    Running L P (tailcallState s arity slots dest) after := by
+  have bound : arity ≤ s.stack.length := Nat.le_trans space.fits space.bound
+  have join : tailcallStart sp arity slots + 8 * arity = sp + 8 * slots := by
+    unfold tailcallStart
+    have fits := space.fits
+    omega
+  have payload := payload_replace_prefix (payload_of_repr data) space.bound space.payload space.inside
+    post.memory post.output (by simpa only [List.length_take, Nat.min_eq_left bound] using join) values
+    (fun v member l loc => Live.root (by simp [roots, List.mem_of_mem_take member]) loc)
+  have entered := payload_env_of_root payload s.accu (fun _ loc => Live.root (by simp [roots]) loc)
+  have memoryFrame : FrameOn [⟨tailcallStart sp arity slots, sp + 8 * slots⟩] before.σ.mem after.σ.mem := by
+    rw [post.memory]
+    exact frameOn_writeLog _ _ _ space.inside
+  exact running_of_payload (payload_pc (payload_extra entered (s.extra + arity - 1)) dest)
+    (bindings_frame_log data.primitives space.bindings post.memory)
+    ⟨post.good, image_of_writeLog platform.image space.image post.memory,
+      stable before after memoryFrame platform.runtime⟩ post.toVmRegisters post.loop
+
+/-- Every fixed-arity tail call specializes the shared argument-copy restoration. -/
 theorem tailcall_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Config}
     {pl : Place} {cp : ChanPlace} {sp high slots dest : Nat} {args : List (BitVec 64)}
     (stable : WindowStable L.runtimeOk [⟨tailcallStart sp args.length slots, sp + 8 * slots⟩])
@@ -47,22 +90,14 @@ theorem tailcall_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : 
     (space : TailcallWriteOk P s before pl cp sp high slots args)
     (post : TailcallPost before s pl sp slots dest args after) :
     Running L P (tailcallState s args.length slots dest) after := by
-  have bound : args.length ≤ s.stack.length := Nat.le_trans space.fits space.bound
   have join : tailcallStart sp args.length slots + 8 * args.length = sp + 8 * slots := by
     unfold tailcallStart
     have fits := space.fits
     omega
-  have payload := payload_copy_prefix (payload_of_repr data) space.bound space.payload post.memory post.output
-    (by simpa only [List.length_take, Nat.min_eq_left bound] using join) arguments
-    (fun v member l loc => Live.root (by simp [roots, List.mem_of_mem_take member]) loc)
-  have entered := payload_env_of_root payload s.accu (fun _ loc => Live.root (by simp [roots]) loc)
-  have memoryFrame : FrameOn [⟨tailcallStart sp args.length slots, sp + 8 * slots⟩] before.σ.mem after.σ.mem := by
-    rw [post.memory]
-    apply frameOn_writeLog
-    simpa only [join] using value_log_in (tailcallStart sp args.length slots) args
-  exact running_of_payload (payload_pc (payload_extra entered (s.extra + args.length - 1)) dest)
-    (bindings_frame_log data.primitives space.bindings post.memory)
-    ⟨post.good, image_of_writeLog platform.image space.image post.memory,
-      stable before after memoryFrame platform.runtime⟩ post.toVmRegisters post.loop
+  have memory : TailcallMemoryOk P s before pl cp sp high args.length slots
+      (valueLog (tailcallStart sp args.length slots) args) :=
+    ⟨space.fits, space.bound, space.payload, space.image, space.bindings,
+      by simpa only [join] using value_log_in (tailcallStart sp args.length slots) args⟩
+  exact tailcall_restore_of_log stable data platform memory (value_log_words arguments post.memory) post
 
 end OCaml.Vm.Sim
