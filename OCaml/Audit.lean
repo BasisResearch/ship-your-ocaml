@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.MinorTablesPrefix
 import OCaml.Vm.Boot.Startup.DomainHeap
 import OCaml.Vm.Boot.Startup.AllocatorRun
 import OCaml.Vm.Gc.FreshCall
@@ -2785,3 +2786,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Fresh.Prepared.typed_arguments
 #print axioms OCaml.Vm.Gc.Fresh.Prepared.enter_allocator
 #print axioms OCaml.Vm.Gc.Fresh.prepare_allocation
+
+#print axioms OCaml.Vm.Boot.Startup.domainInit_domain_word
+#print axioms OCaml.Vm.Boot.Startup.minorTables_stack_address
+#print axioms OCaml.Vm.Boot.Startup.minorTables_code_facts
+#print axioms OCaml.Vm.Boot.Startup.minorTables_access
+#print axioms OCaml.Vm.Boot.Startup.minorTables_prefix
+#print axioms OCaml.Vm.Boot.Startup.minorTables_allocate
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMinorTables.prefixInput
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_table_alloc_exists

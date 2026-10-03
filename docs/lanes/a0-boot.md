@@ -2,6 +2,25 @@
 
 ## Round 2 status (2026-10-03)
 
+`Startup/MinorTablesPrefix.lean` closes `reset_table_alloc_exists`: the
+actual reset reaches the first 56-byte minor-table stat-allocation request.
+`minorTables_prefix` and `minorTables_allocate` certify the source stack
+saves, reloaded domain pointer, argument and call, retaining the exact
+write log and full nonwritten-register frame. `domainInit_domain_word`
+reads back the prior published pointer using the shared write-log rule.
+
+A combined raw-instruction access proof hit kernel recursion. Separating
+code/access certificates with `AccessPlan` and consuming generated literal
+instructions (`minorTablesSave_eq`) resolves it without raising budgets;
+the complete prefix module checks in 2.4 s. All addresses derive from the
+pinned instructions and generated Layout.
+
+The allocator-capacity increment landed as `a59f2de`, full gate passed.
+Next: preserve allocator inputs and the disabled-pool test across the
+prefix, apply `allocator_summary`, and summarize the following memset and
+two further allocations. Reset-to-cut execution remains open.
+
+
 `Startup/DomainHeap.lean` now supplies allocator capacity, the complete
 `VsaOk` platform invariant, and all allocator read-only pins at the actual
 minor-table call. `FirstMallocEnd.room` retains any credit bound justified

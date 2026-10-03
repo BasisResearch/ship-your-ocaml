@@ -42,6 +42,7 @@ def outputs():
                 ('caml_stat_alloc_noexc', 'StatAlloc', None),
                 ('caml_main', 'CamlMain', 'first-call'),
                 ('caml_init_domain', 'Domain', 'first-call'),
+                ('caml_alloc_minor_tables', 'MinorTables', 'first-call'),
                 ('caml_init_domain', 'DomainInit', (0x8002a8ec, 0x8002a938))]:
             entry, end = extents[name]
             words = [(a, di[a].word) for a in sorted(di) if entry <= a < end]

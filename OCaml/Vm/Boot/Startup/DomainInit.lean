@@ -3,6 +3,7 @@ import OCaml.Vm.Boot.Startup.DomainInitCallInterface
 import OCaml.Vm.Boot.Startup.MallocReturn
 import OCaml.Vm.Boot.Startup.PrefixCall
 import Vsa.Sim.ChainFactsTac
+import OCaml.Vm.Gc.Readback
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap LeanRV64DExecutable OCaml.Vm.Primitives
 
@@ -115,6 +116,19 @@ theorem domainInit_log_inside : LogInW domainInitWindows domainInitLog := by
   simp only [List.cons_append, List.nil_append, LogInW, InsideW, domainInitWindows]
   repeat' apply And.intro
   all_goals decide
+
+/-- Read back the published domain pointer after all payload stores. -/
+theorem domainInit_domain_word (m : Std.ExtHashMap Nat (BitVec 8)) :
+    bytesT (writeLog m domainInitLog) Layout.sym_Caml_state 8 = firstDomainPtr := by
+  apply OCaml.Vm.Gc.word_writeLog_at (i := 0)
+  · rfl
+  · simp only [domainInitLog, domainInitBlocks, caml_init_domainXa8ecFSeg,
+      caml_init_domainXa8fcSeg, List.cons_append, List.nil_append, evalBlocks, evalBlock, SegEvalState.init]
+    domain_init_nf
+    rw [domainPtrBytes_value]
+    simp only [List.cons_append, List.nil_append, List.drop, OutLRange]
+    repeat' apply And.intro
+    all_goals decide
 
 /-- Publish the first domain and clear its minor-heap fields, reaching the
 minor-table allocation call with an exact source-derived write log. -/
