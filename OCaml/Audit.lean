@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.ForwardedAccess
 import OCaml.Os.HtifMemory
 import OCaml.Os.DirectoryObstruction
 import OCaml.Bytecode.Callback
@@ -2033,3 +2034,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.FieldCopy.mixed_scan
 #print axioms OCaml.Vm.Gc.FieldCopy.pending_nonYoung
 #print axioms OCaml.Vm.Gc.FieldCopy.scan_mixed_grey
+
+#print axioms OCaml.Vm.Gc.image_after
+#print axioms OCaml.Vm.Gc.oldifyCode_after
+#print axioms OCaml.Vm.Gc.Forwarded.access
+#print axioms OCaml.Vm.Gc.Forwarded.forwarded_machine
+#print axioms OCaml.Vm.Gc.Forwarded.Post.slot_relocates
+#print axioms OCaml.Vm.Gc.Forwarded.Post.target_from_links
+#print axioms OCaml.Vm.Gc.Forwarded.Post.queue_frame

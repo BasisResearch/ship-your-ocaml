@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Already-forwarded oldify path (2026-10-03)
+
+- `ForwardedAccess.lean:forwarded_machine` runs the generated zero-header
+  branch, forwarding-pointer load and root store, stopping at the native
+  epilogue. All reads, the branch and store are discharged from concrete
+  windows/registers/header facts. The full BlockPost retains machine frames.
+- `Post.slot_relocates` transports an actual root slot through Eqv once the
+  partial-placement invariant identifies the forwarding pointer with the
+  typed action. `Post.target_from_links` consumes the existing intrusive
+  link view; `Post.queue_frame` preserves a disjoint queue.
+- `CodeFrame.image_after` shares preservation below the store-policy bound
+  between oldify and mopup code images. Generated helper certificates and
+  audit entries come from `scripts/gen_gc_rows.py`.
+- Targeted capped build passes (614 jobs). Mixed scan landed as `a31aa63`.
+  Next: oldify entry/return seams and young-pointer call composition, then
+  remaining copying/allocation paths. Partial relocation, roots, outer
+  termination, ephemerons, major reclamation and G2/live-word Fits are open.
+
 ## Mixed non-young field scan (2026-10-03)
 
 - `MixedScan.lean:mixed_scan` runs the whole suffix with a fresh parity/range
