@@ -4,6 +4,11 @@ namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open LeanRV64DExecutable.Functions
 
+/-- Extracting the low 32 bits of a bounded natural native word. -/
+theorem low32_nat (n : Nat) (small : n < 2^64) :
+    (BitVec.ofNat 64 n).extractLsb' 0 32 = BitVec.ofNat 32 n := by
+  simp only [BitVec.extractLsb', BitVec.toNat_ofNat, Nat.shiftRight_zero, Nat.mod_eq_of_lt small]
+
 /-- Small natural operands retain their value across a signed 32-bit load. -/
 theorem sign_extend_nat32 (n : Nat) (small : n < 2^31) :
     (BitVec.ofNat 32 n).signExtend 64 = BitVec.ofNat 64 n := by
@@ -38,10 +43,7 @@ theorem apply_count_word (n : BitVec 32) (positive : 0 < n.toInt) :
   rw [loaded, nat, show sign_extend (m := 64) (0xfff#12) = -(1#64) from by decide,
     ← BitVec.sub_eq_add_neg, BitVec.ofNat_sub_ofNat_of_le _ 1 (by decide) (by omega)]
   change ((BitVec.ofNat 64 (n.toNat - 1)).extractLsb' 0 32).signExtend 64 = _
-  have extract : (BitVec.ofNat 64 (n.toNat - 1)).extractLsb' 0 32 = BitVec.ofNat 32 (n.toNat - 1) := by
-    simp only [BitVec.extractLsb', BitVec.toNat_ofNat, Nat.shiftRight_zero,
-      Nat.mod_eq_of_lt (show n.toNat - 1 < 2^64 by omega)]
-  rw [extract]
+  rw [low32_nat _ (by omega)]
   exact sign_extend_nat32 _ (by omega)
 
 end OCaml.Vm.Sim

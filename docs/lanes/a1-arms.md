@@ -1536,6 +1536,17 @@ proof used by APPLY frames and both copy directions. Counted loop execution
 through `loopFromBody`, then prefix/suffix composition, is next.
 GRAB’s satisfied-arity path landed as `41a698a`, all gates passing.
 
+## Counted backward-copy machine loop
+
+`BackwardCopy.backward_copy_run` proves the actual APPTERM loop for every
+31-bit bounded word count, including overlapping ranges. It folds the two
+generated branch adapters with `loopFromBody`; there is no assumed iteration
+premise. `BackwardCopyState.lean` supplies the cursor-derived measure,
+exact log invariant, image preservation and register frame. Counter and cursor
+arithmetic share `BackwardCopyArithmetic.lean`; `low32_nat` also simplifies
+APPLY’s operand arithmetic. Full represented prefix/loop/suffix composition
+is next. Loop cuts and log certificates landed as `039539b`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
