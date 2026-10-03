@@ -1484,6 +1484,14 @@ with all gates passing. Full represented compositions remain next.
 
 ## Open / next
 
+Shared application restoration landed in `ApplyRestore.lean:42`
+(`apply_frame_restore`): frame payload, closure environment, registers,
+image, primitive bindings and runtime window preservation assemble `Running`.
+`EnterFrame.lean` frames the domain, threshold, pending flag and closure loads
+through partial frame writes. The restoration target checks in 0.9 s;
+final generated-body compositions remain next. The indexed frame payload
+facts landed as `f882a65`, all gates passing.
+
 Continue with remaining arithmetic, heap mutation/allocation and control
 families: fixed-arity application, tail calls, restart/grab, allocation and
 remaining division and barrier-backed mutation. OFFSETREF now has

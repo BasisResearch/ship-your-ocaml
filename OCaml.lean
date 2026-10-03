@@ -230,6 +230,7 @@ import OCaml.Vm.Sim.IndexedStores
 import OCaml.Vm.Sim.ValueWords
 import OCaml.Vm.Sim.ApplyFrameLog
 import OCaml.Vm.Sim.ApplyFramePayload
+import OCaml.Vm.Sim.ApplyRestore
 import OCaml.Vm.Sim.Return
 import OCaml.Vm.Sim.ReturnPayload
 import OCaml.Vm.Sim.ReturnRead
