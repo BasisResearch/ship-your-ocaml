@@ -284,3 +284,6 @@ import OCaml.Vm.Boot.Startup.CompareNames
 import OCaml.Vm.Boot.Startup.LookupRun
 
 import OCaml.Vm.Boot.Startup.RunnerSetup
+
+import OCaml.Vm.Boot.Startup.ConfigValid
+import OCaml.Vm.Boot.Startup.ResetMisa

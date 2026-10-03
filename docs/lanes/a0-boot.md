@@ -91,6 +91,8 @@ Checked inner builtin lookup:
   the exact equality branch. All modules check under default proof budgets;
   `LookupLoop` takes about 2.8 s and `LookupRun` about 4.8 s.
 
+The model/runner setup increment landed as `dd42be2`, full gate passed.
+
 Checked model/runner setup:
 
 * `model_init` in `Startup/ModelInit.lean` proves the actual Sail
@@ -108,8 +110,24 @@ Checked model/runner setup:
   without normalizing an accumulated machine state. The append/read and frame
   laws keep the complete initializer within default recursion limits.
 
-Reset still must supply successful `init_model` (configuration validation and
-architectural reset), initial GoodState/code facts, and loader correspondence.
+Checked configuration and ISA-reset progress:
+
+* `config_valid` (`Startup/ConfigValid.lean`) proves that the actual
+  `config_is_valid` succeeds and preserves state when PMA regions are the
+  model-initialized ones. Thirteen static checks, the three PMA regions,
+  and both configured device windows have separate kernel certificates.
+* `config_valid_program` reduces the outer check to `check_mem_layout`.
+  `ConfigMemoryProgram` uses `#simp_nf` to normalize closed integer
+  conversions before state composition. The PMA and outer checks now take
+  about 0.7 s each. Earlier direct state-level compositions elaborated but
+  consumed excessive memory during final checking; those runs were stopped
+  and replaced by these completed program-equality proofs.
+* `reset_misa_run` (`Startup/ResetMisa.lean`) proves the source `reset_misa`
+  installs `initMisa` from the seed, preserves memory/output/cycles and
+  frames every other register. This is one component of architectural reset.
+
+Reset still must supply the remaining architectural reset components and
+composition into `init_model`, initial GoodState/code facts, and loader correspondence.
 The first two setup stages now have a composed execution proof.
 Remaining startup functions include `caml_main`, GC
 initialization, file/code loading, outer primitive-table construction, unmarshalling,
