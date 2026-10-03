@@ -1504,6 +1504,16 @@ assembles the copied stack, closure environment and platform into `Running`.
 addition to natural counters. Represented native-body adapters are next.
 APPLY1–3 landed as `cc62241`, all gates passing.
 
+## Fixed-arity represented tail calls
+
+`Appterm1.lean`, `Appterm2.lean`, `Appterm3.lean` prove `appterm1_arm`,
+`appterm2_arm`, `appterm3_arm` and their `*_step_arm` wrappers. One
+`scripts/gen_tailcall_fixed.py` reads segment order/pins and supplies checked
+word moves to `tailcall_restore`. Copy footprints, operand nonnegativity,
+stack capacity and runtime preservation remain explicit. Tail-call bodies
+and shared restoration landed as `76fa626`, all gates passing. Next are GRAB,
+RESTART, the generic tail-call loop and allocation/barrier-backed families.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
@@ -1521,7 +1531,7 @@ represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 115 conditional
+setup/return bridges and named callee composition. There are 118 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.

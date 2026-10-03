@@ -2124,3 +2124,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.tailcall_offset
 #print axioms OCaml.Vm.Sim.tailcall_address
 #print axioms OCaml.Vm.Sim.tailcall_extra
+#print axioms OCaml.Vm.Sim.appterm1_arm
+#print axioms OCaml.Vm.Sim.appterm1_step_arm
+#print axioms OCaml.Vm.Sim.appterm2_arm
+#print axioms OCaml.Vm.Sim.appterm2_step_arm
+#print axioms OCaml.Vm.Sim.appterm3_arm
+#print axioms OCaml.Vm.Sim.appterm3_step_arm

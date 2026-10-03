@@ -241,6 +241,9 @@ import OCaml.Vm.Sim.Appterm2Pins
 import OCaml.Vm.Sim.Appterm3Segment
 import OCaml.Vm.Sim.Appterm3Pins
 import OCaml.Vm.Sim.TailcallArithmetic
+import OCaml.Vm.Sim.Appterm1
+import OCaml.Vm.Sim.Appterm2
+import OCaml.Vm.Sim.Appterm3
 import OCaml.Vm.Sim.Return
 import OCaml.Vm.Sim.ReturnPayload
 import OCaml.Vm.Sim.ReturnRead
