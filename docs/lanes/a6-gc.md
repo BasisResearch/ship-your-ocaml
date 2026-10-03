@@ -1,5 +1,19 @@
 # Lane a6-gc
 
+## Typed scan result (2026-10-03)
+
+- `ScanPayload.lean:scan_grey` combines the concrete suffix loop with
+  `pendingPayload` to establish a represented destination block (`ObjAt`).
+  `ScanAt.payload` uses Eqv.val transport for each field; `ScanAt.object`
+  preserves the destination header, including its existing color.
+- `pending_immediates` derives every low-bit branch from represented integer
+  fields. `ScanAt.initial` supplies the empty-prefix/reflexive-frame invariant
+  from setup pins. The saved first word lies outside the scanned suffix.
+- This result keeps the placement fixed and requires integer suffix fields.
+  Pointer oldification and machine setup composition remain open, alongside
+  full mopup/G2, live-word Fits and compiler GcSafe.
+- Targeted capped build passes. The suffix loop landed as `628af1d`.
+
 ## Immediate-field scan loop (2026-10-03)
 
 - `ScanLoop.lean:scan_loop` folds the actual immediate-valued field iterations

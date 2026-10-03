@@ -31,7 +31,7 @@ import OCaml.Vm.Gc.Generated.Audit
 import OCaml.Vm.Gc.QueueAccess
 import OCaml.Vm.Gc.QueueEnqueue
 import OCaml.Vm.Gc.PendingPayload
-import OCaml.Vm.Gc.ScanLoop
+import OCaml.Vm.Gc.ScanPayload
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1778,3 +1778,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.config_valid_program
 #print axioms OCaml.Vm.Boot.Startup.config_valid
 #print axioms OCaml.Vm.Boot.Startup.reset_misa_run
+
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAt.initial
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAt.payload
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAt.object
+#print axioms OCaml.Vm.Gc.FieldCopy.pending_immediates
+#print axioms OCaml.Vm.Gc.FieldCopy.scan_grey
