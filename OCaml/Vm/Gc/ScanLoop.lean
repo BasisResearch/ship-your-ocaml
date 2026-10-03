@@ -29,13 +29,13 @@ theorem scan_iteration {a b count start initial i c}
   exact ⟨d, run, h.advance geometry header bound (post.effect input)⟩
 
 /-- Shared loop fold, instantiated below by concrete copy summaries. -/
-theorem ScanAtWith.loop {writes a b count start initial}
+theorem ScanAtWith.loop {writes a b count start initial footprint expected}
     (geometry : Geometry a b count)
-    (step : ∀ i, Triple (fun c => ScanAtWith writes a b count start initial i c ∧ i < count)
-      (ScanAtWith writes a b count start initial (i + 1))) :
-    Triple (ScanAtWith writes a b count start initial start)
-      (ScanAtWith writes a b count start initial count) := by
-  let I := fun c => ScanAtWith writes a b count start initial (scanIndex c) c
+    (step : ∀ i, Triple (fun c => ScanAtWith writes a b count start initial i c footprint expected ∧ i < count)
+      (ScanAtWith writes a b count start initial (i + 1) · footprint expected)) :
+    Triple (fun c => ScanAtWith writes a b count start initial start c footprint expected)
+      (fun c => ScanAtWith writes a b count start initial count c footprint expected) := by
+  let I := fun c => ScanAtWith writes a b count start initial (scanIndex c) c footprint expected
   let B := fun c => scanIndex c < count
   have body : ∀ n, Triple (fun c => I c ∧ B c ∧ count - scanIndex c = n)
       (fun c => I c ∧ count - scanIndex c < n) := by
@@ -43,12 +43,12 @@ theorem ScanAtWith.loop {writes a b count start initial}
     obtain ⟨d, run, post⟩ := step (scanIndex c) c ⟨h, lt⟩
     have index := post.index_eq geometry
     refine ⟨d, run, ?_, ?_⟩
-    · change ScanAtWith writes a b count start initial (scanIndex d) d
+    · change ScanAtWith writes a b count start initial (scanIndex d) d footprint expected
       rw [index]; exact post
     · rw [index]; dsimp [B] at lt; omega
   apply (loopFromBody (fun c => count - scanIndex c) body).conseq
   · intro c h
-    change ScanAtWith writes a b count start initial (scanIndex c) c
+    change ScanAtWith writes a b count start initial (scanIndex c) c footprint expected
     rw [h.index_eq geometry]; exact h
   · intro c ⟨h, stop⟩
     have bound := h.upper

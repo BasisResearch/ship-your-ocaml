@@ -1,4 +1,4 @@
-import OCaml.Vm.Gc.ScanState
+import OCaml.Vm.Gc.ScanProgress
 import OCaml.Vm.Gc.CopyEffect
 
 namespace OCaml.Vm.Gc.FieldCopy
@@ -35,30 +35,21 @@ theorem ScanAtWith.advance {writes a b count start initial i c d}
     apply frameOn_writeLog
     change ((b + 8 * start ≤ b + 8 * i ∧ b + 8 * i + 8 ≤ b + 8 * count) ∨ False) ∧ True
     exact ⟨Or.inl ⟨by have := h.lower; omega, by omega⟩, True.intro⟩
-  refine ⟨post.good, post.minstret, post.tick,
-    post.code, by have := h.lower; omega, by omega, ?_, ?_,
-    (fun a ha => (frame a ha).trans (h.memory a ha)), ?_,
-    post.output.trans h.output, ?_⟩
+  apply h.advance_progress bound
+  refine ⟨post.good, post.minstret, post.tick, post.code, ?_, ?_, frame, ?_, ?_,
+    post.output, post.native⟩
   · have next := post.pc
     rw [again_eq geometry bound (sameHeader ▸ header)] at next
     simpa only [decide_eq_true_eq] using next
   · simpa only [slot, delta, target, index, scanPtr_succ, BitVec.ofNat_add] using post.registers
-  · intro j lower lt
-    by_cases current : j = i
-    · subst j
-      have copied := post.destination
-      simpa only [slot, delta, BitVec.add_comm _ (scanPtr a i), scanPtr_delta,
-        geometry.targetRange.ptr_nat (Nat.le_of_lt bound),
-        geometry.sourceRange.ptr_nat (Nat.le_of_lt bound), source] using copied
-    · have old : j < i := by omega
-      have unchanged : word d (b + 8 * j) = word c (b + 8 * j) := by
-        change bytesT d.σ.mem _ 8 = bytesT c.σ.mem _ 8
-        rw [memory]
-        apply bytesT_writeLog_out
-        exact ⟨Or.inl (by omega), True.intro⟩
-      exact unchanged.trans (h.copied j lower old)
-  · intro r noise notWritten
-    exact (post.native r noise notWritten).trans
-      (h.native r noise notWritten)
+  · have copied := post.destination
+    simpa only [slot, delta, BitVec.add_comm _ (scanPtr a i), scanPtr_delta,
+      geometry.targetRange.ptr_nat (Nat.le_of_lt bound),
+      geometry.sourceRange.ptr_nat (Nat.le_of_lt bound), source] using copied
+  · intro j _ old
+    change bytesT d.σ.mem _ 8 = bytesT c.σ.mem _ 8
+    rw [memory]
+    apply bytesT_writeLog_out
+    exact ⟨Or.inl (by omega), True.intro⟩
 
 end OCaml.Vm.Gc.FieldCopy

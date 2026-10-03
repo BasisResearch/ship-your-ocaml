@@ -3,9 +3,12 @@ import OCaml.Vm.Gc.ScanGeometry
 namespace OCaml.Vm.Gc.FieldCopy
 open Vsa.Machine Vsa.Sim Primitives Vsa.Logic LeanRV64DExecutable
 
-/-- Loop-head or exhausted-scan state. Only the destination suffix can change;
-all copied words equal their source observations at the initial scan boundary. -/
-structure ScanAtWith (writes : List Nat) (a b count start : Nat) (initial : Config) (i : Nat) (c : Config) : Prop where
+/-- Loop-head or exhausted-scan state. The footprint and expected field
+words are parameters: a relocating scan can include native stack saves and
+record forwarding targets, while the original copy scan uses source words. -/
+structure ScanAtWith (writes : List Nat) (a b count start : Nat) (initial : Config) (i : Nat) (c : Config)
+    (footprint : List W := scanWindow b start count)
+    (expected : Nat → BitVec 64 := fun j => word initial (a + 8 * j)) : Prop where
   good : GoodState c.σ
   minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
   tick : c.tick < 2
@@ -15,8 +18,8 @@ structure ScanAtWith (writes : List Nat) (a b count start : Nat) (initial : Conf
   pc : PCAt (if i < count then FieldCopy.pc else exitPc) c
   registers : GHolds c.σ (regs (scanPtr a i) (BitVec.ofNat 64 b - BitVec.ofNat 64 a)
     (BitVec.ofNat 64 b) (BitVec.ofNat 64 i))
-  memory : FrameOn (scanWindow b start count) initial.σ.mem c.σ.mem
-  copied : ∀ j, start ≤ j → j < i → word c (b + 8 * j) = word initial (a + 8 * j)
+  memory : FrameOn footprint initial.σ.mem c.σ.mem
+  copied : ∀ j, start ≤ j → j < i → word c (b + 8 * j) = expected j
   output : c.σ.sailOutput = initial.σ.sailOutput
   native : ∀ r, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ writes, (gprReg n == r) = false) →
@@ -27,8 +30,8 @@ abbrev ScanAt := ScanAtWith [8,9,10,11,15]
 
 def scanIndex (c : Config) : Nat := ((gprGet c.σ 9).getD 0).toNat
 
-theorem ScanAtWith.index_eq {writes a b count start initial i c}
-    (h : ScanAtWith writes a b count start initial i c)
+theorem ScanAtWith.index_eq {writes a b count start initial i c footprint expected}
+    (h : ScanAtWith writes a b count start initial i c footprint expected)
     (geometry : Geometry a b count) : scanIndex c = i := by
   have reg : gprGet c.σ 9 = some (BitVec.ofNat 64 i) := gholds_lookup _ h.registers rfl
   have upper := geometry.targetRange.upper

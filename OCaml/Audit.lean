@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.ForwardedScan
 import OCaml.Vm.Gc.ForwardedField
 import OCaml.Vm.Gc.ForwardedAdvance
 import OCaml.Vm.Boot.Startup.WhileMinToMalloc
@@ -2347,3 +2348,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.ForwardedField.classifier_carried
 #print axioms OCaml.Vm.Gc.ForwardedField.classifier_input
 #print axioms OCaml.Vm.Gc.ForwardedField.forwarded_field
+
+#print axioms OCaml.Vm.Gc.MopupCall.AdvancedPost.word_frame
+#print axioms OCaml.Vm.Gc.MopupCall.againAfterCall_frame
+#print axioms OCaml.Vm.Gc.MopupCall.AdvancedPost.slot_relocates
+#print axioms OCaml.Vm.Gc.MopupCall.againAfterCall_count
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAtWith.advance_progress
+#print axioms OCaml.Vm.Gc.MopupCall.AdvancedPost.progress

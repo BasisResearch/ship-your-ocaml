@@ -1,5 +1,27 @@
 # Lane a6-gc
 
+## Relocated field observations and shared scan update (2026-10-03)
+
+- `ForwardedEffect.lean` proves `AdvancedPost.word_frame` from the actual
+  save/root log, `slot_relocates` via Eqv, and `againAfterCall_count` from
+  header separation and size. These discharge observation consequences of
+  the concrete call rather than assuming memory is unchanged.
+- `ScanAtWith` now parameterizes the permitted footprint and expected field
+  words, with the original copying interpretation as defaults. Its shared
+  `loop` works for both interpretations. `ScanProgress` and
+  `advance_progress` factor the invariant update; existing copy proofs use
+  them and still build.
+- `ForwardedScan.lean:AdvancedPost.progress` turns a forwarded-field run
+  into that same scan update, retaining platform/code/output/native frames.
+  `ScanFootprint` names the remaining native-save/header/prefix separation
+  facts supplied by the enclosing heap and stack geometry.
+- Targeted capped builds pass (668 jobs for the forwarded adapter; 655 for
+  the existing mixed payload proof). Loaded-field composition landed as
+  `d3d4cc1`. Next: supply these footprints and forwarding values from a
+  partial-relocation scan invariant and close the mixed young-field loop.
+  Fresh copying/allocation, roots, ephemerons, major reclamation and the
+  G2/live-word Fits exit remain open.
+
 ## Loaded forwarded field through advance (2026-10-03)
 
 - `ForwardedField.lean:forwarded_field` composes the actual source-field
