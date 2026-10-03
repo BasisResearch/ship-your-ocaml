@@ -1,4 +1,5 @@
 import OCaml.Vm.Sim.BranchCompare
+import OCaml.Vm.Sim.IndexWord
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -26,10 +27,7 @@ theorem longVal_nonnegative (n : BitVec 63) (positive : 0 ≤ n.toInt) :
 theorem switch_index_scale (index : Nat) :
     Sail.shift_bits_left (BitVec.ofNat 64 index) (Sail.BitVec.extractLsb (0x02#6) 5 0) =
       BitVec.ofNat 64 (4 * index) := by
-  change (BitVec.ofNat 64 index <<< (2 : Nat)) = _
-  rw [BitVec.shiftLeft_eq_mul_twoPow]
-  change BitVec.ofNat 64 index * BitVec.ofNat 64 4 = _
-  rw [← BitVec.ofNat_mul, Nat.mul_comm]
+  exact nat_shift_word index 2
 
 /-- SWITCH scales its untagged integer selector by one bytecode word. -/
 theorem switch_int_scale (n : BitVec 63) (positive : 0 ≤ n.toInt) :

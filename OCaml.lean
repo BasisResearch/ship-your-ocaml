@@ -208,6 +208,10 @@ import OCaml.Vm.Sim.Offsetref
 import OCaml.Vm.Sim.OffsetrefSegment
 import OCaml.Vm.Sim.OffsetrefPins
 import OCaml.Vm.Sim.PushRetaddr
+import OCaml.Vm.Sim.Poptrap
+import OCaml.Vm.Sim.PayloadRestore
+import OCaml.Vm.Sim.TrapPayload
+import OCaml.Vm.Sim.TrapArithmetic
 import OCaml.Vm.Sim.PoptrapSegment
 import OCaml.Vm.Sim.PoptrapPins
 import OCaml.Vm.Sim.PushtrapSegment

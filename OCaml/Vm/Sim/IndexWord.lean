@@ -5,6 +5,13 @@ set_option autoImplicit false
 open OCaml.Bytecode
 open LeanRV64DExecutable.Functions
 
+/-- Scaling a natural index by a power of two commutes with native truncation. -/
+theorem nat_shift_word (index amount : Nat) :
+    (BitVec.ofNat 64 index <<< amount) = BitVec.ofNat 64 (2^amount * index) := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ofNat, Nat.shiftLeft_eq,
+    Nat.mod_mul_mod, Nat.mul_mod_mod, Nat.mul_comm]
+
 /-- A nonnegative bytecode index has the same scaled word in the native arm.
 The premise is explicit: Int.toNat would otherwise silently clamp negatives. -/
 theorem index_word (w : BitVec 32) (nonnegative : 0 ≤ w.toInt) :
@@ -13,9 +20,8 @@ theorem index_word (w : BitVec 32) (nonnegative : 0 ≤ w.toInt) :
   change (BitVec.ofInt 64 w.toInt <<< (3 : Nat)) = _
   have cast := congrArg (BitVec.ofInt 64) (Int.toNat_of_nonneg nonnegative)
   change BitVec.ofNat 64 w.toInt.toNat = BitVec.ofInt 64 w.toInt at cast
-  rw [← cast, BitVec.shiftLeft_eq_mul_twoPow]
-  change BitVec.ofNat 64 w.toInt.toNat * BitVec.ofNat 64 8 = _
-  rw [← BitVec.ofNat_mul, Nat.mul_comm]
+  rw [← cast]
+  exact nat_shift_word w.toInt.toNat 3
 
 /-- Atom value pointers are one word beyond their indexed headers. -/
 theorem atom_index_offset (w : BitVec 32) (nonnegative : 0 ≤ w.toInt) :

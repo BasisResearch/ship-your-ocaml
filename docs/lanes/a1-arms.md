@@ -1403,16 +1403,30 @@ Their register/memory observations are machine results; represented
 trap-pointer and stack restoration is next. OFFSETREF landed as `25abf35`
 with the complete gate passing.
 
+## POPTRAP represented restoration
+
+`PayloadRestore.lean:23` (`payload_rebuild`) now frames common code/world
+observations while accepting independently restored stack, heap and trap
+components. OFFSETREF reuses it through `payload_heap_frame` unchanged.
+`TrapPayload.lean:22` (`payload_trap_written`) reads back the native trap
+pointer; `trap_restore` combines that with stack consumption and platform
+restoration. `TrapArithmetic.lean:23` (`poptrap_link`) derives the absolute
+pointer from the bounded tagged link, using shared `nat_shift_word`.
+`Poptrap.lean:13` (`poptrap_arm`) and `poptrap_step_arm` compose the generated
+no-pending body with those facts. The bridge checks in 1.2 s; no pending work,
+read/store geometry, separation and runtime-window preservation remain named
+premises. Generated trap bodies landed as `7c7db48`, all gates passing.
+
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: represented POPTRAP/PUSHTRAP adapters first, then allocation, application/return and
+families: represented PUSHTRAP adapter first, then allocation, application/return and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 108 conditional
+setup/return bridges and named callee composition. There are 109 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
