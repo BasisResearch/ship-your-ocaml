@@ -458,3 +458,5 @@ import OCaml.Vm.Sim.ClosureRestore
 
 import OCaml.Vm.Sim.ClosurePrefixMore
 import OCaml.Vm.Sim.ClosurePrefixZero
+
+import OCaml.Vm.Sim.ClosureReserve

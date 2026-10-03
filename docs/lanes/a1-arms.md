@@ -1776,6 +1776,17 @@ and complete RESTART/GRAB/MAKEBLOCK consumers rebuild. Closure restoration and
 nursery transport landed as `3649e9a`, all gates passing. Next: represented
 CLOSURE nursery reservation, initialization and metadata/return suffix.
 
+## Represented CLOSURE nursery reservation
+
+`ClosureReserve.lean` (`closure_reserve`) checks in 0.99 s. It transports the
+scalar nursery observations through the actual capture push, consumes the
+generated reserve span, and preserves shared closure metadata while recording
+the exact young-pointer update. `NurseryArithmetic.lean`
+(`nursery_sub_reservation`) shares payload-plus-header subtraction.
+`ClosureNurseryInput.after` supplies the transported memory observations.
+Both represented prefixes landed as `bf98689`, all gates passing. Next:
+closure initializer/source snapshot and metadata/return suffix composition.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
