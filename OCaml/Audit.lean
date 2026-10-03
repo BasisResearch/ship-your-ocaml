@@ -1924,3 +1924,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.FieldCopy.immediate_of_even
 #print axioms OCaml.Vm.Gc.FieldCopy.classify_field
 #print axioms OCaml.Vm.Gc.FieldCopy.ClassifiedPost.copy_nonpointer
+-- Bounded byte views and the header of the exact archived while_min ELF.
+#print axioms Vsa.Sim.Boot.bytesOfView_size
+#print axioms Vsa.Sim.Boot.bytesOfView_get
+#print axioms Vsa.Sim.Boot.bytesOfView_extract
+#print axioms Vsa.Sim.Boot.nbytes_ext
+#print axioms Vsa.Sim.Boot.elfHeader_prefix
+#print axioms Vsa.Sim.Boot.elfHeader_view
+#print axioms Vsa.Sim.Boot.elfHeader_parse_view
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.source_header
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.header_eq
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.source_header_parse
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.header_entry

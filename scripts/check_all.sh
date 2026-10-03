@@ -93,6 +93,7 @@ python3 scripts/gen_boot_runtime.py --check || fail "stage a5: boot runtime read
 python3 scripts/gen_boot_heap.py --check || fail "stage a5: boot heap certificate drift"
 python3 scripts/gen_boot_entry.py --check || fail "stage a5: boot entry certificate drift"
 python3 scripts/gen_boot_image.py --check || fail "stage a5: boot image drift"
+python3 scripts/gen_boot_elf.py --check || fail "stage a5: boot ELF data drift"
 python3 scripts/gen_boot_dump.py --check || fail "stage a5: boot capture utility drift"
 python3 scripts/gen_boot_registers.py --check || fail "stage a5: boot register/snapshot drift"
 python3 scripts/gen_startup_rows.py --check || fail "stage a5: startup row/call drift"

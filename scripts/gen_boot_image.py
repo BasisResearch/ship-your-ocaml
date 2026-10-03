@@ -12,6 +12,7 @@ import hashlib
 import json
 from pathlib import Path
 from gen_ocaml_image import sections
+from packed_bytes import emit_packed_bytes
 
 ROOT=Path(__file__).resolve().parents[1]
 ap=argparse.ArgumentParser(description=__doc__)
@@ -47,17 +48,7 @@ for k,(base,raw) in enumerate(pieces):
     for name in ['.text','.rodata']:
         b,bs=fixed[name]
         if base<=b and b+len(bs)<=base+len(body):body[b-base:b-base+len(bs)]=bytes(len(bs))
-    pages=[int.from_bytes(body[i:i+256],'little') for i in range(0,len(body),256)]
-    for i,p in enumerate(pages):
-        if p:out.append(f'def piece{k}Page{i} : Nat := {p:#x}')
-    def tree(lo,hi):
-        if hi-lo==1:return f'piece{k}Page{lo}' if pages[lo] else '0'
-        mid=(lo+hi)//2
-        l,r=tree(lo,mid),tree(mid,hi)
-        return l if l==r else f'(if page < {mid} then {l} else {r})'
-    out += [f'def piece{k}Byte (off : Nat) : BitVec 8 :=',
-            f'  let page := off / 256',f'  let packed := {tree(0,len(pages))}',
-            '  BitVec.ofNat 8 (packed >>> (8 * (off % 256)))','']
+    emit_packed_bytes(out, f'piece{k}', body)
 out += ['def pieces : List (Nat × Nat) := ['+', '.join(f'({a:#x}, {len(b)})' for a,b in pieces)+']',
         'def imageByte (a : Nat) : BitVec 8 :=',
         '  if Image.textBase ≤ a ∧ a < Image.textBase + Image.textSize then Image.textByte (a - Image.textBase)',

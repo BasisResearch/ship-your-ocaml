@@ -43,7 +43,7 @@ and code premises are discharged. `gen_startup_rows.py` reuses
 pins; all three projections check from the fixed executable image. The
 result carries exact BSS/main memory effects, argv, stack/link and output.
 
-The generic loader correspondence is checked in `Vsa/Sim/Boot/LoaderPiece.lean`
+The generic loader correspondence landed as `5b690cc`, full gate passed, in `Vsa/Sim/Boot/LoaderPiece.lean`
 and `LoaderPieces.lean`. `loadPiece_eq` proves the actual byte-array fold
 (including its duplicate-address check) equals `insertRange` on a fresh
 range. `initializeMemory_pieces` factors the frozen source definition;
@@ -51,6 +51,24 @@ range. `initializeMemory_pieces` factors the frozen source definition;
 The proof uses abstract array/list induction, not a concrete memory-map
 computation. Both modules check in under one second each. Concrete parsed-ELF
 piece geometry and byte-view certificates must still instantiate the theorem.
+
+The exact 515,920-byte while_min ELF is now archived under its existing SHA256
+pin (`results/boot/while_min-elf.bin.gz`). `gen_boot_elf.py` verifies that pin
+and the emulator's archived pieces, reuses `WhileMinImage.imageByte` for
+loader-covered ranges, and emits only the remaining file bytes as sparse
+packed pages. The page emitter is shared with `gen_boot_image.py`; its old
+output is unchanged. Stage a5 checks both generators.
+
+`Vsa/Sim/Boot/ByteView.lean` proves size, reads and slicing for bounded byte
+views. `ElfHeader.lean` proves the real header parser observes only 64 bytes.
+`WhileMinElfHeader.source_header_parse` proves that the exact full file parses
+to its generated header, and `header_entry` agrees with pinned Layout.
+Direct header simplification tried to expand the full array (one owned
+check was stopped); early concrete prefix rewriting also hit kernel recursion.
+The checked replacement proves view/header locality with an arbitrary size,
+then instantiates that theorem. No budget was increased. Program-header,
+section-header/name and gap-parser correspondence still need proofs before
+constructing the actual parsed `ELF64File` and its `WhileMinElf` witness.
 
 Next: establish the concrete pinned ELF's `WhileMinElf` loader contract,
 then continue the remaining startup callees. Reset-to-cut reachability and
