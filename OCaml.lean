@@ -219,6 +219,13 @@ import OCaml.Vm.Sim.RootFrame
 import OCaml.Vm.Sim.EnterReady
 import OCaml.Vm.Sim.ApplyArithmetic
 import OCaml.Vm.Sim.Apply
+import OCaml.Vm.Sim.Apply1Segment
+import OCaml.Vm.Sim.Apply1Pins
+import OCaml.Vm.Sim.Apply2Segment
+import OCaml.Vm.Sim.Apply2Pins
+import OCaml.Vm.Sim.Apply3Segment
+import OCaml.Vm.Sim.Apply3Pins
+import OCaml.Vm.Sim.FrameInsert
 import OCaml.Vm.Sim.Return
 import OCaml.Vm.Sim.ReturnPayload
 import OCaml.Vm.Sim.ReturnRead

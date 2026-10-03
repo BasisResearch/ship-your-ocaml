@@ -1250,6 +1250,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.apply_count_word
 #print axioms Vsa.Sim.tr_apply
 #print axioms OCaml.Vm.Sim.apply_loaded
+#print axioms Vsa.Sim.tr_apply1
+#print axioms OCaml.Vm.Sim.apply1_loaded
+#print axioms Vsa.Sim.tr_apply2
+#print axioms OCaml.Vm.Sim.apply2_loaded
+#print axioms Vsa.Sim.tr_apply3
+#print axioms OCaml.Vm.Sim.apply3_loaded
+#print axioms OCaml.Vm.Sim.range_disjoint_inside
+#print axioms OCaml.Vm.Sim.outLRange_of_windows
+#print axioms OCaml.Vm.Sim.payload_replace_prefix
 #print axioms OCaml.Vm.Sim.return_payload
 #print axioms OCaml.Vm.Sim.return_frame_values
 #print axioms OCaml.Vm.Sim.nat64_toInt

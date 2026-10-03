@@ -1461,6 +1461,17 @@ extracts the three saved caller words and its environment root. Operand
 nonnegativity, extra-count signed bounds, read geometry and runtime framing
 remain explicit invariant premises. APPLY landed as `e33689e`, all gates passing.
 
+## Fixed-arity application bodies and prefix replacement
+
+Generated `tr_apply1`, `tr_apply2`, `tr_apply3` include their shared
+no-growth/no-pending tails (17/18/21 instructions), with exact opaque loads,
+write frames and full-image pins. Separate body builds take 3.4/3.9/4.7 s.
+`LogWindow.lean` derives range separation from a write-window certificate;
+`FrameInsert.lean:13` (`payload_replace_prefix`) shares prefix replacement
+and untouched-tail/root preservation for application and tail-call frames.
+Represented fixed-arity composition is next. Both RETURN paths landed as
+`e055960`, all gates passing.
+
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control

@@ -102,6 +102,14 @@ FAMILIES = {
 }
 
 
+# Fixed-arity application paths include the shared no-growth/no-pending tail.
+FAMILIES.update({
+    'APPLY1': ('Apply1', ['ld_tot', 'slli', 'alu_addi', 'sd', 'sd', 'sd', 'sd', 'ld_tot', 'alu_addi', 'alu_addi', 'j', 'ld_tot', 'alu_addi', 'ld_tot', 'branch_nottaken', 'lw_tot', 'branch_taken']),
+    'APPLY2': ('Apply2', ['ld_tot', 'ld_tot', 'sd', 'sd', 'sd', 'sd', 'ld_tot', 'slli', 'alu_addi', 'sd', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_addi', 'alu_addi', 'branch_taken', 'lw_tot', 'branch_taken']),
+    'APPLY3': ('Apply3', ['ld_tot', 'ld_tot', 'ld_tot', 'slli', 'alu_addi', 'sd', 'sd', 'sd', 'sd', 'sd', 'sd', 'ld_tot', 'alu_addi', 'alu_addi', 'j', 'ld_tot', 'alu_addi', 'ld_tot', 'branch_nottaken', 'lw_tot', 'branch_taken']),
+})
+
+
 for _n in range(1, 8):
     FAMILIES[f'PUSHACC{_n}'] = (f'Pushacc{_n}', ['sd', 'alu_addi', 'ld_tot', 'alu_addi', 'j'])
 for _n in range(1, 5):
@@ -119,10 +127,13 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 PATHS = {
+    'APPLY1': ('APPLY1', [False, True]),
+    'APPLY2': ('APPLY2', [True, True]),
+    'APPLY3': ('APPLY3', [False, True]),
     'RETURN_MORE': ('RETURN', [False]),
     'RETURN_FRAME': ('RETURN', [True]),
     'APPLY': ('APPLY', [False, True]),
@@ -334,7 +345,7 @@ def outputs(family='CONST0'):
             prefix, _ = path_span(instructions, start, decisions)
             start = prefix[-1][0] + 4
         insts, rows = path_span(instructions, start, decisions,
-            int(census['loop_head'], 16) if family in {'CHECK_SIGNALS', 'APPLY'} else None)
+            int(census['loop_head'], 16) if family in {'CHECK_SIGNALS', 'APPLY', 'APPLY1', 'APPLY2', 'APPLY3'} else None)
     else:
         arm = census['arms'][family]
         start = int(arm['addr'], 16)
