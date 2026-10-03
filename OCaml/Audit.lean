@@ -1896,3 +1896,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Young.decision_at_end
 #print axioms OCaml.Vm.Gc.Young.nonpointer_outside
 #print axioms OCaml.Vm.Gc.Young.Result.copy_nonpointer
+-- Frozen ELF loader summarized by nonoverlapping byte-array pieces.
+#print axioms Vsa.Sim.Boot.zip_push_both
+#print axioms Vsa.Sim.Boot.array_push_induction
+#print axioms Vsa.Sim.Boot.loadPiece_eq
+#print axioms Vsa.Sim.Boot.initializeMemory_pieces
+#print axioms Vsa.Sim.Boot.loadPieces_eq
+#print axioms Vsa.Sim.Boot.initializeMemory_eq

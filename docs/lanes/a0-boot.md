@@ -34,13 +34,23 @@ The complete architectural reset and ELF setup landed as `f526441` after the ful
   for every successful reset. `whileMin_reset_exists` specializes to the
   named `WhileMinElf` metadata/loader contract, whose supplier is still open.
 
-`reset_to_caml_main` (`Startup/ResetToCamlMain.lean`) now proves actual
+The reset-to-C-entry increment landed as `4565641`, full gate passed.
+`reset_to_caml_main` (`Startup/ResetToCamlMain.lean`) proves actual
 machine steps from `fillZero` of an `ElfReset` configuration to `caml_main`.
 Its `WhileMinElf` premise describes only loader bytes and metadata; platform
 and code premises are discharged. `gen_startup_rows.py` reuses
 `gen_arm_pilot.image_projection` for the crt0, main and primitive-table code
 pins; all three projections check from the fixed executable image. The
 result carries exact BSS/main memory effects, argv, stack/link and output.
+
+The generic loader correspondence is checked in `Vsa/Sim/Boot/LoaderPiece.lean`
+and `LoaderPieces.lean`. `loadPiece_eq` proves the actual byte-array fold
+(including its duplicate-address check) equals `insertRange` on a fresh
+range. `initializeMemory_pieces` factors the frozen source definition;
+`initializeMemory_eq` composes arbitrary disjoint pieces into `loaderMem`.
+The proof uses abstract array/list induction, not a concrete memory-map
+computation. Both modules check in under one second each. Concrete parsed-ELF
+piece geometry and byte-view certificates must still instantiate the theorem.
 
 Next: establish the concrete pinned ELF's `WhileMinElf` loader contract,
 then continue the remaining startup callees. Reset-to-cut reachability and
