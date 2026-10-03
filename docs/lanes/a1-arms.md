@@ -1427,16 +1427,27 @@ new trap depth; `pushtrap_restore` restores the platform and registers from
 the exact log. These modules check in 0.9–1.0 s. The generated-body
 composition is next. POPTRAP landed as `0a91a6e`, all gates passing.
 
+## PUSHTRAP represented arm
+
+`Pushtrap.lean:13` (`pushtrap_arm`) composes dispatch, the generated
+23-instruction body and `pushtrap_restore`. Both domain loads and the old
+trap read after partial writes are justified by sub-log separation.
+`pushtrap_step_arm` matches the actual bytecode transition. The bridge checks
+in 1.5 s. Its register avoidance certificate splits append/cons membership
+before kernel reduction, avoiding a recursion-limit bump. Stack depth,
+trap bound, geometry, separation and runtime-window preservation remain
+explicit. Restoration facts landed as `63fea79`, all gates passing.
+
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: PUSHTRAP generated-body composition first, then allocation, application/return and
+families: application/return, allocation and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 109 conditional
+setup/return bridges and named callee composition. There are 110 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.

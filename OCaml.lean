@@ -214,6 +214,7 @@ import OCaml.Vm.Sim.TrapPayload
 import OCaml.Vm.Sim.TrapArithmetic
 import OCaml.Vm.Sim.PoptrapSegment
 import OCaml.Vm.Sim.PoptrapPins
+import OCaml.Vm.Sim.Pushtrap
 import OCaml.Vm.Sim.PushtrapArithmetic
 import OCaml.Vm.Sim.PushtrapStore
 import OCaml.Vm.Sim.PushtrapRestore
