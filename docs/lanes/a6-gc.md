@@ -1,5 +1,21 @@
 # Lane a6-gc
 
+## Concrete forwarded scan iteration (2026-10-03)
+
+- `ScanFootprint.lean:effect_entry` bounds every native save with the
+  generated slot offsets and separates the one destination store.
+  `scanFootprint_of_geometry` derives all scan footprint obligations from
+  one native-stack/object separation condition and object geometry.
+- `ForwardedIteration.lean:scan_iteration` runs the actual field load,
+  classification, forwarded oldify call and advance, then updates
+  `ScanAtWith` with the relocated destination value. The caller supplies
+  the forwarding observation and geometric/platform entry conditions,
+  not a machine execution or per-store separation certificates.
+- Capped targeted build passes (670 jobs). Shared generalized scan landed
+  as `7887a5c`. Next: maintain the callee input and forwarding observations
+  across loop iterations and cover fresh-copy cases. G2/live-word Fits,
+  allocator/freshness, roots, ephemerons and major reclamation remain open.
+
 ## Relocated field observations and shared scan update (2026-10-03)
 
 - `ForwardedEffect.lean` proves `AdvancedPost.word_frame` from the actual

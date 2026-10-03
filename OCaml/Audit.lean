@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.ForwardedIteration
 import OCaml.Vm.Gc.ForwardedScan
 import OCaml.Vm.Gc.ForwardedField
 import OCaml.Vm.Gc.ForwardedAdvance
@@ -2370,3 +2371,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.MopupCall.againAfterCall_count
 #print axioms OCaml.Vm.Gc.FieldCopy.ScanAtWith.advance_progress
 #print axioms OCaml.Vm.Gc.MopupCall.AdvancedPost.progress
+
+#print axioms OCaml.Vm.Gc.logInW_of_forall
+#print axioms OCaml.Vm.Gc.MopupCall.effect_entry
+#print axioms OCaml.Vm.Gc.MopupCall.scanFootprint_of_geometry
+#print axioms OCaml.Vm.Gc.ForwardedField.scan_iteration

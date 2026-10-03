@@ -44,4 +44,12 @@ theorem word_writeLog_cells (mem : Std.ExtHashMap Nat (BitVec 8))
         exact head cell hc
       · exact ih (applyW mem (cell.1, 8, cell.2)) tail member
 
+/-- Pointwise write containment supplies the reflected log's frame premise. -/
+theorem logInW_of_forall {ws : List W} {log : List WEntry}
+    (inside : ∀ e ∈ log, InsideW ws e.1 e.2.1) : LogInW ws log := by
+  induction log with
+  | nil => trivial
+  | cons e log ih =>
+    exact ⟨inside e (by simp), ih (fun e he => inside e (by simp [he]))⟩
+
 end OCaml.Vm.Gc
