@@ -129,6 +129,7 @@ python3 scripts/gen_tailcall_fixed.py --check || fail "stage a5: represented fix
 python3 scripts/gen_backward_copy.py --check || fail "stage a5: backward-copy branch adapter drift"
 python3 scripts/gen_forward_copy.py --check || fail "stage a5: forward-copy branch adapter drift"
 python3 scripts/gen_restart_setup.py --check || fail "stage a5: RESTART setup adapter drift"
+python3 scripts/gen_makeblock_fixed.py --check || fail "stage a5: fixed MAKEBLOCK adapter drift"
 python3 scripts/gen_ccall_arms.py --check || fail "stage a5: represented C_CALL arm drift"
 python3 scripts/gen_dispatch_table.py --check || fail "stage a5: dispatch table drift"
 python3 scripts/gen_primitive_binding_probe.py --check || fail "stage a5: primitive binding probe drift"

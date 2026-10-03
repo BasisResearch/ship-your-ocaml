@@ -2406,6 +2406,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.makeblock_tag_word
 #print axioms OCaml.Vm.Sim.makeblock_header_word
 
+-- Represented fixed-arity nursery allocation.
+#print axioms OCaml.Vm.Sim.payload_stack_outside
+#print axioms OCaml.Vm.Sim.makeblock1_arm
+#print axioms OCaml.Vm.Sim.makeblock1_step_arm
+#print axioms OCaml.Vm.Sim.makeblock2_arm
+#print axioms OCaml.Vm.Sim.makeblock2_step_arm
+#print axioms OCaml.Vm.Sim.makeblock3_arm
+#print axioms OCaml.Vm.Sim.makeblock3_step_arm
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

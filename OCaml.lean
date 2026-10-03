@@ -403,3 +403,7 @@ import OCaml.Vm.Sim.Makeblock3FastPins
 import OCaml.Vm.Sim.Makeblock3FastLayout
 import OCaml.Vm.Sim.ClosureLayout
 import OCaml.Vm.Sim.GrabAllocInitLayout
+
+import OCaml.Vm.Sim.Makeblock1
+import OCaml.Vm.Sim.Makeblock2
+import OCaml.Vm.Sim.Makeblock3

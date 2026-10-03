@@ -1659,6 +1659,18 @@ extension, stack consumption and platform restoration across all arities.
 The represented native adapters are next. Complete allocating GRAB landed
 as `b6ca7b9`, all gates passing.
 
+## Represented fixed-arity MAKEBLOCK arms
+
+`Makeblock1.lean`, `Makeblock2.lean`, and `Makeblock3.lean`
+(`makeblock1_arm` / `makeblock1_step_arm`, and corresponding arities)
+compose the generated nursery bodies with shared block restoration. They
+check in 1.7/2.2/2.7 s. `gen_makeblock_fixed.py` generates all three adapters;
+`MakeblockInput.lean` names capacity, geometry, source separation and allocation
+conditions. Runtime preservation, placement and signed tag bounds remain
+explicit. There are now 124 conditional represented opcode bridges.
+The native bodies and shared restoration landed as `c367baf`, all gates passing.
+Next: generic MAKEBLOCK, sharing the cursor-copy invariant and proof with GRAB.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
@@ -1670,13 +1682,13 @@ the generated-body compositions are now checked. The indexed frame payload
 facts landed as `f882a65`, all gates passing.
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: heap allocation (MAKEBLOCK/1/2/3, CLOSURE/CLOSUREREC) and
+families: heap allocation (generic MAKEBLOCK, CLOSURE/CLOSUREREC) and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 121 conditional
+setup/return bridges and named callee composition. There are 124 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
