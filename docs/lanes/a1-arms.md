@@ -1472,6 +1472,16 @@ and untouched-tail/root preservation for application and tail-call frames.
 Represented fixed-arity composition is next. Both RETURN paths landed as
 `e055960`, all gates passing.
 
+## Shared fixed-arity frame payload
+
+`IndexedStores.lean:23` proves word readback for any store order with unique
+indices. `ApplyFrameLog.lean` certifies the three concrete native orders,
+coverage and footprint. `ValueWords.lean` shares list/stack-prefix word
+representation. `ApplyFramePayload.lean:25` (`apply_frame_payload`) restores
+all three application frames via those certificates and prefix replacement;
+its target checks in 0.9 s. Fixed-arity native bodies landed as `03a1343`
+with all gates passing. Full represented compositions remain next.
+
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control

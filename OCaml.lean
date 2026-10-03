@@ -226,6 +226,10 @@ import OCaml.Vm.Sim.Apply2Pins
 import OCaml.Vm.Sim.Apply3Segment
 import OCaml.Vm.Sim.Apply3Pins
 import OCaml.Vm.Sim.FrameInsert
+import OCaml.Vm.Sim.IndexedStores
+import OCaml.Vm.Sim.ValueWords
+import OCaml.Vm.Sim.ApplyFrameLog
+import OCaml.Vm.Sim.ApplyFramePayload
 import OCaml.Vm.Sim.Return
 import OCaml.Vm.Sim.ReturnPayload
 import OCaml.Vm.Sim.ReturnRead
