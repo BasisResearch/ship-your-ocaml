@@ -202,6 +202,9 @@ import OCaml.Vm.Sim.Muldi3
 import OCaml.Vm.Sim.Mulint
 import OCaml.Vm.Sim.CheckSignals
 import OCaml.Vm.Sim.FieldStore
+import OCaml.Vm.Sim.HeapPayload
+import OCaml.Vm.Sim.FieldRestore
+import OCaml.Vm.Sim.Offsetref
 import OCaml.Vm.Sim.OffsetrefSegment
 import OCaml.Vm.Sim.OffsetrefPins
 import OCaml.Vm.Sim.PushRetaddr

@@ -1213,6 +1213,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.block_field_written
 #print axioms OCaml.Vm.Sim.field_log_outside
 #print axioms OCaml.Vm.Sim.heap_field_written
+#print axioms OCaml.Vm.Sim.payload_heap_frame
+#print axioms OCaml.Vm.Sim.payload_field_written
+#print axioms OCaml.Vm.Sim.field_restore
+#print axioms OCaml.Vm.Sim.offsetref_arm
+#print axioms OCaml.Vm.Sim.offsetref_step_arm
 
 #print axioms Vsa.Sim.tr_offsetref
 #print axioms OCaml.Vm.Sim.offsetref_loaded

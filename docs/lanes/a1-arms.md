@@ -1381,16 +1381,28 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
   LHU (1) remain unsupported by the site classifier (whole interpreter scope,
   not an F1 opcode count). No claim that classification alone proves arms.
 
+## OFFSETREF represented heap update
+
+`HeapPayload.lean:27` (`payload_heap_frame`) separates non-heap copying from
+heap reconstruction; `payload_field_written` combines it with the landed
+heap graph/write proof. `FieldRestore.lean:20` (`field_restore`) restores
+unit, registers, image, bindings and runtime after one field store.
+`Offsetref.lean:13` (`offsetref_arm`) composes dispatch and the generated
+eight-instruction body, including the 32-bit SLLIW contribution and exact
+readback. `offsetref_step_arm` matches the real bytecode rule.
+All three new modules check (0.8–1.1 s); their headlines enter the axiom audit.
+The named `FieldWriteOk` and runtime-window premises remain invariant work.
+
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: OFFSETREF non-heap payload restoration and generated-body
-composition are next. Its heap-update/root facts, generated body and
-operand-width arithmetic are proved. PUSH_RETADDR now has
+families: exception/trap control, allocation, application/return and
+remaining division and barrier-backed mutation. OFFSETREF now has
+represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 107 conditional
+setup/return bridges and named callee composition. There are 108 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
