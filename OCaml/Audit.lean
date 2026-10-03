@@ -28,6 +28,7 @@ import OCaml.Vm.Boot.FreeList
 import OCaml.Vm.Boot.WhileMinLogChecks
 import Vsa.Sim.Boot.Bytes
 import OCaml.Vm.Gc.Generated.Audit
+import OCaml.Vm.Gc.QueueAccess
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1599,3 +1600,20 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.caml_build_primitive_tableX4e38FRow
 #print axioms Vsa.Sim.caml_build_primitive_tableX4e3cTRow
 #print axioms Vsa.Sim.caml_build_primitive_tableX4e3cFRow
+
+#print axioms OCaml.Vm.Gc.chainPlan_facts
+#print axioms OCaml.Vm.Gc.PendingCopy.links
+#print axioms OCaml.Vm.Gc.WorkQueue.View.first
+#print axioms OCaml.Vm.Gc.WorkQueue.View.loadedNext
+#print axioms OCaml.Vm.Gc.WorkQueue.body_tail
+#print axioms OCaml.Vm.Gc.WorkQueue.body_frame
+#print axioms OCaml.Vm.Gc.WorkQueue.pop
+#print axioms OCaml.Vm.Gc.WorkQueue.pop_loaded
+#print axioms OCaml.Vm.Gc.WorkQueue.todo_window
+#print axioms OCaml.Vm.Gc.WorkQueue.head_access
+#print axioms OCaml.Vm.Gc.WorkQueue.head_regs
+#print axioms OCaml.Vm.Gc.WorkQueue.head_control
+#print axioms OCaml.Vm.Gc.WorkQueue.child_access
+#print axioms OCaml.Vm.Gc.WorkQueue.child_control
+#print axioms OCaml.Vm.Gc.WorkQueue.pop_access
+#print axioms OCaml.Vm.Gc.WorkQueue.pop_machine

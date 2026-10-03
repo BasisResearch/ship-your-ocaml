@@ -1,5 +1,29 @@
 # Lane a6-gc
 
+## Concrete intrusive queue pop (2026-10-03)
+
+- `QueueAccess.lean:pop_machine` discharges the generated SegPre from
+  platform/register pins, the generated code image, three node RAM windows,
+  a nonzero source address, and the concrete queue view. Its first-field
+  branch is computed from the actual loaded word; no branch/run/next-load
+  premise remains. The global write window is checked from Layout.
+- `Queue.lean:WorkQueue.pop_loaded` proves the ghost head is removed while
+  every disjoint tail link survives. `PendingCopy.eqv` uses raw-word Eqv
+  cells for the zero source header, forwarding target and next SOURCE link;
+  `body_frame` uses Eqv.transport and existing write-log frame lemmas.
+  Queue addresses are 64-bit machine words, so pointer arithmetic agrees
+  directly with generated loads. This link view does not claim copied-field
+  correctness, allocator ownership or termination.
+- `ChainPlan.lean:chainPlan_facts` separates reusable code certificates from
+  finite scalar-access and branch certificates. The generator now supplies
+  MopupPop.code_facts for both outcomes, using ELF pins and decode theorems.
+- Targeted capped builds pass; all new declarations are in OCaml/Audit.lean.
+  The law checker again passes 2000 cyclic/aliased intrusive-queue cases
+  and the existing Forward/Infix/remembered-set/promotion checks.
+- Previous entry/pop effects landed through the full gate as `f21deba`.
+  Next: copied-field partial-relocation invariant and oldify call splicing.
+  Full mopup/collection, production live-word Fits, and compiler GcSafe remain open.
+
 ## Mopup queue entry and pop (2026-10-02)
 
 - `Generated/MopupControl.lean:entry_registers` proves the actual prologue

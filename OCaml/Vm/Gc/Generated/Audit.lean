@@ -707,7 +707,9 @@ private def gcAuditNames : Array Name := #[
   ``OCaml.Vm.Gc.Immediate.Post.returns,
   ``OCaml.Vm.Gc.Immediate.run,
   ``OCaml.Vm.Gc.MopupControl.entry_registers,
+  ``OCaml.Vm.Gc.MopupPop.blocks_eq,
   ``OCaml.Vm.Gc.MopupPop.chain_ok,
+  ``OCaml.Vm.Gc.MopupPop.code_facts,
   ``OCaml.Vm.Gc.MopupPop.queue_write,
   ``OCaml.Vm.Gc.MopupPop.Post.todo,
   ``OCaml.Vm.Gc.MopupPop.run
