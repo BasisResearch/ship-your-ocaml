@@ -1,6 +1,6 @@
 # Lane a0-boot
 
-## Round 2 status (2026-10-02)
+## Round 2 status (2026-10-03)
 
 The reset-to-cut execution proof is now the active exit criterion. Round 1
 proved only `Loaded` for the complete captured cut; the native run is not
@@ -42,7 +42,9 @@ callees remain open in `whileMin_reset_loaded_Statement`.
 
 The reset metadata increment landed as `5768425`, full gate passed.
 
-New checked initialization progress:
+The register initializer and lookup foundations landed as `8e99cd2`, full gate passed.
+
+Checked initialization progress:
 
 * `initializeRegisters_program` and `initializeRegisters_run` in
   `Startup/InitializeRegisters.lean` cover the complete register initializer,
@@ -65,12 +67,32 @@ New checked initialization progress:
 * `Startup.strcmpSpecSign_zero_iff` in `CompareNames.lean` derives
   name equality from the landed strcmp sign spec and represented C strings.
   `strcmpSign_zero_iff` connects that observation to the zero-register branch.
-  The counted lookup loop and the caller composition are still open.
+  The counted inner lookup is now proved as described below.
+
+Checked inner builtin lookup:
+
+* `lookup_run` in `Startup/LookupRun.lean` covers the real region
+  `0x80024e0c` through `0x80024e4c`: initial name-pointer load, argument
+  setup, JAL, arbitrary-length strcmp scan, final match and function-pointer
+  load. It returns the resolved function in a1 and preserves memory/output
+  and the caller register frame.
+* `lookup_loop` in `Startup/LookupLoop.lean` uses `loopFromBody` and the
+  measure `target - lookupIndex`. One symbolic `lookup_iteration` composes
+  `lookup_head` with the generated index/load back edge. There is no concrete
+  comparison replay or step-count-dependent kernel term.
+* `NameTable` requires memory-only string/code/mask/window facts, a first
+  matching index below 2^31, and nonnull pointer readbacks. These remain to
+  be instantiated from the runtime image and loaded PRIM section; the outer
+  403-entry construction/insertion loop is still open.
+* `nextLookupIndex_nat` proves the signed ADDIW increment for every in-range
+  index. `compare_names` converts the full aligned/unaligned library spec to
+  the exact equality branch. All modules check under default proof budgets;
+  `LookupLoop` takes about 2.8 s and `LookupRun` about 4.8 s.
 
 Reset still must supply successful `sail_model_init` / `init_model`, the initial
 GoodState/code facts and loader correspondence. Register setup is now proved.
 Remaining startup functions include `caml_main`, GC
-initialization, file/code loading, primitive lookup, unmarshalling,
+initialization, file/code loading, outer primitive-table construction, unmarshalling,
 oldify/mopup and argv initialization. The first CFG inspection finds that
 `caml_main` (482 instructions), `caml_init_gc` (160) and primitive-table
 construction (160) exceed gen_fn's current whole-function budget. Their

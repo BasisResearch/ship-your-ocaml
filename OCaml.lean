@@ -267,3 +267,5 @@ import OCaml.Vm.Boot.Startup.InitializeRegisters
 import OCaml.Vm.Boot.Startup.PrimitiveLookupRows
 import OCaml.Vm.Boot.Startup.PrimitiveLookupCalls
 import OCaml.Vm.Boot.Startup.CompareNames
+
+import OCaml.Vm.Boot.Startup.LookupRun

@@ -1635,3 +1635,22 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.WorkQueue.body_cons
 #print axioms OCaml.Vm.Gc.WorkQueue.body_frame_log
 #print axioms OCaml.Vm.Gc.WorkQueue.enqueue
+-- Complete builtin primitive-name lookup through a counted strcmp scan.
+#print axioms OCaml.Vm.Boot.Startup.strcmp_frame_noise
+#print axioms OCaml.Vm.Boot.Startup.NameComparePost.of_strcmp
+#print axioms OCaml.Vm.Boot.Startup.compare_names
+#print axioms OCaml.Vm.Boot.Startup.lookup_argument_input
+#print axioms OCaml.Vm.Boot.Startup.lookup_branch_input
+#print axioms OCaml.Vm.Boot.Startup.lookup_branch
+#print axioms OCaml.Vm.Boot.Startup.lookup_compare
+#print axioms OCaml.Vm.Boot.Startup.lookup_head
+#print axioms OCaml.Vm.Boot.Startup.lookup_advance_input
+#print axioms OCaml.Vm.Boot.Startup.lookup_advance
+#print axioms OCaml.Vm.Boot.Startup.nextLookupIndex_nat
+#print axioms OCaml.Vm.Boot.Startup.lookupIndex_nat
+#print axioms OCaml.Vm.Boot.Startup.LookupAt.index_eq
+#print axioms OCaml.Vm.Boot.Startup.lookup_iteration
+#print axioms OCaml.Vm.Boot.Startup.lookup_loop
+#print axioms OCaml.Vm.Boot.Startup.lookup_start_input
+#print axioms OCaml.Vm.Boot.Startup.lookup_finish_input
+#print axioms OCaml.Vm.Boot.Startup.lookup_run
