@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Queue pop through forwarded first-field update (2026-10-03)
+
+- `QueueObserved.lean` supplies concrete source/copy/child pins and the
+  canonical queue-head store. `QueueFirstInput.lean:PopPost.first_input`
+  derives the callee-facing input from those loads, preserved native pins
+  and framed initial observations; `first_pc` uses the actual parity test.
+- `PopFirst.lean:pop_first` composes the actual pop and complete forwarded
+  first-field path, with exact combined log, restored native state, code
+  and output frames, and remaining queue. `View.frame_log` shares the queue
+  Eqv frame; the older forwarded-slot proof now uses it too.
+- `PopFirstPayload.lean:PopFirstPost.relocating_grey` supplies the typed
+  suffix boundary. Shared `relocating_grey_of_pending` also serves the
+  standalone first-field result. Existing integer-pop setup now reuses
+  the same concrete loaded-pointer facts.
+- Capped targeted build passes (705 jobs). First-field update landed as
+  `7e70e0b`; PHASES records the queue-pop seam. Next: suffix-setup and whole
+  pending-object composition, mixed fields and fresh-copy/allocator cases.
+  Outer roots, ephemerons, major reclamation and G2/live-word Fits remain open.
+
 ## First-field update and relocated grey boundary (2026-10-03)
 
 - `FirstArgs.lean:args_machine` executes the generated destination setup.

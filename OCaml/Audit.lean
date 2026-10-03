@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.PopFirstPayload
 import OCaml.Vm.Gc.FirstPayload
 import OCaml.Vm.Boot.Startup.MallocBootHeap
 import OCaml.Vm.Gc.FirstYoungAccess
@@ -2551,3 +2552,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.FreshArena.heap
 #print axioms OCaml.Vm.Boot.Startup.malloc_boot_fresh
 #print axioms OCaml.Vm.Boot.Startup.malloc_boot_initialize
+
+#print axioms OCaml.Vm.Gc.WorkQueue.View.frame_log
+#print axioms OCaml.Vm.Gc.FieldCopy.relocating_grey_of_pending
+#print axioms OCaml.Vm.Gc.WorkQueue.PopPost.loaded_regs
+#print axioms OCaml.Vm.Gc.WorkQueue.PopPost.memory_effect
+#print axioms OCaml.Vm.Gc.WorkQueue.PopPost.oldifyCode
+#print axioms OCaml.Vm.Gc.WorkQueue.PopPost.first_native
+#print axioms OCaml.Vm.Gc.WorkQueue.PopPost.first_input
+#print axioms OCaml.Vm.Gc.WorkQueue.PopPost.first_pc
+#print axioms OCaml.Vm.Gc.WorkQueue.pop_first
+#print axioms OCaml.Vm.Gc.WorkQueue.PopFirstPost.word_frame
+#print axioms OCaml.Vm.Gc.WorkQueue.PopFirstPost.relocating_grey

@@ -100,9 +100,6 @@ theorem Post.queue_frame {source root before after qs pl}
     (links : WorkQueue.LinksOutside qs [(root.toNat, 8, word before source.toNat)])
     (head : OutLRange [(root.toNat, 8, word before source.toNat)]
       Layout.sym_oldify_todo_list 8) : WorkQueue.View qs pl after := by
-  refine ⟨?_, WorkQueue.body_frame_log queue.links links post.memory⟩
-  change bytesT after.σ.mem _ 8 = _
-  rw [post.memory, bytesT_writeLog_out _ head]
-  exact queue.root
+  exact queue.frame_log post.memory links head
 
 end OCaml.Vm.Gc.Forwarded

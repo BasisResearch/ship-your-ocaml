@@ -73,6 +73,19 @@ theorem run (immediate : Bool) (lds : List (List (BitVec 8)))
     FnSummary pc (SegPre (blocks immediate) regs lds pc mem) (Post immediate lds mem) :=
   segmentSummary (blocks immediate) regs lds pc mem (chain_ok immediate)
 
+/-- The queue pop has already loaded the copied block's saved first field. -/
+theorem Post.child_value {immediate lds mem c} (post : Post immediate lds mem c) :
+    gprGet c.σ 10 = some (bytesVal .ld (lds.tail.tail.tail.headD [])) := by
+  apply gholds_lookup _ post.registers
+  cases immediate <;> rfl
+
+theorem actual_written (immediate : Bool) : ∀ n ∈ wrChain (blocks immediate), n ∈ [18,19,10,15] := by
+  cases immediate <;> decide
+
+def pointerPc : BitVec 64 := 0x80009d20#64
+
+theorem Post.pointer_pc {lds mem c} (post : Post false lds mem c) : PCAt pointerPc c := post.pc
+
 /-- Both outcomes retain the observed source and destination for the scan. -/
 theorem Post.source_target {immediate lds mem c} (post : Post immediate lds mem c) :
     GHolds c.σ [(18, bytesVal .ld (lds.headD [])), (19, bytesVal .ld (lds.tail.headD []))] := by

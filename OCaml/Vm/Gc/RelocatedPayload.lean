@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.ForwardedLoop
 import OCaml.Vm.Reloc
+import OCaml.Vm.Gc.PendingPayload
 
 namespace OCaml.Vm.Gc.FieldCopy
 open OCaml.Bytecode Vsa.Machine Vsa.Sim Primitives Reloc
@@ -13,6 +14,27 @@ structure RelocatingGrey (a b : Nat) (fields : List Val) (pl : Place)
   first : ∀ v, fields[0]? = some v → (Eqv.val v id).P (reloc μ pl) b initial
   suffix : ∀ i v, fields[i]? = some v → 1 ≤ i →
     (Eqv.val v id).P pl (a + 8 * i) initial
+
+/-- Shared grey-boundary construction from an actual first-slot image and
+unchanged source suffix. Both standalone and queue-pop compositions use the
+same Eqv transport, independent of their different exact write logs. -/
+theorem relocating_grey_of_pending {q : PendingCopy} {fields pl μ before after}
+    (grey : (pendingPayload q fields).P pl q.target.toNat before)
+    (firstImage : ∀ v, fields[0]? = some v →
+      word after q.target.toNat = relocWord μ pl v (word before q.target.toNat))
+    (suffixSame : ∀ i, 1 ≤ i → i < fields.length →
+      word after (q.source.toNat + 8 * i) = word before (q.source.toNat + 8 * i)) :
+    RelocatingGrey q.source.toNat q.target.toNat fields pl μ after := by
+  constructor
+  · intro v member
+    apply (Eqv.val v id).transport μ pl q.target.toNat q.target.toNat before after
+    · simpa only [pendingPayload, Eqv.list, Eqv.all, Eqv.guard, Eqv.val, id_eq, ite_true] using grey 0 v member
+    · exact firstImage v member
+  · intro i v member lower
+    have bound : i < fields.length := (List.getElem?_eq_some_iff.mp member).1
+    have nonzero : i ≠ 0 := by omega
+    simpa only [pendingPayload, Eqv.list, Eqv.all, Eqv.guard, Eqv.val, id_eq,
+      ite_eq_right nonzero, suffixSame i lower bound] using grey i v member
 
 /-- A completed scan with typed relocation observations represents the
 entire payload at the new placement. The already-handled first field is

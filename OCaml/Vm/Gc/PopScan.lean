@@ -1,5 +1,5 @@
 import OCaml.Vm.Gc.ScanSetup
-import OCaml.Vm.Gc.QueueAccess
+import OCaml.Vm.Gc.QueueObserved
 
 namespace OCaml.Vm.Gc.WorkQueue
 open OCaml.Bytecode Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
@@ -60,14 +60,7 @@ theorem PopPost.setup_input {q qs pl count before after}
     (outside : OutsideTodo (q.target.toNat - 8))
     (s8 : gprGet before.σ 24 = some 1#64) :
     FieldCopy.SetupInput q.source.toNat q.target.toNat count after := by
-  have loadedSource : bytesVal .ld ((loads q before).headD []) = q.source := by
-    change bytesVal .ld (read8 before.σ.mem Layout.sym_oldify_todo_list) = _
-    rw [read8_value]; exact input.queue.root
-  have loadedTarget : bytesVal .ld ((loads q before).tail.headD []) = q.target := by
-    change bytesVal .ld (read8 before.σ.mem q.source.toNat) = _
-    rw [read8_value]; exact input.queue.first.target
-  have registers := post.machine.source_target
-  rw [loadedSource, loadedTarget] at registers
+  have registers := post.loaded_regs input.queue
   have keep : gprGet after.σ 24 = gprGet before.σ 24 :=
     post.effects.frame Register.x24 (by decide) (MopupPop.preserves_s8 _)
   refine ⟨post.machine.good, post.machine.minstret, post.machine.tick,

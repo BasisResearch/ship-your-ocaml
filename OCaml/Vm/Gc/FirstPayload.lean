@@ -36,17 +36,12 @@ theorem Post.relocating_grey {R before after μ pl q fields}
     (suffixOutside : ∀ i, 1 ≤ i → i < fields.length →
       OutLRange (ForwardedCall.effect (FirstCall.linked (args R)) before) (q.source.toNat + 8 * i) 8) :
     FieldCopy.RelocatingGrey q.source.toNat q.target.toNat fields pl μ after := by
-  constructor
+  apply FieldCopy.relocating_grey_of_pending grey
   · intro v member
-    have represented : (Eqv.val v id).P pl (R 19).toNat before := by
-      simpa only [target, pendingPayload, Eqv.list, Eqv.all, Eqv.guard, Eqv.val, id_eq, ite_true] using grey 0 v member
-    have updated := post.first_relocates represented (target ▸ loaded) (forwarding v member)
-    simpa only [target] using updated
-  · intro i v member lower
-    have bound : i < fields.length := (List.getElem?_eq_some_iff.mp member).1
-    have nonzero : i ≠ 0 := by omega
-    have same := post.word_frame (suffixOutside i lower bound)
-    simpa only [pendingPayload, Eqv.list, Eqv.all, Eqv.guard, Eqv.val, id_eq,
-      ite_eq_right nonzero, same] using grey i v member
+    have stored : word after q.target.toNat = word before (R 10).toNat := by
+      simpa only [target] using post.first
+    rw [stored, loaded, forwarding v member]
+  · intro i lower bound
+    exact post.word_frame (suffixOutside i lower bound)
 
 end OCaml.Vm.Gc.FirstField

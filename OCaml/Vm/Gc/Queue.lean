@@ -135,6 +135,16 @@ theorem body_frame_log {qs pl c c' log}
   rw [memory]
   exact bytesT_writeLog_out _ (outside.cells i p hp j cell hc)
 
+/-- A disjoint exact log preserves both the queue head and its Eqv links. -/
+theorem View.frame_log {qs pl before after log} (queue : View qs pl before)
+    (memory : after.σ.mem = writeLog before.σ.mem log)
+    (links : LinksOutside qs log) (root : OutLRange log Layout.sym_oldify_todo_list 8) :
+    View qs pl after := by
+  refine ⟨?_, body_frame_log queue.links links memory⟩
+  change bytesT after.σ.mem _ 8 = _
+  rw [memory, bytesT_writeLog_out _ root]
+  exact queue.root
+
 /-- Queue-link cells must not overlap the global head word. The machine
 layout and allocator separation will supply this footprint fact. -/
 def Separate (qs : List PendingCopy) : Prop :=
