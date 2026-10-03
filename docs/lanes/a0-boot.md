@@ -69,6 +69,8 @@ Checked initialization progress:
   `strcmpSign_zero_iff` connects that observation to the zero-register branch.
   The counted inner lookup is now proved as described below.
 
+The inner lookup increment landed as `a9f9eed`, full gate passed.
+
 Checked inner builtin lookup:
 
 * `lookup_run` in `Startup/LookupRun.lean` covers the real region
@@ -89,8 +91,26 @@ Checked inner builtin lookup:
   the exact equality branch. All modules check under default proof budgets;
   `LookupLoop` takes about 2.8 s and `LookupRun` about 4.8 s.
 
-Reset still must supply successful `sail_model_init` / `init_model`, the initial
-GoodState/code facts and loader correspondence. Register setup is now proved.
+Checked model/runner setup:
+
+* `model_init` in `Startup/ModelInit.lean` proves the actual Sail
+  `sail_model_init` succeeds for arbitrary input states, preserves memory,
+  output and cycle count, and supplies named reset CSR/PMA/signal pins.
+* `LegalizeReset.lean` proves the three zero-valued CSR legalization calls
+  with a readable misa. `InitializerFrame.lean` checks that the generated
+  assignment list preserves nine seed registers. `RunnerDefaults.lean`
+  certifies 21 initialized register values from the source-derived write list.
+* `runner_setup` in `Startup/RunnerSetup.lean` composes model initialization
+  with ELF-dependent register setup for any valid tohost metadata. The result
+  has both `ModelSeed` and `RunnerDefaults`, plus memory/output/cycle frames.
+  It checks in about 1.9 s; model initialization checks in about 7 s.
+* `RegisterWrites.lastValue` / `registers_read` observe final register values
+  without normalizing an accumulated machine state. The append/read and frame
+  laws keep the complete initializer within default recursion limits.
+
+Reset still must supply successful `init_model` (configuration validation and
+architectural reset), initial GoodState/code facts, and loader correspondence.
+The first two setup stages now have a composed execution proof.
 Remaining startup functions include `caml_main`, GC
 initialization, file/code loading, outer primitive-table construction, unmarshalling,
 oldify/mopup and argv initialization. The first CFG inspection finds that

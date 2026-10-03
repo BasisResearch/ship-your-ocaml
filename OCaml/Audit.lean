@@ -1690,3 +1690,19 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.WorkQueue.enqueue_access
 #print axioms OCaml.Vm.Gc.WorkQueue.enqueue_loadedFirst
 #print axioms OCaml.Vm.Gc.WorkQueue.enqueue_machine
+-- Source model initialization and runner setup, before architectural reset.
+#print axioms OCaml.Vm.Boot.Startup.legalize_senvcfg_zero
+#print axioms OCaml.Vm.Boot.Startup.legalize_mseccfg_zero
+#print axioms OCaml.Vm.Boot.Startup.legalize_menvcfg_zero
+#print axioms OCaml.Vm.Boot.Startup.model_init
+#print axioms OCaml.Vm.Boot.Startup.register_tail_keeps_seed
+#print axioms OCaml.Vm.Boot.Startup.initializer_keeps_seed
+#print axioms OCaml.Vm.Boot.Startup.initializer_read_tail
+#print axioms OCaml.Vm.Boot.Startup.initializer_model_seed
+#print axioms OCaml.Vm.Boot.Startup.runner_defaults
+#print axioms OCaml.Vm.Boot.Startup.runner_setup
+#print axioms Vsa.Sim.RegisterWrites.lastValue_append
+#print axioms Vsa.Sim.RegisterWrites.registers_read
+#print axioms Vsa.Sim.RegisterWrites.apply_read
+#print axioms Vsa.Sim.RegisterWrites.apply_read_append
+#print axioms Vsa.Sim.RegisterWrites.registers_frame
