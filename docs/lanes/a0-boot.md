@@ -2,6 +2,22 @@
 
 ## Round 2 status (2026-10-03)
 
+`Startup/MallocRun.lean` now closes `reset_first_allocation_exists`: the
+actual pinned ELF reset reaches the return from its first 928-byte malloc.
+`ResetMallocWitness.malloc_run` instantiates the complete bootstrap proof
+with loader-supplied allocator pins, crt0's retained global pointer, dense
+RAM presence, exact stack geometry, and a disjoint mutable footprint.
+`FirstMallocEnd` records return PC/ABI, the exact pointer `heapStart + 16`,
+and the initialized heap shape. The shared library `malloc_ret` supplies
+its terminal rule; its impossible failure branch is rejected by capacity.
+The symbolic-to-machine bridge uses `symbolic_summary` and the run kernel.
+The final bridge module checks in 1 s, without evaluating the execution.
+
+The image increment landed as `356d713`, full gate passed. Next: recover
+the generated-block interface after malloc, finish domain initialization,
+and continue the remaining runtime startup calls. Round 2 exit remains open.
+
+
 `Startup/AllocatorImage.lean` (`ResetMallocWitness.allocator_loaded`) now
 supplies the entire landed allocator read-only table at the actual first
 call. `gen_boot_allocator_pins.py` certifies 366 bounded chunks against the

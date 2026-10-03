@@ -48,6 +48,15 @@ theorem ResetMallocWitness.idle {initial atMain atDomain atAlloc atMalloc : Conf
     atMalloc.σ.regs.get? .htif_payload_writes = some 0#4 :=
   (w.post.frame .htif_payload_writes (by decide) (by decide)).trans w.alloc.idle
 
+/-- The startup register frames retain crt0's initialized global pointer. -/
+theorem ResetMallocWitness.gp {initial atMain atDomain atAlloc atMalloc : Config}
+    (w : ResetMallocWitness initial atMain atDomain atAlloc atMalloc) :
+    gprGet atMalloc.σ 3 = some (BitVec.ofNat 64 Layout.sym_global_pointer) :=
+  (w.post.frame .x3 (by decide) (by decide)).trans
+    ((w.alloc.post.frame .x3 (by decide) (by decide)).trans
+      ((w.alloc.domain.post.frame .x3 (by decide) (by decide)).trans
+        w.alloc.domain.main.post.gp))
+
 /-- Any live image footprint inside RAM has the library model's full platform
 invariant at the actual reset-reachable first malloc entry. -/
 theorem ResetMallocWitness.vsaOk {initial atMain atDomain atAlloc atMalloc : Config}

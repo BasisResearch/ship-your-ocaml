@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.MallocRun
 import OCaml.Vm.Gc.QueueForwarded
 import OCaml.Vm.Gc.PopForwarded
 import OCaml.Vm.Boot.Startup.AllocatorImage
@@ -2683,3 +2684,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.initial_byte
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.impure
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.allocator_loaded
+
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.gp
+#print axioms OCaml.Vm.Boot.Startup.firstMalloc_ok
+#print axioms OCaml.Vm.Boot.Startup.firstMalloc_separate
+#print axioms OCaml.Vm.Boot.Startup.startup_alloc_live
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.symbolic_input
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.malloc_run
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_first_allocation_exists

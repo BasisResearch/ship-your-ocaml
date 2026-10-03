@@ -90,6 +90,7 @@ theorem read8_clearWords_above (m : Std.ExtHashMap Nat (BitVec 8)) (base n a : N
 
 /-- C startup reaches caml_main with the embedded header preserved by BSS clearing. -/
 structure CrtCamlMainPost (initial c : Config) : Prop where
+  gp : gprGet c.σ 3 = some (BitVec.ofNat 64 Layout.sym_global_pointer)
   gprs : GprPresent initial.σ → GprPresent c.σ
   good : GoodState c.σ
   tick : c.tick < 2
@@ -117,7 +118,7 @@ theorem crt0_to_caml_main (initial : Config) (h : CrtReady initial)
     rw [m.memory]; exact read8_clearWords_above _ _ _ _ (by decide)
   have argv : read8 mid.σ.mem Layout.sym_embedded_argv = read8 initial.σ.mem Layout.sym_embedded_argv := by
     rw [m.memory]; exact read8_clearWords_above _ _ _ _ (by decide)
-  refine ⟨out, front.trans back, ⟨(fun h => p.gprs (m.gprs h)), p.good, p.tick, p.pc, ?_, p.stack, ?_, p.linkReg,
+  refine ⟨out, front.trans back, ⟨(p.frame .x3 (by decide) (by decide)).trans m.gp, (fun h => p.gprs (m.gprs h)), p.good, p.tick, p.pc, ?_, p.stack, ?_, p.linkReg,
     p.output.trans m.output, ?_⟩⟩
   · rw [p.memory, m.ready.linkReg, env, m.memory]; rfl
   · rw [← argv]; exact p.argv
