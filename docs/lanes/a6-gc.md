@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Oldify native return and forwarded composition (2026-10-03)
+
+- `OldifyReturn.lean:return_machine` proves the common native epilogue
+  from concrete stack windows and an aligned saved return address. All
+  eleven loads restore their saved registers, sp advances by the decoded
+  frame size, memory/output remain unchanged, and execution returns.
+- The generator extracts saved slots and the stack adjustment from the ELF.
+  Access certificates use ordered load facts rather than backtracking over
+  concrete memory terms; all proofs retain the default elaboration limit.
+- `ForwardedReturn.lean:forwarded_return` composes the real zero-header
+  path through that epilogue. It retains the root store, restored registers,
+  original saved return address, platform/code/output and native frames.
+  `SavedSame` shares the saved-word frame interface for further call seams.
+- Targeted capped build passes (617 jobs). Forwarded root update landed
+  as `a99f02d`. Next: prologue/range entry and caller composition, plus
+  allocation-return restoration. Full collector relocation and G2 remain open.
+
 ## Already-forwarded oldify path (2026-10-03)
 
 - `ForwardedAccess.lean:forwarded_machine` runs the generated zero-header

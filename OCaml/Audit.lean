@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.ForwardedReturn
 import OCaml.Vm.Gc.ForwardedAccess
 import OCaml.Os.HtifMemory
 import OCaml.Os.DirectoryObstruction
@@ -2042,3 +2043,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Forwarded.Post.slot_relocates
 #print axioms OCaml.Vm.Gc.Forwarded.Post.target_from_links
 #print axioms OCaml.Vm.Gc.Forwarded.Post.queue_frame
+
+#print axioms OCaml.Vm.Gc.OldifyReturn.return_machine
+#print axioms OCaml.Vm.Gc.OldifyReturn.SavedSame.returnWord
+#print axioms OCaml.Vm.Gc.OldifyReturn.SavedSame.restored
+#print axioms OCaml.Vm.Gc.Forwarded.Post.saved_same
+#print axioms OCaml.Vm.Gc.Forwarded.Post.return_input
+#print axioms OCaml.Vm.Gc.Forwarded.forwarded_return
