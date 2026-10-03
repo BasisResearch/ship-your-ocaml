@@ -390,5 +390,16 @@ import OCaml.Vm.Sim.CursorCopy
 import OCaml.Vm.Sim.GrabReserve
 import OCaml.Vm.Sim.GrabInitialize
 import OCaml.Vm.Sim.GrabAlloc
+import OCaml.Vm.Sim.MakeblockRestore
+import OCaml.Vm.Sim.MakeblockArithmetic
+import OCaml.Vm.Sim.Makeblock1FastSegment
+import OCaml.Vm.Sim.Makeblock1FastPins
+import OCaml.Vm.Sim.Makeblock1FastLayout
+import OCaml.Vm.Sim.Makeblock2FastSegment
+import OCaml.Vm.Sim.Makeblock2FastPins
+import OCaml.Vm.Sim.Makeblock2FastLayout
+import OCaml.Vm.Sim.Makeblock3FastSegment
+import OCaml.Vm.Sim.Makeblock3FastPins
+import OCaml.Vm.Sim.Makeblock3FastLayout
 import OCaml.Vm.Sim.ClosureLayout
 import OCaml.Vm.Sim.GrabAllocInitLayout

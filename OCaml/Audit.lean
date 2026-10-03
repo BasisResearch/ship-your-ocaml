@@ -2385,6 +2385,25 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.grab_alloc_arm
 #print axioms OCaml.Vm.Sim.grab_alloc_step_arm
 
+
+-- MAKEBLOCK1--3 nursery bodies and common allocation restoration.
+#print axioms Vsa.Sim.tr_makeblock1_fast
+#print axioms OCaml.Vm.Sim.makeblock1_fast_loaded
+#print axioms OCaml.Vm.Sim.makeblock1_fast_domain0
+#print axioms OCaml.Vm.Sim.makeblock1_fast_domain1
+#print axioms Vsa.Sim.tr_makeblock2_fast
+#print axioms OCaml.Vm.Sim.makeblock2_fast_loaded
+#print axioms OCaml.Vm.Sim.makeblock2_fast_domain0
+#print axioms OCaml.Vm.Sim.makeblock2_fast_domain1
+#print axioms Vsa.Sim.tr_makeblock3_fast
+#print axioms OCaml.Vm.Sim.makeblock3_fast_loaded
+#print axioms OCaml.Vm.Sim.makeblock3_fast_domain0
+#print axioms OCaml.Vm.Sim.makeblock3_fast_domain1
+#print axioms OCaml.Vm.Sim.makeblock_allocation_roots
+#print axioms OCaml.Vm.Sim.makeblock_restore
+#print axioms OCaml.Vm.Sim.makeblock_tag_word
+#print axioms OCaml.Vm.Sim.makeblock_header_word
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

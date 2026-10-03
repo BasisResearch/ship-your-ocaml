@@ -1648,6 +1648,17 @@ saved-extra sign bound remain explicit. Initialization landed as `a58e5d5`,
 all gates passing. The opcode bridge count stays 121 because GRAB's fast path
 was already counted.
 
+## Fixed-arity MAKEBLOCK nursery foundations
+
+Generated MAKEBLOCK1/2/3 nursery bodies (20/24/26 instructions) check in
+3.0/5.7/6.7 s. Their generated global-address projections resolve both
+ELF-relative references through `Layout`. `MakeblockRestore.lean`
+(`makeblock_restore`) shares exact initialized block layout, allocation-root
+extension, stack consumption and platform restoration across all arities.
+`MakeblockArithmetic.lean` shares bounded tag decoding and header encoding.
+The represented native adapters are next. Complete allocating GRAB landed
+as `b6ca7b9`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
