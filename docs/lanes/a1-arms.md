@@ -1590,6 +1590,17 @@ between application accumulators and RESTART environments. Stack capacity,
 access geometry, field-count bounds and runtime framing remain explicit.
 The counted forward-copy loop landed as `09c960b`, all gates passing.
 
+## GRAB allocation cuts and restoration
+
+The insufficient-arity nursery path now has generated reservation, initialization,
+copy-loop branches and caller-frame suffixes (16/16/5/5/11 instructions). Native
+segments check in 3.3/3.8/1.1/1.1/2.1 s. `BlockAllocation.lean` shares header
+encoding, exact initializer-log layout and captured-root reasoning for ordinary
+blocks. `GrabRestore.lean` (`grab_restore`) extends the live heap and restores
+the saved caller through the existing allocation and RETURN payload rules;
+it checks in 0.89 s. Native loop composition and nursery-side conditions remain
+open. Full represented RESTART landed as `8eb35e2`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

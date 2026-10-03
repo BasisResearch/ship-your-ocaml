@@ -2312,6 +2312,25 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.restart_arm
 #print axioms OCaml.Vm.Sim.restart_step_arm
 
+
+-- GRAB allocation cuts and shared represented block restoration.
+#print axioms Vsa.Sim.tr_grab_alloc_prefix
+#print axioms OCaml.Vm.Sim.grab_alloc_prefix_loaded
+#print axioms Vsa.Sim.tr_grab_alloc_init
+#print axioms OCaml.Vm.Sim.grab_alloc_init_loaded
+#print axioms Vsa.Sim.tr_grab_copy_more
+#print axioms OCaml.Vm.Sim.grab_copy_more_loaded
+#print axioms Vsa.Sim.tr_grab_copy_last
+#print axioms OCaml.Vm.Sim.grab_copy_last_loaded
+#print axioms Vsa.Sim.tr_grab_alloc_suffix
+#print axioms OCaml.Vm.Sim.grab_alloc_suffix_loaded
+#print axioms OCaml.Vm.Sim.block_header_ok
+#print axioms OCaml.Vm.Sim.block_layout_of_words
+#print axioms OCaml.Vm.Sim.block_log_layout
+#print axioms OCaml.Vm.Sim.block_allocation_roots
+#print axioms OCaml.Vm.Sim.grab_allocation_roots
+#print axioms OCaml.Vm.Sim.grab_restore
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

@@ -375,3 +375,14 @@ import OCaml.Vm.Boot.WhileMinElfHeader
 import OCaml.Vm.Boot.WhileMinElfTables
 import OCaml.Vm.Sim.ForwardCopy
 import OCaml.Vm.Sim.Restart
+import OCaml.Vm.Sim.GrabAllocPrefixSegment
+import OCaml.Vm.Sim.GrabAllocPrefixPins
+import OCaml.Vm.Sim.GrabAllocInitSegment
+import OCaml.Vm.Sim.GrabAllocInitPins
+import OCaml.Vm.Sim.GrabCopyMoreSegment
+import OCaml.Vm.Sim.GrabCopyMorePins
+import OCaml.Vm.Sim.GrabCopyLastSegment
+import OCaml.Vm.Sim.GrabCopyLastPins
+import OCaml.Vm.Sim.GrabAllocSuffixSegment
+import OCaml.Vm.Sim.GrabAllocSuffixPins
+import OCaml.Vm.Sim.GrabRestore

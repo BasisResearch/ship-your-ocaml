@@ -1,0 +1,108 @@
+{
+  "theorem": "tr_grab_copy_last",
+  "doc": "GRAB_COPY_LAST arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.GrabCopyLastSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut",
+    "OCaml.Vm.Sim.GrabCopyLastStoreFrame"
+  ],
+  "params": [
+    "(v15 v14 v12 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80003700 : 0x80000000 ≤ (v15 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_80003700 : (v15 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80003700 : (v15 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v15 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(loaded_80003700 : BitVec 64)",
+    "(hvalue_80003700 : loaded_80003700 = (sign_extend (m := 64) (bytesT8 m0 (v15 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))))",
+    "(hlo_8000370c : 0x80000000 ≤ ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(hhi_8000370c : ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_8000370c : tohostAddr + 16 ≤ ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(halign_8000370c : ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat % 8 = 0)",
+    "(hcode_8000370c : ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x80003700 ∨ 0x80003714 ≤ ((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(m_8000370c : Std.ExtHashMap Nat (BitVec 8))",
+    "(hstore_8000370c : m_8000370c = writeMap8 (m0) (((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat) (sdData_val loaded_80003700))",
+    "(hguard_80003710 : (v12 != (v15 + sign_extend (m := 64) (0x008#12))) = false)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlGrabCopyLastLoaded",
+  "pins": [
+    {
+      "reg": "x15",
+      "val": "v15",
+      "hyp": "hv15"
+    },
+    {
+      "reg": "x14",
+      "val": "v14",
+      "hyp": "hv14"
+    },
+    {
+      "reg": "x12",
+      "val": "v12",
+      "hyp": "hv12"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80003700",
+      "site": "site_80003700_grab_copy_last",
+      "class": "alu",
+      "asm": "ld a3,0(a5)",
+      "rd": "x13",
+      "rd_val": "loaded_80003700",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v15 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl hlo_80003700 hhi_80003700 hhtif_80003700 $hi",
+      "rw": "hmemeq, ← hvalue_80003700"
+    },
+    {
+      "addr": "0x80003704",
+      "site": "site_80003704_grab_copy_last",
+      "class": "alu",
+      "asm": "addi a5,a5,8",
+      "rd": "x15",
+      "rd_val": "(v15 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v15 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003708",
+      "site": "site_80003708_grab_copy_last",
+      "class": "alu",
+      "asm": "addi a4,a4,8",
+      "rd": "x14",
+      "rd_val": "(v14 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v14 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x14 $hG $hpc $hmi $pin:x14 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000370c",
+      "site": "site_8000370c_grab_copy_last",
+      "class": "sd",
+      "asm": "sd a3,-8(a4)",
+      "key": "((v14 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0xff8#12)).toNat",
+      "src_val": "loaded_80003700",
+      "loaded_via": "grab_copy_last_code_store _ _ _ hcode_8000370c $prev",
+      "call": "$vmi $v:x14 $v:x13 $hG $hpc $hmi $pin:x14 $pin:x13 $hmem rfl hlo_8000370c hhi_8000370c hhtif_8000370c halign_8000370c $hi",
+      "mem_alias": "m_8000370c",
+      "mem_alias_eq": "hstore_8000370c"
+    },
+    {
+      "addr": "0x80003710",
+      "site": "site_80003710_nottaken_grab_copy_last",
+      "class": "bnottaken",
+      "asm": "bne a2,a5,80003700 <caml_interprete+0x1908>",
+      "pre_lines": [],
+      "call": "$vmi $v:x12 $v:x15 $hG $hpc $hmi $pin:x12 $pin:x15 $hmem rfl hguard_80003710 $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80003700",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

@@ -29,6 +29,11 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'GRAB_ALLOC_PREFIX': ('GrabAllocPrefix', ['lw_tot', 'alu_addi', 'branch_taken', 'auipc', 'alu_addi', 'ld_tot', 'alu_addi', 'slli', 'ld_tot', 'alu_addi', 'sub', 'alu_add', 'ld_tot', 'sd', 'alu_addi', 'branch_nottaken']),
+    'GRAB_ALLOC_INIT': ('GrabAllocInit', ['slli', 'alu_addi', 'sd', 'auipc', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_addi', 'sd', 'alu_addi', 'branch_nottaken', 'slli', 'alu_addi', 'alu_add', 'alu_addi', 'alu_addi']),
+    'GRAB_COPY_MORE': ('GrabCopyMore', ['ld_tot', 'alu_addi', 'alu_addi', 'sd', 'branch_taken']),
+    'GRAB_COPY_LAST': ('GrabCopyLast', ['ld_tot', 'alu_addi', 'alu_addi', 'sd', 'branch_nottaken']),
+    'GRAB_ALLOC_SUFFIX': ('GrabAllocSuffix', ['alu_addi', 'sd', 'alu_addi', 'alu_add', 'sd', 'ld_tot', 'ld_tot', 'ld_tot', 'alu_add', 'srai', 'j']),
     'RESTART_PREFIX_MORE': ('RestartPrefixMore', ['ld_tot', 'alu_addi', 'srli', 'addiw', 'slli', 'sub', 'addiw', 'alu_addi', 'branch_nottaken']),
     'RESTART_PREFIX_EMPTY': ('RestartPrefixEmpty', ['ld_tot', 'alu_addi', 'srli', 'addiw', 'slli', 'sub', 'addiw', 'alu_addi', 'branch_taken']),
     'RESTART_COPY_MORE': ('RestartCopyMore', ['slli', 'alu_add', 'ld_tot', 'addiw', 'alu_addi', 'sd', 'branch_taken']),
@@ -140,12 +145,17 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 # Explicit loop cuts: entry, exit, and native branch decisions. These are text
 # instruction addresses; all runtime data addresses still come from Layout.
 CUTS = {
+    'GRAB_ALLOC_PREFIX': (0x800027f4, 0x800036c0, [True, False]),
+    'GRAB_ALLOC_INIT': (0x800036c0, 0x80003700, [False]),
+    'GRAB_COPY_MORE': (0x80003700, 0x80003700, [True]),
+    'GRAB_COPY_LAST': (0x80003700, 0x80003714, [False]),
+    'GRAB_ALLOC_SUFFIX': (0x80003714, 0x80001f5c, []),
     'RESTART_PREFIX_MORE': (0x80002b70, 0x80002b94, [False]),
     'RESTART_PREFIX_EMPTY': (0x80002b70, 0x80002bb0, [True]),
     'RESTART_COPY_MORE': (0x80002b94, 0x80002b94, [True]),
