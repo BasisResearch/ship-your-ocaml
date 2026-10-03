@@ -1482,6 +1482,17 @@ all three application frames via those certificates and prefix replacement;
 its target checks in 0.9 s. Fixed-arity native bodies landed as `03a1343`
 with all gates passing. Full represented compositions remain next.
 
+## Fixed-arity represented applications
+
+`Apply1.lean`, `Apply2.lean`, `Apply3.lean` now prove `apply1_arm`,
+`apply2_arm`, `apply3_arm` and their `*_step_arm` wrappers through the
+generated bodies. A single `scripts/gen_apply_fixed.py` reads segment order
+and register pins; shared frame restoration supplies `Running`. APPLY1/2
+adapters check in 1.8/2.1 s. The frame writes preserve closure, domain,
+threshold and pending reads, including APPLY2’s early domain load.
+Geometry, stack capacity, no-pending and runtime preservation remain named
+premises. Shared restoration landed as `5c5ea6e`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
@@ -1489,17 +1500,17 @@ Shared application restoration landed in `ApplyRestore.lean:42`
 image, primitive bindings and runtime window preservation assemble `Running`.
 `EnterFrame.lean` frames the domain, threshold, pending flag and closure loads
 through partial frame writes. The restoration target checks in 0.9 s;
-final generated-body compositions remain next. The indexed frame payload
+the generated-body compositions are now checked. The indexed frame payload
 facts landed as `f882a65`, all gates passing.
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: fixed-arity application, tail calls, restart/grab, allocation and
+families: tail calls, restart/grab, allocation and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 112 conditional
+setup/return bridges and named callee composition. There are 115 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.

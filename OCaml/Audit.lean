@@ -1281,6 +1281,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.SignalCheckReady.read_log
 #print axioms OCaml.Vm.Sim.StackEditOutside.accu_field_load
 #print axioms OCaml.Vm.Sim.apply_frame_restore
+#print axioms OCaml.Vm.Sim.apply1_arm
+#print axioms OCaml.Vm.Sim.apply2_arm
+#print axioms OCaml.Vm.Sim.apply3_arm
+#print axioms OCaml.Vm.Sim.apply1_step_arm
+#print axioms OCaml.Vm.Sim.apply2_step_arm
+#print axioms OCaml.Vm.Sim.apply3_step_arm
 #print axioms OCaml.Vm.Sim.payload_replace_prefix
 #print axioms OCaml.Vm.Sim.return_payload
 #print axioms OCaml.Vm.Sim.return_frame_values
