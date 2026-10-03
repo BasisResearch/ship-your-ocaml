@@ -36,6 +36,9 @@ def outcome (again : Bool) (slot delta target index : BitVec 64)
 theorem chain_ok (again : Bool) : ChainOK pc [8, 18, 19, 9] (blocks again) := by
   cases again <;> decide
 
+theorem written (again : Bool) : ∀ r ∈ wrChain (blocks again), r ∈ [8, 9, 10, 11, 15] := by
+  cases again <;> decide
+
 theorem code_facts (again : Bool) {mem : Std.ExtHashMap Nat (BitVec 8)}
     (hc : Code.Caml_oldify_mopupLoaded mem) : ChainCode mem (blocks again) := by
   cases again <;> intro b hb

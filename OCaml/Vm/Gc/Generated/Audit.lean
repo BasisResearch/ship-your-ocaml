@@ -750,6 +750,7 @@ private def gcAuditNames : Array Name := #[
   ``OCaml.Vm.Gc.Enqueue.writes,
   ``OCaml.Vm.Gc.Enqueue.run,
   ``OCaml.Vm.Gc.FieldCopy.chain_ok,
+  ``OCaml.Vm.Gc.FieldCopy.written,
   ``OCaml.Vm.Gc.FieldCopy.code_facts,
   ``OCaml.Vm.Gc.FieldCopy.head_log,
   ``OCaml.Vm.Gc.FieldCopy.head_regs,

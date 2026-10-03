@@ -1,5 +1,20 @@
 # Lane a6-gc
 
+## Immediate-field scan loop (2026-10-03)
+
+- `ScanLoop.lean:scan_loop` folds the actual immediate-valued field iterations
+  with `loopFromBody`, decreasing the remaining word count. `ScanAt` records
+  the destination suffix frame, copied prefix, loop registers, code, output
+  and unaffected native registers. No run or branch oracle is assumed.
+- `ScanGeometry.lean:again_eq` derives the real back-edge decision from the
+  preserved size header. RAM geometry supplies every iteration window; source
+  disjointness preserves the original field observations.
+- The capped targeted build passes. The previous single-iteration and shared
+  code-frame increment landed as `fd33bad`.
+- Next: connect grey payloads to the scan result and compose pointer oldify
+  calls. Full mopup, allocator freshness, G2/live-word Fits and compiler
+  GcSafe remain open.
+
 ## Immediate-field mopup iteration (2026-10-03)
 
 - `Generated/FieldCopy.lean` composes the actual load/test, store and advance

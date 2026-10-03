@@ -31,7 +31,7 @@ import OCaml.Vm.Gc.Generated.Audit
 import OCaml.Vm.Gc.QueueAccess
 import OCaml.Vm.Gc.QueueEnqueue
 import OCaml.Vm.Gc.PendingPayload
-import OCaml.Vm.Gc.FieldCopyAccess
+import OCaml.Vm.Gc.ScanLoop
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1741,3 +1741,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.FieldCopy.CopyPost.scan_regs
 #print axioms OCaml.Vm.Gc.FieldCopy.CopyPost.pc
 #print axioms OCaml.Vm.Gc.FieldCopy.CopyPost.memory
+
+#print axioms OCaml.Vm.Gc.FieldCopy.header_nat
+#print axioms OCaml.Vm.Gc.FieldCopy.header_window
+#print axioms OCaml.Vm.Gc.FieldCopy.Geometry.write_window
+#print axioms OCaml.Vm.Gc.FieldCopy.Geometry.windows
+#print axioms OCaml.Vm.Gc.FieldCopy.word_frame
+#print axioms OCaml.Vm.Gc.FieldCopy.immediate_tag
+#print axioms OCaml.Vm.Gc.FieldCopy.again_eq
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAt.index_eq
+#print axioms OCaml.Vm.Gc.FieldCopy.scan_iteration
+#print axioms OCaml.Vm.Gc.FieldCopy.scan_loop
