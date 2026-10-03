@@ -1,5 +1,21 @@
 # Lane a6-gc
 
+## First-field update and relocated grey boundary (2026-10-03)
+
+- `FirstArgs.lean:args_machine` executes the generated destination setup.
+  `FirstField.lean:forwarded` composes actual nursery tests, that setup,
+  JAL, the complete forwarded oldify callee and return jump to suffix setup.
+  It proves exact native-save/first-slot writes, restored registers, code
+  and output preservation, and the restricted native ABI frame.
+- `FirstPayload.lean:Post.first_relocates` uses Eqv to interpret the actual
+  store. `Post.relocating_grey` supplies the typed suffix boundary: first
+  field at the new placement, separated source suffix at the old placement.
+  It requires the actual loaded child and typed forwarding observation.
+- Capped targeted build passes (694 jobs). Classifier work landed as
+  `544989b`; PHASES records the first-field route. Next: queue-pop and
+  suffix-setup seams, then mixed fields and fresh-copy/allocator cases.
+  Outer roots, ephemerons, major reclamation and G2/live-word Fits remain open.
+
 ## First-field nursery classifier (2026-10-03)
 
 - `FirstYoungAccess.lean:classify` proves the actual first-field strict

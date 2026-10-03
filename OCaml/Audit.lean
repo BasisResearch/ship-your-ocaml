@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.FirstPayload
 import OCaml.Vm.Gc.FirstYoungAccess
 import OCaml.Vm.Gc.FirstForwarded
 import OCaml.Vm.Boot.Startup.MallocBootAlign
@@ -2512,3 +2513,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.malloc_boot_alignment
 #print axioms OCaml.Vm.Boot.Startup.MallocBootAtCall.sbrk_pre
 #print axioms OCaml.Vm.Boot.Startup.MFrame.after_sbrk
+
+#print axioms OCaml.Vm.Gc.FirstCall.args_machine
+#print axioms OCaml.Vm.Gc.FirstField.Input.young_input
+#print axioms OCaml.Vm.Gc.FirstField.carried_of_frame
+#print axioms OCaml.Vm.Gc.FirstField.classifier_carried
+#print axioms OCaml.Vm.Gc.FirstField.args_carried
+#print axioms OCaml.Vm.Gc.FirstField.callee_input
+#print axioms OCaml.Vm.Gc.FirstField.forwarded
+#print axioms OCaml.Vm.Gc.FirstField.Post.word_frame
+#print axioms OCaml.Vm.Gc.FirstField.Post.first_relocates
+#print axioms OCaml.Vm.Gc.FirstField.Post.relocating_grey

@@ -58,4 +58,38 @@ theorem resume_exit (L : GRegs) (lds : List (List (BitVec 8))) :
 
 theorem resume_written : wrChain resumeBlocks = [] := rfl
 
+
+/-- Destination argument setup preceding the first-field JAL. -/
+def argsBlocks := caml_oldify_mopupX9e80Seg
+def argsPc : BitVec 64 := 0x80009e80#64
+def argsRegs (target : BitVec 64) : GRegs := [(19,target)]
+
+theorem args_shape : ChainOK argsPc [19] argsBlocks := by decide
+
+theorem args_code {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (code : Code.Caml_oldify_mopupLoaded mem) : ChainCode mem argsBlocks := by
+  intro b hb
+  simp only [argsBlocks, caml_oldify_mopupX9e80Seg, List.mem_cons, List.not_mem_nil, or_false] at hb
+  subst b
+  constructor
+  all_goals simp only [CodeFacts]
+  all_goals chain_facts code with "Vsa.Sim.Code.caml_oldify_mopup_at_"
+
+theorem args_access (mem : Std.ExtHashMap Nat (BitVec 8)) (target : BitVec 64) :
+    ChainAccess mem (argsRegs target) [] argsBlocks :=
+  ChainAccess.cons ⟨⟨True.intro, True.intro⟩, True.intro⟩ ChainAccess.nil
+
+theorem args_log (target : BitVec 64) :
+    (evalBlocks argsBlocks (SegEvalState.init (argsRegs target) [])).log = [] := rfl
+
+theorem args_registers (target : BitVec 64) :
+    (evalBlocks argsBlocks (SegEvalState.init (argsRegs target) [])).regs = [(11,target),(19,target)] := by
+  change [(11,target + 0#64),(19,target)] = _
+  simp only [BitVec.add_zero]
+
+theorem args_exit (target : BitVec 64) :
+    evalBlocksPC argsPc (SegEvalState.init (argsRegs target) []) argsBlocks = call.pc := rfl
+
+theorem args_written : ∀ n ∈ wrChain argsBlocks, n ∈ [11] := by decide
+
 end OCaml.Vm.Gc.FirstCall
