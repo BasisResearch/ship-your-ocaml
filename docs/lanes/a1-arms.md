@@ -1568,6 +1568,16 @@ and restores data/platform; it checks in 0.93 s. The counted forward-copy
 loop and represented native composition are next. Generic APPTERM landed
 as `47c7779`, all gates passing.
 
+## RESTART counted forward-copy loop
+
+`ForwardCopy.lean` (`forward_copy_run`) proves the actual RESTART field-copy
+loop for every bounded saved-argument count, with no iteration or execution
+premise. `ForwardCopyState.lean` tracks the counter, source snapshot, register
+frame and prefix write log. `gen_forward_copy.py` instantiates the continuing
+and final generated seven-instruction branches, with drift checks in stage a5.
+The whole loop target builds successfully. The native cuts and represented
+restoration landed as `7fabf12`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
@@ -1579,7 +1589,7 @@ the generated-body compositions are now checked. The indexed frame payload
 facts landed as `f882a65`, all gates passing.
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: RESTART, GRAB allocation, heap allocation and
+families: RESTART (compose prefix, proved copy loop and suffix), GRAB allocation, heap allocation and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and

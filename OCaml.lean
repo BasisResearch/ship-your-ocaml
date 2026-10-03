@@ -373,3 +373,4 @@ import Vsa.Sim.Boot.LoaderPieces
 import OCaml.Vm.Boot.WhileMinElfHeader
 
 import OCaml.Vm.Boot.WhileMinElfTables
+import OCaml.Vm.Sim.ForwardCopy

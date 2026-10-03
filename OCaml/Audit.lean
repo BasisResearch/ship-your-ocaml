@@ -2271,6 +2271,26 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.MopupCall.forwarded
 #print axioms OCaml.Vm.Gc.MopupCall.resume_forwarded
 #print axioms OCaml.Vm.Gc.MopupCall.forwarded_resume
+-- RESTART forward-copy loop: generated iterations and counted closure-field snapshot.
+#print axioms OCaml.Vm.Sim.forward_copy_log_step
+#print axioms OCaml.Vm.Sim.forward_copy_log_complete
+#print axioms OCaml.Vm.Sim.outLRange_subrange
+#print axioms OCaml.Vm.Sim.forward_copy_source_outside
+#print axioms OCaml.Vm.Sim.forward_counter_step
+#print axioms OCaml.Vm.Sim.forward_source_address
+#print axioms OCaml.Vm.Sim.forward_cursor_step
+#print axioms OCaml.Vm.Sim.forward_store_address
+#print axioms OCaml.Vm.Sim.forward_copy_guard
+#print axioms OCaml.Vm.Sim.ForwardCopyAt.index
+#print axioms OCaml.Vm.Sim.ForwardCopyAt.read
+#print axioms OCaml.Vm.Sim.ForwardCopyAt.advance
+#print axioms OCaml.Vm.Sim.ForwardCopyRegion.entry
+#print axioms OCaml.Vm.Sim.forward_copy_loop
+#print axioms OCaml.Vm.Sim.forward_copy_more
+#print axioms OCaml.Vm.Sim.forward_copy_last
+#print axioms OCaml.Vm.Sim.forward_copy_iteration
+#print axioms OCaml.Vm.Sim.forward_copy_run
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

@@ -126,6 +126,7 @@ python3 scripts/gen_ccall_setups.py --check || fail "stage a5: represented C_CAL
 python3 scripts/gen_apply_fixed.py --check || fail "stage a5: represented fixed-arity application drift"
 python3 scripts/gen_tailcall_fixed.py --check || fail "stage a5: represented fixed-arity tail-call drift"
 python3 scripts/gen_backward_copy.py --check || fail "stage a5: backward-copy branch adapter drift"
+python3 scripts/gen_forward_copy.py --check || fail "stage a5: forward-copy branch adapter drift"
 python3 scripts/gen_ccall_arms.py --check || fail "stage a5: represented C_CALL arm drift"
 python3 scripts/gen_dispatch_table.py --check || fail "stage a5: dispatch table drift"
 python3 scripts/gen_primitive_binding_probe.py --check || fail "stage a5: primitive binding probe drift"
