@@ -1,4 +1,6 @@
 import OCaml.Vm.Boot.Startup.MallocRun
+import OCaml.Vm.Gc.MixedRelocated
+import OCaml.Vm.Gc.MixedSchedule
 import OCaml.Vm.Gc.QueueForwarded
 import OCaml.Vm.Gc.PopForwarded
 import OCaml.Vm.Boot.Startup.AllocatorImage
@@ -2692,3 +2694,20 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.symbolic_input
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.malloc_run
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_first_allocation_exists
+
+#print axioms Vsa.Sim.gholds_append
+#print axioms OCaml.Vm.Gc.FieldCopy.copy_nonYoung
+#print axioms OCaml.Vm.Gc.FieldCopy.CopyEffect.oldifyCode_after
+#print axioms OCaml.Vm.Gc.FieldCopy.CopyEffect.next_registers
+#print axioms OCaml.Vm.Gc.MixedField.step
+#print axioms OCaml.Vm.Gc.MixedField.LoopAt.source
+#print axioms OCaml.Vm.Gc.MixedField.LoopAt.route
+#print axioms OCaml.Vm.Gc.MixedField.LoopAt.input
+#print axioms OCaml.Vm.Gc.MixedField.LoopAt.value
+#print axioms OCaml.Vm.Gc.MixedField.LoopAt.step
+#print axioms OCaml.Vm.Gc.MixedField.mixed_scan
+#print axioms OCaml.Vm.Gc.MixedField.returnAt_before
+#print axioms OCaml.Vm.Gc.MixedField.schedule_initial
+#print axioms OCaml.Vm.Gc.MixedField.schedule_advance
+#print axioms OCaml.Vm.Gc.MixedField.scan_relocated
+#print axioms OCaml.Vm.Gc.MixedField.LoopAt.initial

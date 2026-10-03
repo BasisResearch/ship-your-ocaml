@@ -3,6 +3,13 @@ import Vsa.Sim.SegToTripleFramed
 namespace Vsa.Sim
 open Vsa.Machine LeanRV64DExecutable
 
+/-- Join independently established finite register observations. -/
+theorem gholds_append {σ : MState} (xs ys : GRegs) :
+    GHolds σ (xs ++ ys) ↔ GHolds σ xs ∧ GHolds σ ys := by
+  induction xs with
+  | nil => simp [GHolds]
+  | cons pin rest ih => simp only [List.cons_append, GHolds, ih, and_assoc]
+
 /-- Select a finite interface from reflected register observations. -/
 theorem gholds_select {σ : MState} {L : GRegs} (holds : GHolds σ L)
     (wanted : GRegs)

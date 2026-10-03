@@ -1,10 +1,8 @@
 import OCaml.Vm.Gc.ScanLoop
+import OCaml.Vm.Gc.CopyNonYoung
 
 namespace OCaml.Vm.Gc.FieldCopy
 open OCaml.Bytecode Vsa.Machine Vsa.Sim Primitives Vsa.Logic LeanRV64DExecutable
-
-/-- Union of the actual register writes of the two verbatim-copy routes. -/
-def copyWrites : List Nat := [8,9,10,11,14,15]
 
 /-- The destination suffix is disjoint from the three runtime words consulted
 by Is_young. Heap/domain separation supplies these footprint facts. -/
@@ -55,25 +53,18 @@ theorem mixed_iteration {domain a b count start initial i c}
     have separate := geometry.separate
     omega
   have atHead : PCAt pc c := by simpa [bound] using h.pc
-  generalize choice : immediate slot c = tagged
-  cases tagged
-  · have even := even_of_immediate_false choice
-    have current := runtime.at h
-    have outside : ¬ ((Young.lowerWord domain c).toNat < (word c slot.toNat).toNat ∧
+  have current := runtime.at h
+  have safe : (word c slot.toNat).toNat % 2 = 0 →
+      ¬ ((Young.lowerWord domain c).toNat < (word c slot.toNat).toNat ∧
         (word c slot.toNat).toNat < (Young.upperWord domain c).toNat) := by
-      rw [current.lower, current.upper, source]
-      exact safeFields i h.lower bound (by rw [← source]; exact even)
-    have input : ReadInput slot delta target index c :=
-      ⟨h.good, h.minstret, h.tick, h.code, h.registers, geometry.sourceRange.window bound⟩
-    obtain ⟨d, run, post⟩ := (copy_even input even current.register current.root runtime.windows outside
-      (geometry.windows bound).destination (geometry.windows bound).header).run c ⟨atHead, rfl⟩
-    exact ⟨d, run, h.advance geometry header bound post⟩
-  · have input : Input slot delta target index c :=
-      ⟨h.good, h.minstret, h.registers, h.tick, h.code, geometry.windows bound, choice⟩
-    obtain ⟨d, run, post⟩ := (copy_machine input).run c ⟨atHead, rfl⟩
-    have effect : CopyEffect copyWrites slot delta target index c d :=
-      (post.effect input).mono (by decide)
-    exact ⟨d, run, h.advance geometry header bound effect⟩
+    intro even
+    rw [current.lower, current.upper, source]
+    exact safeFields i h.lower bound (by rw [← source]; exact even)
+  have input : ReadInput slot delta target index c :=
+    ⟨h.good, h.minstret, h.tick, h.code, h.registers, geometry.sourceRange.window bound⟩
+  obtain ⟨d, run, post⟩ := (copy_nonYoung input current.register current.root runtime.windows safe
+    (geometry.windows bound).destination (geometry.windows bound).header).run c ⟨atHead, rfl⟩
+  exact ⟨d, run, h.advance geometry header bound post⟩
 
 /-- Complete mixed scan of fields requiring no young-pointer oldification.
 The actual branch choice is recomputed for every field; no parity partition

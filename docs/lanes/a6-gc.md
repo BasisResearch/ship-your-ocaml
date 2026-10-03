@@ -1,5 +1,27 @@
 # Lane a6-gc
 
+## Mixed copied/forwarded suffix (2026-10-03)
+
+- `MixedField.lean:step` executes either the real immediate/non-young copy
+  or complete already-forwarded young oldify route. `CopyNonYoung.lean`
+  shares the copy branch selection with the existing non-young loop;
+  `CopyContext.lean` retains its native interface and oldify code image.
+- `MixedLoop.lean:mixed_scan` folds these steps with the observed index.
+  `MixedLoopState.lean:LoopAt.input` derives each actual input from initial
+  heap facts and memory frames; `LoopAt.route` proves parity/range decisions
+  agree with the framed initial observations. `MixedSchedule.lean` supplies
+  canonical register maps and proves their transition law from initial data.
+- `MixedRelocated.lean:scan_relocated` yields ObjAt at the new placement
+  through shared Eqv transport. `LoopAt.initial` initializes the invariant
+  from platform/code/register pins. Existing forwarded-only clients use the
+  same generic `RelocatedResult` interface.
+- Capped targeted builds (686 and 722 jobs), full Audit (2655 jobs),
+  discipline and abstraction gates pass; new headlines use only permitted
+  axioms. Backedge traversal landed
+  as `1c6a83d`. Next: compose mixed setup/queue seams, then extend fresh-copy
+  allocation coverage. Fresh young objects, outer roots, ephemerons, major
+  reclamation and G2/live-word Fits remain open.
+
 ## Forwarded traversal from the queue backedge (2026-10-03)
 
 - `QueueForwarded.lean:resume_forwarded` executes a subsequent queue visit

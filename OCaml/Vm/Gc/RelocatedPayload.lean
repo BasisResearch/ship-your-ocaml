@@ -73,17 +73,24 @@ theorem ScanAtWith.relocated_object {writes a b fields pl μ initial c expected 
   refine ⟨?_, scan.relocated_payload (cp := cp) (tag := tag) grey firstOutside observed⟩
   simpa only [frame_word scan.memory headerOutside, Obj.wosize, Obj.tag] using header
 
+/-- A completed concrete loop together with its typed relocated object.
+Different field-route invariants share this same result interface. -/
+structure RelocatedResult (Loop : Config → Prop) (pl : Place) (μ : Nat → Nat)
+    (cp : ChanPlace) (tag b : Nat) (fields : List Val) (c : Config) : Prop where
+  loop : Loop c
+  object : ObjAt c (reloc μ pl) cp b (.block tag fields)
+
 end OCaml.Vm.Gc.FieldCopy
 
 namespace OCaml.Vm.Gc.ForwardedField
 open OCaml.Bytecode Vsa.Machine Vsa.Sim Primitives Reloc Vsa.Logic
 
 /-- Completed concrete scan and its typed relocated object. -/
-structure RelocatedPost (R : Nat → BitVec 64) (a b : Nat) (fields : List Val)
+abbrev RelocatedPost (R : Nat → BitVec 64) (a b : Nat) (fields : List Val)
     (initial : Config) (expected : Nat → BitVec 64) (pl : Place) (μ : Nat → Nat)
-    (cp : ChanPlace) (tag : Nat) (c : Config) : Prop where
-  loop : LoopAt R a b fields.length 1 initial expected fields.length c
-  object : ObjAt c (reloc μ pl) cp b (.block tag fields)
+    (cp : ChanPlace) (tag : Nat) :=
+  FieldCopy.RelocatedResult (LoopAt R a b fields.length 1 initial expected fields.length)
+    pl μ cp tag b fields
 
 /-- The real already-forwarded suffix loop produces a represented object
 at the new placement. First-field handling and typed forwarding targets
