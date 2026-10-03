@@ -2527,6 +2527,20 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closure_initialize_more
 #print axioms OCaml.Vm.Sim.closure_initialize_zero
 
+-- Complete represented ordinary closure nursery constructor.
+#print axioms OCaml.Vm.Sim.OperandAt.read32_log
+#print axioms OCaml.Vm.Sim.closure_allocation_log_parts
+#print axioms OCaml.Vm.Sim.ClosureInitialized.ready_zero
+#print axioms OCaml.Vm.Sim.ClosureInitialized.ready_copy
+#print axioms OCaml.Vm.Sim.closure_capture_end
+#print axioms OCaml.Vm.Sim.closure_code_address
+#print axioms OCaml.Vm.Sim.closure_capture_stack
+#print axioms OCaml.Vm.Sim.closure_stack_remaining
+#print axioms OCaml.Vm.Sim.closure_state_of_step
+#print axioms OCaml.Vm.Sim.closure_finish
+#print axioms OCaml.Vm.Sim.closure_arm
+#print axioms OCaml.Vm.Sim.closure_step_arm
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

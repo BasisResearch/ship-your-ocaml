@@ -1800,6 +1800,19 @@ nonempty test. Reservation landed as `51e7207`, all gates passing. Next:
 shared suffix input for zero/copied captures, metadata stores, and CLOSURE
 arm/step composition.
 
+## Complete represented CLOSURE nursery path
+
+`Closure.lean:14` (`closure_arm`, `closure_step_arm`) composes both capture
+prefixes, nursery reservation, both initializers, the arbitrary-count generated
+copy loop, and metadata/return suffix. `ClosureFinish.lean:15`
+(`closure_finish`) reads the preserved displacement, writes code and arity, and
+restores `Running`. It checks in 1.1 s; the full composition checks in 0.83 s.
+`OperandAt.read32_log` shares operand readback through disjoint write logs.
+`ClosureInitialized.ready_zero/ready_copy` shares the suffix input.
+The nursery path requires nonnegative capture count at most 254, capacity,
+placement, separation, concrete accesses and runtime preservation. The major
+allocation and GC paths remain open. Both initializers landed as `12d482e`.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
@@ -1811,13 +1824,13 @@ the generated-body compositions are now checked. The indexed frame payload
 facts landed as `f882a65`, all gates passing.
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: heap allocation (CLOSURE/CLOSUREREC and major-heap MAKEBLOCK) and
+families: heap allocation (CLOSUREREC and major-heap MAKEBLOCK/CLOSURE) and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 125 conditional
+setup/return bridges and named callee composition. There are 126 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.

@@ -463,3 +463,4 @@ import OCaml.Vm.Sim.ClosureReserve
 
 import OCaml.Vm.Sim.ClosureInitializeMore
 import OCaml.Vm.Sim.ClosureInitializeZero
+import OCaml.Vm.Sim.Closure
