@@ -1221,6 +1221,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 #print axioms Vsa.Sim.tr_offsetref
 #print axioms OCaml.Vm.Sim.offsetref_loaded
+#print axioms Vsa.Sim.tr_poptrap
+#print axioms OCaml.Vm.Sim.poptrap_loaded
+#print axioms Vsa.Sim.tr_pushtrap
+#print axioms OCaml.Vm.Sim.pushtrap_loaded
 #print axioms Vsa.Sim.tr_push_retaddr
 #print axioms OCaml.Vm.Sim.push_retaddr_loaded
 #print axioms OCaml.Vm.Sim.stack_prepend

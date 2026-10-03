@@ -208,6 +208,10 @@ import OCaml.Vm.Sim.Offsetref
 import OCaml.Vm.Sim.OffsetrefSegment
 import OCaml.Vm.Sim.OffsetrefPins
 import OCaml.Vm.Sim.PushRetaddr
+import OCaml.Vm.Sim.PoptrapSegment
+import OCaml.Vm.Sim.PoptrapPins
+import OCaml.Vm.Sim.PushtrapSegment
+import OCaml.Vm.Sim.PushtrapPins
 import OCaml.Vm.Sim.PushRetaddrSegment
 import OCaml.Vm.Sim.PushRetaddrPins
 import OCaml.Vm.Sim.StackPrefix

@@ -29,6 +29,8 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'POPTRAP': ('Poptrap', ['auipc', 'lw_tot', 'branch_nottaken', 'ld_tot', 'auipc', 'ld_tot', 'alu_addi', 'srai', 'slli', 'alu_add', 'sd', 'alu_addi', 'j']),
+    'PUSHTRAP': ('Pushtrap', ['lw_tot', 'auipc', 'alu_addi', 'alu_addi', 'slli', 'alu_add', 'sd', 'ld_tot', 'slli', 'alu_addi', 'ld_tot', 'sd', 'sd', 'sub', 'srai', 'slli', 'alu_addi', 'sd', 'ld_tot', 'alu_addi', 'alu_addi', 'sd', 'j']),
     'OFFSETREF': ('Offsetref', ['lw_tot', 'ld_tot', 'alu_addi', 'slliw', 'alu_add', 'sd', 'alu_addi', 'j']),
     'PUSH_RETADDR': ('PushRetaddr', ['lw_tot', 'slli', 'alu_addi', 'slli', 'alu_add', 'sd', 'sd', 'sd', 'alu_addi', 'alu_addi', 'j']),
     'SWITCH_INT': ('SwitchInt', ['andi', 'alu_addi', 'branch_taken', 'srai', 'slli', 'alu_add', 'lw_tot', 'slli', 'alu_add', 'j']),
@@ -114,10 +116,11 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 PATHS = {
+    'POPTRAP': ('POPTRAP', [False]),
     'SWITCH_INT': ('SWITCH', [True]),
     'SWITCH_BLOCK': ('SWITCH', [False]),
     'CHECK_SIGNALS': ('CHECK_SIGNALS', [True]),

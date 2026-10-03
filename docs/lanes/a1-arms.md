@@ -1393,10 +1393,20 @@ readback. `offsetref_step_arm` matches the real bytecode rule.
 All three new modules check (0.8–1.1 s); their headlines enter the axiom audit.
 The named `FieldWriteOk` and runtime-window premises remain invariant work.
 
+## Generated trap bodies
+
+`tr_poptrap` follows the no-pending branch (13 instructions), and
+`tr_pushtrap` proves the complete 23-instruction body. Both come from
+`gen_arm_pilot.py` with opaque, exact load equations, store frames and
+full-image pin projections. Measured body builds: 1.9 s and 6.4 s.
+Their register/memory observations are machine results; represented
+trap-pointer and stack restoration is next. OFFSETREF landed as `25abf35`
+with the complete gate passing.
+
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: exception/trap control, allocation, application/return and
+families: represented POPTRAP/PUSHTRAP adapters first, then allocation, application/return and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
