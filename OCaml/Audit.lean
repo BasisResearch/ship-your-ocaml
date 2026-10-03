@@ -3,6 +3,8 @@ import OCaml.Vm.Gc.ForwardedObservations
 import OCaml.Vm.Gc.ForwardedIteration
 import OCaml.Vm.Gc.ForwardedScan
 import OCaml.Vm.Gc.ForwardedField
+import OCaml.Vm.Boot.Startup.AllocatorInitial
+import OCaml.Vm.Boot.Startup.SbrkBootstrap
 import OCaml.Vm.Gc.ForwardedAdvance
 import OCaml.Vm.Boot.Startup.WhileMinToMalloc
 import OCaml.Vm.Gc.MopupResume
@@ -2387,3 +2389,19 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.ForwardedField.Input.stable
 #print axioms OCaml.Vm.Gc.ForwardedField.stable_after
 #print axioms OCaml.Vm.Gc.ForwardedField.Input.next_registers
+-- Initial allocator metadata and its first morecore branch.
+#print axioms OCaml.Vm.Boot.Startup.sbrk_r_boot
+#print axioms OCaml.Vm.Boot.Startup.readLE_exists_of_present
+#print axioms OCaml.Vm.Boot.Startup.read64_of_word
+#print axioms OCaml.Vm.Boot.Startup.clearWords_present
+#print axioms OCaml.Vm.Boot.Startup.CrtCamlMainPost.present
+#print axioms OCaml.Vm.Boot.Startup.initial_top
+#print axioms OCaml.Vm.Boot.Startup.initial_binblocks
+#print axioms OCaml.Vm.Boot.Startup.initial_bin_links
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.read_frame
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.main_present
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.present
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.initial_read
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.bss_read
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.empty_bins
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetMallocWitness.initial_arena

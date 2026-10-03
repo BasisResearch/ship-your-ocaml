@@ -2,6 +2,31 @@
 
 ## Round 2 status (2026-10-03)
 
+Current frontier: actual reset reaches the first malloc entry (`bfcd9da`,
+full gate passed). `Startup/AllocatorInitial.lean:39`
+(`ResetMallocWitness.initial_arena`) now supplies its source initial
+metadata: zero break, dummy top, -1 sbrk-base sentinel, zero statistics,
+and all 127 empty bins. `AllocatorReads.lean` transports bounded word
+certificates and proves RAM presence through the startup effects; it also
+turns every complete BSS word into the allocator's zero `read64` fact.
+`gen_boot_allocator.py` emits 256 eight-byte loader certificates and checks
+in 3.3 s. An initial unchunked 127-index assembly hit default recursion depth;
+shared `emit_finite_family` now assembles finite chunks without a budget change.
+Stage a5 checks the new generator.
+
+`Startup/SbrkBootstrap.lean:15` (`sbrk_r_boot`) proves the first successful
+`_sbrk_r` call, using the landed allocator instruction table and `sx_run`.
+It takes the actual zero-break branch, returns `heapStart`, advances the
+break by the request, restores the native caller registers, frames memory
+outside `SbrkW`, and preserves byte presence. It checks in 4.5 s. Its
+`SbrkBootPre` requires only ordinary call geometry/ownership and enough
+room; the single source initialization store supplies the usual break
+read. This does not yet prove first malloc: next compose malloc's empty-bin
+path, the two morecore calls, top initialization and split, establish
+`HeapAt`, then consume the general allocator contract. Full reset-to-cut
+and the Round 2 exit remain open.
+
+
 The prefix/bootstrap-obstruction increment landed as `a6de181`, full gate passed.
 
 The next composition now checks: `WhileMinFirstCall.reset_domain_exists`
