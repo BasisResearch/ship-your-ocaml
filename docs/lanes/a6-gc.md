@@ -1,5 +1,25 @@
 # Lane a6-gc
 
+## Mixed non-young field scan (2026-10-03)
+
+- `MixedScan.lean:mixed_scan` runs the whole suffix with a fresh parity/range
+  decision at each field. Even non-young words use the new classifier/store
+  path; immediates use the existing shorter path. `DomainFrame` records the
+  three runtime-word footprints that must remain separate from the copy.
+- `MixedPayload.lean:scan_mixed_grey` gives ObjAt after that real loop.
+  `pending_nonYoung` supplies branch safety from NoForgery for nonpointers
+  and explicit non-young placement of genuine pointer fields. Young pointers
+  requiring relocation remain outside this theorem.
+- `ScanAtWith` parameterizes only the native write set. `ScanAt` retains the
+  original five-register interface. `ScanAtWith.advance` shares the copy
+  invariant update, and `ScanAtWith.loop` shares the standard loop fold.
+  Existing integer theorems and downstream queue summaries still build.
+  The grey-payload Eqv proof is shared through `ScanAtWith.payload/object`.
+- Targeted capped builds pass. Non-young even copying landed as `6d91b28`.
+  Next: young-pointer oldify paths and partial-relocation composition; mixed
+  setup/queue seams, outer termination, allocator freshness, ephemerons and
+  full G2/live-word Fits remain open.
+
 ## Non-young even-field copy (2026-10-03)
 
 - `CopyEffect.lean:copy_even` composes the real field read/tag branch, range

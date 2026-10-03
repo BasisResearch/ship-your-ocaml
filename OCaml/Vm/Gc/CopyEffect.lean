@@ -20,6 +20,17 @@ structure CopyEffect (written : List Nat) (slot delta target index : BitVec 64)
     (∀ n ∈ written, (gprReg n == r) = false) →
       after.σ.regs.get? r = before.σ.regs.get? r
 
+/-- Enlarge the permitted write set without changing any memory or value
+claim. The original stronger effect remains available to its consumers. -/
+theorem CopyEffect.mono {writes writes' slot delta target index before after}
+    (post : CopyEffect writes slot delta target index before after)
+    (subset : ∀ n ∈ writes, n ∈ writes') :
+    CopyEffect writes' slot delta target index before after := by
+  refine ⟨post.good, post.minstret, post.tick, post.code, post.memory, post.pc,
+    post.registers, post.destination, post.output, ?_⟩
+  intro r noise outside
+  exact post.native r noise (fun n hn => outside n (subset n hn))
+
 theorem CopyPost.effect {slot delta target index before after}
     (input : Input slot delta target index before) (post : CopyPost slot delta target index before after) :
     CopyEffect [8,9,10,11,15] slot delta target index before after := by

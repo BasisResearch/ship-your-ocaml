@@ -29,6 +29,12 @@ theorem immediate_of_even {slot c} (even : (word c slot.toNat).toNat % 2 = 0) :
     simpa [BitVec.toNat_and] using even
   simp [immediate, low, guardB]
 
+theorem even_of_immediate_false {slot c} (choice : immediate slot c = false) :
+    (word c slot.toNat).toNat % 2 = 0 := by
+  have low : word c slot.toNat &&& 1#64 = 0 := by simpa [immediate, guardB] using choice
+  have bits := congrArg BitVec.toNat low
+  simpa [BitVec.toNat_and] using bits
+
 /-- The field is loaded and classified, with its destination and scan state
 still available to whichever concrete continuation is selected. -/
 structure ClassifiedPost (slot delta target index domain : BitVec 64) (before after : Config) : Prop where

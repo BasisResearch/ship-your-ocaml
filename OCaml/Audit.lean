@@ -32,7 +32,7 @@ import OCaml.Vm.Gc.QueueAccess
 import OCaml.Vm.Gc.QueueEnqueue
 import OCaml.Vm.Gc.PendingPayload
 import OCaml.Vm.Gc.QueueEmpty
-import OCaml.Vm.Gc.CopyEffect
+import OCaml.Vm.Gc.MixedPayload
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1995,3 +1995,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.section12_parse
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.program_table_parse
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.section_table_parse
+
+#print axioms OCaml.Vm.Gc.FieldCopy.CopyEffect.mono
+#print axioms OCaml.Vm.Gc.FieldCopy.even_of_immediate_false
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAtWith.index_eq
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAtWith.advance
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAtWith.loop
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAtWith.initial
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAtWith.payload
+#print axioms OCaml.Vm.Gc.FieldCopy.ScanAtWith.object
+#print axioms OCaml.Vm.Gc.FieldCopy.DomainFrame.at
+#print axioms OCaml.Vm.Gc.FieldCopy.mixed_iteration
+#print axioms OCaml.Vm.Gc.FieldCopy.mixed_scan
+#print axioms OCaml.Vm.Gc.FieldCopy.pending_nonYoung
+#print axioms OCaml.Vm.Gc.FieldCopy.scan_mixed_grey
