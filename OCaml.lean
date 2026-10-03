@@ -234,6 +234,7 @@ import OCaml.Vm.Sim.ApplyRestore
 import OCaml.Vm.Sim.Apply1
 import OCaml.Vm.Sim.Apply2
 import OCaml.Vm.Sim.Apply3
+import OCaml.Vm.Sim.GrabFast
 import OCaml.Vm.Sim.Appterm1Segment
 import OCaml.Vm.Sim.Appterm1Pins
 import OCaml.Vm.Sim.Appterm2Segment

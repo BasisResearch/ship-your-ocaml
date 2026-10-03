@@ -1,0 +1,102 @@
+{
+  "theorem": "tr_grab_fast",
+  "doc": "GRAB_FAST arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.GrabFastSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v8 v18 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_800027f4 : 0x80000000 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
+    "(hhi_800027f4 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ 0x100000000)",
+    "(hhtif_800027f4 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
+    "(loaded_800027f4 : BitVec 64)",
+    "(hvalue_800027f4 : loaded_800027f4 = (sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4))))",
+    "(hguard_800027fc : zopz0zI_s v18 loaded_800027f4 = false)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlGrabFastLoaded",
+  "pins": [
+    {
+      "reg": "x8",
+      "val": "v8",
+      "hyp": "hv8"
+    },
+    {
+      "reg": "x18",
+      "val": "v18",
+      "hyp": "hv18"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x800027f4",
+      "site": "site_800027f4_grab_fast",
+      "class": "alu",
+      "asm": "lw a5,4(s0)",
+      "rd": "x15",
+      "rd_val": "loaded_800027f4",
+      "raw_val": "(sign_extend (m := 64) (bytesT4 σ.mem (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4)))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl hlo_800027f4 hhi_800027f4 hhtif_800027f4 $hi",
+      "rw": "hmemeq, ← hvalue_800027f4"
+    },
+    {
+      "addr": "0x800027f8",
+      "site": "site_800027f8_grab_fast",
+      "class": "alu",
+      "asm": "addi a2,s0,8",
+      "rd": "x12",
+      "rd_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800027fc",
+      "site": "site_800027fc_nottaken_grab_fast",
+      "class": "bnottaken",
+      "asm": "blt s2,a5,8000368c <caml_interprete+0x1894>",
+      "pre_lines": [],
+      "call": "$vmi $v:x18 $v:x15 $hG $hpc $hmi $pin:x18 $pin:x15 $hmem rfl hguard_800027fc $hi"
+    },
+    {
+      "addr": "0x80002800",
+      "site": "site_80002800_grab_fast",
+      "class": "alu",
+      "asm": "sub s2,s2,a5",
+      "rd": "x18",
+      "rd_val": "(v18 - loaded_800027f4)",
+      "raw_val": "(v18 - v15)",
+      "call": "$vmi $v:x18 $v:x15 $hG $hpc $hmi $pin:x18 $pin:x15 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002804",
+      "site": "site_80002804_grab_fast",
+      "class": "alu",
+      "asm": "mv s0,a2",
+      "rd": "x8",
+      "rd_val": "((v8 + sign_extend (m := 64) (0x008#12)) + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v12 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x12 $hG $hpc $hmi $pin:x12 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002808",
+      "site": "site_80002808_grab_fast",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1ff754#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x800027f4",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

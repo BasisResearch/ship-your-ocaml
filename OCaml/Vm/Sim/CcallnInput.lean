@@ -42,8 +42,6 @@ theorem ccalln_frame_address {sp : Nat} (room : 24 ≤ sp) :
 /-- Positive bytecode counts use their natural value in the C ABI register. -/
 theorem ccalln_count_word (count : BitVec 32) (nonnegative : 0 ≤ count.toInt) :
     sign_extend (m := 64) count = BitVec.ofNat 64 count.toInt.toNat := by
-  change BitVec.ofInt 64 count.toInt = _
-  have cast := congrArg (BitVec.ofInt 64) (Int.toNat_of_nonneg nonnegative)
-  exact cast.symm
+  exact nonnegative_word32 count nonnegative
 
 end OCaml.Vm.Sim

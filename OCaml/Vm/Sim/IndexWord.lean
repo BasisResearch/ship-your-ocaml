@@ -12,15 +12,20 @@ theorem nat_shift_word (index amount : Nat) :
   simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ofNat, Nat.shiftLeft_eq,
     Nat.mod_mul_mod, Nat.mul_mod_mod, Nat.mul_comm]
 
+/-- A nonnegative signed bytecode operand has its natural value in a native word. -/
+theorem nonnegative_word32 (count : BitVec 32) (nonnegative : 0 ≤ count.toInt) :
+    sign_extend (m := 64) count = BitVec.ofNat 64 count.toInt.toNat := by
+  change BitVec.ofInt 64 count.toInt = _
+  have cast := congrArg (BitVec.ofInt 64) (Int.toNat_of_nonneg nonnegative)
+  exact cast.symm
+
 /-- A nonnegative bytecode index has the same scaled word in the native arm.
 The premise is explicit: Int.toNat would otherwise silently clamp negatives. -/
 theorem index_word (w : BitVec 32) (nonnegative : 0 ≤ w.toInt) :
     Sail.shift_bits_left (sign_extend (m := 64) w) (Sail.BitVec.extractLsb (0x03#6) 5 0) =
       BitVec.ofNat 64 (8 * w.toInt.toNat) := by
-  change (BitVec.ofInt 64 w.toInt <<< (3 : Nat)) = _
-  have cast := congrArg (BitVec.ofInt 64) (Int.toNat_of_nonneg nonnegative)
-  change BitVec.ofNat 64 w.toInt.toNat = BitVec.ofInt 64 w.toInt at cast
-  rw [← cast]
+  rw [nonnegative_word32 w nonnegative]
+  change (BitVec.ofNat 64 w.toInt.toNat <<< (3 : Nat)) = _
   exact nat_shift_word w.toInt.toNat 3
 
 /-- Atom value pointers are one word beyond their indexed headers. -/

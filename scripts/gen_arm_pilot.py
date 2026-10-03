@@ -29,6 +29,7 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'GRAB_FAST': ('GrabFast', ['lw_tot', 'alu_addi', 'branch_nottaken', 'sub', 'alu_addi', 'j']),
     'RETURN_MORE': ('ReturnMore', ['lw_tot', 'slli', 'alu_add', 'branch_nottaken', 'ld_tot', 'alu_addi', 'alu_addi', 'j']),
     'RETURN_FRAME': ('ReturnFrame', ['lw_tot', 'slli', 'alu_add', 'branch_taken', 'ld_tot', 'ld_tot', 'ld_tot', 'srai', 'alu_addi', 'j']),
     'APPLY': ('Apply', ['lw_tot', 'ld_tot', 'addiw', 'j', 'ld_tot', 'alu_addi', 'ld_tot', 'branch_nottaken', 'lw_tot', 'branch_taken']),
@@ -130,10 +131,11 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 PATHS = {
+    'GRAB_FAST': ('GRAB', [False]),
     'APPTERM1': ('APPTERM1', [False, True]),
     'APPTERM2': ('APPTERM2', [False, True]),
     'APPTERM3': ('APPTERM3', [False, True]),
