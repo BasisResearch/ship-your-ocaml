@@ -34,6 +34,16 @@ theorem links {p next pl c} (h : (p.eqv next).P pl 0 c) : Links p next c :=
   ⟨h 0 ((p.source - 8#64).toNat, 0) rfl, h 1 (p.source.toNat, p.target) rfl,
    h 2 ((p.target + 8#64).toNat, next) rfl⟩
 
+/-- Build the raw-word assertion from its named link fields. -/
+theorem of_links {p next pl c} (h : Links p next c) : (p.eqv next).P pl 0 c := by
+  intro i cell hc
+  have member := List.mem_of_getElem? hc
+  simp only [cells, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl
+  · exact h.forwardedHeader
+  · exact h.target
+  · exact h.nextSource
+
 end PendingCopy
 
 namespace WorkQueue
@@ -77,6 +87,37 @@ theorem body_tail {q qs pl c} (h : (body (q :: qs)).P pl 0 c) :
   have entry := h (i + 1) p (by simpa using hp)
   simpa only [next, List.getElem?_cons_succ] using entry
 
+/-- Adding a node uses its link to the old head and preserves the tail indices. -/
+theorem body_cons {q qs pl c} (front : (q.eqv (head qs)).P pl 0 c)
+    (tail : (body qs).P pl 0 c) : (body (q :: qs)).P pl 0 c := by
+  intro i p hp
+  cases i with
+  | zero =>
+      have same : q = p := Option.some.inj hp
+      subst p
+      simpa [next, head, List.head?_eq_getElem?] using front
+  | succ i =>
+      have node := tail i p hp
+      simpa only [next, List.getElem?_cons_succ] using node
+
+/-- A write log leaves every intrusive-link observation window disjoint.
+Allocation and stack/heap separation supply these finite footprint facts. -/
+structure LinksOutside (qs : List PendingCopy) (log : List WEntry) : Prop where
+  cells : ∀ (i : Nat) (p : PendingCopy), qs[i]? = some p →
+    ∀ (j : Nat) (cell : Nat × BitVec 64), (p.cells (next qs i))[j]? = some cell →
+      OutLRange log cell.1 8
+
+/-- Any disjoint write log transports the queue links by the identity action. -/
+theorem body_frame_log {qs pl c c' log}
+    (h : (body qs).P pl 0 c) (outside : LinksOutside qs log)
+    (memory : c'.σ.mem = writeLog c.σ.mem log) : (body qs).P pl 0 c' := by
+  have image : (body qs).Img id pl 0 0 c c' := by
+    intro i p hp j cell hc
+    change bytesT c'.σ.mem cell.1 8 = bytesT c.σ.mem cell.1 8
+    rw [memory]
+    exact bytesT_writeLog_out _ (outside.cells i p hp j cell hc)
+  simpa only [placement_identity] using (body qs).transport id pl 0 0 c c' h image
+
 /-- Queue-link cells must not overlap the global head word. The machine
 layout and allocator separation will supply this footprint fact. -/
 def Separate (qs : List PendingCopy) : Prop :=
@@ -90,12 +131,8 @@ theorem body_frame {qs pl c c' value}
     (h : (body qs).P pl 0 c) (separate : Separate qs)
     (memory : c'.σ.mem = writeLog c.σ.mem [(Layout.sym_oldify_todo_list, 8, value)]) :
     (body qs).P pl 0 c' := by
-  have image : (body qs).Img id pl 0 0 c c' := by
-    intro i p hp j cell hc
-    change bytesT c'.σ.mem cell.1 8 = bytesT c.σ.mem cell.1 8
-    rw [memory]
-    exact bytesT_writeLog_out _ ⟨separate i p hp j cell hc, True.intro⟩
-  simpa only [placement_identity] using (body qs).transport id pl 0 0 c c' h image
+  apply body_frame_log h ?_ memory
+  exact ⟨fun i p hp j cell hc => ⟨separate i p hp j cell hc, True.intro⟩⟩
 
 /-- The real generated queue-pop store removes the ghost head. The load
 witness identifies the next-source word; it will be supplied by concrete

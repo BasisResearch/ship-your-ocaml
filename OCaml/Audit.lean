@@ -29,6 +29,7 @@ import OCaml.Vm.Boot.WhileMinLogChecks
 import Vsa.Sim.Boot.Bytes
 import OCaml.Vm.Gc.Generated.Audit
 import OCaml.Vm.Gc.QueueAccess
+import OCaml.Vm.Gc.QueueEnqueue
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1622,3 +1623,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.WorkQueue.child_control
 #print axioms OCaml.Vm.Gc.WorkQueue.pop_access
 #print axioms OCaml.Vm.Gc.WorkQueue.pop_machine
+
+#print axioms OCaml.Vm.Gc.word_writeLog_at
+#print axioms OCaml.Vm.Gc.PendingCopy.of_links
+#print axioms OCaml.Vm.Gc.WorkQueue.body_cons
+#print axioms OCaml.Vm.Gc.WorkQueue.body_frame_log
+#print axioms OCaml.Vm.Gc.WorkQueue.enqueue

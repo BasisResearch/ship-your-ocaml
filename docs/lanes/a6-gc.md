@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Allocation-return enqueue effect (2026-10-03)
+
+- `Generated/Enqueue.lean:writes` proves all six stores on the real
+  multi-field allocation-return route: caller root, zero source header,
+  source forwarding pointer, copied first field, global head and next-source
+  link. `run` composes the two generated blocks through the queue insertion
+  jump, stopping at the native epilogue.
+- `QueueEnqueue.lean:enqueue` turns that effect into the new queue view,
+  caller-root update and copied first field. Existing links use the shared
+  `WorkQueue.body_frame_log` and Eqv.transport. The scalar load identifying
+  the prior queue head and finite write separation remain named premises;
+  allocation freshness and the concrete access supplier are still open.
+- `Readback.lean:word_writeLog_at` reuses the existing indexed write-log
+  read64 theorem and total-read bridge. No byte arithmetic or instruction
+  execution is re-proved. Targeted capped Enqueue/QueueEnqueue builds pass.
+- The fully supplied queue-pop increment landed as `1c9fd67`, full gate exit 0.
+  Next: enqueue access/load suppliers and partial copied-field invariant;
+  allocator/call splicing, full G2 and production Fits remain open.
+
 ## Concrete intrusive queue pop (2026-10-03)
 
 - `QueueAccess.lean:pop_machine` discharges the generated SegPre from
