@@ -219,6 +219,10 @@ import OCaml.Vm.Sim.RootFrame
 import OCaml.Vm.Sim.EnterReady
 import OCaml.Vm.Sim.ApplyArithmetic
 import OCaml.Vm.Sim.Apply
+import OCaml.Vm.Sim.Return
+import OCaml.Vm.Sim.ReturnPayload
+import OCaml.Vm.Sim.ReturnRead
+import OCaml.Vm.Sim.ReturnArithmetic
 import OCaml.Vm.Sim.PushtrapArithmetic
 import OCaml.Vm.Sim.PushtrapStore
 import OCaml.Vm.Sim.PushtrapRestore

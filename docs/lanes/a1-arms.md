@@ -1450,16 +1450,27 @@ path through its shared stack-capacity and no-pending checks. The generated
 claims a machine postcondition. Full invariant derivation and stack-growth
 execution remain open. PUSHTRAP landed as `ae89b00`, all gates passing.
 
+## RETURN represented paths
+
+`ReturnMore.lean:16` and `ReturnFrame.lean:15` prove both native paths;
+`Return.lean` matches their successful bytecode steps. The generated
+eight/ten-instruction bodies check in 1.5/1.8 s, represented bridges in
+1.0/1.1 s and wrappers in 0.9 s. `ReturnPayload.lean:10` retains the restored
+environment as a heap root before dropping stack words. `ReturnRead.lean:18`
+extracts the three saved caller words and its environment root. Operand
+nonnegativity, extra-count signed bounds, read geometry and runtime framing
+remain explicit invariant premises. APPLY landed as `e33689e`, all gates passing.
+
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: fixed-arity application/return, allocation and
+families: fixed-arity application, tail calls, restart/grab, allocation and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 111 conditional
+setup/return bridges and named callee composition. There are 112 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
