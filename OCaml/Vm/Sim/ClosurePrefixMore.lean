@@ -24,10 +24,8 @@ theorem closure_prefix_more {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config
   have address := push_address (space.room branch)
   have member : (sp - 8, 8, accu) ∈ closurePushLog sp count.toInt.toNat accu := by
     simp only [closurePushLog, branch, ite_true, List.mem_singleton]
-  have guard : zopz0zKzJ_s (0#64) (BitVec.ofNat 64 count.toInt.toNat) = false := by
-    unfold zopz0zKzJ_s
-    rw [nat64_toInt count.toInt.toNat (by omega)]
-    exact decide_eq_false (by change ¬ (0 : Int) ≥ (count.toInt.toNat : Int); omega)
+  have guard : zopz0zKzJ_s (0#64) (BitVec.ofNat 64 count.toInt.toNat) = false :=
+    return_more_guard count.toInt.toNat branch (by omega)
   have nurseryGuard : zopz0zKzJ_s (254#64) (BitVec.ofNat 64 count.toInt.toNat) = true := by
     unfold zopz0zKzJ_s
     rw [nat64_toInt count.toInt.toNat (by omega)]

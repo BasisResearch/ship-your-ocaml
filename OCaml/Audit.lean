@@ -2518,6 +2518,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ClosureNurseryInput.after
 #print axioms OCaml.Vm.Sim.closure_reserve
 
+-- Concrete capture snapshots and both represented CLOSURE initializers.
+#print axioms OCaml.Vm.Sim.closure_push_snapshot
+#print axioms OCaml.Vm.Sim.closure_setup_snapshot
+#print axioms OCaml.Vm.Sim.ClosureInitialized.copy_start
+#print axioms OCaml.Vm.Sim.ClosureInitInput.copy_after
+#print axioms OCaml.Vm.Sim.closure_initialize_more
+#print axioms OCaml.Vm.Sim.closure_initialize_zero
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

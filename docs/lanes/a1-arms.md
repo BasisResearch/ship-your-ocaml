@@ -1787,6 +1787,19 @@ the exact young-pointer update. `NurseryArithmetic.lean`
 Both represented prefixes landed as `bf98689`, all gates passing. Next:
 closure initializer/source snapshot and metadata/return suffix composition.
 
+## Both represented CLOSURE initializers and capture snapshot
+
+`ClosureSnapshot.lean` (`closure_push_snapshot`, `closure_setup_snapshot`)
+proves the concrete captured-word snapshot from the push and disjoint nursery
+setup. `ClosureInitializeMore/Zero.lean` (`closure_initialize_more`,
+`closure_initialize_zero`) then checks both generated header/initializer paths;
+the nonempty adapter checks in 1.1 s. `ClosureInitialized.copy_start` and
+`ClosureInitInput.copy_after` establish the already-proved indexed capture loop.
+The prefix generator now reuses `return_more_guard` for the same signed
+nonempty test. Reservation landed as `51e7207`, all gates passing. Next:
+shared suffix input for zero/copied captures, metadata stores, and CLOSURE
+arm/step composition.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
