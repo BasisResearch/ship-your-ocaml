@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.ForwardedField
 import OCaml.Vm.Gc.ForwardedAdvance
 import OCaml.Vm.Boot.Startup.WhileMinToMalloc
 import OCaml.Vm.Gc.MopupResume
@@ -80,6 +81,7 @@ import Vsa.Sim.DivLoops
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
 `Quot.sound`). -/
+
 
 #print axioms OCaml.Os.htif_addresses_distinct
 #print axioms OCaml.Os.longName_eof_rejected
@@ -2318,3 +2320,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_stat_alloc_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetStatAllocWitness.pool_zero
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_malloc_exists
+
+#print axioms OCaml.Vm.Gc.ForwardedCall.Conditions.memory_eq
+#print axioms OCaml.Vm.Gc.ForwardedField.Input.read_input
+#print axioms OCaml.Vm.Gc.ForwardedField.Input.carried
+#print axioms OCaml.Vm.Gc.ForwardedField.classifier_carried
+#print axioms OCaml.Vm.Gc.ForwardedField.classifier_input
+#print axioms OCaml.Vm.Gc.ForwardedField.forwarded_field

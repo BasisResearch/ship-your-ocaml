@@ -1,5 +1,20 @@
 # Lane a6-gc
 
+## Loaded forwarded field through advance (2026-10-03)
+
+- `ForwardedField.lean:forwarded_field` composes the actual source-field
+  load, parity and nursery tests, mopup call, complete forwarded oldify
+  invocation, return jump and header advance. The destination argument is
+  computed by the classifier; its stored word is the source forwarding
+  target. Exact native-save/root logs and platform/code/output frames hold.
+- `ForwardedCall.Conditions.memory_eq` separates geometric/value conditions
+  from the register/platform input established by the read-only classifier.
+  The result retains the installed return link and a restricted ABI frame.
+- Targeted capped build passes (658 jobs). Advance/ABI work landed as
+  `29c0ac5`. Next: establish header-size preservation and typed relocation,
+  then include this case in the scan invariant. Fresh allocation, roots,
+  ephemerons, major reclamation and G2/live-word Fits remain open.
+
 ## Forwarded-field header advance and ABI frame (2026-10-03)
 
 - `ForwardedAdvance.lean:forwarded_advance` runs the actual mopup JAL,

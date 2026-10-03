@@ -22,7 +22,8 @@ theorem ResumedPost.advance_input {R before after} (post : ResumedPost R before 
 /-- A returned forwarded pointer has been written and the scan has advanced.
 Only the actual scratch/link registers and scan index/pointer may change;
 restored callee-saved registers remain available to the enclosing loop. -/
-structure AdvancedPost (R : Nat → BitVec 64) (before after : Config) : Prop where
+structure AdvancedPost (R : Nat → BitVec 64) (before after : Config)
+    (clobbers : List Nat := [1,8,9,12,14,15]) : Prop where
   good : GoodState after.σ
   minstret : ∃ v, after.σ.regs.get? Register.minstret = some v
   tick : after.tick < 2
@@ -31,9 +32,10 @@ structure AdvancedPost (R : Nat → BitVec 64) (before after : Config) : Prop wh
   destination : word after (R 11).toNat = word before (R 10).toNat
   pc : PCAt (if againAfterCall R before then FieldCopy.pc else FieldCopy.exitPc) after
   registers : GHolds after.σ (FieldCopy.regs (R 8 + 8#64) (R 18) (R 19) (R 9 + 1#64))
+  link : gprGet after.σ 1 = some call.link
   output : after.σ.sailOutput = before.σ.sailOutput
   native : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
-    (∀ n ∈ [1,8,9,12,14,15], (gprReg n == r) = false) →
+    (∀ n ∈ clobbers, (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
 
 /-- Complete forwarded-field call, native return, resume jump and concrete
@@ -48,13 +50,20 @@ theorem forwarded_advance {R domain c} (input : ForwardedCall.Input R domain c)
   obtain ⟨after, run, advanced⟩ := (FieldCopy.advance_machine (returned.advance_input header)).run
     middle ⟨returned.body.pc, rfl⟩
   refine ⟨after, run, ⟨advanced.machine.good, advanced.machine.minstret, advanced.machine.tick,
-    advanced.code, advanced.memory.trans returned.body.memory, ?_, ?_, advanced.registers,
+    advanced.code, advanced.memory.trans returned.body.memory, ?_, ?_, advanced.registers, ?_,
     advanced.machine.output.trans returned.body.output, ?_⟩⟩
   · simpa [word, linked, advanced.memory] using returned.body.root
   · have same : FieldCopy.advanceAgain (R 19) (R 9) middle = againAfterCall R c := by
       unfold FieldCopy.advanceAgain againAfterCall word
       rw [returned.body.memory]
     simpa only [same] using advanced.pc
+  · have keep : gprGet after.σ 1 = gprGet middle.σ 1 := by
+      apply advanced.machine.frame Register.x1 (by decide)
+      intro n hn
+      have member := FieldCopy.advance_written _ n hn
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+      rcases member with rfl | rfl | rfl <;> decide
+    exact keep.trans (gholds_lookup _ returned.body.registers rfl)
   · intro r noise untouched
     apply (advanced.machine.frame r noise ?_).trans
       (abi_frame returned.body input.entry.registers r noise ?_)

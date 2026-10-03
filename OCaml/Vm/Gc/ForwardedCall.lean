@@ -7,8 +7,7 @@ open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
 /-- Whole already-forwarded call input. The caller supplies disjoint native,
 nursery, root and domain windows; all saved values are established by the
 real prologue, rather than supplied as scalar-load or callee-run premises. -/
-structure Input (R : Nat → BitVec 64) (domain : BitVec 64) (c : Config) : Prop where
-  entry : OldifyEntry.Input R c
+structure Conditions (R : Nat → BitVec 64) (domain : BitVec 64) (c : Config) : Prop where
   root : word c Layout.sym_Caml_state = domain
   domainWindows : Young.Windows domain
   domainOutside : OldifyEntry.DomainOutside R domain
@@ -24,6 +23,23 @@ structure Input (R : Nat → BitVec 64) (domain : BitVec 64) (c : Config) : Prop
     (R 11).toNat + 8 ≤ (OldifyEntry.frameSp R + BitVec.ofNat 64 off).toNat ∨
       (OldifyEntry.frameSp R + BitVec.ofNat 64 off).toNat + 8 ≤ (R 11).toNat
   aligned : (R 1).toNat % 4 = 0
+
+/-- Platform/register input is separate from the caller's geometric and
+value conditions, so a read-only argument setup can establish the pins. -/
+structure Input (R : Nat → BitVec 64) (domain : BitVec 64) (c : Config)
+    : Prop extends Conditions R domain c where
+  entry : OldifyEntry.Input R c
+
+/-- Read-only classifier and call-bridge steps preserve all concrete callee
+geometry and value observations. Register pins are established separately. -/
+theorem Conditions.memory_eq {R domain before after}
+    (h : Conditions R domain before) (memory : after.σ.mem = before.σ.mem) :
+    Conditions R domain after := by
+  refine { h with root := ?_, lower := ?_, upper := ?_, header := ?_ }
+  · simpa only [word, memory] using h.root
+  · simpa only [Young.lowerWord, word, memory] using h.lower
+  · simpa only [Young.upperWord, word, memory] using h.upper
+  · simpa only [word, memory] using h.header
 
 def effect (R : Nat → BitVec 64) (c : Config) : List WEntry :=
   OldifyEntry.saveLog OldifyEntry.saves R ++ [((R 11).toNat, 8, word c (R 10).toNat)]
