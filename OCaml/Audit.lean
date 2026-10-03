@@ -1234,6 +1234,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.poptrap_step_arm
 #print axioms Vsa.Sim.tr_poptrap
 #print axioms OCaml.Vm.Sim.poptrap_loaded
+#print axioms OCaml.Vm.Sim.trap_shift_words
+#print axioms OCaml.Vm.Sim.pushtrap_link
+#print axioms OCaml.Vm.Sim.pushtrap_stored
+#print axioms OCaml.Vm.Sim.pushtrap_roots
+#print axioms OCaml.Vm.Sim.pushtrap_payload
+#print axioms OCaml.Vm.Sim.pushtrap_log_in
+#print axioms OCaml.Vm.Sim.pushtrap_restore
 #print axioms Vsa.Sim.tr_pushtrap
 #print axioms OCaml.Vm.Sim.pushtrap_loaded
 #print axioms Vsa.Sim.tr_push_retaddr

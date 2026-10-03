@@ -1417,10 +1417,20 @@ no-pending body with those facts. The bridge checks in 1.2 s; no pending work,
 read/store geometry, separation and runtime-window preservation remain named
 premises. Generated trap bodies landed as `7c7db48`, all gates passing.
 
+## PUSHTRAP restoration facts
+
+`PushtrapArithmetic.lean:23` proves native relative-link arithmetic with
+explicit bounded stack/trap depth. `PushtrapStore.lean:23` proves all five
+store readbacks, plus the frame-root fact and named geometry/separation.
+`PushtrapRestore.lean:8` (`pushtrap_payload`) joins the four-word frame and
+new trap depth; `pushtrap_restore` restores the platform and registers from
+the exact log. These modules check in 0.9–1.0 s. The generated-body
+composition is next. POPTRAP landed as `0a91a6e`, all gates passing.
+
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: represented PUSHTRAP adapter first, then allocation, application/return and
+families: PUSHTRAP generated-body composition first, then allocation, application/return and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
