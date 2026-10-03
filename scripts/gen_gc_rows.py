@@ -122,7 +122,7 @@ def outputs():
                 for key, val in {'HEAD': gen_fn.block_name(name, head, False)+'Seg',
                                  'TAKEN': gen_fn.block_name(name, child, True)+'Seg',
                                  'FALL': gen_fn.block_name(name, child, False)+'Seg',
-                                 'PC': hex(head.start)}.items():
+                                 'PC': hex(head.start), 'SETUPPC': hex(child.succs[0])}.items():
                     pop = pop.replace('@'+key+'@', val)
                 result[ROOT / 'OCaml/Vm/Gc/Generated/MopupPop.lean'] = pop
                 pop_audits = re.findall(r'^theorem ([\w.]+)', pop, re.M)
@@ -602,6 +602,24 @@ theorem run (immediate : Bool) (lds : List (List (BitVec 8)))
     (mem : Std.ExtHashMap Nat (BitVec 8)) :
     FnSummary pc (SegPre (blocks immediate) regs lds pc mem) (Post immediate lds mem) :=
   segmentSummary (blocks immediate) regs lds pc mem (chain_ok immediate)
+
+/-- Both outcomes retain the observed source and destination for the scan. -/
+theorem Post.source_target {immediate lds mem c} (post : Post immediate lds mem c) :
+    GHolds c.σ [(18, bytesVal .ld (lds.headD [])), (19, bytesVal .ld (lds.tail.headD []))] := by
+  refine ⟨?_, ?_, True.intro⟩
+  all_goals apply gholds_lookup _ post.registers
+  all_goals cases immediate <;> rfl
+
+theorem Post.setup_pc {lds mem c} (post : Post true lds mem c) :
+    PCAt @SETUPPC@#64 c := post.pc
+
+theorem written (immediate : Bool) :
+    ∀ n ∈ wrChain (blocks immediate), n ∈ [8, 9, 10, 11, 15, 18, 19] := by
+  cases immediate <;> decide
+
+theorem preserves_s8 (immediate : Bool) :
+    ∀ n ∈ wrChain (blocks immediate), (gprReg n == LeanRV64DExecutable.Register.x24) = false := by
+  cases immediate <;> decide
 
 end OCaml.Vm.Gc.MopupPop
 """

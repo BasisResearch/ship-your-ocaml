@@ -107,16 +107,25 @@ structure LinksOutside (qs : List PendingCopy) (log : List WEntry) : Prop where
     ∀ (j : Nat) (cell : Nat × BitVec 64), (p.cells (next qs i))[j]? = some cell →
       OutLRange log cell.1 8
 
+/-- Transport queue links from preserved scalar observations, independently
+of whether the memory effect is one store or a whole scan. -/
+theorem body_frame_words {qs pl c c'}
+    (h : (body qs).P pl 0 c)
+    (same : ∀ (i : Nat) (p : PendingCopy), qs[i]? = some p →
+      ∀ (j : Nat) (cell : Nat × BitVec 64), (p.cells (next qs i))[j]? = some cell →
+        word c' cell.1 = word c cell.1) : (body qs).P pl 0 c' := by
+  have image : (body qs).Img id pl 0 0 c c' := same
+  simpa only [placement_identity] using (body qs).transport id pl 0 0 c c' h image
+
 /-- Any disjoint write log transports the queue links by the identity action. -/
 theorem body_frame_log {qs pl c c' log}
     (h : (body qs).P pl 0 c) (outside : LinksOutside qs log)
     (memory : c'.σ.mem = writeLog c.σ.mem log) : (body qs).P pl 0 c' := by
-  have image : (body qs).Img id pl 0 0 c c' := by
-    intro i p hp j cell hc
-    change bytesT c'.σ.mem cell.1 8 = bytesT c.σ.mem cell.1 8
-    rw [memory]
-    exact bytesT_writeLog_out _ (outside.cells i p hp j cell hc)
-  simpa only [placement_identity] using (body qs).transport id pl 0 0 c c' h image
+  apply body_frame_words h
+  intro i p hp j cell hc
+  change bytesT c'.σ.mem cell.1 8 = bytesT c.σ.mem cell.1 8
+  rw [memory]
+  exact bytesT_writeLog_out _ (outside.cells i p hp j cell hc)
 
 /-- Queue-link cells must not overlap the global head word. The machine
 layout and allocator separation will supply this footprint fact. -/

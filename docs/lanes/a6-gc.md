@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Queue pop through represented integer block (2026-10-03)
+
+- `PopScan.lean:143` (`pop_scan`) composes the concrete queue pop, saved-first
+  classifier, setup and complete integer suffix. Its post gives ObjAt, the
+  remaining queue, exact write footprint (global head and destination suffix),
+  unchanged output, unaffected registers and platform/code/exit pins.
+- `PopPost.setup_input` derives the setup pointers from the actual loads and
+  preserves the runtime s8 constant with the segment kernel frame. PopPost now
+  retains the complete BlockPost alongside its reflected machine result.
+- `PayloadOutsideTodo` and `QueueOutsideScan` name the word-footprint facts
+  expected from heap ownership. `PopPost.payload` and `View.scan_frame` use
+  Eqv transport; shared `body_frame_words` handles both logs and loop frames.
+- `CodeFrame.lean:mopupCode_after` shares code-image preservation across both
+  paths, replacing the formerly local field-copy argument.
+- Targeted capped build passes. Setup/scan composition landed as `6a1797a`.
+  This proves one pending block with integer fields. Outer queue back-edge,
+  pointer classification/oldify calls, allocation and full G2 remain open;
+  production Fits and the compiler GcSafe obligation remain unchanged.
+
 ## Machine setup through represented scan (2026-10-03)
 
 - `ScanSetup.lean:setup_scan` composes the actual mopup setup block with the

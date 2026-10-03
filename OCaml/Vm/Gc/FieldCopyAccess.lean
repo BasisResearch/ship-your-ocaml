@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.CodeFrame
 import OCaml.Vm.Gc.Generated.FieldCopy
 import Vsa.Sim.ChainMemory
 import OCaml.Vm.Gc.Readback
@@ -139,13 +140,9 @@ theorem CopyPost.code {slot delta target index before after}
     (input : Input slot delta target index before)
     (post : CopyPost slot delta target index before after) :
     Code.Caml_oldify_mopupLoaded after.σ.mem := by
-  apply Code.caml_oldify_mopup_transport input.code
-  intro a _ upper
-  rw [post.machine.memory]
-  apply evalBlocks_low (chainPlan_facts (code_facts _ input.code)
-    (copy_access slot delta target index before input.windows input.immediate))
-  have extent : (0x80009f08 : Nat) ≤ tohostAddr := by decide
-  omega
+  exact mopupCode_after input.code
+    (chainPlan_facts (code_facts _ input.code)
+      (copy_access slot delta target index before input.windows input.immediate)) post.machine
 
 /-- Readback of the size header uses the shared total-word frame theorem. -/
 theorem header_unchanged (slot delta target : BitVec 64) (c : Config)

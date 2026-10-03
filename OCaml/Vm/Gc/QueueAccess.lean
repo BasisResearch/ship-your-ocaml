@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.Queue
+import OCaml.Vm.Primitives.Blocks
 
 namespace OCaml.Vm.Gc.WorkQueue
 open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
@@ -107,19 +108,21 @@ structure PopPost (q : PendingCopy) (qs : List PendingCopy) (pl : Place)
     (before after : Config) : Prop where
   machine : MopupPop.Post (firstImmediate q before) (loads q before) before.σ.mem after
   queue : View qs pl after
+  effects : BlockPost (blocks (firstImmediate q before)) MopupPop.pc regs
+    (loads q before) before after
 
 /-- Execute the actual mopup queue-pop code from concrete RAM and link facts.
 This summary stops at the first-field branch, before any oldify call. -/
 theorem pop_machine {q qs pl c} (input : PopInput q qs pl c) :
     FnSummary MopupPop.pc (fun d => d = c) (PopPost q qs pl c) := by
-  constructor
-  rintro d ⟨pc, same⟩
-  subst d
-  have pre : SegPre (blocks (firstImmediate q c)) regs (loads q c) MopupPop.pc c.σ.mem c :=
-    ⟨input.good, rfl, pc, input.minstret, input.registers, by decide,
+  have summary := block_summary (blocks (firstImmediate q c)) MopupPop.pc regs (loads q c) c
+    ⟨input.good, input.minstret, input.registers, by decide,
       chainPlan_facts (code_facts _ input.code) (pop_access input.queue input.windows input.nonzero),
-      input.tick⟩
-  obtain ⟨after, run, post⟩ := (MopupPop.run _ _ _).run c ⟨pc, pre⟩
-  exact ⟨after, run, ⟨post, pop_loaded input.queue post input.separate⟩⟩
+      chain_ok _, input.tick⟩
+  apply summary.weaken (fun _ h => h)
+  intro after effects
+  have post : MopupPop.Post (firstImmediate q c) (loads q c) c.σ.mem after :=
+    segmentPost_of_block effects
+  exact ⟨post, pop_loaded input.queue post input.separate, effects⟩
 
 end OCaml.Vm.Gc.WorkQueue
