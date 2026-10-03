@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.PopMixed
 import OCaml.Vm.Boot.Startup.MallocRun
 import OCaml.Vm.Gc.MixedRelocated
 import OCaml.Vm.Gc.MixedSchedule
@@ -2720,3 +2721,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.MixedField.schedule_advance
 #print axioms OCaml.Vm.Gc.MixedField.scan_relocated
 #print axioms OCaml.Vm.Gc.MixedField.LoopAt.initial
+
+#print axioms OCaml.Vm.Gc.MixedField.LoopData.frame
+#print axioms OCaml.Vm.Gc.MixedField.LoopData.memory_eq
+#print axioms OCaml.Vm.Gc.ForwardedField.setup_result
+#print axioms OCaml.Vm.Gc.MixedField.setup_initial
+#print axioms OCaml.Vm.Gc.MixedField.setup_relocated
+#print axioms OCaml.Vm.Gc.MopupCall.first_outside_of_stack
+#print axioms OCaml.Vm.Gc.WorkQueue.PopFirstPost.traversal_result
+#print axioms OCaml.Vm.Gc.WorkQueue.mixed_after_first
+#print axioms OCaml.Vm.Gc.WorkQueue.pop_mixed
+#print axioms OCaml.Vm.Gc.WorkQueue.resume_mixed

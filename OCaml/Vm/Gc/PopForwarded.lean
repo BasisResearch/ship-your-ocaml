@@ -13,12 +13,8 @@ def suffixRegs (R : Nat → BitVec 64) (q : PendingCopy) (c : Config) :=
 /-- The first slot is outside the native save interval and scanned suffix. -/
 theorem first_outside {R domain a b count initial expected}
     (data : ForwardedField.LoopData R domain a b count 1 initial expected) (large : 1 < count) :
-    OutWRange (MopupCall.scanFootprint R b 1 count) b 8 := by
-  refine ⟨?_, Or.inl (by change b + 8 ≤ b + 8; exact Nat.le_refl _), True.intro⟩
-  have separate := data.stack
-  rcases separate with below | above
-  · exact Or.inr (by omega)
-  · exact Or.inl (by omega)
+    OutWRange (MopupCall.scanFootprint R b 1 count) b 8 :=
+  MopupCall.first_outside_of_stack data.stack large
 
 /-- A pending object has been popped and completely scanned at the new
 placement, with the remaining queue and all external machine frames kept. -/
@@ -39,6 +35,29 @@ structure PopForwardedPost (R : Nat → BitVec 64) (q : PendingCopy) (qs : List 
   native : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ [1,8,9,10,11,12,14,15,18,19], (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
+
+/-- Common remaining-queue and external-frame composition after the
+first-field prefix and any verified complete suffix route. -/
+theorem PopFirstPost.traversal_result {R domain q qs fields pl μ cp tag before middle after}
+    (poppedFirst : PopFirstPost R q qs pl before middle)
+    (ready : FirstReady R domain q before)
+    (queueOutside : OutsideWindows qs (MopupCall.scanFootprint R q.target.toNat 1 fields.length))
+    (scanned : ForwardedField.SetupRelocatedPost (afterFirst R q before)
+      q.source.toNat q.target.toNat fields pl μ cp tag middle after) :
+    PopForwardedPost R q qs fields pl μ cp tag before after := by
+  have scannedMemory : FrameOn (MopupCall.scanFootprint R q.target.toNat 1 fields.length) middle.σ.mem after.σ.mem :=
+    scanned.memory
+  refine ⟨scanned.good, scanned.minstret, scanned.tick, scanned.code, scanned.oldifyCode,
+    scanned.pc, scanned.object, poppedFirst.queue.frame_windows queueOutside scannedMemory,
+    frameOn_comp (poppedFirst.memory_frame ready) scannedMemory, scanned.output.trans poppedFirst.output, ?_⟩
+  intro r noise untouched
+  apply (scanned.native r noise ?_).trans (poppedFirst.native r noise ?_)
+  · intro n member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact untouched _ (by decide)
+  · intro n member
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact untouched _ (by decide)
 
 /-- Shared typed suffix continuation after the complete first-field update. -/
 theorem forwarded_after_first {R domain q qs fields pl μ cp tag c expected}
@@ -74,19 +93,7 @@ theorem forwarded_after_first {R domain q qs fields pl μ cp tag c expected}
   obtain ⟨after, run, scanned⟩ := (ForwardedField.setup_relocated (cp := cp)
     setupInput (data.frame outside memory) poppedFirst.setup_carried poppedFirst.oldifyCode middleGrey
     firstOutside middleHeader middleObserved).run middle ⟨poppedFirst.pc,rfl⟩
-  have scannedMemory : FrameOn (MopupCall.scanFootprint R q.target.toNat 1 fields.length) middle.σ.mem after.σ.mem :=
-    scanned.memory
-  refine ⟨after, run, ⟨scanned.good, scanned.minstret, scanned.tick, scanned.code, scanned.oldifyCode,
-    scanned.pc, scanned.object, poppedFirst.queue.frame_windows queueOutside scannedMemory,
-    frameOn_comp memory scannedMemory, scanned.output.trans poppedFirst.output, ?_⟩⟩
-  intro r noise untouched
-  apply (scanned.native r noise ?_).trans (poppedFirst.native r noise ?_)
-  · intro n member
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact untouched _ (by decide)
-  · intro n member
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact untouched _ (by decide)
+  exact ⟨after, run, poppedFirst.traversal_result ready queueOutside scanned⟩
 
 /-- Complete real pending-object traversal when every child is already
 forwarded. All continuation inputs follow from initial observations. -/

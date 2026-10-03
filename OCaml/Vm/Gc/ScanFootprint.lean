@@ -11,6 +11,15 @@ def nativeWindow (R : Nat → BitVec 64) : W :=
 def scanFootprint (R : Nat → BitVec 64) (b start count : Nat) : List W :=
   nativeWindow R :: FieldCopy.scanWindow b start count
 
+/-- Native-stack separation and the suffix start exclude the first slot. -/
+theorem first_outside_of_stack {R b count}
+    (stack : (nativeWindow R).hi ≤ b - 8 ∨ b + 8 * count ≤ (nativeWindow R).lo)
+    (large : 1 < count) : OutWRange (scanFootprint R b 1 count) b 8 := by
+  refine ⟨?_, Or.inl (by change b + 8 ≤ b + 8; exact Nat.le_refl _), True.intro⟩
+  rcases stack with below | above
+  · exact Or.inr (by omega)
+  · exact Or.inl (by omega)
+
 /-- Every actual callee write is in the native save interval or is the
 single destination store. Saved-register values play no role in separation. -/
 theorem effect_entry_of_bound {R c b i}

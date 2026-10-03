@@ -1,5 +1,27 @@
 # Lane a6-gc
 
+## Pending-object traversal with a mixed suffix (2026-10-03)
+
+- `PopMixed.lean:pop_mixed` and `resume_mixed` execute initial/backedge
+  queue visits through first-child forwarding, setup and a complete mixed
+  suffix. The result includes relocated ObjAt, the remaining queue, and
+  memory/native/code/output frames. `MixedPending` contains only initial
+  platform, heap, geometric and typed-relocation observations.
+- `MixedMemory.lean:LoopData.frame` preserves the suffix's values and route
+  decisions across separated earlier writes. `MixedSetup.lean` derives the
+  real setup boundary and composes it with the complete mixed scan.
+- Shared `ForwardedField.setup_result`,
+  `PopFirstPost.traversal_result` and `first_outside_of_stack` handle both
+  traversal variants. Existing forwarded-only proofs now instantiate them.
+- Capped targeted build (725 jobs), full Audit (2704 jobs), discipline and
+  abstraction gates pass; new headlines use only permitted axioms.
+  Mixed suffix landed as `2fe46be`.
+  The first child is still required to be already-forwarded young; suffix
+  fields may be immediate, non-young or already-forwarded young. Fresh-copy
+  allocation, remaining first-child cases, outer roots/queue closure,
+  ephemerons, major reclamation and G2 remain open. Next: extend the fresh
+  oldify paths and their partial-relocation suppliers.
+
 ## Mixed copied/forwarded suffix (2026-10-03)
 
 - `MixedField.lean:step` executes either the real immediate/non-young copy

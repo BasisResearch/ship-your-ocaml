@@ -20,6 +20,29 @@ structure SetupRelocatedPost (R : Nat → BitVec 64) (a b : Nat) (fields : List 
     (∀ n ∈ [1,8,9,10,11,12,14,15,18], (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
 
+/-- Shared composition of setup's frame with a completed represented scan.
+Both forwarded-only and mixed field loops instantiate this adapter. -/
+theorem setup_result {R a b fields pl μ cp tag before middle after expected}
+    (setup : FieldCopy.SetupPost a b fields.length before middle)
+    (scan : FieldCopy.ScanAtWith [1,8,9,10,11,12,14,15] a b fields.length 1 middle fields.length after
+      (MopupCall.scanFootprint R b 1 fields.length) expected)
+    (code : Code.Caml_oldify_oneLoaded after.σ.mem)
+    (object : ObjAt after (reloc μ pl) cp b (.block tag fields)) :
+    SetupRelocatedPost R a b fields pl μ cp tag before after := by
+  refine ⟨scan.good, scan.minstret, scan.tick, scan.code, code, ?_, object, ?_,
+    scan.output.trans setup.machine.output, ?_⟩
+  · simpa only [Nat.lt_irrefl, ite_false] using scan.pc
+  · simpa only [setup.memory] using scan.memory
+  · intro r noise untouched
+    apply (scan.native r noise ?_).trans
+      (setup.machine.frame_subset FieldCopy.setup_written r noise ?_)
+    · intro n member
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+      rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact untouched _ (by decide)
+    · intro n member
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+      rcases member with rfl | rfl | rfl | rfl | rfl | rfl <;> exact untouched _ (by decide)
+
 /-- Real suffix setup and the terminating already-forwarded scan produce
 ObjAt at the relocated placement. Scalar observations are transported over
 setup's proved memory identity; no loop-head state is assumed. -/
@@ -46,21 +69,6 @@ theorem setup_relocated {R domain a b fields c expected pl μ cp tag}
     simpa only [word, setup.memory] using observed i v member lower
   obtain ⟨after, run, post⟩ := (scan_relocated (cp := cp) (data.memory_eq setup.memory)
     (grey.memory_eq setup.memory) firstOutside header' observed') middle atHead
-  refine ⟨after, run, ⟨post.loop.scan.good, post.loop.scan.minstret, post.loop.scan.tick,
-    post.loop.scan.code, post.loop.code, ?_, post.object, ?_,
-    post.loop.scan.output.trans setup.machine.output, ?_⟩⟩
-  · simpa only [Nat.lt_irrefl, ite_false] using post.loop.scan.pc
-  · have footprint : MopupCall.scanFootprint (setupResult R a b) b 1 fields.length =
-        MopupCall.scanFootprint R b 1 fields.length := rfl
-    simpa only [footprint, setup.memory] using post.loop.scan.memory
-  · intro r noise untouched
-    apply (post.loop.scan.native r noise ?_).trans
-      (setup.machine.frame_subset FieldCopy.setup_written r noise ?_)
-    · intro n member
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-      rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact untouched _ (by decide)
-    · intro n member
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-      rcases member with rfl | rfl | rfl | rfl | rfl | rfl <;> exact untouched _ (by decide)
+  exact ⟨after, run, setup_result setup post.loop.scan post.loop.code post.object⟩
 
 end OCaml.Vm.Gc.ForwardedField
