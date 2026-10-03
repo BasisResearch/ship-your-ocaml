@@ -2,6 +2,30 @@
 
 ## Round 2 status (2026-10-03)
 
+Latest checked increment: `Startup/CamlMainPrefix.lean` (`caml_main_domain`)
+and `Startup/DomainPrefix.lean` (`domain_allocate`) prove the generated
+first runtime call and fresh-domain allocation prefix. They retain exact
+store logs, untouched-register frames, image, output and platform facts;
+the actual JAL supplies the return link. `PrefixCall.prefix_call_post`
+shares the composition rule. Generator-produced literal instruction
+certificates keep symbolic evaluation bounded. The store-log proof initially
+expanded symbolic `toNat` arithmetic until the memory cap/recursion limit;
+explicit instruction simplification and separate bitvector address equalities
+now check both complete prefix modules in about one second, with no budget
+increase.
+
+`Startup/BssFrame.lean` transports byte reads and executable image through
+crt0/main and supplies `CrtCamlMainPost.leaf`. Generic `loaderMem_bytes` and
+`bytesT_local_eq` reuse the bounded byte-view API. `AllocatorBootstrap.lean`
+proves `ResetCamlMainWitness.sbrk_base` is the actual loader sentinel -1,
+and `ResetCamlMainWitness.heap_not_initialized` excludes every instance of
+the landed allocator's `HeapAt` predicate at C entry. This is a checked
+obstruction to applying `malloc_all` prematurely. Next: preserve the needed
+reset register frame through these prefixes, prove first-malloc bootstrap,
+then consume the existing general allocator contracts. No user decision is
+needed. The complete reset-to-cut execution and Round 2 exit remain open.
+
+
 The reset-to-cut execution proof is now the active exit criterion. Round 1
 proved only `Loaded` for the complete captured cut; the native run is not
 a substitute for a kernel execution theorem.

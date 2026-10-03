@@ -1,5 +1,10 @@
 import OCaml.Vm.Gc.MopupResume
 import OCaml.Vm.Gc.ForwardedCall
+import OCaml.Vm.Boot.Startup.AllocatorBootstrap
+import OCaml.Vm.Boot.Startup.CamlMainPrefix
+import OCaml.Vm.Boot.Startup.DomainPrefix
+import OCaml.Vm.Boot.Startup.CamlMainCalls
+import OCaml.Vm.Boot.Startup.DomainCalls
 import OCaml.Vm.Gc.OldifySaved
 import OCaml.Vm.Boot.Startup.StatAlloc
 import OCaml.Vm.Boot.Startup.StatAllocCalls
@@ -2262,3 +2267,28 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.MopupCall.forwarded
 #print axioms OCaml.Vm.Gc.MopupCall.resume_forwarded
 #print axioms OCaml.Vm.Gc.MopupCall.forwarded_resume
+-- Startup frame, first runtime calls, and allocator bootstrap obligation.
+#print axioms Vsa.Sim.Boot.loaderMem_bytes
+#print axioms Vsa.Sim.Boot.bytesT_local_eq
+#print axioms OCaml.Vm.Boot.Startup.mainWrites_before
+#print axioms OCaml.Vm.Boot.Startup.CrtCamlMainPost.memory_below
+#print axioms OCaml.Vm.Boot.Startup.CrtCamlMainPost.bytes_below
+#print axioms OCaml.Vm.Boot.Startup.CrtCamlMainPost.image
+#print axioms OCaml.Vm.Boot.Startup.CrtCamlMainPost.leaf
+#print axioms OCaml.Vm.Boot.Startup.heap_base_word
+#print axioms OCaml.Vm.Boot.Startup.initial_sbrk_base
+#print axioms OCaml.Vm.Boot.Startup.CrtCamlMainPost.sbrk_base
+#print axioms OCaml.Vm.Boot.Startup.heap_not_initialized
+#print axioms OCaml.Vm.Boot.Startup.prefix_call_post
+#print axioms OCaml.Vm.Boot.Startup.caml_main_prefix_input
+#print axioms OCaml.Vm.Boot.Startup.caml_main_prefix_log
+#print axioms OCaml.Vm.Boot.Startup.caml_main_prefix
+#print axioms OCaml.Vm.Boot.Startup.caml_main_domain
+#print axioms OCaml.Vm.Boot.Startup.domain_prefix_input
+#print axioms OCaml.Vm.Boot.Startup.domain_prefix_log
+#print axioms OCaml.Vm.Boot.Startup.domain_prefix
+#print axioms OCaml.Vm.Boot.Startup.domain_allocate
+#print axioms OCaml.Vm.Boot.Startup.call_80004d94
+#print axioms OCaml.Vm.Boot.Startup.call_8002a8e8
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCamlMainWitness.sbrk_base
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCamlMainWitness.heap_not_initialized

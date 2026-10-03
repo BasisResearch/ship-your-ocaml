@@ -17,6 +17,12 @@ theorem bytesT_view {m : Std.ExtHashMap Nat (BitVec 8)} {v : Nat → Option (Bit
   | zero => rfl
   | succ w ih => simp only [bytesT, viewBytes, h, ih]
 
+/-- Read a loader view without materializing any of its memory ranges. -/
+theorem loaderMem_bytes (pieces : List (Nat × Nat)) (byte : Nat → BitVec 8) (a w : Nat) :
+    bytesT (loaderMem pieces byte) a w =
+      viewBytes (fun x => if inPieces pieces x then some (byte x) else none) a w :=
+  bytesT_view (loaderMem_get pieces byte) a w
+
 /-- A checked packed log supplies all total reads from its compact final view. -/
 theorem observedMem_bytes {initial : Vsa.MemRepr.Mem} {L : PackedLog} {t : RunTree}
     (h : LogOk L t) (a w : Nat) :
@@ -43,6 +49,13 @@ theorem viewBytes_congr {v v' : Nat → Option (BitVec 8)} {a w : Nat}
     have rest : viewBytes v (a + 1) w = viewBytes v' (a + 1) w :=
       ih (fun i hi => by simpa only [Nat.add_assoc, Nat.add_comm 1] using h (i + 1) (by omega))
     simp only [viewBytes, first, rest]
+
+/-- Local byte agreement transports a read even when the complete memories differ. -/
+theorem bytesT_local_eq {m m' : Vsa.MemRepr.Mem} (a w : Nat)
+    (h : ∀ i, i < w → m[a + i]? = m'[a + i]?) : bytesT m a w = bytesT m' a w := by
+  rw [bytesT_view (m := m) (v := fun x => m[x]?) (fun _ => rfl),
+    bytesT_view (m := m') (v := fun x => m'[x]?) (fun _ => rfl)]
+  exact viewBytes_congr h
 
 /-- A read wholly covered by final stores has no initial-memory premise. -/
 theorem observedMem_bytes_stored {initial : Vsa.MemRepr.Mem} {L : PackedLog}
