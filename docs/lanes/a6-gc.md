@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Concrete young-range classifier (2026-10-03)
+
+- `YoungAccess.lean:117` (`Young.classify`) runs both range-test blocks from
+  concrete total reads of Caml_state, young_end and young_start. Every symbol
+  and field offset comes from Layout. Its exact endpoint is oldify only when
+  `young_start < value < young_end`; otherwise it reaches the copy store.
+- The classifier is memory/output preserving and writes only a4/a5. Generated
+  code/shape/effect certificates cover all three paths; the input supplies
+  platform/register pins, the represented domain pointer and RAM windows.
+- `decision_at_start` and `decision_at_end` check both excluded endpoints.
+  `nonpointer_outside` and `Result.copy_nonpointer` connect the actual strict
+  classifier to the existing conservative half-open NoForgery invariant.
+  The caller still supplies parity; young-pointer oldification is open.
+- Targeted build and full axiom audit pass under the 24 GB cap. Empty queue
+  exits landed as `8e66983`. Next: compose non-immediate field paths and oldify
+  calls. Outer queue termination, allocation, ephemerons and G2 remain open.
+
 ## Empty queue exits (2026-10-03)
 
 - `QueueEmpty.lean:empty_machine` certifies both the initial and bottom empty

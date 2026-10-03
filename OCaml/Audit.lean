@@ -32,6 +32,7 @@ import OCaml.Vm.Gc.QueueAccess
 import OCaml.Vm.Gc.QueueEnqueue
 import OCaml.Vm.Gc.PendingPayload
 import OCaml.Vm.Gc.QueueEmpty
+import OCaml.Vm.Gc.YoungAccess
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1872,3 +1873,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.reset_image
 #print axioms OCaml.Vm.Boot.Startup.reset_image_fillZero
 #print axioms OCaml.Vm.Boot.Startup.reset_to_caml_main
+
+#print axioms OCaml.Vm.Gc.Young.domain_window
+#print axioms OCaml.Vm.Gc.Young.upper_access
+#print axioms OCaml.Vm.Gc.Young.upper_control
+#print axioms OCaml.Vm.Gc.Young.lower_access
+#print axioms OCaml.Vm.Gc.Young.lower_control
+#print axioms OCaml.Vm.Gc.Young.access
+#print axioms OCaml.Vm.Gc.Young.decision
+#print axioms OCaml.Vm.Gc.Young.classify
+#print axioms OCaml.Vm.Gc.Young.decision_at_start
+#print axioms OCaml.Vm.Gc.Young.decision_at_end
+#print axioms OCaml.Vm.Gc.Young.nonpointer_outside
+#print axioms OCaml.Vm.Gc.Young.Result.copy_nonpointer
