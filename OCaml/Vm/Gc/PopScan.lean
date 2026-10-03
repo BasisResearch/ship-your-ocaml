@@ -140,7 +140,7 @@ structure PopScanPost (q : PendingCopy) (qs : List PendingCopy) (fields : List V
 
 /-- Concrete queue pop, first-field immediate classifier, setup and complete
 integer suffix. The only separation premises describe actual word footprints. -/
-theorem pop_scan {q qs fields pl cp tag c}
+theorem scan_after_pop {q qs fields pl cp tag c}
     (input : PopInput q qs pl c)
     (geometry : FieldCopy.Geometry q.source.toNat q.target.toNat fields.length)
     (large : 1 < fields.length)
@@ -150,9 +150,7 @@ theorem pop_scan {q qs fields pl cp tag c}
     (outside : PayloadOutsideTodo q fields.length)
     (queueOutside : QueueOutsideScan qs q.target.toNat fields.length)
     (s8 : gprGet c.σ 24 = some 1#64) :
-    FnSummary MopupPop.pc (fun d => d = c) (PopScanPost q qs fields pl cp tag c) := by
-  constructor
-  apply Vsa.Logic.Triple.seq (pop_machine input).run
+    Vsa.Logic.Triple (PopPost q qs pl c) (PopScanPost q qs fields pl cp tag c) := by
   intro middle popped
   have immediate := first_immediate grey (by omega) integers
   have pc : PCAt FieldCopy.setupPc middle := by
@@ -177,5 +175,20 @@ theorem pop_scan {q qs fields pl cp tag c}
     apply untouched n
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
     rcases hn with rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+
+/-- Initial queue visit followed by the shared represented scan. -/
+theorem pop_scan {q qs fields pl cp tag c}
+    (input : PopInput q qs pl c)
+    (geometry : FieldCopy.Geometry q.source.toNat q.target.toNat fields.length)
+    (large : 1 < fields.length)
+    (header : HeaderOk (word c (q.target.toNat - 8)) fields.length tag)
+    (grey : (pendingPayload q fields).P pl q.target.toNat c)
+    (integers : ∀ (i : Nat) v, fields[i]? = some v → ∃ n, v = Val.int n)
+    (outside : PayloadOutsideTodo q fields.length)
+    (queueOutside : QueueOutsideScan qs q.target.toNat fields.length)
+    (s8 : gprGet c.σ 24 = some 1#64) :
+    FnSummary MopupPop.pc (fun d => d = c) (PopScanPost q qs fields pl cp tag c) :=
+  ⟨Vsa.Logic.Triple.seq (pop_machine input).run
+    (scan_after_pop input geometry large header grey integers outside queueOutside s8)⟩
 
 end OCaml.Vm.Gc.WorkQueue

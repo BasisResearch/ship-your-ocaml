@@ -1,8 +1,22 @@
 # Lane a6-gc
 
+## Queue back-edge entry (2026-10-03)
+
+- `QueueResume.lean:resume_scan` certifies the actual bottom queue test and
+  composes it with the existing represented scan continuation. Both initial
+  and subsequent visits now have concrete entry summaries.
+- `Generated/MopupPop.lean:resume_effects` proves that the two entry paths
+  have the same complete effects after rejoining the shared child block.
+  The resume path gets its own code/shape/access/branch certificates; it does
+  not reuse a run from a different PC. `scan_after_pop` factors the common
+  continuation without duplicating the field-loop proof.
+- Targeted capped build passes. The first queue-pop/scan composition landed
+  as `93acf8e`. Remaining: outer queue invariant/termination and empty exit,
+  pointer classifiers/oldify calls, allocation and full G2/live-word Fits.
+
 ## Queue pop through represented integer block (2026-10-03)
 
-- `PopScan.lean:143` (`pop_scan`) composes the concrete queue pop, saved-first
+- `PopScan.lean:180` (`pop_scan`) composes the concrete queue pop, saved-first
   classifier, setup and complete integer suffix. Its post gives ObjAt, the
   remaining queue, exact write footprint (global head and destination suffix),
   unchanged output, unaffected registers and platform/code/exit pins.

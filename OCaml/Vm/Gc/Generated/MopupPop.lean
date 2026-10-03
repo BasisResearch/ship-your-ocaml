@@ -1,3 +1,4 @@
+import OCaml.Vm.Primitives.Blocks
 import OCaml.Vm.Gc.Generated.MopupDeferred
 import OCaml.Vm.Gc.ChainPlan
 import Vsa.Sim.ChainFactsTac
@@ -8,6 +9,7 @@ import Vsa.Sim.ElfDecode.Part018
 import Vsa.Sim.ElfDecode.Part031
 import Vsa.Sim.ElfDecode.Part050
 import Vsa.Sim.ElfDecode.Part092
+import Vsa.Sim.ElfDecode.Part211
 import OCaml.Vm.Layout
 import Vsa.Sim.SegmentSummary
 import Vsa.Sim.WriteLogLast
@@ -88,5 +90,33 @@ theorem written (immediate : Bool) :
 theorem preserves_s8 (immediate : Bool) :
     ∀ n ∈ wrChain (blocks immediate), (gprReg n == LeanRV64DExecutable.Register.x24) = false := by
   cases immediate <;> decide
+
+/-- Subsequent queue visits enter through the loop's bottom test. It reads the
+same head word and rejoins the same child block at the same PC. -/
+def resumeHead : BBlock := caml_oldify_mopupX9d88TSeg.getD 0 { body := [], term := none }
+def resumePc : BitVec 64 := 0x80009d88#64
+def resumeBlocks (immediate : Bool) := [resumeHead, childBlock immediate]
+
+theorem resume_ok (immediate : Bool) : ChainOK resumePc [23] (resumeBlocks immediate) := by
+  cases immediate <;> decide
+
+theorem resume_code (immediate : Bool) {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (hc : Code.Caml_oldify_mopupLoaded mem) : ChainCode mem (resumeBlocks immediate) := by
+  cases immediate <;> intro b hb
+  all_goals simp only [resumeBlocks, resumeHead, childBlock, Bool.false_eq_true, ite_false, ite_true,
+    caml_oldify_mopupX9d88TSeg, caml_oldify_mopupX9d08TSeg, caml_oldify_mopupX9d08FSeg, List.getD_cons_zero, List.mem_cons, List.not_mem_nil, or_false] at hb
+  all_goals rcases hb with rfl | rfl
+  all_goals constructor
+  all_goals simp only [CodeFacts]
+  all_goals chain_facts hc with "Vsa.Sim.Code.caml_oldify_mopup_at_"
+
+/-- Only the entry PC and head-test encoding differ; complete effects and
+frames coincide after the shared child block. This compares certificates,
+not executions from different entry PCs. -/
+theorem resume_effects {immediate lds before after}
+    (post : OCaml.Vm.Primitives.BlockPost (resumeBlocks immediate) resumePc regs lds before after) :
+    OCaml.Vm.Primitives.BlockPost (blocks immediate) pc regs lds before after := by
+  cases immediate <;>
+    exact ⟨post.tick, post.good, post.memory, post.output, post.pc, post.minstret, post.regs, post.frame⟩
 
 end OCaml.Vm.Gc.MopupPop

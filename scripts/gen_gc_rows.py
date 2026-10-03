@@ -114,14 +114,18 @@ def outputs():
                 head = next(b for b in deferred if b.start == heads[1])
                 child = next(b for b in deferred if b.start == head.succs[1])
                 assert head.kind == child.kind == 'br'
+                resume_head = next(b for b in deferred if b.start != head.start and b.kind == 'br'
+                                   and b.succs == [child.start, heads[2]])
                 decode_modules = dict(line.split('\t') for line in decodes)
-                pop_words = {f'{ins.word:08x}' for block in (head, child)
+                pop_words = {f'{ins.word:08x}' for block in (head, child, resume_head)
                              for ins in [*block.instrs, block.term]}
                 pop = POP_TEMPLATE.replace('@DECODE_IMPORTS@', '\n'.join(
                     'import ' + module for module in sorted({decode_modules[w] for w in pop_words})))
                 for key, val in {'HEAD': gen_fn.block_name(name, head, False)+'Seg',
                                  'TAKEN': gen_fn.block_name(name, child, True)+'Seg',
                                  'FALL': gen_fn.block_name(name, child, False)+'Seg',
+                                 'RESUME': gen_fn.block_name(name, resume_head, True)+'Seg',
+                                 'RESUMEPC': hex(resume_head.start),
                                  'PC': hex(head.start), 'SETUPPC': hex(child.succs[0])}.items():
                     pop = pop.replace('@'+key+'@', val)
                 result[ROOT / 'OCaml/Vm/Gc/Generated/MopupPop.lean'] = pop
@@ -536,7 +540,8 @@ theorem entry_registers (r : Saved) {lds mem c}
 end OCaml.Vm.Gc.MopupControl
 """
 
-POP_TEMPLATE = """import OCaml.Vm.Gc.Generated.MopupDeferred
+POP_TEMPLATE = """import OCaml.Vm.Primitives.Blocks
+import OCaml.Vm.Gc.Generated.MopupDeferred
 import OCaml.Vm.Gc.ChainPlan
 import Vsa.Sim.ChainFactsTac
 @DECODE_IMPORTS@
@@ -620,6 +625,34 @@ theorem written (immediate : Bool) :
 theorem preserves_s8 (immediate : Bool) :
     ∀ n ∈ wrChain (blocks immediate), (gprReg n == LeanRV64DExecutable.Register.x24) = false := by
   cases immediate <;> decide
+
+/-- Subsequent queue visits enter through the loop's bottom test. It reads the
+same head word and rejoins the same child block at the same PC. -/
+def resumeHead : BBlock := @RESUME@.getD 0 { body := [], term := none }
+def resumePc : BitVec 64 := @RESUMEPC@#64
+def resumeBlocks (immediate : Bool) := [resumeHead, childBlock immediate]
+
+theorem resume_ok (immediate : Bool) : ChainOK resumePc [23] (resumeBlocks immediate) := by
+  cases immediate <;> decide
+
+theorem resume_code (immediate : Bool) {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (hc : Code.Caml_oldify_mopupLoaded mem) : ChainCode mem (resumeBlocks immediate) := by
+  cases immediate <;> intro b hb
+  all_goals simp only [resumeBlocks, resumeHead, childBlock, Bool.false_eq_true, ite_false, ite_true,
+    @RESUME@, @TAKEN@, @FALL@, List.getD_cons_zero, List.mem_cons, List.not_mem_nil, or_false] at hb
+  all_goals rcases hb with rfl | rfl
+  all_goals constructor
+  all_goals simp only [CodeFacts]
+  all_goals chain_facts hc with "Vsa.Sim.Code.caml_oldify_mopup_at_"
+
+/-- Only the entry PC and head-test encoding differ; complete effects and
+frames coincide after the shared child block. This compares certificates,
+not executions from different entry PCs. -/
+theorem resume_effects {immediate lds before after}
+    (post : OCaml.Vm.Primitives.BlockPost (resumeBlocks immediate) resumePc regs lds before after) :
+    OCaml.Vm.Primitives.BlockPost (blocks immediate) pc regs lds before after := by
+  cases immediate <;>
+    exact ⟨post.tick, post.good, post.memory, post.output, post.pc, post.minstret, post.regs, post.frame⟩
 
 end OCaml.Vm.Gc.MopupPop
 """

@@ -31,7 +31,7 @@ import OCaml.Vm.Gc.Generated.Audit
 import OCaml.Vm.Gc.QueueAccess
 import OCaml.Vm.Gc.QueueEnqueue
 import OCaml.Vm.Gc.PendingPayload
-import OCaml.Vm.Gc.PopScan
+import OCaml.Vm.Gc.QueueResume
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1830,3 +1830,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.WorkQueue.first_immediate
 #print axioms OCaml.Vm.Gc.WorkQueue.PopPost.memory_frame
 #print axioms OCaml.Vm.Gc.WorkQueue.pop_scan
+
+#print axioms OCaml.Vm.Gc.WorkQueue.scan_after_pop
+#print axioms OCaml.Vm.Gc.WorkQueue.resume_head_access
+#print axioms OCaml.Vm.Gc.WorkQueue.resume_head_control
+#print axioms OCaml.Vm.Gc.WorkQueue.resume_access
+#print axioms OCaml.Vm.Gc.WorkQueue.resume_machine
+#print axioms OCaml.Vm.Gc.WorkQueue.resume_scan
