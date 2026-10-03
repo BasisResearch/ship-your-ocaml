@@ -2,6 +2,18 @@
 
 ## Round 2 status (2026-10-03)
 
+`Startup/MallocBootPrefix.lean` now proves `malloc_boot_prefix`: starting
+from the actual first request (928 bytes) and `InitialArena`, the generated
+allocator steps round the request to 944, search the empty bins, inspect
+the dummy top and sentinel, then reach `_sbrk_r` with a 976-byte request.
+`MallocBootAtCall` retains the exact eight-store native frame log and saved
+registers. Four `#ix_piece` proofs compose with `#ix_chain`; the complete
+prefix checks in about seven seconds with only standard axioms. No
+initialized heap premise is used. Next splice `sbrk_r_boot`, prove the
+second alignment call, initialize/split the top, and establish `HeapAt`.
+The reset-to-cut exit remains open.
+
+
 Current frontier: actual reset reaches the first malloc entry (`bfcd9da`,
 full gate passed). `Startup/AllocatorInitial.lean:39`
 (`ResetMallocWitness.initial_arena`) now supplies its source initial
