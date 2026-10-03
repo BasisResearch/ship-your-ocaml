@@ -2446,6 +2446,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.makeblock_log_parts
 #print axioms OCaml.Vm.Sim.CursorCopyRegion.frame
 
+-- Both represented generic MAKEBLOCK initializer paths.
+#print axioms OCaml.Vm.Sim.MakeblockInitialized.copy_start
+#print axioms OCaml.Vm.Sim.MakeblockInitInput.copy_after
+#print axioms OCaml.Vm.Sim.makeblock_initialize_more
+#print axioms OCaml.Vm.Sim.makeblock_initialize_one
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

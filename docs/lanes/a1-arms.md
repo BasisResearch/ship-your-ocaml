@@ -1703,6 +1703,17 @@ rebuilds successfully. Nursery cuts landed as `5741911`, all gates passing.
 Next: represented initialization, both return suffixes, and generic MAKEBLOCK
 composition. Capacity, memory separation and runtime preservation remain explicit.
 
+## Both represented generic MAKEBLOCK initializers
+
+`MakeblockInitializeMore.lean` / `MakeblockInitializeOne.lean`
+(`makeblock_initialize_more`, `makeblock_initialize_one`) consume the reservation
+and prove the actual header/first-field stores and both native branches. One
+adapter generator emits both. The multi-field adapter checks in 1.3 s;
+`MakeblockInitialized.copy_start` supplies the actual copy invariant, and
+`MakeblockInitInput.copy_after` preserves its source snapshot. Reservation and
+log laws landed as `0b3b7c6`, all gates passing. Next: connect the generated
+suffixes and assemble the generic MAKEBLOCK arm and successful-step wrapper.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

@@ -426,3 +426,6 @@ import OCaml.Vm.Sim.MakeblockOneSuffixPins
 
 import OCaml.Vm.Sim.MakeblockReserve
 import OCaml.Vm.Sim.MakeblockLog
+
+import OCaml.Vm.Sim.MakeblockInitializeMore
+import OCaml.Vm.Sim.MakeblockInitializeOne
