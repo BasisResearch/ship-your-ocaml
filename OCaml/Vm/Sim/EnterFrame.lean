@@ -31,13 +31,14 @@ theorem SignalCheckReady.read_log {c : Config} {memory : Std.ExtHashMap Nat (Bit
   rw [clear]
   rfl
 
-/-- Application can read its accumulator's closure after overwriting stack
-slots: the empty-stack payload retains that direct root and frames its object. -/
-theorem StackEditOutside.accu_field_load {P : Prog} {s : St} {c : Config}
-    {pl : Place} {cp : ChanPlace} {sp high i l a k : Nat} {v : Val} {log : List WEntry}
+/-- Stack edits preserve field loads from roots retained by the empty-stack
+view. This covers both application accumulators and RESTART environments. -/
+theorem StackEditOutside.root_field_load {P : Prog} {s : St} {c : Config}
+    {pl : Place} {cp : ChanPlace} {sp high i l a k : Nat} {source v : Val} {log : List WEntry}
     {memory : Std.ExtHashMap Nat (BitVec 8)}
     (outside : StackEditOutside log P s c pl cp high) (h : VmPayload P s c pl cp sp high)
-    (field : FieldSelection s.heap pl s.accu i v l a k)
+    (member : source ∈ roots P {s with stack := []})
+    (field : FieldSelection s.heap pl source i v l a k)
     (written : memory = writeLog c.σ.mem log) :
     sign_extend (m := 64) (bytesT8 memory (a + 8 * (k + i))) = word c (a + 8 * (k + i)) := by
   have emptyWords : StackRepr c pl high high [] := by
@@ -45,6 +46,26 @@ theorem StackEditOutside.accu_field_load {P : Prog} {s : St} {c : Config}
     · simp
     · intro j x impossible; simp at impossible
   have empty := payload_stack_of_root h (stack := []) (by intro x impossible; simp at impossible) emptyWords
-  exact field.load_frame empty (fun _ loc => Live.root (by simp [roots]) loc) outside.core written
+  exact field.load_frame empty (fun _ loc => Live.root member loc) outside.core written
+
+/-- Application's accumulator is retained across stack edits. -/
+theorem StackEditOutside.accu_field_load {P : Prog} {s : St} {c : Config}
+    {pl : Place} {cp : ChanPlace} {sp high i l a k : Nat} {v : Val} {log : List WEntry}
+    {memory : Std.ExtHashMap Nat (BitVec 8)}
+    (outside : StackEditOutside log P s c pl cp high) (h : VmPayload P s c pl cp sp high)
+    (field : FieldSelection s.heap pl s.accu i v l a k)
+    (written : memory = writeLog c.σ.mem log) :
+    sign_extend (m := 64) (bytesT8 memory (a + 8 * (k + i))) = word c (a + 8 * (k + i)) :=
+  outside.root_field_load h (by simp [roots]) field written
+
+/-- RESTART's environment is retained across saved-argument writes. -/
+theorem StackEditOutside.env_field_load {P : Prog} {s : St} {c : Config}
+    {pl : Place} {cp : ChanPlace} {sp high i l a k : Nat} {v : Val} {log : List WEntry}
+    {memory : Std.ExtHashMap Nat (BitVec 8)}
+    (outside : StackEditOutside log P s c pl cp high) (h : VmPayload P s c pl cp sp high)
+    (field : FieldSelection s.heap pl s.env i v l a k)
+    (written : memory = writeLog c.σ.mem log) :
+    sign_extend (m := 64) (bytesT8 memory (a + 8 * (k + i))) = word c (a + 8 * (k + i)) :=
+  outside.root_field_load h (by simp [roots]) field written
 
 end OCaml.Vm.Sim

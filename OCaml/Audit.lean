@@ -2292,6 +2292,21 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.forward_copy_iteration
 #print axioms OCaml.Vm.Sim.forward_copy_run
 
+
+-- Complete represented RESTART through its concrete generated loop.
+#print axioms OCaml.Vm.Sim.StackEditOutside.root_field_load
+#print axioms OCaml.Vm.Sim.StackEditOutside.env_field_load
+#print axioms OCaml.Vm.Sim.restart_count_word
+#print axioms OCaml.Vm.Sim.restart_stack_word
+#print axioms OCaml.Vm.Sim.restart_empty_guard
+#print axioms OCaml.Vm.Sim.RestartInput.copy_region
+#print axioms OCaml.Vm.Sim.RestartInput.copy_after
+#print axioms OCaml.Vm.Sim.restart_setup_more
+#print axioms OCaml.Vm.Sim.restart_setup_empty
+#print axioms OCaml.Vm.Sim.restart_finish
+#print axioms OCaml.Vm.Sim.restart_arm
+#print axioms OCaml.Vm.Sim.restart_step_arm
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

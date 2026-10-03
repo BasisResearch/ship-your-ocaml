@@ -374,3 +374,4 @@ import OCaml.Vm.Boot.WhileMinElfHeader
 
 import OCaml.Vm.Boot.WhileMinElfTables
 import OCaml.Vm.Sim.ForwardCopy
+import OCaml.Vm.Sim.Restart

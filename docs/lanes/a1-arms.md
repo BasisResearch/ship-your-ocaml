@@ -1578,6 +1578,18 @@ and final generated seven-instruction branches, with drift checks in stage a5.
 The whole loop target builds successfully. The native cuts and represented
 restoration landed as `7fabf12`, all gates passing.
 
+## Complete represented RESTART
+
+`Restart.lean:12` (`restart_arm`) and `restart_step_arm` compose dispatch,
+both generated setup paths, `forward_copy_run` and the generated suffix into
+`Running` for the successful RESTART rule. The complete bridge checks in
+0.82 s; the setup adapters check in 1.1/1.2 s. `RestartInput.copy_region`
+derives source-read separation from live heap-object separation; it does not
+assume loop execution. `EnterFrame.root_field_load` shares read preservation
+between application accumulators and RESTART environments. Stack capacity,
+access geometry, field-count bounds and runtime framing remain explicit.
+The counted forward-copy loop landed as `09c960b`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
@@ -1589,13 +1601,13 @@ the generated-body compositions are now checked. The indexed frame payload
 facts landed as `f882a65`, all gates passing.
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: RESTART (compose prefix, proved copy loop and suffix), GRAB allocation, heap allocation and
+families: GRAB allocation, heap allocation and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 120 conditional
+setup/return bridges and named callee composition. There are 121 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
