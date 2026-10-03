@@ -22,16 +22,22 @@ theorem longVal_nonnegative (n : BitVec 63) (positive : 0 ≤ n.toInt) :
   simp only [longVal, BitVec.toNat_signExtend, msb, Bool.false_eq_true,
     ↓reduceIte, Nat.add_zero, BitVec.toNat_setWidth, BitVec.toNat_ofNat]
 
+/-- Scale an ordinary selector by the bytecode-word width. -/
+theorem switch_index_scale (index : Nat) :
+    Sail.shift_bits_left (BitVec.ofNat 64 index) (Sail.BitVec.extractLsb (0x02#6) 5 0) =
+      BitVec.ofNat 64 (4 * index) := by
+  change (BitVec.ofNat 64 index <<< (2 : Nat)) = _
+  rw [BitVec.shiftLeft_eq_mul_twoPow]
+  change BitVec.ofNat 64 index * BitVec.ofNat 64 4 = _
+  rw [← BitVec.ofNat_mul, Nat.mul_comm]
+
 /-- SWITCH scales its untagged integer selector by one bytecode word. -/
 theorem switch_int_scale (n : BitVec 63) (positive : 0 ≤ n.toInt) :
     Sail.shift_bits_left
       (shift_bits_right_arith (tag64 n) (Sail.BitVec.extractLsb (0x01#6) 5 0))
       (Sail.BitVec.extractLsb (0x02#6) 5 0) = BitVec.ofNat 64 (4 * n.toNat) := by
   rw [longVal_native, longVal_nonnegative n positive]
-  change (BitVec.ofNat 64 n.toNat <<< (2 : Nat)) = _
-  rw [BitVec.shiftLeft_eq_mul_twoPow]
-  change BitVec.ofNat 64 n.toNat * BitVec.ofNat 64 4 = _
-  rw [← BitVec.ofNat_mul, Nat.mul_comm]
+  exact switch_index_scale n.toNat
 
 /-- The SWITCH table begins after the opcode and packed size operand. -/
 theorem switch_table_word (pl : Place) (pc index : Nat) :

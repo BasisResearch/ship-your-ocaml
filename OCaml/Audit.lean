@@ -1171,6 +1171,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.codePc_succ
 #print axioms OCaml.Vm.Sim.immediate_restore
 #print axioms OCaml.Vm.Sim.immediate_preserved
+#print axioms OCaml.Vm.Sim.SwitchTag.of_object
+#print axioms OCaml.Vm.Sim.SwitchTag.read
+#print axioms OCaml.Vm.Sim.switch_count_read
+#print axioms OCaml.Vm.Sim.switch_block_low_bit
+#print axioms OCaml.Vm.Sim.switch_index_scale
+#print axioms OCaml.Vm.Sim.switch_tag_step
+#print axioms OCaml.Vm.Sim.switch_sizes_nat
+#print axioms OCaml.Vm.Sim.switch_block_arm
+#print axioms OCaml.Vm.Sim.switch_block_step_arm
+
 #print axioms OCaml.Vm.Sim.tag_low_bit
 #print axioms OCaml.Vm.Sim.longVal_nonnegative
 #print axioms OCaml.Vm.Sim.switch_int_scale

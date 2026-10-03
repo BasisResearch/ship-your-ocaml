@@ -1,5 +1,22 @@
 # Lane a1-arms
 
+## Represented block SWITCH path
+
+`SwitchTag.of_object` derives the semantic tag and native header byte from
+an ordinary represented object; `SwitchTag.read` frames it through dispatch.
+`switch_count_read` derives the unsigned halfword from the represented packed
+size operand. `switch_block_arm` consumes these observations and the generated
+12-step body; `switch_block_step_arm` extracts bounds and target success from
+the real bytecode rule. Native and semantic packed-size naturals are equated
+only after proving nonnegativity from successful selection.
+
+Capped/default-limit builds pass: read/semantic facts about 0.8s each, full
+block bridge 1.1s. All new headlines are audited. Integer SWITCH landed as
+`84fc3fe`, full gate passing. Both SWITCH cases now have conditional represented
+bridges, bringing coverage to **106 opcodes**. Atom/infix tag headers, read
+geometry and full invariant adapters remain explicit obligations. Next:
+OFFSETREF and PUSH_RETADDR machine families, then their shared write effects.
+
 ## Represented integer SWITCH path
 
 `switch_int_arm` reads the selected represented table word and follows its
@@ -1316,11 +1333,11 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: the represented SWITCH block-tag path is next; OFFSETREF can reuse the proved
-operand-width arithmetic. MULINT consumes the proved libgcc summary, and
+families: OFFSETREF and PUSH_RETADDR machine families are next. OFFSETREF
+can reuse the proved operand-width arithmetic. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 105 conditional
+setup/return bridges and named callee composition. There are 106 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
