@@ -2099,4 +2099,59 @@ theorem caml_oldify_one_at_80009cb0 {mem : ExtHashMap Nat (BitVec 8)}
   have hc := caml_oldify_one_chunk9 h
   ⟨hc.1, hc.2.1, hc.2.2.1, hc.2.2.2⟩
 
+theorem caml_oldify_one_chunk0_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_oldify_oneChunk0 m) (same : ∀ a, 0x80009a70 ≤ a → a < 0x80009cb4 → m'[a]? = m[a]?) : caml_oldify_oneChunk0 m' := by
+  simp (disch := decide) only [caml_oldify_oneChunk0, same] at *
+  exact h
+
+theorem caml_oldify_one_chunk1_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_oldify_oneChunk1 m) (same : ∀ a, 0x80009a70 ≤ a → a < 0x80009cb4 → m'[a]? = m[a]?) : caml_oldify_oneChunk1 m' := by
+  simp (disch := decide) only [caml_oldify_oneChunk1, same] at *
+  exact h
+
+theorem caml_oldify_one_chunk2_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_oldify_oneChunk2 m) (same : ∀ a, 0x80009a70 ≤ a → a < 0x80009cb4 → m'[a]? = m[a]?) : caml_oldify_oneChunk2 m' := by
+  simp (disch := decide) only [caml_oldify_oneChunk2, same] at *
+  exact h
+
+theorem caml_oldify_one_chunk3_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_oldify_oneChunk3 m) (same : ∀ a, 0x80009a70 ≤ a → a < 0x80009cb4 → m'[a]? = m[a]?) : caml_oldify_oneChunk3 m' := by
+  simp (disch := decide) only [caml_oldify_oneChunk3, same] at *
+  exact h
+
+theorem caml_oldify_one_chunk4_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_oldify_oneChunk4 m) (same : ∀ a, 0x80009a70 ≤ a → a < 0x80009cb4 → m'[a]? = m[a]?) : caml_oldify_oneChunk4 m' := by
+  simp (disch := decide) only [caml_oldify_oneChunk4, same] at *
+  exact h
+
+theorem caml_oldify_one_chunk5_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_oldify_oneChunk5 m) (same : ∀ a, 0x80009a70 ≤ a → a < 0x80009cb4 → m'[a]? = m[a]?) : caml_oldify_oneChunk5 m' := by
+  simp (disch := decide) only [caml_oldify_oneChunk5, same] at *
+  exact h
+
+theorem caml_oldify_one_chunk6_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_oldify_oneChunk6 m) (same : ∀ a, 0x80009a70 ≤ a → a < 0x80009cb4 → m'[a]? = m[a]?) : caml_oldify_oneChunk6 m' := by
+  simp (disch := decide) only [caml_oldify_oneChunk6, same] at *
+  exact h
+
+theorem caml_oldify_one_chunk7_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_oldify_oneChunk7 m) (same : ∀ a, 0x80009a70 ≤ a → a < 0x80009cb4 → m'[a]? = m[a]?) : caml_oldify_oneChunk7 m' := by
+  simp (disch := decide) only [caml_oldify_oneChunk7, same] at *
+  exact h
+
+theorem caml_oldify_one_chunk8_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_oldify_oneChunk8 m) (same : ∀ a, 0x80009a70 ≤ a → a < 0x80009cb4 → m'[a]? = m[a]?) : caml_oldify_oneChunk8 m' := by
+  simp (disch := decide) only [caml_oldify_oneChunk8, same] at *
+  exact h
+
+theorem caml_oldify_one_chunk9_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_oldify_oneChunk9 m) (same : ∀ a, 0x80009a70 ≤ a → a < 0x80009cb4 → m'[a]? = m[a]?) : caml_oldify_oneChunk9 m' := by
+  simp (disch := decide) only [caml_oldify_oneChunk9, same] at *
+  exact h
+
+/-- Byte agreement on the generated extent preserves its code pins. -/
+theorem caml_oldify_one_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : Caml_oldify_oneLoaded m) (same : ∀ a, 0x80009a70 ≤ a → a < 0x80009cb4 → m'[a]? = m[a]?) : Caml_oldify_oneLoaded m' :=
+  ⟨caml_oldify_one_chunk0_transport (caml_oldify_one_chunk0 h) same, caml_oldify_one_chunk1_transport (caml_oldify_one_chunk1 h) same, caml_oldify_one_chunk2_transport (caml_oldify_one_chunk2 h) same, caml_oldify_one_chunk3_transport (caml_oldify_one_chunk3 h) same, caml_oldify_one_chunk4_transport (caml_oldify_one_chunk4 h) same, caml_oldify_one_chunk5_transport (caml_oldify_one_chunk5 h) same, caml_oldify_one_chunk6_transport (caml_oldify_one_chunk6 h) same, caml_oldify_one_chunk7_transport (caml_oldify_one_chunk7 h) same, caml_oldify_one_chunk8_transport (caml_oldify_one_chunk8 h) same, caml_oldify_one_chunk9_transport (caml_oldify_one_chunk9 h) same⟩
+
 end Vsa.Sim.Code

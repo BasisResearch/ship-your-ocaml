@@ -1,5 +1,27 @@
 # Lane a6-gc
 
+## Immediate-field mopup iteration (2026-10-03)
+
+- `Generated/FieldCopy.lean` composes the actual load/test, store and advance
+  blocks with both final-field and loop-back outcomes. It proves the single
+  destination store, counter/source-pointer increments and all loop-carried
+  register pins. The generator supplies fetch/decode certificates and exit PCs.
+- `FieldCopyAccess.lean:copy_machine` supplies every scalar access and branch
+  fact from RAM windows, concrete total reads and the input word's tag bit.
+  The size header is read after the store. CopyPost records the original source
+  word at the destination, exact memory, both possible PCs, updated registers,
+  and the segment kernel's register/output frame.
+- `Vsa/Sim/ChainMemory.lean:evalBlocks_low` lifts the existing per-block store
+  policy to chains. `CopyPost.code` combines it with generated, chunked code
+  transport to preserve the mopup image. No extra code-separation assumption.
+  `experiments/syi/gen_code_lemmas.py` exposes optional transport certificates;
+  default output for its other consumers remains unchanged.
+- `segmentPost_of_block` shares the adapter from complete block results to the
+  reflected post interface. Targeted capped builds pass. The preceding enqueue
+  and grey-payload increment landed as `3970479` through scripts/integrate.sh.
+- Next: fold field progress with the loop rule and compose pointer oldify calls.
+  This is one immediate-valued iteration, not the full mopup or G2 theorem.
+
 ## Concrete enqueue and grey payload (2026-10-03)
 
 - `EnqueueAccess.lean:enqueue_machine` discharges the real allocation-return

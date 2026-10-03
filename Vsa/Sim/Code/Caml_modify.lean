@@ -873,4 +873,29 @@ theorem caml_modify_at_8000aa94 {mem : ExtHashMap Nat (BitVec 8)}
   -- discipline: allow(R6-anon-projection-tower) generated code-pin projections (bounded, chunked)
   ⟨hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.1, hc.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2.2⟩
 
+theorem caml_modify_chunk0_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_modifyChunk0 m) (same : ∀ a, 0x8000a9a8 ≤ a → a < 0x8000aa98 → m'[a]? = m[a]?) : caml_modifyChunk0 m' := by
+  simp (disch := decide) only [caml_modifyChunk0, same] at *
+  exact h
+
+theorem caml_modify_chunk1_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_modifyChunk1 m) (same : ∀ a, 0x8000a9a8 ≤ a → a < 0x8000aa98 → m'[a]? = m[a]?) : caml_modifyChunk1 m' := by
+  simp (disch := decide) only [caml_modifyChunk1, same] at *
+  exact h
+
+theorem caml_modify_chunk2_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_modifyChunk2 m) (same : ∀ a, 0x8000a9a8 ≤ a → a < 0x8000aa98 → m'[a]? = m[a]?) : caml_modifyChunk2 m' := by
+  simp (disch := decide) only [caml_modifyChunk2, same] at *
+  exact h
+
+theorem caml_modify_chunk3_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : caml_modifyChunk3 m) (same : ∀ a, 0x8000a9a8 ≤ a → a < 0x8000aa98 → m'[a]? = m[a]?) : caml_modifyChunk3 m' := by
+  simp (disch := decide) only [caml_modifyChunk3, same] at *
+  exact h
+
+/-- Byte agreement on the generated extent preserves its code pins. -/
+theorem caml_modify_transport {m m' : ExtHashMap Nat (BitVec 8)}
+    (h : Caml_modifyLoaded m) (same : ∀ a, 0x8000a9a8 ≤ a → a < 0x8000aa98 → m'[a]? = m[a]?) : Caml_modifyLoaded m' :=
+  ⟨caml_modify_chunk0_transport (caml_modify_chunk0 h) same, caml_modify_chunk1_transport (caml_modify_chunk1 h) same, caml_modify_chunk2_transport (caml_modify_chunk2 h) same, caml_modify_chunk3_transport (caml_modify_chunk3 h) same⟩
+
 end Vsa.Sim.Code

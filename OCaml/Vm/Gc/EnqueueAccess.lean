@@ -147,7 +147,7 @@ theorem enqueue_machine {q qs pl root size c} (input : EnqueueInput q qs pl root
   apply summary.weaken (fun _ h => h)
   intro after post
   have reflected : Enqueue.Post q.source q.target root size (enqueueLoads q root c) c.σ.mem after :=
-    ⟨post.good, post.memory, post.pc, post.tick, post.minstret, post.regs⟩
+    segmentPost_of_block post
   have data := enqueue input.queue reflected (enqueue_loadedNext input.queue input.headOutside)
     input.separate input.tailOutside
   rw [enqueue_loadedFirst input.separate] at data

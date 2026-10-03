@@ -1,4 +1,5 @@
 import OCaml.Vm.Primitives.AccessPlan
+import Vsa.Sim.SegmentSummary
 
 namespace OCaml.Vm.Gc
 open Vsa.Sim OCaml.Vm.Primitives
@@ -38,5 +39,12 @@ theorem chainPlan_facts {mc m L lds bs}
       have pins := code b (by simp)
       exact ⟨⟨accessPlan_facts pins.body block.data, pins.term, block.control⟩,
         ih (fun b hb => code b (by simp [hb]))⟩
+
+/-- Reuse the complete block kernel result wherever a reflected-segment post
+is expected; machine clients keep the original result's frame as well. -/
+theorem segmentPost_of_block {bs entry L lds before after}
+    (post : BlockPost bs entry L lds before after) :
+    SegmentPost bs L lds entry before.σ.mem after :=
+  ⟨post.good, post.memory, post.pc, post.tick, post.minstret, post.regs⟩
 
 end OCaml.Vm.Gc

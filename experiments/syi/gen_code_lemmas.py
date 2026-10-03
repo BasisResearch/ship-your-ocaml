@@ -45,7 +45,7 @@ def lean_ident(name):
     return re.sub(r"[^A-Za-z0-9_]", "_", name)
 
 
-def render(name, insts):
+def render(name, insts, *, transport=False):
     f = lean_ident(name)
     F = f[0].upper() + f[1:]
     chunks = [insts[i:i + CHUNK] for i in range(0, len(insts), CHUNK)]
@@ -101,6 +101,20 @@ def render(name, insts):
             L.append(f"theorem {f}_at_{addr:x} {{mem : ExtHashMap Nat (BitVec 8)}}\n"
                      f"    (h : {F}Loaded mem) :\n      {concl} :=\n"
                      f"  have hc := {f}_chunk{ci} h\n{allow}  ⟨{parts}⟩\n")
+
+    if transport:
+        start, end = insts[0][0], insts[-1][0] + 4
+        same = (f"(same : ∀ a, 0x{start:x} ≤ a → a < 0x{end:x} → m'[a]? = m[a]?)")
+        for ci in range(len(chunks)):
+            L.append(f"theorem {f}_chunk{ci}_transport {{m m' : ExtHashMap Nat (BitVec 8)}}\n"
+                     f"    (h : {f}Chunk{ci} m) {same} : {f}Chunk{ci} m' := by\n"
+                     f"  simp (disch := decide) only [{f}Chunk{ci}, same] at *\n"
+                     "  exact h\n")
+        pieces = [f"{f}_chunk{ci}_transport ({f}_chunk{ci} h) same" for ci in range(len(chunks))]
+        proof = pieces[0] if len(pieces) == 1 else '⟨' + ', '.join(pieces) + '⟩'
+        L.append(f"/-- Byte agreement on the generated extent preserves its code pins. -/\n"
+                 f"theorem {f}_transport {{m m' : ExtHashMap Nat (BitVec 8)}}\n"
+                 f"    (h : {F}Loaded m) {same} : {F}Loaded m' :=\n  {proof}\n")
 
     L.append("end Vsa.Sim.Code\n")
     return "\n".join(L)

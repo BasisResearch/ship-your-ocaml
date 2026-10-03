@@ -31,6 +31,7 @@ import OCaml.Vm.Gc.Generated.Audit
 import OCaml.Vm.Gc.QueueAccess
 import OCaml.Vm.Gc.QueueEnqueue
 import OCaml.Vm.Gc.PendingPayload
+import OCaml.Vm.Gc.FieldCopyAccess
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1706,3 +1707,20 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.RegisterWrites.apply_read
 #print axioms Vsa.Sim.RegisterWrites.apply_read_append
 #print axioms Vsa.Sim.RegisterWrites.registers_frame
+
+#print axioms Vsa.Sim.memChain_low
+#print axioms Vsa.Sim.evalBlocks_low
+#print axioms OCaml.Vm.Gc.segmentPost_of_block
+#print axioms OCaml.Vm.Gc.FieldCopy.head_access
+#print axioms OCaml.Vm.Gc.FieldCopy.head_control
+#print axioms OCaml.Vm.Gc.FieldCopy.store_access
+#print axioms OCaml.Vm.Gc.FieldCopy.tail_access
+#print axioms OCaml.Vm.Gc.FieldCopy.tail_control
+#print axioms OCaml.Vm.Gc.FieldCopy.copy_access
+#print axioms OCaml.Vm.Gc.FieldCopy.copy_machine
+#print axioms OCaml.Vm.Gc.FieldCopy.CopyPost.code
+#print axioms OCaml.Vm.Gc.FieldCopy.header_unchanged
+#print axioms OCaml.Vm.Gc.FieldCopy.CopyPost.reflected
+#print axioms OCaml.Vm.Gc.FieldCopy.CopyPost.scan_regs
+#print axioms OCaml.Vm.Gc.FieldCopy.CopyPost.pc
+#print axioms OCaml.Vm.Gc.FieldCopy.CopyPost.memory
