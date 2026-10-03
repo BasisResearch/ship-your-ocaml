@@ -12,6 +12,18 @@ open OCaml.Vm.Primitives
 structure SignalCheckReady (c : Config) : Prop where
   clear : word32 c Layout.sym_caml_something_to_do = 0#32
 
+/-- Read the quiet flag through a memory-preserving dispatch or body. -/
+theorem SignalCheckReady.read32 {c d : Config} (h : SignalCheckReady c)
+    (memory : d.σ.mem = c.σ.mem) : bytesT4 d.σ.mem Layout.sym_caml_something_to_do = 0#32 := by
+  simpa only [word32, bytesT_four_eq, memory] using h.clear
+
+/-- The signed native load of a quiet flag is also zero. -/
+theorem SignalCheckReady.read {c d : Config} (h : SignalCheckReady c)
+    (memory : d.σ.mem = c.σ.mem) :
+    sign_extend (m := 64) (bytesT4 d.σ.mem Layout.sym_caml_something_to_do) = 0#64 := by
+  rw [h.read32 memory]
+  rfl
+
 /-- The concrete runtime invariant discharges CHECK_SIGNALS readiness. -/
 theorem signalCheckReady_of_runtime {freeList : Config → Prop} {c : Config}
     (h : RuntimeOk freeList c) : SignalCheckReady c := by
@@ -37,9 +49,8 @@ theorem check_signals_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
       ⟨dp.nextCode, (dp.frame.frame Register.x20 (by decide)).trans h.dispatch.loop.pending, trivial⟩,
       dp.good.minstret, dp.tick, check_signals_loaded (dp.image h.dispatch.image), rfl, rfl⟩
   have pending : bytesT4 d.σ.mem (BitVec.ofNat 64 Layout.sym_caml_something_to_do).toNat = 0#32 := by
-    simpa only [word32, bytesT_four_eq, dp.memory,
-      show (BitVec.ofNat 64 Layout.sym_caml_something_to_do).toNat =
-        Layout.sym_caml_something_to_do from by decide] using quiet.clear
+    simpa only [show (BitVec.ofNat 64 Layout.sym_caml_something_to_do).toNat =
+        Layout.sym_caml_something_to_do from by decide] using quiet.read32 dp.memory
   have run := tr_check_signals (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64)
     (BitVec.ofNat 64 Layout.sym_caml_something_to_do) d.σ.mem d.σ
   simp only [show sign_extend (m := 64) (0x000#12) = 0#64 from by decide,

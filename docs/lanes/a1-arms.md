@@ -1438,16 +1438,28 @@ before kernel reduction, avoiding a recursion-limit bump. Stack depth,
 trap bound, geometry, separation and runtime-window preservation remain
 explicit. Restoration facts landed as `63fea79`, all gates passing.
 
+## APPLY represented entry
+
+`Apply.lean:16` (`apply_arm`) and `apply_step_arm` prove the general APPLY
+path through its shared stack-capacity and no-pending checks. The generated
+10-instruction body checks in 1.9 s; the represented bridge in 1.2 s.
+`EnterReady` names capacity, threshold read geometry and no pending work.
+`ApplyArithmetic.lean:20` proves the positive 32-bit arity decrement.
+`RootFrame.lean` shares heap restriction for environment and stack root edits;
+`SignalCheckReady.read32/read` now supply all quiet-flag loads. No premise
+claims a machine postcondition. Full invariant derivation and stack-growth
+execution remain open. PUSHTRAP landed as `ae89b00`, all gates passing.
+
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: application/return, allocation and
+families: fixed-arity application/return, allocation and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 110 conditional
+setup/return bridges and named callee composition. There are 111 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.

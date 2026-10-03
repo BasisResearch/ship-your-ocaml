@@ -1,4 +1,5 @@
 import OCaml.Vm.Sim.StackAcc
+import OCaml.Vm.Sim.RootFrame
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -24,11 +25,6 @@ theorem payload_stack_of_root {P : Prog} {s : St} {c : Config} {pl : Place} {cp 
     (words : StackRepr c pl sp' high stack) :
     VmPayload P {s with stack := stack} c pl cp sp' high := by
   refine { h with stack := words, heap := ?_ }
-  constructor
-  · intro l hl
-    exact h.heap.1 l (live_stack_of_root root hl)
-  · intro l l' a a' o o' hl hl' hn hp hp' hg hg'
-    exact h.heap.2 l l' a a' o o' (live_stack_of_root root hl)
-      (live_stack_of_root root hl') hn hp hp' hg hg'
+  exact heap_of_live h.heap rfl (fun _ hl => live_stack_of_root root hl)
 
 end OCaml.Vm.Sim

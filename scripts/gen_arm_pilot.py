@@ -29,6 +29,7 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'APPLY': ('Apply', ['lw_tot', 'ld_tot', 'addiw', 'j', 'ld_tot', 'alu_addi', 'ld_tot', 'branch_nottaken', 'lw_tot', 'branch_taken']),
     'POPTRAP': ('Poptrap', ['auipc', 'lw_tot', 'branch_nottaken', 'ld_tot', 'auipc', 'ld_tot', 'alu_addi', 'srai', 'slli', 'alu_add', 'sd', 'alu_addi', 'j']),
     'PUSHTRAP': ('Pushtrap', ['lw_tot', 'auipc', 'alu_addi', 'alu_addi', 'slli', 'alu_add', 'sd', 'ld_tot', 'slli', 'alu_addi', 'ld_tot', 'sd', 'sd', 'sub', 'srai', 'slli', 'alu_addi', 'sd', 'ld_tot', 'alu_addi', 'alu_addi', 'sd', 'j']),
     'OFFSETREF': ('Offsetref', ['lw_tot', 'ld_tot', 'alu_addi', 'slliw', 'alu_add', 'sd', 'alu_addi', 'j']),
@@ -116,10 +117,11 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 PATHS = {
+    'APPLY': ('APPLY', [False, True]),
     'POPTRAP': ('POPTRAP', [False]),
     'SWITCH_INT': ('SWITCH', [True]),
     'SWITCH_BLOCK': ('SWITCH', [False]),
@@ -328,7 +330,7 @@ def outputs(family='CONST0'):
             prefix, _ = path_span(instructions, start, decisions)
             start = prefix[-1][0] + 4
         insts, rows = path_span(instructions, start, decisions,
-            int(census['loop_head'], 16) if family == 'CHECK_SIGNALS' else None)
+            int(census['loop_head'], 16) if family in {'CHECK_SIGNALS', 'APPLY'} else None)
     else:
         arm = census['arms'][family]
         start = int(arm['addr'], 16)

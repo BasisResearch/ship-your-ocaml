@@ -47,10 +47,7 @@ theorem poptrap_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
   obtain ⟨accu, accuReg, accuWord⟩ := h.accu
   apply dispatch_compose h.dispatch
   intro d dp
-  have pending : sign_extend (m := 64) (bytesT4 d.σ.mem Layout.sym_caml_something_to_do) = 0#64 := by
-    have clear : bytesT4 d.σ.mem Layout.sym_caml_something_to_do = 0#32 := by
-      simpa only [word32, bytesT_four_eq, dp.memory] using quiet.clear
-    rw [clear]; rfl
+  have pending : sign_extend (m := 64) (bytesT4 d.σ.mem Layout.sym_caml_something_to_do) = 0#64 := quiet.read dp.memory
   have slotRead : sign_extend (m := 64) (bytesT8 d.σ.mem (sp + 8)) = tag64 link := by
     simpa only [dp.memory, word, bytesT_eight_eq, sign_extend, Sail.BitVec.signExtend,
       BitVec.signExtend_eq] using slotWord
