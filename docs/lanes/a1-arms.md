@@ -1624,6 +1624,16 @@ it checks in 0.98 s. `value_log_framed` shares readback through surrounding
 writes. Initializer/copy/suffix composition remains open. The full counted
 GRAB loop landed as `1e64eb6`, all gates passing.
 
+## GRAB initialized copy entry
+
+`GrabInitialize.lean` (`grab_initialize`) composes the generated initializer
+with the proved nursery reservation: the header and environment are stored,
+the allocated value is installed, and the complete source-cursor copy input
+is established. It checks in 1.2 s. `GrabInitInput.copy_after` transports the
+original stack snapshot through the actual setup log. Reservation and closure
+layout landed as `391b2ca`, all gates passing. The remaining allocating GRAB
+composition is its generated caller-frame suffix and the successful-step wrapper.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

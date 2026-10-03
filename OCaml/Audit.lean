@@ -2365,6 +2365,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.grab_alloc_init_domain
 #print axioms OCaml.Vm.Sim.grab_reserve
 
+
+-- GRAB initializer establishes its concrete counted-copy input.
+#print axioms OCaml.Vm.Sim.GrabInitInput.copy_after
+#print axioms OCaml.Vm.Sim.grab_copy_nonempty
+#print axioms OCaml.Vm.Sim.grab_source_end
+#print axioms OCaml.Vm.Sim.grab_initialize
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq
