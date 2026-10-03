@@ -1,5 +1,22 @@
 # Lane a1-arms
 
+## Represented MULINT arm
+
+`mulint_setup` establishes the libgcc operands, link register, popped stack
+and caller frame from the generated prefix. `mulint_callee` consumes the
+proved library summary; `mulint_return` retags the product through the
+generated suffix. `mulint_arm` and `mulint_step_arm` compose these using
+`callSeg` and the shared consuming-arm restoration. No multiplication callee
+premise remains. `MulintScratch` explicitly names the two defined scratch
+registers required by the copied specification; the full invariant still
+needs to supply it, read geometry and runtime framing.
+
+Capped/default-limit builds pass: call/return 0.9s, setup 1.0s, full arm 0.8s.
+All new headlines are audited. Library/arithmetic landed as `f203e10`, full
+gate passing. There are now **104 conditional represented opcode bridges**.
+Next: CHECK_SIGNALS and remaining arithmetic, mutation/allocation/control
+families; unconditional ArmSim, entry/halt and machine whileMin remain open.
+
 ## MULINT library adapter and arithmetic
 
 `muldi3_summary` exposes the landed total libgcc proof as a `FnSummary`
@@ -1257,10 +1274,10 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: MULINT via generated call boundaries and the landed libgcc summary
-is next; OFFSETREF can reuse the proved operand-width arithmetic.
+families: CHECK_SIGNALS is next; OFFSETREF can reuse the proved operand-width
+arithmetic. MULINT now consumes the proved libgcc summary.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 103 conditional
+setup/return bridges and named callee composition. There are 104 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
