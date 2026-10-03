@@ -2453,6 +2453,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.makeblock_initialize_more
 #print axioms OCaml.Vm.Sim.makeblock_initialize_one
 
+-- Complete represented generic MAKEBLOCK nursery arm.
+#print axioms OCaml.Vm.Sim.makeblock_finish_more
+#print axioms OCaml.Vm.Sim.makeblock_finish_one
+#print axioms OCaml.Vm.Sim.makeblock_arm
+#print axioms OCaml.Vm.Sim.makeblock_step_arm
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

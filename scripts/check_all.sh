@@ -131,6 +131,7 @@ python3 scripts/gen_forward_copy.py --check || fail "stage a5: forward-copy bran
 python3 scripts/gen_restart_setup.py --check || fail "stage a5: RESTART setup adapter drift"
 python3 scripts/gen_makeblock_fixed.py --check || fail "stage a5: fixed MAKEBLOCK adapter drift"
 python3 scripts/gen_makeblock_init.py --check || fail "stage a5: generic MAKEBLOCK initializer drift"
+python3 scripts/gen_makeblock_finish.py --check || fail "stage a5: generic MAKEBLOCK suffix drift"
 python3 scripts/gen_ccall_arms.py --check || fail "stage a5: represented C_CALL arm drift"
 python3 scripts/gen_dispatch_table.py --check || fail "stage a5: dispatch table drift"
 python3 scripts/gen_primitive_binding_probe.py --check || fail "stage a5: primitive binding probe drift"

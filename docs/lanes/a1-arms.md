@@ -1714,6 +1714,19 @@ adapter generator emits both. The multi-field adapter checks in 1.3 s;
 log laws landed as `0b3b7c6`, all gates passing. Next: connect the generated
 suffixes and assemble the generic MAKEBLOCK arm and successful-step wrapper.
 
+## Complete generic MAKEBLOCK nursery arm
+
+`Makeblock.lean` (`makeblock_arm`, `makeblock_step_arm`) composes dispatch,
+reservation, both initializer branches, the actual arbitrary-count copy and
+both generated suffixes. `MakeblockFinishMore/One.lean` restores the represented
+block through shared `makeblock_restore`; each suffix checks in about 1 s,
+and the complete arm plus step wrapper in 0.83 s. This raises coverage to
+125 conditional represented opcode bridges. Positive size at most 256,
+nonnegative bounded tag, capacity, geometry, placement, source separation and
+runtime preservation remain explicit. Larger major-heap allocation remains
+open. Initializers landed as `22d5d10`, all gates passing. Next: CLOSURE and
+CLOSUREREC, then remaining control, mutation and signed division families.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
@@ -1725,13 +1738,13 @@ the generated-body compositions are now checked. The indexed frame payload
 facts landed as `f882a65`, all gates passing.
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: heap allocation (generic MAKEBLOCK, CLOSURE/CLOSUREREC) and
+families: heap allocation (CLOSURE/CLOSUREREC and major-heap MAKEBLOCK) and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and
 CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 124 conditional
+setup/return bridges and named callee composition. There are 125 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
