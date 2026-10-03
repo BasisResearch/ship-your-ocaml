@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Mopup call and returned forwarded field (2026-10-03)
+
+- `MopupForwarded.lean:forwarded` uses the shared direct-call bridge and
+  an ELF-generated JAL certificate, invokes the proved already-forwarded
+  oldify callee, and returns to mopup with its installed link address.
+- `MopupResume.lean:forwarded_resume` includes the real post-return jump
+  to the header/counter advance. It retains the exact native-save/root log,
+  relocated destination word, restored native/scan registers and complete
+  platform/output/code frames. The pointer still must have a zero forwarded
+  header; no allocator or fresh-copy case is assumed.
+- `image_writeLog` shares image preservation for composed exact logs.
+  `ForwardedCall.Input.effect_high` supplies the above-HTIF footprint from
+  the real write windows, proving mopup code survives the callee.
+- Targeted capped build passes (650 jobs). Whole oldify call landed as
+  `1e683fa`. Next: discharge the header-controlled advance after this call
+  and compose the loaded-field classifier with the forwarded route. General
+  copying/allocation, relocation loop, roots, ephemerons, major reclamation
+  and G2/live-word Fits remain open.
+
 ## Whole already-forwarded oldify invocation (2026-10-03)
 
 - `ForwardedCall.lean:forwarded_call` composes the concrete pointer-entry

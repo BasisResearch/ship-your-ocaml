@@ -1,5 +1,6 @@
 import OCaml.Vm.Primitives.Blocks
 import Vsa.Sim.ChainMemory
+import OCaml.Vm.Gc.Readback
 import Vsa.Sim.Code.Caml_oldify_mopup
 import Vsa.Sim.Code.Caml_oldify_one
 
@@ -36,5 +37,20 @@ theorem oldifyCode_after {bs entry regs loads before after}
     (post : BlockPost bs entry regs loads before after) :
     Code.Caml_oldify_oneLoaded after.σ.mem :=
   image_after Code.caml_oldify_one_transport (by decide) code facts post
+
+/-- A reflected log whose stores start beyond an image's end preserves that
+image. This handles composed calls once their exact logs are established. -/
+theorem image_writeLog {lo hi : Nat} {Image : Std.ExtHashMap Nat (BitVec 8) → Prop}
+    (transport : ∀ {m m'}, Image m →
+      (∀ a, lo ≤ a → a < hi → m'[a]? = m[a]?) → Image m')
+    {mem : Std.ExtHashMap Nat (BitVec 8)} {log : List WEntry}
+    (code : Image mem) (high : ∀ e ∈ log, hi ≤ e.1) : Image (writeLog mem log) := by
+  apply transport code
+  intro a _ upper
+  apply writeLog_out
+  apply outL_of_range (n := 1) ?_ (Nat.le_refl a) (Nat.lt_succ_self a)
+  apply outLRange_of_forall
+  intro e member
+  exact Or.inl (by have bound := high e member; omega)
 
 end OCaml.Vm.Gc

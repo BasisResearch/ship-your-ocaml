@@ -34,14 +34,14 @@ def writes : List Nat := wrChain OldifyEntry.blocks ++ wrChain OldifyYoung.block
 /-- A complete oldify invocation on an already-forwarded young argument.
 The caller registers and return PC are original entry values. The only
 stores are the native save bank and the updated caller root. -/
-structure Post (R : Nat → BitVec 64) (before after : Config) : Prop where
+structure Post (R : Nat → BitVec 64) (before after : Config) (exitPC : BitVec 64 := R 1) : Prop where
   good : GoodState after.σ
   minstret : ∃ v, after.σ.regs.get? Register.minstret = some v
   tick : after.tick < 2
   code : Code.Caml_oldify_oneLoaded after.σ.mem
   memory : after.σ.mem = writeLog before.σ.mem (effect R before)
   root : word after (R 11).toNat = word before (R 10).toNat
-  pc : PCAt (R 1) after
+  pc : PCAt exitPC after
   registers : GHolds after.σ (OldifyEntry.callerRegs R)
   output : after.σ.sailOutput = before.σ.sailOutput
   native : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
@@ -104,5 +104,29 @@ theorem forwarded_call {R domain c} (input : Input R domain c) :
   apply Vsa.Logic.Triple.seq (OldifyEntry.entry_machine input.entry).run
   intro entered entry
   exact (after_entry input entry).run entered ⟨entry.pc, rfl⟩
+
+/-- Every store in the whole-call log obeys the same above-HTIF policy as
+the underlying scalar instructions. Stored register values are irrelevant. -/
+theorem Input.effect_high {R domain c} (input : Input R domain c) :
+    ∀ e ∈ effect R c, tohostAddr ≤ e.1 := by
+  intro e member
+  rcases List.mem_append.mp member with saved | root
+  · obtain ⟨cell, hc, rfl⟩ := List.mem_map.mp saved
+    have high := (input.entry.windows cell hc).htif
+    simpa only [tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using
+      Nat.le_trans (Nat.le_add_right Layout.sym_tohost 16) high
+  · have same : e = ((R 11).toNat, 8, word c (R 10).toNat) := List.mem_singleton.mp root
+    subst e
+    have high := input.rootWrite.htif
+    simpa only [tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using
+      Nat.le_trans (Nat.le_add_right Layout.sym_tohost 16) high
+
+theorem Post.mopupCode {R domain before after exitPC} (post : Post R before after exitPC)
+    (input : Input R domain before) (code : Code.Caml_oldify_mopupLoaded before.σ.mem) :
+    Code.Caml_oldify_mopupLoaded after.σ.mem := by
+  rw [post.memory]
+  apply image_writeLog Code.caml_oldify_mopup_transport code
+  intro e member
+  exact Nat.le_trans (by decide : (0x80009f08 : Nat) ≤ tohostAddr) (input.effect_high e member)
 
 end OCaml.Vm.Gc.ForwardedCall

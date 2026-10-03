@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.MopupResume
 import OCaml.Vm.Gc.ForwardedCall
 import OCaml.Vm.Gc.OldifySaved
 import OCaml.Vm.Boot.Startup.StatAlloc
@@ -2223,3 +2224,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.OldifyEntry.carried_after_young
 #print axioms OCaml.Vm.Gc.ForwardedCall.after_entry
 #print axioms OCaml.Vm.Gc.ForwardedCall.forwarded_call
+
+#print axioms OCaml.Vm.Gc.image_writeLog
+#print axioms OCaml.Vm.Gc.ForwardedCall.Input.effect_high
+#print axioms OCaml.Vm.Gc.ForwardedCall.Post.mopupCode
+#print axioms OCaml.Vm.Gc.MopupCall.carried_regs
+#print axioms OCaml.Vm.Gc.MopupCall.linked_regs
+#print axioms OCaml.Vm.Gc.MopupCall.linked_input
+#print axioms OCaml.Vm.Gc.MopupCall.forwarded
+#print axioms OCaml.Vm.Gc.MopupCall.resume_forwarded
+#print axioms OCaml.Vm.Gc.MopupCall.forwarded_resume
