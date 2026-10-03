@@ -409,3 +409,17 @@ import OCaml.Vm.Sim.Makeblock2
 import OCaml.Vm.Sim.Makeblock3
 
 import OCaml.Vm.Sim.MakeblockCopy
+
+import OCaml.Vm.Sim.MakeblockReserveSegment
+import OCaml.Vm.Sim.MakeblockReservePins
+import OCaml.Vm.Sim.MakeblockReserveLayout
+import OCaml.Vm.Sim.MakeblockInitMoreSegment
+import OCaml.Vm.Sim.MakeblockInitMorePins
+import OCaml.Vm.Sim.MakeblockInitMoreLayout
+import OCaml.Vm.Sim.MakeblockInitOneSegment
+import OCaml.Vm.Sim.MakeblockInitOnePins
+import OCaml.Vm.Sim.MakeblockInitOneLayout
+import OCaml.Vm.Sim.MakeblockSuffixSegment
+import OCaml.Vm.Sim.MakeblockSuffixPins
+import OCaml.Vm.Sim.MakeblockOneSuffixSegment
+import OCaml.Vm.Sim.MakeblockOneSuffixPins

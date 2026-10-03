@@ -1682,6 +1682,15 @@ shared abstraction. No copy-execution premise remains. Generic MAKEBLOCK still
 needs its reservation/initialization and suffix composition. Fixed-arity arms
 landed as `96fe151`, all gates passing.
 
+## Generic MAKEBLOCK nursery cuts
+
+Generated reservation (17 instructions), multi-field initialization (16),
+single-field initialization (12), and both return suffixes now check.
+Reservation checks in 3.5 s, initializers in 3.4/2.1 s and suffixes in
+1.1/0.95 s. Their global-address projections use `Layout`. The represented
+reservation and initialization adapters are next. The actual arbitrary-count
+copy loop landed as `94b214f`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

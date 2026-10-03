@@ -29,6 +29,11 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'MAKEBLOCK_ONE_SUFFIX': ('MakeblockOneSuffix', ['alu_addi', 'alu_addi', 'j']),
+    'MAKEBLOCK_SUFFIX': ('MakeblockSuffix', ['alu_add', 'alu_addi', 'alu_addi', 'j']),
+    'MAKEBLOCK_INIT_ONE': ('MakeblockInitOne', ['slli', 'srli', 'slli', 'alu_add', 'sd', 'auipc', 'ld_tot', 'alu_addi', 'ld_tot', 'sd', 'branch_nottaken', 'j']),
+    'MAKEBLOCK_INIT_MORE': ('MakeblockInitMore', ['slli', 'srli', 'slli', 'alu_add', 'sd', 'auipc', 'ld_tot', 'alu_addi', 'ld_tot', 'sd', 'branch_taken', 'slli', 'alu_addi', 'alu_add', 'alu_addi', 'alu_addi']),
+    'MAKEBLOCK_RESERVE': ('MakeblockReserve', ['lw_tot', 'alu_addi', 'alu_addi', 'lw_tot', 'alu_addi', 'branch_taken', 'auipc', 'alu_addi', 'ld_tot', 'slli', 'alu_addi', 'ld_tot', 'sub', 'ld_tot', 'alu_add', 'sd', 'branch_taken']),
     'MAKEBLOCK1_FAST': ('Makeblock1Fast', ['auipc', 'alu_addi', 'ld_tot', 'lw_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'sd', 'branch_taken', 'slli', 'srli', 'alu_addi', 'sd', 'auipc', 'ld_tot', 'ld_tot', 'sd', 'alu_addi', 'j']),
     'MAKEBLOCK2_FAST': ('Makeblock2Fast', ['auipc', 'alu_addi', 'ld_tot', 'lw_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'sd', 'branch_taken', 'slli', 'srli', 'alu_addi', 'alu_addi', 'sd', 'auipc', 'ld_tot', 'alu_addi', 'ld_tot', 'sd', 'ld_tot', 'alu_addi', 'sd', 'j']),
     'MAKEBLOCK3_FAST': ('Makeblock3Fast', ['auipc', 'alu_addi', 'ld_tot', 'lw_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'sd', 'branch_taken', 'slli', 'srli', 'alu_addi', 'alu_addi', 'sd', 'auipc', 'ld_tot', 'alu_addi', 'ld_tot', 'sd', 'ld_tot', 'alu_addi', 'sd', 'ld_tot', 'sd', 'j']),
@@ -150,12 +155,17 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'MAKEBLOCK_COPY_MORE', 'MAKEBLOCK_COPY_LAST', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'MAKEBLOCK_ONE_SUFFIX', 'MAKEBLOCK_SUFFIX', 'MAKEBLOCK_INIT_ONE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_COPY_MORE', 'MAKEBLOCK_COPY_LAST', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 # Explicit loop cuts: entry, exit, and native branch decisions. These are text
 # instruction addresses; all runtime data addresses still come from Layout.
 CUTS = {
+    'MAKEBLOCK_ONE_SUFFIX': (0x80003c74, 0x80001f5c, []),
+    'MAKEBLOCK_SUFFIX': (0x800026e0, 0x80001f5c, []),
+    'MAKEBLOCK_INIT_ONE': (0x80002688, 0x80003c74, [False]),
+    'MAKEBLOCK_INIT_MORE': (0x80002688, 0x800026cc, [True]),
+    'MAKEBLOCK_RESERVE': (0x8000263c, 0x80002688, [True, True]),
     'MAKEBLOCK1_FAST': (0x800025e8, 0x80001f5c, [True]),
     'MAKEBLOCK2_FAST': (0x800026f0, 0x80001f5c, [True]),
     'MAKEBLOCK3_FAST': (0x80002540, 0x80001f5c, [True]),
@@ -528,7 +538,7 @@ theorem {lower}_prim_contents : {table_address} =
 
 end OCaml.Vm.Sim
 """
-    if family in {'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST'}:
+    if family in {'MAKEBLOCK_RESERVE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_INIT_ONE', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST'}:
         domains = []
         for index, (address, _, op, args) in enumerate(insts):
             if '<Caml_state>' not in args:

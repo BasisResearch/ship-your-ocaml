@@ -1,0 +1,87 @@
+{
+  "theorem": "tr_makeblock_suffix",
+  "doc": "MAKEBLOCK_SUFFIX arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.MakeblockSuffixSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v9 v10 v11 v26 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlMakeblockSuffixLoaded",
+  "pins": [
+    {
+      "reg": "x9",
+      "val": "v9",
+      "hyp": "hv9"
+    },
+    {
+      "reg": "x10",
+      "val": "v10",
+      "hyp": "hv10"
+    },
+    {
+      "reg": "x11",
+      "val": "v11",
+      "hyp": "hv11"
+    },
+    {
+      "reg": "x26",
+      "val": "v26",
+      "hyp": "hv26"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x800026e0",
+      "site": "site_800026e0_makeblock_suffix",
+      "class": "alu",
+      "asm": "add s1,s1,a0",
+      "rd": "x9",
+      "rd_val": "(v9 + v10)",
+      "raw_val": "(v9 + v10)",
+      "call": "$vmi $v:x9 $v:x10 $hG $hpc $hmi $pin:x9 $pin:x10 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800026e4",
+      "site": "site_800026e4_makeblock_suffix",
+      "class": "alu",
+      "asm": "addi s5,a1,8",
+      "rd": "x21",
+      "rd_val": "(v11 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v11 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x11 $hG $hpc $hmi $pin:x11 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800026e8",
+      "site": "site_800026e8_makeblock_suffix",
+      "class": "alu",
+      "asm": "mv s0,s10",
+      "rd": "x8",
+      "rd_val": "(v26 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v26 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x26 $hG $hpc $hmi $pin:x26 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800026ec",
+      "site": "site_800026ec_makeblock_suffix",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1ff870#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x800026e0",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

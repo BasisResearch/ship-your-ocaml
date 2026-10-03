@@ -1,0 +1,67 @@
+{
+  "theorem": "tr_makeblock_one_suffix",
+  "doc": "MAKEBLOCK_ONE_SUFFIX arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.MakeblockOneSuffixSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v11 v26 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlMakeblockOneSuffixLoaded",
+  "pins": [
+    {
+      "reg": "x11",
+      "val": "v11",
+      "hyp": "hv11"
+    },
+    {
+      "reg": "x26",
+      "val": "v26",
+      "hyp": "hv26"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80003c74",
+      "site": "site_80003c74_makeblock_one_suffix",
+      "class": "alu",
+      "asm": "addi s5,a1,8",
+      "rd": "x21",
+      "rd_val": "(v11 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v11 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x11 $hG $hpc $hmi $pin:x11 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003c78",
+      "site": "site_80003c78_makeblock_one_suffix",
+      "class": "alu",
+      "asm": "mv s0,s10",
+      "rd": "x8",
+      "rd_val": "(v26 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v26 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x26 $hG $hpc $hmi $pin:x26 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003c7c",
+      "site": "site_80003c7c_makeblock_one_suffix",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1fe2e0#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80003c74",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}
