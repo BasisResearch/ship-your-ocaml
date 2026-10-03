@@ -13,16 +13,16 @@ theorem forward_copy_more {a target i : Nat} {words : List (BitVec 64)} {initial
     (region : ForwardCopyRegion a target words initial)
     (h : ForwardCopyAt a target words initial i c) (bound : i < words.length) (more : i + 1 < words.length) :
     ∃ nb after, StepsN nb c after ∧ ForwardCopyAt a target words initial (i + 1) after := by
-  have read := region.reads i bound
-  have store := region.writes i bound
+  have read : RamReadAt (a + 24 + 8 * i) 8 := region.reads i bound
+  have store : RamWriteAt (target + 8 * i) 8 := region.writes i bound
   have sourceNat : (BitVec.ofNat 64 (a + 24 + 8 * i)).toNat = a + 24 + 8 * i := read.toNat
   have targetNat : (BitVec.ofNat 64 (target + 8 * i)).toNat = target + 8 * i :=
     Nat.mod_eq_of_lt (by have upper := store.upper; omega)
-  have counterStep := forward_counter_step (3 + i) (by have small := region.small; omega)
+  have counterStep := forward_counter_step (3 + i) (by have small : words.length + 3 < 2^31 := region.small; omega)
   have guard : (BitVec.ofNat 64 (words.length + 3) != BitVec.ofNat 64 (3 + i + 1)) = true :=
-    forward_copy_guard words.length i more region.small
+    indexed_copy_guard 3 words.length i more region.small
   have loaded := h.read region (List.getElem?_eq_getElem bound)
-  have entry : (target + 8 * i, 8, words[i]) ∈ valueLog target words :=
+  have entry : (target + 8 * i, 8, words[i]) ∈ valueLog (target) words :=
     copy_store_entry bound
   obtain ⟨nextMemory, written⟩ : ∃ m : Std.ExtHashMap Nat (BitVec 8),
       m = writeMap8 c.σ.mem (target + 8 * i) (sdData_val words[i]) := ⟨_, rfl⟩
@@ -50,6 +50,6 @@ theorem forward_copy_more {a target i : Nat} {words : List (BitVec 64)} {initial
       simpa only [Nat.add_assoc] using counter
     · rw [memory, written]; rfl
     · exact rawFrame.widenChecked (allowed := forwardWrites) (by decide)
-  exact ⟨nb, after, steps, ForwardCopyAt.advance region h bound observed⟩
+  exact ⟨nb, after, steps, IndexedCopyAt.advance region h bound observed⟩
 
 end OCaml.Vm.Sim

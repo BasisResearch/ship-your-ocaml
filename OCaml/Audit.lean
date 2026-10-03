@@ -2306,14 +2306,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.forward_cursor_step
 #print axioms OCaml.Vm.Sim.forward_store_address
 #print axioms OCaml.Vm.Sim.forward_copy_guard
-#print axioms OCaml.Vm.Sim.ForwardCopyAt.index
-#print axioms OCaml.Vm.Sim.ForwardCopyAt.read
-#print axioms OCaml.Vm.Sim.ForwardCopyAt.advance
+#print axioms OCaml.Vm.Sim.IndexedCopyAt.index
+#print axioms OCaml.Vm.Sim.IndexedCopyAt.read
+#print axioms OCaml.Vm.Sim.IndexedCopyAt.advance
 #print axioms OCaml.Vm.Sim.ForwardCopyRegion.entry
 #print axioms OCaml.Vm.Sim.forward_copy_loop
 #print axioms OCaml.Vm.Sim.forward_copy_more
 #print axioms OCaml.Vm.Sim.forward_copy_last
-#print axioms OCaml.Vm.Sim.forward_copy_iteration
+#print axioms OCaml.Vm.Sim.indexed_copy_loop
 #print axioms OCaml.Vm.Sim.forward_copy_run
 
 
@@ -2485,6 +2485,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closure_reserve_domain
 #print axioms OCaml.Vm.Sim.closure_init_more_domain
 #print axioms OCaml.Vm.Sim.closure_init_zero_domain
+
+-- Shared indexed copy and actual ordinary-closure capture loop.
+#print axioms OCaml.Run.counted_loop_native
+#print axioms OCaml.Vm.Sim.indexed_copy_run_of_branches
+#print axioms OCaml.Vm.Sim.indexed_copy_address
+#print axioms OCaml.Vm.Sim.indexed_copy_guard
+#print axioms OCaml.Vm.Sim.closure_copy_more
+#print axioms OCaml.Vm.Sim.closure_copy_last
+#print axioms OCaml.Vm.Sim.closure_copy_run
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes

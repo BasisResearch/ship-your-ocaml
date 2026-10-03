@@ -39,8 +39,9 @@ theorem RestartInput.copy_region {P : Prog} {s : St} {c : Config} {pl : Place} {
     (block : BlockSelection s.heap pl s.env l a tag fields) :
     ForwardCopyRegion a (restartStart sp fields) (stackWords c (a + 24) (fields.length - 3)) c := by
   have length : (stackWords c (a + 24) (fields.length - 3)).length = fields.length - 3 := by simp [stackWords]
-  refine ⟨by rw [length]; have low := space.lower; have small := space.small; omega,
-    ?_, ?_, space.image, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, space.image, ?_, ?_⟩
+  all_goals simp only [restartCopyShape, IndexedCopyShape.sourceStart, IndexedCopyShape.targetStart, Bool.true_eq, ite_true, Nat.add_zero]
+  · rw [length]; have low := space.lower; have small := space.small; omega
   · simpa only [length] using space.reads
   · simpa only [length] using space.writes
   · have whole := (space.payload.heap l a (.block tag fields)

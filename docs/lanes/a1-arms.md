@@ -1740,6 +1740,18 @@ Both complete GRAB and MAKEBLOCK bridges rebuild successfully. Generic
 MAKEBLOCK landed as `1473dcf`, all gates passing. Next: share the indexed-copy
 state with RESTART, then connect CLOSURE's represented nursery stages.
 
+## Actual CLOSURE capture loop and shared indexed copy
+
+`IndexedCopyState.lean` parametrizes the indexed endpoint, metadata offset,
+registers and native addresses. RESTART indexes its source; CLOSURE indexes
+its destination. `ClosureCopy.lean` (`closure_copy_run`) consumes both actual
+generated branches (adapters check in 0.96/0.99 s) and proves the entire copy.
+`OCaml.Run.counted_loop_native` shares native branch selection with the cursor
+loops. `gen_forward_copy.py` now emits all four loop adapters. Complete
+RESTART, allocating GRAB and generic MAKEBLOCK rebuild successfully against
+the shared abstractions. CLOSURE cuts/layout landed as `a1aa6fb`, all gates
+passing. Next: represented CLOSURE nursery stages and allocation restoration.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

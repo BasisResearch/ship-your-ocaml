@@ -6,24 +6,28 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 def render(kind, mode):
-    indexed = mode == 'fields'
+    captures = mode == 'captures'
+    indexed = mode in ('fields', 'captures')
+    bias = 2 if captures else 3
     stem = kind.title()
-    family = 'restart' if indexed else ('makeblock' if mode == 'makeblock' else 'grab')
+    family = ('closure' if captures else 'restart') if indexed else ('makeblock' if mode == 'makeblock' else 'grab')
     native = family.title()
-    prefix = 'Forward' if indexed else ('Makeblock' if mode == 'makeblock' else 'Cursor')
-    state = 'Forward' if indexed else 'Cursor'
+    prefix = ('Closure' if captures else 'Forward') if indexed else ('Makeblock' if mode == 'makeblock' else 'Cursor')
+    state = prefix if indexed else 'Cursor'
     region_prefix = state
-    advance = 'ForwardCopyAt.advance' if indexed else 'CursorCopyAtPc.advance'
-    name = 'forward' if indexed else ('makeblock' if mode == 'makeblock' else 'cursor')
-    origin = 'a' if indexed else 'source'
-    address = 'a + 24 + 8 * i' if indexed else 'source + 8 * i'
-    limit = 'words.length + 3' if indexed else 'source + 8 * words.length'
+    advance = 'IndexedCopyAt.advance' if indexed else 'CursorCopyAtPc.advance'
+    name = ('closure' if captures else 'forward') if indexed else ('makeblock' if mode == 'makeblock' else 'cursor')
+    origin = 'a' if mode == 'fields' else 'source'
+    address = 'a + 24 + 8 * i' if mode == 'fields' else 'source + 8 * i'
+    targetbase = 'target + 16' if captures else 'target'
+    limit = f'words.length + {bias}' if indexed else 'source + 8 * words.length'
     spec = json.loads((ROOT / f'scripts/syi/segments/{family}_copy_{kind}.json').read_text())
     regs = [p['reg'] for p in spec['pins']]
-    expected = ['x15', 'x25', 'x13', 'x12'] if indexed else ['x15', 'x14', 'x12']
+    expected = (['x13', 'x15', 'x16', 'x11'] if captures else ['x15', 'x25', 'x13', 'x12']) if indexed else ['x15', 'x14', 'x12']
     assert regs == expected
-    values = {'x15': '3 + i' if indexed else address, 'x25': 'a',
+    values = {'x15': f'{bias} + i' if indexed else address, 'x25': 'a',
               'x13': 'target + 8 * i', 'x14': 'target + 8 * i', 'x12': limit}
+    if captures: values.update({'x13': address, 'x16': 'target', 'x11': limit})
     pins = ',\n       '.join(f'⟨Register.{r}, BitVec.ofNat 64 ({values[r]})⟩' for r in regs)
     args = ' '.join(f'(BitVec.ofNat 64 ({values[r]}))' for r in regs)
     for step in spec['steps']:
@@ -32,18 +36,18 @@ def render(kind, mode):
     pin = lambda r: f'PinsHold.get post.pins ⟨{regs.index(r)}, by simp⟩'
     condition = '(more : i + 1 < words.length)' if kind == 'more' else '(last : i + 1 = words.length)'
     if kind == 'more':
-        guard = 'forward_copy_guard words.length i more region.small' if indexed else 'cursor_copy_guard source words.length i more region.upper'
+        guard = f'indexed_copy_guard {bias} words.length i more region.small' if indexed else 'cursor_copy_guard source words.length i more region.upper'
     else:
-        guard = 'by rw [show words.length + 3 = 3 + i + 1 by omega]; simp' if indexed else 'by rw [last]; simp'
+        guard = f'by rw [show words.length + {bias} = {bias} + i + 1 by omega]; simp' if indexed else 'by rw [last]; simp'
     pcproof = 'simp only [more, ite_true]; exact post.pcAt' if kind == 'more' else 'simp only [last, Nat.lt_irrefl, ite_false]; exact post.pcAt'
-    count_step = '  have counterStep := forward_counter_step (3 + i) (by have small := region.small; omega)\n' if indexed else ''
-    guard_rhs = '3 + i + 1' if indexed else 'source + 8 * (i + 1)'
-    holds = 'h.counter, h.sourceReg, h.targetReg, h.limit' if indexed else 'h.sourceReg, h.targetReg, h.limit'
-    rewrites = 'forward_source_address, ' if indexed else ''
+    count_step = f'  have counterStep := forward_counter_step ({bias} + i) (by have small : words.length + {bias} < 2^31 := region.small; omega)\n' if indexed else ''
+    guard_rhs = f'{bias} + i + 1' if indexed else 'source + 8 * (i + 1)'
+    holds = ('h.sourceReg, h.counter, h.targetReg, h.limit' if captures else 'h.counter, h.sourceReg, h.targetReg, h.limit') if indexed else 'h.sourceReg, h.targetReg, h.limit'
+    rewrites = ('indexed_copy_address, ' if captures else 'forward_source_address, ') if indexed else ''
     rewrites_tail = 'counterStep, forward_cursor_step' if indexed else 'forward_cursor_step'
-    observed = f"{pin('x25')}, {pin('x13')}, ?_, {pin('x12')}" if indexed else f"{pin('x15')}, {pin('x14')}, {pin('x12')}"
-    counter_post = f"    · have counter : gpr after 15 = some (BitVec.ofNat 64 (3 + i + 1)) := {pin('x15')}\n      simpa only [Nat.add_assoc] using counter\n" if indexed else ''
-    writes = 'forwardWrites' if indexed else 'cursorCopyWrites'
+    observed = (f"{pin('x13')}, {pin('x16')}, ?_, {pin('x11')}" if captures else f"{pin('x25')}, {pin('x13')}, ?_, {pin('x12')}") if indexed else f"{pin('x15')}, {pin('x14')}, {pin('x12')}"
+    counter_post = f"    · have counter : gpr after 15 = some (BitVec.ofNat 64 ({bias} + i + 1)) := {pin('x15')}\n      simpa only [Nat.add_assoc] using counter\n" if indexed else ''
+    writes = ('closureCopyWrites' if captures else 'forwardWrites') if indexed else 'cursorCopyWrites'
     entry = spec['entry']
     return f'''-- GENERATED by scripts/gen_forward_copy.py; do not edit.
 import OCaml.Vm.Sim.{state}CopyState
@@ -60,18 +64,18 @@ theorem {name}_copy_{kind} {{{origin} target i : Nat}} {{words : List (BitVec 64
     (region : {region_prefix}CopyRegion {origin} target words initial)
     (h : {prefix}CopyAt {origin} target words initial i c) (bound : i < words.length) {condition} :
     ∃ nb after, StepsN nb c after ∧ {prefix}CopyAt {origin} target words initial (i + 1) after := by
-  have read := region.reads i bound
-  have store := region.writes i bound
+  have read : RamReadAt ({address}) 8 := region.reads i bound
+  have store : RamWriteAt ({targetbase} + 8 * i) 8 := region.writes i bound
   have sourceNat : (BitVec.ofNat 64 ({address})).toNat = {address} := read.toNat
-  have targetNat : (BitVec.ofNat 64 (target + 8 * i)).toNat = target + 8 * i :=
+  have targetNat : (BitVec.ofNat 64 ({targetbase} + 8 * i)).toNat = {targetbase} + 8 * i :=
     Nat.mod_eq_of_lt (by have upper := store.upper; omega)
 {count_step}  have guard : (BitVec.ofNat 64 ({limit}) != BitVec.ofNat 64 ({guard_rhs})) = {'true' if kind == 'more' else 'false'} :=
     {guard}
   have loaded := h.read region (List.getElem?_eq_getElem bound)
-  have entry : (target + 8 * i, 8, words[i]) ∈ valueLog target words :=
+  have entry : ({targetbase} + 8 * i, 8, words[i]) ∈ valueLog ({targetbase}) words :=
     copy_store_entry bound
   obtain ⟨nextMemory, written⟩ : ∃ m : Std.ExtHashMap Nat (BitVec 8),
-      m = writeMap8 c.σ.mem (target + 8 * i) (sdData_val words[i]) := ⟨_, rfl⟩
+      m = writeMap8 c.σ.mem ({targetbase} + 8 * i) (sdData_val words[i]) := ⟨_, rfl⟩
   have bp : SegSt ({entry}#64)
       [{pins}]
       (fun σ => Vsa.Sim.Code.Caml{native}Copy{stem}Loaded σ.mem ∧ σ.mem = c.σ.mem ∧ σ = c.σ) c :=
@@ -79,7 +83,7 @@ theorem {name}_copy_{kind} {{{origin} target i : Nat}} {{words : List (BitVec 64
       ⟨{holds}, trivial⟩,
       h.good.minstret, h.tick, {family}_copy_{kind}_loaded h.image, rfl, rfl⟩
   have run := tr_{family}_copy_{kind} {args} c.σ.mem c.σ
-  simp only [forward_store_address] at run
+{"  simp only [forward_store_address] at run" if not captures else ""}
   simp only [{rewrites}show sign_extend (m := 64) (0x000#12) = 0#64 from by decide,
     BitVec.add_zero, sourceNat, targetNat, {rewrites_tail}] at run
   obtain ⟨nb, after, _, steps, post⟩ := run read.lower read.upper read.htif words[i] loaded.symm
@@ -97,6 +101,10 @@ end OCaml.Vm.Sim
 '''
 
 def render_cursor_run(prefix, name, family):
+    indexed = prefix in ("Forward", "Closure")
+    origin = "a" if prefix == "Forward" else "source"
+    region = prefix if indexed else "Cursor"
+    engine = "indexed" if indexed else "cursor"
     return f'''-- GENERATED by scripts/gen_forward_copy.py; do not edit.
 import OCaml.Vm.Sim.{prefix}CopyMore
 import OCaml.Vm.Sim.{prefix}CopyLast
@@ -106,11 +114,11 @@ set_option autoImplicit false
 open Vsa.Machine Vsa.Sim
 
 /-- The actual {family} cursor loop copies every word using its generated native branches. -/
-theorem {name}_copy_run {{source target : Nat}} {{words : List (BitVec 64)}} {{initial : Config}}
-    (region : CursorCopyRegion source target words initial) :
-    Vsa.Logic.Triple ({prefix}CopyAt source target words initial 0)
-      ({prefix}CopyAt source target words initial words.length) :=
-  cursor_copy_run_of_branches region
+theorem {name}_copy_run {{{origin} target : Nat}} {{words : List (BitVec 64)}} {{initial : Config}}
+    (region : {region}CopyRegion {origin} target words initial) :
+    Vsa.Logic.Triple ({prefix}CopyAt {origin} target words initial 0)
+      ({prefix}CopyAt {origin} target words initial words.length) :=
+  {engine}_copy_run_of_branches region
     (fun _ _ h bound more => {name}_copy_more region h bound more)
     (fun _ _ h bound last => {name}_copy_last region h bound last)
 
@@ -119,13 +127,13 @@ end OCaml.Vm.Sim
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(); parser.add_argument('--check', action='store_true'); args = parser.parse_args()
-    for mode, prefix in [('fields', 'Forward'), ('cursor', 'Cursor'), ('makeblock', 'Makeblock')]:
+    for mode, prefix in [('fields', 'Forward'), ('cursor', 'Cursor'), ('makeblock', 'Makeblock'), ('captures', 'Closure')]:
         for kind in ['more', 'last']:
             path = ROOT / f'OCaml/Vm/Sim/{prefix}Copy{kind.title()}.lean'; output = render(kind, mode)
             if args.check:
                 if not path.exists() or path.read_text() != output: raise SystemExit(f'drift: {path}')
             else: path.write_text(output)
-    for prefix, name, family in [('Cursor', 'cursor', 'GRAB'), ('Makeblock', 'makeblock', 'MAKEBLOCK')]:
+    for prefix, name, family in [('Cursor', 'cursor', 'GRAB'), ('Makeblock', 'makeblock', 'MAKEBLOCK'), ('Forward', 'forward', 'RESTART'), ('Closure', 'closure', 'CLOSURE')]:
         path = ROOT / f'OCaml/Vm/Sim/{prefix}Copy.lean'; output = render_cursor_run(prefix, name, family)
         if args.check:
             if not path.exists() or path.read_text() != output: raise SystemExit(f'drift: {path}')

@@ -13,15 +13,15 @@ theorem cursor_copy_more {source target i : Nat} {words : List (BitVec 64)} {ini
     (region : CursorCopyRegion source target words initial)
     (h : CursorCopyAt source target words initial i c) (bound : i < words.length) (more : i + 1 < words.length) :
     ∃ nb after, StepsN nb c after ∧ CursorCopyAt source target words initial (i + 1) after := by
-  have read := region.reads i bound
-  have store := region.writes i bound
+  have read : RamReadAt (source + 8 * i) 8 := region.reads i bound
+  have store : RamWriteAt (target + 8 * i) 8 := region.writes i bound
   have sourceNat : (BitVec.ofNat 64 (source + 8 * i)).toNat = source + 8 * i := read.toNat
   have targetNat : (BitVec.ofNat 64 (target + 8 * i)).toNat = target + 8 * i :=
     Nat.mod_eq_of_lt (by have upper := store.upper; omega)
   have guard : (BitVec.ofNat 64 (source + 8 * words.length) != BitVec.ofNat 64 (source + 8 * (i + 1))) = true :=
     cursor_copy_guard source words.length i more region.upper
   have loaded := h.read region (List.getElem?_eq_getElem bound)
-  have entry : (target + 8 * i, 8, words[i]) ∈ valueLog target words :=
+  have entry : (target + 8 * i, 8, words[i]) ∈ valueLog (target) words :=
     copy_store_entry bound
   obtain ⟨nextMemory, written⟩ : ∃ m : Std.ExtHashMap Nat (BitVec 8),
       m = writeMap8 c.σ.mem (target + 8 * i) (sdData_val words[i]) := ⟨_, rfl⟩

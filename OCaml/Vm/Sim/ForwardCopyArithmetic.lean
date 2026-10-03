@@ -13,14 +13,19 @@ theorem forward_counter_step (n : Nat) (small : n + 1 < 2^31) :
   rw [low32_nat _ (by omega)]
   exact sign_extend_nat32 _ small
 
-/-- Saved arguments begin after the closure's code, arity metadata and environment. -/
-theorem forward_source_address (a i : Nat) :
-    Sail.shift_bits_left (BitVec.ofNat 64 (3 + i)) (Sail.BitVec.extractLsb (0x03#6) 5 0) + BitVec.ofNat 64 a =
-      BitVec.ofNat 64 (a + 24 + 8 * i) := by
-  change (BitVec.ofNat 64 (3 + i) <<< (3 : Nat)) + BitVec.ofNat 64 a = _
+/-- An indexed base plus a biased field counter selects its copy window. -/
+theorem indexed_copy_address (a bias i : Nat) :
+    Sail.shift_bits_left (BitVec.ofNat 64 (bias + i)) (Sail.BitVec.extractLsb (0x03#6) 5 0) + BitVec.ofNat 64 a =
+      BitVec.ofNat 64 (a + 8 * bias + 8 * i) := by
+  change (BitVec.ofNat 64 (bias + i) <<< (3 : Nat)) + BitVec.ofNat 64 a = _
   rw [nat_shift_word, ← BitVec.ofNat_add]
   congr 1
   omega
+
+/-- RESTART skips the closure code, arity metadata and environment. -/
+theorem forward_source_address (a i : Nat) :
+    Sail.shift_bits_left (BitVec.ofNat 64 (3 + i)) (Sail.BitVec.extractLsb (0x03#6) 5 0) + BitVec.ofNat 64 a =
+      BitVec.ofNat 64 (a + 24 + 8 * i) := indexed_copy_address a 3 i
 
 theorem forward_cursor_step (base i : Nat) :
     BitVec.ofNat 64 (base + 8 * i) + sign_extend (m := 64) (0x008#12) =
@@ -37,13 +42,18 @@ theorem forward_store_address (base i : Nat) :
     ← BitVec.sub_eq_add_neg, BitVec.add_sub_cancel]
 
 /-- The continuing branch compares distinct, non-wrapping field indices. -/
-theorem forward_copy_guard (count i : Nat) (more : i + 1 < count) (small : count + 3 < 2^31) :
-    (BitVec.ofNat 64 (count + 3) != BitVec.ofNat 64 (3 + i + 1)) = true := by
+theorem indexed_copy_guard (bias count i : Nat) (more : i + 1 < count) (small : count + bias < 2^31) :
+    (BitVec.ofNat 64 (count + bias) != BitVec.ofNat 64 (bias + i + 1)) = true := by
   rw [bne_iff_ne]
   intro equal
   have nat := congrArg BitVec.toNat equal
-  simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show count + 3 < 2^64 by omega),
-    Nat.mod_eq_of_lt (show 3 + i + 1 < 2^64 by omega)] at nat
+  simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (show count + bias < 2^64 by omega),
+    Nat.mod_eq_of_lt (show bias + i + 1 < 2^64 by omega)] at nat
   omega
+
+/-- RESTART's three metadata words specialize the common non-wrapping guard. -/
+theorem forward_copy_guard (count i : Nat) (more : i + 1 < count) (small : count + 3 < 2^31) :
+    (BitVec.ofNat 64 (count + 3) != BitVec.ofNat 64 (3 + i + 1)) = true :=
+  indexed_copy_guard 3 count i more small
 
 end OCaml.Vm.Sim

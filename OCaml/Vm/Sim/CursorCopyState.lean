@@ -114,16 +114,9 @@ theorem cursor_copy_run_of_branches {entry exit : BitVec 64} {source target : Na
       i < words.length → i + 1 = words.length →
       ∃ nb after, StepsN nb c after ∧ CursorCopyAtPc entry exit source target words initial (i + 1) after) :
     Vsa.Logic.Triple (CursorCopyAtPc entry exit source target words initial 0)
-      (CursorCopyAtPc entry exit source target words initial words.length) := by
-  apply cursor_copy_loop_at region
-  intro i c ⟨h, bound⟩
-  have body : ∃ nb after, StepsN nb c after ∧
-      CursorCopyAtPc entry exit source target words initial (i + 1) after := by
-    by_cases next : i + 1 < words.length
-    · exact more i c h bound next
-    · exact last i c h bound (by omega)
-  obtain ⟨nb, after, steps, post⟩ := body
-  exact ⟨after, OCaml.Run.vsa_steps_iff.mpr ⟨nb, OCaml.Run.vsa_stepsN_iff.mp steps⟩, post⟩
+      (CursorCopyAtPc entry exit source target words initial words.length) :=
+  OCaml.Run.counted_loop_native words.length (cursorCopyIndex source) (CursorCopyAtPc entry exit source target words initial)
+    (fun _ _ h => h.index region) (fun _ _ h => h.bound) more last
 
 /-- GRAB specializes the shared cursor invariant to its generated loop addresses. -/
 abbrev CursorCopyAt := CursorCopyAtPc 0x80003700#64 0x80003714#64
