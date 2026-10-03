@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.ForwardedSetup
 import OCaml.Vm.Gc.PopFirstPayload
 import OCaml.Vm.Boot.Startup.MallocBootstrap
 import OCaml.Vm.Gc.FirstPayload
@@ -2599,3 +2600,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.malloc_bootstrap
 #print axioms OCaml.Vm.Boot.Startup.malloc_bootstrap_entry
 #print axioms OCaml.Vm.Boot.Startup.MRet.first_pointer
+
+#print axioms OCaml.Vm.Gc.ForwardedField.args_memory_eq
+#print axioms OCaml.Vm.Gc.ForwardedField.LoopData.frame
+#print axioms OCaml.Vm.Gc.ForwardedField.LoopData.memory_eq
+#print axioms OCaml.Vm.Gc.ForwardedField.setup_registers
+#print axioms OCaml.Vm.Gc.ForwardedField.setup_initial
+#print axioms OCaml.Vm.Gc.ForwardedField.setup_relocated
+#print axioms OCaml.Vm.Gc.FieldCopy.RelocatingGrey.memory_eq

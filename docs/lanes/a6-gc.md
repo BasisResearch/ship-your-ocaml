@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Suffix setup through typed forwarded scan (2026-10-03)
+
+- `ForwardedSetupContext.lean:setup_initial` derives the complete loop
+  context from the actual setup result and preserved native pins.
+  `ForwardedSetup.lean:setup_relocated` composes setup with the terminating
+  forwarded suffix, yielding ObjAt at the new placement and memory/native/
+  code/output frames relative to the original pre-setup boundary.
+- `ForwardedMemory.lean:LoopData.frame` transports fixed suffix observations
+  across an arbitrary separated earlier write footprint. Read-only
+  `LoopData.memory_eq` is its empty-footprint instance. The relocated grey
+  boundary has a matching memory-identity transport.
+- Capped targeted build passes (695 jobs). Queue-pop/first-field composition
+  landed as `8cf9edb`; PHASES records the setup seam. Next: derive the
+  combined queue/native/first-slot footprint and connect both halves into
+  a complete pending-object traversal. Mixed/fresh-copy cases, allocator
+  suppliers, outer roots, ephemerons, major reclamation and G2 remain open.
+
 ## Queue pop through forwarded first-field update (2026-10-03)
 
 - `QueueObserved.lean` supplies concrete source/copy/child pins and the
