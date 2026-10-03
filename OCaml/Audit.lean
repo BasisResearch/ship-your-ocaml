@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.PopMixed
+import OCaml.Vm.Boot.Startup.DomainInit
 import OCaml.Vm.Boot.Startup.MallocRun
 import OCaml.Vm.Gc.MixedRelocated
 import OCaml.Vm.Gc.MixedSchedule
@@ -2738,3 +2739,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.WorkQueue.mixed_after_first
 #print axioms OCaml.Vm.Gc.WorkQueue.pop_mixed
 #print axioms OCaml.Vm.Gc.WorkQueue.resume_mixed
+#print axioms OCaml.Vm.Boot.Startup.startup_image_live
+#print axioms OCaml.Vm.Boot.Startup.firstMalloc_image_separate
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetFirstAllocation.leaf
+#print axioms OCaml.Vm.Boot.Startup.published_word
+#print axioms OCaml.Vm.Boot.Startup.domainInit_loaded
+#print axioms OCaml.Vm.Boot.Startup.domainInit_log
+#print axioms OCaml.Vm.Boot.Startup.domain_initialize
+#print axioms OCaml.Vm.Boot.Startup.domain_init_tables
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_minor_tables_exists

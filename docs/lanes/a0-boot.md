@@ -2,6 +2,22 @@
 
 ## Round 2 status (2026-10-03)
 
+`Startup/DomainInit.lean` now closes `reset_minor_tables_exists`: actual
+reset reaches `caml_alloc_minor_tables` after publishing the first allocated
+domain and performing the source's thirteen minor-heap field zero stores.
+The exact write log comes from generated instructions; `domainInit_log`
+normalizes the reloaded pointer via the generic `published_word` rule.
+`domain_initialize` / `domain_init_tables` preserve the executable image
+and full nonwritten-register frame. `MallocReturn.lean` recovers their
+optional-register interface from the library model's total observations.
+The domain summary checks in 17 s without evaluating a machine run.
+
+The first-allocation increment landed as `b555d0c`, full gate passed.
+Next: retain the allocator capacity bound across domain payload writes,
+then summarize minor-table allocation and finish the domain initializer.
+Subsequent runtime startup and the Round 2 exit remain open.
+
+
 `Startup/MallocRun.lean` now closes `reset_first_allocation_exists`: the
 actual pinned ELF reset reaches the return from its first 928-byte malloc.
 `ResetMallocWitness.malloc_run` instantiates the complete bootstrap proof
