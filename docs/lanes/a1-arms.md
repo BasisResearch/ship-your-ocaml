@@ -1,5 +1,17 @@
 # Lane a1-arms
 
+## MULINT machine call boundaries
+
+`tr_mulint_prefix` runs the five instructions through the direct JAL to
+`__muldi3`; `tr_mulint_suffix` runs the four return instructions back to the
+loop head. Both retain exact register/memory/output frames and project code
+pins from the pinned image. The generator now ends direct-call prefixes at
+callee entry, leaving callee execution to the shared call composition.
+Separate capped builds pass at default limits: prefix 1.3s, suffix 1.0s.
+The new headlines are audited. OFFSETINT landed as `4cd5b6a` with the full
+gate passing. Coverage remains 103 conditional represented opcode bridges;
+MULINT still needs the represented adapter to the landed libgcc summary.
+
 ## OFFSETINT with corrected operand width
 
 `offsetintOperand_eq` proves the generated LW/SLLIW operand contribution is

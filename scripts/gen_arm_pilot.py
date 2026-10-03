@@ -29,6 +29,8 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'MULINT_PREFIX': ('MulintPrefix', ['ld_tot', 'srai', 'alu_addi', 'srai', 'jal']),
+    'MULINT_SUFFIX': ('MulintSuffix', ['slli', 'alu_addi', 'alu_addi', 'j']),
     'PUSH': ('Push', ['sd', 'alu_addi', 'alu_addi', 'j']),
     'PUSHACC0': ('Pushacc0', ['sd', 'alu_addi', 'alu_addi', 'j']),
     'DISPATCH': ('Dispatch', ['lw_tot', 'alu_addi', 'branch_taken', 'slli', 'alu_add', 'lw_tot', 'alu_add', 'jr']),
@@ -111,6 +113,8 @@ OPAQUE_LOADS = {'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 PATHS = {
+    'MULINT_PREFIX': ('MULINT', []),
+    'MULINT_SUFFIX': ('MULINT', []),
     'C_CALL1_PREFIX': ('C_CALL1', []),
     'C_CALL1_SUFFIX': ('C_CALL1', []),
     'C_CALLN_PREFIX': ('C_CALLN', []),
@@ -215,7 +219,7 @@ def path_span(instructions, start, decisions):
             row = choices[0]
         insts.append(ins)
         rows.append(row)
-        if row.cls in ('j', 'jr', 'jalr'):
+        if row.cls in ('j', 'jr', 'jal', 'jalr'):
             if branch != len(decisions):
                 raise ValueError('unused branch decision')
             return insts, rows
@@ -305,6 +309,10 @@ def outputs(family='CONST0'):
     site_module = f'OCaml.Vm.Sim.{stem}Sites'
     instrs = [Instr(r.addr, r.word, r.cls, [str(x) for x in r.ops], r.raw) for r in rows]
     draft = DraftBuilder(instrs, '_' + lower, pred).build('tr_' + lower, [site_module, 'Vsa.Sim.SegState', 'Vsa.Sim.StepCount', 'Vsa.Sim.ChainFrameOut'])
+    # The prefix stops at callee entry; callSeg supplies the callee separately.
+    if instrs[-1].cls == 'jal':
+        assert draft['steps'][-1]['class'] == 'call'
+        draft['steps'].pop()
     draft['params'].pop(0)  # Bounds are emitted below; no callee ghosts.
     draft['prelude'] = []
     draft['params'].append('(σ0 : MState)')
