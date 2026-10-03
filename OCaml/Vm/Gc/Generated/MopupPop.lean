@@ -119,4 +119,33 @@ theorem resume_effects {immediate lds before after}
   cases immediate <;>
     exact ⟨post.tick, post.good, post.memory, post.output, post.pc, post.minstret, post.regs, post.frame⟩
 
+/-- Both empty tests enter the ephemeron region without changing memory. -/
+def emptyBlocks (resume : Bool) := if resume then caml_oldify_mopupX9d88FSeg else caml_oldify_mopupX9d00TSeg
+def emptyPc (resume : Bool) := if resume then resumePc else pc
+def emptyExit : BitVec 64 := 0x80009d90#64
+
+theorem empty_ok (resume : Bool) : ChainOK (emptyPc resume) [23] (emptyBlocks resume) := by
+  cases resume <;> decide
+
+theorem empty_code (resume : Bool) {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (hc : Code.Caml_oldify_mopupLoaded mem) : ChainCode mem (emptyBlocks resume) := by
+  cases resume <;> intro b hb
+  all_goals simp only [emptyBlocks, Bool.false_eq_true, ite_false, ite_true,
+    caml_oldify_mopupX9d88FSeg, caml_oldify_mopupX9d00TSeg, List.mem_cons, List.not_mem_nil, or_false] at hb
+  all_goals subst b
+  all_goals constructor
+  all_goals simp only [CodeFacts]
+  all_goals chain_facts hc with "Vsa.Sim.Code.caml_oldify_mopup_at_"
+
+theorem empty_log (resume : Bool) (lds : List (List (BitVec 8))) :
+    (evalBlocks (emptyBlocks resume) (SegEvalState.init regs lds)).log = [] := by
+  cases resume <;> rfl
+
+theorem empty_pc (resume : Bool) (lds : List (List (BitVec 8))) :
+    evalBlocksPC (emptyPc resume) (SegEvalState.init regs lds) (emptyBlocks resume) = emptyExit := by
+  cases resume <;> rfl
+
+theorem empty_written (resume : Bool) : ∀ n ∈ wrChain (emptyBlocks resume), n = 18 := by
+  cases resume <;> decide
+
 end OCaml.Vm.Gc.MopupPop

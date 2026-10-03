@@ -1,5 +1,18 @@
 # Lane a6-gc
 
+## Empty queue exits (2026-10-03)
+
+- `QueueEmpty.lean:empty_machine` certifies both the initial and bottom empty
+  tests, using a total read of the Layout-derived queue-head word. Both reach
+  ephemeron processing with memory and output unchanged; the full kernel
+  register frame is retained.
+- `PopScanPost.empty_input` derives this concrete input after the last integer
+  block, including the preserved global-head register. The generated helper
+  certifies code, chain shape, no stores, the sole written register and exit PC.
+- Targeted capped build passes. The repeated nonempty entry landed as
+  `f80d34e`. Queue invariants/termination, pointer classifiers and oldify calls,
+  ephemerons, allocation and full G2/live-word Fits remain open.
+
 ## Queue back-edge entry (2026-10-03)
 
 - `QueueResume.lean:resume_scan` certifies the actual bottom queue test and

@@ -31,7 +31,7 @@ import OCaml.Vm.Gc.Generated.Audit
 import OCaml.Vm.Gc.QueueAccess
 import OCaml.Vm.Gc.QueueEnqueue
 import OCaml.Vm.Gc.PendingPayload
-import OCaml.Vm.Gc.QueueResume
+import OCaml.Vm.Gc.QueueEmpty
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1861,3 +1861,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.elf_reset_exists
 #print axioms OCaml.Vm.Boot.Startup.ElfReset.ready
 #print axioms OCaml.Vm.Boot.Startup.whileMin_reset_exists
+
+#print axioms OCaml.Vm.Gc.WorkQueue.empty_access
+#print axioms OCaml.Vm.Gc.WorkQueue.empty_machine
+#print axioms OCaml.Vm.Gc.WorkQueue.PopScanPost.empty_input
