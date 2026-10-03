@@ -1612,6 +1612,18 @@ copy branches. The loop checks in 0.77 s, and full RESTART rechecks in 0.83 s.
 GRAB cuts and restoration landed as `f447142`, all gates passing. Remaining
 GRAB work is the nursery prefix, initializer/copy composition and caller suffix.
 
+## GRAB nursery reservation and partial-closure layout
+
+`GrabReserve.lean` (`grab_reserve`) composes the actual allocating prefix
+through its nursery reservation from named scalar G1 capacity/geometry
+conditions; it checks in 1.1 s. Generated `GrabAllocPrefixLayout` and
+`GrabAllocInitLayout` resolve ELF-relative globals through `Layout`.
+`ClosureLayout.lean` (`partial_closure_layout`) checks the real environment,
+argument-copy, code and arity store order without commuting memory maps;
+it checks in 0.98 s. `value_log_framed` shares readback through surrounding
+writes. Initializer/copy/suffix composition remains open. The full counted
+GRAB loop landed as `1e64eb6`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

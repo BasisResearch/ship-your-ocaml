@@ -387,3 +387,6 @@ import OCaml.Vm.Sim.GrabAllocSuffixSegment
 import OCaml.Vm.Sim.GrabAllocSuffixPins
 import OCaml.Vm.Sim.GrabRestore
 import OCaml.Vm.Sim.CursorCopy
+import OCaml.Vm.Sim.GrabReserve
+import OCaml.Vm.Sim.ClosureLayout
+import OCaml.Vm.Sim.GrabAllocInitLayout

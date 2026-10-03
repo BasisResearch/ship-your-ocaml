@@ -2350,6 +2350,19 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.cursor_copy_iteration
 #print axioms OCaml.Vm.Sim.cursor_copy_run
 
+
+-- Partial-closure layout and concrete G1 GRAB reservation.
+#print axioms OCaml.Vm.Sim.value_log_framed
+#print axioms OCaml.Vm.Sim.outLRange_append
+#print axioms OCaml.Vm.Sim.partial_closure_layout
+#print axioms OCaml.Vm.Sim.RamWriteAt.read
+#print axioms OCaml.Vm.Sim.grab_alloc_guard
+#print axioms OCaml.Vm.Sim.grab_size_word
+#print axioms OCaml.Vm.Sim.grab_reservation_word
+#print axioms OCaml.Vm.Sim.grab_alloc_prefix_domain
+#print axioms OCaml.Vm.Sim.grab_alloc_init_domain
+#print axioms OCaml.Vm.Sim.grab_reserve
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq
