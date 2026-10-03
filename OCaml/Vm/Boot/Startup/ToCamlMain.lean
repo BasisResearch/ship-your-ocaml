@@ -27,6 +27,9 @@ structure CamlMainEntry (before after : Config) : Prop where
   argv : gprGet after.σ 10 = some (bytesVal .ld (read8 before.σ.mem Layout.sym_embedded_argv))
   linkReg : gprGet after.σ 1 = some 0x80001df0#64
   output : after.σ.sailOutput = before.σ.sailOutput
+  frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
+    (∀ n ∈ [1, 2, 10, 14, 15], (gprReg n == r) = false) →
+    after.σ.regs.get? r = before.σ.regs.get? r
 
 theorem main_to_caml_main (c : Config) (ra : BitVec 64) (h : MainReady ra c) :
     FnSummary (BitVec.ofNat 64 Layout.sym_main) (fun d => d = c) (CamlMainEntry c) := by
@@ -45,7 +48,7 @@ theorem main_to_caml_main (c : Config) (ra : BitVec 64) (h : MainReady ra c) :
     exact ⟨Or.inl (by omega), Or.inl (by omega), True.intro⟩)
   obtain ⟨out, jump, q⟩ := (call_80001dec call p.good p.tick code).run call ⟨p.pc, rfl⟩
   refine ⟨out, front.trans jump, ⟨q.good, q.tick, q.pc, ?_, ?_, ?_, q.linkReg,
-    q.output.trans p.output⟩⟩
+    q.output.trans p.output, ?_⟩⟩
   · rw [q.memory, memory, h.linkReg]; rfl
   · have sp : gprGet call.σ 2 = some (BitVec.ofNat 64 (Layout.sym_stack_top - 16)) :=
       gholds_lookup _ p.regs (by
@@ -59,6 +62,14 @@ theorem main_to_caml_main (c : Config) (ra : BitVec 64) (h : MainReady ra c) :
           mainLoads, runGM, stepGM, stepLdsM, srcVal, lookupG, eraseG, wvalM, mkLine, decodeM,
           LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend, Layout.sym_stack_top])
     exact (q.frame .x10 (by decide) (by decide)).trans argv
+
+  · intro r noise outside
+    have x1 : r ≠ .x1 := by
+      intro eq; subst r
+      have no := outside 1 (by decide)
+      contradiction
+    exact (q.frame r noise x1).trans
+      (p.frame_subset (writes := [1, 2, 10, 14, 15]) (by decide) r noise outside)
 
 theorem clearWords_above (m : Std.ExtHashMap Nat (BitVec 8)) (base n a : Nat)
     (ha : base + 8 * n ≤ a) : (clearWords m base n)[a]? = m[a]? := by
@@ -83,6 +94,9 @@ structure CrtCamlMainPost (initial c : Config) : Prop where
   argv : gprGet c.σ 10 = some (bytesVal .ld (read8 initial.σ.mem Layout.sym_embedded_argv))
   linkReg : gprGet c.σ 1 = some 0x80001df0#64
   output : c.σ.sailOutput = initial.σ.sailOutput
+  frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
+    (∀ n ∈ [1, 2, 3, 5, 6, 10, 11, 14, 15], (gprReg n == r) = false) →
+    c.σ.regs.get? r = initial.σ.regs.get? r
 
 theorem crt0_to_caml_main (initial : Config) (h : CrtReady initial)
     (mainCode : Code.MainLoaded initial.σ.mem) :
@@ -98,8 +112,12 @@ theorem crt0_to_caml_main (initial : Config) (h : CrtReady initial)
   have argv : read8 mid.σ.mem Layout.sym_embedded_argv = read8 initial.σ.mem Layout.sym_embedded_argv := by
     rw [m.memory]; exact read8_clearWords_above _ _ _ _ (by decide)
   refine ⟨out, front.trans back, ⟨p.good, p.tick, p.pc, ?_, p.stack, ?_, p.linkReg,
-    p.output.trans m.output⟩⟩
+    p.output.trans m.output, ?_⟩⟩
   · rw [p.memory, m.ready.linkReg, env, m.memory]; rfl
   · rw [← argv]; exact p.argv
+
+  · intro r noise outside
+    exact (p.frame r noise (fun n hn => outside n (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega))).trans
+      (m.frame r noise (fun n hn => outside n (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega)))
 
 end OCaml.Vm.Boot.Startup

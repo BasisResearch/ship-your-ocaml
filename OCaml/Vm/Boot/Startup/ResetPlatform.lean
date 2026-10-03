@@ -8,6 +8,7 @@ structure ResetPost (before after : MState) : Prop where
   memory : after.mem = before.mem
   output : after.sailOutput = before.sailOutput
   cycles : after.cycleCount = before.cycleCount
+  gprs : ∀ n, 1 ≤ n → n < 32 → gprGet after n = gprGet before n
 
 /-- All architectural reset stages establish the running platform invariant. -/
 theorem reset_run (s : MState) (seed : ModelSeed s) (defs : RunnerDefaults s)
@@ -17,10 +18,13 @@ theorem reset_run (s : MState) (seed : ModelSeed s) (defs : RunnerDefaults s)
     cases seed
     constructor <;> simp_all [u, Std.ExtDHashMap.get?_insert]
   have udefs : RunnerDefaults u := by
-    cases defs
-    constructor <;> simp_all [u, Std.ExtDHashMap.get?_insert]
+    constructor
+    all_goals try (solve | cases defs; simp_all [u, Std.ExtDHashMap.get?_insert])
+    intro n lo hi
+    have initialized := defs.gprs n lo hi
+    gpr_cases n => simpa [gprGet, u, Std.ExtDHashMap.get?_insert] using initialized
   obtain ⟨mid, sys⟩ := reset_sys_run u useed udefs
-  refine ⟨?state, {run := ?runProof, good := ?_, memory := ?_, output := ?_, cycles := ?_}⟩
+  refine ⟨?state, {run := ?runProof, good := ?_, memory := ?_, output := ?_, cycles := ?_, gprs := ?_}⟩
   case runProof =>
     simp only [reset, EStateM.run, Bind.bind, EStateM.bind, writeReg, PreSail.writeReg,
       modify, modifyGet, MonadStateOf.modifyGet, EStateM.modifyGet]
@@ -38,4 +42,10 @@ theorem reset_run (s : MState) (seed : ModelSeed s) (defs : RunnerDefaults s)
   · exact sys.memory
   · exact sys.output
   · exact sys.cycles
+  · intro n lo hi
+    gpr_cases n =>
+      simp only [gprGet]
+      simp only [Std.ExtDHashMap.get?_insert]
+      rw [sys.frame _ (by decide)]
+      simp [u, Std.ExtDHashMap.get?_insert]
 end OCaml.Vm.Boot.Startup

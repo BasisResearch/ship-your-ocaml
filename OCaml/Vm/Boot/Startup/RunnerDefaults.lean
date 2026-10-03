@@ -1,3 +1,4 @@
+import Vsa.Sim.GprCases
 import OCaml.Vm.Boot.Startup.InitializerFrame
 
 namespace OCaml.Vm.Boot.Startup
@@ -25,11 +26,15 @@ structure RunnerDefaults (s : MState) : Prop where
   cycle : s.regs.get? .mcycle = some 0#64
   nextPC : s.regs.get? .nextPC = some 0#64
   vcsr : s.regs.get? .vcsr = some 0#3
+  gprs : ∀ n, 1 ≤ n → n < 32 → Vsa.Sim.gprGet s n = some 0#64
   vtype : s.regs.get? .vtype = some 0#64
 
 /-- Finite readback certificates over the generated register-write list. -/
 theorem runner_defaults (elf : ELF64File) (host : Nat) (s : MState) :
     RunnerDefaults (apply (elfRegisterAssignments elf host) s) := by
-  constructor <;> apply initializer_read_tail <;> decide +kernel
+  constructor
+  all_goals try (apply initializer_read_tail; decide +kernel)
+  intro n lo hi
+  gpr_cases n => apply initializer_read_tail <;> decide +kernel
 
 end OCaml.Vm.Boot.Startup

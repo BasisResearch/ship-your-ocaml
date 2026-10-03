@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.ForwardedAdvance
+import OCaml.Vm.Boot.Startup.WhileMinToMalloc
 import OCaml.Vm.Gc.MopupResume
 import OCaml.Vm.Gc.ForwardedCall
 import OCaml.Vm.Boot.Startup.AllocatorBootstrap
@@ -2306,3 +2307,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.MopupCall.abi_frame
 #print axioms OCaml.Vm.Gc.MopupCall.ResumedPost.advance_input
 #print axioms OCaml.Vm.Gc.MopupCall.forwarded_advance
+-- Closed actual-reset execution through the first malloc entry.
+#print axioms OCaml.Vm.Primitives.BlockPost.frame_subset
+#print axioms OCaml.Vm.Primitives.lpins8_writeLog
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCamlMainWitness.savedReg
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCamlMainWitness.prefixInput
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_domain_exists
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.camlMainLog_below
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetDomainWitness.prefixInput
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_stat_alloc_exists
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetStatAllocWitness.pool_zero
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_malloc_exists

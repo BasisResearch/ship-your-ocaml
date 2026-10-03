@@ -13,6 +13,9 @@ structure MainEntry (initial c : Config) : Prop where
   argc : gprGet c.σ 10 = some 0#64
   argv : gprGet c.σ 11 = some 0#64
   output : c.σ.sailOutput = initial.σ.sailOutput
+  frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
+    (∀ n ∈ [1, 2, 3, 5, 6, 10, 11], (gprReg n == r) = false) →
+    c.σ.regs.get? r = initial.σ.regs.get? r
 
 /-- A complete crt0 summary, including its direct call into main.
 The startup platform and image hypotheses are explicit; reset supplies them. -/
@@ -33,10 +36,18 @@ theorem crt0_to_main (initial : Config) (h : CrtReady initial)
     unfold Layout.sym_bss_start
     omega)
   refine ⟨d, front.trans jump, ⟨⟨q.good, q.tick, code, ?_, q.linkReg⟩,
-    q.pc, memory, ?_, ?_, ?_, q.output.trans p.output⟩⟩
+    q.pc, memory, ?_, ?_, ?_, q.output.trans p.output, ?_⟩⟩
   · exact (q.frame .x2 (by decide) (by decide)).trans p.stack
   · exact (q.frame .x3 (by decide) (by decide)).trans p.gp
   · exact (q.frame .x10 (by decide) (by decide)).trans p.argc
   · exact (q.frame .x11 (by decide) (by decide)).trans p.argv
+
+  · intro r noise outside
+    have x1 : r ≠ .x1 := by
+      intro eq; subst r
+      have no := outside 1 (by decide)
+      contradiction
+    exact (q.frame r noise x1).trans
+      (p.frame r noise (fun n hn => outside n (by simp_all)))
 
 end OCaml.Vm.Boot.Startup

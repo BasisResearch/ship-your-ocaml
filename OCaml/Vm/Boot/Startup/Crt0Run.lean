@@ -42,6 +42,9 @@ structure CrtCallPost (initial c : Config) : Prop where
   argc : gprGet c.σ 10 = some 0#64
   argv : gprGet c.σ 11 = some 0#64
   output : c.σ.sailOutput = initial.σ.sailOutput
+  frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
+    (∀ n ∈ [2, 3, 5, 6, 10, 11], (gprReg n == r) = false) →
+    c.σ.regs.get? r = initial.σ.regs.get? r
 
 /-- From `_start` to the `main` call site, for every embedded program.
 The whole BSS loop uses one symbolic iteration and the total-correctness rule. -/
@@ -61,7 +64,7 @@ theorem crt0_to_call (initial : Config) (h : CrtReady initial) :
   have code : Code._startLoaded d.σ.mem := by rw [mp]; exact g.ready.code
   refine ⟨d, setup.trans (loop.trans (guard.trans args)),
     ⟨⟨p.good, code, p.tick⟩, p.pc, ?_, ?_, ?_, ?_, ?_,
-      p.output.trans (g.output.trans (b.output.trans a.output))⟩⟩
+      p.output.trans (g.output.trans (b.output.trans a.output)), ?_⟩⟩
   · rw [mp, g.memory, b.memory, ma]
   · have hr : gprGet first.σ 2 = some (BitVec.ofNat 64 Layout.sym_stack_top) :=
       gholds_lookup _ a.regs (by rfl)
@@ -72,5 +75,14 @@ theorem crt0_to_call (initial : Config) (h : CrtReady initial) :
       ((g.frame .x3 (by decide)).trans ((b.frame .x3 (by decide) (by decide)).trans hr))
   · exact gholds_lookup _ p.regs (by rfl)
   · exact gholds_lookup _ p.regs (by rfl)
+  · intro r noise outside
+    have x5 : r ≠ .x5 := by
+      intro eq
+      subst r
+      have no := outside 5 (by decide)
+      contradiction
+    exact (p.frame_subset (writes := [2, 3, 5, 6, 10, 11]) (by decide) r noise outside).trans
+      ((g.frame r noise).trans ((b.frame r noise x5).trans
+        (a.frame_subset (writes := [2, 3, 5, 6, 10, 11]) (by decide) r noise outside)))
 
 end OCaml.Vm.Boot.Startup

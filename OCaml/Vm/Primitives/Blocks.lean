@@ -30,6 +30,15 @@ structure BlockPost (bs : List BBlock) (entry : BitVec 64) (L : GRegs)
     (∀ n ∈ wrChain bs, (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
 
+/-- Retain the generated register frame under a checked finite write-set inclusion. -/
+theorem BlockPost.frame_subset {bs entry L loads before after} {writes : List Nat}
+    (post : BlockPost bs entry L loads before after)
+    (subset : ∀ n ∈ wrChain bs, n ∈ writes) (r : Register)
+    (noise : ∀ q ∈ noiseRegs, (q == r) = false)
+    (outside : ∀ n ∈ writes, (gprReg n == r) = false) :
+    after.σ.regs.get? r = before.σ.regs.get? r :=
+  post.frame r noise (fun n hn => outside n (subset n hn))
+
 /-- The input certificate is discharged by generated code pins, decode facts,
 operand facts and finite structural checks. It is not a run premise. -/
 theorem block_summary (bs : List BBlock) (entry : BitVec 64) (L : GRegs)

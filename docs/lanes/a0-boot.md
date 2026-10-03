@@ -2,6 +2,20 @@
 
 ## Round 2 status (2026-10-03)
 
+The prefix/bootstrap-obstruction increment landed as `a6de181`, full gate passed.
+
+The next composition now checks: `WhileMinFirstCall.reset_domain_exists`
+and `WhileMinToMalloc.reset_malloc_exists` are closed witnesses from the
+actual parsed ELF reset through the first malloc entry, carrying the source
+928-byte allocation request, stack and return link. The reset setup proves
+all 31 GPRs begin at zero. crt0/main retain the full nonwritten-register
+frame already supplied by generated blocks and the BSS loop; this discharges
+x9 without a new premise. `BlockPost.frame_subset` shares finite write-set
+inclusion, and `lpins8_writeLog` transports the domain/pool load certificates
+past the three native stack saves. These modules check in under two seconds.
+First malloc bootstrap, the rest of domain initialization, and subsequent
+startup remain open; the lane exit is not met.
+
 Latest checked increment: `Startup/CamlMainPrefix.lean` (`caml_main_domain`)
 and `Startup/DomainPrefix.lean` (`domain_allocate`) prove the generated
 first runtime call and fresh-domain allocation prefix. They retain exact
