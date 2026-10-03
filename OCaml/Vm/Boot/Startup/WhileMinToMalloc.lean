@@ -32,7 +32,7 @@ structure ResetStatAllocWitness (initial atMain atDomain atAlloc : Config) : Pro
   post : WriteRegistersPost [15, 2, 10, 1]
     (savedRaLog (camlMainStack - 112#64) jal_80004d94_call.link) atDomain
     (BitVec.ofNat 64 Layout.sym_caml_stat_alloc_noexc) 928#64
-    [(1, jal_8002a8e8_call.link), (2, camlMainStack - 112#64 - 16#64), (10, 928#64)] atAlloc
+    [(1, jal_8002a8e8_call.link), (2, camlMainStack - 112#64 - 16#64), (10, 928#64), (15, 0#64)] atAlloc
 
 theorem reset_stat_alloc_exists : ∃ initial atMain atDomain atAlloc,
     ResetStatAllocWitness initial atMain atDomain atAlloc := by
@@ -58,7 +58,7 @@ structure ResetMallocWitness (initial atMain atDomain atAlloc atMalloc : Config)
   alloc : ResetStatAllocWitness initial atMain atDomain atAlloc
   run : Steps (Vsa.Densify.fillZero initial) atMalloc
   post : BoundaryPost [15] atAlloc jal_8002a8e8_call.link
-    (BitVec.ofNat 64 Layout.sym_malloc) [] atMalloc
+    (BitVec.ofNat 64 Layout.sym_malloc) [(15, 0#64)] atMalloc
   request : gprGet atMalloc.σ 10 = some 928#64
   stack : gprGet atMalloc.σ 2 = some (camlMainStack - 112#64 - 16#64)
 

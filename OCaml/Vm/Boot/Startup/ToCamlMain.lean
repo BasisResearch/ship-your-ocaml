@@ -18,6 +18,7 @@ theorem main_log (ra : BitVec 64) (env argv : List (BitVec 8)) :
 
 /-- The main-to-runtime call seam, for arbitrary embedded argument/environment data. -/
 structure CamlMainEntry (before after : Config) : Prop where
+  gprs : GprPresent before.σ → GprPresent after.σ
   good : GoodState after.σ
   tick : after.tick < 2
   pc : PCAt (BitVec.ofNat 64 Layout.sym_caml_main) after
@@ -47,8 +48,12 @@ theorem main_to_caml_main (c : Config) (ra : BitVec 64) (h : MainReady ra c) :
     unfold mainWrites OutL Layout.sym_stack_top Layout.sym_environ
     exact ⟨Or.inl (by omega), Or.inl (by omega), True.intro⟩)
   obtain ⟨out, jump, q⟩ := (call_80001dec call p.good p.tick code).run call ⟨p.pc, rfl⟩
-  refine ⟨out, front.trans jump, ⟨q.good, q.tick, q.pc, ?_, ?_, ?_, q.linkReg,
+  refine ⟨out, front.trans jump, ⟨?_, q.good, q.tick, q.pc, ?_, ?_, ?_, q.linkReg,
     q.output.trans p.output, ?_⟩⟩
+  · intro beforePins
+    exact (BlockPost.gpr_present p beforePins (by decide) (by
+      change ∀ n ∈ wrChain mainX1dccSeg, n ∈ [14, 2, 10, 15, 1]
+      decide)).of_link q.linkReg q.frame
   · rw [q.memory, memory, h.linkReg]; rfl
   · have sp : gprGet call.σ 2 = some (BitVec.ofNat 64 (Layout.sym_stack_top - 16)) :=
       gholds_lookup _ p.regs (by
@@ -85,6 +90,7 @@ theorem read8_clearWords_above (m : Std.ExtHashMap Nat (BitVec 8)) (base n a : N
 
 /-- C startup reaches caml_main with the embedded header preserved by BSS clearing. -/
 structure CrtCamlMainPost (initial c : Config) : Prop where
+  gprs : GprPresent initial.σ → GprPresent c.σ
   good : GoodState c.σ
   tick : c.tick < 2
   pc : PCAt (BitVec.ofNat 64 Layout.sym_caml_main) c
@@ -111,7 +117,7 @@ theorem crt0_to_caml_main (initial : Config) (h : CrtReady initial)
     rw [m.memory]; exact read8_clearWords_above _ _ _ _ (by decide)
   have argv : read8 mid.σ.mem Layout.sym_embedded_argv = read8 initial.σ.mem Layout.sym_embedded_argv := by
     rw [m.memory]; exact read8_clearWords_above _ _ _ _ (by decide)
-  refine ⟨out, front.trans back, ⟨p.good, p.tick, p.pc, ?_, p.stack, ?_, p.linkReg,
+  refine ⟨out, front.trans back, ⟨(fun h => p.gprs (m.gprs h)), p.good, p.tick, p.pc, ?_, p.stack, ?_, p.linkReg,
     p.output.trans m.output, ?_⟩⟩
   · rw [p.memory, m.ready.linkReg, env, m.memory]; rfl
   · rw [← argv]; exact p.argv

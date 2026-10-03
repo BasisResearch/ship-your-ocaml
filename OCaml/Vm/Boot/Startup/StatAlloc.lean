@@ -33,11 +33,13 @@ address through its complete nonwritten-register frame. No allocator run is assu
 theorem statAlloc_dispatch (c : Config) (ra : BitVec 64) (h : LeafInput ra c)
     (pool : LPins8 c.σ.mem Layout.sym_pool (List.replicate 8 0#8)) :
     FnSummary (BitVec.ofNat 64 Layout.sym_caml_stat_alloc_noexc) (fun d => d = c)
-      (BoundaryPost [15] c ra (BitVec.ofNat 64 Layout.sym_malloc) []) := by
+      (BoundaryPost [15] c ra (BitVec.ofNat 64 Layout.sym_malloc) [(15, 0#64)]) := by
   apply boundary_of_blocks h (block_summary _ _ _ _ _ (statAlloc_input h pool))
   · rfl
   · rfl
-  · intros; trivial
+  · intro σ pins
+    apply holds_project pins
+    decide
   · decide
   · decide
 
@@ -46,7 +48,7 @@ The supplier is the landed allocator contract, instantiated at the reached heap.
 theorem statAlloc_with_malloc (c : Config) (ra : BitVec 64) (h : LeafInput ra c)
     (pool : LPins8 c.σ.mem Layout.sym_pool (List.replicate 8 0#8))
     (Q : Config → Prop)
-    (malloc : ∀ d, BoundaryPost [15] c ra (BitVec.ofNat 64 Layout.sym_malloc) [] d →
+    (malloc : ∀ d, BoundaryPost [15] c ra (BitVec.ofNat 64 Layout.sym_malloc) [(15, 0#64)] d →
       FnSummary (BitVec.ofNat 64 Layout.sym_malloc) (fun e => e = d) Q) :
     FnSummary (BitVec.ofNat 64 Layout.sym_caml_stat_alloc_noexc) (fun d => d = c) Q :=
   boundary_bind (statAlloc_dispatch c ra h pool) malloc

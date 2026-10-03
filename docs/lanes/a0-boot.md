@@ -2,6 +2,23 @@
 
 ## Round 2 status (2026-10-03)
 
+`Startup/MallocPlatform.lean` (`ResetMallocWitness.vsaOk`) now supplies the
+library's full platform invariant at the actual first malloc: `GoodState`,
+valid tick, all 31 GPRs present, RAM presence for any contained live footprint,
+and zero HTIF payload-write counter. The reset proof now retains that source
+counter, and the crt0/main summaries retain GPR presence through generated
+blocks, the BSS loop and calls. Shared `GprPresent` rules combine finite output
+pins with complete frames; no per-register machine stepping is introduced.
+The domain/stat-allocation interfaces now retain x15's observed zero value,
+which their previous projected interfaces dropped. The platform module checks
+in under one second.
+
+The complete first-malloc increment landed as `1c3066c`, full gate passed.
+Next: allocator text/read-only pins and ownership instantiation, then use
+`Primitives.symbolic_summary` to extend the concrete reset witness through
+malloc. Subsequent runtime startup and the Round 2 exit remain open.
+
+
 `Startup/MallocBootstrap.lean` now proves the complete first allocator call:
 `malloc_bootstrap` consumes the initial arena, and `malloc_bootstrap_entry`
 includes the public malloc wrapper. After initialization it uses the landed

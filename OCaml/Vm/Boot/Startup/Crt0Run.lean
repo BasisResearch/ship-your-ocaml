@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.GprPresence
 import OCaml.Vm.Boot.Startup.ClearLoop
 
 namespace OCaml.Vm.Boot.Startup
@@ -34,6 +35,7 @@ theorem args_input {c : Config} (h : CrtReady c) :
   facts := by chain_facts h.code with "Vsa.Sim.Code._start_at_"
 
 structure CrtCallPost (initial c : Config) : Prop where
+  gprs : GprPresent initial.σ → GprPresent c.σ
   ready : CrtReady c
   pc : PCAt 0x80000038#64 c
   memory : c.σ.mem = clearWords initial.σ.mem Layout.sym_bss_start bssWords
@@ -63,8 +65,25 @@ theorem crt0_to_call (initial : Config) (h : CrtReady initial) :
   have mp : d.σ.mem = exit.σ.mem := p.memory
   have code : Code._startLoaded d.σ.mem := by rw [mp]; exact g.ready.code
   refine ⟨d, setup.trans (loop.trans (guard.trans args)),
-    ⟨⟨p.good, code, p.tick⟩, p.pc, ?_, ?_, ?_, ?_, ?_,
+    ⟨?_, ⟨p.good, code, p.tick⟩, p.pc, ?_, ?_, ?_, ?_, ?_,
       p.output.trans (g.output.trans (b.output.trans a.output)), ?_⟩⟩
+  · intro beforePins
+    have setupPins := BlockPost.gpr_present a beforePins (by decide) (by decide)
+    have loopPins : GprPresent last.σ := by
+      apply setupPins.of_frame (writes := [5]) (by decide)
+      · intro n hn
+        have eq : n = 5 := List.mem_singleton.mp hn
+        subst n
+        rw [b.cursor]; rfl
+      · intro r noise outside
+        apply b.frame r noise
+        intro eq
+        subst r
+        have := outside 5 (by decide)
+        contradiction
+    have guardPins : GprPresent exit.σ := loopPins.of_frame (writes := [])
+      (by decide) (by simp) (fun r noise _ => g.frame r noise)
+    exact BlockPost.gpr_present p guardPins (by decide) (by decide)
   · rw [mp, g.memory, b.memory, ma]
   · have hr : gprGet first.σ 2 = some (BitVec.ofNat 64 Layout.sym_stack_top) :=
       gholds_lookup _ a.regs (by rfl)

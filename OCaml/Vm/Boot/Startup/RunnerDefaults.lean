@@ -13,6 +13,7 @@ structure RunnerDefaults (s : MState) : Prop where
   mideleg : s.regs.get? .mideleg = some 0#64
   medeleg : s.regs.get? .medeleg = some 0#64
   done : s.regs.get? .htif_done = some false
+  idle : s.regs.get? .htif_payload_writes = some 0#4
   pmpcfg : s.regs.get? .pmpcfg_n = some Vsa.Sim.initPmpcfg
   pmpaddr : s.regs.get? .pmpaddr_n = some Vsa.Sim.initPmpaddr
   inhibit : s.regs.get? .mcountinhibit = some 0#32

@@ -6,6 +6,7 @@ namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic LeanRV64DExecutable OCaml.Vm.Primitives
 
 structure MainEntry (initial c : Config) : Prop where
+  gprs : GprPresent initial.σ → GprPresent c.σ
   ready : MainReady 0x8000003c#64 c
   pc : PCAt (BitVec.ofNat 64 Layout.sym_main) c
   memory : c.σ.mem = clearWords initial.σ.mem Layout.sym_bss_start bssWords
@@ -35,8 +36,9 @@ theorem crt0_to_main (initial : Config) (h : CrtReady initial)
     apply clearWords_below
     unfold Layout.sym_bss_start
     omega)
-  refine ⟨d, front.trans jump, ⟨⟨q.good, q.tick, code, ?_, q.linkReg⟩,
+  refine ⟨d, front.trans jump, ⟨?_, ⟨q.good, q.tick, code, ?_, q.linkReg⟩,
     q.pc, memory, ?_, ?_, ?_, q.output.trans p.output, ?_⟩⟩
+  · exact fun beforePins => (p.gprs beforePins).of_link q.linkReg q.frame
   · exact (q.frame .x2 (by decide) (by decide)).trans p.stack
   · exact (q.frame .x3 (by decide) (by decide)).trans p.gp
   · exact (q.frame .x10 (by decide) (by decide)).trans p.argc

@@ -75,14 +75,14 @@ theorem domain_allocate (c : Config) (sp ra : BitVec 64) (h : DomainPrefixInput 
     FnSummary (BitVec.ofNat 64 Layout.sym_caml_init_domain) (fun d => d = c)
       (WriteRegistersPost [15, 2, 10, 1] (savedRaLog sp ra) c
         (BitVec.ofNat 64 Layout.sym_caml_stat_alloc_noexc) 928#64
-        [(1, jal_8002a8e8_call.link), (2, sp - 16#64), (10, 928#64)]) := by
+        [(1, jal_8002a8e8_call.link), (2, sp - 16#64), (10, 928#64), (15, 0#64)]) := by
   apply summary_bind (domain_prefix c sp ra h) (fun _ post => post.pc)
   intro mid post
-  have regs : GHolds mid.σ [(2, sp - 16#64), (10, 928#64)] :=
+  have regs : GHolds mid.σ [(2, sp - 16#64), (10, 928#64), (15, 0#64)] :=
     holds_project post.regs (by simp [domainRegs, lookupG])
   have call := call_registers_summary jal_8002a8e8_call_shape jal_8002a8e8_call_decode mid
     (jal_8002a8e8_call_pins post.image) post.good post.image post.tick post.minstret _ regs
-    (by change KeysOK [2, 10]; decide) (by simp [KeysAvoidRa, keysG]) (by rfl)
+    (by change KeysOK [2, 10, 15]; decide) (by simp [KeysAvoidRa, keysG]) (by rfl)
   apply call.weaken (fun _ eq => eq)
   intro after called
   exact prefix_call_post post called

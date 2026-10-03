@@ -8,6 +8,7 @@ structure ResetPost (before after : MState) : Prop where
   memory : after.mem = before.mem
   output : after.sailOutput = before.sailOutput
   cycles : after.cycleCount = before.cycleCount
+  idle : after.regs.get? .htif_payload_writes = before.regs.get? .htif_payload_writes
   gprs : ∀ n, 1 ≤ n → n < 32 → gprGet after n = gprGet before n
 
 /-- All architectural reset stages establish the running platform invariant. -/
@@ -24,7 +25,7 @@ theorem reset_run (s : MState) (seed : ModelSeed s) (defs : RunnerDefaults s)
     have initialized := defs.gprs n lo hi
     gpr_cases n => simpa [gprGet, u, Std.ExtDHashMap.get?_insert] using initialized
   obtain ⟨mid, sys⟩ := reset_sys_run u useed udefs
-  refine ⟨?state, {run := ?runProof, good := ?_, memory := ?_, output := ?_, cycles := ?_, gprs := ?_}⟩
+  refine ⟨?state, {run := ?runProof, good := ?_, memory := ?_, output := ?_, cycles := ?_, idle := ?_, gprs := ?_}⟩
   case runProof =>
     simp only [reset, EStateM.run, Bind.bind, EStateM.bind, writeReg, PreSail.writeReg,
       modify, modifyGet, MonadStateOf.modifyGet, EStateM.modifyGet]
@@ -42,6 +43,9 @@ theorem reset_run (s : MState) (seed : ModelSeed s) (defs : RunnerDefaults s)
   · exact sys.memory
   · exact sys.output
   · exact sys.cycles
+  · simp only [Std.ExtDHashMap.get?_insert]
+    rw [sys.frame _ (by decide)]
+    simp [u, Std.ExtDHashMap.get?_insert]
   · intro n lo hi
     gpr_cases n =>
       simp only [gprGet]
