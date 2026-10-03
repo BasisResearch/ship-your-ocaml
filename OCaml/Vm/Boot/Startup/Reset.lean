@@ -69,7 +69,7 @@ theorem ElfReset.pc {elf : ELF64File} {c : Config} (h : ElfReset elf c) :
     c.σ.regs.get? .PC = some elf.file_header.e_entry.toBitVec := setupElf_pc h.setup
 
 /-- The parsed while_min ELF has the saved loader image and pinned startup metadata.
-The archive was produced by this loader; a kernel loader correspondence is still due. -/
+Supplied for the actual archived ELF by `WhileMinElfParse.whileMin_elf`. -/
 structure WhileMinElf (elf : ELF64File) : Prop where
   memory : initializeMemory .B64 elf = WhileMinImage.initialMem
   entry : (elf.file_header.e_entry : UInt64).toBitVec = BitVec.ofNat 64 Layout.sym_start

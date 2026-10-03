@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.EnqueueReturn
+import OCaml.Vm.Boot.WhileMinElfLoaded
 import OCaml.Vm.Gc.ForwardedReturn
 import OCaml.Vm.Gc.ForwardedAccess
 import OCaml.Vm.Boot.WhileMinElfMetadata
@@ -2094,3 +2095,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.WorkQueue.EnqueueRunPost.code
 #print axioms OCaml.Vm.Gc.WorkQueue.EnqueueRunPost.return_input
 #print axioms OCaml.Vm.Gc.WorkQueue.enqueue_return
+-- Closed parsed-image loader and reset-to-caml_main witness.
+#print axioms Vsa.Sim.Boot.loaderViews_ok
+#print axioms Vsa.Sim.Boot.loaderViews_shape
+#print axioms Vsa.Sim.Boot.foldRanges_nonempty
+#print axioms Vsa.Sim.Boot.initializeMemory_views
+#print axioms OCaml.Vm.Boot.WhileMinElfData.loader_separate
+#print axioms OCaml.Vm.Boot.WhileMinElfData.loader_bytes
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.pieces_view
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.pieces_ok
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.loaded_memory
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.whileMin_elf
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_exists
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_caml_main_exists

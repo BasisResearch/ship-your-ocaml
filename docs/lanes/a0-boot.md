@@ -74,7 +74,7 @@ using the shared `parser_view_of_slice` and scalar-byte simplifier.
 bounded entry certificates in `WhileMinElfTables.lean`; its two
 `program_table_parse` / `section_table_parse` theorems compose the actual
 source table parsers. The complete generated module checks in 4.5 s.
-The complete parser and metadata increment now checks:
+The complete parser and metadata increment landed as `efac856`, full gate passed:
 
 * `Vsa/Sim/Boot/ElfSegments.lean` and `ElfSections.lean` prove actual
   segment/section/name-table interpretation as bounded views, sharing
@@ -95,10 +95,23 @@ Direct full-file parser composition and concrete index elaboration hit the
 existing recursion limit. Generic `elf64File_parse` / `rawElf64_view`
 compose the parsers before specializing to the large view. The checked
 replacement takes 0.8 s for the file proof and 1.2 s for metadata, with no
-budget increase. The concrete loader-byte certificate remains open.
+budget increase.
 
-Next: establish the concrete pinned ELF's `WhileMinElf` loader contract,
-then continue the remaining startup callees. Reset-to-cut reachability and
+The concrete loader and closed reset-to-C-entry increment now checks in
+`WhileMinElfLoaded.lean`: `loaded_memory` proves the actual source loader
+builds `WhileMinImage.initialMem`, `whileMin_elf` supplies the complete
+image/metadata contract, and `reset_caml_main_exists` gives the machine's
+own reset and actual steps through crt0/main with no premises.
+`LoaderViews.lean` shares geometry/byte correspondence and empty-piece
+normalization for arbitrary ELF views. The generator emits the five source
+loader descriptors (including the empty stack program header), pairwise
+separation and symbolic byte aliases; no payload bytes are enumerated.
+A direct concrete memory rewrite hit kernel recursion; `initializeMemory_views`
+composes the abstract fold and removes empty ranges before instantiation.
+The concrete loader/reset witness module checks in 0.8 s at default limits.
+
+Next: continue startup after `caml_main`, composing generated summaries
+with the landed library and GC work. Reset-to-cut reachability and
 the lane exit remain open.
 
 The first startup increment landed as `917d0aa` after the full gate passed.
