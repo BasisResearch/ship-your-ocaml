@@ -1634,6 +1634,20 @@ original stack snapshot through the actual setup log. Reservation and closure
 layout landed as `391b2ca`, all gates passing. The remaining allocating GRAB
 composition is its generated caller-frame suffix and the successful-step wrapper.
 
+## Complete allocating GRAB
+
+`GrabAlloc.lean` (`grab_alloc_arm`, `grab_alloc_step_arm`) now composes the
+actual dispatch, nursery reservation, closure initializer, arbitrary-count
+copy and generated caller-return suffix. `GrabFinish.lean` obtains saved-frame
+reads from the allocation payload-separation contract and supplies closure
+layout from the completed exact write log. The suffix checks in 1.3 s, and
+the whole bridge in 0.85 s. Together with `grab_fast_step_arm`, both GRAB paths
+are proved conditionally on machine-input/G1 conditions; no loop execution
+premise remains. Nursery/runtime preservation, geometry, placement and the
+saved-extra sign bound remain explicit. Initialization landed as `a58e5d5`,
+all gates passing. The opcode bridge count stays 121 because GRAB's fast path
+was already counted.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
@@ -1645,7 +1659,7 @@ the generated-body compositions are now checked. The indexed frame payload
 facts landed as `f882a65`, all gates passing.
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: GRAB allocation, heap allocation and
+families: heap allocation (MAKEBLOCK/1/2/3, CLOSURE/CLOSUREREC) and
 remaining division and barrier-backed mutation. OFFSETREF now has
 represented heap restoration. PUSH_RETADDR has
 represented frame restoration. MULINT consumes the proved libgcc summary, and

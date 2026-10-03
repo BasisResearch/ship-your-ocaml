@@ -2374,6 +2374,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.grab_source_end
 #print axioms OCaml.Vm.Sim.grab_initialize
 
+
+-- Complete allocating GRAB arm and successful bytecode-step bridge.
+#print axioms OCaml.Vm.Sim.grab_allocation_log_parts
+#print axioms OCaml.Vm.Sim.grab_allocation_layout
+#print axioms OCaml.Vm.Sim.grab_restart_pc
+#print axioms OCaml.Vm.Sim.grab_saved_address
+#print axioms OCaml.Vm.Sim.grab_finish
+#print axioms OCaml.Vm.Sim.grab_alloc_arm
+#print axioms OCaml.Vm.Sim.grab_alloc_step_arm
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq
