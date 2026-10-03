@@ -198,6 +198,8 @@ import OCaml.Vm.Sim.Envacc
 import OCaml.Vm.Sim.Getfield
 import OCaml.Vm.Sim.OffsetWidth
 import OCaml.Vm.Sim.Offsetint
+import OCaml.Vm.Sim.Muldi3
+import OCaml.Vm.Sim.MulArithmetic
 import OCaml.Vm.Sim.MulintPrefixSegment
 import OCaml.Vm.Sim.MulintPrefixPins
 import OCaml.Vm.Sim.MulintSuffixSegment

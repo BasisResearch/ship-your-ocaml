@@ -1,5 +1,17 @@
 # Lane a1-arms
 
+## MULINT library adapter and arithmetic
+
+`muldi3_summary` exposes the landed total libgcc proof as a `FnSummary`
+with named input/result fields, exact memory/output preservation and the
+complete register frame. `muldi3_post_named` destructures the copied result
+once. Its code pins come from the executable image through the same
+generator projection used by arm bodies. `tag_truncate` and `tag_mul_native`
+prove the native signed operands/product retag to the modular 63-bit product.
+Capped/default-limit builds pass: library adapter 0.8s, arithmetic 0.8s.
+Machine boundaries landed as `752449d`, full gate passing. The represented
+prefix/callee/suffix composition is next; coverage remains 103 bridges.
+
 ## MULINT machine call boundaries
 
 `tr_mulint_prefix` runs the five instructions through the direct JAL to

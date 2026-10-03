@@ -1169,6 +1169,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.codePc_succ
 #print axioms OCaml.Vm.Sim.immediate_restore
 #print axioms OCaml.Vm.Sim.immediate_preserved
+#print axioms OCaml.Vm.Sim.muldi3_loaded
+#print axioms OCaml.Vm.Sim.muldi3_post_named
+#print axioms OCaml.Vm.Sim.muldi3_summary
+#print axioms OCaml.Vm.Sim.tag_truncate
+#print axioms OCaml.Vm.Sim.tag_mul_native
+
 #print axioms Vsa.Sim.tr_mulint_prefix
 #print axioms Vsa.Sim.tr_mulint_suffix
 #print axioms OCaml.Vm.Sim.mulint_prefix_loaded
