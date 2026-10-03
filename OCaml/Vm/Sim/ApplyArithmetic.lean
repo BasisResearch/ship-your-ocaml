@@ -20,6 +20,16 @@ theorem sign_extend_nat32 (n : Nat) (small : n < 2^31) :
   simp only [BitVec.toNat_signExtend, msb, Bool.false_eq_true, ite_false,
     BitVec.toNat_setWidth, BitVec.toNat_ofNat, Nat.mod_eq_of_lt fits, Nat.add_zero]
 
+/-- Bounded natural addition survives the native signed ADDIW truncation. -/
+theorem addiw_nat_add (n k : Nat) {offset : BitVec 12}
+    (encoded : sign_extend (m := 64) offset = BitVec.ofNat 64 k) (small : n + k < 2^31) :
+    sign_extend (m := 64) (Sail.BitVec.extractLsb (BitVec.ofNat 64 n + sign_extend (m := 64) offset) 31 0) =
+      BitVec.ofNat 64 (n + k) := by
+  rw [encoded, ← BitVec.ofNat_add]
+  change ((BitVec.ofNat 64 (n + k)).extractLsb' 0 32).signExtend 64 = _
+  rw [low32_nat _ (by omega)]
+  exact sign_extend_nat32 _ small
+
 /-- APPLY's ADDIW computes its positive arity minus one without signed wrap. -/
 theorem apply_count_word (n : BitVec 32) (positive : 0 < n.toInt) :
     sign_extend (m := 64) (Sail.BitVec.extractLsb

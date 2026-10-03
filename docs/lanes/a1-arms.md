@@ -1764,6 +1764,18 @@ MAKEBLOCK bridges rebuild successfully. The shared indexed loop landed as
 `47d6c46`, all gates passing. Next: represented CLOSURE prefix, reservation,
 initialization and suffix, using the already proved capture loop/restoration.
 
+## Both represented CLOSURE prefixes
+
+`ClosurePrefixMore.lean` / `ClosurePrefixZero.lean` (`closure_prefix_more`,
+`closure_prefix_zero`) prove operand decoding and the conditional accumulator
+push against the actual native prefixes. The nonempty adapter checks in 0.99 s.
+`ClosureFields.frame` shares the persistent count, source, size and code-offset
+register observations across the following stages. `addiw_nat_add` now shares
+bounded signed-word addition with the copy counter arithmetic. Existing copy
+and complete RESTART/GRAB/MAKEBLOCK consumers rebuild. Closure restoration and
+nursery transport landed as `3649e9a`, all gates passing. Next: represented
+CLOSURE nursery reservation, initialization and metadata/return suffix.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

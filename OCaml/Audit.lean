@@ -2503,6 +2503,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closure_restore
 #print axioms OCaml.Vm.Sim.NurseryInput.frame
 
+-- Represented zero/nonzero closure prefixes and shared metadata framing.
+#print axioms OCaml.Vm.Sim.addiw_nat_add
+#print axioms OCaml.Vm.Sim.ClosureFields.frame
+#print axioms OCaml.Vm.Sim.closure_prefix_more
+#print axioms OCaml.Vm.Sim.closure_prefix_zero
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

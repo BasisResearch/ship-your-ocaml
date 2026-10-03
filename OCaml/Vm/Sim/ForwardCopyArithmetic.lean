@@ -7,11 +7,8 @@ open LeanRV64DExecutable.Functions
 /-- RESTART's field counter advances by one without signed 32-bit wrap. -/
 theorem forward_counter_step (n : Nat) (small : n + 1 < 2^31) :
     sign_extend (m := 64) (Sail.BitVec.extractLsb
-      (BitVec.ofNat 64 n + sign_extend (m := 64) (0x001#12)) 31 0) = BitVec.ofNat 64 (n + 1) := by
-  rw [show sign_extend (m := 64) (0x001#12) = BitVec.ofNat 64 1 from by decide, ← BitVec.ofNat_add]
-  change ((BitVec.ofNat 64 (n + 1)).extractLsb' 0 32).signExtend 64 = _
-  rw [low32_nat _ (by omega)]
-  exact sign_extend_nat32 _ small
+      (BitVec.ofNat 64 n + sign_extend (m := 64) (0x001#12)) 31 0) = BitVec.ofNat 64 (n + 1) :=
+  addiw_nat_add n 1 (by decide) small
 
 /-- An indexed base plus a biased field counter selects its copy window. -/
 theorem indexed_copy_address (a bias i : Nat) :
