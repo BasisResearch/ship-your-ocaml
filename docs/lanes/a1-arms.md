@@ -1493,6 +1493,17 @@ threshold and pending reads, including APPLY2’s early domain load.
 Geometry, stack capacity, no-pending and runtime preservation remain named
 premises. Shared restoration landed as `5c5ea6e`, all gates passing.
 
+## Tail-call bodies and shared restoration
+
+`tr_appterm1`, `tr_appterm2`, `tr_appterm3` cover argument moves and the
+shared no-growth/no-pending tail (14/16/19 instructions). Their generated
+bodies check in 2.9/3.8/4.5 s. `ValueLog.lean` certifies arbitrary contiguous
+word-copy readbacks and `payload_copy_prefix`; `TailcallRestore.lean`
+assembles the copied stack, closure environment and platform into `Running`.
+`TailcallArithmetic.lean` connects scaled slot subtraction and extra-argument
+addition to natural counters. Represented native-body adapters are next.
+APPLY1–3 landed as `cc62241`, all gates passing.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

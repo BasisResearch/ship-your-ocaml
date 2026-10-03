@@ -104,6 +104,9 @@ FAMILIES = {
 
 # Fixed-arity application paths include the shared no-growth/no-pending tail.
 FAMILIES.update({
+    'APPTERM1': ('Appterm1', ['lw_tot', 'ld_tot', 'slli', 'alu_addi', 'alu_add', 'sd', 'ld_tot', 'j', 'ld_tot', 'alu_addi', 'ld_tot', 'branch_nottaken', 'lw_tot', 'branch_taken']),
+    'APPTERM2': ('Appterm2', ['lw_tot', 'ld_tot', 'ld_tot', 'slli', 'alu_addi', 'alu_add', 'sd', 'sd', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_addi', 'ld_tot', 'branch_nottaken', 'lw_tot', 'branch_taken']),
+    'APPTERM3': ('Appterm3', ['lw_tot', 'ld_tot', 'ld_tot', 'ld_tot', 'slli', 'alu_addi', 'alu_add', 'sd', 'sd', 'sd', 'ld_tot', 'alu_addi', 'j', 'ld_tot', 'alu_addi', 'ld_tot', 'branch_nottaken', 'lw_tot', 'branch_taken']),
     'APPLY1': ('Apply1', ['ld_tot', 'slli', 'alu_addi', 'sd', 'sd', 'sd', 'sd', 'ld_tot', 'alu_addi', 'alu_addi', 'j', 'ld_tot', 'alu_addi', 'ld_tot', 'branch_nottaken', 'lw_tot', 'branch_taken']),
     'APPLY2': ('Apply2', ['ld_tot', 'ld_tot', 'sd', 'sd', 'sd', 'sd', 'ld_tot', 'slli', 'alu_addi', 'sd', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_addi', 'alu_addi', 'branch_taken', 'lw_tot', 'branch_taken']),
     'APPLY3': ('Apply3', ['ld_tot', 'ld_tot', 'ld_tot', 'slli', 'alu_addi', 'sd', 'sd', 'sd', 'sd', 'sd', 'sd', 'ld_tot', 'alu_addi', 'alu_addi', 'j', 'ld_tot', 'alu_addi', 'ld_tot', 'branch_nottaken', 'lw_tot', 'branch_taken']),
@@ -127,10 +130,13 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 PATHS = {
+    'APPTERM1': ('APPTERM1', [False, True]),
+    'APPTERM2': ('APPTERM2', [False, True]),
+    'APPTERM3': ('APPTERM3', [False, True]),
     'APPLY1': ('APPLY1', [False, True]),
     'APPLY2': ('APPLY2', [True, True]),
     'APPLY3': ('APPLY3', [False, True]),
@@ -345,7 +351,7 @@ def outputs(family='CONST0'):
             prefix, _ = path_span(instructions, start, decisions)
             start = prefix[-1][0] + 4
         insts, rows = path_span(instructions, start, decisions,
-            int(census['loop_head'], 16) if family in {'CHECK_SIGNALS', 'APPLY', 'APPLY1', 'APPLY2', 'APPLY3'} else None)
+            int(census['loop_head'], 16) if family in {'APPTERM1', 'APPTERM2', 'APPTERM3', 'CHECK_SIGNALS', 'APPLY', 'APPLY1', 'APPLY2', 'APPLY3'} else None)
     else:
         arm = census['arms'][family]
         start = int(arm['addr'], 16)

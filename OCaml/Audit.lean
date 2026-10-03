@@ -2108,3 +2108,19 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.whileMin_elf
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_caml_main_exists
+
+#print axioms Vsa.Sim.tr_appterm1
+#print axioms OCaml.Vm.Sim.appterm1_loaded
+#print axioms Vsa.Sim.tr_appterm2
+#print axioms OCaml.Vm.Sim.appterm2_loaded
+#print axioms Vsa.Sim.tr_appterm3
+#print axioms OCaml.Vm.Sim.appterm3_loaded
+#print axioms OCaml.Vm.Sim.value_entries_distinct
+#print axioms OCaml.Vm.Sim.value_entries_selected
+#print axioms OCaml.Vm.Sim.value_log_in
+#print axioms OCaml.Vm.Sim.value_log_words
+#print axioms OCaml.Vm.Sim.payload_copy_prefix
+#print axioms OCaml.Vm.Sim.tailcall_restore
+#print axioms OCaml.Vm.Sim.tailcall_offset
+#print axioms OCaml.Vm.Sim.tailcall_address
+#print axioms OCaml.Vm.Sim.tailcall_extra
