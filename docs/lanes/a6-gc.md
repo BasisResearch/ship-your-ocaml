@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Non-young even-field copy (2026-10-03)
+
+- `CopyEffect.lean:copy_even` composes the real field read/tag branch, range
+  tests, copy store and header-controlled advance. From concrete non-young
+  bounds it proves the copied word, single-store footprint, counter/source
+  increments, final PC and memory/output/native frame.
+- `FieldStore.lean:store_machine` reuses the existing store and tail access
+  proofs. The shared continuation register order and normalized single-store
+  log let those proofs apply directly, without raising elaboration budgets.
+- `CopyEffect` exposes the common loop-step result with an explicit write set.
+  `CopyPost.effect` retains the immediate path's stronger five-register frame;
+  the even path additionally permits its actual a4 classifier write.
+- Targeted capped builds pass. Loaded-field classification landed as
+  `8c1424e`. Next: share the scan invariant update and fold mixed non-young
+  fields. Young-pointer oldify calls, outer queue termination, allocation,
+  ephemerons and full G2/live-word Fits remain open.
+
 ## Loaded-field classification (2026-10-03)
 
 - `FieldClassify.lean:classify_field` composes the actual field read, parity

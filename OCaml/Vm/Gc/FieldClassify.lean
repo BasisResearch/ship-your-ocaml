@@ -3,10 +3,6 @@ import OCaml.Vm.Gc.FieldRead
 namespace OCaml.Vm.Gc.FieldCopy
 open OCaml.Bytecode Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
 
-/-- Continuation registers common to the copy store and oldify call. -/
-def continuationRegs (slot delta target index value : BitVec 64) : GRegs :=
-  [(8, slot), (18, delta), (19, target), (9, index), (11, delta + slot), (10, value)]
-
 theorem ReadPost.continuation {slot delta target index before after}
     (post : ReadPost slot delta target index before after) :
     GHolds after.σ (continuationRegs slot delta target index (word before slot.toNat)) := by
@@ -19,10 +15,10 @@ theorem classifier_continuation {value domain before after slot delta target ind
     (post : Young.Result value domain before after)
     (registers : GHolds before.σ (continuationRegs slot delta target index value)) :
     GHolds after.σ (continuationRegs slot delta target index value) := by
-  apply gholds_of_frame post.machine.frame _ (by change KeysOK [8,18,19,9,11,10]; decide) ?_ ?_ registers
-  · change ∀ n ∈ [8,18,19,9,11,10], ∀ q ∈ noiseRegs, (q == gprReg n) = false
+  apply gholds_of_frame post.machine.frame _ (by change KeysOK [11,10,8,18,19,9]; decide) ?_ ?_ registers
+  · change ∀ n ∈ [11,10,8,18,19,9], ∀ q ∈ noiseRegs, (q == gprReg n) = false
     decide
-  · have safe : ∀ n ∈ [8,18,19,9,11,10], ∀ m ∈ [14,15], (gprReg m == gprReg n) = false := by decide
+  · have safe : ∀ n ∈ [11,10,8,18,19,9], ∀ m ∈ [14,15], (gprReg m == gprReg n) = false := by decide
     intro n hn m hm
     exact safe n hn m (Young.written _ _ m hm)
 

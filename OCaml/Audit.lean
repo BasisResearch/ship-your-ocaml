@@ -32,7 +32,7 @@ import OCaml.Vm.Gc.QueueAccess
 import OCaml.Vm.Gc.QueueEnqueue
 import OCaml.Vm.Gc.PendingPayload
 import OCaml.Vm.Gc.QueueEmpty
-import OCaml.Vm.Gc.FieldClassify
+import OCaml.Vm.Gc.CopyEffect
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import VsaIris.Vsa.SnpPrint
@@ -1948,3 +1948,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.header_eq
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.source_header_parse
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.header_entry
+
+#print axioms OCaml.Vm.Gc.FieldCopy.store_tail_access
+#print axioms OCaml.Vm.Gc.FieldCopy.store_machine
+#print axioms OCaml.Vm.Gc.FieldCopy.ClassifiedPost.store_input
+#print axioms OCaml.Vm.Gc.FieldCopy.CopyPost.effect
+#print axioms OCaml.Vm.Gc.FieldCopy.StorePost.effect
+#print axioms OCaml.Vm.Gc.FieldCopy.copy_even

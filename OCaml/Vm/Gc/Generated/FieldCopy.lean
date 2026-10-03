@@ -192,4 +192,49 @@ theorem read_registers {immediate slot delta target index lds mem c}
       SegEvalState.init, runGM, ldsRunM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG,
       mkLine, decodeM, LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend] using registers
 
+/-- Continuation registers common to the copy store and oldify call. -/
+def continuationRegs (slot delta target index value : BitVec 64) : GRegs :=
+  [(11, delta + slot), (10, value), (8, slot), (18, delta), (19, target), (9, index)]
+
+def storeBlocks (again : Bool) := [storeBlock, tailBlock again]
+
+theorem store_ok (again : Bool) : ChainOK storePc [11,10,8,18,19,9] (storeBlocks again) := by
+  cases again <;> decide
+
+theorem store_written (again : Bool) : ∀ n ∈ wrChain (storeBlocks again), n ∈ [8,9,15] := by
+  cases again <;> decide
+
+theorem store_code (again : Bool) {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (hc : Code.Caml_oldify_mopupLoaded mem) : ChainCode mem (storeBlocks again) := by
+  intro b hb
+  apply code_facts again hc b
+  simp only [storeBlocks, List.mem_cons, List.not_mem_nil, or_false] at hb
+  rcases hb with rfl | rfl <;> simp [blocks]
+
+theorem store_effect (again : Bool) (slot delta target index value : BitVec 64)
+    (lds : List (List (BitVec 8))) :
+    (evalBlocks (storeBlocks again) (SegEvalState.init (continuationRegs slot delta target index value) lds)).log =
+      [((delta + slot).toNat, 8, value)] := by
+  cases again <;> simp [storeBlocks, storeBlock, tailBlock, caml_oldify_mopupX9d70Seg, caml_oldify_mopupX9d74TSeg, caml_oldify_mopupX9d74FSeg,
+    evalBlocks, evalBlock, SegEvalState.init, continuationRegs, wlogM, wentryM, widthOfM,
+    stepGM, stepLdsM, wvalM, eaddrM, srcVal, lookupG, eraseG, mkLine, decodeM,
+    runGM, ldsRunM, LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend]
+
+theorem store_exit (again : Bool) (slot delta target index value : BitVec 64)
+    (lds : List (List (BitVec 8))) :
+    evalBlocksPC storePc (SegEvalState.init (continuationRegs slot delta target index value) lds) (storeBlocks again) =
+      if again then pc else exitPc := by
+  cases again <;> rfl
+
+theorem store_registers {again slot delta target index value lds mem c}
+    (post : SegmentPost (storeBlocks again) (continuationRegs slot delta target index value) lds storePc mem c) :
+    GHolds c.σ (regs (slot + 8#64) delta target (index + 1#64)) := by
+  refine ⟨?_, ?_, ?_, ?_, True.intro⟩
+  all_goals apply gholds_lookup _ post.registers
+  all_goals cases again <;>
+    simp [storeBlocks, storeBlock, tailBlock, caml_oldify_mopupX9d70Seg, caml_oldify_mopupX9d74TSeg, caml_oldify_mopupX9d74FSeg,
+      evalBlocks, evalBlock, SegEvalState.init, continuationRegs, runGM, ldsRunM,
+      stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, mkLine, decodeM,
+      LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend]
+
 end OCaml.Vm.Gc.FieldCopy
