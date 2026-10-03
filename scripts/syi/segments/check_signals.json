@@ -1,0 +1,82 @@
+{
+  "theorem": "tr_check_signals",
+  "doc": "CHECK_SIGNALS arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.CheckSignalsSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v23 v20 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_8000278c : 0x80000000 ≤ (v20 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_8000278c : (v20 + sign_extend (m := 64) (0x000#12)).toNat + 4 ≤ 0x100000000)",
+    "(hhtif_8000278c : (v20 + sign_extend (m := 64) (0x000#12)).toNat + 4 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v20 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hguard_80002790 : ((sign_extend (m := 64) (bytesT4 m0 (v20 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 4))) == (0#64)) = true)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlCheckSignalsLoaded",
+  "pins": [
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    },
+    {
+      "reg": "x20",
+      "val": "v20",
+      "hyp": "hv20"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x800035cc",
+      "site": "site_800035cc_check_signals",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800035d0",
+      "site": "site_800035d0_check_signals",
+      "class": "j",
+      "asm": "j 8000278c <caml_interprete+0x994>",
+      "imm": "0x1ff1bc#21",
+      "target": "0x8000278c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    },
+    {
+      "addr": "0x8000278c",
+      "site": "site_8000278c_check_signals",
+      "class": "alu",
+      "asm": "lw a5,0(s4)",
+      "rd": "x15",
+      "rd_val": "(sign_extend (m := 64) (bytesT4 m0 (v20 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 4)))",
+      "raw_val": "(sign_extend (m := 64) (bytesT4 σ.mem (v20 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 4)))",
+      "call": "$vmi $v:x20 $hG $hpc $hmi $pin:x20 $hmem rfl hlo_8000278c hhi_8000278c hhtif_8000278c $hi",
+      "rw": "hmemE2"
+    },
+    {
+      "addr": "0x80002790",
+      "site": "site_80002790_taken_check_signals",
+      "class": "btaken",
+      "asm": "beqz a5,80001f5c <caml_interprete+0x164>",
+      "imm": "0x17cc#13",
+      "target": "0x80001f5c",
+      "pre_lines": [],
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl hguard_80002790 $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x800035cc",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

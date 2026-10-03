@@ -29,6 +29,7 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'CHECK_SIGNALS': ('CheckSignals', ['alu_addi', 'j', 'lw_tot', 'branch_taken']),
     'MULINT_PREFIX': ('MulintPrefix', ['ld_tot', 'srai', 'alu_addi', 'srai', 'jal']),
     'MULINT_SUFFIX': ('MulintSuffix', ['slli', 'alu_addi', 'alu_addi', 'j']),
     'PUSH': ('Push', ['sd', 'alu_addi', 'alu_addi', 'j']),
@@ -113,6 +114,7 @@ OPAQUE_LOADS = {'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 PATHS = {
+    'CHECK_SIGNALS': ('CHECK_SIGNALS', [True]),
     'MULINT_PREFIX': ('MULINT', []),
     'MULINT_SUFFIX': ('MULINT', []),
     'C_CALL1_PREFIX': ('C_CALL1', []),
@@ -202,7 +204,7 @@ for _op in ['BLTINT', 'BLEINT', 'BGTINT', 'BGEINT', 'BULTINT', 'BUGEINT', 'BEQ',
         PATHS[_family] = (_op, [_taken])
 
 
-def path_span(instructions, start, decisions):
+def path_span(instructions, start, decisions, exit_pc=None):
     """Follow explicit branch outcomes; generated contracts retain every guard."""
     by_pc = {i[0]: i for i in instructions}
     pc, insts, rows, branch = start, [], [], 0
@@ -219,11 +221,18 @@ def path_span(instructions, start, decisions):
             row = choices[0]
         insts.append(ins)
         rows.append(row)
-        if row.cls in ('j', 'jr', 'jal', 'jalr'):
+        if row.cls in ('j', 'jr', 'jal', 'jalr') and not (row.cls == 'j' and exit_pc is not None):
             if branch != len(decisions):
                 raise ValueError('unused branch decision')
             return insts, rows
-        pc = pc + sext(int(row.ops[3], 16), 13) if row.cls == 'branch_taken' else pc + 4
+        if row.cls == 'j':
+            pc += sext(int(row.ops[0], 16), 21)
+        else:
+            pc = pc + sext(int(row.ops[3], 16), 13) if row.cls == 'branch_taken' else pc + 4
+        if pc == exit_pc:
+            if branch != len(decisions):
+                raise ValueError('unused branch decision')
+            return insts, rows
     raise ValueError('path did not terminate at a jump')
 
 
@@ -309,7 +318,8 @@ def outputs(family='CONST0'):
         if family.endswith('_SUFFIX'):
             prefix, _ = path_span(instructions, start, decisions)
             start = prefix[-1][0] + 4
-        insts, rows = path_span(instructions, start, decisions)
+        insts, rows = path_span(instructions, start, decisions,
+            int(census['loop_head'], 16) if family == 'CHECK_SIGNALS' else None)
     else:
         arm = census['arms'][family]
         start = int(arm['addr'], 16)

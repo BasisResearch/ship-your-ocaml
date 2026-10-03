@@ -1,5 +1,18 @@
 # Lane a1-arms
 
+## Represented CHECK_SIGNALS arm
+
+`check_signals_arm` and `check_signals_step_arm` cover the no-pending path
+through its shared native block. The generator follows an internal direct
+jump to an explicit census-derived exit, retaining the branch guard in the
+segment contract. `signalCheckReady_of_runtime` derives the zero flag from
+the concrete runtime invariant. The fixed pending-flag address and its
+proved read geometry use Layout; no new data-address literal or read-window
+premise is introduced. Capped/default-limit builds pass: body 1.0s,
+represented bridge 0.9s. All headlines are audited. MULINT landed as
+`b113daf`, full gate passing. Coverage is **105 conditional represented
+opcode bridges**; remaining arithmetic, heap and control families are open.
+
 ## Represented MULINT arm
 
 `mulint_setup` establishes the libgcc operands, link register, popped stack
@@ -1274,10 +1287,11 @@ limit is involved. Both arm bridges retain the documented `ArmInput` and
 ## Open / next
 
 Continue with remaining arithmetic, heap mutation/allocation and control
-families: CHECK_SIGNALS is next; OFFSETREF can reuse the proved operand-width
-arithmetic. MULINT now consumes the proved libgcc summary.
+families: SWITCH path generation is next; OFFSETREF can reuse the proved
+operand-width arithmetic. MULINT consumes the proved libgcc summary, and
+CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
 All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 104 conditional
+setup/return bridges and named callee composition. There are 105 conditional
 represented opcode bridges (C_CALLs cover returning `.ok` primitives),
 not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
 is bytecode-level; no machine `whileMin` theorem is claimed.
