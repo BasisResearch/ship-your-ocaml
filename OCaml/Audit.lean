@@ -6,6 +6,7 @@ import OCaml.Vm.Gc.FreshLargeAllocated
 import OCaml.Vm.Gc.AllocLargeWrapper
 import OCaml.Vm.Boot.Startup.ParameterQueryReady
 import OCaml.Vm.Boot.Startup.ParameterReady
+import OCaml.Vm.Boot.WhileMinEnvironment
 import OCaml.Vm.Boot.Startup.ParameterPrefix
 import OCaml.Vm.Boot.Startup.ParameterBranch
 import OCaml.Vm.Boot.Startup.ParameterReturn
@@ -3429,6 +3430,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.parameter_saved
 #print axioms OCaml.Vm.Boot.Startup.parse_parameters_empty
 #print axioms OCaml.Vm.Boot.Startup.parameter_ready
+
+-- Exact initial environment: present parameter with empty value.
+#print axioms OCaml.Vm.Boot.WhileMinImage.env_header
+#print axioms OCaml.Vm.Boot.WhileMinImage.env_first
+#print axioms OCaml.Vm.Boot.WhileMinImage.env_end
+#print axioms OCaml.Vm.Boot.WhileMinImage.env_value
+#print axioms OCaml.Vm.Boot.WhileMinImage.env_not_empty
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.domain_history_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.reset
