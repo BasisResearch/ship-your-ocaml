@@ -238,6 +238,7 @@ def off_prim_contents : Nat := 8
 
 /-! Native interpreter frame, recovered from the prologue saves. -/
 def interpFrameBytes : Nat := 528
+def interpSavedRootsOffset : Nat := 200
 def interpSavedRegs : List Nat := [1, 8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
 def interpSaveOffset : Nat → Nat
   | 1 => 520

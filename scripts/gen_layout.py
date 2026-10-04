@@ -232,6 +232,17 @@ def main():
     if any(offset + 8 > main_frame_bytes for _, offset in main_saved_regs):
         die("caml_main save outside native frame")
 
+    # The nonlocal return reloads the initial local-roots pointer saved before setjmp.
+    roots_loads = [(pc, re.fullmatch(r"a2,(\d+)\(sp\)", ops))
+                   for pc, (mn, ops) in ins.items() if mn == "ld"]
+    roots_offsets = [int(match[1]) for pc, match in roots_loads if match
+                     and ins.get(pc + 12) == ("sd", f"a2,{off['local_roots']}(a5)")]
+    if len(roots_offsets) != 1:
+        die("interpreter nonlocal local-roots restoration changed")
+    saved_roots_offset = roots_offsets[0]
+    if ("sd", f"a3,{saved_roots_offset}(sp)") not in ins.values():
+        die("interpreter initial local-roots save is absent")
+
     # Nonlocal-jump environment: stores and loads must agree for every ABI slot.
     jump_slots = {}
     for fn, op in [("setjmp", "sd"), ("longjmp", "ld")]:
@@ -333,6 +344,7 @@ def main():
     w(f"\n/-- `caml_prim_table.contents`, recovered from C_CALL1. -/\ndef off_prim_contents : Nat := {prim_offsets[0]}\n")
     w("\n/-! Native interpreter frame, recovered from the prologue saves. -/\n")
     w(f"def interpFrameBytes : Nat := {frame_bytes}\n")
+    w(f"def interpSavedRootsOffset : Nat := {saved_roots_offset}\n")
     w("def interpSavedRegs : List Nat := [" + ", ".join(str(r) for r, _ in saved_regs) + "]\n")
     w("def interpSaveOffset : Nat → Nat\n")
     for reg, offset in saved_regs:

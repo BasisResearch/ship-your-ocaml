@@ -2295,10 +2295,23 @@ function summary, not yet the represented C_CALL raising continuation.
 C_CALL terminal adapters landed as `6ad2d70`, full gate passing. Coverage
 remains 140 conditional opcode bridges.
 
+`longjmp_summary` landed as `543fbb3`, full gate passing.
+
+`reentry_quiet` (`OCaml/Vm/Sim/ReentryQuiet.lean`) proves the native quiet
+setjmp continuation through the common handler check: restore the saved
+local-roots pointer, load extern_sp and the exception bucket, and follow
+the quiet trap/backtrace branches. `reentry_read_outside` checks that this
+single store preserves every later domain-field read. Layout extracts the
+saved-roots offset and checks its native save; the generated segment uses
+pinned instructions. Default-budget builds pass: native segment 2.5s,
+state/frame facts 0.866s, complete composition 1.1s. Runtime readiness and
+image separation remain named scalar premises. Composition with longjmp
+and represented primitive raising outcomes is next.
+
 ## Open / next
 
-Immediate next: interpreter exception re-entry from the checked longjmp
-summary, then C_CALL raising continuations. Consume the
+Immediate next: compose the checked longjmp and quiet interpreter re-entry
+summaries, then represented C_CALL raising continuations. Consume the
 remaining caml_do_exit summary when supplied. Continue the
 uncaught semantic continuation/backtrace paths, primitive
 `.raise` C_CALL outcomes and a1-prims terminal summaries, and major-allocation constructor paths.

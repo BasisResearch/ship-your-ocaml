@@ -138,6 +138,7 @@ python3 scripts/gen_closure_reserve.py --check || fail "stage a5: closure nurser
 python3 scripts/gen_interp_return.py --check || fail "stage a5: interpreter return adapter drift"
 python3 scripts/gen_nonlocal.py --check || fail "stage a5: nonlocal-jump artifact drift"
 python3 scripts/gen_longjmp.py --check || fail "stage a5: longjmp summary drift"
+python3 scripts/gen_reentry_quiet.py --check || fail "stage a5: quiet reentry summary drift"
 python3 scripts/gen_raise_quiet.py --check || fail "stage a5: quiet raise adapter drift"
 python3 scripts/gen_modify_indexed.py --check || fail "stage a5: indexed modify caller drift"
 python3 scripts/gen_modify_fixed.py --check || fail "stage a5: fixed modify caller drift"

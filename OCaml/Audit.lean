@@ -3000,6 +3000,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.longjmp_return_pc
 #print axioms OCaml.Vm.Sim.longjmp_summary
 
+-- Interpreter quiet re-entry after a native nonlocal return.
+#print axioms Vsa.Sim.tr_reentry_quiet
+#print axioms OCaml.Vm.Sim.reentry_quiet_loaded
+#print axioms OCaml.Vm.Sim.reentry_read_outside
+#print axioms OCaml.Vm.Sim.reentry_quiet
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq
