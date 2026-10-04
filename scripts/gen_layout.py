@@ -47,6 +47,8 @@ def collector_layout():
         **{f"off_bf_{name}": f"offsetof(large_free_block, {name})"
            for name in ("isnode", "left", "right", "prev", "next")},
         "gc_blue": "Caml_blue",
+        "gc_white": "Caml_white",
+        "tag_abstract": "Abstract_tag",
         "value_bytes": "sizeof(value)",
         "header_bytes": "sizeof(header_t)",
         **{f"off_ref_table_{name}": f"offsetof(struct caml_ref_table, {name})"

@@ -1,6 +1,6 @@
 """Bounded certificates for symbolic store logs, checked against instruction records."""
 
-def emit_log_chunks(E, name, instrs, keys, literal, lib, chunk_size=5):
+def emit_log_chunks(E, name, instrs, keys, literal, lib, chunk_size=5, register_certificate=False):
     regs = {k:f'R {k}' for k in keys}
     order = list(keys)
     consumed = 0
@@ -23,6 +23,8 @@ def emit_log_chunks(E, name, instrs, keys, literal, lib, chunk_size=5):
     simp = ('runGM, wlogM, ldsRunM, wentryM, widthOfM, stepGM, stepLdsM, '
             'wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, '
             'Functions.sign_extend, Sail.BitVec.signExtend, List.head?_eq_getElem?')
+    if any(ins.word & 127 == 0x13 and (ins.word >> 12) & 7 in (1,5) for ins in instrs):
+        simp += ', shamtOf, Sail.BitVec.extractLsb, Sail.shift_bits_left, Sail.shift_bits_right'
     for idx,start in enumerate(range(0,len(instrs),chunk_size)):
         body=instrs[start:start+chunk_size]
         part=f'{name}_piece{idx}'
@@ -33,6 +35,13 @@ def emit_log_chunks(E, name, instrs, keys, literal, lib, chunk_size=5):
             w=ins.word; op=w&127; rd=(w>>7)&31; rs1=(w>>15)&31; rs2=(w>>20)&31
             if op==0x13 and ((w>>12)&7)==0:
                 write(rd,add(val(rs1),lib.sext(w>>20,12)))
+            elif op==0x13 and ((w>>12)&7) in (1,5):
+                kind = 'left' if ((w>>12)&7)==1 else 'right'
+                assert w >> 26 == 0
+                write(rd,f'Sail.shift_bits_{kind} ({val(rs1)}) ({(w >> 20) & 63}#6)')
+            elif op==0x33 and ((w>>12)&7)==0 and w >> 25 in (0,0x20):
+                op_symbol = '+' if w >> 25 == 0 else '-'
+                write(rd,f'({val(rs1)} {op_symbol} {val(rs2)})')
             elif op==0x17:
                 write(rd,add(lit(ins.addr),lib.sext(w & 0xfffff000,32)))
             elif op==3 and ((w>>12)&7)==3:
@@ -67,3 +76,14 @@ def emit_log_chunks(E, name, instrs, keys, literal, lib, chunk_size=5):
         rest = 'wlogM '+app(chunks[i+1:])+f' ({chunks[i+1]}_input R loads) ({remaining(sum(1 for ins in instrs[:(i+1)*chunk_size] if ins.word&127==3))})'
         E('  change '+app([q+'_log R loads' for q in chunks[:i+1]]+[rest])+' = _')
     E(f'  rw [{chunks[-1]}_stores R loads]', '')
+
+    if register_certificate:
+        E(f'theorem {name}_registers_chunks (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :',
+          f'    runGM {name}_body ({name}_input R) loads = {chunks[-1]}_output R loads := by',
+          '  change runGM '+app(chunks)+f' ({chunks[0]}_input R loads) loads = _')
+        for i,p in enumerate(chunks[:-1]):
+            E(f'  rw [runGM_append, {p}_regs R loads, {p}_loads R loads]')
+            consumed_before = sum(1 for ins in instrs[:(i+1)*chunk_size] if ins.word&127==3)
+            E('  change runGM '+app(chunks[i+1:])+f' ({chunks[i+1]}_input R loads) ({remaining(consumed_before)}) = _')
+        E(f'  rw [{chunks[-1]}_regs R loads]', '')
+    return chunks

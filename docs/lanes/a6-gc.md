@@ -1,5 +1,30 @@
 # Lane a6-gc
 
+## Both free-block split paths (2026-10-04)
+
+- `BestFitSplit.lean:56` (`split`) proves actual `bf_split` entry through
+  native return on both remnant-size branches. The loaded source header
+  determines the branch; the postcondition records the carved header
+  address, exact counter/remnant-header stores, and preserved code.
+- `BestFitSplitAccess.lean:7` and `:30` discharge memory access and branch
+  obligations from initial RAM windows and observations. No future run
+  or collector-preservation premise is assumed.
+- `BestFitSplitGeometry.lean:delta_nat`, `remnant_header`, and `Post.remnant`
+  prove the no-wrap remnant size and read the correctly sized/tagged header
+  from final memory. `Post.counter` reads back accounting under explicit
+  source-header separation. Free-list ownership remains a caller obligation.
+- The existing symbolic chunk generator now supports RV64 shifts/add/sub
+  and optional register composition through `SymbolicAppend`; this keeps
+  the 13-instruction head certificate bounded without raising proof limits.
+  White/abstract header constants come from generated `Layout`.
+- Targeted build (608 jobs) and full Audit (2917 jobs) pass; new headlines
+  use only permitted axioms. GC/Layout/argv
+  generator drift, discipline (25 rules), and abstraction gates pass
+  (C1=0, C2=7, C3=7, C4=3). Exact-size allocation landed as `5fcedd7`.
+- Next: larger-size search/tree allocation,
+  and outer-wrapper/fresh-copy composition. Full collector closure and
+  live-word `Fits` (G2) remain open.
+
 ## All exact-size small-list allocation branches (2026-10-04)
 
 - `BestFitExact.lean:allocate` covers all four combinations of cursor
