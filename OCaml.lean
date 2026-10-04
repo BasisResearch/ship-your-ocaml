@@ -501,3 +501,6 @@ import OCaml.Vm.Sim.ClosurerecPrefixMore
 import OCaml.Vm.Sim.ClosurerecPrefixZero
 
 import OCaml.Vm.Sim.ClosurerecReserve
+
+import OCaml.Vm.Sim.ClosurerecInitializeMore
+import OCaml.Vm.Sim.ClosurerecInitializeZero

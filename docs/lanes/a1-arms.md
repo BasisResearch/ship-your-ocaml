@@ -1868,6 +1868,19 @@ the existing payload-plus-header subtraction law. Both prefixes landed as
 `5e25a86`, all gates passing after a push-race retry. Next: recursive closure
 initializer, then infix metadata construction and represented restoration.
 
+## Both represented CLOSUREREC initializers
+
+`ClosurerecInitializeMore/Zero.lean` (`closurerec_initialize_more/zero`)
+proves both actual header/initializer paths (1.1 s / 1.0 s).
+`ClosurerecInitialized.copy_start` establishes the pointer-copy registers;
+`ClosurerecInitInput.copy_after` proves the concrete capture snapshot through
+the actual push, reservation and header log, reusing `closure_setup_snapshot`.
+`gen_closure_init.py` now generates both ordinary and recursive initializers.
+Capture geometry, memory separation and the bounded destination window remain
+explicit. The reservation landed as `da971af`, all gates passing. Next: common
+zero/copied-capture handoff, first function metadata and the infix loop, then
+represented allocation restoration and full CLOSUREREC composition.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

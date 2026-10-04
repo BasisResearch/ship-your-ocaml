@@ -17,6 +17,7 @@ theorem closure_initialize_more {pl : Place} {pc sp count a domain limit : Nat} 
     (front : ClosureReserved c pl pc sp count a domain accu d) :
     ∃ nb after, StepsN nb d after ∧ ClosureInitialized c pl pc sp count a domain accu after := by
   have small := front.fields.nurseryBound
+
   have domainRead : RamReadAt Layout.sym_Caml_state 8 := ⟨by decide, by decide, by decide⟩
   have youngRead := nursery.youngWrite.read
   have headerNat := nursery.headerWrite.read.toNat
