@@ -19,6 +19,22 @@ structure LargeConditions (R : Nat → BitVec 64) (c : Config) : Prop where
     (BestFitLarge.size (frameSp R) (searched R c)) (BestFitLarge.header (searched R c)))
     (BestFitLarge.least (searched R c) - BitVec.ofNat 64 Layout.header_bytes).toNat 8
 
+theorem searched_memory {R before after} (memory : after.σ.mem = before.σ.mem) :
+    (searched R after).σ.mem = (searched R before).σ.mem := by
+  simp only [searched,bitmap,memory]
+
+theorem LargeConditions.of_memory {R before after} (memory : after.σ.mem = before.σ.mem)
+    (conditions : LargeConditions R before) : LargeConditions R after := by
+  have same := searched_memory (R := R) memory
+  refine ⟨conditions.large.of_memory same,?_⟩
+  simpa only [BestFitLarge.size,BestFitLarge.header,BestFitLarge.least,word,same] using conditions.headerOutside
+
+theorem largeEffect_of_memory {R before after} (memory : after.σ.mem = before.σ.mem) :
+    largeEffect R after = largeEffect R before := by
+  unfold largeEffect
+  rw [BestFitLarge.splitEffect_of_memory (searched_memory memory)]
+  simp only [bitmap,memory]
+
 structure LargeSplit (R : Nat → BitVec 64) (before after : Config) : Prop where
   good : GoodState after.σ
   tick : after.tick < 2

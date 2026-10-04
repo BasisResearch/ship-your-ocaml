@@ -20,13 +20,15 @@ theorem filtered_zero {R : Nat → BitVec 64} {c : Config} (zero : bytesT c.σ.m
 
 /-- The native stack supplies the three save windows decoded from the
 fallback prologue; the bitmap is a total four-byte observation. -/
-structure Input (R : Nat → BitVec 64) (c : Config) : Prop where
+structure StackConditions (R : Nat → BitVec 64) : Prop where
+  windows : ∀ cell ∈ saves, WriteWindow (frameSp R + BitVec.ofNat 64 cell.2) 8
+
+structure Input (R : Nat → BitVec 64) (c : Config) : Prop extends StackConditions R where
   good : GoodState c.σ
   tick : c.tick < 2
   minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
   code : Code.Bf_allocateLoaded c.σ.mem
   registers : GHolds c.σ (regs R)
-  windows : ∀ cell ∈ saves, WriteWindow (frameSp R + BitVec.ofNat 64 cell.2) 8
 
 macro "fallback_address" : tactic => `(tactic|
   simp [eaddrM,mkLine,decodeM,regs,srcVal,lookupG,eraseG,stepGM,stepLdsM,wvalM,

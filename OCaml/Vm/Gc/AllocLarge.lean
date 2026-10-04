@@ -17,17 +17,44 @@ def effect (sp size : BitVec 64) (c : Config) :=
 
 /-- Large-block alternative and successful wrapper-continuation conditions.
 All later memory observations refer to explicit initial write-log snapshots. -/
-structure Input (sp size : BitVec 64) (c : Config) : Prop
-    extends BestFitFallback.MissingInput (freeRegs sp size) c where
-  ffsCode : Code.FfsLoaded c.σ.mem
-  splitCode : Code.Bf_splitLoaded c.σ.mem
-  wrapperCode : Code.Caml_alloc_shr_for_minor_gcLoaded c.σ.mem
-  sizeRegister : gprGet c.σ 8 = some size
+structure Conditions (sp size : BitVec 64) (c : Config) : Prop
+    extends BestFitFallback.MissingConditions (freeRegs sp size) c where
   tagRead : ReadWindow (sp + BitVec.ofNat 64 AllocEntry.tagOffset) 8
   emptyBitmap : BestFitFallback.filtered size (BestFitFallback.bitmap c) = 0
   large : BestFitFallback.LargeConditions (freeRegs sp size) c
   returnOutside : BestFitFallback.ReturnOutside (freeRegs sp size) c
   continuation : AllocSuccess.Conditions (AllocFinish.entryRegs sp size (resultHeader sp size c)) (allocated sp size c)
+
+structure Input (sp size : BitVec 64) (c : Config) : Prop
+    extends BestFitFallback.Input (freeRegs sp size) c, Conditions sp size c where
+  ffsCode : Code.FfsLoaded c.σ.mem
+  splitCode : Code.Bf_splitLoaded c.σ.mem
+  wrapperCode : Code.Caml_alloc_shr_for_minor_gcLoaded c.σ.mem
+  sizeRegister : gprGet c.σ 8 = some size
+
+theorem Input.toMissingInput {sp size c} (input : Input sp size c) : BestFitFallback.MissingInput (freeRegs sp size) c :=
+  { toInput := input.toInput
+    small := input.small
+    slotRead := input.slotRead
+    empty := input.empty }
+
+theorem resultHeader_of_memory {sp size before after} (memory : after.σ.mem = before.σ.mem) :
+    resultHeader sp size after = resultHeader sp size before := BestFitFallback.largeHeader_of_memory memory
+
+theorem freeEffect_of_memory {sp size before after} (memory : after.σ.mem = before.σ.mem) :
+    freeEffect sp size after = freeEffect sp size before := BestFitFallback.completeEffect_of_memory memory
+
+theorem allocated_memory {sp size before after} (memory : after.σ.mem = before.σ.mem) :
+    (allocated sp size after).σ.mem = (allocated sp size before).σ.mem := by
+  simp only [allocated,AllocFinish.snapshot,freeEffect_of_memory memory,memory]
+
+theorem Conditions.of_memory {sp size before after} (memory : after.σ.mem = before.σ.mem)
+    (conditions : Conditions sp size before) : Conditions sp size after := by
+  refine ⟨conditions.toMissingConditions.of_memory memory,conditions.tagRead,?_,
+    conditions.large.of_memory memory,conditions.returnOutside.of_memory memory,?_⟩
+  · simpa only [BestFitFallback.bitmap,memory] using conditions.emptyBitmap
+  · rw [resultHeader_of_memory memory]
+    exact conditions.continuation.of_memory (allocated_memory memory)
 
 abbrev Post (sp size : BitVec 64) (before after : Config) : Prop :=
   AllocFinish.Post sp size (resultHeader sp size before) (freeEffect sp size before) before after

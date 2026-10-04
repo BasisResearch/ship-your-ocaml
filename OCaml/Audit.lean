@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Gc.AllocLargeWrapper
 import OCaml.Vm.Boot.Startup.SecureEnvReady
 import OCaml.Vm.Boot.Startup.GetenvReady
 import OCaml.Vm.Boot.Startup.FindEnvReady
@@ -3482,3 +3483,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.AllocWrapperCore.Entered.image
 #print axioms OCaml.Vm.Gc.AllocWrapperCore.Entered.complete
 #print axioms OCaml.Vm.Gc.AllocExact.Post.toFinished
+
+#print axioms OCaml.Vm.Gc.BestFitFallback.MissingConditions.of_memory
+#print axioms OCaml.Vm.Gc.BestFitFallback.LargeConditions.of_memory
+#print axioms OCaml.Vm.Gc.BestFitFallback.largeEffect_of_memory
+#print axioms OCaml.Vm.Gc.BestFitFallback.largeHeader_of_memory
+#print axioms OCaml.Vm.Gc.BestFitFallback.completeEffect_of_memory
+#print axioms OCaml.Vm.Gc.BestFitFallback.ReturnOutside.of_memory
+#print axioms OCaml.Vm.Gc.AllocLarge.Conditions.of_memory
+#print axioms OCaml.Vm.Gc.AllocLargeWrapper.allocate

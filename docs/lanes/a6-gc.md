@@ -1,5 +1,21 @@
 # Lane a6-gc
 
+## Complete least-large-block wrapper (2026-10-04)
+
+- `AllocLargeWrapper.allocate` proves actual wrapper entry, loaded indirect
+  call, empty-list/zero-bitmap least-large-block allocation, successful
+  header/accounting continuation and original caller return. Its
+  postcondition retains exact memory, caller bank, stack and native frame.
+- `BestFitFallback.StackConditions`/`MissingConditions` and
+  `AllocLarge.Conditions` separate initial-memory geometry from machine
+  entry facts. Snapshot transport lemmas supply the actual callee input.
+- Targeted build passes (670 jobs); discipline and abstraction gates pass.
+  Full Audit passes (3283 jobs), with only permitted axioms. Shared wrapper entry
+  and original-caller restoration landed as `05cad7c`.
+- Next: share fresh-oldify composition across allocation alternatives.
+  Other allocator/object routes, ownership suppliers, collector closure,
+  G2 and the ocamlc live-word budget remain open.
+
 ## Shared wrapper entry and original-caller restoration (2026-10-04)
 
 - `AllocWrapperCore.enter` proves the wrapper prologue and loaded indirect

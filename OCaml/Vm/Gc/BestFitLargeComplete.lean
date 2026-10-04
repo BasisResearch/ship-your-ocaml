@@ -21,6 +21,21 @@ def ReturnOutside (R : Nat → BitVec 64) (c : Config) : Prop :=
   OutLRange (BestFitLarge.splitEffect (frameSp R) (searched R c))
     (frameSp R + BitVec.ofNat 64 BestFitLargeReturn.returnOffset).toNat 8
 
+theorem largeHeader_of_memory {R before after} (memory : after.σ.mem = before.σ.mem) :
+    largeHeader R after = largeHeader R before := by
+  simp only [largeHeader,BestFitLarge.size,BestFitLarge.header,BestFitLarge.least,word,
+    searched_memory memory]
+
+theorem completeEffect_of_memory {R before after} (memory : after.σ.mem = before.σ.mem) :
+    completeEffect R after = completeEffect R before := by
+  simp only [completeEffect,largeEffect_of_memory memory,BestFitLargeReturn.counted,
+    BestFitLargeReturn.savedSize,BestFitLargeReturn.savedRequest,word,splitSnapshot,
+    largeEffect_of_memory memory,memory]
+
+theorem ReturnOutside.of_memory {R before after} (memory : after.σ.mem = before.σ.mem)
+    (outside : ReturnOutside R before) : ReturnOutside R after := by
+  simpa only [ReturnOutside,BestFitLarge.splitEffect_of_memory (searched_memory memory)] using outside
+
 theorem LargeSplit.returnWord {R before after} (post : LargeSplit R before after)
     (input : Input R before) (outside : ReturnOutside R before) :
     BestFitLargeReturn.returnWord (frameSp R) after = R 1 := by

@@ -9,10 +9,19 @@ def probeLoads (size : BitVec 64) (c : Config) :=
 
 /-- The concrete small-size slot is empty; the fallback stack geometry is
 independent of this read-only classification prefix. -/
-structure MissingInput (R : Nat → BitVec 64) (c : Config) : Prop extends Input R c where
+structure MissingConditions (R : Nat → BitVec 64) (c : Config) : Prop extends StackConditions R where
   small : (R 10).toNat ≤ Layout.bf_small_count
   slotRead : ReadWindow (BestFitSmall.slot (R 10)) 8
   empty : word c (BestFitSmall.slot (R 10)).toNat = 0
+
+structure MissingInput (R : Nat → BitVec 64) (c : Config) : Prop
+    extends Input R c, MissingConditions R c
+
+theorem MissingConditions.of_memory {R before after}
+    (memory : after.σ.mem = before.σ.mem) (conditions : MissingConditions R before) :
+    MissingConditions R after := by
+  refine ⟨conditions.toStackConditions,conditions.small,conditions.slotRead,?_⟩
+  simpa only [word,memory] using conditions.empty
 
 theorem probe_access {R c} (input : MissingInput R c) :
     ChainAccess c.σ.mem (BestFitSmall.regs (R 1) (R 10)) (probeLoads (R 10) c) probeBlocks := by
@@ -69,8 +78,12 @@ theorem missing_search_zero {R c} (input : MissingInput R c) (ffsCode : Code.Ffs
   apply Vsa.Logic.Triple.seq (missing input).run
   intro middle probed
   have fallback : Input R middle :=
-    ⟨probed.machine.good,probed.machine.tick,probed.machine.minstret,probed.memory ▸ input.code,
-      probed.registers,input.windows⟩
+    { toStackConditions := input.toStackConditions
+      good := probed.machine.good
+      tick := probed.machine.tick
+      minstret := probed.machine.minstret
+      code := probed.memory ▸ input.code
+      registers := probed.registers }
   have same : bitmap middle = bitmap c := by simp only [bitmap,probed.memory]
   obtain ⟨after,run,searched⟩ := (search_zero fallback (probed.memory ▸ ffsCode)
     (same ▸ empty)).run middle ⟨probed.pc,rfl⟩
