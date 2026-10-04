@@ -15,6 +15,17 @@ structure RangeConditions (q : PendingCopy) (root domain : BitVec 64) (c : Confi
   outside : ¬ ((Young.lowerWord domain (forwardedSnapshot q root c)).toNat < (child q root c).toNat ∧
     (child q root c).toNat < (Young.upperWord domain (forwardedSnapshot q root c)).toNat)
 
+theorem forwardedSnapshot_memory {q root before after} (memory : after.σ.mem = before.σ.mem) :
+    (forwardedSnapshot q root after).σ.mem = (forwardedSnapshot q root before).σ.mem := by
+  simp only [forwardedSnapshot,memory]
+
+theorem RangeConditions.of_memory {q root domain before after} (memory : after.σ.mem = before.σ.mem)
+    (conditions : RangeConditions q root domain before) : RangeConditions q root domain after := by
+  have same := forwardedSnapshot_memory (q := q) (root := root) memory
+  refine ⟨?_,conditions.windows,?_⟩
+  · simpa only [word,same] using conditions.domainRoot
+  · simpa only [Young.lowerWord,Young.upperWord,word,same,child_of_memory memory] using conditions.outside
+
 /-- Execute both possible rejection edges after the real even-child branch,
 reaching the same return boundary as an immediate child. -/
 theorem Classified.nonYoung_ready {q root sp domain before middle}

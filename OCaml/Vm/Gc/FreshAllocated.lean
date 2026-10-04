@@ -38,6 +38,7 @@ structure Allocated (R : Nat → BitVec 64) (before after : Config) : Prop where
   registers : GHolds after.σ (Enqueue.regs (R 10) (allocatedPayload R before) (R 11)
     (sizeWord (word before (R 10 - 8#64).toNat)))
   stack : gprGet after.σ 2 = some (OldifyEntry.frameSp R)
+  constants : GHolds after.σ loopConstants
   memory : after.σ.mem = writeLog before.σ.mem (allocationEffect R before)
   output : after.σ.sailOutput = before.σ.sailOutput
   native : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
@@ -78,6 +79,6 @@ theorem allocate_fresh {R domain size tag c} (input : EntryInput R domain size t
       (AllocWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) c after := by
     simpa only [AllocExact.resultHeader,BitVec.sub_add_cancel,payload] using done
   exact ⟨after,run,⟨result.good,result.minstret,result.tick,result.code,result.pc,result.registers,
-    result.stack,result.memory,result.output,result.native⟩⟩
+    result.stack,result.constants,result.memory,result.output,result.native⟩⟩
 
 end OCaml.Vm.Gc.Fresh

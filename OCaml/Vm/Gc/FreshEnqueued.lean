@@ -34,7 +34,7 @@ structure EnqueueConditions (R : Nat → BitVec 64) (qs : List PendingCopy) (pl 
 theorem Allocated.toResult {R before after} (post : Allocated R before after) :
     AllocationResult R (allocatedPayload R before)
       (AllocWrapper.effect (allocatorRegs R before) (oldifySnapshot R before)) before after :=
-  ⟨post.good,post.minstret,post.tick,post.code,post.pc,post.registers,post.stack,
+  ⟨post.good,post.minstret,post.tick,post.code,post.pc,post.registers,post.stack,post.constants,
     post.memory,post.output,post.native⟩
 
 theorem EnqueueConditions.toQueue {R qs pl c} (conditions : EnqueueConditions R qs pl c) :

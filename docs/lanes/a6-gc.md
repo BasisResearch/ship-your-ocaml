@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Whole fresh-single non-young routes (2026-10-04)
+
+- `FreshSingleNonYoung.lean:single_fresh_nonYoung` and
+  `single_fresh_large_nonYoung` prove actual oldify entry through either
+  allocator, even-child nursery rejection, final field store and original
+  caller return. They reuse `SingleResult` payload and typed-header proofs.
+- `AllocationResult` now retains the actual prologue loop constants,
+  including the runtime-domain and tag registers. They are derived from
+  machine frames; no new caller-supplied register premise was introduced.
+  `single_input`, `single_geometry` and `complete_single` share entry and
+  result composition with immediate children.
+- Targeted builds and all fresh-single/header regressions pass (749 jobs);
+  discipline and abstraction gates pass. Full Audit passes (3440 jobs),
+  with only permitted axioms. Even-child continuation landed as `f98bb22`.
+- Next: young-child tail entry and its partial relocation invariant.
+  Other object/allocator routes, ownership suppliers, collector closure,
+  G2 and the ocamlc live-word budget remain open.
+
 ## Single-field even non-young continuation (2026-10-04)
 
 - `OldifyYoung.nonYoung_machine` proves both actual nursery-rejection

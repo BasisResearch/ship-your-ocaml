@@ -6,15 +6,21 @@ open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
 
 /-- Values retained for allocation and the post-allocation update. Runtime
 global addresses come from Layout; tag constants match the decoded prologue. -/
+def loopConstants : GRegs :=
+  [(18,BitVec.ofNat 64 Layout.sym_Caml_state),(19,maxScannedTag),
+   (20,250),(21,249),(22,1),(23,253)]
+
 def allocationCarried (R : Nat → BitVec 64) : GRegs :=
-  [(2,OldifyEntry.frameSp R),(9,R 11),(18,BitVec.ofNat 64 Layout.sym_Caml_state),
-   (19,maxScannedTag),(20,250),(21,249),(22,1),(23,253)]
+  [(2,OldifyEntry.frameSp R),(9,R 11)] ++ loopConstants
+
+theorem carried_constants {R σ} (holds : GHolds σ (allocationCarried R)) : GHolds σ loopConstants :=
+  ((gholds_append _ _).mp holds).2
 
 theorem entry_carried {R before after} (post : OldifyEntry.Post R before after) :
     GHolds after.σ (allocationCarried R) := by
   apply gholds_select post.registers
   intro n v member
-  simp only [allocationCarried, List.mem_cons, List.not_mem_nil, or_false] at member
+  simp only [allocationCarried, loopConstants, List.cons_append, List.nil_append, List.mem_cons, List.not_mem_nil, or_false] at member
   rcases member with h | h | h | h | h | h | h | h <;> cases h <;> rfl
 
 /-- Shared finite frame for nursery tests and fresh argument setup. -/

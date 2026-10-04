@@ -17,12 +17,18 @@ structure AllocationResult (R : Nat → BitVec 64) (payload : BitVec 64) (log : 
   registers : GHolds after.σ (Enqueue.regs (R 10) payload (R 11)
     (sizeWord (word before (R 10 - 8#64).toNat)))
   stack : gprGet after.σ 2 = some (OldifyEntry.frameSp R)
+  constants : GHolds after.σ loopConstants
   memory : after.σ.mem = writeLog before.σ.mem
     (OldifyEntry.saveLog OldifyEntry.saves R ++ log)
   output : after.σ.sailOutput = before.σ.sailOutput
   native : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ (1 :: prepareWrites) ++ [1,2,8,9,10,11,12,13,14,15], (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
+
+theorem AllocationResult.domainRegister {R payload log before after}
+    (post : AllocationResult R payload log before after) :
+    gprGet after.σ 18 = some (BitVec.ofNat 64 Layout.sym_Caml_state) :=
+  gholds_lookup _ post.constants rfl
 
 /-- Compose the proved fresh prefix with a proved wrapper return. This
 shares oldify register preservation and exact memory composition across
@@ -34,16 +40,16 @@ theorem AllocationEntry.finish {R hp log before middle after}
       Layout.sym_tohost + 16 ≤ e.1) :
     AllocationResult R (hp + BitVec.ofNat 64 Layout.header_bytes)
       (AllocWrapperCore.effect (allocatorRegs R before) hp log middle) before after := by
-  have kept : GHolds after.σ [(24,R 10 - 8#64),(22,1),
-      (25,sizeWord (word before (R 10 - 8#64).toNat))] := by
-    apply gholds_of_frame allocated.native _ (by change KeysOK [24,22,25]; decide)
-      (by change ∀ n ∈ [24,22,25], ∀ q ∈ noiseRegs, (q == gprReg n) = false; decide)
-      (by change ∀ n ∈ [24,22,25], ∀ m ∈ [1,2,8,9,10,11,12,13,14,15],
+  have kept : GHolds after.σ ([(24,R 10 - 8#64),(25,sizeWord (word before (R 10 - 8#64).toNat))] ++ loopConstants) := by
+    apply gholds_of_frame allocated.native _ (by change KeysOK [24,25,18,19,20,21,22,23]; decide)
+      (by change ∀ n ∈ [24,25,18,19,20,21,22,23], ∀ q ∈ noiseRegs, (q == gprReg n) = false; decide)
+      (by change ∀ n ∈ [24,25,18,19,20,21,22,23], ∀ m ∈ [1,2,8,9,10,11,12,13,14,15],
           (gprReg m == gprReg n) = false; decide)
-    exact ⟨gholds_lookup _ entered.arguments rfl,gholds_lookup _ entered.carried rfl,
-      gholds_lookup _ entered.arguments rfl,True.intro⟩
+    exact (gholds_append _ _).mpr ⟨⟨gholds_lookup _ entered.arguments rfl,
+      gholds_lookup _ entered.arguments rfl,True.intro⟩,carried_constants entered.carried⟩
+  have constants : GHolds after.σ loopConstants := ((gholds_append _ _).mp kept).2
   refine ⟨allocated.good,allocated.minstret,allocated.tick,?_,allocated.pc,?_,
-    gholds_lookup _ allocated.registers rfl,?_,allocated.output.trans entered.output,?_⟩
+    gholds_lookup _ allocated.registers rfl,constants,?_,allocated.output.trans entered.output,?_⟩
   · rw [allocated.memory]
     apply image_writeLog Code.caml_oldify_one_transport entered.code
     intro e member
