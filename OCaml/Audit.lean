@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.DomainReady
 import OCaml.Vm.Boot.Startup.DomainReturned
 import OCaml.Vm.Boot.Startup.TablesReturn
 import OCaml.Vm.Boot.Startup.TableThird
@@ -3123,3 +3124,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.domain_return
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTablesReturn.domain_word
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_domain_returned_exists
+
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.effect
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.payload_log
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.zero
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTablesReturn.ready
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetDomainReturned.ready

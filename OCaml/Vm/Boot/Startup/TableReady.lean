@@ -1,18 +1,12 @@
-import OCaml.Vm.Boot.Startup.TableHeap
+import OCaml.Vm.Boot.Startup.RuntimeReady
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
 
 /-- Common startup inputs at the two remaining minor-table allocation sites.
 The heap and remaining capacity vary; the source function's frame is fixed. -/
 structure TableReady (H : List (Nat × Nat)) (capacity : Nat) (ra : BitVec 64) (c : Config) : Prop
-    extends LeafInput ra c where
-  platform : VsaOk startupLive c
-  readOnly : ROHolds (vsaModel startupLive) c VsaIris.MallocFast.roR VsaIris.Sym.allocText
-  room : vsaRoomB ((vsaModel startupLive).mem c) H capacity
-  stack : gprGet c.σ 2 = some (firstMallocStack - 32#64)
+    extends RuntimeReady H capacity (firstMallocStack - 32#64) ra c where
   globalReg : gprGet c.σ 8 = some (BitVec.ofNat 64 Layout.sym_Caml_state)
-  domainWord : bytesT c.σ.mem Layout.sym_Caml_state 8 = firstDomainPtr
-  poolZero : LPins8 c.σ.mem Layout.sym_pool (List.replicate 8 0#8)
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.WhileMinElfParse

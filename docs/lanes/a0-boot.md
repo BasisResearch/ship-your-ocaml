@@ -2,6 +2,21 @@
 
 ## Round 2 status (2026-10-04)
 
+`Startup/DomainReady.lean` proves `ResetDomainReturned.ready`: the reached
+caml_main continuation retains the full runtime/allocator contract, with
+all four live allocations and the remaining `startupAllocatorCredits - 192`.
+`RuntimeReady` generalizes the table-specific contract to arbitrary stack
+frames; its `effect`, `payload_log` and `zero` rules share machine/platform,
+read-only, allocation-capacity and runtime-global transport. `TableReady`
+now extends this contract, and its existing transport APIs reuse the shared
+rules. No new allocator assumptions are introduced at the domain return.
+
+The complete domain-return increment landed as `53dfaaf`, full gate passed.
+Next: the generated caml_main call to `caml_parse_ocamlrunparam`, its empty
+environment path through `caml_secure_getenv`, then subsequent startup calls.
+The complete reset-to-cut/Loaded exit remains open.
+
+
 `Startup/DomainReturned.lean` closes `reset_domain_returned_exists`: the
 actual reset execution now completes `caml_init_domain` and returns to
 `caml_main` at `0x80004d98`. `DomainCaller.lean` reads the domain's caller
