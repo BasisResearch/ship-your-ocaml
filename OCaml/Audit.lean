@@ -127,6 +127,7 @@ import Vsa.Sim.DivLoops
 import OCaml.Vm.Gc.BestFitSplitGeometry
 import OCaml.Vm.Gc.AllocAccountReturn
 import OCaml.Vm.Gc.AllocSuccess
+import OCaml.Vm.Gc.AllocExact
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -3152,3 +3153,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.AllocSuccess.finish
 #print axioms OCaml.Vm.Gc.AllocSuccess.Post.result
 #print axioms OCaml.Vm.Gc.AllocSuccess.Post.header
+
+#print axioms OCaml.Vm.Gc.BestFitSmall.CoreConditions.of_memory
+#print axioms OCaml.Vm.Gc.BestFitExact.Conditions.of_memory
+#print axioms OCaml.Vm.Gc.BestFitExact.effect_of_memory
+#print axioms OCaml.Vm.Gc.BestFitExact.effect_high
+#print axioms OCaml.Vm.Gc.AllocSuccess.completed_of_memory
+#print axioms OCaml.Vm.Gc.AllocSuccess.Conditions.of_memory
+#print axioms OCaml.Vm.Gc.AllocExact.returnRegs_of_memory
+#print axioms OCaml.Vm.Gc.AllocExact.allocated_memory
+#print axioms OCaml.Vm.Gc.AllocExact.allocate

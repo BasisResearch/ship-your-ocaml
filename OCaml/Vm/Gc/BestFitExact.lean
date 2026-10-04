@@ -6,12 +6,47 @@ open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable BestFitSmall
 /-- Exact-size small-list allocation. Both branch decisions are read from
 initial memory. Repair and bitmap separation are required only on routes
 that actually perform those accesses. -/
-structure Input (ra size : BitVec 64) (c : Config) : Prop extends CoreInput ra size c where
+structure Conditions (size : BitVec 64) (c : Config) : Prop extends CoreConditions size c where
   repair : cursor size c = first size c → RepairConditions size c
   bitmap : next size c = 0 → OutLRange (BestFitEmpty.effect size c) Layout.sym_bf_small_map 4
 
+structure Input (ra size : BitVec 64) (c : Config) : Prop extends CoreInput ra size c, Conditions size c
+
+theorem Conditions.of_memory {size} {before after : Config}
+    (memory : after.σ.mem = before.σ.mem) (conditions : Conditions size before) : Conditions size after := by
+  refine ⟨conditions.toCoreConditions.of_memory memory,?_,?_⟩
+  · intro repair
+    have same : cursor size before = first size before := by simpa only [cursor,first,word,memory] using repair
+    have ready := conditions.repair same
+    exact ⟨ready.mergeWrite,by simpa only [first,word,memory] using ready.nextOutside,ready.counterOutside⟩
+  · intro empty
+    have same : next size before = 0 := by simpa only [next,first,word,memory] using empty
+    simpa [BestFitEmpty.effect,BestFitEmpty.route,cursor,next,first,word,memory] using conditions.bitmap same
+
 def effect (size : BitVec 64) (c : Config) : List WEntry :=
   if next size c = 0 then BestFitEmpty.allocationEffect size c else selectedEffect size c
+
+/-- All branch choices and store values depend only on memory observations. -/
+theorem effect_of_memory {size} {before after : Config} (memory : after.σ.mem = before.σ.mem) :
+    effect size after = effect size before := by
+  simp [effect,BestFitEmpty.allocationEffect,BestFitEmpty.effect,BestFitEmpty.route,
+    selectedEffect,BestFitSmall.effect,BestFitFinish.effect,cursor,next,first,total,word,memory]
+
+/-- Every store of the complete exact-size path lies above the code/HTIF
+boundary, including conditional cursor repair and bitmap clearing. -/
+theorem effect_high {ra size c} (input : Input ra size c) :
+    ∀ e ∈ effect size c, Layout.sym_tohost + 16 ≤ e.1 := by
+  have head := input.headWrite.htif
+  have counter : Layout.sym_tohost + 16 ≤ Layout.sym_caml_fl_cur_wsz := by decide
+  have bitmap : Layout.sym_tohost + 16 ≤ Layout.sym_bf_small_map := by decide
+  intro e member
+  by_cases empty : next size c = 0
+  all_goals by_cases repair : cursor size c = first size c
+  all_goals simp only [effect,empty,Bool.false_eq_true,eq_self,ite_true,ite_false,BestFitEmpty.allocationEffect,BestFitEmpty.effect,
+    BestFitEmpty.route,repair,decide_true,decide_false,selectedEffect,
+    repairLog,BestFitSmall.effect,BestFitFinish.effect,List.append_eq,List.cons_append,List.nil_append,List.mem_cons,List.not_mem_nil,or_false] at member
+  all_goals rcases member with rfl | rfl | rfl | rfl
+  all_goals first | exact head | exact counter | exact bitmap | exact (input.repair repair).mergeWrite.htif
 
 /-- Uniform result for all four exact-size small-list branches. This gives
 actual execution and accounting, not a complete free-list ownership invariant. -/

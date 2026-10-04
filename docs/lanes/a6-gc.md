@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Exact-size free-list entry through wrapper return (2026-10-04)
+
+- `AllocExact.lean:allocate` composes every exact-size small-list branch
+  with the actual wrapper continuation, covering every color-selection
+  route. It proves the returned payload is the original selected list head,
+  retains the combined exact write log, native save observations, return PC,
+  output and native register frame. Conditions for the continuation are
+  observations of a reflected memory snapshot, not assumed executions.
+- `BestFitExact.effect_high` derives code preservation from every selected
+  store location; `effect_of_memory` and shared `CoreConditions`/`Conditions`
+  transport let the caller derive the allocator entry from the prologue.
+- Targeted build (653 jobs), full Audit (2967 jobs), discipline and
+  abstraction gates pass; new headlines use only permitted axioms. All successful color continuations landed as
+  `239d3a4`.
+- Next: prologue/indirect-call composition and original caller save-bank
+  readback, then fresh-copy completion. Larger-size/tree allocation, major
+  slice requests, collector closure and live-word Fits (G2) remain open.
+
 ## Complete successful allocation continuation (2026-10-04)
 
 - `AllocSuccess.lean:finish` proves all header-color paths from the actual

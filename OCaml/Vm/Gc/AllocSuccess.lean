@@ -7,11 +7,31 @@ open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
 def completed (R : Nat → BitVec 64) (c : Config) :=
   AllocColor.colored (AllocSelect.isBlack R c) (AllocSelect.withTag R c)
 
-/-- Initial memory supplies all conditions after a successful free-list
-call; the phase/color prefix is read-only. -/
-structure Input (R : Nat → BitVec 64) (c : Config) : Prop extends AllocSelect.Input R c where
+/-- Memory conditions for the successful continuation, with the actual
+phase-selected header substituted into accounting. -/
+structure Conditions (R : Nat → BitVec 64) (c : Config) : Prop where
   account : AllocAccount.Conditions (completed R c) c
   nativeReturn : AllocAccount.ReturnConditions (completed R c) c
+
+/-- Initial memory supplies all conditions after a successful free-list
+call; the phase/color prefix is read-only. -/
+structure Input (R : Nat → BitVec 64) (c : Config) : Prop
+    extends AllocSelect.Input R c, Conditions R c
+
+theorem completed_of_memory {R} {before after : Config} (memory : after.σ.mem = before.σ.mem) :
+    completed R after = completed R before := by
+  funext n
+  simp only [completed,AllocColor.colored,AllocSelect.withTag,AllocSelect.tag,AllocSelect.isBlack,
+    AllocSelect.phase,AllocSelect.sweep,word,memory]
+
+theorem Conditions.of_memory {R} {before after : Config} (memory : after.σ.mem = before.σ.mem)
+    (conditions : Conditions R before) : Conditions R after := by
+  have same := completed_of_memory (R := R) memory
+  constructor
+  · rw [same]
+    exact conditions.account.of_memory memory
+  · rw [same]
+    exact conditions.nativeReturn.of_memory memory
 
 structure Post (R : Nat → BitVec 64) (before after : Config) : Prop where
   good : GoodState after.σ

@@ -17,16 +17,8 @@ def loads (size : BitVec 64) (c : Config) : List (List (BitVec 8)) :=
 def effect (size : BitVec 64) (c : Config) : List WEntry :=
   [((slot size).toNat,8,next size c), (Layout.sym_caml_fl_cur_wsz,8,total c - 1#64 - size)]
 
-/-- Initial observations for the exact-size small-list route. The first
-node and its successor are nonnull, the merge cursor is elsewhere, and
-list-head replacement is separated from the free-word counter. This is
-one allocation branch, not a complete free-list invariant. -/
-structure CoreInput (ra size : BitVec 64) (c : Config) : Prop where
-  good : GoodState c.σ
-  tick : c.tick < 2
-  minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
-  code : Code.Bf_allocateLoaded c.σ.mem
-  registers : GHolds c.σ (regs ra size)
+/-- Memory and size conditions shared by all exact-size small-list routes. -/
+structure CoreConditions (size : BitVec 64) (c : Config) : Prop where
   positive : 0 < size.toNat
   small : size.toNat ≤ Layout.bf_small_count
   head : first size c ≠ 0
@@ -34,7 +26,21 @@ structure CoreInput (ra size : BitVec 64) (c : Config) : Prop where
   mergeRead : ReadWindow (slot size + BitVec.ofNat 64 Layout.off_bf_small_merge) 8
   nextRead : ReadWindow (first size c) 8
   counterOutside : OutLRange [((slot size).toNat,8,next size c)] Layout.sym_caml_fl_cur_wsz 8
+
+structure CoreInput (ra size : BitVec 64) (c : Config) : Prop extends CoreConditions size c where
+  good : GoodState c.σ
+  tick : c.tick < 2
+  minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
+  code : Code.Bf_allocateLoaded c.σ.mem
+  registers : GHolds c.σ (regs ra size)
   aligned : ra.toNat % 4 = 0
+
+theorem CoreConditions.of_memory {size} {before after : Config}
+    (memory : after.σ.mem = before.σ.mem) (conditions : CoreConditions size before) : CoreConditions size after := by
+  refine ⟨conditions.positive,conditions.small,?_,conditions.headWrite,conditions.mergeRead,?_,?_⟩
+  · simpa only [first,word,memory] using conditions.head
+  · simpa only [first,word,memory] using conditions.nextRead
+  · simpa only [next,first,word,memory] using conditions.counterOutside
 
 /-- The common allocator observations specialized to a nonempty successor. -/
 structure BaseInput (ra size : BitVec 64) (c : Config) : Prop extends CoreInput ra size c where
