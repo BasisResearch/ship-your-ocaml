@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.ContextAllocated
 import OCaml.Vm.Gc.FreshSingleForwardedHeader
 import OCaml.Vm.Gc.SingleFieldSelf
 import OCaml.Vm.Gc.FreshSingleYoung
@@ -3801,3 +3802,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Fresh.ForwardedSingleResult.payload
 #print axioms OCaml.Vm.Gc.Fresh.ForwardedSingleResult.header
 #print axioms OCaml.Vm.Gc.Fresh.ForwardedSingleResult.object
+
+#print axioms OCaml.Vm.Gc.Fresh.AllocationEntry.context
+#print axioms OCaml.Vm.Gc.Fresh.prepare_context
+#print axioms OCaml.Vm.Gc.Fresh.AllocationContext.wrapper_input
+#print axioms OCaml.Vm.Gc.Fresh.AllocationContext.finish
+#print axioms OCaml.Vm.Gc.Fresh.ContextEntered.complete
+#print axioms OCaml.Vm.Gc.Fresh.allocate_context

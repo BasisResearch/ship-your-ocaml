@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Fresh-child tail allocation context (2026-10-04)
+
+- `AllocationContext.lean:prepare_context` starts at the fresh header
+  classifier and executes the real allocation JAL on the existing frame.
+  `AllocationContext.finish` shares return pins, constants and code
+  preservation with the original `AllocationEntry.finish`.
+- `ContextAllocated.lean:allocate_context` executes the complete exact-size
+  allocator from this tail entry, with concrete initial-memory free-list
+  conditions and an allocator-only write log. No native prologue is replayed.
+- Targeted context build passes (695 jobs), as do prior whole-call
+  regressions after the shared-frame refactor (759 jobs). Full Audit
+  passes (3503 jobs), with permitted axioms; discipline/abstraction gates pass.
+  Whole forwarded-child checkpoint landed as `bf52360`.
+- Next: connect captured young-child heads to this context, add the large
+  allocation alternative, and express fresh-child progress in the partial
+  relocation invariant. Ownership/collector closure, G2 and live budget open.
+
 ## Whole fresh-single forwarded-child calls (2026-10-04)
 
 - `FreshSingleForwarded.lean:single_fresh_forwarded` and

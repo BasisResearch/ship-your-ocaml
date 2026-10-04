@@ -1,4 +1,4 @@
-import OCaml.Vm.Gc.FreshAllocator
+import OCaml.Vm.Gc.AllocationContext
 import OCaml.Vm.Gc.AllocWrapperCore
 import OCaml.Vm.Gc.Generated.Enqueue
 
@@ -40,26 +40,12 @@ theorem AllocationEntry.finish {R hp log before middle after}
       Layout.sym_tohost + 16 ≤ e.1) :
     AllocationResult R (hp + BitVec.ofNat 64 Layout.header_bytes)
       (AllocWrapperCore.effect (allocatorRegs R before) hp log middle) before after := by
-  have kept : GHolds after.σ ([(24,R 10 - 8#64),(25,sizeWord (word before (R 10 - 8#64).toNat))] ++ loopConstants) := by
-    apply gholds_of_frame allocated.native _ (by change KeysOK [24,25,18,19,20,21,22,23]; decide)
-      (by change ∀ n ∈ [24,25,18,19,20,21,22,23], ∀ q ∈ noiseRegs, (q == gprReg n) = false; decide)
-      (by change ∀ n ∈ [24,25,18,19,20,21,22,23], ∀ m ∈ [1,2,8,9,10,11,12,13,14,15],
-          (gprReg m == gprReg n) = false; decide)
-    exact (gholds_append _ _).mpr ⟨⟨gholds_lookup _ entered.arguments rfl,
-      gholds_lookup _ entered.arguments rfl,True.intro⟩,carried_constants entered.carried⟩
-  have constants : GHolds after.σ loopConstants := ((gholds_append _ _).mp kept).2
-  refine ⟨allocated.good,allocated.minstret,allocated.tick,?_,allocated.pc,?_,
-    gholds_lookup _ allocated.registers rfl,constants,?_,allocated.output.trans entered.output,?_⟩
-  · rw [allocated.memory]
-    apply image_writeLog Code.caml_oldify_one_transport entered.code
-    intro e member
-    exact Nat.le_trans (by decide) (high e member)
-  · exact ⟨allocated.result,gholds_lookup _ allocated.registers rfl,
-      gholds_lookup _ allocated.registers rfl,gholds_lookup _ kept rfl,
-      gholds_lookup _ kept rfl,gholds_lookup _ kept rfl,True.intro⟩
-  · rw [allocated.memory,entered.memory,writeLog_append]
+  have done := entered.context.finish allocated ⟨rfl,rfl,rfl,rfl⟩ high
+  refine ⟨done.good,done.minstret,done.tick,done.code,done.pc,done.registers,
+    done.stack,done.constants,?_,done.output.trans entered.output,?_⟩
+  · rw [done.memory,entered.memory,writeLog_append]
   · intro r noise outside
-    exact (allocated.native r noise (fun n hn => outside n (List.mem_append_right _ hn))).trans
+    exact (done.native r noise (fun n hn => outside n (List.mem_append_right _ hn))).trans
       (entered.native r noise (fun n hn => outside n (List.mem_append_left _ hn)))
 
 end OCaml.Vm.Gc.Fresh
