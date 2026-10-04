@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.TablesReturn
 import OCaml.Vm.Boot.Startup.TableThird
 import OCaml.Vm.Boot.Startup.TableSecond
 import OCaml.Vm.Gc.BestFitExact
@@ -3095,3 +3096,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.AllocAccount.ReturnPost.result
 #print axioms OCaml.Vm.Gc.AllocAccount.ReturnPost.header
 #print axioms OCaml.Vm.Gc.AllocAccount.ReturnPost.counter_nat
+#print axioms OCaml.Vm.Boot.Startup.TableStackFrame.trans
+#print axioms OCaml.Vm.Boot.Startup.TableStackFrame.word
+#print axioms OCaml.Vm.Boot.Startup.allocator_table_stack_frame
+#print axioms OCaml.Vm.Boot.Startup.table_publish_stack_frame
+#print axioms OCaml.Vm.Boot.Startup.table_zero_stack_frame
+#print axioms OCaml.Vm.Boot.Startup.TableFinalAllocated.stack_frame
+#print axioms OCaml.Vm.Boot.Startup.table_saved_after_prefix
+#print axioms OCaml.Vm.Boot.Startup.TableSaved.transport
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetThirdAllocation.saved
+#print axioms OCaml.Vm.Boot.Startup.table_tail_restore
+#print axioms OCaml.Vm.Boot.Startup.table_tail_zero
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_tables_return_exists

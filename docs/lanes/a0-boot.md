@@ -2,6 +2,24 @@
 
 ## Round 2 status (2026-10-04)
 
+`Startup/TablesReturn.lean` closes `reset_tables_return_exists`: actual reset
+now returns from the complete minor-table function to `caml_init_domain`,
+after all three allocations, publications and native zeroing calls.
+`TableStackFrame` proves preservation of all saved-frame bytes across the
+library scratch region and payload writes; `TableSaved` reads the three
+prologue stores back and transports them through the actual calls.
+`table_tail_restore` consumes the saved words in the generated epilogue,
+and `table_tail_zero` returns with the original s0/s1, caller sp and return
+address restored. Final composition checks in one second.
+
+A record update that changed the memory index of `EffectPost` hit the default
+elaboration budget; an explicit field constructor and congruence proof for
+the abstract memory effect resolve it, without unfolding the store effect or
+raising budgets. The third-allocation increment landed as `929f41b`, full
+gate passed. Next: the remaining domain-field initialization/return, then
+continue the caml_main startup calls. Reset-to-cut/Loaded remains open.
+
+
 `Startup/TableThird.lean` closes `reset_third_allocation_exists`: actual
 reset returns from the third 56-byte table malloc, with the first two tables
 published and zeroed by their native calls. `table_next_initialize` composes
