@@ -1,3 +1,6 @@
+import OCaml.Vm.Sim.DivintZero
+import OCaml.Vm.Sim.ModintZero
+import OCaml.Vm.Sim.DivisionZeroSetup
 import OCaml.Vm.Sim.RaiseZero
 import OCaml.Vm.Sim.RaiseNative
 import OCaml.Vm.Sim.RaiseRuntimePrefix
@@ -3066,6 +3069,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.raise_zero_value
 #print axioms OCaml.Vm.Sim.raise_zero_setup
 #print axioms OCaml.Vm.Sim.raise_zero
+
+-- Interpreter zero-divisor branches and actual shared raising call.
+#print axioms Vsa.Sim.tr_divint_zero
+#print axioms Vsa.Sim.tr_modint_zero
+#print axioms Vsa.Sim.tr_division_zero_setup
+#print axioms OCaml.Vm.Sim.divint_zero_loaded
+#print axioms OCaml.Vm.Sim.modint_zero_loaded
+#print axioms OCaml.Vm.Sim.division_zero_setup_loaded
+#print axioms OCaml.Vm.Sim.divint_zero
+#print axioms OCaml.Vm.Sim.modint_zero
+#print axioms OCaml.Vm.Sim.division_zero_setup
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes

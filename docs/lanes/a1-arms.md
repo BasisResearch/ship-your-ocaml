@@ -2398,10 +2398,24 @@ capped builds pass: zero prologue 0.863s, value load 6.9s, readiness transport
 0.815s, setup 0.876s, complete zero helper 1.6s. Interpreter DIVINT/MODINT zero
 branches and represented restoration remain open.
 
+Complete caml_raise_zero_divide and memory readiness landed as `cf1e5eb`,
+full gate passing after two push races and upstream Layout regeneration.
+
+`divint_zero` and `modint_zero` (`DivintZero.lean:12`, `ModintZero.lean:12`)
+prove the actual three/four-instruction zero selections. `division_zero_setup`
+(`DivisionZeroSetup.lean:18`) proves the shared eight-instruction temporary
+frame setup and actual JAL into caml_raise_zero_divide. Its exact log saves
+continuation/environment and publishes extern_sp; data addresses come from
+Layout. Both branches and setup use gen_arm_pilot; paired branch adapters share
+`gen_division_zero.py`, registered in stage a5. Default capped builds pass:
+branches 0.813s/0.807s, setup segment 1.5s, complete setup 0.942s. Native helper
+composition and represented caught-handler restoration remain open.
+
 ## Open / next
 
-Immediate next: DIVINT/MODINT zero-divisor setup and native raising helpers,
-using `longjmp_caught`. Consume the remaining caml_do_exit/primitive terminal
+Immediate next: compose the checked DIVINT/MODINT zero selections and setup
+with `raise_zero`, then restore the represented caught handler. Split any
+remaining caller-memory readiness from dynamic ABI entry registers. Consume the remaining caml_do_exit/primitive terminal
 summaries when supplied. Continue uncaught semantic continuation/backtrace
 paths and major-allocation constructor paths. Later-fragment C_CALL raising
 outcomes can reuse the checked nonlocal bridge.

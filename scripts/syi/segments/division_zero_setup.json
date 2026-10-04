@@ -1,0 +1,157 @@
+{
+  "theorem": "tr_division_zero_setup",
+  "doc": "DIVISION_ZERO_SETUP arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.DivisionZeroSetupSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut",
+    "OCaml.Vm.Sim.DivisionZeroSetupStoreFrame"
+  ],
+  "params": [
+    "(v8 v9 v25 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80003c94 : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_80003c94 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80003c94 : tohostAddr + 16 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(halign_80003c94 : (v9 + sign_extend (m := 64) (0x000#12)).toNat % 8 = 0)",
+    "(hcode_80003c94 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x80003c90 ∨ 0x80003cb0 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(m_80003c94 : Std.ExtHashMap Nat (BitVec 8))",
+    "(hstore_80003c94 : m_80003c94 = writeMap8 (m0) ((v9 + sign_extend (m := 64) (0x000#12)).toNat) (sdData_val (v8 + sign_extend (m := 64) (0x008#12))))",
+    "(hlo_80003c98 : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(hhi_80003c98 : (v9 + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80003c98 : tohostAddr + 16 ≤ (v9 + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(halign_80003c98 : (v9 + sign_extend (m := 64) (0xff8#12)).toNat % 8 = 0)",
+    "(hcode_80003c98 : (v9 + sign_extend (m := 64) (0xff8#12)).toNat + 8 ≤ 0x80003c90 ∨ 0x80003cb0 ≤ (v9 + sign_extend (m := 64) (0xff8#12)).toNat)",
+    "(m_80003c98 : Std.ExtHashMap Nat (BitVec 8))",
+    "(hstore_80003c98 : m_80003c98 = writeMap8 (m_80003c94) ((v9 + sign_extend (m := 64) (0xff8#12)).toNat) (sdData_val v25))",
+    "(hlo_80003ca0 : 0x80000000 ≤ (((0x80003c9c#64) + (sign_extend (m := 64) ((0x00061#20) +++ 0x000#12))) + sign_extend (m := 64) (0x06c#12)).toNat)",
+    "(hhi_80003ca0 : (((0x80003c9c#64) + (sign_extend (m := 64) ((0x00061#20) +++ 0x000#12))) + sign_extend (m := 64) (0x06c#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80003ca0 : (((0x80003c9c#64) + (sign_extend (m := 64) ((0x00061#20) +++ 0x000#12))) + sign_extend (m := 64) (0x06c#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (((0x80003c9c#64) + (sign_extend (m := 64) ((0x00061#20) +++ 0x000#12))) + sign_extend (m := 64) (0x06c#12)).toNat)",
+    "(loaded_80003ca0 : BitVec 64)",
+    "(hvalue_80003ca0 : loaded_80003ca0 = (sign_extend (m := 64) (bytesT8 (m_80003c98) (((0x80003c9c#64) + (sign_extend (m := 64) ((0x00061#20) +++ 0x000#12))) + sign_extend (m := 64) (0x06c#12)).toNat : BitVec (8 * 8))))",
+    "(hlo_80003ca8 : 0x80000000 ≤ (loaded_80003ca0 + sign_extend (m := 64) (0x0a0#12)).toNat)",
+    "(hhi_80003ca8 : (loaded_80003ca0 + sign_extend (m := 64) (0x0a0#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80003ca8 : tohostAddr + 16 ≤ (loaded_80003ca0 + sign_extend (m := 64) (0x0a0#12)).toNat)",
+    "(halign_80003ca8 : (loaded_80003ca0 + sign_extend (m := 64) (0x0a0#12)).toNat % 8 = 0)",
+    "(hcode_80003ca8 : (loaded_80003ca0 + sign_extend (m := 64) (0x0a0#12)).toNat + 8 ≤ 0x80003c90 ∨ 0x80003cb0 ≤ (loaded_80003ca0 + sign_extend (m := 64) (0x0a0#12)).toNat)",
+    "(m_80003ca8 : Std.ExtHashMap Nat (BitVec 8))",
+    "(hstore_80003ca8 : m_80003ca8 = writeMap8 (m_80003c98) ((loaded_80003ca0 + sign_extend (m := 64) (0x0a0#12)).toNat) (sdData_val (v9 + sign_extend (m := 64) (0xff8#12))))"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlDivisionZeroSetupLoaded",
+  "pins": [
+    {
+      "reg": "x8",
+      "val": "v8",
+      "hyp": "hv8"
+    },
+    {
+      "reg": "x9",
+      "val": "v9",
+      "hyp": "hv9"
+    },
+    {
+      "reg": "x25",
+      "val": "v25",
+      "hyp": "hv25"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80003c90",
+      "site": "site_80003c90_division_zero_setup",
+      "class": "alu",
+      "asm": "addi s0,s0,8",
+      "rd": "x8",
+      "rd_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003c94",
+      "site": "site_80003c94_division_zero_setup",
+      "class": "sd",
+      "asm": "sd s0,0(s1)",
+      "key": "(v9 + sign_extend (m := 64) (0x000#12)).toNat",
+      "src_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "loaded_via": "division_zero_setup_code_store _ _ _ hcode_80003c94 $prev",
+      "call": "$vmi $v:x9 $v:x8 $hG $hpc $hmi $pin:x9 $pin:x8 $hmem rfl hlo_80003c94 hhi_80003c94 hhtif_80003c94 halign_80003c94 $hi",
+      "mem_alias": "m_80003c94",
+      "mem_alias_eq": "hstore_80003c94"
+    },
+    {
+      "addr": "0x80003c98",
+      "site": "site_80003c98_division_zero_setup",
+      "class": "sd",
+      "asm": "sd s9,-8(s1)",
+      "key": "(v9 + sign_extend (m := 64) (0xff8#12)).toNat",
+      "src_val": "v25",
+      "loaded_via": "division_zero_setup_code_store _ _ _ hcode_80003c98 $prev",
+      "call": "$vmi $v:x9 $v:x25 $hG $hpc $hmi $pin:x9 $pin:x25 $hmem rfl hlo_80003c98 hhi_80003c98 hhtif_80003c98 halign_80003c98 $hi",
+      "mem_alias": "m_80003c98",
+      "mem_alias_eq": "hstore_80003c98"
+    },
+    {
+      "addr": "0x80003c9c",
+      "site": "site_80003c9c_division_zero_setup",
+      "class": "alu",
+      "asm": "auipc a5,0x61",
+      "rd": "x15",
+      "rd_val": "((0x80003c9c#64) + (sign_extend (m := 64) ((0x00061#20) +++ 0x000#12)))",
+      "raw_val": "((0x80003c9c#64) + (sign_extend (m := 64) ((0x00061#20) +++ 0x000#12)))",
+      "call": "$vmi  $hG $hpc $hmi  $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003ca0",
+      "site": "site_80003ca0_division_zero_setup",
+      "class": "alu",
+      "asm": "ld a5,108(a5) # 80064d08 <Caml_state>",
+      "rd": "x15",
+      "rd_val": "loaded_80003ca0",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v15 + sign_extend (m := 64) (0x06c#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl hlo_80003ca0 hhi_80003ca0 hhtif_80003ca0 $hi",
+      "rw": "hmemE4, ← hvalue_80003ca0"
+    },
+    {
+      "addr": "0x80003ca4",
+      "site": "site_80003ca4_division_zero_setup",
+      "class": "alu",
+      "asm": "addi s1,s1,-8",
+      "rd": "x9",
+      "rd_val": "(v9 + sign_extend (m := 64) (0xff8#12))",
+      "raw_val": "(v9 + sign_extend (m := 64) (0xff8#12))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003ca8",
+      "site": "site_80003ca8_division_zero_setup",
+      "class": "sd",
+      "asm": "sd s1,160(a5)",
+      "key": "(loaded_80003ca0 + sign_extend (m := 64) (0x0a0#12)).toNat",
+      "src_val": "(v9 + sign_extend (m := 64) (0xff8#12))",
+      "loaded_via": "division_zero_setup_code_store _ _ _ hcode_80003ca8 $prev",
+      "call": "$vmi $v:x15 $v:x9 $hG $hpc $hmi $pin:x15 $pin:x9 $hmem rfl hlo_80003ca8 hhi_80003ca8 hhtif_80003ca8 halign_80003ca8 $hi",
+      "mem_alias": "m_80003ca8",
+      "mem_alias_eq": "hstore_80003ca8"
+    },
+    {
+      "addr": "0x80003cac",
+      "site": "site_80003cac_division_zero_setup",
+      "class": "jal",
+      "asm": "jal 8000d1d4 <caml_raise_zero_divide>",
+      "imm": "0x009528#21",
+      "target": "0x8000d1d4",
+      "rd": "x1",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80003c90",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

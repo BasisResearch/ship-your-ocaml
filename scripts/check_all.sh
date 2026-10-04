@@ -144,6 +144,7 @@ python3 scripts/gen_modify_indexed.py --check || fail "stage a5: indexed modify 
 python3 scripts/gen_modify_fixed.py --check || fail "stage a5: fixed modify caller drift"
 python3 scripts/gen_modify_returns.py --check || fail "stage a5: modify return adapter drift"
 python3 scripts/gen_division_callers.py --check || fail "stage a5: division caller adapter drift"
+python3 scripts/gen_division_zero.py --check || fail "stage a5: zero-divisor branch adapter drift"
 python3 scripts/gen_signed_division.py --check || fail "stage a5: signed division adapter drift"
 python3 scripts/gen_closurerec_infix.py --check || fail "stage a5: recursive closure infix-loop drift"
 python3 scripts/gen_closurerec_first.py --check || fail "stage a5: recursive closure first-metadata drift"

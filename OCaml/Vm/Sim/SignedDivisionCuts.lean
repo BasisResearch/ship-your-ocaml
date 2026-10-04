@@ -20,6 +20,10 @@ import OCaml.Vm.Sim.SmodPosReturnSegment
 import OCaml.Vm.Sim.SmodPosReturnPins
 import OCaml.Vm.Sim.SmodNegReturnSegment
 import OCaml.Vm.Sim.SmodNegReturnPins
+import OCaml.Vm.Sim.DivintZeroSegment
+import OCaml.Vm.Sim.DivintZeroPins
+import OCaml.Vm.Sim.ModintZeroSegment
+import OCaml.Vm.Sim.ModintZeroPins
 import OCaml.Vm.Sim.DivintPrefixSegment
 import OCaml.Vm.Sim.DivintPrefixPins
 import OCaml.Vm.Sim.DivintSuffixSegment
