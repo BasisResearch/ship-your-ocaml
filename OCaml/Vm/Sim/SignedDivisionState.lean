@@ -9,19 +9,19 @@ inductive DivisionKind where
   | quotient | remainder
   deriving DecidableEq
 
-def divisionMagnitude (x : BitVec 64) : BitVec 64 := if x.msb then -x else x
+def divisionMagnitude {w : Nat} (x : BitVec w) : BitVec w := if x.msb then -x else x
 
-def divisionNegative (kind : DivisionKind) (x y : BitVec 64) : Bool :=
+def divisionNegative {w : Nat} (kind : DivisionKind) (x y : BitVec w) : Bool :=
   match kind with
   | .quotient => x.msb != y.msb
   | .remainder => x.msb
 
-def divisionResult (kind : DivisionKind) (x y : BitVec 64) : BitVec 64 :=
+def divisionResult {w : Nat} (kind : DivisionKind) (x y : BitVec w) : BitVec w :=
   match kind with
   | .quotient => x.sdiv y
   | .remainder => x.srem y
 
-def divisionUnsigned (kind : DivisionKind) (x y : BitVec 64) : BitVec 64 :=
+def divisionUnsigned {w : Nat} (kind : DivisionKind) (x y : BitVec w) : BitVec w :=
   match kind with
   | .quotient => divisionMagnitude x / divisionMagnitude y
   | .remainder => divisionMagnitude x % divisionMagnitude y
@@ -73,7 +73,7 @@ theorem division_magnitude_nonzero {x : BitVec 64} (nonzero : x ≠ 0) : divisio
   · exact nonzero
 
 /-- Both signed operations reuse the unsigned core and their respective sign fixup. -/
-theorem division_result_sign (kind : DivisionKind) (x y : BitVec 64) :
+theorem division_result_sign {w : Nat} (kind : DivisionKind) (x y : BitVec w) :
     divisionResult kind x y =
       if divisionNegative kind x y then -(divisionUnsigned kind x y) else divisionUnsigned kind x y := by
   cases kind <;> cases hx : x.msb <;> cases hy : y.msb <;>

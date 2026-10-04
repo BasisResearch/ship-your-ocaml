@@ -13,4 +13,10 @@ structure BinaryLibInput (x y ra : BitVec 64) (c : Config) : Prop
   scratch2 : ∃ v, gpr c 12 = some v
   scratch3 : ∃ v, gpr c 13 = some v
 
+/-- Defined scratch registers required by the copied libgcc specification.
+Startup's register initialization supplies these; dispatch preserves them. -/
+structure BinaryLibScratch (c : Config) : Prop where
+  a2 : ∃ v, gpr c 12 = some v
+  a3 : ∃ v, gpr c 13 = some v
+
 end OCaml.Vm.Sim

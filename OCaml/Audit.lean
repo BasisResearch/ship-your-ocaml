@@ -2771,6 +2771,23 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.smod_pos_return_finish
 #print axioms OCaml.Vm.Sim.smod_neg_return_finish
 
+#print axioms OCaml.Vm.Sim.unbox_signExtend
+#print axioms OCaml.Vm.Sim.division_magnitude_widen
+#print axioms OCaml.Vm.Sim.division_truncate_neg
+#print axioms OCaml.Vm.Sim.division_unsigned_widen
+#print axioms OCaml.Vm.Sim.division_result_widen
+#print axioms OCaml.Vm.Sim.tag_division_native
+#print axioms OCaml.Vm.Sim.division_unbox_nonzero
+#print axioms OCaml.Vm.Sim.division_callee
+#print axioms OCaml.Vm.Sim.divint_setup
+#print axioms OCaml.Vm.Sim.divint_return
+#print axioms OCaml.Vm.Sim.modint_setup
+#print axioms OCaml.Vm.Sim.modint_return
+#print axioms OCaml.Vm.Sim.division_setup
+#print axioms OCaml.Vm.Sim.division_return
+#print axioms OCaml.Vm.Sim.division_arm
+#print axioms OCaml.Vm.Sim.division_step_arm
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

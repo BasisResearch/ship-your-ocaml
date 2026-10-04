@@ -2025,11 +2025,24 @@ All headline proofs are audited. The native cuts and unsigned adapter landed
 as `1cbbf7a`. DIVINT/MODINT represented caller compositions remain open;
 coverage remains 127 conditional bridges.
 
+## Nonzero DIVINT/MODINT represented arms
+
+`Division.lean:division_arm` and `division_step_arm` compose both generated
+native callers with `signed_division_summary`, restore `Running`, and agree
+with the actual bytecode step. `DivisionArithmetic.lean` proves the 63-bit
+unboxing, signed operation and retagging laws, including minimum-value
+overflow. Shared `BinaryLibScratch` and `ArithmeticCallFrame` also serve
+MULINT. `gen_division_callers.py` generates both caller adapters and is
+checked in stage a5.
+
+Target checks passed: arithmetic 0.927s, callers 1.1/1.0s, complete arm
+0.831s; MULINT rebuilt after factoring. Coverage is now **129 conditional
+represented opcode bridges overall**, including F2 opcodes. This is not a
+count out of F1's 134. Zero divisors still require the native exception path.
+
 ## Open / next
 
-Immediate next: consume `signed_division_summary` from the generated
-DIVINT/MODINT callers, prove 63-bit unboxing/retagging agreement, and finish
-the nonzero represented arms. Then continue F1's barrier-backed
+Immediate next: continue F1's barrier-backed
 SETGLOBAL/SETFIELD mutation, RAISE/RERAISE/RAISE_NOTRACE/STOP, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved

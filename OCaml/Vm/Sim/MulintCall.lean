@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.ArithmeticCallFrame
 import OCaml.Vm.Sim.Muldi3
 import OCaml.Vm.Sim.MulArithmetic
 import OCaml.Vm.Sim.StackConsume
@@ -10,13 +11,8 @@ set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable
 open OCaml.Vm.Primitives
 
-/-- Caller observations retained while libgcc computes the product. -/
-structure MulintFrame (before : Config) (pl : Place) (pc sp : Nat) (c : Config) : Prop where
-  nextCode : gpr c 23 = some (BitVec.ofNat 64 (pl.codeBase + 4 * pc))
-  stack : gpr c Layout.reg_sp = some (BitVec.ofNat 64 sp)
-  memory : c.σ.mem = before.σ.mem
-  output : c.σ.sailOutput = before.σ.sailOutput
-  preserved : ∀ r ∈ consumePreserved, c.σ.regs.get? r = before.σ.regs.get? r
+/-- Multiplication uses the common binary-caller frame. -/
+abbrev MulintFrame := ArithmeticCallFrame
 
 /-- Represented caller state at the generated direct-call boundary. -/
 structure MulintCall (before : Config) (pl : Place) (pc sp : Nat)

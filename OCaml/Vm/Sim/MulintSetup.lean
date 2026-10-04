@@ -8,11 +8,7 @@ set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable LeanRV64DExecutable.Functions
 open OCaml.Vm.Primitives
 
-/-- Defined scratch registers required by the copied libgcc specification.
-Startup's register initialization supplies these; dispatch preserves them. -/
-structure MulintScratch (c : Config) : Prop where
-  a2 : ∃ v, gpr c 12 = some v
-  a3 : ∃ v, gpr c 13 = some v
+abbrev MulintScratch := BinaryLibScratch
 
 /-- The generated five-step prefix establishes the exact libgcc call boundary. -/
 theorem mulint_setup {L : OCaml.Layout} {P : Prog} {s : OCaml.Bytecode.St} {c d : Config}
