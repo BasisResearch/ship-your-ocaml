@@ -2663,6 +2663,18 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.payload_rebuild_accu
 #print axioms OCaml.Vm.Sim.payload_allocate_stack
 
+-- Recursive-closure metadata and interior-pointer readbacks.
+#print axioms OCaml.Vm.Sim.grouped_log_outside
+#print axioms OCaml.Vm.Sim.grouped_suffix_outside
+#print axioms OCaml.Vm.Sim.grouped_log_read
+#print axioms OCaml.Vm.Sim.closurerec_metadata_no_roots
+#print axioms OCaml.Vm.Sim.closurerec_allocation_roots
+#print axioms OCaml.Vm.Sim.closurerec_stack_roots
+#print axioms OCaml.Vm.Sim.infix_stores_read
+#print axioms OCaml.Vm.Sim.infix_stores_in
+#print axioms OCaml.Vm.Sim.infix_groups_heap_read
+#print axioms OCaml.Vm.Sim.infix_groups_stack_read
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

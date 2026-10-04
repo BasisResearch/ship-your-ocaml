@@ -1938,7 +1938,30 @@ stack readback. It allows consumed stack slots to be overwritten, which the
 CLOSUREREC log requires. The new stack may contain interior pointers into the
 fresh object. The shared target checks in 0.806 s; headline audits added.
 
+## Recursive-closure infix readbacks and roots
+
+`infix_groups_heap_read` and `infix_groups_stack_read` in
+`ClosurerecInfixRead.lean` prove every infix header/code/arity word and every
+pushed interior pointer after the full grouped log, for arbitrary function
+counts. Their geometry is explicit: descending-stack room and the metadata
+region below the lowest stack slot. `infix_stores_in` gives each iteration's
+two write windows. All groups share `grouped_log_read` and
+`grouped_suffix_outside` in `GroupedRead.lean`; earlier writes are arbitrary.
+The readback target checks in 1.1 s.
+
+`ClosurerecObject.lean` defines metadata in the exact `BcSem` order and proves
+`closurerec_metadata_no_roots`, `closurerec_allocation_roots`, and
+`closurerec_stack_roots`. Raw infix headers contribute no locations, captures
+are old roots, and pushed interior pointers share the fresh accumulator root.
+The object/root target checks in 0.865 s. Headline audits added.
+
 ## Open / next
+
+Immediate next: combine the infix readbacks with first-function metadata,
+captured words and the object header; reconstruct the reversed final stack,
+then apply `payload_allocate_stack` (landed `6fc1492`). The complete native
+constructor is already proved. Coverage remains 126 conditional bridges.
+
 
 Immediate next: prove CLOSUREREC object and final-stack readback from
 `closurerecFullLog`, then consume `payload_allocate_stack` to finish the
