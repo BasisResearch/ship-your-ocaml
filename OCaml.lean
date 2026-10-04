@@ -548,3 +548,4 @@ import OCaml.Vm.Sim.RaiseNotraceQuiet
 import OCaml.Vm.Sim.StopPrefixSegment
 import OCaml.Vm.Sim.StopPrefixPins
 import OCaml.Vm.Sim.InterpReturn
+import OCaml.Vm.Sim.StopExit

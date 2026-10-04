@@ -2175,10 +2175,26 @@ epilogue 5.0s; complete epilogue adapter 1.4s. Generator and axiom audits
 are registered. This is not yet a STOP machine-halting theorem. Quiet
 caught raising arms landed as `e50b59e` with check_all passing.
 
+## STOP return composition
+
+`stop_return` in `OCaml/Vm/Sim/StopReturn.lean` composes the generated
+10-instruction STOP prefix with the complete native epilogue. `stopLog`
+records callback-depth decrement, extern_sp publication, and external_raise
+restoration. Its image and saved-frame separation premises preserve code
+pins and all thirteen saved ABI values across the stores. The result
+restores caller PC, stack and accumulator result and preserves console
+output. The capped build checks the composition in 1.6 seconds.
+
+`stop_halts` in `StopExit.lean` composes this run through the run kernel
+with named `StopExitContinuation`. The enclosing startup caller and process
+exit must supply that continuation; no unconditional machine halt is
+claimed. The original prefix/epilogue landing passed check_all and landed
+as `1d1b134` after two push races. Represented opcode count stays 139.
+
 ## Open / next
 
-Immediate next: compose STOP prefix stores with interp_return and expose
-the caller/process-exit continuation; then
+Immediate next: connect the STOP return contract to loop-head dispatch and
+prove the enclosing caller/process-exit continuation; then
 uncaught/backtrace paths, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
