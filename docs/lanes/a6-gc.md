@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Least-large-block split call (2026-10-04)
+
+- `BestFitLarge.lean:prepare` proves the saved-size/bitmap reload, actual
+  nonnull least-block test, unsigned size test and pre-split native stores.
+  `split` composes its decoded JAL with both proved `bf_split` paths and
+  returns to the actual allocator continuation with the carved header,
+  exact combined effects, unchanged stack, code and native/output frame.
+- The generated `BestFitLarge` certificates take load/store stack offsets
+  from the ELF and data addresses from Layout. `Conditions.of_memory`
+  transports initial observations into real intermediate configurations.
+  Stack/header separation is an explicit allocator-ownership obligation.
+- Targeted build (625 jobs), full Audit (3127 jobs), discipline and
+  abstraction gates pass; new headlines use only permitted axioms. Empty
+  exact-size-list entry through bitmap search landed as `7bb6cbd`.
+- Next: compose the bitmap entry and split path, then the final accounting
+  stores/native return. Nonzero bitmap/tree routes, ownership suppliers,
+  collector closure and live-word Fits (G2) remain open.
+
 ## Empty-list entry through actual bitmap search (2026-10-04)
 
 - `BestFitMissing.lean:missing_search_zero` starts at the real allocator
