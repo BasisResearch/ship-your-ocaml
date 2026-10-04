@@ -2,6 +2,20 @@
 
 ## Round 2 status (2026-10-04)
 
+`Startup/TableThird.lean` closes `reset_third_allocation_exists`: actual
+reset returns from the third 56-byte table malloc, with the first two tables
+published and zeroed by their native calls. `table_next_initialize` composes
+the second allocation, publication and complete memset; `table_final_allocate`
+adds the third allocation. `TableReady.effect/publish/zero` share the full
+platform, read-only, capacity and global-state transport across the generic
+rounds. Both final composition modules check in about one second.
+
+The second-allocation increment landed as `e20728d`, full gate passed.
+Next: publish the third table, preserve/read back the caller's saved frame,
+and summarize its restore-and-tail-memset path before the domain epilogue.
+The complete reset-to-cut/Loaded exit remains open.
+
+
 `Startup/TableSecond.lean` closes `reset_second_allocation_exists`: actual
 reset returns from the second table malloc, retaining the first table and
 domain in the live heap. `table_next_allocate` (`TableNextAllocate.lean`)

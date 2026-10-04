@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.TableThird
 import OCaml.Vm.Boot.Startup.TableSecond
 import OCaml.Vm.Gc.BestFitExact
 import OCaml.Vm.Boot.Startup.TableReady
@@ -3049,3 +3050,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.BestFitEmpty.Post.counter
 #print axioms OCaml.Vm.Gc.BestFitExact.allocate
 #print axioms OCaml.Vm.Gc.BestFitExact.Post.counter_nat
+
+#print axioms OCaml.Vm.Boot.Startup.TableReady.effect
+#print axioms OCaml.Vm.Boot.Startup.TableReady.publish
+#print axioms OCaml.Vm.Boot.Startup.TableReady.zero
+#print axioms OCaml.Vm.Boot.Startup.TableNextAllocated.ready
+#print axioms OCaml.Vm.Boot.Startup.table_next_initialize
+#print axioms OCaml.Vm.Boot.Startup.TableNextInitialized.ready
+#print axioms OCaml.Vm.Boot.Startup.table_final_allocate
+#print axioms OCaml.Vm.Boot.Startup.TableFinalAllocated.ready
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_third_allocation_exists
