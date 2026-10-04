@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Complete least-large-block allocator alternative (2026-10-04)
+
+- `BestFitLargeComplete.lean:allocate_large` proves actual allocator entry,
+  empty exact-size list, zero filtered-bitmap search, least-large-block
+  split, accounting and native return. The result restores the original
+  caller PC and stack and retains exact combined memory, counter readback,
+  code and native/output frame. `Allocated.requested` identifies the
+  carved header using the original request recovered from the save bank.
+- `BestFitLargeReturn.finish` supplies the generated accounting/return
+  segment. Stack/header and caller-link separation remain explicit finite
+  ownership obligations; no allocator run is assumed.
+- Targeted build (640 jobs), full Audit (3175 jobs), discipline and
+  abstraction gates pass; new headlines use only permitted axioms.
+  Allocator entry through split landed as `8788166`.
+- Next: share the successful wrapper continuation across exact-size and
+  least-large-block allocators, then extend the fresh-oldify composition.
+  Other allocator/object routes, ownership suppliers, collector closure
+  and live-word Fits (G2) remain open.
+
 ## Allocator entry through large-block split (2026-10-04)
 
 - `BestFitFallbackLarge.lean:missing_large_split` composes the real

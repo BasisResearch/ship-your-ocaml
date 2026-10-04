@@ -144,6 +144,7 @@ import OCaml.Vm.Gc.FfsZero
 import OCaml.Vm.Gc.BestFitMissing
 import OCaml.Vm.Gc.BestFitLarge
 import OCaml.Vm.Gc.BestFitFallbackLarge
+import OCaml.Vm.Gc.BestFitLargeComplete
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -3358,3 +3359,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.BestFitFallback.Searched.saved
 #print axioms OCaml.Vm.Gc.BestFitLarge.splitEffect_of_memory
 #print axioms OCaml.Vm.Gc.BestFitFallback.missing_large_split
+
+#print axioms OCaml.Vm.Gc.BestFitLargeReturn.finish
+#print axioms OCaml.Vm.Gc.BestFitFallback.LargeSplit.returnWord
+#print axioms OCaml.Vm.Gc.BestFitFallback.Input.return_windows
+#print axioms OCaml.Vm.Gc.BestFitFallback.Input.searched_size
+#print axioms OCaml.Vm.Gc.BestFitFallback.allocate_large
+#print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.requested
