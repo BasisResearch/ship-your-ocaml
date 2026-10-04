@@ -2040,6 +2040,17 @@ Target checks passed: arithmetic 0.927s, callers 1.1/1.0s, complete arm
 represented opcode bridges overall**, including F2 opcodes. This is not a
 count out of F1's 134. Zero divisors still require the native exception path.
 
+## Write-barrier caller boundaries
+
+`ModifyCallerCuts.lean` collects fourteen generated native segments and image
+projections for SETGLOBAL, SETFIELD0–3, SETFIELD and SETVECTITEM. Prefixes
+reach the actual caml_modify entry with its arguments and saved return;
+suffixes return to dispatch. The shared segment generator now correctly
+constructs an empty PinsHold bundle when replacing its sole register.
+All fourteen segments check (prefixes 1.1–1.6s, suffixes 0.95–1.0s).
+These are native boundaries, not additional represented arm claims.
+Nonzero division arms landed as `0c69b55` with check_all passing.
+
 ## Open / next
 
 Immediate next: continue F1's barrier-backed

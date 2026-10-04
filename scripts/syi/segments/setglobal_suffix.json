@@ -1,0 +1,62 @@
+{
+  "theorem": "tr_setglobal_suffix",
+  "doc": "SETGLOBAL_SUFFIX arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.SetglobalSuffixSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v8 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlSetglobalSuffixLoaded",
+  "pins": [
+    {
+      "reg": "x8",
+      "val": "v8",
+      "hyp": "hv8"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x800025c8",
+      "site": "site_800025c8_setglobal_suffix",
+      "class": "alu",
+      "asm": "addi s0,s0,8",
+      "rd": "x8",
+      "rd_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800025cc",
+      "site": "site_800025cc_setglobal_suffix",
+      "class": "alu",
+      "asm": "li s5,1",
+      "rd": "x21",
+      "rd_val": "((0#64) + sign_extend (m := 64) (0x001#12))",
+      "raw_val": "((0#64) + sign_extend (m := 64) (0x001#12))",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800025d0",
+      "site": "site_800025d0_setglobal_suffix",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1ff98c#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x800025c8",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

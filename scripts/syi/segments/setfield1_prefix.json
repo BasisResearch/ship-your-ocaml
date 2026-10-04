@@ -1,0 +1,84 @@
+{
+  "theorem": "tr_setfield1_prefix",
+  "doc": "SETFIELD1_PREFIX arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.Setfield1PrefixSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v9 v21 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80002190 : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_80002190 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80002190 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(loaded_80002190 : BitVec 64)",
+    "(hvalue_80002190 : loaded_80002190 = (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))))"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlSetfield1PrefixLoaded",
+  "pins": [
+    {
+      "reg": "x9",
+      "val": "v9",
+      "hyp": "hv9"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80002190",
+      "site": "site_80002190_setfield1_prefix",
+      "class": "alu",
+      "asm": "ld a1,0(s1)",
+      "rd": "x11",
+      "rd_val": "loaded_80002190",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl hlo_80002190 hhi_80002190 hhtif_80002190 $hi",
+      "rw": "hmemeq, ← hvalue_80002190"
+    },
+    {
+      "addr": "0x80002194",
+      "site": "site_80002194_setfield1_prefix",
+      "class": "alu",
+      "asm": "addi a0,s5,8",
+      "rd": "x10",
+      "rd_val": "(v21 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v21 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x21 $hG $hpc $hmi $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002198",
+      "site": "site_80002198_setfield1_prefix",
+      "class": "alu",
+      "asm": "addi s1,s1,8",
+      "rd": "x9",
+      "rd_val": "(v9 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v9 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000219c",
+      "site": "site_8000219c_setfield1_prefix",
+      "class": "jal",
+      "asm": "jal 8000a9a8 <caml_modify>",
+      "imm": "0x00880c#21",
+      "target": "0x8000a9a8",
+      "rd": "x1",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80002190",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

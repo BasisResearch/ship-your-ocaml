@@ -196,6 +196,11 @@ def proj(base: str, idx: int) -> str:
     return f"(PinsHold.get {base} ⟨{idx}, by simp⟩)"
 
 
+def pins_proof(proofs):
+    """PinsHold [] is True, rather than a one-field conjunction."""
+    return "⟨" + ", ".join(proofs + ["trivial"]) + "⟩" if proofs else "trivial"
+
+
 def pin_term(reg: str, val: str) -> str:
     return f"⟨Register.{reg}, {val}⟩"
 
@@ -329,7 +334,7 @@ class SegmentEmitter:
             projs = [proj(prev_hp, i) for i in range(len(self.pins)) if i != idx]
             self.lines.append(
                 f"  have hq{k} : PinsHold {self.state} {pin_list(rest)} :=\n"
-                f"    ⟨{', '.join(projs + ['trivial'])}⟩")
+                f"    {pins_proof(projs)}")
             transported = f"pins_{fam} hobs{k} (by rfl) hq{k}"
             base = rest
         else:
@@ -548,7 +553,7 @@ class SegmentEmitter:
                      if p[0] not in drops]
             self.lines.append(
                 f"  have hq{k} : PinsHold {self.state} {pin_list(kept)} :=\n"
-                f"    ⟨{', '.join(projs + ['trivial'])}⟩")
+                f"    {pins_proof(projs)}")
             src_hp = f"hq{k}"
         else:
             src_hp = prev_hp
@@ -676,7 +681,7 @@ class SegmentEmitter:
         if not self.segst:
             self.lines.append(
                 f"  have hp0 : PinsHold c.σ {pin_list(self.pins)} :=\n"
-                f"    ⟨{', '.join(self.pin_hyps + ['trivial'])}⟩")
+                f"    {pins_proof(self.pin_hyps)}")
         for ln in spec.get("prelude", []):
             self.lines.append("  " + ln)
         had_call = False

@@ -2789,6 +2789,35 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.division_arm
 #print axioms OCaml.Vm.Sim.division_step_arm
 
+#print axioms Vsa.Sim.tr_setfield0_prefix
+#print axioms OCaml.Vm.Sim.setfield0_prefix_loaded
+#print axioms Vsa.Sim.tr_setfield0_suffix
+#print axioms OCaml.Vm.Sim.setfield0_suffix_loaded
+#print axioms Vsa.Sim.tr_setfield1_prefix
+#print axioms OCaml.Vm.Sim.setfield1_prefix_loaded
+#print axioms Vsa.Sim.tr_setfield1_suffix
+#print axioms OCaml.Vm.Sim.setfield1_suffix_loaded
+#print axioms Vsa.Sim.tr_setfield2_prefix
+#print axioms OCaml.Vm.Sim.setfield2_prefix_loaded
+#print axioms Vsa.Sim.tr_setfield2_suffix
+#print axioms OCaml.Vm.Sim.setfield2_suffix_loaded
+#print axioms Vsa.Sim.tr_setfield3_prefix
+#print axioms OCaml.Vm.Sim.setfield3_prefix_loaded
+#print axioms Vsa.Sim.tr_setfield3_suffix
+#print axioms OCaml.Vm.Sim.setfield3_suffix_loaded
+#print axioms Vsa.Sim.tr_setfield_prefix
+#print axioms OCaml.Vm.Sim.setfield_prefix_loaded
+#print axioms Vsa.Sim.tr_setfield_suffix
+#print axioms OCaml.Vm.Sim.setfield_suffix_loaded
+#print axioms Vsa.Sim.tr_setglobal_prefix
+#print axioms OCaml.Vm.Sim.setglobal_prefix_loaded
+#print axioms Vsa.Sim.tr_setglobal_suffix
+#print axioms OCaml.Vm.Sim.setglobal_suffix_loaded
+#print axioms Vsa.Sim.tr_setvectitem_prefix
+#print axioms OCaml.Vm.Sim.setvectitem_prefix_loaded
+#print axioms Vsa.Sim.tr_setvectitem_suffix
+#print axioms OCaml.Vm.Sim.setvectitem_suffix_loaded
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

@@ -1,0 +1,125 @@
+{
+  "theorem": "tr_setvectitem_prefix",
+  "doc": "SETVECTITEM_PREFIX arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.SetvectitemPrefixSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v9 v23 v21 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80002244 : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_80002244 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80002244 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(loaded_80002244 : BitVec 64)",
+    "(hvalue_80002244 : loaded_80002244 = (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))))",
+    "(hlo_80002248 : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0x008#12)).toNat)",
+    "(hhi_80002248 : (v9 + sign_extend (m := 64) (0x008#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80002248 : (v9 + sign_extend (m := 64) (0x008#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v9 + sign_extend (m := 64) (0x008#12)).toNat)",
+    "(loaded_80002248 : BitVec 64)",
+    "(hvalue_80002248 : loaded_80002248 = (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x008#12)).toNat : BitVec (8 * 8))))"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlSetvectitemPrefixLoaded",
+  "pins": [
+    {
+      "reg": "x9",
+      "val": "v9",
+      "hyp": "hv9"
+    },
+    {
+      "reg": "x23",
+      "val": "v23",
+      "hyp": "hv23"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80002244",
+      "site": "site_80002244_setvectitem_prefix",
+      "class": "alu",
+      "asm": "ld a0,0(s1)",
+      "rd": "x10",
+      "rd_val": "loaded_80002244",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl hlo_80002244 hhi_80002244 hhtif_80002244 $hi",
+      "rw": "hmemeq, ← hvalue_80002244"
+    },
+    {
+      "addr": "0x80002248",
+      "site": "site_80002248_setvectitem_prefix",
+      "class": "alu",
+      "asm": "ld a1,8(s1)",
+      "rd": "x11",
+      "rd_val": "loaded_80002248",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v9 + sign_extend (m := 64) (0x008#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl hlo_80002248 hhi_80002248 hhtif_80002248 $hi",
+      "rw": "hmemE1, ← hvalue_80002248"
+    },
+    {
+      "addr": "0x8000224c",
+      "site": "site_8000224c_setvectitem_prefix",
+      "class": "alu",
+      "asm": "mv s0,s7",
+      "rd": "x8",
+      "rd_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v23 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x23 $hG $hpc $hmi $pin:x23 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002250",
+      "site": "site_80002250_setvectitem_prefix",
+      "class": "alu",
+      "asm": "srai a0,a0,0x1",
+      "rd": "x10",
+      "rd_val": "(shift_bits_right_arith loaded_80002244 (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "raw_val": "(shift_bits_right_arith v10 (Sail.BitVec.extractLsb (0x01#6) 5 0))",
+      "call": "$vmi $v:x10 $hG $hpc $hmi $pin:x10 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002254",
+      "site": "site_80002254_setvectitem_prefix",
+      "class": "alu",
+      "asm": "slli a0,a0,0x3",
+      "rd": "x10",
+      "rd_val": "(shift_bits_left (shift_bits_right_arith loaded_80002244 (Sail.BitVec.extractLsb (0x01#6) 5 0)) (Sail.BitVec.extractLsb (0x03#6) 5 0))",
+      "raw_val": "(shift_bits_left v10 (Sail.BitVec.extractLsb (0x03#6) 5 0))",
+      "call": "$vmi $v:x10 $hG $hpc $hmi $pin:x10 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002258",
+      "site": "site_80002258_setvectitem_prefix",
+      "class": "alu",
+      "asm": "add a0,a0,s5",
+      "rd": "x10",
+      "rd_val": "((shift_bits_left (shift_bits_right_arith loaded_80002244 (Sail.BitVec.extractLsb (0x01#6) 5 0)) (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v21)",
+      "raw_val": "(v10 + v21)",
+      "call": "$vmi $v:x10 $v:x21 $hG $hpc $hmi $pin:x10 $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000225c",
+      "site": "site_8000225c_setvectitem_prefix",
+      "class": "jal",
+      "asm": "jal 8000a9a8 <caml_modify>",
+      "imm": "0x00874c#21",
+      "target": "0x8000a9a8",
+      "rd": "x1",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80002244",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

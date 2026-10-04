@@ -1,0 +1,115 @@
+{
+  "theorem": "tr_setfield_prefix",
+  "doc": "SETFIELD_PREFIX arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.SetfieldPrefixSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v8 v9 v21 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80002134 : 0x80000000 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
+    "(hhi_80002134 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ 0x100000000)",
+    "(hhtif_80002134 : (v8 + sign_extend (m := 64) (0x004#12)).toNat + 4 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v8 + sign_extend (m := 64) (0x004#12)).toNat)",
+    "(loaded_80002134 : BitVec 64)",
+    "(hvalue_80002134 : loaded_80002134 = (sign_extend (m := 64) (bytesT4 m0 (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4))))",
+    "(hlo_80002138 : 0x80000000 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_80002138 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80002138 : (v9 + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v9 + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(loaded_80002138 : BitVec 64)",
+    "(hvalue_80002138 : loaded_80002138 = (sign_extend (m := 64) (bytesT8 m0 (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))))"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlSetfieldPrefixLoaded",
+  "pins": [
+    {
+      "reg": "x8",
+      "val": "v8",
+      "hyp": "hv8"
+    },
+    {
+      "reg": "x9",
+      "val": "v9",
+      "hyp": "hv9"
+    },
+    {
+      "reg": "x21",
+      "val": "v21",
+      "hyp": "hv21"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80002134",
+      "site": "site_80002134_setfield_prefix",
+      "class": "alu",
+      "asm": "lw a0,4(s0)",
+      "rd": "x10",
+      "rd_val": "loaded_80002134",
+      "raw_val": "(sign_extend (m := 64) (bytesT4 σ.mem (v8 + sign_extend (m := 64) (0x004#12)).toNat : BitVec (8 * 4)))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl hlo_80002134 hhi_80002134 hhtif_80002134 $hi",
+      "rw": "hmemeq, ← hvalue_80002134"
+    },
+    {
+      "addr": "0x80002138",
+      "site": "site_80002138_setfield_prefix",
+      "class": "alu",
+      "asm": "ld a1,0(s1)",
+      "rd": "x11",
+      "rd_val": "loaded_80002138",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v9 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x9 $hG $hpc $hmi $pin:x9 $hmem rfl hlo_80002138 hhi_80002138 hhtif_80002138 $hi",
+      "rw": "hmemE1, ← hvalue_80002138"
+    },
+    {
+      "addr": "0x8000213c",
+      "site": "site_8000213c_setfield_prefix",
+      "class": "alu",
+      "asm": "addi s0,s0,8",
+      "rd": "x8",
+      "rd_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "raw_val": "(v8 + sign_extend (m := 64) (0x008#12))",
+      "call": "$vmi $v:x8 $hG $hpc $hmi $pin:x8 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002140",
+      "site": "site_80002140_setfield_prefix",
+      "class": "alu",
+      "asm": "slli a0,a0,0x3",
+      "rd": "x10",
+      "rd_val": "(shift_bits_left loaded_80002134 (Sail.BitVec.extractLsb (0x03#6) 5 0))",
+      "raw_val": "(shift_bits_left v10 (Sail.BitVec.extractLsb (0x03#6) 5 0))",
+      "call": "$vmi $v:x10 $hG $hpc $hmi $pin:x10 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002144",
+      "site": "site_80002144_setfield_prefix",
+      "class": "alu",
+      "asm": "add a0,a0,s5",
+      "rd": "x10",
+      "rd_val": "((shift_bits_left loaded_80002134 (Sail.BitVec.extractLsb (0x03#6) 5 0)) + v21)",
+      "raw_val": "(v10 + v21)",
+      "call": "$vmi $v:x10 $v:x21 $hG $hpc $hmi $pin:x10 $pin:x21 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80002148",
+      "site": "site_80002148_setfield_prefix",
+      "class": "jal",
+      "asm": "jal 8000a9a8 <caml_modify>",
+      "imm": "0x008860#21",
+      "target": "0x8000a9a8",
+      "rd": "x1",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80002134",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}
