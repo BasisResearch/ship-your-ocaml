@@ -2,6 +2,25 @@
 
 ## Round 2 status (2026-10-04)
 
+The startup-counter increment landed as `4522ebc`, full gate passed.
+**`CustomEntry.lean:reset_custom_entry_exists` now extends the CLOSED reset run
+to caml_init_custom_operations at 0x80024a2c.** It executes the successful
+caller branch, saves the four remaining caml_main registers, calls/returns
+from the locale stub, and takes the actual custom-initializer JAL. Runtime,
+allocator credits and the published domain remain available at entry.
+
+`ReturnStub.return_stub` shares the exact return-only protocol between both
+recursive-lock hooks and caml_init_locale; the existing lock summaries now
+consume it. `caml_locale_prefix`, `caml_locale` and `caml_locale_ready` use
+Layout's generated native-frame size and save offsets. The closed composition
+checks in 1.1 seconds. Explicitly instantiating the symbolic frame base avoids
+asking elaboration to invert bit-vector subtraction; no limits were raised.
+
+Next: summarize caml_stat_alloc's nonpooling successful path using the landed
+malloc spec, then the four 16-byte custom-operation registrations. Subsequent
+file loading, GC/stack initialization and reset-to-cut/Loaded remain open.
+
+
 The actual parser-return increment landed as `17553d0`, full gate passed.
 **`StartupAuxReset.lean:reset_startup_aux_returned_exists` now extends the
 CLOSED reset run through caml_startup_aux's successful first-start return

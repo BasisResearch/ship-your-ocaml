@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.ReturnStub
 import OCaml.Vm.Boot.Startup.EnvLockRows
 import OCaml.Vm.Boot.Startup.EnvUnlockRows
 import OCaml.Vm.Boot.Startup.LockAcquireRows
@@ -16,38 +17,19 @@ def lockEntry (release : Bool) : BitVec 64 := if release then 0x80042550#64 else
 def lockBlocks (release : Bool) : List BBlock := if release then retarget_lock_release_recursiveX2550Seg else retarget_lock_acquire_recursiveX2538Seg
 
 theorem lock_input (release : Bool) {ra value c} (h : LeafInput ra c) (pointer : gprGet c.σ 10 = some value) :
-    BlockInput (lockBlocks release) (lockEntry release) [(1, ra), (10, value)] [] c where
-  good := h.good
-  minstret := h.minstret
-  regs := ⟨h.raReg, pointer, trivial⟩
-  keys := by change KeysOK [1, 10]; decide
-  shape := by change ChainOK _ [1, 10] _; cases release <;> decide
-  tick := h.tick
-  facts := by
-    have ret : (Sail.BitVec.update (ra + Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0 := by
-      rw [ret_tgt ra h.aligned]; exact h.aligned
-    cases release with
-    | false =>
-      have code := lockAcquire_code h.image
-      chain_facts code with "Vsa.Sim.Code.__retarget_lock_acquire_recursive_at_"
-      exact ret
-    | true =>
-      have code := lockRelease_code h.image
-      chain_facts code with "Vsa.Sim.Code.__retarget_lock_release_recursive_at_"
-      exact ret
+    BlockInput (lockBlocks release) (lockEntry release) [(1, ra), (10, value)] [] c := by
+  cases release
+  · exact returnStub_input .acquire h pointer
+  · exact returnStub_input .release h pointer
 
 /-- The linked bare-metal recursive-lock hooks return without modifying state. -/
 theorem lock_noop (release : Bool) (c : Config) (ra value : BitVec 64) (h : LeafInput ra c)
     (pointer : gprGet c.σ 10 = some value) :
     FnSummary (lockEntry release) (fun d => d = c)
       (WriteRegistersPost [] [] c ra value [(1, ra), (10, value)]) := by
-  apply registers_of_blocks h.image (by constructor <;> trivial)
-    (block_summary _ _ _ _ _ (lock_input release h pointer))
-  · cases release <;> rfl
-  · cases release <;> exact ret_tgt ra h.aligned
-  · cases release <;> rfl
-  · rfl
-  · cases release <;> decide
+  cases release
+  · exact return_stub .acquire c ra value h pointer
+  · exact return_stub .release c ra value h pointer
 
 def envLockEntry (release : Bool) : BitVec 64 := if release then 0x80044728#64 else 0x8004471c#64
 def envLockBlocks (release : Bool) : List BBlock := if release then env_unlockX4728Seg else env_lockX471cSeg

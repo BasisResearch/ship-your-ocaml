@@ -27,6 +27,7 @@ import OCaml.Vm.Boot.Startup.FindCount
 import OCaml.Vm.Boot.Startup.FindMatch
 import OCaml.Vm.Boot.Startup.FindFound
 import OCaml.Vm.Boot.Startup.FindFoundReturn
+import OCaml.Vm.Boot.Startup.CustomEntry
 import OCaml.Vm.Boot.Startup.StartupAuxReset
 import OCaml.Vm.Boot.Startup.ParameterReset
 import OCaml.Vm.Boot.Startup.ParameterPresentReady
@@ -3623,6 +3624,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.startup_aux
 #print axioms OCaml.Vm.Boot.Startup.startup_aux_ready
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_startup_aux_returned_exists
+#print axioms OCaml.Vm.Boot.Startup.return_stub
+#print axioms OCaml.Vm.Boot.Startup.caml_locale_prefix
+#print axioms OCaml.Vm.Boot.Startup.caml_locale
+#print axioms OCaml.Vm.Boot.Startup.caml_locale_ready
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_custom_entry_exists
 #print axioms OCaml.Vm.Boot.Startup.NativeFrame.word32
 #print axioms OCaml.Vm.Boot.Startup.getenv_offset_window
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
