@@ -2874,6 +2874,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.raise_notrace_quiet_loaded
 #print axioms OCaml.Vm.Sim.loop_setup
 
+#print axioms OCaml.Vm.Sim.RaiseFrame.count_bound
+#print axioms OCaml.Vm.Sim.RaiseFrame.drop_rest
+#print axioms OCaml.Vm.Sim.RaiseFrame.stack_repr
+#print axioms OCaml.Vm.Sim.RaiseFrame.values
+#print axioms OCaml.Vm.Sim.RaiseFrame.state_of_step
+#print axioms OCaml.Vm.Sim.raise_restore
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

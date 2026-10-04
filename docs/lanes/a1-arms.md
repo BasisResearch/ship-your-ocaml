@@ -2106,10 +2106,23 @@ Layout, and both startup and exception proofs can consume it.
 These native boundaries do not add represented opcode coverage. Indexed
 mutation arms landed as `62aea57` with check_all passing.
 
+## Represented caught-exception frame restoration
+
+`RaiseFrame.lean` names the active, bounded four-word trap frame and proves
+its placement at high − 8*trap, exact handler/link/environment/extra reads,
+complete stack removal and agreement with the actual raiseTo rule.
+`RaiseRestore.lean:raise_restore` restores the represented environment,
+extra arguments, surviving stack and updated trap pointer. It reuses the
+existing trap-write and return-payload laws, preserving image, bindings and
+runtime through the named write footprint. These helpers accept VmPayload
+so they apply inside the native handler as well as at loop entry. Frame and
+restoration targets check in about 0.95/0.85s. Native handler composition
+remains open. Exception boundaries/loop setup landed as `19ae757`.
+
 ## Open / next
 
-Immediate next: restore represented trap/frame state through the shared
-caught-exception path, then compose quiet RAISE/RERAISE/RAISE_NOTRACE entries.
+Immediate next: compose the native handler with the checked trap-frame
+readbacks/restoration and loop_setup, then quiet RAISE/RERAISE/RAISE_NOTRACE entries.
 STOP, uncaught/backtrace paths, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
