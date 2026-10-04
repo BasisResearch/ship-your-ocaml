@@ -2,6 +2,22 @@
 
 ## Round 2 status (2026-10-04)
 
+The complete getenv increment landed as `634d007`, full gate passed.
+`secure_getenv_empty` now completes the ENTIRE caml_secure_getenv call:
+all identity checks, its restoring tailcall, getenv, the name scan and empty
+array test, then the original caller return. `secure_env_ready` retains the
+full running-platform and allocator contract. Both summaries check in about
+one second. Their exact effect concatenates the security-wrapper store log
+with getenv's nested-frame log; all fourteen written registers are observed.
+
+An indexed-record update tried to unify the two large memory expressions and
+hit the default recursion limit. Constructing the effect fields explicitly
+keeps the memory equation opaque until its append-law proof; no budget change
+was needed. Next: the parameter parser's two calls, with its literal variable
+names certified from the pinned read-only image. Actual reset reachability
+still ends at the parser entry; reset-to-cut/Loaded remains open.
+
+
 The complete `_findenv_r` increment landed as `ff9449d`, full gate passed.
 `getenv_empty` now composes the entire native getenv wrapper: load the ELF's
 reentrancy pointer, save the caller link, call the completed empty-environment

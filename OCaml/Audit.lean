@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Boot.Startup.SecureEnvReady
 import OCaml.Vm.Boot.Startup.GetenvReady
 import OCaml.Vm.Boot.Startup.FindEnvReady
 import OCaml.Vm.Boot.Startup.FindLock
@@ -3362,6 +3363,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.getenv_saved
 #print axioms OCaml.Vm.Boot.Startup.getenv_empty
 #print axioms OCaml.Vm.Boot.Startup.getenv_ready
+#print axioms OCaml.Vm.Boot.Startup.secureEnvLog_inside
+#print axioms OCaml.Vm.Boot.Startup.secure_getenv_empty
+#print axioms OCaml.Vm.Boot.Startup.secure_env_ready
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.domain_history_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.reset
