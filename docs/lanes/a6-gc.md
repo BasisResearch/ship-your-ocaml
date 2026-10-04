@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Copying loop with queued-child exits (2026-10-04)
+
+- `CopyChoice.lean` adds actual fresh multi-field child exits to the
+  ordinary branch set. `QueueAllocation.run` selects either proved allocator
+  from data; `Head.step_copy` records exact one- or two-copy publications
+  and strict progress. No execution premise is introduced.
+- `CopyLoop.lean:run_copy_from_head` folds real back edges and scalar or
+  queued exits, retaining complete/bounded partial tables and the initial
+  native return. Existing ordinary Coverage embeds via `Coverage.toCopy`.
+- `CopyCoverage` remains an open reachable-head data/ownership obligation.
+  Final table/native restoration is proved; full typed heap and work-queue
+  invariants are not yet carried by this loop.
+- Targeted build passes (764 jobs), full Audit passes (3665 jobs), and
+  both discipline gates pass; only permitted axioms. Two-publication
+  invariant landed as `0a27b6a`.
+- Next: retain root/pending/completed payload views through wider coverage
+  and derive ownership suppliers. Other tags/allocator paths, full collector
+  closure, G2 and live budget remain open.
+
 ## Two-publication queue exit invariant (2026-10-04)
 
 - `QueuedChildTable.lean:QueuedChild.table` retains both the parent and
