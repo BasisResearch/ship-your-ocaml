@@ -1,5 +1,9 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
 import OCaml.Vm.Gc.AllocLargeWrapper
+import OCaml.Vm.Boot.Startup.ParameterQueryReady
+import OCaml.Vm.Boot.Startup.ParameterPrefix
+import OCaml.Vm.Boot.Startup.ParameterBranch
+import OCaml.Vm.Boot.Startup.ParameterReturn
 import OCaml.Vm.Boot.Startup.SecureEnvReady
 import OCaml.Vm.Boot.Startup.GetenvReady
 import OCaml.Vm.Boot.Startup.FindEnvReady
@@ -3391,6 +3395,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.secureEnvLog_inside
 #print axioms OCaml.Vm.Boot.Startup.secure_getenv_empty
 #print axioms OCaml.Vm.Boot.Startup.secure_env_ready
+#print axioms OCaml.Vm.Boot.Startup.parameter_name
+#print axioms OCaml.Vm.Boot.Startup.parameter_prefix
+#print axioms OCaml.Vm.Boot.Startup.parameter_fallback
+#print axioms OCaml.Vm.Boot.Startup.parameter_second_missing
+#print axioms OCaml.Vm.Boot.Startup.parameter_return
+#print axioms OCaml.Vm.Boot.Startup.parameter_query
+#print axioms OCaml.Vm.Boot.Startup.parameter_query_ready
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.domain_history_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.reset

@@ -2,6 +2,24 @@
 
 ## Round 2 status (2026-10-04)
 
+The complete secure-query increment landed as `e4ab77e`, full gate passed.
+`parameter_query` now covers BOTH generated parameter-parser call sites using
+one Boolean-indexed summary, including the actual JAL, complete secure getenv
+execution and null return. `parameter_query_ready` retains runtime readiness.
+The literal names are no longer premises: `parameter_name` supplies their
+C-string representation from `ExecutableImage`, with per-byte kernel
+certificates generated from the parser's AUIPC/ADDI selections and pinned
+rodata. The generator rejects missing or ambiguous literal selections.
+
+`parameter_prefix`, `parameter_fallback`, `parameter_second_missing` and
+`parameter_return` cover the parser's save, missing-variable branches and
+restoring return. The two-call composition and preservation of its outer
+saved words are next. The literal-name and call summaries each check in about
+one second; no option-loop execution is needed for this empty environment.
+Actual reset reachability still ends at the parser entry; reset-to-cut/Loaded
+remains open.
+
+
 The complete getenv increment landed as `634d007`, full gate passed.
 `secure_getenv_empty` now completes the ENTIRE caml_secure_getenv call:
 all identity checks, its restoring tailcall, getenv, the name scan and empty
