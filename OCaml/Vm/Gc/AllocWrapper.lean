@@ -118,6 +118,18 @@ theorem allocate {R c} (input : Input R c) :
     rw [snapshotSame] at memory'
     simpa only [AllocFinish.snapshot,AllocExact.effect,effect,AllocExact.allocated] using memory'
 
+theorem effect_eq_core (R : Nat → BitVec 64) (c : Config) :
+    effect R c = AllocWrapperCore.effect R (AllocExact.resultHeader (R 10) (prepared R c))
+      (BestFitExact.effect (R 10) (prepared R c)) c := rfl
+
+theorem Post.toCore {R before after} (post : Post R before after) :
+    AllocWrapperCore.Post R (AllocExact.resultHeader (R 10) (prepared R before))
+      (BestFitExact.effect (R 10) (prepared R before)) before after := by
+  refine ⟨post.good,post.tick,post.minstret,post.code,post.pc,?_,?_,?_,post.output,post.native⟩
+  · simpa only [AllocExact.resultHeader,BitVec.sub_add_cancel,callerRegs,AllocWrapperCore.callerRegs] using post.registers
+  · simpa only [AllocExact.resultHeader,BitVec.sub_add_cancel] using post.result
+  · simpa only [effect_eq_core] using post.memory
+
 /-- Full-wrapper final header agreement with its original size and tag. -/
 theorem header_of_effect {R} {before after : Config}
     (memory : after.σ.mem = writeLog before.σ.mem (effect R before))

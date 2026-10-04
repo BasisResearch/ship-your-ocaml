@@ -21,6 +21,19 @@ theorem allocator_size (R : Nat → BitVec 64) (c : Config) :
   change _ ≤ 18014398509481983
   omega
 
+/-- Transport any runtime code image through the decoded oldify save log. -/
+theorem Prepared.image {R before after exitPC writes lo hi}
+    {Image : Std.ExtHashMap Nat (BitVec 8) → Prop}
+    (post : Prepared R before after exitPC writes)
+    (windows : ∀ cell ∈ OldifyEntry.saves,
+      WriteWindow (OldifyEntry.frameSp R + BitVec.ofNat 64 cell.2) 8)
+    (transport : ∀ {m m'}, Image m → (∀ a, lo ≤ a → a < hi → m'[a]? = m[a]?) → Image m')
+    (bound : hi ≤ tohostAddr) (code : Image before.σ.mem) : Image after.σ.mem := by
+  rw [post.memory]
+  apply image_writeLog transport code
+  intro e member
+  exact Nat.le_trans bound (OldifyEntry.saveLog_high windows e member)
+
 /-- Prologue stores preserve the allocator's code image under the shared
 above-HTIF write policy. -/
 theorem Prepared.allocator_code {R before after exitPC writes}
@@ -29,11 +42,7 @@ theorem Prepared.allocator_code {R before after exitPC writes}
       WriteWindow (OldifyEntry.frameSp R + BitVec.ofNat 64 cell.2) 8)
     (code : Code.Caml_alloc_shr_for_minor_gcLoaded before.σ.mem) :
     Code.Caml_alloc_shr_for_minor_gcLoaded after.σ.mem := by
-  rw [post.memory]
-  apply image_writeLog Code.caml_alloc_shr_for_minor_gc_transport code
-  intro e member
-  exact Nat.le_trans (by decide : (0x8000b8a4 : Nat) ≤ tohostAddr)
-    (OldifyEntry.saveLog_high windows e member)
+  exact post.image windows Code.caml_alloc_shr_for_minor_gc_transport (by decide) code
 
 theorem Prepared.word_frame {R before after exitPC writes a}
     (post : Prepared R before after exitPC writes)

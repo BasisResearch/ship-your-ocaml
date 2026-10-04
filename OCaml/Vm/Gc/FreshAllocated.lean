@@ -1,4 +1,4 @@
-import OCaml.Vm.Gc.FreshAllocator
+import OCaml.Vm.Gc.FreshAllocationCore
 import OCaml.Vm.Gc.AllocationFootprint
 import OCaml.Vm.Gc.Generated.Enqueue
 
@@ -53,11 +53,8 @@ theorem allocate_fresh {R domain size tag c} (input : EntryInput R domain size t
   apply Vsa.Logic.Triple.seq (prepare_allocation input).run
   intro middle entered
   have memory : middle.σ.mem = (oldifySnapshot R c).σ.mem := entered.memory
-  have freeCode : Code.Bf_allocateLoaded middle.σ.mem := by
-    rw [entered.memory]
-    apply image_writeLog Code.bf_allocate_transport conditions.freeCode
-    intro e member
-    exact Nat.le_trans (by decide) (OldifyEntry.saveLog_high input.entry.windows e member)
+  have freeCode := entered.toPrepared.image input.entry.windows Code.bf_allocate_transport
+    (by decide) conditions.freeCode
   have allocInput : AllocWrapper.Input (allocatorRegs R c) middle :=
     { toInput := entered.allocator_input input.entry.windows conditions.code conditions.windows
         conditions.pointer conditions.outer conditions.inner
@@ -69,27 +66,18 @@ theorem allocate_fresh {R domain size tag c} (input : EntryInput R domain size t
   have payload : BestFitSmall.first (allocatorRegs R c 10)
       (AllocWrapper.prepared (allocatorRegs R c) middle) = allocatedPayload R c := by
     simp only [BestFitSmall.first,word,preparedMemory,allocatedPayload]
-  have kept : GHolds after.σ [(24,R 10 - 8#64),(22,1),
-      (25,sizeWord (word c (R 10 - 8#64).toNat))] := by
-    apply gholds_of_frame allocated.native _ (by change KeysOK [24,22,25]; decide)
-      (by change ∀ n ∈ [24,22,25], ∀ q ∈ noiseRegs, (q == gprReg n) = false; decide)
-      (by change ∀ n ∈ [24,22,25], ∀ m ∈ [1,2,8,9,10,11,12,13,14,15],
-          (gprReg m == gprReg n) = false; decide)
-    exact ⟨gholds_lookup _ entered.arguments rfl,gholds_lookup _ entered.carried rfl,
-      gholds_lookup _ entered.arguments rfl,True.intro⟩
-  refine ⟨after,run,⟨allocated.good,allocated.minstret,allocated.tick,?_,?_,?_,
-    gholds_lookup _ allocated.registers rfl,?_,allocated.output.trans entered.output,?_⟩⟩
-  · rw [allocated.memory]
-    apply image_writeLog Code.caml_oldify_one_transport entered.code
-    intro e member
-    exact Nat.le_trans (by decide) (AllocWrapper.effect_high conditions.windows allocInput.toConditions e member)
-  · exact allocated.pc
-  · exact ⟨payload ▸ allocated.result,gholds_lookup _ allocated.registers rfl,
-      gholds_lookup _ allocated.registers rfl,gholds_lookup _ kept rfl,
-      gholds_lookup _ kept rfl,gholds_lookup _ kept rfl,True.intro⟩
-  · rw [allocated.memory,effect,entered.memory,allocationEffect,writeLog_append]
-  · intro r noise outside
-    exact (allocated.native r noise (fun n hn => outside n (List.mem_append_right _ hn))).trans
-      (entered.native r noise (fun n hn => outside n (List.mem_append_left _ hn)))
+  have high : ∀ e ∈ AllocWrapperCore.effect (allocatorRegs R c)
+      (AllocExact.resultHeader (allocatorRegs R c 10) (AllocWrapper.prepared (allocatorRegs R c) middle))
+      (BestFitExact.effect (allocatorRegs R c 10) (AllocWrapper.prepared (allocatorRegs R c) middle)) middle,
+      Layout.sym_tohost + 16 ≤ e.1 := by
+    rw [← AllocWrapper.effect_eq_core]
+    exact AllocWrapper.effect_high conditions.windows allocInput.toConditions
+  have done := entered.finish allocated.toCore high
+  rw [← AllocWrapper.effect_eq_core,effect] at done
+  have result : AllocationResult R (allocatedPayload R c)
+      (AllocWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) c after := by
+    simpa only [AllocExact.resultHeader,BitVec.sub_add_cancel,payload] using done
+  exact ⟨after,run,⟨result.good,result.minstret,result.tick,result.code,result.pc,result.registers,
+    result.stack,result.memory,result.output,result.native⟩⟩
 
 end OCaml.Vm.Gc.Fresh

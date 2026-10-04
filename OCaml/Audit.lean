@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Gc.FreshLargeAllocated
 import OCaml.Vm.Gc.AllocLargeWrapper
 import OCaml.Vm.Boot.Startup.ParameterQueryReady
 import OCaml.Vm.Boot.Startup.ParameterPrefix
@@ -3517,3 +3518,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.BestFitFallback.ReturnOutside.of_memory
 #print axioms OCaml.Vm.Gc.AllocLarge.Conditions.of_memory
 #print axioms OCaml.Vm.Gc.AllocLargeWrapper.allocate
+
+#print axioms OCaml.Vm.Gc.AllocFinish.effect_high
+#print axioms OCaml.Vm.Gc.BestFitFallback.StackConditions.effect_high
+#print axioms OCaml.Vm.Gc.AllocLargeWrapper.Conditions.of_memory
+#print axioms OCaml.Vm.Gc.AllocLargeWrapper.effect_of_memory
+#print axioms OCaml.Vm.Gc.AllocLargeWrapper.effect_high
+#print axioms OCaml.Vm.Gc.AllocWrapper.Post.toCore
+#print axioms OCaml.Vm.Gc.Fresh.Prepared.image
+#print axioms OCaml.Vm.Gc.Fresh.AllocationEntry.finish
+#print axioms OCaml.Vm.Gc.Fresh.allocate_fresh_large

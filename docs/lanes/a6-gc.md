@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Fresh oldify through large-block allocation (2026-10-04)
+
+- `FreshLargeAllocated.lean:allocate_fresh_large` proves actual oldify
+  entry through the least-large-block wrapper route to queue entry.
+  `AllocationEntry.finish` shares exact memory composition and native
+  register preservation across this and the existing exact-size route.
+- `Prepared.image` shares code transport through oldify saves.
+  `AllocFinish.effect_high` shares continuation footprints; the complete
+  large-route footprint now requires only pure memory-window conditions.
+- Targeted builds and FreshHeader regression pass (729 jobs); discipline
+  and abstraction gates pass. Full Audit passes (3288 jobs), with only
+  permitted axioms.
+  Complete large wrapper landed as `f1428d1`.
+- Next: share forwarding/queue/native-return composition across the two
+  proved fresh allocation routes, then large-route typed-header readback.
+  Other allocator/object routes, ownership suppliers, collector closure,
+  G2 and the ocamlc live-word budget remain open.
+
 ## Complete least-large-block wrapper (2026-10-04)
 
 - `AllocLargeWrapper.allocate` proves actual wrapper entry, loaded indirect

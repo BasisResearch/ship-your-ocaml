@@ -23,6 +23,23 @@ theorem effect_of_memory {sp size hp log} {before after : Config}
   rw [AllocSuccess.completed_of_memory same]
   simp only [AllocAccount.effect,AllocAccount.counted,AllocAccount.initialized,same]
 
+/-- The common continuation preserves the code-image boundary for every
+free-list route whose finite store log does. -/
+theorem effect_high {sp size hp log c}
+    (high : ∀ e ∈ log, Layout.sym_tohost + 16 ≤ e.1)
+    (conditions : AllocSuccess.Conditions (entryRegs sp size hp) (snapshot log c)) :
+    ∀ e ∈ effect sp size hp log c, Layout.sym_tohost + 16 ≤ e.1 := by
+  intro e member
+  rw [effect,List.mem_append] at member
+  rcases member with member | member
+  · exact high e member
+  · simp only [AllocAccount.effect,AllocAccount.headerLog,List.cons_append,List.nil_append,
+      List.mem_cons,List.not_mem_nil,or_false] at member
+    rcases member with rfl | rfl
+    · exact conditions.account.headerWrite.htif
+    · change Layout.sym_tohost + 16 ≤ Layout.sym_caml_allocated_words
+      decide
+
 /-- Normalized evidence from a proved free-list callee. Concrete allocator
 summaries construct this record; it does not postulate an allocator run. -/
 structure CalleePost (sp size hp : BitVec 64) (log : List WEntry) (before after : Config) : Prop where

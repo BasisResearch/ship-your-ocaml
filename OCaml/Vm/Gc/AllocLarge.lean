@@ -76,7 +76,7 @@ theorem allocate {sp size c} (input : Input sp size c) :
     rw [allocatedPost.memory]
     apply image_writeLog Code.caml_alloc_shr_for_minor_gc_transport input.wrapperCode
     intro e member
-    exact Nat.le_trans (by decide) (BestFitFallback.completeEffect_high input.toInput input.large e member)
+    exact Nat.le_trans (by decide) (BestFitFallback.completeEffect_high input.toStackConditions input.large e member)
   have callee : AllocFinish.CalleePost sp size (resultHeader sp size c) (freeEffect sp size c) c middle :=
     { good := allocatedPost.good
       tick := allocatedPost.tick

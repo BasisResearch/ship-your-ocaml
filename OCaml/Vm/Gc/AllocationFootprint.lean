@@ -9,16 +9,7 @@ theorem AllocExact.effect_high {sp size c}
     (free : BestFitExact.Conditions size c)
     (continuation : AllocSuccess.Conditions (AllocExact.returnRegs sp size c) (AllocExact.allocated size c)) :
     ∀ e ∈ AllocExact.effect sp size c, Layout.sym_tohost + 16 ≤ e.1 := by
-  intro e member
-  rw [AllocExact.effect,List.mem_append] at member
-  rcases member with member | member
-  · exact free.effect_high e member
-  · simp only [AllocAccount.effect,AllocAccount.headerLog,List.cons_append,List.nil_append,
-      List.mem_cons,List.not_mem_nil,or_false] at member
-    rcases member with rfl | rfl
-    · exact continuation.account.headerWrite.htif
-    · change Layout.sym_tohost + 16 ≤ Layout.sym_caml_allocated_words
-      decide
+  exact AllocFinish.effect_high free.effect_high continuation
 
 theorem AllocWrapper.effect_high {R c} (windows : AllocEntry.Windows R)
     (conditions : AllocWrapper.Conditions R c) :

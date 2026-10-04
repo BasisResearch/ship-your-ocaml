@@ -31,17 +31,17 @@ theorem BestFitLarge.splitEffect_high {sp c} (conditions : BestFitLarge.Conditio
   · exact BestFitLarge.effect_high conditions e member
   · exact BestFitSplit.effect_high conditions.headerWrite e member
 
-theorem BestFitFallback.largeEffect_high {R c} (input : BestFitFallback.Input R c)
+theorem BestFitFallback.largeEffect_high {R c} (input : BestFitFallback.StackConditions R)
     (conditions : BestFitFallback.LargeConditions R c) :
     ∀ e ∈ BestFitFallback.largeEffect R c, Layout.sym_tohost + 16 ≤ e.1 := by
   intro e member
   rw [BestFitFallback.largeEffect,List.mem_append] at member
   rcases member with member | member
-  · exact BestFitFallback.effect_high input e member
+  · exact input.effect_high e member
   · exact BestFitLarge.splitEffect_high conditions.large e member
 
 /-- Complete large-block allocation preserves any code image below HTIF. -/
-theorem BestFitFallback.completeEffect_high {R c} (input : BestFitFallback.Input R c)
+theorem BestFitFallback.completeEffect_high {R c} (input : BestFitFallback.StackConditions R)
     (conditions : BestFitFallback.LargeConditions R c) :
     ∀ e ∈ BestFitFallback.completeEffect R c, Layout.sym_tohost + 16 ≤ e.1 := by
   intro e member

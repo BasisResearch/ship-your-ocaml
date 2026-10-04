@@ -14,10 +14,14 @@ def saveShape : SaveBank.Shape saves :=
 theorem effect_bank (R : Nat → BitVec 64) (bits : BitVec 64) :
     effect R bits = SaveBank.log (frameSp R) (bankRegs R bits) saves := rfl
 
-theorem effect_high {R bits c} (input : Input R c) :
+theorem StackConditions.effect_high {R bits} (conditions : StackConditions R) :
     ∀ e ∈ effect R bits, Layout.sym_tohost + 16 ≤ e.1 := by
   rw [effect_bank]
-  exact SaveBank.high input.windows
+  exact SaveBank.high conditions.windows
+
+theorem effect_high {R bits c} (input : Input R c) :
+    ∀ e ∈ effect R bits, Layout.sym_tohost + 16 ≤ e.1 :=
+  input.toStackConditions.effect_high
 
 /-- Every original fallback save reads back after the actual ffs call. -/
 theorem Searched.saved {R before after} (post : Searched R before after)
