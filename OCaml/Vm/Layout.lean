@@ -247,6 +247,7 @@ def off_stack_high : Nat := 144
 def off_stack_threshold : Nat := 152
 def off_extern_sp : Nat := 160
 def off_trapsp : Nat := 168
+def off_trap_barrier : Nat := 176
 def off_external_raise : Nat := 184
 def off_exn_bucket : Nat := 192
 def off_backtrace_active : Nat := 232

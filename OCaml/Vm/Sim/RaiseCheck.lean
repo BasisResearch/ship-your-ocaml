@@ -29,7 +29,7 @@ theorem raise_check {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : Ch
     (h : RaiseCheckInput L P s pl cp sp high dest link env extra rest c)
     (stable : MemoryStable L.runtimeOk) (saved : RaiseStackFrame nativeSp c)
     (highRead : RamReadAt ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high) 8) :
-    ∃ count after, StepsN count c after ∧ RaiseHandlerInput L P s pl cp sp high dest link env extra rest after := by
+    ∃ count after, StepsN count c after ∧ RaiseReadPost (0x80001ef0#64) c L P s pl cp sp high dest link env extra rest after := by
   have savedHigh : sign_extend (m := 64) (bytesT8 c.σ.mem nativeSp) = word c nativeSp := by
     simp only [word, bytesT_eight_eq, sign_extend, Sail.BitVec.signExtend, BitVec.signExtend_eq]
   have savedSp : sign_extend (m := 64) (bytesT8 c.σ.mem (nativeSp + 8)) = word c nativeSp := by
@@ -60,7 +60,7 @@ theorem raise_check {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : Ch
     (word c nativeSp) savedHigh.symm saved.spRead.lower saved.spRead.upper saved.spRead.htif
     (word c nativeSp) savedSp.symm highRead.lower highRead.upper highRead.htif (BitVec.ofNat 64 high) highValue.symm guard c bp
   obtain ⟨_, memory, frame⟩ := post.extra
-  refine ⟨count, after, run, ?_⟩
+  refine ⟨count, after, run, ?_, memory, frame.frame Register.x2 (by decide)⟩
   refine {
     toRaiseContext := h.toRaiseContext.after_read stable post.good post.tick memory frame.out (frame.frame _ (by decide))
     pc := post.pcAt

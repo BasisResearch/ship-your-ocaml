@@ -542,3 +542,6 @@ import OCaml.Vm.Sim.LoopSetup
 import OCaml.Vm.Sim.RaiseRestore
 import OCaml.Vm.Sim.RaiseHandler
 import OCaml.Vm.Sim.RaiseCheck
+import OCaml.Vm.Sim.RaiseQuiet
+import OCaml.Vm.Sim.ReraiseQuiet
+import OCaml.Vm.Sim.RaiseNotraceQuiet

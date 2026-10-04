@@ -135,6 +135,7 @@ python3 scripts/gen_makeblock_init.py --check || fail "stage a5: generic MAKEBLO
 python3 scripts/gen_makeblock_finish.py --check || fail "stage a5: generic MAKEBLOCK suffix drift"
 python3 scripts/gen_closure_prefix.py --check || fail "stage a5: CLOSURE prefix adapter drift"
 python3 scripts/gen_closure_reserve.py --check || fail "stage a5: closure nursery adapter drift"
+python3 scripts/gen_raise_quiet.py --check || fail "stage a5: quiet raise adapter drift"
 python3 scripts/gen_modify_indexed.py --check || fail "stage a5: indexed modify caller drift"
 python3 scripts/gen_modify_fixed.py --check || fail "stage a5: fixed modify caller drift"
 python3 scripts/gen_modify_returns.py --check || fail "stage a5: modify return adapter drift"

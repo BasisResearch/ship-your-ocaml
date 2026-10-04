@@ -265,7 +265,7 @@ def main():
     w("\n/-! `Caml_state` field offsets (bytes). -/\n")
     for f in ["young_limit", "young_ptr", "young_start", "young_end", "young_alloc_start",
               "young_alloc_end", "minor_heap_wsz", "stack_low", "stack_high", "stack_threshold", "extern_sp",
-              "trapsp", "external_raise", "exn_bucket", "backtrace_active",
+              "trapsp", "trap_barrier", "external_raise", "exn_bucket", "backtrace_active",
               "requested_major_slice", "requested_minor_gc", "local_roots",
               "stat_minor_words", "stat_promoted_words", "stat_major_words",
               "stat_minor_collections", "stat_major_collections", "stat_heap_wsz",

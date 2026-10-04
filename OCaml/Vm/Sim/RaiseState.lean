@@ -24,6 +24,14 @@ structure RaiseAt (entry : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St) (pl
   trapReg : gpr c 14 = some (BitVec.ofNat 64 (high - 8 * s.trap))
   domainReg : gpr c 15 = some (word c Layout.sym_Caml_state)
 
+/-- A read-only exception prefix also retains the saved native-stack frame. -/
+structure RaiseReadPost (entry : BitVec 64) (before : Config) (L : OCaml.Layout) (P : Prog) (s : St)
+    (pl : Place) (cp : ChanPlace) (sp high dest : Nat) (link : BitVec 63) (env : Val)
+    (extra : BitVec 63) (rest : List Val) (after : Config) : Prop where
+  state : RaiseAt entry L P s pl cp sp high dest link env extra rest after
+  memory : after.σ.mem = before.σ.mem
+  nativeStack : gpr after 2 = gpr before 2
+
 abbrev RaiseHandlerInput := RaiseAt (0x80001ef0#64)
 abbrev RaiseCheckInput := RaiseAt (0x80001ed4#64)
 

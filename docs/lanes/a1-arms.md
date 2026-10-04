@@ -2144,11 +2144,26 @@ branch is proved, not a premise. Nested callback cuts require a relative
 boundary. The complete handler rebuilds after the context factoring and
 landed previously as `b277e7e` with check_all passing.
 
+## Quiet caught raising arms
+
+Generated `raise_quiet_arm`, `reraise_quiet_arm`, `raise_notrace_quiet_arm`
+and matching step wrappers now compose dispatch, quiet native entry,
+raise_check, raise_handler and loop_setup. The caught branch is derived
+from the represented active trap; quiet domain state, saved root invocation
+frame, nonnegative saved extra arguments, RAM/write geometry and runtime
+preservation remain named premises. All three complete targets check in
+about 0.92–0.97s. `RaiseReadPost` retains memory/native-SP facts between
+cuts; `TrapWriteOk.frame` transports write obligations without assuming a
+store. Layout's generator now emits off_trap_barrier from domain_state.tbl.
+Generator drift checks and headline audits are registered.
+Coverage is **139 conditional represented opcode bridges overall**, including
+F2, not a fraction of F1's 134. Uncaught, backtrace and debugger paths remain
+open. Caught selection landed as `eb3ae96` with check_all passing.
+
 ## Open / next
 
-Immediate next: compose the quiet RAISE/RERAISE/RAISE_NOTRACE entries with
-the checked raise_check and raise_handler.
-STOP, uncaught/backtrace paths, primitive
+Immediate next: STOP and the native interpreter-return frame; then
+uncaught/backtrace paths, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
 `GcSafe P` premise is already threaded through ArmSim and the headline.
