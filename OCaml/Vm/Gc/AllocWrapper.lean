@@ -137,28 +137,39 @@ theorem allocate {R c} (input : Input R c) :
         (prologue.machine.frame r noise (fun n hn => outside n (prefixCover n hn))))
 
 /-- Full-wrapper final header agreement with its original size and tag. -/
-theorem Post.header {R before after} (post : Post R before after) (input : Input R before)
+theorem header_of_effect {R} {before after : Config}
+    (memory : after.σ.mem = writeLog before.σ.mem (effect R before))
+    (windows : AllocEntry.Windows R) (conditions : Conditions R before)
+    (sizeBound : (R 10).toNat < 2^54)
     (separate : (AllocExact.resultHeader (R 10) (prepared R before)).toNat + 8 ≤ Layout.sym_caml_allocated_words ∨
       Layout.sym_caml_allocated_words + 8 ≤ (AllocExact.resultHeader (R 10) (prepared R before)).toNat)
     (tagBound : (R 11).toNat < 256) :
     HeaderOk (word after (AllocExact.resultHeader (R 10) (prepared R before)).toNat) (R 10).toNat (R 11).toNat := by
   have memory : after.σ.mem = writeLog (prepared R before).σ.mem
       (AllocExact.effect (AllocEntry.frameSp R) (R 10) (prepared R before)) := by
-    rw [post.memory,effect,writeLog_append]
+    rw [memory,effect,writeLog_append]
     rfl
   have savedTag : word (AllocExact.allocated (R 10) (prepared R before))
       (AllocEntry.frameSp R + BitVec.ofNat 64 AllocEntry.tagOffset).toNat = R 11 :=
-    AllocEntry.saved_after before.σ.mem input.windows _ (11,AllocEntry.tagOffset)
-      (by simp [AllocEntry.saveCells]) (input.freeOutside _ (by simp [AllocEntry.saveCells]))
-  have sizeBound : (R 10).toNat < 2^54 := by
-    have small := input.small
-    change (R 10).toNat ≤ 18014398509481983 at small
-    omega
+    AllocEntry.saved_after before.σ.mem windows _ (11,AllocEntry.tagOffset)
+      (by simp [AllocEntry.saveCells]) (conditions.freeOutside _ (by simp [AllocEntry.saveCells]))
   have tagBound' : (word (AllocExact.allocated (R 10) (prepared R before))
       (AllocEntry.frameSp R + BitVec.ofNat 64 AllocEntry.tagOffset).toNat).toNat < 256 := by
     rw [savedTag]
     exact tagBound
   have header := AllocExact.header_of_effect memory separate sizeBound tagBound'
   simpa only [savedTag] using header
+
+
+/-- Full-wrapper final header agreement with its original size and tag. -/
+theorem Post.header {R before after} (post : Post R before after) (input : Input R before)
+    (separate : (AllocExact.resultHeader (R 10) (prepared R before)).toNat + 8 ≤ Layout.sym_caml_allocated_words ∨
+      Layout.sym_caml_allocated_words + 8 ≤ (AllocExact.resultHeader (R 10) (prepared R before)).toNat)
+    (tagBound : (R 11).toNat < 256) :
+    HeaderOk (word after (AllocExact.resultHeader (R 10) (prepared R before)).toNat) (R 10).toNat (R 11).toNat := by
+  apply header_of_effect post.memory input.windows input.toConditions _ separate tagBound
+  have small := input.small
+  change (R 10).toNat ≤ 18014398509481983 at small
+  omega
 
 end OCaml.Vm.Gc.AllocWrapper

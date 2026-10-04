@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Typed header after the complete fresh route (2026-10-04)
+
+- `FreshHeader.lean:header_of_allocation`, `Allocated.header`, and
+  `Enqueued.header` prove the copied header retains the original typed
+  size/tag through allocation, accounting and queue insertion, given
+  explicit counter/header and queue/header separation.
+- `AllocationConditions.header_address` derives nonwrapping header
+  subtraction from the selected payload RAM window. `Enqueued.header_nat`
+  exposes the natural-address form required by mopup. The shared wrapper
+  header proof now consumes its exact memory effect independently of the
+  platform postcondition.
+- Targeted build (702 jobs), full Audit (3022 jobs), discipline and
+  abstraction gates pass; new headlines use only permitted axioms.
+  The complete fresh queue route landed as `8f4cb30`.
+- Next: extend allocator coverage beyond the exact-size fast path and
+  connect the complete fresh route into mopup. The general ownership
+  suppliers, other object routes, collector closure and live-word Fits
+  (G2) remain open.
+
 ## Complete fresh scanned-object queue route (2026-10-04)
 
 - `FreshEnqueued.lean:enqueue_fresh` executes real oldify entry, exact-size
