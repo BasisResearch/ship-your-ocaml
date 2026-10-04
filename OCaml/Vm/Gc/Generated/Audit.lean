@@ -13,6 +13,7 @@ import OCaml.Vm.Gc.Generated.MopupPop
 import OCaml.Vm.Gc.Generated.Enqueue
 import OCaml.Vm.Gc.Generated.SingleField
 import OCaml.Vm.Gc.Generated.ChildClassify
+import OCaml.Vm.Gc.Generated.StoreReturn
 import OCaml.Vm.Gc.Generated.FieldCopy
 import OCaml.Vm.Gc.Generated.Young
 import OCaml.Vm.Gc.Generated.Forwarded
@@ -1215,6 +1216,21 @@ private def gcAuditNames : Array Name := #[
   ``OCaml.Vm.Gc.ChildClassify.endpoint,
   ``OCaml.Vm.Gc.ChildClassify.access,
   ``OCaml.Vm.Gc.ChildClassify.written,
+  ``OCaml.Vm.Gc.StoreReturn.code_facts,
+  ``OCaml.Vm.Gc.StoreReturn.chain_ok,
+  ``OCaml.Vm.Gc.StoreReturn.pre_regs,
+  ``OCaml.Vm.Gc.StoreReturn.pre_loads,
+  ``OCaml.Vm.Gc.StoreReturn.pre_log,
+  ``OCaml.Vm.Gc.StoreReturn.return_regs,
+  ``OCaml.Vm.Gc.StoreReturn.return_log,
+  ``OCaml.Vm.Gc.StoreReturn.writes,
+  ``OCaml.Vm.Gc.StoreReturn.registers,
+  ``OCaml.Vm.Gc.StoreReturn.return_lookup,
+  ``OCaml.Vm.Gc.StoreReturn.control,
+  ``OCaml.Vm.Gc.StoreReturn.endpoint,
+  ``OCaml.Vm.Gc.StoreReturn.pre_access,
+  ``OCaml.Vm.Gc.StoreReturn.return_access,
+  ``OCaml.Vm.Gc.StoreReturn.written,
   ``OCaml.Vm.Gc.Forwarded.chain_ok,
   ``OCaml.Vm.Gc.Forwarded.code_facts,
   ``OCaml.Vm.Gc.Forwarded.writes,

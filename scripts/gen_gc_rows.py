@@ -460,6 +460,7 @@ def outputs():
     enqueue_audits = []
     single_audits = []
     child_audits = []
+    store_return_audits = []
     forwarded_audits = []
     fresh_audits = []
     alloc_entry_audits = []
@@ -800,6 +801,40 @@ def outputs():
                 }.items(): classified = classified.replace('@'+key+'@',val)
                 result[ROOT / 'OCaml/Vm/Gc/Generated/ChildClassify.lean'] = classified
                 child_audits = re.findall(r'^theorem ([\w.]+)',classified,re.M)
+                pre_return = next(b for b in oldify if b.start == jump.succs[0])
+                store_return = next(b for b in oldify if b.start == pre_return.succs[0])
+                assert pre_return.kind == 'fallthrough' and store_return.kind == 'ret'
+                def read_slots(instrs):
+                    pairs=[]
+                    for ins in instrs:
+                        assert ins.word & 0x707f == 0x3003 and (ins.word >>15)&31 == 2
+                        pairs.append(((ins.word>>7)&31,gen_fn.lib.sext(ins.word>>20,12)))
+                    return pairs
+                pre_slots=read_slots(pre_return.instrs)
+                ret_slots=read_slots(store_return.instrs[1:-1])
+                assert store_return.instrs[0].word == 0x0084b023
+                adjust=store_return.instrs[-1].word
+                assert adjust & 0xfffff == 0x10113 and ret_slots[0][0] == 1
+                ws={f'{ins.word:08x}' for b in (pre_return,store_return) for ins in [*b.instrs,*([b.term] if b.term else [])]}
+                pre_access='\n'.join(f'  · exact (windows {off} (by decide)).ld rfl rfl (read8_pins _ _)' for r,off in pre_slots)
+                ret_access=[]
+                for r,off in ret_slots:
+                    ret_access += [f'  · apply (windows {off} (by decide)).ld rfl rfl',
+                        '    simpa [stepMemM,wentryM,widthOfM,stepLdsM,eaddrM,mkLine,decodeM,afterPre,',
+                        '      preSlots,regs,suffixLoads,returnSlots,srcVal,lookupG,stepGM,wvalM,eraseG,effect,writeLog,',
+                        '      Functions.sign_extend,Sail.BitVec.signExtend] using',
+                        f'      lpins8_writeLog (read8_pins c.σ.mem (sp + {off}#64).toNat) (outside ({r},{off}) (by decide))']
+                text=STORE_RETURN_TEMPLATE
+                for key,val in {
+                    'DECODE_IMPORTS':'\n'.join('import '+module for module in sorted({decode_modules[w] for w in ws})),
+                    'PRE':gen_fn.block_name(name,pre_return)+'Seg','RETURN':gen_fn.block_name(name,store_return)+'Seg',
+                    'PC':hex(pre_return.start),'PRESLOTS':str(pre_slots),'RETSLOTS':str(ret_slots),
+                    'SIZE':str(gen_fn.lib.sext(adjust>>20,12)),'RAOFFSET':str(ret_slots[0][1]),
+                    'PREACCESS':pre_access,'RETACCESS':'\n'.join(ret_access),
+                    'WRITTEN':str([r for r,o in pre_slots+ret_slots]+[2]),
+                }.items(): text=text.replace('@'+key+'@',val)
+                result[ROOT / 'OCaml/Vm/Gc/Generated/StoreReturn.lean']=text
+                store_return_audits=re.findall(r'^theorem ([\w.]+)',text,re.M)
                 header = next(b for b in oldify if b.start == entry + 0x74)
                 forward = next(b for b in oldify if b.start == header.succs[0])
                 store = next(b for b in oldify if b.start == forward.succs[0])
@@ -1081,6 +1116,7 @@ def outputs():
     names += ['OCaml.Vm.Gc.Enqueue.' + n for n in enqueue_audits]
     names += ['OCaml.Vm.Gc.SingleField.' + n for n in single_audits]
     names += ['OCaml.Vm.Gc.ChildClassify.' + n for n in child_audits]
+    names += ['OCaml.Vm.Gc.StoreReturn.' + n for n in store_return_audits]
     names += ['OCaml.Vm.Gc.Forwarded.' + n for n in forwarded_audits]
     names += ['OCaml.Vm.Gc.Fresh.' + n for n in fresh_audits]
     names += ['OCaml.Vm.Gc.FfsZero.' + n for n in ffs_audits]
@@ -1107,7 +1143,7 @@ def outputs():
     names += ['OCaml.Vm.Gc.Young.' + n for n in young_audits]
     literals = ',\n'.join('  ``' + n for n in names)
     result[ROOT / 'OCaml/Vm/Gc/Generated/Audit.lean'] = (
-        ''.join('import OCaml.Vm.Gc.Generated.' + module + '\n' for module in modules + ['Immediate', 'MopupControl', 'MopupPop', 'Enqueue', 'SingleField', 'ChildClassify', 'FieldCopy', 'Young', 'Forwarded', 'OldifyReturn', 'OldifyEntry', 'OldifyYoung', 'MopupCall', 'FirstCall', 'FirstYoung', 'Fresh', 'AllocEntry', 'BestFitSmall', 'BestFitBitmap', 'BestFitFinish', 'BestFitEmpty', 'BestFitSplit', 'AllocReturn', 'AllocAccount', 'AllocColor', 'AllocSelect', 'FfsZero', 'BestFitFallback', 'BestFitLarge', 'BestFitLargeReturn']) + '\n' +
+        ''.join('import OCaml.Vm.Gc.Generated.' + module + '\n' for module in modules + ['Immediate', 'MopupControl', 'MopupPop', 'Enqueue', 'SingleField', 'ChildClassify', 'StoreReturn', 'FieldCopy', 'Young', 'Forwarded', 'OldifyReturn', 'OldifyEntry', 'OldifyYoung', 'MopupCall', 'FirstCall', 'FirstYoung', 'Fresh', 'AllocEntry', 'BestFitSmall', 'BestFitBitmap', 'BestFitFinish', 'BestFitEmpty', 'BestFitSplit', 'AllocReturn', 'AllocAccount', 'AllocColor', 'AllocSelect', 'FfsZero', 'BestFitFallback', 'BestFitLarge', 'BestFitLargeReturn']) + '\n' +
         '/-! GENERATED by scripts/gen_gc_rows.py. Every generated row, segment and code pin. -/\n'
         'open Lean Elab Command\n\n'
         'private def gcAuditNames : Array Name := #[\n' + literals + '\n]\n\n'
@@ -1690,6 +1726,116 @@ theorem run (sp s0 s1 ra value root : BitVec 64) (lds : List (List (BitVec 8)))
 end OCaml.Vm.Gc.Immediate
 """
 
+
+STORE_RETURN_TEMPLATE = """import OCaml.Vm.Gc.Generated.OldifyOne
+import OCaml.Vm.Gc.ChainPlan
+import OCaml.Vm.Primitives.Write
+import OCaml.Vm.Gc.Readback
+import Vsa.Sim.ChainFactsTac
+@DECODE_IMPORTS@
+
+/-! GENERATED by scripts/gen_gc_rows.py. Native store/return path; save
+slots and stack adjustment are decoded from the pinned instructions. -/
+namespace OCaml.Vm.Gc.StoreReturn
+open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives LeanRV64DExecutable
+
+def preBlock : BBlock := @PRE@.getD 0 {body := [],term := none}
+def returnBlock : BBlock := @RETURN@.getD 0 {body := [],term := none}
+def blocks := [preBlock,returnBlock]
+def pc : BitVec 64 := @PC@#64
+def regs (sp value target : BitVec 64) : GRegs := [(2,sp),(8,value),(9,target)]
+def preSlots : List (Nat × Nat) := @PRESLOTS@
+def returnSlots : List (Nat × Nat) := @RETSLOTS@
+def slots := preSlots ++ returnSlots
+def offsets := slots.map Prod.snd
+def frameSize : BitVec 64 := @SIZE@#64
+
+def loads (sp : BitVec 64) (c : Config) := offsets.map (fun off => read8 c.σ.mem (sp + BitVec.ofNat 64 off).toNat)
+def suffixLoads (sp : BitVec 64) (c : Config) := returnSlots.map (fun cell => read8 c.σ.mem (sp + BitVec.ofNat 64 cell.2).toNat)
+def afterPre (sp value target : BitVec 64) (c : Config) : GRegs :=
+  preSlots.reverse.map (fun cell => (cell.1,word c (sp + BitVec.ofNat 64 cell.2).toNat)) ++ regs sp value target
+def restored (sp : BitVec 64) (c : Config) : GRegs :=
+  (2,sp + frameSize) :: slots.reverse.map (fun cell => (cell.1,word c (sp + BitVec.ofNat 64 cell.2).toNat))
+def returnWord (sp : BitVec 64) (c : Config) := word c (sp + @RAOFFSET@#64).toNat
+def effect (value target : BitVec 64) : List WEntry := [(target.toNat,8,value)]
+
+theorem code_facts {mem : Std.ExtHashMap Nat (BitVec 8)} (hc : Code.Caml_oldify_oneLoaded mem) : ChainCode mem blocks := by
+  intro b hb
+  simp only [blocks,List.mem_cons,List.not_mem_nil,or_false] at hb
+  rcases hb with rfl | rfl
+  all_goals constructor
+  all_goals simp only [preBlock,returnBlock,@PRE@,@RETURN@,List.getD_cons_zero,CodeFacts]
+  all_goals chain_facts hc with "Vsa.Sim.Code.caml_oldify_one_at_"
+
+theorem chain_ok : ChainOK pc [2,8,9] blocks := by decide
+
+theorem pre_regs (sp value target : BitVec 64) (c : Config) :
+    runGM preBlock.body (regs sp value target) (loads sp c) = afterPre sp value target c := by
+  simp [preBlock,@PRE@,regs,loads,offsets,slots,preSlots,returnSlots,afterPre,
+    runGM,stepGM,stepLdsM,wvalM,srcVal,lookupG,eraseG,mkLine,decodeM,read8_value,word,
+    Functions.sign_extend,Sail.BitVec.signExtend]
+
+theorem pre_loads (sp : BitVec 64) (c : Config) : ldsRunM preBlock.body (loads sp c) = suffixLoads sp c := rfl
+
+theorem pre_log (sp value target : BitVec 64) (c : Config) :
+    wlogM preBlock.body (regs sp value target) (loads sp c) = [] := rfl
+
+theorem return_regs (sp value target : BitVec 64) (c : Config) :
+    runGM returnBlock.body (afterPre sp value target c) (suffixLoads sp c) = restored sp c := by
+  simp [returnBlock,@RETURN@,afterPre,regs,suffixLoads,restored,slots,preSlots,returnSlots,frameSize,
+    runGM,stepGM,stepLdsM,wvalM,srcVal,lookupG,eraseG,mkLine,decodeM,read8_value,word,
+    Functions.sign_extend,Sail.BitVec.signExtend]
+
+theorem return_log (sp value target : BitVec 64) (c : Config) :
+    wlogM returnBlock.body (afterPre sp value target c) (suffixLoads sp c) = effect value target := by
+  simp [returnBlock,@RETURN@,afterPre,regs,suffixLoads,effect,preSlots,
+    wlogM,wentryM,widthOfM,stepGM,stepLdsM,wvalM,eaddrM,srcVal,lookupG,eraseG,mkLine,decodeM,
+    Functions.sign_extend,Sail.BitVec.signExtend]
+
+theorem writes (sp value target : BitVec 64) (c : Config) :
+    (evalBlocks blocks (SegEvalState.init (regs sp value target) (loads sp c))).log = effect value target := by
+  simp only [blocks,evalBlocks,evalBlock,SegEvalState.init,pre_regs,pre_log,pre_loads,return_log,List.nil_append]
+
+theorem registers (sp value target : BitVec 64) (c : Config) :
+    (evalBlocks blocks (SegEvalState.init (regs sp value target) (loads sp c))).regs = restored sp c := by
+  simp only [blocks,evalBlocks,evalBlock,SegEvalState.init,pre_regs,pre_loads,return_regs]
+
+theorem return_lookup (sp : BitVec 64) (c : Config) : srcVal 1 (restored sp c) = returnWord sp c := rfl
+
+theorem control (sp value target : BitVec 64) (c : Config) (aligned : (returnWord sp c).toNat % 4 = 0) :
+    TermFactsO (runGM returnBlock.body (afterPre sp value target c) (suffixLoads sp c)) returnBlock.term := by
+  rw [return_regs]
+  exact return_facts _ rfl rfl rfl (return_lookup sp c) aligned
+
+theorem endpoint (sp value target : BitVec 64) (c : Config) (aligned : (returnWord sp c).toNat % 4 = 0) :
+    evalBlocksPC pc (SegEvalState.init (regs sp value target) (loads sp c)) blocks = returnWord sp c := by
+  simp only [blocks,evalBlocksPC,SegEvalState.init,chainEndPC,evalBlock,pre_regs,pre_loads]
+  change Sail.BitVec.update (srcVal 1 (runGM returnBlock.body (afterPre sp value target c) (suffixLoads sp c)) + 0#64) 0 0#1 = _
+  rw [return_regs,return_lookup]
+  exact ret_tgt _ aligned
+
+theorem pre_access (sp value target : BitVec 64) (c : Config)
+    (windows : ∀ off ∈ offsets, ReadWindow (sp + BitVec.ofNat 64 off) 8) :
+    AccessPlan c.σ.mem (regs sp value target) (loads sp c) preBlock.body := by
+  simp only [preBlock,@PRE@,List.getD_cons_zero,AccessPlan]
+  chain_facts True.intro
+@PREACCESS@
+
+theorem return_access (sp value target : BitVec 64) (c : Config)
+    (windows : ∀ off ∈ offsets, ReadWindow (sp + BitVec.ofNat 64 off) 8)
+    (destination : WriteWindow target 8)
+    (outside : ∀ cell ∈ returnSlots, OutLRange (effect value target) (sp + BitVec.ofNat 64 cell.2).toNat 8) :
+    AccessPlan c.σ.mem (afterPre sp value target c) (suffixLoads sp c) returnBlock.body := by
+  simp only [returnBlock,@RETURN@,List.getD_cons_zero,AccessPlan]
+  chain_facts True.intro
+  · apply destination.sd rfl
+    simp [afterPre,preSlots,regs,eaddrM,mkLine,decodeM,srcVal,lookupG,Functions.sign_extend,Sail.BitVec.signExtend]
+@RETACCESS@
+
+theorem written : ∀ n ∈ wrChain blocks, n ∈ @WRITTEN@ := by decide
+
+end OCaml.Vm.Gc.StoreReturn
+"""
 
 CHILD_CLASSIFY_TEMPLATE = """import OCaml.Vm.Gc.Generated.OldifyOne
 import OCaml.Vm.Gc.ChainPlan

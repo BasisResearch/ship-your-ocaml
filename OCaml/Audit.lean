@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Gc.StoreReturn
 import OCaml.Vm.Gc.SingleFieldClassify
 import OCaml.Vm.Gc.SingleField
 import OCaml.Vm.Gc.FreshLargeHeader
@@ -3593,3 +3594,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 #print axioms OCaml.Vm.Gc.ChildClassify.classify
 #print axioms OCaml.Vm.Gc.SingleField.prepare_classify
+
+#print axioms OCaml.Vm.Gc.StoreReturn.access
+#print axioms OCaml.Vm.Gc.StoreReturn.finish

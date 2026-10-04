@@ -1,5 +1,21 @@
 # Lane a6-gc
 
+## Oldify destination store and native return (2026-10-04)
+
+- `StoreReturn.finish` proves the actual restore/store/return path reached
+  by immediate single-field children. It retains the destination value,
+  exact singleton write log, restored native registers and return PC.
+- `Generated/StoreReturn.lean` derives both restore blocks, slot offsets
+  and stack adjustment from the ELF. Access uses total reads; explicit
+  destination/stack separation protects the three loads after the store.
+- Targeted build passes (601 jobs); discipline and abstraction gates pass.
+  Full Audit passes (3359 jobs), with only permitted axioms. Child classification landed
+  as `33e020e`.
+- Next: compose this return with single-field forwarding/classification
+  and the fresh allocator routes. Even-child nursery continuation, other
+  object/allocator routes, ownership suppliers, collector closure, G2 and
+  the ocamlc live-word budget remain open.
+
 ## Both single-field child tag branches (2026-10-04)
 
 - `ChildClassify.classify` executes both actual child-tag branches and
