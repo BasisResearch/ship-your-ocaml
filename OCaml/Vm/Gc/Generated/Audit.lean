@@ -11,6 +11,7 @@ import OCaml.Vm.Gc.Generated.Immediate
 import OCaml.Vm.Gc.Generated.MopupControl
 import OCaml.Vm.Gc.Generated.MopupPop
 import OCaml.Vm.Gc.Generated.Enqueue
+import OCaml.Vm.Gc.Generated.SingleField
 import OCaml.Vm.Gc.Generated.FieldCopy
 import OCaml.Vm.Gc.Generated.Young
 import OCaml.Vm.Gc.Generated.Forwarded
@@ -1198,6 +1199,14 @@ private def gcAuditNames : Array Name := #[
   ``OCaml.Vm.Gc.Enqueue.run,
   ``OCaml.Vm.Gc.Enqueue.endpoint,
   ``OCaml.Vm.Gc.Enqueue.written,
+  ``OCaml.Vm.Gc.SingleField.blocks_eq,
+  ``OCaml.Vm.Gc.SingleField.body_eq,
+  ``OCaml.Vm.Gc.SingleField.code_facts,
+  ``OCaml.Vm.Gc.SingleField.chain_ok,
+  ``OCaml.Vm.Gc.SingleField.registers,
+  ``OCaml.Vm.Gc.SingleField.writes,
+  ``OCaml.Vm.Gc.SingleField.endpoint,
+  ``OCaml.Vm.Gc.SingleField.written,
   ``OCaml.Vm.Gc.Forwarded.chain_ok,
   ``OCaml.Vm.Gc.Forwarded.code_facts,
   ``OCaml.Vm.Gc.Forwarded.writes,

@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Gc.SingleField
 import OCaml.Vm.Gc.FreshLargeHeader
 import OCaml.Vm.Gc.FreshLargeEnqueued
 import OCaml.Vm.Gc.FreshLargeAllocated
@@ -3553,3 +3554,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Fresh.LargeEnqueued.header
 #print axioms OCaml.Vm.Gc.Fresh.LargeAllocationConditions.header_address
 #print axioms OCaml.Vm.Gc.Fresh.LargeEnqueued.header_nat
+
+#print axioms OCaml.Vm.Gc.SingleField.access
+#print axioms OCaml.Vm.Gc.SingleField.prepare

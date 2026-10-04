@@ -15,10 +15,12 @@ def enqueueLoads (q : PendingCopy) (root : BitVec 64) (c : Config) : List (List 
    read8 (writeLog c.σ.mem (prefixLog q.source q.target root)) Layout.sym_oldify_todo_list]
 
 /-- Allocator and nursery geometry supply these concrete write windows. -/
-structure EnqueueWindows (q : PendingCopy) (root : BitVec 64) : Prop where
+structure PrefixWindows (q : PendingCopy) (root : BitVec 64) : Prop where
   rootSlot : WriteWindow root 8
   header : WriteWindow (q.source - 8#64) 8
   source : WriteWindow q.source 8
+
+structure EnqueueWindows (q : PendingCopy) (root : BitVec 64) : Prop extends PrefixWindows q root where
   first : WriteWindow q.target 8
   next : WriteWindow (q.target + 8#64) 8
 
@@ -30,7 +32,7 @@ macro "enqueue_address" : tactic => `(tactic|
     Sail.BitVec.signExtend, imm20Of, Layout.sym_oldify_todo_list])
 
 theorem enqueue_prefix_access (q : PendingCopy) (root size : BitVec 64) (c : Config)
-    (windows : EnqueueWindows q root) :
+    (windows : PrefixWindows q root) :
     AccessPlan c.σ.mem (Enqueue.regs q.source q.target root size) (enqueueLoads q root c)
       prefixBlock.body := by
   simp only [AccessPlan, prefixBlock, caml_oldify_oneX9ba4TSeg, List.getD_cons_zero]
@@ -92,7 +94,7 @@ theorem enqueue_access (q : PendingCopy) (root size : BitVec 64) (c : Config)
     (windows : EnqueueWindows q root) (large : 1 < size.toNat) :
     ChainAccess c.σ.mem (Enqueue.regs q.source q.target root size) (enqueueLoads q root c) blocks := by
   rw [blocks_eq]
-  apply ChainAccess.cons ⟨enqueue_prefix_access q root size c windows,
+  apply ChainAccess.cons ⟨enqueue_prefix_access q root size c windows.toPrefixWindows,
     enqueue_prefix_control q root size c large⟩
   rw [prefix_log, prefix_regs]
   change ChainAccess (writeLog c.σ.mem (prefixLog q.source q.target root))

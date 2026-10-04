@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Single-field forwarding prefix (2026-10-04)
+
+- `SingleField.prepare` proves the actual size-one branch after root
+  update, source-header zeroing and source forwarding-pointer store,
+  reaching the child tagged-value test. Its post retains the captured
+  child value, exact prefix log, code and machine frame.
+- `scripts/gen_gc_rows.py` emits `Generated/SingleField.lean` from the
+  pinned ELF. It reuses the queue prefix body certificates.
+  `WorkQueue.PrefixWindows` factors the three required write windows
+  from the queue-only target-field windows.
+- Targeted build passes (618 jobs), with exact-size/large queue regressions
+  also checked; discipline and abstraction gates pass. Full Audit passes
+  (3347 jobs), with only permitted axioms. Large-route typed headers landed as
+  `7c2457a`.
+- Next: child tagged-value classification and tail continuation for the
+  single-field route. Other object/allocator routes, ownership suppliers,
+  collector closure, G2 and the ocamlc live-word budget remain open.
+
 ## Typed headers after the large-block fresh route (2026-10-04)
 
 - `FreshLargeHeader.lean:LargeEnqueued.header` proves original size/tag
