@@ -2308,13 +2308,35 @@ state/frame facts 0.866s, complete composition 1.1s. Runtime readiness and
 image separation remain named scalar premises. Composition with longjmp
 and represented primitive raising outcomes is next.
 
+Quiet re-entry landed as `d873f73`, full gate passing after two push races.
+
+`longjmp_reentry`, `raise_reentry_restore`, `reentry_handler` and
+`longjmp_caught` now compose the complete native nonlocal return through
+quiet interpreter re-entry and the caught handler, ending in `Running`.
+`ReentryMemory` separates reusable scalar readiness from entry registers;
+`ReentryControl` shares the final observations with direct/combined native
+frames. `CaughtReentryReady` names represented exception memory, native
+boundary words, footprint separation and runtime stability. The bridge
+uses the existing payload/write-log and handler abstractions. Capped builds
+pass at default budgets: longjmp composition 0.850s, represented restoration
+0.807s, caught-handler composition 0.835s.
+
+The current F1 primitive table has **no raising or callback outcomes**:
+`primF1_outcome` and `primF1_not_raise` (`PrimitiveF1Outcomes.lean`) check
+this for every name, argument list, heap and world (11s capped build).
+Unsupported outcomes remain outside successful Good executions. F1 C_CALL
+therefore needs the existing normal-return/exit adapters; raising primitive
+composition belongs to later fragments. The nonlocal bridge is needed now
+for DIVINT/MODINT zero-divisor runtime paths. This corrects the earlier
+open-work list; no primitive body or semantic rule was changed.
+
 ## Open / next
 
-Immediate next: compose the checked longjmp and quiet interpreter re-entry
-summaries, then represented C_CALL raising continuations. Consume the
-remaining caml_do_exit summary when supplied. Continue the
-uncaught semantic continuation/backtrace paths, primitive
-`.raise` C_CALL outcomes and a1-prims terminal summaries, and major-allocation constructor paths.
+Immediate next: DIVINT/MODINT zero-divisor setup and native raising helpers,
+using `longjmp_caught`. Consume the remaining caml_do_exit/primitive terminal
+summaries when supplied. Continue uncaught semantic continuation/backtrace
+paths and major-allocation constructor paths. Later-fragment C_CALL raising
+outcomes can reuse the checked nonlocal bridge.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
 `GcSafe P` premise is already threaded through ArmSim and the headline.
 

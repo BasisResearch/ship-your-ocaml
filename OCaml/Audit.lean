@@ -3006,6 +3006,18 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.reentry_read_outside
 #print axioms OCaml.Vm.Sim.reentry_quiet
 
+-- Nonlocal restoration through the represented caught handler.
+#print axioms OCaml.Vm.Sim.ReentryMemory.frame
+#print axioms OCaml.Vm.Sim.ReentryControl.before_read
+#print axioms OCaml.Vm.Sim.longjmpValue_nonzero
+#print axioms OCaml.Vm.Sim.longjmp_reentry
+#print axioms OCaml.Vm.Sim.raise_reentry_restore
+#print axioms OCaml.Vm.Sim.TrapWriteOk.frame_observations
+#print axioms OCaml.Vm.Sim.reentry_handler
+#print axioms OCaml.Vm.Sim.longjmp_caught
+#print axioms OCaml.Vm.Sim.primF1_outcome
+#print axioms OCaml.Vm.Sim.primF1_not_raise
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

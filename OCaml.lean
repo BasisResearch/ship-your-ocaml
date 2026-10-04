@@ -562,3 +562,5 @@ import OCaml.Vm.Sim.LongjmpStructure
 import OCaml.Vm.Sim.LongjmpImage
 import OCaml.Vm.Sim.Longjmp
 import OCaml.Vm.Sim.ReentryQuiet
+import OCaml.Vm.Sim.ReentryHandler
+import OCaml.Vm.Sim.PrimitiveF1Outcomes

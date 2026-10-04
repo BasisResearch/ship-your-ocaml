@@ -54,8 +54,8 @@ theorem reentry_quiet {nativeSp : Nat} {result : BitVec 64} {c : Config}
     (h.reads Layout.off_trapsp (by decide)).lower (h.reads Layout.off_trapsp (by decide)).upper (h.reads Layout.off_trapsp (by decide)).htif (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trapsp)) (afterRead Layout.off_trapsp (by decide)).symm c bp
   obtain ⟨_, memory, frame⟩ := post.extra
   have writes := memory.trans memoryLog
-  refine ⟨count, after, run, post.good, image_of_writeLog h.image h.imageOutside writes,
-    post.tick, post.pcAt, ?_, ?_, ?_, ?_, frame.frame Register.x2 (by decide), writes,
+  refine ⟨count, after, run, ⟨post.good, image_of_writeLog h.image h.imageOutside writes,
+    post.tick, post.pcAt, ?_, ?_, ?_, ?_, (frame.frame Register.x2 (by decide)).trans h.stack, writes, frame.out⟩,
     frame.widenChecked (by decide)⟩
   · exact PinsHold.get post.pins ⟨5, by simp⟩
   · exact PinsHold.get post.pins ⟨0, by simp⟩

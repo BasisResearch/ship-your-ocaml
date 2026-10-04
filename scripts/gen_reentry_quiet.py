@@ -71,8 +71,8 @@ theorem reentry_quiet {{nativeSp : Nat}} {{result : BitVec 64}} {{c : Config}}
     {read_args('trapsp', True)} c bp
   obtain ⟨_, memory, frame⟩ := post.extra
   have writes := memory.trans memoryLog
-  refine ⟨count, after, run, post.good, image_of_writeLog h.image h.imageOutside writes,
-    post.tick, post.pcAt, ?_, ?_, ?_, ?_, frame.frame Register.x2 (by decide), writes,
+  refine ⟨count, after, run, ⟨post.good, image_of_writeLog h.image h.imageOutside writes,
+    post.tick, post.pcAt, ?_, ?_, ?_, ?_, (frame.frame Register.x2 (by decide)).trans h.stack, writes, frame.out⟩,
     frame.widenChecked (by decide)⟩
   · exact PinsHold.get post.pins ⟨{pins['x15']}, by simp⟩
   · exact PinsHold.get post.pins ⟨{pins['x14']}, by simp⟩
