@@ -29,6 +29,21 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'SDIV_POS_POS': ('SdivPosPos', ['branch_nottaken', 'branch_nottaken']),
+    'SDIV_POS_NEG': ('SdivPosNeg', ['branch_nottaken', 'branch_taken', 'sub', 'alu_addi', 'jal']),
+    'SDIV_NEG_POS': ('SdivNegPos', ['branch_taken', 'sub', 'branch_taken', 'alu_addi', 'jal']),
+    'SDIV_NEG_NEG': ('SdivNegNeg', ['branch_taken', 'sub', 'branch_nottaken', 'sub', 'j']),
+    'SDIV_NEGATE': ('SdivNegate', ['sub', 'jr']),
+    'SMOD_POS_POS': ('SmodPosPos', ['alu_addi', 'branch_nottaken', 'branch_nottaken', 'jal']),
+    'SMOD_POS_NEG': ('SmodPosNeg', ['alu_addi', 'branch_taken', 'sub', 'branch_taken', 'jal']),
+    'SMOD_NEG_POS': ('SmodNegPos', ['alu_addi', 'branch_nottaken', 'branch_taken', 'sub', 'jal']),
+    'SMOD_NEG_NEG': ('SmodNegNeg', ['alu_addi', 'branch_taken', 'sub', 'branch_nottaken', 'sub', 'jal']),
+    'SMOD_POS_RETURN': ('SmodPosReturn', ['alu_addi', 'jr']),
+    'SMOD_NEG_RETURN': ('SmodNegReturn', ['sub', 'jr']),
+    'DIVINT_PREFIX': ('DivintPrefix', ['ld_tot', 'srai', 'branch_nottaken', 'srai', 'jal']),
+    'DIVINT_SUFFIX': ('DivintSuffix', ['slli', 'alu_addi', 'alu_addi', 'alu_addi', 'j']),
+    'MODINT_PREFIX': ('ModintPrefix', ['ld_tot', 'srai', 'branch_taken', 'srai', 'jal']),
+    'MODINT_SUFFIX': ('ModintSuffix', ['slli', 'alu_addi', 'alu_addi', 'alu_addi', 'j']),
     'CLOSUREREC_PREFIX_MORE': ('ClosurerecPrefixMore', ['lw_tot', 'lw_tot', 'alu_addi', 'slliw', 'addw', 'addiw', 'alu_addi', 'alu_add', 'branch_nottaken', 'sd', 'alu_addi', 'alu_addi', 'branch_taken']),
     'CLOSUREREC_PREFIX_ZERO': ('ClosurerecPrefixZero', ['lw_tot', 'lw_tot', 'alu_addi', 'slliw', 'addw', 'addiw', 'alu_addi', 'alu_add', 'branch_taken', 'alu_addi', 'alu_addi', 'branch_taken']),
     'CLOSUREREC_RESERVE': ('ClosurerecReserve', ['auipc', 'alu_addi', 'ld_tot', 'slli', 'alu_addi', 'ld_tot', 'sub', 'ld_tot', 'alu_add', 'sd', 'branch_taken']),
@@ -177,12 +192,27 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'CLOSUREREC_PREFIX_MORE', 'CLOSUREREC_PREFIX_ZERO', 'CLOSUREREC_RESERVE', 'CLOSUREREC_INIT_MORE', 'CLOSUREREC_INIT_ZERO', 'CLOSUREREC_COPY_MORE', 'CLOSUREREC_COPY_LAST', 'CLOSUREREC_FIRST_ONE', 'CLOSUREREC_FIRST_MORE', 'CLOSUREREC_INFIX_MORE', 'CLOSUREREC_INFIX_LAST', 'CLOSUREREC_STACK', 'CLOSUREREC_SUFFIX', 'CLOSURE_SUFFIX', 'CLOSURE_COPY_LAST', 'CLOSURE_COPY_MORE', 'CLOSURE_INIT_ZERO', 'CLOSURE_INIT_MORE', 'CLOSURE_RESERVE', 'CLOSURE_PREFIX_ZERO', 'CLOSURE_PREFIX_MORE', 'MAKEBLOCK_ONE_SUFFIX', 'MAKEBLOCK_SUFFIX', 'MAKEBLOCK_INIT_ONE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_COPY_MORE', 'MAKEBLOCK_COPY_LAST', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'DIVINT_PREFIX', 'MODINT_PREFIX', 'CLOSUREREC_PREFIX_MORE', 'CLOSUREREC_PREFIX_ZERO', 'CLOSUREREC_RESERVE', 'CLOSUREREC_INIT_MORE', 'CLOSUREREC_INIT_ZERO', 'CLOSUREREC_COPY_MORE', 'CLOSUREREC_COPY_LAST', 'CLOSUREREC_FIRST_ONE', 'CLOSUREREC_FIRST_MORE', 'CLOSUREREC_INFIX_MORE', 'CLOSUREREC_INFIX_LAST', 'CLOSUREREC_STACK', 'CLOSUREREC_SUFFIX', 'CLOSURE_SUFFIX', 'CLOSURE_COPY_LAST', 'CLOSURE_COPY_MORE', 'CLOSURE_INIT_ZERO', 'CLOSURE_INIT_MORE', 'CLOSURE_RESERVE', 'CLOSURE_PREFIX_ZERO', 'CLOSURE_PREFIX_MORE', 'MAKEBLOCK_ONE_SUFFIX', 'MAKEBLOCK_SUFFIX', 'MAKEBLOCK_INIT_ONE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_COPY_MORE', 'MAKEBLOCK_COPY_LAST', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 # Explicit loop cuts: entry, exit, and native branch decisions. These are text
 # instruction addresses; all runtime data addresses still come from Layout.
 CUTS = {
+    'SDIV_POS_POS': (0x80037298, 0x800372a0, [False, False]),
+    'SDIV_POS_NEG': (0x80037298, 0x800372a0, [False, True]),
+    'SDIV_NEG_POS': (0x80037298, 0x800372a0, [True, True]),
+    'SDIV_NEG_NEG': (0x80037298, 0x800372a0, [True, False]),
+    'SDIV_NEGATE': (0x80037314, None, []),
+    'SMOD_POS_POS': (0x8003731c, 0x800372a0, [False, False]),
+    'SMOD_POS_NEG': (0x8003731c, 0x800372a0, [True, True]),
+    'SMOD_NEG_POS': (0x8003731c, 0x800372a0, [False, True]),
+    'SMOD_NEG_NEG': (0x8003731c, 0x800372a0, [True, False]),
+    'SMOD_POS_RETURN': (0x8003732c, None, []),
+    'SMOD_NEG_RETURN': (0x80037344, None, []),
+    'DIVINT_PREFIX': (0x80002d10, 0x80037298, [False]),
+    'DIVINT_SUFFIX': (0x80002d24, 0x80001f5c, []),
+    'MODINT_PREFIX': (0x80002ce4, 0x8003731c, [True]),
+    'MODINT_SUFFIX': (0x80002cfc, 0x80001f5c, []),
     'CLOSUREREC_PREFIX_MORE': (0x80002864, 0x8000289c, [False, True]),
     'CLOSUREREC_PREFIX_ZERO': (0x80002864, 0x8000289c, [True, True]),
     'CLOSUREREC_RESERVE': (0x8000289c, 0x800028cc, [True]),
@@ -442,7 +472,9 @@ def outputs(family='CONST0'):
     lower = family.lower()
     text_base = sections((ROOT / 'c/ocamlrun-riscv-htif.elf').read_bytes())['.text'][0]
     census = json.loads((ROOT / 'results/census.json').read_text())['caml_interprete']
-    instructions = disasm(ROOT / 'c/ocamlrun-riscv-htif.elf')['caml_interprete']['insts']
+    functions = disasm(ROOT / 'c/ocamlrun-riscv-htif.elf')
+    instructions = ([ins for fn in functions.values() for ins in fn['insts']]
+                    if family.startswith(('SDIV_', 'SMOD_')) else functions['caml_interprete']['insts'])
     if family in CUTS:
         start, stop, decisions = CUTS[family]
         insts, rows = path_span(instructions, start, decisions, stop)
@@ -624,6 +656,18 @@ open LeanRV64DExecutable.Functions Sail
             library, 'Vsa.Sim.Code.__muldi3Loaded', 'Vsa.Sim.Code.__muldi3',
             [f'Vsa.Sim.Code.__muldi3Chunk{i}' for i in range((len(library)+code.CHUNK-1)//code.CHUNK)],
             'muldi3_loaded', text_base)
+
+    if family == 'DIVINT_PREFIX':
+        cuts = [key for key in FAMILIES if key.startswith(('SDIV_', 'SMOD_', 'DIVINT_', 'MODINT_'))]
+        result[ROOT / 'OCaml/Vm/Sim/SignedDivisionCuts.lean'] = '\n'.join(
+            [f'import OCaml.Vm.Sim.{FAMILIES[key][0]}{kind}' for key in cuts for kind in ('Segment', 'Pins')]
+            + ['', '/-! GENERATED by scripts/gen_arm_pilot.py. Signed division native boundaries. -/', ''])
+        symbol = '__hidden___udivdi3'
+        library = functions[symbol]['insts']
+        result[ROOT / 'OCaml/Vm/Sim/Udivdi3Pins.lean'] = image_projection(
+            library, f'Vsa.Sim.Code.{symbol}Loaded', f'Vsa.Sim.Code.{symbol}',
+            [f'Vsa.Sim.Code.{symbol}Chunk{i}' for i in range((len(library)+code.CHUNK-1)//code.CHUNK)],
+            'udivdi3_loaded', text_base)
 
     return result
 

@@ -1,0 +1,57 @@
+{
+  "theorem": "tr_smod_neg_return",
+  "doc": "SMOD_NEG_RETURN arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.SmodNegReturnSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v11 v5 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(htgt_80037348 : (BitVec.update (v5 + sign_extend (m := 64) (0x000#12)) 0 0#1).toNat % 4 = 0)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlSmodNegReturnLoaded",
+  "pins": [
+    {
+      "reg": "x11",
+      "val": "v11",
+      "hyp": "hv11"
+    },
+    {
+      "reg": "x5",
+      "val": "v5",
+      "hyp": "hv5"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80037344",
+      "site": "site_80037344_smod_neg_return",
+      "class": "alu",
+      "asm": "neg a0,a1",
+      "rd": "x10",
+      "rd_val": "((0#64) - v11)",
+      "raw_val": "((0#64) - v11)",
+      "call": "$vmi $v:x11 $hG $hpc $hmi $pin:x11 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80037348",
+      "site": "site_80037348_smod_neg_return",
+      "class": "jr",
+      "asm": "jr t0",
+      "pc_val": "(BitVec.update (v5 + sign_extend (m := 64) (0x000#12)) 0 0#1)",
+      "call": "$vmi $v:x5 $hG $hpc $hmi $pin:x5 $hmem rfl htgt_80037348 $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80037344",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

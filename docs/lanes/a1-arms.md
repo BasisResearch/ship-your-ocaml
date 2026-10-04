@@ -1990,9 +1990,28 @@ includes F2 opcodes; this is not a count out of F1's 134 or a completed
 separation and runtime preservation remain concrete premises. Major allocation
 and GC paths remain open. The complete object layout landed as `b2d8d2a`.
 
+## Signed division native boundaries and unsigned core
+
+`SignedDivisionCuts.lean` imports 15 generated boundaries: all four sign
+cases of each libgcc signed wrapper, quotient/remainder return fixups, and
+DIVINT/MODINT nonzero caller prefixes/suffixes. The existing arm generator
+now handles cross-symbol library cuts; all bytes still come from the pinned
+ELF. Segments check in 0.98–1.3 s; image projections check in under 1 s.
+
+`udivdi3_summary` in `Udivdi3.lean` consumes the existing total
+`Vsa.Sim.udivdi3_spec` and exposes quotient, remainder, exact memory/output,
+complete register frame and initialized scratch registers through named
+structures. `BinaryLibInput` shares the operand/scratch interface with
+MULINT, whose complete represented arm rebuilds. All new headlines are
+audited and generator drift checks cover the new artifacts. The signed
+whole-function summaries and represented DIVINT/MODINT arms remain open.
+CLOSUREREC landed as `3d99262`; coverage remains 127 conditional bridges.
+
 ## Open / next
 
-Continue F1's remaining families: signed DIVINT/MODINT, barrier-backed
+Immediate next: compose the generated signed-wrapper cuts with
+`udivdi3_summary`, prove the sign/result encoding, and finish nonzero
+DIVINT/MODINT arms. Then continue F1's barrier-backed
 SETGLOBAL/SETFIELD mutation, RAISE/RERAISE/RAISE_NOTRACE/STOP, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved

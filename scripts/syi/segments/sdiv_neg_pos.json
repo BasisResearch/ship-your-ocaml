@@ -1,0 +1,95 @@
+{
+  "theorem": "tr_sdiv_neg_pos",
+  "doc": "SDIV_NEG_POS arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.SdivNegPosSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v10 v11 v1 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hguard_80037298 : zopz0zI_s v10 (0#64) = true)",
+    "(hguard_800372fc : zopz0zI_s (0#64) v11 = true)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlSdivNegPosLoaded",
+  "pins": [
+    {
+      "reg": "x10",
+      "val": "v10",
+      "hyp": "hv10"
+    },
+    {
+      "reg": "x11",
+      "val": "v11",
+      "hyp": "hv11"
+    },
+    {
+      "reg": "x1",
+      "val": "v1",
+      "hyp": "hv1"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80037298",
+      "site": "site_80037298_taken_sdiv_neg_pos",
+      "class": "btaken",
+      "asm": "bltz a0,800372f8 <__umoddi3+0x10>",
+      "imm": "0x0060#13",
+      "target": "0x800372f8",
+      "pre_lines": [],
+      "call": "$vmi $v:x10 $hG $hpc $hmi $pin:x10 $hmem rfl hguard_80037298 $hi"
+    },
+    {
+      "addr": "0x800372f8",
+      "site": "site_800372f8_sdiv_neg_pos",
+      "class": "alu",
+      "asm": "neg a0,a0",
+      "rd": "x10",
+      "rd_val": "((0#64) - v10)",
+      "raw_val": "((0#64) - v10)",
+      "call": "$vmi $v:x10 $hG $hpc $hmi $pin:x10 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800372fc",
+      "site": "site_800372fc_taken_sdiv_neg_pos",
+      "class": "btaken",
+      "asm": "bgtz a1,8003730c <__umoddi3+0x24>",
+      "imm": "0x0010#13",
+      "target": "0x8003730c",
+      "pre_lines": [],
+      "call": "$vmi $v:x11 $hG $hpc $hmi $pin:x11 $hmem rfl hguard_800372fc $hi"
+    },
+    {
+      "addr": "0x8003730c",
+      "site": "site_8003730c_sdiv_neg_pos",
+      "class": "alu",
+      "asm": "mv t0,ra",
+      "rd": "x5",
+      "rd_val": "(v1 + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "(v1 + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $v:x1 $hG $hpc $hmi $pin:x1 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80037310",
+      "site": "site_80037310_sdiv_neg_pos",
+      "class": "jal",
+      "asm": "jal 800372a0 <__hidden___udivdi3>",
+      "imm": "0x1fff90#21",
+      "target": "0x800372a0",
+      "rd": "x1",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80037298",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

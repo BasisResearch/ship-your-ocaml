@@ -2705,6 +2705,41 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closurerec_arm
 #print axioms OCaml.Vm.Sim.closurerec_step_arm
 
+-- Generated signed division boundaries and reused unsigned core.
+#print axioms Vsa.Sim.tr_sdiv_pos_pos
+#print axioms OCaml.Vm.Sim.sdiv_pos_pos_loaded
+#print axioms Vsa.Sim.tr_sdiv_pos_neg
+#print axioms OCaml.Vm.Sim.sdiv_pos_neg_loaded
+#print axioms Vsa.Sim.tr_sdiv_neg_pos
+#print axioms OCaml.Vm.Sim.sdiv_neg_pos_loaded
+#print axioms Vsa.Sim.tr_sdiv_neg_neg
+#print axioms OCaml.Vm.Sim.sdiv_neg_neg_loaded
+#print axioms Vsa.Sim.tr_sdiv_negate
+#print axioms OCaml.Vm.Sim.sdiv_negate_loaded
+#print axioms Vsa.Sim.tr_smod_pos_pos
+#print axioms OCaml.Vm.Sim.smod_pos_pos_loaded
+#print axioms Vsa.Sim.tr_smod_pos_neg
+#print axioms OCaml.Vm.Sim.smod_pos_neg_loaded
+#print axioms Vsa.Sim.tr_smod_neg_pos
+#print axioms OCaml.Vm.Sim.smod_neg_pos_loaded
+#print axioms Vsa.Sim.tr_smod_neg_neg
+#print axioms OCaml.Vm.Sim.smod_neg_neg_loaded
+#print axioms Vsa.Sim.tr_smod_pos_return
+#print axioms OCaml.Vm.Sim.smod_pos_return_loaded
+#print axioms Vsa.Sim.tr_smod_neg_return
+#print axioms OCaml.Vm.Sim.smod_neg_return_loaded
+#print axioms Vsa.Sim.tr_divint_prefix
+#print axioms OCaml.Vm.Sim.divint_prefix_loaded
+#print axioms Vsa.Sim.tr_divint_suffix
+#print axioms OCaml.Vm.Sim.divint_suffix_loaded
+#print axioms Vsa.Sim.tr_modint_prefix
+#print axioms OCaml.Vm.Sim.modint_prefix_loaded
+#print axioms Vsa.Sim.tr_modint_suffix
+#print axioms OCaml.Vm.Sim.modint_suffix_loaded
+#print axioms OCaml.Vm.Sim.udivdi3_loaded
+#print axioms OCaml.Vm.Sim.udivdi3_post_named
+#print axioms OCaml.Vm.Sim.udivdi3_summary
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

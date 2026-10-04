@@ -36,7 +36,7 @@ structure MulintReturn (before : Config) (pl : Place) (pc sp : Nat)
 theorem mulint_callee {before : Config} {pl : Place} {pc sp : Nat} {m n : BitVec 63} :
     Vsa.Logic.Triple (MulintCall before pl pc sp m n) (MulintReturn before pl pc sp m n) := by
   intro c h
-  obtain ⟨after, run, post⟩ := (muldi3_summary h.toMuldi3Input).run c ⟨h.calleePC, rfl⟩
+  obtain ⟨after, run, post⟩ := (muldi3_summary h.toBinaryLibInput).run c ⟨h.calleePC, rfl⟩
   refine ⟨after, run, post.toLeafInput, ?_, post.pc, post.result⟩
   exact ⟨(post.frame Register.x23 (by decide)).trans h.nextCode,
     (post.frame Register.x9 (by decide)).trans h.stack,

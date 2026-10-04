@@ -1,4 +1,4 @@
-import OCaml.Vm.Primitives.Leaf
+import OCaml.Vm.Sim.BinaryLibInput
 import OCaml.Vm.Sim.Muldi3Pins
 import Vsa.Sim.Muldi3Spec
 
@@ -7,14 +7,8 @@ set_option autoImplicit false
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable
 open OCaml.Vm.Primitives
 
-/-- Library entry obligations. Startup register initialization supplies the
-scratch-register witnesses; the caller supplies operands and return address. -/
-structure Muldi3Input (x y ra : BitVec 64) (c : Config) : Prop
-    extends LeafInput ra c where
-  left : gpr c 10 = some x
-  right : gpr c 11 = some y
-  scratch2 : ∃ v, gpr c 12 = some v
-  scratch3 : ∃ v, gpr c 13 = some v
+/-- Multiplication uses the shared binary-library register interface. -/
+abbrev Muldi3Input := BinaryLibInput
 
 /-- Named return view of the landed libgcc contract, with its complete frame. -/
 structure Muldi3Post (before : Config) (ra value : BitVec 64) (after : Config) : Prop
