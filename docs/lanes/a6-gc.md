@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Both single-field child tag branches (2026-10-04)
+
+- `ChildClassify.classify` executes both actual child-tag branches and
+  the immediate branch's jump. `SingleField.prepare_classify` composes
+  forwarding and classification, retaining the captured child, new
+  destination, exact three-store log, code and native frame.
+- Generated branch selection is determined by the child word. Even
+  children reach nursery-range tests; odd children reach the native
+  store/return continuation. No child-run premise is assumed.
+- Targeted build passes (621 jobs); discipline and abstraction gates pass.
+  Full Audit passes (3350 jobs), with only permitted axioms. Single-field prefix landed
+  as `6e7be63`.
+- Next: store/return for immediate children, then even-child nursery
+  continuation and composition with the fresh allocator routes. Other
+  object/allocator routes, ownership suppliers, collector closure, G2 and
+  the ocamlc live-word budget remain open.
+
 ## Single-field forwarding prefix (2026-10-04)
 
 - `SingleField.prepare` proves the actual size-one branch after root
