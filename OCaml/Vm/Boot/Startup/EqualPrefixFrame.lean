@@ -16,10 +16,10 @@ theorem EqualPrefix.same_mem {p q last byte} {before after : Config} (h : EqualP
   h.frame (fun _ _ => by rw [memory]) (fun _ _ => by rw [memory])
 
 /-- A stack-confined log preserves both string prefixes below its frame. -/
-theorem EqualPrefix.stack_log {p q last byte sp size log} {before after : Config} (h : EqualPrefix p q last byte before)
+theorem EqualPrefix.stack_log {p q last byte sp size log upper} {before after : Config} (h : EqualPrefix p q last byte before)
     (left : p.toNat + (last + 1) ≤ nativeFrameBase sp size)
     (right : q.toNat + (last + 1) ≤ nativeFrameBase sp size)
-    (inside : LogInW [⟨nativeFrameBase sp size, sp.toNat⟩] log)
+    (inside : LogInW [⟨nativeFrameBase sp size, upper⟩] log)
     (memory : after.σ.mem = writeLog before.σ.mem log) : EqualPrefix p q last byte after := by
   apply h.frame
   · intro k hk

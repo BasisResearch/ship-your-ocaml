@@ -4,8 +4,8 @@ namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
 /-- Native frame stores preserve every total read lying below the frame. -/
-theorem native_log_read_below {sp size log a n} (mem : Std.ExtHashMap Nat (BitVec 8))
-    (inside : LogInW [⟨nativeFrameBase sp size, sp.toNat⟩] log)
+theorem native_log_read_below {sp size log a n upper} (mem : Std.ExtHashMap Nat (BitVec 8))
+    (inside : LogInW [⟨nativeFrameBase sp size, upper⟩] log)
     (below : a + n ≤ nativeFrameBase sp size) :
     bytesT (writeLog mem log) a n = bytesT mem a n :=
   bytesT_writeLog_out mem (OCaml.Vm.Sim.outLRange_of_windows inside ⟨Or.inl below, trivial⟩)

@@ -2,6 +2,25 @@
 
 ## Round 2 status (2026-10-04)
 
+The complete successful search landed as `5fdd996`, full gate passed.
+`ParameterPresent.lean:parse_parameters_present_empty` now summarizes the
+complete native parser on the pinned environment's actual path: primary query,
+security checks, getenv, first-entry search and strncmp, empty-value branch,
+and restoring parser return. Its exact memory log, all written registers and
+original caller link are proved; `parameter_present_ready` preserves the full
+runtime/allocator contract. The composition checks in 1.3 seconds, without
+run evaluation. `getenv_present` and `secure_getenv_present` are reusable
+successful-lookup summaries with corresponding runtime-preservation adapters.
+
+Stack-log transport now permits an outer upper bound while retaining the same
+lower separation bound, so saved outer frames preserve the nested search's
+string/array observations. Original parser slots survive the full query log.
+
+Next: frame the initial embedded environment through reset/domain history and
+instantiate this complete parser summary. Actual closed reset reachability
+remains at parser entry; reset-to-cut/Loaded and Round 2 exit remain open.
+
+
 The successful-branch increment landed as `25067d7`, full gate passed.
 `FindPresent.lean:findenv_present` now summarizes the COMPLETE native search
 for a matching first environment entry: save/lock/name scan, the actual strncmp

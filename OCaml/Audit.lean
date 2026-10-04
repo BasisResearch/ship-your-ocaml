@@ -22,6 +22,9 @@ import OCaml.Vm.Boot.Startup.FindCount
 import OCaml.Vm.Boot.Startup.FindMatch
 import OCaml.Vm.Boot.Startup.FindFound
 import OCaml.Vm.Boot.Startup.FindFoundReturn
+import OCaml.Vm.Boot.Startup.ParameterPresentReady
+import OCaml.Vm.Boot.Startup.SecurePresentReady
+import OCaml.Vm.Boot.Startup.GetenvPresentReady
 import OCaml.Vm.Boot.Startup.FindPresent
 import OCaml.Vm.Boot.Startup.NativeWord32
 import OCaml.Vm.Boot.WhileMinEnvironment
@@ -3561,6 +3564,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.FindReturnSaved.found
 #print axioms OCaml.Vm.Boot.Startup.find_found_tail
 #print axioms OCaml.Vm.Boot.Startup.findenv_present
+#print axioms OCaml.Vm.Boot.Startup.getenv_present
+#print axioms OCaml.Vm.Boot.Startup.getenv_present_ready
+#print axioms OCaml.Vm.Boot.Startup.secure_getenv_present
+#print axioms OCaml.Vm.Boot.Startup.secure_present_ready
+#print axioms OCaml.Vm.Boot.Startup.parameter_present_query
+#print axioms OCaml.Vm.Boot.Startup.parse_parameters_present_empty
+#print axioms OCaml.Vm.Boot.Startup.parameter_present_ready
 #print axioms OCaml.Vm.Boot.Startup.NativeFrame.word32
 #print axioms OCaml.Vm.Boot.Startup.getenv_offset_window
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset

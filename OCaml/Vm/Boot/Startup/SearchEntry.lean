@@ -30,9 +30,9 @@ theorem SearchEntry.same_mem {sp env entry name count byte} {before after : Conf
   · exact h.equals
 
 /-- The search's save log preserves the environment word, equal prefixes and delimiter. -/
-theorem SearchEntry.stack_log {sp env entry name count byte log} {before after : Config}
+theorem SearchEntry.stack_log {sp env entry name count byte log upper} {before after : Config}
     (h : SearchEntry sp env entry name count byte before)
-    (inside : LogInW [⟨nativeFrameBase sp 80, sp.toNat⟩] log)
+    (inside : LogInW [⟨nativeFrameBase sp 80, upper⟩] log)
     (memory : after.σ.mem = writeLog before.σ.mem log) : SearchEntry sp env entry name count byte after := by
   refine ⟨h.frame, h.array, ?_, h.nonnull, h.envBelow, ?_, h.region, ?_,
     h.entryBelow, h.nameBelow, h.positive, h.small, h.unaligned⟩
