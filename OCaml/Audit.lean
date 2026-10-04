@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.SingleFieldBackEdge
 import OCaml.Vm.Gc.SingleFieldTable
+import OCaml.Vm.Sim.NonlocalAudit
 import OCaml.Vm.Gc.SingleFieldFreshLarge
 import OCaml.Vm.Gc.TailProgress
 import OCaml.Vm.Gc.ContextAllocated
@@ -3021,6 +3022,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.longjmp_caught
 #print axioms OCaml.Vm.Sim.primF1_outcome
 #print axioms OCaml.Vm.Sim.primF1_not_raise
+
+-- Normal global-data check used by the zero-divisor raising helper.
+#print axioms OCaml.Vm.Sim.check_global_input
+#print axioms OCaml.Vm.Sim.check_global_data_summary
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes

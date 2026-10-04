@@ -2330,6 +2330,21 @@ composition belongs to later fragments. The nonlocal bridge is needed now
 for DIVINT/MODINT zero-divisor runtime paths. This corrects the earlier
 open-work list; no primitive body or semantic rule was changed.
 
+The nonlocal caught-handler bridge and F1 outcome classification landed as
+`0538e63`, full gate passing.
+
+`check_global_data_summary` (`CheckGlobalData.lean`) proves the complete
+five-instruction normal path when the represented global value is a block
+pointer. It preserves memory and all registers except native scratch, and
+returns to the aligned caller. `gen_nonlocal.py` now emits whole-function
+CFG rows, image projections and a generated audit for check_global_data,
+caml_process_pending_actions_with_root_exn, caml_raise and
+caml_raise_zero_divide; these last three are generated block certificates,
+not yet complete execution summaries. Every helper imports its pinned
+per-word ELF decode certificates. Capped builds pass: normal check 3.0s,
+and all generated raising-helper rows/image modules. Pending-action fast
+return and raising-helper composition remain next.
+
 ## Open / next
 
 Immediate next: DIVINT/MODINT zero-divisor setup and native raising helpers,
