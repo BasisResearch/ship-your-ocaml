@@ -19,24 +19,42 @@ theorem Coverage.toCopy {sp sources pl initial} (coverage : Coverage sp sources 
 
 /-- Fold single-field back edges and both scalar and queued-child exits,
 retaining properties closed under the concrete publication batches. -/
+theorem run_copy_loop_observed {sp sources pl initial track observe}
+    (coverage : CopyCoverage sp sources pl initial)
+    (extend : ∀ copies q root c next, Head sp sources pl initial copies q root c →
+      Publication sources copies q (SingleField.child q root c) next → track copies → track next)
+    (frame : ∀ copies q root before after log, Head sp sources pl initial copies q root before → track copies →
+      CopyEffect q root sp before log →
+      after.σ.mem = writeLog before.σ.mem (Enqueue.prefixLog q.source q.target root ++ log) →
+      observe before → observe after) :
+    Triple (ObservedAt sp sources pl initial track observe) (ObservedDone sp sources pl initial track observe) := by
+  apply loop_to_exit (entry := SingleField.pc) (tailRemaining sources)
+  · rintro c ⟨⟨copies,q,root,head,_,_⟩,_⟩
+    exact head.pc
+  · rintro c ⟨⟨copies,finished,_⟩,_⟩ pc
+    exact coverage.returnDifferent (Option.some.inj (finished.pc.symm.trans pc))
+  · rintro c ⟨⟨copies,q,root,head,reached,tracked⟩,observation⟩
+    obtain ⟨after,nextCopies,run,⟨log,allowed,memory⟩,publication,post,less⟩ :=
+      head.step_copy_effect reached (coverage.choices copies q root c reached head)
+    have next := extend copies q root c nextCopies head publication tracked
+    have preserved := frame copies q root c after log head tracked allowed memory observation
+    refine ⟨after,run,?_,less⟩
+    rcases post with ⟨child,root,head,reached⟩ | finished
+    · exact Or.inl ⟨⟨_,child,root,head,reached,next⟩,preserved⟩
+    · exact Or.inr ⟨⟨_,finished,next⟩,preserved⟩
+
+/-- Original table-only API delegates to the observed fold. -/
 theorem run_copy_loop_tracked {sp sources pl initial track}
     (coverage : CopyCoverage sp sources pl initial)
     (extend : ∀ copies q root c next, Head sp sources pl initial copies q root c →
       Publication sources copies q (SingleField.child q root c) next → track copies → track next) :
     Triple (TrackedAt sp sources pl initial track) (TrackedDone sp sources pl initial track) := by
-  apply loop_to_exit (entry := SingleField.pc) (tailRemaining sources)
-  · rintro c ⟨copies,q,root,head,_,_⟩
-    exact head.pc
-  · rintro c ⟨copies,finished,_⟩ pc
-    exact coverage.returnDifferent (Option.some.inj (finished.pc.symm.trans pc))
-  · rintro c ⟨copies,q,root,head,reached,tracked⟩
-    obtain ⟨after,nextCopies,run,publication,post,less⟩ :=
-      head.step_copy reached (coverage.choices copies q root c reached head)
-    have next := extend copies q root c nextCopies head publication tracked
-    refine ⟨after,run,?_,less⟩
-    rcases post with ⟨child,root,head,reached⟩ | finished
-    · exact Or.inl ⟨_,child,root,head,reached,next⟩
-    · exact Or.inr ⟨_,finished,next⟩
+  apply (run_copy_loop_observed (observe := fun _ => True) coverage extend
+    (fun _ _ _ _ _ _ _ _ _ _ _ => True.intro)).conseq
+  · intro c pre
+    exact ⟨pre,True.intro⟩
+  · intro c post
+    exact post.operational
 
 /-- Whole copying loop from an allocated single-field entry. The final
 complete forwarding table stays within the original finite young source set,

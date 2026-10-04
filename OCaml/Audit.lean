@@ -211,6 +211,7 @@ import OCaml.Vm.Gc.SingleTailRoots
 import OCaml.Vm.Gc.SingleFieldQueuedChild
 import OCaml.Vm.Gc.SingleTailQueued
 import OCaml.Vm.Gc.CopyLoop
+import OCaml.Vm.Gc.CopyRoots
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -4051,3 +4052,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleTail.Coverage.toCopy
 #print axioms OCaml.Vm.Gc.SingleTail.run_copy_loop_tracked
 #print axioms OCaml.Vm.Gc.SingleTail.run_copy_from_head
+
+#print axioms OCaml.Vm.Gc.SingleTail.Head.step_copy_effect
+#print axioms OCaml.Vm.Gc.SingleTail.run_copy_loop_observed
+#print axioms OCaml.Vm.Gc.SingleTail.run_copy_loop_roots
+#print axioms OCaml.Vm.Gc.SingleTail.Publication.parent_member
+#print axioms OCaml.Vm.Gc.SingleTail.run_copy_from_head_root

@@ -74,8 +74,37 @@ theorem Publication.bounded {sources copies q child next}
   | parent => exact bounded.extend member
   | queued payload childMember => exact (bounded.extend member).extend childMember
 
+/-- Concrete suffix alternatives after the parent's first three stores.
+Queued exits retain allocation plus the child's six-store queue effect. -/
+inductive CopyEffect (q : PendingCopy) (root sp : BitVec 64) (c : Config) : List WEntry → Prop where
+  | ordinary {log} (effect : IterationLog q root sp c log) : CopyEffect q root sp c log
+  | queued (payload : BitVec 64) (log : List WEntry) (qs : List PendingCopy) :
+      CopyEffect q root sp c (log ++ Fresh.contextQueueEffect (SingleField.child q root c) payload q.target
+        (Enqueue.prefixLog q.source q.target root ++ log) qs c)
+
 /-- Execute one covered copying iteration, retaining the exact publication
 batch and strict progress. All branches invoke concrete generated summaries. -/
+theorem Head.step_copy_effect {sp sources pl initial copies q root c}
+    (head : Head sp sources pl initial copies q root c) (reached : Steps initial c)
+    (choice : CopyChoice sp sources copies pl q root c) :
+    ∃ after nextCopies, Steps c after ∧
+      (∃ log, CopyEffect q root sp c log ∧
+        after.σ.mem = writeLog c.σ.mem (Enqueue.prefixLog q.source q.target root ++ log)) ∧
+      Publication sources copies q (SingleField.child q root c) nextCopies ∧
+      ((∃ next root, Head sp sources pl initial nextCopies next root after ∧ Steps initial after) ∨
+        Finished sp sources pl initial nextCopies after) ∧
+      tailRemaining sources after < tailRemaining sources c := by
+  cases choice with
+  | ordinary choice =>
+      obtain ⟨after,run,⟨log,allowed,memory⟩,post,less⟩ := head.step_effect reached choice
+      exact ⟨after,_,run,⟨log,CopyEffect.ordinary allowed,memory⟩,Publication.parent,post,less⟩
+  | queued payload log qs allocation queue footprint member =>
+      obtain ⟨after,run,post⟩ := (allocation.run head.input head.stack head.constants queue).run c ⟨head.pc,rfl⟩
+      have finish := head.finish_queued post footprint
+      exact ⟨after,_,run,⟨_,CopyEffect.queued payload log qs,by simpa only [List.append_assoc] using post.memory⟩,
+        Publication.queued payload member,Or.inr finish.1,finish.2⟩
+
+/-- Published-table/rank interface hiding the concrete store log. -/
 theorem Head.step_copy {sp sources pl initial copies q root c}
     (head : Head sp sources pl initial copies q root c) (reached : Steps initial c)
     (choice : CopyChoice sp sources copies pl q root c) :
@@ -83,13 +112,7 @@ theorem Head.step_copy {sp sources pl initial copies q root c}
       ((∃ next root, Head sp sources pl initial nextCopies next root after ∧ Steps initial after) ∨
         Finished sp sources pl initial nextCopies after) ∧
       tailRemaining sources after < tailRemaining sources c := by
-  cases choice with
-  | ordinary choice =>
-      obtain ⟨after,run,post,less⟩ := head.step_exact reached choice
-      exact ⟨after,_,run,Publication.parent,post,less⟩
-  | queued payload log qs allocation queue footprint member =>
-      obtain ⟨after,run,post⟩ := (allocation.run head.input head.stack head.constants queue).run c ⟨head.pc,rfl⟩
-      have finish := head.finish_queued post footprint
-      exact ⟨after,_,run,Publication.queued payload member,Or.inr finish.1,finish.2⟩
+  obtain ⟨after,next,run,_,publication,post,less⟩ := head.step_copy_effect reached choice
+  exact ⟨after,next,run,publication,post,less⟩
 
 end OCaml.Vm.Gc.SingleTail

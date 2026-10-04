@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Roots through scalar and queued exits (2026-10-04)
+
+- `CopyChoice.lean:Head.step_copy_effect` exposes exact parent-prefix plus
+  suffix logs for both scalar and queued exits.
+- `CopyLoop.lean:run_copy_loop_observed` retains memory observations using
+  pure concrete-log frame laws; the table-only API delegates with True.
+- `CopyRoots.lean:run_copy_from_head_root` publishes the initial caller root
+  and preserves it through both exit kinds. Its result uses the existing
+  `RootReturned.represented` typed final-table interpretation. The existing
+  scalar-only root theorem keeps its original footprint premises.
+- `CopyRootFrame` and initial-root footprints remain explicit ownership
+  suppliers. Full object/queue representation is not yet the loop invariant.
+- Targeted build passes (767 jobs), full Audit passes (3692 jobs), and
+  both discipline gates pass; only permitted axioms. Wider loop landed
+  as `877f28e`.
+- Next: typed tail-allocation headers and completed/pending payloads, then
+  ownership coverage and remaining collector routes. G2/live budget open.
+
 ## Copying loop with queued-child exits (2026-10-04)
 
 - `CopyChoice.lean` adds actual fresh multi-field child exits to the
