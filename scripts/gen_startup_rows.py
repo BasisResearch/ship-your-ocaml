@@ -60,6 +60,7 @@ def outputs():
                 ('_findenv_r', 'FindUnlock', (0x800374f4, 0x800374fc)),
                 ('_findenv_r', 'FindRestore', (0x8003756c, 0x80037574)),
                 ('_findenv_r', 'FindPrefix', 'first-call'),
+                ('_findenv_r', 'FindStart', (0x8003746c, 0x80037490)),
                 ('getuid', 'UserId', None),
                 ('geteuid', 'EffectiveUserId', None),
                 ('getgid', 'GroupId', None),

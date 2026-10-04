@@ -2,6 +2,33 @@
 
 ## Round 2 status (2026-10-04)
 
+The saving-prologue increment landed as `ee266c3`, full gate passed after one
+push race. `findenv_empty` now summarizes the COMPLETE native `_findenv_r`
+for an empty environment and an ordinary nonempty variable name: save, lock,
+read environ, save s4, test/scan the name, observe the null first array entry,
+unlock, restore all saved registers, and return null. Its exact memory effect
+is the seven-word `findLog`; the output and all nonwritten registers are framed.
+`findenv_ready` preserves the full running-platform/allocator contract.
+The complete composition and readiness proof each check in about one second.
+
+`findStart_of_name` derives all first-byte premises from the C-string data
+representation. `cstr_frame`/`EnvName.stack_log` preserve names below stack
+writes; `find_saved` reads all seven saved words from the combined log using
+the existing separated-store theorem. `name_scan_empty` now exposes the final
+cursor and comparison scratch register, so every written GPR has a presence
+witness in the full function's postcondition.
+
+An eager simplification of the symbolic write-log expression expanded
+irrelevant register calculations and consumed gigabytes. Isolated checks
+showed the code/branch facts and log containment were already fast. Checking
+the finite log directly by `rfl`, and projecting the final register list before
+rewriting its observed load, makes the entry-test summary check in three
+seconds. No proof budgets were raised; only owned diagnostic processes were
+stopped. Next: the getenv caller frame and complete secure-getenv/parameter
+parser composition. Actual reset reachability remains at the parser entry;
+reset-to-cut/Loaded is still open.
+
+
 The empty-environment tail increment landed as `3098778`, full gate passed.
 `find_locked` now composes `_findenv_r`'s saving prologue and actual environment
 lock call, reaching `0x8003746c` with its exact six-word store log and retained
