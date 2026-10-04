@@ -1,5 +1,26 @@
 # Lane a6-gc
 
+## Whole fresh-single immediate routes (2026-10-04)
+
+- `FreshSingle.lean:single_fresh` and `single_fresh_large` prove actual
+  oldify entry, either proved allocation alternative, single-field
+  forwarding, immediate-child store and original caller return.
+  `AllocationResult.single_immediate` shares the entire continuation.
+- `NativeRestore.lean` identifies both restore orders with the original
+  caller through a generic register-list permutation lemma.
+  `FreshSingleData.lean:SingleResult.payload` proves the represented
+  single-field payload, using explicit allocation/root separation.
+- `FreshSingleHeader.lean:single_exact_header`/`single_large_header`
+  retain source size/tag in mopup's natural-address interface. The shared
+  `header_of_suffix` also supplies queue header preservation.
+- Targeted builds and queue/header regressions pass (745 jobs); discipline
+  and abstraction gates pass. Full Audit passes (3378 jobs), with only
+  permitted axioms.
+  Immediate single-field continuation landed as `ea450b0`.
+- Next: even-child nursery classification and non-young return, then young
+  child tail-loop composition. Other object/allocator routes, ownership
+  suppliers, collector closure, G2 and the ocamlc live-word budget remain open.
+
 ## Complete single-field immediate-child continuation (2026-10-04)
 
 - `SingleFieldReturn.lean:return_immediate` proves forwarding, actual

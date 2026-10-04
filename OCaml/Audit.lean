@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Gc.FreshSingleHeader
 import OCaml.Vm.Gc.SingleFieldReturn
 import OCaml.Vm.Gc.StoreReturn
 import OCaml.Vm.Gc.SingleFieldClassify
@@ -3643,3 +3644,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.StoreReturn.restored_of_savedSame
 #print axioms OCaml.Vm.Gc.SingleField.ReturnConditions.of_memory
 #print axioms OCaml.Vm.Gc.SingleField.return_immediate
+
+#print axioms OCaml.Vm.Gc.SaveBank.holds_permutation
+#print axioms OCaml.Vm.Gc.StoreReturn.original_caller
+#print axioms OCaml.Vm.Gc.Fresh.AllocationResult.single_immediate
+#print axioms OCaml.Vm.Gc.Fresh.single_fresh
+#print axioms OCaml.Vm.Gc.Fresh.single_fresh_large
+#print axioms OCaml.Vm.Gc.Fresh.single_child_original
+#print axioms OCaml.Vm.Gc.Fresh.SingleResult.payload
+#print axioms OCaml.Vm.Gc.Fresh.header_of_suffix
+#print axioms OCaml.Vm.Gc.Fresh.SingleResult.header
+#print axioms OCaml.Vm.Gc.Fresh.single_exact_header
+#print axioms OCaml.Vm.Gc.Fresh.single_large_header

@@ -32,15 +32,24 @@ theorem header_of_wrapper_effect {R hp log size tag before after}
   have header := AllocWrapperCore.header_of_effect memory windows tagOutside sizeBound separate tagBound
   simpa only [sizeEq,tagEq] using header
 
+/-- A later finite write log preserves a typed header outside its footprint. -/
+theorem header_of_suffix {before after : Config} {log : List WEntry} {a size tag : Nat}
+    (memory : after.σ.mem = writeLog before.σ.mem log)
+    (header : HeaderOk (word before a) size tag) (outside : OutLRange log a 8) :
+    HeaderOk (word after a) size tag := by
+  have same : word after a = word before a := by
+    rw [word,memory,bytesT_writeLog_out _ outside]
+    rfl
+  rw [same]
+  exact header
+
 /-- Queue writes preserve a typed header outside their finite footprint. -/
 theorem QueueResult.header {R target log qs pl before after size tag} {hp : BitVec 64}
     (post : QueueResult R target log qs pl before after)
     (header : HeaderOk (word (queueSnapshot R log before) hp.toNat) size tag)
     (outside : OutLRange (queueEffect R target log qs before) hp.toNat 8) :
     HeaderOk (word after hp.toNat) size tag := by
-  have same : word after hp.toNat = word (queueSnapshot R log before) hp.toNat := by
-    simp only [word,queueSnapshot,post.memory,writeLog_append,bytesT_writeLog_out _ outside]
-  rw [same]
-  exact header
+  apply header_of_suffix ?_ header outside
+  simp only [queueSnapshot,post.memory,writeLog_append]
 
 end OCaml.Vm.Gc.Fresh
