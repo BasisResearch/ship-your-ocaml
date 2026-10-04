@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.FreshSingleForwarded
 import OCaml.Vm.Gc.FreshHeaderCore
+import OCaml.Vm.Gc.SingleObject
 
 namespace OCaml.Vm.Gc.Fresh
 open Vsa.Machine Vsa.Sim Primitives
@@ -28,14 +29,7 @@ theorem ForwardedSingleResult.object {R target log before after pl cp tag value 
     (headerOutside : OutLRange (SingleField.forwardedEffect (queuePending R target) (R 11)
       (queueSnapshot R log before)) (target.toNat - Layout.header_bytes) 8) :
     ObjAt after (Reloc.reloc μ pl) cp target.toNat (.block tag [value]) := by
-  refine ⟨post.header header headerOutside,?_⟩
-  have payload := post.payload object allocationOutside rootOutside forwarding
-  intro i v hi
-  cases i with
-  | zero =>
-    have equal : value = v := Option.some.inj hi
-    subst v
-    simpa [Reloc.Eqv.val] using payload
-  | succ i => simp at hi
+  exact single_object_of_payload (post.header header headerOutside)
+    (post.payload object allocationOutside rootOutside forwarding)
 
 end OCaml.Vm.Gc.Fresh

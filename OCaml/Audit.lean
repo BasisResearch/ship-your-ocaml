@@ -196,6 +196,7 @@ import OCaml.Vm.Gc.BestFitMissing
 import OCaml.Vm.Gc.BestFitLarge
 import OCaml.Vm.Gc.BestFitFallbackLarge
 import OCaml.Vm.Gc.BestFitLargeComplete
+import OCaml.Vm.Gc.FreshSingleFixed
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -3940,3 +3941,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleTail.run_loop_tracked
 #print axioms OCaml.Vm.Gc.SingleTail.run_from_head_tracked
 #print axioms OCaml.Vm.Gc.SingleTail.run_from_head_bounded
+
+#print axioms OCaml.Vm.Gc.single_object_of_payload
+#print axioms OCaml.Vm.Gc.Fresh.SingleResult.payload_fixed
+#print axioms OCaml.Vm.Gc.Fresh.SingleResult.payload_nonpointer
+#print axioms OCaml.Vm.Gc.Fresh.SingleResult.payload_outside
+#print axioms OCaml.Vm.Gc.Fresh.SingleResult.object_fixed

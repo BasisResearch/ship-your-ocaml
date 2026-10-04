@@ -1,5 +1,20 @@
 # Lane a6-gc
 
+## Fixed terminal fields at the final placement (2026-10-04)
+
+- `FreshSingleFixed.lean:SingleResult.payload_fixed` transports the original
+  field through the actual whole-call result using `Eqv.transport`.
+  `payload_nonpointer` and `payload_outside` discharge the typed action
+  for non-pointers and old base pointers outside the finite source set.
+- `SingleObject.lean:single_object_of_payload` assembles the typed singleton
+  from its header and field; both forwarded and fixed terminal proofs use it.
+  `SingleResult.object_fixed` accepts the header proved by either allocator.
+- Targeted build passes (760 jobs); full Audit passes (3598 jobs), with
+  only permitted axioms. Both discipline gates pass. Domain checkpoint
+  landed as `2cc48df`.
+- Next: preserve caller roots and completed ancestor fields across the
+  loop. Full ownership coverage, other routes, G2 and live budget remain open.
+
 ## Tail-loop partial-map domain (2026-10-04)
 
 - `ForwardingDomain.lean:domain_iff` characterizes the table domain as
