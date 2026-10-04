@@ -2007,11 +2007,29 @@ audited and generator drift checks cover the new artifacts. The signed
 whole-function summaries and represented DIVINT/MODINT arms remain open.
 CLOSUREREC landed as `3d99262`; coverage remains 127 conditional bridges.
 
+## Complete signed libgcc summaries
+
+`signed_division_summary` in `SignedDivision.lean` proves both `__divdi3`
+and `__moddi3` for all nonzero native divisors, including the most-negative
+64-bit operand. Eight generated normalization adapters feed the proved
+unsigned core; three generated fixups and the direct quotient return complete
+the calls. `division_result_sign` identifies those native results with
+`BitVec.sdiv`/`srem`. Exact memory/output and the full clobber frame survive.
+The native wrappers return through `t0` where needed and may leave `ra` at
+an internal address; the postcondition records the actual clobber set.
+
+`gen_signed_division.py` obtains register pin positions from SegmentEmitter
+and generates all eleven adapters; stage a5 checks drift. The complete
+summary target checks in 0.773 s, with generated adapters around 0.85–0.9 s.
+All headline proofs are audited. The native cuts and unsigned adapter landed
+as `1cbbf7a`. DIVINT/MODINT represented caller compositions remain open;
+coverage remains 127 conditional bridges.
+
 ## Open / next
 
-Immediate next: compose the generated signed-wrapper cuts with
-`udivdi3_summary`, prove the sign/result encoding, and finish nonzero
-DIVINT/MODINT arms. Then continue F1's barrier-backed
+Immediate next: consume `signed_division_summary` from the generated
+DIVINT/MODINT callers, prove 63-bit unboxing/retagging agreement, and finish
+the nonzero represented arms. Then continue F1's barrier-backed
 SETGLOBAL/SETFIELD mutation, RAISE/RERAISE/RAISE_NOTRACE/STOP, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved

@@ -2744,6 +2744,29 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.udivdi3_post_named
 #print axioms OCaml.Vm.Sim.udivdi3_summary
 
+-- Complete signed libgcc division and remainder summaries.
+#print axioms OCaml.Vm.Sim.division_magnitude_nonzero
+#print axioms OCaml.Vm.Sim.division_result_sign
+#print axioms OCaml.Vm.Sim.division_return_aligned
+#print axioms OCaml.Vm.Sim.division_positive_guard
+#print axioms OCaml.Vm.Sim.division_prepared
+#print axioms OCaml.Vm.Sim.signed_division_core
+#print axioms OCaml.Vm.Sim.signed_division_done
+#print axioms OCaml.Vm.Sim.signed_division_prepare
+#print axioms OCaml.Vm.Sim.signed_division_finish
+#print axioms OCaml.Vm.Sim.signed_division_summary
+#print axioms OCaml.Vm.Sim.sdiv_pos_pos_prepare
+#print axioms OCaml.Vm.Sim.sdiv_pos_neg_prepare
+#print axioms OCaml.Vm.Sim.sdiv_neg_pos_prepare
+#print axioms OCaml.Vm.Sim.sdiv_neg_neg_prepare
+#print axioms OCaml.Vm.Sim.smod_pos_pos_prepare
+#print axioms OCaml.Vm.Sim.smod_pos_neg_prepare
+#print axioms OCaml.Vm.Sim.smod_neg_pos_prepare
+#print axioms OCaml.Vm.Sim.smod_neg_neg_prepare
+#print axioms OCaml.Vm.Sim.sdiv_negate_finish
+#print axioms OCaml.Vm.Sim.smod_pos_return_finish
+#print axioms OCaml.Vm.Sim.smod_neg_return_finish
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

@@ -135,6 +135,7 @@ python3 scripts/gen_makeblock_init.py --check || fail "stage a5: generic MAKEBLO
 python3 scripts/gen_makeblock_finish.py --check || fail "stage a5: generic MAKEBLOCK suffix drift"
 python3 scripts/gen_closure_prefix.py --check || fail "stage a5: CLOSURE prefix adapter drift"
 python3 scripts/gen_closure_reserve.py --check || fail "stage a5: closure nursery adapter drift"
+python3 scripts/gen_signed_division.py --check || fail "stage a5: signed division adapter drift"
 python3 scripts/gen_closurerec_infix.py --check || fail "stage a5: recursive closure infix-loop drift"
 python3 scripts/gen_closurerec_first.py --check || fail "stage a5: recursive closure first-metadata drift"
 python3 scripts/gen_closure_init.py --check || fail "stage a5: CLOSURE initializer drift"
