@@ -39,4 +39,17 @@ theorem infix_more_guard (count i : Nat) (more : i + 1 < count) (small : 3 * (co
     Nat.mod_eq_of_lt (show 3 * (i + 2) < 2^64 by omega)] at nat
   omega
 
+/-- Zero-extending the low count word and scaling by eight selects the pushed infix stack. -/
+theorem infix_stack_scale (count : Nat) (small : count < 2^32) :
+    Sail.shift_bits_right (Sail.shift_bits_left (BitVec.ofNat 64 count) (Sail.BitVec.extractLsb (0x20#6) 5 0))
+      (Sail.BitVec.extractLsb (0x1d#6) 5 0) = BitVec.ofNat 64 (8 * count) := by
+  change ((BitVec.ofNat 64 count <<< (32 : Nat)) >>> (29 : Nat)) = _
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_ushiftRight, BitVec.toNat_shiftLeft, BitVec.toNat_ofNat,
+    Nat.shiftLeft_eq, Nat.shiftRight_eq_div_pow,
+    Nat.mod_eq_of_lt (show count < 2^64 by omega),
+    Nat.mod_eq_of_lt (show count * 2^32 < 2^64 by omega),
+    Nat.mod_eq_of_lt (show 8 * count < 2^64 by omega)]
+  omega
+
 end OCaml.Vm.Sim

@@ -27,6 +27,18 @@ structure InfixRegion (pl : Place) (pc a stackStart : Nat) (targets : List Nat)
   snapshot : ∀ i, i < targets.length → bytesT4 initial.σ.mem (pl.codeBase + 4 * (pc + 4 + i)) = offsets i
   jump : ∀ i, (bound : i < targets.length) → target pc 2 (offsets i).toInt = some targets[i]
 
+/-- A disjoint setup prefix transports only offset snapshots; loop geometry is unchanged. -/
+theorem InfixRegion.frame {pl : Place} {pc a stackStart : Nat} {targets : List Nat}
+    {offsets : Nat → BitVec 32} {before after : Config} {log : List WEntry}
+    (region : InfixRegion pl pc a stackStart targets offsets before)
+    (memory : after.σ.mem = writeLog before.σ.mem log)
+    (outside : ∀ i, i < targets.length → OutLRange log (pl.codeBase + 4 * (pc + 4 + i)) 4) :
+    InfixRegion pl pc a stackStart targets offsets after := by
+  refine ⟨region.small, region.room, region.reads, region.writes, region.image, region.outside, ?_, region.jump⟩
+  intro i bound
+  rw [← bytesT_four_eq, memory, bytesT_writeLog_out _ (outside i bound), bytesT_four_eq]
+  exact region.snapshot i bound
+
 /-- The loop writes function copied+1; function zero was initialized separately. -/
 structure InfixRegisters (pl : Place) (pc a stackStart functions copied : Nat) (c : Config) : Prop where
   counter : gpr c 13 = some (BitVec.ofNat 64 (3 * (copied + 1)))

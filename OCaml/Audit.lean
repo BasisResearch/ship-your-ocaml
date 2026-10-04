@@ -2638,6 +2638,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.infix_last
 #print axioms OCaml.Vm.Sim.infix_run
 
+-- Complete native recursive-closure nursery path and final return.
+#print axioms OCaml.Plus.append_steps
+#print axioms OCaml.Vm.Sim.InfixRegion.frame
+#print axioms OCaml.Vm.Sim.infix_arity_first
+#print axioms OCaml.Vm.Sim.ClosurerecFirst.infix_start
+#print axioms OCaml.Vm.Sim.infix_stack_scale
+#print axioms OCaml.Vm.Sim.ClosurerecFirst.done_one
+#print axioms OCaml.Vm.Sim.closurerec_stack
+#print axioms OCaml.Vm.Sim.closurerec_return
+#print axioms OCaml.Vm.Sim.closurerec_machine
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

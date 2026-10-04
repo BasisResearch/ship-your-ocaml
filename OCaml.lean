@@ -510,3 +510,5 @@ import OCaml.Vm.Sim.ClosurerecFirstOne
 import OCaml.Vm.Sim.ClosurerecFirstMore
 
 import OCaml.Vm.Sim.ClosurerecInfix
+
+import OCaml.Vm.Sim.ClosurerecMachine

@@ -1913,6 +1913,20 @@ after a push-race retry. Next: first-metadata-to-loop bridge, final stack
 adjustment and return, then object readback and simultaneous allocation/stack
 restoration for the complete CLOSUREREC arm.
 
+## Complete native CLOSUREREC nursery path
+
+`ClosurerecMachine.lean:23` (`closurerec_machine`) composes actual dispatch,
+allocation/capture setup, first metadata, arbitrary-count infix construction,
+stack adjustment and return (0.84 s). `ClosurerecFirst.infix_start` supplies
+loop entry, `InfixRegion.frame` transports offset snapshots through the setup,
+and `closurerec_stack/return` establishes the final native stack and bytecode
+registers. `ClosurerecReturned` records the exact complete write log and
+register frame at the loop head. `Plus.append_steps` shares positive-run
+composition through the existing run laws. The infix loop landed as `227712e`,
+all gates passing. This is a complete conditional native path, not yet a
+represented CLOSUREREC arm: object/stack readback and simultaneous allocation
+restoration remain. Next: those memory proofs and the semantic step wrapper.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
