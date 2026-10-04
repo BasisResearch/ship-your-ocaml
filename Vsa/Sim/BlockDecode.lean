@@ -16,6 +16,7 @@ def decodeM (w : BitVec 32) : Option (MKind × Nat × Nat × Nat × BitVec 12) :
 
     (if funct3 = 0 then some (.addi, rd, rs1, 0, immI)
      else if funct3 = 2 then some (.slti, rd, rs1, 0, immI)
+     else if funct3 = 3 then some (.slti true, rd, rs1, 0, immI)
      else if funct3 = 1 then some (.slli, rd, rs1, 0, immI)
      else if funct3 = 5 then
        (if funct6 = 0x00 then some (.srli, rd, rs1, 0, immI)

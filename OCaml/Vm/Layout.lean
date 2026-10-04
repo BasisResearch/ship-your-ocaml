@@ -267,6 +267,26 @@ def camlMainSaveOffset : Nat → Nat
   | 20 => 64
   | _ => 0
 
+/-! Nonlocal-jump buffer slots, matched between setjmp and longjmp. -/
+def jumpBufferBytes : Nat := 112
+def jumpSavedRegs : List Nat := [1, 8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 2]
+def jumpSaveOffset : Nat → Nat
+  | 1 => 0
+  | 8 => 8
+  | 9 => 16
+  | 18 => 24
+  | 19 => 32
+  | 20 => 40
+  | 21 => 48
+  | 22 => 56
+  | 23 => 64
+  | 24 => 72
+  | 25 => 80
+  | 26 => 88
+  | 27 => 96
+  | 2 => 104
+  | _ => 0
+
 /-! `Caml_state` field offsets (bytes). -/
 def off_young_limit : Nat := 0
 def off_young_ptr : Nat := 8

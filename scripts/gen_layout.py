@@ -232,6 +232,21 @@ def main():
     if any(offset + 8 > main_frame_bytes for _, offset in main_saved_regs):
         die("caml_main save outside native frame")
 
+    # Nonlocal-jump environment: stores and loads must agree for every ABI slot.
+    jump_slots = {}
+    for fn, op in [("setjmp", "sd"), ("longjmp", "ld")]:
+        jump_dis = subprocess.run([TOOLS + "objdump", "-d", a.elf, f"--disassemble={fn}"],
+                                  capture_output=True, text=True, check=True).stdout
+        slots = []
+        for line in jump_dis.splitlines():
+            match = re.match(r"^\s*[0-9a-f]+:\s+[0-9a-f]{8}\s+" + op + r"\s+(\w+),(\d+)\(a0\)", line)
+            if match:
+                slots.append((ABI[match[1]], int(match[2])))
+        jump_slots[fn] = slots
+    if jump_slots["setjmp"] != jump_slots["longjmp"] or {r for r, _ in jump_slots["setjmp"]} != {1, 2, 8, 9, *range(18, 28)}:
+        die("setjmp/longjmp environment layout changed")
+    jump_saved = jump_slots["setjmp"]
+
     def arm(name, k=0):
         return ins[int(arms["arms"][name]["addr"], 16) + 4 * k]
 
@@ -328,6 +343,13 @@ def main():
     w("def camlMainSavedRegs : List Nat := [" + ", ".join(str(r) for r, _ in sorted(main_saved_regs)) + "]\n")
     w("def camlMainSaveOffset : Nat → Nat\n")
     for reg, offset in sorted(main_saved_regs):
+        w(f"  | {reg} => {offset}\n")
+    w("  | _ => 0\n")
+    w("\n/-! Nonlocal-jump buffer slots, matched between setjmp and longjmp. -/\n")
+    w(f"def jumpBufferBytes : Nat := {max(off for _, off in jump_saved) + 8}\n")
+    w("def jumpSavedRegs : List Nat := [" + ", ".join(str(r) for r, _ in jump_saved) + "]\n")
+    w("def jumpSaveOffset : Nat → Nat\n")
+    for reg, offset in jump_saved:
         w(f"  | {reg} => {offset}\n")
     w("  | _ => 0\n")
     w("\n/-! `Caml_state` field offsets (bytes). -/\n")

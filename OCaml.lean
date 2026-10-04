@@ -558,3 +558,5 @@ import OCaml.Vm.Sim.Ccall3Exit
 import OCaml.Vm.Sim.Ccall4Exit
 import OCaml.Vm.Sim.Ccall5Exit
 import OCaml.Vm.Sim.CcallnExit
+import OCaml.Vm.Sim.LongjmpStructure
+import OCaml.Vm.Sim.LongjmpImage

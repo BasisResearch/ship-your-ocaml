@@ -2265,10 +2265,31 @@ bridges, now with terminal outcomes for all C_CALL families. Raising callee
 outcomes still need the native longjmp/re-entry and handler continuation.
 The uncaught-return/barrier change landed as `a216751`, full gate passing.
 
+## Nonlocal-jump block support
+
+The longjmp path exposed missing unsigned-immediate comparison in the
+reflected block model. `MKind.slti` now takes an optional signedness flag,
+defaulting to the existing signed instruction. `compareImmOp` and
+`execute_compare_imm_char` share SLTI/SLTIU's execution rule through
+`compareValue`; the block execution/frame induction is generalized once.
+`decodeM` recognizes SLTIU. Capped core builds pass (BlockMem 5.4s).
+
+`gen_nonlocal.py` uses gen_fn's whole-function CFG/block emitter, pinned code
+and ELF decoders. `longjmp_shape`, `longjmp_readonly`, and
+`longjmp_seqz_decode` check the 17-instruction function's structure and
+unsigned seqz operation; generated rows alone are not a whole-function
+execution summary. Layout extracts and cross-checks all fourteen jmp_buf
+save/restore slots between setjmp and longjmp. Structural certificates check
+in 0.836s. The native restoration/value summary remains next.
+
+C_CALL terminal adapters landed as `6ad2d70`, full gate passing. Coverage
+remains 140 conditional opcode bridges.
+
 ## Open / next
 
-Immediate next: consume/prove the remaining caml_do_exit summary; continue
-the
+Immediate next: finish the longjmp saved-register/value summary, then the
+interpreter exception re-entry and C_CALL raising continuations. Consume the
+remaining caml_do_exit summary when supplied. Continue the
 uncaught semantic continuation/backtrace paths, primitive
 `.raise` C_CALL outcomes and a1-prims terminal summaries, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
