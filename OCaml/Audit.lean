@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Boot.Startup.FindLock
 import OCaml.Vm.Boot.Startup.FindTail
 import OCaml.Vm.Boot.Startup.NameLoop
 import OCaml.Vm.Boot.Startup.EnvLock
@@ -3266,6 +3267,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.find_unlock
 #print axioms OCaml.Vm.Boot.Startup.find_return
 #print axioms OCaml.Vm.Boot.Startup.find_tail
+#print axioms OCaml.Vm.Boot.Startup.NativeFrame.word_log_inside
+#print axioms OCaml.Vm.Boot.Startup.NativeFrame.word_log_read
+#print axioms OCaml.Vm.Boot.Startup.find_prefix
+#print axioms OCaml.Vm.Boot.Startup.findPrefix_saved
+#print axioms OCaml.Vm.Boot.Startup.find_locked
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.domain_history_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.reset

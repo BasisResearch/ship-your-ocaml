@@ -2,6 +2,21 @@
 
 ## Round 2 status (2026-10-04)
 
+The empty-environment tail increment landed as `3098778`, full gate passed.
+`find_locked` now composes `_findenv_r`'s saving prologue and actual environment
+lock call, reaching `0x8003746c` with its exact six-word store log and retained
+name, reentrancy pointer, output-pointer argument and stack interface.
+`findPrefix_saved` proves all six later restoring loads from those stores.
+`NativeSave` supplies generic frame containment and saved-word readback,
+reusing the landed `Gc.word_writeLog_cells` rather than individual store proofs.
+The prologue, saved frame and call composition each check in about one second.
+
+Next: read the nonnull environment pointer, save s4, check the first name byte,
+and enter the already-proved scan/empty-array/return path. These are reusable
+function summaries; actual reset reachability is still at the parameter-parser
+entry, and the reset-to-cut/Loaded exit remains open.
+
+
 The name-scan increment landed as `c32ee15`, full gate passed. The next
 increment adds `name_scan_empty`, composing the scan with the null first
 entry of an empty environment. `find_tail` composes s4 restoration, the
