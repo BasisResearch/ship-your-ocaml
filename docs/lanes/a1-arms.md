@@ -2119,10 +2119,23 @@ so they apply inside the native handler as well as at loop entry. Frame and
 restoration targets check in about 0.95/0.85s. Native handler composition
 remains open. Exception boundaries/loop setup landed as `19ae757`.
 
+## Complete native caught-handler restoration
+
+`RaiseHandler.lean:raise_handler` now executes the actual eleven-instruction
+handler and shared loop_setup, returning Running for the saved handler
+state. It derives the previous trap pointer from the represented tagged
+link, proves the trap store leaves the subsequent environment/extra reads
+intact, restores the data registers and reinitializes dispatch. Data, frame
+geometry, nonnegative saved extra arguments and runtime write preservation
+are explicit premises. Target checks in 1.2s; opaque write-log memory avoids
+expanding Sail's memory representation. Quiet opcode entries and handler
+selection still need composition. Frame/restoration helpers landed as
+`2095010` with check_all passing.
+
 ## Open / next
 
-Immediate next: compose the native handler with the checked trap-frame
-readbacks/restoration and loop_setup, then quiet RAISE/RERAISE/RAISE_NOTRACE entries.
+Immediate next: compose the quiet RAISE/RERAISE/RAISE_NOTRACE entries and
+caught-handler check with raise_handler.
 STOP, uncaught/backtrace paths, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved

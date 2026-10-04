@@ -540,3 +540,4 @@ import OCaml.Vm.Sim.Setvectitem
 import OCaml.Vm.Sim.RaiseCuts
 import OCaml.Vm.Sim.LoopSetup
 import OCaml.Vm.Sim.RaiseRestore
+import OCaml.Vm.Sim.RaiseHandler
