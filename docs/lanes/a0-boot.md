@@ -2,6 +2,25 @@
 
 ## Round 2 status (2026-10-04)
 
+The complete `_findenv_r` increment landed as `ff9449d`, full gate passed.
+`getenv_empty` now composes the entire native getenv wrapper: load the ELF's
+reentrancy pointer, save the caller link, call the completed empty-environment
+search, restore the original stack/link and return null. `getenv_saved` proves
+that the nested 80-byte search frame cannot overwrite the wrapper's saved
+return address. `getenv_ready` retains the full runtime/allocator contract,
+with every written register represented in the final interface. The complete
+composition and readiness theorem check in about one second each.
+
+`NativeFrame.nested` and `nested_base` supply nested-frame geometry;
+`log_in_larger_window`/`log_in_append` combine the frame footprints without
+per-store reasoning. The reentrancy address is consumed from the existing
+ELF-generated `AllocatorPins` certificate. All new machine spans come from
+the startup generator. Next: compose the complete caml_secure_getenv call,
+then the two empty-environment queries in caml_parse_ocamlrunparam. Actual
+reset reachability remains at the parser entry; reset-to-cut/Loaded remains
+open.
+
+
 The saving-prologue increment landed as `ee266c3`, full gate passed after one
 push race. `findenv_empty` now summarizes the COMPLETE native `_findenv_r`
 for an empty environment and an ordinary nonempty variable name: save, lock,

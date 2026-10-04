@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Boot.Startup.GetenvReady
 import OCaml.Vm.Boot.Startup.FindEnvReady
 import OCaml.Vm.Boot.Startup.FindLock
 import OCaml.Vm.Boot.Startup.FindTail
@@ -3338,6 +3339,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.find_saved
 #print axioms OCaml.Vm.Boot.Startup.findenv_empty
 #print axioms OCaml.Vm.Boot.Startup.findenv_ready
+#print axioms OCaml.Vm.Boot.Startup.NativeFrame.nested
+#print axioms OCaml.Vm.Boot.Startup.log_in_larger_window
+#print axioms OCaml.Vm.Boot.Startup.log_in_append
+#print axioms OCaml.Vm.Boot.Startup.getenv_prefix
+#print axioms OCaml.Vm.Boot.Startup.getenv_to_find
+#print axioms OCaml.Vm.Boot.Startup.getenv_return
+#print axioms OCaml.Vm.Boot.Startup.getenv_saved
+#print axioms OCaml.Vm.Boot.Startup.getenv_empty
+#print axioms OCaml.Vm.Boot.Startup.getenv_ready
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.domain_history_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.reset
