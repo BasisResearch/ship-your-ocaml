@@ -1,5 +1,28 @@
 # Lane a6-gc
 
+## Complete best-fit exact-size small-list path (2026-10-04)
+
+- `BestFitSmall.lean:allocate` executes the real best-fit allocator from
+  function entry through its native return for a nonnull exact-size list
+  with a nonnull successor and an unchanged merge cursor. It proves the
+  header-pointer return value, exact list-head/accounting stores, code
+  preservation and complete machine frame. All premises are initial
+  observations and memory windows, without a callee-run assumption.
+- `Post.head` and `Post.counter` read back the actual stores.
+  `Post.counter_nat` proves ordinary natural accounting when free-word
+  credit covers the payload and header.
+- `BestFitAccess.lean` discharges each actual access and branch. The
+  generator emits the complete best-fit CFG/code pins and the selected
+  path's register, log and return-PC certificates. Existing Layout provides
+  all global/struct addresses and dimensions.
+- Capped targeted build (603 jobs), full Audit (2827 jobs), generator drift,
+  discipline and abstraction gates pass; new headlines use only permitted
+  axioms. Indirect entry landed as `097d3e1`. Next: remaining small-list branches,
+  then large-block allocation and composition with the wrapper's
+  header/accounting/return. This one branch does not establish free-list
+  invariant preservation or G2. Fresh-copy completion, queue/root closure,
+  ephemerons and major reclamation remain open.
+
 ## Fresh entry executes the loaded free-list call (2026-10-04)
 
 - `FreshIndirect.lean:enter_free_list` composes the complete fresh prefix

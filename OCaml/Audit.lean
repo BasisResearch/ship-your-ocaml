@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.BestFitSmall
 import OCaml.Vm.Gc.FreshIndirect
 import OCaml.Vm.Boot.Startup.MemsetLoop
 import OCaml.Vm.Boot.Startup.TableAllocation
@@ -2891,3 +2892,19 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.zeroPair_branch
 #print axioms OCaml.Vm.Boot.Startup.zero_pair_iteration
 #print axioms OCaml.Vm.Boot.Startup.zero_pairs
+#print axioms OCaml.Vm.Gc.BestFitSmall.size_access
+#print axioms OCaml.Vm.Gc.BestFitSmall.size_control
+#print axioms OCaml.Vm.Gc.BestFitSmall.list_access
+#print axioms OCaml.Vm.Gc.BestFitSmall.list_control
+#print axioms OCaml.Vm.Gc.BestFitSmall.merge_access
+#print axioms OCaml.Vm.Gc.BestFitSmall.merge_control
+#print axioms OCaml.Vm.Gc.BestFitSmall.pop_access
+#print axioms OCaml.Vm.Gc.BestFitSmall.pop_control
+#print axioms OCaml.Vm.Gc.BestFitSmall.counter_window
+#print axioms OCaml.Vm.Gc.BestFitSmall.return_access
+#print axioms OCaml.Vm.Gc.BestFitSmall.return_control
+#print axioms OCaml.Vm.Gc.BestFitSmall.access
+#print axioms OCaml.Vm.Gc.BestFitSmall.allocate
+#print axioms OCaml.Vm.Gc.BestFitSmall.Post.counter
+#print axioms OCaml.Vm.Gc.BestFitSmall.Post.head
+#print axioms OCaml.Vm.Gc.BestFitSmall.Post.counter_nat
