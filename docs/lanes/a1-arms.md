@@ -2064,10 +2064,25 @@ and primitive bindings; none is assumed preserved across an actual write.
 Caller setup and caml_modify's represented summary remain open. The native
 boundary bundle landed as `24a970e` with check_all passing.
 
+## Fixed-index field mutation arms
+
+`ModifyCall.lean:modify_input` frames the full represented VM into the
+barrier call using separate named argument/setup/input structures.
+`ModifyCallee` names the GC lane's represented caml_modify summary: its
+postcondition must supply the edited heap, runtime state, bindings and ABI.
+Generated `setfield0_arm`–`setfield3_arm` and matching step wrappers now
+compose actual setup, that summary and actual return. Setup reads the
+represented stack word, computes the selected field address and advances
+the physical stack. The source step wrapper checks setField? and logical
+stack consumption. Target times: 0.98–1.1s per complete family instance.
+Coverage is **133 conditional represented opcode bridges overall**, including
+F2; this is not a count out of F1's 134. `gen_modify_fixed.py` is checked in
+a5, with new headlines audited. Represented returns landed as `ffad851`.
+
 ## Open / next
 
-Immediate next: establish the shared barrier call interface from generated
-SETGLOBAL/SETFIELD/SETVECTITEM setup, then compose the represented returns.
+Immediate next: instantiate the shared barrier call interface for generic
+SETFIELD, SETGLOBAL and SETVECTITEM setup, then compose their represented returns.
 Continue RAISE/RERAISE/RAISE_NOTRACE/STOP, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
