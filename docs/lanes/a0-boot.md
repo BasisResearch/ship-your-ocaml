@@ -2,6 +2,22 @@
 
 ## Round 2 status (2026-10-04)
 
+`Startup/DomainReturned.lean` closes `reset_domain_returned_exists`: the
+actual reset execution now completes `caml_init_domain` and returns to
+`caml_main` at `0x80004d98`. `DomainCaller.lean` reads the domain's caller
+link from its original pre-malloc stack save and transports it across all
+three minor-table rounds. `domain_fields` summarizes the remaining 35
+source-generated domain stores, with an exact log confined to the 928-byte
+payload; `domain_return` restores the actual saved link and caller stack.
+The field-store certificate checks in about two seconds, using separate
+code/access facts and small scalar address checks, without budget changes.
+
+The complete minor-table return increment landed as `40776ec`, full gate
+passed. Next: retain the complete allocator/platform state across the
+domain return, then summarize `caml_parse_ocamlrunparam` and subsequent
+`caml_main` startup calls. Reset-to-cut/Loaded remains open.
+
+
 `Startup/TablesReturn.lean` closes `reset_tables_return_exists`: actual reset
 now returns from the complete minor-table function to `caml_init_domain`,
 after all three allocations, publications and native zeroing calls.
