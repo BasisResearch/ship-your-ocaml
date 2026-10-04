@@ -42,8 +42,7 @@ theorem Allocated.saved {R before after} (post : Allocated R before after)
     word after (OldifyEntry.frameSp R + BitVec.ofNat 64 cell.2).toNat = R cell.1 := by
   change bytesT after.σ.mem _ 8 = _
   rw [post.memory,allocationEffect,writeLog_append,bytesT_writeLog_out _ (outside cell member)]
-  exact SaveBank.read before.σ.mem (OldifyEntry.frameSp R) R OldifyEntry.saves
-    OldifyEntry.maxSlot.2 input.frame_bound OldifyEntry.slots_bounded OldifyEntry.slots_separate cell member
+  exact OldifyEntry.saveShape.read before.σ.mem (OldifyEntry.frameSp R) R input.windows cell member
 
 structure Enqueued (R : Nat → BitVec 64) (qs : List PendingCopy) (pl : Place)
     (before after : Config) : Prop where

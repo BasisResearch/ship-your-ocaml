@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Allocator entry through large-block split (2026-10-04)
+
+- `BestFitFallbackLarge.lean:missing_large_split` composes the real
+  allocator entry, empty-list classification, filtered-zero bitmap call,
+  least-large-block tests and actual split callee. It retains the carved
+  header, explicit combined log, stack, code and native/output frame.
+- `SaveBank.Shape.read` shares native-bank geometry and readback across
+  oldify, wrapper and fallback prologues. `Searched.saved` recovers the
+  original request, bitmap and caller link after the real ffs call.
+  Geometry for the split is stated on the explicit initial save snapshot.
+- Targeted build (637 jobs), shared-bank/FreshHeader regression build
+  (710 jobs), full Audit (3164 jobs), discipline and abstraction gates pass;
+  new headlines use only permitted axioms. Least-large-block tests and
+  split call landed as `d1fd3c8`.
+- Next: final large-block accounting and native return, then reuse the
+  wrapper continuation for this allocator alternative. Other allocator
+  routes, ownership suppliers, collector closure and live-word Fits (G2)
+  remain open.
+
 ## Least-large-block split call (2026-10-04)
 
 - `BestFitLarge.lean:prepare` proves the saved-size/bitmap reload, actual

@@ -13,6 +13,9 @@ theorem saveCells_bounded : ∀ cell ∈ saveCells, cell.2 ≤ maxSave.2 := by d
 
 theorem saveCells_separate : saveCells.Pairwise (fun x y => x.2 + 8 ≤ y.2 ∨ y.2 + 8 ≤ x.2) := by decide
 
+def saveShape : SaveBank.Shape saveCells :=
+  ⟨maxSave,by decide,by decide,saveCells_bounded,saveCells_separate⟩
+
 theorem effect_bank (R : Nat → BitVec 64) : effect R = SaveBank.log (frameSp R) R saveCells := rfl
 
 theorem Windows.frame_bound {R} (windows : Windows R) : (frameSp R).toNat + maxSave.2 + 8 ≤ 0x100000000 :=
@@ -23,8 +26,11 @@ theorem saved {R : Nat → BitVec 64} (mem : Std.ExtHashMap Nat (BitVec 8)) (win
     (cell : Nat × Nat) (member : cell ∈ saveCells) :
     bytesT (writeLog mem (effect R)) (frameSp R + BitVec.ofNat 64 cell.2).toNat 8 = R cell.1 := by
   rw [effect_bank]
-  exact SaveBank.read mem (frameSp R) R saveCells maxSave.2 windows.frame_bound
-    saveCells_bounded saveCells_separate cell member
+  exact saveShape.read mem (frameSp R) R (fun cell member => by
+    simp only [saveCells,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at member
+    rcases member with member | rfl
+    · exact windows.saved cell member
+    · exact windows.tag) cell member
 
 theorem restore_cells : ∀ cell ∈ AllocReturn.slots, cell ∈ saveCells := by decide
 

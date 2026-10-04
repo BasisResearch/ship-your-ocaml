@@ -28,6 +28,24 @@ theorem read (mem : Std.ExtHashMap Nat (BitVec 8)) (sp : BitVec 64) (R : Nat →
   have readback := word_writeLog_cells mem cells separate (List.mem_map.mpr ⟨cell,member,rfl⟩)
   simpa only [cells,List.map_map,Function.comp_def,log] using readback
 
+/-- Finite native-bank geometry decoded from a prologue. -/
+structure Shape (slots : List (Nat × Nat)) where
+  last : Nat × Nat
+  member : last ∈ slots
+  small : last.2 < 0x80000000
+  bounded : ∀ cell ∈ slots, cell.2 ≤ last.2
+  separated : slots.Pairwise (fun x y => x.2 + 8 ≤ y.2 ∨ y.2 + 8 ≤ x.2)
+
+/-- Scalar windows supply the stack bound once for every concrete save bank. -/
+theorem Shape.read {slots} (shape : Shape slots)
+    (mem : Std.ExtHashMap Nat (BitVec 8)) (sp : BitVec 64) (R : Nat → BitVec 64)
+    (windows : ∀ cell ∈ slots, WriteWindow (sp + BitVec.ofNat 64 cell.2) 8)
+    (cell : Nat × Nat) (member : cell ∈ slots) :
+    bytesT (writeLog mem (log sp R slots)) (sp + BitVec.ofNat 64 cell.2).toNat 8 = R cell.1 :=
+  SaveBank.read mem sp R slots shape.last.2
+    (stack_bound sp shape.last.2 shape.small (windows shape.last shape.member))
+    shape.bounded shape.separated cell member
+
 /-- Every saved cell obeys the scalar-store lower bound. -/
 theorem high {sp R slots}
     (windows : ∀ cell ∈ slots, WriteWindow (sp + BitVec.ofNat 64 cell.2) 8) :

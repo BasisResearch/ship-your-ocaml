@@ -27,6 +27,9 @@ theorem saved_address {R : Nat → BitVec 64}
     (frameSp R + BitVec.ofNat 64 cell.2).toNat = (frameSp R).toNat + cell.2 :=
   stack_address (frameSp R) cell.2 maxSlot.2 bound (slots_bounded cell member)
 
+def saveShape : SaveBank.Shape saves :=
+  ⟨maxSlot,max_mem,by decide,slots_bounded,slots_separate⟩
+
 /-- Every saved native register reads back from the actual prologue log.
 Pairwise separation is a generated finite slot certificate, combined with
 the concrete RAM window's no-wrap consequence. -/
@@ -35,8 +38,7 @@ theorem Post.saved {R before after} (post : Post R before after) (input : Input 
     word after (frameSp R + BitVec.ofNat 64 cell.2).toNat = R cell.1 := by
   change bytesT after.σ.mem _ 8 = _
   rw [post.memory]
-  exact SaveBank.read before.σ.mem (frameSp R) R saves maxSlot.2 input.frame_bound
-    slots_bounded slots_separate cell member
+  exact saveShape.read before.σ.mem (frameSp R) R input.windows cell member
 
 /-- The epilogue register interface with the original caller's values. -/
 def callerRegs (R : Nat → BitVec 64) : GRegs :=

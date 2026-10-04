@@ -35,6 +35,10 @@ def prepared (sp : BitVec 64) (c : Config) : Config :=
 def splitEffect (sp : BitVec 64) (c : Config) :=
   effect sp (size sp c) (header c) ++ BestFitSplit.effect (size sp c) (least c) (prepared sp c)
 
+theorem splitEffect_of_memory {sp} {before after : Config} (memory : after.σ.mem = before.σ.mem) :
+    splitEffect sp after = splitEffect sp before := by
+  simp only [splitEffect,prepared,BestFitSplit.effect,BestFitSplit.header,size,header,least,word,memory]
+
 structure Split (sp : BitVec 64) (before after : Config) : Prop where
   good : GoodState after.σ
   tick : after.tick < 2
