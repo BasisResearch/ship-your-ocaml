@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.SingleFieldTable
 import OCaml.Vm.Gc.SingleFieldFreshLarge
 import OCaml.Vm.Gc.TailProgress
 import OCaml.Vm.Gc.ContextAllocated
@@ -3848,3 +3849,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleField.prepare_allocate_child_large
 #print axioms OCaml.Vm.Gc.countP_strict
 #print axioms OCaml.Vm.Gc.SingleField.YoungHead.decreases
+
+#print axioms OCaml.Vm.Gc.ForwardingTable.frame
+#print axioms OCaml.Vm.Gc.ForwardingTable.publish
+#print axioms OCaml.Vm.Gc.ForwardingTable.publish_then
+#print axioms OCaml.Vm.Gc.ForwardingTable.fresh_source
+#print axioms OCaml.Vm.Gc.ForwardingTable.relocation_head
+#print axioms OCaml.Vm.Gc.ForwardingTable.relocation_cons_of_ne
+#print axioms OCaml.Vm.Gc.ForwardingTable.extends_published
+#print axioms OCaml.Vm.Gc.ForwardingTable.functional
+#print axioms OCaml.Vm.Gc.ForwardingTable.relocation_member
+#print axioms OCaml.Vm.Gc.ForwardingTable.pointer_action
+#print axioms OCaml.Vm.Gc.SingleField.ChildAllocated.table
+#print axioms OCaml.Vm.Gc.SingleField.ChildLargeAllocated.table
+#print axioms OCaml.Vm.Gc.SingleField.ForwardedReturned.payload_from_table

@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Published forwarding component of partial relocation (2026-10-04)
+
+- `ForwardingTable.lean` expresses published entries with Eqv combinators.
+  `publish_then` derives extension through the real prefix plus separated
+  allocation log; `extends_published` proves the sparse map keeps all
+  previously published source mappings when the new source is fresh.
+- Functionality follows from the concrete source word. `pointer_action`
+  turns the table into the typed base-pointer relocation observation.
+- `SingleFieldTable.lean` connects both child allocation results to table
+  extension. `ForwardedReturned.payload_from_table` derives its typed
+  result without a separate scalar forwarding-action premise.
+- Targeted builds pass (747 jobs); full Audit passes (3521 jobs), with
+  only permitted axioms. Discipline and
+  abstraction gates pass. Child/rank checkpoint landed as `eb0498a`.
+- This is the forwarding component, not the whole invariant: target
+  injectivity/freshness, pending payloads, native-bank preservation and
+  complete loop composition remain to be assembled. G2/live budget open.
+
 ## Captured fresh-child allocation and copying-step rank (2026-10-04)
 
 - `SingleFieldFresh.lean:prepare_allocate_child` and
