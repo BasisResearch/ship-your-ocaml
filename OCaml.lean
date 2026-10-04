@@ -570,3 +570,5 @@ import OCaml.Vm.Sim.PendingRoot
 
 import OCaml.Vm.Sim.RaiseRuntimePrefix
 import OCaml.Vm.Sim.RaiseRuntimeSuffix
+
+import OCaml.Vm.Sim.RaiseNative

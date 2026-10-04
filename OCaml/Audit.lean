@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.RaiseNative
 import OCaml.Vm.Sim.RaiseRuntimePrefix
 import OCaml.Vm.Sim.RaiseRuntimeSuffix
 import OCaml.Vm.Gc.SingleTailLoop
@@ -3043,6 +3044,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.raise_runtime_prefix
 #print axioms OCaml.Vm.Sim.raise_runtime_suffix_input
 #print axioms OCaml.Vm.Sim.raise_runtime_suffix
+
+-- Complete quiet runtime raise through both actual direct calls.
+#print axioms OCaml.Vm.Primitives.EffectPost.nativeFrame
+#print axioms OCaml.Vm.Sim.raise_pending
+#print axioms OCaml.Vm.Sim.raise_longjmp
+#print axioms OCaml.Vm.Sim.raise_native_jump_input
+#print axioms OCaml.Vm.Sim.raise_native
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes

@@ -2370,6 +2370,19 @@ pinned JAL certificates for all four raising/check helpers; the generated audit
 passes with only the permitted axioms. Complete caml_raise and zero-divisor
 composition remain next; these boundary summaries do not claim the calls run.
 
+The native raising boundaries and call certificates landed as `9f159b9`,
+full gate passing.
+
+`raise_native` (`RaiseNative.lean:41`) proves complete quiet caml_raise execution
+through the pending-action fast return and longjmp to the saved native
+continuation. `raise_pending` and `raise_longjmp` execute the two pinned JAL
+instructions using the shared call bridge. The result carries the exact
+four-store log, restored native registers and combined register/output frame.
+`RaiseNativeInput` names scalar conditions and separation; VM data restoration
+and zero-divisor caller linkage remain open. `EffectPost.nativeFrame` converts
+library effects once for native frame composition. Capped default-budget builds
+pass: pending composition 1.5s, longjmp composition 0.907s, full raise 0.865s.
+
 ## Open / next
 
 Immediate next: DIVINT/MODINT zero-divisor setup and native raising helpers,
