@@ -1,3 +1,5 @@
+import OCaml.Vm.Sim.RaiseRuntimePrefix
+import OCaml.Vm.Sim.RaiseRuntimeSuffix
 import OCaml.Vm.Gc.SingleTailLoop
 import OCaml.Vm.Sim.PendingRoot
 import OCaml.Vm.Gc.SingleFieldBackEdge
@@ -3034,6 +3036,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.pending_root_return_word
 #print axioms OCaml.Vm.Sim.pending_root_input
 #print axioms OCaml.Vm.Sim.pending_root_summary
+
+-- Native raising boundaries surrounding the checked pending helper.
+#print axioms OCaml.Vm.Sim.raise_runtime_prefix_input
+#print axioms OCaml.Vm.Sim.raise_runtime_prefix
+#print axioms OCaml.Vm.Sim.raise_runtime_suffix_input
+#print axioms OCaml.Vm.Sim.raise_runtime_suffix
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes

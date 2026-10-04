@@ -567,3 +567,6 @@ import OCaml.Vm.Sim.PrimitiveF1Outcomes
 import OCaml.Vm.Sim.CheckGlobalData
 
 import OCaml.Vm.Sim.PendingRoot
+
+import OCaml.Vm.Sim.RaiseRuntimePrefix
+import OCaml.Vm.Sim.RaiseRuntimeSuffix

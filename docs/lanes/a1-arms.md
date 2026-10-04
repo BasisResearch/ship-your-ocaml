@@ -2357,6 +2357,19 @@ zero-divide exception-field offset directly from the pinned ELF. Default-budget
 capped builds pass: state 0.791s, facts 3.7s, summary 1.8s. Direct-call seams
 and caml_raise composition remain open.
 
+The pending-action fast-return summary landed as `a3c168a`, full gate passing
+after two push races.
+
+`raise_runtime_prefix` (`RaiseRuntimePrefix.lean:60`) proves the five-instruction
+disabled-hook path to the pending call; `raise_runtime_suffix`
+(`RaiseRuntimeSuffix.lean:68`) proves the ten-instruction ordinary-exception path
+that publishes the exception bucket and prepares longjmp. Both reuse
+`registers_of_blocks` for exact effects, image and register frames. Capped builds
+pass at default limits (7.8s prefix, 16s suffix). The shared `emit_call` now emits
+pinned JAL certificates for all four raising/check helpers; the generated audit
+passes with only the permitted axioms. Complete caml_raise and zero-divisor
+composition remain next; these boundary summaries do not claim the calls run.
+
 ## Open / next
 
 Immediate next: DIVINT/MODINT zero-divisor setup and native raising helpers,
