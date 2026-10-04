@@ -2,6 +2,34 @@
 
 ## Round 2 status (2026-10-04)
 
+`Startup/SecureGetenv.lean` closes `secure_getenv_to_getenv`, a reusable
+summary for the native caml_secure_getenv wrapper with arbitrary caller
+stack, return link, name and saved registers. It composes the generated
+saving prologue, all four identity calls, both successful comparisons and
+the restoring tail jump into getenv. `secure_saved_after_prefix` reads
+back the three saved words from the exact store log. Composition checks in
+one second; the restoring-tail module checks in about five seconds.
+
+`NativeFrame` supplies shared stack-address, word-window and executable-image
+separation facts. `prefix_readonly_post` generalizes the existing call splice
+without changing its old API, and `RegistersPost.leaf` reads linked return
+addresses from finite interfaces. `RuntimeReady.stack_log` and
+`secure_getenv_ready` preserve the complete allocator/platform/global contract
+through the wrapper. Identity summaries now import only their direct proof
+dependencies rather than the entire reset-history proof.
+
+An attempted choice among store/load certificates for different symbolic
+addresses hit the default recursion limit. Selecting each generated access's
+certificate directly fixes it; no elaboration budget was raised. The generic
+frame geometry and all wrapper summaries use only standard axioms.
+
+The identity increment landed as `56bdb75`, full gate passed. Next: summarize
+getenv/_findenv_r on the pinned empty environment (including the environment
+lock stubs and name scan), then compose parameter parsing from the reached
+caml_main continuation. Actual reset reachability still ends after domain
+initialization; reset-to-cut/Loaded remains open.
+
+
 `Startup/Identity.lean` proves `identity_zero` for getuid/geteuid/getgid/
 getegid through one shared summary over their generated native blocks.
 This transcribes the four zero-return stubs in `c/src/htif.c:595`.

@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.SecureGetenvReady
 import OCaml.Vm.Boot.Startup.IdentityCall
 import OCaml.Vm.Boot.Startup.DomainReady
 import OCaml.Vm.Boot.Startup.DomainReturned
@@ -3149,6 +3150,19 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetDomainReturned.ready
 #print axioms OCaml.Vm.Boot.Startup.identity_zero
 #print axioms OCaml.Vm.Boot.Startup.identity_call
+#print axioms OCaml.Vm.Boot.Startup.prefix_readonly_post
+#print axioms OCaml.Vm.Primitives.RegistersPost.leaf
+#print axioms OCaml.Vm.Boot.Startup.NativeFrame.address
+#print axioms OCaml.Vm.Boot.Startup.NativeFrame.word
+#print axioms OCaml.Vm.Boot.Startup.NativeFrame.image_outside
+#print axioms OCaml.Vm.Boot.Startup.secure_getenv_first_identity
+#print axioms OCaml.Vm.Boot.Startup.secure_saved_after_prefix
+#print axioms OCaml.Vm.Boot.Startup.secure_identity_stage
+#print axioms OCaml.Vm.Boot.Startup.secure_compare
+#print axioms OCaml.Vm.Boot.Startup.secure_getenv_tail
+#print axioms OCaml.Vm.Boot.Startup.secure_getenv_to_getenv
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.stack_log
+#print axioms OCaml.Vm.Boot.Startup.secure_getenv_ready
 #print axioms OCaml.Vm.Gc.AllocColor.prepare
 #print axioms OCaml.Vm.Gc.AllocColor.tag32_eq
 #print axioms OCaml.Vm.Gc.AllocColor.header_ok

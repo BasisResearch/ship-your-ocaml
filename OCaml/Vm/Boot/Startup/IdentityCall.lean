@@ -1,5 +1,6 @@
 import OCaml.Vm.Boot.Startup.Identity
 import OCaml.Vm.Primitives.Call
+import OCaml.Vm.Primitives.RegisterPins
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable OCaml.Vm.Primitives
 
