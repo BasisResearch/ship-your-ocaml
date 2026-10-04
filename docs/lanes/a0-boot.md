@@ -2,6 +2,28 @@
 
 ## Round 2 status (2026-10-04)
 
+The complete abstract parser landed as `db5f31a`, full gate passed.
+**`ParameterReset.lean:reset_parameter_returned_exists` now extends the CLOSED
+actual reset run through the complete parameter parser return to caml_main
+at 0x80004d9c.**
+`ResetParameterReturned` retains the initial ELF reset witness, exact parser
+memory/register effects, and full runtime/allocator readiness. The final
+composition checks in 1.0 second, with no captured-state premise.
+
+`EnvironmentHistoryFrame` supplies one observed-byte frame, with allocator,
+stack-log and table-zeroing adapters. `EnvironmentHistory` composes all actual
+domain/table effects. `ResetCamlMainWitness.environment` identifies main's
+environ store and preserved .embed bytes using loader total-byte equivalence;
+`ResetParameterEntry.environment` carries that certificate through startup.
+`EmbeddedEnvironment.search/value_zero` supply the matching primary name,
+unaligned strncmp path, equals delimiter and empty value from the generated
+ELF environment certificate and current executable-image literal.
+
+Next: summarize caml_startup_aux and its caller, then locale/custom-operation
+initialization, file loading, GC/stack initialization and the remaining startup
+path. Reset-to-cut/Loaded and the Round 2 exit remain open.
+
+
 The complete successful search landed as `5fdd996`, full gate passed.
 `ParameterPresent.lean:parse_parameters_present_empty` now summarizes the
 complete native parser on the pinned environment's actual path: primary query,

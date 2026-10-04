@@ -24,6 +24,7 @@ import OCaml.Vm.Boot.Startup.FindCount
 import OCaml.Vm.Boot.Startup.FindMatch
 import OCaml.Vm.Boot.Startup.FindFound
 import OCaml.Vm.Boot.Startup.FindFoundReturn
+import OCaml.Vm.Boot.Startup.ParameterReset
 import OCaml.Vm.Boot.Startup.ParameterPresentReady
 import OCaml.Vm.Boot.Startup.SecurePresentReady
 import OCaml.Vm.Boot.Startup.GetenvPresentReady
@@ -3588,6 +3589,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.parameter_present_query
 #print axioms OCaml.Vm.Boot.Startup.parse_parameters_present_empty
 #print axioms OCaml.Vm.Boot.Startup.parameter_present_ready
+#print axioms OCaml.Vm.Boot.Startup.allocator_environment_outside
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.environment
+#print axioms OCaml.Vm.Boot.Startup.EmbeddedEnvironment.search
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.input
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_parameter_returned_exists
 #print axioms OCaml.Vm.Boot.Startup.NativeFrame.word32
 #print axioms OCaml.Vm.Boot.Startup.getenv_offset_window
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
