@@ -3,16 +3,6 @@ import OCaml.Vm.Gc.AllocWrapper
 namespace OCaml.Vm.Gc
 open Vsa.Machine Vsa.Sim Primitives
 
-theorem AllocEntry.effect_high {R} (windows : AllocEntry.Windows R) :
-    ∀ e ∈ AllocEntry.effect R, Layout.sym_tohost + 16 ≤ e.1 := by
-  rw [AllocEntry.effect_bank]
-  apply SaveBank.high
-  intro cell member
-  simp only [AllocEntry.saveCells,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at member
-  rcases member with member | rfl
-  · exact windows.saved cell member
-  · exact windows.tag
-
 /-- Both the free-list and wrapper-continuation stores respect the common
 code-image boundary, independently of the register/platform obligations. -/
 theorem AllocExact.effect_high {sp size c}

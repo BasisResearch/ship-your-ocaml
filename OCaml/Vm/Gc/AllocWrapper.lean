@@ -1,5 +1,5 @@
 import OCaml.Vm.Gc.AllocExact
-import OCaml.Vm.Gc.AllocIndirect
+import OCaml.Vm.Gc.AllocWrapperCore
 import OCaml.Vm.Gc.AllocSaved
 
 namespace OCaml.Vm.Gc.AllocWrapper
@@ -66,75 +66,57 @@ allocation, color selection, header/accounting writes and caller return. -/
 theorem allocate {R c} (input : Input R c) :
     FnSummary AllocEntry.pc (fun d => d = c) (Post R c) := by
   constructor
-  apply Vsa.Logic.Triple.seq (AllocEntry.prepare input.toInput).run
-  intro atCall prologue
-  have freeCode : Code.Bf_allocateLoaded atCall.σ.mem :=
-    image_after Code.bf_allocate_transport (by decide) input.freeListCode
-      (chainPlan_facts (AllocEntry.code_facts input.code) (AllocEntry.access input.toInput)) prologue.machine
-  obtain ⟨callee,callRun,called⟩ := (AllocEntry.call_free_list prologue.machine.good prologue.machine.tick
-    prologue.machine.minstret prologue.code prologue.registers (by decide)).run atCall ⟨prologue.pc,rfl⟩
-  have calledMemory : callee.σ.mem = atCall.σ.mem := called.mem
-  have memory : callee.σ.mem = (prepared R c).σ.mem := calledMemory.trans prologue.memory
+  apply Vsa.Logic.Triple.seq (AllocWrapperCore.enter input.toInput).run
+  intro callee entered
+  have memory : callee.σ.mem = (prepared R c).σ.mem := entered.memory
+  have freeCode := entered.image input.windows Code.bf_allocate_transport (by decide) input.freeListCode
   have freeConditions := input.freeList.of_memory memory
-  have allocatedMemory := AllocExact.allocated_memory (size := R 10) memory
-  have returnRegsSame := AllocExact.returnRegs_of_memory (sp := AllocEntry.frameSp R) (size := R 10) memory
   have continuation : AllocSuccess.Conditions
       (AllocExact.returnRegs (AllocEntry.frameSp R) (R 10) callee) (AllocExact.allocated (R 10) callee) := by
-    rw [returnRegsSame]
-    exact input.continuation.of_memory allocatedMemory
+    rw [AllocExact.returnRegs_of_memory memory]
+    exact input.continuation.of_memory (AllocExact.allocated_memory memory)
   have freeInput : AllocExact.Input (AllocEntry.frameSp R) (R 10) callee :=
     { toInput :=
       { toCoreInput :=
         { toCoreConditions := freeConditions.toCoreConditions
-          good := called.good
-          tick := called.tick
-          minstret := called.minstret
-          code := calledMemory ▸ freeCode
-          registers := ⟨called.ra,gholds_lookup _ called.registers rfl,True.intro⟩
+          good := entered.good
+          tick := entered.tick
+          minstret := entered.minstret
+          code := freeCode
+          registers := ⟨entered.link,gholds_lookup _ entered.registers rfl,True.intro⟩
           aligned := by decide }
         repair := freeConditions.repair
         bitmap := freeConditions.bitmap }
-      wrapperCode := calledMemory ▸ prologue.code
-      nativePins := ⟨gholds_lookup _ called.registers rfl,gholds_lookup _ called.registers rfl,True.intro⟩
+      wrapperCode := entered.code
+      nativePins := ⟨gholds_lookup _ entered.registers rfl,gholds_lookup _ entered.registers rfl,True.intro⟩
       tagRead := input.windows.tag.read
       continuation := continuation }
-  obtain ⟨after,allocationRun,finished⟩ := (AllocExact.allocate freeInput).run callee ⟨called.pc,rfl⟩
-  have saved (cell : Nat × Nat) (member : cell ∈ AllocEntry.saveCells) :
-      bytesT (AllocExact.allocated (R 10) (prepared R c)).σ.mem
-        (AllocEntry.frameSp R + BitVec.ofNat 64 cell.2).toNat 8 = R cell.1 :=
-    AllocEntry.saved_after c.σ.mem input.windows _ cell member (input.freeOutside cell member)
-  have returnWord : AllocReturn.returnWord (AllocEntry.frameSp R)
-      (AllocExact.resultHeader (R 10) callee) (AllocExact.allocated (R 10) callee) = R 1 := by
-    unfold AllocReturn.returnWord
-    rw [allocatedMemory]
-    exact saved AllocReturn.slots.head! (AllocEntry.restore_cells _ (by decide))
+  obtain ⟨after,run,finished⟩ := (AllocExact.allocate freeInput).run callee ⟨entered.pc,rfl⟩
+  have logSame := BestFitExact.effect_of_memory (size := R 10) memory
   have headerSame : AllocExact.resultHeader (R 10) callee = AllocExact.resultHeader (R 10) (prepared R c) := by
     simp only [AllocExact.resultHeader,BestFitSmall.first,word,memory]
-  have restored : AllocReturn.restored (AllocEntry.frameSp R) (AllocExact.resultHeader (R 10) callee)
-      (AllocExact.allocated (R 10) callee) = callerRegs R (BestFitSmall.first (R 10) (prepared R c)) := by
-    have stack : AllocEntry.frameSp R + AllocReturn.frameSize = R 2 := by
-      change (R 2 + -AllocReturn.frameSize) + AllocReturn.frameSize = R 2
-      rw [BitVec.add_neg_eq_sub,BitVec.sub_add_cancel]
-    unfold AllocReturn.restored callerRegs
-    rw [stack,headerSame]
-    simp only [AllocExact.resultHeader,Layout.header_bytes,BitVec.sub_add_cancel]
-    congr 2
-    apply List.map_congr_left
-    intro cell member
-    rw [allocatedMemory]
-    exact congrArg (fun value => (cell.1,value)) (saved cell (AllocEntry.restore_cells _ (List.mem_reverse.mp member)))
-  refine ⟨after,callRun.trans allocationRun,⟨finished.good,finished.tick,finished.minstret,finished.code,
-    ?_,?_,?_,?_,finished.output.trans (called.output.trans prologue.machine.output),?_⟩⟩
-  · simpa only [returnWord] using finished.pc
-  · simpa only [restored] using finished.registers
-  · simpa only [BestFitSmall.first,word,memory] using finished.result
-  · rw [finished.memory,AllocExact.effect_of_memory memory,memory]
-    exact (writeLog_append c.σ.mem (AllocEntry.effect R) _).symm
-  · intro r noise outside
-    have prefixCover : ∀ n ∈ wrChain AllocEntry.blocks, n ∈ [1,2,8,9,10,11,12,13,14,15] := by decide
-    exact (finished.native r noise outside).trans
-      ((called.frame r noise (by simp [wrChain]) (outside 1 (by simp))).trans
-        (prologue.machine.frame r noise (fun n hn => outside n (prefixCover n hn))))
+  have outside : ∀ cell ∈ AllocEntry.saveCells, OutLRange (BestFitExact.effect (R 10) callee)
+      (AllocEntry.frameSp R + BitVec.ofNat 64 cell.2).toNat 8 := by
+    simpa only [logSame] using input.freeOutside
+  have complete := entered.complete input.windows outside finished.toFinished
+  refine ⟨after,run,⟨complete.good,complete.tick,complete.minstret,complete.code,complete.pc,?_,?_,?_,
+    complete.output,complete.native⟩⟩
+  · have pins := complete.registers
+    rw [headerSame] at pins
+    simpa only [AllocExact.resultHeader,BitVec.sub_add_cancel,AllocWrapperCore.callerRegs,callerRegs] using pins
+  · have result := complete.result
+    rw [headerSame] at result
+    simpa only [AllocExact.resultHeader,BitVec.sub_add_cancel] using result
+  · have memory' := complete.memory
+    rw [headerSame,logSame] at memory'
+    have same : AllocFinish.entryRegs (AllocEntry.frameSp R) (R 10)
+        (AllocExact.resultHeader (R 10) (prepared R c)) =
+        AllocExact.returnRegs (AllocEntry.frameSp R) (R 10) (prepared R c) := rfl
+    unfold AllocWrapperCore.effect AllocFinish.effect at memory'
+    rw [same] at memory'
+    have snapshotSame : AllocWrapperCore.prepared R c = prepared R c := rfl
+    rw [snapshotSame] at memory'
+    simpa only [AllocFinish.snapshot,AllocExact.effect,effect,AllocExact.allocated] using memory'
 
 /-- Full-wrapper final header agreement with its original size and tag. -/
 theorem header_of_effect {R} {before after : Config}

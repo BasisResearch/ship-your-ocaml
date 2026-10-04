@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Shared wrapper entry and original-caller restoration (2026-10-04)
+
+- `AllocWrapperCore.enter` proves the wrapper prologue and loaded indirect
+  call. `Entered.image` transports callee code images through its save log.
+  `Entered.complete` restores the original caller bank, stack and PC from
+  any proved `AllocFinish.Post`, with explicit free-log separation.
+- `AllocWrapper.allocate` now instantiates this shared interface for the
+  exact-size route. `AllocExact.Post.toFinished` adapts its existing
+  postcondition; `AllocFinish.effect_of_memory` normalizes snapshots.
+- FreshHeader regression passes (704 jobs); discipline and abstraction
+  gates pass. Full Audit passes (3251 jobs); new headlines use only
+  permitted axioms.
+- Previous shared continuation landed as `0066655`. Next: pure large-route
+  memory conditions, full large wrapper and fresh-oldify composition.
+  G2, collector closure, ownership suppliers and the ocamlc live-word
+  budget remain open.
+
 ## Shared wrapper continuation for both allocators (2026-10-04)
 
 - `AllocFinish.CalleePost.finish` shares actual color selection, header

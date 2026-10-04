@@ -14,6 +14,15 @@ def snapshot (log : List WEntry) (c : Config) : Config :=
 def effect (sp size hp : BitVec 64) (log : List WEntry) (c : Config) :=
   log ++ AllocAccount.effect (AllocSuccess.completed (entryRegs sp size hp) (snapshot log c)) (snapshot log c)
 
+theorem effect_of_memory {sp size hp log} {before after : Config}
+    (memory : after.σ.mem = before.σ.mem) :
+    effect sp size hp log after = effect sp size hp log before := by
+  have same : (snapshot log after).σ.mem = (snapshot log before).σ.mem := by
+    simp only [snapshot,memory]
+  unfold effect
+  rw [AllocSuccess.completed_of_memory same]
+  simp only [AllocAccount.effect,AllocAccount.counted,AllocAccount.initialized,same]
+
 /-- Normalized evidence from a proved free-list callee. Concrete allocator
 summaries construct this record; it does not postulate an allocator run. -/
 structure CalleePost (sp size hp : BitVec 64) (log : List WEntry) (before after : Config) : Prop where

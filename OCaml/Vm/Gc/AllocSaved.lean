@@ -43,4 +43,15 @@ theorem saved_after {R : Nat → BitVec 64} (mem : Std.ExtHashMap Nat (BitVec 8)
   rw [bytesT_writeLog_out _ outside]
   exact saved mem windows cell member
 
+theorem effect_high {R} (windows : Windows R) :
+    ∀ e ∈ effect R, Layout.sym_tohost + 16 ≤ e.1 := by
+  rw [effect_bank]
+  apply SaveBank.high
+  intro cell member
+  simp only [saveCells,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at member
+  rcases member with member | rfl
+  · exact windows.saved cell member
+  · exact windows.tag
+
+
 end OCaml.Vm.Gc.AllocEntry

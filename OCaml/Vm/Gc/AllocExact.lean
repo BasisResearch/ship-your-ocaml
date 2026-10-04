@@ -62,6 +62,14 @@ structure Post (sp size : BitVec 64) (before after : Config) : Prop where
     (∀ n ∈ [1,2,8,9,10,11,12,13,14,15], (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
 
+/-- Compatibility view for the shared wrapper entry/return composition. -/
+theorem Post.toFinished {sp size before after} (post : Post sp size before after) :
+    AllocFinish.Post sp size (resultHeader size before) (BestFitExact.effect size before) before after := by
+  refine ⟨post.good,post.tick,post.minstret,post.code,post.pc,post.registers,?_,?_,post.output,post.native⟩
+  · simpa only [resultHeader,BitVec.sub_add_cancel] using post.result
+  · have same : returnRegs sp size before = AllocFinish.entryRegs sp size (resultHeader size before) := rfl
+    simpa only [effect,AllocFinish.effect,allocated,AllocFinish.snapshot,same] using post.memory
+
 /-- Exact-size best-fit allocation followed by the actual wrapper's color,
 accounting and return path. All four small-list cases and all colors are covered. -/
 theorem allocate {sp size c} (input : Input sp size c) :

@@ -3465,3 +3465,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.BestFitSplit.effect_high
 #print axioms OCaml.Vm.Gc.BestFitFallback.completeEffect_high
 #print axioms OCaml.Vm.Gc.AllocLarge.allocate
+
+#print axioms OCaml.Vm.Gc.AllocEntry.effect_high
+#print axioms OCaml.Vm.Gc.AllocFinish.effect_of_memory
+#print axioms OCaml.Vm.Gc.AllocWrapperCore.enter
+#print axioms OCaml.Vm.Gc.AllocWrapperCore.Entered.image
+#print axioms OCaml.Vm.Gc.AllocWrapperCore.Entered.complete
+#print axioms OCaml.Vm.Gc.AllocExact.Post.toFinished
