@@ -105,4 +105,29 @@ theorem Entered.complete {R hp log before middle after} (entered : Entered R bef
   · intro r noise untouched
     exact (body.native r noise untouched).trans (entered.native r noise untouched)
 
+/-- Original size/tag agreement after either proved wrapper route. The
+free-list log must preserve the native slot holding the requested tag. -/
+theorem header_of_effect {R hp log before after}
+    (memory : after.σ.mem = writeLog before.σ.mem (effect R hp log before))
+    (windows : AllocEntry.Windows R)
+    (tagOutside : OutLRange log (AllocEntry.frameSp R + BitVec.ofNat 64 AllocEntry.tagOffset).toNat 8)
+    (sizeBound : (R 10).toNat < 2^54)
+    (separate : hp.toNat + 8 ≤ Layout.sym_caml_allocated_words ∨ Layout.sym_caml_allocated_words + 8 ≤ hp.toNat)
+    (tagBound : (R 11).toNat < 256) :
+    HeaderOk (word after hp.toNat) (R 10).toNat (R 11).toNat := by
+  have memory' : after.σ.mem = writeLog (prepared R before).σ.mem
+      (AllocFinish.effect (AllocEntry.frameSp R) (R 10) hp log (prepared R before)) := by
+    rw [memory,effect,writeLog_append]
+    rfl
+  have savedTag : word (AllocFinish.snapshot log (prepared R before))
+      (AllocEntry.frameSp R + BitVec.ofNat 64 AllocEntry.tagOffset).toNat = R 11 :=
+    AllocEntry.saved_after before.σ.mem windows log (11,AllocEntry.tagOffset)
+      (by simp [AllocEntry.saveCells]) tagOutside
+  have tagBound' : (word (AllocFinish.snapshot log (prepared R before))
+      (AllocEntry.frameSp R + BitVec.ofNat 64 AllocEntry.tagOffset).toNat).toNat < 256 := by
+    rw [savedTag]
+    exact tagBound
+  have header := AllocFinish.header_of_effect memory' separate sizeBound tagBound'
+  simpa only [savedTag] using header
+
 end OCaml.Vm.Gc.AllocWrapperCore

@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Gc.FreshLargeHeader
 import OCaml.Vm.Gc.FreshLargeEnqueued
 import OCaml.Vm.Gc.FreshLargeAllocated
 import OCaml.Vm.Gc.AllocLargeWrapper
@@ -3543,3 +3544,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Fresh.AllocationResult.enqueue
 #print axioms OCaml.Vm.Gc.Fresh.QueueResult.payload
 #print axioms OCaml.Vm.Gc.Fresh.enqueue_fresh_large
+
+#print axioms OCaml.Vm.Gc.AllocWrapperCore.header_of_effect
+#print axioms OCaml.Vm.Gc.AllocLargeWrapper.header_of_effect
+#print axioms OCaml.Vm.Gc.Fresh.header_of_wrapper_effect
+#print axioms OCaml.Vm.Gc.Fresh.QueueResult.header
+#print axioms OCaml.Vm.Gc.Fresh.header_of_large_allocation
+#print axioms OCaml.Vm.Gc.Fresh.LargeEnqueued.header
+#print axioms OCaml.Vm.Gc.Fresh.LargeAllocationConditions.header_address
+#print axioms OCaml.Vm.Gc.Fresh.LargeEnqueued.header_nat

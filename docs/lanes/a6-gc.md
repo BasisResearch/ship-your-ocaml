@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Typed headers after the large-block fresh route (2026-10-04)
+
+- `FreshLargeHeader.lean:LargeEnqueued.header` proves original size/tag
+  agreement after large allocation and queue insertion. `header_nat`
+  provides mopup's natural-address interface; `header_address` derives
+  nonwrapping payload arithmetic from the actual header write window.
+- `AllocWrapperCore.header_of_effect`, `header_of_wrapper_effect` and
+  `QueueResult.header` share saved-tag readback, source-header facts and
+  queue preservation across both allocation alternatives. Existing
+  exact-size header proofs now instantiate these helpers.
+- Targeted builds and exact-size regression pass (733 jobs); discipline
+  and abstraction gates pass. Full Audit passes (3344 jobs), with only
+  permitted axioms.
+  Complete large queue route landed as `62324e5`.
+- Next: single-field fresh scanned-object tail route. Other object and
+  allocator routes, ownership suppliers, collector closure, G2 and the
+  ocamlc live-word budget remain open.
+
 ## Fresh large-block queue route and native return (2026-10-04)
 
 - `FreshLargeEnqueued.lean:enqueue_fresh_large` proves complete actual

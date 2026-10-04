@@ -90,4 +90,16 @@ theorem allocate {R c} (input : Input R c) :
   simpa only [AllocLarge.resultHeader_of_memory memory,AllocLarge.freeEffect_of_memory memory,
     Post,resultHeader,freeEffect] using complete
 
+theorem header_of_effect {R before after}
+    (memory : after.σ.mem = writeLog before.σ.mem (effect R before))
+    (windows : AllocEntry.Windows R) (conditions : Conditions R before)
+    (sizeBound : (R 10).toNat < 2^54)
+    (separate : (resultHeader R before).toNat + 8 ≤ Layout.sym_caml_allocated_words ∨
+      Layout.sym_caml_allocated_words + 8 ≤ (resultHeader R before).toNat)
+    (tagBound : (R 11).toNat < 256) :
+    HeaderOk (word after (resultHeader R before).toNat) (R 10).toNat (R 11).toNat :=
+  AllocWrapperCore.header_of_effect memory windows
+    (conditions.freeOutside (11,AllocEntry.tagOffset) (by simp [AllocEntry.saveCells]))
+    sizeBound separate tagBound
+
 end OCaml.Vm.Gc.AllocLargeWrapper
