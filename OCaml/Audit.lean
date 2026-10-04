@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.IdentityCall
 import OCaml.Vm.Boot.Startup.DomainReady
 import OCaml.Vm.Boot.Startup.DomainReturned
 import OCaml.Vm.Boot.Startup.TablesReturn
@@ -3144,6 +3145,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.RuntimeReady.zero
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTablesReturn.ready
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetDomainReturned.ready
+#print axioms OCaml.Vm.Boot.Startup.identity_zero
+#print axioms OCaml.Vm.Boot.Startup.identity_call
 #print axioms OCaml.Vm.Gc.AllocColor.prepare
 #print axioms OCaml.Vm.Gc.AllocColor.tag32_eq
 #print axioms OCaml.Vm.Gc.AllocColor.header_ok

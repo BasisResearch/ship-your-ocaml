@@ -2,6 +2,21 @@
 
 ## Round 2 status (2026-10-04)
 
+`Startup/Identity.lean` proves `identity_zero` for getuid/geteuid/getgid/
+getegid through one shared summary over their generated native blocks.
+This transcribes the four zero-return stubs in `c/src/htif.c:595`.
+`identity_call` composes any generated direct call to these functions with
+its zero return, retaining a supplied register interface and the complete
+memory/output/nonwritten-register frame. Each module checks in one second.
+These summaries supply the four security checks in `caml_secure_getenv`.
+
+The complete runtime-readiness increment landed as `b3c4a7a`, full gate
+passed. Next: compose the secure-getenv caller frame and identity checks,
+then its getenv tail call on the pinned empty environment. Reset execution
+currently reaches the caml_main continuation after domain initialization;
+parameter parsing and the remaining reset-to-cut/Loaded exit stay open.
+
+
 `Startup/DomainReady.lean` proves `ResetDomainReturned.ready`: the reached
 caml_main continuation retains the full runtime/allocator contract, with
 all four live allocations and the remaining `startupAllocatorCredits - 192`.
