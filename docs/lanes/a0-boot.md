@@ -2,6 +2,21 @@
 
 ## Round 2 status (2026-10-04)
 
+**`StatChecked.lean:stat_checked` now proves the complete successful nonpooling
+caml_stat_alloc function for abstract requests, heap and capacity.** Generated
+prologue, actual malloc JAL, the landed allocator contract, successful pointer
+test and restoring return are composed into one FnSummary. The result carries
+the fresh block and full RuntimeReady contract at the original caller. The
+caller-word readback uses allocator scratch separation, not an assumed return.
+The final composition checks in 1.1 seconds with no budget increases.
+
+`RuntimeMalloc.lean:RuntimeReady.malloc_result` shares allocator-to-runtime
+transport; `StatCheckedAllocated.saved_word` handles either saved caller word.
+The closed reset frontier remains `reset_custom_entry_exists` at 0x80024a2c.
+Next: use this wrapper for the four 16-byte custom-operation registrations;
+then subsequent startup functions. Reset-to-cut/Loaded remains open.
+
+
 The startup-counter increment landed as `4522ebc`, full gate passed.
 **`CustomEntry.lean:reset_custom_entry_exists` now extends the CLOSED reset run
 to caml_init_custom_operations at 0x80024a2c.** It executes the successful
@@ -16,8 +31,8 @@ Layout's generated native-frame size and save offsets. The closed composition
 checks in 1.1 seconds. Explicitly instantiating the symbolic frame base avoids
 asking elaboration to invert bit-vector subtraction; no limits were raised.
 
-Next: summarize caml_stat_alloc's nonpooling successful path using the landed
-malloc spec, then the four 16-byte custom-operation registrations. Subsequent
+Next: compose the four 16-byte custom-operation registrations using the
+checked allocation summary. Subsequent
 file loading, GC/stack initialization and reset-to-cut/Loaded remain open.
 
 
