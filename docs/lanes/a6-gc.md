@@ -1,5 +1,25 @@
 # Lane a6-gc
 
+## Fresh single-field young-child tail entry (2026-10-04)
+
+- `SingleFieldYoung.lean:prepare_young` proves the actual forwarding, child
+  tag and accepted nursery-test path to the header classifier. It retains
+  the captured original child, destination, native frame and prologue constants.
+- `FreshSingleYoung.lean:single_fresh_young` and `single_fresh_large_young`
+  compose both allocation alternatives to this tail boundary; `captured`
+  gives its original-placement `Eqv.valRead` interpretation. No initialized
+  destination payload or recursive execution is assumed.
+- `SingleFieldForwarded.lean:YoungHead.forwarded_return` connects this
+  boundary to the existing actual zero-header path and native return.
+- The law check now covers captured self-pointers: the source is already
+  forwarded while the register still contains its old address. All law
+  checks pass; targeted Lean builds and full Audit (3487 jobs) pass,
+  with only permitted axioms. Discipline and abstraction gates pass.
+- Previous whole non-young checkpoint landed as `43372a6`. Next: compose
+  the young forwarded-child return with the original saved bank and typed
+  relocated payload, then extend the partial relocation for fresh children.
+  Collector closure, ownership suppliers, G2 and live-word budget remain open.
+
 ## Whole fresh-single non-young routes (2026-10-04)
 
 - `FreshSingleNonYoung.lean:single_fresh_nonYoung` and

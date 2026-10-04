@@ -350,3 +350,19 @@ for color in (0, 768):
     assert after[rs[0]] == 85
     assert rs[0] + 8 not in after  # no payload word beyond Wosize is copied
 print("L3' promotion headers: white/black preserve tag and size; byte-identical headers and an extra payload word are not required")
+# Single-field tail entry publishes the parent's forwarding pointer but
+# retains its unrelocated child in x8. Exercise aliasing, cycles and immediates.
+for source in (4096, 8192):
+    target = source + 65536
+    for child in (source, source + 128, 85):
+        mem = {source - 8: 1024, source: child}
+        captured = mem[source]
+        mem[source - 8] = 0
+        mem[source] = target
+        partial = {source: target}
+        assert captured == child
+        assert mem[source] == partial[source]
+        assert target not in mem
+        if child == source:
+            assert captured != partial[child]
+print("L3' single-field tail: 6 captured-child cases pass; a self-pointer remains in the original placement after parent forwarding")

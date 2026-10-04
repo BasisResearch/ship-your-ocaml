@@ -1,3 +1,5 @@
+import OCaml.Vm.Gc.FreshSingleYoung
+import OCaml.Vm.Gc.SingleFieldForwarded
 import OCaml.Vm.Boot.Startup.NameEmpty
 import OCaml.Vm.Gc.FreshSingleNonYoung
 import OCaml.Vm.Gc.SingleFieldNonYoung
@@ -3744,3 +3746,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Fresh.AllocationResult.single_nonYoung
 #print axioms OCaml.Vm.Gc.Fresh.single_fresh_nonYoung
 #print axioms OCaml.Vm.Gc.Fresh.single_fresh_large_nonYoung
+
+#print axioms OCaml.Vm.Gc.SingleField.YoungConditions.of_memory
+#print axioms OCaml.Vm.Gc.SingleField.Classified.young_head
+#print axioms OCaml.Vm.Gc.SingleField.prepare_young
+#print axioms OCaml.Vm.Gc.SingleField.YoungHead.forwarded_return
+#print axioms OCaml.Vm.Gc.Fresh.AllocationResult.single_young
+#print axioms OCaml.Vm.Gc.Fresh.single_fresh_young
+#print axioms OCaml.Vm.Gc.Fresh.single_fresh_large_young
+#print axioms OCaml.Vm.Gc.Fresh.YoungSingleResult.captured
