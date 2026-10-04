@@ -1881,6 +1881,21 @@ explicit. The reservation landed as `da971af`, all gates passing. Next: common
 zero/copied-capture handoff, first function metadata and the infix loop, then
 represented allocation restoration and full CLOSUREREC composition.
 
+## Recursive capture composition and first-function metadata
+
+`ClosurerecSetup.lean:21` (`closurerec_setup`) composes actual dispatch,
+prefix, reservation, initialization and arbitrary capture copying through
+`ClosurerecReady`; zero captures share the same metadata cut (0.82 s).
+`ClosurerecFirstOne/More.lean` (`closurerec_first_one/more`) proves the actual
+first stack pointer, code and arity stores. One function reaches the common
+return suffix; multiple functions establish named infix-loop registers.
+The generated adapters use exact intermediate write logs and the shared
+`OperandAt.read32_mem_log` to read the displacement after the stack write.
+`gen_closurerec_first.py` generates both paths. Initializers landed as
+`d7e21b2`, all gates passing. Next: arbitrary-count infix metadata loop,
+stack adjustment/return, simultaneous heap allocation and stack restoration,
+and complete CLOSUREREC arm/step composition.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
