@@ -2580,6 +2580,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closurerec_copy_last
 #print axioms OCaml.Vm.Sim.closurerec_copy_run
 
+-- Both represented recursive-closure prefixes and shared arithmetic/frame rules.
+#print axioms OCaml.Vm.Sim.signed_low32_nat
+#print axioms OCaml.Vm.Sim.addw_nat_add
+#print axioms OCaml.Vm.Sim.addiw_nat_pred
+#print axioms OCaml.Vm.Sim.closurerec_twice
+#print axioms OCaml.Vm.Sim.frame_pins
+#print axioms OCaml.Vm.Sim.ClosurerecFields.frame
+#print axioms OCaml.Vm.Sim.closurerec_prefix_more
+#print axioms OCaml.Vm.Sim.closurerec_prefix_zero
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

@@ -20,15 +20,37 @@ theorem sign_extend_nat32 (n : Nat) (small : n < 2^31) :
   simp only [BitVec.toNat_signExtend, msb, Bool.false_eq_true, ite_false,
     BitVec.toNat_setWidth, BitVec.toNat_ofNat, Nat.mod_eq_of_lt fits, Nat.add_zero]
 
+/-- A bounded unsigned value survives signed low-word normalization. -/
+theorem signed_low32_nat (n : Nat) (small : n < 2^31) :
+    sign_extend (m := 64) (Sail.BitVec.extractLsb (BitVec.ofNat 64 n) 31 0) =
+      BitVec.ofNat 64 n := by
+  change ((BitVec.ofNat 64 n).extractLsb' 0 32).signExtend 64 = _
+  rw [low32_nat _ (by omega)]
+  exact sign_extend_nat32 _ small
+
+/-- ADDW combines two bounded natural register operands without signed wrap. -/
+theorem addw_nat_add (n k : Nat) (small : n + k < 2^31) :
+    sign_extend (m := 64) ((Sail.BitVec.extractLsb (BitVec.ofNat 64 n) 31 0) +
+      (Sail.BitVec.extractLsb (BitVec.ofNat 64 k) 31 0)) = BitVec.ofNat 64 (n + k) := by
+  change ((BitVec.ofNat 64 n).extractLsb' 0 32 + (BitVec.ofNat 64 k).extractLsb' 0 32).signExtend 64 = _
+  rw [low32_nat n (by omega), low32_nat k (by omega), ← BitVec.ofNat_add]
+  exact sign_extend_nat32 _ small
+
+/-- A positive bounded native word decrements without signed wrap. -/
+theorem addiw_nat_pred (n : Nat) (positive : 0 < n) (small : n < 2^31) :
+    sign_extend (m := 64) (Sail.BitVec.extractLsb
+      (BitVec.ofNat 64 n + sign_extend (m := 64) (0xfff#12)) 31 0) = BitVec.ofNat 64 (n - 1) := by
+  rw [show sign_extend (m := 64) (0xfff#12) = -(1#64) from by decide,
+    ← BitVec.sub_eq_add_neg, BitVec.ofNat_sub_ofNat_of_le _ 1 (by decide) (by omega)]
+  exact signed_low32_nat _ (by omega)
+
 /-- Bounded natural addition survives the native signed ADDIW truncation. -/
 theorem addiw_nat_add (n k : Nat) {offset : BitVec 12}
     (encoded : sign_extend (m := 64) offset = BitVec.ofNat 64 k) (small : n + k < 2^31) :
     sign_extend (m := 64) (Sail.BitVec.extractLsb (BitVec.ofNat 64 n + sign_extend (m := 64) offset) 31 0) =
       BitVec.ofNat 64 (n + k) := by
   rw [encoded, ← BitVec.ofNat_add]
-  change ((BitVec.ofNat 64 (n + k)).extractLsb' 0 32).signExtend 64 = _
-  rw [low32_nat _ (by omega)]
-  exact sign_extend_nat32 _ small
+  exact signed_low32_nat _ small
 
 /-- APPLY's ADDIW computes its positive arity minus one without signed wrap. -/
 theorem apply_count_word (n : BitVec 32) (positive : 0 < n.toInt) :
@@ -52,8 +74,6 @@ theorem apply_count_word (n : BitVec 32) (positive : 0 < n.toInt) :
     rw [signed]; rfl
   rw [loaded, nat, show sign_extend (m := 64) (0xfff#12) = -(1#64) from by decide,
     ← BitVec.sub_eq_add_neg, BitVec.ofNat_sub_ofNat_of_le _ 1 (by decide) (by omega)]
-  change ((BitVec.ofNat 64 (n.toNat - 1)).extractLsb' 0 32).signExtend 64 = _
-  rw [low32_nat _ (by omega)]
-  exact sign_extend_nat32 _ (by omega)
+  exact signed_low32_nat _ (by omega)
 
 end OCaml.Vm.Sim

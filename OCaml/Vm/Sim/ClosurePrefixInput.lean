@@ -1,6 +1,6 @@
 import OCaml.Vm.Sim.ClosureRestore
 import OCaml.Vm.Sim.WriteGeometry
-import Vsa.Sim.FrameWriteSet
+import OCaml.Vm.Sim.FramePins
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -17,7 +17,7 @@ structure ClosurePushInput (sp count : Nat) (accu : BitVec 64) : Prop where
 def closurePrefixWrites : List Register :=
   [Register.x15, Register.x17, Register.x23, Register.x26, Register.x27] ++ noiseRegs
 
-def closureFieldRegisters : List Register := [Register.x17, Register.x23, Register.x26, Register.x27]
+def closureFieldRegisters : List Register := [Register.x17, Register.x26, Register.x27, Register.x23]
 
 /-- Persistent native closure metadata, shared by prefix, reservation and initialization. -/
 structure ClosureFields (pl : Place) (pc sp count : Nat) (c : Config) : Prop where
@@ -31,12 +31,14 @@ structure ClosureFields (pl : Place) (pc sp count : Nat) (c : Config) : Prop whe
 theorem ClosureFields.frame {pl : Place} {pc sp count : Nat} {before after : Config} {written : List Register}
     (fields : ClosureFields pl pc sp count before) (frame : StepFrameOut written before.σ after.σ)
     (avoid : ∀ r ∈ closureFieldRegisters, ∀ w ∈ written, (w == r) = false) :
-    ClosureFields pl pc sp count after :=
-  ⟨fields.nurseryBound,
-    (frame.frame Register.x17 (avoid _ (by decide))).trans fields.countReg,
-    (frame.frame Register.x26 (avoid _ (by decide))).trans fields.fieldCount,
-    (frame.frame Register.x27 (avoid _ (by decide))).trans fields.codeBase,
-    (frame.frame Register.x23 (avoid _ (by decide))).trans fields.sourceReg⟩
+    ClosureFields pl pc sp count after := by
+  have pins : PinsHold before.σ
+      [⟨Register.x17, BitVec.ofNat 64 count⟩, ⟨Register.x26, BitVec.ofNat 64 (count + 2)⟩,
+       ⟨Register.x27, BitVec.ofNat 64 (pl.codeBase + 4 * (pc + 2))⟩,
+       ⟨Register.x23, BitVec.ofNat 64 (closureSource sp count)⟩] :=
+    ⟨fields.countReg, fields.fieldCount, fields.codeBase, fields.sourceReg, trivial⟩
+  obtain ⟨countReg, fieldCount, codeBase, sourceReg, _⟩ := frame_pins frame pins avoid
+  exact ⟨fields.nurseryBound, countReg, fieldCount, codeBase, sourceReg⟩
 
 /-- Both native prefixes decode the count and establish the original capture
 source, allocation size and code-offset base for the common reservation. -/

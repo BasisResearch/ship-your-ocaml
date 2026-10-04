@@ -1841,6 +1841,20 @@ snapshot, geometry, separation and fixed destination-base register remain
 explicit. Native CLOSUREREC cuts landed as `0e24928`, all gates passing.
 Next: recursive-closure prefix/reservation and infix metadata construction.
 
+## Both represented CLOSUREREC prefixes
+
+`ClosurerecPrefixMore/Zero.lean` (`closurerec_prefix_more/zero`) proves both
+actual capture-prefix paths through the nursery-size branch. The function
+count is positive, capture count nonnegative, and `closurerecSize ≤256`.
+`ClosurerecFields` names the persistent metadata separately from allocation
+temporaries. `frame_pins` shares register-bundle transport with ordinary
+`ClosureFields.frame`. `signed_low32_nat`, `addw_nat_add` and `addiw_nat_pred`
+share signed-word arithmetic with the existing count helpers; `closurerec_twice`
+handles the metadata stride. Both prefixes check (nonempty: 1.2 s), and existing
+complete allocation/copy consumers rebuild. The recursive capture loop landed
+as `79c8a1c`, all gates passing. Next: transported recursive nursery reservation,
+initializer and metadata/infix loop.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
