@@ -28,9 +28,9 @@ theorem raise_notrace_quiet_setup {L : OCaml.Layout} {P : Prog} {s : St} {pl : P
     show sign_extend (m := 64) (0x0b0#12) = BitVec.ofNat 64 Layout.off_trap_barrier from by decide,
     show sign_extend (m := 64) (0x0e8#12) = BitVec.ofNat 64 Layout.off_backtrace_active from by decide,
     domain_field_address, quiet.trapRead.toNat, quiet.barrierRead.toNat, quiet.backtraceRead.toNat] at domainStep
-  have below : zopz0zI_u (BitVec.ofNat 64 (high - 8 * s.trap)) (BitVec.ofNat 64 high) = true := by
-    simpa only [native_ult, BitVec.ule_eq_not_ult, Bool.not_not] using context.caught_guard
-  obtain ⟨count, after, _, run, post⟩ := domainStep quiet.trapRead.lower quiet.trapRead.upper quiet.trapRead.htif (BitVec.ofNat 64 (high - 8 * s.trap)) (by rw [load, context.trap_word]) quiet.barrierRead.lower quiet.barrierRead.upper quiet.barrierRead.htif (BitVec.ofNat 64 high) (by rw [load, quiet.barrier]) below d bp
+  have below : zopz0zI_u (BitVec.ofNat 64 (high - 8 * s.trap)) (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trap_barrier)) = true := by
+    simpa only [native_ult, BitVec.ule_eq_not_ult, Bool.not_not] using quiet.below context.caught_guard
+  obtain ⟨count, after, _, run, post⟩ := domainStep quiet.trapRead.lower quiet.trapRead.upper quiet.trapRead.htif (BitVec.ofNat 64 (high - 8 * s.trap)) (by rw [load, context.trap_word]) quiet.barrierRead.lower quiet.barrierRead.upper quiet.barrierRead.htif (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trap_barrier)) (load _).symm below d bp
   obtain ⟨_, memory, nativeFrame⟩ := post.extra
   have trapReg : gpr after 14 = some (BitVec.ofNat 64 (high - 8 * s.trap)) := PinsHold.get post.pins ⟨1, by simp⟩
   have domainReg : gpr after 15 = some (word c Layout.sym_Caml_state) := PinsHold.get post.pins ⟨2, by simp⟩

@@ -17,13 +17,15 @@ def outputs():
         pins = {r: i for i, (r, _) in enumerate(em.pins)}
         global_addr = next(p for p in spec['params'] if p.startswith('(hlo_')).split(' ≤ ',1)[1].removesuffix('.toNat)')
         value = 'BitVec.ofNat 64 (high - 8 * s.trap)'
+        barrier = '(word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trap_barrier))'
         load_args = []
-        for field, word, eq in [('trap','('+value+')','context.trap_word'), ('barrier','(BitVec.ofNat 64 high)','quiet.barrier')]:
-            load_args.append(f'quiet.{field}Read.lower quiet.{field}Read.upper quiet.{field}Read.htif {word} (by rw [load, {eq}])')
+        for field, word, eq in [('trap','('+value+')','context.trap_word'), ('barrier',barrier,None)]:
+            proof = f'(by rw [load, {eq}])' if eq else '(load _).symm'
+            load_args.append(f'quiet.{field}Read.lower quiet.{field}Read.upper quiet.{field}Read.htif {word} {proof}')
         if opcode == 'RAISE_NOTRACE':
             load_args.append('below')
         else:
-            load_args += ['(by simp only [native_uge, context.caught_guard, Bool.not_true])',
+            load_args += ['(by simp only [native_uge, quiet.below context.caught_guard, Bool.not_true])',
                 'quiet.backtraceRead.lower quiet.backtraceRead.upper quiet.backtraceRead.htif 0#64 (by rw [load, quiet.backtrace])',
                 '(by decide)',
                 f'quiet.trapRead.lower quiet.trapRead.upper quiet.trapRead.htif ({value}) (by rw [load, context.trap_word])']
@@ -58,8 +60,8 @@ theorem {family}_setup {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{pl : Place
     show sign_extend (m := 64) (0x0b0#12) = BitVec.ofNat 64 Layout.off_trap_barrier from by decide,
     show sign_extend (m := 64) (0x0e8#12) = BitVec.ofNat 64 Layout.off_backtrace_active from by decide,
     domain_field_address, quiet.trapRead.toNat, quiet.barrierRead.toNat, quiet.backtraceRead.toNat] at domainStep
-  have below : zopz0zI_u ({value}) (BitVec.ofNat 64 high) = true := by
-    simpa only [native_ult, BitVec.ule_eq_not_ult, Bool.not_not] using context.caught_guard
+  have below : zopz0zI_u ({value}) {barrier} = true := by
+    simpa only [native_ult, BitVec.ule_eq_not_ult, Bool.not_not] using quiet.below context.caught_guard
   obtain ⟨count, after, _, run, post⟩ := domainStep {' '.join(load_args)} d bp
   obtain ⟨_, memory, nativeFrame⟩ := post.extra
   have trapReg : gpr after 14 = some ({value}) := PinsHold.get post.pins ⟨{pins['x14']}, by simp⟩

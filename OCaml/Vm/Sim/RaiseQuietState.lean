@@ -8,12 +8,23 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives LeanRV64DExecutable 
 /-- No debugger trap barrier and no active backtrace in the quiet exception path.
 Runtime/startup supplies these memory facts and domain read geometry. -/
 structure RaiseQuietReady (high : Nat) (c : Config) : Prop where
-  barrier : word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trap_barrier) = BitVec.ofNat 64 high
+  barrier : high ≤ (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trap_barrier)).toNat
   backtrace : word c ((word c Layout.sym_Caml_state).toNat + Layout.off_backtrace_active) = 0#64
   trapRead : RamReadAt ((word c Layout.sym_Caml_state).toNat + Layout.off_trapsp) 8
   barrierRead : RamReadAt ((word c Layout.sym_Caml_state).toNat + Layout.off_trap_barrier) 8
   backtraceRead : RamReadAt ((word c Layout.sym_Caml_state).toNat + Layout.off_backtrace_active) 8
   highRead : RamReadAt ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high) 8
+
+/-- An active trap below stack_high is below every barrier at or above it.
+This includes startup's actual stack_high + one-word sentinel. -/
+theorem RaiseQuietReady.below {high : Nat} {c : Config} {v : BitVec 64}
+    (h : RaiseQuietReady high c) (below : v.ult (BitVec.ofNat 64 high) = true) :
+    v.ult (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trap_barrier)) = true := by
+  have highBound : high < 2^64 := Nat.lt_of_le_of_lt h.barrier
+    (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trap_barrier)).isLt
+  simp only [BitVec.ult, BitVec.toNat_ofNat, Nat.mod_eq_of_lt highBound, decide_eq_true_eq] at below ⊢
+  have bound := h.barrier
+  omega
 
 /-- Field addressing is uniform across the domain's native loads. -/
 theorem domain_field_address (w : BitVec 64) (offset : Nat) :

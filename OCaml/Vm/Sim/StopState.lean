@@ -55,9 +55,9 @@ structure StopInput (nativeSp : Nat) (saved : Nat → BitVec 64) (value vmSp : B
   vmStack : gpr c Layout.reg_sp = some vmSp
   value : gpr c Layout.reg_accu = some value
 
-/-- STOP's return preserves the ABI and records the three runtime stores explicitly. -/
-structure StopReturnPost (before : Config) (nativeSp : Nat) (saved : Nat → BitVec 64)
-    (value vmSp : BitVec 64) (after : Config) : Prop where
+/-- Shared interpreter return result after an explicit runtime-store log. -/
+structure InterpRuntimeReturnPost (before : Config) (nativeSp : Nat) (saved : Nat → BitVec 64)
+    (value : BitVec 64) (log : List WEntry) (after : Config) : Prop where
   good : GoodState after.σ
   image : ExecutableImage after
   tick : after.tick < 2
@@ -65,7 +65,12 @@ structure StopReturnPost (before : Config) (nativeSp : Nat) (saved : Nat → Bit
   stack : gpr after 2 = some (BitVec.ofNat 64 (nativeSp + Layout.interpFrameBytes))
   value : gpr after 10 = some value
   registers : ∀ r ∈ Layout.interpSavedRegs, gpr after r = some (saved r)
-  memory : after.σ.mem = writeLog before.σ.mem (stopLog nativeSp vmSp before)
+  memory : after.σ.mem = writeLog before.σ.mem log
   output : after.σ.sailOutput = before.σ.sailOutput
+
+/-- Normal interpreter return with STOP's exact store order. -/
+abbrev StopReturnPost (before : Config) (nativeSp : Nat) (saved : Nat → BitVec 64)
+    (value vmSp : BitVec 64) (after : Config) :=
+  InterpRuntimeReturnPost before nativeSp saved value (stopLog nativeSp vmSp before) after
 
 end OCaml.Vm.Sim

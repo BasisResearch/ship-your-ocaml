@@ -2224,11 +2224,34 @@ is unchanged. Capped builds: caml_main segment 1.9s, adapter 1.1s, main call
 adapter 0.825s, caller composition 0.818s. The represented STOP arm landed as
 `3b41dab`, full gate passing; coverage remains 140 conditional bridges.
 
+## Root uncaught return and startup-compatible quiet barriers
+
+`raise_uncaught_check` proves the root invocation's no-trap comparison and
+jump to the uncaught path. `raise_uncaught_return` executes its three stores,
+adds the exception-result marker, and consumes the complete interpreter
+epilogue. `raise_uncaught` composes both. `UncaughtChecked` records the
+read-only boundary; `InterpRuntimeReturnPost` factors the ABI result across
+STOP and uncaught returns with their exact, distinct store logs. The
+uncaught log reuses STOP's range-separation facts through `uncaught_outside`.
+Capped builds: check 1.7s, native return adapter 0.964s, composition 1.3s.
+
+`RaiseQuietReady.barrier` now requires the barrier to be at or above
+stack_high. The old equality excluded startup's actual stack_high + one
+word (runtime/stacks.c:39). `RaiseQuietReady.below` proves the generated
+comparison for every active represented trap; all three caught quiet
+adapters rebuild in 1.7–1.8s. This changes an auxiliary arm premise, not the
+headline refinement theorem or abstract semantics.
+
+The uncaught bytecode rule enters a pending-exception continuation; connecting
+that abstract continuation to native caml_main exception handling remains
+open. No additional represented opcode is counted (140 conditional bridges).
+The normal caller return landed as `f523550` with check_all passing.
+
 ## Open / next
 
 Immediate next: consume/prove the remaining caml_do_exit summary; continue
 the
-uncaught/backtrace paths, primitive
+uncaught semantic continuation/backtrace paths, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
 `GcSafe P` premise is already threaded through ArmSim and the headline.
