@@ -12,6 +12,11 @@ import OCaml.Vm.Boot.Startup.ParameterQueryReady
 import OCaml.Vm.Boot.Startup.ParameterReady
 import OCaml.Vm.Boot.Startup.ParameterValueReady
 import OCaml.Vm.Boot.Startup.StrncmpEqual
+import OCaml.Vm.Boot.Startup.FindLoaded
+import OCaml.Vm.Boot.Startup.FindCount
+import OCaml.Vm.Boot.Startup.FindMatch
+import OCaml.Vm.Boot.Startup.FindFound
+import OCaml.Vm.Boot.Startup.FindFoundReturn
 import OCaml.Vm.Boot.WhileMinEnvironment
 import OCaml.Vm.Boot.Startup.ParameterPrefix
 import OCaml.Vm.Boot.Startup.ParameterBranch
@@ -3492,6 +3497,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.strncmp_return
 #print axioms OCaml.Vm.Boot.Startup.strncmp_loop
 #print axioms OCaml.Vm.Boot.Startup.strncmp_equal
+
+-- Successful environment lookup pieces.
+#print axioms OCaml.Vm.Boot.Startup.find_loaded
+#print axioms OCaml.Vm.Boot.Startup.find_compare
+#print axioms OCaml.Vm.Boot.Startup.findCompareCount_cursor
+#print axioms OCaml.Vm.Boot.Startup.find_match
+#print axioms OCaml.Vm.Boot.Startup.find_found
+#print axioms OCaml.Vm.Boot.Startup.find_found_return
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.domain_history_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.reset

@@ -2,6 +2,24 @@
 
 ## Round 2 status (2026-10-04)
 
+The folded native strncmp increment landed as `8138ee9`, full gate passed.
+`find_loaded` selects the first nonnull environment entry; `find_compare`
+saves s0 and sets up strncmp, with `findCompareCount_cursor` proving that
+its signed-word difference is the scanned length for names below 2^31.
+`find_match` selects the equals-delimited success branch. `find_found` saves
+the delimiter pointer and writes first-entry index zero to the caller's
+four-byte output slot. `find_found_return` restores all saved registers and
+returns the byte after '='. Every machine span is generated and checked.
+
+The nine-load epilogue initially exhausted default elaboration while comparing
+large symbolic register expressions. Normalizing the saved-word equations
+before comparing the finite register lists closes it without raising budgets.
+The instruction-record generator now covers SW and arithmetic right-immediate
+shift, needed by the actual index store. Next: compose the successful search,
+getenv and security call, then frame the initial environment through reset.
+Actual reset reachability remains at parser entry; reset-to-cut/Loaded is open.
+
+
 The present-empty-value parser continuation landed as `c3c5e97`, full gate
 passed. `StrncmpEqual.lean:strncmp_equal` now proves the COMPLETE native
 strncmp call for an arbitrary positive equal nonzero prefix when either
