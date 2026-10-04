@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Typed headers for tail allocations (2026-10-04)
+
+- `FreshHeaderCore.lean:header_of_typed_wrapper` shares the real wrapper
+  header proof across native entry and tail entry; header color may differ
+  while size/tag agree. Shared address laws exclude modular wraparound.
+- `ContextHeader.lean` proves typed headers for both tail allocator routes,
+  natural header addresses from actual RAM windows, and preservation by
+  queue insertion.
+- `SingleFieldChildHeader.lean` connects these facts to actual captured-child
+  allocation results, retaining the preceding parent-forwarding log.
+  Counter/header separation remains a finite ownership premise.
+- Targeted/header regressions pass (766 jobs), full Audit passes (3697 jobs),
+  and both discipline gates pass; only permitted axioms. Wide caller-root
+  checkpoint landed as `d89dc58`.
+- Next: retain typed copied headers and completed/pending fields across the
+  loop, derive ownership coverage, then cover the remaining collector.
+  G2 and live budget remain open.
+
 ## Roots through scalar and queued exits (2026-10-04)
 
 - `CopyChoice.lean:Head.step_copy_effect` exposes exact parent-prefix plus

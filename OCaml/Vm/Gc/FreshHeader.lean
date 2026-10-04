@@ -54,10 +54,8 @@ agrees with the natural-address representation used by mopup. -/
 theorem AllocationConditions.header_address {R c} (conditions : AllocationConditions R c) :
     (allocatedPayload R c - BitVec.ofNat 64 Layout.header_bytes).toNat =
       (allocatedPayload R c).toNat - Layout.header_bytes := by
-  have bound : (8#64) ≤ allocatedPayload R c := by
-    change 8 ≤ (allocatedPayload R c).toNat
-    exact Nat.le_trans (by decide) conditions.wrapper.freeList.nextRead.lower
-  simpa only [Layout.header_bytes,show (8#64).toNat = 8 from rfl] using BitVec.toNat_sub_of_le bound
+  apply header_address_of_lower
+  exact Nat.le_trans (by decide) conditions.wrapper.freeList.nextRead.lower
 
 /-- Header agreement in mopup's natural-address interface. -/
 theorem Enqueued.header_nat {R qs pl before after size tag} (post : Enqueued R qs pl before after)

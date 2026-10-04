@@ -41,11 +41,10 @@ theorem LargeEnqueued.header {R qs pl before after size tag} (post : LargeEnqueu
 payload address, supplying mopup's natural-address header interface. -/
 theorem LargeAllocationConditions.header_address {R c} (conditions : LargeAllocationConditions R c) :
     (largeHeader R c).toNat = (largePayload R c).toNat - Layout.header_bytes := by
+  apply header_address_of_upper
   have upper := conditions.wrapper.body.continuation.account.headerWrite.upper
   change (largeHeader R c).toNat + 8 ≤ 0x100000000 at upper
-  have bound : (largeHeader R c).toNat + 8 < 2^64 := by omega
-  change (largeHeader R c).toNat = (largeHeader R c + 8#64).toNat - 8
-  simp only [BitVec.toNat_add,show (8#64).toNat = 8 from rfl,Nat.mod_eq_of_lt bound]
+  change (largeHeader R c).toNat + 8 < 2^64
   omega
 
 theorem LargeEnqueued.header_nat {R qs pl before after size tag} (post : LargeEnqueued R qs pl before after)
