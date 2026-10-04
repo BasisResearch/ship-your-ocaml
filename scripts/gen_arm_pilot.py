@@ -29,6 +29,20 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'CLOSUREREC_PREFIX_MORE': ('ClosurerecPrefixMore', ['lw_tot', 'lw_tot', 'alu_addi', 'slliw', 'addw', 'addiw', 'alu_addi', 'alu_add', 'branch_nottaken', 'sd', 'alu_addi', 'alu_addi', 'branch_taken']),
+    'CLOSUREREC_PREFIX_ZERO': ('ClosurerecPrefixZero', ['lw_tot', 'lw_tot', 'alu_addi', 'slliw', 'addw', 'addiw', 'alu_addi', 'alu_add', 'branch_taken', 'alu_addi', 'alu_addi', 'branch_taken']),
+    'CLOSUREREC_RESERVE': ('ClosurerecReserve', ['auipc', 'alu_addi', 'ld_tot', 'slli', 'alu_addi', 'ld_tot', 'sub', 'ld_tot', 'alu_add', 'sd', 'branch_taken']),
+    'CLOSUREREC_INIT_MORE': ('ClosurerecInitMore', ['slli', 'alu_addi', 'sd', 'auipc', 'ld_tot', 'ld_tot', 'alu_addi', 'alu_addi', 'branch_nottaken', 'slli', 'alu_add', 'slli', 'alu_addi', 'alu_add']),
+    'CLOSUREREC_INIT_ZERO': ('ClosurerecInitZero', ['slli', 'alu_addi', 'sd', 'auipc', 'ld_tot', 'ld_tot', 'alu_addi', 'alu_addi', 'branch_taken']),
+    'CLOSUREREC_COPY_MORE': ('ClosurerecCopyMore', ['sub', 'alu_add', 'ld_tot', 'alu_addi', 'sd', 'branch_taken']),
+    'CLOSUREREC_COPY_LAST': ('ClosurerecCopyLast', ['sub', 'alu_add', 'ld_tot', 'alu_addi', 'sd', 'branch_nottaken']),
+    'CLOSUREREC_FIRST_ONE': ('ClosurerecFirstOne', ['slli', 'alu_add', 'sd', 'lw_tot', 'slli', 'alu_addi', 'slli', 'alu_add', 'sd', 'alu_addi', 'sd', 'alu_addi', 'branch_taken']),
+    'CLOSUREREC_FIRST_MORE': ('ClosurerecFirstMore', ['slli', 'alu_add', 'sd', 'lw_tot', 'slli', 'alu_addi', 'slli', 'alu_add', 'sd', 'alu_addi', 'sd', 'alu_addi', 'branch_nottaken', 'slliw', 'alu_addi', 'alu_addi', 'alu_addi', 'addw', 'alu_addi', 'alu_addi']),
+    'CLOSUREREC_INFIX_MORE': ('ClosurerecInfixMore', ['slli', 'alu_addi', 'sd', 'sd', 'lw_tot', 'addiw', 'sd', 'slli', 'alu_add', 'sd', 'alu_addi', 'alu_addi', 'alu_addi', 'alu_addi', 'branch_taken']),
+    'CLOSUREREC_INFIX_LAST': ('ClosurerecInfixLast', ['slli', 'alu_addi', 'sd', 'sd', 'lw_tot', 'addiw', 'sd', 'slli', 'alu_add', 'sd', 'alu_addi', 'alu_addi', 'alu_addi', 'alu_addi', 'branch_nottaken']),
+    'CLOSUREREC_STACK': ('ClosurerecStack', ['addiw', 'slli', 'srli', 'sub']),
+    'CLOSUREREC_SUFFIX': ('ClosurerecSuffix', ['slli', 'alu_add', 'j']),
+
     'CLOSURE_SUFFIX': ('ClosureSuffix', ['lw_tot', 'slli', 'alu_add', 'slli', 'alu_add', 'alu_addi', 'sd', 'alu_addi', 'sd', 'j']),
     'CLOSURE_COPY_LAST': ('ClosureCopyLast', ['ld_tot', 'slli', 'alu_add', 'addiw', 'sd', 'alu_addi', 'branch_nottaken']),
     'CLOSURE_COPY_MORE': ('ClosureCopyMore', ['ld_tot', 'slli', 'alu_add', 'addiw', 'sd', 'alu_addi', 'branch_taken']),
@@ -163,12 +177,26 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'CLOSURE_SUFFIX', 'CLOSURE_COPY_LAST', 'CLOSURE_COPY_MORE', 'CLOSURE_INIT_ZERO', 'CLOSURE_INIT_MORE', 'CLOSURE_RESERVE', 'CLOSURE_PREFIX_ZERO', 'CLOSURE_PREFIX_MORE', 'MAKEBLOCK_ONE_SUFFIX', 'MAKEBLOCK_SUFFIX', 'MAKEBLOCK_INIT_ONE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_COPY_MORE', 'MAKEBLOCK_COPY_LAST', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'CLOSUREREC_PREFIX_MORE', 'CLOSUREREC_PREFIX_ZERO', 'CLOSUREREC_RESERVE', 'CLOSUREREC_INIT_MORE', 'CLOSUREREC_INIT_ZERO', 'CLOSUREREC_COPY_MORE', 'CLOSUREREC_COPY_LAST', 'CLOSUREREC_FIRST_ONE', 'CLOSUREREC_FIRST_MORE', 'CLOSUREREC_INFIX_MORE', 'CLOSUREREC_INFIX_LAST', 'CLOSUREREC_STACK', 'CLOSUREREC_SUFFIX', 'CLOSURE_SUFFIX', 'CLOSURE_COPY_LAST', 'CLOSURE_COPY_MORE', 'CLOSURE_INIT_ZERO', 'CLOSURE_INIT_MORE', 'CLOSURE_RESERVE', 'CLOSURE_PREFIX_ZERO', 'CLOSURE_PREFIX_MORE', 'MAKEBLOCK_ONE_SUFFIX', 'MAKEBLOCK_SUFFIX', 'MAKEBLOCK_INIT_ONE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_COPY_MORE', 'MAKEBLOCK_COPY_LAST', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 # Explicit loop cuts: entry, exit, and native branch decisions. These are text
 # instruction addresses; all runtime data addresses still come from Layout.
 CUTS = {
+    'CLOSUREREC_PREFIX_MORE': (0x80002864, 0x8000289c, [False, True]),
+    'CLOSUREREC_PREFIX_ZERO': (0x80002864, 0x8000289c, [True, True]),
+    'CLOSUREREC_RESERVE': (0x8000289c, 0x800028cc, [True]),
+    'CLOSUREREC_INIT_MORE': (0x800028cc, 0x80002904, [False]),
+    'CLOSUREREC_INIT_ZERO': (0x800028cc, 0x8000291c, [True]),
+    'CLOSUREREC_COPY_MORE': (0x80002904, 0x80002904, [True]),
+    'CLOSUREREC_COPY_LAST': (0x80002904, 0x8000291c, [False]),
+    'CLOSUREREC_FIRST_ONE': (0x8000291c, 0x800029b8, [True]),
+    'CLOSUREREC_FIRST_MORE': (0x8000291c, 0x8000296c, [False]),
+    'CLOSUREREC_INFIX_MORE': (0x8000296c, 0x8000296c, [True]),
+    'CLOSUREREC_INFIX_LAST': (0x8000296c, 0x800029a8, [False]),
+    'CLOSUREREC_STACK': (0x800029a8, 0x800029b8, []),
+    'CLOSUREREC_SUFFIX': (0x800029b8, 0x80001f5c, []),
+
     'CLOSURE_SUFFIX': (0x80002a60, 0x80001f5c, []),
     'CLOSURE_COPY_LAST': (0x80002a44, 0x80002a60, [False]),
     'CLOSURE_COPY_MORE': (0x80002a44, 0x80002a44, [True]),
@@ -554,7 +582,7 @@ theorem {lower}_prim_contents : {table_address} =
 
 end OCaml.Vm.Sim
 """
-    if family in {'CLOSURE_RESERVE', 'CLOSURE_INIT_MORE', 'CLOSURE_INIT_ZERO', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_INIT_ONE', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST'}:
+    if family in {'CLOSUREREC_RESERVE', 'CLOSUREREC_INIT_MORE', 'CLOSUREREC_INIT_ZERO', 'CLOSURE_RESERVE', 'CLOSURE_INIT_MORE', 'CLOSURE_INIT_ZERO', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_INIT_ONE', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST'}:
         domains = []
         for index, (address, _, op, args) in enumerate(insts):
             if '<Caml_state>' not in args:

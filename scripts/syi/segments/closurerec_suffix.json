@@ -1,0 +1,67 @@
+{
+  "theorem": "tr_closurerec_suffix",
+  "doc": "CLOSUREREC_SUFFIX arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.ClosurerecSuffixSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(v17 v16 : BitVec 64)",
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlClosurerecSuffixLoaded",
+  "pins": [
+    {
+      "reg": "x17",
+      "val": "v17",
+      "hyp": "hv17"
+    },
+    {
+      "reg": "x16",
+      "val": "v16",
+      "hyp": "hv16"
+    }
+  ],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x800029b8",
+      "site": "site_800029b8_closurerec_suffix",
+      "class": "alu",
+      "asm": "slli a7,a7,0x2",
+      "rd": "x17",
+      "rd_val": "(shift_bits_left v17 (Sail.BitVec.extractLsb (0x02#6) 5 0))",
+      "raw_val": "(shift_bits_left v17 (Sail.BitVec.extractLsb (0x02#6) 5 0))",
+      "call": "$vmi $v:x17 $hG $hpc $hmi $pin:x17 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800029bc",
+      "site": "site_800029bc_closurerec_suffix",
+      "class": "alu",
+      "asm": "add s0,a6,a7",
+      "rd": "x8",
+      "rd_val": "(v16 + (shift_bits_left v17 (Sail.BitVec.extractLsb (0x02#6) 5 0)))",
+      "raw_val": "(v16 + v17)",
+      "call": "$vmi $v:x16 $v:x17 $hG $hpc $hmi $pin:x16 $pin:x17 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x800029c0",
+      "site": "site_800029c0_closurerec_suffix",
+      "class": "j",
+      "asm": "j 80001f5c <caml_interprete+0x164>",
+      "imm": "0x1ff59c#21",
+      "target": "0x80001f5c",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x800029b8",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

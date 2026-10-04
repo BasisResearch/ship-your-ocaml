@@ -1813,6 +1813,18 @@ The nursery path requires nonnegative capture count at most 254, capacity,
 placement, separation, concrete accesses and runtime preservation. The major
 allocation and GC paths remain open. Both initializers landed as `12d482e`.
 
+## Generated CLOSUREREC nursery and infix cuts
+
+`Closurerec*Segment.lean` now supplies thirteen generated spans: both capture
+prefixes, nursery reservation, both initializers, both capture-copy branches,
+one/multiple-function metadata setup, both infix-loop branches, stack
+adjustment and return. Corresponding `*_loaded` lemmas project pins from the
+executable image; domain-address certificates use `Layout.sym_Caml_state`.
+Native spans check in 1.6–6.4 s (copy branches 1.7–1.8 s). The represented
+CLOSUREREC composition remains open. CLOSURE landed as `8cbad41`, all gates
+passing. Next: share the pointer-copy register shape and prove the actual
+CLOSUREREC capture loop, then its metadata/infix construction.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

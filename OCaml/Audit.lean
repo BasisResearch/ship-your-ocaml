@@ -2542,6 +2542,34 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closure_arm
 #print axioms OCaml.Vm.Sim.closure_step_arm
 
+-- Generated CLOSUREREC nursery and infix-construction cuts.
+#print axioms Vsa.Sim.tr_closurerec_prefix_more
+#print axioms OCaml.Vm.Sim.closurerec_prefix_more_loaded
+#print axioms Vsa.Sim.tr_closurerec_prefix_zero
+#print axioms OCaml.Vm.Sim.closurerec_prefix_zero_loaded
+#print axioms Vsa.Sim.tr_closurerec_reserve
+#print axioms OCaml.Vm.Sim.closurerec_reserve_loaded
+#print axioms Vsa.Sim.tr_closurerec_init_more
+#print axioms OCaml.Vm.Sim.closurerec_init_more_loaded
+#print axioms Vsa.Sim.tr_closurerec_init_zero
+#print axioms OCaml.Vm.Sim.closurerec_init_zero_loaded
+#print axioms Vsa.Sim.tr_closurerec_copy_more
+#print axioms OCaml.Vm.Sim.closurerec_copy_more_loaded
+#print axioms Vsa.Sim.tr_closurerec_copy_last
+#print axioms OCaml.Vm.Sim.closurerec_copy_last_loaded
+#print axioms Vsa.Sim.tr_closurerec_first_one
+#print axioms OCaml.Vm.Sim.closurerec_first_one_loaded
+#print axioms Vsa.Sim.tr_closurerec_first_more
+#print axioms OCaml.Vm.Sim.closurerec_first_more_loaded
+#print axioms Vsa.Sim.tr_closurerec_infix_more
+#print axioms OCaml.Vm.Sim.closurerec_infix_more_loaded
+#print axioms Vsa.Sim.tr_closurerec_infix_last
+#print axioms OCaml.Vm.Sim.closurerec_infix_last_loaded
+#print axioms Vsa.Sim.tr_closurerec_stack
+#print axioms OCaml.Vm.Sim.closurerec_stack_loaded
+#print axioms Vsa.Sim.tr_closurerec_suffix
+#print axioms OCaml.Vm.Sim.closurerec_suffix_loaded
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq
