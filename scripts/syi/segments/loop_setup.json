@@ -1,0 +1,96 @@
+{
+  "theorem": "tr_loop_setup",
+  "doc": "LOOP_SETUP arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.LoopSetupSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlLoopSetupLoaded",
+  "pins": [],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80001f40",
+      "site": "site_80001f40_loop_setup",
+      "class": "alu",
+      "asm": "li s8,148",
+      "rd": "x24",
+      "rd_val": "((0#64) + sign_extend (m := 64) (0x094#12))",
+      "raw_val": "((0#64) + sign_extend (m := 64) (0x094#12))",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80001f44",
+      "site": "site_80001f44_loop_setup",
+      "class": "alu",
+      "asm": "auipc s6,0x57",
+      "rd": "x22",
+      "rd_val": "((0x80001f44#64) + (sign_extend (m := 64) ((0x00057#20) +++ 0x000#12)))",
+      "raw_val": "((0x80001f44#64) + (sign_extend (m := 64) ((0x00057#20) +++ 0x000#12)))",
+      "call": "$vmi  $hG $hpc $hmi  $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80001f48",
+      "site": "site_80001f48_loop_setup",
+      "class": "alu",
+      "asm": "addi s6,s6,-1180 # 80058aa8 <__trunctfdf2+0x5b38>",
+      "rd": "x22",
+      "rd_val": "(((0x80001f44#64) + (sign_extend (m := 64) ((0x00057#20) +++ 0x000#12))) + sign_extend (m := 64) (0xb64#12))",
+      "raw_val": "(v22 + sign_extend (m := 64) (0xb64#12))",
+      "call": "$vmi $v:x22 $hG $hpc $hmi $pin:x22 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80001f4c",
+      "site": "site_80001f4c_loop_setup",
+      "class": "alu",
+      "asm": "auipc s4,0x63",
+      "rd": "x20",
+      "rd_val": "((0x80001f4c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12)))",
+      "raw_val": "((0x80001f4c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12)))",
+      "call": "$vmi  $hG $hpc $hmi  $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80001f50",
+      "site": "site_80001f50_loop_setup",
+      "class": "alu",
+      "asm": "addi s4,s4,-1052 # 80064b30 <caml_something_to_do>",
+      "rd": "x20",
+      "rd_val": "(((0x80001f4c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xbe4#12))",
+      "raw_val": "(v20 + sign_extend (m := 64) (0xbe4#12))",
+      "call": "$vmi $v:x20 $hG $hpc $hmi $pin:x20 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80001f54",
+      "site": "site_80001f54_loop_setup",
+      "class": "alu",
+      "asm": "auipc s3,0x63",
+      "rd": "x19",
+      "rd_val": "((0x80001f54#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12)))",
+      "raw_val": "((0x80001f54#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12)))",
+      "call": "$vmi  $hG $hpc $hmi  $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80001f58",
+      "site": "site_80001f58_loop_setup",
+      "class": "alu",
+      "asm": "addi s3,s3,-588 # 80064d08 <Caml_state>",
+      "rd": "x19",
+      "rd_val": "(((0x80001f54#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xdb4#12))",
+      "raw_val": "(v19 + sign_extend (m := 64) (0xdb4#12))",
+      "call": "$vmi $v:x19 $hG $hpc $hmi $pin:x19 $hmem rfl $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80001f40",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

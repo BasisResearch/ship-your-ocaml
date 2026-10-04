@@ -29,6 +29,13 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    'LOOP_SETUP': ('LoopSetup', ['alu_addi', 'auipc', 'alu_addi', 'auipc', 'alu_addi', 'auipc', 'alu_addi']),
+    'RAISE_HANDLER': ('RaiseHandler', ['ld_tot', 'ld_tot', 'alu_addi', 'srai', 'slli', 'alu_add', 'sd', 'ld_tot', 'ld_tot', 'srai', 'j']),
+    'RAISE_CHECK': ('RaiseCheck', ['ld_tot', 'ld_tot', 'ld_tot', 'sub', 'sub', 'branch_taken']),
+    'RAISE_QUIET': ('RaiseQuiet', ['auipc', 'alu_addi', 'ld_tot', 'ld_tot', 'ld_tot', 'branch_nottaken', 'ld_tot', 'branch_nottaken', 'j', 'ld_tot']),
+    'RERAISE_QUIET': ('ReraiseQuiet', ['auipc', 'alu_addi', 'ld_tot', 'ld_tot', 'ld_tot', 'branch_nottaken', 'ld_tot', 'branch_taken', 'ld_tot']),
+    'RAISE_NOTRACE_QUIET': ('RaiseNotraceQuiet', ['auipc', 'alu_addi', 'ld_tot', 'ld_tot', 'ld_tot', 'branch_taken']),
+
     'SDIV_POS_POS': ('SdivPosPos', ['branch_nottaken', 'branch_nottaken']),
     'SDIV_POS_NEG': ('SdivPosNeg', ['branch_nottaken', 'branch_taken', 'sub', 'alu_addi', 'jal']),
     'SDIV_NEG_POS': ('SdivNegPos', ['branch_taken', 'sub', 'branch_taken', 'alu_addi', 'jal']),
@@ -192,12 +199,19 @@ FAMILIES['C_CALLN_PREFIX'] = ('CcallnPrefix', [
 FAMILIES['C_CALLN_SUFFIX'] = ('CcallnSuffix', [
     'ld_tot', 'alu_addi', 'ld_tot', 'ld_tot', 'alu_addi', 'ld_tot', 'alu_add', 'j'])
 
-OPAQUE_LOADS = {'DIVINT_PREFIX', 'MODINT_PREFIX', 'CLOSUREREC_PREFIX_MORE', 'CLOSUREREC_PREFIX_ZERO', 'CLOSUREREC_RESERVE', 'CLOSUREREC_INIT_MORE', 'CLOSUREREC_INIT_ZERO', 'CLOSUREREC_COPY_MORE', 'CLOSUREREC_COPY_LAST', 'CLOSUREREC_FIRST_ONE', 'CLOSUREREC_FIRST_MORE', 'CLOSUREREC_INFIX_MORE', 'CLOSUREREC_INFIX_LAST', 'CLOSUREREC_STACK', 'CLOSUREREC_SUFFIX', 'CLOSURE_SUFFIX', 'CLOSURE_COPY_LAST', 'CLOSURE_COPY_MORE', 'CLOSURE_INIT_ZERO', 'CLOSURE_INIT_MORE', 'CLOSURE_RESERVE', 'CLOSURE_PREFIX_ZERO', 'CLOSURE_PREFIX_MORE', 'MAKEBLOCK_ONE_SUFFIX', 'MAKEBLOCK_SUFFIX', 'MAKEBLOCK_INIT_ONE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_COPY_MORE', 'MAKEBLOCK_COPY_LAST', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
+OPAQUE_LOADS = {'RAISE_HANDLER', 'RAISE_CHECK', 'RAISE_QUIET', 'RERAISE_QUIET', 'RAISE_NOTRACE_QUIET', 'DIVINT_PREFIX', 'MODINT_PREFIX', 'CLOSUREREC_PREFIX_MORE', 'CLOSUREREC_PREFIX_ZERO', 'CLOSUREREC_RESERVE', 'CLOSUREREC_INIT_MORE', 'CLOSUREREC_INIT_ZERO', 'CLOSUREREC_COPY_MORE', 'CLOSUREREC_COPY_LAST', 'CLOSUREREC_FIRST_ONE', 'CLOSUREREC_FIRST_MORE', 'CLOSUREREC_INFIX_MORE', 'CLOSUREREC_INFIX_LAST', 'CLOSUREREC_STACK', 'CLOSUREREC_SUFFIX', 'CLOSURE_SUFFIX', 'CLOSURE_COPY_LAST', 'CLOSURE_COPY_MORE', 'CLOSURE_INIT_ZERO', 'CLOSURE_INIT_MORE', 'CLOSURE_RESERVE', 'CLOSURE_PREFIX_ZERO', 'CLOSURE_PREFIX_MORE', 'MAKEBLOCK_ONE_SUFFIX', 'MAKEBLOCK_SUFFIX', 'MAKEBLOCK_INIT_ONE', 'MAKEBLOCK_INIT_MORE', 'MAKEBLOCK_RESERVE', 'MAKEBLOCK_COPY_MORE', 'MAKEBLOCK_COPY_LAST', 'MAKEBLOCK1_FAST', 'MAKEBLOCK2_FAST', 'MAKEBLOCK3_FAST', 'GRAB_ALLOC_PREFIX', 'GRAB_ALLOC_INIT', 'GRAB_COPY_MORE', 'GRAB_COPY_LAST', 'GRAB_ALLOC_SUFFIX', 'RESTART_PREFIX_MORE', 'RESTART_PREFIX_EMPTY', 'RESTART_COPY_MORE', 'RESTART_COPY_LAST', 'RESTART_SUFFIX', 'APPTERM_PREFIX', 'APPTERM_COPY_MORE', 'APPTERM_COPY_LAST', 'APPTERM_SUFFIX', 'GRAB_FAST', 'APPTERM1', 'APPTERM2', 'APPTERM3', 'APPLY1', 'APPLY2', 'APPLY3', 'RETURN_MORE', 'RETURN_FRAME', 'APPLY', 'POPTRAP', 'PUSHTRAP', 'OFFSETREF', 'SWITCH_BLOCK', 'VECTLENGTH', 'C_CALL1_PREFIX', 'C_CALL1_SUFFIX',
                 'C_CALLN_PREFIX', 'C_CALLN_SUFFIX'}
 
 # Explicit loop cuts: entry, exit, and native branch decisions. These are text
 # instruction addresses; all runtime data addresses still come from Layout.
 CUTS = {
+    'LOOP_SETUP': (0x80001f40, 0x80001f5c, []),
+    'RAISE_HANDLER': (0x80001ef0, 0x80001f40, []),
+    'RAISE_CHECK': (0x80001ed4, 0x80001ef0, [True]),
+    'RAISE_QUIET': (0x80003078, 0x80001ed4, [False, False]),
+    'RERAISE_QUIET': (0x80002c48, 0x80001ed4, [False, True]),
+    'RAISE_NOTRACE_QUIET': (0x8000232c, 0x80001ed4, [True]),
+
     'SDIV_POS_POS': (0x80037298, 0x800372a0, [False, False]),
     'SDIV_POS_NEG': (0x80037298, 0x800372a0, [False, True]),
     'SDIV_NEG_POS': (0x80037298, 0x800372a0, [True, True]),
@@ -674,6 +688,51 @@ open LeanRV64DExecutable.Functions Sail
             library, 'Vsa.Sim.Code.__muldi3Loaded', 'Vsa.Sim.Code.__muldi3',
             [f'Vsa.Sim.Code.__muldi3Chunk{i}' for i in range((len(library)+code.CHUNK-1)//code.CHUNK)],
             'muldi3_loaded', text_base)
+
+    if family == 'LOOP_SETUP':
+        emitter = SegmentEmitter(draft)
+        emitter.emit()
+        observations = []
+        for reg, field, layout_reg, layout_value in [
+            ('x22', 'table', 'reg_dispatchTable', 'jumpTable'),
+            ('x24', 'bound', 'reg_opcodeBound', 'opcodeBound'),
+            ('x20', 'pending', 'reg_pending', 'sym_caml_something_to_do'),
+            ('x19', 'domain', 'reg_domain', 'sym_Caml_state'),
+        ]:
+            index, expression = next((i, v) for i, (r, v) in enumerate(emitter.pins) if r == reg)
+            observations.append(f"""  have {field} : gpr after Layout.{layout_reg} = some (BitVec.ofNat 64 Layout.{layout_value}) := by
+    have observed : gpr after Layout.{layout_reg} = some ({expression}) := PinsHold.get post.pins ⟨{index}, by simp⟩
+    simpa only [show {expression} = BitVec.ofNat 64 Layout.{layout_value} from by decide] using observed""")
+        result[ROOT / 'OCaml/Vm/Sim/LoopSetup.lean'] = """import OCaml.Vm.Sim.LoopSetupState
+import OCaml.Vm.Sim.LoopSetupSegment
+import OCaml.Vm.Sim.LoopSetupPins
+
+/-! GENERATED by scripts/gen_arm_pilot.py. Shared loop-register initialization. -/
+namespace OCaml.Vm.Sim
+set_option autoImplicit false
+open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives LeanRV64DExecutable LeanRV64DExecutable.Functions Sail
+
+/-- Initialize all four loop registers with the pinned ELF's actual instructions. -/
+theorem loop_setup {c : Config} (h : LoopSetupInput c) :
+    ∃ n after, StepsN n c after ∧ LoopSetupPost c after := by
+  have bp : SegSt (0x80001f40#64) []
+      (fun σ => Vsa.Sim.Code.CamlLoopSetupLoaded σ.mem ∧ σ.mem = c.σ.mem ∧ σ = c.σ) c :=
+    ⟨h.good, h.pc, trivial, h.good.minstret, h.tick, loop_setup_loaded h.image, rfl, rfl⟩
+  obtain ⟨n, after, _, run, post⟩ := tr_loop_setup c.σ.mem c.σ c bp
+  obtain ⟨_, memory, frame⟩ := post.extra
+""" + '\n'.join(observations) + """
+  exact ⟨n, after, run, post.good,
+    image_of_writeLog (log := []) h.image ⟨trivial, trivial⟩ memory,
+    post.tick, post.pcAt, ⟨table, bound, pending, domain⟩, memory,
+    frame.widenChecked (allowed := loopSetupWrites) (by decide)⟩
+
+end OCaml.Vm.Sim
+"""
+
+        cuts = ['LOOP_SETUP', 'RAISE_HANDLER', 'RAISE_CHECK', 'RAISE_QUIET', 'RERAISE_QUIET', 'RAISE_NOTRACE_QUIET']
+        result[ROOT / 'OCaml/Vm/Sim/RaiseCuts.lean'] = '\n'.join(
+            [f'import OCaml.Vm.Sim.{FAMILIES[key][0]}{kind}' for key in cuts for kind in ('Segment', 'Pins')]
+            + ['', '/-! GENERATED by scripts/gen_arm_pilot.py. Shared native exception boundaries. -/', ''])
 
     if family == 'SETGLOBAL_PREFIX':
         cuts = [key for key in FAMILIES if key.startswith(('SETFIELD', 'SETGLOBAL_', 'SETVECTITEM_'))]

@@ -1,0 +1,153 @@
+{
+  "theorem": "tr_raise_quiet",
+  "doc": "RAISE_QUIET arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.RaiseQuietSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)",
+    "(hlo_80003080 : 0x80000000 ≤ ((((0x80003078#64) + (sign_extend (m := 64) ((0x00062#20) +++ 0x000#12))) + sign_extend (m := 64) (0xc90#12)) + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(hhi_80003080 : ((((0x80003078#64) + (sign_extend (m := 64) ((0x00062#20) +++ 0x000#12))) + sign_extend (m := 64) (0xc90#12)) + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80003080 : ((((0x80003078#64) + (sign_extend (m := 64) ((0x00062#20) +++ 0x000#12))) + sign_extend (m := 64) (0xc90#12)) + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ ((((0x80003078#64) + (sign_extend (m := 64) ((0x00062#20) +++ 0x000#12))) + sign_extend (m := 64) (0xc90#12)) + sign_extend (m := 64) (0x000#12)).toNat)",
+    "(loaded_80003080 : BitVec 64)",
+    "(hvalue_80003080 : loaded_80003080 = (sign_extend (m := 64) (bytesT8 m0 ((((0x80003078#64) + (sign_extend (m := 64) ((0x00062#20) +++ 0x000#12))) + sign_extend (m := 64) (0xc90#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))))",
+    "(hlo_80003084 : 0x80000000 ≤ (loaded_80003080 + sign_extend (m := 64) (0x0a8#12)).toNat)",
+    "(hhi_80003084 : (loaded_80003080 + sign_extend (m := 64) (0x0a8#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80003084 : (loaded_80003080 + sign_extend (m := 64) (0x0a8#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (loaded_80003080 + sign_extend (m := 64) (0x0a8#12)).toNat)",
+    "(loaded_80003084 : BitVec 64)",
+    "(hvalue_80003084 : loaded_80003084 = (sign_extend (m := 64) (bytesT8 m0 (loaded_80003080 + sign_extend (m := 64) (0x0a8#12)).toNat : BitVec (8 * 8))))",
+    "(hlo_80003088 : 0x80000000 ≤ (loaded_80003080 + sign_extend (m := 64) (0x0b0#12)).toNat)",
+    "(hhi_80003088 : (loaded_80003080 + sign_extend (m := 64) (0x0b0#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80003088 : (loaded_80003080 + sign_extend (m := 64) (0x0b0#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (loaded_80003080 + sign_extend (m := 64) (0x0b0#12)).toNat)",
+    "(loaded_80003088 : BitVec 64)",
+    "(hvalue_80003088 : loaded_80003088 = (sign_extend (m := 64) (bytesT8 m0 (loaded_80003080 + sign_extend (m := 64) (0x0b0#12)).toNat : BitVec (8 * 8))))",
+    "(hguard_8000308c : zopz0zKzJ_u loaded_80003084 loaded_80003088 = false)",
+    "(hlo_80003090 : 0x80000000 ≤ (loaded_80003080 + sign_extend (m := 64) (0x0e8#12)).toNat)",
+    "(hhi_80003090 : (loaded_80003080 + sign_extend (m := 64) (0x0e8#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80003090 : (loaded_80003080 + sign_extend (m := 64) (0x0e8#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (loaded_80003080 + sign_extend (m := 64) (0x0e8#12)).toNat)",
+    "(loaded_80003090 : BitVec 64)",
+    "(hvalue_80003090 : loaded_80003090 = (sign_extend (m := 64) (bytesT8 m0 (loaded_80003080 + sign_extend (m := 64) (0x0e8#12)).toNat : BitVec (8 * 8))))",
+    "(hguard_80003094 : (loaded_80003090 != (0#64)) = false)",
+    "(hlo_80001ed0 : 0x80000000 ≤ (loaded_80003080 + sign_extend (m := 64) (0x0a8#12)).toNat)",
+    "(hhi_80001ed0 : (loaded_80003080 + sign_extend (m := 64) (0x0a8#12)).toNat + 8 ≤ 0x100000000)",
+    "(hhtif_80001ed0 : (loaded_80003080 + sign_extend (m := 64) (0x0a8#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (loaded_80003080 + sign_extend (m := 64) (0x0a8#12)).toNat)",
+    "(loaded_80001ed0 : BitVec 64)",
+    "(hvalue_80001ed0 : loaded_80001ed0 = (sign_extend (m := 64) (bytesT8 m0 (loaded_80003080 + sign_extend (m := 64) (0x0a8#12)).toNat : BitVec (8 * 8))))"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlRaiseQuietLoaded",
+  "pins": [],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80003078",
+      "site": "site_80003078_raise_quiet",
+      "class": "alu",
+      "asm": "auipc s2,0x62",
+      "rd": "x18",
+      "rd_val": "((0x80003078#64) + (sign_extend (m := 64) ((0x00062#20) +++ 0x000#12)))",
+      "raw_val": "((0x80003078#64) + (sign_extend (m := 64) ((0x00062#20) +++ 0x000#12)))",
+      "call": "$vmi  $hG $hpc $hmi  $hmem rfl $hi"
+    },
+    {
+      "addr": "0x8000307c",
+      "site": "site_8000307c_raise_quiet",
+      "class": "alu",
+      "asm": "addi s2,s2,-880 # 80064d08 <Caml_state>",
+      "rd": "x18",
+      "rd_val": "(((0x80003078#64) + (sign_extend (m := 64) ((0x00062#20) +++ 0x000#12))) + sign_extend (m := 64) (0xc90#12))",
+      "raw_val": "(v18 + sign_extend (m := 64) (0xc90#12))",
+      "call": "$vmi $v:x18 $hG $hpc $hmi $pin:x18 $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80003080",
+      "site": "site_80003080_raise_quiet",
+      "class": "alu",
+      "asm": "ld a5,0(s2)",
+      "rd": "x15",
+      "rd_val": "loaded_80003080",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v18 + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x18 $hG $hpc $hmi $pin:x18 $hmem rfl hlo_80003080 hhi_80003080 hhtif_80003080 $hi",
+      "rw": "hmemE2, ← hvalue_80003080"
+    },
+    {
+      "addr": "0x80003084",
+      "site": "site_80003084_raise_quiet",
+      "class": "alu",
+      "asm": "ld a3,168(a5)",
+      "rd": "x13",
+      "rd_val": "loaded_80003084",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v15 + sign_extend (m := 64) (0x0a8#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl hlo_80003084 hhi_80003084 hhtif_80003084 $hi",
+      "rw": "hmemE3, ← hvalue_80003084"
+    },
+    {
+      "addr": "0x80003088",
+      "site": "site_80003088_raise_quiet",
+      "class": "alu",
+      "asm": "ld a4,176(a5)",
+      "rd": "x14",
+      "rd_val": "loaded_80003088",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v15 + sign_extend (m := 64) (0x0b0#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl hlo_80003088 hhi_80003088 hhtif_80003088 $hi",
+      "rw": "hmemE4, ← hvalue_80003088"
+    },
+    {
+      "addr": "0x8000308c",
+      "site": "site_8000308c_nottaken_raise_quiet",
+      "class": "bnottaken",
+      "asm": "bgeu a3,a4,800038ac <caml_interprete+0x1ab4>",
+      "pre_lines": [],
+      "call": "$vmi $v:x13 $v:x14 $hG $hpc $hmi $pin:x13 $pin:x14 $hmem rfl hguard_8000308c $hi"
+    },
+    {
+      "addr": "0x80003090",
+      "site": "site_80003090_raise_quiet",
+      "class": "alu",
+      "asm": "ld a4,232(a5)",
+      "rd": "x14",
+      "rd_val": "loaded_80003090",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v15 + sign_extend (m := 64) (0x0e8#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl hlo_80003090 hhi_80003090 hhtif_80003090 $hi",
+      "rw": "hmemE6, ← hvalue_80003090"
+    },
+    {
+      "addr": "0x80003094",
+      "site": "site_80003094_nottaken_raise_quiet",
+      "class": "bnottaken",
+      "asm": "bnez a4,8000309c <caml_interprete+0x12a4>",
+      "pre_lines": [],
+      "call": "$vmi $v:x14 $hG $hpc $hmi $pin:x14 $hmem rfl hguard_80003094 $hi"
+    },
+    {
+      "addr": "0x80003098",
+      "site": "site_80003098_raise_quiet",
+      "class": "j",
+      "asm": "j 80001ed0 <caml_interprete+0xd8>",
+      "imm": "0x1fee38#21",
+      "target": "0x80001ed0",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl (by decide) $hi"
+    },
+    {
+      "addr": "0x80001ed0",
+      "site": "site_80001ed0_raise_quiet",
+      "class": "alu",
+      "asm": "ld a4,168(a5)",
+      "rd": "x14",
+      "rd_val": "loaded_80001ed0",
+      "raw_val": "(sign_extend (m := 64) (bytesT8 σ.mem (v15 + sign_extend (m := 64) (0x0a8#12)).toNat : BitVec (8 * 8)))",
+      "call": "$vmi $v:x15 $hG $hpc $hmi $pin:x15 $hmem rfl hlo_80001ed0 hhi_80001ed0 hhtif_80001ed0 $hi",
+      "rw": "hmemE9, ← hvalue_80001ed0"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80003078",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

@@ -2094,9 +2094,23 @@ registered. Coverage is **136 conditional represented opcode bridges
 overall**, including F2, not a fraction of F1's 134. Fixed field arms landed
 as `15272e3` with check_all passing.
 
+## Shared caught-exception boundaries and loop setup
+
+`RaiseCuts.lean` collects six generated native regions: quiet entries for
+RAISE/RERAISE/RAISE_NOTRACE, the caught-handler check, restoration and common
+loop-register initialization. All segments check (handler 1.0s, quiet
+entries about 1.5s). `LoopSetup.lean:loop_setup` establishes all four fixed
+loop registers from pinned instructions, with exact memory/output and
+nonwritten-register frames (0.874s). Its constants are checked against
+Layout, and both startup and exception proofs can consume it.
+These native boundaries do not add represented opcode coverage. Indexed
+mutation arms landed as `62aea57` with check_all passing.
+
 ## Open / next
 
-Immediate next: RAISE/RERAISE/RAISE_NOTRACE/STOP, primitive
+Immediate next: restore represented trap/frame state through the shared
+caught-exception path, then compose quiet RAISE/RERAISE/RAISE_NOTRACE entries.
+STOP, uncaught/backtrace paths, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
 `GcSafe P` premise is already threaded through ArmSim and the headline.

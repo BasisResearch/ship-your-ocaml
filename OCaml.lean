@@ -537,3 +537,5 @@ import OCaml.Vm.Sim.Setfield3
 import OCaml.Vm.Sim.Setfield
 import OCaml.Vm.Sim.Setglobal
 import OCaml.Vm.Sim.Setvectitem
+import OCaml.Vm.Sim.RaiseCuts
+import OCaml.Vm.Sim.LoopSetup
