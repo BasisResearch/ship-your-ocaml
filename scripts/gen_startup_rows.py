@@ -131,6 +131,8 @@ def outputs():
                 ('caml_parse_ocamlrunparam', 'ParameterFallback', (0x8000473c, 0x80004748)),
                 ('caml_parse_ocamlrunparam', 'ParameterSecondTest', (0x80004748, 0x80004750)),
                 ('caml_parse_ocamlrunparam', 'ParameterReturn', (0x800045a8, 0x800045b8)),
+                ('caml_parse_ocamlrunparam', 'ParameterValueReturn', (0x8000459c, 0x800045b8)),
+                ('caml_parse_ocamlrunparam', 'ParameterValue', (0x80004538, 0x80004560)),
                 ('getuid', 'UserId', None),
                 ('geteuid', 'EffectiveUserId', None),
                 ('getgid', 'GroupId', None),

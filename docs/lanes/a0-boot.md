@@ -2,6 +2,22 @@
 
 ## Round 2 status (2026-10-04)
 
+The concrete environment correction landed as `44ce3cb`, full gate passed.
+`ParameterValueDone.lean:parameter_value_done` now summarizes the complete
+parser continuation after successful lookup of a present empty value: the
+nonnull branch, three extra saves, zero-byte test, all five restores and return.
+`parameter_value_ready` retains the full runtime/allocator contract. The
+composition checks in 0.9 seconds, with no evaluation of a startup run.
+`WhileMinImage.env_string` additionally certifies every character of the actual
+`OCAMLRUNPARAM=` entry using bounded loader-byte facts and CStr constructors.
+
+Next: successful `_findenv_r` lookup through its native `strncmp` call, compose
+getenv/security wrappers with that result, and supply environment observations
+from the reset/domain history. The abstract empty-array summaries remain valid
+but do not describe this image. Actual reset reachability remains at parser
+entry; reset-to-cut/Loaded and the Round 2 exit remain open.
+
+
 **Correction from the pinned initial image:** its environment is NOT empty.
 `WhileMinEnvironment.lean:env_header` reads the embedded header pointer;
 `env_first` proves the first array entry points to `OCAMLRUNPARAM=`, and
