@@ -1,5 +1,19 @@
 # Lane a6-gc
 
+## Empty small-bitmap callee (2026-10-04)
+
+- `FfsZero.lean:zero` proves the actual zero-input `ffs` call used by
+  best-fit allocation: zero result, original return PC, unchanged memory
+  and the complete native/output frame. `gen_gc_rows.py` now emits its
+  ELF-derived code pins, function rows and zero-path certificates.
+- Targeted build (602 jobs), full Audit (3044 jobs), discipline and
+  abstraction gates pass. New headlines use only permitted axioms. Typed
+  headers through the complete fresh queue route landed as `38f2b18`.
+- Next: empty exact-size-list prefix, filtered bitmap/ffs call and
+  large-block fallback, then reuse the proved `bf_split` and wrapper
+  continuation. Nonzero size-search/tree routes, general heap ownership,
+  collector closure and live-word Fits (G2) remain open.
+
 ## Typed header after the complete fresh route (2026-10-04)
 
 - `FreshHeader.lean:header_of_allocation`, `Allocated.header`, and
