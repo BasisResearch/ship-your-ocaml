@@ -6,6 +6,7 @@ open Vsa.Machine Vsa.Sim Vsa.MemRepr OCaml.Vm.Primitives
 /-- Preserve a C string through byte agreement on its complete zero-terminated extent. -/
 theorem cstr_frame {m m' : Mem} {p : Nat} {cs : List Char} (h : CStr m p cs)
     (same : ∀ a, p ≤ a → a ≤ p + cs.length → m'[a]? = m[a]?) : CStr m' p cs := by
+  -- discipline: allow(O5-run-induction) CStr is a byte representation, not a run relation; this induction transports its memory bytes.
   induction h with
   | nil pin =>
     constructor

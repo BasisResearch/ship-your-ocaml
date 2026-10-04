@@ -18,6 +18,10 @@ the existing separated-store theorem. `name_scan_empty` now exposes the final
 cursor and comparison scratch register, so every written GPR has a presence
 witness in the full function's postcondition.
 
+The discipline checker mistook induction on the CStr byte representation for
+run induction; the proof now documents that specific exception. Execution
+continues to use the function-summary and loop kernel.
+
 An eager simplification of the symbolic write-log expression expanded
 irrelevant register calculations and consumed gigabytes. Isolated checks
 showed the code/branch facts and log containment were already fast. Checking
