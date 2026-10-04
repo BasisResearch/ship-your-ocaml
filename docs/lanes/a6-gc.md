@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Fresh large-block queue route and native return (2026-10-04)
+
+- `FreshLargeEnqueued.lean:enqueue_fresh_large` proves complete actual
+  fresh oldify through least-large-block allocation, forwarding/root/queue
+  stores and original caller return. `QueueResult.payload` provides the
+  represented grey payload through the relocation Eqv interface.
+- `AllocationResult.enqueue`/`saved` share queue continuation and native
+  save-bank readback across both allocator alternatives. The exact-size
+  route and payload proof now instantiate this common interface.
+- Targeted large-route/FreshHeader regression passes (731 jobs); discipline
+  and abstraction gates pass. Full Audit passes (3340 jobs), with only
+  permitted axioms.
+  Fresh large allocation landed as `0903f7c`.
+- Next: shared original-size/tag header readback and large-route natural
+  header address. Other allocator/object routes, ownership suppliers,
+  collector closure, G2 and the ocamlc live-word budget remain open.
+
 ## Fresh oldify through large-block allocation (2026-10-04)
 
 - `FreshLargeAllocated.lean:allocate_fresh_large` proves actual oldify

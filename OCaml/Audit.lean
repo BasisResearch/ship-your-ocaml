@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Gc.FreshLargeEnqueued
 import OCaml.Vm.Gc.FreshLargeAllocated
 import OCaml.Vm.Gc.AllocLargeWrapper
 import OCaml.Vm.Boot.Startup.ParameterQueryReady
@@ -3535,3 +3536,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Fresh.Prepared.image
 #print axioms OCaml.Vm.Gc.Fresh.AllocationEntry.finish
 #print axioms OCaml.Vm.Gc.Fresh.allocate_fresh_large
+
+#print axioms OCaml.Vm.Gc.Fresh.AllocationResult.saved
+#print axioms OCaml.Vm.Gc.Fresh.AllocationResult.enqueue
+#print axioms OCaml.Vm.Gc.Fresh.QueueResult.payload
+#print axioms OCaml.Vm.Gc.Fresh.enqueue_fresh_large
