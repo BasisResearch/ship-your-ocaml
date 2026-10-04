@@ -15,14 +15,16 @@ structure RuntimeReady (H : List (Nat × Nat)) (capacity : Nat) (sp ra : BitVec 
 
 /-- A summary transports runtime readiness from its complete register
 interface and ordinary heap/global memory frame. -/
-theorem RuntimeReady.effect {H capacity oldsp oldra before after writes mem pc value regs sp ra}
+theorem RuntimeReady.effect_framed {H capacity oldsp oldra before after writes mem pc value regs sp ra}
     (ready : RuntimeReady H capacity oldsp oldra before)
     (post : RegistersPost writes mem before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs)
     (gpFrame : 3 ∉ writes)
     (stack : gprGet after.σ 2 = some sp)
     (link : gprGet after.σ 1 = some ra) (aligned : ra.toNat % 4 = 0)
-    (below : ∀ a, a < heapStart → mem[a]? = before.σ.mem[a]?)
+    (pins : ∀ pin ∈ VsaIris.Sym.allocText, (mem[pin.1]?).getD 0 = (before.σ.mem[pin.1]?).getD 0)
+    (domain : bytesT mem Layout.sym_Caml_state 8 = firstDomainPtr)
+    (pool : LPins8 mem Layout.sym_pool (List.replicate 8 0#8))
     (heap : ∀ a, vsaFoot H a → (mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0)
     (present : ∀ a : Nat, (before.σ.mem[a]?).isSome → (mem[a]?).isSome) :
     RuntimeReady H capacity sp ra after where
@@ -46,7 +48,7 @@ theorem RuntimeReady.effect {H capacity oldsp oldra before after writes mem pc v
         (ready.readOnly.1 _ hp)
     · intro pin hp
       change (after.σ.mem[pin.1]?).getD 0 = pin.2
-      rw [post.memory, below pin.1 (allocator_sources pin hp).geometry.high]
+      rw [post.memory, pins pin hp]
       exact ready.readOnly.2 pin hp
   room := by
     apply roomLocal_vsaRoomB H _ _ capacity ?_ ready.room
@@ -54,14 +56,33 @@ theorem RuntimeReady.effect {H capacity oldsp oldra before after writes mem pc v
     change (before.σ.mem[a]?).getD 0 = (after.σ.mem[a]?).getD 0
     rw [post.memory, heap a ha]
   stack := stack
-  domainWord := by
-    rw [post.memory, Vsa.Sim.Boot.bytesT_local_eq (m' := before.σ.mem) Layout.sym_Caml_state 8 (fun i hi => below _ (by
+  domainWord := by rw [post.memory]; exact domain
+  poolZero := by rw [post.memory]; exact pool
+
+/-- A summary transports runtime readiness from its complete register
+interface and ordinary heap/global memory frame. -/
+theorem RuntimeReady.effect {H capacity oldsp oldra before after writes mem pc value regs sp ra}
+    (ready : RuntimeReady H capacity oldsp oldra before)
+    (post : RegistersPost writes mem before pc value regs after)
+    (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs)
+    (gpFrame : 3 ∉ writes)
+    (stack : gprGet after.σ 2 = some sp)
+    (link : gprGet after.σ 1 = some ra) (aligned : ra.toNat % 4 = 0)
+    (below : ∀ a, a < heapStart → mem[a]? = before.σ.mem[a]?)
+    (heap : ∀ a, vsaFoot H a → (mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0)
+    (present : ∀ a : Nat, (before.σ.mem[a]?).isSome → (mem[a]?).isSome) :
+    RuntimeReady H capacity sp ra after := by
+  apply ready.effect_framed post keys cover gpFrame stack link aligned
+  · intro pin hp
+    rw [below pin.1 (allocator_sources pin hp).geometry.high]
+  · rw [Vsa.Sim.Boot.bytesT_local_eq (m' := before.σ.mem) Layout.sym_Caml_state 8 (fun i hi => below _ (by
       unfold heapStart Layout.sym_Caml_state; omega))]
     exact ready.domainWord
-  poolZero := by
-    apply lpins8_observed ready.poolZero
+  · apply lpins8_observed ready.poolZero
     intro i hi
-    rw [post.memory, below _ (by unfold heapStart Layout.sym_pool; omega)]
+    rw [below _ (by unfold heapStart Layout.sym_pool; omega)]
+  · exact heap
+  · exact present
 
 /-- A finite store log confined to one live payload preserves startup readiness. -/
 theorem RuntimeReady.payload_log {H capacity oldsp oldra before after writes log pc value regs sp ra base size}

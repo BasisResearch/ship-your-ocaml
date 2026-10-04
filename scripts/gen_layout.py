@@ -146,7 +146,8 @@ def main():
             "caml_nativeint_ops", "channel_operations", "caml_all_opened_channels",
             "embedded_files", "embedded_argv", "embedded_env", "__embed_start",
             "__heap_end", "__stack_top", "caml_prim_table", "_start",
-            "__bss_start", "__bss_end", "__global_pointer$", "environ"]
+            "__bss_start", "__bss_end", "__global_pointer$", "environ",
+            "caml_startup_aux", "shutdown_happened", "startup_count", "caml_cleanup_on_exit"]
     need += ["_open", "_read", "_write", "_lseek", "_close", "_fstat", "_stat",
              "_unlink", "rename", "opendir", "readdir", "closedir", "_gettimeofday",
              "_times", "files", "fds", "dirs", "fs_ready"]

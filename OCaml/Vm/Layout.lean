@@ -64,6 +64,14 @@ def sym_bss_end : Nat := 0x8007d138
 def sym_global_pointer : Nat := 0x800627d0
 /-- `environ` -/
 def sym_environ : Nat := 0x800648e0
+/-- `caml_startup_aux` -/
+def sym_caml_startup_aux : Nat := 0x80004760
+/-- `shutdown_happened` -/
+def sym_shutdown_happened : Nat := 0x80064988
+/-- `startup_count` -/
+def sym_startup_count : Nat := 0x8006498c
+/-- `caml_cleanup_on_exit` -/
+def sym_caml_cleanup_on_exit : Nat := 0x80064990
 /-- `_open` -/
 def sym_open : Nat := 0x800008b8
 /-- `_read` -/

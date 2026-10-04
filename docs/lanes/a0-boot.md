@@ -2,6 +2,29 @@
 
 ## Round 2 status (2026-10-04)
 
+The actual parser-return increment landed as `17553d0`, full gate passed.
+**`StartupAuxReset.lean:reset_startup_aux_returned_exists` now extends the
+CLOSED reset run through caml_startup_aux's successful first-start return
+at 0x80004da8.** It derives shutdown/count/cleanup zeros from the BSS clear
+and prior effects, increments startup_count to one, preserves disabled pooling,
+and retains the full runtime/allocator contract. The final composition checks
+in 1.8 seconds; the whole native function summary checks in 3.3 seconds.
+
+`StartupDataFrame` generalizes the domain history's environment frame to all
+bytes outside allocator ownership, the Caml_state publication, and native
+stack writes. The environment certificate now projects from that shared
+frame; the same frame supplies the once-only startup controls.
+`RuntimeReady.effect_framed` isolates read-only pins, domain/pool observations,
+and allocator footprint agreement, so legitimate global updates can preserve
+readiness. The prior stronger `effect` interface delegates to it.
+
+All flag addresses come from the layout generator, and every caller/callee
+block comes from gen_fn. Symbolic load normalization and the existing stack
+restoration lemma keep checking within default limits. Next: the successful
+caller branch, native frame saves, locale stub, then four custom-operation
+registrations and remaining startup functions. Reset-to-cut/Loaded is open.
+
+
 The complete abstract parser landed as `db5f31a`, full gate passed.
 **`ParameterReset.lean:reset_parameter_returned_exists` now extends the CLOSED
 actual reset run through the complete parameter parser return to caml_main
