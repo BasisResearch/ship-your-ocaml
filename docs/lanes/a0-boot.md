@@ -2,6 +2,21 @@
 
 ## Round 2 status (2026-10-04)
 
+`Startup/Memset56.lean:50` closes the complete native aligned 56-byte
+`memset` summary for any allocation in the arena. It composes the generated
+entry, generic word-pair loop, computed byte-tail dispatch and eight byte
+stores/return. `MemsetReadback.lean:25` and `:35` prove all outside bytes
+unchanged and every byte of the requested extent zero. The exact effect,
+full register/output frame, executable image and platform are retained.
+`MemsetTail.lean:13` and `MemsetBytes.lean:56` are the reusable tail pieces.
+The summary and readback check in 1.4 s and 1.2 s. The generic loop increment
+landed as `f8936b6`, full gate passed.
+
+Next: publish the first returned table pointer and supply the new memset
+summary, preserving allocator credits, then repeat for the other two tables
+and return through the domain epilogue. Reset-to-cut remains open.
+
+
 `Startup/MemsetPrefix.lean:65` proves `memset56_prefix`, selecting the
 aligned 56-byte zeroing path. `MemsetPair.lean:60` proves `memset_pair`,
 including both word stores and the native loop branch. `MemsetLoop.lean:66`

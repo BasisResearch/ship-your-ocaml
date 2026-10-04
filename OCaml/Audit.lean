@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.BestFitSmall
+import OCaml.Vm.Boot.Startup.MemsetReadback
 import OCaml.Vm.Gc.FreshIndirect
 import OCaml.Vm.Boot.Startup.MemsetLoop
 import OCaml.Vm.Boot.Startup.TableAllocation
@@ -2918,3 +2919,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.BestFitSmall.Post.counter
 #print axioms OCaml.Vm.Gc.BestFitSmall.Post.head
 #print axioms OCaml.Vm.Gc.BestFitSmall.Post.counter_nat
+
+#print axioms OCaml.Vm.Boot.Startup.memset_tail_dispatch
+#print axioms OCaml.Vm.Boot.Startup.memset_bytes
+#print axioms OCaml.Vm.Boot.Startup.Memset56Region.tail_windows
+#print axioms OCaml.Vm.Boot.Startup.Memset56Region.tail_outside
+#print axioms OCaml.Vm.Boot.Startup.memset56
+#print axioms OCaml.Vm.Boot.Startup.memset56Memory_out
+#print axioms OCaml.Vm.Boot.Startup.memset56Memory_inside
