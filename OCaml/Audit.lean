@@ -130,6 +130,7 @@ import OCaml.Vm.Gc.AllocAccountReturn
 import OCaml.Vm.Gc.AllocSuccess
 import OCaml.Vm.Gc.AllocExact
 import OCaml.Vm.Gc.AllocWrapper
+import OCaml.Vm.Gc.FreshAllocated
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -3192,3 +3193,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.AllocExact.header_of_effect
 #print axioms OCaml.Vm.Gc.AllocWrapper.allocate
 #print axioms OCaml.Vm.Gc.AllocWrapper.Post.header
+
+#print axioms OCaml.Vm.Gc.SaveBank.high
+#print axioms OCaml.Vm.Gc.AllocWrapper.Conditions.of_memory
+#print axioms OCaml.Vm.Gc.AllocWrapper.effect_high
+#print axioms OCaml.Vm.Gc.Fresh.allocate_fresh

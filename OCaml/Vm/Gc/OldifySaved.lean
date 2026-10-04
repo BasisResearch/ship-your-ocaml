@@ -12,9 +12,8 @@ theorem saveLog_high {R slots}
     (windows : ∀ cell ∈ slots, WriteWindow (frameSp R + BitVec.ofNat 64 cell.2) 8) :
     ∀ e ∈ saveLog slots R, tohostAddr ≤ e.1 := by
   intro e member
-  obtain ⟨cell,hc,rfl⟩ := List.mem_map.mp member
-  have high := (windows cell hc).htif
-  simpa only [tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using
+  have high := SaveBank.high windows e member
+  simpa only [tohostAddr,LibraryLayout.tohostAddr,Layout.sym_tohost] using
     Nat.le_trans (Nat.le_add_right Layout.sym_tohost 16) high
 
 /-- A real high saved-slot RAM window rules out modular stack wraparound. -/

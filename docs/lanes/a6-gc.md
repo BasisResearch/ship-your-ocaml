@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Fresh oldify through allocation (2026-10-04)
+
+- `FreshAllocated.lean:allocate_fresh` composes actual oldify entry, argument
+  preparation, allocating JAL and complete exact-size allocator return. It
+  reaches `Enqueue.pc` with the allocated payload, original source/root,
+  size and oldify stack pins, exact combined memory effects, preserved
+  oldify code, output and native frame. No allocator execution is assumed.
+- `AllocationConditions` names the remaining free-list/stack geometry on
+  explicit initial-memory snapshots. `AllocationFootprint.lean` and
+  `SaveBank.high` supply code preservation; memory-transport lemmas reuse
+  these conditions at the actual intermediate configurations.
+- Targeted build (692 jobs), full Audit (2989 jobs), discipline and
+  abstraction gates pass. The new headline uses only permitted axioms.
+  The complete wrapper landed as `146efff`.
+- Next: compose the forwarding/queue insertion and original native return.
+  Larger/tree allocation, major-slice requests, full collector closure and
+  live-word Fits (G2) remain open.
+
 ## Complete exact-size allocating wrapper (2026-10-04)
 
 - `AllocWrapper.lean:allocate` executes the actual wrapper prologue,

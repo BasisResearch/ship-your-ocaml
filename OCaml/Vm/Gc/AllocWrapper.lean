@@ -11,9 +11,7 @@ def prepared (R : Nat → BitVec 64) (c : Config) : Config :=
 
 /-- Successful exact-size allocation from the wrapper's real entry.
 All later conditions describe explicit initial-memory write-log snapshots. -/
-structure Input (R : Nat → BitVec 64) (c : Config) : Prop
-    extends AllocEntry.Input R BestFitSmall.pc c where
-  freeListCode : Code.Bf_allocateLoaded c.σ.mem
+structure Conditions (R : Nat → BitVec 64) (c : Config) : Prop where
   freeList : BestFitExact.Conditions (R 10) (prepared R c)
   freeOutside : ∀ cell ∈ AllocEntry.saveCells, OutLRange (BestFitExact.effect (R 10) (prepared R c))
     (AllocEntry.frameSp R + BitVec.ofNat 64 cell.2).toNat 8
@@ -21,11 +19,33 @@ structure Input (R : Nat → BitVec 64) (c : Config) : Prop
     (AllocExact.returnRegs (AllocEntry.frameSp R) (R 10) (prepared R c))
     (AllocExact.allocated (R 10) (prepared R c))
 
+
+structure Input (R : Nat → BitVec 64) (c : Config) : Prop
+    extends AllocEntry.Input R BestFitSmall.pc c, Conditions R c where
+  freeListCode : Code.Bf_allocateLoaded c.σ.mem
+
+theorem prepared_memory {R} {before after : Config} (memory : after.σ.mem = before.σ.mem) :
+    (prepared R after).σ.mem = (prepared R before).σ.mem := by simp only [prepared,memory]
+
+theorem Conditions.of_memory {R} {before after : Config} (memory : after.σ.mem = before.σ.mem)
+    (conditions : Conditions R before) : Conditions R after := by
+  have same := prepared_memory (R := R) memory
+  constructor
+  · exact conditions.freeList.of_memory same
+  · simpa only [BestFitExact.effect_of_memory same] using conditions.freeOutside
+  · rw [AllocExact.returnRegs_of_memory same]
+    exact conditions.continuation.of_memory (AllocExact.allocated_memory same)
+
 def callerRegs (R : Nat → BitVec 64) (payload : BitVec 64) : GRegs :=
   (2,R 2) :: (10,payload) :: AllocReturn.slots.reverse.map (fun cell => (cell.1,R cell.1))
 
 def effect (R : Nat → BitVec 64) (c : Config) :=
   AllocEntry.effect R ++ AllocExact.effect (AllocEntry.frameSp R) (R 10) (prepared R c)
+
+theorem effect_of_memory {R} {before after : Config} (memory : after.σ.mem = before.σ.mem) :
+    effect R after = effect R before := by
+  unfold effect
+  rw [AllocExact.effect_of_memory (prepared_memory memory)]
 
 structure Post (R : Nat → BitVec 64) (before after : Config) : Prop where
   good : GoodState after.σ

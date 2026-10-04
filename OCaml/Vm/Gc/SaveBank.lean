@@ -28,4 +28,12 @@ theorem read (mem : Std.ExtHashMap Nat (BitVec 8)) (sp : BitVec 64) (R : Nat →
   have readback := word_writeLog_cells mem cells separate (List.mem_map.mpr ⟨cell,member,rfl⟩)
   simpa only [cells,List.map_map,Function.comp_def,log] using readback
 
+/-- Every saved cell obeys the scalar-store lower bound. -/
+theorem high {sp R slots}
+    (windows : ∀ cell ∈ slots, WriteWindow (sp + BitVec.ofNat 64 cell.2) 8) :
+    ∀ e ∈ log sp R slots, Layout.sym_tohost + 16 ≤ e.1 := by
+  intro e member
+  obtain ⟨cell,hc,rfl⟩ := List.mem_map.mp member
+  exact (windows cell hc).htif
+
 end OCaml.Vm.Gc.SaveBank

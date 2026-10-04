@@ -34,7 +34,7 @@ theorem effect_of_memory {size} {before after : Config} (memory : after.σ.mem =
 
 /-- Every store of the complete exact-size path lies above the code/HTIF
 boundary, including conditional cursor repair and bitmap clearing. -/
-theorem effect_high {ra size c} (input : Input ra size c) :
+theorem Conditions.effect_high {size c} (input : Conditions size c) :
     ∀ e ∈ effect size c, Layout.sym_tohost + 16 ≤ e.1 := by
   have head := input.headWrite.htif
   have counter : Layout.sym_tohost + 16 ≤ Layout.sym_caml_fl_cur_wsz := by decide
@@ -47,6 +47,9 @@ theorem effect_high {ra size c} (input : Input ra size c) :
     repairLog,BestFitSmall.effect,BestFitFinish.effect,List.append_eq,List.cons_append,List.nil_append,List.mem_cons,List.not_mem_nil,or_false] at member
   all_goals rcases member with rfl | rfl | rfl | rfl
   all_goals first | exact head | exact counter | exact bitmap | exact (input.repair repair).mergeWrite.htif
+
+theorem effect_high {ra size c} (input : Input ra size c) :
+    ∀ e ∈ effect size c, Layout.sym_tohost + 16 ≤ e.1 := input.toConditions.effect_high
 
 /-- Uniform result for all four exact-size small-list branches. This gives
 actual execution and accounting, not a complete free-list ownership invariant. -/
