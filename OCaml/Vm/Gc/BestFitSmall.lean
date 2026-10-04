@@ -1,4 +1,4 @@
-import OCaml.Vm.Gc.BestFitAccess
+import OCaml.Vm.Gc.BestFitChunks
 
 namespace OCaml.Vm.Gc.BestFitSmall
 open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
@@ -21,7 +21,7 @@ def effect (size : BitVec 64) (c : Config) : List WEntry :=
 node and its successor are nonnull, the merge cursor is elsewhere, and
 list-head replacement is separated from the free-word counter. This is
 one allocation branch, not a complete free-list invariant. -/
-structure Input (ra size : BitVec 64) (c : Config) : Prop where
+structure BaseInput (ra size : BitVec 64) (c : Config) : Prop where
   good : GoodState c.σ
   tick : c.tick < 2
   minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
@@ -31,45 +31,45 @@ structure Input (ra size : BitVec 64) (c : Config) : Prop where
   small : size.toNat ≤ Layout.bf_small_count
   head : first size c ≠ 0
   tail : next size c ≠ 0
-  merge : cursor size c ≠ first size c
   headWrite : WriteWindow (slot size) 8
   mergeRead : ReadWindow (slot size + BitVec.ofNat 64 Layout.off_bf_small_merge) 8
   nextRead : ReadWindow (first size c) 8
   counterOutside : OutLRange [((slot size).toNat,8,next size c)] Layout.sym_caml_fl_cur_wsz 8
   aligned : ra.toNat % 4 = 0
 
+/-- The base observations plus the unchanged-cursor branch condition. -/
+structure Input (ra size : BitVec 64) (c : Config) : Prop extends BaseInput ra size c where
+  merge : cursor size c ≠ first size c
+
 theorem access {ra size c} (input : Input ra size c) :
     ChainAccess c.σ.mem (regs ra size) (loads size c) blocks := by
-  unfold blocks loads
-  apply ChainAccess.cons ⟨size_access _ _ _ _,size_control _ _ _ input.small⟩
-  rw [size_log,size_regs,size_loads]
-  change ChainAccess c.σ.mem _ _ _
-  apply ChainAccess.cons ⟨list_access _ _ _ _ _ input.headWrite.read (read8_pins _ _),?_⟩
-  · rw [list_log,list_regs,list_loads]
-    change ChainAccess c.σ.mem _ _ _
+  apply ChainAccess.append_eval (state := SegEvalState.init (regs ra size) (loads size c))
+    (left := entryBlocks) (right := mergeBlock :: popReturnBlocks)
+  · change ChainAccess c.σ.mem (regs ra size) (loads size c) entryBlocks
+    apply entry_access _ _ _ _ _ input.headWrite.read (read8_pins _ _) input.small
+    simpa only [read8_value,first,word] using input.head
+  · simp only [loads,entry_eval,read8_value]
+    change ChainAccess c.σ.mem (listed ra size (first size c)) _ _
     apply ChainAccess.cons ⟨merge_access _ _ _ _ _ _ input.mergeRead (read8_pins _ _),?_⟩
     · rw [merge_log,merge_regs,merge_loads]
       simp only [read8_value]
       change ChainAccess c.σ.mem (merged ra size (first size c) (cursor size c)) _ _
-      apply ChainAccess.cons ⟨pop_access _ _ _ _ _ _ _ input.nextRead input.headWrite (read8_pins _ _),?_⟩
-      · rw [pop_log,pop_regs,pop_loads]
-        simp only [read8_value]
-        apply ChainAccess.cons ⟨return_access _ _ _ _ _ _ _ ?_,return_control _ _ _ _ _ _ input.aligned⟩ ChainAccess.nil
-        exact lpins8_writeLog (read8_pins _ _) input.counterOutside
-      · apply pop_control
-        simpa only [read8_value,next,word] using input.tail
+      apply pop_return_access _ _ _ _ _ _ _ input.nextRead input.headWrite (read8_pins _ _)
+      · apply lpins8_writeLog (read8_pins _ _)
+        simpa only [read8_value,next,word] using input.counterOutside
+      · simpa only [read8_value,next,word] using input.tail
+      · exact input.aligned
     · apply merge_control
       simpa only [read8_value,cursor,first,word] using input.merge
-  · apply list_control
-    simpa only [read8_value,first,word] using input.head
 
 /-- A completed allocator return, with exact two-store memory effect,
 returned header address, preserved code and the full native/output frame. -/
-structure Post (ra size : BitVec 64) (before after : Config) : Prop where
-  machine : BlockPost blocks pc (regs ra size) (loads size before) before after
+structure Post (ra size : BitVec 64) (before after : Config)
+    (path : List BBlock := blocks) (writes : List WEntry := effect size before) : Prop where
+  machine : BlockPost path pc (regs ra size) (loads size before) before after
   pc : PCAt ra after
   result : gprGet after.σ 10 = some (first size before - BitVec.ofNat 64 Layout.header_bytes)
-  memory : after.σ.mem = writeLog before.σ.mem (effect size before)
+  memory : after.σ.mem = writeLog before.σ.mem writes
   code : Code.Bf_allocateLoaded after.σ.mem
 
 /-- Execute the actual best-fit exact-size/nonempty-tail small-list path,

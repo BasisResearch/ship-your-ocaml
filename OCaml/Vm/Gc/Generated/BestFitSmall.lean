@@ -19,6 +19,7 @@ import Vsa.Sim.ElfDecode.Part107
 import Vsa.Sim.ElfDecode.Part139
 import Vsa.Sim.ElfDecode.Part153
 import Vsa.Sim.ElfDecode.Part154
+import Vsa.Sim.ElfDecode.Part208
 import Vsa.Sim.ElfDecode.Part209
 import Vsa.Sim.ElfDecode.Part226
 import Vsa.Sim.ElfDecode.Part228
@@ -149,6 +150,80 @@ theorem endpoint (ra size : BitVec 64) (bh bm bn bt : List (BitVec 8))
     evalBlocksPC pc (SegEvalState.init (regs ra size) [bh,bm,bn,bt]) blocks = ra := by
   simp only [evalBlocksPC,blocks,SegEvalState.init,chainEndPC,size_regs,size_loads,
     list_regs,list_loads,merge_regs,merge_loads,pop_regs,pop_loads,endPCB]
+  change Sail.BitVec.update (srcVal 1 (finalRegs ra size (bytesVal .ld bh)
+    (bytesVal .ld bm) (bytesVal .ld bn) bt) +
+    LeanRV64DExecutable.Functions.sign_extend (m := 64) (0#12)) 0 0#1 = ra
+  rw [finalRegs,return_ra]
+  exact ret_tgt ra aligned
+
+def entryBlocks : List BBlock := [sizeBlock,listBlock]
+def popReturnBlocks : List BBlock := [popBlock,returnBlock]
+def repairTest : BBlock := bf_allocateX7440TSeg.getD 0 { body := [], term := none }
+def repairBlock : BBlock := bf_allocateX7548Seg.getD 0 { body := [], term := none }
+def repairBlocks : List BBlock := entryBlocks ++ [repairTest,repairBlock] ++ popReturnBlocks
+
+theorem entry_eval (ra size : BitVec 64) (b : List (BitVec 8)) (lds : List (List (BitVec 8))) :
+    evalBlocks entryBlocks (SegEvalState.init (regs ra size) (b::lds)) =
+      ⟨listed ra size (bytesVal .ld b),lds,[]⟩ := by
+  simp only [entryBlocks,evalBlocks,evalBlock,SegEvalState.init,size_regs,size_loads,
+    size_log,list_regs,list_loads,list_log,List.nil_append]
+
+theorem repair_test_regs (ra size head : BitVec 64) (b : List (BitVec 8)) (lds : List (List (BitVec 8))) :
+    runGM repairTest.body (listed ra size head) (b::lds) = merged ra size head (bytesVal .ld b) :=
+  merge_regs ra size head b lds
+
+theorem repair_test_log (ra size head : BitVec 64) (lds : List (List (BitVec 8))) :
+    wlogM repairTest.body (listed ra size head) lds = [] := rfl
+
+theorem repair_test_loads (b : List (BitVec 8)) (lds : List (List (BitVec 8))) :
+    ldsRunM repairTest.body (b::lds) = lds := rfl
+
+def repairLog (size : BitVec 64) : List WEntry :=
+  [((slot size + BitVec.ofNat 64 Layout.off_bf_small_merge).toNat,8,slot size)]
+
+theorem repair_regs (ra size head cursor : BitVec 64) (lds : List (List (BitVec 8))) :
+    runGM repairBlock.body (merged ra size head cursor) lds = merged ra size head cursor := rfl
+
+theorem repair_loads (lds : List (List (BitVec 8))) : ldsRunM repairBlock.body lds = lds := rfl
+
+theorem repair_log (ra size head cursor : BitVec 64) (lds : List (List (BitVec 8))) :
+    wlogM repairBlock.body (merged ra size head cursor) lds = repairLog size := rfl
+
+theorem repair_chain_ok : ChainOK pc [1,10] repairBlocks := by decide
+
+theorem repair_code_facts {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (code : Code.Bf_allocateLoaded mem) : ChainCode mem repairBlocks := by
+  intro b member
+  simp only [repairBlocks,entryBlocks,popReturnBlocks,List.append_assoc,List.cons_append,List.nil_append,
+    List.mem_cons,List.not_mem_nil,or_false] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals constructor
+  all_goals simp only [sizeBlock,listBlock,repairTest,repairBlock,popBlock,returnBlock,
+    bf_allocateX73acFSeg,bf_allocateX73b4TSeg,bf_allocateX7440TSeg,bf_allocateX7548Seg,bf_allocateX7448TSeg,bf_allocateX747cSeg,List.getD_cons_zero,CodeFacts]
+  all_goals chain_facts code with "Vsa.Sim.Code.bf_allocate_at_"
+
+theorem repair_registers (ra size : BitVec 64) (bh bm bn bt : List (BitVec 8)) :
+    (evalBlocks repairBlocks (SegEvalState.init (regs ra size) [bh,bm,bn,bt])).regs =
+      finalRegs ra size (bytesVal .ld bh) (bytesVal .ld bm) (bytesVal .ld bn) bt := by
+  simp only [repairBlocks,entryBlocks,popReturnBlocks,List.cons_append,List.nil_append,
+    evalBlocks,evalBlock,SegEvalState.init,size_regs,size_loads,list_regs,list_loads,
+    repair_test_regs,repair_test_loads,repair_regs,repair_loads,pop_regs,pop_loads,finalRegs]
+
+theorem repair_writes (ra size : BitVec 64) (bh bm bn bt : List (BitVec 8)) :
+    (evalBlocks repairBlocks (SegEvalState.init (regs ra size) [bh,bm,bn,bt])).log =
+      repairLog size ++ [((slot size).toNat,8,bytesVal .ld bn),
+       (Layout.sym_caml_fl_cur_wsz,8,bytesVal .ld bt - 1#64 - size)] := by
+  simp only [repairBlocks,entryBlocks,popReturnBlocks,List.cons_append,List.nil_append,
+    evalBlocks,evalBlock,SegEvalState.init,size_regs,size_loads,list_regs,list_loads,
+    repair_test_regs,repair_test_loads,repair_regs,repair_loads,pop_regs,pop_loads,
+    size_log,list_log,repair_test_log,repair_log,pop_log,return_log,List.append_assoc]
+
+theorem repair_endpoint (ra size : BitVec 64) (bh bm bn bt : List (BitVec 8))
+    (aligned : ra.toNat % 4 = 0) :
+    evalBlocksPC pc (SegEvalState.init (regs ra size) [bh,bm,bn,bt]) repairBlocks = ra := by
+  simp only [evalBlocksPC,repairBlocks,entryBlocks,popReturnBlocks,List.cons_append,List.nil_append,
+    SegEvalState.init,chainEndPC,size_regs,size_loads,list_regs,list_loads,
+    repair_test_regs,repair_test_loads,repair_regs,repair_loads,pop_regs,pop_loads,endPCB]
   change Sail.BitVec.update (srcVal 1 (finalRegs ra size (bytesVal .ld bh)
     (bytesVal .ld bm) (bytesVal .ld bn) bt) +
     LeanRV64DExecutable.Functions.sign_extend (m := 64) (0#12)) 0 0#1 = ra

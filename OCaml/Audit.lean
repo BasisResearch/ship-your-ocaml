@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.BestFitRepair
 import OCaml.Vm.Gc.BestFitSmall
 import OCaml.Vm.Boot.Startup.MemsetReadback
 import OCaml.Vm.Gc.FreshIndirect
@@ -2939,3 +2940,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.memset56
 #print axioms OCaml.Vm.Boot.Startup.memset56Memory_out
 #print axioms OCaml.Vm.Boot.Startup.memset56Memory_inside
+#print axioms OCaml.Vm.Gc.ChainAccess.append_eval
+#print axioms OCaml.Vm.Gc.BestFitSmall.entry_access
+#print axioms OCaml.Vm.Gc.BestFitSmall.pop_return_access
+#print axioms OCaml.Vm.Gc.BestFitSmall.repair_test_control
+#print axioms OCaml.Vm.Gc.BestFitSmall.repair_access
+#print axioms OCaml.Vm.Gc.BestFitSmall.repaired_access
+#print axioms OCaml.Vm.Gc.BestFitSmall.allocate_repair
+#print axioms OCaml.Vm.Gc.BestFitSmall.RepairPost.counter
+#print axioms OCaml.Vm.Gc.BestFitSmall.RepairPost.head
+#print axioms OCaml.Vm.Gc.BestFitSmall.RepairPost.cursor
+#print axioms OCaml.Vm.Gc.BestFitSmall.allocate_nonempty

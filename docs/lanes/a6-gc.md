@@ -1,5 +1,25 @@
 # Lane a6-gc
 
+## Best-fit merge-cursor repair (2026-10-04)
+
+- `BestFitRepair.lean:allocate_nonempty` covers both merge-cursor branches
+  for exact-size allocation with a nonempty successor. Initial memory
+  determines the route. `allocate_repair` executes the repair store and
+  shared pop/accounting/native-return suffix; `RepairPost.cursor` proves
+  the cursor points back to the list-head cell. Head and accounting
+  readbacks cover the repair path as well.
+- `ChainCompose.lean:ChainAccess.append_eval` composes finite reflected
+  access certificates. `BestFitChunks.lean` shares entry and pop/return
+  certificates, and the existing unchanged-cursor proof now uses them.
+  `BaseInput` shares initial observations; `NonemptyInput.repair` requires
+  the additional store window/separation only when repair is selected.
+- Capped targeted build (606 jobs), full Audit (2844 jobs), generator drift,
+  discipline and abstraction gates pass; new headlines use only permitted
+  axioms. The first small-list path landed as `ca30886`. Next: empty-successor
+  bitmap clearing, large-block allocation and wrapper composition. Complete
+  free-list preservation, fresh-copy completion, queue/root closure,
+  ephemerons, major reclamation and G2 remain open.
+
 ## Complete best-fit exact-size small-list path (2026-10-04)
 
 - `BestFitSmall.lean:allocate` executes the real best-fit allocator from
