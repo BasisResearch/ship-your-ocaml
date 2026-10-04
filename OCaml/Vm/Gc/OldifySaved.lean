@@ -42,7 +42,8 @@ theorem Post.saved {R before after} (post : Post R before after) (input : Input 
 def callerRegs (R : Nat → BitVec 64) : GRegs :=
   (2, R 2) :: OldifyReturn.slots.reverse.map (fun cell => (cell.1, R cell.1))
 
-theorem Post.restored_caller {R before after} (post : Post R before after) (input : Input R before) :
+theorem restored_of_saved {R after}
+    (saved : ∀ cell ∈ saves, word after (frameSp R + BitVec.ofNat 64 cell.2).toNat = R cell.1) :
     OldifyReturn.restored (frameSp R) after = callerRegs R := by
   have stack : frameSp R + OldifyReturn.frameSize = R 2 := by
     simp only [frameSp, BitVec.add_neg_eq_sub, BitVec.sub_add_cancel]
@@ -52,7 +53,12 @@ theorem Post.restored_caller {R before after} (post : Post R before after) (inpu
   apply List.map_congr_left
   intro cell member
   exact congrArg (fun w => (cell.1, w))
-    (post.saved input cell (restore_slots cell (List.mem_reverse.mp member)))
+    (saved cell (restore_slots cell (List.mem_reverse.mp member)))
+
+
+theorem Post.restored_caller {R before after} (post : Post R before after) (input : Input R before) :
+    OldifyReturn.restored (frameSp R) after = callerRegs R :=
+  restored_of_saved (post.saved input)
 
 theorem Post.returnWord {R before after} (post : Post R before after) (input : Input R before) :
     OldifyReturn.returnWord (frameSp R) after = R 1 := by

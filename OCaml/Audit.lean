@@ -132,6 +132,7 @@ import OCaml.Vm.Gc.AllocSuccess
 import OCaml.Vm.Gc.AllocExact
 import OCaml.Vm.Gc.AllocWrapper
 import OCaml.Vm.Gc.FreshAllocated
+import OCaml.Vm.Gc.FreshEnqueued
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -3226,3 +3227,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.AllocWrapper.Conditions.of_memory
 #print axioms OCaml.Vm.Gc.AllocWrapper.effect_high
 #print axioms OCaml.Vm.Gc.Fresh.allocate_fresh
+
+#print axioms OCaml.Vm.Gc.WorkQueue.EnqueueConditions.of_memory
+#print axioms OCaml.Vm.Gc.OldifyEntry.restored_of_saved
+#print axioms OCaml.Vm.Gc.Fresh.Allocated.saved
+#print axioms OCaml.Vm.Gc.Fresh.enqueue_fresh
+#print axioms OCaml.Vm.Gc.pendingPayload_of_observations
+#print axioms OCaml.Vm.Gc.Fresh.Enqueued.payload

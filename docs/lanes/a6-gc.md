@@ -1,5 +1,26 @@
 # Lane a6-gc
 
+## Complete fresh scanned-object queue route (2026-10-04)
+
+- `FreshEnqueued.lean:enqueue_fresh` executes real oldify entry, exact-size
+  allocation, root update, source forwarding, pending-copy queue insertion
+  and native return. It restores the original caller stack/registers and
+  return PC, retains exact effects and output/native frame, and proves the
+  updated root, queue links and copied first field.
+- `Enqueued.payload` connects this complete route to the represented grey
+  payload via `Eqv`; shared `pendingPayload_of_observations` also replaces
+  the earlier segment-only payload proof. Saved-bank readback and queue
+  condition transport are shared rather than duplicated.
+- The explicit conditions still require free-list/heap/native-stack
+  separation and preserve the original source suffix. These are geometry
+  supplier obligations, not assumed allocator or oldify executions.
+- Targeted build (701 jobs), full Audit (2990 jobs), discipline and
+  abstraction gates pass; all new headlines use only permitted axioms.
+  Fresh entry through allocation landed as `207164c`.
+- Next: retain the typed allocated header and connect pending copies to
+  mopup. Single-field/other-tag routes, larger/tree allocation, major-slice
+  requests, collector closure and live-word Fits (G2) remain open.
+
 ## Fresh oldify through allocation (2026-10-04)
 
 - `FreshAllocated.lean:allocate_fresh` composes actual oldify entry, argument

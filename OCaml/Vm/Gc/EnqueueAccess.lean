@@ -108,16 +108,10 @@ theorem enqueue_loadedFirst {q c root first next}
   rw [read8_value, rootLog, bytesT_writeLog_out _ separate.sourceOutsideRoot]
   rfl
 
-/-- Concrete entry obligations after the allocating call has returned.
-Freshness, RAM geometry and callee-saved registers must come from that call;
-there is no assumed machine run or scalar-load premise. -/
-structure EnqueueInput (q : PendingCopy) (qs : List PendingCopy) (pl : Place)
+/-- Queue and write-footprint conditions on memory, independent of machine
+registers and execution. The collector ownership invariant supplies them. -/
+structure EnqueueConditions (q : PendingCopy) (qs : List PendingCopy) (pl : Place)
     (root size : BitVec 64) (c : Config) : Prop where
-  good : GoodState c.σ
-  minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
-  registers : GHolds c.σ (Enqueue.regs q.source q.target root size)
-  tick : c.tick < 2
-  code : Code.Caml_oldify_oneLoaded c.σ.mem
   queue : View qs pl c
   windows : EnqueueWindows q root
   large : 1 < size.toNat
@@ -126,6 +120,23 @@ structure EnqueueInput (q : PendingCopy) (qs : List PendingCopy) (pl : Place)
     (bytesVal .ld ((enqueueLoads q root c).headD [])) (head qs)
   tailOutside : LinksOutside qs (effect q.source q.target root
     (bytesVal .ld ((enqueueLoads q root c).headD [])) (head qs))
+
+structure EnqueueInput (q : PendingCopy) (qs : List PendingCopy) (pl : Place)
+    (root size : BitVec 64) (c : Config) : Prop extends EnqueueConditions q qs pl root size c where
+  good : GoodState c.σ
+  minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
+  registers : GHolds c.σ (Enqueue.regs q.source q.target root size)
+  tick : c.tick < 2
+  code : Code.Caml_oldify_oneLoaded c.σ.mem
+
+theorem EnqueueConditions.of_memory {q qs pl root size} {before after : Config}
+    (memory : after.σ.mem = before.σ.mem)
+    (conditions : EnqueueConditions q qs pl root size before) :
+    EnqueueConditions q qs pl root size after := by
+  refine ⟨conditions.queue.memory_eq memory,conditions.windows,conditions.large,
+    conditions.headOutside,?_,?_⟩
+  · simpa only [enqueueLoads,memory] using conditions.separate
+  · simpa only [enqueueLoads,memory] using conditions.tailOutside
 
 /-- Retain the kernel's complete register/output frame for the epilogue splice,
 and identify the first copied word with the original source observation. -/
