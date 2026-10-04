@@ -1,5 +1,25 @@
 # Lane a6-gc
 
+## Ordinary single-field tail loop (2026-10-04)
+
+- `SingleTailLoop.lean:run_loop`/`run_from_head` fold the actual back edges
+  and immediate/non-young/forwarded exits with `loopFromBody`. They return
+  through the initial saved link/bank, preserving output and native frames.
+- `Coverage` is an explicit **open data-only premise** on reachable heads:
+  it supplies concrete branch/header/allocator observations and footprints,
+  plus a distinct native return site. No callee or whole-loop execution is
+  assumed. This is an ordinary single-field subloop, not G2 completion.
+- `ForwardingComplete.lean` strengthens the invariant: every zero-header
+  source in the finite source list has a published entry. The returned
+  table supplies the typed action for each such base pointer.
+- Targeted build passes (754 jobs), as does full Audit (3566 jobs), with
+  only permitted axioms. Both discipline gates pass. Concrete
+  back-edge checkpoint landed as `341760d`.
+- Next: retain typed pending/finished payloads and caller roots across the
+  loop, and derive Coverage from heap/free-list ownership. Other object and
+  allocator paths, roots/mopup/ephemerons, collector closure, G2 and live
+  budget remain open.
+
 ## Concrete fresh single-field back edges (2026-10-04)
 
 - `SingleFieldBackEdge.lean:backedge_exact` and `backedge_large` prove

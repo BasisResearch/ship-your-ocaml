@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.SingleTailLoop
 import OCaml.Vm.Gc.SingleFieldBackEdge
 import OCaml.Vm.Gc.SingleFieldTable
 import OCaml.Vm.Sim.NonlocalAudit
@@ -3892,3 +3893,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleField.complete_backedge
 #print axioms OCaml.Vm.Gc.SingleField.backedge_exact
 #print axioms OCaml.Vm.Gc.SingleField.backedge_large
+
+#print axioms OCaml.Vm.Gc.other_headers_preserved
+#print axioms OCaml.Vm.Gc.ForwardingTable.Complete.extend
+#print axioms OCaml.Vm.Gc.ForwardingTable.complete_empty
+#print axioms OCaml.Vm.Gc.ForwardingTable.Complete.pointer_action
+#print axioms OCaml.Vm.Gc.SingleTail.Head.start
+#print axioms OCaml.Vm.Gc.SingleTail.Head.advance
+#print axioms OCaml.Vm.Gc.SingleTail.returned_plain
+#print axioms OCaml.Vm.Gc.SingleTail.returned_forwarded
+#print axioms OCaml.Vm.Gc.SingleTail.Head.finish
+#print axioms OCaml.Vm.Gc.SingleTail.Head.step
+#print axioms OCaml.Vm.Gc.SingleTail.run_loop
+#print axioms OCaml.Vm.Gc.SingleTail.run_from_head
