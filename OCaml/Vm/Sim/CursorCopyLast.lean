@@ -46,6 +46,6 @@ theorem cursor_copy_last {source target i : Nat} {words : List (BitVec 64)} {ini
     · simp only [last, Nat.lt_irrefl, ite_false]; exact post.pcAt
     · rw [memory, written]; rfl
     · exact rawFrame.widenChecked (allowed := cursorCopyWrites) (by decide)
-  exact ⟨nb, after, steps, CursorCopyAtPc.advance region h bound observed⟩
+  exact ⟨nb, after, steps, PointerCopyAt.advance region h bound observed⟩
 
 end OCaml.Vm.Sim

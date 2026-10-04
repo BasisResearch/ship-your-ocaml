@@ -1825,6 +1825,22 @@ CLOSUREREC composition remains open. CLOSURE landed as `8cbad41`, all gates
 passing. Next: share the pointer-copy register shape and prove the actual
 CLOSUREREC capture loop, then its metadata/infix construction.
 
+## Shared pointer-copy shape and CLOSUREREC capture loop
+
+`CursorCopyState.lean` now parameterizes the pointer invariant by
+`PointerCopyShape`: either source or destination counts the copied words,
+with explicit register choices. `PointerCopyAt.index/read/advance` and
+`cursor_copy_run_of_branches` share exact logs, image framing and the native
+counted-loop fold. Existing GRAB and MAKEBLOCK are specializations.
+`ClosurerecCopy.lean:10` (`closurerec_copy_run`) composes the actual six-instruction
+branches for arbitrary bounded capture lists. The source address is recovered
+from the destination displacement; `difference_copy_address` proves that
+normalization. Branch adapters check in 0.95–0.96 s, the fold in 0.78 s.
+All complete GRAB/MAKEBLOCK/CLOSURE/RESTART consumers rebuild. Concrete source
+snapshot, geometry, separation and fixed destination-base register remain
+explicit. Native CLOSUREREC cuts landed as `0e24928`, all gates passing.
+Next: recursive-closure prefix/reservation and infix metadata construction.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

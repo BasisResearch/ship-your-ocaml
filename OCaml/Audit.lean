@@ -2365,10 +2365,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.forward_copy_load
 #print axioms OCaml.Vm.Sim.copy_store_entry
 #print axioms OCaml.Vm.Sim.forward_copy_memory_step
-#print axioms OCaml.Vm.Sim.CursorCopyAtPc.index
-#print axioms OCaml.Vm.Sim.CursorCopyAtPc.read
+#print axioms OCaml.Vm.Sim.PointerCopyAt.index
+#print axioms OCaml.Vm.Sim.PointerCopyAt.read
 #print axioms OCaml.Vm.Sim.cursor_copy_guard
-#print axioms OCaml.Vm.Sim.CursorCopyAtPc.advance
+#print axioms OCaml.Vm.Sim.PointerCopyAt.advance
 #print axioms OCaml.Vm.Sim.cursor_copy_loop_at
 #print axioms OCaml.Vm.Sim.cursor_copy_more
 #print axioms OCaml.Vm.Sim.cursor_copy_last
@@ -2459,7 +2459,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.makeblock_reserve
 #print axioms OCaml.Vm.Sim.value_log_cons
 #print axioms OCaml.Vm.Sim.makeblock_log_parts
-#print axioms OCaml.Vm.Sim.CursorCopyRegion.frame
+#print axioms OCaml.Vm.Sim.PointerCopyRegion.frame
 
 -- Both represented generic MAKEBLOCK initializer paths.
 #print axioms OCaml.Vm.Sim.MakeblockInitialized.copy_start
@@ -2570,6 +2570,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closurerec_stack_loaded
 #print axioms Vsa.Sim.tr_closurerec_suffix
 #print axioms OCaml.Vm.Sim.closurerec_suffix_loaded
+
+-- Shared pointer-copy shapes and actual recursive-closure capture loop.
+#print axioms OCaml.Vm.Sim.PointerCopyAt.counter
+#print axioms OCaml.Vm.Sim.difference_copy_address
+#print axioms OCaml.Vm.Sim.closurerec_copy_more
+#print axioms OCaml.Vm.Sim.closurerec_copy_last
+#print axioms OCaml.Vm.Sim.closurerec_copy_run
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes

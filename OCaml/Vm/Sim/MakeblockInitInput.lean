@@ -49,9 +49,11 @@ theorem MakeblockInitialized.copy_start {before after : Config} {pl : Place}
   refine ⟨front.good, front.tick, front.image, by omega, ?_, ?_, ?_, ?_, ?_, (StepFrameOut.refl after.σ).widenChecked (allowed := cursorCopyWrites) (by decide)⟩
   · simpa only [stackWords, List.length_map, List.length_range,
       show 0 < count - 1 by omega, more, ite_true] using front.pcAt
-  · simpa only [Nat.mul_zero, Nat.add_zero] using regs.sourceReg
+  · simpa only [cursorCopyShape, PointerCopyShape.sourceWord, Bool.false_eq_true,
+      ite_false, Nat.mul_zero, Nat.add_zero] using regs.sourceReg
   · simpa only [Nat.mul_zero, Nat.add_zero] using regs.targetReg
-  · simpa only [stackWords, List.length_map, List.length_range] using regs.limit
+  · simpa only [cursorCopyShape, PointerCopyShape.counterBase, Bool.false_eq_true,
+      ite_false, stackWords, List.length_map, List.length_range] using regs.limit
   · rfl
 
 theorem MakeblockInitInput.copy_after {before after : Config} {pl : Place}

@@ -494,3 +494,5 @@ import OCaml.Vm.Sim.ClosurerecStackSegment
 import OCaml.Vm.Sim.ClosurerecStackPins
 import OCaml.Vm.Sim.ClosurerecSuffixSegment
 import OCaml.Vm.Sim.ClosurerecSuffixPins
+
+import OCaml.Vm.Sim.ClosurerecCopy
