@@ -11,8 +11,7 @@ def raisePendingLog (sp ra value : BitVec 64) : List WEntry :=
   raiseRuntimeLog sp ra ++ pendingRootLog (raiseRuntimeStack sp) 0x8000ce44#64 value
 
 /-- Static write geometry and the preserved pending flag select the helper's fast path. -/
-structure RaisePendingInput (sp ra value : BitVec 64) (c : Config) : Prop
-    extends RaiseRuntimePrefixInput sp ra value c where
+structure RaisePendingMemory (sp ra value : BitVec 64) (c : Config) : Prop where
   pending : word32 c Layout.sym_caml_something_to_do = 0#32
   pendingOutside : OutLRange (raiseRuntimeLog sp ra) Layout.sym_caml_something_to_do 4
   pendingRaWrite : WriteWindow (pendingRootRa (raiseRuntimeStack sp)) 8
@@ -20,6 +19,9 @@ structure RaisePendingInput (sp ra value : BitVec 64) (c : Config) : Prop
   pendingRaOutside : OutLRange [((pendingRootValue (raiseRuntimeStack sp)).toNat, 8, value)]
     (pendingRootRa (raiseRuntimeStack sp)).toNat 8
   pendingImageOutside : ImageOutside (pendingRootLog (raiseRuntimeStack sp) 0x8000ce44#64 value)
+
+structure RaisePendingInput (sp ra value : BitVec 64) (c : Config) : Prop
+    extends RaiseRuntimePrefixInput sp ra value c, RaisePendingMemory sp ra value c
 
 /-- The native raise frame remains installed after the root-preserving pending check. -/
 structure RaisePendingPost (sp ra value : BitVec 64) (before after : Config) : Prop where

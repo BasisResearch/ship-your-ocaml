@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.RaiseZero
 import OCaml.Vm.Sim.RaiseNative
 import OCaml.Vm.Sim.RaiseRuntimePrefix
 import OCaml.Vm.Sim.RaiseRuntimeSuffix
@@ -3056,6 +3057,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.raise_longjmp
 #print axioms OCaml.Vm.Sim.raise_native_jump_input
 #print axioms OCaml.Vm.Sim.raise_native
+
+-- Complete zero-divisor runtime helper and memory-only call readiness.
+#print axioms OCaml.Vm.Sim.RaiseNativeMemory.input
+#print axioms OCaml.Vm.Sim.RaiseNativeMemory.frame
+#print axioms OCaml.Vm.Sim.raise_zero_prefix
+#print axioms OCaml.Vm.Sim.raise_zero_value
+#print axioms OCaml.Vm.Sim.raise_zero_setup
+#print axioms OCaml.Vm.Sim.raise_zero
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes

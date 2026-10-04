@@ -2383,6 +2383,21 @@ and zero-divisor caller linkage remain open. `EffectPost.nativeFrame` converts
 library effects once for native frame composition. Capped default-budget builds
 pass: pending composition 1.5s, longjmp composition 0.907s, full raise 0.865s.
 
+Complete quiet caml_raise landed as `264b91d`, full gate passing after one
+push race.
+
+`raise_zero` (`RaiseZero.lean:22`) proves complete quiet caml_raise_zero_divide
+execution through its global-data check and caml_raise callees to the saved
+native continuation. `raise_zero_setup` composes its generated four-instruction
+prologue, actual check call/return and three-instruction predefined-exception
+load. The combined result carries an exact five-store log and native frame.
+`RaiseNativeMemory` separates reusable memory readiness from ABI entry facts;
+its `.frame` and `.input` lemmas transport caller stores and establish the actual
+callee input. Existing raising summaries rebuild unchanged in meaning. Default
+capped builds pass: zero prologue 0.863s, value load 6.9s, readiness transport
+0.815s, setup 0.876s, complete zero helper 1.6s. Interpreter DIVINT/MODINT zero
+branches and represented restoration remain open.
+
 ## Open / next
 
 Immediate next: DIVINT/MODINT zero-divisor setup and native raising helpers,

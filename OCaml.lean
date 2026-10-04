@@ -572,3 +572,5 @@ import OCaml.Vm.Sim.RaiseRuntimePrefix
 import OCaml.Vm.Sim.RaiseRuntimeSuffix
 
 import OCaml.Vm.Sim.RaiseNative
+
+import OCaml.Vm.Sim.RaiseZero

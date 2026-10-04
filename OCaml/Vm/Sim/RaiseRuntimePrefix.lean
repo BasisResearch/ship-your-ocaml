@@ -18,16 +18,19 @@ def raiseRuntimeRa (sp : BitVec 64) : BitVec 64 :=
 def raiseRuntimeLog (sp ra : BitVec 64) : List WEntry := [( (raiseRuntimeRa sp).toNat, 8, ra)]
 
 /-- The disabled channel-unlock hook selects the direct pending-action call. -/
-structure RaiseRuntimePrefixInput (sp ra value : BitVec 64) (c : Config) : Prop where
+structure RaiseRuntimePrefixMemory (sp ra : BitVec 64) (c : Config) : Prop where
+  hook : word c Layout.sym_caml_channel_mutex_unlock_exn = 0#64
+  raWrite : WriteWindow (raiseRuntimeRa sp) 8
+  imageOutside : ImageOutside (raiseRuntimeLog sp ra)
+
+structure RaiseRuntimePrefixInput (sp ra value : BitVec 64) (c : Config) : Prop
+    extends RaiseRuntimePrefixMemory sp ra c where
   good : GoodState c.σ
   image : ExecutableImage c
   tick : c.tick < 2
   stack : gpr c 2 = some sp
   returnReg : gpr c 1 = some ra
   argument : gpr c 10 = some value
-  hook : word c Layout.sym_caml_channel_mutex_unlock_exn = 0#64
-  raWrite : WriteWindow (raiseRuntimeRa sp) 8
-  imageOutside : ImageOutside (raiseRuntimeLog sp ra)
 
 theorem raise_runtime_stack (sp : BitVec 64) :
     sp + sign_extend (m := 64) (0xfe0#12) = raiseRuntimeStack sp := by

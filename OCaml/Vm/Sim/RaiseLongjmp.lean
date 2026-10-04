@@ -8,13 +8,16 @@ set_option autoImplicit false
 open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives LeanRV64DExecutable
 
 /-- Native exception publication retains the saved nonlocal-return environment. -/
-structure RaiseLongjmpInput (domain value : BitVec 64) (buffer : Nat)
-    (saved : Nat → BitVec 64) (c : Config) : Prop
-    extends RaiseRuntimeSuffixInput domain (BitVec.ofNat 64 buffer) value c where
+structure RaiseLongjmpMemory (domain value : BitVec 64) (buffer : Nat)
+    (saved : Nat → BitVec 64) (c : Config) : Prop where
   savedFrame : JumpSavedFrame buffer saved c
   savedOutside : ∀ r ∈ Layout.jumpSavedRegs,
     OutLRange (raiseBucketLog domain value) (buffer + Layout.jumpSaveOffset r) 8
   aligned : (saved 1).toNat % 4 = 0
+
+structure RaiseLongjmpInput (domain value : BitVec 64) (buffer : Nat)
+    (saved : Nat → BitVec 64) (c : Config) : Prop
+    extends RaiseRuntimeSuffixInput domain (BitVec.ofNat 64 buffer) value c, RaiseLongjmpMemory domain value buffer saved c
 
 /-- The native exception reaches its saved continuation with the exception published. -/
 structure NativeRaisePost (log : List WEntry) (saved : Nat → BitVec 64)

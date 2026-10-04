@@ -18,11 +18,7 @@ def raiseBucketLog (domain value : BitVec 64) : List WEntry := [((raiseBucket do
 def raiseSuffixBlocks : List BBlock := caml_raiseXce44TSeg ++ caml_raiseXce58FSeg ++ caml_raiseXce6cSeg
 
 /-- Ordinary exception values and an installed native exception handler select longjmp. -/
-structure RaiseRuntimeSuffixInput (domain buffer value : BitVec 64) (c : Config) : Prop where
-  good : GoodState c.σ
-  image : ExecutableImage c
-  tick : c.tick < 2
-  argument : gpr c 10 = some value
+structure RaiseRuntimeSuffixMemory (domain buffer value : BitVec 64) (c : Config) : Prop where
   ordinary : value &&& 3#64 ≠ 2#64
   domainWord : word c Layout.sym_Caml_state = domain
   externalRead : ReadWindow (raiseExternal domain) 8
@@ -30,6 +26,13 @@ structure RaiseRuntimeSuffixInput (domain buffer value : BitVec 64) (c : Config)
   nonzero : buffer ≠ 0#64
   bucketWrite : WriteWindow (raiseBucket domain) 8
   imageOutside : ImageOutside (raiseBucketLog domain value)
+
+structure RaiseRuntimeSuffixInput (domain buffer value : BitVec 64) (c : Config) : Prop
+    extends RaiseRuntimeSuffixMemory domain buffer value c where
+  good : GoodState c.σ
+  image : ExecutableImage c
+  tick : c.tick < 2
+  argument : gpr c 10 = some value
 
 def raiseSuffixLoads (c : Config) (domain : BitVec 64) : List (List (BitVec 8)) :=
   [read8 c.σ.mem Layout.sym_Caml_state, read8 c.σ.mem (raiseExternal domain).toNat]
