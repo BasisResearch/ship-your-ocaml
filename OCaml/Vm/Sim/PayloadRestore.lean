@@ -19,17 +19,17 @@ structure PayloadCoreOutside (log : List WEntry) (P : Prog) (s : St) (c : Config
 
 /-- Rebuild mutable payload components after a log, copying the fixed
 observations once through total-byte and relocation combinators. -/
-theorem payload_rebuild {P : Prog} {s : St} {before after : Config}
+theorem payload_rebuild_accu {P : Prog} {s : St} {before after : Config}
     {pl : Place} {cp : ChanPlace} {sp newSp high trap : Nat} {log : List WEntry}
-    {heap : Heap} {stack : List Val}
+    {heap : Heap} {stack : List Val} {accu : Val}
     (h : VmPayload P s before pl cp sp high)
     (outside : PayloadCoreOutside log P s before pl cp)
     (memory : after.σ.mem = writeLog before.σ.mem log)
     (out : after.σ.sailOutput = before.σ.sailOutput)
     (trapWord : (word after ((word after Layout.sym_Caml_state).toNat + Layout.off_trapsp)).toNat = high - 8 * trap)
     (words : StackRepr after pl newSp high stack)
-    (objects : HeapRepr after pl cp P {s with heap := heap, stack := stack, trap := trap}) :
-    VmPayload P {s with heap := heap, stack := stack, trap := trap} after pl cp newSp high := by
+    (objects : HeapRepr after pl cp P {s with heap := heap, stack := stack, trap := trap, accu := accu}) :
+    VmPayload P {s with heap := heap, stack := stack, trap := trap, accu := accu} after pl cp newSp high := by
   have copy := fun a n (ho : OutLRange log a n) => copied_of_writeLog memory ho
   have hw : ∀ a, OutLRange log a 8 → word after a = word before a :=
     fun a ho => Reloc.bytesT_congr (copy a 8 ho)
@@ -56,6 +56,20 @@ theorem payload_rebuild {P : Prog} {s : St} {before after : Config}
       exact ⟨a, ha, channel_copied layout (copy _ _ (outside.channels id ch a hc ha))⟩
   · rw [hw _ outside.atomBase]
     exact h.atomBase
+
+/-- Existing rebuilding interface for arms that retain the accumulator. -/
+theorem payload_rebuild {P : Prog} {s : St} {before after : Config}
+    {pl : Place} {cp : ChanPlace} {sp newSp high trap : Nat} {log : List WEntry}
+    {heap : Heap} {stack : List Val}
+    (h : VmPayload P s before pl cp sp high)
+    (outside : PayloadCoreOutside log P s before pl cp)
+    (memory : after.σ.mem = writeLog before.σ.mem log)
+    (out : after.σ.sailOutput = before.σ.sailOutput)
+    (trapWord : (word after ((word after Layout.sym_Caml_state).toNat + Layout.off_trapsp)).toNat = high - 8 * trap)
+    (words : StackRepr after pl newSp high stack)
+    (objects : HeapRepr after pl cp P {s with heap := heap, stack := stack, trap := trap}) :
+    VmPayload P {s with heap := heap, stack := stack, trap := trap} after pl cp newSp high :=
+  payload_rebuild_accu h outside memory out trapWord words objects
 
 /-- Copy the represented heap when all live objects lie outside the log. -/
 theorem heap_frame_log {P : Prog} {s : St} {before after : Config}

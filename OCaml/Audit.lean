@@ -2653,6 +2653,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closurerec_return
 #print axioms OCaml.Vm.Sim.closurerec_machine
 
+-- Allocation with simultaneous replacement of consumed stack slots.
+#print axioms OCaml.Vm.Primitives.heap_live_bound
+#print axioms OCaml.Vm.Primitives.heap_live_after_alloc
+#print axioms OCaml.Vm.Primitives.heap_allocate
+#print axioms OCaml.Vm.Sim.payload_rebuild_accu
+#print axioms OCaml.Vm.Sim.payload_allocate_stack
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

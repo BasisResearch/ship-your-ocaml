@@ -6,11 +6,16 @@ namespace OCaml.Vm.Primitives
 open OCaml.Bytecode Vsa.Machine Vsa.Sim
 
 /-- A represented live object is an existing abstract heap entry. -/
+theorem heap_live_bound {P s c pl cp l}
+    (h : HeapRepr c pl cp P s) (hl : Live s.heap (roots P s) l) :
+    l < s.heap.objs.length := by
+  obtain ⟨a, o, hp, hg, layout⟩ := h.1 l hl
+  exact (List.getElem?_eq_some_iff.mp hg).1
+
+/-- Payload convenience wrapper for heap-only reachability. -/
 theorem VmPayload.live_bound {P s c pl cp sp high l}
     (h : VmPayload P s c pl cp sp high) (hl : Live s.heap (roots P s) l) :
-    l < s.heap.objs.length := by
-  obtain ⟨a, o, hp, hg, layout⟩ := h.heap.1 l hl
-  exact (List.getElem?_eq_some_iff.mp hg).1
+    l < s.heap.objs.length := heap_live_bound h.heap hl
 
 /-- Any pointers in the freshly allocated object refer to old live objects.
 The concrete allocator and initialization code will establish its layout. -/
@@ -19,8 +24,8 @@ def AllocationRoots (P : Prog) (s : St) (o : Obj) : Prop :=
 
 /-- After allocation every reachable object is either the fresh object or an
 old reachable object. This is heap-graph reasoning, independent of execution. -/
-theorem live_after_alloc {P s c pl cp sp high o l}
-    (h : VmPayload P s c pl cp sp high) (fields : AllocationRoots P s o)
+theorem heap_live_after_alloc {P s c pl cp o l}
+    (h : HeapRepr c pl cp P s) (fields : AllocationRoots P s o)
     (live : Live (s.heap.alloc o).1
       (roots P {s with heap := (s.heap.alloc o).1, accu := .ptr (s.heap.alloc o).2 0}) l) :
     l = (s.heap.alloc o).2 ∨ Live s.heap (roots P s) l := by
@@ -35,8 +40,16 @@ theorem live_after_alloc {P s c pl cp sp high o l}
     rcases ih with fresh | old
     · rw [fresh, Heap.get_alloc_fresh] at hg
       exact Or.inr (fields t fs (Option.some.inj hg) v hv child hl)
-    · rw [Heap.get_alloc_old _ _ _ (h.live_bound old)] at hg
+    · rw [Heap.get_alloc_old _ _ _ (heap_live_bound h old)] at hg
       exact Or.inr (Live.field old hg hv hl)
+
+/-- Payload convenience wrapper for allocation reachability. -/
+theorem live_after_alloc {P s c pl cp sp high o l}
+    (h : VmPayload P s c pl cp sp high) (fields : AllocationRoots P s o)
+    (live : Live (s.heap.alloc o).1
+      (roots P {s with heap := (s.heap.alloc o).1, accu := .ptr (s.heap.alloc o).2 0}) l) :
+    l = (s.heap.alloc o).2 ∨ Live s.heap (roots P s) l :=
+  heap_live_after_alloc h.heap fields live
 
 /-- Separation of a reserved result allocation from all old reachable objects.
 The caller supplies this from nursery/major-allocation freshness. -/
@@ -46,37 +59,47 @@ def AllocationOutside (P : Prog) (s : St) (pl : Place) (a : Nat) (o : Obj) : Pro
 
 /-- Extend a represented heap with an initialized fresh object. A placement
 may reserve the fresh location before the call: unreachable keys are unconstrained. -/
+theorem heap_allocate {P s c pl cp o a}
+    (h : HeapRepr c pl cp P s) (fields : AllocationRoots P s o)
+    (placed : pl.φ (s.heap.alloc o).2 = some a) (layout : ObjAt c pl cp a o)
+    (outside : AllocationOutside P s pl a o) :
+    HeapRepr c pl cp P
+      {s with heap := (s.heap.alloc o).1, accu := .ptr (s.heap.alloc o).2 0} := by
+  constructor
+  · intro l hl
+    rcases heap_live_after_alloc h fields hl with fresh | old
+    · subst l
+      exact ⟨a, o, placed, Heap.get_alloc_fresh _ _, layout⟩
+    · obtain ⟨b, oldObj, hp, hg, ho⟩ := h.1 l old
+      exact ⟨b, oldObj, hp, (Heap.get_alloc_old _ _ _ (heap_live_bound h old)).trans hg, ho⟩
+  · intro l l' b b' ob ob' hl hl' ne hp hp' hg hg'
+    rcases heap_live_after_alloc h fields hl with fresh | old <;>
+      rcases heap_live_after_alloc h fields hl' with fresh' | old'
+    · exact False.elim (ne (fresh.trans fresh'.symm))
+    · subst l
+      have addr : b = a := Option.some.inj (hp.symm.trans placed)
+      have obj : ob = o := Option.some.inj (hg.symm.trans (Heap.get_alloc_fresh _ _))
+      rw [Heap.get_alloc_old _ _ _ (heap_live_bound h old')] at hg'
+      simpa only [addr, obj] using outside l' b' ob' old' hp' hg'
+    · subst l'
+      have addr : b' = a := Option.some.inj (hp'.symm.trans placed)
+      have obj : ob' = o := Option.some.inj (hg'.symm.trans (Heap.get_alloc_fresh _ _))
+      rw [Heap.get_alloc_old _ _ _ (heap_live_bound h old)] at hg
+      simpa only [addr, obj] using (outside l b ob old hp hg).symm
+    · rw [Heap.get_alloc_old _ _ _ (heap_live_bound h old)] at hg
+      rw [Heap.get_alloc_old _ _ _ (heap_live_bound h old')] at hg'
+      exact h.2 l l' b b' ob ob' old old' ne hp hp' hg hg'
+
+/-- Extend the heap while retaining an unchanged represented stack. Callers
+whose allocation overwrites consumed stack slots use `heap_allocate` and
+rebuild the final stack separately. -/
 theorem VmPayload.allocate {P s c pl cp sp high o a}
     (h : VmPayload P s c pl cp sp high) (fields : AllocationRoots P s o)
     (placed : pl.φ (s.heap.alloc o).2 = some a) (layout : ObjAt c pl cp a o)
     (outside : AllocationOutside P s pl a o) :
     VmPayload P {s with heap := (s.heap.alloc o).1, accu := .ptr (s.heap.alloc o).2 0}
-      c pl cp sp high := by
-  refine { h with heap := ?_ }
-  constructor
-  · intro l hl
-    rcases live_after_alloc h fields hl with fresh | old
-    · subst l
-      exact ⟨a, o, placed, Heap.get_alloc_fresh _ _, layout⟩
-    · obtain ⟨b, oldObj, hp, hg, ho⟩ := h.heap.1 l old
-      exact ⟨b, oldObj, hp, (Heap.get_alloc_old _ _ _ (h.live_bound old)).trans hg, ho⟩
-  · intro l l' b b' ob ob' hl hl' ne hp hp' hg hg'
-    rcases live_after_alloc h fields hl with fresh | old <;>
-      rcases live_after_alloc h fields hl' with fresh' | old'
-    · exact False.elim (ne (fresh.trans fresh'.symm))
-    · subst l
-      have addr : b = a := Option.some.inj (hp.symm.trans placed)
-      have obj : ob = o := Option.some.inj (hg.symm.trans (Heap.get_alloc_fresh _ _))
-      rw [Heap.get_alloc_old _ _ _ (h.live_bound old')] at hg'
-      simpa only [addr, obj] using outside l' b' ob' old' hp' hg'
-    · subst l'
-      have addr : b' = a := Option.some.inj (hp'.symm.trans placed)
-      have obj : ob' = o := Option.some.inj (hg'.symm.trans (Heap.get_alloc_fresh _ _))
-      rw [Heap.get_alloc_old _ _ _ (h.live_bound old)] at hg
-      simpa only [addr, obj] using (outside l b ob old hp hg).symm
-    · rw [Heap.get_alloc_old _ _ _ (h.live_bound old)] at hg
-      rw [Heap.get_alloc_old _ _ _ (h.live_bound old')] at hg'
-      exact h.heap.2 l l' b b' ob ob' old old' ne hp hp' hg hg'
+      c pl cp sp high :=
+  { h with heap := heap_allocate h.heap fields placed layout outside }
 
 /-- An allocating call consumes a fresh placement reservation and preserves
 all old observations outside its concrete write log. -/

@@ -1927,7 +1927,24 @@ all gates passing. This is a complete conditional native path, not yet a
 represented CLOSUREREC arm: object/stack readback and simultaneous allocation
 restoration remain. Next: those memory proofs and the semantic step wrapper.
 
+## Allocation while replacing consumed stack slots
+
+`heap_allocate` in `Primitives/Allocation.lean` factors heap extension out
+of `VmPayload.allocate`; the existing payload and reachability APIs remain
+wrappers. `payload_rebuild_accu` generalizes fixed-observation restoration
+to an updated accumulator. `payload_allocate_stack` in `AllocateStack.lean`
+combines old-object framing, fresh-object layout, root restriction and final
+stack readback. It allows consumed stack slots to be overwritten, which the
+CLOSUREREC log requires. The new stack may contain interior pointers into the
+fresh object. The shared target checks in 0.806 s; headline audits added.
+
 ## Open / next
+
+Immediate next: prove CLOSUREREC object and final-stack readback from
+`closurerecFullLog`, then consume `payload_allocate_stack` to finish the
+represented nursery arm. Native construction landed as `4a03e85`; coverage
+remains 126 conditional opcode bridges until representation is restored.
+
 
 Shared application restoration landed in `ApplyRestore.lean:42`
 (`apply_frame_restore`): frame payload, closure environment, registers,
