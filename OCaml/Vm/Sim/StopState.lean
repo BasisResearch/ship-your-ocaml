@@ -17,16 +17,11 @@ def stopLog (nativeSp : Nat) (vmSp : BitVec 64) (c : Config) : List WEntry :=
    ((word c Layout.sym_Caml_state).toNat + Layout.off_extern_sp, 8, vmSp),
    ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise, 8, word c (nativeSp + 24))]
 
-/-- Native invocation and memory separation supplied by the enclosing interpreter call. -/
-structure StopInput (nativeSp : Nat) (saved : Nat → BitVec 64) (value vmSp : BitVec 64) (c : Config) : Prop where
-  good : GoodState c.σ
-  image : ExecutableImage c
-  pc : pcOf c = some (0x800032f4#64)
-  tick : c.tick < 2
+/-- Saved native invocation and store geometry, independent of the current PC.
+The loop invariant must retain this state until the enclosing call returns. -/
+structure StopInvocation (nativeSp : Nat) (saved : Nat → BitVec 64) (vmSp : BitVec 64) (c : Config) : Prop where
   frame : InterpSavedFrame nativeSp saved c
   stack : gpr c 2 = some (BitVec.ofNat 64 nativeSp)
-  vmStack : gpr c Layout.reg_sp = some vmSp
-  value : gpr c Layout.reg_accu = some value
   aligned : (saved 1).toNat % 4 = 0
   depthWrite : RamWriteAt Layout.sym_caml_callback_depth 4
   domainRead : RamReadAt Layout.sym_Caml_state 8
@@ -36,6 +31,29 @@ structure StopInput (nativeSp : Nat) (saved : Nat → BitVec 64) (value vmSp : B
   savedRaiseOutside : OutLRange [(Layout.sym_caml_callback_depth, 4, stopDepth c)] (nativeSp + 24) 8
   imageOutside : ImageOutside (stopLog nativeSp vmSp c)
   frameOutside : ∀ r ∈ Layout.interpSavedRegs, OutLRange (stopLog nativeSp vmSp c) (nativeSp + Layout.interpSaveOffset r) 8
+
+/-- A read-only dispatch retains the native invocation and every store footprint. -/
+theorem StopInvocation.frame_read {nativeSp : Nat} {saved : Nat → BitVec 64} {vmSp : BitVec 64}
+    {c after : Config} (h : StopInvocation nativeSp saved vmSp c)
+    (memory : after.σ.mem = c.σ.mem) (stack : gpr after 2 = gpr c 2) :
+    StopInvocation nativeSp saved vmSp after := by
+  refine ⟨h.frame.frame (log := []) (by intro r hr; trivial) memory,
+    stack.trans h.stack, h.aligned, h.depthWrite, h.domainRead, h.savedRaiseRead, ?_, ?_, ?_, ?_, ?_⟩
+  · simpa only [word, memory] using h.stackWrite
+  · simpa only [word, memory] using h.raiseWrite
+  · simpa only [stopDepth, memory] using h.savedRaiseOutside
+  · simpa only [stopLog, stopDepth, word, memory] using h.imageOutside
+  · simpa only [stopLog, stopDepth, word, memory] using h.frameOutside
+
+/-- Entry to STOP with the enclosing invocation and represented result registers. -/
+structure StopInput (nativeSp : Nat) (saved : Nat → BitVec 64) (value vmSp : BitVec 64) (c : Config) : Prop
+    extends StopInvocation nativeSp saved vmSp c where
+  good : GoodState c.σ
+  image : ExecutableImage c
+  pc : pcOf c = some (0x800032f4#64)
+  tick : c.tick < 2
+  vmStack : gpr c Layout.reg_sp = some vmSp
+  value : gpr c Layout.reg_accu = some value
 
 /-- STOP's return preserves the ABI and records the three runtime stores explicitly. -/
 structure StopReturnPost (before : Config) (nativeSp : Nat) (saved : Nat → BitVec 64)

@@ -2191,10 +2191,24 @@ exit must supply that continuation; no unconditional machine halt is
 claimed. The original prefix/epilogue landing passed check_all and landed
 as `1d1b134` after two push races. Represented opcode count stays 139.
 
+## Represented STOP arm
+
+`StopInvocation.frame_read` factors the saved invocation and store geometry
+away from the native STOP entry PC. `stop_arm` composes represented dispatch
+with the complete STOP return. `stop_halt_arm` consumes the explicit
+`StopExitContinuation`; `stop_halt_step_arm` matches the actual semantic
+halt, including its world and exit code. All check under the default limits;
+the semantic wrapper module takes 1.7 seconds. Headlines are audited.
+
+Coverage is **140 conditional represented opcode bridges overall**, including
+F2 opcodes. This is not unconditional F1 coverage: STOP still requires the
+saved native invocation and enclosing process-exit summary. The composed
+native return landed as `8024567`, with check_all passing.
+
 ## Open / next
 
-Immediate next: connect the STOP return contract to loop-head dispatch and
-prove the enclosing caller/process-exit continuation; then
+Immediate next: prove the enclosing STOP caller/process-exit continuation;
+continue the
 uncaught/backtrace paths, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
