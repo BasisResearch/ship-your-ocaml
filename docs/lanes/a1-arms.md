@@ -1955,7 +1955,30 @@ The readback target checks in 1.1 s.
 are old roots, and pushed interior pointers share the fresh accumulator root.
 The object/root target checks in 0.865 s. Headline audits added.
 
+## Complete recursive-closure object layout
+
+`closurerec_log_layout` in `ClosurerecLayout.lean` proves the header and every
+field of `closurerecObject` from `closurerecFullLog`: first-function metadata,
+all infix triples, and all captures. The hypotheses are represented capture
+words, object-size bounds, descending-stack room, and separation of the
+complete object from the lowest pushed stack slot. The target checks in 1.0 s.
+
+`ClosurerecMetadataRead.lean` joins arbitrary infix groups using the shared
+`value_read_append`/`value_read_cons` adapters to `stack_prepend`.
+`ClosurerecMetadataMemory.lean` connects the complete metadata log to those
+abstract fields. `ClosurerecEncoding.lean` proves tagged arity and raw infix
+header encodings; the group definition preserves `BcSem`'s signed subtraction
+from the natural environment offset. `closurerec_function_values_length`
+proves the metadata size, and `infix_groups_in` supplies its whole write
+footprint. All new headline proofs are audited.
+
 ## Open / next
+
+Immediate next: reconstruct the reversed final stack using the landed infix
+pointer readbacks (`c6814de`), then combine native execution, object layout,
+`payload_allocate_stack`, registers and runtime preservation into the
+represented CLOSUREREC nursery arm. Coverage remains 126 conditional bridges.
+
 
 Immediate next: combine the infix readbacks with first-function metadata,
 captured words and the object header; reconstruct the reversed final stack,

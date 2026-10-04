@@ -92,4 +92,22 @@ theorem infix_groups_stack_read (pl : Place) (a stackStart : Nat) (targets : Lis
     apply outLRange_of_windows (infix_stores_in pl a stackStart _ (j + 1) targets[j] (by omega))
     exact ⟨Or.inr (by dsimp only; omega), Or.inr (by dsimp only; omega), trivial⟩
 
+/-- The complete loop stays in one metadata window and one stack window. -/
+theorem infix_groups_in (pl : Place) (a stackStart : Nat) (targets : List Nat)
+    (room : 8 * targets.length ≤ stackStart) :
+    LogInW [⟨a + 16, a + 24 * targets.length + 16⟩,
+            ⟨stackStart - 8 * targets.length, stackStart⟩]
+      (infixGroups pl a stackStart targets).flatten := by
+  apply log_in_windows_of_mem
+  intro entry member
+  obtain ⟨group, selected, member⟩ := List.mem_flatten.mp member
+  obtain ⟨i, index, rfl⟩ := List.mem_map.mp selected
+  have bound : i < targets.length := List.mem_range.mp index
+  simp only [infixStores, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl
+  · exact Or.inl ⟨by dsimp only; omega, by dsimp only; omega⟩
+  · exact Or.inr (Or.inl ⟨by dsimp only; omega, by dsimp only; omega⟩)
+  · exact Or.inl ⟨by dsimp only; omega, by dsimp only; omega⟩
+  · exact Or.inl ⟨by dsimp only; omega, by dsimp only; omega⟩
+
 end OCaml.Vm.Sim

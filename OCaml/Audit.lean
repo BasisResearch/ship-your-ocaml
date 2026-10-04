@@ -2679,6 +2679,20 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.infix_groups_heap_read
 #print axioms OCaml.Vm.Sim.infix_groups_stack_read
 
+-- Complete recursive-closure object layout from the native write log.
+#print axioms OCaml.Vm.Sim.value_read_append
+#print axioms OCaml.Vm.Sim.value_read_cons
+#print axioms OCaml.Vm.Sim.closurerec_function_values_length
+#print axioms OCaml.Vm.Sim.tagged_nat_word
+#print axioms OCaml.Vm.Sim.infix_arity_word
+#print axioms OCaml.Vm.Sim.infix_header_word
+#print axioms OCaml.Vm.Sim.infix_groups_in
+#print axioms OCaml.Vm.Sim.closurerec_infix_values_read
+#print axioms OCaml.Vm.Sim.closurerec_tail_values_read
+#print axioms OCaml.Vm.Sim.closurerec_metadata_read
+#print axioms OCaml.Vm.Sim.closurerec_metadata_memory
+#print axioms OCaml.Vm.Sim.closurerec_log_layout
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq
