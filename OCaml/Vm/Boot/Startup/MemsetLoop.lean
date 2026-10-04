@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.MemsetGeometry
+import OCaml.Vm.Boot.Startup.IndexedLoop
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic LeanRV64DExecutable OCaml.Vm.Primitives
 
@@ -64,28 +65,7 @@ theorem zero_pair_iteration {base count k ra initial c} (region : ZeroPairRegion
 /-- Fold an arbitrary number of native memset word-pairs, without evaluating
 the loop in the kernel. -/
 theorem zero_pairs {base count ra} (region : ZeroPairRegion base count) (initial : Config) :
-    Triple (ZeroPairsAt base count 0 ra initial) (ZeroPairsAt base count count ra initial) := by
-  let I := fun c => ZeroPairsAt base count (zeroPairIndex base c) ra initial c
-  let B := fun c => zeroPairIndex base c < count
-  have body : ∀ n, Triple (fun c => I c ∧ B c ∧ count - zeroPairIndex base c = n)
-      (fun c => I c ∧ count - zeroPairIndex base c < n) := by
-    intro n c ⟨h, hk, hn⟩
-    obtain ⟨d, run, post⟩ := zero_pair_iteration region h hk
-    have index := post.index region
-    refine ⟨d, run, ?_, ?_⟩
-    · change ZeroPairsAt base count (zeroPairIndex base d) ra initial d
-      rw [index]
-      exact post
-    · rw [index]
-      dsimp [B] at hk
-      omega
-  apply (loopFromBody (fun c => count - zeroPairIndex base c) body).conseq
-  · intro c h
-    change ZeroPairsAt base count (zeroPairIndex base c) ra initial c
-    rw [h.index region]
-    exact h
-  · intro c ⟨h, stop⟩
-    have bound := h.bound
-    have eq : zeroPairIndex base c = count := by dsimp [B] at stop; omega
-    simpa only [I, eq] using h
+    Triple (ZeroPairsAt base count 0 ra initial) (ZeroPairsAt base count count ra initial) :=
+  indexed_loop (zeroPairIndex base) count 0 _ (fun _ _ h => h.bound)
+    (fun _ _ h => h.index region) (fun _ _ h hk => zero_pair_iteration region h hk)
 end OCaml.Vm.Boot.Startup

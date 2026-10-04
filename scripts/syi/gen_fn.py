@@ -654,6 +654,8 @@ def ocaml_literal_mline(pc, word):
         kind = {3: 'ld', 4: 'lbu'}[funct3]
     elif opcode == 0x13:
         kind = {0: 'addi', 1: 'slli', 5: 'srli', 7: 'andi'}[funct3]
+    elif opcode == 0x1b and funct3 == 0:
+        kind = 'addiw'
     elif opcode == 0x17:
         kind = 'auipc'
     elif opcode == 0x23:

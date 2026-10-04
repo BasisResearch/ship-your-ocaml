@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.NameLoop
 import OCaml.Vm.Boot.Startup.EnvLock
 import OCaml.Vm.Boot.Startup.ParameterEntry
 import OCaml.Vm.Boot.Startup.SecureGetenvReady
@@ -3227,6 +3228,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.scalar_leaf_call
 #print axioms OCaml.Vm.Boot.Startup.lock_noop
 #print axioms OCaml.Vm.Boot.Startup.env_lock
+#print axioms OCaml.Vm.Boot.Startup.indexed_loop
+#print axioms OCaml.Vm.Boot.Startup.name_step
+#print axioms OCaml.Vm.Boot.Startup.name_scan_loop
+#print axioms OCaml.Vm.Boot.Startup.name_scan
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.domain_history_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.reset
