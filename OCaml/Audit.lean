@@ -1,3 +1,5 @@
+import OCaml.Vm.Gc.SingleFieldFreshLarge
+import OCaml.Vm.Gc.TailProgress
 import OCaml.Vm.Gc.ContextAllocated
 import OCaml.Vm.Gc.FreshSingleForwardedHeader
 import OCaml.Vm.Gc.SingleFieldSelf
@@ -3815,3 +3817,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Fresh.AllocationContext.finish
 #print axioms OCaml.Vm.Gc.Fresh.ContextEntered.complete
 #print axioms OCaml.Vm.Gc.Fresh.allocate_context
+
+#print axioms OCaml.Vm.Gc.Fresh.ContextAllocationConditions.of_memory
+#print axioms OCaml.Vm.Gc.Fresh.ContextLargeConditions.of_memory
+#print axioms OCaml.Vm.Gc.Fresh.allocate_context_large
+#print axioms OCaml.Vm.Gc.SingleField.YoungHead.context_carried
+#print axioms OCaml.Vm.Gc.SingleField.YoungHead.fresh_input
+#print axioms OCaml.Vm.Gc.SingleField.YoungHead.complete_allocation
+#print axioms OCaml.Vm.Gc.SingleField.YoungHead.allocate_child
+#print axioms OCaml.Vm.Gc.SingleField.YoungHead.allocate_child_large
+#print axioms OCaml.Vm.Gc.SingleField.prepare_allocate_child
+#print axioms OCaml.Vm.Gc.SingleField.prepare_allocate_child_large
+#print axioms OCaml.Vm.Gc.countP_strict
+#print axioms OCaml.Vm.Gc.SingleField.YoungHead.decreases

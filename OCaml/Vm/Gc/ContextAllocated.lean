@@ -17,6 +17,15 @@ structure ContextAllocationConditions (R : Nat → BitVec 64) (c : Config) : Pro
 def contextPayload (source root sp hd : BitVec 64) (c : Config) : BitVec 64 :=
   BestFitSmall.first (sizeWord hd) (AllocWrapper.prepared (contextRegs source root sp hd) c)
 
+theorem ContextAllocationConditions.of_memory {R} {before after : Config} (memory : after.σ.mem = before.σ.mem)
+    (conditions : ContextAllocationConditions R before) : ContextAllocationConditions R after :=
+  ⟨memory ▸ conditions.code,memory ▸ conditions.freeCode,conditions.windows,
+    by simpa only [word,memory] using conditions.pointer,conditions.inner,conditions.wrapper.of_memory memory⟩
+
+theorem contextPayload_of_memory {source root sp hd} {before after : Config} (memory : after.σ.mem = before.σ.mem) :
+    contextPayload source root sp hd after = contextPayload source root sp hd before := by
+  simp only [contextPayload,BestFitSmall.first,word,AllocWrapper.prepared_memory memory]
+
 /-- Fresh header classification, actual allocation JAL and complete exact-size
 allocation on the existing native frame. This is the fresh-child tail route. -/
 theorem allocate_context {source root sp c} (input : Input source c)

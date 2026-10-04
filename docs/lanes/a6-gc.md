@@ -1,5 +1,27 @@
 # Lane a6-gc
 
+## Captured fresh-child allocation and copying-step rank (2026-10-04)
+
+- `SingleFieldFresh.lean:prepare_allocate_child` and
+  `SingleFieldFreshLarge.lean:prepare_allocate_child_large` prove parent
+  forwarding, actual child classification and either complete child
+  allocation on the existing frame, retaining the exact combined write log.
+- `ContextLargeAllocated.lean:allocate_context_large` adds the complete
+  least-large-block tail allocation alternative. Both child paths share
+  header/input and log/frame composition.
+- `TailProgress.lean:YoungHead.decreases` proves the finite nonzero-source-
+  header count strictly drops under the actual forwarding prefix and other-
+  header separation. It is the copying-step rank component: Forward-tag
+  shortcuts and mopup need additional control/pending-field progress.
+- The law check covers 528 rank-decreasing prefixes, alongside all earlier
+  cyclic/aliased/special-tag cases. Targeted build passes (741 jobs).
+  Full Audit passes (3514 jobs), with permitted axioms; discipline and
+  abstraction gates pass. Context checkpoint landed as `a390302`.
+- Next: assemble the ordinary single-field tail invariant and its machine
+  loop, tying allocation freshness and header separation to heap ownership.
+  Other object/allocator routes, global collector closure, G2 and the live
+  budget remain open.
+
 ## Fresh-child tail allocation context (2026-10-04)
 
 - `AllocationContext.lean:prepare_context` starts at the fresh header

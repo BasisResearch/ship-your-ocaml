@@ -366,3 +366,16 @@ for source in (4096, 8192):
         if child == source:
             assert captured != partial[child]
 print("L3' single-field tail: 6 captured-child cases pass; a self-pointer remains in the original placement after parent forwarding")
+# A fresh single-field tail step removes one nonzero source header. Source
+# headers are separate from payload/root stores and the fresh major target.
+for n in range(1, 33):
+    sources = [Y0 + 8 + 24*i for i in range(n)]
+    for chosen in sources:
+        mem = {a-8: (0 if i % 3 == 0 and a != chosen else 1024)
+               for i, a in enumerate(sources)}
+        old = sum(mem[a-8] != 0 for a in sources)
+        target, root = 50000, 60000
+        mem[root], mem[chosen-8], mem[chosen] = target, 0, target
+        new = sum(mem[a-8] != 0 for a in sources)
+        assert new == old - 1
+print("L3' tail rank: 528 forwarding prefixes strictly decrease nonzero source-header count")
