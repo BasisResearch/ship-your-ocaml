@@ -1,6 +1,21 @@
 # Lane a0-boot
 
-## Round 2 status (2026-10-03)
+## Round 2 status (2026-10-04)
+
+`Startup/MemsetPrefix.lean:65` proves `memset56_prefix`, selecting the
+aligned 56-byte zeroing path. `MemsetPair.lean:60` proves `memset_pair`,
+including both word stores and the native loop branch. `MemsetLoop.lean:66`
+proves `zero_pairs` for an arbitrary pair count using `loopFromBody`, with
+exact `clearWords` memory effect, executable image, platform and register
+frames. Geometry derives write windows from the allocator arena bounds.
+The loop module checks in under one second; no machine-step replay or
+budget increase. Generated regions reuse the existing library memset pins.
+The eight-byte tail and composition with the actual first table allocation
+remain next; reset-to-cut and Round 2 exit remain open.
+
+The first table malloc return increment landed as `3550f1f`, full gate passed.
+
+## Prior reset frontier (2026-10-03)
 
 `Startup/TableAllocation.lean` closes `reset_table_allocation_exists`: actual
 reset returns from the first 56-byte minor-table malloc, with a fresh aligned

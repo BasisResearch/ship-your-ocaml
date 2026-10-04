@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.FreshIndirect
+import OCaml.Vm.Boot.Startup.MemsetLoop
 import OCaml.Vm.Boot.Startup.TableAllocation
 import OCaml.Vm.Boot.Startup.MinorTablesPrefix
 import OCaml.Vm.Gc.FreshAllocator
@@ -2883,3 +2884,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.AllocEntry.call_free_list
 #print axioms OCaml.Vm.Gc.Fresh.FreeListBoundary.enter
 #print axioms OCaml.Vm.Gc.Fresh.enter_free_list
+
+#print axioms OCaml.Vm.Boot.Startup.memset56_prefix
+#print axioms OCaml.Vm.Boot.Startup.memset_pair
+#print axioms OCaml.Vm.Boot.Startup.clearWords_pair
+#print axioms OCaml.Vm.Boot.Startup.zeroPair_branch
+#print axioms OCaml.Vm.Boot.Startup.zero_pair_iteration
+#print axioms OCaml.Vm.Boot.Startup.zero_pairs
