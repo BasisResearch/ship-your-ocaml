@@ -1,5 +1,28 @@
 # Lane a6-gc
 
+## Empty-tail bitmap through native return (2026-10-04)
+
+- `BestFitBitmapReturn.lean:clear_return` executes the actual bitmap block
+  and shared accounting/native-return suffix. It proves the exact combined
+  log, cleared bitmap, returned header pointer, and code/native/output
+  frames. `Post.return_registers` and `Post.counter_frame` discharge the
+  seam from the actual bitmap write and machine frame.
+- `BestFitBitmap.lean:clear` and `cleared_word` show that the decoded
+  LW/ADDIW/SLLW/AND/SW clears precisely the requested size-class bit.
+  `mask_small` checks the fixed sixteen-class index independently of memory
+  and bitmap contents. `BestFitFinish.lean:finish` packages the common
+  accounting/return suffix with only its three required input registers.
+- `Primitives/Word32Access.lean` shares total four-byte reads, LW/SW access
+  windows, separated-write framing and truncated store readback. The
+  generator supplies both block selections and their exact effects.
+- Capped targeted build (619 jobs), full Audit (2868 jobs), generator drift,
+  discipline and abstraction gates pass; new headlines use only permitted
+  axioms. Both nonempty-tail cursor paths landed as `06f9cf9`. Next: compose the
+  empty-tail entry/pop with this proved suffix, then large-block allocation
+  and the outer allocation wrapper. Full free-list invariant preservation,
+  fresh-copy completion, queue/root closure, ephemerons, major reclamation
+  and G2 remain open.
+
 ## Best-fit merge-cursor repair (2026-10-04)
 
 - `BestFitRepair.lean:allocate_nonempty` covers both merge-cursor branches

@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.TableReady
+import OCaml.Vm.Gc.BestFitBitmapReturn
 import OCaml.Vm.Gc.BestFitRepair
 import OCaml.Vm.Boot.Startup.TableZeroed
 import OCaml.Vm.Gc.BestFitSmall
@@ -2989,3 +2990,20 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTableZeroed.domain_word
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTableZeroed.pool_zero
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTableZeroed.ready
+#print axioms OCaml.Vm.Primitives.read4_pins
+#print axioms OCaml.Vm.Primitives.ReadWindow.lw
+#print axioms OCaml.Vm.Primitives.WriteWindow.sw
+#print axioms OCaml.Vm.Primitives.lpins4_writeLog
+#print axioms OCaml.Vm.Primitives.read4_value
+#print axioms OCaml.Vm.Primitives.word32_writeLog
+#print axioms OCaml.Vm.Primitives.truncate_signed_word
+#print axioms OCaml.Vm.Gc.BestFitBitmap.bitmap_window
+#print axioms OCaml.Vm.Gc.BestFitBitmap.access
+#print axioms OCaml.Vm.Gc.BestFitBitmap.mask_small
+#print axioms OCaml.Vm.Gc.BestFitBitmap.cleared_word
+#print axioms OCaml.Vm.Gc.BestFitBitmap.clear
+#print axioms OCaml.Vm.Gc.BestFitBitmap.Post.return_registers
+#print axioms OCaml.Vm.Gc.BestFitBitmap.Post.counter_frame
+#print axioms OCaml.Vm.Gc.BestFitBitmap.clear_return
+#print axioms OCaml.Vm.Gc.BestFitFinish.access
+#print axioms OCaml.Vm.Gc.BestFitFinish.finish
