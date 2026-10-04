@@ -545,3 +545,6 @@ import OCaml.Vm.Sim.RaiseCheck
 import OCaml.Vm.Sim.RaiseQuiet
 import OCaml.Vm.Sim.ReraiseQuiet
 import OCaml.Vm.Sim.RaiseNotraceQuiet
+import OCaml.Vm.Sim.StopPrefixSegment
+import OCaml.Vm.Sim.StopPrefixPins
+import OCaml.Vm.Sim.InterpReturn

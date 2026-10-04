@@ -168,6 +168,8 @@ def sym_caml_fl_p_add_blocks : Nat := 0x800649c0
 def sym_caml_gc_phase : Nat := 0x80064ac0
 /-- `caml_gc_sweep_hp` -/
 def sym_caml_gc_sweep_hp : Nat := 0x80064ac8
+/-- `caml_callback_depth` -/
+def sym_caml_callback_depth : Nat := 0x80064c38
 /-- `caml_allocated_words` -/
 def sym_caml_allocated_words : Nat := 0x80064ab8
 /-- `caml_stack_usage_hook` -/
@@ -233,6 +235,25 @@ def opcodeBound : Nat := 148
 
 /-- `caml_prim_table.contents`, recovered from C_CALL1. -/
 def off_prim_contents : Nat := 8
+
+/-! Native interpreter frame, recovered from the prologue saves. -/
+def interpFrameBytes : Nat := 528
+def interpSavedRegs : List Nat := [1, 8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
+def interpSaveOffset : Nat → Nat
+  | 1 => 520
+  | 8 => 512
+  | 9 => 504
+  | 18 => 496
+  | 19 => 488
+  | 20 => 480
+  | 21 => 472
+  | 22 => 464
+  | 23 => 456
+  | 24 => 448
+  | 25 => 440
+  | 26 => 432
+  | 27 => 424
+  | _ => 0
 
 /-! `Caml_state` field offsets (bytes). -/
 def off_young_limit : Nat := 0

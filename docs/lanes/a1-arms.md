@@ -2160,9 +2160,25 @@ Coverage is **139 conditional represented opcode bridges overall**, including
 F2, not a fraction of F1's 134. Uncaught, backtrace and debugger paths remain
 open. Caught selection landed as `eb3ae96` with check_all passing.
 
+## Native STOP prefix and complete interpreter epilogue
+
+The arm generator now handles both 64-bit and 32-bit stores through the
+same width-aware path and code-frame certificates. Existing sd artifacts
+remain identical. `tr_stop_prefix` executes callback-depth decrement and
+the domain return stores. `InterpReturn.lean:interp_return` executes the
+complete shared epilogue, restoring thirteen saved ABI registers, native
+SP and return target while returning the accumulator in a0. All save
+offsets/frame size come from Layout's prologue extraction; callback-depth
+also has its ELF symbol in Layout. `InterpSavedFrame.frame` retains saved
+words across disjoint earlier stores. Native segment checks: STOP 3.7s,
+epilogue 5.0s; complete epilogue adapter 1.4s. Generator and axiom audits
+are registered. This is not yet a STOP machine-halting theorem. Quiet
+caught raising arms landed as `e50b59e` with check_all passing.
+
 ## Open / next
 
-Immediate next: STOP and the native interpreter-return frame; then
+Immediate next: compose STOP prefix stores with interp_return and expose
+the caller/process-exit continuation; then
 uncaught/backtrace paths, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved

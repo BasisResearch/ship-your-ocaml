@@ -152,6 +152,7 @@ def main():
              "_times", "files", "fds", "dirs", "fs_ready"]
     need += primitive_names()
     need += ["caml_fl_p_allocate", "caml_fl_p_add_blocks", "caml_gc_phase", "caml_gc_sweep_hp"]
+    need += ["caml_callback_depth"]
     need += ["caml_allocated_words", "caml_stack_usage_hook", "oldify_todo_list", "caml_ephe_none"]
     need += ["pool", "caml_stat_alloc_noexc", "malloc", "caml_init_domain"]
     need += ["main_argv", "caml_exe_name", "oo_last_id", "caml_copy_double"]
@@ -177,6 +178,27 @@ def main():
         m = re.match(r"^\s*([0-9a-f]+):\s+[0-9a-f]{8}\s+(\S+)\s*(.*)$", line)
         if m:
             ins[int(m.group(1), 16)] = (m.group(2), m.group(3).split("#")[0].strip())
+
+    # Native interpreter frame: recover the contiguous ABI saves at entry.
+    entry = sym["caml_interprete"]
+    mn, ops = ins[entry]
+    frame_match = re.fullmatch(r"sp,sp,-(\d+)", ops)
+    if mn != "addi" or not frame_match:
+        die("interpreter frame allocation changed")
+    frame_bytes = int(frame_match.group(1))
+    saved_regs = []
+    cursor = entry + 4
+    while cursor in ins and ins[cursor][0] == "sd":
+        saved_match = re.fullmatch(r"(\w+),(\d+)\(sp\)", ins[cursor][1])
+        if not saved_match:
+            die("interpreter native save shape changed")
+        reg, offset = saved_match.group(1), int(saved_match.group(2))
+        saved_regs.append((ABI[reg], offset))
+        cursor += 4
+    if {r for r, _ in saved_regs} != {1, 8, 9, *range(18, 28)}:
+        die("interpreter ABI save set changed")
+    if any(offset + 8 > frame_bytes for _, offset in saved_regs):
+        die("interpreter save outside native frame")
 
     def arm(name, k=0):
         return ins[int(arms["arms"][name]["addr"], 16) + 4 * k]
@@ -262,6 +284,13 @@ def main():
         w(f"/-- `{k}` lives in `{r}` -/\ndef reg_{k} : Nat := {ABI[r]}\n")
     w(f"\n/-- Largest opcode accepted by the dispatch bound check. -/\ndef opcodeBound : Nat := {bound_value}\n")
     w(f"\n/-- `caml_prim_table.contents`, recovered from C_CALL1. -/\ndef off_prim_contents : Nat := {prim_offsets[0]}\n")
+    w("\n/-! Native interpreter frame, recovered from the prologue saves. -/\n")
+    w(f"def interpFrameBytes : Nat := {frame_bytes}\n")
+    w("def interpSavedRegs : List Nat := [" + ", ".join(str(r) for r, _ in saved_regs) + "]\n")
+    w("def interpSaveOffset : Nat → Nat\n")
+    for reg, offset in saved_regs:
+        w(f"  | {reg} => {offset}\n")
+    w("  | _ => 0\n")
     w("\n/-! `Caml_state` field offsets (bytes). -/\n")
     for f in ["young_limit", "young_ptr", "young_start", "young_end", "young_alloc_start",
               "young_alloc_end", "minor_heap_wsz", "stack_low", "stack_high", "stack_threshold", "extern_sp",
