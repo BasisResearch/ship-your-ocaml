@@ -49,12 +49,9 @@ theorem ResetTableAllocation.saved
     (n : Nat) (hn : n ∈ [8, 9]) :
     gprGet afterTable.σ n = gprGet atRequest.σ n := by
   have choices : n = 8 ∨ n = 9 := by simpa using hn
-  have range : 1 ≤ n ∧ n ≤ 31 := by omega
-  have saved := w.post.result.frame.saved (n, vsaReg atTableMalloc n)
-    (by rcases choices with eq | eq <;> subst n <;> simp [firstMallocSaved, vsaSaved])
-  have same : gprGet afterTable.σ n = gprGet atTableMalloc.σ n :=
-    library_register_frame (w.before.allocatorInput _ startupTable_capacity).good
-      w.post.good range.1 range.2 saved
+  have same := allocator_saved_register
+    (w.before.allocatorInput _ startupTable_capacity).good w.post.good w.post.result.frame n
+    (by rcases choices with eq | eq <;> subst n <;> simp [vsaSaved])
   apply same.trans
   rcases choices with eq | eq <;> subst n
   all_goals exact w.before.post.frame _ (by decide) (by decide)

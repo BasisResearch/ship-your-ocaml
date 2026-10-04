@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.TableSecond
 import OCaml.Vm.Boot.Startup.TableReady
 import OCaml.Vm.Gc.BestFitBitmapReturn
 import OCaml.Vm.Gc.BestFitRepair
@@ -3007,3 +3008,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.BestFitBitmap.clear_return
 #print axioms OCaml.Vm.Gc.BestFitFinish.access
 #print axioms OCaml.Vm.Gc.BestFitFinish.finish
+
+#print axioms OCaml.Vm.Boot.Startup.allocator_saved_register
+#print axioms OCaml.Vm.Boot.Startup.table_next_prefix
+#print axioms OCaml.Vm.Boot.Startup.table_next
+#print axioms OCaml.Vm.Boot.Startup.table_next_allocator_input
+#print axioms OCaml.Vm.Boot.Startup.table_next_allocate
+#print axioms OCaml.Vm.Boot.Startup.TableNextAllocated.leaf
+#print axioms OCaml.Vm.Boot.Startup.TableNextAllocated.region
+#print axioms OCaml.Vm.Boot.Startup.TableNextAllocated.publishInput
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_second_allocation_exists

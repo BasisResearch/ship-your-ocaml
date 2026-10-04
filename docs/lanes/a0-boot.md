@@ -2,6 +2,22 @@
 
 ## Round 2 status (2026-10-04)
 
+`Startup/TableSecond.lean` closes `reset_second_allocation_exists`: actual
+reset returns from the second table malloc, retaining the first table and
+domain in the live heap. `table_next_allocate` (`TableNextAllocate.lean`)
+combines the generated request prefix, call, disabled-pool dispatch and
+successful allocator contract for either remaining site, with arbitrary
+prior heap and credits. `TableNextAllocated.publishInput` supplies the next
+shared publication protocol. `allocator_saved_register` factors the common
+ABI return observation out of both allocation-return proofs. The generic
+allocation and final reset composition each check in about one second.
+
+The complete ready-state increment landed as `8080237`, full gate passed.
+Next: carry the generic allocation through publication and second memset,
+then the third allocation and its tail memset/domain return. The complete
+reset-to-cut/Loaded exit remains open.
+
+
 `Startup/TableReady.lean` proves `ResetTableZeroed.ready`: the reached first
 zeroing return supplies complete `VsaOk`, allocator read-only pins, remaining
 credits, stack, domain publication and disabled pooling. `TableHeap.lean`

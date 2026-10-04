@@ -4,6 +4,17 @@ namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.Sym VsaIris.VsaHeap
 open VsaIris.MallocFast OCaml.Vm.Primitives
 
+/-- Recover any allocator-preserved ABI register from the shared return frame. -/
+theorem allocator_saved_register {before after : Config} {r s : BitVec 64}
+    (pre : VsaOk startupLive before) (post : VsaOk startupLive after)
+    (frame : RetFrame ((vsaModel startupLive).reg after) r s (firstMallocSaved (vsaReg before)))
+    (n : Nat) (member : n ∈ vsaSaved) : gprGet after.σ n = gprGet before.σ n := by
+  have range : 1 ≤ n ∧ n ≤ 31 := by simp [vsaSaved] at member; omega
+  have saved := frame.saved (n, vsaReg before n) (by
+    change (n, vsaReg before n) ∈ vsaSaved.map (fun k => (k, vsaReg before k))
+    exact List.mem_map.mpr ⟨n, member, rfl⟩)
+  exact library_register_frame pre post range.1 range.2 saved
+
 /-- Remaining-capacity certificates include the ordinary allocator shape. -/
 theorem room_shape {mv H k} (h : vsaRoomB mv H k) : vsaLayoutP.Shape mv H := by
   obtain ⟨starts, m, top, brkv, chunks, bins, image, heap, _⟩ := h
