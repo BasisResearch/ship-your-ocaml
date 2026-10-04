@@ -2617,6 +2617,26 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closurerec_first_one
 #print axioms OCaml.Vm.Sim.closurerec_first_more
 
+-- Grouped metadata logs and actual arbitrary-count recursive infix loop.
+#print axioms OCaml.Vm.Sim.grouped_log_step
+#print axioms OCaml.Vm.Sim.grouped_log_complete
+#print axioms OCaml.Vm.Sim.grouped_log_sublist
+#print axioms OCaml.Vm.Sim.grouped_partial_sublist
+#print axioms OCaml.Vm.Sim.grouped_log_member
+#print axioms OCaml.Vm.Sim.grouped_log_advance
+#print axioms OCaml.Vm.Sim.infix_groups_length
+#print axioms OCaml.Vm.Sim.infix_group_at
+#print axioms OCaml.Vm.Sim.InfixAt.index
+#print axioms OCaml.Vm.Sim.InfixAt.read_after
+#print axioms OCaml.Vm.Sim.InfixAt.advance
+#print axioms OCaml.Vm.Sim.infix_target_step
+#print axioms OCaml.Vm.Sim.infix_stack_step
+#print axioms OCaml.Vm.Sim.infix_arity_step
+#print axioms OCaml.Vm.Sim.infix_more_guard
+#print axioms OCaml.Vm.Sim.infix_more
+#print axioms OCaml.Vm.Sim.infix_last
+#print axioms OCaml.Vm.Sim.infix_run
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

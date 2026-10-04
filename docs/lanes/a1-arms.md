@@ -1896,6 +1896,23 @@ The generated adapters use exact intermediate write logs and the shared
 stack adjustment/return, simultaneous heap allocation and stack restoration,
 and complete CLOSUREREC arm/step composition.
 
+## Actual arbitrary-count CLOSUREREC infix loop
+
+`ClosurerecInfix.lean:10` (`infix_run`) proves the generated continuing and
+final infix iterations for every bounded number of remaining functions.
+Each fifteen-instruction iteration writes header, stack pointer, arity, then
+code pointer. `InfixAt.read_after` proves offset readback after the first two
+stores. `GroupedLog.lean` shares finite-block prefix, partial-iteration
+separation and exact memory/image advancement. `InfixAt.index/advance` use the
+shared native counted-loop fold; arity subtraction also models the unused
+final -1 word. Branch adapters check in 4.1–4.2 s; composition in 0.79 s.
+`gen_closurerec_infix.py` generates both adapters and the fold.
+Finite geometry, offset snapshots/targets, separation and stack room remain
+explicit. Setup and first metadata paths landed as `2a0ac08`, all gates passing
+after a push-race retry. Next: first-metadata-to-loop bridge, final stack
+adjustment and return, then object readback and simultaneous allocation/stack
+restoration for the complete CLOSUREREC arm.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`
