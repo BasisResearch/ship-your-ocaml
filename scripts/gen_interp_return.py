@@ -9,8 +9,8 @@ sys.path.insert(0, str(ROOT / 'scripts/syi'))
 from gen_segment import SegmentEmitter
 
 
-def output():
-    spec = json.loads((ROOT / 'scripts/syi/segments/interp_return.json').read_text())
+def output(kind='interp_return'):
+    spec = json.loads((ROOT / f'scripts/syi/segments/{kind}.json').read_text())
     em = SegmentEmitter(spec)
     em.emit()
     pins = {r: i for i, (r, _) in enumerate(em.pins)}
@@ -32,7 +32,7 @@ def output():
     saved_regs = sorted(loads)
     cases = '\n'.join(f'    · exact PinsHold.get post.pins ⟨{pins[f"x{r}"]}, by simp⟩' for r in saved_regs)
     norm_text = ',\n    '.join(norms)
-    return f'''import OCaml.Vm.Sim.InterpReturnState
+    result = f'''import OCaml.Vm.Sim.InterpReturnState
 import OCaml.Vm.Sim.InterpReturnSegment
 import OCaml.Vm.Sim.InterpReturnPins
 
@@ -73,16 +73,37 @@ theorem interp_return {{nativeSp : Nat}} {{saved : Nat → BitVec 64}} {{value :
 end OCaml.Vm.Sim
 '''
 
+    if kind == 'caml_main_return':
+        result = result.replace('InterpReturn', 'CamlMainReturn').replace('interp_return', 'caml_main_return')
+        result = result.replace('Layout.interpSaveOffset', 'Layout.camlMainSaveOffset').replace('Layout.interpSavedRegs', 'Layout.camlMainSavedRegs')
+        result = result.replace('Layout.interpFrameBytes', 'Layout.camlMainFrameBytes').replace('interpReturnWrites', 'camlMainReturnWrites')
+        result = result.replace('0x210#12', '0x070#12')
+        result = result.replace('[⟨Register.x2, BitVec.ofNat 64 nativeSp⟩, ⟨Register.x21, value⟩]',
+                                '[⟨Register.x10, value⟩, ⟨Register.x2, BitVec.ofNat 64 nativeSp⟩]')
+        result = result.replace('⟨h.stack, h.value, trivial⟩', '⟨h.value, h.stack, trivial⟩')
+        result = result.replace('tr_caml_main_return (BitVec.ofNat 64 nativeSp) value',
+                                'tr_caml_main_return value (BitVec.ofNat 64 nativeSp)')
+        result = result.replace(':= native (h.frame.reads', ':= native (by simpa only [show sign_extend (m := 64) (0x003#12) = 3#64 from rfl, show (0#64) + sign_extend (m := 64) (0x002#12) = 2#64 from rfl, beq_eq_false_iff_ne] using h.ordinary) (h.frame.reads')
+        start = result.index('  · have observed : gpr after 10')
+        end = result.index('  · intro r member', start)
+        result = result[:start] + f'  · exact PinsHold.get post.pins ⟨{pins["x10"]}, by simp⟩\n' + result[end:]
+        result = result.replace('scripts/gen_caml_main_return.py', 'scripts/gen_interp_return.py')
+        result = result.replace('Complete native interpreter epilogue.', 'Normal native caml_main return.')
+        result = result.replace('Execute the actual epilogue, restoring all saved ABI registers and returning the accumulator.',
+                                'Check the normal interpreter result and restore the complete caml_main frame.')
+    return result
+
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--check', action='store_true')
     args = p.parse_args()
-    path = ROOT / 'OCaml/Vm/Sim/InterpReturn.lean'
-    content = output()
-    if args.check:
-        if not path.exists() or path.read_text() != content:
-            sys.exit('Interpreter return adapter drift')
-    else:
-        path.write_text(content)
-    print('Interpreter return adapter current')
+    for kind, stem in [('interp_return', 'InterpReturn'), ('caml_main_return', 'CamlMainReturn')]:
+        path = ROOT / f'OCaml/Vm/Sim/{stem}.lean'
+        content = output(kind)
+        if args.check:
+            if not path.exists() or path.read_text() != content:
+                sys.exit(f'{stem} adapter drift')
+        else:
+            path.write_text(content)
+    print('Native return adapters current')

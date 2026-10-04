@@ -550,3 +550,4 @@ import OCaml.Vm.Sim.StopPrefixPins
 import OCaml.Vm.Sim.InterpReturn
 import OCaml.Vm.Sim.StopExit
 import OCaml.Vm.Sim.StopArm
+import OCaml.Vm.Sim.StopCaller

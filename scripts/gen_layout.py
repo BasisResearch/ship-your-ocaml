@@ -200,6 +200,38 @@ def main():
     if any(offset + 8 > frame_bytes for _, offset in saved_regs):
         die("interpreter save outside native frame")
 
+    # caml_main's return after the real interpreter invocation (the earlier
+    # null-code invocation initializes the interpreter). Check each restored
+    # slot against an actual save in the same function.
+    main_dis = subprocess.run([TOOLS + "objdump", "-d", a.elf, "--disassemble=caml_main"],
+                              capture_output=True, text=True, check=True).stdout
+    main_ins = {}
+    for line in main_dis.splitlines():
+        match = re.match(r"^\s*([0-9a-f]+):\s+[0-9a-f]{8}\s+(\S+)\s*(.*)$", line)
+        if match:
+            main_ins[int(match[1], 16)] = (match[2], match[3].split("#")[0].strip())
+    main_entry = min(main_ins)
+    main_alloc = re.fullmatch(r"sp,sp,-(\d+)", main_ins[main_entry][1])
+    if main_ins[main_entry][0] != "addi" or not main_alloc:
+        die("caml_main frame allocation changed")
+    main_frame_bytes = int(main_alloc[1])
+    main_return = max(pc for pc, (mn, ops) in main_ins.items()
+                      if mn == "jal" and "<caml_interprete>" in ops) + 4
+    main_saved_regs = []
+    cursor = main_return
+    while main_ins[cursor][0] != "ret":
+        mn, ops = main_ins[cursor]
+        if mn == "ld":
+            match = re.fullmatch(r"(\w+),(\d+)\(sp\)", ops)
+            if not match or ("sd", ops) not in main_ins.values():
+                die("caml_main return slot has no matching native save")
+            main_saved_regs.append((ABI[match[1]], int(match[2])))
+        cursor += 4
+    if {r for r, _ in main_saved_regs} != {1, 8, 9, 18, 19, 20}:
+        die("caml_main return save set changed")
+    if any(offset + 8 > main_frame_bytes for _, offset in main_saved_regs):
+        die("caml_main save outside native frame")
+
     def arm(name, k=0):
         return ins[int(arms["arms"][name]["addr"], 16) + 4 * k]
 
@@ -289,6 +321,13 @@ def main():
     w("def interpSavedRegs : List Nat := [" + ", ".join(str(r) for r, _ in saved_regs) + "]\n")
     w("def interpSaveOffset : Nat → Nat\n")
     for reg, offset in saved_regs:
+        w(f"  | {reg} => {offset}\n")
+    w("  | _ => 0\n")
+    w("\n/-! Native caml_main frame, checked against saves and the final return. -/\n")
+    w(f"def camlMainFrameBytes : Nat := {main_frame_bytes}\n")
+    w("def camlMainSavedRegs : List Nat := [" + ", ".join(str(r) for r, _ in sorted(main_saved_regs)) + "]\n")
+    w("def camlMainSaveOffset : Nat → Nat\n")
+    for reg, offset in sorted(main_saved_regs):
         w(f"  | {reg} => {offset}\n")
     w("  | _ => 0\n")
     w("\n/-! `Caml_state` field offsets (bytes). -/\n")

@@ -2205,10 +2205,29 @@ F2 opcodes. This is not unconditional F1 coverage: STOP still requires the
 saved native invocation and enclosing process-exit summary. The composed
 native return landed as `8024567`, with check_all passing.
 
+## STOP enclosing callers
+
+`caml_main_return` executes the normal-result check and six saved-register
+loads, restoring caml_main's caller stack and PC. `main_exit` then executes
+the two native instructions calling caml_do_exit with zero. `stop_callers`
+composes those boundaries after the proved STOP return, preserving the exact
+three-store log and output. `stop_exit_continuation_of_do_exit` reduces the
+old caller continuation to the named `StopDoExitSummary` at this actual exit
+call site. Debugger/signal cleanup and libc/HTIF exit remain unproved here.
+
+`NativeSavedFrame.frame` now supplies the common saved-word transport for
+both interpreter and caml_main frames. The existing interpreter theorem
+remains as a specialization. Layout derives caml_main's frame size and slots
+from the ELF and checks each restored slot against a native save. The return
+adapter generator serves both epilogues; the original interpreter artifact
+is unchanged. Capped builds: caml_main segment 1.9s, adapter 1.1s, main call
+adapter 0.825s, caller composition 0.818s. The represented STOP arm landed as
+`3b41dab`, full gate passing; coverage remains 140 conditional bridges.
+
 ## Open / next
 
-Immediate next: prove the enclosing STOP caller/process-exit continuation;
-continue the
+Immediate next: consume/prove the remaining caml_do_exit summary; continue
+the
 uncaught/backtrace paths, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved

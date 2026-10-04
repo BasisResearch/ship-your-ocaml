@@ -2936,6 +2936,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.stop_halt_arm
 #print axioms OCaml.Vm.Sim.stop_halt_step_arm
 
+#print axioms OCaml.Vm.Sim.NativeSavedFrame.frame
+#print axioms OCaml.Vm.Sim.caml_main_return
+#print axioms OCaml.Vm.Sim.main_exit
+#print axioms OCaml.Vm.Sim.stop_callers
+#print axioms OCaml.Vm.Sim.stop_exit_continuation_of_do_exit
+#print axioms Vsa.Sim.tr_caml_main_return
+#print axioms Vsa.Sim.tr_main_exit
+
+#print axioms OCaml.Vm.Sim.caml_main_return_loaded
+#print axioms OCaml.Vm.Sim.main_exit_loaded
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.NativeSavedFrame
 import OCaml.Vm.Sim.ReadOnly
 import OCaml.Vm.Sim.LogRead
 import Vsa.Sim.FrameWriteSet
@@ -7,22 +8,15 @@ namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives LeanRV64DExecutable
 
-/-- Callee-saved native registers at the offsets extracted from the prologue. -/
-structure InterpSavedFrame (nativeSp : Nat) (saved : Nat → BitVec 64) (c : Config) : Prop where
-  words : ∀ r ∈ Layout.interpSavedRegs, word c (nativeSp + Layout.interpSaveOffset r) = saved r
-  reads : ∀ r ∈ Layout.interpSavedRegs, RamReadAt (nativeSp + Layout.interpSaveOffset r) 8
+/-- Interpreter ABI saves, instantiated from the pinned prologue metadata. -/
+abbrev InterpSavedFrame := NativeSavedFrame Layout.interpSavedRegs Layout.interpSaveOffset
 
-/-- Runtime stores outside the saved native frame retain every return value. -/
+/-- Interpreter specialization of the shared native saved-frame transport. -/
 theorem InterpSavedFrame.frame {nativeSp : Nat} {saved : Nat → BitVec 64} {c after : Config} {log : List WEntry}
     (h : InterpSavedFrame nativeSp saved c)
     (outside : ∀ r ∈ Layout.interpSavedRegs, OutLRange log (nativeSp + Layout.interpSaveOffset r) 8)
-    (memory : after.σ.mem = writeLog c.σ.mem log) : InterpSavedFrame nativeSp saved after := by
-  refine ⟨?_, h.reads⟩
-  intro r hr
-  have same : word after (nativeSp + Layout.interpSaveOffset r) = word c (nativeSp + Layout.interpSaveOffset r) := by
-    rw [word, memory]
-    exact bytesT_writeLog_out c.σ.mem (outside r hr)
-  exact same.trans (h.words r hr)
+    (memory : after.σ.mem = writeLog c.σ.mem log) : InterpSavedFrame nativeSp saved after :=
+  NativeSavedFrame.frame h outside memory
 
 /-- Entry to the shared interpreter epilogue after STOP or an uncaught return. -/
 structure InterpReturnInput (nativeSp : Nat) (saved : Nat → BitVec 64) (value : BitVec 64) (c : Config) : Prop where

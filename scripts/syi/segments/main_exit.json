@@ -1,0 +1,46 @@
+{
+  "theorem": "tr_main_exit",
+  "doc": "MAIN_EXIT arm body, generated from the census. This is a machine segment, not yet ArmSim.next.",
+  "namespace": "Vsa.Sim",
+  "imports": [
+    "OCaml.Vm.Sim.MainExitSites",
+    "Vsa.Sim.SegState",
+    "Vsa.Sim.StepCount",
+    "Vsa.Sim.ChainFrameOut"
+  ],
+  "params": [
+    "(m0 : Std.ExtHashMap Nat (BitVec 8))",
+    "(σ0 : MState)"
+  ],
+  "loaded_pred": "Vsa.Sim.Code.CamlMainExitLoaded",
+  "pins": [],
+  "prelude": [],
+  "steps": [
+    {
+      "addr": "0x80001df0",
+      "site": "site_80001df0_main_exit",
+      "class": "alu",
+      "asm": "li a0,0",
+      "rd": "x10",
+      "rd_val": "((0#64) + sign_extend (m := 64) (0x000#12))",
+      "raw_val": "((0#64) + sign_extend (m := 64) (0x000#12))",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    },
+    {
+      "addr": "0x80001df4",
+      "site": "site_80001df4_main_exit",
+      "class": "jal",
+      "asm": "jal 8001c5c8 <caml_do_exit>",
+      "imm": "0x01a7d4#21",
+      "target": "0x8001c5c8",
+      "rd": "x1",
+      "call": "$vmi $hG $hpc $hmi $hmem rfl $hi"
+    }
+  ],
+  "boundary": "segst",
+  "entry": "0x80001df0",
+  "mem_param": "m0",
+  "default_limits": true,
+  "counted": true,
+  "frame_origin": "σ0"
+}

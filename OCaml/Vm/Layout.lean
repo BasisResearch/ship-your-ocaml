@@ -255,6 +255,18 @@ def interpSaveOffset : Nat → Nat
   | 27 => 424
   | _ => 0
 
+/-! Native caml_main frame, checked against saves and the final return. -/
+def camlMainFrameBytes : Nat := 112
+def camlMainSavedRegs : List Nat := [1, 8, 9, 18, 19, 20]
+def camlMainSaveOffset : Nat → Nat
+  | 1 => 104
+  | 8 => 96
+  | 9 => 88
+  | 18 => 80
+  | 19 => 72
+  | 20 => 64
+  | _ => 0
+
 /-! `Caml_state` field offsets (bytes). -/
 def off_young_limit : Nat := 0
 def off_young_ptr : Nat := 8
