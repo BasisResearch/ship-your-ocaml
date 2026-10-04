@@ -4,10 +4,20 @@ namespace OCaml.Vm.Gc.AllocAccount
 open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
 
 /-- The accounting writes leave the native save bank intact. -/
-structure ReturnInput (R : Nat → BitVec 64) (c : Config) : Prop extends Input R c where
+structure ReturnConditions (R : Nat → BitVec 64) (c : Config) : Prop where
   stackRead : ∀ off ∈ AllocReturn.offsets, ReadWindow (R 2 + BitVec.ofNat 64 off) 8
   stackOutside : ∀ off ∈ AllocReturn.offsets, OutLRange (effect R c) (R 2 + BitVec.ofNat 64 off).toNat 8
   aligned : (AllocReturn.returnWord (R 2) (R 10) c).toNat % 4 = 0
+
+structure ReturnInput (R : Nat → BitVec 64) (c : Config) : Prop
+    extends Input R c, ReturnConditions R c
+
+theorem ReturnConditions.of_memory {R} {before after : Config} (memory : after.σ.mem = before.σ.mem)
+    (conditions : ReturnConditions R before) : ReturnConditions R after := by
+  constructor
+  · exact conditions.stackRead
+  · simpa only [effect,counted,initialized,memory] using conditions.stackOutside
+  · simpa only [AllocReturn.returnWord,memory] using conditions.aligned
 
 structure ReturnPost (R : Nat → BitVec 64) (before after : Config) : Prop where
   good : GoodState after.σ

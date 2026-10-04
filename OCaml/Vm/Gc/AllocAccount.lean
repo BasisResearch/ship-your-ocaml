@@ -7,17 +7,27 @@ open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
 def effect (R : Nat → BitVec 64) (c : Config) : List WEntry :=
   headerLog R ++ [(Layout.sym_caml_allocated_words,8,counted R c)]
 
+/-- Memory and arithmetic conditions for the no-major-slice path. -/
+structure Conditions (R : Nat → BitVec 64) (c : Config) : Prop where
+  headerWrite : WriteWindow (R 10) 8
+  thresholdRead : ReadWindow (thresholdAddr R c) 8
+  room : (counted R c).toNat ≤ (bytesT (initialized R c) (thresholdAddr R c).toNat 8).toNat
+
 /-- Initial observations select the accounting path that does not request
 a major slice. Loads are measured after the explicit header store. -/
-structure Input (R : Nat → BitVec 64) (c : Config) : Prop where
+structure Input (R : Nat → BitVec 64) (c : Config) : Prop extends Conditions R c where
   good : GoodState c.σ
   tick : c.tick < 2
   minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
   code : Code.Caml_alloc_shr_for_minor_gcLoaded c.σ.mem
   registers : GHolds c.σ (regs R)
-  headerWrite : WriteWindow (R 10) 8
-  thresholdRead : ReadWindow (thresholdAddr R c) 8
-  room : (counted R c).toNat ≤ (bytesT (initialized R c) (thresholdAddr R c).toNat 8).toNat
+
+theorem Conditions.of_memory {R} {before after : Config} (memory : after.σ.mem = before.σ.mem)
+    (conditions : Conditions R before) : Conditions R after := by
+  constructor
+  · exact conditions.headerWrite
+  · simpa only [thresholdAddr,state,initialized,memory] using conditions.thresholdRead
+  · simpa only [counted,thresholdAddr,state,initialized,memory] using conditions.room
 
 structure Post (R : Nat → BitVec 64) (before after : Config) : Prop where
   machine : BlockPost blocks pc (regs R) (loads R before) before after

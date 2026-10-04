@@ -1,5 +1,29 @@
 # Lane a6-gc
 
+## Complete successful allocation continuation (2026-10-04)
+
+- `AllocSuccess.lean:finish` proves all header-color paths from the actual
+  return of a nonnull free-list call through native return, when the loaded
+  accounting threshold selects no major-slice request. It composes
+  `AllocSelect.select`, `AllocColor.prepare`, and `AllocAccount.account_return`.
+  The post retains exact effects, initial native save observations, counter,
+  output and native frame; `Post.result` returns the payload and `Post.header`
+  proves final-memory `HeaderOk` under size/tag bounds and cell separation.
+- The selector proves the real saved-tag load, phase LW, and conditional
+  sweep-pointer load/unsigned comparison. Header construction proves both
+  white/black size/tag encodings. Colors and phase constants are generated
+  from the vendored runtime into Layout.
+- Accounting and native-return conditions now have shared memory-transport
+  lemmas so the read-only prefix supplies them from initial observations.
+  No premise assumes a callee execution or future collector preservation.
+- Targeted build (636 jobs), full Audit (2947 jobs), generator drift,
+  discipline and abstraction gates pass; new headlines use only permitted
+  axioms. Accounting-through-return landed
+  as `8fc24fc`.
+- Next: compose the actual free-list call and exact-size allocator with
+  this continuation, then fresh-copy completion. Major-slice request,
+  larger-block/tree allocation, collector closure and G2 remain open.
+
 ## Allocation accounting through native return (2026-10-04)
 
 - `AllocAccountReturn.lean:account_return` composes actual header

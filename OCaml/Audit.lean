@@ -126,6 +126,7 @@ import Vsa.Sim.Muldi3Spec
 import Vsa.Sim.DivLoops
 import OCaml.Vm.Gc.BestFitSplitGeometry
 import OCaml.Vm.Gc.AllocAccountReturn
+import OCaml.Vm.Gc.AllocSuccess
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -3130,3 +3131,24 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.RuntimeReady.zero
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTablesReturn.ready
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetDomainReturned.ready
+#print axioms OCaml.Vm.Gc.AllocColor.prepare
+#print axioms OCaml.Vm.Gc.AllocColor.tag32_eq
+#print axioms OCaml.Vm.Gc.AllocColor.header_ok
+#print axioms OCaml.Vm.Gc.AllocSelect.entry_access
+#print axioms OCaml.Vm.Gc.AllocSelect.entry_control
+#print axioms OCaml.Vm.Gc.AllocSelect.phase_window
+#print axioms OCaml.Vm.Gc.AllocSelect.phase_access
+#print axioms OCaml.Vm.Gc.AllocSelect.phase_control
+#print axioms OCaml.Vm.Gc.AllocSelect.test_access
+#print axioms OCaml.Vm.Gc.AllocSelect.test_control
+#print axioms OCaml.Vm.Gc.AllocSelect.sweep_window
+#print axioms OCaml.Vm.Gc.AllocSelect.sweep_access
+#print axioms OCaml.Vm.Gc.AllocSelect.sweep_control
+#print axioms OCaml.Vm.Gc.AllocSelect.access
+#print axioms OCaml.Vm.Gc.AllocSelect.final_registers
+#print axioms OCaml.Vm.Gc.AllocSelect.select
+#print axioms OCaml.Vm.Gc.AllocAccount.Conditions.of_memory
+#print axioms OCaml.Vm.Gc.AllocAccount.ReturnConditions.of_memory
+#print axioms OCaml.Vm.Gc.AllocSuccess.finish
+#print axioms OCaml.Vm.Gc.AllocSuccess.Post.result
+#print axioms OCaml.Vm.Gc.AllocSuccess.Post.header
