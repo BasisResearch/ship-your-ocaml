@@ -2697,6 +2697,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closurerec_metadata_memory
 #print axioms OCaml.Vm.Sim.closurerec_log_layout
 
+-- Complete represented recursive-closure nursery arm.
+#print axioms OCaml.Vm.Sim.closurerec_stack_words
+#print axioms OCaml.Vm.Sim.closurerec_restore
+#print axioms OCaml.Vm.Sim.closurerec_state_of_step
+#print axioms OCaml.Vm.Sim.closurerec_arm
+#print axioms OCaml.Vm.Sim.closurerec_step_arm
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

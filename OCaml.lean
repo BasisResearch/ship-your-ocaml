@@ -215,6 +215,7 @@ import OCaml.Vm.Sim.GroupedRead
 import OCaml.Vm.Sim.ClosurerecObject
 import OCaml.Vm.Sim.ClosurerecInfixRead
 import OCaml.Vm.Sim.ClosurerecLayout
+import OCaml.Vm.Sim.Closurerec
 import OCaml.Vm.Sim.TrapPayload
 import OCaml.Vm.Sim.TrapArithmetic
 import OCaml.Vm.Sim.PoptrapSegment

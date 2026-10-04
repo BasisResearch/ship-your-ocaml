@@ -1972,54 +1972,45 @@ from the natural environment offset. `closurerec_function_values_length`
 proves the metadata size, and `infix_groups_in` supplies its whole write
 footprint. All new headline proofs are audited.
 
+## Complete represented CLOSUREREC nursery arm
+
+`closurerec_arm` and `closurerec_step_arm` in `Closurerec.lean` combine the
+actual dispatch/allocation/capture/infix/return execution with complete data
+and platform restoration. `closurerec_stack_words` reads every reversed infix
+pointer and the first-function pointer above the surviving old tail.
+`closurerec_restore` extends the represented heap without requiring consumed
+stack slots to survive, frames the runtime and fixed observations, and
+restores loop registers. `closurerec_state_of_step` matches the actual `stepI`
+CLOSUREREC branch, including signed metadata offsets and all target words.
+
+The full represented arm target checks in 0.828 s; new headlines are audited.
+Coverage is now **127 conditional represented opcode bridges overall**, which
+includes F2 opcodes; this is not a count out of F1's 134 or a completed
+`ArmSim.next`. Nursery capacity, operand/access geometry, heap/stack
+separation and runtime preservation remain concrete premises. Major allocation
+and GC paths remain open. The complete object layout landed as `b2d8d2a`.
+
 ## Open / next
 
-Immediate next: reconstruct the reversed final stack using the landed infix
-pointer readbacks (`c6814de`), then combine native execution, object layout,
-`payload_allocate_stack`, registers and runtime preservation into the
-represented CLOSUREREC nursery arm. Coverage remains 126 conditional bridges.
+Continue F1's remaining families: signed DIVINT/MODINT, barrier-backed
+SETGLOBAL/SETFIELD mutation, RAISE/RERAISE/RAISE_NOTRACE/STOP, primitive
+`.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
+Read landed a1-prims/a6-gc summaries before adding machine work. The approved
+`GcSafe P` premise is already threaded through ArmSim and the headline.
 
+The nursery CLOSURE and CLOSUREREC paths, generic/fixed MAKEBLOCK nursery
+paths, RESTART, GRAB and APPTERM represented adapters have checked. All six
+C_CALL opcodes have setup/return bridges for `.ok` outcomes and consume named
+callee summaries. Negative-ATOM and pointer-branch domain gaps remain
+recorded above.
 
-Immediate next: combine the infix readbacks with first-function metadata,
-captured words and the object header; reconstruct the reversed final stack,
-then apply `payload_allocate_stack` (landed `6fc1492`). The complete native
-constructor is already proved. Coverage remains 126 conditional bridges.
+The full captured boot `Loaded` witness landed as `bc63ae6`; reset execution
+is advancing in a0-boot. Entry and halt remain open. Arm adapters still need
+to derive dispatch clock/geometry, operand/heap access, capacity and runtime
+preservation from a common invariant preserved by all families. Concrete
+GC-boundary and whileMin safety proofs remain to be supplied. No machine
+`whileMin` theorem is claimed; `whileMin_bcSem` is bytecode-level.
 
-
-Immediate next: prove CLOSUREREC object and final-stack readback from
-`closurerecFullLog`, then consume `payload_allocate_stack` to finish the
-represented nursery arm. Native construction landed as `4a03e85`; coverage
-remains 126 conditional opcode bridges until representation is restored.
-
-
-Shared application restoration landed in `ApplyRestore.lean:42`
-(`apply_frame_restore`): frame payload, closure environment, registers,
-image, primitive bindings and runtime window preservation assemble `Running`.
-`EnterFrame.lean` frames the domain, threshold, pending flag and closure loads
-through partial frame writes. The restoration target checks in 0.9 s;
-the generated-body compositions are now checked. The indexed frame payload
-facts landed as `f882a65`, all gates passing.
-
-Continue with remaining arithmetic, heap mutation/allocation and control
-families: heap allocation (CLOSUREREC and major-heap MAKEBLOCK/CLOSURE) and
-remaining division and barrier-backed mutation. OFFSETREF now has
-represented heap restoration. PUSH_RETADDR has
-represented frame restoration. MULINT consumes the proved libgcc summary, and
-CHECK_SIGNALS consumes the concrete runtime no-pending invariant.
-All six C_CALL opcodes have generated machine boundaries, represented
-setup/return bridges and named callee composition. There are 126 conditional
-represented opcode bridges (C_CALLs cover returning `.ok` primitives),
-not an unconditional `ArmSim.next`. Entry and halt remain open. `whileMin_bcSem`
-is bytecode-level; no machine `whileMin` theorem is claimed.
-
-The full captured boot `Loaded` witness has landed (`bc63ae6`) and consumes
-the strengthened platform, primitive and atom-table bindings. The arm adapters
-still need to derive dispatch clock/geometry and operand/heap access conditions
-from an invariant preserved by every family. Runtime preservation remains
-explicit. The OFFSETINT/OFFSETREF width correction has landed; its old obstruction
-stays as a regression witness. Negative-ATOM and pointer-branch domain gaps
-remain recorded above. The approved `GcSafe P` premise is now in
-ArmSim and the headline; concrete GC-boundary and whileMin safety proofs
-remain to be supplied. Primitives
-remain a1-prims' responsibility; C_CALL bodies must consume their named machine
-summaries. Allocation slow paths and relocation are a6-gc's responsibility.
+After the F1 exit, re-read the external brief's After F1 section and continue
+F2–F5 in order as a2-sem supplies their semantics. Primitives remain a1-prims'
+responsibility; relocation and collector execution remain a6-gc's.
