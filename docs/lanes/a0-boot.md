@@ -2,6 +2,27 @@
 
 ## Round 2 status (2026-10-04)
 
+The shared custom-registration summaries landed as `a5863ce`, full gate passed.
+**`CustomNodesReset.lean:reset_custom_nodes_exists` now extends the CLOSED
+actual reset run through all four custom-operation registrations to 0x80024ac0,
+the initializer's restoring epilogue.** The initial empty head is derived from
+the native BSS clear and framed through domain/tables, parameter parsing,
+startup-counter update and locale saves (`ResetCustomEntry.custom_head`).
+`ResetCustomEntry.bss_byte` supplies the general low-global zero transport.
+
+`custom_first` composes the initializer prologue, actual first JAL and int32
+registration. `custom_nodes` chains all four source registrations using the
+shared summaries, with explicit heap-extension equalities. The resulting
+`ResetCustomNodes.ready` retains the original 928-byte domain allocation and
+full runtime interface with 128 additional allocator credits consumed.
+The abstract four-node composition checks in 2.3 seconds; the closed reset
+extension checks in 1.0 seconds. No execution budgets were raised.
+
+Next: preserve/read back the initializer's saved caller words and compose its
+restoring native return. Subsequent startup functions and the full
+reset-to-cut/Loaded exit remain open.
+
+
 The complete checked allocation wrapper landed as `a7724f3`, full gate passed.
 **`CustomNext.lean:custom_next` now composes the actual later-node request JAL,
 checked allocation and custom-list publication**, parameterized over nativeint,
