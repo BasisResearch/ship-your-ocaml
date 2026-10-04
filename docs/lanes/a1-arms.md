@@ -2425,12 +2425,28 @@ helper memory conditions. Default capped builds pass: zero-memory transport
 are scalar native summaries; represented handler restoration and ArmSim linkage
 remain open.
 
+Both complete native zero paths landed as `8433537`, full gate passing after
+one push race.
+
+`division_zero_caught_step` (`DivisionZeroCaught.lean:11`) composes the complete
+dispatched zero path, actual quiet interpreter re-entry and represented handler
+with the unchanged bytecode zero-divisor rule. `native_reentry` and
+`native_caught` share this composition for arbitrary checked native raising
+summaries. Readiness is a data predicate on `nativeMemoryView`, the explicit
+write-log memory/output view; no execution is assumed by that predicate.
+`division_raise_payload` derives the post-divisor/global-exception payload using
+existing root and stack-drop lemmas; `native_memory_last_word` proves exception
+publication from the final store. `division_zero_state` identifies the actual
+caught bytecode next state. Default capped builds pass (0.78–0.86s per new
+module). The full footprint/geometry/runtime readiness supplier and loop-head
+dispatch adapter remain open; this does not discharge ArmSim.next.
+
 ## Open / next
 
-Immediate next: restore represented caught-handler state after `division_zero`.
-Use the checked exact log to frame the remaining logical stack, preserve runtime
-observations, and publish the predefined exception bucket; then compose quiet
-re-entry/handler and the bytecode zero-divisor rule. Consume the remaining caml_do_exit/primitive terminal
+Immediate next: supply the explicit write-log caught-handler readiness for
+`division_zero_caught_step` from scalar footprint/runtime conditions, and bridge
+loop-head dispatch to its native inputs. The native path, re-entry/handler
+composition, payload root/stack edit and caught bytecode rule are checked. Consume the remaining caml_do_exit/primitive terminal
 summaries when supplied. Continue uncaught semantic continuation/backtrace
 paths and major-allocation constructor paths. Later-fragment C_CALL raising
 outcomes can reuse the checked nonlocal bridge.

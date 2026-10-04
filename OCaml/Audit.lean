@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.DivisionZeroCaught
 import OCaml.Vm.Sim.DivisionZero
 import OCaml.Vm.Sim.DivintZero
 import OCaml.Vm.Sim.ModintZero
@@ -3093,6 +3094,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.division_zero_select
 #print axioms OCaml.Vm.Sim.DivisionZeroNativeInput.after_select
 #print axioms OCaml.Vm.Sim.division_zero
+
+-- Native raising effects through re-entry and represented zero-divisor handlers.
+#print axioms OCaml.Vm.Sim.ReentryMemory.frame_log
+#print axioms OCaml.Vm.Sim.native_reentry
+#print axioms OCaml.Vm.Sim.native_caught
+#print axioms OCaml.Vm.Sim.division_raise_payload
+#print axioms OCaml.Vm.Sim.native_memory_last_word
+#print axioms OCaml.Vm.Sim.division_zero_state
+#print axioms OCaml.Vm.Sim.division_zero_caught_step
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
