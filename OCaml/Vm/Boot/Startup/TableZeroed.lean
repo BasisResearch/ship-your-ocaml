@@ -18,15 +18,16 @@ fresh block and clearing all 56 of its bytes through the native routine. -/
 structure ResetTableZeroed (initial atMain atDomain atAlloc atMalloc afterMalloc atTables atRequest atTableMalloc afterTable afterPublish afterZero : Config) : Prop where
   published : ResetTablePublished initial atMain atDomain atAlloc atMalloc afterMalloc atTables atRequest atTableMalloc afterTable afterPublish
   run : Steps (Vsa.Densify.fillZero initial) afterZero
-  post : EffectPost [12, 11, 1, 6, 14, 15, 13, 5]
+  post : RegistersPost [12, 11, 1, 6, 14, 15, 13, 5]
     (memset56Memory afterPublish.σ.mem (vsaReg afterTable 10).toNat) afterPublish
-    jal_80009844_call.link (BitVec.ofNat 64 (vsaReg afterTable 10).toNat) afterZero
+    jal_80009844_call.link (BitVec.ofNat 64 (vsaReg afterTable 10).toNat)
+    (tableZeroFinalRegs false (vsaReg afterTable 10).toNat) afterZero
 
 theorem reset_table_zeroed_exists : ∃ initial atMain atDomain atAlloc atMalloc afterMalloc atTables atRequest atTableMalloc afterTable afterPublish afterZero,
     ResetTableZeroed initial atMain atDomain atAlloc atMalloc afterMalloc atTables atRequest atTableMalloc afterTable afterPublish afterZero := by
   obtain ⟨initial, atMain, atDomain, atAlloc, atMalloc, afterMalloc, atTables, atRequest, atTableMalloc, afterTable, afterPublish, w⟩ :=
     reset_table_published_exists
-  obtain ⟨afterZero, run, post⟩ := (table_zero afterPublish false _ _ w.allocation.region w.leaf
+  obtain ⟨afterZero, run, post⟩ := (table_zero_registers afterPublish false _ _ w.allocation.region w.leaf
     (by
       change gpr afterPublish 10 = some (BitVec.ofNat 64 (vsaReg afterTable 10).toNat)
       simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq] using w.post.result)).run afterPublish ⟨w.post.pc, rfl⟩

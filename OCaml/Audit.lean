@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.TableReady
 import OCaml.Vm.Gc.BestFitRepair
 import OCaml.Vm.Boot.Startup.TableZeroed
 import OCaml.Vm.Gc.BestFitSmall
@@ -2967,3 +2968,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.table_zero
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_table_zeroed_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTableZeroed.zero_bytes
+
+#print axioms OCaml.Vm.Primitives.holds_frame_ne
+#print axioms OCaml.Vm.Primitives.RegistersPost.vsaOk_of_present
+#print axioms OCaml.Vm.Boot.Startup.memset56_registers
+#print axioms OCaml.Vm.Boot.Startup.table_zero_registers
+#print axioms OCaml.Vm.Boot.Startup.allocator_payload_outside
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTableZeroed.vsaOk
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTablePublished.room
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTableZeroed.room
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTableZeroed.readOnly
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTableZeroed.domain_word
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTableZeroed.pool_zero
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTableZeroed.ready

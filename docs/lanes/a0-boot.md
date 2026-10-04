@@ -2,6 +2,23 @@
 
 ## Round 2 status (2026-10-04)
 
+`Startup/TableReady.lean` proves `ResetTableZeroed.ready`: the reached first
+zeroing return supplies complete `VsaOk`, allocator read-only pins, remaining
+credits, stack, domain publication and disabled pooling. `TableHeap.lean`
+uses live-payload exclusion to preserve capacity through publication and
+zeroing. `memset56_registers` and `table_zero_registers` now retain all written
+register observations; their prior effect-only interfaces remain available.
+Shared `holds_frame_ne` reuses `gholds_of_frame`, and
+`RegistersPost.vsaOk_of_present` generalizes the existing platform transport
+from finite logs to arbitrary memory effects with preserved byte presence.
+The complete ready-state module checks in 1.4 s.
+
+The actual reset-through-first-zeroing increment landed as `59d79f4`, full
+gate passed. Next: use this ready state to compose the second and third
+allocations and their initialization, then the domain epilogue. Round 2
+reset-to-cut/Loaded remains open.
+
+
 `Startup/TableZeroed.lean:25` closes `reset_table_zeroed_exists`: the actual
 pinned-image reset now returns from the first 56-byte table's native memset.
 `ResetTableZeroed.zero_bytes` (`:37`) proves all 56 bytes are zero.

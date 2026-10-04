@@ -50,14 +50,17 @@ theorem table_zero_prefix (c : Config) (second : Bool) (p ra : BitVec 64) (h : L
   · cases second <;> decide
   · decide
 
+def tableZeroFinalRegs (second : Bool) (base : Nat) : GRegs :=
+  (1, (tableZeroCall second).link) :: (11, 0#64) :: memset56Regs base
+
 /-- The native call setup, JAL and complete memset summary clear a table and
 return with an exact allocation-local memory effect. -/
-theorem table_zero (c : Config) (second : Bool) (base : Nat) (ra : BitVec 64)
+theorem table_zero_registers (c : Config) (second : Bool) (base : Nat) (ra : BitVec 64)
     (region : Memset56Region base) (h : LeafInput ra c)
     (pointer : gprGet c.σ 10 = some (BitVec.ofNat 64 base)) :
     FnSummary (tableZeroEntry second) (fun d => d = c)
-      (EffectPost [12, 11, 1, 6, 14, 15, 13, 5] (memset56Memory c.σ.mem base) c
-        (tableZeroCall second).link (BitVec.ofNat 64 base)) := by
+      (RegistersPost [12, 11, 1, 6, 14, 15, 13, 5] (memset56Memory c.σ.mem base) c
+        (tableZeroCall second).link (BitVec.ofNat 64 base) (tableZeroFinalRegs second base)) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
@@ -82,15 +85,29 @@ theorem table_zero (c : Config) (second : Bool) (base : Nat) (ra : BitVec 64)
       simp only [pairCursor, Nat.mul_zero, Nat.add_zero] at nat
       rw [nat]; exact region.aligned }
   have atMemset : PCAt 0x8004276c#64 b := by cases second <;> exact call.pc
-  obtain ⟨d, zeroRun, zeroed⟩ := (memset56 b base _ region input).run b ⟨atMemset, rfl⟩
-  refine ⟨d, front.trans (callRun.trans zeroRun), { zeroed with memory := ?_, output := ?_, frame := ?_ }⟩
-  · rw [zeroed.memory, call.memory, setup.memory]
-  · exact zeroed.output.trans (call.output.trans setup.output)
-  · have memIncl : ∀ n ∈ [6, 14, 15, 13, 12, 5], n ∈ [12, 11, 1, 6, 14, 15, 13, 5] := by decide
-    have callIncl : ∀ n ∈ [1], n ∈ [12, 11, 1, 6, 14, 15, 13, 5] := by decide
-    have setupIncl : ∀ n ∈ [12, 11], n ∈ [12, 11, 1, 6, 14, 15, 13, 5] := by decide
-    intro r outside noise
-    exact (zeroed.frame r (fun n hn => outside n (memIncl n hn)) noise).trans
-      ((call.frame r (fun n hn => outside n (callIncl n hn)) noise).trans
-        (setup.frame r (fun n hn => outside n (setupIncl n hn)) noise))
+  obtain ⟨d, zeroRun, zeroed⟩ := (memset56_registers b base _ region input).run b ⟨atMemset, rfl⟩
+  refine ⟨d, front.trans (callRun.trans zeroRun), ?_, ?_⟩
+  · refine { zeroed.toEffectPost with memory := ?_, output := ?_, frame := ?_ }
+    · rw [zeroed.memory, call.memory, setup.memory]
+    · exact zeroed.output.trans (call.output.trans setup.output)
+    · have memIncl : ∀ n ∈ [6, 14, 15, 13, 12, 5], n ∈ [12, 11, 1, 6, 14, 15, 13, 5] := by decide
+      have callIncl : ∀ n ∈ [1], n ∈ [12, 11, 1, 6, 14, 15, 13, 5] := by decide
+      have setupIncl : ∀ n ∈ [12, 11], n ∈ [12, 11, 1, 6, 14, 15, 13, 5] := by decide
+      intro r outside noise
+      exact (zeroed.frame r (fun n hn => outside n (memIncl n hn)) noise).trans
+        ((call.frame r (fun n hn => outside n (callIncl n hn)) noise).trans
+          (setup.frame r (fun n hn => outside n (setupIncl n hn)) noise))
+  · exact ⟨(zeroed.frame .x1 (by decide) (by decide)).trans
+        (gholds_lookup (n := 1) _ call.regs (by rfl)),
+      (zeroed.frame .x11 (by decide) (by decide)).trans
+        (gholds_lookup (n := 11) _ call.regs (by rfl)), zeroed.regs⟩
+
+/-- Effect-only interface for a complete table-zeroing call. -/
+theorem table_zero (c : Config) (second : Bool) (base : Nat) (ra : BitVec 64)
+    (region : Memset56Region base) (h : LeafInput ra c)
+    (pointer : gprGet c.σ 10 = some (BitVec.ofNat 64 base)) :
+    FnSummary (tableZeroEntry second) (fun d => d = c)
+      (EffectPost [12, 11, 1, 6, 14, 15, 13, 5] (memset56Memory c.σ.mem base) c
+        (tableZeroCall second).link (BitVec.ofNat 64 base)) :=
+  (table_zero_registers c second base ra region h pointer).weaken (fun _ eq => eq) (fun _ p => p.toEffectPost)
 end OCaml.Vm.Boot.Startup

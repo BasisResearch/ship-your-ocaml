@@ -29,13 +29,13 @@ theorem EffectPost.observed_gpr {live writes mem before after pc value}
   change vsaReg after n = vsaReg before n
   rw [vsaReg_gpr (by change n ≠ 32; omega), vsaReg_gpr (by change n ≠ 32; omega), agree]
 
-/-- A generated write certificate retains the library invariant when its
-symbolic output covers every written register. Memory writes preserve byte
-presence, and the complete frame preserves the idle HTIF counter. -/
-theorem RegistersPost.vsaOk {live writes log before after pc value regs}
-    (post : WriteRegistersPost writes log before pc value regs after)
+/-- A complete written-register interface and byte presence retain the
+library platform invariant for any exact memory effect. -/
+theorem RegistersPost.vsaOk_of_present {live writes mem before after pc value regs}
+    (post : RegistersPost writes mem before pc value regs after)
     (pre : VsaOk live before) (keys : KeysOK writes)
-    (cover : ∀ n ∈ writes, n ∈ keysG regs) : VsaOk live after := by
+    (cover : ∀ n ∈ writes, n ∈ keysG regs)
+    (present : ∀ a, live a → (after.σ.mem[a]?).isSome) : VsaOk live after := by
   refine ⟨post.good, post.tick, ?_, ?_, ?_⟩
   · intro n lower upper
     by_cases written : n ∈ writes
@@ -46,13 +46,21 @@ theorem RegistersPost.vsaOk {live writes log before after pc value regs}
       change gprGet after.σ n = gprGet before.σ n at frame
       rw [frame]
       exact pre.gpr n lower upper
-  · intro a ha
-    rw [post.memory]
-    exact writeLog_present _ _ _ (pre.live a ha)
+  · exact present
   · rw [post.frame _ (fun n _ => by
       have h := gprReg_htif_payload n
       exact fun eq => by rw [eq, beq_self_eq_true] at h; contradiction) (by decide)]
     exact pre.htifIdle
+
+/-- Finite write logs preserve every previously present byte. -/
+theorem RegistersPost.vsaOk {live writes log before after pc value regs}
+    (post : WriteRegistersPost writes log before pc value regs after)
+    (pre : VsaOk live before) (keys : KeysOK writes)
+    (cover : ∀ n ∈ writes, n ∈ keysG regs) : VsaOk live after := by
+  apply post.vsaOk_of_present pre keys cover
+  intro a ha
+  rw [post.memory]
+  exact writeLog_present _ _ _ (pre.live a ha)
 
 /-- Read-only library cells depend only on their register and byte observations. -/
 theorem readonly_transport {live before after ro text}
