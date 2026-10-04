@@ -1,5 +1,27 @@
 # Lane a6-gc
 
+## All exact-size small-list allocation branches (2026-10-04)
+
+- `BestFitExact.lean:allocate` covers all four combinations of cursor
+  repair and empty/nonempty successor, from the actual function entry to
+  native return. Its uniform result retains the returned header pointer,
+  exact initial-memory-selected write log, free-word accounting and
+  code/native/output frames. `Post.counter_nat` shares the common
+  no-wrap credit argument.
+- `BestFitEmpty.lean:prepare` derives the bitmap boundary from the actual
+  size/head tests, selected cursor branch and empty-successor pop.
+  `allocate` composes that prefix with `BestFitBitmap.clear_return`,
+  framing the bitmap/counter observations back to entry memory.
+- `CoreInput` shares the common initial allocator observations; optional
+  repair and bitmap separation conditions apply only to their selected
+  routes. Generated paths share existing block/access certificates.
+- Capped targeted build (626 jobs), full Audit (2899 jobs), generator drift,
+  discipline and abstraction gates pass; new headlines use only permitted
+  axioms. Bitmap-through-return landed as `5ebd731`. Next: larger-size search and
+  splitting, the large-block allocator, and outer-wrapper composition.
+  Full free-list invariant preservation, fresh-copy completion, queue/root
+  closure, ephemerons, major reclamation and G2 remain open.
+
 ## Empty-tail bitmap through native return (2026-10-04)
 
 - `BestFitBitmapReturn.lean:clear_return` executes the actual bitmap block

@@ -230,4 +230,6 @@ theorem repair_endpoint (ra size : BitVec 64) (bh bm bn bt : List (BitVec 8))
   rw [finalRegs,return_ra]
   exact ret_tgt ra aligned
 
+theorem repair_written : ∀ n ∈ wrChain repairBlocks, n ∈ [10,11,12,13,14,15] := by decide
+
 end OCaml.Vm.Gc.BestFitSmall

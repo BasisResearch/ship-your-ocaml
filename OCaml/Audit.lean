@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.TableSecond
+import OCaml.Vm.Gc.BestFitExact
 import OCaml.Vm.Boot.Startup.TableReady
 import OCaml.Vm.Gc.BestFitBitmapReturn
 import OCaml.Vm.Gc.BestFitRepair
@@ -3018,3 +3019,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.TableNextAllocated.region
 #print axioms OCaml.Vm.Boot.Startup.TableNextAllocated.publishInput
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_second_allocation_exists
+#print axioms OCaml.Vm.Gc.BestFitSmall.accounting_nat
+#print axioms OCaml.Vm.Gc.BestFitEmpty.pop_control_zero
+#print axioms OCaml.Vm.Gc.BestFitEmpty.pop_access_zero
+#print axioms OCaml.Vm.Gc.BestFitEmpty.access
+#print axioms OCaml.Vm.Gc.BestFitEmpty.Input.counter_outside
+#print axioms OCaml.Vm.Gc.BestFitEmpty.prepare
+#print axioms OCaml.Vm.Gc.BestFitEmpty.allocate
+#print axioms OCaml.Vm.Gc.BestFitEmpty.Post.counter
+#print axioms OCaml.Vm.Gc.BestFitExact.allocate
+#print axioms OCaml.Vm.Gc.BestFitExact.Post.counter_nat

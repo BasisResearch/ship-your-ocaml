@@ -21,7 +21,7 @@ def effect (size : BitVec 64) (c : Config) : List WEntry :=
 node and its successor are nonnull, the merge cursor is elsewhere, and
 list-head replacement is separated from the free-word counter. This is
 one allocation branch, not a complete free-list invariant. -/
-structure BaseInput (ra size : BitVec 64) (c : Config) : Prop where
+structure CoreInput (ra size : BitVec 64) (c : Config) : Prop where
   good : GoodState c.σ
   tick : c.tick < 2
   minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
@@ -30,12 +30,15 @@ structure BaseInput (ra size : BitVec 64) (c : Config) : Prop where
   positive : 0 < size.toNat
   small : size.toNat ≤ Layout.bf_small_count
   head : first size c ≠ 0
-  tail : next size c ≠ 0
   headWrite : WriteWindow (slot size) 8
   mergeRead : ReadWindow (slot size + BitVec.ofNat 64 Layout.off_bf_small_merge) 8
   nextRead : ReadWindow (first size c) 8
   counterOutside : OutLRange [((slot size).toNat,8,next size c)] Layout.sym_caml_fl_cur_wsz 8
   aligned : ra.toNat % 4 = 0
+
+/-- The common allocator observations specialized to a nonempty successor. -/
+structure BaseInput (ra size : BitVec 64) (c : Config) : Prop extends CoreInput ra size c where
+  tail : next size c ≠ 0
 
 /-- The base observations plus the unchanged-cursor branch condition. -/
 structure Input (ra size : BitVec 64) (c : Config) : Prop extends BaseInput ra size c where
@@ -108,22 +111,28 @@ theorem Post.head {ra size before after} (post : Post ra size before after)
   apply word_writeLog_at before.σ.mem (effect size before) 0 (slot size).toNat _ rfl
   exact ⟨outside.1.elim Or.inr Or.inl,True.intro⟩
 
+/-- A free-word update with sufficient credit is ordinary natural subtraction. -/
+theorem accounting_nat {before after size : BitVec 64}
+    (counter : after = before - 1#64 - size) (credit : size.toNat + 1 ≤ before.toNat) :
+    after.toNat + size.toNat + 1 = before.toNat := by
+  rw [counter]
+  have one : (1#64 : BitVec 64) ≤ before := by
+    rw [BitVec.le_def]
+    change 1 ≤ before.toNat
+    omega
+  have rest : size ≤ before - 1#64 := by
+    rw [BitVec.le_def,BitVec.toNat_sub_of_le one]
+    change size.toNat ≤ before.toNat - 1
+    omega
+  rw [BitVec.toNat_sub_of_le rest,BitVec.toNat_sub_of_le one]
+  change before.toNat - 1 - size.toNat + size.toNat + 1 = _
+  omega
+
 /-- With sufficient free-word credit, machine subtraction is ordinary
 natural subtraction of the requested payload plus its header. -/
 theorem Post.counter_nat {ra size before after} (post : Post ra size before after)
     (credit : size.toNat + 1 ≤ (total before).toNat) :
-    (total after).toNat + size.toNat + 1 = (total before).toNat := by
-  rw [post.counter]
-  have one : (1#64 : BitVec 64) ≤ total before := by
-    rw [BitVec.le_def]
-    change 1 ≤ (total before).toNat
-    omega
-  have rest : size ≤ total before - 1#64 := by
-    rw [BitVec.le_def,BitVec.toNat_sub_of_le one]
-    change size.toNat ≤ (total before).toNat - 1
-    omega
-  rw [BitVec.toNat_sub_of_le rest,BitVec.toNat_sub_of_le one]
-  change (total before).toNat - 1 - size.toNat + size.toNat + 1 = _
-  omega
+    (total after).toNat + size.toNat + 1 = (total before).toNat :=
+  accounting_nat post.counter credit
 
 end OCaml.Vm.Gc.BestFitSmall
