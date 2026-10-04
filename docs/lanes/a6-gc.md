@@ -1,5 +1,25 @@
 # Lane a6-gc
 
+## Caller root through the ordinary tail loop (2026-10-04)
+
+- `SettledRoots.lean` expresses completed roots/ancestor fields as Eqv
+  observations, proves publication by the actual first prefix store and
+  framing through disjoint logs, and recovers their typed meaning from the
+  final forwarding table. Both allocation back edges and exits instantiate it.
+- `SingleTail.Head.step_effect` exposes the four concrete store alternatives.
+  The shared `run_loop_observed` folds these effects with a proved memory
+  frame; previous tracked/untracked APIs retain their original contracts.
+- `SingleTailRoots.lean:run_from_head_root` publishes and retains the initial
+  caller root through the real loop and return; `RootReturned.represented`
+  gives its typed value under the final table. `RootFrame` and initial root
+  footprints are explicit data-only ownership obligations, still open.
+- Targeted build passes (757 jobs), full Audit passes (3609 jobs), and
+  both discipline gates pass; only permitted axioms. Fixed terminal fields
+  landed as `2bd72dc`.
+- Next: connect all completed ancestor fields and pending payloads, derive
+  ownership coverage, and cover remaining object/allocator paths. G2,
+  collector closure, and live budget remain open.
+
 ## Fixed terminal fields at the final placement (2026-10-04)
 
 - `FreshSingleFixed.lean:SingleResult.payload_fixed` transports the original

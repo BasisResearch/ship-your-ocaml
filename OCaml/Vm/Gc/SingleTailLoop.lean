@@ -46,12 +46,24 @@ inductive Choice (sp : BitVec 64) (sources : List (BitVec 64)) (copies : List Pe
         (Fresh.contextLargePayload (SingleField.child q root c) q.target sp (SingleField.childHeader q root c) (SingleField.forwardedSnapshot q root c))
         copies sources (AllocLargeWrapper.effect (SingleField.childAllocatorRegs q root sp c) (SingleField.forwardedSnapshot q root c)) c)
 
+/-- Finite store alternatives for the ordinary single-field iteration.
+These are concrete allocator/terminal logs, not arbitrary memory effects. -/
+inductive IterationLog (q : PendingCopy) (root sp : BitVec 64) (c : Config) : List WEntry → Prop where
+  | plain : IterationLog q root sp c (StoreReturn.effect (SingleField.child q root c) q.target)
+  | forwarded : IterationLog q root sp c [(q.target.toNat,8,SingleField.forwardedValue q root c)]
+  | exactSize : IterationLog q root sp c
+      (AllocWrapper.effect (SingleField.childAllocatorRegs q root sp c) (SingleField.forwardedSnapshot q root c))
+  | large : IterationLog q root sp c
+      (AllocLargeWrapper.effect (SingleField.childAllocatorRegs q root sp c) (SingleField.forwardedSnapshot q root c))
+
 /-- Each covered branch is executed by its proved concrete summary. A
 back edge re-establishes Head; an exit restores the initial native bank.
 Both strictly decrease the copying rank through the real parent prefix. -/
-theorem Head.step_exact {sp sources pl initial copies q root c}
+theorem Head.step_effect {sp sources pl initial copies q root c}
     (head : Head sp sources pl initial copies q root c) (reached : Steps initial c) (choice : Choice sp sources copies q root c) :
     ∃ after, Steps c after ∧
+      (∃ log, IterationLog q root sp c log ∧
+        after.σ.mem = writeLog c.σ.mem (Enqueue.prefixLog q.source q.target root ++ log)) ∧
       ((∃ next root, Head sp sources pl initial (q :: copies) next root after ∧ Steps initial after) ∨
         Finished sp sources pl initial (q :: copies) after) ∧
       tailRemaining sources after < tailRemaining sources c := by
@@ -59,23 +71,35 @@ theorem Head.step_exact {sp sources pl initial copies q root c}
   | immediate conditions footprint =>
       obtain ⟨after,run,post⟩ := (SingleField.return_immediate head.input head.stack conditions).run c ⟨head.pc,rfl⟩
       have finish := head.finish (returned_plain post) footprint
-      exact ⟨after,run,Or.inr finish.1,finish.2⟩
+      exact ⟨after,run,⟨_,IterationLog.plain,post.memory⟩,Or.inr finish.1,finish.2⟩
   | nonYoung domain even range conditions footprint =>
       have domainRegister : gprGet c.σ 18 = some (BitVec.ofNat 64 Layout.sym_Caml_state) :=
         gholds_lookup _ head.constants rfl
       obtain ⟨after,run,post⟩ := (SingleField.return_even_nonYoung head.input head.stack domainRegister even range conditions).run c ⟨head.pc,rfl⟩
       have finish := head.finish (returned_plain post) footprint
-      exact ⟨after,run,Or.inr finish.1,finish.2⟩
+      exact ⟨after,run,⟨_,IterationLog.plain,post.memory⟩,Or.inr finish.1,finish.2⟩
   | forwarded domain even range conditions footprint =>
       obtain ⟨after,run,post⟩ := (SingleField.return_young_forwarded head.input head.stack head.constants even range conditions).run c ⟨head.pc,rfl⟩
       have finish := head.finish (returned_forwarded post) footprint
-      exact ⟨after,run,Or.inr finish.1,finish.2⟩
+      exact ⟨after,run,⟨_,IterationLog.forwarded,post.memory⟩,Or.inr finish.1,finish.2⟩
   | exactSize domain tag even range fresh conditions =>
       obtain ⟨after,run,post⟩ := (SingleField.backedge_exact head.input head.stack head.constants even range fresh head.table conditions).run c ⟨head.pc,rfl⟩
-      exact ⟨after,run,Or.inl ⟨_,_,head.advance post conditions,reached.trans run⟩,post.decrease⟩
+      exact ⟨after,run,⟨_,IterationLog.exactSize,post.allocated.memory⟩,Or.inl ⟨_,_,head.advance post conditions,reached.trans run⟩,post.decrease⟩
   | large domain tag even range fresh conditions =>
       obtain ⟨after,run,post⟩ := (SingleField.backedge_large head.input head.stack head.constants even range fresh head.table conditions).run c ⟨head.pc,rfl⟩
-      exact ⟨after,run,Or.inl ⟨_,_,head.advance post conditions,reached.trans run⟩,post.decrease⟩
+      exact ⟨after,run,⟨_,IterationLog.large,post.allocated.memory⟩,Or.inl ⟨_,_,head.advance post conditions,reached.trans run⟩,post.decrease⟩
+
+/-- Exact published-list interface, hiding the concrete log when a client
+only needs the operational invariant and rank. -/
+theorem Head.step_exact {sp sources pl initial copies q root c}
+    (head : Head sp sources pl initial copies q root c) (reached : Steps initial c)
+    (choice : Choice sp sources copies q root c) :
+    ∃ after, Steps c after ∧
+      ((∃ next root, Head sp sources pl initial (q :: copies) next root after ∧ Steps initial after) ∨
+        Finished sp sources pl initial (q :: copies) after) ∧
+      tailRemaining sources after < tailRemaining sources c := by
+  obtain ⟨after,run,_,post,less⟩ := head.step_effect reached choice
+  exact ⟨after,run,post,less⟩
 
 /-- Public unindexed step interface, retaining the original loop API. -/
 theorem Head.step {sp sources pl initial copies q root c}
@@ -105,34 +129,62 @@ def TrackedDone (sp : BitVec 64) (sources : List (BitVec 64)) (pl : Place) (init
     (track : List PendingCopy → Prop) (c : Config) : Prop :=
   ∃ copies, Finished sp sources pl initial copies c ∧ track copies
 
-/-- One machine loop fold for any property of the published list preserved
-by its actual one-parent extension. The extension premise is a list/data
-law; concrete executions come exclusively from Head.step_exact. -/
-theorem run_loop_tracked {sp sources pl initial track} (coverage : Coverage sp sources pl initial)
-    (extend : ∀ copies q root c, Head sp sources pl initial copies q root c → track copies → track (q :: copies)) :
-    Triple (TrackedAt sp sources pl initial track) (TrackedDone sp sources pl initial track) := by
-  let Inv := fun c => TrackedAt sp sources pl initial track c ∨ TrackedDone sp sources pl initial track c
+/-- Add a memory observation to the operational loop entry. -/
+structure ObservedAt (sp : BitVec 64) (sources : List (BitVec 64)) (pl : Place) (initial : Config)
+    (track : List PendingCopy → Prop) (observe : Config → Prop) (c : Config) : Prop where
+  operational : TrackedAt sp sources pl initial track c
+  observation : observe c
+
+/-- The same memory observation at the actual native return. -/
+structure ObservedDone (sp : BitVec 64) (sources : List (BitVec 64)) (pl : Place) (initial : Config)
+    (track : List PendingCopy → Prop) (observe : Config → Prop) (c : Config) : Prop where
+  operational : TrackedDone sp sources pl initial track c
+  observation : observe c
+
+/-- Shared machine loop fold with a memory frame. The frame law consumes
+only the concrete store-log alternatives, never an assumed execution. Clients
+prove it from Eqv transport and disjoint finite footprints. -/
+theorem run_loop_observed {sp sources pl initial track observe} (coverage : Coverage sp sources pl initial)
+    (extend : ∀ copies q root c, Head sp sources pl initial copies q root c → track copies → track (q :: copies))
+    (frame : ∀ copies q root before after log, Head sp sources pl initial copies q root before →
+      track copies → IterationLog q root sp before log →
+      after.σ.mem = writeLog before.σ.mem (Enqueue.prefixLog q.source q.target root ++ log) →
+      observe before → observe after) :
+    Triple (ObservedAt sp sources pl initial track observe) (ObservedDone sp sources pl initial track observe) := by
+  let Inv := fun c => ObservedAt sp sources pl initial track observe c ∨ ObservedDone sp sources pl initial track observe c
   let Branch := fun c => PCAt SingleField.pc c
   have body : ∀ n, Triple (fun c => Inv c ∧ Branch c ∧ tailRemaining sources c = n)
       (fun c => Inv c ∧ tailRemaining sources c < n) := by
     intro n c pre
     rcases pre with ⟨inv,branch,rank⟩
-    rcases inv with ⟨copies,q,root,head,reached,tracked⟩ | ⟨copies,finished,tracked⟩
-    · obtain ⟨after,run,post,less⟩ := head.step_exact reached (coverage.choices copies q root c reached head)
+    rcases inv with ⟨⟨copies,q,root,head,reached,tracked⟩,observation⟩ | ⟨⟨copies,finished,tracked⟩,observation⟩
+    · obtain ⟨after,run,⟨log,allowed,memory⟩,post,less⟩ := head.step_effect reached (coverage.choices copies q root c reached head)
       have next := extend copies q root c head tracked
+      have preserved := frame copies q root c after log head tracked allowed memory observation
       refine ⟨after,run,?_,by omega⟩
       rcases post with ⟨child,root,head,reached⟩ | finished
-      · exact Or.inl ⟨_,child,root,head,reached,next⟩
-      · exact Or.inr ⟨_,finished,next⟩
+      · exact Or.inl ⟨⟨_,child,root,head,reached,next⟩,preserved⟩
+      · exact Or.inr ⟨⟨_,finished,next⟩,preserved⟩
     · exact False.elim (coverage.returnDifferent (Option.some.inj (finished.pc.symm.trans branch)))
   apply (loopFromBody (I := Inv) (B := Branch) (tailRemaining sources) body).conseq
   · intro c head
     exact Or.inl head
   · intro c post
     rcases post with ⟨inv,exit⟩
-    rcases inv with ⟨copies,q,root,head,reached,tracked⟩ | finished
+    rcases inv with ⟨⟨copies,q,root,head,reached,tracked⟩,observation⟩ | finished
     · exact False.elim (exit head.pc)
     · exact finished
+
+/-- Published-list-only interface obtained by observing True. -/
+theorem run_loop_tracked {sp sources pl initial track} (coverage : Coverage sp sources pl initial)
+    (extend : ∀ copies q root c, Head sp sources pl initial copies q root c → track copies → track (q :: copies)) :
+    Triple (TrackedAt sp sources pl initial track) (TrackedDone sp sources pl initial track) := by
+  apply (run_loop_observed (observe := fun _ => True) coverage extend
+    (fun _ _ _ _ _ _ _ _ _ _ _ => True.intro)).conseq
+  · intro c pre
+    exact ⟨pre,True.intro⟩
+  · intro c post
+    exact post.operational
 
 /-- Original untracked interface, instantiated from the shared fold without
 changing its coverage or execution guarantees. -/

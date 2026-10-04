@@ -198,6 +198,7 @@ import OCaml.Vm.Gc.BestFitLarge
 import OCaml.Vm.Gc.BestFitFallbackLarge
 import OCaml.Vm.Gc.BestFitLargeComplete
 import OCaml.Vm.Gc.FreshSingleFixed
+import OCaml.Vm.Gc.SingleTailRoots
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -3955,3 +3956,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Fresh.SingleResult.payload_nonpointer
 #print axioms OCaml.Vm.Gc.Fresh.SingleResult.payload_outside
 #print axioms OCaml.Vm.Gc.Fresh.SingleResult.object_fixed
+
+#print axioms OCaml.Vm.Gc.SettledRoots.frame
+#print axioms OCaml.Vm.Gc.SettledRoots.publish
+#print axioms OCaml.Vm.Gc.SettledRoots.backedge
+#print axioms OCaml.Vm.Gc.SettledRoots.returned
+#print axioms OCaml.Vm.Gc.SettledRoots.represented
+#print axioms OCaml.Vm.Gc.SingleTail.Head.step_effect
+#print axioms OCaml.Vm.Gc.SingleTail.run_loop_observed
+#print axioms OCaml.Vm.Gc.SingleTail.run_loop_roots
+#print axioms OCaml.Vm.Gc.SingleTail.run_from_head_root
+#print axioms OCaml.Vm.Gc.SingleTail.RootReturned.represented
