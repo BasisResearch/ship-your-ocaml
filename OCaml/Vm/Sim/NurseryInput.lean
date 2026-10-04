@@ -37,4 +37,16 @@ theorem NurseryInput.frame {count a domain limit : Nat} {before after : Config} 
     (preserved _ youngOutside).trans space.youngValue, (preserved _ limitOutside).trans space.limitValue,
     space.youngWrite, space.limitRead, space.headerWrite, space.capacity, space.image⟩
 
+/-- A pending prefix log is disjoint from the scalar nursery observations. -/
+structure NurseryFrameInput (count a domain limit : Nat) (log : List WEntry) (c : Config) : Prop where
+  nursery : NurseryInput count a domain limit c
+  domainOutside : OutLRange log Layout.sym_Caml_state 8
+  youngOutside : OutLRange log (domain + Layout.off_young_ptr) 8
+  limitOutside : OutLRange log (domain + Layout.off_young_limit) 8
+
+theorem NurseryFrameInput.transport {count a domain limit : Nat} {before after : Config} {log : List WEntry}
+    (space : NurseryFrameInput count a domain limit log before)
+    (memory : after.σ.mem = writeLog before.σ.mem log) : NurseryInput count a domain limit after :=
+  space.nursery.frame memory space.domainOutside space.youngOutside space.limitOutside
+
 end OCaml.Vm.Sim

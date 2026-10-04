@@ -1855,6 +1855,19 @@ complete allocation/copy consumers rebuild. The recursive capture loop landed
 as `79c8a1c`, all gates passing. Next: transported recursive nursery reservation,
 initializer and metadata/infix loop.
 
+## Represented CLOSUREREC nursery reservation
+
+`ClosurerecReserve.lean:14` (`closurerec_reserve`) proves the actual eleven-
+instruction reservation, preserving recursive metadata and allocation size
+while recording the exact young-pointer store. It checks in 1.0 s.
+`NurseryFrameInput.transport` shares scalar-input preservation through a
+pending prefix log; ordinary CLOSURE specializes the same contract.
+`gen_closure_reserve.py` now generates both represented reservation adapters.
+`nursery_add_reservation` reduces the recursive additive-delta arithmetic to
+the existing payload-plus-header subtraction law. Both prefixes landed as
+`5e25a86`, all gates passing after a push-race retry. Next: recursive closure
+initializer, then infix metadata construction and represented restoration.
+
 ## Open / next
 
 Shared application restoration landed in `ApplyRestore.lean:42`

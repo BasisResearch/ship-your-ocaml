@@ -6,16 +6,13 @@ set_option autoImplicit false
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable OCaml.Vm.Primitives
 
 /-- The temporary capture push is disjoint from all scalar nursery observations. -/
-structure ClosureNurseryInput (sp count a domain limit : Nat) (accu : BitVec 64) (c : Config) : Prop where
-  nursery : NurseryInput (count + 2) a domain limit c
-  domainOutside : OutLRange (closurePushLog sp count accu) Layout.sym_Caml_state 8
-  youngOutside : OutLRange (closurePushLog sp count accu) (domain + Layout.off_young_ptr) 8
-  limitOutside : OutLRange (closurePushLog sp count accu) (domain + Layout.off_young_limit) 8
+abbrev ClosureNurseryInput (sp count a domain limit : Nat) (accu : BitVec 64) (c : Config) :=
+  NurseryFrameInput (count + 2) a domain limit (closurePushLog sp count accu) c
 
 theorem ClosureNurseryInput.after {pl : Place} {pc sp count a domain limit : Nat}
     {accu : BitVec 64} {c d : Config} (space : ClosureNurseryInput sp count a domain limit accu c)
     (front : ClosurePrefixed c pl pc sp count accu d) : NurseryInput (count + 2) a domain limit d :=
-  space.nursery.frame front.memory space.domainOutside space.youngOutside space.limitOutside
+  space.transport front.memory
 
 def closureReserveWrites : List Register :=
   [Register.x9, Register.x12, Register.x13, Register.x14, Register.x15] ++ noiseRegs

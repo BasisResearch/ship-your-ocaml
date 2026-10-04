@@ -2591,6 +2591,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closurerec_prefix_more
 #print axioms OCaml.Vm.Sim.closurerec_prefix_zero
 
+-- Shared nursery transport and represented recursive-closure reservation.
+#print axioms OCaml.Vm.Sim.NurseryFrameInput.transport
+#print axioms OCaml.Vm.Sim.nursery_add_reservation
+#print axioms OCaml.Vm.Sim.ClosurerecNurseryInput.after
+#print axioms OCaml.Vm.Sim.closurerec_reserve
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq

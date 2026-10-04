@@ -499,3 +499,5 @@ import OCaml.Vm.Sim.ClosurerecCopy
 
 import OCaml.Vm.Sim.ClosurerecPrefixMore
 import OCaml.Vm.Sim.ClosurerecPrefixZero
+
+import OCaml.Vm.Sim.ClosurerecReserve
