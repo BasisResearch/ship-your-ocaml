@@ -214,6 +214,8 @@ import OCaml.Vm.Gc.SingleTailQueued
 import OCaml.Vm.Gc.CopyLoop
 import OCaml.Vm.Gc.CopyRoots
 import OCaml.Vm.Gc.SingleFieldChildHeader
+import OCaml.Vm.Gc.CopiedHeaders
+import OCaml.Vm.Gc.SingleFieldPayload
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -4080,3 +4082,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Fresh.ContextLargeConditions.header_address
 #print axioms OCaml.Vm.Gc.SingleField.ChildAllocated.header
 #print axioms OCaml.Vm.Gc.SingleField.ChildLargeAllocated.header
+
+#print axioms OCaml.Vm.Gc.wordFamily_frame
+#print axioms OCaml.Vm.Gc.CopiedHeaders.frame
+#print axioms OCaml.Vm.Gc.CopiedHeaders.insert
+#print axioms OCaml.Vm.Gc.CopiedHeaders.singleton
+#print axioms OCaml.Vm.Gc.CopiedHeaders.ancestor
+#print axioms OCaml.Vm.Gc.single_field_relocated
+#print axioms OCaml.Vm.Gc.SingleField.child_original
+#print axioms OCaml.Vm.Gc.SingleField.Returned.payload_fixed
+#print axioms OCaml.Vm.Gc.SingleField.Returned.payload_nonpointer

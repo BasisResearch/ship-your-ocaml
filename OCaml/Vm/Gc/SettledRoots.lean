@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.SingleTailState
+import OCaml.Vm.Gc.WordFamily
 
 namespace OCaml.Vm.Gc.SettledRoots
 open Vsa.Machine Vsa.Sim Primitives Reloc
@@ -11,8 +12,7 @@ structure Cell where
 
 /-- Frozen observations for roots completed by earlier forwarding prefixes. -/
 def eqv (cells : List Cell) : Eqv :=
-  Eqv.all fun cell => Eqv.guard (cell ∈ cells)
-    (Eqv.rawW (fun _ => cell.address) (· = cell.copy.target))
+  wordFamily cells Cell.address (fun cell => (· = cell.copy.target))
 
 def Outside (cells : List Cell) (log : List WEntry) : Prop :=
   ∀ cell ∈ cells, OutLRange log cell.address 8
@@ -21,12 +21,8 @@ def Outside (cells : List Cell) (log : List WEntry) : Prop :=
 theorem frame {cells pl before after log}
     (view : (eqv cells).P pl 0 before)
     (memory : after.σ.mem = writeLog before.σ.mem log) (outside : Outside cells log) :
-    (eqv cells).P pl 0 after := by
-  have image : (eqv cells).Img id pl 0 0 before after := by
-    intro cell member
-    change word after cell.address = word before cell.address
-    simp only [word,memory,bytesT_writeLog_out _ (outside cell member)]
-  simpa only [placement_identity] using (eqv cells).transport id pl 0 0 before after view image
+    (eqv cells).P pl 0 after :=
+  wordFamily_frame view memory outside
 
 /-- Ownership needed to publish the current caller root and retain older
 completed fields. These are only finite store footprints, supplied by the

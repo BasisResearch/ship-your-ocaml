@@ -9,9 +9,8 @@ theorem single_child_original {R target log c}
     (allocationOutside : OutLRange (OldifyEntry.saveLog OldifyEntry.saves R ++ log) (R 10).toNat 8)
     (rootOutside : OutLRange [((R 11).toNat,8,target)] (R 10).toNat 8) :
     SingleField.child (queuePending R target) (R 11) (queueSnapshot R log c) = word c (R 10).toNat := by
-  simp only [SingleField.child,WorkQueue.enqueueLoads,List.headD_cons,WorkQueue.rootLog,
-    queuePending,queueSnapshot,read8_value,bytesT_writeLog_out _ rootOutside,
-    bytesT_writeLog_out _ allocationOutside,word]
+  rw [SingleField.child_original rootOutside]
+  simp only [queuePending,queueSnapshot,word,bytesT_writeLog_out _ allocationOutside]
 
 /-- The complete single-field route establishes the represented payload.
 There are no deferred suffix fields for mopup to copy. -/

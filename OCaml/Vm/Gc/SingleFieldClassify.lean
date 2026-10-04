@@ -7,6 +7,14 @@ open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
 def child (q : PendingCopy) (root : BitVec 64) (c : Config) :=
   bytesVal .ld ((WorkQueue.enqueueLoads q root c).headD [])
 
+/-- The root store precedes capture, so source/root separation identifies
+the register's captured word with the original source field. -/
+theorem child_original {q root c}
+    (outside : OutLRange [(root.toNat,8,q.target)] q.source.toNat 8) :
+    child q root c = word c q.source.toNat := by
+  simp only [child,WorkQueue.enqueueLoads,List.headD_cons,WorkQueue.rootLog,
+    read8_value,bytesT_writeLog_out _ outside,word]
+
 structure Classified (q : PendingCopy) (root : BitVec 64) (before after : Config) : Prop where
   good : GoodState after.σ
   tick : after.tick < 2

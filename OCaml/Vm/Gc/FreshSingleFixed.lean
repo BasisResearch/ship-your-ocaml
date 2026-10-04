@@ -14,10 +14,7 @@ theorem SingleResult.payload_fixed {R target log before after pl cp tag value μ
     (rootOutside : OutLRange [((R 11).toNat,8,target)] (R 10).toNat 8)
     (fixed : relocWord μ pl value (word before (R 10).toNat) = word before (R 10).toNat) :
     (Eqv.val value id).P (reloc μ pl) target.toNat after := by
-  have represented : (Eqv.val value id).P pl (R 10).toNat before := by
-    simpa [Eqv.val] using object.2 0 value rfl
-  apply (Eqv.val value id).transport μ pl (R 10).toNat target.toNat before after represented
-  change word after target.toNat = relocWord μ pl value (word before (R 10).toNat)
+  apply single_field_relocated object
   rw [fixed,post.value,single_child_original allocationOutside rootOutside]
 
 /-- Non-pointer terminal values are stable under every relocation. -/

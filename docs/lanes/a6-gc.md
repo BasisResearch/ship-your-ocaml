@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Completed ancestor objects and terminal fields (2026-10-04)
+
+- `WordFamily.lean:wordFamily_frame` shares Eqv framing for finite scalar
+  predicate families; completed roots and copied headers both instantiate it.
+- `CopiedHeaders.lean:ancestor` combines a retained typed header, a genuinely
+  rewritten ancestor field, and the final child table entry into the complete
+  singleton ObjAt at the final placement. It does not require an acyclic heap.
+- `SingleFieldPayload.lean` proves fixed/non-pointer terminal fields at
+  the loop-body interface. Forwarded and whole-call field proofs now share
+  `single_field_relocated`; source capture shares `child_original`.
+- Targeted build/regressions pass (783 jobs), full Audit passes (3700 jobs),
+  and both discipline gates pass; only permitted axioms. Tail-header
+  checkpoint landed as `429d50f`.
+- Next: carry these evolving header/field observations through the loop,
+  preserve original unforwarded payloads, and derive ownership coverage.
+  Remaining routes, full collector closure, G2 and live budget remain open.
+
 ## Typed headers for tail allocations (2026-10-04)
 
 - `FreshHeaderCore.lean:header_of_typed_wrapper` shares the real wrapper

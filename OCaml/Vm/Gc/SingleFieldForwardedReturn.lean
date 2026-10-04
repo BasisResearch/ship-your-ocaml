@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.SingleObject
 import OCaml.Vm.Gc.SingleFieldForwarded
 
 namespace OCaml.Vm.Gc.SingleField
@@ -80,13 +81,7 @@ theorem ForwardedReturned.payload {q root sp before after pl cp tag value μ}
     (forwarding : forwardedValue q root before =
       Reloc.relocWord μ pl value (child q root before)) :
     (Reloc.Eqv.val value id).P (Reloc.reloc μ pl) q.target.toNat after := by
-  have captured : child q root before = word before q.source.toNat := by
-    simp only [child,WorkQueue.enqueueLoads,List.headD_cons,WorkQueue.rootLog,
-      read8_value,bytesT_writeLog_out _ rootOutside,word]
-  have represented : (Reloc.Eqv.val value id).P pl q.source.toNat before := by
-    simpa [Reloc.Eqv.val] using object.2 0 value rfl
-  apply (Reloc.Eqv.val value id).transport μ pl q.source.toNat q.target.toNat before after represented
-  change word after q.target.toNat = Reloc.relocWord μ pl value (word before q.source.toNat)
-  rw [post.value,forwarding,captured]
+  apply single_field_relocated object
+  rw [post.value,forwarding,child_original rootOutside]
 
 end OCaml.Vm.Gc.SingleField

@@ -131,10 +131,7 @@ theorem ForwardedSingleResult.payload {R target log before after pl cp tag value
     (forwarding : SingleField.forwardedValue (queuePending R target) (R 11) (queueSnapshot R log before) =
       Reloc.relocWord μ pl value (SingleField.child (queuePending R target) (R 11) (queueSnapshot R log before))) :
     (Reloc.Eqv.val value id).P (Reloc.reloc μ pl) target.toNat after := by
-  have represented : (Reloc.Eqv.val value id).P pl (R 10).toNat before := by
-    simpa [Reloc.Eqv.val] using object.2 0 value rfl
-  apply (Reloc.Eqv.val value id).transport μ pl (R 10).toNat target.toNat before after represented
-  change word after target.toNat = Reloc.relocWord μ pl value (word before (R 10).toNat)
+  apply single_field_relocated object
   rw [post.value,forwarding,single_child_original allocationOutside rootOutside]
 
 end OCaml.Vm.Gc.Fresh
