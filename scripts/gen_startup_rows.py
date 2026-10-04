@@ -55,6 +55,10 @@ def outputs():
                 ('__retarget_lock_acquire_recursive', 'LockAcquire', None),
                 ('__retarget_lock_release_recursive', 'LockRelease', None),
                 ('_findenv_r', 'FindName', (0x80037490, 0x800374a8)),
+                ('_findenv_r', 'FindEmpty', (0x800374a8, 0x800374b8)),
+                ('_findenv_r', 'FindReturn', (0x800374fc, 0x80037520)),
+                ('_findenv_r', 'FindUnlock', (0x800374f4, 0x800374fc)),
+                ('_findenv_r', 'FindRestore', (0x8003756c, 0x80037574)),
                 ('getuid', 'UserId', None),
                 ('geteuid', 'EffectiveUserId', None),
                 ('getgid', 'GroupId', None),
@@ -150,7 +154,7 @@ end OCaml.Vm.Boot.Startup
                     if block.kind != 'jal' and stem != 'DomainFields':
                         continue
                     norm = stem[0].lower() + stem[1:] + 'Save'
-                    seg = f'{name}X{block.start & 0xffff:x}Seg'
+                    seg = f"{name.lstrip('_')}X{block.start & 0xffff:x}Seg"
                     normalized += [f'def {norm} : List BBlock := [⟨[',
                         ',\n'.join('  ' + gen_fn.ocaml_literal_mline(i.addr, i.word) for i in block.instrs),
                         '], none⟩]', f'theorem {norm}_eq : {norm} = {seg} := by rfl', '']
