@@ -2051,10 +2051,24 @@ All fourteen segments check (prefixes 1.1–1.6s, suffixes 0.95–1.0s).
 These are native boundaries, not additional represented arm claims.
 Nonzero division arms landed as `0c69b55` with check_all passing.
 
+## Represented write-barrier returns
+
+`ModifyReturn.lean:modify_return_restore` restores Running from separate
+named data/platform/register components supplied at the barrier return.
+Seven generated `setfield0_return`–`setfield3_return`, `setfield_return`,
+`setglobal_return` and `setvectitem_return` adapters execute the actual
+suffix and instantiate that restoration (0.92–0.94s each). Their explicit
+PC/stack equations account for the different native updates. The shared
+callee postcondition requires the changed represented heap, runtime state
+and primitive bindings; none is assumed preserved across an actual write.
+Caller setup and caml_modify's represented summary remain open. The native
+boundary bundle landed as `24a970e` with check_all passing.
+
 ## Open / next
 
-Immediate next: continue F1's barrier-backed
-SETGLOBAL/SETFIELD mutation, RAISE/RERAISE/RAISE_NOTRACE/STOP, primitive
+Immediate next: establish the shared barrier call interface from generated
+SETGLOBAL/SETFIELD/SETVECTITEM setup, then compose the represented returns.
+Continue RAISE/RERAISE/RAISE_NOTRACE/STOP, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
 `GcSafe P` premise is already threaded through ArmSim and the headline.

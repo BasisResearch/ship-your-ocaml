@@ -523,3 +523,10 @@ import OCaml.Vm.Sim.ClosurerecFirstMore
 import OCaml.Vm.Sim.ClosurerecInfix
 
 import OCaml.Vm.Sim.ClosurerecMachine
+import OCaml.Vm.Sim.Setfield0Return
+import OCaml.Vm.Sim.Setfield1Return
+import OCaml.Vm.Sim.Setfield2Return
+import OCaml.Vm.Sim.Setfield3Return
+import OCaml.Vm.Sim.SetfieldReturn
+import OCaml.Vm.Sim.SetglobalReturn
+import OCaml.Vm.Sim.SetvectitemReturn
