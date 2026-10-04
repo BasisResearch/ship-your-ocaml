@@ -534,3 +534,6 @@ import OCaml.Vm.Sim.Setfield0
 import OCaml.Vm.Sim.Setfield1
 import OCaml.Vm.Sim.Setfield2
 import OCaml.Vm.Sim.Setfield3
+import OCaml.Vm.Sim.Setfield
+import OCaml.Vm.Sim.Setglobal
+import OCaml.Vm.Sim.Setvectitem

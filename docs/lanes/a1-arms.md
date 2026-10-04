@@ -2079,11 +2079,24 @@ Coverage is **133 conditional represented opcode bridges overall**, including
 F2; this is not a count out of F1's 134. `gen_modify_fixed.py` is checked in
 a5, with new headlines audited. Represented returns landed as `ffad851`.
 
+## Indexed/global field mutation arms
+
+`setfield_arm`, `setglobal_arm`, `setvectitem_arm` and their step wrappers
+now compose native caller setup and return around `ModifyCallee`. Generic
+field/global operands use `index_word`; vector indexing uses the total
+63-bit `value_index_word`. SETGLOBAL obtains its pointer and read geometry
+from Layout.sym_caml_global_data, with the ELF-relative expression checked
+against Layout. The generator normalizes native pin observations once for
+all three variants. No barrier implementation is assumed read-only: its
+represented callee postcondition must establish the heap and runtime.
+All three target builds pass; new headlines and generator drift checks are
+registered. Coverage is **136 conditional represented opcode bridges
+overall**, including F2, not a fraction of F1's 134. Fixed field arms landed
+as `15272e3` with check_all passing.
+
 ## Open / next
 
-Immediate next: instantiate the shared barrier call interface for generic
-SETFIELD, SETGLOBAL and SETVECTITEM setup, then compose their represented returns.
-Continue RAISE/RERAISE/RAISE_NOTRACE/STOP, primitive
+Immediate next: RAISE/RERAISE/RAISE_NOTRACE/STOP, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
 `GcSafe P` premise is already threaded through ArmSim and the headline.
