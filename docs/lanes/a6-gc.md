@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Forwarded young child and self-cycle return (2026-10-04)
+
+- `SingleFieldForwardedReturn.lean:return_young_forwarded` composes the
+  actual parent forwarding, child tag/range tests, zero-header child route
+  and native epilogue. `ForwardedReturned.payload` gives the typed relocated
+  child via Eqv, with a named forwarding-table observation.
+- `ForwardingPrefix.lean:forwarding_prefix` derives a common raw forwarding
+  view from the real three-store log. `SingleFieldSelf.lean:return_self`
+  uses it to execute a single-field self-cycle: the final field equals the
+  copy address, with no assumed zero-header/forwarding-pointer contents.
+- Targeted Lean builds (670 jobs), full Audit (3490 jobs) and both proof
+  discipline gates pass; new headlines use only permitted axioms.
+  Young-child entry checkpoint landed as `a218e3e`.
+- Next: compose this return with both allocations and the original caller,
+  then extend the partial relocation to fresh children. Ownership suppliers,
+  remaining object/allocator routes, collector closure, G2 and live budget
+  remain open.
+
 ## Fresh single-field young-child tail entry (2026-10-04)
 
 - `SingleFieldYoung.lean:prepare_young` proves the actual forwarding, child
