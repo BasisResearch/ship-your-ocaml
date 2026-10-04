@@ -99,12 +99,21 @@ def outputs():
                 decoder = dict(line.split('\t') for line in decodes)
                 prefix_words = {f'{ins.word:08x}' for block in (alloc_head,alloc_lookup)
                     for ins in [*block.instrs,*([block.term] if block.kind == 'br' else [])]}
+                call_ins = alloc_lookup.term
+                call_word = call_ins.word
+                assert call_word & 0x707f == 0x67 and (call_word >> 7) & 31 == 1
+                prefix_words.add(f'{call_word:08x}')
                 text = ALLOC_ENTRY_TEMPLATE
                 for key,val in {
                     'DECODE_IMPORTS': '\n'.join('import '+m for m in sorted({decoder[w] for w in prefix_words})),
                     'HEAD': gen_fn.block_name(name,alloc_head,False)+'Seg',
                     'LOOKUP': gen_fn.block_name(name,alloc_lookup)+'Seg',
-                    'PC': hex(entry), 'CALLPC': hex(alloc_lookup.term.addr), 'SIZE': str(frame),
+                    'PC': hex(entry), 'CALLPC': hex(call_ins.addr), 'SIZE': str(frame),
+                    'CALL': '⟨' + ', '.join([f'{call_ins.addr:#x}#64', f'{call_word:#010x}#32'] +
+                        [f'{(call_word >> (8*i)) & 255:#04x}#8' for i in range(4)] +
+                        [f'{call_word >> 20:#05x}#12', str((call_word >> 15) & 31)]) + '⟩',
+                    'CALLWORD': f'{call_word:08x}', 'CALLADDR': f'{call_ins.addr:08x}',
+                    'RETURN': hex(call_ins.addr + 4),
                     'SAVES': '['+', '.join(f'({r},{o})' for r,o in saves)+']', 'TAGOFFSET': str(tag_offset),
                     'HEAD_WINDOWS': '\n'.join(f'  · exact (windows ({r},{o}) (by decide)).sd rfl rfl' for r,o in saves),
                 }.items(): text = text.replace('@'+key+'@',val)
@@ -1690,6 +1699,7 @@ end OCaml.Vm.Gc.Fresh
 """
 
 ALLOC_ENTRY_TEMPLATE = """import OCaml.Vm.Primitives.Write
+import OCaml.Vm.Primitives.IndirectCall
 import OCaml.Vm.Gc.Generated.AllocMinor
 import OCaml.Vm.Gc.ChainPlan
 import OCaml.Vm.Layout
@@ -1706,6 +1716,24 @@ def lookupBlock : BBlock := @LOOKUP@.getD 0 { body := [], term := none }
 def blocks := [headBlock,lookupBlock]
 def pc : BitVec 64 := @PC@#64
 def callPc : BitVec 64 := @CALLPC@#64
+def call : IndirectCallInstr := @CALL@
+def returnPc : BitVec 64 := @RETURN@#64
+
+theorem call_shape : IndirectShape call := by constructor <;> decide
+
+theorem call_decode : IndirectDecode call := by
+  intro s hm hp he
+  exact Vsa.Sim.ElfDecode.decode_@CALLWORD@ s hm hp he
+
+theorem call_link : call.link = returnPc := by decide
+
+theorem call_target (value : BitVec 64) (aligned : value.toNat % 4 = 0) :
+    call.target value = value := ret_tgt value aligned
+
+theorem call_pins {c : Config} (h : Code.Caml_alloc_shr_for_minor_gcLoaded c.σ.mem) :
+    IndirectPins call c := by
+  obtain ⟨h0,h1,h2,h3⟩ := Code.caml_alloc_shr_for_minor_gc_at_@CALLADDR@ h
+  exact ⟨h0,h1,h2,h3⟩
 def frameSize : BitVec 64 := @SIZE@#64
 def frameSp (R : Nat → BitVec 64) := R 2 + -frameSize
 def saves : List (Nat × Nat) := @SAVES@

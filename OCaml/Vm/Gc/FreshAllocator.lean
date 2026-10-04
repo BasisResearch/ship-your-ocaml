@@ -62,7 +62,9 @@ theorem AllocationEntry.allocator_input {R target before after}
 
 /-- Oldify and the allocating wrapper have installed both native frames and
 loaded the free-list target. Its indirect JAL and allocation body are next. -/
-structure FreeListBoundary (R : Nat → BitVec 64) (target : BitVec 64) (before after : Config) : Prop where
+structure FreeListBoundary (R : Nat → BitVec 64) (target : BitVec 64) (before after : Config)
+    (exitPC : BitVec 64 := AllocEntry.callPc)
+    (pins : GRegs := AllocEntry.atCall (allocatorRegs R before) target) : Prop where
   good : GoodState after.σ
   minstret : ∃ v, after.σ.regs.get? Register.minstret = some v
   tick : after.tick < 2
@@ -70,8 +72,8 @@ structure FreeListBoundary (R : Nat → BitVec 64) (target : BitVec 64) (before 
   oldifyCode : Code.Caml_oldify_oneLoaded after.σ.mem
   memory : after.σ.mem = writeLog before.σ.mem
     (OldifyEntry.saveLog OldifyEntry.saves R ++ AllocEntry.effect (allocatorRegs R before))
-  pc : PCAt AllocEntry.callPc after
-  registers : GHolds after.σ (AllocEntry.atCall (allocatorRegs R before) target)
+  pc : PCAt exitPC after
+  registers : GHolds after.σ pins
   output : after.σ.sailOutput = before.σ.sailOutput
   native : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ (1 :: prepareWrites) ++ wrChain AllocEntry.blocks, (gprReg n == r) = false) →

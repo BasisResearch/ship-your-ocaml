@@ -1,4 +1,5 @@
 import OCaml.Vm.Primitives.Write
+import OCaml.Vm.Primitives.IndirectCall
 import OCaml.Vm.Gc.Generated.AllocMinor
 import OCaml.Vm.Gc.ChainPlan
 import OCaml.Vm.Layout
@@ -6,6 +7,7 @@ import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.ElfDecode.Part005
 import Vsa.Sim.ElfDecode.Part006
 import Vsa.Sim.ElfDecode.Part007
+import Vsa.Sim.ElfDecode.Part011
 import Vsa.Sim.ElfDecode.Part032
 import Vsa.Sim.ElfDecode.Part035
 import Vsa.Sim.ElfDecode.Part036
@@ -26,6 +28,24 @@ def lookupBlock : BBlock := caml_alloc_shr_for_minor_gcXb784Seg.getD 0 { body :=
 def blocks := [headBlock,lookupBlock]
 def pc : BitVec 64 := 0x8000b768#64
 def callPc : BitVec 64 := 0x8000b798#64
+def call : IndirectCallInstr := ⟨0x8000b798#64, 0x000780e7#32, 0xe7#8, 0x80#8, 0x07#8, 0x00#8, 0x000#12, 15⟩
+def returnPc : BitVec 64 := 0x8000b79c#64
+
+theorem call_shape : IndirectShape call := by constructor <;> decide
+
+theorem call_decode : IndirectDecode call := by
+  intro s hm hp he
+  exact Vsa.Sim.ElfDecode.decode_000780e7 s hm hp he
+
+theorem call_link : call.link = returnPc := by decide
+
+theorem call_target (value : BitVec 64) (aligned : value.toNat % 4 = 0) :
+    call.target value = value := ret_tgt value aligned
+
+theorem call_pins {c : Config} (h : Code.Caml_alloc_shr_for_minor_gcLoaded c.σ.mem) :
+    IndirectPins call c := by
+  obtain ⟨h0,h1,h2,h3⟩ := Code.caml_alloc_shr_for_minor_gc_at_8000b798 h
+  exact ⟨h0,h1,h2,h3⟩
 def frameSize : BitVec 64 := 48#64
 def frameSp (R : Nat → BitVec 64) := R 2 + -frameSize
 def saves : List (Nat × Nat) := [(1,40), (8,32), (9,24)]

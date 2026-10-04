@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.FreshIndirect
 import OCaml.Vm.Boot.Startup.TableAllocation
 import OCaml.Vm.Boot.Startup.MinorTablesPrefix
 import OCaml.Vm.Gc.FreshAllocator
@@ -2867,3 +2868,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Fresh.Prepared.word_frame
 #print axioms OCaml.Vm.Gc.Fresh.AllocationEntry.allocator_input
 #print axioms OCaml.Vm.Gc.Fresh.prepare_free_list
+
+#print axioms Vsa.Sim.jalrCallFacts_of_obs
+#print axioms OCaml.Vm.Primitives.indirect_observed
+#print axioms OCaml.Vm.Primitives.indirect_summary
+#print axioms OCaml.Vm.Gc.AllocEntry.call_registers
+#print axioms OCaml.Vm.Gc.AllocEntry.call_free_list
+#print axioms OCaml.Vm.Gc.Fresh.FreeListBoundary.enter
+#print axioms OCaml.Vm.Gc.Fresh.enter_free_list

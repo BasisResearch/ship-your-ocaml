@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Fresh entry executes the loaded free-list call (2026-10-04)
+
+- `FreshIndirect.lean:enter_free_list` composes the complete fresh prefix
+  with the actual indirect call. It retains the combined native-save/tag
+  log, code images, output and register frame, and installs the allocator's
+  return link at the loaded callee's entry.
+- `AllocIndirect.lean:call_free_list` consumes the actual loaded pointer
+  and its alignment. The generator emits JALR encoding/decode/pins; the
+  existing `ret_tgt` lemma identifies its bit-cleared target.
+- `Primitives/IndirectCall.lean:indirect_summary` and
+  `Vsa/Sim/JalrBridge.lean:jalrCallFacts_of_obs` share the existing direct-call
+  bridge and generic register frame. No callee execution is assumed.
+- Capped targeted build (656 jobs), full Audit (2757 jobs), generator drift,
+  discipline and abstraction gates pass; new headlines use only permitted
+  axioms. Allocator prefix landed as `8897f51`. Next: the actual
+  free-list allocation body, followed by header/accounting and return.
+  Fresh-copy completion, queue/root closure, ephemerons, major reclamation
+  and G2 remain open.
+
 ## Fresh entry through the free-list call boundary (2026-10-03)
 
 - `FreshAllocator.lean:prepare_free_list` composes real oldify entry, its
