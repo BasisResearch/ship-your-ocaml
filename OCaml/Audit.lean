@@ -1,3 +1,5 @@
+import OCaml.Vm.Boot.Startup.EnvLock
+import OCaml.Vm.Boot.Startup.ParameterEntry
 import OCaml.Vm.Boot.Startup.SecureGetenvReady
 import OCaml.Vm.Boot.Startup.IdentityCall
 import OCaml.Vm.Boot.Startup.DomainReady
@@ -3178,6 +3180,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.secure_getenv_to_getenv
 #print axioms OCaml.Vm.Boot.Startup.RuntimeReady.stack_log
 #print axioms OCaml.Vm.Boot.Startup.secure_getenv_ready
+#print axioms OCaml.Vm.Boot.Startup.scalar_leaf_call
+#print axioms OCaml.Vm.Boot.Startup.lock_noop
+#print axioms OCaml.Vm.Boot.Startup.env_lock
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.domain_history_exists
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.reset
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_parameter_entry_exists
 #print axioms OCaml.Vm.Gc.AllocColor.prepare
 #print axioms OCaml.Vm.Gc.AllocColor.tag32_eq
 #print axioms OCaml.Vm.Gc.AllocColor.header_ok

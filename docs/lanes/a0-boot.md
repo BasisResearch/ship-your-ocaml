@@ -2,6 +2,26 @@
 
 ## Round 2 status (2026-10-04)
 
+`Startup/ParameterEntry.lean` closes `reset_parameter_entry_exists`: the
+pinned ELF's actual reset now reaches caml_parse_ocamlrunparam at `0x8000451c`
+through caml_main's generated call, carrying the full runtime/allocator
+contract and its linked return address. `DomainHistory` packs the preceding
+configuration history once; its `reset` projection retains the actual ELF
+reset certificate and its witness retains all earlier exact effects.
+The new entry composition checks in one second.
+
+`EnvLock.lean` proves `env_lock` for both newlib environment wrappers and
+`lock_noop` for their pinned recursive-lock hooks. The lock argument is
+computed from the generated instructions. `scalar_leaf_call` factors the
+shared memory-preserving scalar-call adapter out of `identity_call`, whose
+public contract remains unchanged. Lock summaries check in under one second.
+
+The complete security-wrapper increment landed as `b0123f7`, full gate
+passed. Next: the empty-environment `_findenv_r` name scan and frame return,
+then getenv and parameter-parser composition. Reset-to-cut/Loaded remains
+open; the reached parser entry does not yet imply its successful return.
+
+
 `Startup/SecureGetenv.lean` closes `secure_getenv_to_getenv`, a reusable
 summary for the native caml_secure_getenv wrapper with arbitrary caller
 stack, return link, name and saved registers. It composes the generated
