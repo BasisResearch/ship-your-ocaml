@@ -44,8 +44,7 @@ theorem AllocationResult.single_young {R target domain log c middle}
   have memory : middle.σ.mem = (queueSnapshot R log c).σ.mem := by
     simpa only [queueSnapshot] using allocated.memory
   have input : SingleField.Input (queuePending R target) (R 11) middle :=
-    ⟨allocated.good,allocated.tick,allocated.minstret,allocated.code,
-      by simpa only [conditions.single,queuePending] using allocated.registers,conditions.prefixWindows⟩
+    allocated.single_prefix_input conditions.single conditions.prefixWindows
   have even : ChildClassify.even (SingleField.child (queuePending R target) (R 11) middle) = true := by
     simpa only [SingleField.child_of_memory memory] using conditions.even
   obtain ⟨after,run,head⟩ := (SingleField.prepare_young input allocated.stack allocated.constants even

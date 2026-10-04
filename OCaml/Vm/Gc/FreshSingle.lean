@@ -47,12 +47,22 @@ structure SingleResult (R : Nat → BitVec 64) (target : BitVec 64) (log : List 
       ((1 :: prepareWrites) ++ [1,2,8,9,10,11,12,13,14,15]), (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
 
-/-- The actual allocation result supplies the single-field forwarding input. -/
+/-- Either allocator supplies the forwarding-prefix registers. This shared
+interface needs only size and prefix windows, independently of the child route. -/
+theorem AllocationResult.single_prefix_input {R target log c middle}
+    (allocated : AllocationResult R target log c middle)
+    (single : sizeWord (word c (R 10 - 8#64).toNat) = 1)
+    (windows : WorkQueue.PrefixWindows (queuePending R target) (R 11)) :
+    SingleField.Input (queuePending R target) (R 11) middle :=
+  ⟨allocated.good,allocated.tick,allocated.minstret,allocated.code,
+    by simpa only [single,queuePending] using allocated.registers,windows⟩
+
+/-- The returning routes supply the common prefix interface through their
+stronger native-bank geometry. -/
 theorem AllocationResult.single_input {R target log c middle}
     (allocated : AllocationResult R target log c middle) (conditions : SingleGeometry R target log c) :
     SingleField.Input (queuePending R target) (R 11) middle :=
-  ⟨allocated.good,allocated.tick,allocated.minstret,allocated.code,
-    by simpa only [conditions.single,queuePending] using allocated.registers,conditions.prefixWindows⟩
+  allocated.single_prefix_input conditions.single conditions.prefixWindows
 
 /-- Initial geometry and the saved original caller link supply the actual
 return continuation's windows and alignment after either allocator. -/

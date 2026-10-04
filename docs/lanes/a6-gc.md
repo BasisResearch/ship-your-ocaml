@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Whole fresh-single forwarded-child calls (2026-10-04)
+
+- `FreshSingleForwarded.lean:single_fresh_forwarded` and
+  `single_fresh_large_forwarded` compose real oldify entry, either allocator,
+  forwarded young-child tail processing and original caller return.
+- `ForwardedSingleResult.payload` and `FreshSingleForwardedHeader.lean:object`
+  establish the represented object at the relocated placement from the
+  original object, allocator header, forwarding word and explicit footprints.
+- `AllocationResult.single_prefix_input` now shares the size/prefix adapter
+  across all child routes; existing immediate/non-young/header regressions pass.
+- Targeted builds pass (757 jobs plus header target); full Audit passes
+  (3492 jobs), with permitted axioms. Discipline and abstraction gates pass.
+  Forwarded-child/self-cycle checkpoint landed as `d28c873`.
+- Next: factor an allocation-call context independent of native entry, so
+  fresh children can allocate on the existing tail frame. Then extend the
+  partial-relocation invariant. General ownership/collector closure, G2 and
+  live-word budget remain open.
+
 ## Forwarded young child and self-cycle return (2026-10-04)
 
 - `SingleFieldForwardedReturn.lean:return_young_forwarded` composes the
