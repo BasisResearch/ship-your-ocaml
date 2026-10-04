@@ -178,6 +178,8 @@ def sym_caml_gc_phase : Nat := 0x80064ac0
 def sym_caml_gc_sweep_hp : Nat := 0x80064ac8
 /-- `caml_callback_depth` -/
 def sym_caml_callback_depth : Nat := 0x80064c38
+/-- `caml_channel_mutex_unlock_exn` -/
+def sym_caml_channel_mutex_unlock_exn : Nat := 0x80064b48
 /-- `caml_allocated_words` -/
 def sym_caml_allocated_words : Nat := 0x80064ab8
 /-- `caml_stack_usage_hook` -/
@@ -295,6 +297,17 @@ def jumpSaveOffset : Nat → Nat
   | 27 => 96
   | 2 => 104
   | _ => 0
+
+/-! Raising-helper frames and predefined-exception metadata, extracted from the ELF. -/
+def pendingRootFrameBytes : Nat := 112
+def pendingRootSaveRaOffset : Nat := 104
+def pendingRootSaveValueOffset : Nat := 24
+def raiseRuntimeFrameBytes : Nat := 32
+def raiseRuntimeSaveRaOffset : Nat := 24
+def raiseZeroFrameBytes : Nat := 16
+def raiseZeroSaveRaOffset : Nat := 8
+def raiseZeroExceptionOffset : Nat := 40
+def raiseZeroMessage : Nat := 2147837192
 
 /-! `Caml_state` field offsets (bytes). -/
 def off_young_limit : Nat := 0

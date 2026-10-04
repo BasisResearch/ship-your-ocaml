@@ -67,6 +67,7 @@ ELF pin).
 | `reentry_quiet` | `OCaml/Vm/Sim/ReentryQuiet.lean` | A1 | **proved** over scalar readiness/image separation; local-roots restoration, VM stack/exception reload and quiet handler selection; represented raising composition open |
 | `longjmp_caught`, `raise_reentry_restore`, `reentry_handler` | `OCaml/Vm/Sim/{LongjmpReentry,RaiseReentry,ReentryHandler}.lean` | A1 | **proved** over named scalar/represented readiness; complete nonlocal return through quiet handler reaches Running; zero-divisor helper linkage next |
 | `primF1_outcome`, `primF1_not_raise` | `OCaml/Vm/Sim/PrimitiveF1Outcomes.lean` | A1 | **proved**; all F1 primitive outcomes are normal return, exit or unsupported; raising/callback C_CALL outcomes belong to later fragments |
+| `pending_root_summary` | `OCaml/Vm/Sim/PendingRoot.lean` | A1 | **proved** complete nine-instruction no-pending return; preserves argument/native stack, exact two-store log and image/register frame; raising-helper composition open |
 | `check_global_data_summary` | `OCaml/Vm/Sim/CheckGlobalData.lean` | A1 | **proved** normal block-pointer path through generated whole-function CFG; read-only ABI return used by zero-divisor raising helper |
 | `ArmSim` entry + F1 arms (134 opcodes) + halt | `OCaml/Vm/Sim/` | A1 | open; strengthened `Running` contract excludes the HTIF obstruction |
 | **`ocamlrun_refinement_Statement L B`** (Layer A, F1) | `OCaml/Theorems.lean` | A1 (by `ocamlrun_refinement_of_arms`) | open; derives unchanged from the repaired arm contract |

@@ -30,6 +30,7 @@ import sys
 import tempfile
 from pathlib import Path
 from gen_primitive_census import primitive_names
+from census import disasm as function_disasm
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = os.path.expanduser(
@@ -153,7 +154,7 @@ def main():
              "_times", "files", "fds", "dirs", "fs_ready"]
     need += primitive_names()
     need += ["caml_fl_p_allocate", "caml_fl_p_add_blocks", "caml_gc_phase", "caml_gc_sweep_hp"]
-    need += ["caml_callback_depth"]
+    need += ["caml_callback_depth", "caml_channel_mutex_unlock_exn"]
     need += ["caml_allocated_words", "caml_stack_usage_hook", "oldify_todo_list", "caml_ephe_none"]
     need += ["pool", "caml_stat_alloc_noexc", "malloc", "caml_init_domain"]
     need += ["main_argv", "caml_exe_name", "oo_last_id", "caml_copy_double"]
@@ -243,6 +244,41 @@ def main():
     saved_roots_offset = roots_offsets[0]
     if ("sd", f"a3,{saved_roots_offset}(sp)") not in ins.values():
         die("interpreter initial local-roots save is absent")
+
+    # Raising-helper native frame slots, extracted through the shared ELF census.
+    helper_functions = function_disasm(Path(a.elf))
+    helper_layout = {}
+    for fn, prefix, saved in [
+        ("caml_process_pending_actions_with_root_exn", "pendingRoot", [("ra", "Ra"), ("a0", "Value")]),
+        ("caml_raise", "raiseRuntime", [("ra", "Ra")]),
+        ("caml_raise_zero_divide", "raiseZero", [("ra", "Ra")])]:
+        body = helper_functions[fn]['insts']
+        allocations = [re.fullmatch(r"sp,sp,-(\d+)", ops.split('#')[0].strip())
+                       for _, _, mn, ops in body if mn == "addi"]
+        allocations = [int(match[1]) for match in allocations if match]
+        if len(allocations) != 1:
+            die(f"{fn}: expected one native frame allocation")
+        size = allocations[0]
+        helper_layout[prefix + "FrameBytes"] = size
+        for reg, label in saved:
+            stores = [re.fullmatch(reg + r",(\d+)\(sp\)", ops.split('#')[0].strip())
+                      for _, _, mn, ops in body if mn == "sd"]
+            stores = [int(match[1]) for match in stores if match]
+            if len(set(stores)) != 1 or stores[0] + 8 > size:
+                die(f"{fn}: {reg} save changed or lies outside its frame")
+            helper_layout[prefix + "Save" + label + "Offset"] = stores[0]
+    zero_body = helper_functions['caml_raise_zero_divide']['insts']
+    exception_slots = [re.fullmatch(r"a0,(\d+)\(a5\)", ops.split('#')[0].strip())
+                       for _, _, mn, ops in zero_body if mn == "ld"]
+    exception_slots = [int(match[1]) for match in exception_slots if match]
+    if len(exception_slots) != 1:
+        die("zero-divisor predefined-exception load changed")
+    helper_layout["raiseZeroExceptionOffset"] = exception_slots[0]
+    messages = [re.search(r"#\s*([0-9a-f]+)", ops) for _, _, mn, ops in zero_body
+                if mn == "addi" and ops.startswith("a0,a0,")]
+    if len(messages) != 1 or messages[0] is None:
+        die("zero-divisor diagnostic pointer changed")
+    helper_layout["raiseZeroMessage"] = int(messages[0][1], 16)
 
     # Nonlocal-jump environment: stores and loads must agree for every ABI slot.
     jump_slots = {}
@@ -365,6 +401,9 @@ def main():
     for reg, offset in jump_saved:
         w(f"  | {reg} => {offset}\n")
     w("  | _ => 0\n")
+    w("\n/-! Raising-helper frames and predefined-exception metadata, extracted from the ELF. -/\n")
+    for name, value in helper_layout.items():
+        w(f"def {name} : Nat := {value}\n")
     w("\n/-! `Caml_state` field offsets (bytes). -/\n")
     for f in ["young_limit", "young_ptr", "young_start", "young_end", "young_alloc_start",
               "young_alloc_end", "minor_heap_wsz", "stack_low", "stack_high", "stack_threshold", "extern_sp",

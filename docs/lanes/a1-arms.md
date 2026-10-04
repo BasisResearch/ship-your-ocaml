@@ -2345,6 +2345,18 @@ per-word ELF decode certificates. Capped builds pass: normal check 3.0s,
 and all generated raising-helper rows/image modules. Pending-action fast
 return and raising-helper composition remain next.
 
+`check_global_data_summary` and raising-helper certificates landed as
+`27b779a`, full gate passing.
+
+`pending_root_summary` (`PendingRoot.lean:8`) proves the complete
+nine-instruction no-pending-action return, preserving the argument and native
+stack with an exact two-store memory log and executable-image/register frame.
+`PendingRootInput` names the 32-bit pending flag, write windows and separation.
+Layout extracts and checks pending/raising frame sizes, save slots and the
+zero-divide exception-field offset directly from the pinned ELF. Default-budget
+capped builds pass: state 0.791s, facts 3.7s, summary 1.8s. Direct-call seams
+and caml_raise composition remain open.
+
 ## Open / next
 
 Immediate next: DIVINT/MODINT zero-divisor setup and native raising helpers,

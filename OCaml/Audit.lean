@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.SingleTailLoop
+import OCaml.Vm.Sim.PendingRoot
 import OCaml.Vm.Gc.SingleFieldBackEdge
 import OCaml.Vm.Gc.SingleFieldTable
 import OCaml.Vm.Sim.NonlocalAudit
@@ -3028,6 +3029,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 -- Normal global-data check used by the zero-divisor raising helper.
 #print axioms OCaml.Vm.Sim.check_global_input
 #print axioms OCaml.Vm.Sim.check_global_data_summary
+
+-- Complete no-pending-action runtime return.
+#print axioms OCaml.Vm.Sim.pending_root_return_word
+#print axioms OCaml.Vm.Sim.pending_root_input
+#print axioms OCaml.Vm.Sim.pending_root_summary
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes

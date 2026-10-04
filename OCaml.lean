@@ -565,3 +565,5 @@ import OCaml.Vm.Sim.ReentryQuiet
 import OCaml.Vm.Sim.ReentryHandler
 import OCaml.Vm.Sim.PrimitiveF1Outcomes
 import OCaml.Vm.Sim.CheckGlobalData
+
+import OCaml.Vm.Sim.PendingRoot
