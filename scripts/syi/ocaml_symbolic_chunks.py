@@ -42,10 +42,17 @@ def emit_log_chunks(E, name, instrs, keys, literal, lib, chunk_size=5, register_
             elif op==0x33 and ((w>>12)&7)==0 and w >> 25 in (0,0x20):
                 op_symbol = '+' if w >> 25 == 0 else '-'
                 write(rd,f'({val(rs1)} {op_symbol} {val(rs2)})')
+            elif op==0x33 and ((w>>12)&7)==7 and w >> 25 == 0:
+                write(rd,f'({val(rs1)} &&& {val(rs2)})')
+            elif op==0x3b and ((w>>12)&7)==1 and w >> 25 == 0:
+                write(rd,f'Functions.sign_extend (m := 64) (Sail.shift_bits_left '
+                      f'(Sail.BitVec.extractLsb ({val(rs1)}) 31 0) '
+                      f'(Sail.BitVec.extractLsb (Sail.BitVec.extractLsb ({val(rs2)}) 31 0) 4 0))')
             elif op==0x17:
                 write(rd,add(lit(ins.addr),lib.sext(w & 0xfffff000,32)))
-            elif op==3 and ((w>>12)&7)==3:
-                write(rd,f'bytesVal .ld (loads.getD {consumed} [])')
+            elif op==3 and ((w>>12)&7) in (2,3):
+                load_kind = 'lw' if ((w>>12)&7)==2 else 'ld'
+                write(rd,f'bytesVal .{load_kind} (loads.getD {consumed} [])')
                 consumed+=1
             elif op==0x23 and ((w>>12)&7)==3:
                 imm=lib.sext(((w>>25)<<5)|((w>>7)&31),12)

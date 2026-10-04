@@ -1,5 +1,26 @@
 # Lane a6-gc
 
+## Empty-list entry through actual bitmap search (2026-10-04)
+
+- `BestFitMissing.lean:missing_search_zero` starts at the real allocator
+  entry, checks the small-size branch and empty exact-size list, executes
+  the bitmap filter and decoded native saves, then the linking JAL and
+  actual `ffs(0)` return. It reaches the fallback continuation with zero
+  result, preserved stack, exact save log, code and native/output frame.
+- `BestFitFallback.filtered_zero` derives the branch premise from a zero
+  four-byte bitmap observation. All loads use total reads and concrete
+  RAM windows; native offsets and instruction certificates are generated.
+- Shared symbolic chunk/literal generation now handles LW, SLLW and AND.
+  An initial broad simplification of the reflected write log exceeded
+  practical memory use; the owned build was stopped and replaced with
+  bounded explicit log normalization. No proof limits were raised.
+- Targeted build (617 jobs), full Audit (3051 jobs), discipline and
+  abstraction gates pass; new headlines use only permitted axioms. The
+  zero-input callee landed as `cc2457b`.
+- Next: large-free-block tests, actual `bf_split` splice, accounting and
+  native return. Nonzero bitmap/tree routes, ownership suppliers, full
+  collector closure and live-word Fits (G2) remain open.
+
 ## Empty small-bitmap callee (2026-10-04)
 
 - `FfsZero.lean:zero` proves the actual zero-input `ffs` call used by
