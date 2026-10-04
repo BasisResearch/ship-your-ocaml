@@ -3914,3 +3914,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleTail.Head.step
 #print axioms OCaml.Vm.Gc.SingleTail.run_loop
 #print axioms OCaml.Vm.Gc.SingleTail.run_from_head
+
+#print axioms OCaml.Vm.Gc.ForwardingTable.Bounded.extend
+#print axioms OCaml.Vm.Gc.ForwardingTable.identity_of_absent
+#print axioms OCaml.Vm.Gc.ForwardingTable.Bounded.identity
+#print axioms OCaml.Vm.Gc.ForwardingTable.fresh_identity
+#print axioms OCaml.Vm.Gc.ForwardingTable.domain_iff
+#print axioms OCaml.Vm.Gc.ForwardingTable.Bounded.pointer_fixed
+#print axioms OCaml.Vm.Gc.ForwardingTable.Bounded.nonYoung_fixed
+#print axioms OCaml.Vm.Gc.SingleTail.Head.step_exact
+#print axioms OCaml.Vm.Gc.SingleTail.run_loop_tracked
+#print axioms OCaml.Vm.Gc.SingleTail.run_from_head_tracked
+#print axioms OCaml.Vm.Gc.SingleTail.run_from_head_bounded

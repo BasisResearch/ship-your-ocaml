@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Tail-loop partial-map domain (2026-10-04)
+
+- `ForwardingDomain.lean:domain_iff` characterizes the table domain as
+  exactly the zero-header sources in the finite original source set, under
+  Bounded and Complete. Outside addresses stay fixed; `nonYoung_fixed`
+  supplies the typed base-pointer action from actual nursery rejection.
+- `SingleTail.run_loop_tracked` is the shared machine fold for list properties
+  preserved by actual one-parent publication. `run_from_head_bounded`
+  retains the source-set bound through the real loop. Existing untracked
+  interfaces retain their original premises and guarantees.
+- Targeted build passes (755 jobs), and full Audit passes (3581 jobs)
+  with only permitted axioms. Both discipline gates pass. Ordinary
+  loop checkpoint landed as `468074f`.
+- Next: connect fixed-value exits to the final placement, retain caller
+  roots and typed pending/completed payloads, and derive data Coverage
+  from ownership. Other collector routes, full G2 and live budget open.
+
 ## Ordinary single-field tail loop (2026-10-04)
 
 - `SingleTailLoop.lean:run_loop`/`run_from_head` fold the actual back edges
