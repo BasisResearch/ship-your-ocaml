@@ -15,14 +15,17 @@ def raiseZeroRa (sp : BitVec 64) : BitVec 64 := raiseZeroStack sp + BitVec.ofNat
 def raiseZeroLog (sp ra : BitVec 64) : List WEntry := [((raiseZeroRa sp).toNat, 8, ra)]
 
 /-- The zero-divisor helper installs its native frame before checking global data. -/
-structure RaiseZeroPrefixInput (sp ra : BitVec 64) (c : Config) : Prop where
+structure RaiseZeroPrefixMemory (sp ra : BitVec 64) : Prop where
+  raWrite : WriteWindow (raiseZeroRa sp) 8
+  imageOutside : ImageOutside (raiseZeroLog sp ra)
+
+structure RaiseZeroPrefixInput (sp ra : BitVec 64) (c : Config) : Prop
+    extends RaiseZeroPrefixMemory sp ra where
   good : GoodState c.σ
   image : ExecutableImage c
   tick : c.tick < 2
   stack : gpr c 2 = some sp
   returnReg : gpr c 1 = some ra
-  raWrite : WriteWindow (raiseZeroRa sp) 8
-  imageOutside : ImageOutside (raiseZeroLog sp ra)
 
 theorem raise_zero_stack (sp : BitVec 64) :
     sp + sign_extend (m := 64) (0xff0#12) = raiseZeroStack sp := by

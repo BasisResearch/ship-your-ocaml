@@ -1,5 +1,5 @@
 import OCaml.Vm.Sim.RaiseZeroSetup
-import OCaml.Vm.Sim.RaiseMemory
+import OCaml.Vm.Sim.RaiseZeroMemory
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -10,12 +10,13 @@ def raiseZeroFullLog (sp ra domain value : BitVec 64) : List WEntry :=
 
 /-- Scalar quiet-runtime readiness for the full zero-divisor raising helper. -/
 structure RaiseZeroInput (sp ra global domain value : BitVec 64) (buffer : Nat)
-    (saved : Nat → BitVec 64) (c : Config) : Prop where
-  setup : RaiseZeroSetupInput sp ra global value c
-  native : RaiseNativeMemory (raiseZeroStack sp) 0x8000d1f8#64 domain value buffer saved c
-  wordsOutside : ∀ a ∈ raiseMemoryWords domain, OutLRange (raiseZeroLog sp ra) a 8
-  pendingOutside : OutLRange (raiseZeroLog sp ra) Layout.sym_caml_something_to_do 4
-  savedOutside : ∀ r ∈ Layout.jumpSavedRegs, OutLRange (raiseZeroLog sp ra) (buffer + Layout.jumpSaveOffset r) 8
+    (saved : Nat → BitVec 64) (c : Config) : Prop
+    extends RaiseZeroMemory sp ra global domain value buffer saved c where
+  good : GoodState c.σ
+  image : ExecutableImage c
+  tick : c.tick < 2
+  stack : gpr c 2 = some sp
+  returnReg : gpr c 1 = some ra
 
 /-- Complete caml_raise_zero_divide execution, including the check and raising callees. -/
 theorem raise_zero {sp ra global domain value : BitVec 64} {buffer : Nat}
@@ -26,7 +27,7 @@ theorem raise_zero {sp ra global domain value : BitVec 64} {buffer : Nat}
   intro start initial
   obtain ⟨pc, eq⟩ := initial
   subst start
-  obtain ⟨middle, setupRun, setup⟩ := (raise_zero_setup h.setup).run c ⟨pc, rfl⟩
+  obtain ⟨middle, setupRun, setup⟩ := (raise_zero_setup (h.setup.input h.good h.image h.tick h.stack h.returnReg)).run c ⟨pc, rfl⟩
   have regs : GHolds middle.σ [(2, raiseZeroStack sp), (10, value)] := ⟨setup.stack, setup.result, trivial⟩
   have call := call_registers_summary caml_raise_zero_divide_8000d1f4_call_shape caml_raise_zero_divide_8000d1f4_call_decode
     middle (caml_raise_zero_divide_8000d1f4_call_pins setup.image) setup.good setup.image setup.tick setup.good.minstret

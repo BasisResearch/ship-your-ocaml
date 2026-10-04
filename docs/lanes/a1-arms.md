@@ -2411,11 +2411,26 @@ Layout. Both branches and setup use gen_arm_pilot; paired branch adapters share
 branches 0.813s/0.807s, setup segment 1.5s, complete setup 0.942s. Native helper
 composition and represented caught-handler restoration remain open.
 
+The zero selections and shared interpreter setup landed as `efc9210`, full
+gate passing after one push race.
+
+`division_zero` (`DivisionZero.lean:41`) proves both complete native zero paths
+from their dispatched opcode entries to the saved native continuation. It
+composes the generated selector, shared temporary-frame setup, check_global_data,
+pending-action return and longjmp via `division_zero_native`. The result has
+the exact eight-store log and native register/output frame. `RaiseZeroMemory`
+separates ABI entry facts and transports the interpreter stores through all
+helper memory conditions. Default capped builds pass: zero-memory transport
+0.825s, native shared path 0.881s, complete selector composition 0.854s. These
+are scalar native summaries; represented handler restoration and ArmSim linkage
+remain open.
+
 ## Open / next
 
-Immediate next: compose the checked DIVINT/MODINT zero selections and setup
-with `raise_zero`, then restore the represented caught handler. Split any
-remaining caller-memory readiness from dynamic ABI entry registers. Consume the remaining caml_do_exit/primitive terminal
+Immediate next: restore represented caught-handler state after `division_zero`.
+Use the checked exact log to frame the remaining logical stack, preserve runtime
+observations, and publish the predefined exception bucket; then compose quiet
+re-entry/handler and the bytecode zero-divisor rule. Consume the remaining caml_do_exit/primitive terminal
 summaries when supplied. Continue uncaught semantic continuation/backtrace
 paths and major-allocation constructor paths. Later-fragment C_CALL raising
 outcomes can reuse the checked nonlocal bridge.

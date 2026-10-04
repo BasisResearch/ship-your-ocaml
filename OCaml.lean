@@ -578,3 +578,5 @@ import OCaml.Vm.Sim.RaiseZero
 import OCaml.Vm.Sim.DivintZero
 import OCaml.Vm.Sim.ModintZero
 import OCaml.Vm.Sim.DivisionZeroSetup
+
+import OCaml.Vm.Sim.DivisionZero

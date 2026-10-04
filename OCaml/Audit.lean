@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.DivisionZero
 import OCaml.Vm.Sim.DivintZero
 import OCaml.Vm.Sim.ModintZero
 import OCaml.Vm.Sim.DivisionZeroSetup
@@ -3082,6 +3083,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.divint_zero
 #print axioms OCaml.Vm.Sim.modint_zero
 #print axioms OCaml.Vm.Sim.division_zero_setup
+
+-- Complete native zero-divisor paths, with caller-memory readiness preserved.
+#print axioms OCaml.Vm.Sim.RaiseZeroSetupMemory.input
+#print axioms OCaml.Vm.Sim.RaiseZeroMemory.frame
+#print axioms OCaml.Vm.Sim.division_zero_native
+#print axioms OCaml.Vm.Sim.division_zero_select
+#print axioms OCaml.Vm.Sim.DivisionZeroNativeInput.after_select
+#print axioms OCaml.Vm.Sim.division_zero
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes

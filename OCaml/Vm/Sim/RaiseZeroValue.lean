@@ -11,13 +11,16 @@ open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives LeanRV64DExecutable LeanRV64DExecut
 def raiseZeroField (global : BitVec 64) : BitVec 64 := global + BitVec.ofNat 64 Layout.raiseZeroExceptionOffset
 
 /-- Scalar readiness for the predefined Division_by_zero exception load. -/
-structure RaiseZeroValueInput (global value : BitVec 64) (c : Config) : Prop where
-  good : GoodState c.σ
-  image : ExecutableImage c
-  tick : c.tick < 2
+structure RaiseZeroValueMemory (global value : BitVec 64) (c : Config) : Prop where
   globalWord : word c Layout.sym_caml_global_data = global
   fieldRead : ReadWindow (raiseZeroField global) 8
   fieldWord : word c (raiseZeroField global).toNat = value
+
+structure RaiseZeroValueInput (global value : BitVec 64) (c : Config) : Prop
+    extends RaiseZeroValueMemory global value c where
+  good : GoodState c.σ
+  image : ExecutableImage c
+  tick : c.tick < 2
 
 def raiseZeroLoads (c : Config) (global : BitVec 64) : List (List (BitVec 8)) :=
   [read8 c.σ.mem Layout.sym_caml_global_data, read8 c.σ.mem (raiseZeroField global).toNat]
