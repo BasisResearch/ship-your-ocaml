@@ -35,6 +35,17 @@ theorem read8_value (m : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) :
   simp [bytesVal, read8, bytesT8, LeanRV64DExecutable.Functions.sign_extend,
     Sail.BitVec.signExtend]
 
+/-- Local total-byte agreement suffices for a scalar word observation. -/
+theorem word_observed {m m' : Std.ExtHashMap Nat (BitVec 8)} (a : Nat)
+    (same : ∀ i, i < 8 → (m'[a + i]?).getD 0 = (m[a + i]?).getD 0) :
+    bytesT m' a 8 = bytesT m a 8 := by
+  rw [← read8_value, ← read8_value]
+  congr 1
+  simp only [read8]
+  rw [show (m'[a]?).getD 0 = (m[a]?).getD 0 from by simpa using same 0 (by decide),
+    same 1 (by decide), same 2 (by decide), same 3 (by decide), same 4 (by decide),
+    same 5 (by decide), same 6 (by decide), same 7 (by decide)]
+
 theorem byte_total (c : Config) (a : Nat) :
     byte c a = (c.σ.mem[a]?).getD 0 := by
   apply BitVec.eq_of_getLsbD_eq_iff.mpr

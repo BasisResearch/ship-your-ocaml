@@ -7,14 +7,18 @@ theorem startup_image_live : ImageLive startupLive := by
     simp only [startupLive, Vsa.Densify.ramBase, Vsa.Densify.ramSize,
       Image.textBase, Image.textSize, Image.rodataBase, Image.rodataSize] at * <;> omega
 
-theorem firstMalloc_image_separate : ImageSeparate (mS [] firstMallocStack) := by
-  have spNat : firstMallocStack.toNat = Layout.sym_stack_top - 144 := by decide
+/-- Runtime code and read-only data are outside every startup allocator call's
+metadata and stack ownership. -/
+theorem allocator_image_separate (H : List (Nat × Nat)) (s : BitVec 64)
+    (high : heapEnd + allocHeadroom ≤ s.toNat) : ImageSeparate (mS H s) := by
   constructor <;> intro i hi owned <;>
-    change stackWin firstMallocStack allocHeadroom _ ∨ vsaFoot [] _ at owned <;>
-    simp only [stackWin, InExt, spNat,
-      Layout.sym_stack_top, allocHeadroom, vsaFoot, allocGlobal, InRange,
+    change stackWin s allocHeadroom _ ∨ vsaFoot H _ at owned <;>
+    simp only [stackWin, InExt, allocHeadroom, vsaFoot, allocGlobal, InRange,
       Image.textBase, Image.textSize, Image.rodataBase, Image.rodataSize,
       heapStart, heapEnd] at * <;> omega
+
+theorem firstMalloc_image_separate : ImageSeparate (mS [] firstMallocStack) :=
+  allocator_image_separate [] firstMallocStack (by decide)
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.WhileMinElfParse

@@ -2,6 +2,25 @@
 
 ## Round 2 status (2026-10-04)
 
+`Startup/TableZeroed.lean:25` closes `reset_table_zeroed_exists`: the actual
+pinned-image reset now returns from the first 56-byte table's native memset.
+`ResetTableZeroed.zero_bytes` (`:37`) proves all 56 bytes are zero.
+`TablePublished.lean:38` closes the preceding domain-field publication;
+`TablePublish.lean:115` proves the shared source protocol for all three table
+slots, using generated Layout offsets. `TableZero.lean:55` composes both
+ordinary zero-call sites with the complete memset summary. `TableReturn`
+recovers the allocator's executable image, saved domain registers and fresh
+block geometry. A local total-byte word observation helper transports
+`Caml_state` across the allocator footprint. The final reset composition
+checks in one second.
+
+The complete memset increment landed as `6d2ebce`, full gate passed.
+Next: retain the written-register interface needed for full library
+well-formedness after zeroing, carry allocator capacity and publication
+through that effect, then compose the remaining two allocations/zeroing and
+the domain epilogue. Round 2 reset-to-cut/Loaded exit remains open.
+
+
 `Startup/Memset56.lean:50` closes the complete native aligned 56-byte
 `memset` summary for any allocation in the arena. It composes the generated
 entry, generic word-pair loop, computed byte-tail dispatch and eight byte
