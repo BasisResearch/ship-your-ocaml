@@ -1,4 +1,4 @@
-import OCaml.Vm.Sim.RaiseRestore
+import OCaml.Vm.Sim.RaiseState
 import OCaml.Vm.Sim.RaiseHandlerSegment
 import OCaml.Vm.Sim.RaiseHandlerPins
 import OCaml.Vm.Sim.LoopSetup
@@ -6,19 +6,6 @@ import OCaml.Vm.Sim.LoopSetup
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives LeanRV64DExecutable LeanRV64DExecutable.Functions
-
-/-- The native handler check supplies these represented data and register facts. -/
-structure RaiseHandlerInput (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
-    (sp high dest : Nat) (link : BitVec 63) (env : Val) (extra : BitVec 63) (rest : List Val) (c : Config) : Prop where
-  data : VmPayload P s c pl cp sp high
-  bindings : PrimitiveBindings P c
-  platform : PlatformOk L.runtimeOk c
-  frame : RaiseFrame s dest link env extra rest
-  pc : pcOf c = some (0x80001ef0#64)
-  trapReg : gpr c 14 = some (BitVec.ofNat 64 (high - 8 * s.trap))
-  domainReg : gpr c 15 = some (word c Layout.sym_Caml_state)
-  accu : ∃ w, gpr c Layout.reg_accu = some w ∧ valWord pl s.accu = some w
-  tick : c.tick < 2
 
 /-- Native handler reads are ordinary RAM windows at the four represented words. -/
 structure RaiseFrameReads (base : Nat) : Prop where

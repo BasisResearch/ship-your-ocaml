@@ -2132,10 +2132,22 @@ expanding Sail's memory representation. Quiet opcode entries and handler
 selection still need composition. Frame/restoration helpers landed as
 `2095010` with check_all passing.
 
+## Caught-handler selection
+
+`RaiseState.lean` factors the data/exception context shared by quiet entry,
+selection and restoration. `RaiseContext.caught_guard` derives the strict
+trap/stack-high comparison from representation and an active trap.
+`RaiseCheck.lean:raise_check` executes the six-instruction test, using the
+root invocation's equal saved stack-high/external-SP words in
+`RaiseStackFrame`, and establishes RaiseHandlerInput (0.912s). The native
+branch is proved, not a premise. Nested callback cuts require a relative
+boundary. The complete handler rebuilds after the context factoring and
+landed previously as `b277e7e` with check_all passing.
+
 ## Open / next
 
-Immediate next: compose the quiet RAISE/RERAISE/RAISE_NOTRACE entries and
-caught-handler check with raise_handler.
+Immediate next: compose the quiet RAISE/RERAISE/RAISE_NOTRACE entries with
+the checked raise_check and raise_handler.
 STOP, uncaught/backtrace paths, primitive
 `.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
