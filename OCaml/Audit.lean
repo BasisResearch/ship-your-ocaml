@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.SingleFieldBackEdge
 import OCaml.Vm.Gc.SingleFieldTable
 import OCaml.Vm.Gc.SingleFieldFreshLarge
 import OCaml.Vm.Gc.TailProgress
@@ -3877,3 +3878,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleField.ChildAllocated.table
 #print axioms OCaml.Vm.Gc.SingleField.ChildLargeAllocated.table
 #print axioms OCaml.Vm.Gc.SingleField.ForwardedReturned.payload_from_table
+
+#print axioms OCaml.Vm.Gc.StoreReturn.as_oldify
+#print axioms OCaml.Vm.Gc.tailRemaining_frame
+#print axioms OCaml.Vm.Gc.forwarding_decreases
+#print axioms OCaml.Vm.Gc.forwarding_then_decreases
+#print axioms OCaml.Vm.Gc.SingleField.BackEdgeResult.next_input
+#print axioms OCaml.Vm.Gc.SingleField.complete_backedge
+#print axioms OCaml.Vm.Gc.SingleField.backedge_exact
+#print axioms OCaml.Vm.Gc.SingleField.backedge_large

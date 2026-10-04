@@ -14,28 +14,21 @@ theorem SaveBank.holds_permutation {σ : MState} {xs ys : GRegs} (permutation : 
   | swap a b tail => simp only [GHolds,and_left_comm]
   | trans _ _ ih₁ ih₂ => exact ih₁.trans ih₂
 
-/-- Identify the actual store/return bank with the original oldify caller,
-using the same saved-word observations as the ordinary queue epilogue. -/
+/-- Both decoded epilogues restore the same finite bank, in different
+orders. Share the observation interface before identifying original values. -/
+theorem StoreReturn.as_oldify {sp c} {after : Config}
+    (holds : GHolds after.σ (StoreReturn.restored sp c)) :
+    GHolds after.σ (OldifyReturn.restored sp c) := by
+  have permutation : StoreReturn.slots.reverse.Perm OldifyReturn.slots.reverse := by decide
+  exact (SaveBank.holds_permutation (List.Perm.cons (2,sp + OldifyReturn.frameSize)
+    (permutation.map (fun cell => (cell.1,word c (sp + BitVec.ofNat 64 cell.2).toNat))))).mp holds
+
+/-- Identify either restore order with the original oldify caller. -/
 theorem StoreReturn.original_caller {R c} {after : Config}
     (saved : ∀ cell ∈ OldifyEntry.saves,
       word c (OldifyEntry.frameSp R + BitVec.ofNat 64 cell.2).toNat = R cell.1)
     (holds : GHolds after.σ (StoreReturn.restored (OldifyEntry.frameSp R) c)) :
     GHolds after.σ (OldifyEntry.callerRegs R) := by
-  have stack : OldifyEntry.frameSp R + StoreReturn.frameSize = R 2 := by
-    change (R 2 + -StoreReturn.frameSize) + StoreReturn.frameSize = R 2
-    rw [BitVec.add_neg_eq_sub,BitVec.sub_add_cancel]
-  have identified : StoreReturn.restored (OldifyEntry.frameSp R) c =
-      (2,R 2) :: StoreReturn.slots.reverse.map (fun cell => (cell.1,R cell.1)) := by
-    unfold StoreReturn.restored
-    rw [stack]
-    congr 1
-    apply List.map_congr_left
-    intro cell member
-    have covered : ∀ cell ∈ StoreReturn.slots, cell ∈ OldifyEntry.saves := by decide
-    exact congrArg (fun value => (cell.1,value)) (saved cell (covered cell (List.mem_reverse.mp member)))
-  rw [identified] at holds
-  have permutation : StoreReturn.slots.reverse.Perm OldifyReturn.slots.reverse := by decide
-  exact (SaveBank.holds_permutation (List.Perm.cons (2,R 2)
-    (permutation.map (fun cell => (cell.1,R cell.1))))).mp holds
+  simpa only [OldifyEntry.restored_of_saved saved] using StoreReturn.as_oldify holds
 
 end OCaml.Vm.Gc

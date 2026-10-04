@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Concrete fresh single-field back edges (2026-10-04)
+
+- `SingleFieldBackEdge.lean:backedge_exact` and `backedge_large` prove
+  the actual next forwarding boundary and its full register/RAM interface,
+  partial-table extension, original source membership/freshness, native-bank
+  preservation and strict copying-rank decrease.
+- `TailProgress.forwarding_then_decreases` frames the rank through the
+  child allocator; `BackEdgeConditions` names finite ownership footprints
+  and next write windows, without assuming execution or a post-invariant.
+- `StoreReturn.as_oldify` shares both decoded epilogues at the saved-word
+  interface; original-caller restoration now delegates to it.
+- Targeted build and whole-call/header regressions pass (768 jobs). Full
+  Audit passes (3533 jobs), with permitted axioms; both discipline gates
+  pass. Forwarding-table checkpoint landed as `a2f896f`.
+- Next: construct the ordinary single-field loop invariant and combine
+  concrete back edges with immediate/non-young/forwarded exits using the
+  machine loop rule. Typed pending payloads, ownership suppliers, other
+  routes, full collector closure, G2 and live budget remain open.
+
 ## Published forwarding component of partial relocation (2026-10-04)
 
 - `ForwardingTable.lean` expresses published entries with Eqv combinators.
