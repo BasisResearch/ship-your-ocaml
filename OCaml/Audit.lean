@@ -129,6 +129,7 @@ import OCaml.Vm.Gc.BestFitSplitGeometry
 import OCaml.Vm.Gc.AllocAccountReturn
 import OCaml.Vm.Gc.AllocSuccess
 import OCaml.Vm.Gc.AllocExact
+import OCaml.Vm.Gc.AllocWrapper
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -3178,3 +3179,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.AllocExact.returnRegs_of_memory
 #print axioms OCaml.Vm.Gc.AllocExact.allocated_memory
 #print axioms OCaml.Vm.Gc.AllocExact.allocate
+
+#print axioms OCaml.Vm.Gc.SaveBank.read
+#print axioms OCaml.Vm.Gc.AllocEntry.saveCells_bounded
+#print axioms OCaml.Vm.Gc.AllocEntry.saveCells_separate
+#print axioms OCaml.Vm.Gc.AllocEntry.effect_bank
+#print axioms OCaml.Vm.Gc.AllocEntry.Windows.frame_bound
+#print axioms OCaml.Vm.Gc.AllocEntry.saved
+#print axioms OCaml.Vm.Gc.AllocEntry.restore_cells
+#print axioms OCaml.Vm.Gc.AllocEntry.saved_after
+#print axioms OCaml.Vm.Gc.AllocExact.effect_of_memory
+#print axioms OCaml.Vm.Gc.AllocExact.header_of_effect
+#print axioms OCaml.Vm.Gc.AllocWrapper.allocate
+#print axioms OCaml.Vm.Gc.AllocWrapper.Post.header

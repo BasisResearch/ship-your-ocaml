@@ -1,5 +1,25 @@
 # Lane a6-gc
 
+## Complete exact-size allocating wrapper (2026-10-04)
+
+- `AllocWrapper.lean:allocate` executes the actual wrapper prologue,
+  function-pointer load, linking JALR, all exact-size small-list allocator
+  branches, all color routes, and accounting/native return. It proves the
+  original caller PC, stack and saved registers are restored, returns the
+  selected payload, and retains exact combined effects and output/native
+  frame. `Post.header` proves final `HeaderOk` for the original size/tag
+  under the explicit header/counter separation condition.
+- `SaveBank.read` shares the bounded native-bank argument between oldify
+  and allocator saves. `AllocEntry.saved_after` supplies save/tag readback
+  through separated free-list writes. The conditions remain initial
+  observations of explicit write-log snapshots, with no callee-run premise.
+- Targeted build (659 jobs) and full Audit (2970 jobs) pass, as do
+  discipline and abstraction gates; new headlines use only permitted axioms. Exact-size
+  free-list/continuation composition landed as `4d4e4b1`.
+- Next: compose fresh oldify entry with this wrapper and the allocation-
+  return queue/copy path. Larger-size/tree routes, major-slice requests,
+  collector closure and live-word Fits (G2) remain open.
+
 ## Exact-size free-list entry through wrapper return (2026-10-04)
 
 - `AllocExact.lean:allocate` composes every exact-size small-list branch

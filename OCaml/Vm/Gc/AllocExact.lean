@@ -26,6 +26,19 @@ theorem allocated_memory {size} {before after : Config} (memory : after.σ.mem =
   change writeLog after.σ.mem (BestFitExact.effect size after) = writeLog before.σ.mem (BestFitExact.effect size before)
   rw [memory,BestFitExact.effect_of_memory memory]
 
+/-- Combined reflected effect of the free-list callee and wrapper continuation. -/
+def effect (sp size : BitVec 64) (c : Config) : List WEntry :=
+  BestFitExact.effect size c ++ AllocAccount.effect
+    (AllocSuccess.completed (returnRegs sp size c) (allocated size c)) (allocated size c)
+
+theorem effect_of_memory {sp size} {before after : Config} (memory : after.σ.mem = before.σ.mem) :
+    effect sp size after = effect sp size before := by
+  have allocatedSame := allocated_memory (size := size) memory
+  unfold effect
+  rw [BestFitExact.effect_of_memory memory,returnRegs_of_memory memory,
+    AllocSuccess.completed_of_memory allocatedSame]
+  simp only [AllocAccount.effect,AllocAccount.counted,AllocAccount.initialized,allocatedSame]
+
 /-- Real free-list entry conditions plus memory observations of its exact
 store log. No premise asserts execution of the allocator or continuation. -/
 structure Input (sp size : BitVec 64) (c : Config) : Prop
@@ -43,9 +56,7 @@ structure Post (sp size : BitVec 64) (before after : Config) : Prop where
   pc : PCAt (AllocReturn.returnWord sp (resultHeader size before) (allocated size before)) after
   registers : GHolds after.σ (AllocReturn.restored sp (resultHeader size before) (allocated size before))
   result : gprGet after.σ 10 = some (BestFitSmall.first size before)
-  memory : after.σ.mem = writeLog before.σ.mem
-    (BestFitExact.effect size before ++ AllocAccount.effect
-      (AllocSuccess.completed (returnRegs sp size before) (allocated size before)) (allocated size before))
+  memory : after.σ.mem = writeLog before.σ.mem (effect sp size before)
   output : after.σ.sailOutput = before.σ.sailOutput
   native : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ [1,2,8,9,10,11,12,13,14,15], (gprReg n == r) = false) →
@@ -95,11 +106,30 @@ theorem allocate {sp size c} (input : Input sp size c) :
     simpa [returnRegs,resultHeader,BitVec.sub_add_cancel] using result
   · have same := AllocSuccess.completed_of_memory (R := returnRegs sp size c) memory
     rw [finished.memory,same]
+    unfold effect
     simp only [AllocAccount.effect,AllocAccount.counted,AllocAccount.initialized,memory,allocated,writeLog_append]
   · intro r noise outside
     have finishCover : ∀ n ∈ [1,2,8,9,10,11,13,14,15], n ∈ [1,2,8,9,10,11,12,13,14,15] := by decide
     have allocateCover : ∀ n ∈ [10,11,12,13,14,15], n ∈ [1,2,8,9,10,11,12,13,14,15] := by decide
     exact (finished.native r noise (fun n hn => outside n (finishCover n hn))).trans
       (allocatedPost.native r noise (fun n hn => outside n (allocateCover n hn)))
+
+/-- The final header store carries the requested size and the tag saved by
+the wrapper, provided accounting does not alias that header. -/
+theorem header_of_effect {sp size} {before after : Config}
+    (memory : after.σ.mem = writeLog before.σ.mem (effect sp size before))
+    (separate : (resultHeader size before).toNat + 8 ≤ Layout.sym_caml_allocated_words ∨
+      Layout.sym_caml_allocated_words + 8 ≤ (resultHeader size before).toNat)
+    (sizeBound : size.toNat < 2^54)
+    (tagBound : (word (allocated size before) (sp + BitVec.ofNat 64 AllocEntry.tagOffset).toNat).toNat < 256) :
+    HeaderOk (word after (resultHeader size before).toNat) size.toNat
+      (word (allocated size before) (sp + BitVec.ofNat 64 AllocEntry.tagOffset).toNat).toNat := by
+  have stored : word after (resultHeader size before).toNat =
+      AllocSuccess.completed (returnRegs sp size before) (allocated size before) 11 := by
+    rw [word,memory,effect,writeLog_append]
+    apply word_writeLog_at _ _ 0 _ _ rfl
+    exact ⟨separate,True.intro⟩
+  rw [stored]
+  exact AllocColor.header_ok _ _ _ sizeBound tagBound
 
 end OCaml.Vm.Gc.AllocExact

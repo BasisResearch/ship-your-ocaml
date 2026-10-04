@@ -1,7 +1,7 @@
 import OCaml.Vm.Gc.OldifyEntry
 import OCaml.Vm.Gc.OldifyReturn
 import OCaml.Vm.Gc.Readback
-import OCaml.Vm.Gc.StackArithmetic
+import OCaml.Vm.Gc.SaveBank
 
 namespace OCaml.Vm.Gc.OldifyEntry
 open Vsa.Machine Vsa.Sim Primitives
@@ -34,22 +34,10 @@ the concrete RAM window's no-wrap consequence. -/
 theorem Post.saved {R before after} (post : Post R before after) (input : Input R before)
     (cell : Nat × Nat) (member : cell ∈ saves) :
     word after (frameSp R + BitVec.ofNat 64 cell.2).toNat = R cell.1 := by
-  let cells := saves.map (fun (r, off) => ((frameSp R + BitVec.ofNat 64 off).toNat, R r))
-  have separate : cells.Pairwise (fun x y => x.1 + 8 ≤ y.1 ∨ y.1 + 8 ≤ x.1) := by
-    apply List.pairwise_map.mpr
-    apply slots_separate.imp_of_mem
-    intro x y hx hy sep
-    change (frameSp R + BitVec.ofNat 64 x.2).toNat + 8 ≤
-        (frameSp R + BitVec.ofNat 64 y.2).toNat ∨
-      (frameSp R + BitVec.ofNat 64 y.2).toNat + 8 ≤
-        (frameSp R + BitVec.ofNat 64 x.2).toNat
-    rw [saved_address input.frame_bound hx, saved_address input.frame_bound hy]
-    omega
-  have read := word_writeLog_cells before.σ.mem cells separate
-    (List.mem_map.mpr ⟨cell, member, rfl⟩)
   change bytesT after.σ.mem _ 8 = _
   rw [post.memory]
-  simpa only [cells, List.map_map, Function.comp_def, saveLog] using read
+  exact SaveBank.read before.σ.mem (frameSp R) R saves maxSlot.2 input.frame_bound
+    slots_bounded slots_separate cell member
 
 /-- The epilogue register interface with the original caller's values. -/
 def callerRegs (R : Nat → BitVec 64) : GRegs :=
