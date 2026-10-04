@@ -1,5 +1,26 @@
 # Lane a6-gc
 
+## Two-publication queue exit invariant (2026-10-04)
+
+- `QueuedChildTable.lean:QueuedChild.table` retains both the parent and
+  queued child in the real partial table. `QueuedChild.complete` preserves
+  zero-header coverage from exact finite store footprints.
+- `ForwardingTable.Complete.progress` proves strict copying progress when
+  old table entries survive and at least one fresh source becomes forwarded;
+  an iteration may publish several objects. `extend_many` shares coverage
+  reasoning for these batches.
+- `SingleTailQueued.lean:Head.finish_queued` restores the initial native bank
+  and returns the complete two-entry extension plus strict progress. The
+  concrete QueuedChild result retains intrusive queue/pending payload facts.
+- `LoopFold.lean:loop_to_exit` factors PC-guarded iteration via the machine
+  loop kernel; the ordinary observed loop reuses it with unchanged APIs.
+- Targeted build passes (764 jobs), full Audit passes (3658 jobs), and
+  both discipline gates pass; only permitted axioms. Queue machine
+  checkpoint landed as `c7fc21f`.
+- Next: incorporate queued exits into the loop branch coverage, retain
+  typed ancestor/pending fields, and derive ownership suppliers. Other
+  collector routes, closure, G2 and live budget remain open.
+
 ## Fresh multi-field child queue continuation (2026-10-04)
 
 - `ContextQueue.lean:ContextAllocated.enqueue` executes the actual queue

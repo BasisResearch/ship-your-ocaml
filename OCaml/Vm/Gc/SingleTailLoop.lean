@@ -1,7 +1,7 @@
 import OCaml.Vm.Gc.ForwardingDomain
 import OCaml.Vm.Gc.SingleTailState
 import OCaml.Vm.Gc.SingleFieldNonYoung
-import Vsa.Sim.DeriveLoop
+import OCaml.Vm.Gc.LoopFold
 
 namespace OCaml.Vm.Gc.SingleTail
 open Vsa.Machine Vsa.Sim Vsa.Logic Primitives LeanRV64DExecutable
@@ -151,29 +151,22 @@ theorem run_loop_observed {sp sources pl initial track observe} (coverage : Cove
       after.σ.mem = writeLog before.σ.mem (Enqueue.prefixLog q.source q.target root ++ log) →
       observe before → observe after) :
     Triple (ObservedAt sp sources pl initial track observe) (ObservedDone sp sources pl initial track observe) := by
-  let Inv := fun c => ObservedAt sp sources pl initial track observe c ∨ ObservedDone sp sources pl initial track observe c
-  let Branch := fun c => PCAt SingleField.pc c
-  have body : ∀ n, Triple (fun c => Inv c ∧ Branch c ∧ tailRemaining sources c = n)
-      (fun c => Inv c ∧ tailRemaining sources c < n) := by
-    intro n c pre
-    rcases pre with ⟨inv,branch,rank⟩
-    rcases inv with ⟨⟨copies,q,root,head,reached,tracked⟩,observation⟩ | ⟨⟨copies,finished,tracked⟩,observation⟩
-    · obtain ⟨after,run,⟨log,allowed,memory⟩,post,less⟩ := head.step_effect reached (coverage.choices copies q root c reached head)
-      have next := extend copies q root c head tracked
-      have preserved := frame copies q root c after log head tracked allowed memory observation
-      refine ⟨after,run,?_,by omega⟩
-      rcases post with ⟨child,root,head,reached⟩ | finished
-      · exact Or.inl ⟨⟨_,child,root,head,reached,next⟩,preserved⟩
-      · exact Or.inr ⟨⟨_,finished,next⟩,preserved⟩
-    · exact False.elim (coverage.returnDifferent (Option.some.inj (finished.pc.symm.trans branch)))
-  apply (loopFromBody (I := Inv) (B := Branch) (tailRemaining sources) body).conseq
-  · intro c head
-    exact Or.inl head
-  · intro c post
-    rcases post with ⟨inv,exit⟩
-    rcases inv with ⟨⟨copies,q,root,head,reached,tracked⟩,observation⟩ | finished
-    · exact False.elim (exit head.pc)
-    · exact finished
+  apply loop_to_exit (entry := SingleField.pc) (tailRemaining sources)
+  · intro c pre
+    obtain ⟨copies,q,root,head,_,_⟩ := pre.operational
+    exact head.pc
+  · intro c post pc
+    obtain ⟨copies,finished,_⟩ := post.operational
+    exact coverage.returnDifferent (Option.some.inj (finished.pc.symm.trans pc))
+  · intro c pre
+    obtain ⟨copies,q,root,head,reached,tracked⟩ := pre.operational
+    obtain ⟨after,run,⟨log,allowed,memory⟩,post,less⟩ := head.step_effect reached (coverage.choices copies q root c reached head)
+    have next := extend copies q root c head tracked
+    have preserved := frame copies q root c after log head tracked allowed memory pre.observation
+    refine ⟨after,run,?_,less⟩
+    rcases post with ⟨child,root,head,reached⟩ | finished
+    · exact Or.inl ⟨⟨_,child,root,head,reached,next⟩,preserved⟩
+    · exact Or.inr ⟨⟨_,finished,next⟩,preserved⟩
 
 /-- Published-list-only interface obtained by observing True. -/
 theorem run_loop_tracked {sp sources pl initial track} (coverage : Coverage sp sources pl initial)
