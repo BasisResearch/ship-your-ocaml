@@ -2,6 +2,30 @@
 
 ## Round 2 status (2026-10-04)
 
+The complete checked allocation wrapper landed as `a7724f3`, full gate passed.
+**`CustomNext.lean:custom_next` now composes the actual later-node request JAL,
+checked allocation and custom-list publication**, parameterized over nativeint,
+int64 and bigarray. `CustomAllocate.lean:custom_allocate_publish` handles all
+four kinds after entry to the allocation wrapper; `CustomPrefix.lean:custom_save`
+saves the initializer caller and prepares the first request. `custom_publish`
+shares the exact three-store prepend protocol across all four native spans;
+`customPublish_read` proves both node words and the new global head.
+
+`RuntimeReady.disjoint_log` generalizes preservation across unowned-global and
+live-payload logs. `StatCheckedReturned.framed_byte` preserves every prior
+unowned byte below heapEnd across the complete checked wrapper, including old
+live blocks. All these proofs use the existing allocator contract and native
+word-pair geometry. New Layout symbols come from the pinned ELF generator.
+The publication proof checks in 2.9 seconds and `custom_next` in 1.0 seconds.
+Generated normalized straight-line blocks resolved kernel recursion without
+raising any proof limits.
+
+The closed reset frontier is still `reset_custom_entry_exists` at 0x80024a2c.
+Next: compose the first registration, all three later registrations and native
+return; instantiate the initializer at that reset frontier. The full
+reset-to-cut/Loaded exit remains open.
+
+
 **`StatChecked.lean:stat_checked` now proves the complete successful nonpooling
 caml_stat_alloc function for abstract requests, heap and capacity.** Generated
 prologue, actual malloc JAL, the landed allocator contract, successful pointer

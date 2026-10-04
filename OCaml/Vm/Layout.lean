@@ -64,6 +64,12 @@ def sym_bss_end : Nat := 0x8007d138
 def sym_global_pointer : Nat := 0x800627d0
 /-- `environ` -/
 def sym_environ : Nat := 0x800648e0
+/-- `custom_ops_table` -/
+def sym_custom_ops_table : Nat := 0x80064c98
+/-- `caml_ba_ops` -/
+def sym_caml_ba_ops : Nat := 0x80063ae0
+/-- `caml_stat_alloc` -/
+def sym_caml_stat_alloc : Nat := 0x8000bb2c
 /-- `caml_startup_aux` -/
 def sym_caml_startup_aux : Nat := 0x80004760
 /-- `shutdown_happened` -/

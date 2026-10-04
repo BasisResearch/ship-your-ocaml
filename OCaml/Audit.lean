@@ -35,6 +35,8 @@ import OCaml.Vm.Boot.Startup.FindMatch
 import OCaml.Vm.Boot.Startup.FindFound
 import OCaml.Vm.Boot.Startup.FindFoundReturn
 import OCaml.Vm.Boot.Startup.StatChecked
+import OCaml.Vm.Boot.Startup.CustomNext
+import OCaml.Vm.Boot.Startup.CustomPrefix
 import OCaml.Vm.Boot.Startup.CustomEntry
 import OCaml.Vm.Boot.Startup.StartupAuxReset
 import OCaml.Vm.Boot.Startup.ParameterReset
@@ -3668,6 +3670,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.stat_checked_allocate
 #print axioms OCaml.Vm.Boot.Startup.StatCheckedAllocated.saved_word
 #print axioms OCaml.Vm.Boot.Startup.stat_checked
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.disjoint_log
+#print axioms OCaml.Vm.Boot.Startup.StatCheckedReturned.framed_byte
+#print axioms OCaml.Vm.Boot.Startup.custom_save
+#print axioms OCaml.Vm.Boot.Startup.custom_publish
+#print axioms OCaml.Vm.Boot.Startup.customPublish_read
+#print axioms OCaml.Vm.Boot.Startup.custom_publish_ready
+#print axioms OCaml.Vm.Boot.Startup.custom_allocate_publish
+#print axioms OCaml.Vm.Boot.Startup.custom_request
+#print axioms OCaml.Vm.Boot.Startup.custom_next
 #print axioms OCaml.Vm.Boot.Startup.NativeFrame.word32
 #print axioms OCaml.Vm.Boot.Startup.getenv_offset_window
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
