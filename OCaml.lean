@@ -552,3 +552,9 @@ import OCaml.Vm.Sim.StopExit
 import OCaml.Vm.Sim.StopArm
 import OCaml.Vm.Sim.StopCaller
 import OCaml.Vm.Sim.RaiseUncaught
+import OCaml.Vm.Sim.Ccall1Exit
+import OCaml.Vm.Sim.Ccall2Exit
+import OCaml.Vm.Sim.Ccall3Exit
+import OCaml.Vm.Sim.Ccall4Exit
+import OCaml.Vm.Sim.Ccall5Exit
+import OCaml.Vm.Sim.CcallnExit

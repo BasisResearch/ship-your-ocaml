@@ -146,6 +146,7 @@ python3 scripts/gen_closurerec_infix.py --check || fail "stage a5: recursive clo
 python3 scripts/gen_closurerec_first.py --check || fail "stage a5: recursive closure first-metadata drift"
 python3 scripts/gen_closure_init.py --check || fail "stage a5: CLOSURE initializer drift"
 python3 scripts/gen_ccall_arms.py --check || fail "stage a5: represented C_CALL arm drift"
+python3 scripts/gen_ccall_exits.py --check || fail "stage a5: C_CALL exit adapter drift"
 python3 scripts/gen_dispatch_table.py --check || fail "stage a5: dispatch table drift"
 python3 scripts/gen_primitive_binding_probe.py --check || fail "stage a5: primitive binding probe drift"
 python3 scripts/gen_primitive_entries.py --check || fail "stage a5: primitive entry lookup drift"

@@ -2247,12 +2247,30 @@ that abstract continuation to native caml_main exception handling remains
 open. No additional represented opcode is counted (140 conditional bridges).
 The normal caller return landed as `f523550` with check_all passing.
 
+## Terminal C_CALL outcomes
+
+`PrimitiveExitSummary` names the a1-prims obligation for a primitive's
+actual `.exit` outcome at its represented call site. `CcallExitCallee` and
+`CcallnExitCallee` instantiate the fixed-register and stack-array ABIs.
+`dispatch_halts` factors terminal composition through the run kernel.
+Generated `c_call{1,2,3,4,5,n}_exit_arm` and `_exit_step_arm` theorems reuse
+the checked argument-setup segments and consume those named summaries,
+matching both exit status and output world to the actual bytecode rule.
+No primitive body or returning suffix is assumed to implement an exit.
+
+All six adapters check at default limits (unary 0.804s; other instances about
+0.83s). `gen_ccall_exits.py --check` is registered in a5; all headlines are
+audited. No new opcode count is added: coverage remains 140 conditional
+bridges, now with terminal outcomes for all C_CALL families. Raising callee
+outcomes still need the native longjmp/re-entry and handler continuation.
+The uncaught-return/barrier change landed as `a216751`, full gate passing.
+
 ## Open / next
 
 Immediate next: consume/prove the remaining caml_do_exit summary; continue
 the
 uncaught semantic continuation/backtrace paths, primitive
-`.raise`/`.exit` C_CALL outcomes, and major-allocation constructor paths.
+`.raise` C_CALL outcomes and a1-prims terminal summaries, and major-allocation constructor paths.
 Read landed a1-prims/a6-gc summaries before adding machine work. The approved
 `GcSafe P` premise is already threaded through ArmSim and the headline.
 
