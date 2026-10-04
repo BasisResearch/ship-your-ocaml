@@ -9,18 +9,12 @@ def getenvKeptRegs (s1 s2 s3 s4 s5 s6 name : BitVec 64) (count : Nat) : GRegs :=
 def getenvRegs (sp ra s1 s2 s3 s4 s5 s6 name : BitVec 64) (count : Nat) : GRegs :=
   getenvReturnRegs sp ra ++ getenvKeptRegs s1 s2 s3 s4 s5 s6 name count
 
-structure GetenvInput (sp name env ra s1 s2 s3 s4 s5 s6 : BitVec 64) (cs : List Char) (c : Config) : Prop extends LeafInput ra c where
+structure GetenvInput (sp name env ra s1 s2 s3 s4 s5 s6 : BitVec 64) (cs : List Char) (c : Config) : Prop extends LeafInput ra c, EmptyEnvironment sp 112 env c where
   regs : GHolds c.σ (getenvPrefixInput sp name ra)
   saved : GHolds c.σ (getenvSavedRegs s1 s2 s3 s4 s5 s6)
-  frame : NativeFrame sp 112
   data : EnvName name cs c
   positive : 0 < cs.length
   nameBelow : name.toNat + cs.length + 1 ≤ nativeFrameBase sp 112
-  environment : bytesT c.σ.mem Layout.sym_environ 8 = env
-  nonnull : env ≠ 0#64
-  envWindow : ReadWindow env 8
-  empty : bytesT c.σ.mem env.toNat 8 = 0#64
-  envBelow : env.toNat + 8 ≤ nativeFrameBase sp 112
 
 /-- Complete getenv for an empty embedded environment, including both nested
 caller frames and the generated reentrancy-pointer load. -/
@@ -39,28 +33,17 @@ theorem getenv_empty (c : Config) (sp name env ra s1 s2 s3 s4 s5 s6 : BitVec 64)
   have innerBase := h.frame.nested_base (front := 32) (size := 80) (by decide)
   have baseOrder : nativeFrameBase sp 112 ≤ nativeFrameBase sp 32 := by unfold nativeFrameBase; omega
   obtain ⟨a, run1, called⟩ := (getenv_to_find c sp name ra s1 s2 s3 s4 s5 s6 h.toLeafInput outer h.regs h.saved).run c ⟨pc, rfl⟩
+  have envA := h.toEmptyEnvironment.stack_log
+    (log_in_larger_window (getenvLog_inside outer) baseOrder (Nat.le_refl _)) called.memory
   have searchInput : FindEnvInput (nativeStack sp 32) (getenvReent c) name (nativeStack sp 32 + 12#64)
       env jal_80037428_call.link s1 s2 s3 s4 s5 s6 cs a := {
     toLeafInput := called.leaf (by rfl) (by decide)
     regs := holds_project called.regs (by simp [getenvCallRegs, getenvSavedRegs, findPrefixInput, lookupG])
     saved4 := gholds_lookup (n := 20) _ called.regs (by rfl)
-    frame := inner
+    toEmptyEnvironment := envA.reframe inner (by rw [innerBase]; exact Nat.le_refl _)
     data := h.data.stack_log (Nat.le_trans h.nameBelow baseOrder) (getenvLog_inside outer) called.memory
     positive := h.positive
-    nameBelow := by rw [innerBase]; exact h.nameBelow
-    environment := by
-      rw [called.memory, native_log_read_below c.σ.mem (getenvLog_inside outer) ?_]
-      · exact h.environment
-      · have lower := outer.lower
-        have globalBound : Layout.sym_environ + 8 ≤ Vsa.Sim.DlHeap.heapEnd := by decide
-        unfold nativeFrameBase
-        omega
-    nonnull := h.nonnull
-    envWindow := h.envWindow
-    empty := by
-      rw [called.memory, native_log_read_below c.σ.mem (getenvLog_inside outer) (Nat.le_trans h.envBelow baseOrder)]
-      exact h.empty
-    envBelow := by rw [innerBase]; exact h.envBelow }
+    nameBelow := by rw [innerBase]; exact h.nameBelow }
   obtain ⟨b, run2, found⟩ := (findenv_empty a _ _ _ _ _ _ _ _ _ _ _ _ cs searchInput).run a ⟨called.pc, rfl⟩
   have memoryB : b.σ.mem = writeLog c.σ.mem (getenvFullLog sp ra s1 s2 s3 s4 s5 s6) := by
     rw [found.memory, called.memory, getenvFullLog, writeLog_append]

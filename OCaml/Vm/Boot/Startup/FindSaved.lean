@@ -1,6 +1,6 @@
 import OCaml.Vm.Boot.Startup.FindLock
 import OCaml.Vm.Boot.Startup.FindStartData
-import OCaml.Vm.Primitives.MemoryFrame
+import OCaml.Vm.Boot.Startup.Environment
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
@@ -20,13 +20,6 @@ theorem findLog_bounds {ra s1 s2 s3 s4 s5 s6 : BitVec 64} {off value}
 theorem findLog_inside {sp ra s1 s2 s3 s4 s5 s6} (frame : NativeFrame sp 80) :
     LogInW [⟨nativeFrameBase sp 80, sp.toNat⟩] (findLog sp ra s1 s2 s3 s4 s5 s6) :=
   frame.word_log_inside (fun _ _ hm => findLog_bounds hm)
-
-/-- Native frame stores preserve every total read lying below the frame. -/
-theorem native_log_read_below {sp size log a n} (mem : Std.ExtHashMap Nat (BitVec 8))
-    (inside : LogInW [⟨nativeFrameBase sp size, sp.toNat⟩] log)
-    (below : a + n ≤ nativeFrameBase sp size) :
-    bytesT (writeLog mem log) a n = bytesT mem a n :=
-  bytesT_writeLog_out mem (OCaml.Vm.Sim.outLRange_of_windows inside ⟨Or.inl below, trivial⟩)
 
 /-- All seven saved words are read back from the combined exact prologue log. -/
 theorem find_saved {sp ra s1 s2 s3 s4 s5 s6} {before after : Config} (frame : NativeFrame sp 80)

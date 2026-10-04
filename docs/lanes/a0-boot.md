@@ -2,6 +2,24 @@
 
 ## Round 2 status (2026-10-04)
 
+The query-call increment landed as `ed6d246`, full gate passed.
+`ParameterParse.lean:parse_parameters_empty` now composes the COMPLETE native
+parameter parser for an empty environment: saving prologue, both secure queries,
+missing-variable branches and restoring return. `ParameterMemory.lean:parameter_saved`
+proves that both nested query frames preserve its original return address and s0.
+`ParameterReady.lean:parameter_ready` preserves the full runtime/allocator contract.
+These summaries check in 1.4 and 1.0 seconds respectively.
+
+`Environment.lean:EmptyEnvironment` factors the shared environment observations
+and their stack-log/frame transport out of the search, getenv and query inputs;
+all previous input facts are retained. Memory composition now normalizes each
+empty-log equation before combining logs, avoiding recursive expansion without
+raising any proof budget. Next: certify the while_min embedded empty array and
+transport its observations through the existing reset/domain history, then apply
+the complete parser summary. Actual reset reachability remains at parser entry;
+reset-to-cut/Loaded and the Round 2 exit remain open.
+
+
 The complete secure-query increment landed as `e4ab77e`, full gate passed.
 `parameter_query` now covers BOTH generated parameter-parser call sites using
 one Boolean-indexed summary, including the actual JAL, complete secure getenv

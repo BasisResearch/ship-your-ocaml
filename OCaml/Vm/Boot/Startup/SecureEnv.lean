@@ -42,23 +42,11 @@ theorem secure_getenv_empty (c : Config) (sp name env ra s0 s1 s2 s3 s4 s5 s6 : 
     toLeafInput := prepared.leaf (by rfl) h.aligned
     regs := holds_project prepared.regs (by simp [getenvPrefixInput, secureTailRegs, lookupG])
     saved := ⟨gholds_lookup (n := 9) _ prepared.regs (by rfl), stable⟩
-    frame := h.frame
+    toEmptyEnvironment := h.toEmptyEnvironment.stack_log
+      (log_in_larger_window (secure_log_inside outer) baseOrder (Nat.le_refl _)) prepared.memory
     data := h.data.stack_log (Nat.le_trans h.nameBelow baseOrder) (secure_log_inside outer) prepared.memory
     positive := h.positive
-    nameBelow := h.nameBelow
-    environment := by
-      rw [prepared.memory, native_log_read_below c.σ.mem (secure_log_inside outer) ?_]
-      · exact h.environment
-      · have lower := outer.lower
-        have globalBound : Layout.sym_environ + 8 ≤ Vsa.Sim.DlHeap.heapEnd := by decide
-        unfold nativeFrameBase
-        omega
-    nonnull := h.nonnull
-    envWindow := h.envWindow
-    empty := by
-      rw [prepared.memory, native_log_read_below c.σ.mem (secure_log_inside outer) (Nat.le_trans h.envBelow baseOrder)]
-      exact h.empty
-    envBelow := h.envBelow }
+    nameBelow := h.nameBelow }
   apply (getenv_empty mid sp name env ra s1 s2 s3 s4 s5 s6 cs input).weaken (fun _ eq => eq)
   intro after post
   have effects := prepared.toEffectPost.trans post.toEffectPost

@@ -25,14 +25,8 @@ theorem parameterCall_pins (fallback : Bool) {c : Config} (image : ExecutableIma
 def parameterQueryRegs (fallback : Bool) (sp s0 s1 s2 s3 s4 s5 s6 : BitVec 64) : GRegs :=
   [(10, parameterName fallback), (2, sp), (8, s0)] ++ getenvSavedRegs s1 s2 s3 s4 s5 s6
 
-structure ParameterQueryInput (fallback : Bool) (sp env ra s0 s1 s2 s3 s4 s5 s6 : BitVec 64) (c : Config) : Prop extends LeafInput ra c where
+structure ParameterQueryInput (fallback : Bool) (sp env ra s0 s1 s2 s3 s4 s5 s6 : BitVec 64) (c : Config) : Prop extends LeafInput ra c, EmptyEnvironment sp 112 env c where
   regs : GHolds c.σ (parameterQueryRegs fallback sp s0 s1 s2 s3 s4 s5 s6)
-  frame : NativeFrame sp 112
-  environment : bytesT c.σ.mem Layout.sym_environ 8 = env
-  nonnull : env ≠ 0#64
-  envWindow : ReadWindow env 8
-  empty : bytesT c.σ.mem env.toNat 8 = 0#64
-  envBelow : env.toNat + 8 ≤ nativeFrameBase sp 112
 
 /-- Both parameter-query sites call the complete secure getenv summary; their
 literal name representation is supplied by the pinned read-only image. -/
@@ -56,15 +50,10 @@ theorem parameter_query (fallback : Bool) (c : Config) (sp env ra s0 s1 s2 s3 s4
     toLeafInput := called.leaf (by rfl) linkAligned
     regs := holds_project called.regs (by simp [getenvPrefixInput, parameterQueryRegs, lookupG])
     saved := holds_project called.regs (by simp [getenvSavedRegs, parameterQueryRegs, lookupG])
-    frame := h.frame
+    toEmptyEnvironment := h.toEmptyEnvironment.same_mem called.memory
     data := parameter_name fallback called.image
     positive := parameter_name_positive fallback
-    nameBelow := parameter_name_below fallback h.frame
-    environment := by rw [called.memory]; exact h.environment
-    nonnull := h.nonnull
-    envWindow := h.envWindow
-    empty := by rw [called.memory]; exact h.empty
-    envBelow := h.envBelow }
+    nameBelow := parameter_name_below fallback h.frame }
   apply (secure_getenv_empty mid sp (parameterName fallback) env _ s0 s1 s2 s3 s4 s5 s6 _ input
     (gholds_lookup (n := 8) _ called.regs (by rfl))).weaken (fun _ eq => eq)
   intro after post

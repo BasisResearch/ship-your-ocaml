@@ -5,6 +5,7 @@ import OCaml.Vm.Gc.FreshLargeEnqueued
 import OCaml.Vm.Gc.FreshLargeAllocated
 import OCaml.Vm.Gc.AllocLargeWrapper
 import OCaml.Vm.Boot.Startup.ParameterQueryReady
+import OCaml.Vm.Boot.Startup.ParameterReady
 import OCaml.Vm.Boot.Startup.ParameterPrefix
 import OCaml.Vm.Boot.Startup.ParameterBranch
 import OCaml.Vm.Boot.Startup.ParameterReturn
@@ -3415,6 +3416,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.parameter_return
 #print axioms OCaml.Vm.Boot.Startup.parameter_query
 #print axioms OCaml.Vm.Boot.Startup.parameter_query_ready
+
+-- Complete empty-environment parameter parser and shared environment frame.
+#print axioms OCaml.Vm.Boot.Startup.EmptyEnvironment.same_mem
+#print axioms OCaml.Vm.Boot.Startup.EmptyEnvironment.reframe
+#print axioms OCaml.Vm.Boot.Startup.EmptyEnvironment.stack_log
+#print axioms OCaml.Vm.Boot.Startup.parameter_saved
+#print axioms OCaml.Vm.Boot.Startup.parse_parameters_empty
+#print axioms OCaml.Vm.Boot.Startup.parameter_ready
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.domain_history_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.reset
