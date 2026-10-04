@@ -37,6 +37,48 @@ def immediate_route(name, entry, di, extents):
     return text
 
 
+def native_return_certificate(name, module, namespace, epilogue, decode_modules, payload=False):
+    """One native epilogue template, optionally returning header + payload offset."""
+    assert epilogue.kind == 'ret'
+    slots = []
+    for ins in epilogue.instrs[:(-2 if payload else -1)]:
+        assert ins.word & 0x707f == 0x3003 and (ins.word >> 15) & 31 == 2
+        slots.append(((ins.word >> 7) & 31, gen_fn.lib.sext(ins.word >> 20, 12)))
+    adjust = epilogue.instrs[-1].word
+    assert adjust & 0xfffff == 0x10113
+    size = gen_fn.lib.sext(adjust >> 20, 12)
+    assert slots[0][0] == 1 and all(r != 2 and o >= 0 for r, o in slots)
+    words = {f'{ins.word:08x}' for ins in [*epilogue.instrs, epilogue.term]}
+    text = RETURN_TEMPLATE
+    if payload:
+        bump = epilogue.instrs[-2].word
+        assert bump & 0xfffff == 0x50513
+        increment = gen_fn.lib.sext(bump >> 20, 12)
+        text = text.replace('(sp : BitVec 64)', '(sp hp : BitVec 64)')
+        for definition in ('regs', 'loads', 'restored', 'returnWord', 'restored_regs', 'return_lookup'):
+            text = re.sub(r'\b'+definition+r' sp\b', definition+' sp hp', text)
+        text = text.replace(':= [(2, sp)]', ':= [(2, sp),(10,hp)]')
+        text = text.replace('(2, sp + frameSize) :: slots.reverse.map',
+                            f'(2, sp + frameSize) :: (10, hp + {increment}#64) :: slots.reverse.map')
+        text = text.replace('ChainOK pc [2]', 'ChainOK pc [2,10]')
+    text = text.replace('Generated.OldifyOne', 'Generated.'+module)
+    text = text.replace('Gc.OldifyReturn', 'Gc.'+namespace)
+    if payload:
+        text = text.replace('Native oldify epilogue', 'Native '+name+' epilogue')
+    pin = name[0].upper()+name[1:]
+    text = text.replace('Caml_oldify_oneLoaded', pin+'Loaded').replace('caml_oldify_one_at_',name+'_at_')
+    for key, val in {
+        'DECODE_IMPORTS': '\n'.join('import '+m for m in sorted({decode_modules[w] for w in words})),
+        'RETURN': gen_fn.block_name(name,epilogue)+'Seg', 'PC': hex(epilogue.start),
+        'SLOTS': '['+', '.join(f'({r}, {o})' for r,o in slots)+']',
+        'OFFSETS': str([o for r,o in slots]), 'SIZE': str(size),
+        'RAOFFSET': str(slots[0][1]), 'WRITTEN': str([r for r,o in slots]+([10] if payload else [])+[2]),
+        'WINDOW_CASES': '\n'.join(f'  · exact (windows {o} (by decide)).ld rfl rfl (read8_pins _ _)' for r,o in slots),
+    }.items():
+        text=text.replace('@'+key+'@',val)
+    return text, slots, size
+
+
 def outputs():
     result = {}
     audits = []
@@ -53,6 +95,8 @@ def outputs():
     finish_audits = []
     empty_audits = []
     split_audits = []
+    alloc_return_audits = []
+    account_audits = []
     return_audits = []
     entry_audits = []
     oldify_young_audits = []
@@ -87,6 +131,29 @@ def outputs():
             result[ROOT / f'Vsa/Sim/Code/{pin_name}.lean'] = pins
             pin_audits += re.findall(r'^theorem (\w+)', pins, re.M)
             jobs = [(entry, stem, None)]
+            if name == 'caml_alloc_shr_for_minor_gc':
+                _, alloc_blocks = gen_fn.build_cfg(name,entry,di,extents)
+                epilogue = next(b for b in alloc_blocks if b.kind == 'ret')
+                text, _, _ = native_return_certificate(name,'AllocMinor','AllocReturn',epilogue,
+                    dict(line.split('\t') for line in decodes),payload=True)
+                result[ROOT / 'OCaml/Vm/Gc/Generated/AllocReturn.lean'] = text
+                alloc_return_audits = re.findall(r'^theorem ([\w.]+)',text,re.M)
+                account = next(b for b in alloc_blocks if b.kind == 'br' and b.succs[1] == epilogue.start)
+                emitter = gen_fn.lib.Emitter()
+                pieces = emit_log_chunks(emitter,'account',account.instrs,[2,8,10,11],
+                    gen_fn.ocaml_literal_mline,gen_fn.lib,register_certificate=True)
+                decoder = dict(line.split('\t') for line in decodes)
+                ws = {f'{ins.word:08x}' for ins in [*account.instrs,account.term]}
+                text = ACCOUNT_TEMPLATE
+                for key,val in {
+                    'DECODE_IMPORTS': '\n'.join('import '+m for m in sorted({decoder[w] for w in ws})),
+                    'BLOCK': gen_fn.block_name(name,account,False)+'Seg',
+                    'PC': hex(account.start), 'NEXT': hex(epilogue.start),
+                    'CHUNKS': emitter.text(), 'OUT': pieces[-1]+'_output',
+                    'LOGS': ','.join(p+'_log' for p in pieces),
+                }.items(): text=text.replace('@'+key+'@',val)
+                result[ROOT / 'OCaml/Vm/Gc/Generated/AllocAccount.lean'] = text
+                account_audits = re.findall(r'^theorem ([\w.]+)',text,re.M)
             if name == 'bf_split':
                 _, split_blocks = gen_fn.build_cfg(name,entry,di,extents)
                 split_head = split_blocks[0]
@@ -257,29 +324,7 @@ def outputs():
                 result[ROOT / 'OCaml/Vm/Gc/Generated/Fresh.lean'] = fresh
                 fresh_audits = re.findall(r'^theorem ([\w.]+)',fresh,re.M)
                 epilogue = next(b for b in oldify if b.start == store.succs[0])
-                assert epilogue.kind == 'ret'
-                slots = []
-                for ins in epilogue.instrs[:-1]:
-                    assert ins.word & 0x707f == 0x3003 and (ins.word >> 15) & 31 == 2
-                    slots.append(((ins.word >> 7) & 31, gen_fn.lib.sext(ins.word >> 20, 12)))
-                adjust = epilogue.instrs[-1].word
-                assert adjust & 0xfffff == 0x10113
-                size = gen_fn.lib.sext(adjust >> 20, 12)
-                assert slots[0][0] == 1 and all(r != 2 and o >= 0 for r, o in slots)
-                return_words = {f'{ins.word:08x}' for ins in [*epilogue.instrs, epilogue.term]}
-                return_text = RETURN_TEMPLATE
-                for key, val in {
-                    'DECODE_IMPORTS': '\n'.join('import ' + m for m in sorted(
-                        {decode_modules[w] for w in return_words})),
-                    'RETURN': gen_fn.block_name(name, epilogue)+'Seg', 'PC': hex(epilogue.start),
-                    'SLOTS': '[' + ', '.join(f'({r}, {o})' for r, o in slots) + ']',
-                    'OFFSETS': str([o for r, o in slots]), 'SIZE': str(size),
-                    'RAOFFSET': str(slots[0][1]), 'WRITTEN': str([r for r, o in slots]+[2]),
-                    'WINDOW_CASES': '\n'.join(
-                        f'  · exact (windows {o} (by decide)).ld rfl rfl (read8_pins _ _)'
-                        for r, o in slots),
-                }.items():
-                    return_text = return_text.replace('@'+key+'@', val)
+                return_text, slots, size = native_return_certificate(name,'OldifyOne','OldifyReturn',epilogue,decode_modules)
                 result[ROOT / 'OCaml/Vm/Gc/Generated/OldifyReturn.lean'] = return_text
                 return_audits = re.findall(r'^theorem ([\w.]+)', return_text, re.M)
                 entry_head = next(b for b in oldify if b.start == entry)
@@ -521,6 +566,8 @@ def outputs():
     names += ['OCaml.Vm.Gc.BestFitBitmap.' + n for n in bitmap_audits]
     names += ['OCaml.Vm.Gc.BestFitFinish.' + n for n in finish_audits]
     names += ['OCaml.Vm.Gc.BestFitEmpty.' + n for n in empty_audits]
+    names += ['OCaml.Vm.Gc.AllocAccount.' + n for n in account_audits]
+    names += ['OCaml.Vm.Gc.AllocReturn.' + n for n in alloc_return_audits]
     names += ['OCaml.Vm.Gc.BestFitSplit.' + n for n in split_audits]
     names += ['OCaml.Vm.Gc.OldifyReturn.' + n for n in return_audits]
     names += ['OCaml.Vm.Gc.OldifyEntry.' + n for n in entry_audits]
@@ -532,7 +579,7 @@ def outputs():
     names += ['OCaml.Vm.Gc.Young.' + n for n in young_audits]
     literals = ',\n'.join('  ``' + n for n in names)
     result[ROOT / 'OCaml/Vm/Gc/Generated/Audit.lean'] = (
-        ''.join('import OCaml.Vm.Gc.Generated.' + module + '\n' for module in modules + ['Immediate', 'MopupControl', 'MopupPop', 'Enqueue', 'FieldCopy', 'Young', 'Forwarded', 'OldifyReturn', 'OldifyEntry', 'OldifyYoung', 'MopupCall', 'FirstCall', 'FirstYoung', 'Fresh', 'AllocEntry', 'BestFitSmall', 'BestFitBitmap', 'BestFitFinish', 'BestFitEmpty', 'BestFitSplit']) + '\n' +
+        ''.join('import OCaml.Vm.Gc.Generated.' + module + '\n' for module in modules + ['Immediate', 'MopupControl', 'MopupPop', 'Enqueue', 'FieldCopy', 'Young', 'Forwarded', 'OldifyReturn', 'OldifyEntry', 'OldifyYoung', 'MopupCall', 'FirstCall', 'FirstYoung', 'Fresh', 'AllocEntry', 'BestFitSmall', 'BestFitBitmap', 'BestFitFinish', 'BestFitEmpty', 'BestFitSplit', 'AllocReturn', 'AllocAccount']) + '\n' +
         '/-! GENERATED by scripts/gen_gc_rows.py. Every generated row, segment and code pin. -/\n'
         'open Lean Elab Command\n\n'
         'private def gcAuditNames : Array Name := #[\n' + literals + '\n]\n\n'
@@ -2431,6 +2478,70 @@ theorem endpoint (large : Bool) (ra request source : BitVec 64) (bh bt : List (B
     exact ret_tgt ra aligned
 
 end OCaml.Vm.Gc.BestFitSplit
+"""
+
+ACCOUNT_TEMPLATE = """import OCaml.Vm.Gc.Generated.AllocMinor
+import OCaml.Vm.Gc.ChainPlan
+import OCaml.Vm.Layout
+import OCaml.Vm.Primitives.SymbolicAppend
+import Vsa.Sim.ChainFactsTac
+@DECODE_IMPORTS@
+
+/-! GENERATED by scripts/gen_gc_rows.py. Header installation and allocated-word accounting. -/
+namespace OCaml.Vm.Gc.AllocAccount
+open Vsa.Sim Vsa.Machine OCaml.Vm.Primitives LeanRV64DExecutable
+
+def block : BBlock := @BLOCK@.getD 0 {body := [], term := none}
+def blocks := [block]
+def pc : BitVec 64 := @PC@#64
+def nextPc : BitVec 64 := @NEXT@#64
+def regs (R : Nat → BitVec 64) : GRegs := [(2,R 2),(8,R 8),(10,R 10),(11,R 11)]
+def account_body := block.body
+def account_input := regs
+@CHUNKS@
+
+theorem chain_ok : ChainOK pc [2,8,10,11] blocks := by decide
+
+theorem code_facts {mem : Std.ExtHashMap Nat (BitVec 8)}
+    (hc : Code.Caml_alloc_shr_for_minor_gcLoaded mem) : ChainCode mem blocks := by
+  intro b hb
+  simp only [blocks,List.mem_cons,List.not_mem_nil,or_false] at hb
+  subst b
+  constructor
+  all_goals simp only [block,@BLOCK@,List.getD_cons_zero,CodeFacts]
+  all_goals chain_facts hc with "Vsa.Sim.Code.caml_alloc_shr_for_minor_gc_at_"
+
+theorem registers (R : Nat → BitVec 64) (a b d : List (BitVec 8)) :
+    runGM block.body (regs R) [a,b,d] = @OUT@ R [a,b,d] := account_registers_chunks R _
+
+theorem writes (R : Nat → BitVec 64) (a b d : List (BitVec 8)) :
+    wlogM block.body (regs R) [a,b,d] =
+      [((R 10).toNat,8,R 11),(Layout.sym_caml_allocated_words,8,bytesVal .ld a + 1#64 + R 8)] := by
+  change wlogM account_body (account_input R) [a,b,d] = _
+  rw [account_log_chunks]
+  simp [@LOGS@,Layout.sym_caml_allocated_words]
+
+theorem consumed (a b d : List (BitVec 8)) : ldsRunM block.body [a,b,d] = [] := rfl
+
+theorem return_regs (R : Nat → BitVec 64) (a b d : List (BitVec 8)) :
+    lookupG 2 (runGM block.body (regs R) [a,b,d]) = some (R 2) ∧
+    lookupG 10 (runGM block.body (regs R) [a,b,d]) = some (R 10) := by
+  rw [registers]
+  constructor <;> rfl
+
+theorem control (R : Nat → BitVec 64) (a b d : List (BitVec 8))
+    (room : (bytesVal .ld a + 1#64 + R 8).toNat ≤ (bytesVal .ld d).toNat) :
+    TermFactsO (runGM block.body (regs R) [a,b,d]) block.term := by
+  rw [registers]
+  simpa [block,@BLOCK@,TermFactsO,TermFactsT,@OUT@,srcVal,lookupG,
+    guardB,Functions.zopz0zI_u,Sail.BitVec.toNatInt] using (Int.ofNat_le.mpr room)
+
+theorem endpoint (R : Nat → BitVec 64) (lds : List (List (BitVec 8))) :
+    evalBlocksPC pc (SegEvalState.init (regs R) lds) blocks = nextPc := rfl
+
+theorem written : ∀ n ∈ wrChain blocks, n ∈ [13,14,15] := by decide
+
+end OCaml.Vm.Gc.AllocAccount
 """
 
 if __name__ == '__main__':

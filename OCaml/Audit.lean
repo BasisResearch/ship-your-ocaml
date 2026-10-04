@@ -122,6 +122,7 @@ import Vsa.Sim.MemcpySpec
 import Vsa.Sim.Muldi3Spec
 import Vsa.Sim.DivLoops
 import OCaml.Vm.Gc.BestFitSplitGeometry
+import OCaml.Vm.Gc.AllocAccountReturn
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -3083,3 +3084,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.BestFitSplit.remnant_header
 #print axioms OCaml.Vm.Gc.BestFitSplit.Post.remnant
 #print axioms OCaml.Vm.Gc.BestFitSplit.Post.counter
+
+#print axioms OCaml.Vm.Gc.AllocReturn.return_machine
+#print axioms OCaml.Vm.Gc.AllocAccount.counter_window
+#print axioms OCaml.Vm.Gc.AllocAccount.state_window
+#print axioms OCaml.Vm.Gc.AllocAccount.access
+#print axioms OCaml.Vm.Gc.AllocAccount.account
+#print axioms OCaml.Vm.Gc.AllocAccount.Post.counter
+#print axioms OCaml.Vm.Gc.AllocAccount.account_return
+#print axioms OCaml.Vm.Gc.AllocAccount.ReturnPost.result
+#print axioms OCaml.Vm.Gc.AllocAccount.ReturnPost.header
+#print axioms OCaml.Vm.Gc.AllocAccount.ReturnPost.counter_nat

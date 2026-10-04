@@ -1,5 +1,28 @@
 # Lane a6-gc
 
+## Allocation accounting through native return (2026-10-04)
+
+- `AllocAccountReturn.lean:account_return` composes actual header
+  installation and allocated-word accounting with the allocator epilogue
+  when the observed counter/threshold selects no major-slice request. It
+  retains exact memory, initial saved-register observations, return PC,
+  output, and native register frame. `ReturnPost.result` proves the ABI
+  returns the payload pointer. `ReturnPost.header` reads the installed
+  header under cell separation; `counter_nat` gives natural accounting
+  under a no-overflow bound.
+- `AllocAccountAccess.lean:access` supplies each store/load from RAM windows
+  and total reads after the explicit first header store. The entry
+  conditions contain no premise about a future machine execution.
+- `AllocReturn.lean:return_machine` reuses the same native epilogue
+  generator as oldify, including instruction-derived slots and stack
+  adjustment; oldify generated output remains unchanged.
+- Targeted build (616 jobs), full Audit (2941 jobs), generator drift,
+  discipline and abstraction gates pass; new headlines use only permitted
+  axioms. Both free-block split paths landed as `f051578`.
+- Next: allocator header/color selection, free-list call composition,
+  major-slice request and larger-block/tree routes. Fresh-copy completion,
+  collector closure and live-word Fits (G2) remain open.
+
 ## Both free-block split paths (2026-10-04)
 
 - `BestFitSplit.lean:56` (`split`) proves actual `bf_split` entry through
