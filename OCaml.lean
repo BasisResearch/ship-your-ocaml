@@ -582,3 +582,6 @@ import OCaml.Vm.Sim.DivisionZeroSetup
 import OCaml.Vm.Sim.DivisionZero
 
 import OCaml.Vm.Sim.DivisionZeroCaught
+
+import OCaml.Vm.Sim.CaughtLogRestore
+import OCaml.Vm.Sim.DivisionZeroLog

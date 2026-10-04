@@ -24,9 +24,8 @@ theorem TrapWriteOk.frame_observations {P : Prog} {s : St} {pl : Place} {cp : Ch
 
 /-- Geometry and runtime preservation for a caught exception after nonlocal return.
 All fields describe data or footprints; native execution is proved separately. -/
-structure CaughtReentryReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
-    (nativeSp sp high dest : Nat) (link extra : BitVec 63) (env : Val) (rest : List Val) (c : Config) : Prop
-    extends RaiseReentryReady L P s pl cp nativeSp sp high dest link extra env rest c where
+structure CaughtReentryGeometry (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
+    (nativeSp sp high dest : Nat) (link extra : BitVec 63) (env : Val) (rest : List Val) (c : Config) : Prop where
   highRead : RamReadAt ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high) 8
   nativeHighRead : RamReadAt nativeSp 8
   nativeSpRead : RamReadAt (nativeSp + 8) 8
@@ -40,6 +39,32 @@ structure CaughtReentryReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place)
   stableRoots : WindowStable L.runtimeOk (reentryWindows c)
   stableTrap : WindowStable L.runtimeOk [⟨(word c Layout.sym_Caml_state).toNat + Layout.off_trapsp,
     (word c Layout.sym_Caml_state).toNat + Layout.off_trapsp + 8⟩]
+
+structure CaughtReentryReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
+    (nativeSp sp high dest : Nat) (link extra : BitVec 63) (env : Val) (rest : List Val) (c : Config) : Prop
+    extends RaiseReentryReady L P s pl cp nativeSp sp high dest link extra env rest c,
+      CaughtReentryGeometry L P s pl cp nativeSp sp high dest link extra env rest c
+
+/-- Rebase handler geometry using only the runtime pointers and saved boundary words. -/
+theorem CaughtReentryGeometry.frame_observations {L : OCaml.Layout} {P : Prog} {s : St}
+    {pl : Place} {cp : ChanPlace} {nativeSp sp high dest : Nat} {link extra : BitVec 63}
+    {env : Val} {rest : List Val} {c after : Config}
+    (h : CaughtReentryGeometry L P s pl cp nativeSp sp high dest link extra env rest c)
+    (domain : word after Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (contents : word after (Layout.sym_caml_prim_table + Layout.off_prim_contents) = word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
+    (savedHigh : word after nativeSp = word c nativeSp)
+    (savedSp : word after (nativeSp + 8) = word c (nativeSp + 8))
+    (roots : reentryLog nativeSp after = reentryLog nativeSp c) :
+    CaughtReentryGeometry L P s pl cp nativeSp sp high dest link extra env rest after := by
+  refine {
+    h with
+    highRead := by simpa only [domain] using h.highRead
+    savedBoundary := savedHigh.trans (h.savedBoundary.trans savedSp.symm)
+    savedHighOutside := by rw [roots]; exact h.savedHighOutside
+    savedSpOutside := by rw [roots]; exact h.savedSpOutside
+    space := h.space.frame_observations domain contents
+    stableRoots := by simpa only [reentryWindows, domain] using h.stableRoots
+    stableTrap := by simpa only [domain] using h.stableTrap }
 
 /-- Complete the caught check and handler after the local-roots restoration. -/
 theorem reentry_handler {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}

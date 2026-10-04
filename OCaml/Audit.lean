@@ -1,3 +1,5 @@
+import OCaml.Vm.Sim.CaughtLogRestore
+import OCaml.Vm.Sim.DivisionZeroLog
 import OCaml.Vm.Sim.DivisionZeroCaught
 import OCaml.Vm.Sim.DivisionZero
 import OCaml.Vm.Sim.DivintZero
@@ -3105,6 +3107,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.native_memory_last_word
 #print axioms OCaml.Vm.Sim.division_zero_state
 #print axioms OCaml.Vm.Sim.division_zero_caught_step
+
+-- Footprint-derived represented readiness for the native exception log.
+#print axioms OCaml.Vm.Sim.CaughtReentryGeometry.frame_observations
+#print axioms OCaml.Vm.Sim.caught_log_restore
+#print axioms OCaml.Vm.Sim.division_raise_payload_before
+#print axioms OCaml.Vm.Sim.raise_bucket_address
+#print axioms OCaml.Vm.Sim.division_zero_bucket_log
+#print axioms OCaml.Vm.Sim.division_zero_exception_word
 
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
