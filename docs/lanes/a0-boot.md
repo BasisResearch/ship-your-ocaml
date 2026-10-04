@@ -2,6 +2,27 @@
 
 ## Round 2 status (2026-10-04)
 
+The reset-to-four-nodes increment landed as `cd47f96`, full gate passed.
+**`CustomReset.lean:reset_custom_returned_exists` now extends the CLOSED actual
+reset run through the complete caml_init_custom_operations function, returning
+to caml_main at 0x80004dd4.** `custom_init` is the reusable whole-function
+summary. `CallerFrame` transports the saved caller words through checked
+allocation and all four publications; `CustomNodes.saved_word` reads back
+the original caller link and s0. The full runtime contract, original domain
+membership and remaining allocator capacity survive the restoring return.
+
+`native_return_pair` shares the generated two-register epilogue between
+caml_stat_alloc and custom initialization; the checked-allocation return now
+consumes it. Explicit register-key projection avoids symbolic native-stack
+simplification that had made an attempted adapter elaboration expensive.
+No resource limits were raised. The complete function composition checks in
+1.1 seconds and the closed reset extension in 1.0 seconds.
+
+Next: caml_shared_libs_path's caml_ext_table_init, native file opening and
+section descriptors, then GC/stack initialization and subsequent startup.
+The full reset-to-cut/Loaded exit remains open.
+
+
 The shared custom-registration summaries landed as `a5863ce`, full gate passed.
 **`CustomNodesReset.lean:reset_custom_nodes_exists` now extends the CLOSED
 actual reset run through all four custom-operation registrations to 0x80024ac0,

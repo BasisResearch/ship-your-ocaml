@@ -41,6 +41,7 @@ import OCaml.Vm.Boot.Startup.FindFoundReturn
 import OCaml.Vm.Boot.Startup.StatChecked
 import OCaml.Vm.Boot.Startup.CustomNext
 import OCaml.Vm.Boot.Startup.CustomNodesReset
+import OCaml.Vm.Boot.Startup.CustomReset
 import OCaml.Vm.Boot.Startup.CustomPrefix
 import OCaml.Vm.Boot.Startup.CustomEntry
 import OCaml.Vm.Boot.Startup.StartupAuxReset
@@ -3711,6 +3712,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCustomEntry.custom_head
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCustomNodes.ready
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_custom_nodes_exists
+#print axioms OCaml.Vm.Boot.Startup.native_return_pair
+#print axioms OCaml.Vm.Boot.Startup.StatCheckedReturned.caller_frame
+#print axioms OCaml.Vm.Boot.Startup.CustomNodes.saved_word
+#print axioms OCaml.Vm.Boot.Startup.custom_finish
+#print axioms OCaml.Vm.Boot.Startup.custom_init
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCustomReturned.ready
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_custom_returned_exists
 #print axioms OCaml.Vm.Boot.Startup.NativeFrame.word32
 #print axioms OCaml.Vm.Boot.Startup.getenv_offset_window
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
