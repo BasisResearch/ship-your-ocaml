@@ -119,9 +119,6 @@ theorem QueueResult.payload {R target log qs pl before after cp tag fields}
       OutLRange ((OldifyEntry.saveLog OldifyEntry.saves R ++ log) ++ queueEffect R target log qs before)
         ((R 10).toNat + 8 * i) 8) :
     (pendingPayload (queuePending R target) fields).P pl target.toNat after := by
-  apply pendingPayload_of_observations (q := queuePending R target) object post.data.first
-  intro i v hi zero
-  change bytesT after.σ.mem ((R 10).toNat + 8 * i) 8 = bytesT before.σ.mem ((R 10).toNat + 8 * i) 8
-  rw [post.memory,bytesT_writeLog_out _ (outside i v hi zero)]
+  exact pendingPayload_of_writeLog (q := queuePending R target) object post.data.first post.memory outside
 
 end OCaml.Vm.Gc.Fresh

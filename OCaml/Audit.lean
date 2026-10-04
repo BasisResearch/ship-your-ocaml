@@ -202,6 +202,7 @@ import OCaml.Vm.Gc.BestFitFallbackLarge
 import OCaml.Vm.Gc.BestFitLargeComplete
 import OCaml.Vm.Gc.FreshSingleFixed
 import OCaml.Vm.Gc.SingleTailRoots
+import OCaml.Vm.Gc.SingleFieldQueuedChild
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -3985,3 +3986,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleTail.run_loop_roots
 #print axioms OCaml.Vm.Gc.SingleTail.run_from_head_root
 #print axioms OCaml.Vm.Gc.SingleTail.RootReturned.represented
+
+#print axioms OCaml.Vm.Gc.pendingPayload_of_writeLog
+#print axioms OCaml.Vm.Gc.Fresh.ContextAllocated.enqueue
+#print axioms OCaml.Vm.Gc.Fresh.enqueue_after
+#print axioms OCaml.Vm.Gc.Fresh.ContextQueued.payload
+#print axioms OCaml.Vm.Gc.SingleField.prepare_enqueue_child
+#print axioms OCaml.Vm.Gc.SingleField.prepare_enqueue_child_large

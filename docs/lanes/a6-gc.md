@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Fresh multi-field child queue continuation (2026-10-04)
+
+- `ContextQueue.lean:ContextAllocated.enqueue` executes the actual queue
+  insertion and native return on an existing oldify frame, preserving the
+  earlier saved bank through explicit store footprints. `enqueue_after`
+  shares allocation/queue composition.
+- `SingleFieldQueuedChild.lean:prepare_enqueue_child` and its large variant
+  compose real parent forwarding, either proved allocator, child insertion,
+  and native return. These cover a fresh multi-field child rather than a
+  size-one back edge. The queue conditions enforce size greater than one.
+- `ContextQueued.payload` retains the typed pending payload for mopup using
+  shared `pendingPayload_of_writeLog`; first-entry queue results reuse it.
+- Targeted build/regressions pass (774 jobs), full Audit passes (3615 jobs),
+  and both discipline gates pass; only permitted axioms. Caller-root
+  checkpoint landed as `6de5244`.
+- Next: retain both newly published table entries and incorporate queued
+  exits into collector composition. Ownership suppliers, all ancestor
+  payloads, other tags/routes, G2 and live budget remain open.
+
 ## Caller root through the ordinary tail loop (2026-10-04)
 
 - `SettledRoots.lean` expresses completed roots/ancestor fields as Eqv

@@ -42,6 +42,20 @@ theorem pendingPayload_of_observations {q fields tag pl cp c c'}
   simpa only [placement_identity] using
     (pendingPayload q fields).transport id pl q.source.toNat q.target.toNat c c' before image
 
+/-- Frame every deferred source field through an exact store log, sharing
+one Eqv transport across entry allocation and existing-frame allocation. -/
+theorem pendingPayload_of_writeLog {q fields tag pl cp before after log}
+    (object : ObjAt before pl cp q.source.toNat (.block tag fields))
+    (first : word after q.target.toNat = word before q.source.toNat)
+    (memory : after.σ.mem = writeLog before.σ.mem log)
+    (outside : ∀ i v, fields[i]? = some v → i ≠ 0 →
+      OutLRange log (q.source.toNat + 8 * i) 8) :
+    (pendingPayload q fields).P pl q.target.toNat after := by
+  apply pendingPayload_of_observations object first
+  intro i v hi nonzero
+  change bytesT after.σ.mem _ 8 = bytesT before.σ.mem _ 8
+  rw [memory,bytesT_writeLog_out _ (outside i v hi nonzero)]
+
 /-- The generated enqueue effect establishes the grey payload layout. The
 source suffix must lie outside the six-store footprint; the enclosing heap
 geometry supplies that fact. This does not claim its fields are oldified. -/
