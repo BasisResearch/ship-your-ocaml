@@ -2,6 +2,27 @@
 
 ## Round 2 status (2026-10-04)
 
+The successful-branch increment landed as `25067d7`, full gate passed.
+`FindPresent.lean:findenv_present` now summarizes the COMPLETE native search
+for a matching first environment entry: save/lock/name scan, the actual strncmp
+call and folded loop, equals-delimiter test, caller index-zero store, unlock,
+all register restores and value-pointer return. The complete composition
+checks in 1.0 second, with an exact memory log and full written-register result.
+
+`find_prelude` factors the common save/lock/scan prefix; the existing empty-array
+summary now consumes it and the complete empty-array parser still rechecks.
+`getenv_return` now preserves either result value through its caller epilogue.
+`SearchEntry.stack_log`, `EqualPrefix.stack_log` and `equalPrefix_of_cstr` supply
+shared memory/data transport; the saved-word bank covers all eight saved
+registers, and `find_found_tail` frames both successful-path stores.
+`NativeFrame.word32` supplies the outer caller's four-byte offset slot.
+
+Next: instantiate this search in getenv and the security wrapper, frame the
+initial environment through the reset/domain history, then apply the proved
+present-empty-value parser continuation. Actual reset reachability remains at
+parser entry; reset-to-cut/Loaded and the Round 2 exit remain open.
+
+
 The folded native strncmp increment landed as `8138ee9`, full gate passed.
 `find_loaded` selects the first nonnull environment entry; `find_compare`
 saves s0 and sets up strncmp, with `findCompareCount_cursor` proving that

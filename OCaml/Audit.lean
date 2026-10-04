@@ -18,6 +18,8 @@ import OCaml.Vm.Boot.Startup.FindCount
 import OCaml.Vm.Boot.Startup.FindMatch
 import OCaml.Vm.Boot.Startup.FindFound
 import OCaml.Vm.Boot.Startup.FindFoundReturn
+import OCaml.Vm.Boot.Startup.FindPresent
+import OCaml.Vm.Boot.Startup.NativeWord32
 import OCaml.Vm.Boot.WhileMinEnvironment
 import OCaml.Vm.Boot.Startup.ParameterPrefix
 import OCaml.Vm.Boot.Startup.ParameterBranch
@@ -3541,6 +3543,22 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.find_match
 #print axioms OCaml.Vm.Boot.Startup.find_found
 #print axioms OCaml.Vm.Boot.Startup.find_found_return
+
+-- Complete first-entry lookup and common search/memory contracts.
+#print axioms OCaml.Vm.Boot.Startup.find_prelude
+#print axioms OCaml.Vm.Boot.Startup.EqualPrefix.frame
+#print axioms OCaml.Vm.Boot.Startup.EqualPrefix.stack_log
+#print axioms OCaml.Vm.Boot.Startup.equalPrefix_of_cstr
+#print axioms OCaml.Vm.Boot.Startup.SearchEntry.stack_log
+#print axioms OCaml.Vm.Boot.Startup.find_compared
+#print axioms OCaml.Vm.Boot.Startup.find_matched
+#print axioms OCaml.Vm.Boot.Startup.findSearch_saved
+#print axioms OCaml.Vm.Boot.Startup.findFound_pointer
+#print axioms OCaml.Vm.Boot.Startup.FindReturnSaved.found
+#print axioms OCaml.Vm.Boot.Startup.find_found_tail
+#print axioms OCaml.Vm.Boot.Startup.findenv_present
+#print axioms OCaml.Vm.Boot.Startup.NativeFrame.word32
+#print axioms OCaml.Vm.Boot.Startup.getenv_offset_window
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.domain_history_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.reset

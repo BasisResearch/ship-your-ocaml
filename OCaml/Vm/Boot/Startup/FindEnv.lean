@@ -1,4 +1,4 @@
-import OCaml.Vm.Boot.Startup.FindSaved
+import OCaml.Vm.Boot.Startup.FindPrelude
 import OCaml.Vm.Boot.Startup.NameEmpty
 import OCaml.Vm.Boot.Startup.FindTail
 namespace OCaml.Vm.Boot.Startup
@@ -27,47 +27,40 @@ theorem findenv_empty (c : Config) (sp reent name offset env ra s1 s2 s3 s4 s5 s
         (findLog sp ra s1 s2 s3 s4 s5 s6) c ra 0#64
         (findEnvRegs sp ra s1 s2 s3 s4 s5 s6 name cs.length)) := by
   constructor
-  intro before input
-  obtain ⟨pc, eq⟩ := input
+  rintro before ⟨pc, eq⟩
   subst before
-  obtain ⟨a, run1, locked⟩ := (find_locked c sp reent name offset ra s1 s2 s3 s5 s6 h.toLeafInput h.frame h.regs).run c ⟨pc, rfl⟩
-  have dataA := h.data.stack_log h.nameBelow (findPrefix_log_inside h.frame) locked.memory
-  have envA := h.toEmptyEnvironment.stack_log (findPrefix_log_inside h.frame) locked.memory
-  have regsA : GHolds a.σ (findStartInput sp name s4 (envLockValue false)) :=
-    ⟨gholds_lookup (n := 19) _ locked.regs (by rfl), gholds_lookup (n := 2) _ locked.regs (by rfl),
-      (locked.frame .x20 (by decide) (by decide)).trans h.saved4,
-      gholds_lookup (n := 18) _ locked.regs (by rfl), locked.result, trivial⟩
-  obtain ⟨byte, startInput⟩ := findStart_of_name (locked.leaf (by rfl) (by decide)) h.frame regsA dataA
-    h.positive h.nameBelow envA.environment h.nonnull
-  obtain ⟨b, run2, started⟩ := (find_start a sp name s4 (envLockValue false) env _ byte startInput).run a ⟨locked.pc, rfl⟩
-  have memoryB : b.σ.mem = writeLog c.σ.mem (findLog sp ra s1 s2 s3 s4 s5 s6) := by
-    rw [started.memory, locked.memory, findLog_eq, writeLog_append]
-  have dataB := h.data.stack_log h.nameBelow (findLog_inside h.frame) memoryB
-  have envB := h.toEmptyEnvironment.stack_log (findLog_inside h.frame) memoryB
+  have input : FindPreludeInput sp reent name offset env ra s1 s2 s3 s4 s5 s6 cs c := {
+    toLeafInput := h.toLeafInput
+    frame := h.frame
+    regs := h.regs
+    saved4 := h.saved4
+    data := h.data
+    positive := h.positive
+    nameBelow := h.nameBelow
+    environment := h.environment
+    nonnull := h.nonnull }
+  obtain ⟨a, run1, prepared⟩ := (find_prelude c sp reent name offset env ra s1 s2 s3 s4 s5 s6 cs input).run c ⟨pc, rfl⟩
+  have envA := h.toEmptyEnvironment.stack_log (findLog_inside h.frame) prepared.memory
+  have regsA : GHolds a.σ (findEmptyInput env) :=
+    ⟨gholds_lookup (n := 9) _ prepared.regs (by rfl), gholds_lookup (n := 14) _ prepared.regs (by rfl), trivial⟩
+  have leafA := prepared.leaf (ra := jal_80037468_call.link) (by rfl) (by decide)
+  obtain ⟨b, run2, missing⟩ := (find_empty a env _ leafA regsA h.envWindow envA.empty).run a ⟨prepared.pc, rfl⟩
+  have memoryB : b.σ.mem = writeLog c.σ.mem (findLog sp ra s1 s2 s3 s4 s5 s6) := missing.memory.trans prepared.memory
+  obtain ⟨saved, saved4⟩ := find_saved h.frame memoryB
   have leafB : LeafInput jal_80037468_call.link b :=
-    ⟨started.good, started.image, started.minstret,
-      (started.frame .x1 (by decide) (by decide)).trans (gholds_lookup (n := 1) _ locked.regs (by rfl)),
-      by decide, started.tick⟩
-  obtain ⟨d, run3, scanned⟩ := (name_scan_empty b name env _ (envLockValue false) cs dataB h.positive leafB
-    (gholds_lookup (n := 12) _ started.regs (by rfl)) started.result
-    (gholds_lookup (n := 9) _ started.regs (by rfl)) h.envWindow envB.empty).run b ⟨started.pc, rfl⟩
-  have memoryD : d.σ.mem = writeLog c.σ.mem (findLog sp ra s1 s2 s3 s4 s5 s6) := scanned.memory.trans memoryB
-  obtain ⟨saved, saved4⟩ := find_saved h.frame memoryD
-  have leafD : LeafInput jal_80037468_call.link d :=
-    ⟨scanned.good, scanned.image, scanned.minstret,
-      (scanned.frame .x1 (by decide) (by decide)).trans leafB.raReg, by decide, scanned.tick⟩
-  have regsD : GHolds d.σ (findRestoreInput sp reent) := ⟨
-    (scanned.frame .x2 (by decide) (by decide)).trans (gholds_lookup (n := 2) _ started.regs (by rfl)),
-    (scanned.frame .x21 (by decide) (by decide)).trans ((started.frame .x21 (by decide) (by decide)).trans
-      (gholds_lookup (n := 21) _ locked.regs (by rfl))), scanned.result, trivial⟩
-  obtain ⟨after, run4, post⟩ := (find_tail d sp reent ra s1 s2 s3 s4 s5 s6 _ leafD h.frame regsD saved4 saved h.aligned).run d ⟨scanned.pc, rfl⟩
-  have effects := ((locked.toEffectPost.trans started.toEffectPost).trans scanned.toEffectPost).trans post.toEffectPost
-  refine ⟨after, run1.trans (run2.trans (run3.trans run4)), ⟨?_, ?_⟩⟩
-  · exact { effects.widen (writes' := [1, 2, 9, 10, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide) with
-      memory := post.memory.trans memoryD }
-  · apply (gholds_append _ _).mpr
-    exact ⟨post.regs,
-      (post.frame .x12 (by decide) (by decide)).trans (gholds_lookup (n := 12) _ scanned.regs (by rfl)),
-      (post.frame .x14 (by decide) (by decide)).trans (gholds_lookup (n := 14) _ scanned.regs (by rfl)),
-      (post.frame .x15 (by decide) (by decide)).trans (gholds_lookup (n := 15) _ scanned.regs (by rfl)), trivial⟩
+    ⟨missing.good, missing.image, missing.minstret,
+      (missing.frame .x1 (by decide) (by decide)).trans leafA.raReg, by decide, missing.tick⟩
+  have regsB : GHolds b.σ (findRestoreInput sp reent) := ⟨
+    (missing.frame .x2 (by decide) (by decide)).trans (gholds_lookup (n := 2) _ prepared.regs (by rfl)),
+    (missing.frame .x21 (by decide) (by decide)).trans (gholds_lookup (n := 21) _ prepared.regs (by rfl)), missing.result, trivial⟩
+  obtain ⟨after, run3, post⟩ := (find_tail b sp reent ra s1 s2 s3 s4 s5 s6 _ leafB h.frame regsB saved4 saved h.aligned).run b ⟨missing.pc, rfl⟩
+  have effects := ((prepared.toEffectPost.trans missing.toEffectPost).trans post.toEffectPost).widen
+    (writes' := [1, 2, 9, 10, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
+  refine ⟨after, run1.trans (run2.trans run3), ⟨⟨effects.good, effects.image, effects.minstret, effects.tick,
+    effects.pc, effects.result, post.memory.trans memoryB, effects.output, effects.frame⟩, ?_⟩⟩
+  apply (gholds_append _ _).mpr
+  exact ⟨post.regs,
+    (post.frame .x12 (by decide) (by decide)).trans ((missing.frame .x12 (by decide) (by decide)).trans (gholds_lookup (n := 12) _ prepared.regs (by rfl))),
+    (post.frame .x14 (by decide) (by decide)).trans (gholds_lookup (n := 14) _ missing.regs (by rfl)),
+    (post.frame .x15 (by decide) (by decide)).trans ((missing.frame .x15 (by decide) (by decide)).trans (gholds_lookup (n := 15) _ prepared.regs (by rfl))), trivial⟩
 end OCaml.Vm.Boot.Startup
