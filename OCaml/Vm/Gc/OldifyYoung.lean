@@ -43,7 +43,7 @@ theorem lower_control {value domain hi c} (bound : (Young.lowerWord domain c).to
     Young.loads, srcVal, lookupG, read8_value, guardB, Functions.zopz0zKzJ_u, Sail.BitVec.toNatInt]
   exact bound
 
-structure Input (value domain : BitVec 64) (c : Config) : Prop where
+structure ReadInput (value domain : BitVec 64) (c : Config) : Prop where
   good : GoodState c.σ
   minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
   tick : c.tick < 2
@@ -51,6 +51,8 @@ structure Input (value domain : BitVec 64) (c : Config) : Prop where
   registers : GHolds c.σ (regs value)
   root : word c Layout.sym_Caml_state = domain
   windows : Young.Windows domain
+
+structure Input (value domain : BitVec 64) (c : Config) : Prop extends ReadInput value domain c where
   lower : (Young.lowerWord domain c).toNat < value.toNat
   upper : value.toNat < (Young.upperWord domain c).toNat
 

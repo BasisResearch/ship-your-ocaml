@@ -20,6 +20,7 @@ import OCaml.Vm.Gc.Generated.Forwarded
 import OCaml.Vm.Gc.Generated.OldifyReturn
 import OCaml.Vm.Gc.Generated.OldifyEntry
 import OCaml.Vm.Gc.Generated.OldifyYoung
+import OCaml.Vm.Gc.Generated.OldifyNonYoung
 import OCaml.Vm.Gc.Generated.MopupCall
 import OCaml.Vm.Gc.Generated.FirstCall
 import OCaml.Vm.Gc.Generated.FirstYoung
@@ -1506,6 +1507,13 @@ private def gcAuditNames : Array Name := #[
   ``OCaml.Vm.Gc.OldifyYoung.endpoint,
   ``OCaml.Vm.Gc.OldifyYoung.registers,
   ``OCaml.Vm.Gc.OldifyYoung.written,
+  ``OCaml.Vm.Gc.OldifyYoung.upperReject_body,
+  ``OCaml.Vm.Gc.OldifyYoung.lowerReject_body,
+  ``OCaml.Vm.Gc.OldifyYoung.reject_chain_ok,
+  ``OCaml.Vm.Gc.OldifyYoung.reject_code,
+  ``OCaml.Vm.Gc.OldifyYoung.reject_no_stores,
+  ``OCaml.Vm.Gc.OldifyYoung.reject_endpoint,
+  ``OCaml.Vm.Gc.OldifyYoung.reject_written,
   ``OCaml.Vm.Gc.MopupCall.call_shape,
   ``OCaml.Vm.Gc.MopupCall.call_decode,
   ``OCaml.Vm.Gc.MopupCall.call_target,

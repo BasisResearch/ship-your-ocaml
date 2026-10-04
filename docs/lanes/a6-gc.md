@@ -1,5 +1,23 @@
 # Lane a6-gc
 
+## Single-field even non-young continuation (2026-10-04)
+
+- `OldifyYoung.nonYoung_machine` proves both actual nursery-rejection
+  edges using the accepted path's scalar load certificates.
+  `SingleField.return_even_nonYoung` composes forwarding, child tag test,
+  strict range rejection, final field store and original saved-bank return.
+- `ReturnReady.finish` shares restoration across immediate and non-young
+  children. `ReadInput` separates nursery observations from accepted-range
+  bounds; existing young and immediate routes retain their statements.
+- Targeted builds and complete fresh-single/header regressions pass
+  (748 jobs); discipline and abstraction gates pass. Full Audit passes
+  (3419 jobs), with only permitted axioms. Whole fresh-single immediate routes landed as
+  `41dfc6b`.
+- Next: retain the derived runtime-domain register in allocation results
+  and compose whole fresh non-young single-field calls. Young-child tail
+  composition, other object/allocator routes, ownership suppliers,
+  collector closure, G2 and the ocamlc live-word budget remain open.
+
 ## Whole fresh-single immediate routes (2026-10-04)
 
 - `FreshSingle.lean:single_fresh` and `single_fresh_large` prove actual

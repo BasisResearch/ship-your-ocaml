@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Gc.SingleFieldNonYoung
 import OCaml.Vm.Gc.FreshSingleHeader
 import OCaml.Vm.Gc.SingleFieldReturn
 import OCaml.Vm.Gc.StoreReturn
@@ -3669,3 +3670,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Fresh.SingleResult.header
 #print axioms OCaml.Vm.Gc.Fresh.single_exact_header
 #print axioms OCaml.Vm.Gc.Fresh.single_large_header
+
+#print axioms OCaml.Vm.Gc.OldifyYoung.upper_reject_control
+#print axioms OCaml.Vm.Gc.OldifyYoung.lower_reject_control
+#print axioms OCaml.Vm.Gc.OldifyYoung.reject_access
+#print axioms OCaml.Vm.Gc.OldifyYoung.nonYoung_machine
+#print axioms OCaml.Vm.Gc.SingleField.ReturnGeometry.of_memory
+#print axioms OCaml.Vm.Gc.SingleField.ReturnReady.finish
+#print axioms OCaml.Vm.Gc.SingleField.Classified.immediate_ready
+#print axioms OCaml.Vm.Gc.SingleField.Classified.nonYoung_ready
+#print axioms OCaml.Vm.Gc.SingleField.return_even_nonYoung

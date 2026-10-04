@@ -24,8 +24,16 @@ theorem Post.young_input {R domain before after} (post : Post R before after)
     (lower : (Young.lowerWord domain before).toNat < (R 10).toNat)
     (upper : (R 10).toNat < (Young.upperWord domain before).toNat) :
     OldifyYoung.Input (R 10) domain after := by
-  refine ⟨post.machine.good, post.machine.minstret, post.machine.tick, post.code,
-    ?_, (post.word_unchanged outside.root).trans root, windows, ?_, ?_⟩
+  refine {
+    good := post.machine.good
+    minstret := post.machine.minstret
+    tick := post.machine.tick
+    code := post.code
+    registers := ?_
+    root := (post.word_unchanged outside.root).trans root
+    windows := windows
+    lower := ?_
+    upper := ?_ }
   · exact ⟨gholds_lookup _ post.registers rfl, gholds_lookup _ post.registers rfl, True.intro⟩
   · simpa only [Young.lowerWord, post.word_unchanged outside.lower] using lower
   · simpa only [Young.upperWord, post.word_unchanged outside.upper] using upper
