@@ -1,5 +1,5 @@
 import OCaml.Vm.Gc.BestFitExact
-import OCaml.Vm.Gc.AllocSuccess
+import OCaml.Vm.Gc.AllocFinish
 import Vsa.Sim.GRegsFrame
 
 namespace OCaml.Vm.Gc.AllocExact
@@ -81,38 +81,28 @@ theorem allocate {sp size c} (input : Input sp size c) :
     intro e member
     have bound := BestFitExact.effect_high input.toInput e member
     exact Nat.le_trans (by decide) bound
-  have nonnull : resultHeader size c ≠ 0 := by
-    have lower := input.nextRead.lower
-    have bound := (BestFitSmall.first size c).isLt
-    unfold resultHeader
-    change BestFitSmall.first size c - 8#64 ≠ 0
-    bv_omega
-  have finishInput : AllocSuccess.Input (returnRegs sp size c) middle :=
-    { toInput :=
-      { good := allocatedPost.good
-        tick := allocatedPost.tick
-        minstret := allocatedPost.minstret
-        code := wrapperCode
-        registers := ⟨pins.1,pins.2.1,allocatedPost.result,True.intro⟩
-        tagRead := input.tagRead
-        nonnull := nonnull }
-      toConditions := input.continuation.of_memory memory }
-  obtain ⟨after,run,finished⟩ := (AllocSuccess.finish finishInput).run middle ⟨allocatedPost.pc,rfl⟩
-  refine ⟨after,run,⟨finished.good,finished.tick,finished.minstret,finished.code,?_,?_,?_,?_,
-    finished.output.trans allocatedPost.output,?_⟩⟩
-  · simpa [AllocReturn.returnWord,returnRegs,memory] using finished.pc
-  · simpa [AllocReturn.restored,returnRegs,memory] using finished.registers
-  · have result := finished.result
-    simpa [returnRegs,resultHeader,BitVec.sub_add_cancel] using result
-  · have same := AllocSuccess.completed_of_memory (R := returnRegs sp size c) memory
-    rw [finished.memory,same]
-    unfold effect
-    simp only [AllocAccount.effect,AllocAccount.counted,AllocAccount.initialized,memory,allocated,writeLog_append]
-  · intro r noise outside
-    have finishCover : ∀ n ∈ [1,2,8,9,10,11,13,14,15], n ∈ [1,2,8,9,10,11,12,13,14,15] := by decide
-    have allocateCover : ∀ n ∈ [10,11,12,13,14,15], n ∈ [1,2,8,9,10,11,12,13,14,15] := by decide
-    exact (finished.native r noise (fun n hn => outside n (finishCover n hn))).trans
-      (allocatedPost.native r noise (fun n hn => outside n (allocateCover n hn)))
+  have callee : AllocFinish.CalleePost sp size (resultHeader size c) (BestFitExact.effect size c) c middle :=
+    { good := allocatedPost.good
+      tick := allocatedPost.tick
+      minstret := allocatedPost.minstret
+      code := wrapperCode
+      pc := allocatedPost.pc
+      registers := ⟨pins.1,pins.2.1,allocatedPost.result,True.intro⟩
+      memory := allocatedPost.memory
+      output := allocatedPost.output
+      native := by
+        intro r noise outside
+        apply allocatedPost.native r noise
+        intro n hn
+        apply outside n
+        simp only [List.mem_cons,List.not_mem_nil,or_false] at hn ⊢
+        rcases hn with rfl | rfl | rfl | rfl | rfl | rfl <;> simp }
+  obtain ⟨after,run,finished⟩ := (callee.finish input.tagRead input.continuation).run middle ⟨allocatedPost.pc,rfl⟩
+  refine ⟨after,run,⟨finished.good,finished.tick,finished.minstret,finished.code,
+    finished.pc,finished.registers,?_,?_,finished.output,finished.native⟩⟩
+  · simpa only [resultHeader,BitVec.sub_add_cancel] using finished.result
+  · have same : AllocFinish.entryRegs sp size (resultHeader size c) = returnRegs sp size c := rfl
+    simpa only [AllocFinish.effect,AllocFinish.snapshot,effect,allocated,same] using finished.memory
 
 /-- The final header store carries the requested size and the tag saved by
 the wrapper, provided accounting does not alias that header. -/
@@ -124,12 +114,10 @@ theorem header_of_effect {sp size} {before after : Config}
     (tagBound : (word (allocated size before) (sp + BitVec.ofNat 64 AllocEntry.tagOffset).toNat).toNat < 256) :
     HeaderOk (word after (resultHeader size before).toNat) size.toNat
       (word (allocated size before) (sp + BitVec.ofNat 64 AllocEntry.tagOffset).toNat).toNat := by
-  have stored : word after (resultHeader size before).toNat =
-      AllocSuccess.completed (returnRegs sp size before) (allocated size before) 11 := by
-    rw [word,memory,effect,writeLog_append]
-    apply word_writeLog_at _ _ 0 _ _ rfl
-    exact ⟨separate,True.intro⟩
-  rw [stored]
-  exact AllocColor.header_ok _ _ _ sizeBound tagBound
+  have same : returnRegs sp size before = AllocFinish.entryRegs sp size (resultHeader size before) := rfl
+  have memory' : after.σ.mem = writeLog before.σ.mem
+      (AllocFinish.effect sp size (resultHeader size before) (BestFitExact.effect size before) before) := by
+    simpa only [effect,AllocFinish.effect,allocated,AllocFinish.snapshot,same] using memory
+  exact AllocFinish.header_of_effect memory' separate sizeBound tagBound
 
 end OCaml.Vm.Gc.AllocExact

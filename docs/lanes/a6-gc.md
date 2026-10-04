@@ -1,5 +1,24 @@
 # Lane a6-gc
 
+## Shared wrapper continuation for both allocators (2026-10-04)
+
+- `AllocFinish.CalleePost.finish` shares actual color selection, header
+  and accounting stores, and native wrapper return across proved free-list
+  callees. `header_of_effect`/`Post.header` share typed-header readback.
+  The existing exact-size proof now uses these helpers.
+- `AllocLarge.allocate` composes the complete least-large-block allocator
+  with that continuation. `BestFitLargeFootprint.lean` derives preservation
+  of wrapper code from every store in the large-block route. Conditions
+  remain observations of explicit initial-memory write-log snapshots.
+- Targeted large-route build (665 jobs), exact-size/fresh-route regression
+  builds, full Audit (3178 jobs), discipline and abstraction gates pass;
+  new headlines use only permitted axioms. Complete least-large-block
+  allocation landed as `64fa050`.
+- Next: share prologue/JALR and caller save-bank restoration, then extend
+  the full wrapper and fresh-oldify route to the large-block alternative.
+  Other allocator/object routes, ownership suppliers, collector closure
+  and live-word Fits (G2) remain open.
+
 ## Complete least-large-block allocator alternative (2026-10-04)
 
 - `BestFitLargeComplete.lean:allocate_large` proves actual allocator entry,

@@ -137,6 +137,7 @@ import OCaml.Vm.Gc.BestFitSplitGeometry
 import OCaml.Vm.Gc.AllocAccountReturn
 import OCaml.Vm.Gc.AllocSuccess
 import OCaml.Vm.Gc.AllocExact
+import OCaml.Vm.Gc.AllocLarge
 import OCaml.Vm.Gc.AllocWrapper
 import OCaml.Vm.Gc.FreshAllocated
 import OCaml.Vm.Gc.FreshEnqueued
@@ -3420,3 +3421,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.BestFitFallback.Input.searched_size
 #print axioms OCaml.Vm.Gc.BestFitFallback.allocate_large
 #print axioms OCaml.Vm.Gc.BestFitFallback.Allocated.requested
+
+#print axioms OCaml.Vm.Gc.AllocFinish.CalleePost.finish
+#print axioms OCaml.Vm.Gc.AllocFinish.header_of_effect
+#print axioms OCaml.Vm.Gc.AllocFinish.Post.header
+#print axioms OCaml.Vm.Gc.BestFitSplit.effect_high
+#print axioms OCaml.Vm.Gc.BestFitFallback.completeEffect_high
+#print axioms OCaml.Vm.Gc.AllocLarge.allocate
