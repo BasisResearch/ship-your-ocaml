@@ -1,5 +1,22 @@
 # Lane a6-gc
 
+## Complete single-field immediate-child continuation (2026-10-04)
+
+- `SingleFieldReturn.lean:return_immediate` proves forwarding, actual
+  child classification, final field store and native return. Its exact
+  effect has four stores, and its return PC and saved registers refer to
+  memory before forwarding. `StoreReturn.restored_of_savedSame` shares the
+  existing oldify saved-bank observation interface across both epilogues.
+- `ReturnConditions.of_memory` transports the pure geometry, branch and
+  saved-return observations to an actual allocation result.
+- Targeted build passes (626 jobs); discipline and abstraction gates pass.
+  Full Audit passes (3370 jobs), with only permitted axioms. Store/return landed as
+  `3685356`.
+- Next: whole fresh-oldify composition for immediate single-field children
+  across both allocator alternatives. Even-child nursery continuation,
+  other object/allocator routes, ownership suppliers, collector closure,
+  G2 and the ocamlc live-word budget remain open.
+
 ## Oldify destination store and native return (2026-10-04)
 
 - `StoreReturn.finish` proves the actual restore/store/return path reached

@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.NameEmpty
+import OCaml.Vm.Gc.SingleFieldReturn
 import OCaml.Vm.Gc.StoreReturn
 import OCaml.Vm.Gc.SingleFieldClassify
 import OCaml.Vm.Gc.SingleField
@@ -3611,3 +3612,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 #print axioms OCaml.Vm.Gc.StoreReturn.access
 #print axioms OCaml.Vm.Gc.StoreReturn.finish
+
+#print axioms OCaml.Vm.Gc.StoreReturn.restored_of_savedSame
+#print axioms OCaml.Vm.Gc.SingleField.ReturnConditions.of_memory
+#print axioms OCaml.Vm.Gc.SingleField.return_immediate
