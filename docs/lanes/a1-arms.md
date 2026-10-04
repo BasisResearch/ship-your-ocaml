@@ -2280,15 +2280,25 @@ and ELF decoders. `longjmp_shape`, `longjmp_readonly`, and
 unsigned seqz operation; generated rows alone are not a whole-function
 execution summary. Layout extracts and cross-checks all fourteen jmp_buf
 save/restore slots between setjmp and longjmp. Structural certificates check
-in 0.836s. The native restoration/value summary remains next.
+in 0.836s. Instruction support landed as `8fb720f`, full gate passing.
+
+`longjmp_summary` (`OCaml/Vm/Sim/Longjmp.lean`) now proves the complete
+17-instruction native nonlocal return: all fourteen saved registers,
+including the saved stack and return address; zero-to-one result adjustment;
+unchanged memory/image and the checked register frame. Its input names RAM
+reads, saved words, entry registers and aligned continuation. The generated
+register evaluator separates pure calculation from memory representation;
+individual scalar certificates keep the default elaboration budget. Capped
+builds pass: LongjmpFacts 8.3s, final composition 0.986s. This is a native
+function summary, not yet the represented C_CALL raising continuation.
 
 C_CALL terminal adapters landed as `6ad2d70`, full gate passing. Coverage
 remains 140 conditional opcode bridges.
 
 ## Open / next
 
-Immediate next: finish the longjmp saved-register/value summary, then the
-interpreter exception re-entry and C_CALL raising continuations. Consume the
+Immediate next: interpreter exception re-entry from the checked longjmp
+summary, then C_CALL raising continuations. Consume the
 remaining caml_do_exit summary when supplied. Continue the
 uncaught semantic continuation/backtrace paths, primitive
 `.raise` C_CALL outcomes and a1-prims terminal summaries, and major-allocation constructor paths.

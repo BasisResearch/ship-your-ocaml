@@ -2987,6 +2987,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.longjmp_readonly
 #print axioms OCaml.Vm.Sim.longjmp_seqz_decode
 
+-- Complete native nonlocal return through the pinned longjmp function.
+#print axioms OCaml.Vm.Sim.longjmp_compare_value
+#print axioms OCaml.Vm.Sim.longjmp_body
+#print axioms OCaml.Vm.Sim.longjmp_eval
+#print axioms OCaml.Vm.Sim.longjmp_body_regs
+#print axioms OCaml.Vm.Sim.longjmp_input
+#print axioms OCaml.Vm.Sim.longjmp_return_pc
+#print axioms OCaml.Vm.Sim.longjmp_summary
+
 -- Startup frame, first runtime calls, and allocator bootstrap obligation.
 #print axioms Vsa.Sim.Boot.loaderMem_bytes
 #print axioms Vsa.Sim.Boot.bytesT_local_eq
