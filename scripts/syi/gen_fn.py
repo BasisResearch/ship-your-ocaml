@@ -662,8 +662,8 @@ def ocaml_literal_mline(pc, word):
         kind = {0: 'sb', 3: 'sd'}[funct3]
     elif opcode in (0x33, 0x3b) and funct3 == 0:
         kind = {0: 'add', 0x20: 'sub'}[word >> 25] + ('w' if opcode == 0x3b else '')
-    elif opcode == 0x33 and funct3 == 7 and word >> 25 == 0:
-        kind = 'and'
+    elif opcode == 0x33 and funct3 in (6, 7) and word >> 25 == 0:
+        kind = {6: 'or', 7: 'and'}[funct3]
     elif opcode == 0x3b and funct3 == 1 and word >> 25 == 0:
         kind = 'sllw'
     else:

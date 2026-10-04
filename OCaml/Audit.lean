@@ -10,6 +10,7 @@ import OCaml.Vm.Gc.AllocLargeWrapper
 import OCaml.Vm.Boot.Startup.ParameterQueryReady
 import OCaml.Vm.Boot.Startup.ParameterReady
 import OCaml.Vm.Boot.Startup.ParameterValueReady
+import OCaml.Vm.Boot.Startup.StrncmpEqual
 import OCaml.Vm.Boot.WhileMinEnvironment
 import OCaml.Vm.Boot.Startup.ParameterPrefix
 import OCaml.Vm.Boot.Startup.ParameterBranch
@@ -3464,6 +3465,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.parameterValue_original
 #print axioms OCaml.Vm.Boot.Startup.parameter_value_done
 #print axioms OCaml.Vm.Boot.Startup.parameter_value_ready
+
+-- Bounded equal-prefix strncmp, folded over its native byte loop.
+#print axioms OCaml.Vm.Boot.Startup.strncmp_dispatch
+#print axioms OCaml.Vm.Boot.Startup.strncmp_first
+#print axioms OCaml.Vm.Boot.Startup.strncmp_next
+#print axioms OCaml.Vm.Boot.Startup.strncmp_test
+#print axioms OCaml.Vm.Boot.Startup.strncmp_return
+#print axioms OCaml.Vm.Boot.Startup.strncmp_loop
+#print axioms OCaml.Vm.Boot.Startup.strncmp_equal
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.DomainHistory.reset
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.domain_history_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.reset

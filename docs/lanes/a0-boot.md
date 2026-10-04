@@ -2,6 +2,23 @@
 
 ## Round 2 status (2026-10-04)
 
+The present-empty-value parser continuation landed as `c3c5e97`, full gate
+passed. `StrncmpEqual.lean:strncmp_equal` now proves the COMPLETE native
+strncmp call for an arbitrary positive equal nonzero prefix when either
+pointer selects its unaligned byte path. This is the path selected by the
+actual embedded environment string. `StrncmpLoop.lean:strncmp_loop` folds
+its bounded comparison using the observed left-pointer offset and the shared
+`indexed_loop` rule. Dispatch, both byte loads, end-pointer arithmetic,
+per-byte tests, zero return, all written registers and unchanged memory/output
+are retained. The complete composition checks in about 1.4 seconds.
+
+The instruction-record generator now handles OR alongside its existing AND
+case; generated decode/image certificates prove the emitted rows. Next:
+compose successful `_findenv_r`, then its getenv/security wrappers, and frame
+the certified initial environment through the reset history. Actual reset
+reachability remains at parser entry; reset-to-cut/Loaded remains open.
+
+
 The concrete environment correction landed as `44ce3cb`, full gate passed.
 `ParameterValueDone.lean:parameter_value_done` now summarizes the complete
 parser continuation after successful lookup of a present empty value: the
