@@ -28,10 +28,10 @@ theorem find_matched (c : Config) (sp s0 env name entry ra : BitVec 64) (count :
   have leafA : LeafInput ra a := ⟨loaded.good, loaded.image, loaded.minstret,
     (loaded.frame .x1 (by decide) (by decide)).trans leaf.raReg, leaf.aligned, loaded.tick⟩
   have regsA : GHolds a.σ (findCompareInput sp s0 name (nameCursor name count) entry) := ⟨
-    (loaded.frame .x2 (by decide) (by decide)).trans regs.2.2.1,
-    (loaded.frame .x8 (by decide) (by decide)).trans regs.2.2.2.1,
-    (loaded.frame .x12 (by decide) (by decide)).trans regs.2.2.2.2.1,
-    (loaded.frame .x18 (by decide) (by decide)).trans regs.2.2.2.2.2.1, loaded.result, trivial⟩
+    (loaded.frame .x2 (by decide) (by decide)).trans (gholds_lookup (n := 2) _ regs (by rfl)),
+    (loaded.frame .x8 (by decide) (by decide)).trans (gholds_lookup (n := 8) _ regs (by rfl)),
+    (loaded.frame .x12 (by decide) (by decide)).trans (gholds_lookup (n := 12) _ regs (by rfl)),
+    (loaded.frame .x18 (by decide) (by decide)).trans (gholds_lookup (n := 18) _ regs (by rfl)), loaded.result, trivial⟩
   have dataA := data.same_mem loaded.memory
   obtain ⟨b, run2, compared⟩ := (find_compared a sp s0 name entry ra count byte leafA data.frame regsA
     data.positive data.small dataA.comparison (by have := data.entryBelow; omega) data.nameBelow data.unaligned).run a ⟨loaded.pc, rfl⟩

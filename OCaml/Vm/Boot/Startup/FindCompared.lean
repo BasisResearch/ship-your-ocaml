@@ -34,7 +34,7 @@ theorem find_compared (c : Config) (sp s0 name entry ra : BitVec 64) (count : Na
     change GHolds a.σ (findCompareRegs sp name (nameCursor name count) entry) at hs
     unfold findCompareRegs at hs
     rw [countEq] at hs
-    exact ⟨hs.2.2.2.2.2.1, hs.1, hs.2.1, hs.2.2.1, hs.2.2.2.1, hs.2.2.2.2.1, trivial⟩
+    exact ⟨gholds_lookup (n := 10) _ hs (by rfl), gholds_lookup (n := 11) _ hs (by rfl), gholds_lookup (n := 12) _ hs (by rfl), gholds_lookup (n := 8) _ hs (by rfl), gholds_lookup (n := 2) _ hs (by rfl), gholds_lookup (n := 18) _ hs (by rfl), trivial⟩
   have call := call_registers_summary jal_800374c8_call_shape jal_800374c8_call_decode a
     (jal_800374c8_call_pins prepared.image) prepared.good prepared.image prepared.tick prepared.minstret
     _ holds (by simp only [List.cons_append, List.nil_append, keysG]; decide)
@@ -44,9 +44,10 @@ theorem find_compared (c : Config) (sp s0 name entry ra : BitVec 64) (count : Na
   have dataB := dataA.same_mem called.memory
   have args : GHolds b.σ (strncmpFirstInput entry name (BitVec.ofNat 64 (count - 1 + 1))) := by
     rw [length]
-    exact ⟨called.regs.2.1, called.regs.2.2.1, called.regs.2.2.2.1, trivial⟩
+    exact ⟨gholds_lookup (n := 10) _ called.regs (by rfl), gholds_lookup (n := 11) _ called.regs (by rfl), gholds_lookup (n := 12) _ called.regs (by rfl), trivial⟩
   obtain ⟨after, run3, post⟩ := (strncmp_equal b entry name _ (count - 1) byte (called.leaf (by rfl) (by decide)) dataB args unaligned).run b ⟨called.pc, rfl⟩
-  have parked : GHolds b.σ [(8, BitVec.ofNat 64 count), (2, nativeStack sp 80), (18, name)] := called.regs.2.2.2.2
+  have parked : GHolds b.σ [(8, BitVec.ofNat 64 count), (2, nativeStack sp 80), (18, name)] :=
+    ⟨gholds_lookup (n := 8) _ called.regs (by rfl), gholds_lookup (n := 2) _ called.regs (by rfl), gholds_lookup (n := 18) _ called.regs (by rfl), trivial⟩
   have kept := holds_frame_ne post.frame parked (by simp only [keysG]; decide)
     (by simp only [keysG]; decide) (by simp only [keysG]; decide)
   have effects := (prefix_readonly_post prepared (prefix_readonly_post (log := []) called post)).toEffectPost.widen
