@@ -1,0 +1,33 @@
+{
+  "instructions": 412087,
+  "code_words": 655922,
+  "instruction_shards": 202,
+  "certified_block_rules": 92543,
+  "closure_entries": 11292,
+  "fully_generated_normal_entries": 285,
+  "normal_share": 0.02523910733262487,
+  "generated_over_application_entries": 282,
+  "over_share": 0.02497343251859724,
+  "grab_entries": 5608,
+  "generated_under_application_entries": 5608,
+  "under_share_of_all_entries": 0.49663478568898334,
+  "under_share_of_grab_entries": 1.0,
+  "generated_ranked_list_loops": [
+    8372,
+    20141
+  ],
+  "explicit_cfg_back_edges": 155,
+  "unique_higher_order_call_sites": 34125,
+  "call_sites": 23780,
+  "tail_call_sites": 10345,
+  "statically_resolved_general_callee_edges": 0,
+  "limitations": [
+    "A block rule requires its code pin and local symbolic evaluation; it is not a function termination proof.",
+    "Normal summaries have generated structural calling/field/list preconditions, never a full-run premise.",
+    "Under-application returns a partial closure; it does not prove the eventual saturated body.",
+    "Call and tail composition use Application.call_summary/tail_summary. Unknown higher-order callees remain open.",
+    "The two recognized tail-recursive list loops use loop_rule; other loops and counting shapes remain open.",
+    "CFG back edges exclude dynamic tail calls, so they are not a denominator for the recognized tail-recursive loops.",
+    "The adequacy harness invokes an unchanged compiler helper copy; it is not a proof that boot/ocamlc terminates."
+  ]
+}

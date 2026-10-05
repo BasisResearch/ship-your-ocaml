@@ -336,6 +336,18 @@ work; passing executable difftests does not discharge Layer A.
   `bcModel.ok` bounds the natural PC by 2^64 so its ghost register cannot alias
   another address (`pc_alias_excluded`).
 
+### B′ Round 2 (draft stopped at C4 abstraction gate)
+
+* C4 gate: 10 hand proofs, first-quarter mean 7.5 lines, last-quarter mean
+  18.0; discovery required. See `docs/lanes/bprime.md`. Draft proofs are unlanded.
+* Full compiler: 412,087 instructions in generated bounded shards; complete
+  build/audit measurements pending (`scripts/gen_bc_all.py`).
+* Function/loop summaries: conservative closure-entry CFG census and generated
+  application cases (`scripts/gen_bc_functions.py`); proof coverage and loop
+  recognizers being measured.
+* Nontrivial compiler helper functional postcondition through
+  `bytecode_adequacy`: open. The earlier branch fixture is not this exit.
+
 ## C1–C3: the compiler at the source level
 
 * C1: `OCamlSem` on Lambda (LLM-written), its WP and adequacy; validated

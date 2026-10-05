@@ -47,3 +47,10 @@ C3-relocation	2026-10-01T18:14:18Z	10	OCaml/Vm/Gc/Invariant.lean	LoopHead.reloc
 C4-bytecode-specs	2026-09-30T05:53:26Z	8	OCaml/Programs/CountLoop.lean	loopN_body
 C4-bytecode-specs	2026-09-30T05:53:26Z	7	OCaml/Programs/CountLoop.lean	loopN_exit
 C4-bytecode-specs	2026-09-30T05:53:26Z	22	OCaml/Programs/CountLoop.lean	loopN_reaches
+C4-bytecode-specs	unknown	35	OCaml/Logic/ListLoop.lean	length_loop
+C4-bytecode-specs	unknown	9	OCaml/Logic/ListLoop.lean	length_application
+C4-bytecode-specs	unknown	25	OCaml/Programs/CompilerFunctionAdequacy.lean	abs_runFact
+C4-bytecode-specs	unknown	8	OCaml/Programs/CompilerFunctionAdequacy.lean	abs_haltFact
+C4-bytecode-specs	unknown	15	OCaml/Programs/CompilerFunctionAdequacy.lean	abs_wp
+C4-bytecode-specs	unknown	17	OCaml/Programs/CompilerFunctionAdequacy.lean	abs_hyp
+C4-bytecode-specs	unknown	19	OCaml/Programs/CompilerFunctionAdequacy.lean	compiler_abs_adequacy

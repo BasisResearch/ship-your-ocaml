@@ -70,3 +70,10 @@ adopted 2026-09-30 abstractions/ROUND-1.md   # symbolic stepping, OCaml/Logic/Sy
 OCaml/Programs/CountLoop.lean loopN_body
 OCaml/Programs/CountLoop.lean loopN_exit
 OCaml/Programs/CountLoop.lean loopN_reaches
+OCaml/Logic/ListLoop.lean length_loop
+OCaml/Logic/ListLoop.lean length_application
+OCaml/Programs/CompilerFunctionAdequacy.lean abs_runFact
+OCaml/Programs/CompilerFunctionAdequacy.lean abs_haltFact
+OCaml/Programs/CompilerFunctionAdequacy.lean abs_wp
+OCaml/Programs/CompilerFunctionAdequacy.lean abs_hyp
+OCaml/Programs/CompilerFunctionAdequacy.lean compiler_abs_adequacy

@@ -9,7 +9,7 @@ structure CertifiedSite (code : Code) where
   offset : Nat
   instr : Instr
   len : Nat
-  bound : offset + max len 2 ≤ code.size
+  bound : offset + max len (if instr.op = .SWITCH ∨ instr.op = .CLOSUREREC then 2 else 1) ≤ code.size
   opcode : (code.word offset).bind Opcode.ofNat? = some instr.op
   length : instrLength code offset instr.op = some len
   decoded : decodeAt code offset = some instr
@@ -37,7 +37,7 @@ theorem CertifiedBlock.decode_sound (b : CertifiedBlock) (P : Prog)
     have hp : b.base + site.offset = pc := by simpa using List.find?_some hf
     have hi : site.instr = i := by simpa [hf] using hd
     subst pc
-    have he := decodeAt_extract P.code b.base (b.base + b.code.size)
+    have he := decodeAt_extract_tight P.code b.base (b.base + b.code.size)
       (b.base + site.offset) site.len site.instr.op (by omega)
       (by have := site.bound; omega)
       (by simpa [pin] using site.opcode)

@@ -23,12 +23,15 @@ theorem decodeAt_local (a b : Code) (pa pb len : Nat) (op : Opcode)
     (hw : a.word pa = b.word pb)
     (hop : (b.word pb).bind Opcode.ofNat? = some op)
     (hl : instrLength b pb op = some len)
-    (hw1 : a.word (pa + 1) = b.word (pb + 1))
+    (hw1 : op = .SWITCH ∨ op = .CLOSUREREC → a.word (pa + 1) = b.word (pb + 1))
     (ha : ∀ k, k < len - 1 → a.arg (pa + 1 + k) = b.arg (pb + 1 + k)) :
     decodeAt a pa = decodeAt b pb := by
   have hlen : instrLength a pa op = instrLength b pb op := by
     unfold instrLength
-    split <;> simp only [hw1]
+    split
+    · rw [hw1 (Or.inl rfl)]
+    · rw [hw1 (Or.inr rfl)]
+    · rfl
   have hargs : (List.range (len - 1)).mapM (fun k => a.arg (pa + 1 + k)) =
       (List.range (len - 1)).mapM (fun k => b.arg (pb + 1 + k)) :=
     mapM_congr_on _ _ _ (fun k hk => ha k (List.mem_range.mp hk))
@@ -59,7 +62,30 @@ theorem decodeAt_extract (code : Code) (base stop pc len : Nat) (op : Opcode)
     rw [code_extract_word code base stop pc lo (by omega)]
   · exact hop
   · exact hl
+  · intro _
+    unfold Code.word
+    rw [show pc - base + 1 = (pc + 1) - base by omega,
+      code_extract_word code base stop (pc + 1) (by omega) (by omega)]
+  · intro k hk
+    unfold Code.arg
+    rw [show pc - base + 1 + k = (pc + 1 + k) - base by omega,
+      code_extract_word code base stop (pc + 1 + k) (by omega) (by omega)]
+
+/-- A complete instruction in an extracted window decodes identically.
+The extra word bound includes the size operand of variable-length opcodes. -/
+theorem decodeAt_extract_tight (code : Code) (base stop pc len : Nat) (op : Opcode)
+    (lo : base ≤ pc) (hi : pc + max len (if op = .SWITCH ∨ op = .CLOSUREREC then 2 else 1) ≤ stop)
+    (hop : (Code.word (code.extract base stop) (pc - base)).bind Opcode.ofNat? = some op)
+    (hl : instrLength (code.extract base stop) (pc - base) op = some len) :
+    decodeAt code pc = decodeAt (code.extract base stop) (pc - base) := by
+  apply decodeAt_local code (code.extract base stop) pc (pc - base) len op
   · unfold Code.word
+    rw [code_extract_word code base stop pc lo (by split at hi <;> omega)]
+  · exact hop
+  · exact hl
+  · intro hv
+    simp only [if_pos hv] at hi
+    unfold Code.word
     rw [show pc - base + 1 = (pc + 1) - base by omega,
       code_extract_word code base stop (pc + 1) (by omega) (by omega)]
   · intro k hk

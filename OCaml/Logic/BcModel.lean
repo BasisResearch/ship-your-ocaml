@@ -70,6 +70,12 @@ def wordAt (s : St) (w : Nat) : BitVec 64 :=
         BitVec.ofNat 64 ((List.range 8).foldr (fun k a => a * 256 + (b[8 * i + k]?.map UInt8.toNat).getD 0) 0)
     | _ => 0
 
+/-- Bounds required to recover natural control registers from ghost words.
+The extra-argument count is saved in a 63-bit OCaml integer by APPLY/RETURN. -/
+structure RegisterBounds (s : St) : Prop where
+  pc : s.pc < 2^64
+  extra : s.extra < 2^63
+
 /-- `BcSem` of program `P` as an abstract ISA model. -/
 def bcModel (P : Prog) : VsaIris.MachineModel where
   State := St
@@ -88,7 +94,7 @@ def bcModel (P : Prog) : VsaIris.MachineModel where
   mem s a := (wordAt s (a / 8)).extractLsb' (8 * (a % 8)) 8
   out s := bytesToString s.world.console
   -- The ghost PC is a 64-bit word; exclude aliases at pc + 2^64.
-  ok s := s.pc < 2^64
+  ok s := RegisterBounds s
 
 /-- PC ownership identifies an absolute address in well-formed states.
 Without `ok`'s bound, pc and pc + 2^64 have identical ghost registers. -/
@@ -96,7 +102,7 @@ theorem pc_eq_of_reg {P : Prog} {s : St} {pc : Nat} (hok : (bcModel P).ok s)
     (hpc : pc < 2^64) (hr : (bcModel P).reg s 0 = BitVec.ofNat 64 pc) : s.pc = pc := by
   have h := congrArg BitVec.toNat hr
   change s.pc % 2^64 = pc % 2^64 at h
-  simpa only [Nat.mod_eq_of_lt hok, Nat.mod_eq_of_lt hpc] using h
+  simpa only [Nat.mod_eq_of_lt hok.pc, Nat.mod_eq_of_lt hpc] using h
 
 /-- Machine-checked reason for the PC bound: 0 and 2^64 share a ghost
 register encoding, but the latter is excluded from well-formed states. -/
@@ -106,7 +112,30 @@ theorem pc_alias_excluded (P : Prog) (s : St) :
   constructor
   · change (0#64) = BitVec.ofNat 64 (2^64)
     decide
-  · change ¬ 2^64 < 2^64
+  · intro h
+    have hh := h.pc
+    change 2^64 < 2^64 at hh
+    omega
+
+/-- Extra-argument ownership identifies zero only with its representation bound. -/
+theorem extra_zero_of_reg {P : Prog} {s : St} (hok : (bcModel P).ok s)
+    (hr : (bcModel P).reg s 4 = 0) : s.extra = 0 := by
+  have h := congrArg BitVec.toNat hr
+  change s.extra % 2^64 = 0 at h
+  have hb := hok.extra
+  omega
+
+/-- Without the extra bound a 2^64-argument state aliases the zero register,
+but RETURN would try over-application instead of restoring the caller. -/
+theorem extra_alias_excluded (P : Prog) (s : St) :
+    (bcModel P).reg { s with extra := 2^64 } 4 = 0 ∧
+      ¬ (bcModel P).ok { s with extra := 2^64 } := by
+  constructor
+  · change BitVec.ofNat 64 (2^64) = 0
+    decide
+  · intro h
+    have hh := h.extra
+    change 2^64 < 2^63 at hh
     omega
 
 /-- `bcModel`'s lossy outcome map (`unsupported`/`wrong` collapse to `stuck`). -/
@@ -169,7 +198,7 @@ theorem bytecode_adequacy {GF : BundledGFunctors} [VsaIris.MachGpreS GF] (P : Pr
     (φ : Nat × String → Prop)
     (H : VsaIris.AdequacyHyp GF (bcModel P) mr mm ((bcModel P).out P.init) φ) :
     ∃ e out, BcHalts P out e ∧ φ (e, out) := by
-  obtain ⟨e, out, hh, hφ⟩ := VsaIris.mach_adequacy (M := bcModel P) P.init mr mm hr hm (by change 0 < 2^64; decide) φ H
+  obtain ⟨e, out, hh, hφ⟩ := VsaIris.mach_adequacy (M := bcModel P) P.init mr mm hr hm (by exact ⟨by change 0 < 2^64; decide, by change 0 < 2^63; decide⟩) φ H
   exact ⟨e, out, halts_bcHalts hh, hφ⟩
 
 /-- The statement of Layer B′'s adequacy as a `Prop` (for PHASES.md's

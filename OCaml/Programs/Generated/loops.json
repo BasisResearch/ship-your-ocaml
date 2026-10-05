@@ -1,0 +1,9 @@
+{
+  "closure_entries": 11292,
+  "recognized_length_loops": [
+    8372,
+    20141
+  ],
+  "loop_rule": "OCaml.Bytecode.length_loop",
+  "scope": "Exact list-length accumulator shape; other counting/list loops unresolved."
+}

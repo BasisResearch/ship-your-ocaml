@@ -17,7 +17,7 @@ theorem jump_runFact : RunFact (bcModel jumpStop) 0 [] [] [(0, 0, 2)] [] := by
   dsimp at hp
   subst pc
   refine ⟨⟨2, a, rest, e, x, t, h, w⟩,
-    reachesN_of_symbolic (jumpStop_summary a e rest x t h w), by change 2 < 2^64; decide, ?_, rfl⟩
+    reachesN_of_symbolic (jumpStop_summary a e rest x t h w), by exact ⟨by change 2 < 2^64; decide, hok.extra⟩, ?_, rfl⟩
   constructor
   · intro p hp
     simp only [List.mem_singleton] at hp

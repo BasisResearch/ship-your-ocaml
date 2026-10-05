@@ -1,0 +1,73 @@
+{
+  "memory_cap_gib": 24,
+  "heartbeat_budget": "Lean default (200000)",
+  "executable_sha256": "4000f553d130d88213c95f019d77afd145ac211e54499242708c0762b6d11394",
+  "shards": {
+    "S000": {
+      "wall_seconds": 27.66,
+      "user_seconds": 39.72,
+      "system_seconds": 0.73,
+      "max_rss_kib": 1008128,
+      "exit_status": 0,
+      "source_sha256": "c9fb00d275e92fcd9c2183631b91fd328b7dd4832742fe97584c4800e85bc782",
+      "instructions": 2048,
+      "blocks": 595,
+      "audited": 595
+    },
+    "S201": {
+      "wall_seconds": 6.44,
+      "user_seconds": 8.86,
+      "system_seconds": 0.32,
+      "max_rss_kib": 834248,
+      "exit_status": 0,
+      "source_sha256": "ccbdd27b05040bfe1b683dfa20ebc8c740ad960aa10d86ca9ffc47de3d6cf462",
+      "instructions": 439,
+      "blocks": 125,
+      "audited": 125
+    },
+    "S001": {
+      "wall_seconds": 96.72,
+      "user_seconds": 63.54,
+      "system_seconds": 1.12,
+      "max_rss_kib": 997348,
+      "exit_status": 0,
+      "source_sha256": "734751df5e153f3d941a60f6d6ebe1ef079b7dc36a4d7ccbee6b6e70169a773e",
+      "instructions": 2048,
+      "blocks": 661,
+      "audited": 661
+    },
+    "S002": {
+      "wall_seconds": 28.35,
+      "user_seconds": 41.96,
+      "system_seconds": 0.69,
+      "max_rss_kib": 1002708,
+      "exit_status": 0,
+      "source_sha256": "c4dca8c4bc085c634f28c0e5bd4c9d2b4628844dba0ab9d22d0653ba6fc3f681",
+      "instructions": 2048,
+      "blocks": 606,
+      "audited": 606
+    },
+    "S003": {
+      "wall_seconds": 83.6,
+      "user_seconds": 61.84,
+      "system_seconds": 1.09,
+      "max_rss_kib": 963492,
+      "exit_status": 0,
+      "source_sha256": "a9ad1b89f295bfc8a150884c7bba15519b8ac83458e22c2eae73c03f13b21630",
+      "instructions": 2048,
+      "blocks": 528,
+      "audited": 528
+    },
+    "S004": {
+      "wall_seconds": 144.99,
+      "user_seconds": 67.37,
+      "system_seconds": 1.19,
+      "max_rss_kib": 998592,
+      "exit_status": 0,
+      "source_sha256": "d1db1caed176f6d2de4f598f4f4ffa47f0a1952df48f10fa3f862253176555e0",
+      "instructions": 2048,
+      "blocks": 674,
+      "audited": 674
+    }
+  }
+}

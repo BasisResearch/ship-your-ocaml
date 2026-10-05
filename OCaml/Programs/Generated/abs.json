@@ -1,0 +1,21 @@
+{
+  "source_unit": "Stdlib__Int",
+  "source_entry": 12349,
+  "source_end": 12360,
+  "harness_entry": 8,
+  "helper_words": [
+    0,
+    135,
+    0,
+    4,
+    0,
+    40,
+    1,
+    0,
+    109,
+    40,
+    1
+  ],
+  "functional_postcondition": "signed modular absolute value, for every BitVec 63",
+  "adequacy_example": "abs (-7) = 7"
+}
