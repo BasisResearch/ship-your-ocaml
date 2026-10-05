@@ -74,3 +74,50 @@ theorem stop_exit_continuation {c : Config} {D : InvocationData} {vmSp value : B
     (stop_do_exit_summary exit)
 
 end OCaml.Vm.Sim
+
+namespace OCaml.Vm.Sim
+open OCaml.Bytecode
+
+/-- The low two bits of a word, as a natural number. -/
+theorem and3_toNat (w : BitVec 64) : (w &&& 3#64).toNat = w.toNat % 4 := by
+  rw [BitVec.toNat_and]
+  exact Nat.and_two_pow_sub_one_eq_mod w.toNat 2
+
+/-- **No represented value looks like an exception result** under a
+word-aligned placement: ints are odd, pointers, code pointers and atoms are
+multiples of four. Only `.raw` words are unconstrained (`GoodF1.stopAccu`). -/
+theorem valWord_ordinary {pl : Place} {v : Val} {w : BitVec 64}
+    (code : pl.codeBase % 4 = 0) (heap : ∀ l a, pl.φ l = some a → a % 4 = 0)
+    (atoms : pl.atomBase % 4 = 0) (notRaw : ∀ r, v ≠ .raw r)
+    (hv : valWord pl v = some w) : w &&& 3#64 ≠ 2#64 := by
+  intro h2
+  have e := congrArg BitVec.toNat h2
+  rw [and3_toNat] at e
+  simp only [BitVec.toNat_ofNat] at e
+  cases v with
+  | int n =>
+    simp only [valWord, Option.some.injEq] at hv
+    subst hv
+    have odd : (tag64 n).getLsbD 0 = true := by simp [tag64]
+    have odd' : (tag64 n).toNat % 2 = 1 := by
+      simpa [BitVec.getLsbD, Nat.testBit_zero] using odd
+    omega
+  | ptr l k =>
+    simp only [valWord, Option.map_eq_some_iff] at hv
+    obtain ⟨a, ha, rfl⟩ := hv
+    have := heap l a ha
+    simp only [BitVec.toNat_ofNat] at e
+    omega
+  | code pc =>
+    simp only [valWord, Option.some.injEq] at hv
+    subst hv
+    simp only [BitVec.toNat_ofNat] at e
+    omega
+  | atom t =>
+    simp only [valWord, Option.some.injEq] at hv
+    subst hv
+    simp only [BitVec.toNat_ofNat] at e
+    omega
+  | raw r => exact notRaw r rfl
+
+end OCaml.Vm.Sim
