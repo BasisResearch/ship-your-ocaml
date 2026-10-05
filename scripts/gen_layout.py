@@ -149,7 +149,7 @@ def main():
             "caml_start_code", "caml_code_size", "caml_int64_ops", "caml_int32_ops",
             "caml_nativeint_ops", "channel_operations", "caml_all_opened_channels",
             "embedded_files", "embedded_argv", "embedded_env", "__embed_start",
-            "__heap_end", "__stack_top", "caml_prim_table", "_start",
+            "__heap_end", "__stack_top", "__stack_size", "caml_prim_table", "_start",
             "__bss_start", "__bss_end", "__global_pointer$", "environ",
             "custom_ops_table", "caml_ba_ops", "caml_stat_alloc", "caml_shared_libs_path",
             "caml_startup_aux", "shutdown_happened", "startup_count", "caml_cleanup_on_exit"]

@@ -52,6 +52,8 @@ def sym_embed_start : Nat := 0x86800000
 def sym_heap_end : Nat := 0x86800000
 /-- `__stack_top` -/
 def sym_stack_top : Nat := 0x88000000
+/-- `__stack_size` -/
+def sym_stack_size : Nat := 0x800000
 /-- `caml_prim_table` -/
 def sym_caml_prim_table : Nat := 0x8006c0b8
 /-- `_start` -/

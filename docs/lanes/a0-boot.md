@@ -31,6 +31,17 @@ init_stack/atom_table/backtrace 2.4K. caml_load_code takes 224K: `read` 59K
 and caml_register_code_fragment (MD5 over the code) 164K. read_section(DATA)
 takes 40K and caml_build_primitive_table more than 3.9M (strcmp calls).
 
+caml_main-level context at the frontier (`MainArgv.lean`, `EmbedFrame.lean`):
+`ResetSharedTableReturned.argv_array` proves s1 = the embedded argv array.
+s1 is carried by `keep9` frame lemmas for every summary shape: posts,
+boundaries, allocator `RetFrame`, stat_checked, custom nodes, ext_table and
+the domain chain. `ResetSharedTableReturned.embed` (`EmbedImage`) proves every
+byte of the fixed .embed region [__embed_start, __stack_top - __stack_size)
+still has its loader value. This covers argv, env and the embedded bytecode
+file, which every later startup read needs. `EmbedFrame` composites:
+stat_checked, custom registrations, ext_table. The generated
+`WhileMinArgv.lean` (gen_boot_image.py) pins argv = {"ocamlrun", "/prog"}.
+
 Next: caml_main 0x80004de4 → caml_attempt_open, failing path:
 caml_search_exe_in_path (ext_table_init at sp, getenv("PATH") miss,
 decompose_path(NULL), search_in_path → strdup, frees), strdup, gc_message,
