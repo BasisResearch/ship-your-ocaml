@@ -27,7 +27,9 @@ for attempt in 1 2 3 4 5; do
   git fetch -q origin main
   git rebase -q origin/main || { echo "integrate: rebase conflict — resolve, then rerun"; exit 1; }
   wait_mem
-  bash scripts/check_all.sh > .integrate.log 2>&1 || { tail -20 .integrate.log; echo "integrate: gate failed (.integrate.log)"; exit 1; }
+  # 9>&-: the gate must not inherit the lock descriptor (the OS-spec
+  # validation traces expect fd 9 to be closed, EBADF).
+  bash scripts/check_all.sh > .integrate.log 2>&1 9>&- || { tail -20 .integrate.log; echo "integrate: gate failed (.integrate.log)"; exit 1; }
   if git push -q origin HEAD:main; then echo "integrate: landed $(git rev-parse --short HEAD) on main"; exit 0; fi
   echo "integrate: push race, retrying ($attempt)"
 done
