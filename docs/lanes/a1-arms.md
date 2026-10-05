@@ -35,39 +35,47 @@ preserves it:
   (`CcallnWriteOk.native`);
 * raise/longjmp paths carry `NativeHeld` while `x2` is elsewhere.
 
-Unconditional loop-head simulations, all from `LoopAt` and named premises:
-* `OpArm` rows (generated): ACC0–7, PUSH, PUSHACC0–7, ENVACC1–4,
-  GETFIELD0–3, PUSHENVACC1–4, OFFSETCLOSUREM3/0/3 and PUSHOFFSETCLOSUREM3/0/3
-  (`AccRows`, `PushRows`, `FieldRows`, `OffsetRows`; generators
-  `gen_acc_arms`, `gen_push_rows`, `gen_field_rows`, `gen_offset_rows`);
-* operand `_next` forms (hand, a2-sem style), taking the operand fetch:
-  ACC n, PUSHACC n, POP, ASSIGN, ENVACC n (`OperandStackRows`), OFFSETCLOSURE
-  n, PUSHOFFSETCLOSURE n (`OffsetRows`), and GETGLOBAL, PUSHGETGLOBAL,
-  GETGLOBALFIELD, PUSHGETGLOBALFIELD (`GlobalRows`), APPLY1–3 (`ApplyRows`),
-  RETURN (`ReturnRows`), APPTERM1–3 (`StackLog`), PUSH_RETADDR (`RetaddrRows`),
-  GRAB satisfied path (`GrabRows`), RESTART (`RestartRows`). `StackLogOk.of_window`
-  certifies any aligned word log confined to the VM stack allocation once.
-  RETURN/GRAB name two BcSem invariants (extra < 2^63; saved frame extras ≥ 0),
-  asked of a2-sem.
+Unconditional F1 table rows (`OpArm P (LoopAt L P) op`), derived through
+`decode_fetch` (opcode and operand fetches from `decodeAt`) and the adapters
+`opArm_of_next0/1/2` (`DecodeFetch.lean`):
+* generated: ACC0–7, PUSH, PUSHACC0–7, ENVACC1–4, GETFIELD0–3, PUSHENVACC1–4,
+  OFFSETCLOSUREM3/0/3, PUSHOFFSETCLOSUREM3/0/3;
+* hand: CHECK_SIGNALS, POPTRAP, RESTART, PUSHTRAP, PUSH_RETADDR, APPLY1–3,
+  OFFSETCLOSURE n, PUSHOFFSETCLOSURE n (`SignalRows`, `ControlRows`).
 
-Shared lemmas are in `StackRows.lean` and `ClosureOffsetRows.lean`.
-`StackGeometry` places code, atoms and objects (`heapLow`, `codeLow/Arena`,
-`atomLow/Arena`, `heapCode`/`heapAtoms`). Allocation takes one named
-`NurseryPlacement`. `DispatchCode` is the opcode fetch only (code geometry
-from `StackGeometry.code_read`). Remaining named premises: `MemoryStable`,
-`StackCapacity B` (budget + 2·Stack_threshold ≤ Stack_size), `RuntimeFrame L
-high` (VM-stack windows, stack_high/stack_threshold words, no pending
-signal; a6-gc's pinned `f1Layout` will supply it), and
-`nonnegative` operands (a2-sem is removing those by making negative index
-operands `.unsupported`).
+Loop-head simulations (`_next`, row wrappers next) for ACC n, PUSHACC n, POP,
+ASSIGN, ENVACC n, (PUSH)GETGLOBAL(FIELD), APPLY n, APPTERM n s, APPTERM1–3,
+RETURN, GRAB (satisfied path). They wait on a2-sem's clamp fix, which
+changes their inversions.
+
+Row premises for generic `L`:
+* `MemoryStable L.runtimeOk` and `RuntimeFrame L high dom`; both discharged
+  for a6-gc's pinned `Gc.f1Layout` (`f1_memoryStable`, `f1_runtimeFrame`,
+  `F1Frame.lean`);
+* `StackCapacity B` (budget + 2·Stack_threshold ≤ Stack_size);
+* BcSem reachability invariants from a2-sem: `ExtraBounded` (RETURN, GRAB)
+  and trap ≤ stack length (PUSHTRAP).
+
+Certificates are proved once and reused:
+* `StackLogOk.of_window`: any word log in the stack allocation;
+* `VmLogOk.of_windows`: logs that also write VM-owned Caml_state fields;
+* `ApplyWriteOk`, `TailcallWriteOk`, `ApptermWriteOk`, `RetaddrWriteOk`,
+  `PushtrapWriteOk`, `TrapWriteOk`, `RestartInput`, `AssignWriteOk`,
+  `PushWriteOk` `.of_geometry`.
+
+`StackGeometry` places the stack, the Caml_state record, code, atoms and
+objects pairwise apart. bprime's entry supplies it at the cut.
 
 Open, next:
 * Writes outside the VM stack (SETFIELD n, SETGLOBAL, trap and C_CALL
   setup Caml_state stores) need runtime framing beyond `RuntimeFrame`'s
   stack windows. Decide the contract with a6-gc (runtimeOk's footprint is
   the Caml_state record plus allocator metadata).
-* Allocation families (MAKEBLOCK, CLOSURE, CLOSUREREC, GRAB) need
-  `NurseryPlacement` and `AllocationRuntime` from a6-gc's nursery bounds.
+* Allocation families (MAKEBLOCK, CLOSURE, CLOSUREREC, GRAB) and SETFIELD /
+  SETGLOBAL: put a6-gc's `NurseryGeometry` (definitions now in
+  `Gc/NurseryDefs.lean`) into `Running.stack`'s witness, transport it at the
+  restore sites (`NurseryGeometry.frame_log/alloc`), then use
+  `NurseryGeometry.placement`, `f1_allocation` and `f1_objectField`.
 * Application/return/exception/C_CALL families.
 * Then ENVACC, GETFIELD and the other families, following `acc0_row`.
 
