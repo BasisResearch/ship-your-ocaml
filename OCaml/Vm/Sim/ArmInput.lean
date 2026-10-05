@@ -87,21 +87,36 @@ theorem ArmInput.of_repr {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
   · simpa only [ha, Vsa.Sim.tohostAddr, Vsa.Sim.LibraryLayout.tohostAddr,
       Layout.sym_tohost] using geometry.htif
 
-/-- The code facts dispatch needs at the current bytecode PC: the opcode
-word's RAM geometry under any representation witness and the fetch. Named obligation; a2-sem supplies it
-(`CodeFacts.lean`, docs/lanes/F1-split.md). -/
-structure DispatchCode (P : Prog) (s : St) (c : Config) (op : Opcode) : Prop where
-  geometry : ∀ pl cp sp high, VmReprAt P s c pl cp sp high → CodeReadAt (pl.codeBase + 4 * s.pc)
+/-- Every word of the code buffer is readable (`StackGeometry.codeLow`/`codeArena`). -/
+theorem StackGeometry.code_read {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high i : Nat} (g : StackGeometry P s c pl cp high) (bound : i < P.code.size) :
+    CodeReadAt (pl.codeBase + 4 * i) := by
+  have := g.codeLow
+  have := g.codeArena
+  refine ⟨?_, ?_, Or.inr ?_⟩ <;> simp only [Layout.sym_bss_end, Layout.sym_tohost,
+    Vsa.Sim.DlHeap.heapEnd] at * <;> omega
+
+/-- An operand read needs only its fetch: the geometry is the witness's. -/
+theorem OperandAt.of_fetch {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high i : Nat} {w : BitVec 32} (g : StackGeometry P s c pl cp high)
+    (fetch : P.code[i]? = some w) : OperandAt P pl i w :=
+  ⟨fetch, g.code_read (by simpa using (Array.getElem?_eq_some_iff.mp fetch).1)⟩
+
+/-- The code fact dispatch needs at the current bytecode PC: the fetch of the
+opcode word. Named obligation; a2-sem supplies it from decoding
+(`CodeFacts.lean`). The word's RAM geometry comes from `StackGeometry`. -/
+structure DispatchCode (P : Prog) (s : St) (op : Opcode) : Prop where
   fetch : P.code[s.pc]? = some (BitVec.ofNat 32 op.toNat)
 
 /-- **Arm entry from the loop-head invariant.** The witness is the one that
 carries the stack geometry (`Running.stack`). -/
 theorem ArmInput.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
-    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c op) :
+    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op) :
     ∃ pl cp sp high, ArmInput L P s op c pl cp sp high := by
   obtain ⟨pl, cp, sp, high, repr, stack⟩ := h.running.stack
   exact ⟨pl, cp, sp, high, ArmInput.of_repr repr h.running.platform h.running.loop h.clock
-    (code.geometry pl cp sp high repr) code.fetch stack h.running.native⟩
+    (stack.code_read (by simpa using (Array.getElem?_eq_some_iff.mp code.fetch).1))
+    code.fetch stack h.running.native⟩
 
 /-- A represented register has the uniquely determined word of its value. -/
 theorem represented_register {pl : Place} {v : Val} {c : Config} {r : Nat} {w : BitVec 64}

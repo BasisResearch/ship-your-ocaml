@@ -17,7 +17,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
 PREMISES = '''{{L : OCaml.Layout}} {{B : OCaml.Budget}} {{P : Prog}} {{high0 : Nat}}
     (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .{op})'''
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .{op})'''
 
 
 def plain(op, lower):

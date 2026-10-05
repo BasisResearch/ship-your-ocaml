@@ -19,7 +19,7 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 theorem acc0_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
     (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC0) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .ACC0) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC0 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -38,7 +38,7 @@ theorem acc0_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
 theorem acc1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
     (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC1) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .ACC1) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC1 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -57,7 +57,7 @@ theorem acc1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
 theorem acc2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
     (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC2) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .ACC2) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC2 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -76,7 +76,7 @@ theorem acc2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
 theorem acc3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
     (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC3) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .ACC3) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC3 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -95,7 +95,7 @@ theorem acc3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
 theorem acc4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
     (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC4) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .ACC4) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC4 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -114,7 +114,7 @@ theorem acc4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
 theorem acc5_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
     (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC5) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .ACC5) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC5 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -133,7 +133,7 @@ theorem acc5_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
 theorem acc6_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
     (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC6) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .ACC6) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC6 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -152,7 +152,7 @@ theorem acc6_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
 theorem acc7_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
     (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC7) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .ACC7) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC7 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i

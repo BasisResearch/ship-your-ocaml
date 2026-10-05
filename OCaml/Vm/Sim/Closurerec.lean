@@ -17,17 +17,14 @@ theorem closurerec_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     (arity : functions.toInt.toNat = targets.length + 1) (value : valWord pl s.accu = some accu)
     (runtime : AllocationRuntime L.runtimeOk c (closurerecFullLog c pl sp count.toInt.toNat dest a domain accu targets))
     (writes : ClosurerecWriteOk P s c pl cp sp count.toInt.toNat dest a domain accu targets)
-    (apart : OutWRange [stackWindow high] (a - 8)
-      (8 * (closurerecObject s count.toInt.toNat (dest :: targets)).wosize + 8))
-    (arenaEnd : a + 8 * (closurerecObject s count.toInt.toNat (dest :: targets)).wosize ≤
-      Vsa.Sim.DlHeap.heapEnd)
+    (nursery : NurseryPlacement P pl high a (closurerecObject s count.toInt.toNat (dest :: targets)))
     (arena : LogInW [arenaWindow] (closurerecFullLog c pl sp count.toInt.toNat dest a domain accu targets))
     (space : ClosurerecMachineInput c pl s.pc sp count.toInt.toNat dest a domain limit accu targets offsets) :
     ∃ after, Plus c after ∧ Running L P (closurerecState s count.toInt.toNat dest targets) after := by
   obtain ⟨after, run, post⟩ := closurerec_machine h functionsOperand functionsPositive countOperand nonnegative
     firstOperand jump arity value space
   exact ⟨after, run, closurerec_restore runtime h.toVmReprAt h.running.platform h.dispatch.loop value writes post
-    h.geometry apart arenaEnd arena h.native⟩
+    h.geometry nursery arena h.native⟩
 
 /-- The represented constructor agrees with the successful bytecode step. -/
 theorem closurerec_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
@@ -44,15 +41,12 @@ theorem closurerec_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Confi
     (arity : functions.toInt.toNat = targets.length + 1) (value : valWord pl s.accu = some accu)
     (runtime : AllocationRuntime L.runtimeOk c (closurerecFullLog c pl sp count.toInt.toNat dest a domain accu targets))
     (writes : ClosurerecWriteOk P s c pl cp sp count.toInt.toNat dest a domain accu targets)
-    (apart : OutWRange [stackWindow high] (a - 8)
-      (8 * (closurerecObject s count.toInt.toNat (dest :: targets)).wosize + 8))
-    (arenaEnd : a + 8 * (closurerecObject s count.toInt.toNat (dest :: targets)).wosize ≤
-      Vsa.Sim.DlHeap.heapEnd)
+    (nursery : NurseryPlacement P pl high a (closurerecObject s count.toInt.toNat (dest :: targets)))
     (arena : LogInW [arenaWindow] (closurerecFullLog c pl sp count.toInt.toNat dest a domain accu targets))
     (space : ClosurerecMachineInput c pl s.pc sp count.toInt.toNat dest a domain limit accu targets offsets) :
     ∃ after, Plus c after ∧ Running L P s' after := by
   have state := closurerec_state_of_step arity offsetCount writes.bound jumps step
   rw [← state]
-  exact closurerec_arm h functionsOperand functionsPositive countOperand nonnegative firstOperand jump arity value runtime writes apart arenaEnd arena space
+  exact closurerec_arm h functionsOperand functionsPositive countOperand nonnegative firstOperand jump arity value runtime writes nursery arena space
 
 end OCaml.Vm.Sim

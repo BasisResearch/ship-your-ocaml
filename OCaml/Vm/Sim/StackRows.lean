@@ -90,7 +90,7 @@ theorem stack_read_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {
     (arm : ∀ pl cp sp high v, ArmInput L P s op c pl cp sp high → s.stack[n]? = some v →
       ReadWindow (BitVec.ofNat 64 (sp + 8 * n)) 8 →
       ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P {s with pc := s.pc + 1, accu := v} c')
-    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c op)
+    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op)
     (space : 8 * s.stack.length ≤ Layout.stackBytes)
     (step : opt (s.stack[n]?) (fun v => .next { (s.adv 1) with accu := v }) = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
@@ -110,7 +110,7 @@ theorem push_next {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {op : Opco
       valWord pl s.accu = some w →
       ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P
         {s with pc := s.pc + 1, accu := s.accu, stack := s.accu :: s.stack} c')
-    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c op)
+    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op)
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes) :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P (pushAccu (s.adv 1)) c' := by
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
@@ -128,7 +128,7 @@ theorem push_read_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {o
       s.stack[n]? = some v → RamReadAt (sp + 8 * n) 8 → valWord pl s.accu = some w →
       ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P
         {s with pc := s.pc + 1, accu := v, stack := s.accu :: s.stack} c')
-    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c op)
+    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op)
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
     (step : opt (s.stack[n]?) (fun v => .next { (pushAccu (s.adv 1)) with accu := v }) = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by

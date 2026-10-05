@@ -31,6 +31,10 @@ structure EvenPlace (pl : Place) : Prop where
   heap : ∀ l a, pl.φ l = some a → a % 2 = 0
   atoms : pl.atomBase % 2 = 0
 
+/-- The atom table: 256 zero-size atoms, each one header word, from the
+table base (`Atom(t) = atomBase + 8 * t + 8`). -/
+def atomTableBytes : Nat := 8 * 257
+
 /-- The VM stack's allocation, `[high - stackBytes, high)`. -/
 def stackWindow (high : Nat) : W := ⟨high - Layout.stackBytes, high⟩
 
@@ -62,6 +66,30 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
     a + 8 * o.wosize ≤ Vsa.Sim.DlHeap.heapEnd
   /-- placed words are even (ISINT, BRANCHIF, block SWITCH) -/
   even : EvenPlace pl
+  /-- every placed object starts above `.bss` (its header included) -/
+  heapLow : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o → Layout.sym_bss_end + 8 ≤ a
+  /-- the code buffer and the atom table lie in the arena, apart from each
+  other and from every placed object (word equality, code reads) -/
+  codeLow : Layout.sym_bss_end ≤ pl.codeBase
+  codeArena : pl.codeBase + 4 * P.code.size ≤ Vsa.Sim.DlHeap.heapEnd
+  atomLow : Layout.sym_bss_end ≤ pl.atomBase
+  atomArena : pl.atomBase + atomTableBytes ≤ Vsa.Sim.DlHeap.heapEnd
+  codeAtoms : pl.codeBase + 4 * P.code.size ≤ pl.atomBase ∨ pl.atomBase + atomTableBytes ≤ pl.codeBase
+  heapCode : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
+    OutWRange [⟨pl.codeBase, pl.codeBase + 4 * P.code.size⟩] (a - 8) (8 * o.wosize + 8)
+  heapAtoms : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
+    OutWRange [⟨pl.atomBase, pl.atomBase + atomTableBytes⟩] (a - 8) (8 * o.wosize + 8)
+
+/-- **Placement of a fresh object** (named obligation of the allocating
+families, supplied by the nursery bounds, lane a6-gc): apart from the VM
+stack window, the code buffer and the atom table, inside the arena and above
+`.bss`. -/
+structure NurseryPlacement (P : Prog) (pl : Place) (high a : Nat) (o : Obj) : Prop where
+  stackApart : OutWRange [stackWindow high] (a - 8) (8 * o.wosize + 8)
+  arenaEnd : a + 8 * o.wosize ≤ Vsa.Sim.DlHeap.heapEnd
+  low : Layout.sym_bss_end + 8 ≤ a
+  codeApart : OutWRange [⟨pl.codeBase, pl.codeBase + 4 * P.code.size⟩] (a - 8) (8 * o.wosize + 8)
+  atomApart : OutWRange [⟨pl.atomBase, pl.atomBase + atomTableBytes⟩] (a - 8) (8 * o.wosize + 8)
 
 /-- The geometry depends on the state only through object sizes and the
 channel records, and on the configuration only through two pointer words. -/
@@ -89,6 +117,20 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
     obtain ⟨o, ho, size⟩ := objects l o' object
     simpa only [size] using g.heapArena l a o placed ho
   even := g.even
+  heapLow l a o' placed object := by
+    obtain ⟨o, ho, -⟩ := objects l o' object
+    exact g.heapLow l a o placed ho
+  codeLow := g.codeLow
+  codeArena := g.codeArena
+  atomLow := g.atomLow
+  atomArena := g.atomArena
+  codeAtoms := g.codeAtoms
+  heapCode l a o' placed object := by
+    obtain ⟨o, ho, size⟩ := objects l o' object
+    simpa only [size] using g.heapCode l a o placed ho
+  heapAtoms l a o' placed object := by
+    obtain ⟨o, ho, size⟩ := objects l o' object
+    simpa only [size] using g.heapAtoms l a o placed ho
 
 /-- Same heap and world: only the two pointer words need framing. -/
 theorem StackGeometry.same {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
@@ -123,8 +165,7 @@ theorem heap_alloc_get {h : Heap} {o o' : Obj} {l : Nat} (found : (h.alloc o).1.
 theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
     {cp : ChanPlace} {high a : Nat} {o : Obj} (g : StackGeometry P s c pl cp high)
     (placed : pl.φ (s.heap.alloc o).2 = some a)
-    (apart : OutWRange [stackWindow high] (a - 8) (8 * o.wosize + 8))
-    (below : a + 8 * o.wosize ≤ Vsa.Sim.DlHeap.heapEnd)
+    (np : NurseryPlacement P pl high a o)
     (heap : s'.heap = (s.heap.alloc o).1) (world : s'.world = s.world) :
     StackGeometry P s' c pl cp high where
   statics := g.statics
@@ -138,7 +179,7 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
     · exact g.heap l a' o' found old
     · rw [placed] at found
       cases found
-      exact apart
+      exact np.stackApart
   channels := by rw [world]; exact g.channels
   primitives := g.primitives
   arena := g.arena
@@ -149,7 +190,27 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
     · exact g.heapArena l a' o' found old
     · rw [placed] at found
       cases found
-      exact below
+      exact np.arenaEnd
   even := g.even
+  heapLow l a' o' found object := by
+    rw [heap] at object
+    rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
+    · exact g.heapLow l a' o' found old
+    · rw [placed] at found; cases found; exact np.low
+  codeLow := g.codeLow
+  codeArena := g.codeArena
+  atomLow := g.atomLow
+  atomArena := g.atomArena
+  codeAtoms := g.codeAtoms
+  heapCode l a' o' found object := by
+    rw [heap] at object
+    rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
+    · exact g.heapCode l a' o' found old
+    · rw [placed] at found; cases found; exact np.codeApart
+  heapAtoms l a' o' found object := by
+    rw [heap] at object
+    rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
+    · exact g.heapAtoms l a' o' found old
+    · rw [placed] at found; cases found; exact np.atomApart
 
 end OCaml.Vm.Sim

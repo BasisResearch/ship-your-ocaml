@@ -66,8 +66,13 @@ supplies `StackPlaced` at the cut.
 `Running` also carries `native : NativePlaced c` (`∃ D, Invocation D c ∧
 NativeValid D`, `OCaml/Vm/Sim/Invocation.lean`), which is preserved by every
 arm bridge. `ArmInput.of_loop h code` enters any arm from `LoopAt`.
-`code : DispatchCode P s c op` is the named obligation for a2-sem's
-`CodeFacts.lean`: opcode-word geometry, fetch, not a method-cache slot.
+`code : DispatchCode P s op` is the named obligation for a2-sem's
+`CodeFacts.lean`: only the opcode fetch. The F1 code representation is
+exact, and the code geometry comes from `StackGeometry.codeLow/codeArena`
+(`StackGeometry.code_read`; `OperandAt.of_fetch` for operands).
+`StackGeometry` also places the code buffer and the atom table apart from
+each other and from every placed object (`heapLow`, `heapCode`, `heapAtoms`;
+for word equality). Allocation takes one named `NurseryPlacement` (a6-gc).
 Model rows: `acc0_row` (`AccRows.lean`), `push_row`/`pushacc1_row`
 (`PushRows.lean`), in `OCaml.OpArm P (OCaml.LoopAt L P) op` form. The shared
 row premises are `StackCapacity B` and `RuntimeFrame L high`

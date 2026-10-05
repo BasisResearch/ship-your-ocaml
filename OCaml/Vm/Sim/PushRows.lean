@@ -20,7 +20,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 /-- **The PUSH row**: push the accumulator from any loop head of the budget. -/
 theorem push_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
     (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .PUSH) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSH) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSH := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -39,7 +39,7 @@ theorem push_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
 /-- **The PUSHACC0 row**: push the accumulator from any loop head of the budget. -/
 theorem pushacc0_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
     (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .PUSHACC0) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHACC0) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHACC0 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -58,7 +58,7 @@ theorem pushacc0_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : N
 /-- **The PUSHACC1 row**: push the accumulator and load old slot 0. -/
 theorem pushacc1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
     (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .PUSHACC1) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHACC1) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHACC1 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -78,7 +78,7 @@ theorem pushacc1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : N
 /-- **The PUSHACC2 row**: push the accumulator and load old slot 1. -/
 theorem pushacc2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
     (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .PUSHACC2) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHACC2) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHACC2 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -98,7 +98,7 @@ theorem pushacc2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : N
 /-- **The PUSHACC3 row**: push the accumulator and load old slot 2. -/
 theorem pushacc3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
     (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .PUSHACC3) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHACC3) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHACC3 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -118,7 +118,7 @@ theorem pushacc3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : N
 /-- **The PUSHACC4 row**: push the accumulator and load old slot 3. -/
 theorem pushacc4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
     (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .PUSHACC4) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHACC4) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHACC4 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -138,7 +138,7 @@ theorem pushacc4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : N
 /-- **The PUSHACC5 row**: push the accumulator and load old slot 4. -/
 theorem pushacc5_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
     (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .PUSHACC5) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHACC5) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHACC5 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -158,7 +158,7 @@ theorem pushacc5_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : N
 /-- **The PUSHACC6 row**: push the accumulator and load old slot 5. -/
 theorem pushacc6_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
     (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .PUSHACC6) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHACC6) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHACC6 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
@@ -178,7 +178,7 @@ theorem pushacc6_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : N
 /-- **The PUSHACC7 row**: push the accumulator and load old slot 6. -/
 theorem pushacc7_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
     (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .PUSHACC7) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHACC7) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHACC7 := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i

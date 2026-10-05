@@ -71,7 +71,7 @@ end OCaml.Vm.Sim
 theorem acc{n}_row {{L : OCaml.Layout}} {{B : OCaml.Budget}} {{P : Prog}}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
     (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC{n}) :
+    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .ACC{n}) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC{n} := by
   intro s c i reach h _ op _
   obtain ⟨o, args⟩ := i
