@@ -35,9 +35,11 @@ theorem field_selection_reachable {P : Prog} {s : St} {c : Config} {pl : Place} 
 /-- **GETGLOBAL n from the loop head.** -/
 theorem getglobal_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .GETGLOBAL)
-    (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
+    (fetch : P.code[s.pc + 1]? = some w)
     (step : stepI P s ⟨.GETGLOBAL, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
+  replace step := Res.unguard step
   change opt (field? s.heap P.globals w.toInt.toNat)
     (fun v => .next { (s.adv 2) with accu := v }) = .next s' at step
   obtain ⟨v, selected, next⟩ := opt_next step
@@ -52,10 +54,12 @@ theorem getglobal_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w
 theorem pushgetglobal_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .PUSHGETGLOBAL)
-    (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
+    (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
     (step : stepI P s ⟨.PUSHGETGLOBAL, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
+  replace step := Res.unguard step
   change opt (field? s.heap P.globals w.toInt.toNat)
     (fun v => .next { (pushAccu (s.adv 2)) with accu := v }) = .next s' at step
   obtain ⟨v, selected, next⟩ := opt_next step
@@ -73,9 +77,12 @@ theorem getglobalfield_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Confi
     {n m : BitVec 32} (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .GETGLOBALFIELD)
     (fetchN : P.code[s.pc + 1]? = some n) (fetchM : P.code[s.pc + 2]? = some m)
-    (nonnegativeN : 0 ≤ n.toInt) (nonnegativeM : 0 ≤ m.toInt)
     (step : stepI P s ⟨.GETGLOBALFIELD, [n.toInt, m.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  have guard := Res.guard_ok step
+  have nonnegativeN : 0 ≤ n.toInt := Int.not_lt.mp fun neg => guard (.inl neg)
+  have nonnegativeM : 0 ≤ m.toInt := Int.not_lt.mp fun neg => guard (.inr neg)
+  replace step := Res.unguard step
   change opt (field? s.heap P.globals n.toInt.toNat) (fun g =>
     opt (field? s.heap g m.toInt.toNat) fun v => .next { (s.adv 3) with accu := v }) = .next s' at step
   obtain ⟨mid, firstSel, rest⟩ := opt_next step
@@ -96,10 +103,13 @@ theorem pushgetglobalfield_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : C
     {n m : BitVec 32} {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .PUSHGETGLOBALFIELD)
     (fetchN : P.code[s.pc + 1]? = some n) (fetchM : P.code[s.pc + 2]? = some m)
-    (nonnegativeN : 0 ≤ n.toInt) (nonnegativeM : 0 ≤ m.toInt)
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
     (step : stepI P s ⟨.PUSHGETGLOBALFIELD, [n.toInt, m.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  have guard := Res.guard_ok step
+  have nonnegativeN : 0 ≤ n.toInt := Int.not_lt.mp fun neg => guard (.inl neg)
+  have nonnegativeM : 0 ≤ m.toInt := Int.not_lt.mp fun neg => guard (.inr neg)
+  replace step := Res.unguard step
   change opt (field? s.heap P.globals n.toInt.toNat) (fun g =>
     opt (field? s.heap g m.toInt.toNat) fun v =>
       .next { (pushAccu (s.adv 3)) with accu := v }) = .next s' at step

@@ -20,23 +20,25 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 /-- **RETURN n from the loop head.** -/
 theorem return_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .RETURN)
-    (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
+    (fetch : P.code[s.pc + 1]? = some w)
     (small : s.extra < 2^63)
     (savedNonnegative : ∀ dest env (extra : BitVec 63) rest,
       s.stack.drop w.toInt.toNat = .code dest :: env :: .int extra :: rest → 0 ≤ extra.toInt)
     (space : 8 * s.stack.length ≤ Layout.stackBytes)
     (step : stepI P s ⟨.RETURN, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
+  have unguarded := Res.unguard step
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
   have operand := OperandAt.of_fetch input.geometry fetch
   have bound : w.toInt.toNat ≤ s.stack.length := by
     by_cases inside : w.toInt.toNat ≤ s.stack.length
     · exact inside
     · have bad : s.stack.length < w.toInt.toNat := by omega
-      simp only [stepI, bad, ite_true] at step
-      cases step
-  have shape := step
-  simp only [stepI, show ¬ s.stack.length < w.toInt.toNat by omega, ite_false] at shape
+      simp only [bad, ite_true] at unguarded
+      cases unguarded
+  have shape := unguarded
+  simp only [show ¬ s.stack.length < w.toInt.toNat by omega, ite_false] at shape
   by_cases more : 0 < s.extra
   · simp only [more, ite_true] at shape
     obtain ⟨dest, sel⟩ := enter_next shape
