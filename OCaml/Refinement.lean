@@ -123,17 +123,21 @@ structure OcamlrunSim (L : Layout) (B : Budget) : Prop where
     ∀ out e, BcHalts P out e → Halts c out e
   div_sim : ∀ P c, Loaded L P c → Good P → Fits B P → GcSafe P → BcDiverges P → Diverges c
 
-/-- **Layer A from forward simulation**, by determinism of both sides and
-`halts_or_diverges` (a `Good` program halts or diverges). -/
-theorem ocamlrun_refinement_of_sim {L : Layout} {B : Budget} (H : OcamlrunSim L B) :
-    OcamlrunRefinement L B := by
-  intro P c hL hg hf hgc
-  have fwd := H.term_sim P c hL hg hf hgc
-  have dv := H.div_sim P c hL hg hf hgc
+/-- Per program: forward simulation gives the full equivalence, by
+determinism of both sides and `halts_or_diverges` (a `Good` program halts or
+diverges). -/
+theorem refines_of_forward {P : Prog} {c : Config} (hg : Good P)
+    (fwd : ∀ out e, BcHalts P out e → Halts c out e) (dv : BcDiverges P → Diverges c) :
+    (∀ out e, BcHalts P out e ↔ Halts c out e) ∧ (BcDiverges P ↔ Diverges c) := by
   rcases halts_or_diverges P hg with ⟨out', e', hb⟩ | hbd
   · refine ⟨fun out e => ⟨fwd out e, fun hm => ?_⟩, dv, fun hd => (Diverges.not_halts hd (fwd out' e' hb)).elim⟩
     obtain ⟨rfl, rfl⟩ := hm.deterministic (fwd out' e' hb); exact hb
   · exact ⟨fun out e => ⟨fwd out e, fun hm => (Diverges.not_halts (dv hbd) hm).elim⟩, dv, fun _ => hbd⟩
+
+/-- **Layer A from forward simulation**. -/
+theorem ocamlrun_refinement_of_sim {L : Layout} {B : Budget} (H : OcamlrunSim L B) :
+    OcamlrunRefinement L B := fun P c hL hg hf hgc =>
+  refines_of_forward hg (H.term_sim P c hL hg hf hgc) (H.div_sim P c hL hg hf hgc)
 
 /-- The dense-memory form, as ship-your-interpreter states its headline
 (`Loaded` of `fillZero c`: absent RAM bytes read as the zero they are). -/
@@ -176,37 +180,73 @@ theorem _root_.Vsa.Machine.Halts.of_steps {c c' : Config} {out : String} {e : Na
 theorem _root_.Vsa.Machine.StepsN.prefix' : ∀ {m k : Nat} {a c : Config}, StepsN (m + k) a c → ∃ b, StepsN m a b :=
   fun h => let ⟨b, hb⟩ := Run.iter_prefix (Run.vsa_stepsN_iff.1 h); ⟨b, Run.vsa_stepsN_iff.2 hb⟩
 
+/-- **Simulation by an arbitrary relation** `R` for one program started
+from `c0`: entry, one obligation per `step` outcome. `ArmSim` is its
+instance at `Running` (`ArmSim.simR`); a fragment may use a stronger loop
+invariant (`OCaml/RefinementF1.lean`). -/
+structure SimR (P : Prog) (c0 : Config) (R : St → Config → Prop) : Prop where
+  entry : ∃ c', Plus c0 c' ∧ R P.init c'
+  next : ∀ s s' c, Reach P s → R s c → step P s = .next s' → ∃ c', Plus c c' ∧ R s' c'
+  halt : ∀ s e w c, Reach P s → R s c → step P s = .halt e w → Halts c (bytesToString w.console) e
+
+/-- Along a `BcSem` run of `k` steps from a related state, the machine
+runs at least `k` steps to a configuration related to the end state. -/
+theorem run_simR {P : Prog} {R : St → Config → Prop}
+    (next : ∀ s s' c, Reach P s → R s c → step P s = .next s' → ∃ c', Plus c c' ∧ R s' c') :
+    ∀ {k : Nat} {s s' : St} {c : Config}, Reach P s → StepsN P k s s' → R s c →
+      ∃ n c', k ≤ n ∧ StepsN n c c' ∧ R s' c' := by
+  intro k s s' c hr hs hv
+  -- discipline: allow(O5-run-induction) run_simR is the simulation induction (one obligation per BcSem step), not run algebra
+  induction hs generalizing c with
+  | zero => exact ⟨0, c, Nat.le_refl _, .zero _, hv⟩
+  | @succ k a b d st _ ih =>
+    obtain ⟨e⟩ := st
+    obtain ⟨c1, ⟨n1, h1⟩, hv1⟩ := next a b c hr hv e
+    obtain ⟨hn, hk⟩ := hr
+    obtain ⟨n2, c2, hle, h2, hv2⟩ := ih ⟨hn + 1, hk.snoc (.mk e)⟩ hv1
+    exact ⟨n1 + 1 + n2, c2, by omega, h1.append h2, hv2⟩
+
+theorem SimR.term {P : Prog} {c0 : Config} {R : St → Config → Prop} (H : SimR P c0 R) :
+    ∀ out e, BcHalts P out e → Halts c0 out e := by
+  intro out e ⟨s, w, ⟨k, hk⟩, hst, ho⟩
+  obtain ⟨c1, ⟨n0, h0⟩, hv0⟩ := H.entry
+  obtain ⟨n, c', -, hn, hv⟩ := run_simR H.next ⟨0, .zero _⟩ hk hv0
+  exact Halts.of_steps (h0.toSteps.trans' hn.toSteps) (ho ▸ H.halt s e w c' ⟨k, hk⟩ hv hst)
+
+theorem SimR.div {P : Prog} {c0 : Config} {R : St → Config → Prop} (H : SimR P c0 R) :
+    BcDiverges P → Diverges c0 := by
+  intro hd m
+  obtain ⟨c1, ⟨n0, h0⟩, hv0⟩ := H.entry
+  obtain ⟨s, hs⟩ := hd m
+  obtain ⟨n, c', hle, hn, -⟩ := run_simR H.next ⟨0, .zero _⟩ hs hv0
+  obtain ⟨d, hd'⟩ := Nat.exists_eq_add_of_le (show m ≤ n0 + 1 + n by omega)
+  exact Vsa.Machine.StepsN.prefix' (hd' ▸ h0.append hn)
+
+/-- **Per-program Layer A from any simulation relation.** -/
+theorem SimR.refines {P : Prog} {c0 : Config} {R : St → Config → Prop} (H : SimR P c0 R)
+    (hg : Good P) :
+    (∀ out e, BcHalts P out e ↔ Halts c0 out e) ∧ (BcDiverges P ↔ Diverges c0) :=
+  refines_of_forward hg H.term H.div
+
+/-- `ArmSim` is the `Running` instance of `SimR`. -/
+theorem ArmSim.simR {L : Layout} {B : Budget} {P : Prog} {c : Config} (A : ArmSim L B P)
+    (hL : Loaded L P c) (hg : Good P) (hf : Fits B P) (hgc : GcSafe P) : SimR P c (Running L P) where
+  entry := A.entry c hL hg hf hgc
+  next s s' c hr hv e := A.next s s' c hr hg hf hgc hv e
+  halt s e w c hr hv h := A.halt s e w c hr hg hf hgc hv h
+
 /-- Along a `BcSem` run of `k` steps from a represented state, the machine
 runs at least `k` steps to a configuration representing the end state. -/
 theorem run_sim {L : Layout} {B : Budget} {P : Prog} (A : ArmSim L B P) (hg : Good P)
     (hf : Fits B P) (hgc : GcSafe P) :
     ∀ {k : Nat} {s s' : St} {c : Config}, Reach P s → StepsN P k s s' → Running L P s c →
-      ∃ n c', k ≤ n ∧ StepsN n c c' ∧ Running L P s' c' := by
-  intro k s s' c hr hs hv
-  -- discipline: allow(O5-run-induction) run_sim is the simulation induction (one ArmSim per BcSem step), not run algebra
-  induction hs generalizing c with
-  | zero => exact ⟨0, c, Nat.le_refl _, .zero _, hv⟩
-  | @succ k a b d st _ ih =>
-    obtain ⟨e⟩ := st
-    obtain ⟨c1, ⟨n1, h1⟩, hv1⟩ := A.next a b c hr hg hf hgc hv e
-    obtain ⟨hn, hk⟩ := hr
-    obtain ⟨n2, c2, hle, h2, hv2⟩ := ih ⟨hn + 1, hk.snoc (.mk e)⟩ hv1
-    exact ⟨n1 + 1 + n2, c2, by omega, h1.append h2, hv2⟩
+      ∃ n c', k ≤ n ∧ StepsN n c c' ∧ Running L P s' c' :=
+  run_simR fun s s' c hr hv e => A.next s s' c hr hg hf hgc hv e
 
 /-- **Forward simulation from the per-arm obligations.** -/
 theorem simOfArms {L : Layout} {B : Budget} (A : ∀ P, ArmSim L B P) : OcamlrunSim L B where
-  term_sim := by
-    intro P c hL hg hf hgc out e ⟨s, w, ⟨k, hk⟩, hst, ho⟩
-    obtain ⟨c0, ⟨n0, h0⟩, hv0⟩ := (A P).entry c hL hg hf hgc
-    obtain ⟨n, c', -, hn, hv⟩ := run_sim (A P) hg hf hgc ⟨0, .zero _⟩ hk hv0
-    exact Halts.of_steps (h0.toSteps.trans' hn.toSteps) (ho ▸ (A P).halt s e w c' ⟨k, hk⟩ hg hf hgc hv hst)
-  div_sim := by
-    intro P c hL hg hf hgc hd m
-    obtain ⟨c0, ⟨n0, h0⟩, hv0⟩ := (A P).entry c hL hg hf hgc
-    obtain ⟨s, hs⟩ := hd m
-    obtain ⟨n, c', hle, hn, -⟩ := run_sim (A P) hg hf hgc ⟨0, .zero _⟩ hs hv0
-    obtain ⟨d, hd'⟩ := Nat.exists_eq_add_of_le (show m ≤ n0 + 1 + n by omega)
-    exact Vsa.Machine.StepsN.prefix' (hd' ▸ h0.append hn)
+  term_sim P _ hL hg hf hgc := ((A P).simR hL hg hf hgc).term
+  div_sim P _ hL hg hf hgc := ((A P).simR hL hg hf hgc).div
 
 /-- **Layer A from the per-arm obligations.** -/
 theorem ocamlrun_refinement_of_arms {L : Layout} {B : Budget} (A : ∀ P, ArmSim L B P) :

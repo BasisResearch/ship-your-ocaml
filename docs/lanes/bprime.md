@@ -1,5 +1,50 @@
 # Lane bprime
 
+## F1 round (2026-10-05): entry, halt, final assembly
+
+**Done**
+- `OCaml/RefinementF1.lean`: the F1 domain `GoodF1` (`Good`, plus every
+  reachable state decodes to an `InF1` instruction: an F1 opcode, and a
+  `primsF1` name for C_CALLs), `GoodF1.of_static` (a static code check plus
+  "reachable PCs decode"), and `OcamlrunRefinementF1` (same conclusion as
+  `OcamlrunRefinement`, `GoodF1` for `Good`; implied by it, `OcamlrunRefinement.f1`).
+- Assembly: `F1Arms P c0 R` is the arm table. It has `entry` and one
+  `OpArm P R op` row per F1 opcode. Each row is stated over a loop invariant
+  `R` the families choose (it may depend on `c0`, e.g. the native frame
+  saved at entry). A row concludes `ArmOutcome R c (stepI P s i)`: `.next`
+  means `Plus` into `R`, `.halt` means `Halts`. `ArmOutcome.of_next` and
+  `ArmOutcome.of_cases` adapt existing `*_step_arm` bridges. `F1Arms.simR`
+  and `ocamlrun_refinementF1_of_arms` give the headline, exposed as
+  `Theorems.ocamlrun_refinement_F1_of_arms`. `ArmSim.f1Arms` shows that the
+  old contract is the `Running` instance.
+- `OCaml/Refinement.lean`: simulation by any relation, `SimR` /
+  `run_simR` / `SimR.refines` / `refines_of_forward`. `run_sim`,
+  `simOfArms` and `ocamlrun_refinement_of_sim` are now its instances, with
+  the same statements.
+- Why per-opcode rows carry both outcomes: one lemma "only STOP/C_CALL
+  halt" over all of `stepI` hit the default 200k heartbeat limit, both via
+  `split` on `stepI.eq_def` and via `cases op; simp only [stepI]`. With the
+  opcode and argument shape concrete, a single opcode reduces in about 1 s.
+  So each row discharges its own no-halt fact.
+
+**Round 2 draft**: the previous session's unlanded WIP commit `7c68e6e`
+(the 202-shard rules, function/loop/abs summaries; 2.5M generated lines)
+fails stage a8. Its 7 new C4 hand proofs make C4 FLAT (see "Round 2"
+below), and the F1 brief pauses B′ scale-up. It is NOT landed. It is kept
+on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
+`origin/main`.
+
+**Open / next**
+1. `entry`: caml_interprete 0x80001df8 → setjmp (0x80042c4c) → 0x80001f1c →
+   LOOP_SETUP (`loop_setup`, landed) → loopHead, establishing `R P.init`.
+   This needs `LoadedAt` to name the caller (ra = 0x80004ff8, caml_main's
+   saved frame), which a0-boot supplies.
+2. halt rows: STOP (`stop_halt_step_arm`, conditional on `StopInvocation`,
+   `StopCallerReady` and `StopDoExitSummary`) and C_CALL `caml_sys_exit`.
+   The loop invariant `R` must carry the native invocation frame from entry.
+3. The `whileMin` instance: `GoodF1 whileMin` from a2-sem's `Good whileMin`
+   plus a static `InF1` check of its code.
+
 ## Status
 
 The proof/build exit criteria are met: all 23,678 backend instructions have

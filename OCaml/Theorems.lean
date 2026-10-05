@@ -1,4 +1,5 @@
 import OCaml.EndToEnd
+import OCaml.RefinementF1
 import OCaml.Logic.BcModel
 
 /-!
@@ -16,6 +17,11 @@ open OCaml.Bytecode
 /-- **Layer A.** The bare-metal `ocamlrun` refines `BcSem`
 (`OCaml/Refinement.lean`: `OcamlrunRefinement`). -/
 def ocamlrun_refinement_Statement (L : Layout) (B : Budget) : Prop := OcamlrunRefinement L B
+
+/-- **Layer A for F1** (the current target, `OCaml/RefinementF1.lean`): the
+same conclusion for programs that stay in F1 (`GoodF1`). Implied by
+`ocamlrun_refinement_Statement` (`OcamlrunRefinement.f1`). -/
+def ocamlrun_refinement_F1_Statement (L : Layout) (B : Budget) : Prop := OcamlrunRefinementF1 L B
 
 /-- Open GC-safety obligation for the pinned compiler, for each loaded input
 inside the supported fragment. The static scan and small-heap differential
@@ -64,6 +70,13 @@ theorem endToEnd_of_layers {S : SourceSem} {ocamlc : S.Program}
 theorem ocamlrun_refinement_of_arms' {L : Layout} {B : Budget} (A : ∀ P, ArmSim L B P) :
     ocamlrun_refinement_Statement L B :=
   ocamlrun_refinement_of_arms A
+
+/-- **Layer A for F1 from the per-opcode arm tables is proved**
+(`F1Arms.simR`). -/
+theorem ocamlrun_refinement_F1_of_arms {L : Layout} {B : Budget}
+    (A : ∀ P c, Loaded L P c → GoodF1 P → Fits B P → GcSafe P → ∃ R, F1Arms P c R) :
+    ocamlrun_refinement_F1_Statement L B :=
+  ocamlrun_refinementF1_of_arms A
 
 /-- Layer A observing only the exit code. -/
 theorem ocamlrun_refinement_exit {L : Layout} {B : Budget} (A : ∀ P, ArmSim L B P) {P : Prog} {c : Vsa.Machine.Config}

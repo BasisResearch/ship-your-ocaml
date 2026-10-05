@@ -11,6 +11,7 @@ import OCaml.Vm.Layout
 import OCaml.Vm.Repr
 import OCaml.Vm.Reloc
 import OCaml.Refinement
+import OCaml.RefinementF1
 import OCaml.Vm.Runtime
 import OCaml.Vm.Boot.WhileMinObservation
 import OCaml.Vm.Boot.WhileMin
