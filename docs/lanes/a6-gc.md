@@ -101,8 +101,12 @@ Free-list placement (toward `OwnedFrame.targetOutside`/`payloadOutside`):
   `FreeLists.small_result_placed`: the exact-size result header is placed by
   `SmallListsIn` alone (no effect analysis). `SmallListsIn.of_log`:
   route-independent preservation (static stores missing other slot heads,
-  popped slot holding `next`); next: instantiate it for `BestFitExact.effect`
-  (plain, repair and empty routes).
+  popped slot holding `next`), and `SmallListsIn.exact`: the actual
+  `BestFitExact.effect` (plain, repair and empty routes) preserves it.
+- Next: compose with the allocation wrappers (`AllocWrapper`/`AllocLarge`
+  results placed by `small_result_placed`/`Split.placed`), carry
+  `SmallListsIn ∧ LeastIn` above the nursery through the copying loop, and
+  discharge `OwnedFrame.targetOutside`/`payloadOutside`.
 - Next: the
   general invariant over small lists and the large tree (every free
   block `FreeIn majorLo heap_end`), preserved by each `bf_allocate` path; then

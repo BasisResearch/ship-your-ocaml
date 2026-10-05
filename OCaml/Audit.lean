@@ -357,6 +357,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.FreeLists.SmallChain.pop
 #print axioms OCaml.Vm.Gc.FreeLists.SmallListsIn.pop
 #print axioms OCaml.Vm.Gc.FreeLists.SmallListsIn.of_log
+#print axioms OCaml.Vm.Gc.FreeLists.SmallListsIn.exact
 #print axioms OCaml.Vm.Gc.BestFitLarge.Split.placed
 #print axioms OCaml.Vm.Gc.whileMin_leastIn
 #print axioms OCaml.Vm.Gc.FreeLists.small_result_placed

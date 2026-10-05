@@ -1,6 +1,7 @@
 import OCaml.Vm.Gc.FreePlacement
 import OCaml.Vm.Gc.SmallFreeList
 import OCaml.Vm.Gc.AllocExact
+import OCaml.Vm.Gc.BestFitExact
 import OCaml.Vm.Gc.BestFitLarge
 import OCaml.Vm.Gc.Readback
 import OCaml.Vm.Primitives.MemoryFrame
@@ -91,5 +92,63 @@ theorem small_result_placed {lo hi : Nat} {size : BitVec 64} {c : Config}
     rw [BitVec.toNat_sub_of_le (by rw [BitVec.le_def]; simp [Layout.header_bytes]; omega)]
     simp only [Layout.header_bytes, BitVec.toNat_ofNat]
     omega
+
+end OCaml.Vm.Gc.FreeLists
+
+namespace OCaml.Vm.Gc.FreeLists
+open Vsa.Machine Vsa.Sim Primitives
+
+/-- **The exact-size small path keeps every small list in place**, on all
+three routes (plain pop, merge-cursor repair, emptied list with bitmap clear). -/
+theorem SmallListsIn.exact {lo hi : Nat} {size : BitVec 64} {before after : Config}
+    (lists : SmallListsIn lo hi before)
+    (memory : after.σ.mem = writeLog before.σ.mem (BestFitExact.effect size before))
+    (statics : Layout.sym_bss_end ≤ lo) (positive : 0 < size.toNat) (small : size.toNat ≤ Layout.bf_small_count)
+    (nonnull : BestFitSmall.first size before ≠ 0) : SmallListsIn lo hi after := by
+  have slot := slot_toNat small
+  simp only [Layout.bf_small_size, Layout.sym_bf_small_fl, Layout.bf_small_count] at slot small
+  have slotOf : ∀ i : Nat, 1 ≤ i → i ≤ 16 →
+      (BestFitSmall.slot (BitVec.ofNat 64 i)).toNat = 0x800662d8 + 16 * i := by
+    intro i lo' hi'
+    have small : i % 2 ^ 64 = i := Nat.mod_eq_of_lt (by omega)
+    have h := slot_toNat (size := BitVec.ofNat 64 i)
+      (by rw [BitVec.toNat_ofNat, small]; simp only [Layout.bf_small_count]; omega)
+    rw [BitVec.toNat_ofNat, small] at h
+    simpa only [Layout.bf_small_size, Layout.sym_bf_small_fl] using h
+  apply SmallListsIn.of_log (size := size) lists memory statics
+  · intro e he
+    simp only [BestFitExact.effect, BestFitEmpty.allocationEffect, BestFitEmpty.effect,
+      BestFitSmall.selectedEffect, BestFitSmall.effect, BestFitSmall.repairLog, BestFitFinish.effect] at he
+    split at he <;> (try split at he) <;>
+      simp only [List.mem_cons, List.not_mem_nil, or_false, List.nil_append, List.cons_append] at he <;>
+      rcases he with rfl | rfl | rfl | rfl | rfl <;>
+      simp only [BitVec.toNat_add, BitVec.toNat_ofNat, slot, Layout.off_bf_small_merge, Layout.sym_bss_end,
+        Layout.sym_bf_small_map, Layout.sym_caml_fl_cur_wsz] <;> omega
+  · intro i low high other
+    have si := slotOf i low (by simpa [Layout.bf_small_count] using high)
+    apply outLRange_of_forall
+    intro e he
+    simp only [BestFitExact.effect, BestFitEmpty.allocationEffect, BestFitEmpty.effect,
+      BestFitSmall.selectedEffect, BestFitSmall.effect, BestFitSmall.repairLog, BestFitFinish.effect] at he
+    split at he <;> (try split at he) <;>
+      simp only [List.mem_cons, List.not_mem_nil, or_false, List.nil_append, List.cons_append] at he <;>
+      rcases he with rfl | rfl | rfl | rfl | rfl <;>
+      simp only [BitVec.toNat_add, BitVec.toNat_ofNat, slot, si, Layout.off_bf_small_merge,
+        Layout.sym_bf_small_map, Layout.sym_caml_fl_cur_wsz] <;> omega
+  · change bytesT after.σ.mem _ 8 = _
+    rw [memory]
+    simp only [BestFitExact.effect, BestFitEmpty.allocationEffect, BestFitEmpty.effect,
+      BestFitSmall.selectedEffect, BestFitSmall.effect, BestFitSmall.repairLog, BestFitFinish.effect]
+    split <;> (try split) <;> (try simp only [List.nil_append, List.cons_append])
+    all_goals first
+      | exact word_writeLog_at _ _ 0 _ _ rfl (outLRange_of_forall fun e he => by
+          simp only [List.drop_succ_cons, List.drop_zero, List.mem_cons, List.not_mem_nil, or_false] at he
+          rcases he with rfl | rfl <;>
+            simp only [slot, Layout.sym_bf_small_map, Layout.sym_caml_fl_cur_wsz] <;> omega)
+      | exact word_writeLog_at _ _ 1 _ _ rfl (outLRange_of_forall fun e he => by
+          simp only [List.drop_succ_cons, List.drop_zero, List.mem_cons, List.not_mem_nil, or_false] at he
+          rcases he with rfl | rfl <;>
+            simp only [slot, Layout.sym_bf_small_map, Layout.sym_caml_fl_cur_wsz] <;> omega)
+  · exact nonnull
 
 end OCaml.Vm.Gc.FreeLists
