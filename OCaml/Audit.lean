@@ -4,6 +4,7 @@ import OCaml.Vm.Sim.ImmediateRows
 import OCaml.Vm.Sim.OperandRows
 import OCaml.Vm.Sim.PushRows
 import OCaml.Vm.Sim.FieldRows
+import OCaml.Vm.Sim.OperandStackRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -343,6 +344,14 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.stack_space
 #print axioms OCaml.Vm.Sim.StackGeometry.transport
 #print axioms OCaml.Vm.Sim.StackGeometry.alloc
+#print axioms OCaml.Vm.Sim.acc_next
+#print axioms OCaml.Vm.Sim.pushacc_next
+#print axioms OCaml.Vm.Sim.pop_next
+#print axioms OCaml.Vm.Sim.envacc_next
+#print axioms OCaml.Vm.Sim.assign_next
+#print axioms OCaml.Vm.Sim.StackGeometry.edit
+#print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry
+#print axioms OCaml.Vm.Sim.StackGeometry.push_read
 #print axioms OCaml.Vm.Sim.StackGeometry.frame_log
 #print axioms OCaml.Vm.Sim.StackGeometry.heap_set
 #print axioms OCaml.Vm.Sim.ArmInput.of_loop
@@ -425,6 +434,14 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.StackGeometry.code_read
 #print axioms OCaml.Vm.Sim.OperandAt.of_fetch
 #print axioms OCaml.Vm.Sim.StackGeometry.alloc
+#print axioms OCaml.Vm.Sim.acc_next
+#print axioms OCaml.Vm.Sim.pushacc_next
+#print axioms OCaml.Vm.Sim.pop_next
+#print axioms OCaml.Vm.Sim.envacc_next
+#print axioms OCaml.Vm.Sim.assign_next
+#print axioms OCaml.Vm.Sim.StackGeometry.edit
+#print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry
+#print axioms OCaml.Vm.Sim.StackGeometry.push_read
 #print axioms OCaml.Run.div_iff_not_halts
 #print axioms OCaml.Run.ConsPres.iff
 #print axioms OCaml.Run.ClosPres.iff

@@ -10,6 +10,7 @@ import OCaml.Vm.Sim.ImmediateRows
 import OCaml.Vm.Sim.OperandRows
 import OCaml.Vm.Sim.PushRows
 import OCaml.Vm.Sim.FieldRows
+import OCaml.Vm.Sim.OperandStackRows
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax
