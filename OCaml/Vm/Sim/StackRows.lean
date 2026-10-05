@@ -1,6 +1,7 @@
 import OCaml.Vm.Sim.ArmInput
 import OCaml.Vm.Sim.StackStore
 import OCaml.Vm.Sim.FieldRead
+import OCaml.Vm.Sim.EnterReady
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.RefinementF1
 
@@ -29,12 +30,23 @@ theorem opt_not_halt {α : Type} {o : Option α} {k : α → St} {e : Nat} {w : 
     opt o (fun a => .next (k a)) ≠ .halt e w := by
   cases o <;> simp [opt]
 
-/-- **The budget's stack capacity**: the budget's stack, plus the
-`Stack_threshold` slack that `check_stacks` keeps free (so it never calls
-`caml_realloc_stack`), fits in the VM stack allocation. Pushes of up to 256
-words then stay inside the allocation. -/
+/-- **The budget's stack capacity**: the budget's stack, plus twice the
+`Stack_threshold` slack, fits in the VM stack allocation. One threshold is
+what `check_stacks` keeps free (so it never calls `caml_realloc_stack`), the
+other covers the words an arm pushes (at most 256) before its successor's
+budget bound applies. -/
 def StackCapacity (B : OCaml.Budget) : Prop :=
-  8 * B.stackWords + Layout.stackThresholdBytes ≤ Layout.stackBytes
+  8 * B.stackWords + 2 * Layout.stackThresholdBytes ≤ Layout.stackBytes
+
+/-- The budget bounds every reachable stack, plus `k` pushed words and the
+threshold slack, by the VM stack allocation. -/
+theorem stack_fits_threshold {B : OCaml.Budget} {P : Prog} {s : St} (fits : OCaml.Fits B P)
+    (capacity : StackCapacity B) (reach : Reach P s) {k : Nat}
+    (small : 8 * k ≤ Layout.stackThresholdBytes := by decide) :
+    8 * (s.stack.length + k) + Layout.stackThresholdBytes ≤ Layout.stackBytes := by
+  have := (fits s reach).1
+  unfold StackCapacity at capacity
+  omega
 
 /-- The budget bounds every reachable stack, plus `k` pushed words, by the
 VM stack allocation. -/
@@ -42,8 +54,7 @@ theorem stack_fits {B : OCaml.Budget} {P : Prog} {s : St} (fits : OCaml.Fits B P
     (capacity : StackCapacity B) (reach : Reach P s) {k : Nat}
     (small : 8 * k ≤ Layout.stackThresholdBytes := by decide) :
     8 * (s.stack.length + k) ≤ Layout.stackBytes := by
-  have := (fits s reach).1
-  unfold StackCapacity at capacity
+  have := stack_fits_threshold fits capacity reach small
   omega
 
 /-- **The runtime-framing contract** for VM stack writes: the runtime
@@ -56,6 +67,12 @@ structure RuntimeFrame (L : OCaml.Layout) (high : Nat) : Prop where
     (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high)).toNat = high
   stackWindow : ∀ lo hi, high - Layout.stackBytes ≤ lo → hi ≤ high →
     WindowStable L.runtimeOk [⟨lo, hi⟩]
+  /-- `Caml_state->stack_threshold` stays `Stack_threshold` above the base -/
+  threshold : ∀ c, L.runtimeOk c →
+    (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_threshold)).toNat =
+      high - Layout.stackBytes + Layout.stackThresholdBytes
+  /-- no signal or GC request is pending at a loop head (G1: no collection) -/
+  quiet : ∀ c, L.runtimeOk c → SignalCheckReady c
 
 /-- The window of a push of `k` words below `sp` is runtime-stable. -/
 theorem RuntimeFrame.push {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
@@ -201,5 +218,21 @@ theorem push_field_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {
     (PushWriteOk.of_geometry input.geometry input.stack space) sel
     (input.geometry.field_read sel) pushed
   exact ⟨c', run, h.of_plus run running⟩
+
+/-- **Closure entry is ready** (`check_stacks` takes its fast path, no signal
+is pending) when the frame base `base` stays above `stack_threshold`. -/
+theorem RuntimeFrame.enter {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
+    {pl : Place} {cp : ChanPlace} {sp high high0 base : Nat} (rf : RuntimeFrame L high0)
+    (h : ArmInput L P s op c pl cp sp high)
+    (room : high - Layout.stackBytes + Layout.stackThresholdBytes ≤ base) : EnterReady c base := by
+  have same : high = high0 := h.stackHigh.symm.trans (rf.stackHigh c h.runtime)
+  subst same
+  have hd := h.geometry.domainArena
+  have hl := h.geometry.domainLow
+  have off : Layout.off_stack_threshold + 8 ≤ Layout.domainStateBytes := by decide
+  refine ⟨rf.quiet c h.runtime, ⟨?_, ?_, Or.inr ?_⟩, ?_⟩
+  all_goals first
+    | (rw [rf.threshold c h.runtime]; exact room)
+    | (simp only [Layout.sym_bss_end, Layout.sym_tohost, Vsa.Sim.DlHeap.heapEnd] at *; omega)
 
 end OCaml.Vm.Sim

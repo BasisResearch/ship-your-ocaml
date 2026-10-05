@@ -62,6 +62,8 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
   allocator arena, below the native stack (`NativeValid.low`) -/
   arena : high ≤ Vsa.Sim.DlHeap.heapEnd
   domainArena : (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes ≤ Vsa.Sim.DlHeap.heapEnd
+  /-- the `Caml_state` record is allocated above `.bss` -/
+  domainLow : Layout.sym_bss_end ≤ (word c Layout.sym_Caml_state).toNat
   heapArena : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     a + 8 * o.wosize ≤ Vsa.Sim.DlHeap.heapEnd
   /-- placed words are even (ISINT, BRANCHIF, block SWITCH) -/
@@ -113,6 +115,7 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
   primitives := by rw [prims]; exact g.primitives
   arena := g.arena
   domainArena := by rw [domain]; exact g.domainArena
+  domainLow := by rw [domain]; exact g.domainLow
   heapArena l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     simpa only [size] using g.heapArena l a o placed ho
@@ -184,6 +187,7 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
   primitives := g.primitives
   arena := g.arena
   domainArena := g.domainArena
+  domainLow := g.domainLow
   heapArena l a' o' found object := by
     rw [heap] at object
     rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
