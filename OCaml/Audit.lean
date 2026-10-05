@@ -387,6 +387,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.bgeint_next
 #print axioms OCaml.Vm.Sim.bultint_next
 #print axioms OCaml.Vm.Sim.bugeint_next
+#print axioms OCaml.Vm.Sim.atom_next
 #print axioms OCaml.Run.div_iff_not_halts
 #print axioms OCaml.Run.ConsPres.iff
 #print axioms OCaml.Run.ClosPres.iff

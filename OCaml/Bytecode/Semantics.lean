@@ -1268,9 +1268,11 @@ def stepI (i : Instr) : Res :=
         .next { (s.adv 2) with heap := h, accu := .unit }
   -- Blocks
   | .ATOM0, [] => .next { (s.adv 1) with accu := .atom 0 }
-  | .ATOM, [t] => .next { (s.adv 2) with accu := .atom t.toNat }
+  -- `Atom(*pc++)` indexes `caml_atom_table` by the signed operand; a
+  -- negative operand points before the table and is outside the model.
+  | .ATOM, [t] => if t < 0 then .unsupported else .next { (s.adv 2) with accu := .atom t.toNat }
   | .PUSHATOM0, [] => .next { (pushAccu (s.adv 1)) with accu := .atom 0 }
-  | .PUSHATOM, [t] => .next { (pushAccu (s.adv 2)) with accu := .atom t.toNat }
+  | .PUSHATOM, [t] => if t < 0 then .unsupported else .next { (pushAccu (s.adv 2)) with accu := .atom t.toNat }
   | .MAKEBLOCK, [sz, t] => makeBlock s 3 sz.toNat t.toNat
   | .MAKEBLOCK1, [t] => makeBlock s 2 1 t.toNat
   | .MAKEBLOCK2, [t] => makeBlock s 2 2 t.toNat

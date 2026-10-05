@@ -4,6 +4,7 @@ import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.Offsetint
 import OCaml.Vm.Sim.Constint
 import OCaml.Vm.Sim.Branch
+import OCaml.Vm.Sim.Atom
 import OCaml.Vm.Sim.Bltint
 import OCaml.Vm.Sim.Bleint
 import OCaml.Vm.Sim.Bgtint
@@ -109,5 +110,20 @@ theorem bugeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   input_row h code fun input =>
     bugeint_step_arm stable input (operand.of_input input) (offset.of_input input) step
+
+/-- **ATOM from the loop head.** The semantics makes a negative operand
+`.unsupported` (it would index before `caml_atom_table`), so a successful
+step supplies the arm's nonnegativity. -/
+theorem atom_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .ATOM)
+    (operand : OperandCode P s c 1 w) (step : stepI P s ⟨.ATOM, [w.toInt]⟩ = .next s') :
+    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+  change (if w.toInt < 0 then Res.unsupported
+    else Res.next { (s.adv 2) with accu := .atom w.toInt.toNat }) = .next s' at step
+  split at step
+  · cases step
+  · rename_i nonneg
+    cases Res.next.inj step
+    exact input_row h code fun input => atom_arm stable input (operand.of_input input) (by omega)
 
 end OCaml.Vm.Sim
