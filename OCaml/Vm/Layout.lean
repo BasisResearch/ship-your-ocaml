@@ -214,6 +214,14 @@ def sym_caml_exe_name : Nat := 0x80064c18
 def sym_oo_last_id : Nat := 0x80064898
 /-- `caml_copy_double` -/
 def sym_caml_copy_double : Nat := 0x800121f4
+/-- `caml_verb_gc` -/
+def sym_caml_verb_gc : Nat := 0x80064930
+/-- `__atexit` -/
+def sym_atexit : Nat := 0x80064d90
+/-- `__atexit_recursive_mutex` -/
+def sym_atexit_recursive_mutex : Nat := 0x80064900
+/-- `__stdio_exit_handler` -/
+def sym_stdio_exit_handler : Nat := 0x80064d38
 /-- `bf_small_fl` -/
 def sym_bf_small_fl : Nat := 0x800662d8
 /-- `bf_small_map` -/

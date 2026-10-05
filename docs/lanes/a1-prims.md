@@ -2,7 +2,19 @@
 
 ## Current status
 
-**2026-10-05 (Claude session, taking over from Codex). 20/30 summaries proved.**
+**2026-10-05 (Claude session, taking over from Codex). 21/30 summaries proved.**
+
+* `caml_sys_exit`: `ExitPath.caml_sys_exit_halts` (`OCaml/Vm/Primitives/ExitPath/Primitive.lean`):
+  from the represented call site plus the named `ExitRuntime` (VsaOk, native stack
+  window `ExitLayout`, the four runtime globals zero), the machine `Halts` with
+  `primF1Impl`'s status and console. Machine run `exit_halts` (`Machine.lean`) over
+  generated blocks (`gen_fn.py --ocaml-exit`, new stage-a5 check) and the HTIF step
+  `store_halts` (ported `Vsa/Sim/TermEntry.lean`). New Layout symbols: caml_verb_gc,
+  __atexit, __atexit_recursive_mutex, __stdio_exit_handler.
+  NEXT (half done, reverted): split `exit_run` at the `caml_do_exit` call into
+  `do_exit_halts` (depth-208 window) so STOP's `StopDoExitSummary` (a1-arms/bprime)
+  can instantiate it with status 0; a1-arms can wrap `caml_sys_exit_halts` as
+  `PrimitiveExitSummary` for C_CALL exits.
 
 Done this session:
 * `caml_sys_get_argv`: machine run `ArgvTuple.argv_finish_stage`

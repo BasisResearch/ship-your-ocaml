@@ -653,7 +653,7 @@ def ocaml_literal_mline(pc, word):
     if opcode == 3:
         kind = {2: 'lw', 3: 'ld', 4: 'lbu'}[funct3]
     elif opcode == 0x13:
-        kind = {0: 'addi', 1: 'slli', 5: 'srai' if word >> 26 == 0x10 else 'srli', 7: 'andi'}[funct3]
+        kind = {0: 'addi', 1: 'slli', 5: 'srai' if word >> 26 == 0x10 else 'srli', 6: 'ori', 7: 'andi'}[funct3]
     elif opcode == 0x1b and funct3 == 0:
         kind = 'addiw'
     elif opcode == 0x17:
@@ -774,7 +774,7 @@ def emit_ocaml_counter_body(E, fn, ins):
       '', 'end OCaml.Vm.Primitives', '')
 
 
-def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False, counter=False, scan=False, wrapper=False, allocation=False):
+def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False, counter=False, scan=False, wrapper=False, allocation=False, exit_path=False):
     """Read-only F1 leaves: existing CFG extraction + segment kernel fold.
 
     This backend consumes the pinned OCaml ELF and per-word ElfDecode facts,
@@ -801,6 +801,11 @@ def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False, 
         from ocaml_alloc import emit_alloc
         result = emit_alloc(root, functions, decode, code, text_base, lib, build_cfg, ocaml_literal_mline)
         write_ocaml_artifacts(result, root, check, "--ocaml-allocation")
+        return
+    if exit_path:
+        from ocaml_exit import emit_exit
+        result = emit_exit(root, functions, decode, code, text_base, lib, build_cfg, ocaml_literal_mline)
+        write_ocaml_artifacts(result, root, check, "--ocaml-exit")
         return
     if wrapper:
         from ocaml_wrapper import emit_wrapper
@@ -1147,6 +1152,7 @@ def main():
     p.add_argument("--ocaml-counter", action="store_true")
     p.add_argument("--ocaml-string-scan", action="store_true")
     p.add_argument("--ocaml-string-wrapper", action="store_true")
+    p.add_argument("--ocaml-exit", action="store_true")
     p.add_argument("--ocaml-allocation", action="store_true")
     p.add_argument("--check", action="store_true")
     p.add_argument("--entry")
@@ -1167,8 +1173,8 @@ def main():
     p.add_argument("--cfg-only", action="store_true",
                    help="print the CFG classification and exit")
     args = p.parse_args()
-    if args.ocaml_constants or args.ocaml_compare or args.ocaml_argv or args.ocaml_lengths or args.ocaml_counter or args.ocaml_string_scan or args.ocaml_string_wrapper or args.ocaml_allocation:
-        emit_ocaml_constants(args.check, compare=args.ocaml_compare, argv=args.ocaml_argv, lengths=args.ocaml_lengths, counter=args.ocaml_counter, scan=args.ocaml_string_scan, wrapper=args.ocaml_string_wrapper, allocation=args.ocaml_allocation)
+    if args.ocaml_constants or args.ocaml_compare or args.ocaml_argv or args.ocaml_lengths or args.ocaml_counter or args.ocaml_string_scan or args.ocaml_string_wrapper or args.ocaml_allocation or args.ocaml_exit:
+        emit_ocaml_constants(args.check, compare=args.ocaml_compare, argv=args.ocaml_argv, lengths=args.ocaml_lengths, counter=args.ocaml_counter, scan=args.ocaml_string_scan, wrapper=args.ocaml_string_wrapper, allocation=args.ocaml_allocation, exit_path=args.ocaml_exit)
         return
     if not args.fn or not args.entry:
         p.error("--fn and --entry are required outside --ocaml-constants")

@@ -1,7 +1,8 @@
 """Common generated block certificates with scalar access plans."""
 
-def emit_block(E, fn, b, name, keys, lib, literal):
-    term = None if b.kind == 'jal' else lib.decode_terminator(b.term, taken=False)['record']
+def emit_block(E, fn, b, name, keys, lib, literal, taken=False):
+    # A tohost store is a seam, like a call: the block parks at it.
+    term = None if b.kind in ('jal', 'tohost') else lib.decode_terminator(b.term, taken=taken)['record']
     term_expr = 'none' if term is None else 'some ' + name + '_term'
     keylist = str(keys)
     E(f'def {name}_body : List MInstr := [', ',\n'.join('  ' + literal(i.addr, i.word) for i in b.instrs), ']',
@@ -9,8 +10,9 @@ def emit_block(E, fn, b, name, keys, lib, literal):
       f'def {name}_blocks : List BBlock := [{{ body := {name}_body, term := {term_expr} }}]',
       f'def {name}_input (R : Nat → BitVec 64) : GRegs := [' + ', '.join(f'({k}, R {k})' for k in keys) + ']', '')
     E(f'theorem {name}_code {{c : Config}} (image : ExecutableImage c) : CodeFacts c.σ.mem {name}_body := by',
-      '  have hc := loaded image', f'  simp only [CodeFacts, {name}_body]',
-      f'  chain_facts hc with "Vsa.Sim.Code.{fn}_at_"', '',
+      *(['  have hc := loaded image', f'  simp only [CodeFacts, {name}_body]',
+         f'  chain_facts hc with "Vsa.Sim.Code.{fn}_at_"'] if b.instrs else
+        [f'  simp only [CodeFacts, {name}_body]']), '',
       f'theorem {name}_shape : ChainOK 0x{b.start:08x}#64 {keylist} {name}_blocks := by',
       f'  simp only [ChainOK, BBlockOK, {name}_blocks, {name}_body, '+(name+'_term, ' if term else '')+'BlockOKM]',
       "  repeat' apply And.intro", '  all_goals decide', '',
