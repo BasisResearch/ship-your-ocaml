@@ -99,7 +99,25 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   the cut, and `WindowStable L.runtimeOk (entryWindows …)`. All three become
   `LoadedAt` fields with their proof for the captured whileMin cut.
 
+- **STOP halt** (`OCaml/Vm/Sim/Stop{Halt,Ready}.lean`):
+  * `stop_do_exit_summary` discharges `StopDoExitSummary` with a1-prims'
+    `do_exit_halts` (status 0; console unchanged; the quiet-exit globals read
+    back through STOP's stores);
+  * `stop_ready` gives `StopInvocation`/`StopCallerReady` from
+    `Running.native` and the `Caml_state` placement;
+  * `stop_exit_continuation` composes them for a1-arms'
+    `stop_halt_step_arm`.
+
+  Named premises: `StopExitReady` (ExitGlobals, caml_do_exit's 208-byte
+  window, GPR presence and HTIF idle at caml_do_exit) and an ordinary accu
+  word. The latter needs EvenPlace at mod 4 (requested from a1-arms) and
+  `GoodF1.stopAccu` (new: STOP never returns a `.raw` word, which caml_main
+  would read as an exception; `whileMin` still checks in one kernel run).
+
 **Open / next**
+0. Halt rows: STOP OpArm (a1-arms' machine row + `stop_exit_continuation`);
+   C_CALL `caml_sys_exit` via a1-prims' `caml_sys_exit_halts`; invariant
+   support for `StopExitReady` (GprPresent/htifIdle/ExitGlobals in Running).
 1. Entry's premises into `LoadedAt` with their captured-cut proofs
    (`InterpCaller`, `StackGeometry`, runtime window stability for
    `Gc.f1Layout`), then `F1Arms.entry` for L := Gc.f1Layout. Earlier note: the `LoadedAt`
