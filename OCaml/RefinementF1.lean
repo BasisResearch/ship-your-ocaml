@@ -49,18 +49,31 @@ theorem InF1.prim {P : Prog} {i : Instr} (h : InF1 P i) {nm : String}
     (hn : i.ccallName P = some nm) : nm ∈ primsF1 := by
   simpa [hn] using h.primitive
 
-/-- **The F1 domain.** `Good`, and every reachable state is at an F1
-instruction of the main code. -/
+/-- `STOP` hands its accumulator to caml_main, which reads a word with low
+bits `10` as an exception result (`Is_exception_result`). Represented
+non-raw values never have those bits; a `.raw` accumulator at `STOP` is
+outside F1. -/
+def stopOrdinary (i : Instr) (v : Val) : Bool :=
+  match i.op, v with
+  | .STOP, .raw _ => false
+  | _, _ => true
+
+/-- **The F1 domain.** `Good`, every reachable state is at an F1 instruction
+of the main code, and `STOP` never returns a raw word. -/
 structure GoodF1 (P : Prog) : Prop where
   good : Good P
   inF1 : ∀ s, Reach P s → ∃ i, decodeAt P.code s.pc = some i ∧ InF1 P i
+  stopAccu : ∀ s i, Reach P s → decodeAt P.code s.pc = some i → stopOrdinary i s.accu = true
 
 /-- `GoodF1` from a static check of the code plus the dynamic fact that the
 run never leaves it: every decodable word is F1, and reachable PCs decode. -/
 theorem GoodF1.of_static {P : Prog} (hg : Good P)
     (static : ∀ pc i, decodeAt P.code pc = some i → InF1 P i)
-    (decodes : ∀ s, Reach P s → decodeAt P.code s.pc ≠ none) : GoodF1 P where
+    (decodes : ∀ s, Reach P s → decodeAt P.code s.pc ≠ none)
+    (stopAccu : ∀ s i, Reach P s → decodeAt P.code s.pc = some i → stopOrdinary i s.accu = true) :
+    GoodF1 P where
   good := hg
+  stopAccu := stopAccu
   inF1 s hr := by
     cases h : decodeAt P.code s.pc with
     | none => exact absurd h (decodes s hr)
