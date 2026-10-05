@@ -28,25 +28,33 @@ theorem tr_interp_entry_resume
     (hlo_80001e88 : 0x80000000 ≤ ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat)
     (hhi_80001e88 : ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ 0x100000000)
     (hhtif_80001e88 : ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat)
+    (loaded_80001e88 : BitVec 64)
+    (hvalue_80001e88 : loaded_80001e88 = (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))))
     (hguard_80001e8c : (v10 == (0#64)) = true)
     (hlo_80001f20 : 0x80000000 ≤ (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat)
     (hhi_80001f20 : (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat + 8 ≤ 0x100000000)
     (hhtif_80001f20 : (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat)
-    (hlo_80001f24 : 0x80000000 ≤ ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat)
-    (hhi_80001f24 : ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat + 8 ≤ 0x100000000)
-    (hhtif_80001f24 : ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat)
+    (loaded_80001f20 : BitVec 64)
+    (hvalue_80001f20 : loaded_80001f20 = (sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8))))
+    (hlo_80001f24 : 0x80000000 ≤ (loaded_80001e88 + sign_extend (m := 64) (0x0a0#12)).toNat)
+    (hhi_80001f24 : (loaded_80001e88 + sign_extend (m := 64) (0x0a0#12)).toNat + 8 ≤ 0x100000000)
+    (hhtif_80001f24 : (loaded_80001e88 + sign_extend (m := 64) (0x0a0#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (loaded_80001e88 + sign_extend (m := 64) (0x0a0#12)).toNat)
+    (loaded_80001f24 : BitVec 64)
+    (hvalue_80001f24 : loaded_80001f24 = (sign_extend (m := 64) (bytesT8 m0 (loaded_80001e88 + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8))))
     (hlo_80001f28 : 0x80000000 ≤ (v2 + sign_extend (m := 64) (0x010#12)).toNat)
     (hhi_80001f28 : (v2 + sign_extend (m := 64) (0x010#12)).toNat + 8 ≤ 0x100000000)
     (hhtif_80001f28 : (v2 + sign_extend (m := 64) (0x010#12)).toNat + 8 ≤ tohostAddr ∨ tohostAddr + 8 ≤ (v2 + sign_extend (m := 64) (0x010#12)).toNat)
-    (hlo_80001f34 : 0x80000000 ≤ ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0b8#12)).toNat)
-    (hhi_80001f34 : ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0b8#12)).toNat + 8 ≤ 0x100000000)
-    (hhtif_80001f34 : tohostAddr + 16 ≤ ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0b8#12)).toNat)
-    (halign_80001f34 : ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0b8#12)).toNat % 8 = 0)
-    (hcode_80001f34 : ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0b8#12)).toNat + 8 ≤ 0x80001e80 ∨ 0x80001f40 ≤ ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0b8#12)).toNat)
+    (loaded_80001f28 : BitVec 64)
+    (hvalue_80001f28 : loaded_80001f28 = (sign_extend (m := 64) (bytesT8 m0 (v2 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8))))
+    (hlo_80001f34 : 0x80000000 ≤ (loaded_80001e88 + sign_extend (m := 64) (0x0b8#12)).toNat)
+    (hhi_80001f34 : (loaded_80001e88 + sign_extend (m := 64) (0x0b8#12)).toNat + 8 ≤ 0x100000000)
+    (hhtif_80001f34 : tohostAddr + 16 ≤ (loaded_80001e88 + sign_extend (m := 64) (0x0b8#12)).toNat)
+    (halign_80001f34 : (loaded_80001e88 + sign_extend (m := 64) (0x0b8#12)).toNat % 8 = 0)
+    (hcode_80001f34 : (loaded_80001e88 + sign_extend (m := 64) (0x0b8#12)).toNat + 8 ≤ 0x80001e80 ∨ 0x80001f40 ≤ (loaded_80001e88 + sign_extend (m := 64) (0x0b8#12)).toNat)
     (m_80001f34 : Std.ExtHashMap Nat (BitVec 8))
-    (hstore_80001f34 : m_80001f34 = writeMap8 (m0) (((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0b8#12)).toNat) (sdData_val (v2 + sign_extend (m := 64) (0x0d0#12))))
+    (hstore_80001f34 : m_80001f34 = writeMap8 (m0) ((loaded_80001e88 + sign_extend (m := 64) (0x0b8#12)).toNat) (sdData_val (v2 + sign_extend (m := 64) (0x0d0#12))))
     : TripleN 13 (SegSt (0x80001e80#64) [⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩]
-      (fun σ => Vsa.Sim.Code.CamlInterpEntryResumeLoaded σ.mem ∧ σ.mem = m0 ∧ σ = σ0)) (SegSt (0x80001f40#64) [⟨Register.x21, ((0#64) + sign_extend (m := 64) (0x001#12))⟩, ⟨Register.x18, ((0#64) + sign_extend (m := 64) (0x000#12))⟩, ⟨Register.x25, ((sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x008#12))⟩, ⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, (sign_extend (m := 64) (bytesT8 m0 (v2 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x9, (sign_extend (m := 64) (bytesT8 m0 ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩]
+      (fun σ => Vsa.Sim.Code.CamlInterpEntryResumeLoaded σ.mem ∧ σ.mem = m0 ∧ σ = σ0)) (SegSt (0x80001f40#64) [⟨Register.x21, ((0#64) + sign_extend (m := 64) (0x001#12))⟩, ⟨Register.x18, ((0#64) + sign_extend (m := 64) (0x000#12))⟩, ⟨Register.x25, (loaded_80001f20 + sign_extend (m := 64) (0x008#12))⟩, ⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, loaded_80001f28⟩, ⟨Register.x9, loaded_80001f24⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩]
       (fun σ => Vsa.Sim.Code.CamlInterpEntryResumeLoaded σ.mem ∧ σ.mem = m_80001f34 ∧ StepFrameOut ((Register.x8 :: noiseRegs) ++ (Register.x8 :: noiseRegs) ++ (Register.x15 :: noiseRegs) ++ noiseRegs ++ (Register.x25 :: noiseRegs) ++ (Register.x25 :: noiseRegs) ++ (Register.x9 :: noiseRegs) ++ (Register.x8 :: noiseRegs) ++ (Register.x14 :: noiseRegs) ++ (Register.x25 :: noiseRegs) ++ noiseRegs ++ (Register.x18 :: noiseRegs) ++ (Register.x21 :: noiseRegs)) σ0 σ)) := by
   intro c hPre
   obtain ⟨hgood, hpc, hp0, ⟨vmi, hmi⟩, htick, ⟨hloaded, hmemeq, hinitial⟩⟩ := hPre
@@ -91,10 +99,10 @@ theorem tr_interp_entry_resume
   have hpc3 : σ3.regs.get? Register.PC = some (0x80001e8c#64 : BitVec 64) := by
     have := obs_alu_pc hobs3
     rwa [show BitVec.addInt (0x80001e88#64) 4 = (0x80001e8c#64 : BitVec 64) from by decide] at this
-  have hrd3 : σ3.regs.get? Register.x15 = some (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) := by
+  have hrd3 : σ3.regs.get? Register.x15 = some loaded_80001e88 := by
     have := obs_alu_rd hobs3 (by decide) (by decide) (by decide) (by decide) (by decide)
-    rwa [hmemE2] at this
-  have hp3 : PinsHold σ3 [⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+    rwa [hmemE2, ← hvalue_80001e88] at this
+  have hp3 : PinsHold σ3 [⟨Register.x15, loaded_80001e88⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨hrd3, pins_alu hobs3 (by rfl) hp2⟩
   obtain ⟨vmi3, hmi3⟩ := obs_alu_minstret hobs3
   have hmemE3 : σ3.mem = m0 := by
@@ -108,7 +116,7 @@ theorem tr_interp_entry_resume
   have hpc4 : σ4.regs.get? Register.PC = some (0x80001f1c#64 : BitVec 64) := by
     rw [obs_btaken_pc hobs4,
       show (0x80001e8c#64 : BitVec 64) + sign_extend (m := 64) (0x0090#13) = (0x80001f1c#64 : BitVec 64) from by apply BitVec.eq_of_toNat_eq; decide]
-  have hp4 : PinsHold σ4 [⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+  have hp4 : PinsHold σ4 [⟨Register.x15, loaded_80001e88⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     pins_btaken hobs4 (by rfl) hp3
   obtain ⟨vmi4, hmi4⟩ := obs_btaken_minstret hobs4
   have hmemE4 : σ4.mem = m0 := by
@@ -124,7 +132,7 @@ theorem tr_interp_entry_resume
     rwa [show BitVec.addInt (0x80001f1c#64) 4 = (0x80001f20#64 : BitVec 64) from by decide] at this
   have hrd5 : σ5.regs.get? Register.x25 = some ((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) :=
     obs_alu_rd hobs5 (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hp5 : PinsHold σ5 [⟨Register.x25, ((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+  have hp5 : PinsHold σ5 [⟨Register.x25, ((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12)))⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨hrd5, pins_alu hobs5 (by rfl) hp4⟩
   obtain ⟨vmi5, hmi5⟩ := obs_alu_minstret hobs5
   have hmemE5 : σ5.mem = m0 := by
@@ -138,12 +146,12 @@ theorem tr_interp_entry_resume
   have hpc6 : σ6.regs.get? Register.PC = some (0x80001f24#64 : BitVec 64) := by
     have := obs_alu_pc hobs6
     rwa [show BitVec.addInt (0x80001f20#64) 4 = (0x80001f24#64 : BitVec 64) from by decide] at this
-  have hrd6 : σ6.regs.get? Register.x25 = some (sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8))) := by
+  have hrd6 : σ6.regs.get? Register.x25 = some loaded_80001f20 := by
     have := obs_alu_rd hobs6 (by decide) (by decide) (by decide) (by decide) (by decide)
-    rwa [hmemE5] at this
-  have hq6 : PinsHold σ5 [⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+    rwa [hmemE5, ← hvalue_80001f20] at this
+  have hq6 : PinsHold σ5 [⟨Register.x15, loaded_80001e88⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨(PinsHold.get hp5 ⟨1, by simp⟩), (PinsHold.get hp5 ⟨2, by simp⟩), (PinsHold.get hp5 ⟨3, by simp⟩), (PinsHold.get hp5 ⟨4, by simp⟩), trivial⟩
-  have hp6 : PinsHold σ6 [⟨Register.x25, (sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+  have hp6 : PinsHold σ6 [⟨Register.x25, loaded_80001f20⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨hrd6, pins_alu hobs6 (by rfl) hq6⟩
   obtain ⟨vmi6, hmi6⟩ := obs_alu_minstret hobs6
   have hmemE6 : σ6.mem = m0 := by
@@ -153,14 +161,14 @@ theorem tr_interp_entry_resume
   -- === step 7: 0x80001f24 `site_80001f24_interp_entry_resume` (alu) ===
   obtain ⟨σ7, i7, hs7, hi7, hG7, hmem7, hobs7⟩ :=
     site_80001f24_interp_entry_resume σ6 i6 (c.steps + 1 + 1 + 1 + 1 + 1 + 1) (0x80001f24#64)
-      vmi6 (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) hG6 hpc6 hmi6 (PinsHold.get hp6 ⟨1, by simp⟩) hload6 rfl hlo_80001f24 hhi_80001f24 hhtif_80001f24 hi6
+      vmi6 loaded_80001e88 hG6 hpc6 hmi6 (PinsHold.get hp6 ⟨1, by simp⟩) hload6 rfl hlo_80001f24 hhi_80001f24 hhtif_80001f24 hi6
   have hpc7 : σ7.regs.get? Register.PC = some (0x80001f28#64 : BitVec 64) := by
     have := obs_alu_pc hobs7
     rwa [show BitVec.addInt (0x80001f24#64) 4 = (0x80001f28#64 : BitVec 64) from by decide] at this
-  have hrd7 : σ7.regs.get? Register.x9 = some (sign_extend (m := 64) (bytesT8 m0 ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8))) := by
+  have hrd7 : σ7.regs.get? Register.x9 = some loaded_80001f24 := by
     have := obs_alu_rd hobs7 (by decide) (by decide) (by decide) (by decide) (by decide)
-    rwa [hmemE6] at this
-  have hp7 : PinsHold σ7 [⟨Register.x9, (sign_extend (m := 64) (bytesT8 m0 ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x25, (sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+    rwa [hmemE6, ← hvalue_80001f24] at this
+  have hp7 : PinsHold σ7 [⟨Register.x9, loaded_80001f24⟩, ⟨Register.x25, loaded_80001f20⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x8, (((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨hrd7, pins_alu hobs7 (by rfl) hp6⟩
   obtain ⟨vmi7, hmi7⟩ := obs_alu_minstret hobs7
   have hmemE7 : σ7.mem = m0 := by
@@ -174,12 +182,12 @@ theorem tr_interp_entry_resume
   have hpc8 : σ8.regs.get? Register.PC = some (0x80001f2c#64 : BitVec 64) := by
     have := obs_alu_pc hobs8
     rwa [show BitVec.addInt (0x80001f28#64) 4 = (0x80001f2c#64 : BitVec 64) from by decide] at this
-  have hrd8 : σ8.regs.get? Register.x8 = some (sign_extend (m := 64) (bytesT8 m0 (v2 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8))) := by
+  have hrd8 : σ8.regs.get? Register.x8 = some loaded_80001f28 := by
     have := obs_alu_rd hobs8 (by decide) (by decide) (by decide) (by decide) (by decide)
-    rwa [hmemE7] at this
-  have hq8 : PinsHold σ7 [⟨Register.x9, (sign_extend (m := 64) (bytesT8 m0 ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x25, (sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+    rwa [hmemE7, ← hvalue_80001f28] at this
+  have hq8 : PinsHold σ7 [⟨Register.x9, loaded_80001f24⟩, ⟨Register.x25, loaded_80001f20⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨(PinsHold.get hp7 ⟨0, by simp⟩), (PinsHold.get hp7 ⟨1, by simp⟩), (PinsHold.get hp7 ⟨2, by simp⟩), (PinsHold.get hp7 ⟨4, by simp⟩), (PinsHold.get hp7 ⟨5, by simp⟩), trivial⟩
-  have hp8 : PinsHold σ8 [⟨Register.x8, (sign_extend (m := 64) (bytesT8 m0 (v2 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x9, (sign_extend (m := 64) (bytesT8 m0 ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x25, (sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+  have hp8 : PinsHold σ8 [⟨Register.x8, loaded_80001f28⟩, ⟨Register.x9, loaded_80001f24⟩, ⟨Register.x25, loaded_80001f20⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨hrd8, pins_alu hobs8 (by rfl) hq8⟩
   obtain ⟨vmi8, hmi8⟩ := obs_alu_minstret hobs8
   have hmemE8 : σ8.mem = m0 := by
@@ -195,7 +203,7 @@ theorem tr_interp_entry_resume
     rwa [show BitVec.addInt (0x80001f2c#64) 4 = (0x80001f30#64 : BitVec 64) from by decide] at this
   have hrd9 : σ9.regs.get? Register.x14 = some (v2 + sign_extend (m := 64) (0x0d0#12)) :=
     obs_alu_rd hobs9 (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hp9 : PinsHold σ9 [⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, (sign_extend (m := 64) (bytesT8 m0 (v2 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x9, (sign_extend (m := 64) (bytesT8 m0 ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x25, (sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+  have hp9 : PinsHold σ9 [⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, loaded_80001f28⟩, ⟨Register.x9, loaded_80001f24⟩, ⟨Register.x25, loaded_80001f20⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨hrd9, pins_alu hobs9 (by rfl) hp8⟩
   obtain ⟨vmi9, hmi9⟩ := obs_alu_minstret hobs9
   have hmemE9 : σ9.mem = m0 := by
@@ -205,15 +213,15 @@ theorem tr_interp_entry_resume
   -- === step 10: 0x80001f30 `site_80001f30_interp_entry_resume` (alu) ===
   obtain ⟨σ10, i10, hs10, hi10, hG10, hmem10, hobs10⟩ :=
     site_80001f30_interp_entry_resume σ9 i9 (c.steps + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1) (0x80001f30#64)
-      vmi9 (sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8))) hG9 hpc9 hmi9 (PinsHold.get hp9 ⟨3, by simp⟩) hload9 rfl hi9
+      vmi9 loaded_80001f20 hG9 hpc9 hmi9 (PinsHold.get hp9 ⟨3, by simp⟩) hload9 rfl hi9
   have hpc10 : σ10.regs.get? Register.PC = some (0x80001f34#64 : BitVec 64) := by
     have := obs_alu_pc hobs10
     rwa [show BitVec.addInt (0x80001f30#64) 4 = (0x80001f34#64 : BitVec 64) from by decide] at this
-  have hrd10 : σ10.regs.get? Register.x25 = some ((sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x008#12)) :=
+  have hrd10 : σ10.regs.get? Register.x25 = some (loaded_80001f20 + sign_extend (m := 64) (0x008#12)) :=
     obs_alu_rd hobs10 (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hq10 : PinsHold σ9 [⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, (sign_extend (m := 64) (bytesT8 m0 (v2 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x9, (sign_extend (m := 64) (bytesT8 m0 ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+  have hq10 : PinsHold σ9 [⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, loaded_80001f28⟩, ⟨Register.x9, loaded_80001f24⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨(PinsHold.get hp9 ⟨0, by simp⟩), (PinsHold.get hp9 ⟨1, by simp⟩), (PinsHold.get hp9 ⟨2, by simp⟩), (PinsHold.get hp9 ⟨4, by simp⟩), (PinsHold.get hp9 ⟨5, by simp⟩), (PinsHold.get hp9 ⟨6, by simp⟩), trivial⟩
-  have hp10 : PinsHold σ10 [⟨Register.x25, ((sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x008#12))⟩, ⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, (sign_extend (m := 64) (bytesT8 m0 (v2 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x9, (sign_extend (m := 64) (bytesT8 m0 ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+  have hp10 : PinsHold σ10 [⟨Register.x25, (loaded_80001f20 + sign_extend (m := 64) (0x008#12))⟩, ⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, loaded_80001f28⟩, ⟨Register.x9, loaded_80001f24⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨hrd10, pins_alu hobs10 (by rfl) hq10⟩
   obtain ⟨vmi10, hmi10⟩ := obs_alu_minstret hobs10
   have hmemE10 : σ10.mem = m0 := by
@@ -223,11 +231,11 @@ theorem tr_interp_entry_resume
   -- === step 11: 0x80001f34 `site_80001f34_interp_entry_resume` (sd) ===
   obtain ⟨σ11, i11, hs11, hi11, hG11, hmem11, hobs11⟩ :=
     site_80001f34_interp_entry_resume σ10 i10 (c.steps + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1) (0x80001f34#64)
-      vmi10 (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) (v2 + sign_extend (m := 64) (0x0d0#12)) hG10 hpc10 hmi10 (PinsHold.get hp10 ⟨4, by simp⟩) (PinsHold.get hp10 ⟨1, by simp⟩) hload10 rfl hlo_80001f34 hhi_80001f34 hhtif_80001f34 halign_80001f34 hi10
+      vmi10 loaded_80001e88 (v2 + sign_extend (m := 64) (0x0d0#12)) hG10 hpc10 hmi10 (PinsHold.get hp10 ⟨4, by simp⟩) (PinsHold.get hp10 ⟨1, by simp⟩) hload10 rfl hlo_80001f34 hhi_80001f34 hhtif_80001f34 halign_80001f34 hi10
   have hpc11 : σ11.regs.get? Register.PC = some (0x80001f38#64 : BitVec 64) := by
     have := obs_store_pc hobs11
     rwa [show BitVec.addInt (0x80001f34#64) 4 = (0x80001f38#64 : BitVec 64) from by decide] at this
-  have hp11 : PinsHold σ11 [⟨Register.x25, ((sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x008#12))⟩, ⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, (sign_extend (m := 64) (bytesT8 m0 (v2 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x9, (sign_extend (m := 64) (bytesT8 m0 ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+  have hp11 : PinsHold σ11 [⟨Register.x25, (loaded_80001f20 + sign_extend (m := 64) (0x008#12))⟩, ⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, loaded_80001f28⟩, ⟨Register.x9, loaded_80001f24⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     pins_store hobs11 (by rfl) hp10
   obtain ⟨vmi11, hmi11⟩ := obs_store_minstret hobs11
   have hmemE11 : σ11.mem = m_80001f34 := by
@@ -244,7 +252,7 @@ theorem tr_interp_entry_resume
     rwa [show BitVec.addInt (0x80001f38#64) 4 = (0x80001f3c#64 : BitVec 64) from by decide] at this
   have hrd12 : σ12.regs.get? Register.x18 = some ((0#64) + sign_extend (m := 64) (0x000#12)) :=
     obs_alu_rd hobs12 (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hp12 : PinsHold σ12 [⟨Register.x18, ((0#64) + sign_extend (m := 64) (0x000#12))⟩, ⟨Register.x25, ((sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x008#12))⟩, ⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, (sign_extend (m := 64) (bytesT8 m0 (v2 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x9, (sign_extend (m := 64) (bytesT8 m0 ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+  have hp12 : PinsHold σ12 [⟨Register.x18, ((0#64) + sign_extend (m := 64) (0x000#12))⟩, ⟨Register.x25, (loaded_80001f20 + sign_extend (m := 64) (0x008#12))⟩, ⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, loaded_80001f28⟩, ⟨Register.x9, loaded_80001f24⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨hrd12, pins_alu hobs12 (by rfl) hp11⟩
   obtain ⟨vmi12, hmi12⟩ := obs_alu_minstret hobs12
   have hmemE12 : σ12.mem = m_80001f34 := by
@@ -260,7 +268,7 @@ theorem tr_interp_entry_resume
     rwa [show BitVec.addInt (0x80001f3c#64) 4 = (0x80001f40#64 : BitVec 64) from by decide] at this
   have hrd13 : σ13.regs.get? Register.x21 = some ((0#64) + sign_extend (m := 64) (0x001#12)) :=
     obs_alu_rd hobs13 (by decide) (by decide) (by decide) (by decide) (by decide)
-  have hp13 : PinsHold σ13 [⟨Register.x21, ((0#64) + sign_extend (m := 64) (0x001#12))⟩, ⟨Register.x18, ((0#64) + sign_extend (m := 64) (0x000#12))⟩, ⟨Register.x25, ((sign_extend (m := 64) (bytesT8 m0 (((0x80001f1c#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xa84#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x008#12))⟩, ⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, (sign_extend (m := 64) (bytesT8 m0 (v2 + sign_extend (m := 64) (0x010#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x9, (sign_extend (m := 64) (bytesT8 m0 ((sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8))) + sign_extend (m := 64) (0x0a0#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x15, (sign_extend (m := 64) (bytesT8 m0 ((((0x80001e80#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xe88#12)) + sign_extend (m := 64) (0x000#12)).toNat : BitVec (8 * 8)))⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
+  have hp13 : PinsHold σ13 [⟨Register.x21, ((0#64) + sign_extend (m := 64) (0x001#12))⟩, ⟨Register.x18, ((0#64) + sign_extend (m := 64) (0x000#12))⟩, ⟨Register.x25, (loaded_80001f20 + sign_extend (m := 64) (0x008#12))⟩, ⟨Register.x14, (v2 + sign_extend (m := 64) (0x0d0#12))⟩, ⟨Register.x8, loaded_80001f28⟩, ⟨Register.x9, loaded_80001f24⟩, ⟨Register.x15, loaded_80001e88⟩, ⟨Register.x10, v10⟩, ⟨Register.x2, v2⟩] :=
     ⟨hrd13, pins_alu hobs13 (by rfl) hp12⟩
   obtain ⟨vmi13, hmi13⟩ := obs_alu_minstret hobs13
   have hmemE13 : σ13.mem = m_80001f34 := by
