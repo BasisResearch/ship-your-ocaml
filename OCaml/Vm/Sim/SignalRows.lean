@@ -26,7 +26,7 @@ theorem check_signals_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config
 theorem check_signals_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0) :
     OCaml.OpArm P (OCaml.LoopAt L P) .CHECK_SIGNALS :=
-  opArm_of_next0 (fun _ _ _ _ h code step => check_signals_next stable rf h code step)
+  opArm_of_next0 (fun _ _ _ _ _ h code step => check_signals_next stable rf h code step)
     (fun s args ne => by cases args with | nil => exact absurd rfl ne | cons => exact Or.inr rfl)
     (fun s e w step => by cases step)
 

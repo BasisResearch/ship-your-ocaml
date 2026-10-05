@@ -73,10 +73,17 @@ theorem decode_fetch {P : Prog} {s : St} {i : Instr} (hd : decodeAt P.code s.pc 
 
 /-! ## Table rows from loop-head simulations -/
 
+/-- The successor of a reachable state by a decoded step is reachable. -/
+theorem reach_next {P : Prog} {s s' : St} {i : Instr} (reach : Reach P s)
+    (hd : decodeAt P.code s.pc = some i) (step : stepI P s i = .next s') : Reach P s' := by
+  obtain ⟨n, run⟩ := reach
+  exact ⟨n + 1, run.snoc (.mk (by simp only [OCaml.Bytecode.step, hd]; exact step))⟩
+
 /-- A row from a one-operand simulation. `shape`: every other operand list
 makes the step `.wrong`; `noHalt`: the opcode never halts. -/
 theorem opArm_of_next1 {L : OCaml.Layout} {P : Prog} {op : Opcode}
-    (next : ∀ s s' c (w : BitVec 32), Reach P s → OCaml.LoopAt L P s c → DispatchCode P s op →
+    (next : ∀ s s' c (w : BitVec 32), Reach P s → Reach P s' → OCaml.LoopAt L P s c →
+      DispatchCode P s op →
       P.code[s.pc + 1]? = some w → stepI P s ⟨op, [w.toInt]⟩ = .next s' →
       ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c')
     (shape : ∀ s args, (∀ a, args ≠ [a]) →
@@ -92,13 +99,14 @@ theorem opArm_of_next1 {L : OCaml.Layout} {P : Prog} {op : Opcode}
   · obtain ⟨a, rfl⟩ := single
     obtain ⟨w, hw, rfl⟩ := fetches 0 a rfl
     apply OCaml.ArmOutcome.of_next
-    · exact fun s' step => next s s' c w reach h code hw step
+    · exact fun s' step => next s s' c w reach (reach_next reach hd step) h code hw step
     · exact noHalt s w.toInt
   · rcases shape s args (fun a ha => single ⟨a, ha⟩) with r | r <;> rw [r] <;> trivial
 
 /-- A row from a two-operand simulation. -/
 theorem opArm_of_next2 {L : OCaml.Layout} {P : Prog} {op : Opcode}
-    (next : ∀ s s' c (w v : BitVec 32), Reach P s → OCaml.LoopAt L P s c → DispatchCode P s op →
+    (next : ∀ s s' c (w v : BitVec 32), Reach P s → Reach P s' → OCaml.LoopAt L P s c →
+      DispatchCode P s op →
       P.code[s.pc + 1]? = some w → P.code[s.pc + 2]? = some v →
       stepI P s ⟨op, [w.toInt, v.toInt]⟩ = .next s' →
       ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c')
@@ -116,13 +124,13 @@ theorem opArm_of_next2 {L : OCaml.Layout} {P : Prog} {op : Opcode}
     obtain ⟨w, hw, rfl⟩ := fetches 0 a rfl
     obtain ⟨v, hv, rfl⟩ := fetches 1 b rfl
     apply OCaml.ArmOutcome.of_next
-    · exact fun s' step => next s s' c w v reach h code hw hv step
+    · exact fun s' step => next s s' c w v reach (reach_next reach hd step) h code hw hv step
     · exact noHalt s w.toInt v.toInt
   · rcases shape s args (fun a b hab => pair ⟨a, b, hab⟩) with r | r <;> rw [r] <;> trivial
 
 /-- A row from an operand-free simulation. -/
 theorem opArm_of_next0 {L : OCaml.Layout} {P : Prog} {op : Opcode}
-    (next : ∀ s s' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s op →
+    (next : ∀ s s' c, Reach P s → Reach P s' → OCaml.LoopAt L P s c → DispatchCode P s op →
       stepI P s ⟨op, []⟩ = .next s' → ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c')
     (shape : ∀ s args, args ≠ [] →
       stepI P s ⟨op, args⟩ = .wrong ∨ stepI P s ⟨op, args⟩ = .unsupported)
@@ -136,7 +144,7 @@ theorem opArm_of_next0 {L : OCaml.Layout} {P : Prog} {op : Opcode}
   by_cases empty : args = []
   · subst empty
     apply OCaml.ArmOutcome.of_next
-    · exact fun s' step => next s s' c reach h code step
+    · exact fun s' step => next s s' c reach (reach_next reach hd step) h code step
     · exact noHalt s
   · rcases shape s args empty with r | r <;> rw [r] <;> trivial
 

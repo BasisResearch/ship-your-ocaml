@@ -20,6 +20,7 @@ import OCaml.Vm.Sim.F1Frame
 import OCaml.Vm.Sim.TrapRows
 import OCaml.Vm.Sim.DecodeFetch
 import OCaml.Vm.Sim.SignalRows
+import OCaml.Vm.Sim.ControlRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -467,6 +468,15 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.opArm_of_next1
 #print axioms OCaml.Vm.Sim.opArm_of_next2
 #print axioms OCaml.Vm.Sim.check_signals_row
+#print axioms OCaml.Vm.Sim.poptrap_row
+#print axioms OCaml.Vm.Sim.restart_row
+#print axioms OCaml.Vm.Sim.pushtrap_row
+#print axioms OCaml.Vm.Sim.push_retaddr_row
+#print axioms OCaml.Vm.Sim.apply1_row
+#print axioms OCaml.Vm.Sim.apply2_row
+#print axioms OCaml.Vm.Sim.apply3_row
+#print axioms OCaml.Vm.Sim.offsetclosure_row
+#print axioms OCaml.Vm.Sim.pushoffsetclosure_row
 #print axioms OCaml.Vm.Sim.RetaddrWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.StackGeometry.edit
 #print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry
@@ -603,6 +613,15 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.opArm_of_next1
 #print axioms OCaml.Vm.Sim.opArm_of_next2
 #print axioms OCaml.Vm.Sim.check_signals_row
+#print axioms OCaml.Vm.Sim.poptrap_row
+#print axioms OCaml.Vm.Sim.restart_row
+#print axioms OCaml.Vm.Sim.pushtrap_row
+#print axioms OCaml.Vm.Sim.push_retaddr_row
+#print axioms OCaml.Vm.Sim.apply1_row
+#print axioms OCaml.Vm.Sim.apply2_row
+#print axioms OCaml.Vm.Sim.apply3_row
+#print axioms OCaml.Vm.Sim.offsetclosure_row
+#print axioms OCaml.Vm.Sim.pushoffsetclosure_row
 #print axioms OCaml.Vm.Sim.RetaddrWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.StackGeometry.edit
 #print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry
