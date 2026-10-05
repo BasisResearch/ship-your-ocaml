@@ -26,6 +26,8 @@ structure StopExitCallPost (before : Config) (nativeSp : Nat) (vmSp : BitVec 64)
   status : gpr after 10 = some 0#64
   memory : after.σ.mem = writeLog before.σ.mem (stopLog nativeSp vmSp before)
   output : after.σ.sailOutput = before.σ.sailOutput
+  /-- main's call of caml_main returns here (caml_do_exit never returns) -/
+  returnAddress : gpr after 1 = some 0x80001df8#64
 
 /-- Run both actual native callers after STOP returns to caml_main. -/
 theorem stop_callers {nativeSp : Nat} {interpSaved mainSaved : Nat → BitVec 64}
@@ -48,7 +50,7 @@ theorem stop_callers {nativeSp : Nat} {interpSaved mainSaved : Nat → BitVec 64
   exact ⟨mainCount + exitCount, after, mainRun.append exitRun, exitPost.good, exitPost.image,
     exitPost.tick, exitPost.pc, (exitPost.frame.frame _ (by decide)).trans mainPost.stack,
     exitPost.status, exitPost.memory.trans (mainPost.memory.trans returned.memory),
-    exitPost.frame.out.trans (mainPost.frame.out.trans returned.output)⟩
+    exitPost.frame.out.trans (mainPost.frame.out.trans returned.output), exitPost.returnAddress⟩
 
 /-- The remaining primitive/runtime exit summary, now at its actual call site.
 The caml_do_exit implementation (debugger, signal termination and libc/HTIF
