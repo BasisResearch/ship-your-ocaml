@@ -1,5 +1,6 @@
 import OCaml.Vm.Sim.ArmInput
 import OCaml.Vm.Sim.StackStore
+import OCaml.Vm.Sim.FieldRead
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.RefinementF1
 
@@ -141,6 +142,64 @@ theorem push_read_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {o
     (by simpa only [Nat.mul_one] using rf.push input space) input
     (PushWriteOk.of_geometry input.geometry input.stack space) selected
     (input.geometry.read input.stack (stack_space input.stack (by omega)) bound) pushed
+  exact ⟨c', run, h.of_plus run running⟩
+
+/-- A selected field of a placed block is readable (`heapLow`/`heapArena`). -/
+theorem StackGeometry.field_read {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high i l a k : Nat} {source v : Val} (g : StackGeometry P s c pl cp high)
+    (sel : FieldSelection s.heap pl source i v l a k) : RamReadAt (a + 8 * (k + i)) 8 := by
+  have found := sel.selected
+  rw [sel.pointer] at found
+  simp only [field?] at found
+  split at found
+  · rename_i t fs object
+    have bound := (List.getElem?_eq_some_iff.mp found).1
+    have lo := g.heapLow l a _ sel.placed object
+    have hi := g.heapArena l a _ sel.placed object
+    simp only [Obj.wosize] at hi
+    refine ⟨?_, ?_, Or.inr ?_⟩ <;> simp only [Layout.sym_bss_end, Layout.sym_tohost,
+      Vsa.Sim.DlHeap.heapEnd] at * <;> omega
+  · cases found
+
+/-- Shared simulation of a field read into the accumulator (ENVACCn, GETFIELDn). -/
+theorem field_read_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : Opcode}
+    {i : Nat} {source : Val} (member : source ∈ roots P s)
+    (arm : ∀ pl cp sp high l a k v, ArmInput L P s op c pl cp sp high →
+      FieldSelection s.heap pl source i v l a k → RamReadAt (a + 8 * (k + i)) 8 →
+      ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P {s with pc := s.pc + 1, accu := v} c')
+    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op)
+    (step : opt (field? s.heap source i) (fun v => .next { (s.adv 1) with accu := v }) = .next s') :
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  obtain ⟨v, selected, next⟩ := opt_next step
+  cases next
+  obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
+  obtain ⟨l, a, k, sel⟩ := field_selection input.toVmReprAt member selected
+  obtain ⟨c', run, running⟩ := arm pl cp sp high l a k v input sel (input.geometry.field_read sel)
+  exact ⟨c', run, h.of_plus run running⟩
+
+/-- Shared simulation of a field read pushed over the accumulator (PUSHENVACCn). -/
+theorem push_field_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : Opcode}
+    {i high0 : Nat} {source : Val} (rf : RuntimeFrame L high0) (member : source ∈ roots P s)
+    (arm : ∀ pl cp sp high l a k w v, WindowStable L.runtimeOk [⟨sp - 8, sp⟩] →
+      ArmInput L P s op c pl cp sp high → PushWriteOk P s c pl cp sp w →
+      FieldSelection s.heap pl source i v l a k → RamReadAt (a + 8 * (k + i)) 8 →
+      valWord pl s.accu = some w →
+      ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P
+        {s with pc := s.pc + 1, accu := v, stack := s.accu :: s.stack} c')
+    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op)
+    (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
+    (step : opt (field? s.heap source i)
+      (fun v => .next { (pushAccu (s.adv 1)) with accu := v }) = .next s') :
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  obtain ⟨v, selected, next⟩ := opt_next step
+  cases next
+  obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
+  obtain ⟨w, -, pushed⟩ := input.accu
+  obtain ⟨l, a, k, sel⟩ := field_selection input.toVmReprAt member selected
+  obtain ⟨c', run, running⟩ := arm pl cp sp high l a k w v
+    (by simpa only [Nat.mul_one] using rf.push input space) input
+    (PushWriteOk.of_geometry input.geometry input.stack space) sel
+    (input.geometry.field_read sel) pushed
   exact ⟨c', run, h.of_plus run running⟩
 
 end OCaml.Vm.Sim

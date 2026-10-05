@@ -123,6 +123,7 @@ python3 scripts/gen_global_field_arms.py --check || fail "stage a5: global field
 python3 scripts/gen_atom_arms.py --check || fail "stage a5: atom arm bridge drift"
 python3 scripts/gen_acc_arms.py --check || fail "stage a5: stack arm bridge drift"
 python3 scripts/gen_push_rows.py --check || fail "stage a5: push row drift"
+python3 scripts/gen_field_rows.py --check || fail "stage a5: field row drift"
 python3 scripts/gen_const_arms.py --check || fail "stage a5: constant arm bridge drift"
 python3 scripts/gen_arm_pilot.py --check || fail "stage a5: arm pilot drift"
 python3 scripts/gen_ccall_returns.py --check || fail "stage a5: represented C_CALL return drift"
