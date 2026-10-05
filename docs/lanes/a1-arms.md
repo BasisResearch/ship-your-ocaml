@@ -43,14 +43,16 @@ Unconditional loop-head simulations, all from `LoopAt` and named premises:
 * operand `_next` forms (hand, a2-sem style), taking the operand fetch:
   ACC n, PUSHACC n, POP, ASSIGN, ENVACC n (`OperandStackRows`), OFFSETCLOSURE
   n, PUSHOFFSETCLOSURE n (`OffsetRows`), and GETGLOBAL, PUSHGETGLOBAL,
-  GETGLOBALFIELD, PUSHGETGLOBALFIELD (`GlobalRows`).
+  GETGLOBALFIELD, PUSHGETGLOBALFIELD (`GlobalRows`), APPLY1–3 (`ApplyRows`).
 
 Shared lemmas are in `StackRows.lean` and `ClosureOffsetRows.lean`.
 `StackGeometry` places code, atoms and objects (`heapLow`, `codeLow/Arena`,
 `atomLow/Arena`, `heapCode`/`heapAtoms`). Allocation takes one named
 `NurseryPlacement`. `DispatchCode` is the opcode fetch only (code geometry
 from `StackGeometry.code_read`). Remaining named premises: `MemoryStable`,
-`StackCapacity B`, `RuntimeFrame L high` (VM-stack windows), and
+`StackCapacity B` (budget + 2·Stack_threshold ≤ Stack_size), `RuntimeFrame L
+high` (VM-stack windows, stack_high/stack_threshold words, no pending
+signal; a6-gc's pinned `f1Layout` will supply it), and
 `nonnegative` operands (a2-sem is removing those by making negative index
 operands `.unsupported`).
 
