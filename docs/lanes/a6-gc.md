@@ -29,6 +29,18 @@ Done (F1 side of the GC):
   block's writes in the window, `reserve_outside` + `OutWRange.shrink`
   re-establish it after the reservation. a1-arms: carry `NurseryGeometry`
   beside `StackGeometry` and `G1Room`.
+- `OCaml/Vm/Gc/F1Runtime.lean` (requested by a1-arms): the pinned F1 layout
+  `f1Layout := runtimeLayout F1Pins`. `F1Pins` fixes the cut's free block,
+  `Caml_state` address, `stack_high` and `stack_threshold`; G1 keeps them.
+  `f1_stable`: any window apart from `f1Footprint` (.bss, the young_*/stack
+  domain fields, the free block) is `WindowStable`; corollaries
+  `f1_domainField`/`f1_trapsp`/`f1_extern_sp`/`f1_local_roots`/
+  `f1_exn_bucket`/`f1_external_raise`, `f1_nursery`, `f1_aboveBlock`,
+  `f1_stackWindow`. `f1_stackHigh`/`f1_threshold`/`f1_quiet` give
+  `RuntimeFrame`'s other fields. `f1_allocation`: `AllocationRuntime` for
+  logs storing apart from the kept footprint and lowering `young_ptr` within
+  the nursery. `whileMin_loaded_f1`(`_fillZero`): the cut is `Loaded f1Layout`.
+  `NurseryGeometry.placement` gives a1-arms' `NurseryPlacement`.
 - `OCaml/Vm/Gc/G1Guards.lean`: the C fast paths' `young_ptr - bytes <u
   young_limit` guards. `double_room`, `small_room`, `string_room` give the
   `room` fields of `FastMemory`, `SmallAllocation.NurseryMemory` and

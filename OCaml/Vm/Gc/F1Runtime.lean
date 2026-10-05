@@ -1,0 +1,377 @@
+import OCaml.Vm.Boot.WhileMin
+import OCaml.Vm.Reloc
+import OCaml.Vm.Primitives.Write
+import OCaml.Vm.Primitives.Allocation
+import OCaml.Vm.Primitives.MemoryFrame
+import OCaml.Vm.Sim.CheckSignals
+import OCaml.Vm.Gc.Readback
+
+/-!
+# The F1 runtime invariant, pinned at the cut
+
+Under G1 no collection runs and nothing is allocated in the major heap after
+the cut, so the best-fit free list, the `Caml_state` address and the VM stack
+geometry keep their cut values. `F1Pins` fixes them; `f1Runtime := RuntimeOk
+F1Pins` then reads only a fixed footprint (`f1Footprint`): `.bss`, the
+`young_*` and stack fields of the domain record, and the free block.
+
+* `f1_stable`: every window apart from the footprint is `WindowStable`.
+  Corollaries: Caml_state fields outside the read ones (`f1_domainField`), the
+  nursery (`f1_nursery`), the VM stack (`f1_stackWindow`).
+* `f1_stackHigh`, `f1_threshold`, `f1_quiet`: the stack and signal facts the
+  arms' `RuntimeFrame` takes.
+* `f1_allocation`: `AllocationRuntime` for a log that only stores apart from
+  the footprint, except `young_ptr`, which it lowers within the nursery.
+* `whileMin_f1Pins`: the pins hold at the captured cut.
+-/
+
+namespace OCaml.Vm.Gc
+set_option autoImplicit false
+open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives Boot
+
+/-- The cut's domain address, stack top and threshold. -/
+def f1Domain : Nat := WhileMinRuntime.domain
+def f1High : Nat := WhileMinEntry.high
+def f1Threshold : Nat := f1High - Layout.stackBytes + Layout.stackThresholdBytes
+
+/-- What G1 keeps fixed after the cut. -/
+structure F1Pins (c : Config) : Prop where
+  freeList : BestFitSingletonAt c WhileMinRuntime.freeBlock
+  domain : word c Layout.sym_Caml_state = BitVec.ofNat 64 f1Domain
+  stackHigh : word c (f1Domain + Layout.off_stack_high) = BitVec.ofNat 64 f1High
+  threshold : word c (f1Domain + Layout.off_stack_threshold) = BitVec.ofNat 64 f1Threshold
+
+/-- The F1 runtime invariant. -/
+def f1Runtime : Config → Prop := RuntimeOk F1Pins
+
+/-- The F1 layout. -/
+def f1Layout : OCaml.Layout := runtimeLayout F1Pins
+
+/-- The memory `f1Runtime` reads, except the `young_ptr` word. -/
+def keptFootprint : List W :=
+  [⟨0, Layout.sym_bss_end⟩, ⟨f1Domain, f1Domain + Layout.off_young_ptr⟩,
+   ⟨f1Domain + Layout.off_young_ptr + 8, f1Domain + 64⟩,
+   ⟨f1Domain + Layout.off_stack_high, f1Domain + Layout.off_stack_threshold + 8⟩,
+   ⟨WhileMinRuntime.freeBlock.block - 8,
+    WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words⟩]
+
+/-- The `young_ptr` word, which allocation moves. -/
+def youngWord : W := ⟨f1Domain + Layout.off_young_ptr, f1Domain + Layout.off_young_ptr + 8⟩
+
+/-- The memory `f1Runtime` reads. -/
+def f1Footprint : List W := youngWord :: keptFootprint
+
+/-- Two windows do not overlap. -/
+def Apart (w v : W) : Prop := w.hi ≤ v.lo ∨ v.hi ≤ w.lo
+
+/-- A range lies inside one footprint window. -/
+def InFootprint (x n : Nat) : Prop := ∃ v ∈ f1Footprint, v.lo ≤ x ∧ x + n ≤ v.hi
+
+/-- A range lies inside one kept footprint window. -/
+def InKept (x n : Nat) : Prop := ∃ v ∈ keptFootprint, v.lo ≤ x ∧ x + n ≤ v.hi
+
+theorem InKept.footprint {x n : Nat} (h : InKept x n) : InFootprint x n := by
+  obtain ⟨v, member, low, high⟩ := h
+  exact ⟨v, List.mem_cons_of_mem _ member, low, high⟩
+
+theorem outW_of {ws : List W} {a : Nat} (h : ∀ w ∈ ws, a < w.lo ∨ w.hi ≤ a) : OutW ws a := by
+  induction ws with
+  | nil => trivial
+  | cons w ws ih => exact ⟨h w (by simp), ih fun v hv => h v (by simp [hv])⟩
+
+/-- Bytes inside the footprint survive a frame on windows apart from it. -/
+theorem footprint_keep {ws : List W} {m m' : Std.ExtHashMap Nat (BitVec 8)} (frame : FrameOn ws m m')
+    (apart : ∀ w ∈ ws, ∀ v ∈ f1Footprint, Apart w v) {x n : Nat} (inside : InFootprint x n) :
+    bytesT m' x n = bytesT m x n := by
+  obtain ⟨v, member, low, high⟩ := inside
+  apply Reloc.bytesT_congr
+  intro j hj
+  have out : OutW ws (x + j) := outW_of fun w hw => by
+    rcases apart w hw v member with h | h <;> omega
+  have same := frame (x + j) out
+  simp only [bytesT, same]
+
+theorem in_bss {x n : Nat} (h : x + n ≤ Layout.sym_bss_end) : InKept x n :=
+  ⟨_, List.mem_cons_self, Nat.zero_le _, h⟩
+
+theorem in_youngLimit {x n : Nat} (low : f1Domain ≤ x) (h : x + n ≤ f1Domain + Layout.off_young_ptr) :
+    InKept x n :=
+  ⟨⟨f1Domain, f1Domain + Layout.off_young_ptr⟩, by simp [keptFootprint], low, h⟩
+
+theorem in_youngRest {x n : Nat} (low : f1Domain + Layout.off_young_ptr + 8 ≤ x) (h : x + n ≤ f1Domain + 64) :
+    InKept x n :=
+  ⟨⟨f1Domain + Layout.off_young_ptr + 8, f1Domain + 64⟩, by simp [keptFootprint], low, h⟩
+
+theorem in_stackFields {x n : Nat} (low : f1Domain + Layout.off_stack_high ≤ x)
+    (h : x + n ≤ f1Domain + Layout.off_stack_threshold + 8) : InKept x n :=
+  ⟨⟨f1Domain + Layout.off_stack_high, f1Domain + Layout.off_stack_threshold + 8⟩, by simp [keptFootprint], low, h⟩
+
+theorem in_block {x n : Nat} (low : WhileMinRuntime.freeBlock.block - 8 ≤ x)
+    (h : x + n ≤ WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words) : InKept x n :=
+  ⟨⟨WhileMinRuntime.freeBlock.block - 8, WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words⟩,
+    by simp [keptFootprint], low, h⟩
+
+/-- **Core transfer**: if every kept footprint read is unchanged, the pins
+survive and only `young_ptr` may differ among the runtime fields. -/
+theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem x n = bytesT c.σ.mem x n)
+    (pins : F1Pins c) :
+    F1Pins c' ∧ runtimeFields c' =
+      { runtimeFields c with youngPtr := (word c' (f1Domain + Layout.off_young_ptr)).toNat } := by
+  have w8 : ∀ x, InKept x 8 → word c' x = word c x := fun x h => keep x 8 h
+  have w4 : ∀ x, InKept x 4 → word32 c' x = word32 c x := fun x h => keep x 4 h
+  have b : ∀ {x n}, x + n ≤ Layout.sym_bss_end → InKept x n := in_bss
+  have dom : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state :=
+    w8 _ (b (by simp [Layout.sym_Caml_state, Layout.sym_bss_end]))
+  have domNat : (word c Layout.sym_Caml_state).toNat = f1Domain := by
+    rw [pins.domain]; simp [f1Domain, WhileMinRuntime.domain]
+  have young : ∀ off, Layout.off_young_ptr + 8 ≤ off → off + 8 ≤ 64 →
+      word c' (f1Domain + off) = word c (f1Domain + off) :=
+    fun off l h => w8 _ (in_youngRest (by omega) (by omega))
+  have limit : word c' (f1Domain + Layout.off_young_limit) = word c (f1Domain + Layout.off_young_limit) :=
+    w8 _ (in_youngLimit (by simp [Layout.off_young_limit]) (by simp [Layout.off_young_limit, Layout.off_young_ptr]))
+  have fields : runtimeFields c' =
+      { runtimeFields c with youngPtr := (word c' (f1Domain + Layout.off_young_ptr)).toNat } := by
+    simp only [runtimeFields, domainWord, dom, domNat]
+    rw [young _ (by decide) (by decide), young _ (by decide) (by decide), young _ (by decide) (by decide),
+      young _ (by decide) (by decide), limit,
+      w4 _ (b (by simp [Layout.sym_caml_something_to_do, Layout.sym_bss_end]))]
+  have node : ∀ off, off + 8 ≤ 40 →
+      InKept (WhileMinRuntime.freeBlock.block + off) 8 := fun off h =>
+    in_block (by simp [WhileMinRuntime.freeBlock]; omega) (by simp [WhileMinRuntime.freeBlock]; omega)
+  have shape := pins.freeList
+  refine ⟨⟨?_, ?_, ?_, ?_⟩, fields⟩
+  · exact {
+      nonnull := shape.nonnull
+      aligned := shape.aligned
+      large := shape.large
+      fits := shape.fits
+      small := fun i lo hi => by
+        have e := shape.small i lo hi
+        have slot : smallSlot i + 16 ≤ Layout.sym_bss_end := by
+          simp only [smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.sym_bss_end,
+            Layout.bf_small_count] at hi ⊢
+          omega
+        exact ⟨by rw [w8 _ (b (by simp only [Layout.off_bf_small_free]; omega))]; exact e.head,
+          by rw [w8 _ (b (by simp only [Layout.off_bf_small_merge]; omega))]; exact e.merge⟩
+      bitmap := by rw [w4 _ (b (by simp [Layout.sym_bf_small_map, Layout.sym_bss_end]))]; exact shape.bitmap
+      root := by rw [w8 _ (b (by simp [Layout.sym_bf_large_tree, Layout.sym_bss_end]))]; exact shape.root
+      least := by rw [w8 _ (b (by simp [Layout.sym_bf_large_least, Layout.sym_bss_end]))]; exact shape.least
+      header := by
+        rw [w8 _ (in_block (by simp [WhileMinRuntime.freeBlock, Layout.header_bytes])
+          (by simp [WhileMinRuntime.freeBlock, Layout.header_bytes]))]
+        exact shape.header
+      node := by
+        rw [w4 _ (in_block (by simp [WhileMinRuntime.freeBlock, Layout.off_bf_isnode])
+          (by simp [WhileMinRuntime.freeBlock, Layout.off_bf_isnode]))]
+        exact shape.node
+      left := by rw [w8 _ (node _ (by simp [Layout.off_bf_left]))]; exact shape.left
+      right := by rw [w8 _ (node _ (by simp [Layout.off_bf_right]))]; exact shape.right
+      prev := by rw [w8 _ (node _ (by simp [Layout.off_bf_prev]))]; exact shape.prev
+      next := by rw [w8 _ (node _ (by simp [Layout.off_bf_next]))]; exact shape.next
+      total := by rw [w8 _ (b (by simp [Layout.sym_caml_fl_cur_wsz, Layout.sym_bss_end]))]; exact shape.total }
+  · rw [dom]; exact pins.domain
+  · rw [w8 _ (in_stackFields (by simp [Layout.off_stack_high]) (by simp [Layout.off_stack_high,
+      Layout.off_stack_threshold]))]
+    exact pins.stackHigh
+  · rw [w8 _ (in_stackFields (by simp [Layout.off_stack_high, Layout.off_stack_threshold])
+      (by simp [Layout.off_stack_threshold]))]
+    exact pins.threshold
+
+/-- Read-equality on the whole footprint transfers `f1Runtime`. -/
+theorem f1_transfer {c c' : Config} (keep : ∀ x n, InFootprint x n → bytesT c'.σ.mem x n = bytesT c.σ.mem x n)
+    (ok : f1Runtime c) : f1Runtime c' := by
+  obtain ⟨bounds, quiet, pins⟩ := ok
+  obtain ⟨pins', fields⟩ := f1_core (fun x n h => keep x n h.footprint) pins
+  have ptr : (word c' (f1Domain + Layout.off_young_ptr)).toNat = (runtimeFields c).youngPtr := by
+    have dom : (word c Layout.sym_Caml_state).toNat = f1Domain := by
+      rw [pins.domain]; simp [f1Domain, WhileMinRuntime.domain]
+    have same : word c' (f1Domain + Layout.off_young_ptr) = word c (f1Domain + Layout.off_young_ptr) :=
+      keep _ 8 ⟨youngWord, List.mem_cons_self, Nat.le_refl _, Nat.le_refl _⟩
+    simp only [runtimeFields, domainWord, dom, same]
+  rw [ptr] at fields
+  exact ⟨fields ▸ bounds, fields ▸ quiet, pins'⟩
+
+/-- **Windows apart from the footprint are runtime-stable.** -/
+theorem f1_stable {ws : List W} (apart : ∀ w ∈ ws, ∀ v ∈ f1Footprint, Apart w v) :
+    WindowStable f1Runtime ws :=
+  fun _ _ frame ok => f1_transfer (fun _ _ inside => footprint_keep frame apart inside) ok
+
+/-- A single window apart from the four footprint windows. -/
+theorem f1_window {lo hi : Nat}
+    (apart : ∀ v ∈ f1Footprint, hi ≤ v.lo ∨ v.hi ≤ lo) : WindowStable f1Runtime [⟨lo, hi⟩] :=
+  f1_stable fun w hw v hv => by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
+    subst hw
+    exact apart v hv
+
+/-- The footprint, numerically. -/
+theorem f1_window_of {lo hi : Nat}
+    (bss : Layout.sym_bss_end ≤ lo)
+    (young : hi ≤ f1Domain ∨ f1Domain + 64 ≤ lo)
+    (stack : hi ≤ f1Domain + Layout.off_stack_high ∨ f1Domain + Layout.off_stack_threshold + 8 ≤ lo)
+    (block : hi ≤ WhileMinRuntime.freeBlock.block - 8 ∨
+      WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words ≤ lo) :
+    WindowStable f1Runtime [⟨lo, hi⟩] := by
+  apply f1_window
+  intro v hv
+  simp only [f1Footprint, keptFootprint, youngWord, List.mem_cons, List.not_mem_nil, or_false] at hv
+  simp only [Layout.off_young_ptr] at *
+  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl
+  · dsimp only; omega
+  · exact Or.inr bss
+  · dsimp only; omega
+  · dsimp only; omega
+  · exact stack
+  · exact block
+
+/-- **`AllocationRuntime` for a nursery reservation.** Every store misses the
+kept footprint (the `young_ptr` store does), and the final `young_ptr` stays
+in `[young_limit, old young_ptr]`, aligned. -/
+theorem f1_allocation {before : Config} {log : List WEntry}
+    (stores : ∀ e ∈ log, ∀ v ∈ keptFootprint, e.1 + e.2.1 ≤ v.lo ∨ v.hi ≤ e.1)
+    (young : ∀ after : Config, after.σ.mem = writeLog before.σ.mem log →
+      (runtimeFields before).youngLimit ≤ (word after (f1Domain + Layout.off_young_ptr)).toNat ∧
+      (word after (f1Domain + Layout.off_young_ptr)).toNat ≤ (runtimeFields before).youngPtr ∧
+      (word after (f1Domain + Layout.off_young_ptr)).toNat % 8 = 0) :
+    AllocationRuntime f1Runtime before log := by
+  intro after memory ok
+  obtain ⟨bounds, quiet, pins⟩ := ok
+  have keep : ∀ x n, InKept x n → bytesT after.σ.mem x n = bytesT before.σ.mem x n := by
+    intro x n inside
+    obtain ⟨v, member, low, high⟩ := inside
+    rw [memory]
+    exact bytesT_writeLog_out _ (outLRange_of_forall fun e he => by
+      rcases stores e he v member with h | h <;> omega)
+  obtain ⟨pins', fields⟩ := f1_core keep pins
+  obtain ⟨lowPtr, highPtr, aligned⟩ := young after memory
+  refine ⟨?_, by rw [fields]; exact quiet, pins'⟩
+  rw [fields]
+  exact {
+    nonempty := bounds.nonempty
+    start := bounds.start
+    alloc := Nat.le_trans bounds.limitLow lowPtr
+    ptr := Nat.le_trans highPtr bounds.ptr
+    stop := bounds.stop
+    limitLow := bounds.limitLow
+    limitHigh := bounds.limitHigh
+    alignedStart := bounds.alignedStart
+    alignedEnd := bounds.alignedEnd
+    alignedPtr := aligned }
+
+/-- (a) A `Caml_state` field the runtime invariant does not read
+(trapsp, extern_sp, local_roots, exn_bucket, external_raise, …). -/
+theorem f1_domainField {off : Nat} (notYoung : 64 ≤ off)
+    (notStack : off + 8 ≤ Layout.off_stack_high ∨ Layout.off_stack_threshold + 8 ≤ off)
+    (inRecord : off + 8 ≤ Layout.domainStateBytes) :
+    WindowStable f1Runtime [⟨f1Domain + off, f1Domain + off + 8⟩] := by
+  apply f1_window_of
+  · simp [f1Domain, WhileMinRuntime.domain, Layout.sym_bss_end]; omega
+  · omega
+  · omega
+  · simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.domainStateBytes] at *
+    omega
+
+theorem f1_trapsp : WindowStable f1Runtime [⟨f1Domain + Layout.off_trapsp, f1Domain + Layout.off_trapsp + 8⟩] :=
+  f1_domainField (by decide) (by decide) (by decide)
+theorem f1_extern_sp :
+    WindowStable f1Runtime [⟨f1Domain + Layout.off_extern_sp, f1Domain + Layout.off_extern_sp + 8⟩] :=
+  f1_domainField (by decide) (by decide) (by decide)
+theorem f1_local_roots :
+    WindowStable f1Runtime [⟨f1Domain + Layout.off_local_roots, f1Domain + Layout.off_local_roots + 8⟩] :=
+  f1_domainField (by decide) (by decide) (by decide)
+theorem f1_exn_bucket :
+    WindowStable f1Runtime [⟨f1Domain + Layout.off_exn_bucket, f1Domain + Layout.off_exn_bucket + 8⟩] :=
+  f1_domainField (by decide) (by decide) (by decide)
+theorem f1_external_raise :
+    WindowStable f1Runtime [⟨f1Domain + Layout.off_external_raise, f1Domain + Layout.off_external_raise + 8⟩] :=
+  f1_domainField (by decide) (by decide) (by decide)
+
+/-- (b) Any window inside the nursery `[young_start, young_end)` of the cut,
+in particular the field windows of objects placed there. -/
+theorem f1_nursery {lo hi : Nat} (low : 0x80082000 ≤ lo) (high : hi ≤ 0x80282000) :
+    WindowStable f1Runtime [⟨lo, hi⟩] := by
+  apply f1_window_of <;>
+    simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end,
+      Layout.off_stack_high, Layout.off_stack_threshold] <;> omega
+
+/-- (b) Any window above the free block and below `heap_end` (the initial
+heap's placement and the VM stack lie there). -/
+theorem f1_aboveBlock {lo hi : Nat}
+    (low : WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words ≤ lo) :
+    WindowStable f1Runtime [⟨lo, hi⟩] := by
+  apply f1_window_of <;>
+    simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end,
+      Layout.off_stack_high, Layout.off_stack_threshold] at * <;> omega
+
+/-- `RuntimeFrame.stackWindow`: every window inside the VM stack allocation. -/
+theorem f1_stackWindow {lo hi : Nat} (low : f1High - Layout.stackBytes ≤ lo) (_high : hi ≤ f1High) :
+    WindowStable f1Runtime [⟨lo, hi⟩] :=
+  f1_aboveBlock (by simp only [f1High, WhileMinEntry.high, Layout.stackBytes, WhileMinRuntime.freeBlock] at *; omega)
+
+theorem f1_domain {c : Config} (ok : f1Runtime c) : (word c Layout.sym_Caml_state).toNat = f1Domain := by
+  rw [ok.freeListShape.domain]; simp [f1Domain, WhileMinRuntime.domain]
+
+/-- `RuntimeFrame.stackHigh`. -/
+theorem f1_stackHigh {c : Config} (ok : f1Runtime c) :
+    (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high)).toNat = f1High := by
+  rw [f1_domain ok, ok.freeListShape.stackHigh]; simp [f1High, WhileMinEntry.high]
+
+/-- `RuntimeFrame.threshold`. -/
+theorem f1_threshold {c : Config} (ok : f1Runtime c) :
+    (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_threshold)).toNat =
+      f1High - Layout.stackBytes + Layout.stackThresholdBytes := by
+  rw [f1_domain ok, ok.freeListShape.threshold]
+  simp [f1Threshold, f1High, WhileMinEntry.high, Layout.stackBytes, Layout.stackThresholdBytes]
+
+/-- `RuntimeFrame.quiet`. -/
+theorem f1_quiet {c : Config} (ok : f1Runtime c) : Sim.SignalCheckReady c := by
+  have h := ok.noPending
+  simp only [runtimeFields] at h
+  exact ⟨BitVec.eq_of_toNat_eq (by simpa using h)⟩
+
+section Cut
+open Vsa.Sim.Boot WhileMinLog
+
+/-- The pins hold on the certified cut memory. -/
+theorem f1Pins_of {c : Config} {initial : Vsa.MemRepr.Mem}
+    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) : F1Pins c := by
+  obtain ⟨b, shape⟩ := (WhileMinRuntime.freeList memory).shape
+  have root := shape.root
+  have total := shape.total
+  rw [WhileMinRuntime.read_bf_large_tree memory] at root
+  rw [WhileMinRuntime.read_caml_fl_cur_wsz memory] at total
+  have same : b = WhileMinRuntime.freeBlock := by
+    cases b with
+    | mk block words =>
+      simp only [WhileMinRuntime.freeBlock, FreeBlock.mk.injEq]
+      simp at root total
+      omega
+  subst same
+  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_⟩
+  · exact WhileMinEntry.read_stack_high memory
+  · exact WhileMinEntry.read_stack_threshold memory
+
+/-- `f1Runtime` on the certified cut memory. -/
+theorem f1Runtime_of {c : Config} {initial : Vsa.MemRepr.Mem}
+    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) : f1Runtime c := by
+  have ok := WhileMinRuntime.runtimeOk memory
+  exact ⟨ok.bounds, ok.noPending, f1Pins_of memory⟩
+
+/-- Replace the runtime component of a loaded witness. -/
+theorem Loaded.retarget {L L' : OCaml.Layout} {P : Prog} {c : Config} (h : OCaml.Loaded L P c)
+    (runtime : L'.runtimeOk c) : OCaml.Loaded L' P c := by
+  obtain ⟨pl, cp, high, entry⟩ := h
+  exact ⟨pl, cp, high, { entry with platform := ⟨entry.platform.control, entry.platform.image, runtime⟩ }⟩
+
+/-- **`Loaded f1Layout whileMin`** at the captured cut. -/
+theorem whileMin_loaded_f1 : OCaml.Loaded f1Layout OCaml.Programs.whileMin WhileMin.cut :=
+  Loaded.retarget WhileMin.loaded (f1Runtime_of WhileMin.memory_equiv)
+
+/-- The densified entry, as a0-boot's `loaded_fillZero`. -/
+theorem whileMin_loaded_f1_fillZero : OCaml.Loaded f1Layout OCaml.Programs.whileMin (Vsa.Densify.fillZero WhileMin.cut) :=
+  Loaded.retarget WhileMin.loaded_fillZero
+    (f1Runtime_of ((Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem).symm.trans WhileMin.memory_equiv))
+
+end Cut
+
+end OCaml.Vm.Gc

@@ -158,6 +158,7 @@ import OCaml.Programs.LazyForce
 import OCaml.Programs.WhileMinChecks
 import OCaml.Vm.Gc.WhileMinG1
 import OCaml.Vm.Gc.NurseryGeometry
+import OCaml.Vm.Gc.F1Runtime
 import OCaml.Vm.Gc.FreePlacement
 import OCaml.Vm.Gc.SmallFreeList
 import OCaml.Vm.Gc.G1Guards
@@ -327,6 +328,18 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.NurseryGeometry.young_write
 #print axioms OCaml.Vm.Gc.NurseryGeometry.limit_read
 #print axioms OCaml.Vm.Gc.reserve_outside
+#print axioms OCaml.Vm.Gc.NurseryGeometry.placement
+#print axioms OCaml.Vm.Gc.f1_stable
+#print axioms OCaml.Vm.Gc.f1_allocation
+#print axioms OCaml.Vm.Gc.f1_domainField
+#print axioms OCaml.Vm.Gc.f1_nursery
+#print axioms OCaml.Vm.Gc.f1_aboveBlock
+#print axioms OCaml.Vm.Gc.f1_stackWindow
+#print axioms OCaml.Vm.Gc.f1_stackHigh
+#print axioms OCaml.Vm.Gc.f1_threshold
+#print axioms OCaml.Vm.Gc.f1_quiet
+#print axioms OCaml.Vm.Gc.whileMin_loaded_f1
+#print axioms OCaml.Vm.Gc.whileMin_loaded_f1_fillZero
 #print axioms OCaml.Vm.Gc.BestFitSplit.Post.placed
 #print axioms OCaml.Vm.Gc.BestFitSplit.freeIn_singleton
 #print axioms OCaml.Vm.Gc.whileMin_free_above_nursery

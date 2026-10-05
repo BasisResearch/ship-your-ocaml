@@ -91,6 +91,10 @@ structure NurseryGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   domainLow : Layout.sym_tohost + 16 ≤ (word c Layout.sym_Caml_state).toNat
   domainHigh : (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes ≤ 0x100000000
   domainAligned : (word c Layout.sym_Caml_state).toNat % 8 = 0
+  /-- the whole loaded code buffer, the atom table, and the allocator arena's end -/
+  codeRange : OutWRange [nurseryFree c] pl.codeBase (4 * P.code.size)
+  atoms : OutWRange [nurseryFree c] pl.atomBase atomTableBytes
+  arena : (runtimeFields c).youngPtr ≤ Vsa.Sim.DlHeap.heapEnd
 
 /-- An aligned `Caml_state` word is writable RAM. -/
 theorem NurseryGeometry.domain_write {P s c pl cp high} (g : NurseryGeometry P s c pl cp high)
@@ -148,5 +152,33 @@ theorem OutWRange.shrink {c c' : Config} {x n : Nat}
   obtain ⟨h, -⟩ := h
   simp only [nurseryFree] at h
   exact ⟨by simp only [nurseryFree, limit]; omega, trivial⟩
+
+/-- A range inside the free nursery misses any range separated from it. -/
+theorem apart_of_inside {c : Config} {x n y k : Nat} (outside : OutWRange [nurseryFree c] x n)
+    (low : (runtimeFields c).youngLimit ≤ y) (high : y + k ≤ (runtimeFields c).youngPtr) :
+    y + k ≤ x ∨ x + n ≤ y := by
+  obtain ⟨h, -⟩ := outside
+  simp only [nurseryFree] at h
+  omega
+
+/-- **`NurseryPlacement` for a nursery reservation**: an object of at most
+`count` fields reserved below `young_ptr = a + 8 * count`, within capacity. -/
+theorem NurseryGeometry.placement {P s c pl cp high} (g : NurseryGeometry P s c pl cp high)
+    {count a : Nat} {o : Obj} (young : (runtimeFields c).youngPtr = a + 8 * count)
+    (capacity : (runtimeFields c).youngLimit ≤ a - 8) (room : 8 ≤ a) (size : o.wosize ≤ count) :
+    NurseryPlacement P pl high a o := by
+  have statics := g.statics
+  have arena := g.arena
+  simp only [nurseryFree] at statics
+  have low : (runtimeFields c).youngLimit ≤ a - 8 := capacity
+  have high' : a - 8 + (8 * o.wosize + 8) ≤ (runtimeFields c).youngPtr := by omega
+  refine ⟨⟨?_, trivial⟩, by omega, by omega, ⟨?_, trivial⟩, ⟨?_, trivial⟩⟩
+  · have := apart_of_inside g.stack low high'
+    simp only [stackWindow]
+    omega
+  · have := apart_of_inside g.codeRange low high'
+    omega
+  · have := apart_of_inside g.atoms low high'
+    omega
 
 end OCaml.Vm.Gc
