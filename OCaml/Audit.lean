@@ -162,6 +162,7 @@ import OCaml.Vm.Primitives.StringCopyReadback
 import OCaml.Programs.LazyForce
 import OCaml.Programs.WhileMinChecks
 import OCaml.Programs.WhileMinOffsets
+import OCaml.Programs.WhileMinExtra
 import OCaml.Vm.Gc.WhileMinG1
 import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.F1Runtime
@@ -4444,3 +4445,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleField.Returned.payload_nonpointer
 #print axioms OCaml.Programs.whileMin_ptrsInBlock
 #print axioms OCaml.Bytecode.Val.inBlock_ptr
+#print axioms OCaml.Programs.whileMin_extraBounded
+#print axioms OCaml.Bytecode.ExtraBounded.of_check
+#print axioms OCaml.Bytecode.Res.unguard
+#print axioms OCaml.Bytecode.Res.guard_ok

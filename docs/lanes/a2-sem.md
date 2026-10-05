@@ -23,6 +23,18 @@ Done:
     `branch_next`, `atom_next`, `b{lt,le,gt,ge,ult,uge}int_next`.
   * `OCaml/Vm/Sim/CodeFacts.lean`: the `OperandCode` interface (operand word
     `k` after the PC, for every representing placement).
+* BcSem: every negative index operand is `.unsupported` instead of clamped
+  by `Int.toNat` (ACC PUSHACC POP ASSIGN ENVACC PUSHENVACC RETURN GRAB CLOSURE
+  CLOSUREREC (PUSH)GETGLOBAL(FIELD) SETGLOBAL MAKEBLOCK* GETFIELD SETFIELD
+  GET/SETFLOATFIELD C_CALL1-5 C_CALLN); `Res.unguard`/`Res.unguard_halt`/
+  `Res.guard_ok` invert the guard. All existing inversions (incl. a1-arms'
+  rows and four generators) migrated; 10/10 difftests and the boot/ocamlc
+  compiler differential (1,650,759 steps, identical .cmo/.cmi) pass.
+* `ExtraBounded P` (`OCaml/Bytecode/ExtraBound.lean`) for a1-arms'
+  RETURN/GRAB rows; `whileMin_extraBounded` by one checked run.
+* `PtrsInBlock P` (`OCaml/Bytecode/PtrOffsets.lean`), `whileMin_ptrsInBlock`
+  by one checked run: my half of `WordEquality` for EQ/NEQ on pointers
+  (a1-arms supplies the region placement fields).
 * BcSem: a negative ATOM/PUSHATOM operand is `.unsupported` (interp.c's
   `Atom(*pc++)` would index before `caml_atom_table`; the model had silently
   used atom 0). Removes `atom_arm`'s `nonnegative` premise.

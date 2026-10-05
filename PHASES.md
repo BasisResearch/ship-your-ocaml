@@ -27,6 +27,10 @@ ELF pin).
 | `bcHalts_of_runTo` (checked runs are behaviours) | `OCaml/Bytecode/Load.lean` | P0 | **proved** |
 | `whileMin_bcSem : BcHalts whileMin "55\n2500\n36\n" 0` | `OCaml/Programs/Validation.lean` | P0 | **proved** (kernel `decide`) |
 | `Good.of_bcHalts` (a halting program is `Good`), `whileMin_good : Good whileMin` | `OCaml/Bytecode/Semantics.lean`, `OCaml/Programs/Validation.lean` | A1 (F1) | **proved** (from the kernel-checked `whileMin_runTo`; no new kernel run) |
+| F1 loop-head rows for the integer, comparison, constant and branch families (`top_read_row`, `input_row`; `*_next` for 35 opcodes) | `OCaml/Vm/Sim/{IntRows,ImmediateRows,OperandRows,CodeFacts}.lean` | A1 (a2-sem) | **proved** from `LoopAt` + `DispatchCode` (+ operand fetch); named premises: `BinaryLibScratch` (MULINT/division), division `zero` row, `MemoryStable` |
+| BcSem domain: negative index operands (ACC…C_CALLN, ATOM) are `.unsupported`, not clamped | `OCaml/Bytecode/Semantics.lean` (`Res.unguard`, `Res.guard_ok`) | A1 (a2-sem) | **done**; 10/10 difftests and the boot/ocamlc compiler differential pass |
+| `PtrsInBlock P` (pointer offsets within blocks; for physical equality), `whileMin_ptrsInBlock` | `OCaml/Bytecode/PtrOffsets.lean`, `OCaml/Programs/WhileMinOffsets.lean` | A1 (a2-sem) | **proved for whileMin** (checked run); general discharge open |
+| `ExtraBounded P` (extra-argument counts small, saved counts nonnegative), `whileMin_extraBounded` | `OCaml/Bytecode/ExtraBound.lean`, `OCaml/Programs/WhileMinExtra.lean` | A1 (a2-sem) | **proved for whileMin** (checked run); general invariant (`extra ≤ stack length`) open |
 | `ocamlrun_refinement_of_sim`, `ocamlrun_refinement_fillZero` | `OCaml/Refinement.lean` | P0 | **proved** |
 | `simOfArms`, `ocamlrun_refinement_of_arms` (Layer A from per-arm obligations) | `OCaml/Refinement.lean` | P0 | **proved** |
 | `bytecode_logic_adequacy` (Layer B′ adequacy) | `OCaml/Logic/BcModel.lean`, `OCaml/Theorems.lean` | P0 | **proved** (instance of `VsaIris.mach_adequacy`) |
