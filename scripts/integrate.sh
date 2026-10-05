@@ -7,7 +7,13 @@
 # scripts/check_all.sh (it builds under a 30 GB cgroup cap), and pushes HEAD to
 # main only as a fast-forward; on a push race it re-fetches and retries. On a
 # rebase conflict or a failing gate it stops and leaves the branch as it is.
+# Landings from all lanes are serialized by a machine-wide lock, so they
+# queue instead of racing (a race costs a second full rebuild).
 set -euo pipefail
+exec 9>"${SYO_INTEGRATE_LOCK:-$HOME/.syo-integrate.lock}"
+echo "integrate: waiting for the landing lock (another lane may be landing)"
+flock 9
+echo "integrate: lock held"
 cd "$(git rev-parse --show-toplevel)"
 [ -z "$(git status --porcelain --untracked-files=no)" ] || { echo "integrate: commit or stash first"; exit 1; }
 wait_mem() {
