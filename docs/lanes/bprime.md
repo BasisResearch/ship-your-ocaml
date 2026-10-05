@@ -34,16 +34,38 @@ below), and the F1 brief pauses B′ scale-up. It is NOT landed. It is kept
 on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
 `origin/main`.
 
+- Landed `be2742b`: the assembly above (full gate).
+- `OCaml/Programs/F1Check.lean`: `runToF1` (runTo that also checks `InF1`
+  decoding at every visited state) and `GoodF1.of_runToF1`. A halting
+  checked run visits every reachable state, so `whileMin_goodF1` is one
+  `decide +kernel` (27 s). `whileMin_halts_of_arms`: from `Loaded L whileMin c`
+  and the F1 arm tables, `Halts c "55\n2500\n36\n" 0`. Its domain premises
+  are discharged by `whileMin_goodF1`, `whileMin_fits` and `whileMin_gcSafe`
+  (a6-gc).
+- `OCaml/Vm/Sim/Invocation.lean`: `Invocation D c` is the native frame fixed
+  at entry: x2 = nativeSp, the `Caml_state` pointer, and the bytes of
+  `invocationRanges` = [sp, sp+32) ∪ [sp+200, sp+640). It excludes
+  [sp+32, sp+192), where arm bodies spill. It is frame-shaped: arms preserve
+  it from their write log alone, via `InvocationOutside` and
+  `Invocation.frame`/`frame_log`/`frame_read`. Agreed with a1-arms: the F1
+  invariant is `F1Loop := LoopAt ∧ Invocation`.
+
 **Open / next**
-1. `entry`: caml_interprete 0x80001df8 → setjmp (0x80042c4c) → 0x80001f1c →
-   LOOP_SETUP (`loop_setup`, landed) → loopHead, establishing `R P.init`.
-   This needs `LoadedAt` to name the caller (ra = 0x80004ff8, caml_main's
-   saved frame), which a0-boot supplies.
-2. halt rows: STOP (`stop_halt_step_arm`, conditional on `StopInvocation`,
-   `StopCallerReady` and `StopDoExitSummary`) and C_CALL `caml_sys_exit`.
-   The loop invariant `R` must carry the native invocation frame from entry.
-3. The `whileMin` instance: `GoodF1 whileMin` from a2-sem's `Good whileMin`
-   plus a static `InF1` check of its code.
+1. `F1Loop` (after a1-arms' `LoopAt` lands; build it via their constructor lemma).
+2. `entry`: generator cuts in `gen_arm_pilot.py`:
+   * `INTERP_ENTRY` (0x80001df8 → jal setjmp, bnez taken);
+   * `SETJMP` (0x80042c4c → ret);
+   * `INTERP_ENTRY_RESUME` (0x80001e80 → 0x80001f40, beqz taken);
+   * then the existing `LOOP_SETUP`.
+   Compose them to `F1Loop L P D P.init c'`. This needs a new `LoadedAt`
+   field `caller : InterpCaller c`: x1 = 0x80004ff8, x2 = S, caml_main's
+   frame at [S, S+112) with its ra slot = 0x80001df0, write geometry of
+   [S-528, S+112), and separation from code/globals/VM stack/heap/channels.
+   a0-boot agreed. It holds for the captured cut (S = 0x87ffff80, above
+   `__heap_end`), and the reset route will supply it later.
+3. Halt rows: STOP (`stop_halt_step_arm`, with `StopInvocation` from
+   `Invocation` + the `InterpCaller` snapshot, plus `StopDoExitSummary`:
+   caml_do_exit → HTIF), and C_CALL `caml_sys_exit`.
 
 ## Status
 

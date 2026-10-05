@@ -13,6 +13,8 @@ import OCaml.Vm.Repr
 import OCaml.Vm.Reloc
 import OCaml.Refinement
 import OCaml.RefinementF1
+import OCaml.Programs.F1Check
+import OCaml.Vm.Sim.Invocation
 import OCaml.Vm.Runtime
 import OCaml.Vm.Boot.WhileMinObservation
 import OCaml.Vm.Boot.WhileMin

@@ -266,6 +266,14 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.ocamlrun_refinementF1_of_arms
 #print axioms OCaml.ArmSim.f1Arms
 #print axioms OCaml.ocamlrun_refinement_F1_of_arms
+#print axioms OCaml.runToF1_reach
+#print axioms OCaml.GoodF1.of_runToF1
+#print axioms OCaml.Programs.whileMin_runToF1
+#print axioms OCaml.Programs.whileMin_goodF1
+#print axioms OCaml.Programs.whileMin_halts_of_arms
+#print axioms OCaml.Vm.Sim.Invocation.frame
+#print axioms OCaml.Vm.Sim.Invocation.frame_log
+#print axioms OCaml.Vm.Sim.Invocation.frame_read
 #print axioms OCaml.Logic.bytecode_adequacy
 #print axioms OCaml.Logic.bytecodeLogicAdequacy
 #print axioms OCaml.boot_meaning
