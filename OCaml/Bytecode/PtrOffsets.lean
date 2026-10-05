@@ -1,60 +1,66 @@
 import OCaml.Bytecode.Semantics
 
 /-!
-# Pointer offsets stay within their blocks
+# Live values stay in their regions
 
-`.ptr l k` addresses field `k` of block `l`. Physical equality (`EQ`, `NEQ`,
-`BEQ`, `BNEQ`) compares `(l, k)`, while the machine compares the words
-`φ l + 8k`; the two agree when every compared pointer stays within its block
-(`k ≤ wosize`, one past the end allowed), because the heap representation
-separates distinct blocks by at least a header word. Infix pointers
-(`CLOSUREREC`) satisfy this by construction; `OFFSETCLOSURE` adds a signed
-operand, so in general it is a property of the program.
+Physical equality (`EQ`, `NEQ`, `BEQ`, `BNEQ`) compares values, while the
+machine compares their words. The two agree when every compared value's word
+lies in its own region: a pointer at a field of its block (`k < wosize`), a
+code value inside the code buffer (`pc < code size`), an atom inside the atom
+table (`t < 256`), and no raw word (`CLOSUREREC`'s infix headers are block
+fields, never loaded by compiled code; `ISINT`/`BRANCHIF` decide by the
+represented word's parity, which a raw word does not have). The regions are
+pairwise apart in the placement (`StackGeometry`), so distinct values have
+distinct words (`WordEquality.of_place`).
 
-`PtrsInBlock P` states it for every reachable accumulator and stack value.
+`ValuesInRange P` states it for every reachable accumulator and stack value.
 A concrete program discharges it by one checked run
-(`OCaml/Programs/WhileMinOffsets.lean`); the general discharge (a bounds
-check on `OFFSETCLOSURE` in `BcSem` plus a preservation proof) is open
-(a2-sem).
+(`OCaml/Programs/WhileMinOffsets.lean`); a general discharge (bounds checks in
+`OFFSETCLOSURE`, `CLOSURE` targets and `ATOM` plus a preservation proof) is
+open (a2-sem).
 -/
 
 namespace OCaml.Bytecode
 
-/-- A pointer addresses a field of an existing block, or one past its end;
-other values are unconstrained. -/
-def Val.inBlock (h : Heap) : Val → Bool
+/-- A value's word lies in its region (`n` is the code size). -/
+def Val.inRange (n : Nat) (h : Heap) : Val → Bool
   | .ptr l k => match h.get? l with
-    | some o => decide (k ≤ o.wosize)
+    | some o => decide (k < o.wosize)
     | none => false
-  | _ => true
+  | .code pc => decide (pc < n)
+  | .atom t => decide (t < 256)
+  | .raw _ => false
+  | .int _ => true
 
-/-- The accumulator and every stack value point within their blocks. -/
-def St.ptrsInBlock (s : St) : Bool :=
-  s.accu.inBlock s.heap && s.stack.all (Val.inBlock s.heap)
+/-- The accumulator and every stack value lie in their regions. -/
+def St.valuesInRange (n : Nat) (s : St) : Bool :=
+  s.accu.inRange n s.heap && s.stack.all (Val.inRange n s.heap)
 
-/-- **Every reachable accumulator and stack pointer is within its block.** -/
-def PtrsInBlock (P : Prog) : Prop := ∀ s, Reach P s → s.ptrsInBlock = true
+/-- **Every reachable accumulator and stack value lies in its region.** -/
+def ValuesInRange (P : Prog) : Prop := ∀ s, Reach P s → s.valuesInRange P.code.size = true
 
 /-- Destructuring: the accumulator. -/
-theorem PtrsInBlock.accu {P : Prog} (h : PtrsInBlock P) {s : St} (reach : Reach P s) :
-    s.accu.inBlock s.heap = true := by
+theorem ValuesInRange.accu {P : Prog} (h : ValuesInRange P) {s : St} (reach : Reach P s) :
+    s.accu.inRange P.code.size s.heap = true := by
   have := h s reach
-  simp only [St.ptrsInBlock, Bool.and_eq_true] at this
+  simp only [St.valuesInRange, Bool.and_eq_true] at this
   exact this.1
 
 /-- Destructuring: a stack value. -/
-theorem PtrsInBlock.stack {P : Prog} (h : PtrsInBlock P) {s : St} (reach : Reach P s)
-    {v : Val} (mem : v ∈ s.stack) : v.inBlock s.heap = true := by
+theorem ValuesInRange.stack {P : Prog} (h : ValuesInRange P) {s : St} (reach : Reach P s)
+    {v : Val} (mem : v ∈ s.stack) : v.inRange P.code.size s.heap = true := by
   have := h s reach
-  simp only [St.ptrsInBlock, Bool.and_eq_true, List.all_eq_true] at this
+  simp only [St.valuesInRange, Bool.and_eq_true, List.all_eq_true] at this
   exact this.2 v mem
 
-/-- A within-block pointer: its block exists and the offset is at most its size. -/
-theorem Val.inBlock_ptr {h : Heap} {l k : Nat} (hb : (Val.ptr l k).inBlock h = true) :
-    ∃ o, h.get? l = some o ∧ k ≤ o.wosize := by
-  simp only [Val.inBlock] at hb
-  split at hb
-  · rename_i o ho; exact ⟨o, ho, of_decide_eq_true hb⟩
-  · cases hb
+/-- An in-range value is not a raw word. -/
+theorem Val.inRange_notRaw {n : Nat} {h : Heap} {v : Val} (hb : v.inRange n h = true)
+    (w : BitVec 64) : v ≠ .raw w := by
+  rintro rfl; simp [Val.inRange] at hb
+
+/-- Destructuring: the accumulator is not a raw word. -/
+theorem ValuesInRange.accu_notRaw {P : Prog} (h : ValuesInRange P) {s : St} (reach : Reach P s) :
+    ∀ w, s.accu ≠ .raw w :=
+  Val.inRange_notRaw (h.accu reach)
 
 end OCaml.Bytecode

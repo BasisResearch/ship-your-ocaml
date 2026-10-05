@@ -6,6 +6,7 @@ import OCaml.Vm.Sim.Const3
 import OCaml.Vm.Sim.Atom0
 import OCaml.Vm.Sim.Negint
 import OCaml.Vm.Sim.Boolnot
+import OCaml.Vm.Sim.Isint
 
 /-!
 # Unconditional rows: immediate accumulator arms
@@ -13,7 +14,8 @@ import OCaml.Vm.Sim.Boolnot
 CONST0–CONST3, ATOM0, NEGINT and BOOLNOT. Their conditional bridges state
 the successor explicitly; each row inverts the real `stepI` (definitionally,
 and for NEGINT/BOOLNOT by the accumulator case split the semantics itself
-makes) and derives `ArmInput` from the loop head (`ArmInput.of_loop`).
+makes) and derives `ArmInput` from the loop head (`ArmInput.of_loop`); every row
+re-establishes the loop head (`LoopAt.of_plus`).
 -/
 
 namespace OCaml.Vm.Sim
@@ -25,49 +27,51 @@ theorem input_row {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : O
     (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op)
     (arm : ∀ {pl : Place} {cp : ChanPlace} {sp high : Nat}, ArmInput L P s op c pl cp sp high →
       ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
-  let ⟨_, _, _, _, input⟩ := ArmInput.of_loop h code; arm input
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
+  let ⟨_, _, _, _, input⟩ := ArmInput.of_loop h code
+  let ⟨c', run, running⟩ := arm input
+  ⟨c', run, h.of_plus run running⟩
 
 /-- **CONST0 from the loop head.** -/
 theorem const0_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .CONST0)
     (step : stepI P s ⟨.CONST0, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   cases Res.next.inj step; exact input_row h code fun input => const0_arm stable input
 
 /-- **CONST1 from the loop head.** -/
 theorem const1_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .CONST1)
     (step : stepI P s ⟨.CONST1, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   cases Res.next.inj step; exact input_row h code fun input => const1_arm stable input
 
 /-- **CONST2 from the loop head.** -/
 theorem const2_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .CONST2)
     (step : stepI P s ⟨.CONST2, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   cases Res.next.inj step; exact input_row h code fun input => const2_arm stable input
 
 /-- **CONST3 from the loop head.** -/
 theorem const3_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .CONST3)
     (step : stepI P s ⟨.CONST3, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   cases Res.next.inj step; exact input_row h code fun input => const3_arm stable input
 
 /-- **ATOM0 from the loop head.** -/
 theorem atom0_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ATOM0)
     (step : stepI P s ⟨.ATOM0, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   cases Res.next.inj step; exact input_row h code fun input => atom0_arm stable input
 
 /-- **NEGINT from the loop head.** -/
 theorem negint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .NEGINT)
     (step : stepI P s ⟨.NEGINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   change (match s.accu with
     | .int a => Res.next { (s.adv 1) with accu := .int (untag (2 - tag64 a)) }
     | _ => .wrong) = .next s' at step
@@ -80,7 +84,7 @@ theorem negint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem boolnot_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .BOOLNOT)
     (step : stepI P s ⟨.BOOLNOT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   change (match s.accu with
     | .int n => Res.next { (s.adv 1) with accu := .int (1 - n) }
     | _ => .wrong) = .next s' at step
@@ -88,5 +92,20 @@ theorem boolnot_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
   · rename_i n accu; cases Res.next.inj step
     exact input_row h code fun input => boolnot_arm stable input accu
   · cases step
+
+/-- **ISINT from the loop head.** The semantics rejects a raw accumulator,
+so the step supplies `notRaw`; the parity facts are the witness's `even`. -/
+theorem isint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ISINT)
+    (step : stepI P s ⟨.ISINT, []⟩ = .next s') :
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  change (match s.accu with
+    | .raw _ => Res.wrong
+    | v => Res.next { (s.adv 1) with accu := Val.ofBool v.isInt }) = .next s' at step
+  split at step
+  · cases step
+  · next notRaw =>
+    cases Res.next.inj step
+    exact input_row h code fun input => isint_arm stable input input.geometry.even notRaw
 
 end OCaml.Vm.Sim

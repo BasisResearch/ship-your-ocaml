@@ -2,6 +2,8 @@ import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
 import OCaml.Vm.Sim.OperandRows
+import OCaml.Vm.Sim.PushConstRows
+import OCaml.Vm.Sim.WordPlace
 import OCaml.Vm.Sim.PushRows
 import OCaml.Vm.Sim.FieldRows
 import OCaml.Vm.Sim.OperandStackRows
@@ -495,7 +497,6 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.atom0_next
 #print axioms OCaml.Vm.Sim.negint_next
 #print axioms OCaml.Vm.Sim.boolnot_next
-#print axioms OCaml.Vm.Sim.OperandCode.of_input
 #print axioms OCaml.Vm.Sim.offsetint_next
 #print axioms OCaml.Vm.Sim.constint_next
 #print axioms OCaml.Vm.Sim.branch_next
@@ -4485,10 +4486,27 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleField.child_original
 #print axioms OCaml.Vm.Gc.SingleField.Returned.payload_fixed
 #print axioms OCaml.Vm.Gc.SingleField.Returned.payload_nonpointer
-#print axioms OCaml.Programs.whileMin_ptrsInBlock
-#print axioms OCaml.Bytecode.Val.inBlock_ptr
+#print axioms OCaml.Programs.whileMin_valuesInRange
 #print axioms OCaml.Programs.whileMin_extraBounded
 #print axioms OCaml.Bytecode.ExtraBounded.of_check
 #print axioms OCaml.Bytecode.Res.unguard
 #print axioms OCaml.Bytecode.Res.guard_ok
 #print axioms OCaml.Programs.whileMin_trapBounded
+#print axioms OCaml.Vm.Sim.isint_next
+#print axioms OCaml.Vm.Sim.branchif_next
+#print axioms OCaml.Vm.Sim.branchifnot_next
+#print axioms OCaml.Vm.Sim.beq_next
+#print axioms OCaml.Vm.Sim.bneq_next
+#print axioms OCaml.Vm.Sim.eq_next
+#print axioms OCaml.Vm.Sim.neq_next
+#print axioms OCaml.Vm.Sim.top_equality
+#print axioms OCaml.Vm.Sim.push_set_row
+#print axioms OCaml.Vm.Sim.pushconst0_next
+#print axioms OCaml.Vm.Sim.pushconst1_next
+#print axioms OCaml.Vm.Sim.pushconst2_next
+#print axioms OCaml.Vm.Sim.pushconst3_next
+#print axioms OCaml.Vm.Sim.pushconstint_next
+#print axioms OCaml.Vm.Sim.pushatom0_next
+#print axioms OCaml.Vm.Sim.pushatom_next
+#print axioms OCaml.Vm.Sim.WordEquality.of_place
+#print axioms OCaml.Vm.Sim.Lies.inj

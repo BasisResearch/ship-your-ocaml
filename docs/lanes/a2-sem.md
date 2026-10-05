@@ -9,54 +9,41 @@ method-cache slot, code-address geometry) and the unconditional
 branches (incl. BRANCH, SWITCH), constants/atoms, BOOLNOT, OFFSETINT and
 OFFSETREF.
 
-Done:
-* Unconditional loop-head rows (acc0_next shape: `LoopAt` + `DispatchCode`
-  [+ `OperandCode`] + real `stepI` → `∃ c', Plus c c' ∧ Running L P s' c'`),
-  34 opcodes:
-  * `OCaml/Vm/Sim/IntRows.lean`: combinator `top_read_row` (ArmInput and the
-    top-of-stack read window from the loop head and stack budget);
-    `addint_next` … `asrint_next`, `ltint_next` … `ugeint_next`,
-    `mulint_next`, `division_next` (DIVINT/MODINT via `DivisionKind`).
-  * `OCaml/Vm/Sim/ImmediateRows.lean`: combinator `input_row`;
-    `const0_next`–`const3_next`, `atom0_next`, `negint_next`, `boolnot_next`.
-  * `OCaml/Vm/Sim/OperandRows.lean`: `offsetint_next`, `constint_next`,
-    `branch_next`, `atom_next`, `b{lt,le,gt,ge,ult,uge}int_next`.
-  * `OCaml/Vm/Sim/CodeFacts.lean`: the `OperandCode` interface (operand word
-    `k` after the PC, for every representing placement).
-* BcSem: every negative index operand is `.unsupported` instead of clamped
-  by `Int.toNat` (ACC PUSHACC POP ASSIGN ENVACC PUSHENVACC RETURN GRAB CLOSURE
-  CLOSUREREC (PUSH)GETGLOBAL(FIELD) SETGLOBAL MAKEBLOCK* GETFIELD SETFIELD
-  GET/SETFLOATFIELD C_CALL1-5 C_CALLN); `Res.unguard`/`Res.unguard_halt`/
-  `Res.guard_ok` invert the guard. All existing inversions (incl. a1-arms'
-  rows and four generators) migrated; 10/10 difftests and the boot/ocamlc
-  compiler differential (1,650,759 steps, identical .cmo/.cmi) pass.
-* `ExtraBounded P` (`OCaml/Bytecode/ExtraBound.lean`) for a1-arms'
-  RETURN/GRAB rows; `whileMin_extraBounded` by one checked run.
-* `PtrsInBlock P` (`OCaml/Bytecode/PtrOffsets.lean`), `whileMin_ptrsInBlock`
-  by one checked run: my half of `WordEquality` for EQ/NEQ on pointers
-  (a1-arms supplies the region placement fields).
-* BcSem: a negative ATOM/PUSHATOM operand is `.unsupported` (interp.c's
-  `Atom(*pc++)` would index before `caml_atom_table`; the model had silently
-  used atom 0). Removes `atom_arm`'s `nonnegative` premise.
-* `Good.of_bcHalts`, `whileMin_good` (landed `c8e3451`). bprime's
-  `whileMin_goodF1` is the form the F1 headline consumes.
-* Found and fixed the integrate.sh lock fd 9 leak into stage t1 (`6446d52`).
+Done (all on main unless marked):
+* Unconditional loop-head rows, 51 opcodes, in a1-arms' `_next` shape
+  (`LoopAt` + `DispatchCode` + operand `fetch` + real `stepI` →
+  `∃ c', Plus c c' ∧ LoopAt L P s' c'`):
+  * `IntRows.lean` (`top_read_row`): ADDINT…ASRINT, LTINT…UGEINT, MULINT,
+    DIVINT/MODINT (`division_next`), EQ/NEQ (`eq_next`, `neq_next`).
+  * `ImmediateRows.lean` (`input_row`): CONST0–3, ATOM0, NEGINT, BOOLNOT, ISINT.
+  * `OperandRows.lean`: OFFSETINT, CONSTINT, BRANCH, ATOM, BRANCHIF(NOT),
+    B{LT,LE,GT,GE,ULT,UGE}INT, BEQ/BNEQ.
+  * `PushConstRows.lean` (`push_set_row`): PUSHCONST0–3, PUSHCONSTINT,
+    PUSHATOM0, PUSHATOM.
+* `WordEquality.of_place` (`WordPlace.lean`): physical equality reflects word
+  equality for in-range roots, from parity, in-block pointers, code/atom
+  regions apart from blocks and each other, no wraparound.
+* BcSem domain: negative index operands `.unsupported` (25 opcodes, incl.
+  ATOM/PUSHATOM); `Res.unguard`/`Res.unguard_halt`/`Res.guard_ok`. 10/10
+  difftests and the boot/ocamlc compiler differential pass.
+* Per-program reachability premises, each with a whileMin checked run:
+  `ValuesInRange` (`PtrOffsets.lean`), `ExtraBounded` (`ExtraBound.lean`),
+  `TrapBounded` (`TrapBound.lean`). General discharges open.
+* `Good.of_bcHalts`, `whileMin_good`.
+* integrate.sh lock-fd fix (`6446d52`).
 
-Named premises still on my rows: `BinaryLibScratch c` (MULINT, division;
-a1-arms may derive it from GoodState), `zero` (DIVINT/MODINT zero divisor;
-needs the raise row from the exception machinery, a1-arms), `MemoryStable`.
+Named premises still on my rows: `MemoryStable` (a1-arms discharged it for
+the F1 layout), `BinaryLibScratch c` (MULINT/division), `zero` (DIVINT/MODINT
+zero divisor; needs the exception rows), `ranged` (EQ/NEQ, from
+`ValuesInRange` + `Reach`), `notRaw` (BRANCHIF/NOT, from
+`ValuesInRange.accu_notRaw`), `integer` (BEQ/BNEQ: real obstruction on
+pointers, `beq_pointer_guard_obstruction`; needs a per-program check).
 
 Open / next:
-* ISINT, BRANCHIF, BRANCHIFNOT: need `EvenPlace`; a1-arms is adding it as
-  `StackGeometry.even` (their ef28d0c+).
-* PUSHCONST0–3, PUSHCONSTINT, PUSHATOM0, PUSHATOM: waiting for a1-arms'
-  `PushWriteOk.of_geometry` push helper and `RuntimeFrame` window lemma.
-* EQ/NEQ and the pointer case of BEQ/BNEQ: a general `WordEquality` from
-  `EvenPlace` + placement injectivity (surveying the representation).
-* OFFSETREF, SWITCH: field-write window / block-tag read premises.
-* CodeFacts derivation (`DispatchCode`/`OperandCode` from `decodeAt` + code
-  placement): BLOCKED on a permission-classifier denial of reading the
-  decoder source; asked Kiran.
+* Lift every `_next` row to `OpArm P (LoopAt L P) .OP` via a1-arms'
+  `opArm_of_next0/1/2` + `decode_fetch` (not yet on main).
+* SWITCH and OFFSETREF rows.
+* General discharges of ValuesInRange / ExtraBounded / TrapBounded.
 
 Premise census of the existing conditional bridges (my families):
 * Step-shape bridges (take `stepI P s ⟨op, args⟩ = .next s'`): ADDINT SUBINT

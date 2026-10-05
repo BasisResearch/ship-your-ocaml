@@ -2,6 +2,9 @@ import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.ComparisonArithmetic
 import OCaml.Vm.Sim.Mulint
 import OCaml.Vm.Sim.Division
+import OCaml.Vm.Sim.Eq
+import OCaml.Vm.Sim.Neq
+import OCaml.Vm.Sim.WordPlace
 import OCaml.Vm.Sim.Addint
 import OCaml.Vm.Sim.Subint
 import OCaml.Vm.Sim.Andint
@@ -51,15 +54,17 @@ theorem top_read_row {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op 
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (nonempty : 0 < s.stack.length)
     (arm : ∀ {pl : Place} {cp : ChanPlace} {sp high : Nat}, ArmInput L P s op c pl cp sp high →
       ReadWindow (BitVec.ofNat 64 sp) 8 → ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
-  exact arm input ((input.geometry.read input.stack (stack_space input.stack space) nonempty).window)
+  obtain ⟨c', run, running⟩ :=
+    arm input ((input.geometry.read input.stack (stack_space input.stack space) nonempty).window)
+  exact ⟨c', run, h.of_plus run running⟩
 
 /-- **ADDINT from the loop head.** -/
 theorem addint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ADDINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.ADDINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => a + b - 1) step)
     fun input read => addint_step_arm stable input read step
 
@@ -67,7 +72,7 @@ theorem addint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem subint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .SUBINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.SUBINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => a - b + 1) step)
     fun input read => subint_step_arm stable input read step
 
@@ -75,7 +80,7 @@ theorem subint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem andint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ANDINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.ANDINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => a &&& b) step)
     fun input read => andint_step_arm stable input read step
 
@@ -83,7 +88,7 @@ theorem andint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem orint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ORINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.ORINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => a ||| b) step)
     fun input read => orint_step_arm stable input read step
 
@@ -91,7 +96,7 @@ theorem orint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem xorint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .XORINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.XORINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => (a ^^^ b) ||| 1) step)
     fun input read => xorint_step_arm stable input read step
 
@@ -99,7 +104,7 @@ theorem xorint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem lslint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .LSLINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.LSLINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => ((a - 1) <<< ((untag b).toNat % 64)) + 1) step)
     fun input read => lslint_step_arm stable input read step
 
@@ -107,7 +112,7 @@ theorem lslint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem lsrint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .LSRINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.LSRINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => (a >>> ((untag b).toNat % 64)) ||| 1) step)
     fun input read => lsrint_step_arm stable input read step
 
@@ -115,7 +120,7 @@ theorem lsrint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem asrint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ASRINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.ASRINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => (a.sshiftRight ((untag b).toNat % 64)) ||| 1) step)
     fun input read => asrint_step_arm stable input read step
 
@@ -123,7 +128,7 @@ theorem asrint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem ltint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .LTINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.LTINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => a.slt b) step)
     fun input read => ltint_step_arm stable input read step
 
@@ -131,7 +136,7 @@ theorem ltint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem leint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .LEINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.LEINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => a.sle b) step)
     fun input read => leint_step_arm stable input read step
 
@@ -139,7 +144,7 @@ theorem leint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem gtint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .GTINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.GTINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => b.slt a) step)
     fun input read => gtint_step_arm stable input read step
 
@@ -147,7 +152,7 @@ theorem gtint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem geint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .GEINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.GEINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => b.sle a) step)
     fun input read => geint_step_arm stable input read step
 
@@ -155,7 +160,7 @@ theorem geint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem ultint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ULTINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.ULTINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => a.ult b) step)
     fun input read => ultint_step_arm stable input read step
 
@@ -163,7 +168,7 @@ theorem ultint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 theorem ugeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .UGEINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.UGEINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => b.ule a) step)
     fun input read => ugeint_step_arm stable input read step
 
@@ -173,7 +178,7 @@ theorem mulint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .MULINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (scratch : BinaryLibScratch c)
     (step : stepI P s ⟨.MULINT, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => tag64 (untag a * untag b)) step)
     fun input read => mulint_step_arm stable input read scratch step
 
@@ -199,11 +204,50 @@ theorem division_next (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s s' 
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (scratch : BinaryLibScratch c)
     (zero : ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c')
     (step : stepI P s ⟨divisionOpcode kind, []⟩ = .next s') :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   obtain ⟨x, y, rest, accu, stack⟩ := division_operands kind step
   by_cases hy : y = 0
-  · subst hy; exact zero rest stack
+  · subst hy
+    obtain ⟨c', run, running⟩ := zero rest stack
+    exact ⟨c', run, h.of_plus run running⟩
   · exact top_read_row h code space (by simp [stack])
       fun input read => division_step_arm kind stable input accu stack hy read scratch step
+
+/-- The EQ/NEQ operands: physical equality reflects word equality for the
+accumulator and the top of stack, given that the state's live values lie in
+their regions (`ValuesInRange`, per program). -/
+theorem top_equality {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
+    {pl : Place} {cp : ChanPlace} {sp high : Nat} (input : ArmInput L P s op c pl cp sp high)
+    (ranged : s.valuesInRange P.code.size = true) :
+    ∀ b, s.stack[0]? = some b → WordEquality pl s.accu b := by
+  intro b top
+  simp only [St.valuesInRange, Bool.and_eq_true, List.all_eq_true] at ranged
+  have mem : b ∈ s.stack := List.mem_of_getElem? top
+  exact WordEquality.of_place input.toVmReprAt input.geometry (by simp [roots])
+    (by simp [roots, mem]) ranged.1 (ranged.2 b mem)
+
+theorem physOp_nonempty {P : Prog} {s s' : St} {op : Opcode} (eqop : op = .EQ ∨ op = .NEQ)
+    (step : stepI P s ⟨op, []⟩ = .next s') : 0 < s.stack.length := by
+  cases hs : s.stack with
+  | nil => rcases eqop with rfl | rfl <;> simp [stepI, hs] at step
+  | cons => simp
+
+/-- **EQ from the loop head.** -/
+theorem eq_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .EQ)
+    (space : 8 * s.stack.length ≤ Layout.stackBytes) (ranged : s.valuesInRange P.code.size = true)
+    (step : stepI P s ⟨.EQ, []⟩ = .next s') :
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
+  top_read_row h code space (physOp_nonempty (by simp) step)
+    fun input read => eq_step_arm stable input read (top_equality input ranged) step
+
+/-- **NEQ from the loop head.** -/
+theorem neq_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .NEQ)
+    (space : 8 * s.stack.length ≤ Layout.stackBytes) (ranged : s.valuesInRange P.code.size = true)
+    (step : stepI P s ⟨.NEQ, []⟩ = .next s') :
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
+  top_read_row h code space (physOp_nonempty (by simp) step)
+    fun input read => neq_step_arm stable input read (top_equality input ranged) step
 
 end OCaml.Vm.Sim
