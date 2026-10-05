@@ -2,50 +2,58 @@ import OCaml.Vm.Boot.Startup.ExtTableSaved
 import OCaml.Vm.Boot.Startup.ExtTablePublish
 import OCaml.Vm.Boot.Startup.NativeReturnPair
 namespace OCaml.Vm.Boot.Startup
-open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris.Inst OCaml.Vm.Primitives
+open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
 
-structure ExtTableReturned (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 : BitVec 64)
+structure ExtTableReturned (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 t n : BitVec 64)
     (before after : Config) where
   allocated : Config
-  allocation : ExtTableAllocated H capacity sp ra s0 before allocated
+  allocation : ExtTableAllocated H capacity sp ra s0 t n before allocated
   published : Config
-  publication : WriteRegistersPost [] (extTablePublishLog (vsaReg allocation.allocation.allocated 10)) allocated
+  publication : WriteRegistersPost [] (extTablePublishLog t (vsaReg allocation.allocation.allocated 10)) allocated
     0x80003ddc#64 (vsaReg allocation.allocation.allocated 10)
-    (extTablePublishRegs (vsaReg allocation.allocation.allocated 10)) published
+    (extTablePublishRegs t (vsaReg allocation.allocation.allocated 10)) published
   post : WriteRegistersPost [1, 8, 2] [] published ra (vsaReg allocation.allocation.allocated 10)
     (nativePairRegs sp ra s0 (vsaReg allocation.allocation.allocated 10)) after
-  ready : RuntimeReady (((vsaReg allocation.allocation.allocated 10).toNat, 64) :: H) capacity sp ra after
+  ready : RuntimeReady (((vsaReg allocation.allocation.allocated 10).toNat, (extTableRequest n).toNat) :: H)
+    capacity sp ra after
 
-/-- Complete initialization of the shared-library path's eight-slot native table,
-including header writes, checked allocation, publication and caller restoration. -/
-theorem ext_table_init (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
-    (sp ra s0 : BitVec 64) (ready : RuntimeReady H (capacity + 64) sp ra c)
-    (frame : NativeFrame sp 560) (saved0 : gprGet c.σ 8 = some s0)
-    (table : gprGet c.σ 10 = some sharedTableAddress) (count : gprGet c.σ 11 = some 8#64) :
+/-- Complete caml_ext_table_init for an `n`-slot table at `t`: header writes,
+checked allocation, contents publication and caller restoration. -/
+theorem ext_table_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+    (sp ra s0 t n : BitVec 64) (ready : RuntimeReady H (capacity + charge) sp ra c)
+    (frame : NativeFrame sp 560) (site : ExtTableSite sp t) (saved0 : gprGet c.σ 8 = some s0)
+    (table : gprGet c.σ 10 = some t) (count : gprGet c.σ 11 = some n)
+    (charged : vsaChg (extTableRequest n).toNat charge) :
     FnSummary 0x80003db8#64 (fun d => d = c)
-      (fun after => Nonempty (ExtTableReturned H capacity sp ra s0 c after)) := by
+      (fun after => Nonempty (ExtTableReturned H capacity sp ra s0 t n c after)) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
-  obtain ⟨allocated, run1, ⟨w⟩⟩ := (ext_table_allocate c H capacity sp ra s0 ready frame saved0 table count).run c ⟨pc, rfl⟩
+  have short := frame.resize (small := 16) (by decide) (by decide)
+  obtain ⟨allocated, run1, ⟨w⟩⟩ := (ext_table_allocate c H capacity charge sp ra s0 t n ready frame site
+    saved0 table count charged).run c ⟨pc, rfl⟩
   have allocReady := w.allocation.ready
-  have regs : GHolds allocated.σ (extTablePublishRegs (vsaReg w.allocation.allocated 10)) :=
+  have regs : GHolds allocated.σ (extTablePublishRegs t (vsaReg w.allocation.allocated 10)) :=
     ⟨gholds_lookup (n := 8) _ w.allocation.returned.regs (by rfl), w.allocation.returned.result, trivial⟩
-  obtain ⟨published, run2, publication⟩ := (ext_table_publish allocated _ _ allocReady.toLeafInput regs).run
-    allocated ⟨w.allocation.returned.pc, rfl⟩
-  have publishedReady := ext_table_publish_ready allocReady publication
+  obtain ⟨published, run2, publication⟩ := (ext_table_publish allocated sp _ t _ allocReady.toLeafInput
+    short site regs).run allocated ⟨w.allocation.returned.pc, rfl⟩
+  have publishedReady := ext_table_publish_ready allocReady short site publication
   have saved (off : Nat) (value : BitVec 64) (member : (off, value) ∈ [(0, s0), (8, ra)]) :
       bytesT published.σ.mem (nativeFrameBase sp 16 + off) 8 = value := by
-    rw [publication.memory, bytesT_writeLog_out _ (show OutLRange (extTablePublishLog _) (nativeFrameBase sp 16 + off) 8 from ?_)]
-    · exact w.saved_word frame member
-    · have lower := frame.lower
-      have high : Layout.sym_caml_shared_libs_path + Layout.off_ext_table_contents + 8 ≤ nativeFrameBase sp 16 + off := by
-        unfold Layout.sym_caml_shared_libs_path Layout.off_ext_table_contents heapEnd nativeFrameBase at *
-        omega
-      exact ⟨Or.inr high, trivial⟩
+    have small : off ≤ 8 := by
+      have choices : (off, value) = (0, s0) ∨ (off, value) = (8, ra) := by simpa using member
+      rcases choices with eq | eq <;> cases eq <;> decide
+    rw [publication.memory, bytesT_writeLog_out _ (show OutLRange (extTablePublishLog t _) (nativeFrameBase sp 16 + off) 8 from ?_)]
+    · exact w.saved_word frame site member
+    · have lower := short.lower
+      have place := site.frame short
+      simp only [extTablePublishLog, OutLRange]
+      unfold nativeFrameBase Layout.off_ext_table_contents Layout.ext_table_bytes at *
+      refine ⟨?_, trivial⟩
+      omega
   have input : NativePairInput .extTable sp ra s0 (vsaReg w.allocation.allocated 10) jal_80003dd4_call.link published := {
     toLeafInput := publishedReady.toLeafInput
-    frame := frame.resize (by decide) (by decide)
+    frame := short
     regs := ⟨publishedReady.stack, publication.result, trivial⟩
     savedRa := saved _ ra (by simp [NativePairKind.raOffset])
     savedS0 := saved _ s0 (by simp [NativePairKind.s0Offset])

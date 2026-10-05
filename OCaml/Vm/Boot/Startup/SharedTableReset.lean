@@ -13,7 +13,7 @@ structure ResetSharedTableReturned (initial after : Config) where
   H : List (Nat × Nat)
   domain : (firstDomainPtr.toNat, 928) ∈ H
   returned : ExtTableReturned H (startupAllocatorCredits - 384) parameterStack jal_80004de0_call.link
-    (vsaReg called 8) called after
+    (vsaReg called 8) sharedTableAddress 8#64 called after
   run : Steps (Vsa.Densify.fillZero initial) after
 
 theorem ResetSharedTableReturned.reset {initial after} (w : ResetSharedTableReturned initial after) :
@@ -38,9 +38,9 @@ theorem reset_shared_table_returned_exists : ∃ initial after, Nonempty (ResetS
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ h => h)
   have capacity : startupAllocatorCredits - 320 = (startupAllocatorCredits - 384) + 64 := by decide
   rw [capacity] at calledReady
-  obtain ⟨after, run2, ⟨returned⟩⟩ := (ext_table_init called H (startupAllocatorCredits - 384) parameterStack
-    jal_80004de0_call.link (vsaReg called 8) calledReady (by constructor <;> decide)
-    (library_gpr calledReady.platform (by decide) (by decide) rfl) call.result
-    (gholds_lookup (n := 11) _ call.regs (by rfl))).run called ⟨call.pc, rfl⟩
+  obtain ⟨after, run2, ⟨returned⟩⟩ := (ext_table_init called H (startupAllocatorCredits - 384) 64 parameterStack
+    jal_80004de0_call.link (vsaReg called 8) sharedTableAddress 8#64 calledReady (by constructor <;> decide)
+    (ExtTableSite.shared _) (library_gpr calledReady.platform (by decide) (by decide) rfl) call.result
+    (gholds_lookup (n := 11) _ call.regs (by rfl)) (by constructor <;> decide)).run called ⟨call.pc, rfl⟩
   exact ⟨initial, after, ⟨source, w, called, call, H, domain, returned, w.run.trans (run1.trans run2)⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse

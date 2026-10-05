@@ -15,8 +15,26 @@ Proof note: omega over `Layout.sym_*`/`heapEnd` atoms together with
 `BitVec.toNat` hit `maxRecDepth`. Unfolding the constants first (the idiom
 already in `CustomAllocate`/`MallocBoot*`) fixes it; no limits were raised.
 
-Next: the rest of caml_main's startup path (file open/section table,
-caml_init_gc, code load, primitive table, input_val, sys_init).
+`ext_table_init` is generic over the table address `t` and slot count `n`
+(`ExtTableSite.lean`): the header lies in a global gap clear of allocator
+metadata and the runtime observations (`ExtTableSite.shared`), or in a caller
+frame at or above the callee's entry sp (`ExtTableSite.at_sp`). It occurs 7
+times before the cut: the shared-libs path, the stack-local path table in each
+caml_search_exe_in_path, and the two primitive tables (count 0x180).
+
+Native startup profile (pinned ELF, emulator trace, steps from reset):
+caml_main is entered at 50,217. The first caml_attempt_open (argv[0] =
+"ocamlrun", ENOENT, including htif fs_init) takes 2.3K steps. The retry on
+"/prog" takes 1.8K; read_section_descriptors 0.7K; caml_init_gc 65K
+(set_minor_heap_size 40K, init_major_heap 20K, page table 4K);
+init_stack/atom_table/backtrace 2.4K. caml_load_code takes 224K: `read` 59K
+and caml_register_code_fragment (MD5 over the code) 164K. read_section(DATA)
+takes 40K and caml_build_primitive_table more than 3.9M (strcmp calls).
+
+Next: caml_main 0x80004de4 → caml_attempt_open, failing path:
+caml_search_exe_in_path (ext_table_init at sp, getenv("PATH") miss,
+decompose_path(NULL), search_in_path → strdup, frees), strdup, gc_message,
+free, open → _open_r → _open (fs_init + resolve → ENOENT).
 The reset-to-cut/Loaded exit remains open.
 
 
