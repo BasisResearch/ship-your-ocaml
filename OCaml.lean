@@ -4,6 +4,9 @@ import OCaml.Run.Clock
 import OCaml.Vm.Sim.Invariant
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.AccRows
+import OCaml.Vm.Sim.IntRows
+import OCaml.Vm.Sim.ImmediateRows
+import OCaml.Vm.Sim.OperandRows
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax

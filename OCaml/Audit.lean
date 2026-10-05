@@ -1,4 +1,7 @@
 import OCaml.Vm.Sim.AccRows
+import OCaml.Vm.Sim.IntRows
+import OCaml.Vm.Sim.ImmediateRows
+import OCaml.Vm.Sim.OperandRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -349,6 +352,41 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.Ccall1WriteOk.native
 #print axioms OCaml.Vm.Sim.CcallnWriteOk.native
 #print axioms OCaml.Vm.Sim.acc0_next
+#print axioms OCaml.Vm.Sim.top_read_row
+#print axioms OCaml.Vm.Sim.addint_next
+#print axioms OCaml.Vm.Sim.subint_next
+#print axioms OCaml.Vm.Sim.andint_next
+#print axioms OCaml.Vm.Sim.orint_next
+#print axioms OCaml.Vm.Sim.xorint_next
+#print axioms OCaml.Vm.Sim.lslint_next
+#print axioms OCaml.Vm.Sim.lsrint_next
+#print axioms OCaml.Vm.Sim.asrint_next
+#print axioms OCaml.Vm.Sim.ltint_next
+#print axioms OCaml.Vm.Sim.leint_next
+#print axioms OCaml.Vm.Sim.gtint_next
+#print axioms OCaml.Vm.Sim.geint_next
+#print axioms OCaml.Vm.Sim.ultint_next
+#print axioms OCaml.Vm.Sim.ugeint_next
+#print axioms OCaml.Vm.Sim.mulint_next
+#print axioms OCaml.Vm.Sim.division_next
+#print axioms OCaml.Vm.Sim.input_row
+#print axioms OCaml.Vm.Sim.const0_next
+#print axioms OCaml.Vm.Sim.const1_next
+#print axioms OCaml.Vm.Sim.const2_next
+#print axioms OCaml.Vm.Sim.const3_next
+#print axioms OCaml.Vm.Sim.atom0_next
+#print axioms OCaml.Vm.Sim.negint_next
+#print axioms OCaml.Vm.Sim.boolnot_next
+#print axioms OCaml.Vm.Sim.OperandCode.of_input
+#print axioms OCaml.Vm.Sim.offsetint_next
+#print axioms OCaml.Vm.Sim.constint_next
+#print axioms OCaml.Vm.Sim.branch_next
+#print axioms OCaml.Vm.Sim.bltint_next
+#print axioms OCaml.Vm.Sim.bleint_next
+#print axioms OCaml.Vm.Sim.bgtint_next
+#print axioms OCaml.Vm.Sim.bgeint_next
+#print axioms OCaml.Vm.Sim.bultint_next
+#print axioms OCaml.Vm.Sim.bugeint_next
 #print axioms OCaml.Run.div_iff_not_halts
 #print axioms OCaml.Run.ConsPres.iff
 #print axioms OCaml.Run.ClosPres.iff
