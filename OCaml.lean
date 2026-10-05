@@ -11,6 +11,8 @@ import OCaml.Vm.Sim.OperandRows
 import OCaml.Vm.Sim.PushRows
 import OCaml.Vm.Sim.FieldRows
 import OCaml.Vm.Sim.OperandStackRows
+import OCaml.Vm.Sim.ClosureOffsetRows
+import OCaml.Vm.Sim.OffsetRows
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax
