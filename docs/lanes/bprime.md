@@ -76,10 +76,33 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   (`∃ D, Invocation D c ∧ NativeValid D`, with `NativeValid` as specified by
   bprime), so the table invariant is `LoopAt`.
 
+- **`ArmSim.entry` proved** (`entry_loopAt`, `OCaml/Vm/Sim/EntryLoop.lean`).
+  Starting from `LoadedAt L P c pl cp high`, the machine reaches
+  `LoopAt L P P.init c'` at least one step later (all five `Running`
+  fields). The run chains the generated segments:
+  * `entry_save`: 13 callee-saved stores;
+  * `entry_prep`: prog, `callback_depth + 1` and the four `Caml_state`
+    saves, each load read back through the earlier stores;
+  * `entry_setjmp`: 14 jump-buffer stores;
+  * `entry_resume`: `external_raise = &raise_buf` and the initial VM registers;
+  * `LOOP_SETUP`.
+
+  The total memory effect is one `entryLog`, covered by `entryFootprint`
+  (`entryLog_cover`). From that cover follow: the payload frame
+  (`PayloadOutside.cover`), the primitive table, the runtime invariant via
+  `WindowStable` on `entryWindows`, `StackGeometry.transport`, and the
+  entry snapshot `NativePlaced`, whose `NativeValid` return slots are read
+  back from the save log and caml_main's frame.
+
+  Named premises: `InterpCaller` (now also the cut's dispatch clock and the
+  primitive table's separation), `StackGeometry P P.init c pl cp high` at
+  the cut, and `WindowStable L.runtimeOk (entryWindows …)`. All three become
+  `LoadedAt` fields with their proof for the captured whileMin cut.
+
 **Open / next**
-1. Compose the entry segments into `LoopAt L P P.init c'` (next: `entry_prep`,
-   in progress; then setjmp, resume, loop setup, then VmReprAt for `P.init`
-   via `VmPayload.frame_log` + `InterpCaller.outside`). Done: the new `LoadedAt`
+1. Entry's premises into `LoadedAt` with their captured-cut proofs
+   (`InterpCaller`, `StackGeometry`, runtime window stability for
+   `Gc.f1Layout`), then `F1Arms.entry` for L := Gc.f1Layout. Earlier note: the `LoadedAt`
    field `caller : InterpCaller c`: x1 = 0x80004ff8, x2 = S, caml_main's
    frame at [S, S+112) with its ra slot = 0x80001df0, write geometry of
    [S-528, S+112), and separation from code/globals/VM stack/heap/channels.
