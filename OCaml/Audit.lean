@@ -4491,3 +4491,4 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Bytecode.ExtraBounded.of_check
 #print axioms OCaml.Bytecode.Res.unguard
 #print axioms OCaml.Bytecode.Res.guard_ok
+#print axioms OCaml.Programs.whileMin_trapBounded
