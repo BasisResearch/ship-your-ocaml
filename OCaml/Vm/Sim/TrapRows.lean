@@ -1,4 +1,5 @@
 import OCaml.Vm.Sim.Pushtrap
+import OCaml.Vm.Sim.Poptrap
 import OCaml.Vm.Sim.VmLog
 
 /-!
@@ -85,5 +86,64 @@ theorem pushtrap_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
     input (OperandAt.of_fetch input.geometry fetch) jump envWord
     (PushtrapWriteOk.of_geometry input.geometry input.stack trapBound space) step
   exact ⟨c', run, h.of_plus run running⟩
+
+/-- **A trap-pointer store is separated and writable.** -/
+theorem TrapWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high trap : Nat} (g : StackGeometry P s c pl cp high)
+    (stack : StackRepr c pl sp high s.stack) (space : 8 * s.stack.length ≤ Layout.stackBytes) :
+    TrapWriteOk P s c pl cp sp high trap := by
+  have hs := stack.1
+  have ht := g.top
+  have hg := g.statics
+  have hl := g.domainLow
+  have hal := g.domainAligned
+  have hda := g.domainArena
+  have hb : Layout.sym_tohost + 16 ≤ Layout.sym_bss_end := by decide
+  have off : Layout.off_trapsp + 8 ≤ Layout.domainStateBytes := by decide
+  have inside : LogInW [⟨(word c Layout.sym_Caml_state).toNat + Layout.off_trapsp,
+      (word c Layout.sym_Caml_state).toNat + Layout.off_trapsp + 8⟩]
+      (trapLog (word c Layout.sym_Caml_state).toNat high trap) := by
+    simp only [trapLog, LogInW, InsideW, or_false, and_true]
+    exact ⟨Nat.le_refl _, Nat.le_refl _⟩
+  have ok := VmLogOk.of_windows g stack space inside (by
+    intro w hw
+    simp only [List.mem_singleton] at hw
+    subst hw
+    exact Or.inr ⟨Layout.off_trapsp, by decide, rfl⟩)
+  have dn : ((word c Layout.sym_Caml_state) + BitVec.ofNat 64 Layout.off_trapsp).toNat =
+      (word c Layout.sym_Caml_state).toNat + Layout.off_trapsp := by
+    rw [BitVec.toNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (a := Layout.off_trapsp) (by decide),
+      Nat.mod_eq_of_lt (by simp only [Vsa.Sim.DlHeap.heapEnd] at hda; omega)]
+  refine ⟨by omega, by simp only [Vsa.Sim.DlHeap.heapEnd] at hda; omega, ⟨?_, ?_, ?_, ?_⟩,
+    ⟨ok.core, ok.stack, fun l a o _ placed object => ok.heap l a o placed object⟩, ok.image, ok.bindings⟩
+  all_goals rw [dn]
+  all_goals simp only [Layout.sym_tohost, Layout.sym_bss_end, Vsa.Sim.DlHeap.heapEnd,
+    Layout.off_trapsp, Layout.domainStateBytes] at *
+  all_goals omega
+
+/-- **POPTRAP from the loop head.** -/
+theorem poptrap_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .POPTRAP)
+    (space : 8 * s.stack.length ≤ Layout.stackBytes)
+    (step : stepI P s ⟨.POPTRAP, []⟩ = .next s') :
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  have shape := step
+  simp only [stepI] at shape
+  split at shape
+  · rename_i handler link env extra rest frame
+    obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
+    have dom := rf.domainWord c input.runtime
+    have len : 1 < s.stack.length := by rw [frame]; simp
+    obtain ⟨c', run, running⟩ := poptrap_step_arm
+      (rf.windows _ (by
+        intro w hw
+        simp only [List.mem_singleton] at hw
+        subst hw
+        exact Or.inr ⟨Layout.off_trapsp, by decide, by rw [dom]⟩))
+      input (rf.quiet c input.runtime) frame
+      (input.geometry.read input.stack (stack_space input.stack space) (i := 1) len).window
+      (TrapWriteOk.of_geometry input.geometry input.stack space) step
+    exact ⟨c', run, h.of_plus run running⟩
+  · cases shape
 
 end OCaml.Vm.Sim
