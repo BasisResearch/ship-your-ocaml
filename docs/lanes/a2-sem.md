@@ -10,13 +10,41 @@ branches (incl. BRANCH, SWITCH), constants/atoms, BOOLNOT, OFFSETINT and
 OFFSETREF.
 
 Done:
-* `Good.of_bcHalts` (`OCaml/Bytecode/Semantics.lean`): any halting program is
-  `Good`, by run-kernel determinism. `whileMin_good : Good whileMin`
-  (`OCaml/Programs/Validation.lean`) from the existing `whileMin_runTo`.
-  Landed `c8e3451`. bprime's `whileMin_goodF1` (`OCaml/Programs/F1Check.lean`)
-  is the form the F1 headline consumes; it contains `Good`.
-* Found and fixed the integrate.sh lock fd 9 leaking into stage t1's OS
-  validation (foreman landed it as `6446d52`).
+* Unconditional loop-head rows (acc0_next shape: `LoopAt` + `DispatchCode`
+  [+ `OperandCode`] + real `stepI` → `∃ c', Plus c c' ∧ Running L P s' c'`),
+  34 opcodes:
+  * `OCaml/Vm/Sim/IntRows.lean`: combinator `top_read_row` (ArmInput and the
+    top-of-stack read window from the loop head and stack budget);
+    `addint_next` … `asrint_next`, `ltint_next` … `ugeint_next`,
+    `mulint_next`, `division_next` (DIVINT/MODINT via `DivisionKind`).
+  * `OCaml/Vm/Sim/ImmediateRows.lean`: combinator `input_row`;
+    `const0_next`–`const3_next`, `atom0_next`, `negint_next`, `boolnot_next`.
+  * `OCaml/Vm/Sim/OperandRows.lean`: `offsetint_next`, `constint_next`,
+    `branch_next`, `atom_next`, `b{lt,le,gt,ge,ult,uge}int_next`.
+  * `OCaml/Vm/Sim/CodeFacts.lean`: the `OperandCode` interface (operand word
+    `k` after the PC, for every representing placement).
+* BcSem: a negative ATOM/PUSHATOM operand is `.unsupported` (interp.c's
+  `Atom(*pc++)` would index before `caml_atom_table`; the model had silently
+  used atom 0). Removes `atom_arm`'s `nonnegative` premise.
+* `Good.of_bcHalts`, `whileMin_good` (landed `c8e3451`). bprime's
+  `whileMin_goodF1` is the form the F1 headline consumes.
+* Found and fixed the integrate.sh lock fd 9 leak into stage t1 (`6446d52`).
+
+Named premises still on my rows: `BinaryLibScratch c` (MULINT, division;
+a1-arms may derive it from GoodState), `zero` (DIVINT/MODINT zero divisor;
+needs the raise row from the exception machinery, a1-arms), `MemoryStable`.
+
+Open / next:
+* ISINT, BRANCHIF, BRANCHIFNOT: need `EvenPlace`; a1-arms is adding it as
+  `StackGeometry.even` (their ef28d0c+).
+* PUSHCONST0–3, PUSHCONSTINT, PUSHATOM0, PUSHATOM: waiting for a1-arms'
+  `PushWriteOk.of_geometry` push helper and `RuntimeFrame` window lemma.
+* EQ/NEQ and the pointer case of BEQ/BNEQ: a general `WordEquality` from
+  `EvenPlace` + placement injectivity (surveying the representation).
+* OFFSETREF, SWITCH: field-write window / block-tag read premises.
+* CodeFacts derivation (`DispatchCode`/`OperandCode` from `decodeAt` + code
+  placement): BLOCKED on a permission-classifier denial of reading the
+  decoder source; asked Kiran.
 
 Premise census of the existing conditional bridges (my families):
 * Step-shape bridges (take `stepI P s ⟨op, args⟩ = .next s'`): ADDINT SUBINT
@@ -37,11 +65,6 @@ Premise census of the existing conditional bridges (my families):
   `division_zero_caught_step` (FnSummary form, not arm form).
 * No generic `Running` → `ArmInput` adapter. `ArmInput.of_repr` needs `tick`
   (a1-arms), `fetch` and `opcodeSlot` and `geometry` (CodeFacts, a2-sem).
-
-Open / next:
-* BLOCKED (permission): reading the bytecode decoder source was denied by
-  this session's permission classifier; asked Kiran to allow read-only
-  searches. CodeFacts and the arm cases start once that is granted.
 
 ## Round 2 status
 
