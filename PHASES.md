@@ -26,6 +26,7 @@ ELF pin).
 | `ledger_exact`, `ledger_fragment`, `f1_count`, `primF1_unsupported` | `OCaml/Fragment.lean` | P0 | **proved** (`decide`) |
 | `bcHalts_of_runTo` (checked runs are behaviours) | `OCaml/Bytecode/Load.lean` | P0 | **proved** |
 | `whileMin_bcSem : BcHalts whileMin "55\n2500\n36\n" 0` | `OCaml/Programs/Validation.lean` | P0 | **proved** (kernel `decide`) |
+| `Good.of_bcHalts` (a halting program is `Good`), `whileMin_good : Good whileMin` | `OCaml/Bytecode/Semantics.lean`, `OCaml/Programs/Validation.lean` | A1 (F1) | **proved** (from the kernel-checked `whileMin_runTo`; no new kernel run) |
 | `ocamlrun_refinement_of_sim`, `ocamlrun_refinement_fillZero` | `OCaml/Refinement.lean` | P0 | **proved** |
 | `simOfArms`, `ocamlrun_refinement_of_arms` (Layer A from per-arm obligations) | `OCaml/Refinement.lean` | P0 | **proved** |
 | `bytecode_logic_adequacy` (Layer B′ adequacy) | `OCaml/Logic/BcModel.lean`, `OCaml/Theorems.lean` | P0 | **proved** (instance of `VsaIris.mach_adequacy`) |

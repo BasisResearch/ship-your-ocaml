@@ -37,4 +37,8 @@ theorem whileMin_bcSem : BcHalts whileMin "55\n2500\n36\n" 0 := by
     obtain ⟨rfl, hw⟩ := h
     exact hw ▸ bcHalts_of_runTo hr
 
+/-- **`whileMin` is `Good`**: it never reaches an unsupported or wrong
+state, because its kernel-checked run halts (`Good.of_bcHalts`). -/
+theorem whileMin_good : Good whileMin := Good.of_bcHalts whileMin_bcSem
+
 end OCaml.Programs

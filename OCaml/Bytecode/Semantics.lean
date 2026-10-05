@@ -1583,4 +1583,23 @@ theorem BcHalts.det {P : Prog} {out out' : String} {e e' : Nat}
   obtain ⟨w, hk, rfl⟩ := bcHalts_iff.1 h; obtain ⟨w', hk', rfl⟩ := bcHalts_iff.1 h'
   cases hk.unique hk'; exact ⟨rfl, rfl⟩
 
+/-- **A halting program is `Good`.** Every reachable state of a run that
+halts either steps (`.next`) or is the halting state: by determinism its
+outcome is the run's unique `.halt`, never `.unsupported` or `.wrong`. -/
+theorem Good.of_bcHalts {P : Prog} {out : String} {e : Nat} (h : BcHalts P out e) : Good P := by
+  obtain ⟨w, hk, -⟩ := bcHalts_iff.1 h
+  obtain ⟨m, hm⟩ := Run.haltsK_iff.1 hk
+  intro s ⟨n, hn⟩
+  have hs : ∀ o, step P s = o → o ≠ .unsupported ∧ o ≠ .wrong := fun o hst => by
+    cases hb : bcK P s with
+    | ok s' =>
+      obtain ⟨hst'⟩ := (bcK_graph P).iff.2 hb
+      rw [hst] at hst'; subst hst'; exact ⟨nofun, nofun⟩
+    | error o' =>
+      have hi : Run.iter (bcK P) (n + 1) P.init = .error o' := by
+        rw [Run.iter_succ', stepsN_iff.1 hn]; exact hb
+      cases Run.iter_error_unique hm hi
+      rw [bcK_error hb] at hst; subst hst; exact ⟨nofun, nofun⟩
+  exact hs _ rfl
+
 end OCaml.Bytecode

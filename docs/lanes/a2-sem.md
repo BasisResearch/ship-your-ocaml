@@ -1,6 +1,22 @@
 # Lane a2-sem
 
-## Current status
+## F1 round (2026-10-05) — current
+
+Done:
+* `Good.of_bcHalts` (`OCaml/Bytecode/Semantics.lean`): any halting program is
+  `Good`, by determinism through the run kernel (`haltsK_iff`,
+  `iter_error_unique`). `whileMin_good : Good whileMin`
+  (`OCaml/Programs/Validation.lean`) follows from the existing kernel-checked
+  `whileMin_runTo`; no new or chunked kernel evaluation was needed.
+
+Open / next:
+* `ArmSim.next` for the integer arithmetic, comparison, conditional-branch,
+  constant and OFFSETINT/OFFSETREF families. a1-arms already has conditional
+  bridges (`*_step_arm`) for these; the remaining work is discharging their
+  premises from a1-arms' shared invariant. Waiting for
+  `docs/lanes/F1-split.md` (a1-arms creates it first) before starting arms.
+
+## Round 2 status
 
 Round 2 executable exit met (2026-10-02), after rebasing on the fixed
 `.embed` image. Compiler/bytes/offset work landed as `ecf3253` through
