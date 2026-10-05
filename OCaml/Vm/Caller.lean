@@ -57,17 +57,26 @@ structure InterpCaller (P : Prog) (c : Config) (pl : Place) (cp : ChanPlace) (hi
   domainAligned : (word c Layout.sym_Caml_state).toNat % 8 = 0
   /-- entry's writes miss everything the initial VM representation observes -/
   outside : PayloadOutside (entryFootprint sp (word c Layout.sym_Caml_state).toNat) P P.init c pl cp high
+  /-- and the primitive table -/
+  primTable : OutLRange (entryFootprint sp (word c Layout.sym_Caml_state).toNat)
+    (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8
+  primEntries : ∀ i name, P.prims[i]? = some name →
+    OutLRange (entryFootprint sp (word c Layout.sym_Caml_state).toNat)
+      ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
+  /-- the dispatch clock at the cut (the loop's `tick < 2` invariant) -/
+  tick : c.tick < 2
 
 /-- The caller is a property of registers and total reads: it transports to
 any zero-equivalent memory (e.g. `fillZero`). -/
 theorem InterpCaller.of_mem {P : Prog} {c c' : Config} {pl : Place} {cp : ChanPlace} {high sp : Nat}
     {callerRegs mainSaved : Nat → BitVec 64}
     (h : InterpCaller P c pl cp high sp callerRegs mainSaved) (regs : c'.σ.regs = c.σ.regs)
-    (mem : Vsa.Densify.MemEqv c'.σ.mem c.σ.mem) : InterpCaller P c' pl cp high sp callerRegs mainSaved := by
+    (mem : Vsa.Densify.MemEqv c'.σ.mem c.σ.mem) (tick : c'.tick = c.tick) : InterpCaller P c' pl cp high sp callerRegs mainSaved := by
   have hw : ∀ a, word c' a = word c a := fun a => Vsa.Sim.Boot.bytesT_memEqv mem a 8
   have hg : ∀ n, gpr c' n = gpr c n := by
     intro n; unfold gpr Vsa.Sim.gprGet; rw [regs]
-  refine ⟨?_, h.ra, ?_, h.frameLow, h.frameHigh, h.aligned, ?_, h.mainReturn, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, h.ra, ?_, h.frameLow, h.frameHigh, h.aligned, ?_, h.mainReturn, ?_, ?_, ?_, ?_, ?_, ?_,
+    tick ▸ h.tick⟩
   · intro r hr; rw [hg]; exact h.regs r hr
   · rw [hg]; exact h.stack
   · intro r hr; rw [hw]; exact h.mainFrame r hr
@@ -80,5 +89,7 @@ theorem InterpCaller.of_mem {P : Prog} {c c' : Config} {pl : Place} {cp : ChanPl
     refine ⟨o.domain, ?_, ?_, o.codeBase, o.atomBase, o.globals, o.code, o.stack, o.heap, o.channels⟩
     · rw [e]; exact o.stackHigh
     · rw [e]; exact o.trapsp
+  · rw [hw]; exact h.primTable
+  · intro i name hi; rw [hw, hw]; exact h.primEntries i name hi
 
 end OCaml.Vm
