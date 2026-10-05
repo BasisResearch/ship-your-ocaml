@@ -46,6 +46,7 @@ import OCaml.Vm.Boot.Startup.StatChecked
 import OCaml.Vm.Boot.Startup.CustomNext
 import OCaml.Vm.Boot.Startup.CustomNodesReset
 import OCaml.Vm.Boot.Startup.CustomReset
+import OCaml.Vm.Boot.Startup.SharedTableReset
 import OCaml.Vm.Boot.Startup.CustomPrefix
 import OCaml.Vm.Boot.Startup.CustomEntry
 import OCaml.Vm.Boot.Startup.StartupAuxReset
@@ -3753,6 +3754,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.custom_finish
 #print axioms OCaml.Vm.Boot.Startup.custom_init
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCustomReturned.ready
+#print axioms OCaml.Vm.Boot.Startup.ext_table_init
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_shared_table_returned_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_custom_returned_exists
 #print axioms OCaml.Vm.Boot.Startup.NativeFrame.word32
 #print axioms OCaml.Vm.Boot.Startup.getenv_offset_window

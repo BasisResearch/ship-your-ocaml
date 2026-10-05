@@ -70,6 +70,8 @@ def sym_custom_ops_table : Nat := 0x80064c98
 def sym_caml_ba_ops : Nat := 0x80063ae0
 /-- `caml_stat_alloc` -/
 def sym_caml_stat_alloc : Nat := 0x8000bb2c
+/-- `caml_shared_libs_path` -/
+def sym_caml_shared_libs_path : Nat := 0x8006c098
 /-- `caml_startup_aux` -/
 def sym_caml_startup_aux : Nat := 0x80004760
 /-- `shutdown_happened` -/
@@ -389,6 +391,10 @@ def off_ephe_ref_table_reserve : Nat := 48
 def ephe_ref_elt_size : Nat := 16
 def off_ephe_ref_ephe : Nat := 0
 def off_ephe_ref_offset : Nat := 8
+def ext_table_bytes : Nat := 16
+def off_ext_table_size : Nat := 0
+def off_ext_table_capacity : Nat := 4
+def off_ext_table_contents : Nat := 8
 
 /-! HTIF table layout measured from c/src/htif.c by the RV64 compiler. -/
 def htif_max_files : Nat := 64

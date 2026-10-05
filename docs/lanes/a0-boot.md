@@ -1,5 +1,25 @@
 # Lane a0-boot
 
+## Round 2 status (2026-10-05)
+
+**`SharedTableReset.lean:reset_shared_table_returned_exists` extends the CLOSED
+actual reset run through `caml_ext_table_init(&caml_shared_libs_path, 8)`,
+returning to caml_main at 0x80004de4.** `ExtTableFinish.lean:ext_table_init`
+is the whole-function summary: header writes (size 0, capacity 8), checked
+64-byte allocation, contents publication and the shared `native_return_pair`
+epilogue (new kind `.extTable`). Runtime readiness, the 928-byte domain
+allocation and the remaining allocator credits (`startupAllocatorCredits - 384`)
+survive. The `ext_table` offsets come from `gen_layout.py`.
+
+Proof note: omega over `Layout.sym_*`/`heapEnd` atoms together with
+`BitVec.toNat` hit `maxRecDepth`. Unfolding the constants first (the idiom
+already in `CustomAllocate`/`MallocBoot*`) fixes it; no limits were raised.
+
+Next: the rest of caml_main's startup path (file open/section table,
+caml_init_gc, code load, primitive table, input_val, sys_init).
+The reset-to-cut/Loaded exit remains open.
+
+
 ## Round 2 status (2026-10-04)
 
 The reset-to-four-nodes increment landed as `cd47f96`, full gate passed.
