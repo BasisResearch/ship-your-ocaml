@@ -91,6 +91,9 @@ structure NativeValid (D : InvocationData) : Prop where
   interpReturn : ∀ c, Invocation D c → word c (D.nativeSp + Layout.interpSaveOffset 1) = 0x80004ff8#64
   mainReturn : ∀ c, Invocation D c →
     word c (D.nativeSp + Layout.interpFrameBytes + Layout.camlMainSaveOffset 1) = 0x80001df0#64
+  /-- the root invocation's saved `initial_sp_offset` source (`stack_high`, at
+  sp+0) equals its saved `extern_sp` (sp+8): the VM stack was empty at entry -/
+  rootSaved : ∀ c, Invocation D c → word c D.nativeSp = word c (D.nativeSp + 8)
 
 /-- The native invocation at a loop-head configuration: some entry snapshot
 that is intact and valid (`Running.native`). -/

@@ -188,7 +188,7 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
   -- the native invocation fixed here
   have native : NativePlaced c5 := by
     refine ⟨⟨sp - Layout.interpFrameBytes, word c Layout.sym_Caml_state, fun a => byte c5 a⟩,
-      ⟨p.stack, dom5, fun _ _ _ _ => rfl⟩, ⟨?_, ?_, ?_, ?_, ?_⟩⟩
+      ⟨p.stack, dom5, fun _ _ _ _ => rfl⟩, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩⟩
     · dsimp only; simp only [Layout.interpFrameBytes, Vsa.Sim.DlHeap.heapEnd]; omega
     · dsimp only; simp only [Layout.interpFrameBytes, Layout.camlMainFrameBytes, Layout.sym_stack_top]; omega
     · dsimp only; simp only [Layout.interpFrameBytes]; omega
@@ -208,6 +208,23 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
       rw [addr, e, ← addr, show sp - Layout.interpFrameBytes + Layout.interpFrameBytes = sp by
         simp only [Layout.interpFrameBytes]; omega]
       rw [word_of_log p.memory (by log_out), caller.mainFrame 1 (by decide), caller.mainReturn]
+    · intro c' inv
+      have e0 := inv.word_eq (c := c5) (fun _ => rfl) (r := (0, 32)) (off := 0) (by decide) (by decide)
+      have e8 := inv.word_eq (c := c5) (fun _ => rfl) (r := (0, 32)) (off := 8) (by decide) (by decide)
+      simp only [Nat.add_zero] at e0 e8
+      dsimp only
+      rw [e0, e8, word, word, p.memory]
+      have hi := OCaml.Vm.Gc.word_writeLog_at c.σ.mem (entryLog sp callerRegs (BitVec.ofNat 64 pl.codeBase) c)
+        15 (sp - Layout.interpFrameBytes + 0) (domainField c Layout.off_stack_high)
+        (by simp only [entryLog, entrySaveLog, entryPrepLog, Layout.interpSavedRegs, List.map, List.cons_append, List.nil_append, List.getElem?_cons_succ, List.getElem?_cons_zero, Nat.add_zero]) (by log_out)
+      have ex := OCaml.Vm.Gc.word_writeLog_at c.σ.mem (entryLog sp callerRegs (BitVec.ofNat 64 pl.codeBase) c)
+        17 (sp - Layout.interpFrameBytes + 8) (domainField c Layout.off_extern_sp)
+        (by simp only [entryLog, entrySaveLog, entryPrepLog, Layout.interpSavedRegs, List.map, List.cons_append, List.nil_append, List.getElem?_cons_succ, List.getElem?_cons_zero, Nat.add_zero]) (by log_out)
+      simp only [Nat.add_zero] at hi
+      rw [hi, ex]
+      apply BitVec.eq_of_toNat_eq
+      simp only [domainField]
+      rw [h.stackHigh, h.externSp]
   -- the runtime invariant through entry's windows
   have platform : PlatformOk L.runtimeOk c5 :=
     ⟨p.good, p.image, stable c c5 (by rw [p.memory]; exact frameOn_writeLog _ _ _ (logInW_of_cover cover))
