@@ -61,11 +61,13 @@ theorem stop_do_exit_summary {before : Config} {nativeSp : Nat} {vmSp : BitVec 6
     obtain ⟨q, c, a, h⟩ := ready.globals
     exact ⟨by rw [same _ (by simp)]; exact q, by rw [same _ (by simp)]; exact c,
       by rw [same _ (by simp)]; exact a, by rw [same _ (by simp)]; exact h⟩
-  have input : DoExitInput (fun _ => False) 0x80001df8#64
+  have input : DoExitInput 0x80001df8#64
       (BitVec.ofNat 64 (nativeSp + Layout.interpFrameBytes + Layout.camlMainFrameBytes)) 0#64 after :=
     { good := post.good, image := post.image, minstret := post.good.minstret,
       raReg := post.returnAddress, aligned := by decide, tick := post.tick,
-      ok := ⟨post.good, post.tick, present, fun _ h => h.elim, idle⟩,
+      ok := ⟨post.good, post.tick, idle, fun n hn => by
+        have : 1 ≤ n ∧ n ≤ 31 := by simp [exitReads] at hn; omega
+        exact present n this.1 this.2⟩,
       stack := post.stack, arg := post.status, layout := ready.layout, globals := globals }
   have halts := do_exit_halts input post.pc
   rw [exitStatus_zero] at halts

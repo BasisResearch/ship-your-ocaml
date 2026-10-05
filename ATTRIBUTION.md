@@ -284,3 +284,10 @@ image and value-representation proofs. `LibraryCopyFacts` preserves the
 source's `and7_toNat`/`sltiu8` arithmetic; its loaded-word store readback uses
 the already landed byte-extraction and store-projection lemmas. The source
 worktree remains read only. HTIF data addresses come from `OCaml.Vm.Layout`.
+
+`Vsa/Sim/TermEntry.lean` (the HTIF exit store, `stepOnce_tohost_G`) and
+`Vsa/Sim/HtifStepObs.lean` (the HTIF putchar store, `stepObs_tohost_putchar`)
+are copied from ship-your-interpreter commit `0534d832` (BasisResearch/ship-your-interpreter,
+same paths). Only their imports were changed: the WHILE-specific `TermSimClose`
+and `ErrorSim` imports and opens are cut, and `StepStore`, `Skeleton` and
+`ExecuteStore` are imported directly.

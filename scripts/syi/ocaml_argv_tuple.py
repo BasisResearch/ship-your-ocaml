@@ -11,14 +11,14 @@ def shifts(b):
 
 def emit_tuple_blocks(root, functions, decode, code, text_base, lib, build_cfg, literal,
                       fn, stem, namespace, out, selected, starts=None,
-                      chunked=('prepare', 'finish'), flag='--ocaml-string-wrapper'):
+                      chunked=('prepare', 'finish'), flag='--ocaml-string-wrapper', route=None):
     """Block certificates of selected CFG blocks of one native function. By
     default: a caller that copies a C string with `caml_copy_string`,
     allocates a small block and fills its fields (all three blocks). With
     `starts`, the blocks with those entry addresses, in that order."""
     ins = functions[fn]['insts']
     di = {a: lib.Instr(a,w,op,args,f'{op} {args}') for a,w,op,args in ins}
-    _, cfg = build_cfg(fn, ins[0][0], di, {fn:(ins[0][0],ins[-1][0]+4)})
+    _, cfg = build_cfg(fn, ins[0][0], di, {fn:(ins[0][0],ins[-1][0]+4)}, route=route)
     if starts is None:
         assert [b.kind for b in cfg] == ['jal','jal','ret']
         assert [b.callee for b in cfg[:2]] == ['caml_copy_string','caml_alloc_small']

@@ -40,19 +40,19 @@ theorem osCall_exit_streams {os os' : TCB.Os.OsState} {e : Nat} {r : TCB.Os.Ret}
     rfl
 
 /-- Native-runtime facts of the exit path beyond the represented call site:
-library health, the native stack window and the four runtime globals at their
+machine health with the registers the exit path reads (`ExitOk`), the native stack window and the four runtime globals at their
 defaults. The running-platform invariant supplies them at every `C_CALL`. -/
-structure ExitRuntime (live : Nat → Prop) (nativeSp : BitVec 64) (c : Config) : Prop where
-  ok : VsaOk live c
+structure ExitRuntime (nativeSp : BitVec 64) (c : Config) : Prop where
+  ok : ExitOk c
   stack : gpr c 2 = some nativeSp
   layout : ExitLayout exitDepth nativeSp
   globals : ExitGlobals c
 
 theorem caml_sys_exit_halts {runtimeOk : Config → Prop} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
-    {sp high : Nat} {ra : BitVec 64} {c : Config} {live : Nat → Prop} {nativeSp : BitVec 64}
+    {sp high : Nat} {ra : BitVec 64} {c : Config} {nativeSp : BitVec 64}
     {n : BitVec 63} {code : Nat} {w' : World}
     (h : ImmediateInput runtimeOk P s pl cp sp high ra [.int n] c)
-    (runtime : ExitRuntime live nativeSp c)
+    (runtime : ExitRuntime nativeSp c)
     (entry : pcOf c = some (BitVec.ofNat 64 Layout.sym_caml_sys_exit))
     (sem : primF1Impl "caml_sys_exit" [.int n] s.heap s.world = .exit code w') :
     Halts c (bytesToString w'.console) code := by

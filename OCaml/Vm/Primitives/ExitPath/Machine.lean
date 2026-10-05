@@ -38,9 +38,9 @@ structure ExitGlobals (c : Config) : Prop where
   noAtexit : bytesVal .ld (read8 c.σ.mem atexitList.toNat) = 0#64
   noHandler : bytesVal .ld (read8 c.σ.mem stdioExitHandler.toNat) = 0#64
 
-structure ExitInput (live : Nat → Prop) (ra sp v : BitVec 64) (c : Config) : Prop
+structure ExitInput (ra sp v : BitVec 64) (c : Config) : Prop
     extends LeafInput ra c where
-  ok : VsaOk live c
+  ok : ExitOk c
   stack : gpr c 2 = some sp
   arg : gpr c 10 = some v
   layout : ExitLayout exitDepth sp
@@ -85,16 +85,16 @@ theorem ExitLayout.read {depth : Nat} {sp x : BitVec 64} (h : ExitLayout depth s
     ReadWindow x 8 := (h.write slot).read
 
 /-- Parked at `_exit`'s HTIF store with its address and data registers. -/
-structure Parked (depth : Nat) (live : Nat → Prop) (sp code : BitVec 64) (c d : Config) : Prop where
-  ctx : ExitCtx live (sp.toNat - depth) sp.toNat c d
+structure Parked (depth : Nat) (sp code : BitVec 64) (c d : Config) : Prop where
+  ctx : ExitCtx (sp.toNat - depth) sp.toNat c d
   pc : pcOf d = some 0x800008b0#64
   base : gpr d 14 = some 0x800618ac#64
   data : gpr d 15 = some ((code <<< 32) >>> 31 ||| 1#64)
 
 /-- `caml_do_exit`'s entry: the status in `a0`, any aligned return address. -/
-structure DoExitInput (live : Nat → Prop) (ra sp code : BitVec 64) (d : Config) : Prop
+structure DoExitInput (ra sp code : BitVec 64) (d : Config) : Prop
     extends LeafInput ra d where
-  ok : VsaOk live d
+  ok : ExitOk d
   stack : gpr d 2 = some sp
   arg : gpr d 10 = some code
   layout : ExitLayout doExitDepth sp
@@ -102,20 +102,20 @@ structure DoExitInput (live : Nat → Prop) (ra sp code : BitVec 64) (d : Config
 
 /-- `caml_do_exit(code)` with the default runtime flags runs through the
 debugger hook, signal termination and libc `exit` to `_exit`'s HTIF store. -/
-theorem do_exit_run {live ra sp code d} (h : DoExitInput live ra sp code d) :
-    FnSummary 0x8001c5c8#64 (fun e => e = d) (Parked doExitDepth live sp code d) := by
+theorem do_exit_run {ra sp code d} (h : DoExitInput ra sp code d) :
+    FnSummary 0x8001c5c8#64 (fun e => e = d) (Parked doExitDepth sp code d) := by
   have L := h.layout
-  have ctx2 : ExitCtx live (sp.toNat - doExitDepth) sp.toNat d d :=
+  have ctx2 : ExitCtx (sp.toNat - doExitDepth) sp.toNat d d :=
     ⟨h.ok, h.image, h.minstret, rfl, fun _ _ => rfl⟩
   let R1 : Nat → BitVec 64 := fun n => if n = 1 then ra else
     if n = 2 then sp else if n = 10 then code else (gpr d n).getD 0
-  have pr := fun n lo hi => ctx2.present n lo hi
+  have pr := fun n r => ctx2.present n r
   have e1 := DoExit.save_fast d R1 (ctx2.leaf h.raReg (by simp only [R1, ↓reduceIte]; exact h.aligned))
-    ⟨h.raReg, h.stack, pr 8 (by decide) (by decide),
-      pr 9 (by decide) (by decide), h.arg, pr 18 (by decide) (by decide),
-      pr 19 (by decide) (by decide), pr 20 (by decide) (by decide), pr 21 (by decide) (by decide),
-      pr 22 (by decide) (by decide), pr 23 (by decide) (by decide), pr 24 (by decide) (by decide),
-      pr 25 (by decide) (by decide), pr 26 (by decide) (by decide), True.intro⟩
+    ⟨h.raReg, h.stack, pr 8 (by decide),
+      pr 9 (by decide), h.arg, pr 18 (by decide),
+      pr 19 (by decide), pr 20 (by decide), pr 21 (by decide),
+      pr 22 (by decide), pr 23 (by decide), pr 24 (by decide),
+      pr 25 (by decide), pr 26 (by decide), True.intro⟩
     (global_window _ (by simp))
     (by
       intro k hk
@@ -213,7 +213,7 @@ theorem do_exit_run {live ra sp code d} (h : DoExitInput live ra sp code d) :
   have ctx11 := ctx10.step p7 LogWithin.nil (by decide) (by simp [DoExit.leave_regs, keysG])
   have sp10 : gpr d10 2 = some (sp - 96#64) :=
     (p7.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by simp)).trans sp9
-  have s0 := ctx11.present 8 (by decide) (by decide)
+  have s0 := ctx11.present 8 (by decide)
   let a7 : GRegs := [(2, sp - 96#64), (8, (gpr d10 8).getD 0), (10, code)]
   have J7 := call_registers_summary DoExit.leave_call_shape DoExit.leave_call_decode d10
     (DoExit.leave_call_pins p7.image) p7.good p7.image p7.tick p7.minstret a7
@@ -256,11 +256,11 @@ theorem do_exit_run {live ra sp code d} (h : DoExitInput live ra sp code d) :
   let R8 : Nat → BitVec 64 := fun n => if n = 1 then LibcExit.enter_call.link else
     if n = 2 then sp - 96#64 - 16#64 else if n = 10 then code else if n = 11 then 0#64 else
     (gpr d13 n).getD 0
-  have pr := fun n lo hi => ctx14.present n lo hi
+  have pr := fun n r => ctx14.present n r
   have e9 := ExitProcs.enter_fast d13 R8 (ctx14.leaf (gholds_lookup _ q8.regs rfl) (by simp only [R8, ↓reduceIte]; decide))
     ⟨gholds_lookup _ q8.regs rfl, gholds_lookup _ q8.regs rfl, gholds_lookup _ q8.regs rfl,
-      gholds_lookup _ q8.regs rfl, pr 18 (by decide) (by decide), pr 20 (by decide) (by decide),
-      pr 22 (by decide) (by decide), pr 23 (by decide) (by decide), pr 24 (by decide) (by decide), True.intro⟩
+      gholds_lookup _ q8.regs rfl, pr 18 (by decide), pr 20 (by decide),
+      pr 22 (by decide), pr 23 (by decide), pr 24 (by decide), True.intro⟩
     (global_window _ (by simp))
     (by
       intro k hk
@@ -336,7 +336,7 @@ theorem do_exit_run {live ra sp code d} (h : DoExitInput live ra sp code d) :
     exact Gc.word_writeLog_at _ _ 5 _ _ rfl True.intro
   have ra18 : gpr d18 1 = some LibcExit.enter_call.link := by
     rw [← raBack]; exact gholds_lookup _ p12.regs rfl
-  have a18 := ctx19.present 10 (by decide) (by decide)
+  have a18 := ctx19.present 10 (by decide)
   let R12 : Nat → BitVec 64 := fun n => if n = 1 then LibcExit.enter_call.link else (gpr d18 10).getD 0
   have l12 := RetargetLockReleaseRecursive.leaf_fast d18 R12 (ctx19.leaf ra18 (by simp only [R12, ↓reduceIte]; decide)) ⟨ra18, a18, True.intro⟩
   apply summary_bind l12 (fun _ p => p.pc)
@@ -351,7 +351,7 @@ theorem do_exit_run {live ra sp code d} (h : DoExitInput live ra sp code d) :
       p9.toEffectPost.gpr_frame (by decide) 8 (by decide) (by decide) (by simp)]
     exact gholds_lookup _ q8.regs rfl
   -- back in exit: the stdio exit handler is null; _exit(code)
-  have a19 := ctx20.present 10 (by decide) (by decide)
+  have a19 := ctx20.present 10 (by decide)
   let R13 : Nat → BitVec 64 := fun n => if n = 1 then LibcExit.enter_call.link else
     if n = 8 then code else (gpr d19 10).getD 0
   have e14 := LibcExit.handler_fast d19 R13 (ctx20.leaf (gholds_lookup _ p13.regs rfl) (by simp only [R13, ↓reduceIte]; decide))
@@ -383,12 +383,12 @@ theorem do_exit_run {live ra sp code d} (h : DoExitInput live ra sp code d) :
 
 
 /-- `caml_sys_exit` untags its argument, saves `ra` and calls `caml_do_exit`. -/
-theorem sys_exit_prefix {live ra sp v c} (h : ExitInput live ra sp v c) :
+theorem sys_exit_prefix {ra sp v c} (h : ExitInput ra sp v c) :
     FnSummary 0x8001c7ac#64 (fun d => d = c)
-      (fun d => DoExitInput live SysExit.entry_call.link (sp - 16#64) (exitCode v) d ∧
+      (fun d => DoExitInput SysExit.entry_call.link (sp - 16#64) (exitCode v) d ∧
         pcOf d = some 0x8001c5c8#64 ∧ Vsa.Machine.output d.σ = Vsa.Machine.output c.σ) := by
   have L := h.layout
-  have ctx0 : ExitCtx live (sp.toNat - exitDepth) sp.toNat c c :=
+  have ctx0 : ExitCtx (sp.toNat - exitDepth) sp.toNat c c :=
     ⟨h.ok, h.image, h.minstret, rfl, fun _ _ => rfl⟩
   -- caml_sys_exit: untag, save ra, call caml_do_exit
   let R0 : Nat → BitVec 64 := fun n => if n = 1 then ra else if n = 2 then sp else v
@@ -456,7 +456,7 @@ theorem exitStatus_zero : (exitStatus 0#64).toNat = 0 := by decide
 
 /-- `caml_do_exit(code)` halts the machine with the low 32 bits of `code` and
 the console output so far (the STOP path calls it with 0). -/
-theorem do_exit_halts {live ra sp code d} (h : DoExitInput live ra sp code d)
+theorem do_exit_halts {ra sp code d} (h : DoExitInput ra sp code d)
     (entry : pcOf d = some 0x8001c5c8#64) :
     Halts d (Vsa.Machine.output d.σ) (exitStatus code).toNat := by
   obtain ⟨e, steps, parked⟩ := (do_exit_run h).run d ⟨entry, rfl⟩
@@ -468,7 +468,7 @@ theorem do_exit_halts {live ra sp code d} (h : DoExitInput live ra sp code d)
 
 /-- From `caml_sys_exit`'s entry, the default exit path halts the machine with
 the low 32 bits of the untagged status and the console output so far. -/
-theorem exit_halts {live ra sp v c} (h : ExitInput live ra sp v c)
+theorem exit_halts {ra sp v c} (h : ExitInput ra sp v c)
     (entry : pcOf c = some 0x8001c7ac#64) :
     Halts c (Vsa.Machine.output c.σ) (exitStatus (exitCode v)).toNat := by
   obtain ⟨d, steps, input, pc, out⟩ := (sys_exit_prefix h).run c ⟨entry, rfl⟩

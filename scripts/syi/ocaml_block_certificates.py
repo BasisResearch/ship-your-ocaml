@@ -2,7 +2,7 @@
 
 def emit_block(E, fn, b, name, keys, lib, literal, taken=False):
     # A tohost store is a seam, like a call: the block parks at it.
-    term = None if b.kind in ('jal', 'tohost') else lib.decode_terminator(b.term, taken=taken)['record']
+    term = None if b.kind in ('jal', 'tohost', 'fallthrough') else lib.decode_terminator(b.term, taken=taken)['record']
     term_expr = 'none' if term is None else 'some ' + name + '_term'
     keylist = str(keys)
     E(f'def {name}_body : List MInstr := [', ',\n'.join('  ' + literal(i.addr, i.word) for i in b.instrs), ']',
