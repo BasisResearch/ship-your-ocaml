@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.G1Room
+import OCaml.Vm.Gc.NurseryDefs
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.NurseryInput
 
@@ -21,21 +22,6 @@ reservation: the free window shrinks, and the new block lies outside it.
 namespace OCaml.Vm.Gc
 set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Sim OCaml.Vm.Primitives
-
-/-- A window missing every observation of the represented payload. -/
-structure WindowSeparated (w : W) (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace)
-    (high : Nat) : Prop where
-  /-- above `.bss` (hence above the image, `tohost` and every static variable) -/
-  statics : Layout.sym_bss_end ≤ w.lo
-  domain : OutWRange [w] (word c Layout.sym_Caml_state).toNat Layout.domainStateBytes
-  stack : OutWRange [w] (high - Layout.stackBytes) Layout.stackBytes
-  code : ∀ i v, P.code[i]? = some v → OutWRange [w] (pl.codeBase + 4 * i) 4
-  /-- every placed object (live or not, as in `StackGeometry`) -/
-  heap : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o → OutWRange [w] (a - 8) (8 * o.wosize + 8)
-  channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-    OutWRange [w] a (chanOffBuff + ch.buffer.length)
-  primitives : ∀ i name, P.prims[i]? = some name →
-    OutWRange [w] ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
 
 theorem window_static {w : W} {a n : Nat} (g : Layout.sym_bss_end ≤ w.lo)
     (static : a + n ≤ Layout.sym_bss_end) : OutWRange [w] a n :=
@@ -78,23 +64,6 @@ theorem WindowSeparated.bindings {w : W} {P s c pl cp high} {log : List WEntry}
     (g : WindowSeparated w P s c pl cp high) (inside : LogInW [w] log) : BindingsOutside log P c :=
   ⟨outLRange_of_windows inside (window_static g.statics (by decide)),
     fun i name h => outLRange_of_windows inside (g.primitives i name h)⟩
-
-/-- The unallocated nursery, `[young_limit, young_ptr)`. -/
-def nurseryFree (c : Config) : W := ⟨(runtimeFields c).youngLimit, (runtimeFields c).youngPtr⟩
-
-/-- **Nursery geometry**: the free nursery misses the represented payload and
-lies in RAM; the `Caml_state` record lies in aligned RAM above `tohost`. -/
-structure NurseryGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace)
-    (high : Nat) : Prop extends WindowSeparated (nurseryFree c) P s c pl cp high where
-  top : (runtimeFields c).youngPtr ≤ 0x100000000
-  aligned : (runtimeFields c).youngPtr % 8 = 0
-  domainLow : Layout.sym_tohost + 16 ≤ (word c Layout.sym_Caml_state).toNat
-  domainHigh : (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes ≤ 0x100000000
-  domainAligned : (word c Layout.sym_Caml_state).toNat % 8 = 0
-  /-- the whole loaded code buffer, the atom table, and the allocator arena's end -/
-  codeRange : OutWRange [nurseryFree c] pl.codeBase (4 * P.code.size)
-  atoms : OutWRange [nurseryFree c] pl.atomBase atomTableBytes
-  arena : (runtimeFields c).youngPtr ≤ Vsa.Sim.DlHeap.heapEnd
 
 /-- An aligned `Caml_state` word is writable RAM. -/
 theorem NurseryGeometry.domain_write {P s c pl cp high} (g : NurseryGeometry P s c pl cp high)
@@ -212,7 +181,14 @@ theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : P
     domainAligned := by rw [domain]; exact g.domainAligned
     codeRange := by rw [window]; exact g.codeRange
     atoms := by rw [window]; exact g.atoms
-    arena := by rw [ptr]; exact g.arena }
+    arena := by rw [ptr]; exact g.arena
+    heapDomain := fun l a o' placed object => by
+      obtain ⟨o, ho, size⟩ := objects l o' object
+      rw [domain, ← size]; exact g.heapDomain l a o placed ho
+    heapPrivate := fun l a o' placed object => by
+      obtain ⟨o, ho, size⟩ := objects l o' object
+      rw [← size]; exact g.heapPrivate l a o placed ho
+    belowPrivate := by rw [ptr]; exact g.belowPrivate }
 
 /-- **Transport across a write log** missing the `Caml_state` and
 primitive-table pointers and the `young_limit`/`young_ptr` words (VM-stack
@@ -245,7 +221,8 @@ theorem NurseryGeometry.alloc {P : Prog} {s s' : St} {c c' : Config} {pl : Place
       word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
     (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
     (before : (runtimeFields c).youngPtr = a + 8 * count)
-    (after : (runtimeFields c').youngPtr = a - 8) (room : 8 ≤ a) (aligned : (a - 8) % 8 = 0) :
+    (after : (runtimeFields c').youngPtr = a - 8) (room : 8 ≤ a) (aligned : (a - 8) % 8 = 0)
+    (capacity : (runtimeFields c).youngLimit ≤ a - 8) :
     NurseryGeometry P s' c' pl cp high := by
   have lower : (runtimeFields c').youngPtr ≤ (runtimeFields c).youngPtr := by omega
   have sh : ∀ {x n}, OutWRange [nurseryFree c] x n → OutWRange [nurseryFree c'] x n :=
@@ -272,6 +249,26 @@ theorem NurseryGeometry.alloc {P : Prog} {s s' : St} {c c' : Config} {pl : Place
     domainAligned := by rw [domain]; exact g.domainAligned
     codeRange := sh g.codeRange
     atoms := sh g.atoms
-    arena := by have := g.arena; omega }
+    arena := by have := g.arena; omega
+    heapDomain := fun l a' o' found object => by
+      rw [domain]
+      rw [heap] at object
+      rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
+      · exact g.heapDomain l a' o' found old
+      · rw [placed] at found
+        cases found
+        have dom := g.domain
+        obtain ⟨h, -⟩ := dom
+        simp only [nurseryFree] at h
+        exact ⟨by dsimp only; omega, trivial⟩
+    heapPrivate := fun l a' o' found object => by
+      rw [heap] at object
+      rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
+      · exact g.heapPrivate l a' o' found old
+      · rw [placed] at found
+        cases found
+        have := g.belowPrivate
+        exact ⟨Or.inl (by omega), trivial⟩
+    belowPrivate := by have := g.belowPrivate; omega }
 
 end OCaml.Vm.Gc

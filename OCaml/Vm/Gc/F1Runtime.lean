@@ -5,6 +5,7 @@ import OCaml.Vm.Primitives.Allocation
 import OCaml.Vm.Primitives.MemoryFrame
 import OCaml.Vm.Sim.CheckSignals
 import OCaml.Vm.Gc.Readback
+import OCaml.Vm.Gc.NurseryDefs
 
 /-!
 # The F1 runtime invariant, pinned at the cut
@@ -328,6 +329,32 @@ theorem f1_quiet {c : Config} (ok : f1Runtime c) : Sim.SignalCheckReady c := by
   have h := ok.noPending
   simp only [runtimeFields] at h
   exact ⟨BitVec.eq_of_toNat_eq (by simpa using h)⟩
+
+/-- The private region of `NurseryGeometry` is the cut's free block. -/
+theorem privateRegion_eq : privateRegion =
+    ⟨WhileMinRuntime.freeBlock.block - 8, WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words⟩ := by
+  simp [privateRegion, WhileMinRuntime.freeBlock]
+
+/-- **(b) Object field windows.** A window inside a placed object (header or
+fields) is stable under `f1Runtime`: the object lies above `.bss`
+(`StackGeometry.heapLow`), apart from the `Caml_state` record and from the
+private free block (`NurseryGeometry.heapDomain`/`heapPrivate`). -/
+theorem f1_objectField {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {high l a x n : Nat}
+    {o : Obj} (g : NurseryGeometry P s c pl cp high) (ok : f1Runtime c)
+    (placed : pl.φ l = some a) (object : s.heap.get? l = some o)
+    (low : Layout.sym_bss_end + 8 ≤ a) (start : a - 8 ≤ x) (finish : x + n ≤ a + 8 * o.wosize) :
+    WindowStable f1Runtime [⟨x, x + n⟩] := by
+  have dom := f1_domain ok
+  obtain ⟨hd, -⟩ := g.heapDomain l a o placed object
+  obtain ⟨hp, -⟩ := g.heapPrivate l a o placed object
+  rw [dom] at hd
+  rw [privateRegion_eq] at hp
+  simp only at hd hp
+  apply f1_window_of
+  · omega
+  · simp only [Layout.domainStateBytes] at hd; omega
+  · simp only [Layout.domainStateBytes, Layout.off_stack_high, Layout.off_stack_threshold] at hd ⊢; omega
+  · omega
 
 section Cut
 open Vsa.Sim.Boot WhileMinLog

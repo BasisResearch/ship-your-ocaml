@@ -356,6 +356,8 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.f1_quiet
 #print axioms OCaml.Vm.Gc.whileMin_loaded_f1
 #print axioms OCaml.Vm.Gc.whileMin_loaded_f1_fillZero
+#print axioms OCaml.Vm.Gc.f1_objectField
+#print axioms OCaml.Vm.Gc.privateRegion_eq
 #print axioms OCaml.Vm.Gc.BestFitSplit.Post.placed
 #print axioms OCaml.Vm.Gc.BestFitSplit.freeIn_singleton
 #print axioms OCaml.Vm.Gc.whileMin_free_above_nursery

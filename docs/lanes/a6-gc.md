@@ -45,6 +45,14 @@ Done (F1 side of the GC):
   `NurseryGeometry.alloc` (after a reservation) re-establish the geometry,
   mirroring `StackGeometry`'s. Its heap field now covers every placed object.
   `WhileMinNursery.lean:whileMin_nurseryGeometry`: the geometry holds at the cut.
+  Definitions moved low for the loop-head witness (a1-arms' `Running.stack`):
+  `OCaml/Vm/RuntimeFields.lean` (`RuntimeFields`, `runtimeFields`) and
+  `OCaml/Vm/Gc/NurseryDefs.lean` (`WindowSeparated`, `nurseryFree`,
+  `NurseryGeometry`, `privateRegion`). New fields `heapDomain`, `heapPrivate`,
+  `belowPrivate`: placed objects miss `Caml_state` and the private free block.
+  `F1Runtime.lean:f1_objectField`: windows inside placed objects are
+  `f1Runtime`-stable (SETFIELD/SETGLOBAL). `NurseryGeometry.alloc` now takes
+  `capacity`.
 - `OCaml/Vm/Gc/G1Guards.lean`: the C fast paths' `young_ptr - bytes <u
   young_limit` guards. `double_room`, `small_room`, `string_room` give the
   `room` fields of `FastMemory`, `SmallAllocation.NurseryMemory` and
