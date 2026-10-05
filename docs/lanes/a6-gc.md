@@ -59,6 +59,16 @@ G2 progress after F1:
 - Next: supply `OwnedFrame`'s address facts (targets/payloads from the major
   allocator's result range; allocator logs from free-list/frame windows) and
   `Nursery` from `HeapRepr` + `RuntimeOk` bounds.
+Free-list placement (toward `OwnedFrame.targetOutside`/`payloadOutside`):
+- `OCaml/Vm/Gc/FreePlacement.lean`: `BestFitSplit.Post.placed`: a split of a
+  free block lying in `[lo, hi)` (`FreeIn`) returns a block in `[lo, hi)`
+  ending where the source ended, and leaves the remnant `FreeIn lo result`.
+  `freeIn_singleton`: the startup singleton block is `FreeIn` up to `heap_end`.
+- `WhileMinG1.lean:whileMin_free_above_nursery`: the cut's free block starts
+  above `young_end`, so splits from it never touch the nursery.
+- Next: the general invariant over small lists and the large tree (every free
+  block `FreeIn majorLo heap_end`), preserved by each `bf_allocate` path; then
+  `OwnedFrame` target/payload facts from it.
 
 ## Source objects through the copying loop (2026-10-05)
 
