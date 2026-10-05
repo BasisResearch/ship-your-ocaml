@@ -159,6 +159,7 @@ import OCaml.Vm.Gc.WhileMinG1
 import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.FreePlacement
 import OCaml.Vm.Gc.SmallFreeList
+import OCaml.Vm.Gc.G1Guards
 import OCaml.Vm.Gc.Observed
 import OCaml.Vm.Primitives.StringCopyFast
 import OCaml.Vm.GcObservation
@@ -332,6 +333,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.FreeLists.SmallListsIn.pop
 #print axioms OCaml.Programs.whileMin_good
 #print axioms OCaml.Bytecode.Good.of_bcHalts
+#print axioms OCaml.Vm.Gc.G1Room.double_room
+#print axioms OCaml.Vm.Gc.G1Room.small_room
+#print axioms OCaml.Vm.Gc.G1Room.string_room
 #print axioms OCaml.bytecode_logic_adequacy
 #print axioms OCaml.endToEnd_of_layers
 #print axioms OCaml.ocamlrun_refinement_of_arms'

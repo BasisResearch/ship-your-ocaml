@@ -29,6 +29,11 @@ Done (F1 side of the GC):
   block's writes in the window, `reserve_outside` + `OutWRange.shrink`
   re-establish it after the reservation. a1-arms: carry `NurseryGeometry`
   beside `StackGeometry` and `G1Room`.
+- `OCaml/Vm/Gc/G1Guards.lean`: the C fast paths' `young_ptr - bytes <u
+  young_limit` guards. `double_room`, `small_room`, `string_room` give the
+  `room` fields of `FastMemory`, `SmallAllocation.NurseryMemory` and
+  `StringAllocation.NurseryGeometry` (a1-prims' allocating summaries) from
+  `G1Room` plus the successor state's budget.
 - `OCaml/Vm/Gc/WhileMinG1.lean:whileMin_g1Room`: room at the captured cut
   (`scripts/gen_boot_entry.py` now also emits `stack_low`/`stack_threshold`).
 
