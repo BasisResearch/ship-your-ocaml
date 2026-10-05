@@ -2,6 +2,23 @@
 
 ## Current status
 
+**2026-10-05 (Claude session, taking over from Codex).** 18/30 summaries proved.
+Landed `88ba657`: the argv copy and pair-allocation stages
+(`ArgvTupleCopied.lean`, `ArgvTupleAllocated.lean`) with byte-copy-log,
+pair-field and observational access-plan transport lemmas.
+Done (this commit): the complete machine run of `caml_sys_get_argv`,
+`ArgvTuple.argv_finish_stage` (`ArgvTupleFinished.lean`). `finish_access`
+discharges all 13 scalar accesses of the generated tuple-finishing block from
+`FinishLayout` windows; the loaded values (string root, tuple, `main_argv`,
+`Caml_state`, saved ra/s0/s1/s2) are recovered from the exact write logs
+(`saved_readback`, `Gc.word_writeLog_at`). Remaining premises are static
+layout/separation (`FinishStageInput`).
+Open, next: the represented contract `caml_sys_get_argv_primitive` (two
+`VmPayload.allocate` steps: bytes then the pair), then `caml_sys_get_config`
+(same copy-string + small-block shape: generate the stage files from one
+template instead of copying), then `caml_sys_exit`, the channel family,
+`caml_format_int`, `caml_register_named_value`.
+
 Executable-name allocation now passes its focused build: 18/30 summaries
 proved, with full copy-string/memcpy execution and represented fresh bytes.
 The complete 2,023-target build and axiom audit pass (standard axioms only);

@@ -226,6 +226,7 @@ import OCaml.Vm.Gc.SingleFieldChildHeader
 import OCaml.Vm.Gc.CopiedHeaders
 import OCaml.Vm.Gc.SingleFieldPayload
 import OCaml.Vm.Primitives.ArgvTupleAllocated
+import OCaml.Vm.Primitives.ArgvTupleFinished
 import OCaml.Vm.Primitives.PairLayout
 import OCaml.Vm.Primitives.AccessPlanObservation
 
@@ -2022,6 +2023,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.SmallAllocation.NurseryMemory.observed_transport
 #print axioms OCaml.Vm.Primitives.ArgvTuple.argv_copy_stage
 #print axioms OCaml.Vm.Primitives.ArgvTuple.argv_allocate_stage
+#print axioms OCaml.Vm.Primitives.ArgvTuple.finish_access
+#print axioms OCaml.Vm.Primitives.ArgvTuple.saved_readback
+#print axioms OCaml.Vm.Primitives.ArgvTuple.argv_finish_stage
 
 #print axioms Vsa.Sim.segmentSummary
 -- Register initialization and primitive-lookup foundations.
