@@ -8,6 +8,8 @@ import OCaml.Vm.Sim.OperandStackRows
 import OCaml.Vm.Sim.OffsetRows
 import OCaml.Vm.Sim.GlobalRows
 import OCaml.Vm.Sim.ApplyRows
+import OCaml.Vm.Sim.ReturnRows
+import OCaml.Vm.Sim.StackLog
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -396,6 +398,12 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.ApplyWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.RuntimeFrame.enter
 #print axioms OCaml.Vm.Sim.stack_fits_threshold
+#print axioms OCaml.Vm.Sim.return_next
+#print axioms OCaml.Vm.Sim.StackLogOk.of_window
+#print axioms OCaml.Vm.Sim.TailcallWriteOk.of_geometry
+#print axioms OCaml.Vm.Sim.appterm1_next
+#print axioms OCaml.Vm.Sim.appterm2_next
+#print axioms OCaml.Vm.Sim.appterm3_next
 #print axioms OCaml.Vm.Sim.StackGeometry.edit
 #print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.StackGeometry.push_read
@@ -505,6 +513,12 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.ApplyWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.RuntimeFrame.enter
 #print axioms OCaml.Vm.Sim.stack_fits_threshold
+#print axioms OCaml.Vm.Sim.return_next
+#print axioms OCaml.Vm.Sim.StackLogOk.of_window
+#print axioms OCaml.Vm.Sim.TailcallWriteOk.of_geometry
+#print axioms OCaml.Vm.Sim.appterm1_next
+#print axioms OCaml.Vm.Sim.appterm2_next
+#print axioms OCaml.Vm.Sim.appterm3_next
 #print axioms OCaml.Vm.Sim.StackGeometry.edit
 #print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.StackGeometry.push_read

@@ -15,6 +15,8 @@ import OCaml.Vm.Sim.ClosureOffsetRows
 import OCaml.Vm.Sim.OffsetRows
 import OCaml.Vm.Sim.GlobalRows
 import OCaml.Vm.Sim.ApplyRows
+import OCaml.Vm.Sim.ReturnRows
+import OCaml.Vm.Sim.StackLog
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax
