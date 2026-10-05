@@ -58,6 +58,9 @@ Done (F1 side of the GC):
   `f1Runtime`-stable (SETFIELD/SETGLOBAL). `NurseryGeometry.alloc` now takes
   `capacity`. `F1Pins.exit` (bprime): the exit path's four `.bss` globals,
   read by `f1_exitGlobals`; `gen_boot_entry.py` emits their cut reads.
+  `F1Pins.trapBarrier`/`backtraceOff` (a1-arms, RAISE): `f1_trapBarrier`,
+  `f1_backtrace`. `stackWindow_apart`/`domainField_apart` let `Sim.F1Frame`
+  avoid enumerating the footprint.
 - `OCaml/Vm/Gc/G1Guards.lean`: the C fast paths' `young_ptr - bytes <u
   young_limit` guards. `double_room`, `small_room`, `string_room` give the
   `room` fields of `FastMemory`, `SmallAllocation.NurseryMemory` and

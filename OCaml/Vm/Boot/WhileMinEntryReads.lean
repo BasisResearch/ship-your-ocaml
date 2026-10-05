@@ -75,6 +75,18 @@ theorem read_trapsp (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial l
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := WhileMinRuntime.domain + Layout.off_trapsp) (w := 8) (by decide +kernel)]
   decide +kernel
 
+theorem read_trap_barrier (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (WhileMinRuntime.domain + Layout.off_trap_barrier) = 0x8038b7b8#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := WhileMinRuntime.domain + Layout.off_trap_barrier) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_backtrace_active (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (WhileMinRuntime.domain + Layout.off_backtrace_active) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := WhileMinRuntime.domain + Layout.off_backtrace_active) (w := 8) (by decide +kernel)]
+  decide +kernel
+
 theorem read_code0 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word32 c (place.codeBase + 4 * 0) = 0x54#32 := by
   unfold word32

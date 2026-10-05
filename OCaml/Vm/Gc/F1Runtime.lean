@@ -46,6 +46,10 @@ structure F1Pins (c : Config) : Prop where
   `caml_cleanup_on_exit`, `__atexit`, `__stdio_exit_handler`) at their
   defaults: no F1 path writes them -/
   exit : ExitPath.ExitGlobals c
+  /-- `caml_init_stack` puts `trap_barrier` one word above `stack_high`; G1 never moves it -/
+  trapBarrier : word c (f1Domain + Layout.off_trap_barrier) = BitVec.ofNat 64 (f1High + 8)
+  /-- no backtrace recording -/
+  backtraceOff : word c (f1Domain + Layout.off_backtrace_active) = 0#64
 
 /-- The F1 runtime invariant. -/
 def f1Runtime : Config → Prop := RuntimeOk F1Pins
@@ -58,6 +62,8 @@ def keptFootprint : List W :=
   [⟨0, Layout.sym_bss_end⟩, ⟨f1Domain, f1Domain + Layout.off_young_ptr⟩,
    ⟨f1Domain + Layout.off_young_ptr + 8, f1Domain + 64⟩,
    ⟨f1Domain + Layout.off_stack_high, f1Domain + Layout.off_stack_threshold + 8⟩,
+   ⟨f1Domain + Layout.off_trap_barrier, f1Domain + Layout.off_trap_barrier + 8⟩,
+   ⟨f1Domain + Layout.off_backtrace_active, f1Domain + Layout.off_backtrace_active + 8⟩,
    ⟨WhileMinRuntime.freeBlock.block - 8,
     WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words⟩]
 
@@ -111,6 +117,14 @@ theorem in_youngRest {x n : Nat} (low : f1Domain + Layout.off_young_ptr + 8 ≤ 
 theorem in_stackFields {x n : Nat} (low : f1Domain + Layout.off_stack_high ≤ x)
     (h : x + n ≤ f1Domain + Layout.off_stack_threshold + 8) : InKept x n :=
   ⟨⟨f1Domain + Layout.off_stack_high, f1Domain + Layout.off_stack_threshold + 8⟩, by simp [keptFootprint], low, h⟩
+
+theorem in_trapBarrier : InKept (f1Domain + Layout.off_trap_barrier) 8 :=
+  ⟨⟨f1Domain + Layout.off_trap_barrier, f1Domain + Layout.off_trap_barrier + 8⟩, by simp [keptFootprint],
+    Nat.le_refl _, Nat.le_refl _⟩
+
+theorem in_backtrace : InKept (f1Domain + Layout.off_backtrace_active) 8 :=
+  ⟨⟨f1Domain + Layout.off_backtrace_active, f1Domain + Layout.off_backtrace_active + 8⟩,
+    by simp [keptFootprint], Nat.le_refl _, Nat.le_refl _⟩
 
 theorem in_block {x n : Nat} (low : WhileMinRuntime.freeBlock.block - 8 ≤ x)
     (h : x + n ≤ WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words) : InKept x n :=
@@ -197,7 +211,8 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
       InKept (WhileMinRuntime.freeBlock.block + off) 8 := fun off h =>
     in_block (by simp [WhileMinRuntime.freeBlock]; omega) (by simp [WhileMinRuntime.freeBlock]; omega)
   have shape := pins.freeList
-  refine ⟨⟨?_, ?_, ?_, ?_, ExitGlobals.transfer (fun x hx => keep x 8 (b hx)) pins.exit⟩, fields⟩
+  refine ⟨⟨?_, ?_, ?_, ?_, ExitGlobals.transfer (fun x hx => keep x 8 (b hx)) pins.exit,
+    by rw [w8 _ in_trapBarrier]; exact pins.trapBarrier, by rw [w8 _ in_backtrace]; exact pins.backtraceOff⟩, fields⟩
   · exact {
       nonnull := shape.nonnull
       aligned := shape.aligned
@@ -267,6 +282,8 @@ theorem f1_window_of {lo hi : Nat}
     (bss : Layout.sym_bss_end ≤ lo)
     (young : hi ≤ f1Domain ∨ f1Domain + 64 ≤ lo)
     (stack : hi ≤ f1Domain + Layout.off_stack_high ∨ f1Domain + Layout.off_stack_threshold + 8 ≤ lo)
+    (barrier : hi ≤ f1Domain + Layout.off_trap_barrier ∨ f1Domain + Layout.off_trap_barrier + 8 ≤ lo)
+    (backtrace : hi ≤ f1Domain + Layout.off_backtrace_active ∨ f1Domain + Layout.off_backtrace_active + 8 ≤ lo)
     (block : hi ≤ WhileMinRuntime.freeBlock.block - 8 ∨
       WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words ≤ lo) :
     WindowStable f1Runtime [⟨lo, hi⟩] := by
@@ -274,12 +291,14 @@ theorem f1_window_of {lo hi : Nat}
   intro v hv
   simp only [f1Footprint, keptFootprint, youngWord, List.mem_cons, List.not_mem_nil, or_false] at hv
   simp only [Layout.off_young_ptr] at *
-  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · dsimp only; omega
   · exact Or.inr bss
   · dsimp only; omega
   · dsimp only; omega
   · exact stack
+  · exact barrier
+  · exact backtrace
   · exact block
 
 /-- **`AllocationRuntime` for a nursery reservation.** Every store misses the
@@ -319,13 +338,20 @@ theorem f1_allocation {before : Config} {log : List WEntry}
 /-- (a) A `Caml_state` field the runtime invariant does not read
 (trapsp, extern_sp, local_roots, exn_bucket, external_raise, …). -/
 theorem f1_domainField {off : Nat} (notYoung : 64 ≤ off)
-    (notStack : off + 8 ≤ Layout.off_stack_high ∨ Layout.off_stack_threshold + 8 ≤ off)
+    (notPinned : off + 8 ≤ Layout.off_stack_high ∨
+      (Layout.off_stack_threshold + 8 ≤ off ∧ off + 8 ≤ Layout.off_trap_barrier) ∨
+      (Layout.off_trap_barrier + 8 ≤ off ∧ off + 8 ≤ Layout.off_backtrace_active) ∨
+      Layout.off_backtrace_active + 8 ≤ off)
     (inRecord : off + 8 ≤ Layout.domainStateBytes) :
     WindowStable f1Runtime [⟨f1Domain + off, f1Domain + off + 8⟩] := by
+  simp only [Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
+    Layout.off_backtrace_active] at notPinned
   apply f1_window_of
   · simp [f1Domain, WhileMinRuntime.domain, Layout.sym_bss_end]; omega
   · omega
-  · omega
+  · simp only [Layout.off_stack_high, Layout.off_stack_threshold]; omega
+  · simp only [Layout.off_trap_barrier]; omega
+  · simp only [Layout.off_backtrace_active]; omega
   · simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.domainStateBytes] at *
     omega
 
@@ -350,7 +376,8 @@ theorem f1_nursery {lo hi : Nat} (low : 0x80082000 ≤ lo) (high : hi ≤ 0x8028
     WindowStable f1Runtime [⟨lo, hi⟩] := by
   apply f1_window_of <;>
     simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end,
-      Layout.off_stack_high, Layout.off_stack_threshold] <;> omega
+      Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
+      Layout.off_backtrace_active] <;> omega
 
 /-- (b) Any window above the free block and below `heap_end` (the initial
 heap's placement and the VM stack lie there). -/
@@ -359,7 +386,8 @@ theorem f1_aboveBlock {lo hi : Nat}
     WindowStable f1Runtime [⟨lo, hi⟩] := by
   apply f1_window_of <;>
     simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end,
-      Layout.off_stack_high, Layout.off_stack_threshold] at * <;> omega
+      Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
+      Layout.off_backtrace_active] at * <;> omega
 
 /-- `RuntimeFrame.stackWindow`: every window inside the VM stack allocation. -/
 theorem f1_stackWindow {lo hi : Nat} (low : f1High - Layout.stackBytes ≤ lo) (_high : hi ≤ f1High) :
@@ -383,6 +411,42 @@ theorem f1_threshold {c : Config} (ok : f1Runtime c) :
 
 /-- The exit path's globals (`ExitPath.do_exit_halts`, `ExitGlobals`). -/
 theorem f1_exitGlobals {c : Config} (ok : f1Runtime c) : ExitPath.ExitGlobals c := ok.freeListShape.exit
+
+/-- `RaiseQuietReady`: the trap barrier lies above the stack top. -/
+theorem f1_trapBarrier {c : Config} (ok : f1Runtime c) :
+    f1High ≤ (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trap_barrier)).toNat := by
+  rw [f1_domain ok, ok.freeListShape.trapBarrier]
+  simp [f1High, WhileMinEntry.high]
+
+/-- `RaiseQuietReady`: backtrace recording is off. -/
+theorem f1_backtrace {c : Config} (ok : f1Runtime c) :
+    word c ((word c Layout.sym_Caml_state).toNat + Layout.off_backtrace_active) = 0#64 := by
+  rw [f1_domain ok]; exact ok.freeListShape.backtraceOff
+
+/-- A window inside the VM stack allocation misses the whole footprint
+(for consumers that enumerate `f1Footprint`, e.g. `Sim.F1Frame`). -/
+theorem stackWindow_apart {lo hi : Nat} (low : f1High - Layout.stackBytes ≤ lo) (high : hi ≤ f1High) :
+    ∀ v ∈ f1Footprint, Apart ⟨lo, hi⟩ v := by
+  intro v hv
+  simp only [f1Footprint, keptFootprint, youngWord, List.mem_cons, List.not_mem_nil, or_false] at hv
+  simp only [f1High, f1Domain, WhileMinEntry.high, WhileMinRuntime.domain, WhileMinRuntime.freeBlock,
+    Layout.stackBytes, Layout.sym_bss_end, Layout.off_young_ptr, Layout.off_stack_high,
+    Layout.off_stack_threshold, Layout.off_trap_barrier, Layout.off_backtrace_active] at *
+  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;> omega
+
+/-- The VM-owned `Caml_state` fields miss the whole footprint. -/
+theorem domainField_apart {off : Nat}
+    (member : off ∈ [Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots,
+      Layout.off_exn_bucket, Layout.off_external_raise]) :
+    ∀ v ∈ f1Footprint, Apart ⟨f1Domain + off, f1Domain + off + 8⟩ v := by
+  intro v hv
+  simp only [f1Footprint, keptFootprint, youngWord, List.mem_cons, List.not_mem_nil, or_false] at hv member
+  simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end,
+    Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
+    Layout.off_backtrace_active, Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots,
+    Layout.off_exn_bucket, Layout.off_external_raise] at *
+  rcases member with rfl | rfl | rfl | rfl | rfl <;>
+    rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;> omega
 
 /-- `RuntimeFrame.quiet`. -/
 theorem f1_quiet {c : Config} (ok : f1Runtime c) : Sim.SignalCheckReady c := by
@@ -414,6 +478,8 @@ theorem f1_objectField {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanP
   · omega
   · simp only [Layout.domainStateBytes] at hd; omega
   · simp only [Layout.domainStateBytes, Layout.off_stack_high, Layout.off_stack_threshold] at hd ⊢; omega
+  · simp only [Layout.domainStateBytes, Layout.off_trap_barrier] at hd ⊢; omega
+  · simp only [Layout.domainStateBytes, Layout.off_backtrace_active] at hd ⊢; omega
   · omega
 
 section Cut
@@ -434,7 +500,7 @@ theorem f1Pins_of {c : Config} {initial : Vsa.MemRepr.Mem}
       simp at root total
       omega
   subst same
-  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_⟩
+  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_⟩
   · exact WhileMinEntry.read_stack_high memory
   · exact WhileMinEntry.read_stack_threshold memory
   · have z : ∀ (g : BitVec 64) (n : Nat), g.toNat = n → word c n = 0#64 →
@@ -444,6 +510,8 @@ theorem f1Pins_of {c : Config} {initial : Vsa.MemRepr.Mem}
       by rw [z _ _ (by simp [ExitPath.cleanupOnExit, Layout.sym_caml_cleanup_on_exit]) (WhileMinEntry.read_caml_cleanup_on_exit memory)]; rfl,
       by rw [z _ _ (by simp [ExitPath.atexitList, Layout.sym_atexit]) (WhileMinEntry.read_atexit memory)]; rfl,
       by rw [z _ _ (by simp [ExitPath.stdioExitHandler, Layout.sym_stdio_exit_handler]) (WhileMinEntry.read_stdio_exit_handler memory)]; rfl⟩
+  · exact WhileMinEntry.read_trap_barrier memory
+  · exact WhileMinEntry.read_backtrace_active memory
 
 /-- `f1Runtime` on the certified cut memory. -/
 theorem f1Runtime_of {c : Config} {initial : Vsa.MemRepr.Mem}
