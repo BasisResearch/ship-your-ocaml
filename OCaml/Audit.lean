@@ -344,6 +344,8 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.stop_do_exit_summary
 #print axioms OCaml.Vm.Sim.stop_ready
 #print axioms OCaml.Vm.Sim.stop_exit_continuation
+#print axioms OCaml.Vm.Sim.and3_toNat
+#print axioms OCaml.Vm.Sim.valWord_ordinary
 #print axioms OCaml.Logic.bytecode_adequacy
 #print axioms OCaml.Logic.bytecodeLogicAdequacy
 #print axioms OCaml.boot_meaning
