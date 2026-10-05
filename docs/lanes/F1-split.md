@@ -1,0 +1,44 @@
+# F1 ownership split (foreman, 2026-10-05)
+
+The goal is `ArmSim L B P` for F1, then `ocamlrun_refinement_Statement`
+(~/Documents/code/syo-lanes/F1.md). Most F1 opcodes already have a
+*conditional* bridge `<op>_step_arm` (OCaml/Vm/Sim). What remains:
+* derive their premises from the running invariant;
+* compose them into unconditional `ArmSim.next` cases.
+
+## The shared running invariant (critical path)
+`Running` (the platform/loop-head invariant) must supply every arm's
+premises. a2-sem found that four facts are missing.
+| fact | owner |
+|---|---|
+| the machine's tick count is below 2 at the loop head (dispatch clock) | **a1-arms** |
+| dispatch registers and stack geometry (stack space, separation) as a preserved invariant | **a1-arms** |
+| decode-to-fetch: the decoded instruction at `pcOf c` is the one the ELF image holds (via `Vsa.Sim.ElfDecode` and the image pins) | **a2-sem** |
+| a reachable bytecode PC is not an object method-cache slot (F1 never writes code) | **a2-sem** |
+| code-address geometry: bytecode PCs map into the loaded code region, in bounds and aligned | **a2-sem** |
+
+a2-sem's three facts go in `OCaml/Vm/Sim/CodeFacts.lean`, a new file owned
+by a2-sem. a1-arms consumes them and states its own in
+`OCaml/Vm/Sim/Invariant.lean`, owned by a1-arms.
+
+## Opcode families → unconditional `ArmSim.next` cases
+* **a2-sem**:
+  * integer arithmetic and logic: ADDINT SUBINT MULINT DIVINT MODINT ANDINT
+    ORINT XORINT LSLINT LSRINT ASRINT NEGINT (`division_step_arm`);
+  * comparisons: EQ NEQ LTINT LEINT GTINT GEINT ULTINT UGEINT ISINT;
+  * conditional branches: BEQ BNEQ BLTINT BLEINT BGTINT BGEINT BULTINT
+    BUGEINT BRANCH BRANCHIF BRANCHIFNOT SWITCH;
+  * constants: CONST0–3, CONSTINT, PUSHCONST*, ATOM*, PUSHATOM*;
+  * OFFSETINT and OFFSETREF;
+  * BOOLNOT.
+* **a1-arms**: everything else in F1, namely stack (ACC*, PUSH*, POP,
+  ASSIGN), environment (ENVACC*, PUSHENVACC*, OFFSETCLOSURE*), closures
+  (CLOSURE, CLOSUREREC), globals (GETGLOBAL*, SETGLOBAL), blocks (MAKEBLOCK*,
+  GETFIELD*, SETFIELD*), application and return (PUSH_RETADDR, APPLY*,
+  APPTERM*, RETURN, RESTART, GRAB), exceptions (PUSHTRAP, POPTRAP, RAISE*),
+  C_CALL1–5 (citing a1-prims' summaries), CHECK_SIGNALS and STOP.
+* **bprime**: `ArmSim.entry`, `ArmSim.halt`, and the assembly of `next` from
+  the per-opcode cases.
+
+An opcode missing from both lists belongs to a1-arms. Record a disputed or
+moved opcode here, in the same commit as the change.
