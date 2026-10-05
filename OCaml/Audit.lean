@@ -362,7 +362,6 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.NativeHeld.frame
 #print axioms OCaml.Vm.Sim.Ccall1WriteOk.native
 #print axioms OCaml.Vm.Sim.CcallnWriteOk.native
-#print axioms OCaml.Vm.Sim.acc0_next
 #print axioms OCaml.Vm.Sim.top_read_row
 #print axioms OCaml.Vm.Sim.addint_next
 #print axioms OCaml.Vm.Sim.subint_next
