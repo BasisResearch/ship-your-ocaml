@@ -358,6 +358,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.FreeLists.SmallListsIn.pop
 #print axioms OCaml.Vm.Gc.BestFitLarge.Split.placed
 #print axioms OCaml.Vm.Gc.whileMin_leastIn
+#print axioms OCaml.Vm.Gc.FreeLists.small_result_placed
 #print axioms OCaml.Programs.whileMin_good
 #print axioms OCaml.Bytecode.Good.of_bcHalts
 #print axioms OCaml.Vm.Gc.G1Room.double_room

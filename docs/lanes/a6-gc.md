@@ -98,6 +98,8 @@ Free-list placement (toward `OwnedFrame.targetOutside`/`payloadOutside`):
   remnant stays `LeastIn lo result`. `whileMin_leastIn`: holds at the cut with
   `lo` above the nursery. (The tree-search/removal paths are not yet proved
   allocator paths, so no tree-wide invariant is needed by current proofs.)
+  `FreeLists.small_result_placed`: the exact-size result header is placed by
+  `SmallListsIn` alone (no effect analysis).
 - Next: the
   general invariant over small lists and the large tree (every free
   block `FreeIn majorLo heap_end`), preserved by each `bf_allocate` path; then

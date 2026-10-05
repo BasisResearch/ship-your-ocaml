@@ -1,4 +1,6 @@
 import OCaml.Vm.Gc.FreePlacement
+import OCaml.Vm.Gc.SmallFreeList
+import OCaml.Vm.Gc.AllocExact
 import OCaml.Vm.Gc.BestFitLarge
 import OCaml.Vm.Gc.Readback
 import OCaml.Vm.Primitives.MemoryFrame
@@ -65,3 +67,29 @@ theorem Split.placed {sp : BitVec 64} {before after : Config} {lo hi : Nat}
   omega
 
 end OCaml.Vm.Gc.BestFitLarge
+
+namespace OCaml.Vm.Gc.FreeLists
+open Vsa.Machine Vsa.Sim Primitives
+
+/-- The small-list allocation result (`AllocExact.resultHeader`) is placed by
+the list invariant alone: the head block lies in `[lo, hi)`. -/
+theorem small_result_placed {lo hi : Nat} {size : BitVec 64} {c : Config}
+    (lists : SmallListsIn lo hi c) (positive : 0 < size.toNat) (small : size.toNat ≤ Layout.bf_small_count)
+    (nonnull : BestFitSmall.first size c ≠ 0) :
+    lo ≤ (AllocExact.resultHeader size c).toNat ∧
+      (AllocExact.resultHeader size c).toNat + 8 * (size.toNat + 1) ≤ hi := by
+  have own := lists size.toNat positive small
+  rw [show BitVec.ofNat 64 size.toNat = size by simp] at own
+  have result : AllocExact.resultHeader size c =
+      word c (BestFitSmall.slot size).toNat - BitVec.ofNat 64 Layout.header_bytes := rfl
+  change word c (BestFitSmall.slot size).toNat ≠ 0 at nonnull
+  rw [result]
+  generalize word c (BestFitSmall.slot size).toNat = f at own nonnull ⊢
+  cases own with
+  | nil => exact absurd rfl nonnull
+  | cons _ inside _ =>
+    rw [BitVec.toNat_sub_of_le (by rw [BitVec.le_def]; simp [Layout.header_bytes]; omega)]
+    simp only [Layout.header_bytes, BitVec.toNat_ofNat]
+    omega
+
+end OCaml.Vm.Gc.FreeLists
