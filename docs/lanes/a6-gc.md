@@ -1,5 +1,17 @@
 # Lane a6-gc
 
+## Source objects through the copying loop (2026-10-05)
+
+- `CopyLoop.lean:run_copy_loop_indexed` generalizes the copying fold to views
+  indexed by the growing forwarding table; `run_copy_loop_observed` is now its
+  index-independent instance.
+- `SourceObjects.lean:View.frame` keeps every still-unforwarded source object
+  through a disjoint store log (Eqv object frame); `View.initial` starts from
+  any represented nursery (no empty-nursery premise).
+- `CopySources.lean:run_copy_from_head_sources` runs the real loop retaining
+  all remaining source objects. `SourceFrame` (finite footprint ownership)
+  stays an explicit premise.
+
 ## Completed ancestor objects and terminal fields (2026-10-04)
 
 - `WordFamily.lean:wordFamily_frame` shares Eqv framing for finite scalar
