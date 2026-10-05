@@ -13,7 +13,9 @@ caller: the return address, the native stack and caml_main's saved frame,
 the RAM windows the interpreter prologue writes, and the separation of those
 writes from everything the VM representation observes.
 
-`InterpCaller P c pl cp high` is that named premise (a field of `LoadedAt`).
+`InterpCaller P c pl cp high sp callerRegs mainSaved` is that named premise.
+It becomes a field of `LoadedAt` together with its proof for the captured
+whileMin cut (bprime, with a0-boot).
 a0-boot supplies it from the reset run's caml_main frame: the native stack
 lies above `heapEnd` and below `__stack_top`, and the VM's code, heap, stack
 and channels lie in the allocator arena below `heapEnd`.

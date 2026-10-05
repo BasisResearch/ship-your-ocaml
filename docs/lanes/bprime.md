@@ -48,24 +48,38 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   [sp+32, sp+192), where arm bodies spill. It is frame-shaped: arms preserve
   it from their write log alone, via `InvocationOutside` and
   `Invocation.frame`/`frame_log`/`frame_read`. Agreed with a1-arms: the F1
-  invariant is `F1Loop := LoopAt ∧ Invocation`.
+  invariant (since replaced by `Running.native`, see below).
 
 - Landed `81ccb44`: F1Check and Invocation.
-- `OCaml/Vm/Sim/F1Loop.lean`: `F1Loop L P D s c` (`LoopAt` + `Invocation D`),
-  `F1Loop.of_plus`, `F1Loop.outcome_of_next` (a non-halting row from
-  `Running` plus the preserved invocation).
 - The entry machine segments are generated (`gen_arm_pilot.py`) and build
-  under default limits:
+  under the default limits:
   * `INTERP_ENTRY_SAVE`: 0x80001df8 → 0x80001e38, bnez taken; 7 s;
-  * `INTERP_ENTRY_PREP`: → jal setjmp; 17 s;
+  * `INTERP_ENTRY_PREP`: → jal setjmp, loads named (opaque loads);
   * `SETJMP`: 0x80042c4c → ret; 10 s;
-  * `INTERP_ENTRY_RESUME`: 0x80001e80 → 0x80001f40, beqz taken; 10 s;
-  * the existing `LOOP_SETUP` follows.
+  * `INTERP_ENTRY_RESUME`: 0x80001e80 → 0x80001f40, beqz taken;
+  * then the existing `LOOP_SETUP`.
   As one 33-step segment, the save and prep parts together hit the 200k
   heartbeat whnf limit; split in two they fit.
+- `entry_save` (`OCaml/Vm/Sim/EntrySave.lean`): the prologue's exact
+  13-store log, the new sp, preserved registers and the image, from the
+  caller's frame. `EntryFrame`/`slot_nat`/`slot_tac` (`EntryFrame.lean`)
+  normalize frame addresses once; every store premise closes by `omega`.
+- `InterpCaller` (`OCaml/Vm/Caller.lean`), to become `LoadedAt.caller`: callee-saved registers with
+  ra = 0x80004ff8, sp above `heapEnd`, caml_main's frame with its ra slot
+  = 0x80001df0, the `Caml_state` record in the arena, and `PayloadOutside`
+  of entry's write footprint. Without it, STOP's return is unconstrained
+  and the statement is false. The captured whileMin cut carries it as an
+  to be discharged for the closed captured whileMin witness
+  (`WhileMin.loaded`) in the same commit that adds the field, so that witness
+  stays closed. `InterpCaller.of_mem` transports it through `fillZero`.
+- F1Loop is dropped. a1-arms moved the invocation into `Running.native`
+  (`∃ D, Invocation D c ∧ NativeValid D`, with `NativeValid` as specified by
+  bprime), so the table invariant is `LoopAt`.
 
 **Open / next**
-1. Compose the entry segments into `F1Loop L P D P.init c'`. This needs a new `LoadedAt`
+1. Compose the entry segments into `LoopAt L P P.init c'` (next: `entry_prep`,
+   in progress; then setjmp, resume, loop setup, then VmReprAt for `P.init`
+   via `VmPayload.frame_log` + `InterpCaller.outside`). Done: the new `LoadedAt`
    field `caller : InterpCaller c`: x1 = 0x80004ff8, x2 = S, caml_main's
    frame at [S, S+112) with its ra slot = 0x80001df0, write geometry of
    [S-528, S+112), and separation from code/globals/VM stack/heap/channels.

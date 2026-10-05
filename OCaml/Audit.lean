@@ -284,12 +284,15 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.Invocation.frame
 #print axioms OCaml.Vm.Sim.Invocation.frame_log
 #print axioms OCaml.Vm.Sim.Invocation.frame_read
-#print axioms OCaml.Vm.Sim.F1Loop.of_plus
-#print axioms OCaml.Vm.Sim.F1Loop.outcome_of_next
 #print axioms Vsa.Sim.tr_interp_entry_save
 #print axioms Vsa.Sim.tr_interp_entry_prep
 #print axioms Vsa.Sim.tr_setjmp
 #print axioms Vsa.Sim.tr_interp_entry_resume
+#print axioms OCaml.Vm.InterpCaller.of_mem
+#print axioms OCaml.Vm.Sim.slot_nat
+#print axioms OCaml.Vm.Sim.frame_sp
+#print axioms Vsa.Sim.StepFrameOut.gpr_list
+#print axioms OCaml.Vm.Sim.entry_save
 #print axioms OCaml.Logic.bytecode_adequacy
 #print axioms OCaml.Logic.bytecodeLogicAdequacy
 #print axioms OCaml.boot_meaning
