@@ -15,10 +15,9 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
 ROW = '''
 /-- **The {op} row.** -/
-theorem {lower}_row {{L : OCaml.Layout}} {{P : Prog}}{extra_binders}
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .{op}) :
+theorem {lower}_row {{L : OCaml.Layout}} {{P : Prog}}{extra_binders} :
     OCaml.OpArm P (OCaml.LoopAt L P) .{op} := by
-  intro s c i reach h _ op _
+  intro s c i reach h hd op _
   obtain ⟨o, args⟩ := i
   cases op
   cases args with
@@ -35,7 +34,7 @@ theorem {lower}_row {{L : OCaml.Layout}} {{P : Prog}}{extra_binders}
 def read(op, lower, src, i):
     body = (f'field_read_next (i := {i}) (by simp [roots])\n'
             f'        (fun _ _ _ _ _ _ _ _ input sel read => {lower}_arm stable input sel read)\n'
-            f'        h (code s c reach h) step')
+            f'        h (decode_fetch hd).1 step')
     return ROW.format(op=op, lower=lower, body=body,
                       extra_binders='\n    (stable : MemoryStable L.runtimeOk)')
 
@@ -44,7 +43,7 @@ def push(op, lower, src, i):
     body = (f'push_field_next (i := {i}) rf (by simp [roots])\n'
             f'        (fun _ _ _ _ _ _ _ _ _ stable input space sel read pushed =>\n'
             f'          {lower}_arm stable input space sel read pushed)\n'
-            f'        h (code s c reach h) (stack_fits fits capacity reach) step')
+            f'        h (decode_fetch hd).1 (stack_fits fits capacity reach) step')
     return ROW.format(op=op, lower=lower, body=body,
                       extra_binders=' {B : OCaml.Budget} {high0 dom0 : Nat}\n'
                       '    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)')
@@ -57,7 +56,7 @@ def outputs():
     imports = ''.join(f'import OCaml.Vm.Sim.{lower.capitalize()}\n' for _, lower, _, _, _ in rows)
     body = ''.join(f(op, lower, src, i) for op, lower, src, i, f in rows)
     return {ROOT / 'OCaml/Vm/Sim/FieldRows.lean':
-            imports + 'import OCaml.Vm.Sim.StackRows\n\n' + HEADER + body + '\nend OCaml.Vm.Sim\n'}
+            imports + 'import OCaml.Vm.Sim.StackRows\nimport OCaml.Vm.Sim.DecodeFetch\n\n' + HEADER + body + '\nend OCaml.Vm.Sim\n'}
 
 
 if __name__ == '__main__':

@@ -15,10 +15,9 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
 NOPUSH = '''
 /-- **The {op} row.** -/
-theorem {lower}_row {{L : OCaml.Layout}} {{P : Prog}} (stable : MemoryStable L.runtimeOk)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .{op}) :
+theorem {lower}_row {{L : OCaml.Layout}} {{P : Prog}} (stable : MemoryStable L.runtimeOk) :
     OCaml.OpArm P (OCaml.LoopAt L P) .{op} := by
-  intro s c i reach h _ op _
+  intro s c i reach h hd op _
   obtain ⟨o, args⟩ := i
   cases op
   cases args with
@@ -27,7 +26,7 @@ theorem {lower}_row {{L : OCaml.Layout}} {{P : Prog}} (stable : MemoryStable L.r
     apply OCaml.ArmOutcome.of_next
     · intro s' step
       exact closure_offset_next (d := {d}) (width := 1)
-        (fun _ _ _ _ _ _ _ _ input sel => {lower}_arm stable input sel) h (code s c reach h) step
+        (fun _ _ _ _ _ _ _ _ input sel => {lower}_arm stable input sel) h (decode_fetch hd).1 step
     · intro e w step
       change (match s.env with
         | .ptr l k => if (k : Int) + {d} < 0 then Res.wrong else
@@ -41,10 +40,9 @@ theorem {lower}_row {{L : OCaml.Layout}} {{P : Prog}} (stable : MemoryStable L.r
 PUSH = '''
 /-- **The {op} row.** -/
 theorem {lower}_row {{L : OCaml.Layout}} {{B : OCaml.Budget}} {{P : Prog}} {{high0 dom0 : Nat}}
-    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .{op}) :
+    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B) :
     OCaml.OpArm P (OCaml.LoopAt L P) .{op} := by
-  intro s c i reach h _ op _
+  intro s c i reach h hd op _
   obtain ⟨o, args⟩ := i
   cases op
   cases args with
@@ -54,7 +52,7 @@ theorem {lower}_row {{L : OCaml.Layout}} {{B : OCaml.Budget}} {{P : Prog}} {{hig
     · intro s' step
       exact push_closure_offset_next (d := {d}) (width := 1) rf
         (fun _ _ _ _ _ _ _ _ _ stable input space sel pushed => {lower}_arm stable input space sel pushed)
-        h (code s c reach h) (stack_fits fits capacity reach) step
+        h (decode_fetch hd).1 (stack_fits fits capacity reach) step
     · intro e w step
       change (match s.env with
         | .ptr l k => if (k : Int) + {d} < 0 then Res.wrong else
@@ -100,7 +98,7 @@ def outputs():
     imports += 'import OCaml.Vm.Sim.Offsetclosure\nimport OCaml.Vm.Sim.Pushoffsetclosure\n'
     body = ''.join(t.format(op=op, lower=lower, d=d) for op, lower, d, t in nullary) + OPERAND
     return {ROOT / 'OCaml/Vm/Sim/OffsetRows.lean':
-            imports + 'import OCaml.Vm.Sim.ClosureOffsetRows\nimport OCaml.Vm.Sim.StackRows\n\n'
+            imports + 'import OCaml.Vm.Sim.ClosureOffsetRows\nimport OCaml.Vm.Sim.StackRows\nimport OCaml.Vm.Sim.DecodeFetch\n\n'
             + HEADER + body + '\nend OCaml.Vm.Sim\n'}
 
 
