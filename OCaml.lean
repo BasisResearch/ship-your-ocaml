@@ -27,6 +27,7 @@ import OCaml.Vm.Sim.F1Frame
 import OCaml.Vm.Sim.VmLog
 import OCaml.Vm.Sim.TrapRows
 import OCaml.Vm.Sim.DecodeFetch
+import OCaml.Vm.Sim.SignalRows
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax

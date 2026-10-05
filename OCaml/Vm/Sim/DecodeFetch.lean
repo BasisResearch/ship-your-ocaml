@@ -79,7 +79,8 @@ theorem opArm_of_next1 {L : OCaml.Layout} {P : Prog} {op : Opcode}
     (next : ∀ s s' c (w : BitVec 32), Reach P s → OCaml.LoopAt L P s c → DispatchCode P s op →
       P.code[s.pc + 1]? = some w → stepI P s ⟨op, [w.toInt]⟩ = .next s' →
       ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c')
-    (shape : ∀ s args, (∀ a, args ≠ [a]) → stepI P s ⟨op, args⟩ = .wrong)
+    (shape : ∀ s args, (∀ a, args ≠ [a]) →
+      stepI P s ⟨op, args⟩ = .wrong ∨ stepI P s ⟨op, args⟩ = .unsupported)
     (noHalt : ∀ s a e w, stepI P s ⟨op, [a]⟩ ≠ .halt e w) :
     OCaml.OpArm P (OCaml.LoopAt L P) op := by
   intro s c i reach h hd hop _
@@ -93,8 +94,7 @@ theorem opArm_of_next1 {L : OCaml.Layout} {P : Prog} {op : Opcode}
     apply OCaml.ArmOutcome.of_next
     · exact fun s' step => next s s' c w reach h code hw step
     · exact noHalt s w.toInt
-  · rw [shape s args (fun a ha => single ⟨a, ha⟩)]
-    trivial
+  · rcases shape s args (fun a ha => single ⟨a, ha⟩) with r | r <;> rw [r] <;> trivial
 
 /-- A row from a two-operand simulation. -/
 theorem opArm_of_next2 {L : OCaml.Layout} {P : Prog} {op : Opcode}
@@ -102,7 +102,8 @@ theorem opArm_of_next2 {L : OCaml.Layout} {P : Prog} {op : Opcode}
       P.code[s.pc + 1]? = some w → P.code[s.pc + 2]? = some v →
       stepI P s ⟨op, [w.toInt, v.toInt]⟩ = .next s' →
       ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c')
-    (shape : ∀ s args, (∀ a b, args ≠ [a, b]) → stepI P s ⟨op, args⟩ = .wrong)
+    (shape : ∀ s args, (∀ a b, args ≠ [a, b]) →
+      stepI P s ⟨op, args⟩ = .wrong ∨ stepI P s ⟨op, args⟩ = .unsupported)
     (noHalt : ∀ s a b e w, stepI P s ⟨op, [a, b]⟩ ≠ .halt e w) :
     OCaml.OpArm P (OCaml.LoopAt L P) op := by
   intro s c i reach h hd hop _
@@ -117,14 +118,14 @@ theorem opArm_of_next2 {L : OCaml.Layout} {P : Prog} {op : Opcode}
     apply OCaml.ArmOutcome.of_next
     · exact fun s' step => next s s' c w v reach h code hw hv step
     · exact noHalt s w.toInt v.toInt
-  · rw [shape s args (fun a b hab => pair ⟨a, b, hab⟩)]
-    trivial
+  · rcases shape s args (fun a b hab => pair ⟨a, b, hab⟩) with r | r <;> rw [r] <;> trivial
 
 /-- A row from an operand-free simulation. -/
 theorem opArm_of_next0 {L : OCaml.Layout} {P : Prog} {op : Opcode}
     (next : ∀ s s' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s op →
       stepI P s ⟨op, []⟩ = .next s' → ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c')
-    (shape : ∀ s args, args ≠ [] → stepI P s ⟨op, args⟩ = .wrong)
+    (shape : ∀ s args, args ≠ [] →
+      stepI P s ⟨op, args⟩ = .wrong ∨ stepI P s ⟨op, args⟩ = .unsupported)
     (noHalt : ∀ s e w, stepI P s ⟨op, []⟩ ≠ .halt e w) :
     OCaml.OpArm P (OCaml.LoopAt L P) op := by
   intro s c i reach h hd hop _
@@ -137,7 +138,6 @@ theorem opArm_of_next0 {L : OCaml.Layout} {P : Prog} {op : Opcode}
     apply OCaml.ArmOutcome.of_next
     · exact fun s' step => next s s' c reach h code step
     · exact noHalt s
-  · rw [shape s args empty]
-    trivial
+  · rcases shape s args empty with r | r <;> rw [r] <;> trivial
 
 end OCaml.Vm.Sim
