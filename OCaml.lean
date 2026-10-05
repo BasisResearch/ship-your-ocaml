@@ -13,6 +13,7 @@ import OCaml.Vm.Sim.FieldRows
 import OCaml.Vm.Sim.OperandStackRows
 import OCaml.Vm.Sim.ClosureOffsetRows
 import OCaml.Vm.Sim.OffsetRows
+import OCaml.Vm.Sim.GlobalRows
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax

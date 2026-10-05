@@ -6,6 +6,7 @@ import OCaml.Vm.Sim.PushRows
 import OCaml.Vm.Sim.FieldRows
 import OCaml.Vm.Sim.OperandStackRows
 import OCaml.Vm.Sim.OffsetRows
+import OCaml.Vm.Sim.GlobalRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -359,6 +360,11 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.offsetclosure_next
 #print axioms OCaml.Vm.Sim.pushoffsetclosure_next
 #print axioms OCaml.Vm.Sim.closure_offset_of_step
+#print axioms OCaml.Vm.Sim.getglobal_next
+#print axioms OCaml.Vm.Sim.pushgetglobal_next
+#print axioms OCaml.Vm.Sim.getglobalfield_next
+#print axioms OCaml.Vm.Sim.pushgetglobalfield_next
+#print axioms OCaml.Vm.Sim.field_selection_reachable
 #print axioms OCaml.Vm.Sim.StackGeometry.edit
 #print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.StackGeometry.push_read
@@ -457,6 +463,11 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.offsetclosure_next
 #print axioms OCaml.Vm.Sim.pushoffsetclosure_next
 #print axioms OCaml.Vm.Sim.closure_offset_of_step
+#print axioms OCaml.Vm.Sim.getglobal_next
+#print axioms OCaml.Vm.Sim.pushgetglobal_next
+#print axioms OCaml.Vm.Sim.getglobalfield_next
+#print axioms OCaml.Vm.Sim.pushgetglobalfield_next
+#print axioms OCaml.Vm.Sim.field_selection_reachable
 #print axioms OCaml.Vm.Sim.StackGeometry.edit
 #print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.StackGeometry.push_read
