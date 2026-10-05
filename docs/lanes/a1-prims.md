@@ -11,10 +11,11 @@
   generated blocks (`gen_fn.py --ocaml-exit`, new stage-a5 check) and the HTIF step
   `store_halts` (ported `Vsa/Sim/TermEntry.lean`). New Layout symbols: caml_verb_gc,
   __atexit, __atexit_recursive_mutex, __stdio_exit_handler.
-  NEXT (half done, reverted): split `exit_run` at the `caml_do_exit` call into
-  `do_exit_halts` (depth-208 window) so STOP's `StopDoExitSummary` (a1-arms/bprime)
-  can instantiate it with status 0; a1-arms can wrap `caml_sys_exit_halts` as
-  `PrimitiveExitSummary` for C_CALL exits.
+  `ExitPath.do_exit_halts` (`Machine.lean`) is the shared `caml_do_exit(code)` run from
+  its own entry (`DoExitInput`: status in a0, any aligned ra, 208-byte stack window,
+  the four globals), with `exitStatus_zero` for STOP: a1-arms/bprime can discharge
+  `StopDoExitSummary` from it; `caml_sys_exit_halts` serves the C_CALL
+  `PrimitiveExitSummary`.
 
 Done this session:
 * `caml_sys_get_argv`: machine run `ArgvTuple.argv_finish_stage`

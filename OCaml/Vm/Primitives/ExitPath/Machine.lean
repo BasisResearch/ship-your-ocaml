@@ -5,8 +5,10 @@ import OCaml.Vm.Primitives.ExitPath.Halt
 namespace OCaml.Vm.Primitives.ExitPath
 open Vsa.Machine Vsa.Sim VsaIris.Inst LeanRV64DExecutable
 
-/-- The native stack below `sp` used by the exit path: 16 + 96 + 16 + 96 bytes. -/
+/-- The native stack below `caml_sys_exit`'s `sp` used by the exit path:
+16 + 96 + 16 + 96 bytes; below `caml_do_exit`'s, 96 + 16 + 96. -/
 def exitDepth : Nat := 224
+def doExitDepth : Nat := 208
 
 theorem LogWithin.outLRange {log : List WEntry} {lo hi a n : Nat} (h : LogWithin log lo hi)
     (apart : a + n ≤ lo ∨ hi ≤ a) : OutLRange log a n := by
@@ -20,15 +22,15 @@ theorem LogWithin.outLRange {log : List WEntry} {lo hi a n : Nat} (h : LogWithin
 four flag/list globals at their defaults (zero: no GC verbosity, no cleanup at
 exit, no atexit registrations, stdio never initialized) and a native stack
 window disjoint from them and from the image. -/
-structure ExitLayout (sp : BitVec 64) : Prop where
-  low : 0x80000000 + exitDepth ≤ sp.toNat
+structure ExitLayout (depth : Nat) (sp : BitVec 64) : Prop where
+  low : 0x80000000 + depth ≤ sp.toNat
   high : sp.toNat ≤ 0x100000000
-  htif : Layout.sym_tohost + 16 + exitDepth ≤ sp.toNat
+  htif : Layout.sym_tohost + 16 + depth ≤ sp.toNat
   aligned : sp.toNat % 16 = 0
-  text : Image.textBase + Image.textSize ≤ sp.toNat - exitDepth ∨ sp.toNat ≤ Image.textBase
-  rodata : Image.rodataBase + Image.rodataSize ≤ sp.toNat - exitDepth ∨ sp.toNat ≤ Image.rodataBase
+  text : Image.textBase + Image.textSize ≤ sp.toNat - depth ∨ sp.toNat ≤ Image.textBase
+  rodata : Image.rodataBase + Image.rodataSize ≤ sp.toNat - depth ∨ sp.toNat ≤ Image.rodataBase
   globals : ∀ g ∈ [verbGc, cleanupOnExit, atexitList, atexitMutex, stdioExitHandler],
-    g.toNat + 8 ≤ sp.toNat - exitDepth ∨ sp.toNat ≤ g.toNat
+    g.toNat + 8 ≤ sp.toNat - depth ∨ sp.toNat ≤ g.toNat
 
 structure ExitGlobals (c : Config) : Prop where
   quiet : bytesVal .ld (read8 c.σ.mem verbGc.toNat) &&& 1024#64 = 0#64
@@ -41,7 +43,7 @@ structure ExitInput (live : Nat → Prop) (ra sp v : BitVec 64) (c : Config) : P
   ok : VsaOk live c
   stack : gpr c 2 = some sp
   arg : gpr c 10 = some v
-  layout : ExitLayout sp
+  layout : ExitLayout exitDepth sp
   globals : ExitGlobals c
 
 theorem sub_toNat {x : BitVec 64} {k : Nat} (h : k ≤ x.toNat) :
@@ -66,110 +68,89 @@ theorem global_window (g : BitVec 64) (hg : g ∈ [verbGc, cleanupOnExit, atexit
   rcases hg with rfl | rfl | rfl | rfl | rfl <;>
     exact ⟨by decide, by decide, Or.inr (by decide)⟩
 
-theorem ExitLayout.image {sp : BitVec 64} (h : ExitLayout sp) {log : List WEntry}
-    (within : LogWithin log (sp.toNat - exitDepth) sp.toNat) : ImageOutside log :=
+theorem ExitLayout.image {depth : Nat} {sp : BitVec 64} (h : ExitLayout depth sp) {log : List WEntry}
+    (within : LogWithin log (sp.toNat - depth) sp.toNat) : ImageOutside log :=
   ⟨within.outLRange h.text, within.outLRange h.rodata⟩
 
 /-- A slot of the exit stack window, stated by its bounds; the caller's
 frame arithmetic discharges them. -/
-theorem ExitLayout.write {sp x : BitVec 64} (h : ExitLayout sp)
-    (slot : sp.toNat - exitDepth ≤ x.toNat ∧ x.toNat + 8 ≤ sp.toNat ∧ x.toNat % 8 = 0) :
+theorem ExitLayout.write {depth : Nat} {sp x : BitVec 64} (h : ExitLayout depth sp)
+    (slot : sp.toNat - depth ≤ x.toNat ∧ x.toNat + 8 ≤ sp.toNat ∧ x.toNat % 8 = 0) :
     WriteWindow x 8 := by
   have l := h.low; have u := h.high; have t := h.htif
-  unfold exitDepth at *
   exact ⟨by omega, by omega, by omega, by omega⟩
 
-theorem ExitLayout.read {sp x : BitVec 64} (h : ExitLayout sp)
-    (slot : sp.toNat - exitDepth ≤ x.toNat ∧ x.toNat + 8 ≤ sp.toNat ∧ x.toNat % 8 = 0) :
+theorem ExitLayout.read {depth : Nat} {sp x : BitVec 64} (h : ExitLayout depth sp)
+    (slot : sp.toNat - depth ≤ x.toNat ∧ x.toNat + 8 ≤ sp.toNat ∧ x.toNat % 8 = 0) :
     ReadWindow x 8 := (h.write slot).read
 
 /-- Parked at `_exit`'s HTIF store with its address and data registers. -/
-structure Parked (live : Nat → Prop) (sp code : BitVec 64) (c d : Config) : Prop where
-  ctx : ExitCtx live (sp.toNat - exitDepth) sp.toNat c d
+structure Parked (depth : Nat) (live : Nat → Prop) (sp code : BitVec 64) (c d : Config) : Prop where
+  ctx : ExitCtx live (sp.toNat - depth) sp.toNat c d
   pc : pcOf d = some 0x800008b0#64
   base : gpr d 14 = some 0x800618ac#64
   data : gpr d 15 = some ((code <<< 32) >>> 31 ||| 1#64)
 
-theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
-    FnSummary 0x8001c7ac#64 (fun d => d = c) (Parked live sp (exitCode v) c) := by
+/-- `caml_do_exit`'s entry: the status in `a0`, any aligned return address. -/
+structure DoExitInput (live : Nat → Prop) (ra sp code : BitVec 64) (d : Config) : Prop
+    extends LeafInput ra d where
+  ok : VsaOk live d
+  stack : gpr d 2 = some sp
+  arg : gpr d 10 = some code
+  layout : ExitLayout doExitDepth sp
+  globals : ExitGlobals d
+
+/-- `caml_do_exit(code)` with the default runtime flags runs through the
+debugger hook, signal termination and libc `exit` to `_exit`'s HTIF store. -/
+theorem do_exit_run {live ra sp code d} (h : DoExitInput live ra sp code d) :
+    FnSummary 0x8001c5c8#64 (fun e => e = d) (Parked doExitDepth live sp code d) := by
   have L := h.layout
-  have ctx0 : ExitCtx live (sp.toNat - exitDepth) sp.toNat c c :=
+  have ctx2 : ExitCtx live (sp.toNat - doExitDepth) sp.toNat d d :=
     ⟨h.ok, h.image, h.minstret, rfl, fun _ _ => rfl⟩
-  -- caml_sys_exit: untag, save ra, call caml_do_exit
-  let R0 : Nat → BitVec 64 := fun n => if n = 1 then ra else if n = 2 then sp else v
-  have e0 := SysExit.entry_fast c R0 h.toLeafInput ⟨h.raReg, h.stack, h.arg, True.intro⟩
-    (L.write (by
-      have := L.low; have := L.aligned; unfold exitDepth at *
-      simp only [R0, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
-    (L.image (by
-      have := L.low; unfold exitDepth at *
-      intro e he
-      simp only [SysExit.entryLog, List.mem_cons, List.mem_nil_iff, or_false] at he
-      subst he
-      simp only [R0, ↓reduceIte, Nat.reduceEqDiff, BitVec.toNat_sub, BitVec.toNat_add]; simp
-      omega))
-  apply summary_bind e0 (fun _ p => p.pc)
-  intro d0 p0
-  have ctx1 := ctx0.step p0 (by
-      have := L.low; unfold exitDepth at *
-      intro e he
-      simp only [SysExit.entryLog, List.mem_cons, List.mem_nil_iff, or_false] at he
-      subst he
-      simp only [R0, ↓reduceIte, Nat.reduceEqDiff, BitVec.toNat_sub, BitVec.toNat_add]; simp
-      omega) (by decide) (by simp [SysExit.entry_regs, keysG])
-  let a0 : GRegs := [(2, sp - 16#64), (10, exitCode v)]
-  have a0h : GHolds d0.σ a0 := holds_project p0.regs (by simp [a0, SysExit.entry_regs, R0, lookupG, exitCode])
-  have J0 := call_registers_summary SysExit.entry_call_shape SysExit.entry_call_decode d0
-    (SysExit.entry_call_pins p0.image) p0.good p0.image p0.tick p0.minstret a0 a0h
-    (by change KeysOK [2, 10]; decide) (by simp [KeysAvoidRa, a0, keysG]) rfl
-  apply summary_bind J0 (fun _ q => q.pc)
-  intro d1 q1
-  have ctx2 := ctx1.call q1 (by simp [keysG])
-  -- caml_do_exit: save the callee-saved registers, test GC verbosity
-  let R1 : Nat → BitVec 64 := fun n => if n = 1 then SysExit.entry_call.link else
-    if n = 2 then sp - 16#64 else if n = 10 then exitCode v else (gpr d1 n).getD 0
+  let R1 : Nat → BitVec 64 := fun n => if n = 1 then ra else
+    if n = 2 then sp else if n = 10 then code else (gpr d n).getD 0
   have pr := fun n lo hi => ctx2.present n lo hi
-  have e1 := DoExit.save_fast d1 R1 (ctx2.leaf (gholds_lookup _ q1.regs rfl) (by simp only [R1, ↓reduceIte]; decide))
-    ⟨gholds_lookup _ q1.regs rfl, gholds_lookup _ q1.regs rfl, pr 8 (by decide) (by decide),
-      pr 9 (by decide) (by decide), gholds_lookup _ q1.regs rfl, pr 18 (by decide) (by decide),
+  have e1 := DoExit.save_fast d R1 (ctx2.leaf h.raReg (by simp only [R1, ↓reduceIte]; exact h.aligned))
+    ⟨h.raReg, h.stack, pr 8 (by decide) (by decide),
+      pr 9 (by decide) (by decide), h.arg, pr 18 (by decide) (by decide),
       pr 19 (by decide) (by decide), pr 20 (by decide) (by decide), pr 21 (by decide) (by decide),
       pr 22 (by decide) (by decide), pr 23 (by decide) (by decide), pr 24 (by decide) (by decide),
       pr 25 (by decide) (by decide), pr 26 (by decide) (by decide), True.intro⟩
     (global_window _ (by simp))
     (by
       intro k hk
-      have := L.low; have := L.aligned; unfold exitDepth at *
+      have := L.low; have := L.aligned; unfold doExitDepth at *
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hk
       rcases hk with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-        exact L.write (by unfold exitDepth; simp only [R1, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
+        exact L.write (by simp only [R1, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
     (L.image (by
-      have := L.low; unfold exitDepth at *
+      have := L.low; unfold doExitDepth at *
       intro e he
       simp only [DoExit.saveLog, List.mem_cons, List.mem_nil_iff, or_false] at he
       rcases he with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
         (simp only [R1, ↓reduceIte, Nat.reduceEqDiff]; frame_arith)))
-    (by rw [ctx2.read (L.globals _ (by simp))]; exact h.globals.quiet)
+    h.globals.quiet
   apply summary_bind e1 (fun _ p => p.pc)
   intro d2 p1
   have ctx3 := ctx2.step p1 (by
-      have := L.low; unfold exitDepth at *
+      have := L.low; unfold doExitDepth at *
       intro e he
       simp only [DoExit.saveLog, List.mem_cons, List.mem_nil_iff, or_false] at he
       rcases he with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
         (simp only [R1, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
     (by decide) (by simp [DoExit.save_regs, keysG])
-  have sp2 : gpr d2 2 = some (sp - 16#64 - 96#64) := gholds_lookup _ p1.regs rfl
-  have code2 : gpr d2 9 = some (exitCode v) := gholds_lookup _ p1.regs rfl
+  have sp2 : gpr d2 2 = some (sp - 96#64) := gholds_lookup _ p1.regs rfl
+  have code2 : gpr d2 9 = some (code) := gholds_lookup _ p1.regs rfl
   -- caml_debugger(PROGRAM_EXIT, Val_unit): a `ret` leaf
-  let R2 : Nat → BitVec 64 := fun n => if n = 1 then SysExit.entry_call.link else exitCode v
-  have e2 := DoExit.debug_fast d2 R2 (ctx3.leaf (gholds_lookup _ p1.regs rfl) (by simp only [R2, ↓reduceIte]; decide))
+  let R2 : Nat → BitVec 64 := fun n => if n = 1 then ra else code
+  have e2 := DoExit.debug_fast d2 R2 (ctx3.leaf (gholds_lookup _ p1.regs rfl) (by simp only [R2, ↓reduceIte]; exact h.aligned))
     ⟨gholds_lookup _ p1.regs rfl, code2, True.intro⟩
   apply summary_bind e2 (fun _ p => p.pc)
   intro d3 p2
   have ctx4 := ctx3.step p2 LogWithin.nil (by decide) (by simp [DoExit.debug_regs, keysG])
-  have fr2 : gpr d3 2 = some (sp - 16#64 - 96#64) :=
+  have fr2 : gpr d3 2 = some (sp - 96#64) :=
     (p2.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans sp2
-  let a2 : GRegs := [(2, sp - 16#64 - 96#64), (9, exitCode v), (10, 3#64)]
+  let a2 : GRegs := [(2, sp - 96#64), (9, code), (10, 3#64)]
   have J2 := call_registers_summary DoExit.debug_call_shape DoExit.debug_call_decode d3
     (DoExit.debug_call_pins p2.image) p2.good p2.image p2.tick p2.minstret a2
     ⟨fr2, gholds_lookup _ p2.regs rfl, gholds_lookup _ p2.regs rfl, True.intro⟩
@@ -183,12 +164,12 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
   apply summary_bind l3 (fun _ p => p.pc)
   intro d5 p3
   have ctx6 := ctx5.step p3 LogWithin.nil (by decide) (by simp)
-  have sp5 : gpr d5 2 = some (sp - 16#64 - 96#64) :=
+  have sp5 : gpr d5 2 = some (sp - 96#64) :=
     (p3.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by simp)).trans (gholds_lookup _ q2.regs rfl)
-  have code5 : gpr d5 9 = some (exitCode v) :=
+  have code5 : gpr d5 9 = some (code) :=
     (p3.toEffectPost.gpr_frame (by decide) 9 (by decide) (by decide) (by simp)).trans (gholds_lookup _ q2.regs rfl)
   -- if (caml_cleanup_on_exit) caml_shutdown(): the flag is clear
-  let R4 : Nat → BitVec 64 := fun n => if n = 1 then DoExit.debug_call.link else if n = 9 then exitCode v else 3#64
+  let R4 : Nat → BitVec 64 := fun n => if n = 1 then DoExit.debug_call.link else if n = 9 then code else 3#64
   have e4 := DoExit.cleanup_fast d5 R4 (ctx6.leaf (gholds_lookup _ p3.regs rfl) (by simp only [R4, ↓reduceIte]; decide))
     ⟨gholds_lookup _ p3.regs rfl, code5, gholds_lookup _ p3.regs rfl, True.intro⟩
     ⟨by decide, by decide, Or.inr (by decide)⟩
@@ -201,11 +182,11 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
   apply summary_bind e5 (fun _ p => p.pc)
   intro d7 p5
   have ctx8 := ctx7.step p5 LogWithin.nil (by decide) (by simp [DoExit.signals_regs, keysG])
-  have sp7 : gpr d7 2 = some (sp - 16#64 - 96#64) :=
+  have sp7 : gpr d7 2 = some (sp - 96#64) :=
     (p5.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by simp)).trans
       ((p4.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by simp)).trans sp5)
   -- caml_terminate_signals(): a `ret` leaf
-  let a5 : GRegs := [(2, sp - 16#64 - 96#64), (9, exitCode v), (10, 3#64)]
+  let a5 : GRegs := [(2, sp - 96#64), (9, code), (10, 3#64)]
   have J5 := call_registers_summary DoExit.signals_call_shape DoExit.signals_call_decode d7
     (DoExit.signals_call_pins p5.image) p5.good p5.image p5.tick p5.minstret a5
     ⟨sp7, gholds_lookup _ p5.regs rfl, gholds_lookup _ p5.regs rfl, True.intro⟩
@@ -219,21 +200,21 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
   apply summary_bind l5 (fun _ p => p.pc)
   intro d9 p6
   have ctx10 := ctx9.step p6 LogWithin.nil (by decide) (by simp)
-  have sp9 : gpr d9 2 = some (sp - 16#64 - 96#64) :=
+  have sp9 : gpr d9 2 = some (sp - 96#64) :=
     (p6.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by simp)).trans (gholds_lookup _ q5.regs rfl)
-  have code9 : gpr d9 9 = some (exitCode v) :=
+  have code9 : gpr d9 9 = some (code) :=
     (p6.toEffectPost.gpr_frame (by decide) 9 (by decide) (by decide) (by simp)).trans (gholds_lookup _ q5.regs rfl)
   -- exit(retcode)
-  let R6 : Nat → BitVec 64 := fun n => if n = 1 then DoExit.signals_call.link else exitCode v
+  let R6 : Nat → BitVec 64 := fun n => if n = 1 then DoExit.signals_call.link else code
   have e6 := DoExit.leave_fast d9 R6 (ctx10.leaf (gholds_lookup _ p6.regs rfl) (by simp only [R6, ↓reduceIte]; decide))
     ⟨gholds_lookup _ p6.regs rfl, code9, True.intro⟩
   apply summary_bind e6 (fun _ p => p.pc)
   intro d10 p7
   have ctx11 := ctx10.step p7 LogWithin.nil (by decide) (by simp [DoExit.leave_regs, keysG])
-  have sp10 : gpr d10 2 = some (sp - 16#64 - 96#64) :=
+  have sp10 : gpr d10 2 = some (sp - 96#64) :=
     (p7.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by simp)).trans sp9
   have s0 := ctx11.present 8 (by decide) (by decide)
-  let a7 : GRegs := [(2, sp - 16#64 - 96#64), (8, (gpr d10 8).getD 0), (10, exitCode v)]
+  let a7 : GRegs := [(2, sp - 96#64), (8, (gpr d10 8).getD 0), (10, code)]
   have J7 := call_registers_summary DoExit.leave_call_shape DoExit.leave_call_decode d10
     (DoExit.leave_call_pins p7.image) p7.good p7.image p7.tick p7.minstret a7
     ⟨sp10, s0, gholds_lookup _ p7.regs rfl, True.intro⟩
@@ -243,26 +224,26 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
   have ctx12 := ctx11.call q7 (by simp [keysG])
   -- exit: save s0/ra, keep the code in s0, call __call_exitprocs(code, NULL)
   let R7 : Nat → BitVec 64 := fun n => if n = 1 then DoExit.leave_call.link else
-    if n = 2 then sp - 16#64 - 96#64 else if n = 8 then (gpr d10 8).getD 0 else exitCode v
+    if n = 2 then sp - 96#64 else if n = 8 then (gpr d10 8).getD 0 else code
   have e8 := LibcExit.enter_fast d11 R7 (ctx12.leaf (gholds_lookup _ q7.regs rfl) (by simp only [R7, ↓reduceIte]; decide))
     ⟨gholds_lookup _ q7.regs rfl, gholds_lookup _ q7.regs rfl, gholds_lookup _ q7.regs rfl,
       gholds_lookup _ q7.regs rfl, True.intro⟩
-    (L.write (by have := L.low; have := L.aligned; unfold exitDepth at *; simp only [R7, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
-    (L.write (by have := L.low; have := L.aligned; unfold exitDepth at *; simp only [R7, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
+    (L.write (by have := L.low; have := L.aligned; unfold doExitDepth at *; simp only [R7, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
+    (L.write (by have := L.low; have := L.aligned; unfold doExitDepth at *; simp only [R7, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
     (L.image (by
-      have := L.low; unfold exitDepth at *
+      have := L.low; unfold doExitDepth at *
       intro e he
       simp only [LibcExit.enterLog, List.mem_cons, List.mem_nil_iff, or_false] at he
       rcases he with rfl | rfl <;> (simp only [R7, ↓reduceIte, Nat.reduceEqDiff]; frame_arith)))
   apply summary_bind e8 (fun _ p => p.pc)
   intro d12 p8
   have ctx13 := ctx12.step p8 (by
-      have := L.low; unfold exitDepth at *
+      have := L.low; unfold doExitDepth at *
       intro e he
       simp only [LibcExit.enterLog, List.mem_cons, List.mem_nil_iff, or_false] at he
       rcases he with rfl | rfl <;> (simp only [R7, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
     (by decide) (by simp [LibcExit.enter_regs, keysG])
-  let a8 : GRegs := [(2, sp - 16#64 - 96#64 - 16#64), (8, exitCode v), (10, exitCode v), (11, 0#64)]
+  let a8 : GRegs := [(2, sp - 96#64 - 16#64), (8, code), (10, code), (11, 0#64)]
   have J8 := call_registers_summary LibcExit.enter_call_shape LibcExit.enter_call_decode d12
     (LibcExit.enter_call_pins p8.image) p8.good p8.image p8.tick p8.minstret a8
     ⟨gholds_lookup _ p8.regs rfl, gholds_lookup _ p8.regs rfl, gholds_lookup _ p8.regs rfl,
@@ -273,7 +254,7 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
   have ctx14 := ctx13.call q8 (by simp [keysG])
   -- __call_exitprocs: save, take the lock, find the atexit list empty, restore and release
   let R8 : Nat → BitVec 64 := fun n => if n = 1 then LibcExit.enter_call.link else
-    if n = 2 then sp - 16#64 - 96#64 - 16#64 else if n = 10 then exitCode v else if n = 11 then 0#64 else
+    if n = 2 then sp - 96#64 - 16#64 else if n = 10 then code else if n = 11 then 0#64 else
     (gpr d13 n).getD 0
   have pr := fun n lo hi => ctx14.present n lo hi
   have e9 := ExitProcs.enter_fast d13 R8 (ctx14.leaf (gholds_lookup _ q8.regs rfl) (by simp only [R8, ↓reduceIte]; decide))
@@ -283,24 +264,24 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
     (global_window _ (by simp))
     (by
       intro k hk
-      have := L.low; have := L.aligned; unfold exitDepth at *
+      have := L.low; have := L.aligned; unfold doExitDepth at *
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hk
       rcases hk with rfl | rfl | rfl | rfl | rfl | rfl <;>
-        exact L.write (by unfold exitDepth; simp only [R8, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
+        exact L.write (by simp only [R8, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
     (L.image (by
-      have := L.low; unfold exitDepth at *
+      have := L.low; unfold doExitDepth at *
       intro e he
       simp only [ExitProcs.enterLog, List.mem_cons, List.mem_nil_iff, or_false] at he
       rcases he with rfl | rfl | rfl | rfl | rfl | rfl <;> (simp only [R8, ↓reduceIte, Nat.reduceEqDiff]; frame_arith)))
   apply summary_bind e9 (fun _ p => p.pc)
   intro d14 p9
   have ctx15 := ctx14.step p9 (by
-      have := L.low; unfold exitDepth at *
+      have := L.low; unfold doExitDepth at *
       intro e he
       simp only [ExitProcs.enterLog, List.mem_cons, List.mem_nil_iff, or_false] at he
       rcases he with rfl | rfl | rfl | rfl | rfl | rfl <;> (simp only [R8, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
     (by decide) (by simp [ExitProcs.enter_regs, keysG])
-  let sp224 : BitVec 64 := sp - 16#64 - 96#64 - 16#64 - 96#64
+  let sp224 : BitVec 64 := sp - 96#64 - 16#64 - 96#64
   let mutexv : BitVec 64 := bytesVal .ld (read8 (writeLog d13.σ.mem (ExitProcs.enterLog R8 |>.take 2)) atexitMutex.toNat)
   let a9 : GRegs := [(2, sp224), (10, mutexv), (20, 0x80064d90#64), (23, 0x80064900#64)]
   have J9 := call_registers_summary ExitProcs.enter_call_shape ExitProcs.enter_call_decode d14
@@ -343,10 +324,10 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
     (global_window _ (by simp [R11, atexitMutex, Layout.sym_atexit_recursive_mutex]))
     (by
       intro k hk
-      have := L.low; have := L.aligned; unfold exitDepth at *
+      have := L.low; have := L.aligned; unfold doExitDepth at *
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hk
       rcases hk with rfl | rfl | rfl | rfl | rfl | rfl <;>
-        exact L.read (by unfold exitDepth; simp only [R11, sp224, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
+        exact L.read (by simp only [R11, sp224, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
   apply summary_bind e12 (fun _ p => p.pc)
   intro d18 p12
   have ctx19 := ctx18.step p12 LogWithin.nil (by decide) (by simp [ExitProcs.leave_regs, keysG])
@@ -361,7 +342,7 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
   apply summary_bind l12 (fun _ p => p.pc)
   intro d19 p13
   have ctx20 := ctx19.step p13 LogWithin.nil (by decide) (by simp)
-  have code19 : gpr d19 8 = some (exitCode v) := by
+  have code19 : gpr d19 8 = some (code) := by
     rw [p13.toEffectPost.gpr_frame (by decide) 8 (by decide) (by decide) (by simp),
       p12.toEffectPost.gpr_frame (by decide) 8 (by decide) (by decide) (by simp),
       p11.toEffectPost.gpr_frame (by decide) 8 (by decide) (by decide) (by simp),
@@ -372,7 +353,7 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
   -- back in exit: the stdio exit handler is null; _exit(code)
   have a19 := ctx20.present 10 (by decide) (by decide)
   let R13 : Nat → BitVec 64 := fun n => if n = 1 then LibcExit.enter_call.link else
-    if n = 8 then exitCode v else (gpr d19 10).getD 0
+    if n = 8 then code else (gpr d19 10).getD 0
   have e14 := LibcExit.handler_fast d19 R13 (ctx20.leaf (gholds_lookup _ p13.regs rfl) (by simp only [R13, ↓reduceIte]; decide))
     ⟨gholds_lookup _ p13.regs rfl, code19, a19, True.intro⟩ (global_window _ (by simp))
     (by rw [ctx20.read (L.globals _ (by simp))]; exact h.globals.noHandler)
@@ -384,7 +365,7 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
   apply summary_bind e15 (fun _ p => p.pc)
   intro d21 p15
   have ctx22 := ctx21.step p15 LogWithin.nil (by decide) (by simp [LibcExit.tail_regs, keysG])
-  let a15 : GRegs := [(10, exitCode v)]
+  let a15 : GRegs := [(10, code)]
   have J15 := call_registers_summary LibcExit.tail_call_shape LibcExit.tail_call_decode d21
     (LibcExit.tail_call_pins p15.image) p15.good p15.image p15.tick p15.minstret a15
     ⟨gholds_lookup _ p15.regs rfl, True.intro⟩
@@ -392,7 +373,7 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
   apply summary_bind J15 (fun _ q => q.pc)
   intro d22 q15
   have ctx23 := ctx22.call q15 (by simp [keysG])
-  let R14 : Nat → BitVec 64 := fun n => if n = 1 then LibcExit.tail_call.link else exitCode v
+  let R14 : Nat → BitVec 64 := fun n => if n = 1 then LibcExit.tail_call.link else code
   have e16 := HtifExit.store_fast d22 R14 (ctx23.leaf (gholds_lookup _ q15.regs rfl) (by simp only [R14, ↓reduceIte]; decide))
     ⟨gholds_lookup _ q15.regs rfl, gholds_lookup _ q15.regs rfl, True.intro⟩
   apply e16.weaken (fun _ eq => eq)
@@ -400,6 +381,61 @@ theorem exit_run {live ra sp v c} (h : ExitInput live ra sp v c) :
   exact ⟨ctx23.step p16 LogWithin.nil (by decide) (by simp [HtifExit.store_regs, keysG]), p16.pc,
     gholds_lookup _ p16.regs rfl, gholds_lookup _ p16.regs rfl⟩
 
+
+/-- `caml_sys_exit` untags its argument, saves `ra` and calls `caml_do_exit`. -/
+theorem sys_exit_prefix {live ra sp v c} (h : ExitInput live ra sp v c) :
+    FnSummary 0x8001c7ac#64 (fun d => d = c)
+      (fun d => DoExitInput live SysExit.entry_call.link (sp - 16#64) (exitCode v) d ∧
+        pcOf d = some 0x8001c5c8#64 ∧ Vsa.Machine.output d.σ = Vsa.Machine.output c.σ) := by
+  have L := h.layout
+  have ctx0 : ExitCtx live (sp.toNat - exitDepth) sp.toNat c c :=
+    ⟨h.ok, h.image, h.minstret, rfl, fun _ _ => rfl⟩
+  -- caml_sys_exit: untag, save ra, call caml_do_exit
+  let R0 : Nat → BitVec 64 := fun n => if n = 1 then ra else if n = 2 then sp else v
+  have e0 := SysExit.entry_fast c R0 h.toLeafInput ⟨h.raReg, h.stack, h.arg, True.intro⟩
+    (L.write (by
+      have := L.low; have := L.aligned; unfold exitDepth at *
+      simp only [R0, ↓reduceIte, Nat.reduceEqDiff]; frame_arith))
+    (L.image (by
+      have := L.low; unfold exitDepth at *
+      intro e he
+      simp only [SysExit.entryLog, List.mem_cons, List.mem_nil_iff, or_false] at he
+      subst he
+      simp only [R0, ↓reduceIte, Nat.reduceEqDiff, BitVec.toNat_sub, BitVec.toNat_add]; simp
+      omega))
+  apply summary_bind e0 (fun _ p => p.pc)
+  intro d0 p0
+  have ctx1 := ctx0.step p0 (by
+      have := L.low; unfold exitDepth at *
+      intro e he
+      simp only [SysExit.entryLog, List.mem_cons, List.mem_nil_iff, or_false] at he
+      subst he
+      simp only [R0, ↓reduceIte, Nat.reduceEqDiff, BitVec.toNat_sub, BitVec.toNat_add]; simp
+      omega) (by decide) (by simp [SysExit.entry_regs, keysG])
+  let a0 : GRegs := [(2, sp - 16#64), (10, exitCode v)]
+  have a0h : GHolds d0.σ a0 := holds_project p0.regs (by simp [a0, SysExit.entry_regs, R0, lookupG, exitCode])
+  have J0 := call_registers_summary SysExit.entry_call_shape SysExit.entry_call_decode d0
+    (SysExit.entry_call_pins p0.image) p0.good p0.image p0.tick p0.minstret a0 a0h
+    (by change KeysOK [2, 10]; decide) (by simp [KeysAvoidRa, a0, keysG]) rfl
+  apply J0.weaken (fun _ eq => eq)
+  intro d1 q1
+  have ctx2 := ctx1.call q1 (by simp [keysG])
+  have inner : ExitLayout doExitDepth (sp - 16#64) := by
+    have := L.low; have := L.high; have := L.htif; have := L.aligned; have := L.text; have := L.rodata
+    have g := L.globals
+    have e : (sp - 16#64).toNat = sp.toNat - 16 := by unfold exitDepth at *; frame_arith
+    unfold exitDepth doExitDepth at *
+    refine ⟨by omega, by omega, by omega, by omega, by omega, by omega, ?_⟩
+    intro x hx
+    have := g x hx
+    omega
+  have rd := fun g (hg : g ∈ [verbGc, cleanupOnExit, atexitList, atexitMutex, stdioExitHandler]) =>
+    ctx2.read (L.globals g hg)
+  exact ⟨⟨ctx2.leaf (gholds_lookup _ q1.regs rfl) (by decide), ctx2.ok, gholds_lookup _ q1.regs rfl,
+    gholds_lookup _ q1.regs rfl, inner,
+    ⟨by rw [rd _ (by simp)]; exact h.globals.quiet, by rw [rd _ (by simp)]; exact h.globals.noCleanup,
+     by rw [rd _ (by simp)]; exact h.globals.noAtexit, by rw [rd _ (by simp)]; exact h.globals.noHandler⟩⟩,
+    q1.pc, ctx2.output⟩
 
 /-- `_exit` keeps the low 32 bits of its `int` status. -/
 def exitStatus (code : BitVec 64) : BitVec 64 := (code <<< 32) >>> 32
@@ -416,16 +452,29 @@ theorem exitStatus_small (code : BitVec 64) : (exitStatus code).toNat < 2 ^ 47 :
   have := (code <<< 32).isLt
   omega
 
+theorem exitStatus_zero : (exitStatus 0#64).toNat = 0 := by decide
+
+/-- `caml_do_exit(code)` halts the machine with the low 32 bits of `code` and
+the console output so far (the STOP path calls it with 0). -/
+theorem do_exit_halts {live ra sp code d} (h : DoExitInput live ra sp code d)
+    (entry : pcOf d = some 0x8001c5c8#64) :
+    Halts d (Vsa.Machine.output d.σ) (exitStatus code).toNat := by
+  obtain ⟨e, steps, parked⟩ := (do_exit_run h).run d ⟨entry, rfl⟩
+  have halt := HtifExit.store_halts (exitStatus_small code) parked.ctx.ok.good parked.ctx.image
+    parked.pc parked.base (by rw [parked.data, exitStatus_word]) parked.ctx.ok.htifIdle
+  rw [parked.ctx.output] at halt
+  obtain ⟨e', σf, run, halted, out⟩ := halt
+  exact ⟨e', σf, steps.trans run, halted, out⟩
+
 /-- From `caml_sys_exit`'s entry, the default exit path halts the machine with
 the low 32 bits of the untagged status and the console output so far. -/
 theorem exit_halts {live ra sp v c} (h : ExitInput live ra sp v c)
     (entry : pcOf c = some 0x8001c7ac#64) :
     Halts c (Vsa.Machine.output c.σ) (exitStatus (exitCode v)).toNat := by
-  obtain ⟨d, steps, parked⟩ := (exit_run h).run c ⟨entry, rfl⟩
-  have halt := HtifExit.store_halts (exitStatus_small (exitCode v)) parked.ctx.ok.good parked.ctx.image
-    parked.pc parked.base (by rw [parked.data, exitStatus_word]) parked.ctx.ok.htifIdle
-  rw [parked.ctx.output] at halt
-  obtain ⟨d', σf, run, halted, out⟩ := halt
-  exact ⟨d', σf, steps.trans run, halted, out⟩
+  obtain ⟨d, steps, input, pc, out⟩ := (sys_exit_prefix h).run c ⟨entry, rfl⟩
+  have halt := do_exit_halts input pc
+  rw [out] at halt
+  obtain ⟨e', σf, run, halted, out'⟩ := halt
+  exact ⟨e', σf, steps.trans run, halted, out'⟩
 
 end OCaml.Vm.Primitives.ExitPath

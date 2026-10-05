@@ -45,7 +45,7 @@ defaults. The running-platform invariant supplies them at every `C_CALL`. -/
 structure ExitRuntime (live : Nat → Prop) (nativeSp : BitVec 64) (c : Config) : Prop where
   ok : VsaOk live c
   stack : gpr c 2 = some nativeSp
-  layout : ExitLayout nativeSp
+  layout : ExitLayout exitDepth nativeSp
   globals : ExitGlobals c
 
 theorem caml_sys_exit_halts {runtimeOk : Config → Prop} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
