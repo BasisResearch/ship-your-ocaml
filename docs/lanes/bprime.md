@@ -50,14 +50,22 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `Invocation.frame`/`frame_log`/`frame_read`. Agreed with a1-arms: the F1
   invariant is `F1Loop := LoopAt ∧ Invocation`.
 
+- Landed `81ccb44`: F1Check and Invocation.
+- `OCaml/Vm/Sim/F1Loop.lean`: `F1Loop L P D s c` (`LoopAt` + `Invocation D`),
+  `F1Loop.of_plus`, `F1Loop.outcome_of_next` (a non-halting row from
+  `Running` plus the preserved invocation).
+- The entry machine segments are generated (`gen_arm_pilot.py`) and build
+  under default limits:
+  * `INTERP_ENTRY_SAVE`: 0x80001df8 → 0x80001e38, bnez taken; 7 s;
+  * `INTERP_ENTRY_PREP`: → jal setjmp; 17 s;
+  * `SETJMP`: 0x80042c4c → ret; 10 s;
+  * `INTERP_ENTRY_RESUME`: 0x80001e80 → 0x80001f40, beqz taken; 10 s;
+  * the existing `LOOP_SETUP` follows.
+  As one 33-step segment, the save and prep parts together hit the 200k
+  heartbeat whnf limit; split in two they fit.
+
 **Open / next**
-1. `F1Loop` (after a1-arms' `LoopAt` lands; build it via their constructor lemma).
-2. `entry`: generator cuts in `gen_arm_pilot.py`:
-   * `INTERP_ENTRY` (0x80001df8 → jal setjmp, bnez taken);
-   * `SETJMP` (0x80042c4c → ret);
-   * `INTERP_ENTRY_RESUME` (0x80001e80 → 0x80001f40, beqz taken);
-   * then the existing `LOOP_SETUP`.
-   Compose them to `F1Loop L P D P.init c'`. This needs a new `LoadedAt`
+1. Compose the entry segments into `F1Loop L P D P.init c'`. This needs a new `LoadedAt`
    field `caller : InterpCaller c`: x1 = 0x80004ff8, x2 = S, caml_main's
    frame at [S, S+112) with its ra slot = 0x80001df0, write geometry of
    [S-528, S+112), and separation from code/globals/VM stack/heap/channels.

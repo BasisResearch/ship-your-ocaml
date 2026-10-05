@@ -29,6 +29,12 @@ spec.loader.exec_module(code)
 
 
 FAMILIES = {
+    # caml_interprete's entry (ArmSim.entry): prologue to the setjmp call,
+    # newlib setjmp, and the zero-result resume to LOOP_SETUP.
+    'INTERP_ENTRY_SAVE': ('InterpEntrySave', ['alu_addi'] + ['sd'] * 13 + ['branch_taken']),
+    'INTERP_ENTRY_PREP': ('InterpEntryPrep', ['auipc', 'lw_tot', 'auipc', 'ld_tot', 'sd', 'addiw', 'auipc', 'sw', 'ld_tot', 'ld_tot', 'alu_addi', 'sd', 'ld_tot', 'ld_tot', 'sd', 'sd', 'sd', 'jal']),
+    'SETJMP': ('Setjmp', ['sd'] * 14 + ['alu_addi', 'jr']),
+    'INTERP_ENTRY_RESUME': ('InterpEntryResume', ['auipc', 'alu_addi', 'ld_tot', 'branch_taken', 'auipc', 'ld_tot', 'ld_tot', 'ld_tot', 'alu_addi', 'alu_addi', 'sd', 'alu_addi', 'alu_addi']),
     'REENTRY_QUIET': ('ReentryQuiet', ['auipc', 'alu_addi', 'ld_tot', 'branch_nottaken', 'ld_tot', 'ld_tot', 'ld_tot', 'sd', 'ld_tot', 'ld_tot', 'branch_taken', 'ld_tot', 'branch_taken', 'ld_tot']),
     'CAML_MAIN_RETURN': ('CamlMainReturn', ['andi', 'alu_addi', 'branch_nottaken'] + ['ld_tot'] * 6 + ['alu_addi', 'jr']),
     'MAIN_EXIT': ('MainExit', ['alu_addi', 'jal']),
@@ -216,6 +222,10 @@ OPAQUE_LOADS = {'DIVINT_ZERO', 'MODINT_ZERO', 'DIVISION_ZERO_SETUP', 'REENTRY_QU
 # Explicit loop cuts: entry, exit, and native branch decisions. These are text
 # instruction addresses; all runtime data addresses still come from Layout.
 CUTS = {
+    'INTERP_ENTRY_SAVE': (0x80001df8, 0x80001e38, [True]),
+    'INTERP_ENTRY_PREP': (0x80001e38, 0x80042c4c, []),
+    'SETJMP': (0x80042c4c, None, []),
+    'INTERP_ENTRY_RESUME': (0x80001e80, 0x80001f40, [True]),
     'REENTRY_QUIET': (0x80001e80, 0x80001ed4, [False, True, True]),
     'RAISE_UNCAUGHT_CHECK': (0x80001ed4, 0x800035f0, [False]),
     'RAISE_UNCAUGHT_RETURN': (0x800035f0, 0x8000331c, []),
@@ -423,7 +433,7 @@ def path_span(instructions, start, decisions, exit_pc=None):
     """Follow explicit branch outcomes; generated contracts retain every guard."""
     by_pc = {i[0]: i for i in instructions}
     pc, insts, rows, branch = start, [], [], 0
-    for _ in range(32):
+    for _ in range(64):
         ins = by_pc[pc]
         choices = classify(ins[0], ins[1], ins[2] + ' ' + ins[3], {})
         if any(r.cls == 'branch_taken' for r in choices):
@@ -533,7 +543,7 @@ def outputs(family='CONST0'):
     census = json.loads((ROOT / 'results/census.json').read_text())['caml_interprete']
     functions = disasm(ROOT / 'c/ocamlrun-riscv-htif.elf')
     instructions = ([ins for fn in functions.values() for ins in fn['insts']]
-                    if family.startswith(('SDIV_', 'SMOD_', 'CAML_MAIN_', 'MAIN_EXIT')) else functions['caml_interprete']['insts'])
+                    if family.startswith(('SDIV_', 'SMOD_', 'CAML_MAIN_', 'MAIN_EXIT', 'SETJMP')) else functions['caml_interprete']['insts'])
     if family in CUTS:
         start, stop, decisions = CUTS[family]
         insts, rows = path_span(instructions, start, decisions, stop)
