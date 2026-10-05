@@ -232,6 +232,7 @@ import OCaml.Vm.Gc.SingleFieldPayload
 import OCaml.Vm.Primitives.ArgvTupleAllocated
 import OCaml.Vm.Primitives.ArgvTupleFinished
 import OCaml.Vm.Primitives.CamlSysGetArgv
+import OCaml.Vm.Primitives.CamlSysGetConfig
 import OCaml.Vm.Primitives.PairLayout
 import OCaml.Vm.Primitives.AccessPlanObservation
 
@@ -2060,6 +2061,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ArgvTuple.argv_finish_stage
 #print axioms OCaml.Vm.Primitives.ArgvTuple.get_argv_contract
 #print axioms OCaml.Vm.Primitives.caml_sys_get_argv_primitive
+#print axioms OCaml.Vm.Primitives.ConfigTuple.prepare_fast
+#print axioms OCaml.Vm.Primitives.ConfigTuple.allocate_fast
+#print axioms OCaml.Vm.Primitives.ConfigTuple.finish_fast
+#print axioms OCaml.Vm.Primitives.ConfigTuple.config_copy_stage
+#print axioms OCaml.Vm.Primitives.ConfigTuple.config_allocate_stage
+#print axioms OCaml.Vm.Primitives.ConfigTuple.finish_access
+#print axioms OCaml.Vm.Primitives.ConfigTuple.config_finish_stage
+#print axioms OCaml.Vm.Primitives.ConfigTuple.get_config_contract
+#print axioms OCaml.Vm.Primitives.caml_sys_get_config_primitive
 
 #print axioms Vsa.Sim.segmentSummary
 -- Register initialization and primitive-lookup foundations.

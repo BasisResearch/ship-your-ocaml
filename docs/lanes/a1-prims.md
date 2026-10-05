@@ -2,26 +2,35 @@
 
 ## Current status
 
-**2026-10-05 (Claude session, taking over from Codex).** 19/30 summaries proved.
-Landed `88ba657`: the argv copy and pair-allocation stages
-(`ArgvTupleCopied.lean`, `ArgvTupleAllocated.lean`) with byte-copy-log,
-pair-field and observational access-plan transport lemmas.
-Done (this commit): the complete machine run of `caml_sys_get_argv`,
-`ArgvTuple.argv_finish_stage` (`ArgvTupleFinished.lean`). `finish_access`
-discharges all 13 scalar accesses of the generated tuple-finishing block from
-`FinishLayout` windows; the loaded values (string root, tuple, `main_argv`,
-`Caml_state`, saved ra/s0/s1/s2) are recovered from the exact write logs
-(`saved_readback`, `Gc.word_writeLog_at`). Remaining premises are static
-layout/separation (`FinishStageInput`).
-Done: `caml_sys_get_argv_primitive` (`CamlSysGetArgv.lean`, generated wrapper
-over `ArgvTuple.get_argv_contract` in `GetArgvContract.lean`): two
-`VmPayload.allocate` steps (executable-name bytes, then the pair whose fields
-are the fresh string and `World.argv`), the observational payload/bindings
-frame over `getArgvLog`, and restored s0/s1/s2 (interpreter pc/sp/extra).
-Open, next: `caml_sys_get_config`
-(same copy-string + small-block shape: generate the stage files from one
-template instead of copying), then `caml_sys_exit`, the channel family,
-`caml_format_int`, `caml_register_named_value`.
+**2026-10-05 (Claude session, taking over from Codex). 20/30 summaries proved.**
+
+Done this session:
+* `caml_sys_get_argv`: machine run `ArgvTuple.argv_finish_stage`
+  (`ArgvTupleFinished.lean`) over the copy/allocation stages (landed `88ba657`);
+  `finish_access` discharges the generated finishing block's 13 scalar accesses
+  from `FinishLayout` windows, and every loaded value (string root, pair,
+  `main_argv`, `Caml_state`, saved ra/s0/s1/s2) is read back from the exact
+  write logs (`saved_readback`, `Gc.word_writeLog_at`). Represented contract
+  `get_argv_contract` (`GetArgvContract.lean`): payload/bindings framed over
+  `getArgvLog`, then two `VmPayload.allocate` steps (name bytes, then the pair
+  `[name, World.argv]`). Headline `caml_sys_get_argv_primitive` is generated.
+* `caml_sys_get_config`: block certificates from the shared generator backend
+  (`ocaml_argv_tuple.emit_tuple_blocks`, argv output byte-identical); stages
+  `ConfigTuple{Fast,Copied,Allocated,Finished}.lean`, contract
+  `get_config_contract` (`"Unix"` bytes, then `[ostype, 64, false]`), generated
+  headline `caml_sys_get_config_primitive`.
+
+Duplication note (law 3): argv and config are two instances of "native frame:
+copy a C string, allocate a small block, fill fields". The config stages were
+adapted from argv's. A third instance must first factor the stage composition
+(prefix block + JAL + callee summary; predicted-memory `finishLoads` with
+`lpins8_of_view`; saved-register readback) rather than copy it.
+
+Open, next: `caml_sys_exit` (tail into `caml_do_exit`: halt behaviour), the
+channel family (`open_descriptor_in/out` via malloc and custom alloc,
+`out_channels_list`, `flush`, `output_char`, `output`=tail jump to
+`output_bytes`), `caml_format_int` (`parse_format` + `caml_alloc_sprintf`),
+`caml_register_named_value`.
 
 Executable-name allocation now passes its focused build: 18/30 summaries
 proved, with full copy-string/memcpy execution and represented fresh bytes.
@@ -486,6 +495,7 @@ exact/observational log APIs. Focused builds pass at default proof budgets.
 | --- | --- | --- |
 | `caml_sys_executable_name` | `caml_sys_executable_name_primitive` | `CamlSysExecutableName.lean:7` |
 | `caml_sys_get_argv` | `caml_sys_get_argv_primitive` | `CamlSysGetArgv.lean:7` |
+| `caml_sys_get_config` | `caml_sys_get_config_primitive` | `CamlSysGetConfig.lean:7` |
 
 Next: allocating configuration/argv and channel primitives, named-value
 registration, output/formatting and process exit. The exit remains 30/30 landed
