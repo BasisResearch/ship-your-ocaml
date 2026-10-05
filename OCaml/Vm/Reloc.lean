@@ -447,7 +447,7 @@ def atomBaseEqv : Eqv :=
 
 def codeEqv (P : Prog) : Eqv :=
   Eqv.atCode <| Eqv.all fun i => Eqv.all fun w => Eqv.guard (P.code[i]? = some w) <|
-    Eqv.rawW32 (· + 4 * i) (CodeWordOk P.code i w)
+    Eqv.rawW32 (· + 4 * i) (· = w)
 
 /-- Caml_state is fixed during a minor collection; the observation includes
 both the pointer load and its selected field. -/

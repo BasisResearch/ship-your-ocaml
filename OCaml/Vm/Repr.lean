@@ -214,9 +214,11 @@ well-formed method tables and control flow through instruction boundaries. -/
 def CodeWordOk (code : Code) (index : Nat) (expected actual : BitVec 32) : Prop :=
   methodCacheSlot code index = true ∨ actual = expected
 
-/-- Shared code observation for dispatch states and C-call payloads. -/
+/-- Shared code observation for dispatch states and C-call payloads. F1
+never writes code, so every word is exact (as `LoadedAt.code`); F3's
+`GETPUBMET` relaxes this to `CodeWordOk` (PLAN.md §Risks). -/
 def CodeRepr (code : Code) (base : Nat) (c : Config) : Prop :=
-  ∀ i w, code[i]? = some w → CodeWordOk code i w (word32 c (base + 4 * i))
+  ∀ i w, code[i]? = some w → word32 c (base + 4 * i) = w
 
 /-- The machine is at `caml_interprete`'s loop head in state `s`, under the
 placement `pl`, channel placement `cp`, stack pointer `sp` and stack top
@@ -235,7 +237,7 @@ structure VmReprAt (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace
   trapsp : (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trapsp)).toNat =
     high - 8 * s.trap
   codeBase : (word c Layout.sym_caml_start_code).toNat = pl.codeBase
-  /-- Code is immutable except for decoded GETPUBMET cache operands. -/
+  /-- Code is immutable (F1; F3 relaxes this for GETPUBMET caches). -/
   code : CodeRepr P.code pl.codeBase c
   globals : valWord pl P.globals = some (word c Layout.sym_caml_global_data)
   stack : StackRepr c pl sp high s.stack

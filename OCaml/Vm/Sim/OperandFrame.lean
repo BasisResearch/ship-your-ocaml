@@ -13,7 +13,7 @@ theorem OperandAt.read32_mem_log {P : Prog} {pl : Place} {i : Nat} {w : BitVec 3
     (memory : after = writeLog before.σ.mem log) :
     bytesT4 after (pl.codeBase + 4 * i) = w := by
   rw [← bytesT_four_eq, memory, bytesT_writeLog_out _ outside]
-  exact code_read repr operand.fetch operand.ordinary
+  exact code_read repr operand.fetch
 
 /-- Configuration-level wrapper for represented arm boundaries. -/
 theorem OperandAt.read32_log {P : Prog} {pl : Place} {i : Nat} {w : BitVec 32}
