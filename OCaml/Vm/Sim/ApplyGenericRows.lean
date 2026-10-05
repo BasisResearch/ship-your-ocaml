@@ -17,7 +17,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
 /-- **APPLY n from the loop head.** -/
 theorem apply_generic_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    {high0 : Nat} (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0)
+    {high0 dom0 : Nat} (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .APPLY)
     (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * s.stack.length + Layout.stackThresholdBytes ≤ Layout.stackBytes)
@@ -83,7 +83,7 @@ theorem ApptermWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place}
 
 /-- **APPTERM n s from the loop head.** -/
 theorem appterm_generic_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    {count slots : BitVec 32} {high0 : Nat} (rf : RuntimeFrame L high0)
+    {count slots : BitVec 32} {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0)
     (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .APPTERM)
     (fetchCount : P.code[s.pc + 1]? = some count) (fetchSlots : P.code[s.pc + 2]? = some slots)
     (space : 8 * s.stack.length + Layout.stackThresholdBytes ≤ Layout.stackBytes)

@@ -64,6 +64,7 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
   domainArena : (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes ≤ Vsa.Sim.DlHeap.heapEnd
   /-- the `Caml_state` record is allocated above `.bss` -/
   domainLow : Layout.sym_bss_end ≤ (word c Layout.sym_Caml_state).toNat
+  domainAligned : (word c Layout.sym_Caml_state).toNat % 8 = 0
   heapArena : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     a + 8 * o.wosize ≤ Vsa.Sim.DlHeap.heapEnd
   /-- placed words are even (ISINT, BRANCHIF, block SWITCH) -/
@@ -81,6 +82,20 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
     OutWRange [⟨pl.codeBase, pl.codeBase + 4 * P.code.size⟩] (a - 8) (8 * o.wosize + 8)
   heapAtoms : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     OutWRange [⟨pl.atomBase, pl.atomBase + atomTableBytes⟩] (a - 8) (8 * o.wosize + 8)
+  /-- the `Caml_state` record is apart from the code, every placed object,
+  the channel records and the primitive entries (its fields are written) -/
+  domainCode : OutWRange [⟨pl.codeBase, pl.codeBase + 4 * P.code.size⟩]
+    (word c Layout.sym_Caml_state).toNat Layout.domainStateBytes
+  domainHeap : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
+    OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
+      (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a - 8) (8 * o.wosize + 8)
+  domainChannels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+    OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
+      (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] a (chanOffBuff + ch.buffer.length)
+  domainPrims : ∀ i name, P.prims[i]? = some name →
+    OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
+      (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩]
+      ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
 
 /-- **Placement of a fresh object** (named obligation of the allocating
 families, supplied by the nursery bounds, lane a6-gc): apart from the VM
@@ -116,6 +131,7 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
   arena := g.arena
   domainArena := by rw [domain]; exact g.domainArena
   domainLow := by rw [domain]; exact g.domainLow
+  domainAligned := by rw [domain]; exact g.domainAligned
   heapArena l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     simpa only [size] using g.heapArena l a o placed ho
@@ -134,6 +150,12 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
   heapAtoms l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     simpa only [size] using g.heapAtoms l a o placed ho
+  domainCode := by rw [domain]; exact g.domainCode
+  domainHeap l a o' placed object := by
+    obtain ⟨o, ho, size⟩ := objects l o' object
+    rw [domain]; simpa only [size] using g.domainHeap l a o placed ho
+  domainChannels := by rw [domain, chans]; exact g.domainChannels
+  domainPrims := by rw [domain, prims]; exact g.domainPrims
 
 /-- Same heap and world: only the two pointer words need framing. -/
 theorem StackGeometry.same {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
@@ -169,6 +191,8 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
     {cp : ChanPlace} {high a : Nat} {o : Obj} (g : StackGeometry P s c pl cp high)
     (placed : pl.φ (s.heap.alloc o).2 = some a)
     (np : NurseryPlacement P pl high a o)
+    (domainApart : OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
+      (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a - 8) (8 * o.wosize + 8))
     (heap : s'.heap = (s.heap.alloc o).1) (world : s'.world = s.world) :
     StackGeometry P s' c pl cp high where
   statics := g.statics
@@ -188,6 +212,7 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
   arena := g.arena
   domainArena := g.domainArena
   domainLow := g.domainLow
+  domainAligned := g.domainAligned
   heapArena l a' o' found object := by
     rw [heap] at object
     rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
@@ -216,5 +241,13 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
     rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
     · exact g.heapAtoms l a' o' found old
     · rw [placed] at found; cases found; exact np.atomApart
+  domainCode := g.domainCode
+  domainHeap l a' o' found object := by
+    rw [heap] at object
+    rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
+    · exact g.domainHeap l a' o' found old
+    · rw [placed] at found; cases found; exact domainApart
+  domainChannels := by rw [world]; exact g.domainChannels
+  domainPrims := g.domainPrims
 
 end OCaml.Vm.Sim

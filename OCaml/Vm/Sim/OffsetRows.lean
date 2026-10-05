@@ -86,8 +86,8 @@ theorem offsetclosure3_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable 
       · cases step
 
 /-- **The PUSHOFFSETCLOSUREM3 row.** -/
-theorem pushoffsetclosurem3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
-    (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+theorem pushoffsetclosurem3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHOFFSETCLOSUREM3) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHOFFSETCLOSUREM3 := by
   intro s c i reach h _ op _
@@ -111,8 +111,8 @@ theorem pushoffsetclosurem3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
       · cases step
 
 /-- **The PUSHOFFSETCLOSURE0 row.** -/
-theorem pushoffsetclosure0_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
-    (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+theorem pushoffsetclosure0_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHOFFSETCLOSURE0) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHOFFSETCLOSURE0 := by
   intro s c i reach h _ op _
@@ -136,8 +136,8 @@ theorem pushoffsetclosure0_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} 
       · cases step
 
 /-- **The PUSHOFFSETCLOSURE3 row.** -/
-theorem pushoffsetclosure3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 : Nat}
-    (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+theorem pushoffsetclosure3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHOFFSETCLOSURE3) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHOFFSETCLOSURE3 := by
   intro s c i reach h _ op _
@@ -172,7 +172,7 @@ theorem offsetclosure_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config
 
 /-- **PUSHOFFSETCLOSURE n from the loop head.** -/
 theorem pushoffsetclosure_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    {w : BitVec 32} {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
+    {w : BitVec 32} {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .PUSHOFFSETCLOSURE) (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
     (step : stepI P s ⟨.PUSHOFFSETCLOSURE, [w.toInt]⟩ = .next s') :

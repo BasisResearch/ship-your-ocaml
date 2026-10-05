@@ -57,7 +57,7 @@ theorem closure_offset_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Confi
 
 /-- Shared simulation of a pushing closure offset from the loop head. -/
 theorem push_closure_offset_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    {op : Opcode} {d : Int} {width high0 : Nat} (rf : RuntimeFrame L high0)
+    {op : Opcode} {d : Int} {width high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0)
     (arm : ∀ pl cp sp high l a k dest w, WindowStable L.runtimeOk [⟨sp - 8, sp⟩] →
       ArmInput L P s op c pl cp sp high → PushWriteOk P s c pl cp sp w →
       ClosureOffset s pl d l a k dest → valWord pl s.accu = some w →

@@ -52,7 +52,7 @@ theorem getglobal_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w
 
 /-- **PUSHGETGLOBAL n from the loop head.** -/
 theorem pushgetglobal_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
+    {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .PUSHGETGLOBAL)
     (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
@@ -100,7 +100,7 @@ theorem getglobalfield_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Confi
 
 /-- **PUSHGETGLOBALFIELD n k from the loop head.** -/
 theorem pushgetglobalfield_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    {n m : BitVec 32} {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
+    {n m : BitVec 32} {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .PUSHGETGLOBALFIELD)
     (fetchN : P.code[s.pc + 1]? = some n) (fetchM : P.code[s.pc + 2]? = some m)
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)

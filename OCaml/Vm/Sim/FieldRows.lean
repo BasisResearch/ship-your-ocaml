@@ -173,8 +173,8 @@ theorem getfield3_row {L : OCaml.Layout} {P : Prog}
       exact opt_not_halt
 
 /-- **The PUSHENVACC1 row.** -/
-theorem pushenvacc1_row {L : OCaml.Layout} {P : Prog} {B : OCaml.Budget} {high0 : Nat}
-    (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+theorem pushenvacc1_row {L : OCaml.Layout} {P : Prog} {B : OCaml.Budget} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHENVACC1) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHENVACC1 := by
   intro s c i reach h _ op _
@@ -193,8 +193,8 @@ theorem pushenvacc1_row {L : OCaml.Layout} {P : Prog} {B : OCaml.Budget} {high0 
       exact opt_not_halt
 
 /-- **The PUSHENVACC2 row.** -/
-theorem pushenvacc2_row {L : OCaml.Layout} {P : Prog} {B : OCaml.Budget} {high0 : Nat}
-    (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+theorem pushenvacc2_row {L : OCaml.Layout} {P : Prog} {B : OCaml.Budget} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHENVACC2) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHENVACC2 := by
   intro s c i reach h _ op _
@@ -213,8 +213,8 @@ theorem pushenvacc2_row {L : OCaml.Layout} {P : Prog} {B : OCaml.Budget} {high0 
       exact opt_not_halt
 
 /-- **The PUSHENVACC3 row.** -/
-theorem pushenvacc3_row {L : OCaml.Layout} {P : Prog} {B : OCaml.Budget} {high0 : Nat}
-    (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+theorem pushenvacc3_row {L : OCaml.Layout} {P : Prog} {B : OCaml.Budget} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHENVACC3) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHENVACC3 := by
   intro s c i reach h _ op _
@@ -233,8 +233,8 @@ theorem pushenvacc3_row {L : OCaml.Layout} {P : Prog} {B : OCaml.Budget} {high0 
       exact opt_not_halt
 
 /-- **The PUSHENVACC4 row.** -/
-theorem pushenvacc4_row {L : OCaml.Layout} {P : Prog} {B : OCaml.Budget} {high0 : Nat}
-    (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+theorem pushenvacc4_row {L : OCaml.Layout} {P : Prog} {B : OCaml.Budget} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .PUSHENVACC4) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHENVACC4 := by
   intro s c i reach h _ op _

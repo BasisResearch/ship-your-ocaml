@@ -15,6 +15,7 @@ import OCaml.Vm.Sim.GrabRows
 import OCaml.Vm.Sim.RestartRows
 import OCaml.Vm.Sim.ApplyGenericRows
 import OCaml.Vm.Sim.F1Frame
+import OCaml.Vm.Sim.TrapRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -431,6 +432,11 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.ApptermWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.f1_runtimeFrame
 #print axioms OCaml.Vm.Sim.f1_memoryStable
+#print axioms OCaml.Vm.Sim.f1_vmWindow_apart
+#print axioms OCaml.Vm.Sim.RuntimeFrame.stackWindow
+#print axioms OCaml.Vm.Sim.VmLogOk.of_windows
+#print axioms OCaml.Vm.Sim.PushtrapWriteOk.of_geometry
+#print axioms OCaml.Vm.Sim.pushtrap_next
 #print axioms OCaml.Vm.Sim.RetaddrWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.StackGeometry.edit
 #print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry
@@ -556,6 +562,11 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.ApptermWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.f1_runtimeFrame
 #print axioms OCaml.Vm.Sim.f1_memoryStable
+#print axioms OCaml.Vm.Sim.f1_vmWindow_apart
+#print axioms OCaml.Vm.Sim.RuntimeFrame.stackWindow
+#print axioms OCaml.Vm.Sim.VmLogOk.of_windows
+#print axioms OCaml.Vm.Sim.PushtrapWriteOk.of_geometry
+#print axioms OCaml.Vm.Sim.pushtrap_next
 #print axioms OCaml.Vm.Sim.RetaddrWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.StackGeometry.edit
 #print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry

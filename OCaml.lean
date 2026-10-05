@@ -22,6 +22,8 @@ import OCaml.Vm.Sim.GrabRows
 import OCaml.Vm.Sim.RestartRows
 import OCaml.Vm.Sim.ApplyGenericRows
 import OCaml.Vm.Sim.F1Frame
+import OCaml.Vm.Sim.VmLog
+import OCaml.Vm.Sim.TrapRows
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax

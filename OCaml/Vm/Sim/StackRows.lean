@@ -57,16 +57,29 @@ theorem stack_fits {B : OCaml.Budget} {P : Prog} {s : St} (fits : OCaml.Fits B P
   have := stack_fits_threshold fits capacity reach small
   omega
 
-/-- **The runtime-framing contract** for VM stack writes: the runtime
-invariant pins `Caml_state->stack_high` to `high` (the stack never moves
-under the budget) and ignores every write inside the VM stack allocation.
-A named obligation on the chosen `Layout`; whoever defines `runtimeOk`
-supplies it. -/
-structure RuntimeFrame (L : OCaml.Layout) (high : Nat) : Prop where
+/-- The `Caml_state` fields the interpreter's arms write and the runtime
+invariant must ignore. -/
+def vmDomainOffsets : List Nat :=
+  [Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots, Layout.off_exn_bucket,
+    Layout.off_external_raise]
+
+/-- A window the arms may write without disturbing the runtime invariant:
+inside the VM stack allocation, or one of the VM-owned `Caml_state` fields. -/
+def VmWindow (high domain : Nat) (w : W) : Prop :=
+  (high - Layout.stackBytes ≤ w.lo ∧ w.hi ≤ high) ∨
+    ∃ off ∈ vmDomainOffsets, w = ⟨domain + off, domain + off + 8⟩
+
+/-- **The runtime-framing contract**: the runtime invariant pins the
+`Caml_state` address and `Caml_state->stack_high` (the stack never moves
+under the budget), ignores every write to VM windows, keeps
+`stack_threshold` a fixed slack above the stack base, and has no pending
+signal at a loop head. A named obligation on the chosen `Layout`, supplied
+for F1 by `f1_runtimeFrame` (`F1Frame.lean`). -/
+structure RuntimeFrame (L : OCaml.Layout) (high domain : Nat) : Prop where
+  domainWord : ∀ c, L.runtimeOk c → (word c Layout.sym_Caml_state).toNat = domain
   stackHigh : ∀ c, L.runtimeOk c →
     (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high)).toNat = high
-  stackWindow : ∀ lo hi, high - Layout.stackBytes ≤ lo → hi ≤ high →
-    WindowStable L.runtimeOk [⟨lo, hi⟩]
+  windows : ∀ ws : List W, (∀ w ∈ ws, VmWindow high domain w) → WindowStable L.runtimeOk ws
   /-- `Caml_state->stack_threshold` stays `Stack_threshold` above the base -/
   threshold : ∀ c, L.runtimeOk c →
     (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_threshold)).toNat =
@@ -74,9 +87,18 @@ structure RuntimeFrame (L : OCaml.Layout) (high : Nat) : Prop where
   /-- no signal or GC request is pending at a loop head (G1: no collection) -/
   quiet : ∀ c, L.runtimeOk c → SignalCheckReady c
 
+/-- Every window inside the VM stack allocation is runtime-stable. -/
+theorem RuntimeFrame.stackWindow {L : OCaml.Layout} {high domain : Nat} (rf : RuntimeFrame L high domain)
+    (lo hi : Nat) (low : high - Layout.stackBytes ≤ lo) (top : hi ≤ high) :
+    WindowStable L.runtimeOk [⟨lo, hi⟩] :=
+  rf.windows _ fun w hw => by
+    simp only [List.mem_singleton] at hw
+    subst hw
+    exact Or.inl ⟨low, top⟩
+
 /-- The window of a push of `k` words below `sp` is runtime-stable. -/
 theorem RuntimeFrame.push {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
-    {pl : Place} {cp : ChanPlace} {sp high high' k : Nat} (rf : RuntimeFrame L high')
+    {pl : Place} {cp : ChanPlace} {sp high high' k dom0 : Nat} (rf : RuntimeFrame L high' dom0)
     (h : ArmInput L P s op c pl cp sp high)
     (space : 8 * (s.stack.length + k) ≤ Layout.stackBytes) :
     WindowStable L.runtimeOk [⟨sp - 8 * k, sp⟩] := by
@@ -122,7 +144,7 @@ theorem stack_read_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {
 
 /-- Shared simulation of `PUSH`/`PUSHACC0` from the loop head. -/
 theorem push_next {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {op : Opcode}
-    {high0 : Nat} (rf : RuntimeFrame L high0)
+    {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0)
     (arm : ∀ pl cp sp high w, WindowStable L.runtimeOk [⟨sp - 8, sp⟩] →
       ArmInput L P s op c pl cp sp high → PushWriteOk P s c pl cp sp w →
       valWord pl s.accu = some w →
@@ -140,7 +162,7 @@ theorem push_next {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {op : Opco
 
 /-- Shared simulation of `PUSHACCn` (`n ≥ 1`, reading slot `n - 1` of the old stack). -/
 theorem push_read_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : Opcode}
-    {n high0 : Nat} (rf : RuntimeFrame L high0)
+    {n high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0)
     (arm : ∀ pl cp sp high w v, WindowStable L.runtimeOk [⟨sp - 8, sp⟩] →
       ArmInput L P s op c pl cp sp high → PushWriteOk P s c pl cp sp w →
       s.stack[n]? = some v → RamReadAt (sp + 8 * n) 8 → valWord pl s.accu = some w →
@@ -196,7 +218,7 @@ theorem field_read_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {
 
 /-- Shared simulation of a field read pushed over the accumulator (PUSHENVACCn). -/
 theorem push_field_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : Opcode}
-    {i high0 : Nat} {source : Val} (rf : RuntimeFrame L high0) (member : source ∈ roots P s)
+    {i high0 dom0 : Nat} {source : Val} (rf : RuntimeFrame L high0 dom0) (member : source ∈ roots P s)
     (arm : ∀ pl cp sp high l a k w v, WindowStable L.runtimeOk [⟨sp - 8, sp⟩] →
       ArmInput L P s op c pl cp sp high → PushWriteOk P s c pl cp sp w →
       FieldSelection s.heap pl source i v l a k → RamReadAt (a + 8 * (k + i)) 8 →
@@ -222,7 +244,7 @@ theorem push_field_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {
 /-- **Closure entry is ready** (`check_stacks` takes its fast path, no signal
 is pending) when the frame base `base` stays above `stack_threshold`. -/
 theorem RuntimeFrame.enter {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
-    {pl : Place} {cp : ChanPlace} {sp high high0 base : Nat} (rf : RuntimeFrame L high0)
+    {pl : Place} {cp : ChanPlace} {sp high high0 base dom0 : Nat} (rf : RuntimeFrame L high0 dom0)
     (h : ArmInput L P s op c pl cp sp high)
     (room : high - Layout.stackBytes + Layout.stackThresholdBytes ≤ base) : EnterReady c base := by
   have same : high = high0 := h.stackHigh.symm.trans (rf.stackHigh c h.runtime)

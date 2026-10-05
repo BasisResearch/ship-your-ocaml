@@ -50,7 +50,7 @@ theorem acc_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : Bit
 
 /-- **PUSHACC n from the loop head.** -/
 theorem pushacc_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
+    {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .PUSHACC)
     (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
@@ -160,7 +160,7 @@ theorem AssignWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} 
 
 /-- **ASSIGN n from the loop head.** -/
 theorem assign_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
+    {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .ASSIGN)
     (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * s.stack.length ≤ Layout.stackBytes)

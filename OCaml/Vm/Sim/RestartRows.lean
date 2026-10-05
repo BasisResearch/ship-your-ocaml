@@ -46,8 +46,8 @@ theorem RestartInput.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {
         Layout.sym_tohost, Layout.sym_bss_end] at * <;> omega)
 
 /-- **RESTART from the loop head.** -/
-theorem restart_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high0 : Nat}
-    (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .RESTART)
+theorem restart_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .RESTART)
     (space : 8 * s'.stack.length ≤ Layout.stackBytes)
     (step : stepI P s ⟨.RESTART, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by

@@ -64,6 +64,9 @@ structure ClosureWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Cha
   bindings : BindingsOutside (closureAllocationLog c pl sp count dest a domain accu) P c
   /-- the nursery placement of the new object (a6-gc's nursery bounds) -/
   placement : NurseryPlacement P pl high a (closureObject s count dest)
+  /-- the new object is apart from the `Caml_state` record -/
+  domainApart : OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
+    (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a - 8) (8 * (closureObject s count dest).wosize + 8)
   /-- all the allocation's stores lie in the allocator arena -/
   arena : LogInW [arenaWindow] (closureAllocationLog c pl sp count dest a domain accu)
 
@@ -107,7 +110,8 @@ theorem closure_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
   exact running_of_payload payload (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory, runtime after post.memory platform.runtime⟩
     post.toVmRegisters post.loop
-    ((geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory).alloc space.placed space.placement rfl rfl)
+    ((geometry.alloc (s' := closureState s count dest) space.placed space.placement space.domainApart rfl rfl).frame_log rfl rfl
+      space.payload.domain space.bindings.contents post.memory)
     (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

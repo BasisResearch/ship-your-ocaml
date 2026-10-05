@@ -46,8 +46,8 @@ def push(op, lower, src, i):
             f'          {lower}_arm stable input space sel read pushed)\n'
             f'        h (code s c reach h) (stack_fits fits capacity reach) step')
     return ROW.format(op=op, lower=lower, body=body,
-                      extra_binders=' {B : OCaml.Budget} {high0 : Nat}\n'
-                      '    (rf : RuntimeFrame L high0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)')
+                      extra_binders=' {B : OCaml.Budget} {high0 dom0 : Nat}\n'
+                      '    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)')
 
 
 def outputs():

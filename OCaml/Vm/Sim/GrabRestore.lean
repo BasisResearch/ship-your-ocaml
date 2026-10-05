@@ -35,6 +35,9 @@ structure GrabWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPl
   bindings : BindingsOutside log P c
   /-- the nursery placement of the new object (a6-gc's nursery bounds) -/
   placement : NurseryPlacement P pl high a (grabClosure s)
+  /-- the new object is apart from the `Caml_state` record -/
+  domainApart : OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
+    (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a - 8) (8 * (grabClosure s).wosize + 8)
   /-- all the allocation's stores lie in the allocator arena -/
   arena : LogInW [arenaWindow] (log)
 
@@ -81,7 +84,8 @@ theorem grab_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Conf
   exact running_of_payload payload (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       runtime after post.memory platform.runtime⟩ post.toVmRegisters post.loop
-    ((geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory).alloc space.placed space.placement rfl rfl)
+    ((geometry.alloc (s' := grabState s dest savedEnv savedExtra rest) space.placed space.placement space.domainApart rfl rfl).frame_log rfl rfl
+      space.payload.domain space.bindings.contents post.memory)
     (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

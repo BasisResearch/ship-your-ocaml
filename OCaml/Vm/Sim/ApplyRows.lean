@@ -94,7 +94,7 @@ theorem enter_next {s s' : St} {stack : List Val} {extra : Nat}
 /-- Shared simulation of `APPLYn` from the loop head, given the generated
 `applyn_step_arm`. -/
 theorem apply_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : Opcode}
-    {n high0 : Nat} (rf : RuntimeFrame L high0) (positive : 1 ≤ n) (small : n ≤ 3)
+    {n high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (positive : 1 ≤ n) (small : n ≤ 3)
     (arm : ∀ pl cp sp high l a k dest env, WindowStable L.runtimeOk [⟨sp - 24, sp + 8 * n⟩] →
       ArmInput L P s op c pl cp sp high → n ≤ s.stack.length →
       FieldSelection s.heap pl s.accu 0 (.code dest) l a k → RamReadAt (a + 8 * k) 8 →
@@ -119,8 +119,8 @@ theorem apply_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : 
   exact ⟨c', run, h.of_plus run running⟩
 
 /-- **APPLY1 from the loop head.** -/
-theorem apply1_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high0 : Nat}
-    (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .APPLY1)
+theorem apply1_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .APPLY1)
     (space : 8 * (s.stack.length + 3) + Layout.stackThresholdBytes ≤ Layout.stackBytes)
     (step : stepI P s ⟨.APPLY1, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
@@ -142,8 +142,8 @@ theorem apply1_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high
     h code shape.1 shape.2 space
 
 /-- **APPLY2 from the loop head.** -/
-theorem apply2_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high0 : Nat}
-    (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .APPLY2)
+theorem apply2_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .APPLY2)
     (space : 8 * (s.stack.length + 3) + Layout.stackThresholdBytes ≤ Layout.stackBytes)
     (step : stepI P s ⟨.APPLY2, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
@@ -165,8 +165,8 @@ theorem apply2_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high
     h code shape.1 shape.2 space
 
 /-- **APPLY3 from the loop head.** -/
-theorem apply3_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high0 : Nat}
-    (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .APPLY3)
+theorem apply3_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high0 dom0 : Nat}
+    (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .APPLY3)
     (space : 8 * (s.stack.length + 3) + Layout.stackThresholdBytes ≤ Layout.stackBytes)
     (step : stepI P s ⟨.APPLY3, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by

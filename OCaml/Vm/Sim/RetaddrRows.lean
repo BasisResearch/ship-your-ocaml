@@ -39,7 +39,7 @@ theorem RetaddrWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place}
 
 /-- **PUSH_RETADDR from the loop head.** -/
 theorem push_retaddr_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
+    {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .PUSH_RETADDR) (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * (s.stack.length + 3) ≤ Layout.stackBytes)
     (step : stepI P s ⟨.PUSH_RETADDR, [w.toInt]⟩ = .next s') :

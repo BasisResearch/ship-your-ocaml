@@ -84,7 +84,7 @@ theorem TailcallWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place
 
 /-- Shared simulation of `APPTERMn` from the loop head. -/
 theorem appterm_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : Opcode}
-    {n slots high0 : Nat} (rf : RuntimeFrame L high0)
+    {n slots high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0)
     (arm : ∀ pl cp sp high l a k dest,
       WindowStable L.runtimeOk [⟨tailcallStart sp n slots, sp + 8 * slots⟩] →
       ArmInput L P s op c pl cp sp high →
@@ -112,7 +112,7 @@ theorem appterm_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op 
 
 /-- **APPTERM1 from the loop head.** -/
 theorem appterm1_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
+    {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .APPTERM1)
     (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
     (space : 8 * s.stack.length + Layout.stackThresholdBytes ≤ Layout.stackBytes)
@@ -131,7 +131,7 @@ theorem appterm1_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
 
 /-- **APPTERM2 from the loop head.** -/
 theorem appterm2_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
+    {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .APPTERM2)
     (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
     (space : 8 * s.stack.length + Layout.stackThresholdBytes ≤ Layout.stackBytes)
@@ -150,7 +150,7 @@ theorem appterm2_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
 
 /-- **APPTERM3 from the loop head.** -/
 theorem appterm3_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
+    {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .APPTERM3)
     (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
     (space : 8 * s.stack.length + Layout.stackThresholdBytes ≤ Layout.stackBytes)
