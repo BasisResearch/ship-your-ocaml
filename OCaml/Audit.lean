@@ -223,6 +223,9 @@ import OCaml.Vm.Gc.CopySources
 import OCaml.Vm.Gc.SingleFieldChildHeader
 import OCaml.Vm.Gc.CopiedHeaders
 import OCaml.Vm.Gc.SingleFieldPayload
+import OCaml.Vm.Primitives.ArgvTupleAllocated
+import OCaml.Vm.Primitives.PairLayout
+import OCaml.Vm.Primitives.AccessPlanObservation
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -2000,6 +2003,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ArgvTuple.prepare_fast
 #print axioms OCaml.Vm.Primitives.ArgvTuple.allocate_fast
 #print axioms OCaml.Vm.Primitives.ArgvTuple.finish_fast
+#print axioms OCaml.Vm.Primitives.memFacts_observed
+#print axioms OCaml.Vm.Primitives.AccessPlan.observed_transport
+#print axioms OCaml.Vm.Primitives.byteCopyLog_observe
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyPost.observed_log
+#print axioms OCaml.Vm.Primitives.pairLog_fields
+#print axioms OCaml.Vm.Primitives.SmallAllocation.NurseryMemory.observed_transport
+#print axioms OCaml.Vm.Primitives.ArgvTuple.argv_copy_stage
+#print axioms OCaml.Vm.Primitives.ArgvTuple.argv_allocate_stage
 
 #print axioms Vsa.Sim.segmentSummary
 -- Register initialization and primitive-lookup foundations.

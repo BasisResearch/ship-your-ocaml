@@ -8,9 +8,7 @@ theorem caml_sys_executable_name_primitive {runtimeOk P s pl cp sp high ra nativ
     (h : ExecutableNameInput runtimeOk P s pl cp sp high ra nativeSp arg live Dt DA a g domain young limit c)
     (runtime : ObservationRuntime runtimeOk c (copyMemory c ra nativeSp a s.world.exeName.length g domain young)) :
     FnSummary (BitVec.ofNat 64 Layout.sym_caml_sys_executable_name) (fun d => d = c)
-      (LibraryPrimitivePost runtimeOk P s pl cp sp high "caml_sys_executable_name" [arg]
-        (.ptr (s.heap.alloc (.bytes s.world.exeName)).2 0) (resultWord young s.world.exeName.length)
-        (s.heap.alloc (.bytes s.world.exeName)).1 s.world ra) :=
+      (ExecutableNamePost runtimeOk P s pl cp sp high ra nativeSp arg live a g domain young c) :=
   executable_name_contract h runtime
 
 end OCaml.Vm.Primitives

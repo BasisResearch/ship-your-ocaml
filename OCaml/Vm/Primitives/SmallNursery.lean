@@ -18,10 +18,8 @@ def constructorLog (ra size tag domain young : BitVec 64) : List WEntry :=
 
 /-- Caller-supplied nursery space and static scalar memory observations for
 G1 block allocation. The post-header observations follow from separation. -/
-structure NurseryInput (ra size tag domain young limit : BitVec 64) (c : Config) : Prop
-    extends LeafInput ra c where
-  sizeReg : gpr c 10 = some size
-  tagReg : gpr c 11 = some tag
+structure NurseryMemory (ra size tag domain young limit : BitVec 64) (c : Config) : Prop
+    where
   domainValue : word c DoubleAllocation.domainGlobal.toNat = domain
   youngValue : word c (DoubleAllocation.youngSlot domain).toNat = young
   limitValue : word c (DoubleAllocation.limitSlot domain).toNat = limit
@@ -35,6 +33,12 @@ structure NurseryInput (ra size tag domain young limit : BitVec 64) (c : Config)
     DoubleAllocation.domainGlobal.toNat 8 = domain
   youngAfterHeader : bytesT (writeLog c.σ.mem (constructorLog ra size tag domain young))
     (DoubleAllocation.youngSlot domain).toNat 8 = nurseryHeader young size
+
+/-- Dynamic entry facts are established by the generated call boundary. -/
+structure NurseryInput (ra size tag domain young limit : BitVec 64) (c : Config) : Prop
+    extends LeafInput ra c, NurseryMemory ra size tag domain young limit c where
+  sizeReg : gpr c 10 = some size
+  tagReg : gpr c 11 = some tag
 
 structure NurseryPost (ra size tag domain young : BitVec 64) (before after : Config) : Prop extends
     WriteRegistersPost [6, 10, 12, 13, 14, 15, 16, 17]
