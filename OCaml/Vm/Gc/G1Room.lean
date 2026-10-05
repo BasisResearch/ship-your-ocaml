@@ -81,6 +81,19 @@ theorem G1Room.step {B : Budget} {s s' : St} {c c' : Config} (room : G1Room B s 
   · rw [threshold, high]
     exact stack
 
+/-- The nursery reservation of `Sim.NurseryInput` (`young_ptr` from
+`a + 8 * count` down to `a - 8`, i.e. `count + 1` words) preserves the room
+when `BcSem` adds those `count + 1` words. -/
+theorem G1Room.reserve {B : Budget} {s s' : St} {c c' : Config} (room : G1Room B s c)
+    {count a : Nat}
+    (before : (runtimeFields c).youngPtr = a + 8 * count)
+    (after : (runtimeFields c').youngPtr = a - 8) (low : 8 ≤ a)
+    (words : s'.heap.words = s.heap.words + (count + 1)) (fits : s'.heap.words ≤ B.heapWords)
+    (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
+    (threshold : stackThreshold c' = stackThreshold c) (high : stackHigh c' = stackHigh c) :
+    G1Room B s' c' :=
+  room.step (by omega) fits (by rw [before, after, words]; omega) limit threshold high
+
 /-- The `stack_threshold` check (`Sim.EnterReady.capacity`) for a represented
 stack (`StackRepr`: `sp + 8 * length = stack_high`) within the budget. -/
 theorem G1Room.stack_capacity {B : Budget} {s : St} {c : Config} (room : G1Room B s c) {sp len : Nat}

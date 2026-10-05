@@ -18,7 +18,8 @@ Done (F1 side of the GC):
   relation `G1Room B s c` (nursery `young_limit + 8*(B - words) ≤ young_ptr`;
   `stack_threshold + 8*B.stackWords ≤ stack_high`).
   `G1Room.nursery_capacity` gives `NurseryInput.capacity` in its exact shape;
-  `G1Room.step` re-establishes it after a step; `G1Room.stack_capacity` gives
+  `G1Room.step` re-establishes it after a step (`G1Room.reserve`: directly from
+  a `NurseryInput` reservation); `G1Room.stack_capacity` gives
   `EnterReady.capacity` from `StackRepr`.
 - `OCaml/Vm/Gc/WhileMinG1.lean:whileMin_g1Room`: room at the captured cut
   (`scripts/gen_boot_entry.py` now also emits `stack_low`/`stack_threshold`).

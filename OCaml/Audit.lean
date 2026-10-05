@@ -288,6 +288,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Programs.whileMin_gcSafe
 #print axioms OCaml.Vm.Gc.G1Room.nursery_capacity
 #print axioms OCaml.Vm.Gc.G1Room.step
+#print axioms OCaml.Vm.Gc.G1Room.reserve
 #print axioms OCaml.Vm.Gc.G1Room.stack_capacity
 #print axioms OCaml.Vm.Gc.whileMin_g1Room
 #print axioms OCaml.bytecode_logic_adequacy
