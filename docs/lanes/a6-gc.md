@@ -64,6 +64,7 @@ G2 progress after F1:
 - Next: supply `OwnedFrame`'s address facts (targets/payloads from the major
   allocator's result range; allocator logs from free-list/frame windows) and
   `Nursery` from `HeapRepr` + `RuntimeOk` bounds.
+
 Free-list placement (toward `OwnedFrame.targetOutside`/`payloadOutside`):
 - `OCaml/Vm/Gc/FreePlacement.lean`: `BestFitSplit.Post.placed`: a split of a
   free block lying in `[lo, hi)` (`FreeIn`) returns a block in `[lo, hi)`
