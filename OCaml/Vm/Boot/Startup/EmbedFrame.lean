@@ -9,14 +9,40 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap Vsa
 /-! The `.embed` region (argv, environment and the embedded files, including
 the bytecode executable) lies between the allocator arena and the native
 stack: [`__embed_start` = `__heap_end`, `__stack_top - __stack_size`).
-Startup never writes it, so every byte keeps its loader value. -/
+Startup never writes it, so every byte keeps its loader value. The frame also
+keeps the `environ` word, which main sets once to the embedded environment. -/
 
 def embedLimit : Nat := Layout.sym_stack_top - Layout.sym_stack_size
 
 def EmbedByte (a : Nat) : Prop := heapEnd ≤ a ∧ a < embedLimit
 
+def EnvironByte (a : Nat) : Prop := Layout.sym_environ ≤ a ∧ a < Layout.sym_environ + 8
+
+/-- Bytes no startup function writes after main. -/
+def KeptByte (a : Nat) : Prop := EmbedByte a ∨ EnvironByte a
+
+theorem KeptByte.lt {a} (ha : KeptByte a) : a < embedLimit := by
+  rcases ha with ⟨_, h⟩ | ⟨_, h⟩
+  · exact h
+  · unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size Layout.sym_environ at *; omega
+
+theorem KeptByte.not_foot {a H} (ha : KeptByte a) : ¬ vsaFoot H a := by
+  intro owned
+  rcases ha with ⟨low, _⟩ | ⟨lo, hi⟩
+  · have := allocator_foot_below owned; omega
+  · unfold vsaFoot allocGlobal InRange heapStart at owned
+    unfold Layout.sym_environ at lo hi
+    omega
+
+/-- Kept bytes avoid every low global from `startup_count` up to the arena. -/
+theorem KeptByte.out_low {a g n} (ha : KeptByte a) (lo : Layout.sym_startup_count ≤ g) (hi : g + n ≤ heapEnd) :
+    a < g ∨ g + n ≤ a := by
+  rcases ha with ⟨low, _⟩ | ⟨_, h⟩
+  · right; omega
+  · left; unfold Layout.sym_environ Layout.sym_startup_count at *; omega
+
 structure EmbedFrame (before after : Config) : Prop where
-  byte : ∀ a, EmbedByte a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
+  byte : ∀ a, KeptByte a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
 
 theorem EmbedFrame.trans {before middle after} (h : EmbedFrame before middle)
     (g : EmbedFrame middle after) : EmbedFrame before after :=
@@ -26,7 +52,7 @@ theorem EmbedFrame.of_memory {before after} (memory : after.σ.mem = before.σ.m
     EmbedFrame before after := ⟨fun _ _ => by rw [memory]⟩
 
 theorem EmbedFrame.of_out {before after log} (memory : after.σ.mem = writeLog before.σ.mem log)
-    (out : ∀ a, EmbedByte a → OutL log a) : EmbedFrame before after :=
+    (out : ∀ a, KeptByte a → OutL log a) : EmbedFrame before after :=
   ⟨fun a ha => by rw [memory, writeLog_out _ _ _ (out a ha)]⟩
 
 /-- Every native frame of the startup path lies above the embed region. -/
@@ -37,7 +63,7 @@ theorem EmbedFrame.stack {before after log} {sp : BitVec 64} {size : Nat}
   constructor
   intro a ha
   rw [memory, frameOn_writeLog _ _ _ inside a ⟨Or.inl ?_, trivial⟩]
-  have := ha.2
+  have := ha.lt
   show a < nativeFrameBase sp size
   unfold nativeFrameBase
   omega
@@ -51,20 +77,18 @@ theorem StatCheckedReturned.embed_frame {H capacity sp ra s0 n before after}
   have unowned : ¬ mS H (nativeStack sp 32) a := by
     intro owned
     rcases owned with scratch | heap
-    · have := ha.2
+    · have := ha.lt
       unfold stackWin InExt allocHeadroom at scratch
       rw [short.stack_nat] at scratch
       unfold nativeFrameBase at scratch
       omega
-    · have := allocator_foot_below heap
-      have := ha.1
-      omega
+    · exact ha.not_foot heap
   have unchanged := w.allocation.allocation.memory a unowned
   change (w.allocated.σ.mem[a]?).getD 0 = (w.allocation.atMalloc.σ.mem[a]?).getD 0 at unchanged
   have restored : after.σ.mem = w.allocated.σ.mem := w.returned.memory
   rw [restored, unchanged, w.allocation.call.memory, w.allocation.setup.memory]
   have low : a < nativeFrameBase sp 32 := by
-    have := ha.2
+    have := ha.lt
     unfold nativeFrameBase
     omega
   rw [frameOn_writeLog _ _ _ (statCheckedLog_inside short) a ⟨Or.inl low, trivial⟩]
@@ -75,11 +99,11 @@ theorem CustomRegistered.embed_frame {H capacity kind sp s0 head before after}
   apply (w.allocation.embed_frame frame deep).trans
   apply EmbedFrame.of_out w.publication.memory
   intro a ha
-  have high := w.region.upper
-  have low := ha.1
-  unfold heapEnd at high low
-  exact customPublish_out_byte w.region (Or.inr (by omega))
-    (Or.inr (by unfold Layout.sym_custom_ops_table; omega))
+  have region := w.region
+  have node := ha.out_low (g := (vsaReg w.allocated 10).toNat) (n := 16)
+    (Nat.le_trans (by decide) region.lower) region.upper
+  have table := ha.out_low (g := Layout.sym_custom_ops_table) (n := 8) (by decide) (by decide)
+  exact customPublish_out_byte region node table
 
 theorem CustomNextRegistered.embed_frame {H capacity kind sp head before after}
     (w : CustomNextRegistered H capacity kind sp head before after)
@@ -110,17 +134,16 @@ theorem ExtTableReturned.embed_frame {H capacity sp ra s0 t n before after}
   have nested : NativeFrame (nativeStack sp 16) 544 := frame.nested (front := 16) (by decide)
   have deep' : embedLimit + 544 ≤ (nativeStack sp 16).toNat := by
     rw [short.stack_nat]; unfold nativeFrameBase; omega
-  have header (a : Nat) (ha : EmbedByte a) : a < t.toNat ∨ t.toNat + Layout.ext_table_bytes ≤ a := by
-    have := ha.2
-    have := ha.1
+  have header (a : Nat) (ha : KeptByte a) : a < t.toNat ∨ t.toNat + Layout.ext_table_bytes ≤ a := by
+    have := ha.lt
     rcases site.place with ⟨above, _⟩ | g
     · left; unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size at *; omega
-    · right; have := g.high; unfold heapStart heapEnd at *; omega
+    · exact ha.out_low g.low (Nat.le_trans g.high (by decide))
   have setup : EmbedFrame before w.allocation.saved := by
     constructor
     intro a ha
     rw [w.allocation.setup.memory, frameOn_writeLog _ _ _ (extTableLog_inside short) a ?_]
-    have := ha.2
+    have := ha.lt
     have h := header a ha
     exact ⟨Or.inl (by show a < nativeFrameBase sp 16; unfold nativeFrameBase; omega), h, trivial⟩
   have call := EmbedFrame.of_memory (before := w.allocation.saved) w.allocation.call.memory
@@ -137,21 +160,39 @@ theorem ExtTableReturned.embed_frame {H capacity sp ra s0 t n before after}
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.Startup
-open Vsa.Machine Vsa.Sim
+open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.VsaHeap OCaml.Vm.Primitives
 
 theorem StartupDataFrame.embed {before after} (h : StartupDataFrame before after) :
-    EmbedFrame before after :=
-  ⟨fun a ha => h.byte a (Or.inr ⟨ha.1, by
-    have := ha.2
-    unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size at *
-    omega⟩)⟩
+    EmbedFrame before after := by
+  constructor
+  intro a ha
+  apply h.byte a
+  rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩
+  · exact Or.inr ⟨lo, by unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size at *; omega⟩
+  · refine Or.inl ⟨?_, ?_, ?_⟩
+    · unfold Layout.sym_environ heapStart at *; omega
+    · unfold allocGlobal InRange; unfold Layout.sym_environ at lo hi; omega
+    · left; unfold Layout.sym_environ Layout.sym_Caml_state at *; omega
 
 /-- Every embed byte still has its loader value. -/
 structure EmbedImage (c : Config) : Prop where
   byte : ∀ a, EmbedByte a → (c.σ.mem[a]?).getD 0 = (WhileMinImage.initialMem[a]?).getD 0
 
 theorem EmbedImage.frame {before after} (h : EmbedImage before) (f : EmbedFrame before after) :
-    EmbedImage after := ⟨fun a ha => (f.byte a ha).trans (h.byte a ha)⟩
+    EmbedImage after := ⟨fun a ha => (f.byte a (Or.inl ha)).trans (h.byte a ha)⟩
+
+/-- The embedded image together with main's `environ` publication. -/
+structure KeptImage (c : Config) : Prop where
+  embed : EmbedImage c
+  environ : bytesT c.σ.mem Layout.sym_environ 8 = BitVec.ofNat 64 WhileMinImage.envArray
+
+/-- The `environ` global survives every kept frame. -/
+theorem EmbedFrame.environ {before after v} (f : EmbedFrame before after)
+    (h : bytesT before.σ.mem Layout.sym_environ 8 = v) : bytesT after.σ.mem Layout.sym_environ 8 = v :=
+  (word_observed _ (fun i hi => f.byte _ (Or.inr ⟨by omega, by omega⟩))).trans h
+
+theorem KeptImage.frame {before after} (h : KeptImage before) (f : EmbedFrame before after) :
+    KeptImage after := ⟨h.embed.frame f, f.environ h.environ⟩
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.WhileMinElfParse
@@ -177,38 +218,42 @@ theorem ResetParameterEntry.embed {initial entry} (w : ResetParameterEntry initi
   w.domain.witness.tables.third.first.published.allocation.before.request.tables.allocation.before.alloc.domain.main.embed.frame
     w.data_frame.embed
 
-theorem ResetParameterReturned.embed {initial after} (w : ResetParameterReturned initial after) :
-    EmbedImage after :=
-  w.before.embed.frame (EmbedFrame.stack (size := 176) w.post.memory
+theorem ResetParameterEntry.kept {initial entry} (w : ResetParameterEntry initial entry) :
+    KeptImage entry := ⟨w.embed, w.environment.global⟩
+
+theorem ResetParameterReturned.kept {initial after} (w : ResetParameterReturned initial after) :
+    KeptImage after :=
+  w.before.kept.frame (EmbedFrame.stack (size := 176) w.post.memory
     (parameterPresentLog_inside (by constructor <;> decide)) (by decide))
 
-theorem ResetCustomEntry.embed {initial entry} (w : ResetCustomEntry initial entry) :
-    EmbedImage entry := by
+theorem ResetCustomEntry.kept {initial entry} (w : ResetCustomEntry initial entry) :
+    KeptImage entry := by
   have auxFrame : NativeFrame parameterStack 16 := by constructor <;> decide
   have aux : EmbedFrame w.auxiliary.called w.source := by
     constructor
     intro a ha
-    have high := ha.2
-    have low := ha.1
+    have high := ha.lt
     rw [w.auxiliary.post.memory, startupAuxLog, writeLog_append,
-      writeLog_out _ _ _ (show OutL [(Layout.sym_startup_count, 4, 1#64)] a from ⟨Or.inr (by
-        show Layout.sym_startup_count + 4 ≤ a
-        unfold Layout.sym_startup_count heapEnd at *; omega), trivial⟩),
+      writeLog_out _ _ _ (show OutL [(Layout.sym_startup_count, 4, 1#64)] a from
+        ⟨ha.out_low (Nat.le_refl _) (by decide), trivial⟩),
       frameOn_writeLog _ _ _ (startupAuxSave_inside auxFrame) a ⟨Or.inl ?_, trivial⟩]
     show a < nativeFrameBase parameterStack 16
     have bound : embedLimit ≤ nativeFrameBase parameterStack 16 := by decide
     omega
-  have source := (w.auxiliary.parameter.embed.frame (EmbedFrame.of_memory w.auxiliary.call.memory)).frame aux
+  have source := (w.auxiliary.parameter.kept.frame (EmbedFrame.of_memory w.auxiliary.call.memory)).frame aux
   exact (source.frame (EmbedFrame.stack (size := Layout.camlMainFrameBytes) w.locale.memory
     (camlLocaleLog_inside (by constructor <;> decide)) (by decide))).frame
     (EmbedFrame.of_memory w.call.memory)
 
-theorem ResetSharedTableReturned.embed {initial after} (w : ResetSharedTableReturned initial after) :
-    EmbedImage after := by
+theorem ResetSharedTableReturned.kept {initial after} (w : ResetSharedTableReturned initial after) :
+    KeptImage after := by
   have frame : NativeFrame parameterStack 560 := by constructor <;> decide
-  have custom := w.custom.source.source.embed.frame (w.custom.returned.embed_frame frame (by decide))
+  have custom := w.custom.source.source.kept.frame (w.custom.returned.embed_frame frame (by decide))
   exact (custom.frame (EmbedFrame.of_memory w.call.memory)).frame
     (w.returned.embed_frame frame (ExtTableSite.shared _) (by decide))
+
+theorem ResetSharedTableReturned.embed {initial after} (w : ResetSharedTableReturned initial after) :
+    EmbedImage after := w.kept.embed
 end OCaml.Vm.Boot.WhileMinElfParse
 
 namespace OCaml.Vm.Boot.Startup
