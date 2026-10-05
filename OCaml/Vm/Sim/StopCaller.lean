@@ -1,6 +1,7 @@
 import OCaml.Vm.Sim.StopExit
 import OCaml.Vm.Sim.CamlMainReturn
 import OCaml.Vm.Sim.MainExit
+import OCaml.Vm.Sim.EntryFrame
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -28,6 +29,9 @@ structure StopExitCallPost (before : Config) (nativeSp : Nat) (vmSp : BitVec 64)
   output : after.σ.sailOutput = before.σ.sailOutput
   /-- main's call of caml_main returns here (caml_do_exit never returns) -/
   returnAddress : gpr after 1 = some 0x80001df8#64
+  /-- the callee-saved registers caml_do_exit's run reads are present: s0–s4
+  restored by caml_main's epilogue, s5–s10 by the interpreter's -/
+  present : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26], (gprGet after.σ n).isSome
 
 /-- Run both actual native callers after STOP returns to caml_main. -/
 theorem stop_callers {nativeSp : Nat} {interpSaved mainSaved : Nat → BitVec 64}
@@ -47,10 +51,31 @@ theorem stop_callers {nativeSp : Nat} {interpSaved mainSaved : Nat → BitVec 64
   have mainPc : pcOf mainAfter = some (0x80001df0#64) := by
     simpa only [ready.mainReturn] using mainPost.pc
   obtain ⟨exitCount, after, exitRun, exitPost⟩ := main_exit ⟨mainPost.good, mainPost.image, mainPost.tick, mainPc⟩
-  exact ⟨mainCount + exitCount, after, mainRun.append exitRun, exitPost.good, exitPost.image,
+  refine ⟨mainCount + exitCount, after, mainRun.append exitRun, exitPost.good, exitPost.image,
     exitPost.tick, exitPost.pc, (exitPost.frame.frame _ (by decide)).trans mainPost.stack,
     exitPost.status, exitPost.memory.trans (mainPost.memory.trans returned.memory),
-    exitPost.frame.out.trans (mainPost.frame.out.trans returned.output), exitPost.returnAddress⟩
+    exitPost.frame.out.trans (mainPost.frame.out.trans returned.output), exitPost.returnAddress, ?_⟩
+  have keepExit := exitPost.frame.gpr_list (L := [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26])
+    (by decide +kernel)
+  have keepMain := mainPost.frame.gpr_list (L := [21, 22, 23, 24, 25, 26]) (by decide +kernel)
+  have main (n : Nat) (hn : n ∈ Layout.camlMainSavedRegs) : (gprGet mainAfter.σ n).isSome := by
+    have m := mainPost.registers n hn
+    change gprGet _ _ = _ at m
+    rw [m]; rfl
+  have interp (n : Nat) (hn : n ∈ [21, 22, 23, 24, 25, 26]) : (gprGet mainAfter.σ n).isSome := by
+    have m := returned.registers n (by
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn
+      simp only [Layout.interpSavedRegs, List.mem_cons, List.mem_nil_iff, or_false]
+      omega)
+    change gprGet _ _ = _ at m
+    rw [keepMain n hn, m]; rfl
+  intro n hn
+  rw [keepExit n hn]
+  simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn
+  rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals first
+    | exact main _ (by decide)
+    | exact interp _ (by decide)
 
 /-- The remaining primitive/runtime exit summary, now at its actual call site.
 The caml_do_exit implementation (debugger, signal termination and libc/HTIF
