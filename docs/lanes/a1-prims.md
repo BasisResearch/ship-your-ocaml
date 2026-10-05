@@ -2,6 +2,20 @@
 
 ## Current status
 
+**Next (remaining 9, all deep; path-specific callees):**
+* `caml_register_named_value`: `strlen` (landed `strlen_summary`), `__umoddi3` hash
+  (`DivSpec` battery), `strcmp` chain walk; first registration: `caml_stat_alloc`
+  (malloc specs) + `memcpy` (landed) + `caml_register_generational_global_root`
+  (skiplist insert, needs a summary); repeat name: `caml_modify_generational_global_root`.
+* channels: `open_descriptor_in/out` → `caml_open_descriptor_in` (`caml_stat_alloc`,
+  `lseek`) + `caml_alloc_custom_mem`; `output_bytes`/`output_char` (buffer `memmove`,
+  `caml_flush_partial` when full); `flush` → `caml_flush_partial` → `caml_write_fd` →
+  `write` → `_write` (209-instruction HTIF/FS emulator; check a0-boot's startup rows
+  for an existing `_write` summary first); `output` tail-jumps to `output_bytes`;
+  `out_channels_list` walks `caml_all_opened_channels`.
+* `caml_format_int`: `parse_format` + `caml_alloc_sprintf` (newlib vsnprintf; check
+  the A0 `LibraryFormat` specs).
+
 **2026-10-05 (Claude session, taking over from Codex). 21/30 summaries proved.**
 
 * `caml_sys_exit`: `ExitPath.caml_sys_exit_halts` (`OCaml/Vm/Primitives/ExitPath/Primitive.lean`):
