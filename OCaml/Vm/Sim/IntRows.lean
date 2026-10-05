@@ -47,7 +47,7 @@ theorem cmpOp_nonempty {s s' : St} {f : BitVec 64 → BitVec 64 → Bool}
 facts and the stack budget, an arm that needs only `ArmInput` and the read
 window of the top stack word is simulated. -/
 theorem top_read_row {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : Opcode}
-    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c op)
+    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (nonempty : 0 < s.stack.length)
     (arm : ∀ {pl : Place} {cp : ChanPlace} {sp high : Nat}, ArmInput L P s op c pl cp sp high →
       ReadWindow (BitVec.ofNat 64 sp) 8 → ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c') :
@@ -57,7 +57,7 @@ theorem top_read_row {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op 
 
 /-- **ADDINT from the loop head.** -/
 theorem addint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .ADDINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ADDINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.ADDINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => a + b - 1) step)
@@ -65,7 +65,7 @@ theorem addint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **SUBINT from the loop head.** -/
 theorem subint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .SUBINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .SUBINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.SUBINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => a - b + 1) step)
@@ -73,7 +73,7 @@ theorem subint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **ANDINT from the loop head.** -/
 theorem andint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .ANDINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ANDINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.ANDINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => a &&& b) step)
@@ -81,7 +81,7 @@ theorem andint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **ORINT from the loop head.** -/
 theorem orint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .ORINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ORINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.ORINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => a ||| b) step)
@@ -89,7 +89,7 @@ theorem orint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **XORINT from the loop head.** -/
 theorem xorint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .XORINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .XORINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.XORINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => (a ^^^ b) ||| 1) step)
@@ -97,7 +97,7 @@ theorem xorint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **LSLINT from the loop head.** -/
 theorem lslint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .LSLINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .LSLINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.LSLINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => ((a - 1) <<< ((untag b).toNat % 64)) + 1) step)
@@ -105,7 +105,7 @@ theorem lslint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **LSRINT from the loop head.** -/
 theorem lsrint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .LSRINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .LSRINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.LSRINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => (a >>> ((untag b).toNat % 64)) ||| 1) step)
@@ -113,7 +113,7 @@ theorem lsrint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **ASRINT from the loop head.** -/
 theorem asrint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .ASRINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ASRINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.ASRINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => (a.sshiftRight ((untag b).toNat % 64)) ||| 1) step)
@@ -121,7 +121,7 @@ theorem asrint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **LTINT from the loop head.** -/
 theorem ltint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .LTINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .LTINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.LTINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => a.slt b) step)
@@ -129,7 +129,7 @@ theorem ltint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **LEINT from the loop head.** -/
 theorem leint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .LEINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .LEINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.LEINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => a.sle b) step)
@@ -137,7 +137,7 @@ theorem leint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **GTINT from the loop head.** -/
 theorem gtint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .GTINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .GTINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.GTINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => b.slt a) step)
@@ -145,7 +145,7 @@ theorem gtint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **GEINT from the loop head.** -/
 theorem geint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .GEINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .GEINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.GEINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => b.sle a) step)
@@ -153,7 +153,7 @@ theorem geint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **ULTINT from the loop head.** -/
 theorem ultint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .ULTINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ULTINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.ULTINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => a.ult b) step)
@@ -161,7 +161,7 @@ theorem ultint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **UGEINT from the loop head.** -/
 theorem ugeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .UGEINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .UGEINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (step : stepI P s ⟨.UGEINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
   top_read_row h code space (cmpOp_nonempty (f := fun a b => b.ule a) step)
@@ -170,7 +170,7 @@ theorem ugeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 /-- **MULINT from the loop head.** The libgcc call needs defined a2/a3
 (`BinaryLibScratch`), which the loop-head invariant does not yet carry. -/
 theorem mulint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .MULINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .MULINT)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (scratch : BinaryLibScratch c)
     (step : stepI P s ⟨.MULINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
@@ -195,7 +195,7 @@ that row is the named premise `zero`, supplied by the zero-divisor arm
 (caught: `division_zero_caught_step`, not yet in row form; uncaught: open). -/
 theorem division_next (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c)
-    (code : DispatchCode P s c (divisionOpcode kind))
+    (code : DispatchCode P s (divisionOpcode kind))
     (space : 8 * s.stack.length ≤ Layout.stackBytes) (scratch : BinaryLibScratch c)
     (zero : ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c')
     (step : stepI P s ⟨divisionOpcode kind, []⟩ = .next s') :

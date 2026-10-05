@@ -22,7 +22,7 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 
 /-- **An `ArmInput`-only row.** -/
 theorem input_row {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : Opcode}
-    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c op)
+    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op)
     (arm : ∀ {pl : Place} {cp : ChanPlace} {sp high : Nat}, ArmInput L P s op c pl cp sp high →
       ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
@@ -30,42 +30,42 @@ theorem input_row {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : O
 
 /-- **CONST0 from the loop head.** -/
 theorem const0_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .CONST0)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .CONST0)
     (step : stepI P s ⟨.CONST0, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
   cases Res.next.inj step; exact input_row h code fun input => const0_arm stable input
 
 /-- **CONST1 from the loop head.** -/
 theorem const1_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .CONST1)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .CONST1)
     (step : stepI P s ⟨.CONST1, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
   cases Res.next.inj step; exact input_row h code fun input => const1_arm stable input
 
 /-- **CONST2 from the loop head.** -/
 theorem const2_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .CONST2)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .CONST2)
     (step : stepI P s ⟨.CONST2, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
   cases Res.next.inj step; exact input_row h code fun input => const2_arm stable input
 
 /-- **CONST3 from the loop head.** -/
 theorem const3_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .CONST3)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .CONST3)
     (step : stepI P s ⟨.CONST3, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
   cases Res.next.inj step; exact input_row h code fun input => const3_arm stable input
 
 /-- **ATOM0 from the loop head.** -/
 theorem atom0_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .ATOM0)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ATOM0)
     (step : stepI P s ⟨.ATOM0, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
   cases Res.next.inj step; exact input_row h code fun input => atom0_arm stable input
 
 /-- **NEGINT from the loop head.** -/
 theorem negint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .NEGINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .NEGINT)
     (step : stepI P s ⟨.NEGINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
   change (match s.accu with
@@ -78,7 +78,7 @@ theorem negint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
 
 /-- **BOOLNOT from the loop head.** -/
 theorem boolnot_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .BOOLNOT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .BOOLNOT)
     (step : stepI P s ⟨.BOOLNOT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
   change (match s.accu with

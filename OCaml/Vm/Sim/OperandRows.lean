@@ -26,7 +26,7 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 
 /-- **OFFSETINT from the loop head.** -/
 theorem offsetint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .OFFSETINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .OFFSETINT)
     (operand : OperandCode P s c 1 w) (step : stepI P s ⟨.OFFSETINT, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
   change (match s.accu with
@@ -41,7 +41,7 @@ theorem offsetint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w
 
 /-- **CONSTINT from the loop head.** -/
 theorem constint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .CONSTINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .CONSTINT)
     (operand : OperandCode P s c 1 w) (step : stepI P s ⟨.CONSTINT, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
   cases Res.next.inj step
@@ -49,7 +49,7 @@ theorem constint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
 
 /-- **BRANCH from the loop head.** -/
 theorem branch_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .BRANCH)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .BRANCH)
     (operand : OperandCode P s c 1 w) (step : stepI P s ⟨.BRANCH, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
   change opt (target s.pc 0 w.toInt) (fun t => Res.next { s with pc := t }) = .next s' at step
@@ -59,7 +59,7 @@ theorem branch_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : 
 
 /-- **BLTINT from the loop head.** -/
 theorem bltint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .BLTINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .BLTINT)
     (operand : OperandCode P s c 1 imm) (offset : OperandCode P s c 2 ofs)
     (step : stepI P s ⟨.BLTINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
@@ -68,7 +68,7 @@ theorem bltint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm 
 
 /-- **BLEINT from the loop head.** -/
 theorem bleint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .BLEINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .BLEINT)
     (operand : OperandCode P s c 1 imm) (offset : OperandCode P s c 2 ofs)
     (step : stepI P s ⟨.BLEINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
@@ -77,7 +77,7 @@ theorem bleint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm 
 
 /-- **BGTINT from the loop head.** -/
 theorem bgtint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .BGTINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .BGTINT)
     (operand : OperandCode P s c 1 imm) (offset : OperandCode P s c 2 ofs)
     (step : stepI P s ⟨.BGTINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
@@ -86,7 +86,7 @@ theorem bgtint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm 
 
 /-- **BGEINT from the loop head.** -/
 theorem bgeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .BGEINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .BGEINT)
     (operand : OperandCode P s c 1 imm) (offset : OperandCode P s c 2 ofs)
     (step : stepI P s ⟨.BGEINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
@@ -95,7 +95,7 @@ theorem bgeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm 
 
 /-- **BULTINT from the loop head.** -/
 theorem bultint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .BULTINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .BULTINT)
     (operand : OperandCode P s c 1 imm) (offset : OperandCode P s c 2 ofs)
     (step : stepI P s ⟨.BULTINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
@@ -104,7 +104,7 @@ theorem bultint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm
 
 /-- **BUGEINT from the loop head.** -/
 theorem bugeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .BUGEINT)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .BUGEINT)
     (operand : OperandCode P s c 1 imm) (offset : OperandCode P s c 2 ofs)
     (step : stepI P s ⟨.BUGEINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
@@ -115,7 +115,7 @@ theorem bugeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm
 `.unsupported` (it would index before `caml_atom_table`), so a successful
 step supplies the arm's nonnegativity. -/
 theorem atom_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
-    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c .ATOM)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ATOM)
     (operand : OperandCode P s c 1 w) (step : stepI P s ⟨.ATOM, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
   change (if w.toInt < 0 then Res.unsupported
