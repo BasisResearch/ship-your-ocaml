@@ -1,6 +1,7 @@
 import OCaml.Vm.Boot.WhileMin
 import OCaml.Programs.WhileMinChecks
 import OCaml.Vm.Gc.FreePlacement
+import OCaml.Vm.Gc.LargePlacement
 
 /-! G1 room at the captured `whileMin` cut: the nursery left at the cut
 (262,044 words) covers the whole F1 budget beyond the 100-word initial heap,
@@ -48,3 +49,22 @@ theorem whileMin_free_above_nursery :
   decide +kernel
 
 end OCaml.Vm.Gc
+
+namespace OCaml.Vm.Gc
+open OCaml.Bytecode OCaml.Programs Vsa.Machine Vsa.Sim.Boot Boot
+
+/-- The cut's least large block lies in a region starting above the nursery. -/
+theorem whileMin_leastIn :
+    ∃ lo, (runtimeFields WhileMin.cut).youngEnd ≤ lo ∧
+      BestFitLarge.LeastIn lo Layout.sym_heap_end WhileMin.cut := by
+  obtain ⟨b, shape, above, free⟩ := whileMin_free_above_nursery
+  refine ⟨b.block - 8, by omega, ?_⟩
+  have least : BestFitLarge.least WhileMin.cut = BitVec.ofNat 64 b.block := by
+    apply BitVec.eq_of_toNat_eq
+    rw [show (BestFitLarge.least WhileMin.cut).toNat = b.block from shape.least, BitVec.toNat_ofNat]
+    have := shape.fits
+    simp only [Layout.sym_heap_end, Layout.value_bytes] at this
+    omega
+  unfold BestFitLarge.LeastIn
+  rw [least]
+  exact free

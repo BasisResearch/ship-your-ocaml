@@ -92,7 +92,13 @@ Free-list placement (toward `OwnedFrame.targetOutside`/`payloadOutside`):
   null-terminated small list, every block in `[lo, hi)`), its frame law, and
   `SmallChain.pop` / `SmallListsIn.pop`: the actual exact-size pop returns a
   block in `[lo, hi)` and keeps all 16 lists in place.
-- Next: the large tree (nodes, `bf_split` remnant reinsertion), then the
+- `OCaml/Vm/Gc/LargePlacement.lean:BestFitLarge.Split.placed`: the proved
+  large path splits `bf_large_least`; if that block is `LeastIn lo hi`, the
+  returned block lies in `[lo, hi)`, the least pointer is unchanged and the
+  remnant stays `LeastIn lo result`. `whileMin_leastIn`: holds at the cut with
+  `lo` above the nursery. (The tree-search/removal paths are not yet proved
+  allocator paths, so no tree-wide invariant is needed by current proofs.)
+- Next: the
   general invariant over small lists and the large tree (every free
   block `FreeIn majorLo heap_end`), preserved by each `bf_allocate` path; then
   `OwnedFrame` target/payload facts from it.
