@@ -2,7 +2,7 @@
 
 ## Current status
 
-**2026-10-05 (Claude session, taking over from Codex).** 18/30 summaries proved.
+**2026-10-05 (Claude session, taking over from Codex).** 19/30 summaries proved.
 Landed `88ba657`: the argv copy and pair-allocation stages
 (`ArgvTupleCopied.lean`, `ArgvTupleAllocated.lean`) with byte-copy-log,
 pair-field and observational access-plan transport lemmas.
@@ -13,8 +13,12 @@ discharges all 13 scalar accesses of the generated tuple-finishing block from
 `Caml_state`, saved ra/s0/s1/s2) are recovered from the exact write logs
 (`saved_readback`, `Gc.word_writeLog_at`). Remaining premises are static
 layout/separation (`FinishStageInput`).
-Open, next: the represented contract `caml_sys_get_argv_primitive` (two
-`VmPayload.allocate` steps: bytes then the pair), then `caml_sys_get_config`
+Done: `caml_sys_get_argv_primitive` (`CamlSysGetArgv.lean`, generated wrapper
+over `ArgvTuple.get_argv_contract` in `GetArgvContract.lean`): two
+`VmPayload.allocate` steps (executable-name bytes, then the pair whose fields
+are the fresh string and `World.argv`), the observational payload/bindings
+frame over `getArgvLog`, and restored s0/s1/s2 (interpreter pc/sp/extra).
+Open, next: `caml_sys_get_config`
 (same copy-string + small-block shape: generate the stage files from one
 template instead of copying), then `caml_sys_exit`, the channel family,
 `caml_format_int`, `caml_register_named_value`.
@@ -481,6 +485,7 @@ exact/observational log APIs. Focused builds pass at default proof budgets.
 | Primitive | Theorem | Location |
 | --- | --- | --- |
 | `caml_sys_executable_name` | `caml_sys_executable_name_primitive` | `CamlSysExecutableName.lean:7` |
+| `caml_sys_get_argv` | `caml_sys_get_argv_primitive` | `CamlSysGetArgv.lean:7` |
 
 Next: allocating configuration/argv and channel primitives, named-value
 registration, output/formatting and process exit. The exit remains 30/30 landed
