@@ -21,6 +21,14 @@ Done (F1 side of the GC):
   `G1Room.step` re-establishes it after a step (`G1Room.reserve`: directly from
   a `NurseryInput` reservation); `G1Room.stack_capacity` gives
   `EnterReady.capacity` from `StackRepr`.
+- `OCaml/Vm/Gc/NurseryGeometry.lean`: the nursery counterpart of a1-arms'
+  `StackGeometry`. `WindowSeparated w` proves `PayloadOutside`/`ImageOutside`/
+  `BindingsOutside` once for any window; `NurseryGeometry` instantiates it
+  with the free nursery `[young_limit, young_ptr)` and gives `NurseryInput`'s
+  `headerWrite`/`youngWrite`/`limitRead`; `reserved_inside` puts the new
+  block's writes in the window, `reserve_outside` + `OutWRange.shrink`
+  re-establish it after the reservation. a1-arms: carry `NurseryGeometry`
+  beside `StackGeometry` and `G1Room`.
 - `OCaml/Vm/Gc/WhileMinG1.lean:whileMin_g1Room`: room at the captured cut
   (`scripts/gen_boot_entry.py` now also emits `stack_low`/`stack_threshold`).
 

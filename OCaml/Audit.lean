@@ -146,6 +146,7 @@ import OCaml.Vm.Primitives.StringCopyReadback
 import OCaml.Programs.LazyForce
 import OCaml.Programs.WhileMinChecks
 import OCaml.Vm.Gc.WhileMinG1
+import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.Observed
 import OCaml.Vm.Primitives.StringCopyFast
 import OCaml.Vm.GcObservation
@@ -295,6 +296,11 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.G1Room.reserve
 #print axioms OCaml.Vm.Gc.G1Room.stack_capacity
 #print axioms OCaml.Vm.Gc.whileMin_g1Room
+#print axioms OCaml.Vm.Gc.WindowSeparated.payload
+#print axioms OCaml.Vm.Gc.NurseryGeometry.header_write
+#print axioms OCaml.Vm.Gc.NurseryGeometry.young_write
+#print axioms OCaml.Vm.Gc.NurseryGeometry.limit_read
+#print axioms OCaml.Vm.Gc.reserve_outside
 #print axioms OCaml.Programs.whileMin_good
 #print axioms OCaml.Bytecode.Good.of_bcHalts
 #print axioms OCaml.bytecode_logic_adequacy
