@@ -35,6 +35,18 @@ structure EvenPlace (pl : Place) : Prop where
 table base (`Atom(t) = atomBase + 8 * t + 8`). -/
 def atomTableBytes : Nat := 8 * 257
 
+/-- Word alignment of the placement (malloc'd code buffer, word-aligned
+blocks and atom table). Needed where the runtime tests low bits of a value
+(`Is_exception_result` at STOP: `(res & 3) == 2`). Implies `EvenPlace`. -/
+structure WordPlace (pl : Place) : Prop where
+  code : pl.codeBase % 4 = 0
+  heap : ∀ l a, pl.φ l = some a → a % 8 = 0
+  atoms : pl.atomBase % 8 = 0
+
+theorem WordPlace.even {pl : Place} (h : WordPlace pl) : EvenPlace pl :=
+  ⟨by have := h.code; omega, fun l a ha => by have := h.heap l a ha; omega,
+    by have := h.atoms; omega⟩
+
 /-- The VM stack's allocation, `[high - stackBytes, high)`. -/
 def stackWindow (high : Nat) : W := ⟨high - Layout.stackBytes, high⟩
 
@@ -69,6 +81,8 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
     a + 8 * o.wosize ≤ Vsa.Sim.DlHeap.heapEnd
   /-- placed words are even (ISINT, BRANCHIF, block SWITCH) -/
   even : EvenPlace pl
+  /-- placed words are word-aligned (STOP's exception-result test) -/
+  words : WordPlace pl
   /-- every placed object starts above `.bss` (its header included) -/
   heapLow : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o → Layout.sym_bss_end + 8 ≤ a
   /-- the code buffer and the atom table lie in the arena, apart from each
@@ -136,6 +150,7 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
     obtain ⟨o, ho, size⟩ := objects l o' object
     simpa only [size] using g.heapArena l a o placed ho
   even := g.even
+  words := g.words
   heapLow l a o' placed object := by
     obtain ⟨o, ho, -⟩ := objects l o' object
     exact g.heapLow l a o placed ho
@@ -221,6 +236,7 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
       cases found
       exact np.arenaEnd
   even := g.even
+  words := g.words
   heapLow l a' o' found object := by
     rw [heap] at object
     rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
