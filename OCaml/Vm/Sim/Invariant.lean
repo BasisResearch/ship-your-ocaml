@@ -23,6 +23,14 @@ namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim
 
+/-- Only alignment, not a heap graph property: necessary for ISINT to
+classify represented pointers and bytecode addresses as non-integers. A
+property of the placement alone, so every arm preserves it. -/
+structure EvenPlace (pl : Place) : Prop where
+  code : pl.codeBase % 2 = 0
+  heap : ∀ l a, pl.φ l = some a → a % 2 = 0
+  atoms : pl.atomBase % 2 = 0
+
 /-- The VM stack's allocation, `[high - stackBytes, high)`. -/
 def stackWindow (high : Nat) : W := ⟨high - Layout.stackBytes, high⟩
 
@@ -52,6 +60,8 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
   domainArena : (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes ≤ Vsa.Sim.DlHeap.heapEnd
   heapArena : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     a + 8 * o.wosize ≤ Vsa.Sim.DlHeap.heapEnd
+  /-- placed words are even (ISINT, BRANCHIF, block SWITCH) -/
+  even : EvenPlace pl
 
 /-- The geometry depends on the state only through object sizes and the
 channel records, and on the configuration only through two pointer words. -/
@@ -78,6 +88,7 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
   heapArena l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     simpa only [size] using g.heapArena l a o placed ho
+  even := g.even
 
 /-- Same heap and world: only the two pointer words need framing. -/
 theorem StackGeometry.same {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
@@ -139,5 +150,6 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
     · rw [placed] at found
       cases found
       exact below
+  even := g.even
 
 end OCaml.Vm.Sim

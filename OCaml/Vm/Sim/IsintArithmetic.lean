@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.Invariant
 import OCaml.Vm.Sim.ImmediateArithmetic
 import OCaml.Vm.Repr
 
@@ -22,13 +23,6 @@ theorem isintWord_eq (w : BitVec 64) :
 
 theorem ofBool_int (b : Bool) : Val.ofBool b = .int (if b then 1#63 else 0#63) := by
   cases b <;> rfl
-
-/-- Only alignment, not a heap graph property: necessary for ISINT to
-classify represented pointers and bytecode addresses as non-integers. -/
-structure EvenPlace (pl : Place) : Prop where
-  code : pl.codeBase % 2 = 0
-  heap : ∀ l a, pl.φ l = some a → a % 2 = 0
-  atoms : pl.atomBase % 2 = 0
 
 theorem valWord_parity {pl : Place} (aligned : EvenPlace pl) {v : Val} {w : BitVec 64}
     (repr : valWord pl v = some w) (notRaw : ∀ x, v ≠ .raw x) :
