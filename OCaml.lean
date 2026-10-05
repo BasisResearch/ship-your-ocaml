@@ -33,6 +33,7 @@ import OCaml.Vm.Reloc
 import OCaml.Refinement
 import OCaml.RefinementF1
 import OCaml.Programs.F1Check
+import OCaml.Programs.WhileMinOffsets
 import OCaml.Vm.Sim.Invocation
 import OCaml.Vm.Sim.InterpEntrySaveSegment
 import OCaml.Vm.Sim.InterpEntrySavePins
