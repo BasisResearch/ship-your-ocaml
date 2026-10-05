@@ -44,9 +44,20 @@ An opcode missing from both lists belongs to a1-arms. Record a disputed or
 moved opcode here, in the same commit as the change.
 
 ## The arm contract (a1-arms)
-`ArmSim` is stated over `LoopAt L P s c` (`OCaml/Refinement.lean`), which is
-`Running L P s c` plus the dispatch clock `c.tick < 2`. The clock is a run
-invariant (`StepsN.tick_lt`, `OCaml/Run/Clock.lean`). `LoopAt.of_plus` turns
-any arm's `Running` conclusion into `LoopAt`, so no arm threads the clock.
-Stack geometry and the other a1-arms invariant fields go in
-`OCaml/Vm/Sim/Invariant.lean`.
+`ArmSim` is stated over `LoopAt L P s c` (`OCaml/Refinement.lean`):
+* `running : Running L P s c`;
+* `clock : c.tick < 2`. This is a run invariant (`StepsN.tick_lt`), so no
+  arm threads it;
+* `stack : StackPlaced P s c`: some representation witness together with
+  `StackGeometry` (`OCaml/Vm/Sim/Invariant.lean`). The VM stack window
+  `[high - Layout.stackBytes, high)` lies above `.bss`, inside RAM, and apart
+  from `Caml_state`, the code, the live objects, the channels and the
+  primitive entries.
+
+`LoopAt.of_plus` rebuilds `LoopAt` from an arm's `Running` result plus the
+`StackPlaced` of that result. `InvariantUse.lean` turns the geometry into
+the arms' stack premises: `StackGeometry.payload`/`.image`/`.bindings` (every
+write in `[high - stackBytes, sp)` is outside the payload, the image and the
+bindings), `.read`, `.write` and `stack_space` (stack space from
+`Fits`, given `8 * B.stackWords ≤ Layout.stackBytes`). bprime's entry
+supplies `StackPlaced` at the cut.

@@ -3,6 +3,7 @@ import OCaml.Vm.Platform
 import Vsa.Densify
 import OCaml.Run.Machine
 import OCaml.Run.Clock
+import OCaml.Vm.Sim.Invariant
 
 /-!
 # Layer A: `ocamlrun` refines `BcSem`
@@ -155,20 +156,29 @@ theorem ocamlrun_refinement_fillZero {L : Layout} {B : Budget} (H : OcamlrunSim 
 /-- At least one machine step. -/
 def Plus (c c' : Config) : Prop := ∃ n, StepsN (n + 1) c c'
 
+/-- The represented state together with the VM stack geometry of the same
+placement (`OCaml/Vm/Sim/Invariant.lean`). -/
+def StackPlaced (P : Prog) (s : St) (c : Config) : Prop :=
+  ∃ pl cp sp high, VmReprAt P s c pl cp sp high ∧ Vm.Sim.StackGeometry P s c pl cp high
+
 /-- **The loop-head invariant of the per-arm obligations**: `Running` plus
-the facts every arm needs that `Running` does not carry. `clock` is the
-platform tick counter that the generated segment lemmas consume; it is a
-run invariant (`StepsN.tick_lt`), so arms conclude plain `Running` and
-`LoopAt.of_plus` restores it. Further common-invariant fields are added
-here (docs/lanes/F1-split.md). -/
+the facts every arm needs that `Running` does not carry.
+* `clock`: the platform tick counter the generated segment lemmas consume.
+  It is a run invariant (`StepsN.tick_lt`), so `LoopAt.of_plus` restores it.
+* `stack`: the VM stack window and its separation from the rest of the
+  payload, for the placement of some representation witness.
+Ownership and further fields: docs/lanes/F1-split.md. -/
 structure LoopAt (L : Layout) (P : Prog) (s : St) (c : Config) : Prop where
   running : Running L P s c
   clock : c.tick < 2
+  stack : StackPlaced P s c
 
-/-- An arm's `Running` conclusion re-establishes the loop-head invariant. -/
+/-- An arm's `Running` conclusion, with the stack geometry of its result,
+re-establishes the loop-head invariant. -/
 theorem LoopAt.of_plus {L : Layout} {P : Prog} {s s' : St} {c c' : Config}
-    (h : LoopAt L P s c) (run : Plus c c') (running : Running L P s' c') : LoopAt L P s' c' :=
-  ⟨running, let ⟨_, hn⟩ := run; hn.tick_lt h.clock⟩
+    (h : LoopAt L P s c) (run : Plus c c') (running : Running L P s' c')
+    (stack : StackPlaced P s' c') : LoopAt L P s' c' :=
+  ⟨running, let ⟨_, hn⟩ := run; hn.tick_lt h.clock, stack⟩
 
 /-- **The per-instruction obligations** for one program: entry, one per
 `step` outcome. Each field is what one family of generated segment proofs

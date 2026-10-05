@@ -65,6 +65,9 @@ def collector_layout():
         "off_ephe_ref_ephe": "offsetof(struct caml_ephe_ref_elt, ephe)",
         "off_ephe_ref_offset": "offsetof(struct caml_ephe_ref_elt, offset)",
         "ext_table_bytes": "sizeof(struct ext_table)",
+        "domainStateBytes": "sizeof(caml_domain_state)",
+        "stackBytes": "Stack_size",
+        "stackThresholdBytes": "Stack_threshold",
         **{f"off_ext_table_{name}": f"offsetof(struct ext_table, {name})"
            for name in ("size", "capacity", "contents")},
     }

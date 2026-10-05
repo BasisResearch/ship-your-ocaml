@@ -1,6 +1,8 @@
 import OCaml.Run.Kernel
 import OCaml.Run.Machine
 import OCaml.Run.Clock
+import OCaml.Vm.Sim.Invariant
+import OCaml.Vm.Sim.InvariantUse
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax

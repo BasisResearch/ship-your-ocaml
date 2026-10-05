@@ -2,18 +2,29 @@
 
 ## Current (F1 round, 2026-10-05)
 
-Done: `ArmSim` is now stated over `LoopAt L P s c`
-(`OCaml/Refinement.lean`), which is `Running` plus the dispatch clock
-`c.tick < 2`. `StepsN.tick_lt` (`OCaml/Run/Clock.lean`, via the new kernel law
-`Run.iter_inv`) makes the clock a run invariant. `LoopAt.of_plus` turns any
-arm's `Running` conclusion into `LoopAt`, so no arm threads the clock. The
-contract is appended to the foreman's `docs/lanes/F1-split.md`.
+Done (landed 741ad7a): `ArmSim` is stated over `LoopAt L P s c`
+(`OCaml/Refinement.lean`). `StepsN.tick_lt` (`OCaml/Run/Clock.lean`, from the
+new kernel law `Run.iter_inv`) makes the dispatch clock a run invariant.
 
-Open, next: the stack-geometry and dispatch-register part of the invariant
-(`OCaml/Vm/Sim/Invariant.lean`). a2-sem supplies code geometry,
-decode-to-fetch and the not-method-cache fact (`CodeFacts.lean`). Then the
-unconditional `ArmSim.next` cases for a1-arms' families, over bprime's
-`F1Loop`, which is `LoopAt` + `Invocation`.
+Done (this commit): `LoopAt.stack : StackPlaced P s c`, the
+`StackGeometry` of a representation witness (`OCaml/Vm/Sim/Invariant.lean`).
+The VM stack window `[high - Layout.stackBytes, high)` lies above `.bss` and
+inside RAM, apart from `Caml_state`, code, live objects, channels and
+primitive entries. `Layout.stackBytes`, `stackThresholdBytes` and
+`domainStateBytes` are compiler-measured by `gen_layout.py`.
+`InvariantUse.lean` derives the full `PayloadOutside`/`ImageOutside`/
+`BindingsOutside` for any write in `[high - stackBytes, sp)`
+(`StackGeometry.payload`, `.image`, `.bindings`), the stack read and write
+windows (`.read`, `.write`), and `stack_space` from `Fits`.
+
+Open, next:
+* `StackPlaced` preservation per family: a monotonicity lemma for
+  non-allocating arms (same heap, `Live` shrinks, frame words unchanged);
+  allocating arms need the nursery to be apart from the stack window.
+* The first unconditional `ArmSim.next` cases (stack family), consuming
+  a2-sem's `CodeFacts.lean` for fetch, code geometry and the method cache.
+* bprime's `F1Loop` = `LoopAt` + `Invocation`; arms supply
+  `InvocationOutside` from their write logs.
 
 ## Shared heap-field update facts
 

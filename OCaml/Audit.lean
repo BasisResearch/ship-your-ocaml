@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
 import OCaml.Vm.Sim.DivisionZeroCaught
@@ -306,6 +307,12 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms Vsa.Machine.Step.tick_lt
 #print axioms Vsa.Machine.StepsN.tick_lt
 #print axioms OCaml.LoopAt.of_plus
+#print axioms OCaml.Vm.Sim.StackGeometry.payload
+#print axioms OCaml.Vm.Sim.StackGeometry.image
+#print axioms OCaml.Vm.Sim.StackGeometry.bindings
+#print axioms OCaml.Vm.Sim.StackGeometry.read
+#print axioms OCaml.Vm.Sim.StackGeometry.write
+#print axioms OCaml.Vm.Sim.stack_space
 #print axioms OCaml.Run.div_iff_not_halts
 #print axioms OCaml.Run.ConsPres.iff
 #print axioms OCaml.Run.ClosPres.iff
