@@ -141,6 +141,8 @@ import OCaml.Os.DirectoryObstruction
 import OCaml.Bytecode.Callback
 import OCaml.Vm.Primitives.StringCopyReadback
 import OCaml.Programs.LazyForce
+import OCaml.Programs.WhileMinChecks
+import OCaml.Vm.Gc.WhileMinG1
 import OCaml.Vm.Gc.Observed
 import OCaml.Vm.Primitives.StringCopyFast
 import OCaml.Vm.GcObservation
@@ -254,6 +256,14 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.boot_meaning
 #print axioms OCaml.endToEnd_ocaml
 #print axioms OCaml.Programs.whileMin_bcSem
+#print axioms OCaml.Run.checkAll_reach
+#print axioms OCaml.Bytecode.gcSafe_of_noForward
+#print axioms OCaml.Programs.whileMin_fits
+#print axioms OCaml.Programs.whileMin_gcSafe
+#print axioms OCaml.Vm.Gc.G1Room.nursery_capacity
+#print axioms OCaml.Vm.Gc.G1Room.step
+#print axioms OCaml.Vm.Gc.G1Room.stack_capacity
+#print axioms OCaml.Vm.Gc.whileMin_g1Room
 #print axioms OCaml.bytecode_logic_adequacy
 #print axioms OCaml.endToEnd_of_layers
 #print axioms OCaml.ocamlrun_refinement_of_arms'

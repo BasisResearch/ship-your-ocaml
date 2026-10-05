@@ -1,5 +1,38 @@
 # Lane a6-gc
 
+## F1 status (2026-10-05) — current
+
+Done (F1 side of the GC):
+- `GcSafe` for programs without `Forward_tag` blocks:
+  `OCaml/Bytecode/GcSafeNoForward.lean:gcSafe_of_noForward` (`NoForward P`:
+  no reachable heap holds a tag-250 block; then every `FwdReduction` is the
+  identity and `GcReach` collapses to `Reach`).
+- `OCaml/Run/Checked.lean:checkAll_reach`: one kernel evaluation of a fold
+  over a finite run proves a `Bool` predicate at every reachable state
+  (`reach_of_checkAll` for BcSem). a2-sem can reuse it for `Good whileMin`
+  (`ok s := step P s` is neither unsupported nor wrong).
+- `OCaml/Programs/WhileMinChecks.lean`: `whileMin_checked` (8 GB, ~40 s),
+  `whileMin_fits : Fits g1Budget whileMin` (peak 18 stack / 125 heap words,
+  100 initial), `whileMin_noForward`, `whileMin_gcSafe`.
+- `OCaml/Vm/Gc/G1Room.lean`: `g1Budget = ⟨3840, 262044⟩` and the G1 room
+  relation `G1Room B s c` (nursery `young_limit + 8*(B - words) ≤ young_ptr`;
+  `stack_threshold + 8*B.stackWords ≤ stack_high`).
+  `G1Room.nursery_capacity` gives `NurseryInput.capacity` in its exact shape;
+  `G1Room.step` re-establishes it after a step; `G1Room.stack_capacity` gives
+  `EnterReady.capacity` from `StackRepr`.
+- `OCaml/Vm/Gc/WhileMinG1.lean:whileMin_g1Room`: room at the captured cut
+  (`scripts/gen_boot_entry.py` now also emits `stack_low`/`stack_threshold`).
+
+For other lanes:
+- a1-arms: carry `G1Room B s c` in the common loop invariant. Each allocating
+  family discharges `G1Room.step`'s `ptr` premise: `young_ptr` moves down by at
+  most the words `BcSem` adds (header included); non-allocating arms leave
+  `young_ptr`, `young_limit`, `stack_threshold`, `stack_high` unchanged.
+- bprime: `whileMin_fits`, `whileMin_gcSafe` for the `Halts` instance; transport
+  `whileMin_g1Room` from the cut to the loop head through the prologue.
+
+Open: G2 (collector proper) resumes after F1; see entries below.
+
 ## Source objects through the copying loop (2026-10-05)
 
 - `CopyLoop.lean:run_copy_loop_indexed` generalizes the copying fold to views

@@ -27,6 +27,18 @@ theorem read_stack_high (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initi
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := WhileMinRuntime.domain + Layout.off_stack_high) (w := 8) (by decide +kernel)]
   decide +kernel
 
+theorem read_stack_low (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (WhileMinRuntime.domain + Layout.off_stack_low) = 0x803837b0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := WhileMinRuntime.domain + Layout.off_stack_low) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_stack_threshold (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (WhileMinRuntime.domain + Layout.off_stack_threshold) = 0x80383fb0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := WhileMinRuntime.domain + Layout.off_stack_threshold) (w := 8) (by decide +kernel)]
+  decide +kernel
+
 theorem read_extern_sp (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word c (WhileMinRuntime.domain + Layout.off_extern_sp) = 0x8038b7b0#64 := by
   unfold word
