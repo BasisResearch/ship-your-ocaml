@@ -43,7 +43,12 @@ Unconditional loop-head simulations, all from `LoopAt` and named premises:
 * operand `_next` forms (hand, a2-sem style), taking the operand fetch:
   ACC n, PUSHACC n, POP, ASSIGN, ENVACC n (`OperandStackRows`), OFFSETCLOSURE
   n, PUSHOFFSETCLOSURE n (`OffsetRows`), and GETGLOBAL, PUSHGETGLOBAL,
-  GETGLOBALFIELD, PUSHGETGLOBALFIELD (`GlobalRows`), APPLY1–3 (`ApplyRows`).
+  GETGLOBALFIELD, PUSHGETGLOBALFIELD (`GlobalRows`), APPLY1–3 (`ApplyRows`),
+  RETURN (`ReturnRows`), APPTERM1–3 (`StackLog`), PUSH_RETADDR (`RetaddrRows`),
+  GRAB satisfied path (`GrabRows`), RESTART (`RestartRows`). `StackLogOk.of_window`
+  certifies any aligned word log confined to the VM stack allocation once.
+  RETURN/GRAB name two BcSem invariants (extra < 2^63; saved frame extras ≥ 0),
+  asked of a2-sem.
 
 Shared lemmas are in `StackRows.lean` and `ClosureOffsetRows.lean`.
 `StackGeometry` places code, atoms and objects (`heapLow`, `codeLow/Arena`,
