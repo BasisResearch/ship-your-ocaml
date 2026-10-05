@@ -51,6 +51,7 @@ import OCaml.Vm.Boot.Startup.CustomReset
 import OCaml.Vm.Boot.Startup.SharedTableReset
 import OCaml.Vm.Boot.Startup.EmbedFrame
 import OCaml.Vm.Boot.Startup.SearchTableReset
+import OCaml.Vm.Boot.Startup.PathReset
 import OCaml.Vm.Boot.Startup.CustomPrefix
 import OCaml.Vm.Boot.Startup.CustomEntry
 import OCaml.Vm.Boot.Startup.StartupAuxReset
@@ -3850,6 +3851,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.keep9
 #print axioms OCaml.Vm.Boot.WhileMinImage.argv0_string
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_search_table_returned_exists
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_path_missed_exists
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetSearchTableReturned.kept
+#print axioms OCaml.Vm.Boot.Startup.strncmp_mismatch
+#print axioms OCaml.Vm.Boot.Startup.findenv_miss
+#print axioms OCaml.Vm.Boot.Startup.getenv_miss
+#print axioms OCaml.Vm.Boot.Startup.find_release
 #print axioms OCaml.Vm.Boot.Startup.attempt_open_save
 #print axioms OCaml.Vm.Boot.Startup.attempt_open_name
 #print axioms OCaml.Vm.Boot.Startup.search_exe_prefix

@@ -2,6 +2,29 @@
 
 ## Round 2 status (2026-10-05)
 
+**`PathReset.lean:reset_path_missed_exists` extends the CLOSED reset run through
+caml_search_exe_in_path's `getenv("PATH")` returning NULL (return at 0x8002555c).**
+The reusable pieces:
+* `strncmp_mismatch` (StrncmpDiffer.lean): unaligned dispatch, a differing
+  first byte, and the native `subw` return. `strncmpDiff_ne` proves the
+  result nonzero.
+* `find_skip` (a nonzero compare skips to a null next entry) and
+  `find_release` (unlock + return; `find_tail` now reuses it).
+* `findenv_miss` and `getenv_miss` (one-entry environment, no match), with
+  the generic `getenv_saved_below`.
+
+`KeptImage` (EmbedFrame.lean) carries the embed bytes and main's `environ`
+publication together; `EmbedFrame` now also keeps the `environ` word.
+`gen_startup_rows.py` certifies rodata C-string literals generically
+(`literal_names`), now also `"PATH"` (PathName.lean). Landing now batches
+work, with a second worktree `../a0-boot-next`.
+
+Next: caml_decompose_path(&path, NULL); caml_search_in_path("ocamlrun") →
+caml_stat_strdup (strlen + stat_alloc_noexc/malloc + memcpy: the library
+`strlen_call`/`memcpy_summary` need StrRead/ROHolds for the .embed string),
+caml_stat_free(NULL), caml_ext_table_free (free contract), return.
+
+
 **`SearchTableReset.lean:reset_search_table_returned_exists` extends the CLOSED
 reset run into caml_attempt_open(&exe_name = "ocamlrun") → caml_search_exe_in_path,
 through `caml_ext_table_init(&path, 8)` on the stack-local table (return at
