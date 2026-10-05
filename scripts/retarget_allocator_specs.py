@@ -19,7 +19,11 @@ TEMPLATES = ROOT / 'experiments/syi/allocator-template'
 
 def units(insts, syms):
     gp = syms['__global_pointer$'][0]
-    addrnames = {a: n for n, (a, _) in syms.items()}
+    # Coincident symbols (e.g. brk.0 and __bss_start) come out of nm in a
+    # host-dependent order; prefer program symbols over linker ones, by name.
+    addrnames = {}
+    for n, (a, _) in sorted(syms.items(), key=lambda kv: (kv[0].startswith('_'), kv[0])):
+        addrnames.setdefault(a, n)
     def target(a):
         # The fixed .embed boundary aliases __heap_end. Match its role,
         # independent of nm's ordering of coincident linker symbols.
