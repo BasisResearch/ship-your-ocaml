@@ -44,20 +44,28 @@ An opcode missing from both lists belongs to a1-arms. Record a disputed or
 moved opcode here, in the same commit as the change.
 
 ## The arm contract (a1-arms)
-`ArmSim` is stated over `LoopAt L P s c` (`OCaml/Refinement.lean`):
-* `running : Running L P s c`;
-* `clock : c.tick < 2`. This is a run invariant (`StepsN.tick_lt`), so no
-  arm threads it;
-* `stack : StackPlaced P s c`: some representation witness together with
-  `StackGeometry` (`OCaml/Vm/Sim/Invariant.lean`). The VM stack window
-  `[high - Layout.stackBytes, high)` lies above `.bss`, inside RAM, and apart
-  from `Caml_state`, the code, the live objects, the channels and the
-  primitive entries.
+`ArmSim` is stated over `LoopAt L P s c` (`OCaml/Refinement.lean`), which is
+`Running L P s c` plus `clock : c.tick < 2`. The clock is a run invariant
+(`StepsN.tick_lt`): `LoopAt.of_plus h run running` restores it, so no arm
+threads it.
 
-`LoopAt.of_plus` rebuilds `LoopAt` from an arm's `Running` result plus the
-`StackPlaced` of that result. `InvariantUse.lean` turns the geometry into
-the arms' stack premises: `StackGeometry.payload`/`.image`/`.bindings` (every
-write in `[high - stackBytes, sp)` is outside the payload, the image and the
-bindings), `.read`, `.write` and `stack_space` (stack space from
-`Fits`, given `8 * B.stackWords ≤ Layout.stackBytes`). bprime's entry
+`Running` carries `stack : StackPlaced P s c`: a representation witness
+together with its `StackGeometry` (`OCaml/Vm/Sim/Invariant.lean`). The VM
+stack window `[high - Layout.stackBytes, high)` lies above `.bss`, inside RAM,
+and apart from `Caml_state`, the code, every placed object, the channels and
+the primitive entries. Every arm bridge proves it for its result at the shared
+restore sites. Allocating families take a named `stackApart` premise: the new
+object is placed apart from the window (a6-gc's nursery bounds).
+`ArmInput.of_loop` enters an arm from `LoopAt` and the code facts
+(a2-sem's `CodeFacts.lean`). `InvariantUse.lean` turns the geometry into the
+arms' stack premises: `StackGeometry.payload`/`.image`/`.bindings` for any
+write in `[high - stackBytes, sp)`, `.read`, `.write`, and `stack_space` from
+`Fits` (given `8 * B.stackWords ≤ Layout.stackBytes`). bprime's entry
 supplies `StackPlaced` at the cut.
+
+`Running` also carries `native : NativePlaced c` (`∃ D, Invocation D c ∧
+NativeValid D`, `OCaml/Vm/Sim/Invocation.lean`), which is preserved by every
+arm bridge. `ArmInput.of_loop h code` enters any arm from `LoopAt`.
+`code : DispatchCode P s c op` is the named obligation for a2-sem's
+`CodeFacts.lean`: opcode-word geometry, fetch, not a method-cache slot.
+Model row: `acc0_next` (`AccRows.lean`).

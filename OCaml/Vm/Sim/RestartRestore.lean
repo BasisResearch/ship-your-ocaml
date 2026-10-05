@@ -33,6 +33,8 @@ structure RestartPost (before : Config) (s : St) (pl : Place) (sp a : Nat)
   memory : after.σ.mem = writeLog before.σ.mem (restartLog before sp a fields)
   output : after.σ.sailOutput = before.σ.sailOutput
   loop : LoopRegisters after
+  /-- the native stack pointer is unchanged -/
+  nativeSp : gpr after 2 = gpr before 2
 
 /-- Copying the saved closure fields restores RESTART's stack and root graph. -/
 theorem restart_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Config}
@@ -41,7 +43,9 @@ theorem restart_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     (data : VmReprAt P s before pl cp sp high) (platform : PlatformOk L.runtimeOk before)
     (block : BlockSelection s.heap pl s.env l a tag fields) (environment : fields[2]? = some env)
     (space : RestartWriteOk P s before pl cp sp high a fields)
-    (post : RestartPost before s pl sp a fields env after) :
+    (post : RestartPost before s pl sp a fields env after)
+    (geometry : StackGeometry P s before pl cp high)
+    (native : NativePlaced before) :
     Running L P (restartState s fields env) after := by
   have arguments : ValueWords pl (fields.drop 3) (stackWords before (a + 24) (fields.length - 3)) :=
     block.words (payload_of_repr data) (by simp [roots]) 3
@@ -65,5 +69,7 @@ theorem restart_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable before after memoryFrame platform.runtime⟩ post.toVmRegisters post.loop
+    (geometry.frame_log rfl rfl space.payload.core.domain space.bindings.contents post.memory)
+    (native.frameOn memoryFrame (by simp only [List.mem_singleton, forall_eq]; exact geometry.stack_below (by have := data.stack.1; omega)) (Reloc.bytesT_congr (copied_of_writeLog post.memory space.payload.core.domain)) post.nativeSp)
 
 end OCaml.Vm.Sim

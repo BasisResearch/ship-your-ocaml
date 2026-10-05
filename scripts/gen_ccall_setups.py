@@ -143,6 +143,9 @@ theorem c_call@ARITY@_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config
       omega
     · simpa only [domainAddress] using space.externWindow.read
   · exact post.pcAt
+  · exact h.geometry.frame_log rfl rfl space.payload.domain space.bindings.contents written
+  · exact space.native h.native h.geometry h.stack domainWord written
+      ((frame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide)))
 
 end OCaml.Vm.Sim
 '''

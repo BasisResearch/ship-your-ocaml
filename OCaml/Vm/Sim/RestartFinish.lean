@@ -58,11 +58,12 @@ theorem restart_finish {L : OCaml.Layout} {P : Prog} {s : St} {c middle d : Conf
     refine ⟨⟨post.pcAt, PinsHold.get post.pins ⟨0, by simp⟩,
       (frame.frame Register.x9 (by decide)).trans spReg, ?_,
       ⟨_, PinsHold.get post.pins ⟨2, by simp⟩, envWord⟩, PinsHold.get post.pins ⟨1, by simp⟩⟩,
-      post.good, memory.trans written, frame.out.trans (copied.frame.out.trans front.frame.out), ?_⟩
+      post.good, memory.trans written, frame.out.trans (copied.frame.out.trans front.frame.out), ?_,
+      ((frame.frame (gprReg 2) (by decide)).trans ((copied.frame.frame (gprReg 2) (by decide)).trans (front.frame.frame (gprReg 2) (by decide))))⟩
     · obtain ⟨w, reg, value⟩ := h.accu
       exact ⟨w, (frame.frame Register.x21 (by decide)).trans
         ((copied.frame.frame Register.x21 (by decide)).trans ((front.frame.frame Register.x21 (by decide)).trans reg)), value⟩
     · exact loopRegisters_frame (fun r hr => frame.frame r (by revert r; decide)) loop
-  exact ⟨nb, after, steps, restart_restore stable h.toVmReprAt h.running.platform block environment space.toRestartWriteOk observations⟩
+  exact ⟨nb, after, steps, restart_restore stable h.toVmReprAt h.running.platform block environment space.toRestartWriteOk observations h.geometry h.native⟩
 
 end OCaml.Vm.Sim

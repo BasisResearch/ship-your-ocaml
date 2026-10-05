@@ -10,7 +10,7 @@ open OCaml.Vm.Primitives
 def consumePreserved : List Register :=
   [gprReg Layout.reg_env, gprReg Layout.reg_extra,
    gprReg Layout.reg_dispatchTable, gprReg Layout.reg_opcodeBound,
-   gprReg Layout.reg_pending, gprReg Layout.reg_domain]
+   gprReg Layout.reg_pending, gprReg Layout.reg_domain, gprReg 2]
 
 /-- Register/output observations with an exact, opaque memory effect. -/
 structure StackPost (before : Config) (pl : Place) (pc sp : Nat) (w : BitVec 64)
@@ -23,6 +23,12 @@ structure StackPost (before : Config) (pl : Place) (pc sp : Nat) (w : BitVec 64)
   memory : after.σ.mem = memoryAfter
   output : after.σ.sailOutput = before.σ.sailOutput
   preserved : ∀ r ∈ consumePreserved, after.σ.regs.get? r = before.σ.regs.get? r
+
+/-- Stack bodies keep the native stack pointer. -/
+theorem StackPost.nativeSp {before after : Config} {pl : Place} {pc sp : Nat} {w : BitVec 64}
+    {memoryAfter : Std.ExtHashMap Nat (BitVec 8)} (post : StackPost before pl pc sp w memoryAfter after) :
+    gpr after 2 = gpr before 2 :=
+  post.preserved (gprReg 2) (by decide)
 
 /-- One register reconstruction for stack reads, pushes and in-place edits. -/
 theorem StackPost.registers {P : Prog} {s target : St} {c after : Config}
@@ -70,12 +76,13 @@ theorem consume_value_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : 
     (value : valWord pl v = some w)
     (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
     (bound : count ≤ s.stack.length)
-    (post : ConsumeValuePost c pl pc (sp + 8 * count) w after) :
+    (post : ConsumeValuePost c pl pc (sp + 8 * count) w after)
+    (geometry : StackGeometry P s c pl cp high) (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := v, stack := s.stack.drop count} after := by
   have payload := payload_pc (payload_stack_drop ((payload_of_repr data).accu_of_root v root) bound) pc
   exact readOnly_restore stable payload data.primitives platform
     (post.registers data rfl rfl value) (post.loopRegisters loop)
-    post.good post.memory post.output
+    post.good post.memory post.output (geometry.state rfl rfl) native post.nativeSp
 
 /-- Compose dispatch with a generated consuming body, sharing payload restoration. -/
 theorem consume_value_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
@@ -92,7 +99,8 @@ theorem consume_value_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
   intro d dp
   obtain ⟨nb, after, hb, post⟩ := body d dp
   refine ⟨nb, after, hb, ?_⟩
-  apply consume_value_restore stable h.toVmReprAt h.running.platform h.dispatch.loop value root bound
+  refine consume_value_restore stable h.toVmReprAt h.running.platform h.dispatch.loop value root bound
+    ?_ h.geometry h.native
   simpa only [dp.memory] using post.after_dispatch dp
 
 /-- Existing integer restoration API, obtained from the arbitrary-result rule. -/
@@ -101,9 +109,11 @@ theorem consume_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config
     (stable : MemoryStable L.runtimeOk) (data : VmReprAt P s c pl cp sp high)
     (platform : PlatformOk L.runtimeOk c) (loop : LoopRegisters c)
     (bound : count ≤ s.stack.length)
-    (post : ConsumePost c pl pc (sp + 8 * count) n after) :
+    (post : ConsumePost c pl pc (sp + 8 * count) n after)
+    (geometry : StackGeometry P s c pl cp high) (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := .int n, stack := s.stack.drop count} after :=
-  consume_value_restore stable data platform loop rfl (fun _ hl => by cases hl) bound post
+  consume_value_restore stable data platform loop rfl (fun _ hl => by cases hl) bound post geometry
+    native
 
 /-- Integer binary arms share the general consuming composition. -/
 theorem consume_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}

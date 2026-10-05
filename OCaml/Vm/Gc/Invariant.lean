@@ -73,8 +73,10 @@ structure WritingArmBarrier (P : Prog) (s' : St) (c' : Config) (pl' : Place)
 
 /-- The safety-enhanced loop head projects to the existing a1 relation. -/
 theorem LoopHead.running {L P s c pl cp sp high lo hi remembered}
-    (h : LoopHead L P s c pl cp sp high lo hi remembered) : Running L P s c :=
-  ⟨⟨pl, cp, sp, high, h.data⟩, h.platform, h.loop⟩
+    (h : LoopHead L P s c pl cp sp high lo hi remembered)
+    (stack : Vm.Sim.StackGeometry P s c pl cp high) (native : Vm.Sim.NativePlaced c) :
+    Running L P s c :=
+  ⟨⟨pl, cp, sp, high, h.data⟩, h.platform, h.loop, ⟨pl, cp, sp, high, h.data, stack⟩, native⟩
 
 /-- After every scanned field ceases to be young, an empty table is complete.
 The collector's concrete reset proof must supply the no-young premise. -/

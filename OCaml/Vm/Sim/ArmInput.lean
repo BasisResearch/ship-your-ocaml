@@ -14,6 +14,10 @@ structure ArmInput (L : OCaml.Layout) (P : Prog) (s : St) (op : Opcode)
     extends VmReprAt P s c pl cp sp high where
   dispatch : DispatchInput op (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) c
   runtime : L.runtimeOk c
+  /-- the VM stack geometry of this placement (`Invariant.lean`) -/
+  geometry : StackGeometry P s c pl cp high
+  /-- the native invocation (`Invocation.lean`) -/
+  native : NativePlaced c
 
 /-- Changing only the abstract bytecode PC does not alter the represented
 memory payload. Register restoration is a separate machine obligation. -/
@@ -26,7 +30,8 @@ theorem ArmInput.running {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
     {c : Config} {pl : Place} {cp : ChanPlace} {sp high : Nat}
     (h : ArmInput L P s op c pl cp sp high) : Running L P s c :=
   ⟨⟨pl, cp, sp, high, h.toVmReprAt⟩,
-    ⟨h.dispatch.good, h.dispatch.image, h.runtime⟩, h.dispatch.loop⟩
+    ⟨h.dispatch.good, h.dispatch.image, h.runtime⟩, h.dispatch.loop,
+    ⟨pl, cp, sp, high, h.toVmReprAt, h.geometry⟩, h.native⟩
 
 /-- Geometry for one bytecode-word read. These are architectural RAM limits;
 all program and image addresses are supplied by the representation/Layout. -/
@@ -72,18 +77,37 @@ theorem ArmInput.of_repr {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
     (loop : LoopRegisters c) (tick : c.tick < 2)
     (geometry : CodeReadAt (pl.codeBase + 4 * s.pc))
     (fetch : P.code[s.pc]? = some (BitVec.ofNat 32 op.toNat))
-    (opcodeSlot : methodCacheSlot P.code s.pc = false) :
+    (opcodeSlot : methodCacheSlot P.code s.pc = false)
+    (stack : StackGeometry P s c pl cp high) (native : NativePlaced c) :
     ArmInput L P s op c pl cp sp high := by
   have ha : (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)).toNat =
       pl.codeBase + 4 * s.pc := geometry.toNat
   refine ⟨h, ⟨platform.control, platform.image, loop, h.atHead, h.pc,
-    ?_, tick, ?_, ?_, ?_⟩, platform.runtime⟩
+    ?_, tick, ?_, ?_, ?_⟩, platform.runtime, stack, native⟩
   · rw [ha]
     exact code_read h.code fetch opcodeSlot
   · simpa only [ha] using geometry.lower
   · simpa only [ha] using geometry.upper
   · simpa only [ha, Vsa.Sim.tohostAddr, Vsa.Sim.LibraryLayout.tohostAddr,
       Layout.sym_tohost] using geometry.htif
+
+/-- The code facts dispatch needs at the current bytecode PC: the opcode
+word's RAM geometry under any representation witness, the fetch, and that
+the PC is not a method-cache slot. Named obligation; a2-sem supplies it
+(`CodeFacts.lean`, docs/lanes/F1-split.md). -/
+structure DispatchCode (P : Prog) (s : St) (c : Config) (op : Opcode) : Prop where
+  geometry : ∀ pl cp sp high, VmReprAt P s c pl cp sp high → CodeReadAt (pl.codeBase + 4 * s.pc)
+  fetch : P.code[s.pc]? = some (BitVec.ofNat 32 op.toNat)
+  ordinary : methodCacheSlot P.code s.pc = false
+
+/-- **Arm entry from the loop-head invariant.** The witness is the one that
+carries the stack geometry (`Running.stack`). -/
+theorem ArmInput.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
+    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s c op) :
+    ∃ pl cp sp high, ArmInput L P s op c pl cp sp high := by
+  obtain ⟨pl, cp, sp, high, repr, stack⟩ := h.running.stack
+  exact ⟨pl, cp, sp, high, ArmInput.of_repr repr h.running.platform h.running.loop h.clock
+    (code.geometry pl cp sp high repr) code.fetch code.ordinary stack h.running.native⟩
 
 /-- A represented register has the uniquely determined word of its value. -/
 theorem represented_register {pl : Place} {v : Val} {c : Config} {r : Nat} {w : BitVec 64}

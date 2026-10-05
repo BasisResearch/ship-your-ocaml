@@ -17,6 +17,30 @@ structure CcallSetupPost (ra : BitVec 64) (args : List Val)
   saved : Ccall1Saved {s with pc := s.pc + 2} pl sp (BitVec.ofNat 64 domain)
     (BitVec.ofNat 64 (sp - 16)) env c
   target : pcOf c = some (BitVec.ofNat 64 entry)
+  /-- the VM stack geometry at the callee entry (`Invariant.lean`) -/
+  geometry : StackGeometry P s c pl cp high
+  /-- the native invocation at the callee entry (`Invocation.lean`) -/
+  native : NativePlaced c
+
+/-- C_CALL setup keeps the native invocation: its three stores lie in the
+VM stack and the `Caml_state` record, inside the allocator arena. -/
+theorem Ccall1WriteOk.native {P : Prog} {s : St} {c after : Config} {pl : Place} {cp : ChanPlace}
+    {sp high domain : Nat} {next env : BitVec 64}
+    (space : Ccall1WriteOk P s c pl cp sp domain next env) (n : NativePlaced c)
+    (g : StackGeometry P s c pl cp high) (stack : StackRepr c pl sp high s.stack)
+    (domainWord : word c Layout.sym_Caml_state = BitVec.ofNat 64 domain)
+    (memory : after.σ.mem = writeLog c.σ.mem (ccall1Log sp domain next env))
+    (x2 : gpr after 2 = gpr c 2) : NativePlaced after := by
+  apply n.frame_log (logInW_arena ?_ (ccall1_log_in next env space.room)) space.payload.domain memory x2
+  have hs := stack.1
+  have ha := g.arena
+  have hd := g.domainArena
+  have hn := space.domainNat
+  rw [domainWord, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)] at hd
+  have off : Layout.off_extern_sp + 8 ≤ Layout.domainStateBytes := by decide
+  intro w hw
+  simp only [ccall1Windows, List.mem_cons, List.not_mem_nil, or_false] at hw
+  rcases hw with rfl | rfl <;> simp only <;> omega
 
 abbrev Ccall1SetupPost (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place)
     (cp : ChanPlace) (sp high domain entry : Nat) (env : BitVec 64) :=

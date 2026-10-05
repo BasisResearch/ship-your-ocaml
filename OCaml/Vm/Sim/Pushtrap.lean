@@ -160,6 +160,8 @@ theorem pushtrap_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     simpa only [show sign_extend (m := 64) (0x008#12) = BitVec.ofNat 64 (4 * 2) from by decide, codePc_add] using pc
   refine ⟨nb, after, steps, ?_⟩
   apply pushtrap_restore stable h.toVmReprAt h.running.platform h.dispatch.loop space envWord accuWord
+  case geometry => exact h.geometry
+  case native => exact h.native
   simpa only [dp.memory] using observed.after_dispatch dp
 
 /-- Match the actual PUSHTRAP bytecode transition to its represented frame. -/

@@ -98,6 +98,8 @@ theorem push_retaddr_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
       codePc_add] using pc
   refine ⟨nb, after, steps, ?_⟩
   apply retaddr_restore stable h.toVmReprAt h.running.platform h.dispatch.loop space envWord accuWord
+  case geometry => exact h.geometry
+  case native => exact h.native
   simpa only [dp.memory] using observed.after_dispatch dp
 
 /-- Match the actual PUSH_RETADDR bytecode transition to the represented frame. -/

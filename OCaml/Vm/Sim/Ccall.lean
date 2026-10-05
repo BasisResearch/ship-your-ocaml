@@ -51,6 +51,7 @@ theorem ccall_callee_of_readOnly {ra : BitVec 64} {args : List Val} {L : OCaml.L
         (ReadOnlyPost L.runtimeOk P s pl cp sp high name args v result writes c ra)) :
     CcallCallee ra args L P s pl cp sp high domain entry env name v result s.heap s.world :=
   ⟨fragment, model, fun c setup =>
-    ccall_readOnly_summary (summary c setup.input) preserved setup.saved⟩
+    ccall_readOnly_summary (summary c setup.input) preserved setup.saved setup.geometry
+      setup.native⟩
 
 end OCaml.Vm.Sim

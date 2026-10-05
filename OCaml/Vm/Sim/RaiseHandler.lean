@@ -109,7 +109,11 @@ theorem raise_handler {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {pl : 
   obtain ⟨accu, accuReg, accuWord⟩ := h.accu
   refine ⟨count + loopCount, after, run.append loopRun, ?_⟩
   apply raise_restore stable h.data h.bindings h.platform h.frame space
-  refine ⟨loopPost.good, ?_, loopPost.loop, loopPost.memory.trans (memory.trans memEq), loopPost.frame.out.trans frame.out⟩
+  case geometry => exact h.geometry
+  case native => exact h.native
+  refine ⟨loopPost.good, ?_, loopPost.loop,
+    (loopPost.frame.frame (gprReg 2) (by decide)).trans (frame.frame (gprReg 2) (by decide)),
+    loopPost.memory.trans (memory.trans memEq), loopPost.frame.out.trans frame.out⟩
   refine ⟨loopPost.head, (loopPost.frame.frame _ (by decide)).trans codeReg, ?_,
     ⟨accu, (loopPost.frame.frame _ (by decide)).trans ((frame.frame _ (by decide)).trans accuReg), accuWord⟩,
     ⟨word c (base + 16), (loopPost.frame.frame _ (by decide)).trans envReg, values.environment⟩, ?_⟩

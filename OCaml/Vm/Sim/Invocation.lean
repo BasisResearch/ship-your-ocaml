@@ -1,4 +1,5 @@
 import OCaml.Vm.Primitives.MemoryFrame
+import Vsa.Sim.DlHeap
 
 /-!
 # The native invocation of `caml_interprete`
@@ -78,5 +79,21 @@ theorem Invocation.frame_read {D : InvocationData} {c c' : Config}
     Invocation D c' :=
   h.frame (log := []) ⟨trivial, fun _ _ => trivial⟩
     (fun x _ => by simp only [byte, memory]) stack
+
+/-- What the exits (STOP, caml_sys_exit) need from the entry snapshot: the
+native frames lie above the allocator arena and below the stack top, and the
+saved return addresses of caml_interprete (into caml_main) and of caml_main
+(into main) are the ones startup installed. D-only: preserved trivially. -/
+structure NativeValid (D : InvocationData) : Prop where
+  low : Vsa.Sim.DlHeap.heapEnd ≤ D.nativeSp
+  high : D.nativeSp + Layout.interpFrameBytes + Layout.camlMainFrameBytes ≤ Layout.sym_stack_top
+  aligned : D.nativeSp % 16 = 0
+  interpReturn : ∀ c, Invocation D c → word c (D.nativeSp + Layout.interpSaveOffset 1) = 0x80004ff8#64
+  mainReturn : ∀ c, Invocation D c →
+    word c (D.nativeSp + Layout.interpFrameBytes + Layout.camlMainSaveOffset 1) = 0x80001df0#64
+
+/-- The native invocation at a loop-head configuration: some entry snapshot
+that is intact and valid (`Running.native`). -/
+def NativePlaced (c : Config) : Prop := ∃ D, Invocation D c ∧ NativeValid D
 
 end OCaml.Vm.Sim

@@ -22,6 +22,10 @@ structure ModifyReturn (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp :
   env : ∃ w, gpr c Layout.reg_env = some w ∧ valWord pl s.env = some w
   extra : gpr c Layout.reg_extra = some (BitVec.ofNat 64 s.extra)
   unit : s.accu = .unit
+  /-- the VM stack geometry after the barrier (`Invariant.lean`) -/
+  geometry : StackGeometry P s c pl cp high
+  /-- the native invocation after the barrier (`Invocation.lean`) -/
+  native : NativePlaced c
 
 /-- One restoration rule for all write-barrier caller suffixes. -/
 theorem modify_return_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
@@ -30,6 +34,7 @@ theorem modify_return_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place
     (h : ModifyReturn L P s pl cp sp high codeReg ra codeWord stackWord c)
     (post : StackPost c pl s.pc sp (tag64 0) c.σ.mem after) : Running L P s after := by
   apply readOnly_restore stable h.data h.primitives h.platform ?_ ?_ post.good post.memory post.output
+    (h.geometry.state rfl rfl) h.native post.nativeSp
   · refine ⟨post.head, post.code, post.stack, ⟨tag64 0, post.accu, ?_⟩, ?_, ?_⟩
     · rw [h.unit]; rfl
     · obtain ⟨w, reg, value⟩ := h.env

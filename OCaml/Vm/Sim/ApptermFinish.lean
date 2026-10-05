@@ -77,13 +77,14 @@ theorem appterm_finish {L : OCaml.Layout} {P : Prog} {s : St} {c middle d : Conf
     refine ⟨⟨post.pcAt, PinsHold.get post.pins ⟨5, by simp⟩, PinsHold.get post.pins ⟨3, by simp⟩,
       ⟨_, PinsHold.get post.pins ⟨6, by simp⟩, field.sourceWord⟩,
       ⟨_, PinsHold.get post.pins ⟨2, by simp⟩, field.sourceWord⟩, ?_⟩,
-      post.good, memory.trans written, frame.out.trans (copied.frame.out.trans front.frame.out), ?_⟩
+      post.good, memory.trans written, frame.out.trans (copied.frame.out.trans front.frame.out), ?_,
+      ((frame.frame (gprReg 2) (by decide)).trans ((copied.frame.frame (gprReg 2) (by decide)).trans (front.frame.frame (gprReg 2) (by decide))))⟩
     · have counter : gpr after Layout.reg_extra = some (BitVec.ofNat 64 s.extra + BitVec.ofNat 64 (count - 1)) :=
         PinsHold.get post.pins ⟨4, by simp⟩
       simpa only [tailcallState, tailcall_extra s.extra count positive] using counter
     · exact loopRegisters_frame (fun r hr => frame.frame r (by revert r; decide)) loop
   have arguments := stack_value_words h.stack (Nat.le_trans space.fits space.bound)
   exact ⟨nb, after, steps, tailcall_restore_of_log stable h.toVmReprAt h.running.platform space.toTailcallMemoryOk
-    (reverse_copy_log_words arguments observations.memory) observations⟩
+    (reverse_copy_log_words arguments observations.memory) observations h.geometry h.native⟩
 
 end OCaml.Vm.Sim

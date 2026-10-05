@@ -81,7 +81,7 @@ theorem c_call1_sys_argv_callee {L : OCaml.Layout} {P : Prog} {s : St}
   intro c setup
   have S := caml_sys_argv_primitive stable setup.input (by rw [global c setup]; exact value)
   rw [global c setup] at S
-  exact c_call1_readOnly_summary S (by decide) setup.saved
+  exact c_call1_readOnly_summary S (by decide) setup.saved setup.geometry setup.native
 
 
 end OCaml.Vm.Sim

@@ -117,7 +117,9 @@ theorem retaddr_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     (envWord : valWord pl s.env = some env) (accuWord : valWord pl s.accu = some accu)
     (post : StackPost before pl pc (sp - 24) accu
       (writeLog before.σ.mem (retaddrLog sp (BitVec.ofNat 64 (pl.codeBase + 4 * dest)) env
-        (tag64 (BitVec.ofNat 63 s.extra)))) after) :
+        (tag64 (BitVec.ofNat 63 s.extra)))) after)
+    (geometry : StackGeometry P s before pl cp high)
+    (native : NativePlaced before) :
     Running L P {s with pc := pc, stack := .code dest :: s.env :: Val.ofInt s.extra :: s.stack} after := by
   have payload := retaddr_payload (payload_of_repr data) space envWord post.memory post.output
   have memoryFrame : FrameOn [⟨sp - 24, sp⟩] before.σ.mem after.σ.mem := by
@@ -129,5 +131,7 @@ theorem retaddr_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable before after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl accuWord) (post.loopRegisters loop)
+    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory)
+    (native.frame_vm (ws := [⟨sp - 24, sp⟩]) (retaddr_log_in _ _ _ space.room) (by simp only [List.mem_singleton, forall_eq]; exact geometry.stack_below (by have := data.stack.1; omega)) space.payload.domain post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

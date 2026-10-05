@@ -76,6 +76,8 @@ theorem offsetref_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
   apply field_restore stable h.toVmReprAt h.running.platform h.dispatch.loop space live placed object room bound
     (show valWord pl (.int (untag (tag64 n + offsetintOperand ofs))) = some (tag64 n + offsetintOperand ofs) from by
       simp only [valWord, tag_offsetint]) (fun _ loc => by cases loc)
+  case geometry => exact h.geometry
+  case native => exact h.native
   simpa only [dp.memory] using observed.after_dispatch dp
 
 /-- The successful OFFSETREF bytecode rule matches the checked field update. -/

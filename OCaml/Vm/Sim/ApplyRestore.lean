@@ -37,6 +37,8 @@ structure ApplyPost (before : Config) (s : St) (pl : Place) (sp dest : Nat)
     (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 1))) savedEnv (tag64 (BitVec.ofNat 63 s.extra)))
   output : after.σ.sailOutput = before.σ.sailOutput
   loop : LoopRegisters after
+  /-- the native stack pointer is unchanged -/
+  nativeSp : gpr after 2 = gpr before 2
 
 /-- Fixed-arity applications share one data/platform restoration proof. -/
 theorem apply_frame_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Config}
@@ -46,7 +48,9 @@ theorem apply_frame_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after
     (positive : 1 ≤ args.length) (small : args.length ≤ 3) (bound : args.length ≤ s.stack.length)
     (arguments : ValueWords pl (s.stack.take args.length) args) (envWord : valWord pl s.env = some env)
     (space : ApplyWriteOk P s before pl cp sp high args env)
-    (post : ApplyPost before s pl sp dest args env after) : Running L P (applyState s args.length dest) after := by
+    (post : ApplyPost before s pl sp dest args env after)
+    (geometry : StackGeometry P s before pl cp high)
+    (native : NativePlaced before) : Running L P (applyState s args.length dest) after := by
   have payload := apply_frame_payload (payload_of_repr data) space.room positive small bound arguments envWord
     space.payload post.memory post.output
   have entered := payload_env_of_root payload s.accu (fun _ loc => Live.root (by simp [roots]) loc)
@@ -61,5 +65,7 @@ theorem apply_frame_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after
     (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable before after memoryFrame platform.runtime⟩ post.toVmRegisters post.loop
+    (geometry.frame_log rfl rfl space.payload.core.domain space.bindings.contents post.memory)
+    (native.frameOn memoryFrame (by simp only [List.mem_singleton, forall_eq]; exact geometry.stack_below (by have := data.stack.1; have := bound; omega)) (Reloc.bytesT_congr (copied_of_writeLog post.memory space.payload.core.domain)) post.nativeSp)
 
 end OCaml.Vm.Sim

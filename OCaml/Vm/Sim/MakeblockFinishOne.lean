@@ -47,7 +47,8 @@ theorem makeblock_finish_one {L : OCaml.Layout} {P : Prog} {s : St} {c d : Confi
       Register.x14, Register.x15, Register.x16, Register.x21, Register.x23, Register.x26] ++ noiseRegs) (by decide)
   have observed : MakeblockPost c s pl sp 3 count tag a domain accu after := by
     refine ⟨⟨post.pcAt, PinsHold.get post.pins ⟨0, by simp⟩, ?_, ⟨BitVec.ofNat 64 a, PinsHold.get post.pins ⟨1, by simp⟩, ?_⟩, ?_, ?_⟩,
-      post.good, memory.trans fullMemory, frame.out, ?_⟩
+      post.good, memory.trans fullMemory, frame.out, ?_,
+      frame.frame (gprReg 2) (by decide)⟩
     · simp only [branch, Nat.sub_self, Nat.mul_zero, Nat.add_zero]
       exact (rawFrame.frame Register.x9 (by decide)).trans front.stack
     · simp only [makeblockState, valWord, space.placed, Option.map_some, Nat.mul_zero, Nat.add_zero]
@@ -55,6 +56,6 @@ theorem makeblock_finish_one {L : OCaml.Layout} {P : Prog} {s : St} {c d : Confi
       exact ⟨w, (frame.frame Register.x25 (by decide)).trans reg, value⟩
     · exact (frame.frame Register.x18 (by decide)).trans h.extra
     · exact loopRegisters_frame (fun r hr => frame.frame r (by revert r; decide)) h.dispatch.loop
-  exact ⟨nb, after, steps, makeblock_restore runtime h.toVmReprAt h.running.platform value space observed⟩
+  exact ⟨nb, after, steps, makeblock_restore runtime h.toVmReprAt h.running.platform value space observed h.geometry h.native⟩
 
 end OCaml.Vm.Sim

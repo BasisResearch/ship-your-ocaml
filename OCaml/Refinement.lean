@@ -4,6 +4,7 @@ import Vsa.Densify
 import OCaml.Run.Machine
 import OCaml.Run.Clock
 import OCaml.Vm.Sim.Invariant
+import OCaml.Vm.Sim.Invocation
 
 /-!
 # Layer A: `ocamlrun` refines `BcSem`
@@ -104,12 +105,23 @@ theorem Loaded.primitives {L : Layout} {P : Prog} {c : Config} (h : Loaded L P c
 theorem Loaded.runtime {L : Layout} {P : Prog} {c : Config} (h : Loaded L P c) :
     L.runtimeOk c := h.platform.runtime
 
+/-- The represented state together with the VM stack geometry of the same
+placement (`OCaml/Vm/Sim/Invariant.lean`). -/
+def StackPlaced (P : Prog) (s : St) (c : Config) : Prop :=
+  ∃ pl cp sp high, VmReprAt P s c pl cp sp high ∧ Vm.Sim.StackGeometry P s c pl cp high
+
 /-- The loop-head representation: VM data and platform facts are separate
-named parts. No platform field depends on the abstract heap placement. -/
+named parts. No platform field depends on the abstract heap placement.
+`stack` is the VM stack geometry of some representation witness
+(`OCaml/Vm/Sim/Invariant.lean`), from which the arms' stack premises follow
+(`InvariantUse.lean`). -/
 structure Running (L : Layout) (P : Prog) (s : St) (c : Config) : Prop where
   data : VmRepr P s c
   platform : PlatformOk L.runtimeOk c
   loop : LoopRegisters c
+  stack : StackPlaced P s c
+  /-- the native invocation of `caml_interprete` is intact (`Invocation.lean`) -/
+  native : Vm.Sim.NativePlaced c
 
 /-- **Layer A (statement).** `ocamlrun` refines `BcSem`: for every loaded
 program inside the fragment (`Good`), budget (`Fits`) and observational
@@ -156,29 +168,18 @@ theorem ocamlrun_refinement_fillZero {L : Layout} {B : Budget} (H : OcamlrunSim 
 /-- At least one machine step. -/
 def Plus (c c' : Config) : Prop := ∃ n, StepsN (n + 1) c c'
 
-/-- The represented state together with the VM stack geometry of the same
-placement (`OCaml/Vm/Sim/Invariant.lean`). -/
-def StackPlaced (P : Prog) (s : St) (c : Config) : Prop :=
-  ∃ pl cp sp high, VmReprAt P s c pl cp sp high ∧ Vm.Sim.StackGeometry P s c pl cp high
-
 /-- **The loop-head invariant of the per-arm obligations**: `Running` plus
-the facts every arm needs that `Running` does not carry.
-* `clock`: the platform tick counter the generated segment lemmas consume.
-  It is a run invariant (`StepsN.tick_lt`), so `LoopAt.of_plus` restores it.
-* `stack`: the VM stack window and its separation from the rest of the
-  payload, for the placement of some representation witness.
-Ownership and further fields: docs/lanes/F1-split.md. -/
+the platform tick counter that the generated segment lemmas consume. The
+clock is a run invariant (`StepsN.tick_lt`), so arms conclude `Running` and
+`LoopAt.of_plus` restores it. Ownership: docs/lanes/F1-split.md. -/
 structure LoopAt (L : Layout) (P : Prog) (s : St) (c : Config) : Prop where
   running : Running L P s c
   clock : c.tick < 2
-  stack : StackPlaced P s c
 
-/-- An arm's `Running` conclusion, with the stack geometry of its result,
-re-establishes the loop-head invariant. -/
+/-- An arm's `Running` conclusion re-establishes the loop-head invariant. -/
 theorem LoopAt.of_plus {L : Layout} {P : Prog} {s s' : St} {c c' : Config}
-    (h : LoopAt L P s c) (run : Plus c c') (running : Running L P s' c')
-    (stack : StackPlaced P s' c') : LoopAt L P s' c' :=
-  ⟨running, let ⟨_, hn⟩ := run; hn.tick_lt h.clock, stack⟩
+    (h : LoopAt L P s c) (run : Plus c c') (running : Running L P s' c') : LoopAt L P s' c' :=
+  ⟨running, let ⟨_, hn⟩ := run; hn.tick_lt h.clock⟩
 
 /-- **The per-instruction obligations** for one program: entry, one per
 `step` outcome. Each field is what one family of generated segment proofs

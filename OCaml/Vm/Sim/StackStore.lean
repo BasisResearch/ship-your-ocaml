@@ -133,7 +133,8 @@ theorem push_value_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Con
     (loop : LoopRegisters c) (space : PushWriteOk P s c pl cp sp w)
     (pushed : valWord pl s.accu = some w) (value : valWord pl v = some result)
     (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
-    (post : PushPost c pl pc sp w result after) :
+    (post : PushPost c pl pc sp w result after) (geometry : StackGeometry P s c pl cp high)
+    (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := v, stack := s.accu :: s.stack} after := by
   have stored : word after (sp - 8) = w := by
     rw [word, post.memory]
@@ -152,6 +153,12 @@ theorem push_value_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Con
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable c after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl value) (post.loopRegisters loop)
+    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory)
+    (native.frame_vm (ws := [⟨sp - 8, sp⟩])
+      (by simp only [pushLog, LogInW, InsideW, or_false, and_true]; have := space.room; omega)
+      (by simp only [List.mem_singleton, forall_eq]
+          exact geometry.stack_below (by have := data.stack.1; omega))
+      space.payload.domain post.memory post.nativeSp)
 
 /-- Shared dispatch composition for stack-writing bodies. -/
 theorem push_value_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
@@ -168,7 +175,8 @@ theorem push_value_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c :
   intro d dp
   obtain ⟨nb, after, hb, post⟩ := body d dp
   refine ⟨nb, after, hb, ?_⟩
-  apply push_value_restore stable h.toVmReprAt h.running.platform h.dispatch.loop space pushed value root
+  refine push_value_restore stable h.toVmReprAt h.running.platform h.dispatch.loop space pushed value root
+    ?_ h.geometry h.native
   simpa only [dp.memory] using post.after_dispatch dp
 
 end OCaml.Vm.Sim

@@ -153,13 +153,14 @@ through the generated no-growth/no-pending tail. -/
     refine ⟨⟨post.pcAt, {get('x8')}, ?_,
       ⟨_, {get('x21')}, field.sourceWord⟩,
       ⟨_, {get('x25')}, field.sourceWord⟩, ?_⟩,
-      post.good, memory.trans fullMemory, frame.out.trans dp.frame.out, loop⟩
+      post.good, memory.trans fullMemory, frame.out.trans dp.frame.out, loop,
+      (frame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide))⟩
     · simp only [length]
       exact {get('x9')}
     ·
 {''.join('  '+l+'\n' for l in extraProof.splitlines())}  refine ⟨nb, after, steps, ?_⟩
   have restored := tailcall_restore (by simpa only [length] using stable) h.toVmReprAt h.running.platform
-    (by simpa only [length] using stack_value_words h.stack bound) space observed
+    (by simpa only [length] using stack_value_words h.stack bound) space observed h.geometry h.native
   simpa only [length] using restored
 
 ''')

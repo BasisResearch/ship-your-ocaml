@@ -91,6 +91,8 @@ theorem poptrap_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
         BitVec.ofNat_add] using stack
   refine ⟨nb, after, steps, ?_⟩
   apply trap_restore stable h.toVmReprAt h.running.platform h.dispatch.loop space count accuWord
+  case geometry => exact h.geometry
+  case native => exact h.native
   simpa only [dp.memory] using observed.after_dispatch dp
 
 /-- A successful POPTRAP transition supplies the link bound used by the native

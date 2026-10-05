@@ -33,6 +33,11 @@ structure GrabWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPl
   payload : PayloadOutside log P s c pl cp sp
   image : ImageOutside log
   bindings : BindingsOutside log P c
+  /-- the nursery placement is apart from the VM stack window -/
+  stackApart : OutWRange [stackWindow high] (a - 8) (8 * (grabClosure s).wosize + 8)
+  /-- the allocation and all its stores lie in the allocator arena -/
+  arenaEnd : a + 8 * (grabClosure s).wosize ≤ Vsa.Sim.DlHeap.heapEnd
+  arena : LogInW [arenaWindow] (log)
 
 /-- Final generated observations of the allocation and caller-frame path. -/
 structure GrabPost (before : Config) (s : St) (pl : Place) (sp dest : Nat)
@@ -42,6 +47,8 @@ structure GrabPost (before : Config) (s : St) (pl : Place) (sp dest : Nat)
   memory : after.σ.mem = writeLog before.σ.mem log
   output : after.σ.sailOutput = before.σ.sailOutput
   loop : LoopRegisters after
+  /-- the native stack pointer is unchanged -/
+  nativeSp : gpr after 2 = gpr before 2
 
 /-- GRAB allocation extends the represented heap and restores the caller
 using the same frame payload rule as RETURN. -/
@@ -53,7 +60,9 @@ theorem grab_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Conf
     (stack : s.stack.drop (1 + s.extra) = .code dest :: savedEnv :: .int savedExtra :: rest)
     (space : GrabWriteOk P s before pl cp sp high a log)
     (layout : ObjAt after pl cp a (grabClosure s))
-    (post : GrabPost before s pl sp dest savedEnv savedExtra rest log after) :
+    (post : GrabPost before s pl sp dest savedEnv savedExtra rest log after)
+    (geometry : StackGeometry P s before pl cp high)
+    (native : NativePlaced before) :
     Running L P (grabState s dest savedEnv savedExtra rest) after := by
   have framed := (payload_of_repr data).frame_log space.payload post.memory post.output
   have allocated := framed.allocate grab_allocation_roots space.placed layout space.separate
@@ -73,5 +82,7 @@ theorem grab_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Conf
   exact running_of_payload payload (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       runtime after post.memory platform.runtime⟩ post.toVmRegisters post.loop
+    ((geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory).alloc space.placed space.stackApart space.arenaEnd rfl rfl)
+    (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

@@ -80,5 +80,7 @@ theorem return_frame_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     (loopRegisters_frame (fun r hr => (frame.frame r (by revert r; decide)).trans
       (dp.frame.frame r (by revert r; decide))) h.dispatch.loop)
     post.good (memory.trans dp.memory) (frame.out.trans dp.frame.out)
+    (h.geometry.state rfl rfl) h.native
+    ((frame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide)))
 
 end OCaml.Vm.Sim

@@ -118,13 +118,14 @@ theorem grab_finish {L : OCaml.Layout} {P : Prog} {s : St} {c middle d : Config}
     refine ⟨⟨post.pcAt, PinsHold.get post.pins ⟨3, by simp⟩, PinsHold.get post.pins ⟨1, by simp⟩,
       ⟨_, (frame.frame Register.x21 (by decide)).trans ((copied.frame.frame Register.x21 (by decide)).trans front.accu), ?_⟩,
       ⟨_, PinsHold.get post.pins ⟨2, by simp⟩, saved.environment⟩, ?_⟩,
-      post.good, memory.trans fullMemory, frame.out.trans (copied.frame.out.trans front.frame.out), ?_⟩
+      post.good, memory.trans fullMemory, frame.out.trans (copied.frame.out.trans front.frame.out), ?_,
+      (frame.frame (gprReg 2) (by decide)).trans ((copied.frame.frame (gprReg 2) (by decide)).trans (front.frame.frame (gprReg 2) (by decide)))⟩
     · simp only [grabState, valWord, space.allocation.placed, Option.map_some, Nat.mul_zero, Nat.add_zero]
     · have untagged : gpr after Layout.reg_extra = some (shift_bits_right_arith (tag64 savedExtra)
         (Sail.BitVec.extractLsb (0x01#6) 5 0)) := PinsHold.get post.pins ⟨0, by simp⟩
       simpa only [grabState, longVal_native, longVal_nonnegative savedExtra savedNonnegative] using untagged
     · exact loopRegisters_frame (fun r hr => frame.frame r (by revert r; decide)) loop
   exact ⟨nb, after, steps, grab_restore runtime h.toVmReprAt h.running.platform stack space.allocation
-    (grab_allocation_layout h.toVmReprAt space environment stack observations.memory) observations⟩
+    (grab_allocation_layout h.toVmReprAt space environment stack observations.memory) observations h.geometry h.native⟩
 
 end OCaml.Vm.Sim

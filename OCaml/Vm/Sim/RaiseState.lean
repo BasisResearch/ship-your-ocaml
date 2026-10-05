@@ -15,6 +15,10 @@ structure RaiseContext (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp :
   frame : RaiseFrame s dest link env extra rest
   accu : ∃ w, gpr c Layout.reg_accu = some w ∧ valWord pl s.accu = some w
   tick : c.tick < 2
+  /-- the VM stack geometry (`Invariant.lean`) -/
+  geometry : StackGeometry P s c pl cp high
+  /-- the native invocation (`Invocation.lean`) -/
+  native : NativePlaced c
 
 /-- Native exception cuts retain the domain and current trap pointer. -/
 structure RaiseAt (entry : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
@@ -41,11 +45,13 @@ theorem RaiseContext.after_read {L : OCaml.Layout} {P : Prog} {s : St} {pl : Pla
     (h : RaiseContext L P s pl cp sp high dest link env extra rest c)
     (stable : MemoryStable L.runtimeOk) (good : GoodState after.σ) (tick : after.tick < 2)
     (memory : after.σ.mem = c.σ.mem) (out : after.σ.sailOutput = c.σ.sailOutput)
-    (accu : gpr after Layout.reg_accu = gpr c Layout.reg_accu) :
+    (accu : gpr after Layout.reg_accu = gpr c Layout.reg_accu)
+    (nativeSp : gpr after 2 = gpr c 2) :
     RaiseContext L P s pl cp sp high dest link env extra rest after := by
   refine ⟨h.data.frame memory out, h.bindings.frame memory,
     ⟨good, image_of_writeLog (log := []) h.platform.image ⟨trivial, trivial⟩ memory,
-      stable c after memory h.platform.runtime⟩, h.frame, ?_, tick⟩
+      stable c after memory h.platform.runtime⟩, h.frame, ?_, tick,
+    h.geometry.same rfl rfl memory, h.native.frame_read memory nativeSp⟩
   obtain ⟨w, reg, value⟩ := h.accu
   exact ⟨w, accu.trans reg, value⟩
 

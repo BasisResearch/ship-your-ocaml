@@ -46,6 +46,7 @@ theorem c_call@ARITY@_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
   obtain ⟨_, memory, frame⟩ := post.extra
   refine ⟨after, ⟨n - 1, by simpa only [show n - 1 + 1 = n from by omega] using steps⟩, ?_⟩
   apply ccall_return_restore stable h (count := @COUNT@) @BOUND_PROOF@ ?_ ?_ post.good memory frame.out
+    (frame.frame (gprReg 2) (by decide))
   · refine ⟨post.pcAt, ?_, ?_, ⟨result, ?_, h.resultRepr⟩,
       ⟨env, PinsHold.get post.pins ⟨1, by simp⟩, h.envRepr⟩, ?_⟩
     · exact (frame.frame Register.x8 (by decide)).trans h.pc

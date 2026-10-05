@@ -61,6 +61,7 @@ theorem grab_fast_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     (s.extra - count.toInt.toNat)) (s.pc + 2)) h.primitives h.running.platform regs
     (loopRegisters_frame (fun r hr => preserved r (by revert r; decide) (by revert r; decide)) h.dispatch.loop)
     post.good (memory.trans dp.memory) (frame.out.trans dp.frame.out)
+    (h.geometry.state rfl rfl) h.native (preserved (gprReg 2) (by decide) (by decide))
 
 /-- The satisfied-arity path implements GRAB's corresponding semantic branch. -/
 theorem grab_fast_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}

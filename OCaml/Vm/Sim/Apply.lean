@@ -94,6 +94,8 @@ theorem apply_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     (loopRegisters_frame (fun r hr => (frame.frame r (by revert r; decide)).trans
       (dp.frame.frame r (by revert r; decide))) h.dispatch.loop)
     post.good (memory.trans dp.memory) (frame.out.trans dp.frame.out)
+    (h.geometry.state rfl rfl) h.native
+    ((frame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide)))
 
 /-- Successful APPLY supplies a positive arity; closure entry agrees with
 its represented field and the generated no-growth/no-pending path. -/

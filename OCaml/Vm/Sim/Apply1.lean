@@ -143,14 +143,15 @@ theorem apply1_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     refine ⟨⟨post.pcAt, PinsHold.get post.pins ⟨5, by simp⟩, ?_,
       ⟨_, PinsHold.get post.pins ⟨7, by simp⟩, field.sourceWord⟩,
       ⟨_, PinsHold.get post.pins ⟨2, by simp⟩, field.sourceWord⟩, ?_⟩,
-      post.good, memory.trans fullMemory, frame.out.trans dp.frame.out, loop⟩
+      post.good, memory.trans fullMemory, frame.out.trans dp.frame.out, loop,
+      (frame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide))⟩
     · exact PinsHold.get post.pins ⟨4, by simp⟩
     · simp only [applyState, length]
       exact PinsHold.get post.pins ⟨3, by simp⟩
   refine ⟨nb, after, steps, ?_⟩
   have restored := apply_frame_restore (by simpa only [length] using stable) h.toVmReprAt h.running.platform
     (by rw [length]; decide) (by rw [length]; decide) (by simpa only [length] using bound)
-    (by simpa only [length] using stack_value_words h.stack bound) envWord space observed
+    (by simpa only [length] using stack_value_words h.stack bound) envWord space observed h.geometry h.native
   simpa only [length] using restored
 
 /-- The generated represented transition agrees with the actual bytecode step. -/

@@ -42,6 +42,11 @@ structure MakeblockWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : C
   payload : PayloadOutside (makeblockLog c sp count tag a domain accu) P s c pl cp sp
   image : ImageOutside (makeblockLog c sp count tag a domain accu)
   bindings : BindingsOutside (makeblockLog c sp count tag a domain accu) P c
+  /-- the nursery placement is apart from the VM stack window -/
+  stackApart : OutWRange [stackWindow high] (a - 8) (8 * (makeblockObject s count tag).wosize + 8)
+  /-- the allocation and all its stores lie in the allocator arena -/
+  arenaEnd : a + 8 * (makeblockObject s count tag).wosize ≤ Vsa.Sim.DlHeap.heapEnd
+  arena : LogInW [arenaWindow] (makeblockLog c sp count tag a domain accu)
 
 structure MakeblockPost (before : Config) (s : St) (pl : Place) (sp width count tag a domain : Nat)
     (accuWord : BitVec 64) (after : Config) : Prop
@@ -50,6 +55,8 @@ structure MakeblockPost (before : Config) (s : St) (pl : Place) (sp width count 
   memory : after.σ.mem = writeLog before.σ.mem (makeblockLog before sp count tag a domain accuWord)
   output : after.σ.sailOutput = before.σ.sailOutput
   loop : LoopRegisters after
+  /-- the native stack pointer is unchanged -/
+  nativeSp : gpr after 2 = gpr before 2
 
 /-- Shared represented restoration for fixed and variable block constructors.
 Field layout follows from the exact initialized word log. -/
@@ -59,7 +66,9 @@ theorem makeblock_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after :
     (data : VmReprAt P s before pl cp sp high) (platform : PlatformOk L.runtimeOk before)
     (value : valWord pl s.accu = some accu)
     (space : MakeblockWriteOk P s before pl cp sp high count tag a domain accu)
-    (post : MakeblockPost before s pl sp width count tag a domain accu after) :
+    (post : MakeblockPost before s pl sp width count tag a domain accu after)
+    (geometry : StackGeometry P s before pl cp high)
+    (native : NativePlaced before) :
     Running L P (makeblockState s width count tag) after := by
   have fields := ValueWords.cons value (stack_value_words data.stack space.bound)
   have length : (makeblockWords before sp count accu).length = count := by
@@ -77,5 +86,7 @@ theorem makeblock_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after :
   exact running_of_payload payload (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory, runtime after post.memory platform.runtime⟩
     post.toVmRegisters post.loop
+    ((geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory).alloc space.placed space.stackApart space.arenaEnd rfl rfl)
+    (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

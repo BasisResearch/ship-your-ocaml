@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -322,6 +323,19 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.StackGeometry.read
 #print axioms OCaml.Vm.Sim.StackGeometry.write
 #print axioms OCaml.Vm.Sim.stack_space
+#print axioms OCaml.Vm.Sim.StackGeometry.transport
+#print axioms OCaml.Vm.Sim.StackGeometry.alloc
+#print axioms OCaml.Vm.Sim.StackGeometry.frame_log
+#print axioms OCaml.Vm.Sim.StackGeometry.heap_set
+#print axioms OCaml.Vm.Sim.ArmInput.of_loop
+#print axioms OCaml.Vm.Sim.NativePlaced.frame_log
+#print axioms OCaml.Vm.Sim.NativePlaced.frameOn
+#print axioms OCaml.Vm.Sim.NativePlaced.held
+#print axioms OCaml.Vm.Sim.NativeHeld.frame_log
+#print axioms OCaml.Vm.Sim.NativeHeld.frame
+#print axioms OCaml.Vm.Sim.Ccall1WriteOk.native
+#print axioms OCaml.Vm.Sim.CcallnWriteOk.native
+#print axioms OCaml.Vm.Sim.acc0_next
 #print axioms OCaml.Run.div_iff_not_halts
 #print axioms OCaml.Run.ConsPres.iff
 #print axioms OCaml.Run.ClosPres.iff

@@ -1,4 +1,5 @@
 import OCaml.Vm.Sim.ArmInput
+import OCaml.Vm.Sim.InvariantUse
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -35,11 +36,12 @@ theorem running_of_payload {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     {pl : Place} {cp : ChanPlace} {sp high : Nat}
     (data : VmPayload P s c pl cp sp high) (primitives : PrimitiveBindings P c)
     (platform : PlatformOk L.runtimeOk c) (regs : VmRegisters s pl sp c)
-    (loop : LoopRegisters c) : Running L P s c := by
-  refine ⟨⟨pl, cp, sp, high, ?_⟩, platform, loop⟩
-  exact ⟨regs.head, regs.pc, regs.spReg, regs.accu, regs.env, regs.extra,
+    (loop : LoopRegisters c) (geometry : StackGeometry P s c pl cp high)
+    (native : NativePlaced c) : Running L P s c := by
+  have repr : VmReprAt P s c pl cp sp high := ⟨regs.head, regs.pc, regs.spReg, regs.accu, regs.env, regs.extra,
     data.stackHigh, data.trapsp, data.codeBase, data.code,
     data.globals, data.stack, data.heap, data.world, primitives, data.atomBase⟩
+  exact ⟨⟨pl, cp, sp, high, repr⟩, platform, loop, ⟨pl, cp, sp, high, repr, geometry⟩, native⟩
 
 /-- Restore any read-only result once its payload and register observations
 are established. This is the common image/runtime/primitive-table frame. -/
@@ -49,8 +51,11 @@ theorem readOnly_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Confi
     (primitives : PrimitiveBindings P c) (platform : PlatformOk L.runtimeOk c)
     (regs : VmRegisters s pl sp after) (loop : LoopRegisters after)
     (good : GoodState after.σ) (memory : after.σ.mem = c.σ.mem)
-    (output : after.σ.sailOutput = c.σ.sailOutput) : Running L P s after := by
+    (output : after.σ.sailOutput = c.σ.sailOutput)
+    (geometry : StackGeometry P s c pl cp high) (native : NativePlaced c)
+    (nativeSp : gpr after 2 = gpr c 2) : Running L P s after := by
   apply running_of_payload (payload.frame memory output) (primitives.frame memory) ?_ regs loop
+    (geometry.same rfl rfl memory) (native.frame_read memory nativeSp)
   exact ⟨good,
     ⟨fun i hi => by rw [memory]; exact platform.image.text i hi,
      fun i hi => by rw [memory]; exact platform.image.rodata i hi⟩,

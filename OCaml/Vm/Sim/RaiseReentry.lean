@@ -21,6 +21,10 @@ structure RaiseReentryReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) 
   exceptionWord : valWord pl s.accu = some (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_exn_bucket))
   outside : PayloadOutside (reentryLog nativeSp c) P s c pl cp sp
   bindingsOutside : BindingsOutside (reentryLog nativeSp c) P c
+  /-- the VM stack geometry (`Invariant.lean`) -/
+  geometry : StackGeometry P s c pl cp high
+  /-- the native invocation, held while the C stack unwinds (`InvariantUse.lean`) -/
+  native : NativeHeld nativeSp c
 
 /-- The native re-entry observations restore the represented common exception-check input. -/
 theorem raise_reentry_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
@@ -46,7 +50,16 @@ theorem raise_reentry_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place
       platform := ⟨post.good, post.image, stable c after memoryFrame h.runtime⟩
       frame := h.frame
       accu := ⟨_, post.exceptionValue, h.exceptionWord⟩
-      tick := post.tick }
+      tick := post.tick
+      geometry := h.geometry.frame_log rfl rfl h.outside.domain h.bindingsOutside.contents
+        post.memory
+      native := h.native.frame_log h.outside.domain
+        (h.native.region_of_arena (logInW_arena (ws := [⟨(word c Layout.sym_Caml_state).toNat +
+            Layout.off_local_roots, (word c Layout.sym_Caml_state).toNat + Layout.off_local_roots + 8⟩])
+          (by simp only [List.mem_singleton, forall_eq]
+              exact h.geometry.domain_below (off := Layout.off_local_roots + 8) (by decide))
+          (by simp only [reentryLog, LogInW, InsideW, or_false, and_true]; omega)))
+        post.memory post.nativeStack }
     pc := post.pc
     trapReg := post.trap.trans (congrArg some trap)
     domainReg := ?_ }

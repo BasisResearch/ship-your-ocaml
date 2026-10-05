@@ -55,7 +55,9 @@ theorem trap_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     (loop : LoopRegisters c) (space : TrapWriteOk P s c pl cp sp high trap)
     (bound : count ≤ s.stack.length) (value : valWord pl s.accu = some accu)
     (post : StackPost c pl pc (sp + 8 * count) accu
-      (writeLog c.σ.mem (trapLog (word c Layout.sym_Caml_state).toNat high trap)) after) :
+      (writeLog c.σ.mem (trapLog (word c Layout.sym_Caml_state).toNat high trap)) after)
+    (geometry : StackGeometry P s c pl cp high)
+    (native : NativePlaced c) :
     Running L P {s with pc := pc, stack := s.stack.drop count, trap := trap} after := by
   have payload := payload_trap_written (payload_of_repr data) space.highNat space.payload post.memory post.output
   have memoryFrame : FrameOn [⟨(word c Layout.sym_Caml_state).toNat + Layout.off_trapsp,
@@ -69,5 +71,7 @@ theorem trap_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable c after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl value) (post.loopRegisters loop)
+    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory)
+    (native.frame_vm (ws := [⟨(word c Layout.sym_Caml_state).toNat + Layout.off_trapsp, (word c Layout.sym_Caml_state).toNat + Layout.off_trapsp + 8⟩]) (by simp only [trapLog, LogInW, InsideW, or_false, and_true]; exact ⟨Nat.le_refl _, Nat.le_refl _⟩) (by simp only [List.mem_singleton, forall_eq]; have := geometry.domain_below (off := Layout.off_trapsp + 8) (by decide); omega) space.payload.domain post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

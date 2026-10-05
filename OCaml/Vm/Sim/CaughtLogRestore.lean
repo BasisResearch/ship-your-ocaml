@@ -24,6 +24,11 @@ structure CaughtLogReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp
   rootsBindingsOutside : BindingsOutside (reentryLog nativeSp c) P c
   savedOutside : ∀ offset ∈ [0, 8, Layout.interpSavedRootsOffset], OutLRange log (nativeSp + offset) 8
   runtimeFrame : AllocationRuntime L.runtimeOk c log
+  /-- the VM stack geometry before the raise (`Invariant.lean`) -/
+  stackGeometry : StackGeometry P s c pl cp high
+  /-- the native invocation held before the raise, and missed by its log -/
+  nativeHeld : NativeHeld nativeSp c
+  invocationOutside : ∀ r ∈ invocationRanges, OutLRange log (nativeSp + r.1) r.2
 
 /-- Derive the full represented caught-handler readiness from the concrete memory effect. -/
 theorem caught_log_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
@@ -59,7 +64,10 @@ theorem caught_log_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {
       runtime := h.runtimeFrame _ rfl h.runtime
       frame := h.frame
       exceptionWord := ?_
-      outside := rootPayload, bindingsOutside := rootBindings }
+      outside := rootPayload, bindingsOutside := rootBindings
+      geometry := h.stackGeometry.frame_log rfl rfl h.payloadOutside.domain
+        h.bindingsOutside.contents rfl
+      native := h.nativeHeld.frame h.payloadOutside.domain h.invocationOutside rfl }
     toCaughtReentryGeometry := h.geometry.frame_observations domain contents savedHigh savedSp roots }
   rw [domain, native_memory_last_word h.bucketLog]
   exact h.exceptionValue

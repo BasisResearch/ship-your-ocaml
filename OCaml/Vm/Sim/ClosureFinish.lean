@@ -68,13 +68,15 @@ theorem closure_finish {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   have frame := (front.frame.trans rawFrame).widenChecked (allowed := Register.x8 :: closureSetupWrites) (by decide)
   have observed : ClosurePost c s pl sp count dest a domain accu after := by
     refine ⟨⟨post.pcAt, PinsHold.get post.pins ⟨0, by simp⟩, PinsHold.get post.pins ⟨4, by simp⟩,
-      ⟨BitVec.ofNat 64 a, ?_, ?_⟩, ?_, ?_⟩, post.good, memory.trans fullMemory, frame.out, ?_⟩
+      ⟨BitVec.ofNat 64 a, ?_, ?_⟩, ?_, ?_⟩, post.good, memory.trans fullMemory, frame.out, ?_,
+      frame.frame (gprReg 2) (by decide)⟩
     · exact (rawFrame.frame Register.x21 (by decide)).trans front.accu
     · simp only [closureState, valWord, space.placed, Option.map_some, Nat.mul_zero, Nat.add_zero]
     · obtain ⟨w, reg, value⟩ := h.env
       exact ⟨w, (frame.frame Register.x25 (by decide)).trans reg, value⟩
     · exact (frame.frame Register.x18 (by decide)).trans h.extra
     · exact loopRegisters_frame (fun r hr => frame.frame r (by revert r; decide)) h.dispatch.loop
-  exact ⟨nb, after, steps, closure_restore runtime h.toVmReprAt h.running.platform value space observed⟩
+  exact ⟨nb, after, steps, closure_restore runtime h.toVmReprAt h.running.platform value space observed
+    h.geometry h.native⟩
 
 end OCaml.Vm.Sim

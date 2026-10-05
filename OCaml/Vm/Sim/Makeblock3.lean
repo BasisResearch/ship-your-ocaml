@@ -164,7 +164,8 @@ theorem makeblock3_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
   have frame := rawFrame.widenChecked (allowed := [Register.x13, Register.x14, Register.x15, Register.x16, Register.x21, Register.x23, Register.x8, Register.x9] ++ noiseRegs) (by decide)
   have observed : MakeblockPost c s pl sp 2 3 tag.toInt.toNat a domain accu after := by
     refine ⟨⟨post.pcAt, PinsHold.get post.pins ⟨5, by simp⟩, ?_, ⟨BitVec.ofNat 64 a, PinsHold.get post.pins ⟨1, by simp⟩, ?_⟩, ?_, ?_⟩,
-      post.good, memory.trans fullMemory, frame.out.trans dp.frame.out, ?_⟩
+      post.good, memory.trans fullMemory, frame.out.trans dp.frame.out, ?_,
+      (frame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide))⟩
     · exact PinsHold.get post.pins ⟨3, by simp⟩
     · simp only [makeblockState, valWord, space.placed, Option.map_some, Nat.mul_zero, Nat.add_zero]
     · obtain ⟨w, reg, value⟩ := h.env
@@ -172,7 +173,7 @@ theorem makeblock3_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     · exact (frame.frame Register.x18 (by decide)).trans ((dp.frame.frame Register.x18 (by decide)).trans h.extra)
     · exact loopRegisters_frame (fun r hr =>
         (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))) h.dispatch.loop
-  exact ⟨nb, after, steps, makeblock_restore runtime h.toVmReprAt h.running.platform value space.toMakeblockWriteOk observed⟩
+  exact ⟨nb, after, steps, makeblock_restore runtime h.toVmReprAt h.running.platform value space.toMakeblockWriteOk observed h.geometry h.native⟩
 
 /-- The successful fixed-arity bytecode constructor selects this represented block. -/
 theorem makeblock3_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}

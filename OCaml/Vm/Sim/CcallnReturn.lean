@@ -65,11 +65,13 @@ theorem c_calln_primitive_return {L : OCaml.Layout} {P : Prog} {s : St}
     {before after : Config}
     (post : PrimitivePost L.runtimeOk P s pl cp sp high name args
       v result heap world writes memory before (0x80002e64#64) after)
-    (saved : CcallnSaved {s with pc := s.pc + 3} pl sp count nativeSp domain frameSp env after) :
+    (saved : CcallnSaved {s with pc := s.pc + 3} pl sp count nativeSp domain frameSp env after)
+    (geometry : StackGeometry P {s with accu := v, heap := heap, world := world} after pl cp high)
+    (native : NativePlaced after) :
     CcallnReturn L P {s with pc := s.pc + 3, accu := v, heap := heap, world := world}
       pl cp sp high count nativeSp domain frameSp result env after :=
   { toCcallnSaved := { saved with savedPC := saved.savedPC }
-    toCcallResult := ccall_primitive_result (s.pc + 3) post }
+    toCcallResult := ccall_primitive_result (s.pc + 3) post geometry native }
 
 /-- Read-only primitive summaries retain the native saved-PC slot as well as
 the VM saved frame; the ABI write-set check discharges the register frame. -/
@@ -81,7 +83,8 @@ theorem c_calln_readOnly_summary {L : OCaml.Layout} {P : Prog} {s : St}
       (ReadOnlyPost L.runtimeOk P s pl cp sp high name args
         v result writes before (0x80002e64#64)))
     (preserved : ∀ r ∈ callnSavedRegs, ∀ n ∈ writes, gprReg n ≠ r)
-    (saved : CcallnSaved {s with pc := s.pc + 3} pl sp count nativeSp domain frameSp env before) :
+    (saved : CcallnSaved {s with pc := s.pc + 3} pl sp count nativeSp domain frameSp env before)
+    (geometry : StackGeometry P s before pl cp high) (native : NativePlaced before) :
     FnSummary entry (fun c => c = before)
       (CcallnReturn L P {s with pc := s.pc + 3, accu := v}
         pl cp sp high count nativeSp domain frameSp result env) := by
@@ -89,6 +92,9 @@ theorem c_calln_readOnly_summary {L : OCaml.Layout} {P : Prog} {s : St}
   intro after post
   exact c_calln_primitive_return post (saved.frame post.call.memory
     (fun r hr => post.call.frame r (preserved r hr) (by revert r; decide)))
+    (geometry.same rfl rfl post.call.memory)
+    (native.frame_read post.call.memory
+      (post.call.frame (gprReg 2) (preserved _ (by decide)) (by decide)))
 
 /-- The extra pushed accumulator accounts for the difference between the
 three-word saved-frame displacement and the consumed stack-argument count. -/
@@ -132,6 +138,7 @@ theorem c_calln_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
   obtain ⟨_, memory, frame⟩ := post.extra
   refine ⟨after, ⟨n - 1, by simpa only [show n - 1 + 1 = n from by omega] using steps⟩, ?_⟩
   apply ccall_result_restore stable h.toCcallResult bound ?_ ?_ post.good memory frame.out
+    (frame.frame (gprReg 2) (by decide))
   · refine ⟨post.pcAt, PinsHold.get post.pins ⟨4, by simp⟩, ?_,
       ⟨result, PinsHold.get post.pins ⟨2, by simp⟩, h.resultRepr⟩,
       ⟨env, PinsHold.get post.pins ⟨1, by simp⟩, h.envRepr⟩, ?_⟩

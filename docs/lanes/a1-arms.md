@@ -6,25 +6,43 @@ Done (landed 741ad7a): `ArmSim` is stated over `LoopAt L P s c`
 (`OCaml/Refinement.lean`). `StepsN.tick_lt` (`OCaml/Run/Clock.lean`, from the
 new kernel law `Run.iter_inv`) makes the dispatch clock a run invariant.
 
-Done (this commit): `LoopAt.stack : StackPlaced P s c`, the
+Done (bf8de18 + next): `Running.stack : StackPlaced P s c`, the
 `StackGeometry` of a representation witness (`OCaml/Vm/Sim/Invariant.lean`).
-The VM stack window `[high - Layout.stackBytes, high)` lies above `.bss` and
-inside RAM, apart from `Caml_state`, code, live objects, channels and
-primitive entries. `Layout.stackBytes`, `stackThresholdBytes` and
-`domainStateBytes` are compiler-measured by `gen_layout.py`.
-`InvariantUse.lean` derives the full `PayloadOutside`/`ImageOutside`/
-`BindingsOutside` for any write in `[high - stackBytes, sp)`
-(`StackGeometry.payload`, `.image`, `.bindings`), the stack read and write
-windows (`.read`, `.write`), and `stack_space` from `Fits`.
+The VM stack window `[high - Layout.stackBytes, high)` lies above `.bss`, in
+RAM, apart from `Caml_state`, code, placed objects, channels and primitive
+entries (`Layout.stackBytes`, `stackThresholdBytes`, `domainStateBytes` are
+compiler-measured by `gen_layout.py`). Every existing arm bridge now proves
+it for its result:
+* the shared restore lemmas take the pre-state geometry;
+* `ArmInput`, `CcallResult`, `CcallSetupPost`/`CcallnSetupPost`,
+  `RaiseContext`, `RaiseReentryReady`, `ModifyReturn` and `CaughtLogReady`
+  carry it;
+* the transports are `StackGeometry.state`/`same`/`frame_log`/`heap_set`/`alloc`.
 
-Open, next:
-* `StackPlaced` preservation per family: a monotonicity lemma for
-  non-allocating arms (same heap, `Live` shrinks, frame words unchanged);
-  allocating arms need the nursery to be apart from the stack window.
-* The first unconditional `ArmSim.next` cases (stack family), consuming
-  a2-sem's `CodeFacts.lean` for fetch, code geometry and the method cache.
-* bprime's `F1Loop` = `LoopAt` + `Invocation`; arms supply
-  `InvocationOutside` from their write logs.
+Allocating restores (GRAB, CLOSURE, CLOSUREREC, MAKEBLOCK) take named
+`stackApart`, `arenaEnd` and `arena` premises: the nursery object and the
+allocation log are apart from the window and inside the allocator arena.
+
+Done: `Running.native : NativePlaced c` (`∃ D, Invocation D c ∧ NativeValid
+D`; bprime's snapshot and validity in `Invocation.lean`). Every arm bridge
+preserves it:
+* every arm write stays below `heapEnd ≤ D.nativeSp` (`StackGeometry.arena`,
+  `domainArena`, `heapArena`);
+* `x2` is restored, by register frames (`immediatePreserved`,
+  `consumePreserved`, `callSavedRegs` now include `x2`; post structures carry
+  `nativeSp`);
+* C_CALLN's `sp + 88` spill is outside `invocationRanges`
+  (`CcallnWriteOk.native`);
+* raise/longjmp paths carry `NativeHeld` while `x2` is elsewhere.
+
+`acc0_next` (`AccRows.lean`) is the first unconditional row: ACC0 from
+`LoopAt`, `DispatchCode` (a2-sem's code facts) and the budget's stack bound.
+
+Open, next: generate the unconditional rows family by family (ACC/PUSHACC,
+ENVACC, GETFIELD, …) from the arm generators, following `acc0_next`.
+Supply the remaining per-arm premises (operand nonnegativity from decode,
+read/write windows from `StackGeometry`, runtime framing) from the
+invariant. bprime's F1 table reduces to `LoopAt`.
 
 ## Shared heap-field update facts
 

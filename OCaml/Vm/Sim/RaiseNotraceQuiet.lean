@@ -40,6 +40,7 @@ theorem raise_notrace_quiet_setup {L : OCaml.Layout} {P : Prog} {s : St} {pl : P
   refine {
     toRaiseContext := context.after_read stable post.good post.tick memoryAll (nativeFrame.out.trans dp.frame.out)
       ((nativeFrame.frame _ (by decide)).trans (dp.frame.frame _ (by decide)))
+      ((nativeFrame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide)))
     pc := post.pcAt, trapReg := trapReg, domainReg := ?_ }
   simpa only [word, memoryAll] using domainReg
 

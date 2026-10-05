@@ -9,7 +9,7 @@ accumulator with an immediate or an existing live root. Use the generated regist
 def immediatePreserved : List Register :=
   [gprReg Layout.reg_sp, gprReg Layout.reg_env, gprReg Layout.reg_extra,
    gprReg Layout.reg_dispatchTable, gprReg Layout.reg_opcodeBound,
-   gprReg Layout.reg_pending, gprReg Layout.reg_domain]
+   gprReg Layout.reg_pending, gprReg Layout.reg_domain, gprReg 2]
 
 /-- Machine observations sufficient to restore an accumulator-result VM state.
 The generated segment supplies execution and its complete frame separately. -/
@@ -44,11 +44,13 @@ theorem accu_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     (platform : PlatformOk L.runtimeOk c) (loop : LoopRegisters c)
     (value : valWord pl v = some w)
     (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
-    (post : AccuPost c pl pc w after) :
+    (post : AccuPost c pl pc w after) (geometry : StackGeometry P s c pl cp high)
+    (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := v} after := by
   have payload := payload_pc ((payload_of_repr data).accu_of_root v root) pc
   apply readOnly_restore stable payload data.primitives platform ?_ ?_
-    post.good post.memory post.output
+    post.good post.memory post.output (geometry.state rfl rfl) native
+    (post.preserved (gprReg 2) (by decide))
   · refine ⟨post.head, post.code, ?_, ⟨w, post.accu, value⟩, ?_, ?_⟩
     · exact (post.preserved _ (by decide)).trans data.spReg
     · obtain ⟨w, hw, hv⟩ := data.env
@@ -62,9 +64,10 @@ theorem immediate_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Conf
     {pl : Place} {cp : ChanPlace} {sp high pc : Nat} {n : BitVec 63}
     (stable : MemoryStable L.runtimeOk) (data : VmReprAt P s c pl cp sp high)
     (platform : PlatformOk L.runtimeOk c) (loop : LoopRegisters c)
-    (post : ImmediatePost c pl pc n after) :
+    (post : ImmediatePost c pl pc n after) (geometry : StackGeometry P s c pl cp high)
+    (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := .int n} after :=
-  accu_restore stable data platform loop rfl (fun _ h => by cases h) post
+  accu_restore stable data platform loop rfl (fun _ h => by cases h) post geometry native
 
 /-- Check a generated write-set once, then consume the whole frame. -/
 theorem immediate_preserved {W : List Register} {σ σ' : MState}
@@ -94,7 +97,8 @@ theorem accu_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
   intro d dp
   obtain ⟨nb, after, hb, post⟩ := body d dp
   refine ⟨nb, after, hb, ?_⟩
-  apply accu_restore stable h.toVmReprAt h.running.platform h.dispatch.loop value root
+  refine accu_restore stable h.toVmReprAt h.running.platform h.dispatch.loop value root
+    ?_ h.geometry h.native
   exact ⟨post.good, post.head, post.code, post.accu,
       post.memory.trans dp.memory, post.output.trans dp.frame.out,
       fun r hr => (post.preserved r hr).trans

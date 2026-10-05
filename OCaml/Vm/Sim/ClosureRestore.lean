@@ -62,6 +62,11 @@ structure ClosureWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Cha
   payload : PayloadOutside (closureAllocationLog c pl sp count dest a domain accu) P s c pl cp sp
   image : ImageOutside (closureAllocationLog c pl sp count dest a domain accu)
   bindings : BindingsOutside (closureAllocationLog c pl sp count dest a domain accu) P c
+  /-- the nursery placement is apart from the VM stack window -/
+  stackApart : OutWRange [stackWindow high] (a - 8) (8 * (closureObject s count dest).wosize + 8)
+  /-- the allocation and all its stores lie in the allocator arena -/
+  arenaEnd : a + 8 * (closureObject s count dest).wosize ≤ Vsa.Sim.DlHeap.heapEnd
+  arena : LogInW [arenaWindow] (closureAllocationLog c pl sp count dest a domain accu)
 
 structure ClosurePost (before : Config) (s : St) (pl : Place) (sp count dest a domain : Nat)
     (accuWord : BitVec 64) (after : Config) : Prop
@@ -70,6 +75,8 @@ structure ClosurePost (before : Config) (s : St) (pl : Place) (sp count dest a d
   memory : after.σ.mem = writeLog before.σ.mem (closureAllocationLog before pl sp count dest a domain accuWord)
   output : after.σ.sailOutput = before.σ.sailOutput
   loop : LoopRegisters after
+  /-- the native stack pointer is unchanged -/
+  nativeSp : gpr after 2 = gpr before 2
 
 /-- The native closure log extends the represented heap, consumes its captures,
 and restores the loop-head platform invariant. -/
@@ -79,7 +86,9 @@ theorem closure_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     (data : VmReprAt P s before pl cp sp high) (platform : PlatformOk L.runtimeOk before)
     (value : valWord pl s.accu = some accu)
     (space : ClosureWriteOk P s before pl cp sp high count dest a domain accu)
-    (post : ClosurePost before s pl sp count dest a domain accu after) :
+    (post : ClosurePost before s pl sp count dest a domain accu after)
+    (geometry : StackGeometry P s before pl cp high)
+    (native : NativePlaced before) :
     Running L P (closureState s count dest) after := by
   have captures : ValueWords pl (closureCaptures s count) (closureWords before sp count accu) := by
     by_cases positive : 0 < count
@@ -99,5 +108,7 @@ theorem closure_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
   exact running_of_payload payload (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory, runtime after post.memory platform.runtime⟩
     post.toVmRegisters post.loop
+    ((geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory).alloc space.placed space.stackApart space.arenaEnd rfl rfl)
+    (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

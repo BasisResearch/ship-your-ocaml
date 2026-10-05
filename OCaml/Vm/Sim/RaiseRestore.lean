@@ -9,6 +9,8 @@ structure RaisePost (before : Config) (pl : Place) (s : St) (sp high trap : Nat)
   good : GoodState after.σ
   registers : VmRegisters s pl sp after
   loop : LoopRegisters after
+  /-- the native stack pointer is unchanged -/
+  nativeSp : gpr after 2 = gpr before 2
   memory : after.σ.mem = writeLog before.σ.mem (trapLog (word before Layout.sym_Caml_state).toNat high trap)
   output : after.σ.sailOutput = before.σ.sailOutput
 
@@ -23,7 +25,9 @@ theorem raise_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     (frame : RaiseFrame s dest link env extra rest)
     (space : TrapWriteOk P s c pl cp sp high (s.trap - link.toNat))
     (post : RaisePost c pl {s with pc := dest, env := env, extra := extra.toNat, stack := rest, trap := s.trap - link.toNat}
-      (sp + 8 * (s.stack.length - s.trap + 4)) high (s.trap - link.toNat) after) :
+      (sp + 8 * (s.stack.length - s.trap + 4)) high (s.trap - link.toNat) after)
+    (geometry : StackGeometry P s c pl cp high)
+    (native : NativePlaced c) :
     Running L P {s with pc := dest, env := env, extra := extra.toNat, stack := rest, trap := s.trap - link.toNat} after := by
   have payload := payload_trap_written data space.highNat space.payload post.memory post.output
   have saved := frame.values data
@@ -40,5 +44,7 @@ theorem raise_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
   exact running_of_payload restored (bindings_frame_log bindings space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable c after memoryFrame platform.runtime⟩ post.registers post.loop
+    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory)
+    (native.frameOn memoryFrame (by simp only [List.mem_singleton, forall_eq]; have := geometry.domain_below (off := Layout.off_trapsp + 8) (by decide); omega) (Reloc.bytesT_congr (copied_of_writeLog post.memory space.payload.domain)) post.nativeSp)
 
 end OCaml.Vm.Sim

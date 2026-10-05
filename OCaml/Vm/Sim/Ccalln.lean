@@ -100,6 +100,7 @@ theorem c_calln_callee_of_readOnly {L : OCaml.Layout} {P : Prog} {s : St}
           v result writes c (0x80002e64#64))) :
     CcallnCallee L P s pl cp sp high count domain nativeSp entry env name v result s.heap s.world :=
   ⟨fragment, model, fun c setup =>
-    c_calln_readOnly_summary (summary c setup.input) preserved setup.saved⟩
+    c_calln_readOnly_summary (summary c setup.input) preserved setup.saved setup.geometry
+      setup.native⟩
 
 end OCaml.Vm.Sim

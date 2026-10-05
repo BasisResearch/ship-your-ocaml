@@ -44,7 +44,13 @@ theorem closurerec_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after 
     (data : VmReprAt P s before pl cp sp high) (platform : PlatformOk L.runtimeOk before)
     (loop : LoopRegisters before) (value : valWord pl s.accu = some accu)
     (space : ClosurerecWriteOk P s before pl cp sp count dest a domain accu targets)
-    (post : ClosurerecReturned before pl s.pc sp count dest a domain accu targets after) :
+    (post : ClosurerecReturned before pl s.pc sp count dest a domain accu targets after)
+    (geometry : StackGeometry P s before pl cp high)
+    (apart : OutWRange [stackWindow high] (a - 8)
+      (8 * (closurerecObject s count (dest :: targets)).wosize + 8))
+    (arenaEnd : a + 8 * (closurerecObject s count (dest :: targets)).wosize ≤ Vsa.Sim.DlHeap.heapEnd)
+    (arena : LogInW [arenaWindow] (closurerecFullLog before pl sp count dest a domain accu targets))
+    (native : NativePlaced before) :
     Running L P (closurerecState s count dest targets) after := by
   have captures : ValueWords pl (closureCaptures s count) (closureWords before sp count accu) := by
     by_cases positive : 0 < count
@@ -72,6 +78,11 @@ theorem closurerec_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after 
   apply running_of_payload (payload_pc payload (s.pc + 3 + (targets.length + 1)))
     (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, post.image, runtime after post.memory platform.runtime⟩
+  case geometry =>
+    exact (geometry.frame_log rfl rfl space.core.domain space.bindings.contents post.memory).alloc
+      space.placed apart arenaEnd rfl rfl
+  case native =>
+    exact native.frame_log arena space.core.domain post.memory (post.frame.frame (gprReg 2) (by decide))
   · refine ⟨post.pcAt, post.codeReg, post.stackReg, ⟨BitVec.ofNat 64 a, post.accu, ?_⟩, ?_, ?_⟩
     · simp only [closurerecState, valWord, space.placed, Option.map_some, Nat.mul_zero, Nat.add_zero]
     · obtain ⟨w, reg, represented⟩ := data.env
