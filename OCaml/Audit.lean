@@ -2,6 +2,7 @@ import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
 import OCaml.Vm.Sim.OperandRows
+import OCaml.Vm.Sim.PushRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -388,6 +389,25 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.bultint_next
 #print axioms OCaml.Vm.Sim.bugeint_next
 #print axioms OCaml.Vm.Sim.atom_next
+#print axioms OCaml.Vm.Sim.acc0_row
+#print axioms OCaml.Vm.Sim.acc1_row
+#print axioms OCaml.Vm.Sim.acc2_row
+#print axioms OCaml.Vm.Sim.acc3_row
+#print axioms OCaml.Vm.Sim.acc4_row
+#print axioms OCaml.Vm.Sim.acc5_row
+#print axioms OCaml.Vm.Sim.acc6_row
+#print axioms OCaml.Vm.Sim.acc7_row
+#print axioms OCaml.Vm.Sim.push_row
+#print axioms OCaml.Vm.Sim.pushacc0_row
+#print axioms OCaml.Vm.Sim.pushacc1_row
+#print axioms OCaml.Vm.Sim.pushacc2_row
+#print axioms OCaml.Vm.Sim.pushacc3_row
+#print axioms OCaml.Vm.Sim.pushacc4_row
+#print axioms OCaml.Vm.Sim.pushacc5_row
+#print axioms OCaml.Vm.Sim.pushacc6_row
+#print axioms OCaml.Vm.Sim.pushacc7_row
+#print axioms OCaml.Vm.Sim.PushWriteOk.of_geometry
+#print axioms OCaml.Vm.Sim.RuntimeFrame.push
 #print axioms OCaml.Run.div_iff_not_halts
 #print axioms OCaml.Run.ConsPres.iff
 #print axioms OCaml.Run.ClosPres.iff

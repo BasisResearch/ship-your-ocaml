@@ -18,7 +18,7 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 /-- **The ACC0 row**: the real step from any loop head of the budget. -/
 theorem acc0_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
-    (capacity : 8 * B.stackWords ≤ Layout.stackBytes)
+    (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC0) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC0 := by
   intro s c i reach h _ op _
@@ -30,14 +30,14 @@ theorem acc0_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     apply OCaml.ArmOutcome.of_next
     · intro s' step
       exact stack_read_next (fun _ _ _ _ _ input selected read => acc0_arm stable input selected read)
-        h (code s c reach h) (stack_fits fits capacity reach) step
+        h (code s c reach h) (by simpa using stack_fits fits capacity reach (k := 0)) step
     · intro e w
       exact opt_not_halt
 
 /-- **The ACC1 row**: the real step from any loop head of the budget. -/
 theorem acc1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
-    (capacity : 8 * B.stackWords ≤ Layout.stackBytes)
+    (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC1) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC1 := by
   intro s c i reach h _ op _
@@ -49,14 +49,14 @@ theorem acc1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     apply OCaml.ArmOutcome.of_next
     · intro s' step
       exact stack_read_next (fun _ _ _ _ _ input selected read => acc1_arm stable input selected read)
-        h (code s c reach h) (stack_fits fits capacity reach) step
+        h (code s c reach h) (by simpa using stack_fits fits capacity reach (k := 0)) step
     · intro e w
       exact opt_not_halt
 
 /-- **The ACC2 row**: the real step from any loop head of the budget. -/
 theorem acc2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
-    (capacity : 8 * B.stackWords ≤ Layout.stackBytes)
+    (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC2) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC2 := by
   intro s c i reach h _ op _
@@ -68,14 +68,14 @@ theorem acc2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     apply OCaml.ArmOutcome.of_next
     · intro s' step
       exact stack_read_next (fun _ _ _ _ _ input selected read => acc2_arm stable input selected read)
-        h (code s c reach h) (stack_fits fits capacity reach) step
+        h (code s c reach h) (by simpa using stack_fits fits capacity reach (k := 0)) step
     · intro e w
       exact opt_not_halt
 
 /-- **The ACC3 row**: the real step from any loop head of the budget. -/
 theorem acc3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
-    (capacity : 8 * B.stackWords ≤ Layout.stackBytes)
+    (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC3) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC3 := by
   intro s c i reach h _ op _
@@ -87,14 +87,14 @@ theorem acc3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     apply OCaml.ArmOutcome.of_next
     · intro s' step
       exact stack_read_next (fun _ _ _ _ _ input selected read => acc3_arm stable input selected read)
-        h (code s c reach h) (stack_fits fits capacity reach) step
+        h (code s c reach h) (by simpa using stack_fits fits capacity reach (k := 0)) step
     · intro e w
       exact opt_not_halt
 
 /-- **The ACC4 row**: the real step from any loop head of the budget. -/
 theorem acc4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
-    (capacity : 8 * B.stackWords ≤ Layout.stackBytes)
+    (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC4) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC4 := by
   intro s c i reach h _ op _
@@ -106,14 +106,14 @@ theorem acc4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     apply OCaml.ArmOutcome.of_next
     · intro s' step
       exact stack_read_next (fun _ _ _ _ _ input selected read => acc4_arm stable input selected read)
-        h (code s c reach h) (stack_fits fits capacity reach) step
+        h (code s c reach h) (by simpa using stack_fits fits capacity reach (k := 0)) step
     · intro e w
       exact opt_not_halt
 
 /-- **The ACC5 row**: the real step from any loop head of the budget. -/
 theorem acc5_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
-    (capacity : 8 * B.stackWords ≤ Layout.stackBytes)
+    (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC5) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC5 := by
   intro s c i reach h _ op _
@@ -125,14 +125,14 @@ theorem acc5_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     apply OCaml.ArmOutcome.of_next
     · intro s' step
       exact stack_read_next (fun _ _ _ _ _ input selected read => acc5_arm stable input selected read)
-        h (code s c reach h) (stack_fits fits capacity reach) step
+        h (code s c reach h) (by simpa using stack_fits fits capacity reach (k := 0)) step
     · intro e w
       exact opt_not_halt
 
 /-- **The ACC6 row**: the real step from any loop head of the budget. -/
 theorem acc6_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
-    (capacity : 8 * B.stackWords ≤ Layout.stackBytes)
+    (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC6) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC6 := by
   intro s c i reach h _ op _
@@ -144,14 +144,14 @@ theorem acc6_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     apply OCaml.ArmOutcome.of_next
     · intro s' step
       exact stack_read_next (fun _ _ _ _ _ input selected read => acc6_arm stable input selected read)
-        h (code s c reach h) (stack_fits fits capacity reach) step
+        h (code s c reach h) (by simpa using stack_fits fits capacity reach (k := 0)) step
     · intro e w
       exact opt_not_halt
 
 /-- **The ACC7 row**: the real step from any loop head of the budget. -/
 theorem acc7_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
-    (capacity : 8 * B.stackWords ≤ Layout.stackBytes)
+    (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC7) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC7 := by
   intro s c i reach h _ op _
@@ -163,7 +163,7 @@ theorem acc7_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
     apply OCaml.ArmOutcome.of_next
     · intro s' step
       exact stack_read_next (fun _ _ _ _ _ input selected read => acc7_arm stable input selected read)
-        h (code s c reach h) (stack_fits fits capacity reach) step
+        h (code s c reach h) (by simpa using stack_fits fits capacity reach (k := 0)) step
     · intro e w
       exact opt_not_halt
 

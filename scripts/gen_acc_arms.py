@@ -70,7 +70,7 @@ end OCaml.Vm.Sim
 /-- **The ACC{n} row**: the real step from any loop head of the budget. -/
 theorem acc{n}_row {{L : OCaml.Layout}} {{B : OCaml.Budget}} {{P : Prog}}
     (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P)
-    (capacity : 8 * B.stackWords ≤ Layout.stackBytes)
+    (capacity : StackCapacity B)
     (code : ∀ s c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s c .ACC{n}) :
     OCaml.OpArm P (OCaml.LoopAt L P) .ACC{n} := by
   intro s c i reach h _ op _
@@ -82,7 +82,7 @@ theorem acc{n}_row {{L : OCaml.Layout}} {{B : OCaml.Budget}} {{P : Prog}}
     apply OCaml.ArmOutcome.of_next
     · intro s' step
       exact stack_read_next (fun _ _ _ _ _ input selected read => acc{n}_arm stable input selected read)
-        h (code s c reach h) (stack_fits fits capacity reach) step
+        h (code s c reach h) (by simpa using stack_fits fits capacity reach (k := 0)) step
     · intro e w
       exact opt_not_halt
 ''' for n in range(8))

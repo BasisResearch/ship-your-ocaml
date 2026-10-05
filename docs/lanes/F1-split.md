@@ -68,4 +68,9 @@ NativeValid D`, `OCaml/Vm/Sim/Invocation.lean`), which is preserved by every
 arm bridge. `ArmInput.of_loop h code` enters any arm from `LoopAt`.
 `code : DispatchCode P s c op` is the named obligation for a2-sem's
 `CodeFacts.lean`: opcode-word geometry, fetch, not a method-cache slot.
-Model row: `acc0_next` (`AccRows.lean`).
+Model rows: `acc0_row` (`AccRows.lean`), `push_row`/`pushacc1_row`
+(`PushRows.lean`), in `OCaml.OpArm P (OCaml.LoopAt L P) op` form. The shared
+row premises are `StackCapacity B` and `RuntimeFrame L high`
+(`StackRows.lean`). `PushWriteOk.of_geometry` and `RuntimeFrame.push`
+supply every one-word push. `StackGeometry.even : EvenPlace pl` serves
+ISINT/BRANCHIF/SWITCH.
