@@ -103,6 +103,8 @@ def outputs():
         # Explicit source semantic equation and instruction operands.
         bc_args = '[]' if vec else '[ofs.toInt]'
         simp_step = 'stepI, ' + ('' if glob else 'stack, ') + 'update, opt, St.adv'
+        # index operands are guarded in stepI (negative → unsupported); SETVECTITEM's index is a stack value
+        step_term = 'step' if vec else 'Res.unguard step'
         result[ROOT / f'OCaml/Vm/Sim/{stem}.lean'] = f'''import OCaml.Vm.Sim.ModifyCall
 import OCaml.Vm.Sim.StackAcc
 import OCaml.Vm.Sim.IndexWord
@@ -177,7 +179,7 @@ theorem {lower}_step_arm {{L : OCaml.Layout}} {{P : Prog}} {{s s' : St}} {{c : C
     (step : stepI P s ⟨.{opcode}, {bc_args}⟩ = .next s') :
     ∃ after, Plus c after ∧ Running L P s' after := by
   have state : {target} = s' := by
-    simpa [{simp_step}] using step
+    simpa [{simp_step}] using {step_term}
   rw [← state]
   exact {lower}_arm stable h {args} callee
 

@@ -22,6 +22,6 @@ theorem closurerec_state_of_step {P : Prog} {s s' : St} {nf nv : Int}
   simpa only [stepI, valid, enough, ite_false, jumps, opt, arity,
     closure_capture_stack, closure_stack_remaining, closurerecState, closurerecObject,
     closurerecFunctionValues, closurerecFunctionGroup, closurerecStack, St.adv,
-    List.length_cons, Nat.add_assoc, Int.ofNat_eq_natCast, Res.next.injEq] using step
+    List.length_cons, Nat.add_assoc, Int.ofNat_eq_natCast, Res.next.injEq] using Res.unguard step
 
 end OCaml.Vm.Sim

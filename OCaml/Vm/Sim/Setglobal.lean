@@ -139,7 +139,7 @@ theorem setglobal_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config
     (step : stepI P s ⟨.SETGLOBAL, [ofs.toInt]⟩ = .next s') :
     ∃ after, Plus c after ∧ Running L P s' after := by
   have state : {s with pc := s.pc + 2, accu := .unit, heap := heap, stack := s.stack} = s' := by
-    simpa [stepI, update, opt, St.adv] using step
+    simpa [stepI, update, opt, St.adv] using Res.unguard step
   rw [← state]
   exact setglobal_arm stable h operand nonnegative source encoded callee
 

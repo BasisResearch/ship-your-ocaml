@@ -52,7 +52,7 @@ theorem c_call{arity}_exit_step_arm {params}
     {{e : Nat}} {{w : World}} (step : stepI P s ⟨{op}, {stepArgs}⟩ = .halt e w) :
     Halts c (bytesToString w.console) e := by
   have outcome : Res.halt code world = Res.halt e w := by
-    simpa [stepI, h.primitive, opt, cCall, prim, primF1, callee.fragment, callee.semantics{simp}] using step
+    simpa [stepI, h.primitive, opt, cCall, prim, primF1, callee.fragment, callee.semantics{simp}] using Res.unguard_halt step
   obtain ⟨rfl, rfl⟩ := Res.halt.inj outcome
   exact c_call{arity}_exit_arm writeStable h{argument} callee
 

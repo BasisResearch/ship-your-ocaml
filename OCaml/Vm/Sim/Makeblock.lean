@@ -53,7 +53,7 @@ theorem makeblock_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config
   have nonzero : ¬ size.toInt.toNat = 0 := by have positive := space.positive; omega
   have state : makeblockState s 3 size.toInt.toNat tag.toInt.toNat = s' := by
     simpa only [stepI, makeBlock, nonzero, enough, ite_false,
-      makeblockState, makeblockObject, Res.next.injEq] using step
+      makeblockState, makeblockObject, Res.next.injEq] using Res.unguard step
   rw [← state]
   exact makeblock_arm runtime h sizeOperand tagOperand sizeNonnegative tagNonnegative nursery value space initializer
 

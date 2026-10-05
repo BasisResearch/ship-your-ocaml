@@ -50,6 +50,6 @@ theorem closure_state_of_step {P : Prog} {s s' : St} {nv ofs : Int} {dest : Nat}
     · simp only [List.length_cons]; omega
     · omega
   simpa only [stepI, enough, ite_false, jump, opt, closure_capture_stack, closure_stack_remaining,
-    closureState, closureObject, St.adv, List.cons_append, List.nil_append, Res.next.injEq] using step
+    closureState, closureObject, St.adv, List.cons_append, List.nil_append, Res.next.injEq] using Res.unguard step
 
 end OCaml.Vm.Sim

@@ -34,7 +34,8 @@ theorem return_over (P : Prog) (pc dest : Nat) (f env : Val) (extra trap : Nat)
     Run.iter (bcK P) 1 ⟨pc, f, args ++ tail, env, extra + 1, trap, h, w⟩ =
       .ok ⟨dest, f, tail, f, extra, trap, h, w⟩ := by
   apply sym_instr decode
-  simp [stepI, enter, code, opt]
+  have guard : ¬ ((args.length : Int) < 0) := by omega
+  simp [stepI, guard, enter, code, opt]
 
 /-- Under-applied GRAB allocates a partial closure and immediately restores
 the caller frame. RESTART's address is the instruction preceding GRAB. -/
@@ -47,7 +48,8 @@ theorem grab_under (P : Prog) (pc req ret : Nat) (a env caller : Val)
       .ok ⟨ret, .ptr h.objs.length 0, tail, caller, saved.toNat, trap,
         (h.alloc (.block closureTag (.code (pc - 1) :: Val.ofInt 2 :: env :: args))).1, w⟩ := by
   apply sym_instr decode
-  simp only [stepI]
+  have guard : ¬ ((req : Int) < 0) := by omega
+  simp only [stepI, guard, if_false]
   have hn : ¬ req ≤ extra := by omega
   have hp : ¬ pc < 1 := by omega
   simp [hn, hp, ← count, Heap.alloc]

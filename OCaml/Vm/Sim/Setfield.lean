@@ -153,7 +153,7 @@ theorem setfield_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (step : stepI P s ⟨.SETFIELD, [ofs.toInt]⟩ = .next s') :
     ∃ after, Plus c after ∧ Running L P s' after := by
   have state : {s with pc := s.pc + 2, accu := .unit, heap := heap, stack := rest} = s' := by
-    simpa [stepI, stack, update, opt, St.adv] using step
+    simpa [stepI, stack, update, opt, St.adv] using Res.unguard step
   rw [← state]
   exact setfield_arm stable h operand nonnegative source stack encoded stackRead callee
 

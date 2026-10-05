@@ -177,6 +177,26 @@ def ints? : Val → Val → Option (BitVec 63 × BitVec 63)
   | .int a, .int b => some (a, b)
   | _, _ => none
 
+/-- A guarded step that continues took the unguarded branch (index operands:
+a negative one is `.unsupported`, `stepI`). -/
+theorem Res.unguard {c : Prop} [Decidable c] {x : Res} {s' : St}
+    (h : (if c then Res.unsupported else x) = .next s') : x = .next s' := by
+  by_cases hc : c
+  · rw [if_pos hc] at h; cases h
+  · rwa [if_neg hc] at h
+
+/-- A guarded step that halts took the unguarded branch. -/
+theorem Res.unguard_halt {c : Prop} [Decidable c] {x : Res} {e : Nat} {w : World}
+    (h : (if c then Res.unsupported else x) = .halt e w) : x = .halt e w := by
+  by_cases hc : c
+  · rw [if_pos hc] at h; cases h
+  · rwa [if_neg hc] at h
+
+/-- A guarded step that continues had a non-negative guard. -/
+theorem Res.guard_ok {c : Prop} [Decidable c] {x : Res} {s' : St}
+    (h : (if c then Res.unsupported else x) = .next s') : ¬ c := by
+  intro hc; rw [if_pos hc] at h; cases h
+
 @[inline] def opt {α} (o : Option α) (k : α → Res) : Res :=
   match o with
   | some a => k a
@@ -1111,7 +1131,10 @@ def makeBlock (len size tag : Nat) : Res :=
 def pushAccu (s : St) : St := { s with stack := s.accu :: s.stack }
 
 /-- One step of the ZINC machine: `caml_interprete`'s arm for the
-instruction at `pc`. -/
+instruction at `pc`. Index operands (stack slots, fields, globals, sizes,
+tags, primitive numbers) are signed `int32` words in `interp.c`; a negative
+one indexes outside the object, so it is `.unsupported` here rather than
+clamped by `Int.toNat`. -/
 def stepI (i : Instr) : Res :=
   let pc := s.pc
   let stk := s.stack
@@ -1126,7 +1149,7 @@ def stepI (i : Instr) : Res :=
   | .ACC5, [] => opt (nth 5) fun v => .next { (s.adv 1) with accu := v }
   | .ACC6, [] => opt (nth 6) fun v => .next { (s.adv 1) with accu := v }
   | .ACC7, [] => opt (nth 7) fun v => .next { (s.adv 1) with accu := v }
-  | .ACC, [n] => opt (stk[n.toNat]?) fun v => .next { (s.adv 2) with accu := v }
+  | .ACC, [n] => if n < 0 then .unsupported else opt (stk[n.toNat]?) fun v => .next { (s.adv 2) with accu := v }
   | .PUSH, [] | .PUSHACC0, [] => .next (pushAccu (s.adv 1))
   | .PUSHACC1, [] => opt (nth 0) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
   | .PUSHACC2, [] => opt (nth 1) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
@@ -1135,11 +1158,11 @@ def stepI (i : Instr) : Res :=
   | .PUSHACC5, [] => opt (nth 4) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
   | .PUSHACC6, [] => opt (nth 5) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
   | .PUSHACC7, [] => opt (nth 6) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
-  | .PUSHACC, [n] =>
+  | .PUSHACC, [n] => if n < 0 then .unsupported else
       -- `*--sp = accu; accu = sp[*pc++]` : index n of the pushed stack
       opt ((s.accu :: stk)[n.toNat]?) fun v => .next { (pushAccu (s.adv 2)) with accu := v }
-  | .POP, [n] => if stk.length < n.toNat then .wrong else .next { (s.adv 2) with stack := stk.drop n.toNat }
-  | .ASSIGN, [n] =>
+  | .POP, [n] => if n < 0 then .unsupported else if stk.length < n.toNat then .wrong else .next { (s.adv 2) with stack := stk.drop n.toNat }
+  | .ASSIGN, [n] => if n < 0 then .unsupported else
       if n.toNat < stk.length then
         .next { (s.adv 2) with stack := stk.set n.toNat s.accu, accu := .unit }
       else .wrong
@@ -1148,12 +1171,12 @@ def stepI (i : Instr) : Res :=
   | .ENVACC2, [] => opt (field? s.heap s.env 2) fun v => .next { (s.adv 1) with accu := v }
   | .ENVACC3, [] => opt (field? s.heap s.env 3) fun v => .next { (s.adv 1) with accu := v }
   | .ENVACC4, [] => opt (field? s.heap s.env 4) fun v => .next { (s.adv 1) with accu := v }
-  | .ENVACC, [n] => opt (field? s.heap s.env n.toNat) fun v => .next { (s.adv 2) with accu := v }
+  | .ENVACC, [n] => if n < 0 then .unsupported else opt (field? s.heap s.env n.toNat) fun v => .next { (s.adv 2) with accu := v }
   | .PUSHENVACC1, [] => opt (field? s.heap s.env 1) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
   | .PUSHENVACC2, [] => opt (field? s.heap s.env 2) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
   | .PUSHENVACC3, [] => opt (field? s.heap s.env 3) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
   | .PUSHENVACC4, [] => opt (field? s.heap s.env 4) fun v => .next { (pushAccu (s.adv 1)) with accu := v }
-  | .PUSHENVACC, [n] => opt (field? s.heap s.env n.toNat) fun v => .next { (pushAccu (s.adv 2)) with accu := v }
+  | .PUSHENVACC, [n] => if n < 0 then .unsupported else opt (field? s.heap s.env n.toNat) fun v => .next { (pushAccu (s.adv 2)) with accu := v }
   -- Function application
   | .PUSH_RETADDR, [ofs] => opt (target pc 0 ofs) fun r =>
       .next { (s.adv 2) with stack := .code r :: s.env :: Val.ofInt s.extra :: stk }
@@ -1181,7 +1204,7 @@ def stepI (i : Instr) : Res :=
   | .APPTERM3, [slot] =>
       if slot < 3 ∨ stk.length < slot.toNat then .wrong else
       enter s (stk.take 3 ++ stk.drop slot.toNat) (s.extra + 2)
-  | .RETURN, [n] =>
+  | .RETURN, [n] => if n < 0 then .unsupported else
       let rest := stk.drop n.toNat
       if stk.length < n.toNat then .wrong else
       if s.extra > 0 then enter s rest (s.extra - 1)
@@ -1198,7 +1221,7 @@ def stepI (i : Instr) : Res :=
               stack := fs.drop 3 ++ stk, env := fs.getD 2 .unit, extra := s.extra + (fs.length - 3) }
         | _ => .wrong
       | _ => .wrong
-  | .GRAB, [req] =>
+  | .GRAB, [req] => if req < 0 then .unsupported else
       if req.toNat ≤ s.extra then .next { (s.adv 2) with extra := s.extra - req.toNat }
       else
         let na := 1 + s.extra
@@ -1211,14 +1234,14 @@ def stepI (i : Instr) : Res :=
         | .code r :: env :: .int ex :: rest =>
             .next { s with pc := r, accu := .ptr l 0, heap := h, env := env, extra := ex.toNat, stack := rest }
         | _ => .wrong
-  | .CLOSURE, [nv, ofs] =>
+  | .CLOSURE, [nv, ofs] => if nv < 0 then .unsupported else
       let n := nv.toNat
       let stk' := if n > 0 then s.accu :: stk else stk
       if stk'.length < n then .wrong else
       opt (target pc 1 ofs) fun c =>
       let (h, l) := s.heap.alloc (.block closureTag (.code c :: Val.ofInt 2 :: stk'.take n))
       .next { (s.adv 3) with accu := .ptr l 0, heap := h, stack := stk'.drop n }
-  | .CLOSUREREC, nf :: nv :: ofss =>
+  | .CLOSUREREC, nf :: nv :: ofss => if nf < 0 ∨ nv < 0 then .unsupported else
       let f := nf.toNat; let n := nv.toNat
       if f = 0 ∨ ofss.length ≠ f then .wrong else
       let stk' := if n > 0 then s.accu :: stk else stk
@@ -1254,16 +1277,16 @@ def stepI (i : Instr) : Res :=
           .next { (s1.adv (1 + i.args.length)) with accu := .ptr l ((k : Int) + d).toNat }
       | _ => .wrong
   -- Globals
-  | .GETGLOBAL, [n] => opt (field? s.heap P.globals n.toNat) fun v => .next { (s.adv 2) with accu := v }
-  | .PUSHGETGLOBAL, [n] =>
+  | .GETGLOBAL, [n] => if n < 0 then .unsupported else opt (field? s.heap P.globals n.toNat) fun v => .next { (s.adv 2) with accu := v }
+  | .PUSHGETGLOBAL, [n] => if n < 0 then .unsupported else
       opt (field? s.heap P.globals n.toNat) fun v => .next { (pushAccu (s.adv 2)) with accu := v }
-  | .GETGLOBALFIELD, [n, k] =>
+  | .GETGLOBALFIELD, [n, k] => if n < 0 ∨ k < 0 then .unsupported else
       opt (field? s.heap P.globals n.toNat) fun g =>
       opt (field? s.heap g k.toNat) fun v => .next { (s.adv 3) with accu := v }
-  | .PUSHGETGLOBALFIELD, [n, k] =>
+  | .PUSHGETGLOBALFIELD, [n, k] => if n < 0 ∨ k < 0 then .unsupported else
       opt (field? s.heap P.globals n.toNat) fun g =>
       opt (field? s.heap g k.toNat) fun v => .next { (pushAccu (s.adv 3)) with accu := v }
-  | .SETGLOBAL, [n] =>
+  | .SETGLOBAL, [n] => if n < 0 then .unsupported else
       opt (setField? s.heap P.globals n.toNat s.accu) fun h =>
         .next { (s.adv 2) with heap := h, accu := .unit }
   -- Blocks
@@ -1273,16 +1296,21 @@ def stepI (i : Instr) : Res :=
   | .ATOM, [t] => if t < 0 then .unsupported else .next { (s.adv 2) with accu := .atom t.toNat }
   | .PUSHATOM0, [] => .next { (pushAccu (s.adv 1)) with accu := .atom 0 }
   | .PUSHATOM, [t] => if t < 0 then .unsupported else .next { (pushAccu (s.adv 2)) with accu := .atom t.toNat }
-  | .MAKEBLOCK, [sz, t] => makeBlock s 3 sz.toNat t.toNat
-  | .MAKEBLOCK1, [t] => makeBlock s 2 1 t.toNat
-  | .MAKEBLOCK2, [t] => makeBlock s 2 2 t.toNat
-  | .MAKEBLOCK3, [t] => makeBlock s 2 3 t.toNat
+  | .MAKEBLOCK, [sz, t] => if sz < 0 ∨ t < 0 then .unsupported else makeBlock s 3 sz.toNat t.toNat
+  | .MAKEBLOCK1, [t] => if t < 0 then .unsupported else makeBlock s 2 1 t.toNat
+  | .MAKEBLOCK2, [t] => if t < 0 then .unsupported else makeBlock s 2 2 t.toNat
+  | .MAKEBLOCK3, [t] => if t < 0 then .unsupported else makeBlock s 2 3 t.toNat
   | .GETFIELD0, [] => opt (field? s.heap s.accu 0) fun v => .next { (s.adv 1) with accu := v }
   | .GETFIELD1, [] => opt (field? s.heap s.accu 1) fun v => .next { (s.adv 1) with accu := v }
   | .GETFIELD2, [] => opt (field? s.heap s.accu 2) fun v => .next { (s.adv 1) with accu := v }
   | .GETFIELD3, [] => opt (field? s.heap s.accu 3) fun v => .next { (s.adv 1) with accu := v }
-  | .GETFIELD, [n] => opt (field? s.heap s.accu n.toNat) fun v => .next { (s.adv 2) with accu := v }
-  | .SETFIELD0, [] | .SETFIELD1, [] | .SETFIELD2, [] | .SETFIELD3, [] | .SETFIELD, [_] =>
+  | .GETFIELD, [n] => if n < 0 then .unsupported else opt (field? s.heap s.accu n.toNat) fun v => .next { (s.adv 2) with accu := v }
+  | .SETFIELD, [n] => if n < 0 then .unsupported else
+      match stk with
+      | v :: rest => opt (setField? s.heap s.accu n.toNat v) fun h =>
+          .next { (s.adv 2) with heap := h, accu := .unit, stack := rest }
+      | [] => .wrong
+  | .SETFIELD0, [] | .SETFIELD1, [] | .SETFIELD2, [] | .SETFIELD3, [] =>
       let k := match i.op, i.args with
         | .SETFIELD1, _ => 1 | .SETFIELD2, _ => 2 | .SETFIELD3, _ => 3
         | .SETFIELD, [n] => n.toNat | _, _ => 0
@@ -1296,10 +1324,10 @@ def stepI (i : Instr) : Res :=
       opt ((s.accu :: stk.take (sz.toNat - 1)).mapM (doubleOf? s.heap)) fun ds =>
       let (h, l) := s.heap.alloc (.doubleArray ds)
       .next { (s.adv 2) with accu := .ptr l 0, heap := h, stack := stk.drop (sz.toNat - 1) }
-  | .GETFLOATFIELD, [n] => opt (floatField? s.heap s.accu n.toNat) fun d =>
+  | .GETFLOATFIELD, [n] => if n < 0 then .unsupported else opt (floatField? s.heap s.accu n.toNat) fun d =>
       let (h, l) := s.heap.alloc (.double d)
       .next { (s.adv 2) with accu := .ptr l 0, heap := h }
-  | .SETFLOATFIELD, [n] => match stk with
+  | .SETFLOATFIELD, [n] => if n < 0 then .unsupported else match stk with
       | v :: rest => opt (doubleOf? s.heap v) fun d =>
           opt (setFloatField? s.heap s.accu n.toNat d) fun h =>
           .next { (s.adv 2) with accu := .unit, heap := h, stack := rest }
@@ -1363,12 +1391,12 @@ def stepI (i : Instr) : Res :=
   | .RAISE, [] | .RERAISE, [] | .RAISE_NOTRACE, [] => raiseTo P s s.accu
   | .CHECK_SIGNALS, [] => .next (s.adv 1)
   -- C calls
-  | .C_CALL1, [p] => opt P.prims[p.toNat]? fun nm => cCall P s 2 nm [s.accu]
-  | .C_CALL2, [p] => opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 1)
-  | .C_CALL3, [p] => opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 2)
-  | .C_CALL4, [p] => opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 3)
-  | .C_CALL5, [p] => opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 4)
-  | .C_CALLN, [n, p] =>
+  | .C_CALL1, [p] => if p < 0 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm [s.accu]
+  | .C_CALL2, [p] => if p < 0 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 1)
+  | .C_CALL3, [p] => if p < 0 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 2)
+  | .C_CALL4, [p] => if p < 0 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 3)
+  | .C_CALL5, [p] => if p < 0 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 4)
+  | .C_CALLN, [n, p] => if p < 0 then .unsupported else
       if n ≤ 0 ∨ stk.length < n.toNat - 1 then .wrong else
       opt P.prims[p.toNat]? fun nm => cCall P s 3 nm (s.accu :: stk.take (n.toNat - 1))
   -- Integer constants and arithmetic

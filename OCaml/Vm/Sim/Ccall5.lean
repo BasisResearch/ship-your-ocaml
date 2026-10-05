@@ -46,7 +46,7 @@ theorem c_call5_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (step : stepI P s ⟨.C_CALL5, [index.toInt]⟩ = .next s') :
     ∃ after, Plus c after ∧ Running L P s' after := by
   have state : {s with pc := s.pc + 2, accu := v, heap := heap, world := world, stack := s.stack.drop 4} = s' := by
-    simpa [stepI, h.primitive, opt, cCall, prim, primF1, callee.fragment, callee.semantics, List.length_take, Nat.min_eq_left arguments.bound] using step
+    simpa [stepI, h.primitive, opt, cCall, prim, primF1, callee.fragment, callee.semantics, List.length_take, Nat.min_eq_left arguments.bound] using Res.unguard step
   rw [← state]
   exact c_call5_arm writeStable readStable h arguments callee
 

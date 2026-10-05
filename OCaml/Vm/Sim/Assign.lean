@@ -77,9 +77,9 @@ theorem assign_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     ∃ c', Plus c c' ∧ Running L P s' c' := by
   by_cases bound : index.toInt.toNat < s.stack.length
   · have state : {s with pc := s.pc + 2, accu := .unit, stack := s.stack.set index.toInt.toNat s.accu} = s' := by
-      simpa [stepI, bound, St.adv] using step
+      simpa [stepI, bound, St.adv] using Res.unguard step
     rw [← state]
     exact assign_arm stable h operand nonnegative space bound value
-  · simp [stepI, bound] at step
+  · have step := Res.unguard step; simp [stepI, bound] at step
 
 end OCaml.Vm.Sim

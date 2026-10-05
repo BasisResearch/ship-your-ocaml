@@ -64,6 +64,7 @@ theorem pop_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (nonnegative : 0 ≤ w.toInt)
     (step : stepI P s ⟨.POP, [w.toInt]⟩ = .next s') :
     ∃ c', Plus c c' ∧ Running L P s' c' := by
+  replace step := Res.unguard step
   change (if s.stack.length < w.toInt.toNat then Res.wrong else
     .next {s with pc := s.pc + 2, stack := s.stack.drop w.toInt.toNat}) = .next s' at step
   split at step

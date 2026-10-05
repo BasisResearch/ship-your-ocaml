@@ -165,7 +165,7 @@ theorem makeblock2_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Confi
   have enough : ¬ s.stack.length < 2 - 1 := by have bound := space.bound; omega
   have state : makeblockState s 2 2 tag.toInt.toNat = s' := by
     simpa only [stepI, makeBlock, show ¬ (2 : Nat) = 0 by decide, enough, ite_false,
-      makeblockState, makeblockObject, Res.next.injEq] using step
+      makeblockState, makeblockObject, Res.next.injEq] using Res.unguard step
   rw [← state]
   exact makeblock2_arm runtime h operand nonnegative value space
 

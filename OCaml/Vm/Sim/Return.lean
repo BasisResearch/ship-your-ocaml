@@ -19,11 +19,11 @@ theorem return_more_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Conf
     by_cases bound : count.toInt.toNat ≤ s.stack.length
     · exact bound
     · have bad : s.stack.length < count.toInt.toNat := by omega
-      simp only [stepI, bad, ite_true] at step
+      have step := Res.unguard step; simp only [stepI, bad, ite_true] at step
       cases step
   have state : {s with pc := dest, env := s.accu, extra := s.extra - 1, stack := s.stack.drop count.toInt.toNat} = s' := by
     simpa only [stepI, show ¬ s.stack.length < count.toInt.toNat by omega, ite_false,
-      positive, ite_true, enter, field.selected, opt, Res.next.injEq] using step
+      positive, ite_true, enter, field.selected, opt, Res.next.injEq] using Res.unguard step
   rw [← state]
   exact return_more_arm stable h operand nonnegative bound positive small field geometry
 
@@ -47,7 +47,7 @@ theorem return_frame_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Con
     simpa only [List.drop_drop, List.drop_succ_cons, List.drop_zero] using dropped
   have state : {s with pc := dest, env := env, extra := extra.toNat, stack := s.stack.drop (count.toInt.toNat + 3)} = s' := by
     simpa only [stepI, show ¬ s.stack.length < count.toInt.toNat by omega, ite_false,
-      noExtra, Nat.lt_irrefl, stack, remainder, Res.next.injEq] using step
+      noExtra, Nat.lt_irrefl, stack, remainder, Res.next.injEq] using Res.unguard step
   rw [← state]
   exact return_frame_arm stable h operand nonnegative noExtra savedNonnegative stack reads
 

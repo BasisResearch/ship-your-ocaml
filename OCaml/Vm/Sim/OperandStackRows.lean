@@ -11,9 +11,9 @@ import OCaml.Vm.Sim.StackRows
 `ACC n`, `PUSHACC n`, `POP n` and `ENVACC n` from `LoopAt`: the operand comes
 from its fetch alone (`OperandAt.of_fetch`, geometry from the witness), the
 read windows from the placement geometry, the push from
-`PushWriteOk.of_geometry`/`RuntimeFrame.push`. `nonnegative` is named: BcSem
-clamps a negative operand with `Int.toNat`, while `interp.c` indexes below
-`sp` (a2-sem's BcSem domain).
+`PushWriteOk.of_geometry`/`RuntimeFrame.push`. Operand nonnegativity comes
+from the step itself: BcSem makes a negative index operand `.unsupported`
+(`interp.c` would index below `sp`), so `Res.guard_ok` supplies it.
 -/
 
 namespace OCaml.Vm.Sim
@@ -33,10 +33,12 @@ theorem StackGeometry.push_read {P : Prog} {s : St} {c : Config} {pl : Place} {c
 /-- **ACC n from the loop head.** -/
 theorem acc_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ACC)
-    (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
+    (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * s.stack.length ≤ Layout.stackBytes)
     (step : stepI P s ⟨.ACC, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
+  replace step := Res.unguard step
   change opt (s.stack[w.toInt.toNat]?) (fun v => .next { (s.adv 2) with accu := v }) = .next s' at step
   obtain ⟨v, selected, next⟩ := opt_next step
   cases next
@@ -50,10 +52,12 @@ theorem acc_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : Bit
 theorem pushacc_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .PUSHACC)
-    (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
+    (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
     (step : stepI P s ⟨.PUSHACC, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
+  replace step := Res.unguard step
   change opt ((s.accu :: s.stack)[w.toInt.toNat]?)
     (fun v => .next { (pushAccu (s.adv 2)) with accu := v }) = .next s' at step
   obtain ⟨v, selected, next⟩ := opt_next step
@@ -71,9 +75,10 @@ theorem pushacc_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w :
 /-- **POP n from the loop head.** -/
 theorem pop_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .POP)
-    (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
+    (fetch : P.code[s.pc + 1]? = some w)
     (step : stepI P s ⟨.POP, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
   obtain ⟨c', run, running⟩ := pop_step_arm stable input (OperandAt.of_fetch input.geometry fetch)
     nonnegative step
@@ -82,9 +87,11 @@ theorem pop_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : Bit
 /-- **ENVACC n from the loop head.** -/
 theorem envacc_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .ENVACC)
-    (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
+    (fetch : P.code[s.pc + 1]? = some w)
     (step : stepI P s ⟨.ENVACC, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
+  replace step := Res.unguard step
   change opt (field? s.heap s.env w.toInt.toNat)
     (fun v => .next { (s.adv 2) with accu := v }) = .next s' at step
   obtain ⟨v, selected, next⟩ := opt_next step
@@ -155,16 +162,16 @@ theorem AssignWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} 
 theorem assign_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     {high0 : Nat} (rf : RuntimeFrame L high0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .ASSIGN)
-    (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
+    (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * s.stack.length ≤ Layout.stackBytes)
     (step : stepI P s ⟨.ASSIGN, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
+  have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
   have bound : w.toInt.toNat < s.stack.length := by
     by_cases inside : w.toInt.toNat < s.stack.length
     · exact inside
-    · have : stepI P s ⟨.ASSIGN, [w.toInt]⟩ = .wrong := by simp [stepI, inside]
-      rw [this] at step
-      cases step
+    · have unguarded := Res.unguard step
+      simp [inside] at unguarded
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
   obtain ⟨x, -, value⟩ := input.accu
   have same : high = high0 := input.stackHigh.symm.trans (rf.stackHigh c input.runtime)

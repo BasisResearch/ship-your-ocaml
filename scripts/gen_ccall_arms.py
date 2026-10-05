@@ -53,7 +53,7 @@ theorem c_call@ARITY@_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Co
     (step : stepI P s ⟨.C_CALL@ARITY@, [index.toInt]⟩ = .next s') :
     ∃ after, Plus c after ∧ Running L P s' after := by
   have state : {s with pc := s.pc + 2, accu := v, heap := heap, world := world, stack := s.stack.drop @COUNT@} = s' := by
-    simpa [stepI, h.primitive, opt, cCall, prim, primF1, callee.fragment, callee.semantics, List.length_take, Nat.min_eq_left arguments.bound] using step
+    simpa [stepI, h.primitive, opt, cCall, prim, primF1, callee.fragment, callee.semantics, List.length_take, Nat.min_eq_left arguments.bound] using Res.unguard step
   rw [← state]
   exact c_call@ARITY@_arm writeStable readStable h arguments callee
 

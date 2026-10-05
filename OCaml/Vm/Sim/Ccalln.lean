@@ -82,7 +82,7 @@ theorem c_calln_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
   have state : {s with pc := s.pc + 3, accu := v, heap := heap, world := world, stack := s.stack.drop (nargs.toInt.toNat - 1)} = s' := by
     simpa [stepI, h.primitive, opt, cCall, prim, primF1, callee.fragment, callee.semantics,
       Int.not_le.mpr h.positive, Nat.not_lt.mpr h.bound,
-      List.length_take, Nat.min_eq_left h.bound] using step
+      List.length_take, Nat.min_eq_left h.bound] using Res.unguard step
   rw [← state]
   exact c_calln_arm writeStable readStable h callee
 

@@ -30,7 +30,7 @@ theorem c_call1_exit_step_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config
     {e : Nat} {w : World} (step : stepI P s ⟨.C_CALL1, [index.toInt]⟩ = .halt e w) :
     Halts c (bytesToString w.console) e := by
   have outcome : Res.halt code world = Res.halt e w := by
-    simpa [stepI, h.primitive, opt, cCall, prim, primF1, callee.fragment, callee.semantics] using step
+    simpa [stepI, h.primitive, opt, cCall, prim, primF1, callee.fragment, callee.semantics] using Res.unguard_halt step
   obtain ⟨rfl, rfl⟩ := Res.halt.inj outcome
   exact c_call1_exit_arm writeStable h callee
 
