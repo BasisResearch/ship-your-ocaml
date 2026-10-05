@@ -222,6 +222,7 @@ import OCaml.Vm.Gc.SingleTailQueued
 import OCaml.Vm.Gc.CopyLoop
 import OCaml.Vm.Gc.CopyRoots
 import OCaml.Vm.Gc.CopySources
+import OCaml.Vm.Gc.SourceOwnership
 import OCaml.Vm.Gc.SingleFieldChildHeader
 import OCaml.Vm.Gc.CopiedHeaders
 import OCaml.Vm.Gc.SingleFieldPayload
@@ -4163,6 +4164,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleTail.Publication.parent_member
 #print axioms OCaml.Vm.Gc.SingleTail.run_copy_from_head_root
 #print axioms OCaml.Vm.Gc.SingleTail.run_copy_from_head_sources
+#print axioms OCaml.Vm.Gc.SingleTail.OwnedFrame.sourceFrame
+#print axioms OCaml.Vm.Gc.SingleTail.outside_of_allowed
 #print axioms OCaml.Vm.Gc.SingleTail.run_copy_loop_indexed
 
 #print axioms OCaml.Vm.Gc.Fresh.header_of_typed_wrapper

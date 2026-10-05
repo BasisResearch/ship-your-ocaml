@@ -34,6 +34,17 @@ For other lanes:
 
 Open: G2 (collector proper) resumes after F1; see entries below.
 
+G2 progress after F1:
+- `OCaml/Vm/Gc/SourceOwnership.lean:OwnedFrame.sourceFrame` reduces the
+  `SourceFrame` premise of `run_copy_from_head_sources` to: `Nursery lo hi
+  objects` (sources inside the nursery, each with a field, footprints
+  disjoint) and `OwnedFrame` (root slot outside the nursery, copied source
+  recorded, each effect-log store `Allowed`: outside the nursery or within a
+  published source's header/first field). Next: discharge `OwnedFrame.effect`
+  per `CopyEffect` branch (store-return/forwarded writes target the major
+  heap; allocator effects stay in free-list metadata; queued child
+  forwarding is `Allowed` by publication), and `Nursery` from `HeapRepr`.
+
 ## Source objects through the copying loop (2026-10-05)
 
 - `CopyLoop.lean:run_copy_loop_indexed` generalizes the copying fold to views
