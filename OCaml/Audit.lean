@@ -386,6 +386,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.f1_stackHigh
 #print axioms OCaml.Vm.Gc.f1_threshold
 #print axioms OCaml.Vm.Gc.f1_quiet
+#print axioms OCaml.Vm.Gc.f1_exitGlobals
 #print axioms OCaml.Vm.Gc.whileMin_loaded_f1
 #print axioms OCaml.Vm.Gc.whileMin_loaded_f1_fillZero
 #print axioms OCaml.Vm.Gc.f1_objectField

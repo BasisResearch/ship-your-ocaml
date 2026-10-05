@@ -55,6 +55,9 @@ Done (F1 side of the GC):
   `NurseryTransport.lean` (below `Sim/ReadOnly.lean`), with `NurseryGeometry.same`.
   `NurseryGeometry.alloc` now takes
   `capacity`.
+  `f1Runtime`-stable (SETFIELD/SETGLOBAL). `NurseryGeometry.alloc` now takes
+  `capacity`. `F1Pins.exit` (bprime): the exit path's four `.bss` globals,
+  read by `f1_exitGlobals`; `gen_boot_entry.py` emits their cut reads.
 - `OCaml/Vm/Gc/G1Guards.lean`: the C fast paths' `young_ptr - bytes <u
   young_limit` guards. `double_room`, `small_room`, `string_room` give the
   `room` fields of `FastMemory`, `SmallAllocation.NurseryMemory` and

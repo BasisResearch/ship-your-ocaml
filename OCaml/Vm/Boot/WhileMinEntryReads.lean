@@ -21,6 +21,30 @@ theorem read_caml_global_data (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_global_data) (w := 8) (by decide +kernel)]
   decide +kernel
 
+theorem read_caml_verb_gc (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_verb_gc) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_verb_gc) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_caml_cleanup_on_exit (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_cleanup_on_exit) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_cleanup_on_exit) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_atexit (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_atexit) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_atexit) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_stdio_exit_handler (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_stdio_exit_handler) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_stdio_exit_handler) (w := 8) (by decide +kernel)]
+  decide +kernel
+
 theorem read_stack_high (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word c (WhileMinRuntime.domain + Layout.off_stack_high) = 0x8038b7b0#64 := by
   unfold word

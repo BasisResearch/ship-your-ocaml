@@ -6,6 +6,7 @@ import OCaml.Vm.Primitives.MemoryFrame
 import OCaml.Vm.Sim.CheckSignals
 import OCaml.Vm.Gc.Readback
 import OCaml.Vm.Gc.NurseryDefs
+import OCaml.Vm.Primitives.ExitPath.Machine
 
 /-!
 # The F1 runtime invariant, pinned at the cut
@@ -41,6 +42,10 @@ structure F1Pins (c : Config) : Prop where
   domain : word c Layout.sym_Caml_state = BitVec.ofNat 64 f1Domain
   stackHigh : word c (f1Domain + Layout.off_stack_high) = BitVec.ofNat 64 f1High
   threshold : word c (f1Domain + Layout.off_stack_threshold) = BitVec.ofNat 64 f1Threshold
+  /-- the default exit path's four `.bss` globals (`caml_verb_gc`,
+  `caml_cleanup_on_exit`, `__atexit`, `__stdio_exit_handler`) at their
+  defaults: no F1 path writes them -/
+  exit : ExitPath.ExitGlobals c
 
 /-- The F1 runtime invariant. -/
 def f1Runtime : Config → Prop := RuntimeOk F1Pins
@@ -112,6 +117,58 @@ theorem in_block {x n : Nat} (low : WhileMinRuntime.freeBlock.block - 8 ≤ x)
   ⟨⟨WhileMinRuntime.freeBlock.block - 8, WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words⟩,
     by simp [keptFootprint], low, h⟩
 
+/-- Equal `n`-byte reads agree byte by byte. -/
+theorem byte_of_bytesT {m m' : Std.ExtHashMap Nat (BitVec 8)} {a n : Nat}
+    (h : bytesT m' a n = bytesT m a n) {i : Nat} (hi : i < n) :
+    (m'[a + i]?).getD 0 = (m[a + i]?).getD 0 := by
+  apply BitVec.eq_of_getLsbD_eq
+  intro k hk
+  have := congrArg (fun v => v.getLsbD (8 * i + k)) h
+  rw [getLsbD_bytesT _ _ _ _ (by omega), getLsbD_bytesT _ _ _ _ (by omega)] at this
+  simpa [show (8 * i + k) / 8 = i by omega, show (8 * i + k) % 8 = k by omega] using this
+
+/-- `read8` is determined by the 8-byte read. -/
+theorem read8_of_bytesT {m m' : Std.ExtHashMap Nat (BitVec 8)} {a : Nat}
+    (h : bytesT m' a 8 = bytesT m a 8) : Primitives.read8 m' a = Primitives.read8 m a := by
+  have b := fun i (hi : i < 8) => byte_of_bytesT h hi
+  have b0 := b 0 (by decide)
+  simp only [Nat.add_zero] at b0
+  unfold Primitives.read8
+  rw [b0, b 1 (by decide), b 2 (by decide), b 3 (by decide),
+    b 4 (by decide), b 5 (by decide), b 6 (by decide), b 7 (by decide)]
+
+/-- A zero 8-byte read is eight zero bytes. -/
+theorem read8_zero {m : Std.ExtHashMap Nat (BitVec 8)} {a : Nat} (h : bytesT m a 8 = 0#64) :
+    Primitives.read8 m a = List.replicate 8 0#8 := by
+  have b : ∀ i, i < 8 → (m[a + i]?).getD 0 = 0#8 := by
+    intro i hi
+    apply BitVec.eq_of_getLsbD_eq
+    intro k hk
+    have := congrArg (fun v => v.getLsbD (8 * i + k)) h
+    rw [getLsbD_bytesT _ _ _ _ (by omega)] at this
+    simpa [show (8 * i + k) / 8 = i by omega, show (8 * i + k) % 8 = k by omega] using this
+  have b0 := b 0 (by decide)
+  simp only [Nat.add_zero] at b0
+  unfold Primitives.read8
+  rw [b0, b 1 (by decide), b 2 (by decide), b 3 (by decide), b 4 (by decide), b 5 (by decide),
+    b 6 (by decide), b 7 (by decide)]
+  rfl
+
+/-- The exit globals survive any change that keeps their four words. -/
+theorem ExitGlobals.transfer {c c' : Config}
+    (keep : ∀ x, x + 8 ≤ Layout.sym_bss_end → bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8)
+    (h : ExitPath.ExitGlobals c) : ExitPath.ExitGlobals c' := by
+  have r : ∀ (g : BitVec 64), g.toNat + 8 ≤ Layout.sym_bss_end →
+      Primitives.read8 c'.σ.mem g.toNat = Primitives.read8 c.σ.mem g.toNat :=
+    fun g hg => read8_of_bytesT (keep _ hg)
+  have bss : ∀ (g : BitVec 64), g.toNat < 0x8007d130 → g.toNat + 8 ≤ Layout.sym_bss_end := fun g hg => by
+    simp only [Layout.sym_bss_end]; omega
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [r _ (bss _ (by simp [ExitPath.verbGc, Layout.sym_caml_verb_gc]))]; exact h.quiet
+  · rw [r _ (bss _ (by simp [ExitPath.cleanupOnExit, Layout.sym_caml_cleanup_on_exit]))]; exact h.noCleanup
+  · rw [r _ (bss _ (by simp [ExitPath.atexitList, Layout.sym_atexit]))]; exact h.noAtexit
+  · rw [r _ (bss _ (by simp [ExitPath.stdioExitHandler, Layout.sym_stdio_exit_handler]))]; exact h.noHandler
+
 /-- **Core transfer**: if every kept footprint read is unchanged, the pins
 survive and only `young_ptr` may differ among the runtime fields. -/
 theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem x n = bytesT c.σ.mem x n)
@@ -140,7 +197,7 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
       InKept (WhileMinRuntime.freeBlock.block + off) 8 := fun off h =>
     in_block (by simp [WhileMinRuntime.freeBlock]; omega) (by simp [WhileMinRuntime.freeBlock]; omega)
   have shape := pins.freeList
-  refine ⟨⟨?_, ?_, ?_, ?_⟩, fields⟩
+  refine ⟨⟨?_, ?_, ?_, ?_, ExitGlobals.transfer (fun x hx => keep x 8 (b hx)) pins.exit⟩, fields⟩
   · exact {
       nonnull := shape.nonnull
       aligned := shape.aligned
@@ -324,6 +381,9 @@ theorem f1_threshold {c : Config} (ok : f1Runtime c) :
   rw [f1_domain ok, ok.freeListShape.threshold]
   simp [f1Threshold, f1High, WhileMinEntry.high, Layout.stackBytes, Layout.stackThresholdBytes]
 
+/-- The exit path's globals (`ExitPath.do_exit_halts`, `ExitGlobals`). -/
+theorem f1_exitGlobals {c : Config} (ok : f1Runtime c) : ExitPath.ExitGlobals c := ok.freeListShape.exit
+
 /-- `RuntimeFrame.quiet`. -/
 theorem f1_quiet {c : Config} (ok : f1Runtime c) : Sim.SignalCheckReady c := by
   have h := ok.noPending
@@ -374,9 +434,16 @@ theorem f1Pins_of {c : Config} {initial : Vsa.MemRepr.Mem}
       simp at root total
       omega
   subst same
-  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_⟩
+  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_⟩
   · exact WhileMinEntry.read_stack_high memory
   · exact WhileMinEntry.read_stack_threshold memory
+  · have z : ∀ (g : BitVec 64) (n : Nat), g.toNat = n → word c n = 0#64 →
+        Primitives.read8 c.σ.mem g.toNat = List.replicate 8 0#8 :=
+      fun g n hn hw => by rw [hn]; exact read8_zero hw
+    exact ⟨by rw [z _ _ (by simp [ExitPath.verbGc, Layout.sym_caml_verb_gc]) (WhileMinEntry.read_caml_verb_gc memory)]; rfl,
+      by rw [z _ _ (by simp [ExitPath.cleanupOnExit, Layout.sym_caml_cleanup_on_exit]) (WhileMinEntry.read_caml_cleanup_on_exit memory)]; rfl,
+      by rw [z _ _ (by simp [ExitPath.atexitList, Layout.sym_atexit]) (WhileMinEntry.read_atexit memory)]; rfl,
+      by rw [z _ _ (by simp [ExitPath.stdioExitHandler, Layout.sym_stdio_exit_handler]) (WhileMinEntry.read_stdio_exit_handler memory)]; rfl⟩
 
 /-- `f1Runtime` on the certified cut memory. -/
 theorem f1Runtime_of {c : Config} {initial : Vsa.MemRepr.Mem}
