@@ -45,6 +45,12 @@ theorem slot_nat (sp : Nat) (x : BitVec 12) (h1 : 528 ≤ sp) (h2 : sp < 4294967
   rw [show (2:Nat)^64 = 18446744073709551616 from rfl, e1]
   omega
 
+/-- A positive 12-bit displacement from a small base. -/
+theorem addr_pos (b : BitVec 64) (n : Nat) (hb : b.toNat = n) (hn : n < 4294967296)
+    (x : BitVec 12) (hx : x.toNat < 2048) : (b + sign_extend (m := 64) x).toNat = n + x.toNat := by
+  rw [BitVec.toNat_add, hb, sext12_pos x hx, show (2:Nat)^64 = 18446744073709551616 from rfl]
+  exact Nat.mod_eq_of_lt (by omega)
+
 /-- The new native sp itself. -/
 theorem frame_sp (sp : Nat) (h1 : 528 ≤ sp) (h2 : sp < 4294967296) :
     BitVec.ofNat 64 sp + sign_extend (m := 64) (0xdf0#12) = BitVec.ofNat 64 (sp - 528) := by
@@ -100,5 +106,13 @@ end OCaml.Vm.Sim
 macro "slot_tac" : tactic =>
   `(tactic| first
     | omega
-    | (simp only [Vsa.Sim.tohostAddr, Vsa.Sim.LibraryLayout.tohostAddr]; omega)
+    | decide
+    | (simp only [Vsa.Sim.tohostAddr, Vsa.Sim.LibraryLayout.tohostAddr, OCaml.Vm.Layout.sym_caml_callback_depth]; omega)
     | (right; omega))
+
+/-- Close a log-disjointness premise between the native frame, `caml_callback_depth`
+and the `Caml_state` record. -/
+macro "out_tac" : tactic =>
+  `(tactic| (simp only [Vsa.Sim.OutLRange, OCaml.Vm.Layout.sym_caml_callback_depth,
+      OCaml.Vm.Layout.off_stack_high, OCaml.Vm.Layout.off_local_roots, OCaml.Vm.Layout.off_extern_sp,
+      OCaml.Vm.Layout.off_external_raise, and_true]; omega))

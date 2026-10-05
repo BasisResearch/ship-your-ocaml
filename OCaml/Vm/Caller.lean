@@ -28,10 +28,6 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives OCaml.Vm.Sim
 /-- caml_interprete's native frame size (the prologue's `addi sp, sp, -528`). -/
 abbrev interpFrame : Nat := Layout.interpFrameBytes
 
-/-- The `Caml_state` fields the interpreter prologue reads or writes. -/
-def entryDomainOffsets : List Nat :=
-  [Layout.off_stack_high, Layout.off_extern_sp, Layout.off_external_raise, Layout.off_local_roots]
-
 /-- Every window entry writes, as a footprint (values are irrelevant): the
 interpreter's native frame below the caller's sp, `caml_callback_depth`, and
 `Caml_state->external_raise`. -/
@@ -55,8 +51,10 @@ structure InterpCaller (P : Prog) (c : Config) (pl : Place) (cp : ChanPlace) (hi
   /-- caml_main's saved registers `mainSaved`, with its own return into `main` -/
   mainFrame : ∀ r ∈ Layout.camlMainSavedRegs, word c (sp + Layout.camlMainSaveOffset r) = mainSaved r
   mainReturn : mainSaved 1 = 0x80001df0#64
-  /-- the `Caml_state` fields entry touches are writable RAM -/
-  domainFields : ∀ off ∈ entryDomainOffsets, RamWriteAt ((word c Layout.sym_Caml_state).toNat + off) 8
+  /-- the `Caml_state` record lies in the allocator arena, word aligned -/
+  domainLow : Vsa.Sim.DlHeap.heapStart ≤ (word c Layout.sym_Caml_state).toNat
+  domainHigh : (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes ≤ Vsa.Sim.DlHeap.heapEnd
+  domainAligned : (word c Layout.sym_Caml_state).toNat % 8 = 0
   /-- entry's writes miss everything the initial VM representation observes -/
   outside : PayloadOutside (entryFootprint sp (word c Layout.sym_Caml_state).toNat) P P.init c pl cp high
 
@@ -69,11 +67,13 @@ theorem InterpCaller.of_mem {P : Prog} {c c' : Config} {pl : Place} {cp : ChanPl
   have hw : ∀ a, word c' a = word c a := fun a => Vsa.Sim.Boot.bytesT_memEqv mem a 8
   have hg : ∀ n, gpr c' n = gpr c n := by
     intro n; unfold gpr Vsa.Sim.gprGet; rw [regs]
-  refine ⟨?_, h.ra, ?_, h.frameLow, h.frameHigh, h.aligned, ?_, h.mainReturn, ?_, ?_⟩
+  refine ⟨?_, h.ra, ?_, h.frameLow, h.frameHigh, h.aligned, ?_, h.mainReturn, ?_, ?_, ?_, ?_⟩
   · intro r hr; rw [hg]; exact h.regs r hr
   · rw [hg]; exact h.stack
   · intro r hr; rw [hw]; exact h.mainFrame r hr
-  · intro off hoff; rw [hw]; exact h.domainFields off hoff
+  · rw [hw]; exact h.domainLow
+  · rw [hw]; exact h.domainHigh
+  · rw [hw]; exact h.domainAligned
   · have e := hw Layout.sym_Caml_state
     have o := h.outside
     rw [e]
