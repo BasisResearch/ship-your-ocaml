@@ -2,6 +2,21 @@
 
 ## Round 2 status (2026-10-05)
 
+**`SearchTableReset.lean:reset_search_table_returned_exists` extends the CLOSED
+reset run into caml_attempt_open(&exe_name = "ocamlrun") → caml_search_exe_in_path,
+through `caml_ext_table_init(&path, 8)` on the stack-local table (return at
+0x80025550).** New generated spans: caml_main 0x80004de4 (`exe_name = argv[0]`),
+caml_attempt_open prologue split at its load (0x800048c0 saves; 0x800048e0
+`*name` + call), caml_search_exe_in_path prologue. The `argv[0]` load is
+discharged by `ResetSharedTableReturned.argv_array`. The generic
+`ext_table_init` runs at `ExtTableSite.at_sp`. RuntimeReady is carried
+throughout (`stack_log`), and the whole composition checks in under 2 s.
+
+Next: getenv("PATH") miss (findenv over one non-matching entry: strncmp
+first-byte mismatch, advance, null), decompose_path(NULL),
+search_in_path("ocamlrun") → strdup, stat_free(NULL), ext_table_free.
+
+
 **`SharedTableReset.lean:reset_shared_table_returned_exists` extends the CLOSED
 actual reset run through `caml_ext_table_init(&caml_shared_libs_path, 8)`,
 returning to caml_main at 0x80004de4.** `ExtTableFinish.lean:ext_table_init`

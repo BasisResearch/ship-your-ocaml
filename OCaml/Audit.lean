@@ -49,6 +49,7 @@ import OCaml.Vm.Boot.Startup.CustomNodesReset
 import OCaml.Vm.Boot.Startup.CustomReset
 import OCaml.Vm.Boot.Startup.SharedTableReset
 import OCaml.Vm.Boot.Startup.EmbedFrame
+import OCaml.Vm.Boot.Startup.SearchTableReset
 import OCaml.Vm.Boot.Startup.CustomPrefix
 import OCaml.Vm.Boot.Startup.CustomEntry
 import OCaml.Vm.Boot.Startup.StartupAuxReset
@@ -3823,6 +3824,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.embed_frame
 #print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.keep9
 #print axioms OCaml.Vm.Boot.WhileMinImage.argv0_string
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_search_table_returned_exists
+#print axioms OCaml.Vm.Boot.Startup.attempt_open_save
+#print axioms OCaml.Vm.Boot.Startup.attempt_open_name
+#print axioms OCaml.Vm.Boot.Startup.search_exe_prefix
+#print axioms OCaml.Vm.Boot.Startup.caml_attempt_open_call
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_custom_returned_exists
 #print axioms OCaml.Vm.Boot.Startup.NativeFrame.word32
 #print axioms OCaml.Vm.Boot.Startup.getenv_offset_window
