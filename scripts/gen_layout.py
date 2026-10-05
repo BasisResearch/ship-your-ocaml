@@ -64,6 +64,9 @@ def collector_layout():
         "ephe_ref_elt_size": "sizeof(struct caml_ephe_ref_elt)",
         "off_ephe_ref_ephe": "offsetof(struct caml_ephe_ref_elt, ephe)",
         "off_ephe_ref_offset": "offsetof(struct caml_ephe_ref_elt, offset)",
+        "ext_table_bytes": "sizeof(struct ext_table)",
+        **{f"off_ext_table_{name}": f"offsetof(struct ext_table, {name})"
+           for name in ("size", "capacity", "contents")},
     }
     source = ('#include <stddef.h>\n#include ' +
               json.dumps(str(ROOT / "vendor/ocaml-4.14.4/runtime/freelist.c")) +
@@ -148,7 +151,7 @@ def main():
             "embedded_files", "embedded_argv", "embedded_env", "__embed_start",
             "__heap_end", "__stack_top", "caml_prim_table", "_start",
             "__bss_start", "__bss_end", "__global_pointer$", "environ",
-            "custom_ops_table", "caml_ba_ops", "caml_stat_alloc",
+            "custom_ops_table", "caml_ba_ops", "caml_stat_alloc", "caml_shared_libs_path",
             "caml_startup_aux", "shutdown_happened", "startup_count", "caml_cleanup_on_exit"]
     need += ["_open", "_read", "_write", "_lseek", "_close", "_fstat", "_stat",
              "_unlink", "rename", "opendir", "readdir", "closedir", "_gettimeofday",
