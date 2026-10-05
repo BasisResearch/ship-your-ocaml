@@ -99,7 +99,10 @@ Free-list placement (toward `OwnedFrame.targetOutside`/`payloadOutside`):
   `lo` above the nursery. (The tree-search/removal paths are not yet proved
   allocator paths, so no tree-wide invariant is needed by current proofs.)
   `FreeLists.small_result_placed`: the exact-size result header is placed by
-  `SmallListsIn` alone (no effect analysis).
+  `SmallListsIn` alone (no effect analysis). `SmallListsIn.of_log`:
+  route-independent preservation (static stores missing other slot heads,
+  popped slot holding `next`); next: instantiate it for `BestFitExact.effect`
+  (plain, repair and empty routes).
 - Next: the
   general invariant over small lists and the large tree (every free
   block `FreeIn majorLo heap_end`), preserved by each `bf_allocate` path; then

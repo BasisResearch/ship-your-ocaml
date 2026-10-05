@@ -137,3 +137,42 @@ theorem SmallListsIn.pop {lo hi : Nat} {ra size : BitVec 64} {before after : Con
     exact SmallChain.frame post.memory static low (lists i low (by simpa [Layout.bf_small_count] using high))
 
 end OCaml.Vm.Gc.FreeLists
+
+namespace OCaml.Vm.Gc.FreeLists
+open Vsa.Machine Vsa.Sim Primitives
+
+/-- **Route-independent pop preservation**: a log of `.bss` stores that misses
+every other slot head and leaves slot `size` holding the popped block's
+successor keeps every small list in place. Each `bf_allocate` small route
+(plain pop, merge-cursor repair, bitmap clear) is an instance. -/
+theorem SmallListsIn.of_log {lo hi : Nat} {size : BitVec 64} {before after : Config} {log : List WEntry}
+    (lists : SmallListsIn lo hi before) (memory : after.σ.mem = writeLog before.σ.mem log)
+    (statics : Layout.sym_bss_end ≤ lo) (static : ∀ e ∈ log, e.1 + e.2.1 ≤ Layout.sym_bss_end)
+    (others : ∀ i : Nat, 1 ≤ i → i ≤ Layout.bf_small_count → i ≠ size.toNat →
+      OutLRange log (BestFitSmall.slot (BitVec.ofNat 64 i)).toNat 8)
+    (head : word after (BestFitSmall.slot size).toNat = BestFitSmall.next size before)
+    (nonnull : BestFitSmall.first size before ≠ 0) :
+    SmallListsIn lo hi after := by
+  have outside : Outside lo hi log := fun e he => Or.inl (by have := static e he; omega)
+  have sizeEq : BitVec.ofNat 64 size.toNat = size := by simp
+  intro i low high
+  by_cases same : i = size.toNat
+  · subst same
+    rw [sizeEq, head]
+    have own := lists size.toNat low high
+    rw [sizeEq] at own
+    change SmallChain lo hi size.toNat before (word before (BestFitSmall.slot size).toNat) at own
+    change word before (BestFitSmall.slot size).toNat ≠ 0 at nonnull
+    unfold BestFitSmall.next BestFitSmall.first
+    generalize word before (BestFitSmall.slot size).toNat = f at own nonnull ⊢
+    cases own with
+    | nil => exact absurd rfl nonnull
+    | cons _ _ rest => exact SmallChain.frame memory outside low rest
+  · have keep : word after (BestFitSmall.slot (BitVec.ofNat 64 i)).toNat =
+        word before (BestFitSmall.slot (BitVec.ofNat 64 i)).toNat := by
+      change bytesT after.σ.mem _ 8 = bytesT before.σ.mem _ 8
+      rw [memory, OCaml.Vm.Primitives.bytesT_writeLog_out _ (others i low high same)]
+    rw [keep]
+    exact SmallChain.frame memory outside low (lists i low high)
+
+end OCaml.Vm.Gc.FreeLists
