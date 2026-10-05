@@ -18,6 +18,7 @@ import OCaml.Vm.Sim.ApplyRows
 import OCaml.Vm.Sim.ReturnRows
 import OCaml.Vm.Sim.StackLog
 import OCaml.Vm.Sim.RetaddrRows
+import OCaml.Vm.Sim.GrabRows
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax

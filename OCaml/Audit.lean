@@ -11,6 +11,7 @@ import OCaml.Vm.Sim.ApplyRows
 import OCaml.Vm.Sim.ReturnRows
 import OCaml.Vm.Sim.StackLog
 import OCaml.Vm.Sim.RetaddrRows
+import OCaml.Vm.Sim.GrabRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -406,6 +407,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.appterm2_next
 #print axioms OCaml.Vm.Sim.appterm3_next
 #print axioms OCaml.Vm.Sim.push_retaddr_next
+#print axioms OCaml.Vm.Sim.grab_fast_next
 #print axioms OCaml.Vm.Sim.RetaddrWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.StackGeometry.edit
 #print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry
@@ -523,6 +525,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.appterm2_next
 #print axioms OCaml.Vm.Sim.appterm3_next
 #print axioms OCaml.Vm.Sim.push_retaddr_next
+#print axioms OCaml.Vm.Sim.grab_fast_next
 #print axioms OCaml.Vm.Sim.RetaddrWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.StackGeometry.edit
 #print axioms OCaml.Vm.Sim.AssignWriteOk.of_geometry
