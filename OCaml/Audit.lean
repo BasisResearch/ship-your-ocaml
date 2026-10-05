@@ -164,6 +164,7 @@ import OCaml.Programs.WhileMinChecks
 import OCaml.Vm.Gc.WhileMinG1
 import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.F1Runtime
+import OCaml.Vm.Gc.WhileMinNursery
 import OCaml.Vm.Gc.FreePlacement
 import OCaml.Vm.Gc.SmallFreeList
 import OCaml.Vm.Gc.G1Guards
@@ -337,6 +338,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.NurseryGeometry.transport
 #print axioms OCaml.Vm.Gc.NurseryGeometry.frame_log
 #print axioms OCaml.Vm.Gc.NurseryGeometry.alloc
+#print axioms OCaml.Vm.Gc.whileMin_nurseryGeometry
 #print axioms OCaml.Vm.Gc.f1_stable
 #print axioms OCaml.Vm.Gc.f1_allocation
 #print axioms OCaml.Vm.Gc.f1_domainField

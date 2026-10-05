@@ -44,6 +44,7 @@ Done (F1 side of the GC):
   `NurseryGeometry.transport`/`frame_log` (non-allocating arms) and
   `NurseryGeometry.alloc` (after a reservation) re-establish the geometry,
   mirroring `StackGeometry`'s. Its heap field now covers every placed object.
+  `WhileMinNursery.lean:whileMin_nurseryGeometry`: the geometry holds at the cut.
 - `OCaml/Vm/Gc/G1Guards.lean`: the C fast paths' `young_ptr - bytes <u
   young_limit` guards. `double_room`, `small_room`, `string_room` give the
   `room` fields of `FastMemory`, `SmallAllocation.NurseryMemory` and
