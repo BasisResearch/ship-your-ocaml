@@ -20,6 +20,7 @@ import OCaml.Vm.Sim.StackLog
 import OCaml.Vm.Sim.RetaddrRows
 import OCaml.Vm.Sim.GrabRows
 import OCaml.Vm.Sim.RestartRows
+import OCaml.Vm.Sim.ApplyGenericRows
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax
