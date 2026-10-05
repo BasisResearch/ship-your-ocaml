@@ -334,6 +334,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.NurseryGeometry.limit_read
 #print axioms OCaml.Vm.Gc.reserve_outside
 #print axioms OCaml.Vm.Gc.NurseryGeometry.placement
+#print axioms OCaml.Vm.Gc.NurseryGeometry.transport
+#print axioms OCaml.Vm.Gc.NurseryGeometry.frame_log
+#print axioms OCaml.Vm.Gc.NurseryGeometry.alloc
 #print axioms OCaml.Vm.Gc.f1_stable
 #print axioms OCaml.Vm.Gc.f1_allocation
 #print axioms OCaml.Vm.Gc.f1_domainField

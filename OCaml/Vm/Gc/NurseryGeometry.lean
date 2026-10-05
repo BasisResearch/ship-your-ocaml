@@ -30,8 +30,8 @@ structure WindowSeparated (w : W) (P : Prog) (s : St) (c : Config) (pl : Place) 
   domain : OutWRange [w] (word c Layout.sym_Caml_state).toNat Layout.domainStateBytes
   stack : OutWRange [w] (high - Layout.stackBytes) Layout.stackBytes
   code : ∀ i v, P.code[i]? = some v → OutWRange [w] (pl.codeBase + 4 * i) 4
-  heap : ∀ l a o, Live s.heap (roots P s) l → pl.φ l = some a → s.heap.get? l = some o →
-    OutWRange [w] (a - 8) (8 * o.wosize + 8)
+  /-- every placed object (live or not, as in `StackGeometry`) -/
+  heap : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o → OutWRange [w] (a - 8) (8 * o.wosize + 8)
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
     OutWRange [w] a (chanOffBuff + ch.buffer.length)
   primitives : ∀ i name, P.prims[i]? = some name →
@@ -64,7 +64,7 @@ theorem WindowSeparated.payload {w : W} {P s c pl cp sp high} {log : List WEntry
     have bound : i < s.stack.length := (List.getElem?_eq_some_iff.1 hv).1
     exact outLRange_of_windows inside (outW_sub g.stack (by omega) (by omega))
   · intro l a o live placed object
-    have ho := g.heap l a o live placed object
+    have ho := g.heap l a o placed object
     exact ⟨outLRange_of_windows inside (outW_sub ho (by omega) (by omega)),
       outLRange_of_windows inside (outW_sub ho (by omega) (by omega))⟩
   · exact fun id ch a hch hcp => outLRange_of_windows inside (g.channels id ch a hch hcp)
@@ -180,5 +180,98 @@ theorem NurseryGeometry.placement {P s c pl cp high} (g : NurseryGeometry P s c 
     omega
   · have := apart_of_inside g.atoms low high'
     omega
+
+/-- **Transport** across a step that keeps object sizes, channels, the
+`Caml_state` and primitive-table pointers, and the `young_limit`/`young_ptr`
+words (every non-allocating arm), mirroring `StackGeometry.transport`. -/
+theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Place} {cp : ChanPlace}
+    {high : Nat} (g : NurseryGeometry P s c pl cp high)
+    (objects : ∀ l o', s'.heap.get? l = some o' → ∃ o, s.heap.get? l = some o ∧ o.wosize = o'.wosize)
+    (chans : s'.world.chans = s.world.chans)
+    (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
+    (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
+    (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr) :
+    NurseryGeometry P s' c' pl cp high := by
+  have window : nurseryFree c' = nurseryFree c := by simp only [nurseryFree, limit, ptr]
+  exact {
+    statics := by rw [window]; exact g.statics
+    domain := by rw [window, domain]; exact g.domain
+    stack := by rw [window]; exact g.stack
+    code := by rw [window]; exact g.code
+    heap := fun l a o' placed object => by
+      obtain ⟨o, ho, size⟩ := objects l o' object
+      rw [window, ← size]; exact g.heap l a o placed ho
+    channels := by rw [window, chans]; exact g.channels
+    primitives := by rw [window, prims]; exact g.primitives
+    top := by rw [ptr]; exact g.top
+    aligned := by rw [ptr]; exact g.aligned
+    domainLow := by rw [domain]; exact g.domainLow
+    domainHigh := by rw [domain]; exact g.domainHigh
+    domainAligned := by rw [domain]; exact g.domainAligned
+    codeRange := by rw [window]; exact g.codeRange
+    atoms := by rw [window]; exact g.atoms
+    arena := by rw [ptr]; exact g.arena }
+
+/-- **Transport across a write log** missing the `Caml_state` and
+primitive-table pointers and the `young_limit`/`young_ptr` words (VM-stack
+stores, object field stores, other `Caml_state` fields). -/
+theorem NurseryGeometry.frame_log {P : Prog} {s s' : St} {c c' : Config} {pl : Place} {cp : ChanPlace}
+    {high : Nat} {log : List WEntry} (g : NurseryGeometry P s c pl cp high)
+    (objects : ∀ l o', s'.heap.get? l = some o' → ∃ o, s.heap.get? l = some o ∧ o.wosize = o'.wosize)
+    (chans : s'.world.chans = s.world.chans)
+    (domain : OutLRange log Layout.sym_Caml_state 8)
+    (contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
+    (limit : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_young_limit) 8)
+    (ptr : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr) 8)
+    (memory : c'.σ.mem = writeLog c.σ.mem log) : NurseryGeometry P s' c' pl cp high := by
+  have keep : ∀ x, OutLRange log x 8 → word c' x = word c x := fun x h => by
+    change bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8
+    rw [memory, bytesT_writeLog_out _ h]
+  have dom := keep _ domain
+  refine g.transport objects chans dom (keep _ contents) ?_ ?_
+  · simp only [runtimeFields, domainWord, dom]; rw [keep _ limit]
+  · simp only [runtimeFields, domainWord, dom]; rw [keep _ ptr]
+
+/-- **Allocation** of `o` at a reserved address `a`: the free window shrinks
+to end at `a - 8`, and the new object lies outside it. -/
+theorem NurseryGeometry.alloc {P : Prog} {s s' : St} {c c' : Config} {pl : Place} {cp : ChanPlace}
+    {high count a : Nat} {o : Obj} (g : NurseryGeometry P s c pl cp high)
+    (placed : pl.φ (s.heap.alloc o).2 = some a) (size : o.wosize ≤ count)
+    (heap : s'.heap = (s.heap.alloc o).1) (chans : s'.world.chans = s.world.chans)
+    (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
+    (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
+    (before : (runtimeFields c).youngPtr = a + 8 * count)
+    (after : (runtimeFields c').youngPtr = a - 8) (room : 8 ≤ a) (aligned : (a - 8) % 8 = 0) :
+    NurseryGeometry P s' c' pl cp high := by
+  have lower : (runtimeFields c').youngPtr ≤ (runtimeFields c).youngPtr := by omega
+  have sh : ∀ {x n}, OutWRange [nurseryFree c] x n → OutWRange [nurseryFree c'] x n :=
+    fun h => OutWRange.shrink h limit lower
+  exact {
+    statics := by simp only [nurseryFree, limit]; exact g.statics
+    domain := by rw [domain]; exact sh g.domain
+    stack := sh g.stack
+    code := fun i v hv => sh (g.code i v hv)
+    heap := fun l a' o' found object => by
+      rw [heap] at object
+      rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
+      · exact sh (g.heap l a' o' found old)
+      · rw [placed] at found
+        cases found
+        have := reserve_outside (c' := c') (count := o'.wosize) after
+        simpa only [Nat.add_comm] using this
+    channels := by rw [chans]; exact fun id ch x h1 h2 => sh (g.channels id ch x h1 h2)
+    primitives := by rw [prims]; exact fun i name h => sh (g.primitives i name h)
+    top := by have := g.top; omega
+    aligned := by rw [after]; exact aligned
+    domainLow := by rw [domain]; exact g.domainLow
+    domainHigh := by rw [domain]; exact g.domainHigh
+    domainAligned := by rw [domain]; exact g.domainAligned
+    codeRange := sh g.codeRange
+    atoms := sh g.atoms
+    arena := by have := g.arena; omega }
 
 end OCaml.Vm.Gc

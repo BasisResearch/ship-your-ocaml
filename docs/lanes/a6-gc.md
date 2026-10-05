@@ -40,7 +40,10 @@ Done (F1 side of the GC):
   `RuntimeFrame`'s other fields. `f1_allocation`: `AllocationRuntime` for
   logs storing apart from the kept footprint and lowering `young_ptr` within
   the nursery. `whileMin_loaded_f1`(`_fillZero`): the cut is `Loaded f1Layout`.
-  `NurseryGeometry.placement` gives a1-arms' `NurseryPlacement`.
+  `NurseryGeometry.placement` gives a1-arms' `NurseryPlacement`;
+  `NurseryGeometry.transport`/`frame_log` (non-allocating arms) and
+  `NurseryGeometry.alloc` (after a reservation) re-establish the geometry,
+  mirroring `StackGeometry`'s. Its heap field now covers every placed object.
 - `OCaml/Vm/Gc/G1Guards.lean`: the C fast paths' `young_ptr - bytes <u
   young_limit` guards. `double_room`, `small_room`, `string_room` give the
   `room` fields of `FastMemory`, `SmallAllocation.NurseryMemory` and
