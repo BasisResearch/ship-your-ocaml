@@ -10,7 +10,7 @@ may be overwritten. This is a finite log-footprint obligation only. -/
 structure SourceFrame (sp : BitVec 64) (sources : List (BitVec 64)) (pl : Place) (initial : Config)
     (track : List PendingCopy → Prop) (objects : List SourceObjects.Entry) : Prop where
   outside : ∀ copies q root c next log, Head sp sources pl initial copies q root c → track copies →
-    Publication sources copies q (SingleField.child q root c) next → CopyEffect q root sp c log →
+    CopyStep sources copies q root sp c next log →
     SourceObjects.Outside objects next (Enqueue.prefixLog q.source q.target root ++ log)
 
 /-- Preserve the typed original shape of every as-yet-unforwarded source
@@ -23,9 +23,9 @@ theorem run_copy_loop_sources {sp sources pl cp initial track objects}
     Triple (IndexedAt sp sources pl initial track (fun copies c => SourceObjects.View objects copies pl cp c))
       (IndexedDone sp sources pl initial track (fun copies c => SourceObjects.View objects copies pl cp c)) := by
   apply run_copy_loop_indexed coverage extend
-  intro copies q root before after next log head tracked publication allowed memory view
-  exact view.frame publication.retained memory
-    (footprint.outside copies q root before next log head tracked publication allowed)
+  intro copies q root before after next log head tracked step memory view
+  exact view.frame step.publication.retained memory
+    (footprint.outside copies q root before next log head tracked step)
 
 /-- Every fresh head described in the original source metadata still has
 its original object representation in the current machine memory. -/

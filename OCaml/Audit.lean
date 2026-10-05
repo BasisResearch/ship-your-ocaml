@@ -4165,6 +4165,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleTail.run_copy_from_head_root
 #print axioms OCaml.Vm.Gc.SingleTail.run_copy_from_head_sources
 #print axioms OCaml.Vm.Gc.SingleTail.OwnedFrame.sourceFrame
+#print axioms OCaml.Vm.Gc.SingleTail.OwnedFrame.effect
+#print axioms OCaml.Vm.Gc.SingleTail.Head.step_copy_step
 #print axioms OCaml.Vm.Gc.SingleTail.outside_of_allowed
 #print axioms OCaml.Vm.Gc.SingleTail.run_copy_loop_indexed
 

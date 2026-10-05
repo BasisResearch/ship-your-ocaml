@@ -50,7 +50,7 @@ theorem run_copy_loop_indexed {sp sources pl initial track observe}
     (extend : ∀ copies q root c next, Head sp sources pl initial copies q root c →
       Publication sources copies q (SingleField.child q root c) next → track copies → track next)
     (frame : ∀ copies q root before after next log, Head sp sources pl initial copies q root before → track copies →
-      Publication sources copies q (SingleField.child q root before) next → CopyEffect q root sp before log →
+      CopyStep sources copies q root sp before next log →
       after.σ.mem = writeLog before.σ.mem (Enqueue.prefixLog q.source q.target root ++ log) →
       observe copies before → observe next after) :
     Triple (IndexedAt sp sources pl initial track observe) (IndexedDone sp sources pl initial track observe) := by
@@ -63,10 +63,10 @@ theorem run_copy_loop_indexed {sp sources pl initial track observe}
     exact coverage.returnDifferent (Option.some.inj (finished.pc.symm.trans pc))
   · intro c pre
     obtain ⟨copies,q,root,head⟩ := pre.state
-    obtain ⟨after,nextCopies,run,⟨log,allowed,memory⟩,publication,post,less⟩ :=
-      head.toHead.step_copy_effect head.reached (coverage.choices copies q root c head.reached head.toHead)
-    have next := extend copies q root c nextCopies head.toHead publication head.tracked
-    have preserved := frame copies q root c after nextCopies log head.toHead head.tracked publication allowed memory head.observation
+    obtain ⟨after,nextCopies,run,⟨log,step,memory⟩,post,less⟩ :=
+      head.toHead.step_copy_step head.reached (coverage.choices copies q root c head.reached head.toHead)
+    have next := extend copies q root c nextCopies head.toHead step.publication head.tracked
+    have preserved := frame copies q root c after nextCopies log head.toHead head.tracked step memory head.observation
     refine ⟨after,run,?_,less⟩
     rcases post with ⟨child,root,head,reached⟩ | finished
     · exact Or.inl ⟨⟨_,child,root,⟨head,reached,next,preserved⟩⟩⟩
@@ -83,8 +83,8 @@ theorem run_copy_loop_observed {sp sources pl initial track observe}
       observe before → observe after) :
     Triple (ObservedAt sp sources pl initial track observe) (ObservedDone sp sources pl initial track observe) := by
   apply (run_copy_loop_indexed (observe := fun _ => observe) coverage extend
-    (fun copies q root before after _ log head tracked _ allowed memory view =>
-      frame copies q root before after log head tracked allowed memory view)).conseq
+    (fun copies q root before after _ log head tracked step memory view =>
+      frame copies q root before after log head tracked step.effect memory view)).conseq
   · intro c pre
     obtain ⟨copies,q,root,head,reached,tracked⟩ := pre.operational
     exact ⟨⟨copies,q,root,⟨head,reached,tracked,pre.observation⟩⟩⟩

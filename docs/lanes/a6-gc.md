@@ -35,15 +35,22 @@ For other lanes:
 Open: G2 (collector proper) resumes after F1; see entries below.
 
 G2 progress after F1:
-- `OCaml/Vm/Gc/SourceOwnership.lean:OwnedFrame.sourceFrame` reduces the
-  `SourceFrame` premise of `run_copy_from_head_sources` to: `Nursery lo hi
-  objects` (sources inside the nursery, each with a field, footprints
-  disjoint) and `OwnedFrame` (root slot outside the nursery, copied source
-  recorded, each effect-log store `Allowed`: outside the nursery or within a
-  published source's header/first field). Next: discharge `OwnedFrame.effect`
-  per `CopyEffect` branch (store-return/forwarded writes target the major
-  heap; allocator effects stay in free-list metadata; queued child
-  forwarding is `Allowed` by publication), and `Nursery` from `HeapRepr`.
+- Fixed an unsatisfiable premise inherited from the WIP commit: the queued
+  `CopyEffect` left its allocator log free, and `SourceFrame` quantified the
+  effect and the publication independently, so any remaining source could be
+  "overwritten" by a chosen log. `CopyChoice.lean:CopyStep` now ties the
+  published table and the log to one branch (`Head.step_copy_step`;
+  `step_copy_effect` is derived), and `CopyEffect.queued` keeps its
+  `QueueAllocation`.
+- `SourceOwnership.lean:OwnedFrame.sourceFrame` derives `SourceFrame` from
+  `Nursery lo hi objects` (sources in the nursery, each with a field,
+  footprints disjoint) and `OwnedFrame`: sources recorded, and root slot, copy
+  target, queued payload, the two allocator effect logs and
+  `oldify_todo_list` outside the nursery. `OwnedFrame.effect` proves every
+  `CopyStep` branch's stores `Allowed`.
+- Next: supply `OwnedFrame`'s address facts (targets/payloads from the major
+  allocator's result range; allocator logs from free-list/frame windows) and
+  `Nursery` from `HeapRepr` + `RuntimeOk` bounds.
 
 ## Source objects through the copying loop (2026-10-05)
 
