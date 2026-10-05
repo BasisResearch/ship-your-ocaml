@@ -145,10 +145,10 @@ theorem ocamlrun_refinementF1_of_arms {L : Layout} {B : Budget}
   exact (T.simR hg).refines hg.good
 
 /-- The existing `ArmSim` contract restricted to F1 programs is a table over
-`Running` (its entry is reused; its `next`/`halt` give every row). -/
+`LoopAt` (its entry is reused; its `next`/`halt` give every row). -/
 theorem ArmSim.f1Arms {L : Layout} {B : Budget} {P : Prog} {c : Config} (A : ArmSim L B P)
     (hL : Loaded L P c) (hg : GoodF1 P) (hf : Fits B P) (hgc : GcSafe P) :
-    F1Arms P c (Running L P) where
+    F1Arms P c (LoopAt L P) where
   entry := A.entry c hL hg.good hf hgc
   arm op _ s c' i hr hv hd _ _ := by
     have hs : step P s = stepI P s i := by simp only [step, hd]

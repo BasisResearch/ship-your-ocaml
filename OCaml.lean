@@ -1,5 +1,6 @@
 import OCaml.Run.Kernel
 import OCaml.Run.Machine
+import OCaml.Run.Clock
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax

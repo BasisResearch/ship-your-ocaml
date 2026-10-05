@@ -2,6 +2,7 @@ import OCaml.Bytecode.GcSafe
 import OCaml.Vm.Platform
 import Vsa.Densify
 import OCaml.Run.Machine
+import OCaml.Run.Clock
 
 /-!
 # Layer A: `ocamlrun` refines `BcSem`
@@ -154,14 +155,29 @@ theorem ocamlrun_refinement_fillZero {L : Layout} {B : Budget} (H : OcamlrunSim 
 /-- At least one machine step. -/
 def Plus (c c' : Config) : Prop := ∃ n, StepsN (n + 1) c c'
 
+/-- **The loop-head invariant of the per-arm obligations**: `Running` plus
+the facts every arm needs that `Running` does not carry. `clock` is the
+platform tick counter that the generated segment lemmas consume; it is a
+run invariant (`StepsN.tick_lt`), so arms conclude plain `Running` and
+`LoopAt.of_plus` restores it. Further common-invariant fields are added
+here (docs/lanes/F1-split.md). -/
+structure LoopAt (L : Layout) (P : Prog) (s : St) (c : Config) : Prop where
+  running : Running L P s c
+  clock : c.tick < 2
+
+/-- An arm's `Running` conclusion re-establishes the loop-head invariant. -/
+theorem LoopAt.of_plus {L : Layout} {P : Prog} {s s' : St} {c c' : Config}
+    (h : LoopAt L P s c) (run : Plus c c') (running : Running L P s' c') : LoopAt L P s' c' :=
+  ⟨running, let ⟨_, hn⟩ := run; hn.tick_lt h.clock⟩
+
 /-- **The per-instruction obligations** for one program: entry, one per
 `step` outcome. Each field is what one family of generated segment proofs
 discharges (the `.next` field splits by `caml_interprete` arm). -/
 structure ArmSim (L : Layout) (B : Budget) (P : Prog) : Prop where
-  entry : ∀ c, Loaded L P c → Good P → Fits B P → GcSafe P → ∃ c', Plus c c' ∧ Running L P P.init c'
-  next : ∀ s s' c, Reach P s → Good P → Fits B P → GcSafe P → Running L P s c → step P s = .next s' →
-    ∃ c', Plus c c' ∧ Running L P s' c'
-  halt : ∀ s e w c, Reach P s → Good P → Fits B P → GcSafe P → Running L P s c → step P s = .halt e w →
+  entry : ∀ c, Loaded L P c → Good P → Fits B P → GcSafe P → ∃ c', Plus c c' ∧ LoopAt L P P.init c'
+  next : ∀ s s' c, Reach P s → Good P → Fits B P → GcSafe P → LoopAt L P s c → step P s = .next s' →
+    ∃ c', Plus c c' ∧ LoopAt L P s' c'
+  halt : ∀ s e w c, Reach P s → Good P → Fits B P → GcSafe P → LoopAt L P s c → step P s = .halt e w →
     Halts c (bytesToString w.console) e
 
 /-! Machine run laws: corollaries of the run kernel (`OCaml/Run/Machine.lean`). -/
@@ -182,7 +198,7 @@ theorem _root_.Vsa.Machine.StepsN.prefix' : ∀ {m k : Nat} {a c : Config}, Step
 
 /-- **Simulation by an arbitrary relation** `R` for one program started
 from `c0`: entry, one obligation per `step` outcome. `ArmSim` is its
-instance at `Running` (`ArmSim.simR`); a fragment may use a stronger loop
+instance at `LoopAt` (`ArmSim.simR`); a fragment may use a stronger loop
 invariant (`OCaml/RefinementF1.lean`). -/
 structure SimR (P : Prog) (c0 : Config) (R : St → Config → Prop) : Prop where
   entry : ∃ c', Plus c0 c' ∧ R P.init c'
@@ -228,9 +244,9 @@ theorem SimR.refines {P : Prog} {c0 : Config} {R : St → Config → Prop} (H : 
     (∀ out e, BcHalts P out e ↔ Halts c0 out e) ∧ (BcDiverges P ↔ Diverges c0) :=
   refines_of_forward hg H.term H.div
 
-/-- `ArmSim` is the `Running` instance of `SimR`. -/
+/-- `ArmSim` is the `LoopAt` instance of `SimR`. -/
 theorem ArmSim.simR {L : Layout} {B : Budget} {P : Prog} {c : Config} (A : ArmSim L B P)
-    (hL : Loaded L P c) (hg : Good P) (hf : Fits B P) (hgc : GcSafe P) : SimR P c (Running L P) where
+    (hL : Loaded L P c) (hg : Good P) (hf : Fits B P) (hgc : GcSafe P) : SimR P c (LoopAt L P) where
   entry := A.entry c hL hg hf hgc
   next s s' c hr hv e := A.next s s' c hr hg hf hgc hv e
   halt s e w c hr hv h := A.halt s e w c hr hg hf hgc hv h
@@ -239,8 +255,8 @@ theorem ArmSim.simR {L : Layout} {B : Budget} {P : Prog} {c : Config} (A : ArmSi
 runs at least `k` steps to a configuration representing the end state. -/
 theorem run_sim {L : Layout} {B : Budget} {P : Prog} (A : ArmSim L B P) (hg : Good P)
     (hf : Fits B P) (hgc : GcSafe P) :
-    ∀ {k : Nat} {s s' : St} {c : Config}, Reach P s → StepsN P k s s' → Running L P s c →
-      ∃ n c', k ≤ n ∧ StepsN n c c' ∧ Running L P s' c' :=
+    ∀ {k : Nat} {s s' : St} {c : Config}, Reach P s → StepsN P k s s' → LoopAt L P s c →
+      ∃ n c', k ≤ n ∧ StepsN n c c' ∧ LoopAt L P s' c' :=
   run_simR fun s s' c hr hv e => A.next s s' c hr hg hf hgc hv e
 
 /-- **Forward simulation from the per-arm obligations.** -/

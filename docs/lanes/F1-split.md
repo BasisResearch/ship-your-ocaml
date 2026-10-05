@@ -42,3 +42,11 @@ by a2-sem. a1-arms consumes them and states its own in
 
 An opcode missing from both lists belongs to a1-arms. Record a disputed or
 moved opcode here, in the same commit as the change.
+
+## The arm contract (a1-arms)
+`ArmSim` is stated over `LoopAt L P s c` (`OCaml/Refinement.lean`), which is
+`Running L P s c` plus the dispatch clock `c.tick < 2`. The clock is a run
+invariant (`StepsN.tick_lt`, `OCaml/Run/Clock.lean`). `LoopAt.of_plus` turns
+any arm's `Running` conclusion into `LoopAt`, so no arm threads the clock.
+Stack geometry and the other a1-arms invariant fields go in
+`OCaml/Vm/Sim/Invariant.lean`.

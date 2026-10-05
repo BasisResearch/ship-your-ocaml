@@ -1,5 +1,20 @@
 # Lane a1-arms
 
+## Current (F1 round, 2026-10-05)
+
+Done: `ArmSim` is now stated over `LoopAt L P s c`
+(`OCaml/Refinement.lean`), which is `Running` plus the dispatch clock
+`c.tick < 2`. `StepsN.tick_lt` (`OCaml/Run/Clock.lean`, via the new kernel law
+`Run.iter_inv`) makes the clock a run invariant. `LoopAt.of_plus` turns any
+arm's `Running` conclusion into `LoopAt`, so no arm threads the clock. The
+contract is appended to the foreman's `docs/lanes/F1-split.md`.
+
+Open, next: the stack-geometry and dispatch-register part of the invariant
+(`OCaml/Vm/Sim/Invariant.lean`). a2-sem supplies code geometry,
+decode-to-fetch and the not-method-cache fact (`CodeFacts.lean`). Then the
+unconditional `ArmSim.next` cases for a1-arms' families, over bprime's
+`F1Loop`, which is `LoopAt` + `Invocation`.
+
 ## Shared heap-field update facts
 
 `live_field_edit` proves that writing an already-live value introduces no new

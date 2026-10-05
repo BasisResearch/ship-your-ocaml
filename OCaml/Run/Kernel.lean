@@ -90,6 +90,16 @@ theorem iter_prefix {m k : Nat} {c e : C} (h : iter f (m + k) c = .ok e) :
   | ok d => exact ⟨d, rfl⟩
   | error o => rw [hm] at h; cases h
 
+/-- A predicate preserved by every continuing step holds along every run. -/
+theorem iter_inv (I : C → Prop) (step : ∀ {a b}, f a = .ok b → I a → I b) :
+    ∀ {n : Nat} {c d : C}, iter f n c = .ok d → I c → I d
+  | 0, _, _, h, hc => by cases h; exact hc
+  | n + 1, c, d, h, hc => by
+    change f c >>= iter f n = .ok d at h
+    cases hf : f c with
+    | ok b => rw [hf] at h; exact iter_inv I step h (step hf hc)
+    | error o => rw [hf] at h; cases h
+
 /-- Stop: a stopped state has no continuation one step later. -/
 theorem iter_stop {n : Nat} {a b : C} (h : iter f n a = .ok b) (hs : ∀ x, f b ≠ .ok x) (d : C) :
     iter f (n + 1) a ≠ .ok d := by

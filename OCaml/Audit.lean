@@ -287,6 +287,11 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Run.iter_add
 #print axioms OCaml.Run.HaltsK.unique
 #print axioms OCaml.Run.halts_or_div
+#print axioms OCaml.Run.iter_inv
+#print axioms Vsa.Machine.stepOnce_tick
+#print axioms Vsa.Machine.Step.tick_lt
+#print axioms Vsa.Machine.StepsN.tick_lt
+#print axioms OCaml.LoopAt.of_plus
 #print axioms OCaml.Run.div_iff_not_halts
 #print axioms OCaml.Run.ConsPres.iff
 #print axioms OCaml.Run.ClosPres.iff
