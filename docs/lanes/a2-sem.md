@@ -2,19 +2,46 @@
 
 ## F1 round (2026-10-05) — current
 
+Ownership: `docs/lanes/F1-split.md` (foreman). a2-sem owns
+`OCaml/Vm/Sim/CodeFacts.lean` (decode-to-fetch, reachable PC is not a
+method-cache slot, code-address geometry) and the unconditional
+`ArmSim.next` cases for integer arithmetic/logic, comparisons, conditional
+branches (incl. BRANCH, SWITCH), constants/atoms, BOOLNOT, OFFSETINT and
+OFFSETREF.
+
 Done:
 * `Good.of_bcHalts` (`OCaml/Bytecode/Semantics.lean`): any halting program is
-  `Good`, by determinism through the run kernel (`haltsK_iff`,
-  `iter_error_unique`). `whileMin_good : Good whileMin`
-  (`OCaml/Programs/Validation.lean`) follows from the existing kernel-checked
-  `whileMin_runTo`; no new or chunked kernel evaluation was needed.
+  `Good`, by run-kernel determinism. `whileMin_good : Good whileMin`
+  (`OCaml/Programs/Validation.lean`) from the existing `whileMin_runTo`.
+  Landed `c8e3451`. bprime's `whileMin_goodF1` (`OCaml/Programs/F1Check.lean`)
+  is the form the F1 headline consumes; it contains `Good`.
+* Found and fixed the integrate.sh lock fd 9 leaking into stage t1's OS
+  validation (foreman landed it as `6446d52`).
+
+Premise census of the existing conditional bridges (my families):
+* Step-shape bridges (take `stepI P s ⟨op, args⟩ = .next s'`): ADDINT SUBINT
+  ANDINT ORINT XORINT LSLINT LSRINT ASRINT LTINT LEINT GTINT GEINT ULTINT
+  UGEINT (premises: `ArmInput`, `MemoryStable`, `ReadWindow sp 8`); MULINT
+  (+ `MulintScratch`); DIVINT/MODINT nonzero (`division_step_arm`, +
+  `BinaryLibScratch`, int operands, `y ≠ 0`); OFFSETINT (`OperandAt`, int
+  accu); EQ/NEQ (+ `WordEquality`, integers only); BRANCHIF/BRANCHIFNOT
+  (`EvenPlace`, non-raw accu, `OperandAt`); BEQ/BNEQ (integer accu, two
+  `OperandAt`); B{LT,LE,GT,GE,ULT,UGE}INT (two `OperandAt`); OFFSETREF
+  (`WindowStable` field window, pointer/placement/object/field shape,
+  `FieldWriteOk`).
+* Explicit-successor bridges needing a `stepI` inversion wrapper (16):
+  NEGINT BOOLNOT ISINT BRANCH CONST0–3 CONSTINT PUSHCONST0–3 PUSHCONSTINT
+  ATOM0 ATOM PUSHATOM0 PUSHATOM.
+* Missing: DIVINT/MODINT zero divisor with no handler (BcSem `.next` to
+  `pc := code.size` with a pending exception); the caught path exists only as
+  `division_zero_caught_step` (FnSummary form, not arm form).
+* No generic `Running` → `ArmInput` adapter. `ArmInput.of_repr` needs `tick`
+  (a1-arms), `fetch` and `opcodeSlot` and `geometry` (CodeFacts, a2-sem).
 
 Open / next:
-* `ArmSim.next` for the integer arithmetic, comparison, conditional-branch,
-  constant and OFFSETINT/OFFSETREF families. a1-arms already has conditional
-  bridges (`*_step_arm`) for these; the remaining work is discharging their
-  premises from a1-arms' shared invariant. Waiting for
-  `docs/lanes/F1-split.md` (a1-arms creates it first) before starting arms.
+* BLOCKED (permission): reading the bytecode decoder source was denied by
+  this session's permission classifier; asked Kiran to allow read-only
+  searches. CodeFacts and the arm cases start once that is granted.
 
 ## Round 2 status
 
