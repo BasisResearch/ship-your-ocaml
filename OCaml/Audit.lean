@@ -158,6 +158,7 @@ import OCaml.Programs.WhileMinChecks
 import OCaml.Vm.Gc.WhileMinG1
 import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.FreePlacement
+import OCaml.Vm.Gc.SmallFreeList
 import OCaml.Vm.Gc.Observed
 import OCaml.Vm.Primitives.StringCopyFast
 import OCaml.Vm.GcObservation
@@ -327,6 +328,8 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.BestFitSplit.Post.placed
 #print axioms OCaml.Vm.Gc.BestFitSplit.freeIn_singleton
 #print axioms OCaml.Vm.Gc.whileMin_free_above_nursery
+#print axioms OCaml.Vm.Gc.FreeLists.SmallChain.pop
+#print axioms OCaml.Vm.Gc.FreeLists.SmallListsIn.pop
 #print axioms OCaml.Programs.whileMin_good
 #print axioms OCaml.Bytecode.Good.of_bcHalts
 #print axioms OCaml.bytecode_logic_adequacy

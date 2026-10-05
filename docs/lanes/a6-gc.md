@@ -66,7 +66,12 @@ Free-list placement (toward `OwnedFrame.targetOutside`/`payloadOutside`):
   `freeIn_singleton`: the startup singleton block is `FreeIn` up to `heap_end`.
 - `WhileMinG1.lean:whileMin_free_above_nursery`: the cut's free block starts
   above `young_end`, so splits from it never touch the nursery.
-- Next: the general invariant over small lists and the large tree (every free
+- `OCaml/Vm/Gc/SmallFreeList.lean`: `SmallChain lo hi size c a` (a
+  null-terminated small list, every block in `[lo, hi)`), its frame law, and
+  `SmallChain.pop` / `SmallListsIn.pop`: the actual exact-size pop returns a
+  block in `[lo, hi)` and keeps all 16 lists in place.
+- Next: the large tree (nodes, `bf_split` remnant reinsertion), then the
+  general invariant over small lists and the large tree (every free
   block `FreeIn majorLo heap_end`), preserved by each `bf_allocate` path; then
   `OwnedFrame` target/payload facts from it.
 
