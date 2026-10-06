@@ -39,6 +39,19 @@ theorem RaisesCaught.of_check {P : Prog} (h : ∀ s, Reach P s → St.raisesOk P
 def St.shapeOk (P : Prog) (s : St) : Bool :=
   s.valuesInRange P.code.size && s.extraOk && s.trapOk && s.branchIntsOk P && St.raisesOk P s
 
+/-- The F1 shape checks of one state, by name. -/
+structure ShapeFacts (P : Prog) (s : St) : Prop where
+  values : s.valuesInRange P.code.size = true
+  extra : s.extraOk = true
+  trap : s.trapOk = true
+  branches : s.branchIntsOk P = true
+  raises : St.raisesOk P s = true
+
+theorem ShapeFacts.of_ok {P : Prog} {s : St} (h : St.shapeOk P s = true) : ShapeFacts P s := by
+  simp only [St.shapeOk, Bool.and_eq_true] at h
+  obtain ⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩ := h
+  exact ⟨values, extra, trap, branches, raises⟩
+
 end OCaml.Vm.Sim
 
 namespace OCaml.Programs
@@ -49,30 +62,26 @@ theorem whileMin_shapeChecked :
     Run.checkAll (bcK whileMin) (St.shapeOk whileMin) 2200 whileMin.init = true := by
   decide +kernel
 
-theorem whileMin_shapeOk {s : St} (reach : Reach whileMin s) :
-    s.valuesInRange whileMin.code.size = true ∧ s.extraOk = true ∧ s.trapOk = true ∧
-      s.branchIntsOk whileMin = true ∧ St.raisesOk whileMin s = true := by
-  have h := reach_of_checkAll whileMin_shapeChecked reach
-  simp only [St.shapeOk, Bool.and_eq_true] at h
-  exact ⟨h.1.1.1.1, h.1.1.1.2, h.1.1.2, h.1.2, h.2⟩
+theorem whileMin_shapeOk {s : St} (reach : Reach whileMin s) : ShapeFacts whileMin s :=
+  .of_ok (reach_of_checkAll whileMin_shapeChecked reach)
 
 /-- **`whileMin`'s live values lie in their regions.** -/
-theorem whileMin_valuesInRange : ValuesInRange whileMin := fun _ reach => (whileMin_shapeOk reach).1
+theorem whileMin_valuesInRange : ValuesInRange whileMin := fun _ reach => (whileMin_shapeOk reach).values
 
 /-- **`whileMin`'s extra-argument counts are bounded.** -/
 theorem whileMin_extraBounded : ExtraBounded whileMin :=
-  .of_check fun _ reach => (whileMin_shapeOk reach).2.1
+  .of_check fun _ reach => (whileMin_shapeOk reach).extra
 
 /-- **`whileMin`'s trap pointer stays inside the stack.** -/
 theorem whileMin_trapBounded : TrapBounded whileMin :=
-  .of_check fun _ reach => (whileMin_shapeOk reach).2.2.1
+  .of_check fun _ reach => (whileMin_shapeOk reach).trap
 
 /-- **`whileMin`'s immediate branches see integers.** -/
 theorem whileMin_branchInts : BranchInts whileMin :=
-  .of_check fun _ reach => (whileMin_shapeOk reach).2.2.2.1
+  .of_check fun _ reach => (whileMin_shapeOk reach).branches
 
 /-- **Every reachable raise in `whileMin` is caught.** -/
 theorem whileMin_raisesCaught : RaisesCaught whileMin :=
-  .of_check fun _ reach => (whileMin_shapeOk reach).2.2.2.2
+  .of_check fun _ reach => (whileMin_shapeOk reach).raises
 
 end OCaml.Programs
