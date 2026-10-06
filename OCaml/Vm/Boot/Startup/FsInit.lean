@@ -180,6 +180,7 @@ structure FsScanned (H : List (Nat × Nat)) (capacity : Nat) (sp s9 : BitVec 64)
   carried : GHolds e.σ [(20, 0x86800018#64), (21, 0#64), (22, 0x86800018#64), (23, 1#64), (24, 4#64), (25, s9)]
   kept : ∀ x, x < nativeFrameBase (nativeStack sp 96) 64 ∨ (nativeStack sp 96).toNat ≤ x →
     (e.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0
+  high : ∀ n, 26 ≤ n → n ≤ 27 → gpr e n = gpr d n
 
 /-- From the `strchr` call to the `new_node` call: "prog" has no '/', its
 length is 4, and `child(0, "prog", 4)` misses every (unused) slot. -/
@@ -275,7 +276,13 @@ theorem fs_init_scan (d : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp s
       gholds_lookup (n := 24) _ p6.regs rfl,
       keep6 25 _ (by decide) (by decide) (by decide)
         (keep5 25 _ (by decide) (by decide) (by decide) (gholds_lookup (n := 25) _ carried4 rfl)), trivial⟩,
-    fun x out => ?_⟩
+    fun x out => ?_, fun n lo hi =>
+      (p6.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+      ((p5.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+      ((p4.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+      ((R3.post.registers n (by omega) (by omega) (by simp; omega)).trans
+      ((p2.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+      (done1.frame.gpr n (by omega) (by omega) (by simp [strchrWrites]; omega))))))⟩
   rw [p6.memory, show writeLog e5.σ.mem [] = e5.σ.mem from rfl, p5.memory,
     frameOn_writeLog _ _ _ (childLog_inside inner) x ⟨out, trivial⟩, same4]
 
@@ -330,6 +337,7 @@ structure FsTail (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 
   low : ∀ x, x < heapStart → ¬ allocGlobal x → (x < slotOne ∨ slotOne + 56 ≤ x) →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  high : ∀ n, 26 ≤ n → n ≤ 27 → gprGet after.σ n = gprGet before.σ n
 
 /-- `new_node(0, "prog", 4, 0)` takes slot 1; `fs_init` records the file's
 extent there, finds the table's end and returns. -/
@@ -487,7 +495,11 @@ theorem fs_init_tail (e : Config) (H : List (Nat × Nat)) (capacity charge : Nat
         unfold nativeFrameBase heapEnd allocHeadroom embedLimit Layout.sym_stack_top Layout.sym_stack_size at *; omega
       · rcases foot with g' | ⟨_, _, apart⟩
         · rcases allocGlobal_off_arena x g' with l | r <;> omega
-        · exact apart e he (by unfold InExt; omega) }⟩⟩
+        · exact apart e he (by unfold InExt; omega)
+    high := fun n lo hi =>
+      (p3.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+      ((p2.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+      (N.upper n (by omega) (by omega))) }⟩⟩
 
 theorem fsPrefixLog_inside {sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64} (frame : NativeFrame sp 96) :
     LogInW (fsWindows sp) (fsPrefixLog sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9) :=
@@ -546,6 +558,7 @@ structure FsInitDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3
   low : ∀ x, x < heapStart → ¬ allocGlobal x → OutW (fsWindows sp) x → (x < slotOne ∨ slotOne + 56 ≤ x) →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  high : ∀ n, 26 ≤ n → n ≤ 27 → gprGet after.σ n = gprGet before.σ n
 
 /-- **`fs_init()` over the embedded table "/prog"**: slot 1 becomes the file
 `prog` under the root, the descriptors and `fs_ready` are set, and the
@@ -643,7 +656,9 @@ theorem fs_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
         unfold nativeFrameBase; rw [spNat]; unfold nativeFrameBase heapEnd at *; omega)), keepD x (by
         simp only [OutW, fsWindows, and_true, nativeFrameBase, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready,
           heapEnd, heapStart] at *
-        omega)] }⟩⟩
+        omega)]
+    high := fun n lo hi => (T.high n lo hi).trans ((S.high n lo hi).trans
+      (p1.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp [fsPrefixWrites]; omega))) }⟩⟩
   have lowJ : Layout.sym_files + 56 * j < heapStart := by unfold heapStart Layout.sym_files; omega
   unfold slotUsed
   rw [T.low _ lowJ (by unfold allocGlobal InRange Layout.sym_files; omega)
