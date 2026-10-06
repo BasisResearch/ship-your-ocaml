@@ -4883,3 +4883,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Programs.whileMin_ccall3Ok
 #print axioms OCaml.Programs.whileMin_ccall4Ok
 #print axioms OCaml.Programs.whileMin_ccall5Ok
+#print axioms OCaml.Vm.Sim.raise_native_memory
+#print axioms OCaml.Vm.Sim.raise_zero_memory
+#print axioms OCaml.Vm.Sim.division_zero_native_input
+#print axioms OCaml.Vm.Sim.division_reentry_memory
+#print axioms OCaml.Vm.Sim.division_control_outside
+#print axioms OCaml.Vm.Sim.NativeValid.jumpFrame
