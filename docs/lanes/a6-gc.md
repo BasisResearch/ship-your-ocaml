@@ -211,6 +211,24 @@ runtime invariant: the long pole for whileMin's `Halts`.
   `f1Runtime`, via `ignoredStatics`) and the ModifySlow → callee →
   ModifyInsert splice with `Entry` from the F1 invariant (needs HeapReady in
   `F1Pins` and VsaOk at the interpreter state).
+- Barrier integration plan (after `realloc_run`). a1-arms' `ModifyCallee`
+  (`OCaml/Vm/Sim/ModifyCall.lean`) is a represented summary from
+  `ModifyInput` to `ModifyReturn` for every F1 program. Two invariant pieces
+  are still missing before path (5) can run malloc from an interpreter state:
+  (a) every GPR x1–x31 present (`VsaOk`; no loop invariant carries it yet;
+  a0-boot's reset gives it at the cut, every arm's frame keeps it);
+  (b) the library heap: `HeapReady H cap` with the F1 extents covered
+  (a0-boot's `cut_heapReady_covers_Statement`). It reads malloc's globals,
+  which `ignoredStatics` now excludes from `f1Runtime`. So the heap is a
+  separate invariant component, kept by arms because they write only live
+  blocks or non-malloc statics. Writes to `errno` (a1-prims) need a lemma
+  that the room predicate ignores the errno words.
+- Open domain question (records, not yet a blocker): for general F1
+  programs the remembered set is unbounded. Alternating immediate/young
+  writes to one major slot (only `SETGLOBAL` on global data reaches a major
+  slot under G1) add an entry each time. At `threshold`, caml_modify requests a
+  minor GC, which G1 excludes. whileMin inserts once. A bound needs a budget
+  field (insertions ≤ wsz/8) or G2.
 - `F1Runtime.ignoredStatics` (a1-prims request): `_impure_data._errno`,
   `oo_last_id`, `caml_callback_depth` and `errno` are carved out of
   `keptFootprint`; `f1_ignoredStatic : WindowStable f1Runtime ignoredStatics`.
