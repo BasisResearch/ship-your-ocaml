@@ -280,6 +280,7 @@ import OCaml.Vm.Primitives.Console.Write
 import OCaml.Vm.Primitives.Console.WriteFd
 import OCaml.Vm.Primitives.PairLayout
 import OCaml.Vm.Primitives.AccessPlanObservation
+import OCaml.Vm.Boot.Startup.HeapReady
 import OCaml.Vm.Boot.Startup.Strdup
 import OCaml.Vm.Boot.Startup.ExtTableFree
 import OCaml.Vm.Boot.Startup.DecomposeNull
@@ -2274,6 +2275,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.setup_input
 #print axioms OCaml.Vm.Boot.Startup.setup_summary
 -- a0-boot: the startup reset run
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.heap
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.of_heap
 #print axioms OCaml.Vm.Boot.Startup.strdup_full
 #print axioms OCaml.Vm.Boot.Startup.ext_table_free_empty
 #print axioms OCaml.Vm.Boot.Startup.decompose_null
