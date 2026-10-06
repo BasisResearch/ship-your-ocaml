@@ -6,6 +6,7 @@ import OCaml.Vm.Sim.PushConstRows
 import OCaml.Vm.Sim.WordPlace
 import OCaml.Vm.Sim.HeapRows
 import OCaml.Vm.Sim.DivisionRows
+import OCaml.Vm.Sim.F1RaiseRuntime
 import OCaml.Vm.Sim.SwitchRows
 import OCaml.Vm.Sim.A2TableRows
 import OCaml.Vm.Sim.PushRows
@@ -4996,3 +4997,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.bneq_pointer_step
 #print axioms OCaml.Vm.Sim.beq_pointer_unsupported
 #print axioms OCaml.Vm.Sim.RaiseFrame.saved_of_step
+#print axioms OCaml.Vm.Sim.nativeScratch_apart
+#print axioms OCaml.Vm.Sim.f1_raiseRuntimeFrame
