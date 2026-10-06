@@ -20,15 +20,15 @@ open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives OCaml.Vm
 theorem nativeScratch_apart {D : InvocationData} (v : NativeValid D) :
     ∀ x ∈ Gc.f1Footprint, Gc.Apart (nativeScratch D) x := by
   have hh := v.headroom
+  simp only [nativeScratch, nativeHeadroom, Vsa.Sim.DlHeap.heapEnd] at hh
+  refine Gc.footprint_apart (Or.inl (by
+    simp only [nativeScratch, nativeHeadroom, Layout.sym_bss_end]; omega)) ?_
   intro x hx
-  simp only [Gc.f1Footprint, Gc.keptFootprint, Gc.youngWord, List.mem_cons, List.not_mem_nil,
-    or_false] at hx
-  simp only [nativeScratch, nativeHeadroom, Vsa.Sim.DlHeap.heapEnd, Gc.f1Domain, Boot.WhileMinRuntime.domain,
-    Boot.WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth, Layout.sym_impure_data,
-    Layout.sym_oo_last_id, Layout.sym_errno, Layout.off_young_ptr, Layout.off_stack_high,
-    Layout.off_stack_threshold, Layout.off_trap_barrier, Layout.off_backtrace_active] at *
-  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-    simp only [Gc.Apart] <;> omega
+  simp only [Gc.youngWord, Gc.dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hx
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    simp only [Gc.Apart, nativeScratch, nativeHeadroom, Gc.f1Domain, Boot.WhileMinRuntime.domain,
+      Boot.WhileMinRuntime.freeBlock, Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold,
+      Layout.off_trap_barrier, Layout.off_backtrace_active] <;> omega
 
 /-- **`RaiseRuntimeFrame` for the pinned F1 layout.** -/
 theorem f1_raiseRuntimeFrame : RaiseRuntimeFrame Gc.f1Layout Gc.f1High Gc.f1Domain where
