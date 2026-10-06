@@ -36,6 +36,12 @@ Done (F1 side of the GC):
     words, and a0-boot's obligation covers `f1Covered` (requested sizes).
     `F1Pins.codeWord`/`primsWord` pin `caml_start_code` and the prim
     table's contents to their blocks.
+  * `LibHeapAt.tableIn : (refTable, 56) ∈ H` (exact block, for `Grow.table`);
+    a0-boot's obligation is `cut_heapReady_covers_Statement f1Covered
+    [(refTable, 56)]`. `GrowDone.kept`: the growing barrier keeps every byte
+    realloc keeps, except the slot. BarrierGrowth waits on a2-sem's
+    `keep_field_step` and on the C-heap room decision (`LibHeapAt.room`
+    is not kept by allocations; options are with the foreman).
   * `OCaml/Vm/Gc/F1Barrier.lean`: the parts of `BarrierRuntime f1Layout`.
     `f1_tableRuntime` gives `.table`: the remembered set as `Table`, its
     arena bounds, and `WindowSeparated` for the struct and the next entry,

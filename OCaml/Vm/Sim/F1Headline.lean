@@ -28,7 +28,7 @@ rows of the opcodes `whileMin` reaches (`whileMinOps`, checked in the one
 shape run) and a0-boot's newlib heap at the cut
 (`cut_heapReady_covers_Statement`); the other rows are vacuous. -/
 theorem whileMin_halts_f1
-    (heap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered)
+    (heap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered [(Gc.refTable, 56)])
     (pre : F1PremisesFor (fun op => OCaml.Programs.whileMinOps.contains op) OCaml.Programs.whileMin) :
     Halts Boot.WhileMin.cut "55\n2500\n36\n" 0 :=
   have table := f1_table_for (Gc.whileMin_loaded_f1 heap) OCaml.Programs.whileMin_goodF1

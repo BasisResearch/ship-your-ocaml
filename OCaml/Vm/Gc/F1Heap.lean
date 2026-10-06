@@ -126,6 +126,9 @@ structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Co
   recordsDisjoint : ∀ a ∈ chs, ∀ b ∈ chs, a ≠ b → a + chanRecordBytes ≤ b ∨ b + chanRecordBytes ≤ a
   /-- the remembered set -/
   table : RefTableAt H chs c
+  /-- its struct is a live block verbatim (the barrier's growth path frees
+  nothing and reads it as `(tbl, tableBytes) ∈ H`) -/
+  tableIn : (refTable, 56) ∈ H
 
 /-- The F1 heap invariant. -/
 def LibHeap (c : Config) : Prop := ∃ H cap chs, LibHeapAt H cap chs c
@@ -204,6 +207,7 @@ theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List N
   records := h.records
   recordsApart := h.recordsApart
   recordsDisjoint := h.recordsDisjoint
+  tableIn := h.tableIn
   table := h.table.congr fun y hy => keep y fun w hw => (safe w hw).misses_table hy
 
 /-- `LibHeapAt.keep_windows` for a frame. -/
@@ -273,6 +277,7 @@ theorem LibHeapAt.keep_records {H : List (Nat × Nat)} {cap : Nat} {chs : List N
   records := h.records
   recordsApart := h.recordsApart
   recordsDisjoint := h.recordsDisjoint
+  tableIn := h.tableIn
   table := h.table.congr fun y hy => keep y fun w hw => by
     rcases safe w hw with s | r
     · exact s.misses_table hy

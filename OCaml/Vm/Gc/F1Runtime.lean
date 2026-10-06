@@ -1044,15 +1044,17 @@ theorem consoleRuntime_of {c : Config}
 /-- newlib's heap readiness covering `f1Covered` (the body of a0-boot's
 `WhileMin.cut_heapReady_covers_Statement`, at any configuration). -/
 def HeapCovers (c : Config) : Prop :=
-  ∃ H cap, 2 ^ 24 ≤ cap ∧ Startup.HeapReady H cap c ∧ ∀ x ∈ f1Covered, ∃ e ∈ H, e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2
+  ∃ H cap, 2 ^ 24 ≤ cap ∧ Startup.HeapReady H cap c ∧
+    (∀ x ∈ f1Covered, ∃ e ∈ H, e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2) ∧ ∀ x ∈ [(refTable, 56)], x ∈ H
 
 /-- newlib's heap at the cut: no channel is open yet. -/
 theorem libHeap_of {c : Config}
     (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) (heap : HeapCovers c) :
     LibHeap c := by
-  obtain ⟨H, cap, room, ready, covers⟩ := heap
+  obtain ⟨H, cap, room, ready, covers, exact⟩ := heap
   refine ⟨H, cap, [], ⟨room, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h),
-    (fun _ h => by cases h), ⟨WhileMinEntry.read_ref_table memory, Or.inl ⟨?_, ?_, ?_⟩⟩⟩⟩
+    (fun _ h => by cases h), ⟨WhileMinEntry.read_ref_table memory, Or.inl ⟨?_, ?_, ?_⟩⟩,
+    exact _ List.mem_cons_self⟩⟩
   rotate_left
   · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl
   · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_ptr memory]; rfl
@@ -1115,22 +1117,22 @@ theorem Loaded.retarget {L L' : OCaml.Layout} {P : Prog} {c : Config} (h : OCaml
 
 /-- a0-boot's covering readiness at the densified cut holds at the cut itself:
 `HeapReady` reads total bytes only. -/
-theorem heapCovers_cut (heap : WhileMin.cut_heapReady_covers_Statement f1Covered) : HeapCovers WhileMin.cut := by
-  obtain ⟨H, cap, room, ready, covers⟩ := heap
-  refine ⟨H, cap, room, HeapReady.frame_read ready fun a _ _ => ?_, covers⟩
+theorem heapCovers_cut (heap : WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56)]) : HeapCovers WhileMin.cut := by
+  obtain ⟨H, cap, room, ready, covers, exact⟩ := heap
+  refine ⟨H, cap, room, HeapReady.frame_read ready fun a _ _ => ?_, covers, exact⟩
   have := Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem a
   simp only [Std.ExtHashMap.get?_eq_getElem?] at this
   exact this
 
 /-- **`Loaded f1Layout whileMin`** at the captured cut, given a0-boot's named
-obligation `WhileMin.cut_heapReady_covers_Statement f1Covered` (newlib's heap
+obligation `WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56)]` (newlib's heap
 at the cut covers the runtime's blocks). -/
-theorem whileMin_loaded_f1 (heap : WhileMin.cut_heapReady_covers_Statement f1Covered) :
+theorem whileMin_loaded_f1 (heap : WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56)]) :
     OCaml.Loaded f1Layout OCaml.Programs.whileMin WhileMin.cut :=
   Loaded.retarget WhileMin.loaded (f1Runtime_of WhileMin.memory_equiv (heapCovers_cut heap)) rfl
 
 /-- The densified entry, as a0-boot's `loaded_fillZero`. -/
-theorem whileMin_loaded_f1_fillZero (heap : WhileMin.cut_heapReady_covers_Statement f1Covered) :
+theorem whileMin_loaded_f1_fillZero (heap : WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56)]) :
     OCaml.Loaded f1Layout OCaml.Programs.whileMin (Vsa.Densify.fillZero WhileMin.cut) :=
   Loaded.retarget WhileMin.loaded_fillZero
     (f1Runtime_of ((Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem).symm.trans WhileMin.memory_equiv) heap) rfl

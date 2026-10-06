@@ -248,7 +248,8 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
     records := h.records
     recordsApart := h.recordsApart
     recordsDisjoint := h.recordsDisjoint
-    table := ⟨?_, Or.inr ?_⟩ }
+    table := ⟨?_, Or.inr ?_⟩
+    tableIn := h.tableIn }
   · rcases win w hw with rfl | rfl
     · exact Or.inl ⟨e, he, by simp only [Layout.off_ref_table_ptr]; omega,
         by simp only [Layout.off_ref_table_ptr]; omega⟩
