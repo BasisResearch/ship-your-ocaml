@@ -82,6 +82,12 @@ theorem whileMin_nurseryGeometry :
     heapPrivate := fun l a o placed object => whileMin_heapPrivate placed object
     belowPrivate := by rw [rf]; decide
     heapChunks := fun l a o placed object => whileMin_heapChunks placed object
+    channelsListed := ⟨[], by
+        have head := WhileMinEntry.read_caml_all_opened_channels WhileMin.memory_equiv
+        change bytesT _ _ 8 = _ at head
+        unfold OpenChannelList
+        rw [head]
+        exact .nil, fun _ _ _ _ none => by cases none, fun _ h => by cases h⟩
     nurseryLow := by rw [rf]; decide
     nurseryHigh := by rw [rf]; decide
     stackAbove := by rw [rf]; simp [WhileMinEntry.high, Layout.stackBytes, WhileMinObservation.observed] }

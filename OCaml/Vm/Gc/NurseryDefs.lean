@@ -1,5 +1,6 @@
 import OCaml.Vm.Sim.Invariant
 import OCaml.Vm.RuntimeFields
+import OCaml.Vm.Gc.OpenChannels
 
 /-!
 # Nursery geometry: definitions
@@ -79,6 +80,11 @@ structure NurseryGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   (newlib's records lie outside the major heap's free block) -/
   channelsPrivate : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
     OutWRange [privateRegion] a (chanOffBuff + ioBufferSize)
+  /-- the runtime's open-channel list is exactly the placed channel records
+  (`caml_ml_open_descriptor_*` links each new record; nothing unlinks under G1) -/
+  channelsListed : ∃ chs, OpenChannelList c.σ.mem chs ∧
+    (∀ id ch a, s.world.chans[id]? = some ch → cp id = some a → a ∈ chs) ∧
+    ∀ b ∈ chs, ∃ id ch, s.world.chans[id]? = some ch ∧ cp id = some b
   /-- the nursery lies below the VM stack allocation, so a reserved block sits
   below every stack slot the arms write (a1-arms' CLOSUREREC) -/
   stackAbove : (runtimeFields c).youngPtr ≤ high - Layout.stackBytes

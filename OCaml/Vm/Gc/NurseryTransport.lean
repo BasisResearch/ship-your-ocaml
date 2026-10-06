@@ -32,6 +32,28 @@ theorem OutWRange.shrink {c c' : Config} {x n : Nat}
   simp only [nurseryFree] at h
   exact ⟨by simp only [nurseryFree, limit]; omega, trivial⟩
 
+/-- The open-channel list survives when its head and every placed record's
+`next` word are unchanged and the channel table is kept. -/
+theorem channelsListed_transfer {s s' : St} {c c' : Config} {cp : ChanPlace}
+    (h : ∃ chs, OpenChannelList c.σ.mem chs ∧
+      (∀ id ch a, s.world.chans[id]? = some ch → cp id = some a → a ∈ chs) ∧
+      ∀ b ∈ chs, ∃ id ch, s.world.chans[id]? = some ch ∧ cp id = some b)
+    (chans : s'.world.chans = s.world.chans)
+    (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
+    (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      word c' (a + chanOffNext) = word c (a + chanOffNext)) :
+    ∃ chs, OpenChannelList c'.σ.mem chs ∧
+      (∀ id ch a, s'.world.chans[id]? = some ch → cp id = some a → a ∈ chs) ∧
+      ∀ b ∈ chs, ∃ id ch, s'.world.chans[id]? = some ch ∧ cp id = some b := by
+  obtain ⟨chs, list, placed, listed⟩ := h
+  refine ⟨chs, ?_, by rw [chans]; exact placed, by rw [chans]; exact listed⟩
+  unfold OpenChannelList
+  change bytesT c'.σ.mem _ 8 = bytesT c.σ.mem _ 8 at head
+  rw [head]
+  refine OpenChannels.congr list fun b hb => ?_
+  obtain ⟨id, ch, hc, hp⟩ := listed b hb
+  exact links id ch b hc hp
+
 /-- **Transport** across a step that keeps object sizes, channels, the
 `Caml_state` and primitive-table pointers, and the `young_limit`/`young_ptr`
 words (every non-allocating arm), mirroring `StackGeometry.transport`. -/
@@ -43,7 +65,10 @@ theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : P
     (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
       word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
     (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
-    (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr) :
+    (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
+    (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
+    (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      word c' (a + chanOffNext) = word c (a + chanOffNext)) :
     NurseryGeometry P s' c' pl cp high := by
   have window : nurseryFree c' = nurseryFree c := by simp only [nurseryFree, limit, ptr]
   exact {
@@ -72,6 +97,7 @@ theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : P
       obtain ⟨o, ho, size⟩ := objects l o' object
       rw [← size]; exact g.heapPrivate l a o placed ho
     belowPrivate := by rw [ptr]; exact g.belowPrivate
+    channelsListed := channelsListed_transfer g.channelsListed chans head links
     heapChunks := fun l a o' placed object => by
       obtain ⟨o, ho, size⟩ := objects l o' object
       rw [← size]; exact g.heapChunks l a o placed ho
@@ -90,12 +116,15 @@ theorem NurseryGeometry.frame_log {P : Prog} {s s' : St} {c c' : Config} {pl : P
     (contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
     (limit : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_young_limit) 8)
     (ptr : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr) 8)
+    (head : OutLRange log Layout.sym_caml_all_opened_channels 8)
+    (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a → OutLRange log (a + chanOffNext) 8)
     (memory : c'.σ.mem = writeLog c.σ.mem log) : NurseryGeometry P s' c' pl cp high := by
   have keep : ∀ x, OutLRange log x 8 → word c' x = word c x := fun x h => by
     change bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8
     rw [memory, bytesT_writeLog_out _ h]
   have dom := keep _ domain
-  refine g.transport objects chans dom (keep _ contents) ?_ ?_
+  refine g.transport objects chans dom (keep _ contents) ?_ ?_ (keep _ head)
+    (fun id ch a hc hp => keep _ (links id ch a hc hp))
   · simp only [runtimeFields, domainWord, dom]; rw [keep _ limit]
   · simp only [runtimeFields, domainWord, dom]; rw [keep _ ptr]
 
@@ -111,7 +140,10 @@ theorem NurseryGeometry.alloc {P : Prog} {s s' : St} {c c' : Config} {pl : Place
     (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
     (before : (runtimeFields c).youngPtr = a + 8 * count)
     (after : (runtimeFields c').youngPtr = a - 8) (room : 8 ≤ a) (aligned : (a - 8) % 8 = 0)
-    (capacity : (runtimeFields c).youngLimit ≤ a - 8) :
+    (capacity : (runtimeFields c).youngLimit ≤ a - 8)
+    (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
+    (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      word c' (a + chanOffNext) = word c (a + chanOffNext)) :
     NurseryGeometry P s' c' pl cp high := by
   have lower : (runtimeFields c').youngPtr ≤ (runtimeFields c).youngPtr := by omega
   have sh : ∀ {x n}, OutWRange [nurseryFree c] x n → OutWRange [nurseryFree c'] x n :=
@@ -160,6 +192,7 @@ theorem NurseryGeometry.alloc {P : Prog} {s s' : St} {c c' : Config} {pl : Place
         have := g.belowPrivate
         exact ⟨Or.inl (by omega), trivial⟩
     belowPrivate := by have := g.belowPrivate; omega
+    channelsListed := channelsListed_transfer g.channelsListed chans head links
     heapChunks := fun l a' o' found object => by
       rw [heap] at object
       rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
@@ -181,6 +214,7 @@ theorem NurseryGeometry.same {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
   g.transport (fun l o' h => ⟨o', heap ▸ h, rfl⟩) (by rw [world])
     (by simp only [word, memory]) (by simp only [word, memory])
     (by simp only [runtimeFields, domainWord, word, memory]) (by simp only [runtimeFields, domainWord, word, memory])
+    (by simp only [word, memory]) (fun _ _ _ _ _ => by simp only [word, memory])
 
 /-- The reserved block `[a - 8, a + 8 * count)` lies in the free nursery, so
 its initializing writes miss the payload (`WindowSeparated.payload`). -/

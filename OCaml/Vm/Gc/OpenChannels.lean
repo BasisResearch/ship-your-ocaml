@@ -32,4 +32,30 @@ structure OpenChannelsLinked (before after : Std.ExtHashMap Nat (BitVec 8)) (a :
   next : bytesT after (a + chanOffNext) 8 = bytesT before Layout.sym_caml_all_opened_channels 8
   nonzero : a ≠ 0
 
+/-- Equal `next` words keep the open-channel list. -/
+theorem OpenChannels.congr {m m' : Std.ExtHashMap Nat (BitVec 8)} {x : Nat} {chs : List Nat}
+    (h : OpenChannels m x chs) (same : ∀ a ∈ chs, bytesT m' (a + chanOffNext) 8 = bytesT m (a + chanOffNext) 8) :
+    OpenChannels m' x chs := by
+  -- discipline: allow(O5-run-induction) `OpenChannels` is the shape of one linked list in a fixed memory, not a run relation
+  induction h with
+  | nil => exact .nil
+  | @cons a chs ne _ ih =>
+    refine .cons ne ?_
+    rw [same a List.mem_cons_self]
+    exact ih fun b hb => same b (List.mem_cons_of_mem _ hb)
+
+/-- The open-channel list is determined by memory. -/
+theorem OpenChannels.unique {m : Std.ExtHashMap Nat (BitVec 8)} {x : Nat} {l₁ l₂ : List Nat}
+    (h₁ : OpenChannels m x l₁) (h₂ : OpenChannels m x l₂) : l₁ = l₂ := by
+  -- discipline: allow(O5-run-induction) `OpenChannels` is the shape of one linked list in a fixed memory, not a run relation
+  induction h₁ generalizing l₂ with
+  | nil =>
+    cases h₂ with
+    | nil => rfl
+    | cons ne _ => exact absurd rfl ne
+  | @cons a rest ne _ ih =>
+    cases h₂ with
+    | nil => exact absurd rfl ne
+    | cons _ tail => rw [ih tail]
+
 end OCaml.Vm.Gc

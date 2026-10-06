@@ -94,18 +94,6 @@ theorem F1HeapSafe.outside {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} 
     · omega
   · exact Or.inr g
 
-/-- Equal `next` words keep the open-channel list. -/
-theorem OpenChannels.congr {m m' : Std.ExtHashMap Nat (BitVec 8)} {x : Nat} {chs : List Nat}
-    (h : OpenChannels m x chs) (same : ∀ a ∈ chs, bytesT m' (a + chanOffNext) 8 = bytesT m (a + chanOffNext) 8) :
-    OpenChannels m' x chs := by
-  -- discipline: allow(O5-run-induction) `OpenChannels` is the shape of one linked list in a fixed memory, not a run relation
-  induction h with
-  | nil => exact .nil
-  | @cons a chs ne _ ih =>
-    refine .cons ne ?_
-    rw [same a List.mem_cons_self]
-    exact ih fun b hb => same b (List.mem_cons_of_mem _ hb)
-
 /-- **The F1 heap invariant survives writes confined to safe windows**, given
 byte equality outside them and an unchanged open-channel list head. -/
 theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c c' : Config}
@@ -137,20 +125,6 @@ theorem LibHeapAt.frame_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List 
       bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8)
     (frame : FrameOn ws c.σ.mem c'.σ.mem) : LibHeapAt H cap chs c' :=
   h.keep_windows safe head fun a out => by rw [frame a (outW_all out)]
-
-/-- The open-channel list is determined by memory. -/
-theorem OpenChannels.unique {m : Std.ExtHashMap Nat (BitVec 8)} {x : Nat} {l₁ l₂ : List Nat}
-    (h₁ : OpenChannels m x l₁) (h₂ : OpenChannels m x l₂) : l₁ = l₂ := by
-  -- discipline: allow(O5-run-induction) `OpenChannels` is the shape of one linked list in a fixed memory, not a run relation
-  induction h₁ generalizing l₂ with
-  | nil =>
-    cases h₂ with
-    | nil => rfl
-    | cons ne _ => exact absurd rfl ne
-  | @cons a rest ne _ ih =>
-    cases h₂ with
-    | nil => exact absurd rfl ne
-    | cons _ tail => rw [ih tail]
 
 /-- `a` is a record on the memory's open-channel list. -/
 def OpenAt (c : Config) (a : Nat) : Prop := ∃ chs, OpenChannelList c.σ.mem chs ∧ a ∈ chs
