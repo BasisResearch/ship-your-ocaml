@@ -2,6 +2,16 @@ import OCaml.Vm.Boot.Startup.LibOpenEntryNormalized
 import OCaml.Vm.Boot.Startup.LibOpenEntryImage
 import OCaml.Vm.Boot.Startup.LibOpenEntryCallInterface
 import OCaml.Vm.Boot.Startup.ResolveRun
+import OCaml.Vm.Boot.Startup.OpenRCheckNormalized
+import OCaml.Vm.Boot.Startup.OpenRCheckImage
+import OCaml.Vm.Boot.Startup.OpenRErrnoNormalized
+import OCaml.Vm.Boot.Startup.OpenRErrnoImage
+import OCaml.Vm.Boot.Startup.OpenRReturnNormalized
+import OCaml.Vm.Boot.Startup.OpenRReturnImage
+import OCaml.Vm.Boot.Startup.OpenRStoreNormalized
+import OCaml.Vm.Boot.Startup.OpenRStoreImage
+import OCaml.Vm.Boot.Startup.LibOpenReturnNormalized
+import OCaml.Vm.Boot.Startup.LibOpenReturnImage
 import OCaml.Vm.Boot.Startup.ErrnoNormalized
 import OCaml.Vm.Boot.Startup.ErrnoImage
 import OCaml.Vm.Boot.Startup.HtifOpenErrnoSetNormalized
@@ -448,6 +458,71 @@ theorem htif_open_fail (c : Config) (sp ra s0 s1 s2 oldra : BitVec 64) (leaf : L
     rw [show Functions.sign_extend (m := 64) 80#12 = 80#64 by decide, nativeStack_restore, open_se0, BitVec.add_zero,
       show (0#64 + Functions.sign_extend (m := 64) 4095#12) = -1#64 by decide,
       saved 56 s1 (by simp), saved 48 s2 (by simp), savedRa, saved 64 s0 (by simp)]
+  · rfl
+  · decide
+
+open Sail in
+/-- `auipc a5; lw a5,1376(a5)` at 0x8004d7e8: the global `errno`. -/
+theorem open_r_errno_load : 2147801064#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 96151#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 1376#12 = BitVec.ofNat 64 0x80064d48 := by decide
+
+/-- A non-store step leaves the memory a later access sees. -/
+theorem memFacts_stepMem_skip {m : Std.ExtHashMap Nat (BitVec 8)} {a b : MInstr} {L L' : GRegs} {bs : List (BitVec 8)}
+    (kind : IsStore a.kind = false) (h : MemFacts m L' bs b) : MemFacts (stepMemM m a L) L' bs b := by
+  rw [stepMemM_skip kind]; exact h
+
+theorem open_r_failed : guardB bop.BEQ (-1#64) (0#64 + Functions.sign_extend (m := 64) 4095#12) = true := by decide
+
+def openRReturnLoads (m : Std.ExtHashMap Nat (BitVec 8)) (sp : BitVec 64) (w : List (BitVec 8)) :
+    List (List (BitVec 8)) := [w, read8 m (nativeFrameBase sp 16 + 8), read8 m (nativeFrameBase sp 16 + 0)]
+
+/-- `_open` failed and the global `errno` is clear: return -1. -/
+theorem open_r_fail_zero (c : Config) (sp ra s0 oldra : BitVec 64) (w : List (BitVec 8)) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 16) (regs : GHolds c.σ [(10, -1#64), (2, nativeStack sp 16)])
+    (global : read4 c.σ.mem 0x80064d48 = w) (zero : bytesVal .lw w = 0#64)
+    (saved : ∀ off value, (off, value) ∈ [(8, ra), (0, s0)] →
+      bytesT c.σ.mem (nativeFrameBase sp 16 + off) 8 = value) (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x8004d7d0#64 (fun e => e = c)
+      (WriteRegistersPost [2, 8, 1, 15] [] c ra (-1#64) [(2, sp), (8, s0), (1, ra), (15, 0#64), (10, -1#64)]) := by
+  have savedRa := saved 8 ra (by simp)
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (open_rXd7d0TSeg ++ open_rXd7e8TSeg ++ open_rXd7d8Seg) 0x8004d7d0#64
+        [(10, -1#64), (2, nativeStack sp 16)] (openRReturnLoads c.σ.mem sp w) c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 2]; decide
+      shape := by change ChainOK _ [10, 2] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := openRCheck_code leaf.image
+        chain_facts code with "Vsa.Sim.Code._open_r_at_"
+        · change guardB bop.BEQ (-1#64) (0#64 + Functions.sign_extend (m := 64) 4095#12) = true
+          exact open_r_failed
+        · refine memFacts_stepMem_skip rfl <| memFacts_writeLog ((show ReadWindow (BitVec.ofNat 64 0x80064d48) 4 by constructor <;> decide).lw rfl
+            (by simp only [openrcheck_line_8004d7d0, openrerrno_line_8004d7e8, openrerrno_line_8004d7ec, openrreturn_line_8004d7d8, openrreturn_line_8004d7dc, openrreturn_line_8004d7e0, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true,
+                  ite_false, imm20Of, Nat.reduceEqDiff]
+                exact open_r_errno_load) (by rw [← global]; exact read4_pins _ _)) (fun _ => trivial)
+        · change guardB bop.BEQ (bytesVal .lw w) 0#64 = true
+          rw [zero]; decide
+        · exact memFacts_writeLog (memFacts_writeLog ((frame.read_slot (off := 8) (by decide) (by decide)).ld rfl rfl
+            (frame.pins_slot c (by decide))) (fun _ => trivial)) (fun _ => trivial)
+        · exact memFacts_stepMem_skip rfl <| memFacts_writeLog (memFacts_writeLog ((frame.read_slot (off := 0) (by decide) (by decide)).ld rfl rfl
+            (frame.pins_slot c (by decide))) (fun _ => trivial)) (fun _ => trivial)
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 16 + 8)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [read8_value, savedRa, ret_tgt ra aligned]
+          exact aligned }))
+  · rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 16 + 8)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [read8_value, savedRa, ret_tgt ra aligned]
+  · simp only [open_rXd7d0TSeg, open_rXd7e8TSeg, open_rXd7d8Seg, evalBlocks, evalBlock, SegEvalState.init, openrcheck_line_8004d7d0, openrerrno_line_8004d7e8, openrerrno_line_8004d7ec, openrreturn_line_8004d7d8, openrreturn_line_8004d7dc, openrreturn_line_8004d7e0, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, openRReturnLoads, read8_value,
+      List.cons_append, List.nil_append]
+    rw [show Functions.sign_extend (m := 64) 16#12 = 16#64 by decide, nativeStack_restore, zero, savedRa,
+      saved 0 s0 (by simp)]
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
