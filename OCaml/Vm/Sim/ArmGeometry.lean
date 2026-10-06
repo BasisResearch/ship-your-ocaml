@@ -168,6 +168,36 @@ theorem _root_.OCaml.Vm.Gc.NurseryGeometry.domainApart {P s c pl cp high} {log :
     (y := a - 8) (k := 8 * o.wosize + 8) (by omega)
   exact ⟨by dsimp only; omega, trivial⟩
 
+/-- A reserved object is apart from every channel record. -/
+theorem _root_.OCaml.Vm.Gc.NurseryGeometry.channelsApart {P s c pl cp high} {log : List WEntry}
+    {a count : Nat} {o : Obj} (g : NurseryGeometry P s c pl cp high)
+    (reserve : NurseryReserve c log a o.wosize count) :
+    ∀ id ch b, s.world.chans[id]? = some ch → cp id = some b →
+      OutWRange [⟨b, b + (chanOffBuff + ch.buffer.length)⟩] (a - 8) (8 * o.wosize + 8) := by
+  intro id ch b hch hcp
+  have := reserve.before
+  have := reserve.size
+  have := reserve.room
+  have apart := apart_of_inside (g.channels id ch b hch hcp) reserve.capacity
+    (y := a - 8) (k := 8 * o.wosize + 8) (by omega)
+  exact ⟨by dsimp only; omega, trivial⟩
+
+/-- A reserved object is apart from every primitive entry. -/
+theorem _root_.OCaml.Vm.Gc.NurseryGeometry.primsApart {P s c pl cp high} {log : List WEntry}
+    {a count : Nat} {o : Obj} (g : NurseryGeometry P s c pl cp high)
+    (reserve : NurseryReserve c log a o.wosize count) :
+    ∀ i name, P.prims[i]? = some name →
+      OutWRange [⟨(word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i,
+        (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8⟩]
+        (a - 8) (8 * o.wosize + 8) := by
+  intro i name hi
+  have := reserve.before
+  have := reserve.size
+  have := reserve.room
+  have apart := apart_of_inside (g.primitives i name hi) reserve.capacity
+    (y := a - 8) (k := 8 * o.wosize + 8) (by omega)
+  exact ⟨by dsimp only; omega, trivial⟩
+
 /-- **Allocation transports the arm geometry**: the fresh object is placed in
 the reserved nursery block, and the log otherwise misses the
 `Caml_state`/primitive-table pointers. -/
@@ -186,7 +216,8 @@ theorem ArmGeometry.alloc_log {P : Prog} {s s' : St} {c c' : Config} {pl : Place
   have stack : StackGeometry P s' c pl cp high :=
     g.toStackGeometry.alloc placed
       (g.nursery.placement reserve.before reserve.capacity reserve.room reserve.size)
-      (g.nursery.domainApart reserve) heap world
+      (g.nursery.domainApart reserve) (g.nursery.channelsApart reserve) (g.nursery.primsApart reserve)
+      heap world
   exact ⟨stack.frame_log rfl rfl domain contents memory,
     g.nursery.alloc placed reserve.size heap (by rw [world]) (keep _ domain) (keep _ contents) limit
       reserve.before ptr reserve.room reserve.aligned reserve.capacity⟩

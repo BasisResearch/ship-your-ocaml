@@ -96,6 +96,14 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
     OutWRange [⟨pl.codeBase, pl.codeBase + 4 * P.code.size⟩] (a - 8) (8 * o.wosize + 8)
   heapAtoms : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     OutWRange [⟨pl.atomBase, pl.atomBase + atomTableBytes⟩] (a - 8) (8 * o.wosize + 8)
+  /-- placed objects are apart from the channel records and the primitive
+  entries (object stores keep them) -/
+  heapChannels : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
+    ∀ id ch b, s.world.chans[id]? = some ch → cp id = some b →
+      OutWRange [⟨b, b + (chanOffBuff + ch.buffer.length)⟩] (a - 8) (8 * o.wosize + 8)
+  heapPrims : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
+    ∀ i name, P.prims[i]? = some name →
+      OutWRange [⟨(word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i, (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8⟩] (a - 8) (8 * o.wosize + 8)
   /-- the `Caml_state` record is apart from the code, every placed object,
   the channel records and the primitive entries (its fields are written) -/
   domainCode : OutWRange [⟨pl.codeBase, pl.codeBase + 4 * P.code.size⟩]
@@ -165,6 +173,12 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
   heapAtoms l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     simpa only [size] using g.heapAtoms l a o placed ho
+  heapChannels l a o' placed object := by
+    obtain ⟨o, ho, size⟩ := objects l o' object
+    rw [chans, ← size]; exact g.heapChannels l a o placed ho
+  heapPrims l a o' placed object := by
+    obtain ⟨o, ho, size⟩ := objects l o' object
+    rw [prims, ← size]; exact g.heapPrims l a o placed ho
   domainCode := by rw [domain]; exact g.domainCode
   domainHeap l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
@@ -208,6 +222,10 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
     (np : NurseryPlacement P pl high a o)
     (domainApart : OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
       (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a - 8) (8 * o.wosize + 8))
+    (channelsApart : ∀ id ch b, s.world.chans[id]? = some ch → cp id = some b →
+      OutWRange [⟨b, b + (chanOffBuff + ch.buffer.length)⟩] (a - 8) (8 * o.wosize + 8))
+    (primsApart : ∀ i name, P.prims[i]? = some name →
+      OutWRange [⟨(word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i, (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8⟩] (a - 8) (8 * o.wosize + 8))
     (heap : s'.heap = (s.heap.alloc o).1) (world : s'.world = s.world) :
     StackGeometry P s' c pl cp high where
   statics := g.statics
@@ -257,6 +275,17 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
     rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
     · exact g.heapAtoms l a' o' found old
     · rw [placed] at found; cases found; exact np.atomApart
+  heapChannels l a' o' found object := by
+    rw [heap] at object
+    rw [world]
+    rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
+    · exact g.heapChannels l a' o' found old
+    · rw [placed] at found; cases found; exact channelsApart
+  heapPrims l a' o' found object := by
+    rw [heap] at object
+    rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
+    · exact g.heapPrims l a' o' found old
+    · rw [placed] at found; cases found; exact primsApart
   domainCode := g.domainCode
   domainHeap l a' o' found object := by
     rw [heap] at object
