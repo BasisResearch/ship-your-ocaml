@@ -178,9 +178,7 @@ import OCaml.Bytecode.Callback
 import OCaml.Vm.Primitives.StringCopyReadback
 import OCaml.Programs.LazyForce
 import OCaml.Programs.WhileMinChecks
-import OCaml.Programs.WhileMinOffsets
-import OCaml.Programs.WhileMinRaises
-import OCaml.Programs.WhileMinExtra
+import OCaml.Programs.WhileMinShape
 import OCaml.Vm.Gc.WhileMinG1
 import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.NurseryTransport

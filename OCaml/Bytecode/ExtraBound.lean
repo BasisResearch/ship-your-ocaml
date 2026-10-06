@@ -7,7 +7,7 @@ import OCaml.Bytecode.Semantics
 return frames as `Val_long`. The arms need every reachable count, current or
 saved in a frame, to be a small nonnegative integer. `ExtraBounded P` names
 that premise; a concrete program discharges it by one checked run
-(`OCaml/Programs/WhileMinExtra.lean`). The general invariant
+(`OCaml/Programs/WhileMinShape.lean`). The general invariant
 (`extra ≤ stack length`, the extra arguments living on the stack) is open
 (a2-sem).
 -/

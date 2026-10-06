@@ -7,7 +7,7 @@ import OCaml.Bytecode.Semantics
 PUSHTRAP's saved link `len + 4 - trap` is the native `Trap_link` only when
 `trap ≤ stack length`. A program that pops past its trap frame breaks this,
 so `TrapBounded P` is a named premise; a concrete program discharges it by
-one checked run (`OCaml/Programs/WhileMinExtra.lean`). A general invariant
+one checked run (`OCaml/Programs/WhileMinShape.lean`). A general invariant
 (trap frames are never popped except by POPTRAP or a raise) is open (a2-sem).
 -/
 

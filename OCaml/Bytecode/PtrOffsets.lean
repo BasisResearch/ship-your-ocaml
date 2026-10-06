@@ -15,7 +15,7 @@ distinct words (`WordEquality.of_place`).
 
 `ValuesInRange P` states it for every reachable accumulator and stack value.
 A concrete program discharges it by one checked run
-(`OCaml/Programs/WhileMinOffsets.lean`); a general discharge (bounds checks in
+(`OCaml/Programs/WhileMinShape.lean`); a general discharge (bounds checks in
 `OFFSETCLOSURE`, `CLOSURE` targets and `ATOM` plus a preservation proof) is
 open (a2-sem).
 -/
