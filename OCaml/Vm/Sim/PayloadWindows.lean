@@ -209,18 +209,9 @@ theorem YoungOutside.of_payloadWindows {P : Prog} {s : St} {c : Config} {pl : Pl
 
 /-! ## Windows above the allocator arena -/
 
-/-- The channel records and the program's primitive-table slots lie in the
-allocator arena (named premise; a1-arms adds both to `StackGeometry`). -/
-structure ArenaBounds (P : Prog) (s : St) (c : Config) (cp : ChanPlace) : Prop where
-  channelArena : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-    a + (chanOffBuff + ch.buffer.length) ≤ Vsa.Sim.DlHeap.heapEnd
-  primsArena : ∀ i name, P.prims[i]? = some name →
-    (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8 ≤
-      Vsa.Sim.DlHeap.heapEnd
-
 /-- **A window above the allocator arena misses the whole payload.** -/
 theorem WindowSeparated.of_above {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {high : Nat} {w : W} (g : StackGeometry P s c pl cp high) (arena : ArenaBounds P s c cp)
+    {high : Nat} {w : W} (g : StackGeometry P s c pl cp high)
     (above : Vsa.Sim.DlHeap.heapEnd ≤ w.lo) : WindowSeparated w P s c pl cp high where
   statics := by
     have : Layout.sym_bss_end ≤ Vsa.Sim.DlHeap.heapEnd := by decide
@@ -236,7 +227,7 @@ theorem WindowSeparated.of_above {P : Prog} {s : St} {c : Config} {pl : Place} {
     have := g.heapArena l a o placed obj
     have := g.heapLow l a o placed obj
     exact ⟨Or.inl (by omega), trivial⟩
-  channels id ch a hch hcp := ⟨Or.inl (by have := arena.channelArena id ch a hch hcp; omega), trivial⟩
-  primitives i name hi := ⟨Or.inl (by have := arena.primsArena i name hi; omega), trivial⟩
+  channels id ch a hch hcp := ⟨Or.inl (by have := g.channelArena id ch a hch hcp; omega), trivial⟩
+  primitives i name hi := ⟨Or.inl (by have := g.primsArena i name hi; omega), trivial⟩
 
 end OCaml.Vm.Sim

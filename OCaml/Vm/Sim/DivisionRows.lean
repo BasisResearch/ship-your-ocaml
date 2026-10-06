@@ -685,7 +685,7 @@ def divisionWindows (c : Config) (sp : Nat) (D : InvocationData) : List W :=
 /-- **Each zero-path window is a payload window** of the raise state at `sp + 8`. -/
 theorem division_windows_payload {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp high : Nat} {D : InvocationData} (g : StackGeometry P s c pl cp high)
-    (arena : ArenaBounds P s c cp) (v : NativeValid D)
+    (v : NativeValid D)
     (low : high - Layout.stackBytes + 8 ≤ sp) :
     ∀ w ∈ divisionWindows c sp D, PayloadWindow P s c pl cp (sp + 8) high w := by
   intro w hw
@@ -694,8 +694,8 @@ theorem division_windows_payload {P : Prog} {s : St} {c : Config} {pl : Place} {
   · exact .belowStack (show high - Layout.stackBytes ≤ sp - 8 by omega) (Nat.le_refl _)
   · exact .field (by simp [payloadFreeOffsets])
   · exact .field (by simp [payloadFreeOffsets])
-  · exact .separated (WindowSeparated.of_above g arena (by
-      have := v.headroom; simp only [nativeScratch, nativeHeadroom] at this ⊢; omega))
+  · exact .separated (WindowSeparated.of_above g
+      (show _ ≤ D.nativeSp - nativeHeadroom from Nat.le_sub_of_add_le v.headroom))
 
 /-- **Every store of the zero path lies in a zero-path window.** -/
 theorem division_log_in {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
