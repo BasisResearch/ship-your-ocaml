@@ -2,6 +2,7 @@ import OCaml.RefinementF1
 import OCaml.Programs.WhileMin
 import OCaml.Programs.WhileMinChecks
 import OCaml.Programs.Validation
+import OCaml.Programs.WhileMinShape
 
 /-!
 # `GoodF1` of a concrete program from one checked run
@@ -9,8 +10,8 @@ import OCaml.Programs.Validation
 `runToF1` is `runTo` that also checks, at every visited state, that the PC
 decodes to an `InF1` instruction. A deterministic run that halts visits
 every reachable state, so one successful check gives `GoodF1`
-(`GoodF1.of_runToF1`): the domain premise of the F1 headline for a concrete
-program is a single `decide +kernel`.
+(`GoodF1.of_runToF1`). `whileMin`'s own check is folded into the single
+shape run of `WhileMinShape.lean` (`whileMin_goodF1`).
 -/
 
 namespace OCaml
@@ -72,13 +73,6 @@ theorem GoodF1.of_runToF1 {P : Prog} {k : Nat} (h : (runToF1 P k P.init).isSome)
     exact ho
 
 namespace Programs
-
-set_option maxRecDepth 100000 in
-theorem whileMin_runToF1 : (runToF1 whileMin 2200 whileMin.init).isSome := by
-  decide +kernel
-
-/-- **`while_min.byte` stays in F1** along its whole run. -/
-theorem whileMin_goodF1 : GoodF1 whileMin := GoodF1.of_runToF1 whileMin_runToF1
 
 /-- **The `whileMin` machine instance**, from the F1 arm tables: the machine
 loaded with `while_min.byte` halts printing `55`, `2500`, `36` with exit 0.
