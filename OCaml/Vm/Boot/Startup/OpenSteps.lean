@@ -525,4 +525,73 @@ theorem open_r_fail_zero (c : Config) (sp ra s0 oldra : BitVec 64) (w : List (Bi
       saved 0 s0 (by simp)]
   · rfl
   · decide
+
+/-- `_open` failed with the global `errno` set: copy it to `reent->_errno`, return -1. -/
+theorem open_r_fail_set (c : Config) (sp ra s0 oldra : BitVec 64) (w : List (BitVec 8)) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 16) (regs : GHolds c.σ [(10, -1#64), (2, nativeStack sp 16), (8, 0x80064668#64)])
+    (global : read4 c.σ.mem 0x80064d48 = w) (nonzero : bytesVal .lw w ≠ 0#64)
+    (saved : ∀ off value, (off, value) ∈ [(8, ra), (0, s0)] →
+      bytesT c.σ.mem (nativeFrameBase sp 16 + off) 8 = value) (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x8004d7d0#64 (fun e => e = c)
+      (WriteRegistersPost [2, 8, 1, 15] [(0x80064668, 4, bytesVal .lw w)] c ra (-1#64)
+        [(2, sp), (8, s0), (1, ra), (15, bytesVal .lw w), (10, -1#64)]) := by
+  have savedRa := saved 8 ra (by simp)
+  apply registers_of_blocks leaf.image (by constructor <;> simp only [OutLRange] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput (open_rXd7d0TSeg ++ open_rXd7e8FSeg ++ open_rXd7f4Seg) 0x8004d7d0#64
+        [(10, -1#64), (2, nativeStack sp 16), (8, 0x80064668#64)] (openRReturnLoads c.σ.mem sp w) c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 2, 8]; decide
+      shape := by change ChainOK _ [10, 2, 8] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := openRCheck_code leaf.image
+        chain_facts code with "Vsa.Sim.Code._open_r_at_"
+        · change guardB bop.BEQ (-1#64) (0#64 + Functions.sign_extend (m := 64) 4095#12) = true
+          exact open_r_failed
+        · refine memFacts_stepMem_skip rfl <| memFacts_writeLog ((show ReadWindow (BitVec.ofNat 64 0x80064d48) 4 by
+            constructor <;> decide).lw rfl
+            (by simp only [openrcheck_line_8004d7d0, openrerrno_line_8004d7e8, openrerrno_line_8004d7ec, openrstore_line_8004d7f4, openrstore_line_8004d7f8, openrstore_line_8004d7fc, openrstore_line_8004d800, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true,
+                  ite_false, imm20Of, Nat.reduceEqDiff]
+                exact open_r_errno_load) (by rw [← global]; exact read4_pins _ _)) (fun _ => trivial)
+        · change guardB bop.BEQ (bytesVal .lw w) 0#64 = false
+          exact beq_eq_false_iff_ne.mpr nonzero
+        · exact memFacts_writeLog (memFacts_writeLog ((frame.read_slot (off := 8) (by decide) (by decide)).ld rfl rfl
+            (frame.pins_slot c (by decide))) (fun _ => trivial)) (fun _ => trivial)
+        · exact (show WriteWindow (BitVec.ofNat 64 0x80064668) 4 by constructor <;> decide).sw rfl
+            (by simp only [openrcheck_line_8004d7d0, openrerrno_line_8004d7e8, openrerrno_line_8004d7ec, openrstore_line_8004d7f4, openrstore_line_8004d7f8, openrstore_line_8004d7fc, openrstore_line_8004d800, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true,
+                  ite_false, Nat.reduceEqDiff, open_se0, BitVec.add_zero])
+        · rw [stepMemM_store rfl]
+          refine memFacts_writeLog (memFacts_stepMem_skip rfl <| memFacts_writeLog (memFacts_writeLog
+            ((frame.read_slot (off := 0) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide)))
+            (fun _ => trivial)) (fun _ => trivial)) (fun _ => ?_)
+          have lower := frame.lower
+          have slot0 : (nativeStack sp 16 + BitVec.ofNat 64 0).toNat = nativeFrameBase sp 16 + 0 := by
+            rw [nativeStack, frame.address 0 (by decide), frame.slot_nat (by decide)]
+          simp only [openrcheck_line_8004d7d0, openrerrno_line_8004d7e8, openrerrno_line_8004d7ec, openrstore_line_8004d7f4, openrstore_line_8004d7f8, openrstore_line_8004d7fc, openrstore_line_8004d800, wentryM, widthOfM, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM,
+            Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, OutLRange, and_true, open_se0, BitVec.add_zero,
+            BitVec.toNat_ofNat, Nat.reduceMod]
+          rw [show nativeStack sp 16 = nativeStack sp 16 + BitVec.ofNat 64 0 from (BitVec.add_zero _).symm, slot0]
+          unfold nativeFrameBase heapEnd at *; omega
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 16 + 8)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [read8_value, savedRa, ret_tgt ra aligned]
+          exact aligned }))
+  · simp only [open_rXd7d0TSeg, open_rXd7e8FSeg, open_rXd7f4Seg, evalBlocks, evalBlock, SegEvalState.init, openrcheck_line_8004d7d0, openrerrno_line_8004d7e8, openrerrno_line_8004d7ec, openrstore_line_8004d7f4, openrstore_line_8004d7f8, openrstore_line_8004d7fc, openrstore_line_8004d800, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, openRReturnLoads, List.cons_append,
+      List.nil_append, open_se0, BitVec.add_zero]
+    rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 16 + 8)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [read8_value, savedRa, ret_tgt ra aligned]
+  · simp only [open_rXd7d0TSeg, open_rXd7e8FSeg, open_rXd7f4Seg, evalBlocks, evalBlock, SegEvalState.init, openrcheck_line_8004d7d0, openrerrno_line_8004d7e8, openrerrno_line_8004d7ec, openrstore_line_8004d7f4, openrstore_line_8004d7f8, openrstore_line_8004d7fc, openrstore_line_8004d800, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, openRReturnLoads, read8_value,
+      List.cons_append, List.nil_append]
+    rw [show Functions.sign_extend (m := 64) 16#12 = 16#64 by decide, nativeStack_restore, savedRa,
+      saved 0 s0 (by simp)]
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
