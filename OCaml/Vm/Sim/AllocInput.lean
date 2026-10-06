@@ -266,4 +266,75 @@ theorem MakeblockInput.of_input {L : OCaml.Layout} {P : Prog} {s : St} {op : Opc
       (logInW_widen blockInside fun w hw => by
         simp only [List.mem_singleton] at hw; subst hw; simp only [arenaWindow]; omega)
 
+/-! ## The reserved block at a loop head -/
+
+/-- **A block of `n` words (header excluded) reserved below `young_ptr`**: the
+scalar facts every allocating arm consumes. -/
+structure ReservedBlock (c : Config) (a n : Nat) : Prop where
+  young : (runtimeFields c).youngPtr = a + 8 * n
+  capacity : (runtimeFields c).youngLimit ≤ a - 8
+  room : 8 ≤ a
+  aligned : a % 8 = 0
+  top : a + 8 * n ≤ 0x100000000
+  statics : Layout.sym_bss_end ≤ a - 8
+
+/-- The reserved block below `young_ptr` at a loop head. -/
+theorem ReservedBlock.of_reservation {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {pl : Place}
+    {cp : ChanPlace} {high n : Nat} (g : Gc.NurseryGeometry P s c pl cp high) (reserve : Reservation L s c n) :
+    ReservedBlock c ((runtimeFields c).youngPtr - 8 * n) n := by
+  have capacityAll := reserve.capacity
+  have aligned := g.aligned
+  have top := g.top
+  have statics := g.statics
+  simp only [Gc.nurseryFree] at statics
+  exact ⟨by omega, by omega, by omega, by omega, by omega, by omega⟩
+
+/-- Every aligned word of a reserved block is writable RAM. -/
+theorem ReservedBlock.write {c : Config} {a n x : Nat} (b : ReservedBlock c a n)
+    (low : a - 8 ≤ x) (high : x + 8 ≤ a + 8 * n) (aligned : x % 8 = 0) : RamWriteAt x 8 := by
+  have hb : Layout.sym_tohost + 16 ≤ Layout.sym_bss_end := by decide
+  have hr : 0x80000000 ≤ Layout.sym_tohost := by decide
+  have := b.statics
+  have := b.top
+  exact ⟨by omega, by omega, by simp only [tohostAddr, ← mailbox_layout] at *; omega, by omega⟩
+
+/-- A log inside the reserved block lies in the free nursery. -/
+theorem ReservedBlock.free {c : Config} {a n : Nat} {log : List WEntry} (b : ReservedBlock c a n)
+    (inside : LogInW [⟨a - 8, a + 8 * n⟩] log) : LogInW [Gc.nurseryFree c] log :=
+  block_in_free b.young b.capacity inside
+
+/-- The reserved block misses the `Caml_state` record. -/
+theorem ReservedBlock.domainApart {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high a n : Nat} (b : ReservedBlock c a n) (g : Gc.NurseryGeometry P s c pl cp high) :
+    a + 8 * n ≤ (word c Layout.sym_Caml_state).toNat ∨
+      (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes ≤ a - 8 := by
+  have := Gc.apart_of_inside g.domain b.capacity (y := a - 8) (k := 8 * n + 8)
+    (by have := b.young; have := b.room; omega)
+  have := b.room
+  omega
+
+/-- The reserved block misses the VM stack allocation. -/
+theorem ReservedBlock.stackApart {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high a n : Nat} (b : ReservedBlock c a n) (g : Gc.NurseryGeometry P s c pl cp high) :
+    a + 8 * n ≤ high - Layout.stackBytes ∨ high ≤ a - 8 := by
+  have apart := Gc.apart_of_inside g.stack b.capacity (y := a - 8) (k := 8 * n + 8)
+    (by have := b.young; have := b.room; omega)
+  have := b.room
+  omega
+
+/-- **The scalar nursery input of a reservation.** -/
+theorem NurseryInput.of_block {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high a n : Nat} (b : ReservedBlock c a n) (g : Gc.NurseryGeometry P s c pl cp high)
+    (sg : StackGeometry P s c pl cp high) (small : n < 2^31) :
+    NurseryInput n a (word c Layout.sym_Caml_state).toNat (runtimeFields c).youngLimit c := by
+  have young := b.young
+  have youngWord : (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr)).toNat =
+      a + 8 * n := by rw [← young]; rfl
+  have limitWord : (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_young_limit)).toNat =
+      (runtimeFields c).youngLimit := rfl
+  exact ⟨small, b.room, by rw [BitVec.ofNat_toNat, BitVec.setWidth_eq],
+    by rw [← youngWord, BitVec.ofNat_toNat, BitVec.setWidth_eq],
+    by rw [← limitWord, BitVec.ofNat_toNat, BitVec.setWidth_eq],
+    g.young_write, g.limit_read, g.header_write young b.capacity b.room, b.capacity, sg.young_image⟩
+
 end OCaml.Vm.Sim
