@@ -183,7 +183,7 @@ for k, (ptr, text, start, end) in enumerate(files):
         ecert += [f'theorem embed_{field}{k} : bytesT initialMem (embedTable + {24*k + off}) 8 = {value:#x}#64 :=',
                   f'  (loaderMem_bytes pieces imageByte (embedTable + {24*k + off}) 8).trans (by decide +kernel)', '']
     for i, value in enumerate(text + b'\0'):
-        ecert += [f'private theorem embedPath{k}_byte_{i} : initialMem[embedPath{k} + {i}]? = some {value}#8 :=',
+        ecert += [f'theorem embedPath{k}_byte_{i} : initialMem[embedPath{k} + {i}]? = some {value}#8 :=',
                   f'  (loaderMem_get pieces imageByte (embedPath{k} + {i})).trans (by decide +kernel)', '']
     for w in range((ptr // 8) * 8, ptr + len(text) + 1, 8):
         value = int.from_bytes(image_total(w, 8), 'little')

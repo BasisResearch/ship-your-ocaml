@@ -31,22 +31,22 @@ theorem embed_start0 : bytesT initialMem (embedTable + 8) 8 = 0x86800090#64 :=
 theorem embed_end0 : bytesT initialMem (embedTable + 16) 8 = 0x8680253c#64 :=
   (loaderMem_bytes pieces imageByte (embedTable + 16) 8).trans (by decide +kernel)
 
-private theorem embedPath0_byte_0 : initialMem[embedPath0 + 0]? = some 47#8 :=
+theorem embedPath0_byte_0 : initialMem[embedPath0 + 0]? = some 47#8 :=
   (loaderMem_get pieces imageByte (embedPath0 + 0)).trans (by decide +kernel)
 
-private theorem embedPath0_byte_1 : initialMem[embedPath0 + 1]? = some 112#8 :=
+theorem embedPath0_byte_1 : initialMem[embedPath0 + 1]? = some 112#8 :=
   (loaderMem_get pieces imageByte (embedPath0 + 1)).trans (by decide +kernel)
 
-private theorem embedPath0_byte_2 : initialMem[embedPath0 + 2]? = some 114#8 :=
+theorem embedPath0_byte_2 : initialMem[embedPath0 + 2]? = some 114#8 :=
   (loaderMem_get pieces imageByte (embedPath0 + 2)).trans (by decide +kernel)
 
-private theorem embedPath0_byte_3 : initialMem[embedPath0 + 3]? = some 111#8 :=
+theorem embedPath0_byte_3 : initialMem[embedPath0 + 3]? = some 111#8 :=
   (loaderMem_get pieces imageByte (embedPath0 + 3)).trans (by decide +kernel)
 
-private theorem embedPath0_byte_4 : initialMem[embedPath0 + 4]? = some 103#8 :=
+theorem embedPath0_byte_4 : initialMem[embedPath0 + 4]? = some 103#8 :=
   (loaderMem_get pieces imageByte (embedPath0 + 4)).trans (by decide +kernel)
 
-private theorem embedPath0_byte_5 : initialMem[embedPath0 + 5]? = some 0#8 :=
+theorem embedPath0_byte_5 : initialMem[embedPath0 + 5]? = some 0#8 :=
   (loaderMem_get pieces imageByte (embedPath0 + 5)).trans (by decide +kernel)
 
 theorem embedPath0_word_86802538 : bytesT initialMem 0x86802538 8 = 0x72702f0031333058#64 :=
