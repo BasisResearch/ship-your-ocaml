@@ -50,19 +50,26 @@
   `curr`, `curr + 1`) or full (one `flush_partial` of the 65536-byte buffer, then the
   byte at `buff`). Phases `oc_pro` / `oc_tail` / `oc_full_enter` / `oc_full_flushed`.
 * Repr: WorldRepr carries the object-ID counter (`WorldRepr.ooId`), ChanAt the buffer end,
-  a clear unbuffered flag, and (last conjunct) `cursor ≤ ioBufferSize ∧ a % 8 = 0`
-  (`ChanAt.cursorLe`/`.aligned`); PayloadOutside/PayloadCoreOutside an `ooId` window.
+  a clear unbuffered flag, and (last conjunct) `cursor ≤ ioBufferSize ∧ buffer.length ≤
+  ioBufferSize ∧ a % 8 = 0` (`ChanAt.fields`/`.cursorLe`/`.bufferLe`/`.aligned`); PayloadOutside/PayloadCoreOutside an `ooId` window.
   `VmPayload.frame_chan` (`ChannelFrame.lean`): payload across a footprint that rewrites one
   channel record, which then represents the channel's new state.
 * Console statics: `ConsoleRuntime` (`Console/Runtime.lean`): fds 1/2 consoles, default
   blocking hooks, `_impure_ptr`, no pending signals/actions, null channel-mutex hooks; a6-gc
   pins it for F1 (`f1_consoleRuntime`). Console streams: bprime's `GoodF1.consoles`
-  (`OCaml.ConsoleChannels`, out channels with fd ≠ -1). BcSem guards (a2-sem, pending):
+  (`OCaml.ConsoleChannels`, out channels with fd ≠ -1). BcSem guards (a2-sem, landed):
   `offsetFits` (offset + n < 2^63) and `isOut` on flushChan/putChar/putBlock.
-* Flush adapter (in progress, `Sim/PrimMlFlush.lean`): footprint `flushWindows sp a`;
-  runtime stability is the named premise `FlushStable L` (a6-gc: `f1_flush_stable`, FIXED
-  `flushStable`). Layouts from one numeric `ConsoleGeometry` (native sp ≥ heapEnd + 4096,
-  channel and domain records in the arena).
+* Flush adapter (in progress, `Sim/PrimMlFlush.lean`): `flush_semantics` (model inversion),
+  `channel_arg` (`ChannelArg`: custom block, record, `ChanAt` at the callee entry),
+  `console_geometry` (`ConsoleGeometry` from `LoopGeometry` + `NativeValid`) and
+  `flush_input` (`MlFlushInput` for an open console channel) are proved; layouts from
+  `Console/Geometry.lean` (`ConsoleGeometry.write`…`.mlFlush`; console addresses checked
+  against the ELF symbols by `console_symbols`). Footprint `flushWindows sp a`; runtime
+  stability is the named premise `FlushStable L` over a getD frame (`FrameOnD`; a6-gc:
+  `f1_flush_stable`, FIXED `flushStable`). Waiting on: a1-arms' `CcallSetupPost.calleeSaved`
+  and channel-record apartness (`channelCode/Atoms/Prims/channelsApart`, full extent).
+  Remaining: the post (`FramedPrimitivePost` via `VmPayload.frame_chan`), the closed path,
+  `prim_caml_ml_flush_returns`.
 * whileMin `PrimReturnsAt` summaries (picked up by `scripts/gen_f1_table.py`; regenerate
   WhileMinTable.lean in the same batch): `prim_caml_ml_string_length_returns` and
   `prim_caml_fresh_oo_id_returns` (`f1_counterStable` from a6-gc's `f1_ignoredStatic`) done.

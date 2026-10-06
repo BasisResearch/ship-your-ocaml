@@ -424,7 +424,7 @@ def chanEqv (a : Nat) (ch : Chan) : Eqv :=
   Eqv.and (Eqv.rawW (fun _ => a + chanOffEnd) (·.toNat = a + chanOffBuff + ioBufferSize)) <|
   Eqv.and (Eqv.rawW32 (fun _ => a + chanOffFlags) (· &&& chanFlagUnbuffered = 0#32)) <|
   Eqv.and (Eqv.list ch.buffer fun i b => Eqv.rawB (fun _ => a + chanOffBuff + i)
-    (· = BitVec.ofNat 8 b.toNat)) (Eqv.pure fun _ => ch.cursor ≤ ioBufferSize ∧ a % 8 = 0)
+    (· = BitVec.ofNat 8 b.toNat)) (Eqv.pure fun _ => ch.cursor ≤ ioBufferSize ∧ ch.buffer.length ≤ ioBufferSize ∧ a % 8 = 0)
 
 def worldEqv (cp : ChanPlace) (w : World) : Eqv :=
   Eqv.and (Eqv.observe (fun c => output c.σ) (· = bytesToString w.console)) <|

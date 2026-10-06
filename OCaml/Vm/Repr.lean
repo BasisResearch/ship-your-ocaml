@@ -138,17 +138,36 @@ def ChanAt (c : Config) (a : Nat) (ch : Chan) : Prop :=
   (∀ i (b : UInt8), ch.buffer[i]? = some b → byte c (a + chanOffBuff + i) = BitVec.ofNat 8 b.toNat) ∧
   -- `curr` never passes `end` (`Putch` flushes first when `curr >= end`); the
   -- record is malloc'd, so word-aligned
-  (ch.cursor ≤ ioBufferSize ∧ a % 8 = 0)
+  (ch.cursor ≤ ioBufferSize ∧ ch.buffer.length ≤ ioBufferSize ∧ a % 8 = 0)
+
+/-- `ChanAt`'s components by name. -/
+structure ChanFields (c : Config) (a : Nat) (ch : Chan) : Prop where
+  fd : (word32 c (a + chanOffFd)).toInt = ch.fd
+  offset : (word c (a + chanOffOffset)).toInt = ch.offset
+  curr : (word c (a + chanOffCurr)).toNat = a + chanOffBuff + ch.cursor
+  max : (word c (a + chanOffMax)).toNat = (if ch.fd = -1 then a + chanOffBuff + ioBufferSize else if ch.isOut then 0 else a + chanOffBuff + ch.inBuf.length)
+  bufEnd : (word c (a + chanOffEnd)).toNat = a + chanOffBuff + ioBufferSize
+  flags : word32 c (a + chanOffFlags) &&& chanFlagUnbuffered = 0#32
+  bytes : ∀ i (b : UInt8), ch.buffer[i]? = some b → byte c (a + chanOffBuff + i) = BitVec.ofNat 8 b.toNat
+  cursorLe : ch.cursor ≤ ioBufferSize
+  bufferLe : ch.buffer.length ≤ ioBufferSize
+  aligned : a % 8 = 0
+
+theorem ChanAt.fields {c : Config} {a : Nat} {ch : Chan} (h : ChanAt c a ch) : ChanFields c a ch := by
+  obtain ⟨fd, offset, curr, max, bufEnd, flags, bytes, cursorLe, bufferLe, aligned⟩ := h
+  exact ⟨fd, offset, curr, max, bufEnd, flags, bytes, cursorLe, bufferLe, aligned⟩
 
 /-- The cursor bound of a represented channel. -/
 theorem ChanAt.cursorLe {c : Config} {a : Nat} {ch : Chan} (h : ChanAt c a ch) : ch.cursor ≤ ioBufferSize := by
-  obtain ⟨-, -, -, -, -, -, -, le, -⟩ := h
-  exact le
+  exact h.fields.cursorLe
 
 /-- A represented channel record is word-aligned. -/
 theorem ChanAt.aligned {c : Config} {a : Nat} {ch : Chan} (h : ChanAt c a ch) : a % 8 = 0 := by
-  obtain ⟨-, -, -, -, -, -, -, -, al⟩ := h
-  exact al
+  exact h.fields.aligned
+
+/-- A represented channel's active bytes fit its buffer. -/
+theorem ChanAt.bufferLe {c : Config} {a : Nat} {ch : Chan} (h : ChanAt c a ch) : ch.buffer.length ≤ ioBufferSize :=
+  h.fields.bufferLe
 
 /-- Where the `struct channel`s live (`caml_open_descriptor_in` mallocs
 them). -/
