@@ -609,4 +609,61 @@ theorem division_reentry_memory {L : OCaml.Layout} {P : Prog} {s : St} {op : Opc
     have := g.domainLow
     dsimp only; omega
 
+/-- **The zero path's stores miss the re-entry control words**: the
+`Caml_state` pointer, `trapsp`, `trap_barrier` and `backtrace_active`. -/
+theorem division_control_outside {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
+    {c : Config} {pl : Place} {cp : ChanPlace} {sp high : Nat} {rest : List Val} {env value : BitVec 64}
+    {D : InvocationData}
+    (h : ArmInput L P s op c pl cp sp high) (stack : s.stack = .int 0#63 :: rest)
+    (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes) (v : NativeValid D) :
+    ∀ a ∈ reentryControlWords c,
+      OutLRange (divisionZeroNativeLog (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) (BitVec.ofNat 64 sp) env
+        (word c Layout.sym_Caml_state) (BitVec.ofNat 64 D.nativeSp) value) a 8 := by
+  have g := h.geometry.toArmGeometry
+  have hs := h.stack.1
+  have hst := g.statics
+  have har := g.arena
+  have hdl := g.domainLow
+  have hda := g.domainArena
+  have hdom := g.domain
+  simp only [stackWindow, OutWRange, and_true] at hdom
+  have low := stack_space h.stack (by omega : 8 * s.stack.length ≤ Layout.stackBytes)
+  have nonempty : 0 < s.stack.length := by simp [stack]
+  have hh := v.headroom
+  have ht := v.high
+  have small : D.nativeSp < 2 ^ 64 := by simp only [Layout.sym_stack_top] at ht; omega
+  have le : 160 ≤ D.nativeSp := by simp only [nativeHeadroom, Vsa.Sim.DlHeap.heapEnd] at hh; omega
+  have spN : (BitVec.ofNat 64 sp).toNat = sp := Nat.mod_eq_of_lt (by
+    have := g.top; simp only [Layout.stackBytes] at *; omega)
+  have envN : (divisionZeroEnvSp (BitVec.ofNat 64 sp)).toNat = sp - 8 := by
+    simp only [divisionZeroEnvSp, BitVec.toNat_sub, BitVec.toNat_ofNat]
+    have := g.top; simp only [Layout.stackBytes] at *; omega
+  have extN : (divisionZeroExtern (word c Layout.sym_Caml_state)).toNat =
+      (word c Layout.sym_Caml_state).toNat + Layout.off_extern_sp := by
+    rw [divisionZeroExtern]; exact domain_field_nat g (by decide)
+  have bkt := domain_field_nat g (off := Layout.off_exn_bucket) (by decide)
+  have raN : (raiseZeroRa (BitVec.ofNat 64 D.nativeSp)).toNat = D.nativeSp - 8 := by
+    rw [raiseZeroRa_at (by omega) small, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have rtN : (raiseRuntimeRa (raiseZeroStack (BitVec.ofNat 64 D.nativeSp))).toNat = D.nativeSp - 24 := by
+    rw [raiseRuntimeRa_at (by omega) small, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have prN : (pendingRootRa (raiseRuntimeStack (raiseZeroStack (BitVec.ofNat 64 D.nativeSp)))).toNat = D.nativeSp - 56 := by
+    rw [pendingRootRa_at le small, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have pvN : (pendingRootValue (raiseRuntimeStack (raiseZeroStack (BitVec.ofNat 64 D.nativeSp)))).toNat = D.nativeSp - 136 := by
+    rw [pendingRootValue_at le small, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have sc : Layout.sym_Caml_state + 8 ≤ Layout.sym_bss_end ∧ Layout.sym_bss_end ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+  intro a ha
+  simp only [reentryControlWords, List.mem_cons, List.not_mem_nil, or_false] at ha
+  simp only [divisionZeroNativeLog, divisionZeroSetupLog, divisionZeroStackLog, raiseZeroFullLog,
+    raiseZeroLog, raiseNativeLog, raisePendingLog, raiseRuntimeLog, pendingRootLog, raiseBucketLog,
+    List.cons_append, List.nil_append, List.append_assoc, OutLRange, spN, envN, extN, raN, rtN, prN, pvN,
+    and_true]
+  rw [show (raiseBucket (word c Layout.sym_Caml_state)).toNat =
+      (word c Layout.sym_Caml_state).toNat + Layout.off_exn_bucket from by rw [raiseBucket, bkt]]
+  simp only [Layout.stackBytes, Layout.domainStateBytes, Layout.off_extern_sp, Layout.off_exn_bucket,
+    Layout.off_trapsp, Layout.off_trap_barrier, Layout.off_backtrace_active, nativeHeadroom,
+    Vsa.Sim.DlHeap.heapEnd, Layout.sym_bss_end, Layout.sym_Caml_state] at hst har hdl hda hdom low space hh sc
+  rcases ha with rfl | rfl | rfl | rfl <;>
+    simp only [Layout.off_trapsp, Layout.off_trap_barrier, Layout.off_backtrace_active, Layout.off_extern_sp, Layout.off_exn_bucket,
+      Layout.sym_Caml_state] <;> omega
+
 end OCaml.Vm.Sim
