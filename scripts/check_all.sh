@@ -124,6 +124,7 @@ python3 scripts/gen_global_field_arms.py --check || fail "stage a5: global field
 python3 scripts/gen_atom_arms.py --check || fail "stage a5: atom arm bridge drift"
 python3 scripts/gen_acc_arms.py --check || fail "stage a5: stack arm bridge drift"
 python3 scripts/gen_push_rows.py --check || fail "stage a5: push row drift"
+python3 scripts/gen_a2_rows.py --check || fail "stage a5: a2 table row drift"
 python3 scripts/gen_field_rows.py --check || fail "stage a5: field row drift"
 python3 scripts/gen_offset_rows.py --check || fail "stage a5: closure-offset row drift"
 python3 scripts/gen_const_arms.py --check || fail "stage a5: constant arm bridge drift"

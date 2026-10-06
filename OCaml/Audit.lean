@@ -6,6 +6,7 @@ import OCaml.Vm.Sim.PushConstRows
 import OCaml.Vm.Sim.WordPlace
 import OCaml.Vm.Sim.HeapRows
 import OCaml.Vm.Sim.SwitchRows
+import OCaml.Vm.Sim.A2TableRows
 import OCaml.Vm.Sim.PushRows
 import OCaml.Vm.Sim.FieldRows
 import OCaml.Vm.Sim.OperandStackRows
@@ -4577,3 +4578,53 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.return_row
 #print axioms OCaml.Vm.Sim.offsetref_next
 #print axioms OCaml.Vm.Sim.switch_row
+#print axioms OCaml.Vm.Sim.shape0
+#print axioms OCaml.Vm.Sim.addint_row
+#print axioms OCaml.Vm.Sim.subint_row
+#print axioms OCaml.Vm.Sim.andint_row
+#print axioms OCaml.Vm.Sim.orint_row
+#print axioms OCaml.Vm.Sim.xorint_row
+#print axioms OCaml.Vm.Sim.lslint_row
+#print axioms OCaml.Vm.Sim.lsrint_row
+#print axioms OCaml.Vm.Sim.asrint_row
+#print axioms OCaml.Vm.Sim.ltint_row
+#print axioms OCaml.Vm.Sim.leint_row
+#print axioms OCaml.Vm.Sim.gtint_row
+#print axioms OCaml.Vm.Sim.geint_row
+#print axioms OCaml.Vm.Sim.ultint_row
+#print axioms OCaml.Vm.Sim.ugeint_row
+#print axioms OCaml.Vm.Sim.mulint_row
+#print axioms OCaml.Vm.Sim.divint_row
+#print axioms OCaml.Vm.Sim.modint_row
+#print axioms OCaml.Vm.Sim.eq_row
+#print axioms OCaml.Vm.Sim.neq_row
+#print axioms OCaml.Vm.Sim.const0_row
+#print axioms OCaml.Vm.Sim.const1_row
+#print axioms OCaml.Vm.Sim.const2_row
+#print axioms OCaml.Vm.Sim.const3_row
+#print axioms OCaml.Vm.Sim.atom0_row
+#print axioms OCaml.Vm.Sim.negint_row
+#print axioms OCaml.Vm.Sim.boolnot_row
+#print axioms OCaml.Vm.Sim.isint_row
+#print axioms OCaml.Vm.Sim.offsetint_row
+#print axioms OCaml.Vm.Sim.constint_row
+#print axioms OCaml.Vm.Sim.branch_row
+#print axioms OCaml.Vm.Sim.atom_row
+#print axioms OCaml.Vm.Sim.branchif_row
+#print axioms OCaml.Vm.Sim.branchifnot_row
+#print axioms OCaml.Vm.Sim.bltint_row
+#print axioms OCaml.Vm.Sim.bleint_row
+#print axioms OCaml.Vm.Sim.bgtint_row
+#print axioms OCaml.Vm.Sim.bgeint_row
+#print axioms OCaml.Vm.Sim.bultint_row
+#print axioms OCaml.Vm.Sim.bugeint_row
+#print axioms OCaml.Vm.Sim.beq_row
+#print axioms OCaml.Vm.Sim.bneq_row
+#print axioms OCaml.Vm.Sim.pushconst0_row
+#print axioms OCaml.Vm.Sim.pushconst1_row
+#print axioms OCaml.Vm.Sim.pushconst2_row
+#print axioms OCaml.Vm.Sim.pushconst3_row
+#print axioms OCaml.Vm.Sim.pushatom0_row
+#print axioms OCaml.Vm.Sim.pushconstint_row
+#print axioms OCaml.Vm.Sim.pushatom_row
+#print axioms OCaml.Vm.Sim.offsetref_row

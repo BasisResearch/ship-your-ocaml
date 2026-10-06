@@ -46,6 +46,37 @@ theorem cmpOp_nonempty {s s' : St} {f : BitVec 64 → BitVec 64 → Bool}
   obtain ⟨_, _, _, _, stack, _⟩ := cmpOp_next step
   simp [stack]
 
+theorem intOp_no_halt {s : St} {f : BitVec 64 → BitVec 64 → BitVec 64} {e : Nat} {w : World} :
+    intOp s f ≠ .halt e w := by
+  unfold intOp; split
+  · cases ints? _ _ <;> simp [opt]
+  · nofun
+
+theorem cmpOp_no_halt {s : St} {f : BitVec 64 → BitVec 64 → Bool} {e : Nat} {w : World} :
+    cmpOp s f ≠ .halt e w := by
+  unfold cmpOp; split
+  · cases ints? _ _ <;> simp [opt]
+  · nofun
+
+theorem brOp_no_halt {s : St} {n ofs : Int} {f : BitVec 64 → BitVec 64 → Bool} {e : Nat} {w : World} :
+    brOp s n ofs f ≠ .halt e w := by
+  unfold brOp; split
+  · split
+    · cases target s.pc 1 ofs <;> simp [opt]
+    · nofun
+  · nofun
+
+theorem raiseTo_no_halt {P : Prog} {s : St} {x : Val} {e : Nat} {w : World} :
+    raiseTo P s x ≠ .halt e w := by
+  intro h; simp only [raiseTo] at h; repeat' split at h
+  all_goals cases h
+
+theorem division_no_halt (kind : DivisionKind) {P : Prog} {s : St} {e : Nat} {w : World} :
+    stepI P s ⟨divisionOpcode kind, []⟩ ≠ .halt e w := by
+  intro h
+  cases kind <;> simp only [stepI, divisionOpcode, opt] at h <;> (repeat' split at h) <;>
+    first | exact raiseTo_no_halt h | cases h
+
 /-- **A top-of-stack-reading row.** From the loop head, the dispatch code
 facts and the stack budget, an arm that needs only `ArmInput` and the read
 window of the top stack word is simulated. -/

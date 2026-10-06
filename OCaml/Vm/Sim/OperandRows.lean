@@ -180,4 +180,14 @@ theorem bneq_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm of
     bneq_step_arm stable input integer (OperandAt.of_fetch input.geometry fetch)
       (OperandAt.of_fetch input.geometry fetchOfs) step
 
+theorem beq_no_halt {P : Prog} {s : St} {n o : Int} {e : Nat} {w : World} :
+    stepI P s ⟨.BEQ, [n, o]⟩ ≠ .halt e w := by
+  intro h; simp only [stepI, brOp, opt] at h; repeat' split at h
+  all_goals cases h
+
+theorem bneq_no_halt {P : Prog} {s : St} {n o : Int} {e : Nat} {w : World} :
+    stepI P s ⟨.BNEQ, [n, o]⟩ ≠ .halt e w := by
+  intro h; simp only [stepI, brOp, opt] at h; repeat' split at h
+  all_goals cases h
+
 end OCaml.Vm.Sim
