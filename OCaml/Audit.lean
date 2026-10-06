@@ -4902,14 +4902,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.division_reentry_memory
 #print axioms OCaml.Vm.Sim.division_control_outside
 #print axioms OCaml.Vm.Sim.NativeValid.jumpFrame
-#print axioms OCaml.Vm.Sim.payload_free_offsets
-#print axioms OCaml.Vm.Sim.PayloadWindow.apart
-#print axioms OCaml.Vm.Sim.domain_apart_field
-#print axioms OCaml.Vm.Sim.stack_apart_field
 #print axioms OCaml.Vm.Sim.PayloadOutside.of_windows
 #print axioms OCaml.Vm.Sim.BindingsOutside.of_windows
 #print axioms OCaml.Vm.Sim.YoungOutside.of_payloadWindows
-#print axioms OCaml.Vm.Sim.WindowSeparated.of_above
 #print axioms OCaml.Vm.Sim.division_windows_payload
 #print axioms OCaml.Vm.Sim.division_log_in
 #print axioms OCaml.Vm.Sim.RaiseStackFrame.of_valid
@@ -4919,3 +4914,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.RaiseRuntimeReady.of_frame
 #print axioms OCaml.Vm.Sim.division_zero_raise
 #print axioms OCaml.Vm.Sim.division_zero_caught_next
+#print axioms OCaml.Vm.Sim.LogWindow.apart
+#print axioms OCaml.Vm.Sim.LogWindows.out
+#print axioms OCaml.Vm.Sim.LogWindows.payload
+#print axioms OCaml.Vm.Sim.LogWindows.core
+#print axioms OCaml.Vm.Sim.LogWindows.young
+#print axioms OCaml.Vm.Sim.LogWindows.bindings
+#print axioms OCaml.Vm.Sim.LogWindows.stackSlot
+#print axioms OCaml.Vm.Gc.WindowSeparated.of_above
+#print axioms OCaml.Vm.Gc.WindowSeparated.sub

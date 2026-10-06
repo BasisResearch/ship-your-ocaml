@@ -62,14 +62,12 @@ Done (all on main unless marked):
   scratch window; per layout, F1 supplier open), and per-state `caught`
   (`trap ≠ 0`), `trapSaved`, `notRaw` (global field 5), stack `space`.
   whileMin discharges `division_next`'s `zero` vacuously (`DivisorsNonzero`).
-* `PayloadWindows.lean`: `PayloadWindow` (separated / below the live stack /
-  payload-free `Caml_state` field) with `PayloadOutside`/`BindingsOutside`/
-  `YoungOutside.of_windows` and `WindowSeparated.of_above` (uses a1-arms'
-  `channelArena`/`primsArena`). Agreed with a1-arms: after this batch lands,
-  fold `FreshLogOk.of_windows` and `VmLogOk.of_windows` into one window-kind
-  inductive (young_ptr as a kind only non-young conclusions accept; keep
-  `FreshLogOk.of_windows`'s signature for `ClosurerecPlan`). Also re-derive
-  `division_control_outside` from `division_log_in`.
+* **Window fold** (`PayloadWindows.lean`): one `LogWindow` kind (separated /
+  below a stack bound / chosen `Caml_state` field) and `LogWindows` with
+  `.payload/.core/.young/.bindings/.stackSlot/.domainField/.objectOutside`.
+  `PayloadOutside.of_windows`, a1-arms' `VmLogOk.of_windows` and
+  `FreshLogOk.of_windows` (signatures kept) and `division_control_outside` are
+  instances; net −119 lines. Listed in CLAUDE.md's task-shape table.
 * integrate.sh lock-fd fix (`6446d52`).
 
 Named premises still on my rows: `MemoryStable` (a1-arms discharged it for

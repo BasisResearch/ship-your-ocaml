@@ -39,70 +39,21 @@ structure FreshLogOk (log : List WEntry) (P : Prog) (s : St) (c : Config) (pl : 
   bindings : BindingsOutside log P c
   arena : LogInW [arenaWindow] log
 
-/-- A range apart from the whole `Caml_state` record misses its young-pointer word. -/
-theorem record_young {c : Config} {x n : Nat}
-    (h : OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
-      (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] x n) :
-    OutWRange [youngPtrW c] x n := by
-  have hy : Layout.off_young_ptr + 8 ≤ Layout.domainStateBytes := by decide
-  have h1 := h.1
-  dsimp only at h1
-  exact ⟨by simp only [youngPtrW]; omega, trivial⟩
-
 /-- **One derivation for every allocation log.** -/
 theorem FreshLogOk.of_windows {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {high : Nat} {ws : List W} {log : List WEntry} (g : ArmGeometry P s c pl cp high)
     (inside : LogInW ws log) (fresh : ∀ w ∈ ws, FreshWindow c high w) : FreshLogOk log P s c pl cp := by
   have n := g.nursery
-  have hg := g.statics
-  have hl := g.domainLow
-  have hd := g.domain.1
-  simp only [stackWindow] at hd
-  have hy : Layout.off_young_ptr + 8 ≤ Layout.domainStateBytes := by decide
-  -- one target is apart from every window when it is apart from all three kinds
-  have apart : ∀ x k, OutWRange [Gc.nurseryFree c] x k → OutWRange [stackWindow high] x k →
-      OutWRange [youngPtrW c] x k → OutLRange log x k := by
-    intro x k h1 h2 h3
-    apply outLRange_of_windows inside
-    apply outWRange_of_forall
-    intro w hw
-    have o1 := h1.1
-    have o2 := h2.1
-    have o3 := h3.1
-    simp only [Gc.nurseryFree, stackWindow, youngPtrW] at o1 o2 o3
-    rcases fresh w hw with ⟨lo, hi⟩ | ⟨lo, hi⟩ | rfl
-    · omega
-    · omega
-    · simp only [youngPtrW]; omega
-  have static : ∀ x k, x + k ≤ Layout.sym_bss_end → OutLRange log x k := fun x k hx =>
-    apart x k (Gc.window_static n.statics hx) ⟨by simp only [stackWindow]; omega, trivial⟩
-      ⟨by simp only [youngPtrW]; omega, trivial⟩
-  -- a `Caml_state` field other than the young pointer
-  have field : ∀ off, off + 8 ≤ Layout.domainStateBytes →
-      (off + 8 ≤ Layout.off_young_ptr ∨ Layout.off_young_ptr + 8 ≤ off) →
-      OutLRange log ((word c Layout.sym_Caml_state).toNat + off) 8 := fun off hoff hne =>
-    apart _ 8 (Gc.outW_sub n.domain (by omega) (by omega))
-      ⟨by simp only [stackWindow]; omega, trivial⟩ ⟨by simp only [youngPtrW]; omega, trivial⟩
-  refine ⟨⟨static _ _ (by decide), field _ (by decide) (by decide), static _ _ (by decide),
-      static _ _ (by decide), static _ _ (by decide), fun i w hw => ?_, fun id ch a hch hcp => ?_⟩,
-    field _ (by decide) (by decide), fun l a o placed object => ?_,
-    ⟨static _ _ (by decide), static _ _ (by decide)⟩,
-    ⟨static _ _ (by decide), fun j name hj => ?_⟩, ?_⟩
-  · have bound : i < P.code.size := by simpa using (Array.getElem?_eq_some_iff.mp hw).1
-    have h2 := g.domainCode.1
-    dsimp only at h2
-    exact apart _ 4 (n.code i w hw) (g.code i w hw) ⟨by simp only [youngPtrW]; omega, trivial⟩
-  · exact apart _ _ (n.channels id ch a hch hcp) (g.channels id ch a hch hcp)
-      (record_young (g.domainChannels id ch a hch hcp))
-  · have ho := n.heap l a o placed object
-    have hs := g.heap l a o placed object
-    have hr := record_young (g.domainHeap l a o placed object)
-    exact ⟨apart _ 8 (Gc.outW_sub ho (by omega) (by omega)) (Gc.outW_sub hs (by omega) (by omega))
-        (Gc.outW_sub hr (by omega) (by omega)),
-      apart _ _ (Gc.outW_sub ho (by omega) (by omega)) (Gc.outW_sub hs (by omega) (by omega))
-        (Gc.outW_sub hr (by omega) (by omega))⟩
-  · exact apart _ 8 (n.primitives j name hj) (g.primitives j name hj) (record_young (g.domainPrims j name hj))
+  have lw : LogWindows log P s c pl cp high high [Layout.off_young_ptr] :=
+    ⟨g.toStackGeometry, ⟨ws, inside, fun w hw => by
+      rcases fresh w hw with ⟨lo, hi⟩ | ⟨lo, hi⟩ | rfl
+      · exact .separated (n.toWindowSeparated.sub lo hi)
+      · exact .belowStack lo hi
+      · exact .field (List.mem_singleton_self _)⟩, Nat.le_refl _, by decide⟩
+  refine ⟨lw.core (by decide), lw.domainField (by decide) (by decide),
+    fun _ _ _ placed got => lw.objectOutside placed got, lw.image, lw.bindings, ?_⟩
   · have ha := g.arena
+    have hy : Layout.off_young_ptr + 8 ≤ Layout.domainStateBytes := by decide
     have hn := n.arena
     have hda := g.domainArena
     apply log_in_windows_of_mem
