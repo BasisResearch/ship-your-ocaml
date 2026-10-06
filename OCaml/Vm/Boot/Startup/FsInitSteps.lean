@@ -242,4 +242,56 @@ theorem fs_init_fds (c : Config) (sp ra s0 s7 a0 table : BitVec 64) (leaf : Leaf
     exact ⟨by decide, by decide, by decide⟩
   · rfl
   · decide
+def fsReadyLog : List WEntry := [(Layout.sym_fs_ready, 4, 1#64)]
+
+open Sail in
+theorem ready_auipc : 2147484584#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 411543#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 1392#12 = BitVec.ofNat 64 Layout.sym_fs_ready := by decide
+
+def fsInitFirst (sp ra a0 table path : BitVec 64) : GRegs :=
+  [(15, 0x800643a8#64), (8, path), (14, 0x80065394#64), (23, 1#64), (22, table), (19, BitVec.ofNat 64 Layout.sym_files),
+    (2, nativeStack sp 96), (1, ra), (10, a0)]
+
+/-- The first entry's path; mark the file system ready. -/
+theorem fs_init_first (c : Config) (sp ra s0 a0 table path : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ (fsInitFds sp ra s0 a0 table)) (window : ReadWindow table 8)
+    (entry : bytesT c.σ.mem table.toNat 8 = path) (nonnull : path ≠ 0#64) :
+    FnSummary 0x800003a4#64 (fun e => e = c)
+      (WriteRegistersPost [8, 15] fsReadyLog c 0x800003b4#64 a0 (fsInitFirst sp ra a0 table path)) := by
+  apply registers_of_blocks leaf.image (by constructor <;> simp only [fsReadyLog, OutLRange] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput fs_init_part_0X03a4FSeg 0x800003a4#64 (fsInitFds sp ra s0 a0 table)
+        [read8 c.σ.mem table.toNat] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [15, 14, 23, 22, 19, 2, 1, 8, 10]; decide
+      shape := by change ChainOK _ [15, 14, 23, 22, 19, 2, 1, 8, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := fsInitFirst_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.fs_init_part_0_at_"
+        · exact window.ld rfl (by change table + Functions.sign_extend (m := 64) 0#12 = table
+                                  rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero])
+            (read8_pins _ _)
+        · exact (show WriteWindow (BitVec.ofNat 64 Layout.sym_fs_ready) 4 by constructor <;> decide).sw rfl
+            (by simp only [fsinitfirst_line_800003a4, fsinitfirst_line_800003a8, fsinitfirst_line_800003ac, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some,
+                  ite_true, ite_false, imm20Of, Nat.reduceEqDiff]
+                exact ready_auipc)
+        · change guardB bop.BEQ (bytesVal .ld (read8 c.σ.mem table.toNat)) 0#64 = false
+          rw [read8_value, entry]
+          exact beq_eq_false_iff_ne.mpr nonnull }))
+  · simp only [fs_init_part_0X03a4FSeg, evalBlocks, evalBlock, SegEvalState.init, fsinitfirst_line_800003a4, fsinitfirst_line_800003a8, fsinitfirst_line_800003ac, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, fsInitFds, imm20Of, fsReadyLog,
+      List.nil_append, List.cons_append]
+    rw [ready_auipc]
+    decide
+  · rfl
+  · simp only [fs_init_part_0X03a4FSeg, evalBlocks, evalBlock, SegEvalState.init, fsinitfirst_line_800003a4, fsinitfirst_line_800003a8, fsinitfirst_line_800003ac, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, fsInitFds, imm20Of, read8_value, entry, fsInitFirst]
+    simp only [List.cons.injEq, Prod.mk.injEq, and_true, true_and]
+    decide
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
