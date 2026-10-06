@@ -289,5 +289,57 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
       (p9.toEffectPost.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans
         (gholds_lookup (n := 9) _ p8.regs rfl), ready9.stack, trivial⟩
     saved9 (by decide)).run d9 ⟨p9.pc, rfl⟩
+  have errnoOnly : LogInW errnoWindows [(0x80064668, 4, 2#64)] := by
+    simp only [LogInW, InsideW, errnoWindows]
+    exact ⟨Or.inl ⟨Nat.le_refl _, Nat.le_refl _⟩, trivial⟩
+  have errnoIn : LogInW (⟨nativeFrameBase (nativeStack sp 80) 16, (nativeStack sp 80).toNat⟩ :: errnoWindows)
+      [(0x80064668, 4, 2#64)] :=
+    OCaml.Vm.Sim.logInW_mono errnoOnly fun w hw => List.mem_cons_of_mem _ hw
+  have ready10 := ready9.errno_log p10 (by decide) (by simp only [keysG]; decide) (by decide)
+    (gholds_lookup (n := 2) _ p10.regs rfl) (gholds_lookup (n := 1) _ p10.regs rfl) (by decide) f1 errnoIn
+  have base1 : nativeFrameBase (nativeStack sp 80) 16 = sp.toNat - 96 := by unfold nativeFrameBase; rw [h1]; omega
+  have stackHigh : 0x80064d4c + 16 ≤ sp.toNat - 96 := by
+    unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at *; omega
+  -- _open_r's saved words, through _open
+  have keep10 (x : Nat) (lo : sp.toNat - 96 ≤ x) (hi : x < sp.toNat - 80) :
+      (d10.σ.mem[x]?).getD 0 = (d3.σ.mem[x]?).getD 0 := by
+    have outE : OutW errnoWindows x := by simp only [OutW, errnoWindows, and_true]; omega
+    have outS : OutW [⟨nativeFrameBase (nativeStack (nativeStack sp 80) 16) 80,
+        (nativeStack (nativeStack sp 80) 16).toNat⟩] x := by simp only [OutW, and_true]; rw [h2]; omega
+    rw [p10.memory, frameOn_writeLog _ _ _ errnoOnly x outE, p9.memory, show writeLog d8.σ.mem [] = d8.σ.mem from rfl,
+      p8.memory, show writeLog d7.σ.mem [] = d7.σ.mem from rfl, R.above x (by rw [sp2Nat]; omega), p6'.memory,
+      show writeLog d5.σ.mem [] = d5.σ.mem from rfl, p5.memory, frameOn_writeLog _ _ _ (htifOpenLog_inside f2) x outS,
+      p4'.memory]
+    rfl
+  have saved10 (off : Nat) (value : BitVec 64) (member : (off, value) ∈ [(8, jal_800425d4_call.link), (0, s0)]) :
+      bytesT d10.σ.mem (nativeFrameBase (nativeStack sp 80) 16 + off) 8 = value := by
+    have range : off + 8 ≤ 16 := by
+      simp only [List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member; omega
+    rw [word_observed (m := d3.σ.mem) _ (fun i hi => keep10 _ (by omega) (by omega)), p3.memory, openRLog,
+      writeLog_append, bytesT_writeLog_out _ (by simp only [OutLRange, and_true]; omega)]
+    exact f1.word_log_read (by
+      intro k v hk; simp only [List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at hk; omega)
+      (by simp) _ (by
+        simp only [List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member ⊢
+        rcases member with h | h <;> simp [h])
+  -- _open_r: -1, maybe copying the global errno
+  obtain ⟨d11, run11, L, v, Lin, p11⟩ : ∃ d11, Steps d10 d11 ∧ ∃ L v, LogInW errnoWindows L ∧
+      WriteRegistersPost [2, 8, 1, 15] L d10 jal_800425d4_call.link (-1#64)
+        [(2, nativeStack sp 80), (8, s0), (1, jal_800425d4_call.link), (15, v), (10, -1#64)] d11 := by
+    by_cases hz : bytesVal .lw (read4 d10.σ.mem 0x80064d48) = 0#64
+    · obtain ⟨d11, run, p⟩ := (open_r_fail_zero d10 (nativeStack sp 80) jal_800425d4_call.link s0 _ _
+        ready10.toLeafInput f1 ⟨gholds_lookup (n := 10) _ p10.regs rfl, gholds_lookup (n := 2) _ p10.regs rfl, trivial⟩
+        rfl hz saved10 (by decide)).run d10 ⟨p10.pc, rfl⟩
+      exact ⟨d11, run, [], 0#64, trivial, p⟩
+    · obtain ⟨d11, run, p⟩ := (open_r_fail_set d10 (nativeStack sp 80) jal_800425d4_call.link s0 _ _
+        ready10.toLeafInput f1 ⟨gholds_lookup (n := 10) _ p10.regs rfl, gholds_lookup (n := 2) _ p10.regs rfl,
+          by rw [← impure]; exact gholds_lookup (n := 8) _ p10.regs rfl, trivial⟩
+        rfl hz saved10 (by decide)).run d10 ⟨p10.pc, rfl⟩
+      refine ⟨d11, run, _, _, ?_, p⟩
+      simp only [LogInW, InsideW, errnoWindows]
+      exact ⟨Or.inl ⟨Nat.le_refl _, Nat.le_refl _⟩, trivial⟩
+  have ready11 := ready10.errno_log p11 (by decide) (by simp only [keysG]; decide) (by decide)
+    (gholds_lookup (n := 2) _ p11.regs rfl) (gholds_lookup (n := 1) _ p11.regs rfl) (by decide) f0
+    (OCaml.Vm.Sim.logInW_mono Lin fun w hw => List.mem_cons_of_mem _ hw)
   sorry
 end OCaml.Vm.Boot.Startup
