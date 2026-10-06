@@ -73,6 +73,66 @@ theorem HeapReady.frame_live {H capacity c c'} (heap : HeapReady H capacity c) (
     exact keep _ (low _ (by unfold Layout.sym_Caml_state heapStart; omega))
   · intro i hi
     exact keep _ (low _ (by unfold Layout.sym_pool heapStart; omega))
+
+/-- The bytes of newlib's two `errno` words (`_impure_data._errno`, `errno`). -/
+def errnoBytes : List Nat :=
+  [0x80064668, 0x80064669, 0x8006466a, 0x8006466b, 0x80064d48, 0x80064d49, 0x80064d4a, 0x80064d4b]
+
+theorem errnoBytes_mem {a : Nat} :
+    a ∈ errnoBytes ↔ InRange 0x80064668 0x8006466c a ∨ InRange 0x80064d48 0x80064d4c a := by
+  simp only [errnoBytes, List.mem_cons, List.not_mem_nil, or_false, InRange]
+  omega
+
+private theorem insert_all_get (img : Nat → BitVec 8) :
+    ∀ (xs : List Nat) (m : Std.ExtHashMap Nat (BitVec 8)) (a : Nat),
+      (xs.foldl (fun m x => m.insert x (img x)) m)[a]? = if a ∈ xs then some (img a) else m[a]?
+  | [], m, a => by simp
+  | x :: xs, m, a => by
+    rw [List.foldl_cons, insert_all_get img xs, Std.ExtHashMap.getElem?_insert]
+    by_cases hx : a ∈ xs
+    · simp [hx]
+    · by_cases ha : a = x
+      · subst ha; simp
+      · simp [hx, ha, Ne.symm ha]
+
+/-- The heap's room ignores the `errno` words: the shape reads `vsaRead`,
+which excludes them, so a new image there is re-pinned by a fresh witness. -/
+theorem vsaRoomB_errno {H : List (Nat × Nat)} {img img' : Nat → BitVec 8} {k : Nat}
+    (room : vsaRoomB img H k) (same : ∀ a, vsaRead H a → img a = img' a) : vsaRoomB img' H k := by
+  obtain ⟨starts, m, top, brkv, chunks, bins, on, shape, roomy⟩ := room
+  let m' := errnoBytes.foldl (fun m x => m.insert x (img' x)) m
+  refine ⟨starts, m', top, brkv, chunks, bins, fun a ha => ?_, shape.transport_read fun a ha => ?_, roomy⟩
+  · rw [insert_all_get]
+    split
+    · rfl
+    · rename_i out
+      rw [errnoBytes_mem] at out
+      rw [on a ha, same a ⟨ha, fun h => out (.inl h), fun h => out (.inr h)⟩]
+  · rw [insert_all_get]
+    split
+    · rename_i inside
+      rw [errnoBytes_mem] at inside
+      rcases inside with h | h
+      · exact absurd h ha.2.1
+      · exact absurd h ha.2.2
+    · rfl
+
+/-- Stores to the `errno` words keep `HeapReady`. -/
+theorem HeapReady.frame_errno {H capacity c c'} (heap : HeapReady H capacity c)
+    (keep : ∀ a, a ∉ errnoBytes → (c'.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) : HeapReady H capacity c' where
+  room := vsaRoomB_errno heap.room fun a ha =>
+    (keep a fun h => by rcases errnoBytes_mem.1 h with e | e; exact ha.2.1 e; exact ha.2.2 e).symm
+  text := fun pin hp => by
+    refine (keep _ fun h => ?_).trans (heap.text pin hp)
+    have source := allocator_sources pin hp
+    unfold AllocatorByteSource at source
+    rw [errnoBytes_mem] at h
+    unfold InRange at h
+    split at source <;> simp only [Image.textBase, Image.textSize, allocatorImpureAddr] at * <;> omega
+  domainWord := (word_observed _ fun i hi => keep _ fun h => by
+    rw [errnoBytes_mem] at h; unfold InRange Layout.sym_Caml_state at *; omega).trans heap.domainWord
+  poolZero := lpins8_observed heap.poolZero fun i hi => keep _ fun h => by
+    rw [errnoBytes_mem] at h; unfold InRange Layout.sym_pool at *; omega
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.WhileMin
