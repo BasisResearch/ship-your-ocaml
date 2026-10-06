@@ -463,4 +463,64 @@ theorem copy {live : Nat → Prop} {sp : BitVec 64} {f buf n : Nat} (c d : Confi
   · rw [toD 18 (by decide) (by decide) (by decide), dm.suffix]
   · rw [toD 20 (by decide) (by decide) (by decide), dm.fmt]
 
+/-- The conversion-byte test of `parse_format` (no `l`/`L`/`n` length
+modifier before the conversion), for every byte (one kernel check). -/
+theorem plain_guard_all : ∀ k : Fin 256, 34 < (k.val + 180) % 256 →
+    guardB .BLTU 34#64 (BitVec.signExtend 64 (Sail.BitVec.extractLsb
+      (bytesVal .lbu [BitVec.ofNat 8 k.val] + 18446744073709551540#64) 31 0) &&& 255#64) = true := by
+  decide +kernel
+
+theorem plain_guard (b : BitVec 8) (h : 34 < (b.toNat + 180) % 256) :
+    guardB .BLTU 34#64 (BitVec.signExtend 64 (Sail.BitVec.extractLsb
+      (bytesVal .lbu [b] + 18446744073709551540#64) 31 0) &&& 255#64) = true := by
+  have := plain_guard_all ⟨b.toNat, b.isLt⟩ h
+  simpa only [BitVec.ofNat_toNat, BitVec.setWidth_eq] using this
+
+/-- Buffer addresses from the plain block's register arithmetic. -/
+theorem buffer_last {f buf n : Nat} (hb : BufferInput f buf n) (long : 1 ≤ n) :
+    BitVec.ofNat 64 buf + (BitVec.ofNat 64 n + 18446744073709551615#64) = BitVec.ofNat 64 (buf + (n - 1)) := by
+  have := hb.bufHigh; have := hb.fits
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_add, BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
+    show (2:Nat)^64 = 18446744073709551616 from rfl]
+  try simp only [BitVec.toNat_ofNat, show (2:Nat)^64 = 18446744073709551616 from rfl]
+  rw [Nat.mod_eq_of_lt (a := buf) (by omega), Nat.mod_eq_of_lt (a := n) (by omega)]
+  omega
+
+theorem buffer_prev {f buf n : Nat} (hb : BufferInput f buf n) (long : 2 ≤ n) :
+    BitVec.ofNat 64 buf + (BitVec.ofNat 64 n + 18446744073709551615#64) + 18446744073709551615#64 =
+      BitVec.ofNat 64 (buf + (n - 2)) := by
+  have := hb.bufHigh; have := hb.fits
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_add, BitVec.toNat_add, BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
+    show (2:Nat)^64 = 18446744073709551616 from rfl]
+  try simp only [BitVec.toNat_ofNat, show (2:Nat)^64 = 18446744073709551616 from rfl]
+  rw [Nat.mod_eq_of_lt (a := buf) (by omega), Nat.mod_eq_of_lt (a := n) (by omega)]
+  omega
+
+theorem buffer_window {f buf n : Nat} (hb : BufferInput f buf n) (k : Nat) (hk : k < 32) :
+    ReadWindow (BitVec.ofNat 64 (buf + k)) 1 := by
+  have := hb.bufHigh; have := hb.bufLow
+  have e : (BitVec.ofNat 64 (buf + k)).toNat = buf + k := Nat.mod_eq_of_lt (by omega)
+  refine ⟨?_, ?_, Or.inr ?_⟩ <;> rw [e] <;> (try simp only [Layout.sym_tohost]) <;> omega
+
+/-- The registers `append` may change. -/
+def appendWritten : List Nat := [1, 6, 8, 10, 11, 12, 13, 14, 15, 16, 17, 19, 28]
+
+/-- After the second `memmove`: the suffix replaces the conversion byte. -/
+structure Appended (live : Nat → Prop) (sp : BitVec 64) (f buf n : Nat) (base before after : Config) : Prop
+    extends LeafInput append_call.link after where
+  libraryGood : VsaOk live after
+  globalPointer : ROHolds (vsaModel live) after roR []
+  pc : OCaml.Vm.pcOf after = some append_call.link
+  prefixBytes : ∀ i, i + 1 < n → byte after (buf + i) = byte base (f + i)
+  suffixByte : byte after (buf + (n - 1)) = 0x6c#8
+  rest : ∀ a, a < buf ∨ buf + n ≤ a → byte after a = byte base a
+  output : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
+  conversion : gpr after 8 = some ((byte base (f + (n - 1))).setWidth 64)
+  suffixLength : gpr after 9 = some 1#64
+  cursor : gpr after 10 = some (BitVec.ofNat 64 (buf + (n - 1)))
+  stack : gpr after 2 = some (sp - 48#64)
+  kept : ∀ k, 1 ≤ k → k ≤ 31 → k ∉ appendWritten → gpr after k = gpr before k
+
 end OCaml.Vm.Primitives.Format.ParseFormat
