@@ -387,6 +387,7 @@ structure ResolveDone (H : List (Nat × Nat)) (capacity : Nat)
   kept : ∀ x, x < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   none : bytesT after.σ.mem (resAt spo 16) 8 = path
+  kind : read4 after.σ.mem (resAt spo 0) = [2#8, 0#8, 0#8, 0#8]
 
 theorem resolve_finish (e : Config) (H : List (Nat × Nat)) (capacity : Nat)
     (spo path node ra0 ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 : BitVec 64)
@@ -592,13 +593,22 @@ theorem resolve_finish (e : Config) (H : List (Nat × Nat)) (capacity : Nat)
     slot := slot.transport (fun x _ hi => back x (Or.inl (slotLow x hi))) (fun j hj => back _ (Or.inl (by omega)))
     name := name.transport fun k hk => back _ (pathLow k hk)
     kept := back
-    none := ?_ }⟩
-  rw [mem8, p7.memory]
-  refine word_writeLog_at _ _ 1 _ _ rfl ?_
-  have lowerO := frameO.lower
-  simp only [resolveNoneLog, List.drop, OutLRange, resAt_nat frameO (by decide : 16 ≤ 80),
-    resAt_nat frameO (by decide : 24 ≤ 80), resAt_nat frameO (by decide : 0 ≤ 80), and_true]
-  omega
+    none := ?_
+    kind := ?_ }⟩
+  · rw [mem8, p7.memory]
+    refine word_writeLog_at _ _ 1 _ _ rfl ?_
+    have lowerO := frameO.lower
+    simp only [resolveNoneLog, List.drop, OutLRange, resAt_nat frameO (by decide : 16 ≤ 80),
+      resAt_nat frameO (by decide : 24 ≤ 80), resAt_nat frameO (by decide : 0 ≤ 80), and_true]
+    omega
+  · rw [mem8, p7.memory]
+    obtain ⟨b0, b1, b2, b3⟩ := pin4_of_writeLog f6.σ.mem
+      [(resAt spo 4, 4, 0#64), (resAt spo 16, 8, path), (resAt spo 24, 8, 8#64)] [] (resAt spo 0) 2#64 trivial
+    unfold read4
+    rw [show resolveNoneLog spo 0#64 path 8#64 =
+      [(resAt spo 4, 4, 0#64), (resAt spo 16, 8, path), (resAt spo 24, 8, 8#64)] ++ [(resAt spo 0, 4, 2#64)] from rfl,
+      b0, b1, b2, b3]
+    decide
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.Startup
@@ -619,6 +629,7 @@ structure ResolveOcamlrun (H : List (Nat × Nat)) (capacity : Nat)
   slot : FsSlotOne after.σ.mem node
   name : OcamlrunName after.σ.mem path
   none : bytesT after.σ.mem (resAt spo 16) 8 = path
+  kind : read4 after.σ.mem (resAt spo 0) = [2#8, 0#8, 0#8, 0#8]
   live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   above : ∀ x, spo.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
@@ -702,6 +713,7 @@ theorem resolve_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge :
     slot := C.slot
     name := C.name
     none := C.none
+    kind := C.kind
     live := fun blk' h x inside => by
       have bounds := ready.heap.block_bounds (q := blk'.1) (n := blk'.2) h
       unfold InExt at inside
