@@ -126,6 +126,11 @@ def OpArm (P : Prog) (R : St → Config → Prop) (op : Opcode) : Prop :=
   ∀ s c i, Reach P s → R s c → decodeAt P.code s.pc = some i → i.op = op → InF1 P i →
     ArmOutcome R c (stepI P s i)
 
+/-- A row is vacuous for an opcode no reachable state decodes to. -/
+theorem OpArm.of_unreached {P : Prog} {R : St → Config → Prop} {op : Opcode}
+    (h : ∀ s i, Reach P s → decodeAt P.code s.pc = some i → i.op ≠ op) : OpArm P R op :=
+  fun s _ i reach _ hd hop _ => absurd hop (h s i reach hd)
+
 /-- **The F1 arm table** for one program started from `c0`, under a loop
 invariant `R` of the arm families' choosing (it contains `Running`, plus what
 the families preserve: dispatch clock, native invocation frame, ...). The
