@@ -199,4 +199,50 @@ theorem pendingRootValue_at {nsp : Nat} (le : 160 ≤ nsp) (small : nsp < 2 ^ 64
     ofNat_sub_ofNat (by omega : 112 ≤ nsp - 16 - 32) (by omega), ofNat_add_ofNat']
   rw [show nsp - 16 - 32 - 112 + 24 = nsp - 136 by omega]
 
+/-! ## The `Division_by_zero` exception value -/
+
+/-- **The exception value read by `caml_raise_zero_divide`**: field 5 of the
+global data block. Its word is the represented exception; the global block
+pointer is even. -/
+structure DivisionException (P : Prog) (s : St) (pl : Place) (c : Config) (exn : Val)
+    (value : BitVec 64) : Prop where
+  valueWord : valWord pl exn = some value
+  memory : RaiseZeroValueMemory (word c Layout.sym_caml_global_data) value c
+  globalBlock : word c Layout.sym_caml_global_data &&& 1#64 = 0#64
+  /-- the field's address (`global + 40`) lies in a placed block -/
+  field : ∃ l a k, pl.φ l = some a ∧ (raiseZeroField (word c Layout.sym_caml_global_data)).toNat = a + 8 * (k + 5) ∧
+    ∃ o, s.heap.get? l = some o
+
+theorem DivisionException.of_field {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high : Nat} {exn : Val} (h : VmReprAt P s c pl cp sp high) (g : StackGeometry P s c pl cp high)
+    (field : field? s.heap P.globals 5 = some exn) :
+    ∃ value, DivisionException P s pl c exn value := by
+  obtain ⟨l, a, k, sel⟩ := field_selection h (by simp [roots]) field
+  have fv := sel.read h (by simp [roots])
+  have rd := g.field_read sel
+  have src := sel.sourceWord
+  rw [h.globals] at src
+  have global : word c Layout.sym_caml_global_data = BitVec.ofNat 64 (a + 8 * k) := Option.some.inj src
+  have even := g.words.heap l a sel.placed
+  have rn := rd.toNat
+  have fieldAddr : raiseZeroField (word c Layout.sym_caml_global_data) = BitVec.ofNat 64 (a + 8 * (k + 5)) := by
+    rw [global, raiseZeroField, Layout.raiseZeroExceptionOffset, ofNat_add_ofNat']
+    congr 1
+  have object : ∃ o, s.heap.get? l = some o := by
+    have found := sel.selected
+    rw [sel.pointer] at found
+    simp only [field?] at found
+    split at found
+    · rename_i t fs got; exact ⟨_, got⟩
+    · cases found
+  refine ⟨word c (a + 8 * (k + 5)), fv.word, ⟨rfl, ?_, ?_⟩, ?_, ⟨l, a, k, sel.placed, ?_, object⟩⟩
+  · rw [fieldAddr]; exact rd.window
+  · rw [fieldAddr, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by have := rd.upper; omega)]
+  · rw [global]
+    apply BitVec.eq_of_toNat_eq
+    have small : a + 8 * k < 2 ^ 64 := by have := rd.upper; omega
+    simp only [BitVec.toNat_and, BitVec.toNat_ofNat, Nat.mod_eq_of_lt small]
+    rw [Nat.and_one_is_mod]; simp; omega
+  · rw [fieldAddr, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by have := rd.upper; omega)]
+
 end OCaml.Vm.Sim
