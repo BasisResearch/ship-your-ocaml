@@ -39,6 +39,12 @@ import OCaml.Vm.Boot.Startup.ResolveChildNormalized
 import OCaml.Vm.Boot.Startup.ResolveChildImage
 import OCaml.Vm.Boot.Startup.ResolveLengthCallInterface
 import OCaml.Vm.Boot.Startup.ResolveChildCallInterface
+import OCaml.Vm.Boot.Startup.ResolveMissedNormalized
+import OCaml.Vm.Boot.Startup.ResolveMissedImage
+import OCaml.Vm.Boot.Startup.ResolveNoneNormalized
+import OCaml.Vm.Boot.Startup.ResolveNoneImage
+import OCaml.Vm.Boot.Startup.ResolveReturnNormalized
+import OCaml.Vm.Boot.Startup.ResolveReturnImage
 import OCaml.Vm.Boot.Startup.FsInit
 import OCaml.Vm.Boot.Startup.NativeWord32
 import OCaml.Vm.Boot.Startup.IndexedLoop
@@ -637,4 +643,61 @@ theorem resolve_child_call (c : Config) (path len d ra : BitVec 64) (leaf : Leaf
   block_then_call c jal_800006b0_call_shape jal_800006b0_call_decode (fun _ h => jal_800006b0_call_pins h)
     (resolve_child_front c path len d ra leaf regs nonzero notOne notTwo) (by simp only [keysG]; decide)
     (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+/-- `child` missed and this is the last component: `R_NONE`, with the
+directory, the name and its length. -/
+def resolveNoneLog (spo d path len : BitVec 64) : List WEntry :=
+  [(resAt spo 4, 4, d), (resAt spo 16, 8, path), (resAt spo 24, 8, len), (resAt spo 0, 4, 2#64)]
+
+theorem resolve_none (c : Config) (spo path len d ra : BitVec 64) (leaf : LeafInput ra c) (frame : NativeFrame spo 80)
+    (regs : GHolds c.σ [(10, -1#64), (9, 1#64), (20, d), (19, nativeStack spo 80), (25, path), (8, len)]) :
+    FnSummary 0x800006b4#64 (fun e => e = c) (WriteRegistersPost [15] (resolveNoneLog spo d path len) c 0x80000700#64 (-1#64)
+      [(15, 2#64), (10, -1#64), (9, 1#64), (20, d), (19, nativeStack spo 80), (25, path), (8, len)]) := by
+  apply registers_of_blocks leaf.image (frame.image_outside (by
+      have lower := frame.lower
+      simp only [resolveNoneLog, LogInW, InsideW, resAt_nat frame (by decide : 4 ≤ 80), resAt_nat frame (by decide : 16 ≤ 80),
+        resAt_nat frame (by decide : 24 ≤ 80), resAt_nat frame (by decide : 0 ≤ 80), or_false, and_true]
+      unfold nativeFrameBase at *
+      refine ⟨?_, ?_, ?_, ?_⟩ <;> omega))
+    (block_summary _ _ _ _ _ (show BlockInput (resolveX06b4TSeg ++ resolveX0754FSeg ++ resolveX0758Seg) 0x800006b4#64
+        [(10, -1#64), (9, 1#64), (20, d), (19, nativeStack spo 80), (25, path), (8, len)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 9, 20, 19, 25, 8]; decide
+      shape := by change ChainOK _ [10, 9, 20, 19, 25, 8] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := resolveMissed_code leaf.image
+        have word (off : Nat) (bound : off + 8 ≤ 80) (aligned : off % 8 = 0) :
+            WriteWindow (nativeStack spo 80 + BitVec.ofNat 64 off) 8 := by
+          rw [nativeStack, frame.address _ (by omega)]
+          exact frame.word bound aligned
+        have half (off : Nat) (bound : off + 4 ≤ 80) (aligned : off % 4 = 0) :
+            WriteWindow (nativeStack spo 80 + BitVec.ofNat 64 off) 4 := by
+          rw [nativeStack, frame.address _ (by omega)]
+          exact frame.word32 bound aligned
+        chain_facts code with "Vsa.Sim.Code.resolve_at_"
+        · change guardB bop.BLT (-1#64) 0#64 = true
+          decide
+        · change guardB bop.BEQ 1#64 0#64 = false
+          decide
+        · exact (half 4 (by decide) (by decide)).sw rfl (by simp only [resolvenone_line_80000758, resolvenone_line_8000075c, resolvenone_line_80000760, resolvenone_line_80000764, resolvenone_line_80000768, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; rw [show Functions.sign_extend (m := 64) 4#12 = 4#64 by decide])
+        · exact (word 16 (by decide) (by decide)).sd rfl (by simp only [resolvenone_line_80000758, resolvenone_line_8000075c, resolvenone_line_80000760, resolvenone_line_80000764, resolvenone_line_80000768, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; rw [show Functions.sign_extend (m := 64) 16#12 = 16#64 by decide])
+        · exact (word 24 (by decide) (by decide)).sd rfl (by simp only [resolvenone_line_80000758, resolvenone_line_8000075c, resolvenone_line_80000760, resolvenone_line_80000764, resolvenone_line_80000768, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; rw [show Functions.sign_extend (m := 64) 24#12 = 24#64 by decide])
+        · exact (half 0 (by decide) (by decide)).sw rfl (by simp only [resolvenone_line_80000758, resolvenone_line_8000075c, resolvenone_line_80000760, resolvenone_line_80000764, resolvenone_line_80000768, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide]) }))
+  · simp only [resolveX06b4TSeg, resolveX0754FSeg, resolveX0758Seg, evalBlocks, evalBlock, SegEvalState.init, resolvenone_line_80000758, resolvenone_line_8000075c, resolvenone_line_80000760, resolvenone_line_80000764, resolvenone_line_80000768,
+      runGM, ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM,
+      List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of,
+      List.cons_append, List.nil_append, resolveNoneLog, resAt, show Functions.sign_extend (m := 64) 4#12 = 4#64 by decide,
+      show Functions.sign_extend (m := 64) 16#12 = 16#64 by decide, show Functions.sign_extend (m := 64) 24#12 = 24#64 by decide,
+      show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, show Functions.sign_extend (m := 64) 2#12 = 2#64 by decide,
+      BitVec.zero_add]
+  · rfl
+  · simp only [resolveX06b4TSeg, resolveX0754FSeg, resolveX0758Seg, evalBlocks, evalBlock, SegEvalState.init, resolvenone_line_80000758, resolvenone_line_8000075c, resolvenone_line_80000760, resolvenone_line_80000764, resolvenone_line_80000768,
+      runGM, ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM,
+      List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of,
+      List.cons_append, List.nil_append, show Functions.sign_extend (m := 64) 2#12 = 2#64 by decide, BitVec.zero_add]
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
