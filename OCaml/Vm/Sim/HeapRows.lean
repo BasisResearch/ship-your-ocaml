@@ -23,7 +23,7 @@ writes to a field of a placed block are runtime-stable and miss the rest of
 the represented payload. -/
 structure FieldWriteReady (L : OCaml.Layout) (P : Prog) (s : St) (c : Config) : Prop where
   ready : ∀ (pl : Place) (cp : ChanPlace) (sp high l a k tag : Nat) (fields : List Val)
-    (w : BitVec 64), VmReprAt P s c pl cp sp high → StackGeometry P s c pl cp high →
+    (w : BitVec 64), VmReprAt P s c pl cp sp high → ArmGeometry P s c pl cp high →
     pl.φ l = some a → s.heap.get? l = some (.block tag fields) → k < fields.length →
     WindowStable L.runtimeOk [⟨a + 8 * k, a + 8 * k + 8⟩] ∧ FieldWriteOk P s c pl cp sp a k w
 
