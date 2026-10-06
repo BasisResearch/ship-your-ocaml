@@ -336,3 +336,267 @@ theorem resolve_scan (d : Config) (H : List (Nat × Nat)) (capacity : Nat)
       rw [p7.memory, frameOn_writeLog _ _ _ (rWin 44 4 (by decide)) _ (pathOut k hk), B.memory]
     kept := fun x out => mem7 x ⟨out, trivial⟩ }⟩
 end OCaml.Vm.Boot.Startup
+
+namespace OCaml.Vm.Boot.Startup
+open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
+  LeanRV64DExecutable
+
+/-- Slot 1's facts survive any change that keeps slot 1 and the name block. -/
+theorem FsSlotOne.transport {m m' : Std.ExtHashMap Nat (BitVec 8)} {node : BitVec 64} (h : FsSlotOne m node)
+    (slot : ∀ x, slotOne ≤ x → x < slotOne + 56 → (m'[x]?).getD 0 = (m[x]?).getD 0)
+    (name : ∀ j, j ≤ 4 → (m'[node.toNat + j]?).getD 0 = (m[node.toNat + j]?).getD 0) : FsSlotOne m' node := by
+  have word (off : Nat) (fits : off + 8 ≤ 56) : bytesT m' (slotOne + off) 8 = bytesT m (slotOne + off) 8 :=
+    word_observed _ fun i hi => slot _ (by omega) (by omega)
+  refine ⟨(slot _ (by omega) (by omega)).trans h.used, (slot _ (by omega) (by omega)).trans h.dirByte,
+    (slot _ (by omega) (by omega)).trans h.linked, ?_, (word 8 (by decide)).trans h.namePtr, ?_,
+    (word 24 (by decide)).trans h.data, (word 32 (by decide)).trans h.size, (word 40 (by decide)).trans h.cap,
+    (slot _ (by omega) (by omega)).trans h.ro, fun j hj => (name j (by omega)).trans (h.name j hj),
+    (name 4 (by decide)).trans h.nul⟩
+  · have p := h.parent
+    unfold slotParent read4 at *
+    rw [slot (slotOne + 4) (by omega) (by omega), slot (slotOne + 4 + 1) (by omega) (by omega),
+      slot (slotOne + 4 + 2) (by omega) (by omega), slot (slotOne + 4 + 3) (by omega) (by omega)]
+    exact p
+  · have l := h.length
+    unfold slotLength at *
+    rw [show slotOne + 16 = slotOne + 16 from rfl, word 16 (by decide)]
+    exact l
+
+theorem resolveNoneLog_inside {spo d path len : BitVec 64} (frame : NativeFrame spo 80) :
+    LogInW [⟨nativeFrameBase spo 80, spo.toNat⟩] (resolveNoneLog spo d path len) := by
+  have lower := frame.lower
+  simp only [resolveNoneLog, LogInW, InsideW, resAt_nat frame (by decide : 4 ≤ 80), resAt_nat frame (by decide : 16 ≤ 80),
+    resAt_nat frame (by decide : 24 ≤ 80), resAt_nat frame (by decide : 0 ≤ 80), or_false, and_true]
+  unfold nativeFrameBase at *
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> omega
+end OCaml.Vm.Boot.Startup
+
+namespace OCaml.Vm.Boot.Startup
+open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
+  LeanRV64DExecutable
+
+/-- `resolve` returned `R_NONE` for "ocamlrun". -/
+structure ResolveDone (H : List (Nat × Nat)) (capacity : Nat)
+    (spo ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 node path : BitVec 64) (before after : Config) : Prop where
+  pc : PCAt ra after
+  regs : GHolds after.σ [(2, nativeStack spo 80), (25, s9), (20, s4), (19, s3), (26, s10), (24, s8), (23, s7),
+    (22, s6), (21, s5), (18, s2), (9, s1), (1, ra), (8, s0), (10, -1#64)]
+  ready : RuntimeReady H capacity (nativeStack spo 80) ra after
+  slot : FsSlotOne after.σ.mem node
+  name : OcamlrunName after.σ.mem path
+  kept : ∀ x, x < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  none : bytesT after.σ.mem (resAt spo 16) 8 = path
+
+theorem resolve_finish (e : Config) (H : List (Nat × Nat)) (capacity : Nat)
+    (spo path node ra0 ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 : BitVec 64)
+    (ready : RuntimeReady H capacity (resolveStack spo) ra e) (frame : NativeFrame spo (80 + (96 + 64)))
+    (regs : GHolds e.σ ([(20, 0#64), (10, 8#64), (25, path), (19, nativeStack spo 80), (2, resolveStack spo)] ++
+      resolveCarried s0 s1 s2 s5 s6 s7 s8 s10))
+    (name : OcamlrunName e.σ.mem path) (below : path.toNat + 16 ≤ nativeFrameBase (resolveStack spo) 64)
+    (slot : FsSlotOne e.σ.mem node) (nodeBelow : node.toNat + 5 ≤ nativeFrameBase (resolveStack spo) 64)
+    (rest : ∀ j, 2 ≤ j → j < 64 → slotUsed e.σ.mem (Layout.sym_files + 56 * j) = 0#8)
+    (saved : ∀ off value, (off, value) ∈ resolveSlots ra0 s3 s4 s9 →
+      bytesT e.σ.mem (nativeFrameBase (nativeStack spo 80) 96 + off) 8 = value) (aligned0 : ra0.toNat % 4 = 0) :
+    FnSummary 0x8000062c#64 (fun d => d = e)
+      (ResolveDone H capacity spo ra0 s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 node path e) := by
+  constructor
+  intro before ⟨pc, eq⟩
+  subst before
+  have outer : NativeFrame (nativeStack spo 80) (96 + 64) := frame.nested (front := 80) (by decide)
+  have frameR := outer.resize (small := 96) (by decide) (by decide)
+  have frame64 : NativeFrame (resolveStack spo) 64 := outer.nested (front := 96) (by decide)
+  have frameO := frame.resize (small := 80) (by decide) (by decide)
+  have rNat := frameR.stack_nat
+  have oNat := frameO.stack_nat
+  have cNat := frame64.stack_nat
+  have lower := frame.lower
+  have hO : (nativeStack spo 80).toNat = spo.toNat - 80 := by rw [oNat]; rfl
+  have hR : (resolveStack spo).toNat = spo.toNat - 176 := by
+    unfold resolveStack; rw [rNat]; unfold nativeFrameBase; rw [hO]; omega
+  have carried0 : GHolds e.σ (resolveCarried s0 s1 s2 s5 s6 s7 s8 s10) := ((gholds_append _ _).1 regs).2
+  -- save the loop's registers; strchr(path, '/') = NULL
+  obtain ⟨f1, run1, p1⟩ := (resolve_strchr_call e (nativeStack spo 80) path s0 s1 s2 s5 s6 s7 s8 s10 ra
+    ready.toLeafInput frameR (by
+      have g := (gholds_append _ _).1 regs
+      exact ⟨gholds_lookup (n := 2) _ regs rfl, gholds_lookup (n := 25) _ regs rfl,
+        gholds_lookup (n := 18) _ g.2 rfl, gholds_lookup (n := 21) _ g.2 rfl, gholds_lookup (n := 22) _ g.2 rfl,
+        gholds_lookup (n := 23) _ g.2 rfl, gholds_lookup (n := 24) _ g.2 rfl, gholds_lookup (n := 8) _ g.2 rfl,
+        gholds_lookup (n := 9) _ g.2 rfl, gholds_lookup (n := 26) _ g.2 rfl, trivial⟩)).run e ⟨pc, rfl⟩
+  have loopInside : LogInW [⟨nativeFrameBase (nativeStack spo 80) 96, (nativeStack spo 80).toNat⟩]
+      (resolveLoopLog (nativeStack spo 80) s0 s1 s2 s5 s6 s7 s8 s10) :=
+    frameR.word_log_inside fun off value member => by
+      simp only [resolveLoopSlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member
+      omega
+  have ready1 := ready.stack_log p1 (by decide) (by simp only [resolveLooped, keysG]; decide) (by decide)
+    (gholds_lookup (n := 2) _ p1.regs rfl) (gholds_lookup (n := 1) _ p1.regs rfl) (by decide) frameR loopInside
+  have out1 (x : Nat) (h : x < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ x) :
+      (f1.σ.mem[x]?).getD 0 = (e.σ.mem[x]?).getD 0 := by
+    rw [p1.memory, frameOn_writeLog _ _ _ loopInside x ⟨by
+      simp only [nativeFrameBase, hO, hR] at h ⊢; omega, trivial⟩]
+  have pathLow (k : Nat) (hk : k ≤ 8) : path.toNat + k < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ path.toNat + k :=
+    Or.inl (by omega)
+  have name1 : OcamlrunName f1.σ.mem path := name.transport fun k hk => out1 _ (pathLow k hk)
+  obtain ⟨f2, run2, ⟨done2, ready2⟩⟩ := (strchr_ready f1 H capacity (resolveStack spo) _ path 8 ready1
+    ⟨gholds_lookup (n := 11) _ p1.regs rfl, gholds_lookup (n := 10) _ p1.regs rfl, trivial⟩ name1.slash
+    name1.plan).run f1 ⟨p1.pc, rfl⟩
+  have keep2 (n : Nat) (v : BitVec 64) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ strchrWrites)
+      (hv : gprGet f1.σ n = some v) : gprGet f2.σ n = some v := (done2.frame.gpr n lo hi out).trans hv
+  -- strlen(path) = 8
+  obtain ⟨f3, run3, p3⟩ := (resolve_strlen2_call f2 path _ done2.toLeafInput
+    ⟨gholds_lookup (n := 10) _ done2.regs rfl,
+      keep2 25 _ (by decide) (by decide) (by decide) (gholds_lookup (n := 25) _ p1.regs rfl), trivial⟩).run f2
+    ⟨done2.pc, rfl⟩
+  have ready3 := ready2.stack_log p3 (by decide) (by simp only [keysG]; decide) (by decide)
+    ((p3.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans ready2.stack)
+    (gholds_lookup (n := 1) _ p3.regs rfl) (by decide) frame64 (by simp only [LogInW])
+  have keep3 (n : Nat) (v : BitVec 64) (lo : 1 ≤ n) (hi : n ≤ 31) (out1 : n ∉ [10] ++ [1]) (out2 : n ∉ strchrWrites)
+      (hv : gprGet f1.σ n = some v) : gprGet f3.σ n = some v :=
+    (p3.toEffectPost.gpr_frame (by decide) n lo hi out1).trans (keep2 n v lo hi out2 hv)
+  have mem3 : f3.σ.mem = f1.σ.mem := (p3.memory.trans rfl).trans done2.memory
+  have name3 : OcamlrunName f3.σ.mem path := by rw [mem3]; exact name1
+  obtain ⟨f4, run4, R4⟩ := (strlen_ready f3 H capacity (resolveStack spo) _ path 8 ready3 name3.cbytes
+    (gholds_lookup (n := 10) _ p3.regs rfl)).run f3 ⟨p3.pc, rfl⟩
+  have keep4 (n : Nat) (v : BitVec 64) (lo : 1 ≤ n) (hi : n ≤ 31) (out0 : n ∉ [10, 11, 12, 13, 14, 15])
+      (out1 : n ∉ [10] ++ [1]) (out2 : n ∉ strchrWrites) (hv : gprGet f1.σ n = some v) : gprGet f4.σ n = some v :=
+    (R4.post.registers n lo hi out0).trans (keep3 n v lo hi out1 out2 hv)
+  have mem4 (x : Nat) : (f4.σ.mem[x]?).getD 0 = (f1.σ.mem[x]?).getD 0 := by
+    have := R4.post.memory x
+    simp only [Std.ExtHashMap.get?_eq_getElem?] at this
+    rw [this, mem3]
+  -- child(0, path, 8) = -1
+  obtain ⟨f5, run5, p5⟩ := (resolve_child_call f4 path 8#64 0#64 _ R4.ready.toLeafInput
+    ⟨R4.post.result,
+      keep4 21 _ (by decide) (by decide) (by decide) (by decide) (by decide) (gholds_lookup (n := 21) _ p1.regs rfl),
+      keep4 23 _ (by decide) (by decide) (by decide) (by decide) (by decide) (gholds_lookup (n := 23) _ p1.regs rfl),
+      keep4 25 _ (by decide) (by decide) (by decide) (by decide) (by decide) (gholds_lookup (n := 25) _ p1.regs rfl),
+      keep4 20 _ (by decide) (by decide) (by decide) (by decide) (by decide)
+        ((p1.toEffectPost.gpr_frame (by decide) 20 (by decide) (by decide) (by decide)).trans
+          (gholds_lookup (n := 20) _ regs rfl)), trivial⟩
+    (by decide) (by decide) (by decide)).run f4 ⟨R4.post.pc, rfl⟩
+  have ready5 := R4.ready.stack_log p5 (by decide) (by simp only [keysG]; decide) (by decide)
+    ((p5.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans R4.ready.stack)
+    (gholds_lookup (n := 1) _ p5.regs rfl) (by decide) frame64 (by simp only [LogInW])
+  have keep5 (n : Nat) (v : BitVec 64) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [8, 26, 9, 12, 11, 10] ++ [1])
+      (hv : gprGet f4.σ n = some v) : gprGet f5.σ n = some v :=
+    (p5.toEffectPost.gpr_frame (by decide) n lo hi out).trans hv
+  have memF5 (x : Nat) (h : x < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ x) :
+      (f5.σ.mem[x]?).getD 0 = (e.σ.mem[x]?).getD 0 := by
+    rw [p5.memory, show writeLog f4.σ.mem [] = f4.σ.mem from rfl, mem4, out1 x h]
+  have slotLow (x : Nat) (hx : x < slotOne + 56) : x < nativeFrameBase (resolveStack spo) 64 := by
+    simp only [nativeFrameBase, hR, slotOne, Layout.sym_files, heapEnd] at *; omega
+  have slot5 : FsSlotOne f5.σ.mem node :=
+    slot.transport (fun x _ hi => memF5 x (Or.inl (slotLow x hi))) (fun j hj => memF5 _ (Or.inl (by omega)))
+  obtain ⟨a5, ha5⟩ := Option.isSome_iff_exists.mp (ready5.platform.gpr 15 (by decide) (by decide))
+  obtain ⟨f6, run6, p6⟩ := (child_miss f5 (resolveStack spo) _ 8#64 1#64 47#64 (nativeStack spo 80) 0#64 1#64
+    0#64 path 8#64 a5 ready5.toLeafInput frame64
+    ⟨ready5.stack, gholds_lookup (n := 8) _ p5.regs rfl, gholds_lookup (n := 9) _ p5.regs rfl,
+      keep5 18 _ (by decide) (by decide) (by decide)
+        (keep4 18 _ (by decide) (by decide) (by decide) (by decide) (by decide) (gholds_lookup (n := 18) _ p1.regs rfl)),
+      keep5 19 _ (by decide) (by decide) (by decide)
+        (keep4 19 _ (by decide) (by decide) (by decide) (by decide) (by decide)
+          ((p1.toEffectPost.gpr_frame (by decide) 19 (by decide) (by decide) (by decide)).trans
+            (gholds_lookup (n := 19) _ regs rfl))),
+      gholds_lookup (n := 20) _ p5.regs rfl, gholds_lookup (n := 21) _ p5.regs rfl,
+      gholds_lookup (n := 1) _ p5.regs rfl, gholds_lookup (n := 10) _ p5.regs rfl,
+      gholds_lookup (n := 11) _ p5.regs rfl, gholds_lookup (n := 12) _ p5.regs rfl, ha5, trivial⟩
+    (fun j lo hi => by
+      rcases Nat.lt_or_ge j 2 with one | two
+      · have j1 : j = 1 := by omega
+        subst j1
+        rw [show Layout.sym_files + 56 * 1 = slotOne from rfl]
+        refine .length (by unfold slotUsed; rw [slot5.used]; decide) (by unfold slotLinked; rw [slot5.linked]; decide)
+          slot5.parent (by rw [slot5.length]; decide)
+      · refine .unused ?_
+        unfold slotUsed
+        rw [memF5 _ (Or.inl (by simp only [nativeFrameBase, hR, Layout.sym_files, heapEnd] at *; omega))]
+        exact rest j two hi)).run f5 ⟨p5.pc, rfl⟩
+  have ready6 := ready5.stack_log p6 (by decide) (by simp only [childResult, keysG]; decide) (by decide)
+    (gholds_lookup (n := 2) _ p6.regs rfl) (gholds_lookup (n := 1) _ p6.regs rfl) (by decide) frame64
+    (childLog_inside frame64)
+  -- R_NONE
+  obtain ⟨f7, run7, p7⟩ := (resolve_none f6 spo path 8#64 0#64 _ ready6.toLeafInput frameO
+    ⟨gholds_lookup (n := 10) _ p6.regs rfl, gholds_lookup (n := 9) _ p6.regs rfl,
+      gholds_lookup (n := 20) _ p6.regs rfl, gholds_lookup (n := 19) _ p6.regs rfl,
+      (p6.toEffectPost.gpr_frame (by decide) 25 (by decide) (by decide) (by decide)).trans
+        (gholds_lookup (n := 25) _ p5.regs rfl),
+      gholds_lookup (n := 8) _ p6.regs rfl, trivial⟩).run f6 ⟨p6.pc, rfl⟩
+  have ready7 := ready6.stack_log p7 (by decide) (by simp only [keysG]; decide) (by decide)
+    ((p7.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans ready6.stack)
+    ((p7.toEffectPost.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans ready6.raReg) (by decide)
+    frameO (resolveNoneLog_inside frameO)
+  have childInside : LogInW [⟨nativeFrameBase (resolveStack spo) 64, (resolveStack spo).toNat⟩]
+      (childLog (resolveStack spo) jal_800006b0_call.link 8#64 1#64 47#64 (nativeStack spo 80) 0#64 1#64) :=
+    childLog_inside frame64
+  have mem7 (x : Nat) (out7 : x < nativeFrameBase spo 80 ∨ spo.toNat ≤ x)
+      (out6 : x < nativeFrameBase (resolveStack spo) 64 ∨ (resolveStack spo).toNat ≤ x) :
+      (f7.σ.mem[x]?).getD 0 = (f4.σ.mem[x]?).getD 0 := by
+    rw [p7.memory, frameOn_writeLog _ _ _ (resolveNoneLog_inside frameO) x ⟨out7, trivial⟩, p6.memory,
+      frameOn_writeLog _ _ _ childInside x ⟨out6, trivial⟩, p5.memory]
+    rfl
+  -- the frame words, from both saves
+  have loopSlots : resolveLoopLog (nativeStack spo 80) s0 s1 s2 s5 s6 s7 s8 s10 =
+      (resolveLoopSlots s0 s1 s2 s5 s6 s7 s8 s10).map
+        (fun (off, value) => (nativeFrameBase (nativeStack spo 80) 96 + off, 8, value)) :=
+    frameR.word_log_slots fun off value member => by
+      simp only [resolveLoopSlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member
+      omega
+  have frameWord (off : Nat) (h : off + 8 ≤ 96) :
+      bytesT f7.σ.mem (nativeFrameBase (nativeStack spo 80) 96 + off) 8 =
+        bytesT f1.σ.mem (nativeFrameBase (nativeStack spo 80) 96 + off) 8 :=
+    word_observed _ fun i hi => (mem7 _ (Or.inl (by simp only [nativeFrameBase, hO] at *; omega))
+      (Or.inr (by simp only [nativeFrameBase, hO, hR] at *; omega))).trans (mem4 _)
+  have savedF7 (off : Nat) (value : BitVec 64)
+      (member : (off, value) ∈ resolveRestored ra0 s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10) :
+      bytesT f7.σ.mem (nativeFrameBase (nativeStack spo 80) 96 + off) 8 = value := by
+    have loopRead (off : Nat) (value : BitVec 64) (hm : (off, value) ∈ resolveLoopSlots s0 s1 s2 s5 s6 s7 s8 s10) :
+        bytesT f7.σ.mem (nativeFrameBase (nativeStack spo 80) 96 + off) 8 = value := by
+      have bound : off + 8 ≤ 96 := by
+        simp only [resolveLoopSlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at hm; omega
+      rw [frameWord off bound, p1.memory]
+      exact frameR.word_log_read (fun k v hk => by
+        simp only [resolveLoopSlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at hk; omega)
+        (by simp [resolveLoopSlots]) _ hm
+    have entryRead (off : Nat) (value : BitVec 64) (hm : (off, value) ∈ resolveSlots ra0 s3 s4 s9) :
+        bytesT f7.σ.mem (nativeFrameBase (nativeStack spo 80) 96 + off) 8 = value := by
+      have bound : off + 8 ≤ 96 ∧ (off = 56 ∨ off = 8 ∨ off = 88 ∨ off = 48) := by
+        simp only [resolveSlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at hm; omega
+      rw [frameWord off bound.1, p1.memory, bytesT_writeLog_out _ (by
+        rw [loopSlots]
+        simp only [resolveLoopSlots, List.map, OutLRange, and_true]
+        omega)]
+      exact saved off value hm
+    simp only [resolveRestored, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member
+    rcases member with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ |
+      ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    all_goals first
+      | (apply loopRead; simp [resolveLoopSlots]; done)
+      | (apply entryRead; simp [resolveSlots])
+  -- restore and return
+  obtain ⟨f8, run8, p8⟩ := (resolve_return f7 (nativeStack spo 80) ra0 s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 (-1#64) _
+    ready7.toLeafInput frameR
+    ⟨(p7.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans ready6.stack,
+      gholds_lookup (n := 10) _ p7.regs rfl, trivial⟩ savedF7 aligned0).run f7 ⟨p7.pc, rfl⟩
+  have ready8 := ready7.stack_log p8 (by decide) (by simp only [keysG]; decide) (by decide)
+    (gholds_lookup (n := 2) _ p8.regs rfl) (gholds_lookup (n := 1) _ p8.regs rfl) aligned0 frameR
+    (by simp only [LogInW])
+  have mem8 : f8.σ.mem = f7.σ.mem := p8.memory
+  have back (x : Nat) (h : x < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ x) :
+      (f8.σ.mem[x]?).getD 0 = (e.σ.mem[x]?).getD 0 := by
+    rw [mem8, mem7 x (by simp only [nativeFrameBase, hO, hR] at h ⊢; omega)
+      (by simp only [nativeFrameBase, hO, hR] at h ⊢; omega), mem4, out1 x h]
+  refine ⟨f8, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans run8)))))), {
+    pc := p8.pc
+    regs := p8.regs
+    ready := ready8
+    slot := slot.transport (fun x _ hi => back x (Or.inl (slotLow x hi))) (fun j hj => back _ (Or.inl (by omega)))
+    name := name.transport fun k hk => back _ (pathLow k hk)
+    kept := back
+    none := ?_ }⟩
+  rw [mem8, p7.memory]
+  refine word_writeLog_at _ _ 1 _ _ rfl ?_
+  have lowerO := frameO.lower
+  simp only [resolveNoneLog, List.drop, OutLRange, resAt_nat frameO (by decide : 16 ≤ 80),
+    resAt_nat frameO (by decide : 24 ≤ 80), resAt_nat frameO (by decide : 0 ≤ 80), and_true]
+  omega
+end OCaml.Vm.Boot.Startup
