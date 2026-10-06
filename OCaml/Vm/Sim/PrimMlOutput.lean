@@ -603,23 +603,26 @@ theorem output_semantics {a b o n v : Val} {h h' : Heap} {w w' : World}
   cases hc : chanOf? h a with
   | none => simp [primF1Impl, hc] at sem
   | some id =>
+    cases hk : w.chans[id]? with
+    | none => simp [primF1Impl, hc, hk] at sem
+    | some chn =>
     cases ho : intArg? o with
-    | none => simp [primF1Impl, hc, ho] at sem
+    | none => simp [primF1Impl, hc, hk, ho] at sem
     | some oi =>
       cases hn : intArg? n with
-      | none => simp [primF1Impl, hc, ho, hn] at sem
+      | none => simp [primF1Impl, hc, hk, ho, hn] at sem
       | some ni =>
         by_cases pos : 0 ≤ oi ∧ 0 ≤ ni
         · cases hs : byteSlice? h b oi.toNat ni.toNat with
-          | none => simp [primF1Impl, hc, ho, hn, pos, hs] at sem
+          | none => simp [primF1Impl, hc, hk, ho, hn, pos, hs] at sem
           | some bs =>
             cases hp : putBlock w id bs (ni.toNat + 1) with
-            | none => simp [primF1Impl, hc, ho, hn, pos, hs, hp] at sem
+            | none => simp [primF1Impl, hc, hk, ho, hn, pos, hs, hp] at sem
             | some w'' =>
-              simp [primF1Impl, hc, ho, hn, pos, hs, hp] at sem
+              simp [primF1Impl, hc, hk, ho, hn, pos, hs, hp] at sem
               obtain ⟨rfl, rfl, rfl⟩ := sem
               exact ⟨id, oi, ni, bs, rfl, rfl, rfl, pos.1, pos.2, hs, hp, rfl, rfl⟩
-        · simp [primF1Impl, hc, ho, hn, pos] at sem
+        · simp [primF1Impl, hc, hk, ho, hn, pos] at sem
 
 theorem mapM_id_get : ∀ (cells : List (Option UInt8)) (bs : List UInt8), cells.mapM id = some bs →
     ∀ (i : Nat) (x : UInt8), bs[i]? = some x → cells[i]? = some (some x)

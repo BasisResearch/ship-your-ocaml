@@ -342,7 +342,7 @@ def primF1Impl (name : String) (args : List Val) (h : Heap) (w : World) : PRes :
         some (putChar w id (c % 256).toNat.toUInt8) fun w' => .ok .unit h w'
   | "caml_ml_output", [ch, s, ofs, len]
   | "caml_ml_output_bytes", [ch, s, ofs, len] =>
-      some (chanOf? h ch) fun id =>
+      some (chanOf? h ch) fun id => some w.chans[id]? fun _ =>
       some (intArg? ofs) fun o => some (intArg? len) fun n =>
         if 0 ≤ o ∧ 0 ≤ n then
           some (byteSlice? h s o.toNat n.toNat) fun b =>
