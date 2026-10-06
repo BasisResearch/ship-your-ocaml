@@ -96,17 +96,33 @@ theorem St.ccallOk_ok {P : Prog} {op : Opcode} {k : Nat} {s : St} {w : BitVec 32
   simp only [St.ccallOk, if_pos at_, fetch, if_pos nonnegative, hp, if_pos member] at ok
   exact PRes.isOk_ok ok
 
+/-- At a `C_CALL op` site the named primitive is one of `names`. -/
+def St.namesOk (P : Prog) (names : List String) (op : Opcode) (s : St) : Bool :=
+  if s.atOp P op then
+    match P.code[s.pc + 1]? with
+    | some w => match P.prims[w.toInt.toNat]? with
+      | some name => names.contains name
+      | none => true
+    | none => true
+  else true
+
+/-- Every `C_CALLk` site names one of `names` (`CcallReturns.of_names`). -/
+def St.callNamesOk (P : Prog) (names : List String) (s : St) : Bool :=
+  St.namesOk P names .C_CALL1 s && St.namesOk P names .C_CALL2 s && St.namesOk P names .C_CALL3 s &&
+    St.namesOk P names .C_CALL4 s && St.namesOk P names .C_CALL5 s
+
 /-- All F1 shape checks at one state. -/
-def St.shapeOk (P : Prog) (ops : List Opcode) (s : St) : Bool :=
+def St.shapeOk (P : Prog) (ops : List Opcode) (names : List String) (s : St) : Bool :=
   s.valuesInRange P.code.size && s.extraOk && s.trapOk && s.branchIntsOk P && St.raisesOk P s &&
     St.decodedOk P ops s && s.divisorsOk P && St.operandOk P .CLOSURE 254 s &&
     St.operandOk P .MAKEBLOCK 256 s && St.ccallOk P .C_CALL1 0 s && St.ccallOk P .C_CALL2 1 s &&
     St.ccallOk P .C_CALL3 2 s && St.ccallOk P .C_CALL4 3 s && St.ccallOk P .C_CALL5 4 s &&
     s.heap.noForward &&
-    decide (s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords)
+    decide (s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords) &&
+    St.callNamesOk P names s
 
 /-- The F1 shape checks of one state, by name. -/
-structure ShapeFacts (P : Prog) (ops : List Opcode) (s : St) : Prop where
+structure ShapeFacts (P : Prog) (ops : List Opcode) (names : List String) (s : St) : Prop where
   values : s.valuesInRange P.code.size = true
   extra : s.extraOk = true
   trap : s.trapOk = true
@@ -125,17 +141,19 @@ structure ShapeFacts (P : Prog) (ops : List Opcode) (s : St) : Prop where
   noForward : s.heap.noForward = true
   /-- within the F1 budget (a6-gc: `Fits g1Budget`) -/
   fits : s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords
+  callNames : St.callNamesOk P names s = true
 
-theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {s : St} (h : St.shapeOk P ops s = true) :
-    ShapeFacts P ops s := by
+theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {names : List String} {s : St}
+    (h : St.shapeOk P ops names s = true) : ShapeFacts P ops names s := by
   simp only [St.shapeOk, Bool.and_eq_true, decide_eq_true_eq] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩, divisors⟩, closures⟩, blocks⟩,
-    c1⟩, c2⟩, c3⟩, c4⟩, c5⟩, noForward⟩, fits⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩, divisors⟩, closures⟩, blocks⟩,
+    c1⟩, c2⟩, c3⟩, c4⟩, c5⟩, noForward⟩, fits⟩, callNames⟩ := h
   exact ⟨values, extra, trap, branches, raises, decoded, divisors, closures, blocks, c1, c2, c3, c4, c5,
-    noForward, fits⟩
+    noForward, fits, callNames⟩
 
 /-- The decode check, by name. -/
-theorem ShapeFacts.decode {P : Prog} {ops : List Opcode} {s : St} (h : ShapeFacts P ops s) :
+theorem ShapeFacts.decode {P : Prog} {ops : List Opcode} {names : List String} {s : St}
+    (h : ShapeFacts P ops names s) :
     ∃ i, decodeAt P.code s.pc = some i ∧ OCaml.InF1 P i ∧ OCaml.stopOrdinary i s.accu = true ∧ i.op ∈ ops := by
   have d := h.decoded
   unfold St.decodedOk at d
@@ -159,12 +177,17 @@ def whileMinOps : List Opcode :=
    .PUSHACC6, .MODINT, .NEQ, .PUSHACC5, .ACC, .RAISE, .PUSHACC, .EQ, .POP, .BGEINT, .MULINT,
    .PUSHACC7, .MAKEBLOCK, .SETGLOBAL, .STOP]
 
+/-- The primitives `while_min.byte`'s calls name (checked in `whileMin_shapeChecked`). -/
+def whileMinCalls : List String :=
+  ["caml_fresh_oo_id", "caml_ml_open_descriptor_out", "caml_ml_string_length", "caml_ml_flush",
+   "caml_format_int", "caml_ml_output_char", "caml_ml_output"]
+
 set_option maxRecDepth 100000 in
 theorem whileMin_shapeChecked :
-    Run.checkAll (bcK whileMin) (St.shapeOk whileMin whileMinOps) 2200 whileMin.init = true := by
+    Run.checkAll (bcK whileMin) (St.shapeOk whileMin whileMinOps whileMinCalls) 2200 whileMin.init = true := by
   decide +kernel
 
-theorem whileMin_shapeOk {s : St} (reach : Reach whileMin s) : ShapeFacts whileMin whileMinOps s :=
+theorem whileMin_shapeOk {s : St} (reach : Reach whileMin s) : ShapeFacts whileMin whileMinOps whileMinCalls s :=
   .of_ok (reach_of_checkAll whileMin_shapeChecked reach)
 
 /-- **`Fits g1Budget whileMin`** (peak 18 stack / 125 heap words). -/

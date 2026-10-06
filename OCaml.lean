@@ -78,6 +78,7 @@ import OCaml.Vm.Sim.EntryLoop
 import OCaml.Vm.Sim.EntryF1
 import OCaml.Vm.Sim.F1Headline
 import OCaml.Vm.Sim.WhileMinTable
+import OCaml.Vm.Sim.WhileMinCalls
 import OCaml.Vm.Sim.StopReady
 import OCaml.Vm.Sim.StopRow
 import OCaml.Vm.Runtime

@@ -396,6 +396,11 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.whileMin_halts_f1
 #print axioms OCaml.Vm.Sim.whileMin_premises
 #print axioms OCaml.Vm.Sim.whileMin_halts_open
+#print axioms OCaml.Vm.Sim.CcallReturns.of_names
+#print axioms OCaml.Vm.Sim.CcallReturns.of_primsF1
+#print axioms OCaml.Vm.Sim.ArmInput.fetch
+#print axioms OCaml.Vm.Sim.whileMin_call_named
+#print axioms OCaml.Vm.Sim.whileMin_ccallReturns
 #print axioms OCaml.Vm.Sim.read8_writeLog_out
 #print axioms OCaml.Vm.Sim.stop_do_exit_summary
 #print axioms OCaml.Vm.Sim.stop_ready

@@ -75,6 +75,15 @@ def implementedF2 : List Opcode :=
   [.MAKEFLOATBLOCK, .GETFLOATFIELD, .SETFLOATFIELD, .VECTLENGTH,
    .GETVECTITEM, .SETVECTITEM, .GETBYTESCHAR, .SETBYTESCHAR, .GETSTRINGCHAR, .C_CALLN]
 
+/-- **Major-heap allocations outside F1.** These F1 opcodes stay in F1 only
+when their block fits the minor heap (`OCaml.Instr.minorAlloc`, part of
+`OCaml.InF1`); larger blocks take interp.c's `caml_alloc_shr` path (the major
+heap, the GC lane's G2/F2+). The compiler executes MAKEBLOCK with wosize 852. -/
+def majorAllocLedger : List (Opcode × String) :=
+  [ (.MAKEBLOCK, "wosize > Max_young_wosize: caml_alloc_shr (major heap)"),
+    (.CLOSURE, "2 + nvars > Max_young_wosize: caml_alloc_shr (major heap)"),
+    (.CLOSUREREC, "3 nfuncs - 1 + nvars > Max_young_wosize: caml_alloc_shr (major heap)") ]
+
 /-- The ledger lists exactly the non-F1 opcodes. -/
 theorem ledger_exact :
     ∀ o ∈ Opcode.all, (o.fragment ≠ .F1 ↔ o ∈ ledger.map (·.1)) := by decide

@@ -34,15 +34,33 @@ def _root_.OCaml.Bytecode.Instr.ccallName (P : Prog) (i : Instr) : Option String
   | .C_CALLN, [_, p] => P.prims[p.toNat]?
   | _, _ => none
 
-/-- A decoded instruction inside F1: an F1 opcode, and an F1 primitive if it
-calls one. Decidable, so a static code check is a `decide`. -/
+/-- `Max_young_wosize` (runtime/caml/config.h): larger blocks are allocated in
+the major heap (`caml_alloc_shr`), a path outside F1 (Fragment.lean,
+`majorAllocLedger`). -/
+def maxYoungWosize : Nat := 256
+
+/-- The block an allocating instruction makes fits the minor heap, as
+interp.c tests it: MAKEBLOCK `wosize ≤ Max_young_wosize`, CLOSURE
+`nvars ≤ Max_young_wosize - 2`, CLOSUREREC `3 nfuncs - 1 + nvars ≤
+Max_young_wosize`. Other instructions trivially pass. -/
+def _root_.OCaml.Bytecode.Instr.minorAlloc (i : Instr) : Bool :=
+  match i.op, i.args with
+  | .MAKEBLOCK, sz :: _ => decide (sz ≤ (maxYoungWosize : Int))
+  | .CLOSURE, nv :: _ => decide (nv ≤ (maxYoungWosize : Int) - 2)
+  | .CLOSUREREC, nf :: nv :: _ => decide (nf * 3 - 1 + nv ≤ (maxYoungWosize : Int))
+  | _, _ => true
+
+/-- A decoded instruction inside F1: an F1 opcode, an F1 primitive if it
+calls one, and a minor-heap allocation if it allocates. Decidable, so a static
+code check is a `decide`. -/
 structure InF1 (P : Prog) (i : Instr) : Prop where
   opcode : i.op.fragment = .F1
   primitive : (i.ccallName P).all (· ∈ primsF1) = true
+  minor : i.minorAlloc = true
 
 instance (P : Prog) (i : Instr) : Decidable (InF1 P i) :=
-  decidable_of_iff (i.op.fragment = .F1 ∧ (i.ccallName P).all (· ∈ primsF1) = true)
-    ⟨fun ⟨a, b⟩ => ⟨a, b⟩, fun ⟨a, b⟩ => ⟨a, b⟩⟩
+  decidable_of_iff (i.op.fragment = .F1 ∧ (i.ccallName P).all (· ∈ primsF1) = true ∧ i.minorAlloc = true)
+    ⟨fun ⟨a, b, c⟩ => ⟨a, b, c⟩, fun ⟨a, b, c⟩ => ⟨a, b, c⟩⟩
 
 /-- The named primitive of an F1 `C_CALLk` is an F1 primitive. -/
 theorem InF1.prim {P : Prog} {i : Instr} (h : InF1 P i) {nm : String}

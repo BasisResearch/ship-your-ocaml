@@ -114,6 +114,20 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `GoodF1.stopAccu` (new: STOP never returns a `.raw` word, which caml_main
   would read as an exception; `whileMin` still checks in one kernel run).
 
+**InF1 minor-heap bound; whileMin's C_CALL returns (2026-10-06)**
+- Foreman decision: MAKEBLOCK with `wosize > Max_young_wosize` (and CLOSURE /
+  CLOSUREREC whose block exceeds it) take interp.c's `caml_alloc_shr` path and
+  are outside F1. `InF1.minor : i.minorAlloc = true` (`RefinementF1.lean`,
+  interp.c's own tests); ledger `Fragment.majorAllocLedger`. Rows get the
+  bound from `InF1` (OpArm's premise), so BlockSizes/ClosureSizes retire.
+- `CcallReturns.of_names` / `.of_primsF1` (`CcallNames.lean`): `CcallReturns`
+  from per-primitive summaries `PrimReturnsAt` (a1-prims' adapters). The
+  general instance needs no per-program premise.
+- whileMin: `St.callNamesOk` joins the one shape run; `whileMin_ccallReturns`
+  (`WhileMinCalls.lean`) uses its 7 primitives. `WhileMinOpen` is now 4
+  fields: `setglobal_barrier`, and `c_call{1,2,4}_prims` (PrimReturnsAt for
+  each of `whileMinCalls`).
+
 **Deferred (2026-10-06)**: `Invocation.raiseBuf`
 (`Caml_state->external_raise = D.nativeSp + raiseBufOffset`). Only the general
 C-raise path needs it (a2-sem's zero-divisor row for programs that do divide
