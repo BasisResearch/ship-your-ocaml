@@ -132,6 +132,26 @@ runtime invariant: the long pole for whileMin's `Halts`.
   barrier's malloc path exists (it makes `whileMin_loaded_f1` conditional on
   the cut obligation and changes a1-arms' window lemmas).
 
+### caml_modify slow route — progress and obstruction (2026-10-06)
+
+- `OCaml/Vm/Gc/ModifySlow.lean`: the whileMin route's chain skeleton
+  (a9a8T → a9ccT → aa0cF → aa14F → aa20F → aa28T → aa7c), `code_facts`
+  (chain_facts over `Code.Caml_modifyLoaded`), `chain_ok`, the entry block's
+  `slot_regs`/`slot_access`/`slot_control`, `old_regs` (frame as
+  `sp + -32#64`, AllocEntry's `frameSp` idiom), and the memory helpers
+  `stepMemM_of_addi`/`lpins8_stepMemM_sd` for a load after a store in one block.
+- OBSTRUCTION (reproducible): any simp proof that computes the `a9cc` block's
+  store entry (`sd ra,24(sp)` after `addi sp,sp,-32`) — `wentryM`/`wlogM` or
+  `stepMemM` with the symbolic stack pointer — fails kernel checking with
+  "(kernel) deep recursion detected", independent of maxRecDepth (100000 and
+  1000000) and of whether `sign_extend` is unfolded or rewritten by decided
+  lemmas (`sign_extend 4064#12 = -32#64` by decide is fine on its own). `rfl`
+  for the log fails elaboration (not defeq at default transparency). The
+  full simp over the stepped memory in `old_access` does not finish in 20 min.
+  Next: replicate exactly how `Generated/AllocEntry.lean` states and proves
+  `head_log` (its rfl succeeds for an `addi sp,-N; sd` prefix), or extend
+  gen_gc_rows with a MODIFY template emitting these lemmas in its idiom.
+
 Open: G2 (collector proper); status and next design step below. F1 asks from a1-arms/bprime are all landed (last: `72d88e40`).
 
 G2 progress after F1:

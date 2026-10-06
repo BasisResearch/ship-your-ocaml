@@ -186,6 +186,7 @@ import OCaml.Vm.Gc.WhileMinG1
 import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.NurseryTransport
 import OCaml.Vm.Gc.G1Reserve
+import OCaml.Vm.Gc.ModifySlow
 import OCaml.Vm.Gc.F1Runtime
 import OCaml.Vm.Gc.WhileMinNursery
 import OCaml.Vm.Gc.FreePlacement
@@ -422,6 +423,10 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.NurseryGeometry.alloc
 #print axioms OCaml.Vm.Gc.NurseryGeometry.same
 #print axioms OCaml.Vm.Gc.NurseryReserve.of_room
+#print axioms OCaml.Vm.Gc.ModifySlow.slot_access
+#print axioms OCaml.Vm.Gc.ModifySlow.slot_control
+#print axioms OCaml.Vm.Gc.ModifySlow.old_regs
+#print axioms OCaml.Vm.Gc.ModifySlow.lpins8_stepMemM_sd
 #print axioms OCaml.Vm.Gc.whileMin_nurseryGeometry
 #print axioms OCaml.Vm.Gc.f1_stable
 #print axioms OCaml.Vm.Gc.f1_allocation
