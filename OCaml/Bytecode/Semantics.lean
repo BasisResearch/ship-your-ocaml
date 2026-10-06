@@ -1122,6 +1122,8 @@ def brOp (n ofs : Int) (f : BitVec 64 → BitVec 64 → Bool) : Res :=
 
 /-- `MAKEBLOCK`: `Field(b,0) = accu`, the rest popped from the stack. -/
 def makeBlock (len size tag : Nat) : Res :=
+  -- the header packs 8 tag bits (`Make_header`): a larger tag is outside the model
+  if 256 ≤ tag then .unsupported else
   if size = 0 then .wrong else
   if s.stack.length < size - 1 then .wrong else
   let (h, l) := s.heap.alloc (.block tag (s.accu :: s.stack.take (size - 1)))

@@ -68,10 +68,18 @@ pointers, `beq_pointer_guard_obstruction`; needs a per-program check).
   `CcallArity` premise retired (`ccall_row_of` takes the bound from the
   guard). `RaisesCaught whileMin` and `BranchInts whileMin` by checked runs.
 
+* BcSem: SWITCH on an atom or interior pointer, and MAKEBLOCK with a tag
+  ≥ 256, are `.unsupported` (compiled code never does either; the machine
+  reads unrepresented headers / packs 8 tag bits). `switch_row` has no
+  premise left; a1-arms' MAKEBLOCK rows need no `BlockTags`.
+* All whileMin per-program facts come from ONE kernel run
+  (`WhileMinShape.lean`, `St.shapeOk`/`ShapeFacts`); bprime folded GoodF1 and
+  the opcode census into it.
+
 Open / next (row premises to discharge, owner):
-* `SwitchExotic` (SWITCH on atoms / infix pointers): represent atom-table
-  headers and infix headers (a2-sem/a1-arms).
-* `BinaryLibScratch` (a1-arms), division `zero` (raise rows, a1-arms).
+* `BinaryLibScratch` (a1-arms).
+* DIVINT/MODINT zero divisor: `DivisionRows.lean` loop-head adapter for
+  `division_zero_caught_step` (a2-sem, in progress; a1-arms handed it over).
 * General discharges of ValuesInRange / ExtraBounded / TrapBounded.
 
 Premise census of the existing conditional bridges (my families):
