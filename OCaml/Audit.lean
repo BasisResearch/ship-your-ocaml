@@ -202,6 +202,7 @@ import OCaml.Vm.Gc.BarrierGrow
 import OCaml.Vm.Gc.LibHeap
 import OCaml.Vm.Gc.F1Heap
 import OCaml.Vm.Gc.F1Barrier
+import OCaml.Vm.Sim.F1BarrierRuntime
 import OCaml.Vm.Gc.Generated.BarrierAbove
 import OCaml.Vm.Gc.Generated.BarrierBelow
 import OCaml.Vm.Gc.Generated.BarrierFull
@@ -631,6 +632,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.f1_tableRuntime
 #print axioms OCaml.Vm.Gc.LibHeapAt.insert
 #print axioms OCaml.Vm.Gc.f1_insert
+#print axioms OCaml.Vm.Sim.f1_barrierRuntime
 #print axioms OCaml.Vm.Gc.arena_footprint_apart
 #print axioms OCaml.Vm.Gc.record_footprint_apart
 #print axioms OCaml.Vm.Gc.LibHeapAt.keep_records
