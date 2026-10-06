@@ -193,6 +193,7 @@ import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.NurseryTransport
 import OCaml.Vm.Gc.G1Reserve
 import OCaml.Vm.Gc.ModifyInsert
+import OCaml.Vm.Gc.BarrierRun
 import OCaml.Vm.Gc.Generated.BarrierAbove
 import OCaml.Vm.Gc.Generated.BarrierBelow
 import OCaml.Vm.Gc.Generated.BarrierFull
@@ -475,6 +476,13 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.ModifyInsert.run
 #print axioms OCaml.Vm.Gc.ModifyInsert.log
 #print axioms OCaml.Vm.Gc.ModifyInsert.registers
+#print axioms OCaml.Vm.Gc.Barrier.barrier_fast
+#print axioms OCaml.Vm.Gc.Barrier.young_run
+#print axioms OCaml.Vm.Gc.Barrier.major_head
+#print axioms OCaml.Vm.Gc.Barrier.old_run
+#print axioms OCaml.Vm.Gc.Barrier.value_skip
+#print axioms OCaml.Vm.Gc.Barrier.value_insert
+#print axioms OCaml.Vm.Gc.Barrier.return_run
 #print axioms OCaml.Vm.Gc.BarrierAbove.run
 #print axioms OCaml.Vm.Gc.BarrierAbove.log
 #print axioms OCaml.Vm.Gc.BarrierBelow.run

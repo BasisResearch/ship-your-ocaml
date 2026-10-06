@@ -222,6 +222,19 @@ runtime invariant: the long pole for whileMin's `Halts`.
   represented `ModifyCallee`. The generator now tracks the evaluator's exact
   in-block forms (`mv` leaves `x + 0`), supports `lw`, unsigned branches and
   `ret`/fall-through endpoints.
+- **Machine caml_modify, fast path** (`OCaml/Vm/Gc/BarrierRun.lean:barrier_fast`):
+  from `Entry` (slot/value/ra/sp registers, `Caml_state`, young_start/end,
+  the old value, `Phase_idle`, the frame and slot windows, separation from
+  the read words and above-code stores) and `Remembered` (ref table words and
+  windows), under `NoGrow` (young slot, or old young, or value not young, or
+  `ptr < limit`), it returns to `ra` with `sp` restored and memory
+  `writeLog entry log`, where `log` is `youngLog`, `majorLog` or
+  `majorLog ++ insertLog` (`FastLog`), and every register outside
+  x1/x2/x10–x15 is kept. Steps: `young_run`, `major_head`, `old_run` (four
+  cases), `value_skip`/`value_insert`, `return_run`. Next: splice the growth
+  path (`BarrierFull` → `realloc_run` → `BarrierReload`) with a named
+  `GprPresent` premise (a0-boot: VsaOk's full presence is structural), then
+  the represented `ModifyCallee` from `barrier_fast`.
 - Barrier integration plan (after `realloc_run`). a1-arms' `ModifyCallee`
   (`OCaml/Vm/Sim/ModifyCall.lean`) is a represented summary from
   `ModifyInput` to `ModifyReturn` for every F1 program. Two invariant pieces
