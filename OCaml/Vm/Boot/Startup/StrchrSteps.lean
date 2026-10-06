@@ -193,4 +193,206 @@ theorem strchr_byte_step (c : Config) (p ra : BitVec 64) (b : BitVec 8) (leaf : 
         show Functions.sign_extend (m := 64) 7#12 = 7#64 by decide]
     · rfl
     · decide
+/-- A NUL before alignment: no slash. -/
+theorem strchr_byte_nul (c : Config) (p ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ (strchrByteInput p ra)) (window : ReadWindow p 1)
+    (pin : (c.σ.mem[p.toNat]?).getD 0 = 0#8) :
+    FnSummary 0x80040714#64 (fun e => e = c)
+      (WriteRegistersPost [15] [] c 0x800407e0#64 p
+        [(15, 0#64), (10, p), (13, 47#64), (11, 47#64), (1, ra)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput strchrX0714TSeg 0x80040714#64 (strchrByteInput p ra) [[0#8]] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 13, 11, 1]; decide
+      shape := by change ChainOK _ [10, 13, 11, 1] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := strchrByte_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.strchr_at_"
+        · exact window.lbu rfl (by change p + Functions.sign_extend (m := 64) 0#12 = p
+                                   rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]) pin
+        · rfl }))
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · decide
+
+/-- `return NULL`. -/
+theorem strchr_none (c : Config) (ra a5 : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(1, ra), (15, a5), (13, 47#64)]) :
+    FnSummary 0x800407e0#64 (fun e => e = c)
+      (WriteRegistersPost [10] [] c ra 0#64 [(10, 0#64), (1, ra), (15, a5), (13, 47#64)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput strchrX07e0Seg 0x800407e0#64 [(1, ra), (15, a5), (13, 47#64)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [1, 15, 13]; decide
+      shape := by change ChainOK _ [1, 15, 13] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := strchrTail_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.strchr_at_"
+        · change (Sail.BitVec.update (ra + Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [ret_tgt ra leaf.aligned]
+          exact leaf.aligned }))
+  · rfl
+  · exact ret_tgt ra leaf.aligned
+  · change [(10, 0#64 + Functions.sign_extend (m := 64) 0#12), (1, ra), (15, a5), (13, 47#64)] = _
+    rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]
+  · rfl
+  · decide
+def slashPattern : BitVec 64 := 0x2f2f2f2f2f2f2f2f#64
+def lowOnes : BitVec 64 := 0xfefefefefefefeff#64
+def highBits : BitVec 64 := 0x8080808080808080#64
+
+def strchrWordInput (a ra : BitVec 64) : GRegs := [(11, 47#64), (10, a), (13, 47#64), (1, ra)]
+
+/-- At alignment: start the byte pattern and load the first word. -/
+theorem strchr_load (c : Config) (a ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ (strchrWordInput a ra)) (window : ReadWindow a 8) :
+    FnSummary 0x8004072c#64 (fun e => e = c)
+      (WriteRegistersPost [11, 17, 15, 14] [] c 0x80040744#64 a
+        [(17, 0x2f2f2f2f#64), (14, bytesT c.σ.mem a.toNat 8), (15, 0x2f2f0000#64), (11, 47#64), (10, a),
+          (13, 47#64), (1, ra)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput strchrX072cSeg 0x8004072c#64 (strchrWordInput a ra)
+        [read8 c.σ.mem a.toNat] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [11, 10, 13, 1]; decide
+      shape := by change ChainOK _ [11, 10, 13, 1] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := strchrSetup_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.strchr_at_"
+        exact window.ld rfl (by change a + Functions.sign_extend (m := 64) 0#12 = a
+                                rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero])
+          (read8_pins _ _) }))
+  · rfl
+  · rfl
+  · simp only [strchrX072cSeg, evalBlocks, evalBlock, SegEvalState.init, strchrsetup_line_8004072c, strchrsetup_line_80040730, strchrsetup_line_80040734, strchrsetup_line_80040738, strchrsetup_line_8004073c, strchrsetup_line_80040740, runGM, ldsRunM,
+      wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, strchrWordInput, read8_value,
+      List.cons.injEq, Prod.mk.injEq, and_true, true_and]
+    exact ⟨by decide, by decide, by decide⟩
+  · rfl
+  · decide
+def strchrLoaded (a ra x : BitVec 64) : GRegs :=
+  [(17, 0x2f2f2f2f#64), (14, x), (15, 0x2f2f0000#64), (11, 47#64), (10, a), (13, 47#64), (1, ra)]
+
+def strchrMasked (a ra x : BitVec 64) : GRegs :=
+  [(12, 0x7f7f7f7f#64), (16, lowOnes), (15, slashPattern ^^^ x), (17, slashPattern), (11, 0xfffffffffefefeff#64),
+    (14, x), (10, a), (13, 47#64), (1, ra)]
+
+/-- Build the slash pattern and the carry masks. -/
+theorem strchr_masks (c : Config) (a ra x : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ (strchrLoaded a ra x)) :
+    FnSummary 0x80040744#64 (fun e => e = c)
+      (WriteRegistersPost [11, 15, 16, 17, 12] [] c 0x80040768#64 a (strchrMasked a ra x)) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput strchrX0744Seg 0x80040744#64 (strchrLoaded a ra x) [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [17, 14, 15, 11, 10, 13, 1]; decide
+      shape := by change ChainOK _ [17, 14, 15, 11, 10, 13, 1] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := strchrMasks_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.strchr_at_" }))
+  · rfl
+  · rfl
+  · simp only [strchrX0744Seg, evalBlocks, evalBlock, SegEvalState.init, strchrmasks_line_80040744, strchrmasks_line_80040748, strchrmasks_line_8004074c, strchrmasks_line_80040750, strchrmasks_line_80040754, strchrmasks_line_80040758, strchrmasks_line_8004075c, strchrmasks_line_80040760, strchrmasks_line_80040764, runGM, ldsRunM,
+      wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, strchrLoaded, strchrMasked,
+      List.cons.injEq, Prod.mk.injEq, and_true, true_and]
+    refine ⟨by decide, by decide, ?_, by decide, by decide⟩
+    congr 1
+  · rfl
+  · decide
+def allOnes : BitVec 64 := 0xffffffffffffffff#64
+
+/-- The first word's test: nonzero when the word may hold a NUL or a '/'. -/
+def setupTest (x : BitVec 64) : BitVec 64 :=
+  ((x + lowOnes) &&& (x ^^^ allOnes) ||| (slashPattern ^^^ x) + lowOnes &&& (slashPattern ^^^ x ^^^ allOnes)) &&&
+    highBits
+
+def strchrTested (a ra x : BitVec 64) : GRegs :=
+  [(15, setupTest x), (6, highBits), (11, (slashPattern ^^^ x) + lowOnes &&& (slashPattern ^^^ x ^^^ allOnes)),
+    (14, x ^^^ allOnes), (28, (slashPattern ^^^ x) + lowOnes), (12, 0x7f7f7f7f#64), (16, lowOnes),
+    (17, slashPattern), (10, a), (13, 47#64), (1, ra)]
+
+theorem guard_of_eq {op : bop} {v w r : BitVec 64} {b : Bool} (h : v = w) (g : guardB op w r = b) :
+    guardB op v r = b := h ▸ g
+
+local macro "test_regs" : tactic =>
+  `(tactic| (
+    rw [show Functions.sign_extend (m := 64) 4095#12 = allOnes by decide]
+    simp only [List.cons.injEq, Prod.mk.injEq, and_true, true_and]
+    refine ⟨?_, by decide⟩
+    unfold setupTest
+    congr 1))
+
+/-- The first word's test: a hit goes to the byte scan, a clear word to the loop. -/
+theorem strchr_test (c : Config) (a ra x : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ (strchrMasked a ra x)) :
+    FnSummary 0x80040768#64 (fun e => e = c)
+      (WriteRegistersPost [28, 11, 6, 15, 14] [] c (if setupTest x = 0#64 then 0x80040798#64 else 0x800407d8#64) a
+        (strchrTested a ra x)) := by
+  by_cases clear : setupTest x = 0#64
+  · apply registers_of_blocks leaf.image (by constructor <;> trivial)
+      (block_summary _ _ _ _ _ (show BlockInput strchrX0768FSeg 0x80040768#64 (strchrMasked a ra x) [] c from {
+        good := leaf.good
+        minstret := leaf.minstret
+        regs := regs
+        keys := by change KeysOK [12, 16, 15, 17, 11, 14, 10, 13, 1]; decide
+        shape := by change ChainOK _ [12, 16, 15, 17, 11, 14, 10, 13, 1] _; decide
+        tick := leaf.tick
+        facts := by
+          have code := strchrTest_code leaf.image
+          chain_facts code with "Vsa.Sim.Code.strchr_at_"
+          refine guard_of_eq (w := setupTest x) ?_ (by rw [clear]; rfl)
+          simp only [strchrtest_line_80040768, strchrtest_line_8004076c, strchrtest_line_80040770, strchrtest_line_80040774, strchrtest_line_80040778, strchrtest_line_8004077c, strchrtest_line_80040780, strchrtest_line_80040784, strchrtest_line_80040788, strchrtest_line_8004078c, strchrtest_line_80040790, runGM, stepGM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff,
+            ite_true, ite_false, strchrMasked]
+          rw [show Functions.sign_extend (m := 64) 4095#12 = allOnes by decide]
+          unfold setupTest
+          congr 1 }))
+    · rfl
+    · rw [if_pos clear]; rfl
+    · simp only [strchrX0768FSeg, evalBlocks, evalBlock, SegEvalState.init, strchrtest_line_80040768, strchrtest_line_8004076c, strchrtest_line_80040770, strchrtest_line_80040774, strchrtest_line_80040778, strchrtest_line_8004077c, strchrtest_line_80040780, strchrtest_line_80040784, strchrtest_line_80040788, strchrtest_line_8004078c, strchrtest_line_80040790, runGM, ldsRunM,
+        wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+        List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, strchrMasked, strchrTested]
+      test_regs
+    · rfl
+    · decide
+  · apply registers_of_blocks leaf.image (by constructor <;> trivial)
+      (block_summary _ _ _ _ _ (show BlockInput strchrX0768TSeg 0x80040768#64 (strchrMasked a ra x) [] c from {
+        good := leaf.good
+        minstret := leaf.minstret
+        regs := regs
+        keys := by change KeysOK [12, 16, 15, 17, 11, 14, 10, 13, 1]; decide
+        shape := by change ChainOK _ [12, 16, 15, 17, 11, 14, 10, 13, 1] _; decide
+        tick := leaf.tick
+        facts := by
+          have code := strchrTest_code leaf.image
+          chain_facts code with "Vsa.Sim.Code.strchr_at_"
+          refine guard_of_eq (w := setupTest x) ?_ (by simp only [guardB, bne_iff_ne]; exact clear)
+          simp only [strchrtest_line_80040768, strchrtest_line_8004076c, strchrtest_line_80040770, strchrtest_line_80040774, strchrtest_line_80040778, strchrtest_line_8004077c, strchrtest_line_80040780, strchrtest_line_80040784, strchrtest_line_80040788, strchrtest_line_8004078c, strchrtest_line_80040790, runGM, stepGM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff,
+            ite_true, ite_false, strchrMasked]
+          rw [show Functions.sign_extend (m := 64) 4095#12 = allOnes by decide]
+          unfold setupTest
+          congr 1 }))
+    · rfl
+    · rw [if_neg clear]; rfl
+    · simp only [strchrX0768TSeg, evalBlocks, evalBlock, SegEvalState.init, strchrtest_line_80040768, strchrtest_line_8004076c, strchrtest_line_80040770, strchrtest_line_80040774, strchrtest_line_80040778, strchrtest_line_8004077c, strchrtest_line_80040780, strchrtest_line_80040784, strchrtest_line_80040788, strchrtest_line_8004078c, strchrtest_line_80040790, runGM, ldsRunM,
+        wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+        List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, strchrMasked, strchrTested]
+      test_regs
+    · rfl
+    · decide
 end OCaml.Vm.Boot.Startup
