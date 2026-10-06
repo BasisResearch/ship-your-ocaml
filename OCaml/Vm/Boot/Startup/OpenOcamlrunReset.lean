@@ -65,7 +65,7 @@ theorem reset_ocamlrun_opened_exists : ∃ initial after, Nonempty (ResetOcamlru
     have := w.search.fresh; have := w.search.aligned; unfold heapEnd at *; omega
   obtain ⟨after, run, ⟨o⟩⟩ := (open_ocamlrun c _ (startupAllocatorCredits - 496) 16 attemptStack
     jal_80004920_call.link w.search.copy _ _ _ _ _ _ _ _ w.search.copy _ _ _ _ _ _ _ _ ready frame (by decide)
-    w.kept.embed regs w.kept.htif.notReady w.kept.htif.clear w.kept.htif.reent w.ocamlrun_name home pathLow
+    w.kept.late regs w.kept.htif.notReady w.kept.htif.clear w.ocamlrun_name home pathLow
     ⟨by decide, by decide⟩).run c ⟨w.pc, rfl⟩
   exact ⟨initial, after, ⟨⟨c, w, r 8, r 9, r 19, r 20, r 21, r 22, r 23, r 24, r 25, r 26, o, w.run.trans run⟩⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse

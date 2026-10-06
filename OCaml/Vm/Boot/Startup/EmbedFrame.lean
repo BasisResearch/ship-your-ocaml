@@ -304,6 +304,35 @@ theorem EmbedFrame.verbGc {before after bytes} (f : EmbedFrame before after)
 
 theorem KeptImage.frame {before after} (h : KeptImage before) (f : EmbedFrame before after) :
     KeptImage after := ⟨h.embed.frame f, f.environ h.environ, f.verbGc h.verbGc, h.htif.frame f⟩
+
+/-- What startup still needs once htif.c's file system is up (`fs_ready` and
+`files` then change): the embedded image, `environ`, the zero GC verbosity and
+`_impure_ptr`. -/
+structure LateImage (c : Config) : Prop where
+  embed : EmbedImage c
+  environ : bytesT c.σ.mem Layout.sym_environ 8 = BitVec.ofNat 64 WhileMinImage.envArray
+  verbGc : LPins8 c.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8)
+  reent : bytesT c.σ.mem allocatorImpureAddr 8 = BitVec.ofNat 64 Layout.sym_impure_data
+
+theorem KeptImage.late {c} (h : KeptImage c) : LateImage c := ⟨h.embed, h.environ, h.verbGc, h.htif.reent⟩
+
+/-- A late image survives any change keeping the embedded image and the three
+low globals. -/
+theorem LateImage.transport {before after} (h : LateImage before) (embed : EmbedImage after)
+    (low : ∀ a, (EnvironByte a ∨ VerbGcByte a ∨ (allocatorImpureAddr ≤ a ∧ a < allocatorImpureAddr + 8)) →
+      (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0) : LateImage after where
+  embed := embed
+  environ := (word_observed _ (fun i hi => low _ (Or.inl ⟨by omega, by omega⟩))).trans h.environ
+  verbGc := lpins8_observed h.verbGc (fun i hi => low _ (Or.inr (Or.inl ⟨by omega, by omega⟩)))
+  reent := (word_observed _ (fun i hi => low _ (Or.inr (Or.inr ⟨by omega, by omega⟩)))).trans h.reent
+
+theorem LateImage.frame {before after} (h : LateImage before) (f : EmbedFrame before after) : LateImage after :=
+  h.transport (h.embed.frame f) fun a ha => f.byte a (by
+    rcases ha with e | v | ⟨lo, hi⟩
+    · exact Or.inr (Or.inl e)
+    · exact Or.inr (Or.inr (Or.inl v))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨by unfold allocatorImpureAddr at lo; exact lo,
+        by unfold allocatorImpureAddr at hi; exact hi⟩)))))
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.WhileMinElfParse

@@ -46,7 +46,7 @@ structure OpenOcamlrun (H : List (Nat × Nat)) (capacity : Nat) (sp ra path : Bi
   pc : PCAt ra after
   regs : GHolds after.σ ([(2, sp), (1, ra), (10, -1#64)] ++ openCarried s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10)
   ready : RuntimeReady ((node.toNat, 5) :: H) capacity sp ra after
-  embed : EmbedImage after
+  late : LateImage after
   slot : FsSlotOne after.σ.mem node
   name : OcamlrunName after.σ.mem path
   caller : CallerFrame sp before after
@@ -54,11 +54,10 @@ structure OpenOcamlrun (H : List (Nat × Nat)) (capacity : Nat) (sp ra path : Bi
 theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra path a2 a3 a4 a5 a6 a7 s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 : BitVec 64)
     (ready : RuntimeReady H (capacity + charge) sp ra c) (frame : NativeFrame sp openDepth)
-    (deep : embedLimit + openDepth ≤ sp.toNat) (image : EmbedImage c)
+    (deep : embedLimit + openDepth ≤ sp.toNat) (late : LateImage c)
     (regs : GHolds c.σ (libOpenInput sp ra path 0#64 a2 a3 a4 a5 a6 a7 ++ openCarried s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10))
     (notReady : read4 c.σ.mem Layout.sym_fs_ready = [0#8, 0#8, 0#8, 0#8])
     (clear : ∀ j, 1 ≤ j → j < 64 → slotUsed c.σ.mem (Layout.sym_files + 56 * j) = 0#8)
-    (impure : getenvReent c = 0x80064668#64)
     (name : OcamlrunName c.σ.mem path) (home : ∃ e ∈ H, e.1 ≤ path.toNat ∧ path.toNat + 9 ≤ e.1 + e.2)
     (pathLow : path.toNat + 16 ≤ heapEnd)
     (charged : vsaChg 5 charge) :
@@ -67,6 +66,8 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
   constructor
   intro before ⟨pc, eq⟩
   subst before
+  have image := late.embed
+  have impure : getenvReent c = 0x80064668#64 := late.reent
   have entry := (gholds_append _ _).1 regs
   -- frames
   have f0 : NativeFrame sp 80 := frame.resize (by decide) (by decide)
@@ -397,7 +398,24 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
     ready := ready11.stack_log p12 (by decide) (by simp only [keysG]; decide) (by decide)
       (gholds_lookup (n := 2) _ p12.regs rfl) (gholds_lookup (n := 1) _ p12.regs rfl) ready.aligned f0
       (by simp only [LogInW])
-    embed := embed12
+    late := late.transport embed12 fun a ha => by
+      have g : 0x8006466c ≤ a ∧ a < 0x80064918 ∨ 0x8006491c ≤ a ∧ a < 0x80064d48 := by
+        rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+          simp only [Layout.sym_environ, Layout.sym_caml_verb_gc, allocatorImpureAddr] at * <;> omega
+      have ag : ¬ allocGlobal a := by
+        rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+          simp only [allocGlobal, InRange, Layout.sym_environ, Layout.sym_caml_verb_gc, allocatorImpureAddr] at * <;> omega
+      rw [mem12 a (by simp only [OutW, errnoWindows, and_true]; omega)]
+      rw [R.low a (by unfold heapStart; omega) ag (by
+          simp only [OutW, fsWindows, and_true, nativeFrameBase, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready]
+          refine ⟨Or.inl ?_, by omega, by omega, by omega⟩
+          rw [hRS]
+          unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at *
+          omega)
+        (by unfold slotOne Layout.sym_files; omega)]
+      rcases g with ⟨lo, hi⟩ | ⟨lo, hi⟩
+      · exact low6 a lo (by omega)
+      · exact low6 a (by omega) hi
     slot := R.slot.transport (fun x lo hi => mem12 x (by
         simp only [OutW, errnoWindows, and_true, slotOne, Layout.sym_files] at *; omega))
       (fun j hj => mem12 _ (by
