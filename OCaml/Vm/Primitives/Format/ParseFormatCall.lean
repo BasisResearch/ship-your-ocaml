@@ -326,4 +326,141 @@ theorem measure {live : Nat → Prop} {ra sp : BitVec 64} {f buf n : Nat} (c : C
     simp only [measureWritten, List.mem_cons, List.not_mem_nil, or_false, not_or] at out
     rw [back k lo hi (by simp; omega), dl.kept k lo hi (by simp [lengthWritten]; omega)]
 
+/-- Every stdio-footprint byte lies below the end of `.bss`. -/
+theorem stdioFoot_high {a : Nat} (h : VsaIris.Stdio.stdioFoot a) : a < 0x8007d138 := by
+  simp only [VsaIris.Stdio.stdioFoot, VsaIris.Stdio.InRange] at h
+  omega
+
+theorem bltu_false_of_le {a b : BitVec 64} (h : b.toNat ≤ a.toNat) :
+    LeanRV64DExecutable.Functions.zopz0zI_u a b = false := by
+  unfold LeanRV64DExecutable.Functions.zopz0zI_u; simp only [Sail.BitVec.toNatInt]
+  exact decide_eq_false (Int.not_lt.mpr (Int.ofNat_le.mpr h))
+
+/-- The buffer and the format string, as `memmove` needs them. -/
+structure BufferInput (f buf n : Nat) : Prop where
+  bufLow : 0x80063b90 ≤ buf
+  bufHigh : buf + 32 ≤ 0x100000000
+  /-- the string, its suffix and conversion, and the terminator fit -/
+  fits : n + 2 ≤ 31
+  /-- the string is a heap object, above `.bss` -/
+  fmtLow : 0x8007d138 ≤ f
+  fmtHigh : f + n ≤ 0x100000000
+  apart : f + n ≤ buf ∨ buf + 32 ≤ f
+
+/-- The registers `copy` may change. -/
+def copyWritten : List Nat := [1, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 28]
+
+/-- After the first `memmove`: the format string is in the buffer. -/
+structure Copied (live : Nat → Prop) (sp : BitVec 64) (f buf n : Nat) (before after : Config) : Prop
+    extends LeafInput copy_call.link after where
+  libraryGood : VsaOk live after
+  globalPointer : ROHolds (vsaModel live) after roR []
+  pc : OCaml.Vm.pcOf after = some copy_call.link
+  copied : ∀ i, i < n → byte after (buf + i) = byte before (f + i)
+  rest : ∀ a, a < buf ∨ buf + n ≤ a → byte after a = byte before a
+  output : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
+  buffer : gpr after 8 = some (BitVec.ofNat 64 buf)
+  suffixLength : gpr after 9 = some 1#64
+  length : gpr after 19 = some (BitVec.ofNat 64 n)
+  stack : gpr after 2 = some (sp - 48#64)
+  suffix : gpr after 18 = some 0x80055088#64
+  fmt : gpr after 20 = some (BitVec.ofNat 64 f)
+  kept : ∀ k, 1 ≤ k → k ≤ 31 → k ∉ copyWritten → gpr after k = gpr before k
+
+/-- **The fit check and the copy of the format string.** -/
+theorem copy {live : Nat → Prop} {sp : BitVec 64} {f buf n : Nat} (c d : Config)
+    (codeLive : ∀ p ∈ snpText, live p.1) (liveImage : ImageLive live)
+    (dm : Measured live sp f buf n c d) (hb : BufferInput f buf n) :
+    FnSummary suffix_call.link (fun e => e = d) (Copied live sp f buf n d) := by
+  let R := entryRegs d
+  have hR10 : R 10 = 1#64 := entry_value dm.suffixLength
+  have hR19 : R 19 = BitVec.ofNat 64 n := entry_value dm.length
+  have hR8 : R 8 = BitVec.ofNat 64 buf := entry_value dm.buffer
+  have hR20 : R 20 = BitVec.ofNat 64 f := entry_value dm.fmt
+  have regs : GHolds d.σ (fits_input R) := holds_entry dm.libraryGood [1, 2, 8, 10, 18, 19, 20] (by decide)
+  have leaf : LeafInput (R 1) d := by rw [show R 1 = suffix_call.link from entry_value dm.raReg]; exact dm.toLeafInput
+  have ok : guardB .BLTU (31#64) (R 19 + R 10 + 1#64) = false := by
+    rw [hR19, hR10]
+    apply bltu_false_of_le
+    have := hb.fits
+    simp only [BitVec.toNat_add, BitVec.toNat_ofNat]
+    omega
+  have S := fits_fast d R leaf regs ok
+  apply summary_bind S (fun _ p => p.pc)
+  intro e p
+  have goodE : VsaOk live e := p.vsaOk dm.libraryGood (by decide) (by simp [fits_regs, keysG])
+  have regsE : GHolds e.σ (copy_input (entryRegs e)) := holds_entry goodE [1, 2, 8, 10, 18, 19, 20] (by decide)
+  have frameP (k : Nat) (lo : 1 ≤ k) (hi : k ≤ 31) (out : k ∉ [14, 15]) : gpr e k = gpr d k :=
+    p.toEffectPost.gpr_frame (by decide) k lo hi out
+  have leafE : LeafInput (entryRegs e 1) e := by
+    rw [show entryRegs e 1 = suffix_call.link from entry_value ((frameP 1 (by decide) (by decide) (by decide)).trans dm.raReg)]
+    exact ⟨p.good, p.image, p.minstret, (frameP 1 (by decide) (by decide) (by decide)).trans dm.raReg, by decide, p.tick⟩
+  let R' := entryRegs e
+  have back (k : Nat) (lo : 1 ≤ k) (hi : k ≤ 31) (out : k ∉ [14, 15]) {v : BitVec 64} (hv : gpr d k = some v) :
+      R' k = v := entry_value ((frameP k lo hi out).trans hv)
+  have S2 := copy_fast e R' leafE regsE
+  apply summary_bind S2 (fun _ p2 => p2.pc)
+  intro e2 p2
+  have args : GHolds e2.σ [(10, R' 8), (11, R' 20), (12, R' 19)] :=
+    holds_project p2.regs (by simp [copy_regs, lookupG])
+  have J := call_registers_summary copy_call_shape copy_call_decode e2 (copy_call_pins p2.image) p2.good
+    p2.image p2.tick p2.minstret _ args (by change KeysOK [10, 11, 12]; decide) (by simp [KeysAvoidRa, keysG]) rfl
+  apply summary_bind J (fun _ q => q.pc)
+  intro entered q
+  have goodE2 : VsaOk live e2 := p2.vsaOk goodE (by decide) (by simp [copy_regs, keysG])
+  have goodQ : VsaOk live entered := q.vsaOk_of_present goodE2 (by decide) (by simp [keysG])
+    (fun a ha => by rw [q.memory]; exact goodE2.live a ha)
+  have frameP2 (k : Nat) (lo : 1 ≤ k) (hi : k ≤ 31) (out : k ∉ [9, 10, 11, 12]) : gpr e2 k = gpr e k :=
+    p2.toEffectPost.gpr_frame (by decide) k lo hi out
+  have frameQ (k : Nat) (lo : 1 ≤ k) (hi : k ≤ 31) (out : k ∉ [1]) : gpr entered k = gpr e2 k :=
+    q.toEffectPost.gpr_frame (by decide) k lo hi out
+  have memE : entered.σ.mem = d.σ.mem := by
+    have pm : e.σ.mem = d.σ.mem := p.memory
+    have pm2 : e2.σ.mem = e.σ.mem := p2.memory
+    rw [q.memory, pm2, pm]
+  have geometry : VsaIris.Sym.MoveGeom 0 buf n buf f n :=
+    ⟨hb.bufLow, ⟨Nat.le_refl _, Nat.le_refl _⟩, by have := hb.bufHigh; have := hb.fits; omega,
+      by have := hb.fmtLow; omega, hb.fmtHigh, Or.inr (by have := hb.fmtLow; omega),
+      by have := hb.fits; rcases hb.apart with h | h <;> omega⟩
+  have sourceOut : ∀ a, f ≤ a → a < f + n → ¬ VsaIris.Stdio.stdioFoot a := fun a lo _ foot => by
+    have := stdioFoot_high foot; have := hb.fmtLow; omega
+  have gpQ := globalPointer_of_gpr (live := live)
+    ((frameQ 3 (by decide) (by decide) (by decide)).trans ((frameP2 3 (by decide) (by decide) (by decide)).trans
+      (frameP 3 (by decide) (by decide) (by decide)))) dm.globalPointer
+  have readOnly : ROHolds (vsaModel live) entered roR (snpText ++ dataOf entered.σ.mem (List.range' f n)) := by
+    refine ⟨gpQ.1, ?_⟩
+    intro r hr
+    rcases List.mem_append.1 hr with snp | data
+    · change (entered.σ.mem[r.1]?).getD 0 = r.2
+      rw [snp_text_loaded q.image r snp]; rfl
+    · obtain ⟨a, _, rfl⟩ := List.mem_map.1 data
+      rfl
+  have h8 : R' 8 = BitVec.ofNat 64 buf := back 8 (by decide) (by decide) (by decide) dm.buffer
+  have h20 : R' 20 = BitVec.ofNat 64 f := back 20 (by decide) (by decide) (by decide) dm.fmt
+  have h19 : R' 19 = BitVec.ofNat 64 n := back 19 (by decide) (by decide) (by decide) dm.length
+  have h10 : R' 10 = 1#64 := back 10 (by decide) (by decide) (by decide) dm.suffixLength
+  have M := memmove_call (live := live) entered codeLive geometry sourceOut goodQ q.image liveImage readOnly
+    (by rw [← h8]; exact gholds_lookup (n := 10) _ q.regs rfl)
+    (by rw [← h20]; exact gholds_lookup (n := 11) _ q.regs rfl)
+    (by rw [← h19]; exact gholds_lookup (n := 12) _ q.regs rfl)
+    (gholds_lookup (n := 1) _ q.regs rfl) (by decide)
+  apply M.weaken (fun _ eq => eq)
+  intro after r
+  have toD (k : Nat) (lo : 1 ≤ k) (hi : k ≤ 31) (out : k ∉ copyWritten) : gpr after k = gpr d k := by
+    simp only [copyWritten, List.mem_cons, List.not_mem_nil, or_false, not_or] at out
+    rw [r.registers k lo hi (by simp [memmoveScratch]; omega) (by simp; omega),
+      frameQ k lo hi (by simp; omega), frameP2 k lo hi (by simp; omega), frameP k lo hi (by simp; omega)]
+  have byteE (x : Nat) : byte entered x = byte d x := by simp only [byte, memE]
+  refine ⟨r.toLeafInput, r.libraryGood, globalPointer_of_gpr (toD 3 (by decide) (by decide) (by decide))
+    dm.globalPointer, r.pc, fun i hi => (r.copied i hi).trans (byteE _),
+    fun a ha => (r.kept a ha).trans (byteE _), ?_, ?_, ?_, ?_, ?_, ?_, ?_, toD⟩
+  · exact r.output.trans (by simp only [Vsa.Machine.output, q.output, p2.output, p.output])
+  · rw [toD 8 (by decide) (by decide) (by decide), dm.buffer]
+  · rw [r.registers 9 (by decide) (by decide) (by decide) (by decide), frameQ 9 (by decide) (by decide) (by decide),
+      show gpr e2 9 = some (R' 10) from gholds_lookup (n := 9) _ p2.regs rfl, h10]
+  · rw [toD 19 (by decide) (by decide) (by decide), dm.length]
+  · rw [toD 2 (by decide) (by decide) (by decide), dm.stack]
+  · rw [toD 18 (by decide) (by decide) (by decide), dm.suffix]
+  · rw [toD 20 (by decide) (by decide) (by decide), dm.fmt]
+
 end OCaml.Vm.Primitives.Format.ParseFormat
