@@ -338,6 +338,7 @@ structure FsTail (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   high : ∀ n, 26 ≤ n → n ≤ 27 → gprGet after.σ n = gprGet before.σ n
+  above : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 /-- `new_node(0, "prog", 4, 0)` takes slot 1; `fs_init` records the file's
 extent there, finds the table's end and returns. -/
@@ -499,7 +500,15 @@ theorem fs_init_tail (e : Config) (H : List (Nat × Nat)) (capacity charge : Nat
     high := fun n lo hi =>
       (p3.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
       ((p2.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
-      (N.upper n (by omega) (by omega))) }⟩⟩
+      (N.upper n (by omega) (by omega)))
+    above := fun x high => by
+      have lower := frame.lower
+      rw [memH, fileOut x (by unfold heapEnd at lower; file_out)]
+      apply N.kept
+      refine ⟨Or.inr (by rw [spNat]; unfold nativeFrameBase; omega), fun foot => ?_,
+        Or.inr (by unfold slotOne Layout.sym_files heapEnd at *; omega), fun inside => ?_⟩
+      · have := allocator_foot_below foot; omega
+      · unfold InExt at inside; unfold heapEnd at *; omega }⟩⟩
 
 theorem fsPrefixLog_inside {sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64} (frame : NativeFrame sp 96) :
     LogInW (fsWindows sp) (fsPrefixLog sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9) :=
@@ -559,6 +568,7 @@ structure FsInitDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   high : ∀ n, 26 ≤ n → n ≤ 27 → gprGet after.σ n = gprGet before.σ n
+  above : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 /-- **`fs_init()` over the embedded table "/prog"**: slot 1 becomes the file
 `prog` under the root, the descriptors and `fs_ready` are set, and the
@@ -658,7 +668,12 @@ theorem fs_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
           heapEnd, heapStart] at *
         omega)]
     high := fun n lo hi => (T.high n lo hi).trans ((S.high n lo hi).trans
-      (p1.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp [fsPrefixWrites]; omega))) }⟩⟩
+      (p1.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp [fsPrefixWrites]; omega)))
+    above := fun x high => by
+      rw [T.above x high, S.kept x (Or.inr (by rw [spNat]; unfold nativeFrameBase; omega)), keepD x (by
+        simp only [OutW, fsWindows, and_true, nativeFrameBase, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready,
+          heapEnd] at *
+        omega)] }⟩⟩
   have lowJ : Layout.sym_files + 56 * j < heapStart := by unfold heapStart Layout.sym_files; omega
   unfold slotUsed
   rw [T.low _ lowJ (by unfold allocGlobal InRange Layout.sym_files; omega)
