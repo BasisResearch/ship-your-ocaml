@@ -49,6 +49,12 @@ private theorem embedPath0_byte_4 : initialMem[embedPath0 + 4]? = some 103#8 :=
 private theorem embedPath0_byte_5 : initialMem[embedPath0 + 5]? = some 0#8 :=
   (loaderMem_get pieces imageByte (embedPath0 + 5)).trans (by decide +kernel)
 
+theorem embedPath0_word_86802538 : bytesT initialMem 0x86802538 8 = 0x72702f0031333058#64 :=
+  (loaderMem_bytes pieces imageByte 0x86802538 8).trans (by decide +kernel)
+
+theorem embedPath0_word_86802540 : bytesT initialMem 0x86802540 8 = 0x676f#64 :=
+  (loaderMem_bytes pieces imageByte 0x86802540 8).trans (by decide +kernel)
+
 theorem embedPath0_string : CStr initialMem embedPath0 embedPath0Chars := by
   apply CStr.cons (b := 47#8) embedPath0_byte_0 (by decide) (by decide)
   apply CStr.cons (b := 112#8) embedPath0_byte_1 (by decide) (by decide)

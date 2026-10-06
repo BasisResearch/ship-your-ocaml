@@ -49,6 +49,12 @@ private theorem argv0_byte_7 : initialMem[argv0 + 7]? = some 110#8 :=
 private theorem argv0_byte_8 : initialMem[argv0 + 8]? = some 0#8 :=
   (loaderMem_get pieces imageByte (argv0 + 8)).trans (by decide +kernel)
 
+theorem argv0_word_86800070 : bytesT initialMem 0x86800070 8 = 0x6e75726c6d61636f#64 :=
+  (loaderMem_bytes pieces imageByte 0x86800070 8).trans (by decide +kernel)
+
+theorem argv0_word_86800078 : bytesT initialMem 0x86800078 8 = 0x4f00676f72702f00#64 :=
+  (loaderMem_bytes pieces imageByte 0x86800078 8).trans (by decide +kernel)
+
 theorem argv0_string : CStr initialMem argv0 argv0Chars := by
   apply CStr.cons (b := 111#8) argv0_byte_0 (by decide) (by decide)
   apply CStr.cons (b := 99#8) argv0_byte_1 (by decide) (by decide)
@@ -83,6 +89,9 @@ private theorem argv1_byte_4 : initialMem[argv1 + 4]? = some 103#8 :=
 
 private theorem argv1_byte_5 : initialMem[argv1 + 5]? = some 0#8 :=
   (loaderMem_get pieces imageByte (argv1 + 5)).trans (by decide +kernel)
+
+theorem argv1_word_86800078 : bytesT initialMem 0x86800078 8 = 0x4f00676f72702f00#64 :=
+  (loaderMem_bytes pieces imageByte 0x86800078 8).trans (by decide +kernel)
 
 theorem argv1_string : CStr initialMem argv1 argv1Chars := by
   apply CStr.cons (b := 47#8) argv1_byte_0 (by decide) (by decide)

@@ -71,6 +71,12 @@ layout = (ROOT / 'OCaml/Vm/Layout.lean').read_text()
 header = int(re.search(r'def sym_embedded_env : Nat := (0x[0-9a-fA-F]+|[0-9]+)', layout).group(1), 0)
 def image_read(a, n):
     return next(body[a-base:a-base+n] for base, body in pieces if base <= a and a+n <= base+len(body))
+def image_total(a, n):
+    """Total reads: bytes outside every piece are zero, as `bytesT` reads them."""
+    out = bytearray()
+    for i in range(n):
+        out += next((body[a+i-base:a+i-base+1] for base, body in pieces if base <= a+i < base+len(body)), b'\0')
+    return bytes(out)
 env = int.from_bytes(image_read(header, 8), 'little')
 entry = int.from_bytes(image_read(env, 8), 'little')
 name = b'OCAMLRUNPARAM='
@@ -131,6 +137,10 @@ for k, (ptr, text) in enumerate(args_):
     for i, value in enumerate(text + b'\0'):
         acert += [f'private theorem argv{k}_byte_{i} : initialMem[argv{k} + {i}]? = some {value}#8 :=',
                   f'  (loaderMem_get pieces imageByte (argv{k} + {i})).trans (by decide +kernel)', '']
+    for w in range((ptr // 8) * 8, ptr + len(text) + 1, 8):
+        value = int.from_bytes(image_total(w, 8), 'little')
+        acert += [f'theorem argv{k}_word_{w:x} : bytesT initialMem {w:#x} 8 = {value:#x}#64 :=',
+                  f'  (loaderMem_bytes pieces imageByte {w:#x} 8).trans (by decide +kernel)', '']
     acert += [f'theorem argv{k}_string : CStr initialMem argv{k} argv{k}Chars := by']
     for i, value in enumerate(text):
         acert += [f'  apply CStr.cons (b := {value}#8) argv{k}_byte_{i} (by decide) (by decide)']
@@ -175,6 +185,10 @@ for k, (ptr, text, start, end) in enumerate(files):
     for i, value in enumerate(text + b'\0'):
         ecert += [f'private theorem embedPath{k}_byte_{i} : initialMem[embedPath{k} + {i}]? = some {value}#8 :=',
                   f'  (loaderMem_get pieces imageByte (embedPath{k} + {i})).trans (by decide +kernel)', '']
+    for w in range((ptr // 8) * 8, ptr + len(text) + 1, 8):
+        value = int.from_bytes(image_total(w, 8), 'little')
+        ecert += [f'theorem embedPath{k}_word_{w:x} : bytesT initialMem {w:#x} 8 = {value:#x}#64 :=',
+                  f'  (loaderMem_bytes pieces imageByte {w:#x} 8).trans (by decide +kernel)', '']
     ecert += [f'theorem embedPath{k}_string : CStr initialMem embedPath{k} embedPath{k}Chars := by']
     for i, value in enumerate(text):
         ecert += [f'  apply CStr.cons (b := {value}#8) embedPath{k}_byte_{i} (by decide) (by decide)']
