@@ -298,6 +298,12 @@ import OCaml.Vm.Primitives.Console.World
 import OCaml.Vm.Sim.PrimStringLength
 import OCaml.Vm.Primitives.PairLayout
 import OCaml.Vm.Primitives.AccessPlanObservation
+import OCaml.Vm.Boot.Startup.ChildCheck
+import OCaml.Vm.Boot.Startup.ChildScan
+import OCaml.Vm.Boot.Startup.MallocReady
+import OCaml.Vm.Boot.Startup.MemcpyFresh
+import OCaml.Vm.Boot.Startup.NewNodeSteps
+import OCaml.Vm.Boot.Startup.NewNode
 import OCaml.Vm.Boot.Startup.HeapReady
 import OCaml.Vm.Boot.Startup.HeapFrame
 import OCaml.Vm.Boot.Startup.Strdup
@@ -2336,6 +2342,27 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.HeapReady.block_bounds
 #print axioms OCaml.Vm.Boot.Startup.HeapReady.frame
 #print axioms OCaml.Vm.Boot.Startup.HeapReady.frame_live
+#print axioms OCaml.Vm.Boot.Startup.child_check
+#print axioms OCaml.Vm.Boot.Startup.child_next
+#print axioms OCaml.Vm.Boot.Startup.child_prologue
+#print axioms OCaml.Vm.Boot.Startup.child_scan_step
+#print axioms OCaml.Vm.Boot.Startup.child_scan_loop
+#print axioms OCaml.Vm.Boot.Startup.child_miss_exit
+#print axioms OCaml.Vm.Boot.Startup.child_return
+#print axioms OCaml.Vm.Boot.Startup.child_miss
+#print axioms OCaml.Vm.Boot.Startup.SlotSame.miss
+#print axioms OCaml.Vm.Boot.Startup.malloc_ready
+#print axioms OCaml.Vm.Boot.Startup.MallocReturned.saved_gpr
+#print axioms OCaml.Vm.Boot.Startup.MallocReturned.caller_byte
+#print axioms OCaml.Vm.Boot.Startup.memcpy_fresh
+#print axioms OCaml.Vm.Boot.Startup.new_node_save
+#print axioms OCaml.Vm.Boot.Startup.new_node_free
+#print axioms OCaml.Vm.Boot.Startup.new_node_alloc_call
+#print axioms OCaml.Vm.Boot.Startup.new_node_copy_call
+#print axioms OCaml.Vm.Boot.Startup.new_node_init
+#print axioms OCaml.Vm.Boot.Startup.new_node_return
+#print axioms OCaml.Vm.Boot.Startup.allocator_pin_below_files
+#print axioms OCaml.Vm.Boot.Startup.new_node_slot1
 #print axioms OCaml.Vm.Boot.Startup.strdup_full
 #print axioms OCaml.Vm.Boot.Startup.ext_table_free_empty
 #print axioms OCaml.Vm.Boot.Startup.decompose_null

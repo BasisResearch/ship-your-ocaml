@@ -1,6 +1,28 @@
 # Lane a0-boot
 
-## Round 2 status (2026-10-06)
+## Round 2 status (2026-10-06, htif fs)
+
+The reset run reaches `open("ocamlrun")` (`reset_open_call_exists`).
+The htif fs behind `open` is in progress. For "ocamlrun" the path is:
+`open` → `_open_r` → `_open` → `resolve` (runs `fs_init` once:
+`new_node(0, "prog", 4, 0)` for the one embedded file) → `child(0,
+"ocamlrun", 8)` misses → R_NONE → `errno = ENOENT`, -1. Landed pieces:
+* `child_miss` (ChildScan.lean): the whole `child` over a `files` table
+  where every slot misses (`SlotMiss`: unused, unlinked, other parent,
+  other length), via `indexed_loop`.
+* `new_node_slot1` (NewNode.lean): the whole `new_node` when slot 1 is
+  free: malloc(k+1), the name copy, slot 1's fields, the kept bytes.
+* `malloc_ready` (MallocReady.lean) and `memcpy_fresh` (MemcpyFresh.lean)
+  are reusable for any ready native caller; `stat_alloc_ready` uses
+  `malloc_ready`.
+* `gen_startup_rows.py` pads normalized segment names to 4 hex digits
+  (needed for `child`/`new_node` at 0x800000xx).
+
+Next: `fs_init.part.0` (embedded-file table read from the image, `strchr`,
+`strlen`, `child_miss`, `new_node_slot1`, data/size/ro stores), then
+`resolve("ocamlrun")`, `_open`'s ENOENT path, `_open_r`, `open`.
+
+## Round 2 status (2026-10-06, search)
 
 **`SearchExeReset.lean:reset_search_exe_returned_exists` extends the CLOSED
 reset run through caml_search_exe_in_path("ocamlrun") returning to
