@@ -13,9 +13,9 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 /-- **What `whileMin`'s machine run still needs** from the arm lanes. -/
 structure WhileMinOpen : Prop where
   setglobal_barrier : GlobalBarrier Gc.f1Layout OCaml.Programs.whileMin
-  c_call1_prims : ∀ name ∈ OCaml.Programs.whileMinCalls, PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0 name
-  c_call2_prims : ∀ name ∈ OCaml.Programs.whileMinCalls, PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL2 (0x80003004#64) 1 name
-  c_call4_prims : ∀ name ∈ OCaml.Programs.whileMinCalls, PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL4 (0x80002f40#64) 3 name
+  c_call1_prims : ∀ name ∈ OCaml.Programs.whileMinCalls .C_CALL1, PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0 name
+  c_call2_prims : ∀ name ∈ OCaml.Programs.whileMinCalls .C_CALL2, PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL2 (0x80003004#64) 1 name
+  c_call4_prims : ∀ name ∈ OCaml.Programs.whileMinCalls .C_CALL4, PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL4 (0x80002f40#64) 3 name
 
 theorem whileMin_premises (o : WhileMinOpen) :
     F1PremisesFor (fun op => OCaml.Programs.whileMinOps.contains op) OCaml.Programs.whileMin where

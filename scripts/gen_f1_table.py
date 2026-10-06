@@ -129,7 +129,7 @@ def render_whilemin(fields, users):
         elif re.fullmatch(r'c_call\d_returns', fname):
             m = re.fullmatch(r'CcallReturns Gc\.f1Layout P (\.C_CALL\d) (\S+) (\d+)', ty)
             prims = fname.replace('_returns', '_prims')
-            open_[prims] = (f'∀ name ∈ OCaml.Programs.whileMinCalls, PrimReturnsAt Gc.f1Layout '
+            open_[prims] = (f'∀ name ∈ OCaml.Programs.whileMinCalls {m.group(1)}, PrimReturnsAt Gc.f1Layout '
                             f'OCaml.Programs.whileMin {m.group(1)} {m.group(2)} {m.group(3)} name')
             fill.append(f'  {fname} _ := whileMin_ccallReturns (by decide) o.{prims}')
         else:

@@ -106,13 +106,14 @@ def St.namesOk (P : Prog) (names : List String) (op : Opcode) (s : St) : Bool :=
     | none => true
   else true
 
-/-- Every `C_CALLk` site names one of `names` (`CcallReturns.of_names`). -/
-def St.callNamesOk (P : Prog) (names : List String) (s : St) : Bool :=
-  St.namesOk P names .C_CALL1 s && St.namesOk P names .C_CALL2 s && St.namesOk P names .C_CALL3 s &&
-    St.namesOk P names .C_CALL4 s && St.namesOk P names .C_CALL5 s
+/-- Every `C_CALLk` site names one of `names .C_CALLk` (`CcallReturns.of_names`). -/
+def St.callNamesOk (P : Prog) (names : Opcode → List String) (s : St) : Bool :=
+  St.namesOk P (names .C_CALL1) .C_CALL1 s && St.namesOk P (names .C_CALL2) .C_CALL2 s &&
+    St.namesOk P (names .C_CALL3) .C_CALL3 s && St.namesOk P (names .C_CALL4) .C_CALL4 s &&
+    St.namesOk P (names .C_CALL5) .C_CALL5 s
 
 /-- All F1 shape checks at one state. -/
-def St.shapeOk (P : Prog) (ops : List Opcode) (names : List String) (s : St) : Bool :=
+def St.shapeOk (P : Prog) (ops : List Opcode) (names : Opcode → List String) (s : St) : Bool :=
   s.valuesInRange P.code.size && s.extraOk && s.trapOk && s.branchIntsOk P && St.raisesOk P s &&
     St.decodedOk P ops s && s.divisorsOk P && St.operandOk P .CLOSURE 254 s &&
     St.operandOk P .MAKEBLOCK 256 s && St.ccallOk P .C_CALL1 0 s && St.ccallOk P .C_CALL2 1 s &&
@@ -122,7 +123,7 @@ def St.shapeOk (P : Prog) (ops : List Opcode) (names : List String) (s : St) : B
     St.callNamesOk P names s
 
 /-- The F1 shape checks of one state, by name. -/
-structure ShapeFacts (P : Prog) (ops : List Opcode) (names : List String) (s : St) : Prop where
+structure ShapeFacts (P : Prog) (ops : List Opcode) (names : Opcode → List String) (s : St) : Prop where
   values : s.valuesInRange P.code.size = true
   extra : s.extraOk = true
   trap : s.trapOk = true
@@ -143,7 +144,7 @@ structure ShapeFacts (P : Prog) (ops : List Opcode) (names : List String) (s : S
   fits : s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords
   callNames : St.callNamesOk P names s = true
 
-theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {names : List String} {s : St}
+theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {names : Opcode → List String} {s : St}
     (h : St.shapeOk P ops names s = true) : ShapeFacts P ops names s := by
   simp only [St.shapeOk, Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩, divisors⟩, closures⟩, blocks⟩,
@@ -152,7 +153,7 @@ theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {names : List String} {s
     noForward, fits, callNames⟩
 
 /-- The decode check, by name. -/
-theorem ShapeFacts.decode {P : Prog} {ops : List Opcode} {names : List String} {s : St}
+theorem ShapeFacts.decode {P : Prog} {ops : List Opcode} {names : Opcode → List String} {s : St}
     (h : ShapeFacts P ops names s) :
     ∃ i, decodeAt P.code s.pc = some i ∧ OCaml.InF1 P i ∧ OCaml.stopOrdinary i s.accu = true ∧ i.op ∈ ops := by
   have d := h.decoded
@@ -177,10 +178,13 @@ def whileMinOps : List Opcode :=
    .PUSHACC6, .MODINT, .NEQ, .PUSHACC5, .ACC, .RAISE, .PUSHACC, .EQ, .POP, .BGEINT, .MULINT,
    .PUSHACC7, .MAKEBLOCK, .SETGLOBAL, .STOP]
 
-/-- The primitives `while_min.byte`'s calls name (checked in `whileMin_shapeChecked`). -/
-def whileMinCalls : List String :=
-  ["caml_fresh_oo_id", "caml_ml_open_descriptor_out", "caml_ml_string_length", "caml_ml_flush",
-   "caml_format_int", "caml_ml_output_char", "caml_ml_output"]
+/-- The primitives `while_min.byte`'s calls name, per call opcode (checked in
+`whileMin_shapeChecked`). -/
+def whileMinCalls : Opcode → List String
+  | .C_CALL1 => ["caml_fresh_oo_id", "caml_ml_open_descriptor_out", "caml_ml_string_length", "caml_ml_flush"]
+  | .C_CALL2 => ["caml_format_int", "caml_ml_output_char"]
+  | .C_CALL4 => ["caml_ml_output"]
+  | _ => []
 
 set_option maxRecDepth 100000 in
 theorem whileMin_shapeChecked :
