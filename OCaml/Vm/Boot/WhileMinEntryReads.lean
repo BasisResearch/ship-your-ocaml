@@ -45,6 +45,12 @@ theorem read_stdio_exit_handler (memory : Vsa.Densify.MemEqv c.σ.mem (observedM
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_stdio_exit_handler) (w := 8) (by decide +kernel)]
   decide +kernel
 
+theorem read_caml_channel_mutex_unlock_exn (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_channel_mutex_unlock_exn) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_channel_mutex_unlock_exn) (w := 8) (by decide +kernel)]
+  decide +kernel
+
 theorem read_stack_high (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word c (WhileMinRuntime.domain + Layout.off_stack_high) = 0x8038b7b0#64 := by
   unfold word

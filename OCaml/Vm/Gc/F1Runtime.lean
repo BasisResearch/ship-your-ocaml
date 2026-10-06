@@ -51,6 +51,8 @@ structure F1Pins (c : Config) : Prop where
   trapBarrier : word c (f1Domain + Layout.off_trap_barrier) = BitVec.ofNat 64 (f1High + 8)
   /-- no backtrace recording -/
   backtraceOff : word c (f1Domain + Layout.off_backtrace_active) = 0#64
+  /-- no channel-mutex unlock hook (`caml_channel_mutex_unlock_exn`) -/
+  channelUnlock : word c Layout.sym_caml_channel_mutex_unlock_exn = 0#64
 
 /-- The F1 runtime invariant. -/
 def f1Runtime : Config → Prop := RuntimeOk F1Pins
@@ -220,7 +222,10 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
     in_block (by simp [WhileMinRuntime.freeBlock]; omega) (by simp [WhileMinRuntime.freeBlock]; omega)
   have shape := pins.freeList
   refine ⟨⟨?_, ?_, ?_, ?_, ExitGlobals.transfer (fun x hx side => keep x 8 (b hx side)) pins.exit,
-    by rw [w8 _ in_trapBarrier]; exact pins.trapBarrier, by rw [w8 _ in_backtrace]; exact pins.backtraceOff⟩, fields⟩
+    by rw [w8 _ in_trapBarrier]; exact pins.trapBarrier, by rw [w8 _ in_backtrace]; exact pins.backtraceOff,
+    by rw [w8 _ (b (by simp [Layout.sym_caml_channel_mutex_unlock_exn, Layout.sym_bss_end])
+      (by simp only [Layout.sym_caml_channel_mutex_unlock_exn, Layout.sym_caml_callback_depth]; omega))];
+       exact pins.channelUnlock⟩, fields⟩
   · exact {
       nonnull := shape.nonnull
       aligned := shape.aligned
@@ -469,6 +474,10 @@ theorem f1_callbackDepth :
     Layout.off_backtrace_active] at *
   rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only <;> omega
 
+/-- The channel-mutex unlock hook is unset (a2-sem's division-by-zero row). -/
+theorem f1_channelUnlock {c : Config} (ok : f1Runtime c) :
+    word c Layout.sym_caml_channel_mutex_unlock_exn = 0#64 := ok.freeListShape.channelUnlock
+
 /-- `RuntimeFrame.quiet`. -/
 theorem f1_quiet {c : Config} (ok : f1Runtime c) : Sim.SignalCheckReady c := by
   have h := ok.noPending
@@ -583,7 +592,7 @@ theorem f1Pins_of {c : Config} {initial : Vsa.MemRepr.Mem}
       simp at root total
       omega
   subst same
-  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact WhileMinEntry.read_stack_high memory
   · exact WhileMinEntry.read_stack_threshold memory
   · have z : ∀ (g : BitVec 64) (n : Nat), g.toNat = n → word c n = 0#64 →
@@ -595,6 +604,7 @@ theorem f1Pins_of {c : Config} {initial : Vsa.MemRepr.Mem}
       by rw [z _ _ (by simp [ExitPath.stdioExitHandler, Layout.sym_stdio_exit_handler]) (WhileMinEntry.read_stdio_exit_handler memory)]; rfl⟩
   · exact WhileMinEntry.read_trap_barrier memory
   · exact WhileMinEntry.read_backtrace_active memory
+  · exact WhileMinEntry.read_caml_channel_mutex_unlock_exn memory
 
 /-- `f1Runtime` on the certified cut memory. -/
 theorem f1Runtime_of {c : Config} {initial : Vsa.MemRepr.Mem}
