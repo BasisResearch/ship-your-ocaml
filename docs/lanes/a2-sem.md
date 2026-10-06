@@ -1,5 +1,19 @@
 # Lane a2-sem
 
+## NEEDS KIRAN
+
+**F1 domain shape (asked the foreman 2026-10-06).** Four row premises are
+per-program reachability facts, each proved for whileMin by one checked run:
+`ValuesInRange` (EQ/NEQ word equality, BRANCHIF parity), `ExtraBounded`
+(RETURN/GRAB/RAISE saved counts), `TrapBounded` (PUSHTRAP link), `BranchInts`
+(BEQ/BNEQ only on integers; `beq_pointer_guard_obstruction`). Some are false
+for arbitrary `Good` bytecode (POP past a trap frame, OFFSETCLOSURE out of its
+block, BEQ on a pointer). Either (a) carry them as one named structure in
+`OcamlrunRefinementF1`'s domain beside `Fits`/`GcSafe` (per-program checked
+run), or (b) make BcSem reject each violation and prove them generally
+(preservation over every opcode/primitive). Recommendation: (a) for F1, (b)
+after.
+
 ## F1 round (2026-10-05) — current
 
 Ownership: `docs/lanes/F1-split.md` (foreman). a2-sem owns
