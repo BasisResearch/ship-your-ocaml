@@ -13,29 +13,46 @@ theorem bytesToString_snoc (bs : List UInt8) (x : UInt8) :
   simp [bytesToString, String.ofList_append]
   rfl
 
+/-- Machine health along the console loop. -/
+structure LoopOk (d : Config) : Prop where
+  good : GoodState d.σ
+  tick : d.tick < 2
+  htifIdle : d.σ.regs.get? Register.htif_payload_writes = some (0#4)
+
+theorem PutcharPost.loopOk {c d b} (post : PutcharPost c b d) : LoopOk d :=
+  ⟨post.good, post.tick, post.idle⟩
+
+theorem _root_.OCaml.Vm.Primitives.RegistersPost.loopOk {writes mem before after pc value regs}
+    (post : RegistersPost writes mem before pc value regs after) (pre : LoopOk before) : LoopOk after := by
+  refine ⟨post.good, post.tick, ?_⟩
+  rw [post.frame _ (fun n _ => by
+    have h := gprReg_htif_payload n
+    exact fun eq => by rw [eq, beq_self_eq_true] at h; contradiction) (by decide)]
+  exact pre.htifIdle
+
 /-- Facts fixed for the whole loop, relative to its entry configuration `e`. -/
-structure LoopFrame (live : Nat → Prop) (e d : Config) : Prop where
-  ok : VsaOk live d
+structure LoopFrame (e d : Config) : Prop where
+  ok : LoopOk d
   image : ExecutableImage d
   minstret : ∃ v, d.σ.regs.get? Register.minstret = some v
   memory : d.σ.mem = e.σ.mem
   kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [11, 12, 15] → gpr d n = gpr e n
 
 /-- At the loop head having printed `k` bytes, or finished after all of them. -/
-inductive LoopState (live : Nat → Prop) (e : Config) (buf : BitVec 64) (bs : List UInt8) :
+inductive LoopState (e : Config) (buf : BitVec 64) (bs : List UInt8) :
     Config → Prop where
-  | looping {d : Config} (k : Nat) (hk : k < bs.length) (frame : LoopFrame live e d)
+  | looping {d : Config} (k : Nat) (hk : k < bs.length) (frame : LoopFrame e d)
       (pc : pcOf d = some 0x80000f6c#64) (cursor : gpr d 11 = some (buf + BitVec.ofNat 64 k))
       (out : Vsa.Machine.output d.σ = Vsa.Machine.output e.σ ++ bytesToString (bs.take k)) :
-      LoopState live e buf bs d
-  | finished {d : Config} (frame : LoopFrame live e d) (pc : pcOf d = some 0x80000f84#64)
+      LoopState e buf bs d
+  | finished {d : Config} (frame : LoopFrame e d) (pc : pcOf d = some 0x80000f84#64)
       (out : Vsa.Machine.output d.σ = Vsa.Machine.output e.σ ++ bytesToString bs) :
-      LoopState live e buf bs d
+      LoopState e buf bs d
 
 /-- The loop's entry: the end pointer, the putchar mask and the buffer bytes. -/
-structure LoopInput (live : Nat → Prop) (ra buf : BitVec 64) (bs : List UInt8) (e : Config) : Prop
+structure LoopInput (ra buf : BitVec 64) (bs : List UInt8) (e : Config) : Prop
     extends LeafInput ra e where
-  ok : VsaOk live e
+  ok : LoopOk e
   stop : gpr e 13 = some (buf + BitVec.ofNat 64 bs.length)
   mask : gpr e 14 = some (257#64 <<< 48)
   arg : ∃ v, gpr e 10 = some v
@@ -52,15 +69,6 @@ theorem putc_data (b : BitVec 8) :
   rw [BitVec.or_comm]
   congr 1
 
-theorem PutcharPost.vsaOk {live c d b} (post : PutcharPost c b d) (pre : VsaOk live c) : VsaOk live d where
-  good := post.good
-  tick := post.tick
-  gpr := fun n lo hi => by
-    have := post.gpr n
-    change gprGet d.σ n = gprGet c.σ n at this
-    rw [this]; exact pre.gpr n lo hi
-  live := fun a ha => by rw [post.memory]; exact pre.live a ha
-  htifIdle := post.idle
 
 theorem cursor_toNat {buf : BitVec 64} {k len : Nat} (ram : buf.toNat + len ≤ 0x100000000) (hk : k ≤ len) :
     (buf + BitVec.ofNat 64 k).toNat = buf.toNat + k := by
@@ -69,11 +77,11 @@ theorem cursor_toNat {buf : BitVec 64} {k len : Nat} (ram : buf.toNat + len ≤ 
 
 /-- One iteration from the loop head: a byte is loaded, printed by the HTIF
 putchar store, and the back-edge returns to the head or exits. -/
-theorem loop_iteration {live ra buf bs e d} (h : LoopInput live ra buf bs e) {k : Nat}
-    (hk : k < bs.length) (frame : LoopFrame live e d) (pc : pcOf d = some 0x80000f6c#64)
+theorem loop_iteration {ra buf bs e d} (h : LoopInput ra buf bs e) {k : Nat}
+    (hk : k < bs.length) (frame : LoopFrame e d) (pc : pcOf d = some 0x80000f6c#64)
     (cursor : gpr d 11 = some (buf + BitVec.ofNat 64 k))
     (out : Vsa.Machine.output d.σ = Vsa.Machine.output e.σ ++ bytesToString (bs.take k)) :
-    ∃ d', Steps d d' ∧ LoopState live e buf bs d' ∧ loopMeasure d' < loopMeasure d := by
+    ∃ d', Steps d d' ∧ LoopState e buf bs d' ∧ loopMeasure d' < loopMeasure d := by
   obtain ⟨v, hv⟩ := h.arg
   have ram := h.ram
   have tohost : Layout.sym_tohost = 0x80061fc0 := rfl
@@ -92,7 +100,7 @@ theorem loop_iteration {live ra buf bs e d} (h : LoopInput live ra buf bs e) {k 
          · exact Or.inl (by omega)
          · exact Or.inr (by omega)⟩
   obtain ⟨d1, run1, p1⟩ := (byte_fast d R leaf regs slot).run d ⟨pc, rfl⟩
-  have ok1 := p1.vsaOk frame.ok (by decide) (by simp [byte_regs, keysG])
+  have ok1 := p1.loopOk frame.ok
   -- the loaded byte is the buffer's k-th byte
   have xk : bs[k]? = some bs[k] := List.getElem?_eq_getElem hk
   have byte : (d.σ.mem[(R 11).toNat]?).getD 0 = BitVec.ofNat 8 (bs[k]).toNat := by
@@ -100,7 +108,7 @@ theorem loop_iteration {live ra buf bs e d} (h : LoopInput live ra buf bs e) {k 
   have data : gpr d1 15 = some (putcWord (BitVec.ofNat 8 (bs[k]).toNat)) := by
     rw [← putc_data, ← byte]; exact gholds_lookup _ p1.regs rfl
   obtain ⟨d2, step2, p2⟩ := putchar_step p1.good p1.image p1.tick p1.pc (gholds_lookup _ p1.regs rfl) data ok1.htifIdle
-  have ok2 := p2.vsaOk ok1
+  have ok2 := p2.loopOk
   have kept2 : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [11, 12, 15] → gpr d2 n = gpr e n := fun n lo hi hn => by
     rw [p2.gpr n, p1.toEffectPost.gpr_frame (by decide) n lo hi (by simpa using hn)]
     exact keep n lo hi hn
@@ -131,9 +139,9 @@ theorem loop_iteration {live ra buf bs e d} (h : LoopInput live ra buf bs e) {k 
     have := buf.isLt; omega
   have frame3 := fun {pc' : BitVec 64} {regs' : GRegs} {d3 : Config}
       (p3 : WriteRegistersPost [] [] d2 pc' (R2 10) regs' d3) =>
-    (⟨p3.vsaOk ok2 (by decide) (by simp), p3.image, p3.minstret, by rw [p3.memory]; exact mem2,
+    (⟨p3.loopOk ok2, p3.image, p3.minstret, by rw [p3.memory]; exact mem2,
       fun n lo hi hn => (p3.toEffectPost.gpr_frame (by decide) n lo hi (by simp)).trans (kept2 n lo hi hn)⟩ :
-      LoopFrame live e d3)
+      LoopFrame e d3)
   by_cases more : k + 1 < bs.length
   · have ne : R2 13 ≠ R2 11 := by
       simp only [R2, ↓reduceIte, Nat.reduceEqDiff]
@@ -170,13 +178,13 @@ theorem loop_iteration {live ra buf bs e d} (h : LoopInput live ra buf bs e) {k 
 
 /-- The whole byte loop, from its head with a non-empty buffer, to its exit
 having printed every byte. -/
-theorem console_loop {live ra buf bs e} (h : LoopInput live ra buf bs e) (nonempty : 0 < bs.length)
+theorem console_loop {ra buf bs e} (h : LoopInput ra buf bs e) (nonempty : 0 < bs.length)
     (pc : pcOf e = some 0x80000f6c#64) (cursor : gpr e 11 = some buf) :
-    ∃ d, Steps e d ∧ LoopFrame live e d ∧ pcOf d = some 0x80000f84#64 ∧
+    ∃ d, Steps e d ∧ LoopFrame e d ∧ pcOf d = some 0x80000f84#64 ∧
       Vsa.Machine.output d.σ = Vsa.Machine.output e.σ ++ bytesToString bs := by
   have body : ∀ n, Vsa.Logic.Triple
-      (fun d => LoopState live e buf bs d ∧ pcOf d = some 0x80000f6c#64 ∧ loopMeasure d = n)
-      (fun d => LoopState live e buf bs d ∧ loopMeasure d < n) := by
+      (fun d => LoopState e buf bs d ∧ pcOf d = some 0x80000f6c#64 ∧ loopMeasure d = n)
+      (fun d => LoopState e buf bs d ∧ loopMeasure d < n) := by
     intro n d pre
     obtain ⟨state, head, measure⟩ := pre
     cases state with
@@ -186,7 +194,7 @@ theorem console_loop {live ra buf bs e} (h : LoopInput live ra buf bs e) (nonemp
     | finished _ pc' _ =>
       have bad : some (0x80000f84#64 : BitVec 64) = some 0x80000f6c#64 := pc'.symm.trans head
       exact absurd bad (by decide)
-  have start : LoopState live e buf bs e := .looping 0 nonempty
+  have start : LoopState e buf bs e := .looping 0 nonempty
     ⟨h.ok, h.image, h.minstret, rfl, fun _ _ _ _ => rfl⟩ pc (by rw [cursor]; simp)
     (by simp [bytesToString])
   obtain ⟨d, run, state, stopped⟩ := loopFromBody loopMeasure body e start
