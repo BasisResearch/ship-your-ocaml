@@ -83,7 +83,7 @@ theorem channel_copied {c c' : Config} {a : Nat} {ch : Chan}
     (copied : Reloc.Copied c c' a a (chanOffBuff + ch.buffer.length)) : ChanAt c' a ch := by
   let pl : Place := ⟨fun _ => none, 0, 0⟩
   have img : (Reloc.chanEqv a ch).Img id pl 0 0 c c' := by
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, h.cursorLe, h.aligned⟩
     · exact Reloc.bytesT_congr (copied.mono chanOffFd 4 (by simp only [chanOffFd, chanOffBuff]; omega))
     · exact Reloc.bytesT_congr (copied.mono chanOffOffset 8 (by simp only [chanOffOffset, chanOffBuff]; omega))
     · exact Reloc.bytesT_congr (copied.mono chanOffCurr 8 (by simp only [chanOffCurr, chanOffBuff]; omega))

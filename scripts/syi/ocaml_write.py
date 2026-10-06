@@ -90,10 +90,11 @@ def callers(ld, rest):
 
 def flushers(ld, rest):
     """`caml_ml_flush` of an output channel: no channel mutex hooks, no pending
-    actions, one `caml_write_fd` of the whole buffer."""
+    actions, one `caml_write_fd` of the whole buffer; `closed` is the
+    `fd == -1` return straight to the epilogue."""
     return [
       ('caml_ml_flush', 'Caml_ml_flush', 'MlFlush',
-       {0x8001628c: 'F', 0x80016298: 'T', 0x800162ac: 'F', 0x800162b8: 'T'}, ('lock', 'unlock'), [
+       {0x8001628c: 'TF', 0x80016298: 'T', 0x800162ac: 'F', 0x800162b8: 'T'}, ('lock', 'unlock', 'closed'), [
         (0x80016238, 'pro', [1, 2, 8, 9, 10, 18],
          f'[(13, {ld(3, "lw")}), (14, 18446744073709551615#64), (8, {ld(2)}), (12, R 2 - 112#64 + 16#64), (9, {ld(1)}), (15, {ld(0)}), (18, 0x80064d08#64), (2, R 2 - 112#64), {rest([1, 10])}]',
          {'mem': [(f'R 2 - 112#64 + {k}#64', 'window') for k in (80, 104, 96, 88)]
@@ -106,6 +107,18 @@ def flushers(ld, rest):
                  '((R 2 - 112#64 + 8#64).toNat, 8, R 10), ((R 2 - 112#64 + 16#64).toNat, 8, bytesVal .ld (loads.getD 1 [])), '
                  '((bytesVal .ld (loads.getD 0 []) + 288#64).toNat, 8, R 2 - 112#64 + 16#64), '
                  '((R 2 - 112#64 + 40#64).toNat, 8, R 2 - 112#64 + 8#64)]', 'taken': False}),
+        (0x80016238, 'closed', [1, 2, 8, 9, 10, 18],
+         f'[(13, {ld(3, "lw")}), (14, 18446744073709551615#64), (8, {ld(2)}), (12, R 2 - 112#64 + 16#64), (9, {ld(1)}), (15, {ld(0)}), (18, 0x80064d08#64), (2, R 2 - 112#64), {rest([1, 10])}]',
+         {'mem': [(f'R 2 - 112#64 + {k}#64', 'window') for k in (80, 104, 96, 88)]
+                 + [('0x80064d08#64', 'global'), ('@0 + 288#64', 'window')]
+                 + [(f'R 2 - 112#64 + {k}#64', 'window') for k in (32, 24, 8, 16)]
+                 + [('@0 + 288#64', 'window'), ('R 2 - 112#64 + 40#64', 'window'), ('R 10 + 8#64', 'window'), ('@2', 'window')],
+          'log': '[((R 2 - 112#64 + 80#64).toNat, 8, R 18), ((R 2 - 112#64 + 104#64).toNat, 8, R 1), '
+                 '((R 2 - 112#64 + 96#64).toNat, 8, R 8), ((R 2 - 112#64 + 88#64).toNat, 8, R 9), '
+                 '((R 2 - 112#64 + 32#64).toNat, 8, 1#64), ((R 2 - 112#64 + 24#64).toNat, 8, 1#64), '
+                 '((R 2 - 112#64 + 8#64).toNat, 8, R 10), ((R 2 - 112#64 + 16#64).toNat, 8, bytesVal .ld (loads.getD 1 [])), '
+                 '((bytesVal .ld (loads.getD 0 []) + 288#64).toNat, 8, R 2 - 112#64 + 16#64), '
+                 '((R 2 - 112#64 + 40#64).toNat, 8, R 2 - 112#64 + 8#64)]', 'taken': True}),
         (0x80016290, 'lock', [1, 8, 9, 10, 18], f'[(15, {ld(0)}), {rest([1, 8, 9, 10, 18])}]',
          {'mem': [('0x80064b58#64', 'global')]}),
         (0x800162a4, 'call', [1, 8, 9, 18], f'[(10, R 8), {rest([1, 8, 9, 18])}]', {}),

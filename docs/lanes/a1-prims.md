@@ -17,15 +17,18 @@
   Parts: `enter_blocking`, `write_call` (write → `_write_r` → `write_console`),
   `leave_blocking` (`scan_loop` over the 32 pending-signal slots by `loopFromBody`);
   `indirect_registers_summary` (`IndirectCall.lean`) for the hook's `jalr`.
-* `ConsoleWrite.flush_partial` (`Console/Flush.lean`): a nonempty console channel's whole
-  buffer through one `caml_write_fd`; `offset += n`, `curr := buff`, result 1. Its memory
-  premises are `FlushMem`, transferable by `FlushMem.transfer` over `FlushReads`.
+* `ConsoleWrite.flush_partial` (`Console/Flush.lean`): a console channel's whole buffer
+  through one `caml_write_fd` (`flush_written`), or nothing for an empty buffer
+  (`flush_empty`); `offset += n`, `curr := buff`, result 1. Shared prologue `flush_head`
+  and epilogue `flush_epi`. Memory premises `FlushMem`, transferable over `FlushReads`.
 * `ConsoleWrite.ml_flush` (`Console/MlFlush.lean`): `caml_ml_flush(vchannel)` with null
   channel-mutex hooks: local root registered and restored, `flush_partial` once, `Val_unit`.
   Post `MlFlushPost`: output ++ bytes, curr/offset, s0–s11 and sp preserved, memory framed
   outside [sp-384, sp), the errno words, the two channel words and `local_roots`.
   Split by phase (`ml_flush_pro/_enter/_written/_flushed`) to stay within the elaboration
-  budget; separation facts in `MlFlushLayout.sep`.
+  budget; separation facts in `MlFlushLayout.sep`. The prologue (`ml_flush_pro_gen`,
+  input `MlFlushEntry`) and epilogue (`ml_flush_tail`) are shared with the closed channel
+  (`fd == -1`, `ml_flush_closed`: straight to the epilogue, generated `closed_fast`).
 * Generated block wrappers: `scripts/syi/ocaml_block_wrappers.py` emits `<block>_fast`
   from an access spec (windows, logs over loads, `@k` addresses, branch conditions,
   reloaded ra). Loads after the block's own stores use `BlockPins.accessPlan_of_pure`
@@ -46,8 +49,20 @@
   on a buffered console channel with null mutex hooks; room in the buffer (byte at
   `curr`, `curr + 1`) or full (one `flush_partial` of the 65536-byte buffer, then the
   byte at `buff`). Phases `oc_pro` / `oc_tail` / `oc_full_enter` / `oc_full_flushed`.
-* Repr: WorldRepr carries the object-ID counter (`WorldRepr.ooId`), ChanAt the buffer end
-  and a clear unbuffered flag; PayloadOutside/PayloadCoreOutside an `ooId` window.
+* Repr: WorldRepr carries the object-ID counter (`WorldRepr.ooId`), ChanAt the buffer end,
+  a clear unbuffered flag, and (last conjunct) `cursor ≤ ioBufferSize ∧ a % 8 = 0`
+  (`ChanAt.cursorLe`/`.aligned`); PayloadOutside/PayloadCoreOutside an `ooId` window.
+  `VmPayload.frame_chan` (`ChannelFrame.lean`): payload across a footprint that rewrites one
+  channel record, which then represents the channel's new state.
+* Console statics: `ConsoleRuntime` (`Console/Runtime.lean`): fds 1/2 consoles, default
+  blocking hooks, `_impure_ptr`, no pending signals/actions, null channel-mutex hooks; a6-gc
+  pins it for F1 (`f1_consoleRuntime`). Console streams: bprime's `GoodF1.consoles`
+  (`OCaml.ConsoleChannels`, out channels with fd ≠ -1). BcSem guards (a2-sem, pending):
+  `offsetFits` (offset + n < 2^63) and `isOut` on flushChan/putChar/putBlock.
+* Flush adapter (in progress, `Sim/PrimMlFlush.lean`): footprint `flushWindows sp a`;
+  runtime stability is the named premise `FlushStable L` (a6-gc: `f1_flush_stable`, FIXED
+  `flushStable`). Layouts from one numeric `ConsoleGeometry` (native sp ≥ heapEnd + 4096,
+  channel and domain records in the arena).
 * whileMin `PrimReturnsAt` summaries (picked up by `scripts/gen_f1_table.py`; regenerate
   WhileMinTable.lean in the same batch): `prim_caml_ml_string_length_returns` and
   `prim_caml_fresh_oo_id_returns` (`f1_counterStable` from a6-gc's `f1_ignoredStatic`) done.
@@ -55,9 +70,8 @@
   and `caml_ml_open_descriptor_out` (C_CALL1); a1-prims keeps `caml_ml_flush` (C_CALL1),
   `caml_ml_output_char` (C_CALL2) and `caml_ml_output` (C_CALL4), the flush_partial →
   caml_write_fd → _write chain.
-* Next: the C_CALL adapter for flush via a1-arms' `ccall_framed_summary` (7d3d4f09):
-  `FramedCall` footprint = native stack window + errno words + channel words + roots word;
-  then `output_bytes`/`output`/`output_char`, `Ready.lean`.
+* Next: finish the flush adapter (`ccall_framed_summary`), then output_char, then
+  `output_bytes` (a2-sem's `memmove_summary`, `Primitives/Memmove.lean`) and `output`.
 * Exit path weakened to `ExitOk` (registers read: ra, sp, a0, s0–s10) for STOP;
   `EffectPost.htifIdle` (`HtifFrame.lean`) for a1-arms' `LoopRegisters.htifIdle`.
 

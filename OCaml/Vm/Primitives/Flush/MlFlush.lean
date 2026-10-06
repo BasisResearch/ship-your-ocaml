@@ -892,6 +892,148 @@ theorem pro_fast (c : Config) (R : Nat → BitVec 64)
   · rfl
   · decide
 
+def closed_body : List MInstr := [
+  ⟨0x80016238#64, 0xf9010113#32, 0x13#8, 0x01#8, 0x01#8, 0xf9#8, .addi, 2, 2, 0, 0xf90#12⟩,
+  ⟨0x8001623c#64, 0x05213823#32, 0x23#8, 0x38#8, 0x21#8, 0x05#8, .sd, 0, 2, 18, 0x050#12⟩,
+  ⟨0x80016240#64, 0x06113423#32, 0x23#8, 0x34#8, 0x11#8, 0x06#8, .sd, 0, 2, 1, 0x068#12⟩,
+  ⟨0x80016244#64, 0x06813023#32, 0x23#8, 0x30#8, 0x81#8, 0x06#8, .sd, 0, 2, 8, 0x060#12⟩,
+  ⟨0x80016248#64, 0x04913c23#32, 0x23#8, 0x3c#8, 0x91#8, 0x04#8, .sd, 0, 2, 9, 0x058#12⟩,
+  ⟨0x8001624c#64, 0x0004f917#32, 0x17#8, 0xf9#8, 0x04#8, 0x00#8, .auipc, 18, 0, 0, 0x000#12⟩,
+  ⟨0x80016250#64, 0xabc90913#32, 0x13#8, 0x09#8, 0xc9#8, 0xab#8, .addi, 18, 18, 0, 0xabc#12⟩,
+  ⟨0x80016254#64, 0x00093783#32, 0x83#8, 0x37#8, 0x09#8, 0x00#8, .ld, 15, 18, 0, 0x000#12⟩,
+  ⟨0x80016258#64, 0x00100713#32, 0x13#8, 0x07#8, 0x10#8, 0x00#8, .addi, 14, 0, 0, 0x001#12⟩,
+  ⟨0x8001625c#64, 0x00810693#32, 0x93#8, 0x06#8, 0x81#8, 0x00#8, .addi, 13, 2, 0, 0x008#12⟩,
+  ⟨0x80016260#64, 0x1207b483#32, 0x83#8, 0xb4#8, 0x07#8, 0x12#8, .ld, 9, 15, 0, 0x120#12⟩,
+  ⟨0x80016264#64, 0x01010613#32, 0x13#8, 0x06#8, 0x01#8, 0x01#8, .addi, 12, 2, 0, 0x010#12⟩,
+  ⟨0x80016268#64, 0x02e13023#32, 0x23#8, 0x30#8, 0xe1#8, 0x02#8, .sd, 0, 2, 14, 0x020#12⟩,
+  ⟨0x8001626c#64, 0x00e13c23#32, 0x23#8, 0x3c#8, 0xe1#8, 0x00#8, .sd, 0, 2, 14, 0x018#12⟩,
+  ⟨0x80016270#64, 0x00a13423#32, 0x23#8, 0x34#8, 0xa1#8, 0x00#8, .sd, 0, 2, 10, 0x008#12⟩,
+  ⟨0x80016274#64, 0x00913823#32, 0x23#8, 0x38#8, 0x91#8, 0x00#8, .sd, 0, 2, 9, 0x010#12⟩,
+  ⟨0x80016278#64, 0x12c7b023#32, 0x23#8, 0xb0#8, 0xc7#8, 0x12#8, .sd, 0, 15, 12, 0x120#12⟩,
+  ⟨0x8001627c#64, 0x02d13423#32, 0x23#8, 0x34#8, 0xd1#8, 0x02#8, .sd, 0, 2, 13, 0x028#12⟩,
+  ⟨0x80016280#64, 0x00853403#32, 0x03#8, 0x34#8, 0x85#8, 0x00#8, .ld, 8, 10, 0, 0x008#12⟩,
+  ⟨0x80016284#64, 0xfff00713#32, 0x13#8, 0x07#8, 0xf0#8, 0xff#8, .addi, 14, 0, 0, 0xfff#12⟩,
+  ⟨0x80016288#64, 0x00042683#32, 0x83#8, 0x26#8, 0x04#8, 0x00#8, .lw, 13, 8, 0, 0x000#12⟩
+]
+def closed_term : TInstr := ⟨0x8001628c#64, 0x02e68e63#32, 0x63#8, 0x8e#8, 0xe6#8, 0x02#8, .br bop.BEQ true, 13, 14, 0x003c#13, 0#21, 0#12⟩
+def closed_blocks : List BBlock := [{ body := closed_body, term := some closed_term }]
+def closed_input (R : Nat → BitVec 64) : GRegs := [(1, R 1), (2, R 2), (8, R 8), (9, R 9), (10, R 10), (18, R 18)]
+
+theorem closed_code {c : Config} (image : ExecutableImage c) : CodeFacts c.σ.mem closed_body := by
+  have hc := loaded image
+  simp only [CodeFacts, closed_body]
+  chain_facts hc with "Vsa.Sim.Code.caml_ml_flush_at_"
+
+theorem closed_shape : ChainOK 0x80016238#64 [1, 2, 8, 9, 10, 18] closed_blocks := by
+  simp only [ChainOK, BBlockOK, closed_blocks, closed_body, closed_term, BlockOKM]
+  repeat' apply And.intro
+  all_goals decide
+
+theorem closed_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)
+    (loads : List (List (BitVec 8))) (h : LeafInput ra c)
+    (regs : GHolds c.σ (closed_input R))
+    (access : AccessPlan c.σ.mem (closed_input R) loads closed_body)
+    (control : TermFactsO (runGM closed_body (closed_input R) loads) (some closed_term)) :
+    FnSummary 0x80016238#64 (fun d => d = c)
+      (BlockPost closed_blocks 0x80016238#64 (closed_input R) loads c) := by
+  apply block_summary closed_blocks _ _ _ c
+  refine ⟨h.good, h.minstret, regs, ?_, ?_, closed_shape, h.tick⟩
+  · change KeysOK [1, 2, 8, 9, 10, 18]; decide
+  · apply singleton_chain_facts (accessPlan_facts (closed_code h.image) access) ?_ control
+    have hc := loaded h.image
+    chain_facts hc with "Vsa.Sim.Code.caml_ml_flush_at_"
+
+def closed_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs :=
+  [(13, bytesVal .lw (loads.getD 3 [])), (14, 18446744073709551615#64), (8, bytesVal .ld (loads.getD 2 [])), (12, R 2 - 112#64 + 16#64), (9, bytesVal .ld (loads.getD 1 [])), (15, bytesVal .ld (loads.getD 0 [])), (18, 0x80064d08#64), (2, R 2 - 112#64), (1, R 1), (10, R 10)]
+theorem closed_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM closed_body (closed_input R) loads = closed_regs R loads := by
+  simp [closed_body, closed_input, closed_regs, runGM, stepGM, stepLdsM,
+    wvalM, srcVal, lookupG, eraseG, imm20Of, DoubleAllocation.domainGlobal, Layout.sym_Caml_state,
+    Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?, BitVec.add_assoc]
+
+def closedLog (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry :=
+  [((R 2 - 112#64 + 80#64).toNat, 8, R 18), ((R 2 - 112#64 + 104#64).toNat, 8, R 1), ((R 2 - 112#64 + 96#64).toNat, 8, R 8), ((R 2 - 112#64 + 88#64).toNat, 8, R 9), ((R 2 - 112#64 + 32#64).toNat, 8, 1#64), ((R 2 - 112#64 + 24#64).toNat, 8, 1#64), ((R 2 - 112#64 + 8#64).toNat, 8, R 10), ((R 2 - 112#64 + 16#64).toNat, 8, bytesVal .ld (loads.getD 1 [])), ((bytesVal .ld (loads.getD 0 []) + 288#64).toNat, 8, R 2 - 112#64 + 16#64), ((R 2 - 112#64 + 40#64).toNat, 8, R 2 - 112#64 + 8#64)]
+
+theorem closed_log_eq (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    (evalBlocks closed_blocks (SegEvalState.init (closed_input R) loads)).log = closedLog R loads := by
+  change [] ++ wlogM closed_body (closed_input R) loads = _
+  simp only [List.nil_append, closed_body, wlogM, closed_input, wentryM, widthOfM, eaddrM, srcVal, stepGM,
+    lookupG, eraseG, stepLdsM, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, Nat.reduceAdd, wvalM,
+    Functions.sign_extend, Sail.BitVec.signExtend]
+  simp only [show BitVec.signExtend 64 0#12 = 0#64 by decide, show BitVec.signExtend 64 1#12 = 1#64 by decide, show BitVec.signExtend 64 104#12 = 104#64 by decide, show BitVec.signExtend 64 16#12 = 16#64 by decide, show BitVec.signExtend 64 24#12 = 24#64 by decide, show BitVec.signExtend 64 2748#12 = -1348#64 by decide, show BitVec.signExtend 64 288#12 = 288#64 by decide, show BitVec.signExtend 64 32#12 = 32#64 by decide, show BitVec.signExtend 64 3984#12 = -112#64 by decide, show BitVec.signExtend 64 40#12 = 40#64 by decide, show BitVec.signExtend 64 4095#12 = -1#64 by decide, show BitVec.signExtend 64 8#12 = 8#64 by decide, show BitVec.signExtend 64 80#12 = 80#64 by decide, show BitVec.signExtend 64 88#12 = 88#64 by decide, show BitVec.signExtend 64 96#12 = 96#64 by decide, ← BitVec.sub_eq_add_neg, BitVec.add_zero]
+  simp only [closedLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,
+    List.getElem?_tail, BitVec.zero_add]
+
+def closed_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
+  [read8 m (0x80064d08#64).toNat, read8 m ((bytesVal .ld (read8 m (0x80064d08#64).toNat)) + 288#64).toNat, read8 m (R 10 + 8#64).toNat, read8 m ((bytesVal .ld (read8 m (R 10 + 8#64).toNat))).toNat]
+
+theorem closed_fast (c : Config) (R : Nat → BitVec 64)
+    (h : LeafInput (R 1) c) (regs : GHolds c.σ (closed_input R))
+    (w0 : WriteWindow (R 2 - 112#64 + 80#64) 8)
+    (w1 : WriteWindow (R 2 - 112#64 + 104#64) 8)
+    (w2 : WriteWindow (R 2 - 112#64 + 96#64) 8)
+    (w3 : WriteWindow (R 2 - 112#64 + 88#64) 8)
+    (a4 : OutLRange ((closedLog R (closed_loads c.σ.mem R)).take 4) (0x80064d08#64).toNat 8)
+    (w5 : ReadWindow ((bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat)) + 288#64) 8)
+    (a5 : OutLRange ((closedLog R (closed_loads c.σ.mem R)).take 4) ((bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat)) + 288#64).toNat 8)
+    (w6 : WriteWindow (R 2 - 112#64 + 32#64) 8)
+    (w7 : WriteWindow (R 2 - 112#64 + 24#64) 8)
+    (w8 : WriteWindow (R 2 - 112#64 + 8#64) 8)
+    (w9 : WriteWindow (R 2 - 112#64 + 16#64) 8)
+    (w10 : WriteWindow ((bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat)) + 288#64) 8)
+    (w11 : WriteWindow (R 2 - 112#64 + 40#64) 8)
+    (w12 : ReadWindow (R 10 + 8#64) 8)
+    (a12 : OutLRange ((closedLog R (closed_loads c.σ.mem R)).take 10) (R 10 + 8#64).toNat 8)
+    (w13 : ReadWindow ((bytesVal .ld (read8 c.σ.mem (R 10 + 8#64).toNat))) 4)
+    (a13 : OutLRange ((closedLog R (closed_loads c.σ.mem R)).take 10) ((bytesVal .ld (read8 c.σ.mem (R 10 + 8#64).toNat))).toNat 4)
+    (outside : ImageOutside (closedLog R (closed_loads c.σ.mem R)))
+    (ok : guardB .BEQ (bytesVal .lw ((closed_loads c.σ.mem R).getD 3 [])) (18446744073709551615#64) = true) :
+    FnSummary 0x80016238#64 (fun d => d = c)
+      (WriteRegistersPost [2, 8, 9, 12, 13, 14, 15, 18] (closedLog R (closed_loads c.σ.mem R)) c (0x800162c8#64) (R 10) (closed_regs R (closed_loads c.σ.mem R))) := by
+  have w4 : ReadWindow (0x80064d08#64) 8 := ⟨by decide, by decide, Or.inr (by decide)⟩
+  have wl : wlogM closed_body (closed_input R) (closed_loads c.σ.mem R) = closedLog R (closed_loads c.σ.mem R) := by rw [← closed_log_eq R _]; rfl
+  have access : AccessPlan c.σ.mem (closed_input R) (closed_loads c.σ.mem R) closed_body := by
+    apply accessPlan_of_pure
+    · simp only [AccessPure, closed_body, closed_loads]
+      chain_facts True.intro
+      · apply w0.sd rfl
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w1.sd rfl
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w2.sd rfl
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w3.sd rfl
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w4.ld rfl ?_ (read8_pins _ _)
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w5.ld rfl ?_ (read8_pins _ _)
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w6.sd rfl
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w7.sd rfl
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w8.sd rfl
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w9.sd rfl
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w10.sd rfl
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w11.sd rfl
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply w12.ld rfl ?_ (read8_pins _ _)
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+      · apply ExitPath.ReadWindow.lw w13 rfl ?_ (ExitPath.read8_pins4 _ _)
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input]
+    · rw [wl]; simp only [LoadMiss, closed_body, IsStore, Bool.false_eq_true, ↓reduceIte, Nat.reduceAdd]
+      exact ⟨fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input, closed_loads]) a4, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input, closed_loads]) a5, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input, closed_loads]) a12, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, closed_input, closed_loads]) a13, trivial⟩
+  have control : TermFactsO (runGM closed_body (closed_input R) (closed_loads c.σ.mem R)) (some closed_term) := by rw [closed_eval]; exact ok
+  apply registers_of_blocks h.image outside (closed_summary c (R 1) R _ h regs access control)
+  · exact closed_log_eq R _
+  · rfl
+  · exact closed_eval R _
+  · rfl
+  · decide
+
 def lock_body : List MInstr := [
   ⟨0x80016290#64, 0x0004f797#32, 0x97#8, 0xf7#8, 0x04#8, 0x00#8, .auipc, 15, 0, 0, 0x000#12⟩,
   ⟨0x80016294#64, 0x8c87b783#32, 0x83#8, 0xb7#8, 0x87#8, 0x8c#8, .ld, 15, 15, 0, 0x8c8#12⟩

@@ -81,6 +81,75 @@ structure MlFlushInput (ra sp v ch fd rp off dom lr : BitVec 64) (bs : List UInt
   lockNull : bytesVal .ld (read8 c.σ.mem channelLock.toNat) = 0#64
   unlockNull : bytesVal .ld (read8 c.σ.mem channelUnlock.toNat) = 0#64
 
+/-- A word read after the prologue misses its frame and the local-roots word. -/
+def ProMiss (sp dom a : Nat) : Prop := (a + 8 ≤ sp - 112 ∨ sp ≤ a) ∧ (a + 8 ≤ dom + 288 ∨ dom + 296 ≤ a)
+
+/-- What `caml_ml_flush`'s prologue and epilogue touch: the 112-byte frame,
+the domain's `local_roots` word, `Caml_state`, the channel custom block's
+pointer word and the channel's fd word, apart from the frame and the
+local-roots word. -/
+structure MlFlushFrame (sp v ch dom : BitVec 64) : Prop where
+  slots : ∀ k ∈ [8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104],
+    WriteWindow (sp - 112#64 + BitVec.ofNat 64 k) 8
+  floor : 0x80000000 + 384 ≤ sp.toNat
+  top : sp.toNat ≤ 0x100000000
+  text : Image.textBase + Image.textSize ≤ sp.toNat - 112 ∨ sp.toNat ≤ Image.textBase
+  rodata : Image.rodataBase + Image.rodataSize ≤ sp.toNat - 112 ∨ sp.toNat ≤ Image.rodataBase
+  roots : WriteWindow (dom + 288#64) 8
+  rootsRam : dom.toNat + 296 ≤ 0x100000000
+  rootsText : dom.toNat + 296 ≤ Image.textBase ∨ Image.textBase + Image.textSize ≤ dom.toNat + 288
+  rootsRodata : dom.toNat + 296 ≤ Image.rodataBase ∨ Image.rodataBase + Image.rodataSize ≤ dom.toNat + 288
+  rootsStack : dom.toNat + 296 ≤ sp.toNat - 112 ∨ sp.toNat ≤ dom.toNat + 288
+  stateMiss : ProMiss sp.toNat dom.toNat camlStateGlobal.toNat
+  valMiss : ProMiss sp.toNat dom.toNat (v + 8#64).toNat
+  valWindow : ReadWindow (v + 8#64) 8
+  fdWindow : ReadWindow ch 4
+  fdMiss : (ch.toNat + 4 ≤ sp.toNat - 112 ∨ sp.toNat ≤ ch.toNat) ∧
+    (ch.toNat + 4 ≤ dom.toNat + 288 ∨ dom.toNat + 296 ≤ ch.toNat)
+
+/-- `caml_ml_flush`'s entry, open or closed channel. -/
+structure MlFlushEntry (ra sp v ch dom lr : BitVec 64) (c : Config) : Prop extends LeafInput ra c where
+  idle : c.σ.regs.get? Register.htif_payload_writes = some (0#4)
+  saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], (gprGet c.σ n).isSome
+  stack : gpr c 2 = some sp
+  valReg : gpr c 10 = some v
+  frame : MlFlushFrame sp v ch dom
+  domWord : bytesVal .ld (read8 c.σ.mem camlStateGlobal.toNat) = dom
+  rootsWord : bytesVal .ld (read8 c.σ.mem (dom + 288#64).toNat) = lr
+  chanPtr : bytesVal .ld (read8 c.σ.mem (v + 8#64).toNat) = ch
+
+theorem WordApart.proMiss {sp ch rp dom : BitVec 64} {a : Nat} (h : WordApart sp ch rp dom a)
+    (floor : 384 ≤ sp.toNat) : ProMiss sp.toNat dom.toNat a :=
+  ⟨by have := h.stack; omega, h.roots⟩
+
+/-- The open-channel input gives the entry. -/
+theorem MlFlushInput.entry {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch fd rp off dom lr bs c) :
+    MlFlushEntry ra sp v ch dom lr c := by
+  have L := h.layout
+  have floor := L.floor
+  have rootsRam := L.rootsRam
+  have chRam := h.flush.layout.chanRam
+  have r288 : (dom + 288#64).toNat = dom.toNat + 288 := by
+    rw [BitVec.toNat_add]; simp only [BitVec.toNat_ofNat]; omega
+  have a := L.reads ch.toNat (Or.inl ⟨Nat.le_refl _, by omega⟩)
+  have b := L.reads (ch.toNat + 3) (Or.inl ⟨by omega, by omega⟩)
+  rw [r288] at a b
+  have ra' := L.rootsApart.1
+  exact { h with
+    frame := { L with
+      rootsStack := by omega
+      stateMiss := (L.apart _ (by simp)).proMiss (by omega)
+      valMiss := (L.apart _ (by simp)).proMiss (by omega)
+      fdWindow := h.flush.layout.fdWindow
+      fdMiss := ⟨by omega, by omega⟩ } }
+
+theorem MlFlushInput.fdOpen {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch fd rp off dom lr bs c) :
+    guardB .BEQ (bytesVal .lw (read8 c.σ.mem ch.toNat)) 18446744073709551615#64 = false := by
+  rw [h.flush.fdWord]
+  have := h.flush.descriptor.range
+  simp only [guardB, beq_eq_false_iff_ne, ne_eq]
+  intro e; rw [e] at this; simp at this
+
 /-- Return from `caml_ml_flush`: `Val_unit`, the buffer on the console, the
 channel's `curr` reset and `offset` advanced, `local_roots` restored; only
 the native stack, the errno words, the two channel words and the
@@ -106,20 +175,22 @@ structure MlFlushPost (ra sp ch rp off dom lr : BitVec 64) (bs : List UInt8) (c 
     (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
 
 /-- `caml_ml_flush` after its prologue: the frame saved, the local root
-registered, the channel and its fd loaded. -/
-structure MlFlushPro (ra sp v ch dom lr : BitVec 64) (c d : Config) : Prop where
+registered, the channel and its fd loaded; `t` is the lock block (open
+channel) or the epilogue (`fd == -1`). -/
+structure MlFlushPro (ra sp v ch dom lr t : BitVec 64) (c d : Config) : Prop where
   good : GoodState d.σ
   image : ExecutableImage d
   minstret : ∃ w, d.σ.regs.get? Register.minstret = some w
   tick : d.tick < 2
   idle : d.σ.regs.get? Register.htif_payload_writes = some (0#4)
-  pc : pcOf d = some 0x80016290#64
+  pc : pcOf d = some t
   raReg : gpr d 1 = some ra
   stack : gpr d 2 = some (sp - 112#64)
   chReg : gpr d 8 = some ch
   lrReg : gpr d 9 = some lr
   valReg : gpr d 10 = some v
   globalReg : gpr d 18 = some 0x80064d08#64
+  domReg : gpr d 15 = some dom
   kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [2, 8, 9, 12, 13, 14, 15, 18] → gpr d n = gpr c n
   output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ
   outside : ∀ x, (x < sp.toNat - 112 ∨ sp.toNat ≤ x) → (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) →
@@ -129,11 +200,11 @@ structure MlFlushPro (ra sp v ch dom lr : BitVec 64) (c d : Config) : Prop where
   savedS1 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 88).toNat) = (gpr c 9).getD 0
   savedS2 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 80).toNat) = (gpr c 18).getD 0
 
-theorem ml_flush_pro {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch fd rp off dom lr bs c)
-    (entry : pcOf c = some 0x80016238#64) :
-    ∃ d, Steps c d ∧ MlFlushPro ra sp v ch dom lr c d := by
-  have L := h.layout
-  have F := h.flush
+theorem ml_flush_pro_gen {ra sp v ch dom lr c} (h : MlFlushEntry ra sp v ch dom lr c)
+    (entry : pcOf c = some 0x80016238#64) (closed : Bool)
+    (fd : guardB .BEQ (bytesVal .lw (read8 c.σ.mem ch.toNat)) 18446744073709551615#64 = closed) :
+    ∃ d, Steps c d ∧ MlFlushPro ra sp v ch dom lr (if closed then 0x800162c8#64 else 0x80016290#64) c d := by
+  have L := h.frame
   have present : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gpr c n = some ((gpr c n).getD 0) := by
     intro n hn
     have := h.saved n hn
@@ -150,7 +221,6 @@ theorem ml_flush_pro {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp 
   have rootsRam := L.rootsRam
   have r288 : (dom + 288#64).toNat = dom.toNat + 288 := by
     rw [BitVec.toNat_add]; simp only [BitVec.toNat_ofNat]; omega
-  have ap := L.apart
   have dw : bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat) = dom := h.domWord
   -- prologue: the frame, the local root, the channel and its fd
   let R0 : Nat → BitVec 64 := fun n => if n = 1 then ra else if n = 2 then sp else if n = 10 then v else
@@ -177,46 +247,33 @@ theorem ml_flush_pro {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp 
       rcases he with rfl | rfl | rfl | rfl <;>
         (simp only [R0, ↓reduceIte, Nat.reduceEqDiff]; rw [off112 _ (by decide)]; omega)
   have slot := fun k (hk : k ∈ [8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104]) => L.slots k hk
-  have g := fun a (ha : a ∈ [camlStateGlobal.toNat, channelLock.toNat, channelUnlock.toNat, (v + 8#64).toNat]) => ap a ha
-  have rootsAp := L.rootsApart
-  have stateAp := g camlStateGlobal.toNat (by simp)
-  have valAp := g (v + 8#64).toNat (by simp)
-  have FL := F.layout
-  have chRam := FL.chanRam
-  have rd := L.reads
-  have chanReads := rd ch.toNat (Or.inl ⟨Nat.le_refl _, by omega⟩)
-  have chanReads4 := rd (ch.toNat + 4) (Or.inl ⟨by omega, by omega⟩)
-  have ok0 : guardB .BEQ (bytesVal .lw ((Flush.MlFlush.pro_loads c.σ.mem R0).getD 3 [])) 18446744073709551615#64 = false := by
-    show guardB .BEQ (bytesVal .lw (read8 c.σ.mem (bytesVal .ld (read8 c.σ.mem (v + 8#64).toNat)).toNat))
-      18446744073709551615#64 = false
-    rw [h.chanPtr, F.fdWord]
-    have := F.descriptor.range
-    simp only [guardB, beq_eq_false_iff_ne, ne_eq]
-    intro e; rw [e] at this; simp at this
-  have fdApart : OutLRange ((Flush.MlFlush.proLog R0 (Flush.MlFlush.pro_loads c.σ.mem R0)).take 10) ch.toNat 4 := by
-    have a1 := chanReads.1; have a2 := chanReads4.1; have b1 := chanReads.2; have b2 := chanReads4.2
-    rw [r288] at b1 b2
-    exact range0 _ _ _ (by omega) (by omega)
-  have st := stateAp.stack; have st2 := stateAp.roots
-  have ro := rootsAp.1
-  have va := valAp.stack; have va2 := valAp.roots
+  have st := L.stateMiss
+  have va := L.valMiss
+  have fm := L.fdMiss
+  have rs := L.rootsStack
   have cs : camlStateGlobal.toNat = 2147896584 := by decide
-  rw [cs] at st st2
-  clear cs stateAp rootsAp valAp
+  rw [cs] at st
+  clear cs
+  have ok0 : guardB .BEQ (bytesVal .lw ((Flush.MlFlush.pro_loads c.σ.mem R0).getD 3 [])) 18446744073709551615#64 = closed := by
+    show guardB .BEQ (bytesVal .lw (read8 c.σ.mem (bytesVal .ld (read8 c.σ.mem (v + 8#64).toNat)).toNat))
+      18446744073709551615#64 = closed
+    rw [h.chanPtr]; exact fd
+  have fdApart : OutLRange ((Flush.MlFlush.proLog R0 (Flush.MlFlush.pro_loads c.σ.mem R0)).take 10) ch.toNat 4 :=
+    range0 _ _ _ fm.1 fm.2
   have a4 : OutLRange ((Flush.MlFlush.proLog R0 (Flush.MlFlush.pro_loads c.σ.mem R0)).take 4) (0x80064d08#64).toNat 8 := by
     rw [show (0x80064d08#64 : BitVec 64).toNat = 2147896584 by decide]
-    exact frame4 _ _ (by omega)
+    exact frame4 _ _ st.1
   have w5 : ReadWindow (bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat) + 288#64) 8 := by
     rw [dw]; exact L.roots.read
   have a5 : OutLRange ((Flush.MlFlush.proLog R0 (Flush.MlFlush.pro_loads c.σ.mem R0)).take 4)
       (bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat) + 288#64).toNat 8 := by
-    rw [dw, r288]; exact frame4 _ _ (by omega)
+    rw [dw, r288]; exact frame4 _ _ rs
   have w10 : WriteWindow (bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat) + 288#64) 8 := by
     rw [dw]; exact L.roots
   have a12 : OutLRange ((Flush.MlFlush.proLog R0 (Flush.MlFlush.pro_loads c.σ.mem R0)).take 10) (v + 8#64).toNat 8 :=
-    range0 _ _ _ (by omega) (by omega)
+    range0 _ _ _ va.1 va.2
   have w13 : ReadWindow (bytesVal .ld (read8 c.σ.mem (v + 8#64).toNat)) 4 := by
-    rw [h.chanPtr]; exact FL.fdWindow
+    rw [h.chanPtr]; exact L.fdWindow
   have a13 : OutLRange ((Flush.MlFlush.proLog R0 (Flush.MlFlush.pro_loads c.σ.mem R0)).take 10)
       (bytesVal .ld (read8 c.σ.mem (v + 8#64).toNat)).toNat 4 := by
     rw [h.chanPtr]; exact fdApart
@@ -225,11 +282,19 @@ theorem ml_flush_pro {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp 
      outLRange_of_each fun e he => by have := L.rodata; have := L.rootsRodata; rcases proIn e he with ⟨l, u⟩ | ⟨l, u⟩ <;> omega⟩
   have regs0 : GHolds c.σ (Flush.MlFlush.pro_input R0) :=
     ⟨h.raReg, h.stack, present 8 (by simp), present 9 (by simp), h.valReg, present 18 (by simp), True.intro⟩
-  have P0 := Flush.MlFlush.pro_fast c R0 h.toLeafInput regs0
-    (slot 80 (by simp)) (slot 104 (by simp)) (slot 96 (by simp)) (slot 88 (by simp)) a4 w5 a5
-    (slot 32 (by simp)) (slot 24 (by simp)) (slot 8 (by simp)) (slot 16 (by simp)) w10 (slot 40 (by simp))
-    L.valWindow a12 w13 a13 image0 ok0
-  obtain ⟨d1, run1, p1⟩ := P0.run c ⟨entry, rfl⟩
+  obtain ⟨d1, run1, p1⟩ : ∃ d1, Steps c d1 ∧ WriteRegistersPost [2, 8, 9, 12, 13, 14, 15, 18]
+      (Flush.MlFlush.proLog R0 (Flush.MlFlush.pro_loads c.σ.mem R0)) c
+      (if closed then 0x800162c8#64 else 0x80016290#64) (R0 10)
+      (Flush.MlFlush.pro_regs R0 (Flush.MlFlush.pro_loads c.σ.mem R0)) d1 := by
+    cases closed
+    · exact (Flush.MlFlush.pro_fast c R0 h.toLeafInput regs0
+        (slot 80 (by simp)) (slot 104 (by simp)) (slot 96 (by simp)) (slot 88 (by simp)) a4 w5 a5
+        (slot 32 (by simp)) (slot 24 (by simp)) (slot 8 (by simp)) (slot 16 (by simp)) w10 (slot 40 (by simp))
+        L.valWindow a12 w13 a13 image0 ok0).run c ⟨entry, rfl⟩
+    · exact (Flush.MlFlush.closed_fast c R0 h.toLeafInput regs0
+        (slot 80 (by simp)) (slot 104 (by simp)) (slot 96 (by simp)) (slot 88 (by simp)) a4 w5 a5
+        (slot 32 (by simp)) (slot 24 (by simp)) (slot 8 (by simp)) (slot 16 (by simp)) w10 (slot 40 (by simp))
+        L.valWindow a12 w13 a13 image0 ok0).run c ⟨entry, rfl⟩
   have mem1 : d1.σ.mem = writeLog c.σ.mem (Flush.MlFlush.proLog R0 (Flush.MlFlush.pro_loads c.σ.mem R0)) := p1.memory
   have same1 : ∀ x, (x < sp.toNat - 112 ∨ sp.toNat ≤ x) → (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) →
       (d1.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := fun x a b => by rw [mem1, writeLog_out _ _ _ (outside0 x a b)]
@@ -243,6 +308,9 @@ theorem ml_flush_pro {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp 
       288#64).toNat)) := gholds_lookup _ p1.regs rfl
     rw [l, dw, h.rootsWord]
   have ra1 : gpr d1 1 = some ra := gholds_lookup _ p1.regs rfl
+  have dom1 : gpr d1 15 = some dom := by
+    have l : gpr d1 15 = some (bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat)) := gholds_lookup _ p1.regs rfl
+    rw [l, dw]
   -- the frame reads back from the prologue's log
   have back := fun (i k : Nat) (hk : k ≤ 104) (w : BitVec 64)
       (sel : (Flush.MlFlush.proLog R0 (Flush.MlFlush.pro_loads c.σ.mem R0))[i]? = some ((sp - 112#64 + BitVec.ofNat 64 k).toNat, 8, w))
@@ -280,12 +348,17 @@ theorem ml_flush_pro {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp 
      apart 88 8 (by decide) (by decide) (by decide), apart 88 16 (by decide) (by decide) (by decide),
      domLater 88 (by decide), apart 88 40 (by decide) (by decide) (by decide), trivial⟩
   refine ⟨d1, run1, p1.good, p1.image, p1.minstret, p1.tick, p1.toEffectPost.htifIdle h.idle, p1.pc, ra1,
-    gholds_lookup _ p1.regs rfl, ch1, lr1, gholds_lookup _ p1.regs rfl, gholds_lookup _ p1.regs rfl,
+    gholds_lookup _ p1.regs rfl, ch1, lr1, gholds_lookup _ p1.regs rfl, gholds_lookup _ p1.regs rfl, dom1,
     fun n lo hi hn => p1.toEffectPost.gpr_frame (by decide) n lo hi hn,
     by unfold Vsa.Machine.output; rw [p1.output], same1, raBack, ?_, ?_, ?_⟩
   · rw [s0Back]; exact rfl
   · rw [s1Back]; exact rfl
   · rw [s2Back]; exact rfl
+
+theorem ml_flush_pro {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch fd rp off dom lr bs c)
+    (entry : pcOf c = some 0x80016238#64) :
+    ∃ d, Steps c d ∧ MlFlushPro ra sp v ch dom lr 0x80016290#64 c d :=
+  ml_flush_pro_gen h.entry entry false h.fdOpen
 
 /-- The call of `caml_flush_partial` inside `caml_ml_flush`: its input, the
 saved frame words, and memory unchanged outside the frame and the
@@ -396,9 +469,6 @@ channel header. -/
 def FlushMiss (sp ch rp a : Nat) : Prop :=
   (a + 8 ≤ sp - 384 ∨ sp - 112 ≤ a) ∧ (a + 8 ≤ 2147896648 ∨ 2147896648 + 4 ≤ a) ∧
   (a + 8 ≤ rp ∨ rp + 4 ≤ a) ∧ (a + 8 ≤ ch ∨ ch + 72 ≤ a)
-
-/-- A word read after the prologue misses its frame and the local-roots word. -/
-def ProMiss (sp dom a : Nat) : Prop := (a + 8 ≤ sp - 112 ∨ sp ≤ a) ∧ (a + 8 ≤ dom + 288 ∨ dom + 296 ≤ a)
 
 /-- The separation facts `caml_ml_flush`'s reads need, from its layout. -/
 structure MlFlushSep (sp ch rp dom : Nat) : Prop where
@@ -576,11 +646,46 @@ theorem ml_flush_flushed {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra
     unfold Vsa.Machine.output at *
     rw [p7.output, p6.output, o]
 
-theorem ml_flush {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch fd rp off dom lr bs c)
-    (entry : pcOf c = some 0x80016238#64) :
-    ∃ d, Steps c d ∧ MlFlushPost ra sp ch rp off dom lr bs c d := by
-  obtain ⟨d7, run7, p7'⟩ := ml_flush_flushed h entry
-  have L := h.layout
+/-- `caml_ml_flush` at its epilogue (`0x800162c8`): `Caml_state` in `a5`, the
+saved `local_roots` in `s1`, the frame words as the prologue saved them. -/
+structure MlFlushTail (ra sp dom lr lk : BitVec 64) (c d : Config) : Prop where
+  good : GoodState d.σ
+  image : ExecutableImage d
+  minstret : ∃ w, d.σ.regs.get? Register.minstret = some w
+  tick : d.tick < 2
+  idle : d.σ.regs.get? Register.htif_payload_writes = some (0#4)
+  pc : pcOf d = some 0x800162c8#64
+  link : gpr d 1 = some lk
+  linkAligned : lk.toNat % 4 = 0
+  stack : gpr d 2 = some (sp - 112#64)
+  lrReg : gpr d 9 = some lr
+  domReg : gpr d 15 = some dom
+  rest : ∀ n ∈ [19, 20, 21, 22, 23, 24, 25, 26, 27], gpr d n = gpr c n
+  savedRa : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 104).toNat) = ra
+  savedS0 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 96).toNat) = (gpr c 8).getD 0
+  savedS1 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 88).toNat) = (gpr c 9).getD 0
+  savedS2 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 80).toNat) = (gpr c 18).getD 0
+
+/-- Return through `caml_ml_flush`'s epilogue: `Val_unit`, the saves restored,
+`local_roots` restored, nothing else written. -/
+structure MlFlushRet (ra sp dom lr : BitVec 64) (c d e : Config) : Prop where
+  good : GoodState e.σ
+  image : ExecutableImage e
+  minstret : ∃ w, e.σ.regs.get? Register.minstret = some w
+  tick : e.tick < 2
+  idle : e.σ.regs.get? Register.htif_payload_writes = some (0#4)
+  pc : pcOf e = some ra
+  raReg : gpr e 1 = some ra
+  result : gpr e 10 = some 1#64
+  stack : gpr e 2 = some sp
+  saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gpr e n = gpr c n
+  output : Vsa.Machine.output e.σ = Vsa.Machine.output d.σ
+  roots : bytesVal .ld (read8 e.σ.mem (dom + 288#64).toNat) = lr
+  frame : ∀ x, (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) → (e.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0
+
+theorem ml_flush_tail {ra sp v ch dom lr lk c d} (h : MlFlushEntry ra sp v ch dom lr c)
+    (t : MlFlushTail ra sp dom lr lk c d) : ∃ e, Steps d e ∧ MlFlushRet ra sp dom lr c d e := by
+  have L := h.frame
   have floor := L.floor
   have off112 : ∀ k, k ≤ 112 → (sp - 112#64 + BitVec.ofNat 64 k).toNat = sp.toNat - 112 + k := by
     intro k hk
@@ -588,7 +693,7 @@ theorem ml_flush {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch
   have rootsRam := L.rootsRam
   have r288 : (dom + 288#64).toNat = dom.toNat + 288 := by
     rw [BitVec.toNat_add]; simp only [BitVec.toNat_ofNat]; omega
-  have ra' := L.rootsApart
+  have rs := L.rootsStack
   have present : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gpr c n = some ((gpr c n).getD 0) := by
     intro n hn
     have := h.saved n hn
@@ -596,7 +701,64 @@ theorem ml_flush {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch
     cases e : gprGet c.σ n with
     | none => rw [e] at this; cases this
     | some v => rfl
-  -- reload Caml_state, restore local_roots and the saves
+  -- restore local_roots and the saves
+  let R8 : Nat → BitVec 64 := fun n => if n = 1 then lk else
+    if n = 2 then sp - 112#64 else if n = 9 then lr else dom
+  have tlWithin : LogWithin (Flush.MlFlush.tailLog R8 []) (dom.toNat + 288) (dom.toNat + 296) := by
+    intro e he
+    simp only [Flush.MlFlush.tailLog, List.mem_cons, List.mem_nil_iff, or_false] at he
+    subst he; simp only [R8, ↓reduceIte, Nat.reduceEqDiff]; rw [r288]; omega
+  have readFrame : ∀ k, k ≤ 104 →
+      read8 (writeLog d.σ.mem (Flush.MlFlush.tailLog R8 [])) (sp - 112#64 + BitVec.ofNat 64 k).toNat =
+        read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 k).toNat := by
+    intro k hk
+    rw [read8_outside tlWithin (by rw [off112 k (by omega)]; omega)]
+  have raBack : bytesVal .ld (read8 (writeLog d.σ.mem (Flush.MlFlush.tailLog R8 [])) (R8 2 + 104#64).toNat) = ra := by
+    show bytesVal .ld (read8 (writeLog d.σ.mem (Flush.MlFlush.tailLog R8 [])) (sp - 112#64 + BitVec.ofNat 64 104).toNat) = ra
+    rw [readFrame 104 (by decide)]; exact t.savedRa
+  obtain ⟨e, run9, p9⟩ := (Flush.MlFlush.tail_fast d ra R8
+    ⟨t.good, t.image, t.minstret, t.link, t.linkAligned, t.tick⟩ ⟨t.stack, t.lrReg, t.domReg, True.intro⟩
+    L.roots (L.slots 104 (by simp)).read (L.slots 96 (by simp)).read (L.slots 88 (by simp)).read
+    (L.slots 80 (by simp)).read
+    ⟨tlWithin.outLRange (by have := L.rootsText; omega), tlWithin.outLRange (by have := L.rootsRodata; omega)⟩
+    raBack h.aligned).run d ⟨t.pc, rfl⟩
+  have mem9 : e.σ.mem = writeLog d.σ.mem (Flush.MlFlush.tailLog R8 []) := p9.memory
+  have load := fun (n k : Nat) (hk : k ≤ 104) (w : BitVec 64)
+      (l : gpr e n = some (bytesVal .ld (read8 (writeLog d.σ.mem (Flush.MlFlush.tailLog R8 []))
+        (sp - 112#64 + BitVec.ofNat 64 k).toNat)))
+      (b : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 k).toNat) = w) =>
+    (show gpr e n = some w by rw [l, readFrame k hk, b])
+  refine ⟨e, run9, p9.good, p9.image, p9.minstret, p9.tick, p9.toEffectPost.htifIdle t.idle, p9.pc,
+    load 1 104 (by decide) ra (gholds_lookup _ p9.regs rfl) t.savedRa, gholds_lookup _ p9.regs rfl, ?_, ?_, ?_,
+    ?_, ?_⟩
+  · have l : gpr e 2 = some (R8 2 + 112#64) := gholds_lookup _ p9.regs rfl
+    rw [l]; simp only [R8, ↓reduceIte, Nat.reduceEqDiff, BitVec.sub_add_cancel]
+  · intro n hn
+    rw [present n hn]
+    have hn' := hn
+    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn'
+    rcases hn' with rfl | rfl | rfl | hn'
+    · exact load 8 96 (by decide) _ (gholds_lookup _ p9.regs rfl) t.savedS0
+    · exact load 9 88 (by decide) _ (gholds_lookup _ p9.regs rfl) t.savedS1
+    · exact load 18 80 (by decide) _ (gholds_lookup _ p9.regs rfl) t.savedS2
+    · rw [p9.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega), t.rest n (by simp; omega)]
+      exact present n hn
+  · unfold Vsa.Machine.output
+    rw [p9.output]
+  · rw [mem9, read8_value]
+    exact Gc.word_writeLog_at d.σ.mem (Flush.MlFlush.tailLog R8 []) 0 (dom + 288#64).toNat lr rfl trivial
+  · intro x hx
+    rw [mem9, writeLog_out _ _ _ (tlWithin.outL (by omega))]
+
+theorem ml_flush {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch fd rp off dom lr bs c)
+    (entry : pcOf c = some 0x80016238#64) :
+    ∃ d, Steps c d ∧ MlFlushPost ra sp ch rp off dom lr bs c d := by
+  obtain ⟨d7, run7, p7'⟩ := ml_flush_flushed h entry
+  have L := h.layout
+  have floor := L.floor
+  have rootsRam := L.rootsRam
+  have ra' := L.rootsApart
+  -- reload Caml_state
   let R7 : Nat → BitVec 64 := fun n => if n = 1 then Flush.MlFlush.call_call.link else
     if n = 2 then sp - 112#64 else if n = 9 then lr else if n = 10 then 1#64 else 0x80064d08#64
   have sp7 := p7'.stack
@@ -611,68 +773,78 @@ theorem ml_flush {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch
   have keep8 := fun n (hn : n ≠ 15) (lo : 1 ≤ n) (hi : n ≤ 31) =>
     p8.toEffectPost.gpr_frame (by decide) n lo hi (by simpa using hn)
   have mem8 : d8.σ.mem = d7.σ.mem := by rw [p8.memory]; rfl
-  let R8 : Nat → BitVec 64 := fun n => if n = 1 then Flush.MlFlush.call_call.link else
-    if n = 2 then sp - 112#64 else if n = 9 then lr else dom
-  have tlWithin : LogWithin (Flush.MlFlush.tailLog R8 []) (dom.toNat + 288) (dom.toNat + 296) := by
-    intro e he
-    simp only [Flush.MlFlush.tailLog, List.mem_cons, List.mem_nil_iff, or_false] at he
-    subst he; simp only [R8, ↓reduceIte, Nat.reduceEqDiff]; rw [r288]; omega
-  have readFrame : ∀ k, k ≤ 104 →
-      read8 (writeLog d8.σ.mem (Flush.MlFlush.tailLog R8 [])) (sp - 112#64 + BitVec.ofNat 64 k).toNat =
-        read8 d7.σ.mem (sp - 112#64 + BitVec.ofNat 64 k).toNat := by
-    intro k hk
-    rw [read8_outside tlWithin (by rw [off112 k (by omega)]; omega), mem8]
-  have raBack : bytesVal .ld (read8 (writeLog d8.σ.mem (Flush.MlFlush.tailLog R8 [])) (R8 2 + 104#64).toNat) = ra := by
-    show bytesVal .ld (read8 (writeLog d8.σ.mem (Flush.MlFlush.tailLog R8 [])) (sp - 112#64 + BitVec.ofNat 64 104).toNat) = ra
-    rw [readFrame 104 (by decide)]; exact p7'.savedRa
-  obtain ⟨d9, run9, p9⟩ := (Flush.MlFlush.tail_fast d8 ra R8
-    ⟨p8.good, p8.image, p8.minstret, (keep8 1 (by decide) (by decide) (by decide)).trans link7,
-      by simp only [R8, ↓reduceIte]; decide, p8.tick⟩
-    ⟨(keep8 2 (by decide) (by decide) (by decide)).trans sp7,
-      (keep8 9 (by decide) (by decide) (by decide)).trans p7'.lrReg,
-      dom8, True.intro⟩
-    L.roots (L.slots 104 (by simp)).read (L.slots 96 (by simp)).read (L.slots 88 (by simp)).read
-    (L.slots 80 (by simp)).read
-    ⟨tlWithin.outLRange (by have := L.rootsText; omega), tlWithin.outLRange (by have := L.rootsRodata; omega)⟩
-    raBack h.aligned).run d8 ⟨p8.pc, rfl⟩
-  have mem9 : d9.σ.mem = writeLog d8.σ.mem (Flush.MlFlush.tailLog R8 []) := p9.memory
-  have load := fun (n k : Nat) (hk : k ≤ 104) (w : BitVec 64)
-      (l : gpr d9 n = some (bytesVal .ld (read8 (writeLog d8.σ.mem (Flush.MlFlush.tailLog R8 []))
-        (sp - 112#64 + BitVec.ofNat 64 k).toNat)))
-      (b : bytesVal .ld (read8 d7.σ.mem (sp - 112#64 + BitVec.ofNat 64 k).toNat) = w) =>
-    (show gpr d9 n = some w by rw [l, readFrame k hk, b])
+  obtain ⟨e, run9, r⟩ := ml_flush_tail h.entry
+    { good := p8.good, image := p8.image, minstret := p8.minstret, tick := p8.tick
+      idle := p8.toEffectPost.htifIdle p7'.idle, pc := p8.pc
+      link := (keep8 1 (by decide) (by decide) (by decide)).trans link7, linkAligned := by decide
+      stack := (keep8 2 (by decide) (by decide) (by decide)).trans sp7
+      lrReg := (keep8 9 (by decide) (by decide) (by decide)).trans p7'.lrReg
+      domReg := dom8
+      rest := fun n hn => by
+        have b := hn; simp only [List.mem_cons, List.mem_nil_iff, or_false] at b
+        rw [keep8 n (by omega) (by omega) (by omega)]; exact p7'.rest n hn
+      savedRa := by rw [mem8]; exact p7'.savedRa
+      savedS0 := by rw [mem8]; exact p7'.savedS0
+      savedS1 := by rw [mem8]; exact p7'.savedS1
+      savedS2 := by rw [mem8]; exact p7'.savedS2 }
   have chApart := ra'.2.2.2
   have chRam := h.flush.layout.chanRam
   have chOff : ∀ k, k ≤ 72 → (ch + BitVec.ofNat 64 k).toNat = ch.toNat + k := by
     intro k hk; rw [BitVec.toNat_add]; simp only [BitVec.toNat_ofNat]; omega
-  refine ⟨d9, run7.trans (run8.trans run9), p9.good, p9.image, p9.minstret, p9.tick,
-    p9.toEffectPost.htifIdle (p8.toEffectPost.htifIdle p7'.idle), p9.pc,
-    load 1 104 (by decide) ra (gholds_lookup _ p9.regs rfl) p7'.savedRa, gholds_lookup _ p9.regs rfl, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_⟩
-  · have l : gpr d9 2 = some (R8 2 + 112#64) := gholds_lookup _ p9.regs rfl
-    rw [l]; simp only [R8, ↓reduceIte, Nat.reduceEqDiff, BitVec.sub_add_cancel]
-  · intro n hn
-    rw [present n hn]
-    have hn' := hn
-    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn'
-    rcases hn' with rfl | rfl | rfl | hn'
-    · exact load 8 96 (by decide) _ (gholds_lookup _ p9.regs rfl) p7'.savedS0
-    · exact load 9 88 (by decide) _ (gholds_lookup _ p9.regs rfl) p7'.savedS1
-    · exact load 18 80 (by decide) _ (gholds_lookup _ p9.regs rfl) p7'.savedS2
-    · rw [p9.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega),
-        keep8 n (by omega) (by omega) (by omega), p7'.rest n (by simp; omega)]
-      exact present n hn
+  refine ⟨e, run7.trans (run8.trans run9), r.good, r.image, r.minstret, r.tick, r.idle, r.pc, r.raReg, r.result,
+    r.stack, r.saved, ?_, ?_, ?_, r.roots, ?_⟩
   · have o := p7'.output
+    have ro := r.output
     unfold Vsa.Machine.output at *
-    rw [p9.output, p8.output, o]
-  · rw [mem9, read8_outside tlWithin (by rw [show (24#64 : BitVec 64) = BitVec.ofNat 64 24 from rfl, chOff 24 (by decide)]; omega),
-      mem8]; exact p7'.curr
-  · rw [mem9, read8_outside tlWithin (by rw [show (8#64 : BitVec 64) = BitVec.ofNat 64 8 from rfl, chOff 8 (by decide)]; omega),
-      mem8]; exact p7'.offset
-  · rw [mem9, read8_value]
-    exact Gc.word_writeLog_at d8.σ.mem (Flush.MlFlush.tailLog R8 []) 0 (dom + 288#64).toNat lr rfl trivial
-  · intro x a b r o k z
-    rw [mem9, writeLog_out _ _ _ (tlWithin.outL (by omega)), mem8]
-    exact p7'.frame x a b r o k z
+    rw [ro, p8.output, o]
+  · rw [read8_same fun i hi => r.frame _ (by
+      rw [show (24#64 : BitVec 64) = BitVec.ofNat 64 24 from rfl, chOff 24 (by decide)]; omega), mem8]
+    exact p7'.curr
+  · rw [read8_same fun i hi => r.frame _ (by
+      rw [show (8#64 : BitVec 64) = BitVec.ofNat 64 8 from rfl, chOff 8 (by decide)]; omega), mem8]
+    exact p7'.offset
+  · intro x a b rr o k z
+    rw [r.frame x z, mem8]
+    exact p7'.frame x a b rr o k z
+
+/-- Return from `caml_ml_flush` on a closed channel (`fd == -1`): `Val_unit`,
+nothing written outside its frame but the restored local-roots word. -/
+structure MlFlushClosedPost (ra sp dom lr : BitVec 64) (c e : Config) : Prop where
+  good : GoodState e.σ
+  image : ExecutableImage e
+  minstret : ∃ w, e.σ.regs.get? Register.minstret = some w
+  tick : e.tick < 2
+  idle : e.σ.regs.get? Register.htif_payload_writes = some (0#4)
+  pc : pcOf e = some ra
+  raReg : gpr e 1 = some ra
+  result : gpr e 10 = some 1#64
+  stack : gpr e 2 = some sp
+  saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gpr e n = gpr c n
+  output : Vsa.Machine.output e.σ = Vsa.Machine.output c.σ
+  roots : bytesVal .ld (read8 e.σ.mem (dom + 288#64).toNat) = lr
+  frame : ∀ x, (x < sp.toNat - 112 ∨ sp.toNat ≤ x) → (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) →
+    (e.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+
+theorem ml_flush_closed {ra sp v ch dom lr c} (h : MlFlushEntry ra sp v ch dom lr c)
+    (entry : pcOf c = some 0x80016238#64)
+    (closed : guardB .BEQ (bytesVal .lw (read8 c.σ.mem ch.toNat)) 18446744073709551615#64 = true) :
+    ∃ e, Steps c e ∧ MlFlushClosedPost ra sp dom lr c e := by
+  obtain ⟨d, run1, P⟩ := ml_flush_pro_gen h entry true closed
+  obtain ⟨e, run2, r⟩ := ml_flush_tail h
+    { good := P.good, image := P.image, minstret := P.minstret, tick := P.tick, idle := P.idle, pc := P.pc
+      link := P.raReg, linkAligned := h.aligned, stack := P.stack, lrReg := P.lrReg, domReg := P.domReg
+      rest := fun n hn => by
+        have b := hn; simp only [List.mem_cons, List.mem_nil_iff, or_false] at b
+        exact P.kept n (by omega) (by omega) (by simp; omega)
+      savedRa := P.savedRa, savedS0 := P.savedS0, savedS1 := P.savedS1, savedS2 := P.savedS2 }
+  refine ⟨e, run1.trans run2, r.good, r.image, r.minstret, r.tick, r.idle, r.pc, r.raReg, r.result, r.stack,
+    r.saved, ?_, r.roots, ?_⟩
+  · have o := r.output
+    have po := P.output
+    unfold Vsa.Machine.output at *
+    rw [o, po]
+  · intro x a b
+    rw [r.frame x b]
+    exact P.outside x a b
 
 end OCaml.Vm.Primitives.ConsoleWrite
