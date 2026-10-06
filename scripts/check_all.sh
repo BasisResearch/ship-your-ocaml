@@ -73,6 +73,7 @@ echo "stage a4: OK"
 
 echo "== stage a5: generated files are current"
 python3 scripts/gen_gc_rows.py --check || fail "stage a5: GC row/code drift"
+python3 scripts/gen_chain.py --check || fail "stage a5: chain module drift"
 python3 scripts/gc_cfg.py --check || fail "stage a5: collector CFG drift"
 python3 scripts/gen_lazy_force.py --check || fail "stage a5: Lazy.force bytecode drift"
 python3 scripts/check_lazy_force.py || fail "stage a5: Lazy.force host/BcSem mismatch"

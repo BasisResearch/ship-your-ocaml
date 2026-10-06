@@ -192,6 +192,10 @@ import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.NurseryTransport
 import OCaml.Vm.Gc.G1Reserve
 import OCaml.Vm.Gc.ModifyInsert
+import OCaml.Vm.Gc.Generated.ReallocEntry
+import OCaml.Vm.Gc.Generated.ReallocInstall
+import OCaml.Vm.Gc.Generated.ReallocLimit
+import OCaml.Vm.Gc.Generated.ReallocReturn
 import OCaml.Vm.Gc.ModifySlow
 import OCaml.Vm.Gc.F1Runtime
 import OCaml.Vm.Gc.WhileMinNursery
@@ -441,6 +445,18 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.ModifyInsert.run
 #print axioms OCaml.Vm.Gc.ModifyInsert.log
 #print axioms OCaml.Vm.Gc.ModifyInsert.registers
+#print axioms OCaml.Vm.Gc.ReallocEntry.run
+#print axioms OCaml.Vm.Gc.ReallocEntry.log
+#print axioms OCaml.Vm.Gc.ReallocEntry.registers
+#print axioms OCaml.Vm.Gc.ReallocInstall.run
+#print axioms OCaml.Vm.Gc.ReallocInstall.log
+#print axioms OCaml.Vm.Gc.ReallocInstall.registers
+#print axioms OCaml.Vm.Gc.ReallocLimit.run
+#print axioms OCaml.Vm.Gc.ReallocLimit.log
+#print axioms OCaml.Vm.Gc.ReallocLimit.registers
+#print axioms OCaml.Vm.Gc.ReallocReturn.run
+#print axioms OCaml.Vm.Gc.ReallocReturn.log
+#print axioms OCaml.Vm.Gc.ReallocReturn.registers
 #print axioms OCaml.Vm.Gc.ModifySlow.slot_access
 #print axioms OCaml.Vm.Gc.ModifySlow.slot_control
 #print axioms OCaml.Vm.Gc.ModifySlow.old_regs
@@ -462,6 +478,8 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.f1_trapBarrier
 #print axioms OCaml.Vm.Gc.f1_backtrace
 #print axioms OCaml.Vm.Gc.f1_callbackDepth
+#print axioms OCaml.Vm.Gc.f1_ignoredStatic
+#print axioms OCaml.Vm.Gc.StaticApart.above
 #print axioms OCaml.Vm.Gc.f1_allocFrame_core
 #print axioms OCaml.Vm.Gc.f1_allocFrame_core'
 #print axioms OCaml.Vm.Gc.f1_channelUnlock

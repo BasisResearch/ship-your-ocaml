@@ -26,9 +26,9 @@ theorem f1_entryStable {sp : Nat} (frame : EntryFrame sp) :
   simp only [Gc.f1Footprint, Gc.keptFootprint, Gc.youngWord, List.mem_cons, List.mem_nil_iff,
     or_false] at hv
   rcases hw with rfl | rfl | rfl <;>
-  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
   simp only [Gc.Apart, Gc.f1Domain, Boot.WhileMinRuntime.domain, Boot.WhileMinRuntime.freeBlock,
-    Layout.sym_caml_callback_depth, Layout.sym_bss_end, Layout.off_young_ptr, Layout.off_stack_high,
+    Layout.sym_caml_callback_depth, Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_errno, Layout.sym_bss_end, Layout.off_young_ptr, Layout.off_stack_high,
     Layout.off_stack_threshold, Layout.off_trap_barrier, Layout.off_backtrace_active,
     Layout.off_external_raise, interpFrame, Layout.interpFrameBytes] <;> omega
 

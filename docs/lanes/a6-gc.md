@@ -182,6 +182,21 @@ runtime invariant: the long pole for whileMin's `Halts`.
   `caml_realloc_ref_table` (ReallocRef), `realloc_generic_table.isra.0`
   (Realloc), the realloc callee's building blocks (`caml_gc_message` is
   a0-boot's `gc_message_quiet`; it is off the base == NULL path anyway).
+- `scripts/gen_chain.py` (stage a5 `--check`) generates chain modules: for a
+  straight route through generated rows it emits per-block registers (simp),
+  logs (rfl), loads, access plans and controls, a named `Route`, `run`
+  (`block_summary`), `log` and `registers`. Loads after same-block stores use
+  `ChainGen.lpins8_stepMemM_keep`/`_apart`. It replaces hand-written
+  ModifyInsert-style modules. The realloc callee's four chains are generated:
+  `ReallocEntry` (a654 tail-j → 961cT → 9750, to the `__muldi3` call at 9774),
+  `ReallocInstall` (977cF → 9784T → 9790, to 97a4), `ReallocLimit` (97a8, to
+  97c0) and `ReallocReturn` (97c4, ret). Next: splice them with
+  `call_summary` + `muldi3_summary` (×3) and `stat_alloc_ready` (HeapReady).
+- `F1Runtime.ignoredStatics` (a1-prims request): `_impure_data._errno`,
+  `oo_last_id`, `caml_callback_depth` and `errno` are carved out of
+  `keptFootprint`; `f1_ignoredStatic : WindowStable f1Runtime ignoredStatics`.
+  `in_bss` now takes `StaticApart x n` (decidable; `StaticApart.above` for
+  ranges past `errno`). `keptFootprint` has 11 windows (12 in `f1Footprint`).
 
 Open: G2 (collector proper); status and next design step below. F1 asks from a1-arms/bprime are all landed (last: `72d88e40`).
 

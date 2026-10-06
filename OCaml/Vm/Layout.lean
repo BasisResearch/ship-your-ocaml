@@ -214,6 +214,10 @@ def sym_caml_exe_name : Nat := 0x80064c18
 def sym_oo_last_id : Nat := 0x80064898
 /-- `caml_copy_double` -/
 def sym_caml_copy_double : Nat := 0x800121f4
+/-- `errno` -/
+def sym_errno : Nat := 0x80064d48
+/-- `_impure_data` -/
+def sym_impure_data : Nat := 0x80064668
 /-- `caml_verb_gc` -/
 def sym_caml_verb_gc : Nat := 0x80064930
 /-- `__atexit` -/
