@@ -34,6 +34,7 @@ import OCaml.Vm.Sim.BarrierRows
 import OCaml.Vm.Sim.MakeblockRows
 import OCaml.Vm.Sim.GrabAllocRows
 import OCaml.Vm.Sim.ClosureAllocRows
+import OCaml.Vm.Sim.ClosurerecAllocRows
 import OCaml.Vm.Sim.MakeblockNRows
 import OCaml.Vm.Sim.AllocInput
 import OCaml.Vm.Sim.PlacePut
@@ -4865,6 +4866,18 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ClosureAllocInput.of_input
 #print axioms OCaml.Vm.Sim.closure_shape
 #print axioms OCaml.Vm.Sim.closure_row
+#print axioms OCaml.Vm.Sim.AllocFrame.alloc
+#print axioms OCaml.Vm.Sim.opArm_of_next
+#print axioms OCaml.Vm.Sim.FreshLogOk.of_windows
+#print axioms OCaml.Vm.Sim.NurseryReserve.of_prefixed
+#print axioms OCaml.Vm.Sim.logInW_mono
+#print axioms OCaml.Vm.Sim.closurerec_shape
+#print axioms OCaml.Vm.Sim.closurerec_no_halt
+#print axioms OCaml.Vm.Sim.closurerecBodyLog_in
+#print axioms OCaml.Vm.Sim.ClosurerecPlan.writes
+#print axioms OCaml.Vm.Sim.ClosurerecPlan.reserve
+#print axioms OCaml.Vm.Sim.ClosurerecPlan.machine
+#print axioms OCaml.Vm.Sim.closurerec_row
 #print axioms OCaml.Vm.Sim.MakeblockInitInput.of_block
 #print axioms OCaml.Vm.Sim.makeblock_row
 #print axioms OCaml.Vm.Sim.division_dispatch_entry

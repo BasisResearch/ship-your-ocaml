@@ -87,25 +87,33 @@ Primitive adapters for a1-prims (`CcallWriting.lean`):
 * `ccall_framed_summary` (`FramedCall`: footprint frame plus
   saved registers, the footprint below the native sp; console output).
 
-Done: the allocation rows. MAKEBLOCK1–3, MAKEBLOCK n, GRAB (both paths) and
-CLOSURE are proved (`MakeblockRows`, `MakeblockNRows`, `GrabAllocRows`,
-`ClosureAllocRows`).
+Done: the allocation rows. MAKEBLOCK1–3, MAKEBLOCK n, GRAB (both paths),
+CLOSURE and CLOSUREREC are proved (`MakeblockRows`, `MakeblockNRows`,
+`GrabAllocRows`, `ClosureAllocRows`, `ClosurerecAllocRows`).
 * The fresh location is re-placed at the reserved block (`Place.put`,
   `VmReprAt.put`): every represented pointer is live, hence present.
 * `ReservedBlock`/`AllocLogOk.of_block`/`of_prefixed` derive every
   allocation log's certificates and `NurseryReserve` once.
-* The runtime obligation is `AllocFrame L` (F1: `f1_allocFrame`, from a6-gc's
-  core), composed with a VM-stack prefix by `AllocFrame.prefixed` (CLOSURE's
-  pushed accumulator).
-* Per-program premises: `ClosureSizes`, `BlockSizes` (G1: minor-heap sizes;
-  a2-sem's checked run). CLOSUREREC is not reached by whileMin and is still
-  open.
+* `FreshLogOk.of_windows` (`FreshLog.lean`) covers logs whose stores lie in
+  the free nursery, the VM stack allocation or the young-pointer word.
+  CLOSUREREC's pointer pushes overwrite consumed captures, so its log
+  interleaves block and stack stores. `NurseryReserve.of_prefixed` is the
+  reservation summary behind a prefix.
+* `ClosurerecPlan` names a CLOSUREREC's loop-head premises. `.writes`,
+  `.reserve`, `.arena` and `.machine` give every input of
+  `closurerec_step_arm`.
+* The runtime obligation is `AllocFrame L`. Its field `allocW` allows stores
+  into the VM stack allocation as well as the free nursery. F1:
+  `f1_allocFrame`, from a6-gc's `f1_allocFrame_core'`. `AllocFrame.alloc` is
+  the nursery-only form, and `AllocFrame.prefixed` composes with a VM-stack
+  prefix (CLOSURE's and CLOSUREREC's pushed accumulator).
+* `opArm_of_next` is the adapter for any operand list (CLOSUREREC).
+* Per-program premises: `ClosureSizes`, `ClosurerecSizes`, `BlockSizes` (G1:
+  minor-heap sizes; a2-sem's checked run). whileMin reaches no CLOSUREREC.
 
-Next (whileMin's `scratch`): GPR presence in `LoopRegisters`. Plan: add
-`grow` to `StepFrameOut` (GPRs present before stay present: a GPR is either
-framed or the step's single written `rd`). Every arm frame then transports
-`GprPresent`. Arm posts export it through their existing frames, and C_CALL
-posts get it from the library's `VsaOk`.
+whileMin's `scratch` premise is gone: a2-sem's `Muldi3Any`/`udivdi3_spec_any`
+specs write the scratch registers before reading them. No GPR-presence round
+is needed.
 
 STOP/uncaught-raise returns export the HTIF payload-counter frame
 (`InterpRuntimeReturnPost.htif`, `UncaughtChecked.htif`) for bprime's exit.
@@ -134,13 +142,8 @@ Open, next:
   setup Caml_state stores) need runtime framing beyond `RuntimeFrame`'s
   stack windows. Decide the contract with a6-gc (runtimeOk's footprint is
   the Caml_state record plus allocator metadata).
-* Allocation families (MAKEBLOCK, CLOSURE, CLOSUREREC, GRAB) and SETFIELD /
-  SETGLOBAL: put a6-gc's `NurseryGeometry` (definitions now in
-  `Gc/NurseryDefs.lean`) into `Running.stack`'s witness, transport it at the
-  restore sites (`NurseryGeometry.frame_log/alloc`), then use
-  `NurseryGeometry.placement`, `f1_allocation` and `f1_objectField`.
-* Application/return/exception/C_CALL families.
-* Then ENVACC, GETFIELD and the other families, following `acc0_row`.
+* `raiseBuf` (the Invocation field for `caml_raise`'s external path):
+  deferred, off whileMin's path.
 
 ## Shared heap-field update facts
 

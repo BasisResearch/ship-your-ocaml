@@ -4,6 +4,7 @@ import OCaml.Vm.Sim.Makeblock2
 import OCaml.Vm.Sim.Makeblock3
 import OCaml.Vm.Sim.OperandTableRows
 import OCaml.Vm.Gc.F1Runtime
+import OCaml.Vm.Sim.F1Frame
 
 /-!
 # MAKEBLOCK1..3 from the loop head
@@ -23,23 +24,43 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
 /-- **A nursery reservation keeps the layout's runtime invariant** (named
 obligation, a6-gc): the young-pointer store followed by stores into the free
-nursery, with the new `young_ptr` within the old free window. -/
+nursery and the VM stack allocation (CLOSUREREC's pushed function pointers),
+with the new `young_ptr` within the old free window. -/
 structure AllocFrame (L : OCaml.Layout) : Prop where
-  alloc : ∀ (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (high a : Nat) (log : List WEntry),
-    L.runtimeOk c → Gc.NurseryGeometry P s c pl cp high → LogInW [Gc.nurseryFree c] log →
+  allocW : ∀ (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (high a : Nat) (log : List WEntry),
+    L.runtimeOk c → Gc.NurseryGeometry P s c pl cp high →
+    LogInW [Gc.nurseryFree c, stackWindow (domainWord c Layout.off_stack_high)] log →
     (runtimeFields c).youngLimit ≤ a - 8 → a - 8 ≤ (runtimeFields c).youngPtr → (a - 8) % 8 = 0 →
     AllocationRuntime L.runtimeOk c (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log)
 
+/-- A log in the first of two windows lies in both. -/
+theorem logInW_left {w w' : W} {log : List WEntry} (inside : LogInW [w] log) : LogInW [w, w'] log :=
+  log_in_windows_of_mem fun e he => by
+    rcases logInW_mem inside he with h | h
+    · exact Or.inl h
+    · exact False.elim h
+
+/-- The nursery-only reservation (MAKEBLOCK, GRAB, CLOSURE). -/
+theorem AllocFrame.alloc {L : OCaml.Layout} (af : AllocFrame L) (P : Prog) (s : St) (c : Config)
+    (pl : Place) (cp : ChanPlace) (high a : Nat) (log : List WEntry)
+    (ok : L.runtimeOk c) (g : Gc.NurseryGeometry P s c pl cp high) (inside : LogInW [Gc.nurseryFree c] log)
+    (low : (runtimeFields c).youngLimit ≤ a - 8) (below : a - 8 ≤ (runtimeFields c).youngPtr)
+    (aligned : (a - 8) % 8 = 0) :
+    AllocationRuntime L.runtimeOk c (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log) :=
+  af.allocW P s c pl cp high a log ok g (logInW_left inside) low below aligned
+
 /-- **A runtime-stable prefix before a nursery reservation** (CLOSURE's
 pushed accumulator): the prefix is stable in its windows and misses every word
-the reservation reads, so `AllocFrame` applies after it. -/
+the reservation reads, so `AllocFrame` applies after it. The stores after the
+reservation may also reach the VM stack allocation (CLOSUREREC). -/
 theorem AllocFrame.prefixed {L : OCaml.Layout} (af : AllocFrame L) {P : Prog} {s : St} {c : Config}
     {pl : Place} {cp : ChanPlace} {high a : Nat} {ws : List W} {pre log : List WEntry}
     (stable : WindowStable L.runtimeOk ws) (preIn : LogInW ws pre)
     (domainOut : OutLRange pre Layout.sym_Caml_state 8)
     (contentsOut : OutLRange pre (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
+    (highOut : OutLRange pre ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high) 8)
     (young : YoungOutside pre c) (g : Gc.NurseryGeometry P s c pl cp high)
-    (inside : LogInW [Gc.nurseryFree c] log) (low : (runtimeFields c).youngLimit ≤ a - 8)
+    (inside : LogInW [Gc.nurseryFree c, stackWindow (domainWord c Layout.off_stack_high)] log) (low : (runtimeFields c).youngLimit ≤ a - 8)
     (below : a - 8 ≤ (runtimeFields c).youngPtr) (aligned : (a - 8) % 8 = 0) :
     AllocationRuntime L.runtimeOk c
       (pre ++ (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log)) := by
@@ -55,16 +76,22 @@ theorem AllocFrame.prefixed {L : OCaml.Layout} (af : AllocFrame L) {P : Prog} {s
   have ptr1 : (runtimeFields c1).youngPtr = (runtimeFields c).youngPtr := by
     simp only [runtimeFields, domainWord, dom1, keep _ young.ptr]
   have free1 : Gc.nurseryFree c1 = Gc.nurseryFree c := by simp only [Gc.nurseryFree, lim1, ptr1]
+  have high1 : domainWord c1 Layout.off_stack_high = domainWord c Layout.off_stack_high := by
+    simp only [domainWord, dom1, keep _ highOut]
   have g1 := g.frame_log (s' := s) (c' := c1) (fun l o' h => ⟨o', h, rfl⟩) rfl domainOut contentsOut
     young.limit young.ptr mem1
   have ok1 : L.runtimeOk c1 := stable c c1 (by rw [mem1]; exact frameOn_writeLog _ _ _ preIn) ok
-  have r := af.alloc P s c1 pl cp high a log ok1 g1 (by rw [free1]; exact inside) (by rw [lim1]; exact low)
+  have r := af.allocW P s c1 pl cp high a log ok1 g1 (by rw [free1, high1]; exact inside) (by rw [lim1]; exact low)
     (by rw [ptr1]; exact below) aligned
   exact r after (by rw [memory, writeLog_append, dom1]) ok1
 
-/-- `AllocFrame` for the pinned F1 layout (a6-gc's `f1_allocFrame_core`). -/
+/-- `AllocFrame` for the pinned F1 layout (a6-gc's `f1_allocFrame_core'`):
+the stack high word is pinned at `f1High`. -/
 theorem f1_allocFrame : AllocFrame Gc.f1Layout :=
-  ⟨fun _ _ _ _ _ _ _ _ ok g inside low below aligned => Gc.f1_allocFrame_core ok g inside low below aligned⟩
+  ⟨fun _ _ c _ _ _ _ _ ok g inside low below aligned => by
+    have high : domainWord c Layout.off_stack_high = Gc.f1High := f1_runtimeFrame.stackHigh c ok
+    rw [high] at inside
+    exact Gc.f1_allocFrame_core' ok g inside low below aligned⟩
 
 /-- A continuing `makeBlock` had a header-sized tag and its fields on the stack. -/
 theorem makeBlock_next {s s' : St} {len size tag : Nat} (step : makeBlock s len size tag = .next s') :

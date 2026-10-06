@@ -148,4 +148,21 @@ theorem opArm_of_next0 {L : OCaml.Layout} {P : Prog} {op : Opcode}
     · exact noHalt s
   · rcases shape s args empty with r | r <;> rw [r] <;> trivial
 
+/-- A row from a simulation over any operand list (variable-arity opcodes:
+CLOSUREREC). Non-continuing outcomes other than halting are vacuous. -/
+theorem opArm_of_next {L : OCaml.Layout} {P : Prog} {op : Opcode}
+    (next : ∀ s s' c (args : List Int), Reach P s → Reach P s' → OCaml.LoopAt L P s c →
+      DispatchCode P s op → OperandFetches P s.pc args →
+      stepI P s ⟨op, args⟩ = .next s' → ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c')
+    (noHalt : ∀ s args e w, stepI P s ⟨op, args⟩ ≠ .halt e w) :
+    OCaml.OpArm P (OCaml.LoopAt L P) op := by
+  intro s c i reach h hd hop _
+  obtain ⟨code, fetches⟩ := decode_fetch hd
+  obtain ⟨o, args⟩ := i
+  simp only at hop
+  subst hop
+  apply OCaml.ArmOutcome.of_next
+  · exact fun s' step => next s s' c args reach (reach_next reach hd step) h code fetches step
+  · exact noHalt s args
+
 end OCaml.Vm.Sim

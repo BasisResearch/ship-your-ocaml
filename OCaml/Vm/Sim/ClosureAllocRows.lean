@@ -205,10 +205,14 @@ theorem closure_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat} (rf : Runti
             ((runtimeFields c).youngPtr - 8 * (n.toInt.toNat + 2))).codeBase + 4 * dest))
           (captures := closureWords c sp n.toInt.toNat accu) b.room
         rwa [wordsLen] at hin
+      have hd := sg.domain.1
+      simp only [stackWindow] at hd
+      have hh : Layout.off_stack_high + 8 ≤ Layout.domainStateBytes := by decide
       have runtime := allocFrame.prefixed stable pushIn
         (outLRange_of_windows pushIn ⟨by dsimp only; omega, trivial⟩)
         (outLRange_of_windows pushIn ⟨by dsimp only; omega, trivial⟩)
-        (.of_windows sg pushIn vm) input.geometry.nursery (b.free blockIn) b.capacity
+        (outLRange_of_windows pushIn ⟨by dsimp only; omega, trivial⟩)
+        (.of_windows sg pushIn vm) input.geometry.nursery (logInW_left (b.free blockIn)) b.capacity
         (by have := b.young; omega) (by have := b.aligned; omega)
       obtain ⟨after, run, running⟩ := closure_step_arm (by rw [closureAllocationLog, List.append_assoc]; exact runtime)
         input (OperandAt.of_fetch input.geometry.toArmGeometry fetchN)
