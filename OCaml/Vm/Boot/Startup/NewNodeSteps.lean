@@ -225,6 +225,15 @@ def newNodeInitRegs (sp p k d dir : BitVec 64) : GRegs :=
   [(13, 1#64), (12, p + k), (15, childFirst), (14, p), (8, 1#64), (2, nativeStack sp 64), (9, k), (18, dir), (19, d),
     (10, p)]
 
+/-- A store window inside slot 1 of `files`. -/
+theorem slotOne_write (off w : Nat) (fits : off + w ≤ 56) (aligned : (Layout.sym_files + 56 + off) % w = 0) :
+    WriteWindow (childFirst + BitVec.ofNat 64 off) w := by
+  have nat : (childFirst + BitVec.ofNat 64 off).toNat = Layout.sym_files + 56 + off := by
+    unfold childFirst Layout.sym_files at *
+    rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat]
+    omega
+  constructor <;> rw [nat] <;> unfold Layout.sym_files at * <;> first | omega | (unfold Layout.sym_tohost; omega)
+
 local macro "init_addr" : tactic =>
   `(tactic| (simp only [newnodeinit_line_8000015c, newnodeinit_line_80000160, newnodeinit_line_80000164, newnodeinit_line_80000168, newnodeinit_line_8000016c, newnodeinit_line_80000170, newnodeinit_line_80000174, newnodeinit_line_80000178, newnodeinit_line_8000017c, newnodeinit_line_80000180, newnodeinit_line_80000184, newnodeinit_line_80000188, newnodeinit_line_8000018c, newnodeinit_line_80000190, newnodeinit_line_80000194, newnodeinit_line_80000198, newnodeinit_line_8000019c, newnodeinit_line_800001a0, newnodeinit_line_800001a4, newnodeinit_line_800001a8, newnodeinit_line_800001ac, eaddrM, srcVal, lookupG, runGM, stepGM,
     eraseG, wvalM, Option.getD_some, ite_true, ite_false, imm20Of, Nat.reduceEqDiff]; decide))
@@ -237,13 +246,7 @@ theorem new_node_init (c : Config) (sp p k d dir oldra : BitVec 64) (leaf : Leaf
     FnSummary 0x8000015c#64 (fun e => e = c)
       (WriteRegistersPost [15, 14, 12, 13] (newNodeInitLog p k d dir) c 0x800001b0#64 p
         (newNodeInitRegs sp p k d dir)) := by
-  have slotW (off w : Nat) (fits : off + w ≤ 56) (aligned : (Layout.sym_files + 56 + off) % w = 0) :
-      WriteWindow (childFirst + BitVec.ofNat 64 off) w := by
-    have nat : (childFirst + BitVec.ofNat 64 off).toNat = Layout.sym_files + 56 + off := by
-      unfold childFirst Layout.sym_files at *
-      rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat]
-      omega
-    constructor <;> rw [nat] <;> unfold Layout.sym_files at * <;> first | omega | (unfold Layout.sym_tohost; omega)
+  have slotW := slotOne_write
   have heapBounds : 0x80000000 ≤ Vsa.Sim.DlHeap.heapStart ∧ Vsa.Sim.DlHeap.heapEnd ≤ 0x100000000 ∧
       Layout.sym_tohost + 16 ≤ Vsa.Sim.DlHeap.heapStart ∧ Image.textBase + Image.textSize ≤ slotOne ∧
       Image.rodataBase + Image.rodataSize ≤ slotOne ∧ Image.textBase + Image.textSize ≤ Vsa.Sim.DlHeap.heapStart ∧
