@@ -71,6 +71,8 @@ structure InterpCaller (P : Prog) (c : Config) (pl : Place) (cp : ChanPlace) (hi
   htifIdle : c.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some (0#4)
   /-- every GPR x1..x31 is present (the loop's `LoopRegisters.gprs`) -/
   gprs : OCaml.Vm.Boot.Startup.GprPresent c.σ
+  /-- the global pointer (the loop's `LoopRegisters.gp`, newlib's `gp`) -/
+  gp : gpr c 3 = some Vsa.Sim.LibraryLayout.gpV
 
 /-- The caller is a property of registers and total reads: it transports to
 any zero-equivalent memory (e.g. `fillZero`). -/
@@ -83,7 +85,8 @@ theorem InterpCaller.of_mem {P : Prog} {c c' : Config} {pl : Place} {cp : ChanPl
     intro n; unfold gpr Vsa.Sim.gprGet; rw [regs]
   refine ⟨?_, h.ra, ?_, h.frameLow, h.frameHigh, h.aligned, ?_, h.mainReturn, ?_, ?_, ?_, ?_, ?_, ?_,
     tick ▸ h.tick, by rw [regs]; exact h.htifIdle,
-    ⟨fun n h1 h2 => by have := h.gprs.get n h1 h2; unfold Vsa.Sim.gprGet at *; rw [regs]; exact this⟩⟩
+    ⟨fun n h1 h2 => by have := h.gprs.get n h1 h2; unfold Vsa.Sim.gprGet at *; rw [regs]; exact this⟩,
+    by have := h.gp; unfold gpr Vsa.Sim.gprGet at *; rw [regs]; exact this⟩
   · intro r hr; rw [hg]; exact h.regs r hr
   · rw [hg]; exact h.stack
   · intro r hr; rw [hw]; exact h.mainFrame r hr

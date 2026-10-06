@@ -2629,6 +2629,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMin.interpCaller
 #print axioms OCaml.Vm.Boot.WhileMin.interpCaller_fillZero
 #print axioms OCaml.Vm.Boot.WhileMin.cut_gprs
+#print axioms OCaml.Vm.Boot.WhileMin.cut_gp
 #print axioms OCaml.Vm.Boot.WhileMin.stackGeometry
 #print axioms OCaml.Vm.Boot.WhileMin.stackGeometry_fillZero
 #print axioms OCaml.Vm.Boot.Startup.search_in_path_prefix

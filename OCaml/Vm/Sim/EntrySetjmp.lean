@@ -50,6 +50,8 @@ structure EntrySetjmpPost (before : Config) (buf : Nat) (regs : Nat → BitVec 6
   output : after.σ.sailOutput = before.σ.sailOutput
   htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
   gprs : OCaml.Vm.Boot.Startup.GprPresent before.σ → OCaml.Vm.Boot.Startup.GprPresent after.σ
+  /-- the global pointer is untouched (the loop's `LoopRegisters.gp`) -/
+  gp : gpr after 3 = gpr before 3
 
 theorem setjmpLog_above {buf : Nat} {regs : Nat → BitVec 64} {sp : BitVec 64}
     (low : Vsa.Sim.DlHeap.heapEnd ≤ buf) : ∀ e ∈ setjmpLog buf regs sp, Vsa.Sim.DlHeap.heapEnd ≤ e.1 := by
@@ -96,7 +98,7 @@ theorem entry_setjmp {c : Config} {buf : Nat} {regs : Nat → BitVec 64} {sp : B
     post.tick, post.pcAt, x10, PinsHold.get post.pins ⟨1, by simp⟩, ?_,
     PinsHold.get post.pins ⟨14, by simp⟩, memLog, frame.out, frame.frame _ (by decide),
     fun p => p.of_stepFrame frame (writes := [10, 1]) (by decide) (by decide +kernel)
-      (written_of_pins post.pins (by simp [gprReg]))⟩
+      (written_of_pins post.pins (by simp [gprReg])), frame.frame Register.x3 (by decide)⟩
   intro k hk
   exact (frame.gpr_list (L := setjmpRegs) (by decide +kernel) k hk).trans (h.saved k hk)
 

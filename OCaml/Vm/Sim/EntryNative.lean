@@ -32,6 +32,8 @@ structure EntryNativeInput (c : Config) (sp : Nat) (regs : Nat → BitVec 64) (a
   htifIdle : c.σ.regs.get? Register.htif_payload_writes = some 0#4
   /-- every GPR holds a value at the caller (a0-boot's captured register table) -/
   gprs : OCaml.Vm.Boot.Startup.GprPresent c.σ
+  /-- the global pointer at the caller -/
+  gp : gpr c 3 = some Vsa.Sim.LibraryLayout.gpV
 
 structure EntryNativePost (before : Config) (sp : Nat) (regs : Nat → BitVec 64) (a0 : BitVec 64)
     (after : Config) : Prop where
@@ -51,6 +53,8 @@ structure EntryNativePost (before : Config) (sp : Nat) (regs : Nat → BitVec 64
   htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
   /-- GPR presence survives entry (the loop's `LoopRegisters.gprs`) -/
   gprs : OCaml.Vm.Boot.Startup.GprPresent before.σ → OCaml.Vm.Boot.Startup.GprPresent after.σ
+  /-- the global pointer is untouched (the loop's `LoopRegisters.gp`) -/
+  gp : gpr after 3 = gpr before 3
 
 /-- The loop registers are present after LOOP_SETUP. -/
 theorem LoopSetupPost.gprs {c c' : Config} (h : LoopSetupPost c c') (p : OCaml.Vm.Boot.Startup.GprPresent c.σ) :
@@ -133,7 +137,8 @@ theorem entry_native {c : Config} {sp : Nat} {regs : Nat → BitVec 64} {a0 : Bi
     simp only [entryResumeLog, dom3]
   refine ⟨n1 + n2 + n3 + n4 + n5, c5, ((((s1.append s2).append s3).append s4).append s5), p5.good,
     p5.image, p5.tick, p5.head, p5.loop, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    fun p => p5.gprs (p4.gprs (p3.gprs (p2.gprs (p1.gprs p))))⟩
+    fun p => p5.gprs (p4.gprs (p3.gprs (p2.gprs (p1.gprs p)))),
+    (p5.frame.frame Register.x3 (by decide)).trans (p4.gp.trans (p3.gp.trans (p2.gp.trans p1.gp)))⟩
   · exact (keep 8 (by decide)).trans (p4.vmPc.trans (by rw [prog3]))
   · refine (keep 9 (by decide)).trans (p4.vmSp.trans ?_)
     simp only [domainField, dom3]

@@ -45,6 +45,8 @@ structure EntryResumePost (before : Config) (sp : Nat) (after : Config) : Prop w
   output : after.σ.sailOutput = before.σ.sailOutput
   htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
   gprs : OCaml.Vm.Boot.Startup.GprPresent before.σ → OCaml.Vm.Boot.Startup.GprPresent after.σ
+  /-- the global pointer is untouched (the loop's `LoopRegisters.gp`) -/
+  gp : gpr after 3 = gpr before 3
 
 theorem entry_resume {c : Config} {sp : Nat} (h : EntryResumeInput c sp) :
     ∃ n after, StepsN n c after ∧ EntryResumePost c sp after := by
@@ -100,7 +102,7 @@ theorem entry_resume {c : Config} {sp : Nat} (h : EntryResumeInput c sp) :
     PinsHold.get post.pins ⟨4, by simp⟩, PinsHold.get post.pins ⟨5, by simp⟩, accu, extra, env,
     PinsHold.get post.pins ⟨8, by simp⟩, memory, frame.out, frame.frame _ (by decide),
     fun p => p.of_stepFrame frame (writes := [21, 18, 25, 14, 8, 9, 15, 10]) (by decide) (by decide +kernel)
-      (written_of_pins post.pins (by simp [gprReg]))⟩
+      (written_of_pins post.pins (by simp [gprReg])), frame.frame Register.x3 (by decide)⟩
   constructor <;>
     simp only [OutLRange, entryResumeLog, Layout.off_external_raise, Image.textBase, Image.textSize,
       Image.rodataBase, Image.rodataSize, and_true] <;> omega

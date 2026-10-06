@@ -46,6 +46,8 @@ structure EntrySavePost (before : Config) (sp : Nat) (regs : Nat → BitVec 64) 
   output : after.σ.sailOutput = before.σ.sailOutput
   htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
   gprs : OCaml.Vm.Boot.Startup.GprPresent before.σ → OCaml.Vm.Boot.Startup.GprPresent after.σ
+  /-- the global pointer is untouched (the loop's `LoopRegisters.gp`) -/
+  gp : gpr after 3 = gpr before 3
 
 theorem entry_save {c : Config} {sp : Nat} {regs : Nat → BitVec 64} {a0 : BitVec 64}
     (h : EntrySaveInput c sp regs a0) :
@@ -74,7 +76,7 @@ theorem entry_save {c : Config} {sp : Nat} {regs : Nat → BitVec 64} {a0 : BitV
     simp only [entrySaveLog, Layout.interpSavedRegs, List.map, writeLog, List.foldl, applyW,
       Layout.interpSaveOffset, Layout.interpFrameBytes]
   refine ⟨n, after, steps, post.good, ?_, post.tick, post.pcAt, PinsHold.get post.pins ⟨0, by simp⟩,
-    ?_, ?_, ?_, frame.out, frame.frame _ (by decide), ?_⟩
+    ?_, ?_, ?_, frame.out, frame.frame _ (by decide), ?_, frame.frame Register.x3 (by decide)⟩
   · exact image_of_writeLog h.image (image_outside_of_above (entrySaveLog_above h.frame)) memLog
   · intro k hk
     exact (frame.gpr_list (L := Layout.interpSavedRegs) (by decide) k hk).trans (h.saved k hk)

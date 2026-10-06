@@ -122,6 +122,12 @@ theorem cut_gprs : OCaml.Vm.Boot.Startup.GprPresent cut.σ := by
   have h31 : n ≤ 31 := by omega
   gpr_cases n => exact present_of_key (by decide +kernel)
 
+/-- The global pointer at the cut (the captured register table). -/
+theorem cut_gp : gpr cut 3 = some Vsa.Sim.LibraryLayout.gpV := by
+  show WhileMinRegisters.registers.get? .x3 = _
+  rw [WhileMinRegisters.get_x3]
+  rfl
+
 /-- **caml_interprete's caller at the captured cut.** -/
 theorem interpCaller :
     InterpCaller whileMin cut WhileMinHeap.place (fun _ => none) WhileMinEntry.high callerSp callerRegs
@@ -154,6 +160,7 @@ theorem interpCaller :
   tick := by decide
   htifIdle := WhileMinRegisters.get_htif_payload_writes
   gprs := cut_gprs
+  gp := cut_gp
   outside := caller_outside
 
 theorem interpCaller_densify {P : Prog} {c : Config} {pl : Place} {cp : ChanPlace} {high sp : Nat}
