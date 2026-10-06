@@ -32,6 +32,7 @@ FIXED = {
     'allocFrame': 'f1_allocFrame',
     'field': ('(fun s c reach h => f1_fieldWriteReady h.running.platform.runtime'
               ' (by simpa using stack_fits fits g1_capacity reach (k := 0)))'),
+    'budgetSmall': 'f1_budgetSmall',
     'fits': 'fits',
     'capacity': 'g1_capacity',
     'good': 'good',

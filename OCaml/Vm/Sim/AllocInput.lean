@@ -337,4 +337,56 @@ theorem NurseryInput.of_block {P : Prog} {s : St} {c : Config} {pl : Place} {cp 
     by rw [← limitWord, BitVec.ofNat_toNat, BitVec.setWidth_eq],
     g.young_write, g.limit_read, g.header_write young b.capacity b.room, b.capacity, sg.young_image⟩
 
+/-- **The certificates of an allocation log**: the young-pointer store
+followed by stores inside the reserved block. -/
+structure AllocLogOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (sp a n : Nat)
+    (log : List WEntry) : Prop where
+  payload : PayloadOutside log P s c pl cp sp
+  image : ImageOutside log
+  bindings : BindingsOutside log P c
+  reserve : NurseryReserve c log a n n
+  arena : LogInW [arenaWindow] log
+
+/-- **One derivation for every allocation log.** -/
+theorem AllocLogOk.of_block {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high a n : Nat} {log : List WEntry} (b : ReservedBlock c a n)
+    (g : Gc.NurseryGeometry P s c pl cp high) (sg : StackGeometry P s c pl cp high)
+    (stack : StackRepr c pl sp high s.stack) (space : high - Layout.stackBytes ≤ sp)
+    (inside : LogInW [⟨a - 8, a + 8 * n⟩] log) :
+    AllocLogOk P s c pl cp sp a n (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log) := by
+  have free := b.free inside
+  have apart := b.domainApart g
+  have young := b.young
+  have room := b.room
+  have hy : Layout.off_young_ptr + 8 ≤ Layout.domainStateBytes := by decide
+  have hl : Layout.off_young_limit + 8 ≤ Layout.domainStateBytes := by decide
+  have miss : ∀ off, off + 8 ≤ Layout.domainStateBytes → OutLRange log ((word c Layout.sym_Caml_state).toNat + off) 8 := fun off hoff =>
+    outLRange_of_windows inside ⟨by dsimp only; omega, trivial⟩
+  have pay := (sg.young_payload (a := a) stack space).append (g.toWindowSeparated.payload stack space free)
+  refine ⟨pay, sg.young_image.append (g.toWindowSeparated.image free),
+    sg.young_bindings.append (g.toWindowSeparated.bindings free),
+    ⟨young, Nat.le_refl _, room, by have := b.aligned; omega, b.capacity, fun c' memory => ?_⟩, ?_⟩
+  · have keep : ∀ x, OutLRange (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log) x 8 → word c' x = word c x := fun x hx => by
+      change bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8
+      rw [memory, bytesT_writeLog_out _ hx]
+    have domainKeep := keep _ pay.domain
+    have youngNew : word c' ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr) = BitVec.ofNat 64 (a - 8) := by
+      change bytesT c'.σ.mem _ 8 = _
+      rw [memory]
+      exact Gc.word_writeLog_at _ _ 0 _ _ (by simp [grabReserveLog])
+        (by simpa [grabReserveLog] using miss _ hy)
+    have limitOut : OutLRange (grabReserveLog (word c Layout.sym_Caml_state).toNat a) ((word c Layout.sym_Caml_state).toNat + Layout.off_young_limit) 8 :=
+      grab_out (by simp only [Layout.off_young_limit, Layout.off_young_ptr]; omega)
+    have limitKeep := keep _ (outLRange_append limitOut (miss _ hl))
+    have top := b.top
+    refine ⟨?_, ?_⟩
+    · simp only [runtimeFields, domainWord, domainKeep, youngNew, BitVec.toNat_ofNat]
+      omega
+    · simp only [runtimeFields, domainWord, domainKeep, limitKeep]
+  · have domainArena := sg.domainArena
+    have arenaEnd := g.arena
+    exact logInW_append' ⟨Or.inl ⟨by simp only [arenaWindow]; omega, by simp only [arenaWindow]; omega⟩, trivial⟩
+      (logInW_widen inside fun w hw => by
+        simp only [List.mem_singleton] at hw; subst hw; simp only [arenaWindow]; omega)
+
 end OCaml.Vm.Sim

@@ -7,6 +7,7 @@ import OCaml.Vm.Sim.EntryF1
 import OCaml.Vm.Sim.F1Frame
 import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.FieldRows
+import OCaml.Vm.Sim.GrabAllocRows
 import OCaml.Vm.Sim.MakeblockRows
 import OCaml.Vm.Sim.OffsetRows
 import OCaml.Vm.Sim.OperandTableRows
@@ -33,8 +34,7 @@ theorem g1_capacity : StackCapacity Gc.g1Budget := by unfold StackCapacity; deci
 /-- **Program-level premises of the F1 rows**, each guarded by the kept
 opcodes that use it, and the rows still open. -/
 structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
-  extra : (keep .RETURN || keep .RAISE || keep .RERAISE || keep .RAISE_NOTRACE) = true → ExtraBounded P
-  row_GRAB : (keep .GRAB) = true → OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .GRAB
+  extra : (keep .RETURN || keep .GRAB || keep .RAISE || keep .RERAISE || keep .RAISE_NOTRACE) = true → ExtraBounded P
   row_CLOSURE : (keep .CLOSURE) = true → OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .CLOSURE
   row_CLOSUREREC : (keep .CLOSUREREC) = true → OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .CLOSUREREC
   setglobal_barrier : (keep .SETGLOBAL) = true → GlobalBarrier Gc.f1Layout P
@@ -159,7 +159,7 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .RESTART, _ => if h : keep .RESTART = true then restart_row f1_runtimeFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .GRAB, _ => if h : keep .GRAB = true then pre.row_GRAB (by simp [h])
+    | .GRAB, _ => if h : keep .GRAB = true then grab_row f1_memoryStable f1_allocFrame fits g1_capacity f1_budgetSmall (pre.extra (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .CLOSURE, _ => if h : keep .CLOSURE = true then pre.row_CLOSURE (by simp [h])
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)

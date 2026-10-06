@@ -31,6 +31,7 @@ import OCaml.Vm.Sim.CcallWriting
 import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.BarrierRows
 import OCaml.Vm.Sim.MakeblockRows
+import OCaml.Vm.Sim.GrabAllocRows
 import OCaml.Vm.Sim.AllocInput
 import OCaml.Vm.Sim.PlacePut
 import OCaml.Vm.Sim.InvariantUse
@@ -4839,3 +4840,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.f1_allocFrame
 #print axioms OCaml.Programs.whileMin_divisorsNonzero
 #print axioms OCaml.Vm.Sim.DivisorsNonzero.zero
+#print axioms OCaml.Vm.Sim.ReservedBlock.of_reservation
+#print axioms OCaml.Vm.Sim.AllocLogOk.of_block
+#print axioms OCaml.Vm.Sim.NurseryInput.of_block
+#print axioms OCaml.Vm.Sim.GrabAllocInput.of_input
+#print axioms OCaml.Vm.Sim.grab_alloc_shape
+#print axioms OCaml.Vm.Sim.grab_row
+#print axioms OCaml.Vm.Sim.f1_budgetSmall
