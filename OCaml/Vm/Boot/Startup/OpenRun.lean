@@ -341,5 +341,72 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
   have ready11 := ready10.errno_log p11 (by decide) (by simp only [keysG]; decide) (by decide)
     (gholds_lookup (n := 2) _ p11.regs rfl) (gholds_lookup (n := 1) _ p11.regs rfl) (by decide) f0
     (OCaml.Vm.Sim.logInW_mono Lin fun w hw => List.mem_cons_of_mem _ hw)
-  sorry
+  have fromD7 (x : Nat) (out : OutW errnoWindows x) : (d11.σ.mem[x]?).getD 0 = (d7.σ.mem[x]?).getD 0 := by
+    rw [p11.memory, frameOn_writeLog _ _ _ Lin x out, p10.memory, frameOn_writeLog _ _ _ errnoOnly x out, p9.memory,
+      show writeLog d8.σ.mem [] = d8.σ.mem from rfl, p8.memory]
+    rfl
+  -- open: return -1
+  have saved11 : bytesT d11.σ.mem (nativeFrameBase sp 80 + 24) 8 = ra := by
+    rw [word_observed (m := d1.σ.mem) _ (fun i hi => by
+      have outE : OutW errnoWindows (nativeFrameBase sp 80 + 24 + i) := by
+        simp only [OutW, errnoWindows, and_true, nativeFrameBase]; omega
+      rw [fromD7 _ outE, R.above _ (by rw [sp2Nat]; simp only [nativeFrameBase]; omega), p6'.memory,
+        show writeLog d5.σ.mem [] = d5.σ.mem from rfl, p5.memory,
+        frameOn_writeLog _ _ _ (htifOpenLog_inside f2) _ ⟨Or.inr (by rw [h2]; simp only [nativeFrameBase]; omega), trivial⟩,
+        p4'.memory, show writeLog d3.σ.mem [] = d3.σ.mem from rfl, p3.memory,
+        frameOn_writeLog _ _ _ (openRLog_inside f1) _ ⟨Or.inr (by rw [h1]; simp only [nativeFrameBase]; omega),
+          by simp only [OutW, errnoWindows, and_true, nativeFrameBase]; omega⟩,
+        p2'.memory]
+      rfl), p1.memory]
+    exact f0.word_log_read (by
+      intro k v hk; simp only [libOpenSlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at hk; omega)
+      (by simp [libOpenSlots]) _ (by simp [libOpenSlots])
+  obtain ⟨d12, run12, p12⟩ := (lib_open_return d11 sp ra (-1#64) _ ready11.toLeafInput f0
+    ⟨gholds_lookup (n := 2) _ p11.regs rfl, gholds_lookup (n := 10) _ p11.regs rfl, trivial⟩ saved11
+    ready.aligned).run d11 ⟨p11.pc, rfl⟩
+  have k12 (n : Nat) (v : BitVec 64) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [2, 1]) (out11 : n ∉ [2, 8, 1, 15])
+      (hv : gprGet d10.σ n = some v) : gprGet d12.σ n = some v :=
+    (p12.toEffectPost.gpr_frame (by decide) n lo hi out).trans
+      ((p11.toEffectPost.gpr_frame (by decide) n lo hi out11).trans hv)
+  have k7 (n : Nat) (v : BitVec 64) (hn : n ∈ [19, 20, 21, 22, 23, 24, 25, 26]) (hv : gprGet d7.σ n = some v) :
+      gprGet d12.σ n = some v := by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+    exact k12 n v (by omega) (by omega) (by simp; omega) (by simp; omega)
+      ((p10.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+        ((p9.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+          ((p8.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans hv)))
+  have embed12 : EmbedImage d12 := R.embed.frame ⟨fun a ka => by
+    rw [p12.memory, show writeLog d11.σ.mem [] = d11.σ.mem from rfl]
+    apply fromD7
+    have := ka.lt
+    simp only [OutW, errnoWindows, and_true]
+    rcases ka with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+      simp only [heapEnd, Layout.sym_environ, Layout.sym_caml_verb_gc] at * <;> omega⟩
+  have mem12 (x : Nat) (out : OutW errnoWindows x) : (d12.σ.mem[x]?).getD 0 = (d7.σ.mem[x]?).getD 0 := by
+    rw [p12.memory, show writeLog d11.σ.mem [] = d11.σ.mem from rfl, fromD7 x out]
+  refine ⟨d12, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans
+    (run9.trans (run10.trans (run11.trans run12)))))))))), ⟨{
+    node := R.node
+    pc := p12.pc
+    regs := (gholds_append _ _).2 ⟨p12.regs, (p12.toEffectPost.gpr_frame (by decide) 8 (by decide) (by decide)
+        (by decide)).trans (gholds_lookup (n := 8) _ p11.regs rfl),
+      k12 9 s1 (by decide) (by decide) (by decide) (by decide) (gholds_lookup (n := 9) _ p10.regs rfl),
+      k12 18 s2 (by decide) (by decide) (by decide) (by decide) (gholds_lookup (n := 18) _ p10.regs rfl),
+      k7 19 _ (by decide) (gholds_lookup (n := 19) _ R.regs rfl), k7 20 _ (by decide) (gholds_lookup (n := 20) _ R.regs rfl),
+      k7 21 _ (by decide) (gholds_lookup (n := 21) _ R.regs rfl), k7 22 _ (by decide) (gholds_lookup (n := 22) _ R.regs rfl),
+      k7 23 _ (by decide) (gholds_lookup (n := 23) _ R.regs rfl), k7 24 _ (by decide) (gholds_lookup (n := 24) _ R.regs rfl),
+      k7 25 _ (by decide) (gholds_lookup (n := 25) _ R.regs rfl), k7 26 _ (by decide) (gholds_lookup (n := 26) _ R.regs rfl),
+      trivial⟩
+    ready := ready11.stack_log p12 (by decide) (by simp only [keysG]; decide) (by decide)
+      (gholds_lookup (n := 2) _ p12.regs rfl) (gholds_lookup (n := 1) _ p12.regs rfl) ready.aligned f0
+      (by simp only [LogInW])
+    embed := embed12
+    slot := R.slot.transport (fun x lo hi => mem12 x (by
+        simp only [OutW, errnoWindows, and_true, slotOne, Layout.sym_files] at *; omega))
+      (fun j hj => mem12 _ (by
+        have := (R.ready.heap.block_bounds (q := R.node.toNat) (n := 5) (List.mem_cons_self ..)).1
+        simp only [OutW, errnoWindows, and_true, heapStart] at *; omega))
+    name := R.name.transport fun k hk => mem12 _ (by
+      have := (ready.heap.block_bounds (q := blk.1) (n := blk.2) blkH).1
+      simp only [OutW, errnoWindows, and_true, heapStart] at *; omega) }⟩⟩
 end OCaml.Vm.Boot.Startup

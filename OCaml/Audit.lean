@@ -340,6 +340,7 @@ import OCaml.Vm.Boot.Startup.FsInit
 import OCaml.Vm.Boot.WhileMinHeapChunks
 import OCaml.Vm.Boot.Startup.ResolveSteps
 import OCaml.Vm.Boot.Startup.ResolveRun
+import OCaml.Vm.Boot.Startup.OpenRun
 import OCaml.Vm.Boot.Startup.Strdup
 import OCaml.Vm.Boot.Startup.ExtTableFree
 import OCaml.Vm.Boot.Startup.DecomposeNull
@@ -2542,6 +2543,20 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.resolve_scan
 #print axioms OCaml.Vm.Boot.Startup.resolve_finish
 #print axioms OCaml.Vm.Boot.Startup.resolve_ocamlrun
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.errno_framed
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.errno_log
+#print axioms OCaml.Vm.Boot.Startup.block_then_call_select
+#print axioms OCaml.Vm.Boot.Startup.lib_open_entry
+#print axioms OCaml.Vm.Boot.Startup.open_r_entry
+#print axioms OCaml.Vm.Boot.Startup.htif_open_entry
+#print axioms OCaml.Vm.Boot.Startup.htif_open_enoent
+#print axioms OCaml.Vm.Boot.Startup.htif_open_errno_call
+#print axioms OCaml.Vm.Boot.Startup.errno_return
+#print axioms OCaml.Vm.Boot.Startup.htif_open_fail
+#print axioms OCaml.Vm.Boot.Startup.open_r_fail_zero
+#print axioms OCaml.Vm.Boot.Startup.open_r_fail_set
+#print axioms OCaml.Vm.Boot.Startup.lib_open_return
+#print axioms OCaml.Vm.Boot.Startup.open_ocamlrun
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
 #print axioms OCaml.Vm.Boot.Startup.resAt36_window
 #print axioms OCaml.Vm.Boot.Startup.fs_init
