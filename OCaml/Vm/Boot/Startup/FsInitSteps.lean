@@ -42,6 +42,7 @@ import OCaml.Vm.Boot.Startup.FindRestore
 import OCaml.Vm.Boot.Startup.StrncmpReturn
 import OCaml.Vm.Boot.Startup.NameByte
 import OCaml.Vm.Sim.ClosureLayout
+import OCaml.Vm.Primitives.Word32Access
 import Vsa.Sim.ChainFactsTac
 namespace OCaml.Vm.Primitives
 open Vsa.Machine Vsa.Sim
@@ -139,6 +140,106 @@ theorem fs_init_save (c : Config) (sp ra s0 s3 s6 s7 a0 : BitVec 64) (leaf : Lea
       show Functions.sign_extend (m := 64) 257#12 = 257#64 by decide, BitVec.zero_add]
     simp only [List.cons.injEq, Prod.mk.injEq, and_true, true_and]
     exact ⟨by rw [← files_auipc]; rfl, rfl⟩
+  · rfl
+  · decide
+open Sail in
+theorem embed_auipc : 2147484536#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 109054743#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 3208#12 = BitVec.ofNat 64 Layout.sym_embed_start := by
+  decide
+
+def fsInitHeadered (sp ra s0 s7 a0 table : BitVec 64) : GRegs :=
+  [(15, 2#64), (22, table), (19, BitVec.ofNat 64 Layout.sym_files), (2, nativeStack sp 96), (23, s7), (1, ra), (8, s0),
+    (10, a0)]
+
+/-- Load the embedded-file table pointer. -/
+theorem fs_init_header (c : Config) (sp ra s0 s6 s7 a0 table : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ (fsInitSaved sp ra s0 s6 s7 a0))
+    (header : bytesT c.σ.mem Layout.sym_embed_start 8 = table) :
+    FnSummary 0x80000378#64 (fun e => e = c)
+      (WriteRegistersPost [22, 15] [] c 0x80000384#64 a0 (fsInitHeadered sp ra s0 s7 a0 table)) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput fs_init_part_0X0378Seg 0x80000378#64 (fsInitSaved sp ra s0 s6 s7 a0)
+        [read8 c.σ.mem Layout.sym_embed_start] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [19, 15, 2, 22, 23, 1, 8, 10]; decide
+      shape := by change ChainOK _ [19, 15, 2, 22, 23, 1, 8, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := fsInitHeader_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.fs_init_part_0_at_"
+        exact (show ReadWindow (BitVec.ofNat 64 Layout.sym_embed_start) 8 by constructor <;> decide).ld rfl
+          (by simp only [fsinitheader_line_80000378, fsinitheader_line_8000037c, fsinitheader_line_80000380, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM,
+                Option.getD_some, ite_true, ite_false, imm20Of, Nat.reduceEqDiff]
+              exact embed_auipc) (read8_pins _ _) }))
+  · rfl
+  · rfl
+  · simp only [fs_init_part_0X0378Seg, evalBlocks, evalBlock, SegEvalState.init, fsinitheader_line_80000378, fsinitheader_line_8000037c, fsinitheader_line_80000380, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, fsInitSaved, imm20Of, read8_value, header, fsInitHeadered]
+    rw [show Functions.sign_extend (m := 64) 2#12 = 2#64 by decide, BitVec.zero_add]
+  · rfl
+  · decide
+open Sail in
+theorem fds_auipc0 : 2147484552#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 415511#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 2600#12 = BitVec.ofNat 64 (Layout.sym_fds + 24) := by decide
+open Sail in
+theorem fds_auipc1 : 2147484564#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 415511#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 2612#12 = BitVec.ofNat 64 (Layout.sym_fds + 48) := by decide
+open Sail in
+theorem fds_auipc2 : 2147484572#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 415639#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 2556#12 = BitVec.ofNat 64 Layout.sym_fds := by decide
+
+def fdsLog : List WEntry :=
+  [(Layout.sym_fds + 24, 4, 2#64), (Layout.sym_fds + 48, 4, 3#64), (Layout.sym_fds, 4, 1#64)]
+
+def fsInitFds (sp ra s0 a0 table : BitVec 64) : GRegs :=
+  [(15, 0x8006539c#64), (14, 0x80065394#64), (23, 1#64), (22, table), (19, BitVec.ofNat 64 Layout.sym_files),
+    (2, nativeStack sp 96), (1, ra), (8, s0), (10, a0)]
+
+/-- The three standard descriptors. -/
+theorem fs_init_fds (c : Config) (sp ra s0 s7 a0 table : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ (fsInitHeadered sp ra s0 s7 a0 table)) :
+    FnSummary 0x80000384#64 (fun e => e = c)
+      (WriteRegistersPost [23, 14, 15] fdsLog c 0x800003a4#64 a0 (fsInitFds sp ra s0 a0 table)) := by
+  apply registers_of_blocks leaf.image (by constructor <;> simp only [fdsLog, OutLRange] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput fs_init_part_0X0384Seg 0x80000384#64 (fsInitHeadered sp ra s0 s7 a0 table)
+        [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [15, 22, 19, 2, 23, 1, 8, 10]; decide
+      shape := by change ChainOK _ [15, 22, 19, 2, 23, 1, 8, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := fsInitFds_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.fs_init_part_0_at_"
+        · exact (show WriteWindow (BitVec.ofNat 64 (Layout.sym_fds + 24)) 4 by constructor <;> decide).sw rfl
+            (by simp only [fsinitfds_line_80000384, fsinitfds_line_80000388, fsinitfds_line_8000038c, fsinitfds_line_80000390, fsinitfds_line_80000394, fsinitfds_line_80000398, fsinitfds_line_8000039c, fsinitfds_line_800003a0, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some,
+                  ite_true, ite_false, imm20Of, Nat.reduceEqDiff]
+                exact fds_auipc0)
+        · exact (show WriteWindow (BitVec.ofNat 64 (Layout.sym_fds + 48)) 4 by constructor <;> decide).sw rfl
+            (by simp only [fsinitfds_line_80000384, fsinitfds_line_80000388, fsinitfds_line_8000038c, fsinitfds_line_80000390, fsinitfds_line_80000394, fsinitfds_line_80000398, fsinitfds_line_8000039c, fsinitfds_line_800003a0, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some,
+                  ite_true, ite_false, imm20Of, Nat.reduceEqDiff]
+                exact fds_auipc1)
+        · exact (show WriteWindow (BitVec.ofNat 64 Layout.sym_fds) 4 by constructor <;> decide).sw rfl
+            (by simp only [fsinitfds_line_80000384, fsinitfds_line_80000388, fsinitfds_line_8000038c, fsinitfds_line_80000390, fsinitfds_line_80000394, fsinitfds_line_80000398, fsinitfds_line_8000039c, fsinitfds_line_800003a0, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some,
+                  ite_true, ite_false, imm20Of, Nat.reduceEqDiff]
+                exact fds_auipc2) }))
+  · simp only [fs_init_part_0X0384Seg, evalBlocks, evalBlock, SegEvalState.init, fsinitfds_line_80000384, fsinitfds_line_80000388, fsinitfds_line_8000038c, fsinitfds_line_80000390, fsinitfds_line_80000394, fsinitfds_line_80000398, fsinitfds_line_8000039c, fsinitfds_line_800003a0, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, fsInitHeadered, imm20Of, fdsLog,
+      List.nil_append, List.cons_append]
+    rw [fds_auipc0, fds_auipc1, fds_auipc2]
+    simp only [List.cons.injEq, Prod.mk.injEq, and_true]
+    decide
+  · rfl
+  · simp only [fs_init_part_0X0384Seg, evalBlocks, evalBlock, SegEvalState.init, fsinitfds_line_80000384, fsinitfds_line_80000388, fsinitfds_line_8000038c, fsinitfds_line_80000390, fsinitfds_line_80000394, fsinitfds_line_80000398, fsinitfds_line_8000039c, fsinitfds_line_800003a0, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, fsInitHeadered, imm20Of, fsInitFds]
+    simp only [List.cons.injEq, Prod.mk.injEq, and_true, true_and]
+    exact ⟨by decide, by decide, by decide⟩
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
