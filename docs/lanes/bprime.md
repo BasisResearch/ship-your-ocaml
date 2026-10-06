@@ -114,6 +114,21 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `GoodF1.stopAccu` (new: STOP never returns a `.raw` word, which caml_main
   would read as an exception; `whileMin` still checks in one kernel run).
 
+**ArmSim.halt at C_CALL1: caml_sys_exit (2026-10-06)**
+- `ccall1Exit_f1 (fits) (present) : CcallExit Gc.f1Layout P .C_CALL1 0`
+  (`CcallExitF1.lean`). It runs a1-arms' `c_call1_exit_arm`, then a1-prims'
+  `caml_sys_exit_halts`, which exits through caml_do_exit to the HTIF halt.
+  The exit runtime comes from the invariant:
+  * quiet-exit globals from `f1Runtime`;
+  * HTIF idle from `LoopRegisters`;
+  * the 224-byte window from `NativeValid.headroom`.
+- Named premise `present`: the GPRs caml_do_exit reads are present at the
+  callee entry. s7/s10 are pinned nowhere today; a1-arms is adding
+  `LoopRegisters.gprs` (GprPresent), which discharges it via
+  `CcallSetupPost.input.loop`. Then the generator passes `ccall1Exit_f1` for
+  the table's `c_call1_exit` field. Halt is then complete: STOP and
+  caml_sys_exit are the only halting F1 outcomes.
+
 **InF1 minor-heap bound; whileMin's C_CALL returns (2026-10-06)**
 - Foreman decision: MAKEBLOCK with `wosize > Max_young_wosize` (and CLOSURE /
   CLOSUREREC whose block exceeds it) take interp.c's `caml_alloc_shr` path and
