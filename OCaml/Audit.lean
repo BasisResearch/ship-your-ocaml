@@ -4827,3 +4827,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.makeblock2_row
 #print axioms OCaml.Vm.Sim.makeblock3_row
 #print axioms OCaml.Vm.Sim.f1_allocFrame
+#print axioms OCaml.Programs.whileMin_divisorsNonzero
+#print axioms OCaml.Vm.Sim.DivisorsNonzero.zero

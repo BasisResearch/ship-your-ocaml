@@ -91,4 +91,24 @@ theorem BranchInts.of_check {P : Prog} (h : ∀ s, Reach P s → s.branchIntsOk 
     simp only [St.branchIntsOk, if_pos at_] at this
     exact this
 
+/-! ## Divisors are nonzero
+
+`DIVINT`/`MODINT` by zero raise `Division_by_zero` through the C runtime
+(`caml_raise_zero_divide`). `DivisorsNonzero P` states that a program never
+divides by zero, so that path is unreachable. -/
+
+/-- The per-state check: at a division, the divisor (stack top) is not zero. -/
+def St.divisorsOk (P : Prog) (s : St) : Bool :=
+  if s.atOp P .DIVINT ∨ s.atOp P .MODINT then s.stack.head? != some (.int 0) else true
+
+/-- **No reachable division has a zero divisor.** -/
+structure DivisorsNonzero (P : Prog) : Prop where
+  nonzero : ∀ s, Reach P s → s.atOp P .DIVINT ∨ s.atOp P .MODINT → ∀ rest, s.stack ≠ .int 0 :: rest
+
+theorem DivisorsNonzero.of_check {P : Prog} (h : ∀ s, Reach P s → s.divisorsOk P = true) :
+    DivisorsNonzero P where
+  nonzero s reach at_ rest stack := by
+    have := h s reach
+    simp [St.divisorsOk, if_pos at_, stack] at this
+
 end OCaml.Bytecode

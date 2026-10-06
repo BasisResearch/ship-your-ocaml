@@ -108,10 +108,10 @@ ROWS.append(row('MULINT', 0, ['stable','budget','scratch'],
     '; `scratch` (defined a2/a3) is named', reach_used=True, nohalt_term='fun _ _ _ => intOp_no_halt (f := fun a b => tag64 (untag a * untag b))'))
 for op, kind in [('DIVINT','quotient'),('MODINT','remainder')]:
     ROWS.append(row(op, 0, ['stable','budget','scratch'],
-        f'division_next .{kind} stable h code {SPACE0} (scratch s _ reach h) (zero s _ _ reach h step) step',
+        f'division_next .{kind} stable h code {SPACE0} (scratch s _ reach h) (zero s _ _ reach h code step) step',
         '; a zero divisor is the named `zero` (the raise row)',
         nohalt_term=f'fun _ _ _ => division_no_halt .{kind}',
-        extra_prem=f'(zero : ∀ s s\' c, Reach P s → OCaml.LoopAt L P s c → stepI P s ⟨.{op}, []⟩ = .next s\' →\n      ∀ rest, s.stack = .int 0 :: rest → ∃ c\', OCaml.Plus c c\' ∧ OCaml.Running L P s\' c\')',
+        extra_prem=f'(zero : ∀ s s\' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .{op} →\n      stepI P s ⟨.{op}, []⟩ = .next s\' →\n      ∀ rest, s.stack = .int 0 :: rest → ∃ c\', OCaml.Plus c c\' ∧ OCaml.Running L P s\' c\')',
         reach_used=True))
 for op in ['EQ','NEQ']:
     ROWS.append(row(op, 0, ['stable','budget','values'],

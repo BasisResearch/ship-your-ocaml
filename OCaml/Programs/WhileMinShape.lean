@@ -49,7 +49,7 @@ def St.decodedOk (P : Prog) (ops : List Opcode) (s : St) : Bool :=
 /-- All F1 shape checks at one state. -/
 def St.shapeOk (P : Prog) (ops : List Opcode) (s : St) : Bool :=
   s.valuesInRange P.code.size && s.extraOk && s.trapOk && s.branchIntsOk P && St.raisesOk P s &&
-    St.decodedOk P ops s
+    St.decodedOk P ops s && s.divisorsOk P
 
 /-- The F1 shape checks of one state, by name. -/
 structure ShapeFacts (P : Prog) (ops : List Opcode) (s : St) : Prop where
@@ -59,12 +59,13 @@ structure ShapeFacts (P : Prog) (ops : List Opcode) (s : St) : Prop where
   branches : s.branchIntsOk P = true
   raises : St.raisesOk P s = true
   decoded : St.decodedOk P ops s = true
+  divisors : s.divisorsOk P = true
 
 theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {s : St} (h : St.shapeOk P ops s = true) :
     ShapeFacts P ops s := by
   simp only [St.shapeOk, Bool.and_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩ := h
-  exact ⟨values, extra, trap, branches, raises, decoded⟩
+  obtain ⟨⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩, divisors⟩ := h
+  exact ⟨values, extra, trap, branches, raises, decoded, divisors⟩
 
 /-- The decode check, by name. -/
 theorem ShapeFacts.decode {P : Prog} {ops : List Opcode} {s : St} (h : ShapeFacts P ops s) :
@@ -133,5 +134,9 @@ theorem whileMin_ops : ∀ s i, Reach whileMin s → decodeAt whileMin.code s.pc
   obtain ⟨j, hj, _, _, hm⟩ := (whileMin_shapeOk reach).decode
   rw [hd] at hj; cases hj
   exact List.contains_iff_mem.mpr hm
+
+/-- **`whileMin` never divides by zero.** -/
+theorem whileMin_divisorsNonzero : DivisorsNonzero whileMin :=
+  .of_check fun _ reach => (whileMin_shapeOk reach).divisors
 
 end OCaml.Programs

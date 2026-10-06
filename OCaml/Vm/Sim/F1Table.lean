@@ -58,8 +58,8 @@ structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   c_call5_returns : (keep .C_CALL5) = true → CcallReturns Gc.f1Layout P .C_CALL5 (0x80002ed8#64) 4
   c_call5_effects : (keep .C_CALL5) = true → CcallEffects Gc.f1Layout P .C_CALL5 4
   scratch : (keep .MULINT || keep .DIVINT || keep .MODINT) = true → ∀ s c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → BinaryLibScratch c
-  divint_zero : (keep .DIVINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → stepI P s ⟨.DIVINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
-  modint_zero : (keep .MODINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → stepI P s ⟨.MODINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
+  divint_zero : (keep .DIVINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .DIVINT → stepI P s ⟨.DIVINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
+  modint_zero : (keep .MODINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .MODINT → stepI P s ⟨.MODINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
   field : (keep .OFFSETREF) = true → ∀ s c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → FieldWriteReady Gc.f1Layout P s c
   ints : (keep .BEQ || keep .BNEQ) = true → BranchInts P
 

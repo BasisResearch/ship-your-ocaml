@@ -281,4 +281,14 @@ theorem neq_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
   top_read_row h code space (physOp_nonempty (by simp) step)
     fun input read => neq_step_arm stable input read (top_equality input ranged) step
 
+/-- A program that never divides by zero discharges the DIVINT/MODINT
+zero-divisor row premise vacuously. -/
+theorem DivisorsNonzero.zero {L : OCaml.Layout} {P : Prog} (d : DivisorsNonzero P) {op : Opcode}
+    (hop : op = .DIVINT ∨ op = .MODINT) :
+    ∀ s s' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s op →
+      stepI P s ⟨op, []⟩ = .next s' →
+      ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
+  fun s _ _ reach _ code _ rest stack => absurd stack (d.nonzero s reach
+    (by rcases hop with rfl | rfl <;> first | exact .inl code.fetch | exact .inr code.fetch) rest)
+
 end OCaml.Vm.Sim
