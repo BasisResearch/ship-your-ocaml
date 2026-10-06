@@ -112,6 +112,17 @@ structure CcallEffects (L : OCaml.Layout) (P : Prog) (op : Opcode) (k : Nat) : P
     (∀ v heap world, primF1Impl name (s.accu :: s.stack.take k) s.heap s.world ≠ .ok v heap world) →
     OCaml.ArmOutcome (OCaml.LoopAt L P) c (stepI P s ⟨op, [w.toInt]⟩)
 
+/-- **Primitives that always return** discharge the other outcomes: when every
+reachable call's F1 primitive returns normally, `CcallEffects` is vacuous. -/
+theorem CcallEffects.of_ok {L : OCaml.Layout} {P : Prog} {op : Opcode} {k : Nat}
+    (ok : ∀ s (w : BitVec 32) name, Reach P s → DispatchCode P s op → P.code[s.pc + 1]? = some w →
+      0 ≤ w.toInt → P.prims[w.toInt.toNat]? = some name → name ∈ primsF1 →
+      ∃ v heap world, primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .ok v heap world) :
+    CcallEffects L P op k :=
+  ⟨fun s _ w name reach _ code fetch nonnegative hp member notOk => by
+    obtain ⟨v, heap, world, result⟩ := ok s w name reach code fetch nonnegative hp member
+    exact absurd result (notOk v heap world)⟩
+
 /-- The shared C_CALLk row. -/
 theorem ccall_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opcode} {ra : BitVec 64}
     {k high0 dom0 : Nat} (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
