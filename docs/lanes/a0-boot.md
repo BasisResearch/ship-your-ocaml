@@ -1,6 +1,66 @@
 # Lane a0-boot
 
-## Round 2 status (2026-10-05)
+## Round 2 status (2026-10-06)
+
+**`SearchExeReset.lean:reset_search_exe_returned_exists` extends the CLOSED
+reset run through caml_search_exe_in_path("ocamlrun") returning to
+caml_attempt_open (0x800048f0).** PATH is unset, so the run goes through
+decompose_path(NULL), caml_search_in_path over the empty table (the slash
+scan, then strdup), caml_stat_free(NULL), the empty table's free, and the
+epilogue. `ResetSearchExeReturned` carries `RuntimeReady` with the copy
+live, the copy's bytes (= argv[0]), `KeptImage`, and caml_attempt_open's
+saved s0–s3.
+
+The reusable pieces:
+* `block_then_call` (BlockCall.lean): a generated block followed by its `jal`.
+* `RuntimeReady.perm` and `RuntimeReady.block_bounds`: readiness is
+  invariant under reordering the live list, and every live block lies in
+  the arena.
+* `CallerFrame.of_log` / `mono`, `ExtTableReturned.above`,
+  `StatFreed`/`ExtTableFreed` `.byte`/`.live_byte`/`.saved_gpr`/`.embed_frame`:
+  the frames of the library calls.
+* `StatFreed` records the platform at the free. `StrdupDone`/`SearchInPathDone`
+  keep malloc's disjointness and s0/s2/s3. `getenv_miss` and `stat_free_null`
+  name their scratch registers, which `RuntimeReady.stack_log`'s cover needs.
+* `argv0_plain`, `ResetSearchTableReturned.exe_name`.
+* `gen_startup_rows.py` no longer writes `Vsa/Sim/Code` files owned by
+  `gen_library_pins.py` (the a5 drift seen on `_free_r.lean`).
+
+**`OpenCallReset.lean:reset_open_call_exists` extends it to the entry of
+`open("ocamlrun", O_RDONLY)` (0x80042590):** the second strdup,
+`gc_message_quiet` (GcMessageQuiet.lean; `KeptImage` now carries
+`caml_verb_gc = 0`, from crt0's BSS clear) and the copy's free. `StrdupDone`
+now also keeps s2/s3.
+
+Next: `open` → `_open_r` → `_open`. The htif fs (c/src/htif.c) runs `fs_init`
+first: it walks the embedded-file table, and `new_node` mallocs "prog". Then
+`resolve("ocamlrun")` misses in `child`'s 64-entry scan, giving ENOENT and
+-1. After that: caml_attempt_open's failure return and the retry with
+argv[1] = "/prog".
+Audit lines now go after the `stat_free_block` anchor, not at EOF, which
+avoids the repeated EOF rebase conflicts.
+
+## Round 2 status (2026-10-05, earlier)
+
+Reusable startup library summaries (landing in this batch), all carrying
+`RuntimeReady`:
+* `free_summary` / `RuntimeReady.free_result` (landed `_free_r` capacity run),
+  `stat_free_block`, `stat_free_null`;
+* `stat_alloc_ready`: `caml_stat_alloc_noexc` → landed malloc;
+* `strdup_full` (Strdup.lean): complete `caml_stat_strdup` using the
+  library `strlen_call` and `memcpy_summary`. The string certificate takes
+  the strlen data image to be the entry memory (`CBytes`). `StrdupKept` names
+  the bytes it preserves.
+* `ext_table_free_empty`, `decompose_null`.
+* `RuntimeReady.of_same_memory` / `of_block_frame` / `above_log` adapters.
+* `gen_library_text.py` → `LibraryText.lean`: `snp_text_loaded` and
+  `memcpy_text_loaded` certify the library code footprints against the image
+  (chunked kernel checks), drift-checked in a5.
+
+Next: assemble caml_search_in_path("ocamlrun") (char scan loop, empty
+table, strdup), then caml_search_exe_in_path's tail (stat_free(NULL),
+ext_table_free, return) into the closed reset run; then the rest of
+caml_attempt_open (strdup, gc_message, stat_free, open → htif fs).
 
 **`PathReset.lean:reset_path_missed_exists` extends the CLOSED reset run through
 caml_search_exe_in_path's `getenv("PATH")` returning NULL (return at 0x8002555c).**

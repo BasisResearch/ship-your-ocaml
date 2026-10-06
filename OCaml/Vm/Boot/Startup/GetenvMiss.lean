@@ -69,7 +69,8 @@ theorem getenv_miss (c : Config) (sp env entry name ra s0 s1 s2 s3 s4 s5 s6 : Bi
     FnSummary 0x80037410#64 (fun d => d = c)
       (WriteRegistersPost [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]
         (getenvMissLog sp ra s0 s1 s2 s3 s4 s5 s6) c ra 0#64
-        (getenvReturnRegs sp ra ++ getenvMissKeptRegs s0 s1 s2 s3 s4 s5 s6)) := by
+        (getenvReturnRegs sp ra ++ (getenvMissKeptRegs s0 s1 s2 s3 s4 s5 s6 ++
+          findMissScratch entry name cs.length l r))) := by
   constructor
   rintro before ⟨pc, eq⟩
   subst before
@@ -130,12 +131,16 @@ theorem getenv_miss (c : Config) (sp env entry name ra s0 s1 s2 s3 s4 s5 s6 : Bi
     ⟨gholds_lookup (n := 2) _ missed.regs (by rfl), missed.result, trivial⟩
   obtain ⟨after, run3, returned⟩ := (getenv_return b sp ra _ (missed.leaf (by rfl) (by decide)) outer regsB
     savedRa h.aligned).run b ⟨missed.pc, rfl⟩
-  have parked : GHolds b.σ (getenvMissKeptRegs s0 s1 s2 s3 s4 s5 s6) :=
-    holds_project missed.regs (by simp [getenvMissKeptRegs, getenvSavedRegs, findMissRegs, findReturnRegs, lookupG])
+  have parked : GHolds b.σ (getenvMissKeptRegs s0 s1 s2 s3 s4 s5 s6 ++ findMissScratch entry name cs.length l r) :=
+    holds_project missed.regs (by simp [getenvMissKeptRegs, getenvSavedRegs, findMissRegs, findReturnRegs,
+      findMissScratch, lookupG])
   have kept := holds_frame_ne returned.frame parked
-    (by simp only [getenvMissKeptRegs, getenvSavedRegs, List.cons_append, List.nil_append, keysG]; decide)
-    (by simp only [getenvMissKeptRegs, getenvSavedRegs, List.cons_append, List.nil_append, keysG]; decide)
-    (by simp only [getenvMissKeptRegs, getenvSavedRegs, List.cons_append, List.nil_append, keysG]; decide)
+    (by simp only [getenvMissKeptRegs, getenvSavedRegs, findMissScratch, List.cons_append, List.nil_append,
+      keysG]; decide)
+    (by simp only [getenvMissKeptRegs, getenvSavedRegs, findMissScratch, List.cons_append, List.nil_append,
+      keysG]; decide)
+    (by simp only [getenvMissKeptRegs, getenvSavedRegs, findMissScratch, List.cons_append, List.nil_append,
+      keysG]; decide)
   have effects := ((called.toEffectPost.trans missed.toEffectPost).trans returned.toEffectPost).widen
     (writes' := [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
   exact ⟨after, run1.trans (run2.trans run3), ⟨⟨effects.good, effects.image, effects.minstret, effects.tick,

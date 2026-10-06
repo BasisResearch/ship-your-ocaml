@@ -274,6 +274,23 @@ import OCaml.Vm.Primitives.HtifFrame
 import OCaml.Vm.Primitives.Console.Write
 import OCaml.Vm.Primitives.PairLayout
 import OCaml.Vm.Primitives.AccessPlanObservation
+import OCaml.Vm.Boot.Startup.Strdup
+import OCaml.Vm.Boot.Startup.ExtTableFree
+import OCaml.Vm.Boot.Startup.DecomposeNull
+import OCaml.Vm.Boot.WhileMinCaller
+import OCaml.Vm.Boot.Startup.OpenCallReset
+import OCaml.Vm.Boot.Startup.GcMessageQuiet
+import OCaml.Vm.Boot.Startup.AttemptOpenCalls
+import OCaml.Vm.Boot.Startup.SearchExeReset
+import OCaml.Vm.Boot.Startup.Argv0Name
+import OCaml.Vm.Boot.Startup.SearchInPathSteps
+import OCaml.Vm.Boot.Startup.SearchInPathScan
+import OCaml.Vm.Boot.Startup.SearchInPath
+import OCaml.Vm.Boot.Startup.BlockCall
+import OCaml.Vm.Boot.Startup.SearchExeTail
+import OCaml.Vm.Boot.Startup.ReadyPerm
+import OCaml.Vm.Boot.Startup.ExtTableFinish
+import OCaml.Vm.Boot.Startup.SearchExeFrames
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -2239,6 +2256,71 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 -- Startup summaries: generated blocks/calls and counted BSS loop.
 #print axioms OCaml.Vm.Boot.Startup.setup_input
 #print axioms OCaml.Vm.Boot.Startup.setup_summary
+-- a0-boot: the startup reset run
+#print axioms OCaml.Vm.Boot.Startup.strdup_full
+#print axioms OCaml.Vm.Boot.Startup.ext_table_free_empty
+#print axioms OCaml.Vm.Boot.Startup.decompose_null
+#print axioms OCaml.Vm.Boot.Startup.stat_free_block
+#print axioms OCaml.Vm.Boot.Startup.gc_message_save
+#print axioms OCaml.Vm.Boot.Startup.gc_message_return
+#print axioms OCaml.Vm.Boot.Startup.gc_message_quiet
+#print axioms OCaml.Vm.Boot.Startup.attempt_open_strdup
+#print axioms OCaml.Vm.Boot.Startup.attempt_open_message
+#print axioms OCaml.Vm.Boot.Startup.attempt_open_free_copy
+#print axioms OCaml.Vm.Boot.Startup.attempt_open_open
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.verb_gc
+#print axioms OCaml.Vm.Boot.Startup.KeptByte.low
+#print axioms OCaml.Vm.Boot.Startup.EmbedFrame.verbGc
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetSearchExeReturned.copy_bytes
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_open_call_exists
+#print axioms OCaml.Vm.Boot.Startup.stat_free_null
+#print axioms OCaml.Vm.Boot.Startup.stat_alloc_ready
+#print axioms OCaml.Vm.Boot.Startup.snp_text_loaded
+#print axioms OCaml.Vm.Boot.Startup.memcpy_text_loaded
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.free_result
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.of_block_frame
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.above_log
+#print axioms OCaml.Vm.Boot.WhileMin.interpCaller
+#print axioms OCaml.Vm.Boot.WhileMin.interpCaller_fillZero
+#print axioms OCaml.Vm.Boot.WhileMin.stackGeometry
+#print axioms OCaml.Vm.Boot.WhileMin.stackGeometry_fillZero
+#print axioms OCaml.Vm.Boot.Startup.search_in_path_prefix
+#print axioms OCaml.Vm.Boot.Startup.search_in_path_first
+#print axioms OCaml.Vm.Boot.Startup.search_scan_step
+#print axioms OCaml.Vm.Boot.Startup.search_in_path_dup
+#print axioms OCaml.Vm.Boot.Startup.search_in_path_return
+#print axioms OCaml.Vm.Boot.Startup.slash_scan
+#print axioms OCaml.Vm.Boot.Startup.search_in_path_plain
+#print axioms OCaml.Vm.Boot.Startup.block_then_call
+#print axioms OCaml.Vm.Boot.Startup.search_exe_decompose
+#print axioms OCaml.Vm.Boot.Startup.search_exe_search
+#print axioms OCaml.Vm.Boot.Startup.search_exe_free_tofree
+#print axioms OCaml.Vm.Boot.Startup.search_exe_free_table
+#print axioms OCaml.Vm.Boot.Startup.search_exe_return
+#print axioms OCaml.Vm.Boot.Startup.vsaRoomB_perm
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.perm
+#print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.size_byte
+#print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.contents_word
+#print axioms OCaml.Vm.Boot.Startup.fS_outside
+#print axioms OCaml.Vm.Boot.Startup.StatFreed.embed_frame
+#print axioms OCaml.Vm.Boot.Startup.ExtTableFreed.embed_frame
+#print axioms OCaml.Vm.Boot.Startup.CallerFrame.of_log
+#print axioms OCaml.Vm.Boot.Startup.CallerFrame.mono
+#print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.above
+#print axioms OCaml.Vm.Boot.Startup.chunkWalk_mem_bounds
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.block_bounds
+#print axioms OCaml.Vm.Boot.Startup.cstr_getD_le
+#print axioms OCaml.Vm.Boot.Startup.argv0_plain
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetSearchTableReturned.exe_name
+#print axioms OCaml.Vm.Boot.Startup.StatFreed.saved_gpr
+#print axioms OCaml.Vm.Boot.Startup.ExtTableFreed.saved_gpr
+#print axioms OCaml.Vm.Boot.Startup.StatFreed.byte
+#print axioms OCaml.Vm.Boot.Startup.ExtTableFreed.byte
+#print axioms OCaml.Vm.Boot.Startup.fS_live_outside
+#print axioms OCaml.Vm.Boot.Startup.StatFreed.live_byte
+#print axioms OCaml.Vm.Boot.Startup.ExtTableFreed.live_byte
+#print axioms OCaml.Vm.Boot.Startup.KeptByte.strdup_kept
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_search_exe_returned_exists
 #print axioms OCaml.Vm.Boot.Startup.clear_input
 #print axioms OCaml.Vm.Boot.Startup.clear_summary
 #print axioms OCaml.Vm.Boot.Startup.clear_log

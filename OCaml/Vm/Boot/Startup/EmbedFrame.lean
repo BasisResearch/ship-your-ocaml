@@ -10,7 +10,8 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap Vsa
 the bytecode executable) lies between the allocator arena and the native
 stack: [`__embed_start` = `__heap_end`, `__stack_top - __stack_size`).
 Startup never writes it, so every byte keeps its loader value. The frame also
-keeps the `environ` word, which main sets once to the embedded environment. -/
+keeps the `environ` word, which main sets once to the embedded environment,
+and `caml_verb_gc`, which stays zero without OCAMLRUNPARAM. -/
 
 def embedLimit : Nat := Layout.sym_stack_top - Layout.sym_stack_size
 
@@ -18,28 +19,47 @@ def EmbedByte (a : Nat) : Prop := heapEnd ≤ a ∧ a < embedLimit
 
 def EnvironByte (a : Nat) : Prop := Layout.sym_environ ≤ a ∧ a < Layout.sym_environ + 8
 
+def VerbGcByte (a : Nat) : Prop := Layout.sym_caml_verb_gc ≤ a ∧ a < Layout.sym_caml_verb_gc + 8
+
 /-- Bytes no startup function writes after main. -/
-def KeptByte (a : Nat) : Prop := EmbedByte a ∨ EnvironByte a
+def KeptByte (a : Nat) : Prop := EmbedByte a ∨ EnvironByte a ∨ VerbGcByte a
 
 theorem KeptByte.lt {a} (ha : KeptByte a) : a < embedLimit := by
-  rcases ha with ⟨_, h⟩ | ⟨_, h⟩
+  rcases ha with ⟨_, h⟩ | ⟨_, h⟩ | ⟨_, h⟩
   · exact h
   · unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size Layout.sym_environ at *; omega
+  · unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size Layout.sym_caml_verb_gc at *; omega
+
+/-- The kept low globals lie below the arena, outside the allocator's globals. -/
+theorem KeptByte.low {a} (ha : KeptByte a) (below : a < heapEnd) : a < heapStart ∧ ¬ allocGlobal a := by
+  rcases ha with ⟨low, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩
+  · omega
+  · unfold allocGlobal InRange heapStart
+    unfold Layout.sym_environ at lo hi
+    omega
+  · unfold allocGlobal InRange heapStart
+    unfold Layout.sym_caml_verb_gc at lo hi
+    omega
 
 theorem KeptByte.not_foot {a H} (ha : KeptByte a) : ¬ vsaFoot H a := by
   intro owned
-  rcases ha with ⟨low, _⟩ | ⟨lo, hi⟩
-  · have := allocator_foot_below owned; omega
-  · unfold vsaFoot allocGlobal InRange heapStart at owned
-    unfold Layout.sym_environ at lo hi
-    omega
+  by_cases below : a < heapEnd
+  · have low := ha.low below
+    rcases owned with global | ⟨lo, _⟩
+    · exact low.2 global
+    · unfold heapStart at *; omega
+  · rcases ha with ⟨_, _⟩ | ⟨_, hi⟩ | ⟨_, hi⟩
+    · have := allocator_foot_below owned; omega
+    · unfold Layout.sym_environ heapEnd at *; omega
+    · unfold Layout.sym_caml_verb_gc heapEnd at *; omega
 
 /-- Kept bytes avoid every low global from `startup_count` up to the arena. -/
 theorem KeptByte.out_low {a g n} (ha : KeptByte a) (lo : Layout.sym_startup_count ≤ g) (hi : g + n ≤ heapEnd) :
     a < g ∨ g + n ≤ a := by
-  rcases ha with ⟨low, _⟩ | ⟨_, h⟩
+  rcases ha with ⟨low, _⟩ | ⟨_, h⟩ | ⟨_, h⟩
   · right; omega
   · left; unfold Layout.sym_environ Layout.sym_startup_count at *; omega
+  · left; unfold Layout.sym_caml_verb_gc Layout.sym_startup_count at *; omega
 
 structure EmbedFrame (before after : Config) : Prop where
   byte : ∀ a, KeptByte a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
@@ -167,12 +187,16 @@ theorem StartupDataFrame.embed {before after} (h : StartupDataFrame before after
   constructor
   intro a ha
   apply h.byte a
-  rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩
+  rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩
   · exact Or.inr ⟨lo, by unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size at *; omega⟩
   · refine Or.inl ⟨?_, ?_, ?_⟩
     · unfold Layout.sym_environ heapStart at *; omega
     · unfold allocGlobal InRange; unfold Layout.sym_environ at lo hi; omega
     · left; unfold Layout.sym_environ Layout.sym_Caml_state at *; omega
+  · refine Or.inl ⟨?_, ?_, ?_⟩
+    · unfold Layout.sym_caml_verb_gc heapStart at *; omega
+    · unfold allocGlobal InRange; unfold Layout.sym_caml_verb_gc at lo hi; omega
+    · left; unfold Layout.sym_caml_verb_gc Layout.sym_Caml_state at *; omega
 
 /-- Every embed byte still has its loader value. -/
 structure EmbedImage (c : Config) : Prop where
@@ -181,18 +205,24 @@ structure EmbedImage (c : Config) : Prop where
 theorem EmbedImage.frame {before after} (h : EmbedImage before) (f : EmbedFrame before after) :
     EmbedImage after := ⟨fun a ha => (f.byte a (Or.inl ha)).trans (h.byte a ha)⟩
 
-/-- The embedded image together with main's `environ` publication. -/
+/-- The embedded image together with main's `environ` publication and the
+zero GC verbosity. -/
 structure KeptImage (c : Config) : Prop where
   embed : EmbedImage c
   environ : bytesT c.σ.mem Layout.sym_environ 8 = BitVec.ofNat 64 WhileMinImage.envArray
+  verbGc : LPins8 c.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8)
 
 /-- The `environ` global survives every kept frame. -/
 theorem EmbedFrame.environ {before after v} (f : EmbedFrame before after)
     (h : bytesT before.σ.mem Layout.sym_environ 8 = v) : bytesT after.σ.mem Layout.sym_environ 8 = v :=
-  (word_observed _ (fun i hi => f.byte _ (Or.inr ⟨by omega, by omega⟩))).trans h
+  (word_observed _ (fun i hi => f.byte _ (Or.inr (Or.inl ⟨by omega, by omega⟩)))).trans h
+
+theorem EmbedFrame.verbGc {before after bytes} (f : EmbedFrame before after)
+    (h : LPins8 before.σ.mem Layout.sym_caml_verb_gc bytes) : LPins8 after.σ.mem Layout.sym_caml_verb_gc bytes :=
+  lpins8_observed h (fun i hi => f.byte _ (Or.inr (Or.inr ⟨by omega, by omega⟩)))
 
 theorem KeptImage.frame {before after} (h : KeptImage before) (f : EmbedFrame before after) :
-    KeptImage after := ⟨h.embed.frame f, f.environ h.environ⟩
+    KeptImage after := ⟨h.embed.frame f, f.environ h.environ, f.verbGc h.verbGc⟩
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.WhileMinElfParse
@@ -218,8 +248,25 @@ theorem ResetParameterEntry.embed {initial entry} (w : ResetParameterEntry initi
   w.domain.witness.tables.third.first.published.allocation.before.request.tables.allocation.before.alloc.domain.main.embed.frame
     w.data_frame.embed
 
+theorem ResetParameterEntry.verb_gc {initial entry} (w : ResetParameterEntry initial entry) :
+    LPins8 entry.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8) := by
+  have main := w.domain.witness.tables.third.first.published.allocation.before.request.tables.allocation.before.alloc.domain.main.post.toCrtCamlMainPost
+  have bounds : Layout.sym_bss_start ≤ Layout.sym_caml_verb_gc ∧
+      Layout.sym_caml_verb_gc + 8 ≤ Layout.sym_bss_start + 8 * bssWords ∧
+      Layout.sym_environ + 8 ≤ Layout.sym_caml_verb_gc ∧
+      Layout.sym_caml_verb_gc + 8 ≤ Layout.sym_stack_top - 8 := by decide
+  have zero (i : Nat) (hi : i < 8) : (entry.σ.mem[Layout.sym_caml_verb_gc + i]?).getD 0 = 0#8 := by
+    rw [w.data_frame.byte _ (show StartupDataBytes (Layout.sym_caml_verb_gc + i) from by
+        refine Or.inl ⟨?_, ?_, ?_⟩
+        · unfold Layout.sym_caml_verb_gc heapStart; omega
+        · unfold VsaIris.VsaHeap.allocGlobal VsaIris.VsaHeap.InRange Layout.sym_caml_verb_gc; omega
+        · left; unfold Layout.sym_caml_verb_gc Layout.sym_Caml_state; omega)]
+    exact main.bss_byte _ (by omega) (by omega) (mainWrites_between _ _ _ (by omega) (by omega))
+  exact ⟨by simpa using zero 0 (by decide), zero 1 (by decide), zero 2 (by decide), zero 3 (by decide),
+    zero 4 (by decide), zero 5 (by decide), zero 6 (by decide), zero 7 (by decide)⟩
+
 theorem ResetParameterEntry.kept {initial entry} (w : ResetParameterEntry initial entry) :
-    KeptImage entry := ⟨w.embed, w.environment.global⟩
+    KeptImage entry := ⟨w.embed, w.environment.global, w.verb_gc⟩
 
 theorem ResetParameterReturned.kept {initial after} (w : ResetParameterReturned initial after) :
     KeptImage after :=

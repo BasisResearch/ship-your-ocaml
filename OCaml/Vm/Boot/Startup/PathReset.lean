@@ -57,8 +57,9 @@ structure ResetPathMissed (initial after : Config) where
       (vsaReg source 22))
     atGetenv jal_80025558_call.link 0#64
     (getenvReturnRegs searchStack jal_80025558_call.link ++
-      getenvMissKeptRegs (bytesT table.atSaved.σ.mem exeNameSlot.toNat 8) (vsaReg source 9)
-        (vsaReg source 18) (vsaReg source 19) (vsaReg source 20) (vsaReg source 21) (vsaReg source 22)) after
+      (getenvMissKeptRegs (bytesT table.atSaved.σ.mem exeNameSlot.toNat 8) (vsaReg source 9)
+        (vsaReg source 18) (vsaReg source 19) (vsaReg source 20) (vsaReg source 21) (vsaReg source 22) ++
+        findMissScratch 0x8680007f#64 pathName0 pathChars0.length (BitVec.ofNat 8 79) (BitVec.ofNat 8 80))) after
   run : Steps (Vsa.Densify.fillZero initial) after
 
 theorem reset_path_missed_exists : ∃ initial after, Nonempty (ResetPathMissed initial after) := by

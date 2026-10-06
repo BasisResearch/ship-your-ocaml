@@ -36,6 +36,10 @@ structure FindMissInput (sp reent name offset env entry ra s0 s1 s2 s3 s4 s5 s6 
 def findMissRegs (sp ra s0 s1 s2 s3 s4 s5 s6 : BitVec 64) : GRegs :=
   findReturnRegs sp ra s1 s2 s3 s5 s6 ++ [(20, s4), (8, s0)]
 
+/-- The argument registers the failed comparison leaves behind. -/
+def findMissScratch (entry name : BitVec 64) (count : Nat) (l r : BitVec 8) : GRegs :=
+  [(11, name), (12, strncmpEnd entry (BitVec.ofNat 64 count)), (14, nameByteWord r), (15, nameByteWord l)]
+
 /-- Complete `_findenv_r` over a one-entry environment that does not match:
 the bounded comparison fails at the first byte, the null next entry ends the
 search, and the lock is released before returning null. -/
@@ -45,7 +49,7 @@ theorem findenv_miss (c : Config) (sp reent name offset env entry ra s0 s1 s2 s3
     FnSummary 0x80037438#64 (fun d => d = c)
       (WriteRegistersPost [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]
         (findSearchLog sp ra s0 s1 s2 s3 s4 s5 s6) c ra 0#64
-        (findMissRegs sp ra s0 s1 s2 s3 s4 s5 s6)) := by
+        (findMissRegs sp ra s0 s1 s2 s3 s4 s5 s6 ++ findMissScratch entry name cs.length l r)) := by
   constructor
   rintro before ⟨pc, eq⟩
   subst before
@@ -135,8 +139,18 @@ theorem findenv_miss (c : Config) (sp reent name offset env entry ra s0 s1 s2 s3
       (writes' := [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
   refine ⟨after, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans run7))))),
     ⟨{ effects with memory := released.memory.trans (sameG.trans memoryF) }, ?_⟩⟩
+  have scratch (n : Nat) (v : BitVec 64) (lower : 1 ≤ n) (upper : n ≤ 31)
+      (unwritten : n ∉ [20, 8, 9, 10] ∧ n ∉ [10, 1, 9, 18, 19, 21, 22, 2])
+      (hv : gprGet f.σ n = some v) : gprGet after.σ n = some v :=
+    (released.toEffectPost.gpr_frame (by decide) n lower upper unwritten.2).trans
+      ((skipped.toEffectPost.gpr_frame (by decide) n lower upper unwritten.1).trans hv)
   apply (gholds_append _ _).mpr
-  refine ⟨released.regs, ?_, ?_, trivial⟩
+  refine ⟨(gholds_append _ _).mpr ⟨released.regs, ?_, ?_, trivial⟩, ?_⟩
   · exact (released.frame .x20 (by decide) (by decide)).trans (gholds_lookup (n := 20) _ skipped.regs (by rfl))
   · exact (released.frame .x8 (by decide) (by decide)).trans (gholds_lookup (n := 8) _ skipped.regs (by rfl))
+  · exact ⟨scratch 11 _ (by decide) (by decide) (by decide) (gholds_lookup (n := 11) _ differed.regs (by rfl)),
+      scratch 12 _ (by decide) (by decide) (by decide) (gholds_lookup (n := 12) _ differed.regs (by rfl)),
+      scratch 14 _ (by decide) (by decide) (by decide) (gholds_lookup (n := 14) _ differed.regs (by rfl)),
+      scratch 15 _ (by decide) (by decide) (by decide) (gholds_lookup (n := 15) _ differed.regs (by rfl)),
+      trivial⟩
 end OCaml.Vm.Boot.Startup
