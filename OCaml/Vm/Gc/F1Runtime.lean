@@ -487,19 +487,12 @@ theorem f1_stable {ws : List W} (apart : ∀ w ∈ ws, ∀ v ∈ f1Footprint, Ap
       (footprint_keep frame apart in_channelsHead.footprint)
       fun a out => by rw [frame a (outW_of out)]⟩) ok
 
-/-- An open record misses the whole footprint: it lies in the arena, apart
-from the `Caml_state` record and the major chunk. -/
-theorem record_footprint_apart {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
-    (h : LibHeapAt H cap chs c) {a : Nat} (ha : a ∈ chs) {w : W} (r : RecordWindow a w) :
-    ∀ v ∈ f1Footprint, Apart w v := by
-  obtain ⟨lo, hi, -⟩ := r
-  obtain ⟨e, he, elo, ehi⟩ := h.records a ha
-  have bounds := h.ready.block_bounds he
-  dsimp only at elo ehi
-  have dom := h.recordsApart a ha _ (List.mem_cons_self (a := (WhileMinRuntime.domain, Layout.domainStateBytes)))
-  have major := h.recordsApart a ha (majorRegion.lo, majorRegion.hi - majorRegion.lo) (by decide)
-  simp only [majorRegion, WhileMinRuntime.domain, Layout.domainStateBytes, chanRecordBytes, chanOffBuff,
-    OCaml.Bytecode.ioBufferSize, Vsa.Sim.DlHeap.heapStart] at *
+/-- An arena window apart from the `Caml_state` record and the major chunk
+misses the whole footprint. -/
+theorem arena_footprint_apart {w : W} (low : Vsa.Sim.DlHeap.heapStart ≤ w.lo)
+    (dom : w.hi ≤ WhileMinRuntime.domain ∨ WhileMinRuntime.domain + Layout.domainStateBytes ≤ w.lo)
+    (major : w.hi ≤ majorRegion.lo ∨ majorRegion.hi ≤ w.lo) : ∀ v ∈ f1Footprint, Apart w v := by
+  simp only [majorRegion, WhileMinRuntime.domain, Layout.domainStateBytes, Vsa.Sim.DlHeap.heapStart] at *
   intro v hv
   rcases List.mem_cons.1 hv with rfl | hv
   · simp only [Apart, youngWord, f1Domain, WhileMinRuntime.domain, Layout.off_young_ptr]; omega
@@ -511,6 +504,21 @@ theorem record_footprint_apart {H : List (Nat × Nat)} {cap : Nat} {chs : List N
       simp only [Apart, f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.off_young_ptr,
         Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
         Layout.off_backtrace_active] <;> omega
+
+/-- An open record misses the whole footprint: it lies in the arena, apart
+from the `Caml_state` record and the major chunk. -/
+theorem record_footprint_apart {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
+    (h : LibHeapAt H cap chs c) {a : Nat} (ha : a ∈ chs) {w : W} (r : RecordWindow a w) :
+    ∀ v ∈ f1Footprint, Apart w v := by
+  obtain ⟨lo, hi, -⟩ := r
+  obtain ⟨e, he, elo, ehi⟩ := h.records a ha
+  have bounds := h.ready.block_bounds he
+  dsimp only at elo ehi
+  have dom := h.recordsApart a ha _ (List.mem_cons_self (a := (WhileMinRuntime.domain, Layout.domainStateBytes)))
+  have major := h.recordsApart a ha (majorRegion.lo, majorRegion.hi - majorRegion.lo) (by decide)
+  dsimp only at dom major
+  apply arena_footprint_apart (by omega) (by omega)
+  simp only [majorRegion] at *; omega
 
 /-- **Writes to an open channel record keep `f1Runtime`**, alongside windows
 apart from the footprint and safe for newlib's heap (a1-prims' flush and

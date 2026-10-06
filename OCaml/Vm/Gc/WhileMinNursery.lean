@@ -94,6 +94,8 @@ theorem whileMin_nurseryGeometry :
       exact .nil
     nurseryLow := by rw [rf]; decide
     nurseryHigh := by rw [rf]; decide
-    stackAbove := by rw [rf]; simp [WhileMinEntry.high, Layout.stackBytes, WhileMinObservation.observed] }
+    stackAbove := by rw [rf]; simp [WhileMinEntry.high, Layout.stackBytes, WhileMinObservation.observed]
+    codeFits := by rw [WhileMin.code_size]; decide
+    primsFit := by rw [WhileMinPrimitives.prims_size]; decide }
 
 end OCaml.Vm.Gc

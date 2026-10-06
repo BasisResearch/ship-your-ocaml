@@ -26,6 +26,12 @@ G1 (the whileMin cut's values; the chunk's extent from its chunk head). -/
 def minorRegion : W := ⟨0x80082000, 0x80282000⟩
 def majorRegion : W := ⟨0x80283000, 0x8037b000⟩
 
+/-- The code buffer's and the primitive table's sizes at the F1 cut: the
+requests `caml_load_code` and the primitive table's growth made (whileMin's
+191 code words; capacity 768 entries). -/
+def f1CodeBytes : Nat := 764
+def f1PrimCapacity : Nat := 768
+
 /-- `[x, x + n)` lies in the minor heap or in the major heap chunk. -/
 def InHeapChunks (x n : Nat) : Prop :=
   (minorRegion.lo ≤ x ∧ x + n ≤ minorRegion.hi) ∨ (majorRegion.lo ≤ x ∧ x + n ≤ majorRegion.hi)
@@ -88,5 +94,9 @@ structure NurseryGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   /-- the nursery lies below the VM stack allocation, so a reserved block sits
   below every stack slot the arms write (a1-arms' CLOSUREREC) -/
   stackAbove : (runtimeFields c).youngPtr ≤ high - Layout.stackBytes
+  /-- the program fits the cut's code buffer and primitive table, so a fresh
+  malloc block misses its code and its primitive entries -/
+  codeFits : 4 * P.code.size ≤ f1CodeBytes
+  primsFit : P.prims.size ≤ f1PrimCapacity
 
 end OCaml.Vm.Gc

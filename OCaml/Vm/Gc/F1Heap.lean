@@ -41,7 +41,7 @@ def f1Covered : List (Nat × Nat) :=
   [(Boot.WhileMinRuntime.domain, Layout.domainStateBytes), (refTable, 56),
    (minorRegion.lo, minorRegion.hi - minorRegion.lo), (majorRegion.lo, majorRegion.hi - majorRegion.lo),
    (Boot.WhileMinEntry.high - Layout.stackBytes, Layout.stackBytes),
-   (Boot.WhileMinHeapChunks.codeBufferPayload, 764), (Boot.WhileMinHeapChunks.primTablePayload, 6144)]
+   (Boot.WhileMinHeapChunks.codeBufferPayload, f1CodeBytes), (Boot.WhileMinHeapChunks.primTablePayload, 8 * f1PrimCapacity)]
 
 /-- The regions F1's ordinary windows write: the `Caml_state` record around
 its `ref_table` word, the minor heap, the major chunk, the VM stack. The

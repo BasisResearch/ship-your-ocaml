@@ -111,7 +111,9 @@ theorem NurseryGeometry.transport_ids {P : Prog} {s s' : St} {c c' : Config} {pl
       rw [← size]; exact g.heapChunks l a o placed ho
     nurseryLow := by rw [limit]; exact g.nurseryLow
     nurseryHigh := by rw [ptr]; exact g.nurseryHigh
-    stackAbove := by rw [ptr]; exact g.stackAbove }
+    stackAbove := by rw [ptr]; exact g.stackAbove
+    codeFits := g.codeFits
+    primsFit := g.primsFit }
 
 /-- **Transport** across a step that keeps the channel table. -/
 theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Place} {cp : ChanPlace}
@@ -228,7 +230,9 @@ theorem NurseryGeometry.alloc {P : Prog} {s s' : St} {c c' : Config} {pl : Place
         exact Or.inl ⟨by omega, by omega⟩
     nurseryLow := by rw [limit]; exact g.nurseryLow
     nurseryHigh := by have := g.nurseryHigh; omega
-    stackAbove := by have := g.stackAbove; omega }
+    stackAbove := by have := g.stackAbove; omega
+    codeFits := g.codeFits
+    primsFit := g.primsFit }
 
 /-- A step that keeps heap, world and memory keeps the geometry. -/
 theorem NurseryGeometry.same {P : Prog} {s s' : St} {c c' : Config} {pl : Place} {cp : ChanPlace}

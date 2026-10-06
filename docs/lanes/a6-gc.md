@@ -36,6 +36,14 @@ Done (F1 side of the GC):
     words, and a0-boot's obligation covers `f1Covered` (requested sizes).
     `F1Pins.codeWord`/`primsWord` pin `caml_start_code` and the prim
     table's contents to their blocks.
+  * `OCaml/Vm/Gc/F1Barrier.lean`: the parts of `BarrierRuntime f1Layout`.
+    `f1_tableRuntime` gives `.table`: the remembered set as `Table`, its
+    arena bounds, and `WindowSeparated` for the struct and the next entry,
+    via `windowSeparated_of` (a window apart from `f1Uses` and the open
+    records). `f1_insert` gives `.insert` (`LibHeapAt.insert`: both stores
+    land in live blocks, the pointer stays in its storage). `.idle` is
+    `f1_gcIdle`. `NurseryGeometry.codeFits`/`primsFit` bound P's code and
+    primitives by the pinned blocks.
   * `Sim.f1_console_stable : ConsoleStable Gc.f1Layout`
     (`OCaml/Vm/Sim/F1Console.lean`), a1-prims' console premise. It covers
     the native window above the arena, the two errno words (mutable
