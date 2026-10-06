@@ -59,6 +59,17 @@ the `StackGeometry` plus a6-gc's `NurseryGeometry` of the same witness.
 * `ArmSim.entry` takes `ArmGeometry` at the cut. For whileMin it is the
   stack geometry with `Gc.whileMin_nurseryGeometry`.
 
+* hand: RAISE, RERAISE, RAISE_NOTRACE, caught path (`RaiseRows`). Every
+  quiet-raise premise comes from the loop head: `RuntimeFrame.barrier`/
+  `backtrace` (a6-gc's pins), `NativeValid.rootSaved` (bprime) and
+  `ExtraBounded.trapSaved` (a2-sem). Uncaught raises leave the interpreter, so
+  the rows take the named `RaisesCaught P`.
+* hand: C_CALL1–5 (`CcallRows`, generic `ccall_row_of`). `CcallReady` comes
+  from the loop head: the generated `lookup` is word-aligned by construction,
+  and the slots come from `StackGeometry.primsRam`. Named obligations remain:
+  `CcallReturns` (a1-prims' callee summaries), `CcallEffects` (raise, exit
+  and callback results) and `CcallArity` (per program).
+
 GRAB has only its satisfied path (`grab_fast_next`). Its row and the other
 allocation rows need `NurseryReserve` from the allocation summaries.
 
