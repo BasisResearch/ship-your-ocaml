@@ -43,12 +43,14 @@ theorem byte_getD (c : Config) (a : Nat) : byte c a = (c.σ.mem[a]?).getD 0 := b
 def lengthWrites : List Nat := [10, 15]
 
 /-- **`caml_string_length` on a placed string** of byte length `n` at value
-address `a`: returns `n`, writes only `a0`/`a5`, leaves memory unchanged. -/
+address `a`: returns `n`, writes only `a0`/`a5` (both pinned), leaves memory
+unchanged. -/
 theorem string_length_call (c : Config) (ra : BitVec 64) {a n : Nat}
     (h : LeafInput ra c) (argument : gpr c 10 = some (BitVec.ofNat 64 a))
     (geometry : StringGeometry a n) (shape : StringShape c a n) :
     FnSummary 0x80013570#64 (fun d => d = c)
-      (WritePost lengthWrites [] c ra (BitVec.ofNat 64 n)) := by
+      (WriteRegistersPost lengthWrites [] c ra (BitVec.ofNat 64 n)
+        [(10, BitVec.ofNat 64 n), (15, stringLast (word c (a - 8))), (1, ra)]) := by
   let R : Nat → BitVec 64 := fun k => if k = 1 then ra else BitVec.ofNat 64 a
   have regs : GHolds c.σ (length_input R) := ⟨h.raReg, argument, True.intro⟩
   have minus8 : R 10 + 18446744073709551608#64 = BitVec.ofNat 64 a - 8 := by
@@ -77,11 +79,19 @@ theorem string_length_call (c : Config) (ra : BitVec 64) {a n : Nat}
     rw [padAddr, padByte, hw, ← BitVec.add_assoc, last, ← BitVec.sub_eq_add_neg]
     simp only [bytesVal, zero_extend, Sail.BitVec.zeroExtend]
     exact untagged _ _ n shape.headerSize shape.padding
+  have lastValue : bytesVal .ld ((length_loads c.σ.mem R).getD 0 []) >>> 10 <<< 3 + 18446744073709551615#64 =
+      stringLast (word c (a - 8)) := by
+    simp only [length_loads, List.getD_cons_zero]
+    rw [hw, last]
   have call := post.toEffectPost
   rw [value] at call
+  have regs' := post.regs
+  simp only [length_regs] at regs'
+  rw [value, lastValue] at regs'
   exact { call with
     pc := call.pc
     frame := fun r out noise => call.frame r (fun k hk => out k (by
-      simpa only [lengthWrites, List.mem_cons, List.not_mem_nil, or_false] using hk)) noise }
+      simpa only [lengthWrites, List.mem_cons, List.not_mem_nil, or_false] using hk)) noise
+    regs := regs' }
 
 end OCaml.Vm.Primitives.Format.StringLength
