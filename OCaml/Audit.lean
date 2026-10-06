@@ -390,6 +390,8 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.OpArm.of_unreached
 #print axioms OCaml.Vm.Sim.ocamlrun_refinement_F1_pinned
 #print axioms OCaml.Vm.Sim.whileMin_halts_f1
+#print axioms OCaml.Vm.Sim.whileMin_premises
+#print axioms OCaml.Vm.Sim.whileMin_halts_open
 #print axioms OCaml.Vm.Sim.read8_writeLog_out
 #print axioms OCaml.Vm.Sim.stop_do_exit_summary
 #print axioms OCaml.Vm.Sim.stop_ready

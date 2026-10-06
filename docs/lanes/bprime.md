@@ -114,6 +114,17 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `GoodF1.stopAccu` (new: STOP never returns a `.raw` word, which caml_main
   would read as an exception; `whileMin` still checks in one kernel run).
 
+**whileMin's open premises, generated (2026-10-06)**
+- `WhileMinTable.lean` (generated with F1Table by `scripts/gen_f1_table.py`):
+  `whileMin_halts_open (o : WhileMinOpen) : Halts WhileMin.cut "55\n2500\n36\n" 0`.
+  Fields of unreached opcodes are discharged from `whileMinOps`; fields
+  proved by the shape run are filled. As rows land and the generator reruns,
+  `WhileMinOpen` shrinks. Currently it has 10 fields:
+  * `row_CLOSURE`, `row_MAKEBLOCK` (a1-arms);
+  * `setglobal_barrier` (caml_modify, a6-gc);
+  * `c_call{1,2,4}_{returns,effects}` (a1-arms/a1-prims);
+  * `scratch` (GPR presence in LoopRegisters, a1-arms).
+
 **whileMin's remaining premises (2026-10-06)**
 - `f1_table_for keep`: rows of opcodes a program never reaches are vacuous
   (`OpArm.of_unreached`), and premises are guarded by the kept opcodes.
