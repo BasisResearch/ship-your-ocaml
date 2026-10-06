@@ -114,6 +114,19 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `GoodF1.stopAccu` (new: STOP never returns a `.raw` word, which caml_main
   would read as an exception; `whileMin` still checks in one kernel run).
 
+**GPR presence, entry side (2026-10-06)**
+- `InterpCaller.gprs : GprPresent c.σ`, proved at the captured cut
+  (`WhileMin.cut_gprs`, one key check per register in the generated table).
+- `GprPresent.of_stepFrame` and `written_of_pins` (`EntryFrame.lean`) carry
+  presence through a generated segment's `StepFrameOut` and output pins.
+- Each entry post (save, prep, setjmp, resume) carries `gprs : GprPresent before → GprPresent after`, and so do
+  `LoopSetupPost.gprs` and `EntryNativePost.gprs`.
+- a1-arms consumes `EntryNativePost.gprs` for `LoopRegisters.gprs`. That
+  discharges `ccall1Exit_f1`'s `present`.
+- a2-sem asked for `Caml_state->external_raise = &raise_buf` at the loop head
+  (DIVINT/MODINT's raise). This became `Invocation.externalRaise`; a2-sem
+  landed both the arm side and the entry half (entryLog index 33), in 27b71b45.
+
 **ArmSim.halt at C_CALL1: caml_sys_exit (2026-10-06)**
 - `ccall1Exit_f1 (fits) (present) : CcallExit Gc.f1Layout P .C_CALL1 0`
   (`CcallExitF1.lean`). It runs a1-arms' `c_call1_exit_arm`, then a1-prims'

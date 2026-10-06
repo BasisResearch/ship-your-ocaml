@@ -47,6 +47,19 @@ structure EntryNativePost (before : Config) (sp : Nat) (regs : Nat → BitVec 64
   memory : after.σ.mem = writeLog before.σ.mem (entryLog sp regs a0 before)
   output : after.σ.sailOutput = before.σ.sailOutput
   htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
+  /-- GPR presence survives entry (the loop's `LoopRegisters.gprs`) -/
+  gprs : OCaml.Vm.Boot.Startup.GprPresent before.σ → OCaml.Vm.Boot.Startup.GprPresent after.σ
+
+/-- The loop registers are present after LOOP_SETUP. -/
+theorem LoopSetupPost.gprs {c c' : Config} (h : LoopSetupPost c c') (p : OCaml.Vm.Boot.Startup.GprPresent c.σ) :
+    OCaml.Vm.Boot.Startup.GprPresent c'.σ :=
+  p.of_stepFrame h.frame (writes := [19, 20, 22, 24]) (by decide) (by decide +kernel) fun n hn => by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+    rcases hn with rfl | rfl | rfl | rfl
+    · exact gprGet_isSome_of h.loop.domain
+    · exact gprGet_isSome_of h.loop.pending
+    · exact gprGet_isSome_of h.loop.dispatchTable
+    · exact gprGet_isSome_of h.loop.opcodeBound
 
 /-- A word outside a write log reads the same before and after it. -/
 theorem word_of_log {c c' : Config} {log : List WEntry} {a : Nat}
@@ -116,7 +129,8 @@ theorem entry_native {c : Config} {sp : Nat} {regs : Nat → BitVec 64} {a0 : Bi
   have resumeEq : entryResumeLog sp c3 = entryResumeLog sp c := by
     simp only [entryResumeLog, dom3]
   refine ⟨n1 + n2 + n3 + n4 + n5, c5, ((((s1.append s2).append s3).append s4).append s5), p5.good,
-    p5.image, p5.tick, p5.head, p5.loop, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    p5.image, p5.tick, p5.head, p5.loop, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+    fun p => p5.gprs (p4.gprs (p3.gprs (p2.gprs (p1.gprs p))))⟩
   · exact (keep 8 (by decide)).trans (p4.vmPc.trans (by rw [prog3]))
   · refine (keep 9 (by decide)).trans (p4.vmSp.trans ?_)
     simp only [domainField, dom3]

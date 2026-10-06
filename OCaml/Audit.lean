@@ -390,6 +390,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.entry_setjmp
 #print axioms OCaml.Vm.Sim.entry_resume
 #print axioms OCaml.Vm.Sim.entry_native
+#print axioms OCaml.Vm.Sim.LoopSetupPost.gprs
+#print axioms OCaml.Vm.Boot.Startup.GprPresent.of_stepFrame
+#print axioms OCaml.Vm.Sim.written_of_pins
 #print axioms OCaml.Vm.Sim.outLRange_of_cover
 #print axioms OCaml.Vm.Primitives.PayloadOutside.cover
 #print axioms OCaml.Vm.Sim.entryLog_cover
@@ -2392,6 +2395,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.RuntimeReady.above_log
 #print axioms OCaml.Vm.Boot.WhileMin.interpCaller
 #print axioms OCaml.Vm.Boot.WhileMin.interpCaller_fillZero
+#print axioms OCaml.Vm.Boot.WhileMin.cut_gprs
 #print axioms OCaml.Vm.Boot.WhileMin.stackGeometry
 #print axioms OCaml.Vm.Boot.WhileMin.stackGeometry_fillZero
 #print axioms OCaml.Vm.Boot.Startup.search_in_path_prefix

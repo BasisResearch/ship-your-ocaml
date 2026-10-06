@@ -3,6 +3,7 @@ import OCaml.Vm.Sim.WriteGeometry
 import Vsa.Sim.DlHeap
 import Vsa.Sim.Boot.Bytes
 import OCaml.Vm.Sim.Invocation
+import OCaml.Vm.Boot.Startup.GprPresence
 
 /-!
 # `caml_interprete`'s caller at the Layer A cut
@@ -68,6 +69,8 @@ structure InterpCaller (P : Prog) (c : Config) (pl : Place) (cp : ChanPlace) (hi
   tick : c.tick < 2
   /-- HTIF is idle at the cut (no half-written tohost command) -/
   htifIdle : c.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some (0#4)
+  /-- every GPR x1..x31 is present (the loop's `LoopRegisters.gprs`) -/
+  gprs : OCaml.Vm.Boot.Startup.GprPresent c.σ
 
 /-- The caller is a property of registers and total reads: it transports to
 any zero-equivalent memory (e.g. `fillZero`). -/
@@ -79,7 +82,8 @@ theorem InterpCaller.of_mem {P : Prog} {c c' : Config} {pl : Place} {cp : ChanPl
   have hg : ∀ n, gpr c' n = gpr c n := by
     intro n; unfold gpr Vsa.Sim.gprGet; rw [regs]
   refine ⟨?_, h.ra, ?_, h.frameLow, h.frameHigh, h.aligned, ?_, h.mainReturn, ?_, ?_, ?_, ?_, ?_, ?_,
-    tick ▸ h.tick, by rw [regs]; exact h.htifIdle⟩
+    tick ▸ h.tick, by rw [regs]; exact h.htifIdle,
+    ⟨fun n h1 h2 => by have := h.gprs.get n h1 h2; unfold Vsa.Sim.gprGet at *; rw [regs]; exact this⟩⟩
   · intro r hr; rw [hg]; exact h.regs r hr
   · rw [hg]; exact h.stack
   · intro r hr; rw [hw]; exact h.mainFrame r hr

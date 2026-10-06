@@ -107,6 +107,20 @@ theorem caller_outside :
     cases ha
   · simp only [entryFootprint, OutLRange]; decide
 
+/-- A register with an assignment in the captured table is present. -/
+theorem present_of_key {r : LeanRV64DExecutable.Register}
+    (h : r ∈ WhileMinRegisters.assignments.map Sigma.fst) : (WhileMinRegisters.registers.get? r).isSome := by
+  obtain ⟨⟨r', v⟩, hm, rfl⟩ := List.mem_map.1 h
+  rw [WhileMinRegisters.register_get hm]
+  rfl
+
+/-- Every GPR is present at the cut (one key check per register). -/
+theorem cut_gprs : OCaml.Vm.Boot.Startup.GprPresent cut.σ := by
+  constructor
+  intro n lo hi
+  have h31 : n ≤ 31 := by omega
+  gpr_cases n => exact present_of_key (by decide +kernel)
+
 /-- **caml_interprete's caller at the captured cut.** -/
 theorem interpCaller :
     InterpCaller whileMin cut WhileMinHeap.place (fun _ => none) WhileMinEntry.high callerSp callerRegs
@@ -138,6 +152,7 @@ theorem interpCaller :
     refine ⟨Or.inl (by omega), Or.inr (by omega), Or.inr (by omega), trivial⟩
   tick := by decide
   htifIdle := WhileMinRegisters.get_htif_payload_writes
+  gprs := cut_gprs
   outside := caller_outside
 
 theorem interpCaller_densify {P : Prog} {c : Config} {pl : Place} {cp : ChanPlace} {high sp : Nat}

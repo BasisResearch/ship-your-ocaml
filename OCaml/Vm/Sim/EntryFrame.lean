@@ -3,6 +3,7 @@ import OCaml.Vm.Sim.InterpEntrySaveSegment
 import OCaml.Vm.Sim.InterpEntrySavePins
 import OCaml.Vm.Primitives.ImageFrame
 import Vsa.Sim.SegToTripleFramed
+import OCaml.Vm.Boot.Startup.GprPresence
 
 /-!
 # Native frame addressing for `caml_interprete`'s entry
@@ -99,6 +100,39 @@ theorem _root_.Vsa.Sim.StepFrameOut.gpr_list {W : List Register} {σ σ' : MStat
   intro n hn
   obtain ⟨h1, h31, hw⟩ := hL n hn
   gpr_cases n => exact h.frame _ hw
+
+/-- **GPR presence through a step frame**: registers outside the frame's
+write set keep their values, and the written ones are present by their pins. -/
+theorem _root_.OCaml.Vm.Boot.Startup.GprPresent.of_stepFrame {W : List Register} {σ σ' : MState}
+    (p : OCaml.Vm.Boot.Startup.GprPresent σ) (frame : StepFrameOut W σ σ') {writes : List Nat}
+    (keys : KeysOK writes) (cover : ∀ r ∈ W, r ∈ noiseRegs ∨ ∃ n ∈ writes, gprReg n = r)
+    (written : ∀ n ∈ writes, (gprGet σ' n).isSome) : OCaml.Vm.Boot.Startup.GprPresent σ' :=
+  p.of_frame keys written fun R noise wr => frame.frame R fun r hr => by
+    rcases cover r hr with hn | ⟨n, hn, rfl⟩
+    · exact noise r hn
+    · exact wr n hn
+
+/-- A pinned register is present. -/
+theorem gprGet_isSome_of {σ : MState} {n : Nat} {v : BitVec 64} (h : gprGet σ n = some v) :
+    (gprGet σ n).isSome := by rw [h]; rfl
+
+/-- A pinned register is present. -/
+theorem _root_.Vsa.Sim.PinsHold.isSome_mem {σ : MState} {L : List Pin} (h : PinsHold σ L)
+    {r : Register} (hr : r ∈ L.map Sigma.fst) : (σ.regs.get? r).isSome := by
+  induction L with
+  | nil => cases hr
+  | cons p rest ih =>
+    rcases List.mem_cons.1 hr with e | hr
+    · subst e; rw [h.1]; rfl
+    · exact ih h.2 hr
+
+/-- The written GPRs of a segment are present by its output pins. -/
+theorem written_of_pins {σ : MState} {L : List Pin} (h : PinsHold σ L) {writes : List Nat}
+    (cover : ∀ n ∈ writes, 1 ≤ n ∧ n ≤ 31 ∧ gprReg n ∈ L.map Sigma.fst) :
+    ∀ n ∈ writes, (gprGet σ n).isSome := by
+  intro n hn
+  obtain ⟨h1, h31, hm⟩ := cover n hn
+  gpr_cases n => exact h.isSome_mem hm
 
 end OCaml.Vm.Sim
 
