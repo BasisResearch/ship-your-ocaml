@@ -11,7 +11,7 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 
 /-- **What `whileMin`'s machine run still needs** from the arm lanes. -/
 structure WhileMinOpen : Prop where
-  row_CLOSURE : OCaml.OpArm OCaml.Programs.whileMin (OCaml.LoopAt Gc.f1Layout OCaml.Programs.whileMin) .CLOSURE
+  closure_sizes : ClosureSizes OCaml.Programs.whileMin
   setglobal_barrier : GlobalBarrier Gc.f1Layout OCaml.Programs.whileMin
   row_MAKEBLOCK : OCaml.OpArm OCaml.Programs.whileMin (OCaml.LoopAt Gc.f1Layout OCaml.Programs.whileMin) .MAKEBLOCK
   c_call1_returns : CcallReturns Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0
@@ -25,7 +25,7 @@ structure WhileMinOpen : Prop where
 theorem whileMin_premises (o : WhileMinOpen) :
     F1PremisesFor (fun op => OCaml.Programs.whileMinOps.contains op) OCaml.Programs.whileMin where
   extra _ := OCaml.Programs.whileMin_extraBounded
-  row_CLOSURE _ := o.row_CLOSURE
+  closure_sizes _ := o.closure_sizes
   row_CLOSUREREC h := absurd h (by decide)
   setglobal_barrier _ := o.setglobal_barrier
   row_MAKEBLOCK _ := o.row_MAKEBLOCK
