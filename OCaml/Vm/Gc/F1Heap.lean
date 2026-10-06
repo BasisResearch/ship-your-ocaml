@@ -437,3 +437,72 @@ theorem LibHeapAt.link {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
   tableIn := List.mem_cons_of_mem _ h.tableIn
 
 end OCaml.Vm.Gc
+
+namespace OCaml.Vm.Gc
+set_option autoImplicit false
+open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap OCaml.Vm.Boot.Startup VsaIris.VsaHeap
+
+/-- **The remembered set's first allocation keeps the F1 heap invariant**
+(`caml_realloc_ref_table` on an unallocated table): the storage `[p, p + req)`
+is a fresh malloc block, the struct now holds `base = p`, `end = p + req`,
+`ptr = p + 8` (one entry inserted) and `limit = p + lim`; newlib's charge
+spends the table's reservation; everything else the invariant reads is kept. -/
+theorem LibHeapAt.grow {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : List Nat} {c c' : Config}
+    (h : LibHeapAt H cap chs c) {p req lim : Nat}
+    (ready : HeapReady ((p, req) :: H) cap' c') (spend : cap = cap' + charge) (charged : charge ≤ tableCharge)
+    (empty : (word c (refTable + Layout.off_ref_table_base)).toNat = 0)
+    (fresh : ∀ e ∈ H, ∀ y, VsaIris.InExt (p, req) y → ¬ VsaIris.InExt e y)
+    (nonzero : p ≠ 0) (aligned : p % 8 = 0) (limLow : 16 ≤ lim) (limHigh : lim ≤ req) (limAligned : lim % 8 = 0)
+    (base' : (word c' (refTable + Layout.off_ref_table_base)).toNat = p)
+    (end' : (word c' (refTable + Layout.off_ref_table_end)).toNat = p + req)
+    (ptr' : (word c' (refTable + Layout.off_ref_table_ptr)).toNat = p + 8)
+    (limit' : (word c' (refTable + Layout.off_ref_table_limit)).toNat = p + lim)
+    (pointer : word c' (Boot.WhileMinRuntime.domain + Layout.off_ref_table) =
+      word c (Boot.WhileMinRuntime.domain + Layout.off_ref_table))
+    (wsz : word c' (Boot.WhileMinRuntime.domain + Layout.off_minor_heap_wsz) =
+      word c (Boot.WhileMinRuntime.domain + Layout.off_minor_heap_wsz))
+    (head : bytesT c'.σ.mem Layout.sym_caml_all_opened_channels 8 =
+      bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8)
+    (keepLinks : ∀ b ∈ chs, bytesT c'.σ.mem (b + chanOffNext) 8 = bytesT c.σ.mem (b + chanOffNext) 8) :
+    LibHeapAt ((p, req) :: H) cap' chs c' where
+  room := by
+    have r := h.room
+    rw [empty] at r
+    rw [base']
+    simp only [reserved, nonzero, if_false, if_true] at r ⊢
+    omega
+  channelsBound := h.channelsBound
+  ready := ready
+  extents := fun x hx => (h.extents x hx).mono _
+  channels := by
+    unfold OpenChannelList
+    rw [head]
+    exact OpenChannels.congr h.channels keepLinks
+  records := fun a ha => (h.records a ha).mono _
+  recordsApart := h.recordsApart
+  recordsDisjoint := h.recordsDisjoint
+  table := by
+    refine ⟨by rw [pointer]; exact h.table.pointer, by rw [wsz]; exact h.table.minorWsz, Or.inr ?_⟩
+    rw [base', end', ptr', limit']
+    exact {
+      nonzero := nonzero
+      aligned := aligned
+      ptrAligned := by omega
+      limitAligned := by omega
+      low := by omega
+      ptrLimit := by omega
+      limitEnd := by omega
+      sized := by omega
+      covered := ⟨(p, req), List.mem_cons_self, Nat.le_refl _, by dsimp only; omega⟩
+      apartBlocks := fun x hx => by
+        rcases fresh_apart_covered fresh (h.extents x hx) (covered_pos x hx) (n := req) (by omega)
+          (Nat.le_refl _) with o | o
+        · exact Or.inl o
+        · exact Or.inr o
+      apartRecords := fun a ha => by
+        rcases fresh_apart_covered fresh (h.records a ha) record_pos (n := req) (by omega) (Nat.le_refl _) with o | o
+        · exact Or.inl o
+        · exact Or.inr o }
+  tableIn := List.mem_cons_of_mem _ h.tableIn
+
+end OCaml.Vm.Gc

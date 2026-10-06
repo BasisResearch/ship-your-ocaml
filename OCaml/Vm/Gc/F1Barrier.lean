@@ -291,7 +291,7 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
       ptrAligned := by omega
       low := by omega
       ptrLimit := by omega
-      limitEnd := st.limitEnd, covered := st.covered, apartBlocks := st.apartBlocks
+      limitEnd := st.limitEnd, sized := st.sized, covered := st.covered, apartBlocks := st.apartBlocks
       apartRecords := st.apartRecords }
 
 /-- **`BarrierRuntime.insert` for F1**: an insertion into the remembered set
