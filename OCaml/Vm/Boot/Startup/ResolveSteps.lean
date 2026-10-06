@@ -700,4 +700,77 @@ theorem resolve_none (c : Config) (spo path len d ra : BitVec 64) (leaf : LeafIn
       List.cons_append, List.nil_append, show Functions.sign_extend (m := 64) 2#12 = 2#64 by decide, BitVec.zero_add]
   · rfl
   · decide
+
+local macro "restore_addr96" : tactic =>
+  `(tactic| (simp only [resolvereturn_line_80000700, resolvereturn_line_80000704, resolvereturn_line_80000708, resolvereturn_line_8000070c, resolvereturn_line_80000710, resolvereturn_line_80000714, resolvereturn_line_80000718, resolvereturn_line_8000071c, resolvereturn_line_80000720, resolvereturn_line_80000724, resolvereturn_line_80000728, resolvereturn_line_8000072c, resolvereturn_line_80000730, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true,
+    ite_false, Nat.reduceEqDiff] <;> first | rfl | (congr 1)))
+
+/-- The registers `resolve` restores, at their frame offsets. -/
+def resolveRestored (ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 : BitVec 64) : List (Nat × BitVec 64) :=
+  [(80, s0), (88, ra), (72, s1), (64, s2), (40, s5), (32, s6), (24, s7), (16, s8), (0, s10), (56, s3), (48, s4), (8, s9)]
+
+def resolveReturnLoads (m : Std.ExtHashMap Nat (BitVec 8)) (sp : BitVec 64) : List (List (BitVec 8)) :=
+  [80, 88, 72, 64, 40, 32, 24, 16, 0, 56, 48, 8].map fun off => read8 m (nativeFrameBase sp 96 + off)
+
+/-- Restore and return. -/
+theorem resolve_return (c : Config) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 a0 oldra : BitVec 64)
+    (leaf : LeafInput oldra c) (frame : NativeFrame sp 96) (regs : GHolds c.σ [(2, nativeStack sp 96), (10, a0)])
+    (saved : ∀ off value, (off, value) ∈ resolveRestored ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 →
+      bytesT c.σ.mem (nativeFrameBase sp 96 + off) 8 = value) (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x80000700#64 (fun e => e = c)
+      (WriteRegistersPost [2, 25, 20, 19, 26, 24, 23, 22, 21, 18, 9, 1, 8] [] c ra a0
+        [(2, sp), (25, s9), (20, s4), (19, s3), (26, s10), (24, s8), (23, s7), (22, s6), (21, s5), (18, s2), (9, s1),
+          (1, ra), (8, s0), (10, a0)]) := by
+  have savedRa := saved 88 ra (by simp [resolveRestored])
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput resolveX0700Seg 0x80000700#64 [(2, nativeStack sp 96), (10, a0)]
+        (resolveReturnLoads c.σ.mem sp) c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 10]; decide
+      shape := by change ChainOK _ [2, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := resolveReturn_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.resolve_at_"
+        · exact (frame.read_slot (off := 80) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 88) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 72) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 64) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 40) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 32) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 24) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 16) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 0) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 56) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 48) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 8) (by decide) (by decide)).ld rfl (by restore_addr96)
+            (frame.pins_slot c (by decide))
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 96 + 88)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [read8_value, savedRa, ret_tgt ra aligned]
+          exact aligned }))
+  · rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 96 + 88)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [read8_value, savedRa, ret_tgt ra aligned]
+  · simp only [resolveX0700Seg, evalBlocks, evalBlock, SegEvalState.init, resolvereturn_line_80000700, resolvereturn_line_80000704, resolvereturn_line_80000708, resolvereturn_line_8000070c, resolvereturn_line_80000710, resolvereturn_line_80000714, resolvereturn_line_80000718, resolvereturn_line_8000071c, resolvereturn_line_80000720, resolvereturn_line_80000724, resolvereturn_line_80000728, resolvereturn_line_8000072c, resolvereturn_line_80000730, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, resolveReturnLoads, List.map_cons,
+      List.map_nil, read8_value, List.cons_append, List.nil_append]
+    rw [show Functions.sign_extend (m := 64) 96#12 = 96#64 by decide, nativeStack_restore, savedRa, saved 80 s0 (by simp [resolveRestored]), saved 72 s1 (by simp [resolveRestored]), saved 64 s2 (by simp [resolveRestored]), saved 40 s5 (by simp [resolveRestored]), saved 32 s6 (by simp [resolveRestored]), saved 24 s7 (by simp [resolveRestored]), saved 16 s8 (by simp [resolveRestored]), saved 0 s10 (by simp [resolveRestored]), saved 56 s3 (by simp [resolveRestored]), saved 48 s4 (by simp [resolveRestored]), saved 8 s9 (by simp [resolveRestored])]
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
