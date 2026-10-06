@@ -653,24 +653,26 @@ def ocaml_literal_mline(pc, word):
     if opcode == 3:
         kind = {2: 'lw', 3: 'ld', 4: 'lbu'}[funct3]
     elif opcode == 0x13:
-        kind = {0: 'addi', 1: 'slli', 2: 'slti false', 3: 'slti true', 5: 'srai' if word >> 26 == 0x10 else 'srli', 6: 'ori', 7: 'andi'}[funct3]
+        kind = {0: 'addi', 1: 'slli', 2: 'slti false', 3: 'slti true', 4: 'xori', 5: 'srai' if word >> 26 == 0x10 else 'srli', 6: 'ori', 7: 'andi'}[funct3]
     elif opcode == 0x1b and funct3 == 0:
         kind = 'addiw'
     elif opcode == 0x17:
         kind = 'auipc'
+    elif opcode == 0x37:
+        kind = 'lui'
     elif opcode == 0x23:
         kind = {0: 'sb', 2: 'sw', 3: 'sd'}[funct3]
     elif opcode in (0x33, 0x3b) and funct3 == 0:
         kind = {0: 'add', 0x20: 'sub'}[word >> 25] + ('w' if opcode == 0x3b else '')
-    elif opcode == 0x33 and funct3 in (6, 7) and word >> 25 == 0:
-        kind = {6: 'or', 7: 'and'}[funct3]
+    elif opcode == 0x33 and funct3 in (4, 6, 7) and word >> 25 == 0:
+        kind = {4: 'xor', 6: 'or', 7: 'and'}[funct3]
     elif opcode == 0x3b and funct3 == 1 and word >> 25 == 0:
         kind = 'sllw'
     else:
         raise ValueError(f'unsupported read-only instruction {word:08x}')
     rd, rs1 = (word >> 7) & 31, (word >> 15) & 31
     rs2, imm = ((word >> 20) & 31, 0) if opcode in (0x33, 0x3b) else (0, word >> 20)
-    if opcode == 0x17:
+    if opcode in (0x17, 0x37):
         rs1, rs2, imm = 0, 0, 0
     elif opcode == 0x23:
         rd, rs2, imm = 0, (word >> 20) & 31, ((word >> 25) << 5) | ((word >> 7) & 31)
