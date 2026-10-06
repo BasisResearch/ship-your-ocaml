@@ -4889,6 +4889,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ClosurerecPlan.machine
 #print axioms OCaml.Vm.Sim.closurerec_row
 #print axioms OCaml.Vm.Sim.uncaught_unreachable
+#print axioms OCaml.Vm.Sim.GoodF1.inF1_at
+#print axioms OCaml.Vm.Sim.opArm_of_decoded
+#print axioms OCaml.Vm.Sim.opArm_of_next2_f1
 #print axioms OCaml.Vm.Sim.MakeblockInitInput.of_block
 #print axioms OCaml.Vm.Sim.makeblock_row
 #print axioms OCaml.Vm.Sim.division_dispatch_entry
@@ -4897,8 +4900,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.NativeValid.scratch_write
 #print axioms OCaml.Vm.Sim.DivisionException.of_field
 #print axioms OCaml.Vm.Sim.raise_zero_setup_memory
-#print axioms OCaml.Programs.whileMin_closureSizes
-#print axioms OCaml.Programs.whileMin_blockSizes
 #print axioms OCaml.Vm.Sim.CcallEffects.of_ok
 #print axioms Vsa.Sim.muldi3_spec_any
 #print axioms Vsa.Sim.udivdi3_spec_any

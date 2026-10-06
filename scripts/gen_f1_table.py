@@ -30,8 +30,6 @@ WHILEMIN_KNOWN = {
     'ints': 'OCaml.Programs.whileMin_branchInts',
     'divint_zero': 'DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inl rfl)',
     'modint_zero': 'DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inr rfl)',
-    'closure_sizes': 'OCaml.Programs.whileMin_closureSizes',
-    'makeblock_sizes': 'OCaml.Programs.whileMin_blockSizes',
     'c_call1_effects': 'CcallEffects.of_ok OCaml.Programs.whileMin_ccall1Ok',
     'c_call2_effects': 'CcallEffects.of_ok OCaml.Programs.whileMin_ccall2Ok',
     'c_call3_effects': 'CcallEffects.of_ok OCaml.Programs.whileMin_ccall3Ok',

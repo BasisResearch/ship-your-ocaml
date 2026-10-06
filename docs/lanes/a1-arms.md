@@ -109,8 +109,10 @@ CLOSURE and CLOSUREREC are proved (`MakeblockRows`, `MakeblockNRows`,
   the nursery-only form, and `AllocFrame.prefixed` composes with a VM-stack
   prefix (CLOSURE's and CLOSUREREC's pushed accumulator).
 * `opArm_of_next` is the adapter for any operand list (CLOSUREREC).
-* Per-program premises: `ClosureSizes`, `ClosurerecSizes`, `BlockSizes` (G1:
-  minor-heap sizes; a2-sem's checked run). whileMin reaches no CLOSUREREC.
+* No per-program premises: each allocation row reads its minor-heap size
+  bound off the decoded instruction (`InF1.minor`, under `GoodF1`) through
+  `opArm_of_next2_f1`/`opArm_of_decoded` and `GoodF1.inF1_at`. Major-heap
+  allocations are outside F1 (`Fragment.majorAllocLedger`).
 
 whileMin's `scratch` premise is gone: a2-sem's `Muldi3Any`/`udivdi3_spec_any`
 specs write the scratch registers before reading them. No GPR-presence round

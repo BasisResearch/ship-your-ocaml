@@ -174,6 +174,32 @@ theorem opArm_of_decoded {L : OCaml.Layout} {P : Prog} {op : Opcode}
   · exact fun s' step => next s s' c args reach (reach_next reach hd step) h code hd fetches step
   · exact noHalt s args
 
+/-- A two-operand row whose simulation also gets the instruction's F1
+facts (`InF1`, under `GoodF1`): allocation sizes for MAKEBLOCK and CLOSURE. -/
+theorem opArm_of_next2_f1 {L : OCaml.Layout} {P : Prog} {op : Opcode} (good : OCaml.GoodF1 P)
+    (next : ∀ s s' c (w v : BitVec 32), Reach P s → Reach P s' → OCaml.LoopAt L P s c →
+      DispatchCode P s op →
+      P.code[s.pc + 1]? = some w → P.code[s.pc + 2]? = some v →
+      OCaml.InF1 P ⟨op, [w.toInt, v.toInt]⟩ →
+      stepI P s ⟨op, [w.toInt, v.toInt]⟩ = .next s' →
+      ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c')
+    (shape : ∀ s args, (∀ a b, args ≠ [a, b]) →
+      stepI P s ⟨op, args⟩ = .wrong ∨ stepI P s ⟨op, args⟩ = .unsupported)
+    (noHalt : ∀ s a b e w, stepI P s ⟨op, [a, b]⟩ ≠ .halt e w) :
+    OCaml.OpArm P (OCaml.LoopAt L P) op :=
+  opArm_of_decoded (fun s s' c args reach reach' h code hd fetches step => by
+      by_cases pair : ∃ a b, args = [a, b]
+      · obtain ⟨a, b, rfl⟩ := pair
+        obtain ⟨w, hw, rfl⟩ := fetches 0 a rfl
+        obtain ⟨v, hv, rfl⟩ := fetches 1 b rfl
+        exact next s s' c w v reach reach' h code hw hv (GoodF1.inF1_at good reach hd) step
+      · rcases shape s args (fun a b hab => pair ⟨a, b, hab⟩) with r | r <;> rw [r] at step <;> cases step)
+    (fun s args e w => by
+      by_cases pair : ∃ a b, args = [a, b]
+      · obtain ⟨a, b, rfl⟩ := pair
+        exact noHalt s a b e w
+      · rcases shape s args (fun a b hab => pair ⟨a, b, hab⟩) with r | r <;> rw [r] <;> intro h <;> cases h)
+
 /-- A row from a simulation over any operand list (variable-arity opcodes:
 CLOSUREREC). Non-continuing outcomes other than halting are vacuous. -/
 theorem opArm_of_next {L : OCaml.Layout} {P : Prog} {op : Opcode}

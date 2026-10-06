@@ -242,14 +242,6 @@ theorem whileMin_ops : ∀ s i, Reach whileMin s → decodeAt whileMin.code s.pc
 theorem whileMin_divisorsNonzero : DivisorsNonzero whileMin :=
   .of_check fun _ reach => (whileMin_shapeOk reach).divisors
 
-/-- **`whileMin`'s closures fit the minor heap.** -/
-theorem whileMin_closureSizes : ClosureSizes whileMin :=
-  ⟨fun _ _ reach code fetch => St.operandOk_bound (whileMin_shapeOk reach).closures code fetch⟩
-
-/-- **`whileMin`'s blocks fit the minor heap.** -/
-theorem whileMin_blockSizes : BlockSizes whileMin :=
-  ⟨fun _ _ reach code fetch => St.operandOk_bound (whileMin_shapeOk reach).blocks code fetch⟩
-
 /-- **`whileMin`'s C_CALL1 primitives return normally.** -/
 theorem whileMin_ccall1Ok : ∀ s (w : BitVec 32) name, Reach whileMin s → DispatchCode whileMin s .C_CALL1 →
     whileMin.code[s.pc + 1]? = some w → 0 ≤ w.toInt → whileMin.prims[w.toInt.toNat]? = some name →

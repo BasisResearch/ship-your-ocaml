@@ -20,10 +20,7 @@ structure WhileMinOpen : Prop where
 theorem whileMin_premises (o : WhileMinOpen) :
     F1PremisesFor (fun op => OCaml.Programs.whileMinOps.contains op) OCaml.Programs.whileMin where
   extra _ := OCaml.Programs.whileMin_extraBounded
-  closure_sizes _ := OCaml.Programs.whileMin_closureSizes
-  closurerec_sizes h := absurd h (by decide)
   setglobal_barrier _ := o.setglobal_barrier
-  makeblock_sizes _ := OCaml.Programs.whileMin_blockSizes
   setfield0_barrier h := absurd h (by decide)
   setfield1_barrier h := absurd h (by decide)
   setfield2_barrier h := absurd h (by decide)

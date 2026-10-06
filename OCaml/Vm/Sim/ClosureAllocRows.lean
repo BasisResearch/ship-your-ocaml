@@ -134,12 +134,6 @@ theorem ClosureAllocInput.of_input {L : OCaml.Layout} {P : Prog} {s : St} {op : 
       rwa [e]
   · omega
 
-/-- **Every reachable CLOSURE captures at most 254 values** (named per-program
-code fact: the closure then fits the minor heap's size limit). -/
-structure ClosureSizes (P : Prog) : Prop where
-  small : ∀ s (w : BitVec 32), Reach P s → DispatchCode P s .CLOSURE → P.code[s.pc + 1]? = some w →
-    w.toInt.toNat ≤ 254
-
 /-- A continuing CLOSURE had its captures and a valid target. -/
 theorem closure_shape {P : Prog} {s s' : St} {nv ofs : Int} (step : stepI P s ⟨.CLOSURE, [nv, ofs]⟩ = .next s') :
     0 ≤ nv ∧ nv.toNat - 1 ≤ s.stack.length ∧ ∃ dest, target s.pc 1 ofs = some dest := by
@@ -163,11 +157,16 @@ theorem closure_shape {P : Prog} {s s' : St} {nv ofs : Int} (step : stepI P s �
 /-- **The CLOSURE row.** -/
 theorem closure_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0)
     (allocFrame : AllocFrame L) (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
-    (sizes : ClosureSizes P) : OCaml.OpArm P (OCaml.LoopAt L P) .CLOSURE :=
-  opArm_of_next2 (fun s s' c n o reach reach' h code fetchN fetchO step => by
+    (good : OCaml.GoodF1 P) : OCaml.OpArm P (OCaml.LoopAt L P) .CLOSURE :=
+  opArm_of_next2_f1 good (fun s s' c n o reach reach' h code fetchN fetchO f1 step => by
       obtain ⟨nonnegative, bound, dest, jump⟩ := closure_shape step
       have state := closure_state_of_step bound jump step
-      have young := sizes.small s n reach code fetchN
+      have young : n.toInt.toNat ≤ 254 := by
+        have m := f1.minor
+        simp only [Instr.minorAlloc] at m
+        have m := of_decide_eq_true m
+        simp only [OCaml.maxYoungWosize] at m
+        omega
       have budget := (fits s' reach').2
       rw [← state] at budget
       simp only [closureState, Heap.words_alloc, closureObject_wosize (dest := dest) bound] at budget

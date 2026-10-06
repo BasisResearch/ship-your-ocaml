@@ -6,19 +6,13 @@ import OCaml.Vm.Sim.Makeblock
 
 The general constructor reserves `size` words, writes the header and the
 accumulator field, then copies `size - 1` stack values (`MakeblockInitInput`).
-Its size operand is bounded by the minor heap's limit (`BlockSizes`, a named
-per-program fact under G1).
+Its size operand is bounded by the minor heap's limit: larger blocks are
+outside F1 (`InF1.minor`), read off the decoded instruction under `GoodF1`.
 -/
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
-
-/-- **Every reachable MAKEBLOCK's size fits the minor heap** (named per-program
-code fact under G1: larger blocks go to the major heap). -/
-structure BlockSizes (P : Prog) : Prop where
-  small : ∀ s (w : BitVec 32), Reach P s → DispatchCode P s .MAKEBLOCK → P.code[s.pc + 1]? = some w →
-    w.toInt.toNat ≤ 256
 
 /-- MAKEBLOCK's field copy at the loop head. -/
 theorem MakeblockInitInput.of_block {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
@@ -56,14 +50,19 @@ theorem MakeblockInitInput.of_block {P : Prog} {s : St} {c : Config} {pl : Place
 /-- **The MAKEBLOCK n row.** -/
 theorem makeblock_row {L : OCaml.Layout} {P : Prog} (allocFrame : AllocFrame L)
     (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
-    (budgetSmall : L.budget.heapWords < 2^31) (sizes : BlockSizes P) :
+    (budgetSmall : L.budget.heapWords < 2^31) (good : OCaml.GoodF1 P) :
     OCaml.OpArm P (OCaml.LoopAt L P) .MAKEBLOCK :=
-  opArm_of_next2 (fun s s' c sz t reach reach' h code fetchS fetchT step => by
+  opArm_of_next2_f1 good (fun s s' c sz t reach reach' h code fetchS fetchT f1 step => by
       have guard := Res.guard_ok step
       have sizeNonnegative : 0 ≤ sz.toInt := by omega
       have tagNonnegative : 0 ≤ t.toInt := by omega
       obtain ⟨tagSmall, positive, bound, state⟩ := makeBlock_next (Res.unguard step)
-      have nursery := sizes.small s sz reach code fetchS
+      have nursery : sz.toInt.toNat ≤ 256 := by
+        have m := f1.minor
+        simp only [Instr.minorAlloc] at m
+        have m := of_decide_eq_true m
+        simp only [OCaml.maxYoungWosize] at m
+        omega
       have budget := (fits s' reach').2
       rw [← state] at budget
       simp only [makeblockState, Heap.words_alloc, makeblockObject_wosize positive bound] at budget

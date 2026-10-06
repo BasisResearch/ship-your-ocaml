@@ -19,26 +19,19 @@ theorem closurerecStack_length {s : St} {count functions fresh : Nat} :
     (closurerecStack s count functions fresh).length = functions - 1 + 1 + (s.stack.length - (count - 1)) := by
   simp [closurerecStack]; omega
 
-/-- **Every reachable CLOSUREREC builds a closure of at most 256 words**
-(named per-program code fact: the closure then fits the minor heap's size
-limit). -/
-structure ClosurerecSizes (P : Prog) : Prop where
-  small : ∀ s (nf nv : BitVec 32), Reach P s → DispatchCode P s .CLOSUREREC →
-    P.code[s.pc + 1]? = some nf → P.code[s.pc + 2]? = some nv →
-    closurerecSize nf.toInt.toNat nv.toInt.toNat ≤ 256
-
 /-- The model's offsets, read back from the code. -/
 def closurerecOffsets (P : Prog) (pc : Nat) (i : Nat) : BitVec 32 := (P.code[pc + 4 + i]?).getD 0
 
 /-- **The CLOSUREREC row.** -/
 theorem closurerec_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0)
     (allocFrame : AllocFrame L) (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
-    (sizes : ClosurerecSizes P) : OCaml.OpArm P (OCaml.LoopAt L P) .CLOSUREREC :=
-  opArm_of_next (fun s s' c args reach reach' h code fetches step => by
-      match args, fetches, step with
-      | [], _, step => simp [stepI] at step
-      | [_], _, step => simp [stepI] at step
-      | nf :: nv :: ofss, fetches, step =>
+    (good : OCaml.GoodF1 P) : OCaml.OpArm P (OCaml.LoopAt L P) .CLOSUREREC :=
+  opArm_of_decoded (fun s s' c args reach reach' h code hd fetches step => by
+      have f1 := GoodF1.inF1_at good reach hd
+      match args, fetches, step, f1 with
+      | [], _, step, _ => simp [stepI] at step
+      | [_], _, step, _ => simp [stepI] at step
+      | nf :: nv :: ofss, fetches, step, f1 =>
       obtain ⟨-, nvNN, nfPos, ofLen, bound, dest, targets, jumps, arity⟩ := closurerec_shape step
       obtain ⟨wf, hf, rfl⟩ := fetches 0 nf rfl
       obtain ⟨wc, hc, rfl⟩ := fetches 1 nv rfl
@@ -73,8 +66,13 @@ theorem closurerec_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat} (rf : Ru
         cases hx'
         rw [e]; exact hj
       -- sizes and budgets
-      have young := sizes.small s wf wc reach code hf hc
-      rw [arity] at young
+      have young : closurerecSize (ts.length + 1) wc.toInt.toNat ≤ 256 := by
+        have m := f1.minor
+        simp only [Instr.minorAlloc] at m
+        have m := of_decide_eq_true m
+        simp only [OCaml.maxYoungWosize] at m
+        unfold closurerecSize
+        omega
       have budget := (fits s' reach').2
       have stackAfter := (fits s' reach').1
       rw [← state] at budget stackAfter
