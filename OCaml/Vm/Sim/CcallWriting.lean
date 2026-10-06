@@ -78,4 +78,78 @@ theorem ccall_writing_summary {L : OCaml.Layout} {P : Prog} {s : St}
   exact ccall_primitive_return post (saved.frame_outside outside frame regs) (geometry after frame)
     (native.frame_outside arena outside.domainPtr frame (regs _ (by decide)))
 
+/-! ## Framed calls (console output, nested native frames) -/
+
+/-- **The native invocation across a footprint below the native stack
+pointer**: the callee's own frames lie below the interpreter's, so the
+footprint misses every saved invocation range. -/
+theorem NativePlaced.frame_below {c c' : Config} {log : List WEntry} (n : NativePlaced c)
+    (below : ∀ sp, gpr c 2 = some (BitVec.ofNat 64 sp) → LogInW [⟨0, sp⟩] log)
+    (domain : OutLRange log Layout.sym_Caml_state 8)
+    (memory : ∀ x, OutL log x → byte c' x = byte c x) (stack : gpr c' 2 = gpr c 2) : NativePlaced c' := by
+  obtain ⟨D, inv, valid⟩ := n
+  have inside := below D.nativeSp inv.stack
+  exact ⟨D, inv.frame ⟨domain, fun r _ => outLRange_of_windows inside ⟨Or.inr (by dsimp only; omega), trivial⟩⟩
+    memory stack, valid⟩
+
+/-- **A framed primitive call**: return state, result register, a memory frame
+outside the footprint, and the caller-saved VM registers. No output or exact
+memory claim (console writes extend the output). -/
+structure FramedCall (footprint : List WEntry) (before : Config) (ra w : BitVec 64) (after : Config) : Prop where
+  good : GoodState after.σ
+  image : ExecutableImage after
+  minstret : ∃ v, after.σ.regs.get? Register.minstret = some v
+  tick : after.tick < 2
+  pc : pcOf after = some ra
+  result : gpr after 10 = some w
+  memory : ∀ x, OutL footprint x → byte after x = byte before x
+  saved : ∀ r ∈ callSavedRegs, after.σ.regs.get? r = before.σ.regs.get? r
+
+/-- A represented primitive result after a framed call. -/
+structure FramedPrimitivePost (runtimeOk : Config → Prop) (P : Prog) (s : St)
+    (pl : Place) (cp : ChanPlace) (sp high : Nat) (name : String) (args : List Val)
+    (v : Val) (w : BitVec 64) (heapAfter : Heap) (worldAfter : World)
+    (footprint : List WEntry) (before : Config) (ra : BitVec 64) (after : Config) : Prop where
+  call : FramedCall footprint before ra w after
+  data : VmPayload P {s with accu := v, heap := heapAfter, world := worldAfter} after pl cp sp high
+  primitives : PrimitiveBindings P after
+  platform : PlatformOk runtimeOk after
+  loop : LoopRegisters after
+  resultRepr : valWord pl v = some w
+  semantics : primF1Impl name args s.heap s.world = .ok v heapAfter worldAfter
+
+/-- **Adapt a framed primitive summary to the C_CALL return boundary.** -/
+theorem ccall_framed_summary {L : OCaml.Layout} {P : Prog} {s : St}
+    {pl : Place} {cp : ChanPlace} {sp high : Nat} {name : String} {v : Val}
+    {heap : Heap} {world : World} {domain frameSp result env entry ra : BitVec 64} {pc : Nat}
+    {args : List Val} {footprint : List WEntry} {before : Config}
+    (S : FnSummary entry (fun c => c = before)
+      (FramedPrimitivePost L.runtimeOk P s pl cp sp high name args v result heap world footprint before ra))
+    (saved : Ccall1Saved {s with pc := pc} pl sp domain frameSp env before)
+    (outside : CcallSavedOutside footprint domain frameSp)
+    (below : ∀ n, gpr before 2 = some (BitVec.ofNat 64 n) → LogInW [⟨0, n⟩] footprint)
+    (geometry : ∀ after : Config, (∀ x, OutL footprint x → byte after x = byte before x) →
+      OCaml.LoopGeometry L P {s with accu := v, heap := heap, world := world} after pl cp high)
+    (native : NativePlaced before) :
+    FnSummary entry (fun c => c = before)
+      (CcallReturn ra L P {s with pc := pc, accu := v, heap := heap, world := world}
+        pl cp sp high domain frameSp result env) := by
+  apply S.weaken (fun _ h => h)
+  intro after post
+  have frame := post.call.memory
+  have regs := post.call.saved
+  have kept := saved.frame_outside outside frame regs
+  exact { toCcall1Saved := { kept with pc := kept.pc }
+          toCcallResult :=
+            { geometry := (geometry after frame).state rfl rfl
+              native := native.frame_below below outside.domainPtr frame (regs _ (by decide))
+              data := payload_pc post.data pc
+              primitives := post.primitives
+              platform := post.platform
+              loop := post.loop
+              tick := post.call.tick
+              returnPC := post.call.pc
+              resultReg := post.call.result
+              resultRepr := post.resultRepr } }
+
 end OCaml.Vm.Sim

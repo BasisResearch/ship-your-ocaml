@@ -4805,3 +4805,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.LoopGeometry.heap_set
 #print axioms OCaml.Bytecode.Heap.words_alloc
 #print axioms OCaml.Bytecode.Heap.words_set
+#print axioms OCaml.Vm.Sim.NativePlaced.frame_below
+#print axioms OCaml.Vm.Sim.ccall_framed_summary
