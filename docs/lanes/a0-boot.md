@@ -46,10 +46,11 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   `_open_r` branches. `RuntimeReady.errno_log` (RuntimeErrno.lean) keeps
   readiness across the errno stores.
 
-Next: the obligation "startup globals kept since reset" (`fs_ready = 0`,
-slots 1–63 unused, `_impure_ptr = &_impure_data` at `ResetOpenCall`) by
-extending `KeptByte`/`KeptImage`; then compose `open_ocamlrun` after
-`ResetOpenCall`, and the retry with "/prog".
+* **`reset_ocamlrun_opened_exists` (OpenOcamlrunReset.lean)**: the reset
+  run through `open("ocamlrun")`'s return. htif.c's `fs_ready`, `files`
+  slots 1–63 and `_impure_ptr` are `KeptByte`s (`HtifImage` in `KeptImage`).
+
+Next: caml_attempt_open's failure path after -1, then the retry with "/prog".
 
 ## Round 2 status (2026-10-06, search)
 

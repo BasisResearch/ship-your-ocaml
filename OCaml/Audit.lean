@@ -341,6 +341,7 @@ import OCaml.Vm.Boot.WhileMinHeapChunks
 import OCaml.Vm.Boot.Startup.ResolveSteps
 import OCaml.Vm.Boot.Startup.ResolveRun
 import OCaml.Vm.Boot.Startup.OpenRun
+import OCaml.Vm.Boot.Startup.OpenOcamlrunReset
 import OCaml.Vm.Boot.Startup.Strdup
 import OCaml.Vm.Boot.Startup.ExtTableFree
 import OCaml.Vm.Boot.Startup.DecomposeNull
@@ -2557,6 +2558,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.open_r_fail_set
 #print axioms OCaml.Vm.Boot.Startup.lib_open_return
 #print axioms OCaml.Vm.Boot.Startup.open_ocamlrun
+#print axioms OCaml.Vm.Boot.Startup.HtifImage.notReady
+#print axioms OCaml.Vm.Boot.Startup.HtifImage.clear
+#print axioms OCaml.Vm.Boot.Startup.HtifImage.reent
+#print axioms OCaml.Vm.Boot.Startup.HtifImage.frame
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCamlMainWitness.htif
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.kept
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetOpenCall.ocamlrun_name
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_ocamlrun_opened_exists
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
 #print axioms OCaml.Vm.Boot.Startup.resAt36_window
 #print axioms OCaml.Vm.Boot.Startup.fs_init

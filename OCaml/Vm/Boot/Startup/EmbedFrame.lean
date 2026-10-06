@@ -238,12 +238,60 @@ theorem EmbedImage.of_bytes {before after} (h : EmbedImage before)
     (f : ∀ a, EmbedByte a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0) : EmbedImage after :=
   ⟨fun a ha => (f a ha).trans (h.byte a ha)⟩
 
-/-- The embedded image together with main's `environ` publication and the
-zero GC verbosity. -/
+/-- The loader value of an htif.c global byte: `_impure_ptr` from `.data`,
+`fs_ready` and `files` zero from `.bss`. -/
+def htifInitByte (a : Nat) : BitVec 8 :=
+  if allocatorImpureAddr ≤ a ∧ a < allocatorImpureAddr + 8 then allocatorImpureByte (a - allocatorImpureAddr) else 0
+
+/-- htif.c's file-system globals still hold their loader values. -/
+structure HtifImage (c : Config) : Prop where
+  byte : ∀ a, HtifByte a → (c.σ.mem[a]?).getD 0 = htifInitByte a
+
+theorem HtifImage.zero {c a} (h : HtifImage c) (ha : HtifByte a)
+    (apart : a < allocatorImpureAddr ∨ allocatorImpureAddr + 8 ≤ a) : (c.σ.mem[a]?).getD 0 = 0#8 := by
+  have out : ¬ (allocatorImpureAddr ≤ a ∧ a < allocatorImpureAddr + 8) := by omega
+  rw [h.byte a ha]; simp only [htifInitByte, out, ↓reduceIte]; rfl
+
+/-- `fs_ready` is clear: htif.c has not initialised its file table. -/
+theorem HtifImage.notReady {c} (h : HtifImage c) :
+    read4 c.σ.mem Layout.sym_fs_ready = [0#8, 0#8, 0#8, 0#8] := by
+  have z (i : Nat) (hi : i < 4) : (c.σ.mem[Layout.sym_fs_ready + i]?).getD 0 = 0#8 :=
+    h.zero (Or.inl ⟨by omega, by omega⟩) (Or.inr (by unfold allocatorImpureAddr Layout.sym_fs_ready; omega))
+  simp only [read4]
+  rw [show (c.σ.mem[Layout.sym_fs_ready]?).getD 0 = 0#8 from by simpa using z 0 (by decide),
+    z 1 (by decide), z 2 (by decide), z 3 (by decide)]
+
+/-- Slots 1–63 of `files` are unused. -/
+theorem HtifImage.clear {c} (h : HtifImage c) (j : Nat) (lo : 1 ≤ j) (hi : j < 64) :
+    (c.σ.mem[Layout.sym_files + 56 * j]?).getD 0 = 0#8 :=
+  h.zero (Or.inr (Or.inr ⟨by omega, by omega⟩)) (Or.inr (by unfold allocatorImpureAddr Layout.sym_files; omega))
+
+/-- `_impure_ptr` is `&_impure_data`. -/
+theorem HtifImage.reent {c} (h : HtifImage c) :
+    bytesT c.σ.mem allocatorImpureAddr 8 = BitVec.ofNat 64 Layout.sym_impure_data := by
+  have b (i : Nat) (hi : i < 8) : (c.σ.mem[allocatorImpureAddr + i]?).getD 0 = allocatorImpureByte i := by
+    rw [h.byte _ (Or.inr (Or.inl ⟨by unfold allocatorImpureAddr Layout.sym_impure_ptr; omega,
+      by unfold allocatorImpureAddr Layout.sym_impure_ptr; omega⟩))]
+    have inside : allocatorImpureAddr ≤ allocatorImpureAddr + i ∧ allocatorImpureAddr + i < allocatorImpureAddr + 8 :=
+      ⟨Nat.le_add_right _ _, Nat.add_lt_add_left hi _⟩
+    simp only [htifInitByte, inside, and_self, ↓reduceIte, Nat.add_sub_cancel_left]
+  rw [bytesT_eight_eq]
+  simp only [bytesT8]
+  rw [show (c.σ.mem[allocatorImpureAddr]?).getD 0 = allocatorImpureByte 0 from by simpa using b 0 (by decide),
+    b 1 (by decide), b 2 (by decide), b 3 (by decide), b 4 (by decide), b 5 (by decide), b 6 (by decide),
+    b 7 (by decide)]
+  decide
+
+theorem HtifImage.frame {before after} (h : HtifImage before) (f : EmbedFrame before after) :
+    HtifImage after := ⟨fun a ha => (f.byte a (Or.inr (Or.inr (Or.inr ha)))).trans (h.byte a ha)⟩
+
+/-- The embedded image together with main's `environ` publication, the
+zero GC verbosity, and htif.c's untouched file-system globals. -/
 structure KeptImage (c : Config) : Prop where
   embed : EmbedImage c
   environ : bytesT c.σ.mem Layout.sym_environ 8 = BitVec.ofNat 64 WhileMinImage.envArray
   verbGc : LPins8 c.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8)
+  htif : HtifImage c
 
 /-- The `environ` global survives every kept frame. -/
 theorem EmbedFrame.environ {before after v} (f : EmbedFrame before after)
@@ -255,7 +303,7 @@ theorem EmbedFrame.verbGc {before after bytes} (f : EmbedFrame before after)
   lpins8_observed h (fun i hi => f.byte _ (Or.inr (Or.inr (Or.inl ⟨by omega, by omega⟩))))
 
 theorem KeptImage.frame {before after} (h : KeptImage before) (f : EmbedFrame before after) :
-    KeptImage after := ⟨h.embed.frame f, f.environ h.environ, f.verbGc h.verbGc⟩
+    KeptImage after := ⟨h.embed.frame f, f.environ h.environ, f.verbGc h.verbGc, h.htif.frame f⟩
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.WhileMinElfParse
@@ -275,6 +323,34 @@ theorem ResetCamlMainWitness.embed {initial atMain : Config}
       (a < Layout.sym_environ ∨ Layout.sym_environ + 8 ≤ a) ∧ True
     unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size Layout.sym_environ heapEnd at *
     exact ⟨Or.inl (by omega), Or.inr (by omega), trivial⟩
+
+theorem allocator_initial_impure_getD (i : Nat) (hi : i < 8) :
+    (WhileMinImage.initialMem[allocatorImpureAddr + i]?).getD 0 = allocatorImpureByte i := by
+  rw [allocator_initial_impure i (Nat.zero_le _) hi]; rfl
+
+theorem ResetCamlMainWitness.htif {initial atMain : Config}
+    (w : ResetCamlMainWitness initial atMain) : HtifImage atMain := by
+  constructor
+  intro a ha
+  have b := ha.bounds
+  by_cases imp : allocatorImpureAddr ≤ a ∧ a < allocatorImpureAddr + 8
+  · have init := allocator_initial_impure_getD (a - allocatorImpureAddr) (by omega)
+    rw [Nat.add_sub_cancel' imp.1] at init
+    simp only [htifInitByte, imp, and_self, ↓reduceIte]
+    rw [w.post.memory, writeLog_out _ _ _ ?_, clearWords_below _ _ _ _ ?_, reset_total_byte w.reset a, init]
+    · unfold allocatorImpureAddr Layout.sym_bss_start at *; omega
+    · exact mainWrites_between _ _ _ (by unfold allocatorImpureAddr Layout.sym_environ at *; omega)
+        (by unfold allocatorImpureAddr Layout.sym_stack_top at *; unfold Layout.sym_files at b; omega)
+  · simp only [htifInitByte, imp, ↓reduceIte]
+    have bss : Layout.sym_bss_start ≤ a := by
+      rcases ha with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, _⟩
+      · unfold Layout.sym_fs_ready Layout.sym_bss_start at *; omega
+      · exfalso; apply imp; unfold allocatorImpureAddr; unfold Layout.sym_impure_ptr at lo hi; omega
+      · unfold Layout.sym_files Layout.sym_bss_start at *; omega
+    have bound : Layout.sym_files + 56 * 64 ≤ Layout.sym_bss_start + 8 * bssWords := by decide
+    exact w.post.toCrtCamlMainPost.bss_byte a bss (by omega)
+      (mainWrites_between _ _ _ (by unfold Layout.sym_environ Layout.sym_bss_start at *; omega)
+        (by unfold Layout.sym_stack_top Layout.sym_files at *; omega))
 
 theorem ResetParameterEntry.embed {initial entry} (w : ResetParameterEntry initial entry) :
     EmbedImage entry :=
@@ -299,7 +375,9 @@ theorem ResetParameterEntry.verb_gc {initial entry} (w : ResetParameterEntry ini
     zero 4 (by decide), zero 5 (by decide), zero 6 (by decide), zero 7 (by decide)⟩
 
 theorem ResetParameterEntry.kept {initial entry} (w : ResetParameterEntry initial entry) :
-    KeptImage entry := ⟨w.embed, w.environment.global, w.verb_gc⟩
+    KeptImage entry := ⟨w.embed, w.environment.global, w.verb_gc,
+  w.domain.witness.tables.third.first.published.allocation.before.request.tables.allocation.before.alloc.domain.main.htif.frame
+    w.data_frame.embed⟩
 
 theorem ResetParameterReturned.kept {initial after} (w : ResetParameterReturned initial after) :
     KeptImage after :=
