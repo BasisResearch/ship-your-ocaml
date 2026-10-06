@@ -41,12 +41,17 @@ Unconditional F1 table rows (`OpArm P (LoopAt L P) op`), derived through
 * generated: ACC0–7, PUSH, PUSHACC0–7, ENVACC1–4, GETFIELD0–3, PUSHENVACC1–4,
   OFFSETCLOSUREM3/0/3, PUSHOFFSETCLOSUREM3/0/3;
 * hand: CHECK_SIGNALS, POPTRAP, RESTART, PUSHTRAP, PUSH_RETADDR, APPLY1–3,
-  OFFSETCLOSURE n, PUSHOFFSETCLOSURE n (`SignalRows`, `ControlRows`).
+  OFFSETCLOSURE n, PUSHOFFSETCLOSURE n (`SignalRows`, `ControlRows`);
+* hand: ACC n, PUSHACC n, POP n, ASSIGN n, ENVACC n, GETGLOBAL n,
+  PUSHGETGLOBAL n, (PUSH)GETGLOBALFIELD n m, APPLY n, APPTERM n s,
+  APPTERM1–3, RETURN n (`OperandTableRows`; RETURN takes `ExtraBounded P`).
 
-Loop-head simulations (`_next`, row wrappers next) for ACC n, PUSHACC n, POP,
-ASSIGN, ENVACC n, (PUSH)GETGLOBAL(FIELD), APPLY n, APPTERM n s, APPTERM1–3,
-RETURN, GRAB (satisfied path). They wait on a2-sem's clamp fix, which
-changes their inversions.
+GRAB has only its satisfied path (`grab_fast_next`). Its row waits on the
+allocating path (NurseryGeometry in `Running`).
+
+STOP/uncaught-raise returns export the HTIF payload-counter frame
+(`InterpRuntimeReturnPost.htif`, `UncaughtChecked.htif`) for bprime's exit.
+`LoopRegisters.htifIdle` lands after a1-prims' `EffectPost.htifIdle`.
 
 Row premises for generic `L`:
 * `MemoryStable L.runtimeOk` and `RuntimeFrame L high dom`; both discharged

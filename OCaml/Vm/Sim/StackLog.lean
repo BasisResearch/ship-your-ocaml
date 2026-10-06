@@ -114,7 +114,7 @@ theorem appterm_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op 
 theorem appterm1_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .APPTERM1)
-    (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
+    (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * s.stack.length + Layout.stackThresholdBytes ≤ Layout.stackBytes)
     (step : stepI P s ⟨.APPTERM1, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
@@ -123,6 +123,7 @@ theorem appterm1_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
   split at shape
   · cases shape
   · rename_i valid
+    have nonnegative : 0 ≤ w.toInt := by omega
     exact appterm_next (n := 1) rf
       (fun _ _ _ _ _ _ _ _ stable input field read ready space =>
         appterm1_step_arm stable input (OperandAt.of_fetch input.geometry fetch) nonnegative
@@ -133,7 +134,7 @@ theorem appterm1_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
 theorem appterm2_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .APPTERM2)
-    (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
+    (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * s.stack.length + Layout.stackThresholdBytes ≤ Layout.stackBytes)
     (step : stepI P s ⟨.APPTERM2, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
@@ -142,6 +143,7 @@ theorem appterm2_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
   split at shape
   · cases shape
   · rename_i valid
+    have nonnegative : 0 ≤ w.toInt := by omega
     exact appterm_next (n := 2) rf
       (fun _ _ _ _ _ _ _ _ stable input field read ready space =>
         appterm2_step_arm stable input (OperandAt.of_fetch input.geometry fetch) nonnegative
@@ -152,7 +154,7 @@ theorem appterm2_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
 theorem appterm3_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .APPTERM3)
-    (fetch : P.code[s.pc + 1]? = some w) (nonnegative : 0 ≤ w.toInt)
+    (fetch : P.code[s.pc + 1]? = some w)
     (space : 8 * s.stack.length + Layout.stackThresholdBytes ≤ Layout.stackBytes)
     (step : stepI P s ⟨.APPTERM3, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
@@ -161,6 +163,7 @@ theorem appterm3_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
   split at shape
   · cases shape
   · rename_i valid
+    have nonnegative : 0 ≤ w.toInt := by omega
     exact appterm_next (n := 3) rf
       (fun _ _ _ _ _ _ _ _ stable input field read ready space =>
         appterm3_step_arm stable input (OperandAt.of_fetch input.geometry fetch) nonnegative

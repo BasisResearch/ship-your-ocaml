@@ -21,6 +21,7 @@ import OCaml.Vm.Sim.TrapRows
 import OCaml.Vm.Sim.DecodeFetch
 import OCaml.Vm.Sim.SignalRows
 import OCaml.Vm.Sim.ControlRows
+import OCaml.Vm.Sim.OperandTableRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -4549,3 +4550,20 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.pushatom_next
 #print axioms OCaml.Vm.Sim.WordEquality.of_place
 #print axioms OCaml.Vm.Sim.Lies.inj
+#print axioms OCaml.Vm.Sim.shape1
+#print axioms OCaml.Vm.Sim.shape2
+#print axioms OCaml.Vm.Sim.acc_row
+#print axioms OCaml.Vm.Sim.pushacc_row
+#print axioms OCaml.Vm.Sim.pop_row
+#print axioms OCaml.Vm.Sim.assign_row
+#print axioms OCaml.Vm.Sim.envacc_row
+#print axioms OCaml.Vm.Sim.getglobal_row
+#print axioms OCaml.Vm.Sim.pushgetglobal_row
+#print axioms OCaml.Vm.Sim.getglobalfield_row
+#print axioms OCaml.Vm.Sim.pushgetglobalfield_row
+#print axioms OCaml.Vm.Sim.apply_row
+#print axioms OCaml.Vm.Sim.appterm_row
+#print axioms OCaml.Vm.Sim.appterm1_row
+#print axioms OCaml.Vm.Sim.appterm2_row
+#print axioms OCaml.Vm.Sim.appterm3_row
+#print axioms OCaml.Vm.Sim.return_row
