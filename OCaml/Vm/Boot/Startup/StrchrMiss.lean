@@ -287,7 +287,7 @@ inductive StrchrPlan (m : Std.ExtHashMap Nat (BitVec 8)) (a : BitVec 64) (len : 
       WordRun m (nameCursor a K) n → K + 8 * n ≤ len → StrchrPlan m a len
 
 /-- `strchr(s, '/')` returned NULL. -/
-structure StrchrMissDone (ra : BitVec 64) (before after : Config) : Prop where
+structure StrchrMissDone (ra : BitVec 64) (before after : Config) : Prop extends LeafInput ra after where
   pc : PCAt ra after
   regs : GHolds after.σ [(10, 0#64), (1, ra), (15, 0#64), (13, 47#64)]
   present : GprPresent after.σ
@@ -323,6 +323,8 @@ theorem strchr_finish {ra : BitVec 64} {before c : Config} (leaf : LeafInput ra 
     ⟨leaf.raReg, gholds_lookup (n := 15) _ regs (by rfl), gholds_lookup (n := 13) _ regs (by rfl), trivial⟩).run
     c ⟨pc, rfl⟩
   exact ⟨d, run, {
+    toLeafInput := ⟨post.good, post.image, post.minstret, gholds_lookup (n := 1) _ post.regs (by rfl), leaf.aligned,
+      post.tick⟩
     pc := post.pc
     regs := ⟨gholds_lookup (n := 10) _ post.regs (by rfl), gholds_lookup (n := 1) _ post.regs (by rfl),
       gholds_lookup (n := 15) _ post.regs (by rfl), gholds_lookup (n := 13) _ post.regs (by rfl), trivial⟩
