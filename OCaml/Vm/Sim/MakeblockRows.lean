@@ -30,6 +30,38 @@ structure AllocFrame (L : OCaml.Layout) : Prop where
     (runtimeFields c).youngLimit ≤ a - 8 → a - 8 ≤ (runtimeFields c).youngPtr → (a - 8) % 8 = 0 →
     AllocationRuntime L.runtimeOk c (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log)
 
+/-- **A runtime-stable prefix before a nursery reservation** (CLOSURE's
+pushed accumulator): the prefix is stable in its windows and misses every word
+the reservation reads, so `AllocFrame` applies after it. -/
+theorem AllocFrame.prefixed {L : OCaml.Layout} (af : AllocFrame L) {P : Prog} {s : St} {c : Config}
+    {pl : Place} {cp : ChanPlace} {high a : Nat} {ws : List W} {pre log : List WEntry}
+    (stable : WindowStable L.runtimeOk ws) (preIn : LogInW ws pre)
+    (domainOut : OutLRange pre Layout.sym_Caml_state 8)
+    (contentsOut : OutLRange pre (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
+    (young : YoungOutside pre c) (g : Gc.NurseryGeometry P s c pl cp high)
+    (inside : LogInW [Gc.nurseryFree c] log) (low : (runtimeFields c).youngLimit ≤ a - 8)
+    (below : a - 8 ≤ (runtimeFields c).youngPtr) (aligned : (a - 8) % 8 = 0) :
+    AllocationRuntime L.runtimeOk c
+      (pre ++ (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log)) := by
+  intro after memory ok
+  let c1 : Config := { c with σ := { c.σ with mem := writeLog c.σ.mem pre } }
+  have mem1 : c1.σ.mem = writeLog c.σ.mem pre := rfl
+  have keep : ∀ x, OutLRange pre x 8 → word c1 x = word c x := fun x hx => by
+    change bytesT (writeLog c.σ.mem pre) x 8 = bytesT c.σ.mem x 8
+    rw [bytesT_writeLog_out _ hx]
+  have dom1 := keep _ domainOut
+  have lim1 : (runtimeFields c1).youngLimit = (runtimeFields c).youngLimit := by
+    simp only [runtimeFields, domainWord, dom1, keep _ young.limit]
+  have ptr1 : (runtimeFields c1).youngPtr = (runtimeFields c).youngPtr := by
+    simp only [runtimeFields, domainWord, dom1, keep _ young.ptr]
+  have free1 : Gc.nurseryFree c1 = Gc.nurseryFree c := by simp only [Gc.nurseryFree, lim1, ptr1]
+  have g1 := g.frame_log (s' := s) (c' := c1) (fun l o' h => ⟨o', h, rfl⟩) rfl domainOut contentsOut
+    young.limit young.ptr mem1
+  have ok1 : L.runtimeOk c1 := stable c c1 (by rw [mem1]; exact frameOn_writeLog _ _ _ preIn) ok
+  have r := af.alloc P s c1 pl cp high a log ok1 g1 (by rw [free1]; exact inside) (by rw [lim1]; exact low)
+    (by rw [ptr1]; exact below) aligned
+  exact r after (by rw [memory, writeLog_append, dom1]) ok1
+
 /-- `AllocFrame` for the pinned F1 layout (a6-gc's `f1_allocFrame_core`). -/
 theorem f1_allocFrame : AllocFrame Gc.f1Layout :=
   ⟨fun _ _ _ _ _ _ _ _ ok g inside low below aligned => Gc.f1_allocFrame_core ok g inside low below aligned⟩
