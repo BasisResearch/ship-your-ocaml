@@ -123,6 +123,12 @@ theorem read_backtrace_active (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := WhileMinRuntime.domain + Layout.off_backtrace_active) (w := 8) (by decide +kernel)]
   decide +kernel
 
+theorem read_caml_gc_phase (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word32 c (Layout.sym_caml_gc_phase) = 0x3#32 := by
+  unfold word32
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_gc_phase) (w := 4) (by decide +kernel)]
+  decide +kernel
+
 theorem read_fd1_kind (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word c (Layout.sym_fds + 24) = 0x2#64 := by
   unfold word

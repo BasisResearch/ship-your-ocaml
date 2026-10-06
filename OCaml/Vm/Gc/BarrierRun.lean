@@ -693,9 +693,11 @@ structure Remembered (sp ra slot v dom tbl ptr limit : BitVec 64) (c : Config) :
   table : Table dom tbl ptr limit c.σ.mem
   stored : ∀ x ∈ [(dom + BitVec.ofNat 64 104).toNat, (tbl + BitVec.ofNat 64 24).toNat,
     (tbl + BitVec.ofNat 64 32).toNat], ∀ e ∈ majorLog sp ra slot v, x + 8 ≤ e.1 ∨ e.1 + e.2.1 ≤ x
-  frameApart : ∀ e ∈ insertLog tbl ptr slot, ((sp + -32#64) + BitVec.ofNat 64 24).toNat + 8 ≤ e.1 ∨
-    e.1 + e.2.1 ≤ ((sp + -32#64) + BitVec.ofNat 64 24).toNat
-  aboveCode : ∀ e ∈ insertLog tbl ptr slot, 0x8000aa98 ≤ e.1
+  /-- with room (the only case that inserts), the insertion misses the saved `ra` -/
+  frameApart : ptr.toNat < limit.toNat → ∀ e ∈ insertLog tbl ptr slot,
+    ((sp + -32#64) + BitVec.ofNat 64 24).toNat + 8 ≤ e.1 ∨ e.1 + e.2.1 ≤ ((sp + -32#64) + BitVec.ofNat 64 24).toNat
+  /-- with room, the insertion lies above `caml_modify`'s code -/
+  aboveCode : ptr.toNat < limit.toNat → ∀ e ∈ insertLog tbl ptr slot, 0x8000aa98 ≤ e.1
 
 /-- The write barrier never needs to grow the remembered set. -/
 def NoGrow (ys ye slot old v ptr limit : BitVec 64) : Prop :=
@@ -815,8 +817,8 @@ theorem barrier_fast {slot v ra sp dom ys ye old tbl ptr limit} {c : Config}
       have mem3 : d3.σ.mem = writeLog (writeLog d.σ.mem (majorLog sp ra slot v)) (insertLog tbl ptr slot) := by
         rw [V.memory, mem2]
       obtain ⟨d4, run4, T⟩ := return_run (ra := ra) V.good V.tick V.minstret
-        (by rw [mem3]; exact code_after (code_after e.code e.aboveCode) rem.aboveCode) V.stack
-        e.frameWrite.read (by rw [mem3]; exact ra_saved e rem.frameApart) e.raAligned V.pc
+        (by rw [mem3]; exact code_after (code_after e.code e.aboveCode) (rem.aboveCode room)) V.stack
+        e.frameWrite.read (by rw [mem3]; exact ra_saved e (rem.frameApart room)) e.raAligned V.pc
       exact ⟨d4, run1.trans (run2.trans (run3.trans run4)), ⟨majorLog sp ra slot v ++ insertLog tbl ptr slot,
         Or.inr (Or.inr ⟨young, notOld, valueYoung, rfl⟩),
         ⟨T.good, T.tick, T.minstret, T.pc, T.link, T.stack, by rw [T.memory, mem3, writeLog_nil_eq, writeLog_append], by

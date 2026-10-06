@@ -60,7 +60,7 @@ structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Co
   records : ∀ a ∈ chs, Covered H (a, chanRecordBytes)
   recordsApart : ∀ a ∈ chs, ∀ x ∈ f1Extents, a + chanRecordBytes ≤ x.1 ∨ x.1 + x.2 ≤ a
   /-- distinct open records are disjoint (each its own malloc block) -/
-  recordsDisjoint : chs.Pairwise fun a b => a + chanRecordBytes ≤ b ∨ b + chanRecordBytes ≤ a
+  recordsDisjoint : ∀ a ∈ chs, ∀ b ∈ chs, a ≠ b → a + chanRecordBytes ≤ b ∨ b + chanRecordBytes ≤ a
 
 /-- The F1 heap invariant. -/
 def LibHeap (c : Config) : Prop := ∃ H cap chs, LibHeapAt H cap chs c
@@ -137,5 +137,68 @@ theorem LibHeapAt.frame_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List 
       bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8)
     (frame : FrameOn ws c.σ.mem c'.σ.mem) : LibHeapAt H cap chs c' :=
   h.keep_windows safe head fun a out => by rw [frame a (outW_all out)]
+
+/-- The open-channel list is determined by memory. -/
+theorem OpenChannels.unique {m : Std.ExtHashMap Nat (BitVec 8)} {x : Nat} {l₁ l₂ : List Nat}
+    (h₁ : OpenChannels m x l₁) (h₂ : OpenChannels m x l₂) : l₁ = l₂ := by
+  -- discipline: allow(O5-run-induction) `OpenChannels` is the shape of one linked list in a fixed memory, not a run relation
+  induction h₁ generalizing l₂ with
+  | nil =>
+    cases h₂ with
+    | nil => rfl
+    | cons ne _ => exact absurd rfl ne
+  | @cons a rest ne _ ih =>
+    cases h₂ with
+    | nil => exact absurd rfl ne
+    | cons _ tail => rw [ih tail]
+
+/-- `a` is a record on the memory's open-channel list. -/
+def OpenAt (c : Config) (a : Nat) : Prop := ∃ chs, OpenChannelList c.σ.mem chs ∧ a ∈ chs
+
+theorem LibHeapAt.open_mem {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
+    (h : LibHeapAt H cap chs c) {a : Nat} (o : OpenAt c a) : a ∈ chs := by
+  obtain ⟨chs', list, mem⟩ := o
+  rw [OpenChannels.unique h.channels list]
+  exact mem
+
+/-- A write window inside the open record at `a` that misses its `next` word. -/
+def RecordWindow (a : Nat) (w : W) : Prop :=
+  a ≤ w.lo ∧ w.hi ≤ a + chanRecordBytes ∧ (w.hi ≤ a + chanOffNext ∨ a + chanOffNext + 8 ≤ w.lo)
+
+/-- **The F1 heap invariant survives writes to one open record** (missing its
+`next` word) together with safe windows. -/
+theorem LibHeapAt.keep_records {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c c' : Config}
+    (h : LibHeapAt H cap chs c) {a : Nat} (ha : a ∈ chs) {ws : List W}
+    (safe : ∀ w ∈ ws, F1HeapSafe w ∨ RecordWindow a w)
+    (head : bytesT c'.σ.mem Layout.sym_caml_all_opened_channels 8 =
+      bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8)
+    (keep : ∀ x, (∀ w ∈ ws, x < w.lo ∨ w.hi ≤ x) → (c'.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0) :
+    LibHeapAt H cap chs c' where
+  room := h.room
+  ready := HeapReady.keep_windows h.ready (fun w hw => by
+    rcases safe w hw with s | ⟨lo, hi, _⟩
+    · exact s.heapSafe h
+    · obtain ⟨e, he, elo, ehi⟩ := h.records a ha
+      dsimp only at elo ehi
+      exact Or.inl ⟨e, he, by omega, by omega⟩) keep
+  extents := h.extents
+  channels := by
+    unfold OpenChannelList
+    rw [head]
+    refine OpenChannels.congr h.channels fun b hb => ?_
+    apply Reloc.bytesT_congr
+    intro j hj
+    have same := keep (b + chanOffNext + j) fun w hw => by
+      rcases safe w hw with s | ⟨lo, hi, next⟩
+      · exact s.outside h hb (by omega) (by unfold chanOffNext chanRecordBytes chanOffBuff at *; omega)
+      · by_cases e : b = a
+        · subst e; omega
+        · have := h.recordsDisjoint b hb a ha e
+          unfold chanOffNext chanRecordBytes chanOffBuff at *
+          omega
+    simp only [bytesT, same]
+  records := h.records
+  recordsApart := h.recordsApart
+  recordsDisjoint := h.recordsDisjoint
 
 end OCaml.Vm.Gc

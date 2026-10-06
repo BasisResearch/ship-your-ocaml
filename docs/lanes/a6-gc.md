@@ -23,8 +23,16 @@ Done (F1 side of the GC):
   * `whileMin_loaded_f1`, `whileMin_halts_f1` and `WhileMinOpen.libHeap` take
     a0-boot's named obligation
     `WhileMin.cut_heapReady_covers_Statement f1Extents`.
-  * Next: `LibHeapAt` record windows (for a1-prims' flush/output),
-    `gcIdle`/`refTable` pins, `BarrierRuntime f1Layout`.
+  * `f1_records`: writes to an open channel record (`OpenAt c a`, any
+    `RecordWindow` missing the `next` link), alongside safe windows, keep
+    `f1Runtime` (getD frame). It uses `LibHeapAt.keep_records`, and
+    `OpenChannels.unique` makes the list determined by memory.
+  * `F1Pins.gcIdle` (`f1_gcIdle`, a2-sem's `BarrierRuntime.idle`).
+  * `Remembered.frameApart`/`aboveCode` are guarded by room.
+  * Next: `NurseryGeometry.channelsListed` (299ea97e, lands with a1-arms'
+    channel-extent commit), `f1_console_stable` (a1-prims' `ConsoleStable`),
+    the `refTable` pin, `BarrierRuntime f1Layout`, `BarrierGrowth f1Layout`
+    (unallocated table, from `barrier_grow`).
 - `F1Pins.console : ConsoleRuntime c` (a1-prims' console statics):
   `ConsoleRuntime.transfer` keeps it under any change to non-ignored static
   words; `consoleRuntime_of` reads it at the cut (file table, signals, lock

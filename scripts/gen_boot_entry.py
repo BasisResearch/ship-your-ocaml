@@ -35,6 +35,7 @@ for name in ['caml_start_code','caml_global_data','caml_verb_gc','caml_cleanup_o
     emit_read(out,name,f'Layout.sym_{name}',read(layout['sym_'+name]))
 for name in ['stack_high','stack_low','stack_threshold','extern_sp','trapsp','trap_barrier','backtrace_active']:
     emit_read(out,name,f'WhileMinRuntime.domain + Layout.off_{name}',read(domain+layout['off_'+name]))
+emit_read(out,'caml_gc_phase','Layout.sym_caml_gc_phase',read(layout['sym_caml_gc_phase'],4),4)
 for fd in (1,2):
     emit_read(out,f'fd{fd}_kind',f'Layout.sym_fds + {24*fd}',read(layout['sym_fds']+24*fd))
 pending=[emit_read(out,f'pending{i}',f'Layout.sym_caml_pending_signals + 8 * {i}',

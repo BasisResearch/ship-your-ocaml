@@ -62,6 +62,8 @@ structure F1Pins (c : Config) : Prop where
   /-- newlib's heap: ready with room, covering the runtime's blocks and the
   open channel records (`F1Heap.lean`) -/
   libHeap : LibHeap c
+  /-- the collector is idle (`Phase_idle`): G1 never starts a cycle -/
+  gcIdle : word32 c Layout.sym_caml_gc_phase = 3#32
 
 /-- The F1 runtime invariant. -/
 def f1Runtime : Config → Prop := RuntimeOk F1Pins
@@ -236,6 +238,18 @@ theorem footprint_keep {ws : List W} {m m' : Std.ExtHashMap Nat (BitVec 8)} (fra
   have same := frame (x + j) out
   simp only [bytesT, same]
 
+/-- `footprint_keep` for a byte-total frame (`getD 0` outside the windows). -/
+theorem footprint_keepD {ws : List W} {m m' : Std.ExtHashMap Nat (BitVec 8)}
+    (keep : ∀ a, OutW ws a → (m'[a]?).getD 0 = (m[a]?).getD 0)
+    (apart : ∀ w ∈ ws, ∀ v ∈ f1Footprint, Apart w v) {x n : Nat} (inside : InFootprint x n) :
+    bytesT m' x n = bytesT m x n := by
+  obtain ⟨v, member, low, high⟩ := inside
+  apply Reloc.bytesT_congr
+  intro j hj
+  have out : OutW ws (x + j) := outW_of fun w hw => by
+    rcases apart w hw v member with h | h <;> omega
+  simp only [bytesT, keep _ out]
+
 /-- A static read missing the ignored statics. -/
 theorem in_bss {x n : Nat} (h : x + n ≤ Layout.sym_bss_end) (side : StaticApart x n) : InKept x n := by
   obtain ⟨v, member, low, high⟩ := in_gaps (lo := 0) (Nat.zero_le x) h side
@@ -394,7 +408,8 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
     by rw [w8 _ (b (by simp [Layout.sym_caml_channel_mutex_unlock_exn, Layout.sym_bss_end])
       (by decide))];
        exact pins.channelUnlock,
-    ConsoleRuntime.transfer (fun x hx side => keep x 8 (b hx side)) pins.console, heap pins.libHeap⟩, fields⟩
+    ConsoleRuntime.transfer (fun x hx side => keep x 8 (b hx side)) pins.console, heap pins.libHeap,
+    by rw [w4 _ (b (by simp [Layout.sym_caml_gc_phase, Layout.sym_bss_end]) (by decide))]; exact pins.gcIdle⟩, fields⟩
   · exact {
       nonnull := shape.nonnull
       aligned := shape.aligned
@@ -464,6 +479,51 @@ theorem f1_stable {ws : List W} (apart : ∀ w ∈ ws, ∀ v ∈ f1Footprint, Ap
     (fun ⟨H, cap, chs, h⟩ => ⟨H, cap, chs, h.keep_windows heap
       (footprint_keep frame apart in_channelsHead.footprint)
       fun a out => by rw [frame a (outW_of out)]⟩) ok
+
+/-- An open record misses the whole footprint: it lies in the arena, apart
+from the `Caml_state` record and the major chunk. -/
+theorem record_footprint_apart {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
+    (h : LibHeapAt H cap chs c) {a : Nat} (ha : a ∈ chs) {w : W} (r : RecordWindow a w) :
+    ∀ v ∈ f1Footprint, Apart w v := by
+  obtain ⟨lo, hi, -⟩ := r
+  obtain ⟨e, he, elo, ehi⟩ := h.records a ha
+  have bounds := h.ready.block_bounds he
+  dsimp only at elo ehi
+  have dom := h.recordsApart a ha _ (List.mem_cons_self (a := (WhileMinRuntime.domain, Layout.domainStateBytes)))
+  have major := h.recordsApart a ha (majorRegion.lo, majorRegion.hi - majorRegion.lo) (by decide)
+  simp only [majorRegion, WhileMinRuntime.domain, Layout.domainStateBytes, chanRecordBytes, chanOffBuff,
+    OCaml.Bytecode.ioBufferSize, Vsa.Sim.DlHeap.heapStart] at *
+  intro v hv
+  rcases List.mem_cons.1 hv with rfl | hv
+  · simp only [Apart, youngWord, f1Domain, WhileMinRuntime.domain, Layout.off_young_ptr]; omega
+  rcases List.mem_append.1 hv with hs | hd
+  · have := staticKept_below v hs
+    simp only [Apart, Layout.sym_bss_end] at *; omega
+  · simp only [dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hd
+    rcases hd with rfl | rfl | rfl | rfl | rfl | rfl <;>
+      simp only [Apart, f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.off_young_ptr,
+        Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
+        Layout.off_backtrace_active] <;> omega
+
+/-- **Writes to an open channel record keep `f1Runtime`**, alongside windows
+apart from the footprint and safe for newlib's heap (a1-prims' flush and
+output paths: `offset`, `curr`, the buffer; never the `next` link). -/
+theorem f1_records {a : Nat} {ws : List W}
+    (safe : ∀ w ∈ ws, ((∀ v ∈ f1Footprint, Apart w v) ∧ F1HeapSafe w) ∨ RecordWindow a w)
+    {c c' : Config} (isOpen : OpenAt c a)
+    (keep : ∀ x, OutW ws x → (c'.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0) (ok : f1Runtime c) :
+    f1Runtime c' := by
+  obtain ⟨H, cap, chs, h⟩ := ok.freeListShape.libHeap
+  have ha := h.open_mem isOpen
+  have apart : ∀ w ∈ ws, ∀ v ∈ f1Footprint, Apart w v := fun w hw => by
+    rcases safe w hw with ⟨s, -⟩ | r
+    · exact s
+    · exact record_footprint_apart h ha r
+  refine f1_transfer (fun _ _ inside => footprint_keepD keep apart inside) (fun ⟨H', cap', chs', h'⟩ => ?_) ok
+  exact ⟨H', cap', chs', h'.keep_records (h'.open_mem isOpen)
+    (fun w hw => (safe w hw).imp (fun s => s.2) id)
+    (footprint_keepD keep apart in_channelsHead.footprint)
+    fun x out => keep x (outW_of out)⟩
 
 /-- A single window apart from the four footprint windows. -/
 theorem f1_window {lo hi : Nat}
@@ -749,6 +809,10 @@ theorem f1_ignoredStatic : WindowStable f1Runtime mutableStatics :=
 theorem f1_channelUnlock {c : Config} (ok : f1Runtime c) :
     word c Layout.sym_caml_channel_mutex_unlock_exn = 0#64 := ok.freeListShape.channelUnlock
 
+/-- The collector is idle at every F1 state (a2-sem's `BarrierRuntime.idle`). -/
+theorem f1_gcIdle : ∀ c, f1Layout.runtimeOk c → bytesT c.σ.mem Layout.sym_caml_gc_phase 4 = 3#32 :=
+  fun _ ok => ok.freeListShape.gcIdle
+
 /-- The console statics the output primitives read, at every F1 state. -/
 theorem f1_consoleRuntime : ∀ c, f1Layout.runtimeOk c → ConsoleWrite.ConsoleRuntime c :=
   fun _ ok => ok.freeListShape.console
@@ -964,7 +1028,7 @@ theorem libHeap_of {c : Config}
     (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) (heap : HeapCovers c) :
     LibHeap c := by
   obtain ⟨H, cap, room, ready, covers⟩ := heap
-  refine ⟨H, cap, [], ⟨room, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h), List.Pairwise.nil⟩⟩
+  refine ⟨H, cap, [], ⟨room, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h), (fun _ h => by cases h)⟩⟩
   have head := WhileMinEntry.read_caml_all_opened_channels memory
   change bytesT c.σ.mem _ 8 = _ at head
   unfold OpenChannelList
@@ -987,7 +1051,7 @@ theorem f1Pins_of {c : Config}
       simp at root total
       omega
   subst same
-  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact WhileMinEntry.read_stack_high memory
   · exact WhileMinEntry.read_stack_threshold memory
   · have z : ∀ (g : BitVec 64) (n : Nat), g.toNat = n → word c n = 0#64 →
@@ -1002,6 +1066,7 @@ theorem f1Pins_of {c : Config}
   · exact WhileMinEntry.read_caml_channel_mutex_unlock_exn memory
   · exact consoleRuntime_of memory
   · exact libHeap_of memory heap
+  · exact WhileMinEntry.read_caml_gc_phase memory
 
 /-- `f1Runtime` on the certified cut memory. -/
 theorem f1Runtime_of {c : Config}
