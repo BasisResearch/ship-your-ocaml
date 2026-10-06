@@ -18,6 +18,7 @@ Done (F1 side of the GC):
   relation `G1Room B s c` (nursery `young_limit + 8*(B - words) ≤ young_ptr`;
   `stack_threshold + 8*B.stackWords ≤ stack_high`).
   `G1Room.nursery_capacity` gives `NurseryInput.capacity` in its exact shape;
+  `G1Reserve.lean:NurseryReserve.of_room` gives a1-arms' `NurseryReserve`.
   `G1Room.step` re-establishes it after a step (`G1Room.reserve`: directly from
   a `NurseryInput` reservation); `G1Room.stack_capacity` gives
   `EnterReady.capacity` from `StackRepr`.
