@@ -222,6 +222,12 @@ runtime invariant: the long pole for whileMin's `Halts`.
   represented `ModifyCallee`. The generator now tracks the evaluator's exact
   in-block forms (`mv` leaves `x + 0`), supports `lw`, unsigned branches and
   `ret`/fall-through endpoints.
+- `NurseryGeometry.channelsPrivate` (for a1-prims' `f1_flush_stable`): every
+  placed channel record misses `privateRegion` (newlib's records lie outside
+  the major heap's free block); kept by `transport`/`frame_log`/`alloc`/`put`,
+  vacuous at the cut (no channel placed). Next: `F1Pins.libHeap` (decided with
+  a1-arms: option A, the newlib heap inside f1Runtime; a0-boot generates the
+  cut's chunk list `WhileMinHeapChunks`).
 - **Machine caml_modify, growth path** (`OCaml/Vm/Gc/BarrierGrow.lean:barrier_grow`):
   with `Grow` (a0-boot's `RuntimeReady H (capacity + charge) sp ra` at the
   barrier entry, which carries VsaOk's full GPR presence; a native frame for

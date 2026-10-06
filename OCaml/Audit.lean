@@ -196,6 +196,7 @@ import OCaml.Vm.Gc.G1Reserve
 import OCaml.Vm.Gc.ModifyInsert
 import OCaml.Vm.Gc.BarrierRun
 import OCaml.Vm.Gc.BarrierGrow
+import OCaml.Vm.Gc.LibHeap
 import OCaml.Vm.Gc.Generated.BarrierAbove
 import OCaml.Vm.Gc.Generated.BarrierBelow
 import OCaml.Vm.Gc.Generated.BarrierFull
@@ -486,6 +487,8 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.ModifyInsert.registers
 #print axioms OCaml.Vm.Gc.Barrier.barrier_fast
 #print axioms OCaml.Vm.Gc.Barrier.barrier_grow
+#print axioms OCaml.Vm.Gc.HeapReady.frame_windows
+#print axioms OCaml.Vm.Gc.HeapReady.frame_read
 #print axioms OCaml.Vm.Gc.Barrier.grow_to_call
 #print axioms OCaml.Vm.Gc.Barrier.reload_run
 #print axioms OCaml.Vm.Gc.Barrier.value_full

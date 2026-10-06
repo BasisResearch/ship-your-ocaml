@@ -55,6 +55,7 @@ theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : P
       obtain ⟨o, ho, size⟩ := objects l o' object
       rw [window, ← size]; exact g.heap l a o placed ho
     channels := by rw [window, chans]; exact g.channels
+    channelsPrivate := by rw [chans]; exact g.channelsPrivate
     primitives := by rw [window, prims]; exact g.primitives
     top := by rw [ptr]; exact g.top
     aligned := by rw [ptr]; exact g.aligned
@@ -124,6 +125,7 @@ theorem NurseryGeometry.alloc {P : Prog} {s s' : St} {c c' : Config} {pl : Place
         have := reserve_outside (c' := c') (count := o'.wosize) after
         simpa only [Nat.add_comm] using this
     channels := by rw [chans]; exact fun id ch x h1 h2 => sh (g.channels id ch x h1 h2)
+    channelsPrivate := by rw [chans]; exact g.channelsPrivate
     primitives := by rw [prims]; exact fun i name h => sh (g.primitives i name h)
     top := by have := g.top; omega
     aligned := by rw [after]; exact aligned

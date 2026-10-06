@@ -60,6 +60,10 @@ structure NurseryGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   heapPrivate : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     OutWRange [privateRegion] (a - 8) (8 * o.wosize + 8)
   belowPrivate : (runtimeFields c).youngPtr ≤ privateRegion.lo
+  /-- every placed channel record misses the runtime's private region
+  (newlib's records lie outside the major heap's free block) -/
+  channelsPrivate : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+    OutWRange [privateRegion] a (chanOffBuff + ioBufferSize)
   /-- the nursery lies below the VM stack allocation, so a reserved block sits
   below every stack slot the arms write (a1-arms' CLOSUREREC) -/
   stackAbove : (runtimeFields c).youngPtr ≤ high - Layout.stackBytes

@@ -50,6 +50,7 @@ theorem whileMin_nurseryGeometry :
       have := whileMin_addresses_high a member
       exact above _ _ (by omega)
     channels := fun id ch a _ none => by cases none
+    channelsPrivate := fun id ch a _ none => by cases none
     primitives := fun i name _ => above _ _ (by rw [prims]; simp; omega)
     top := by rw [rf]; decide
     aligned := by rw [rf]; decide
