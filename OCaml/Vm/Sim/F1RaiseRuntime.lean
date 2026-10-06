@@ -33,9 +33,13 @@ theorem nativeScratch_apart {D : InvocationData} (v : NativeValid D) :
 /-- **`RaiseRuntimeFrame` for the pinned F1 layout.** -/
 theorem f1_raiseRuntimeFrame : RaiseRuntimeFrame Gc.f1Layout Gc.f1High Gc.f1Domain where
   hook _ ok := ok.freeListShape.channelUnlock
-  scratch _ D v each := Gc.f1_stable fun w hw => by
+  scratch _ D v each := Gc.f1_stable (fun w hw => by
     rcases each w hw with vm | rfl
     · exact f1_vmWindow_apart vm
-    · exact nativeScratch_apart v
+    · exact nativeScratch_apart v) fun w hw => by
+    rcases each w hw with vm | rfl
+    · exact f1_vmWindow_heapSafe vm
+    · have hh := v.headroom
+      exact Gc.heapSafe_native (by simp only [nativeScratch] at *; omega)
 
 end OCaml.Vm.Sim

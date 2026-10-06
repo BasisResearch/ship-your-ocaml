@@ -10,6 +10,7 @@ import OCaml.Vm.Primitives.ExitPath.Machine
 import OCaml.Vm.Sim.NurseryInput
 import VsaIris.Vsa.HeapShape
 import OCaml.Vm.Primitives.Console.Runtime
+import OCaml.Vm.Gc.F1Heap
 
 /-!
 # The F1 runtime invariant, pinned at the cut
@@ -58,6 +59,9 @@ structure F1Pins (c : Config) : Prop where
   /-- the console statics the output primitives read (`ConsoleRuntime`):
   set by startup, written by no F1 path -/
   console : ConsoleWrite.ConsoleRuntime c
+  /-- newlib's heap: ready with room, covering the runtime's blocks and the
+  open channel records (`F1Heap.lean`) -/
+  libHeap : LibHeap c
 
 /-- The F1 runtime invariant. -/
 def f1Runtime : Config → Prop := RuntimeOk F1Pins
@@ -84,6 +88,19 @@ theorem allocGlobal_ignored {a : Nat} (h : VsaIris.VsaHeap.allocGlobal a) :
   simp only [ignoredStatics, List.mem_cons, List.not_mem_nil, or_false, exists_eq_or_imp, exists_eq_left,
     Layout.sym_impure_data, Layout.sym_errno]
   omega
+
+/-- The ignored statics outside newlib's allocator state:
+`_impure_data._errno`, `oo_last_id`, `caml_callback_depth`, `errno`. Any
+write to them keeps `f1Runtime` (`f1_ignoredStatic`); the malloc globals
+change only through the allocator's own posts. -/
+def mutableStatics : List W :=
+  [⟨Layout.sym_impure_data, Layout.sym_impure_data + 4⟩, ⟨Layout.sym_oo_last_id, Layout.sym_oo_last_id + 8⟩,
+   ⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩, ⟨Layout.sym_errno, Layout.sym_errno + 4⟩]
+
+theorem mutableStatics_ignored : ∀ w ∈ mutableStatics, w ∈ ignoredStatics := by
+  intro w hw
+  simp only [mutableStatics, List.mem_cons, List.not_mem_nil, or_false] at hw
+  rcases hw with rfl | rfl | rfl | rfl <;> simp [ignoredStatics]
 
 /-- A static range misses every ignored static word. -/
 def StaticApart (x n : Nat) : Prop := ∀ w ∈ ignoredStatics, x + n ≤ w.lo ∨ w.hi ≤ x
@@ -347,7 +364,7 @@ theorem ConsoleRuntime.transfer {c c' : Config}
 /-- **Core transfer**: if every kept footprint read is unchanged, the pins
 survive and only `young_ptr` may differ among the runtime fields. -/
 theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem x n = bytesT c.σ.mem x n)
-    (pins : F1Pins c) :
+    (heap : LibHeap c → LibHeap c') (pins : F1Pins c) :
     F1Pins c' ∧ runtimeFields c' =
       { runtimeFields c with youngPtr := (word c' (f1Domain + Layout.off_young_ptr)).toNat } := by
   have w8 : ∀ x, InKept x 8 → word c' x = word c x := fun x h => keep x 8 h
@@ -377,7 +394,7 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
     by rw [w8 _ (b (by simp [Layout.sym_caml_channel_mutex_unlock_exn, Layout.sym_bss_end])
       (by decide))];
        exact pins.channelUnlock,
-    ConsoleRuntime.transfer (fun x hx side => keep x 8 (b hx side)) pins.console⟩, fields⟩
+    ConsoleRuntime.transfer (fun x hx side => keep x 8 (b hx side)) pins.console, heap pins.libHeap⟩, fields⟩
   · exact {
       nonnull := shape.nonnull
       aligned := shape.aligned
@@ -417,9 +434,9 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
 
 /-- Read-equality on the whole footprint transfers `f1Runtime`. -/
 theorem f1_transfer {c c' : Config} (keep : ∀ x n, InFootprint x n → bytesT c'.σ.mem x n = bytesT c.σ.mem x n)
-    (ok : f1Runtime c) : f1Runtime c' := by
+    (heap : LibHeap c → LibHeap c') (ok : f1Runtime c) : f1Runtime c' := by
   obtain ⟨bounds, quiet, pins⟩ := ok
-  obtain ⟨pins', fields⟩ := f1_core (fun x n h => keep x n h.footprint) pins
+  obtain ⟨pins', fields⟩ := f1_core (fun x n h => keep x n h.footprint) heap pins
   have ptr : (word c' (f1Domain + Layout.off_young_ptr)).toNat = (runtimeFields c).youngPtr := by
     have dom : (word c Layout.sym_Caml_state).toNat = f1Domain := by
       rw [pins.domain]; simp [f1Domain, WhileMinRuntime.domain]
@@ -429,18 +446,36 @@ theorem f1_transfer {c c' : Config} (keep : ∀ x n, InFootprint x n → bytesT 
   rw [ptr] at fields
   exact ⟨fields ▸ bounds, fields ▸ quiet, pins'⟩
 
-/-- **Windows apart from the footprint are runtime-stable.** -/
-theorem f1_stable {ws : List W} (apart : ∀ w ∈ ws, ∀ v ∈ f1Footprint, Apart w v) :
-    WindowStable f1Runtime ws :=
-  fun _ _ frame ok => f1_transfer (fun _ _ inside => footprint_keep frame apart inside) ok
+/-- The open-channel list head is a kept static word. -/
+theorem in_channelsHead : InKept Layout.sym_caml_all_opened_channels 8 :=
+  in_bss (by simp [Layout.sym_caml_all_opened_channels, Layout.sym_bss_end]) (by decide)
+
+/-- Equal memories keep `f1Runtime`. -/
+theorem f1_sameMemory {c c' : Config} (memory : c'.σ.mem = c.σ.mem) (ok : f1Runtime c) : f1Runtime c' :=
+  f1_transfer (fun x n _ => by simp only [memory])
+    (fun ⟨H, cap, chs, h⟩ => ⟨H, cap, chs, h.keep_windows (ws := []) (fun _ hw => by cases hw)
+      (by simp only [memory]) fun a _ => by simp only [memory]⟩) ok
+
+/-- **Windows apart from the footprint, each safe for newlib's heap, are
+runtime-stable.** -/
+theorem f1_stable {ws : List W} (apart : ∀ w ∈ ws, ∀ v ∈ f1Footprint, Apart w v)
+    (heap : ∀ w ∈ ws, F1HeapSafe w) : WindowStable f1Runtime ws :=
+  fun _ _ frame ok => f1_transfer (fun _ _ inside => footprint_keep frame apart inside)
+    (fun ⟨H, cap, chs, h⟩ => ⟨H, cap, chs, h.keep_windows heap
+      (footprint_keep frame apart in_channelsHead.footprint)
+      fun a out => by rw [frame a (outW_of out)]⟩) ok
 
 /-- A single window apart from the four footprint windows. -/
 theorem f1_window {lo hi : Nat}
-    (apart : ∀ v ∈ f1Footprint, hi ≤ v.lo ∨ v.hi ≤ lo) : WindowStable f1Runtime [⟨lo, hi⟩] :=
-  f1_stable fun w hw v hv => by
+    (apart : ∀ v ∈ f1Footprint, hi ≤ v.lo ∨ v.hi ≤ lo) (heap : F1HeapSafe ⟨lo, hi⟩) :
+    WindowStable f1Runtime [⟨lo, hi⟩] :=
+  f1_stable (fun w hw v hv => by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
     subst hw
-    exact apart v hv
+    exact apart v hv) fun w hw => by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
+    subst hw
+    exact heap
 
 /-- The footprint, numerically. -/
 theorem f1_window_of {lo hi : Nat}
@@ -450,9 +485,10 @@ theorem f1_window_of {lo hi : Nat}
     (barrier : hi ≤ f1Domain + Layout.off_trap_barrier ∨ f1Domain + Layout.off_trap_barrier + 8 ≤ lo)
     (backtrace : hi ≤ f1Domain + Layout.off_backtrace_active ∨ f1Domain + Layout.off_backtrace_active + 8 ≤ lo)
     (block : hi ≤ WhileMinRuntime.freeBlock.block - 8 ∨
-      WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words ≤ lo) :
+      WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words ≤ lo)
+    (heap : F1HeapSafe ⟨lo, hi⟩) :
     WindowStable f1Runtime [⟨lo, hi⟩] := by
-  apply f1_window
+  refine f1_window ?_ heap
   refine footprint_apart (w := ⟨lo, hi⟩) (Or.inl bss) ?_
   intro v hv
   simp only [youngWord, dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
@@ -466,11 +502,74 @@ theorem f1_window_of {lo hi : Nat}
   · exact backtrace
   · exact block
 
+/-- A window inside one of the runtime's blocks is safe for newlib's heap. -/
+theorem heapSafe_extent {lo hi : Nat} {x : Nat × Nat} (member : x ∈ f1Extents) (low : x.1 ≤ lo)
+    (high : hi ≤ x.1 + x.2) : F1HeapSafe ⟨lo, hi⟩ :=
+  Or.inl ⟨x, member, low, high⟩
+
+theorem heapSafe_domain {lo hi : Nat} (low : f1Domain ≤ lo) (high : hi ≤ f1Domain + Layout.domainStateBytes) :
+    F1HeapSafe ⟨lo, hi⟩ :=
+  heapSafe_extent (x := (f1Domain, Layout.domainStateBytes)) List.mem_cons_self low high
+
+theorem heapSafe_minor {lo hi : Nat} (low : minorRegion.lo ≤ lo) (high : hi ≤ minorRegion.hi) :
+    F1HeapSafe ⟨lo, hi⟩ :=
+  heapSafe_extent (x := (minorRegion.lo, minorRegion.hi - minorRegion.lo)) (by decide) low
+    (by simp only [minorRegion] at *; omega)
+
+theorem heapSafe_major {lo hi : Nat} (low : majorRegion.lo ≤ lo) (high : hi ≤ majorRegion.hi) :
+    F1HeapSafe ⟨lo, hi⟩ :=
+  heapSafe_extent (x := (majorRegion.lo, majorRegion.hi - majorRegion.lo)) (by decide) low
+    (by simp only [majorRegion] at *; omega)
+
+theorem heapSafe_stack {lo hi : Nat} (low : f1High - Layout.stackBytes ≤ lo) (high : hi ≤ f1High) :
+    F1HeapSafe ⟨lo, hi⟩ :=
+  heapSafe_extent (x := (f1High - Layout.stackBytes, Layout.stackBytes)) (by decide) low
+    (by simp only [f1High, WhileMinEntry.high, Layout.stackBytes] at *; omega)
+
+/-- A placed object (header and fields) is safe for newlib's heap: it lies in
+the minor heap or the major chunk (`NurseryGeometry.heapChunks`). -/
+theorem heapSafe_object {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {high l a x n : Nat}
+    {o : Obj} (g : NurseryGeometry P s c pl cp high) (placed : pl.φ l = some a) (object : s.heap.get? l = some o)
+    (start : a - 8 ≤ x) (finish : x + n ≤ a + 8 * o.wosize) : F1HeapSafe ⟨x, x + n⟩ := by
+  rcases g.heapChunks l a o placed object with ⟨lo, hi⟩ | ⟨lo, hi⟩
+  · exact heapSafe_minor (by simp only [minorRegion] at *; omega) (by simp only [minorRegion] at *; omega)
+  · exact heapSafe_major (by simp only [majorRegion] at *; omega) (by simp only [majorRegion] at *; omega)
+
+/-- Native windows lie above the allocator arena. -/
+theorem heapSafe_native {lo hi : Nat} (low : Vsa.Sim.DlHeap.heapEnd ≤ lo) : F1HeapSafe ⟨lo, hi⟩ :=
+  Or.inr (Or.inl low)
+
+/-- The mutable statics are errno words or static words newlib never reads. -/
+theorem mutable_heapSafe : ∀ w ∈ mutableStatics, F1HeapSafe w := by
+  intro w hw
+  simp only [mutableStatics, List.mem_cons, List.not_mem_nil, or_false] at hw
+  have errno : ∀ lo hi : Nat, (∀ a, lo ≤ a → a < hi → a ∈ Startup.errnoBytes) → F1HeapSafe ⟨lo, hi⟩ :=
+    fun _ _ h => Or.inr (Or.inr (Or.inl h))
+  have low : ∀ lo hi : Nat, hi ≤ Vsa.Sim.DlHeap.heapStart →
+      (∀ a, lo ≤ a → a < hi → ¬ VsaIris.VsaHeap.allocGlobal a ∧ ¬ HeapPinned a) → F1HeapSafe ⟨lo, hi⟩ :=
+    fun _ _ h k => Or.inr (Or.inr (Or.inr ⟨h, k⟩))
+  rcases hw with rfl | rfl | rfl | rfl
+  · exact errno _ _ fun a l h => Startup.errnoBytes_mem.2 (Or.inl ⟨l, h⟩)
+  · refine low _ _ (by decide) fun a l h => ⟨fun g => ?_, fun p => ?_⟩
+    · unfold VsaIris.VsaHeap.allocGlobal VsaIris.VsaHeap.InRange at g
+      simp only [Layout.sym_oo_last_id] at l h; omega
+    · unfold HeapPinned at p
+      simp only [Image.textBase, Image.textSize, Startup.allocatorImpureAddr, Layout.sym_Caml_state,
+        Layout.sym_pool, Layout.sym_oo_last_id] at *; omega
+  · refine low _ _ (by decide) fun a l h => ⟨fun g => ?_, fun p => ?_⟩
+    · unfold VsaIris.VsaHeap.allocGlobal VsaIris.VsaHeap.InRange at g
+      simp only [Layout.sym_caml_callback_depth] at l h; omega
+    · unfold HeapPinned at p
+      simp only [Image.textBase, Image.textSize, Startup.allocatorImpureAddr, Layout.sym_Caml_state,
+        Layout.sym_pool, Layout.sym_caml_callback_depth] at *; omega
+  · exact errno _ _ fun a l h => Startup.errnoBytes_mem.2 (Or.inr ⟨l, h⟩)
+
 /-- **`AllocationRuntime` for a nursery reservation.** Every store misses the
 kept footprint (the `young_ptr` store does), and the final `young_ptr` stays
 in `[young_limit, old young_ptr]`, aligned. -/
 theorem f1_allocation {before : Config} {log : List WEntry}
     (stores : ∀ e ∈ log, ∀ v ∈ keptFootprint, e.1 + e.2.1 ≤ v.lo ∨ v.hi ≤ e.1)
+    (heap : ∀ e ∈ log, F1HeapSafe ⟨e.1, e.1 + e.2.1⟩)
     (young : ∀ after : Config, after.σ.mem = writeLog before.σ.mem log →
       (runtimeFields before).youngLimit ≤ (word after (f1Domain + Layout.off_young_ptr)).toNat ∧
       (word after (f1Domain + Layout.off_young_ptr)).toNat ≤ (runtimeFields before).youngPtr ∧
@@ -484,7 +583,19 @@ theorem f1_allocation {before : Config} {log : List WEntry}
     rw [memory]
     exact bytesT_writeLog_out _ (outLRange_of_forall fun e he => by
       rcases stores e he v member with h | h <;> omega)
-  obtain ⟨pins', fields⟩ := f1_core keep pins
+  have libHeap : LibHeap before → LibHeap after := fun ⟨H, cap, chs, h⟩ =>
+    ⟨H, cap, chs, h.keep_windows (ws := log.map fun e => ⟨e.1, e.1 + e.2.1⟩)
+      (fun w hw => by
+        obtain ⟨e, he, rfl⟩ := List.mem_map.1 hw
+        exact heap e he)
+      (keep _ _ in_channelsHead)
+      fun a out => by
+        have same : bytesT after.σ.mem a 1 = bytesT before.σ.mem a 1 := by
+          rw [memory]
+          exact bytesT_writeLog_out _ (outLRange_of_forall fun e he => by
+            rcases out ⟨e.1, e.1 + e.2.1⟩ (List.mem_map.2 ⟨e, he, rfl⟩) with h | h <;> simp only at h <;> omega)
+        simpa using byte_of_bytesT same (i := 0) (by decide)⟩
+  obtain ⟨pins', fields⟩ := f1_core keep libHeap pins
   obtain ⟨lowPtr, highPtr, aligned⟩ := young after memory
   refine ⟨?_, by rw [fields]; exact quiet, pins'⟩
   rw [fields]
@@ -519,6 +630,7 @@ theorem f1_domainField {off : Nat} (notYoung : 64 ≤ off)
   · simp only [Layout.off_backtrace_active]; omega
   · simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.domainStateBytes] at *
     omega
+  · exact heapSafe_domain (by omega) (by omega)
 
 theorem f1_trapsp : WindowStable f1Runtime [⟨f1Domain + Layout.off_trapsp, f1Domain + Layout.off_trapsp + 8⟩] :=
   f1_domainField (by decide) (by decide) (by decide)
@@ -539,7 +651,7 @@ theorem f1_external_raise :
 in particular the field windows of objects placed there. -/
 theorem f1_nursery {lo hi : Nat} (low : 0x80082000 ≤ lo) (high : hi ≤ 0x80282000) :
     WindowStable f1Runtime [⟨lo, hi⟩] := by
-  apply f1_window_of <;>
+  refine f1_window_of ?_ ?_ ?_ ?_ ?_ ?_ (heapSafe_minor low high) <;>
     simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end,
       Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
       Layout.off_backtrace_active] <;> omega
@@ -547,17 +659,19 @@ theorem f1_nursery {lo hi : Nat} (low : 0x80082000 ≤ lo) (high : hi ≤ 0x8028
 /-- (b) Any window above the free block and below `heap_end` (the initial
 heap's placement and the VM stack lie there). -/
 theorem f1_aboveBlock {lo hi : Nat}
-    (low : WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words ≤ lo) :
+    (low : WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words ≤ lo)
+    (heap : F1HeapSafe ⟨lo, hi⟩) :
     WindowStable f1Runtime [⟨lo, hi⟩] := by
-  apply f1_window_of <;>
+  refine f1_window_of ?_ ?_ ?_ ?_ ?_ ?_ heap <;>
     simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end,
       Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
       Layout.off_backtrace_active] at * <;> omega
 
 /-- `RuntimeFrame.stackWindow`: every window inside the VM stack allocation. -/
-theorem f1_stackWindow {lo hi : Nat} (low : f1High - Layout.stackBytes ≤ lo) (_high : hi ≤ f1High) :
+theorem f1_stackWindow {lo hi : Nat} (low : f1High - Layout.stackBytes ≤ lo) (high : hi ≤ f1High) :
     WindowStable f1Runtime [⟨lo, hi⟩] :=
   f1_aboveBlock (by simp only [f1High, WhileMinEntry.high, Layout.stackBytes, WhileMinRuntime.freeBlock] at *; omega)
+    (heapSafe_stack low high)
 
 theorem f1_domain {c : Config} (ok : f1Runtime c) : (word c Layout.sym_Caml_state).toNat = f1Domain := by
   rw [ok.freeListShape.domain]; simp [f1Domain, WhileMinRuntime.domain]
@@ -621,14 +735,15 @@ theorem domainField_apart {off : Nat}
 entry (`entry_prep`, depth + 1) and `STOP` (depth − 1) keep the invariant. -/
 theorem f1_callbackDepth :
     WindowStable f1Runtime [⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩] :=
-  f1_window fun v hv => footprint_apart_ignored
+  f1_window (fun v hv => footprint_apart_ignored
     ⟨⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩, by simp [ignoredStatics],
-      Nat.le_refl _, Nat.le_refl _⟩ v hv
+      Nat.le_refl _, Nat.le_refl _⟩ v hv) (mutable_heapSafe _ (by simp [mutableStatics]))
 
-/-- **The ignored statics are runtime-stable**: writes to `errno`,
+/-- **The mutable statics are runtime-stable**: writes to `errno`,
 `_impure_data._errno`, `oo_last_id` or `caml_callback_depth` keep `f1Runtime`. -/
-theorem f1_ignoredStatic : WindowStable f1Runtime ignoredStatics :=
-  f1_stable fun w hw => footprint_apart_ignored ⟨w, hw, Nat.le_refl _, Nat.le_refl _⟩
+theorem f1_ignoredStatic : WindowStable f1Runtime mutableStatics :=
+  f1_stable (fun w hw => footprint_apart_ignored ⟨w, mutableStatics_ignored w hw, Nat.le_refl _, Nat.le_refl _⟩)
+    mutable_heapSafe
 
 /-- The channel-mutex unlock hook is unset (a2-sem's division-by-zero row). -/
 theorem f1_channelUnlock {c : Config} (ok : f1Runtime c) :
@@ -671,6 +786,7 @@ theorem f1_objectField {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanP
   · simp only [Layout.domainStateBytes, Layout.off_trap_barrier] at hd ⊢; omega
   · simp only [Layout.domainStateBytes, Layout.off_backtrace_active] at hd ⊢; omega
   · omega
+  · exact heapSafe_object g placed object start finish
 
 theorem mem_of_logInW {ws : List W} {log : List WEntry} (h : LogInW ws log) :
     ∀ e ∈ log, InsideW ws e.1 e.2.1 := by
@@ -734,6 +850,19 @@ theorem f1_allocFrame_core' {P : Prog} {s : St} {c : Config} {pl : Place} {cp : 
             Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
             Layout.off_backtrace_active]) <;> omega
       · exact stackApart e hin.1 hin.2 v (List.mem_cons_of_mem _ hv)
+      · cases hin
+  · intro e he
+    rcases List.mem_append.1 he with hy | hl
+    · simp only [Sim.grabReserveLog, dom, List.mem_cons, List.not_mem_nil, or_false] at hy
+      subst hy
+      exact heapSafe_domain (by simp only [Layout.off_young_ptr]; omega)
+        (by simp only [Layout.off_young_ptr, Layout.domainStateBytes]; omega)
+    · rcases entries e hl with hin | hin | hin
+      · have nl := g.nurseryLow
+        have nh := g.nurseryHigh
+        simp only [nurseryFree] at hin
+        exact heapSafe_minor (by omega) (by omega)
+      · exact heapSafe_stack (by simpa [Sim.stackWindow] using hin.1) (by simpa [Sim.stackWindow] using hin.2)
       · cases hin
   · intro after memory
     have readback : word after (f1Domain + Layout.off_young_ptr) = BitVec.ofNat 64 (a - 8) := by
@@ -825,9 +954,27 @@ theorem consoleRuntime_of {c : Config}
   · rw [rd ConsoleWrite.channelLock _ _ (by decide) (WhileMinEntry.read_caml_channel_mutex_lock memory)]; decide
   · rw [rd ConsoleWrite.channelUnlock _ _ (by decide) (WhileMinEntry.read_caml_channel_mutex_unlock memory)]; decide
 
+/-- newlib's heap readiness covering `f1Extents` (the body of a0-boot's
+`WhileMin.cut_heapReady_covers_Statement`, at any configuration). -/
+def HeapCovers (c : Config) : Prop :=
+  ∃ H cap, 2 ^ 24 ≤ cap ∧ Startup.HeapReady H cap c ∧ ∀ x ∈ f1Extents, ∃ e ∈ H, e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2
+
+/-- newlib's heap at the cut: no channel is open yet. -/
+theorem libHeap_of {c : Config}
+    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) (heap : HeapCovers c) :
+    LibHeap c := by
+  obtain ⟨H, cap, room, ready, covers⟩ := heap
+  refine ⟨H, cap, [], ⟨room, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h), List.Pairwise.nil⟩⟩
+  have head := WhileMinEntry.read_caml_all_opened_channels memory
+  change bytesT c.σ.mem _ 8 = _ at head
+  unfold OpenChannelList
+  rw [head]
+  exact .nil
+
 /-- The pins hold on the certified cut memory. -/
 theorem f1Pins_of {c : Config}
-    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) : F1Pins c := by
+    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) (heap : HeapCovers c) :
+    F1Pins c := by
   obtain ⟨b, shape⟩ := (WhileMinRuntime.freeList memory).shape
   have root := shape.root
   have total := shape.total
@@ -840,7 +987,7 @@ theorem f1Pins_of {c : Config}
       simp at root total
       omega
   subst same
-  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact WhileMinEntry.read_stack_high memory
   · exact WhileMinEntry.read_stack_threshold memory
   · have z : ∀ (g : BitVec 64) (n : Nat), g.toNat = n → word c n = 0#64 →
@@ -854,12 +1001,14 @@ theorem f1Pins_of {c : Config}
   · exact WhileMinEntry.read_backtrace_active memory
   · exact WhileMinEntry.read_caml_channel_mutex_unlock_exn memory
   · exact consoleRuntime_of memory
+  · exact libHeap_of memory heap
 
 /-- `f1Runtime` on the certified cut memory. -/
 theorem f1Runtime_of {c : Config}
-    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) : f1Runtime c := by
+    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) (heap : HeapCovers c) :
+    f1Runtime c := by
   have ok := WhileMinRuntime.runtimeOk memory
-  exact ⟨ok.bounds, ok.noPending, f1Pins_of memory⟩
+  exact ⟨ok.bounds, ok.noPending, f1Pins_of memory heap⟩
 
 /-- Replace the runtime component of a loaded witness. -/
 theorem Loaded.retarget {L L' : OCaml.Layout} {P : Prog} {c : Config} (h : OCaml.Loaded L P c)
@@ -869,14 +1018,27 @@ theorem Loaded.retarget {L L' : OCaml.Layout} {P : Prog} {c : Config} (h : OCaml
     platform := ⟨entry.platform.control, entry.platform.image, runtime⟩
     geometry := ⟨entry.geometry.toArmGeometry, budget ▸ entry.geometry.room⟩ }⟩
 
-/-- **`Loaded f1Layout whileMin`** at the captured cut. -/
-theorem whileMin_loaded_f1 : OCaml.Loaded f1Layout OCaml.Programs.whileMin WhileMin.cut :=
-  Loaded.retarget WhileMin.loaded (f1Runtime_of WhileMin.memory_equiv) rfl
+/-- a0-boot's covering readiness at the densified cut holds at the cut itself:
+`HeapReady` reads total bytes only. -/
+theorem heapCovers_cut (heap : WhileMin.cut_heapReady_covers_Statement f1Extents) : HeapCovers WhileMin.cut := by
+  obtain ⟨H, cap, room, ready, covers⟩ := heap
+  refine ⟨H, cap, room, HeapReady.frame_read ready fun a _ _ => ?_, covers⟩
+  have := Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem a
+  simp only [Std.ExtHashMap.get?_eq_getElem?] at this
+  exact this
+
+/-- **`Loaded f1Layout whileMin`** at the captured cut, given a0-boot's named
+obligation `WhileMin.cut_heapReady_covers_Statement f1Extents` (newlib's heap
+at the cut covers the runtime's blocks). -/
+theorem whileMin_loaded_f1 (heap : WhileMin.cut_heapReady_covers_Statement f1Extents) :
+    OCaml.Loaded f1Layout OCaml.Programs.whileMin WhileMin.cut :=
+  Loaded.retarget WhileMin.loaded (f1Runtime_of WhileMin.memory_equiv (heapCovers_cut heap)) rfl
 
 /-- The densified entry, as a0-boot's `loaded_fillZero`. -/
-theorem whileMin_loaded_f1_fillZero : OCaml.Loaded f1Layout OCaml.Programs.whileMin (Vsa.Densify.fillZero WhileMin.cut) :=
+theorem whileMin_loaded_f1_fillZero (heap : WhileMin.cut_heapReady_covers_Statement f1Extents) :
+    OCaml.Loaded f1Layout OCaml.Programs.whileMin (Vsa.Densify.fillZero WhileMin.cut) :=
   Loaded.retarget WhileMin.loaded_fillZero
-    (f1Runtime_of ((Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem).symm.trans WhileMin.memory_equiv)) rfl
+    (f1Runtime_of ((Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem).symm.trans WhileMin.memory_equiv) heap) rfl
 
 end Cut
 

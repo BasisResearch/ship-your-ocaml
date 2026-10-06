@@ -3,15 +3,28 @@
 ## F1 status (2026-10-05) — current
 
 Done (F1 side of the GC):
-- `OCaml/Vm/Gc/F1Heap.lean`: newlib's heap under F1. `f1Extents` (the
-  `Caml_state` record, the remembered-set struct, the minor heap, the major
-  chunk, the VM stack), `LibHeapAt H cap chs c` (a0-boot's `HeapReady` with
-  room 2^24, the extents and the open channel records `chs` covered by live
-  blocks, records apart from the extents), and `F1HeapSafe w`, a window
-  class that does not depend on `H`. `LibHeapAt.frame_windows` keeps the
-  invariant under a frame on safe windows when `caml_all_opened_channels` is
-  unchanged. Next: `F1Pins.libHeap`, with the window lemmas taking
-  `F1HeapSafe`.
+- **`F1Pins.libHeap : LibHeap c`** (`OCaml/Vm/Gc/F1Heap.lean`). This is
+  newlib's heap inside the F1 runtime invariant: a0-boot's `HeapReady H cap`
+  with room 2^24. The runtime blocks `f1Extents` are covered (the
+  `Caml_state` record, the remembered-set struct, `minorRegion`,
+  `majorRegion`, the VM stack). So are the open channel records on
+  `caml_all_opened_channels` (`OpenChannelList`), which lie apart from the
+  extents and from each other.
+  * `F1HeapSafe w` is the safe-window class and does not depend on `H`.
+    `f1_stable`/`f1_window`/`f1_window_of` take it per window, and
+    `f1_allocation` takes it per entry.
+  * Instances: `heapSafe_domain`, `heapSafe_minor`, `heapSafe_major`,
+    `heapSafe_stack`, `heapSafe_native`, `heapSafe_object` (placed objects
+    via `NurseryGeometry.heapChunks`), `mutable_heapSafe`.
+  * `f1_ignoredStatic` now covers `mutableStatics`, the ignored statics
+    minus malloc's globals.
+  * `NurseryGeometry` gained `heapChunks`, `nurseryLow` and `nurseryHigh`.
+  * At the cut no channel is open (`libHeap_of`).
+  * `whileMin_loaded_f1`, `whileMin_halts_f1` and `WhileMinOpen.libHeap` take
+    a0-boot's named obligation
+    `WhileMin.cut_heapReady_covers_Statement f1Extents`.
+  * Next: `LibHeapAt` record windows (for a1-prims' flush/output),
+    `gcIdle`/`refTable` pins, `BarrierRuntime f1Layout`.
 - `F1Pins.console : ConsoleRuntime c` (a1-prims' console statics):
   `ConsoleRuntime.transfer` keeps it under any change to non-ignored static
   words; `consoleRuntime_of` reads it at the cut (file table, signals, lock

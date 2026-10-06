@@ -3,6 +3,7 @@ import OCaml.Vm.Gc.LibHeap
 import OCaml.Vm.Gc.OpenChannels
 import OCaml.Vm.Boot.WhileMinHeapChunks
 import OCaml.Vm.Boot.WhileMinEntryReads
+import OCaml.Vm.Gc.NurseryDefs
 
 /-!
 # newlib's heap under F1
@@ -31,12 +32,12 @@ def chanRecordBytes : Nat := chanOffBuff + OCaml.Bytecode.ioBufferSize
 malloc block at the whileMin cut:
 * the `Caml_state` record;
 * the remembered-set struct (`Caml_state->ref_table`, 7 words);
-* the minor heap `[young_start, young_end)`;
-* the major heap chunk (`0xf8000` bytes, from its chunk head);
+* the minor heap `[young_start, young_end)` (`minorRegion`);
+* the major heap chunk (`majorRegion`);
 * the VM stack `[stack_low, stack_high)`. -/
 def f1Extents : List (Nat × Nat) :=
   [(Boot.WhileMinRuntime.domain, Layout.domainStateBytes), (Boot.WhileMinHeapChunks.refTablePayload, 56),
-   (0x80082000, 0x200000), (0x80283000, 0xf8000),
+   (minorRegion.lo, minorRegion.hi - minorRegion.lo), (majorRegion.lo, majorRegion.hi - majorRegion.lo),
    (Boot.WhileMinEntry.high - Layout.stackBytes, Layout.stackBytes)]
 
 /-- `x` lies inside a live block of `H`. -/
@@ -58,6 +59,8 @@ structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Co
   channels : OpenChannelList c.σ.mem chs
   records : ∀ a ∈ chs, Covered H (a, chanRecordBytes)
   recordsApart : ∀ a ∈ chs, ∀ x ∈ f1Extents, a + chanRecordBytes ≤ x.1 ∨ x.1 + x.2 ≤ a
+  /-- distinct open records are disjoint (each its own malloc block) -/
+  recordsDisjoint : chs.Pairwise fun a b => a + chanRecordBytes ≤ b ∨ b + chanRecordBytes ≤ a
 
 /-- The F1 heap invariant. -/
 def LibHeap (c : Config) : Prop := ∃ H cap chs, LibHeapAt H cap chs c
@@ -103,15 +106,16 @@ theorem OpenChannels.congr {m m' : Std.ExtHashMap Nat (BitVec 8)} {x : Nat} {chs
     rw [same a List.mem_cons_self]
     exact ih fun b hb => same b (List.mem_cons_of_mem _ hb)
 
-/-- **The F1 heap invariant survives writes confined to safe windows**, when
-the open-channel list head is unchanged. -/
-theorem LibHeapAt.frame_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c c' : Config}
+/-- **The F1 heap invariant survives writes confined to safe windows**, given
+byte equality outside them and an unchanged open-channel list head. -/
+theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c c' : Config}
     (h : LibHeapAt H cap chs c) {ws : List W} (safe : ∀ w ∈ ws, F1HeapSafe w)
     (head : bytesT c'.σ.mem Layout.sym_caml_all_opened_channels 8 =
       bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8)
-    (frame : FrameOn ws c.σ.mem c'.σ.mem) : LibHeapAt H cap chs c' where
+    (keep : ∀ a, (∀ w ∈ ws, a < w.lo ∨ w.hi ≤ a) → (c'.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) :
+    LibHeapAt H cap chs c' where
   room := h.room
-  ready := HeapReady.frame_windows h.ready (fun w hw => (safe w hw).heapSafe h) frame
+  ready := HeapReady.keep_windows h.ready (fun w hw => (safe w hw).heapSafe h) keep
   extents := h.extents
   channels := by
     unfold OpenChannelList
@@ -119,10 +123,19 @@ theorem LibHeapAt.frame_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List 
     refine OpenChannels.congr h.channels fun a ha => ?_
     apply Reloc.bytesT_congr
     intro j hj
-    have out : OutW ws (a + chanOffNext + j) := outW_all fun w hw =>
+    have same := keep (a + chanOffNext + j) fun w hw =>
       (safe w hw).outside h ha (by omega) (by unfold chanOffNext chanRecordBytes chanOffBuff at *; omega)
-    simp only [bytesT, frame _ out]
+    simp only [bytesT, same]
   records := h.records
   recordsApart := h.recordsApart
+  recordsDisjoint := h.recordsDisjoint
+
+/-- `LibHeapAt.keep_windows` for a frame. -/
+theorem LibHeapAt.frame_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c c' : Config}
+    (h : LibHeapAt H cap chs c) {ws : List W} (safe : ∀ w ∈ ws, F1HeapSafe w)
+    (head : bytesT c'.σ.mem Layout.sym_caml_all_opened_channels 8 =
+      bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8)
+    (frame : FrameOn ws c.σ.mem c'.σ.mem) : LibHeapAt H cap chs c' :=
+  h.keep_windows safe head fun a out => by rw [frame a (outW_all out)]
 
 end OCaml.Vm.Gc

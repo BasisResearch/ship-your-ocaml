@@ -593,6 +593,17 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.F1HeapSafe.heapSafe
 #print axioms OCaml.Vm.Gc.F1HeapSafe.outside
 #print axioms OCaml.Vm.Gc.OpenChannels.congr
+#print axioms OCaml.Vm.Gc.LibHeapAt.keep_windows
+#print axioms OCaml.Vm.Gc.HeapReady.keep_windows
+#print axioms OCaml.Vm.Gc.heapSafe_object
+#print axioms OCaml.Vm.Gc.heapSafe_stack
+#print axioms OCaml.Vm.Gc.heapSafe_domain
+#print axioms OCaml.Vm.Gc.mutable_heapSafe
+#print axioms OCaml.Vm.Gc.f1_sameMemory
+#print axioms OCaml.Vm.Gc.libHeap_of
+#print axioms OCaml.Vm.Gc.heapCovers_cut
+#print axioms OCaml.Vm.Gc.whileMin_heapChunks
+#print axioms OCaml.Vm.Sim.f1_vmWindow_heapSafe
 #print axioms OCaml.Vm.Gc.stackWindow_apart
 #print axioms OCaml.Vm.Gc.domainField_apart
 #print axioms OCaml.Vm.Gc.whileMin_loaded_f1

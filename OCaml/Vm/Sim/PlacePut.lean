@@ -113,7 +113,8 @@ theorem _root_.OCaml.Vm.Gc.NurseryGeometry.put {P : Prog} {s : St} {c : Config} 
   { g with
     heap := fun l b o placed object => g.heap l b o (put_present absent object placed) object
     heapDomain := fun l b o placed object => g.heapDomain l b o (put_present absent object placed) object
-    heapPrivate := fun l b o placed object => g.heapPrivate l b o (put_present absent object placed) object }
+    heapPrivate := fun l b o placed object => g.heapPrivate l b o (put_present absent object placed) object
+    heapChunks := fun l b o placed object => g.heapChunks l b o (put_present absent object placed) object }
 
 /-- **The loop geometry survives re-placing an absent location.** -/
 theorem _root_.OCaml.LoopGeometry.put {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {pl : Place}

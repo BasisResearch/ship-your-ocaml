@@ -64,12 +64,16 @@ theorem HeapPinned.low {a : Nat} (h : HeapPinned a) : a < heapStart := by
     heapStart] at *
   omega
 
-/-- **The newlib heap survives writes confined to safe windows.** -/
-theorem HeapReady.frame_windows {H capacity c c'} (heap : HeapReady H capacity c) {ws : List W}
-    (safe : ∀ w ∈ ws, HeapSafe H w) (frame : FrameOn ws c.σ.mem c'.σ.mem) : HeapReady H capacity c' := by
+/-- **The newlib heap survives writes confined to safe windows**, given
+byte equality outside them. -/
+theorem HeapReady.keep_windows {H capacity c c'} (heap : HeapReady H capacity c) {ws : List W}
+    (safe : ∀ w ∈ ws, HeapSafe H w)
+    (keep : ∀ a, (∀ w ∈ ws, a < w.lo ∨ w.hi ≤ a) → (c'.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) :
+    HeapReady H capacity c' := by
   apply HeapReady.frame_read heap
   intro a notErr reads
-  rw [frame a (outW_all fun w hw => ?_)]
+  apply keep a
+  intro w hw
   rcases Nat.lt_or_ge a w.lo with h | h
   · exact Or.inl h
   rcases Nat.lt_or_ge a w.hi with g | g
@@ -92,5 +96,10 @@ theorem HeapReady.frame_windows {H capacity c c'} (heap : HeapReady H capacity c
         · omega
       · exact notPinned r
   · exact Or.inr g
+
+/-- `HeapReady.keep_windows` for a frame. -/
+theorem HeapReady.frame_windows {H capacity c c'} (heap : HeapReady H capacity c) {ws : List W}
+    (safe : ∀ w ∈ ws, HeapSafe H w) (frame : FrameOn ws c.σ.mem c'.σ.mem) : HeapReady H capacity c' :=
+  HeapReady.keep_windows heap safe fun a out => by rw [frame a (outW_all out)]
 
 end OCaml.Vm.Gc

@@ -19,25 +19,34 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 theorem f1_entryStable {sp : Nat} (frame : EntryFrame sp) :
     WindowStable Gc.f1Runtime (entryWindows sp Gc.f1Domain) := by
   obtain ⟨b1, b2, b3⟩ := frame.nat
-  apply Gc.f1_stable
-  intro w hw
-  simp only [entryWindows, footprintWindows, entryFootprint, List.map, List.mem_cons, List.mem_nil_iff,
-    or_false] at hw
-  rcases hw with rfl | rfl | rfl
-  rotate_left
-  · exact Gc.footprint_apart_ignored ⟨⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩,
-      by simp [Gc.ignoredStatics], Nat.le_refl _, Nat.le_refl _⟩
-  all_goals
-    refine Gc.footprint_apart (Or.inl ?_) ?_
-    · simp only [Gc.f1Domain, Boot.WhileMinRuntime.domain, Layout.sym_bss_end, Layout.off_external_raise,
-        interpFrame, Layout.interpFrameBytes] at *; omega
-    intro v hv
-    simp only [Gc.youngWord, Gc.dynamicKept, List.mem_cons, List.mem_nil_iff, or_false] at hv
-    rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-    simp only [Gc.Apart, Gc.f1Domain, Boot.WhileMinRuntime.domain, Boot.WhileMinRuntime.freeBlock,
-      Layout.sym_bss_end, Layout.off_young_ptr, Layout.off_stack_high,
-      Layout.off_stack_threshold, Layout.off_trap_barrier, Layout.off_backtrace_active,
-      Layout.off_external_raise, interpFrame, Layout.interpFrameBytes] <;> omega
+  refine Gc.f1_stable ?_ ?_
+  · intro w hw
+    simp only [entryWindows, footprintWindows, entryFootprint, List.map, List.mem_cons, List.mem_nil_iff,
+      or_false] at hw
+    rcases hw with rfl | rfl | rfl
+    rotate_left
+    · exact Gc.footprint_apart_ignored ⟨⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩,
+        by simp [Gc.ignoredStatics], Nat.le_refl _, Nat.le_refl _⟩
+    all_goals
+      refine Gc.footprint_apart (Or.inl ?_) ?_
+      · simp only [Gc.f1Domain, Boot.WhileMinRuntime.domain, Layout.sym_bss_end, Layout.off_external_raise,
+          interpFrame, Layout.interpFrameBytes] at *; omega
+      intro v hv
+      simp only [Gc.youngWord, Gc.dynamicKept, List.mem_cons, List.mem_nil_iff, or_false] at hv
+      rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      simp only [Gc.Apart, Gc.f1Domain, Boot.WhileMinRuntime.domain, Boot.WhileMinRuntime.freeBlock,
+        Layout.sym_bss_end, Layout.off_young_ptr, Layout.off_stack_high,
+        Layout.off_stack_threshold, Layout.off_trap_barrier, Layout.off_backtrace_active,
+        Layout.off_external_raise, interpFrame, Layout.interpFrameBytes] <;> omega
+  · intro w hw
+    simp only [entryWindows, footprintWindows, entryFootprint, List.map, List.mem_cons, List.mem_nil_iff,
+      or_false] at hw
+    rcases hw with rfl | rfl | rfl
+    · exact Gc.heapSafe_native (by
+        simp only [interpFrame, Layout.interpFrameBytes, Vsa.Sim.DlHeap.heapEnd] at *; omega)
+    · exact Gc.mutable_heapSafe _ (by simp [Gc.mutableStatics])
+    · exact Gc.heapSafe_domain (Nat.le_add_right _ _)
+        (by simp only [Layout.off_external_raise, Layout.domainStateBytes]; omega)
 
 /-- **`ArmSim.entry` for the pinned F1 layout.** -/
 theorem f1_entry {P : Prog} {c : Config} (h : OCaml.Loaded Gc.f1Layout P c) :

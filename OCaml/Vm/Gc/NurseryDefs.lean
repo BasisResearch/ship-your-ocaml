@@ -20,6 +20,15 @@ field stores never disturb the allocator state. G2 replaces it by the
 free-list placement invariant (`SmallListsIn`, `LeastIn`). -/
 def privateRegion : W := ⟨0x80283000, 0x8037ad00⟩
 
+/-- The minor heap `[young_start, young_end)` and the major heap chunk under
+G1 (the whileMin cut's values; the chunk's extent from its chunk head). -/
+def minorRegion : W := ⟨0x80082000, 0x80282000⟩
+def majorRegion : W := ⟨0x80283000, 0x8037b000⟩
+
+/-- `[x, x + n)` lies in the minor heap or in the major heap chunk. -/
+def InHeapChunks (x n : Nat) : Prop :=
+  (minorRegion.lo ≤ x ∧ x + n ≤ minorRegion.hi) ∨ (majorRegion.lo ≤ x ∧ x + n ≤ majorRegion.hi)
+
 /-- A window missing every observation of the represented payload. -/
 structure WindowSeparated (w : W) (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace)
     (high : Nat) : Prop where
@@ -60,6 +69,12 @@ structure NurseryGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   heapPrivate : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     OutWRange [privateRegion] (a - 8) (8 * o.wosize + 8)
   belowPrivate : (runtimeFields c).youngPtr ≤ privateRegion.lo
+  /-- every placed object lies in the minor heap or the major chunk, which
+  are newlib blocks apart from the other runtime blocks -/
+  heapChunks : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o → InHeapChunks (a - 8) (8 * o.wosize + 8)
+  /-- the free nursery lies in the minor heap, so fresh objects do too -/
+  nurseryLow : minorRegion.lo ≤ (runtimeFields c).youngLimit
+  nurseryHigh : (runtimeFields c).youngPtr ≤ minorRegion.hi
   /-- every placed channel record misses the runtime's private region
   (newlib's records lie outside the major heap's free block) -/
   channelsPrivate : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →

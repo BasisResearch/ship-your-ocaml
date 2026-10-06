@@ -14,6 +14,8 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 
 /-- **What `whileMin`'s machine run still needs** from the arm lanes. -/
 structure WhileMinOpen : Prop where
+  /-- newlib's heap at the cut covers the runtime's blocks (a0-boot) -/
+  libHeap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Extents
   setglobal_barrier : GlobalBarrier Gc.f1Layout OCaml.Programs.whileMin
   ml_open_descriptor_out_c_call1 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0 "caml_ml_open_descriptor_out"
   ml_flush_c_call1 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0 "caml_ml_flush"
@@ -52,6 +54,6 @@ theorem whileMin_premises (o : WhileMinOpen) :
 /-- **The `whileMin` machine run** from the open premises only. -/
 theorem whileMin_halts_open (o : WhileMinOpen) :
     Halts Boot.WhileMin.cut "55\n2500\n36\n" 0 :=
-  whileMin_halts_f1 (whileMin_premises o)
+  whileMin_halts_f1 o.libHeap (whileMin_premises o)
 
 end OCaml.Vm.Sim

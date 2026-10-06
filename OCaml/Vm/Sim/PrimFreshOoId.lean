@@ -37,7 +37,7 @@ theorem f1_counterStable : WindowStable Gc.f1Layout.runtimeOk counterWindows := 
       rcases List.mem_cons.mp hw' with rfl | hw'
       · exact h.1
       · exact ih h.2 w' hw'
-  exact ⟨key _ ha ⟨Layout.sym_oo_last_id, Layout.sym_oo_last_id + 8⟩ (by simp [Gc.ignoredStatics]), trivial⟩
+  exact ⟨key _ ha ⟨Layout.sym_oo_last_id, Layout.sym_oo_last_id + 8⟩ (by simp [Gc.mutableStatics]), trivial⟩
 
 theorem prim_caml_fresh_oo_id_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64}
     (counterStable : WindowStable L.runtimeOk counterWindows) :

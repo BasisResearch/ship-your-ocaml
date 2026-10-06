@@ -22,11 +22,22 @@ theorem f1_vmWindow_apart {w : W} (vm : VmWindow Gc.f1High Gc.f1Domain w) :
       simp only [vmDomainOffsets, List.mem_cons, List.not_mem_nil, or_false] at member ⊢
       rcases member with h | h | h | h <;> simp [h])
 
+/-- Every VM window is safe for newlib's heap: it lies in the VM stack or the
+`Caml_state` record, both runtime blocks. -/
+theorem f1_vmWindow_heapSafe {w : W} (vm : VmWindow Gc.f1High Gc.f1Domain w) : Gc.F1HeapSafe w := by
+  rcases vm with ⟨low, high⟩ | ⟨off, member, rfl⟩
+  · exact Gc.heapSafe_stack low high
+  · simp only [vmDomainOffsets, List.mem_cons, List.not_mem_nil, or_false] at member
+    refine Gc.heapSafe_domain (Nat.le_add_right _ _) ?_
+    rcases member with rfl | rfl | rfl | rfl <;>
+      simp only [Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots, Layout.off_exn_bucket,
+        Layout.domainStateBytes] <;> omega
+
 /-- **`RuntimeFrame` for the pinned F1 layout.** -/
 theorem f1_runtimeFrame : RuntimeFrame Gc.f1Layout Gc.f1High Gc.f1Domain where
   domainWord _ ok := Gc.f1_domain ok
   stackHigh _ ok := Gc.f1_stackHigh ok
-  windows _ vm := Gc.f1_stable fun w hw => f1_vmWindow_apart (vm w hw)
+  windows _ vm := Gc.f1_stable (fun w hw => f1_vmWindow_apart (vm w hw)) fun w hw => f1_vmWindow_heapSafe (vm w hw)
   threshold _ ok := Gc.f1_threshold ok
   quiet _ ok := Gc.f1_quiet ok
   barrier _ ok := Gc.f1_trapBarrier ok
@@ -34,6 +45,6 @@ theorem f1_runtimeFrame : RuntimeFrame Gc.f1Layout Gc.f1High Gc.f1Domain where
 
 /-- The F1 runtime invariant depends on memory only. -/
 theorem f1_memoryStable : MemoryStable Gc.f1Layout.runtimeOk :=
-  fun c c' memory ok => Gc.f1_transfer (fun x n _ => by simp only [memory]) ok
+  fun _ _ memory ok => Gc.f1_sameMemory memory ok
 
 end OCaml.Vm.Sim

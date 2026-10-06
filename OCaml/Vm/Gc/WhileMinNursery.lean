@@ -11,23 +11,38 @@ open OCaml.Bytecode OCaml.Programs Vsa.Machine Vsa.Sim Boot
 
 theorem whileMin_addresses_high : ∀ a ∈ WhileMinHeap.addresses, 0x80281ce8 ≤ a := by decide
 
+/-- A per-object range check over the cut's 29 placed objects. -/
+theorem whileMin_objects (p : Nat → Nat → Bool)
+    (check : ∀ l : Fin 29, (match WhileMinHeap.addresses[l.val]?, whileMin.init.heap.get? l.val with
+      | some a, some o => p (a - 8) (8 * o.wosize + 8)
+      | _, _ => true) = true)
+    {l a : Nat} {o : Obj} (placed : WhileMinHeap.place.φ l = some a)
+    (object : whileMin.init.heap.get? l = some o) : p (a - 8) (8 * o.wosize + 8) = true := by
+  have bound : l < 29 := by
+    have := (List.getElem?_eq_some_iff.1 placed).1
+    simpa [WhileMinHeap.addresses] using this
+  have placed' : WhileMinHeap.addresses[l]? = some a := placed
+  have h := check ⟨l, bound⟩
+  simpa only [placed', object] using h
+
 /-- Placed cut objects miss the private free block: globals lie above it, the
 two nursery objects below it. -/
 theorem whileMin_heapPrivate {l a : Nat} {o : Obj} (placed : WhileMinHeap.place.φ l = some a)
     (object : whileMin.init.heap.get? l = some o) :
     OutWRange [privateRegion] (a - 8) (8 * o.wosize + 8) := by
-  have bound : l < 29 := by
-    have := (List.getElem?_eq_some_iff.1 placed).1
-    simpa [WhileMinHeap.addresses] using this
-  have check : ∀ l : Fin 29,
-      (match WhileMinHeap.addresses[l.val]?, whileMin.init.heap.get? l.val with
-        | some a, some o => decide (a - 8 + (8 * o.wosize + 8) ≤ 0x80283000 ∨ 0x8037ad00 ≤ a - 8)
-        | _, _ => true) = true := by
-    decide +kernel
-  have placed' : WhileMinHeap.addresses[l]? = some a := placed
-  have h := check ⟨l, bound⟩
-  simp only [placed', object, decide_eq_true_eq] at h
+  have h := whileMin_objects (fun x n => decide (x + n ≤ 0x80283000 ∨ 0x8037ad00 ≤ x))
+    (by decide +kernel) placed object
+  simp only [decide_eq_true_eq] at h
   exact ⟨by simpa only [privateRegion] using h, trivial⟩
+
+/-- Placed cut objects lie in the major chunk (globals) or the minor heap
+(the two nursery objects). -/
+theorem whileMin_heapChunks {l a : Nat} {o : Obj} (placed : WhileMinHeap.place.φ l = some a)
+    (object : whileMin.init.heap.get? l = some o) : InHeapChunks (a - 8) (8 * o.wosize + 8) := by
+  have h := whileMin_objects (fun x n => decide ((0x80082000 ≤ x ∧ x + n ≤ 0x80282000) ∨
+    (0x80283000 ≤ x ∧ x + n ≤ 0x8037b000))) (by decide +kernel) placed object
+  simp only [decide_eq_true_eq] at h
+  simpa only [InHeapChunks, minorRegion, majorRegion] using h
 
 /-- **`NurseryGeometry` at the cut.** -/
 theorem whileMin_nurseryGeometry :
@@ -66,6 +81,9 @@ theorem whileMin_nurseryGeometry :
       rw [domNat]; exact ⟨Or.inr (by dsimp only; simp only [Layout.domainStateBytes]; omega), trivial⟩
     heapPrivate := fun l a o placed object => whileMin_heapPrivate placed object
     belowPrivate := by rw [rf]; decide
+    heapChunks := fun l a o placed object => whileMin_heapChunks placed object
+    nurseryLow := by rw [rf]; decide
+    nurseryHigh := by rw [rf]; decide
     stackAbove := by rw [rf]; simp [WhileMinEntry.high, Layout.stackBytes, WhileMinObservation.observed] }
 
 end OCaml.Vm.Gc
