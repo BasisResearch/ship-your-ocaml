@@ -3,6 +3,8 @@ import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.Readback
 import OCaml.Vm.Sim.ClosureLayout
 import OCaml.Vm.Sim.NurseryInput
+import OCaml.Vm.Sim.MakeblockInput
+import OCaml.Vm.Sim.ApplyRows
 
 /-!
 # Allocation logs at the loop head
@@ -112,5 +114,156 @@ theorem StackGeometry.young_bindings {P : Prog} {s : St} {c : Config} {pl : Plac
   have hl := g.domainLow
   have t : Layout.sym_caml_prim_table + Layout.off_prim_contents + 8 ≤ Layout.sym_bss_end := by decide
   exact ⟨grab_out (by omega), fun i name hi => young_apart (g.domainPrims i name hi)⟩
+
+/-! ## The reserved block -/
+
+/-- The free nursery holds the reserved block `[a - 8, a + 8 * count)`. -/
+theorem block_in_free {c : Config} {a count : Nat} {log : List WEntry}
+    (young : (runtimeFields c).youngPtr = a + 8 * count) (capacity : (runtimeFields c).youngLimit ≤ a - 8)
+    (inside : LogInW [⟨a - 8, a + 8 * count⟩] log) : LogInW [Gc.nurseryFree c] log :=
+  logInW_widen inside fun w hw => by
+    simp only [List.mem_singleton] at hw
+    subst hw
+    simp only [Gc.nurseryFree]
+    omega
+
+/-- A reserved object misses every placed object. -/
+theorem _root_.OCaml.Vm.Gc.NurseryGeometry.allocationOutside {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high a count : Nat} {o : Obj} (g : Gc.NurseryGeometry P s c pl cp high)
+    (young : (runtimeFields c).youngPtr = a + 8 * count) (capacity : (runtimeFields c).youngLimit ≤ a - 8)
+    (room : 8 ≤ a) (size : o.wosize ≤ count) : AllocationOutside P s pl a o := by
+  intro l b old _ placed object
+  have apart := Gc.apart_of_inside (g.heap l b old placed object) capacity
+    (y := a - 8) (k := 8 * o.wosize + 8) (by omega)
+  omega
+
+/-- **The reservation of `count` words below `young_ptr`**: the nursery's
+scalar observations at the loop head. -/
+structure Reservation (L : OCaml.Layout) (s : St) (c : Config) (count : Nat) : Prop where
+  room : Gc.G1Room L.budget s c
+  fits : s.heap.words + (count + 1) ≤ L.budget.heapWords
+
+theorem Reservation.capacity {L : OCaml.Layout} {s : St} {c : Config} {count : Nat}
+    (r : Reservation L s c count) :
+    (runtimeFields c).youngLimit + 8 * (count + 1) ≤ (runtimeFields c).youngPtr := by
+  have := r.room.nursery
+  have := r.fits
+  omega
+
+theorem logInW_append' {ws : List W} {l1 l2 : List WEntry} (h1 : LogInW ws l1) (h2 : LogInW ws l2) :
+    LogInW ws (l1 ++ l2) := by
+  induction l1 with
+  | nil => exact h2
+  | cons e l ih => exact ⟨h1.1, ih h1.2⟩
+
+/-- A block log lies in its reserved block. -/
+theorem blockLog_in {a tag : Nat} {words : List (BitVec 64)} (room : 8 ≤ a) (nonempty : 0 < words.length) :
+    LogInW [⟨a - 8, a + 8 * words.length⟩] (blockLog a tag words) :=
+  ⟨Or.inl ⟨Nat.le_refl _, by dsimp only; omega⟩, logInW_widen (value_log_in a words) fun w hw => by
+    simp only [List.mem_singleton] at hw
+    subst hw
+    dsimp only
+    omega⟩
+
+theorem makeblockWords_length {c : Config} {sp count : Nat} {accu : BitVec 64} (positive : 0 < count) :
+    (makeblockWords c sp count accu).length = count := by
+  simp [makeblockWords, stackWords]
+  omega
+
+theorem makeblockObject_wosize {s : St} {count tag : Nat} (positive : 0 < count)
+    (bound : count - 1 ≤ s.stack.length) : (makeblockObject s count tag).wosize = count := by
+  simp [makeblockObject, Obj.wosize]
+  omega
+
+/-- **MAKEBLOCK's input at the loop head**, the fresh location placed at
+`young_ptr - 8 * count`. -/
+theorem MakeblockInput.of_input {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
+    {pl : Place} {cp : ChanPlace} {sp high count tag : Nat} {accu : BitVec 64}
+    (h : ArmInput L P s op c pl cp sp high)
+    (placed : pl.φ (s.heap.alloc (makeblockObject s count tag)).2 =
+      some ((runtimeFields c).youngPtr - 8 * count))
+    (reserve : Reservation L s c count)
+    (positive : 0 < count) (bound : count - 1 ≤ s.stack.length) (small : count < 2^31) (tagBound : tag < 256)
+    (value : valWord pl s.accu = some accu) (space : 8 * s.stack.length ≤ Layout.stackBytes) :
+    MakeblockInput P s c pl cp sp high count tag ((runtimeFields c).youngPtr - 8 * count)
+      (word c Layout.sym_Caml_state).toNat (runtimeFields c).youngLimit accu := by
+  have g := h.geometry.nursery
+  have capacityAll := reserve.capacity
+  have aligned := g.aligned
+  have top := g.top
+  have statics := g.statics
+  simp only [Gc.nurseryFree] at statics
+  have hb : Layout.sym_tohost + 16 ≤ Layout.sym_bss_end := by decide
+  have hr : 0x80000000 ≤ Layout.sym_tohost := by decide
+  have hs := h.stack.1
+  have spSpace := stack_space h.stack space
+  have young : (runtimeFields c).youngPtr = ((runtimeFields c).youngPtr - 8 * count) + 8 * count := by omega
+  generalize ha : (runtimeFields c).youngPtr - 8 * count = a at placed young ⊢
+  have capacity : (runtimeFields c).youngLimit ≤ a - 8 := by omega
+  have room : 8 ≤ a := by omega
+  have size := makeblockObject_wosize (tag := tag) positive bound
+  have wordsLen := makeblockWords_length (c := c) (sp := sp) (accu := accu) positive
+  have blockInside : LogInW [⟨a - 8, a + 8 * count⟩] (blockLog a tag (makeblockWords c sp count accu)) := by
+    simpa only [wordsLen] using blockLog_in (tag := tag) (words := makeblockWords c sp count accu) room
+      (by omega)
+  have free := block_in_free young capacity blockInside
+  have domFree := g.domain
+  have apartDomain : a + 8 * count ≤ (word c Layout.sym_Caml_state).toNat ∨ ((word c Layout.sym_Caml_state).toNat) + Layout.domainStateBytes ≤ a - 8 := by
+    have := Gc.apart_of_inside domFree capacity (y := a - 8) (k := 8 * count + 8) (by omega)
+    omega
+  have hy : Layout.off_young_ptr + 8 ≤ Layout.domainStateBytes := by decide
+  have hl : Layout.off_young_limit + 8 ≤ Layout.domainStateBytes := by decide
+  -- the block part misses the domain record's words
+  have blockMiss : ∀ off, off + 8 ≤ Layout.domainStateBytes →
+      OutLRange (blockLog a tag (makeblockWords c sp count accu)) ((word c Layout.sym_Caml_state).toNat + off) 8 := fun off hoff =>
+    outLRange_of_windows blockInside ⟨by dsimp only; omega, trivial⟩
+  have domainArena := h.geometry.domainArena
+  have arenaEnd := g.arena
+  have youngWord : (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr)).toNat = a + 8 * count := by
+    rw [← young]; rfl
+  have limitWord : (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_young_limit)).toNat = (runtimeFields c).youngLimit := rfl
+  refine
+    { positive, bound, small := by omega, tagBound, room, placed
+      separate := g.allocationOutside young capacity room (by omega)
+      payload := (h.geometry.young_payload h.stack spSpace).append
+        (g.toWindowSeparated.payload h.stack spSpace free)
+      image := h.geometry.young_image.append (g.toWindowSeparated.image free)
+      bindings := h.geometry.young_bindings.append (g.toWindowSeparated.bindings free)
+      reserve := ?_
+      arena := ?_
+      domainValue := by rw [BitVec.ofNat_toNat, BitVec.setWidth_eq]
+      youngValue := by rw [← youngWord, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+      limitValue := by rw [← limitWord, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+      youngWrite := g.young_write
+      limitRead := g.limit_read
+      headerWrite := g.header_write young capacity room
+      fieldWrites := fun i hi => ⟨by omega, by omega, by simp only [tohostAddr, ← mailbox_layout] at *; omega,
+        by omega⟩
+      reads := fun i hi => h.geometry.read h.stack spSpace (by omega)
+      capacity
+      headerYoungOutside := ⟨by dsimp only; omega, trivial⟩ }
+  · refine ⟨by rw [size]; exact young, by rw [size]; exact Nat.le_refl _, room, by omega, capacity, fun c' memory => ?_⟩
+    have pay := (h.geometry.young_payload (a := a) h.stack spSpace).append
+      (g.toWindowSeparated.payload h.stack spSpace free)
+    have keep : ∀ x, OutLRange (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ blockLog a tag (makeblockWords c sp count accu)) x 8 →
+        word c' x = word c x := fun x hx => by
+      change bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8
+      rw [memory, makeblockLog, bytesT_writeLog_out _ hx]
+    have domainKeep := keep _ pay.domain
+    have youngNew : word c' ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr) = BitVec.ofNat 64 (a - 8) := by
+      change bytesT c'.σ.mem _ 8 = _
+      rw [memory, makeblockLog]
+      exact Gc.word_writeLog_at _ _ 0 _ _ (by simp [grabReserveLog])
+        (by simpa [grabReserveLog] using blockMiss _ hy)
+    have limitOut : OutLRange (grabReserveLog (word c Layout.sym_Caml_state).toNat a) ((word c Layout.sym_Caml_state).toNat + Layout.off_young_limit) 8 :=
+      grab_out (by simp only [Layout.off_young_limit, Layout.off_young_ptr]; omega)
+    have limitKeep := keep _ (outLRange_append limitOut (blockMiss _ hl))
+    refine ⟨?_, ?_⟩
+    · simp only [runtimeFields, domainWord, domainKeep, youngNew, BitVec.toNat_ofNat]
+      omega
+    · simp only [runtimeFields, domainWord, domainKeep, limitKeep]
+  · exact logInW_append' ⟨Or.inl ⟨by simp only [arenaWindow]; omega, by simp only [arenaWindow]; omega⟩, trivial⟩
+      (logInW_widen blockInside fun w hw => by
+        simp only [List.mem_singleton] at hw; subst hw; simp only [arenaWindow]; omega)
 
 end OCaml.Vm.Sim
