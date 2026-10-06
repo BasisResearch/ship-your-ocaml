@@ -4,6 +4,8 @@ import OCaml.Vm.Sim.ImmediateRows
 import OCaml.Vm.Sim.OperandRows
 import OCaml.Vm.Sim.PushConstRows
 import OCaml.Vm.Sim.WordPlace
+import OCaml.Vm.Sim.HeapRows
+import OCaml.Vm.Sim.SwitchRows
 import OCaml.Vm.Sim.PushRows
 import OCaml.Vm.Sim.FieldRows
 import OCaml.Vm.Sim.OperandStackRows
@@ -4573,3 +4575,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.appterm2_row
 #print axioms OCaml.Vm.Sim.appterm3_row
 #print axioms OCaml.Vm.Sim.return_row
+#print axioms OCaml.Vm.Sim.offsetref_next
+#print axioms OCaml.Vm.Sim.switch_row
