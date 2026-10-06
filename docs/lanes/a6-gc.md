@@ -82,6 +82,29 @@ For other lanes:
 - bprime: `whileMin_fits`, `whileMin_gcSafe` for the `Halts` instance; transport
   `whileMin_g1Room` from the cut to the loop head through the prologue.
 
+## caml_modify (write barrier) for F1 — plan (2026-10-06)
+
+a1-arms' SETGLOBAL/SETFIELD rows take `GlobalBarrier`/`FieldBarrier`/
+`FieldBarrierK` (per-site `ModifyCallee`, `OCaml/Vm/Sim/ModifyCall.lean`);
+a6-gc supplies them from one general summary. Measured at the pinned cut:
+`caml_gc_phase = 3` (idle: `caml_darken` dead), `Caml_state->ref_table`
+unallocated (base = ptr = limit = 0). whileMin runs exactly ONE barrier step
+(SETGLOBAL, pc 188: a young block into the major global-data block), which
+takes add_to_ref_table's slow path: `caml_realloc_ref_table` →
+`realloc_generic_table.isra.0` → `caml_alloc_table` (35 instrs) →
+`caml_stat_alloc_noexc` (21) → `malloc`/`_malloc_r` (569).
+Paths (CFG of the 60-instruction body, rows in `Gc/Generated/Modify.lean`):
+(1) young slot: store, ret; (2) major slot, old young: store, ret;
+(3) old immediate/major (phase ≠ mark): value immediate/major: store, ret;
+(4) value young, `ptr < limit`: store + entry + ptr bump; (5) as (4) with the
+table full/unallocated: realloc call, then (4)'s insertion.
+Plan: route modules for (1)–(5) in `scripts/gen_gc_rows.py` (segmentSummary
+pattern, like `Immediate`/`BestFitSmall`); representation half from
+`heap_field_written` + framing the ref-table stores; F1Pins gains `gcIdle` and
+a remembered-set state field. Path (5) needs the library-heap invariant
+(a0-boot's `RuntimeReady H capacity`, `stat_alloc_ready`) inside the F1
+runtime invariant: the long pole for whileMin's `Halts`.
+
 Open: G2 (collector proper); status and next design step below. F1 asks from a1-arms/bprime are all landed (last: `72d88e40`).
 
 G2 progress after F1:
