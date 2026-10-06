@@ -62,6 +62,7 @@ structure NewNodeDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s
   pc : PCAt ra after
   result : gprGet after.σ 10 = some 1#64
   regs : GHolds after.σ [(2, sp), (8, s0), (9, s1), (18, s2), (19, s3)]
+  upper : ∀ n, 20 ≤ n → n ≤ 27 → gprGet after.σ n = gprGet before.σ n
   ready : RuntimeReady ((node.toNat, k.toNat + 1) :: H) capacity sp ra after
   fresh : heapStart ≤ node.toNat ∧ node.toNat + (k.toNat + 1) ≤ heapEnd
   disjoint : ∀ e ∈ H, ∀ a, InExt (node.toNat, k.toNat + 1) a → ¬ InExt e a
@@ -329,6 +330,15 @@ theorem new_node_slot1 (c : Config) (H : List (Nat × Nat)) (capacity charge : N
   have doneWord (q : Nat) : bytesT done.σ.mem q 8 = bytesT (writeLog y.σ.mem (newNodeInitLog (vsaReg m 10) k d dir)) q 8 := by
     rw [memDone]
   have heapByte : slotOne + 56 ≤ (vsaReg m 10 + k).toNat := by rw [pNat]; omega
+  have upper (n : Nat) (lo : 20 ≤ n) (hi : n ≤ 27) : gprGet done.σ n = gprGet c.σ n :=
+    (returned.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+      ((init.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+      ((Y.registers n (by omega) (by omega) (by simp [mRegs, VsaIris.PC]; omega)).trans
+      ((copy.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+      ((M.other_gpr readyM.platform n (by omega) (by omega) (by simp [aRegs]; omega)).trans
+      ((call.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+      ((found.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
+      (saved.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega))))))))
   refine ⟨done, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans run8)))))),
     ⟨{ node := vsaReg m 10
        pc := returned.pc
@@ -336,6 +346,7 @@ theorem new_node_slot1 (c : Config) (H : List (Nat × Nat)) (capacity charge : N
        regs := ⟨gholds_lookup (n := 2) _ returned.regs (by rfl), gholds_lookup (n := 8) _ returned.regs (by rfl),
          gholds_lookup (n := 9) _ returned.regs (by rfl), gholds_lookup (n := 18) _ returned.regs (by rfl),
          gholds_lookup (n := 19) _ returned.regs (by rfl), trivial⟩
+       upper := upper
        ready := readyDone
        fresh := ⟨pLow, pHigh⟩
        disjoint := pDisjoint

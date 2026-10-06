@@ -4,8 +4,10 @@ import OCaml.Vm.Sim.AllocInput
 import OCaml.Vm.Sim.FreshLog
 import OCaml.Vm.Boot.Startup.ChildScan
 import OCaml.Vm.Boot.Startup.RuntimeStack
+import OCaml.Vm.Boot.Startup.RuntimeWindows
+import OCaml.Vm.Boot.Startup.NewNode
 namespace OCaml.Vm.Boot.Startup
-open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris OCaml.Vm.Primitives
+open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
 
 /-! htif.c's `fs_init()` over the embedded table: the windows it writes outside
 `new_node` (its frame, the `files` table, the three descriptors, `fs_ready`),
@@ -246,4 +248,135 @@ theorem fs_init_scan (d : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp s
     fun x out => ?_⟩
   rw [p6.memory, show writeLog e5.σ.mem [] = e5.σ.mem from rfl, p5.memory,
     frameOn_writeLog _ _ _ (childLog_inside inner) x ⟨out, trivial⟩, same4]
+
+/-- The `files` table misses the allocator's footprint and protected words. -/
+theorem fsFiles_out_foot {H : List (Nat × Nat)} {a : Nat} (foot : vsaFoot H a) : OutW [fsFilesWindow] a := by
+  simp only [OutW, fsFilesWindow, and_true]
+  rcases foot with global | ⟨lo, _⟩
+  · unfold allocGlobal InRange at global; unfold Layout.sym_files; omega
+  · unfold heapStart at lo; unfold Layout.sym_files; omega
+
+theorem fsFiles_out_pins (pin : Nat × BitVec 8) (member : pin ∈ VsaIris.Sym.allocText) :
+    OutW [fsFilesWindow] pin.1 := by
+  have source := allocator_sources pin member
+  unfold AllocatorByteSource at source
+  simp only [OutW, fsFilesWindow, and_true]
+  left
+  split at source <;> simp only [Image.textBase, Image.textSize, allocatorImpureAddr, Layout.sym_files] at * <;> omega
+
+theorem fsFileLog_inside (start stop : BitVec 64) : LogInW [fsFilesWindow] (fsFileLog start stop) := by
+  simp only [fsFileLog, LogInW, InsideW, fsFilesWindow, slotOne, Layout.sym_files]
+  refine ⟨?_, ?_, ?_, ?_, trivial⟩ <;> omega
+
+/-- `fs_init` after slot 1 is set up: back at its caller. -/
+structure FsTail (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64)
+    (before after : Config) where
+  node : BitVec 64
+  pc : PCAt ra after
+  regs : GHolds after.σ [(2, sp), (23, s7), (22, s6), (19, s3), (8, s0), (1, ra), (25, s9), (24, s8), (21, s5),
+    (20, s4), (18, s2), (9, s1), (10, 1#64)]
+  ready : RuntimeReady ((node.toNat, 5) :: H) capacity sp ra after
+  embed : EmbedImage after
+
+/-- `new_node(0, "prog", 4, 0)` takes slot 1; `fs_init` records the file's
+extent there, finds the table's end and returns. -/
+theorem fs_init_tail (e : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+    (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64)
+    (ready : RuntimeReady H (capacity + charge) (nativeStack sp 96) jal_80000544_call.link e)
+    (frame : NativeFrame sp (96 + (64 + allocHeadroom))) (deep : embedLimit + 96 + (64 + allocHeadroom) ≤ sp.toNat)
+    (regs : GHolds e.σ (newNodeInput (nativeStack sp 96) jal_80000544_call.link progName 0#64 progName 4#64 0#64 ++
+      [(9, 0#64), (18, 47#64), (19, BitVec.ofNat 64 Layout.sym_files)]))
+    (carried : GHolds e.σ [(20, 0x86800018#64), (21, 0#64), (22, 0x86800018#64), (23, 1#64), (24, 4#64), (25, s9)])
+    (embed : EmbedImage e) (free : (e.σ.mem[slotOne]?).getD 0 = 0#8)
+    (saved : ∀ off value, (off, value) ∈ fsInitRestored ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 →
+      bytesT e.σ.mem (nativeFrameBase sp 96 + off) 8 = value) (aligned : ra.toNat % 4 = 0)
+    (charged : vsaChg 5 charge) :
+    FnSummary 0x800000f0#64 (fun d => d = e) (fun after => Nonempty (FsTail H capacity sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 e after)) := by
+  constructor
+  intro before ⟨pc, eq⟩
+  subst before
+  have frame96 := frame.resize (small := 96) (by unfold allocHeadroom; omega) (by decide)
+  have inner : NativeFrame (nativeStack sp 96) (64 + allocHeadroom) := frame.nested (front := 96) (by decide)
+  have spNat := frame96.stack_nat
+  have upper := frame.upper
+  -- new_node(0, "prog", 4, 0) = 1
+  obtain ⟨f, run1, ⟨N⟩⟩ := (new_node_slot1 e H capacity charge (nativeStack sp 96) _ progName 0#64 47#64
+    (BitVec.ofNat 64 Layout.sym_files) 0#64 progName 4#64 0#64 ready inner regs free
+    ⟨by decide, by
+      have : progName.toNat = 0x8680253e := by decide
+      rw [this, show (4#64).toNat = 4 by decide]
+      unfold nativeFrameBase; rw [spNat]; unfold nativeFrameBase embedLimit Layout.sym_stack_top Layout.sym_stack_size
+        allocHeadroom at *; omega⟩
+    (by decide) charged).run e ⟨pc, rfl⟩
+  have fresh := N.fresh
+  have keptF (a : Nat) (ka : KeptByte a) : (f.σ.mem[a]?).getD 0 = (e.σ.mem[a]?).getD 0 := by
+    have lt := ka.lt
+    apply N.kept
+    refine ⟨Or.inl ?_, ka.not_foot, ?_, fun inside => ?_⟩
+    · unfold nativeFrameBase; rw [spNat]; unfold nativeFrameBase allocHeadroom at *; omega
+    · rcases ka with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+        simp only [heapEnd, slotOne, Layout.sym_files, Layout.sym_environ, Layout.sym_caml_verb_gc] at * <;> omega
+    · unfold InExt at inside
+      rcases ka with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+        simp only [heapEnd, heapStart, Layout.sym_environ, Layout.sym_caml_verb_gc] at * <;> omega
+  have embedF : EmbedImage f := embed.frame ⟨keptF⟩
+  have upperF (n : Nat) (v : BitVec 64) (lo : 20 ≤ n) (hi : n ≤ 27) (hv : gprGet e.σ n = some v) :
+      gprGet f.σ n = some v := (N.upper n lo hi).trans hv
+  -- the file's extent
+  obtain ⟨g, run2, p2⟩ := (fs_init_file f _ 0x86800018#64 N.ready.toLeafInput
+    ⟨N.result, gholds_lookup (n := 19) _ N.regs rfl,
+      upperF 20 _ (by decide) (by decide) (gholds_lookup (n := 20) _ carried rfl),
+      upperF 23 _ (by decide) (by decide) (gholds_lookup (n := 23) _ carried rfl), trivial⟩
+    (N.dirByte.trans (by decide)) ⟨by decide, by decide, Or.inr (by decide)⟩ ⟨by decide, by decide, Or.inr (by decide)⟩
+    (by decide)).run f ⟨N.pc, rfl⟩
+  have keepG (n : Nat) (v : BitVec 64) (lower : 1 ≤ n) (upper : n ≤ 31) (unwritten : n ∉ [15, 14, 13])
+      (hv : gprGet f.σ n = some v) : gprGet g.σ n = some v :=
+    (p2.toEffectPost.gpr_frame (by decide) n lower upper unwritten).trans hv
+  have readyG := N.ready.window_log p2 (by decide) (by simp only [fsFiled, keysG]; decide) (by decide)
+    (keepG 2 _ (by decide) (by decide) (by decide) (gholds_lookup (n := 2) _ N.regs rfl))
+    (keepG 1 _ (by decide) (by decide) (by decide) N.ready.raReg) (by decide) (fsFileLog_inside _ _)
+    fsFiles_out_pins
+    ⟨Or.inl (by decide), trivial⟩ ⟨Or.inl (by decide), trivial⟩
+    (fun a foot => fsFiles_out_foot foot)
+  have filesOut (a : Nat) (out : OutW [fsFilesWindow] a) : (g.σ.mem[a]?).getD 0 = (f.σ.mem[a]?).getD 0 := by
+    rw [p2.memory, frameOn_writeLog _ _ _ (fsFileLog_inside _ _) a out]
+  have embedG : EmbedImage g := embedF.frame ⟨fun a ka => filesOut a (by
+    have := ka.lt
+    simp only [OutW, fsFilesWindow, and_true]
+    rcases ka with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+      simp only [heapEnd, Layout.sym_files, Layout.sym_environ, Layout.sym_caml_verb_gc] at * <;> omega)⟩
+  -- the table ends: restore and return
+  obtain ⟨h, run3, p3⟩ := (fs_init_return g sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 0x86800018#64 _ readyG.toLeafInput
+    frame96
+    ⟨keepG 21 _ (by decide) (by decide) (by decide)
+        (upperF 21 _ (by decide) (by decide) (gholds_lookup (n := 21) _ carried rfl)),
+      keepG 22 _ (by decide) (by decide) (by decide)
+        (upperF 22 _ (by decide) (by decide) (gholds_lookup (n := 22) _ carried rfl)),
+      keepG 2 _ (by decide) (by decide) (by decide) (gholds_lookup (n := 2) _ N.regs rfl),
+      gholds_lookup (n := 10) _ p2.regs rfl, trivial⟩
+    ⟨by decide, by decide, Or.inr (by decide)⟩ embedG.fs_end
+    (fun off value member => by
+      have range : 8 ≤ off ∧ off + 8 ≤ 96 := by
+        simp only [fsInitRestored, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member
+        omega
+      rw [word_observed (m := e.σ.mem) _ (fun i hi => by
+        rw [filesOut _ (by
+          simp only [OutW, fsFilesWindow, and_true]
+          right; have := frame.lower; unfold nativeFrameBase heapEnd Layout.sym_files at *; omega)]
+        apply N.kept
+        refine ⟨Or.inr ?_, fun foot => ?_, Or.inr ?_, fun inside => ?_⟩
+        · rw [spNat]; unfold nativeFrameBase; omega
+        · have := allocator_foot_below foot; have := frame.lower; unfold nativeFrameBase heapEnd at *; omega
+        · have := frame.lower; unfold nativeFrameBase heapEnd slotOne Layout.sym_files at *; omega
+        · unfold InExt at inside; have := frame.lower; unfold nativeFrameBase at *; omega)]
+      exact saved off value member) aligned).run g ⟨p2.pc, rfl⟩
+  have readyH := readyG.stack_log p3 (by decide) (by simp only [keysG]; decide) (by decide)
+    (gholds_lookup (n := 2) _ p3.regs rfl) (gholds_lookup (n := 1) _ p3.regs rfl) aligned frame96
+    (by simp only [LogInW])
+  refine ⟨h, run1.trans (run2.trans run3), ⟨{
+    node := N.node
+    pc := p3.pc
+    regs := p3.regs
+    ready := readyH
+    embed := embedG.frame ⟨fun a _ => by rw [p3.memory]; rfl⟩ }⟩⟩
 end OCaml.Vm.Boot.Startup

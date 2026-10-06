@@ -46,6 +46,12 @@ theorem MallocReturned.result {H capacity n sp ra before after} (w : MallocRetur
     gprGet after.σ 10 = some (vsaReg after 10) :=
   library_gpr w.ready.platform (by decide) (by decide) rfl
 
+/-- malloc keeps every register outside the allocator's register set. -/
+theorem MallocReturned.other_gpr {H capacity n sp ra before after} (w : MallocReturned H capacity n sp ra before after)
+    (platform : VsaOk startupLive before) (k : Nat) (lower : 1 ≤ k) (upper : k ≤ 31) (outside : k ∉ aRegs) :
+    gprGet after.σ k = gprGet before.σ k :=
+  library_register_frame platform w.allocation.good lower upper (w.allocation.registers k outside)
+
 /-- malloc keeps every library-saved register. -/
 theorem MallocReturned.saved_gpr {H capacity n sp ra before after k}
     (w : MallocReturned H capacity n sp ra before after) (platform : VsaOk startupLive before)
