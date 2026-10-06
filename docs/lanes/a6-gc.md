@@ -36,6 +36,11 @@ Done (F1 side of the GC):
     words, and a0-boot's obligation covers `f1Covered` (requested sizes).
     `F1Pins.codeWord`/`primsWord` pin `caml_start_code` and the prim
     table's contents to their blocks.
+  * `Sim.f1_console_stable : ConsoleStable Gc.f1Layout`
+    (`OCaml/Vm/Sim/F1Console.lean`), a1-prims' console premise. It covers
+    the native window above the arena, the two errno words (mutable
+    statics), and the record's offset/curr/buffer through `f1_records`,
+    with the record open by `NurseryGeometry.channelsListed`.
   * LibraryReady's platform facts (F1-split row) cannot be runtimeOk
     fields. `WindowStable`/`MemoryStable` allow arbitrary registers in c',
     and `FrameOnD`/window frames do not keep byte presence. a1-arms carries

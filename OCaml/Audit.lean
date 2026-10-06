@@ -24,6 +24,7 @@ import OCaml.Vm.Sim.GrabRows
 import OCaml.Vm.Sim.RestartRows
 import OCaml.Vm.Sim.ApplyGenericRows
 import OCaml.Vm.Sim.F1Frame
+import OCaml.Vm.Sim.F1Console
 import OCaml.Vm.Sim.TrapRows
 import OCaml.Vm.Sim.DecodeFetch
 import OCaml.Vm.Sim.SignalRows
@@ -617,6 +618,8 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.whileMin_gp_fillZero
 #print axioms OCaml.Vm.Gc.gpr_fillZero
 #print axioms OCaml.Vm.Gc.fillZero_ram
+#print axioms OCaml.Vm.Sim.f1_console_stable
+#print axioms OCaml.Vm.Sim.footprint_below_heapEnd
 #print axioms OCaml.Vm.Gc.record_footprint_apart
 #print axioms OCaml.Vm.Gc.LibHeapAt.keep_records
 #print axioms OCaml.Vm.Gc.OpenChannels.unique
