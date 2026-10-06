@@ -25,6 +25,20 @@ import OCaml.Vm.Boot.Startup.ResolveDotsImage
 import OCaml.Vm.Boot.Startup.ResolveSaveNormalized
 import OCaml.Vm.Boot.Startup.ResolveSaveImage
 import OCaml.Vm.Boot.Startup.ResolveSaveCallInterface
+import OCaml.Vm.Boot.Startup.ResolveNoSlashNormalized
+import OCaml.Vm.Boot.Startup.ResolveNoSlashImage
+import OCaml.Vm.Boot.Startup.ResolveLengthNormalized
+import OCaml.Vm.Boot.Startup.ResolveLengthImage
+import OCaml.Vm.Boot.Startup.ResolveNamedNormalized
+import OCaml.Vm.Boot.Startup.ResolveNamedImage
+import OCaml.Vm.Boot.Startup.ResolveLastNameNormalized
+import OCaml.Vm.Boot.Startup.ResolveLastNameImage
+import OCaml.Vm.Boot.Startup.ResolveTwoNormalized
+import OCaml.Vm.Boot.Startup.ResolveTwoImage
+import OCaml.Vm.Boot.Startup.ResolveChildNormalized
+import OCaml.Vm.Boot.Startup.ResolveChildImage
+import OCaml.Vm.Boot.Startup.ResolveLengthCallInterface
+import OCaml.Vm.Boot.Startup.ResolveChildCallInterface
 import OCaml.Vm.Boot.Startup.FsInit
 import OCaml.Vm.Boot.Startup.NativeWord32
 import OCaml.Vm.Boot.Startup.IndexedLoop
@@ -548,4 +562,79 @@ theorem resolve_strchr_call (c : Config) (sp path s0 s1 s2 s5 s6 s7 s8 s10 ra : 
   block_then_call c jal_8000066c_call_shape jal_8000066c_call_decode (fun _ h => jal_8000066c_call_pins h)
     (resolve_loop_save c sp path s0 s1 s2 s5 s6 s7 s8 s10 ra leaf frame regs)
     (by simp only [resolveLooped, keysG]; decide) (by simp only [resolveLooped, KeysAvoidRa, keysG]; decide) rfl
+
+theorem resolve_noslash_front (c : Config) (path ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, 0#64), (25, path)]) :
+    FnSummary 0x80000670#64 (fun e => e = c) (WriteRegistersPost [10] [] c jal_800006f0_call.pc path [(10, path), (25, path)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (resolveX0670TSeg ++ resolveX06ecSeg) 0x80000670#64 [(10, 0#64), (25, path)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 25]; decide
+      shape := by change ChainOK _ [10, 25] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := resolveNoSlash_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.resolve_at_"
+        · change guardB bop.BEQ 0#64 0#64 = true
+          decide }))
+  · rfl
+  · rfl
+  · simp only [resolveX0670TSeg, resolveX06ecSeg, evalBlocks, evalBlock, SegEvalState.init, resolvelength_line_800006ec, runGM, ldsRunM, wlogM, stepGM,
+      stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons, List.tail_cons,
+      Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of, List.cons_append, List.nil_append, show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide, BitVec.add_zero, BitVec.zero_add]
+  · rfl
+  · decide
+
+theorem resolve_child_front (c : Config) (path len d ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, len), (21, 1#64), (23, 2#64), (25, path), (20, d)]) (nonzero : len ≠ 0#64)
+    (notOne : len ≠ 1#64) (notTwo : len ≠ 2#64) :
+    FnSummary 0x800006f4#64 (fun e => e = c) (WriteRegistersPost [8, 26, 9, 12, 11, 10] [] c jal_800006b0_call.pc d
+      [(10, d), (11, path), (12, len), (9, 1#64), (26, 0#64), (8, len), (21, 1#64), (23, 2#64), (25, path), (20, d)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (resolveX06f4TSeg ++ resolveX0770TSeg ++ resolveX06a0FSeg ++ resolveX06a4Seg) 0x800006f4#64 [(10, len), (21, 1#64), (23, 2#64), (25, path), (20, d)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 21, 23, 25, 20]; decide
+      shape := by change ChainOK _ [10, 21, 23, 25, 20] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := resolveNamed_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.resolve_at_"
+        · change guardB bop.BNE len 0#64 = true
+          exact bne_iff_ne.mpr nonzero
+        · change guardB bop.BNE len 1#64 = true
+          exact bne_iff_ne.mpr notOne
+        · change guardB bop.BEQ (len + Functions.sign_extend (m := 64) 0#12) 2#64 = false
+          rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]
+          exact beq_eq_false_iff_ne.mpr notTwo }))
+  · rfl
+  · rfl
+  · simp only [resolveX06f4TSeg, resolveX0770TSeg, resolveX06a0FSeg, resolveX06a4Seg, evalBlocks, evalBlock, SegEvalState.init, resolvenamed_line_800006f4, resolvelastname_line_80000770, resolvelastname_line_80000774, resolvechild_line_800006a4, resolvechild_line_800006a8, resolvechild_line_800006ac, runGM, ldsRunM, wlogM, stepGM,
+      stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons, List.tail_cons,
+      Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of, List.cons_append, List.nil_append, show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide, BitVec.add_zero, BitVec.zero_add]
+  · rfl
+  · decide
+
+theorem resolve_strlen2_call (c : Config) (path ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, 0#64), (25, path)]) :
+    FnSummary 0x80000670#64 (fun e => e = c)
+      (WriteRegistersPost ([10] ++ [1]) [] c jal_800006f0_call.target path
+        ((1, jal_800006f0_call.link) :: [(10, path), (25, path)])) :=
+  block_then_call c jal_800006f0_call_shape jal_800006f0_call_decode (fun _ h => jal_800006f0_call_pins h)
+    (resolve_noslash_front c path ra leaf regs) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+theorem resolve_child_call (c : Config) (path len d ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, len), (21, 1#64), (23, 2#64), (25, path), (20, d)]) (nonzero : len ≠ 0#64)
+    (notOne : len ≠ 1#64) (notTwo : len ≠ 2#64) :
+    FnSummary 0x800006f4#64 (fun e => e = c)
+      (WriteRegistersPost ([8, 26, 9, 12, 11, 10] ++ [1]) [] c jal_800006b0_call.target d
+        ((1, jal_800006b0_call.link) ::
+          [(10, d), (11, path), (12, len), (9, 1#64), (26, 0#64), (8, len), (21, 1#64), (23, 2#64), (25, path), (20, d)])) :=
+  block_then_call c jal_800006b0_call_shape jal_800006b0_call_decode (fun _ h => jal_800006b0_call_pins h)
+    (resolve_child_front c path len d ra leaf regs nonzero notOne notTwo) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
 end OCaml.Vm.Boot.Startup
