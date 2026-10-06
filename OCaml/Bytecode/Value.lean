@@ -162,6 +162,14 @@ def tag? (h : Heap) : Val → Option Nat
   | .ptr _ _ => some infixTag
   | _ => none
 
+/-- A SWITCH selector whose tag the machine reads from a header the model
+does not represent: an atom (the atom table's header) or an interior/infix
+pointer (the word before it). Compiled code never switches on either. -/
+def Val.switchExotic : Val → Bool
+  | .atom _ => true
+  | .ptr _ (_ + 1) => true
+  | _ => false
+
 /-- Write field `i` (`caml_modify` / `Field(v,i) = x`). -/
 def setField? (h : Heap) : Val → Nat → Val → Option Heap
   | .ptr l k, i, x => match h.get? l with

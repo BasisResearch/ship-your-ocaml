@@ -48,7 +48,6 @@ structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   setfield3_barrier : (keep .SETFIELD3) = true → FieldBarrierK Gc.f1Layout P .SETFIELD3 3 (0x80002168#64) (24#64)
   setfield_barrier : (keep .SETFIELD) = true → FieldBarrier Gc.f1Layout P
   values : (keep .BRANCHIF || keep .BRANCHIFNOT || keep .EQ || keep .NEQ) = true → ValuesInRange P
-  exotic : (keep .SWITCH) = true → SwitchExotic Gc.f1Layout P
   trapBounded : (keep .PUSHTRAP) = true → ∀ s, Reach P s → s.trap ≤ s.stack.length
   raises : (keep .RAISE || keep .RERAISE || keep .RAISE_NOTRACE) = true → RaisesCaught P
   c_call1_returns : (keep .C_CALL1) = true → CcallReturns Gc.f1Layout P .C_CALL1 (0x80003060#64) 0
@@ -246,7 +245,7 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .BRANCHIFNOT, _ => if h : keep .BRANCHIFNOT = true then branchifnot_row f1_memoryStable (pre.values (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .SWITCH, _ => if h : keep .SWITCH = true then switch_row f1_memoryStable (pre.exotic (by simp [h]))
+    | .SWITCH, _ => if h : keep .SWITCH = true then switch_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .BOOLNOT, _ => if h : keep .BOOLNOT = true then boolnot_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)

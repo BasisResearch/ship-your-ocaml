@@ -82,7 +82,9 @@ theorem switch_block_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Con
     (entry : table[sizes.toNat % 65536 + tag]? = some w.toInt)
     (step : stepI P s ⟨.SWITCH, sizes.toInt :: table⟩ = .next s') :
     ∃ after, Plus c after ∧ Running L P s' after := by
+  have guarded := step
   rw [switch_tag_step sizes.toInt table selected.tagOf] at step
+  replace step := Res.unguard step
   have bound : tag < sizes.toInt.toNat / 65536 := by
     by_cases good : tag < sizes.toInt.toNat / 65536
     · exact good

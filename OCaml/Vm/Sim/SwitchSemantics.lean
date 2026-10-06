@@ -4,10 +4,11 @@ namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open OCaml.Bytecode
 
-/-- A successful tag lookup excludes integers and exposes SWITCH's block rule. -/
+/-- A successful tag lookup excludes integers and exposes SWITCH's block rule
+(behind the guard rejecting atom and interior-pointer selectors). -/
 theorem switch_tag_step {P : Prog} {s : St} {tag : Nat} (sizes : Int) (table : List Int)
     (tagOf : tag? s.heap s.accu = some tag) :
-    stepI P s ⟨.SWITCH, sizes :: table⟩ =
+    stepI P s ⟨.SWITCH, sizes :: table⟩ = if s.accu.switchExotic then .unsupported else
       opt (if tag < sizes.toNat / 65536 then some (sizes.toNat % 65536 + tag) else none)
         (fun k => opt table[k]? fun ofs => opt (target s.pc 1 ofs) fun dest => .next {s with pc := dest}) := by
   cases ha : s.accu with

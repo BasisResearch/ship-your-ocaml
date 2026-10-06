@@ -1370,7 +1370,7 @@ def stepI (i : Instr) : Res :=
       if s.accu = .int 0 then .next (s.adv 2) else opt (target pc 0 ofs) fun t => .next { s with pc := t }
   | .BRANCHIFNOT, [ofs] =>
       if s.accu = .int 0 then opt (target pc 0 ofs) fun t => .next { s with pc := t } else .next (s.adv 2)
-  | .SWITCH, sizes :: tbl =>
+  | .SWITCH, sizes :: tbl => if s.accu.switchExotic then .unsupported else
       let nc := sizes.toNat % 65536
       let idx : Option Nat := match s.accu with
         | .int n => if 0 ≤ n.toInt ∧ n.toInt < nc then some n.toNat else none

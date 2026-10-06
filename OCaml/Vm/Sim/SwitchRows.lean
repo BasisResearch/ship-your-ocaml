@@ -10,21 +10,14 @@ SWITCH's operand list is the packed size word and the jump table, so its row
 is stated directly over `decode_fetch` (every table entry is a fetched
 operand word). Integer selectors use `switch_int_step_arm`; pointers to an
 ordinary block (`.ptr l 0`) use `switch_block_step_arm` with the tag and
-header read from the represented object. Atom and infix selectors need the
-atom table's headers and infix headers in the representation; that row is
-the named premise `SwitchExotic` (open).
+header read from the represented object. Atom and infix selectors are
+`.unsupported` in BcSem (`Val.switchExotic`; compiled code never switches on
+them), so the row has no further premise.
 -/
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
-
-/-- **Atom and infix SWITCH selectors** (named obligation): their header
-words are the atom table's and the infix headers, not yet represented. -/
-def SwitchExotic (L : OCaml.Layout) (P : Prog) : Prop :=
-  ∀ s s' c sizes table, Reach P s → OCaml.LoopAt L P s c →
-    (∀ n, s.accu ≠ .int n) → (∀ l, s.accu ≠ .ptr l 0) →
-    stepI P s ⟨.SWITCH, sizes :: table⟩ = .next s' → ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c'
 
 /-- A placed object's header byte is readable. -/
 theorem StackGeometry.header_read {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
@@ -42,12 +35,15 @@ theorem opt_ne_halt {α : Type} {o : Option α} {k : α → Res} {e : Nat} {w : 
   | some a => exact hk a
 
 theorem switch_no_halt {P : Prog} {s : St} {sizes : Int} {table : List Int} {e : Nat} {w : World} :
-    stepI P s ⟨.SWITCH, sizes :: table⟩ ≠ .halt e w :=
-  opt_ne_halt fun _ => opt_ne_halt fun _ => opt_ne_halt fun _ => nofun
+    stepI P s ⟨.SWITCH, sizes :: table⟩ ≠ .halt e w := by
+  intro h
+  have body := Res.unguard_halt h
+  revert body
+  exact opt_ne_halt fun _ => opt_ne_halt fun _ => opt_ne_halt fun _ => nofun
 
 /-- **The SWITCH row.** -/
-theorem switch_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable L.runtimeOk)
-    (exotic : SwitchExotic L P) : OCaml.OpArm P (OCaml.LoopAt L P) .SWITCH := by
+theorem switch_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable L.runtimeOk) :
+    OCaml.OpArm P (OCaml.LoopAt L P) .SWITCH := by
   intro s c i reach h hd hop _
   obtain ⟨code, fetches⟩ := decode_fetch hd
   obtain ⟨o, args⟩ := i
@@ -66,8 +62,8 @@ theorem switch_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable L.runtim
         exact ⟨w, by rw [show s.pc + 2 + k = s.pc + 1 + (k + 1) by omega]; exact hw, hx'⟩
       cases ha : s.accu with
       | int n =>
-        have unfolded := step
-        simp only [stepI, ha] at unfolded
+        have unfolded := Res.unguard step
+        simp only [ha] at unfolded
         obtain ⟨k, hk, rest⟩ := opt_next unfolded
         obtain ⟨x, hx, -⟩ := opt_next rest
         split at hk
@@ -92,6 +88,7 @@ theorem switch_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable L.runtim
           have selected := SwitchTag.of_object input.toVmReprAt input.geometry.even ha placed object
           have unfolded := step
           rw [switch_tag_step sw.toInt table selected.tagOf] at unfolded
+          replace unfolded := Res.unguard unfolded
           obtain ⟨k, hk, rest⟩ := opt_next unfolded
           obtain ⟨x, hx, -⟩ := opt_next rest
           split at hk
@@ -106,15 +103,14 @@ theorem switch_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable L.runtim
               (OperandAt.of_fetch input.geometry.toArmGeometry wfetch) hx step
             exact ⟨c', run, h.of_plus run running⟩
           · cases hk
-        | succ k =>
-          exact exotic s s' c _ table reach h (by simp [ha]) (by simp [ha]) step
-      | atom t => exact exotic s s' c _ table reach h (by simp [ha]) (by simp [ha]) step
+        | succ k => exact absurd (Res.guard_ok step) (by simp [ha, Val.switchExotic])
+      | atom t => exact absurd (Res.guard_ok step) (by simp [ha, Val.switchExotic])
       | code pc =>
-        have unfolded := step
-        simp [stepI, ha, tag?, opt] at unfolded
+        have unfolded := Res.unguard step
+        simp [ha, tag?, opt] at unfolded
       | raw w =>
-        have unfolded := step
-        simp [stepI, ha, tag?, opt] at unfolded
+        have unfolded := Res.unguard step
+        simp [ha, tag?, opt] at unfolded
     · intro e w; exact switch_no_halt
 
 end OCaml.Vm.Sim

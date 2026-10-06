@@ -61,6 +61,8 @@ theorem switch_int_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Confi
     (entry : table[n.toNat]? = some w.toInt)
     (step : stepI P s ⟨.SWITCH, sizes :: table⟩ = .next s') :
     ∃ after, Plus c after ∧ Running L P s' after := by
+  have guarded := step
+  replace step := Res.unguard step
   have bounds : 0 ≤ n.toInt ∧ n.toInt < (sizes.toNat % 65536 : Nat) := by
     by_cases good : 0 ≤ n.toInt ∧ n.toInt < (sizes.toNat % 65536 : Nat)
     · exact good
