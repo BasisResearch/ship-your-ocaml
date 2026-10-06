@@ -179,6 +179,7 @@ import OCaml.Vm.Primitives.StringCopyReadback
 import OCaml.Programs.LazyForce
 import OCaml.Programs.WhileMinChecks
 import OCaml.Programs.WhileMinOffsets
+import OCaml.Programs.WhileMinRaises
 import OCaml.Programs.WhileMinExtra
 import OCaml.Vm.Gc.WhileMinG1
 import OCaml.Vm.Gc.NurseryGeometry
@@ -4807,3 +4808,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Bytecode.Heap.words_set
 #print axioms OCaml.Vm.Sim.NativePlaced.frame_below
 #print axioms OCaml.Vm.Sim.ccall_framed_summary
+#print axioms OCaml.Vm.Sim.FieldWriteOk.of_geometry
+#print axioms OCaml.Vm.Sim.f1_fieldWriteReady
+#print axioms OCaml.Programs.whileMin_raisesCaught

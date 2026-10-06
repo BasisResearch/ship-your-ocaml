@@ -56,6 +56,7 @@ import OCaml.Refinement
 import OCaml.RefinementF1
 import OCaml.Programs.F1Check
 import OCaml.Programs.WhileMinOffsets
+import OCaml.Programs.WhileMinRaises
 import OCaml.Programs.WhileMinExtra
 import OCaml.Vm.Sim.Invocation
 import OCaml.Vm.Sim.InterpEntrySaveSegment

@@ -60,13 +60,17 @@ zero divisor; needs the exception rows), `ranged` (EQ/NEQ, from
 `ValuesInRange.accu_notRaw`), `integer` (BEQ/BNEQ: real obstruction on
 pointers, `beq_pointer_guard_obstruction`; needs a per-program check).
 
+* `FieldWriteOk.of_geometry` (`HeapRows.lean`): a field write of a placed
+  block is writable and misses the whole represented payload, from
+  `ArmGeometry` + the stack budget; `f1_fieldWriteReady` discharges
+  OFFSETREF's `FieldWriteReady` for the F1 layout (`Gc.f1_objectField`).
+* BcSem: `C_CALL2-5` on a short stack is `.unsupported`; a1-arms'
+  `CcallArity` premise retired (`ccall_row_of` takes the bound from the
+  guard). `RaisesCaught whileMin` and `BranchInts whileMin` by checked runs.
+
 Open / next (row premises to discharge, owner):
-* `FieldWriteReady` (OFFSETREF): StackGeometry lacks block apartness from the
-  `Caml_state` record, channel buffers and the primitive table, and
-  `RuntimeFrame` has no heap windows (a1-arms' invariant).
 * `SwitchExotic` (SWITCH on atoms / infix pointers): represent atom-table
   headers and infix headers (a2-sem/a1-arms).
-* BEQ/BNEQ `integer`: a per-program check, like `ValuesInRange` (a2-sem).
 * `BinaryLibScratch` (a1-arms), division `zero` (raise rows, a1-arms).
 * General discharges of ValuesInRange / ExtraBounded / TrapBounded.
 
