@@ -9,6 +9,7 @@ import OCaml.Vm.Sim.F1Frame
 import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.FieldRows
 import OCaml.Vm.Sim.GrabAllocRows
+import OCaml.Vm.Sim.MakeblockNRows
 import OCaml.Vm.Sim.MakeblockRows
 import OCaml.Vm.Sim.OffsetRows
 import OCaml.Vm.Sim.OperandTableRows
@@ -39,7 +40,7 @@ structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   closure_sizes : (keep .CLOSURE) = true → ClosureSizes P
   row_CLOSUREREC : (keep .CLOSUREREC) = true → OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .CLOSUREREC
   setglobal_barrier : (keep .SETGLOBAL) = true → GlobalBarrier Gc.f1Layout P
-  row_MAKEBLOCK : (keep .MAKEBLOCK) = true → OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .MAKEBLOCK
+  makeblock_sizes : (keep .MAKEBLOCK) = true → BlockSizes P
   setfield0_barrier : (keep .SETFIELD0) = true → FieldBarrierK Gc.f1Layout P .SETFIELD0 0 (0x800021bc#64) (0#64)
   setfield1_barrier : (keep .SETFIELD1) = true → FieldBarrierK Gc.f1Layout P .SETFIELD1 1 (0x800021a0#64) (8#64)
   setfield2_barrier : (keep .SETFIELD2) = true → FieldBarrierK Gc.f1Layout P .SETFIELD2 2 (0x80002184#64) (16#64)
@@ -200,7 +201,7 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .PUSHATOM, _ => if h : keep .PUSHATOM = true then pushatom_row f1_runtimeFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .MAKEBLOCK, _ => if h : keep .MAKEBLOCK = true then pre.row_MAKEBLOCK (by simp [h])
+    | .MAKEBLOCK, _ => if h : keep .MAKEBLOCK = true then makeblock_row f1_allocFrame fits g1_capacity f1_budgetSmall (pre.makeblock_sizes (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .MAKEBLOCK1, _ => if h : keep .MAKEBLOCK1 = true then makeblock1_row f1_allocFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)

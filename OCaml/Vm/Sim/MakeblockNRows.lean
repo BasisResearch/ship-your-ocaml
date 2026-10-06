@@ -53,4 +53,52 @@ theorem MakeblockInitInput.of_block {P : Prog} {s : St} {c : Config} {pl : Place
   simp only [PointerCopyShape.counterBase, cursorCopyShape, Bool.false_eq_true, ite_false, len]
   omega
 
+/-- **The MAKEBLOCK n row.** -/
+theorem makeblock_row {L : OCaml.Layout} {P : Prog} (allocFrame : AllocFrame L)
+    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
+    (budgetSmall : L.budget.heapWords < 2^31) (sizes : BlockSizes P) :
+    OCaml.OpArm P (OCaml.LoopAt L P) .MAKEBLOCK :=
+  opArm_of_next2 (fun s s' c sz t reach reach' h code fetchS fetchT step => by
+      have guard := Res.guard_ok step
+      have sizeNonnegative : 0 ≤ sz.toInt := by omega
+      have tagNonnegative : 0 ≤ t.toInt := by omega
+      obtain ⟨tagSmall, positive, bound, state⟩ := makeBlock_next (Res.unguard step)
+      have nursery := sizes.small s sz reach code fetchS
+      have budget := (fits s' reach').2
+      rw [← state] at budget
+      simp only [makeblockState, Heap.words_alloc, makeblockObject_wosize positive bound] at budget
+      have space := stack_fits fits capacity reach (k := 0)
+      simp only [Nat.add_zero] at space
+      obtain ⟨pl0, cp, sp, high, input0⟩ := ArmInput.of_loop h code
+      have reserve : Reservation L s c sz.toInt.toNat := ⟨input0.geometry.room, by omega⟩
+      have b := ReservedBlock.of_reservation input0.geometry.nursery reserve
+      have input := input0.put (alloc_absent s.heap (makeblockObject s sz.toInt.toNat t.toInt.toNat)) b.aligned
+      obtain ⟨accu, -, value⟩ := input.accu
+      have mk := MakeblockInput.of_input input put_self reserve positive bound (by omega) tagSmall value space
+      have init := MakeblockInitInput.of_block (tag := t.toInt.toNat) (accu := accu) b input.geometry.nursery
+        input.geometry.toStackGeometry input.stack space positive bound
+      have blk : LogInW [⟨((runtimeFields c).youngPtr - 8 * sz.toInt.toNat) - 8,
+          ((runtimeFields c).youngPtr - 8 * sz.toInt.toNat) + 8 * sz.toInt.toNat⟩]
+          (blockLog ((runtimeFields c).youngPtr - 8 * sz.toInt.toNat) t.toInt.toNat
+            (makeblockWords c sp sz.toInt.toNat accu)) := by
+        have hin := blockLog_in (a := (runtimeFields c).youngPtr - 8 * sz.toInt.toNat) (tag := t.toInt.toNat)
+          (words := makeblockWords c sp sz.toInt.toNat accu) b.room
+          (by rw [makeblockWords_length positive]; omega)
+        rwa [makeblockWords_length positive] at hin
+      have runtime : AllocationRuntime L.runtimeOk c (makeblockLog c sp sz.toInt.toNat t.toInt.toNat _ _ accu) :=
+        allocFrame.alloc P s c _ cp high _ _ input.runtime input.geometry.nursery (b.free blk) b.capacity
+          (by have := b.young; omega) (by have := b.aligned; omega)
+      obtain ⟨after, run, running⟩ := makeblock_step_arm runtime input
+        (OperandAt.of_fetch input.geometry.toArmGeometry fetchS) (OperandAt.of_fetch input.geometry.toArmGeometry fetchT)
+        sizeNonnegative tagNonnegative nursery value mk init step
+      exact ⟨after, run, h.of_plus run running⟩)
+    (shape2 (fun _ => rfl) (fun _ _ => rfl) (fun _ _ _ _ _ => rfl))
+    (fun s a b e w step => by
+      simp only [stepI] at step
+      split at step
+      · cases step
+      · unfold makeBlock at step
+        repeat' split at step
+        all_goals cases step)
+
 end OCaml.Vm.Sim

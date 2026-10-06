@@ -41,6 +41,7 @@ import OCaml.Vm.Sim.BarrierRows
 import OCaml.Vm.Sim.MakeblockRows
 import OCaml.Vm.Sim.GrabAllocRows
 import OCaml.Vm.Sim.ClosureAllocRows
+import OCaml.Vm.Sim.MakeblockNRows
 import OCaml.Vm.Sim.AllocInput
 import OCaml.Vm.Sim.PlacePut
 import OCaml.Vm.Gc.WhileMinRoom

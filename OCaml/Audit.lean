@@ -33,6 +33,7 @@ import OCaml.Vm.Sim.BarrierRows
 import OCaml.Vm.Sim.MakeblockRows
 import OCaml.Vm.Sim.GrabAllocRows
 import OCaml.Vm.Sim.ClosureAllocRows
+import OCaml.Vm.Sim.MakeblockNRows
 import OCaml.Vm.Sim.AllocInput
 import OCaml.Vm.Sim.PlacePut
 import OCaml.Vm.Sim.InvariantUse
@@ -4862,3 +4863,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ClosureAllocInput.of_input
 #print axioms OCaml.Vm.Sim.closure_shape
 #print axioms OCaml.Vm.Sim.closure_row
+#print axioms OCaml.Vm.Sim.MakeblockInitInput.of_block
+#print axioms OCaml.Vm.Sim.makeblock_row
