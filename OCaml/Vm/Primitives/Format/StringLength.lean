@@ -190,7 +190,7 @@ theorem length_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)
     chain_facts hc with "Vsa.Sim.Code.caml_string_length_at_"
 
 def length_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs :=
-  [(10, (bytesVal .ld (loads.getD 0 []) >>> 10 <<< 3) - 1#64 - bytesVal .lbu (loads.getD 1 [])), (15, (bytesVal .ld (loads.getD 0 []) >>> 10 <<< 3) - 1#64), (1, R 1)]
+  [(10, bytesVal .ld (loads.getD 0 []) >>> 10 <<< 3 + (18446744073709551615#64 + -bytesVal .lbu (loads.getD 1 []))), (15, bytesVal .ld (loads.getD 0 []) >>> 10 <<< 3 + 18446744073709551615#64), (1, R 1)]
 theorem length_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
     runGM length_body (length_input R) loads = length_regs R loads := by
   simp [length_body, length_input, length_regs, runGM, stepGM, stepLdsM,
@@ -198,21 +198,21 @@ theorem length_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
     Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?, BitVec.add_assoc, shamtOf, Sail.BitVec.extractLsb, Sail.shift_bits_right, Sail.shift_bits_left]
 
 def length_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
-  [read8 m (R 10 - 8#64).toNat, [(m[(R 10 + (((bytesVal .ld (read8 m (R 10 - 8#64).toNat)) >>> 10 <<< 3) - 1#64)).toNat]?).getD 0]]
+  [read8 m (R 10 + 18446744073709551608#64).toNat, [(m[(R 10 + ((bytesVal .ld (read8 m (R 10 + 18446744073709551608#64).toNat)) >>> 10 <<< 3 + 18446744073709551615#64)).toNat]?).getD 0]]
 
 theorem length_fast (c : Config) (R : Nat → BitVec 64)
     (h : LeafInput (R 1) c) (regs : GHolds c.σ (length_input R))
-    (w0 : ReadWindow (R 10 - 8#64) 8)
-    (w1 : ReadWindow (R 10 + (((bytesVal .ld (read8 c.σ.mem (R 10 - 8#64).toNat)) >>> 10 <<< 3) - 1#64)) 1) :
+    (w0 : ReadWindow (R 10 + 18446744073709551608#64) 8)
+    (w1 : ReadWindow (R 10 + ((bytesVal .ld (read8 c.σ.mem (R 10 + 18446744073709551608#64).toNat)) >>> 10 <<< 3 + 18446744073709551615#64)) 1) :
     FnSummary 0x80013570#64 (fun d => d = c)
-      (WriteRegistersPost [10, 15] [] c (R 1) ((bytesVal .ld ((length_loads c.σ.mem R).getD 0 []) >>> 10 <<< 3) - 1#64 - bytesVal .lbu ((length_loads c.σ.mem R).getD 1 [])) (length_regs R (length_loads c.σ.mem R))) := by
+      (WriteRegistersPost [10, 15] [] c (R 1) (bytesVal .ld ((length_loads c.σ.mem R).getD 0 []) >>> 10 <<< 3 + (18446744073709551615#64 + -bytesVal .lbu ((length_loads c.σ.mem R).getD 1 []))) (length_regs R (length_loads c.σ.mem R))) := by
   have access : AccessPlan c.σ.mem (length_input R) (length_loads c.σ.mem R) length_body := by
     simp only [AccessPlan, length_body, length_loads]
     chain_facts True.intro
     · apply w0.ld rfl ?_ (read8_pins _ _)
-      simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, length_input, shamtOf, Sail.BitVec.extractLsb, Sail.shift_bits_right, Sail.shift_bits_left]
+      simp only [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, ↓reduceIte, Nat.reduceEqDiff, Option.getD_some, List.headD_cons, BitVec.add_zero, length_input, shamtOf, Sail.BitVec.extractLsb, (show BitVec.signExtend 64 4088#12 = 18446744073709551608#64 by decide), (show BitVec.signExtend 64 4095#12 = 18446744073709551615#64 by decide), (show BitVec.signExtend 64 0#12 = 0#64 by decide), (show BitVec.extractLsb 5 0 (BitVec.extractLsb' 0 6 10#12) = 10#6 by decide), (show ∀ v : BitVec 64, Sail.shift_bits_right v 10#6 = v >>> 10 from fun _ => rfl), (show BitVec.extractLsb 5 0 (BitVec.extractLsb' 0 6 3#12) = 3#6 by decide), (show ∀ v : BitVec 64, Sail.shift_bits_left v 3#6 = v <<< 3 from fun _ => rfl)]
     · apply w1.lbu rfl ?_ rfl
-      simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, length_input, shamtOf, Sail.BitVec.extractLsb, Sail.shift_bits_right, Sail.shift_bits_left]
+      simp only [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, ↓reduceIte, Nat.reduceEqDiff, Option.getD_some, List.headD_cons, BitVec.add_zero, length_input, shamtOf, Sail.BitVec.extractLsb, (show BitVec.signExtend 64 4088#12 = 18446744073709551608#64 by decide), (show BitVec.signExtend 64 4095#12 = 18446744073709551615#64 by decide), (show BitVec.signExtend 64 0#12 = 0#64 by decide), (show BitVec.extractLsb 5 0 (BitVec.extractLsb' 0 6 10#12) = 10#6 by decide), (show ∀ v : BitVec 64, Sail.shift_bits_right v 10#6 = v >>> 10 from fun _ => rfl), (show BitVec.extractLsb 5 0 (BitVec.extractLsb' 0 6 3#12) = 3#6 by decide), (show ∀ v : BitVec 64, Sail.shift_bits_left v 3#6 = v <<< 3 from fun _ => rfl)]
   have control : TermFactsO (runGM length_body (length_input R) (length_loads c.σ.mem R)) (some length_term) := by rw [length_eval]; exact return_facts _ rfl rfl rfl rfl h.aligned
   apply registers_of_blocks h.image (log := []) ⟨True.intro, True.intro⟩ (length_summary c (R 1) R _ h regs access control)
   · exact readonly_log _ (by unfold ReadOnlyBody; decide) _ _

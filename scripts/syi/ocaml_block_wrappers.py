@@ -17,8 +17,10 @@ reloaded ra, the saved word. The spec of a block (`fast`) gives
 * `taken`: the routed outcome of a branch (its condition becomes the premise
   `ok : guardB op v1 v2 = taken` over the block's output registers);
 * `ra`: the load index of a reloaded return address;
-* `shiftAddr`: an address depends on an immediate shift of a loaded value
-  (the address simp set then unfolds the shift amounts).
+* `shiftAddr`: an address depends on an immediate shift of a loaded value.
+  Its address goals then close by a targeted `simp only`: shift amounts as
+  literals, Sail shifts as `Nat` shifts. Full `simp` there yields a proof
+  term the kernel rejects (deep recursion).
 """
 import re
 
@@ -115,6 +117,30 @@ def _imm_facts(instrs):
     return sorted(facts)
 
 
+def _shift_addr_facts(instrs):
+    """Simp facts for an address over immediate shifts of 64-bit values: the
+    shift amounts as literals, then each Sail shift as the `Nat` shift (`rfl`),
+    so no shift is unfolded to bit operations."""
+    facts = ['shamtOf', 'Sail.BitVec.extractLsb']
+    for i in instrs:
+        op = i.word & 0x7f
+        if op in (0x03, 0x13, 0x1b) and not (op == 0x13 and (i.word >> 12) & 7 in (1, 5)):
+            raw = (i.word >> 20) & 0xfff
+            facts.append(f'(show BitVec.signExtend 64 {raw}#12 = {_signed(raw, 12) % (1 << 64)}#64 by decide)')
+    for i in instrs:
+        if i.word & 127 == 0x13 and (i.word >> 12) & 7 in (1, 5):
+            raw = (i.word >> 20) & 0xfff
+            k = raw & 0x3f
+            facts.append(f"(show BitVec.extractLsb 5 0 (BitVec.extractLsb' 0 6 {raw}#12) = {k}#6 by decide)")
+            if (i.word >> 12) & 7 == 1:
+                facts.append(f'(show ∀ v : BitVec 64, Sail.shift_bits_left v {k}#6 = v <<< {k} from fun _ => rfl)')
+            elif not (i.word >> 30) & 1:
+                facts.append(f'(show ∀ v : BitVec 64, Sail.shift_bits_right v {k}#6 = v >>> {k} from fun _ => rfl)')
+    return list(dict.fromkeys(facts))
+
+
+SHIFT_ADDR = ('eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, '
+              'Sail.BitVec.signExtend, ↓reduceIte, Nat.reduceEqDiff, Option.getD_some, List.headD_cons, BitVec.add_zero')
 ENTRY_SIMP = ('List.take, wentryM, widthOfM, eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, '
               'Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg')
 SIMP_ADDR = ('eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, '
@@ -198,7 +224,8 @@ def emit_fast(E, b, name, regs, fast):
             windows.append(f'  have {w} : {typ} ({addr}) {a[2]} := {proof}')
         else:
             params.append(f'({w} : {typ} ({addr}) {a[2]})')
-        addr_simp = f'      simp [{SIMP_ADDR}, {name}_input' + (', shamtOf, Sail.BitVec.extractLsb, Sail.shift_bits_right, Sail.shift_bits_left' if fast.get('shiftAddr') else '') + ']'
+        addr_simp = (f'      simp only [{SHIFT_ADDR}, {name}_input, ' + ', '.join(_shift_addr_facts(b.instrs)) + ']'
+                     if fast.get('shiftAddr') else f'      simp [{SIMP_ADDR}, {name}_input]')
         if a[1] == 'ld' and mode == 'view':
             bullets += [f'    · apply {w}.ld rfl', '      · ' + addr_simp.strip(),
                         f'      · apply ArgvTuple.lpins8_of_view (m\' := {view(m)[1:-1]})',

@@ -114,6 +114,28 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `GoodF1.stopAccu` (new: STOP never returns a `.raw` word, which caml_main
   would read as an exception; `whileMin` still checks in one kernel run).
 
+**caml_format_int and caml_ml_open_descriptor_out (2026-10-06, in progress)**
+- format_int, `"%d"` path: `scripts/syi/ocaml_format.py` (`gen_fn.py
+  --ocaml-format`, stage a5) emits block certificates and `_fast` wrappers.
+  * Done: parse_format (7 blocks, route: fits, no l/L/n before the
+    conversion) and caml_string_length.
+  * `emit_fast` fixes: lbu window loads read one byte; opt-in `shiftAddr`.
+  * Callees: memmove through a2-sem's `memmove_call` (in flight), strlen
+    through `strlen_call`, caml_alloc_string through a1-prims'
+    `alloc_string_nursery`, memcpy through `memcpy_summary`.
+  * vsnprintf `%ld` is a LONGINT variant of upstream `svf_iterLLD`.
+- open_descriptor_out: obligations its post must supply, named premises
+  until the pieces land:
+  * `ChanAt` for the new record, with cursor ≤ ioBufferSize,
+    buffer.length ≤ ioBufferSize and 8-byte alignment (from malloc);
+  * a1-arms' StackGeometry channel-apartness fields (channelCode/Atoms/Prims/
+    channelsApart), from malloc disjointness;
+  * a6-gc's `OpenChannelsLinked before after a` (`Gc/OpenChannels.lean`,
+    link_channel's stores);
+  * `heapBlock : (a, recordBytes) ∈ H'` over a0-boot's `HeapReady`;
+  * a frame: the open writes only the new record, the list head, the old
+    head's `prev`, and malloc's footprint.
+
 **F1 output is console output; primitive split (2026-10-06)**
 - `GoodF1.consoles : ConsoleChannels P`: in every reachable state, every open
   output channel has fd 1 or 2, an OS stdout/stderr stream, and a live

@@ -13,8 +13,9 @@ def functions_spec(ld, rest):
       # `caml_string_length(s)`: the header's word size, minus the padding byte.
       ('caml_string_length', 'Caml_string_length', 'StringLength', {}, (), [
         (0x80013570, 'length', [1, 10],
-         f'[(10, ({ld(0)} >>> 10 <<< 3) - 1#64 - {ld(1, "lbu")}), (15, ({ld(0)} >>> 10 <<< 3) - 1#64), {rest([1])}]',
-         {'mem': [('R 10 - 8#64', 'window'), ('R 10 + ((@0 >>> 10 <<< 3) - 1#64)', 'window')], 'shiftAddr': True}),
+         f'[(10, {ld(0)} >>> 10 <<< 3 + (18446744073709551615#64 + -{ld(1, "lbu")})), (15, {ld(0)} >>> 10 <<< 3 + 18446744073709551615#64), {rest([1])}]',
+         {'mem': [('R 10 + 18446744073709551608#64', 'window'),
+                  ('R 10 + (@0 >>> 10 <<< 3 + 18446744073709551615#64)', 'window')], 'shiftAddr': True}),
       ]),
       # `parse_format(fmt, suffix, buf)`: copy fmt and the suffix into buf,
       # then the conversion byte and the terminator; returns the conversion.
