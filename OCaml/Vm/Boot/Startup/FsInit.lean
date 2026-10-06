@@ -53,20 +53,19 @@ theorem writeLog_skip (m : Std.ExtHashMap Nat (BitVec 8)) (a g b : List WEntry) 
   rw [writeLog_append, writeLog_append, writeLog_append]
   exact writeLog_point (writeLog_out _ _ _ out) b
 
-theorem fsWindows_kept {sp : BitVec 64} (deep : embedLimit + 96 ≤ sp.toNat) (a : Nat) (kept : KeptByte a) :
+theorem fsWindows_kept {sp : BitVec 64} (deep : embedLimit + 96 ≤ sp.toNat) (a : Nat) (kept : EmbedByte a) :
     OutW (fsWindows sp) a := by
-  have := kept.lt
+  obtain ⟨lo, hi⟩ := kept
   simp only [fsWindows, fsFilesWindow, OutW, and_true]
   refine ⟨Or.inl (by unfold nativeFrameBase; omega), ?_⟩
-  rcases kept with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-    simp only [EmbedByte, EnvironByte, VerbGcByte, heapEnd, Layout.sym_environ, Layout.sym_caml_verb_gc,
-      Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready] at * <;> omega
+  simp only [heapEnd, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready] at *
+  omega
 
 /-- A state reached by writes inside `fsWindows` keeps the embedded image. -/
 theorem EmbedImage.of_fs {c d : Config} {sp : BitVec 64} {log : List WEntry} (image : EmbedImage c)
     (deep : embedLimit + 96 ≤ sp.toNat) (memory : d.σ.mem = writeLog c.σ.mem log)
     (inside : LogInW (fsWindows sp) log) : EmbedImage d :=
-  image.frame ⟨fun a ha => by rw [memory, frameOn_writeLog _ _ _ inside a (fsWindows_kept deep a ha)]⟩
+  image.of_bytes fun a ha => by rw [memory, frameOn_writeLog _ _ _ inside a (fsWindows_kept deep a ha)]
 
 theorem fsInitLog_inside {sp ra s0 s3 s6 s7} (frame : NativeFrame sp 96) :
     LogInW (fsWindows sp) (fsInitLog sp ra s0 s3 s6 s7) :=
@@ -371,17 +370,16 @@ theorem fs_init_tail (e : Config) (H : List (Nat × Nat)) (capacity charge : Nat
         allocHeadroom at *; omega⟩
     (by decide) charged).run e ⟨pc, rfl⟩
   have fresh := N.fresh
-  have keptF (a : Nat) (ka : KeptByte a) : (f.σ.mem[a]?).getD 0 = (e.σ.mem[a]?).getD 0 := by
+  have keptF (a : Nat) (ea : EmbedByte a) : (f.σ.mem[a]?).getD 0 = (e.σ.mem[a]?).getD 0 := by
+    have ka : KeptByte a := Or.inl ea
     have lt := ka.lt
+    obtain ⟨lo, _⟩ := ea
     apply N.kept
     refine ⟨Or.inl ?_, ka.not_foot, ?_, fun inside => ?_⟩
     · unfold nativeFrameBase; rw [spNat]; unfold nativeFrameBase allocHeadroom at *; omega
-    · rcases ka with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-        simp only [heapEnd, slotOne, Layout.sym_files, Layout.sym_environ, Layout.sym_caml_verb_gc] at * <;> omega
-    · unfold InExt at inside
-      rcases ka with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-        simp only [heapEnd, heapStart, Layout.sym_environ, Layout.sym_caml_verb_gc] at * <;> omega
-  have embedF : EmbedImage f := embed.frame ⟨keptF⟩
+    · simp only [heapEnd, slotOne, Layout.sym_files] at *; omega
+    · unfold InExt at inside; simp only [heapEnd, heapStart] at *; omega
+  have embedF : EmbedImage f := embed.of_bytes keptF
   have upperF (n : Nat) (v : BitVec 64) (lo : 20 ≤ n) (hi : n ≤ 27) (hv : gprGet e.σ n = some v) :
       gprGet f.σ n = some v := (N.upper n lo hi).trans hv
   -- the file's extent
@@ -402,11 +400,10 @@ theorem fs_init_tail (e : Config) (H : List (Nat × Nat)) (capacity charge : Nat
     (fun a foot => fsFiles_out_foot foot)
   have filesOut (a : Nat) (out : OutW [fsFilesWindow] a) : (g.σ.mem[a]?).getD 0 = (f.σ.mem[a]?).getD 0 := by
     rw [p2.memory, frameOn_writeLog _ _ _ (fsFileLog_inside _ _) a out]
-  have embedG : EmbedImage g := embedF.frame ⟨fun a ka => filesOut a (by
-    have := ka.lt
+  have embedG : EmbedImage g := embedF.of_bytes fun a ea => filesOut a (by
+    obtain ⟨lo, _⟩ := ea
     simp only [OutW, fsFilesWindow, and_true]
-    rcases ka with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-      simp only [heapEnd, Layout.sym_files, Layout.sym_environ, Layout.sym_caml_verb_gc] at * <;> omega)⟩
+    simp only [heapEnd, Layout.sym_files] at *; omega)
   -- the table ends: restore and return
   obtain ⟨h, run3, p3⟩ := (fs_init_return g sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 0x86800018#64 _ readyG.toLeafInput
     frame96
@@ -473,7 +470,7 @@ theorem fs_init_tail (e : Config) (H : List (Nat × Nat)) (capacity charge : Nat
     pc := p3.pc
     regs := p3.regs
     ready := readyH
-    embed := embedG.frame ⟨fun a _ => by rw [memH]⟩
+    embed := embedG.of_bytes fun a _ => by rw [memH]
     slot := memH ▸ slot
     low := fun x below global apart => by
       rw [memH, fileOut x (by unfold heapStart at below; unfold slotOne Layout.sym_files at apart; file_out)]
@@ -615,9 +612,9 @@ theorem fs_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     ⟨p1.pc, rfl⟩
   have keptE (x : Nat) (high : nativeFrameBase sp 96 ≤ x) : (e.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0 :=
     S.kept x (Or.inr (by rw [spNat]; exact high))
-  have embedE : EmbedImage e := embedD.frame ⟨fun a ka => S.kept a (Or.inl (by
-    have := ka.lt
-    unfold nativeFrameBase; rw [spNat]; unfold nativeFrameBase allocHeadroom at *; omega))⟩
+  have embedE : EmbedImage e := embedD.of_bytes fun a ea => S.kept a (Or.inl (by
+    have := ea.2
+    unfold nativeFrameBase; rw [spNat]; unfold nativeFrameBase allocHeadroom at *; omega))
   have freeE : (e.σ.mem[slotOne]?).getD 0 = 0#8 := by
     rw [S.kept _ (Or.inl (by
       unfold nativeFrameBase; rw [spNat]; unfold nativeFrameBase slotOne Layout.sym_files heapEnd at *; omega))]

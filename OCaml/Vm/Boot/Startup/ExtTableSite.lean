@@ -12,6 +12,7 @@ structure ExtTableGlobal (t : Nat) : Prop where
   domain : t + Layout.ext_table_bytes ≤ Layout.sym_Caml_state ∨ Layout.sym_Caml_state + 8 ≤ t
   pool : t + Layout.ext_table_bytes ≤ Layout.sym_pool ∨ Layout.sym_pool + 8 ≤ t
   allocator : ∀ a, t ≤ a → a < t + Layout.ext_table_bytes → ¬ allocGlobal a
+  files : t + Layout.ext_table_bytes ≤ Layout.sym_files + 56 ∨ Layout.sym_files + 56 * 64 ≤ t
 
 /-- Where caml_ext_table_init (entered with stack pointer `sp`) may find its
 `struct ext_table`: a global header, or a header in a caller's native frame at
@@ -24,6 +25,7 @@ structure ExtTableSite (sp t : BitVec 64) : Prop where
     ExtTableGlobal t.toNat
 
 theorem ExtTableGlobal.shared : ExtTableGlobal Layout.sym_caml_shared_libs_path where
+  files := by decide
   low := by decide
   high := by decide
   domain := by decide

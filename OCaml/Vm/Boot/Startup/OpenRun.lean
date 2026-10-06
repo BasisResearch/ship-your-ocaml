@@ -189,13 +189,10 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
       (Or.inl below) (Or.inr lo)
   have high6 (x : Nat) (lo : 0x80064d4c ≤ x) (hi : x < sp.toNat - 176) :
       (d6.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := mem6 x (Or.inl hi) (Or.inr lo) (Or.inr (by omega))
-  have image6 : EmbedImage d6 := image.frame ⟨fun a ka => by
-    have := ka.lt
-    rcases ka with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩
-    · exact high6 a (by unfold heapEnd at lo; omega)
-        (by unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at *; omega)
-    · exact low6 a (by unfold Layout.sym_environ at lo; omega) (by unfold Layout.sym_environ at hi; omega)
-    · exact low6 a (by unfold Layout.sym_caml_verb_gc at lo; omega) (by unfold Layout.sym_caml_verb_gc at hi; omega)⟩
+  have image6 : EmbedImage d6 := image.of_bytes fun a ea => by
+    obtain ⟨lo, hi⟩ := ea
+    exact high6 a (by unfold heapEnd at lo; omega)
+      (by unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at *; omega)
   have heapBelow : heapEnd ≤ sp.toNat - 176 := by
     unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom heapEnd at *; omega
   have hRS : (resolveStack (nativeStack (nativeStack sp 80) 16)).toNat = sp.toNat - 272 := by
@@ -375,13 +372,12 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
       ((p10.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
         ((p9.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans
           ((p8.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)).trans hv)))
-  have embed12 : EmbedImage d12 := R.embed.frame ⟨fun a ka => by
+  have embed12 : EmbedImage d12 := R.embed.of_bytes fun a ea => by
     rw [p12.memory, show writeLog d11.σ.mem [] = d11.σ.mem from rfl]
     apply fromD7
-    have := ka.lt
+    obtain ⟨lo, _⟩ := ea
     simp only [OutW, errnoWindows, and_true]
-    rcases ka with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-      simp only [heapEnd, Layout.sym_environ, Layout.sym_caml_verb_gc] at * <;> omega⟩
+    simp only [heapEnd] at *; omega
   have mem12 (x : Nat) (out : OutW errnoWindows x) : (d12.σ.mem[x]?).getD 0 = (d7.σ.mem[x]?).getD 0 := by
     rw [p12.memory, show writeLog d11.σ.mem [] = d11.σ.mem from rfl, fromD7 x out]
   refine ⟨d12, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans

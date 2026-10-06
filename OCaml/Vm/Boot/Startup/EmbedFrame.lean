@@ -21,18 +21,35 @@ def EnvironByte (a : Nat) : Prop := Layout.sym_environ ≤ a ∧ a < Layout.sym_
 
 def VerbGcByte (a : Nat) : Prop := Layout.sym_caml_verb_gc ≤ a ∧ a < Layout.sym_caml_verb_gc + 8
 
+/-- htif.c's file-system state that startup leaves untouched until the first
+`open`: `fs_ready`, slots 1–63 of `files`, and newlib's `_impure_ptr`. -/
+def HtifByte (a : Nat) : Prop :=
+  (Layout.sym_fs_ready ≤ a ∧ a < Layout.sym_fs_ready + 4) ∨
+    (Layout.sym_impure_ptr ≤ a ∧ a < Layout.sym_impure_ptr + 8) ∨
+    (Layout.sym_files + 56 ≤ a ∧ a < Layout.sym_files + 56 * 64)
+
 /-- Bytes no startup function writes after main. -/
-def KeptByte (a : Nat) : Prop := EmbedByte a ∨ EnvironByte a ∨ VerbGcByte a
+def KeptByte (a : Nat) : Prop := EmbedByte a ∨ EnvironByte a ∨ VerbGcByte a ∨ HtifByte a
+
+theorem HtifByte.bounds {a} (h : HtifByte a) : Layout.sym_impure_ptr ≤ a ∧ a < Layout.sym_files + 56 * 64 := by
+  rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+    simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files] at * <;> omega
+
+theorem HtifByte.not_alloc {a} (h : HtifByte a) : ¬ allocGlobal a := by
+  unfold allocGlobal InRange
+  rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+    simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files] at * <;> omega
 
 theorem KeptByte.lt {a} (ha : KeptByte a) : a < embedLimit := by
-  rcases ha with ⟨_, h⟩ | ⟨_, h⟩ | ⟨_, h⟩
+  rcases ha with ⟨_, h⟩ | ⟨_, h⟩ | ⟨_, h⟩ | htif
   · exact h
   · unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size Layout.sym_environ at *; omega
   · unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size Layout.sym_caml_verb_gc at *; omega
+  · have := htif.bounds; unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size Layout.sym_files at *; omega
 
 /-- The kept low globals lie below the arena, outside the allocator's globals. -/
 theorem KeptByte.low {a} (ha : KeptByte a) (below : a < heapEnd) : a < heapStart ∧ ¬ allocGlobal a := by
-  rcases ha with ⟨low, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩
+  rcases ha with ⟨low, _⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | htif
   · omega
   · unfold allocGlobal InRange heapStart
     unfold Layout.sym_environ at lo hi
@@ -40,6 +57,7 @@ theorem KeptByte.low {a} (ha : KeptByte a) (below : a < heapEnd) : a < heapStart
   · unfold allocGlobal InRange heapStart
     unfold Layout.sym_caml_verb_gc at lo hi
     omega
+  · exact ⟨by have := htif.bounds; unfold heapStart Layout.sym_files at *; omega, htif.not_alloc⟩
 
 theorem KeptByte.not_foot {a H} (ha : KeptByte a) : ¬ vsaFoot H a := by
   intro owned
@@ -48,18 +66,23 @@ theorem KeptByte.not_foot {a H} (ha : KeptByte a) : ¬ vsaFoot H a := by
     rcases owned with global | ⟨lo, _⟩
     · exact low.2 global
     · unfold heapStart at *; omega
-  · rcases ha with ⟨_, _⟩ | ⟨_, hi⟩ | ⟨_, hi⟩
+  · rcases ha with ⟨_, _⟩ | ⟨_, hi⟩ | ⟨_, hi⟩ | htif
     · have := allocator_foot_below owned; omega
     · unfold Layout.sym_environ heapEnd at *; omega
     · unfold Layout.sym_caml_verb_gc heapEnd at *; omega
+    · have := htif.bounds; unfold Layout.sym_files heapEnd at *; omega
 
-/-- Kept bytes avoid every low global from `startup_count` up to the arena. -/
-theorem KeptByte.out_low {a g n} (ha : KeptByte a) (lo : Layout.sym_startup_count ≤ g) (hi : g + n ≤ heapEnd) :
+/-- Kept bytes avoid every low global from `startup_count` up to the arena
+that also avoids htif.c's `files` table. -/
+theorem KeptByte.out_low {a g n} (ha : KeptByte a) (lo : Layout.sym_startup_count ≤ g) (hi : g + n ≤ heapEnd)
+    (files : g + n ≤ Layout.sym_files + 56 ∨ Layout.sym_files + 56 * 64 ≤ g) :
     a < g ∨ g + n ≤ a := by
-  rcases ha with ⟨low, _⟩ | ⟨_, h⟩ | ⟨_, h⟩
+  rcases ha with ⟨low, _⟩ | ⟨_, h⟩ | ⟨_, h⟩ | htif
   · right; omega
   · left; unfold Layout.sym_environ Layout.sym_startup_count at *; omega
   · left; unfold Layout.sym_caml_verb_gc Layout.sym_startup_count at *; omega
+  · rcases htif with ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ <;>
+      simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_startup_count] at * <;> omega
 
 structure EmbedFrame (before after : Config) : Prop where
   byte : ∀ a, KeptByte a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
@@ -122,7 +145,8 @@ theorem CustomRegistered.embed_frame {H capacity kind sp s0 head before after}
   have region := w.region
   have node := ha.out_low (g := (vsaReg w.allocated 10).toNat) (n := 16)
     (Nat.le_trans (by decide) region.lower) region.upper
-  have table := ha.out_low (g := Layout.sym_custom_ops_table) (n := 8) (by decide) (by decide)
+    (Or.inr (Nat.le_trans (by decide) region.lower))
+  have table := ha.out_low (g := Layout.sym_custom_ops_table) (n := 8) (by decide) (by decide) (by decide)
   exact customPublish_out_byte region node table
 
 theorem CustomNextRegistered.embed_frame {H capacity kind sp head before after}
@@ -158,7 +182,7 @@ theorem ExtTableReturned.embed_frame {H capacity sp ra s0 t n before after}
     have := ha.lt
     rcases site.place with ⟨above, _⟩ | g
     · left; unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size at *; omega
-    · exact ha.out_low g.low (Nat.le_trans g.high (by decide))
+    · exact ha.out_low g.low (Nat.le_trans g.high (by decide)) g.files
   have setup : EmbedFrame before w.allocation.saved := by
     constructor
     intro a ha
@@ -187,7 +211,7 @@ theorem StartupDataFrame.embed {before after} (h : StartupDataFrame before after
   constructor
   intro a ha
   apply h.byte a
-  rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩
+  rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | htif
   · exact Or.inr ⟨lo, by unfold embedLimit Layout.sym_stack_top Layout.sym_stack_size at *; omega⟩
   · refine Or.inl ⟨?_, ?_, ?_⟩
     · unfold Layout.sym_environ heapStart at *; omega
@@ -197,6 +221,10 @@ theorem StartupDataFrame.embed {before after} (h : StartupDataFrame before after
     · unfold Layout.sym_caml_verb_gc heapStart at *; omega
     · unfold allocGlobal InRange; unfold Layout.sym_caml_verb_gc at lo hi; omega
     · left; unfold Layout.sym_caml_verb_gc Layout.sym_Caml_state at *; omega
+  · have b := htif.bounds
+    refine Or.inl ⟨by unfold heapStart Layout.sym_files at *; omega, htif.not_alloc, ?_⟩
+    rcases htif with ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ <;>
+      simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_Caml_state] at * <;> omega
 
 /-- Every embed byte still has its loader value. -/
 structure EmbedImage (c : Config) : Prop where
@@ -204,6 +232,11 @@ structure EmbedImage (c : Config) : Prop where
 
 theorem EmbedImage.frame {before after} (h : EmbedImage before) (f : EmbedFrame before after) :
     EmbedImage after := ⟨fun a ha => (f.byte a (Or.inl ha)).trans (h.byte a ha)⟩
+
+/-- The embedded image only needs its own bytes kept. -/
+theorem EmbedImage.of_bytes {before after} (h : EmbedImage before)
+    (f : ∀ a, EmbedByte a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0) : EmbedImage after :=
+  ⟨fun a ha => (f a ha).trans (h.byte a ha)⟩
 
 /-- The embedded image together with main's `environ` publication and the
 zero GC verbosity. -/
@@ -219,7 +252,7 @@ theorem EmbedFrame.environ {before after v} (f : EmbedFrame before after)
 
 theorem EmbedFrame.verbGc {before after bytes} (f : EmbedFrame before after)
     (h : LPins8 before.σ.mem Layout.sym_caml_verb_gc bytes) : LPins8 after.σ.mem Layout.sym_caml_verb_gc bytes :=
-  lpins8_observed h (fun i hi => f.byte _ (Or.inr (Or.inr ⟨by omega, by omega⟩)))
+  lpins8_observed h (fun i hi => f.byte _ (Or.inr (Or.inr (Or.inl ⟨by omega, by omega⟩))))
 
 theorem KeptImage.frame {before after} (h : KeptImage before) (f : EmbedFrame before after) :
     KeptImage after := ⟨h.embed.frame f, f.environ h.environ, f.verbGc h.verbGc⟩
@@ -282,7 +315,7 @@ theorem ResetCustomEntry.kept {initial entry} (w : ResetCustomEntry initial entr
     have high := ha.lt
     rw [w.auxiliary.post.memory, startupAuxLog, writeLog_append,
       writeLog_out _ _ _ (show OutL [(Layout.sym_startup_count, 4, 1#64)] a from
-        ⟨ha.out_low (Nat.le_refl _) (by decide), trivial⟩),
+        ⟨ha.out_low (Nat.le_refl _) (by decide) (by decide), trivial⟩),
       frameOn_writeLog _ _ _ (startupAuxSave_inside auxFrame) a ⟨Or.inl ?_, trivial⟩]
     show a < nativeFrameBase parameterStack 16
     have bound : embedLimit ≤ nativeFrameBase parameterStack 16 := by decide
