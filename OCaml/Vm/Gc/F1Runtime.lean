@@ -582,12 +582,24 @@ theorem heapSafe_extent {lo hi : Nat} {x : Nat × Nat} (member : x ∈ f1Extents
     (high : hi ≤ x.1 + x.2) : F1HeapSafe ⟨lo, hi⟩ :=
   Or.inl ⟨x, member, low, high⟩
 
-/-- A `Caml_state` window other than the `ref_table` word. -/
+/-- A `Caml_state` window other than the `minor_heap_wsz` and `ref_table`
+words (`TableFree`). -/
+def TableFree (lo hi : Nat) : Prop :=
+  hi ≤ f1Domain + Layout.off_minor_heap_wsz ∨
+    (f1Domain + Layout.off_minor_heap_wsz + 8 ≤ lo ∧ hi ≤ f1Domain + Layout.off_ref_table) ∨
+    f1Domain + Layout.off_ref_table + 8 ≤ lo
+
+/-- A field window above the remembered set's `Caml_state` words. -/
+theorem TableFree.above {lo hi : Nat} (h : f1Domain + Layout.off_ref_table + 8 ≤ lo) : TableFree lo hi :=
+  Or.inr (Or.inr h)
+
 theorem heapSafe_domain {lo hi : Nat} (low : f1Domain ≤ lo) (high : hi ≤ f1Domain + Layout.domainStateBytes)
-    (table : hi ≤ f1Domain + Layout.off_ref_table ∨ f1Domain + Layout.off_ref_table + 8 ≤ lo) :
-    F1HeapSafe ⟨lo, hi⟩ := by
-  rcases table with t | t
-  · exact heapSafe_extent (x := (f1Domain, Layout.off_ref_table)) List.mem_cons_self low (by simpa using t)
+    (table : TableFree lo hi) : F1HeapSafe ⟨lo, hi⟩ := by
+  rcases table with t | ⟨t1, t2⟩ | t
+  · exact heapSafe_extent (x := (f1Domain, Layout.off_minor_heap_wsz)) List.mem_cons_self low (by simpa using t)
+  · exact heapSafe_extent (x := (f1Domain + Layout.off_minor_heap_wsz + 8,
+      Layout.off_ref_table - Layout.off_minor_heap_wsz - 8)) (by simp [f1Extents, f1Domain]) t1
+      (by simp only [Layout.off_ref_table, Layout.off_minor_heap_wsz] at *; omega)
   · exact heapSafe_extent (x := (f1Domain + Layout.off_ref_table + 8,
       Layout.domainStateBytes - Layout.off_ref_table - 8)) (by simp [f1Extents, f1Domain]) t
       (by simp only [Layout.domainStateBytes, Layout.off_ref_table] at *; omega)
@@ -700,7 +712,8 @@ theorem f1_domainField {off : Nat} (notYoung : 64 ≤ off)
       (Layout.off_trap_barrier + 8 ≤ off ∧ off + 8 ≤ Layout.off_backtrace_active) ∨
       Layout.off_backtrace_active + 8 ≤ off)
     (inRecord : off + 8 ≤ Layout.domainStateBytes)
-    (notTable : off + 8 ≤ Layout.off_ref_table ∨ Layout.off_ref_table + 8 ≤ off) :
+    (notTable : off + 8 ≤ Layout.off_minor_heap_wsz ∨
+      (Layout.off_minor_heap_wsz + 8 ≤ off ∧ off + 8 ≤ Layout.off_ref_table) ∨ Layout.off_ref_table + 8 ≤ off) :
     WindowStable f1Runtime [⟨f1Domain + off, f1Domain + off + 8⟩] := by
   simp only [Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
     Layout.off_backtrace_active] at notPinned
@@ -712,7 +725,7 @@ theorem f1_domainField {off : Nat} (notYoung : 64 ≤ off)
   · simp only [Layout.off_backtrace_active]; omega
   · simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.domainStateBytes] at *
     omega
-  · exact heapSafe_domain (by omega) (by omega) (by omega)
+  · exact heapSafe_domain (by omega) (by omega) (by unfold TableFree; omega)
 
 theorem f1_trapsp : WindowStable f1Runtime [⟨f1Domain + Layout.off_trapsp, f1Domain + Layout.off_trapsp + 8⟩] :=
   f1_domainField (by decide) (by decide) (by decide) (by decide)
@@ -943,7 +956,7 @@ theorem f1_allocFrame_core' {P : Prog} {s : St} {c : Config} {pl : Place} {cp : 
       subst hy
       exact heapSafe_domain (by simp only [Layout.off_young_ptr]; omega)
         (by simp only [Layout.off_young_ptr, Layout.domainStateBytes]; omega)
-        (Or.inl (by simp only [Layout.off_young_ptr, Layout.off_ref_table]; omega))
+        (Or.inl (by simp only [f1Domain, Layout.off_young_ptr, Layout.off_minor_heap_wsz]; omega))
     · rcases entries e hl with hin | hin | hin
       · have nl := g.nurseryLow
         have nh := g.nurseryHigh
@@ -1052,8 +1065,13 @@ theorem libHeap_of {c : Config}
     (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) (heap : HeapCovers c) :
     LibHeap c := by
   obtain ⟨H, cap, room, ready, covers, exact⟩ := heap
-  refine ⟨H, cap, [], ⟨room, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h),
-    (fun _ h => by cases h), ⟨WhileMinEntry.read_ref_table memory, Or.inl ⟨?_, ?_, ?_⟩⟩,
+  have base : (word c (refTable + Layout.off_ref_table_base)).toNat = 0 := by
+    rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl
+  have reserve : reserved (word c (refTable + Layout.off_ref_table_base)).toNat ([] : List Nat).length ≤ cap := by
+    rw [base]; simp only [reserved, tableCharge, recordCharge, maxChannels, if_true, List.length_nil] at *; omega
+  refine ⟨H, cap, [], ⟨reserve, by decide, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h),
+    (fun _ h => by cases h), ⟨WhileMinEntry.read_ref_table memory, WhileMinEntry.read_minor_heap_wsz memory,
+      Or.inl ⟨?_, ?_, ?_⟩⟩,
     exact _ List.mem_cons_self⟩⟩
   rotate_left
   · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl

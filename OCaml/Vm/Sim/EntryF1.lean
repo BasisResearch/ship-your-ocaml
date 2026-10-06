@@ -47,7 +47,7 @@ theorem f1_entryStable {sp : Nat} (frame : EntryFrame sp) :
     · exact Gc.mutable_heapSafe _ (by simp [Gc.mutableStatics])
     · exact Gc.heapSafe_domain (Nat.le_add_right _ _)
         (by simp only [Layout.off_external_raise, Layout.domainStateBytes]; omega)
-        (Or.inr (by simp only [Layout.off_external_raise, Layout.off_ref_table]; omega))
+        (Gc.TableFree.above (by simp only [Layout.off_external_raise, Layout.off_ref_table]; omega))
 
 /-- **`ArmSim.entry` for the pinned F1 layout.** -/
 theorem f1_entry {P : Prog} {c : Config} (h : OCaml.Loaded Gc.f1Layout P c) :

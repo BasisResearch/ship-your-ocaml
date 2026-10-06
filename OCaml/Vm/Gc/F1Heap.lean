@@ -44,25 +44,33 @@ def f1Covered : List (Nat × Nat) :=
    (Boot.WhileMinHeapChunks.codeBufferPayload, f1CodeBytes), (Boot.WhileMinHeapChunks.primTablePayload, 8 * f1PrimCapacity)]
 
 /-- The regions F1's ordinary windows write: the `Caml_state` record around
-its `ref_table` word, the minor heap, the major chunk, the VM stack. The
-remembered set changes only through the write barrier's own lemmas. -/
+its `minor_heap_wsz` and `ref_table` words, the minor heap, the major chunk,
+the VM stack. The remembered set changes only through the write barrier's
+own lemmas. -/
 def f1Extents : List (Nat × Nat) :=
-  [(Boot.WhileMinRuntime.domain, Layout.off_ref_table),
+  [(Boot.WhileMinRuntime.domain, Layout.off_minor_heap_wsz),
+   (Boot.WhileMinRuntime.domain + Layout.off_minor_heap_wsz + 8,
+     Layout.off_ref_table - Layout.off_minor_heap_wsz - 8),
    (Boot.WhileMinRuntime.domain + Layout.off_ref_table + 8, Layout.domainStateBytes - Layout.off_ref_table - 8),
    (minorRegion.lo, minorRegion.hi - minorRegion.lo), (majorRegion.lo, majorRegion.hi - majorRegion.lo),
    (Boot.WhileMinEntry.high - Layout.stackBytes, Layout.stackBytes)]
 
 theorem extent_covered : ∀ x ∈ f1Extents, ∃ y ∈ f1Covered, y.1 ≤ x.1 ∧ x.1 + x.2 ≤ y.1 + y.2 := by decide
 
-/-- The remembered set's words: the `Caml_state->ref_table` pointer and the struct. -/
+/-- The remembered set's words: the `Caml_state->ref_table` pointer, the
+struct, and `Caml_state->minor_heap_wsz` (which sizes its first allocation). -/
 def InTableWords (y : Nat) : Prop :=
   (Boot.WhileMinRuntime.domain + Layout.off_ref_table ≤ y ∧ y < Boot.WhileMinRuntime.domain + Layout.off_ref_table + 8) ∨
-    (refTable ≤ y ∧ y < refTable + 56)
+    (refTable ≤ y ∧ y < refTable + 56) ∨
+    (Boot.WhileMinRuntime.domain + Layout.off_minor_heap_wsz ≤ y ∧
+      y < Boot.WhileMinRuntime.domain + Layout.off_minor_heap_wsz + 8)
 
 theorem extents_miss_table : ∀ x ∈ f1Extents,
     (x.1 + x.2 ≤ Boot.WhileMinRuntime.domain + Layout.off_ref_table ∨
       Boot.WhileMinRuntime.domain + Layout.off_ref_table + 8 ≤ x.1) ∧
-    (x.1 + x.2 ≤ refTable ∨ refTable + 56 ≤ x.1) := by decide
+    (x.1 + x.2 ≤ refTable ∨ refTable + 56 ≤ x.1) ∧
+    (x.1 + x.2 ≤ Boot.WhileMinRuntime.domain + Layout.off_minor_heap_wsz ∨
+      Boot.WhileMinRuntime.domain + Layout.off_minor_heap_wsz + 8 ≤ x.1) := by decide
 
 /-- `x` lies inside a live block of `H`. -/
 def Covered (H : List (Nat × Nat)) (x : Nat × Nat) : Prop :=
@@ -94,6 +102,8 @@ structure RefStorage (H : List (Nat × Nat)) (chs : List Nat) (b e p l : Nat) : 
 cut's struct; the table is unallocated (as at the cut) or has its storage. -/
 structure RefTableAt (H : List (Nat × Nat)) (chs : List Nat) (c : Config) : Prop where
   pointer : word c (Boot.WhileMinRuntime.domain + Layout.off_ref_table) = BitVec.ofNat 64 refTable
+  /-- the minor heap's size, which sizes the table's first allocation -/
+  minorWsz : word c (Boot.WhileMinRuntime.domain + Layout.off_minor_heap_wsz) = 0x40000#64
   shape : ((word c (refTable + Layout.off_ref_table_base)).toNat = 0 ∧
       (word c (refTable + Layout.off_ref_table_ptr)).toNat = 0 ∧
       (word c (refTable + Layout.off_ref_table_limit)).toNat = 0) ∨
@@ -101,22 +111,46 @@ structure RefTableAt (H : List (Nat × Nat)) (chs : List Nat) (c : Config) : Pro
       (word c (refTable + Layout.off_ref_table_end)).toNat (word c (refTable + Layout.off_ref_table_ptr)).toNat
       (word c (refTable + Layout.off_ref_table_limit)).toNat
 
+/-- A word inside the remembered set's words survives byte equality on them. -/
+theorem tableWord_keep {c c' : Config}
+    (same : ∀ y, InTableWords y → (c'.σ.mem[y]?).getD 0 = (c.σ.mem[y]?).getD 0)
+    {x : Nat} (h : ∀ j, j < 8 → InTableWords (x + j)) : word c' x = word c x := by
+  apply Reloc.bytesT_congr
+  intro j hj
+  simp only [bytesT, same _ (h j hj)]
+
+theorem structWord_keep {c c' : Config}
+    (same : ∀ y, InTableWords y → (c'.σ.mem[y]?).getD 0 = (c.σ.mem[y]?).getD 0) {off : Nat} (h : off + 8 ≤ 56) :
+    word c' (refTable + off) = word c (refTable + off) :=
+  tableWord_keep same fun j hj => Or.inr (Or.inl ⟨by omega, by omega⟩)
+
 /-- The remembered set survives byte equality on its words. -/
 theorem RefTableAt.congr {H : List (Nat × Nat)} {chs : List Nat} {c c' : Config} (t : RefTableAt H chs c)
     (same : ∀ y, InTableWords y → (c'.σ.mem[y]?).getD 0 = (c.σ.mem[y]?).getD 0) : RefTableAt H chs c' := by
-  have w : ∀ x, (∀ j, j < 8 → InTableWords (x + j)) → word c' x = word c x := fun x h => by
-    apply Reloc.bytesT_congr
-    intro j hj
-    simp only [bytesT, same _ (h j hj)]
   have tw : ∀ off, off + 8 ≤ 56 → word c' (refTable + off) = word c (refTable + off) := fun off h =>
-    w _ fun j hj => Or.inr ⟨by omega, by omega⟩
-  refine ⟨by rw [w _ fun j hj => Or.inl ⟨by omega, by omega⟩]; exact t.pointer, ?_⟩
+    structWord_keep same h
+  refine ⟨by rw [tableWord_keep same fun j hj => Or.inl ⟨by omega, by omega⟩]; exact t.pointer,
+    by rw [tableWord_keep same fun j hj => Or.inr (Or.inr ⟨by omega, by omega⟩)]; exact t.minorWsz, ?_⟩
   rw [tw _ (by decide), tw _ (by decide), tw _ (by decide), tw _ (by decide)]
   exact t.shape
 
+/-- The C-heap charges F1 reserves after the cut: the remembered set's first
+allocation (`caml_alloc_table`'s `(minor_heap_wsz/8 + 256)·8` bytes) while the
+table is unallocated, and one channel record (`72 + 65536` bytes) for each of
+the at most `maxChannels` channels not yet opened. Each covers newlib's
+charge for that request (`vsaChg`). -/
+def tableCharge : Nat := 2 ^ 19
+def recordCharge : Nat := 2 ^ 17
+def maxChannels : Nat := 64
+
+def reserved (base opened : Nat) : Nat :=
+  (if base = 0 then tableCharge else 0) + recordCharge * (maxChannels - opened)
+
 /-- **newlib's heap at an F1 state**, with live blocks `H` and open channels `chs`. -/
 structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Config) : Prop where
-  room : 2 ^ 24 ≤ cap
+  /-- the room still covers every allocation F1 may make -/
+  room : reserved (word c (refTable + Layout.off_ref_table_base)).toNat chs.length ≤ cap
+  channelsBound : chs.length ≤ maxChannels
   ready : HeapReady H cap c
   extents : ∀ x ∈ f1Covered, Covered H x
   channels : OpenChannelList c.σ.mem chs
@@ -169,7 +203,8 @@ theorem F1HeapSafe.misses_table {w : W} (s : F1HeapSafe w) {y : Nat} (hy : InTab
     y < w.lo ∨ w.hi ≤ y := by
   have yr : 0x8007d140 ≤ y ∧ y < 0x86800000 := by
     unfold InTableWords refTable at hy
-    simp only [Boot.WhileMinRuntime.domain, Layout.off_ref_table, Boot.WhileMinHeapChunks.refTablePayload] at hy
+    simp only [Boot.WhileMinRuntime.domain, Layout.off_ref_table, Layout.off_minor_heap_wsz,
+      Boot.WhileMinHeapChunks.refTablePayload] at hy
     omega
   rcases Nat.lt_or_ge y w.lo with l | l
   · exact Or.inl l
@@ -192,7 +227,8 @@ theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List N
       bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8)
     (keep : ∀ a, (∀ w ∈ ws, a < w.lo ∨ w.hi ≤ a) → (c'.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) :
     LibHeapAt H cap chs c' where
-  room := h.room
+  room := by rw [structWord_keep (fun y hy => keep y fun w hw => (safe w hw).misses_table hy) (by decide)]; exact h.room
+  channelsBound := h.channelsBound
   ready := HeapReady.keep_windows h.ready (fun w hw => (safe w hw).heapSafe h) keep
   extents := h.extents
   channels := by
@@ -239,7 +275,7 @@ theorem RecordWindow.misses_table {H : List (Nat × Nat)} {cap : Nat} {chs : Lis
   have d := h.recordsApart a ha _ (List.mem_cons_self (a := (Boot.WhileMinRuntime.domain, Layout.domainStateBytes)))
   have t := h.recordsApart a ha (refTable, 56) (by decide)
   unfold InTableWords at hy
-  simp only [Layout.domainStateBytes, Layout.off_ref_table] at d hy ⊢
+  simp only [Layout.domainStateBytes, Layout.off_ref_table, Layout.off_minor_heap_wsz] at d hy ⊢
   omega
 
 /-- **The F1 heap invariant survives writes to one open record** (missing its
@@ -251,7 +287,13 @@ theorem LibHeapAt.keep_records {H : List (Nat × Nat)} {cap : Nat} {chs : List N
       bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8)
     (keep : ∀ x, (∀ w ∈ ws, x < w.lo ∨ w.hi ≤ x) → (c'.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0) :
     LibHeapAt H cap chs c' where
-  room := h.room
+  room := by
+    rw [structWord_keep (fun y hy => keep y fun w hw => by
+      rcases safe w hw with s | r
+      · exact s.misses_table hy
+      · exact r.misses_table h ha hy) (by decide)]
+    exact h.room
+  channelsBound := h.channelsBound
   ready := HeapReady.keep_windows h.ready (fun w hw => by
     rcases safe w hw with s | ⟨lo, hi, _⟩
     · exact s.heapSafe h

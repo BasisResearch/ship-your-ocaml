@@ -130,6 +130,12 @@ theorem read_ref_table (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initia
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := WhileMinRuntime.domain + Layout.off_ref_table) (w := 8) (by decide +kernel)]
   decide +kernel
 
+theorem read_minor_heap_wsz (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (WhileMinRuntime.domain + Layout.off_minor_heap_wsz) = 0x40000#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := WhileMinRuntime.domain + Layout.off_minor_heap_wsz) (w := 8) (by decide +kernel)]
+  decide +kernel
+
 theorem read_prim_contents (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word c (Layout.sym_caml_prim_table + Layout.off_prim_contents) = 0x8038fb10#64 := by
   unfold word

@@ -33,7 +33,7 @@ for name in ['caml_start_code','caml_global_data','caml_verb_gc','caml_cleanup_o
              'fs_ready','caml_something_to_do','caml_channel_mutex_lock',
              'caml_channel_mutex_unlock','caml_all_opened_channels']:
     emit_read(out,name,f'Layout.sym_{name}',read(layout['sym_'+name]))
-for name in ['stack_high','stack_low','stack_threshold','extern_sp','trapsp','trap_barrier','backtrace_active','ref_table']:
+for name in ['stack_high','stack_low','stack_threshold','extern_sp','trapsp','trap_barrier','backtrace_active','ref_table','minor_heap_wsz']:
     emit_read(out,name,f'WhileMinRuntime.domain + Layout.off_{name}',read(domain+layout['off_'+name]))
 emit_read(out,'prim_contents','Layout.sym_caml_prim_table + Layout.off_prim_contents',
           read(layout['sym_caml_prim_table']+layout['off_prim_contents']))

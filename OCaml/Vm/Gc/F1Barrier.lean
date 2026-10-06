@@ -241,14 +241,15 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
     simp only [BitVec.toNat_ofNat]
     omega
   refine {
-    room := h.room
+    room := by rw [tableWord Layout.off_ref_table_base (by decide) (by decide)]; exact h.room
+    channelsBound := h.channelsBound
     ready := HeapReady.keep_windows h.ready (fun w hw => ?_) keep
     extents := h.extents
     channels := ?_
     records := h.records
     recordsApart := h.recordsApart
     recordsDisjoint := h.recordsDisjoint
-    table := ⟨?_, Or.inr ?_⟩
+    table := ⟨?_, ?_, Or.inr ?_⟩
     tableIn := h.tableIn }
   · rcases win w hw with rfl | rfl
     · exact Or.inl ⟨e, he, by simp only [Layout.off_ref_table_ptr]; omega,
@@ -277,6 +278,11 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
         simp only [WhileMinRuntime.domain, Layout.off_ref_table, refTable, WhileMinHeapChunks.refTablePayload,
           Layout.domainStateBytes, Layout.off_ref_table_ptr] at * <;> omega]
     exact h.table.pointer
+  · rw [word_keep _ fun j hj w hw => by
+      rcases win w hw with rfl | rfl <;> dsimp only <;>
+        simp only [WhileMinRuntime.domain, Layout.off_minor_heap_wsz, refTable, WhileMinHeapChunks.refTablePayload,
+          Layout.domainStateBytes, Layout.off_ref_table_ptr] at * <;> omega]
+    exact h.table.minorWsz
   · rw [tableWord Layout.off_ref_table_base (by decide) (by decide),
       tableWord Layout.off_ref_table_end (by decide) (by decide),
       tableWord Layout.off_ref_table_limit (by decide) (by decide), ptrWord, ptrNat]

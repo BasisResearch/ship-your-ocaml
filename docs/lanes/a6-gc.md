@@ -36,6 +36,14 @@ Done (F1 side of the GC):
     words, and a0-boot's obligation covers `f1Covered` (requested sizes).
     `F1Pins.codeWord`/`primsWord` pin `caml_start_code` and the prim
     table's contents to their blocks.
+  * C-heap room: `LibHeapAt.room : reserved base #open ≤ cap`, which
+    reserves `tableCharge = 2^19` while the remembered set is unallocated,
+    plus `recordCharge = 2^17` per channel not yet opened, up to
+    `maxChannels = 64` (`channelsBound`). The table's first growth spends its
+    own reservation, so `f1_barrierGrowth` needs no room premise. A channel
+    open spends one record and needs `#open < 64`, the per-program bound
+    (foreman). `RefTableAt.minorWsz` pins `minor_heap_wsz = 2^18`, and
+    `TableFree` keeps it and `ref_table` out of the writable domain windows.
   * `LibHeapAt.tableIn : (refTable, 56) ∈ H` (exact block, for `Grow.table`);
     a0-boot's obligation is `cut_heapReady_covers_Statement f1Covered
     [(refTable, 56)]`. `GrowDone.kept`: the growing barrier keeps every byte
