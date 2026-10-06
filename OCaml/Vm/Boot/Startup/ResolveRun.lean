@@ -33,6 +33,8 @@ structure ResolveInit (H : List (Nat × Nat)) (capacity : Nat)
     bytesT after.σ.mem (nativeFrameBase (nativeStack spo 80) 96 + off) 8 = value
   live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   above : ∀ x, (nativeStack spo 80).toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  low : ∀ x, x < heapStart → ¬ allocGlobal x → OutW (fsWindows (resolveStack spo)) x →
+    (x < slotOne ∨ slotOne + 56 ≤ x) → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 /-- `resolve`'s entry through `fs_init`. -/
 theorem resolve_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
@@ -143,7 +145,10 @@ theorem resolve_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat
     above := fun x high => by
       rw [F.above x (by
         unfold resolveStack; rw [rNat, base]; have h' := high; rw [outerNat] at h'; unfold nativeFrameBase at h'; omega),
-        keep2 x (Or.inr high)] }⟩⟩
+        keep2 x (Or.inr high)]
+    low := fun x below global out apart => by
+      rw [F.low x below global out apart, keep2 x (Or.inl (by
+        rw [base]; unfold heapStart embedLimit Layout.sym_stack_top Layout.sym_stack_size at *; omega))] }⟩⟩
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.Startup
@@ -175,6 +180,26 @@ theorem OcamlrunName.last {m path} (h : OcamlrunName m path) :
   simp only [BitVec.toNat_ofNat]
   omega
 
+/-- `*r`, the 48-byte `struct res` at the bottom of `_open`'s frame. -/
+def structWin (spo : BitVec 64) : W := ⟨nativeFrameBase spo 80, nativeFrameBase spo 80 + 48⟩
+
+theorem structWin_widen {spo : BitVec 64} {log : List WEntry} (frame : NativeFrame spo 80)
+    (inside : LogInW [structWin spo] log) : LogInW [⟨nativeFrameBase spo 80, spo.toNat⟩] log :=
+  OCaml.Vm.Sim.logInW_widen inside fun w hw => by
+    have lower := frame.lower
+    simp only [List.mem_singleton] at hw
+    subst hw
+    simp only [structWin, nativeFrameBase] at *
+    omega
+
+theorem resolveClearLog_struct {spo : BitVec 64} (frame : NativeFrame spo 80) :
+    LogInW [structWin spo] (resolveClearLog spo) := by
+  have lower := frame.lower
+  simp only [resolveClearLog, structWin, LogInW, InsideW, resAt_nat frame (by decide : 8 ≤ 80),
+    resAt_nat frame (by decide : 0 ≤ 80), resAt_nat frame (by decide : 16 ≤ 80), resAt_nat frame (by decide : 24 ≤ 80),
+    resAt_nat frame (by decide : 32 ≤ 80), resAt_nat frame (by decide : 40 ≤ 80), or_false, and_true]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> omega
+
 /-- `resolve` at its component loop: `r` cleared, the last component is the
 whole path. -/
 structure ResolveScanned (H : List (Nat × Nat)) (capacity : Nat) (spo path s0 s1 s2 s5 s6 s7 s8 s10 : BitVec 64)
@@ -184,7 +209,8 @@ structure ResolveScanned (H : List (Nat × Nat)) (capacity : Nat) (spo path s0 s
   regs : GHolds after.σ ([(20, 0#64), (10, 8#64), (25, path), (19, nativeStack spo 80), (2, resolveStack spo)] ++
     resolveCarried s0 s1 s2 s5 s6 s7 s8 s10)
   name : OcamlrunName after.σ.mem path
-  kept : ∀ x, x < nativeFrameBase spo 80 ∨ spo.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  kept : ∀ x, x < nativeFrameBase spo 80 ∨ nativeFrameBase spo 80 + 48 ≤ x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 theorem resolve_scan (d : Config) (H : List (Nat × Nat)) (capacity : Nat)
     (spo path s0 s1 s2 s5 s6 s7 s8 s10 ra : BitVec 64) (ready : RuntimeReady H capacity (resolveStack spo) ra d)
@@ -212,7 +238,8 @@ theorem resolve_scan (d : Config) (H : List (Nat × Nat)) (capacity : Nat)
       (gholds_lookup (n := 2) _ regs rfl)
   have ready1 := ready.stack_log p1 (by decide) (by simp only [keysG]; decide) (by decide) sp1
     (gholds_lookup (n := 1) _ p1.regs rfl) (by decide) frameO (resolveClearLog_inside frameO)
-  have name1 : OcamlrunName e1.σ.mem path := by rw [p1.memory]; exact nameOut _ (resolveClearLog_inside frameO) _ name
+  have name1 : OcamlrunName e1.σ.mem path := by
+    rw [p1.memory]; exact nameOut _ (structWin_widen frameO (resolveClearLog_struct frameO)) _ name
   obtain ⟨e2, run2, R2⟩ := (strlen_ready e1 H capacity (resolveStack spo) _ path 8 ready1 name1.cbytes
     (gholds_lookup (n := 10) _ p1.regs rfl)).run e1 ⟨p1.pc, rfl⟩
   have carried2 := gholds_carry carried1 R2.post.registers (by simp only [resolveCarried, keysG]; decide)
@@ -223,17 +250,15 @@ theorem resolve_scan (d : Config) (H : List (Nat × Nat)) (capacity : Nat)
     simp only [Std.ExtHashMap.get?_eq_getElem?] at this
     exact this
   have name2 : OcamlrunName e2.σ.mem path := name1.transport fun k _ => mem2 _
-  have rWin (off w : Nat) (h : off + w ≤ 80) :
-      LogInW [⟨nativeFrameBase spo 80, spo.toNat⟩] [(resAt spo off, w, (0#64 : BitVec 64))] := by
-    have lower := frameO.lower
-    simp only [LogInW, InsideW, resAt_nat frameO (by omega : off ≤ 80), or_false, and_true]
-    unfold nativeFrameBase at *; omega
-  have rWinV (off w : Nat) (v : BitVec 64) (h : off + w ≤ 80) :
-      LogInW [⟨nativeFrameBase spo 80, spo.toNat⟩] [(resAt spo off, w, v)] := by
-    have lower := frameO.lower
-    simp only [LogInW, InsideW, resAt_nat frameO (by omega : off ≤ 80), or_false, and_true]
-    unfold nativeFrameBase at *; omega
-  have pathOut (k : Nat) (hk : k ≤ 8) : OutW [⟨nativeFrameBase spo 80, spo.toNat⟩] (path.toNat + k) :=
+  have rWin (off w : Nat) (h : off + w ≤ 48) :
+      LogInW [structWin spo] [(resAt spo off, w, (0#64 : BitVec 64))] := by
+    simp only [structWin, LogInW, InsideW, resAt_nat frameO (by omega : off ≤ 80), or_false, and_true]
+    omega
+  have rWinV (off w : Nat) (v : BitVec 64) (h : off + w ≤ 48) :
+      LogInW [structWin spo] [(resAt spo off, w, v)] := by
+    simp only [structWin, LogInW, InsideW, resAt_nat frameO (by omega : off ≤ 80), or_false, and_true]
+    omega
+  have pathOut (k : Nat) (hk : k ≤ 8) : OutW [structWin spo] (path.toNat + k) :=
     ⟨Or.inl (show path.toNat + k < nativeFrameBase spo 80 by omega), trivial⟩
   -- the last byte is not '/'
   have bLast : (e2.σ.mem[(path + 8#64 - 1#64).toNat]?).getD 0 = BitVec.ofNat 8 (byteVal WhileMinImage.argv0Chars 7) := by
@@ -262,10 +287,10 @@ theorem resolve_scan (d : Config) (H : List (Nat × Nat)) (capacity : Nat)
   have ready4 := ready3.stack_log p4 (by decide) (by simp only [keysG]; decide) (by decide)
     ((p4.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans ready3.stack)
     ((p4.toEffectPost.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans ready3.raReg) (by decide)
-    frameO (rWinV 36 4 _ (by decide))
+    frameO (structWin_widen frameO (rWinV 36 4 _ (by decide)))
   have carried4 := gholds_carry carried3 (p4.toEffectPost.gpr_frame (by decide))
     (by simp only [resolveCarried, keysG]; decide)
-  have mem4 (x : Nat) (out : OutW [⟨nativeFrameBase spo 80, spo.toNat⟩] x) :
+  have mem4 (x : Nat) (out : OutW [structWin spo] x) :
       (e4.σ.mem[x]?).getD 0 = (e2.σ.mem[x]?).getD 0 := by
     rw [p4.memory, frameOn_writeLog _ _ _ (rWinV 36 4 _ (by decide)) x out, p3.memory]; rfl
   have name4 : OcamlrunName e4.σ.mem path := name2.transport fun k hk => mem4 _ (pathOut k hk)
@@ -319,14 +344,14 @@ theorem resolve_scan (d : Config) (H : List (Nat × Nat)) (capacity : Nat)
   have ready7 := ready6.stack_log p7 (by decide) (by simp only [keysG]; decide) (by decide)
     ((p7.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans ready6.stack)
     ((p7.toEffectPost.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans ready6.raReg) (by decide)
-    frameO (rWin 44 4 (by decide))
+    frameO (structWin_widen frameO (rWin 44 4 (by decide)))
   have carried7 := gholds_carry carried6 (p7.toEffectPost.gpr_frame (by decide))
     (by simp only [resolveCarried, keysG]; decide)
-  have mem7 (x : Nat) (out : OutW [⟨nativeFrameBase spo 80, spo.toNat⟩] x) :
+  have mem7 (x : Nat) (out : OutW [structWin spo] x) :
       (e7.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0 := by
     rw [p7.memory, frameOn_writeLog _ _ _ (rWin 44 4 (by decide)) x out, B.memory, p5.memory,
       show writeLog e4.σ.mem [] = e4.σ.mem from rfl, mem4 x out, mem2,
-      p1.memory, frameOn_writeLog _ _ _ (resolveClearLog_inside frameO) x out]
+      p1.memory, frameOn_writeLog _ _ _ (resolveClearLog_struct frameO) x out]
   refine ⟨e7, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans run7))))), {
     ready := ready7
     pc := p7.pc
@@ -362,6 +387,13 @@ theorem FsSlotOne.transport {m m' : Std.ExtHashMap Nat (BitVec 8)} {node : BitVe
     rw [show slotOne + 16 = slotOne + 16 from rfl, word 16 (by decide)]
     exact l
 
+theorem resolveNoneLog_struct {spo d path len : BitVec 64} (frame : NativeFrame spo 80) :
+    LogInW [structWin spo] (resolveNoneLog spo d path len) := by
+  simp only [resolveNoneLog, structWin, LogInW, InsideW, resAt_nat frame (by decide : 4 ≤ 80),
+    resAt_nat frame (by decide : 16 ≤ 80), resAt_nat frame (by decide : 24 ≤ 80), resAt_nat frame (by decide : 0 ≤ 80),
+    or_false, and_true]
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> omega
+
 theorem resolveNoneLog_inside {spo d path len : BitVec 64} (frame : NativeFrame spo 80) :
     LogInW [⟨nativeFrameBase spo 80, spo.toNat⟩] (resolveNoneLog spo d path len) := by
   have lower := frame.lower
@@ -384,7 +416,7 @@ structure ResolveDone (H : List (Nat × Nat)) (capacity : Nat)
   ready : RuntimeReady H capacity (nativeStack spo 80) ra after
   slot : FsSlotOne after.σ.mem node
   name : OcamlrunName after.σ.mem path
-  kept : ∀ x, x < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ x →
+  kept : ∀ x, x < nativeFrameBase (resolveStack spo) 64 ∨ nativeFrameBase spo 80 + 48 ≤ x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   none : bytesT after.σ.mem (resAt spo 16) 8 = path
   kind : read4 after.σ.mem (resAt spo 0) = [2#8, 0#8, 0#8, 0#8]
@@ -431,11 +463,12 @@ theorem resolve_finish (e : Config) (H : List (Nat × Nat)) (capacity : Nat)
       omega
   have ready1 := ready.stack_log p1 (by decide) (by simp only [resolveLooped, keysG]; decide) (by decide)
     (gholds_lookup (n := 2) _ p1.regs rfl) (gholds_lookup (n := 1) _ p1.regs rfl) (by decide) frameR loopInside
-  have out1 (x : Nat) (h : x < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ x) :
+  have out1 (x : Nat) (h : x < nativeFrameBase (resolveStack spo) 64 ∨ nativeFrameBase spo 80 + 48 ≤ x) :
       (f1.σ.mem[x]?).getD 0 = (e.σ.mem[x]?).getD 0 := by
     rw [p1.memory, frameOn_writeLog _ _ _ loopInside x ⟨by
       simp only [nativeFrameBase, hO, hR] at h ⊢; omega, trivial⟩]
-  have pathLow (k : Nat) (hk : k ≤ 8) : path.toNat + k < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ path.toNat + k :=
+  have pathLow (k : Nat) (hk : k ≤ 8) :
+      path.toNat + k < nativeFrameBase (resolveStack spo) 64 ∨ nativeFrameBase spo 80 + 48 ≤ path.toNat + k :=
     Or.inl (by omega)
   have name1 : OcamlrunName f1.σ.mem path := name.transport fun k hk => out1 _ (pathLow k hk)
   obtain ⟨f2, run2, ⟨done2, ready2⟩⟩ := (strchr_ready f1 H capacity (resolveStack spo) _ path 8 ready1
@@ -481,7 +514,7 @@ theorem resolve_finish (e : Config) (H : List (Nat × Nat)) (capacity : Nat)
   have keep5 (n : Nat) (v : BitVec 64) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [8, 26, 9, 12, 11, 10] ++ [1])
       (hv : gprGet f4.σ n = some v) : gprGet f5.σ n = some v :=
     (p5.toEffectPost.gpr_frame (by decide) n lo hi out).trans hv
-  have memF5 (x : Nat) (h : x < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ x) :
+  have memF5 (x : Nat) (h : x < nativeFrameBase (resolveStack spo) 64 ∨ nativeFrameBase spo 80 + 48 ≤ x) :
       (f5.σ.mem[x]?).getD 0 = (e.σ.mem[x]?).getD 0 := by
     rw [p5.memory, show writeLog f4.σ.mem [] = f4.σ.mem from rfl, mem4, out1 x h]
   have slotLow (x : Nat) (hx : x < slotOne + 56) : x < nativeFrameBase (resolveStack spo) 64 := by
@@ -529,10 +562,10 @@ theorem resolve_finish (e : Config) (H : List (Nat × Nat)) (capacity : Nat)
   have childInside : LogInW [⟨nativeFrameBase (resolveStack spo) 64, (resolveStack spo).toNat⟩]
       (childLog (resolveStack spo) jal_800006b0_call.link 8#64 1#64 47#64 (nativeStack spo 80) 0#64 1#64) :=
     childLog_inside frame64
-  have mem7 (x : Nat) (out7 : x < nativeFrameBase spo 80 ∨ spo.toNat ≤ x)
+  have mem7 (x : Nat) (out7 : x < nativeFrameBase spo 80 ∨ nativeFrameBase spo 80 + 48 ≤ x)
       (out6 : x < nativeFrameBase (resolveStack spo) 64 ∨ (resolveStack spo).toNat ≤ x) :
       (f7.σ.mem[x]?).getD 0 = (f4.σ.mem[x]?).getD 0 := by
-    rw [p7.memory, frameOn_writeLog _ _ _ (resolveNoneLog_inside frameO) x ⟨out7, trivial⟩, p6.memory,
+    rw [p7.memory, frameOn_writeLog _ _ _ (resolveNoneLog_struct frameO) x ⟨out7, trivial⟩, p6.memory,
       frameOn_writeLog _ _ _ childInside x ⟨out6, trivial⟩, p5.memory]
     rfl
   -- the frame words, from both saves
@@ -582,7 +615,7 @@ theorem resolve_finish (e : Config) (H : List (Nat × Nat)) (capacity : Nat)
     (gholds_lookup (n := 2) _ p8.regs rfl) (gholds_lookup (n := 1) _ p8.regs rfl) aligned0 frameR
     (by simp only [LogInW])
   have mem8 : f8.σ.mem = f7.σ.mem := p8.memory
-  have back (x : Nat) (h : x < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ x) :
+  have back (x : Nat) (h : x < nativeFrameBase (resolveStack spo) 64 ∨ nativeFrameBase spo 80 + 48 ≤ x) :
       (f8.σ.mem[x]?).getD 0 = (e.σ.mem[x]?).getD 0 := by
     rw [mem8, mem7 x (by simp only [nativeFrameBase, hO, hR] at h ⊢; omega)
       (by simp only [nativeFrameBase, hO, hR] at h ⊢; omega), mem4, out1 x h]
@@ -631,7 +664,9 @@ structure ResolveOcamlrun (H : List (Nat × Nat)) (capacity : Nat)
   none : bytesT after.σ.mem (resAt spo 16) 8 = path
   kind : read4 after.σ.mem (resAt spo 0) = [2#8, 0#8, 0#8, 0#8]
   live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
-  above : ∀ x, spo.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  above : ∀ x, nativeFrameBase spo 80 + 48 ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  low : ∀ x, x < heapStart → ¬ allocGlobal x → OutW (fsWindows (resolveStack spo)) x →
+    (x < slotOne ∨ slotOne + 56 ≤ x) → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 theorem resolve_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (spo ra path s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 : BitVec 64)
@@ -697,8 +732,8 @@ theorem resolve_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge :
       rw [word_observed (m := d.σ.mem) _ (fun i hi => keptB _ (by
         simp only [nativeFrameBase, hO, baseO] at *; omega))]
       exact A.saved off value member) ready.aligned).run e ⟨B.pc, rfl⟩
-  have toC (x : Nat) (h1 : x < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ x)
-      (h2 : x < nativeFrameBase spo 80 ∨ spo.toNat ≤ x) : (after.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0 :=
+  have toC (x : Nat) (h1 : x < nativeFrameBase (resolveStack spo) 64 ∨ nativeFrameBase spo 80 + 48 ≤ x)
+      (h2 : x < nativeFrameBase spo 80 ∨ nativeFrameBase spo 80 + 48 ≤ x) : (after.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0 :=
     (C.kept x h1).trans (B.kept x h2)
   refine ⟨after, runA.trans (runB.trans runC), ⟨{
     node := A.node
@@ -719,5 +754,9 @@ theorem resolve_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge :
       unfold InExt at inside
       rw [toC x (Or.inl (by simp only [nativeFrameBase, hR, heapEnd] at *; omega))
         (Or.inl (by simp only [heapEnd, baseO] at *; omega)), A.live blk' h x (by unfold InExt; omega)]
-    above := fun x high => by rw [toC x (Or.inr high) (Or.inr high), A.above x (by rw [hO]; omega)] }⟩⟩
+    above := fun x high => by
+      rw [toC x (Or.inr high) (Or.inr high), A.above x (by rw [hO]; simp only [nativeFrameBase] at high; omega)]
+    low := fun x below global out apart => by
+      rw [toC x (Or.inl (by simp only [nativeFrameBase, hR, heapStart] at *; omega))
+        (Or.inl (by simp only [heapStart, baseO] at *; omega)), A.low x below global out apart] }⟩⟩
 end OCaml.Vm.Boot.Startup
