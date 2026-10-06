@@ -1,9 +1,11 @@
 import OCaml.Vm.Sim.A2TableRows
 import OCaml.Vm.Sim.AccRows
+import OCaml.Vm.Sim.BarrierRows
 import OCaml.Vm.Sim.CcallRows
 import OCaml.Vm.Sim.ControlRows
 import OCaml.Vm.Sim.EntryF1
 import OCaml.Vm.Sim.F1Frame
+import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.FieldRows
 import OCaml.Vm.Sim.OffsetRows
 import OCaml.Vm.Sim.OperandTableRows
@@ -28,22 +30,20 @@ theorem g1_capacity : StackCapacity Gc.g1Budget := by unfold StackCapacity; deci
 /-- **Program-level premises of the F1 rows** (each names the lane that
 supplies it in the row's file), and the rows still open. -/
 structure F1Premises (P : Prog) : Prop where
-  row_PUSHENVACC : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .PUSHENVACC
   extra : ExtraBounded P
   row_GRAB : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .GRAB
   row_CLOSURE : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .CLOSURE
   row_CLOSUREREC : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .CLOSUREREC
-  row_SETGLOBAL : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .SETGLOBAL
+  setglobal_barrier : GlobalBarrier Gc.f1Layout P
   row_MAKEBLOCK : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .MAKEBLOCK
   row_MAKEBLOCK1 : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .MAKEBLOCK1
   row_MAKEBLOCK2 : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .MAKEBLOCK2
   row_MAKEBLOCK3 : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .MAKEBLOCK3
-  row_GETFIELD : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .GETFIELD
-  row_SETFIELD0 : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .SETFIELD0
-  row_SETFIELD1 : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .SETFIELD1
-  row_SETFIELD2 : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .SETFIELD2
-  row_SETFIELD3 : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .SETFIELD3
-  row_SETFIELD : OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .SETFIELD
+  setfield0_barrier : FieldBarrierK Gc.f1Layout P .SETFIELD0 0 (0x800021bc#64) (0#64)
+  setfield1_barrier : FieldBarrierK Gc.f1Layout P .SETFIELD1 1 (0x800021a0#64) (8#64)
+  setfield2_barrier : FieldBarrierK Gc.f1Layout P .SETFIELD2 2 (0x80002184#64) (16#64)
+  setfield3_barrier : FieldBarrierK Gc.f1Layout P .SETFIELD3 3 (0x80002168#64) (24#64)
+  setfield_barrier : FieldBarrier Gc.f1Layout P
   values : ValuesInRange P
   exotic : SwitchExotic Gc.f1Layout P
   trapBounded : ∀ s, Reach P s → s.trap ≤ s.stack.length
@@ -105,7 +105,7 @@ theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)
     | .PUSHENVACC2, _ => pushenvacc2_row f1_runtimeFrame fits g1_capacity
     | .PUSHENVACC3, _ => pushenvacc3_row f1_runtimeFrame fits g1_capacity
     | .PUSHENVACC4, _ => pushenvacc4_row f1_runtimeFrame fits g1_capacity
-    | .PUSHENVACC, _ => pre.row_PUSHENVACC
+    | .PUSHENVACC, _ => pushenvacc_row f1_runtimeFrame fits g1_capacity
     | .PUSH_RETADDR, _ => push_retaddr_row f1_runtimeFrame fits g1_capacity
     | .APPLY, _ => apply_row f1_memoryStable f1_runtimeFrame fits g1_capacity
     | .APPLY1, _ => apply1_row f1_runtimeFrame fits g1_capacity
@@ -132,7 +132,7 @@ theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)
     | .PUSHGETGLOBAL, _ => pushgetglobal_row f1_runtimeFrame fits g1_capacity
     | .GETGLOBALFIELD, _ => getglobalfield_row f1_memoryStable
     | .PUSHGETGLOBALFIELD, _ => pushgetglobalfield_row f1_runtimeFrame fits g1_capacity
-    | .SETGLOBAL, _ => pre.row_SETGLOBAL
+    | .SETGLOBAL, _ => setglobal_row f1_memoryStable pre.setglobal_barrier
     | .ATOM0, _ => atom0_row f1_memoryStable
     | .ATOM, _ => atom_row f1_memoryStable
     | .PUSHATOM0, _ => pushatom0_row f1_runtimeFrame fits g1_capacity
@@ -146,13 +146,13 @@ theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)
     | .GETFIELD1, _ => getfield1_row f1_memoryStable
     | .GETFIELD2, _ => getfield2_row f1_memoryStable
     | .GETFIELD3, _ => getfield3_row f1_memoryStable
-    | .GETFIELD, _ => pre.row_GETFIELD
+    | .GETFIELD, _ => getfield_row f1_memoryStable
     | .GETFLOATFIELD, h => absurd h (by decide)
-    | .SETFIELD0, _ => pre.row_SETFIELD0
-    | .SETFIELD1, _ => pre.row_SETFIELD1
-    | .SETFIELD2, _ => pre.row_SETFIELD2
-    | .SETFIELD3, _ => pre.row_SETFIELD3
-    | .SETFIELD, _ => pre.row_SETFIELD
+    | .SETFIELD0, _ => setfield0_row f1_memoryStable fits g1_capacity pre.setfield0_barrier
+    | .SETFIELD1, _ => setfield1_row f1_memoryStable fits g1_capacity pre.setfield1_barrier
+    | .SETFIELD2, _ => setfield2_row f1_memoryStable fits g1_capacity pre.setfield2_barrier
+    | .SETFIELD3, _ => setfield3_row f1_memoryStable fits g1_capacity pre.setfield3_barrier
+    | .SETFIELD, _ => setfield_row f1_memoryStable fits g1_capacity pre.setfield_barrier
     | .SETFLOATFIELD, h => absurd h (by decide)
     | .VECTLENGTH, h => absurd h (by decide)
     | .GETVECTITEM, h => absurd h (by decide)
