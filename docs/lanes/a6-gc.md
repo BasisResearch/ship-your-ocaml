@@ -77,7 +77,7 @@ For other lanes:
 - bprime: `whileMin_fits`, `whileMin_gcSafe` for the `Halts` instance; transport
   `whileMin_g1Room` from the cut to the loop head through the prologue.
 
-Open: G2 (collector proper) resumes after F1; see entries below.
+Open: G2 (collector proper); status and next design step below. F1 asks from a1-arms/bprime are all landed (last: `72d88e40`).
 
 G2 progress after F1:
 - Fixed an unsatisfiable premise inherited from the WIP commit: the queued
@@ -119,10 +119,22 @@ Free-list placement (toward `OwnedFrame.targetOutside`/`payloadOutside`):
   route-independent preservation (static stores missing other slot heads,
   popped slot holding `next`), and `SmallListsIn.exact`: the actual
   `BestFitExact.effect` (plain, repair and empty routes) preserves it.
-- Next: compose with the allocation wrappers (`AllocWrapper`/`AllocLarge`
-  results placed by `small_result_placed`/`Split.placed`), carry
-  `SmallListsIn ∧ LeastIn` above the nursery through the copying loop, and
-  discharge `OwnedFrame.targetOutside`/`payloadOutside`.
+- Next (design): `OwnedFrame.targetOutside` needs the copying loop to know
+  where `q.target` came from; `Head` records nothing about it. Targets come
+  from the caller's first copy or from an earlier iteration's allocation
+  (`QueueAllocation`/`IterationLog.exactSize|large`). Plan: (1) carry
+  `SmallListsIn majorLo heapEnd ∧ LeastIn majorLo heapEnd` as the loop's
+  `observe` (memory-only; preserved per branch by `SmallListsIn.exact` and
+  `Split.placed`, other stores miss .bss and the free blocks); (2) add a
+  `targetIn : q.target ∈ [majorLo, heapEnd)` field to `IndexedHead`,
+  established by `small_result_placed`/`Split.placed` at each back edge and
+  queued exit; (3) derive `targetOutside`/`payloadOutside` from
+  `young_end ≤ majorLo` (`whileMin_free_above_nursery`/`whileMin_leastIn`).
+  Refinement needed first: the allocator's own initializing stores land
+  inside `[majorLo, heapEnd)` (in the block just popped), so `SmallChain.frame`
+  (stores outside the region) is too strong. Strengthen the list invariant
+  with pairwise-disjoint free blocks, and frame chains by "stores miss every
+  remaining free block's first word" instead.
 - Next: the
   general invariant over small lists and the large tree (every free
   block `FreeIn majorLo heap_end`), preserved by each `bf_allocate` path; then
