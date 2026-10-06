@@ -4,6 +4,7 @@ import OCaml.Vm.Primitives.DoubleAllocation
 import OCaml.Vm.Primitives.SymbolicAppend
 import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.Code.Caml_check_pending_actions
+import OCaml.Vm.Primitives.BlockPins
 import OCaml.Vm.Primitives.ExitPath.Effects
 import OCaml.Vm.Primitives.ArgvTupleFinished
 import OCaml.Vm.Primitives.Word32Access

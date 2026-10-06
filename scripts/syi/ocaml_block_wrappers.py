@@ -8,8 +8,11 @@ reloaded ra, the saved word. The spec of a block (`fast`) gives
 
 * `mem`: one `(address, mode)` per load/store in body order; mode `'window'`
   makes a window premise, `'global'` discharges a fixed RAM window by
-  `decide`, and `'view'` (a load after the block's own stores) reads through
-  the store log;
+  `decide`, and `'view'` (a load after all the block's stores) reads through
+  the store log. A window load after some of the block's stores reads the
+  caller's memory, with the premise that it misses those stores
+  (`OutLRange (log.take j) address width`). In an address, `@k` is the
+  value of the block's load k;
 * `log`: the store log, a Lean list of `WEntry` over `R`;
 * `taken`: the routed outcome of a branch (its condition becomes the premise
   `ok : guardB op v1 v2 = taken` over the block's output registers);
@@ -102,6 +105,8 @@ def _imm_facts(instrs):
     return sorted(facts)
 
 
+ENTRY_SIMP = ('List.take, wentryM, widthOfM, eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, '
+              'Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg')
 SIMP_ADDR = ('eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, '
              'Sail.BitVec.signExtend, BitVec.sub_eq_add_neg')
 
@@ -113,10 +118,24 @@ def emit_fast(E, b, name, regs, fast):
     assert len(specs) == len(mems), f'{name}: {len(mems)} accesses, {len(specs)} specs'
     stores = any(a[0] == 'store' for _, a in mems)
     m = 'c.σ.mem'
-    viewm = f'(writeLog m ({name}Log R []))'
-    assert not (stores and 'loads' in fast['log'] and any(mode == 'view' for _, mode in fast.get('mem', []))), \
-        f'{name}: a view load under a load-dependent log'
-    loads = [(addr, mode) for (i, a), (addr, mode) in zip(mems, specs) if a[0] == 'load']
+    loads = [(addr, mode, a[1]) for (i, a), (addr, mode) in zip(mems, specs) if a[0] == 'load']
+    views = [k for k, (_, mode, _) in enumerate(loads) if mode == 'view']
+    assert not views or all(mode != 'view' for _, mode, _ in loads[:views[0]]) and \
+        all(mode == 'view' for _, mode, _ in loads[views[0]:]), f'{name}: view loads must come last'
+    pre_n = views[0] if views else len(loads)
+
+    def view(mem):
+        pre = ', '.join(read(j, mem) for j in range(pre_n))
+        return f'(writeLog {mem} ({name}Log R [{pre}]))'
+
+    def sub(addr, mem):
+        """An address over `R`; `@k` is the value of the block's load k."""
+        return re.sub(r'@(\d+)', lambda g: f'(bytesVal .{loads[int(g.group(1))][2]} ({read(int(g.group(1)), mem)}))', addr)
+
+    def read(k, mem):
+        addr, mode, _ = loads[k]
+        return f'read8 {view(mem) if mode == "view" else mem} ({sub(addr, mem)}).toNat'
+
     if stores:
         E(f'def {name}Log (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry :=', '  ' + fast['log'], '')
         E(f'theorem {name}_log_eq (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :',
@@ -126,9 +145,10 @@ def emit_fast(E, b, name, regs, fast):
           '    lookupG, eraseG, stepLdsM, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, Nat.reduceAdd, wvalM,',
           '    Functions.sign_extend, Sail.BitVec.signExtend]',
           '  simp only [' + ', '.join(_imm_facts(b.instrs) + ['← BitVec.sub_eq_add_neg', 'BitVec.add_zero']) + ']',
-          f'  simp only [{name}Log, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD]', '')
+          f'  simp only [{name}Log, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,',
+          '    List.getElem?_tail, BitVec.zero_add]', '')
     E(f'def {name}_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=',
-      '  [' + ', '.join(f'read8 {viewm if mode == "view" else "m"} ({addr}).toNat' for addr, mode in loads) + ']', '')
+      '  [' + ', '.join(read(k, 'm') for k in range(len(loads))) + ']', '')
     L = f'({name}_loads {m} R)'
     log = f'{name}Log R {L}' if stores else None
     out = _items(regs)
@@ -150,9 +170,16 @@ def emit_fast(E, b, name, regs, fast):
         pc = f'0x{(_branch_target(term.word, term.addr) if taken else term.addr + 4):08x}#64'
     params = [f'(h : LeafInput (R 1) c) (regs : GHolds c.σ ({name}_input R))']
     windows, bullets = [], []
+    stored = 0
+    pure = False
+    pos_of = {k: b.instrs.index(i) for k, (i, _) in enumerate(mems)}
+    misses = {}
     for k, ((i, a), (addr, mode)) in enumerate(zip(mems, specs)):
         w = f'w{k}'
+        before = stored
+        stored += a[0] == 'store'
         typ = 'ReadWindow' if a[0] == 'load' else 'WriteWindow'
+        addr = sub(addr, m)
         if mode == 'global':
             proof = '⟨by decide, by decide, Or.inr (by decide)⟩' if a[0] == 'load' else '⟨by decide, by decide, by decide, by decide⟩'
             windows.append(f'  have {w} : {typ} ({addr}) {a[2]} := {proof}')
@@ -161,11 +188,22 @@ def emit_fast(E, b, name, regs, fast):
         addr_simp = f'      simp [{SIMP_ADDR}, {name}_input]'
         if a[1] == 'ld' and mode == 'view':
             bullets += [f'    · apply {w}.ld rfl', '      · ' + addr_simp.strip(),
-                        f'      · apply ArgvTuple.lpins8_of_view (m\' := writeLog c.σ.mem ({name}Log R []))',
+                        f'      · apply ArgvTuple.lpins8_of_view (m\' := {view(m)[1:-1]})',
                         f'        · simp [stepMemM, wentryM, widthOfM, {SIMP_ADDR}, {name}_input, writeLog, {name}Log]',
                         '        · rfl']
             continue
-        assert mode != 'view', f'{name}: view loads must be ld'
+        if a[0] == 'load' and mode != 'view' and before:
+            apart = f'a{k}'
+            params.append(f'({apart} : OutLRange ({log}) ({addr}).toNat {a[2]})')
+            misses[pos_of[k]] = f'fun _ => outLRange_of_eaddr (by simp [{SIMP_ADDR}, {name}_input, {name}_loads]) {apart}'
+            pure = True
+        if a[1] == 'lw' and mode == 'view':
+            bullets += [f'    · apply ExitPath.ReadWindow.lw {w} rfl', '      · ' + addr_simp.strip(),
+                        f'      · apply ExitPath.lpins4_of_view (m\' := {view(m)[1:-1]})',
+                        f'        · simp [stepMemM, wentryM, widthOfM, {SIMP_ADDR}, {name}_input, writeLog, {name}Log]',
+                        '        · rfl']
+            continue
+        assert mode != 'view', f'{name}: view loads must be ld or lw'
         head = {'ld': f'apply {w}.ld rfl ?_ (read8_pins _ _)',
                 'lbu': f'apply {w}.lbu rfl ?_ (read8_pins _ _)',
                 'lw': f'apply ExitPath.ReadWindow.lw {w} rfl ?_ (ExitPath.read8_pins4 _ _)',
@@ -182,9 +220,7 @@ def emit_fast(E, b, name, regs, fast):
         rs1, rs2 = (term.word >> 15) & 31, (term.word >> 20) & 31
         params.append(f'(ok : guardB .{op} ({val(rs1)}) ({val(rs2)}) = {"true" if fast.get("taken") else "false"})')
     if 'ra' in fast:
-        ra_addr, ra_mode = loads[fast['ra']]
-        ra_mem = f'(writeLog {m} ({name}Log R []))' if ra_mode == 'view' else m
-        params.append(f'(savedRa : bytesVal .ld (read8 {ra_mem} ({ra_addr}).toNat) = ra) (aligned : ra.toNat % 4 = 0)')
+        params.append(f'(savedRa : bytesVal .ld ({read(fast["ra"], m)}) = ra) (aligned : ra.toNat % 4 = 0)')
     term_expr = 'none' if kind in ('jal', 'jalrcall', 'fallthrough') else f'some {name}_term'
     writes = _writes(b.instrs)
     E(f'theorem {name}_fast (c : Config)' + (' (ra : BitVec 64)' if 'ra' in fast else '') + ' (R : Nat → BitVec 64)',
@@ -194,6 +230,15 @@ def emit_fast(E, b, name, regs, fast):
       *windows)
     if not b.instrs:
         E(f'  have access : AccessPlan c.σ.mem ({name}_input R) {L} {name}_body := trivial')
+    elif pure:
+        miss = ', '.join(misses.get(t, 'fun h => by simp [IsLoad] at h') for t in range(len(b.instrs)))
+        E(f'  have wl : wlogM {name}_body ({name}_input R) {L} = {log} := by rw [← {name}_log_eq R _]; rfl',
+          f'  have access : AccessPlan c.σ.mem ({name}_input R) {L} {name}_body := by',
+          '    apply accessPlan_of_pure',
+          f'    · simp only [AccessPure, {name}_body, {name}_loads]',
+          '      chain_facts True.intro', *['  ' + bl for bl in bullets],
+          f'    · rw [wl]; simp only [LoadMiss, {name}_body]',
+          f'      exact ⟨{miss}, trivial⟩')
     else:
         E(f'  have access : AccessPlan c.σ.mem ({name}_input R) {L} {name}_body := by',
           f'    simp only [AccessPlan, {name}_body, {name}_loads]',
@@ -230,5 +275,5 @@ def emit_fast(E, b, name, regs, fast):
     E(f'  · exact {name}_eval R _', '  · rfl', '  · decide', '')
 
 
-FAST_IMPORTS = ['OCaml.Vm.Primitives.ExitPath.Effects', 'OCaml.Vm.Primitives.ArgvTupleFinished',
+FAST_IMPORTS = ['OCaml.Vm.Primitives.BlockPins', 'OCaml.Vm.Primitives.ExitPath.Effects', 'OCaml.Vm.Primitives.ArgvTupleFinished',
                 'OCaml.Vm.Primitives.Word32Access']

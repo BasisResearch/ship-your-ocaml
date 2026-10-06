@@ -4,6 +4,7 @@ import OCaml.Vm.Primitives.DoubleAllocation
 import OCaml.Vm.Primitives.SymbolicAppend
 import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.Code.Caml_flush_partial
+import OCaml.Vm.Primitives.BlockPins
 import OCaml.Vm.Primitives.ExitPath.Effects
 import OCaml.Vm.Primitives.ArgvTupleFinished
 import OCaml.Vm.Primitives.Word32Access
@@ -1125,7 +1126,8 @@ theorem pro_log_eq (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
     lookupG, eraseG, stepLdsM, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, Nat.reduceAdd, wvalM,
     Functions.sign_extend, Sail.BitVec.signExtend]
   simp only [show BitVec.signExtend 64 0#12 = 0#64 by decide, show BitVec.signExtend 64 1824#12 = 1824#64 by decide, show BitVec.signExtend 64 24#12 = 24#64 by decide, show BitVec.signExtend 64 32#12 = 32#64 by decide, show BitVec.signExtend 64 40#12 = 40#64 by decide, show BitVec.signExtend 64 4016#12 = -80#64 by decide, show BitVec.signExtend 64 4095#12 = -1#64 by decide, show BitVec.signExtend 64 48#12 = 48#64 by decide, show BitVec.signExtend 64 56#12 = 56#64 by decide, show BitVec.signExtend 64 64#12 = 64#64 by decide, show BitVec.signExtend 64 72#12 = 72#64 by decide, ← BitVec.sub_eq_add_neg, BitVec.add_zero]
-  simp only [proLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD]
+  simp only [proLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,
+    List.getElem?_tail, BitVec.zero_add]
 
 def pro_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
   []
@@ -1591,7 +1593,8 @@ theorem adjust_log_eq (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
     lookupG, eraseG, stepLdsM, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, Nat.reduceAdd, wvalM,
     Functions.sign_extend, Sail.BitVec.signExtend]
   simp only [show BitVec.signExtend 64 8#12 = 8#64 by decide, ← BitVec.sub_eq_add_neg, BitVec.add_zero]
-  simp only [adjustLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD]
+  simp only [adjustLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,
+    List.getElem?_tail, BitVec.zero_add]
 
 def adjust_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
   [read8 m (R 8 + 8#64).toNat]
@@ -1670,7 +1673,8 @@ theorem shift_log_eq (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
     lookupG, eraseG, stepLdsM, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, Nat.reduceAdd, wvalM,
     Functions.sign_extend, Sail.BitVec.signExtend]
   simp only [show BitVec.signExtend 64 24#12 = 24#64 by decide, ← BitVec.sub_eq_add_neg, BitVec.add_zero]
-  simp only [shiftLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD]
+  simp only [shiftLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,
+    List.getElem?_tail, BitVec.zero_add]
 
 def shift_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
   [read8 m (R 8 + 24#64).toNat]

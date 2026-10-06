@@ -72,6 +72,18 @@ theorem ReadWindow.lw {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs}
 theorem read8_pins4 (m : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) : LPins4 m a (read8 m a) := by
   simp [LPins4, read8]
 
+/-- Pins carry across an equal memory. -/
+theorem lpins8_transport {m m' : Std.ExtHashMap Nat (BitVec 8)} {a : Nat} {bs : List (BitVec 8)}
+    (memory : m = m') (pins : LPins8 m' a bs) : LPins8 m a bs := memory ▸ pins
+
+theorem lpins4_transport {m m' : Std.ExtHashMap Nat (BitVec 8)} {a : Nat} {bs : List (BitVec 8)}
+    (memory : m = m') (pins : LPins4 m' a bs) : LPins4 m a bs := memory ▸ pins
+
+/-- Pins for a word load chosen as the observation of a predicted memory. -/
+theorem lpins4_of_view {m m' : Std.ExtHashMap Nat (BitVec 8)} {a : Nat} {bs : List (BitVec 8)}
+    (memory : m = m') (bytes : bs = read8 m' a) : LPins4 m a bs := by
+  subst memory bytes; exact read8_pins4 _ _
+
 def verbGc : BitVec 64 := BitVec.ofNat 64 Layout.sym_caml_verb_gc
 def cleanupOnExit : BitVec 64 := BitVec.ofNat 64 Layout.sym_caml_cleanup_on_exit
 def atexitList : BitVec 64 := BitVec.ofNat 64 Layout.sym_atexit
