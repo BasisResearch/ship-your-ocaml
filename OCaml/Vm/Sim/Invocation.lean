@@ -80,6 +80,13 @@ theorem Invocation.frame_read {D : InvocationData} {c c' : Config}
   h.frame (log := []) ⟨trivial, fun _ _ => trivial⟩
     (fun x _ => by simp only [byte, memory]) stack
 
+/-- Free native stack kept below the interpreter frame, for the C paths
+(primitives, `caml_raise`, the exit) that push frames under it. -/
+def nativeHeadroom : Nat := 4096
+
+/-- `raise_buf`, the interpreter's jump buffer, in its native frame. -/
+def raiseBufOffset : Nat := 208
+
 /-- What the exits (STOP, caml_sys_exit) need from the entry snapshot: the
 native frames lie above the allocator arena and below the stack top, and the
 saved return addresses of caml_interprete (into caml_main) and of caml_main
@@ -94,6 +101,14 @@ structure NativeValid (D : InvocationData) : Prop where
   /-- the root invocation's saved `initial_sp_offset` source (`stack_high`, at
   sp+0) equals its saved `extern_sp` (sp+8): the VM stack was empty at entry -/
   rootSaved : ∀ c, Invocation D c → word c D.nativeSp = word c (D.nativeSp + 8)
+  /-- free native stack below the interpreter frame, above the arena -/
+  headroom : Vsa.Sim.DlHeap.heapEnd + nativeHeadroom ≤ D.nativeSp
+  /-- `raise_buf` (filled by entry's setjmp) returns to caml_interprete's resume -/
+  jumpRa : ∀ c, Invocation D c →
+    word c (D.nativeSp + raiseBufOffset + Layout.jumpSaveOffset 1) = 0x80001e80#64
+  /-- … with the interpreter frame's native sp -/
+  jumpSp : ∀ c, Invocation D c →
+    word c (D.nativeSp + raiseBufOffset + Layout.jumpSaveOffset 2) = BitVec.ofNat 64 D.nativeSp
 
 /-- The native invocation at a loop-head configuration: some entry snapshot
 that is intact and valid (`Running.native`). -/

@@ -70,7 +70,7 @@ structure EntryFrame (sp : Nat) : Prop where
 theorem EntryFrame.of_caller {P : OCaml.Bytecode.Prog} {c : Config} {pl : OCaml.Vm.Place}
     {cp : OCaml.Vm.ChanPlace} {high sp : Nat} {callerRegs mainSaved : Nat → BitVec 64}
     (h : OCaml.Vm.InterpCaller P c pl cp high sp callerRegs mainSaved) : EntryFrame sp :=
-  ⟨h.frameLow, h.frameHigh, h.aligned⟩
+  ⟨Nat.le_trans (Nat.le_add_right _ _) h.frameLow, h.frameHigh, h.aligned⟩
 
 theorem EntryFrame.nat {sp : Nat} (h : EntryFrame sp) :
     0x86800210 ≤ sp ∧ sp + 112 ≤ 0x88000000 ∧ sp % 16 = 0 := by

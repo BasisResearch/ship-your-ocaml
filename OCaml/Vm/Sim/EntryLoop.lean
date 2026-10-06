@@ -188,7 +188,7 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
   -- the native invocation fixed here
   have native : NativePlaced c5 := by
     refine ⟨⟨sp - Layout.interpFrameBytes, word c Layout.sym_Caml_state, fun a => byte c5 a⟩,
-      ⟨p.stack, dom5, fun _ _ _ _ => rfl⟩, ⟨?_, ?_, ?_, ?_, ?_, ?_⟩⟩
+      ⟨p.stack, dom5, fun _ _ _ _ => rfl⟩, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩⟩
     · dsimp only; simp only [Layout.interpFrameBytes, Vsa.Sim.DlHeap.heapEnd]; omega
     · dsimp only; simp only [Layout.interpFrameBytes, Layout.camlMainFrameBytes, Layout.sym_stack_top]; omega
     · dsimp only; simp only [Layout.interpFrameBytes]; omega
@@ -225,6 +225,33 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
       apply BitVec.eq_of_toNat_eq
       simp only [domainField]
       rw [h.stackHigh, h.externSp]
+    · have low := caller.frameLow
+      rw [Nat.add_right_comm] at low
+      exact Nat.le_sub_of_add_le low
+    · intro c' inv
+      have e := inv.word_eq (c := c5) (fun _ => rfl) (r := (200, 440)) (off := 8) (by decide) (by decide)
+      rw [Nat.add_assoc, show raiseBufOffset + Layout.jumpSaveOffset 1 = 200 + 8 from rfl,
+        ← Nat.add_assoc]
+      rw [e, word, p.memory]
+      have ra := OCaml.Vm.Gc.word_writeLog_at c.σ.mem (entryLog sp callerRegs (BitVec.ofNat 64 pl.codeBase) c)
+        19 (sp - Layout.interpFrameBytes + 200 + 8) 0x80001e80#64
+        (by simp only [entryLog, entrySaveLog, entryPrepLog, setjmpLog, entryBuffer, Layout.interpSavedRegs,
+          List.map, List.cons_append, List.nil_append, List.getElem?_cons_succ, List.getElem?_cons_zero,
+          Nat.add_zero, Option.some.injEq, Prod.mk.injEq, and_true] <;> omega)
+        (by log_out)
+      exact ra
+    · intro c' inv
+      have e := inv.word_eq (c := c5) (fun _ => rfl) (r := (200, 440)) (off := 112) (by decide) (by decide)
+      rw [Nat.add_assoc, show raiseBufOffset + Layout.jumpSaveOffset 2 = 200 + 112 from rfl,
+        ← Nat.add_assoc]
+      rw [e, word, p.memory]
+      have spw := OCaml.Vm.Gc.word_writeLog_at c.σ.mem (entryLog sp callerRegs (BitVec.ofNat 64 pl.codeBase) c)
+        32 (sp - Layout.interpFrameBytes + 200 + 112) (BitVec.ofNat 64 (sp - Layout.interpFrameBytes))
+        (by simp only [entryLog, entrySaveLog, entryPrepLog, setjmpLog, entryBuffer, Layout.interpSavedRegs,
+          List.map, List.cons_append, List.nil_append, List.getElem?_cons_succ, List.getElem?_cons_zero,
+          Nat.add_zero, Option.some.injEq, Prod.mk.injEq, and_true] <;> omega)
+        (by log_out)
+      exact spw
   -- the runtime invariant through entry's windows
   have platform : PlatformOk L.runtimeOk c5 :=
     ⟨p.good, p.image, stable c c5 (by rw [p.memory]; exact frameOn_writeLog _ _ _ (logInW_of_cover cover))

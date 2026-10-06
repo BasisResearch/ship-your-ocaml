@@ -2,6 +2,7 @@ import OCaml.Vm.Primitives.MemoryFrame
 import OCaml.Vm.Sim.WriteGeometry
 import Vsa.Sim.DlHeap
 import Vsa.Sim.Boot.Bytes
+import OCaml.Vm.Sim.Invocation
 
 /-!
 # `caml_interprete`'s caller at the Layer A cut
@@ -45,7 +46,7 @@ structure InterpCaller (P : Prog) (c : Config) (pl : Place) (cp : ChanPlace) (hi
   /-- `sp` is the caller's native stack pointer -/
   stack : gpr c 2 = some (BitVec.ofNat 64 sp)
   /-- the native frames lie above the allocator arena and below the stack top -/
-  frameLow : Vsa.Sim.DlHeap.heapEnd + interpFrame ≤ sp
+  frameLow : Vsa.Sim.DlHeap.heapEnd + interpFrame + OCaml.Vm.Sim.nativeHeadroom ≤ sp
   frameHigh : sp + Layout.camlMainFrameBytes ≤ Layout.sym_stack_top
   aligned : sp % 16 = 0
   /-- caml_main's saved registers `mainSaved`, with its own return into `main` -/
