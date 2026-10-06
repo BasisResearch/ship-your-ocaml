@@ -326,6 +326,7 @@ import OCaml.Vm.Primitives.Console.Runtime
 import OCaml.Vm.Primitives.ChannelFrame
 import OCaml.Vm.Sim.PrimMlFlush
 import OCaml.Vm.Sim.PrimMlOutputChar
+import OCaml.Vm.Sim.PrimConsoleReturns
 import OCaml.Vm.Primitives.Flush.MlOutput
 import OCaml.Vm.Sim.PrimMlOutput
 import OCaml.Vm.Primitives.Console.Geometry
@@ -5361,6 +5362,24 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ob_loop
 #print axioms OCaml.Vm.Sim.ob_bytes
 #print axioms OCaml.Vm.ChanAt.of_bytes
-#print axioms VsaIris.Sym.svf_convL
-#print axioms VsaIris.Sym.svf_intL
-#print axioms VsaIris.Sym.svf_iterLD
+#print axioms OCaml.Vm.Sim.consoleLog_static
+#print axioms OCaml.Vm.Sim.consoleLog_arena
+#print axioms OCaml.Vm.Sim.consoleStatics
+#print axioms OCaml.Vm.Sim.console_outside
+#print axioms OCaml.Vm.Sim.console_bindings
+#print axioms OCaml.Vm.Sim.console_loopGeometry
+#print axioms OCaml.Vm.Sim.console_callee_summary
+#print axioms OCaml.Vm.Sim.flushChan_open
+#print axioms OCaml.Vm.Sim.console_site
+#print axioms OCaml.Vm.Sim.prim_caml_ml_output_char_returns
+#print axioms OCaml.Vm.Sim.prim_caml_ml_flush_returns
+#print axioms OCaml.Vm.Sim.output_semantics
+#print axioms OCaml.Vm.Sim.mapM_id_get
+#print axioms OCaml.Vm.Sim.slice_bytes
+#print axioms OCaml.Vm.Sim.ObInput.jump
+#print axioms OCaml.Vm.Sim.ObModel.jump
+#print axioms OCaml.Vm.Sim.ConsoleRet.jump
+#print axioms OCaml.Vm.Sim.intArg_some
+#print axioms OCaml.Vm.Sim.byteSlice_ptr
+#print axioms OCaml.Vm.Sim.toInt_toNat_nonneg
+#print axioms OCaml.Vm.Sim.output_framed

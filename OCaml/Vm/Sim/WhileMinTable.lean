@@ -1,6 +1,8 @@
 import OCaml.Vm.Sim.F1Headline
 import OCaml.Programs.WhileMinShape
 import OCaml.Vm.Sim.WhileMinCalls
+import OCaml.Vm.Sim.F1Console
+import OCaml.Vm.Sim.PrimConsoleReturns
 import OCaml.Vm.Sim.PrimFreshOoId
 import OCaml.Vm.Sim.PrimStringLength
 
@@ -18,9 +20,7 @@ structure WhileMinOpen : Prop where
   libHeap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered
   setglobal_barrier : GlobalBarrier Gc.f1Layout OCaml.Programs.whileMin
   ml_open_descriptor_out_c_call1 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0 "caml_ml_open_descriptor_out"
-  ml_flush_c_call1 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0 "caml_ml_flush"
   format_int_c_call2 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL2 (0x80003004#64) 1 "caml_format_int"
-  ml_output_char_c_call2 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL2 (0x80003004#64) 1 "caml_ml_output_char"
   ml_output_c_call4 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL4 (0x80002f40#64) 3 "caml_ml_output"
 
 theorem whileMin_premises (o : WhileMinOpen) :
@@ -37,12 +37,12 @@ theorem whileMin_premises (o : WhileMinOpen) :
     · exact prim_caml_fresh_oo_id_returns f1_counterStable
     · exact o.ml_open_descriptor_out_c_call1
     · exact prim_caml_ml_string_length_returns f1_memoryStable
-    · exact o.ml_flush_c_call1
+    · exact prim_caml_ml_flush_returns f1_console_stable Gc.f1_consoleRuntime OCaml.Programs.whileMin_goodF1.consoles
   c_call2_returns _ := whileMin_ccallReturns (by decide) fun _ h => by
     simp only [OCaml.Programs.whileMinCalls, List.mem_cons, List.mem_nil_iff, or_false] at h
     rcases h with rfl | rfl
     · exact o.format_int_c_call2
-    · exact o.ml_output_char_c_call2
+    · exact prim_caml_ml_output_char_returns f1_console_stable Gc.f1_consoleRuntime OCaml.Programs.whileMin_goodF1.consoles
   c_call3_returns h := absurd h (by decide)
   c_call4_returns _ := whileMin_ccallReturns (by decide) fun _ h => by
     simp only [OCaml.Programs.whileMinCalls, List.mem_cons, List.mem_nil_iff, or_false] at h

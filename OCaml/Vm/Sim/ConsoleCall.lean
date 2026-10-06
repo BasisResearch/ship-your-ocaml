@@ -1,5 +1,6 @@
 import OCaml.Vm.Sim.CcallNames
 import OCaml.Vm.Sim.CcallWriting
+import OCaml.Vm.Sim.LoopGeometry
 import OCaml.Vm.Primitives.ChannelFrame
 import OCaml.Vm.Primitives.Console.Geometry
 
@@ -323,5 +324,219 @@ theorem _root_.OCaml.Vm.ChanAt.of_bytes {c e : Config} {ch : Nat} {chn : Chan} (
     have bl := F.bufferLe; simp only [ioBufferSize] at bl
     rw [keep _ (by omega) (by omega)]
     simpa [chanOffBuff] using F.bytes i b hb
+
+/-- A static range apart from the errno words misses the console footprint. -/
+theorem consoleLog_static {nsp ch A n : Nat} (hA : A + n ≤ 0x8007d138)
+    (er : A + n ≤ 0x80064d48 ∨ 0x80064d48 + 4 ≤ A) (im : A + n ≤ 0x80064668 ∨ 0x80064668 + 4 ≤ A)
+    (chl : 0x8007d138 ≤ ch) (nl : 0x8007d138 + 512 ≤ nsp) : OutLRange (consoleLog nsp ch) A n := by
+  simp only [consoleLog, OutLRange, ioBufferSize, Layout.sym_errno, Layout.sym_impure_data]
+  exact ⟨by omega, er, im, by omega, by omega, by omega, trivial⟩
+
+/-- A range in the arena, apart from the channel's whole record, misses the
+console footprint. -/
+theorem consoleLog_arena {nsp ch A n : Nat} (lo : 0x8007d138 ≤ A) (hi : A + n ≤ 0x86800000)
+    (apart : A + n ≤ ch ∨ ch + 65608 ≤ A) (nl : 0x86800000 + 512 ≤ nsp) : OutLRange (consoleLog nsp ch) A n := by
+  simp only [consoleLog, OutLRange, ioBufferSize, Layout.sym_errno, Layout.sym_impure_data]
+  exact ⟨by omega, by omega, by omega, by omega, by omega, by omega, trivial⟩
+
+/-- The static addresses the console separation compares, as numerals. -/
+structure ConsoleStatics : Prop where
+  bss : Layout.sym_bss_end = 0x8007d138
+  heap : Vsa.Sim.DlHeap.heapEnd = 0x86800000
+  state : Layout.sym_Caml_state = 0x80064d08
+  globals : Layout.sym_caml_global_data = 0x800647e8
+  atoms : Layout.sym_caml_atom_table = 0x800649a0
+  code : Layout.sym_caml_start_code = 0x80064980
+  prims : Layout.sym_caml_prim_table + Layout.off_prim_contents = 0x8006c0c0
+  ooId : Layout.sym_oo_last_id = 0x80064898
+  domain : Layout.domainStateBytes = 928
+  stackHigh : Layout.off_stack_high = 144
+  trapsp : Layout.off_trapsp = 168
+  stack : Layout.stackBytes = 32768
+  record : chanOffBuff + ioBufferSize = 65608
+
+theorem consoleStatics : ConsoleStatics := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-- **The console footprint misses the represented payload** (every channel
+record but the written one included). -/
+theorem console_outside {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high nsp id ch : Nat} {chn : Chan} (g : StackGeometry P s c pl cp high)
+    (stack : sp + 8 * s.stack.length = high) (low : high - Layout.stackBytes ≤ sp)
+    (nl : Vsa.Sim.DlHeap.heapEnd + 512 ≤ nsp) (chan : s.world.chans[id]? = some chn) (record : cp id = some ch) :
+    PayloadChanOutside (consoleLog nsp ch) P s c pl cp sp id := by
+  have K := consoleStatics
+  have chl := g.channelLow id chn ch chan record
+  rw [K.heap] at nl; rw [K.bss] at chl; rw [K.stack] at low
+  have nl' : 0x8007d138 + 512 ≤ nsp := by omega
+  have stat := fun (A : Nat) (hA : A + 8 ≤ 0x8007d138) (er : A + 8 ≤ 0x80064d48 ∨ 0x80064d48 + 4 ≤ A)
+      (im : A + 8 ≤ 0x80064668 ∨ 0x80064668 + 4 ≤ A) => consoleLog_static (nsp := nsp) (ch := ch) hA er im chl nl'
+  have dl := g.domainLow; have da := g.domainArena
+  have dc := (g.domainChannels id chn ch chan record).1
+  rw [K.bss] at dl; rw [K.domain, K.heap] at da; rw [K.domain, K.record] at dc; dsimp only at dc
+  have dom := fun (off : Nat) (h : off + 8 ≤ 928) =>
+    consoleLog_arena (n := 8) (nsp := nsp) (ch := ch) (A := (word c Layout.sym_Caml_state).toNat + off)
+      (by omega) (by omega) (by omega) nl
+  refine ⟨by rw [K.state]; exact stat _ (by omega) (by omega) (by omega),
+    by rw [K.stackHigh]; exact dom _ (by omega), by rw [K.trapsp]; exact dom _ (by omega),
+    by rw [K.code]; exact stat _ (by omega) (by omega) (by omega),
+    by rw [K.atoms]; exact stat _ (by omega) (by omega) (by omega),
+    by rw [K.globals]; exact stat _ (by omega) (by omega) (by omega), ?_, ?_, ?_, ?_,
+    by rw [K.ooId]; exact stat _ (by omega) (by omega) (by omega)⟩
+  · intro i w hw
+    have bound : i < P.code.size := (Array.getElem?_eq_some_iff.1 hw).1
+    have cl := g.codeLow; have ca := g.codeArena
+    have cc := (g.channelCode id chn ch chan record).1
+    rw [K.bss] at cl; rw [K.heap] at ca; rw [K.record] at cc; dsimp only at cc
+    exact consoleLog_arena (by omega) (by omega) (by omega) nl
+  · intro i v hv
+    have bound := (List.getElem?_eq_some_iff.1 hv).1
+    have sc := (g.channels id chn ch chan record).1
+    have st := g.statics; have ar := g.arena
+    simp only [stackWindow] at sc
+    rw [K.stack, K.record] at sc; rw [K.bss, K.stack] at st; rw [K.heap] at ar
+    exact consoleLog_arena (by omega) (by omega) (by omega) nl
+  · intro l a o _ placed object
+    have hl := g.heapLow l a o placed object
+    have ha := g.heapArena l a o placed object
+    have hc := (g.heapChannels l a o placed object id chn ch chan record).1
+    rw [K.bss] at hl; rw [K.heap] at ha; rw [K.record] at hc; dsimp only at hc
+    exact ⟨consoleLog_arena (by omega) (by omega) (by omega) nl, consoleLog_arena (by omega) (by omega) (by omega) nl⟩
+  · intro id' ch' a ne hch hcp
+    have l' := g.channelLow id' ch' a hch hcp
+    have a' := g.channelArena id' ch' a hch hcp
+    have ap := g.channelsApart id' id ch' chn a ch ne hch chan hcp record
+    rw [K.bss] at l'; rw [K.heap, K.record] at a'; rw [K.record] at ap ⊢
+    exact consoleLog_arena l' (by omega) ap nl
+
+/-- **The console footprint misses the primitive bindings.** -/
+theorem console_bindings {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high nsp id ch : Nat} {chn : Chan} (g : StackGeometry P s c pl cp high)
+    (nl : Vsa.Sim.DlHeap.heapEnd + 512 ≤ nsp) (chan : s.world.chans[id]? = some chn) (record : cp id = some ch) :
+    BindingsOutside (consoleLog nsp ch) P c := by
+  have K := consoleStatics
+  have chl := g.channelLow id chn ch chan record
+  rw [K.heap] at nl; rw [K.bss] at chl
+  refine ⟨by rw [K.prims]; exact consoleLog_static (by omega) (by omega) (by omega) chl (by omega),
+    fun i name hi => ?_⟩
+  have pl' := g.primsLow i name hi
+  have pa := g.primsArena i name hi
+  have cp' := (g.channelPrims id chn ch chan record i name hi).1
+  rw [K.bss] at pl'; rw [K.heap] at pa; rw [K.record] at cp'; dsimp only at cp'
+  exact consoleLog_arena (by omega) pa (by omega) nl
+
+/-- **The loop geometry after a console primitive**: the heap is kept, only
+channel `id` changes, and memory changes only in the console footprint. -/
+theorem console_loopGeometry {L : OCaml.Layout} {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
+    {cp : ChanPlace} {high nsp id ch : Nat} {chn chn' : Chan} (g : OCaml.LoopGeometry L P s c pl cp high)
+    (heap : s'.heap = s.heap) (chans : s'.world.chans = s.world.chans.set id chn')
+    (chan : s.world.chans[id]? = some chn) (record : cp id = some ch)
+    (nl : Vsa.Sim.DlHeap.heapEnd + 512 ≤ nsp)
+    (memory : ∀ x, OutL (consoleLog nsp ch) x → byte c' x = byte c x) :
+    OCaml.LoopGeometry L P s' c' pl cp high := by
+  have SG := g.toArmGeometry.toStackGeometry
+  have K := consoleStatics
+  have chl := SG.channelLow id chn ch chan record
+  have nl0 := nl
+  rw [K.heap] at nl; rw [K.bss] at chl
+  have kept : ∀ a, OutLRange (consoleLog nsp ch) a 8 → word c' a = word c a :=
+    fun a out => Reloc.bytesT_congr (copied_of_outsideLog memory out)
+  have stat := fun (A : Nat) (hA : A + 8 ≤ 0x8007d138) (er : A + 8 ≤ 0x80064d48 ∨ 0x80064d48 + 4 ≤ A)
+      (im : A + 8 ≤ 0x80064668 ∨ 0x80064668 + 4 ≤ A) =>
+    kept A (consoleLog_static (nsp := nsp) (ch := ch) hA er im chl (by omega))
+  have domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state := by
+    rw [K.state]; exact stat _ (by omega) (by omega) (by omega)
+  have dl := SG.domainLow; have da := SG.domainArena
+  have dc := (SG.domainChannels id chn ch chan record).1
+  rw [K.bss] at dl; rw [K.domain, K.heap] at da; rw [K.domain, K.record] at dc; dsimp only at dc
+  have field : ∀ off, off + 8 ≤ 928 → word c' ((word c Layout.sym_Caml_state).toNat + off) =
+      word c ((word c Layout.sym_Caml_state).toNat + off) := fun off h =>
+    kept _ (consoleLog_arena (n := 8) (nsp := nsp) (ch := ch) (A := (word c Layout.sym_Caml_state).toNat + off)
+      (by omega) (by omega) (by omega) nl)
+  refine g.transport_ids (fun l o' h => ⟨o', by rw [← heap]; exact h, rfl⟩) ?_ domain
+    (by rw [K.prims]; exact stat _ (by omega) (by omega) (by omega))
+    (by simp only [runtimeFields, domainWord]; rw [domain, field _ (by rw [show Layout.off_young_limit = 0 from rfl]; omega)])
+    (by simp only [runtimeFields, domainWord]; rw [domain, field _ (by rw [show Layout.off_young_ptr = 8 from rfl]; omega)])
+    (by rw [show Layout.sym_caml_all_opened_channels = 0x80064b40 from rfl]; exact stat _ (by omega) (by omega) (by omega))
+    ?_ (by rw [heap])
+  · intro id'
+    rw [chans]
+    by_cases e : id' = id
+    · subst e; obtain ⟨hlt, -⟩ := List.getElem?_eq_some_iff.mp chan
+      simp [List.getElem?_set_self hlt, chan]
+    · rw [List.getElem?_set_ne (Ne.symm e)]
+  · intro id' ch' a hch hcp
+    by_cases e : id' = id
+    · subst e
+      rw [record] at hcp; cases hcp
+      have ca := SG.channelArena id' chn ch chan record
+      rw [K.heap, K.record] at ca
+      refine kept _ ?_
+      simp only [consoleLog, OutLRange, ioBufferSize, Gc.chanOffNext, Layout.sym_errno, Layout.sym_impure_data]
+      exact ⟨by omega, by omega, by omega, by omega, by omega, by omega, trivial⟩
+    · have l' := SG.channelLow id' ch' a hch hcp
+      have a' := SG.channelArena id' ch' a hch hcp
+      have ap := SG.channelsApart id' id ch' chn a ch e hch chan hcp record
+      rw [K.bss] at l'; rw [K.heap, K.record] at a'; rw [K.record] at ap
+      exact kept _ (consoleLog_arena (by simp only [Gc.chanOffNext]; omega) (by simp only [Gc.chanOffNext]; omega)
+        (by simp only [Gc.chanOffNext]; omega) nl)
+
+/-- **A console primitive's C_CALL return**: its framed summary, the saved
+C-call frame kept outside the console footprint, the loop geometry
+transported. -/
+theorem console_callee_summary {L : OCaml.Layout} {P : Prog} {op : Opcode} {s : St} {c0 c : Config}
+    {pl : Place} {cp : ChanPlace} {sp high table entry : Nat} {value env ra result : BitVec 64} {index : BitVec 32}
+    {name : String} {args : List Val} {v : Val} {heap : Heap} {world : World} {D : InvocationData}
+    {l a id ch : Nat} {chn chn' : Chan}
+    (ready : CcallReady op L P s c0 pl cp sp high (domainAt c0) table entry value env index name)
+    (setup : CcallSetupPost ra args L P s pl cp sp high (domainAt c0) entry env c)
+    (inv : Invocation D c) (valid : NativeValid D) (arg : ChannelArg s c pl cp l a id ch chn)
+    (heapEq : heap = s.heap) (chans : world.chans = s.world.chans.set id chn')
+    (S : FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
+      (FramedPrimitivePost L.runtimeOk P s pl cp sp high name args v result heap world
+        (consoleLog D.nativeSp ch) c ra)) :
+    FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
+      (CcallReturn ra L P {s with pc := s.pc + 2, accu := v, heap := heap, world := world} pl cp sp high
+        (BitVec.ofNat 64 (domainAt c0)) (BitVec.ofNat 64 (sp - 16)) result env) := by
+  have K := consoleStatics
+  have SG0 := ready.geometry.toArmGeometry.toStackGeometry
+  have hr := valid.headroom
+  rw [show nativeHeadroom = 4096 from rfl] at hr
+  have nl : Vsa.Sim.DlHeap.heapEnd + 512 ≤ D.nativeSp := Nat.le_trans (Nat.add_le_add_left (by omega) _) hr
+  have nl' := nl; rw [K.heap] at nl'
+  have chl := SG0.channelLow id chn ch arg.chan arg.record
+  have ca := SG0.channelArena id chn ch arg.chan arg.record
+  rw [K.bss] at chl; rw [K.heap, K.record] at ca
+  have dl := SG0.domainLow; have da := SG0.domainArena
+  have dc := (SG0.domainChannels id chn ch arg.chan arg.record).1
+  rw [K.bss] at dl; rw [K.domain, K.heap] at da; rw [K.domain, K.record] at dc; dsimp only at dc
+  have dn : (word c0 Layout.sym_Caml_state).toNat < 2 ^ 64 := (word c0 Layout.sym_Caml_state).isLt
+  have hs := setup.input.data.stack.1
+  have fits := ready.stackFits
+  have sc := (SG0.channels id chn ch arg.chan arg.record).1
+  have st := SG0.statics; have ar := SG0.arena
+  simp only [stackWindow] at sc
+  rw [K.stack, K.record] at sc; rw [K.bss, K.stack] at st; rw [K.heap] at ar; rw [K.stack] at fits
+  apply ccall_framed_summary S setup.saved
+  · refine ⟨by rw [K.state]; exact consoleLog_static (by omega) (by omega) (by omega) chl (by omega), ?_, ?_, ?_⟩
+    · rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat, show Layout.off_extern_sp = 160 from rfl]
+      simp only [domainAt]
+      exact consoleLog_arena (by omega) (by omega) (by omega) nl'
+    · rw [BitVec.toNat_ofNat]
+      exact consoleLog_arena (by omega) (by omega) (by omega) nl'
+    · simp only [domainAt]
+      rw [BitVec.toNat_ofNat, show Layout.off_external_raise = 184 from rfl]
+      exact consoleLog_arena (by omega) (by omega) (by omega) nl'
+  · intro n hn
+    have e := Option.some.inj (hn.symm.trans inv.stack)
+    have := congrArg BitVec.toNat e
+    simp only [BitVec.toNat_ofNat] at this
+    have nb : D.nativeSp < 2 ^ 64 := by have := valid.high; simp only [Layout.sym_stack_top] at this; omega
+    rw [Nat.mod_eq_of_lt nb] at this
+    simp only [consoleLog, LogInW, InsideW, ioBufferSize, Layout.sym_errno, Layout.sym_impure_data]
+    refine ⟨Or.inl ⟨by omega, by omega⟩, Or.inl ⟨by omega, by omega⟩, Or.inl ⟨by omega, by omega⟩,
+      Or.inl ⟨by omega, by omega⟩, Or.inl ⟨by omega, by omega⟩, Or.inl ⟨by omega, by omega⟩, trivial⟩
+  · intro after frame
+    exact console_loopGeometry setup.geometry heapEq chans arg.chan arg.record nl frame
+  · exact setup.native
 
 end OCaml.Vm.Sim

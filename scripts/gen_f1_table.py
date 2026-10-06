@@ -43,7 +43,12 @@ FIXED = {
     'capacity': 'g1_capacity',
     'good': 'good',
     'counterStable': 'f1_counterStable',
+    'consoleStable': 'f1_console_stable',
+    'consoleRt': 'Gc.f1_consoleRuntime',
+    'consoles': 'OCaml.Programs.whileMin_goodF1.consoles',
 }
+# Modules a FIXED instance lives in, beyond the table's base imports.
+FIXED_IMPORTS = {'consoleStable': 'OCaml.Vm.Sim.F1Console'}
 # Program-level parameters shared by several rows: one premise field each.
 SHARED = {'values': 'values', 'ints': 'ints', 'extra': 'extra', 'extraBounded': 'extra', 'exotic': 'exotic', 'trapBounded': 'trapBounded',
           'scratch': 'scratch', 'field': 'field'}
@@ -145,6 +150,7 @@ def render_whilemin(fields, users):
                 if name in summaries:
                     thm, ps, mod = summaries[name]
                     imports.add(mod)
+                    imports.update(FIXED_IMPORTS[p] for p, _ in ps if p in FIXED_IMPORTS)
                     proofs.append(' '.join([thm] + [FIXED[p] for p, _ in ps if p in FIXED]))
                 else:
                     field = f'{name.removeprefix("caml_")}_{op.lower()}'

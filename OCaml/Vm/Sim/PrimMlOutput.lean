@@ -1,4 +1,7 @@
 import OCaml.Vm.Sim.ConsoleCall
+import OCaml.Vm.Sim.PrimMlOutputChar
+import OCaml.Vm.Primitives.Flush.MlOutput
+import OCaml.Vm.Primitives.StringContract
 import OCaml.Vm.Sim.PrimMlFlush
 import OCaml.Vm.Primitives.Console.OutputBytes
 import OCaml.Vm.Primitives.Console.World
@@ -589,5 +592,248 @@ theorem ob_bytes {ra sp v str ch dom lr : BitVec 64} {no nl : BitVec 63} {id fue
       (M.ready.of_kept (P.gprs.trans En.gprs) H.idle) zero model)
     obtain ⟨e, run4, D⟩ := ob_finish I Lf
     exact ⟨e, chnF, run1.trans (run2.trans (run3.trans run4)), D, Lf.chan⟩
+
+/-- `caml_ml_output`'s model: a channel, a byte slice of a string at
+nonnegative offset and length, `putBlock` of the slice, `Val_unit`. -/
+theorem output_semantics {a b o n v : Val} {h h' : Heap} {w w' : World}
+    (sem : primF1Impl "caml_ml_output" [a, b, o, n] h w = .ok v h' w') :
+    ∃ id oi ni bs, chanOf? h a = some id ∧ intArg? o = some oi ∧ intArg? n = some ni ∧ 0 ≤ oi ∧ 0 ≤ ni ∧
+      byteSlice? h b oi.toNat ni.toNat = some bs ∧ putBlock w id bs (ni.toNat + 1) = some w' ∧
+      v = Val.unit ∧ h' = h := by
+  cases hc : chanOf? h a with
+  | none => simp [primF1Impl, hc] at sem
+  | some id =>
+    cases ho : intArg? o with
+    | none => simp [primF1Impl, hc, ho] at sem
+    | some oi =>
+      cases hn : intArg? n with
+      | none => simp [primF1Impl, hc, ho, hn] at sem
+      | some ni =>
+        by_cases pos : 0 ≤ oi ∧ 0 ≤ ni
+        · cases hs : byteSlice? h b oi.toNat ni.toNat with
+          | none => simp [primF1Impl, hc, ho, hn, pos, hs] at sem
+          | some bs =>
+            cases hp : putBlock w id bs (ni.toNat + 1) with
+            | none => simp [primF1Impl, hc, ho, hn, pos, hs, hp] at sem
+            | some w'' =>
+              simp [primF1Impl, hc, ho, hn, pos, hs, hp] at sem
+              obtain ⟨rfl, rfl, rfl⟩ := sem
+              exact ⟨id, oi, ni, bs, rfl, rfl, rfl, pos.1, pos.2, hs, hp, rfl, rfl⟩
+        · simp [primF1Impl, hc, ho, hn, pos] at sem
+
+theorem mapM_id_get : ∀ (cells : List (Option UInt8)) (bs : List UInt8), cells.mapM id = some bs →
+    ∀ (i : Nat) (x : UInt8), bs[i]? = some x → cells[i]? = some (some x)
+  | [], bs, h, i, x, hx => by simp at h; subst h; simp at hx
+  | c :: cs, bs, h, i, x, hx => by
+    cases c with
+    | none => simp at h
+    | some y =>
+      cases e : cs.mapM id with
+      | none => simp [e] at h
+      | some ys =>
+        simp [e] at h; subst h
+        cases i with
+        | zero => simpa using hx
+        | succ i => simpa using mapM_id_get cs ys e i x (by simpa using hx)
+
+/-- **A byte slice of a placed string** lies in its block, byte for byte. -/
+theorem slice_bytes {c : Config} {pl : Place} {cp : ChanPlace} {h : Heap} {l a off n : Nat} {o : Obj}
+    {bs : List UInt8} (layout : ObjAt c pl cp a o) (object : h.get? l = some o)
+    (slice : byteSlice? h (.ptr l 0) off n = some bs) :
+    bs.length = n ∧ off + n ≤ 8 * o.wosize ∧
+      ∀ i (x : UInt8), bs[i]? = some x → byte c (a + off + i) = BitVec.ofNat 8 x.toNat := by
+  simp only [byteSlice?, object, Option.bind_eq_bind, Option.bind_some] at slice
+  cases o with
+  | bytes b =>
+    simp only at slice
+    split at slice
+    · cases slice
+      obtain ⟨-, bytes, -⟩ := layout
+      refine ⟨by simp; omega, by simp only [Obj.wosize]; omega, fun i x hx => ?_⟩
+      have hi := (List.getElem?_eq_some_iff.mp hx).1
+      simp only [List.length_take, List.length_drop] at hi
+      rw [List.getElem?_take_of_lt (by omega), List.getElem?_drop] at hx
+      rw [show a + off + i = a + (off + i) by omega]
+      exact bytes _ x hx
+    · cases slice
+  | partialBytes b =>
+    simp only at slice
+    split at slice
+    · obtain ⟨-, bytes, -⟩ := layout
+      have len := mapM_id_length _ _ slice
+      refine ⟨by simp at len; omega, by simp only [Obj.wosize]; omega, fun i x hx => ?_⟩
+      have cell := mapM_id_get _ _ slice i x hx
+      have hi := (List.getElem?_eq_some_iff.mp cell).1
+      simp only [List.length_take, List.length_drop] at hi
+      rw [List.getElem?_take_of_lt (by omega), List.getElem?_drop] at cell
+      rw [show a + off + i = a + (off + i) by omega]
+      exact bytes _ _ cell x rfl
+    · cases slice
+  | _ => simp at slice
+
+/-- `caml_ml_output_bytes`' entry facts survive a jump into it. -/
+theorem ObInput.jump {ra sp v str ofs len ch dom lr pc value : BitVec 64} {regs : GRegs} {c d : Config}
+    (I : ObInput ra sp v str ofs len ch dom lr c) (p : WriteRegistersPost [] [] c pc value regs d) :
+    ObInput ra sp v str ofs len ch dom lr d := by
+  have keep := fun n (lo : 1 ≤ n) (hi : n ≤ 31) => p.toEffectPost.gpr_frame (by decide) n lo hi (by simp)
+  have mem : d.σ.mem = c.σ.mem := by rw [p.memory]; rfl
+  exact
+    { good := p.good, image := p.image, minstret := p.minstret, tick := p.tick, aligned := I.aligned
+      raReg := (keep 1 (by decide) (by decide)).trans I.raReg
+      idle := p.toEffectPost.htifIdle I.idle
+      saved := fun n hn => by
+        have := I.saved n hn
+        have b : 1 ≤ n ∧ n ≤ 31 := by simp at hn; omega
+        change (gpr d n).isSome; rw [keep n b.1 b.2]; exact this
+      stack := (keep 2 (by decide) (by decide)).trans I.stack
+      valReg := (keep 10 (by decide) (by decide)).trans I.valReg
+      strReg := (keep 11 (by decide) (by decide)).trans I.strReg
+      ofsReg := (keep 12 (by decide) (by decide)).trans I.ofsReg
+      lenReg := (keep 13 (by decide) (by decide)).trans I.lenReg
+      geo := I.geo
+      domWord := by rw [mem]; exact I.domWord
+      rootsWord := by rw [mem]; exact I.rootsWord
+      chanPtr := by rw [mem]; exact I.chanPtr
+      lockNull := by rw [mem]; exact I.lockNull
+      unlockNull := by rw [mem]; exact I.unlockNull
+      flagsClear := by rw [mem]; exact I.flagsClear }
+
+/-- The model facts survive a jump. -/
+theorem ObModel.jump {ch dom str pc value : BitVec 64} {id p : Nat} {st : TCB.Os.Stream} {w : World} {chn : Chan}
+    {bs : List UInt8} {regs : GRegs} {c d : Config} (M : ObModel ch dom str id st w chn bs p c)
+    (q : WriteRegistersPost [] [] c pc value regs d) : ObModel ch dom str id st w chn bs p d := by
+  have mem : d.σ.mem = c.σ.mem := by rw [q.memory]; rfl
+  have b : ∀ x, byte d x = byte c x := fun x => by simp only [byte, mem]
+  exact
+    { M with
+      repr := ChanAt.of_bytes M.repr fun x _ _ => b x
+      output := by rw [← M.output]; unfold Vsa.Machine.output; rw [q.output]
+      bytes := fun i x hx => (b _).trans (M.bytes i x hx)
+      rt := OCaml.Vm.Gc.ConsoleRuntime.transfer (fun x _ _ => by rw [mem]) M.rt
+      ready := M.ready.of_kept (GprsKept.of_pins q (by decide) (by decide) (by simp))
+        (q.toEffectPost.htifIdle M.ready.htifIdle) }
+
+/-- A console return from `caml_ml_output_bytes` is one from `caml_ml_output`'s
+jump into it. -/
+theorem ConsoleRet.jump {ra sp pc value : BitVec 64} {regs : GRegs} {c d e : Config}
+    (p : WriteRegistersPost [] [] c pc value regs d) (r : ConsoleRet ra sp d e) : ConsoleRet ra sp c e :=
+  { r with
+    saved := fun n hn => (r.saved n hn).trans
+      (p.toEffectPost.gpr_frame (by decide) n (by simp at hn; omega) (by simp at hn; omega) (by simp))
+    gprs := (GprsKept.of_pins p (by decide) (by decide) (by simp)).trans r.gprs }
+
+theorem intArg_some {x : Val} {i : Int} (h : intArg? x = some i) : ∃ n, x = .int n ∧ i = n.toInt := by
+  cases x <;> simp [intArg?] at h; exact ⟨_, rfl, h.symm⟩
+
+theorem byteSlice_ptr {h : Heap} {x : Val} {off n : Nat} {bs : List UInt8} (hs : byteSlice? h x off n = some bs) :
+    ∃ l o, x = .ptr l 0 ∧ h.get? l = some o := by
+  match x, hs with
+  | .ptr l 0, hs =>
+    cases e : h.get? l with
+    | none => simp [byteSlice?, e] at hs
+    | some o => exact ⟨l, o, rfl, e⟩
+  | .ptr l (k + 1), hs => simp [byteSlice?] at hs
+  | .int _, hs | .code _, hs | .atom _, hs | .raw _, hs => simp [byteSlice?] at hs
+
+theorem toInt_toNat_nonneg (n : BitVec 63) (h : 0 ≤ n.toInt) : n.toInt.toNat = n.toNat := by
+  have := BitVec.toInt_eq_toNat_cond n
+  split at this <;> omega
+
+/-- **`caml_ml_output` at a `C_CALL4` site**: the framed summary, for a
+console output channel. -/
+theorem output_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
+    {sp high domain : Nat} {env ra : BitVec 64} {c : Config} {l a id ch : Nat} {chn : Chan}
+    {D : InvocationData} {st : TCB.Os.Stream} {v : Val} {heap : Heap} {world : World}
+    (setup : CcallSetupPost ra (s.accu :: s.stack.take 3) L P s pl cp sp high domain 0x800166cc env c)
+    (arg : ChannelArg s c pl cp l a id ch chn) (inv : Invocation D c) (valid : NativeValid D)
+    (rt : ConsoleWrite.ConsoleRuntime c) (ready : LibraryReady c)
+    (console : chn.fd = 1 ∨ chn.fd = 2) (out : chn.isOut = true)
+    (stream : TCB.Os.lookupFd s.world.os chn.fd.toNat = some (.stream st))
+    (live : s.world.os.proc.exited = none) (streamOut : st ≠ .stdin)
+    (outside : PayloadChanOutside (consoleLog D.nativeSp ch) P s c pl cp sp id)
+    (bindings : BindingsOutside (consoleLog D.nativeSp ch) P c)
+    (stable : ConsoleStable L)
+    (sem : primF1Impl "caml_ml_output" (s.accu :: s.stack.take 3) s.heap s.world = .ok v heap world) :
+    FnSummary (BitVec.ofNat 64 0x800166cc) (fun x => x = c)
+      (FramedPrimitivePost L.runtimeOk P s pl cp sp high "caml_ml_output" (s.accu :: s.stack.take 3) v 1#64
+        heap world (consoleLog D.nativeSp ch) c ra) := by
+  -- the model: three stack arguments, a slice of a placed string, `putBlock`
+  obtain ⟨x1, x2, x3, rest, hst⟩ : ∃ x1 x2 x3 rest, s.stack = x1 :: x2 :: x3 :: rest := by
+    match h : s.stack with
+    | x1 :: x2 :: x3 :: rest => exact ⟨x1, x2, x3, rest, rfl⟩
+    | [] | [_] | [_, _] => rw [h] at sem; simp [primF1Impl] at sem
+  have args : s.accu :: s.stack.take 3 = [s.accu, x1, x2, x3] := by rw [hst]; rfl
+  have sem0 := sem
+  rw [args] at sem
+  obtain ⟨id', oi, ni, bs, hc, ho, hn, opos, npos, slice, model, rfl, rfl⟩ := output_semantics sem
+  have hid : id' = id := by
+    rw [arg.accu] at hc; simp [chanOf?, arg.object] at hc; exact hc.symm
+  subst id'
+  obtain ⟨no, rfl, rfl⟩ := intArg_some ho
+  obtain ⟨nl, rfl, rfl⟩ := intArg_some hn
+  obtain ⟨ls, o, rfl, hobj⟩ := byteSlice_ptr slice
+  have liveS : Live s.heap (roots P s) ls := Live.root (v := .ptr ls 0) (by simp [roots, hst]) rfl
+  obtain ⟨sa, o', placedS, ho', layoutS⟩ := setup.input.data.heap.1 ls liveS
+  rw [hobj] at ho'; cases ho'
+  obtain ⟨blen, extent, sbytes⟩ := slice_bytes layoutS hobj slice
+  simp only [toInt_toNat_nonneg _ opos, toInt_toNat_nonneg _ npos] at blen extent sbytes
+  -- the machine
+  have SG := setup.geometry.toArmGeometry.toStackGeometry
+  have G := console_geometry_full setup.geometry arg valid
+  have GL := G.lits
+  have hl := SG.heapLow ls sa o placedS hobj
+  have ha := SG.heapArena ls sa o placedS hobj
+  have hc' := (SG.heapChannels ls sa o placedS hobj id chn ch arg.chan arg.record).1
+  have hd := (SG.domainHeap ls sa o placedS hobj).1
+  simp only [chanOffBuff, ioBufferSize, Layout.domainStateBytes, Layout.sym_bss_end, DlHeap.heapEnd] at hl ha hc' hd
+  have hs : (BitVec.ofNat 64 D.nativeSp).toNat = D.nativeSp := by rw [BitVec.toNat_ofNat]; have := GL.high; omega
+  have hv : (BitVec.ofNat 64 a).toNat = a := by rw [BitVec.toNat_ofNat]; have := GL.valHigh; omega
+  have hstr : (BitVec.ofNat 64 sa).toNat = sa := by rw [BitVec.toNat_ofNat]; omega
+  have E := flush_entry setup arg inv valid setup.calleeSaved
+  have F := arg.repr.fields
+  have off68 : (word c (a + 8) + 68#64).toNat = ch + 68 := by
+    rw [ConsoleWrite.bv_add_toNat (by rw [arg.pointer]; have := GL.chanHigh; omega), arg.pointer]
+  have I : ConsoleWrite.ObInput ra (BitVec.ofNat 64 D.nativeSp) (BitVec.ofNat 64 a) (BitVec.ofNat 64 sa)
+      (tag64 no) (tag64 nl) (word c (a + 8)) (word c Layout.sym_Caml_state)
+      (word c ((word c Layout.sym_Caml_state).toNat + 288)) c :=
+    { E.toLeafInput with
+      idle := E.idle, saved := E.saved, stack := E.stack, valReg := E.valReg
+      strReg := setup.input.arguments.get (i := 1) (by rw [args]; rfl) (show valWord pl (.ptr ls 0) = some (BitVec.ofNat 64 (sa + 8 * 0))
+        by simp [valWord, placedS])
+      ofsReg := setup.input.arguments.get (i := 2) (v := .int no) (by rw [args]; rfl) rfl
+      lenReg := setup.input.arguments.get (i := 3) (v := .int nl) (by rw [args]; rfl) rfl
+      geo := by rw [hs, arg.pointer, hv]; exact G
+      domWord := E.domWord, rootsWord := E.rootsWord, chanPtr := E.chanPtr
+      lockNull := rt.lockNull, unlockNull := rt.unlockNull
+      flagsClear := by rw [off68]; exact flags_word (by simpa only [chanOffFlags] using F.flags) }
+  have M : ObModel (word c (a + 8)) (word c Layout.sym_Caml_state) (BitVec.ofNat 64 sa) id st s.world chn bs
+      no.toNat c :=
+    { chan := arg.chan, repr := by rw [arg.pointer]; exact arg.repr, console := console, out := out
+      stream := stream, live := live, streamOut := streamOut, output := setup.input.data.world.output
+      source := ⟨by rw [hstr]; simp only [Layout.sym_bss_end]; omega,
+        by rw [hstr, blen]; simp only [DlHeap.heapEnd]; omega,
+        by rw [hstr, blen, arg.pointer]; omega⟩
+      sourceRoots := by rw [hstr, blen]; omega
+      bytes := fun i x hx => by rw [hstr]; exact sbytes i x hx
+      rt := rt, ready := ready }
+  refine ⟨fun c0 ⟨pc0, e0⟩ => ?_⟩
+  subst c0
+  -- the tail jump into `caml_ml_output_bytes`
+  let R : Nat → BitVec 64 := fun n => if n = 1 then ra else BitVec.ofNat 64 a
+  obtain ⟨d1, run1, p1⟩ := (Flush.MlOutput.tail_fast c R ⟨I.good, I.image, I.minstret, I.raReg, I.aligned, I.tick⟩
+    ⟨I.raReg, I.valReg, True.intro⟩).run c ⟨pc0, rfl⟩
+  obtain ⟨e, chnF, run2, Dn, chanF⟩ := ob_bytes (ObInput.jump I p1) p1.pc
+    opos npos blen (M.jump p1) model
+  obtain ⟨cF, hshape⟩ := ConsoleWrite.putBlock_shape arg.chan model
+  have hcF : cF = chnF := by
+    obtain ⟨hlt, -⟩ := List.getElem?_eq_some_iff.mp arg.chan
+    rw [hshape] at chanF; simpa [List.getElem?_set_self hlt] using chanF
+  subst hcF
+  have b1 : ∀ x, byte d1 x = byte c x := fun x => by simp only [byte, p1.memory]; rfl
+  have memory : ∀ x, OutL (consoleLog D.nativeSp ch) x → byte e x = byte c x := fun x hx => by
+    rw [Dn.memory x (by rw [hs, arg.pointer]; exact hx), b1]
+  exact ⟨e, run1.trans run2, framed_of_ret setup inv valid (by simp only [Layout.sym_stack_top]; have := GL.high; omega)
+    (ConsoleRet.jump p1 Dn.ret) memory outside bindings stable arg.chan arg.record
+    (by rw [hshape]) (by rw [hshape]) (by rw [hshape]; rfl) (by rw [← arg.pointer]; exact Dn.repr) Dn.console sem0⟩
 
 end OCaml.Vm.Sim

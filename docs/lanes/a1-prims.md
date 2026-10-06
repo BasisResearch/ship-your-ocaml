@@ -95,6 +95,15 @@
   `FramedPrimitivePost.gprs`; `LibraryReady.of_kept` re-derives memmove readiness after
   calls. The console native window is `sp - 512` (output_bytes reaches 448 deep).
   `console_geometry_full` gives the channel record at full extent (65536).
+* **Console `PrimReturnsAt`** (`Sim/PrimConsoleReturns.lean`): `prim_caml_ml_flush_returns`
+  (open and closed channels) and `prim_caml_ml_output_char_returns` (room/full) proved for
+  every program from `ConsoleStable L`, the console statics from `runtimeOk` and
+  `ConsoleChannels P` (FIXED `consoleStable`/`consoleRt`/`consoles` in `gen_f1_table.py`, with
+  `FIXED_IMPORTS`). Shared glue in `Sim/ConsoleCall.lean`: `console_site` (invocation, channel
+  argument, `console_outside`/`console_bindings`: the footprint misses the payload and the
+  bindings), `console_callee_summary` (framed summary to `CcallReturn` via
+  `ccall_framed_summary`; `console_loopGeometry` transports the geometry). `caml_ml_output`:
+  `output_framed` proved; its `PrimReturnsAt` waits for `LibraryReady` at C_CALL entry (a1-arms).
 * whileMin `PrimReturnsAt` summaries (picked up by `scripts/gen_f1_table.py`; regenerate
   WhileMinTable.lean in the same batch): `prim_caml_ml_string_length_returns` and
   `prim_caml_fresh_oo_id_returns` (`f1_counterStable` from a6-gc's `f1_ignoredStatic`) done.

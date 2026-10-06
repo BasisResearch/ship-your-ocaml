@@ -137,17 +137,9 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
     `BufferInput`, `2 ≤ n`, the buffer above the frame (`buf = sp` at
     caml_format_int's call), and the conversion test. The test is proved for
     all bytes by one kernel check (`plain_guard_all`).
-  * `_svfprintf_r` on `%ld` (`Format/SvfLong.lean`): `svf_convL`,
-    `svf_intL` and `svf_iterLD` are proved, alongside upstream's `%lld`.
-    `IntAt` admits the LONGINT flag 16 (template change; the digit and print
-    code tests no LONGINT bit). The LONGINT arm of the `l` case
-    (`0x8004878c`, `0x80048790`) got two step lemmas.
-  * Next: the `vsnprintf` wrapper (0x8004018c). Not in `snpText`, and
-    upstream proved `snprintf`'s wrapper (`snp_pro`/`snp_epi`). Plan: port
-    `gen_interp_steps.py --target snp` (syi) for its step table, add its
-    range to `snpText`, adapt `snp_pro`/`snp_epi`. Then
-    caml_alloc_initialized_string (`alloc_string_nursery` + memcpy),
-    caml_format_int, and its C_CALL2 adapter.
+  * Next: caml_alloc_sprintf, i.e. vsnprintf `%ld` (the LONGINT variant of
+    upstream `svf_iterLLD`), then caml_alloc_initialized_string, then
+    caml_format_int and its C_CALL2 adapter.
   * Library calls need `VsaOk` (all 31 GPRs present) at the C_CALL callee
     entry. For now it is a premise (as in a1-prims' primitives); a0-boot is
     asked whether `VsaOk.gpr` can be weakened.
