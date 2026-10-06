@@ -3,6 +3,8 @@ import OCaml.Vm.Sim.RaiseRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.LongjmpState
 import OCaml.Vm.Sim.PayloadWindows
+import OCaml.Vm.Sim.CaughtLogRestore
+import OCaml.Vm.Sim.DivisionZeroLog
 
 /-!
 # The DIVINT/MODINT zero-divisor row (in progress)
@@ -740,5 +742,153 @@ theorem division_log_in {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
       (word c Layout.sym_Caml_state).toNat + Layout.off_exn_bucket from by rw [raiseBucket, bkt]]
   simp only [Layout.stackBytes, Layout.off_extern_sp, Layout.off_exn_bucket, nativeHeadroom] at low space hh ⊢
   omega
+
+/-! ## The caught re-entry readiness -/
+
+/-- The root invocation's saved boundary words, from the invocation itself. -/
+theorem RaiseStackFrame.of_valid {D : InvocationData} {c : Config} (v : NativeValid D)
+    (inv : Invocation D c) : RaiseStackFrame D.nativeSp c := by
+  have low := v.low
+  have high := v.high
+  simp only [Vsa.Sim.DlHeap.heapEnd, Layout.sym_stack_top, Layout.interpFrameBytes,
+    Layout.camlMainFrameBytes] at low high
+  have ht : Layout.sym_tohost + 8 ≤ 0x80283000 := by decide
+  exact ⟨inv.stack, v.rootSaved c inv, ⟨by omega, by omega, Or.inr (by omega)⟩,
+    ⟨by omega, by omega, Or.inr (by omega)⟩⟩
+
+/-- A range at or above the native sp misses every zero-path window. -/
+theorem division_windows_above {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high x n : Nat} {D : InvocationData} (g : StackGeometry P s c pl cp high) (v : NativeValid D)
+    (top : sp + 8 ≤ high) (above : D.nativeSp ≤ x) : OutWRange (divisionWindows c sp D) x n := by
+  have hh := v.headroom
+  have ha := g.arena
+  have hd := g.domainArena
+  have fits : Layout.off_exn_bucket + 8 ≤ Layout.domainStateBytes ∧
+      Layout.off_extern_sp + 8 ≤ Layout.domainStateBytes := by decide
+  simp only [divisionWindows, nativeScratch, OutWRange, and_true]
+  omega
+
+/-- **The caught-handler readiness of the zero path**, at the dispatch post:
+everything `caught_log_restore` needs about the raise state
+`divisionRaiseState s exn` (the divisor popped, the exception in the
+accumulator) and the zero path's exact log. -/
+theorem division_caught_log_ready {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
+    {c d : Config} {pl : Place} {cp : ChanPlace} {sp high high0 dom0 dest : Nat} {rest restV : List Val}
+    {env value : BitVec 64} {exn envV : Val} {link extra : BitVec 63} {D : InvocationData}
+    (rf : RuntimeFrame L high0 dom0) (stable : MemoryStable L.runtimeOk)
+    (h : ArmInput L P s op c pl cp sp high) (stack : s.stack = .int 0#63 :: rest)
+    (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
+    (dp : DispatchPost c op (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d)
+    (v : NativeValid D) (inv : Invocation D c)
+    (ex : DivisionException P s pl c exn value) (rr : RaiseRuntimeReady c D value)
+    (field : field? s.heap P.globals 5 = some exn)
+    (frame : RaiseFrame (divisionRaiseState s exn) dest link envV extra restV)
+    (nonnegative : 0 ≤ extra.toInt)
+    (runtime : AllocationRuntime L.runtimeOk d
+      (divisionZeroNativeLog (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) (BitVec.ofNat 64 sp) env
+        (word c Layout.sym_Caml_state) (BitVec.ofNat 64 D.nativeSp) value)) :
+    CaughtLogReady L P (divisionRaiseState s exn) pl cp D.nativeSp (sp + 8) high dest link extra envV restV d
+      (divisionZeroNativeLog (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) (BitVec.ofNat 64 sp) env
+        (word c Layout.sym_Caml_state) (BitVec.ofNat 64 D.nativeSp) value)
+      (divisionZeroBeforeBucket (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) (BitVec.ofNat 64 sp) env
+        (word c Layout.sym_Caml_state) (BitVec.ofNat 64 D.nativeSp) value) value := by
+  have wd : word d = word c := funext fun a => by simp only [word, dp.memory]
+  have g := h.geometry.toArmGeometry
+  have hs := h.stack.1
+  have len : s.stack.length = rest.length + 1 := by simp [stack]
+  have low := stack_space h.stack (by omega : 8 * s.stack.length ≤ Layout.stackBytes)
+  have runtimeD : L.runtimeOk d := stable c d dp.memory h.runtime
+  obtain ⟨l, a, k, sel⟩ := field_selection h.toVmReprAt (by simp [roots]) field
+  -- the raise state's geometry at the dispatch post
+  have gD : OCaml.LoopGeometry L P (divisionRaiseState s exn) d pl cp high :=
+    h.geometry.transport (fun l o' got => ⟨o', got, rfl⟩) rfl (by rw [wd]) (by rw [wd])
+      (by simp only [runtimeFields, domainWord, wd]) (by simp only [runtimeFields, domainWord, wd]) rfl
+  have sgD := gD.toArmGeometry.toStackGeometry
+  have dataD : VmPayload P (divisionRaiseState s exn) d pl cp (sp + 8) high :=
+    (division_raise_payload_before (payload_of_repr h.toVmReprAt) sel (by omega)).frame_log (log := [])
+      ⟨trivial, trivial, trivial, trivial, trivial, trivial, fun _ _ _ => trivial, fun _ _ _ => trivial,
+        fun _ _ _ _ _ _ => ⟨trivial, trivial⟩, fun _ _ _ _ _ => trivial⟩ dp.memory dp.frame.out
+  have stackD : (sp + 8) + 8 * (divisionRaiseState s exn).stack.length = high := by
+    simp only [divisionRaiseState, List.length_drop]; omega
+  have lowD : high - Layout.stackBytes ≤ sp + 8 := by omega
+  have topD : sp + 8 ≤ high := by omega
+  have lowW : high - Layout.stackBytes + 8 ≤ sp := by
+    have := g.statics; simp only [Layout.stackBytes, Layout.sym_bss_end] at this low space ⊢; omega
+  have each := division_windows_payload (sp := sp) sgD v lowW
+  have inside : LogInW (divisionWindows d sp D) (divisionZeroNativeLog (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc))
+      (BitVec.ofNat 64 sp) env (word c Layout.sym_Caml_state) (BitVec.ofNat 64 D.nativeSp) value) := by
+    rw [show divisionWindows d sp D = divisionWindows c sp D by simp only [divisionWindows, wd]]
+    exact division_log_in h stack space v
+  have above : ∀ x n, D.nativeSp ≤ x → OutLRange (divisionZeroNativeLog (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc))
+      (BitVec.ofNat 64 sp) env (word c Layout.sym_Caml_state) (BitVec.ofNat 64 D.nativeSp) value) x n :=
+    fun x n hx => outLRange_of_windows inside (division_windows_above sgD v topD hx)
+  have rootsIn : LogInW [⟨(word d Layout.sym_Caml_state).toNat + Layout.off_local_roots,
+      (word d Layout.sym_Caml_state).toNat + Layout.off_local_roots + 8⟩] (reentryLog D.nativeSp d) := by
+    simp only [reentryLog, LogInW, InsideW, Nat.le_refl, and_self, or_false, and_true]
+  have rootsEach : ∀ w ∈ [(⟨(word d Layout.sym_Caml_state).toNat + Layout.off_local_roots,
+      (word d Layout.sym_Caml_state).toNat + Layout.off_local_roots + 8⟩ : W)],
+      PayloadWindow P (divisionRaiseState s exn) d pl cp (sp + 8) high w := by
+    intro w hw
+    simp only [List.mem_singleton] at hw
+    subst hw
+    exact .field (by simp [payloadFreeOffsets])
+  have saved := (RaiseStackFrame.of_valid v inv).frame dp.memory (dp.frame.frame Register.x2 (by decide))
+  have domD : (word d Layout.sym_Caml_state).toNat = dom0 := rf.domainWord d runtimeD
+  have vmField : ∀ off ∈ vmDomainOffsets, WindowStable L.runtimeOk
+      [⟨(word d Layout.sym_Caml_state).toNat + off, (word d Layout.sym_Caml_state).toNat + off + 8⟩] :=
+    fun off member => rf.windows _ fun w hw => by
+      simp only [List.mem_singleton] at hw
+      subst hw
+      rw [domD]
+      exact Or.inr ⟨off, member, rfl⟩
+  have trapCount := frame.count_bound
+  have trapBound := frame.bound
+  have rd : ∀ j, j < 4 → RamReadAt (high - 8 * (divisionRaiseState s exn).trap + 8 * j) 8 := fun j hj => by
+    have r := sgD.read dataD.stack lowD
+      (i := (divisionRaiseState s exn).stack.length - (divisionRaiseState s exn).trap + j) (by omega)
+    have e : sp + 8 + 8 * ((divisionRaiseState s exn).stack.length - (divisionRaiseState s exn).trap + j) =
+        high - 8 * (divisionRaiseState s exn).trap + 8 * j := by omega
+    rwa [e] at r
+  have dl := sgD.domainLow
+  have da := sgD.domainArena
+  have hh := v.headroom
+  have bucketWrite := (raise_zero_memory v inv g ex rr).native.publish.bucketWrite
+  refine {
+    data := dataD
+    bindings := bindings_frame_log (log := []) h.primitives ⟨trivial, fun _ _ _ => trivial⟩ dp.memory
+    runtime := runtimeD
+    frame := frame
+    geometry := {
+      highRead := gD.toArmGeometry.domain_read
+      nativeHighRead := saved.highRead
+      nativeSpRead := saved.spRead
+      savedBoundary := saved.equalSaved
+      savedHighOutside := ?_
+      savedSpOutside := ?_
+      nonnegative := nonnegative
+      reads := ⟨by simpa using rd 0 (by decide), rd 1 (by decide), rd 2 (by decide), rd 3 (by decide)⟩
+      space := TrapWriteOk.of_geometry gD.toArmGeometry dataD.stack (by
+        simp only [divisionRaiseState, List.length_drop]; omega)
+      stableRead := stable
+      stableRoots := vmField _ (by simp [vmDomainOffsets])
+      stableTrap := vmField _ (by simp [vmDomainOffsets]) }
+    exceptionValue := ex.valueWord
+    bucketLog := by rw [wd]; exact division_zero_bucket_log rfl bucketWrite
+    payloadOutside := PayloadOutside.of_windows sgD stackD lowD inside each
+    bindingsOutside := BindingsOutside.of_windows sgD topD inside each
+    young := YoungOutside.of_payloadWindows sgD topD inside each
+    htifIdle := (dp.frame.frame Register.htif_payload_writes (by decide)).trans h.running.loop.htifIdle
+    rootsPayloadOutside := PayloadOutside.of_windows sgD stackD lowD rootsIn rootsEach
+    rootsBindingsOutside := BindingsOutside.of_windows sgD topD rootsIn rootsEach
+    savedOutside := fun off _ => above _ _ (Nat.le_add_right _ _)
+    runtimeFrame := runtime
+    stackGeometry := gD
+    nativeHeld := ⟨D, rfl, v, by rw [wd]; exact inv.domain,
+      fun r hr i hi => by simpa only [byte, dp.memory] using inv.region r hr i hi⟩
+    invocationOutside := fun r _ => above _ _ (Nat.le_add_right _ _) }
+  all_goals
+    simp only [reentryLog, OutLRange, and_true]
+    simp only [Layout.domainStateBytes, Layout.off_local_roots, nativeHeadroom] at da hh ⊢
+    omega
 
 end OCaml.Vm.Sim
