@@ -46,6 +46,7 @@ import OCaml.Fragment
 import OCaml.Vm.Layout
 import OCaml.Vm.Repr
 import OCaml.Vm.Reloc
+import OCaml.Budget
 import OCaml.Refinement
 import OCaml.RefinementF1
 import OCaml.Programs.F1Check

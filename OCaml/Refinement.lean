@@ -1,4 +1,5 @@
 import OCaml.Bytecode.GcSafe
+import OCaml.Budget
 import OCaml.Vm.Platform
 import Vsa.Densify
 import OCaml.Run.Machine
@@ -52,11 +53,6 @@ abstract, as ship-your-interpreter keeps `Layout.atInterpRun`; the Layer A
 proof instantiates it with what `caml_main` establishes. -/
 structure Layout where
   runtimeOk : Config → Prop
-
-/-- Resource budget. -/
-structure Budget where
-  stackWords : Nat
-  heapWords : Nat
 
 /-- Every reachable state is within the budget. -/
 def Fits (B : Budget) (P : Prog) : Prop :=
