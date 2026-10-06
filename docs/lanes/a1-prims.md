@@ -2,6 +2,21 @@
 
 ## Current status
 
+**Console output (in progress, shared by all channel primitives):**
+* `ConsoleWrite.write_console` (`Console/Write.lean`): newlib `_write(fd, buf, n)` on a
+  console descriptor prints the buffer by one HTIF putchar per byte (`putchar_step`,
+  ported `stepObs_tohost_putchar`; `console_loop` by `loopFromBody`) and returns `n`;
+  output = old ++ `bytesToString bytes`; premises `WriteLayout` (96-byte frame) and
+  `ConsoleFd` (fs_ready, fd < 32, descriptor kind > 1 and ≠ 4). Generated blocks:
+  `gen_fn.py --ocaml-write`.
+* Next: `caml_write_fd` = enter-blocking hook (indirect) + `write` → `_write_r` →
+  `_write` + `caml_leave_blocking_section` (errno save/restore, leave hook, a 32-slot
+  `caml_pending_signals` scan: needs a "no pending signals" premise); then
+  `caml_flush_partial`/`caml_flush`/`caml_ml_flush` with `ChanAt` and `writeFd`
+  (OS `.write` on the console stream), then `output_bytes`/`output`/`output_char`.
+* Exit path weakened to `ExitOk` (registers read: ra, sp, a0, s0–s10) for STOP;
+  `EffectPost.htifIdle` (`HtifFrame.lean`) for a1-arms' `LoopRegisters.htifIdle`.
+
 **Next (remaining 9, all deep; path-specific callees):**
 * `caml_register_named_value`: `strlen` (landed `strlen_summary`), `__umoddi3` hash
   (`DivSpec` battery), `strcmp` chain walk; first registration: `caml_stat_alloc`
