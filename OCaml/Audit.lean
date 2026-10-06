@@ -1,4 +1,5 @@
 import OCaml.Vm.Primitives.Memmove
+import OCaml.Vm.Primitives.GprsKept
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
@@ -5240,3 +5241,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.memmove_leaf
 #print axioms OCaml.Vm.Primitives.moveOwned_image
 #print axioms OCaml.Vm.Primitives.Format.StringLength.string_length_call
+#print axioms OCaml.Vm.Primitives.GprsKept.of_effect
+#print axioms OCaml.Vm.Primitives.GprsKept.trans
