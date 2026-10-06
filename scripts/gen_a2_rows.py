@@ -14,6 +14,7 @@ from census import ROOT
 OUT = ROOT / 'OCaml/Vm/Sim/A2TableRows.lean'
 
 HEADER = '''import OCaml.Vm.Sim.OperandTableRows
+import OCaml.Vm.Sim.DivisionRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
 import OCaml.Vm.Sim.OperandRows
@@ -47,14 +48,15 @@ P = {
 SPACE0 = '(by simpa using stack_fits fits capacity reach (k := 0))'
 SPACE1 = '(stack_fits fits capacity reach)'
 
-def row(op, arity, prem, call, doc, extra_prem='', reach_used=False, nohalt_term=None):
+def row(op, arity, prem, call, doc, extra_prem='', reach_used=False, nohalt_term=None, reach2_used=False):
     lower = op.lower()
     implicit = '{L : OCaml.Layout}' + (' {B : OCaml.Budget}' if 'budget' in prem else '') + ' {P : Prog}' + \
         (' {high0 dom0 : Nat}' if 'rf' in prem else '')
     premises = ' '.join(P[p] for p in prem) + (f'\n    {extra_prem}' if extra_prem else '')
     r = 'reach' if reach_used else '_'
+    r2 = "reach'" if reach2_used else '_'
     if arity == 0:
-        lam = f'fun s _ _ {r} _ h code step =>'
+        lam = f'fun s _ _ {r} {r2} h code step =>'
         shape = 'shape0 (fun _ _ _ => rfl)'
         nohalt = 'fun s e w step => by no_halt step'
         fn = 'opArm_of_next0'
@@ -105,12 +107,12 @@ for op, helper, f in BINARY:
 ROWS.append(row('MULINT', 0, ['stable','budget'],
     f'mulint_next stable h code {SPACE0} step', '', reach_used=True, nohalt_term='fun _ _ _ => intOp_no_halt (f := fun a b => tag64 (untag a * untag b))'))
 for op, kind in [('DIVINT','quotient'),('MODINT','remainder')]:
-    ROWS.append(row(op, 0, ['stable','budget'],
-        f'division_next .{kind} stable h code {SPACE0} (zero s _ _ reach h code step) step',
-        '; a zero divisor is the named `zero` (the raise row)',
+    ROWS.append(row(op, 0, ['stable','rf','budget'],
+        f"division_next .{kind} stable h code {SPACE0}\n        (fun _ stack => division_zero_any .{kind} rf rr stable good reach' h code (stack_fits fits capacity reach) step stack) step",
+        '; a zero divisor raises `Division_by_zero` (`division_zero_any`)',
         nohalt_term=f'fun _ _ _ => division_no_halt .{kind}',
-        extra_prem=f'(zero : ∀ s s\' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .{op} →\n      stepI P s ⟨.{op}, []⟩ = .next s\' →\n      ∀ rest, s.stack = .int 0 :: rest → ∃ c\', OCaml.Plus c c\' ∧ OCaml.Running L P s\' c\')',
-        reach_used=True))
+        extra_prem='(rr : RaiseRuntimeFrame L high0 dom0) (good : OCaml.GoodF1 P)',
+        reach_used=True, reach2_used=True))
 for op in ['EQ','NEQ']:
     ROWS.append(row(op, 0, ['stable','budget'],
         f'{op.lower()}_next stable h code {SPACE0} step', '', reach_used=True))

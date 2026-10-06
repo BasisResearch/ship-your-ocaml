@@ -226,9 +226,8 @@ theorem division_operands (kind : DivisionKind) {P : Prog} {s s' : St}
       | simp [stepI, divisionOpcode, hs, ha, ints?, opt] at step
 
 /-- **DIVINT/MODINT from the loop head.** A nonzero divisor is the proved
-libgcc arm (`division_step_arm`). A zero divisor raises `Division_by_zero`;
-that row is the named premise `zero`, supplied by the zero-divisor arm
-(caught: `division_zero_caught_step`, not yet in row form; uncaught: open). -/
+libgcc arm (`division_step_arm`). A zero divisor raises `Division_by_zero`
+(`zero`, supplied by `division_zero_any`, DivisionRows). -/
 theorem division_next (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s (divisionOpcode kind))
@@ -278,15 +277,5 @@ theorem neq_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (physOp_nonempty (by simp) step)
     fun input read => neq_step_arm stable input read (top_equality input) step
-
-/-- A program that never divides by zero discharges the DIVINT/MODINT
-zero-divisor row premise vacuously. -/
-theorem DivisorsNonzero.zero {L : OCaml.Layout} {P : Prog} (d : DivisorsNonzero P) {op : Opcode}
-    (hop : op = .DIVINT ∨ op = .MODINT) :
-    ∀ s s' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s op →
-      stepI P s ⟨op, []⟩ = .next s' →
-      ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' :=
-  fun s _ _ reach _ code _ rest stack => absurd stack (d.nonzero s reach
-    (by rcases hop with rfl | rfl <;> first | exact .inl code.fetch | exact .inr code.fetch) rest)
 
 end OCaml.Vm.Sim

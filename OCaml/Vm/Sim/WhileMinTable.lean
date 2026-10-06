@@ -48,8 +48,6 @@ theorem whileMin_premises (o : WhileMinOpen) :
     subst h
     exact o.ml_output_c_call4
   c_call5_returns h := absurd h (by decide)
-  divint_zero h := absurd h (by decide)
-  modint_zero _ := DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inr rfl)
 
 /-- **The `whileMin` machine run** from the open premises only. -/
 theorem whileMin_halts_open (o : WhileMinOpen) :

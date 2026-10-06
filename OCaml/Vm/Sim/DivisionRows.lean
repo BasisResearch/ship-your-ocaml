@@ -907,8 +907,7 @@ theorem division_zero_raise (kind : DivisionKind) {P : Prog} {s s' : St} {x : Bi
     (field : field? s.heap P.globals 5 = some exn) (caught : s.trap ≠ 0)
     (step : stepI P s ⟨divisionOpcode kind, []⟩ = .next s') :
     raiseTo P (divisionRaiseState s exn) (divisionRaiseState s exn).accu = .next s' := by
-  have raised : raiseTo P {s with stack := rest} exn = .next s' := by
-    cases kind <;> simpa [stepI, divisionOpcode, accu, stack, ints?, opt, field] using step
+  have raised := (division_zero_raised kind accu stack field step).2
   have same : raiseTo P (divisionRaiseState s exn) exn = raiseTo P {s with stack := rest} exn := by
     simp only [raiseTo, divisionRaiseState, stack, List.drop_succ_cons, List.drop_zero, caught, ite_false]
   exact same.trans raised
@@ -923,7 +922,6 @@ theorem division_zero_caught_next (kind : DivisionKind) {L : OCaml.Layout} {P : 
     (code : DispatchCode P s (divisionOpcode kind))
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
     (caught : s.trap ≠ 0)
-    (notRaw : ∀ exn, field? s.heap P.globals 5 = some exn → ∀ r, exn ≠ .raw r)
     (step : stepI P s ⟨divisionOpcode kind, []⟩ = .next s')
     {rest : List Val} (stack : s.stack = .int 0 :: rest) :
     ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
@@ -937,8 +935,12 @@ theorem division_zero_caught_next (kind : DivisionKind) {L : OCaml.Layout} {P : 
     cases kind <;> cases hf : field? s.heap P.globals 5 <;>
       simp_all [stepI, divisionOpcode, ints?, opt]
   obtain ⟨value, ex, apart⟩ := DivisionException.of_field input.toVmReprAt input.geometry.toArmGeometry field
-  have ready := RaiseRuntimeReady.of_frame rf rr input v inv ex (notRaw exn field)
   have stack0 : s.stack = .int 0#63 :: rest := stack
+  -- BcSem's guard: the selected exception is not a raw word
+  have notRaw : ∀ r, exn ≠ .raw r := fun r hr => by
+    have := (division_zero_raised kind accu stack0 field step).1
+    simp [hr, Val.isRaw] at this
+  have ready := RaiseRuntimeReady.of_frame rf rr input v inv ex notRaw
   obtain ⟨dest, link, envV, extra, restV, frame⟩ :=
     RaiseFrame.of_step (division_zero_raise kind accu stack0 field caught step) caught
   have nonnegative := frame.saved_of_step (division_zero_raise kind accu stack0 field caught step)
@@ -976,5 +978,26 @@ theorem division_zero_caught_next (kind : DivisionKind) {L : OCaml.Layout} {P : 
   obtain ⟨after, run, post⟩ := summary.run d
     ⟨by rw [← division_dispatch_entry kind]; exact dp.pc, rfl⟩
   exact ⟨_, after, Steps.toN_of_stepsField run, post⟩
+
+/-- **DIVINT/MODINT with a zero divisor, from the loop head**, for any
+`GoodF1` program: a caught raise is `division_zero_caught_next`; an uncaught
+one steps to the end of the code, which `GoodF1` makes unreachable. -/
+theorem division_zero_any (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s s' : St}
+    {c : Config} {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (rr : RaiseRuntimeFrame L high0 dom0)
+    (stable : MemoryStable L.runtimeOk) (good : OCaml.GoodF1 P) (reach' : Reach P s')
+    (h : OCaml.LoopAt L P s c) (code : DispatchCode P s (divisionOpcode kind))
+    (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
+    (step : stepI P s ⟨divisionOpcode kind, []⟩ = .next s')
+    {rest : List Val} (stack : s.stack = .int 0 :: rest) :
+    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+  by_cases caught : s.trap = 0
+  · obtain ⟨x, y, rest', accu, stack'⟩ := division_operands kind step
+    have stack0 : s.stack = .int 0#63 :: rest := stack
+    obtain ⟨exn, field⟩ : ∃ exn, field? s.heap P.globals 5 = some exn := by
+      cases kind <;> cases hf : field? s.heap P.globals 5 <;>
+        simp_all [stepI, divisionOpcode, ints?, opt]
+    exact (uncaught_unreachable (s := {s with stack := rest}) good reach' caught
+      (division_zero_raised kind accu stack0 field step).2).elim
+  · exact division_zero_caught_next kind rf rr stable h code space caught step stack
 
 end OCaml.Vm.Sim

@@ -1428,8 +1428,11 @@ def stepI (i : Instr) : Res :=
   | .DIVINT, [] | .MODINT, [] => match stk with
       | b :: rest => opt (ints? s.accu b) fun (x, y) =>
           if y = 0 then
-            -- `caml_raise_zero_divide`: Field(caml_global_data, ZERO_DIVIDE_EXN = 5)
-            opt (field? s.heap P.globals 5) fun e => raiseTo P { s with stack := rest } e
+            -- `caml_raise_zero_divide`: Field(caml_global_data, ZERO_DIVIDE_EXN = 5);
+            -- `caml_raise` tests the word with `Is_exception_result`, which a raw
+            -- word (never an exception) could pass: outside the model
+            opt (field? s.heap P.globals 5) fun e =>
+              if e.isRaw then .unsupported else raiseTo P { s with stack := rest } e
           else
             let r := if i.op = .DIVINT then x.sdiv y else x.srem y
             .next { (s.adv 1) with accu := .int r, stack := rest }

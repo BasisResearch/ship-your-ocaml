@@ -12,8 +12,8 @@ import OCaml.Programs.Validation
 One `decide +kernel` of `Run.checkAll` over the 2,161-step run checks, at
 every state, the per-program facts the F1 table still takes: the decoded
 instruction is F1, STOP returns no raw word, and its opcode is one of the
-program's (`St.decodedOk`: `GoodF1` and the reached opcodes of the table), no
-zero divisor, the C_CALL results and names, `Fits` and `NoForward`. The
+program's (`St.decodedOk`: `GoodF1` and the reached opcodes of the table),
+the C_CALL results and names, `Fits` and `NoForward`. The
 former shape facts (values in range, extra counts, the trap pointer, BEQ on
 integers) are BcSem's use-site guards, read off each row's step. One combined run, not one
 per fact: each run of the kernel costs several GB.
@@ -79,7 +79,7 @@ def St.callNamesOk (P : Prog) (names : Opcode → List String) (s : St) : Bool :
 
 /-- All F1 shape checks at one state. -/
 def St.shapeOk (P : Prog) (ops : List Opcode) (names : Opcode → List String) (s : St) : Bool :=
-  St.decodedOk P ops s && s.divisorsOk P && St.ccallOk P .C_CALL1 0 s &&
+  St.decodedOk P ops s && St.ccallOk P .C_CALL1 0 s &&
     s.heap.noForward &&
     decide (s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords) &&
     St.callNamesOk P names s && OCaml.consolesOk s.world
@@ -87,7 +87,6 @@ def St.shapeOk (P : Prog) (ops : List Opcode) (names : Opcode → List String) (
 /-- The F1 shape checks of one state, by name. -/
 structure ShapeFacts (P : Prog) (ops : List Opcode) (names : Opcode → List String) (s : St) : Prop where
   decoded : St.decodedOk P ops s = true
-  divisors : s.divisorsOk P = true
   ccall1 : St.ccallOk P .C_CALL1 0 s = true
   /-- no `Forward_tag` block (a6-gc: `gcSafe_of_noForward`) -/
   noForward : s.heap.noForward = true
@@ -100,8 +99,8 @@ structure ShapeFacts (P : Prog) (ops : List Opcode) (names : Opcode → List Str
 theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {names : Opcode → List String} {s : St}
     (h : St.shapeOk P ops names s = true) : ShapeFacts P ops names s := by
   simp only [St.shapeOk, Bool.and_eq_true, decide_eq_true_eq] at h
-  obtain ⟨⟨⟨⟨⟨⟨decoded, divisors⟩, c1⟩, noForward⟩, fits⟩, callNames⟩, consoles⟩ := h
-  exact ⟨decoded, divisors, c1, noForward, fits, callNames, consoles⟩
+  obtain ⟨⟨⟨⟨⟨decoded, c1⟩, noForward⟩, fits⟩, callNames⟩, consoles⟩ := h
+  exact ⟨decoded, c1, noForward, fits, callNames, consoles⟩
 
 /-- The decode check, by name. -/
 theorem ShapeFacts.decode {P : Prog} {ops : List Opcode} {names : Opcode → List String} {s : St}
@@ -170,10 +169,6 @@ theorem whileMin_ops : ∀ s i, Reach whileMin s → decodeAt whileMin.code s.pc
   obtain ⟨j, hj, _, _, hm⟩ := (whileMin_shapeOk reach).decode
   rw [hd] at hj; cases hj
   exact List.contains_iff_mem.mpr hm
-
-/-- **`whileMin` never divides by zero.** -/
-theorem whileMin_divisorsNonzero : DivisorsNonzero whileMin :=
-  .of_check fun _ reach => (whileMin_shapeOk reach).divisors
 
 /-- **`whileMin`'s C_CALL1 primitives return normally.** -/
 theorem whileMin_ccall1Ok : ∀ s (w : BitVec 32) name, Reach whileMin s → DispatchCode whileMin s .C_CALL1 →

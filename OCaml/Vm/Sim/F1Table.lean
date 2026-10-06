@@ -7,6 +7,7 @@ import OCaml.Vm.Sim.ClosurerecAllocRows
 import OCaml.Vm.Sim.ControlRows
 import OCaml.Vm.Sim.EntryF1
 import OCaml.Vm.Sim.F1Frame
+import OCaml.Vm.Sim.F1RaiseRuntime
 import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.FieldRows
 import OCaml.Vm.Sim.GrabAllocRows
@@ -49,8 +50,6 @@ structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   c_call3_returns : (keep .C_CALL3) = true → CcallReturns Gc.f1Layout P .C_CALL3 (0x80002fa4#64) 2
   c_call4_returns : (keep .C_CALL4) = true → CcallReturns Gc.f1Layout P .C_CALL4 (0x80002f40#64) 3
   c_call5_returns : (keep .C_CALL5) = true → CcallReturns Gc.f1Layout P .C_CALL5 (0x80002ed8#64) 4
-  divint_zero : (keep .DIVINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .DIVINT → stepI P s ⟨.DIVINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
-  modint_zero : (keep .MODINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .MODINT → stepI P s ⟨.MODINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
 
 /-- All rows kept: the premises of the general F1 statement. -/
 abbrev F1Premises (P : Prog) : Prop := F1PremisesFor (fun _ => true) P
@@ -282,9 +281,9 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .MULINT, _ => if h : keep .MULINT = true then mulint_row f1_memoryStable fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .DIVINT, _ => if h : keep .DIVINT = true then divint_row f1_memoryStable fits g1_capacity (pre.divint_zero (by simp [h]))
+    | .DIVINT, _ => if h : keep .DIVINT = true then divint_row f1_memoryStable f1_runtimeFrame fits g1_capacity f1_raiseRuntimeFrame good
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .MODINT, _ => if h : keep .MODINT = true then modint_row f1_memoryStable fits g1_capacity (pre.modint_zero (by simp [h]))
+    | .MODINT, _ => if h : keep .MODINT = true then modint_row f1_memoryStable f1_runtimeFrame fits g1_capacity f1_raiseRuntimeFrame good
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .ANDINT, _ => if h : keep .ANDINT = true then andint_row f1_memoryStable fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)

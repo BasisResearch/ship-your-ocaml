@@ -1,5 +1,16 @@
 # Lane a2-sem
 
+## DIVINT/MODINT zero divisor closed (2026-10-06)
+
+`division_zero_any`: a caught zero-divisor raise is `division_zero_caught_next`
+(now premise-free for F1: `f1_raiseRuntimeFrame`, `notRaw` read off the step);
+an uncaught one steps to `pc = code.size`, unreachable under `GoodF1`
+(`uncaught_unreachable`). BcSem's zero branch rejects a raw exception word
+(`caml_raise`'s `Is_exception_result` test); validated (ocamlc byte-identical,
+1,650,759 steps; difftest_bc 10/10, callbacks, lexer, offsets). The rows drop
+`zero`; `DivisorsNonzero` and its whileMin shape conjunct are deleted, as are
+the CLOSURE/MAKEBLOCK operand and C_CALL2–5 checks (no consumers).
+
 ## Invocation carries `external_raise` (2026-10-06)
 
 `Invocation D c` gains `externalRaise : word c (D.domain.toNat +

@@ -1,4 +1,5 @@
 import OCaml.Vm.Sim.OperandTableRows
+import OCaml.Vm.Sim.DivisionRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
 import OCaml.Vm.Sim.OperandRows
@@ -140,26 +141,24 @@ theorem mulint_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
       mulint_next stable h code (by simpa using stack_fits fits capacity reach (k := 0)) step)
     (shape0 (fun _ _ _ => rfl)) (fun _ _ _ => intOp_no_halt (f := fun a b => tag64 (untag a * untag b)))
 
-/-- **The DIVINT row**; a zero divisor is the named `zero` (the raise row). -/
-theorem divint_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
-    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (zero : ∀ s s' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .DIVINT →
-      stepI P s ⟨.DIVINT, []⟩ = .next s' →
-      ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c') :
+/-- **The DIVINT row**; a zero divisor raises `Division_by_zero` (`division_zero_any`). -/
+theorem divint_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
+    (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+    (rr : RaiseRuntimeFrame L high0 dom0) (good : OCaml.GoodF1 P) :
     OCaml.OpArm P (OCaml.LoopAt L P) .DIVINT :=
-  opArm_of_next0 (fun s _ _ reach _ h code step =>
-      division_next .quotient stable h code (by simpa using stack_fits fits capacity reach (k := 0)) (zero s _ _ reach h code step) step)
+  opArm_of_next0 (fun s _ _ reach reach' h code step =>
+      division_next .quotient stable h code (by simpa using stack_fits fits capacity reach (k := 0))
+        (fun _ stack => division_zero_any .quotient rf rr stable good reach' h code (stack_fits fits capacity reach) step stack) step)
     (shape0 (fun _ _ _ => rfl)) (fun _ _ _ => division_no_halt .quotient)
 
-/-- **The MODINT row**; a zero divisor is the named `zero` (the raise row). -/
-theorem modint_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
-    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (zero : ∀ s s' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .MODINT →
-      stepI P s ⟨.MODINT, []⟩ = .next s' →
-      ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c') :
+/-- **The MODINT row**; a zero divisor raises `Division_by_zero` (`division_zero_any`). -/
+theorem modint_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
+    (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+    (rr : RaiseRuntimeFrame L high0 dom0) (good : OCaml.GoodF1 P) :
     OCaml.OpArm P (OCaml.LoopAt L P) .MODINT :=
-  opArm_of_next0 (fun s _ _ reach _ h code step =>
-      division_next .remainder stable h code (by simpa using stack_fits fits capacity reach (k := 0)) (zero s _ _ reach h code step) step)
+  opArm_of_next0 (fun s _ _ reach reach' h code step =>
+      division_next .remainder stable h code (by simpa using stack_fits fits capacity reach (k := 0))
+        (fun _ stack => division_zero_any .remainder rf rr stable good reach' h code (stack_fits fits capacity reach) step stack) step)
     (shape0 (fun _ _ _ => rfl)) (fun _ _ _ => division_no_halt .remainder)
 
 /-- **The EQ row**. -/

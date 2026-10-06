@@ -5025,8 +5025,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.makeblock2_row
 #print axioms OCaml.Vm.Sim.makeblock3_row
 #print axioms OCaml.Vm.Sim.f1_allocFrame
-#print axioms OCaml.Programs.whileMin_divisorsNonzero
-#print axioms OCaml.Vm.Sim.DivisorsNonzero.zero
 #print axioms OCaml.Vm.Sim.ReservedBlock.of_reservation
 #print axioms OCaml.Vm.Sim.AllocLogOk.of_block
 #print axioms OCaml.Vm.Sim.NurseryInput.of_block
@@ -5114,3 +5112,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.StackGeometry.external_object
 #print axioms OCaml.Vm.Sim.StackGeometry.external_of_stack
 #print axioms OCaml.Vm.Sim.RaiseRuntimeReady.of_frame
+#print axioms OCaml.Vm.Sim.division_zero_any
+#print axioms OCaml.Vm.Sim.division_zero_raised
