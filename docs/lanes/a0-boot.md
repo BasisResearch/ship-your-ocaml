@@ -35,8 +35,14 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
 * `WhileMinHeapChunks.lean` (gen_boot_chunks.py): the runtime's newlib
   chunks at the cut, for a6-gc's `F1Pins.libHeap`.
 
-Next: the rest of `resolve("ocamlrun")`, `_open`'s ENOENT path,
-`_open_r`, `open`, and the retry with "/prog".
+* **`resolve_ocamlrun` (ResolveRun.lean)**: the first `resolve("ocamlrun",
+  r)` from `_open`, in three parts (`resolve_init` through fs_init,
+  `resolve_scan` to the component loop, `resolve_finish` to the return).
+  `OcamlrunName` (ResolveName.lean) gives strchr's plan from the copy's
+  alignment (now a field of StrdupDone/SearchInPathDone/ResetSearchExeReturned).
+
+Next: `_open`'s ENOENT tail (`__errno`, errno store kept by
+`HeapReady.frame_errno`), `_open_r`, `open`; compose after ResetOpenCall.
 
 ## Round 2 status (2026-10-06, search)
 
