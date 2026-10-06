@@ -14,7 +14,8 @@ theorem raise_uncaught {nativeSp : Nat} {saved : Nat → BitVec 64} {value : Bit
   obtain ⟨returnCount, after, returnRun, returned⟩ := raise_uncaught_return checkPost.state
   refine ⟨checkCount + returnCount, after, checkRun.append returnRun, returned.good,
     returned.image, returned.tick, returned.pc, returned.stack, returned.value,
-    returned.registers, ?_, returned.output.trans checkPost.output⟩
+    returned.registers, ?_, returned.output.trans checkPost.output,
+    returned.htif.trans checkPost.htif⟩
   simpa only [uncaughtLog, stopDepth, word, checkPost.memory] using returned.memory
 
 end OCaml.Vm.Sim

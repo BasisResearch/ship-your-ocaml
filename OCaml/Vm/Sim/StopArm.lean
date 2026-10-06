@@ -26,7 +26,8 @@ theorem stop_arm {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanP
     value := (dp.frame.frame _ (by decide)).trans (represented_register h.accu encoded) }
   obtain ⟨count, after, run, post⟩ := stop_return input
   refine ⟨count, after, run, post.good, post.image, post.tick, post.pc,
-    post.stack, post.value, post.registers, ?_, post.output.trans dp.frame.out⟩
+    post.stack, post.value, post.registers, ?_, post.output.trans dp.frame.out,
+    post.htif.trans (dp.frame.frame _ (by decide))⟩
   simpa only [stopLog, stopDepth, word, dp.memory] using post.memory
 
 /-- STOP's bytecode halt is realized once the enclosing native exit path is supplied. -/

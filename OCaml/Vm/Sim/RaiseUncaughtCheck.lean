@@ -28,6 +28,8 @@ structure UncaughtChecked (before : Config) (nativeSp : Nat) (saved : Nat → Bi
   state : UncaughtReturnInput nativeSp saved value (BitVec.ofNat 64 high) after
   memory : after.σ.mem = before.σ.mem
   output : after.σ.sailOutput = before.σ.sailOutput
+  htif : after.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes =
+    before.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes
 
 /-- The native root-invocation comparison selects the uncaught return; no branch premise is assumed. -/
 theorem raise_uncaught_check {nativeSp : Nat} {saved : Nat → BitVec 64} {value : BitVec 64} {high : Nat} {c : Config}
@@ -61,7 +63,7 @@ theorem raise_uncaught_check {nativeSp : Nat} {saved : Nat → BitVec 64} {value
     (word c nativeSp) savedHigh.symm h.boundary.spRead.lower h.boundary.spRead.upper h.boundary.spRead.htif
     (word c nativeSp) savedSp.symm h.highRead.lower h.highRead.upper h.highRead.htif (BitVec.ofNat 64 high) highValue.symm guard c bp
   obtain ⟨_, memory, frame⟩ := post.extra
-  refine ⟨count, after, run, ?_, memory, frame.out⟩
+  refine ⟨count, after, run, ?_, memory, frame.out, frame.frame _ (by decide)⟩
   refine {
     toStopInvocation := h.toStopInvocation.frame_read memory (frame.frame _ (by decide))
     good := post.good

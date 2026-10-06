@@ -67,6 +67,9 @@ structure InterpRuntimeReturnPost (before : Config) (nativeSp : Nat) (saved : Na
   registers : ∀ r ∈ Layout.interpSavedRegs, gpr after r = some (saved r)
   memory : after.σ.mem = writeLog before.σ.mem log
   output : after.σ.sailOutput = before.σ.sailOutput
+  /-- the HTIF payload counter is untouched (caml_do_exit's exit command needs it idle) -/
+  htif : after.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes =
+    before.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes
 
 /-- Normal interpreter return with STOP's exact store order. -/
 abbrev StopReturnPost (before : Config) (nativeSp : Nat) (saved : Nat → BitVec 64)

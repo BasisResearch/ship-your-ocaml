@@ -58,6 +58,8 @@ theorem stop_return {nativeSp : Nat} {saved : Nat → BitVec 64} {value vmSp : B
   obtain ⟨returnCount, after, returnRun, returned⟩ := interp_return input
   exact ⟨count + returnCount, after, run.append returnRun, returned.good, returned.image,
     returned.tick, returned.pc, returned.stack, returned.value, returned.registers,
-    returned.memory.trans writes, returned.frame.out.trans frame.out⟩
+    returned.memory.trans writes, returned.frame.out.trans frame.out,
+    (returned.frame.frame LeanRV64DExecutable.Register.htif_payload_writes (by decide)).trans
+      (frame.frame LeanRV64DExecutable.Register.htif_payload_writes (by decide))⟩
 
 end OCaml.Vm.Sim
