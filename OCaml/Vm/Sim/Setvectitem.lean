@@ -112,7 +112,7 @@ theorem setvectitem_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     valueRead.toNat,
     value_index_word n,
     show BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 8#64 = BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2)) from codePc_add pl s.pc 2] using observed
-  exact ⟨count, after, run, modify_input stable h.toVmReprAt h.running.platform h.dispatch.loop setup⟩
+  exact ⟨count, after, run, modify_input stable h.toVmReprAt h.running.platform h.dispatch.loop h.geometry h.native setup⟩
 
 /-- Compose native setup, the GC lane's named barrier, and native represented return. -/
 theorem setvectitem_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}

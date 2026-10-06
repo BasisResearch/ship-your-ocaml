@@ -146,7 +146,7 @@ theorem {lower}_setup {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c d : Confi
       memory := memory.trans dp.memory, output := frame.out.trans dp.frame.out,
       preserved := fun r hr => (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide)) }}
 {chr(10).join(obs)}
-  exact ⟨count, after, run, modify_input stable h.toVmReprAt h.running.platform h.dispatch.loop setup⟩
+  exact ⟨count, after, run, modify_input stable h.toVmReprAt h.running.platform h.dispatch.loop h.geometry h.native setup⟩
 
 /-- Compose native setup, the GC lane's named barrier, and native represented return. -/
 theorem {lower}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}

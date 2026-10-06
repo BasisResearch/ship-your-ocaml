@@ -1,5 +1,23 @@
 # Lane a2-sem
 
+## The write barrier, represented (2026-10-06, with a6-gc)
+
+`OCaml/Vm/Sim/BarrierF1.lean` discharges the F1 table's `GlobalBarrier`,
+`FieldBarrier`, `FieldBarrierK` (`f1_globalBarrier`, `f1_fieldBarrier`,
+`f1_fieldBarrierK`) over a6-gc's machine summaries (`barrier_fast`,
+`barrier_grow`): `barrier_entry`/`barrier_remembered` build `Entry` and
+`Remembered` from the represented call; `barrier_core` follows the fast path's
+three logs (young slot; frame store + slot; + remembered-set insertion)
+through `BarrierState` (`separated_step` for stores in `WindowSeparated`
+windows, `field_step` for the slot); `modify_return_of_done` gives the row's
+`ModifyReturn`. For frame-form calls (malloc/realloc in the growth path), `BarrierKeep.lean` gives `BarrierObserved` (every byte the represented state reads, over every placed object) and `keep_step`/`keep_field_step` (one frame over the whole call, the slot word holding the stored value). Named premises (GC lane, a6-gc discharges): `BarrierRuntime`
+(idle collector, the ref table's words/arena/separation, insertion keeps the
+runtime) and `BarrierGrowth` (the growth path's `BarrierDone`). Also:
+`ModifyInput` carries `geometry`/`native` (a1-arms agreed); `caml_modify_loaded`
+(`gen_barrier_image.py`); `WindowSeparated.transport`; `memmove_call`
+(shared by bprime's parse_format and a1-prims' caml_putblock); the channel
+guards (`offsetFits`, `isOut`; validated).
+
 ## DIVINT/MODINT zero divisor closed (2026-10-06)
 
 `division_zero_any`: a caught zero-divisor raise is `division_zero_caught_next`

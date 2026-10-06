@@ -32,12 +32,17 @@ structure ModifyInput (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : 
   loop : LoopRegisters c
   env : ∃ w, gpr c Layout.reg_env = some w ∧ valWord pl s.env = some w
   extra : gpr c Layout.reg_extra = some (BitVec.ofNat 64 s.extra)
+  /-- the VM stack geometry at the call (`Invariant.lean`) -/
+  geometry : OCaml.LoopGeometry L P s c pl cp high
+  /-- the native invocation at the call (`Invocation.lean`) -/
+  native : NativePlaced c
 
 /-- Reconstruct the represented call input once, from the read-only native setup. -/
 theorem modify_input {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
     {sp high codeReg : Nat} {ra codeWord stackWord slot value : BitVec 64} {c after : Config}
     (stable : MemoryStable L.runtimeOk) (data : VmReprAt P s c pl cp sp high)
     (platform : PlatformOk L.runtimeOk c) (loop : LoopRegisters c)
+    (geometry : OCaml.LoopGeometry L P s c pl cp high) (native : NativePlaced c)
     (post : ModifySetup c codeReg ra codeWord stackWord slot value after) :
     ModifyInput L P s pl cp sp high codeReg ra codeWord stackWord slot value after := by
   refine {
@@ -46,7 +51,9 @@ theorem modify_input {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : C
     primitives := data.primitives.frame post.memory
     runtime := stable c after post.memory platform.runtime
     loop := loopRegisters_frame (fun r hr => post.preserved r (by revert r; decide)) loop
-    env := ?_, extra := (post.preserved _ (by decide)).trans data.extra }
+    env := ?_, extra := (post.preserved _ (by decide)).trans data.extra
+    geometry := geometry.same rfl rfl post.memory
+    native := native.frame_read post.memory (post.preserved _ (by decide)) }
   obtain ⟨w, reg, value⟩ := data.env
   exact ⟨w, (post.preserved _ (by decide)).trans reg, value⟩
 

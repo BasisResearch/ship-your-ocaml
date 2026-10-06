@@ -73,6 +73,7 @@ echo "stage a4: OK"
 
 echo "== $(date +%T) stage a5: generated files are current"
 python3 scripts/gen_gc_rows.py --check || fail "stage a5: GC row/code drift"
+python3 scripts/gen_barrier_image.py --check || fail "stage a5: caml_modify image drift"
 python3 scripts/gen_chain.py --check || fail "stage a5: chain module drift"
 python3 scripts/gc_cfg.py --check || fail "stage a5: collector CFG drift"
 python3 scripts/gen_lazy_force.py --check || fail "stage a5: Lazy.force bytecode drift"

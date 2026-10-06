@@ -56,7 +56,7 @@ theorem setfield0_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     · have observed : gpr after 10 = some base :=
         PinsHold.get post.pins ⟨2, by simp⟩
       simpa only [show sign_extend (m := 64) (0x000#12) = 0#64 from by decide, BitVec.add_zero] using observed
-  exact ⟨n, after, run, modify_input stable h.toVmReprAt h.running.platform h.dispatch.loop setup⟩
+  exact ⟨n, after, run, modify_input stable h.toVmReprAt h.running.platform h.dispatch.loop h.geometry h.native setup⟩
 
 /-- Represented fixed-field mutation, conditional on the GC lane's named barrier summary. -/
 theorem setfield0_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}

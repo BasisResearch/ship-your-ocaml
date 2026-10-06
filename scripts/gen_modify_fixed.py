@@ -80,7 +80,7 @@ theorem {lower}_setup {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c d : Confi
     · have observed : gpr after 10 = some {native_slot} :=
         PinsHold.get post.pins ⟨{pins['x10']}, by simp⟩
       simpa only [show sign_extend (m := 64) (0x{8*index:03x}#12) = {8*index}#64 from by decide, BitVec.add_zero] using observed
-  exact ⟨n, after, run, modify_input stable h.toVmReprAt h.running.platform h.dispatch.loop setup⟩
+  exact ⟨n, after, run, modify_input stable h.toVmReprAt h.running.platform h.dispatch.loop h.geometry h.native setup⟩
 
 /-- Represented fixed-field mutation, conditional on the GC lane's named barrier summary. -/
 theorem {lower}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}

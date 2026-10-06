@@ -265,4 +265,24 @@ theorem _root_.OCaml.Vm.Gc.WindowSeparated.sub {P : Prog} {s : St} {c : Config} 
           channels := fun id ch a hch hcp => sub (h.channels id ch a hch hcp)
           primitives := fun i name hi => sub (h.primitives i name hi) }
 
+/-- A separated window depends on the state only through object sizes and
+the channel records, and on the configuration only through two words. -/
+theorem _root_.OCaml.Vm.Gc.WindowSeparated.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
+    {cp : ChanPlace} {high : Nat} {w : W} (h : WindowSeparated w P s c pl cp high)
+    (objects : ∀ l o', s'.heap.get? l = some o' → ∃ o, s.heap.get? l = some o ∧ o.wosize = o'.wosize)
+    (chans : s'.world.chans = s.world.chans)
+    (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)) :
+    WindowSeparated w P s' c' pl cp high where
+  statics := h.statics
+  domain := by rw [domain]; exact h.domain
+  stack := h.stack
+  code := h.code
+  heap l a o' placed object := by
+    obtain ⟨o, ho, size⟩ := objects l o' object
+    simpa only [size] using h.heap l a o placed ho
+  channels := by rw [chans]; exact h.channels
+  primitives := by rw [prims]; exact h.primitives
+
 end OCaml.Vm.Sim
