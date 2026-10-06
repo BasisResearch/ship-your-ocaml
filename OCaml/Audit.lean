@@ -25,6 +25,7 @@ import OCaml.Vm.Sim.DecodeFetch
 import OCaml.Vm.Sim.SignalRows
 import OCaml.Vm.Sim.ControlRows
 import OCaml.Vm.Sim.OperandTableRows
+import OCaml.Vm.Sim.RaiseRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -4733,3 +4734,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ArmGeometry.heap_set
 #print axioms OCaml.Vm.Sim.ArmGeometry.alloc_log
 #print axioms OCaml.Vm.Gc.NurseryGeometry.domainApart
+#print axioms OCaml.Vm.Sim.RaiseFrame.of_step
+#print axioms OCaml.Vm.Sim.ArmGeometry.domain_read
+#print axioms OCaml.Vm.Sim.RaiseQuietReady.of_frame
+#print axioms OCaml.Vm.Sim.NativePlaced.raise
+#print axioms OCaml.Vm.Sim.raise_family_next
+#print axioms OCaml.Vm.Sim.raiseTo_not_halt
+#print axioms OCaml.Vm.Sim.raise_row_of
+#print axioms OCaml.Vm.Sim.raise_row
+#print axioms OCaml.Vm.Sim.reraise_row
+#print axioms OCaml.Vm.Sim.raise_notrace_row

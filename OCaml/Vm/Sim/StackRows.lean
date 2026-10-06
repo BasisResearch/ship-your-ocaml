@@ -75,6 +75,12 @@ structure RuntimeFrame (L : OCaml.Layout) (high domain : Nat) : Prop where
       high - Layout.stackBytes + Layout.stackThresholdBytes
   /-- no signal or GC request is pending at a loop head (G1: no collection) -/
   quiet : ∀ c, L.runtimeOk c → SignalCheckReady c
+  /-- the trap barrier lies at or above the stack top, and backtrace
+  recording is off (a raise needs neither) -/
+  barrier : ∀ c, L.runtimeOk c →
+    high ≤ (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_trap_barrier)).toNat
+  backtrace : ∀ c, L.runtimeOk c →
+    word c ((word c Layout.sym_Caml_state).toNat + Layout.off_backtrace_active) = 0#64
 
 /-- Every window inside the VM stack allocation is runtime-stable. -/
 theorem RuntimeFrame.stackWindow {L : OCaml.Layout} {high domain : Nat} (rf : RuntimeFrame L high domain)

@@ -27,6 +27,8 @@ theorem f1_runtimeFrame : RuntimeFrame Gc.f1Layout Gc.f1High Gc.f1Domain where
   windows _ vm := Gc.f1_stable fun w hw => f1_vmWindow_apart (vm w hw)
   threshold _ ok := Gc.f1_threshold ok
   quiet _ ok := Gc.f1_quiet ok
+  barrier _ ok := Gc.f1_trapBarrier ok
+  backtrace _ ok := Gc.f1_backtrace ok
 
 /-- The F1 runtime invariant depends on memory only. -/
 theorem f1_memoryStable : MemoryStable Gc.f1Layout.runtimeOk :=
