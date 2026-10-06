@@ -153,6 +153,24 @@ runtime invariant: the long pole for whileMin's `Halts`.
   with a0-boot's HeapReady), the post-call insertion chain (aa88, aa38, aa44),
   and the represented ModifyReturn.
 
+### caml_modify insertion chain and the realloc callee (2026-10-06)
+
+- `OCaml/Vm/Gc/ModifyInsert.lean:run`: the actual blocks after
+  `jal caml_realloc_ref_table` returns (aa88 reload table pointer/slot/ptr from
+  the frame, aa38 `ptr := ptr + 8` and `*ptr := slot`, aa44 restore ra/sp and
+  `ret`), from a named `Route`; `log`/`registers` give the exact effect. With
+  `ModifySlow.prefix_run`, only the callee is missing for whileMin's route.
+- The callee, on the unallocated-table path: `caml_realloc_ref_table`
+  (8 instrs, tail-`j`) → `realloc_generic_table.isra.0` with `caml_alloc_table`
+  INLINED: at `base == NULL` (0x80009750) it reads `Caml_state->minor_heap_wsz`
+  (offset 80), stores `reserve = 256` and `size = wsz / 8` into the table,
+  `__muldi3(size + 256, 8)`, `caml_stat_alloc_noexc` (a0-boot's
+  `stat_alloc_ready` → malloc under `HeapReady`), then fills base/ptr/
+  threshold/limit/end (more `__muldi3`, and `caml_gc_message` with
+  `caml_verb_gc = 0`). Needed summaries at the pinned addresses: `__muldi3`
+  (the Muldi3Spec battery, regenerated), `caml_gc_message` (quiet path),
+  `caml_stat_alloc_noexc`.
+
 Open: G2 (collector proper); status and next design step below. F1 asks from a1-arms/bprime are all landed (last: `72d88e40`).
 
 G2 progress after F1:
