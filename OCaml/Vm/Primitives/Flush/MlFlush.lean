@@ -831,9 +831,9 @@ theorem pro_fast (c : Config) (R : Nat → BitVec 64)
     (w1 : WriteWindow (R 2 - 112#64 + 104#64) 8)
     (w2 : WriteWindow (R 2 - 112#64 + 96#64) 8)
     (w3 : WriteWindow (R 2 - 112#64 + 88#64) 8)
-    (a4 : OutLRange (proLog R (pro_loads c.σ.mem R)) (0x80064d08#64).toNat 8)
+    (a4 : OutLRange ((proLog R (pro_loads c.σ.mem R)).take 4) (0x80064d08#64).toNat 8)
     (w5 : ReadWindow ((bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat)) + 288#64) 8)
-    (a5 : OutLRange (proLog R (pro_loads c.σ.mem R)) ((bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat)) + 288#64).toNat 8)
+    (a5 : OutLRange ((proLog R (pro_loads c.σ.mem R)).take 4) ((bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat)) + 288#64).toNat 8)
     (w6 : WriteWindow (R 2 - 112#64 + 32#64) 8)
     (w7 : WriteWindow (R 2 - 112#64 + 24#64) 8)
     (w8 : WriteWindow (R 2 - 112#64 + 8#64) 8)
@@ -841,9 +841,9 @@ theorem pro_fast (c : Config) (R : Nat → BitVec 64)
     (w10 : WriteWindow ((bytesVal .ld (read8 c.σ.mem (0x80064d08#64).toNat)) + 288#64) 8)
     (w11 : WriteWindow (R 2 - 112#64 + 40#64) 8)
     (w12 : ReadWindow (R 10 + 8#64) 8)
-    (a12 : OutLRange (proLog R (pro_loads c.σ.mem R)) (R 10 + 8#64).toNat 8)
+    (a12 : OutLRange ((proLog R (pro_loads c.σ.mem R)).take 10) (R 10 + 8#64).toNat 8)
     (w13 : ReadWindow ((bytesVal .ld (read8 c.σ.mem (R 10 + 8#64).toNat))) 4)
-    (a13 : OutLRange (proLog R (pro_loads c.σ.mem R)) ((bytesVal .ld (read8 c.σ.mem (R 10 + 8#64).toNat))).toNat 4)
+    (a13 : OutLRange ((proLog R (pro_loads c.σ.mem R)).take 10) ((bytesVal .ld (read8 c.σ.mem (R 10 + 8#64).toNat))).toNat 4)
     (outside : ImageOutside (proLog R (pro_loads c.σ.mem R)))
     (ok : guardB .BEQ (bytesVal .lw ((pro_loads c.σ.mem R).getD 3 [])) (18446744073709551615#64) = false) :
     FnSummary 0x80016238#64 (fun d => d = c)
@@ -882,7 +882,7 @@ theorem pro_fast (c : Config) (R : Nat → BitVec 64)
         simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, pro_input]
       · apply ExitPath.ReadWindow.lw w13 rfl ?_ (ExitPath.read8_pins4 _ _)
         simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, pro_input]
-    · rw [wl]; simp only [LoadMiss, pro_body]
+    · rw [wl]; simp only [LoadMiss, pro_body, IsStore, Bool.false_eq_true, ↓reduceIte, Nat.reduceAdd]
       exact ⟨fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, pro_input, pro_loads]) a4, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, pro_input, pro_loads]) a5, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, pro_input, pro_loads]) a12, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, pro_input, pro_loads]) a13, trivial⟩
   have control : TermFactsO (runGM pro_body (pro_input R) (pro_loads c.σ.mem R)) (some pro_term) := by rw [pro_eval]; exact ok
   apply registers_of_blocks h.image outside (pro_summary c (R 1) R _ h regs access control)

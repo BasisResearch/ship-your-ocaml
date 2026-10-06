@@ -36,18 +36,13 @@ def AccessPure (m : Std.ExtHashMap Nat (BitVec 8)) : GRegs → List (List (BitVe
   | L, loads, a :: rest =>
     MemFacts m L (loads.headD []) a ∧ AccessPure m (stepGM a L (loads.headD [])) (stepLdsM a.kind loads) rest
 
-/-- Every load of a block misses the store log `log`. -/
-def LoadMiss (log : List WEntry) : GRegs → List (List (BitVec 8)) → List MInstr → Prop
+/-- Every load of a block misses the stores before it: the first `j`
+entries of the block's log `log`, `j` counting the stores passed so far. -/
+def LoadMiss (log : List WEntry) (j : Nat) : GRegs → List (List (BitVec 8)) → List MInstr → Prop
   | _, _, [] => True
   | L, loads, a :: rest =>
-    (IsLoad a.kind = true → OutLRange log (eaddrM a L).toNat (widthOfM a.kind)) ∧
-    LoadMiss log (stepGM a L (loads.headD [])) (stepLdsM a.kind loads) rest
-
-theorem outLRange_prefix {log rest : List WEntry} {x n : Nat} (h : OutLRange (log ++ rest) x n) :
-    OutLRange log x n := by
-  induction log with
-  | nil => trivial
-  | cons e log ih => exact ⟨h.1, ih h.2⟩
+    (IsLoad a.kind = true → OutLRange (log.take j) (eaddrM a L).toNat (widthOfM a.kind)) ∧
+    LoadMiss log (if IsStore a.kind then j + 1 else j) (stepGM a L (loads.headD [])) (stepLdsM a.kind loads) rest
 
 theorem outLRange_of_eaddr {log : List WEntry} {a : MInstr} {L : GRegs} {x : BitVec 64} {n : Nat}
     (e : eaddrM a L = x) (h : OutLRange log x.toNat n) : OutLRange log (eaddrM a L).toNat n := e ▸ h
@@ -78,11 +73,11 @@ theorem memFacts_writeLog {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs} {bs : 
 
 theorem accessPlan_of_miss {m : Std.ExtHashMap Nat (BitVec 8)} :
     ∀ (body : List MInstr) (L : GRegs) (loads : List (List (BitVec 8))) (log0 : List WEntry),
-    AccessPure m L loads body → LoadMiss (log0 ++ wlogM body L loads) L loads body →
+    AccessPure m L loads body → LoadMiss (log0 ++ wlogM body L loads) log0.length L loads body →
     AccessPlan (writeLog m log0) L loads body
   | [], _, _, _, _, _ => trivial
   | a :: rest, L, loads, log0, ⟨facts, pure⟩, ⟨miss, misses⟩ => by
-    refine ⟨memFacts_writeLog facts fun hl => outLRange_prefix (miss hl), ?_⟩
+    refine ⟨memFacts_writeLog facts fun hl => by simpa using miss hl, ?_⟩
     by_cases st : IsStore a.kind = true
     · rw [stepMemM_store st, show writeLog (writeLog m log0) [wentryM a L] = writeLog m (log0 ++ [wentryM a L]) by
         simp [writeLog, List.foldl_append]]
@@ -92,19 +87,21 @@ theorem accessPlan_of_miss {m : Std.ExtHashMap Nat (BitVec 8)} :
         unfold stepLdsM; split <;> simp_all [IsStore]
       have gs : stepGM a L (loads.headD []) = L := by
         unfold stepGM; split <;> simp_all [IsStore]
-      rw [wl] at misses miss
-      rw [gs, ls] at misses pure ⊢
+      rw [wl] at misses
+      rw [gs, ls, st] at misses
+      rw [gs, ls] at pure ⊢
       exact accessPlan_of_miss rest L loads _ pure (by simpa using misses)
-    · rw [stepMemM_skip (by simpa using st)]
+    · have st' : IsStore a.kind = false := by simpa using st
+      rw [stepMemM_skip st']
       have wl : wlogM (a :: rest) L loads = wlogM rest (stepGM a L (loads.headD [])) (stepLdsM a.kind loads) := by
         simp only [wlogM]; split <;> simp_all [IsStore]
-      rw [wl] at misses
-      exact accessPlan_of_miss rest _ _ log0 pure misses
+      rw [wl, st'] at misses
+      exact accessPlan_of_miss rest _ _ log0 pure (by simpa using misses)
 
 /-- A block's access plan from accesses against the caller's memory, when
-every load misses the block's own stores. -/
+every load misses the block's earlier stores. -/
 theorem accessPlan_of_pure {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs} {loads : List (List (BitVec 8))}
-    {body : List MInstr} (pure : AccessPure m L loads body) (miss : LoadMiss (wlogM body L loads) L loads body) :
+    {body : List MInstr} (pure : AccessPure m L loads body) (miss : LoadMiss (wlogM body L loads) 0 L loads body) :
     AccessPlan m L loads body :=
   accessPlan_of_miss body L loads [] pure miss
 

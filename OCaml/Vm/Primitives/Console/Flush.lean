@@ -70,12 +70,8 @@ structure FlushLayout (sp ch fd rp : BitVec 64) (len : Nat) : Prop where
   chanText : ch.toNat + 72 ≤ Image.textBase ∨ Image.textBase + Image.textSize ≤ ch.toNat
   chanRodata : ch.toNat + 72 ≤ Image.rodataBase ∨ Image.rodataBase + Image.rodataSize ≤ ch.toNat
 
-structure FlushInput (ra sp ch fd rp off : BitVec 64) (bs : List UInt8) (c : Config) : Prop
-    extends LeafInput ra c where
-  idle : c.σ.regs.get? Register.htif_payload_writes = some (0#4)
-  saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], (gprGet c.σ n).isSome
-  stack : gpr c 2 = some sp
-  chanReg : gpr c 10 = some ch
+/-- What `caml_flush_partial` reads from memory and its native layout. -/
+structure FlushMem (sp ch fd rp off : BitVec 64) (bs : List UInt8) (c : Config) : Prop where
   short : bs.length < 2 ^ 31
   nonempty : 0 < bs.length
   layout : FlushLayout sp ch fd rp bs.length
@@ -92,6 +88,68 @@ structure FlushInput (ra sp ch fd rp off : BitVec 64) (bs : List UInt8) (c : Con
   impure : bytesVal .ld (read8 c.σ.mem impurePtr.toNat) = rp
   clear : NoPendingSignals c.σ.mem
   quiet : bytesVal .lw (read8 c.σ.mem somethingToDo.toNat) = 0#64
+
+structure FlushInput (ra sp ch fd rp off : BitVec 64) (bs : List UInt8) (c : Config) : Prop
+    extends LeafInput ra c, FlushMem sp ch fd rp off bs c where
+  idle : c.σ.regs.get? Register.htif_payload_writes = some (0#4)
+  saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], (gprGet c.σ n).isSome
+  stack : gpr c 2 = some sp
+  chanReg : gpr c 10 = some ch
+
+/-- The bytes `caml_flush_partial` reads: the channel header and buffer, the
+descriptor table entries, the blocking hooks, `_impure_ptr`, the pending
+signals and `caml_something_to_do`. -/
+def FlushReads (ch fd : BitVec 64) (len x : Nat) : Prop :=
+  (ch.toNat ≤ x ∧ x < ch.toNat + 72 + len) ∨
+  (∃ a ∈ [fsReady.toNat, (kindAddress fd).toNat, enterHook.toNat, leaveHook.toNat, impurePtr.toNat,
+    somethingToDo.toNat], a ≤ x ∧ x < a + 8) ∨
+  (pendingSignals.toNat ≤ x ∧ x < pendingSignals.toNat + 256)
+
+theorem read8_same {m m' : Std.ExtHashMap Nat (BitVec 8)} {a : Nat}
+    (same : ∀ i, i < 8 → (m'[a + i]?).getD 0 = (m[a + i]?).getD 0) : read8 m' a = read8 m a := by
+  have h0 := same 0 (by decide); simp only [Nat.add_zero] at h0
+  simp only [read8]
+  rw [h0, same 1 (by decide), same 2 (by decide), same 3 (by decide), same 4 (by decide),
+    same 5 (by decide), same 6 (by decide), same 7 (by decide)]
+
+/-- `caml_flush_partial`'s memory facts survive any change that keeps the
+bytes it reads. -/
+theorem FlushMem.transfer {sp ch fd rp off bs c d} (h : FlushMem sp ch fd rp off bs c)
+    (same : ∀ x, FlushReads ch fd bs.length x → (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0) :
+    FlushMem sp ch fd rp off bs d := by
+  have L := h.layout
+  have chRam := L.chanRam
+  have chOff : ∀ k, k ≤ 72 → (ch + BitVec.ofNat 64 k).toNat = ch.toNat + k := by
+    intro k hk; rw [BitVec.toNat_add]; simp only [BitVec.toNat_ofNat]; omega
+  have chan : ∀ k, k ≤ 64 → read8 d.σ.mem (ch + BitVec.ofNat 64 k).toNat = read8 c.σ.mem (ch + BitVec.ofNat 64 k).toNat :=
+    fun k hk => read8_same fun i hi => same _ (Or.inl (by rw [chOff k (by omega)]; omega))
+  have glob : ∀ a ∈ [fsReady.toNat, (kindAddress fd).toNat, enterHook.toNat, leaveHook.toNat, impurePtr.toNat,
+      somethingToDo.toNat], read8 d.σ.mem a = read8 c.σ.mem a :=
+    fun a ha => read8_same fun i hi => same _ (Or.inr (Or.inl ⟨a, ha, by omega, by omega⟩))
+  have D := h.descriptor
+  have fd0 : read8 d.σ.mem ch.toNat = read8 c.σ.mem ch.toNat := by
+    have := chan 0 (by decide); simpa using this
+  refine { h with
+    fdWord := by rw [fd0]; exact h.fdWord
+    descriptor := ⟨by rw [glob _ (by simp)]; exact D.ready, D.range, D.kindWindow,
+      by rw [glob _ (by simp)]; exact D.console, by rw [glob _ (by simp)]; exact D.notFile⟩
+    curr := by rw [show (24#64 : BitVec 64) = BitVec.ofNat 64 24 from rfl, chan 24 (by decide)]; exact h.curr
+    offset := by rw [show (8#64 : BitVec 64) = BitVec.ofNat 64 8 from rfl, chan 8 (by decide)]; exact h.offset
+    bytes := by
+      intro i x hx
+      have hi := (List.getElem?_eq_some_iff.mp hx).1
+      have addr := cursor_toNat h.ram.2.1 (Nat.le_of_lt hi)
+      rw [same _ (Or.inl (by rw [addr, chOff 72 (by decide)]; omega))]
+      exact h.bytes i x hx
+    enterHookWord := by rw [glob _ (by simp)]; exact h.enterHookWord
+    leaveHookWord := by rw [glob _ (by simp)]; exact h.leaveHookWord
+    impure := by rw [glob _ (by simp)]; exact h.impure
+    clear := by
+      intro i hi
+      rw [read8_same fun j hj => same _ (Or.inr (Or.inr (by
+        rw [slot_toNat i hi]; generalize pendingSignals.toNat = P; omega)))]
+      exact h.clear i hi
+    quiet := by rw [glob _ (by simp)]; exact h.quiet }
 
 /-- Return from `caml_flush_partial`: 1, the buffer on the console, `curr`
 reset to the buffer start, `offset` advanced; only the native stack, the two

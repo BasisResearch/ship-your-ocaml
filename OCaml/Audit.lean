@@ -282,6 +282,7 @@ import OCaml.Vm.Primitives.Console.Loop
 import OCaml.Vm.Primitives.HtifFrame
 import OCaml.Vm.Primitives.Console.Write
 import OCaml.Vm.Primitives.Console.WriteFd
+import OCaml.Vm.Primitives.Console.MlFlush
 import OCaml.Vm.Primitives.PairLayout
 import OCaml.Vm.Primitives.AccessPlanObservation
 import OCaml.Vm.Boot.Startup.HeapReady
@@ -2495,6 +2496,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.scan_loop
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.leave_blocking
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.write_fd
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.flush_partial
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.FlushMem.transfer
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ml_flush
+#print axioms OCaml.Vm.Primitives.accessPlan_of_pure
 #print axioms OCaml.Vm.Primitives.indirect_registers_summary
 
 #print axioms Vsa.Sim.segmentSummary

@@ -11,7 +11,7 @@ reloaded ra, the saved word. The spec of a block (`fast`) gives
   `decide`, and `'view'` (a load after all the block's stores) reads through
   the store log. A window load after some of the block's stores reads the
   caller's memory, with the premise that it misses those stores
-  (`OutLRange (log.take j) address width`). In an address, `@k` is the
+  (`OutLRange (log.take j) address width`, `j` stores before it). In an address, `@k` is the
   value of the block's load k;
 * `log`: the store log, a Lean list of `WEntry` over `R`;
 * `taken`: the routed outcome of a branch (its condition becomes the premise
@@ -194,7 +194,7 @@ def emit_fast(E, b, name, regs, fast):
             continue
         if a[0] == 'load' and mode != 'view' and before:
             apart = f'a{k}'
-            params.append(f'({apart} : OutLRange ({log}) ({addr}).toNat {a[2]})')
+            params.append(f'({apart} : OutLRange (({log}).take {before}) ({addr}).toNat {a[2]})')
             misses[pos_of[k]] = f'fun _ => outLRange_of_eaddr (by simp [{SIMP_ADDR}, {name}_input, {name}_loads]) {apart}'
             pure = True
         if a[1] == 'lw' and mode == 'view':
@@ -237,7 +237,7 @@ def emit_fast(E, b, name, regs, fast):
           '    apply accessPlan_of_pure',
           f'    · simp only [AccessPure, {name}_body, {name}_loads]',
           '      chain_facts True.intro', *['  ' + bl for bl in bullets],
-          f'    · rw [wl]; simp only [LoadMiss, {name}_body]',
+          f'    · rw [wl]; simp only [LoadMiss, {name}_body, IsStore, Bool.false_eq_true, ↓reduceIte, Nat.reduceAdd]',
           f'      exact ⟨{miss}, trivial⟩')
     else:
         E(f'  have access : AccessPlan c.σ.mem ({name}_input R) {L} {name}_body := by',
