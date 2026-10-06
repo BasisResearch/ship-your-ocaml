@@ -157,4 +157,104 @@ theorem toInt_add_small (x : BitVec 64) (n : Nat) (hn : n < 2 ^ 62) (h : x.toInt
 theorem bytesToString_append (a b : List UInt8) : bytesToString (a ++ b) = bytesToString a ++ bytesToString b := by
   simp [bytesToString, String.ofList_append]
 
+/-- `consoleWindows` as a write log (the values are irrelevant): the footprint
+of every console primitive's framed post. -/
+def consoleLog (sp a : Nat) : List WEntry :=
+  [(sp - 384, 384, 0#64), (Layout.sym_errno, 4, 0#64), (Layout.sym_impure_data, 4, 0#64),
+   (a + 8, 8, 0#64), (a + 24, 8, 0#64), (a + 72, ioBufferSize, 0#64)]
+
+/-- A byte frame on the console footprint is a getD frame on its windows. -/
+theorem frameOnD_of_consoleLog {c e : Config} {sp a : Nat} (room : 384 ≤ sp)
+    (memory : ∀ x, OutL (consoleLog sp a) x → byte e x = byte c x) :
+    FrameOnD (consoleWindows sp a) c.σ.mem e.σ.mem := by
+  intro x hx
+  simp only [consoleWindows, OutW, and_true] at hx
+  have m := memory x (by simp only [consoleLog, OutL, and_true]; omega)
+  rwa [byte_total, byte_total] at m
+
+/-- The control and register facts of a console primitive's return:
+`Val_unit`, `s0`–`s11` and `sp` restored, the HTIF device idle. -/
+structure ConsoleRet (ra sp : BitVec 64) (c e : Config) : Prop where
+  good : GoodState e.σ
+  image : ExecutableImage e
+  minstret : ∃ w, e.σ.regs.get? LeanRV64DExecutable.Register.minstret = some w
+  tick : e.tick < 2
+  idle : e.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some (0#4)
+  pc : pcOf e = some ra
+  result : gpr e 10 = some 1#64
+  stack : gpr e 2 = some sp
+  saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gpr e n = gpr c n
+
+/-- **A console primitive's framed post**: from its return, its byte frame
+on the console footprint, and the one channel record it changes. -/
+theorem framed_of_ret {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
+    {sp high domain entry : Nat} {env ra : BitVec 64} {c e : Config} {args : List Val} {name : String}
+    {id ch : Nat} {chn chn' : Chan} {w' : World} {D : InvocationData}
+    (setup : CcallSetupPost ra args L P s pl cp sp high domain entry env c)
+    (inv : Invocation D c) (valid : NativeValid D) (high' : D.nativeSp ≤ Layout.sym_stack_top)
+    (ret : ConsoleRet ra (BitVec.ofNat 64 D.nativeSp) c e)
+    (memory : ∀ x, OutL (consoleLog D.nativeSp ch) x → byte e x = byte c x)
+    (outside : PayloadChanOutside (consoleLog D.nativeSp ch) P s c pl cp sp id)
+    (bindings : BindingsOutside (consoleLog D.nativeSp ch) P c)
+    (stable : ConsoleStable L)
+    (chan : s.world.chans[id]? = some chn) (record : cp id = some ch)
+    (chans : w'.chans = s.world.chans.set id chn') (counter : w'.ooId = s.world.ooId)
+    (rootsEq : roots P {s with world := w'} = roots P s)
+    (repr : ChanAt e ch chn') (console : output e.σ = bytesToString w'.console)
+    (sem : primF1Impl name args s.heap s.world = .ok Val.unit s.heap w') :
+    FramedPrimitivePost L.runtimeOk P s pl cp sp high name args Val.unit 1#64 s.heap w'
+      (consoleLog D.nativeSp ch) c ra e := by
+  have hr := valid.headroom
+  simp only [nativeHeadroom] at hr
+  refine ⟨⟨ret.good, ret.image, ret.minstret, ret.tick, ret.pc, ret.result, memory, ?_⟩,
+    ?_, bindings_frame_outsideLog setup.input.primitives bindings memory,
+    ⟨ret.good, ret.image, stable P s c pl cp high id chn ch D.nativeSp setup.geometry setup.input.runtime
+      chan record valid.headroom high' e
+      (frameOnD_of_consoleLog (by simp only [Vsa.Sim.DlHeap.heapEnd] at hr; omega) memory)⟩,
+    LoopRegisters.of_restored setup.input.loop (fun n hn => ret.saved n (by
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn ⊢; omega)) ret.idle,
+    rfl, sem⟩
+  · intro r hr
+    simp only [callSavedRegs, List.mem_cons, List.mem_nil_iff, or_false] at hr
+    rcases hr with rfl | rfl | rfl | rfl
+    · exact ret.saved 25 (by decide)
+    · exact ret.saved 8 (by decide)
+    · exact ret.saved 18 (by decide)
+    · exact ret.stack.trans inv.stack.symm
+  · exact (setup.input.data.frame_chan outside memory chans counter rootsEq record repr console).accu_int 0
+
+/-- What a channel update keeps: the descriptor, direction and read-ahead. -/
+structure ChanSame (chn chn' : Chan) : Prop where
+  fd : chn'.fd = chn.fd
+  isOut : chn'.isOut = chn.isOut
+  inBuf : chn'.inBuf = chn.inBuf
+
+/-- **A channel record after an update** of its `offset`/`curr` words and
+buffer bytes: every other header word is copied. -/
+theorem _root_.OCaml.Vm.ChanAt.update {c e : Config} {ch : Nat} {chn chn' : Chan} (repr : ChanAt c ch chn)
+    (same : ChanSame chn chn')
+    (keep : ∀ x, ch ≤ x → x < ch + 72 → (x < ch + 8 ∨ ch + 16 ≤ x) → (x < ch + 24 ∨ ch + 32 ≤ x) →
+      byte e x = byte c x)
+    (offset : (word e (ch + 8)).toInt = chn'.offset)
+    (curr : (word e (ch + 24)).toNat = ch + 72 + chn'.cursor)
+    (bytes : ∀ i (b : UInt8), chn'.buffer[i]? = some b → byte e (ch + 72 + i) = BitVec.ofNat 8 b.toNat)
+    (cursorLe : chn'.cursor ≤ ioBufferSize) (bufferLe : chn'.buffer.length ≤ ioBufferSize) :
+    ChanAt e ch chn' := by
+  have F := repr.fields
+  have copy := fun (k n : Nat) (lo : k + n ≤ 8 ∨ (16 ≤ k ∧ k + n ≤ 24) ∨ (32 ≤ k ∧ k + n ≤ 72)) =>
+    (show Reloc.Copied c e (ch + k) (ch + k) n from fun j hj => keep _ (by omega) (by omega) (by omega) (by omega))
+  refine ⟨?_, offset, curr, ?_, ?_, ?_, bytes, cursorLe, bufferLe, F.aligned⟩
+  · rw [show word32 e (ch + chanOffFd) = word32 c (ch + chanOffFd) from
+      Reloc.bytesT_congr (copy chanOffFd 4 (by simp only [chanOffFd]; omega)), same.fd]
+    exact F.fd
+  · rw [show word e (ch + chanOffMax) = word c (ch + chanOffMax) from
+      Reloc.bytesT_congr (copy chanOffMax 8 (by simp only [chanOffMax]; omega)), same.fd, same.isOut, same.inBuf]
+    exact F.max
+  · rw [show word e (ch + chanOffEnd) = word c (ch + chanOffEnd) from
+      Reloc.bytesT_congr (copy chanOffEnd 8 (by simp only [chanOffEnd]; omega))]
+    exact F.bufEnd
+  · rw [show word32 e (ch + chanOffFlags) = word32 c (ch + chanOffFlags) from
+      Reloc.bytesT_congr (copy chanOffFlags 4 (by simp only [chanOffFlags]; omega))]
+    exact F.flags
+
 end OCaml.Vm.Sim

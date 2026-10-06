@@ -59,4 +59,24 @@ theorem flushedWorld_console (w : World) (id : Nat) (c : Chan) {st : TCB.Os.Stre
   | stdout => rfl
   | stderr => rfl
 
+/-- The world after a whole write `b` to an output stream. -/
+def wroteWorld (w : World) (st : TCB.Os.Stream) (b : List UInt8) : World :=
+  { w with os := { w.os with streams := w.os.streams.doWrite st b } }
+
+/-- A write of `b` on a console descriptor completes. -/
+theorem writeFd_stream {w : World} {fd : Int} {b : List UInt8} {st : TCB.Os.Stream}
+    (fdNonneg : 0 ≤ fd) (live : w.os.proc.exited = none)
+    (stream : TCB.Os.lookupFd w.os fd.toNat = some (.stream st)) (out : st ≠ .stdin) :
+    writeFd w fd b = some (wroteWorld w st b) := by
+  have nlt : ¬ fd < 0 := by omega
+  simp [writeFd, nlt, osCall_write_stream live stream out, wroteWorld]
+
+/-- The written bytes are appended to the console. -/
+theorem wroteWorld_console (w : World) (b : List UInt8) {st : TCB.Os.Stream} (out : st ≠ .stdin) :
+    (wroteWorld w st b).console = w.console ++ b := by
+  cases st with
+  | stdin => exact absurd rfl out
+  | stdout => rfl
+  | stderr => rfl
+
 end OCaml.Vm.Primitives.ConsoleWrite

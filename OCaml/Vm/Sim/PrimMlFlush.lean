@@ -30,8 +30,8 @@ theorem flush_semantics {a v : Val} {h h' : Heap} {w w' : World}
 /-- **`caml_ml_flush`'s entry** at a represented channel, open or closed. -/
 theorem flush_entry {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
     {sp high domain entry : Nat} {env ra : BitVec 64} {c : Config} {l a id ch : Nat} {chn : Chan}
-    {D : InvocationData}
-    (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
+    {D : InvocationData} {args : List Val}
+    (setup : CcallSetupPost ra args L P s pl cp sp high domain entry env c)
     (arg : ChannelArg s c pl cp l a id ch chn) (inv : Invocation D c) (valid : NativeValid D)
     (saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], (gprGet c.σ n).isSome) :
     ConsoleWrite.MlFlushEntry ra (BitVec.ofNat 64 D.nativeSp) (BitVec.ofNat 64 a) (word c (a + 8))
@@ -54,17 +54,16 @@ theorem flush_entry {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : Ch
       chanPtr := by
         rw [ConsoleWrite.bv_add_toNat (by rw [hv]; have := GL.valHigh; omega), hv, read8_value]; rfl }
 
-/-- **`caml_ml_flush`'s input** at a represented console channel. -/
-theorem flush_input {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
+/-- **`caml_flush_partial`'s memory facts** at a represented open console channel,
+below a 112-byte frame (`caml_ml_flush`'s and `caml_ml_output_char`'s). -/
+theorem flush_mem {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
     {sp high domain entry : Nat} {env ra : BitVec 64} {c : Config} {l a id ch : Nat} {chn : Chan}
-    {D : InvocationData}
-    (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
-    (arg : ChannelArg s c pl cp l a id ch chn) (inv : Invocation D c) (valid : NativeValid D)
-    (rt : ConsoleWrite.ConsoleRuntime c) (console : chn.fd = 1 ∨ chn.fd = 2) (out : chn.isOut = true)
-    (saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], (gprGet c.σ n).isSome) :
-    ConsoleWrite.MlFlushInput ra (BitVec.ofNat 64 D.nativeSp) (BitVec.ofNat 64 a) (word c (a + 8))
-      (BitVec.ofInt 64 chn.fd) ConsoleWrite.impureData (word c (ch + 8))
-      (word c Layout.sym_Caml_state) (word c ((word c Layout.sym_Caml_state).toNat + 288)) chn.buf c := by
+    {D : InvocationData} {args : List Val}
+    (setup : CcallSetupPost ra args L P s pl cp sp high domain entry env c)
+    (arg : ChannelArg s c pl cp l a id ch chn) (valid : NativeValid D)
+    (rt : ConsoleWrite.ConsoleRuntime c) (console : chn.fd = 1 ∨ chn.fd = 2) (out : chn.isOut = true) :
+    ConsoleWrite.FlushMem (BitVec.ofNat 64 D.nativeSp - 112#64) (word c (a + 8)) (BitVec.ofInt 64 chn.fd)
+      ConsoleWrite.impureData (word c (ch + 8)) chn.buf c := by
   have G := console_geometry setup.geometry arg valid
   have F := arg.repr.fields
   have open_ : chn.fd ≠ -1 := by omega
@@ -94,9 +93,7 @@ theorem flush_input {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : Ch
     simp only [chanOffCurr, chanOffBuff, hcur] at cw
     change (word c (ch + 24)).toNat = _
     rw [cw, BitVec.toNat_add, b72, BitVec.toNat_ofNat]; omega
-  refine
-    { flush_entry setup arg inv valid saved with
-      flush :=
+  exact
         { short := by have := F.cursorLe; rw [hcur] at this; simp only [ioBufferSize] at this; omega
           layout := G.flush hc h112 (by decide) (by decide) hfd
           fdWord := fdw
@@ -119,7 +116,32 @@ theorem flush_input {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : Ch
           impure := rt.impure
           clear := rt.clear
           quiet := rt.quiet }
-      layout := G.mlFlush hc hv rfl hs hfd
+
+/-- **`caml_ml_flush`'s input** at a represented console channel. -/
+theorem flush_input {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
+    {sp high domain entry : Nat} {env ra : BitVec 64} {c : Config} {l a id ch : Nat} {chn : Chan}
+    {D : InvocationData}
+    (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
+    (arg : ChannelArg s c pl cp l a id ch chn) (inv : Invocation D c) (valid : NativeValid D)
+    (rt : ConsoleWrite.ConsoleRuntime c) (console : chn.fd = 1 ∨ chn.fd = 2) (out : chn.isOut = true)
+    (saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], (gprGet c.σ n).isSome) :
+    ConsoleWrite.MlFlushInput ra (BitVec.ofNat 64 D.nativeSp) (BitVec.ofNat 64 a) (word c (a + 8))
+      (BitVec.ofInt 64 chn.fd) ConsoleWrite.impureData (word c (ch + 8))
+      (word c Layout.sym_Caml_state) (word c ((word c Layout.sym_Caml_state).toNat + 288)) chn.buf c := by
+  have G := console_geometry setup.geometry arg valid
+  have open_ : chn.fd ≠ -1 := by omega
+  obtain ⟨hbuf, hcur⟩ := out_buffer open_ out
+  rw [hbuf] at G
+  have GL := G.lits
+  have hfd : BitVec.ofInt 64 chn.fd = 1#64 ∨ BitVec.ofInt 64 chn.fd = 2#64 := by
+    rcases console with e | e <;> rw [e] <;> decide
+  have hs : (BitVec.ofNat 64 D.nativeSp).toNat = D.nativeSp := by
+    rw [BitVec.toNat_ofNat]; have := GL.high; omega
+  have hv : (BitVec.ofNat 64 a).toNat = a := by rw [BitVec.toNat_ofNat]; have := GL.valHigh; omega
+  exact
+    { flush_entry setup arg inv valid saved with
+      flush := flush_mem setup arg valid rt console out
+      layout := G.mlFlush arg.pointer hv rfl hs hfd
       lockNull := rt.lockNull
       unlockNull := rt.unlockNull }
 
@@ -128,23 +150,19 @@ def flushLog (sp a : Nat) : List WEntry :=
   [(sp - 384, 384, 0#64), (Layout.sym_errno, 4, 0#64), (Layout.sym_impure_data, 4, 0#64),
    (a + 8, 8, 0#64), (a + 24, 8, 0#64)]
 
-/-- A byte frame on the flush footprint is a getD frame on the console windows. -/
-theorem frameOnD_of_flushLog {c e : Config} {sp a : Nat} (room : 384 ≤ sp)
-    (memory : ∀ x, OutL (flushLog sp a) x → byte e x = byte c x) :
-    FrameOnD (consoleWindows sp a) c.σ.mem e.σ.mem := by
-  intro x hx
-  simp only [consoleWindows, OutW, and_true] at hx
-  have m := memory x (by simp only [flushLog, OutL, and_true]; omega)
-  rwa [byte_total, byte_total] at m
+/-- The console footprint covers the flush footprint. -/
+theorem outL_flushLog {sp a x : Nat} (h : OutL (consoleLog sp a) x) : OutL (flushLog sp a) x := by
+  simp only [consoleLog, flushLog, OutL, and_true] at h ⊢
+  omega
 
 /-- A run that keeps every byte outside the footprint and the local-roots
 word, and restores the local-roots word's value, keeps every byte outside the
 footprint. -/
-theorem footprint_memory {c e : Config} {sp ch dom : Nat} {lr : BitVec 64}
+theorem footprint_memory {c e : Config} {lg : List WEntry} {dom : Nat} {lr : BitVec 64}
     (rootsC : bytesT c.σ.mem (dom + 288) 8 = lr) (rootsE : bytesT e.σ.mem (dom + 288) 8 = lr)
-    (frame : ∀ x, OutL (flushLog sp ch) x → (x < dom + 288 ∨ dom + 296 ≤ x) →
+    (frame : ∀ x, OutL lg x → (x < dom + 288 ∨ dom + 296 ≤ x) →
       (e.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0) :
-    ∀ x, OutL (flushLog sp ch) x → byte e x = byte c x := by
+    ∀ x, OutL lg x → byte e x = byte c x := by
   intro x hx
   rw [byte_total, byte_total]
   by_cases hr : dom + 288 ≤ x ∧ x < dom + 296
@@ -187,8 +205,6 @@ theorem flushed_chanAt {c e : Config} {ch : Nat} {chn : Chan} {chB : BitVec 64}
   rw [hbuf] at len
   simp only [ioBufferSize] at len
   have fits' : chn.offset + chn.buf.length < 2 ^ 63 := of_decide_eq_true fits
-  have copy := fun (k n : Nat) (hk : 72 ≤ k + n ∨ True) (lo : k + n ≤ 8 ∨ (16 ≤ k ∧ k + n ≤ 24) ∨ (32 ≤ k ∧ k + n ≤ 72)) =>
-    (show Reloc.Copied c e (ch + k) (ch + k) n from fun j hj => keep _ (by omega) (by omega) (by omega) (by omega))
   have w8 : word e (ch + 8) = word c (ch + 8) + BitVec.ofNat 64 chn.buf.length := by
     change bytesT e.σ.mem (ch + 8) 8 = _
     rw [← read8_value, ← offset, show (chB + 8#64).toNat = ch + 8 by
@@ -197,24 +213,12 @@ theorem flushed_chanAt {c e : Config} {ch : Nat} {chn : Chan} {chB : BitVec 64}
     change (bytesT e.σ.mem (ch + 24) 8).toNat = _
     rw [← read8_value, show ch + 24 = (chB + 24#64).toNat by rw [ConsoleWrite.bv_add_toNat (by omega), hc],
       curr, ConsoleWrite.bv_add_toNat (by omega), hc]
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, F.aligned⟩
-  · rw [show word32 e (ch + chanOffFd) = word32 c (ch + chanOffFd) from
-      Reloc.bytesT_congr (copy chanOffFd 4 (Or.inr trivial) (by simp only [chanOffFd]; omega))]
-    exact F.fd
-  · simp only [chanOffOffset]
-    rw [w8, toInt_add_small _ _ (by omega) (by have := F.offset; simp only [chanOffOffset] at this; omega)]
-    have := F.offset; simp only [chanOffOffset] at this; rw [this]
-  · simp only [chanOffCurr, chanOffBuff, Chan.cursor, open_, out, ↓reduceIte, List.length_nil, Nat.add_zero]
-    exact w24
-  · rw [show word e (ch + chanOffMax) = word c (ch + chanOffMax) from
-      Reloc.bytesT_congr (copy chanOffMax 8 (Or.inr trivial) (by simp only [chanOffMax]; omega))]
-    exact F.max
-  · rw [show word e (ch + chanOffEnd) = word c (ch + chanOffEnd) from
-      Reloc.bytesT_congr (copy chanOffEnd 8 (Or.inr trivial) (by simp only [chanOffEnd]; omega))]
-    exact F.bufEnd
-  · rw [show word32 e (ch + chanOffFlags) = word32 c (ch + chanOffFlags) from
-      Reloc.bytesT_congr (copy chanOffFlags 4 (Or.inr trivial) (by simp only [chanOffFlags]; omega))]
-    exact F.flags
+  have off := F.offset
+  simp only [chanOffOffset] at off
+  refine repr.update (chn' := { chn with buf := [], offset := chn.offset + chn.buf.length }) ⟨rfl, rfl, rfl⟩ keep
+    ?_ ?_ ?_ ?_ ?_
+  · rw [w8, toInt_add_small _ _ (by omega) (by omega), off]
+  · rw [w24]; simp [Chan.cursor, open_, out]
   · intro i b hb; simp [Chan.buffer, open_, out] at hb
   · simp [Chan.cursor, open_, out]
   · simp [Chan.buffer, open_, out]
@@ -230,14 +234,14 @@ theorem flush_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : C
     (rt : ConsoleWrite.ConsoleRuntime c) (console : chn.fd = 1 ∨ chn.fd = 2) (out : chn.isOut = true)
     (fits : offsetFits chn chn.buf.length = true) (streamOut : st ≠ .stdin)
     (saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], (gprGet c.σ n).isSome)
-    (outside : PayloadChanOutside (flushLog D.nativeSp ch) P s c pl cp sp id)
-    (bindings : BindingsOutside (flushLog D.nativeSp ch) P c)
+    (outside : PayloadChanOutside (consoleLog D.nativeSp ch) P s c pl cp sp id)
+    (bindings : BindingsOutside (consoleLog D.nativeSp ch) P c)
     (stable : ConsoleStable L)
     (sem : primF1Impl "caml_ml_flush" [s.accu] s.heap s.world =
       .ok Val.unit s.heap (ConsoleWrite.flushedWorld s.world id chn st)) :
     FnSummary (BitVec.ofNat 64 0x80016238) (fun x => x = c)
       (FramedPrimitivePost L.runtimeOk P s pl cp sp high "caml_ml_flush" [s.accu] Val.unit 1#64 s.heap
-        (ConsoleWrite.flushedWorld s.world id chn st) (flushLog D.nativeSp ch) c ra) := by
+        (ConsoleWrite.flushedWorld s.world id chn st) (consoleLog D.nativeSp ch) c ra) := by
   have I := flush_input setup arg inv valid rt console out saved
   have G := (console_geometry setup.geometry arg valid).lits
   have open_ : chn.fd ≠ -1 := by omega
@@ -253,30 +257,19 @@ theorem flush_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : C
   refine ⟨fun c0 ⟨pc0, e0⟩ => ?_⟩
   subst c0
   obtain ⟨e, run, post⟩ := ConsoleWrite.ml_flush I pc0
-  have memory := flush_memory post hs (by omega) arg.pointer rfl I.rootsWord hd
+  have memory0 := flush_memory post hs (by omega) arg.pointer rfl I.rootsWord hd
+  have memory : ∀ x, OutL (consoleLog D.nativeSp ch) x → byte e x = byte c x :=
+    fun x hx => memory0 x (outL_flushLog hx)
   have repr' : ChanAt e ch { chn with buf := [], offset := chn.offset + chn.buf.length } :=
     flushed_chanAt arg.repr open_ out fits arg.pointer (by omega) post.curr post.offset
-      (fun x lo hi o k => memory x (by
+      (fun x lo hi o k => memory0 x (by
         simp only [flushLog, OutL, Layout.sym_errno, Layout.sym_impure_data, and_true]; omega))
   have console' : output e.σ = bytesToString (ConsoleWrite.flushedWorld s.world id chn st).console := by
     rw [ConsoleWrite.flushedWorld_console _ _ _ streamOut, bytesToString_append, ← setup.input.data.world.output]
     exact post.output
-  refine ⟨e, run, ⟨⟨post.good, post.image, post.minstret, post.tick, post.pc, post.result, memory, ?_⟩,
-    ?_, bindings_frame_outsideLog setup.input.primitives bindings memory,
-    ⟨post.good, post.image, stable P s c pl cp high id chn ch D.nativeSp setup.geometry setup.input.runtime
-      arg.chan arg.record valid.headroom (by simp only [Layout.sym_stack_top]; omega) e (frameOnD_of_flushLog (by omega) memory)⟩,
-    LoopRegisters.of_restored setup.input.loop (fun n hn => post.saved n (by
-      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn ⊢; omega)) post.idle,
-    rfl, sem⟩⟩
-  · intro r hr
-    simp only [callSavedRegs, List.mem_cons, List.mem_nil_iff, or_false] at hr
-    rcases hr with rfl | rfl | rfl | rfl
-    · exact post.saved 25 (by decide)
-    · exact post.saved 8 (by decide)
-    · exact post.saved 18 (by decide)
-    · exact post.stack.trans inv.stack.symm
-  · have d1 := setup.input.data.frame_chan (w' := ConsoleWrite.flushedWorld s.world id chn st) outside memory rfl rfl rfl arg.record repr' console'
-    exact d1.accu_int 0
+  exact ⟨e, run, framed_of_ret setup inv valid (by simp only [Layout.sym_stack_top]; omega)
+    ⟨post.good, post.image, post.minstret, post.tick, post.idle, post.pc, post.result, post.stack, post.saved⟩
+    memory outside bindings stable arg.chan arg.record rfl rfl rfl repr' console' sem⟩
 
 /-- A closed channel's descriptor word is `-1`: `caml_ml_flush` returns at once. -/
 theorem closed_fd {c : Config} {a : Nat} (h : (word32 c a).toInt = -1) :
@@ -295,13 +288,13 @@ theorem flush_closed_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} 
     (arg : ChannelArg s c pl cp l a id ch chn) (inv : Invocation D c) (valid : NativeValid D)
     (closed : chn.fd = -1)
     (saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], (gprGet c.σ n).isSome)
-    (outside : PayloadChanOutside (flushLog D.nativeSp ch) P s c pl cp sp id)
-    (bindings : BindingsOutside (flushLog D.nativeSp ch) P c)
+    (outside : PayloadChanOutside (consoleLog D.nativeSp ch) P s c pl cp sp id)
+    (bindings : BindingsOutside (consoleLog D.nativeSp ch) P c)
     (stable : ConsoleStable L)
     (sem : primF1Impl "caml_ml_flush" [s.accu] s.heap s.world = .ok Val.unit s.heap s.world) :
     FnSummary (BitVec.ofNat 64 0x80016238) (fun x => x = c)
       (FramedPrimitivePost L.runtimeOk P s pl cp sp high "caml_ml_flush" [s.accu] Val.unit 1#64 s.heap
-        s.world (flushLog D.nativeSp ch) c ra) := by
+        s.world (consoleLog D.nativeSp ch) c ra) := by
   have E := flush_entry setup arg inv valid saved
   have G := (console_geometry setup.geometry arg valid).lits
   have nlow := G.low
@@ -322,7 +315,7 @@ theorem flush_closed_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} 
   have keep : ∀ x, (x < D.nativeSp - 112 ∨ D.nativeSp ≤ x) →
       (x < (word c Layout.sym_Caml_state).toNat + 288 ∨ (word c Layout.sym_Caml_state).toNat + 296 ≤ x) →
       (e.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := fun x lo hi => post.frame x (by rw [hs]; exact lo) hi
-  have memory : ∀ x, OutL (flushLog D.nativeSp ch) x → byte e x = byte c x := by
+  have memory0 : ∀ x, OutL (flushLog D.nativeSp ch) x → byte e x = byte c x := by
     apply footprint_memory (dom := (word c Layout.sym_Caml_state).toNat)
       (lr := word c ((word c Layout.sym_Caml_state).toNat + 288)) rfl
     · have r := post.roots
@@ -331,6 +324,8 @@ theorem flush_closed_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} 
     · intro x hx hr
       simp only [flushLog, OutL, Layout.sym_errno, Layout.sym_impure_data] at hx
       exact keep x (by omega) hr
+  have memory : ∀ x, OutL (consoleLog D.nativeSp ch) x → byte e x = byte c x :=
+    fun x hx => memory0 x (outL_flushLog hx)
   have repr : ChanAt e ch chn := by
     have dc := G.chanDom
     have len := arg.repr.bufferLe
@@ -342,23 +337,9 @@ theorem flush_closed_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} 
   have chans : s.world.chans = s.world.chans.set id chn := by
     obtain ⟨hlt, heq⟩ := List.getElem?_eq_some_iff.mp arg.chan
     rw [← heq, List.set_getElem_self]
-  refine ⟨e, run, ⟨⟨post.good, post.image, post.minstret, post.tick, post.pc, post.result, memory, ?_⟩,
-    ?_, bindings_frame_outsideLog setup.input.primitives bindings memory,
-    ⟨post.good, post.image, stable P s c pl cp high id chn ch D.nativeSp setup.geometry setup.input.runtime
-      arg.chan arg.record valid.headroom (by simp only [Layout.sym_stack_top]; omega) e
-      (frameOnD_of_flushLog (by omega) memory)⟩,
-    LoopRegisters.of_restored setup.input.loop (fun n hn => post.saved n (by
-      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn ⊢; omega)) post.idle,
-    rfl, sem⟩⟩
-  · intro r hr
-    simp only [callSavedRegs, List.mem_cons, List.mem_nil_iff, or_false] at hr
-    rcases hr with rfl | rfl | rfl | rfl
-    · exact post.saved 25 (by decide)
-    · exact post.saved 8 (by decide)
-    · exact post.saved 18 (by decide)
-    · exact post.stack.trans inv.stack.symm
-  · have d1 := setup.input.data.frame_chan (w' := s.world) outside memory chans rfl rfl arg.record repr
-      (post.output.trans setup.input.data.world.output)
-    exact d1.accu_int 0
+  exact ⟨e, run, framed_of_ret setup inv valid (by simp only [Layout.sym_stack_top]; omega)
+    ⟨post.good, post.image, post.minstret, post.tick, post.idle, post.pc, post.result, post.stack, post.saved⟩
+    memory outside bindings stable arg.chan arg.record chans rfl rfl repr
+    (post.output.trans setup.input.data.world.output) sem⟩
 
 end OCaml.Vm.Sim

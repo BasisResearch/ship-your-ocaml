@@ -1,4 +1,4 @@
-import OCaml.Vm.Primitives.Console.MlFlush
+import OCaml.Vm.Primitives.Console.OutputChar
 import OCaml.Vm.Primitives.Console.Runtime
 import Vsa.Sim.DlHeap
 
@@ -307,5 +307,32 @@ theorem ConsoleGeometry.mlFlushFrame {sp ch dom v len : Nat} (g : ConsoleGeometr
   exact ⟨slots, by omega, by omega, by omega, by omega, arena_write hd (by omega) (by omega) (by omega),
     by omega, by omega, by omega, by omega, ⟨by rw [C.state]; omega, by rw [C.state]; omega⟩,
     ⟨by rw [v8]; omega, by rw [v8]; omega⟩, arena_read hv (by omega) (by omega), fdW, ⟨by omega, by omega⟩⟩
+
+/-- A geometry for a longer record holds for a shorter one. -/
+theorem ConsoleGeometry.mono {sp ch dom v len len' : Nat} (g : ConsoleGeometry sp ch dom v len) (le : len' ≤ len) :
+    ConsoleGeometry sp ch dom v len' :=
+  { g with
+    chanHigh := by have := g.chanHigh; omega
+    chanDom := by have := g.chanDom; omega
+    valChan := by have := g.valChan; omega }
+
+/-- `caml_ml_output_char`'s layout, from the geometry of the channel's whole
+record (`chanOffBuff + ioBufferSize`). -/
+theorem ConsoleGeometry.ocLayout {sp ch dom v len : Nat} (g : ConsoleGeometry sp ch dom v 65536)
+    {s vB chB domB fd : BitVec 64} (hc : chB.toNat = ch) (hv : vB.toNat = v) (hd : domB.toNat = dom)
+    (hs : s.toNat = sp) (hfd : fd = 1#64 ∨ fd = 2#64) (le : len ≤ 65536) :
+    OcLayout s vB chB fd impureData domB len := by
+  have G := g.lits
+  have C := consoleLits
+  have l1 := G.low; have l2 := G.high; have l3 := G.aligned; have l4 := G.chanHigh; have l5 := G.chanLow
+  have l6 := G.chanAligned; have l7 := G.domLow; have l10 := G.chanDom
+  have T := C.textEnd; have R := C.rodataEnd
+  exact ⟨(g.mono le).mlFlush hc hv hd hs hfd,
+    frame_window0 hs (by omega) (by omega) (by decide) (by omega),
+    arena_read hc (by omega) (by omega), arena_write hc (by omega) (by omega) (by omega),
+    arena_read hc (by omega) (by omega),
+    ⟨by rw [hc]; omega, by rw [hc]; omega, by rw [hc, C.tohost]; omega⟩,
+    by rw [hc]; omega, by rw [hc]; omega, by rw [hc, hs]; omega, by rw [hc, C.errno]; omega,
+    by rw [hc, C.impureData]; omega, by rw [hc, hd]; omega, by rw [hc]; simp only [Layout.sym_bss_end]; omega⟩
 
 end OCaml.Vm.Primitives.ConsoleWrite

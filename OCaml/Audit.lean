@@ -2795,6 +2795,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.output_char_semantics
 #print axioms OCaml.Vm.Sim.putChar_cases
 #print axioms OCaml.Vm.Sim.char_byte
+#print axioms OCaml.Vm.Sim.roomed_chanAt
+#print axioms OCaml.Vm.Sim.fulled_chanAt
+#print axioms OCaml.Vm.Sim.oc_room_framed
+#print axioms OCaml.Vm.Sim.oc_full_framed
+#print axioms OCaml.Vm.Sim.oc_input
+#print axioms OCaml.Vm.Sim.framed_of_ret
+#print axioms OCaml.Vm.Sim.flush_mem
+#print axioms OCaml.Vm.ChanAt.update
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.writeFd_stream
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ConsoleGeometry.ocLayout
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.ConsoleGeometry.mlFlushFrame
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.oc_room
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.oc_full

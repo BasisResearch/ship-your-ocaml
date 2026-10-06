@@ -59,19 +59,22 @@
   pins it for F1 (`f1_consoleRuntime`). Console streams: bprime's `GoodF1.consoles`
   (`OCaml.ConsoleChannels`, out channels with fd ≠ -1). BcSem guards (a2-sem, landed):
   `offsetFits` (offset + n < 2^63) and `isOut` on flushChan/putChar/putBlock.
-* Console C_CALL adapters. Shared pieces in `Sim/ConsoleCall.lean`: `consoleWindows sp a`
-  (native stack, errno words, a channel record's offset/curr words and buffer) and the named
-  premise `ConsoleStable L` over a getD frame (`FrameOnD`; a6-gc: `f1_console_stable`, FIXED
+* Console C_CALL adapters. Shared pieces in `Sim/ConsoleCall.lean`: `consoleWindows sp a` /
+  `consoleLog sp a` (native stack, errno words, a channel record's offset/curr words and
+  buffer: the one footprint of every console primitive) and the named premise
+  `ConsoleStable L` over a getD frame (`FrameOnD`; a6-gc: `f1_console_stable`, FIXED
   `consoleStable`), `ChannelArg`/`channel_arg`, `console_geometry` (`ConsoleGeometry` from
   `LoopGeometry` + `NativeValid`; layouts in `Console/Geometry.lean`, addresses checked
-  against the ELF by `console_symbols`), `LoopRegisters.of_restored`.
-  `caml_ml_flush` (`Sim/PrimMlFlush.lean`): `flush_framed` (open console channel) and
-  `flush_closed_framed` (fd = -1) give `FramedPrimitivePost`; the payload/binding apartness
-  of the footprint are premises. Waiting on a1-arms (`CcallSetupPost.calleeSaved`,
-  channel-record apartness at full extent, transport with a weaker `chans` premise) for
-  `prim_caml_ml_flush_returns`. `caml_ml_output_char` (`Sim/PrimMlOutputChar.lean`):
-  model inversion (`output_char_semantics`, `PutCharCase`) and the stored byte
-  (`char_byte`); next its input (OcLayout from the full-extent geometry) and posts.
+  against the ELF by `console_symbols`), `ChanAt.update` (a record after an offset/curr/buffer
+  update), `ConsoleRet` + `framed_of_ret` (any console return to `FramedPrimitivePost`).
+  `caml_ml_flush` (`Sim/PrimMlFlush.lean`): `flush_framed` (open console channel),
+  `flush_closed_framed` (fd = -1). `caml_ml_output_char` (`Sim/PrimMlOutputChar.lean`):
+  `output_char_semantics`/`PutCharCase`, `char_byte`, `oc_input` (from a full-extent
+  `ConsoleGeometry`), `oc_room_framed`, `oc_full_framed`. The payload/binding apartness of
+  the footprint are premises of the framed theorems.
+  Waiting on a1-arms (`CcallSetupPost.calleeSaved`; channel-record apartness at full extent;
+  transport with a weaker `chans` premise) and a6-gc (`f1_console_stable`) for
+  `prim_caml_ml_flush_returns` / `prim_caml_ml_output_char_returns`.
 * whileMin `PrimReturnsAt` summaries (picked up by `scripts/gen_f1_table.py`; regenerate
   WhileMinTable.lean in the same batch): `prim_caml_ml_string_length_returns` and
   `prim_caml_fresh_oo_id_returns` (`f1_counterStable` from a6-gc's `f1_ignoredStatic`) done.
