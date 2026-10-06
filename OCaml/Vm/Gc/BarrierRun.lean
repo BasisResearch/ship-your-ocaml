@@ -463,7 +463,8 @@ structure Table (dom tbl ptr limit : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 
   tableRead : ReadWindow (dom + BitVec.ofNat 64 104) 8
   ptrWrite : WriteWindow (tbl + BitVec.ofNat 64 24) 8
   limitRead : ReadWindow (tbl + BitVec.ofNat 64 32) 8
-  entryWrite : WriteWindow (ptr + BitVec.ofNat 64 0) 8
+  /-- with room, the next entry slot is writable -/
+  entryWrite : ptr.toNat < limit.toNat → WriteWindow (ptr + BitVec.ofNat 64 0) 8
 
 /-- The words survive stores apart from them. -/
 theorem Table.writeLog {dom tbl ptr limit : BitVec 64} {m : Std.ExtHashMap Nat (BitVec 8)} {log : List WEntry}
@@ -634,7 +635,7 @@ theorem value_insert {slot v fsp dom ys ye tbl ptr limit} {d : Config} (b : Body
           exact read8_pins _ _
         control3 := by rw [ptrV, limV]; exact room
         write1 := by rw [tblV]; exact t.ptrWrite
-        write2 := by rw [ptrV]; exact t.entryWrite } }
+        write2 := by rw [ptrV]; exact t.entryWrite room } }
   obtain ⟨d1, run, post⟩ := (BarrierInsert.run input).run d ⟨pc, rfl⟩
   have keep := keep_gpr post (by decide) BarrierInsert.written
   refine ⟨d1, run, post.good, post.tick, post.minstret, by rw [post.pc]; rfl, ?_, post.output,
