@@ -2,7 +2,7 @@
 
 def emit_block(E, fn, b, name, keys, lib, literal, taken=False):
     # A tohost store is a seam, like a call: the block parks at it.
-    term = None if b.kind in ('jal', 'tohost', 'fallthrough') else lib.decode_terminator(b.term, taken=taken)['record']
+    term = None if b.kind in ('jal', 'jalrcall', 'tohost', 'fallthrough') else lib.decode_terminator(b.term, taken=taken)['record']
     term_expr = 'none' if term is None else 'some ' + name + '_term'
     keylist = str(keys)
     E(f'def {name}_body : List MInstr := [', ',\n'.join('  ' + literal(i.addr, i.word) for i in b.instrs), ']',
@@ -40,5 +40,21 @@ def emit_call(E, fn, b, name, functions, lib, loaded="loaded"):
       '  intro s hm hp he', f'  exact Vsa.Sim.ElfDecode.decode_{word:08x} s hm hp he',
       f'theorem {call}_target : {call}.target = 0x{functions[b.callee]["insts"][0][0]:08x}#64 := by decide',
       f'theorem {call}_pins {{c : Config}} (h : ExecutableImage c) : CallPins {call} c := by',
+      f'  obtain ⟨h0, h1, h2, h3⟩ := Vsa.Sim.Code.{fn}_at_{pc:08x} ({loaded} h)',
+      '  exact ⟨h0, h1, h2, h3⟩', '')
+
+
+def emit_indirect(E, fn, b, name, lib, loaded="loaded"):
+    """An indirect ABI call (`jalr ra, imm(rs1)`), certified like a direct one."""
+    pc, word = b.term.addr, b.term.word
+    call = name + '_call'
+    imm, source = (word >> 20) & 0xfff, (word >> 15) & 31
+    E(f'def {call} : IndirectCallInstr := ⟨' + ', '.join([
+        f'0x{pc:08x}#64', f'0x{word:08x}#32'] + lib.le_bytes(word) + [f'0x{imm:03x}#12', str(source)]) + '⟩',
+      f'theorem {call}_shape : IndirectShape {call} := by constructor <;> decide',
+      f'theorem {call}_decode : IndirectDecode {call} := by',
+      '  intro s hm hp he', f'  exact Vsa.Sim.ElfDecode.decode_{word:08x} s hm hp he',
+      f'theorem {call}_link : {call}.link = 0x{pc + 4:08x}#64 := by decide',
+      f'theorem {call}_pins {{c : Config}} (h : ExecutableImage c) : IndirectPins {call} c := by',
       f'  obtain ⟨h0, h1, h2, h3⟩ := Vsa.Sim.Code.{fn}_at_{pc:08x} ({loaded} h)',
       '  exact ⟨h0, h1, h2, h3⟩', '')
