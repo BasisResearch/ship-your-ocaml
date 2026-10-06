@@ -8,7 +8,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim
 /-- OCaml's string allocator zeroes the last payload word before filling
 bytes and writing the final padding count. Equality compares these full words. -/
 structure PaddedString (c : Config) (a : Nat) (b : List UInt8) : Prop
-    extends StringShape c a b where
+    extends StringShape c a b.length where
   data : ∀ i x, b[i]? = some x → byte c (a + i) = BitVec.ofNat 8 x.toNat
   zeroPad : ∀ i, b.length ≤ i → i < 8 * ((b.length + 8) / 8) - 1 → byte c (a + i) = 0
 
