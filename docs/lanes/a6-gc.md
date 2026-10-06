@@ -14,7 +14,7 @@ Done (F1 side of the GC):
 - `OCaml/Programs/WhileMinChecks.lean`: `whileMin_checked` (8 GB, ~40 s),
   `whileMin_fits : Fits g1Budget whileMin` (peak 18 stack / 125 heap words,
   100 initial), `whileMin_noForward`, `whileMin_gcSafe`.
-- `OCaml/Vm/Gc/G1Room.lean`: `g1Budget = ⟨3840, 262044⟩` and the G1 room
+- `OCaml/Vm/Gc/G1Room.lean`: `g1Budget = ⟨3584, 262044⟩` (two stack thresholds of slack) and the G1 room
   relation `G1Room B s c` (nursery `young_limit + 8*(B - words) ≤ young_ptr`;
   `stack_threshold + 8*B.stackWords ≤ stack_high`).
   `G1Room.nursery_capacity` gives `NurseryInput.capacity` in its exact shape;
