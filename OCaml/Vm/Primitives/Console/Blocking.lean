@@ -54,6 +54,9 @@ theorem scan_next : ∀ i, i < 32 →
 def NoPendingSignals (m : Std.ExtHashMap Nat (BitVec 8)) : Prop :=
   ∀ i, i < 32 → bytesVal .ld (read8 m (pendingSignals + Sail.shift_bits_left (BitVec.ofNat 64 i) 3#6).toNat) = 0#64
 
+theorem slot_toNat : ∀ i, i < 32 → (pendingSignals + Sail.shift_bits_left (BitVec.ofNat 64 i) 3#6).toNat =
+    pendingSignals.toNat + 8 * i := by decide
+
 theorem slot_window : ∀ i, i < 32 →
     ReadWindow (pendingSignals + Sail.shift_bits_left (BitVec.ofNat 64 i) 3#6) 8 := by
   intro i hi
@@ -204,6 +207,7 @@ structure LeavePost (ra sp s0 rp : BitVec 64) (c d : Config) : Prop where
   raReg : gpr d 1 = some ra
   stack : gpr d 2 = some sp
   s0Reg : gpr d 8 = some s0
+  result : gpr d 10 = some rp
   kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 2, 8, 10, 12, 13, 14, 15] → gpr d n = gpr c n
   output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ
   frame : ∀ x, (x < sp.toNat - 16 ∨ sp.toNat ≤ x) → (x < rp.toNat ∨ rp.toNat + 4 ≤ x) →
@@ -294,11 +298,9 @@ theorem leave_blocking {ra sp s0 rp errv c} (h : LeaveInput ra sp s0 rp errv c)
   have mem7 : d7.σ.mem = writeLog c.σ.mem (FdWrite.LeaveBlocking.enterLog R0) := by
     rw [p7.memory, show writeLog d6.σ.mem [] = d6.σ.mem from rfl, p6.memory, show writeLog d5.σ.mem [] = d5.σ.mem from rfl,
       q5.memory, p4.memory, show writeLog d3.σ.mem [] = d3.σ.mem from rfl, mem3]
-  have slots : ∀ i, i < 32 → (pendingSignals + Sail.shift_bits_left (BitVec.ofNat 64 i) 3#6).toNat =
-      pendingSignals.toNat + 8 * i := by decide
   have clear7 : NoPendingSignals d7.σ.mem := by
     intro i hi
-    rw [mem7, read8_outside within (by rw [slots i hi]; have := h.pending; omega)]
+    rw [mem7, read8_outside within (by rw [slot_toNat i hi]; have := h.pending; omega)]
     exact h.clear i hi
   have ok7 : LoopOk d7 := p7.loopOk (p6.loopOk (q5.loopOk (p4.loopOk (p3.loopOk (q2.loopOk (p1.loopOk loop0))))))
   obtain ⟨d8, run8, f8, pc8⟩ := scan_loop ok7 p7.image p7.minstret p7.pc (gholds_lookup _ p7.regs rfl)
@@ -361,7 +363,7 @@ theorem leave_blocking {ra sp s0 rp errv c} (h : LeaveInput ra sp s0 rp errv c)
   have ok12 : LoopOk d12 := p12.loopOk (p11.loopOk (q10.loopOk (p9.loopOk f8.ok)))
   refine ⟨d12, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans
     (run9.trans (run10.trans (run11.trans run12)))))))))),
-    p12.good, p12.image, p12.minstret, p12.tick, ok12.htifIdle, p12.pc, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    p12.good, p12.image, p12.minstret, p12.tick, ok12.htifIdle, p12.pc, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · have l : gpr d12 1 = some (bytesVal .ld (read8 (writeLog d11.σ.mem (FdWrite.LeaveBlocking.retLog R11))
         (R11 2 + 8#64).toNat)) := gholds_lookup _ p12.regs rfl
     rw [l, raBack]
@@ -370,6 +372,8 @@ theorem leave_blocking {ra sp s0 rp errv c} (h : LeaveInput ra sp s0 rp errv c)
   · have l : gpr d12 8 = some (bytesVal .ld (read8 (writeLog d11.σ.mem (FdWrite.LeaveBlocking.retLog R11))
         (R11 2).toNat)) := gholds_lookup _ p12.regs rfl
     rw [l, s0Back]
+  · have l : gpr d12 10 = some (R11 10) := gholds_lookup _ p12.regs rfl
+    exact l
   · intro n lo hi hn
     simp only [List.mem_cons, List.mem_nil_iff, or_false, not_or] at hn
     obtain ⟨n1, n2, n8, n10, n12, n13, n14, n15⟩ := hn

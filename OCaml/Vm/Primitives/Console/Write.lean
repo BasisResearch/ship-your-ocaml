@@ -55,6 +55,7 @@ structure WritePost (ra sp : BitVec 64) (bs : List UInt8) (c d : Config) : Prop 
   result : gpr d 10 = some (BitVec.ofNat 64 bs.length)
   stack : gpr d 2 = some sp
   saved : ∀ n ∈ [1, 8, 9, 18], gpr d n = gpr c n
+  rest : ∀ n ∈ [19, 20, 21, 22, 23, 24, 25, 26, 27], gpr d n = gpr c n
   output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ ++ bytesToString bs
   frame : ∀ x, ((sp.toNat - 96) > x ∨ sp.toNat ≤ x) → (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
 
@@ -140,10 +141,11 @@ theorem write_console {ra sp fd buf bs c} (h : WriteInput ra sp fd buf bs c)
   have finish : ∀ d, LoopOk d → ExecutableImage d → (∃ v, d.σ.regs.get? Register.minstret = some v) →
       pcOf d = some 0x80000f3c#64 → gpr d 1 = some ra → gpr d 2 = some (sp - 96#64) →
       gpr d 9 = some len → (∃ v, gpr d 10 = some v) →
+      (∀ n ∈ [19, 20, 21, 22, 23, 24, 25, 26, 27], gpr d n = gpr c n) →
       d.σ.mem = writeLog c.σ.mem (entryLog R0) →
       Vsa.Machine.output d.σ = Vsa.Machine.output c.σ ++ bytesToString bs →
       ∃ f, Steps d f ∧ WritePost ra sp bs c f := by
-    intro d ok image mins pc raR spR lenR aR mem out
+    intro d ok image mins pc raR spR lenR aR rest mem out
     obtain ⟨a, ha⟩ := aR
     let R5 : Nat → BitVec 64 := fun n => if n = 1 then ra else if n = 9 then len else a
     have e5 := result_fast d R5 ⟨ok.good, image, mins, raR, h.aligned, ok.tick⟩ ⟨raR, lenR, ha, True.intro⟩
@@ -183,7 +185,7 @@ theorem write_console {ra sp fd buf bs c} (h : WriteInput ra sp fd buf bs c)
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn
       rcases hn with rfl | rfl | rfl <;> exact present _ (by simp)
     refine ⟨d6, run5.trans run6, p6.good, p6.image, p6.minstret, p6.tick,
-      ((p6.loopOk (p5.loopOk ok))).htifIdle, p6.pc, ?_, ?_, ?_, ?_, ?_⟩
+      ((p6.loopOk (p5.loopOk ok))).htifIdle, p6.pc, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · have l : gpr d6 10 = some (R6 10) := gholds_lookup _ p6.regs rfl
       exact l
     · have l : gpr d6 2 = some (sp - 96#64 + 96#64) := gholds_lookup _ p6.regs rfl
@@ -203,6 +205,12 @@ theorem write_console {ra sp fd buf bs c} (h : WriteInput ra sp fd buf bs c)
       · have l : gpr d6 18 = some (bytesVal .ld (read8 d5.σ.mem (sp - 96#64 + BitVec.ofNat 64 64).toNat)) :=
           gholds_lookup _ p6.regs rfl
         rw [l, s2Back]; exact (restore 18 (by simp)).symm
+    · intro n hn
+      have hn' := hn
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn'
+      rw [p6.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega),
+        p5.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)]
+      exact rest n hn
     · have o6 : Vsa.Machine.output d6.σ = Vsa.Machine.output d.σ := by
         unfold Vsa.Machine.output; rw [p6.output, p5.output]
       rw [o6, out]
@@ -226,6 +234,11 @@ theorem write_console {ra sp fd buf bs c} (h : WriteInput ra sp fd buf bs c)
   have keep4 : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [11, 12, 13, 14, 15, 16] → gpr d4 n = gpr d1 n := fun n lo hi hn => by
     rw [p4.toEffectPost.gpr_frame (by decide) n lo hi (by simp at hn ⊢; omega),
       keep3 n lo hi (by simp at hn ⊢; omega), keep2 n lo hi (by simp at hn ⊢; omega)]
+  have rest4 : ∀ n ∈ [19, 20, 21, 22, 23, 24, 25, 26, 27], gpr d4 n = gpr c n := by
+    intro n hn
+    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn
+    rw [keep4 n (by omega) (by omega) (by simp; omega),
+      p1.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)]
   have mem4 : d4.σ.mem = writeLog c.σ.mem (entryLog R0) := by
     rw [p4.memory, show writeLog d3.σ.mem [] = d3.σ.mem from rfl, p3.memory,
       show writeLog d2.σ.mem [] = d2.σ.mem from rfl, p2.memory, show writeLog d1.σ.mem [] = d1.σ.mem from rfl, mem1]
@@ -249,6 +262,7 @@ theorem write_console {ra sp fd buf bs c} (h : WriteInput ra sp fd buf bs c)
       ((keep5 1 (by decide) (by decide) (by simp)).trans ra4)
       ((keep5 2 (by decide) (by decide) (by simp)).trans sp4)
       (gholds_lookup _ p5.regs rfl) ⟨_, gholds_lookup (n := 10) _ p5.regs rfl⟩
+      (fun n hn => (keep5 n (by simp at hn; omega) (by simp at hn; omega) (by simp at hn ⊢; omega)).trans (rest4 n hn))
       (by rw [p5.memory]; exact mem4)
       (by unfold Vsa.Machine.output; rw [p5.output]
           have := out4; unfold Vsa.Machine.output at this; rw [this, List.length_eq_zero_iff.mp zero]
@@ -298,6 +312,11 @@ theorem write_console {ra sp fd buf bs c} (h : WriteInput ra sp fd buf bs c)
       ((keep7 9 (by decide) (by decide)).trans ((frame6.kept 9 (by decide) (by decide) (by simp)).trans
         ((keep5 9 (by decide) (by decide) (by simp)).trans ((keep4 9 (by decide) (by decide) (by simp)).trans len1))))
       ⟨_, (keep7 10 (by decide) (by decide)).trans a6⟩
+      (fun n hn => by
+        have b := hn; simp only [List.mem_cons, List.mem_nil_iff, or_false] at b
+        rw [keep7 n (by omega) (by omega), frame6.kept n (by omega) (by omega) (by simp; omega),
+          keep5 n (by omega) (by omega) (by simp; omega)]
+        exact rest4 n hn)
       (by rw [p7.memory, show writeLog d6.σ.mem [] = d6.σ.mem from rfl, frame6.memory]; exact mem5)
       (by have o7 : Vsa.Machine.output d7.σ = Vsa.Machine.output d6.σ := by
             unfold Vsa.Machine.output; rw [p7.output]

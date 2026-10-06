@@ -276,6 +276,7 @@ import OCaml.Vm.Primitives.ExitPath.Primitive
 import OCaml.Vm.Primitives.Console.Loop
 import OCaml.Vm.Primitives.HtifFrame
 import OCaml.Vm.Primitives.Console.Write
+import OCaml.Vm.Primitives.Console.WriteFd
 import OCaml.Vm.Primitives.PairLayout
 import OCaml.Vm.Primitives.AccessPlanObservation
 import OCaml.Vm.Boot.Startup.Strdup
@@ -2466,6 +2467,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.console_loop
 #print axioms OCaml.Vm.Primitives.EffectPost.htifIdle
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.write_console
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.write_call
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.enter_blocking
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.scan_loop
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.leave_blocking
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.write_fd
+#print axioms OCaml.Vm.Primitives.indirect_registers_summary
 
 #print axioms Vsa.Sim.segmentSummary
 -- Register initialization and primitive-lookup foundations.

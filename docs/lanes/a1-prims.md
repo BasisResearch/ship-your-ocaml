@@ -9,11 +9,17 @@
   output = old ++ `bytesToString bytes`; premises `WriteLayout` (96-byte frame) and
   `ConsoleFd` (fs_ready, fd < 32, descriptor kind > 1 and ≠ 4). Generated blocks:
   `gen_fn.py --ocaml-write`.
-* Next: `caml_write_fd` = enter-blocking hook (indirect) + `write` → `_write_r` →
-  `_write` + `caml_leave_blocking_section` (errno save/restore, leave hook, a 32-slot
-  `caml_pending_signals` scan: needs a "no pending signals" premise); then
-  `caml_flush_partial`/`caml_flush`/`caml_ml_flush` with `ChanAt` and `writeFd`
-  (OS `.write` on the console stream), then `output_bytes`/`output`/`output_char`.
+* `ConsoleWrite.write_fd` (`Console/WriteFd.lean`): `caml_write_fd(fd, flags, buf, n)` on
+  a console descriptor returns `n` with the bytes appended to the output and s0–s7
+  restored; it writes only `[sp-192, sp)`, `errno` and the reentrancy errno word.
+  Premises: `WriteFdLayout`, `ConsoleFd`, the default enter/leave hooks
+  (`0x8000d2a4`/`0x8000d2a8`), `_impure_ptr = rp`, `NoPendingSignals`, `n < 2^31`.
+  Parts: `enter_blocking`, `write_call` (write → `_write_r` → `write_console`),
+  `leave_blocking` (`scan_loop` over the 32 pending-signal slots by `loopFromBody`);
+  `indirect_registers_summary` (`IndirectCall.lean`) for the hook's `jalr`.
+* Next: `caml_flush_partial`/`caml_flush`/`caml_ml_flush` with `ChanAt` and `writeFd`
+  (OS `.write` on the console stream), then `output_bytes`/`output`/`output_char`;
+  `Ready.lean` against a1-arms' `CcallReturns` (335fac20) and `ccall_writing_summary`.
 * Exit path weakened to `ExitOk` (registers read: ra, sp, a0, s0–s10) for STOP;
   `EffectPost.htifIdle` (`HtifFrame.lean`) for a1-arms' `LoopRegisters.htifIdle`.
 

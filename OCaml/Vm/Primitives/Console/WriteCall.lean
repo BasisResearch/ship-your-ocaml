@@ -49,9 +49,11 @@ structure WriteCallPost (ra sp : BitVec 64) (bs : List UInt8) (c d : Config) : P
   tick : d.tick < 2
   idle : d.σ.regs.get? Register.htif_payload_writes = some (0#4)
   pc : pcOf d = some ra
+  raReg : gpr d 1 = some ra
   result : gpr d 10 = some (BitVec.ofNat 64 bs.length)
   stack : gpr d 2 = some sp
   saved : ∀ n ∈ [8, 9, 18], gpr d n = gpr c n
+  rest : ∀ n ∈ [19, 20, 21, 22, 23, 24, 25, 26, 27], gpr d n = gpr c n
   output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ ++ bytesToString bs
   frame : ∀ x, ((sp.toNat - 112) > x ∨ sp.toNat ≤ x) → (x < errnoGlobal.toNat ∨ errnoGlobal.toNat + 4 ≤ x) →
     (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
@@ -224,7 +226,9 @@ theorem write_call {ra sp fd buf bs c} (h : WriteCallInput ra sp fd buf bs c)
     unfold Vsa.Machine.output; rw [q3.output, p2.output, p1.output]
   refine ⟨d6, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans run6)))),
     p6.good, p6.image, p6.minstret, p6.tick,
-    p6.toEffectPost.htifIdle (p5.toEffectPost.htifIdle p4.idle), p6.pc, ?_, ?_, ?_, ?_, ?_⟩
+    p6.toEffectPost.htifIdle (p5.toEffectPost.htifIdle p4.idle), p6.pc, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · have l : gpr d6 1 = some (bytesVal .ld (read8 d5.σ.mem (R5 2 + 8#64).toNat)) := gholds_lookup _ p6.regs rfl
+    rw [l]; exact congrArg some raBack
   · have l : gpr d6 10 = some (R5 10) := gholds_lookup _ p6.regs rfl
     exact l
   · have l : gpr d6 2 = some (R5 2 + 16#64) := gholds_lookup _ p6.regs rfl
@@ -238,6 +242,11 @@ theorem write_call {ra sp fd buf bs c} (h : WriteCallInput ra sp fd buf bs c)
       rw [s0Back]; exact (present 8 (by simp)).symm
     · rw [keep56 9 (by decide) (by decide) (by simp), p4.saved 9 (by simp)]; exact saved3 9 (by simp)
     · rw [keep56 18 (by decide) (by decide) (by simp), p4.saved 18 (by simp)]; exact saved3 18 (by simp)
+  · intro n hn
+    have b := hn; simp only [List.mem_cons, List.mem_nil_iff, or_false] at b
+    rw [keep56 n (by omega) (by omega) (by simp; omega), p4.rest n hn,
+      keepq n (by omega) (by omega) (by omega), keep2 n (by omega) (by omega) (by simp; omega),
+      keep1 n (by omega) (by omega) (by simp; omega)]
   · have o6 : Vsa.Machine.output d6.σ = Vsa.Machine.output d4.σ := by
       unfold Vsa.Machine.output; rw [p6.output, p5.output]
     rw [o6, p4.output, out3]
