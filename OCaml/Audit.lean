@@ -373,6 +373,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.entry_of_loaded
 #print axioms OCaml.Vm.Sim.f1_entryStable
 #print axioms OCaml.Vm.Sim.f1_entry
+#print axioms OCaml.Vm.Sim.f1_table
+#print axioms OCaml.Vm.Sim.ocamlrun_refinement_F1_pinned
+#print axioms OCaml.Vm.Sim.whileMin_halts_f1
 #print axioms OCaml.Vm.Sim.read8_writeLog_out
 #print axioms OCaml.Vm.Sim.stop_do_exit_summary
 #print axioms OCaml.Vm.Sim.stop_ready
