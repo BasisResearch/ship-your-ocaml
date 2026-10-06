@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.WhileMin
+import OCaml.Vm.Gc.WhileMinRoom
 import OCaml.Programs.WhileMinChecks
 import OCaml.Vm.Gc.FreePlacement
 import OCaml.Vm.Gc.LargePlacement
@@ -8,16 +9,6 @@ import OCaml.Vm.Gc.LargePlacement
 and the 4096-word VM stack holds the budgeted 3,840 words above its threshold. -/
 namespace OCaml.Vm.Gc
 open OCaml.Bytecode OCaml.Programs Vsa.Machine Vsa.Sim.Boot Boot
-
-theorem whileMin_init_words : whileMin.init.heap.words = 100 := by decide +kernel
-
-/-- Room for any configuration whose memory is the certified cut memory. -/
-theorem whileMin_g1Room_of {c : Config} {initial : Vsa.MemRepr.Mem}
-    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial WhileMinLog.log)) :
-    G1Room g1Budget whileMin.init c := by
-  constructor
-  rw [WhileMinRuntime.fields memory, whileMin_init_words]
-  decide +kernel
 
 /-- **G1 room at the `whileMin` cut.** -/
 theorem whileMin_g1Room : G1Room g1Budget whileMin.init WhileMin.cut :=

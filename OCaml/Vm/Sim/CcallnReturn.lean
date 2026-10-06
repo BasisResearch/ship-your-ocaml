@@ -66,7 +66,7 @@ theorem c_calln_primitive_return {L : OCaml.Layout} {P : Prog} {s : St}
     (post : PrimitivePost L.runtimeOk P s pl cp sp high name args
       v result heap world writes memory before (0x80002e64#64) after)
     (saved : CcallnSaved {s with pc := s.pc + 3} pl sp count nativeSp domain frameSp env after)
-    (geometry : ArmGeometry P {s with accu := v, heap := heap, world := world} after pl cp high)
+    (geometry : OCaml.LoopGeometry L P {s with accu := v, heap := heap, world := world} after pl cp high)
     (native : NativePlaced after) :
     CcallnReturn L P {s with pc := s.pc + 3, accu := v, heap := heap, world := world}
       pl cp sp high count nativeSp domain frameSp result env after :=
@@ -84,7 +84,7 @@ theorem c_calln_readOnly_summary {L : OCaml.Layout} {P : Prog} {s : St}
         v result writes before (0x80002e64#64)))
     (preserved : ∀ r ∈ callnSavedRegs, ∀ n ∈ writes, gprReg n ≠ r)
     (saved : CcallnSaved {s with pc := s.pc + 3} pl sp count nativeSp domain frameSp env before)
-    (geometry : ArmGeometry P s before pl cp high) (native : NativePlaced before) :
+    (geometry : OCaml.LoopGeometry L P s before pl cp high) (native : NativePlaced before) :
     FnSummary entry (fun c => c = before)
       (CcallnReturn L P {s with pc := s.pc + 3, accu := v}
         pl cp sp high count nativeSp domain frameSp result env) := by

@@ -18,7 +18,7 @@ structure CcallSetupPost (ra : BitVec 64) (args : List Val)
     (BitVec.ofNat 64 (sp - 16)) env c
   target : pcOf c = some (BitVec.ofNat 64 entry)
   /-- the VM stack geometry at the callee entry (`Invariant.lean`) -/
-  geometry : ArmGeometry P s c pl cp high
+  geometry : OCaml.LoopGeometry L P s c pl cp high
   /-- the native invocation at the callee entry (`Invocation.lean`) -/
   native : NativePlaced c
 

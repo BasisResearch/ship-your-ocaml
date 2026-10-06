@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.LoopGeometry
 import OCaml.Refinement
 import OCaml.Vm.Sim.Dispatch
 import OCaml.Vm.Sim.ReadGeometry
@@ -15,7 +16,7 @@ structure ArmInput (L : OCaml.Layout) (P : Prog) (s : St) (op : Opcode)
   dispatch : DispatchInput op (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) c
   runtime : L.runtimeOk c
   /-- the VM stack geometry of this placement (`Invariant.lean`) -/
-  geometry : ArmGeometry P s c pl cp high
+  geometry : OCaml.LoopGeometry L P s c pl cp high
   /-- the native invocation (`Invocation.lean`) -/
   native : NativePlaced c
 
@@ -74,7 +75,7 @@ theorem ArmInput.of_repr {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
     (loop : LoopRegisters c) (tick : c.tick < 2)
     (geometry : CodeReadAt (pl.codeBase + 4 * s.pc))
     (fetch : P.code[s.pc]? = some (BitVec.ofNat 32 op.toNat))
-    (stack : ArmGeometry P s c pl cp high) (native : NativePlaced c) :
+    (stack : OCaml.LoopGeometry L P s c pl cp high) (native : NativePlaced c) :
     ArmInput L P s op c pl cp sp high := by
   have ha : (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)).toNat =
       pl.codeBase + 4 * s.pc := geometry.toNat

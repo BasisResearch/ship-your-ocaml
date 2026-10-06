@@ -134,7 +134,7 @@ theorem push_value_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Con
     (loop : LoopRegisters c) (space : PushWriteOk P s c pl cp sp w)
     (pushed : valWord pl s.accu = some w) (value : valWord pl v = some result)
     (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
-    (post : PushPost c pl pc sp w result after) (geometry : ArmGeometry P s c pl cp high)
+    (post : PushPost c pl pc sp w result after) (geometry : OCaml.LoopGeometry L P s c pl cp high)
     (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := v, stack := s.accu :: s.stack} after := by
   have stored : word after (sp - 8) = w := by

@@ -26,7 +26,7 @@ theorem raise_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     (space : TrapWriteOk P s c pl cp sp high (s.trap - link.toNat))
     (post : RaisePost c pl {s with pc := dest, env := env, extra := extra.toNat, stack := rest, trap := s.trap - link.toNat}
       (sp + 8 * (s.stack.length - s.trap + 4)) high (s.trap - link.toNat) after)
-    (geometry : ArmGeometry P s c pl cp high)
+    (geometry : OCaml.LoopGeometry L P s c pl cp high)
     (native : NativePlaced c) :
     Running L P {s with pc := dest, env := env, extra := extra.toNat, stack := rest, trap := s.trap - link.toNat} after := by
   have payload := payload_trap_written data space.highNat space.payload post.memory post.output

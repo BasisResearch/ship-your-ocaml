@@ -83,8 +83,8 @@ theorem pushtrap_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
       rcases hw with rfl | rfl
       · exact Or.inl ⟨by dsimp only; omega, by dsimp only; omega⟩
       · exact Or.inr ⟨Layout.off_trapsp, by decide, by rw [dom]⟩))
-    input (OperandAt.of_fetch input.geometry fetch) jump envWord
-    (PushtrapWriteOk.of_geometry input.geometry input.stack trapBound space) step
+    input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) jump envWord
+    (PushtrapWriteOk.of_geometry input.geometry.toArmGeometry input.stack trapBound space) step
   exact ⟨c', run, h.of_plus run running⟩
 
 /-- **A trap-pointer store is separated and writable.** -/
@@ -142,7 +142,7 @@ theorem poptrap_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {hig
         exact Or.inr ⟨Layout.off_trapsp, by decide, by rw [dom]⟩))
       input (rf.quiet c input.runtime) frame
       (input.geometry.read input.stack (stack_space input.stack space) (i := 1) len).window
-      (TrapWriteOk.of_geometry input.geometry input.stack space) step
+      (TrapWriteOk.of_geometry input.geometry.toArmGeometry input.stack space) step
     exact ⟨c', run, h.of_plus run running⟩
   · cases shape
 

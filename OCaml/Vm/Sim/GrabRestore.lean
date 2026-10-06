@@ -34,7 +34,7 @@ structure GrabWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPl
   image : ImageOutside log
   bindings : BindingsOutside log P c
   /-- the log's nursery reservation for the new object (the allocation summary) -/
-  reserve : ∃ words, NurseryReserve c log a (grabClosure s).wosize words
+  reserve : NurseryReserve c log a (grabClosure s).wosize (grabClosure s).wosize
 
   /-- all the allocation's stores lie in the allocator arena -/
   arena : LogInW [arenaWindow] (log)
@@ -61,7 +61,7 @@ theorem grab_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Conf
     (space : GrabWriteOk P s before pl cp sp high a log)
     (layout : ObjAt after pl cp a (grabClosure s))
     (post : GrabPost before s pl sp dest savedEnv savedExtra rest log after)
-    (geometry : ArmGeometry P s before pl cp high)
+    (geometry : OCaml.LoopGeometry L P s before pl cp high)
     (native : NativePlaced before) :
     Running L P (grabState s dest savedEnv savedExtra rest) after := by
   have framed := (payload_of_repr data).frame_log space.payload post.memory post.output
@@ -82,7 +82,7 @@ theorem grab_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Conf
   exact running_of_payload payload (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       runtime after post.memory platform.runtime⟩ post.toVmRegisters post.loop
-    (geometry.alloc_log (s' := grabState s dest savedEnv savedExtra rest) space.placed space.reserve.choose_spec rfl rfl
+    (geometry.alloc_log (s' := grabState s dest savedEnv savedExtra rest) space.placed space.reserve rfl rfl
       space.payload.domain space.bindings.contents post.memory)
     (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
 

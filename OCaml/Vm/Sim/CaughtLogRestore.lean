@@ -29,7 +29,7 @@ structure CaughtLogReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp
   savedOutside : ∀ offset ∈ [0, 8, Layout.interpSavedRootsOffset], OutLRange log (nativeSp + offset) 8
   runtimeFrame : AllocationRuntime L.runtimeOk c log
   /-- the VM stack geometry before the raise (`Invariant.lean`) -/
-  stackGeometry : ArmGeometry P s c pl cp high
+  stackGeometry : OCaml.LoopGeometry L P s c pl cp high
   /-- the native invocation held before the raise, and missed by its log -/
   nativeHeld : NativeHeld nativeSp c
   invocationOutside : ∀ r ∈ invocationRanges, OutLRange log (nativeSp + r.1) r.2

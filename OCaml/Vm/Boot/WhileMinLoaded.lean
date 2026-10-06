@@ -20,12 +20,12 @@ theorem control : WhileMinEntry.EntryControl cut where
   geometry := ⟨stackGeometry, OCaml.Vm.Gc.whileMin_nurseryGeometry⟩
 
 /-- The captured machine entry satisfies the complete loaded-state relation. -/
-theorem loaded : Loaded (runtimeLayout BestFitSingleton) whileMin cut :=
+theorem loaded : Loaded (runtimeLayout BestFitSingleton OCaml.Vm.Gc.g1Budget) whileMin cut :=
   WhileMinEntry.loaded (c := cut) (initial := WhileMinImage.initialMem) memory_equiv control
 
 /-- A0's closed densified-entry witness, with the concrete collector invariant. -/
 theorem loaded_fillZero :
-    Loaded (runtimeLayout BestFitSingleton) whileMin (Vsa.Densify.fillZero cut) :=
+    Loaded (runtimeLayout BestFitSingleton OCaml.Vm.Gc.g1Budget) whileMin (Vsa.Densify.fillZero cut) :=
   WhileMinEntry.loaded_fillZero (c := cut) (initial := WhileMinImage.initialMem) memory_eq control
 
 end OCaml.Vm.Boot.WhileMin

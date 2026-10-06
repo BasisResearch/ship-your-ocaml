@@ -38,9 +38,9 @@ structure RuntimeOk (freeList : Config → Prop) (c : Config) : Prop where
   noPending : (runtimeFields c).somethingToDo = 0
   freeListShape : freeList c
 
-/-- A concrete `Layout.runtimeOk`, parameterized only by the free-list shape. -/
-def runtimeLayout (freeList : Config → Prop) : OCaml.Layout :=
-  ⟨RuntimeOk freeList⟩
+/-- A concrete layout, parameterized by the free-list shape and the heap budget. -/
+def runtimeLayout (freeList : Config → Prop) (budget : OCaml.Budget) : OCaml.Layout :=
+  ⟨RuntimeOk freeList, budget⟩
 
 /-- The startup invariant allows exactly the ordinary allocation interval;
 live blocks in its allocated part are handled by `HeapRepr`. -/

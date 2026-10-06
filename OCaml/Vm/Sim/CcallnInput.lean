@@ -34,7 +34,7 @@ structure CcallnSetupPost (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place)
     (BitVec.ofNat 64 domain) (BitVec.ofNat 64 (sp - 24)) env c
   target : pcOf c = some (BitVec.ofNat 64 entry)
   /-- the VM stack geometry at the callee entry (`Invariant.lean`) -/
-  geometry : ArmGeometry P s c pl cp high
+  geometry : OCaml.LoopGeometry L P s c pl cp high
   /-- the native invocation at the callee entry (`Invocation.lean`) -/
   native : NativePlaced c
 

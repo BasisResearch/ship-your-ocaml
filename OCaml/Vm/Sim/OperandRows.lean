@@ -40,7 +40,7 @@ theorem offsetint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w
   split at step
   · rename_i n accu
     exact input_row h code fun input =>
-      offsetint_step_arm stable input (OperandAt.of_fetch input.geometry fetch) accu (by simp only [stepI, accu]; exact step)
+      offsetint_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) accu (by simp only [stepI, accu]; exact step)
   · cases step
 
 /-- **CONSTINT from the loop head.** -/
@@ -49,7 +49,7 @@ theorem constint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
     (fetch : P.code[s.pc + 1]? = some w) (step : stepI P s ⟨.CONSTINT, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   cases Res.next.inj step
-  exact input_row h code fun input => constint_arm stable input (OperandAt.of_fetch input.geometry fetch)
+  exact input_row h code fun input => constint_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
 
 /-- **BRANCH from the loop head.** -/
 theorem branch_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
@@ -59,7 +59,7 @@ theorem branch_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : 
   change opt (target s.pc 0 w.toInt) (fun t => Res.next { s with pc := t }) = .next s' at step
   obtain ⟨dest, jump, next⟩ := opt_next step
   cases Res.next.inj next
-  exact input_row h code fun input => branch_arm stable input (OperandAt.of_fetch input.geometry fetch) jump
+  exact input_row h code fun input => branch_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) jump
 
 /-- **BLTINT from the loop head.** -/
 theorem bltint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
@@ -68,7 +68,7 @@ theorem bltint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm 
     (step : stepI P s ⟨.BLTINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   input_row h code fun input =>
-    bltint_step_arm stable input (OperandAt.of_fetch input.geometry fetch) (OperandAt.of_fetch input.geometry fetchOfs) step
+    bltint_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) (OperandAt.of_fetch input.geometry.toArmGeometry fetchOfs) step
 
 /-- **BLEINT from the loop head.** -/
 theorem bleint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
@@ -77,7 +77,7 @@ theorem bleint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm 
     (step : stepI P s ⟨.BLEINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   input_row h code fun input =>
-    bleint_step_arm stable input (OperandAt.of_fetch input.geometry fetch) (OperandAt.of_fetch input.geometry fetchOfs) step
+    bleint_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) (OperandAt.of_fetch input.geometry.toArmGeometry fetchOfs) step
 
 /-- **BGTINT from the loop head.** -/
 theorem bgtint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
@@ -86,7 +86,7 @@ theorem bgtint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm 
     (step : stepI P s ⟨.BGTINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   input_row h code fun input =>
-    bgtint_step_arm stable input (OperandAt.of_fetch input.geometry fetch) (OperandAt.of_fetch input.geometry fetchOfs) step
+    bgtint_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) (OperandAt.of_fetch input.geometry.toArmGeometry fetchOfs) step
 
 /-- **BGEINT from the loop head.** -/
 theorem bgeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
@@ -95,7 +95,7 @@ theorem bgeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm 
     (step : stepI P s ⟨.BGEINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   input_row h code fun input =>
-    bgeint_step_arm stable input (OperandAt.of_fetch input.geometry fetch) (OperandAt.of_fetch input.geometry fetchOfs) step
+    bgeint_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) (OperandAt.of_fetch input.geometry.toArmGeometry fetchOfs) step
 
 /-- **BULTINT from the loop head.** -/
 theorem bultint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
@@ -104,7 +104,7 @@ theorem bultint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm
     (step : stepI P s ⟨.BULTINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   input_row h code fun input =>
-    bultint_step_arm stable input (OperandAt.of_fetch input.geometry fetch) (OperandAt.of_fetch input.geometry fetchOfs) step
+    bultint_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) (OperandAt.of_fetch input.geometry.toArmGeometry fetchOfs) step
 
 /-- **BUGEINT from the loop head.** -/
 theorem bugeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs : BitVec 32}
@@ -113,7 +113,7 @@ theorem bugeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm
     (step : stepI P s ⟨.BUGEINT, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   input_row h code fun input =>
-    bugeint_step_arm stable input (OperandAt.of_fetch input.geometry fetch) (OperandAt.of_fetch input.geometry fetchOfs) step
+    bugeint_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) (OperandAt.of_fetch input.geometry.toArmGeometry fetchOfs) step
 
 /-- **ATOM from the loop head.** The semantics makes a negative operand
 `.unsupported` (it would index before `caml_atom_table`), so a successful
@@ -128,7 +128,7 @@ theorem atom_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : Bi
   · cases step
   · rename_i nonneg
     cases Res.next.inj step
-    exact input_row h code fun input => atom_arm stable input (OperandAt.of_fetch input.geometry fetch) (by omega)
+    exact input_row h code fun input => atom_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) (by omega)
 
 /-- **BRANCHIF from the loop head.** `notRaw` is named: the semantics branches on
 any non-zero accumulator, while the machine decides by the represented
@@ -139,7 +139,7 @@ theorem branchif_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
     (step : stepI P s ⟨.BRANCHIF, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   input_row h code fun input =>
-    branchif_arm stable input input.geometry.even notRaw (OperandAt.of_fetch input.geometry fetch) step
+    branchif_arm stable input input.geometry.even notRaw (OperandAt.of_fetch input.geometry.toArmGeometry fetch) step
 
 /-- **BRANCHIFNOT from the loop head.** `notRaw` is named: the semantics branches on
 any non-zero accumulator, while the machine decides by the represented
@@ -150,7 +150,7 @@ theorem branchifnot_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} 
     (step : stepI P s ⟨.BRANCHIFNOT, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   input_row h code fun input =>
-    branchifnot_arm stable input input.geometry.even notRaw (OperandAt.of_fetch input.geometry fetch) step
+    branchifnot_arm stable input input.geometry.even notRaw (OperandAt.of_fetch input.geometry.toArmGeometry fetch) step
 
 /-- **BEQ from the loop head**, for an integer accumulator. `integer` is
 named: on a pointer the semantics falls through, while `interp.c` compares
@@ -163,8 +163,8 @@ theorem beq_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm ofs
     (step : stepI P s ⟨.BEQ, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   input_row h code fun input =>
-    beq_step_arm stable input integer (OperandAt.of_fetch input.geometry fetch)
-      (OperandAt.of_fetch input.geometry fetchOfs) step
+    beq_step_arm stable input integer (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
+      (OperandAt.of_fetch input.geometry.toArmGeometry fetchOfs) step
 
 /-- **BNEQ from the loop head**, for an integer accumulator. `integer` is
 named: on a pointer the semantics falls through, while `interp.c` compares
@@ -177,8 +177,8 @@ theorem bneq_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {imm of
     (step : stepI P s ⟨.BNEQ, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   input_row h code fun input =>
-    bneq_step_arm stable input integer (OperandAt.of_fetch input.geometry fetch)
-      (OperandAt.of_fetch input.geometry fetchOfs) step
+    bneq_step_arm stable input integer (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
+      (OperandAt.of_fetch input.geometry.toArmGeometry fetchOfs) step
 
 theorem beq_no_halt {P : Prog} {s : St} {n o : Int} {e : Nat} {w : World} :
     stepI P s ⟨.BEQ, [n, o]⟩ ≠ .halt e w := by

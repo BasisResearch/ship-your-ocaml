@@ -16,7 +16,7 @@ structure RaiseContext (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp :
   accu : ∃ w, gpr c Layout.reg_accu = some w ∧ valWord pl s.accu = some w
   tick : c.tick < 2
   /-- the VM stack geometry (`Invariant.lean`) -/
-  geometry : ArmGeometry P s c pl cp high
+  geometry : OCaml.LoopGeometry L P s c pl cp high
   /-- the native invocation (`Invocation.lean`) -/
   native : NativePlaced c
   /-- the HTIF device is idle (the loop registers' fact, carried to the handler) -/

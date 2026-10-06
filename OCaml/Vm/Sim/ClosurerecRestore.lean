@@ -39,14 +39,15 @@ structure ClosurerecWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : 
 /-- Restore the full represented state after the proved native constructor. -/
 theorem closurerec_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Config}
     {pl : Place} {cp : ChanPlace} {sp high count dest a domain : Nat} {accu : BitVec 64}
-    {targets : List Nat} {words : Nat}
+    {targets : List Nat}
     (runtime : AllocationRuntime L.runtimeOk before (closurerecFullLog before pl sp count dest a domain accu targets))
     (data : VmReprAt P s before pl cp sp high) (platform : PlatformOk L.runtimeOk before)
     (loop : LoopRegisters before) (value : valWord pl s.accu = some accu)
     (space : ClosurerecWriteOk P s before pl cp sp count dest a domain accu targets)
     (post : ClosurerecReturned before pl s.pc sp count dest a domain accu targets after)
-    (geometry : ArmGeometry P s before pl cp high)
-    (reserve : NurseryReserve before (closurerecFullLog before pl sp count dest a domain accu targets) a (closurerecObject s count (dest :: targets)).wosize words)
+    (geometry : OCaml.LoopGeometry L P s before pl cp high)
+    (reserve : NurseryReserve before (closurerecFullLog before pl sp count dest a domain accu targets) a (closurerecObject s count (dest :: targets)).wosize
+      (closurerecObject s count (dest :: targets)).wosize)
     (arena : LogInW [arenaWindow] (closurerecFullLog before pl sp count dest a domain accu targets))
     (native : NativePlaced before) :
     Running L P (closurerecState s count dest targets) after := by

@@ -22,7 +22,7 @@ structure RaiseReentryReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) 
   outside : PayloadOutside (reentryLog nativeSp c) P s c pl cp sp
   bindingsOutside : BindingsOutside (reentryLog nativeSp c) P c
   /-- the VM stack geometry (`Invariant.lean`) -/
-  geometry : ArmGeometry P s c pl cp high
+  geometry : OCaml.LoopGeometry L P s c pl cp high
   /-- the native invocation, held while the C stack unwinds (`InvariantUse.lean`) -/
   native : NativeHeld nativeSp c
   /-- the HTIF device is idle -/

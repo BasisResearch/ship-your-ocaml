@@ -53,8 +53,8 @@ theorem push_retaddr_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
   obtain ⟨env, -, envWord⟩ := input.env
   obtain ⟨c', run, running⟩ := push_retaddr_step_arm
     (by simpa using rf.push input (k := 3) space) input
-    (OperandAt.of_fetch input.geometry fetch) jump envWord
-    (RetaddrWriteOk.of_geometry input.geometry input.stack space) step
+    (OperandAt.of_fetch input.geometry.toArmGeometry fetch) jump envWord
+    (RetaddrWriteOk.of_geometry input.geometry.toArmGeometry input.stack space) step
   exact ⟨c', run, h.of_plus run running⟩
 
 end OCaml.Vm.Sim

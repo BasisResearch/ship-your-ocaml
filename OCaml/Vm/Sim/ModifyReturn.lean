@@ -23,7 +23,7 @@ structure ModifyReturn (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp :
   extra : gpr c Layout.reg_extra = some (BitVec.ofNat 64 s.extra)
   unit : s.accu = .unit
   /-- the VM stack geometry after the barrier (`Invariant.lean`) -/
-  geometry : ArmGeometry P s c pl cp high
+  geometry : OCaml.LoopGeometry L P s c pl cp high
   /-- the native invocation after the barrier (`Invocation.lean`) -/
   native : NativePlaced c
 

@@ -163,7 +163,7 @@ theorem offsetclosure_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   closure_offset_next (d := w.toInt) (width := 2)
     (fun _ _ _ _ _ _ _ _ input sel =>
-      offsetclosure_arm stable input (OperandAt.of_fetch input.geometry fetch) sel) h code step
+      offsetclosure_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) sel) h code step
 
 /-- **PUSHOFFSETCLOSURE n from the loop head.** -/
 theorem pushoffsetclosure_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
@@ -174,7 +174,7 @@ theorem pushoffsetclosure_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Co
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   push_closure_offset_next (d := w.toInt) (width := 2) rf
     (fun _ _ _ _ _ _ _ _ _ stable input space sel pushed =>
-      pushoffsetclosure_arm stable input space (OperandAt.of_fetch input.geometry fetch) sel pushed)
+      pushoffsetclosure_arm stable input space (OperandAt.of_fetch input.geometry.toArmGeometry fetch) sel pushed)
     h code space step
 
 end OCaml.Vm.Sim

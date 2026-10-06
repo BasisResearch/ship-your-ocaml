@@ -78,7 +78,7 @@ theorem CcallReady.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {
   have aligned := PrimitiveEntries.lookup_aligned lookup
   exact ⟨pl, cp, sp, high, entry, value, env,
     { input with
-      operand := OperandAt.of_fetch input.geometry fetch
+      operand := OperandAt.of_fetch input.geometry.toArmGeometry fetch
       nonnegative, primitive, entryName := lookup
       aligned := by rw [BitVec.toNat_ofNat]; omega
       domainWord := by rw [BitVec.ofNat_toNat, BitVec.setWidth_eq]
@@ -86,7 +86,7 @@ theorem CcallReady.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {
       targetRead := input.geometry.primsRam _ name primitive
       value := valueWord
       environment := envWord
-      space := Ccall1WriteOk.of_geometry _ env input.geometry input.stack space }⟩
+      space := Ccall1WriteOk.of_geometry _ env input.geometry.toArmGeometry input.stack space }⟩
 
 /-! ## The C_CALL rows -/
 

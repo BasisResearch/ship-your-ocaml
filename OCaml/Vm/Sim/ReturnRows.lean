@@ -30,7 +30,7 @@ theorem return_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : 
   have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
   have unguarded := Res.unguard step
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
-  have operand := OperandAt.of_fetch input.geometry fetch
+  have operand := OperandAt.of_fetch input.geometry.toArmGeometry fetch
   have bound : w.toInt.toNat ≤ s.stack.length := by
     by_cases inside : w.toInt.toNat ≤ s.stack.length
     · exact inside

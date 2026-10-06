@@ -7,6 +7,7 @@ import OCaml.Vm.Caller
 import OCaml.Run.Clock
 import OCaml.Vm.Sim.Invariant
 import OCaml.Vm.Sim.ArmGeometry
+import OCaml.Vm.Gc.G1RoomDefs
 import OCaml.Vm.Sim.Invocation
 
 /-!
@@ -53,10 +54,19 @@ abstract, as ship-your-interpreter keeps `Layout.atInterpRun`; the Layer A
 proof instantiates it with what `caml_main` establishes. -/
 structure Layout where
   runtimeOk : Config → Prop
+  /-- the configured heap budget: the free nursery holds every word the
+  budget still allows (`Gc.G1Room`, no collection under G1) -/
+  budget : Budget
 
 /-- Every reachable state is within the budget. -/
 def Fits (B : Budget) (P : Prog) : Prop :=
   ∀ s, Reach P s → s.stack.length ≤ B.stackWords ∧ s.heap.words ≤ B.heapWords
+
+/-- **The loop geometry**: the arm geometry of a representation witness and the
+G1 nursery room for the layout's budget. -/
+structure LoopGeometry (L : Layout) (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace)
+    (high : Nat) : Prop extends Vm.Sim.ArmGeometry P s c pl cp high where
+  room : Vm.Gc.G1Room L.budget s c
 
 /-- **The program is loaded** at `caml_interprete`'s entry
 (`caml_interprete(caml_start_code, caml_code_size)`, `startup_byt.c`):
@@ -86,7 +96,7 @@ structure LoadedAt (L : Layout) (P : Prog) (c : Config) (pl : Place) (cp : ChanP
   the prologue's writes, dispatch clock and HTIF idleness (`OCaml/Vm/Caller.lean`) -/
   caller : ∃ sp callerRegs mainSaved, InterpCaller P c pl cp high sp callerRegs mainSaved
   /-- the stack/heap/code/nursery placement of the initial state (`OCaml/Vm/Sim/ArmGeometry.lean`) -/
-  geometry : Vm.Sim.ArmGeometry P P.init c pl cp high
+  geometry : LoopGeometry L P P.init c pl cp high
 
 def Loaded (L : Layout) (P : Prog) (c : Config) : Prop :=
   ∃ (pl : Place) (cp : ChanPlace) (high : Nat), LoadedAt L P c pl cp high
@@ -108,10 +118,10 @@ theorem Loaded.primitives {L : Layout} {P : Prog} {c : Config} (h : Loaded L P c
 theorem Loaded.runtime {L : Layout} {P : Prog} {c : Config} (h : Loaded L P c) :
     L.runtimeOk c := h.platform.runtime
 
-/-- The represented state together with the VM stack geometry of the same
-placement (`OCaml/Vm/Sim/Invariant.lean`). -/
-def StackPlaced (P : Prog) (s : St) (c : Config) : Prop :=
-  ∃ pl cp sp high, VmReprAt P s c pl cp sp high ∧ Vm.Sim.ArmGeometry P s c pl cp high
+/-- The represented state together with the loop geometry of the same
+placement (`OCaml/Vm/Sim/Invariant.lean`, `ArmGeometry.lean`). -/
+def StackPlaced (L : Layout) (P : Prog) (s : St) (c : Config) : Prop :=
+  ∃ pl cp sp high, VmReprAt P s c pl cp sp high ∧ LoopGeometry L P s c pl cp high
 
 /-- The loop-head representation: VM data and platform facts are separate
 named parts. No platform field depends on the abstract heap placement.
@@ -122,7 +132,7 @@ structure Running (L : Layout) (P : Prog) (s : St) (c : Config) : Prop where
   data : VmRepr P s c
   platform : PlatformOk L.runtimeOk c
   loop : LoopRegisters c
-  stack : StackPlaced P s c
+  stack : StackPlaced L P s c
   /-- the native invocation of `caml_interprete` is intact (`Invocation.lean`) -/
   native : Vm.Sim.NativePlaced c
 

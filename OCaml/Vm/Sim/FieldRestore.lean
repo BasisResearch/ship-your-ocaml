@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.HeapWords
 import OCaml.Vm.Sim.HeapPayload
 import OCaml.Vm.Sim.StackStore
 import OCaml.Vm.Sim.WriteGeometry
@@ -60,6 +61,19 @@ theorem ArmGeometry.heap_set {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
   · rw [heap_set_other _ _ _ _ (Ne.symm equal)] at found
     exact ⟨o', found, rfl⟩
 
+/-- A same-size object replacement keeps the loop geometry: the heap's words
+are unchanged, so the G1 room survives. -/
+theorem _root_.OCaml.LoopGeometry.heap_set {L : OCaml.Layout} {P : Prog} {s s' : St} {c c' : Config}
+    {pl : Place} {cp : ChanPlace} {high l : Nat} {old new : Obj} {log : List WEntry}
+    (g : OCaml.LoopGeometry L P s c pl cp high) (selected : s.heap.get? l = some old)
+    (size : new.wosize = old.wosize) (heap : s'.heap = s.heap.set l new)
+    (world : s'.world = s.world) (domain : OutLRange log Layout.sym_Caml_state 8)
+    (contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
+    (young : YoungOutside log c)
+    (memory : c'.σ.mem = writeLog c.σ.mem log) : OCaml.LoopGeometry L P s' c' pl cp high :=
+  ⟨g.toArmGeometry.heap_set selected size heap world domain contents young memory,
+   g.room.frame young domain memory (by rw [heap, Heap.words_set selected size]; exact Nat.le_refl _)⟩
+
 /-- Restore a represented field replacement, unit result and complete platform. -/
 theorem field_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     {pl : Place} {cp : ChanPlace} {sp high l a i tag pc : Nat}
@@ -72,7 +86,7 @@ theorem field_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     (room : 8 ≤ a) (bound : i < fields.length) (represented : valWord pl value = some w)
     (root : ∀ loc, value.loc? = some loc → Live s.heap (roots P s) loc)
     (post : StackPost c pl pc sp (tag64 0) (writeLog c.σ.mem (fieldLog a i w)) after)
-    (geometry : ArmGeometry P s c pl cp high)
+    (geometry : OCaml.LoopGeometry L P s c pl cp high)
     (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := .unit, heap := s.heap.set l (.block tag (fields.set i value))} after := by
   have payload := payload_field_written (payload_of_repr data) live placed selected room bound

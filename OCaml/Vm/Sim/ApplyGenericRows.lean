@@ -32,7 +32,7 @@ theorem apply_generic_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config
     obtain ⟨l, a, k, field⟩ := field_selection input.toVmReprAt (by simp [roots]) sel
     have hs := input.stack.1
     have hg := input.geometry.statics
-    obtain ⟨c', run, running⟩ := apply_step_arm stable input (OperandAt.of_fetch input.geometry fetch)
+    obtain ⟨c', run, running⟩ := apply_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
       field (by simpa only [Nat.add_zero] using input.geometry.field_read field)
       (rf.enter input (by omega)) step
     exact ⟨c', run, h.of_plus run running⟩
@@ -102,10 +102,10 @@ theorem appterm_generic_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Conf
     have hg := input.geometry.statics
     obtain ⟨c', run, running⟩ := appterm_step_arm
       (rf.stackWindow _ _ (by rw [← same]; unfold tailcallStart; omega) (by rw [← same]; omega)) input
-      (OperandAt.of_fetch input.geometry fetchCount) (OperandAt.of_fetch input.geometry fetchSlots)
+      (OperandAt.of_fetch input.geometry.toArmGeometry fetchCount) (OperandAt.of_fetch input.geometry.toArmGeometry fetchSlots)
       field (by simpa only [Nat.add_zero] using input.geometry.field_read field)
       (rf.enter input (by unfold tailcallStart; omega))
-      (ApptermWriteOk.of_geometry input.geometry input.stack (by omega) (by omega) (by omega) (by omega))
+      (ApptermWriteOk.of_geometry input.geometry.toArmGeometry input.stack (by omega) (by omega) (by omega) (by omega))
       step
     exact ⟨c', run, h.of_plus run running⟩
 

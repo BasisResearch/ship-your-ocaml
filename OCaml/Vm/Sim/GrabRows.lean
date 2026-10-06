@@ -20,7 +20,7 @@ theorem grab_fast_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w
     (step : stepI P s ⟨.GRAB, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
-  obtain ⟨c', run, running⟩ := grab_fast_step_arm stable input (OperandAt.of_fetch input.geometry fetch)
+  obtain ⟨c', run, running⟩ := grab_fast_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
     nonnegative small enough step
   exact ⟨c', run, h.of_plus run running⟩
 

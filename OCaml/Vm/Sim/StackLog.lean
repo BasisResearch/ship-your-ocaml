@@ -109,7 +109,7 @@ theorem appterm_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op 
     (rf.stackWindow _ _ (by rw [← same]; unfold tailcallStart; omega) (by rw [← same]; omega)) input
     field (by simpa only [Nat.add_zero] using input.geometry.field_read field)
     (rf.enter input (by unfold tailcallStart; omega))
-    (TailcallWriteOk.of_geometry input.geometry input.stack fits bound (by omega))
+    (TailcallWriteOk.of_geometry input.geometry.toArmGeometry input.stack fits bound (by omega))
   exact ⟨c', run, h.of_plus run running⟩
 
 /-- **APPTERM1 from the loop head.** -/
@@ -128,7 +128,7 @@ theorem appterm1_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
     have nonnegative : 0 ≤ w.toInt := by omega
     exact appterm_next (n := 1) rf
       (fun _ _ _ _ _ _ _ _ stable input field read ready space =>
-        appterm1_step_arm stable input (OperandAt.of_fetch input.geometry fetch) nonnegative
+        appterm1_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) nonnegative
           field read ready space step)
       h code (by omega) (by omega) (enter_next shape) space
 
@@ -148,7 +148,7 @@ theorem appterm2_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
     have nonnegative : 0 ≤ w.toInt := by omega
     exact appterm_next (n := 2) rf
       (fun _ _ _ _ _ _ _ _ stable input field read ready space =>
-        appterm2_step_arm stable input (OperandAt.of_fetch input.geometry fetch) nonnegative
+        appterm2_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) nonnegative
           field read ready space step)
       h code (by omega) (by omega) (enter_next shape) space
 
@@ -168,7 +168,7 @@ theorem appterm3_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
     have nonnegative : 0 ≤ w.toInt := by omega
     exact appterm_next (n := 3) rf
       (fun _ _ _ _ _ _ _ _ stable input field read ready space =>
-        appterm3_step_arm stable input (OperandAt.of_fetch input.geometry fetch) nonnegative
+        appterm3_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch) nonnegative
           field read ready space step)
       h code (by omega) (by omega) (enter_next shape) space
 

@@ -45,7 +45,7 @@ theorem restart_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     (block : BlockSelection s.heap pl s.env l a tag fields) (environment : fields[2]? = some env)
     (space : RestartWriteOk P s before pl cp sp high a fields)
     (post : RestartPost before s pl sp a fields env after)
-    (geometry : ArmGeometry P s before pl cp high)
+    (geometry : OCaml.LoopGeometry L P s before pl cp high)
     (native : NativePlaced before) :
     Running L P (restartState s fields env) after := by
   have arguments : ValueWords pl (fields.drop 3) (stackWords before (a + 24) (fields.length - 3)) :=

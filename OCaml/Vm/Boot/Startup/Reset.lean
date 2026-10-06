@@ -80,6 +80,6 @@ Suppliers: loader correspondence, setup invariant, and startup function summarie
 def whileMin_reset_loaded_Statement : Prop :=
   ∀ elf, WhileMinElf elf → ∀ c₀, ElfReset elf c₀ →
     ∃ c_cut, Steps (Vsa.Densify.fillZero c₀) c_cut ∧
-      Loaded (runtimeLayout BestFitSingleton) whileMin c_cut
+      Loaded (runtimeLayout BestFitSingleton OCaml.Vm.Gc.g1Budget) whileMin c_cut
 
 end OCaml.Vm.Boot.Startup

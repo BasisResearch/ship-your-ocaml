@@ -43,7 +43,7 @@ structure MakeblockWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : C
   image : ImageOutside (makeblockLog c sp count tag a domain accu)
   bindings : BindingsOutside (makeblockLog c sp count tag a domain accu) P c
   /-- the log's nursery reservation for the new object (the allocation summary) -/
-  reserve : ∃ words, NurseryReserve c (makeblockLog c sp count tag a domain accu) a (makeblockObject s count tag).wosize words
+  reserve : NurseryReserve c (makeblockLog c sp count tag a domain accu) a (makeblockObject s count tag).wosize (makeblockObject s count tag).wosize
 
   /-- all the allocation's stores lie in the allocator arena -/
   arena : LogInW [arenaWindow] (makeblockLog c sp count tag a domain accu)
@@ -67,7 +67,7 @@ theorem makeblock_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after :
     (value : valWord pl s.accu = some accu)
     (space : MakeblockWriteOk P s before pl cp sp high count tag a domain accu)
     (post : MakeblockPost before s pl sp width count tag a domain accu after)
-    (geometry : ArmGeometry P s before pl cp high)
+    (geometry : OCaml.LoopGeometry L P s before pl cp high)
     (native : NativePlaced before) :
     Running L P (makeblockState s width count tag) after := by
   have fields := ValueWords.cons value (stack_value_words data.stack space.bound)
@@ -86,7 +86,7 @@ theorem makeblock_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after :
   exact running_of_payload payload (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory, runtime after post.memory platform.runtime⟩
     post.toVmRegisters post.loop
-    (geometry.alloc_log (s' := makeblockState s width count tag) space.placed space.reserve.choose_spec rfl rfl
+    (geometry.alloc_log (s' := makeblockState s width count tag) space.placed space.reserve rfl rfl
       space.payload.domain space.bindings.contents post.memory)
     (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
 

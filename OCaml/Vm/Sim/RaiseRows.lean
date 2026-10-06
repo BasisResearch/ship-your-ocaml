@@ -113,7 +113,7 @@ theorem raise_family_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
       rw [dom]
       exact Or.inr ⟨Layout.off_trapsp, by simp [vmDomainOffsets], rfl⟩)
     ⟨by simpa using rd 0 (by decide), rd 1 (by decide), rd 2 (by decide), rd 3 (by decide)⟩
-    (TrapWriteOk.of_geometry input.geometry input.stack space)
+    (TrapWriteOk.of_geometry input.geometry.toArmGeometry input.stack space)
   exact ⟨c', run, h.of_plus run running⟩
 
 /-- A raise never halts the bytecode machine. -/

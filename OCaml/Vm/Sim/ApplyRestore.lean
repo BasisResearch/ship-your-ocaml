@@ -51,7 +51,7 @@ theorem apply_frame_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after
     (arguments : ValueWords pl (s.stack.take args.length) args) (envWord : valWord pl s.env = some env)
     (space : ApplyWriteOk P s before pl cp sp high args env)
     (post : ApplyPost before s pl sp dest args env after)
-    (geometry : ArmGeometry P s before pl cp high)
+    (geometry : OCaml.LoopGeometry L P s before pl cp high)
     (native : NativePlaced before) : Running L P (applyState s args.length dest) after := by
   have payload := apply_frame_payload (payload_of_repr data) space.room positive small bound arguments envWord
     space.payload post.memory post.output

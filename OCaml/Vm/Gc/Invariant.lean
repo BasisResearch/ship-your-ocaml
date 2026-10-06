@@ -74,7 +74,7 @@ structure WritingArmBarrier (P : Prog) (s' : St) (c' : Config) (pl' : Place)
 /-- The safety-enhanced loop head projects to the existing a1 relation. -/
 theorem LoopHead.running {L P s c pl cp sp high lo hi remembered}
     (h : LoopHead L P s c pl cp sp high lo hi remembered)
-    (stack : Vm.Sim.ArmGeometry P s c pl cp high) (native : Vm.Sim.NativePlaced c) :
+    (stack : OCaml.LoopGeometry L P s c pl cp high) (native : Vm.Sim.NativePlaced c) :
     Running L P s c :=
   ⟨⟨pl, cp, sp, high, h.data⟩, h.platform, h.loop, ⟨pl, cp, sp, high, h.data, stack⟩, native⟩
 

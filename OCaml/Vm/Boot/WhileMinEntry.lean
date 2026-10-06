@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.WhileMinRoom
 import OCaml.Vm.Boot.WhileMinEntryReads
 import Vsa.Sim.Frame
 
@@ -28,7 +29,7 @@ structure EntryControl (c : Config) : Prop where
 certified store-log memory. Control, image and primitive bindings remain explicit. -/
 theorem loaded {c : Config} {initial : Vsa.MemRepr.Mem}
     (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log))
-    (entry : EntryControl c) : Loaded (runtimeLayout BestFitSingleton) whileMin c := by
+    (entry : EntryControl c) : Loaded (runtimeLayout BestFitSingleton OCaml.Vm.Gc.g1Budget) whileMin c := by
   have dom : (word c Layout.sym_Caml_state).toNat = WhileMinRuntime.domain :=
     congrArg BitVec.toNat (WhileMinRuntime.read_domain memory)
   refine ⟨place, (fun _ => none), high, {
@@ -47,7 +48,7 @@ theorem loaded {c : Config} {initial : Vsa.MemRepr.Mem}
     primitives := entry.primitives
     atomBase := congrArg BitVec.toNat (WhileMinHeap.read_atom_table memory)
     caller := entry.caller
-    geometry := entry.geometry
+    geometry := ⟨entry.geometry, OCaml.Vm.Gc.whileMin_g1Room_of memory⟩
   }⟩
   · rw [dom]; exact congrArg BitVec.toNat (read_stack_high memory)
   · rw [dom]; exact congrArg BitVec.toNat (read_extern_sp memory)
@@ -84,7 +85,7 @@ theorem EntryControl.fillZero {c : Config} (h : EntryControl c) :
 cut's memory projection and remaining control/image/binding certificate. -/
 theorem loaded_fillZero {c : Config} {initial : Vsa.MemRepr.Mem}
     (memory : c.σ.mem = observedMem initial log) (entry : EntryControl c) :
-    Loaded (runtimeLayout BestFitSingleton) whileMin (Vsa.Densify.fillZero c) :=
+    Loaded (runtimeLayout BestFitSingleton OCaml.Vm.Gc.g1Budget) whileMin (Vsa.Densify.fillZero c) :=
   loaded ((Vsa.Densify.memEqv_fillZeroMem c.σ.mem).symm.trans
     (by rw [memory]; exact Vsa.Densify.MemEqv.refl _)) entry.fillZero
 

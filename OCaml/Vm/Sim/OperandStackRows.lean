@@ -44,7 +44,7 @@ theorem acc_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : Bit
   cases next
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
   have bound := (List.getElem?_eq_some_iff.mp selected).1
-  obtain ⟨c', run, running⟩ := acc_arm stable input (OperandAt.of_fetch input.geometry fetch)
+  obtain ⟨c', run, running⟩ := acc_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
     nonnegative selected (input.geometry.read input.stack (stack_space input.stack space) bound)
   exact ⟨c', run, h.of_plus run running⟩
 
@@ -67,8 +67,8 @@ theorem pushacc_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w :
   have bound := (List.getElem?_eq_some_iff.mp selected).1
   simp only [List.length_cons] at bound
   obtain ⟨c', run, running⟩ := pushacc_arm (by simpa only [Nat.mul_one] using rf.push input space)
-    input (PushWriteOk.of_geometry input.geometry input.stack space)
-    (OperandAt.of_fetch input.geometry fetch) nonnegative selected
+    input (PushWriteOk.of_geometry input.geometry.toArmGeometry input.stack space)
+    (OperandAt.of_fetch input.geometry.toArmGeometry fetch) nonnegative selected
     (input.geometry.push_read input.stack space (by omega)) pushed
   exact ⟨c', run, h.of_plus run running⟩
 
@@ -80,7 +80,7 @@ theorem pop_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : Bit
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
-  obtain ⟨c', run, running⟩ := pop_step_arm stable input (OperandAt.of_fetch input.geometry fetch)
+  obtain ⟨c', run, running⟩ := pop_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
     nonnegative step
   exact ⟨c', run, h.of_plus run running⟩
 
@@ -98,7 +98,7 @@ theorem envacc_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : 
   cases next
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
   obtain ⟨l, a, k, sel⟩ := field_selection input.toVmReprAt (by simp [roots]) selected
-  obtain ⟨c', run, running⟩ := envacc_arm stable input (OperandAt.of_fetch input.geometry fetch)
+  obtain ⟨c', run, running⟩ := envacc_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
     nonnegative sel (input.geometry.field_read sel)
   exact ⟨c', run, h.of_plus run running⟩
 
@@ -178,8 +178,8 @@ theorem assign_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : 
   have hs := input.stack.1
   obtain ⟨c', run, running⟩ := assign_step_arm
     (rf.stackWindow _ _ (by rw [← same]; omega) (by rw [← same]; omega)) input
-    (OperandAt.of_fetch input.geometry fetch) nonnegative
-    (AssignWriteOk.of_geometry input.geometry input.stack space bound) value step
+    (OperandAt.of_fetch input.geometry.toArmGeometry fetch) nonnegative
+    (AssignWriteOk.of_geometry input.geometry.toArmGeometry input.stack space bound) value step
   exact ⟨c', run, h.of_plus run running⟩
 
 end OCaml.Vm.Sim

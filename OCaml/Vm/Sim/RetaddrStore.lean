@@ -120,7 +120,7 @@ theorem retaddr_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     (post : StackPost before pl pc (sp - 24) accu
       (writeLog before.σ.mem (retaddrLog sp (BitVec.ofNat 64 (pl.codeBase + 4 * dest)) env
         (tag64 (BitVec.ofNat 63 s.extra)))) after)
-    (geometry : ArmGeometry P s before pl cp high)
+    (geometry : OCaml.LoopGeometry L P s before pl cp high)
     (native : NativePlaced before) :
     Running L P {s with pc := pc, stack := .code dest :: s.env :: Val.ofInt s.extra :: s.stack} after := by
   have payload := retaddr_payload (payload_of_repr data) space envWord post.memory post.output

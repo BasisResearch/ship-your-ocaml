@@ -55,7 +55,7 @@ structure F1Pins (c : Config) : Prop where
 def f1Runtime : Config → Prop := RuntimeOk F1Pins
 
 /-- The F1 layout. -/
-def f1Layout : OCaml.Layout := runtimeLayout F1Pins
+def f1Layout : OCaml.Layout := runtimeLayout F1Pins g1Budget
 
 /-- The memory `f1Runtime` reads, except the `young_ptr` word. -/
 def keptFootprint : List W :=
@@ -541,18 +541,20 @@ theorem f1Runtime_of {c : Config} {initial : Vsa.MemRepr.Mem}
 
 /-- Replace the runtime component of a loaded witness. -/
 theorem Loaded.retarget {L L' : OCaml.Layout} {P : Prog} {c : Config} (h : OCaml.Loaded L P c)
-    (runtime : L'.runtimeOk c) : OCaml.Loaded L' P c := by
+    (runtime : L'.runtimeOk c) (budget : L'.budget = L.budget) : OCaml.Loaded L' P c := by
   obtain ⟨pl, cp, high, entry⟩ := h
-  exact ⟨pl, cp, high, { entry with platform := ⟨entry.platform.control, entry.platform.image, runtime⟩ }⟩
+  exact ⟨pl, cp, high, { entry with
+    platform := ⟨entry.platform.control, entry.platform.image, runtime⟩
+    geometry := ⟨entry.geometry.toArmGeometry, budget ▸ entry.geometry.room⟩ }⟩
 
 /-- **`Loaded f1Layout whileMin`** at the captured cut. -/
 theorem whileMin_loaded_f1 : OCaml.Loaded f1Layout OCaml.Programs.whileMin WhileMin.cut :=
-  Loaded.retarget WhileMin.loaded (f1Runtime_of WhileMin.memory_equiv)
+  Loaded.retarget WhileMin.loaded (f1Runtime_of WhileMin.memory_equiv) rfl
 
 /-- The densified entry, as a0-boot's `loaded_fillZero`. -/
 theorem whileMin_loaded_f1_fillZero : OCaml.Loaded f1Layout OCaml.Programs.whileMin (Vsa.Densify.fillZero WhileMin.cut) :=
   Loaded.retarget WhileMin.loaded_fillZero
-    (f1Runtime_of ((Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem).symm.trans WhileMin.memory_equiv))
+    (f1Runtime_of ((Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem).symm.trans WhileMin.memory_equiv)) rfl
 
 end Cut
 

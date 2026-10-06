@@ -46,7 +46,7 @@ theorem getglobal_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w
   cases next
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
   obtain ⟨l, a, k, sel⟩ := field_selection input.toVmReprAt (by simp [roots]) selected
-  obtain ⟨c', run, running⟩ := getglobal_arm stable input (OperandAt.of_fetch input.geometry fetch)
+  obtain ⟨c', run, running⟩ := getglobal_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
     nonnegative sel (input.geometry.field_read sel)
   exact ⟨c', run, h.of_plus run running⟩
 
@@ -68,8 +68,8 @@ theorem pushgetglobal_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config
   obtain ⟨x, -, pushed⟩ := input.accu
   obtain ⟨l, a, k, sel⟩ := field_selection input.toVmReprAt (by simp [roots]) selected
   obtain ⟨c', run, running⟩ := pushgetglobal_arm (by simpa only [Nat.mul_one] using rf.push input space)
-    input (PushWriteOk.of_geometry input.geometry input.stack space)
-    (OperandAt.of_fetch input.geometry fetch) sel (input.geometry.field_read sel) nonnegative pushed
+    input (PushWriteOk.of_geometry input.geometry.toArmGeometry input.stack space)
+    (OperandAt.of_fetch input.geometry.toArmGeometry fetch) sel (input.geometry.field_read sel) nonnegative pushed
   exact ⟨c', run, h.of_plus run running⟩
 
 /-- **GETGLOBALFIELD n k from the loop head.** -/
@@ -93,7 +93,7 @@ theorem getglobalfield_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Confi
   obtain ⟨loc, b, j, second⟩ := field_selection_reachable input.toVmReprAt
     (first.read input.toVmReprAt (by simp [roots])).root secondSel
   obtain ⟨c', run, running⟩ := getglobalfield_arm stable input
-    (OperandAt.of_fetch input.geometry fetchN) (OperandAt.of_fetch input.geometry fetchM)
+    (OperandAt.of_fetch input.geometry.toArmGeometry fetchN) (OperandAt.of_fetch input.geometry.toArmGeometry fetchM)
     nonnegativeN nonnegativeM first second (input.geometry.field_read first)
     (input.geometry.field_read second)
   exact ⟨c', run, h.of_plus run running⟩
@@ -123,8 +123,8 @@ theorem pushgetglobalfield_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : C
     (first.read input.toVmReprAt (by simp [roots])).root secondSel
   obtain ⟨c', run, running⟩ := pushgetglobalfield_arm
     (by simpa only [Nat.mul_one] using rf.push input space) input
-    (PushWriteOk.of_geometry input.geometry input.stack space) pushed
-    (OperandAt.of_fetch input.geometry fetchN) (OperandAt.of_fetch input.geometry fetchM)
+    (PushWriteOk.of_geometry input.geometry.toArmGeometry input.stack space) pushed
+    (OperandAt.of_fetch input.geometry.toArmGeometry fetchN) (OperandAt.of_fetch input.geometry.toArmGeometry fetchM)
     nonnegativeN nonnegativeM first second (input.geometry.field_read first)
     (input.geometry.field_read second)
   exact ⟨c', run, h.of_plus run running⟩

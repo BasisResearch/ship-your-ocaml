@@ -21,7 +21,7 @@ theorem assign_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     (loop : LoopRegisters c) (space : AssignWriteOk P s c pl cp sp high i w)
     (bound : i < s.stack.length) (value : valWord pl s.accu = some w)
     (post : StackPost c pl pc sp (tag64 0) (writeLog c.σ.mem (assignLog sp i w)) after)
-    (geometry : ArmGeometry P s c pl cp high)
+    (geometry : OCaml.LoopGeometry L P s c pl cp high)
     (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := .unit, stack := s.stack.set i s.accu} after := by
   have payload := payload_stack_assign (payload_of_repr data) bound value space.payload post.memory post.output

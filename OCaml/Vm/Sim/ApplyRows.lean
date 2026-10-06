@@ -116,7 +116,7 @@ theorem apply_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : 
     (rf.stackWindow _ _ (by rw [← same]; omega) (by rw [← same]; omega)) input bound field
     (by simpa only [Nat.add_zero] using input.geometry.field_read field)
     (rf.enter input (by have h1 := input.stack.1; have h2 := space; have h3 := input.geometry.statics; have h4 : 24 ≤ Layout.sym_bss_end := (by decide); show high - Layout.stackBytes + Layout.stackThresholdBytes ≤ sp - 24; omega)) envWord
-    (ApplyWriteOk.of_geometry input.geometry input.stack positive small bound (by omega))
+    (ApplyWriteOk.of_geometry input.geometry.toArmGeometry input.stack positive small bound (by omega))
   exact ⟨c', run, h.of_plus run running⟩
 
 /-- **APPLY1 from the loop head.** -/

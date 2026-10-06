@@ -67,7 +67,7 @@ theorem tailcall_restore_of_log {L : OCaml.Layout} {P : Prog} {s : St} {before a
     (values : ∀ i v, (s.stack.take arity)[i]? = some v →
       valWord pl v = some (word after (tailcallStart sp arity slots + 8 * i)))
     (post : TailcallPostWith log before s pl sp slots dest arity after)
-    (geometry : ArmGeometry P s before pl cp high)
+    (geometry : OCaml.LoopGeometry L P s before pl cp high)
     (native : NativePlaced before) :
     Running L P (tailcallState s arity slots dest) after := by
   have bound : arity ≤ s.stack.length := Nat.le_trans space.fits space.bound
@@ -97,7 +97,7 @@ theorem tailcall_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : 
     (arguments : ValueWords pl (s.stack.take args.length) args)
     (space : TailcallWriteOk P s before pl cp sp high slots args)
     (post : TailcallPost before s pl sp slots dest args after)
-    (geometry : ArmGeometry P s before pl cp high) (native : NativePlaced before) :
+    (geometry : OCaml.LoopGeometry L P s before pl cp high) (native : NativePlaced before) :
     Running L P (tailcallState s args.length slots dest) after := by
   have join : tailcallStart sp args.length slots + 8 * args.length = sp + 8 * slots := by
     unfold tailcallStart

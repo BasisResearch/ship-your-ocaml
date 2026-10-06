@@ -80,7 +80,7 @@ theorem restart_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {hig
           obtain ⟨c', run, running⟩ := restart_step_arm
             (rf.stackWindow _ _ (by rw [← same]; unfold restartStart; omega) (by rw [← same]; omega))
             input block environment
-            (RestartInput.of_geometry input.geometry input.stack block (by omega) (by omega)) step
+            (RestartInput.of_geometry input.geometry.toArmGeometry input.stack block (by omega) (by omega)) step
           exact ⟨c', run, h.of_plus run running⟩
     · cases shape
   · cases shape

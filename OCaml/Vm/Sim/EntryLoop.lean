@@ -138,7 +138,7 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
     {high sp : Nat} {callerRegs mainSaved : Nat → BitVec 64}
     (h : OCaml.LoadedAt L P c pl cp high)
     (caller : InterpCaller P c pl cp high sp callerRegs mainSaved)
-    (geometry : ArmGeometry P P.init c pl cp high)
+    (geometry : OCaml.LoopGeometry L P P.init c pl cp high)
     (stable : WindowStable L.runtimeOk (entryWindows sp (word c Layout.sym_Caml_state).toNat)) :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P P.init c' := by
   have frame := EntryFrame.of_caller caller
@@ -244,7 +244,7 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
         Layout.domainStateBytes, Vsa.Sim.DlHeap.heapStart, Vsa.Sim.DlHeap.heapEnd, and_true] at * <;> omega
   have geometry5 := geometry.transport (s' := P.init) (fun l o' ho => ⟨o', ho, rfl⟩) rfl dom5 prim5
     (by simp only [OCaml.Vm.runtimeFields, OCaml.Vm.domainWord, dom5]; rw [young _ (by simp)])
-    (by simp only [OCaml.Vm.runtimeFields, OCaml.Vm.domainWord, dom5]; rw [young _ (by simp)])
+    (by simp only [OCaml.Vm.runtimeFields, OCaml.Vm.domainWord, dom5]; rw [young _ (by simp)]) rfl
   refine ⟨c5, ?_, ⟨running_of_payload payload primitives platform regs p.loop geometry5 native, p.tick⟩⟩
   cases n with
   | zero =>

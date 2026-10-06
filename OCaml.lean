@@ -38,6 +38,9 @@ import OCaml.Vm.Sim.CcallRows
 import OCaml.Vm.Sim.CcallWriting
 import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.BarrierRows
+import OCaml.Vm.Gc.WhileMinRoom
+import OCaml.Vm.Sim.HeapWords
+import OCaml.Vm.Sim.LoopGeometry
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax

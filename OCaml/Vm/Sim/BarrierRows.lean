@@ -59,7 +59,7 @@ theorem setglobal_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable L.run
       obtain ⟨heap, update, -⟩ := opt_next body
       obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
       obtain ⟨value, -, encoded⟩ := input.accu
-      obtain ⟨c', run, running⟩ := setglobal_step_arm stable input (OperandAt.of_fetch input.geometry fetch)
+      obtain ⟨c', run, running⟩ := setglobal_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
         nonnegative input.globals encoded
         (barrier.callee s c pl cp sp high w value heap reach input nonnegative encoded update) update step
       exact ⟨c', run, h.of_plus run running⟩)
@@ -83,7 +83,7 @@ theorem setfield_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} (stable : 
         have space := stack_space input.stack (by simpa using stack_fits fits capacity reach (k := 0))
         have read := input.geometry.read input.stack space (i := 0) (by simp [hs])
         simp only [Nat.mul_zero, Nat.add_zero] at encoded read
-        obtain ⟨c', run, running⟩ := setfield_step_arm stable input (OperandAt.of_fetch input.geometry fetch)
+        obtain ⟨c', run, running⟩ := setfield_step_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
           nonnegative source hs encoded read
           (barrier.callee s c pl cp sp high w base _ v rest heap reach input nonnegative source hs encoded update)
           update step

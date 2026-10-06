@@ -33,7 +33,7 @@ theorem push_set_row {L : OCaml.Layout} {P : Prog} {s t : St} {c : Config} {op :
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
   obtain ⟨w, -, pushed⟩ := input.accu
   obtain ⟨c', run, running⟩ := arm (by simpa only [Nat.mul_one] using rf.push input space) input
-    (PushWriteOk.of_geometry input.geometry input.stack space) pushed
+    (PushWriteOk.of_geometry input.geometry.toArmGeometry input.stack space) pushed
   exact ⟨c', run, h.of_plus run running⟩
 
 /-- **PUSHCONST0 from the loop head.** -/
@@ -90,7 +90,7 @@ theorem pushconstint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   cases Res.next.inj step
   exact push_set_row rf h code space fun stable input write pushed =>
-    pushconstint_arm stable input write (OperandAt.of_fetch input.geometry fetch) pushed
+    pushconstint_arm stable input write (OperandAt.of_fetch input.geometry.toArmGeometry fetch) pushed
 
 /-- **PUSHATOM from the loop head.** A negative operand is `.unsupported`. -/
 theorem pushatom_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {high0 dom0 : Nat}
@@ -102,6 +102,6 @@ theorem pushatom_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {hi
   have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
   cases Res.next.inj (Res.unguard step)
   exact push_set_row rf h code space fun stable input write pushed =>
-    pushatom_arm stable input write (OperandAt.of_fetch input.geometry fetch) nonnegative pushed
+    pushatom_arm stable input write (OperandAt.of_fetch input.geometry.toArmGeometry fetch) nonnegative pushed
 
 end OCaml.Vm.Sim

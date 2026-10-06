@@ -75,7 +75,7 @@ theorem push_closure_offset_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : 
   obtain ⟨l, a, k, dest, sel, rfl⟩ := closure_offset_of_step input.toVmReprAt step
   obtain ⟨c', run, running⟩ := arm pl cp sp high l a k dest w
     (by simpa only [Nat.mul_one] using rf.push input space) input
-    (PushWriteOk.of_geometry input.geometry input.stack space) sel pushed
+    (PushWriteOk.of_geometry input.geometry.toArmGeometry input.stack space) sel pushed
   exact ⟨c', run, h.of_plus run running⟩
 
 end OCaml.Vm.Sim

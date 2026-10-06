@@ -153,7 +153,7 @@ theorem push_next {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {op : Opco
   obtain ⟨w, -, pushed⟩ := input.accu
   obtain ⟨c', run, running⟩ := arm pl cp sp high w
     (by simpa only [Nat.mul_one] using rf.push input space) input
-    (PushWriteOk.of_geometry input.geometry input.stack space) pushed
+    (PushWriteOk.of_geometry input.geometry.toArmGeometry input.stack space) pushed
   exact ⟨c', run, h.of_plus run running⟩
 
 /-- Shared simulation of `PUSHACCn` (`n ≥ 1`, reading slot `n - 1` of the old stack). -/
@@ -175,7 +175,7 @@ theorem push_read_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {o
   have bound : n < s.stack.length := (List.getElem?_eq_some_iff.mp selected).1
   obtain ⟨c', run, running⟩ := arm pl cp sp high w v
     (by simpa only [Nat.mul_one] using rf.push input space) input
-    (PushWriteOk.of_geometry input.geometry input.stack space) selected
+    (PushWriteOk.of_geometry input.geometry.toArmGeometry input.stack space) selected
     (input.geometry.read input.stack (stack_space input.stack (by omega)) bound) pushed
   exact ⟨c', run, h.of_plus run running⟩
 
@@ -233,7 +233,7 @@ theorem push_field_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {
   obtain ⟨l, a, k, sel⟩ := field_selection input.toVmReprAt member selected
   obtain ⟨c', run, running⟩ := arm pl cp sp high l a k w v
     (by simpa only [Nat.mul_one] using rf.push input space) input
-    (PushWriteOk.of_geometry input.geometry input.stack space) sel
+    (PushWriteOk.of_geometry input.geometry.toArmGeometry input.stack space) sel
     (input.geometry.field_read sel) pushed
   exact ⟨c', run, h.of_plus run running⟩
 

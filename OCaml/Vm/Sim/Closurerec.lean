@@ -9,7 +9,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 capture and infix loops, return, and full data/platform restoration. -/
 theorem closurerec_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     {pl : Place} {cp : ChanPlace} {sp high dest a domain limit : Nat}
-    {functions count firstOffset : BitVec 32} {accu : BitVec 64} {targets : List Nat} {offsets : Nat → BitVec 32} {words : Nat}
+    {functions count firstOffset : BitVec 32} {accu : BitVec 64} {targets : List Nat} {offsets : Nat → BitVec 32}
     (h : ArmInput L P s .CLOSUREREC c pl cp sp high)
     (functionsOperand : OperandAt P pl (s.pc + 1) functions) (functionsPositive : 0 < functions.toInt)
     (countOperand : OperandAt P pl (s.pc + 2) count) (nonnegative : 0 ≤ count.toInt)
@@ -18,7 +18,8 @@ theorem closurerec_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     (runtime : AllocationRuntime L.runtimeOk c (closurerecFullLog c pl sp count.toInt.toNat dest a domain accu targets))
     (writes : ClosurerecWriteOk P s c pl cp sp count.toInt.toNat dest a domain accu targets)
     (reserve : NurseryReserve c (closurerecFullLog c pl sp count.toInt.toNat dest a domain accu targets) a
-      (closurerecObject s count.toInt.toNat (dest :: targets)).wosize words)
+      (closurerecObject s count.toInt.toNat (dest :: targets)).wosize
+      (closurerecObject s count.toInt.toNat (dest :: targets)).wosize)
     (arena : LogInW [arenaWindow] (closurerecFullLog c pl sp count.toInt.toNat dest a domain accu targets))
     (space : ClosurerecMachineInput c pl s.pc sp count.toInt.toNat dest a domain limit accu targets offsets) :
     ∃ after, Plus c after ∧ Running L P (closurerecState s count.toInt.toNat dest targets) after := by
@@ -30,7 +31,7 @@ theorem closurerec_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
 /-- The represented constructor agrees with the successful bytecode step. -/
 theorem closurerec_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     {pl : Place} {cp : ChanPlace} {sp high dest a domain limit : Nat}
-    {functions count firstOffset : BitVec 32} {accu : BitVec 64} {targets : List Nat} {offsets : Nat → BitVec 32} {words : Nat}
+    {functions count firstOffset : BitVec 32} {accu : BitVec 64} {targets : List Nat} {offsets : Nat → BitVec 32}
     (modelOffsets : List Int)
     (offsetCount : modelOffsets.length = functions.toInt.toNat)
     (jumps : modelOffsets.mapM (fun o => target s.pc 2 o) = some (dest :: targets))
@@ -43,7 +44,8 @@ theorem closurerec_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Confi
     (runtime : AllocationRuntime L.runtimeOk c (closurerecFullLog c pl sp count.toInt.toNat dest a domain accu targets))
     (writes : ClosurerecWriteOk P s c pl cp sp count.toInt.toNat dest a domain accu targets)
     (reserve : NurseryReserve c (closurerecFullLog c pl sp count.toInt.toNat dest a domain accu targets) a
-      (closurerecObject s count.toInt.toNat (dest :: targets)).wosize words)
+      (closurerecObject s count.toInt.toNat (dest :: targets)).wosize
+      (closurerecObject s count.toInt.toNat (dest :: targets)).wosize)
     (arena : LogInW [arenaWindow] (closurerecFullLog c pl sp count.toInt.toNat dest a domain accu targets))
     (space : ClosurerecMachineInput c pl s.pc sp count.toInt.toNat dest a domain limit accu targets offsets) :
     ∃ after, Plus c after ∧ Running L P s' after := by

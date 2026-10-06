@@ -65,7 +65,7 @@ theorem ccall_writing_summary {L : OCaml.Layout} {P : Prog} {s : St}
     (outside : CcallSavedOutside footprint domain frameSp)
     (arena : LogInW [arenaWindow] footprint)
     (geometry : ∀ after : Config, (∀ x, OutL footprint x → byte after x = byte before x) →
-      ArmGeometry P {s with accu := v, heap := heap, world := world} after pl cp high)
+      OCaml.LoopGeometry L P {s with accu := v, heap := heap, world := world} after pl cp high)
     (native : NativePlaced before) :
     FnSummary entry (fun c => c = before)
       (CcallReturn ra L P {s with pc := pc, accu := v, heap := heap, world := world}

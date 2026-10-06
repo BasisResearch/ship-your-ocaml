@@ -28,7 +28,7 @@ theorem getfield_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
   cases next
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
   obtain ⟨l, a, k, sel⟩ := field_selection input.toVmReprAt (by simp [roots]) selected
-  obtain ⟨c', run, running⟩ := getfield_arm stable input (OperandAt.of_fetch input.geometry fetch)
+  obtain ⟨c', run, running⟩ := getfield_arm stable input (OperandAt.of_fetch input.geometry.toArmGeometry fetch)
     nonnegative sel (input.geometry.field_read sel)
   exact ⟨c', run, h.of_plus run running⟩
 
@@ -49,8 +49,8 @@ theorem pushenvacc_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {
   obtain ⟨x, -, pushed⟩ := input.accu
   obtain ⟨l, a, k, sel⟩ := field_selection input.toVmReprAt (by simp [roots]) selected
   obtain ⟨c', run, running⟩ := pushenvacc_arm (by simpa only [Nat.mul_one] using rf.push input space)
-    input (PushWriteOk.of_geometry input.geometry input.stack space)
-    (OperandAt.of_fetch input.geometry fetch) sel (input.geometry.field_read sel) nonnegative pushed
+    input (PushWriteOk.of_geometry input.geometry.toArmGeometry input.stack space)
+    (OperandAt.of_fetch input.geometry.toArmGeometry fetch) sel (input.geometry.field_read sel) nonnegative pushed
   exact ⟨c', run, h.of_plus run running⟩
 
 /-- **The GETFIELD n row.** -/

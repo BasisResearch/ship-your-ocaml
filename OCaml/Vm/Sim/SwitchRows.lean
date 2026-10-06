@@ -75,7 +75,7 @@ theorem switch_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable L.runtim
           obtain ⟨w, wfetch, rfl⟩ := entryWord _ _ hx
           obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
           obtain ⟨c', run, running⟩ := switch_int_step_arm stable input ha
-            (OperandAt.of_fetch input.geometry wfetch) hx step
+            (OperandAt.of_fetch input.geometry.toArmGeometry wfetch) hx step
           exact ⟨c', run, h.of_plus run running⟩
         · cases hk
       | ptr l k =>
@@ -102,8 +102,8 @@ theorem switch_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable L.runtim
             obtain ⟨w, wfetch, rfl⟩ := entryWord _ _ hx
             have low := input.geometry.heapLow l a ob placed object
             obtain ⟨c', run, running⟩ := switch_block_step_arm stable input selected (by omega)
-              (input.geometry.header_read placed object) (OperandAt.of_fetch input.geometry sfetch)
-              (OperandAt.of_fetch input.geometry wfetch) hx step
+              (input.geometry.header_read placed object) (OperandAt.of_fetch input.geometry.toArmGeometry sfetch)
+              (OperandAt.of_fetch input.geometry.toArmGeometry wfetch) hx step
             exact ⟨c', run, h.of_plus run running⟩
           · cases hk
         | succ k =>
