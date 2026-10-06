@@ -209,9 +209,10 @@ structure DivisionException (P : Prog) (s : St) (pl : Place) (c : Config) (exn :
   valueWord : valWord pl exn = some value
   memory : RaiseZeroValueMemory (word c Layout.sym_caml_global_data) value c
   globalBlock : word c Layout.sym_caml_global_data &&& 1#64 = 0#64
-  /-- the field's address (`global + 40`) lies in a placed block -/
-  field : ∃ l a k, pl.φ l = some a ∧ (raiseZeroField (word c Layout.sym_caml_global_data)).toNat = a + 8 * (k + 5) ∧
-    ∃ o, s.heap.get? l = some o
+  /-- the field (`global + 40`) lies in a placed block, above `.bss` and
+  below the allocator arena's end -/
+  fieldLow : Layout.sym_bss_end ≤ (raiseZeroField (word c Layout.sym_caml_global_data)).toNat
+  fieldBelow : (raiseZeroField (word c Layout.sym_caml_global_data)).toNat + 8 ≤ Vsa.Sim.DlHeap.heapEnd
 
 theorem DivisionException.of_field {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp high : Nat} {exn : Val} (h : VmReprAt P s c pl cp sp high) (g : StackGeometry P s c pl cp high)
@@ -228,14 +229,19 @@ theorem DivisionException.of_field {P : Prog} {s : St} {c : Config} {pl : Place}
   have fieldAddr : raiseZeroField (word c Layout.sym_caml_global_data) = BitVec.ofNat 64 (a + 8 * (k + 5)) := by
     rw [global, raiseZeroField, Layout.raiseZeroExceptionOffset, ofNat_add_ofNat']
     congr 1
-  have object : ∃ o, s.heap.get? l = some o := by
+  have bounds : Layout.sym_bss_end + 8 ≤ a ∧ a + 8 * (k + 5) + 8 ≤ Vsa.Sim.DlHeap.heapEnd := by
     have found := sel.selected
     rw [sel.pointer] at found
     simp only [field?] at found
     split at found
-    · rename_i t fs got; exact ⟨_, got⟩
+    · rename_i t fs got
+      have idx := (List.getElem?_eq_some_iff.mp found).1
+      have arena := g.heapArena l a _ sel.placed got
+      exact ⟨g.heapLow l a _ sel.placed got, by simp only [Obj.wosize] at arena; omega⟩
     · cases found
-  refine ⟨word c (a + 8 * (k + 5)), fv.word, ⟨rfl, ?_, ?_⟩, ?_, ⟨l, a, k, sel.placed, ?_, object⟩⟩
+  have addrN : (raiseZeroField (word c Layout.sym_caml_global_data)).toNat = a + 8 * (k + 5) := by
+    rw [fieldAddr, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by have := rd.upper; omega)]
+  refine ⟨word c (a + 8 * (k + 5)), fv.word, ⟨rfl, ?_, ?_⟩, ?_, by rw [addrN]; omega, by rw [addrN]; omega⟩
   · rw [fieldAddr]; exact rd.window
   · rw [fieldAddr, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by have := rd.upper; omega)]
   · rw [global]
@@ -243,6 +249,41 @@ theorem DivisionException.of_field {P : Prog} {s : St} {c : Config} {pl : Place}
     have small : a + 8 * k < 2 ^ 64 := by have := rd.upper; omega
     simp only [BitVec.toNat_and, BitVec.toNat_ofNat, Nat.mod_eq_of_lt small]
     rw [Nat.and_one_is_mod]; simp; omega
-  · rw [fieldAddr, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by have := rd.upper; omega)]
+
+/-- **The zero helper's setup memory**: its saved return address lands in
+the native scratch window, apart from the image, the global data word and
+the exception field. -/
+theorem raise_zero_setup_memory {P : Prog} {s : St} {pl : Place} {c : Config} {exn : Val}
+    {value ra : BitVec 64} {D : InvocationData} (v : NativeValid D)
+    (ex : DivisionException P s pl c exn value) :
+    RaiseZeroSetupMemory (BitVec.ofNat 64 D.nativeSp) ra (word c Layout.sym_caml_global_data) value c := by
+  have hh := v.headroom
+  have ht := v.high
+  have small : D.nativeSp < 2 ^ 64 := by simp only [Layout.sym_stack_top] at ht; omega
+  have le : 16 ≤ D.nativeSp := by simp only [nativeHeadroom] at hh; omega
+  have raN : (raiseZeroRa (BitVec.ofNat 64 D.nativeSp)).toNat = D.nativeSp - 8 := by
+    rw [raiseZeroRa_at le small, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have bss : Layout.sym_bss_end ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+  have glob : Layout.sym_caml_global_data + 8 ≤ Layout.sym_bss_end := by decide
+  have fb := ex.fieldBelow
+  refine ⟨⟨?_, ?_⟩, ex.memory, ex.globalBlock, ?_⟩
+  · rw [raiseZeroRa_at le small]
+    exact v.scratch_write (k := 8) (by decide) (by decide) (by decide)
+  · apply ImageOutside.of_above
+    intro e he
+    simp only [raiseZeroLog, List.mem_singleton] at he
+    subst he
+    dsimp only
+    rw [raN]
+    simp only [nativeHeadroom] at hh
+    simp only [Layout.sym_bss_end, Vsa.Sim.DlHeap.heapEnd] at hh ⊢
+    omega
+  · intro a ha
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at ha
+    simp only [raiseZeroLog, OutLRange, raN, and_true]
+    simp only [nativeHeadroom] at hh
+    rcases ha with rfl | rfl <;>
+      simp only [Layout.sym_bss_end, Vsa.Sim.DlHeap.heapEnd, Layout.sym_caml_global_data] at hh fb glob bss ⊢ <;>
+      omega
 
 end OCaml.Vm.Sim

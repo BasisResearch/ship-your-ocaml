@@ -77,9 +77,22 @@ pointers, `beq_pointer_guard_obstruction`; needs a per-program check).
   the opcode census into it.
 
 Open / next (row premises to discharge, owner):
-* `BinaryLibScratch` (a1-arms).
-* DIVINT/MODINT zero divisor: `DivisionRows.lean` loop-head adapter for
-  `division_zero_caught_step` (a2-sem, in progress; a1-arms handed it over).
+* DIVINT/MODINT zero divisor (general programs): `DivisionRows.lean`, the
+  loop-head adapter for a1-arms' `division_zero_caught_step`. Done so far:
+  dispatch entry (`division_dispatch_entry`), selection input
+  (`division_zero_input`), setup input (`division_zero_setup_input`), the
+  native scratch window (`NativeValid.scratch_write`, bprime's headroom) and
+  raise-frame address normal forms, the `Division_by_zero` value
+  (`DivisionException.of_field`), the zero helper's setup memory
+  (`raise_zero_setup_memory`). Next: `RaiseNativeMemory` (pending flag from
+  `RuntimeFrame.quiet`, mutex hook from a6-gc's F1 pin, `extern_raise` =
+  raise_buf from a1-arms' `Invocation.raiseBuf` when it lands, jump buffer
+  from bprime's `NativeValid.jumpRa/jumpSp`), `ReentryMemory`, the caught
+  readiness via `caught_log_restore`, and the final composition. whileMin
+  needs none of it (`whileMin_divisorsNonzero`).
+* `scratch` (MULINT/DIVINT/MODINT a2/a3 presence): an artifact of the copied
+  libgcc specs' state records; a1-arms adds `GprPresent` to `LoopRegisters`
+  next round, then `BinaryLibScratch.of_loop`.
 * General discharges of ValuesInRange / ExtraBounded / TrapBounded.
 
 Premise census of the existing conditional bridges (my families):
