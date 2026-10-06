@@ -427,6 +427,13 @@ work; passing executable difftests does not discharge Layer A.
 * **Exit per fragment**: the difftests of the fragment pass under `runbc`
   and on Sail, and Layer A holds for the fragment.
 
+* Floats (F2): specify the float opcodes, the `caml_*_float` primitives and
+  the libgcc soft-float proofs against Lean core's `Float.Model` (v4.34,
+  `Init/Data/Float/Model/`; native `Float` is equivalent via
+  `Float.toModel`). It ships no lemma library, and it canonicalises NaN, so
+  NaN bits observable through `Int64.bits_of_float` / `%h` stay explicit
+  beside it. See ~/syi-briefs/FLOAT-MODEL-NOTE.md.
+
 ## A6: the collector (exit: Layer A without the G1 budget)
 
 * Round 2: Kiran chose observational `GcSafe` beside unchanged `Good` and
