@@ -240,6 +240,7 @@ def outputs():
                 ('_open_r', 'OpenRCheck', (0x8004d7d0, 0x8004d7d8)),
                 ('_open_r', 'OpenRErrno', (0x8004d7e8, 0x8004d7f4)),
                 ('_open_r', 'OpenRReturn', (0x8004d7d8, 0x8004d7e8)),
+                ('_open_r', 'OpenRStore', (0x8004d7f4, 0x8004d808)),
                 ('_open', 'HtifOpenEntry', (0x800008b8, 0x800008fc)),
                 ('_open', 'HtifOpenKind', (0x800008fc, 0x8000091c)),
                 ('_open', 'HtifOpenNone', (0x80000958, 0x8000095c)),
