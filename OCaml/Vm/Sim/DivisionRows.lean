@@ -5,6 +5,7 @@ import OCaml.Vm.Sim.LongjmpState
 import OCaml.Vm.Sim.PayloadWindows
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
+import OCaml.Vm.Sim.StopReady
 
 /-!
 # The DIVINT/MODINT zero-divisor row (in progress)
@@ -890,5 +891,128 @@ theorem division_caught_log_ready {L : OCaml.Layout} {P : Prog} {s : St} {op : O
     simp only [reentryLog, OutLRange, and_true]
     simp only [Layout.domainStateBytes, Layout.off_local_roots, nativeHeadroom] at da hh ⊢
     omega
+
+/-! ## The caught zero-divisor row -/
+
+/-- **What the runtime keeps for a native raise** (named premise, supplied
+per layout beside `RuntimeFrame`; for F1 by `F1Runtime`): no channel-unlock
+hook; `Caml_state->external_raise` is the invocation's jump buffer; and the
+runtime state survives stores in VM windows together with the native scratch
+window below the invocation. -/
+structure RaiseRuntimeFrame (L : OCaml.Layout) (high domain : Nat) : Prop where
+  hook : ∀ c, L.runtimeOk c → word c Layout.sym_caml_channel_mutex_unlock_exn = 0#64
+  external : ∀ c D, L.runtimeOk c → Invocation D c → NativeValid D →
+    word c (raiseExternal (word c Layout.sym_Caml_state)).toNat = BitVec.ofNat 64 (raiseBuffer D)
+  scratch : ∀ (ws : List W) D, NativeValid D →
+    (∀ w ∈ ws, VmWindow high domain w ∨ w = nativeScratch D) → WindowStable L.runtimeOk ws
+
+/-- The zero path's windows are VM windows or the native scratch window. -/
+theorem division_windows_vm {c : Config} {sp high : Nat} {D : InvocationData}
+    (low : high - Layout.stackBytes + 8 ≤ sp) (top : sp + 8 ≤ high) :
+    ∀ w ∈ divisionWindows c sp D,
+      VmWindow high (word c Layout.sym_Caml_state).toNat w ∨ w = nativeScratch D := by
+  intro w hw
+  simp only [divisionWindows, List.mem_cons, List.not_mem_nil, or_false] at hw
+  rcases hw with rfl | rfl | rfl | rfl
+  · exact .inl (.inl ⟨show high - Layout.stackBytes ≤ sp - 8 by omega, top⟩)
+  · exact .inl (.inr ⟨_, by simp [vmDomainOffsets], rfl⟩)
+  · exact .inl (.inr ⟨_, by simp [vmDomainOffsets], rfl⟩)
+  · exact .inr rfl
+
+/-- The jump-buffer readiness of the runtime at a loop head. -/
+theorem RaiseRuntimeReady.of_frame {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
+    {pl : Place} {cp : ChanPlace} {sp high high0 dom0 : Nat} {exn : Val} {value : BitVec 64}
+    {D : InvocationData} (rf : RuntimeFrame L high0 dom0) (rr : RaiseRuntimeFrame L high0 dom0)
+    (h : ArmInput L P s op c pl cp sp high) (v : NativeValid D) (inv : Invocation D c)
+    (ex : DivisionException P s pl c exn value) (notRaw : ∀ r, exn ≠ .raw r) :
+    RaiseRuntimeReady c D value where
+  hook := rr.hook c h.runtime
+  pending := (rf.quiet c h.runtime).clear
+  externalWord := rr.external c D h.runtime inv v
+  ordinary := by
+    have words := h.geometry.words
+    exact valWord_ordinary words.code (fun l a ha => by have := words.heap l a ha; omega)
+      (by have := words.atoms; omega) notRaw ex.valueWord
+
+/-- The zero divisor raises the selected exception from the popped state. -/
+theorem division_zero_raise (kind : DivisionKind) {P : Prog} {s s' : St} {x : BitVec 63}
+    {rest : List Val} {exn : Val} (accu : s.accu = .int x) (stack : s.stack = .int 0#63 :: rest)
+    (field : field? s.heap P.globals 5 = some exn) (caught : s.trap ≠ 0)
+    (step : stepI P s ⟨divisionOpcode kind, []⟩ = .next s') :
+    raiseTo P (divisionRaiseState s exn) (divisionRaiseState s exn).accu = .next s' := by
+  have raised : raiseTo P {s with stack := rest} exn = .next s' := by
+    cases kind <;> simpa [stepI, divisionOpcode, accu, stack, ints?, opt, field] using step
+  have same : raiseTo P (divisionRaiseState s exn) exn = raiseTo P {s with stack := rest} exn := by
+    simp only [raiseTo, divisionRaiseState, stack, List.drop_succ_cons, List.drop_zero, caught, ite_false]
+  exact same.trans raised
+
+/-- **DIVINT/MODINT with a zero divisor and an active handler, from the loop
+head**: dispatch, `caml_raise_zero_divide` through `caml_raise` and
+`longjmp`, re-entry and the handler. Discharges `division_next`'s `zero`
+premise for a caught raise. -/
+theorem division_zero_caught_next (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s s' : St}
+    {c : Config} {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (rr : RaiseRuntimeFrame L high0 dom0)
+    (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c)
+    (code : DispatchCode P s (divisionOpcode kind))
+    (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
+    (trapSaved : ∀ n dest link env (ex : BitVec 63) rest,
+      s.stack.drop n = .code dest :: .int link :: env :: .int ex :: rest → 0 ≤ ex.toInt)
+    (caught : s.trap ≠ 0)
+    (notRaw : ∀ exn, field? s.heap P.globals 5 = some exn → ∀ r, exn ≠ .raw r)
+    (step : stepI P s ⟨divisionOpcode kind, []⟩ = .next s')
+    {rest : List Val} (stack : s.stack = .int 0 :: rest) :
+    ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c' := by
+  obtain ⟨x, y, rest', accu, stack'⟩ := division_operands kind step
+  have nonempty : 0 < s.stack.length := by simp [stack]
+  obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
+  have read := (input.geometry.read input.stack (stack_space input.stack (by omega)) nonempty).window
+  obtain ⟨D, inv, v⟩ := input.native
+  obtain ⟨env, envReg, -⟩ := input.env
+  obtain ⟨exn, field⟩ : ∃ exn, field? s.heap P.globals 5 = some exn := by
+    cases kind <;> cases hf : field? s.heap P.globals 5 <;>
+      simp_all [stepI, divisionOpcode, ints?, opt]
+  obtain ⟨value, ex, apart⟩ := DivisionException.of_field input.toVmReprAt input.geometry.toArmGeometry field
+  have ready := RaiseRuntimeReady.of_frame rf rr input v inv ex (notRaw exn field)
+  have stack0 : s.stack = .int 0#63 :: rest := stack
+  obtain ⟨dest, link, envV, extra, restV, frame⟩ :=
+    RaiseFrame.of_step (division_zero_raise kind accu stack0 field caught step) caught
+  have nonnegative := trapSaved _ _ _ _ _ _ (by
+    have fs := frame.stack
+    simp only [divisionRaiseState, List.drop_drop] at fs
+    exact fs)
+  have g := input.geometry.toArmGeometry
+  have hs := input.stack.1
+  have low := stack_space input.stack (by omega : 8 * s.stack.length ≤ Layout.stackBytes)
+  have same : high = high0 := input.stackHigh.symm.trans (rf.stackHigh c input.runtime)
+  have dom := rf.domainWord c input.runtime
+  have lowW : high - Layout.stackBytes + 8 ≤ sp := by
+    have := g.statics; simp only [Layout.stackBytes, Layout.sym_bss_end] at this low space ⊢; omega
+  have topW : sp + 8 ≤ high := by simp only [stack0, List.length_cons] at hs; omega
+  apply dispatch_compose input.dispatch
+  intro d dp
+  have wd : word d = word c := funext fun a => by simp only [word, dp.memory]
+  have runtime : AllocationRuntime L.runtimeOk d
+      (divisionZeroNativeLog (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) (BitVec.ofNat 64 sp) env
+        (word c Layout.sym_Caml_state) (BitVec.ofNat 64 D.nativeSp) value) := by
+    intro after memory ok
+    have stableW := rr.scratch (divisionWindows c sp D) D v (by
+      have vm := division_windows_vm (c := c) (D := D) lowW topW
+      rw [dom, same] at vm
+      exact vm)
+    have framed := frameOn_writeLog _ c.σ.mem _ (division_log_in input stack0 space v (env := env) (value := value))
+    rw [← dp.memory, ← memory] at framed
+    exact stableW d after framed ok
+  have readyD := caught_log_restore (division_caught_log_ready rf stable input stack0 space dp v inv ex
+    ready field frame nonnegative runtime)
+  have outside := division_control_outside input stack0 space v (env := env) (value := value)
+  have summary := division_zero_caught_step kind (division_zero_input input stack0 read dp)
+    (division_zero_native_input input stack0 envReg space dp v inv ex apart ready)
+    ((division_reentry_memory rf input v caught (by
+      have fb := frame.bound; simp only [divisionRaiseState, List.length_drop] at fb; omega)).frame dp.memory)
+    (by simpa only [reentryControlWords, wd] using outside) readyD
+    (v.jumpRa c inv) (v.jumpSp c inv) accu stack0 field step
+  obtain ⟨after, run, post⟩ := summary.run d
+    ⟨by rw [← division_dispatch_entry kind]; exact dp.pc, rfl⟩
+  exact ⟨_, after, Steps.toN_of_stepsField run, post⟩
 
 end OCaml.Vm.Sim

@@ -51,11 +51,30 @@ Done (all on main unless marked):
   `ValuesInRange` (`PtrOffsets.lean`), `ExtraBounded` (`ExtraBound.lean`),
   `TrapBounded` (`TrapBound.lean`). General discharges open.
 * `Good.of_bcHalts`, `whileMin_good`.
+* **DIVINT/MODINT caught zero divisor from the loop head**
+  (`division_zero_caught_next`, `DivisionRows.lean`; branch `lane/a2-sem`,
+  next batch): dispatch → `division_zero_caught_step` → `Running`, with every
+  input derived (`division_zero_input`, `division_zero_native_input`,
+  `division_reentry_memory`, `division_control_outside`,
+  `division_caught_log_ready` → `caught_log_restore`). Named premises:
+  `RaiseRuntimeFrame L high domain` (no unlock hook, `external_raise` = the
+  invocation's jump buffer, runtime stable under VM windows plus the native
+  scratch window; per layout, F1 supplier open), and per-state `caught`
+  (`trap ≠ 0`), `trapSaved`, `notRaw` (global field 5), stack `space`.
+  whileMin discharges `division_next`'s `zero` vacuously (`DivisorsNonzero`).
+* `PayloadWindows.lean`: `PayloadWindow` (separated / below the live stack /
+  payload-free `Caml_state` field) with `PayloadOutside`/`BindingsOutside`/
+  `YoungOutside.of_windows` and `WindowSeparated.of_above` (uses a1-arms'
+  `channelArena`/`primsArena`). Agreed with a1-arms: after this batch lands,
+  fold `FreshLogOk.of_windows` and `VmLogOk.of_windows` into one window-kind
+  inductive (young_ptr as a kind only non-young conclusions accept; keep
+  `FreshLogOk.of_windows`'s signature for `ClosurerecPlan`). Also re-derive
+  `division_control_outside` from `division_log_in`.
 * integrate.sh lock-fd fix (`6446d52`).
 
 Named premises still on my rows: `MemoryStable` (a1-arms discharged it for
 the F1 layout), `BinaryLibScratch c` (MULINT/division), `zero` (DIVINT/MODINT
-zero divisor; needs the exception rows), `ranged` (EQ/NEQ, from
+zero divisor; caught case now `division_zero_caught_next`, uncaught open), `ranged` (EQ/NEQ, from
 `ValuesInRange` + `Reach`), `notRaw` (BRANCHIF/NOT, from
 `ValuesInRange.accu_notRaw`), `integer` (BEQ/BNEQ: real obstruction on
 pointers, `beq_pointer_guard_obstruction`; needs a per-program check).
