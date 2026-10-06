@@ -12,6 +12,12 @@ import OCaml.Vm.Boot.Startup.ResolveEndNormalized
 import OCaml.Vm.Boot.Startup.ResolveEndImage
 import OCaml.Vm.Boot.Startup.ResolveBackNormalized
 import OCaml.Vm.Boot.Startup.ResolveBackImage
+import OCaml.Vm.Boot.Startup.ResolveBackTestNormalized
+import OCaml.Vm.Boot.Startup.ResolveBackTestImage
+import OCaml.Vm.Boot.Startup.ResolveBackByteNormalized
+import OCaml.Vm.Boot.Startup.ResolveBackByteImage
+import OCaml.Vm.Boot.Startup.ResolveBackNextNormalized
+import OCaml.Vm.Boot.Startup.ResolveBackNextImage
 import OCaml.Vm.Boot.Startup.FsInit
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives LeanRV64DExecutable
@@ -254,6 +260,91 @@ theorem resolve_flag_store (c : Config) (spo path len v ra : BitVec 64) (leaf : 
       List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of,
       show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, show Functions.sign_extend (m := 64) 47#12 = 47#64 by decide,
       BitVec.add_zero, BitVec.zero_add]
+  · rfl
+  · decide
+
+/-- The last byte is not '/': the trailing-slash scan stops at once and the
+scan for the last component starts at the path's end. -/
+theorem resolve_back_start (c : Config) (path len ra : BitVec 64) (b : BitVec 8) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(15, len), (12, 47#64), (10, len), (25, path)]) (nonzero : len ≠ 0#64)
+    (window : ReadWindow (path + len - 1#64) 1) (last : (c.σ.mem[(path + len - 1#64).toNat]?).getD 0 = b)
+    (notSlash : b ≠ 47#8) :
+    FnSummary 0x800005f4#64 (fun e => e = c) (WriteRegistersPost [14, 13, 11] [] c 0x800007d0#64 len
+        [(11, 47#64), (14, len), (13, nameByteWord b), (15, len), (12, 47#64), (10, len), (25, path)]) := by
+  have addr : path + (len + Functions.sign_extend (m := 64) 4095#12) + Functions.sign_extend (m := 64) 0#12 =
+      path + len - 1#64 := by
+    rw [show Functions.sign_extend (m := 64) 4095#12 = -1#64 by decide,
+      show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero, ← BitVec.add_assoc,
+      ← BitVec.sub_eq_add_neg]
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (resolveX05f4TSeg ++ resolveX05e8TSeg ++ resolveX07c0Seg) 0x800005f4#64
+        [(15, len), (12, 47#64), (10, len), (25, path)] [[b]] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [15, 12, 10, 25]; decide
+      shape := by change ChainOK _ [15, 12, 10, 25] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := resolveEnd_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.resolve_at_"
+        · change guardB bop.BNE len 0#64 = true
+          exact bne_iff_ne.mpr nonzero
+        · refine memFacts_writeLog (window.lbu rfl (by
+            simp only [resolveend_line_800005f4, resolveend_line_800005f8, resolvelast_line_800005e8, resolvelast_line_800005f0, resolveback_line_800007c0, resolveback_line_800007c4, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some,
+              ite_true, ite_false, Nat.reduceEqDiff]
+            exact addr) last) (fun _ => by simp only [resolveend_line_800005f4, resolveend_line_800005f8, resolvelast_line_800005e8, resolvelast_line_800005f0, resolveback_line_800007c0, resolveback_line_800007c4, wlogM]; trivial)
+        · change guardB bop.BNE (bytesVal .lbu [b]) (0#64 + Functions.sign_extend (m := 64) 47#12) = true
+          rw [name_lbu_value, show Functions.sign_extend (m := 64) 47#12 = 47#64 by decide, BitVec.zero_add]
+          exact bne_iff_ne.mpr (nameByteWord_ne_of notSlash (by decide)) }))
+  · rfl
+  · rfl
+  · simp only [resolveX05f4TSeg, resolveX05e8TSeg, resolveX07c0Seg, evalBlocks, evalBlock, SegEvalState.init, resolveend_line_800005f4, resolveend_line_800005f8, resolvelast_line_800005e8, resolvelast_line_800005f0, resolveback_line_800007c0, resolveback_line_800007c4, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of, List.cons_append,
+      List.nil_append, name_lbu_value, show Functions.sign_extend (m := 64) 47#12 = 47#64 by decide,
+      show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.zero_add, BitVec.add_zero]
+  · rfl
+  · decide
+
+/-- One step of the scan for the last component: byte `k - 1` is not '/'. -/
+theorem resolve_back_step (c : Config) (path k a0 ra : BitVec 64) (b : BitVec 8) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(14, k), (11, 47#64), (10, a0), (25, path)]) (nonzero : k ≠ 0#64)
+    (window : ReadWindow (path + (k - 1#64)) 1) (byte : (c.σ.mem[(path + (k - 1#64)).toNat]?).getD 0 = b)
+    (notSlash : b ≠ 47#8) :
+    FnSummary 0x800007d0#64 (fun e => e = c) (WriteRegistersPost [13, 12, 14] [] c 0x800007d0#64 a0
+        [(14, k - 1#64), (12, nameByteWord b), (13, k - 1#64), (11, 47#64), (10, a0), (25, path)]) := by
+  have dec : k + Functions.sign_extend (m := 64) 4095#12 = k - 1#64 := by
+    rw [show Functions.sign_extend (m := 64) 4095#12 = -1#64 by decide, ← BitVec.sub_eq_add_neg]
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (resolveX07d0FSeg ++ resolveX07dcTSeg ++ resolveX07ccSeg) 0x800007d0#64
+        [(14, k), (11, 47#64), (10, a0), (25, path)] [[b]] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [14, 11, 10, 25]; decide
+      shape := by change ChainOK _ [14, 11, 10, 25] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := resolveBackTest_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.resolve_at_"
+        · change guardB bop.BEQ k 0#64 = false
+          exact beq_eq_false_iff_ne.mpr nonzero
+        · refine memFacts_writeLog (window.lbu rfl (by
+            simp only [resolvebacktest_line_800007d0, resolvebacktest_line_800007d4, resolvebackbyte_line_800007dc, resolvebacknext_line_800007cc, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some,
+              ite_true, ite_false, Nat.reduceEqDiff]
+            rw [dec, show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]) byte)
+            (fun _ => by simp only [resolvebacktest_line_800007d0, resolvebacktest_line_800007d4, resolvebackbyte_line_800007dc, resolvebacknext_line_800007cc, wlogM]; trivial)
+        · change guardB bop.BNE (bytesVal .lbu [b]) 47#64 = true
+          rw [name_lbu_value]
+          exact bne_iff_ne.mpr (nameByteWord_ne_of notSlash (by decide)) }))
+  · rfl
+  · rfl
+  · simp only [resolveX07d0FSeg, resolveX07dcTSeg, resolveX07ccSeg, evalBlocks, evalBlock, SegEvalState.init, resolvebacktest_line_800007d0, resolvebacktest_line_800007d4, resolvebackbyte_line_800007dc, resolvebacknext_line_800007cc, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of, List.cons_append,
+      List.nil_append, name_lbu_value, dec, show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide,
+      BitVec.add_zero]
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
