@@ -44,11 +44,12 @@ def flushedWorld (w : World) (id : Nat) (c : Chan) (st : TCB.Os.Stream) : World 
 /-- `caml_flush` of a channel on stdout or stderr writes its buffer whole. -/
 theorem flushChan_stream {w : World} {id : Nat} {c : Chan} {st : TCB.Os.Stream}
     (hc : w.chans[id]? = some c) (fdNonneg : 0 ≤ c.fd) (live : w.os.proc.exited = none)
-    (stream : TCB.Os.lookupFd w.os c.fd.toNat = some (.stream st)) (out : st ≠ .stdin) :
+    (stream : TCB.Os.lookupFd w.os c.fd.toNat = some (.stream st)) (out : st ≠ .stdin)
+    (isOut : c.isOut = true) (fits : offsetFits c c.buf.length = true) :
     flushChan w id = some (flushedWorld w id c st) := by
   have ne : c.fd ≠ -1 := by omega
   have nlt : ¬ c.fd < 0 := by omega
-  simp [flushChan, writeFd, hc, ne, nlt, osCall_write_stream live stream out, flushedWorld]
+  simp [flushChan, writeFd, hc, ne, nlt, isOut, fits, osCall_write_stream live stream out, flushedWorld]
 
 /-- The flushed buffer is appended to the console. -/
 theorem flushedWorld_console (w : World) (id : Nat) (c : Chan) {st : TCB.Os.Stream} (out : st ≠ .stdin) :

@@ -217,10 +217,17 @@ def writeFd (w : World) (fd : Int) (b : List UInt8) : Option World :=
 def World.setChan (w : World) (id : Nat) (c : Chan) : World :=
   { w with chans := w.chans.set id c }
 
+/-- The channel's `file_offset` after writing `n` more bytes stays an `int64`
+(an overflowing `channel->offset += n` is undefined in C: outside the model). -/
+def offsetFits (c : Chan) (n : Nat) : Bool := decide (c.offset + n < 2 ^ 63)
+
 /-- `caml_flush`: write out the whole buffer. -/
 def flushChan (w : World) (id : Nat) : Option World := do
   let c ← w.chans[id]?
   if c.fd = -1 then pure w else
+  -- only an output channel's buffer is the pending write (`caml_flush_partial`)
+  if !c.isOut then none else
+  if !offsetFits c c.buf.length then none else
   let w' ← writeFd w c.fd c.buf
   pure (w'.setChan id { c with buf := [], offset := c.offset + c.buf.length })
 
@@ -232,19 +239,21 @@ def putBlock (w : World) (id : Nat) : List UInt8 → Nat → Option World
   | bs, 0 => if bs = [] then some w else none
   | bs, fuel + 1 => do
     let c ← w.chans[id]?
-    if c.fd < 0 then none else do
+    if c.fd < 0 ∨ !c.isOut then none else do
     let free := ioBufferSize - c.buf.length
     if bs.length < free then
       pure (w.setChan id { c with buf := c.buf ++ bs })
     else
       let full := c.buf ++ bs.take free
+      if !offsetFits c full.length then none else
       let w' ← writeFd w c.fd full
       putBlock (w'.setChan id { c with buf := [], offset := c.offset + full.length }) id (bs.drop free) fuel
 
 /-- `Putch`: flush first if the buffer is full, then append. -/
 def putChar (w : World) (id : Nat) (b : UInt8) : Option World := do
   let c ← w.chans[id]?
-  if c.fd < 0 then none else if c.buf.length ≥ ioBufferSize then
+  if c.fd < 0 ∨ !c.isOut then none else if c.buf.length ≥ ioBufferSize then
+    if !offsetFits c c.buf.length then none else
     let w' ← writeFd w c.fd c.buf
     pure (w'.setChan id { c with buf := [b], offset := c.offset + c.buf.length })
   else pure (w.setChan id { c with buf := c.buf ++ [b] })
