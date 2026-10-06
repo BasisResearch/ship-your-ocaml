@@ -2,6 +2,7 @@ import OCaml.Vm.Boot.Startup.StatAlloc
 import OCaml.Vm.Boot.Startup.AllocatorRun
 import OCaml.Vm.Boot.Startup.RuntimeMalloc
 import OCaml.Vm.Boot.Startup.StatCheckedAllocate
+import OCaml.Vm.Boot.Startup.MallocReady
 import OCaml.Vm.Primitives.LibraryEffects
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.Sym VsaIris.VsaHeap VsaIris.MallocFast
@@ -45,19 +46,9 @@ theorem stat_alloc_ready (c : Config) (H : List (Nat × Nat)) (capacity charge :
     ((kept 2 (by decide) (by decide) (by decide)).trans ready.stack)
     ((kept 1 (by decide) (by decide) (by decide)).trans ready.raReg) ready.aligned
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ h => h)
-  have input : AllocatorInput H n ra sp (capacity + charge) atMalloc :=
-    { good := mid.platform
-      readOnly := mid.readOnly
-      room := mid.room
-      request := (kept 10 (by decide) (by decide) (by decide)).trans request
-      stack := mid.stack
-      link := mid.raReg
-      stackOk := frame.allocator_stack
-      high := frame.lower
-      aligned := mid.aligned }
-  obtain ⟨after, run2, allocation⟩ := (allocator_summary atMalloc H n ra sp capacity charge input charged).run
-    atMalloc ⟨dispatch.pc, rfl⟩
-  exact ⟨after, run1.trans run2, ⟨atMalloc, dispatch, mid.platform, allocation, mid.malloc_result frame.lower allocation⟩⟩
+  obtain ⟨after, run2, ⟨M⟩⟩ := (malloc_ready atMalloc H capacity charge n sp ra mid frame
+    ((kept 10 (by decide) (by decide) (by decide)).trans request) charged).run atMalloc ⟨dispatch.pc, rfl⟩
+  exact ⟨after, run1.trans run2, ⟨atMalloc, dispatch, mid.platform, M.allocation, M.ready⟩⟩
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.Startup

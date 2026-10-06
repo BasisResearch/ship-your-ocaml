@@ -5,38 +5,10 @@ import OCaml.Vm.Boot.Startup.BlockReady
 import OCaml.Vm.Boot.Startup.NativeNested
 import OCaml.Vm.Primitives.LibraryMemcpy
 import OCaml.Vm.Primitives.StringCopyFinish
+import OCaml.Vm.Boot.Startup.MemcpyFresh
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.Sym VsaIris.VsaHeap VsaIris.MallocFast
   VsaIris.Memcpy OCaml.Vm.Primitives
-
-theorem memcpy_text_live : ∀ p ∈ mText, startupLive p.1 := by
-  intro p hp
-  obtain ⟨⟨b, k⟩, member, rfl⟩ := List.mem_map.1 hp
-  have get := List.mem_zipIdx_iff_getElem?.1 member
-  simp only at get
-  have bound : k < memcpyCode.length := by
-    rcases Nat.lt_or_ge k memcpyCode.length with h | h
-    · exact h
-    · rw [List.getElem?_eq_none h] at get
-      cases get
-  have length : memcpyCode.length = 296 := by decide +kernel
-  change Vsa.Densify.ramBase ≤ memcpyBase + k ∧ memcpyBase + k < Vsa.Densify.ramBase + Vsa.Densify.ramSize
-  unfold Vsa.Densify.ramBase Vsa.Densify.ramSize memcpyBase
-  omega
-
-theorem memcpy_text_low {p : Nat × BitVec 8} (hp : p ∈ mText) : p.1 < heapStart := by
-  obtain ⟨⟨b, k⟩, member, rfl⟩ := List.mem_map.1 hp
-  have get := List.mem_zipIdx_iff_getElem?.1 member
-  simp only at get
-  have bound : k < memcpyCode.length := by
-    rcases Nat.lt_or_ge k memcpyCode.length with h | h
-    · exact h
-    · rw [List.getElem?_eq_none h] at get
-      cases get
-  have length : memcpyCode.length = 296 := by decide +kernel
-  change memcpyBase + k < heapStart
-  unfold memcpyBase heapStart
-  omega
 
 /-- Bytes caml_stat_strdup never writes: its caller's frame, memory well below
 its native frames, low globals outside the allocator, and live blocks. -/
