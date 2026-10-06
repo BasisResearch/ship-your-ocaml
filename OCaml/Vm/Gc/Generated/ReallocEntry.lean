@@ -165,7 +165,7 @@ theorem writeLog_nil' (m : Std.ExtHashMap Nat (BitVec 8)) : writeLog m [] = m :=
 def loads (b1 b2 b3 : List (BitVec 8)) : List (List (BitVec 8)) := [b1, b2, b3]
 def mem0 (mem : Std.ExtHashMap Nat (BitVec 8)) (b1 b2 b3 : List (BitVec 8)) (sp s0 s3 ra s2 a0 s1 : BitVec 64) : Std.ExtHashMap Nat (BitVec 8) := mem
 def mem1 (mem : Std.ExtHashMap Nat (BitVec 8)) (b1 b2 b3 : List (BitVec 8)) (sp s0 s3 ra s2 a0 s1 : BitVec 64) : Std.ExtHashMap Nat (BitVec 8) :=
-  writeLog (mem0 mem b1 b2 b3 sp s0 s3 ra s2 a0 s1) []
+  mem0 mem b1 b2 b3 sp s0 s3 ra s2 a0 s1
 def mem2 (mem : Std.ExtHashMap Nat (BitVec 8)) (b1 b2 b3 : List (BitVec 8)) (sp s0 s3 ra s2 a0 s1 : BitVec 64) : Std.ExtHashMap Nat (BitVec 8) :=
   writeLog (mem1 mem b1 b2 b3 sp s0 s3 ra s2 a0 s1) [(((sp + -64#64) + BitVec.ofNat 64 48).toNat, 8, s0), (((sp + -64#64) + BitVec.ofNat 64 24).toNat, 8, s3), (((sp + -64#64) + BitVec.ofNat 64 56).toNat, 8, ra), (((sp + -64#64) + BitVec.ofNat 64 32).toNat, 8, s2)]
 def mem3 (mem : Std.ExtHashMap Nat (BitVec 8)) (b1 b2 b3 : List (BitVec 8)) (sp s0 s3 ra s2 a0 s1 : BitVec 64) : Std.ExtHashMap Nat (BitVec 8) :=
@@ -208,7 +208,6 @@ theorem access {mem : Std.ExtHashMap Nat (BitVec 8)} {sp s0 s3 ra s2 a0 s1 : Bit
   apply ChainAccess.cons ⟨block2_access (mem2 mem b1 b2 b3 sp s0 s3 ra s2 a0 s1) sp s0 s3 ra s2 a0 s1 (bytesVal .ld b1) b2 b3 _ r.read2 r.pins2 r.write5 r.read3 r.pins3 r.apart3_5 r.write6 r.write7,
     block2_control sp s0 s3 ra s2 a0 s1 (bytesVal .ld b1) b2 b3 _⟩
   rw [block2_log, block2_regs, block2_loads]
-  change ChainAccess (mem3 mem b1 b2 b3 sp s0 s3 ra s2 a0 s1) _ _ _
   exact ChainAccess.nil
 
 structure Input (sp s0 s3 ra s2 a0 s1 : BitVec 64) (b1 b2 b3 : List (BitVec 8)) (c : Config) : Prop where

@@ -193,6 +193,20 @@ import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.NurseryTransport
 import OCaml.Vm.Gc.G1Reserve
 import OCaml.Vm.Gc.ModifyInsert
+import OCaml.Vm.Gc.Generated.BarrierAbove
+import OCaml.Vm.Gc.Generated.BarrierBelow
+import OCaml.Vm.Gc.Generated.BarrierFull
+import OCaml.Vm.Gc.Generated.BarrierInsert
+import OCaml.Vm.Gc.Generated.BarrierOldHigh
+import OCaml.Vm.Gc.Generated.BarrierOldImm
+import OCaml.Vm.Gc.Generated.BarrierOldLow
+import OCaml.Vm.Gc.Generated.BarrierOldYoung
+import OCaml.Vm.Gc.Generated.BarrierReload
+import OCaml.Vm.Gc.Generated.BarrierReturn
+import OCaml.Vm.Gc.Generated.BarrierValHigh
+import OCaml.Vm.Gc.Generated.BarrierValImm
+import OCaml.Vm.Gc.Generated.BarrierValLow
+import OCaml.Vm.Gc.Generated.BarrierYoung
 import OCaml.Vm.Gc.Generated.ReallocAllocCall
 import OCaml.Vm.Gc.ReallocCallee
 import OCaml.Vm.Gc.Generated.ReallocEntry
@@ -459,6 +473,34 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.ModifyInsert.run
 #print axioms OCaml.Vm.Gc.ModifyInsert.log
 #print axioms OCaml.Vm.Gc.ModifyInsert.registers
+#print axioms OCaml.Vm.Gc.BarrierAbove.run
+#print axioms OCaml.Vm.Gc.BarrierAbove.log
+#print axioms OCaml.Vm.Gc.BarrierBelow.run
+#print axioms OCaml.Vm.Gc.BarrierBelow.log
+#print axioms OCaml.Vm.Gc.BarrierFull.run
+#print axioms OCaml.Vm.Gc.BarrierFull.log
+#print axioms OCaml.Vm.Gc.BarrierInsert.run
+#print axioms OCaml.Vm.Gc.BarrierInsert.log
+#print axioms OCaml.Vm.Gc.BarrierOldHigh.run
+#print axioms OCaml.Vm.Gc.BarrierOldHigh.log
+#print axioms OCaml.Vm.Gc.BarrierOldImm.run
+#print axioms OCaml.Vm.Gc.BarrierOldImm.log
+#print axioms OCaml.Vm.Gc.BarrierOldLow.run
+#print axioms OCaml.Vm.Gc.BarrierOldLow.log
+#print axioms OCaml.Vm.Gc.BarrierOldYoung.run
+#print axioms OCaml.Vm.Gc.BarrierOldYoung.log
+#print axioms OCaml.Vm.Gc.BarrierReload.run
+#print axioms OCaml.Vm.Gc.BarrierReload.log
+#print axioms OCaml.Vm.Gc.BarrierReturn.run
+#print axioms OCaml.Vm.Gc.BarrierReturn.log
+#print axioms OCaml.Vm.Gc.BarrierValHigh.run
+#print axioms OCaml.Vm.Gc.BarrierValHigh.log
+#print axioms OCaml.Vm.Gc.BarrierValImm.run
+#print axioms OCaml.Vm.Gc.BarrierValImm.log
+#print axioms OCaml.Vm.Gc.BarrierValLow.run
+#print axioms OCaml.Vm.Gc.BarrierValLow.log
+#print axioms OCaml.Vm.Gc.BarrierYoung.run
+#print axioms OCaml.Vm.Gc.BarrierYoung.log
 #print axioms OCaml.Vm.Gc.Realloc.realloc_run
 #print axioms OCaml.Vm.Gc.Realloc.prefix_run
 #print axioms OCaml.Vm.Gc.Realloc.entry_step

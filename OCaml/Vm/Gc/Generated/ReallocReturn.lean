@@ -145,7 +145,6 @@ theorem access {mem : Std.ExtHashMap Nat (BitVec 8)} {s1 a0 s0 sp : BitVec 64} {
   apply ChainAccess.cons ⟨block0_access (mem0 mem b1 b2 b3 b4 b5 s1 a0 s0 sp) s1 a0 s0 sp b1 b2 b3 b4 b5 _ r.write1 r.read1 r.pins1 r.apart1_1 r.read2 r.pins2 r.apart2_1 r.read3 r.pins3 r.apart3_1 r.read4 r.pins4 r.apart4_1 r.read5 r.pins5 r.apart5_1,
     block0_control s1 a0 s0 sp b1 b2 b3 b4 b5 _ r.control0⟩
   rw [block0_log, block0_regs, block0_loads]
-  change ChainAccess (mem1 mem b1 b2 b3 b4 b5 s1 a0 s0 sp) _ _ _
   exact ChainAccess.nil
 
 structure Input (s1 a0 s0 sp : BitVec 64) (b1 b2 b3 b4 b5 : List (BitVec 8)) (c : Config) : Prop where
@@ -179,7 +178,7 @@ theorem endpoint (s1 a0 s0 sp : BitVec 64) (b1 b2 b3 b4 b5 : List (BitVec 8)) (c
     evalBlocksPC pc (SegEvalState.init (regs s1 a0 s0 sp) (loads b1 b2 b3 b4 b5)) blocks = (bytesVal .ld b1) := by
   change Sail.BitVec.update (srcVal 1 (runGM block0.body (state0 s1 a0 s0 sp) [b1, b2, b3, b4, b5]) +
     Functions.sign_extend (m := 64) (0#12)) 0 0#1 = _
-  rw [block0_regs s1 a0 s0 sp b1 b2 b3 b4 b5 []]
+  rw [block0_regs]
   rw [show srcVal 1 (state1 s1 a0 s0 sp (bytesVal .ld b1) (bytesVal .ld b2) (bytesVal .ld b3) (bytesVal .ld b4) (bytesVal .ld b5)) = (bytesVal .ld b1) from rfl, ret_tgt _ control]
 
 end OCaml.Vm.Gc.ReallocReturn

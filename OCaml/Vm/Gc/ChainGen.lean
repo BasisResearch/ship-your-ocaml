@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.ChainPlan
 import OCaml.Vm.Primitives.Write
+import OCaml.Vm.Primitives.Word32Access
 
 /-!
 # Support lemmas for generated chain modules
@@ -34,6 +35,21 @@ theorem lpins8_stepMemM_apart {m : Std.ExtHashMap Nat (BitVec 8)} {a : MInstr} {
   have out : OutLRange [wentryM a L] x 8 :=
     ⟨by simp only [wentryM, widthOfM, h, address]; omega, trivial⟩
   have := lpins8_writeLog pins out
+  simpa [stepMemM, h, writeLog] using this
+
+theorem lpins4_stepMemM_keep {m : Std.ExtHashMap Nat (BitVec 8)} {a : MInstr} {L : GRegs} {x : Nat}
+    {bs : List (BitVec 8)} (h : storeKind a.kind = false) (pins : LPins4 m x bs) :
+    LPins4 (stepMemM m a L) x bs := by
+  unfold stepMemM
+  split <;> simp_all [storeKind]
+
+theorem lpins4_stepMemM_apart {m : Std.ExtHashMap Nat (BitVec 8)} {a : MInstr} {L : GRegs} {x : Nat}
+    {y : BitVec 64} {bs : List (BitVec 8)} (h : a.kind = .sd) (address : eaddrM a L = y)
+    (pins : LPins4 m x bs) (apart : x + 4 ≤ y.toNat ∨ y.toNat + 8 ≤ x) :
+    LPins4 (stepMemM m a L) x bs := by
+  have out : OutLRange [wentryM a L] x 4 :=
+    ⟨by simp only [wentryM, widthOfM, h, address]; omega, trivial⟩
+  have := lpins4_writeLog pins out
   simpa [stepMemM, h, writeLog] using this
 
 end OCaml.Vm.Gc

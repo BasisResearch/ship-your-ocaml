@@ -211,6 +211,17 @@ runtime invariant: the long pole for whileMin's `Halts`.
   `f1Runtime`, via `ignoredStatics`) and the ModifySlow → callee →
   ModifyInsert splice with `Entry` from the F1 invariant (needs HeapReady in
   `F1Pins` and VsaOk at the interpreter state).
+- `caml_modify` as generated segments (`gen_chain.py`, `Gc/Generated/Barrier*.lean`):
+  slot class (`BarrierYoung` full young path; `BarrierAbove`/`BarrierBelow` to
+  `a9cc`), old-value class (`BarrierOldImm`/`OldHigh`/`OldLow` to `aa0c`,
+  `BarrierOldYoung` to `aa44`), value class (`BarrierValImm`/`ValHigh`/
+  `ValLow` to `aa44`, `BarrierInsert` insertion to `aa44`, `BarrierFull` to
+  the realloc `jal` at `aa84`), `BarrierReload` (after realloc) and
+  `BarrierReturn`. Every path except the dead mark-phase branch. Next: the
+  four-step memory-level composition (head, old, value, return), then the
+  represented `ModifyCallee`. The generator now tracks the evaluator's exact
+  in-block forms (`mv` leaves `x + 0`), supports `lw`, unsigned branches and
+  `ret`/fall-through endpoints.
 - Barrier integration plan (after `realloc_run`). a1-arms' `ModifyCallee`
   (`OCaml/Vm/Sim/ModifyCall.lean`) is a represented summary from
   `ModifyInput` to `ModifyReturn` for every F1 program. Two invariant pieces

@@ -52,6 +52,50 @@ CHAINS = [
      [(GEN, 'realloc_generic_table_isra_0X97c4Seg')], None),
 ]
 
+MOD = ('OCaml/Vm/Gc/Generated/Modify.lean', 'Code.Caml_modifyLoaded', 'Vsa.Sim.Code.caml_modify_at_')
+
+
+def mod(*segs):
+    return [(MOD, f'caml_modifyX{x}Seg') for x in segs]
+
+
+# caml_modify as a DAG of segments: slot class -> old-value class -> value class -> return.
+CHAINS += [
+    ('OCaml/Vm/Gc/Generated/BarrierYoung.lean', 'OCaml.Vm.Gc.BarrierYoung',
+     '`caml_modify` on a slot in the minor heap: store and return.', mod('a9a8F', 'a9bcF', 'a9c4'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierAbove.lean', 'OCaml.Vm.Gc.BarrierAbove',
+     '`caml_modify`: the slot is at or above `young_end` (major).', mod('a9a8T'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierBelow.lean', 'OCaml.Vm.Gc.BarrierBelow',
+     '`caml_modify`: the slot is at or below `young_start` (major).', mod('a9a8F', 'a9bcT'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierOldImm.lean', 'OCaml.Vm.Gc.BarrierOldImm',
+     'Major slot: frame, store, and the old value is an immediate.', mod('a9ccT'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierOldHigh.lean', 'OCaml.Vm.Gc.BarrierOldHigh',
+     'Major slot: the old value is a block at or above `young_end`; not marking.',
+     mod('a9ccF', 'a9ecT', 'aa00F'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierOldLow.lean', 'OCaml.Vm.Gc.BarrierOldLow',
+     'Major slot: the old value is a block at or below `young_start`; not marking.',
+     mod('a9ccF', 'a9ecF', 'a9f8F', 'aa00F'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierOldYoung.lean', 'OCaml.Vm.Gc.BarrierOldYoung',
+     'Major slot: the old value is young, so the slot is already remembered.',
+     mod('a9ccF', 'a9ecF', 'a9f8T'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierValImm.lean', 'OCaml.Vm.Gc.BarrierValImm',
+     'The new value is an immediate.', mod('aa0cT'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierValHigh.lean', 'OCaml.Vm.Gc.BarrierValHigh',
+     'The new value is a block at or above `young_end`.', mod('aa0cF', 'aa14T'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierValLow.lean', 'OCaml.Vm.Gc.BarrierValLow',
+     'The new value is a block at or below `young_start`.', mod('aa0cF', 'aa14F', 'aa20T'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierInsert.lean', 'OCaml.Vm.Gc.BarrierInsert',
+     'The new value is young and the remembered set has room: insert.',
+     mod('aa0cF', 'aa14F', 'aa20F', 'aa28F', 'aa38'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierFull.lean', 'OCaml.Vm.Gc.BarrierFull',
+     'The new value is young and the remembered set is full or unallocated: grow it.',
+     mod('aa0cF', 'aa14F', 'aa20F', 'aa28T', 'aa7c'), (MOD, 0x8000aa84)),
+    ('OCaml/Vm/Gc/Generated/BarrierReload.lean', 'OCaml.Vm.Gc.BarrierReload',
+     'After `caml_realloc_ref_table`: reload and insert, then return.', mod('aa88', 'aa38', 'aa44'), None),
+    ('OCaml/Vm/Gc/Generated/BarrierReturn.lean', 'OCaml.Vm.Gc.BarrierReturn',
+     'Restore `ra` and return.', mod('aa44'), None),
+]
+
 SIMP = ('runGM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, mkLine, decodeM, imm20Of, shamtOf, '
         'Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, Sail.shift_bits_right, '
         'Sail.shift_bits_left')
@@ -66,9 +110,19 @@ def sext(v, bits):
 
 
 class E:
-    """A symbolic 64-bit value: a literal or a Lean expression."""
-    def __init__(self, text=None, lit=None, atom=True):
-        self.text, self.lit, self.atom = text, lit, atom
+    """A symbolic 64-bit value: a literal or a Lean expression. `exact` is the
+    evaluator's own form inside the current block (`mv` leaves `x + 0`), used
+    for the block's store log; `text` is the simp-normal form of block states."""
+    def __init__(self, text=None, lit=None, atom=True, exact=None):
+        self.text, self.lit, self.atom, self.exact = text, lit, atom, exact
+
+    def ex(self):
+        return self.exact if self.exact is not None else self.lean()
+
+    def exp(self):
+        if self.exact is not None:
+            return f'({self.exact})'
+        return self.p()
 
     def lean(self):
         if self.lit is not None:
@@ -101,6 +155,8 @@ def decode(word):
         return ('add', rd, rs1, rs2)
     if op == 0x03 and f3 == 3:
         return ('ld', rd, rs1, sext(word >> 20, 12))
+    if op == 0x03 and f3 == 2:
+        return ('lw', rd, rs1, sext(word >> 20, 12))
     if op == 0x23 and f3 == 3:
         return ('sd', rs2, rs1, sext(((word >> 25) << 5) | ((word >> 7) & 31), 12))
     raise SystemExit(f'gen_chain: unsupported word {word:08x}')
@@ -128,6 +184,7 @@ class Chain:
         self.inputs = []                # register numbers, first-read order
         self.loads = 0
         self.stores = 0
+        self.kind = {}
 
     def simulate(self):
         # pre-pass: registers read before written
@@ -136,7 +193,7 @@ class Chain:
             for _, w in instrs:
                 d = decode(w)
                 reads = {'auipc': [], 'addi': [d[2]] if d[0] == 'addi' else [], }.get(d[0])
-                if d[0] in ('addi', 'slli', 'srli', 'andi', 'ld'):
+                if d[0] in ('addi', 'slli', 'srli', 'andi', 'ld', 'lw'):
                     reads = [d[2]]
                 elif d[0] == 'add':
                     reads = [d[2], d[3]]
@@ -185,7 +242,7 @@ class Chain:
                     if s.lit is not None:
                         put(d[1], E(lit=(s.lit + d[3]) % 2**64))
                     elif d[3] == 0:
-                        put(d[1], s)
+                        put(d[1], E(s.text, atom=s.atom, exact=f'{s.exp()} + BitVec.ofNat 64 0'))
                     else:
                         put(d[1], E(f'{s.p()} + {bv(d[3])}', atom=False))
                     ops.append(('alu',))
@@ -205,24 +262,27 @@ class Chain:
                     else:
                         put(d[1], E(f'{a.p()} + {b.p()}', atom=False))
                     ops.append(('alu',))
-                elif kind in ('ld', 'sd'):
+                elif kind in ('ld', 'sd', 'lw'):
                     base = val(d[2])
                     if base.lit is not None:
                         addr = E(lit=(base.lit + d[3]) % 2**64)
                     elif d[3] >= 0:
-                        addr = E(f'{base.p()} + BitVec.ofNat 64 {d[3]}', atom=False)
+                        addr = E(f'{base.exp()} + BitVec.ofNat 64 {d[3]}', atom=False)
                     else:
                         raise SystemExit(f'gen_chain: negative offset at {pc:x}')
-                    if kind == 'ld':
+                    if kind in ('ld', 'lw'):
                         k += 1
                         loads.append(k)
-                        ops.append(('ld', k, addr))
+                        ops.append((kind, k, addr))
+                        self.kind[k] = kind
                         put(d[1], E(f'v{k}'))
                     else:
                         self.stores += 1
-                        entry = (addr, val(d[1]))
+                        v = val(d[1])
+                        entry = (addr, E(v.ex(), lit=v.lit, atom=v.atom and v.exact is None))
                         log.append(entry)
                         ops.append(('sd', self.stores, addr))
+            state = [(q, E(x.text, lit=x.lit, atom=x.atom)) for q, x in state]
             self.per.append(dict(loads=loads, ops=ops, log=log, term=term,
                                  before=list(self.states[-1])))
             # register state with load values as variables v_k
@@ -230,10 +290,22 @@ class Chain:
         self.loads = k
 
 
+LOADKIND = {}
+
+
+def bval(j):
+    """The value of the j-th load of the current chain."""
+    return f'(bytesVal .{LOADKIND[j]} b{j})'
+
+
+def bindv(t):
+    return re.sub(r'\bv(\d+)\b', lambda m: bval(int(m.group(1))), t)
+
+
 def localize(t, first):
     """Within block lemmas, loads of the block itself are byte lists `b_k`."""
     return re.sub(r'\bv(\d+)\b', lambda m: m.group(0) if int(m.group(1)) < first
-                  else f'(bytesVal .ld b{m.group(1)})', t)
+                  else bval(int(m.group(1))), t)
 
 
 def regs_text(state):
@@ -247,6 +319,8 @@ def emit(module, ns, doc, spec, decode_modules):
         blocks.append(((path, pred, prefix), seg, instrs, term))
     ch = Chain(blocks)
     ch.simulate()
+    LOADKIND.clear()
+    LOADKIND.update(ch.kind)
     n = len(blocks)
     inputs = [ABI[r] for r in ch.inputs]
     inp = ' '.join(inputs)
@@ -281,7 +355,7 @@ def emit(module, ns, doc, spec, decode_modules):
     E_('')
     vs = lambda k: ' '.join(f'v{j}' for j in range(1, k + 1))
     bs = lambda lo, hi: ' '.join(f'b{j}' for j in range(lo, hi + 1))
-    vals = lambda lo, hi: ' '.join(f'(bytesVal .ld b{j})' for j in range(lo, hi + 1))
+    vals = lambda lo, hi: ' '.join(bval(j) for j in range(lo, hi + 1))
     # state definitions
     loaded = [0]
     for i in range(n):
@@ -335,19 +409,21 @@ def emit(module, ns, doc, spec, decode_modules):
         script = []
         stores_in_block = []
         for idx, op in enumerate(per['ops']):
-            if op[0] == 'ld':
+            if op[0] in ('ld', 'lw'):
                 k, addr = op[1], localize(op[2].lean(), lo)
-                prem.append(f'(read{k} : ReadWindow ({addr}) 8)')
-                prem.append(f'(pins{k} : LPins8 mem ({addr}).toNat b{k})')
+                w, P = (8, 'LPins8') if op[0] == 'ld' else (4, 'LPins4')
+                prem.append(f'(read{k} : ReadWindow ({addr}) {w})')
+                prem.append(f'(pins{k} : {P} mem ({addr}).toNat b{k})')
                 for j, saddr in stores_in_block:
-                    prem.append(f'(apart{k}_{j} : ({addr}).toNat + 8 ≤ ({saddr}).toNat ∨ '
+                    prem.append(f'(apart{k}_{j} : ({addr}).toNat + {w} ≤ ({saddr}).toNat ∨ '
                                 f'({saddr}).toNat + 8 ≤ ({addr}).toNat)')
-                lines = [f'  · apply read{k}.ld rfl (by first | rfl | simp [{ADDR}, state{i}])']
+                lines = [f'  · apply read{k}.{op[0]} rfl (by first | rfl | simp [{ADDR}, state{i}])']
+                lp = 'lpins8' if op[0] == 'ld' else 'lpins4'
                 for prev in reversed(per['ops'][:idx]):
                     if prev[0] == 'sd':
-                        lines.append(f'    refine lpins8_stepMemM_apart rfl (by first | rfl | simp [{ADDR}, state{i}]) ?_ apart{k}_{prev[1]}')
+                        lines.append(f'    refine {lp}_stepMemM_apart rfl (by first | rfl | simp [{ADDR}, state{i}]) ?_ apart{k}_{prev[1]}')
                     else:
-                        lines.append('    apply lpins8_stepMemM_keep rfl')
+                        lines.append(f'    apply {lp}_stepMemM_keep rfl')
                 lines.append(f'    exact pins{k}')
                 script += lines
             elif op[0] == 'sd':
@@ -379,13 +455,28 @@ def emit(module, ns, doc, spec, decode_modules):
         elif term['kind'].startswith('.br'):
             _, op, taken = term['kind'].split()
             a, b = rv(term['rs1']).lean(), rv(term['rs2']).lean()
-            assert op == 'bop.BEQ', term
-            cond = f'{a} = {b}' if taken == 'true' else f'{a} ≠ {b}'
+            t = taken == 'true'
+            if op in ('bop.BEQ', 'bop.BNE'):
+                eq = (op == 'bop.BEQ') == t
+                cond = f'{a} = {b}' if eq else f'{a} ≠ {b}'
+                tac = 'simpa'
+            elif op in ('bop.BGEU', 'bop.BLTU'):
+                ge = (op == 'bop.BGEU') == t
+                cond = f'({b}).toNat ≤ ({a}).toNat' if ge else f'({a}).toNat < ({b}).toNat'
+                tac = 'omega'
+            else:
+                raise SystemExit(f'gen_chain: branch {op}')
             per['control'] = cond
             E_(f'theorem block{i}_control {hdr} (control : {localize(cond, lo)}) :')
             E_(f'    TermFactsO (runGM block{i}.body ({st}) ({ldsl})) block{i}.term := by')
             E_(f'  rw [block{i}_regs]')
-            E_(f'  simpa [block{i}, {seg_names[i]}, TermFactsO, TermFactsT, state{i+1}, srcVal, lookupG, guardB] using control')
+            simps = (f'block{i}, {seg_names[i]}, TermFactsO, TermFactsT, state{i+1}, srcVal, lookupG, guardB, '
+                     'Functions.zopz0zKzJ_u, Functions.zopz0zI_u, Sail.BitVec.toNatInt')
+            if tac == 'simpa':
+                E_(f'  simpa [block{i}, {seg_names[i]}, TermFactsO, TermFactsT, state{i+1}, srcVal, lookupG, guardB] using control')
+            else:
+                E_(f'  simp [{simps}]')
+                E_('  omega')
         elif term['kind'] == '.jr':
             per['control'] = f'({rv(term["rs1"]).lean()}).toNat % 4 = 0'
             per['target'] = rv(term['rs1']).lean()
@@ -406,7 +497,7 @@ def emit_fold(L, ch, loaded, inputs, n):
     inp = ' '.join(inputs)
     K = ch.loads
     ball = ' '.join(f'b{j}' for j in range(1, K + 1))
-    vals_all = lambda hi: ' '.join(f'(bytesVal .ld b{j})' for j in range(1, hi + 1))
+    vals_all = lambda hi: ' '.join(bval(j) for j in range(1, hi + 1))
     E_('/-! ### The chain -/')
     E_('')
     E_('theorem writeLog_nil\' (m : Std.ExtHashMap Nat (BitVec 8)) : writeLog m [] = m := rfl')
@@ -425,15 +516,16 @@ def emit_fold(L, ch, loaded, inputs, n):
         sub = lambda s: s
         logt = '[' + ', '.join(f'(({a.lean()}).toNat, 8, {v.lean()})' for a, v in per['log']) + ']'
         # replace load variables v_j by their byte values
-        def bind(t):
-            return re.sub(r'\bv(\d+)\b', r'(bytesVal .ld b\1)', t)
+        bind = bindv
         E_(f'def mem{i} (mem : Std.ExtHashMap Nat (BitVec 8)){bdecl} ({inp} : BitVec 64) :'
            f' Std.ExtHashMap Nat (BitVec 8) :=')
-        E_(f'  writeLog (mem{i-1} mem {ball} {inp}) {bind(logt)}')
+        if per['log']:
+            E_(f'  writeLog (mem{i-1} mem {ball} {inp}) {bind(logt)}')
+        else:
+            E_(f'  mem{i-1} mem {ball} {inp}')
     E_('')
 
-    def bind(t):
-        return re.sub(r'\bv(\d+)\b', r'(bytesVal .ld b\1)', t)
+    bind = bindv
     # Route
     E_('/-- The route\'s scalar observations: each load\'s window and byte pins at its')
     E_('block-start memory, each store\'s window, and each branch choice. -/')
@@ -444,12 +536,13 @@ def emit_fold(L, ch, loaded, inputs, n):
         memi = f'(mem{i} mem {ball} {inp})'
         stores = []
         for op in per['ops']:
-            if op[0] == 'ld':
+            if op[0] in ('ld', 'lw'):
                 k, a = op[1], bind(op[2].lean())
-                E_(f'  read{k} : ReadWindow ({a}) 8')
-                E_(f'  pins{k} : LPins8 {memi} ({a}).toNat b{k}')
+                w, P = (8, 'LPins8') if op[0] == 'ld' else (4, 'LPins4')
+                E_(f'  read{k} : ReadWindow ({a}) {w}')
+                E_(f'  pins{k} : {P} {memi} ({a}).toNat b{k}')
                 for j, sa in stores:
-                    E_(f'  apart{k}_{j} : ({a}).toNat + 8 ≤ ({sa}).toNat ∨ ({sa}).toNat + 8 ≤ ({a}).toNat')
+                    E_(f'  apart{k}_{j} : ({a}).toNat + {w} ≤ ({sa}).toNat ∨ ({sa}).toNat + 8 ≤ ({a}).toNat')
             elif op[0] == 'sd':
                 j, a = op[1], bind(op[2].lean())
                 E_(f'  write{j} : WriteWindow ({a}) 8')
@@ -470,7 +563,7 @@ def emit_fold(L, ch, loaded, inputs, n):
         args = []
         stores = []
         for op in per['ops']:
-            if op[0] == 'ld':
+            if op[0] in ('ld', 'lw'):
                 args += [f'r.read{op[1]}', f'r.pins{op[1]}'] + [f'r.apart{op[1]}_{j}' for j in stores]
             elif op[0] == 'sd':
                 args.append(f'r.write{op[1]}')
@@ -483,7 +576,8 @@ def emit_fold(L, ch, loaded, inputs, n):
             E_(f'  rw [block{i}_log, block{i}_regs, block{i}_loads, writeLog_nil\']')
         else:
             E_(f'  rw [block{i}_log, block{i}_regs, block{i}_loads]')
-        E_(f'  change ChainAccess (mem{i+1} mem {ball} {inp}) _ _ _')
+        if i + 1 < n:
+            E_(f'  change ChainAccess (mem{i+1} mem {ball} {inp}) _ _ _')
     E_('  exact ChainAccess.nil')
     E_('')
     # Input / run
@@ -514,14 +608,14 @@ def finish(L, ch, loaded, inputs, n, preds):
     E_(f'    ⟨input.good, input.minstret, input.registers, by change KeysOK {keys}; decide,')
     E_(f'      chainPlan_facts (code_facts {codes}) (access input.route), chain_ok, input.tick⟩')
     E_('')
-    vals_all = ' '.join(f'(bytesVal .ld b{j})' for j in range(1, K + 1))
+    vals_all = ' '.join(bval(j) for j in range(1, K + 1))
     biv = (f' ({ball} : List (BitVec 8))' if K else '')
     lemmas = ', '.join(f'block{i}_regs, block{i}_loads, block{i}_log' for i in range(n))
     full = []
     for i in range(n):
         for a, v in ch.per[i]['log']:
             full.append(f'(({a.lean()}).toNat, 8, {v.lean()})')
-    fl = re.sub(r'\bv(\d+)\b', r'(bytesVal .ld b\1)', '[' + ', '.join(full) + ']')
+    fl = bindv('[' + ', '.join(full) + ']')
     E_(f'theorem log ({inp} : BitVec 64){biv} :')
     E_(f'    (evalBlocks blocks (SegEvalState.init (regs {inp}) (loads {ball}))).log =')
     E_(f'      {fl} := by')
@@ -587,21 +681,35 @@ def generate():
                 preds.append(pred)
         finish(L, ch, loaded, inputs, n, preds)
         last = ch.per[-1]
-        if call is None and n == 1 and 'target' in last:
-            inp = ' '.join(inputs)
-            K = ch.loads
-            bl = ' '.join(f'b{j}' for j in range(1, K + 1))
-            vals = ' '.join(f'(bytesVal .ld b{j})' for j in range(1, K + 1))
-            target = re.sub(r'\bv(\d+)\b', r'(bytesVal .ld b\1)', last['target'])
+        inp = ' '.join(inputs)
+        K = ch.loads
+        bl = ' '.join(f'b{j}' for j in range(1, K + 1))
+        if call is None and 'target' in last:
+            vals = ' '.join(bval(j) for j in range(1, K + 1))
+            target = bindv(last['target'])
             rs1 = last['term']['rs1']
+            inner = f'(state0 {inp})'
+            for i in range(n):
+                rem = [f'b{j}' for j in range(loaded[i] + 1, K + 1)]
+                inner = f'(runGM block{i}.body {inner} [{", ".join(rem)}])'
             L.extend([
                 '/-- The `ret` target. -/',
-                f'theorem endpoint ({inp} : BitVec 64) ({bl} : List (BitVec 8)) (control : ({target}).toNat % 4 = 0) :',
+                f'theorem endpoint ({inp} : BitVec 64){f" ({bl} : List (BitVec 8))" if K else ""} (control : ({target}).toNat % 4 = 0) :',
                 f'    evalBlocksPC pc (SegEvalState.init (regs {inp}) (loads {bl})) blocks = {target} := by',
-                f'  change Sail.BitVec.update (srcVal {rs1} (runGM block0.body (state0 {inp}) [{", ".join(bl.split())}]) +',
+                f'  change Sail.BitVec.update (srcVal {rs1} {inner} +',
                 '    Functions.sign_extend (m := 64) (0#12)) 0 0#1 = _',
-                f'  rw [block0_regs {inp} {bl} []]',
-                f'  rw [show srcVal {rs1} (state1 {inp} {vals}) = {target} from rfl, ret_tgt _ control]',
+                f'  rw [{", ".join(f"block{i}_regs" for i in range(n))}]',
+                f'  rw [show srcVal {rs1} (state{n} {inp} {vals}) = {target} from rfl, ret_tgt _ control]',
+                ''])
+        elif call is None:
+            (path, _, _), seg = spec[-1]
+            base = seg[:-len('Seg')]
+            m = re.search(r'The `' + re.escape(base) + r'` row post: parked at the computed end PC `(0x[0-9a-f]+)#64`',
+                          (ROOT / path).read_text())
+            L.extend([
+                '/-- Where the chain falls through. -/',
+                f'theorem endpoint ({inp} : BitVec 64) (lds : List (List (BitVec 8))) :',
+                f'    evalBlocksPC pc (SegEvalState.init (regs {inp}) lds) blocks = {m.group(1)}#64 := rfl',
                 ''])
         if call:
             text, dm = call_text(call, decodes)

@@ -88,7 +88,6 @@ theorem access {mem : Std.ExtHashMap Nat (BitVec 8)} {s0 s1 a0 s3 s2 : BitVec 64
   apply ChainAccess.cons ⟨block0_access (mem0 mem b1 s0 s1 a0 s3 s2) s0 s1 a0 s3 s2 b1 _ r.read1 r.pins1 r.write1 r.write2,
     block0_control s0 s1 a0 s3 s2 b1 _⟩
   rw [block0_log, block0_regs, block0_loads]
-  change ChainAccess (mem1 mem b1 s0 s1 a0 s3 s2) _ _ _
   exact ChainAccess.nil
 
 structure Input (s0 s1 a0 s3 s2 : BitVec 64) (b1 : List (BitVec 8)) (c : Config) : Prop where
