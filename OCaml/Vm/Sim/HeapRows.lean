@@ -107,9 +107,10 @@ theorem FieldWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {
 theorem f1_fieldWriteReady {P : Prog} {s : St} {c : Config} (ok : Gc.f1Runtime c)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) : FieldWriteReady Gc.f1Layout P s c where
   ready pl cp sp high l a k tag fields w repr g placed object bound := by
-    have low := g.heapLow l a _ placed object
-    refine ⟨Gc.f1_objectField g.nursery ok placed object low (by omega) ?_,
-      FieldWriteOk.of_geometry g repr.stack space placed object bound⟩
+    have g' := g.toArmGeometry
+    have low := g'.heapLow l a _ placed object
+    refine ⟨Gc.f1_objectField g'.nursery ok placed object low (by omega) ?_,
+      FieldWriteOk.of_geometry g' repr.stack space placed object bound⟩
     show a + 8 * k + 8 ≤ a + 8 * fields.length
     omega
 
