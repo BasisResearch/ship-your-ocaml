@@ -5274,3 +5274,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Format.StringLength.string_length_call
 #print axioms OCaml.Vm.Primitives.GprsKept.of_effect
 #print axioms OCaml.Vm.Primitives.GprsKept.trans
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.measure
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.copy
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.append
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.finish
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.parse_format_call

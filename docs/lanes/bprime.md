@@ -130,8 +130,16 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   --ocaml-format`, stage a5) emits block certificates and `_fast` wrappers.
   * Done: block families of parse_format, caml_string_length,
     caml_alloc_sprintf and caml_format_int. `string_length_call` is proved.
-    parse_format composition (`ParseFormatCall.lean`): `measure`, `copy`
-    and the conversion guard are proved; `append` and `finish` remain.
+    `parse_format_call` (`ParseFormatCall.lean`) is proved: the whole
+    function as a call summary, composed in four phases (`measure`, `copy`,
+    `append`, `finish`). Its premises are `MeasureInput` (VsaOk, the global
+    pointer, a 48-byte native frame, the placed format string apart from it),
+    `BufferInput`, `2 ≤ n`, the buffer above the frame (`buf = sp` at
+    caml_format_int's call), and the conversion test. The test is proved for
+    all bytes by one kernel check (`plain_guard_all`).
+  * Next: caml_alloc_sprintf, i.e. vsnprintf `%ld` (the LONGINT variant of
+    upstream `svf_iterLLD`), then caml_alloc_initialized_string, then
+    caml_format_int and its C_CALL2 adapter.
   * Library calls need `VsaOk` (all 31 GPRs present) at the C_CALL callee
     entry. For now it is a premise (as in a1-prims' primitives); a0-boot is
     asked whether `VsaOk.gpr` can be weakened.

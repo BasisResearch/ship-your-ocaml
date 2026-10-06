@@ -646,13 +646,14 @@ theorem append {live : Nat → Prop} {sp : BitVec 64} {f buf n : Nat} (d e : Con
   · exact toE
 
 /-- The six words parse_format's prologue saved, still in its frame. -/
-structure SavedSlots (sp : BitVec 64) (ra s0 s1 s2 s3 s4 : BitVec 64) (c : Config) : Prop where
-  ra : bytesT c.σ.mem (nativeFrameBase sp 48 + 40) 8 = ra
-  s0 : bytesT c.σ.mem (nativeFrameBase sp 48 + 32) 8 = s0
-  s1 : bytesT c.σ.mem (nativeFrameBase sp 48 + 24) 8 = s1
-  s2 : bytesT c.σ.mem (nativeFrameBase sp 48 + 16) 8 = s2
-  s3 : bytesT c.σ.mem (nativeFrameBase sp 48 + 8) 8 = s3
-  s4 : bytesT c.σ.mem (nativeFrameBase sp 48) 8 = s4
+structure SavedSlots (sp : BitVec 64) (ra s0 s1 s2 s3 s4 : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) :
+    Prop where
+  ra : bytesT m (nativeFrameBase sp 48 + 40) 8 = ra
+  s0 : bytesT m (nativeFrameBase sp 48 + 32) 8 = s0
+  s1 : bytesT m (nativeFrameBase sp 48 + 24) 8 = s1
+  s2 : bytesT m (nativeFrameBase sp 48 + 16) 8 = s2
+  s3 : bytesT m (nativeFrameBase sp 48 + 8) 8 = s3
+  s4 : bytesT m (nativeFrameBase sp 48) 8 = s4
 
 /-- The registers `finish` may change. -/
 def finishWritten : List Nat := [1, 2, 8, 9, 10, 15, 18, 19, 20]
@@ -698,7 +699,7 @@ theorem setWidth_zext (b : BitVec 8) : b.setWidth 64 = LeanRV64DExecutable.zero_
 theorem finish {live : Nat → Prop} {sp ra s0 s1 s2 s3 s4 : BitVec 64} {f buf n : Nat} (d e a : Config)
     (da : Appended live sp f buf n d e a) (hb : BufferInput f buf n) (long : 2 ≤ n)
     (frame : NativeFrame sp 48) (above : sp.toNat ≤ buf)
-    (slots : SavedSlots sp ra s0 s1 s2 s3 s4 a) (aligned : ra.toNat % 4 = 0) :
+    (slots : SavedSlots sp ra s0 s1 s2 s3 s4 a.σ.mem) (aligned : ra.toNat % 4 = 0) :
     FnSummary append_call.link (fun x => x = a)
       (Finished live sp ra s0 s1 s2 s3 s4 buf n (byte d (f + (n - 1))) a) := by
   let R := entryRegs a
@@ -789,5 +790,150 @@ theorem finish {live : Nat → Prop} {sp ra s0 s1 s2 s3 s4 : BitVec 64} {f buf n
     exact congrArg some (by rw [read8_value, slot0]; exact slots.s4)
   · intro k lo hi out
     exact p.toEffectPost.gpr_frame (by decide) k lo hi out
+
+/-- The prologue's saves at their frame addresses. -/
+theorem proLog_nat {R : Nat → BitVec 64} {sp : BitVec 64} (stack : R 2 = sp) (frame : NativeFrame sp 48) :
+    proLog R [] = [(nativeFrameBase sp 48 + 40, 8, R 1), (nativeFrameBase sp 48 + 32, 8, R 8),
+      (nativeFrameBase sp 48 + 16, 8, R 18), (nativeFrameBase sp 48 + 8, 8, R 19),
+      (nativeFrameBase sp 48, 8, R 20), (nativeFrameBase sp 48 + 24, 8, R 9)] := by
+  have slot (off : Nat) (bound : off + 8 ≤ 48) :
+      (sp - 48#64 + BitVec.ofNat 64 off).toNat = nativeFrameBase sp 48 + off := by
+    rw [frame_slot frame off (by omega)]; exact frame.slot_nat (by omega)
+  have base : (sp - 48#64).toNat = nativeFrameBase sp 48 := by
+    rw [frame_base frame]; simpa using frame.slot_nat (off := 0) (by decide)
+  simp only [proLog, stack]
+  rw [slot 40 (by decide), slot 32 (by decide), slot 16 (by decide), slot 8 (by decide), base, slot 24 (by decide)]
+
+/-- A word written by a log and missed by its later entries reads back. -/
+theorem word_log_last (m : Std.ExtHashMap Nat (BitVec 8)) (log1 log2 : List WEntry) (A : Nat) (v : BitVec 64)
+    (out : OutLRange log2 A 8) : bytesT (writeLog m (log1 ++ (A, 8, v) :: log2)) A 8 = v := by
+  rw [writeLog_append]
+  show bytesT (writeLog (writeLog (writeLog m log1) [(A, 8, v)]) log2) A 8 = v
+  rw [bytesT_writeLog_out _ out, word_writeLog]
+
+/-- The prologue's saves read back from the frame. -/
+theorem proLog_slots {R : Nat → BitVec 64} {sp : BitVec 64} (stack : R 2 = sp) (frame : NativeFrame sp 48)
+    (m : Std.ExtHashMap Nat (BitVec 8)) :
+    SavedSlots sp (R 1) (R 8) (R 9) (R 18) (R 19) (R 20) (writeLog m (proLog R [])) := by
+  have top : nativeFrameBase sp 48 + 48 = sp.toNat := by
+    have := frame.lower; unfold nativeFrameBase; simp only [Vsa.Sim.DlHeap.heapEnd] at this; omega
+  rw [proLog_nat stack frame]
+  have e40 := word_log_last m [] [((nativeFrameBase sp 48) + 32, 8, R 8), ((nativeFrameBase sp 48) + 16, 8, R 18), ((nativeFrameBase sp 48) + 8, 8, R 19),
+    ((nativeFrameBase sp 48), 8, R 20), ((nativeFrameBase sp 48) + 24, 8, R 9)] ((nativeFrameBase sp 48) + 40) (R 1) (by simp [OutLRange] <;> omega)
+  have e32 := word_log_last m [((nativeFrameBase sp 48) + 40, 8, R 1)] [((nativeFrameBase sp 48) + 16, 8, R 18), ((nativeFrameBase sp 48) + 8, 8, R 19),
+    ((nativeFrameBase sp 48), 8, R 20), ((nativeFrameBase sp 48) + 24, 8, R 9)] ((nativeFrameBase sp 48) + 32) (R 8) (by simp [OutLRange] <;> omega)
+  have e16 := word_log_last m [((nativeFrameBase sp 48) + 40, 8, R 1), ((nativeFrameBase sp 48) + 32, 8, R 8)] [((nativeFrameBase sp 48) + 8, 8, R 19),
+    ((nativeFrameBase sp 48), 8, R 20), ((nativeFrameBase sp 48) + 24, 8, R 9)] ((nativeFrameBase sp 48) + 16) (R 18) (by simp [OutLRange] <;> omega)
+  have e8 := word_log_last m [((nativeFrameBase sp 48) + 40, 8, R 1), ((nativeFrameBase sp 48) + 32, 8, R 8), ((nativeFrameBase sp 48) + 16, 8, R 18)]
+    [((nativeFrameBase sp 48), 8, R 20), ((nativeFrameBase sp 48) + 24, 8, R 9)] ((nativeFrameBase sp 48) + 8) (R 19) (by simp [OutLRange] <;> omega)
+  have e0 := word_log_last m [((nativeFrameBase sp 48) + 40, 8, R 1), ((nativeFrameBase sp 48) + 32, 8, R 8), ((nativeFrameBase sp 48) + 16, 8, R 18), ((nativeFrameBase sp 48) + 8, 8, R 19)]
+    [((nativeFrameBase sp 48) + 24, 8, R 9)] (nativeFrameBase sp 48) (R 20) (by simp [OutLRange] <;> omega)
+  have e24 := word_log_last m [((nativeFrameBase sp 48) + 40, 8, R 1), ((nativeFrameBase sp 48) + 32, 8, R 8), ((nativeFrameBase sp 48) + 16, 8, R 18), ((nativeFrameBase sp 48) + 8, 8, R 19),
+    ((nativeFrameBase sp 48), 8, R 20)] [] ((nativeFrameBase sp 48) + 24) (R 9) trivial
+  simp only [List.cons_append, List.nil_append] at e40 e32 e16 e8 e0 e24
+  exact ⟨e40, e32, e24, e16, e8, e0⟩
+
+theorem bytesT_one (m : Std.ExtHashMap Nat (BitVec 8)) (x : Nat) : bytesT m x 1 = (m[x]?).getD 0 := by
+  simp only [bytesT]
+  change (0#0).append ((m[x]?).getD 0) = _
+  rw [BitVec.append]
+  simp
+
+/-- Every register parse_format may change. -/
+def parseWritten : List Nat := [1, 2, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 28]
+
+/-- **parse_format returned** to `ra`: the buffer holds the format string
+with the suffix `l` before its conversion character, then a NUL; the
+conversion character is in `a0`; callee-saved registers and `sp` are
+restored; memory outside the frame and the buffer is unchanged. -/
+structure ParseFormatPost (live : Nat → Prop) (ra sp : BitVec 64) (f buf n : Nat) (before after : Config) : Prop
+    extends LeafInput ra after where
+  libraryGood : VsaOk live after
+  globalPointer : ROHolds (vsaModel live) after roR []
+  pc : OCaml.Vm.pcOf after = some ra
+  result : gpr after 10 = some ((byte before (f + (n - 1))).setWidth 64)
+  prefixBytes : ∀ i, i + 1 < n → byte after (buf + i) = byte before (f + i)
+  suffixByte : byte after (buf + (n - 1)) = 0x6c#8
+  conversion : byte after (buf + n) = byte before (f + (n - 1))
+  nul : byte after (buf + n + 1) = 0#8
+  rest : ∀ a, (a + 1 ≤ nativeFrameBase sp 48 ∨ sp.toNat ≤ a) → (a < buf ∨ buf + n + 2 ≤ a) →
+    byte after a = byte before a
+  output : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
+  stack : gpr after 2 = some sp
+  restored : ∀ k ∈ [8, 9, 18, 19, 20], gpr after k = gpr before k
+  kept : ∀ k, 1 ≤ k → k ≤ 31 → k ∉ parseWritten → gpr after k = gpr before k
+
+/-- **`parse_format` as a call summary** (`"%d"`-like formats: no `l`/`L`/`n`
+modifier before the conversion). The buffer is the caller's, directly above
+parse_format's frame. -/
+theorem parse_format_call {live : Nat → Prop} {ra sp : BitVec 64} {f buf n : Nat} (c : Config)
+    (codeLive : ∀ p ∈ snpText, live p.1) (liveImage : ImageLive live)
+    (h : MeasureInput live ra sp f buf n c) (hb : BufferInput f buf n) (long : 2 ≤ n)
+    (above : sp.toNat ≤ buf) (prev : 34 < ((byte c (f + (n - 2))).toNat + 180) % 256) :
+    FnSummary 0x800103fc#64 (fun d => d = c) (ParseFormatPost live ra sp f buf n c) := by
+  have lower := h.geometry.lower
+  have top : nativeFrameBase sp 48 + 48 = sp.toNat := by
+    have := h.frame.lower; unfold nativeFrameBase; simp only [Vsa.Sim.DlHeap.heapEnd] at this; omega
+  have hR2 : entryRegs c 2 = sp := entry_value h.stack
+  apply summary_bind (measure c codeLive liveImage h) (fun _ d => d.pc)
+  intro d dm
+  -- outside the frame, the measured memory is the entry memory
+  have toC (x : Nat) (hx : x + 1 ≤ nativeFrameBase sp 48 ∨ sp.toNat ≤ x) : byte d x = byte c x := by
+    rw [StringLength.byte_getD, StringLength.byte_getD]
+    rw [show (d.σ.mem[x]?).getD 0 = ((writeLog c.σ.mem (proLog (entryRegs c) []))[x]?).getD 0 from dm.memory x]
+    rw [writeLog_out _ _ _ (by
+      rw [proLog_nat hR2 h.frame]; simp [OutL] <;> omega)]
+  have strC (i : Nat) (hi : i < n) : byte d (f + i) = byte c (f + i) := toC _ (by
+    rcases h.apart with b | b
+    · left; have := h.geometry.upper; omega
+    · right; omega)
+  apply summary_bind (copy c d codeLive liveImage dm hb) (fun _ e => e.pc)
+  intro e dc
+  apply summary_bind (append d e codeLive liveImage dc hb long (by rw [strC _ (by omega)]; exact prev))
+    (fun _ a => a.pc)
+  intro a da
+  have slotsC := proLog_slots hR2 h.frame c.σ.mem
+  have slotA (off : Nat) (bound : off + 8 ≤ 48) :
+      bytesT a.σ.mem (nativeFrameBase sp 48 + off) 8 =
+        bytesT (writeLog c.σ.mem (proLog (entryRegs c) [])) (nativeFrameBase sp 48 + off) 8 := by
+    apply Reloc.bytesT_congr
+    intro j hj
+    rw [bytesT_one, bytesT_one]
+    rw [← StringLength.byte_getD, da.rest _ (Or.inl (by omega)), StringLength.byte_getD]
+    exact dm.memory _
+  have slots : SavedSlots sp ra (entryRegs c 8) (entryRegs c 9) (entryRegs c 18) (entryRegs c 19)
+      (entryRegs c 20) a.σ.mem :=
+    ⟨by rw [slotA 40 (by decide), slotsC.ra]; exact entry_value h.raReg,
+      by rw [slotA 32 (by decide)]; exact slotsC.s0, by rw [slotA 24 (by decide)]; exact slotsC.s1,
+      by rw [slotA 16 (by decide)]; exact slotsC.s2, by rw [slotA 8 (by decide)]; exact slotsC.s3,
+      by simpa using (slotA 0 (by decide)).trans slotsC.s4⟩
+  apply (finish d e a da hb long h.frame above slots h.aligned).weaken (fun _ eq => eq)
+  intro after fin
+  have present (k : Nat) (lo : 1 ≤ k) (hi : k ≤ 31) : gpr c k = some (entryRegs c k) :=
+    gpr_getD (h.libraryGood.gpr k lo hi)
+  have keptAll (k : Nat) (lo : 1 ≤ k) (hi : k ≤ 31) (out : k ∉ parseWritten) : gpr after k = gpr c k := by
+    simp only [parseWritten, List.mem_cons, List.not_mem_nil, or_false, not_or] at out
+    rw [fin.kept k lo hi (by simp [finishWritten]; omega), da.kept k lo hi (by simp [appendWritten]; omega),
+      dc.kept k lo hi (by simp [copyWritten]; omega), dm.kept k lo hi (by simp [measureWritten]; omega)]
+  refine ⟨fin.toLeafInput, fin.libraryGood, fin.globalPointer, fin.pc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+    keptAll⟩
+  · rw [fin.result, strC _ (by omega)]
+  · intro i hi
+    rw [fin.rest _ (Or.inl (by omega)), da.prefixBytes i hi, strC i (by omega)]
+  · rw [fin.rest _ (Or.inl (by omega)), da.suffixByte]
+  · rw [fin.conversion, strC _ (by omega)]
+  · exact fin.nul
+  · intro x frameOut bufOut
+    rw [fin.rest _ (by omega), da.rest _ (by omega), toC x frameOut]
+  · exact fin.output.trans (da.output.trans (dc.output.trans dm.output))
+  · exact fin.stack
+  · intro k hk
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hk
+    rcases hk with rfl | rfl | rfl | rfl | rfl
+    · rw [fin.savedS0, present 8 (by decide) (by decide)]
+    · rw [fin.savedS1, present 9 (by decide) (by decide)]
+    · rw [fin.savedS2, present 18 (by decide) (by decide)]
+    · rw [fin.savedS3, present 19 (by decide) (by decide)]
+    · rw [fin.savedS4, present 20 (by decide) (by decide)]
 
 end OCaml.Vm.Primitives.Format.ParseFormat
