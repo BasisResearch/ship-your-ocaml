@@ -1,5 +1,6 @@
 import OCaml.Vm.Primitives.LibraryStrlen
 import VsaIris.Vsa.SnpMove
+import VsaIris.Vsa.LibraryStdioFoot
 
 /-!
 # newlib `memmove` as a machine summary
@@ -68,5 +69,111 @@ theorem memmove_summary {live Dt DA s dst n} (d src len : Nat) (g : Nat → BitV
         (MemmoveResult (snpS s dst n) R Mt d src len g) c) :=
   symbolic_summary c separate input
     (memmove_symbolic codeLive d src len g R Mt geometry destination source length aligned window)
+
+/-! ## The ABI wrapper -/
+
+/-- The snprintf context with an empty stack window and the destination as
+the owned window: only the stdio footprint and `[d, d + len)`. -/
+abbrev moveOwned (d len : Nat) : Nat → Prop := snpS 0 d len
+
+/-- memmove's library code lies in `.text`, below `.rodata`. -/
+theorem snpText_below : ∀ p ∈ snpText, p.1 < 0x80053180 := by
+  apply forall_piecesText (P := fun a _ => a < 0x80053180)
+  intro q hq a ha
+  simp only [snpPieces, List.mem_singleton] at hq
+  subst hq
+  obtain ⟨r, hr, -, high⟩ := inRangesB_iff.1 ha
+  have bounds : ∀ r ∈ snpCodeRanges, r.2 ≤ 0x80053180 := by decide
+  have := bounds r hr
+  omega
+
+/-- Every stdio-footprint byte lies at or above `0x800643a0`. -/
+theorem stdioFoot_low {a : Nat} (h : VsaIris.Stdio.stdioFoot a) : 0x800643a0 ≤ a := by
+  simp only [VsaIris.Stdio.stdioFoot, VsaIris.Stdio.InRange] at h
+  omega
+
+/-- The owned window misses the program image. -/
+theorem moveOwned_image {d len : Nat} (low : 0x80063b90 ≤ d) : ImageSeparate (moveOwned d len) := by
+  constructor <;> intro i hi owned <;>
+    simp only [moveOwned, snpS, snpNeed, Image.textBase, Image.textSize, Image.rodataBase,
+      Image.rodataSize] at hi owned <;>
+    rcases owned with ⟨foot, -⟩ | ⟨lo, hi'⟩ | ⟨lo, hi'⟩ <;>
+    first | (have := stdioFoot_low foot; omega) | omega
+
+/-- **memmove at a caller's registers.** -/
+structure MemmoveCallPost (live : Nat → Prop) (ra : BitVec 64) (d src len : Nat)
+    (before after : Config) : Prop extends LeafInput ra after where
+  libraryGood : VsaOk live after
+  pc : OCaml.Vm.pcOf after = some ra
+  result : gpr after 10 = some (BitVec.ofNat 64 d)
+  copied : ∀ i, i < len → byte after (d + i) = byte before (src + i)
+  kept : ∀ a, a < d ∨ d + len ≤ a → byte after a = byte before a
+  output : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
+  registers : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ memmoveScratch → n ∉ [10] → gpr after n = gpr before n
+
+/-- **memmove from any caller**: the source is read in the caller's memory
+(`DA` = its addresses), the destination is the only owned window. -/
+theorem memmove_call {live : Nat → Prop} {d src len : Nat} {ra : BitVec 64} (c : Config)
+    (codeLive : ∀ p ∈ snpText, live p.1)
+    (geometry : MoveGeom 0 d len d src len)
+    (sourceOut : ∀ a, src ≤ a → a < src + len → ¬ VsaIris.Stdio.stdioFoot a)
+    (good : VsaOk live c) (image : ExecutableImage c) (liveImage : ImageLive live)
+    (readOnly : ROHolds (vsaModel live) c roR (snpText ++ dataOf c.σ.mem (List.range' src len)))
+    (destination : gpr c 10 = some (BitVec.ofNat 64 d)) (source : gpr c 11 = some (BitVec.ofNat 64 src))
+    (length : gpr c 12 = some (BitVec.ofNat 64 len)) (returnAddress : gpr c 1 = some ra)
+    (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x80042644#64 (fun e => e = c) (MemmoveCallPost live ra d src len c) := by
+  let R := (vsaModel live).reg c
+  have ret : R 1 = ra := by change (gpr c 1).getD 0 = ra; rw [returnAddress]; rfl
+  have dst : R 10 = BitVec.ofNat 64 d := by change (gpr c 10).getD 0 = _; rw [destination]; rfl
+  have srcR : R 11 = BitVec.ofNat 64 src := by change (gpr c 11).getD 0 = _; rw [source]; rfl
+  have lenR : R 12 = BitVec.ofNat 64 len := by change (gpr c 12).getD 0 = _; rw [length]; rfl
+  have align : (R 1).toNat % 4 = 0 := by rw [ret]; exact aligned
+  have dLow := geometry.d_lo
+  have disj := geometry.disj
+  have window : ReadWin c.σ.mem (List.range' src len) (moveOwned d len) c.σ.mem src (src + len)
+      (imgM c.σ.mem) := fun a lo hi => .inl ⟨List.mem_range'_1.2 ⟨lo, by omega⟩, rfl⟩
+  have input : SymbolicInput live (snpText ++ dataOf c.σ.mem (List.range' src len)) nRegs
+      (moveOwned d len) R c.σ.mem c :=
+    ⟨good, readOnly, fun _ _ _ => rfl, fun _ _ => rfl⟩
+  have separate : LocalSeparation roR (snpText ++ dataOf c.σ.mem (List.range' src len)) nRegs
+      (moveOwned d len) := by
+    refine ⟨by decide, fun p hp owned => ?_⟩
+    rcases List.mem_append.1 hp with code | data
+    · have := snpText_below p code
+      rcases owned with ⟨foot, -⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩
+      · have := stdioFoot_low foot; omega
+      · simp only [snpNeed] at lo hi; omega
+      · omega
+    · obtain ⟨a, ha, rfl⟩ := List.mem_map.1 data
+      have inside := List.mem_range'_1.1 ha
+      rcases owned with ⟨foot, -⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩
+      · exact sourceOut a inside.1 (by omega) foot
+      · simp only [snpNeed] at lo hi; omega
+      · dsimp only at lo hi; omega
+  apply (memmove_summary d src len (imgM c.σ.mem) R c.σ.mem c codeLive geometry
+    dst srcR lenR align window separate input).weaken
+    (fun _ h => h)
+  intro after post
+  have memory : ∀ a, a < d ∨ d + len ≤ a → (vsaModel live).mem after a = (vsaModel live).mem c a := by
+    intro a out
+    by_cases owned : moveOwned d len a
+    · exact post.result.rest a owned out
+    · exact post.memory a owned
+  have leafImage := image_local image post.good liveImage (moveOwned_image dLow) post.memory
+  refine ⟨⟨post.good.good, leafImage, post.good.good.minstret,
+      library_gpr post.good (by decide) (by decide)
+        ((post.result.registers 1 (by decide) (by decide) (by decide)).trans ret),
+      aligned, post.good.tick⟩,
+    post.good, library_pc post.good (post.result.pc.trans ret),
+    library_gpr post.good (by decide) (by decide) (post.result.result.trans dst),
+    fun i hi => by rw [byte_total, byte_total]; exact post.result.copied i hi,
+    fun a out => by rw [byte_total, byte_total]; exact memory a out,
+    post.output, ?_⟩
+  intro n lower upper scratch notResult
+  apply library_register_frame good post.good lower upper
+  by_cases owned : n ∈ nRegs
+  · exact post.result.registers n owned (by change n ≠ 32; omega) scratch
+  · exact post.registers n owned
 
 end OCaml.Vm.Primitives
