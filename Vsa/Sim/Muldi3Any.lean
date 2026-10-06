@@ -141,10 +141,10 @@ def muldi3_pre_any (g : (R : Register) → Option (RegisterType R)) (x y r : Bit
     (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (c : Config) : Prop :=
   (∃ a2 a3, St0 g (0x80037234#64) x y r a2 a3 m0 o c) ∧ r.toNat % 4 = 0
 
-/-- **`__muldi3` without scratch-register presence at entry.** -/
-theorem muldi3_spec_any (g : (R : Register) → Option (RegisterType R)) (x y r : BitVec 64)
+/-- `__muldi3` from any scratch-register state to its `ret` at `0x60`. -/
+theorem muldi3_done_any (g : (R : Register) → Option (RegisterType R)) (x y r : BitVec 64)
     (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) :
-    Triple (muldi3_pre_any g x y r m0 o) (muldi3_post g x y r m0 o) := by
+    Triple (muldi3_pre_any g x y r m0 o) (fun c => AtDone g x y r m0 o c ∧ r.toNat % 4 = 0) := by
   -- entry to the first `AtDone` or `AtHead`, through the first iteration
   have hfirst : Triple (muldi3_pre_any g x y r m0 o)
       (fun c => (AtDone g x y r m0 o c ∨ LoopI g x y r m0 o c) ∧ r.toNat % 4 = 0) := by
@@ -176,12 +176,56 @@ theorem muldi3_spec_any (g : (R : Register) → Option (RegisterType R)) (x y r 
     · exact ⟨c, .refl c, hDone, halign⟩
     · obtain ⟨c', hs, hDone⟩ := loop_to_done g x y r m0 o c hLoop
       exact ⟨c', hs, hDone, halign⟩
+  exact hfirst.seq hdone
+
+/-- **`__muldi3` without scratch-register presence at entry.** -/
+theorem muldi3_spec_any (g : (R : Register) → Option (RegisterType R)) (x y r : BitVec 64)
+    (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) :
+    Triple (muldi3_pre_any g x y r m0 o) (muldi3_post g x y r m0 o) := by
   have hret : Triple (fun c => AtDone g x y r m0 o c ∧ r.toNat % 4 = 0) (muldi3_post g x y r m0 o) := by
     intro c hc
     obtain ⟨⟨a1, a2, a3, hSt⟩, halign⟩ := hc
     obtain ⟨c', hs, hG, hmem, hout, hpc, ha0, ha1, ha2, hra, htick, hframe⟩ :=
       tr_60_ret g x y r (x*y) a1 a2 a3 m0 o halign c hSt
     exact ⟨c', hs, hG, hmem, hout, hpc, ha0, hra, htick, hframe⟩
-  exact (hfirst.seq hdone).seq hret
+  exact (muldi3_done_any g x y r m0 o).seq hret
+
+/-- The scratch registers `__muldi3` writes stay present after it returns. -/
+def Muldi3Scratch (c : Config) : Prop :=
+  ∃ a1 a2 a3 : BitVec 64, c.σ.regs.get? Register.x11 = some a1 ∧ c.σ.regs.get? Register.x12 = some a2 ∧
+    c.σ.regs.get? Register.x13 = some a3
+
+/-- `muldi3_spec_any` that also keeps the scratch registers present (callers
+that carry a full register file, e.g. allocator readiness, need it). -/
+theorem muldi3_spec_present (g : (R : Register) → Option (RegisterType R)) (x y r : BitVec 64)
+    (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) :
+    Triple (muldi3_pre_any g x y r m0 o) (fun c => muldi3_post g x y r m0 o c ∧ Muldi3Scratch c) := by
+  have hret : Triple (fun c => AtDone g x y r m0 o c ∧ r.toNat % 4 = 0)
+      (fun c => muldi3_post g x y r m0 o c ∧ Muldi3Scratch c) := by
+    intro c hc
+    obtain ⟨⟨a1, a2, a3, hSt⟩, halign⟩ := hc
+    obtain ⟨vmi, hmi⟩ := hSt.minstret
+    have htgt : (BitVec.update (r + sign_extend (m := 64) (0x000#12)) 0 0#1).toNat % 4 = 0 := by
+      rw [ret_tgt r halign]; exact halign
+    obtain ⟨σ', i', hstep, hi', hG', hmem', hobs⟩ :=
+      site_80037254 c.σ c.tick c.steps (0x80037254#64) vmi r
+        hSt.good hSt.pc hmi hSt.ra hSt.loaded rfl htgt hSt.tick
+    have other (R : Register) {w : RegisterType R} (h : c.σ.regs.get? R = some w)
+        (h1 : (Register.mcycle == R) = false) (h2 : (Register.mtime == R) = false)
+        (h3 : (Register.mip == R) = false) (h4 : (Register.minstret == R) = false)
+        (h5 : (Register.PC == R) = false) (h6 : (Register.nextPC == R) = false)
+        (h7 : (Register.minstret_increment == R) = false) : σ'.regs.get? R = some w :=
+      obs_jr_other hobs R h1 h2 h3 h4 h5 h6 h7 h
+    refine ⟨⟨σ', i', c.steps + 1⟩, Steps.single (by cases c; exact hstep), ⟨hG', by rw [hmem']; exact hSt.mem,
+      by rw [hobs.out]; exact hSt.sailOut, ?_,
+      other _ hSt.a0 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide),
+      other _ hSt.ra (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide),
+      hi', fun R hR => (frame_jr_m hobs R hR).trans (hSt.hframe R hR)⟩,
+      a1, a2, a3,
+      other _ hSt.a1 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide),
+      other _ hSt.a2 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide),
+      other _ hSt.a3 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)⟩
+    rw [obs_jr_pc hobs, ret_tgt r halign]
+  exact (muldi3_done_any g x y r m0 o).seq hret
 
 end Vsa.Sim

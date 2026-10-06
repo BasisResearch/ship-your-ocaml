@@ -174,4 +174,12 @@ theorem registers (s1 a0 s0 sp : BitVec 64) (b1 b2 b3 b4 b5 : List (BitVec 8)) :
   simp only [blocks, loads, regs, evalBlocks, evalBlock, SegEvalState.init, block0_regs, block0_loads, block0_log]
 theorem written : ∀ n ∈ wrChain blocks, n ∈ [1, 2, 8, 9, 18, 19] := by decide
 
+/-- The `ret` target. -/
+theorem endpoint (s1 a0 s0 sp : BitVec 64) (b1 b2 b3 b4 b5 : List (BitVec 8)) (control : ((bytesVal .ld b1)).toNat % 4 = 0) :
+    evalBlocksPC pc (SegEvalState.init (regs s1 a0 s0 sp) (loads b1 b2 b3 b4 b5)) blocks = (bytesVal .ld b1) := by
+  change Sail.BitVec.update (srcVal 1 (runGM block0.body (state0 s1 a0 s0 sp) [b1, b2, b3, b4, b5]) +
+    Functions.sign_extend (m := 64) (0#12)) 0 0#1 = _
+  rw [block0_regs s1 a0 s0 sp b1 b2 b3 b4 b5 []]
+  rw [show srcVal 1 (state1 s1 a0 s0 sp (bytesVal .ld b1) (bytesVal .ld b2) (bytesVal .ld b3) (bytesVal .ld b4) (bytesVal .ld b5)) = (bytesVal .ld b1) from rfl, ret_tgt _ control]
+
 end OCaml.Vm.Gc.ReallocReturn

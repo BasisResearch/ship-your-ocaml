@@ -193,6 +193,8 @@ import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.NurseryTransport
 import OCaml.Vm.Gc.G1Reserve
 import OCaml.Vm.Gc.ModifyInsert
+import OCaml.Vm.Gc.Generated.ReallocAllocCall
+import OCaml.Vm.Gc.ReallocCallee
 import OCaml.Vm.Gc.Generated.ReallocEntry
 import OCaml.Vm.Gc.Generated.ReallocInstall
 import OCaml.Vm.Gc.Generated.ReallocLimit
@@ -457,6 +459,20 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.ModifyInsert.run
 #print axioms OCaml.Vm.Gc.ModifyInsert.log
 #print axioms OCaml.Vm.Gc.ModifyInsert.registers
+#print axioms OCaml.Vm.Gc.Realloc.realloc_run
+#print axioms OCaml.Vm.Gc.Realloc.prefix_run
+#print axioms OCaml.Vm.Gc.Realloc.entry_step
+#print axioms OCaml.Vm.Gc.Realloc.install_step
+#print axioms OCaml.Vm.Gc.Realloc.limit_step
+#print axioms OCaml.Vm.Gc.Realloc.return_step
+#print axioms OCaml.Vm.Gc.ready_call
+#print axioms OCaml.Vm.Gc.ready_muldi3
+#print axioms OCaml.Vm.Sim.muldi3_registers
+#print axioms Vsa.Sim.muldi3_spec_present
+#print axioms OCaml.Vm.Gc.lpins8_stepMemM_keep
+#print axioms OCaml.Vm.Gc.lpins8_stepMemM_apart
+#print axioms OCaml.Vm.Gc.ReallocReturn.endpoint
+#print axioms OCaml.Vm.Gc.ReallocAllocCall.call_pins
 #print axioms OCaml.Vm.Gc.ReallocEntry.run
 #print axioms OCaml.Vm.Gc.ReallocEntry.log
 #print axioms OCaml.Vm.Gc.ReallocEntry.registers

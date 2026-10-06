@@ -192,6 +192,25 @@ runtime invariant: the long pole for whileMin's `Halts`.
   `ReallocInstall` (977cF → 9784T → 9790, to 97a4), `ReallocLimit` (97a8, to
   97c0) and `ReallocReturn` (97c4, ret). Next: splice them with
   `call_summary` + `muldi3_summary` (×3) and `stat_alloc_ready` (HeapReady).
+- **The realloc callee is proved** (`OCaml/Vm/Gc/ReallocCallee.lean:realloc_run`):
+  `caml_realloc_ref_table` on an unallocated table (`base == NULL`), entry to
+  `ret`, from `Entry` (a0-boot's `RuntimeReady H (capacity + charge)`, a
+  `NativeFrame sp (64 + allocHeadroom)`, the table a live 56-byte block, its
+  `base` word 0, `minor_heap_wsz`). `Done` names the fresh block `p`,
+  `RuntimeReady ((p, request) :: H)`, the restored s0–s3/sp/ra and all seven
+  table fields (base = ptr = p, threshold = limit = p + 8·size, end =
+  p + 8·(size + 256), size = wsz/8, reserve = 256). Pieces:
+  `ReallocPrefix.lean` (entry chain, `__muldi3`, `stat_alloc_ready`),
+  `ReallocSuffix.lean` (install, limit, return, under `window_log`),
+  `ReadyCalls.lean` (`ready_call`, `ready_muldi3`: any direct call / any
+  `__muldi3` site under readiness), `Muldi3.lean:muldi3_registers` (the
+  libgcc multiply as a `RegistersPost`, scratch registers present via
+  `Muldi3Any.muldi3_spec_present`). `gen_chain.py` now also emits the `jal`
+  `CallInstr` a chain parks at and the `ret` endpoint of a single-block chain.
+  Open for whileMin's barrier: the memory frame of the callee (kept bytes for
+  `f1Runtime`, via `ignoredStatics`) and the ModifySlow → callee →
+  ModifyInsert splice with `Entry` from the F1 invariant (needs HeapReady in
+  `F1Pins` and VsaOk at the interpreter state).
 - `F1Runtime.ignoredStatics` (a1-prims request): `_impure_data._errno`,
   `oo_last_id`, `caml_callback_depth` and `errno` are carved out of
   `keptFootprint`; `f1_ignoredStatic : WindowStable f1Runtime ignoredStatics`.
