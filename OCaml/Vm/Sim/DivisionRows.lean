@@ -1,6 +1,7 @@
 import OCaml.Vm.Sim.DivisionZeroCaught
 import OCaml.Vm.Sim.RaiseRows
 import OCaml.Vm.Sim.IntRows
+import OCaml.Vm.Sim.LongjmpState
 
 /-!
 # The DIVINT/MODINT zero-divisor row (in progress)
@@ -285,5 +286,154 @@ theorem raise_zero_setup_memory {P : Prog} {s : St} {pl : Place} {c : Config} {e
     rcases ha with rfl | rfl <;>
       simp only [Layout.sym_bss_end, Vsa.Sim.DlHeap.heapEnd, Layout.sym_caml_global_data] at hh fb glob bss ⊢ <;>
       omega
+
+/-! ## The interpreter's jump buffer -/
+
+/-- The jump buffer's address (`raise_buf`, in the interpreter frame). -/
+def raiseBuffer (D : InvocationData) : Nat := D.nativeSp + raiseBufOffset
+
+/-- The saved words of the jump buffer. -/
+def raiseSaved (D : InvocationData) (c : Config) : Nat → BitVec 64 :=
+  fun r => word c (raiseBuffer D + Layout.jumpSaveOffset r)
+
+/-- **The jump buffer is a readable saved frame**, returning to
+`caml_interprete`'s resume point with the interpreter's native stack. -/
+theorem NativeValid.jumpFrame {D : InvocationData} {c : Config} (v : NativeValid D) (inv : Invocation D c) :
+    JumpSavedFrame (raiseBuffer D) (raiseSaved D c) c ∧ raiseSaved D c 1 = 0x80001e80#64 ∧
+      raiseSaved D c 2 = BitVec.ofNat 64 D.nativeSp := by
+  have hl := v.low
+  have hh := v.high
+  refine ⟨⟨fun _ _ => rfl, fun r hr => ?_⟩, v.jumpRa c inv, v.jumpSp c inv⟩
+  have off : Layout.jumpSaveOffset r ≤ 104 := by
+    simp only [Layout.jumpSavedRegs, List.mem_cons, List.not_mem_nil, or_false] at hr
+    rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+  simp only [raiseBuffer, raiseBufOffset, Vsa.Sim.DlHeap.heapEnd, Layout.sym_stack_top,
+    Layout.interpFrameBytes, Layout.camlMainFrameBytes] at *
+  refine ⟨?_, ?_, Or.inr ?_⟩ <;> first | omega | (simp only [Layout.sym_tohost]; omega)
+
+/-! ## The runtime's raise memory -/
+
+/-- **Runtime facts of the C raise path** (named obligation): the disabled
+channel-unlock hook and quiet pending flag (a6-gc's F1 runtime pins and
+`RuntimeFrame.quiet`), `Caml_state->external_raise` pointing at the
+interpreter's jump buffer (a1-arms' `Invocation.raiseBuf`), and an ordinary
+(non-exception-result) exception word. -/
+structure RaiseRuntimeReady (c : Config) (D : InvocationData) (value : BitVec 64) : Prop where
+  hook : word c Layout.sym_caml_channel_mutex_unlock_exn = 0#64
+  pending : word32 c Layout.sym_caml_something_to_do = 0#32
+  externalWord : word c (raiseExternal (word c Layout.sym_Caml_state)).toNat = BitVec.ofNat 64 (raiseBuffer D)
+  ordinary : value &&& 3#64 ≠ 2#64
+
+/-- A `Caml_state` field address without wraparound. -/
+theorem domain_field_nat {P s c pl cp high} (g : ArmGeometry P s c pl cp high) {off : Nat}
+    (fits : off + 8 ≤ Layout.domainStateBytes) :
+    (word c Layout.sym_Caml_state + BitVec.ofNat 64 off).toNat = (word c Layout.sym_Caml_state).toNat + off := by
+  have hh := g.nursery.domainHigh
+  simp only [BitVec.toNat_add, BitVec.toNat_ofNat]
+  simp only [Layout.domainStateBytes] at hh fits
+  omega
+
+/-- **`caml_raise`'s native memory**: its frames lie in the native scratch
+window, the exception bucket in the `Caml_state` record, and the jump buffer
+in the interpreter frame; all apart. -/
+theorem raise_native_memory {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {high : Nat}
+    {D : InvocationData} {value : BitVec 64} (v : NativeValid D) (inv : Invocation D c)
+    (g : ArmGeometry P s c pl cp high) (rr : RaiseRuntimeReady c D value) :
+    RaiseNativeMemory (raiseZeroStack (BitVec.ofNat 64 D.nativeSp)) 0x8000d1f8#64
+      (word c Layout.sym_Caml_state) value (raiseBuffer D) (raiseSaved D c) c := by
+  obtain ⟨jump, ra, -⟩ := v.jumpFrame inv
+  have hh := v.headroom
+  have ht := v.high
+  have small : D.nativeSp < 2 ^ 64 := by simp only [Layout.sym_stack_top] at ht; omega
+  have le : 160 ≤ D.nativeSp := by simp only [nativeHeadroom, Vsa.Sim.DlHeap.heapEnd] at hh; omega
+  have hda := g.domainArena
+  have hdl := g.domainLow
+  have hal := g.domainAligned
+  have ext := domain_field_nat g (off := Layout.off_external_raise) (by decide)
+  have bkt := domain_field_nat g (off := Layout.off_exn_bucket) (by decide)
+  have rtN : (raiseRuntimeRa (raiseZeroStack (BitVec.ofNat 64 D.nativeSp))).toNat = D.nativeSp - 24 := by
+    rw [raiseRuntimeRa_at (by omega) small, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have prN : (pendingRootRa (raiseRuntimeStack (raiseZeroStack (BitVec.ofNat 64 D.nativeSp)))).toNat = D.nativeSp - 56 := by
+    rw [pendingRootRa_at le small, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have pvN : (pendingRootValue (raiseRuntimeStack (raiseZeroStack (BitVec.ofNat 64 D.nativeSp)))).toNat = D.nativeSp - 136 := by
+    rw [pendingRootValue_at le small, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have bss : Layout.sym_bss_end ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+  have statics : Layout.sym_caml_something_to_do + 8 ≤ Layout.sym_bss_end ∧
+      Layout.sym_Caml_state + 8 ≤ Layout.sym_bss_end := by decide
+  have bufN : (BitVec.ofNat 64 (raiseBuffer D)).toNat = raiseBuffer D := by
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by
+      simp only [raiseBuffer, raiseBufOffset, Layout.sym_stack_top, Layout.interpFrameBytes,
+        Layout.camlMainFrameBytes] at ht ⊢; omega)]
+  have offs : ∀ r ∈ Layout.jumpSavedRegs, Layout.jumpSaveOffset r ≤ 104 := by decide
+  refine ⟨⟨rr.hook, ?_, ?_⟩, ⟨rr.pending, ?_, ?_, ?_, ?_, ?_⟩,
+    ⟨rr.ordinary, rfl, ?_, rr.externalWord, ?_, ?_, ?_⟩, ⟨jump, ?_, ?_⟩, ?_, ?_⟩
+  -- prologue
+  · rw [raiseRuntimeRa_at (by omega) small]
+    exact v.scratch_write (k := 24) (by decide) (by decide) (by decide)
+  · apply ImageOutside.of_above
+    intro e he
+    simp only [raiseRuntimeLog, List.mem_singleton] at he
+    subst he
+    dsimp only; rw [rtN]
+    simp only [nativeHeadroom, Layout.sym_bss_end, Vsa.Sim.DlHeap.heapEnd] at hh bss ⊢; omega
+  -- pending
+  · simp only [raiseRuntimeLog, OutLRange, rtN, and_true]
+    simp only [nativeHeadroom, Layout.sym_bss_end, Vsa.Sim.DlHeap.heapEnd, Layout.sym_caml_something_to_do] at hh bss statics ⊢
+    omega
+  · rw [pendingRootRa_at le small]
+    exact v.scratch_write (k := 56) (by decide) (by decide) (by decide)
+  · rw [pendingRootValue_at le small]
+    exact v.scratch_write (k := 136) (by decide) (by decide) (by decide)
+  · simp only [OutLRange, prN, pvN, and_true]; omega
+  · apply ImageOutside.of_above
+    intro e he
+    simp only [pendingRootLog, List.mem_cons, List.not_mem_nil, or_false] at he
+    simp only [nativeHeadroom, Layout.sym_bss_end, Vsa.Sim.DlHeap.heapEnd] at hh bss
+    rcases he with rfl | rfl
+    · dsimp only; rw [prN]; simp only [Layout.sym_bss_end]; omega
+    · dsimp only; rw [pvN]; simp only [Layout.sym_bss_end]; omega
+  -- publish
+  · have w := g.nursery.domain_write (off := Layout.off_external_raise) (by decide) (by decide)
+    have rd := w.read.window
+    simpa only [raiseExternal] using (show BitVec.ofNat 64 ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) =
+        word c Layout.sym_Caml_state + BitVec.ofNat 64 Layout.off_external_raise from by
+      apply BitVec.eq_of_toNat_eq; rw [ext, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by have := w.upper; omega)]) ▸ rd
+  · intro zero
+    have := congrArg BitVec.toNat zero
+    rw [bufN] at this
+    simp only [BitVec.toNat_ofNat, raiseBuffer, raiseBufOffset] at this; omega
+  · have w := g.nursery.domain_write (off := Layout.off_exn_bucket) (by decide) (by decide)
+    refine ⟨?_, ?_, ?_, ?_⟩ <;> simp only [raiseBucket, bkt] <;> first | exact w.lower | exact w.upper | exact w.htif | exact w.aligned
+  · apply ImageOutside.of_above
+    intro e he
+    simp only [raiseBucketLog, List.mem_singleton] at he
+    subst he
+    dsimp only; rw [raiseBucket, bkt]; omega
+  -- jump
+  · intro r hr
+    have o := offs r hr
+    simp only [raiseBucketLog, OutLRange, raiseBucket, bkt, and_true]
+    simp only [raiseBuffer, raiseBufOffset, nativeHeadroom, Vsa.Sim.DlHeap.heapEnd, Layout.domainStateBytes,
+      Layout.off_exn_bucket] at *
+    omega
+  · rw [ra]; decide
+  -- runtimeOutside, savedOutside
+  · intro a ha
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at ha
+    simp only [raisePendingLog, raiseRuntimeLog, pendingRootLog, List.cons_append, List.nil_append,
+      OutLRange, rtN, prN, pvN, and_true]
+    rcases ha with rfl | rfl
+    · simp only [nativeHeadroom, Vsa.Sim.DlHeap.heapEnd, Layout.sym_bss_end, Layout.sym_Caml_state]
+        at hh bss statics ⊢
+      omega
+    · rw [raiseExternal, ext]
+      simp only [nativeHeadroom, Vsa.Sim.DlHeap.heapEnd, Layout.domainStateBytes, Layout.off_external_raise]
+        at hh hda ⊢
+      omega
+  · intro r hr
+    have o := offs r hr
+    simp only [raisePendingLog, raiseRuntimeLog, pendingRootLog, List.cons_append, List.nil_append,
+      OutLRange, rtN, prN, pvN, and_true, raiseBuffer, raiseBufOffset]
+    omega
 
 end OCaml.Vm.Sim
