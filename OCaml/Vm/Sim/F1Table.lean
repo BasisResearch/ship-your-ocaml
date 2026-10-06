@@ -2,6 +2,7 @@ import OCaml.Vm.Sim.A2TableRows
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.BarrierRows
 import OCaml.Vm.Sim.CcallRows
+import OCaml.Vm.Sim.ClosureAllocRows
 import OCaml.Vm.Sim.ControlRows
 import OCaml.Vm.Sim.EntryF1
 import OCaml.Vm.Sim.F1Frame
@@ -35,7 +36,7 @@ theorem g1_capacity : StackCapacity Gc.g1Budget := by unfold StackCapacity; deci
 opcodes that use it, and the rows still open. -/
 structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   extra : (keep .RETURN || keep .GRAB || keep .RAISE || keep .RERAISE || keep .RAISE_NOTRACE) = true → ExtraBounded P
-  row_CLOSURE : (keep .CLOSURE) = true → OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .CLOSURE
+  closure_sizes : (keep .CLOSURE) = true → ClosureSizes P
   row_CLOSUREREC : (keep .CLOSUREREC) = true → OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .CLOSUREREC
   setglobal_barrier : (keep .SETGLOBAL) = true → GlobalBarrier Gc.f1Layout P
   row_MAKEBLOCK : (keep .MAKEBLOCK) = true → OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .MAKEBLOCK
@@ -161,7 +162,7 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .GRAB, _ => if h : keep .GRAB = true then grab_row f1_memoryStable f1_allocFrame fits g1_capacity f1_budgetSmall (pre.extra (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .CLOSURE, _ => if h : keep .CLOSURE = true then pre.row_CLOSURE (by simp [h])
+    | .CLOSURE, _ => if h : keep .CLOSURE = true then closure_row f1_runtimeFrame f1_allocFrame fits g1_capacity (pre.closure_sizes (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .CLOSUREREC, _ => if h : keep .CLOSUREREC = true then pre.row_CLOSUREREC (by simp [h])
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)

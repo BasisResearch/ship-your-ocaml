@@ -134,4 +134,92 @@ theorem ClosureAllocInput.of_input {L : OCaml.Layout} {P : Prog} {s : St} {op : 
       rwa [e]
   · omega
 
+/-- **Every reachable CLOSURE captures at most 254 values** (named per-program
+code fact: the closure then fits the minor heap's size limit). -/
+structure ClosureSizes (P : Prog) : Prop where
+  small : ∀ s (w : BitVec 32), Reach P s → DispatchCode P s .CLOSURE → P.code[s.pc + 1]? = some w →
+    w.toInt.toNat ≤ 254
+
+/-- A continuing CLOSURE had its captures and a valid target. -/
+theorem closure_shape {P : Prog} {s s' : St} {nv ofs : Int} (step : stepI P s ⟨.CLOSURE, [nv, ofs]⟩ = .next s') :
+    0 ≤ nv ∧ nv.toNat - 1 ≤ s.stack.length ∧ ∃ dest, target s.pc 1 ofs = some dest := by
+  have neg : ¬ nv < 0 := Res.guard_ok step
+  simp only [stepI] at step
+  by_cases pos : 0 < nv.toNat
+  · simp [neg, pos] at step
+    split at step
+    · simp at step
+    · rename_i enough
+      cases hj : target s.pc 1 ofs with
+      | none => simp [hj, opt] at step
+      | some dest => exact ⟨by omega, by omega, dest, rfl⟩
+  · simp [neg, pos] at step
+    split at step
+    · simp at step
+    · cases hj : target s.pc 1 ofs with
+      | none => simp [hj, opt] at step
+      | some dest => exact ⟨by omega, by omega, dest, rfl⟩
+
+/-- **The CLOSURE row.** -/
+theorem closure_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0)
+    (allocFrame : AllocFrame L) (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
+    (sizes : ClosureSizes P) : OCaml.OpArm P (OCaml.LoopAt L P) .CLOSURE :=
+  opArm_of_next2 (fun s s' c n o reach reach' h code fetchN fetchO step => by
+      obtain ⟨nonnegative, bound, dest, jump⟩ := closure_shape step
+      have state := closure_state_of_step bound jump step
+      have young := sizes.small s n reach code fetchN
+      have budget := (fits s' reach').2
+      rw [← state] at budget
+      simp only [closureState, Heap.words_alloc, closureObject_wosize (dest := dest) bound] at budget
+      have space := stack_fits fits capacity reach (k := 1)
+      obtain ⟨pl0, cp, sp, high, input0⟩ := ArmInput.of_loop h code
+      have reserve : Reservation L s c (n.toInt.toNat + 2) := ⟨input0.geometry.room, by omega⟩
+      have b := ReservedBlock.of_reservation input0.geometry.nursery reserve
+      have input := input0.put (alloc_absent s.heap (closureObject s n.toInt.toNat dest)) b.aligned
+      obtain ⟨accu, -, value⟩ := input.accu
+      have alloc := ClosureAllocInput.of_input (accu := accu) input b put_self bound young space
+      -- the runtime invariant across the push and the reservation
+      have sg := input.geometry.toStackGeometry
+      have hs := input.stack.1
+      have stat := sg.statics
+      have same : high = high0 := input.stackHigh.symm.trans (rf.stackHigh c input.runtime)
+      have pushIn : LogInW [⟨sp - 8, sp⟩] (closurePushLog sp n.toInt.toNat accu) := by
+        unfold closurePushLog; split
+        · exact ⟨Or.inl ⟨by dsimp only; omega, by dsimp only; omega⟩, trivial⟩
+        · trivial
+      have vm : ∀ w ∈ [(⟨sp - 8, sp⟩ : W)], VmWindow high (word c Layout.sym_Caml_state).toNat w := by
+        intro w hw; simp only [List.mem_singleton] at hw; subst hw
+        exact Or.inl ⟨by dsimp only; omega, by dsimp only; omega⟩
+      have stable : WindowStable L.runtimeOk [⟨sp - 8, sp⟩] := rf.windows _ fun w hw => by
+        simp only [List.mem_singleton] at hw; subst hw; rw [← same]
+        exact Or.inl ⟨by dsimp only; omega, by dsimp only; omega⟩
+      have hb : Layout.sym_Caml_state + 8 ≤ Layout.sym_bss_end := by decide
+      have hc : Layout.sym_caml_prim_table + Layout.off_prim_contents + 8 ≤ Layout.sym_bss_end := by decide
+      have wordsLen := closureWords_length (c := c) (sp := sp) (count := n.toInt.toNat) (accu := accu)
+      have blockIn : LogInW [⟨((runtimeFields c).youngPtr - 8 * (n.toInt.toNat + 2)) - 8, ((runtimeFields c).youngPtr - 8 * (n.toInt.toNat + 2)) + 8 * (n.toInt.toNat + 2)⟩]
+          (closureLog ((runtimeFields c).youngPtr - 8 * (n.toInt.toNat + 2))
+            (BitVec.ofNat 64 ((pl0.put (s.heap.alloc (closureObject s n.toInt.toNat dest)).2
+              ((runtimeFields c).youngPtr - 8 * (n.toInt.toNat + 2))).codeBase + 4 * dest))
+            (closureWords c sp n.toInt.toNat accu)) := by
+        have hin := closureLog_in (code := BitVec.ofNat 64 ((pl0.put (s.heap.alloc (closureObject s n.toInt.toNat dest)).2
+            ((runtimeFields c).youngPtr - 8 * (n.toInt.toNat + 2))).codeBase + 4 * dest))
+          (captures := closureWords c sp n.toInt.toNat accu) b.room
+        rwa [wordsLen] at hin
+      have runtime := allocFrame.prefixed stable pushIn
+        (outLRange_of_windows pushIn ⟨by dsimp only; omega, trivial⟩)
+        (outLRange_of_windows pushIn ⟨by dsimp only; omega, trivial⟩)
+        (.of_windows sg pushIn vm) input.geometry.nursery (b.free blockIn) b.capacity
+        (by have := b.young; omega) (by have := b.aligned; omega)
+      obtain ⟨after, run, running⟩ := closure_step_arm (by rw [closureAllocationLog, List.append_assoc]; exact runtime)
+        input (OperandAt.of_fetch input.geometry.toArmGeometry fetchN)
+        (OperandAt.of_fetch input.geometry.toArmGeometry fetchO) nonnegative jump value alloc step
+      exact ⟨after, run, h.of_plus run running⟩)
+    (shape2 (fun _ => rfl) (fun _ _ => rfl) (fun _ _ _ _ _ => rfl))
+    (fun s a b e w step => by
+      simp only [stepI] at step
+      by_cases neg : a < 0
+      · simp [neg] at step
+      · by_cases pos : 0 < a.toNat <;> simp [neg, pos] at step <;> split at step <;>
+          first | simp at step | (cases hj : target s.pc 1 b <;> simp [hj, opt] at step))
+
 end OCaml.Vm.Sim
