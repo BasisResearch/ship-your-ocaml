@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.ArmGeometry
 import OCaml.Vm.Sim.ArmInput
 import OCaml.Vm.Sim.StackStore
 import OCaml.Vm.Sim.FieldRead
@@ -57,18 +58,6 @@ theorem stack_fits {B : OCaml.Budget} {P : Prog} {s : St} (fits : OCaml.Fits B P
   have := stack_fits_threshold fits capacity reach small
   omega
 
-/-- The `Caml_state` fields the interpreter's arms write and the runtime
-invariant must ignore. -/
-def vmDomainOffsets : List Nat :=
-  [Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots, Layout.off_exn_bucket,
-    Layout.off_external_raise]
-
-/-- A window the arms may write without disturbing the runtime invariant:
-inside the VM stack allocation, or one of the VM-owned `Caml_state` fields. -/
-def VmWindow (high domain : Nat) (w : W) : Prop :=
-  (high - Layout.stackBytes ≤ w.lo ∧ w.hi ≤ high) ∨
-    ∃ off ∈ vmDomainOffsets, w = ⟨domain + off, domain + off + 8⟩
-
 /-- **The runtime-framing contract**: the runtime invariant pins the
 `Caml_state` address and `Caml_state->stack_high` (the stack never moves
 under the budget), ignores every write to VM windows, keeps
@@ -110,7 +99,7 @@ theorem RuntimeFrame.push {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {
 /-- **A one-word push is separated and writable**, from the geometry and
 the post-push stack bound. -/
 theorem PushWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high : Nat} {w : BitVec 64} (g : StackGeometry P s c pl cp high)
+    {sp high : Nat} {w : BitVec 64} (g : ArmGeometry P s c pl cp high)
     (stack : StackRepr c pl sp high s.stack)
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes) : PushWriteOk P s c pl cp sp w := by
   have hs := stack.1
@@ -122,7 +111,8 @@ theorem PushWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {c
     simp only [pushLog, freeWindow, LogInW, InsideW, or_false, and_true]
     omega
   exact ⟨by omega, by omega, by simpa only [Nat.mul_one] using g.write stack (by decide) room,
-    g.payload stack inside, g.image inside, g.bindings stack inside⟩
+    g.payload stack inside, g.image inside, .of_free g.toStackGeometry stack inside,
+    g.bindings stack inside⟩
 
 /-- Shared simulation of a stack read `ACCn` from the loop head. -/
 theorem stack_read_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : Opcode}

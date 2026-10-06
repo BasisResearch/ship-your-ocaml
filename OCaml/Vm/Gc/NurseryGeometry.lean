@@ -99,39 +99,4 @@ theorem NurseryGeometry.header_write {P s c pl cp high} (g : NurseryGeometry P s
   simp only [nurseryFree] at hs
   refine ⟨?_, ?_, ?_, ?_⟩ <;> simp only [tohostAddr, ← mailbox_layout] at * <;> omega
 
-/-- The reserved block `[a - 8, a + 8 * count)` lies in the free nursery, so
-its initializing writes miss the payload (`WindowSeparated.payload`). -/
-theorem reserved_inside {c : Config} {count a : Nat} (young : (runtimeFields c).youngPtr = a + 8 * count)
-    (capacity : (runtimeFields c).youngLimit ≤ a - 8) {b k : Nat}
-    (low : a - 8 ≤ b) (high : b + k ≤ a + 8 * count) : InsideW [nurseryFree c] b k :=
-  Or.inl ⟨by simp only [nurseryFree]; omega, by simp only [nurseryFree]; omega⟩
-
-/-- A range inside the free nursery misses any range separated from it. -/
-theorem apart_of_inside {c : Config} {x n y k : Nat} (outside : OutWRange [nurseryFree c] x n)
-    (low : (runtimeFields c).youngLimit ≤ y) (high : y + k ≤ (runtimeFields c).youngPtr) :
-    y + k ≤ x ∨ x + n ≤ y := by
-  obtain ⟨h, -⟩ := outside
-  simp only [nurseryFree] at h
-  omega
-
-/-- **`NurseryPlacement` for a nursery reservation**: an object of at most
-`count` fields reserved below `young_ptr = a + 8 * count`, within capacity. -/
-theorem NurseryGeometry.placement {P s c pl cp high} (g : NurseryGeometry P s c pl cp high)
-    {count a : Nat} {o : Obj} (young : (runtimeFields c).youngPtr = a + 8 * count)
-    (capacity : (runtimeFields c).youngLimit ≤ a - 8) (room : 8 ≤ a) (size : o.wosize ≤ count) :
-    NurseryPlacement P pl high a o := by
-  have statics := g.statics
-  have arena := g.arena
-  simp only [nurseryFree] at statics
-  have low : (runtimeFields c).youngLimit ≤ a - 8 := capacity
-  have high' : a - 8 + (8 * o.wosize + 8) ≤ (runtimeFields c).youngPtr := by omega
-  refine ⟨⟨?_, trivial⟩, by omega, by omega, ⟨?_, trivial⟩, ⟨?_, trivial⟩⟩
-  · have := apart_of_inside g.stack low high'
-    simp only [stackWindow]
-    omega
-  · have := apart_of_inside g.codeRange low high'
-    omega
-  · have := apart_of_inside g.atoms low high'
-    omega
-
 end OCaml.Vm.Gc

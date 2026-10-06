@@ -44,6 +44,7 @@ structure TrapWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPl
   window : WriteWindow (word c Layout.sym_Caml_state + BitVec.ofNat 64 Layout.off_trapsp) 8
   payload : TrapWriteOutside (trapLog (word c Layout.sym_Caml_state).toNat high trap) P s c pl cp sp
   image : ImageOutside (trapLog (word c Layout.sym_Caml_state).toNat high trap)
+  young : YoungOutside (trapLog (word c Layout.sym_Caml_state).toNat high trap) c
   bindings : BindingsOutside (trapLog (word c Layout.sym_Caml_state).toNat high trap) P c
 
 /-- Restore a trap-pointer write together with stack-frame removal. -/
@@ -56,7 +57,7 @@ theorem trap_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     (bound : count ≤ s.stack.length) (value : valWord pl s.accu = some accu)
     (post : StackPost c pl pc (sp + 8 * count) accu
       (writeLog c.σ.mem (trapLog (word c Layout.sym_Caml_state).toNat high trap)) after)
-    (geometry : StackGeometry P s c pl cp high)
+    (geometry : ArmGeometry P s c pl cp high)
     (native : NativePlaced c) :
     Running L P {s with pc := pc, stack := s.stack.drop count, trap := trap} after := by
   have payload := payload_trap_written (payload_of_repr data) space.highNat space.payload post.memory post.output
@@ -71,7 +72,7 @@ theorem trap_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable c after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl value) (post.loopRegisters loop)
-    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory)
+    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.young post.memory)
     (native.frame_vm (ws := [⟨(word c Layout.sym_Caml_state).toNat + Layout.off_trapsp, (word c Layout.sym_Caml_state).toNat + Layout.off_trapsp + 8⟩]) (by simp only [trapLog, LogInW, InsideW, or_false, and_true]; exact ⟨Nat.le_refl _, Nat.le_refl _⟩) (by simp only [List.mem_singleton, forall_eq]; have := geometry.domain_below (off := Layout.off_trapsp + 8) (by decide); omega) space.payload.domain post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

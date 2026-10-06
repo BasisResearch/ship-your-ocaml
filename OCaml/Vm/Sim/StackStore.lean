@@ -19,6 +19,7 @@ structure PushWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPl
   window : WriteWindow (BitVec.ofNat 64 (sp - 8)) 8
   payload : PayloadOutside (pushLog sp w) P s c pl cp sp
   image : ImageOutside (pushLog sp w)
+  young : YoungOutside (pushLog sp w) c
   bindings : BindingsOutside (pushLog sp w) P c
 
 theorem PushWriteOk.toNat {P s c pl cp sp w} (h : PushWriteOk P s c pl cp sp w) :
@@ -133,7 +134,7 @@ theorem push_value_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Con
     (loop : LoopRegisters c) (space : PushWriteOk P s c pl cp sp w)
     (pushed : valWord pl s.accu = some w) (value : valWord pl v = some result)
     (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
-    (post : PushPost c pl pc sp w result after) (geometry : StackGeometry P s c pl cp high)
+    (post : PushPost c pl pc sp w result after) (geometry : ArmGeometry P s c pl cp high)
     (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := v, stack := s.accu :: s.stack} after := by
   have stored : word after (sp - 8) = w := by
@@ -153,7 +154,7 @@ theorem push_value_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Con
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable c after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl value) (post.loopRegisters loop)
-    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory)
+    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.young post.memory)
     (native.frame_vm (ws := [⟨sp - 8, sp⟩])
       (by simp only [pushLog, LogInW, InsideW, or_false, and_true]; have := space.room; omega)
       (by simp only [List.mem_singleton, forall_eq]

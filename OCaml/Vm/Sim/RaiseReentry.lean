@@ -22,7 +22,7 @@ structure RaiseReentryReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) 
   outside : PayloadOutside (reentryLog nativeSp c) P s c pl cp sp
   bindingsOutside : BindingsOutside (reentryLog nativeSp c) P c
   /-- the VM stack geometry (`Invariant.lean`) -/
-  geometry : StackGeometry P s c pl cp high
+  geometry : ArmGeometry P s c pl cp high
   /-- the native invocation, held while the C stack unwinds (`InvariantUse.lean`) -/
   native : NativeHeld nativeSp c
 
@@ -51,7 +51,14 @@ theorem raise_reentry_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place
       frame := h.frame
       accu := ⟨_, post.exceptionValue, h.exceptionWord⟩
       tick := post.tick
-      geometry := h.geometry.frame_log rfl rfl h.outside.domain h.bindingsOutside.contents
+      geometry := h.geometry.frame_vm rfl rfl h.outside.domain h.bindingsOutside.contents
+        (ws := reentryWindows c)
+        (by simp only [reentryWindows, reentryLog, LogInW, InsideW, or_false, and_true]
+            exact ⟨Nat.le_refl _, Nat.le_refl _⟩)
+        (fun w hw => by
+          simp only [reentryWindows, List.mem_singleton] at hw
+          subst hw
+          exact Or.inr ⟨Layout.off_local_roots, by simp [vmDomainOffsets], rfl⟩)
         post.memory
       native := h.native.frame_log h.outside.domain
         (h.native.region_of_arena (logInW_arena (ws := [⟨(word c Layout.sym_Caml_state).toNat +

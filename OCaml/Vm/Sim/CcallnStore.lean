@@ -35,6 +35,7 @@ structure CcallnWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
     nativeSp + 96 ≤ domain + Layout.off_extern_sp
   payload : PayloadOutside (ccallnLog sp domain nativeSp next env accu) P s c pl cp sp
   image : ImageOutside (ccallnLog sp domain nativeSp next env accu)
+  young : YoungOutside (ccallnLog sp domain nativeSp next env accu) c
   bindings : BindingsOutside (ccallnLog sp domain nativeSp next env accu) P c
 
 /-- Named readback facts supplied by the exact setup store log. -/

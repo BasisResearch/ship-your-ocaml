@@ -34,11 +34,12 @@ structure VmLogOk (log : List WEntry) (P : Prog) (s : St) (c : Config) (pl : Pla
   stack : ∀ i v, s.stack[i]? = some v → OutLRange log (sp + 8 * i) 8
   heap : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o → ObjectOutside log a o
   image : ImageOutside log
+  young : YoungOutside log c
   bindings : BindingsOutside log P c
 
 /-- **One derivation for every VM write log.** -/
 theorem VmLogOk.of_windows {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high : Nat} {ws : List W} {log : List WEntry} (g : StackGeometry P s c pl cp high)
+    {sp high : Nat} {ws : List W} {log : List WEntry} (g : ArmGeometry P s c pl cp high)
     (stackRepr : StackRepr c pl sp high s.stack) (space : 8 * s.stack.length ≤ Layout.stackBytes)
     (inside : LogInW ws log)
     (vm : ∀ w ∈ ws, VmWriteWindow c sp high w) : VmLogOk log P s c pl cp sp := by
@@ -75,9 +76,20 @@ theorem VmLogOk.of_windows {P : Prog} {s : St} {c : Config} {pl : Place} {cp : C
     have hr := hrec.1
     dsimp only at hr
     omega
+  -- the allocation pointers are `Caml_state` fields the VM never writes
+  have young : ∀ off ∈ [Layout.off_young_limit, Layout.off_young_ptr],
+      OutLRange log ((word c Layout.sym_Caml_state).toNat + off) 8 := by
+    intro off member
+    have fields := young_field_offsets off member
+    simp only [stackWindow] at hd
+    apply apart _ 8 (by omega)
+    intro o mo
+    have := fields.2 o mo
+    omega
   refine ⟨⟨static _ (by decide), ?_, static _ (by decide), static _ (by decide), static _ (by decide),
     fun i w hw => ?_, fun id ch a hch hcp => ?_⟩, fun i v hv => ?_, fun l a o placed object => ?_,
-    ⟨staticN _ _ (by decide), staticN _ _ (by decide)⟩, ⟨static _ (by decide), fun j name hj => ?_⟩⟩
+    ⟨staticN _ _ (by decide), staticN _ _ (by decide)⟩, ⟨young _ (by simp), young _ (by simp)⟩,
+    ⟨static _ (by decide), fun j name hj => ?_⟩⟩
   · have hh : Layout.off_stack_high + 8 ≤ Layout.domainStateBytes := by decide
     simp only [stackWindow] at hd
     apply apart _ 8 (by omega)

@@ -174,7 +174,7 @@ theorem c_calln_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     · simpa only [domainAddress] using space.externWindow.read
     · simpa only [nativeAddress] using space.nativeWindow.read
   · exact post.pcAt
-  · exact h.geometry.frame_log rfl rfl space.payload.domain space.bindings.contents written
+  · exact h.geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.young written
   · exact space.native h.native h.geometry h.stack domainWord nativeReg written
       ((frame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide)))
 

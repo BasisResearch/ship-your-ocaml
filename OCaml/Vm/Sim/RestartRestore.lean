@@ -23,6 +23,7 @@ structure RestartWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Cha
   room : 8 * (fields.length - 3) ≤ sp
   payload : StackEditOutside (restartLog c sp a fields) P s c pl cp high
   image : ImageOutside (restartLog c sp a fields)
+  young : YoungOutside (restartLog c sp a fields) c
   bindings : BindingsOutside (restartLog c sp a fields) P c
 
 /-- Final native observations; source field representation is proved separately. -/
@@ -44,7 +45,7 @@ theorem restart_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     (block : BlockSelection s.heap pl s.env l a tag fields) (environment : fields[2]? = some env)
     (space : RestartWriteOk P s before pl cp sp high a fields)
     (post : RestartPost before s pl sp a fields env after)
-    (geometry : StackGeometry P s before pl cp high)
+    (geometry : ArmGeometry P s before pl cp high)
     (native : NativePlaced before) :
     Running L P (restartState s fields env) after := by
   have arguments : ValueWords pl (fields.drop 3) (stackWords before (a + 24) (fields.length - 3)) :=
@@ -69,7 +70,7 @@ theorem restart_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable before after memoryFrame platform.runtime⟩ post.toVmRegisters post.loop
-    (geometry.frame_log rfl rfl space.payload.core.domain space.bindings.contents post.memory)
+    (geometry.frame_log rfl rfl space.payload.core.domain space.bindings.contents space.young post.memory)
     (native.frameOn memoryFrame (by simp only [List.mem_singleton, forall_eq]; exact geometry.stack_below (by have := data.stack.1; omega)) (Reloc.bytesT_congr (copied_of_writeLog post.memory space.payload.core.domain)) post.nativeSp)
 
 end OCaml.Vm.Sim

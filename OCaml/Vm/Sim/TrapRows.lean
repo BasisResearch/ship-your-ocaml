@@ -18,7 +18,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
 /-- **The trap-frame push is separated and writable.** -/
 theorem PushtrapWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high dest : Nat} {env : BitVec 64} (g : StackGeometry P s c pl cp high)
+    {sp high dest : Nat} {env : BitVec 64} (g : ArmGeometry P s c pl cp high)
     (stack : StackRepr c pl sp high s.stack) (trapBound : s.trap ≤ s.stack.length + 4)
     (space : 8 * (s.stack.length + 4) ≤ Layout.stackBytes) :
     PushtrapWriteOk P s c pl cp sp high dest env := by
@@ -51,7 +51,7 @@ theorem PushtrapWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place
     by simpa using g.write stack (k := 2) (by decide) (by omega),
     by simpa using g.write stack (k := 3) (by decide) (by omega),
     by simp only [Vsa.Sim.DlHeap.heapEnd] at hda; omega, ⟨?_, ?_, ?_, ?_⟩, by omega,
-    ⟨ok.core, ok.stack, fun l a o _ placed object => ok.heap l a o placed object⟩, ok.image, ok.bindings⟩
+    ⟨ok.core, ok.stack, fun l a o _ placed object => ok.heap l a o placed object⟩, ok.image, ok.young, ok.bindings⟩
   all_goals rw [dn]
   all_goals simp only [Layout.sym_tohost, Layout.sym_bss_end, Vsa.Sim.DlHeap.heapEnd,
     Layout.off_trapsp, Layout.domainStateBytes] at *
@@ -89,7 +89,7 @@ theorem pushtrap_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w 
 
 /-- **A trap-pointer store is separated and writable.** -/
 theorem TrapWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high trap : Nat} (g : StackGeometry P s c pl cp high)
+    {sp high trap : Nat} (g : ArmGeometry P s c pl cp high)
     (stack : StackRepr c pl sp high s.stack) (space : 8 * s.stack.length ≤ Layout.stackBytes) :
     TrapWriteOk P s c pl cp sp high trap := by
   have hs := stack.1
@@ -115,7 +115,7 @@ theorem TrapWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {c
     rw [BitVec.toNat_add, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (a := Layout.off_trapsp) (by decide),
       Nat.mod_eq_of_lt (by simp only [Vsa.Sim.DlHeap.heapEnd] at hda; omega)]
   refine ⟨by omega, by simp only [Vsa.Sim.DlHeap.heapEnd] at hda; omega, ⟨?_, ?_, ?_, ?_⟩,
-    ⟨ok.core, ok.stack, fun l a o _ placed object => ok.heap l a o placed object⟩, ok.image, ok.bindings⟩
+    ⟨ok.core, ok.stack, fun l a o _ placed object => ok.heap l a o placed object⟩, ok.image, ok.young, ok.bindings⟩
   all_goals rw [dn]
   all_goals simp only [Layout.sym_tohost, Layout.sym_bss_end, Vsa.Sim.DlHeap.heapEnd,
     Layout.off_trapsp, Layout.domainStateBytes] at *

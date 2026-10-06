@@ -33,11 +33,9 @@ structure GrabWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPl
   payload : PayloadOutside log P s c pl cp sp
   image : ImageOutside log
   bindings : BindingsOutside log P c
-  /-- the nursery placement of the new object (a6-gc's nursery bounds) -/
-  placement : NurseryPlacement P pl high a (grabClosure s)
-  /-- the new object is apart from the `Caml_state` record -/
-  domainApart : OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
-    (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a - 8) (8 * (grabClosure s).wosize + 8)
+  /-- the log's nursery reservation for the new object (the allocation summary) -/
+  reserve : ∃ words, NurseryReserve c log a (grabClosure s).wosize words
+
   /-- all the allocation's stores lie in the allocator arena -/
   arena : LogInW [arenaWindow] (log)
 
@@ -63,7 +61,7 @@ theorem grab_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Conf
     (space : GrabWriteOk P s before pl cp sp high a log)
     (layout : ObjAt after pl cp a (grabClosure s))
     (post : GrabPost before s pl sp dest savedEnv savedExtra rest log after)
-    (geometry : StackGeometry P s before pl cp high)
+    (geometry : ArmGeometry P s before pl cp high)
     (native : NativePlaced before) :
     Running L P (grabState s dest savedEnv savedExtra rest) after := by
   have framed := (payload_of_repr data).frame_log space.payload post.memory post.output
@@ -84,7 +82,7 @@ theorem grab_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Conf
   exact running_of_payload payload (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       runtime after post.memory platform.runtime⟩ post.toVmRegisters post.loop
-    ((geometry.alloc (s' := grabState s dest savedEnv savedExtra rest) space.placed space.placement space.domainApart rfl rfl).frame_log rfl rfl
+    (geometry.alloc_log (s' := grabState s dest savedEnv savedExtra rest) space.placed space.reserve.choose_spec rfl rfl
       space.payload.domain space.bindings.contents post.memory)
     (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
 

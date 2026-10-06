@@ -16,7 +16,7 @@ structure RaiseContext (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp :
   accu : ∃ w, gpr c Layout.reg_accu = some w ∧ valWord pl s.accu = some w
   tick : c.tick < 2
   /-- the VM stack geometry (`Invariant.lean`) -/
-  geometry : StackGeometry P s c pl cp high
+  geometry : ArmGeometry P s c pl cp high
   /-- the native invocation (`Invocation.lean`) -/
   native : NativePlaced c
 

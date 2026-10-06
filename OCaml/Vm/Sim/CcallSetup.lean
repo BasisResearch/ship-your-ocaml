@@ -18,7 +18,7 @@ structure CcallSetupPost (ra : BitVec 64) (args : List Val)
     (BitVec.ofNat 64 (sp - 16)) env c
   target : pcOf c = some (BitVec.ofNat 64 entry)
   /-- the VM stack geometry at the callee entry (`Invariant.lean`) -/
-  geometry : StackGeometry P s c pl cp high
+  geometry : ArmGeometry P s c pl cp high
   /-- the native invocation at the callee entry (`Invocation.lean`) -/
   native : NativePlaced c
 
@@ -27,7 +27,7 @@ VM stack and the `Caml_state` record, inside the allocator arena. -/
 theorem Ccall1WriteOk.native {P : Prog} {s : St} {c after : Config} {pl : Place} {cp : ChanPlace}
     {sp high domain : Nat} {next env : BitVec 64}
     (space : Ccall1WriteOk P s c pl cp sp domain next env) (n : NativePlaced c)
-    (g : StackGeometry P s c pl cp high) (stack : StackRepr c pl sp high s.stack)
+    (g : ArmGeometry P s c pl cp high) (stack : StackRepr c pl sp high s.stack)
     (domainWord : word c Layout.sym_Caml_state = BitVec.ofNat 64 domain)
     (memory : after.σ.mem = writeLog c.σ.mem (ccall1Log sp domain next env))
     (x2 : gpr after 2 = gpr c 2) : NativePlaced after := by

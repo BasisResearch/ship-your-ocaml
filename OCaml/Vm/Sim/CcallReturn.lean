@@ -57,7 +57,7 @@ structure CcallResult (ra : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St)
   resultReg : gpr c 10 = some result
   resultRepr : valWord pl s.accu = some result
   /-- the VM stack geometry after the callee (`Invariant.lean`) -/
-  geometry : StackGeometry P s c pl cp high
+  geometry : ArmGeometry P s c pl cp high
   /-- the native invocation at the primitive's return (`x2` is callee-saved) -/
   native : NativePlaced c
 
@@ -83,7 +83,7 @@ theorem ccall_primitive_result {L : OCaml.Layout} {P : Prog} {s : St}
     (pc : Nat)
     (post : PrimitivePost L.runtimeOk P s pl cp sp high name args
       v result heap world writes memory before ra after)
-    (geometry : StackGeometry P {s with accu := v, heap := heap, world := world} after pl cp high)
+    (geometry : ArmGeometry P {s with accu := v, heap := heap, world := world} after pl cp high)
     (native : NativePlaced after) :
     CcallResult ra L P {s with pc := pc, accu := v, heap := heap, world := world}
       pl cp sp high result after :=
@@ -107,7 +107,7 @@ theorem ccall_primitive_return {L : OCaml.Layout} {P : Prog} {s : St}
     (post : PrimitivePost L.runtimeOk P s pl cp sp high name args
       v result heap world writes memory before ra after)
     (saved : Ccall1Saved {s with pc := pc} pl sp domain frameSp env after)
-    (geometry : StackGeometry P {s with accu := v, heap := heap, world := world} after pl cp high)
+    (geometry : ArmGeometry P {s with accu := v, heap := heap, world := world} after pl cp high)
     (native : NativePlaced after) :
     CcallReturn ra L P {s with pc := pc, accu := v, heap := heap, world := world}
       pl cp sp high domain frameSp result env after :=
@@ -123,7 +123,7 @@ theorem c_call1_primitive_return {L : OCaml.Layout} {P : Prog} {s : St}
     (post : PrimitivePost L.runtimeOk P s pl cp sp high name [s.accu]
       v result heap world writes memory before (0x80003060#64) after)
     (saved : Ccall1Saved {s with pc := s.pc + 2} pl sp domain frameSp env after)
-    (geometry : StackGeometry P {s with accu := v, heap := heap, world := world} after pl cp high)
+    (geometry : ArmGeometry P {s with accu := v, heap := heap, world := world} after pl cp high)
     (native : NativePlaced after) :
     Ccall1Return L P {s with pc := s.pc + 2, accu := v, heap := heap, world := world}
       pl cp sp high domain frameSp result env after :=
@@ -139,7 +139,7 @@ theorem ccall_readOnly_summary {L : OCaml.Layout} {P : Prog} {s : St}
         v result writes before ra))
     (preserved : ∀ r ∈ callSavedRegs, ∀ n ∈ writes, gprReg n ≠ r)
     (saved : Ccall1Saved {s with pc := pc} pl sp domain frameSp env before)
-    (geometry : StackGeometry P s before pl cp high) (native : NativePlaced before) :
+    (geometry : ArmGeometry P s before pl cp high) (native : NativePlaced before) :
     FnSummary entry (fun c => c = before)
       (CcallReturn ra L P {s with pc := pc, accu := v}
         pl cp sp high domain frameSp result env) := by
@@ -161,7 +161,7 @@ theorem c_call1_readOnly_summary {L : OCaml.Layout} {P : Prog} {s : St}
         v result writes before (0x80003060#64)))
     (preserved : ∀ r ∈ callSavedRegs, ∀ n ∈ writes, gprReg n ≠ r)
     (saved : Ccall1Saved {s with pc := s.pc + 2} pl sp domain frameSp env before)
-    (geometry : StackGeometry P s before pl cp high) (native : NativePlaced before) :
+    (geometry : ArmGeometry P s before pl cp high) (native : NativePlaced before) :
     FnSummary entry (fun c => c = before)
       (Ccall1Return L P {s with pc := s.pc + 2, accu := v}
         pl cp sp high domain frameSp result env) :=

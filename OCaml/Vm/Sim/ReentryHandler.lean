@@ -11,7 +11,7 @@ theorem TrapWriteOk.frame_observations {P : Prog} {s : St} {pl : Place} {cp : Ch
     (contents : word after (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
       word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)) :
     TrapWriteOk P s after pl cp sp high trap := by
-  refine ⟨h.highNat, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨h.highNat, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simpa only [domain] using h.address
   · simpa only [domain] using h.window
   · rw [domain]
@@ -19,6 +19,7 @@ theorem TrapWriteOk.frame_observations {P : Prog} {s : St} {pl : Place} {cp : Ch
       toPayloadCoreOutside := { h.payload.toPayloadCoreOutside with stackHigh := by simpa only [domain] using h.payload.stackHigh }
       stack := h.payload.stack, heap := h.payload.heap }
   · simpa only [domain] using h.image
+  · exact ⟨by simpa only [domain] using h.young.limit, by simpa only [domain] using h.young.ptr⟩
   · rw [domain]
     exact ⟨h.bindings.contents, by simpa only [contents] using h.bindings.entries⟩
 

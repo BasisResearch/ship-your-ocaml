@@ -254,7 +254,7 @@ theorem top_equality {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : C
   intro b top
   simp only [St.valuesInRange, Bool.and_eq_true, List.all_eq_true] at ranged
   have mem : b ∈ s.stack := List.mem_of_getElem? top
-  exact WordEquality.of_place input.toVmReprAt input.geometry (by simp [roots])
+  exact WordEquality.of_place input.toVmReprAt input.geometry.toStackGeometry (by simp [roots])
     (by simp [roots, mem]) ranged.1 (ranged.2 b mem)
 
 theorem physOp_nonempty {P : Prog} {s s' : St} {op : Opcode} (eqop : op = .EQ ∨ op = .NEQ)

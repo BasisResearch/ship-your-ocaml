@@ -15,7 +15,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
 /-- **The return-frame push is separated and writable.** -/
 theorem RetaddrWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high dest : Nat} {env : BitVec 64} (g : StackGeometry P s c pl cp high)
+    {sp high dest : Nat} {env : BitVec 64} (g : ArmGeometry P s c pl cp high)
     (stack : StackRepr c pl sp high s.stack)
     (space : 8 * (s.stack.length + 3) ≤ Layout.stackBytes) : RetaddrWriteOk P s c pl cp sp dest env := by
   have hs := stack.1
@@ -35,7 +35,8 @@ theorem RetaddrWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place}
   have w2 := g.write stack (k := 2) (by decide) (by omega)
   have w3 := g.write stack (k := 3) (by decide) (by omega)
   exact ⟨room, by omega, by simpa using w2, by simpa using w3, by simpa using w1,
-    g.payload stack inside, g.image inside, g.bindings stack inside⟩
+    g.payload stack inside, g.image inside, .of_free g.toStackGeometry stack inside,
+    g.bindings stack inside⟩
 
 /-- **PUSH_RETADDR from the loop head.** -/
 theorem push_retaddr_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}

@@ -62,11 +62,9 @@ structure ClosureWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Cha
   payload : PayloadOutside (closureAllocationLog c pl sp count dest a domain accu) P s c pl cp sp
   image : ImageOutside (closureAllocationLog c pl sp count dest a domain accu)
   bindings : BindingsOutside (closureAllocationLog c pl sp count dest a domain accu) P c
-  /-- the nursery placement of the new object (a6-gc's nursery bounds) -/
-  placement : NurseryPlacement P pl high a (closureObject s count dest)
-  /-- the new object is apart from the `Caml_state` record -/
-  domainApart : OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
-    (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a - 8) (8 * (closureObject s count dest).wosize + 8)
+  /-- the log's nursery reservation for the new object (the allocation summary) -/
+  reserve : ∃ words, NurseryReserve c (closureAllocationLog c pl sp count dest a domain accu) a (closureObject s count dest).wosize words
+
   /-- all the allocation's stores lie in the allocator arena -/
   arena : LogInW [arenaWindow] (closureAllocationLog c pl sp count dest a domain accu)
 
@@ -89,7 +87,7 @@ theorem closure_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     (value : valWord pl s.accu = some accu)
     (space : ClosureWriteOk P s before pl cp sp high count dest a domain accu)
     (post : ClosurePost before s pl sp count dest a domain accu after)
-    (geometry : StackGeometry P s before pl cp high)
+    (geometry : ArmGeometry P s before pl cp high)
     (native : NativePlaced before) :
     Running L P (closureState s count dest) after := by
   have captures : ValueWords pl (closureCaptures s count) (closureWords before sp count accu) := by
@@ -110,7 +108,7 @@ theorem closure_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
   exact running_of_payload payload (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory, runtime after post.memory platform.runtime⟩
     post.toVmRegisters post.loop
-    ((geometry.alloc (s' := closureState s count dest) space.placed space.placement space.domainApart rfl rfl).frame_log rfl rfl
+    (geometry.alloc_log (s' := closureState s count dest) space.placed space.reserve.choose_spec rfl rfl
       space.payload.domain space.bindings.contents post.memory)
     (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
 

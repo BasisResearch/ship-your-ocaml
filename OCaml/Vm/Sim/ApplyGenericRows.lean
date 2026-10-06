@@ -43,7 +43,7 @@ theorem logInW_reverse {ws : List W} {log : List WEntry} (inside : LogInW ws log
 
 /-- **APPTERM's backward copy is separated, readable and writable.** -/
 theorem ApptermWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high count slots : Nat} (g : StackGeometry P s c pl cp high)
+    {sp high count slots : Nat} (g : ArmGeometry P s c pl cp high)
     (stack : StackRepr c pl sp high s.stack) (positive : 0 < count) (fits : count ≤ slots)
     (bound : slots ≤ s.stack.length) (space : 8 * s.stack.length ≤ Layout.stackBytes) :
     ApptermWriteOk P s c pl cp sp high count slots := by
@@ -65,7 +65,7 @@ theorem ApptermWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place}
     intro e member
     simp only [reverseCopyLog, List.drop_zero, List.mem_reverse] at member
     exact indexedLog_words (by unfold tailcallStart; omega) e member)
-  refine ⟨⟨fits, bound, ok.payload, ok.image, ok.bindings, inside⟩, ⟨by omega, by unfold tailcallStart; omega,
+  refine ⟨⟨fits, bound, ok.payload, ok.image, ok.young, ok.bindings, inside⟩, ⟨by omega, by unfold tailcallStart; omega,
     by rw [len]; omega, by rw [len]; omega, by rw [len]; unfold tailcallStart; omega,
     fun i hi => g.read stack (by omega) (by rw [len] at hi; omega), fun i hi => ?_, ok.image,
     fun i x hx => ?_⟩, ok.enter⟩

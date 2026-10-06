@@ -39,17 +39,14 @@ structure ClosurerecWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : 
 /-- Restore the full represented state after the proved native constructor. -/
 theorem closurerec_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Config}
     {pl : Place} {cp : ChanPlace} {sp high count dest a domain : Nat} {accu : BitVec 64}
-    {targets : List Nat}
+    {targets : List Nat} {words : Nat}
     (runtime : AllocationRuntime L.runtimeOk before (closurerecFullLog before pl sp count dest a domain accu targets))
     (data : VmReprAt P s before pl cp sp high) (platform : PlatformOk L.runtimeOk before)
     (loop : LoopRegisters before) (value : valWord pl s.accu = some accu)
     (space : ClosurerecWriteOk P s before pl cp sp count dest a domain accu targets)
     (post : ClosurerecReturned before pl s.pc sp count dest a domain accu targets after)
-    (geometry : StackGeometry P s before pl cp high)
-    (nursery : NurseryPlacement P pl high a (closurerecObject s count (dest :: targets)))
-    (domainApart : OutWRange [⟨(word before Layout.sym_Caml_state).toNat,
-      (word before Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a - 8)
-      (8 * (closurerecObject s count (dest :: targets)).wosize + 8))
+    (geometry : ArmGeometry P s before pl cp high)
+    (reserve : NurseryReserve before (closurerecFullLog before pl sp count dest a domain accu targets) a (closurerecObject s count (dest :: targets)).wosize words)
     (arena : LogInW [arenaWindow] (closurerecFullLog before pl sp count dest a domain accu targets))
     (native : NativePlaced before) :
     Running L P (closurerecState s count dest targets) after := by
@@ -80,7 +77,7 @@ theorem closurerec_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after 
     (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, post.image, runtime after post.memory platform.runtime⟩
   case geometry =>
-    exact (geometry.alloc (s' := closurerecState s count dest targets) space.placed nursery domainApart rfl rfl).frame_log rfl rfl
+    exact geometry.alloc_log (s' := closurerecState s count dest targets) space.placed reserve rfl rfl
       space.core.domain space.bindings.contents post.memory
   case native =>
     exact native.frame_log arena space.core.domain post.memory (post.frame.frame (gprReg 2) (by decide))

@@ -138,7 +138,7 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
     {high sp : Nat} {callerRegs mainSaved : Nat → BitVec 64}
     (h : OCaml.LoadedAt L P c pl cp high)
     (caller : InterpCaller P c pl cp high sp callerRegs mainSaved)
-    (geometry : StackGeometry P P.init c pl cp high)
+    (geometry : ArmGeometry P P.init c pl cp high)
     (stable : WindowStable L.runtimeOk (entryWindows sp (word c Layout.sym_Caml_state).toNat)) :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P P.init c' := by
   have frame := EntryFrame.of_caller caller
@@ -229,7 +229,22 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
   have platform : PlatformOk L.runtimeOk c5 :=
     ⟨p.good, p.image, stable c c5 (by rw [p.memory]; exact frameOn_writeLog _ _ _ (logInW_of_cover cover))
       h.platform.runtime⟩
+  -- entry's footprint misses the allocation pointers
+  have young (off : Nat) (member : off ∈ [Layout.off_young_limit, Layout.off_young_ptr]) :
+      word c5 ((word c Layout.sym_Caml_state).toNat + off) =
+        word c ((word c Layout.sym_Caml_state).toNat + off) := by
+    apply same
+    have := caller.domainLow
+    have := caller.domainHigh
+    have := caller.frameLow
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl <;>
+      simp only [OutLRange, entryFootprint, interpFrame, Layout.interpFrameBytes, Layout.off_young_limit,
+        Layout.off_young_ptr, Layout.off_external_raise, Layout.sym_caml_callback_depth,
+        Layout.domainStateBytes, Vsa.Sim.DlHeap.heapStart, Vsa.Sim.DlHeap.heapEnd, and_true] at * <;> omega
   have geometry5 := geometry.transport (s' := P.init) (fun l o' ho => ⟨o', ho, rfl⟩) rfl dom5 prim5
+    (by simp only [OCaml.Vm.runtimeFields, OCaml.Vm.domainWord, dom5]; rw [young _ (by simp)])
+    (by simp only [OCaml.Vm.runtimeFields, OCaml.Vm.domainWord, dom5]; rw [young _ (by simp)])
   refine ⟨c5, ?_, ⟨running_of_payload payload primitives platform regs p.loop geometry5 native, p.tick⟩⟩
   cases n with
   | zero =>

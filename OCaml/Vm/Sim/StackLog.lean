@@ -25,11 +25,12 @@ structure StackLogOk (log : List WEntry) (P : Prog) (s : St) (c : Config) (pl : 
   payload : StackEditOutside log P s c pl cp high
   enter : EnterOutside log c
   image : ImageOutside log
+  young : YoungOutside log c
   bindings : BindingsOutside log P c
 
 /-- **One derivation for every stack-confined log.** -/
 theorem StackLogOk.of_window {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {high lo hi : Nat} {log : List WEntry} (g : StackGeometry P s c pl cp high)
+    {high lo hi : Nat} {log : List WEntry} (g : ArmGeometry P s c pl cp high)
     (inside : LogInW [⟨lo, hi⟩] log) (low : high - Layout.stackBytes ≤ lo) (top : hi ≤ high)
     (words : ∀ entry ∈ log, entry.2.1 = 8 ∧ entry.1 % 8 = 0) :
     StackLogOk log P s c pl cp high := by
@@ -43,7 +44,8 @@ theorem StackLogOk.of_window {P : Prog} {s : St} {c : Config} {pl : Place} {cp :
       subst hw
       simp only [stackWindow]
       omega)
-  refine ⟨fun e member => ?_, g.edit wide, ⟨?_, ?_, ?_⟩, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+  refine ⟨fun e member => ?_, g.edit wide, ⟨?_, ?_, ?_⟩, ⟨?_, ?_⟩, .of_stack g.toStackGeometry wide,
+    ⟨?_, ?_⟩⟩
   · have hin := logInW_mem inside member
     obtain ⟨width, aligned⟩ := words e member
     simp only [InsideW, or_false] at hin
@@ -69,7 +71,7 @@ theorem indexedLog_words {base : Nat} {entries : List (Nat × BitVec 64)} (align
 
 /-- **The tail-call argument move is separated and writable.** -/
 theorem TailcallWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high n slots : Nat} (g : StackGeometry P s c pl cp high)
+    {sp high n slots : Nat} (g : ArmGeometry P s c pl cp high)
     (stack : StackRepr c pl sp high s.stack) (fits : n ≤ slots) (bound : slots ≤ s.stack.length)
     (space : 8 * s.stack.length ≤ Layout.stackBytes) :
     TailcallWriteOk P s c pl cp sp high slots (stackWords c sp n) := by
@@ -80,7 +82,7 @@ theorem TailcallWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place
   have ok := StackLogOk.of_window g inside (by unfold tailcallStart; omega)
     (by unfold tailcallStart; omega) (indexedLog_words (by unfold tailcallStart; omega))
   exact ⟨by omega, bound, fun i hi => g.read stack (by omega) (by omega),
-    ok.writes, ok.payload, ok.enter, ok.image, ok.bindings⟩
+    ok.writes, ok.payload, ok.enter, ok.image, ok.young, ok.bindings⟩
 
 /-- Shared simulation of `APPTERMn` from the loop head. -/
 theorem appterm_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {op : Opcode}

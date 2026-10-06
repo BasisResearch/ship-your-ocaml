@@ -20,12 +20,14 @@ structure CaughtLogReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp
   bucketLog : log = front ++ [((word c Layout.sym_Caml_state).toNat + Layout.off_exn_bucket, 8, value)]
   payloadOutside : PayloadOutside log P s c pl cp sp
   bindingsOutside : BindingsOutside log P c
+  /-- the runtime's raise path leaves the allocation pointers alone -/
+  young : YoungOutside log c
   rootsPayloadOutside : PayloadOutside (reentryLog nativeSp c) P s c pl cp sp
   rootsBindingsOutside : BindingsOutside (reentryLog nativeSp c) P c
   savedOutside : ∀ offset ∈ [0, 8, Layout.interpSavedRootsOffset], OutLRange log (nativeSp + offset) 8
   runtimeFrame : AllocationRuntime L.runtimeOk c log
   /-- the VM stack geometry before the raise (`Invariant.lean`) -/
-  stackGeometry : StackGeometry P s c pl cp high
+  stackGeometry : ArmGeometry P s c pl cp high
   /-- the native invocation held before the raise, and missed by its log -/
   nativeHeld : NativeHeld nativeSp c
   invocationOutside : ∀ r ∈ invocationRanges, OutLRange log (nativeSp + r.1) r.2
@@ -66,7 +68,7 @@ theorem caught_log_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {
       exceptionWord := ?_
       outside := rootPayload, bindingsOutside := rootBindings
       geometry := h.stackGeometry.frame_log rfl rfl h.payloadOutside.domain
-        h.bindingsOutside.contents rfl
+        h.bindingsOutside.contents h.young rfl
       native := h.nativeHeld.frame h.payloadOutside.domain h.invocationOutside rfl }
     toCaughtReentryGeometry := h.geometry.frame_observations domain contents savedHigh savedSp roots }
   rw [domain, native_memory_last_word h.bucketLog]

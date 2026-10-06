@@ -74,7 +74,7 @@ theorem pushtrap_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : 
       (writeLog before.σ.mem (pushtrapLog sp (word before Layout.sym_Caml_state).toNat
         (BitVec.ofNat 64 (pl.codeBase + 4 * dest)) (tag64 (BitVec.ofNat 63 (s.stack.length + 4 - s.trap)))
         env (tag64 (BitVec.ofNat 63 s.extra)))) after)
-    (geometry : StackGeometry P s before pl cp high)
+    (geometry : ArmGeometry P s before pl cp high)
     (native : NativePlaced before) :
     Running L P {s with pc := pc, stack := .code dest :: Val.ofInt (s.stack.length + 4 - s.trap : Nat) :: s.env :: Val.ofInt s.extra :: s.stack, trap := s.stack.length + 4} after := by
   have payload := pushtrap_payload (payload_of_repr data) space envWord post.memory post.output
@@ -89,7 +89,7 @@ theorem pushtrap_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : 
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable before after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl accuWord) (post.loopRegisters loop)
-    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory)
+    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.young post.memory)
     (native.frame_vm (pushtrap_log_in _ _ _ _ space.room) (by intro w hw; simp only [List.mem_cons, List.not_mem_nil, or_false] at hw; rcases hw with rfl | rfl <;> dsimp only <;> first | exact geometry.stack_below (by have := data.stack.1; omega) | (have := geometry.domain_below (off := Layout.off_trapsp + 8) (by decide); omega)) space.payload.domain post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

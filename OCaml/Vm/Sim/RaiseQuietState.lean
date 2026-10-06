@@ -51,7 +51,7 @@ theorem TrapWriteOk.frame {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp 
     (h : TrapWriteOk P s c pl cp sp high trap) (memory : after.σ.mem = c.σ.mem) :
     TrapWriteOk P s after pl cp sp high trap := by
   have words (a : Nat) : word after a = word c a := by simp only [word, memory]
-  refine ⟨h.highNat, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨h.highNat, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simpa only [words] using h.address
   · simpa only [words] using h.window
   · rw [words]
@@ -59,6 +59,7 @@ theorem TrapWriteOk.frame {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp 
       toPayloadCoreOutside := { h.payload.toPayloadCoreOutside with stackHigh := by simpa only [words] using h.payload.stackHigh }
       stack := h.payload.stack, heap := h.payload.heap }
   · simpa only [words] using h.image
+  · exact ⟨by simpa only [words] using h.young.limit, by simpa only [words] using h.young.ptr⟩
   · rw [words]
     exact ⟨h.bindings.contents, by simpa only [words] using h.bindings.entries⟩
 

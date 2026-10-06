@@ -42,11 +42,9 @@ structure MakeblockWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : C
   payload : PayloadOutside (makeblockLog c sp count tag a domain accu) P s c pl cp sp
   image : ImageOutside (makeblockLog c sp count tag a domain accu)
   bindings : BindingsOutside (makeblockLog c sp count tag a domain accu) P c
-  /-- the nursery placement of the new object (a6-gc's nursery bounds) -/
-  placement : NurseryPlacement P pl high a (makeblockObject s count tag)
-  /-- the new object is apart from the `Caml_state` record -/
-  domainApart : OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
-    (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a - 8) (8 * (makeblockObject s count tag).wosize + 8)
+  /-- the log's nursery reservation for the new object (the allocation summary) -/
+  reserve : ∃ words, NurseryReserve c (makeblockLog c sp count tag a domain accu) a (makeblockObject s count tag).wosize words
+
   /-- all the allocation's stores lie in the allocator arena -/
   arena : LogInW [arenaWindow] (makeblockLog c sp count tag a domain accu)
 
@@ -69,7 +67,7 @@ theorem makeblock_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after :
     (value : valWord pl s.accu = some accu)
     (space : MakeblockWriteOk P s before pl cp sp high count tag a domain accu)
     (post : MakeblockPost before s pl sp width count tag a domain accu after)
-    (geometry : StackGeometry P s before pl cp high)
+    (geometry : ArmGeometry P s before pl cp high)
     (native : NativePlaced before) :
     Running L P (makeblockState s width count tag) after := by
   have fields := ValueWords.cons value (stack_value_words data.stack space.bound)
@@ -88,7 +86,7 @@ theorem makeblock_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after :
   exact running_of_payload payload (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory, runtime after post.memory platform.runtime⟩
     post.toVmRegisters post.loop
-    ((geometry.alloc (s' := makeblockState s width count tag) space.placed space.placement space.domainApart rfl rfl).frame_log rfl rfl
+    (geometry.alloc_log (s' := makeblockState s width count tag) space.placed space.reserve.choose_spec rfl rfl
       space.payload.domain space.bindings.contents post.memory)
     (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
 

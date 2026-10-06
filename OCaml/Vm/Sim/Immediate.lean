@@ -44,7 +44,7 @@ theorem accu_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     (platform : PlatformOk L.runtimeOk c) (loop : LoopRegisters c)
     (value : valWord pl v = some w)
     (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
-    (post : AccuPost c pl pc w after) (geometry : StackGeometry P s c pl cp high)
+    (post : AccuPost c pl pc w after) (geometry : ArmGeometry P s c pl cp high)
     (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := v} after := by
   have payload := payload_pc ((payload_of_repr data).accu_of_root v root) pc
@@ -64,7 +64,7 @@ theorem immediate_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Conf
     {pl : Place} {cp : ChanPlace} {sp high pc : Nat} {n : BitVec 63}
     (stable : MemoryStable L.runtimeOk) (data : VmReprAt P s c pl cp sp high)
     (platform : PlatformOk L.runtimeOk c) (loop : LoopRegisters c)
-    (post : ImmediatePost c pl pc n after) (geometry : StackGeometry P s c pl cp high)
+    (post : ImmediatePost c pl pc n after) (geometry : ArmGeometry P s c pl cp high)
     (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := .int n} after :=
   accu_restore stable data platform loop rfl (fun _ h => by cases h) post geometry native

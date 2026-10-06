@@ -28,6 +28,7 @@ structure Ccall1WriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
   externApart : sp ≤ domain + Layout.off_extern_sp ∨ domain + Layout.off_extern_sp + 8 ≤ sp - 16
   payload : PayloadOutside (ccall1Log sp domain next env) P s c pl cp sp
   image : ImageOutside (ccall1Log sp domain next env)
+  young : YoungOutside (ccall1Log sp domain next env) c
   bindings : BindingsOutside (ccall1Log sp domain next env) P c
 
 /-- The three writes establish the return frame's exact saved environment word. -/

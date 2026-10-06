@@ -10,6 +10,7 @@ structure AssignWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
   window : WriteWindow (BitVec.ofNat 64 (sp + 8 * i)) 8
   payload : StackEditOutside (assignLog sp i w) P s c pl cp high
   image : ImageOutside (assignLog sp i w)
+  young : YoungOutside (assignLog sp i w) c
   bindings : BindingsOutside (assignLog sp i w) P c
 
 /-- Restore the exact represented stack edit and the unit accumulator. -/
@@ -20,7 +21,7 @@ theorem assign_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     (loop : LoopRegisters c) (space : AssignWriteOk P s c pl cp sp high i w)
     (bound : i < s.stack.length) (value : valWord pl s.accu = some w)
     (post : StackPost c pl pc sp (tag64 0) (writeLog c.σ.mem (assignLog sp i w)) after)
-    (geometry : StackGeometry P s c pl cp high)
+    (geometry : ArmGeometry P s c pl cp high)
     (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := .unit, stack := s.stack.set i s.accu} after := by
   have payload := payload_stack_assign (payload_of_repr data) bound value space.payload post.memory post.output
@@ -35,7 +36,7 @@ theorem assign_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable c after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl rfl) (post.loopRegisters loop)
-    (geometry.frame_log rfl rfl space.payload.core.domain space.bindings.contents post.memory)
+    (geometry.frame_log rfl rfl space.payload.core.domain space.bindings.contents space.young post.memory)
     (native.frame_vm (ws := [⟨sp + 8 * i, sp + 8 * i + 8⟩]) (by simp only [assignLog, LogInW, InsideW, or_false, and_true]; exact ⟨Nat.le_refl _, Nat.le_refl _⟩) (by simp only [List.mem_singleton, forall_eq]; exact geometry.stack_below (by have := data.stack.1; omega)) space.payload.core.domain post.memory post.nativeSp)
 
 /-- Compose dispatch and a generated stack-assignment body. -/

@@ -23,7 +23,7 @@ theorem c_call1_sys_argv {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     (h : ImmediateInput L.runtimeOk P s pl cp sp high (0x80003060#64) [s.accu] c)
     (saved : Ccall1Saved {s with pc := s.pc + 2} pl sp domain frameSp env c)
     (argv : valWord pl s.world.argv = some (word c Layout.sym_main_argv))
-    (geometry : StackGeometry P s c pl cp high) (native : NativePlaced c) :
+    (geometry : ArmGeometry P s c pl cp high) (native : NativePlaced c) :
     FnSummary (BitVec.ofNat 64 Layout.sym_caml_sys_argv) (fun x => x = c)
       (Running L P {s with pc := s.pc + 2, accu := s.world.argv}) :=
   c_call1_resume stable (c_call1_readOnly_summary

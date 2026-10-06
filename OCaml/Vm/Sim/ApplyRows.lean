@@ -41,7 +41,7 @@ theorem logInW_widen {ws : List W} {log : List WEntry} {lo hi : Nat} (inside : L
 
 /-- **APPLY's frame write is separated, writable and enters a ready closure**. -/
 theorem ApplyWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high n : Nat} {env : BitVec 64} (g : StackGeometry P s c pl cp high)
+    {sp high n : Nat} {env : BitVec 64} (g : ArmGeometry P s c pl cp high)
     (stack : StackRepr c pl sp high s.stack) (positive : 1 ≤ n) (small : n ≤ 3)
     (bound : n ≤ s.stack.length)
     (space : 8 * (s.stack.length + 3) ≤ Layout.stackBytes) :
@@ -64,7 +64,8 @@ theorem ApplyWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {
       subst hw
       simp only [stackWindow]
       omega)
-  refine ⟨by omega, fun i hi => ?_, fun e member => ?_, g.edit wide, ⟨?_, ?_, ?_⟩, ⟨?_, ?_⟩, ⟨?_, ?_⟩⟩
+  refine ⟨by omega, fun i hi => ?_, fun e member => ?_, g.edit wide, ⟨?_, ?_, ?_⟩, ⟨?_, ?_⟩,
+    .of_stack g.toStackGeometry wide, ⟨?_, ?_⟩⟩
   · rw [len] at hi
     exact g.read stack (by omega) (by omega)
   · have hin := logInW_mem inside member

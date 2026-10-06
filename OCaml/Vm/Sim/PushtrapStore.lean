@@ -71,6 +71,8 @@ structure PushtrapWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   image : ImageOutside
     (pushtrapLog sp (word c Layout.sym_Caml_state).toNat (BitVec.ofNat 64 (pl.codeBase + 4 * dest))
       (tag64 (BitVec.ofNat 63 (s.stack.length + 4 - s.trap))) env (tag64 (BitVec.ofNat 63 s.extra)))
+  young : YoungOutside (pushtrapLog sp (word c Layout.sym_Caml_state).toNat (BitVec.ofNat 64 (pl.codeBase + 4 * dest))
+        (tag64 (BitVec.ofNat 63 (s.stack.length + 4 - s.trap))) env (tag64 (BitVec.ofNat 63 s.extra))) c
   bindings : BindingsOutside
     (pushtrapLog sp (word c Layout.sym_Caml_state).toNat (BitVec.ofNat 64 (pl.codeBase + 4 * dest))
       (tag64 (BitVec.ofNat 63 (s.stack.length + 4 - s.trap))) env (tag64 (BitVec.ofNat 63 s.extra))) P c

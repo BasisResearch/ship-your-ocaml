@@ -16,7 +16,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
 /-- **RESTART's reads and copy are in RAM and separated.** -/
 theorem RestartInput.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high l a tag : Nat} {fields : List Val} (g : StackGeometry P s c pl cp high)
+    {sp high l a tag : Nat} {fields : List Val} (g : ArmGeometry P s c pl cp high)
     (stack : StackRepr c pl sp high s.stack) (block : BlockSelection s.heap pl s.env l a tag fields)
     (lower : 3 ≤ fields.length)
     (space : 8 * (s.stack.length + (fields.length - 3)) ≤ Layout.stackBytes) :
@@ -35,7 +35,7 @@ theorem RestartInput.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {
   rw [len] at inside
   have ok := StackLogOk.of_window g inside (by unfold restartStart; omega)
     (by unfold restartStart; omega) (indexedLog_words (by unfold restartStart; omega))
-  refine ⟨⟨by omega, ok.payload, ok.image, ok.bindings⟩, by omega, ?_, ?_, lower, by
+  refine ⟨⟨by omega, ok.payload, ok.image, ok.young, ok.bindings⟩, by omega, ?_, ?_, lower, by
       simp only [Layout.sym_bss_end, Vsa.Sim.DlHeap.heapEnd] at *; omega, fun i hi' => ?_,
     fun i hi' => ?_⟩
   all_goals first

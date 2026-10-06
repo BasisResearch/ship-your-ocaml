@@ -15,7 +15,7 @@ structure ArmInput (L : OCaml.Layout) (P : Prog) (s : St) (op : Opcode)
   dispatch : DispatchInput op (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) c
   runtime : L.runtimeOk c
   /-- the VM stack geometry of this placement (`Invariant.lean`) -/
-  geometry : StackGeometry P s c pl cp high
+  geometry : ArmGeometry P s c pl cp high
   /-- the native invocation (`Invocation.lean`) -/
   native : NativePlaced c
 
@@ -74,7 +74,7 @@ theorem ArmInput.of_repr {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
     (loop : LoopRegisters c) (tick : c.tick < 2)
     (geometry : CodeReadAt (pl.codeBase + 4 * s.pc))
     (fetch : P.code[s.pc]? = some (BitVec.ofNat 32 op.toNat))
-    (stack : StackGeometry P s c pl cp high) (native : NativePlaced c) :
+    (stack : ArmGeometry P s c pl cp high) (native : NativePlaced c) :
     ArmInput L P s op c pl cp sp high := by
   have ha : (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)).toNat =
       pl.codeBase + 4 * s.pc := geometry.toNat
@@ -98,13 +98,13 @@ theorem StackGeometry.code_read {P : Prog} {s : St} {c : Config} {pl : Place} {c
 
 /-- An operand read needs only its fetch: the geometry is the witness's. -/
 theorem OperandAt.of_fetch {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {high i : Nat} {w : BitVec 32} (g : StackGeometry P s c pl cp high)
+    {high i : Nat} {w : BitVec 32} (g : ArmGeometry P s c pl cp high)
     (fetch : P.code[i]? = some w) : OperandAt P pl i w :=
   ⟨fetch, g.code_read (by simpa using (Array.getElem?_eq_some_iff.mp fetch).1)⟩
 
 /-- The code fact dispatch needs at the current bytecode PC: the fetch of the
 opcode word. Named obligation; a2-sem supplies it from decoding
-(`CodeFacts.lean`). The word's RAM geometry comes from `StackGeometry`. -/
+(`CodeFacts.lean`). The word's RAM geometry comes from `ArmGeometry`. -/
 structure DispatchCode (P : Prog) (s : St) (op : Opcode) : Prop where
   fetch : P.code[s.pc]? = some (BitVec.ofNat 32 op.toNat)
 

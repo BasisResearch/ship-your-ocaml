@@ -26,7 +26,7 @@ theorem raise_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     (space : TrapWriteOk P s c pl cp sp high (s.trap - link.toNat))
     (post : RaisePost c pl {s with pc := dest, env := env, extra := extra.toNat, stack := rest, trap := s.trap - link.toNat}
       (sp + 8 * (s.stack.length - s.trap + 4)) high (s.trap - link.toNat) after)
-    (geometry : StackGeometry P s c pl cp high)
+    (geometry : ArmGeometry P s c pl cp high)
     (native : NativePlaced c) :
     Running L P {s with pc := dest, env := env, extra := extra.toNat, stack := rest, trap := s.trap - link.toNat} after := by
   have payload := payload_trap_written data space.highNat space.payload post.memory post.output
@@ -44,7 +44,7 @@ theorem raise_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
   exact running_of_payload restored (bindings_frame_log bindings space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable c after memoryFrame platform.runtime⟩ post.registers post.loop
-    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents post.memory)
+    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.young post.memory)
     (native.frameOn memoryFrame (by simp only [List.mem_singleton, forall_eq]; have := geometry.domain_below (off := Layout.off_trapsp + 8) (by decide); omega) (Reloc.bytesT_congr (copied_of_writeLog post.memory space.payload.domain)) post.nativeSp)
 
 end OCaml.Vm.Sim

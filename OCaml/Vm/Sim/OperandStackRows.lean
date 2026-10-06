@@ -137,7 +137,7 @@ theorem StackGeometry.edit {P : Prog} {s : St} {c : Config} {pl : Place} {cp : C
 
 /-- A stack slot write is runtime-stable, writable and separated. -/
 theorem AssignWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high i : Nat} {w : BitVec 64} (g : StackGeometry P s c pl cp high)
+    {sp high i : Nat} {w : BitVec 64} (g : ArmGeometry P s c pl cp high)
     (stack : StackRepr c pl sp high s.stack) (space : 8 * s.stack.length ≤ Layout.stackBytes)
     (bound : i < s.stack.length) : AssignWriteOk P s c pl cp sp high i w := by
   have hs := stack.1
@@ -149,7 +149,7 @@ theorem AssignWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} 
     simp only [assignLog, stackWindow, LogInW, InsideW, or_false, and_true]
     omega
   have hn : (BitVec.ofNat 64 (sp + 8 * i)).toNat = sp + 8 * i := Nat.mod_eq_of_lt (by omega)
-  refine ⟨⟨?_, ?_, ?_, ?_⟩, g.edit inside, ?_, ?_⟩
+  refine ⟨⟨?_, ?_, ?_, ?_⟩, g.edit inside, ?_, .of_stack g.toStackGeometry inside, ?_⟩
   all_goals first
     | (rw [hn]; simp only [Layout.sym_tohost, Layout.sym_bss_end] at *; omega)
     | skip

@@ -26,6 +26,7 @@ structure TailcallWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   payload : StackEditOutside (valueLog (tailcallStart sp args.length slots) args) P s c pl cp high
   enter : EnterOutside (valueLog (tailcallStart sp args.length slots) args) c
   image : ImageOutside (valueLog (tailcallStart sp args.length slots) args)
+  young : YoungOutside (valueLog (tailcallStart sp args.length slots) args) c
   bindings : BindingsOutside (valueLog (tailcallStart sp args.length slots) args) P c
 
 /-- Memory-side facts independent of the concrete argument-copy order. -/
@@ -35,6 +36,7 @@ structure TailcallMemoryOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : C
   bound : slots ≤ s.stack.length
   payload : StackEditOutside log P s c pl cp high
   image : ImageOutside log
+  young : YoungOutside log c
   bindings : BindingsOutside log P c
   inside : LogInW [⟨tailcallStart sp arity slots, sp + 8 * slots⟩] log
 
@@ -65,7 +67,7 @@ theorem tailcall_restore_of_log {L : OCaml.Layout} {P : Prog} {s : St} {before a
     (values : ∀ i v, (s.stack.take arity)[i]? = some v →
       valWord pl v = some (word after (tailcallStart sp arity slots + 8 * i)))
     (post : TailcallPostWith log before s pl sp slots dest arity after)
-    (geometry : StackGeometry P s before pl cp high)
+    (geometry : ArmGeometry P s before pl cp high)
     (native : NativePlaced before) :
     Running L P (tailcallState s arity slots dest) after := by
   have bound : arity ≤ s.stack.length := Nat.le_trans space.fits space.bound
@@ -84,7 +86,7 @@ theorem tailcall_restore_of_log {L : OCaml.Layout} {P : Prog} {s : St} {before a
     (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable before after memoryFrame platform.runtime⟩ post.toVmRegisters post.loop
-    (geometry.frame_log rfl rfl space.payload.core.domain space.bindings.contents post.memory)
+    (geometry.frame_log rfl rfl space.payload.core.domain space.bindings.contents space.young post.memory)
     (native.frameOn memoryFrame (by simp only [List.mem_singleton, forall_eq]; exact geometry.stack_below (by have := data.stack.1; have := space.bound; omega)) (Reloc.bytesT_congr (copied_of_writeLog post.memory space.payload.core.domain)) post.nativeSp)
 
 /-- Every fixed-arity tail call specializes the shared argument-copy restoration. -/
@@ -95,7 +97,7 @@ theorem tailcall_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : 
     (arguments : ValueWords pl (s.stack.take args.length) args)
     (space : TailcallWriteOk P s before pl cp sp high slots args)
     (post : TailcallPost before s pl sp slots dest args after)
-    (geometry : StackGeometry P s before pl cp high) (native : NativePlaced before) :
+    (geometry : ArmGeometry P s before pl cp high) (native : NativePlaced before) :
     Running L P (tailcallState s args.length slots dest) after := by
   have join : tailcallStart sp args.length slots + 8 * args.length = sp + 8 * slots := by
     unfold tailcallStart
@@ -103,7 +105,7 @@ theorem tailcall_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : 
     omega
   have memory : TailcallMemoryOk P s before pl cp sp high args.length slots
       (valueLog (tailcallStart sp args.length slots) args) :=
-    ⟨space.fits, space.bound, space.payload, space.image, space.bindings,
+    ⟨space.fits, space.bound, space.payload, space.image, space.young, space.bindings,
       by simpa only [join] using value_log_in (tailcallStart sp args.length slots) args⟩
   exact tailcall_restore_of_log stable data platform memory (value_log_words arguments post.memory) post
     geometry native

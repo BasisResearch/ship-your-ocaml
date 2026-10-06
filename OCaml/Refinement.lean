@@ -4,6 +4,7 @@ import Vsa.Densify
 import OCaml.Run.Machine
 import OCaml.Run.Clock
 import OCaml.Vm.Sim.Invariant
+import OCaml.Vm.Sim.ArmGeometry
 import OCaml.Vm.Sim.Invocation
 
 /-!
@@ -108,7 +109,7 @@ theorem Loaded.runtime {L : Layout} {P : Prog} {c : Config} (h : Loaded L P c) :
 /-- The represented state together with the VM stack geometry of the same
 placement (`OCaml/Vm/Sim/Invariant.lean`). -/
 def StackPlaced (P : Prog) (s : St) (c : Config) : Prop :=
-  ∃ pl cp sp high, VmReprAt P s c pl cp sp high ∧ Vm.Sim.StackGeometry P s c pl cp high
+  ∃ pl cp sp high, VmReprAt P s c pl cp sp high ∧ Vm.Sim.ArmGeometry P s c pl cp high
 
 /-- The loop-head representation: VM data and platform facts are separate
 named parts. No platform field depends on the abstract heap placement.

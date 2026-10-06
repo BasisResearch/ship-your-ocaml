@@ -46,8 +46,21 @@ Unconditional F1 table rows (`OpArm P (LoopAt L P) op`), derived through
   PUSHGETGLOBAL n, (PUSH)GETGLOBALFIELD n m, APPLY n, APPTERM n s,
   APPTERM1–3, RETURN n (`OperandTableRows`; RETURN takes `ExtraBounded P`).
 
-GRAB has only its satisfied path (`grab_fast_next`). Its row waits on the
-allocating path (NurseryGeometry in `Running`).
+Done: `Running.stack` carries `ArmGeometry` (`OCaml/Vm/Sim/ArmGeometry.lean`):
+the `StackGeometry` plus a6-gc's `NurseryGeometry` of the same witness.
+* Non-allocating arms frame the nursery through `YoungOutside log c`: the log
+  misses `young_limit`/`young_ptr`. Every write certificate carries it,
+  derived once from its window (`of_free`, `of_stack`, `of_windows` for VM
+  windows).
+* Allocating restores (GRAB, CLOSURE, CLOSUREREC, MAKEBLOCK) take one named
+  `NurseryReserve c log a size count`. That is the allocation summary's
+  young_ptr effect. `ArmGeometry.alloc_log` derives the old
+  `placement`/`domainApart` premises from it and the nursery geometry.
+* `ArmSim.entry` takes `ArmGeometry` at the cut. For whileMin it is the
+  stack geometry with `Gc.whileMin_nurseryGeometry`.
+
+GRAB has only its satisfied path (`grab_fast_next`). Its row and the other
+allocation rows need `NurseryReserve` from the allocation summaries.
 
 STOP/uncaught-raise returns export the HTIF payload-counter frame
 (`InterpRuntimeReturnPost.htif`, `UncaughtChecked.htif`) for bprime's exit.

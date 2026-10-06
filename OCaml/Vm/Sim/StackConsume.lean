@@ -77,7 +77,7 @@ theorem consume_value_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : 
     (root : ∀ l, v.loc? = some l → Live s.heap (roots P s) l)
     (bound : count ≤ s.stack.length)
     (post : ConsumeValuePost c pl pc (sp + 8 * count) w after)
-    (geometry : StackGeometry P s c pl cp high) (native : NativePlaced c) :
+    (geometry : ArmGeometry P s c pl cp high) (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := v, stack := s.stack.drop count} after := by
   have payload := payload_pc (payload_stack_drop ((payload_of_repr data).accu_of_root v root) bound) pc
   exact readOnly_restore stable payload data.primitives platform
@@ -110,7 +110,7 @@ theorem consume_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config
     (platform : PlatformOk L.runtimeOk c) (loop : LoopRegisters c)
     (bound : count ≤ s.stack.length)
     (post : ConsumePost c pl pc (sp + 8 * count) n after)
-    (geometry : StackGeometry P s c pl cp high) (native : NativePlaced c) :
+    (geometry : ArmGeometry P s c pl cp high) (native : NativePlaced c) :
     Running L P {s with pc := pc, accu := .int n, stack := s.stack.drop count} after :=
   consume_value_restore stable data platform loop rfl (fun _ hl => by cases hl) bound post geometry
     native

@@ -34,7 +34,7 @@ structure CcallnSetupPost (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place)
     (BitVec.ofNat 64 domain) (BitVec.ofNat 64 (sp - 24)) env c
   target : pcOf c = some (BitVec.ofNat 64 entry)
   /-- the VM stack geometry at the callee entry (`Invariant.lean`) -/
-  geometry : StackGeometry P s c pl cp high
+  geometry : ArmGeometry P s c pl cp high
   /-- the native invocation at the callee entry (`Invocation.lean`) -/
   native : NativePlaced c
 
@@ -44,7 +44,7 @@ spill slot outside `invocationRanges`. -/
 theorem CcallnWriteOk.native {P : Prog} {s : St} {c after : Config} {pl : Place} {cp : ChanPlace}
     {sp high domain nativeSp : Nat} {next env accu : BitVec 64}
     (space : CcallnWriteOk P s c pl cp sp domain nativeSp next env accu) (n : NativePlaced c)
-    (g : StackGeometry P s c pl cp high) (stack : StackRepr c pl sp high s.stack)
+    (g : ArmGeometry P s c pl cp high) (stack : StackRepr c pl sp high s.stack)
     (domainWord : word c Layout.sym_Caml_state = BitVec.ofNat 64 domain)
     (nativeReg : gpr c 2 = some (BitVec.ofNat 64 nativeSp))
     (memory : after.σ.mem = writeLog c.σ.mem (ccallnLog sp domain nativeSp next env accu))
