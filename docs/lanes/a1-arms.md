@@ -87,9 +87,25 @@ Primitive adapters for a1-prims (`CcallWriting.lean`):
 * `ccall_framed_summary` (`FramedCall`: footprint frame plus
   saved registers, the footprint below the native sp; console output).
 
-GRAB has only its satisfied path (`grab_fast_next`). Its row and the other
-allocation rows are next. They get `NurseryReserve` from a6-gc's
-`Gc.NurseryReserve.of_room`.
+Done: the allocation rows. MAKEBLOCK1–3, MAKEBLOCK n, GRAB (both paths) and
+CLOSURE are proved (`MakeblockRows`, `MakeblockNRows`, `GrabAllocRows`,
+`ClosureAllocRows`).
+* The fresh location is re-placed at the reserved block (`Place.put`,
+  `VmReprAt.put`): every represented pointer is live, hence present.
+* `ReservedBlock`/`AllocLogOk.of_block`/`of_prefixed` derive every
+  allocation log's certificates and `NurseryReserve` once.
+* The runtime obligation is `AllocFrame L` (F1: `f1_allocFrame`, from a6-gc's
+  core), composed with a VM-stack prefix by `AllocFrame.prefixed` (CLOSURE's
+  pushed accumulator).
+* Per-program premises: `ClosureSizes`, `BlockSizes` (G1: minor-heap sizes;
+  a2-sem's checked run). CLOSUREREC is not reached by whileMin and is still
+  open.
+
+Next (whileMin's `scratch`): GPR presence in `LoopRegisters`. Plan: add
+`grow` to `StepFrameOut` (GPRs present before stay present: a GPR is either
+framed or the step's single written `rd`). Every arm frame then transports
+`GprPresent`. Arm posts export it through their existing frames, and C_CALL
+posts get it from the library's `VsaOk`.
 
 STOP/uncaught-raise returns export the HTIF payload-counter frame
 (`InterpRuntimeReturnPost.htif`, `UncaughtChecked.htif`) for bprime's exit.
