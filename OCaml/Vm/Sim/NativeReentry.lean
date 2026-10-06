@@ -52,7 +52,8 @@ theorem native_reentry {entry : BitVec 64} {log : List WEntry} {saved : Nat → 
     good := native.good, image := native.image, tick := native.tick
     pc := native.pc.trans (congrArg some returnPc)
     stack := (native.registers 2 (by decide)).trans (congrArg some returnSp)
-    resultReg := native.result, nonzero := by decide }
+    resultReg := native.result, nonzero := by decide
+    s10 := by rw [native.registers 26 (by decide)]; rfl }
   obtain ⟨count, after, run, post⟩ := reentry_quiet input
   exact ⟨after, nativeRun.trans run.toSteps, post.toReentryControl.before_read native.memory native.frame.out
     (native.frame.frame _ (by decide))⟩

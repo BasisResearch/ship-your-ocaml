@@ -2,6 +2,7 @@ import OCaml.Vm.Repr
 import OCaml.Vm.ImageData
 import Vsa.Sim.Code.FixedImage
 import Vsa.Sim.GoodState
+import OCaml.Vm.Boot.Startup.GprPresence
 
 /-!
 # Platform and fixed loop registers
@@ -36,6 +37,13 @@ theorem PlatformOk.htif_done {runtimeOk : Config → Prop} {c : Config}
     c.σ.regs.get? LeanRV64DExecutable.Register.htif_done = some false :=
   h.control.htif_done
 
+/-- The callee-saved registers the loop head keeps present without pinning a
+value: `s10`, which C paths spill (caml_sys_exit's prologue). The other
+callee-saved registers the interpreter uses hold the VM registers, the loop
+constants and the native `sp`; `s7` is the next-code pointer each dispatch
+writes and pins (`DispatchPost.nextCode`). -/
+def unpinnedSaved : List Nat := [26]
+
 /-- Fixed callee-saved registers established by the interpreter prologue.
 The variable loop registers (pc/sp/accu/env/extra) live in `VmReprAt`.
 All constants and register numbers are extracted from the pinned ELF. -/
@@ -47,5 +55,17 @@ structure LoopRegisters (c : Config) : Prop where
   /-- no HTIF command is half-written (the console device is idle between
   complete `tohost` commands; caml_do_exit's exit command needs it) -/
   htifIdle : c.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some 0#4
+  /-- the unpinned callee-saved registers hold values (C paths spill them:
+  caml_sys_exit's and malloc's prologues) -/
+  saved : ∀ n ∈ unpinnedSaved, (gpr c n).isSome
+
+/-- Full GPR presence gives the unpinned callee-saved registers. -/
+theorem _root_.OCaml.Vm.Boot.Startup.GprPresent.saved {c : Config}
+    (p : OCaml.Vm.Boot.Startup.GprPresent c.σ) : ∀ n ∈ unpinnedSaved, (gpr c n).isSome := by
+  intro n hn
+  have b : 1 ≤ n ∧ n < 32 := by
+    simp only [unpinnedSaved, List.mem_cons, List.not_mem_nil, or_false] at hn
+    omega
+  exact p.get n b.1 b.2
 
 end OCaml.Vm

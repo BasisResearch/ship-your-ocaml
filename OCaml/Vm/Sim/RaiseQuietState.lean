@@ -37,7 +37,7 @@ theorem raise_context {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : 
     (h : ArmInput L P s op c pl cp sp high) (frame : RaiseFrame s dest link env extra rest) :
     RaiseContext L P s pl cp sp high dest link env extra rest c :=
   ⟨payload_of_repr h.toVmReprAt, h.primitives, h.running.platform, frame, h.accu, h.dispatch.tick,
-    h.geometry, h.native, h.running.loop.htifIdle⟩
+    h.geometry, h.native, h.running.loop.htifIdle, h.running.loop.saved⟩
 
 /-- Domain trap readback follows from the represented absolute trap pointer. -/
 theorem RaiseContext.trap_word {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}

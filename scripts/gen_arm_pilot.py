@@ -762,7 +762,8 @@ theorem loop_setup {c : Config} (h : LoopSetupInput c) :
 """ + '\n'.join(observations) + """
   exact ⟨n, after, run, post.good,
     image_of_writeLog (log := []) h.image ⟨trivial, trivial⟩ memory,
-    post.tick, post.pcAt, ⟨table, bound, pending, domain, (frame.frame _ (by decide)).trans h.htifIdle⟩, memory,
+    post.tick, post.pcAt, ⟨table, bound, pending, domain, (frame.frame _ (by decide)).trans h.htifIdle,
+      loopSetup_saved (frame.widenChecked (allowed := loopSetupWrites) (by decide)) h.saved⟩, memory,
     frame.widenChecked (allowed := loopSetupWrites) (by decide)⟩
 
 end OCaml.Vm.Sim

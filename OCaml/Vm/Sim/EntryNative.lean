@@ -30,6 +30,8 @@ structure EntryNativeInput (c : Config) (sp : Nat) (regs : Nat → BitVec 64) (a
     extends EntrySaveInput c sp regs a0 where
   domain : DomainWindow (word c Layout.sym_Caml_state).toNat
   htifIdle : c.σ.regs.get? Register.htif_payload_writes = some 0#4
+  /-- every GPR holds a value at the caller (a0-boot's captured register table) -/
+  gprs : OCaml.Vm.Boot.Startup.GprPresent c.σ
 
 structure EntryNativePost (before : Config) (sp : Nat) (regs : Nat → BitVec 64) (a0 : BitVec 64)
     (after : Config) : Prop where
@@ -118,7 +120,8 @@ theorem entry_native {c : Config} {sp : Nat} {regs : Nat → BitVec 64} {a0 : Bi
     by rw [dom3]; exact h.domain⟩
   -- loop registers
   obtain ⟨n5, c5, s5, p5⟩ := loop_setup ⟨p4.good, p4.image, p4.tick, p4.pc,
-    p4.htif.trans (p3.htif.trans (p2.htif.trans (p1.htif.trans h.htifIdle)))⟩
+    p4.htif.trans (p3.htif.trans (p2.htif.trans (p1.htif.trans h.htifIdle))),
+    (p4.gprs (p3.gprs (p2.gprs (p1.gprs h.gprs)))).saved⟩
   have keep : ∀ n ∈ [8, 9, 18, 21, 25, 2], gprGet c5.σ n = gprGet c4.σ n :=
     p5.frame.gpr_list (by decide +kernel)
   have depth1 : entryDepth c1 = entryDepth c := by

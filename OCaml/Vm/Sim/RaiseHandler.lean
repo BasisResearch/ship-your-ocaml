@@ -100,7 +100,7 @@ theorem raise_handler {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {pl : 
   obtain ⟨_, memory, frame⟩ := post.extra
   have image := image_of_writeLog h.platform.image space.image (memory.trans memEq)
   obtain ⟨loopCount, after, loopRun, loopPost⟩ := loop_setup ⟨post.good, image, post.tick, post.pcAt,
-    (frame.frame _ (by decide)).trans h.htifIdle⟩
+    (frame.frame _ (by decide)).trans h.htifIdle, saved_keep (frame.frame (gprReg 26) (by decide)) h.saved⟩
   have codeReg : gpr middle Layout.reg_pc = some (BitVec.ofNat 64 (pl.codeBase + 4 * dest)) := PinsHold.get post.pins ⟨4, by simp⟩
   have stackReg : gpr middle Layout.reg_sp = some (BitVec.ofNat 64 (base + 32)) := PinsHold.get post.pins ⟨3, by simp⟩
   have envReg : gpr middle Layout.reg_env = some (word c (base + 16)) := PinsHold.get post.pins ⟨1, by simp⟩

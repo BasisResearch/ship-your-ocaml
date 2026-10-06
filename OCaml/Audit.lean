@@ -5075,6 +5075,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Bytecode.primF1Impl_exit
 #print axioms OCaml.Vm.Sim.CcallExit.of_arity
 #print axioms OCaml.Vm.Sim.CcallExit.of_ok
+#print axioms OCaml.Vm.Sim.loopRegisters_of
+#print axioms OCaml.Vm.Sim.saved_of_pin
+#print axioms OCaml.Vm.Sim.loopSetup_saved
+#print axioms OCaml.Vm.Boot.Startup.GprPresent.saved
 #print axioms OCaml.Vm.Sim.MakeblockInitInput.of_block
 #print axioms OCaml.Vm.Sim.makeblock_row
 #print axioms OCaml.Vm.Sim.division_dispatch_entry

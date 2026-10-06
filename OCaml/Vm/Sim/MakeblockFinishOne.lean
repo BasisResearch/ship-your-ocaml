@@ -55,7 +55,8 @@ theorem makeblock_finish_one {L : OCaml.Layout} {P : Prog} {s : St} {c d : Confi
     · obtain ⟨w, reg, value⟩ := h.env
       exact ⟨w, (frame.frame Register.x25 (by decide)).trans reg, value⟩
     · exact (frame.frame Register.x18 (by decide)).trans h.extra
-    · exact loopRegisters_frame (fun r hr => frame.frame r (by revert r; decide)) h.dispatch.loop
+    · exact loopRegisters_of (fun r hr => frame.frame r (by revert r; decide)) h.dispatch.loop
+        (saved_of_pin ((rawFrame.frame Register.x26 (by decide)).trans codeReg))
   exact ⟨nb, after, steps, makeblock_restore runtime h.toVmReprAt h.running.platform value space observed h.geometry h.native⟩
 
 end OCaml.Vm.Sim

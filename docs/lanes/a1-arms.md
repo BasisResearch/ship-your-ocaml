@@ -126,6 +126,22 @@ STOP/uncaught-raise returns export the HTIF payload-counter frame
 (`InterpRuntimeReturnPost.htif`, `UncaughtChecked.htif`) for bprime's exit.
 `LoopRegisters.htifIdle` lands after a1-prims' `EffectPost.htifIdle`.
 
+Done: `LoopRegisters.saved`: `s10` (x26, `unpinnedSaved`) holds a value at
+every loop head; C paths spill it (caml_sys_exit's prologue, bprime's
+`ccall1Exit_f1`).
+* The other callee-saved registers are pinned already. They hold the VM
+  registers, the loop constants and the native `sp`; `s7` is dispatch's
+  next-code pointer (`DispatchPost.nextCode`).
+* Arms that don't write `s10` keep it through `loopPreserved`.
+* MAKEBLOCK, CLOSURE and CLOSUREREC pin it (`saved_of_pin`, through
+  `loopRegisters_of`).
+* Entry gets it from `InterpCaller.gprs` (`GprPresent.saved`). The raise path
+  carries it in `RaiseContext.saved`, and longjmp's restored registers give
+  `ReentryControl.s10`.
+* All-31 GPR presence would need a1-prims' `EffectPost` to carry presence of
+  the written temporaries (~85 files). a6-gc states malloc's need as one named
+  premise of caml_modify's realloc branch.
+
 Row premises for generic `L`:
 * `MemoryStable L.runtimeOk` and `RuntimeFrame L high dom`; both discharged
   for a6-gc's pinned `Gc.f1Layout` (`f1_memoryStable`, `f1_runtimeFrame`,

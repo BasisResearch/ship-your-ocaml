@@ -73,7 +73,8 @@ theorem reentry_quiet {{nativeSp : Nat}} {{result : BitVec 64}} {{c : Config}}
   have writes := memory.trans memoryLog
   refine ⟨count, after, run, ⟨post.good, image_of_writeLog h.image h.imageOutside writes,
     post.tick, post.pcAt, ?_, ?_, ?_, ?_, (frame.frame Register.x2 (by decide)).trans h.stack, writes, frame.out,
-    frame.frame Register.htif_payload_writes (by decide)⟩,
+    frame.frame Register.htif_payload_writes (by decide),
+    by rw [show gpr after 26 = gpr c 26 from frame.frame Register.x26 (by decide)]; exact h.s10⟩,
     frame.widenChecked (by decide)⟩
   · exact PinsHold.get post.pins ⟨{pins['x15']}, by simp⟩
   · exact PinsHold.get post.pins ⟨{pins['x14']}, by simp⟩

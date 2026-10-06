@@ -29,7 +29,8 @@ theorem loop_setup {c : Config} (h : LoopSetupInput c) :
     simpa only [show (((0x80001f54#64) + (sign_extend (m := 64) ((0x00063#20) +++ 0x000#12))) + sign_extend (m := 64) (0xdb4#12)) = BitVec.ofNat 64 Layout.sym_Caml_state from by decide] using observed
   exact ⟨n, after, run, post.good,
     image_of_writeLog (log := []) h.image ⟨trivial, trivial⟩ memory,
-    post.tick, post.pcAt, ⟨table, bound, pending, domain, (frame.frame _ (by decide)).trans h.htifIdle⟩, memory,
+    post.tick, post.pcAt, ⟨table, bound, pending, domain, (frame.frame _ (by decide)).trans h.htifIdle,
+      loopSetup_saved (frame.widenChecked (allowed := loopSetupWrites) (by decide)) h.saved⟩, memory,
     frame.widenChecked (allowed := loopSetupWrites) (by decide)⟩
 
 end OCaml.Vm.Sim

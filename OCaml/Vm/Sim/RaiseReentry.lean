@@ -76,7 +76,10 @@ theorem raise_reentry_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place
             subst hw
             exact external_field (by decide)))
         post.memory post.nativeStack
-      htifIdle := post.htif.trans h.htifIdle }
+      htifIdle := post.htif.trans h.htifIdle
+      saved := fun n hn => by
+        simp only [unpinnedSaved, List.mem_singleton] at hn
+        subst hn; exact post.s10 }
     pc := post.pc
     trapReg := post.trap.trans (congrArg some trap)
     domainReg := ?_ }

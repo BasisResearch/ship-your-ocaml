@@ -28,13 +28,20 @@ structure LibraryPrimitivePost (runtimeOk : Config → Prop) (P : Prog) (s : St)
 /-- One finite ABI check preserves all dedicated interpreter registers. -/
 theorem loop_of_abi_frame {writes : List Nat} {before after : Config}
     (frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ writes → gpr after n = gpr before n)
-    (kept : ∀ n ∈ [Layout.reg_dispatchTable, Layout.reg_opcodeBound, Layout.reg_pending, Layout.reg_domain], n ∉ writes)
+    (kept : ∀ n ∈ [Layout.reg_dispatchTable, Layout.reg_opcodeBound, Layout.reg_pending, Layout.reg_domain,
+      26], n ∉ writes)
     (loop : LoopRegisters before)
     (idle : after.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some 0#4) :
     LoopRegisters after := by
   exact ⟨(frame _ (by decide) (by decide) (kept _ (by simp))).trans loop.dispatchTable,
     (frame _ (by decide) (by decide) (kept _ (by simp))).trans loop.opcodeBound,
     (frame _ (by decide) (by decide) (kept _ (by simp))).trans loop.pending,
-    (frame _ (by decide) (by decide) (kept _ (by simp))).trans loop.domain, idle⟩
+    (frame _ (by decide) (by decide) (kept _ (by simp))).trans loop.domain, idle, fun n hn => by
+      have b : 1 ≤ n ∧ n ≤ 31 ∧ n ∈ [Layout.reg_dispatchTable, Layout.reg_opcodeBound, Layout.reg_pending,
+          Layout.reg_domain, 26] := by
+        simp only [unpinnedSaved, List.mem_cons, List.not_mem_nil, or_false] at hn
+        subst hn; decide
+      rw [frame n b.1 b.2.1 (kept n b.2.2)]
+      exact loop.saved n hn⟩
 
 end OCaml.Vm.Primitives
