@@ -19,6 +19,9 @@ Done (F1 side of the GC):
   `stack_threshold + 8*B.stackWords ≤ stack_high`).
   `G1Room.nursery_capacity` gives `NurseryInput.capacity` in its exact shape;
   `G1Reserve.lean:NurseryReserve.of_room` gives a1-arms' `NurseryReserve`.
+  `G1RoomDefs.lean` (below Refinement, for `Running`) holds `G1Room`/`g1Budget`;
+  `G1RoomTransport.lean` holds `step`/`reserve`/`frame`/`same`. The stack
+  field was dropped (a1-arms' `StackCapacity` + `RuntimeFrame` cover it).
   `G1Room.step` re-establishes it after a step (`G1Room.reserve`: directly from
   a `NurseryInput` reservation); `G1Room.stack_capacity` gives
   `EnterReady.capacity` from `StackRepr`.

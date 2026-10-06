@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.G1Room
+import OCaml.Vm.Runtime
 import OCaml.Vm.Gc.NurseryDefs
 import OCaml.Vm.Gc.NurseryTransport
 import OCaml.Vm.Sim.InvariantUse

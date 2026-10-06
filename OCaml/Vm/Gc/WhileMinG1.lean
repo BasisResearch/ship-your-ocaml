@@ -15,17 +15,9 @@ theorem whileMin_init_words : whileMin.init.heap.words = 100 := by decide +kerne
 theorem whileMin_g1Room_of {c : Config} {initial : Vsa.MemRepr.Mem}
     (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial WhileMinLog.log)) :
     G1Room g1Budget whileMin.init c := by
-  have dom : (word c Layout.sym_Caml_state).toNat = WhileMinRuntime.domain :=
-    congrArg BitVec.toNat (WhileMinRuntime.read_domain memory)
-  have threshold : stackThreshold c = 0x80383fb0 := by
-    simp only [stackThreshold, domainWord, dom, WhileMinEntry.read_stack_threshold memory]; rfl
-  have high : stackHigh c = 0x8038b7b0 := by
-    simp only [stackHigh, domainWord, dom, WhileMinEntry.read_stack_high memory]; rfl
   constructor
-  · rw [WhileMinRuntime.fields memory, whileMin_init_words]
-    decide +kernel
-  · rw [threshold, high]
-    decide +kernel
+  rw [WhileMinRuntime.fields memory, whileMin_init_words]
+  decide +kernel
 
 /-- **G1 room at the `whileMin` cut.** -/
 theorem whileMin_g1Room : G1Room g1Budget whileMin.init WhileMin.cut :=

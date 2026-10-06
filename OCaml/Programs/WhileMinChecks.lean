@@ -2,6 +2,7 @@ import OCaml.Programs.WhileMin
 import OCaml.Bytecode.GcSafeNoForward
 import OCaml.Run.Checked
 import OCaml.Vm.Gc.G1Room
+import OCaml.Refinement
 
 /-!
 # `Fits` and `GcSafe` for `whileMin`, kernel-checked
