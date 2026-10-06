@@ -54,4 +54,14 @@ theorem nameByte_equals_guard {b : BitVec 8} (neq : b ≠ 61#8) :
     guardB bop.BNE (nameSignedByte b + (-61#64)) 0#64 = true := by
   rw [guardB, bne_iff_ne]
   exact fun eq => neq ((nameByte_equals b).mp eq)
+theorem nameByteWord_ne_of {b : BitVec 8} {v : Nat} (ne : b ≠ BitVec.ofNat 8 v) (small : v < 256) :
+    nameByteWord b ≠ BitVec.ofNat 64 v := by
+  intro h
+  apply ne
+  apply BitVec.eq_of_toNat_eq
+  have := congrArg BitVec.toNat h
+  simp only [nameByteWord, BitVec.toNat_setWidth, BitVec.toNat_ofNat] at this ⊢
+  have := b.isLt
+  omega
+
 end OCaml.Vm.Boot.Startup

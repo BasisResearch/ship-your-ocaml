@@ -107,16 +107,6 @@ theorem search_in_path_first (c : Config) (ra tbl name : BitVec 64) (b : BitVec 
   · rfl
   · decide
 
-theorem nameByteWord_ne_of {b : BitVec 8} {v : Nat} (ne : b ≠ BitVec.ofNat 8 v) (small : v < 256) :
-    nameByteWord b ≠ BitVec.ofNat 64 v := by
-  intro h
-  apply ne
-  apply BitVec.eq_of_toNat_eq
-  have := congrArg BitVec.toNat h
-  simp only [nameByteWord, BitVec.toNat_setWidth, BitVec.toNat_ofNat] at this ⊢
-  have := b.isLt
-  omega
-
 def scanStepInput (cursor : BitVec 64) (b : BitVec 8) (a0 : BitVec 64) : GRegs :=
   [(14, cursor), (15, nameByteWord b), (13, 47#64), (10, a0)]
 
