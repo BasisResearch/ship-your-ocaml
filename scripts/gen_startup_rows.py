@@ -108,7 +108,7 @@ def search_names(di, extents, elf_sections):
 
 
 # Functions whose code predicates scripts/gen_library_pins.py owns.
-LIBRARY_PINNED = ('strcmp', '__ssprint_r', '__ssputs_r', '_malloc_r', '_free_r', '_svfprintf_r', 'memmove')
+LIBRARY_PINNED = ('strcmp', '__ssprint_r', '__ssputs_r', '_malloc_r', '_free_r', '_svfprintf_r', 'memmove', '__errno')
 
 
 def outputs():
