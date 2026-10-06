@@ -148,11 +148,20 @@ theorem opArm_of_next0 {L : OCaml.Layout} {P : Prog} {op : Opcode}
     · exact noHalt s
   · rcases shape s args empty with r | r <;> rw [r] <;> trivial
 
-/-- A row from a simulation over any operand list (variable-arity opcodes:
-CLOSUREREC). Non-continuing outcomes other than halting are vacuous. -/
-theorem opArm_of_next {L : OCaml.Layout} {P : Prog} {op : Opcode}
+/-- Under `GoodF1`, the instruction decoded at a reachable state is F1 (its
+fragment facts, e.g. allocation sizes, hold for the row). -/
+theorem GoodF1.inF1_at {P : Prog} {s : St} {i : Instr} (good : OCaml.GoodF1 P) (reach : Reach P s)
+    (hd : decodeAt P.code s.pc = some i) : OCaml.InF1 P i := by
+  obtain ⟨i', hi', h⟩ := good.inF1 s reach
+  rw [hd] at hi'
+  cases hi'
+  exact h
+
+/-- A row from a simulation that also sees the decoded instruction (to read
+its `InF1` facts through `GoodF1.inF1_at`). -/
+theorem opArm_of_decoded {L : OCaml.Layout} {P : Prog} {op : Opcode}
     (next : ∀ s s' c (args : List Int), Reach P s → Reach P s' → OCaml.LoopAt L P s c →
-      DispatchCode P s op → OperandFetches P s.pc args →
+      DispatchCode P s op → decodeAt P.code s.pc = some ⟨op, args⟩ → OperandFetches P s.pc args →
       stepI P s ⟨op, args⟩ = .next s' → ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c')
     (noHalt : ∀ s args e w, stepI P s ⟨op, args⟩ ≠ .halt e w) :
     OCaml.OpArm P (OCaml.LoopAt L P) op := by
@@ -162,7 +171,18 @@ theorem opArm_of_next {L : OCaml.Layout} {P : Prog} {op : Opcode}
   simp only at hop
   subst hop
   apply OCaml.ArmOutcome.of_next
-  · exact fun s' step => next s s' c args reach (reach_next reach hd step) h code fetches step
+  · exact fun s' step => next s s' c args reach (reach_next reach hd step) h code hd fetches step
   · exact noHalt s args
+
+/-- A row from a simulation over any operand list (variable-arity opcodes:
+CLOSUREREC). Non-continuing outcomes other than halting are vacuous. -/
+theorem opArm_of_next {L : OCaml.Layout} {P : Prog} {op : Opcode}
+    (next : ∀ s s' c (args : List Int), Reach P s → Reach P s' → OCaml.LoopAt L P s c →
+      DispatchCode P s op → OperandFetches P s.pc args →
+      stepI P s ⟨op, args⟩ = .next s' → ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c')
+    (noHalt : ∀ s args e w, stepI P s ⟨op, args⟩ ≠ .halt e w) :
+    OCaml.OpArm P (OCaml.LoopAt L P) op :=
+  opArm_of_decoded (fun s s' c args reach reach' h code _ fetches step =>
+    next s s' c args reach reach' h code fetches step) noHalt
 
 end OCaml.Vm.Sim
