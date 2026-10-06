@@ -395,4 +395,248 @@ theorem strchr_test (c : Config) (a ra x : BitVec 64) (leaf : LeafInput ra c)
       test_regs
     · rfl
     · decide
+/-- A later word's test (the loop's operand order). -/
+def loopTest (x : BitVec 64) : BitVec 64 :=
+  ((x + lowOnes) &&& (x ^^^ allOnes) ||| (x ^^^ slashPattern ^^^ allOnes) &&& ((x ^^^ slashPattern) + lowOnes)) &&&
+    highBits
+
+def strchrLoopInput (w : BitVec 64) : GRegs := [(10, w), (17, slashPattern), (16, lowOnes), (6, highBits)]
+
+def strchrLooped (w x : BitVec 64) : GRegs :=
+  [(15, loopTest x), (12, (x ^^^ slashPattern ^^^ allOnes) &&& (x ^^^ slashPattern) + lowOnes), (14, x ^^^ allOnes),
+    (11, x ^^^ slashPattern ^^^ allOnes), (10, w + 8#64), (17, slashPattern), (16, lowOnes), (6, highBits)]
+
+/-- The next word: a clear word stays in the loop, a hit goes to the byte scan. -/
+theorem strchr_word_step (c : Config) (w ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ (strchrLoopInput w)) (window : ReadWindow (w + 8#64) 8) :
+    FnSummary 0x80040798#64 (fun e => e = c)
+      (WriteRegistersPost [14, 10, 15, 11, 12] [] c
+        (if loopTest (bytesT c.σ.mem (w + 8#64).toNat 8) = 0#64 then 0x80040798#64 else 0x800407c8#64) (w + 8#64)
+        (strchrLooped w (bytesT c.σ.mem (w + 8#64).toNat 8))) := by
+  by_cases clear : loopTest (bytesT c.σ.mem (w + 8#64).toNat 8) = 0#64
+  · apply registers_of_blocks leaf.image (by constructor <;> trivial)
+      (block_summary _ _ _ _ _ (show BlockInput (strchrX0798Seg ++ strchrX07a8TSeg) 0x80040798#64 (strchrLoopInput w)
+          [read8 c.σ.mem (w + 8#64).toNat] c from {
+        good := leaf.good
+        minstret := leaf.minstret
+        regs := regs
+        keys := by change KeysOK [10, 17, 16, 6]; decide
+        shape := by change ChainOK _ [10, 17, 16, 6] _; decide
+        tick := leaf.tick
+        facts := by
+          have code := strchrWord_code leaf.image
+          chain_facts code with "Vsa.Sim.Code.strchr_at_"
+          · exact window.ld rfl (by change w + Functions.sign_extend (m := 64) 8#12 = w + 8#64
+                                    rw [show Functions.sign_extend (m := 64) 8#12 = 8#64 by decide]) (read8_pins _ _)
+          · refine guard_of_eq (w := loopTest (bytesT c.σ.mem (w + 8#64).toNat 8)) ?_ (by rw [clear]; rfl)
+            simp only [strchrword_line_80040798, strchrword_line_8004079c, strchrword_line_800407a0, strchrword_line_800407a4, strchrwordtest_line_800407a8, strchrwordtest_line_800407ac, strchrwordtest_line_800407b0, strchrwordtest_line_800407b4, strchrwordtest_line_800407b8, strchrwordtest_line_800407bc, strchrwordtest_line_800407c0, runGM, ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM,
+              wentryM, widthOfM, List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true,
+              ite_false, strchrLoopInput, read8_value]
+            rw [show Functions.sign_extend (m := 64) 4095#12 = allOnes by decide]
+            rfl }))
+    · rfl
+    · rw [if_pos clear]; rfl
+    · simp only [strchrX0798Seg, strchrX07a8TSeg, evalBlocks, evalBlock, SegEvalState.init, strchrword_line_80040798, strchrword_line_8004079c, strchrword_line_800407a0, strchrword_line_800407a4, strchrwordtest_line_800407a8, strchrwordtest_line_800407ac, strchrwordtest_line_800407b0, strchrwordtest_line_800407b4, strchrwordtest_line_800407b8, strchrwordtest_line_800407bc, strchrwordtest_line_800407c0, runGM,
+        ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+        List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, strchrLoopInput, List.cons_append,
+        List.nil_append, read8_value, strchrLooped]
+      rw [show Functions.sign_extend (m := 64) 4095#12 = allOnes by decide,
+        show Functions.sign_extend (m := 64) 8#12 = 8#64 by decide]
+      rfl
+    · rfl
+    · decide
+  · apply registers_of_blocks leaf.image (by constructor <;> trivial)
+      (block_summary _ _ _ _ _ (show BlockInput (strchrX0798Seg ++ strchrX07a8FSeg) 0x80040798#64 (strchrLoopInput w)
+          [read8 c.σ.mem (w + 8#64).toNat] c from {
+        good := leaf.good
+        minstret := leaf.minstret
+        regs := regs
+        keys := by change KeysOK [10, 17, 16, 6]; decide
+        shape := by change ChainOK _ [10, 17, 16, 6] _; decide
+        tick := leaf.tick
+        facts := by
+          have code := strchrWord_code leaf.image
+          chain_facts code with "Vsa.Sim.Code.strchr_at_"
+          · exact window.ld rfl (by change w + Functions.sign_extend (m := 64) 8#12 = w + 8#64
+                                    rw [show Functions.sign_extend (m := 64) 8#12 = 8#64 by decide]) (read8_pins _ _)
+          · refine guard_of_eq (w := loopTest (bytesT c.σ.mem (w + 8#64).toNat 8)) ?_ (by simp only [guardB, beq_eq_false_iff_ne]; exact clear)
+            simp only [strchrword_line_80040798, strchrword_line_8004079c, strchrword_line_800407a0, strchrword_line_800407a4, strchrwordtest_line_800407a8, strchrwordtest_line_800407ac, strchrwordtest_line_800407b0, strchrwordtest_line_800407b4, strchrwordtest_line_800407b8, strchrwordtest_line_800407bc, strchrwordtest_line_800407c0, runGM, ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM,
+              wentryM, widthOfM, List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true,
+              ite_false, strchrLoopInput, read8_value]
+            rw [show Functions.sign_extend (m := 64) 4095#12 = allOnes by decide]
+            rfl }))
+    · rfl
+    · rw [if_neg clear]; rfl
+    · simp only [strchrX0798Seg, strchrX07a8FSeg, evalBlocks, evalBlock, SegEvalState.init, strchrword_line_80040798, strchrword_line_8004079c, strchrword_line_800407a0, strchrword_line_800407a4, strchrwordtest_line_800407a8, strchrwordtest_line_800407ac, strchrwordtest_line_800407b0, strchrwordtest_line_800407b4, strchrwordtest_line_800407b8, strchrwordtest_line_800407bc, strchrwordtest_line_800407c0, runGM,
+        ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+        List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, strchrLoopInput, List.cons_append,
+        List.nil_append, read8_value, strchrLooped]
+      rw [show Functions.sign_extend (m := 64) 4095#12 = allOnes by decide,
+        show Functions.sign_extend (m := 64) 8#12 = 8#64 by decide]
+      rfl
+    · rfl
+    · decide
+/-- Byte scan, first load (after a first-word hit). -/
+theorem strchr_scan_first (c : Config) (q ra : BitVec 64) (b : BitVec 8) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, q), (13, 47#64)]) (window : ReadWindow q 1) (pin : (c.σ.mem[q.toNat]?).getD 0 = b) :
+    FnSummary 0x800407d8#64 (fun e => e = c)
+      (WriteRegistersPost [15] [] c (if b = 0#8 then 0x800407e0#64 else 0x800407d0#64) q
+        [(15, nameByteWord b), (10, q), (13, 47#64)]) := by
+  by_cases zero : b = 0#8
+  · subst zero
+    apply registers_of_blocks leaf.image (by constructor <;> trivial)
+      (block_summary _ _ _ _ _ (show BlockInput strchrX07d8FSeg 0x800407d8#64 [(10, q), (13, 47#64)] [[0#8]] c from {
+        good := leaf.good
+        minstret := leaf.minstret
+        regs := regs
+        keys := by change KeysOK [10, 13]; decide
+        shape := by change ChainOK _ [10, 13] _; decide
+        tick := leaf.tick
+        facts := by
+          have code := strchrScan_code leaf.image
+          chain_facts code with "Vsa.Sim.Code.strchr_at_"
+          · exact window.lbu rfl (by change q + Functions.sign_extend (m := 64) 0#12 = q
+                                     rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]) pin
+          · rfl }))
+    · rfl
+    · rw [if_pos rfl]; rfl
+    · change [(15, bytesVal .lbu [0#8]), (10, q), (13, 47#64)] = _
+      rw [name_lbu_value]
+    · rfl
+    · decide
+  · have nz : nameByteWord b ≠ 0#64 := nameByteWord_ne_of zero (by decide)
+    apply registers_of_blocks leaf.image (by constructor <;> trivial)
+      (block_summary _ _ _ _ _ (show BlockInput strchrX07d8TSeg 0x800407d8#64 [(10, q), (13, 47#64)] [[b]] c from {
+        good := leaf.good
+        minstret := leaf.minstret
+        regs := regs
+        keys := by change KeysOK [10, 13]; decide
+        shape := by change ChainOK _ [10, 13] _; decide
+        tick := leaf.tick
+        facts := by
+          have code := strchrScan_code leaf.image
+          chain_facts code with "Vsa.Sim.Code.strchr_at_"
+          · exact window.lbu rfl (by change q + Functions.sign_extend (m := 64) 0#12 = q
+                                     rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]) pin
+          · change guardB bop.BNE (bytesVal .lbu [b]) 0#64 = true
+            rw [name_lbu_value]
+            exact bne_iff_ne.mpr nz }))
+    · rfl
+    · rw [if_neg zero]; rfl
+    · change [(15, bytesVal .lbu [b]), (10, q), (13, 47#64)] = _
+      rw [name_lbu_value]
+    · rfl
+    · decide
+/-- Byte scan, first load (after a later word's hit). -/
+theorem strchr_scan_word (c : Config) (q ra : BitVec 64) (b : BitVec 8) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, q), (13, 47#64)]) (window : ReadWindow q 1) (pin : (c.σ.mem[q.toNat]?).getD 0 = b) :
+    FnSummary 0x800407c8#64 (fun e => e = c)
+      (WriteRegistersPost [15] [] c (if b = 0#8 then 0x800407e0#64 else 0x800407d0#64) q
+        [(15, nameByteWord b), (10, q), (13, 47#64)]) := by
+  by_cases zero : b = 0#8
+  · subst zero
+    apply registers_of_blocks leaf.image (by constructor <;> trivial)
+      (block_summary _ _ _ _ _ (show BlockInput strchrX07c8TSeg 0x800407c8#64 [(10, q), (13, 47#64)] [[0#8]] c from {
+        good := leaf.good
+        minstret := leaf.minstret
+        regs := regs
+        keys := by change KeysOK [10, 13]; decide
+        shape := by change ChainOK _ [10, 13] _; decide
+        tick := leaf.tick
+        facts := by
+          have code := strchrTail_code leaf.image
+          chain_facts code with "Vsa.Sim.Code.strchr_at_"
+          · exact window.lbu rfl (by change q + Functions.sign_extend (m := 64) 0#12 = q
+                                     rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]) pin
+          · rfl }))
+    · rfl
+    · rw [if_pos rfl]; rfl
+    · change [(15, bytesVal .lbu [0#8]), (10, q), (13, 47#64)] = _
+      rw [name_lbu_value]
+    · rfl
+    · decide
+  · have nz : nameByteWord b ≠ 0#64 := nameByteWord_ne_of zero (by decide)
+    apply registers_of_blocks leaf.image (by constructor <;> trivial)
+      (block_summary _ _ _ _ _ (show BlockInput strchrX07c8FSeg 0x800407c8#64 [(10, q), (13, 47#64)] [[b]] c from {
+        good := leaf.good
+        minstret := leaf.minstret
+        regs := regs
+        keys := by change KeysOK [10, 13]; decide
+        shape := by change ChainOK _ [10, 13] _; decide
+        tick := leaf.tick
+        facts := by
+          have code := strchrTail_code leaf.image
+          chain_facts code with "Vsa.Sim.Code.strchr_at_"
+          · exact window.lbu rfl (by change q + Functions.sign_extend (m := 64) 0#12 = q
+                                     rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]) pin
+          · change guardB bop.BEQ (bytesVal .lbu [b]) 0#64 = false
+            rw [name_lbu_value]
+            exact beq_eq_false_iff_ne.mpr nz }))
+    · rfl
+    · rw [if_neg zero]; rfl
+    · change [(15, bytesVal .lbu [b]), (10, q), (13, 47#64)] = _
+      rw [name_lbu_value]
+    · rfl
+    · decide
+
+/-- One scan step: the current byte is not '/'; load the next. -/
+theorem strchr_scan_step (c : Config) (q ra : BitVec 64) (b next : BitVec 8) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, q), (13, 47#64), (15, nameByteWord b)]) (notSlash : b ≠ 47#8)
+    (window : ReadWindow (q + 1#64) 1) (pin : (c.σ.mem[(q + 1#64).toNat]?).getD 0 = next) :
+    FnSummary 0x800407d0#64 (fun e => e = c)
+      (WriteRegistersPost [10, 15] [] c (if next = 0#8 then 0x800407e0#64 else 0x800407d0#64) (q + 1#64)
+        [(15, nameByteWord next), (10, q + 1#64), (13, 47#64)]) := by
+  have ne : guardB bop.BEQ 47#64 (nameByteWord b) = false := by
+    simp only [guardB, beq_eq_false_iff_ne]
+    exact fun h => nameByteWord_ne_of notSlash (by decide) h.symm
+  have addr : q + Functions.sign_extend (m := 64) 1#12 + Functions.sign_extend (m := 64) 0#12 = q + 1#64 := by
+    rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero,
+      show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide]
+  by_cases zero : next = 0#8
+  · subst zero
+    apply registers_of_blocks leaf.image (by constructor <;> trivial)
+      (block_summary _ _ _ _ _ (show BlockInput (strchrX07d0FSeg ++ strchrX07d4FSeg) 0x800407d0#64
+          [(10, q), (13, 47#64), (15, nameByteWord b)] [[0#8]] c from {
+        good := leaf.good
+        minstret := leaf.minstret
+        regs := regs
+        keys := by change KeysOK [10, 13, 15]; decide
+        shape := by change ChainOK _ [10, 13, 15] _; decide
+        tick := leaf.tick
+        facts := by
+          have code := strchrTail_code leaf.image
+          chain_facts code with "Vsa.Sim.Code.strchr_at_"
+          · exact ne
+          · exact window.lbu rfl addr pin
+          · rfl }))
+    · rfl
+    · rw [if_pos rfl]; rfl
+    · change [(15, bytesVal .lbu [0#8]), (10, q + Functions.sign_extend (m := 64) 1#12), (13, 47#64)] = _
+      rw [name_lbu_value, show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide]
+    · rfl
+    · decide
+  · have nz : nameByteWord next ≠ 0#64 := nameByteWord_ne_of zero (by decide)
+    apply registers_of_blocks leaf.image (by constructor <;> trivial)
+      (block_summary _ _ _ _ _ (show BlockInput (strchrX07d0FSeg ++ strchrX07d4TSeg) 0x800407d0#64
+          [(10, q), (13, 47#64), (15, nameByteWord b)] [[next]] c from {
+        good := leaf.good
+        minstret := leaf.minstret
+        regs := regs
+        keys := by change KeysOK [10, 13, 15]; decide
+        shape := by change ChainOK _ [10, 13, 15] _; decide
+        tick := leaf.tick
+        facts := by
+          have code := strchrTail_code leaf.image
+          chain_facts code with "Vsa.Sim.Code.strchr_at_"
+          · exact ne
+          · exact window.lbu rfl addr pin
+          · change guardB bop.BNE (bytesVal .lbu [next]) 0#64 = true
+            rw [name_lbu_value]
+            exact bne_iff_ne.mpr nz }))
+    · rfl
+    · rw [if_neg zero]; rfl
+    · change [(15, bytesVal .lbu [next]), (10, q + Functions.sign_extend (m := 64) 1#12), (13, 47#64)] = _
+      rw [name_lbu_value, show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide]
+    · rfl
+    · decide
 end OCaml.Vm.Boot.Startup
