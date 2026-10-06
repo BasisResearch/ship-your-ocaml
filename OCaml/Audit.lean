@@ -5425,3 +5425,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.byteSlice_ptr
 #print axioms OCaml.Vm.Sim.toInt_toNat_nonneg
 #print axioms OCaml.Vm.Sim.output_framed
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.putBlock_open
+#print axioms OCaml.Vm.Sim.prim_caml_ml_output_returns
+#print axioms OCaml.Vm.Sim.ob_empty

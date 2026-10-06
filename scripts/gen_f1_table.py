@@ -49,6 +49,8 @@ FIXED = {
 }
 # Modules a FIXED instance lives in, beyond the table's base imports.
 FIXED_IMPORTS = {'consoleStable': 'OCaml.Vm.Sim.F1Console'}
+# Summary parameters with no instance yet: one named `WhileMinOpen` field each.
+OPEN_PARAMS = {'entryGprs': ('ccall_entry_gprs', 'CcallEntryGprs Gc.f1Layout')}
 # Program-level parameters shared by several rows: one premise field each.
 SHARED = {'values': 'values', 'ints': 'ints', 'extra': 'extra', 'extraBounded': 'extra', 'exotic': 'exotic', 'trapBounded': 'trapBounded',
           'scratch': 'scratch', 'field': 'field'}
@@ -160,7 +162,11 @@ def render_whilemin(fields, users):
                     thm, ps, mod = summaries[name]
                     imports.add(mod)
                     imports.update(FIXED_IMPORTS[p] for p, _ in ps if p in FIXED_IMPORTS)
-                    proofs.append(' '.join([thm] + [FIXED[p] for p, _ in ps if p in FIXED]))
+                    for p, _ in ps:
+                        if p in OPEN_PARAMS:
+                            open_[OPEN_PARAMS[p][0]] = OPEN_PARAMS[p][1]
+                    proofs.append(' '.join([thm] + [FIXED[p] if p in FIXED else f'o.{OPEN_PARAMS[p][0]}'
+                                                    for p, _ in ps if p in FIXED or p in OPEN_PARAMS]))
                 else:
                     field = f'{name.removeprefix("caml_")}_{op.lower()}'
                     open_[field] = (f'PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .{op} {ra} {k} '

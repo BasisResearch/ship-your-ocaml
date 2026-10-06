@@ -102,8 +102,11 @@
   `FIXED_IMPORTS`). Shared glue in `Sim/ConsoleCall.lean`: `console_site` (invocation, channel
   argument, `console_outside`/`console_bindings`: the footprint misses the payload and the
   bindings), `console_callee_summary` (framed summary to `CcallReturn` via
-  `ccall_framed_summary`; `console_loopGeometry` transports the geometry). `caml_ml_output`:
-  `output_framed` proved; its `PrimReturnsAt` waits for `LibraryReady` at C_CALL entry (a1-arms).
+  `ccall_framed_summary`; `console_loopGeometry` transports the geometry).
+  `prim_caml_ml_output_returns` (C_CALL4): `output_framed` (empty writes on any channel via
+  `ob_empty`; console facts from `putBlock_open` + `ConsoleChannels`), `LibraryReady` from
+  `CcallSetupPost.libraryReady` with the named premise `CcallEntryGprs L` (OPEN_PARAMS
+  `ccall_entry_gprs` in `gen_f1_table.py`; a1-arms discharges it with `LoopRegisters.gprs`).
 * whileMin `PrimReturnsAt` summaries (picked up by `scripts/gen_f1_table.py`; regenerate
   WhileMinTable.lean in the same batch): `prim_caml_ml_string_length_returns` and
   `prim_caml_fresh_oo_id_returns` (`f1_counterStable` from a6-gc's `f1_ignoredStatic`) done.

@@ -1,4 +1,5 @@
 import OCaml.Vm.Sim.PrimMlFlush
+import OCaml.Vm.Sim.LibraryEntry
 import OCaml.Vm.Sim.PrimMlOutputChar
 import OCaml.Vm.Sim.PrimMlOutput
 import OCaml.RefinementF1
@@ -128,5 +129,38 @@ theorem prim_caml_ml_flush_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64
     exact console_callee_summary ready setup inv valid arg rfl rfl
       (flush_framed setup arg inv valid (consoleRt c setup.input.runtime) console out ofits streamOut
         setup.calleeSaved outside bindings consoleStable sem)
+
+/-- **GPR presence at every C_CALL callee entry** (memmove's `LibraryReady`
+needs it). A named premise: supplied by `setup.input.loop.gprs` once
+`LoopRegisters` carries GPR presence (a1-arms' GPR sweep). -/
+def CcallEntryGprs (L : OCaml.Layout) : Prop :=
+  ∀ (ra : BitVec 64) (args : List Val) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
+    (sp high domain entry : Nat) (env : BitVec 64) (c : Config),
+    CcallSetupPost ra args L P s pl cp sp high domain entry env c → OCaml.Vm.Boot.Startup.GprPresent c.σ
+
+/-- **`caml_ml_output` returns at a `C_CALL4` site.** -/
+theorem prim_caml_ml_output_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64}
+    (consoleStable : ConsoleStable L) (consoleRt : ∀ c, L.runtimeOk c → ConsoleWrite.ConsoleRuntime c)
+    (consoles : OCaml.ConsoleChannels P) (entryGprs : CcallEntryGprs L) :
+    PrimReturnsAt L P .C_CALL4 ra 3 "caml_ml_output" := by
+  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem
+  obtain ⟨x1, x2, x3, rest, hst⟩ : ∃ x1 x2 x3 rest, s.stack = x1 :: x2 :: x3 :: rest := by
+    match h : s.stack with
+    | x1 :: x2 :: x3 :: rest => exact ⟨x1, x2, x3, rest, rfl⟩
+    | [] | [_] | [_, _] => rw [h] at sem; simp [primF1Impl] at sem
+  have args : s.accu :: s.stack.take 3 = [s.accu, x1, x2, x3] := by rw [hst]; rfl
+  have sem0 := sem
+  rw [args] at sem
+  obtain ⟨id, chn, oi, ni, bs, hc, hw, ho, hn, opos, npos, slice, model, rfl, rfl⟩ := output_semantics sem
+  have hentry : entry = Layout.sym_caml_ml_output :=
+    Option.some.inj (ready.entryName.symm.trans PrimitiveEntries.entry_caml_ml_output)
+  subst hentry
+  obtain ⟨cF, hshape⟩ := ConsoleWrite.putBlock_shape hw model
+  refine ⟨1#64, by decide, sem0, fun c setup => ?_⟩
+  obtain ⟨D, l, a, ch, site⟩ := console_site ready setup (by rw [args]; rfl) hc hw
+  exact console_callee_summary ready setup site.inv site.valid site.arg rfl (by rw [hshape])
+    (output_framed setup site.arg site.inv site.valid (consoleRt c setup.input.runtime)
+      (setup.libraryReady (entryGprs _ _ _ _ _ _ _ _ _ _ _ _ setup))
+      (consoles s reach id chn hw) site.outside site.bindings consoleStable sem0)
 
 end OCaml.Vm.Sim

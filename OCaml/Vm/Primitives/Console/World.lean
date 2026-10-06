@@ -211,4 +211,20 @@ theorem putBlock_shape {w wF : World} {id fuel : Nat} {bs : List UInt8} {c : Cha
                 simp [World.setChan, List.set_set]
       · intro h; cases h
 
+/-- A successful `caml_putblock` of some bytes was on an open output channel. -/
+theorem putBlock_open {w wF : World} {id fuel : Nat} {bs : List UInt8} {c : Chan}
+    (hc : w.chans[id]? = some c) (ne : bs ≠ []) (ok : putBlock w id bs fuel = some wF) :
+    0 ≤ c.fd ∧ c.isOut = true := by
+  obtain ⟨f, rfl⟩ := putBlock_fuel ne ok
+  cases bs with
+  | nil => exact absurd rfl ne
+  | cons b bs =>
+    rw [putBlock] at ok
+    · simp only [hc, Option.bind_eq_bind, Option.bind_some] at ok
+      by_cases bad : c.fd < 0 ∨ (!c.isOut) = true
+      · rw [if_pos bad] at ok; cases ok
+      · simp only [not_or, Bool.not_eq_true', Bool.not_eq_false] at bad
+        exact ⟨by omega, by simpa using bad.2⟩
+    · intro h; cases h
+
 end OCaml.Vm.Primitives.ConsoleWrite

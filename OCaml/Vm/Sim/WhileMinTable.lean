@@ -22,7 +22,7 @@ structure WhileMinOpen : Prop where
   growth : BarrierGrowthPaths Gc.f1Layout
   ml_open_descriptor_out_c_call1 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0 "caml_ml_open_descriptor_out"
   format_int_c_call2 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL2 (0x80003004#64) 1 "caml_format_int"
-  ml_output_c_call4 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL4 (0x80002f40#64) 3 "caml_ml_output"
+  ccall_entry_gprs : CcallEntryGprs Gc.f1Layout
 
 theorem whileMin_premises (o : WhileMinOpen) :
     F1PremisesFor (fun op => OCaml.Programs.whileMinOps.contains op) OCaml.Programs.whileMin where
@@ -42,7 +42,7 @@ theorem whileMin_premises (o : WhileMinOpen) :
   c_call4_returns _ := whileMin_ccallReturns (by decide) fun _ h => by
     simp only [OCaml.Programs.whileMinCalls, List.mem_cons, List.mem_nil_iff, or_false] at h
     subst h
-    exact o.ml_output_c_call4
+    exact prim_caml_ml_output_returns f1_console_stable Gc.f1_consoleRuntime OCaml.Programs.whileMin_goodF1.consoles o.ccall_entry_gprs
   c_call5_returns h := absurd h (by decide)
 
 /-- **The `whileMin` machine run** from the open premises only. -/
