@@ -100,7 +100,7 @@ def St.shapeOk (P : Prog) (ops : List Opcode) (names : Opcode → List String) (
     St.ccallOk P .C_CALL3 2 s && St.ccallOk P .C_CALL4 3 s && St.ccallOk P .C_CALL5 4 s &&
     s.heap.noForward &&
     decide (s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords) &&
-    St.callNamesOk P names s
+    St.callNamesOk P names s && OCaml.consolesOk s.world
 
 /-- The F1 shape checks of one state, by name. -/
 structure ShapeFacts (P : Prog) (ops : List Opcode) (names : Opcode → List String) (s : St) : Prop where
@@ -118,13 +118,15 @@ structure ShapeFacts (P : Prog) (ops : List Opcode) (names : Opcode → List Str
   /-- within the F1 budget (a6-gc: `Fits g1Budget`) -/
   fits : s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords
   callNames : St.callNamesOk P names s = true
+  /-- every open output channel is the console (`GoodF1.consoles`) -/
+  consoles : OCaml.consolesOk s.world = true
 
 theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {names : Opcode → List String} {s : St}
     (h : St.shapeOk P ops names s = true) : ShapeFacts P ops names s := by
   simp only [St.shapeOk, Bool.and_eq_true, decide_eq_true_eq] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨decoded, divisors⟩, closures⟩, blocks⟩,
-    c1⟩, c2⟩, c3⟩, c4⟩, c5⟩, noForward⟩, fits⟩, callNames⟩ := h
-  exact ⟨decoded, divisors, closures, blocks, c1, c2, c3, c4, c5, noForward, fits, callNames⟩
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨decoded, divisors⟩, closures⟩, blocks⟩,
+    c1⟩, c2⟩, c3⟩, c4⟩, c5⟩, noForward⟩, fits⟩, callNames⟩, consoles⟩ := h
+  exact ⟨decoded, divisors, closures, blocks, c1, c2, c3, c4, c5, noForward, fits, callNames, consoles⟩
 
 /-- The decode check, by name. -/
 theorem ShapeFacts.decode {P : Prog} {ops : List Opcode} {names : Opcode → List String} {s : St}
@@ -184,6 +186,7 @@ theorem whileMin_goodF1 : OCaml.GoodF1 whileMin where
   stopAccu s i reach hd := by
     obtain ⟨j, hj, _, ho, _⟩ := (whileMin_shapeOk reach).decode
     rw [hd] at hj; cases hj; exact ho
+  consoles s reach := OCaml.consolesOk_sound (whileMin_shapeOk reach).consoles
 
 /-- **`while_min.byte` only reaches `whileMinOps`.** -/
 theorem whileMin_ops : ∀ s i, Reach whileMin s → decodeAt whileMin.code s.pc = some i →

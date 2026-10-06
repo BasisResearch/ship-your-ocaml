@@ -114,6 +114,25 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `GoodF1.stopAccu` (new: STOP never returns a `.raw` word, which caml_main
   would read as an exception; `whileMin` still checks in one kernel run).
 
+**F1 output is console output; primitive split (2026-10-06)**
+- `GoodF1.consoles : ConsoleChannels P`: in every reachable state, every open
+  output channel has fd 1 or 2, an OS stdout/stderr stream, and a live
+  process (`ConsoleChan`).
+  * Why: a1-prims' flush/output summaries need it, and the machine certifies
+    only HTIF's console descriptors.
+  * a2-sem rejected a BcSem guard because the ocamlc differential writes
+    files, so file output is excluded in GoodF1 instead (`Fragment.consoleLedger`).
+  * Checked by `consolesOk` (`consolesOk_sound`), in `runToF1` and, for
+    whileMin, in `St.shapeOk`.
+- Primitive split with a1-prims (recorded in docs/lanes/a1-prims.md):
+  * bprime takes `caml_format_int` (C_CALL2) and `caml_ml_open_descriptor_out` (C_CALL1);
+  * a1-prims keeps flush, output_char and output;
+  * fresh_oo_id was done by a1-prims.
+- format_int plan: `parse_format` turns `"%d"` into `"%ld"`. newlib
+  `_svfprintf_r` takes the LONGINT branch for it. ship-your-interpreter's
+  `svf_iterLLD`/`loop_lld` (QUADINT, `"%lld"`) is the template; the retargeted
+  copy here (`svfprintf_nw`) has only `%s` and 32-bit `%d`.
+
 **GPR presence, entry side (2026-10-06)**
 - `InterpCaller.gprs : GprPresent c.σ`, proved at the captured cut
   (`WhileMin.cut_gprs`, one key check per register in the generated table).

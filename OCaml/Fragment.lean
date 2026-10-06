@@ -84,6 +84,17 @@ def majorAllocLedger : List (Opcode × String) :=
     (.CLOSURE, "2 + nvars > Max_young_wosize: caml_alloc_shr (major heap)"),
     (.CLOSUREREC, "3 nfuncs - 1 + nvars > Max_young_wosize: caml_alloc_shr (major heap)") ]
 
+/-- **Non-console output outside F1** (`OCaml.GoodF1.consoles`). F1's channel
+primitives write only to console channels (descriptor 1 or 2, an OS
+stdout/stderr stream, a live process): the machine certifies only HTIF's
+console descriptors. File output (the compiler writing `.cmo`/`.cmi`) is the
+file-system lane's. -/
+def consoleLedger : List (String × String) :=
+  [ ("caml_ml_flush", "a channel whose fd is not an OS stdout/stderr stream"),
+    ("caml_ml_output", "a channel whose fd is not an OS stdout/stderr stream"),
+    ("caml_ml_output_bytes", "a channel whose fd is not an OS stdout/stderr stream"),
+    ("caml_ml_output_char", "a channel whose fd is not an OS stdout/stderr stream") ]
+
 /-- The ledger lists exactly the non-F1 opcodes. -/
 theorem ledger_exact :
     ∀ o ∈ Opcode.all, (o.fragment ≠ .F1 ↔ o ∈ ledger.map (·.1)) := by decide

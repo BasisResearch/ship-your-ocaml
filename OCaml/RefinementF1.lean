@@ -76,22 +76,67 @@ def stopOrdinary (i : Instr) (v : Val) : Bool :=
   | .STOP, .raw _ => false
   | _, _ => true
 
+/-- An output channel the F1 machine writes to the console: descriptor 1 or 2
+(the HTIF descriptor table the runtime pins covers exactly these), an OS
+stdout/stderr stream, and a live process. -/
+def ConsoleChan (w : World) (c : Chan) : Prop :=
+  (c.fd = 1 ∨ c.fd = 2) ∧ w.os.proc.exited = none ∧
+    ∃ st, TCB.Os.lookupFd w.os c.fd.toNat = some (.stream st) ∧ st ≠ .stdin
+
+/-- **F1 output is console output**: in every reachable state, every open
+output channel is a console channel. Programs writing files (the ocamlc
+differential) are outside F1, like large `MAKEBLOCK`s; `BcSem` stays faithful. -/
+def ConsoleChannels (P : Prog) : Prop :=
+  ∀ s, Reach P s → ∀ (id : Nat) c, s.world.chans[id]? = some c → c.isOut = true → c.fd ≠ -1 →
+    ConsoleChan s.world c
+
+/-- `ConsoleChan`, as a check. -/
+def consoleChanB (w : World) (c : Chan) : Bool :=
+  (c.fd == 1 || c.fd == 2) && w.os.proc.exited.isNone &&
+    match TCB.Os.lookupFd w.os c.fd.toNat with
+    | some (.stream st) => st != .stdin
+    | _ => false
+
+/-- Every open output channel of a world is a console channel, as a check. -/
+def consolesOk (w : World) : Bool :=
+  w.chans.all fun c => !c.isOut || c.fd == -1 || consoleChanB w c
+
+theorem consolesOk_sound {w : World} (h : consolesOk w = true) :
+    ∀ (id : Nat) c, w.chans[id]? = some c → c.isOut = true → c.fd ≠ -1 → ConsoleChan w c := by
+  intro id c hc out open_
+  have hc' := List.all_eq_true.1 h c (List.mem_of_getElem? hc)
+  have closed : (c.fd == -1) = false := beq_eq_false_iff_ne.2 open_
+  rw [out, closed] at hc'
+  simp only [Bool.not_true, Bool.false_or] at hc'
+  unfold consoleChanB at hc'
+  simp only [Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq, Option.isNone_iff_eq_none] at hc'
+  obtain ⟨⟨fd, exited⟩, stream⟩ := hc'
+  refine ⟨fd, exited, ?_⟩
+  split at stream
+  · rename_i st hst
+    exact ⟨st, hst, by simpa using stream⟩
+  · cases stream
+
 /-- **The F1 domain.** `Good`, every reachable state is at an F1 instruction
 of the main code, and `STOP` never returns a raw word. -/
 structure GoodF1 (P : Prog) : Prop where
   good : Good P
   inF1 : ∀ s, Reach P s → ∃ i, decodeAt P.code s.pc = some i ∧ InF1 P i
   stopAccu : ∀ s i, Reach P s → decodeAt P.code s.pc = some i → stopOrdinary i s.accu = true
+  /-- every open output channel is the console (F1 output goes to HTIF) -/
+  consoles : ConsoleChannels P
 
 /-- `GoodF1` from a static check of the code plus the dynamic fact that the
 run never leaves it: every decodable word is F1, and reachable PCs decode. -/
 theorem GoodF1.of_static {P : Prog} (hg : Good P)
     (static : ∀ pc i, decodeAt P.code pc = some i → InF1 P i)
     (decodes : ∀ s, Reach P s → decodeAt P.code s.pc ≠ none)
-    (stopAccu : ∀ s i, Reach P s → decodeAt P.code s.pc = some i → stopOrdinary i s.accu = true) :
+    (stopAccu : ∀ s i, Reach P s → decodeAt P.code s.pc = some i → stopOrdinary i s.accu = true)
+    (consoles : ConsoleChannels P) :
     GoodF1 P where
   good := hg
   stopAccu := stopAccu
+  consoles := consoles
   inF1 s hr := by
     cases h : decodeAt P.code s.pc with
     | none => exact absurd h (decodes s hr)

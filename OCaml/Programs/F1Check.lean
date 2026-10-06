@@ -24,7 +24,7 @@ def runToF1 (P : Prog) : Nat → St → Option (Nat × World)
   | k + 1, s => match decodeAt P.code s.pc with
     | none => none
     | some i =>
-      if InF1 P i ∧ stopOrdinary i s.accu = true then
+      if InF1 P i ∧ stopOrdinary i s.accu = true ∧ consolesOk s.world = true then
         match stepI P s i with
         | .next s' => runToF1 P k s'
         | .halt e w => some (e, w)
@@ -35,7 +35,8 @@ def runToF1 (P : Prog) : Nat → St → Option (Nat × World)
 steps normally or halts. -/
 theorem runToF1_reach {P : Prog} :
     ∀ k s, (runToF1 P k s).isSome → ∀ n s', StepsN P n s s' →
-      (∃ i, decodeAt P.code s'.pc = some i ∧ InF1 P i ∧ stopOrdinary i s'.accu = true) ∧
+      (∃ i, decodeAt P.code s'.pc = some i ∧ InF1 P i ∧ stopOrdinary i s'.accu = true ∧
+        consolesOk s'.world = true) ∧
         step P s' ≠ .unsupported ∧ step P s' ≠ .wrong := by
   intro k
   induction k with
@@ -51,7 +52,7 @@ theorem runToF1_reach {P : Prog} :
       · rename_i hi
         cases hs with
         | zero =>
-          refine ⟨⟨i, hd, hi.1, hi.2⟩, ?_, ?_⟩ <;> rw [hstep] <;> split at h <;> simp_all
+          refine ⟨⟨i, hd, hi.1, hi.2.1, hi.2.2⟩, ?_, ?_⟩ <;> rw [hstep] <;> split at h <;> simp_all
         | succ st rest =>
           obtain ⟨e⟩ := st
           rw [hstep] at e
@@ -67,10 +68,14 @@ theorem GoodF1.of_runToF1 {P : Prog} {k : Nat} (h : (runToF1 P k P.init).isSome)
     ⟨i, hd, hi⟩
   stopAccu s i hr hd := by
     obtain ⟨n, hn⟩ := hr
-    obtain ⟨i', hd', _, ho⟩ := (runToF1_reach k _ h n s hn).1
+    obtain ⟨i', hd', _, ho, _⟩ := (runToF1_reach k _ h n s hn).1
     rw [hd] at hd'
     cases hd'
     exact ho
+  consoles s hr := by
+    obtain ⟨n, hn⟩ := hr
+    obtain ⟨_, _, _, _, hc⟩ := (runToF1_reach k _ h n s hn).1
+    exact consolesOk_sound hc
 
 namespace Programs
 

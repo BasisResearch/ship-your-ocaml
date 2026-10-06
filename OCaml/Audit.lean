@@ -388,6 +388,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.runToF1_reach
 #print axioms OCaml.GoodF1.of_runToF1
 #print axioms OCaml.Programs.whileMin_goodF1
+#print axioms OCaml.consolesOk_sound
 #print axioms OCaml.Programs.whileMin_ops
 #print axioms OCaml.Vm.Sim.ShapeFacts.decode
 #print axioms OCaml.Programs.whileMin_halts_of_arms
