@@ -38,6 +38,8 @@ structure FreshLogOk (log : List WEntry) (P : Prog) (s : St) (c : Config) (pl : 
   image : ImageOutside log
   bindings : BindingsOutside log P c
   arena : LogInW [arenaWindow] log
+  /-- the stores miss the invocation's `external_raise` word -/
+  external : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8
 
 /-- **One derivation for every allocation log.** -/
 theorem FreshLogOk.of_windows {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
@@ -51,7 +53,8 @@ theorem FreshLogOk.of_windows {P : Prog} {s : St} {c : Config} {pl : Place} {cp 
       · exact .belowStack lo hi
       · exact .field (List.mem_singleton_self _)⟩, Nat.le_refl _, by decide⟩
   refine ⟨lw.core (by decide), lw.domainField (by decide) (by decide),
-    fun _ _ _ placed got => lw.objectOutside placed got, lw.image, lw.bindings, ?_⟩
+    fun _ _ _ placed got => lw.objectOutside placed got, lw.image, lw.bindings, ?_,
+    lw.domainField (by decide) (by decide)⟩
   · have ha := g.arena
     have hy : Layout.off_young_ptr + 8 ≤ Layout.domainStateBytes := by decide
     have hn := n.arena

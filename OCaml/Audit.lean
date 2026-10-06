@@ -4999,3 +4999,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.RaiseFrame.saved_of_step
 #print axioms OCaml.Vm.Sim.nativeScratch_apart
 #print axioms OCaml.Vm.Sim.f1_raiseRuntimeFrame
+#print axioms OCaml.Vm.Sim.external_out
+#print axioms OCaml.Vm.Sim.StackGeometry.external_stack
+#print axioms OCaml.Vm.Sim.external_field
+#print axioms OCaml.Vm.Sim.StackGeometry.external_object
+#print axioms OCaml.Vm.Sim.StackGeometry.external_of_stack
+#print axioms OCaml.Vm.Sim.RaiseRuntimeReady.of_frame

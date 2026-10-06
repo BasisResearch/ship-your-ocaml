@@ -27,6 +27,8 @@ structure ClosurerecWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : 
   placed : pl.φ (s.heap.alloc (closurerecObject s count (dest :: targets))).2 = some a
   separate : AllocationOutside P s pl a (closurerecObject s count (dest :: targets))
   core : PayloadCoreOutside (closurerecFullLog c pl sp count dest a domain accu targets) P s c pl cp
+  /-- the stores miss the invocation's `external_raise` word -/
+  external : OutLRange (closurerecFullLog c pl sp count dest a domain accu targets) ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8
   heap : ∀ l b o, Live s.heap (roots P s) l → pl.φ l = some b → s.heap.get? l = some o →
     ObjectOutside (closurerecFullLog c pl sp count dest a domain accu targets) b o
   tail : ∀ i v, (s.stack.drop (count - 1))[i]? = some v →
@@ -81,7 +83,7 @@ theorem closurerec_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after 
     exact geometry.alloc_log (s' := closurerecState s count dest targets) space.placed reserve rfl rfl
       space.core.domain space.bindings.contents post.memory
   case native =>
-    exact native.frame_log arena space.core.domain post.memory (post.frame.frame (gprReg 2) (by decide))
+    exact native.frame_log arena space.core.domain space.external post.memory (post.frame.frame (gprReg 2) (by decide))
   · refine ⟨post.pcAt, post.codeReg, post.stackReg, ⟨BitVec.ofNat 64 a, post.accu, ?_⟩, ?_, ?_⟩
     · simp only [closurerecState, valWord, space.placed, Option.map_some, Nat.mul_zero, Nat.add_zero]
     · obtain ⟨w, reg, represented⟩ := data.env

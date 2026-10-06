@@ -88,7 +88,7 @@ theorem GrabAllocInput.of_input {L : OCaml.Layout} {P : Prog} {s : St} {op : Opc
     { nursery := NurseryInput.of_block b g sg small
       initializer := ?_
       allocation := ⟨placed, g.allocationOutside b.young b.capacity room (by omega), ok.payload, ok.image,
-        ok.bindings, by rw [size]; exact ok.reserve, ok.arena⟩
+        ok.bindings, by rw [size]; exact ok.reserve, ok.arena, ok.external⟩
       codeWrite := b.write (by omega) (by omega) alignedA
       arityWrite := b.write (by omega) (by omega) (by omega)
       frameReads := ⟨by simpa only [Nat.mul_add, Nat.add_assoc] using sg.read h.stack spSpace (i := 1 + s.extra) (by omega),

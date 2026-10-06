@@ -47,6 +47,8 @@ structure MakeblockWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : C
 
   /-- all the allocation's stores lie in the allocator arena -/
   arena : LogInW [arenaWindow] (makeblockLog c sp count tag a domain accu)
+  /-- and miss the invocation's `external_raise` word -/
+  external : OutLRange (makeblockLog c sp count tag a domain accu) ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8
 
 structure MakeblockPost (before : Config) (s : St) (pl : Place) (sp width count tag a domain : Nat)
     (accuWord : BitVec 64) (after : Config) : Prop
@@ -88,6 +90,6 @@ theorem makeblock_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after :
     post.toVmRegisters post.loop
     (geometry.alloc_log (s' := makeblockState s width count tag) space.placed space.reserve rfl rfl
       space.payload.domain space.bindings.contents post.memory)
-    (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
+    (native.frame_log space.arena space.payload.domain space.external post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

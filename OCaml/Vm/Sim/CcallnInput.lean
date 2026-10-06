@@ -68,7 +68,8 @@ theorem CcallnWriteOk.native {P : Prog} {s : St} {c after : Config} {pl : Place}
   have low := valid.low
   rw [domainWord, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)] at hd
   have off : Layout.off_extern_sp + 8 ≤ Layout.domainStateBytes := by decide
-  refine ⟨D, inv.frame_log ⟨space.payload.domain, ?_⟩ memory x2, valid⟩
+  refine ⟨D, inv.frame_log ⟨space.payload.domain, ?_, by rw [← inv.domain]; exact space.young.external⟩
+    memory x2, valid⟩
   intro r hr
   simp only [invocationRanges, List.mem_cons, List.not_mem_nil, or_false] at hr
   have room := space.room

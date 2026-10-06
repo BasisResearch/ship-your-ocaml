@@ -1,5 +1,20 @@
 # Lane a2-sem
 
+## Invocation carries `external_raise` (2026-10-06)
+
+`Invocation D c` gains `externalRaise : word c (D.domain.toNat +
+off_external_raise) = ofNat (D.nativeSp + raiseBufOffset)` (agreed with
+bprime; entry half proved in `EntryLoop` from `entryResumeLog`'s store).
+Arm-side preservation: `YoungOutside` gains `external` (the runtime words
+outside the VM-written set: allocation pointers and `external_raise`;
+`vmDomainOffsets` drops `off_external_raise`, which no arm writes), so every
+certificate carrying `young` supplies it; the allocation certificates
+(`AllocLogOk`, `FreshLogOk`, Closure/Grab/Makeblock/ClosurerecWriteOk) gain
+`external`; `NativePlaced.frame_vm/frame_log/frameOn`,
+`NativeHeld.frame(_log)`, `CcallSavedOutside` thread it. With it
+`RaiseRuntimeFrame` loses its `external` field, and `f1_raiseRuntimeFrame`
+(`F1RaiseRuntime.lean`) discharges it for F1 with no premise.
+
 ## F1 domain, option (b): use-site guards (2026-10-06) — current
 
 Kiran chose (b); the foreman approved use-site guards only (a weaker, true

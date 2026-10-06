@@ -851,7 +851,7 @@ theorem division_caught_log_ready {L : OCaml.Layout} {P : Prog} {s : St} {op : O
     savedOutside := fun off _ => above _ _ (Nat.le_add_right _ _)
     runtimeFrame := runtime
     stackGeometry := gD
-    nativeHeld := ⟨D, rfl, v, by rw [wd]; exact inv.domain,
+    nativeHeld := ⟨D, rfl, v, by rw [wd]; exact inv.domain, by rw [wd]; exact inv.externalRaise,
       fun r hr i hi => by simpa only [byte, dp.memory] using inv.region r hr i hi⟩
     invocationOutside := fun r _ => above _ _ (Nat.le_add_right _ _) }
   all_goals
@@ -862,14 +862,12 @@ theorem division_caught_log_ready {L : OCaml.Layout} {P : Prog} {s : St} {op : O
 /-! ## The caught zero-divisor row -/
 
 /-- **What the runtime keeps for a native raise** (named premise, supplied
-per layout beside `RuntimeFrame`; for F1 by `F1Runtime`): no channel-unlock
-hook; `Caml_state->external_raise` is the invocation's jump buffer; and the
-runtime state survives stores in VM windows together with the native scratch
-window below the invocation. -/
+per layout beside `RuntimeFrame`; for F1 by `f1_raiseRuntimeFrame`): no
+channel-unlock hook, and the runtime state survives stores in VM windows
+together with the native scratch window below the invocation.
+(`Caml_state->external_raise` is the invocation's, `Invocation.externalRaise`.) -/
 structure RaiseRuntimeFrame (L : OCaml.Layout) (high domain : Nat) : Prop where
   hook : ∀ c, L.runtimeOk c → word c Layout.sym_caml_channel_mutex_unlock_exn = 0#64
-  external : ∀ c D, L.runtimeOk c → Invocation D c → NativeValid D →
-    word c (raiseExternal (word c Layout.sym_Caml_state)).toNat = BitVec.ofNat 64 (raiseBuffer D)
   scratch : ∀ (ws : List W) D, NativeValid D →
     (∀ w ∈ ws, VmWindow high domain w ∨ w = nativeScratch D) → WindowStable L.runtimeOk ws
 
@@ -895,7 +893,9 @@ theorem RaiseRuntimeReady.of_frame {L : OCaml.Layout} {P : Prog} {s : St} {op : 
     RaiseRuntimeReady c D value where
   hook := rr.hook c h.runtime
   pending := (rf.quiet c h.runtime).clear
-  externalWord := rr.external c D h.runtime inv v
+  externalWord := by
+    rw [raiseExternal, domain_field_nat h.geometry.toArmGeometry (by decide), inv.domain, raiseBuffer]
+    exact inv.externalRaise
   ordinary := by
     have words := h.geometry.words
     exact valWord_ordinary words.code (fun l a ha => by have := words.heap l a ha; omega)

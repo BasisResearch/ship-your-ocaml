@@ -159,7 +159,7 @@ theorem push_value_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Con
       (by simp only [pushLog, LogInW, InsideW, or_false, and_true]; have := space.room; omega)
       (by simp only [List.mem_singleton, forall_eq]
           exact geometry.stack_below (by have := data.stack.1; omega))
-      space.payload.domain post.memory post.nativeSp)
+      space.payload.domain space.young.external post.memory post.nativeSp)
 
 /-- Shared dispatch composition for stack-writing bodies. -/
 theorem push_value_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}

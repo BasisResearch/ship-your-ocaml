@@ -4,14 +4,12 @@ import OCaml.Vm.Sim.DivisionRows
 /-!
 # The F1 layout's raise-runtime facts
 
-`RaiseRuntimeFrame` (DivisionRows) asks three things of a layout: no
-channel-unlock hook, `Caml_state->external_raise` holding the invocation's
-jump buffer, and runtime stability under VM windows together with the native
-scratch window. For the pinned F1 layout the hook is the pin `channelUnlock`
-and the scratch window lies above the allocator arena, apart from every word
-`f1Runtime` reads. The `external_raise` word is an invocation fact set by
-`caml_interprete`'s entry; it stays a named premise (`ExternalRaiseHeld`)
-until the invocation carries it.
+`RaiseRuntimeFrame` (DivisionRows) asks two things of a layout: no
+channel-unlock hook, and runtime stability under VM windows together with the
+native scratch window. For the pinned F1 layout the hook is the pin
+`channelUnlock` and the scratch window lies above the allocator arena, apart
+from every word `f1Runtime` reads. (`Caml_state->external_raise` is carried by
+the invocation, `Invocation.externalRaise`.)
 -/
 
 namespace OCaml.Vm.Sim
@@ -32,19 +30,9 @@ theorem nativeScratch_apart {D : InvocationData} (v : NativeValid D) :
   rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
     simp only [Gc.Apart] <;> omega
 
-/-- `caml_interprete`'s entry stores the invocation's jump buffer in
-`Caml_state->external_raise` (named premise: the invocation does not carry it
-yet). -/
-def ExternalRaiseHeld (L : OCaml.Layout) : Prop :=
-  ∀ c D, L.runtimeOk c → Invocation D c → NativeValid D →
-    word c (raiseExternal (word c Layout.sym_Caml_state)).toNat = BitVec.ofNat 64 (raiseBuffer D)
-
-/-- **`RaiseRuntimeFrame` for the pinned F1 layout**, given the entry's
-`external_raise` store. -/
-theorem f1_raiseRuntimeFrame (external : ExternalRaiseHeld Gc.f1Layout) :
-    RaiseRuntimeFrame Gc.f1Layout Gc.f1High Gc.f1Domain where
+/-- **`RaiseRuntimeFrame` for the pinned F1 layout.** -/
+theorem f1_raiseRuntimeFrame : RaiseRuntimeFrame Gc.f1Layout Gc.f1High Gc.f1Domain where
   hook _ ok := ok.freeListShape.channelUnlock
-  external := external
   scratch _ D v each := Gc.f1_stable fun w hw => by
     rcases each w hw with vm | rfl
     · exact f1_vmWindow_apart vm

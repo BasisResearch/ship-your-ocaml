@@ -67,6 +67,8 @@ structure ClosureWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Cha
 
   /-- all the allocation's stores lie in the allocator arena -/
   arena : LogInW [arenaWindow] (closureAllocationLog c pl sp count dest a domain accu)
+  /-- and miss the invocation's `external_raise` word -/
+  external : OutLRange (closureAllocationLog c pl sp count dest a domain accu) ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8
 
 structure ClosurePost (before : Config) (s : St) (pl : Place) (sp count dest a domain : Nat)
     (accuWord : BitVec 64) (after : Config) : Prop
@@ -110,6 +112,6 @@ theorem closure_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     post.toVmRegisters post.loop
     (geometry.alloc_log (s' := closureState s count dest) space.placed space.reserve rfl rfl
       space.payload.domain space.bindings.contents post.memory)
-    (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
+    (native.frame_log space.arena space.payload.domain space.external post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

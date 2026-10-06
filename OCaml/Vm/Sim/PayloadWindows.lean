@@ -171,9 +171,11 @@ theorem core (h : LogWindows log P s c pl cp top high offs)
 
 /-- The allocation pointers: away from both. -/
 theorem young (h : LogWindows log P s c pl cp top high offs)
-    (apart : ∀ off ∈ [Layout.off_young_limit, Layout.off_young_ptr], ∀ o ∈ offs, off + 8 ≤ o ∨ o + 8 ≤ off) :
+    (apart : ∀ off ∈ [Layout.off_young_limit, Layout.off_young_ptr, Layout.off_external_raise], ∀ o ∈ offs,
+      off + 8 ≤ o ∨ o + 8 ≤ off) :
     YoungOutside log c :=
-  ⟨h.domainField (by decide) (apart _ (by simp)), h.domainField (by decide) (apart _ (by simp))⟩
+  ⟨h.domainField (by decide) (apart _ (by simp)), h.domainField (by decide) (apart _ (by simp)),
+    h.domainField (by decide) (apart _ (by simp))⟩
 
 /-- **The full payload**, for a store bound at or below `sp`. -/
 theorem payload (h : LogWindows log P s c pl cp top high offs) {sp : Nat}
@@ -196,7 +198,7 @@ end LogWindows
 /-- The `Caml_state` fields a native path may store without touching the
 payload: every VM-written field but `trapsp`. -/
 def payloadFreeOffsets : List Nat :=
-  [Layout.off_extern_sp, Layout.off_local_roots, Layout.off_exn_bucket, Layout.off_external_raise]
+  [Layout.off_extern_sp, Layout.off_local_roots, Layout.off_exn_bucket]
 
 /-- A write window apart from the payload at `sp`. -/
 abbrev PayloadWindow (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (sp high : Nat) :=

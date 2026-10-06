@@ -72,7 +72,7 @@ theorem FieldWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {
   have hn : (BitVec.ofNat 64 (a + 8 * k)).toNat = a + 8 * k := Nat.mod_eq_of_lt (by omega)
   refine ⟨by omega, ⟨?_, ?_, ?_, ?_⟩, ⟨⟨field_static low fDom, inDomain _ fHigh, field_static low fCode,
     field_static low fAtom, field_static low fGlob, ?_, ?_, field_static low fOo⟩, inDomain _ fTrap, ?_⟩,
-    ⟨field_static low fText, field_static low fRo⟩, ⟨?_, ?_⟩,
+    ⟨field_static low fText, field_static low fRo⟩, ⟨?_, ?_, ?_⟩,
     ⟨field_static low fPrim, ?_⟩⟩
   · rw [hn]; omega
   · rw [hn]; omega
@@ -94,6 +94,7 @@ theorem FieldWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {
     simp only [stackWindow] at apart
     have top := stack.1
     exact field_apart bound room apart (by omega) (by omega)
+  · exact inDomain _ (young_field_offsets _ (by simp)).1
   · exact inDomain _ (young_field_offsets _ (by simp)).1
   · exact inDomain _ (young_field_offsets _ (by simp)).1
   · intro i name found

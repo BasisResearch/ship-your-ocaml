@@ -39,17 +39,25 @@ structure InvocationData where
   domain : BitVec 64
   snapshot : Nat → BitVec 8
 
+/-- `raise_buf`, the interpreter's jump buffer, in its native frame. -/
+def raiseBufOffset : Nat := 208
+
 /-- **The native invocation is intact** at `c`. -/
 structure Invocation (D : InvocationData) (c : Config) : Prop where
   stack : gpr c 2 = some (BitVec.ofNat 64 D.nativeSp)
   domain : word c Layout.sym_Caml_state = D.domain
   region : ∀ r ∈ invocationRanges, ∀ i < r.2, byte c (D.nativeSp + r.1 + i) = D.snapshot (D.nativeSp + r.1 + i)
+  /-- `Caml_state->external_raise` is the invocation's jump buffer (set by
+  `caml_interprete`'s entry; `caml_raise` longjmps through it) -/
+  externalRaise : word c (D.domain.toNat + Layout.off_external_raise) =
+    BitVec.ofNat 64 (D.nativeSp + raiseBufOffset)
 
 /-- **The footprint obligation** of an arm: its write log misses the
 preserved ranges and the `Caml_state` pointer. -/
 structure InvocationOutside (D : InvocationData) (log : List WEntry) : Prop where
   domain : OutLRange log Layout.sym_Caml_state 8
   region : ∀ r ∈ invocationRanges, OutLRange log (D.nativeSp + r.1) r.2
+  externalRaise : OutLRange log (D.domain.toNat + Layout.off_external_raise) 8
 
 /-- **Preservation by footprint**: bytes outside the log are unchanged and
 `x2` is restored. -/
@@ -65,6 +73,9 @@ theorem Invocation.frame {D : InvocationData} {c c' : Config} {log : List WEntry
     rw [← h.region r hr i hi]
     simpa only [Nat.add_zero] using
       copied_of_outsideLog memory (outside.region r hr) i hi
+  externalRaise := by
+    rw [← h.externalRaise]
+    exact Reloc.bytesT_congr (copied_of_outsideLog memory outside.externalRaise)
 
 /-- Exact write logs specialize the footprint frame. -/
 theorem Invocation.frame_log {D : InvocationData} {c c' : Config} {log : List WEntry}
@@ -77,15 +88,12 @@ theorem Invocation.frame_log {D : InvocationData} {c c' : Config} {log : List WE
 theorem Invocation.frame_read {D : InvocationData} {c c' : Config}
     (h : Invocation D c) (memory : c'.σ.mem = c.σ.mem) (stack : gpr c' 2 = gpr c 2) :
     Invocation D c' :=
-  h.frame (log := []) ⟨trivial, fun _ _ => trivial⟩
+  h.frame (log := []) ⟨trivial, fun _ _ => trivial, trivial⟩
     (fun x _ => by simp only [byte, memory]) stack
 
 /-- Free native stack kept below the interpreter frame, for the C paths
 (primitives, `caml_raise`, the exit) that push frames under it. -/
 def nativeHeadroom : Nat := 4096
-
-/-- `raise_buf`, the interpreter's jump buffer, in its native frame. -/
-def raiseBufOffset : Nat := 208
 
 /-- What the exits (STOP, caml_sys_exit) need from the entry snapshot: the
 native frames lie above the allocator arena and below the stack top, and the

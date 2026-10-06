@@ -31,7 +31,8 @@ theorem Ccall1WriteOk.native {P : Prog} {s : St} {c after : Config} {pl : Place}
     (domainWord : word c Layout.sym_Caml_state = BitVec.ofNat 64 domain)
     (memory : after.σ.mem = writeLog c.σ.mem (ccall1Log sp domain next env))
     (x2 : gpr after 2 = gpr c 2) : NativePlaced after := by
-  apply n.frame_log (logInW_arena ?_ (ccall1_log_in next env space.room)) space.payload.domain memory x2
+  apply n.frame_log (logInW_arena ?_ (ccall1_log_in next env space.room)) space.payload.domain
+    space.young.external memory x2
   have hs := stack.1
   have ha := g.arena
   have hd := g.domainArena

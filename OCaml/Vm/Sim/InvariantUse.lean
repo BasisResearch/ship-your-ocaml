@@ -146,13 +146,68 @@ theorem logInW_arena {ws : List W} {log : List WEntry}
   | nil => trivial
   | cons e log ih => exact ⟨insideW_arena below inside.1, ih inside.2⟩
 
+/-! ## The `external_raise` word across a write -/
+
+/-- The `Caml_state->external_raise` word of `c`. -/
+abbrev externalWord (c : Config) : Nat := (word c Layout.sym_Caml_state).toNat + Layout.off_external_raise
+
+/-- A log in windows apart from `external_raise` misses it. -/
+theorem external_out {c : Config} {ws : List W} {log : List WEntry} (inside : LogInW ws log)
+    (apart : ∀ w ∈ ws, w.hi ≤ externalWord c ∨ externalWord c + 8 ≤ w.lo) :
+    OutLRange log (externalWord c) 8 := by
+  apply outLRange_of_windows inside
+  clear inside
+  induction ws with
+  | nil => trivial
+  | cons w ws ih =>
+    exact ⟨(apart w (by simp)).symm, ih (fun w' hw => apart w' (by simp [hw]))⟩
+
+/-- A window in the VM stack allocation is apart from `external_raise`. -/
+theorem StackGeometry.external_stack {P s c pl cp high} (g : StackGeometry P s c pl cp high)
+    {lo hi : Nat} (low : high - Layout.stackBytes ≤ lo) (top : hi ≤ high) :
+    hi ≤ externalWord c ∨ externalWord c + 8 ≤ lo := by
+  have fits : Layout.off_external_raise + 8 ≤ Layout.domainStateBytes := by decide
+  obtain ⟨d, -⟩ := g.domain
+  simp only [stackWindow] at d
+  simp only [externalWord]
+  omega
+
+/-- A log inside the VM stack allocation misses `external_raise`. -/
+theorem StackGeometry.external_of_stack {P s c pl cp high} (g : StackGeometry P s c pl cp high)
+    {log : List WEntry} (inside : LogInW [stackWindow high] log) : OutLRange log (externalWord c) 8 :=
+  external_out inside fun w hw => by
+    simp only [List.mem_singleton] at hw
+    subst hw
+    exact g.external_stack (Nat.le_refl _) (Nat.le_refl _)
+
+/-- Another `Caml_state` field is apart from `external_raise`. -/
+theorem external_field {c : Config} {off : Nat}
+    (apart : off + 8 ≤ Layout.off_external_raise ∨ Layout.off_external_raise + 8 ≤ off) :
+    (word c Layout.sym_Caml_state).toNat + off + 8 ≤ externalWord c ∨
+      externalWord c + 8 ≤ (word c Layout.sym_Caml_state).toNat + off := by
+  simp only [externalWord]
+  omega
+
+/-- A range inside a placed object is apart from `external_raise`. -/
+theorem StackGeometry.external_object {P s c pl cp high} (g : StackGeometry P s c pl cp high)
+    {l a : Nat} {o : Obj} (placed : pl.φ l = some a) (got : s.heap.get? l = some o) {lo hi : Nat}
+    (low : a - 8 ≤ lo) (top : hi ≤ a - 8 + (8 * o.wosize + 8)) :
+    hi ≤ externalWord c ∨ externalWord c + 8 ≤ lo := by
+  have fits : Layout.off_external_raise + 8 ≤ Layout.domainStateBytes := by decide
+  obtain ⟨d, -⟩ := g.domainHeap l a o placed got
+  dsimp only at d
+  simp only [externalWord]
+  omega
+
 /-- **The native invocation survives an arena write** that misses the
 `Caml_state` pointer and restores `x2`. -/
 theorem NativePlaced.frame_log {c c' : Config} {log : List WEntry} (n : NativePlaced c)
     (inside : LogInW [arenaWindow] log) (domain : OutLRange log Layout.sym_Caml_state 8)
+    (external : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8)
     (memory : c'.σ.mem = writeLog c.σ.mem log) (stack : gpr c' 2 = gpr c 2) : NativePlaced c' := by
   obtain ⟨D, inv, valid⟩ := n
-  refine ⟨D, inv.frame_log ⟨domain, fun r _ => outLRange_of_windows inside ⟨?_, trivial⟩⟩ memory stack,
+  rw [inv.domain] at external
+  refine ⟨D, inv.frame_log ⟨domain, fun r _ => outLRange_of_windows inside ⟨?_, trivial⟩, external⟩ memory stack,
     valid⟩
   have := valid.low
   exact Or.inr (by simp only [arenaWindow]; omega)
@@ -162,9 +217,9 @@ inside the allocator arena. -/
 theorem NativePlaced.frame_vm {c c' : Config} {ws : List W} {log : List WEntry}
     (n : NativePlaced c) (inside : LogInW ws log)
     (below : ∀ w ∈ ws, w.hi ≤ Vsa.Sim.DlHeap.heapEnd)
-    (domain : OutLRange log Layout.sym_Caml_state 8)
+    (domain : OutLRange log Layout.sym_Caml_state 8) (external : OutLRange log (externalWord c) 8)
     (memory : c'.σ.mem = writeLog c.σ.mem log) (stack : gpr c' 2 = gpr c 2) : NativePlaced c' :=
-  n.frame_log (logInW_arena below inside) domain memory stack
+  n.frame_log (logInW_arena below inside) domain external memory stack
 
 theorem outW_of_above {ws : List W} {a : Nat} (below : ∀ w ∈ ws, w.hi ≤ a) : OutW ws a := by
   induction ws with
@@ -177,15 +232,19 @@ their memory by `FrameOn`. -/
 theorem NativePlaced.frameOn {c c' : Config} {ws : List W} (n : NativePlaced c)
     (frame : FrameOn ws c.σ.mem c'.σ.mem) (below : ∀ w ∈ ws, w.hi ≤ Vsa.Sim.DlHeap.heapEnd)
     (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (external : word c' (externalWord c) = word c (externalWord c))
     (stack : gpr c' 2 = gpr c 2) : NativePlaced c' := by
   obtain ⟨D, inv, valid⟩ := n
-  refine ⟨D, ⟨stack.trans inv.stack, domain.trans inv.domain, fun r hr i hi => ?_⟩, valid⟩
-  rw [← inv.region r hr i hi, byte_total, byte_total, frame]
-  apply outW_of_above
-  intro w hw
-  have := below w hw
-  have := valid.low
-  omega
+  refine ⟨D, ⟨stack.trans inv.stack, domain.trans inv.domain, fun r hr i hi => ?_, ?_⟩, valid⟩
+  · rw [← inv.region r hr i hi, byte_total, byte_total, frame]
+    apply outW_of_above
+    intro w hw
+    have := below w hw
+    have := valid.low
+    omega
+  · have e := inv.externalRaise
+    rw [← inv.domain] at e ⊢
+    exact external.trans e
 
 /-- A window ending in the VM stack ends in the arena. -/
 theorem StackGeometry.stack_below {P s c pl cp high} (g : StackGeometry P s c pl cp high)
@@ -204,6 +263,7 @@ C callee or a `longjmp`): the snapshot's bytes and `Caml_state` pointer are
 intact, and restoring `x2 = nsp` re-establishes `NativePlaced`. -/
 def NativeHeld (nsp : Nat) (c : Config) : Prop :=
   ∃ D, D.nativeSp = nsp ∧ NativeValid D ∧ word c Layout.sym_Caml_state = D.domain ∧
+    word c (D.domain.toNat + Layout.off_external_raise) = BitVec.ofNat 64 (D.nativeSp + raiseBufOffset) ∧
     ∀ r ∈ invocationRanges, ∀ i < r.2,
       byte c (D.nativeSp + r.1 + i) = D.snapshot (D.nativeSp + r.1 + i)
 
@@ -217,34 +277,42 @@ theorem NativePlaced.held {c : Config} {nsp : Nat} (n : NativePlaced c)
     omega
   have same := congrArg BitVec.toNat (Option.some.inj (sp.symm.trans inv.stack))
   rw [BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt small, Nat.mod_eq_of_lt top] at same
-  exact ⟨D, same.symm, valid, inv.domain, inv.region⟩
+  exact ⟨D, same.symm, valid, inv.domain, inv.externalRaise, inv.region⟩
 
 /-- Return to the loop head across a write log that misses the invocation. -/
 theorem NativeHeld.frame_log {c c' : Config} {nsp : Nat} {log : List WEntry} (n : NativeHeld nsp c)
     (domain : OutLRange log Layout.sym_Caml_state 8)
     (region : ∀ r ∈ invocationRanges, OutLRange log (nsp + r.1) r.2)
+    (external : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8)
     (memory : c'.σ.mem = writeLog c.σ.mem log)
     (stack : gpr c' 2 = some (BitVec.ofNat 64 nsp)) : NativePlaced c' := by
-  obtain ⟨D, rfl, valid, dom, reg⟩ := n
+  obtain ⟨D, rfl, valid, dom, ext, reg⟩ := n
   have bytes : ∀ x, OutL log x → byte c' x = byte c x := fun x hx => by
     rw [byte_total, byte_total, memory, writeLog_out _ _ _ hx]
-  refine ⟨D, ⟨stack, ?_, fun r hr i hi => ?_⟩, valid⟩
+  rw [dom] at external
+  refine ⟨D, ⟨stack, ?_, fun r hr i hi => ?_, ?_⟩, valid⟩
   · rw [← dom]
     exact Reloc.bytesT_congr (copied_of_outsideLog bytes domain)
   · rw [← reg r hr i hi]
     simpa only [Nat.add_zero] using copied_of_outsideLog bytes (region r hr) i hi
+  · rw [← ext]
+    exact Reloc.bytesT_congr (copied_of_outsideLog bytes external)
 
 /-- A held invocation survives a write log that misses it. -/
 theorem NativeHeld.frame {c c' : Config} {nsp : Nat} {log : List WEntry} (n : NativeHeld nsp c)
     (domain : OutLRange log Layout.sym_Caml_state 8)
     (region : ∀ r ∈ invocationRanges, OutLRange log (nsp + r.1) r.2)
+    (external : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8)
     (memory : c'.σ.mem = writeLog c.σ.mem log) : NativeHeld nsp c' := by
-  obtain ⟨D, rfl, valid, dom, reg⟩ := n
+  obtain ⟨D, rfl, valid, dom, ext, reg⟩ := n
   have bytes : ∀ x, OutL log x → byte c' x = byte c x := fun x hx => by
     rw [byte_total, byte_total, memory, writeLog_out _ _ _ hx]
-  refine ⟨D, rfl, valid, ?_, fun r hr i hi => ?_⟩
+  rw [dom] at external
+  refine ⟨D, rfl, valid, ?_, ?_, fun r hr i hi => ?_⟩
   · rw [← dom]
     exact Reloc.bytesT_congr (copied_of_outsideLog bytes domain)
+  · rw [← ext]
+    exact Reloc.bytesT_congr (copied_of_outsideLog bytes external)
   · rw [← reg r hr i hi]
     simpa only [Nat.add_zero] using copied_of_outsideLog bytes (region r hr) i hi
 
@@ -252,7 +320,7 @@ theorem NativeHeld.frame {c c' : Config} {nsp : Nat} {log : List WEntry} (n : Na
 theorem NativeHeld.region_of_arena {c : Config} {nsp : Nat} {log : List WEntry}
     (n : NativeHeld nsp c) (inside : LogInW [arenaWindow] log) :
     ∀ r ∈ invocationRanges, OutLRange log (nsp + r.1) r.2 := by
-  obtain ⟨D, rfl, valid, -, -⟩ := n
+  obtain ⟨D, rfl, valid, -, -, -⟩ := n
   intro r _
   apply outLRange_of_windows inside
   have := valid.low

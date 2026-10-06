@@ -18,7 +18,9 @@ theorem f1_vmWindow_apart {w : W} (vm : VmWindow Gc.f1High Gc.f1Domain w) :
     ∀ v ∈ Gc.f1Footprint, Gc.Apart w v := by
   rcases vm with ⟨low, high⟩ | ⟨off, member, rfl⟩
   · exact Gc.stackWindow_apart low high
-  · exact Gc.domainField_apart (by simpa only [vmDomainOffsets] using member)
+  · exact Gc.domainField_apart (by
+      simp only [vmDomainOffsets, List.mem_cons, List.not_mem_nil, or_false] at member ⊢
+      rcases member with h | h | h | h <;> simp [h])
 
 /-- **`RuntimeFrame` for the pinned F1 layout.** -/
 theorem f1_runtimeFrame : RuntimeFrame Gc.f1Layout Gc.f1High Gc.f1Domain where

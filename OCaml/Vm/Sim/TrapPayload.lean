@@ -73,6 +73,6 @@ theorem trap_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
       stable c after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl value) (post.loopRegisters loop)
     (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.young post.memory)
-    (native.frame_vm (ws := [⟨(word c Layout.sym_Caml_state).toNat + Layout.off_trapsp, (word c Layout.sym_Caml_state).toNat + Layout.off_trapsp + 8⟩]) (by simp only [trapLog, LogInW, InsideW, or_false, and_true]; exact ⟨Nat.le_refl _, Nat.le_refl _⟩) (by simp only [List.mem_singleton, forall_eq]; have := geometry.domain_below (off := Layout.off_trapsp + 8) (by decide); omega) space.payload.domain post.memory post.nativeSp)
+    (native.frame_vm (ws := [⟨(word c Layout.sym_Caml_state).toNat + Layout.off_trapsp, (word c Layout.sym_Caml_state).toNat + Layout.off_trapsp + 8⟩]) (by simp only [trapLog, LogInW, InsideW, or_false, and_true]; exact ⟨Nat.le_refl _, Nat.le_refl _⟩) (by simp only [List.mem_singleton, forall_eq]; have := geometry.domain_below (off := Layout.off_trapsp + 8) (by decide); omega) space.payload.domain space.young.external post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

@@ -19,7 +19,8 @@ theorem TrapWriteOk.frame_observations {P : Prog} {s : St} {pl : Place} {cp : Ch
       toPayloadCoreOutside := { h.payload.toPayloadCoreOutside with stackHigh := by simpa only [domain] using h.payload.stackHigh }
       stack := h.payload.stack, heap := h.payload.heap }
   · simpa only [domain] using h.image
-  · exact ⟨by simpa only [domain] using h.young.limit, by simpa only [domain] using h.young.ptr⟩
+  · exact ⟨by simpa only [domain] using h.young.limit, by simpa only [domain] using h.young.ptr,
+      by simpa only [domain] using h.young.external⟩
   · rw [domain]
     exact ⟨h.bindings.contents, by simpa only [contents] using h.bindings.entries⟩
 

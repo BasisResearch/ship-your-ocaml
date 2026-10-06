@@ -45,6 +45,7 @@ theorem raise_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable c after memoryFrame platform.runtime⟩ post.registers post.loop
     (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.young post.memory)
-    (native.frameOn memoryFrame (by simp only [List.mem_singleton, forall_eq]; have := geometry.domain_below (off := Layout.off_trapsp + 8) (by decide); omega) (Reloc.bytesT_congr (copied_of_writeLog post.memory space.payload.domain)) post.nativeSp)
+    (native.frameOn memoryFrame (by simp only [List.mem_singleton, forall_eq]; have := geometry.domain_below (off := Layout.off_trapsp + 8) (by decide); omega) (Reloc.bytesT_congr (copied_of_writeLog post.memory space.payload.domain))
+    (Reloc.bytesT_congr (copied_of_writeLog post.memory space.young.external)) post.nativeSp)
 
 end OCaml.Vm.Sim

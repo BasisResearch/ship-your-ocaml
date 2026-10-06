@@ -68,6 +68,13 @@ theorem raise_reentry_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place
           (by simp only [List.mem_singleton, forall_eq]
               exact h.geometry.domain_below (off := Layout.off_local_roots + 8) (by decide))
           (by simp only [reentryLog, LogInW, InsideW, or_false, and_true]; omega)))
+        (external_out (ws := [⟨(word c Layout.sym_Caml_state).toNat + Layout.off_local_roots,
+            (word c Layout.sym_Caml_state).toNat + Layout.off_local_roots + 8⟩])
+          (by simp only [reentryLog, LogInW, InsideW, or_false, and_true]; omega)
+          (fun w hw => by
+            simp only [List.mem_singleton] at hw
+            subst hw
+            exact external_field (by decide)))
         post.memory post.nativeStack
       htifIdle := post.htif.trans h.htifIdle }
     pc := post.pc

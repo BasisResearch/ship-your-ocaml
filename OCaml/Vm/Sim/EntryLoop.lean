@@ -189,7 +189,17 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
   -- the native invocation fixed here
   have native : NativePlaced c5 := by
     refine ⟨⟨sp - Layout.interpFrameBytes, word c Layout.sym_Caml_state, fun a => byte c5 a⟩,
-      ⟨p.stack, dom5, fun _ _ _ _ => rfl⟩, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩⟩
+      ⟨p.stack, dom5, fun _ _ _ _ => rfl, ?_⟩, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩⟩
+    · -- the resume's store: `Caml_state->external_raise = &raise_buf`
+      dsimp only
+      rw [word, p.memory]
+      exact OCaml.Vm.Gc.word_writeLog_at c.σ.mem (entryLog sp callerRegs (BitVec.ofNat 64 pl.codeBase) c)
+        33 ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise)
+        (BitVec.ofNat 64 (sp - Layout.interpFrameBytes + raiseBufOffset))
+        (by simp only [entryLog, entrySaveLog, entryPrepLog, setjmpLog, entryResumeLog, entryBuffer,
+          Layout.interpSavedRegs, raiseBufOffset, List.map, List.cons_append, List.nil_append,
+          List.getElem?_cons_succ, List.getElem?_cons_zero])
+        (by simp [entryLog, entrySaveLog, entryPrepLog, setjmpLog, entryResumeLog, Layout.interpSavedRegs, OutLRange])
     · dsimp only; simp only [Layout.interpFrameBytes, Vsa.Sim.DlHeap.heapEnd]; omega
     · dsimp only; simp only [Layout.interpFrameBytes, Layout.camlMainFrameBytes, Layout.sym_stack_top]; omega
     · dsimp only; simp only [Layout.interpFrameBytes]; omega

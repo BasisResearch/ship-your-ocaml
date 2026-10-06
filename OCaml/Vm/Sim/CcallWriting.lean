@@ -25,9 +25,11 @@ theorem word_of_outside {c c' : Config} {log : List WEntry} {a : Nat}
 /-- **The native invocation across a footprint in the arena.** -/
 theorem NativePlaced.frame_outside {c c' : Config} {log : List WEntry} (n : NativePlaced c)
     (inside : LogInW [arenaWindow] log) (domain : OutLRange log Layout.sym_Caml_state 8)
+    (external : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8)
     (memory : ∀ x, OutL log x → byte c' x = byte c x) (stack : gpr c' 2 = gpr c 2) : NativePlaced c' := by
   obtain ⟨D, inv, valid⟩ := n
-  refine ⟨D, inv.frame ⟨domain, fun r _ => outLRange_of_windows inside ⟨?_, trivial⟩⟩ memory stack, valid⟩
+  rw [inv.domain] at external
+  refine ⟨D, inv.frame ⟨domain, fun r _ => outLRange_of_windows inside ⟨?_, trivial⟩, external⟩ memory stack, valid⟩
   have := valid.low
   exact Or.inr (by simp only [arenaWindow]; omega)
 
@@ -36,6 +38,8 @@ structure CcallSavedOutside (log : List WEntry) (domain frameSp : BitVec 64) : P
   domainPtr : OutLRange log Layout.sym_Caml_state 8
   externSp : OutLRange log (domain + BitVec.ofNat 64 Layout.off_extern_sp).toNat 8
   env : OutLRange log frameSp.toNat 8
+  /-- the interpreter's `external_raise` (the invocation's jump buffer) -/
+  externalRaise : OutLRange log (domain.toNat + Layout.off_external_raise) 8
 
 /-- **The saved C-call frame across a footprint.** -/
 theorem Ccall1Saved.frame_outside {s : St} {pl : Place} {sp : Nat} {domain frameSp env : BitVec 64}
@@ -76,7 +80,8 @@ theorem ccall_writing_summary {L : OCaml.Layout} {P : Prog} {s : St}
   have regs : ∀ r ∈ callSavedRegs, after.σ.regs.get? r = before.σ.regs.get? r :=
     fun r hr => post.call.frame r (preserved r hr) (by revert r; decide)
   exact ccall_primitive_return post (saved.frame_outside outside frame regs) (geometry after frame)
-    (native.frame_outside arena outside.domainPtr frame (regs _ (by decide)))
+    (native.frame_outside arena outside.domainPtr (saved.domainWord ▸ outside.externalRaise) frame
+      (regs _ (by decide)))
 
 /-! ## Framed calls (console output, nested native frames) -/
 
@@ -86,11 +91,13 @@ footprint misses every saved invocation range. -/
 theorem NativePlaced.frame_below {c c' : Config} {log : List WEntry} (n : NativePlaced c)
     (below : ∀ sp, gpr c 2 = some (BitVec.ofNat 64 sp) → LogInW [⟨0, sp⟩] log)
     (domain : OutLRange log Layout.sym_Caml_state 8)
+    (external : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8)
     (memory : ∀ x, OutL log x → byte c' x = byte c x) (stack : gpr c' 2 = gpr c 2) : NativePlaced c' := by
   obtain ⟨D, inv, valid⟩ := n
   have inside := below D.nativeSp inv.stack
-  exact ⟨D, inv.frame ⟨domain, fun r _ => outLRange_of_windows inside ⟨Or.inr (by dsimp only; omega), trivial⟩⟩
-    memory stack, valid⟩
+  rw [inv.domain] at external
+  exact ⟨D, inv.frame ⟨domain, fun r _ => outLRange_of_windows inside ⟨Or.inr (by dsimp only; omega), trivial⟩,
+    external⟩ memory stack, valid⟩
 
 /-- **A framed primitive call**: return state, result register, a memory frame
 outside the footprint, and the caller-saved VM registers. No output or exact
@@ -142,7 +149,8 @@ theorem ccall_framed_summary {L : OCaml.Layout} {P : Prog} {s : St}
   exact { toCcall1Saved := { kept with pc := kept.pc }
           toCcallResult :=
             { geometry := (geometry after frame).state rfl rfl
-              native := native.frame_below below outside.domainPtr frame (regs _ (by decide))
+              native := native.frame_below below outside.domainPtr (saved.domainWord ▸ outside.externalRaise)
+                frame (regs _ (by decide))
               data := payload_pc post.data pc
               primitives := post.primitives
               platform := post.platform

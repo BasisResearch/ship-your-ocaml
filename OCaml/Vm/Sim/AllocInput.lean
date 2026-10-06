@@ -232,6 +232,9 @@ theorem MakeblockInput.of_input {L : OCaml.Layout} {P : Prog} {s : St} {op : Opc
       bindings := h.geometry.young_bindings.append (g.toWindowSeparated.bindings free)
       reserve := ?_
       arena := ?_
+      external := outLRange_append
+        (grab_out (by simp only [Layout.off_young_ptr, Layout.off_external_raise]; omega))
+        (blockMiss _ (by decide))
       domainValue := by rw [BitVec.ofNat_toNat, BitVec.setWidth_eq]
       youngValue := by rw [← youngWord, BitVec.ofNat_toNat, BitVec.setWidth_eq]
       limitValue := by rw [← limitWord, BitVec.ofNat_toNat, BitVec.setWidth_eq]
@@ -347,6 +350,8 @@ structure AllocLogOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPla
   bindings : BindingsOutside log P c
   reserve : NurseryReserve c log a n n
   arena : LogInW [arenaWindow] log
+  /-- the stores miss the invocation's `external_raise` word -/
+  external : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8
 
 /-- **One derivation for every allocation log.** -/
 theorem AllocLogOk.of_block {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
@@ -366,7 +371,8 @@ theorem AllocLogOk.of_block {P : Prog} {s : St} {c : Config} {pl : Place} {cp : 
   have pay := (sg.young_payload (a := a) stack space).append (g.toWindowSeparated.payload stack space free)
   refine ⟨pay, sg.young_image.append (g.toWindowSeparated.image free),
     sg.young_bindings.append (g.toWindowSeparated.bindings free),
-    ⟨young, Nat.le_refl _, room, by have := b.aligned; omega, b.capacity, fun c' memory => ?_⟩, ?_⟩
+    ⟨young, Nat.le_refl _, room, by have := b.aligned; omega, b.capacity, fun c' memory => ?_⟩, ?_,
+    outLRange_append (grab_out (by simp only [Layout.off_young_ptr, Layout.off_external_raise]; omega)) (miss _ (by decide))⟩
   · have keep : ∀ x, OutLRange (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log) x 8 → word c' x = word c x := fun x hx => by
       change bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8
       rw [memory, bytesT_writeLog_out _ hx]
@@ -414,7 +420,8 @@ theorem AllocLogOk.of_prefixed {P : Prog} {s : St} {c : Config} {pl : Place} {cp
   have pay := prePay.append ok.payload
   refine ⟨pay, (sg.image preIn).append ok.image, (sg.bindings stack preIn).append ok.bindings,
     ⟨b.young, Nat.le_refl _, b.room, by have := b.aligned; have := b.room; omega, b.capacity,
-      fun c' memory => ?_⟩, ?_⟩
+      fun c' memory => ?_⟩, ?_,
+    outLRange_append (preMiss _ (by decide)) (outLRange_append (grab_out (by simp only [Layout.off_young_ptr, Layout.off_external_raise]; omega)) (logMiss _ (by decide)))⟩
   · have keep : ∀ x, OutLRange (pre ++ (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log)) x 8 → word c' x = word c x :=
       fun x hx => by
         change bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8

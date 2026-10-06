@@ -107,6 +107,7 @@ theorem ClosureAllocInput.of_input {L : OCaml.Layout} {P : Prog} {s : St} {op : 
       bindings := by rw [closureAllocationLog, List.append_assoc]; exact ok.bindings
       reserve := by rw [closureAllocationLog, List.append_assoc, size]; exact ok.reserve
       arena := by rw [closureAllocationLog, List.append_assoc]; exact ok.arena
+      external := by rw [closureAllocationLog, List.append_assoc]; exact ok.external
       young
       push := ⟨fun _ => by omega, fun _ => pushW,
         sg.image pushIn⟩

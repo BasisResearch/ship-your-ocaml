@@ -59,7 +59,8 @@ theorem TrapWriteOk.frame {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp 
       toPayloadCoreOutside := { h.payload.toPayloadCoreOutside with stackHigh := by simpa only [words] using h.payload.stackHigh }
       stack := h.payload.stack, heap := h.payload.heap }
   · simpa only [words] using h.image
-  · exact ⟨by simpa only [words] using h.young.limit, by simpa only [words] using h.young.ptr⟩
+  · exact ⟨by simpa only [words] using h.young.limit, by simpa only [words] using h.young.ptr,
+      by simpa only [words] using h.young.external⟩
   · rw [words]
     exact ⟨h.bindings.contents, by simpa only [words] using h.bindings.entries⟩
 

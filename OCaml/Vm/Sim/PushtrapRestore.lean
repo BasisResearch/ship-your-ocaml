@@ -90,6 +90,6 @@ theorem pushtrap_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : 
       stable before after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl accuWord) (post.loopRegisters loop)
     (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.young post.memory)
-    (native.frame_vm (pushtrap_log_in _ _ _ _ space.room) (by intro w hw; simp only [List.mem_cons, List.not_mem_nil, or_false] at hw; rcases hw with rfl | rfl <;> dsimp only <;> first | exact geometry.stack_below (by have := data.stack.1; omega) | (have := geometry.domain_below (off := Layout.off_trapsp + 8) (by decide); omega)) space.payload.domain post.memory post.nativeSp)
+    (native.frame_vm (pushtrap_log_in _ _ _ _ space.room) (by intro w hw; simp only [List.mem_cons, List.not_mem_nil, or_false] at hw; rcases hw with rfl | rfl <;> dsimp only <;> first | exact geometry.stack_below (by have := data.stack.1; omega) | (have := geometry.domain_below (off := Layout.off_trapsp + 8) (by decide); omega)) space.payload.domain space.young.external post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

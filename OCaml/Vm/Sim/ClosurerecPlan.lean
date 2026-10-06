@@ -153,7 +153,7 @@ theorem writes (p : ClosurerecPlan L P s op c pl cp sp high count dest a targets
   exact ⟨p.bound, by have := p.young; omega, b.room, p.tailRoom, p.stackRoom,
     by unfold closurerecStackStart closurerecCaptureBase; simp only [closurerecSize] at kb; omega,
     p.placed, p.input.geometry.nursery.allocationOutside b.young b.capacity b.room (by omega),
-    whole.core, fun l a o _ => whole.heap l a o,
+    whole.core, whole.external, fun l a o _ => whole.heap l a o,
     fun i v hv => p.above_out p.full_in (by omega) (by
       have := (List.getElem?_eq_some_iff.mp hv).1
       simp only [List.length_drop] at this; omega),

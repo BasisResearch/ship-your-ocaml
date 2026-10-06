@@ -38,6 +38,8 @@ structure GrabWriteOk (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPl
 
   /-- all the allocation's stores lie in the allocator arena -/
   arena : LogInW [arenaWindow] (log)
+  /-- and miss the invocation's `external_raise` word -/
+  external : OutLRange (log) ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8
 
 /-- Final generated observations of the allocation and caller-frame path. -/
 structure GrabPost (before : Config) (s : St) (pl : Place) (sp dest : Nat)
@@ -84,6 +86,6 @@ theorem grab_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Conf
       runtime after post.memory platform.runtime⟩ post.toVmRegisters post.loop
     (geometry.alloc_log (s' := grabState s dest savedEnv savedExtra rest) space.placed space.reserve rfl rfl
       space.payload.domain space.bindings.contents post.memory)
-    (native.frame_log space.arena space.payload.domain post.memory post.nativeSp)
+    (native.frame_log space.arena space.payload.domain space.external post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

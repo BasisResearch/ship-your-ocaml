@@ -102,6 +102,6 @@ theorem field_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
       stable c after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl rfl) (post.loopRegisters loop)
     (geometry.heap_set selected (by simp only [Obj.wosize, List.length_set]) rfl rfl space.payload.domain space.bindings.contents space.young post.memory)
-    (native.frame_vm (ws := [⟨a + 8 * i, a + 8 * i + 8⟩]) (by simp only [fieldLog, LogInW, InsideW, or_false, and_true]; exact ⟨Nat.le_refl _, Nat.le_refl _⟩) (by simp only [List.mem_singleton, forall_eq]; have := geometry.heapArena l a _ placed selected; simp only [Obj.wosize] at this; omega) space.payload.domain post.memory post.nativeSp)
+    (native.frame_vm (ws := [⟨a + 8 * i, a + 8 * i + 8⟩]) (by simp only [fieldLog, LogInW, InsideW, or_false, and_true]; exact ⟨Nat.le_refl _, Nat.le_refl _⟩) (by simp only [List.mem_singleton, forall_eq]; have := geometry.heapArena l a _ placed selected; simp only [Obj.wosize] at this; omega) space.payload.domain space.young.external post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

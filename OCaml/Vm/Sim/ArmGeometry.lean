@@ -19,10 +19,10 @@ namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives OCaml.Vm.Gc
 
-/-- The `Caml_state` fields the VM itself writes. -/
+/-- The `Caml_state` fields the VM itself writes (`external_raise` is set
+once by `caml_interprete`'s entry and only restored on its exits). -/
 def vmDomainOffsets : List Nat :=
-  [Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots, Layout.off_exn_bucket,
-    Layout.off_external_raise]
+  [Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots, Layout.off_exn_bucket]
 
 /-- A VM-owned write window: inside the VM stack allocation, or one VM
 `Caml_state` field. -/
@@ -36,10 +36,13 @@ structure ArmGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPl
     (high : Nat) : Prop extends StackGeometry P s c pl cp high where
   nursery : NurseryGeometry P s c pl cp high
 
-/-- A write log misses the allocation-pointer words. -/
+/-- A write log misses the runtime words the loop invariant carries outside
+the VM-written fields: the allocation pointers and `external_raise` (the
+invocation's jump buffer, `Invocation.externalRaise`). -/
 structure YoungOutside (log : List WEntry) (c : Config) : Prop where
   limit : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_young_limit) 8
   ptr : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr) 8
+  external : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8
 
 /-- Separation from each window of a list is separation from the list. -/
 theorem outWRange_of_each {ws : List W} {a n : Nat} (each : ∀ w ∈ ws, OutWRange [w] a n) :
@@ -49,14 +52,14 @@ theorem outWRange_of_each {ws : List W} {a n : Nat} (each : ∀ w ∈ ws, OutWRa
   | cons w ws ih =>
     exact ⟨(each w (by simp)).1, ih fun w' hw => each w' (by simp [hw])⟩
 
-theorem young_field_offsets : ∀ off ∈ [Layout.off_young_limit, Layout.off_young_ptr],
+theorem young_field_offsets : ∀ off ∈ [Layout.off_young_limit, Layout.off_young_ptr, Layout.off_external_raise],
     off + 8 ≤ Layout.domainStateBytes ∧ ∀ o ∈ vmDomainOffsets, off + 8 ≤ o ∨ o + 8 ≤ off := by
   decide
 
-/-- A VM window misses both allocation-pointer words. -/
+/-- A VM window misses the allocation pointers and `external_raise`. -/
 theorem VmWindow.young {P s c pl cp high} {w : W} (g : StackGeometry P s c pl cp high)
     (vm : VmWindow high (word c Layout.sym_Caml_state).toNat w) {off : Nat}
-    (young : off ∈ [Layout.off_young_limit, Layout.off_young_ptr]) :
+    (young : off ∈ [Layout.off_young_limit, Layout.off_young_ptr, Layout.off_external_raise]) :
     OutWRange [w] ((word c Layout.sym_Caml_state).toNat + off) 8 := by
   obtain ⟨fits, apart⟩ := young_field_offsets off young
   rcases vm with ⟨low, high'⟩ | ⟨o, member, rfl⟩
@@ -71,6 +74,7 @@ theorem YoungOutside.of_windows {P s c pl cp high} {ws : List W} {log : List WEn
     (g : StackGeometry P s c pl cp high) (inside : LogInW ws log)
     (vm : ∀ w ∈ ws, VmWindow high (word c Layout.sym_Caml_state).toNat w) : YoungOutside log c :=
   ⟨outLRange_of_windows inside (outWRange_of_each fun w hw => (vm w hw).young g (by simp)),
+   outLRange_of_windows inside (outWRange_of_each fun w hw => (vm w hw).young g (by simp)),
    outLRange_of_windows inside (outWRange_of_each fun w hw => (vm w hw).young g (by simp))⟩
 
 /-- A log in the VM stack window misses the allocation pointers. -/
