@@ -90,4 +90,32 @@ theorem indirect_summary {a : IndirectCallInstr} (shape : IndirectShape a) (deco
         (gholds_lookup _ kept source) aligned)
   exact ⟨after,h.run,h⟩
 
+/-- `indirect_summary` in the register-post shape of `call_registers_summary`. -/
+theorem indirect_registers_summary {a : IndirectCallInstr} (shape : IndirectShape a) (decode : IndirectDecode a)
+    (c : Config) (pins : IndirectPins a c) (good : GoodState c.σ) (image : ExecutableImage c)
+    (tick : c.tick < 2) (minstret : ∃ w, c.σ.regs.get? Register.minstret = some w)
+    (regs : GRegs) (holds : GHolds c.σ regs) (keys : KeysOK (keysG regs))
+    (avoid : KeysAvoidRa regs) (value : BitVec 64)
+    (source : lookupG a.source regs = some value) (aligned : (a.target value).toNat % 4 = 0)
+    {result : BitVec 64} (resultReg : lookupG 10 regs = some result) :
+    FnSummary a.pc (fun d => d = c)
+      (RegistersPost [1] c.σ.mem c (a.target value) result ((1, a.link) :: regs)) := by
+  have S := indirect_summary shape decode c pins good tick minstret regs holds keys avoid value source aligned
+  apply S.weaken (fun _ he => he)
+  intro after post
+  have memory : after.σ.mem = c.σ.mem := post.mem
+  refine {
+    toEffectPost := {
+      good := post.good
+      image := ⟨fun i hi => by rw [memory]; exact image.text i hi,
+        fun i hi => by rw [memory]; exact image.rodata i hi⟩
+      minstret := post.minstret
+      tick := post.tick
+      pc := post.pc
+      result := gholds_lookup _ post.registers resultReg
+      memory := memory
+      output := post.output
+      frame := fun r hr hn => post.frame r hn (by simp [wrChain]) (beq_eq_false_iff_ne.mpr (hr 1 (by simp))) }
+    regs := ⟨post.ra, post.registers⟩ }
+
 end OCaml.Vm.Primitives
