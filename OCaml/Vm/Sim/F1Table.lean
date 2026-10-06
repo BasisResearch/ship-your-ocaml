@@ -48,19 +48,14 @@ structure F1Premises (P : Prog) : Prop where
   exotic : SwitchExotic Gc.f1Layout P
   trapBounded : ∀ s, Reach P s → s.trap ≤ s.stack.length
   raises : RaisesCaught P
-  c_call1_arity : CcallArity P .C_CALL1 0
   c_call1_returns : CcallReturns Gc.f1Layout P .C_CALL1 (0x80003060#64) 0
   c_call1_effects : CcallEffects Gc.f1Layout P .C_CALL1 0
-  c_call2_arity : CcallArity P .C_CALL2 1
   c_call2_returns : CcallReturns Gc.f1Layout P .C_CALL2 (0x80003004#64) 1
   c_call2_effects : CcallEffects Gc.f1Layout P .C_CALL2 1
-  c_call3_arity : CcallArity P .C_CALL3 2
   c_call3_returns : CcallReturns Gc.f1Layout P .C_CALL3 (0x80002fa4#64) 2
   c_call3_effects : CcallEffects Gc.f1Layout P .C_CALL3 2
-  c_call4_arity : CcallArity P .C_CALL4 3
   c_call4_returns : CcallReturns Gc.f1Layout P .C_CALL4 (0x80002f40#64) 3
   c_call4_effects : CcallEffects Gc.f1Layout P .C_CALL4 3
-  c_call5_arity : CcallArity P .C_CALL5 4
   c_call5_returns : CcallReturns Gc.f1Layout P .C_CALL5 (0x80002ed8#64) 4
   c_call5_effects : CcallEffects Gc.f1Layout P .C_CALL5 4
   scratch : ∀ s c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → BinaryLibScratch c
@@ -168,11 +163,11 @@ theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)
     | .POPTRAP, _ => poptrap_row f1_runtimeFrame fits g1_capacity
     | .RAISE, _ => raise_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.extra pre.raises
     | .CHECK_SIGNALS, _ => check_signals_row f1_memoryStable f1_runtimeFrame
-    | .C_CALL1, _ => c_call1_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call1_arity pre.c_call1_returns pre.c_call1_effects
-    | .C_CALL2, _ => c_call2_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call2_arity pre.c_call2_returns pre.c_call2_effects
-    | .C_CALL3, _ => c_call3_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call3_arity pre.c_call3_returns pre.c_call3_effects
-    | .C_CALL4, _ => c_call4_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call4_arity pre.c_call4_returns pre.c_call4_effects
-    | .C_CALL5, _ => c_call5_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call5_arity pre.c_call5_returns pre.c_call5_effects
+    | .C_CALL1, _ => c_call1_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call1_returns pre.c_call1_effects
+    | .C_CALL2, _ => c_call2_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call2_returns pre.c_call2_effects
+    | .C_CALL3, _ => c_call3_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call3_returns pre.c_call3_effects
+    | .C_CALL4, _ => c_call4_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call4_returns pre.c_call4_effects
+    | .C_CALL5, _ => c_call5_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call5_returns pre.c_call5_effects
     | .C_CALLN, h => absurd h (by decide)
     | .CONST0, _ => const0_row f1_memoryStable
     | .CONST1, _ => const1_row f1_memoryStable
