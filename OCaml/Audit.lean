@@ -5,6 +5,7 @@ import OCaml.Vm.Sim.OperandRows
 import OCaml.Vm.Sim.PushConstRows
 import OCaml.Vm.Sim.WordPlace
 import OCaml.Vm.Sim.HeapRows
+import OCaml.Vm.Sim.DivisionRows
 import OCaml.Vm.Sim.SwitchRows
 import OCaml.Vm.Sim.A2TableRows
 import OCaml.Vm.Sim.PushRows
@@ -4865,3 +4866,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.closure_row
 #print axioms OCaml.Vm.Sim.MakeblockInitInput.of_block
 #print axioms OCaml.Vm.Sim.makeblock_row
+#print axioms OCaml.Vm.Sim.division_dispatch_entry
+#print axioms OCaml.Vm.Sim.division_zero_input
+#print axioms OCaml.Vm.Sim.division_zero_setup_input
+#print axioms OCaml.Vm.Sim.NativeValid.scratch_write
+#print axioms OCaml.Vm.Sim.DivisionException.of_field
+#print axioms OCaml.Vm.Sim.raise_zero_setup_memory

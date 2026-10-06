@@ -11,6 +11,7 @@ import OCaml.Vm.Sim.OperandRows
 import OCaml.Vm.Sim.PushConstRows
 import OCaml.Vm.Sim.WordPlace
 import OCaml.Vm.Sim.HeapRows
+import OCaml.Vm.Sim.DivisionRows
 import OCaml.Vm.Sim.SwitchRows
 import OCaml.Vm.Sim.A2TableRows
 import OCaml.Vm.Sim.PushRows
