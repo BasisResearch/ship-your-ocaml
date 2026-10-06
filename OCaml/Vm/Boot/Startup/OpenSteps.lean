@@ -2,6 +2,9 @@ import OCaml.Vm.Boot.Startup.LibOpenEntryNormalized
 import OCaml.Vm.Boot.Startup.LibOpenEntryImage
 import OCaml.Vm.Boot.Startup.LibOpenEntryCallInterface
 import OCaml.Vm.Boot.Startup.ResolveRun
+import OCaml.Vm.Boot.Startup.HtifOpenEntryNormalized
+import OCaml.Vm.Boot.Startup.HtifOpenEntryImage
+import OCaml.Vm.Boot.Startup.HtifOpenEntryCallInterface
 import OCaml.Vm.Boot.Startup.OpenREntryNormalized
 import OCaml.Vm.Boot.Startup.OpenREntryImage
 import OCaml.Vm.Boot.Startup.OpenREntryCallInterface
@@ -156,6 +159,94 @@ theorem open_r_entry (c : Config) (sp ra s0 reent path flags mode : BitVec 64) (
       List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, openRInput, imm20Of,
       show Functions.sign_extend (m := 64) 4080#12 = -BitVec.ofNat 64 16 by decide,
       show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero, open_r_a5_auipc]
+    rfl
+  · rfl
+  · decide
+
+open Sail in
+/-- `lui a5,0x200; addi a5,a5,512`: `O_CREAT | O_DIRECTORY`. -/
+theorem open_creat_dir : Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 2099127#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 512#12 = 0x200200#64 := by decide
+
+theorem open_mode_mask : (0#64 &&& Functions.sign_extend (m := 64) 3#12) = 0#64 := by decide
+
+theorem open_flags_none : (0#64 &&& 0x200200#64) = 0#64 := by decide
+
+theorem open_two : (0#64 + Functions.sign_extend (m := 64) 2#12) = 2#64 := by decide
+
+theorem open_mode_ok : guardB bop.BLTU 2#64 0#64 = false := by decide
+
+theorem open_creat_ok : guardB bop.BEQ 0#64 0x200200#64 = false := by decide
+
+def htifOpenSlots (ra s0 s1 s2 : BitVec 64) : List (Nat × BitVec 64) := [(56, s1), (48, s2), (72, ra), (64, s0)]
+def htifOpenLog (sp ra s0 s1 s2 : BitVec 64) : List WEntry :=
+  nativeWordLog sp 80 [(56, s1), (48, s2), (72, ra)] ++ nativeWordLog sp 80 [(64, s0)] ++
+    [(resAt sp 4, 4, 0#64), (resAt sp 36, 4, 0#64)]
+def htifOpenInput (sp ra s0 s1 s2 path : BitVec 64) : GRegs :=
+  [(2, sp), (1, ra), (8, s0), (9, s1), (18, s2), (10, path), (11, 0#64)]
+
+/-- `_open(path, O_RDONLY, ·)`: save, check the flags, call `resolve(path, &r)`. -/
+theorem htif_open_entry (c : Config) (sp ra s0 s1 s2 path : BitVec 64) (leaf : LeafInput ra c)
+    (frame : NativeFrame sp 80) (regs : GHolds c.σ (htifOpenInput sp ra s0 s1 s2 path)) :
+    FnSummary 0x800008b8#64 (fun e => e = c) (WriteRegistersPost [11, 8, 14, 15, 9, 18, 2] (htifOpenLog sp ra s0 s1 s2) c 0x800008f8#64 path
+      [(11, nativeStack sp 80), (8, 0#64), (14, 0#64), (15, 0x200200#64), (9, 2#64), (18, 0#64), (2, nativeStack sp 80),
+        (1, ra), (10, path)]) := by
+  apply registers_of_blocks leaf.image (frame.image_outside (OCaml.Vm.Sim.logInW_append'
+      (OCaml.Vm.Sim.logInW_append' (frame.word_log_inside fun off value member => by simp at member; omega)
+        (frame.word_log_inside fun off value member => by simp at member; omega)) (by
+      have lower := frame.lower
+      simp only [LogInW, InsideW, resAt_nat frame (by decide : 4 ≤ 80), resAt_nat frame (by decide : 36 ≤ 80),
+        or_false, and_true]
+      unfold nativeFrameBase at *
+      refine ⟨?_, ?_⟩ <;> omega)))
+    (block_summary _ _ _ _ _ (show BlockInput (openX08b8FSeg ++ openX08d4FSeg ++ openX08ecSeg) 0x800008b8#64
+        (htifOpenInput sp ra s0 s1 s2 path) [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 1, 8, 9, 18, 10, 11]; decide
+      shape := by change ChainOK _ [2, 1, 8, 9, 18, 10, 11] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := htifOpenEntry_code leaf.image
+        have slot (off : Nat) (bound : off + 8 ≤ 80) (aligned : off % 8 = 0) :
+            WriteWindow (nativeStack sp 80 + BitVec.ofNat 64 off) 8 := by
+          rw [nativeStack, frame.address _ (by omega)]
+          exact frame.word bound aligned
+        have half (off : Nat) (bound : off + 4 ≤ 80) (aligned : off % 4 = 0) :
+            WriteWindow (nativeStack sp 80 + BitVec.ofNat 64 off) 4 := by
+          rw [nativeStack, frame.address _ (by omega)]
+          exact frame.word32 bound aligned
+        chain_facts code with "Vsa.Sim.Code._open_at_"
+        · exact (slot 56 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 48 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 72 (by decide) (by decide)).sd rfl rfl
+        · change guardB bop.BLTU (0#64 + Functions.sign_extend (m := 64) 2#12)
+            (0#64 &&& Functions.sign_extend (m := 64) 3#12) = false
+          rw [open_two, open_mode_mask]
+          exact open_mode_ok
+        · exact (slot 64 (by decide) (by decide)).sd rfl rfl
+        · change guardB bop.BEQ (0#64 &&& (Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 2099127#32 +++ 0#12) +
+            Functions.sign_extend (m := 64) 512#12)) (Functions.sign_extend (m := 64)
+            (BitVec.extractLsb' 12 20 2099127#32 +++ 0#12) + Functions.sign_extend (m := 64) 512#12) = false
+          rw [open_creat_dir, open_flags_none]
+          exact open_creat_ok
+        · exact (half 4 (by decide) (by decide)).sw rfl rfl
+        · exact (half 36 (by decide) (by decide)).sw rfl rfl }))
+  · simp only [openX08b8FSeg, openX08d4FSeg, openX08ecSeg, evalBlocks, evalBlock, SegEvalState.init, htifopenentry_line_800008b8, htifopenentry_line_800008bc, htifopenentry_line_800008c0, htifopenentry_line_800008c4, htifopenentry_line_800008c8, htifopenentry_line_800008cc, htifopenentry_line_800008d4, htifopenentry_line_800008d8, htifopenentry_line_800008dc, htifopenentry_line_800008e0, htifopenentry_line_800008e4, htifopenentry_line_800008ec, htifopenentry_line_800008f0, htifopenentry_line_800008f4, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, htifOpenInput, imm20Of, htifOpenLog,
+      nativeWordLog, List.map, List.nil_append, List.cons_append, resAt,
+      show Functions.sign_extend (m := 64) 4016#12 = -BitVec.ofNat 64 80 by decide, show Functions.sign_extend (m := 64) 56#12 = 56#64 by decide, show Functions.sign_extend (m := 64) 48#12 = 48#64 by decide, show Functions.sign_extend (m := 64) 72#12 = 72#64 by decide, show Functions.sign_extend (m := 64) 64#12 = 64#64 by decide, show Functions.sign_extend (m := 64) 4#12 = 4#64 by decide, show Functions.sign_extend (m := 64) 36#12 = 36#64 by decide]
+    rfl
+  · rfl
+  · simp only [openX08b8FSeg, openX08d4FSeg, openX08ecSeg, evalBlocks, evalBlock, SegEvalState.init, htifopenentry_line_800008b8, htifopenentry_line_800008bc, htifopenentry_line_800008c0, htifopenentry_line_800008c4, htifopenentry_line_800008c8, htifopenentry_line_800008cc, htifopenentry_line_800008d4, htifopenentry_line_800008d8, htifopenentry_line_800008dc, htifopenentry_line_800008e0, htifopenentry_line_800008e4, htifopenentry_line_800008ec, htifopenentry_line_800008f0, htifopenentry_line_800008f4, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, htifOpenInput, imm20Of, List.cons_append,
+      List.nil_append, show Functions.sign_extend (m := 64) 4016#12 = -BitVec.ofNat 64 80 by decide,
+      show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero, BitVec.zero_add,
+      show Functions.sign_extend (m := 64) 2#12 = 2#64 by decide,
+      open_mode_mask, open_creat_dir, open_flags_none]
     rfl
   · rfl
   · decide
