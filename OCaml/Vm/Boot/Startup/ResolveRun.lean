@@ -600,3 +600,112 @@ theorem resolve_finish (e : Config) (H : List (Nat × Nat)) (capacity : Nat)
     resAt_nat frameO (by decide : 24 ≤ 80), resAt_nat frameO (by decide : 0 ≤ 80), and_true]
   omega
 end OCaml.Vm.Boot.Startup
+
+namespace OCaml.Vm.Boot.Startup
+open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
+  LeanRV64DExecutable
+
+/-- **The first `resolve("ocamlrun", r)`**: the file system is initialized
+(slot 1 = "prog"), the path names no file, and `r` says `R_NONE` with the
+name. -/
+structure ResolveOcamlrun (H : List (Nat × Nat)) (capacity : Nat)
+    (spo ra path s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 : BitVec 64) (before after : Config) where
+  node : BitVec 64
+  pc : PCAt ra after
+  regs : GHolds after.σ [(2, nativeStack spo 80), (25, s9), (20, s4), (19, s3), (26, s10), (24, s8), (23, s7),
+    (22, s6), (21, s5), (18, s2), (9, s1), (1, ra), (8, s0), (10, -1#64)]
+  ready : RuntimeReady ((node.toNat, 5) :: H) capacity (nativeStack spo 80) ra after
+  embed : EmbedImage after
+  slot : FsSlotOne after.σ.mem node
+  name : OcamlrunName after.σ.mem path
+  none : bytesT after.σ.mem (resAt spo 16) 8 = path
+  live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  above : ∀ x, spo.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+
+theorem resolve_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+    (spo ra path s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 : BitVec 64)
+    (ready : RuntimeReady H (capacity + charge) (nativeStack spo 80) ra c)
+    (frame : NativeFrame spo (80 + (96 + (96 + (64 + allocHeadroom)))))
+    (deep : embedLimit + (80 + (96 + (96 + (64 + allocHeadroom)))) ≤ spo.toNat)
+    (image : EmbedImage c)
+    (regs : GHolds c.σ (resolveEntry spo ra path s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 ++ [(26, s10)]))
+    (notReady : read4 c.σ.mem Layout.sym_fs_ready = [0#8, 0#8, 0#8, 0#8])
+    (clear : ∀ j, 1 ≤ j → j < 64 → slotUsed c.σ.mem (Layout.sym_files + 56 * j) = 0#8)
+    (name : OcamlrunName c.σ.mem path) (home : ∃ e ∈ H, e.1 ≤ path.toNat ∧ path.toNat + 9 ≤ e.1 + e.2)
+    (below : path.toNat + 16 ≤ nativeFrameBase (resolveStack spo) 64)
+    (charged : vsaChg 5 charge) :
+    FnSummary 0x8000056c#64 (fun d => d = c)
+      (fun after => Nonempty (ResolveOcamlrun H capacity spo ra path s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 c after)) := by
+  constructor
+  intro before ⟨pc, eq⟩
+  subst before
+  have entry := (gholds_append _ _).1 regs
+  have outer : NativeFrame (nativeStack spo 80) (96 + (96 + (64 + allocHeadroom))) :=
+    frame.nested (front := 80) (by decide)
+  have frameO := frame.resize (small := 80) (by unfold allocHeadroom; omega) (by decide)
+  have frameC : NativeFrame spo (80 + (96 + 64)) := frame.resize (by unfold allocHeadroom; omega) (by decide)
+  have oNat := frameO.stack_nat
+  have rNat := (outer.resize (small := 96) (by unfold allocHeadroom; omega) (by decide)).stack_nat
+  have hO : (nativeStack spo 80).toNat = spo.toNat - 80 := by rw [oNat]; rfl
+  have hR : (resolveStack spo).toNat = spo.toNat - 176 := by
+    unfold resolveStack; rw [rNat]; unfold nativeFrameBase; rw [hO]; omega
+  have lower := frame.lower
+  obtain ⟨blk, blkH, blkLo, blkHi⟩ := home
+  -- entry through fs_init
+  obtain ⟨d, runA, ⟨A⟩⟩ := (resolve_init c H capacity charge spo ra path s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 ready frame
+    deep image entry.1 notReady clear charged).run c ⟨pc, rfl⟩
+  have nameD : OcamlrunName d.σ.mem path :=
+    name.transport fun k hk => A.live blk blkH _ ⟨by omega, by omega⟩
+  -- the scan to the component loop
+  obtain ⟨e, runB, B⟩ := (resolve_scan d ((A.node.toNat, 5) :: H) capacity spo path s0 s1 s2 s5 s6 s7 s8 s10 _
+    A.ready frameO
+    ((gholds_append _ _).2 ⟨⟨gholds_lookup (n := 19) _ A.regs rfl, gholds_lookup (n := 25) _ A.regs rfl,
+        gholds_lookup (n := 2) _ A.regs rfl, trivial⟩,
+      ⟨gholds_lookup (n := 8) _ A.regs rfl, gholds_lookup (n := 9) _ A.regs rfl,
+        gholds_lookup (n := 18) _ A.regs rfl, gholds_lookup (n := 21) _ A.regs rfl,
+        gholds_lookup (n := 22) _ A.regs rfl, gholds_lookup (n := 23) _ A.regs rfl,
+        gholds_lookup (n := 24) _ A.regs rfl, (A.high 26 (by decide) (by decide)).trans entry.2.1, trivial⟩⟩)
+    nameD (by simp only [nativeFrameBase, hR] at below ⊢; omega)).run d ⟨A.pc, rfl⟩
+  have nodeBounds := A.ready.heap.block_bounds (q := A.node.toNat) (n := 5) (List.mem_cons_self ..)
+  have keptB (x : Nat) (h : x < nativeFrameBase spo 80) : (e.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0 :=
+    B.kept x (Or.inl h)
+  have baseO : nativeFrameBase spo 80 = spo.toNat - 80 := rfl
+  -- strchr through the return
+  obtain ⟨after, runC, C⟩ := (resolve_finish e ((A.node.toNat, 5) :: H) capacity spo path A.node ra _ s0 s1 s2 s3
+    s4 s5 s6 s7 s8 s9 s10 B.ready frameC B.regs B.name below
+    (A.slot.transport (fun x _ hi => keptB x (by simp only [slotOne, Layout.sym_files, heapEnd, baseO] at *; omega))
+      (fun j hj => keptB _ (by simp only [heapEnd, baseO] at *; omega)))
+    (by simp only [nativeFrameBase, hR, heapEnd] at *; omega)
+    (fun j lo hi => by
+      unfold slotUsed
+      rw [keptB _ (by simp only [Layout.sym_files, heapEnd, baseO] at *; omega)]
+      exact A.rest j lo hi)
+    (fun off value member => by
+      have range : off + 8 ≤ 96 := by
+        simp only [resolveSlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member; omega
+      rw [word_observed (m := d.σ.mem) _ (fun i hi => keptB _ (by
+        simp only [nativeFrameBase, hO, baseO] at *; omega))]
+      exact A.saved off value member) ready.aligned).run e ⟨B.pc, rfl⟩
+  have toC (x : Nat) (h1 : x < nativeFrameBase (resolveStack spo) 64 ∨ spo.toNat ≤ x)
+      (h2 : x < nativeFrameBase spo 80 ∨ spo.toNat ≤ x) : (after.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0 :=
+    (C.kept x h1).trans (B.kept x h2)
+  refine ⟨after, runA.trans (runB.trans runC), ⟨{
+    node := A.node
+    pc := C.pc
+    regs := C.regs
+    ready := C.ready
+    embed := A.embed.frame ⟨fun a ka => by
+      have := ka.lt
+      have limit : embedLimit ≤ nativeFrameBase (resolveStack spo) 64 := by
+        simp only [nativeFrameBase, hR] at *; omega
+      exact toC a (Or.inl (by omega)) (Or.inl (by simp only [nativeFrameBase, hR, baseO] at *; omega))⟩
+    slot := C.slot
+    name := C.name
+    none := C.none
+    live := fun blk' h x inside => by
+      have bounds := ready.heap.block_bounds (q := blk'.1) (n := blk'.2) h
+      unfold InExt at inside
+      rw [toC x (Or.inl (by simp only [nativeFrameBase, hR, heapEnd] at *; omega))
+        (Or.inl (by simp only [heapEnd, baseO] at *; omega)), A.live blk' h x (by unfold InExt; omega)]
+    above := fun x high => by rw [toC x (Or.inr high) (Or.inr high), A.above x (by rw [hO]; omega)] }⟩⟩
+end OCaml.Vm.Boot.Startup

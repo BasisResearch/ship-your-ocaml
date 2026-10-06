@@ -338,6 +338,7 @@ import OCaml.Vm.Boot.Startup.HeapFrame
 import OCaml.Vm.Boot.Startup.FsInit
 import OCaml.Vm.Boot.WhileMinHeapChunks
 import OCaml.Vm.Boot.Startup.ResolveSteps
+import OCaml.Vm.Boot.Startup.ResolveRun
 import OCaml.Vm.Boot.Startup.Strdup
 import OCaml.Vm.Boot.Startup.ExtTableFree
 import OCaml.Vm.Boot.Startup.DecomposeNull
@@ -2517,6 +2518,24 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.resolve_strlen_call
 #print axioms OCaml.Vm.Boot.Startup.resolve_flag_test
 #print axioms OCaml.Vm.Boot.Startup.resolve_flag_store
+#print axioms OCaml.Vm.Boot.Startup.resolve_back_start
+#print axioms OCaml.Vm.Boot.Startup.resolve_back_step
+#print axioms OCaml.Vm.Boot.Startup.back_loop
+#print axioms OCaml.Vm.Boot.Startup.resolve_back_exit
+#print axioms OCaml.Vm.Boot.Startup.resolve_loop_save
+#print axioms OCaml.Vm.Boot.Startup.resolve_strchr_call
+#print axioms OCaml.Vm.Boot.Startup.resolve_strlen2_call
+#print axioms OCaml.Vm.Boot.Startup.resolve_child_call
+#print axioms OCaml.Vm.Boot.Startup.resolve_none
+#print axioms OCaml.Vm.Boot.Startup.resolve_return
+#print axioms OCaml.Vm.Boot.Startup.OcamlrunName.plan
+#print axioms OCaml.Vm.Boot.Startup.OcamlrunName.slash
+#print axioms OCaml.Vm.Boot.Startup.OcamlrunName.cbytes
+#print axioms OCaml.Vm.Boot.Startup.resolve_init
+#print axioms OCaml.Vm.Boot.Startup.resolve_scan
+#print axioms OCaml.Vm.Boot.Startup.resolve_finish
+#print axioms OCaml.Vm.Boot.Startup.resolve_ocamlrun
+#print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
 #print axioms OCaml.Vm.Boot.Startup.resAt36_window
 #print axioms OCaml.Vm.Boot.Startup.fs_init
 #print axioms OCaml.Vm.Boot.Startup.child_check
