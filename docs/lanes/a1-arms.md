@@ -70,8 +70,26 @@ the `StackGeometry` plus a6-gc's `NurseryGeometry` of the same witness.
   `CcallReturns` (a1-prims' callee summaries), `CcallEffects` (raise, exit
   and callback results) and `CcallArity` (per program).
 
+* hand: GETFIELD n, PUSHENVACC n (`FieldOperandRows`), SETGLOBAL, SETFIELD n
+  and SETFIELD0–3 (`BarrierRows`). caml_modify's summary is the GC lane's
+  per-site obligation (`GlobalBarrier`, `FieldBarrier`, `FieldBarrierK`).
+* bprime's generated `F1Table.lean` collects every row. Rerun
+  `scripts/gen_f1_table.py` whenever a row changes.
+
+Done: the G1 nursery room is in the loop invariant. `Layout.budget` is new.
+`Running.stack`'s witness is `OCaml.LoopGeometry` (`ArmGeometry` plus
+`G1Room L.budget s c`). Its transports have the same names
+(`OCaml/Vm/Sim/LoopGeometry.lean`). Allocation consumes the room exactly
+(`alloc_log`, count = size); no budget-fit premise is needed.
+
+Primitive adapters for a1-prims (`CcallWriting.lean`):
+* `ccall_writing_summary` (exact write log);
+* `ccall_framed_summary` (`FramedCall`: footprint frame plus
+  saved registers, the footprint below the native sp; console output).
+
 GRAB has only its satisfied path (`grab_fast_next`). Its row and the other
-allocation rows need `NurseryReserve` from the allocation summaries.
+allocation rows are next. They get `NurseryReserve` from a6-gc's
+`Gc.NurseryReserve.of_room`.
 
 STOP/uncaught-raise returns export the HTIF payload-counter frame
 (`InterpRuntimeReturnPost.htif`, `UncaughtChecked.htif`) for bprime's exit.
