@@ -19,8 +19,10 @@ import OCaml.Vm.Boot.Startup.ResolveBackByteImage
 import OCaml.Vm.Boot.Startup.ResolveBackNextNormalized
 import OCaml.Vm.Boot.Startup.ResolveBackNextImage
 import OCaml.Vm.Boot.Startup.FsInit
+import OCaml.Vm.Boot.Startup.IndexedLoop
+import OCaml.Vm.Boot.Startup.NameData
 namespace OCaml.Vm.Boot.Startup
-open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives LeanRV64DExecutable
+open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives LeanRV64DExecutable
 
 /-! htif.c's `resolve(path, r)` for a one-component relative path that names
 no file ("ocamlrun"): `fs_init`, the scans of the path, `strchr` and `strlen`,
@@ -347,4 +349,68 @@ theorem resolve_back_step (c : Config) (path k a0 ra : BitVec 64) (b : BitVec 8)
       BitVec.add_zero]
   · rfl
   · decide
+
+/-- The scan for the last component after `j` steps: `a4 = L - j`. -/
+structure BackAt (path : BitVec 64) (L : Nat) (a0 ra : BitVec 64) (start : Config) (j : Nat) (c : Config) : Prop where
+  leaf : LeafInput ra c
+  bound : j ≤ L
+  pc : PCAt 0x800007d0#64 c
+  regs : GHolds c.σ [(14, BitVec.ofNat 64 (L - j)), (11, 47#64), (10, a0), (25, path)]
+  memory : c.σ.mem = start.σ.mem
+  output : c.σ.sailOutput = start.σ.sailOutput
+  frame : ∀ r : Register, (∀ n ∈ [13, 12, 14], gprReg n ≠ r) →
+    (∀ q ∈ noiseRegs, (q == r) = false) → c.σ.regs.get? r = start.σ.regs.get? r
+
+def backIndex (L : Nat) (c : Config) : Nat := L - ((gprGet c.σ 14).getD 0).toNat
+
+/-- A path of `L` bytes, none '/'. -/
+structure NoSlash (m : Std.ExtHashMap Nat (BitVec 8)) (path : BitVec 64) (L : Nat) : Prop where
+  region : ReadWindow path (L + 1)
+  free : ∀ j, j < L → strByte m (path.toNat + j) ≠ 47#8
+
+theorem back_iteration {path L a0 ra start j c} (run : NoSlash start.σ.mem path L) (h : BackAt path L a0 ra start j c)
+    (hj : j < L) : ∃ d, Steps c d ∧ BackAt path L a0 ra start (j + 1) d := by
+  have small : L < 2 ^ 64 := by have := run.region.upper; omega
+  have kNe : BitVec.ofNat 64 (L - j) ≠ 0#64 := by
+    intro e
+    have := congrArg BitVec.toNat e
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)] at this
+    simp at this; omega
+  have kDec : BitVec.ofNat 64 (L - j) - 1#64 = BitVec.ofNat 64 (L - (j + 1)) := by
+    apply BitVec.eq_of_toNat_eq
+    rw [BitVec.toNat_sub, BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (by omega : L - j < 2 ^ 64), Nat.mod_eq_of_lt (by omega : L - (j + 1) < 2 ^ 64)]
+    omega
+  have cursor : path + (BitVec.ofNat 64 (L - j) - 1#64) = nameCursor path (L - (j + 1)) := by
+    rw [kDec]; rfl
+  have nat := nameCursor_nat run.region (k := L - (j + 1)) (by omega)
+  obtain ⟨d, run1, post⟩ := (resolve_back_step c path _ a0 ra (strByte start.σ.mem (path.toNat + (L - (j + 1))))
+    h.leaf h.regs kNe (by rw [cursor]; exact name_window run.region (by omega))
+    (by rw [cursor, nat, h.memory]; rfl) (run.free _ (by omega))).run c ⟨h.pc, rfl⟩
+  refine ⟨d, run1, {
+    leaf := ⟨post.good, post.image, post.minstret,
+      (post.frame .x1 (by decide) (by decide)).trans h.leaf.raReg, h.leaf.aligned, post.tick⟩
+    bound := by omega
+    pc := post.pc
+    regs := ?_
+    memory := post.memory.trans h.memory
+    output := post.output.trans h.output
+    frame := fun r outside noise => (post.frame r (fun n hn => outside n (by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega)) noise).trans (h.frame r outside noise) }⟩
+  rw [← kDec]
+  exact ⟨gholds_lookup (n := 14) _ post.regs (by rfl), gholds_lookup (n := 11) _ post.regs (by rfl),
+    gholds_lookup (n := 10) _ post.regs (by rfl), gholds_lookup (n := 25) _ post.regs (by rfl), trivial⟩
+
+theorem BackAt.index {path L a0 ra start j c} (small : L < 2 ^ 64) (h : BackAt path L a0 ra start j c) :
+    backIndex L c = j := by
+  simp only [backIndex, gholds_lookup (n := 14) _ h.regs (by rfl), Option.getD_some, BitVec.toNat_ofNat]
+  have := h.bound
+  rw [Nat.mod_eq_of_lt (by omega)]
+  omega
+
+/-- The whole scan for the last component over a '/'-free path. -/
+theorem back_loop {path L a0 ra} (start : Config) (run : NoSlash start.σ.mem path L) :
+    Triple (BackAt path L a0 ra start 0) (BackAt path L a0 ra start L) :=
+  indexed_loop (backIndex L) L 0 _ (fun _ _ h => h.bound)
+    (fun _ _ h => h.index (by have := run.region.upper; omega)) (fun _ _ h hj => back_iteration run h hj)
 end OCaml.Vm.Boot.Startup
