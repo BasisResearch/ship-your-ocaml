@@ -41,8 +41,15 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   `OcamlrunName` (ResolveName.lean) gives strchr's plan from the copy's
   alignment (now a field of StrdupDone/SearchInPathDone/ResetSearchExeReturned).
 
-Next: `_open`'s ENOENT tail (`__errno`, errno store kept by
-`HeapReady.frame_errno`), `_open_r`, `open`; compose after ResetOpenCall.
+* **`open_ocamlrun` (OpenRun.lean)**: the complete `open("ocamlrun",
+  O_RDONLY)` → `_open_r` → `_open` → `resolve` → ENOENT → -1, with both
+  `_open_r` branches. `RuntimeReady.errno_log` (RuntimeErrno.lean) keeps
+  readiness across the errno stores.
+
+Next: the obligation "startup globals kept since reset" (`fs_ready = 0`,
+slots 1–63 unused, `_impure_ptr = &_impure_data` at `ResetOpenCall`) by
+extending `KeptByte`/`KeptImage`; then compose `open_ocamlrun` after
+`ResetOpenCall`, and the retry with "/prog".
 
 ## Round 2 status (2026-10-06, search)
 
