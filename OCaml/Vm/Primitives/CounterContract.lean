@@ -28,7 +28,7 @@ structure CounterInput (runtimeOk : Config → Prop) (P : Prog) (s : St)
     extends ImmediateInput runtimeOk P s pl cp sp high ra [s.accu] c where
   bindingsOutside : BindingsOutside (counterLog (counterWord s.world.ooId)) P c
   counter : word c Layout.sym_oo_last_id = counterWord s.world.ooId
-  outside : PayloadOutside (counterLog (counterWord s.world.ooId)) P s c pl cp sp
+  outside : PayloadObsOutside (counterLog (counterWord s.world.ooId)) P s c pl cp sp
 
 structure CounterPost (runtimeOk : Config → Prop) (P : Prog) (s : St)
     (pl : Place) (cp : ChanPlace) (sp high : Nat) (before : Config) (ra : BitVec 64)
@@ -49,6 +49,11 @@ theorem counter_contract {runtimeOk P s pl cp sp high ra c entry}
   rw [h.counter] at S
   apply S.weaken (fun _ h => h)
   intro after post
+  have counter : word after Layout.sym_oo_last_id = counterWord (s.world.ooId + 1) := by
+    change bytesT after.σ.mem Layout.sym_oo_last_id 8 = _
+    rw [post.memory]
+    exact (word_writeLog c.σ.mem Layout.sym_oo_last_id (counterWord s.world.ooId + 2)).trans
+      (counterWord_succ s.world.ooId)
   have frame : FrameOn counterWindows c.σ.mem after.σ.mem := by
     rw [post.memory]
     exact frameOn_writeLog _ _ _ (counter_log_in _)
@@ -63,11 +68,9 @@ theorem counter_contract {runtimeOk P s pl cp sp high ra c entry}
     resultRepr := counterWord_repr pl s.world.ooId
     semantics := rfl }, counter := ?_ }
   · simpa only [Val.ofInt, BitVec.ofInt_natCast] using
-      ((h.data.frame_log h.outside post.memory post.output).accu_int
-        (BitVec.ofNat 63 s.world.ooId)).ooId (s.world.ooId + 1)
-  · change bytesT after.σ.mem Layout.sym_oo_last_id 8 = _
-    rw [post.memory]
-    exact (word_writeLog c.σ.mem Layout.sym_oo_last_id (counterWord s.world.ooId + 2)).trans
-      (counterWord_succ s.world.ooId)
+      (h.data.frame_obs h.outside (outsideLog_of_observedLog fun a => by rw [post.memory])
+        (by simp only [output, post.output]) (s.world.ooId + 1) counter).accu_int
+        (BitVec.ofNat 63 s.world.ooId)
+  · exact counter
 
 end OCaml.Vm.Primitives

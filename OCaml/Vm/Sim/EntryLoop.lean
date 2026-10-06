@@ -47,6 +47,7 @@ theorem _root_.OCaml.Vm.Primitives.PayloadOutside.cover {log fp : List WEntry} {
   stackHigh := outLRange_of_cover cover h.stackHigh
   trapsp := outLRange_of_cover cover h.trapsp
   codeBase := outLRange_of_cover cover h.codeBase
+  ooId := outLRange_of_cover cover h.ooId
   atomBase := outLRange_of_cover cover h.atomBase
   globals := outLRange_of_cover cover h.globals
   code i w hi := outLRange_of_cover cover (h.code i w hi)

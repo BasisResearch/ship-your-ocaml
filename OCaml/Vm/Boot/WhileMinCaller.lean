@@ -105,6 +105,7 @@ theorem caller_outside :
       refine ⟨Or.inl (by omega), Or.inr (by omega), Or.inr (by omega), trivial⟩
   · intro id ch a _ ha
     cases ha
+  · simp only [entryFootprint, OutLRange]; decide
 
 /-- **caml_interprete's caller at the captured cut.** -/
 theorem interpCaller :

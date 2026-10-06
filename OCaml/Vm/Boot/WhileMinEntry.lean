@@ -24,6 +24,9 @@ structure EntryControl (c : Config) : Prop where
     InterpCaller whileMin c place (fun _ => none) high sp callerRegs mainSaved
   /-- the placement of the initial state (`WhileMinCaller.stackGeometry`, nursery geometry) -/
   geometry : OCaml.Vm.Sim.ArmGeometry whileMin whileMin.init c place (fun _ => none) high
+  /-- `oo_last_id` still holds its `.data` initializer `Val_int(0)` (no startup store
+  writes it; the cut's image facts supply it with the other initialized statics) -/
+  ooCounter : word c Layout.sym_oo_last_id = tag64 (BitVec.ofNat 63 0)
 
 /-- All heap, code, globals, stack and runtime obligations follow from the
 certified store-log memory. Control, image and primitive bindings remain explicit. -/
@@ -53,7 +56,7 @@ theorem loaded {c : Config} {initial : Vsa.MemRepr.Mem}
   · rw [dom]; exact congrArg BitVec.toNat (read_stack_high memory)
   · rw [dom]; exact congrArg BitVec.toNat (read_extern_sp memory)
   · rw [dom]; exact congrArg BitVec.toNat (read_trapsp memory)
-  · refine ⟨entry.console, ?_⟩
+  · refine ⟨entry.console, ?_, entry.ooCounter⟩
     intro id ch hc
     change ([] : List Chan)[id]? = some ch at hc
     simp at hc
@@ -80,6 +83,7 @@ theorem EntryControl.fillZero {c : Config} (h : EntryControl c) :
       fun a => bytesT_memEqv (Vsa.Densify.memEqv_fillZeroMem c.σ.mem).symm a 8
     h.geometry.transport (fun _ o' ho => ⟨o', ho, rfl⟩) rfl (hw _) (hw _)
       (by simp only [runtimeFields, domainWord, hw]) (by simp only [runtimeFields, domainWord, hw])
+  ooCounter := (bytesT_memEqv (Vsa.Densify.memEqv_fillZeroMem c.σ.mem).symm _ 8).trans h.ooCounter
 
 /-- The requested densified entry statement, conditional only on the actual
 cut's memory projection and remaining control/image/binding certificate. -/

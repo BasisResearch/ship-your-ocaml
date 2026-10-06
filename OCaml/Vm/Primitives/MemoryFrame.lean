@@ -83,11 +83,13 @@ theorem channel_copied {c c' : Config} {a : Nat} {ch : Chan}
     (copied : Reloc.Copied c c' a a (chanOffBuff + ch.buffer.length)) : ChanAt c' a ch := by
   let pl : Place := ⟨fun _ => none, 0, 0⟩
   have img : (Reloc.chanEqv a ch).Img id pl 0 0 c c' := by
-    refine ⟨?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · exact Reloc.bytesT_congr (copied.mono chanOffFd 4 (by simp only [chanOffFd, chanOffBuff]; omega))
     · exact Reloc.bytesT_congr (copied.mono chanOffOffset 8 (by simp only [chanOffOffset, chanOffBuff]; omega))
     · exact Reloc.bytesT_congr (copied.mono chanOffCurr 8 (by simp only [chanOffCurr, chanOffBuff]; omega))
     · exact Reloc.bytesT_congr (copied.mono chanOffMax 8 (by simp only [chanOffMax, chanOffBuff]; omega))
+    · exact Reloc.bytesT_congr (copied.mono chanOffEnd 8 (by simp only [chanOffEnd, chanOffBuff]; omega))
+    · exact Reloc.bytesT_congr (copied.mono chanOffFlags 4 (by simp only [chanOffFlags, chanOffBuff]; omega))
     · intro i b hb
       have hi := (List.getElem?_eq_some_iff.mp hb).1
       change byte c' (a + chanOffBuff + i) = byte c (a + chanOffBuff + i)
@@ -101,7 +103,7 @@ structure ObjectOutside (log : List WEntry) (a : Nat) (o : Obj) : Prop where
 /-- Static separation of a callee's writes from the VM's observations.
 The caller supplies this from stack/code/global separation and allocator
 placement invariants; it makes no assumption about machine execution. -/
-structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
+structure PayloadObsOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
     (pl : Place) (cp : ChanPlace) (sp : Nat) : Prop where
   domain : OutLRange log Layout.sym_Caml_state 8
   stackHigh : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high) 8
@@ -116,12 +118,35 @@ structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
     OutLRange log a (chanOffBuff + ch.buffer.length)
 
-/-- Transport the complete VM payload across a checked write footprint. -/
-theorem VmPayload.frame_outsideLog {P s c c' pl cp sp high log}
-    (h : VmPayload P s c pl cp sp high) (outside : PayloadOutside log P s c pl cp sp)
+/-- `PayloadObsOutside` and the object-ID counter word. -/
+structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
+    (pl : Place) (cp : ChanPlace) (sp : Nat) : Prop where
+  domain : OutLRange log Layout.sym_Caml_state 8
+  stackHigh : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high) 8
+  trapsp : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_trapsp) 8
+  codeBase : OutLRange log Layout.sym_caml_start_code 8
+  atomBase : OutLRange log Layout.sym_caml_atom_table 8
+  globals : OutLRange log Layout.sym_caml_global_data 8
+  code : ∀ i w, P.code[i]? = some w → OutLRange log (pl.codeBase + 4 * i) 4
+  stack : ∀ i v, s.stack[i]? = some v → OutLRange log (sp + 8 * i) 8
+  heap : ∀ l a o, Live s.heap (roots P s) l → pl.φ l = some a → s.heap.get? l = some o →
+    ObjectOutside log a o
+  channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+    OutLRange log a (chanOffBuff + ch.buffer.length)
+  ooId : OutLRange log Layout.sym_oo_last_id 8
+
+theorem PayloadOutside.obs {log : List WEntry} {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp : Nat} (h : PayloadOutside log P s c pl cp sp) : PayloadObsOutside log P s c pl cp sp :=
+  ⟨h.domain, h.stackHigh, h.trapsp, h.codeBase, h.atomBase, h.globals, h.code, h.stack, h.heap, h.channels⟩
+
+/-- Transport the VM payload across a write footprint that may write the
+object-ID counter: the counter word afterwards represents `n`. -/
+theorem VmPayload.frame_obs {P s c c' pl cp sp high log}
+    (h : VmPayload P s c pl cp sp high) (outside : PayloadObsOutside log P s c pl cp sp)
     (memory : ∀ x, OutL log x → byte c' x = byte c x)
-    (outputEq : output c'.σ = output c.σ) :
-    VmPayload P s c' pl cp sp high := by
+    (outputEq : output c'.σ = output c.σ) (n : Nat)
+    (counter : word c' Layout.sym_oo_last_id = tag64 (BitVec.ofNat 63 n)) :
+    VmPayload P {s with world := {s.world with ooId := n}} c' pl cp sp high := by
   have copy := fun a n (ho : OutLRange log a n) => copied_of_outsideLog memory ho
   have hw : ∀ a, OutLRange log a 8 → word c' a = word c a :=
     fun a ho => Reloc.bytesT_congr (copy a 8 ho)
@@ -149,13 +174,26 @@ theorem VmPayload.frame_outsideLog {P s c c' pl cp sp high log}
       have iso := outside.heap l a o hl ha ho
       exact ⟨a, o, ha, ho, object_copied layout (copy _ 8 iso.header) (copy _ _ iso.payload)⟩
     · exact h.heap.2
-  · refine ⟨?_, ?_⟩
-    · simpa only [outputEq] using h.world.1
+  · refine ⟨?_, ?_, ?_⟩
+    · rw [outputEq]; exact h.world.output
     · intro id ch hc
-      obtain ⟨a, ha, layout⟩ := h.world.2 id ch hc
+      obtain ⟨a, ha, layout⟩ := h.world.chans id ch hc
       exact ⟨a, ha, channel_copied layout (copy _ _ (outside.channels id ch a hc ha))⟩
+    · exact counter
   · rw [hw _ outside.atomBase]
     exact h.atomBase
+
+/-- Transport the complete VM payload across a checked write footprint. -/
+theorem VmPayload.frame_outsideLog {P s c c' pl cp sp high log}
+    (h : VmPayload P s c pl cp sp high) (outside : PayloadOutside log P s c pl cp sp)
+    (memory : ∀ x, OutL log x → byte c' x = byte c x)
+    (outputEq : output c'.σ = output c.σ) :
+    VmPayload P s c' pl cp sp high := by
+  have keep := h.frame_obs outside.obs memory outputEq s.world.ooId (by
+    have e : word c' Layout.sym_oo_last_id = word c Layout.sym_oo_last_id :=
+      Reloc.bytesT_congr (copied_of_outsideLog memory outside.ooId)
+    rw [e]; exact h.world.ooId)
+  exact keep
 
 /-- Total-byte agreement with a write log specializes the footprint frame. -/
 theorem VmPayload.frame_observedLog {P s c c' pl cp sp high log}
@@ -179,10 +217,13 @@ theorem VmPayload.frame_observed {P s c c' pl cp sp high}
   constructor
   all_goals first | trivial | (intros; trivial) | (intros; exact ⟨True.intro, True.intro⟩)
 
-/-- The object-ID counter does not change roots, channels or console state. -/
-theorem VmPayload.ooId {P s c pl cp sp high} (h : VmPayload P s c pl cp sp high) (n : Nat) :
+/-- The object-ID counter does not change roots, channels or console state;
+its word represents the new counter. -/
+theorem VmPayload.ooId {P s c pl cp sp high} (h : VmPayload P s c pl cp sp high) (n : Nat)
+    (counter : word c Layout.sym_oo_last_id = tag64 (BitVec.ofNat 63 n)) :
     VmPayload P {s with world := {s.world with ooId := n}} c pl cp sp high :=
-  ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, h.world, h.atomBase⟩
+  ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap,
+    ⟨h.world.output, h.world.chans, counter⟩, h.atomBase⟩
 
 /-- The primitive-table pointer and all referenced entries are outside a write
 log. The caller supplies this from its table allocation and write separation. -/

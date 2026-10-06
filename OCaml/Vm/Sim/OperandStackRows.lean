@@ -127,7 +127,7 @@ theorem StackGeometry.edit {P : Prog} {s : St} {c : Config} {pl : Place} {cp : C
     · simp only [stackWindow] at ho ⊢; omega
     · simp only [stackWindow] at ho ⊢; omega
   refine ⟨⟨static _ (by decide), domainField _ (by decide), domainField _ (by decide),
-    static _ (by decide), static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_⟩, ?_⟩
+    static _ (by decide), static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_, static _ (by decide)⟩, ?_⟩
   · exact fun i w hw => outLRange_of_windows inside (g.code i w hw)
   · intro i v hv
     cases hv

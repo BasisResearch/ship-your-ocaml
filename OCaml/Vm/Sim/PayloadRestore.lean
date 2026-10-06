@@ -16,6 +16,7 @@ structure PayloadCoreOutside (log : List WEntry) (P : Prog) (s : St) (c : Config
   code : ∀ i w, P.code[i]? = some w → OutLRange log (pl.codeBase + 4 * i) 4
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
     OutLRange log a (chanOffBuff + ch.buffer.length)
+  ooId : OutLRange log Layout.sym_oo_last_id 8
 
 /-- Rebuild mutable payload components after a log, copying the fixed
 observations once through total-byte and relocation combinators. -/
@@ -48,12 +49,13 @@ theorem payload_rebuild_accu {P : Prog} {s : St} {before after : Config}
     exact h.globals
   · exact words
   · exact objects
-  · refine ⟨?_, ?_⟩
+  · refine ⟨?_, ?_, ?_⟩
     · have same : output after.σ = output before.σ := by simp only [output, out]
-      simpa only [same] using h.world.1
+      simpa only [same] using h.world.output
     · intro id ch hc
-      obtain ⟨a, ha, layout⟩ := h.world.2 id ch hc
+      obtain ⟨a, ha, layout⟩ := h.world.chans id ch hc
       exact ⟨a, ha, channel_copied layout (copy _ _ (outside.channels id ch a hc ha))⟩
+    · rw [hw _ outside.ooId]; exact h.world.ooId
   · rw [hw _ outside.atomBase]
     exact h.atomBase
 

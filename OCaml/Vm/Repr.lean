@@ -115,6 +115,11 @@ def chanOffBuff : Nat := 72
 
 def chanOffOffset : Nat := 8
 def chanOffMax : Nat := 32
+def chanOffEnd : Nat := 16
+def chanOffFlags : Nat := 68
+
+/-- `CHANNEL_FLAG_UNBUFFERED` (`runtime/caml/io.h`). -/
+def chanFlagUnbuffered : BitVec 32 := 16#32
 
 /-- The active bytes and cursor of either kind of C channel. -/
 def _root_.OCaml.Bytecode.Chan.buffer (ch : Chan) : List UInt8 :=
@@ -128,6 +133,8 @@ def ChanAt (c : Config) (a : Nat) (ch : Chan) : Prop :=
   (word c (a + chanOffOffset)).toInt = ch.offset ∧
   (word c (a + chanOffCurr)).toNat = a + chanOffBuff + ch.cursor ∧
   (word c (a + chanOffMax)).toNat = (if ch.fd = -1 then a + chanOffBuff + ioBufferSize else if ch.isOut then 0 else a + chanOffBuff + ch.inBuf.length) ∧
+  (word c (a + chanOffEnd)).toNat = a + chanOffBuff + ioBufferSize ∧
+  word32 c (a + chanOffFlags) &&& chanFlagUnbuffered = 0#32 ∧
   ∀ i (b : UInt8), ch.buffer[i]? = some b → byte c (a + chanOffBuff + i) = BitVec.ofNat 8 b.toNat
 
 /-- Where the `struct channel`s live (`caml_open_descriptor_in` mallocs
@@ -192,7 +199,17 @@ def StackRepr (c : Config) (pl : Place) (sp high : Nat) (stk : List Val) : Prop 
 is laid out at its place. -/
 def WorldRepr (c : Config) (cp : ChanPlace) (w : World) : Prop :=
   output c.σ = bytesToString w.console ∧
-  ∀ id ch, w.chans[id]? = some ch → ∃ a, cp id = some a ∧ ChanAt c a ch
+  (∀ id ch, w.chans[id]? = some ch → ∃ a, cp id = some a ∧ ChanAt c a ch) ∧
+  word c Layout.sym_oo_last_id = tag64 (BitVec.ofNat 63 w.ooId)
+
+theorem WorldRepr.output {c : Config} {cp : ChanPlace} {w : World} (h : WorldRepr c cp w) :
+    Vsa.Machine.output c.σ = bytesToString w.console := h.1
+
+theorem WorldRepr.chans {c : Config} {cp : ChanPlace} {w : World} (h : WorldRepr c cp w) :
+    ∀ id ch, w.chans[id]? = some ch → ∃ a, cp id = some a ∧ ChanAt c a ch := h.2.1
+
+theorem WorldRepr.ooId {c : Config} {cp : ChanPlace} {w : World} (h : WorldRepr c cp w) :
+    word c Layout.sym_oo_last_id = tag64 (BitVec.ofNat 63 w.ooId) := h.2.2
 
 /-- Recognize only GETPUBMET cache operands on a linear instruction decode.
 An opcode-looking operand is never treated as an instruction boundary. -/

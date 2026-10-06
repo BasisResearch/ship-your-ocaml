@@ -421,13 +421,16 @@ def chanEqv (a : Nat) (ch : Chan) : Eqv :=
     (·.toNat = a + chanOffBuff + ch.cursor)) <|
   Eqv.and (Eqv.rawW (fun _ => a + chanOffMax)
     (·.toNat = (if ch.fd = -1 then a + chanOffBuff + ioBufferSize else if ch.isOut then 0 else a + chanOffBuff + ch.inBuf.length))) <|
+  Eqv.and (Eqv.rawW (fun _ => a + chanOffEnd) (·.toNat = a + chanOffBuff + ioBufferSize)) <|
+  Eqv.and (Eqv.rawW32 (fun _ => a + chanOffFlags) (· &&& chanFlagUnbuffered = 0#32)) <|
   Eqv.list ch.buffer fun i b => Eqv.rawB (fun _ => a + chanOffBuff + i)
     (· = BitVec.ofNat 8 b.toNat)
 
 def worldEqv (cp : ChanPlace) (w : World) : Eqv :=
   Eqv.and (Eqv.observe (fun c => output c.σ) (· = bytesToString w.console)) <|
-  Eqv.all fun id => Eqv.all fun ch => Eqv.guard (w.chans[id]? = some ch) <|
-  Eqv.ex fun a => Eqv.and (Eqv.pure fun _ => cp id = some a) (chanEqv a ch)
+  Eqv.and (Eqv.all fun id => Eqv.all fun ch => Eqv.guard (w.chans[id]? = some ch) <|
+    Eqv.ex fun a => Eqv.and (Eqv.pure fun _ => cp id = some a) (chanEqv a ch)) <|
+  Eqv.rawW (fun _ => Layout.sym_oo_last_id) (· = tag64 (BitVec.ofNat 63 w.ooId))
 
 def pcEqv (pc : Nat) : Eqv :=
   Eqv.atCode <| Eqv.ex fun base =>
