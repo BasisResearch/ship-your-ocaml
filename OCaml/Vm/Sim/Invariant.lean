@@ -110,6 +110,10 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
     a + (chanOffBuff + ch.buffer.length) ≤ Vsa.Sim.DlHeap.heapEnd
   primsArena : ∀ i name, P.prims[i]? = some name →
     (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8 ≤ Vsa.Sim.DlHeap.heapEnd
+  /-- and above `.bss` (separating them from static runtime variables) -/
+  channelLow : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a → Layout.sym_bss_end ≤ a
+  primsLow : ∀ (i : Nat) name, P.prims[i]? = some name →
+    Layout.sym_bss_end ≤ (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat
   heapPrims : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     ∀ i name, P.prims[i]? = some name →
       OutWRange [⟨(word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i, (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8⟩] (a - 8) (8 * o.wosize + 8)
@@ -188,6 +192,8 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
   primsRam := by rw [prims]; exact g.primsRam
   channelArena := by rw [chans]; exact g.channelArena
   primsArena := by rw [prims]; exact g.primsArena
+  channelLow := by rw [chans]; exact g.channelLow
+  primsLow := by rw [prims]; exact g.primsLow
   heapPrims l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     rw [prims, ← size]; exact g.heapPrims l a o placed ho
@@ -296,6 +302,8 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
   primsRam := g.primsRam
   channelArena := by rw [world]; exact g.channelArena
   primsArena := g.primsArena
+  channelLow := by rw [world]; exact g.channelLow
+  primsLow := g.primsLow
   heapPrims l a' o' found object := by
     rw [heap] at object
     rcases heap_alloc_get object with old | ⟨rfl, rfl⟩

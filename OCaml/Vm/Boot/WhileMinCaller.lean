@@ -251,6 +251,11 @@ theorem stackGeometry_of {c : Config} (memory : Vsa.Densify.MemEqv c.σ.mem
         simp only [BitVec.toNat_ofNat]
         exact ⟨by omega, by omega, Or.inr (by omega)⟩
       channelArena := fun _ _ _ _ ha => by cases ha
+      channelLow := fun _ _ _ _ ha => by cases ha
+      primsLow := fun _ _ _ => by
+        rw [prim_table_word]
+        simp only [BitVec.toNat_ofNat]
+        decide
       primsArena := fun i name hi => by
         have bound : i < whileMin.prims.size := (Array.getElem?_eq_some_iff.mp hi).1
         have size : whileMin.prims.size ≤ 512 := by decide +kernel
