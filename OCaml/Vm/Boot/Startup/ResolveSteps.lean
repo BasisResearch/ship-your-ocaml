@@ -388,6 +388,7 @@ structure BackAt (path : BitVec 64) (L : Nat) (a0 ra : BitVec 64) (start : Confi
   output : c.σ.sailOutput = start.σ.sailOutput
   frame : ∀ r : Register, (∀ n ∈ [13, 12, 14], gprReg n ≠ r) →
     (∀ q ∈ noiseRegs, (q == r) = false) → c.σ.regs.get? r = start.σ.regs.get? r
+  present : GprPresent c.σ
 
 def backIndex (L : Nat) (c : Config) : Nat := L - ((gprGet c.σ 14).getD 0).toNat
 
@@ -424,7 +425,8 @@ theorem back_iteration {path L a0 ra start j c} (run : NoSlash start.σ.mem path
     memory := post.memory.trans h.memory
     output := post.output.trans h.output
     frame := fun r outside noise => (post.frame r (fun n hn => outside n (by
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega)) noise).trans (h.frame r outside noise) }⟩
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega)) noise).trans (h.frame r outside noise)
+    present := post.present h.present (by decide) (by simp only [keysG]; decide) }⟩
   rw [← kDec]
   exact ⟨gholds_lookup (n := 14) _ post.regs (by rfl), gholds_lookup (n := 11) _ post.regs (by rfl),
     gholds_lookup (n := 10) _ post.regs (by rfl), gholds_lookup (n := 25) _ post.regs (by rfl), trivial⟩
