@@ -114,11 +114,27 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `GoodF1.stopAccu` (new: STOP never returns a `.raw` word, which caml_main
   would read as an exception; `whileMin` still checks in one kernel run).
 
+**ArmSim.halt complete (2026-10-06)**
+- `ccall1Exit_pinned fits : CcallExit Gc.f1Layout P .C_CALL1 0`. Its
+  `present` premise is discharged by `ccall1_present`: ra and a0 come from
+  the setup, sp from the native invocation, and s0–s10 from a1-arms'
+  `CcallSetupPost.calleeSaved`.
+- The generator's FIXED `exit` now points at it, so `F1PremisesFor` has no
+  `c_call1_exit` field. STOP and caml_sys_exit are the only halting F1
+  outcomes, and both are proved.
+- `g1_capacity` moved from the generated table to `Sim/G1Capacity.lean` to
+  break the import cycle.
+
 **caml_format_int and caml_ml_open_descriptor_out (2026-10-06, in progress)**
 - format_int, `"%d"` path: `scripts/syi/ocaml_format.py` (`gen_fn.py
   --ocaml-format`, stage a5) emits block certificates and `_fast` wrappers.
-  * Done: parse_format (7 blocks, route: fits, no l/L/n before the
-    conversion) and caml_string_length.
+  * Done: block families of parse_format, caml_string_length,
+    caml_alloc_sprintf and caml_format_int. `string_length_call` is proved.
+    parse_format composition (`ParseFormatCall.lean`): `measure`, `copy`
+    and the conversion guard are proved; `append` and `finish` remain.
+  * Library calls need `VsaOk` (all 31 GPRs present) at the C_CALL callee
+    entry. For now it is a premise (as in a1-prims' primitives); a0-boot is
+    asked whether `VsaOk.gpr` can be weakened.
   * `emit_fast` fixes: lbu window loads read one byte; opt-in `shiftAddr`.
   * Callees: memmove through a2-sem's `memmove_call` (in flight), strlen
     through `strlen_call`, caml_alloc_string through a1-prims'

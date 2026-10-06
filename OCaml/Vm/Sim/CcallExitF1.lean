@@ -1,7 +1,7 @@
 import OCaml.Vm.Sim.CcallRows
 import OCaml.Vm.Sim.Ccall1Exit
 import OCaml.Vm.Sim.F1Frame
-import OCaml.Vm.Sim.F1Table
+import OCaml.Vm.Sim.G1Capacity
 import OCaml.Vm.Primitives.ExitPath.Primitive
 
 /-!
@@ -72,5 +72,29 @@ theorem ccall1Exit_f1 {P : Prog} (fits : OCaml.Fits Gc.g1Budget P)
     all_goals omega
   rw [hn] at setup
   exact caml_sys_exit_halts setup.input runtime setup.target hr
+
+/-- Every register `caml_do_exit` reads is present at the C_CALL1 callee
+entry: `ra` and `a0` from the call setup, `sp` from the native invocation,
+`s0`–`s10` from `CcallSetupPost.calleeSaved`. -/
+theorem ccall1_present {P : Prog} : ∀ s c' pl cp sp high domain entry env, Reach P s →
+    CcallSetupPost (0x80003060#64) [s.accu] Gc.f1Layout P s pl cp sp high domain entry env c' →
+    ∀ n ∈ exitReads, (gprGet c'.σ n).isSome := by
+  intro s c' pl cp sp high domain entry env _ setup n hn
+  have saved := setup.calleeSaved
+  obtain ⟨D, inv, -⟩ := setup.native
+  obtain ⟨w, -, hw⟩ := setup.input.arguments 0 s.accu rfl
+  simp only [exitReads, List.mem_cons, List.not_mem_nil, or_false] at hn
+  rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  · exact isSome_of_pin setup.input.raReg
+  · exact isSome_of_pin inv.stack
+  · exact saved 8 (by simp)
+  · exact saved 9 (by simp)
+  · exact isSome_of_pin hw
+  all_goals exact saved _ (by simp)
+
+/-- **The C_CALL1 exit row**, with no premise beyond the budget. -/
+theorem ccall1Exit_pinned {P : Prog} (fits : OCaml.Fits Gc.g1Budget P) :
+    CcallExit Gc.f1Layout P .C_CALL1 0 :=
+  ccall1Exit_f1 fits ccall1_present
 
 end OCaml.Vm.Sim

@@ -1,6 +1,7 @@
 import OCaml.Vm.Sim.A2TableRows
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.BarrierRows
+import OCaml.Vm.Sim.CcallExitF1
 import OCaml.Vm.Sim.CcallRows
 import OCaml.Vm.Sim.ClosureAllocRows
 import OCaml.Vm.Sim.ClosurerecAllocRows
@@ -10,6 +11,7 @@ import OCaml.Vm.Sim.F1Frame
 import OCaml.Vm.Sim.F1RaiseRuntime
 import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.FieldRows
+import OCaml.Vm.Sim.G1Capacity
 import OCaml.Vm.Sim.GrabAllocRows
 import OCaml.Vm.Sim.MakeblockNRows
 import OCaml.Vm.Sim.MakeblockRows
@@ -32,9 +34,6 @@ namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 
-/-- The G1 budget leaves both thresholds of slack on the VM stack. -/
-theorem g1_capacity : StackCapacity Gc.g1Budget := by unfold StackCapacity; decide
-
 /-- **Program-level premises of the F1 rows**, each guarded by the kept
 opcodes that use it, and the rows still open. -/
 structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
@@ -45,7 +44,6 @@ structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   setfield3_barrier : (keep .SETFIELD3) = true → FieldBarrierK Gc.f1Layout P .SETFIELD3 3 (0x80002168#64) (24#64)
   setfield_barrier : (keep .SETFIELD) = true → FieldBarrier Gc.f1Layout P
   c_call1_returns : (keep .C_CALL1) = true → CcallReturns Gc.f1Layout P .C_CALL1 (0x80003060#64) 0
-  c_call1_exit : (keep .C_CALL1) = true → CcallExit Gc.f1Layout P .C_CALL1 0
   c_call2_returns : (keep .C_CALL2) = true → CcallReturns Gc.f1Layout P .C_CALL2 (0x80003004#64) 1
   c_call3_returns : (keep .C_CALL3) = true → CcallReturns Gc.f1Layout P .C_CALL3 (0x80002fa4#64) 2
   c_call4_returns : (keep .C_CALL4) = true → CcallReturns Gc.f1Layout P .C_CALL4 (0x80002f40#64) 3
@@ -242,7 +240,7 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .CHECK_SIGNALS, _ => if h : keep .CHECK_SIGNALS = true then check_signals_row f1_memoryStable f1_runtimeFrame
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .C_CALL1, _ => if h : keep .C_CALL1 = true then c_call1_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call1_returns (by simp [h])) (pre.c_call1_exit (by simp [h]))
+    | .C_CALL1, _ => if h : keep .C_CALL1 = true then c_call1_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call1_returns (by simp [h])) (ccall1Exit_pinned fits)
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .C_CALL2, _ => if h : keep .C_CALL2 = true then c_call2_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call2_returns (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)

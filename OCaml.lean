@@ -81,6 +81,7 @@ import OCaml.Vm.Sim.EntryF1
 import OCaml.Vm.Sim.F1Headline
 import OCaml.Vm.Sim.WhileMinTable
 import OCaml.Vm.Sim.WhileMinCalls
+import OCaml.Vm.Sim.G1Capacity
 import OCaml.Vm.Sim.CcallExitF1
 import OCaml.Vm.Sim.StopReady
 import OCaml.Vm.Sim.StopRow

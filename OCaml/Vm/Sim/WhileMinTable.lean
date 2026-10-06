@@ -38,7 +38,6 @@ theorem whileMin_premises (o : WhileMinOpen) :
     · exact o.ml_open_descriptor_out_c_call1
     · exact prim_caml_ml_string_length_returns f1_memoryStable
     · exact o.ml_flush_c_call1
-  c_call1_exit _ := CcallExit.of_ok OCaml.Programs.whileMin_ccall1Ok
   c_call2_returns _ := whileMin_ccallReturns (by decide) fun _ h => by
     simp only [OCaml.Programs.whileMinCalls, List.mem_cons, List.mem_nil_iff, or_false] at h
     rcases h with rfl | rfl
