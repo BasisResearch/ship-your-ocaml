@@ -114,21 +114,23 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `GoodF1.stopAccu` (new: STOP never returns a `.raw` word, which caml_main
   would read as an exception; `whileMin` still checks in one kernel run).
 
-**Open / next**
-0. Halt rows: STOP OpArm (a1-arms' machine row + `stop_exit_continuation`);
-   C_CALL `caml_sys_exit` via a1-prims' `caml_sys_exit_halts`; invariant
-   support for `StopExitReady` (GprPresent/htifIdle/ExitGlobals in Running).
-1. Entry's premises into `LoadedAt` with their captured-cut proofs
-   (`InterpCaller`, `StackGeometry`, runtime window stability for
-   `Gc.f1Layout`), then `F1Arms.entry` for L := Gc.f1Layout. Earlier note: the `LoadedAt`
-   field `caller : InterpCaller c`: x1 = 0x80004ff8, x2 = S, caml_main's
-   frame at [S, S+112) with its ra slot = 0x80001df0, write geometry of
-   [S-528, S+112), and separation from code/globals/VM stack/heap/channels.
-   a0-boot agreed. It holds for the captured cut (S = 0x87ffff80, above
-   `__heap_end`), and the reset route will supply it later.
-3. Halt rows: STOP (`stop_halt_step_arm`, with `StopInvocation` from
-   `Invocation` + the `InterpCaller` snapshot, plus `StopDoExitSummary`:
-   caml_do_exit → HTIF), and C_CALL `caml_sys_exit`.
+**Open / next** (2026-10-06)
+- Landed: `b0689bc2` (entry, STOP exit pieces); `ae04104c` (`NativeValid.rootSaved`
+  proved at entry; `StopExitCallPost.present`; `valWord_ordinary`).
+- STOP row: write `stop_row : OpArm P (LoopAt Gc.f1Layout P) .STOP` from
+  `ArmInput.of_loop` + `stop_halt_step_arm` + `stop_exit_continuation`. Waiting on:
+  * a1-arms `WordPlace` (alignment for `ordinary`) and `htif` preservation on
+    `InterpRuntimeReturnPost` plus `LoopRegisters.htifIdle`;
+  * a1-prims `ExitOk` (do_exit reads only ra, sp, a0, s0–s10);
+  * a6-gc `Gc.f1_exitGlobals`.
+
+  Then `StopExitReady` reduces to these invariant facts.
+- `caml_sys_exit` halt: a1-arms' C_CALL rows with a1-prims' `caml_sys_exit_halts`.
+- Entry premises into `LoadedAt`: a0-boot's `WhileMinCaller.lean` (`interpCaller`,
+  `stackGeometry` for the captured cut) is queued. Then add the fields and fill
+  `WhileMin.loaded`; runtime window stability from a1-arms' `f1_runtimeFrame`.
+- Final: `F1Arms P c (LoopAt Gc.f1Layout P)` from the rows, then
+  `ocamlrun_refinement_F1_Statement Gc.f1Layout g1Budget` and the whileMin `Halts`.
 
 ## Status
 
