@@ -594,4 +594,37 @@ theorem open_r_fail_set (c : Config) (sp ra s0 oldra : BitVec 64) (w : List (Bit
       saved 0 s0 (by simp)]
   · rfl
   · decide
+
+/-- `open` returns `_open_r`'s result. -/
+theorem lib_open_return (c : Config) (sp ra a0 oldra : BitVec 64) (leaf : LeafInput oldra c) (frame : NativeFrame sp 80)
+    (regs : GHolds c.σ [(2, nativeStack sp 80), (10, a0)])
+    (saved : bytesT c.σ.mem (nativeFrameBase sp 80 + 24) 8 = ra) (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x800425d8#64 (fun e => e = c) (WriteRegistersPost [2, 1] [] c ra a0 [(2, sp), (1, ra), (10, a0)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput openX25d8Seg 0x800425d8#64 [(2, nativeStack sp 80), (10, a0)]
+        [read8 c.σ.mem (nativeFrameBase sp 80 + 24)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 10]; decide
+      shape := by change ChainOK _ [2, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := libOpenReturn_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.open_at_"
+        · exact (frame.read_slot (off := 24) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 80 + 24)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [read8_value, saved, ret_tgt ra aligned]
+          exact aligned }))
+  · rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 80 + 24)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [read8_value, saved, ret_tgt ra aligned]
+  · simp only [openX25d8Seg, evalBlocks, evalBlock, SegEvalState.init, libopenreturn_line_800425d8, libopenreturn_line_800425dc, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, read8_value]
+    rw [show Functions.sign_extend (m := 64) 80#12 = 80#64 by decide, nativeStack_restore, saved]
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
