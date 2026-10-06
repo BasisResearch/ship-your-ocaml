@@ -1,6 +1,8 @@
 import OCaml.Vm.Primitives.LibraryStrlen
 import VsaIris.Vsa.SnpMove
 import VsaIris.Vsa.LibraryStdioFoot
+import OCaml.Vm.Boot.Startup.LibraryText
+import Vsa.Densify.Transport
 
 /-!
 # newlib `memmove` as a machine summary
@@ -175,5 +177,60 @@ theorem memmove_call {live : Nat → Prop} {d src len : Nat} {ra : BitVec 64} (c
   by_cases owned : n ∈ nRegs
   · exact post.result.registers n owned (by change n ≠ 32; omega) scratch
   · exact post.registers n owned
+
+/-! ## memmove from a leaf call with the library's register facts -/
+
+/-- RAM: the bytes the library proofs read and write. -/
+def ramLive (a : Nat) : Prop :=
+  Vsa.Densify.ramBase ≤ a ∧ a < Vsa.Densify.ramBase + Vsa.Densify.ramSize
+
+theorem ramLive_image : ImageLive ramLive := by
+  constructor <;> intro i hi <;>
+    simp only [ramLive, Vsa.Densify.ramBase, Vsa.Densify.ramSize,
+      Image.textBase, Image.textSize, Image.rodataBase, Image.rodataSize] at * <;> omega
+
+theorem snpText_ram : ∀ p ∈ snpText, ramLive p.1 := by
+  apply forall_piecesText (P := fun a _ => ramLive a)
+  intro q hq a ha
+  simp only [snpPieces, List.mem_singleton] at hq
+  subst hq
+  obtain ⟨r, hr, low, high⟩ := inRangesB_iff.1 ha
+  have bounds : ∀ r ∈ snpCodeRanges, 0x80000000 ≤ r.1 ∧ r.2 ≤ 0x80053180 := by decide
+  have := bounds r hr
+  simp only [ramLive, Vsa.Densify.ramBase, Vsa.Densify.ramSize]
+  omega
+
+/-- **The machine facts a library call needs beyond `LeafInput`**: every
+integer register present, RAM present, the global pointer, an idle HTIF
+payload. -/
+structure LibraryReady (c : Config) : Prop where
+  gprs : ∀ n, 1 ≤ n → n ≤ 31 → (gprGet c.σ n).isSome
+  ram : ∀ a, ramLive a → (c.σ.mem[a]?).isSome
+  gp : gpr c 3 = some gpV
+  htifIdle : c.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some 0#4
+
+/-- **memmove from a leaf call**: the destination is outside the stdio
+footprint and the program image, and does not overlap the source. -/
+theorem memmove_leaf {d src len : Nat} {ra : BitVec 64} (c : Config)
+    (leaf : LeafInput ra c) (ready : LibraryReady c)
+    (geometry : MoveGeom 0 d len d src len)
+    (sourceOut : ∀ a, src ≤ a → a < src + len → ¬ VsaIris.Stdio.stdioFoot a)
+    (destination : gpr c 10 = some (BitVec.ofNat 64 d)) (source : gpr c 11 = some (BitVec.ofNat 64 src))
+    (length : gpr c 12 = some (BitVec.ofNat 64 len)) :
+    FnSummary 0x80042644#64 (fun e => e = c) (MemmoveCallPost ramLive ra d src len c) := by
+  have code := OCaml.Vm.Boot.Startup.snp_text_loaded leaf.image
+  refine memmove_call c snpText_ram geometry sourceOut
+    ⟨leaf.good, leaf.tick, ready.gprs, ready.ram, ready.htifIdle⟩ leaf.image ramLive_image
+    ⟨fun p hp => ?_, fun p hp => ?_⟩ destination source length leaf.raReg leaf.aligned
+  · rw [List.mem_singleton.1 hp]
+    change vsaReg c 3 = gpV
+    simp only [vsaReg, show ((3 : Nat) = VsaIris.PC) = False from by decide, ite_false]
+    change (gpr c 3).getD 0 = gpV
+    rw [ready.gp]; rfl
+  · rcases List.mem_append.1 hp with text | data
+    · change (c.σ.mem[p.1]?).getD 0 = p.2
+      rw [code p text]; rfl
+    · obtain ⟨a, -, rfl⟩ := List.mem_map.1 data
+      rfl
 
 end OCaml.Vm.Primitives

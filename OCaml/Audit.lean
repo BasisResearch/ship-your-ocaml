@@ -5226,5 +5226,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.memmove_symbolic
 #print axioms OCaml.Vm.Primitives.memmove_summary
 #print axioms OCaml.Vm.Primitives.memmove_call
+#print axioms OCaml.Vm.Primitives.memmove_leaf
 #print axioms OCaml.Vm.Primitives.moveOwned_image
 #print axioms OCaml.Vm.Primitives.Format.StringLength.string_length_call
