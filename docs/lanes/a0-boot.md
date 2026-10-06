@@ -29,8 +29,13 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
 * `HeapReady.frame_errno`: stores to newlib's two errno words keep
   `HeapReady` (asked for by a6-gc).
 
-Next: `FsTail` gains the slot-1/fs_ready/descriptor memory facts that
-`resolve` reads; then `resolve("ocamlrun")`, `_open`'s ENOENT path,
+* `FsInitDone` carries slot 1's fields and name bytes, the unused slots
+  and the low frame. `resolve` rows are generated; `ResolveSteps.lean` has
+  the entry, `*r` clearing, the `strlen` call and the last-byte flag.
+* `WhileMinHeapChunks.lean` (gen_boot_chunks.py): the runtime's newlib
+  chunks at the cut, for a6-gc's `F1Pins.libHeap`.
+
+Next: the rest of `resolve("ocamlrun")`, `_open`'s ENOENT path,
 `_open_r`, `open`, and the retry with "/prog".
 
 ## Round 2 status (2026-10-06, search)
