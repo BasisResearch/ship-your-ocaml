@@ -29,15 +29,11 @@ theorem whileMin_premises (o : WhileMinOpen) :
   values _ := OCaml.Programs.whileMin_valuesInRange
   trapBounded _ := OCaml.Programs.whileMin_trapBounded.bounded
   c_call1_returns _ := whileMin_ccallReturns (by decide) o.c_call1_prims
-  c_call1_effects _ := CcallEffects.of_ok OCaml.Programs.whileMin_ccall1Ok
+  c_call1_exit _ := CcallExit.of_ok OCaml.Programs.whileMin_ccall1Ok
   c_call2_returns _ := whileMin_ccallReturns (by decide) o.c_call2_prims
-  c_call2_effects _ := CcallEffects.of_ok OCaml.Programs.whileMin_ccall2Ok
   c_call3_returns h := absurd h (by decide)
-  c_call3_effects h := absurd h (by decide)
   c_call4_returns _ := whileMin_ccallReturns (by decide) o.c_call4_prims
-  c_call4_effects _ := CcallEffects.of_ok OCaml.Programs.whileMin_ccall4Ok
   c_call5_returns h := absurd h (by decide)
-  c_call5_effects h := absurd h (by decide)
   divint_zero h := absurd h (by decide)
   modint_zero _ := DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inr rfl)
   ints h := absurd h (by decide)

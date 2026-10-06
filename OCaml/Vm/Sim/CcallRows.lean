@@ -5,6 +5,7 @@ import OCaml.Vm.Sim.Ccall4
 import OCaml.Vm.Sim.Ccall5
 import OCaml.Vm.Sim.VmLog
 import OCaml.Vm.Sim.RaiseRows
+import OCaml.Bytecode.PrimOutcome
 
 /-!
 # C_CALL1..5 from the loop head
@@ -104,24 +105,36 @@ structure CcallReturns (L : OCaml.Layout) (P : Prog) (op : Opcode) (ra : BitVec 
     ∃ result, CcallCallee ra (s.accu :: s.stack.take k) L P s pl cp sp high (domainAt c) entry env
       name v result heap world
 
-/-- **The other primitive outcomes** at a `C_CALLk` site: raising, exiting or
-calling back (named obligation of the lanes owning those continuations). -/
-structure CcallEffects (L : OCaml.Layout) (P : Prog) (op : Opcode) (k : Nat) : Prop where
-  outcome : ∀ s c (w : BitVec 32) name, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s op →
+/-- **`caml_sys_exit` at a `C_CALLk` site halts the machine** (named
+obligation, lane bprime: the exit path). The F1 primitives never raise or call
+back, and only `caml_sys_exit` exits (`primF1Impl_ne_raise`,
+`primF1Impl_ne_callback`, `primF1Impl_exit`), so this is the one outcome
+besides returning. -/
+structure CcallExit (L : OCaml.Layout) (P : Prog) (op : Opcode) (k : Nat) : Prop where
+  exit : ∀ s c (w : BitVec 32) name e world, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s op →
     P.code[s.pc + 1]? = some w → 0 ≤ w.toInt → P.prims[w.toInt.toNat]? = some name → name ∈ primsF1 →
-    (∀ v heap world, primF1Impl name (s.accu :: s.stack.take k) s.heap s.world ≠ .ok v heap world) →
-    OCaml.ArmOutcome (OCaml.LoopAt L P) c (stepI P s ⟨op, [w.toInt]⟩)
+    k ≤ s.stack.length →
+    primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .exit e world →
+    Halts c (bytesToString world.console) e
 
-/-- **Primitives that always return** discharge the other outcomes: when every
-reachable call's F1 primitive returns normally, `CcallEffects` is vacuous. -/
-theorem CcallEffects.of_ok {L : OCaml.Layout} {P : Prog} {op : Opcode} {k : Nat}
+/-- `caml_sys_exit` takes one argument: sites passing stack words never exit. -/
+theorem CcallExit.of_arity {L : OCaml.Layout} {P : Prog} {op : Opcode} {k : Nat} (hk : 1 ≤ k) :
+    CcallExit L P op k :=
+  ⟨fun s _ _ _ _ _ _ _ _ _ _ _ _ bound hr => by
+    have := (primF1Impl_exit hr).2
+    simp only [List.length_cons, List.length_take] at this
+    omega⟩
+
+/-- **Primitives that always return** never exit. -/
+theorem CcallExit.of_ok {L : OCaml.Layout} {P : Prog} {op : Opcode} {k : Nat}
     (ok : ∀ s (w : BitVec 32) name, Reach P s → DispatchCode P s op → P.code[s.pc + 1]? = some w →
       0 ≤ w.toInt → P.prims[w.toInt.toNat]? = some name → name ∈ primsF1 →
       ∃ v heap world, primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .ok v heap world) :
-    CcallEffects L P op k :=
-  ⟨fun s _ w name reach _ code fetch nonnegative hp member notOk => by
+    CcallExit L P op k :=
+  ⟨fun s _ w name _ _ reach _ code fetch nonnegative hp member _ hr => by
     obtain ⟨v, heap, world, result⟩ := ok s w name reach code fetch nonnegative hp member
-    exact absurd result (notOk v heap world)⟩
+    rw [hr] at result
+    cases result⟩
 
 /-- The shared C_CALLk row. -/
 theorem ccall_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opcode} {ra : BitVec 64}
@@ -138,7 +151,7 @@ theorem ccall_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opco
       CcallCallee ra (s.accu :: s.stack.take k) L P s pl cp sp high (domainAt c) entry env name v result
         heap world →
       stepI P s ⟨op, [index.toInt]⟩ = .next s' → ∃ after, OCaml.Plus c after ∧ OCaml.Running L P s' after)
-    (returns : CcallReturns L P op ra k) (effects : CcallEffects L P op k) :
+    (returns : CcallReturns L P op ra k) (exit : CcallExit L P op k) :
     OCaml.OpArm P (OCaml.LoopAt L P) op := by
   intro s c i reach h hd hop f1
   obtain ⟨code, fetches⟩ := decode_fetch hd
@@ -185,15 +198,21 @@ theorem ccall_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opco
           rw [semantics, if_neg neg, hp] at halt
           simp only [opt, cCall, prim, primF1, member, if_true, result] at halt
           cases halt
-      · exact effects.outcome s c w name reach h code fetch nonnegative hp member
-          (fun v heap world eq => ok ⟨v, heap, world, eq⟩)
+      · rw [semantics, if_neg neg, hp]
+        simp only [opt, cCall, prim, primF1, member, if_true]
+        cases r : primF1Impl name (s.accu :: s.stack.take k) s.heap s.world with
+        | ok v heap world => exact absurd ⟨v, heap, world, r⟩ ok
+        | raise e h' w' => exact absurd r primF1Impl_ne_raise
+        | exit e w' => exact exit.exit s c w name e w' reach h code fetch nonnegative hp member bound r
+        | callback f a h' w' => exact absurd r primF1Impl_ne_callback
+        | unsupported => trivial
   · rw [shape s args (fun a ha => single ⟨a, ha⟩)]; trivial
 
 /-- **The C_CALL1 row.** -/
 theorem c_call1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (returns : CcallReturns L P .C_CALL1 (0x80003060#64) 0) (effects : CcallEffects L P .C_CALL1 0) :
+    (returns : CcallReturns L P .C_CALL1 (0x80003060#64) 0) (exit : CcallExit L P .C_CALL1 0) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL1 :=
   ccall_row_of stable rf fits capacity (by decide) (fun _ _ => by simp only [Nat.not_lt_zero, or_false]; rfl)
     (fun s args ne => by
@@ -204,13 +223,13 @@ theorem c_call1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     (fun _ => rfl)
     (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ stable' ready arguments callee step =>
       c_call1_step_arm stable' stable ready callee step)
-    returns effects
+    returns exit
 
 /-- **The C_CALL2 row.** -/
 theorem c_call2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (returns : CcallReturns L P .C_CALL2 (0x80003004#64) 1) (effects : CcallEffects L P .C_CALL2 1) :
+    (returns : CcallReturns L P .C_CALL2 (0x80003004#64) 1) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL2 :=
   ccall_row_of stable rf fits capacity (by decide) (fun _ _ => rfl)
     (fun s args ne => by
@@ -221,13 +240,13 @@ theorem c_call2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     (fun _ => rfl)
     (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ stable' ready arguments callee step =>
       c_call2_step_arm stable' stable ready arguments callee step)
-    returns effects
+    returns (.of_arity (by decide))
 
 /-- **The C_CALL3 row.** -/
 theorem c_call3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (returns : CcallReturns L P .C_CALL3 (0x80002fa4#64) 2) (effects : CcallEffects L P .C_CALL3 2) :
+    (returns : CcallReturns L P .C_CALL3 (0x80002fa4#64) 2) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL3 :=
   ccall_row_of stable rf fits capacity (by decide) (fun _ _ => rfl)
     (fun s args ne => by
@@ -238,13 +257,13 @@ theorem c_call3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     (fun _ => rfl)
     (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ stable' ready arguments callee step =>
       c_call3_step_arm stable' stable ready arguments callee step)
-    returns effects
+    returns (.of_arity (by decide))
 
 /-- **The C_CALL4 row.** -/
 theorem c_call4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (returns : CcallReturns L P .C_CALL4 (0x80002f40#64) 3) (effects : CcallEffects L P .C_CALL4 3) :
+    (returns : CcallReturns L P .C_CALL4 (0x80002f40#64) 3) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL4 :=
   ccall_row_of stable rf fits capacity (by decide) (fun _ _ => rfl)
     (fun s args ne => by
@@ -255,13 +274,13 @@ theorem c_call4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     (fun _ => rfl)
     (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ stable' ready arguments callee step =>
       c_call4_step_arm stable' stable ready arguments callee step)
-    returns effects
+    returns (.of_arity (by decide))
 
 /-- **The C_CALL5 row.** -/
 theorem c_call5_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (returns : CcallReturns L P .C_CALL5 (0x80002ed8#64) 4) (effects : CcallEffects L P .C_CALL5 4) :
+    (returns : CcallReturns L P .C_CALL5 (0x80002ed8#64) 4) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL5 :=
   ccall_row_of stable rf fits capacity (by decide) (fun _ _ => rfl)
     (fun s args ne => by
@@ -272,6 +291,6 @@ theorem c_call5_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     (fun _ => rfl)
     (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ stable' ready arguments callee step =>
       c_call5_step_arm stable' stable ready arguments callee step)
-    returns effects
+    returns (.of_arity (by decide))
 
 end OCaml.Vm.Sim

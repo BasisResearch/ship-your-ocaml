@@ -70,6 +70,10 @@ the `StackGeometry` plus a6-gc's `NurseryGeometry` of the same witness.
   and the slots come from `StackGeometry.primsRam`. Named obligations remain:
   `CcallReturns` (a1-prims' callee summaries), `CcallEffects` (raise, exit
   and callback results) and `CcallArity` (per program).
+  `CcallEffects` is retired: F1 primitives never raise or call back
+  (`primF1Impl_ne_raise`/`_ne_callback`, `PrimOutcome.lean`), and only
+  `caml_sys_exit` (one argument) exits. So C_CALL2–5 need nothing and
+  C_CALL1 takes `CcallExit` (bprime's exit path).
 
 * hand: GETFIELD n, PUSHENVACC n (`FieldOperandRows`), SETGLOBAL, SETFIELD n
   and SETFIELD0–3 (`BarrierRows`). caml_modify's summary is the GC lane's

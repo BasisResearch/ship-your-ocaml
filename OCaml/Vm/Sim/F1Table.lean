@@ -47,15 +47,11 @@ structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   values : (keep .BRANCHIF || keep .BRANCHIFNOT || keep .EQ || keep .NEQ) = true → ValuesInRange P
   trapBounded : (keep .PUSHTRAP) = true → ∀ s, Reach P s → s.trap ≤ s.stack.length
   c_call1_returns : (keep .C_CALL1) = true → CcallReturns Gc.f1Layout P .C_CALL1 (0x80003060#64) 0
-  c_call1_effects : (keep .C_CALL1) = true → CcallEffects Gc.f1Layout P .C_CALL1 0
+  c_call1_exit : (keep .C_CALL1) = true → CcallExit Gc.f1Layout P .C_CALL1 0
   c_call2_returns : (keep .C_CALL2) = true → CcallReturns Gc.f1Layout P .C_CALL2 (0x80003004#64) 1
-  c_call2_effects : (keep .C_CALL2) = true → CcallEffects Gc.f1Layout P .C_CALL2 1
   c_call3_returns : (keep .C_CALL3) = true → CcallReturns Gc.f1Layout P .C_CALL3 (0x80002fa4#64) 2
-  c_call3_effects : (keep .C_CALL3) = true → CcallEffects Gc.f1Layout P .C_CALL3 2
   c_call4_returns : (keep .C_CALL4) = true → CcallReturns Gc.f1Layout P .C_CALL4 (0x80002f40#64) 3
-  c_call4_effects : (keep .C_CALL4) = true → CcallEffects Gc.f1Layout P .C_CALL4 3
   c_call5_returns : (keep .C_CALL5) = true → CcallReturns Gc.f1Layout P .C_CALL5 (0x80002ed8#64) 4
-  c_call5_effects : (keep .C_CALL5) = true → CcallEffects Gc.f1Layout P .C_CALL5 4
   divint_zero : (keep .DIVINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .DIVINT → stepI P s ⟨.DIVINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
   modint_zero : (keep .MODINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .MODINT → stepI P s ⟨.MODINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
   ints : (keep .BEQ || keep .BNEQ) = true → BranchInts P
@@ -251,15 +247,15 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .CHECK_SIGNALS, _ => if h : keep .CHECK_SIGNALS = true then check_signals_row f1_memoryStable f1_runtimeFrame
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .C_CALL1, _ => if h : keep .C_CALL1 = true then c_call1_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call1_returns (by simp [h])) (pre.c_call1_effects (by simp [h]))
+    | .C_CALL1, _ => if h : keep .C_CALL1 = true then c_call1_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call1_returns (by simp [h])) (pre.c_call1_exit (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .C_CALL2, _ => if h : keep .C_CALL2 = true then c_call2_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call2_returns (by simp [h])) (pre.c_call2_effects (by simp [h]))
+    | .C_CALL2, _ => if h : keep .C_CALL2 = true then c_call2_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call2_returns (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .C_CALL3, _ => if h : keep .C_CALL3 = true then c_call3_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call3_returns (by simp [h])) (pre.c_call3_effects (by simp [h]))
+    | .C_CALL3, _ => if h : keep .C_CALL3 = true then c_call3_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call3_returns (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .C_CALL4, _ => if h : keep .C_CALL4 = true then c_call4_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call4_returns (by simp [h])) (pre.c_call4_effects (by simp [h]))
+    | .C_CALL4, _ => if h : keep .C_CALL4 = true then c_call4_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call4_returns (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .C_CALL5, _ => if h : keep .C_CALL5 = true then c_call5_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call5_returns (by simp [h])) (pre.c_call5_effects (by simp [h]))
+    | .C_CALL5, _ => if h : keep .C_CALL5 = true then c_call5_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call5_returns (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .C_CALLN, h => absurd h (by decide)
     | .CONST0, _ => if h : keep .CONST0 = true then const0_row f1_memoryStable
