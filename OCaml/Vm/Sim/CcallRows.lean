@@ -87,7 +87,8 @@ theorem CcallReady.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {
       targetRead := input.geometry.primsRam _ name primitive
       value := valueWord
       environment := envWord
-      space := Ccall1WriteOk.of_geometry _ env input.geometry.toArmGeometry input.stack space }⟩
+      space := Ccall1WriteOk.of_geometry _ env input.geometry.toArmGeometry input.stack space
+      stackFits := space }⟩
 
 /-! ## The C_CALL rows -/
 

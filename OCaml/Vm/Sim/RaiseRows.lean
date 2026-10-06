@@ -29,11 +29,6 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 /-- The raising opcodes. -/
 def raiseOps : List Opcode := [.RAISE, .RERAISE, .RAISE_NOTRACE]
 
-/-- **Every reachable raise is caught.** The rows no longer take it: under
-`GoodF1` an uncaught raise is unreachable (`uncaught_unreachable`). -/
-structure RaisesCaught (P : Prog) : Prop where
-  caught : ∀ s op, Reach P s → op ∈ raiseOps → DispatchCode P s op → s.trap ≠ 0
-
 /-- An uncaught raise steps to the callback boundary at the end of the code. -/
 theorem raiseTo_uncaught_pc {P : Prog} {s s' : St} {v : Val} (trap : s.trap = 0)
     (step : raiseTo P s v = .next s') : s'.pc = P.code.size := by

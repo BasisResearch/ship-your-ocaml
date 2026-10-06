@@ -23,6 +23,9 @@ structure CcallReady (opcode : Opcode) (L : OCaml.Layout) (P : Prog) (s : St) (c
   value : valWord pl s.accu = some accuWord
   environment : valWord pl s.env = some envWord
   space : Ccall1WriteOk P s c pl cp sp domain (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) envWord
+  /-- the stack, the pushed environment and return address fit the VM stack
+  (with `StackGeometry.statics`: `sp - 16` lies above `.bss`) -/
+  stackFits : 8 * (s.stack.length + 2) ≤ Layout.stackBytes
 
 /-- Named obligation for a returning F1 primitive. a1-prims supplies the
 represented machine summary; its frame must retain the caller-owned saved
