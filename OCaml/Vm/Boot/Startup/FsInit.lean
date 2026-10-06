@@ -6,6 +6,7 @@ import OCaml.Vm.Boot.Startup.ChildScan
 import OCaml.Vm.Boot.Startup.RuntimeStack
 import OCaml.Vm.Boot.Startup.RuntimeWindows
 import OCaml.Vm.Boot.Startup.NewNode
+import OCaml.Vm.Boot.Startup.HeapFrame
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
 
@@ -328,6 +329,7 @@ structure FsTail (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 
   slot : FsSlotOne after.σ.mem node
   low : ∀ x, x < heapStart → ¬ allocGlobal x → (x < slotOne ∨ slotOne + 56 ≤ x) →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 /-- `new_node(0, "prog", 4, 0)` takes slot 1; `fs_init` records the file's
 extent there, finds the table's end and returns. -/
@@ -473,7 +475,19 @@ theorem fs_init_tail (e : Config) (H : List (Nat × Nat)) (capacity charge : Nat
       · rcases foot with g' | ⟨lo, _⟩
         · exact global g'
         · omega
-      · unfold InExt at inside; omega }⟩⟩
+      · unfold InExt at inside; omega
+    live := fun e he x inside => by
+      have bounds := ready.heap.block_bounds (q := e.1) (n := e.2) he
+      unfold InExt at inside
+      rw [memH, fileOut x (by unfold heapStart at bounds; file_out)]
+      apply N.kept
+      refine ⟨Or.inl ?_, fun foot => ?_, Or.inr (by unfold slotOne Layout.sym_files heapStart at *; omega),
+        fun block => N.disjoint e he x block (by unfold InExt; omega)⟩
+      · unfold nativeFrameBase; rw [spNat]
+        unfold nativeFrameBase heapEnd allocHeadroom embedLimit Layout.sym_stack_top Layout.sym_stack_size at *; omega
+      · rcases foot with g' | ⟨_, _, apart⟩
+        · rcases allocGlobal_off_arena x g' with l | r <;> omega
+        · exact apart e he (by unfold InExt; omega) }⟩⟩
 
 theorem fsPrefixLog_inside {sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64} (frame : NativeFrame sp 96) :
     LogInW (fsWindows sp) (fsPrefixLog sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9) :=
@@ -531,6 +545,7 @@ structure FsInitDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3
   rest : ∀ j, 2 ≤ j → j < 64 → slotUsed after.σ.mem (Layout.sym_files + 56 * j) = 0#8
   low : ∀ x, x < heapStart → ¬ allocGlobal x → OutW (fsWindows sp) x → (x < slotOne ∨ slotOne + 56 ≤ x) →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 /-- **`fs_init()` over the embedded table "/prog"**: slot 1 becomes the file
 `prog` under the root, the descriptors and `fs_ready` are set, and the
@@ -620,7 +635,15 @@ theorem fs_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     embed := T.embed
     slot := T.slot
     rest := fun j lo hi => ?_
-    low := fun x below global out apart => (T.low x below global apart).trans (lowE x below out) }⟩⟩
+    low := fun x below global out apart => (T.low x below global apart).trans (lowE x below out)
+    live := fun e he x inside => by
+      have bounds := ready.heap.block_bounds (q := e.1) (n := e.2) he
+      unfold InExt at inside
+      rw [T.live e he x (by unfold InExt; omega), S.kept x (Or.inl (by
+        unfold nativeFrameBase; rw [spNat]; unfold nativeFrameBase heapEnd at *; omega)), keepD x (by
+        simp only [OutW, fsWindows, and_true, nativeFrameBase, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready,
+          heapEnd, heapStart] at *
+        omega)] }⟩⟩
   have lowJ : Layout.sym_files + 56 * j < heapStart := by unfold heapStart Layout.sym_files; omega
   unfold slotUsed
   rw [T.low _ lowJ (by unfold allocGlobal InRange Layout.sym_files; omega)
