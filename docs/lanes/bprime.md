@@ -114,6 +114,14 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `GoodF1.stopAccu` (new: STOP never returns a `.raw` word, which caml_main
   would read as an exception; `whileMin` still checks in one kernel run).
 
+**Deferred (2026-10-06)**: `Invocation.raiseBuf`
+(`Caml_state->external_raise = D.nativeSp + raiseBufOffset`). Only the general
+C-raise path needs it (a2-sem's zero-divisor row for programs that do divide
+by zero), and it costs a frame hypothesis at ~90 native-frame sites (a1-arms).
+whileMin does not need it: its divisors are never zero
+(`whileMin_divisorsNonzero`). Entry's readback recipe, should it be added:
+`word_writeLog_at` on `entryLog` at index 33 (the resume store).
+
 **whileMin's open premises, generated (2026-10-06)**
 - `WhileMinTable.lean` (generated with F1Table by `scripts/gen_f1_table.py`):
   `whileMin_halts_open (o : WhileMinOpen) : Halts WhileMin.cut "55\n2500\n36\n" 0`.
