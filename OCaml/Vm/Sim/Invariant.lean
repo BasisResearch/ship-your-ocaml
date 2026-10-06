@@ -104,6 +104,12 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
       OutWRange [⟨b, b + (chanOffBuff + ch.buffer.length)⟩] (a - 8) (8 * o.wosize + 8)
   /-- the program's primitive-table slots are readable RAM -/
   primsRam : ∀ i name, P.prims[i]? = some name → RamReadAt ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
+  /-- the channel records and the program's primitive-table slots lie in the
+  allocator arena (both are malloc'd at startup), below the native frames -/
+  channelArena : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+    a + (chanOffBuff + ch.buffer.length) ≤ Vsa.Sim.DlHeap.heapEnd
+  primsArena : ∀ i name, P.prims[i]? = some name →
+    (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8 ≤ Vsa.Sim.DlHeap.heapEnd
   heapPrims : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     ∀ i name, P.prims[i]? = some name →
       OutWRange [⟨(word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i, (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8⟩] (a - 8) (8 * o.wosize + 8)
@@ -180,6 +186,8 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
     obtain ⟨o, ho, size⟩ := objects l o' object
     rw [chans, ← size]; exact g.heapChannels l a o placed ho
   primsRam := by rw [prims]; exact g.primsRam
+  channelArena := by rw [chans]; exact g.channelArena
+  primsArena := by rw [prims]; exact g.primsArena
   heapPrims l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     rw [prims, ← size]; exact g.heapPrims l a o placed ho
@@ -286,6 +294,8 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
     · exact g.heapChannels l a' o' found old
     · rw [placed] at found; cases found; exact channelsApart
   primsRam := g.primsRam
+  channelArena := by rw [world]; exact g.channelArena
+  primsArena := g.primsArena
   heapPrims l a' o' found object := by
     rw [heap] at object
     rcases heap_alloc_get object with old | ⟨rfl, rfl⟩

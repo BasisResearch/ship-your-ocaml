@@ -249,6 +249,14 @@ theorem stackGeometry_of {c : Config} (memory : Vsa.Densify.MemEqv c.σ.mem
         rw [prim_table_word]
         simp only [BitVec.toNat_ofNat]
         exact ⟨by omega, by omega, Or.inr (by omega)⟩
+      channelArena := fun _ _ _ _ ha => by cases ha
+      primsArena := fun i name hi => by
+        have bound : i < whileMin.prims.size := (Array.getElem?_eq_some_iff.mp hi).1
+        have size : whileMin.prims.size ≤ 512 := by decide +kernel
+        have he : (0x8038fb10 : Nat) + 8 * 512 + 8 ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+        rw [prim_table_word]
+        simp only [BitVec.toNat_ofNat]
+        omega
       heapPrims := fun l a o ha ho i name hi => by
         have band := obj ha ho
         rw [prim_table_word]
