@@ -476,4 +476,76 @@ theorem resolve_back_exit (c : Config) (spo path len ra : BitVec 64) (leaf : Lea
     rw [← BitVec.sub_eq_add_neg]
   · rfl
   · decide
+
+open Sail in
+/-- `auipc s6; addi s6,s6,-400` at 0x80000658: the `files` table. -/
+theorem resolve_files_auipc : 2147485272#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 416535#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 3696#12 = BitVec.ofNat 64 Layout.sym_files := by decide
+
+def resolveLoopSlots (s0 s1 s2 s5 s6 s7 s8 s10 : BitVec 64) : List (Nat × BitVec 64) :=
+  [(64, s2), (40, s5), (32, s6), (24, s7), (16, s8), (80, s0), (72, s1), (0, s10)]
+def resolveLoopLog (sp s0 s1 s2 s5 s6 s7 s8 s10 : BitVec 64) : List WEntry :=
+  nativeWordLog sp 96 (resolveLoopSlots s0 s1 s2 s5 s6 s7 s8 s10)
+def resolveLoopInput (sp path s0 s1 s2 s5 s6 s7 s8 s10 : BitVec 64) : GRegs :=
+  [(2, nativeStack sp 96), (25, path), (18, s2), (21, s5), (22, s6), (23, s7), (24, s8), (8, s0), (9, s1), (26, s10)]
+
+def resolveLooped (sp path s0 s1 s10 : BitVec 64) : GRegs :=
+  [(21, 1#64), (24, 46#64), (23, 2#64), (22, BitVec.ofNat 64 Layout.sym_files), (18, 47#64), (10, path), (11, 47#64),
+    (2, nativeStack sp 96), (25, path), (8, s0), (9, s1), (26, s10)]
+
+/-- Save the loop's registers and call `strchr(path, '/')`. -/
+theorem resolve_loop_save (c : Config) (sp path s0 s1 s2 s5 s6 s7 s8 s10 ra : BitVec 64) (leaf : LeafInput ra c)
+    (frame : NativeFrame sp 96) (regs : GHolds c.σ (resolveLoopInput sp path s0 s1 s2 s5 s6 s7 s8 s10)) :
+    FnSummary 0x8000062c#64 (fun e => e = c)
+      (WriteRegistersPost [21, 24, 23, 22, 18, 10, 11] (resolveLoopLog sp s0 s1 s2 s5 s6 s7 s8 s10) c 0x8000066c#64 path
+        (resolveLooped sp path s0 s1 s10)) := by
+  apply registers_of_blocks leaf.image (frame.image_outside (frame.word_log_inside fun off value member => by
+      simp only [resolveLoopSlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member
+      omega))
+    (block_summary _ _ _ _ _ (show BlockInput resolveX062cSeg 0x8000062c#64
+        (resolveLoopInput sp path s0 s1 s2 s5 s6 s7 s8 s10) [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 25, 18, 21, 22, 23, 24, 8, 9, 26]; decide
+      shape := by change ChainOK _ [2, 25, 18, 21, 22, 23, 24, 8, 9, 26] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := resolveSave_code leaf.image
+        have slot (off : Nat) (bound : off + 8 ≤ 96) (aligned : off % 8 = 0) :
+            WriteWindow (nativeStack sp 96 + BitVec.ofNat 64 off) 8 := by
+          rw [nativeStack, frame.address _ (by omega)]
+          exact frame.word bound aligned
+        chain_facts code with "Vsa.Sim.Code.resolve_at_"
+        · exact (slot 64 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 40 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 32 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 24 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 16 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 80 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 72 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 0 (by decide) (by decide)).sd rfl rfl }))
+  · simp only [resolveX062cSeg, evalBlocks, evalBlock, SegEvalState.init, resolvesave_line_8000061c, resolvesave_line_80000620, resolvesave_line_80000624, resolvesave_line_8000062c, resolvesave_line_80000630, resolvesave_line_80000634, resolvesave_line_80000638, resolvesave_line_8000063c, resolvesave_line_80000640, resolvesave_line_80000644, resolvesave_line_80000648, resolvesave_line_8000064c, resolvesave_line_80000650, resolvesave_line_80000654, resolvesave_line_80000658, resolvesave_line_8000065c, resolvesave_line_80000660, resolvesave_line_80000664, resolvesave_line_80000668, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, resolveLoopInput, imm20Of,
+      resolveLoopLog, resolveLoopSlots, nativeWordLog, List.map, List.nil_append, show Functions.sign_extend (m := 64) 64#12 = BitVec.ofNat 64 64 by decide, show Functions.sign_extend (m := 64) 40#12 = BitVec.ofNat 64 40 by decide, show Functions.sign_extend (m := 64) 32#12 = BitVec.ofNat 64 32 by decide, show Functions.sign_extend (m := 64) 24#12 = BitVec.ofNat 64 24 by decide, show Functions.sign_extend (m := 64) 16#12 = BitVec.ofNat 64 16 by decide, show Functions.sign_extend (m := 64) 80#12 = BitVec.ofNat 64 80 by decide, show Functions.sign_extend (m := 64) 72#12 = BitVec.ofNat 64 72 by decide, show Functions.sign_extend (m := 64) 0#12 = BitVec.ofNat 64 0 by decide]
+  · rfl
+  · simp only [resolveX062cSeg, evalBlocks, evalBlock, SegEvalState.init, resolvesave_line_8000061c, resolvesave_line_80000620, resolvesave_line_80000624, resolvesave_line_8000062c, resolvesave_line_80000630, resolvesave_line_80000634, resolvesave_line_80000638, resolvesave_line_8000063c, resolvesave_line_80000640, resolvesave_line_80000644, resolvesave_line_80000648, resolvesave_line_8000064c, resolvesave_line_80000650, resolvesave_line_80000654, resolvesave_line_80000658, resolvesave_line_8000065c, resolvesave_line_80000660, resolvesave_line_80000664, resolvesave_line_80000668, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, resolveLoopInput, imm20Of,
+      resolve_files_auipc, show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide,
+      show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide, show Functions.sign_extend (m := 64) 2#12 = 2#64 by decide,
+      show Functions.sign_extend (m := 64) 46#12 = 46#64 by decide,
+      show Functions.sign_extend (m := 64) 47#12 = 47#64 by decide, BitVec.zero_add, BitVec.add_zero, resolveLooped]
+  · rfl
+  · decide
+
+theorem resolve_strchr_call (c : Config) (sp path s0 s1 s2 s5 s6 s7 s8 s10 ra : BitVec 64) (leaf : LeafInput ra c)
+    (frame : NativeFrame sp 96) (regs : GHolds c.σ (resolveLoopInput sp path s0 s1 s2 s5 s6 s7 s8 s10)) :
+    FnSummary 0x8000062c#64 (fun e => e = c)
+      (WriteRegistersPost ([21, 24, 23, 22, 18, 10, 11] ++ [1]) (resolveLoopLog sp s0 s1 s2 s5 s6 s7 s8 s10) c
+        jal_8000066c_call.target path ((1, jal_8000066c_call.link) :: resolveLooped sp path s0 s1 s10)) :=
+  block_then_call c jal_8000066c_call_shape jal_8000066c_call_decode (fun _ h => jal_8000066c_call_pins h)
+    (resolve_loop_save c sp path s0 s1 s2 s5 s6 s7 s8 s10 ra leaf frame regs)
+    (by simp only [resolveLooped, keysG]; decide) (by simp only [resolveLooped, KeysAvoidRa, keysG]; decide) rfl
 end OCaml.Vm.Boot.Startup
