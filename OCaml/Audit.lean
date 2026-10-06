@@ -5359,3 +5359,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ob_loop
 #print axioms OCaml.Vm.Sim.ob_bytes
 #print axioms OCaml.Vm.ChanAt.of_bytes
+#print axioms VsaIris.Sym.svf_convL
+#print axioms VsaIris.Sym.svf_intL
+#print axioms VsaIris.Sym.svf_iterLD

@@ -667,3 +667,4 @@ import OCaml.Vm.Primitives.Format.StringLengthCall
 import OCaml.Vm.Primitives.Format.AllocSprintf
 import OCaml.Vm.Primitives.Format.FormatInt
 import OCaml.Vm.Primitives.Format.ParseFormatCall
+import OCaml.Vm.Primitives.Format.SvfLong
