@@ -44,6 +44,7 @@ structure EntrySavePost (before : Config) (sp : Nat) (regs : Nat → BitVec 64) 
   arg : gpr after 10 = some a0
   memory : after.σ.mem = writeLog before.σ.mem (entrySaveLog sp regs)
   output : after.σ.sailOutput = before.σ.sailOutput
+  htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
 
 theorem entry_save {c : Config} {sp : Nat} {regs : Nat → BitVec 64} {a0 : BitVec 64}
     (h : EntrySaveInput c sp regs a0) :
@@ -72,7 +73,7 @@ theorem entry_save {c : Config} {sp : Nat} {regs : Nat → BitVec 64} {a0 : BitV
     simp only [entrySaveLog, Layout.interpSavedRegs, List.map, writeLog, List.foldl, applyW,
       Layout.interpSaveOffset, Layout.interpFrameBytes]
   refine ⟨n, after, steps, post.good, ?_, post.tick, post.pcAt, PinsHold.get post.pins ⟨0, by simp⟩,
-    ?_, ?_, ?_, frame.out⟩
+    ?_, ?_, ?_, frame.out, frame.frame _ (by decide)⟩
   · exact image_of_writeLog h.image (image_outside_of_above (entrySaveLog_above h.frame)) memLog
   · intro k hk
     exact (frame.gpr_list (L := Layout.interpSavedRegs) (by decide) k hk).trans (h.saved k hk)

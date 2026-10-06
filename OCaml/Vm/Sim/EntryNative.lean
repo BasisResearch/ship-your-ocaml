@@ -45,6 +45,7 @@ structure EntryNativePost (before : Config) (sp : Nat) (regs : Nat → BitVec 64
   stack : gpr after 2 = some (BitVec.ofNat 64 (sp - Layout.interpFrameBytes))
   memory : after.σ.mem = writeLog before.σ.mem (entryLog sp regs a0 before)
   output : after.σ.sailOutput = before.σ.sailOutput
+  htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
 
 /-- A word outside a write log reads the same before and after it. -/
 theorem word_of_log {c c' : Config} {log : List WEntry} {a : Nat}
@@ -113,7 +114,7 @@ theorem entry_native {c : Config} {sp : Nat} {regs : Nat → BitVec 64} {a0 : Bi
   have resumeEq : entryResumeLog sp c3 = entryResumeLog sp c := by
     simp only [entryResumeLog, dom3]
   refine ⟨n1 + n2 + n3 + n4 + n5, c5, ((((s1.append s2).append s3).append s4).append s5), p5.good,
-    p5.image, p5.tick, p5.head, p5.loop, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    p5.image, p5.tick, p5.head, p5.loop, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact (keep 8 (by decide)).trans (p4.vmPc.trans (by rw [prog3]))
   · refine (keep 9 (by decide)).trans (p4.vmSp.trans ?_)
     simp only [domainField, dom3]
@@ -126,5 +127,6 @@ theorem entry_native {c : Config} {sp : Nat} {regs : Nat → BitVec 64} {a0 : Bi
   · rw [p5.memory, p4.memory, p3.memory, p2.memory, p1.memory, resumeEq, prepEq, entryLog,
       writeLog_append, writeLog_append, writeLog_append]
   · exact p5.frame.out.trans (p4.output.trans (p3.output.trans (p2.output.trans p1.output)))
+  · exact (p5.frame.frame _ (by decide)).trans (p4.htif.trans (p3.htif.trans (p2.htif.trans p1.htif)))
 
 end OCaml.Vm.Sim

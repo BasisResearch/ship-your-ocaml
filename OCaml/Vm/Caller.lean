@@ -65,6 +65,8 @@ structure InterpCaller (P : Prog) (c : Config) (pl : Place) (cp : ChanPlace) (hi
       ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
   /-- the dispatch clock at the cut (the loop's `tick < 2` invariant) -/
   tick : c.tick < 2
+  /-- HTIF is idle at the cut (no half-written tohost command) -/
+  htifIdle : c.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some (0#4)
 
 /-- The caller is a property of registers and total reads: it transports to
 any zero-equivalent memory (e.g. `fillZero`). -/
@@ -76,7 +78,7 @@ theorem InterpCaller.of_mem {P : Prog} {c c' : Config} {pl : Place} {cp : ChanPl
   have hg : ∀ n, gpr c' n = gpr c n := by
     intro n; unfold gpr Vsa.Sim.gprGet; rw [regs]
   refine ⟨?_, h.ra, ?_, h.frameLow, h.frameHigh, h.aligned, ?_, h.mainReturn, ?_, ?_, ?_, ?_, ?_, ?_,
-    tick ▸ h.tick⟩
+    tick ▸ h.tick, by rw [regs]; exact h.htifIdle⟩
   · intro r hr; rw [hg]; exact h.regs r hr
   · rw [hg]; exact h.stack
   · intro r hr; rw [hw]; exact h.mainFrame r hr

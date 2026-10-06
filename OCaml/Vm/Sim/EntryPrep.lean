@@ -79,6 +79,7 @@ structure EntryPrepPost (before : Config) (sp : Nat) (a0 : BitVec 64) (after : C
   preserved : ∀ r ∈ Layout.interpSavedRegs.tail, gpr after r = gpr before r
   memory : after.σ.mem = writeLog before.σ.mem (entryPrepLog sp a0 before)
   output : after.σ.sailOutput = before.σ.sailOutput
+  htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
 
 theorem entry_prep {c : Config} {sp : Nat} {a0 : BitVec 64} (h : EntryPrepInput c sp a0) :
     ∃ n after, StepsN n c after ∧ EntryPrepPost c sp a0 after := by
@@ -134,7 +135,7 @@ theorem entry_prep {c : Config} {sp : Nat} {a0 : BitVec 64} (h : EntryPrepInput 
     exact (Nat.mod_eq_of_lt (by omega)).symm
   refine ⟨n, after, steps, post.good, image_of_writeLog h.image (entryPrep_image b1 b2) memLog,
     post.tick, post.pcAt, PinsHold.get post.pins ⟨0, by simp⟩, ?_, PinsHold.get post.pins ⟨6, by simp⟩,
-    frame.gpr_list (by decide +kernel), memLog, frame.out⟩
+    frame.gpr_list (by decide +kernel), memLog, frame.out, frame.frame _ (by decide +kernel)⟩
   have x10 : gpr after 10 = some (BitVec.ofNat 64 (sp - Layout.interpFrameBytes) +
       sign_extend (m := 64) (0x0d0#12)) := PinsHold.get post.pins ⟨3, by simp⟩
   rw [buf] at x10
