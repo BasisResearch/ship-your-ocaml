@@ -127,6 +127,9 @@ runtime invariant: the long pole for whileMin's `Halts`.
   0x803837b0/32768, code buffer 0x8038d7f0/764, prim table 0x8038fb10.
   Plan: `F1Pins.libHeap : ∃ H cap, extents covered ∧ HeapReady H cap c`;
   `f1_stable` additionally requires each window inside one F1 extent.
+  a0-boot landed these as ec7fd92d. Integration is sequenced after the
+  barrier's malloc path exists (it makes `whileMin_loaded_f1` conditional on
+  the cut obligation and changes a1-arms' window lemmas).
 
 Open: G2 (collector proper); status and next design step below. F1 asks from a1-arms/bprime are all landed (last: `72d88e40`).
 
