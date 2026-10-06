@@ -573,4 +573,40 @@ theorem division_zero_native_input {L : OCaml.Layout} {P : Prog} {s : St} {op : 
     simp only [nativeHeadroom, Layout.domainStateBytes, Layout.off_extern_sp] at hh hda ⊢
     omega
 
+/-- **The re-entry memory** at the loop head (and, by `ReentryMemory.frame`,
+after dispatch): the saved-roots slot in the interpreter frame, the domain
+fields re-entry reads and writes, a trap pointer below the barrier (the raise
+is caught), and a disabled backtrace. -/
+theorem division_reentry_memory {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
+    {pl : Place} {cp : ChanPlace} {sp high high0 dom0 : Nat} {D : InvocationData}
+    (rf : RuntimeFrame L high0 dom0) (h : ArmInput L P s op c pl cp sp high) (v : NativeValid D)
+    (caught : s.trap ≠ 0) (trapBound : s.trap ≤ s.stack.length) :
+    ReentryMemory D.nativeSp c := by
+  have quiet := RaiseQuietReady.of_frame rf h
+  have g := h.geometry.toArmGeometry
+  have hl := v.low
+  have ht := v.high
+  have hs := h.stack.1
+  have top := g.top
+  refine ⟨?_, ?_, g.nursery.domain_write (by decide) (by decide), ?_, quiet.backtrace, ?_⟩
+  · simp only [Layout.interpSavedRootsOffset, Vsa.Sim.DlHeap.heapEnd, Layout.sym_stack_top,
+      Layout.interpFrameBytes, Layout.camlMainFrameBytes] at *
+    refine ⟨?_, ?_, Or.inr ?_⟩ <;> first | omega | (simp only [Layout.sym_tohost]; omega)
+  · intro off hoff
+    simp only [reentryReadOffsets, List.mem_cons, List.not_mem_nil, or_false] at hoff
+    rcases hoff with rfl | rfl | rfl | rfl | rfl <;> exact h.geometry.domain_read
+  · apply quiet.below
+    have tw := h.trapsp
+    have hst := g.statics
+    simp only [BitVec.ult, BitVec.toNat_ofNat, decide_eq_true_eq, tw]
+    simp only [Layout.stackBytes, Layout.sym_bss_end] at top hst
+    rw [Nat.mod_eq_of_lt (by omega)]
+    omega
+  · apply ImageOutside.of_above
+    intro e he
+    simp only [reentryLog, List.mem_singleton] at he
+    subst he
+    have := g.domainLow
+    dsimp only; omega
+
 end OCaml.Vm.Sim
