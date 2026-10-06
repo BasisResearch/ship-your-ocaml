@@ -18,16 +18,6 @@ theorem forward_copy_log_complete (base : Nat) (words : List (BitVec 64)) :
     forwardCopyLog base words words.length = valueLog base words := by
   simp [forwardCopyLog, ← value_log_length base words]
 
-/-- Separation of a whole observation range also separates any subrange. -/
-theorem outLRange_subrange {log : List WEntry} {a n b width : Nat}
-    (outside : OutLRange log a n) (lower : a ≤ b) (upper : b + width ≤ a + n) :
-    OutLRange log b width := by
-  induction log with
-  | nil => trivial
-  | cons entry log ih =>
-    have here := outside.1
-    exact ⟨by omega, ih outside.2⟩
-
 /-- Every partial forward copy leaves the separated source snapshot unchanged. -/
 theorem forward_copy_source_outside {source base copied i : Nat} {words : List (BitVec 64)}
     (separate : OutLRange (valueLog base words) source (8 * words.length)) (bound : i < words.length) :

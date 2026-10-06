@@ -60,8 +60,9 @@ theorem FieldWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {
       Layout.sym_caml_prim_table + Layout.off_prim_contents + 8 ≤ Layout.sym_bss_end ∧
       Layout.off_stack_high + 8 ≤ Layout.domainStateBytes ∧ Layout.off_trapsp + 8 ≤ Layout.domainStateBytes ∧
       0x80000000 ≤ Layout.sym_bss_end ∧ Layout.sym_tohost + 16 ≤ Layout.sym_bss_end ∧
-      Vsa.Sim.DlHeap.heapEnd ≤ 0x100000000 ∧ Layout.sym_oo_last_id + 8 ≤ Layout.sym_bss_end := by decide
-  obtain ⟨fText, fRo, fDom, fCode, fAtom, fGlob, fPrim, fHigh, fTrap, fRam, fTohost, fEnd, fOo⟩ := facts
+      Vsa.Sim.DlHeap.heapEnd ≤ 0x100000000 ∧ Layout.sym_oo_last_id + 8 ≤ Layout.sym_bss_end ∧
+      Layout.sym_caml_all_opened_channels + 8 ≤ Layout.sym_bss_end := by decide
+  obtain ⟨fText, fRo, fDom, fCode, fAtom, fGlob, fPrim, fHigh, fTrap, fRam, fTohost, fEnd, fOo, fOH⟩ := facts
   have room : 8 ≤ a := by omega
   have domain := g.nursery.heapDomain l a _ placed object
   rw [size] at domain
@@ -71,7 +72,7 @@ theorem FieldWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {
   have stackLow := stack_space stack space
   have hn : (BitVec.ofNat 64 (a + 8 * k)).toNat = a + 8 * k := Nat.mod_eq_of_lt (by omega)
   refine ⟨by omega, ⟨?_, ?_, ?_, ?_⟩, ⟨⟨field_static low fDom, inDomain _ fHigh, field_static low fCode,
-    field_static low fAtom, field_static low fGlob, ?_, ?_, field_static low fOo⟩, inDomain _ fTrap, ?_⟩,
+    field_static low fAtom, field_static low fGlob, ?_, ?_, field_static low fOo, field_static low fOH⟩, inDomain _ fTrap, ?_⟩,
     ⟨field_static low fText, field_static low fRo⟩, ⟨?_, ?_, ?_⟩,
     ⟨field_static low fPrim, ?_⟩⟩
   · rw [hn]; omega

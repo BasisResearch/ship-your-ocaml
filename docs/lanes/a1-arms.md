@@ -143,6 +143,18 @@ at the callee entry (`vmSaved`: VM sp, accu, next-code pointer).
   the written temporaries (~85 files). a6-gc states malloc's need as one named
   premise of caml_modify's realloc branch.
 
+Done: channel records at full extent (`chanOffBuff + ioBufferSize`) in
+`StackGeometry` (channels, heapChannels, domainChannels, channelArena, and the
+new channelCode/channelAtoms/channelPrims/channelsApart) and in
+`WindowSeparated.channels`. `PayloadOutside`/`PayloadCoreOutside.channels`
+use it too, plus `openHead` (the open-channel list head).
+`channel_copied_full` narrows to the buffer with `ChanAt.bufferLe`.
+`transport_ids` (Stack/Nursery/Arm/LoopGeometry) needs only the same channel
+ids, so channel primitives can change record contents. `frame_log`/`alloc_log`
+take the certificate's `channels`/`openHead`, which give a6-gc's
+`channelsListed` its list head and record links (`links_of_channels`);
+`frame_vm` derives both from its VM windows (`VmWindow.channel`/`openHead`).
+
 Row premises for generic `L`:
 * `MemoryStable L.runtimeOk` and `RuntimeFrame L high dom`; both discharged
   for a6-gc's pinned `Gc.f1Layout` (`f1_memoryStable`, `f1_runtimeFrame`,

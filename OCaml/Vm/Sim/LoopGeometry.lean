@@ -32,9 +32,12 @@ theorem LoopGeometry.frame_log {L : Layout} {P : Prog} {s s' : St} {c c' : Confi
     (heap : s'.heap = s.heap) (world : s'.world = s.world)
     (domain : OutLRange log Layout.sym_Caml_state 8)
     (contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
+    (chans : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      OutLRange log a (chanOffBuff + ioBufferSize))
+    (head : OutLRange log Layout.sym_caml_all_opened_channels 8)
     (young : YoungOutside log c)
     (memory : c'.σ.mem = writeLog c.σ.mem log) : LoopGeometry L P s' c' pl cp high :=
-  ⟨g.toArmGeometry.frame_log heap world domain contents young memory,
+  ⟨g.toArmGeometry.frame_log heap world domain contents chans head young memory,
    g.room.frame young domain memory (by rw [heap]; exact Nat.le_refl _)⟩
 
 theorem LoopGeometry.frame_vm {L : Layout} {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
@@ -44,7 +47,8 @@ theorem LoopGeometry.frame_vm {L : Layout} {P : Prog} {s s' : St} {c c' : Config
     (contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
     (inside : LogInW ws log) (vm : ∀ w ∈ ws, VmWindow high (word c Layout.sym_Caml_state).toNat w)
     (memory : c'.σ.mem = writeLog c.σ.mem log) : LoopGeometry L P s' c' pl cp high :=
-  g.frame_log heap world domain contents (.of_windows g.toStackGeometry inside vm) memory
+  ⟨g.toArmGeometry.frame_vm heap world domain contents inside vm memory,
+   g.room.frame (.of_windows g.toStackGeometry inside vm) domain memory (by rw [heap]; exact Nat.le_refl _)⟩
 
 /-- Transport keeping the heap's words and the allocation pointers. -/
 theorem LoopGeometry.transport {L : Layout} {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
@@ -56,8 +60,28 @@ theorem LoopGeometry.transport {L : Layout} {P : Prog} {s s' : St} {c c' : Confi
       word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
     (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
     (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
+    (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
+    (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      word c' (a + Gc.chanOffNext) = word c (a + Gc.chanOffNext))
     (words : s'.heap.words = s.heap.words) : LoopGeometry L P s' c' pl cp high :=
-  ⟨g.toArmGeometry.transport objects chans domain prims limit ptr,
+  ⟨g.toArmGeometry.transport objects chans domain prims limit ptr head links,
+   ⟨by rw [limit, ptr, words]; exact g.room.nursery⟩⟩
+
+/-- Transport keeping the channel ids (channel primitives). -/
+theorem LoopGeometry.transport_ids {L : Layout} {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
+    {cp : ChanPlace} {high : Nat} (g : LoopGeometry L P s c pl cp high)
+    (objects : ∀ l o', s'.heap.get? l = some o' → ∃ o, s.heap.get? l = some o ∧ o.wosize = o'.wosize)
+    (ids : ∀ id : Nat, (s'.world.chans[id]?).isSome = (s.world.chans[id]?).isSome)
+    (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
+    (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
+    (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
+    (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
+    (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      word c' (a + Gc.chanOffNext) = word c (a + Gc.chanOffNext))
+    (words : s'.heap.words = s.heap.words) : LoopGeometry L P s' c' pl cp high :=
+  ⟨g.toArmGeometry.transport_ids objects ids domain prims limit ptr head links,
    ⟨by rw [limit, ptr, words]; exact g.room.nursery⟩⟩
 
 /-- **Allocation consumes the room**: the reserved block holds exactly the
@@ -71,6 +95,9 @@ theorem LoopGeometry.alloc_log {L : Layout} {P : Prog} {s s' : St} {c c' : Confi
     (heap : s'.heap = (s.heap.alloc o).1) (world : s'.world = s.world)
     (domain : OutLRange log Layout.sym_Caml_state 8)
     (contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
+    (chans : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      OutLRange log a (chanOffBuff + ioBufferSize))
+    (head : OutLRange log Layout.sym_caml_all_opened_channels 8)
     (memory : c'.σ.mem = writeLog c.σ.mem log) : LoopGeometry L P s' c' pl cp high := by
   obtain ⟨ptr, limit⟩ := reserve.after c' memory
   have words : s'.heap.words = s.heap.words + (o.wosize + 1) := by rw [heap, Heap.words_alloc]
@@ -78,7 +105,7 @@ theorem LoopGeometry.alloc_log {L : Layout} {P : Prog} {s s' : St} {c c' : Confi
   have capacity := reserve.capacity
   have before := reserve.before
   have low := reserve.room
-  exact ⟨g.toArmGeometry.alloc_log placed reserve heap world domain contents memory,
+  exact ⟨g.toArmGeometry.alloc_log placed reserve heap world domain contents chans head memory,
     ⟨by rw [limit, ptr, words]; omega⟩⟩
 
 end OCaml

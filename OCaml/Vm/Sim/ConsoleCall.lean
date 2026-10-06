@@ -96,14 +96,15 @@ theorem console_geometry {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp
   have da := SG.domainArena
   have dal := SG.domainAligned
   have al := arg.repr.aligned
+  have bl := arg.repr.bufferLe
   have va := valid.aligned
-  simp only [chanOffBuff, Obj.wosize, nativeHeadroom] at ca cd hl ha hc hd hr
+  simp only [chanOffBuff, ioBufferSize, Obj.wosize, nativeHeadroom] at ca cd hl ha hc hd hr bl
   generalize Layout.interpFrameBytes = f1 at hh
   generalize Layout.camlMainFrameBytes = f2 at hh
   generalize (word c Layout.sym_Caml_state).toNat = dom at *
   clear g SG arg valid
   simp only [Vsa.Sim.DlHeap.heapEnd, Layout.sym_bss_end, Layout.domainStateBytes, Layout.sym_stack_top]
-    at hr ca hl ha hc cl hh cd hd dl da
+    at hr ca hl ha hc cl hh cd hd dl da bl
   refine ⟨?_, ?_, va, cl, ?_, al, dl, da, dal, ?_, ?_, ?_, ?_, ?_⟩ <;>
     (try simp only [Vsa.Sim.DlHeap.heapEnd, Layout.sym_bss_end, Layout.domainStateBytes, Layout.sym_stack_top]) <;> omega
 

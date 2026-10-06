@@ -70,7 +70,7 @@ theorem caught_log_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {
       exceptionWord := ?_
       outside := rootPayload, bindingsOutside := rootBindings
       geometry := h.stackGeometry.frame_log rfl rfl h.payloadOutside.domain
-        h.bindingsOutside.contents h.young rfl
+        h.bindingsOutside.contents h.payloadOutside.channels h.payloadOutside.openHead h.young rfl
       native := h.nativeHeld.frame h.payloadOutside.domain h.invocationOutside h.young.external rfl
       htifIdle := h.htifIdle }
     toCaughtReentryGeometry := h.geometry.frame_observations domain contents savedHigh savedSp roots }

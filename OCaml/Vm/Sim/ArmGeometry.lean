@@ -69,6 +69,41 @@ theorem VmWindow.young {P s c pl cp high} {w : W} (g : StackGeometry P s c pl cp
   · have := apart o member
     exact ⟨by dsimp only; omega, trivial⟩
 
+/-- A VM window misses every placed channel record (whole extent). -/
+theorem VmWindow.channel {P s c pl cp high} {w : W} (g : StackGeometry P s c pl cp high)
+    (vm : VmWindow high (word c Layout.sym_Caml_state).toNat w) {id : Nat} {ch : Chan} {a : Nat}
+    (hc : s.world.chans[id]? = some ch) (hp : cp id = some a) :
+    OutWRange [w] a (chanOffBuff + ioBufferSize) := by
+  rcases vm with ⟨low, high'⟩ | ⟨o, member, rfl⟩
+  · obtain ⟨d, -⟩ := g.channels id ch a hc hp
+    simp only [stackWindow] at d
+    exact ⟨by omega, trivial⟩
+  · have fits : o + 8 ≤ Layout.domainStateBytes := by
+      simp only [vmDomainOffsets, List.mem_cons, List.not_mem_nil, or_false] at member
+      rcases member with rfl | rfl | rfl | rfl <;> decide
+    obtain ⟨d, -⟩ := g.domainChannels id ch a hc hp
+    dsimp only at d
+    exact ⟨by dsimp only; omega, trivial⟩
+
+/-- A VM window misses the open-channel list head (a `.bss` static). -/
+theorem VmWindow.openHead {P s c pl cp high} {w : W} (g : StackGeometry P s c pl cp high)
+    (vm : VmWindow high (word c Layout.sym_Caml_state).toNat w) :
+    OutWRange [w] Layout.sym_caml_all_opened_channels 8 := by
+  have hb : Layout.sym_caml_all_opened_channels + 8 ≤ Layout.sym_bss_end := by decide
+  have st := g.statics
+  have dl := g.domainLow
+  rcases vm with ⟨low, -⟩ | ⟨o, -, rfl⟩
+  · exact ⟨by omega, trivial⟩
+  · exact ⟨by dsimp only; omega, trivial⟩
+
+/-- A log missing every placed record misses its `next` link. -/
+theorem links_of_channels {log : List WEntry} {s : St} {cp : ChanPlace}
+    (chans : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      OutLRange log a (chanOffBuff + ioBufferSize)) :
+    ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a → OutLRange log (a + chanOffNext) 8 :=
+  fun id ch a hc hp => outLRange_subrange (chans id ch a hc hp) (by omega)
+    (by simp only [chanOffNext, chanOffBuff, ioBufferSize]; omega)
+
 /-- **A log in VM windows misses the allocation pointers.** -/
 theorem YoungOutside.of_windows {P s c pl cp high} {ws : List W} {log : List WEntry}
     (g : StackGeometry P s c pl cp high) (inside : LogInW ws log)
@@ -117,10 +152,31 @@ theorem ArmGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Place
     (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
       word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
     (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
-    (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr) :
+    (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
+    (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
+    (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      word c' (a + chanOffNext) = word c (a + chanOffNext)) :
     ArmGeometry P s' c' pl cp high :=
   ⟨g.toStackGeometry.transport objects chans domain prims,
-   g.nursery.transport objects chans domain prims limit ptr⟩
+   g.nursery.transport objects chans domain prims limit ptr head links⟩
+
+/-- Transport across a step that keeps the channel ids (channel primitives
+change only record contents). -/
+theorem ArmGeometry.transport_ids {P : Prog} {s s' : St} {c c' : Config} {pl : Place} {cp : ChanPlace}
+    {high : Nat} (g : ArmGeometry P s c pl cp high)
+    (objects : ∀ l o', s'.heap.get? l = some o' → ∃ o, s.heap.get? l = some o ∧ o.wosize = o'.wosize)
+    (ids : ∀ id : Nat, (s'.world.chans[id]?).isSome = (s.world.chans[id]?).isSome)
+    (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
+    (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
+    (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
+    (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
+    (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      word c' (a + chanOffNext) = word c (a + chanOffNext)) :
+    ArmGeometry P s' c' pl cp high :=
+  ⟨g.toStackGeometry.transport_ids objects ids domain prims,
+   g.nursery.transport_ids objects ids domain prims limit ptr head links⟩
 
 /-- **Transport across an arm's write log**, which misses the
 `Caml_state`/primitive-table pointers and the allocation pointers. -/
@@ -129,11 +185,14 @@ theorem ArmGeometry.frame_log {P : Prog} {s s' : St} {c c' : Config} {pl : Place
     (heap : s'.heap = s.heap) (world : s'.world = s.world)
     (domain : OutLRange log Layout.sym_Caml_state 8)
     (contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
+    (chans : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      OutLRange log a (chanOffBuff + ioBufferSize))
+    (head : OutLRange log Layout.sym_caml_all_opened_channels 8)
     (young : YoungOutside log c)
     (memory : c'.σ.mem = writeLog c.σ.mem log) : ArmGeometry P s' c' pl cp high :=
   ⟨g.toStackGeometry.frame_log heap world domain contents memory,
    g.nursery.frame_log (fun l o' h => ⟨o', heap ▸ h, rfl⟩) (by rw [world]) domain contents
-     young.limit young.ptr memory⟩
+     young.limit young.ptr head (links_of_channels chans) memory⟩
 
 /-- **Transport across a log in VM windows.** -/
 theorem ArmGeometry.frame_vm {P : Prog} {s s' : St} {c c' : Config} {pl : Place} {cp : ChanPlace}
@@ -143,7 +202,11 @@ theorem ArmGeometry.frame_vm {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
     (contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
     (inside : LogInW ws log) (vm : ∀ w ∈ ws, VmWindow high (word c Layout.sym_Caml_state).toNat w)
     (memory : c'.σ.mem = writeLog c.σ.mem log) : ArmGeometry P s' c' pl cp high :=
-  g.frame_log heap world domain contents (.of_windows g.toStackGeometry inside vm) memory
+  g.frame_log heap world domain contents
+    (fun _ _ _ hc hp => outLRange_of_windows inside
+      (outWRange_of_each fun w hw => (vm w hw).channel g.toStackGeometry hc hp))
+    (outLRange_of_windows inside (outWRange_of_each fun w hw => (vm w hw).openHead g.toStackGeometry))
+    (.of_windows g.toStackGeometry inside vm) memory
 
 /-! ## Allocation -/
 
@@ -177,7 +240,7 @@ theorem _root_.OCaml.Vm.Gc.NurseryGeometry.channelsApart {P s c pl cp high} {log
     {a count : Nat} {o : Obj} (g : NurseryGeometry P s c pl cp high)
     (reserve : NurseryReserve c log a o.wosize count) :
     ∀ id ch b, s.world.chans[id]? = some ch → cp id = some b →
-      OutWRange [⟨b, b + (chanOffBuff + ch.buffer.length)⟩] (a - 8) (8 * o.wosize + 8) := by
+      OutWRange [⟨b, b + (chanOffBuff + ioBufferSize)⟩] (a - 8) (8 * o.wosize + 8) := by
   intro id ch b hch hcp
   have := reserve.before
   have := reserve.size
@@ -212,6 +275,9 @@ theorem ArmGeometry.alloc_log {P : Prog} {s s' : St} {c c' : Config} {pl : Place
     (heap : s'.heap = (s.heap.alloc o).1) (world : s'.world = s.world)
     (domain : OutLRange log Layout.sym_Caml_state 8)
     (contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
+    (chans : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      OutLRange log a (chanOffBuff + ioBufferSize))
+    (head : OutLRange log Layout.sym_caml_all_opened_channels 8)
     (memory : c'.σ.mem = writeLog c.σ.mem log) : ArmGeometry P s' c' pl cp high := by
   have keep : ∀ x, OutLRange log x 8 → word c' x = word c x := fun x h => by
     change bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8
@@ -224,6 +290,7 @@ theorem ArmGeometry.alloc_log {P : Prog} {s s' : St} {c c' : Config} {pl : Place
       heap world
   exact ⟨stack.frame_log rfl rfl domain contents memory,
     g.nursery.alloc placed reserve.size heap (by rw [world]) (keep _ domain) (keep _ contents) limit
-      reserve.before ptr reserve.room reserve.aligned reserve.capacity⟩
+      reserve.before ptr reserve.room reserve.aligned reserve.capacity (keep _ head)
+      (fun id ch a hc hp => keep _ (links_of_channels chans id ch a hc hp))⟩
 
 end OCaml.Vm.Sim

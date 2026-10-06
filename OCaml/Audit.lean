@@ -5201,6 +5201,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.loopRegisters_of
 #print axioms OCaml.Vm.Sim.saved_eq_of_frame
 #print axioms OCaml.Vm.Sim.CcallSetupPost.calleeSaved
+#print axioms OCaml.Vm.Sim.chan_back
+#print axioms OCaml.Vm.Sim.StackGeometry.transport_ids
+#print axioms OCaml.Vm.Gc.NurseryGeometry.transport_ids
+#print axioms OCaml.Vm.Sim.ArmGeometry.transport_ids
+#print axioms OCaml.LoopGeometry.transport_ids
+#print axioms OCaml.Vm.Sim.VmWindow.channel
+#print axioms OCaml.Vm.Sim.links_of_channels
 #print axioms OCaml.Vm.Sim.loopSetup_saved
 #print axioms OCaml.Vm.Boot.Startup.GprPresent.saved
 #print axioms OCaml.Vm.Sim.MakeblockInitInput.of_block

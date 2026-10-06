@@ -133,7 +133,7 @@ theorem retaddr_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : C
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable before after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl accuWord) (post.loopRegisters loop)
-    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.young post.memory)
+    (geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.payload.channels space.payload.openHead space.young post.memory)
     (native.frame_vm (ws := [⟨sp - 24, sp⟩]) (retaddr_log_in _ _ _ space.room) (by simp only [List.mem_singleton, forall_eq]; exact geometry.stack_below (by have := data.stack.1; omega)) space.payload.domain space.young.external post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

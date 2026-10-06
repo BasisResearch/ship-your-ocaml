@@ -138,7 +138,7 @@ theorem objectOutside (h : LogWindows log P s c pl cp top high offs) {l a : Nat}
 
 theorem channel (h : LogWindows log P s c pl cp top high offs) {id : Nat} {ch : Chan} {a : Nat}
     (hch : s.world.chans[id]? = some ch) (hcp : cp id = some a) :
-    OutLRange log a (chanOffBuff + ch.buffer.length) :=
+    OutLRange log a (chanOffBuff + ioBufferSize) :=
   h.out (fun w sep => sep.channels id ch a hch hcp) (h.stack_of_window (h.geometry.channels id ch a hch hcp))
     (h.field_of_record (h.geometry.domainChannels id ch a hch hcp))
 
@@ -167,7 +167,7 @@ theorem core (h : LogWindows log P s c pl cp top high offs)
     PayloadCoreOutside log P s c pl cp :=
   ⟨h.static (by decide), h.domainField (by decide) stackHigh, h.static (by decide),
     h.static (by decide), h.static (by decide), fun _ _ hv => h.code hv,
-    fun _ _ _ hch hcp => h.channel hch hcp, h.static (by decide)⟩
+    fun _ _ _ hch hcp => h.channel hch hcp, h.static (by decide), h.static (by decide)⟩
 
 /-- The allocation pointers: away from both. -/
 theorem young (h : LogWindows log P s c pl cp top high offs)
@@ -189,7 +189,7 @@ theorem payload (h : LogWindows log P s c pl cp top high offs) {sp : Nat}
       have := (List.getElem?_eq_some_iff.1 hv).1
       exact h.stackSlot (by omega) (by omega) (by omega),
     fun _ _ _ _ placed got => h.objectOutside placed got, fun _ _ _ hch hcp => h.channel hch hcp,
-    h.static (by decide)⟩
+    h.static (by decide), h.static (by decide)⟩
 
 end LogWindows
 

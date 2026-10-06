@@ -33,12 +33,12 @@ theorem OutWRange.shrink {c c' : Config} {x n : Nat}
   exact ⟨by simp only [nurseryFree, limit]; omega, trivial⟩
 
 /-- The open-channel list survives when its head and every placed record's
-`next` word are unchanged and the channel table is kept. -/
+`next` word are unchanged and the channel ids are kept. -/
 theorem channelsListed_transfer {s s' : St} {c c' : Config} {cp : ChanPlace}
     (h : ∃ chs, OpenChannelList c.σ.mem chs ∧
       (∀ id ch a, s.world.chans[id]? = some ch → cp id = some a → a ∈ chs) ∧
       ∀ b ∈ chs, ∃ id ch, s.world.chans[id]? = some ch ∧ cp id = some b)
-    (chans : s'.world.chans = s.world.chans)
+    (ids : ∀ id : Nat, (s'.world.chans[id]?).isSome = (s.world.chans[id]?).isSome)
     (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
     (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
       word c' (a + chanOffNext) = word c (a + chanOffNext)) :
@@ -46,7 +46,12 @@ theorem channelsListed_transfer {s s' : St} {c c' : Config} {cp : ChanPlace}
       (∀ id ch a, s'.world.chans[id]? = some ch → cp id = some a → a ∈ chs) ∧
       ∀ b ∈ chs, ∃ id ch, s'.world.chans[id]? = some ch ∧ cp id = some b := by
   obtain ⟨chs, list, placed, listed⟩ := h
-  refine ⟨chs, ?_, by rw [chans]; exact placed, by rw [chans]; exact listed⟩
+  refine ⟨chs, ?_, fun id _ a h hp => let ⟨ch, hc⟩ := Sim.chan_back ids h; placed id ch a hc hp,
+    fun b hb => ?_⟩
+  rotate_left
+  · obtain ⟨id, ch, hc, hp⟩ := listed b hb
+    obtain ⟨ch', hc'⟩ := Sim.chan_back (s := s') (s' := s) (fun id => (ids id).symm) hc
+    exact ⟨id, ch', hc', hp⟩
   unfold OpenChannelList
   change bytesT c'.σ.mem _ 8 = bytesT c.σ.mem _ 8 at head
   rw [head]
@@ -54,13 +59,14 @@ theorem channelsListed_transfer {s s' : St} {c c' : Config} {cp : ChanPlace}
   obtain ⟨id, ch, hc, hp⟩ := listed b hb
   exact links id ch b hc hp
 
-/-- **Transport** across a step that keeps object sizes, channels, the
+/-- **Transport** across a step that keeps object sizes, the channel ids, the
 `Caml_state` and primitive-table pointers, and the `young_limit`/`young_ptr`
-words (every non-allocating arm), mirroring `StackGeometry.transport`. -/
-theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Place} {cp : ChanPlace}
+words (every non-allocating arm, and channel primitives), mirroring
+`StackGeometry.transport_ids`. -/
+theorem NurseryGeometry.transport_ids {P : Prog} {s s' : St} {c c' : Config} {pl : Place} {cp : ChanPlace}
     {high : Nat} (g : NurseryGeometry P s c pl cp high)
     (objects : ∀ l o', s'.heap.get? l = some o' → ∃ o, s.heap.get? l = some o ∧ o.wosize = o'.wosize)
-    (chans : s'.world.chans = s.world.chans)
+    (ids : ∀ id : Nat, (s'.world.chans[id]?).isSome = (s.world.chans[id]?).isSome)
     (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
     (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
       word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
@@ -79,8 +85,10 @@ theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : P
     heap := fun l a o' placed object => by
       obtain ⟨o, ho, size⟩ := objects l o' object
       rw [window, ← size]; exact g.heap l a o placed ho
-    channels := by rw [window, chans]; exact g.channels
-    channelsPrivate := by rw [chans]; exact g.channelsPrivate
+    channels := fun id _ a h hp => by
+      obtain ⟨ch, hc⟩ := Sim.chan_back ids h
+      rw [window]; exact g.channels id ch a hc hp
+    channelsPrivate := fun id _ a h hp => let ⟨ch, hc⟩ := Sim.chan_back ids h; g.channelsPrivate id ch a hc hp
     primitives := by rw [window, prims]; exact g.primitives
     top := by rw [ptr]; exact g.top
     aligned := by rw [ptr]; exact g.aligned
@@ -97,13 +105,29 @@ theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : P
       obtain ⟨o, ho, size⟩ := objects l o' object
       rw [← size]; exact g.heapPrivate l a o placed ho
     belowPrivate := by rw [ptr]; exact g.belowPrivate
-    channelsListed := channelsListed_transfer g.channelsListed chans head links
+    channelsListed := channelsListed_transfer g.channelsListed ids head links
     heapChunks := fun l a o' placed object => by
       obtain ⟨o, ho, size⟩ := objects l o' object
       rw [← size]; exact g.heapChunks l a o placed ho
     nurseryLow := by rw [limit]; exact g.nurseryLow
     nurseryHigh := by rw [ptr]; exact g.nurseryHigh
     stackAbove := by rw [ptr]; exact g.stackAbove }
+
+/-- **Transport** across a step that keeps the channel table. -/
+theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Place} {cp : ChanPlace}
+    {high : Nat} (g : NurseryGeometry P s c pl cp high)
+    (objects : ∀ l o', s'.heap.get? l = some o' → ∃ o, s.heap.get? l = some o ∧ o.wosize = o'.wosize)
+    (chans : s'.world.chans = s.world.chans)
+    (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
+    (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
+    (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
+    (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
+    (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      word c' (a + chanOffNext) = word c (a + chanOffNext)) :
+    NurseryGeometry P s' c' pl cp high :=
+  g.transport_ids objects (fun id => by rw [chans]) domain prims limit ptr head links
 
 /-- **Transport across a write log** missing the `Caml_state` and
 primitive-table pointers and the `young_limit`/`young_ptr` words (VM-stack
@@ -192,7 +216,7 @@ theorem NurseryGeometry.alloc {P : Prog} {s s' : St} {c c' : Config} {pl : Place
         have := g.belowPrivate
         exact ⟨Or.inl (by omega), trivial⟩
     belowPrivate := by have := g.belowPrivate; omega
-    channelsListed := channelsListed_transfer g.channelsListed chans head links
+    channelsListed := channelsListed_transfer g.channelsListed (fun id => by rw [chans]) head links
     heapChunks := fun l a' o' found object => by
       rw [heap] at object
       rcases heap_alloc_get object with old | ⟨rfl, rfl⟩

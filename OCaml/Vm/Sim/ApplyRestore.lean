@@ -67,7 +67,7 @@ theorem apply_frame_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after
     (bindings_frame_log data.primitives space.bindings post.memory)
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable before after memoryFrame platform.runtime⟩ post.toVmRegisters post.loop
-    (geometry.frame_log rfl rfl space.payload.core.domain space.bindings.contents space.young post.memory)
+    (geometry.frame_log rfl rfl space.payload.core.domain space.bindings.contents space.payload.core.channels space.payload.core.openHead space.young post.memory)
     (native.frameOn memoryFrame (by simp only [List.mem_singleton, forall_eq]; exact geometry.stack_below (by have := data.stack.1; have := bound; omega)) (Reloc.bytesT_congr (copied_of_writeLog post.memory space.payload.core.domain))
     (Reloc.bytesT_congr (copied_of_writeLog post.memory space.young.external)) post.nativeSp)
 

@@ -85,7 +85,7 @@ theorem grab_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after : Conf
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       runtime after post.memory platform.runtime⟩ post.toVmRegisters post.loop
     (geometry.alloc_log (s' := grabState s dest savedEnv savedExtra rest) space.placed space.reserve rfl rfl
-      space.payload.domain space.bindings.contents post.memory)
+      space.payload.domain space.bindings.contents space.payload.channels space.payload.openHead post.memory)
     (native.frame_log space.arena space.payload.domain space.external post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

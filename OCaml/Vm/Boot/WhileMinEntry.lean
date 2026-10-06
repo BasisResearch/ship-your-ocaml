@@ -83,6 +83,7 @@ theorem EntryControl.fillZero {c : Config} (h : EntryControl c) :
       fun a => bytesT_memEqv (Vsa.Densify.memEqv_fillZeroMem c.σ.mem).symm a 8
     h.geometry.transport (fun _ o' ho => ⟨o', ho, rfl⟩) rfl (hw _) (hw _)
       (by simp only [runtimeFields, domainWord, hw]) (by simp only [runtimeFields, domainWord, hw])
+      (hw _) (fun _ _ _ _ _ => hw _)
   ooCounter := (bytesT_memEqv (Vsa.Densify.memEqv_fillZeroMem c.σ.mem).symm _ 8).trans h.ooCounter
 
 /-- The requested densified entry statement, conditional only on the actual

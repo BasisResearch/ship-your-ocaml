@@ -81,7 +81,7 @@ theorem closurerec_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after 
     ⟨post.good, post.image, runtime after post.memory platform.runtime⟩
   case geometry =>
     exact geometry.alloc_log (s' := closurerecState s count dest targets) space.placed reserve rfl rfl
-      space.core.domain space.bindings.contents post.memory
+      space.core.domain space.bindings.contents space.core.channels space.core.openHead post.memory
   case native =>
     exact native.frame_log arena space.core.domain space.external post.memory (post.frame.frame (gprReg 2) (by decide))
   · refine ⟨post.pcAt, post.codeReg, post.stackReg, ⟨BitVec.ofNat 64 a, post.accu, ?_⟩, ?_, ?_⟩

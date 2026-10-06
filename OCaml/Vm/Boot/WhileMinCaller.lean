@@ -106,6 +106,7 @@ theorem caller_outside :
   · intro id ch a _ ha
     cases ha
   · simp only [entryFootprint, OutLRange]; decide
+  · simp only [entryFootprint, OutLRange]; decide
 
 /-- A register with an assignment in the captured table is present. -/
 theorem present_of_key {r : LeanRV64DExecutable.Register}
@@ -267,6 +268,10 @@ theorem stackGeometry_of {c : Config} (memory : Vsa.Densify.MemEqv c.σ.mem
         exact ⟨by omega, by omega, Or.inr (by omega)⟩
       channelArena := fun _ _ _ _ ha => by cases ha
       channelLow := fun _ _ _ _ ha => by cases ha
+      channelCode := fun _ _ _ _ ha => by cases ha
+      channelAtoms := fun _ _ _ _ ha => by cases ha
+      channelPrims := fun _ _ _ _ ha => by cases ha
+      channelsApart := fun _ _ _ _ _ _ _ _ _ ha => by cases ha
       primsLow := fun _ _ _ => by
         rw [prim_table_word]
         simp only [BitVec.toNat_ofNat]

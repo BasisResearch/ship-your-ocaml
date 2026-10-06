@@ -22,7 +22,7 @@ structure PayloadChanOutside (log : List WEntry) (P : Prog) (s : St) (c : Config
     ObjectOutside log a o
   /-- every other channel record -/
   others : ∀ id' ch a, id' ≠ id → s.world.chans[id']? = some ch → cp id' = some a →
-    OutLRange log a (chanOffBuff + ch.buffer.length)
+    OutLRange log a (chanOffBuff + ioBufferSize)
   ooId : OutLRange log Layout.sym_oo_last_id 8
 
 /-- **Transport the VM payload across a channel primitive's footprint**: the
@@ -83,7 +83,7 @@ theorem VmPayload.frame_chan {P : Prog} {s : St} {c c' : Config} {pl : Place} {c
         exact ⟨a, place, repr⟩
       · simp only [same, ↓reduceIte] at hc
         obtain ⟨b, hb, layout⟩ := h.world.chans id' ch hc
-        exact ⟨b, hb, channel_copied layout (copy _ _ (outside.others id' ch b (Ne.symm same) hc hb))⟩
+        exact ⟨b, hb, channel_copied_full layout (copy _ _ (outside.others id' ch b (Ne.symm same) hc hb))⟩
     · rw [hw _ outside.ooId, counter]
       exact h.world.ooId
   · rw [hw _ outside.atomBase]

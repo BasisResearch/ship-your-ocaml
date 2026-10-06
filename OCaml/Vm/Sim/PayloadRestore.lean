@@ -15,8 +15,10 @@ structure PayloadCoreOutside (log : List WEntry) (P : Prog) (s : St) (c : Config
   globals : OutLRange log Layout.sym_caml_global_data 8
   code : ∀ i w, P.code[i]? = some w → OutLRange log (pl.codeBase + 4 * i) 4
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-    OutLRange log a (chanOffBuff + ch.buffer.length)
+    OutLRange log a (chanOffBuff + ioBufferSize)
   ooId : OutLRange log Layout.sym_oo_last_id 8
+  /-- the open-channel list head (`caml_all_opened_channels`, a `.bss` static) -/
+  openHead : OutLRange log Layout.sym_caml_all_opened_channels 8
 
 /-- Rebuild mutable payload components after a log, copying the fixed
 observations once through total-byte and relocation combinators. -/
@@ -54,7 +56,7 @@ theorem payload_rebuild_accu {P : Prog} {s : St} {before after : Config}
       simpa only [same] using h.world.output
     · intro id ch hc
       obtain ⟨a, ha, layout⟩ := h.world.chans id ch hc
-      exact ⟨a, ha, channel_copied layout (copy _ _ (outside.channels id ch a hc ha))⟩
+      exact ⟨a, ha, channel_copied_full layout (copy _ _ (outside.channels id ch a hc ha))⟩
     · rw [hw _ outside.ooId]; exact h.world.ooId
   · rw [hw _ outside.atomBase]
     exact h.atomBase

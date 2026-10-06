@@ -135,6 +135,9 @@ theorem closurerec_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat} (rf : Ru
         (outLRange_of_windows pushIn ⟨by dsimp only; omega, trivial⟩)
         (outLRange_of_windows pushIn ⟨by dsimp only; omega, trivial⟩)
         (outLRange_of_windows pushIn ⟨by dsimp only; omega, trivial⟩)
+        (outLRange_of_windows pushIn (outWRange_of_each fun w hw => (vm w hw).openHead sg))
+        (fun _ _ _ hc hp => outLRange_of_windows pushIn
+          (outWRange_of_each fun w hw => (vm w hw).channel sg hc hp))
         (.of_windows sg pushIn vm) input.geometry.nursery bodyIn b.capacity
         (by have := b.young; omega) (by have := b.aligned; omega)
       obtain ⟨after, run, running⟩ := closurerec_step_arm (w3.toInt :: rest) (by simpa using ofLen)

@@ -67,7 +67,7 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
   heap : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     OutWRange [stackWindow high] (a - 8) (8 * o.wosize + 8)
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-    OutWRange [stackWindow high] a (chanOffBuff + ch.buffer.length)
+    OutWRange [stackWindow high] a (chanOffBuff + ioBufferSize)
   primitives : ∀ i name, P.prims[i]? = some name →
     OutWRange [stackWindow high]
       ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
@@ -101,17 +101,32 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
   entries (object stores keep them) -/
   heapChannels : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     ∀ id ch b, s.world.chans[id]? = some ch → cp id = some b →
-      OutWRange [⟨b, b + (chanOffBuff + ch.buffer.length)⟩] (a - 8) (8 * o.wosize + 8)
+      OutWRange [⟨b, b + (chanOffBuff + ioBufferSize)⟩] (a - 8) (8 * o.wosize + 8)
   /-- the program's primitive-table slots are readable RAM -/
   primsRam : ∀ i name, P.prims[i]? = some name → RamReadAt ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
   /-- the channel records and the program's primitive-table slots lie in the
   allocator arena (both are malloc'd at startup), below the native frames -/
   channelArena : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-    a + (chanOffBuff + ch.buffer.length) ≤ Vsa.Sim.DlHeap.heapEnd
+    a + (chanOffBuff + ioBufferSize) ≤ Vsa.Sim.DlHeap.heapEnd
   primsArena : ∀ i name, P.prims[i]? = some name →
     (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8 ≤ Vsa.Sim.DlHeap.heapEnd
   /-- and above `.bss` (separating them from static runtime variables) -/
   channelLow : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a → Layout.sym_bss_end ≤ a
+  /-- each channel record (its full `struct channel`, whatever its buffer
+  holds) is apart from the code, the atom table, the primitive slots and every
+  other record -/
+  channelCode : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+    OutWRange [⟨pl.codeBase, pl.codeBase + 4 * P.code.size⟩] a (chanOffBuff + ioBufferSize)
+  channelAtoms : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+    OutWRange [⟨pl.atomBase, pl.atomBase + atomTableBytes⟩] a (chanOffBuff + ioBufferSize)
+  channelPrims : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+    ∀ (i : Nat) name, P.prims[i]? = some name →
+      OutWRange [⟨(word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i,
+        (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8⟩]
+        a (chanOffBuff + ioBufferSize)
+  channelsApart : ∀ id id' ch ch' a a', id ≠ id' → s.world.chans[id]? = some ch →
+    s.world.chans[id']? = some ch' → cp id = some a → cp id' = some a' →
+    a + (chanOffBuff + ioBufferSize) ≤ a' ∨ a' + (chanOffBuff + ioBufferSize) ≤ a
   primsLow : ∀ (i : Nat) name, P.prims[i]? = some name →
     Layout.sym_bss_end ≤ (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat
   heapPrims : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
@@ -126,7 +141,7 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
       (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a - 8) (8 * o.wosize + 8)
   domainChannels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
     OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
-      (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] a (chanOffBuff + ch.buffer.length)
+      (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] a (chanOffBuff + ioBufferSize)
   domainPrims : ∀ i name, P.prims[i]? = some name →
     OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
       (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩]
@@ -143,12 +158,22 @@ structure NurseryPlacement (P : Prog) (pl : Place) (high a : Nat) (o : Obj) : Pr
   codeApart : OutWRange [⟨pl.codeBase, pl.codeBase + 4 * P.code.size⟩] (a - 8) (8 * o.wosize + 8)
   atomApart : OutWRange [⟨pl.atomBase, pl.atomBase + atomTableBytes⟩] (a - 8) (8 * o.wosize + 8)
 
-/-- The geometry depends on the state only through object sizes and the
-channel records, and on the configuration only through two pointer words. -/
-theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
+/-- A state with the same channel ids: each new channel record was an old one. -/
+theorem chan_back {s s' : St} (ids : ∀ id : Nat, (s'.world.chans[id]?).isSome = (s.world.chans[id]?).isSome)
+    {id : Nat} {ch' : Chan} (h : s'.world.chans[id]? = some ch') : ∃ ch, s.world.chans[id]? = some ch := by
+  have e := ids id
+  rw [h] at e
+  cases hc : s.world.chans[id]? with
+  | none => rw [hc] at e; cases e
+  | some ch => exact ⟨ch, rfl⟩
+
+/-- The geometry depends on the state only through object sizes and which
+channel ids exist (records are placed at their full extent), and on the
+configuration only through two pointer words. -/
+theorem StackGeometry.transport_ids {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
     {cp : ChanPlace} {high : Nat} (g : StackGeometry P s c pl cp high)
     (objects : ∀ l o', s'.heap.get? l = some o' → ∃ o, s.heap.get? l = some o ∧ o.wosize = o'.wosize)
-    (chans : s'.world.chans = s.world.chans)
+    (ids : ∀ id : Nat, (s'.world.chans[id]?).isSome = (s.world.chans[id]?).isSome)
     (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
     (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
       word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)) :
@@ -161,7 +186,7 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
   heap l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     simpa only [size] using g.heap l a o placed ho
-  channels := by rw [chans]; exact g.channels
+  channels id _ a h hp := let ⟨ch, hc⟩ := chan_back ids h; g.channels id ch a hc hp
   primitives := by rw [prims]; exact g.primitives
   arena := g.arena
   domainArena := by rw [domain]; exact g.domainArena
@@ -186,13 +211,23 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
   heapAtoms l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     simpa only [size] using g.heapAtoms l a o placed ho
-  heapChannels l a o' placed object := by
+  heapChannels l a o' placed object id _ b h hp := by
     obtain ⟨o, ho, size⟩ := objects l o' object
-    rw [chans, ← size]; exact g.heapChannels l a o placed ho
+    obtain ⟨ch, hc⟩ := chan_back ids h
+    rw [← size]; exact g.heapChannels l a o placed ho id ch b hc hp
   primsRam := by rw [prims]; exact g.primsRam
-  channelArena := by rw [chans]; exact g.channelArena
+  channelArena id _ a h hp := let ⟨ch, hc⟩ := chan_back ids h; g.channelArena id ch a hc hp
   primsArena := by rw [prims]; exact g.primsArena
-  channelLow := by rw [chans]; exact g.channelLow
+  channelLow id _ a h hp := let ⟨ch, hc⟩ := chan_back ids h; g.channelLow id ch a hc hp
+  channelCode id _ a h hp := let ⟨ch, hc⟩ := chan_back ids h; g.channelCode id ch a hc hp
+  channelAtoms id _ a h hp := let ⟨ch, hc⟩ := chan_back ids h; g.channelAtoms id ch a hc hp
+  channelPrims id _ a h hp := by
+    obtain ⟨ch, hc⟩ := chan_back ids h
+    rw [prims]; exact g.channelPrims id ch a hc hp
+  channelsApart id id' _ _ a a' ne h h' hp hp' :=
+    let ⟨ch, hc⟩ := chan_back ids h
+    let ⟨ch', hc'⟩ := chan_back ids h'
+    g.channelsApart id id' ch ch' a a' ne hc hc' hp hp'
   primsLow := by rw [prims]; exact g.primsLow
   heapPrims l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
@@ -201,8 +236,21 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
   domainHeap l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     rw [domain]; simpa only [size] using g.domainHeap l a o placed ho
-  domainChannels := by rw [domain, chans]; exact g.domainChannels
+  domainChannels id _ a h hp := by
+    obtain ⟨ch, hc⟩ := chan_back ids h
+    rw [domain]; exact g.domainChannels id ch a hc hp
   domainPrims := by rw [domain, prims]; exact g.domainPrims
+
+/-- The geometry across a step that keeps the channel table. -/
+theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
+    {cp : ChanPlace} {high : Nat} (g : StackGeometry P s c pl cp high)
+    (objects : ∀ l o', s'.heap.get? l = some o' → ∃ o, s.heap.get? l = some o ∧ o.wosize = o'.wosize)
+    (chans : s'.world.chans = s.world.chans)
+    (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)) :
+    StackGeometry P s' c' pl cp high :=
+  g.transport_ids objects (fun id => by rw [chans]) domain prims
 
 /-- Same heap and world: only the two pointer words need framing. -/
 theorem StackGeometry.same {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
@@ -241,7 +289,7 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
     (domainApart : OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
       (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a - 8) (8 * o.wosize + 8))
     (channelsApart : ∀ id ch b, s.world.chans[id]? = some ch → cp id = some b →
-      OutWRange [⟨b, b + (chanOffBuff + ch.buffer.length)⟩] (a - 8) (8 * o.wosize + 8))
+      OutWRange [⟨b, b + (chanOffBuff + ioBufferSize)⟩] (a - 8) (8 * o.wosize + 8))
     (primsApart : ∀ i name, P.prims[i]? = some name →
       OutWRange [⟨(word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i, (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8⟩] (a - 8) (8 * o.wosize + 8))
     (heap : s'.heap = (s.heap.alloc o).1) (world : s'.world = s.world) :
@@ -303,6 +351,10 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
   channelArena := by rw [world]; exact g.channelArena
   primsArena := g.primsArena
   channelLow := by rw [world]; exact g.channelLow
+  channelCode := by rw [world]; exact g.channelCode
+  channelAtoms := by rw [world]; exact g.channelAtoms
+  channelPrims := by rw [world]; exact g.channelPrims
+  channelsApart := by rw [world]; exact g.channelsApart
   primsLow := g.primsLow
   heapPrims l a' o' found object := by
     rw [heap] at object

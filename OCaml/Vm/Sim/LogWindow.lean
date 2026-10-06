@@ -31,4 +31,14 @@ theorem outLRange_of_windows {windows : List W} {log : List WEntry} {a n : Nat}
   | nil => trivial
   | cons entry log ih => exact ⟨range_disjoint_inside outside inside.1, ih inside.2⟩
 
+/-- Separation of a whole observation range also separates any subrange. -/
+theorem outLRange_subrange {log : List WEntry} {a n b width : Nat}
+    (outside : OutLRange log a n) (lower : a ≤ b) (upper : b + width ≤ a + n) :
+    OutLRange log b width := by
+  induction log with
+  | nil => trivial
+  | cons entry log ih =>
+    have here := outside.1
+    exact ⟨by omega, ih outside.2⟩
+
 end OCaml.Vm.Sim

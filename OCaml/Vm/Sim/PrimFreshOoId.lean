@@ -106,7 +106,12 @@ theorem prim_caml_fresh_oo_id_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec
       simp only [domainWord]
       rw [domEq, wordEq _ (dom off)]
     exact g.transport (fun l o' h => ⟨o', h, rfl⟩) rfl domEq (wordEq _ (counter_out_static (by decide)))
-      (by simp only [runtimeFields, field]) (by simp only [runtimeFields, field]) rfl
+      (by simp only [runtimeFields, field]) (by simp only [runtimeFields, field])
+      (wordEq _ (counter_out_static (by decide)))
+      (fun id ch a hc hp => wordEq _ (counter_out_static (Or.inr (by
+        have := setup.geometry.channelLow id ch a hc hp
+        have hb : Layout.sym_oo_last_id + 8 ≤ Layout.sym_bss_end := by decide
+        omega)))) rfl
   · exact setup.native
 
 end OCaml.Vm.Sim

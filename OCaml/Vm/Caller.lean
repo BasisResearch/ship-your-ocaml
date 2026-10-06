@@ -93,7 +93,7 @@ theorem InterpCaller.of_mem {P : Prog} {c c' : Config} {pl : Place} {cp : ChanPl
   · have e := hw Layout.sym_Caml_state
     have o := h.outside
     rw [e]
-    refine ⟨o.domain, ?_, ?_, o.codeBase, o.atomBase, o.globals, o.code, o.stack, o.heap, o.channels, o.ooId⟩
+    refine ⟨o.domain, ?_, ?_, o.codeBase, o.atomBase, o.globals, o.code, o.stack, o.heap, o.channels, o.ooId, o.openHead⟩
     · rw [e]; exact o.stackHigh
     · rw [e]; exact o.trapsp
   · rw [hw]; exact h.primTable

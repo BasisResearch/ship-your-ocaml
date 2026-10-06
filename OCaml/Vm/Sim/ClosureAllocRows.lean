@@ -212,6 +212,9 @@ theorem closure_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat} (rf : Runti
         (outLRange_of_windows pushIn ⟨by dsimp only; omega, trivial⟩)
         (outLRange_of_windows pushIn ⟨by dsimp only; omega, trivial⟩)
         (outLRange_of_windows pushIn ⟨by dsimp only; omega, trivial⟩)
+        (outLRange_of_windows pushIn (outWRange_of_each fun w hw => (vm w hw).openHead sg))
+        (fun _ _ _ hc hp => outLRange_of_windows pushIn
+          (outWRange_of_each fun w hw => (vm w hw).channel sg hc hp))
         (.of_windows sg pushIn vm) input.geometry.nursery (logInW_left (b.free blockIn)) b.capacity
         (by have := b.young; omega) (by have := b.aligned; omega)
       obtain ⟨after, run, running⟩ := closure_step_arm (by rw [closureAllocationLog, List.append_assoc]; exact runtime)

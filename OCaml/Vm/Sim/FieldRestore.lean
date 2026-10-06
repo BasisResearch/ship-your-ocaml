@@ -46,11 +46,14 @@ theorem ArmGeometry.heap_set {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
     (size : new.wosize = old.wosize) (heap : s'.heap = s.heap.set l new)
     (world : s'.world = s.world) (domain : OutLRange log Layout.sym_Caml_state 8)
     (contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
+    (chans : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      OutLRange log a (chanOffBuff + ioBufferSize))
+    (head : OutLRange log Layout.sym_caml_all_opened_channels 8)
     (young : YoungOutside log c)
     (memory : c'.σ.mem = writeLog c.σ.mem log) : ArmGeometry P s' c' pl cp high := by
   have g' : ArmGeometry P {s with world := s'.world} c' pl cp high :=
-    g.frame_log rfl world domain contents young memory
-  refine g'.transport (s' := s') ?_ rfl rfl rfl rfl rfl
+    g.frame_log rfl world domain contents chans head young memory
+  refine g'.transport (s' := s') ?_ rfl rfl rfl rfl rfl rfl (fun _ _ _ _ _ => rfl)
   intro q o' found
   rw [heap] at found
   by_cases equal : q = l
@@ -69,9 +72,12 @@ theorem _root_.OCaml.LoopGeometry.heap_set {L : OCaml.Layout} {P : Prog} {s s' :
     (size : new.wosize = old.wosize) (heap : s'.heap = s.heap.set l new)
     (world : s'.world = s.world) (domain : OutLRange log Layout.sym_Caml_state 8)
     (contents : OutLRange log (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
+    (chans : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      OutLRange log a (chanOffBuff + ioBufferSize))
+    (head : OutLRange log Layout.sym_caml_all_opened_channels 8)
     (young : YoungOutside log c)
     (memory : c'.σ.mem = writeLog c.σ.mem log) : OCaml.LoopGeometry L P s' c' pl cp high :=
-  ⟨g.toArmGeometry.heap_set selected size heap world domain contents young memory,
+  ⟨g.toArmGeometry.heap_set selected size heap world domain contents chans head young memory,
    g.room.frame young domain memory (by rw [heap, Heap.words_set selected size]; exact Nat.le_refl _)⟩
 
 /-- Restore a represented field replacement, unit result and complete platform. -/
@@ -101,7 +107,7 @@ theorem field_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
     ⟨post.good, image_of_writeLog platform.image space.image post.memory,
       stable c after memoryFrame platform.runtime⟩
     (post.registers data rfl rfl rfl) (post.loopRegisters loop)
-    (geometry.heap_set selected (by simp only [Obj.wosize, List.length_set]) rfl rfl space.payload.domain space.bindings.contents space.young post.memory)
+    (geometry.heap_set selected (by simp only [Obj.wosize, List.length_set]) rfl rfl space.payload.domain space.bindings.contents space.payload.channels space.payload.openHead space.young post.memory)
     (native.frame_vm (ws := [⟨a + 8 * i, a + 8 * i + 8⟩]) (by simp only [fieldLog, LogInW, InsideW, or_false, and_true]; exact ⟨Nat.le_refl _, Nat.le_refl _⟩) (by simp only [List.mem_singleton, forall_eq]; have := geometry.heapArena l a _ placed selected; simp only [Obj.wosize] at this; omega) space.payload.domain space.young.external post.memory post.nativeSp)
 
 end OCaml.Vm.Sim

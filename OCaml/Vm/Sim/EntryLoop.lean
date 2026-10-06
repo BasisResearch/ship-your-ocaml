@@ -48,6 +48,7 @@ theorem _root_.OCaml.Vm.Primitives.PayloadOutside.cover {log fp : List WEntry} {
   trapsp := outLRange_of_cover cover h.trapsp
   codeBase := outLRange_of_cover cover h.codeBase
   ooId := outLRange_of_cover cover h.ooId
+  openHead := outLRange_of_cover cover h.openHead
   atomBase := outLRange_of_cover cover h.atomBase
   globals := outLRange_of_cover cover h.globals
   code i w hi := outLRange_of_cover cover (h.code i w hi)
@@ -282,7 +283,9 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
         Layout.domainStateBytes, Vsa.Sim.DlHeap.heapStart, Vsa.Sim.DlHeap.heapEnd, and_true] at * <;> omega
   have geometry5 := geometry.transport (s' := P.init) (fun l o' ho => ⟨o', ho, rfl⟩) rfl dom5 prim5
     (by simp only [OCaml.Vm.runtimeFields, OCaml.Vm.domainWord, dom5]; rw [young _ (by simp)])
-    (by simp only [OCaml.Vm.runtimeFields, OCaml.Vm.domainWord, dom5]; rw [young _ (by simp)]) rfl
+    (by simp only [OCaml.Vm.runtimeFields, OCaml.Vm.domainWord, dom5]; rw [young _ (by simp)])
+    (same _ caller.outside.openHead)
+    (fun id ch a hc hp => same _ (links_of_channels caller.outside.channels id ch a hc hp)) rfl
   refine ⟨c5, ?_, ⟨running_of_payload payload primitives platform regs p.loop geometry5 native, p.tick⟩⟩
   cases n with
   | zero =>

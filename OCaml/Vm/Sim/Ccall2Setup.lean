@@ -141,7 +141,7 @@ theorem c_call2_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
       omega
     · simpa only [domainAddress] using space.externWindow.read
   · exact post.pcAt
-  · exact h.geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.young written
+  · exact h.geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.payload.channels space.payload.openHead space.young written
   · exact space.native h.native h.geometry.toArmGeometry h.stack domainWord written
       ((frame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide)))
   · vm_saved_tac

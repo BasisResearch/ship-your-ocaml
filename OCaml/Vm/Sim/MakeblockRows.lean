@@ -59,6 +59,9 @@ theorem AllocFrame.prefixed {L : OCaml.Layout} (af : AllocFrame L) {P : Prog} {s
     (domainOut : OutLRange pre Layout.sym_Caml_state 8)
     (contentsOut : OutLRange pre (Layout.sym_caml_prim_table + Layout.off_prim_contents) 8)
     (highOut : OutLRange pre ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high) 8)
+    (headOut : OutLRange pre Layout.sym_caml_all_opened_channels 8)
+    (chansOut : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      OutLRange pre a (chanOffBuff + ioBufferSize))
     (young : YoungOutside pre c) (g : Gc.NurseryGeometry P s c pl cp high)
     (inside : LogInW [Gc.nurseryFree c, stackWindow (domainWord c Layout.off_stack_high)] log) (low : (runtimeFields c).youngLimit ≤ a - 8)
     (below : a - 8 ≤ (runtimeFields c).youngPtr) (aligned : (a - 8) % 8 = 0) :
@@ -79,7 +82,7 @@ theorem AllocFrame.prefixed {L : OCaml.Layout} (af : AllocFrame L) {P : Prog} {s
   have high1 : domainWord c1 Layout.off_stack_high = domainWord c Layout.off_stack_high := by
     simp only [domainWord, dom1, keep _ highOut]
   have g1 := g.frame_log (s' := s) (c' := c1) (fun l o' h => ⟨o', h, rfl⟩) rfl domainOut contentsOut
-    young.limit young.ptr mem1
+    young.limit young.ptr headOut (links_of_channels chansOut) mem1
   have ok1 : L.runtimeOk c1 := stable c c1 (by rw [mem1]; exact frameOn_writeLog _ _ _ preIn) ok
   have r := af.allocW P s c1 pl cp high a log ok1 g1 (by rw [free1, high1]; exact inside) (by rw [lim1]; exact low)
     (by rw [ptr1]; exact below) aligned

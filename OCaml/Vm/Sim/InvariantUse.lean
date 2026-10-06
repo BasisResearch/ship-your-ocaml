@@ -47,7 +47,8 @@ theorem StackGeometry.payload {P s c pl cp sp high} {log : List WEntry}
     have hd := (OutWRange.narrow g.domain below).1
     exact ⟨by simp only [freeWindow] at hd ⊢; omega, trivial⟩
   refine ⟨static _ (by decide), domainField _ (by decide), domainField _ (by decide),
-    static _ (by decide), static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_, static _ (by decide)⟩
+    static _ (by decide), static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_, static _ (by decide),
+    static _ (by decide)⟩
   · exact fun i w hw => outLRange_of_windows inside (OutWRange.narrow (g.code i w hw) below)
   · intro i v _
     exact outLRange_of_windows inside ⟨Or.inr (by simp only [freeWindow]; omega), trivial⟩

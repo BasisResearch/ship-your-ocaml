@@ -770,12 +770,13 @@ theorem division_caught_log_ready {L : OCaml.Layout} {P : Prog} {s : St} {op : O
   -- the raise state's geometry at the dispatch post
   have gD : OCaml.LoopGeometry L P (divisionRaiseState s exn) d pl cp high :=
     h.geometry.transport (fun l o' got => ⟨o', got, rfl⟩) rfl (by rw [wd]) (by rw [wd])
-      (by simp only [runtimeFields, domainWord, wd]) (by simp only [runtimeFields, domainWord, wd]) rfl
+      (by simp only [runtimeFields, domainWord, wd]) (by simp only [runtimeFields, domainWord, wd])
+      (by rw [wd]) (fun _ _ _ _ _ => by rw [wd]) rfl
   have sgD := gD.toArmGeometry.toStackGeometry
   have dataD : VmPayload P (divisionRaiseState s exn) d pl cp (sp + 8) high :=
     (division_raise_payload_before (payload_of_repr h.toVmReprAt) sel (by omega)).frame_log (log := [])
       ⟨trivial, trivial, trivial, trivial, trivial, trivial, fun _ _ _ => trivial, fun _ _ _ => trivial,
-        fun _ _ _ _ _ _ => ⟨trivial, trivial⟩, fun _ _ _ _ _ => trivial, trivial⟩ dp.memory dp.frame.out
+        fun _ _ _ _ _ _ => ⟨trivial, trivial⟩, fun _ _ _ _ _ => trivial, trivial, trivial⟩ dp.memory dp.frame.out
   have stackD : (sp + 8) + 8 * (divisionRaiseState s exn).stack.length = high := by
     simp only [divisionRaiseState, List.length_drop]; omega
   have lowD : high - Layout.stackBytes ≤ sp + 8 := by omega

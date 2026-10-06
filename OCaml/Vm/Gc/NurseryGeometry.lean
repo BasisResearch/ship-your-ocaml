@@ -46,7 +46,8 @@ theorem WindowSeparated.payload {w : W} {P s c pl cp sp high} {log : List WEntry
       OutLRange log ((word c Layout.sym_Caml_state).toNat + off) 8 :=
     fun off hoff => outLRange_of_windows inside (outW_sub g.domain (by omega) (by omega))
   refine ⟨static _ (by decide), domainField _ (by decide), domainField _ (by decide),
-    static _ (by decide), static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_, static _ (by decide)⟩
+    static _ (by decide), static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_, static _ (by decide),
+    static _ (by decide)⟩
   · exact fun i v hv => outLRange_of_windows inside (g.code i v hv)
   · intro i v hv
     have bound : i < s.stack.length := (List.getElem?_eq_some_iff.1 hv).1

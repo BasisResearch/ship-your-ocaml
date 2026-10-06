@@ -96,6 +96,11 @@ theorem channel_copied {c c' : Config} {a : Nat} {ch : Chan}
       simpa only [Nat.add_assoc] using copied (chanOffBuff + i) (by omega)
   exact (Reloc.chanEqv a ch).transport id pl 0 0 c c' h img
 
+/-- The same from the record's full extent (the geometry's separation facts). -/
+theorem channel_copied_full {c c' : Config} {a : Nat} {ch : Chan} (h : ChanAt c a ch)
+    (copied : Reloc.Copied c c' a a (chanOffBuff + ioBufferSize)) : ChanAt c' a ch :=
+  channel_copied h fun j hj => copied j (by have := h.bufferLe; omega)
+
 structure ObjectOutside (log : List WEntry) (a : Nat) (o : Obj) : Prop where
   header : OutLRange log (a - 8) 8
   payload : OutLRange log a (8 * o.wosize)
@@ -116,7 +121,7 @@ structure PayloadObsOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
   heap : ∀ l a o, Live s.heap (roots P s) l → pl.φ l = some a → s.heap.get? l = some o →
     ObjectOutside log a o
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-    OutLRange log a (chanOffBuff + ch.buffer.length)
+    OutLRange log a (chanOffBuff + ioBufferSize)
 
 /-- `PayloadObsOutside` and the object-ID counter word. -/
 structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
@@ -132,8 +137,10 @@ structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
   heap : ∀ l a o, Live s.heap (roots P s) l → pl.φ l = some a → s.heap.get? l = some o →
     ObjectOutside log a o
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-    OutLRange log a (chanOffBuff + ch.buffer.length)
+    OutLRange log a (chanOffBuff + ioBufferSize)
   ooId : OutLRange log Layout.sym_oo_last_id 8
+  /-- the open-channel list head (`caml_all_opened_channels`, a `.bss` static) -/
+  openHead : OutLRange log Layout.sym_caml_all_opened_channels 8
 
 theorem PayloadOutside.obs {log : List WEntry} {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp : Nat} (h : PayloadOutside log P s c pl cp sp) : PayloadObsOutside log P s c pl cp sp :=
@@ -178,7 +185,7 @@ theorem VmPayload.frame_obs {P s c c' pl cp sp high log}
     · rw [outputEq]; exact h.world.output
     · intro id ch hc
       obtain ⟨a, ha, layout⟩ := h.world.chans id ch hc
-      exact ⟨a, ha, channel_copied layout (copy _ _ (outside.channels id ch a hc ha))⟩
+      exact ⟨a, ha, channel_copied_full layout (copy _ _ (outside.channels id ch a hc ha))⟩
     · exact counter
   · rw [hw _ outside.atomBase]
     exact h.atomBase

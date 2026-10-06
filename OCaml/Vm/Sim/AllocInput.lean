@@ -38,7 +38,7 @@ theorem _root_.OCaml.Vm.Primitives.PayloadOutside.append {l1 l2 : List WEntry} {
    fun l a o live placed object => objectOutside_append (h1.heap l a o live placed object)
      (h2.heap l a o live placed object),
    fun id ch a hch hcp => outLRange_append (h1.channels id ch a hch hcp) (h2.channels id ch a hch hcp),
-   outLRange_append h1.ooId h2.ooId⟩
+   outLRange_append h1.ooId h2.ooId, outLRange_append h1.openHead h2.openHead⟩
 
 theorem _root_.OCaml.Vm.Primitives.ImageOutside.append {l1 l2 : List WEntry}
     (h1 : ImageOutside l1) (h2 : ImageOutside l2) : ImageOutside (l1 ++ l2) :=
@@ -83,7 +83,7 @@ theorem StackGeometry.young_payload {P : Prog} {s : St} {c : Config} {pl : Place
         ((word c Layout.sym_Caml_state).toNat + off) 8 := fun off h =>
     grab_out (by omega)
   refine ⟨static _ (by decide), field _ (by decide), field _ (by decide), static _ (by decide),
-    static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_, static _ (by decide)⟩
+    static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_, static _ (by decide), static _ (by decide)⟩
   · intro i w hw
     obtain ⟨hc, -⟩ := g.domainCode
     have bound : i < P.code.size := (Array.getElem?_eq_some_iff.mp hw).1
