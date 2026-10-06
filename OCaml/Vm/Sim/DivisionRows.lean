@@ -215,10 +215,18 @@ structure DivisionException (P : Prog) (s : St) (pl : Place) (c : Config) (exn :
   fieldLow : Layout.sym_bss_end ≤ (raiseZeroField (word c Layout.sym_caml_global_data)).toNat
   fieldBelow : (raiseZeroField (word c Layout.sym_caml_global_data)).toNat + 8 ≤ Vsa.Sim.DlHeap.heapEnd
 
+/-- The exception field lies apart from the VM stack allocation and the
+`Caml_state` record (it is a field of a placed block). -/
+structure DivisionFieldApart (c : Config) (high : Nat) : Prop where
+  stack : OutWRange [stackWindow high] (raiseZeroField (word c Layout.sym_caml_global_data)).toNat 8
+  domain : OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
+    (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩]
+    (raiseZeroField (word c Layout.sym_caml_global_data)).toNat 8
+
 theorem DivisionException.of_field {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp high : Nat} {exn : Val} (h : VmReprAt P s c pl cp sp high) (g : StackGeometry P s c pl cp high)
+    {sp high : Nat} {exn : Val} (h : VmReprAt P s c pl cp sp high) (g : ArmGeometry P s c pl cp high)
     (field : field? s.heap P.globals 5 = some exn) :
-    ∃ value, DivisionException P s pl c exn value := by
+    ∃ value, DivisionException P s pl c exn value ∧ DivisionFieldApart c high := by
   obtain ⟨l, a, k, sel⟩ := field_selection h (by simp [roots]) field
   have fv := sel.read h (by simp [roots])
   have rd := g.field_read sel
@@ -230,7 +238,10 @@ theorem DivisionException.of_field {P : Prog} {s : St} {c : Config} {pl : Place}
   have fieldAddr : raiseZeroField (word c Layout.sym_caml_global_data) = BitVec.ofNat 64 (a + 8 * (k + 5)) := by
     rw [global, raiseZeroField, Layout.raiseZeroExceptionOffset, ofNat_add_ofNat']
     congr 1
-  have bounds : Layout.sym_bss_end + 8 ≤ a ∧ a + 8 * (k + 5) + 8 ≤ Vsa.Sim.DlHeap.heapEnd := by
+  have bounds : Layout.sym_bss_end + 8 ≤ a ∧ a + 8 * (k + 5) + 8 ≤ Vsa.Sim.DlHeap.heapEnd ∧
+      OutWRange [stackWindow high] (a + 8 * (k + 5)) 8 ∧
+      OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
+        (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] (a + 8 * (k + 5)) 8 := by
     have found := sel.selected
     rw [sel.pointer] at found
     simp only [field?] at found
@@ -238,11 +249,16 @@ theorem DivisionException.of_field {P : Prog} {s : St} {c : Config} {pl : Place}
     · rename_i t fs got
       have idx := (List.getElem?_eq_some_iff.mp found).1
       have arena := g.heapArena l a _ sel.placed got
-      exact ⟨g.heapLow l a _ sel.placed got, by simp only [Obj.wosize] at arena; omega⟩
+      have st := g.heap l a _ sel.placed got
+      have dm := g.nursery.heapDomain l a _ sel.placed got
+      simp only [Obj.wosize, OutWRange, and_true] at arena st dm
+      refine ⟨g.heapLow l a _ sel.placed got, by omega, ?_, ?_⟩ <;> simp only [OutWRange, and_true] <;> omega
     · cases found
   have addrN : (raiseZeroField (word c Layout.sym_caml_global_data)).toNat = a + 8 * (k + 5) := by
     rw [fieldAddr, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by have := rd.upper; omega)]
-  refine ⟨word c (a + 8 * (k + 5)), fv.word, ⟨rfl, ?_, ?_⟩, ?_, by rw [addrN]; omega, by rw [addrN]; omega⟩
+  obtain ⟨blow, bhigh, bstack, bdomain⟩ := bounds
+  refine ⟨word c (a + 8 * (k + 5)), ⟨fv.word, ⟨rfl, ?_, ?_⟩, ?_, by rw [addrN]; omega, by rw [addrN]; omega⟩,
+    ⟨by rw [addrN]; exact bstack, by rw [addrN]; exact bdomain⟩⟩
   · rw [fieldAddr]; exact rd.window
   · rw [fieldAddr, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by have := rd.upper; omega)]
   · rw [global]
@@ -478,6 +494,83 @@ theorem raise_zero_memory {P : Prog} {s : St} {c : Config} {pl : Place} {cp : Ch
   · intro r hr
     have o := offs r hr
     simp only [raiseZeroLog, OutLRange, raN, and_true, raiseBuffer, raiseBufOffset]
+    omega
+
+/-- **The zero path's native input** at the post-dispatch configuration: the
+setup input, the native stack pointer, the runtime memory (transported over
+dispatch, which writes no memory), and the setup log apart from everything
+the rest of the path reads. -/
+theorem division_zero_native_input {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
+    {c d : Config} {pl : Place} {cp : ChanPlace} {sp high : Nat} {rest : List Val} {env : BitVec 64}
+    {exn : Val} {value : BitVec 64} {D : InvocationData}
+    (h : ArmInput L P s op c pl cp sp high) (stack : s.stack = .int 0#63 :: rest)
+    (envReg : gpr c Layout.reg_env = some env)
+    (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
+    (dp : DispatchPost c op (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d)
+    (v : NativeValid D) (inv : Invocation D c)
+    (ex : DivisionException P s pl c exn value) (apart : DivisionFieldApart c high)
+    (rr : RaiseRuntimeReady c D value) :
+    DivisionZeroNativeInput (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) (BitVec.ofNat 64 sp) env
+      (word c Layout.sym_Caml_state) (BitVec.ofNat 64 D.nativeSp) (word c Layout.sym_caml_global_data)
+      value (raiseBuffer D) (raiseSaved D c) d := by
+  have g := h.geometry.toArmGeometry
+  have hs := h.stack.1
+  have hst := g.statics
+  have har := g.arena
+  have hdl := g.domainLow
+  have hda := g.domainArena
+  have hdom := g.domain
+  simp only [stackWindow, OutWRange, and_true] at hdom
+  have nonempty : 0 < s.stack.length := by simp [stack]
+  have low := stack_space h.stack (by omega : 8 * s.stack.length ≤ Layout.stackBytes)
+  have spN : (BitVec.ofNat 64 sp).toNat = sp := Nat.mod_eq_of_lt (by
+    have := g.top; simp only [Layout.stackBytes] at *; omega)
+  have envN : (divisionZeroEnvSp (BitVec.ofNat 64 sp)).toNat = sp - 8 := by
+    simp only [divisionZeroEnvSp, BitVec.toNat_sub, BitVec.toNat_ofNat]
+    have := g.top; simp only [Layout.stackBytes] at *; omega
+  have extN : (divisionZeroExtern (word c Layout.sym_Caml_state)).toNat =
+      (word c Layout.sym_Caml_state).toNat + Layout.off_extern_sp := by
+    rw [divisionZeroExtern]; exact domain_field_nat g (by decide)
+  have ext := domain_field_nat g (off := Layout.off_external_raise) (by decide)
+  have fa := apart.stack
+  have fd := apart.domain
+  simp only [stackWindow, OutWRange, and_true] at fa fd
+  have fl := ex.fieldLow
+  have hh := v.headroom
+  have offs : ∀ r ∈ Layout.jumpSavedRegs, Layout.jumpSaveOffset r ≤ 104 := by decide
+  have statics : Layout.sym_caml_global_data + 8 ≤ Layout.sym_bss_end ∧
+      Layout.sym_caml_channel_mutex_unlock_exn + 8 ≤ Layout.sym_bss_end ∧
+      Layout.sym_Caml_state + 8 ≤ Layout.sym_bss_end ∧
+      Layout.sym_caml_something_to_do + 4 ≤ Layout.sym_bss_end ∧
+      Layout.sym_bss_end ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+  obtain ⟨sg, sm, sc, sp4, sb⟩ := statics
+  have memory : d.σ.mem = writeLog c.σ.mem [] := dp.memory
+  refine ⟨division_zero_setup_input h stack envReg space dp,
+    (dp.frame.frame Register.x2 (by decide)).trans inv.stack,
+    (raise_zero_memory v inv g ex rr).frame memory (fun _ _ => trivial) trivial (fun _ _ => trivial),
+    ?_, ?_, ?_⟩
+  · intro a ha
+    simp only [raiseZeroMemoryWords, raiseMemoryWords, List.cons_append, List.nil_append,
+      List.mem_cons, List.not_mem_nil, or_false] at ha
+    simp only [divisionZeroSetupLog, divisionZeroStackLog, List.cons_append, List.nil_append,
+      OutLRange, spN, envN, extN, and_true]
+    simp only [Layout.stackBytes, Layout.domainStateBytes] at hst low space hdom fd fa hda
+    rcases ha with rfl | rfl | rfl | rfl | rfl
+    · simp only [Layout.off_extern_sp]; omega
+    · simp only [Layout.off_extern_sp]; omega
+    · simp only [Layout.off_extern_sp]; omega
+    · simp only [Layout.off_extern_sp]; omega
+    · rw [raiseExternal, ext]; simp only [Layout.off_external_raise, Layout.off_extern_sp]; omega
+  · simp only [divisionZeroSetupLog, divisionZeroStackLog, List.cons_append, List.nil_append,
+      OutLRange, spN, envN, extN, and_true]
+    simp only [Layout.stackBytes, Layout.domainStateBytes, Layout.off_extern_sp, Layout.sym_bss_end,
+      Layout.sym_caml_something_to_do] at hst low hda hdl sp4 ⊢
+    omega
+  · intro r hr
+    have o := offs r hr
+    simp only [divisionZeroSetupLog, divisionZeroStackLog, List.cons_append, List.nil_append,
+      OutLRange, spN, envN, extN, and_true, raiseBuffer, raiseBufOffset]
+    simp only [nativeHeadroom, Layout.domainStateBytes, Layout.off_extern_sp] at hh hda ⊢
     omega
 
 end OCaml.Vm.Sim
