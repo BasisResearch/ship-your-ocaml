@@ -89,6 +89,7 @@ python3 scripts/syi/gen_fn.py --ocaml-string-wrapper --check || fail "stage a5: 
 python3 scripts/syi/gen_fn.py --ocaml-exit --check || fail "stage a5: F1 process-exit path drift"
 python3 scripts/syi/gen_fn.py --ocaml-write --check || fail "stage a5: console write path drift"
 python3 scripts/syi/gen_fn.py --ocaml-allocation --check || fail "stage a5: F1 allocation certificate drift"
+python3 scripts/syi/gen_fn.py --ocaml-format --check || fail "stage a5: format_int path drift"
 python3 scripts/gen_layout.py | cmp -s - OCaml/Vm/Layout.lean || fail "stage a5: Layout.lean differs from gen_layout.py"
 python3 scripts/gen_boot_observation.py results/boot/while_min-cut.json | cmp -s - OCaml/Vm/Boot/WhileMinObservation.lean || fail "stage a5: boot observation differs from generator"
 python3 scripts/gen_boot_log.py --check || fail "stage a5: boot log certificate drift"

@@ -16,7 +16,9 @@ reloaded ra, the saved word. The spec of a block (`fast`) gives
 * `log`: the store log, a Lean list of `WEntry` over `R`;
 * `taken`: the routed outcome of a branch (its condition becomes the premise
   `ok : guardB op v1 v2 = taken` over the block's output registers);
-* `ra`: the load index of a reloaded return address.
+* `ra`: the load index of a reloaded return address;
+* `shiftAddr`: an address depends on an immediate shift of a loaded value
+  (the address simp set then unfolds the shift amounts).
 """
 import re
 
@@ -141,7 +143,10 @@ def emit_fast(E, b, name, regs, fast):
         return re.sub(r'@(\d+)', lambda g: f'(bytesVal .{loads[int(g.group(1))][2]} ({read(int(g.group(1)), mem)}))', addr)
 
     def read(k, mem):
-        addr, mode, _ = loads[k]
+        addr, mode, kind = loads[k]
+        if kind == 'lbu':
+            assert mode != 'view', f'{name}: lbu view loads are not supported'
+            return f'[({mem}[({sub(addr, mem)}).toNat]?).getD 0]'
         return f'read8 {view(mem) if mode == "view" else mem} ({sub(addr, mem)}).toNat'
 
     if stores:
@@ -193,7 +198,7 @@ def emit_fast(E, b, name, regs, fast):
             windows.append(f'  have {w} : {typ} ({addr}) {a[2]} := {proof}')
         else:
             params.append(f'({w} : {typ} ({addr}) {a[2]})')
-        addr_simp = f'      simp [{SIMP_ADDR}, {name}_input]'
+        addr_simp = f'      simp [{SIMP_ADDR}, {name}_input' + (', shamtOf, Sail.BitVec.extractLsb, Sail.shift_bits_right, Sail.shift_bits_left' if fast.get('shiftAddr') else '') + ']'
         if a[1] == 'ld' and mode == 'view':
             bullets += [f'    · apply {w}.ld rfl', '      · ' + addr_simp.strip(),
                         f'      · apply ArgvTuple.lpins8_of_view (m\' := {view(m)[1:-1]})',
@@ -213,7 +218,7 @@ def emit_fast(E, b, name, regs, fast):
             continue
         assert mode != 'view', f'{name}: view loads must be ld or lw'
         head = {'ld': f'apply {w}.ld rfl ?_ (read8_pins _ _)',
-                'lbu': f'apply {w}.lbu rfl ?_ (read8_pins _ _)',
+                'lbu': f'apply {w}.lbu rfl ?_ rfl',
                 'lw': f'apply ExitPath.ReadWindow.lw {w} rfl ?_ (ExitPath.read8_pins4 _ _)',
                 'sd': f'apply {w}.sd rfl',
                 'sb': f'apply {w}.sb rfl',
