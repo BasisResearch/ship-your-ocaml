@@ -28,6 +28,8 @@ import OCaml.Vm.Sim.OperandTableRows
 import OCaml.Vm.Sim.RaiseRows
 import OCaml.Vm.Sim.CcallRows
 import OCaml.Vm.Sim.CcallWriting
+import OCaml.Vm.Sim.FieldOperandRows
+import OCaml.Vm.Sim.BarrierRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -4785,3 +4787,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.NativePlaced.frame_outside
 #print axioms OCaml.Vm.Sim.Ccall1Saved.frame_outside
 #print axioms OCaml.Vm.Sim.ccall_writing_summary
+#print axioms OCaml.Vm.Sim.getfield_next
+#print axioms OCaml.Vm.Sim.pushenvacc_next
+#print axioms OCaml.Vm.Sim.getfield_row
+#print axioms OCaml.Vm.Sim.pushenvacc_row
+#print axioms OCaml.Vm.Sim.setglobal_row
+#print axioms OCaml.Vm.Sim.setfield_row
+#print axioms OCaml.Vm.Sim.setfield0_row
+#print axioms OCaml.Vm.Sim.setfield1_row
+#print axioms OCaml.Vm.Sim.setfield2_row
+#print axioms OCaml.Vm.Sim.setfield3_row

@@ -36,6 +36,8 @@ import OCaml.Vm.Sim.OperandTableRows
 import OCaml.Vm.Sim.RaiseRows
 import OCaml.Vm.Sim.CcallRows
 import OCaml.Vm.Sim.CcallWriting
+import OCaml.Vm.Sim.FieldOperandRows
+import OCaml.Vm.Sim.BarrierRows
 import OCaml.Run.Model
 import OCaml.Bytecode.Opcode
 import OCaml.Bytecode.Syntax
