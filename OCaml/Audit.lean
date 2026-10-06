@@ -4878,6 +4878,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ClosurerecPlan.reserve
 #print axioms OCaml.Vm.Sim.ClosurerecPlan.machine
 #print axioms OCaml.Vm.Sim.closurerec_row
+#print axioms OCaml.Vm.Sim.uncaught_unreachable
 #print axioms OCaml.Vm.Sim.MakeblockInitInput.of_block
 #print axioms OCaml.Vm.Sim.makeblock_row
 #print axioms OCaml.Vm.Sim.division_dispatch_entry

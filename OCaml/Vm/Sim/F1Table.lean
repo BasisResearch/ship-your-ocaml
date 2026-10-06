@@ -49,7 +49,6 @@ structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   setfield_barrier : (keep .SETFIELD) = true → FieldBarrier Gc.f1Layout P
   values : (keep .BRANCHIF || keep .BRANCHIFNOT || keep .EQ || keep .NEQ) = true → ValuesInRange P
   trapBounded : (keep .PUSHTRAP) = true → ∀ s, Reach P s → s.trap ≤ s.stack.length
-  raises : (keep .RAISE || keep .RERAISE || keep .RAISE_NOTRACE) = true → RaisesCaught P
   c_call1_returns : (keep .C_CALL1) = true → CcallReturns Gc.f1Layout P .C_CALL1 (0x80003060#64) 0
   c_call1_effects : (keep .C_CALL1) = true → CcallEffects Gc.f1Layout P .C_CALL1 0
   c_call2_returns : (keep .C_CALL2) = true → CcallReturns Gc.f1Layout P .C_CALL2 (0x80003004#64) 1
@@ -251,7 +250,7 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .POPTRAP, _ => if h : keep .POPTRAP = true then poptrap_row f1_runtimeFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .RAISE, _ => if h : keep .RAISE = true then raise_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.extra (by simp [h])) (pre.raises (by simp [h]))
+    | .RAISE, _ => if h : keep .RAISE = true then raise_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.extra (by simp [h])) good
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .CHECK_SIGNALS, _ => if h : keep .CHECK_SIGNALS = true then check_signals_row f1_memoryStable f1_runtimeFrame
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
@@ -354,9 +353,9 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
     | .STOP, _ => stop_row_f1 good
     | .EVENT, h => absurd h (by decide)
     | .BREAK, h => absurd h (by decide)
-    | .RERAISE, _ => if h : keep .RERAISE = true then reraise_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.extra (by simp [h])) (pre.raises (by simp [h]))
+    | .RERAISE, _ => if h : keep .RERAISE = true then reraise_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.extra (by simp [h])) good
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .RAISE_NOTRACE, _ => if h : keep .RAISE_NOTRACE = true then raise_notrace_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.extra (by simp [h])) (pre.raises (by simp [h]))
+    | .RAISE_NOTRACE, _ => if h : keep .RAISE_NOTRACE = true then raise_notrace_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.extra (by simp [h])) good
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .GETSTRINGCHAR, h => absurd h (by decide)
 

@@ -62,8 +62,9 @@ the `StackGeometry` plus a6-gc's `NurseryGeometry` of the same witness.
 * hand: RAISE, RERAISE, RAISE_NOTRACE, caught path (`RaiseRows`). Every
   quiet-raise premise comes from the loop head: `RuntimeFrame.barrier`/
   `backtrace` (a6-gc's pins), `NativeValid.rootSaved` (bprime) and
-  `ExtraBounded.trapSaved` (a2-sem). Uncaught raises leave the interpreter, so
-  the rows take the named `RaisesCaught P`.
+  `ExtraBounded.trapSaved` (a2-sem). An uncaught raise steps to the callback
+  boundary at `pc = code.size`, which `GoodF1` makes unreachable
+  (`uncaught_unreachable`): the rows take `GoodF1`, not a per-program premise.
 * hand: C_CALL1–5 (`CcallRows`, generic `ccall_row_of`). `CcallReady` comes
   from the loop head: the generated `lookup` is word-aligned by construction,
   and the slots come from `StackGeometry.primsRam`. Named obligations remain:

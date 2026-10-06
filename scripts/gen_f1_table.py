@@ -27,7 +27,6 @@ WHILEMIN_KNOWN = {
     'extra': 'OCaml.Programs.whileMin_extraBounded',
     'values': 'OCaml.Programs.whileMin_valuesInRange',
     'trapBounded': 'OCaml.Programs.whileMin_trapBounded.bounded',
-    'raises': 'OCaml.Programs.whileMin_raisesCaught',
     'ints': 'OCaml.Programs.whileMin_branchInts',
     'divint_zero': 'DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inl rfl)',
     'modint_zero': 'DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inr rfl)',
@@ -57,8 +56,7 @@ FIXED = {
     'good': 'good',
 }
 # Program-level parameters shared by several rows: one premise field each.
-SHARED = {'values': 'values', 'ints': 'ints', 'extra': 'extra', 'extraBounded': 'extra',
-          'raises': 'raises', 'exotic': 'exotic', 'trapBounded': 'trapBounded',
+SHARED = {'values': 'values', 'ints': 'ints', 'extra': 'extra', 'extraBounded': 'extra', 'exotic': 'exotic', 'trapBounded': 'trapBounded',
           'scratch': 'scratch', 'field': 'field'}
 SUBST = [(r'\bL\b', 'Gc.f1Layout'), (r'\bB\b', 'Gc.g1Budget'),
          (r'\bhigh0\b', 'Gc.f1High'), (r'\bdom0\b', 'Gc.f1Domain')]

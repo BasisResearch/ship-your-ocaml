@@ -18,8 +18,9 @@ Every premise of the quiet caught-raise arms comes from the loop head:
 * the saved extra count from `ExtraBounded.trapSaved`;
 * the trap-pointer store from `TrapWriteOk.of_geometry`.
 
-An uncaught raise leaves the interpreter (no loop head follows), so the rows
-take the named premise `RaisesCaught P`.
+An uncaught raise steps to the callback boundary at the end of the code;
+`GoodF1` excludes that state (`uncaught_unreachable`), so every F1 raise is
+caught.
 -/
 
 namespace OCaml.Vm.Sim
@@ -29,10 +30,30 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 /-- The raising opcodes. -/
 def raiseOps : List Opcode := [.RAISE, .RERAISE, .RAISE_NOTRACE]
 
-/-- **Every reachable raise is caught** (named per-program obligation: an
-uncaught exception ends the program outside the interpreter loop). -/
+/-- **Every reachable raise is caught.** The rows no longer take it: under
+`GoodF1` an uncaught raise is unreachable (`uncaught_unreachable`). -/
 structure RaisesCaught (P : Prog) : Prop where
   caught : ∀ s op, Reach P s → op ∈ raiseOps → DispatchCode P s op → s.trap ≠ 0
+
+/-- An uncaught raise steps to the callback boundary at the end of the code. -/
+theorem raiseTo_uncaught_pc {P : Prog} {s s' : St} {v : Val} (trap : s.trap = 0)
+    (step : raiseTo P s v = .next s') : s'.pc = P.code.size := by
+  unfold raiseTo at step
+  simp only [trap, ite_true, Res.next.injEq] at step
+  rw [← step]
+
+/-- Nothing decodes at the end of the code. -/
+theorem decodeAt_size (c : Code) : decodeAt c c.size = none := by
+  simp [decodeAt, Code.word]
+
+/-- **Every F1 raise is caught**: an uncaught raise reaches the callback
+boundary at the end of the code, which `GoodF1` excludes (every reachable
+state decodes to an F1 instruction). -/
+theorem uncaught_unreachable {P : Prog} {s s' : St} {v : Val} (good : OCaml.GoodF1 P)
+    (reach' : Reach P s') (trap : s.trap = 0) (step : raiseTo P s v = .next s') : False := by
+  obtain ⟨i, hi, -⟩ := good.inF1 s' reach'
+  rw [raiseTo_uncaught_pc trap step, decodeAt_size] at hi
+  cases hi
 
 /-- A continuing caught raise selects a complete trap frame. -/
 theorem RaiseFrame.of_step {P : Prog} {s s' : St} (step : raiseTo P s s.accu = .next s')
@@ -134,7 +155,7 @@ theorem raiseTo_not_halt {P : Prog} {s : St} {v : Val} {e : Nat} {w : World} :
 /-- The three raise rows share one adapter. -/
 theorem raise_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opcode}
     (member : op ∈ raiseOps) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (extraBounded : ExtraBounded P) (raises : RaisesCaught P)
+    (extraBounded : ExtraBounded P) (good : OCaml.GoodF1 P)
     (semantics : ∀ s, stepI P s ⟨op, []⟩ = raiseTo P s s.accu)
     (shape : ∀ s args, args ≠ [] → stepI P s ⟨op, args⟩ = .unsupported)
     (next : ∀ s s' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s op →
@@ -143,10 +164,11 @@ theorem raise_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opco
         s.stack.drop n = .code dest :: .int link :: env :: .int ex :: rest → 0 ≤ ex.toInt) →
       s.trap ≠ 0 → raiseTo P s s.accu = .next s' → ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c') :
     OCaml.OpArm P (OCaml.LoopAt L P) op :=
-  opArm_of_next0 (fun s s' c reach _ h code step =>
+  opArm_of_next0 (fun s s' c reach reach' h code step =>
       next s s' c reach h code (by simpa using stack_fits fits capacity reach (k := 0))
         (fun n dest link env ex rest drop => extraBounded.trapSaved s n dest link env ex rest reach drop)
-        (raises.caught s op reach member code) (by rw [← semantics]; exact step))
+        (fun trap => uncaught_unreachable good reach' trap (by rw [← semantics]; exact step))
+        (by rw [← semantics]; exact step))
     (fun s args ne => Or.inr (shape s args ne))
     (fun s e w step => raiseTo_not_halt (by rw [← semantics]; exact step))
 
@@ -154,9 +176,9 @@ theorem raise_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opco
 theorem raise_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (extraBounded : ExtraBounded P) (raises : RaisesCaught P) :
+    (extraBounded : ExtraBounded P) (good : OCaml.GoodF1 P) :
     OCaml.OpArm P (OCaml.LoopAt L P) .RAISE :=
-  raise_row_of (by simp [raiseOps]) fits capacity extraBounded raises (fun _ => rfl)
+  raise_row_of (by simp [raiseOps]) fits capacity extraBounded good (fun _ => rfl)
     (fun s args ne => by cases args with | nil => exact absurd rfl ne | cons => rfl)
     (fun _ _ _ _ h code space trapSaved caught step =>
       raise_family_next stable rf
@@ -169,9 +191,9 @@ theorem raise_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 :
 theorem reraise_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (extraBounded : ExtraBounded P) (raises : RaisesCaught P) :
+    (extraBounded : ExtraBounded P) (good : OCaml.GoodF1 P) :
     OCaml.OpArm P (OCaml.LoopAt L P) .RERAISE :=
-  raise_row_of (by simp [raiseOps]) fits capacity extraBounded raises (fun _ => rfl)
+  raise_row_of (by simp [raiseOps]) fits capacity extraBounded good (fun _ => rfl)
     (fun s args ne => by cases args with | nil => exact absurd rfl ne | cons => rfl)
     (fun _ _ _ _ h code space trapSaved caught step =>
       raise_family_next stable rf
@@ -184,9 +206,9 @@ theorem reraise_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
 theorem raise_notrace_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (extraBounded : ExtraBounded P) (raises : RaisesCaught P) :
+    (extraBounded : ExtraBounded P) (good : OCaml.GoodF1 P) :
     OCaml.OpArm P (OCaml.LoopAt L P) .RAISE_NOTRACE :=
-  raise_row_of (by simp [raiseOps]) fits capacity extraBounded raises (fun _ => rfl)
+  raise_row_of (by simp [raiseOps]) fits capacity extraBounded good (fun _ => rfl)
     (fun s args ne => by cases args with | nil => exact absurd rfl ne | cons => rfl)
     (fun _ _ _ _ h code space trapSaved caught step =>
       raise_family_next stable rf

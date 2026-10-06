@@ -30,7 +30,6 @@ theorem whileMin_premises (o : WhileMinOpen) :
   setfield_barrier h := absurd h (by decide)
   values _ := OCaml.Programs.whileMin_valuesInRange
   trapBounded _ := OCaml.Programs.whileMin_trapBounded.bounded
-  raises _ := OCaml.Programs.whileMin_raisesCaught
   c_call1_returns _ := o.c_call1_returns
   c_call1_effects _ := CcallEffects.of_ok OCaml.Programs.whileMin_ccall1Ok
   c_call2_returns _ := o.c_call2_returns
