@@ -29,6 +29,8 @@ structure ResetSearchExeReturned (initial after : Config) where
   kept : KeptImage after
   run : Steps (Vsa.Densify.fillZero initial) after
   aligned : copy.toNat % 16 = 0
+  /-- caml_attempt_open's frame is kept since its saves. -/
+  caller : CallerFrame attemptStack path.table.atSaved after
 
 theorem reset_search_exe_returned_exists : ∃ initial after, Nonempty (ResetSearchExeReturned initial after) := by
   obtain ⟨initial, atD, ⟨w⟩⟩ := reset_path_missed_exists
@@ -210,12 +212,25 @@ theorem reset_search_exe_returned_exists : ∃ initial after, Nonempty (ResetSea
     exact (returned.toEffectPost.gpr_frame (by decide) n range.1 range.2 unwritten).trans
       ((tableFreed.saved_gpr (k := n) (by simp at member ⊢; omega)).trans
         (toE n v range.1 range.2 (by simp at member ⊢; omega) hv))
+  have callerA : CallerFrame attemptStack w.table.atSaved atRet := by
+    constructor
+    intro a bound
+    have above : searchStack.toNat + 48 ≤ a := by
+      have : searchStack.toNat + 48 = attemptStack.toNat := by decide
+      omega
+    rw [sameRet, tableFreed.byte (by constructor <;> decide) (by decide) (Nat.le_refl _) bounds.1 bounds.2
+        (Or.inl (by omega)),
+      callerE.byte _ (by omega),
+      w.table.returned.above (by constructor <;> decide) (by omega) (by unfold Layout.ext_table_bytes; omega),
+      w.table.search.memory, frameOn_writeLog _ _ _ (searchExeLog_inside searchFrame) a ⟨Or.inr bound, trivial⟩,
+      w.table.name.memory]
+    rfl
   refine ⟨initial, atRet, ⟨atD, w, found.copy, gholds_lookup (n := 10) _ returned.regs (by rfl), returned.pc,
     gholds_lookup (n := 2) _ returned.regs (by rfl), gholds_lookup (n := 8) _ returned.regs (by rfl),
     gholds_lookup (n := 9) _ returned.regs (by rfl), toR 18 (by decide) _ found.saved2,
     toR 19 (by decide) _ found.saved3, readyRet, found.fresh, ?_, ?_,
     w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans
-      (run8.trans run9)))))))), found.aligned⟩⟩
+      (run8.trans run9)))))))), found.aligned, callerA⟩⟩
   · intro k hk
     have inside : InExt (found.copy.toNat, 8 + 1) (found.copy.toNat + k) := ⟨by omega, by omega⟩
     rw [sameRet, tableFreed.live_byte frameFree (Nat.le_refl _) (List.mem_cons_self ..) inside

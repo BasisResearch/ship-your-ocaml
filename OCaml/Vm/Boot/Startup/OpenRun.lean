@@ -49,6 +49,7 @@ structure OpenOcamlrun (H : List (Nat × Nat)) (capacity : Nat) (sp ra path : Bi
   embed : EmbedImage after
   slot : FsSlotOne after.σ.mem node
   name : OcamlrunName after.σ.mem path
+  caller : CallerFrame sp before after
 
 theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra path a2 a3 a4 a5 a6 a7 s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 : BitVec 64)
@@ -404,5 +405,13 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
         simp only [OutW, errnoWindows, and_true, heapStart] at *; omega))
     name := R.name.transport fun k hk => mem12 _ (by
       have := (ready.heap.block_bounds (q := blk.1) (n := blk.2) blkH).1
-      simp only [OutW, errnoWindows, and_true, heapStart] at *; omega) }⟩⟩
+      simp only [OutW, errnoWindows, and_true, heapStart] at *; omega)
+    caller := ⟨fun x bound => by
+      have outE : OutW errnoWindows x := by
+        simp only [OutW, errnoWindows, and_true]
+        unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at deep; omega
+      rw [mem12 x outE, R.above x (by rw [sp2Nat]; omega)]
+      exact mem6 x (Or.inr bound) (Or.inr (by
+          unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at deep; omega))
+        (Or.inr (by unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at deep; omega))⟩ }⟩⟩
 end OCaml.Vm.Boot.Startup

@@ -39,6 +39,8 @@ structure ResetOpenCall (initial after : Config) where
     (after.σ.mem[search.copy.toNat + k]?).getD 0 = BitVec.ofNat 8 (byteVal WhileMinImage.argv0Chars k)
   kept : KeptImage after
   run : Steps (Vsa.Densify.fillZero initial) after
+  /-- caml_attempt_open's frame is kept since its saves. -/
+  caller : CallerFrame attemptStack search.path.table.atSaved after
 
 theorem reset_open_call_exists : ∃ initial after, Nonempty (ResetOpenCall initial after) := by
   obtain ⟨initial, atS, ⟨w⟩⟩ := reset_search_exe_returned_exists
@@ -114,7 +116,7 @@ theorem reset_open_call_exists : ∃ initial after, Nonempty (ResetOpenCall init
   refine ⟨initial, atCall, ⟨atS, w, ocall.pc, gholds_lookup (n := 1) _ ocall.regs (by rfl),
     gholds_lookup (n := 10) _ ocall.regs (by rfl), gholds_lookup (n := 11) _ ocall.regs (by rfl),
     gholds_lookup (n := 2) _ ocall.regs (by rfl), gholds_lookup (n := 18) _ ocall.regs (by rfl), readyCall, ?_, ?_,
-    w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans run7))))))⟩⟩
+    w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans run7)))))), ?_⟩⟩
   · intro k hk
     have inside : InExt (w.copy.toNat, 9) (w.copy.toNat + k) := ⟨by omega, by omega⟩
     have apart : ¬ InExt (D.copy.toNat, 8 + 1) (w.copy.toNat + k) := fun copy2 =>
@@ -135,4 +137,10 @@ theorem reset_open_call_exists : ∃ initial after, Nonempty (ResetOpenCall init
       ((EmbedFrame.stack gc.memory (gcMessageLog_inside frameGc) (by decide)).trans
         ((EmbedFrame.of_memory fcall.memory).trans ((freed.embed_frame frameA (by decide) D.fresh.1 D.fresh.2).trans
           (EmbedFrame.of_memory ocall.memory)))))
+  · refine w.caller.trans ⟨fun a bound => ?_⟩
+    rw [show atCall.σ.mem = atOpen.σ.mem from ocall.memory,
+      freed.byte frameA (by decide) D.fresh.1 D.fresh.2 (Or.inl bound),
+      show atStat.σ.mem = atFree.σ.mem from fcall.memory, gc.memory,
+      frameOn_writeLog _ _ _ (gcMessageLog_inside frameGc) _ ⟨Or.inr bound, trivial⟩,
+      show atGc.σ.mem = atMsg.σ.mem from mcall.memory, D.kept a (Or.inl bound), sameDup]
 end OCaml.Vm.Boot.WhileMinElfParse
