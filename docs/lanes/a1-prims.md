@@ -32,6 +32,10 @@
   (each load misses only the stores before it). Used for the flush path; the earlier
   hand wrappers (FdWrite/Console/ExitPath `Effects.lean`) are to be migrated, after
   which a discipline rule should forbid hand `registers_of_blocks` wrappers.
+* Rules (foreman, 2026-10-06): no new `decide +kernel` over the whileMin run (extend
+  `St.shapeOk`); no per-program premises in the headline. Primitive premises are
+  native-layout/runtime facts at the call site; the flush adapter's "channel fd is an OS
+  output stream" premise belongs to the running-platform invariant.
 * Lean notes: `omega` hits max recursion on `s - 112 - 272` with disjunctions (normalize
   with `Nat.sub_sub`), and evaluates `def` constants like `errnoGlobal.toNat` in
   hypotheses (rewrite them to numerals first).
