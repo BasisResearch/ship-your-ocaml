@@ -125,7 +125,8 @@ theorem entry_native {c : Config} {sp : Nat} {regs : Nat → BitVec 64} {a0 : Bi
   -- loop registers
   obtain ⟨n5, c5, s5, p5⟩ := loop_setup ⟨p4.good, p4.image, p4.tick, p4.pc,
     p4.htif.trans (p3.htif.trans (p2.htif.trans (p1.htif.trans h.htifIdle))),
-    (p4.gprs (p3.gprs (p2.gprs (p1.gprs h.gprs)))).saved⟩
+    (p4.gprs (p3.gprs (p2.gprs (p1.gprs h.gprs)))).saved,
+    p4.gp.trans (p3.gp.trans (p2.gp.trans (p1.gp.trans h.gp)))⟩
   have keep : ∀ n ∈ [8, 9, 18, 21, 25, 2], gprGet c5.σ n = gprGet c4.σ n :=
     p5.frame.gpr_list (by decide +kernel)
   have depth1 : entryDepth c1 = entryDepth c := by

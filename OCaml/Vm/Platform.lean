@@ -3,6 +3,7 @@ import OCaml.Vm.ImageData
 import Vsa.Sim.Code.FixedImage
 import Vsa.Sim.GoodState
 import OCaml.Vm.Boot.Startup.GprPresence
+import Vsa.Sim.LibraryLayout
 
 /-!
 # Platform and fixed loop registers
@@ -67,6 +68,8 @@ structure LoopRegisters (c : Config) : Prop where
   /-- the unpinned callee-saved registers hold values (C paths spill them:
   caml_sys_exit's and the console primitives' prologues) -/
   saved : ∀ n ∈ unpinnedSaved, (gpr c n).isSome
+  /-- the global pointer the C runtime was linked with (no arm or C path writes `gp`) -/
+  gp : gpr c 3 = some Vsa.Sim.LibraryLayout.gpV
 
 /-- Full GPR presence gives the unpinned callee-saved registers. -/
 theorem _root_.OCaml.Vm.Boot.Startup.GprPresent.saved {c : Config}

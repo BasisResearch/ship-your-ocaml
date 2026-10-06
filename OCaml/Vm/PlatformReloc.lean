@@ -58,13 +58,14 @@ def loopRegistersEqv : Eqv :=
   Eqv.and (fixedGprEqv Layout.reg_opcodeBound (BitVec.ofNat 64 Layout.opcodeBound)) <|
   Eqv.and (fixedGprEqv Layout.reg_pending (BitVec.ofNat 64 Layout.sym_caml_something_to_do)) <|
   Eqv.and (fixedGprEqv Layout.reg_domain (BitVec.ofNat 64 Layout.sym_Caml_state)) <|
-  Eqv.and htifIdleEqv savedEqv
+  Eqv.and htifIdleEqv <|
+  Eqv.and savedEqv (fixedGprEqv 3 Vsa.Sim.LibraryLayout.gpV)
 
 /-- Named interface to the product assertion. -/
 theorem loopRegisters_iff (pl : Place) (c : Config) :
     LoopRegisters c ↔ loopRegistersEqv.P pl 0 c :=
-  ⟨fun h => ⟨h.dispatchTable, h.opcodeBound, h.pending, h.domain, h.htifIdle, h.saved⟩,
-    fun ⟨table, bound, pending, domain, idle, saved⟩ => ⟨table, bound, pending, domain, idle, saved⟩⟩
+  ⟨fun h => ⟨h.dispatchTable, h.opcodeBound, h.pending, h.domain, h.htifIdle, h.saved, h.gp⟩,
+    fun ⟨table, bound, pending, domain, idle, saved, gp⟩ => ⟨table, bound, pending, domain, idle, saved, gp⟩⟩
 
 /-- Relocation of heap pointers does not change these fixed-address registers. -/
 theorem loopRegisters_reloc {c c' : Config} (μ : Nat → Nat) (pl : Place)

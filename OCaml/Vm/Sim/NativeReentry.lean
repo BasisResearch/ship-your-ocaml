@@ -57,6 +57,6 @@ theorem native_reentry {entry : BitVec 64} {log : List WEntry} {saved : Nat → 
       (isSome_of_pin (native.registers 27 (by decide))) }
   obtain ⟨count, after, run, post⟩ := reentry_quiet input
   exact ⟨after, nativeRun.trans run.toSteps, post.toReentryControl.before_read native.memory native.frame.out
-    (native.frame.frame _ (by decide))⟩
+    (native.frame.frame _ (by decide)) (native.frame.frame (gprReg 3) (by decide))⟩
 
 end OCaml.Vm.Sim

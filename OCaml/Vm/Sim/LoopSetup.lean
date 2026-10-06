@@ -30,7 +30,8 @@ theorem loop_setup {c : Config} (h : LoopSetupInput c) :
   exact ⟨n, after, run, post.good,
     image_of_writeLog (log := []) h.image ⟨trivial, trivial⟩ memory,
     post.tick, post.pcAt, ⟨table, bound, pending, domain, (frame.frame _ (by decide)).trans h.htifIdle,
-      loopSetup_saved (frame.widenChecked (allowed := loopSetupWrites) (by decide)) h.saved⟩, memory,
+      loopSetup_saved (frame.widenChecked (allowed := loopSetupWrites) (by decide)) h.saved,
+      ((frame.widenChecked (allowed := loopSetupWrites) (by decide)).frame (gprReg 3) (by decide)).trans h.gp⟩, memory,
     frame.widenChecked (allowed := loopSetupWrites) (by decide)⟩
 
 end OCaml.Vm.Sim

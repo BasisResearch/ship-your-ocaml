@@ -24,6 +24,8 @@ structure CaughtLogReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp
   young : YoungOutside log c
   /-- the HTIF device is idle when the runtime raises -/
   htifIdle : c.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some 0#4
+  /-- the C runtime's global pointer at the raise -/
+  gp : gpr c 3 = some Vsa.Sim.LibraryLayout.gpV
   rootsPayloadOutside : PayloadOutside (reentryLog nativeSp c) P s c pl cp sp
   rootsBindingsOutside : BindingsOutside (reentryLog nativeSp c) P c
   savedOutside : ∀ offset ∈ [0, 8, Layout.interpSavedRootsOffset], OutLRange log (nativeSp + offset) 8
@@ -72,7 +74,8 @@ theorem caught_log_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {
       geometry := h.stackGeometry.frame_log rfl rfl h.payloadOutside.domain
         h.bindingsOutside.contents h.payloadOutside.channels h.payloadOutside.openHead h.young rfl
       native := h.nativeHeld.frame h.payloadOutside.domain h.invocationOutside h.young.external rfl
-      htifIdle := h.htifIdle }
+      htifIdle := h.htifIdle
+      gp := h.gp }
     toCaughtReentryGeometry := h.geometry.frame_observations domain contents savedHigh savedSp roots }
   rw [domain, native_memory_last_word h.bucketLog]
   exact h.exceptionValue

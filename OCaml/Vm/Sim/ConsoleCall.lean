@@ -180,7 +180,8 @@ theorem ChanAt.words {c : Config} {chB : BitVec 64} {chn : Chan} (repr : ChanAt 
 HTIF device idle. -/
 theorem LoopRegisters.of_restored {c e : Config} (loop : LoopRegisters c)
     (regs : ∀ n ∈ [19, 20, 21, 22, 23, 24, 25, 26, 27], gpr e n = gpr c n)
-    (idle : e.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some 0#4) : LoopRegisters e where
+    (idle : e.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some 0#4)
+    (gp : gpr e 3 = gpr c 3) : LoopRegisters e where
   dispatchTable := (regs _ (by decide)).trans loop.dispatchTable
   opcodeBound := (regs _ (by decide)).trans loop.opcodeBound
   pending := (regs _ (by decide)).trans loop.pending
@@ -189,6 +190,7 @@ theorem LoopRegisters.of_restored {c e : Config} (loop : LoopRegisters c)
   saved n hn := by
     have sub : ∀ n ∈ unpinnedSaved, n ∈ [19, 20, 21, 22, 23, 24, 25, 26, 27] := by decide
     rw [regs n (sub n hn)]; exact loop.saved n hn
+  gp := gp.trans loop.gp
 
 /-- A signed 64-bit add of a small count that does not overflow. -/
 theorem toInt_add_small (x : BitVec 64) (n : Nat) (hn : n < 2 ^ 62) (h : x.toInt + n < 2 ^ 63) :
@@ -261,7 +263,7 @@ theorem framed_of_ret {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : 
       chan record valid.headroom high' e
       (frameOnD_of_consoleLog (by simp only [Vsa.Sim.DlHeap.heapEnd] at hr; omega) memory)⟩,
     LoopRegisters.of_restored setup.input.loop (fun n hn => ret.saved n (by
-      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn ⊢; omega)) ret.idle,
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn ⊢; omega)) ret.idle ret.gprs.gp,
     rfl, sem, ret.gprs⟩
   · intro r hr
     simp only [callSavedRegs, List.mem_cons, List.mem_nil_iff, or_false] at hr

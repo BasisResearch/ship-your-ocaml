@@ -32,7 +32,7 @@ abbrev RegisterPost (writes : List Nat) (before : Config) (ra value : BitVec 64)
 /-- A finite write-set check protects the interpreter's dedicated registers. -/
 def PreservesLoopRegisters (writes : List Nat) : Prop :=
   ∀ r ∈ [Layout.reg_dispatchTable, Layout.reg_opcodeBound, Layout.reg_pending, Layout.reg_domain,
-      26, 27],
+      26, 27, 3],
     ∀ n ∈ writes, gprReg n ≠ gprReg r
 
 /-- No GPR is the HTIF payload counter. -/
@@ -47,7 +47,7 @@ theorem gprReg_ne_htif (n : Nat) : gprReg n ≠ Register.htif_payload_writes := 
 theorem EffectPost.loop {writes expectedMem before ra value after}
     (post : EffectPost writes expectedMem before ra value after)
     (frame : PreservesLoopRegisters writes) (loop : LoopRegisters before) : LoopRegisters after := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, (post.frame (gprReg 3) (frame 3 (by simp)) (by decide)).trans loop.gp⟩
   · exact (post.frame (gprReg Layout.reg_dispatchTable) (frame Layout.reg_dispatchTable (by simp)) (by decide)).trans loop.dispatchTable
   · exact (post.frame (gprReg Layout.reg_opcodeBound) (frame Layout.reg_opcodeBound (by simp)) (by decide)).trans loop.opcodeBound
   · exact (post.frame (gprReg Layout.reg_pending) (frame Layout.reg_pending (by simp)) (by decide)).trans loop.pending

@@ -39,6 +39,7 @@ import OCaml.Vm.Sim.MakeblockRows
 import OCaml.Vm.Sim.GrabAllocRows
 import OCaml.Vm.Sim.ClosureAllocRows
 import OCaml.Vm.Sim.ClosurerecAllocRows
+import OCaml.Vm.Sim.LibraryEntry
 import OCaml.Vm.Sim.MakeblockNRows
 import OCaml.Vm.Sim.AllocInput
 import OCaml.Vm.Sim.PlacePut
@@ -5229,6 +5230,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.LoopGeometry.transport_ids
 #print axioms OCaml.Vm.Sim.VmWindow.channel
 #print axioms OCaml.Vm.Sim.links_of_channels
+#print axioms OCaml.Vm.Sim.CcallSetupPost.libraryReady
 #print axioms OCaml.Vm.Sim.loopSetup_saved
 #print axioms OCaml.Vm.Boot.Startup.GprPresent.saved
 #print axioms OCaml.Vm.Sim.MakeblockInitInput.of_block

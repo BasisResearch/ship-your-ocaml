@@ -19,6 +19,8 @@ structure LoopSetupInput (c : Config) : Prop where
   htifIdle : c.σ.regs.get? Register.htif_payload_writes = some 0#4
   /-- the unpinned callee-saved registers hold values -/
   saved : ∀ n ∈ unpinnedSaved, (gpr c n).isSome
+  /-- the C runtime's global pointer -/
+  gp : gpr c 3 = some Vsa.Sim.LibraryLayout.gpV
 
 /-- The exact read-only frame and initialized dispatch registers at loop entry. -/
 structure LoopSetupPost (before after : Config) : Prop where

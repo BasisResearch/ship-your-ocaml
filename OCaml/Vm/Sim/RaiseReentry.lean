@@ -27,6 +27,8 @@ structure RaiseReentryReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) 
   native : NativeHeld nativeSp c
   /-- the HTIF device is idle -/
   htifIdle : c.σ.regs.get? Register.htif_payload_writes = some 0#4
+  /-- the C runtime's global pointer at the raise -/
+  gp : gpr c 3 = some Vsa.Sim.LibraryLayout.gpV
 
 /-- The native re-entry observations restore the represented common exception-check input. -/
 theorem raise_reentry_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
@@ -77,7 +79,8 @@ theorem raise_reentry_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place
             exact external_field (by decide)))
         post.memory post.nativeStack
       htifIdle := post.htif.trans h.htifIdle
-      saved := post.saved }
+      saved := post.saved
+      gp := post.gpEq.trans h.gp }
     pc := post.pc
     trapReg := post.trap.trans (congrArg some trap)
     domainReg := ?_ }

@@ -74,7 +74,7 @@ theorem reentry_quiet {{nativeSp : Nat}} {{result : BitVec 64}} {{c : Config}}
   refine ⟨count, after, run, ⟨post.good, image_of_writeLog h.image h.imageOutside writes,
     post.tick, post.pcAt, ?_, ?_, ?_, ?_, (frame.frame Register.x2 (by decide)).trans h.stack, writes, frame.out,
     frame.frame Register.htif_payload_writes (by decide),
-    saved_keep (saved_eq_of_frame frame (by decide)) h.saved⟩,
+    saved_keep (saved_eq_of_frame frame (by decide)) h.saved, frame.frame Register.x3 (by decide)⟩,
     frame.widenChecked (by decide)⟩
   · exact PinsHold.get post.pins ⟨{pins['x15']}, by simp⟩
   · exact PinsHold.get post.pins ⟨{pins['x14']}, by simp⟩

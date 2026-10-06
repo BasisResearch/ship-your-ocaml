@@ -9,7 +9,7 @@ open OCaml.Vm.Primitives
 /-- The fixed loop registers and the HTIF counter, pinned to values. -/
 def loopFixed : List Register :=
   [gprReg Layout.reg_dispatchTable, gprReg Layout.reg_opcodeBound,
-   gprReg Layout.reg_pending, gprReg Layout.reg_domain, Register.htif_payload_writes]
+   gprReg Layout.reg_pending, gprReg Layout.reg_domain, Register.htif_payload_writes, gprReg 3]
 
 /-- The unpinned callee-saved registers, as machine registers. -/
 def savedRegs : List Register := [gprReg 26, gprReg 27]
@@ -64,7 +64,8 @@ theorem loopRegisters_of {before after : Config}
    (frame _ (by decide)).trans loop.opcodeBound,
    (frame _ (by decide)).trans loop.pending,
    (frame _ (by decide)).trans loop.domain,
-   (frame _ (by decide)).trans loop.htifIdle, saved⟩
+   (frame _ (by decide)).trans loop.htifIdle, saved,
+   (frame (gprReg 3) (by decide)).trans loop.gp⟩
 
 /-- Reconstruct all loop registers from one finite frame check. -/
 theorem loopRegisters_frame {before after : Config}

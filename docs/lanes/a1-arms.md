@@ -155,6 +155,14 @@ take the certificate's `channels`/`openHead`, which give a6-gc's
 `channelsListed` its list head and record links (`links_of_channels`);
 `frame_vm` derives both from its VM windows (`VmWindow.channel`/`openHead`).
 
+Done: `LoopRegisters.gp` (x3 = newlib's `gpV`). Every arm frames it,
+entry takes it from `InterpCaller.gp`, and the raise paths carry it
+(`RaiseContext.gp`, `ReentryControl.gpEq`, `CaughtLogReady.gp`).
+`CcallSetupPost.libraryReady (setup) (gprs)` gives `LibraryReady` at a C_CALL
+entry. GPR presence is still an argument; next is the sweep making it a loop
+field (C_CALL returns rebuild it from a1-prims' `GprsKept`, arms via
+`GprsKept.of_segment`).
+
 Row premises for generic `L`:
 * `MemoryStable L.runtimeOk` and `RuntimeFrame L high dom`; both discharged
   for a6-gc's pinned `Gc.f1Layout` (`f1_memoryStable`, `f1_runtimeFrame`,
