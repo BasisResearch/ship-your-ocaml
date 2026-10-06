@@ -42,10 +42,8 @@ structure StopExitReady (before : Config) (nativeSp : Nat) (vmSp : BitVec 64) : 
     OutLRange (stopLog nativeSp vmSp before) g.toNat 8
   /-- caml_do_exit's native stack window below caml_main's caller frame -/
   layout : ExitLayout doExitDepth (BitVec.ofNat 64 (nativeSp + Layout.interpFrameBytes + Layout.camlMainFrameBytes))
-  /-- the platform facts at caml_do_exit's entry -/
-  platform : ∀ after, StopExitCallPost before nativeSp vmSp after →
-    (∀ n, 1 ≤ n → n ≤ 31 → (gprGet after.σ n).isSome) ∧
-      after.σ.regs.get? Register.htif_payload_writes = some (0#4)
+  /-- HTIF is idle at STOP (`LoopRegisters`); the path to caml_do_exit preserves it -/
+  htifIdle : before.σ.regs.get? Register.htif_payload_writes = some (0#4)
 
 /-- **STOP's exit obligation**, from caml_do_exit's machine run. -/
 theorem stop_do_exit_summary {before : Config} {nativeSp : Nat} {vmSp : BitVec 64}
@@ -53,7 +51,7 @@ theorem stop_do_exit_summary {before : Config} {nativeSp : Nat} {vmSp : BitVec 6
     StopDoExitSummary before nativeSp vmSp (output before.σ) := by
   constructor
   intro after post
-  obtain ⟨present, idle⟩ := ready.platform after post
+  have idle := post.htif.trans ready.htifIdle
   have same (g : BitVec 64) (hg : g ∈ [verbGc, cleanupOnExit, atexitList, stdioExitHandler]) :
       Primitives.read8 after.σ.mem g.toNat = Primitives.read8 before.σ.mem g.toNat := by
     rw [post.memory]; exact read8_writeLog_out _ (ready.globalsOutside g hg)
@@ -66,8 +64,15 @@ theorem stop_do_exit_summary {before : Config} {nativeSp : Nat} {vmSp : BitVec 6
     { good := post.good, image := post.image, minstret := post.good.minstret,
       raReg := post.returnAddress, aligned := by decide, tick := post.tick,
       ok := ⟨post.good, post.tick, idle, fun n hn => by
-        have : 1 ≤ n ∧ n ≤ 31 := by simp [exitReads] at hn; omega
-        exact present n this.1 this.2⟩,
+        simp only [exitReads, List.mem_cons, List.mem_nil_iff, or_false] at hn
+        rcases hn with rfl | rfl | hn
+        · have r := post.returnAddress; change gprGet _ _ = _ at r; rw [r]; rfl
+        · have r := post.stack; change gprGet _ _ = _ at r; rw [r]; rfl
+        rcases hn with rfl | rfl | rfl | hn
+        · exact post.present 8 (by decide)
+        · exact post.present 9 (by decide)
+        · have r := post.status; change gprGet _ _ = _ at r; rw [r]; rfl
+        exact post.present n (by simp only [List.mem_cons, List.mem_nil_iff, or_false]; omega)⟩,
       stack := post.stack, arg := post.status, layout := ready.layout, globals := globals }
   have halts := do_exit_halts input post.pc
   rw [exitStatus_zero] at halts
