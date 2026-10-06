@@ -2,6 +2,9 @@ import OCaml.Vm.Boot.Startup.LibOpenEntryNormalized
 import OCaml.Vm.Boot.Startup.LibOpenEntryImage
 import OCaml.Vm.Boot.Startup.LibOpenEntryCallInterface
 import OCaml.Vm.Boot.Startup.ResolveRun
+import OCaml.Vm.Boot.Startup.OpenREntryNormalized
+import OCaml.Vm.Boot.Startup.OpenREntryImage
+import OCaml.Vm.Boot.Startup.OpenREntryCallInterface
 import OCaml.Vm.Boot.Startup.RuntimeErrno
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
@@ -14,6 +17,25 @@ open Sail in
 /-- `auipc a0; ld a0,868(a0)` at 0x80042594: `_impure_ptr`. -/
 theorem open_impure_auipc : 2147755412#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 140567#32 +++ 0#12) +
     Functions.sign_extend (m := 64) 868#12 = BitVec.ofNat 64 allocatorImpureAddr := by decide
+
+/-- A block followed by its direct call, keeping only a selected register
+list across the call (the block may read and save `ra`). -/
+theorem block_then_call_select {entry : BitVec 64} {writes : List Nat} {log : List WEntry} {value : BitVec 64}
+    {regs : GRegs} {a : CallInstr} (c : Config) (shape : CallShape a) (decode : CallDecode a)
+    (pins : ∀ d : Config, ExecutableImage d → CallPins a d)
+    (front : FnSummary entry (fun d => d = c) (WriteRegistersPost writes log c a.pc value regs))
+    (kept : GRegs) (select : ∀ n v, (n, v) ∈ kept → lookupG n regs = some v)
+    (keys : KeysOK (keysG kept)) (avoid : KeysAvoidRa kept) (result : lookupG 10 kept = some value) :
+    FnSummary entry (fun d => d = c)
+      (WriteRegistersPost (writes ++ [1]) log c a.target value ((1, a.link) :: kept)) := by
+  constructor
+  intro before ⟨pc, eq⟩
+  subst before
+  obtain ⟨request, run1, setup⟩ := front.run c ⟨pc, rfl⟩
+  obtain ⟨after, run2, called⟩ := (call_registers_summary shape decode request (pins _ setup.image) setup.good
+    setup.image setup.tick setup.minstret kept (gholds_select setup.regs kept select) keys avoid result).run request
+    ⟨setup.pc, rfl⟩
+  exact ⟨after, run1.trans run2, prefix_call_post setup called⟩
 
 def libOpenSlots (sp ra a2 a3 a4 a5 a6 a7 : BitVec 64) : List (Nat × BitVec 64) :=
   [(32, a2), (40, a3), (24, ra), (48, a4), (56, a5), (64, a6), (72, a7), (8, nativeStack sp 80 + 32#64)]
@@ -75,6 +97,65 @@ theorem lib_open_entry (c : Config) (sp ra path flags a2 a3 a4 a5 a6 a7 : BitVec
       List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, libOpenInput, imm20Of,
       show Functions.sign_extend (m := 64) 4016#12 = -BitVec.ofNat 64 80 by decide, show Functions.sign_extend (m := 64) 32#12 = 32#64 by decide,
       show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero, libOpened, getenvReent, read8_value]
+    rfl
+  · rfl
+  · decide
+
+open Sail in
+/-- `auipc a5; sw zero,1412(a5)` at 0x8004d7c4: the global `errno`. -/
+theorem open_r_errno_auipc : 2147801028#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 96151#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 1412#12 = BitVec.ofNat 64 0x80064d48 := by decide
+
+open Sail in
+theorem open_r_a5_auipc : 2147801028#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 96151#32 +++ 0#12) =
+    0x800647c4#64 := by decide
+
+def openRLog (sp ra s0 : BitVec 64) : List WEntry := nativeWordLog sp 16 [(0, s0), (8, ra)] ++ [(0x80064d48, 4, 0#64)]
+def openRInput (sp ra s0 reent path flags mode : BitVec 64) : GRegs :=
+  [(2, sp), (1, ra), (8, s0), (10, reent), (11, path), (12, flags), (13, mode)]
+
+/-- `_open_r`: save, clear the global `errno`, call `_open(path, flags, mode)`. -/
+theorem open_r_entry (c : Config) (sp ra s0 reent path flags mode : BitVec 64) (leaf : LeafInput ra c)
+    (frame : NativeFrame sp 16) (regs : GHolds c.σ (openRInput sp ra s0 reent path flags mode)) :
+    FnSummary 0x8004d7a4#64 (fun e => e = c) (WriteRegistersPost [15, 10, 12, 8, 11, 2] (openRLog sp ra s0) c 0x8004d7cc#64 path
+      [(15, 0x800647c4#64), (10, path), (12, mode), (8, reent), (11, flags), (2, nativeStack sp 16), (1, ra),
+        (13, mode)]) := by
+  apply registers_of_blocks leaf.image (imageOutside_append (frame.image_outside (frame.word_log_inside
+      fun off value member => by simp at member; omega)) (by constructor <;> simp only [OutLRange] <;> decide))
+    (block_summary _ _ _ _ _ (show BlockInput open_rXd7a4Seg 0x8004d7a4#64 (openRInput sp ra s0 reent path flags mode)
+        [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 1, 8, 10, 11, 12, 13]; decide
+      shape := by change ChainOK _ [2, 1, 8, 10, 11, 12, 13] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := openREntry_code leaf.image
+        have slot (off : Nat) (bound : off + 8 ≤ 16) (aligned : off % 8 = 0) :
+            WriteWindow (nativeStack sp 16 + BitVec.ofNat 64 off) 8 := by
+          rw [nativeStack, frame.address _ (by omega)]
+          exact frame.word bound aligned
+        chain_facts code with "Vsa.Sim.Code._open_r_at_"
+        · exact (slot 0 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 8 (by decide) (by decide)).sd rfl rfl
+        · exact (show WriteWindow (BitVec.ofNat 64 0x80064d48) 4 by constructor <;> decide).sw rfl
+            (by simp only [openrentry_line_8004d7a4, openrentry_line_8004d7a8, openrentry_line_8004d7ac, openrentry_line_8004d7b0, openrentry_line_8004d7b4, openrentry_line_8004d7b8, openrentry_line_8004d7bc, openrentry_line_8004d7c0, openrentry_line_8004d7c4, openrentry_line_8004d7c8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some,
+                  ite_true, ite_false, imm20Of, Nat.reduceEqDiff]
+                exact open_r_errno_auipc) }))
+  · simp only [open_rXd7a4Seg, evalBlocks, evalBlock, SegEvalState.init, openrentry_line_8004d7a4, openrentry_line_8004d7a8, openrentry_line_8004d7ac, openrentry_line_8004d7b0, openrentry_line_8004d7b4, openrentry_line_8004d7b8, openrentry_line_8004d7bc, openrentry_line_8004d7c0, openrentry_line_8004d7c4, openrentry_line_8004d7c8, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, openRInput, imm20Of, openRLog,
+      nativeWordLog, List.map, List.nil_append, List.cons_append, open_r_errno_auipc,
+      show Functions.sign_extend (m := 64) 4080#12 = -BitVec.ofNat 64 16 by decide,
+      show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, show Functions.sign_extend (m := 64) 8#12 = 8#64 by decide]
+    rfl
+  · rfl
+  · simp only [open_rXd7a4Seg, evalBlocks, evalBlock, SegEvalState.init, openrentry_line_8004d7a4, openrentry_line_8004d7a8, openrentry_line_8004d7ac, openrentry_line_8004d7b0, openrentry_line_8004d7b4, openrentry_line_8004d7b8, openrentry_line_8004d7bc, openrentry_line_8004d7c0, openrentry_line_8004d7c4, openrentry_line_8004d7c8, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, openRInput, imm20Of,
+      show Functions.sign_extend (m := 64) 4080#12 = -BitVec.ofNat 64 16 by decide,
+      show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero, open_r_a5_auipc]
     rfl
   · rfl
   · decide
