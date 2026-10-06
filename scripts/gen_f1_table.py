@@ -31,6 +31,8 @@ WHILEMIN_KNOWN = {
     'ints': 'OCaml.Programs.whileMin_branchInts',
     'divint_zero': 'DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inl rfl)',
     'modint_zero': 'DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inr rfl)',
+    'closure_sizes': 'OCaml.Programs.whileMin_closureSizes',
+    'makeblock_sizes': 'OCaml.Programs.whileMin_blockSizes',
 }
 
 NON_F1 = set('MAKEFLOATBLOCK GETFLOATFIELD SETFLOATFIELD VECTLENGTH GETVECTITEM SETVECTITEM '

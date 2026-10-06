@@ -3,6 +3,8 @@ import OCaml.Bytecode.PtrOffsets
 import OCaml.Bytecode.ExtraBound
 import OCaml.Bytecode.TrapBound
 import OCaml.Vm.Sim.RaiseRows
+import OCaml.Vm.Sim.ClosureAllocRows
+import OCaml.Vm.Sim.MakeblockNRows
 import OCaml.RefinementF1
 import OCaml.Programs.Validation
 
@@ -46,10 +48,27 @@ def St.decodedOk (P : Prog) (ops : List Opcode) (s : St) : Bool :=
   | some i => decide (OCaml.InF1 P i) && OCaml.stopOrdinary i s.accu && ops.contains i.op
   | none => false
 
+/-- The per-state operand check: at opcode `op`, the operand word after it
+is at most `bound` (closure capture counts, block sizes). -/
+def St.operandOk (P : Prog) (op : Opcode) (bound : Nat) (s : St) : Bool :=
+  if s.atOp P op then
+    match P.code[s.pc + 1]? with
+    | some w => decide (w.toInt.toNat ≤ bound)
+    | none => true
+  else true
+
+theorem St.operandOk_bound {P : Prog} {op : Opcode} {bound : Nat} {s : St} {w : BitVec 32}
+    (ok : St.operandOk P op bound s = true) (code : DispatchCode P s op)
+    (fetch : P.code[s.pc + 1]? = some w) : w.toInt.toNat ≤ bound := by
+  have at_ : s.atOp P op := code.fetch
+  simp only [St.operandOk, if_pos at_, fetch, decide_eq_true_eq] at ok
+  exact ok
+
 /-- All F1 shape checks at one state. -/
 def St.shapeOk (P : Prog) (ops : List Opcode) (s : St) : Bool :=
   s.valuesInRange P.code.size && s.extraOk && s.trapOk && s.branchIntsOk P && St.raisesOk P s &&
-    St.decodedOk P ops s && s.divisorsOk P
+    St.decodedOk P ops s && s.divisorsOk P && St.operandOk P .CLOSURE 254 s &&
+    St.operandOk P .MAKEBLOCK 256 s
 
 /-- The F1 shape checks of one state, by name. -/
 structure ShapeFacts (P : Prog) (ops : List Opcode) (s : St) : Prop where
@@ -60,12 +79,14 @@ structure ShapeFacts (P : Prog) (ops : List Opcode) (s : St) : Prop where
   raises : St.raisesOk P s = true
   decoded : St.decodedOk P ops s = true
   divisors : s.divisorsOk P = true
+  closures : St.operandOk P .CLOSURE 254 s = true
+  blocks : St.operandOk P .MAKEBLOCK 256 s = true
 
 theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {s : St} (h : St.shapeOk P ops s = true) :
     ShapeFacts P ops s := by
   simp only [St.shapeOk, Bool.and_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩, divisors⟩ := h
-  exact ⟨values, extra, trap, branches, raises, decoded, divisors⟩
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩, divisors⟩, closures⟩, blocks⟩ := h
+  exact ⟨values, extra, trap, branches, raises, decoded, divisors, closures, blocks⟩
 
 /-- The decode check, by name. -/
 theorem ShapeFacts.decode {P : Prog} {ops : List Opcode} {s : St} (h : ShapeFacts P ops s) :
@@ -138,5 +159,13 @@ theorem whileMin_ops : ∀ s i, Reach whileMin s → decodeAt whileMin.code s.pc
 /-- **`whileMin` never divides by zero.** -/
 theorem whileMin_divisorsNonzero : DivisorsNonzero whileMin :=
   .of_check fun _ reach => (whileMin_shapeOk reach).divisors
+
+/-- **`whileMin`'s closures fit the minor heap.** -/
+theorem whileMin_closureSizes : ClosureSizes whileMin :=
+  ⟨fun _ _ reach code fetch => St.operandOk_bound (whileMin_shapeOk reach).closures code fetch⟩
+
+/-- **`whileMin`'s blocks fit the minor heap.** -/
+theorem whileMin_blockSizes : BlockSizes whileMin :=
+  ⟨fun _ _ reach code fetch => St.operandOk_bound (whileMin_shapeOk reach).blocks code fetch⟩
 
 end OCaml.Programs

@@ -4872,3 +4872,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.NativeValid.scratch_write
 #print axioms OCaml.Vm.Sim.DivisionException.of_field
 #print axioms OCaml.Vm.Sim.raise_zero_setup_memory
+#print axioms OCaml.Programs.whileMin_closureSizes
+#print axioms OCaml.Programs.whileMin_blockSizes
