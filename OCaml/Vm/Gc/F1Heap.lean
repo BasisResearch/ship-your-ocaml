@@ -94,6 +94,7 @@ structure RefStorage (H : List (Nat × Nat)) (chs : List Nat) (b e p l : Nat) : 
   low : b ≤ p
   ptrLimit : p ≤ l
   limitEnd : l ≤ e
+  sized : b < e
   covered : Covered H (b, e - b)
   apartBlocks : ∀ x ∈ f1Covered, e ≤ x.1 ∨ x.1 + x.2 ≤ b
   apartRecords : ∀ a ∈ chs, e ≤ a ∨ a + chanRecordBytes ≤ b
@@ -324,5 +325,115 @@ theorem LibHeapAt.keep_records {H : List (Nat × Nat)} {cap : Nat} {chs : List N
     rcases safe w hw with s | r
     · exact s.misses_table hy
     · exact r.misses_table h ha hy
+
+end OCaml.Vm.Gc
+
+namespace OCaml.Vm.Gc
+set_option autoImplicit false
+open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap OCaml.Vm.Boot.Startup VsaIris.VsaHeap
+
+/-- A range inside a live block of `H` misses a fresh block disjoint from `H`. -/
+theorem fresh_apart_covered {H : List (Nat × Nat)} {p r : Nat}
+    (fresh : ∀ e ∈ H, ∀ y, VsaIris.InExt (p, r) y → ¬ VsaIris.InExt e y) {x : Nat × Nat} (cov : Covered H x)
+    (pos : 0 < x.2) {n : Nat} (npos : 0 < n) (small : n ≤ r) : p + n ≤ x.1 ∨ x.1 + x.2 ≤ p := by
+  obtain ⟨e, he, lo, hi⟩ := cov
+  rcases Nat.lt_or_ge x.1 (p + n) with l | l
+  · rcases Nat.lt_or_ge p (x.1 + x.2) with g | g
+    · exfalso
+      rcases Nat.le_total p x.1 with o | o
+      · have i1 : VsaIris.InExt (p, r) x.1 := ⟨o, by dsimp only; omega⟩
+        have i2 : VsaIris.InExt e x.1 := ⟨lo, by omega⟩
+        exact fresh e he x.1 i1 i2
+      · have i1 : VsaIris.InExt (p, r) p := ⟨Nat.le_refl _, by dsimp only; omega⟩
+        have i2 : VsaIris.InExt e p := ⟨by omega, by omega⟩
+        exact fresh e he p i1 i2
+    · exact Or.inr g
+  · exact Or.inl l
+
+theorem covered_pos : ∀ x ∈ f1Covered, 0 < x.2 := by decide
+
+theorem record_pos : 0 < chanRecordBytes := by decide
+
+theorem Covered.mono {H : List (Nat × Nat)} {x : Nat × Nat} (h : Covered H x) (e : Nat × Nat) :
+    Covered (e :: H) x := by
+  obtain ⟨f, hf, lo, hi⟩ := h
+  exact ⟨f, List.mem_cons_of_mem _ hf, lo, hi⟩
+
+/-- **Opening a channel keeps the F1 heap invariant** (`caml_ml_open_descriptor_*`):
+the record `a` is a fresh malloc block of at least `chanRecordBytes`, linked at
+the list head; newlib's charge fits one record's reservation; the remembered
+set's words and the open records' links are unchanged. -/
+theorem LibHeapAt.link {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : List Nat} {c c' : Config}
+    (h : LibHeapAt H cap chs c) {a req : Nat}
+    (bound : chs.length < maxChannels)
+    (ready : HeapReady ((a, req) :: H) cap' c') (spend : cap = cap' + charge) (charged : charge ≤ recordCharge)
+    (big : chanRecordBytes ≤ req)
+    (fresh : ∀ e ∈ H, ∀ y, VsaIris.InExt (a, req) y → ¬ VsaIris.InExt e y)
+    (linked : OpenChannelsLinked c.σ.mem c'.σ.mem a)
+    (keepTable : ∀ y, InTableWords y → (c'.σ.mem[y]?).getD 0 = (c.σ.mem[y]?).getD 0)
+    (keepLinks : ∀ b ∈ chs, bytesT c'.σ.mem (b + chanOffNext) 8 = bytesT c.σ.mem (b + chanOffNext) 8) :
+    LibHeapAt ((a, req) :: H) cap' (a :: chs) c' where
+  room := by
+    rw [structWord_keep keepTable (by decide)]
+    have r := h.room
+    have key : ∀ X n : Nat, n < maxChannels → X + recordCharge * (maxChannels - n) ≤ cap' + charge →
+        X + recordCharge * (maxChannels - (n + 1)) ≤ cap' := by
+      intro X n hn hr
+      simp only [maxChannels, recordCharge] at *
+      omega
+    simp only [reserved, List.length_cons] at r ⊢
+    rw [spend] at r
+    exact key _ _ bound r
+  channelsBound := by simp only [List.length_cons]; omega
+  ready := ready
+  extents := fun x hx => (h.extents x hx).mono _
+  channels := by
+    unfold OpenChannelList
+    rw [linked.head, BitVec.toNat_ofNat]
+    have aSmall : a < 2 ^ 64 := by
+      have := ready.block_bounds List.mem_cons_self
+      simp only [heapEnd] at this; omega
+    rw [Nat.mod_eq_of_lt aSmall]
+    refine .cons linked.nonzero ?_
+    rw [linked.next]
+    exact OpenChannels.congr h.channels keepLinks
+  records := by
+    intro b hb
+    rcases List.mem_cons.1 hb with rfl | hb
+    · exact ⟨(b, req), List.mem_cons_self, Nat.le_refl _, by dsimp only; omega⟩
+    · exact (h.records b hb).mono _
+  recordsApart := by
+    intro b hb x hx
+    rcases List.mem_cons.1 hb with rfl | hb
+    · exact fresh_apart_covered fresh (h.extents x hx) (covered_pos x hx) record_pos big
+    · exact h.recordsApart b hb x hx
+  recordsDisjoint := by
+    intro b hb d hd ne
+    rcases List.mem_cons.1 hb with eb | hb' <;> rcases List.mem_cons.1 hd with ed | hd'
+    · exact absurd (eb.trans ed.symm) ne
+    · subst eb
+      rcases fresh_apart_covered fresh (h.records d hd') record_pos record_pos big with o | o
+      · exact Or.inl o
+      · exact Or.inr o
+    · subst ed
+      rcases fresh_apart_covered fresh (h.records b hb') record_pos record_pos big with o | o
+      · exact Or.inr o
+      · exact Or.inl o
+    · exact h.recordsDisjoint b hb' d hd' ne
+  table := by
+    have t := h.table.congr keepTable
+    refine ⟨t.pointer, t.minorWsz, ?_⟩
+    rcases t.shape with u | st
+    · exact Or.inl u
+    · refine Or.inr { st with covered := st.covered.mono _, apartRecords := fun b hb => ?_ }
+      rcases List.mem_cons.1 hb with rfl | hb
+      · rcases fresh_apart_covered fresh st.covered (by have := st.sized; dsimp only; omega) record_pos big with o | o
+        · have := st.limitEnd; have := st.ptrLimit; have := st.low
+          dsimp only at o
+          exact Or.inr (by omega)
+        · dsimp only at o
+          exact Or.inl (by have := st.limitEnd; have := st.ptrLimit; have := st.low; omega)
+      · exact st.apartRecords b hb
+  tableIn := List.mem_cons_of_mem _ h.tableIn
 
 end OCaml.Vm.Gc
