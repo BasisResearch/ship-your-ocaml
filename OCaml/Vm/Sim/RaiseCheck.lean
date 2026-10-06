@@ -64,7 +64,7 @@ theorem raise_check {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : Ch
   refine {
     toRaiseContext := h.toRaiseContext.after_read stable post.good post.tick memory frame.out (frame.frame _ (by decide))
       (frame.frame (gprReg 2) (by decide)) (frame.frame Register.htif_payload_writes (by decide))
-      (frame.frame (gprReg 26) (by decide))
+      (saved_eq_of_frame frame (by decide))
     pc := post.pcAt
     trapReg := (frame.frame Register.x14 (by decide)).trans h.trapReg
     domainReg := ?_ }

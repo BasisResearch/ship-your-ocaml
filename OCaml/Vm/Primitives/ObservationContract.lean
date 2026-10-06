@@ -29,7 +29,7 @@ structure LibraryPrimitivePost (runtimeOk : Config → Prop) (P : Prog) (s : St)
 theorem loop_of_abi_frame {writes : List Nat} {before after : Config}
     (frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ writes → gpr after n = gpr before n)
     (kept : ∀ n ∈ [Layout.reg_dispatchTable, Layout.reg_opcodeBound, Layout.reg_pending, Layout.reg_domain,
-      26], n ∉ writes)
+      26, 27], n ∉ writes)
     (loop : LoopRegisters before)
     (idle : after.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some 0#4) :
     LoopRegisters after := by
@@ -38,9 +38,9 @@ theorem loop_of_abi_frame {writes : List Nat} {before after : Config}
     (frame _ (by decide) (by decide) (kept _ (by simp))).trans loop.pending,
     (frame _ (by decide) (by decide) (kept _ (by simp))).trans loop.domain, idle, fun n hn => by
       have b : 1 ≤ n ∧ n ≤ 31 ∧ n ∈ [Layout.reg_dispatchTable, Layout.reg_opcodeBound, Layout.reg_pending,
-          Layout.reg_domain, 26] := by
+          Layout.reg_domain, 26, 27] := by
         simp only [unpinnedSaved, List.mem_cons, List.not_mem_nil, or_false] at hn
-        subst hn; decide
+        rcases hn with rfl | rfl <;> decide
       rw [frame n b.1 b.2.1 (kept n b.2.2)]
       exact loop.saved n hn⟩
 

@@ -32,12 +32,7 @@ structure LoopSetupPost (before after : Config) : Prop where
 
 /-- The setup writes none of the unpinned callee-saved registers. -/
 theorem loopSetup_saved {before after : Config} (frame : StepFrameOut loopSetupWrites before.σ after.σ)
-    (saved : ∀ n ∈ unpinnedSaved, (gpr before n).isSome) : ∀ n ∈ unpinnedSaved, (gpr after n).isSome := by
-  intro n hn
-  have e : gpr after n = gpr before n := by
-    simp only [unpinnedSaved, List.mem_cons, List.not_mem_nil, or_false] at hn
-    rcases hn with rfl
-    exact frame.frame (gprReg 26) (by decide)
-  rw [e]; exact saved n hn
+    (saved : ∀ n ∈ unpinnedSaved, (gpr before n).isSome) : ∀ n ∈ unpinnedSaved, (gpr after n).isSome :=
+  saved_keep (saved_eq_of_frame frame (by decide)) saved
 
 end OCaml.Vm.Sim

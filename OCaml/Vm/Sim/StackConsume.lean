@@ -12,7 +12,7 @@ def consumePreserved : List Register :=
    gprReg Layout.reg_dispatchTable, gprReg Layout.reg_opcodeBound,
    gprReg Layout.reg_pending, gprReg Layout.reg_domain, gprReg 2,
    LeanRV64DExecutable.Register.htif_payload_writes,
-   gprReg 26]
+   gprReg 26, gprReg 27]
 
 /-- Register/output observations with an exact, opaque memory effect. -/
 structure StackPost (before : Config) (pl : Place) (pc sp : Nat) (w : BitVec 64)

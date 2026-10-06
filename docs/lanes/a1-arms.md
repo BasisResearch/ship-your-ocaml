@@ -126,9 +126,10 @@ STOP/uncaught-raise returns export the HTIF payload-counter frame
 (`InterpRuntimeReturnPost.htif`, `UncaughtChecked.htif`) for bprime's exit.
 `LoopRegisters.htifIdle` lands after a1-prims' `EffectPost.htifIdle`.
 
-Done: `LoopRegisters.saved`: `s10` (x26, `unpinnedSaved`) holds a value at
-every loop head; C paths spill it (caml_sys_exit's prologue, bprime's
-`ccall1Exit_f1`).
+Done: `LoopRegisters.saved`: `s10`/`s11` (x26/x27, `unpinnedSaved`) hold
+values at every loop head; C paths spill them (caml_sys_exit's and the console
+primitives' prologues). `CcallSetupPost.calleeSaved` gives all of `s0`–`s11`
+at the callee entry (`vmSaved`: VM sp, accu, next-code pointer).
 * The other callee-saved registers are pinned already. They hold the VM
   registers, the loop constants and the native `sp`; `s7` is dispatch's
   next-code pointer (`DispatchPost.nextCode`).

@@ -34,7 +34,8 @@ theorem longjmp_reentry {buffer nativeSp : Nat} {saved : Nat → BitVec 64}
     pc := jump.pc.trans (congrArg some returnPc)
     stack := (jump.registers 2 (by decide)).trans (congrArg some returnSp)
     resultReg := jump.value, nonzero := longjmpValue_nonzero value
-    s10 := by rw [jump.registers 26 (by decide)]; rfl }
+    saved := forall_saved (isSome_of_pin (jump.registers 26 (by decide)))
+      (isSome_of_pin (jump.registers 27 (by decide))) }
   obtain ⟨count, after, run, post⟩ := reentry_quiet input
   refine ⟨after, jumpRun.trans run.toSteps,
     post.toReentryControl.before_read jump.memory jump.frame.out (jump.frame.frame _ (by decide)), ?_⟩

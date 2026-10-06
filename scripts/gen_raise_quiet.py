@@ -75,7 +75,7 @@ theorem {family}_setup {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{pl : Place
       ((nativeFrame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide)))
       ((nativeFrame.frame Register.htif_payload_writes (by decide)).trans
         (dp.frame.frame Register.htif_payload_writes (by decide)))
-      ((nativeFrame.frame (gprReg 26) (by decide)).trans (dp.frame.frame (gprReg 26) (by decide)))
+      (saved_eq_of_frame (dp.frame.trans nativeFrame) (by decide))
     pc := post.pcAt, trapReg := trapReg, domainReg := ?_ }}
   simpa only [word, memoryAll] using domainReg
 

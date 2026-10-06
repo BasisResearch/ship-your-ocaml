@@ -20,6 +20,8 @@ structure ClosurerecReturned (before : Config) (pl : Place) (pc sp count dest a 
   frame : StepFrameOut closurerecMetadataWrites before.σ after.σ
   /-- `s10` keeps the capture count -/
   countReg : gpr after 26 = some (BitVec.ofNat 64 count)
+  /-- `s11` keeps the environment offset -/
+  envReg : gpr after 27 = some (BitVec.ofNat 64 (3 * (targets.length + 1) - 1))
 
 /-- The actual shared suffix skips every offset-table word and returns to dispatch. -/
 theorem closurerec_return {pl : Place} {pc sp count dest a domain : Nat} {targets : List Nat}
@@ -47,6 +49,7 @@ theorem closurerec_return {pl : Place} {pc sp count dest a domain : Nat} {target
     (frame.frame Register.x9 (by decide)).trans front.stackReg,
     (frame.frame Register.x21 (by decide)).trans front.accu, memory.trans front.memory,
     (front.frame.trans frame).widenChecked (allowed := closurerecMetadataWrites) (by decide),
-    (frame.frame Register.x26 (by decide)).trans front.fields.countReg⟩
+    (frame.frame Register.x26 (by decide)).trans front.fields.countReg,
+    (frame.frame Register.x27 (by decide)).trans front.fields.environmentOffset⟩
 
 end OCaml.Vm.Sim

@@ -21,6 +21,59 @@ structure CcallSetupPost (ra : BitVec 64) (args : List Val)
   geometry : OCaml.LoopGeometry L P s c pl cp high
   /-- the native invocation at the callee entry (`Invocation.lean`) -/
   native : NativePlaced c
+  /-- the VM stack pointer, the accumulator and the next-code pointer still
+  hold values (the C callee's prologue spills these callee-saved registers) -/
+  vmSaved : ∀ n ∈ [9, 21, 23], (gpr c n).isSome
+
+/-- **Every callee-saved register `s0`–`s11` holds a value at the callee entry**
+(the primitive prologues spill them). -/
+theorem CcallSetupPost.calleeSaved {ra : BitVec 64} {args : List Val} {L : OCaml.Layout} {P : Prog} {s : St}
+    {pl : Place} {cp : ChanPlace} {sp high domain entry : Nat} {env : BitVec 64} {c : Config}
+    (setup : CcallSetupPost ra args L P s pl cp sp high domain entry env c) :
+    ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], (gpr c n).isSome := by
+  have loop := setup.input.loop
+  intro n hn
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+  rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  · exact isSome_of_pin setup.saved.pc
+  · exact setup.vmSaved 9 (by simp)
+  · exact isSome_of_pin setup.saved.extra
+  · exact isSome_of_pin loop.domain
+  · exact isSome_of_pin loop.pending
+  · exact setup.vmSaved 21 (by simp)
+  · exact isSome_of_pin loop.dispatchTable
+  · exact setup.vmSaved 23 (by simp)
+  · exact isSome_of_pin loop.opcodeBound
+  · exact isSome_of_pin setup.saved.domainReg
+  · exact loop.saved 26 (by simp [unpinnedSaved])
+  · exact loop.saved 27 (by simp [unpinnedSaved])
+
+set_option hygiene false in
+/-- Discharge `CcallSetupPost.vmSaved` in a setup proof: each register is the
+arm input's pin framed through dispatch and setup, dispatch's next-code pin,
+or one of the setup segment's output pins. -/
+macro "vm_saved_tac" : tactic => `(tactic| (
+  intro n hn
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+  rcases hn with rfl | rfl | rfl
+  all_goals first
+    | exact isSome_of_pin ((frame.frame (gprReg 23) (by decide)).trans dp.nextCode)
+    | exact isSome_of_pin ((frame.frame (gprReg 9) (by decide)).trans
+        ((dp.frame.frame (gprReg 9) (by decide)).trans h.spReg))
+    | (obtain ⟨w, hw, -⟩ := h.accu
+       exact isSome_of_pin ((frame.frame (gprReg 21) (by decide)).trans
+         ((dp.frame.frame (gprReg 21) (by decide)).trans hw)))
+    | exact isSome_of_pin (PinsHold.get post.pins ⟨0, by simp⟩)
+    | exact isSome_of_pin (PinsHold.get post.pins ⟨1, by simp⟩)
+    | exact isSome_of_pin (PinsHold.get post.pins ⟨2, by simp⟩)
+    | exact isSome_of_pin (PinsHold.get post.pins ⟨3, by simp⟩)
+    | exact isSome_of_pin (PinsHold.get post.pins ⟨4, by simp⟩)
+    | exact isSome_of_pin (PinsHold.get post.pins ⟨5, by simp⟩)
+    | exact isSome_of_pin (PinsHold.get post.pins ⟨6, by simp⟩)
+    | exact isSome_of_pin (PinsHold.get post.pins ⟨7, by simp⟩)
+    | exact isSome_of_pin (PinsHold.get post.pins ⟨8, by simp⟩)
+    | exact isSome_of_pin (PinsHold.get post.pins ⟨9, by simp⟩)
+    | exact isSome_of_pin (PinsHold.get post.pins ⟨10, by simp⟩)))
 
 /-- C_CALL setup keeps the native invocation: its three stores lie in the
 VM stack and the `Caml_state` record, inside the allocator arena. -/

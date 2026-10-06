@@ -38,11 +38,20 @@ theorem PlatformOk.htif_done {runtimeOk : Config → Prop} {c : Config}
   h.control.htif_done
 
 /-- The callee-saved registers the loop head keeps present without pinning a
-value: `s10`, which C paths spill (caml_sys_exit's prologue). The other
+value: `s10` and `s11`, which C paths spill (caml_sys_exit's and the console
+primitives' prologues). The other
 callee-saved registers the interpreter uses hold the VM registers, the loop
 constants and the native `sp`; `s7` is the next-code pointer each dispatch
 writes and pins (`DispatchPost.nextCode`). -/
-def unpinnedSaved : List Nat := [26]
+def unpinnedSaved : List Nat := [26, 27]
+
+/-- A property of both unpinned callee-saved registers. -/
+theorem forall_saved {P : Nat → Prop} (h26 : P 26) (h27 : P 27) : ∀ n ∈ unpinnedSaved, P n := by
+  intro n hn
+  simp only [unpinnedSaved, List.mem_cons, List.not_mem_nil, or_false] at hn
+  rcases hn with rfl | rfl
+  · exact h26
+  · exact h27
 
 /-- Fixed callee-saved registers established by the interpreter prologue.
 The variable loop registers (pc/sp/accu/env/extra) live in `VmReprAt`.
@@ -56,7 +65,7 @@ structure LoopRegisters (c : Config) : Prop where
   complete `tohost` commands; caml_do_exit's exit command needs it) -/
   htifIdle : c.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some 0#4
   /-- the unpinned callee-saved registers hold values (C paths spill them:
-  caml_sys_exit's and malloc's prologues) -/
+  caml_sys_exit's and the console primitives' prologues) -/
   saved : ∀ n ∈ unpinnedSaved, (gpr c n).isSome
 
 /-- Full GPR presence gives the unpinned callee-saved registers. -/

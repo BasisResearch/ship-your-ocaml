@@ -32,7 +32,7 @@ abbrev RegisterPost (writes : List Nat) (before : Config) (ra value : BitVec 64)
 /-- A finite write-set check protects the interpreter's dedicated registers. -/
 def PreservesLoopRegisters (writes : List Nat) : Prop :=
   ∀ r ∈ [Layout.reg_dispatchTable, Layout.reg_opcodeBound, Layout.reg_pending, Layout.reg_domain,
-      26],
+      26, 27],
     ∀ n ∈ writes, gprReg n ≠ gprReg r
 
 /-- No GPR is the HTIF payload counter. -/
@@ -54,11 +54,10 @@ theorem EffectPost.loop {writes expectedMem before ra value after}
   · exact (post.frame (gprReg Layout.reg_domain) (frame Layout.reg_domain (by simp)) (by decide)).trans loop.domain
   · exact (post.frame Register.htif_payload_writes (fun n _ => gprReg_ne_htif n) (by decide)).trans loop.htifIdle
   · intro n hn
-    have e : gpr after n = gpr before n := by
-      simp only [unpinnedSaved, List.mem_cons, List.not_mem_nil, or_false] at hn
-      rcases hn with rfl
-      exact post.frame (gprReg 26) (frame 26 (by simp)) (by decide)
-    rw [e]; exact loop.saved n hn
+    rw [forall_saved (P := fun n => gpr after n = gpr before n)
+      (post.frame (gprReg 26) (frame 26 (by simp)) (by decide))
+      (post.frame (gprReg 27) (frame 27 (by simp)) (by decide)) n hn]
+    exact loop.saved n hn
 
 /-- Package the segment kernel's complete frame for a callee with a write log.
 The generated certificate proves its accesses and image separation. -/

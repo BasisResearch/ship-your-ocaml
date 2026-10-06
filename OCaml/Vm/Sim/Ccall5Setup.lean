@@ -161,5 +161,6 @@ theorem c_call5_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   · exact h.geometry.frame_log rfl rfl space.payload.domain space.bindings.contents space.young written
   · exact space.native h.native h.geometry.toArmGeometry h.stack domainWord written
       ((frame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide)))
+  · vm_saved_tac
 
 end OCaml.Vm.Sim

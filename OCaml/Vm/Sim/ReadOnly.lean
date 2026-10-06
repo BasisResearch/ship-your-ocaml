@@ -11,10 +11,30 @@ def loopFixed : List Register :=
   [gprReg Layout.reg_dispatchTable, gprReg Layout.reg_opcodeBound,
    gprReg Layout.reg_pending, gprReg Layout.reg_domain, Register.htif_payload_writes]
 
+/-- The unpinned callee-saved registers, as machine registers. -/
+def savedRegs : List Register := [gprReg 26, gprReg 27]
+
 /-- Fixed loop registers and the unpinned callee-saved registers, independent
 of the current opcode's data registers. -/
 def loopPreserved : List Register :=
-  loopFixed ++ [gprReg 26]
+  loopFixed ++ savedRegs
+
+/-- A register frame keeps the unpinned callee-saved registers' values. -/
+theorem saved_eq {before after : Config}
+    (frame : ∀ r ∈ savedRegs, after.σ.regs.get? r = before.σ.regs.get? r) :
+    ∀ n ∈ unpinnedSaved, gpr after n = gpr before n :=
+  forall_saved (frame (gprReg 26) (by decide)) (frame (gprReg 27) (by decide))
+
+/-- A step frame that writes neither register keeps them (one `decide`). -/
+theorem saved_eq_of_frame {W : List Register} {before after : Config}
+    (frame : StepFrameOut W before.σ after.σ) (avoid : ∀ R ∈ savedRegs, ∀ r ∈ W, (r == R) = false) :
+    ∀ n ∈ unpinnedSaved, gpr after n = gpr before n :=
+  saved_eq fun R hR => frame.frame R (avoid R hR)
+
+/-- Unchanged registers stay present. -/
+theorem saved_keep {before after : Config} (e : ∀ n ∈ unpinnedSaved, gpr after n = gpr before n)
+    (saved : ∀ n ∈ unpinnedSaved, (gpr before n).isSome) : ∀ n ∈ unpinnedSaved, (gpr after n).isSome :=
+  fun n hn => by rw [e n hn]; exact saved n hn
 
 /-- Each unpinned callee-saved register is kept or freshly written. -/
 theorem saved_of {before after : Config} (loop : LoopRegisters before)
@@ -26,26 +46,13 @@ theorem saved_of {before after : Config} (loop : LoopRegisters before)
 
 /-- A register frame keeps the unpinned callee-saved registers. -/
 theorem saved_frame {before after : Config}
-    (frame : ∀ r ∈ [gprReg 26], after.σ.regs.get? r = before.σ.regs.get? r)
+    (frame : ∀ r ∈ savedRegs, after.σ.regs.get? r = before.σ.regs.get? r)
     (loop : LoopRegisters before) : ∀ n ∈ unpinnedSaved, (gpr after n).isSome :=
-  saved_of loop fun n hn => .inl <| by
-    simp only [unpinnedSaved, List.mem_cons, List.not_mem_nil, or_false] at hn
-    rcases hn with rfl
-    exact frame (gprReg 26) (by decide)
+  saved_keep (saved_eq frame) loop.saved
 
-/-- `s10` pinned to a value (arms that write it). -/
-theorem saved_of_pin {after : Config} {v : BitVec 64} (pin : gpr after 26 = some v) :
-    ∀ n ∈ unpinnedSaved, (gpr after n).isSome := fun n hn => by
-  simp only [unpinnedSaved, List.mem_singleton] at hn
-  subst hn; rw [pin]; rfl
-
-/-- `s10` unchanged keeps the unpinned callee-saved registers present. -/
-theorem saved_keep {before after : Config} (e : gpr after 26 = gpr before 26)
-    (saved : ∀ n ∈ unpinnedSaved, (gpr before n).isSome) : ∀ n ∈ unpinnedSaved, (gpr after n).isSome :=
-  fun n hn => by
-    have h := saved n hn
-    simp only [unpinnedSaved, List.mem_singleton] at hn
-    subst hn; rw [e]; exact h
+/-- A pinned register is present. -/
+theorem isSome_of_pin {o : Option (BitVec 64)} {v : BitVec 64} (h : o = some v) : o.isSome := by
+  rw [h]; rfl
 
 /-- The loop registers from a frame on the fixed ones and the presence of the
 unpinned callee-saved registers (arms that write `s10`/`s11`). -/

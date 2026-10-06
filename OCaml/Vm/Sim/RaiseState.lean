@@ -52,13 +52,13 @@ theorem RaiseContext.after_read {L : OCaml.Layout} {P : Prog} {s : St} {pl : Pla
     (accu : gpr after Layout.reg_accu = gpr c Layout.reg_accu)
     (nativeSp : gpr after 2 = gpr c 2)
     (htif : after.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes)
-    (s10 : gpr after 26 = gpr c 26) :
+    (saved : ∀ n ∈ unpinnedSaved, gpr after n = gpr c n) :
     RaiseContext L P s pl cp sp high dest link env extra rest after := by
   refine ⟨h.data.frame memory out, h.bindings.frame memory,
     ⟨good, image_of_writeLog (log := []) h.platform.image ⟨trivial, trivial⟩ memory,
       stable c after memory h.platform.runtime⟩, h.frame, ?_, tick,
     h.geometry.same rfl rfl memory, h.native.frame_read memory nativeSp, htif.trans h.htifIdle,
-    saved_keep s10 h.saved⟩
+    saved_keep saved h.saved⟩
   obtain ⟨w, reg, value⟩ := h.accu
   exact ⟨w, accu.trans reg, value⟩
 
