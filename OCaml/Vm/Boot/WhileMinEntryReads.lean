@@ -51,6 +51,30 @@ theorem read_caml_channel_mutex_unlock_exn (memory : Vsa.Densify.MemEqv c.σ.mem
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_channel_mutex_unlock_exn) (w := 8) (by decide +kernel)]
   decide +kernel
 
+theorem read_fs_ready (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_fs_ready) = 0x1#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_fs_ready) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_caml_something_to_do (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_something_to_do) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_something_to_do) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_caml_channel_mutex_lock (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_channel_mutex_lock) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_channel_mutex_lock) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_caml_channel_mutex_unlock (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_channel_mutex_unlock) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_channel_mutex_unlock) (w := 8) (by decide +kernel)]
+  decide +kernel
+
 theorem read_stack_high (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word c (WhileMinRuntime.domain + Layout.off_stack_high) = 0x8038b7b0#64 := by
   unfold word
@@ -92,6 +116,214 @@ theorem read_backtrace_active (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem
   unfold word
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := WhileMinRuntime.domain + Layout.off_backtrace_active) (w := 8) (by decide +kernel)]
   decide +kernel
+
+theorem read_fd1_kind (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_fds + 24) = 0x2#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_fds + 24) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_fd2_kind (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_fds + 48) = 0x3#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_fds + 48) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending0 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 0) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 0) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending1 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 1) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 1) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending2 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 2) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 2) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending3 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 3) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 3) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending4 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 4) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 4) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending5 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 5) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 5) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending6 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 6) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 6) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending7 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 7) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 7) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending8 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 8) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 8) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending9 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 9) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 9) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending10 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 10) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 10) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending11 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 11) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 11) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending12 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 12) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 12) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending13 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 13) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 13) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 14) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 14) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending15 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 15) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 15) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending16 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 16) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 16) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending17 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 17) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 17) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending18 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 18) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 18) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending19 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 19) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 19) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending20 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 20) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 20) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending21 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 21) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 21) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending22 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 22) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 22) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending23 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 23) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 23) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending24 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 24) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 24) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending25 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 25) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 25) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending26 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 26) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 26) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending27 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 27) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 27) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending28 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 28) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 28) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending29 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 29) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 29) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending30 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 30) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 30) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pending31 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_pending_signals + 8 * 31) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_pending_signals + 8 * 31) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem pending (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    ∀ i : Fin 32, word c (Layout.sym_caml_pending_signals + 8 * i.val) = 0#64 :=
+  Fin.cases (read_pending0 memory) (Fin.cases (read_pending1 memory) (Fin.cases (read_pending2 memory) (Fin.cases (read_pending3 memory) (Fin.cases (read_pending4 memory) (Fin.cases (read_pending5 memory) (Fin.cases (read_pending6 memory) (Fin.cases (read_pending7 memory) (Fin.cases (read_pending8 memory) (Fin.cases (read_pending9 memory) (Fin.cases (read_pending10 memory) (Fin.cases (read_pending11 memory) (Fin.cases (read_pending12 memory) (Fin.cases (read_pending13 memory) (Fin.cases (read_pending14 memory) (Fin.cases (read_pending15 memory) (Fin.cases (read_pending16 memory) (Fin.cases (read_pending17 memory) (Fin.cases (read_pending18 memory) (Fin.cases (read_pending19 memory) (Fin.cases (read_pending20 memory) (Fin.cases (read_pending21 memory) (Fin.cases (read_pending22 memory) (Fin.cases (read_pending23 memory) (Fin.cases (read_pending24 memory) (Fin.cases (read_pending25 memory) (Fin.cases (read_pending26 memory) (Fin.cases (read_pending27 memory) (Fin.cases (read_pending28 memory) (Fin.cases (read_pending29 memory) (Fin.cases (read_pending30 memory) (Fin.cases (read_pending31 memory) (fun i => Fin.elim0 i))))))))))))))))))))))))))))))))
 
 theorem read_code0 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word32 c (place.codeBase + 4 * 0) = 0x54#32 := by

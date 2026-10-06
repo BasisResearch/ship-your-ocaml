@@ -218,6 +218,18 @@ def sym_caml_copy_double : Nat := 0x800121f4
 def sym_errno : Nat := 0x80064d48
 /-- `_impure_data` -/
 def sym_impure_data : Nat := 0x80064668
+/-- `caml_pending_signals` -/
+def sym_caml_pending_signals : Nat := 0x80068690
+/-- `caml_channel_mutex_lock` -/
+def sym_caml_channel_mutex_lock : Nat := 0x80064b58
+/-- `caml_enter_blocking_section_hook` -/
+def sym_caml_enter_blocking_section_hook : Nat := 0x80064870
+/-- `caml_leave_blocking_section_hook` -/
+def sym_caml_leave_blocking_section_hook : Nat := 0x80064868
+/-- `_impure_ptr` -/
+def sym_impure_ptr : Nat := 0x800648f8
+/-- `caml_channel_mutex_unlock` -/
+def sym_caml_channel_mutex_unlock : Nat := 0x80064b50
 /-- `caml_verb_gc` -/
 def sym_caml_verb_gc : Nat := 0x80064930
 /-- `__atexit` -/

@@ -29,10 +29,20 @@ out=['import OCaml.Vm.Boot.WhileMinHeap','import OCaml.Vm.Boot.WhileMinRuntime',
      'open Vsa.Machine Vsa.Sim Vsa.Sim.Boot WhileMinLog WhileMinHeap','',
      f'def high : Nat := {high:#x}',
      'variable {c : Config} {initial : Vsa.MemRepr.Mem}','']
-for name in ['caml_start_code','caml_global_data','caml_verb_gc','caml_cleanup_on_exit','atexit','stdio_exit_handler','caml_channel_mutex_unlock_exn']:
+for name in ['caml_start_code','caml_global_data','caml_verb_gc','caml_cleanup_on_exit','atexit','stdio_exit_handler','caml_channel_mutex_unlock_exn',
+             'fs_ready','caml_something_to_do','caml_channel_mutex_lock',
+             'caml_channel_mutex_unlock']:
     emit_read(out,name,f'Layout.sym_{name}',read(layout['sym_'+name]))
 for name in ['stack_high','stack_low','stack_threshold','extern_sp','trapsp','trap_barrier','backtrace_active']:
     emit_read(out,name,f'WhileMinRuntime.domain + Layout.off_{name}',read(domain+layout['off_'+name]))
+for fd in (1,2):
+    emit_read(out,f'fd{fd}_kind',f'Layout.sym_fds + {24*fd}',read(layout['sym_fds']+24*fd))
+pending=[emit_read(out,f'pending{i}',f'Layout.sym_caml_pending_signals + 8 * {i}',
+                   read(layout['sym_caml_pending_signals']+8*i)) for i in range(32)]
+assert all(read(layout['sym_caml_pending_signals']+8*i)==0 for i in range(32))
+out += ['theorem pending (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :',
+        '    ∀ i : Fin 32, word c (Layout.sym_caml_pending_signals + 8 * i.val) = 0#64 :=',
+        '  '+finite_cases(pending),'']
 for i,w in enumerate(code):
     assert read(base+4*i,4)==w
     emit_read(out,f'code{i}',f'place.codeBase + 4 * {i}',w,4)

@@ -3,6 +3,13 @@
 ## F1 status (2026-10-05) — current
 
 Done (F1 side of the GC):
+- `F1Pins.console : ConsoleRuntime c` (a1-prims' console statics):
+  `ConsoleRuntime.transfer` keeps it under any change to non-ignored static
+  words; `consoleRuntime_of` reads it at the cut (file table, signals, lock
+  words from `gen_boot_entry.py` reads; hooks and `_impure_ptr` from `.data`
+  via `cut_imageWord`); `f1_consoleRuntime : ∀ c, f1Layout.runtimeOk c →
+  ConsoleRuntime c`. `OpenChannels.lean`: the open-channel list
+  (`OpenChannelList`, `OpenChannelsLinked`) for bprime's `open_descriptor`.
 - `GcSafe` for programs without `Forward_tag` blocks:
   `OCaml/Bytecode/GcSafeNoForward.lean:gcSafe_of_noForward` (`NoForward P`:
   no reachable heap holds a tag-250 block; then every `FwdReduction` is the

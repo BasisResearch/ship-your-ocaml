@@ -9,6 +9,7 @@ import OCaml.Vm.Gc.NurseryDefs
 import OCaml.Vm.Primitives.ExitPath.Machine
 import OCaml.Vm.Sim.NurseryInput
 import VsaIris.Vsa.HeapShape
+import OCaml.Vm.Primitives.Console.Runtime
 
 /-!
 # The F1 runtime invariant, pinned at the cut
@@ -54,6 +55,9 @@ structure F1Pins (c : Config) : Prop where
   backtraceOff : word c (f1Domain + Layout.off_backtrace_active) = 0#64
   /-- no channel-mutex unlock hook (`caml_channel_mutex_unlock_exn`) -/
   channelUnlock : word c Layout.sym_caml_channel_mutex_unlock_exn = 0#64
+  /-- the console statics the output primitives read (`ConsoleRuntime`):
+  set by startup, written by no F1 path -/
+  console : ConsoleWrite.ConsoleRuntime c
 
 /-- The F1 runtime invariant. -/
 def f1Runtime : Config → Prop := RuntimeOk F1Pins
@@ -297,6 +301,49 @@ theorem ExitGlobals.transfer {c c' : Config}
   · rw [r _ (bss _ (by simp [ExitPath.atexitList, Layout.sym_atexit])) (by simp only [ExitPath.atexitList, Layout.sym_atexit]; decide)]; exact h.noAtexit
   · rw [r _ (bss _ (by simp [ExitPath.stdioExitHandler, Layout.sym_stdio_exit_handler])) (by simp only [ExitPath.stdioExitHandler, Layout.sym_stdio_exit_handler]; decide)]; exact h.noHandler
 
+/-- An 8-byte read with a known word value, as its little-endian bytes. -/
+theorem read8_eq {m : Std.ExtHashMap Nat (BitVec 8)} {a : Nat} {v : BitVec 64} (h : bytesT m a 8 = v) :
+    Primitives.read8 m a = [v.extractLsb' 0 8, v.extractLsb' 8 8, v.extractLsb' 16 8, v.extractLsb' 24 8,
+      v.extractLsb' 32 8, v.extractLsb' 40 8, v.extractLsb' 48 8, v.extractLsb' 56 8] := by
+  have b : ∀ i, i < 8 → (m[a + i]?).getD 0 = v.extractLsb' (8 * i) 8 := by
+    intro i hi
+    apply BitVec.eq_of_getLsbD_eq
+    intro k hk
+    have := congrArg (fun w => w.getLsbD (8 * i + k)) h
+    rw [getLsbD_bytesT _ _ _ _ (by omega)] at this
+    simpa [show (8 * i + k) / 8 = i by omega, show (8 * i + k) % 8 = k by omega, hk] using this
+  have b0 := b 0 (by decide)
+  simp only [Nat.add_zero] at b0
+  unfold Primitives.read8
+  rw [b0, b 1 (by decide), b 2 (by decide), b 3 (by decide), b 4 (by decide), b 5 (by decide),
+    b 6 (by decide), b 7 (by decide)]
+
+/-- The console statics survive any change that keeps the static words. -/
+theorem ConsoleRuntime.transfer {c c' : Config}
+    (keep : ∀ x, x + 8 ≤ Layout.sym_bss_end → StaticApart x 8 → bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8)
+    (h : ConsoleWrite.ConsoleRuntime c) : ConsoleWrite.ConsoleRuntime c' := by
+  have r : ∀ a, a + 8 ≤ Layout.sym_bss_end → StaticApart a 8 →
+      Primitives.read8 c'.σ.mem a = Primitives.read8 c.σ.mem a :=
+    fun a ha side => read8_of_bytesT (keep a ha side)
+  have ready := r _ (by decide) (by decide : StaticApart ConsoleWrite.fsReady.toNat 8)
+  have fd : ∀ fd : BitVec 64, (ConsoleWrite.kindAddress fd).toNat + 8 ≤ Layout.sym_bss_end →
+      StaticApart (ConsoleWrite.kindAddress fd).toNat 8 → ConsoleWrite.ConsoleFd fd c → ConsoleWrite.ConsoleFd fd c' :=
+    fun fd hb hs d => ⟨by rw [ready]; exact d.ready, d.range, d.kindWindow, by rw [r _ hb hs]; exact d.console,
+      by rw [r _ hb hs]; exact d.notFile⟩
+  have signals : ∀ i, i < 32 → StaticApart (FdWrite.pendingSignals.toNat + 8 * i) 8 := by decide
+  refine ⟨fd _ (by decide) (by decide) h.stdout, fd _ (by decide) (by decide) h.stderr, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [r _ (by decide) (by decide : StaticApart FdWrite.enterHook.toNat 8)]; exact h.enterHookWord
+  · rw [r _ (by decide) (by decide : StaticApart FdWrite.leaveHook.toNat 8)]; exact h.leaveHookWord
+  · rw [r _ (by decide) (by decide : StaticApart FdWrite.impurePtr.toNat 8)]; exact h.impure
+  · intro i hi
+    have e := h.clear i hi
+    rw [ConsoleWrite.slot_toNat i hi] at e ⊢
+    rw [r _ (by simp only [FdWrite.pendingSignals, Layout.sym_bss_end]; simp; omega) (signals i hi)]
+    exact e
+  · rw [r _ (by decide) (by decide : StaticApart ConsoleWrite.somethingToDo.toNat 8)]; exact h.quiet
+  · rw [r _ (by decide) (by decide : StaticApart ConsoleWrite.channelLock.toNat 8)]; exact h.lockNull
+  · rw [r _ (by decide) (by decide : StaticApart ConsoleWrite.channelUnlock.toNat 8)]; exact h.unlockNull
+
 /-- **Core transfer**: if every kept footprint read is unchanged, the pins
 survive and only `young_ptr` may differ among the runtime fields. -/
 theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem x n = bytesT c.σ.mem x n)
@@ -329,7 +376,8 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
     by rw [w8 _ in_trapBarrier]; exact pins.trapBarrier, by rw [w8 _ in_backtrace]; exact pins.backtraceOff,
     by rw [w8 _ (b (by simp [Layout.sym_caml_channel_mutex_unlock_exn, Layout.sym_bss_end])
       (by decide))];
-       exact pins.channelUnlock⟩, fields⟩
+       exact pins.channelUnlock,
+    ConsoleRuntime.transfer (fun x hx side => keep x 8 (b hx side)) pins.console⟩, fields⟩
   · exact {
       nonnull := shape.nonnull
       aligned := shape.aligned
@@ -586,6 +634,10 @@ theorem f1_ignoredStatic : WindowStable f1Runtime ignoredStatics :=
 theorem f1_channelUnlock {c : Config} (ok : f1Runtime c) :
     word c Layout.sym_caml_channel_mutex_unlock_exn = 0#64 := ok.freeListShape.channelUnlock
 
+/-- The console statics the output primitives read, at every F1 state. -/
+theorem f1_consoleRuntime : ∀ c, f1Layout.runtimeOk c → ConsoleWrite.ConsoleRuntime c :=
+  fun _ ok => ok.freeListShape.console
+
 /-- `RuntimeFrame.quiet`. -/
 theorem f1_quiet {c : Config} (ok : f1Runtime c) : Sim.SignalCheckReady c := by
   have h := ok.noPending
@@ -717,9 +769,65 @@ theorem f1_allocFrame_core {P : Prog} {s : St} {c : Config} {pl : Place} {cp : C
 section Cut
 open Vsa.Sim.Boot WhileMinLog
 
+/-- A cut word no startup store touches keeps its `.data` initializer. -/
+theorem cut_imageWord {c : Config} (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log))
+    {a : Nat} {v : BitVec 64} (absent : ∀ i, i < 8 → runs.fin (a + i) = none)
+    (image : bytesT WhileMinImage.initialMem a 8 = v) : word c a = v := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes logOk]
+  rw [viewBytes_congr (v' := fun x => WhileMinImage.initialMem[x]?) (fun i hi => by
+    simp only [logView, absent i hi])]
+  rw [← bytesT_view (fun _ => rfl), image]
+
+/-- The console statics at the cut: the file table and signal words from the
+startup stores, the hooks and `_impure_ptr` from `.data`. -/
+theorem consoleRuntime_of {c : Config}
+    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) :
+    ConsoleWrite.ConsoleRuntime c := by
+  have rd : ∀ (g : BitVec 64) (n : Nat) (v : BitVec 64), g.toNat = n → word c n = v →
+      Primitives.read8 c.σ.mem g.toNat = [v.extractLsb' 0 8, v.extractLsb' 8 8, v.extractLsb' 16 8,
+        v.extractLsb' 24 8, v.extractLsb' 32 8, v.extractLsb' 40 8, v.extractLsb' 48 8, v.extractLsb' 56 8] :=
+    fun g n v hn hw => by rw [hn]; exact read8_eq hw
+  have ready := rd ConsoleWrite.fsReady _ _ (by decide) (WhileMinEntry.read_fs_ready memory)
+  have fd : ∀ (fd : BitVec 64) (n : Nat) (v : BitVec 64), (ConsoleWrite.kindAddress fd).toNat = n →
+      word c n = v → fd.toNat < 32 → ReadWindow (ConsoleWrite.kindAddress fd) 4 →
+      1 < (bytesVal .lw [v.extractLsb' 0 8, v.extractLsb' 8 8, v.extractLsb' 16 8, v.extractLsb' 24 8,
+        v.extractLsb' 32 8, v.extractLsb' 40 8, v.extractLsb' 48 8, v.extractLsb' 56 8]).toNat →
+      bytesVal .lw [v.extractLsb' 0 8, v.extractLsb' 8 8, v.extractLsb' 16 8, v.extractLsb' 24 8,
+        v.extractLsb' 32 8, v.extractLsb' 40 8, v.extractLsb' 48 8, v.extractLsb' 56 8] ≠ 4#64 →
+      ConsoleWrite.ConsoleFd fd c :=
+    fun fd n v hn hw range window console notFile =>
+      ⟨by rw [ready]; decide, range, window, by rw [rd _ _ _ hn hw]; exact console,
+        by rw [rd _ _ _ hn hw]; exact notFile⟩
+  refine ⟨fd 1#64 _ _ (by decide) (WhileMinEntry.read_fd1_kind memory) (by decide)
+      ⟨by decide, by decide, by decide⟩ (by decide) (by decide),
+    fd 2#64 _ _ (by decide) (WhileMinEntry.read_fd2_kind memory) (by decide)
+      ⟨by decide, by decide, by decide⟩ (by decide) (by decide), ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [rd FdWrite.enterHook _ _ (by decide) (cut_imageWord memory (a := Layout.sym_caml_enter_blocking_section_hook) (by decide +kernel)
+      ((loaderMem_bytes WhileMinImage.pieces WhileMinImage.imageByte _ 8).trans (by decide +kernel) :
+        _ = 0x8000d2a4#64))]
+    decide
+  · rw [rd FdWrite.leaveHook _ _ (by decide) (cut_imageWord memory (a := Layout.sym_caml_leave_blocking_section_hook) (by decide +kernel)
+      ((loaderMem_bytes WhileMinImage.pieces WhileMinImage.imageByte _ 8).trans (by decide +kernel) :
+        _ = 0x8000d2a8#64))]
+    decide
+  · rw [rd FdWrite.impurePtr _ _ (by decide) (cut_imageWord memory (a := Layout.sym_impure_ptr) (by decide +kernel)
+      ((loaderMem_bytes WhileMinImage.pieces WhileMinImage.imageByte _ 8).trans (by decide +kernel) :
+        _ = BitVec.ofNat 64 Layout.sym_impure_data))]
+    decide
+  · intro i hi
+    have e : word c (FdWrite.pendingSignals.toNat + 8 * i) = 0#64 := by
+      rw [show FdWrite.pendingSignals.toNat = Layout.sym_caml_pending_signals by decide]
+      exact WhileMinEntry.pending memory ⟨i, hi⟩
+    rw [ConsoleWrite.slot_toNat i hi, read8_eq e]
+    decide
+  · rw [rd ConsoleWrite.somethingToDo _ _ (by decide) (WhileMinEntry.read_caml_something_to_do memory)]; decide
+  · rw [rd ConsoleWrite.channelLock _ _ (by decide) (WhileMinEntry.read_caml_channel_mutex_lock memory)]; decide
+  · rw [rd ConsoleWrite.channelUnlock _ _ (by decide) (WhileMinEntry.read_caml_channel_mutex_unlock memory)]; decide
+
 /-- The pins hold on the certified cut memory. -/
-theorem f1Pins_of {c : Config} {initial : Vsa.MemRepr.Mem}
-    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) : F1Pins c := by
+theorem f1Pins_of {c : Config}
+    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) : F1Pins c := by
   obtain ⟨b, shape⟩ := (WhileMinRuntime.freeList memory).shape
   have root := shape.root
   have total := shape.total
@@ -732,7 +840,7 @@ theorem f1Pins_of {c : Config} {initial : Vsa.MemRepr.Mem}
       simp at root total
       omega
   subst same
-  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact WhileMinEntry.read_stack_high memory
   · exact WhileMinEntry.read_stack_threshold memory
   · have z : ∀ (g : BitVec 64) (n : Nat), g.toNat = n → word c n = 0#64 →
@@ -745,10 +853,11 @@ theorem f1Pins_of {c : Config} {initial : Vsa.MemRepr.Mem}
   · exact WhileMinEntry.read_trap_barrier memory
   · exact WhileMinEntry.read_backtrace_active memory
   · exact WhileMinEntry.read_caml_channel_mutex_unlock_exn memory
+  · exact consoleRuntime_of memory
 
 /-- `f1Runtime` on the certified cut memory. -/
-theorem f1Runtime_of {c : Config} {initial : Vsa.MemRepr.Mem}
-    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) : f1Runtime c := by
+theorem f1Runtime_of {c : Config}
+    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) : f1Runtime c := by
   have ok := WhileMinRuntime.runtimeOk memory
   exact ⟨ok.bounds, ok.noPending, f1Pins_of memory⟩
 
