@@ -101,7 +101,9 @@ def St.shapeOk (P : Prog) (ops : List Opcode) (s : St) : Bool :=
   s.valuesInRange P.code.size && s.extraOk && s.trapOk && s.branchIntsOk P && St.raisesOk P s &&
     St.decodedOk P ops s && s.divisorsOk P && St.operandOk P .CLOSURE 254 s &&
     St.operandOk P .MAKEBLOCK 256 s && St.ccallOk P .C_CALL1 0 s && St.ccallOk P .C_CALL2 1 s &&
-    St.ccallOk P .C_CALL3 2 s && St.ccallOk P .C_CALL4 3 s && St.ccallOk P .C_CALL5 4 s
+    St.ccallOk P .C_CALL3 2 s && St.ccallOk P .C_CALL4 3 s && St.ccallOk P .C_CALL5 4 s &&
+    s.heap.noForward &&
+    decide (s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords)
 
 /-- The F1 shape checks of one state, by name. -/
 structure ShapeFacts (P : Prog) (ops : List Opcode) (s : St) : Prop where
@@ -119,13 +121,18 @@ structure ShapeFacts (P : Prog) (ops : List Opcode) (s : St) : Prop where
   ccall3 : St.ccallOk P .C_CALL3 2 s = true
   ccall4 : St.ccallOk P .C_CALL4 3 s = true
   ccall5 : St.ccallOk P .C_CALL5 4 s = true
+  /-- no `Forward_tag` block (a6-gc: `gcSafe_of_noForward`) -/
+  noForward : s.heap.noForward = true
+  /-- within the F1 budget (a6-gc: `Fits g1Budget`) -/
+  fits : s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords
 
 theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {s : St} (h : St.shapeOk P ops s = true) :
     ShapeFacts P ops s := by
-  simp only [St.shapeOk, Bool.and_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩, divisors⟩, closures⟩, blocks⟩,
-    c1⟩, c2⟩, c3⟩, c4⟩, c5⟩ := h
-  exact ⟨values, extra, trap, branches, raises, decoded, divisors, closures, blocks, c1, c2, c3, c4, c5⟩
+  simp only [St.shapeOk, Bool.and_eq_true, decide_eq_true_eq] at h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩, divisors⟩, closures⟩, blocks⟩,
+    c1⟩, c2⟩, c3⟩, c4⟩, c5⟩, noForward⟩, fits⟩ := h
+  exact ⟨values, extra, trap, branches, raises, decoded, divisors, closures, blocks, c1, c2, c3, c4, c5,
+    noForward, fits⟩
 
 /-- The decode check, by name. -/
 theorem ShapeFacts.decode {P : Prog} {ops : List Opcode} {s : St} (h : ShapeFacts P ops s) :
@@ -159,6 +166,15 @@ theorem whileMin_shapeChecked :
 
 theorem whileMin_shapeOk {s : St} (reach : Reach whileMin s) : ShapeFacts whileMin whileMinOps s :=
   .of_ok (reach_of_checkAll whileMin_shapeChecked reach)
+
+/-- **`Fits g1Budget whileMin`** (peak 18 stack / 125 heap words). -/
+theorem whileMin_fits : Fits Vm.Gc.g1Budget whileMin := fun _ reach => (whileMin_shapeOk reach).fits
+
+/-- `whileMin` never creates a `Forward_tag` block. -/
+theorem whileMin_noForward : NoForward whileMin := fun _ reach => (whileMin_shapeOk reach).noForward
+
+/-- **`GcSafe whileMin`**. -/
+theorem whileMin_gcSafe : GcSafe whileMin := gcSafe_of_noForward whileMin_noForward
 
 /-- **`whileMin`'s live values lie in their regions.** -/
 theorem whileMin_valuesInRange : ValuesInRange whileMin := fun _ reach => (whileMin_shapeOk reach).values

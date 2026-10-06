@@ -5,12 +5,13 @@ import OCaml.Vm.Gc.G1Room
 import OCaml.Refinement
 
 /-!
-# `Fits` and `GcSafe` for `whileMin`, kernel-checked
+# Checked runs: every-state facts from one kernel evaluation
 
-One `decide +kernel` of `Run.checkAll` walks the 2,161-step run once and checks
-at every state: stack at most 18 words, heap at most 125 words (100 of them
-the initial heap), and no `Forward_tag` block. `whileMin` never forces a lazy
-value, so it is GC-safe (`gcSafe_of_noForward`), and it fits the F1 budget.
+`reach_of_checkAll` turns one `Run.checkAll` evaluation into a fact at every
+reachable state. For `whileMin` there is exactly ONE such run,
+`WhileMinShape.whileMin_shapeChecked` (`St.shapeOk`); its `Fits`, `NoForward`
+and `GcSafe` corollaries live there. Never add a second `decide +kernel` over
+the run: extend `St.shapeOk`.
 -/
 
 namespace OCaml.Bytecode
@@ -28,39 +29,4 @@ theorem _root_.OCaml.Fits.mono {B B' : Budget} {P : Prog} (h : Fits B P)
 
 end OCaml.Bytecode
 
-namespace OCaml.Programs
-open OCaml.Bytecode
 
-/-- The measured peak resources of `whileMin`'s run. -/
-def whileMinPeak : Budget := ⟨18, 125⟩
-
-/-- The per-state check: within the peak budget and free of `Forward_tag` blocks. -/
-def whileMinOk (s : St) : Bool :=
-  decide (s.stack.length ≤ whileMinPeak.stackWords ∧ s.heap.words ≤ whileMinPeak.heapWords) &&
-    s.heap.noForward
-
-set_option maxRecDepth 100000 in
-theorem whileMin_checked : Run.checkAll (bcK whileMin) whileMinOk 2200 whileMin.init = true := by
-  decide +kernel
-
-theorem whileMin_ok {s : St} (reach : Reach whileMin s) :
-    (s.stack.length ≤ whileMinPeak.stackWords ∧ s.heap.words ≤ whileMinPeak.heapWords) ∧
-      s.heap.noForward = true := by
-  have h := reach_of_checkAll whileMin_checked reach
-  simp only [whileMinOk, Bool.and_eq_true, decide_eq_true_eq] at h
-  exact h
-
-/-- `whileMin` stays within its measured peak. -/
-theorem whileMin_fitsPeak : Fits whileMinPeak whileMin := fun _ reach => (whileMin_ok reach).1
-
-/-- **`Fits g1Budget whileMin`**: within the F1 budget. -/
-theorem whileMin_fits : Fits Vm.Gc.g1Budget whileMin :=
-  whileMin_fitsPeak.mono (by decide) (by decide)
-
-/-- `whileMin` never creates a `Forward_tag` block. -/
-theorem whileMin_noForward : NoForward whileMin := fun _ reach => (whileMin_ok reach).2
-
-/-- **`GcSafe whileMin`**. -/
-theorem whileMin_gcSafe : GcSafe whileMin := gcSafe_of_noForward whileMin_noForward
-
-end OCaml.Programs
