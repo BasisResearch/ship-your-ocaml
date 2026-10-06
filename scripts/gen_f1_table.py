@@ -30,7 +30,7 @@ FIXED = {
     'stable': 'f1_memoryStable',
     'rf': 'f1_runtimeFrame',
     'fits': 'fits',
-    'capacity': 'capacity',
+    'capacity': 'g1_capacity',
     'good': 'good',
 }
 # Program-level parameters shared by several rows: one premise field each.
@@ -127,12 +127,13 @@ def render():
               '/-- **Program-level premises of the F1 rows** (each names the lane that',
               'supplies it in the row\'s file), and the rows still open. -/',
               'structure F1Premises (P : Prog) : Prop where']
+    lines[-4:-4] = ['/-- The G1 budget leaves both thresholds of slack on the VM stack. -/',
+                    'theorem g1_capacity : StackCapacity Gc.g1Budget := by unfold StackCapacity; decide', '']
     for fname, ty in fields.items():
         lines.append(f'  {fname} : {ty}')
     lines += ['', '/-- **The F1 arm table** for the pinned layout. -/',
               'theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)',
-              '    (good : OCaml.GoodF1 P) (fits : OCaml.Fits Gc.g1Budget P)',
-              '    (capacity : StackCapacity Gc.g1Budget) (pre : F1Premises P) :',
+              '    (good : OCaml.GoodF1 P) (fits : OCaml.Fits Gc.g1Budget P) (pre : F1Premises P) :',
               '    OCaml.F1Arms P c (OCaml.LoopAt Gc.f1Layout P) where',
               '  entry := f1_entry loaded',
               '  arm op hop := match op, hop with']

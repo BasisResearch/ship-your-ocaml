@@ -21,6 +21,9 @@ are the named fields of `F1Premises`. -/
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
+/-- The G1 budget leaves both thresholds of slack on the VM stack. -/
+theorem g1_capacity : StackCapacity Gc.g1Budget := by unfold StackCapacity; decide
+
 
 /-- **Program-level premises of the F1 rows** (each names the lane that
 supplies it in the row's file), and the rows still open. -/
@@ -68,53 +71,52 @@ structure F1Premises (P : Prog) : Prop where
 
 /-- **The F1 arm table** for the pinned layout. -/
 theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)
-    (good : OCaml.GoodF1 P) (fits : OCaml.Fits Gc.g1Budget P)
-    (capacity : StackCapacity Gc.g1Budget) (pre : F1Premises P) :
+    (good : OCaml.GoodF1 P) (fits : OCaml.Fits Gc.g1Budget P) (pre : F1Premises P) :
     OCaml.F1Arms P c (OCaml.LoopAt Gc.f1Layout P) where
   entry := f1_entry loaded
   arm op hop := match op, hop with
-    | .ACC0, _ => acc0_row f1_memoryStable fits capacity
-    | .ACC1, _ => acc1_row f1_memoryStable fits capacity
-    | .ACC2, _ => acc2_row f1_memoryStable fits capacity
-    | .ACC3, _ => acc3_row f1_memoryStable fits capacity
-    | .ACC4, _ => acc4_row f1_memoryStable fits capacity
-    | .ACC5, _ => acc5_row f1_memoryStable fits capacity
-    | .ACC6, _ => acc6_row f1_memoryStable fits capacity
-    | .ACC7, _ => acc7_row f1_memoryStable fits capacity
-    | .ACC, _ => acc_row f1_memoryStable fits capacity
-    | .PUSH, _ => push_row f1_runtimeFrame fits capacity
-    | .PUSHACC0, _ => pushacc0_row f1_runtimeFrame fits capacity
-    | .PUSHACC1, _ => pushacc1_row f1_runtimeFrame fits capacity
-    | .PUSHACC2, _ => pushacc2_row f1_runtimeFrame fits capacity
-    | .PUSHACC3, _ => pushacc3_row f1_runtimeFrame fits capacity
-    | .PUSHACC4, _ => pushacc4_row f1_runtimeFrame fits capacity
-    | .PUSHACC5, _ => pushacc5_row f1_runtimeFrame fits capacity
-    | .PUSHACC6, _ => pushacc6_row f1_runtimeFrame fits capacity
-    | .PUSHACC7, _ => pushacc7_row f1_runtimeFrame fits capacity
-    | .PUSHACC, _ => pushacc_row f1_runtimeFrame fits capacity
+    | .ACC0, _ => acc0_row f1_memoryStable fits g1_capacity
+    | .ACC1, _ => acc1_row f1_memoryStable fits g1_capacity
+    | .ACC2, _ => acc2_row f1_memoryStable fits g1_capacity
+    | .ACC3, _ => acc3_row f1_memoryStable fits g1_capacity
+    | .ACC4, _ => acc4_row f1_memoryStable fits g1_capacity
+    | .ACC5, _ => acc5_row f1_memoryStable fits g1_capacity
+    | .ACC6, _ => acc6_row f1_memoryStable fits g1_capacity
+    | .ACC7, _ => acc7_row f1_memoryStable fits g1_capacity
+    | .ACC, _ => acc_row f1_memoryStable fits g1_capacity
+    | .PUSH, _ => push_row f1_runtimeFrame fits g1_capacity
+    | .PUSHACC0, _ => pushacc0_row f1_runtimeFrame fits g1_capacity
+    | .PUSHACC1, _ => pushacc1_row f1_runtimeFrame fits g1_capacity
+    | .PUSHACC2, _ => pushacc2_row f1_runtimeFrame fits g1_capacity
+    | .PUSHACC3, _ => pushacc3_row f1_runtimeFrame fits g1_capacity
+    | .PUSHACC4, _ => pushacc4_row f1_runtimeFrame fits g1_capacity
+    | .PUSHACC5, _ => pushacc5_row f1_runtimeFrame fits g1_capacity
+    | .PUSHACC6, _ => pushacc6_row f1_runtimeFrame fits g1_capacity
+    | .PUSHACC7, _ => pushacc7_row f1_runtimeFrame fits g1_capacity
+    | .PUSHACC, _ => pushacc_row f1_runtimeFrame fits g1_capacity
     | .POP, _ => pop_row f1_memoryStable
-    | .ASSIGN, _ => assign_row f1_runtimeFrame fits capacity
+    | .ASSIGN, _ => assign_row f1_runtimeFrame fits g1_capacity
     | .ENVACC1, _ => envacc1_row f1_memoryStable
     | .ENVACC2, _ => envacc2_row f1_memoryStable
     | .ENVACC3, _ => envacc3_row f1_memoryStable
     | .ENVACC4, _ => envacc4_row f1_memoryStable
     | .ENVACC, _ => envacc_row f1_memoryStable
-    | .PUSHENVACC1, _ => pushenvacc1_row f1_runtimeFrame fits capacity
-    | .PUSHENVACC2, _ => pushenvacc2_row f1_runtimeFrame fits capacity
-    | .PUSHENVACC3, _ => pushenvacc3_row f1_runtimeFrame fits capacity
-    | .PUSHENVACC4, _ => pushenvacc4_row f1_runtimeFrame fits capacity
+    | .PUSHENVACC1, _ => pushenvacc1_row f1_runtimeFrame fits g1_capacity
+    | .PUSHENVACC2, _ => pushenvacc2_row f1_runtimeFrame fits g1_capacity
+    | .PUSHENVACC3, _ => pushenvacc3_row f1_runtimeFrame fits g1_capacity
+    | .PUSHENVACC4, _ => pushenvacc4_row f1_runtimeFrame fits g1_capacity
     | .PUSHENVACC, _ => pre.row_PUSHENVACC
-    | .PUSH_RETADDR, _ => push_retaddr_row f1_runtimeFrame fits capacity
-    | .APPLY, _ => apply_row f1_memoryStable f1_runtimeFrame fits capacity
-    | .APPLY1, _ => apply1_row f1_runtimeFrame fits capacity
-    | .APPLY2, _ => apply2_row f1_runtimeFrame fits capacity
-    | .APPLY3, _ => apply3_row f1_runtimeFrame fits capacity
-    | .APPTERM, _ => appterm_row f1_runtimeFrame fits capacity
-    | .APPTERM1, _ => appterm1_row f1_runtimeFrame fits capacity
-    | .APPTERM2, _ => appterm2_row f1_runtimeFrame fits capacity
-    | .APPTERM3, _ => appterm3_row f1_runtimeFrame fits capacity
-    | .RETURN, _ => return_row f1_memoryStable fits capacity pre.extra
-    | .RESTART, _ => restart_row f1_runtimeFrame fits capacity
+    | .PUSH_RETADDR, _ => push_retaddr_row f1_runtimeFrame fits g1_capacity
+    | .APPLY, _ => apply_row f1_memoryStable f1_runtimeFrame fits g1_capacity
+    | .APPLY1, _ => apply1_row f1_runtimeFrame fits g1_capacity
+    | .APPLY2, _ => apply2_row f1_runtimeFrame fits g1_capacity
+    | .APPLY3, _ => apply3_row f1_runtimeFrame fits g1_capacity
+    | .APPTERM, _ => appterm_row f1_runtimeFrame fits g1_capacity
+    | .APPTERM1, _ => appterm1_row f1_runtimeFrame fits g1_capacity
+    | .APPTERM2, _ => appterm2_row f1_runtimeFrame fits g1_capacity
+    | .APPTERM3, _ => appterm3_row f1_runtimeFrame fits g1_capacity
+    | .RETURN, _ => return_row f1_memoryStable fits g1_capacity pre.extra
+    | .RESTART, _ => restart_row f1_runtimeFrame fits g1_capacity
     | .GRAB, _ => pre.row_GRAB
     | .CLOSURE, _ => pre.row_CLOSURE
     | .CLOSUREREC, _ => pre.row_CLOSUREREC
@@ -122,19 +124,19 @@ theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)
     | .OFFSETCLOSURE0, _ => offsetclosure0_row f1_memoryStable
     | .OFFSETCLOSURE3, _ => offsetclosure3_row f1_memoryStable
     | .OFFSETCLOSURE, _ => offsetclosure_row f1_memoryStable
-    | .PUSHOFFSETCLOSUREM3, _ => pushoffsetclosurem3_row f1_runtimeFrame fits capacity
-    | .PUSHOFFSETCLOSURE0, _ => pushoffsetclosure0_row f1_runtimeFrame fits capacity
-    | .PUSHOFFSETCLOSURE3, _ => pushoffsetclosure3_row f1_runtimeFrame fits capacity
-    | .PUSHOFFSETCLOSURE, _ => pushoffsetclosure_row f1_runtimeFrame fits capacity
+    | .PUSHOFFSETCLOSUREM3, _ => pushoffsetclosurem3_row f1_runtimeFrame fits g1_capacity
+    | .PUSHOFFSETCLOSURE0, _ => pushoffsetclosure0_row f1_runtimeFrame fits g1_capacity
+    | .PUSHOFFSETCLOSURE3, _ => pushoffsetclosure3_row f1_runtimeFrame fits g1_capacity
+    | .PUSHOFFSETCLOSURE, _ => pushoffsetclosure_row f1_runtimeFrame fits g1_capacity
     | .GETGLOBAL, _ => getglobal_row f1_memoryStable
-    | .PUSHGETGLOBAL, _ => pushgetglobal_row f1_runtimeFrame fits capacity
+    | .PUSHGETGLOBAL, _ => pushgetglobal_row f1_runtimeFrame fits g1_capacity
     | .GETGLOBALFIELD, _ => getglobalfield_row f1_memoryStable
-    | .PUSHGETGLOBALFIELD, _ => pushgetglobalfield_row f1_runtimeFrame fits capacity
+    | .PUSHGETGLOBALFIELD, _ => pushgetglobalfield_row f1_runtimeFrame fits g1_capacity
     | .SETGLOBAL, _ => pre.row_SETGLOBAL
     | .ATOM0, _ => atom0_row f1_memoryStable
     | .ATOM, _ => atom_row f1_memoryStable
-    | .PUSHATOM0, _ => pushatom0_row f1_runtimeFrame fits capacity
-    | .PUSHATOM, _ => pushatom_row f1_runtimeFrame fits capacity
+    | .PUSHATOM0, _ => pushatom0_row f1_runtimeFrame fits g1_capacity
+    | .PUSHATOM, _ => pushatom_row f1_runtimeFrame fits g1_capacity
     | .MAKEBLOCK, _ => pre.row_MAKEBLOCK
     | .MAKEBLOCK1, _ => pre.row_MAKEBLOCK1
     | .MAKEBLOCK2, _ => pre.row_MAKEBLOCK2
@@ -162,44 +164,44 @@ theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)
     | .BRANCHIFNOT, _ => branchifnot_row f1_memoryStable pre.values
     | .SWITCH, _ => switch_row f1_memoryStable pre.exotic
     | .BOOLNOT, _ => boolnot_row f1_memoryStable
-    | .PUSHTRAP, _ => pushtrap_row f1_runtimeFrame fits capacity pre.trapBounded
-    | .POPTRAP, _ => poptrap_row f1_runtimeFrame fits capacity
-    | .RAISE, _ => raise_row f1_memoryStable f1_runtimeFrame fits capacity pre.extra pre.raises
+    | .PUSHTRAP, _ => pushtrap_row f1_runtimeFrame fits g1_capacity pre.trapBounded
+    | .POPTRAP, _ => poptrap_row f1_runtimeFrame fits g1_capacity
+    | .RAISE, _ => raise_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.extra pre.raises
     | .CHECK_SIGNALS, _ => check_signals_row f1_memoryStable f1_runtimeFrame
-    | .C_CALL1, _ => c_call1_row f1_memoryStable f1_runtimeFrame fits capacity pre.c_call1_arity pre.c_call1_returns pre.c_call1_effects
-    | .C_CALL2, _ => c_call2_row f1_memoryStable f1_runtimeFrame fits capacity pre.c_call2_arity pre.c_call2_returns pre.c_call2_effects
-    | .C_CALL3, _ => c_call3_row f1_memoryStable f1_runtimeFrame fits capacity pre.c_call3_arity pre.c_call3_returns pre.c_call3_effects
-    | .C_CALL4, _ => c_call4_row f1_memoryStable f1_runtimeFrame fits capacity pre.c_call4_arity pre.c_call4_returns pre.c_call4_effects
-    | .C_CALL5, _ => c_call5_row f1_memoryStable f1_runtimeFrame fits capacity pre.c_call5_arity pre.c_call5_returns pre.c_call5_effects
+    | .C_CALL1, _ => c_call1_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call1_arity pre.c_call1_returns pre.c_call1_effects
+    | .C_CALL2, _ => c_call2_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call2_arity pre.c_call2_returns pre.c_call2_effects
+    | .C_CALL3, _ => c_call3_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call3_arity pre.c_call3_returns pre.c_call3_effects
+    | .C_CALL4, _ => c_call4_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call4_arity pre.c_call4_returns pre.c_call4_effects
+    | .C_CALL5, _ => c_call5_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.c_call5_arity pre.c_call5_returns pre.c_call5_effects
     | .C_CALLN, h => absurd h (by decide)
     | .CONST0, _ => const0_row f1_memoryStable
     | .CONST1, _ => const1_row f1_memoryStable
     | .CONST2, _ => const2_row f1_memoryStable
     | .CONST3, _ => const3_row f1_memoryStable
     | .CONSTINT, _ => constint_row f1_memoryStable
-    | .PUSHCONST0, _ => pushconst0_row f1_runtimeFrame fits capacity
-    | .PUSHCONST1, _ => pushconst1_row f1_runtimeFrame fits capacity
-    | .PUSHCONST2, _ => pushconst2_row f1_runtimeFrame fits capacity
-    | .PUSHCONST3, _ => pushconst3_row f1_runtimeFrame fits capacity
-    | .PUSHCONSTINT, _ => pushconstint_row f1_runtimeFrame fits capacity
+    | .PUSHCONST0, _ => pushconst0_row f1_runtimeFrame fits g1_capacity
+    | .PUSHCONST1, _ => pushconst1_row f1_runtimeFrame fits g1_capacity
+    | .PUSHCONST2, _ => pushconst2_row f1_runtimeFrame fits g1_capacity
+    | .PUSHCONST3, _ => pushconst3_row f1_runtimeFrame fits g1_capacity
+    | .PUSHCONSTINT, _ => pushconstint_row f1_runtimeFrame fits g1_capacity
     | .NEGINT, _ => negint_row f1_memoryStable
-    | .ADDINT, _ => addint_row f1_memoryStable fits capacity
-    | .SUBINT, _ => subint_row f1_memoryStable fits capacity
-    | .MULINT, _ => mulint_row f1_memoryStable fits capacity pre.scratch
-    | .DIVINT, _ => divint_row f1_memoryStable fits capacity pre.scratch pre.divint_zero
-    | .MODINT, _ => modint_row f1_memoryStable fits capacity pre.scratch pre.modint_zero
-    | .ANDINT, _ => andint_row f1_memoryStable fits capacity
-    | .ORINT, _ => orint_row f1_memoryStable fits capacity
-    | .XORINT, _ => xorint_row f1_memoryStable fits capacity
-    | .LSLINT, _ => lslint_row f1_memoryStable fits capacity
-    | .LSRINT, _ => lsrint_row f1_memoryStable fits capacity
-    | .ASRINT, _ => asrint_row f1_memoryStable fits capacity
-    | .EQ, _ => eq_row f1_memoryStable fits capacity pre.values
-    | .NEQ, _ => neq_row f1_memoryStable fits capacity pre.values
-    | .LTINT, _ => ltint_row f1_memoryStable fits capacity
-    | .LEINT, _ => leint_row f1_memoryStable fits capacity
-    | .GTINT, _ => gtint_row f1_memoryStable fits capacity
-    | .GEINT, _ => geint_row f1_memoryStable fits capacity
+    | .ADDINT, _ => addint_row f1_memoryStable fits g1_capacity
+    | .SUBINT, _ => subint_row f1_memoryStable fits g1_capacity
+    | .MULINT, _ => mulint_row f1_memoryStable fits g1_capacity pre.scratch
+    | .DIVINT, _ => divint_row f1_memoryStable fits g1_capacity pre.scratch pre.divint_zero
+    | .MODINT, _ => modint_row f1_memoryStable fits g1_capacity pre.scratch pre.modint_zero
+    | .ANDINT, _ => andint_row f1_memoryStable fits g1_capacity
+    | .ORINT, _ => orint_row f1_memoryStable fits g1_capacity
+    | .XORINT, _ => xorint_row f1_memoryStable fits g1_capacity
+    | .LSLINT, _ => lslint_row f1_memoryStable fits g1_capacity
+    | .LSRINT, _ => lsrint_row f1_memoryStable fits g1_capacity
+    | .ASRINT, _ => asrint_row f1_memoryStable fits g1_capacity
+    | .EQ, _ => eq_row f1_memoryStable fits g1_capacity pre.values
+    | .NEQ, _ => neq_row f1_memoryStable fits g1_capacity pre.values
+    | .LTINT, _ => ltint_row f1_memoryStable fits g1_capacity
+    | .LEINT, _ => leint_row f1_memoryStable fits g1_capacity
+    | .GTINT, _ => gtint_row f1_memoryStable fits g1_capacity
+    | .GEINT, _ => geint_row f1_memoryStable fits g1_capacity
     | .OFFSETINT, _ => offsetint_row f1_memoryStable
     | .OFFSETREF, _ => offsetref_row pre.field
     | .ISINT, _ => isint_row f1_memoryStable
@@ -210,8 +212,8 @@ theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)
     | .BLEINT, _ => bleint_row f1_memoryStable
     | .BGTINT, _ => bgtint_row f1_memoryStable
     | .BGEINT, _ => bgeint_row f1_memoryStable
-    | .ULTINT, _ => ultint_row f1_memoryStable fits capacity
-    | .UGEINT, _ => ugeint_row f1_memoryStable fits capacity
+    | .ULTINT, _ => ultint_row f1_memoryStable fits g1_capacity
+    | .UGEINT, _ => ugeint_row f1_memoryStable fits g1_capacity
     | .BULTINT, _ => bultint_row f1_memoryStable
     | .BUGEINT, _ => bugeint_row f1_memoryStable
     | .GETPUBMET, h => absurd h (by decide)
@@ -219,8 +221,8 @@ theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)
     | .STOP, _ => stop_row_f1 good
     | .EVENT, h => absurd h (by decide)
     | .BREAK, h => absurd h (by decide)
-    | .RERAISE, _ => reraise_row f1_memoryStable f1_runtimeFrame fits capacity pre.extra pre.raises
-    | .RAISE_NOTRACE, _ => raise_notrace_row f1_memoryStable f1_runtimeFrame fits capacity pre.extra pre.raises
+    | .RERAISE, _ => reraise_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.extra pre.raises
+    | .RAISE_NOTRACE, _ => raise_notrace_row f1_memoryStable f1_runtimeFrame fits g1_capacity pre.extra pre.raises
     | .GETSTRINGCHAR, h => absurd h (by decide)
 
 end OCaml.Vm.Sim

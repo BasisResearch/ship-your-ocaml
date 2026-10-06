@@ -7,7 +7,7 @@ import OCaml.Theorems
 
 The F1 arm table (`f1_table`, generated) gives the F1 refinement statement for
 the pinned layout `Gc.f1Layout` and the G1 budget, given the stack capacity
-of the budget and the program-level premises of the rows (`F1Premises`), and
+of the budget (`g1_capacity`) and the program-level premises of the rows (`F1Premises`), and
 its `whileMin` instance at the captured cut.
 -/
 
@@ -16,19 +16,19 @@ set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine
 
 /-- **Layer A for F1, pinned layout**, from the rows' program-level premises. -/
-theorem ocamlrun_refinement_F1_pinned (capacity : StackCapacity Gc.g1Budget)
+theorem ocamlrun_refinement_F1_pinned
     (pre : ∀ P, OCaml.GoodF1 P → OCaml.Fits Gc.g1Budget P → GcSafe P → F1Premises P) :
     OCaml.ocamlrun_refinement_F1_Statement Gc.f1Layout Gc.g1Budget :=
   OCaml.ocamlrun_refinement_F1_of_arms fun P c loaded good fits gc =>
-    ⟨_, f1_table loaded good fits capacity (pre P good fits gc)⟩
+    ⟨_, f1_table loaded good fits (pre P good fits gc)⟩
 
 /-- **The `whileMin` machine run**: the captured cut of the pinned image
 halts printing `55`, `2500`, `36` with exit code 0. -/
-theorem whileMin_halts_f1 (capacity : StackCapacity Gc.g1Budget)
+theorem whileMin_halts_f1
     (pre : F1Premises OCaml.Programs.whileMin) :
     Halts Boot.WhileMin.cut "55\n2500\n36\n" 0 :=
   have table := f1_table Gc.whileMin_loaded_f1 OCaml.Programs.whileMin_goodF1
-    OCaml.Programs.whileMin_fits capacity pre
+    OCaml.Programs.whileMin_fits pre
   ((table.simR OCaml.Programs.whileMin_goodF1).refines OCaml.Programs.whileMin_goodF1.good).1 _ _
     |>.1 OCaml.Programs.whileMin_bcSem
 
