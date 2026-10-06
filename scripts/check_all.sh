@@ -93,6 +93,7 @@ python3 scripts/gen_layout.py | cmp -s - OCaml/Vm/Layout.lean || fail "stage a5:
 python3 scripts/gen_boot_observation.py results/boot/while_min-cut.json | cmp -s - OCaml/Vm/Boot/WhileMinObservation.lean || fail "stage a5: boot observation differs from generator"
 python3 scripts/gen_boot_log.py --check || fail "stage a5: boot log certificate drift"
 python3 scripts/gen_boot_runtime.py --check || fail "stage a5: boot runtime read drift"
+python3 scripts/gen_boot_chunks.py --check || fail "stage a5: boot heap chunk drift"
 python3 scripts/gen_boot_heap.py --check || fail "stage a5: boot heap certificate drift"
 python3 scripts/gen_boot_entry.py --check || fail "stage a5: boot entry certificate drift"
 python3 scripts/gen_boot_image.py --check || fail "stage a5: boot image drift"

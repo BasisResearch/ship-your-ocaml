@@ -332,6 +332,8 @@ import OCaml.Vm.Boot.Startup.NewNode
 import OCaml.Vm.Boot.Startup.HeapReady
 import OCaml.Vm.Boot.Startup.HeapFrame
 import OCaml.Vm.Boot.Startup.FsInit
+import OCaml.Vm.Boot.WhileMinHeapChunks
+import OCaml.Vm.Boot.Startup.ResolveSteps
 import OCaml.Vm.Boot.Startup.Strdup
 import OCaml.Vm.Boot.Startup.ExtTableFree
 import OCaml.Vm.Boot.Startup.DecomposeNull
@@ -2472,6 +2474,26 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.fs_init_prefix
 #print axioms OCaml.Vm.Boot.Startup.fs_init_scan
 #print axioms OCaml.Vm.Boot.Startup.fs_init_tail
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.camlState_inUse
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.camlState_size
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.refTable_inUse
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.refTable_size
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.minorHeap_inUse
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.minorHeap_size
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.majorHeap_inUse
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.majorHeap_size
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.vmStack_inUse
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.vmStack_size
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.codeBuffer_inUse
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.codeBuffer_size
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.primTable_inUse
+#print axioms OCaml.Vm.Boot.WhileMinHeapChunks.primTable_size
+#print axioms OCaml.Vm.Boot.Startup.resolve_entry
+#print axioms OCaml.Vm.Boot.Startup.resolve_clear
+#print axioms OCaml.Vm.Boot.Startup.resolve_strlen_call
+#print axioms OCaml.Vm.Boot.Startup.resolve_flag_test
+#print axioms OCaml.Vm.Boot.Startup.resolve_flag_store
+#print axioms OCaml.Vm.Boot.Startup.resAt36_window
 #print axioms OCaml.Vm.Boot.Startup.fs_init
 #print axioms OCaml.Vm.Boot.Startup.child_check
 #print axioms OCaml.Vm.Boot.Startup.child_next
