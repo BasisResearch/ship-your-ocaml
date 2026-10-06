@@ -365,7 +365,7 @@ structure IntAt (DA : List Nat) (s dst n : Nat) (R0 : Nat → BitVec 64) (Mt0 : 
   sg01 : sg = 0 ∨ sg = 45
   r14 : R 14 = BitVec.ofNat 64 m
   mlt : m < 2 ^ 64
-  r6 : R 6 = 0#64 ∨ R 6 = 32#64
+  r6 : R 6 = 0#64 ∨ R 6 = 32#64 ∨ R 6 = 16#64
   r20 : R 20 = 18446744073709551615#64
   r28 : R 28 = 0#64
 
@@ -472,7 +472,7 @@ theorem vMag_lt (v : BitVec 64) : vMag v < 2 ^ 64 := by unfold vMag; split <;> e
   · exact vSg01 v
   · rw [vMag_pos hc]; simp
   · exact vMag_lt v
-  · exact .inr h6
+  · exact .inr (.inl h6)
   · exact h20
 
 #ix_piece svf_intQ_b from svf_intQ_cases at 2 by
@@ -489,7 +489,7 @@ theorem vMag_lt (v : BitVec 64) : vMag v < 2 ^ 64 := by unfold vMag; split <;> e
   · exact vSg01 v
   · rw [vMag_neg hc]; apply BitVec.eq_of_toNat_eq; simp
   · exact vMag_lt v
-  · exact .inr h6
+  · exact .inr (.inl h6)
   · exact h20
 
 
@@ -863,9 +863,9 @@ def IntPrintK (live : Nat → Prop) (Dt : Mem) (DA : List Nat)
   · svf_mem; exact IA.st.core.fmt
   · svf_mem; exact IA.st.core.ret
   · svf_mem; exact IA.st.core.ap
-  · rcases IA.r6 with h | h <;> rw [h] <;> decide
-  · rcases IA.r6 with h | h <;> rw [h] <;> decide
-  · rcases IA.r6 with h | h <;> rw [h] <;> decide
+  · rcases IA.r6 with h | h | h <;> rw [h] <;> decide
+  · rcases IA.r6 with h | h | h <;> rw [h] <;> decide
+  · rcases IA.r6 with h | h | h <;> rw [h] <;> decide
   · exact IA.r28
   · rcases IA.sg01 with h | h <;> subst h <;> first | rfl | (simp at hsg) | decide
   · rw [show s - 864 + 348 - 1 = s - 864 + 347 by omega]
@@ -892,9 +892,9 @@ def IntPrintK (live : Nat → Prop) (Dt : Mem) (DA : List Nat)
   · svf_mem; exact IA.st.core.fmt
   · svf_mem; exact IA.st.core.ret
   · svf_mem; exact IA.st.core.ap
-  · rcases IA.r6 with h | h <;> rw [h] <;> decide
-  · rcases IA.r6 with h | h <;> rw [h] <;> decide
-  · rcases IA.r6 with h | h <;> rw [h] <;> decide
+  · rcases IA.r6 with h | h | h <;> rw [h] <;> decide
+  · rcases IA.r6 with h | h | h <;> rw [h] <;> decide
+  · rcases IA.r6 with h | h | h <;> rw [h] <;> decide
   · exact IA.r28
   · rcases IA.sg01 with h | h <;> subst h <;> first | rfl | (simp at hsg) | decide
   · rw [show s - 864 + 348 - 1 = s - 864 + 347 by omega]
@@ -928,7 +928,7 @@ structure DigSpill (s : Nat) (Rs : Nat → BitVec 64) (t1 : BitVec 64) (Mt : Mem
     {R0 : Nat → BitVec 64} {Mt0 : Mem} {p ap c : Nat} {total : List (BitVec 8)}
     {L : List (Nat × Nat)} {m K : Nat} (Rs R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n)
     (St : SvfSt DA s dst n R0 Mt0 p ap (BitVec.ofNat 64 c) total L Rs Mt) (t1 : BitVec 64)
-    (ht1 : t1 = 0#64 ∨ t1 = 32#64) (DS : DigSpill s Rs t1 Mt) (hR : ∀ z, z = 2 ∨ z = 9 ∨ z = 18 ∨ z = 19 ∨ z = 21 → R z = Rs z)
+    (ht1 : t1 = 0#64 ∨ t1 = 32#64 ∨ t1 = 16#64) (DS : DigSpill s Rs t1 Mt) (hR : ∀ z, z = 2 ∨ z = 9 ∨ z = 18 ∨ z = 19 ∨ z = 21 → R z = Rs z)
     (h26 : R 26 = BitVec.ofNat 64 (s - 864 + 348 - K)) (DG : DigitsAt Mt s m K)
     (h167 : ldv .lbu Mt (BitVec.ofNat 64 (s - 864 + 167)).toNat = BitVec.ofNat 64 0)
     (hL : L.length ≤ 1) (hc : c + 20 + 1 < 2 ^ 31) (hsum : sumLen L + 20 + 1 < 2 ^ 31)
@@ -995,9 +995,9 @@ structure DigSpill (s : Nat) (Rs : Nat → BitVec 64) (t1 : BitVec 64) (Mt : Mem
   · svf_mem; exact St.core.fmt
   · svf_mem; exact St.core.ret
   · svf_mem; exact St.core.ap
-  · rcases ht1 with h | h <;> rw [h] <;> decide
-  · rcases ht1 with h | h <;> rw [h] <;> decide
-  · rcases ht1 with h | h <;> rw [h] <;> decide
+  · rcases ht1 with h | h | h <;> rw [h] <;> decide
+  · rcases ht1 with h | h | h <;> rw [h] <;> decide
+  · rcases ht1 with h | h | h <;> rw [h] <;> decide
   · simp [sgN]
   · exact h26
   · svf_mem; exact h167
@@ -1015,7 +1015,7 @@ structure DigSpill (s : Nat) (Rs : Nat → BitVec 64) (t1 : BitVec 64) (Mt : Mem
     {R0 : Nat → BitVec 64} {Mt0 : Mem} {p ap c : Nat} {total : List (BitVec 8)}
     {L : List (Nat × Nat)} {m K : Nat} (Rs R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n)
     (St : SvfSt DA s dst n R0 Mt0 p ap (BitVec.ofNat 64 c) total L Rs Mt) (t1 : BitVec 64)
-    (ht1 : t1 = 0#64 ∨ t1 = 32#64) (DS : DigSpill s Rs t1 Mt) (hR : ∀ z, z = 2 ∨ z = 9 ∨ z = 18 ∨ z = 19 ∨ z = 21 → R z = Rs z)
+    (ht1 : t1 = 0#64 ∨ t1 = 32#64 ∨ t1 = 16#64) (DS : DigSpill s Rs t1 Mt) (hR : ∀ z, z = 2 ∨ z = 9 ∨ z = 18 ∨ z = 19 ∨ z = 21 → R z = Rs z)
     (h26 : R 26 = BitVec.ofNat 64 (s - 864 + 348 - K)) (DG : DigitsAt Mt s m K)
     (h167 : ldv .lbu Mt (BitVec.ofNat 64 (s - 864 + 167)).toNat = BitVec.ofNat 64 45)
     (hL : L.length ≤ 1) (hc : c + 20 + 1 < 2 ^ 31) (hsum : sumLen L + 20 + 1 < 2 ^ 31)
@@ -1082,9 +1082,9 @@ structure DigSpill (s : Nat) (Rs : Nat → BitVec 64) (t1 : BitVec 64) (Mt : Mem
   · svf_mem; exact St.core.fmt
   · svf_mem; exact St.core.ret
   · svf_mem; exact St.core.ap
-  · rcases ht1 with h | h <;> rw [h] <;> decide
-  · rcases ht1 with h | h <;> rw [h] <;> decide
-  · rcases ht1 with h | h <;> rw [h] <;> decide
+  · rcases ht1 with h | h | h <;> rw [h] <;> decide
+  · rcases ht1 with h | h | h <;> rw [h] <;> decide
+  · rcases ht1 with h | h | h <;> rw [h] <;> decide
   · simp [sgN]
   · exact h26
   · svf_mem; exact h167
@@ -1102,7 +1102,7 @@ theorem svf_digExit {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) 
     {R0 : Nat → BitVec 64} {Mt0 : Mem} {p ap c : Nat} {total : List (BitVec 8)}
     {L : List (Nat × Nat)} {m sg K : Nat} (Rs R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n)
     (St : SvfSt DA s dst n R0 Mt0 p ap (BitVec.ofNat 64 c) total L Rs Mt) (t1 : BitVec 64)
-    (ht1 : t1 = 0#64 ∨ t1 = 32#64) (DS : DigSpill s Rs t1 Mt) (hR : ∀ z, z = 2 ∨ z = 9 ∨ z = 18 ∨ z = 19 ∨ z = 21 → R z = Rs z)
+    (ht1 : t1 = 0#64 ∨ t1 = 32#64 ∨ t1 = 16#64) (DS : DigSpill s Rs t1 Mt) (hR : ∀ z, z = 2 ∨ z = 9 ∨ z = 18 ∨ z = 19 ∨ z = 21 → R z = Rs z)
     (h26 : R 26 = BitVec.ofNat 64 (s - 864 + 348 - K)) (DG : DigitsAt Mt s m K)
     (hsg : sg = 0 ∨ sg = 45) (h167 : ldv .lbu Mt (BitVec.ofNat 64 (s - 864 + 167)).toNat = BitVec.ofNat 64 sg)
     (hL : L.length ≤ 1) (hc : c + 20 + 1 < 2 ^ 31) (hsum : sumLen L + 20 + 1 < 2 ^ 31)
@@ -1126,7 +1126,7 @@ theorem svf_digExit {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) 
   have h2 := IA.st.core.r2
   have h14 := IA.r14
   have h9 : (9#64).toNat < (BitVec.ofNat 64 m).toNat := by rw [toNat_ofNat_lt IA.mlt]; simp; omega
-  have h1024 : R 6 &&& 1024#64 = 0#64 := by rcases IA.r6 with h | h <;> rw [h] <;> decide
+  have h1024 : R 6 &&& 1024#64 = 0#64 := by rcases IA.r6 with h | h | h <;> rw [h] <;> decide
   snp_runF [6] hlive using [ofNat_add_ofNat, h2, h14, h9, h1024] at 0x80048568
 
 #ix_piece svf_digMulti_p2 from svf_digMulti_p1 by
