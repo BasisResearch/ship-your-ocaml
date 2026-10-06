@@ -60,7 +60,6 @@ structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   scratch : (keep .MULINT || keep .DIVINT || keep .MODINT) = true → ∀ s c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → BinaryLibScratch c
   divint_zero : (keep .DIVINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .DIVINT → stepI P s ⟨.DIVINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
   modint_zero : (keep .MODINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .MODINT → stepI P s ⟨.MODINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
-  field : (keep .OFFSETREF) = true → ∀ s c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → FieldWriteReady Gc.f1Layout P s c
   ints : (keep .BEQ || keep .BNEQ) = true → BranchInts P
 
 /-- All rows kept: the premises of the general F1 statement. -/
@@ -323,7 +322,7 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .OFFSETINT, _ => if h : keep .OFFSETINT = true then offsetint_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .OFFSETREF, _ => if h : keep .OFFSETREF = true then offsetref_row (pre.field (by simp [h]))
+    | .OFFSETREF, _ => if h : keep .OFFSETREF = true then offsetref_row (fun s c reach h => f1_fieldWriteReady h.running.platform.runtime (by simpa using stack_fits fits g1_capacity reach (k := 0)))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .ISINT, _ => if h : keep .ISINT = true then isint_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
