@@ -16,6 +16,7 @@ premises. a2-sem found that four facts are missing.
 | decode-to-fetch: the decoded instruction at `pcOf c` is the one the ELF image holds (via `Vsa.Sim.ElfDecode` and the image pins) | **a2-sem** |
 | a reachable bytecode PC is not an object method-cache slot (F1 never writes code) | **a2-sem** |
 | code-address geometry: bytecode PCs map into the loaded code region, in bounds and aligned | **a2-sem** |
+| `LibraryReady c` (`OCaml/Vm/Primitives/Memmove.lean`) at every C_CALL entry that calls newlib (memmove, strlen, …): every GPR 1..31 present (`isSome` only, monotone: a write keeps presence, `GprPresent.of_frame`), every RAM byte present, `gp = gpV`, idle HTIF payload. Consumed by `memmove_leaf` (a1-prims' output_bytes takes it as a named premise) | **unowned**: a1-arms (loop invariant) or a6-gc (`F1Pins`/`runtimeOk`); flagged by a2-sem and a1-prims |
 
 a2-sem's three facts go in `OCaml/Vm/Sim/CodeFacts.lean`, a new file owned
 by a2-sem. a1-arms consumes them and states its own in
