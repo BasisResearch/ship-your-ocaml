@@ -348,6 +348,7 @@ import OCaml.Vm.Boot.Startup.ResolveSteps
 import OCaml.Vm.Boot.Startup.ResolveRun
 import OCaml.Vm.Boot.Startup.OpenRun
 import OCaml.Vm.Boot.Startup.OpenOcamlrunReset
+import OCaml.Vm.Boot.Startup.AttemptFailReset
 import OCaml.Vm.Boot.Startup.Strdup
 import OCaml.Vm.Boot.Startup.ExtTableFree
 import OCaml.Vm.Boot.Startup.DecomposeNull
@@ -2588,6 +2589,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.kept
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetOpenCall.ocamlrun_name
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_ocamlrun_opened_exists
+#print axioms OCaml.Vm.Boot.Startup.LateImage.transport
+#print axioms OCaml.Vm.Boot.Startup.LateImage.frame
+#print axioms OCaml.Vm.Boot.Startup.HtifImage.printFlags
+#print axioms OCaml.Vm.Boot.Startup.attempt_fail_test
+#print axioms OCaml.Vm.Boot.Startup.attempt_fail_free
+#print axioms OCaml.Vm.Boot.Startup.attempt_fail_message
+#print axioms OCaml.Vm.Boot.Startup.attempt_fail_code_other
+#print axioms OCaml.Vm.Boot.Startup.attempt_fail_code_emfile
+#print axioms OCaml.Vm.Boot.Startup.attempt_open_return
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetSearchTableReturned.attempt_slot
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_attempt_failed_exists
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
 #print axioms OCaml.Vm.Boot.Startup.resAt36_window
 #print axioms OCaml.Vm.Boot.Startup.fs_init

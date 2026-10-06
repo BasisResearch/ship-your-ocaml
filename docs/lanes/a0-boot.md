@@ -50,7 +50,16 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   run through `open("ocamlrun")`'s return. htif.c's `fs_ready`, `files`
   slots 1–63 and `_impure_ptr` are `KeptByte`s (`HtifImage` in `KeptImage`).
 
-Next: caml_attempt_open's failure path after -1, then the retry with "/prog".
+* **`reset_attempt_failed_exists` (AttemptFailReset.lean)**: free, quiet
+  "Cannot open file" message, `__errno`, both errno outcomes (-1 or -4),
+  restore and return to caml_main. The six saves come from
+  `ResetSearchTableReturned.attempt_slot` over `CallerFrame attemptStack`
+  (now a field of ResetSearchExeReturned, ResetOpenCall, OpenOcamlrun).
+  `LateImage` (embed, environ, verb_gc, `_impure_ptr`, print flags) is what
+  survives fs_init; `print_config`/`print_magic` are `HtifByte`s.
+
+Next: caml_main's retry (`caml_executable_name` → NULL, `argv[1]`, the
+`print_config` test) and caml_attempt_open("/prog", 1).
 
 ## Round 2 status (2026-10-06, search)
 

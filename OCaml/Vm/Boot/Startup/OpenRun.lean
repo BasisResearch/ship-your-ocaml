@@ -400,11 +400,13 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
       (by simp only [LogInW])
     late := late.transport embed12 fun a ha => by
       have g : 0x8006466c ≤ a ∧ a < 0x80064918 ∨ 0x8006491c ≤ a ∧ a < 0x80064d48 := by
-        rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-          simp only [Layout.sym_environ, Layout.sym_caml_verb_gc, allocatorImpureAddr] at * <;> omega
+        rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+          simp only [Layout.sym_environ, Layout.sym_caml_verb_gc, allocatorImpureAddr, Layout.sym_print_config] at * <;>
+          omega
       have ag : ¬ allocGlobal a := by
-        rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-          simp only [allocGlobal, InRange, Layout.sym_environ, Layout.sym_caml_verb_gc, allocatorImpureAddr] at * <;> omega
+        rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+          simp only [allocGlobal, InRange, Layout.sym_environ, Layout.sym_caml_verb_gc, allocatorImpureAddr,
+            Layout.sym_print_config] at * <;> omega
       rw [mem12 a (by simp only [OutW, errnoWindows, and_true]; omega)]
       rw [R.low a (by unfold heapStart; omega) ag (by
           simp only [OutW, fsWindows, and_true, nativeFrameBase, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready]

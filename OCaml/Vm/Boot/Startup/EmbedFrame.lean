@@ -22,23 +22,30 @@ def EnvironByte (a : Nat) : Prop := Layout.sym_environ ≤ a ∧ a < Layout.sym_
 def VerbGcByte (a : Nat) : Prop := Layout.sym_caml_verb_gc ≤ a ∧ a < Layout.sym_caml_verb_gc + 8
 
 /-- htif.c's file-system state that startup leaves untouched until the first
-`open`: `fs_ready`, slots 1–63 of `files`, and newlib's `_impure_ptr`. -/
+`open`: `fs_ready`, slots 1–63 of `files`, and newlib's `_impure_ptr`; and
+caml_main's `print_config`/`print_magic` flags. -/
 def HtifByte (a : Nat) : Prop :=
   (Layout.sym_fs_ready ≤ a ∧ a < Layout.sym_fs_ready + 4) ∨
     (Layout.sym_impure_ptr ≤ a ∧ a < Layout.sym_impure_ptr + 8) ∨
-    (Layout.sym_files + 56 ≤ a ∧ a < Layout.sym_files + 56 * 64)
+    (Layout.sym_files + 56 ≤ a ∧ a < Layout.sym_files + 56 * 64) ∨
+    (Layout.sym_print_config ≤ a ∧ a < Layout.sym_print_config + 8)
+
+/-- Low globals that avoid every `HtifByte` at or above `startup_count`. -/
+abbrev HtifApart (g n : Nat) : Prop :=
+  g + n ≤ Layout.sym_print_config ∨ Layout.sym_files + 56 * 64 ≤ g ∨
+    (Layout.sym_print_config + 8 ≤ g ∧ g + n ≤ Layout.sym_files + 56)
 
 /-- Bytes no startup function writes after main. -/
 def KeptByte (a : Nat) : Prop := EmbedByte a ∨ EnvironByte a ∨ VerbGcByte a ∨ HtifByte a
 
 theorem HtifByte.bounds {a} (h : HtifByte a) : Layout.sym_impure_ptr ≤ a ∧ a < Layout.sym_files + 56 * 64 := by
-  rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-    simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files] at * <;> omega
+  rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+    simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_print_config] at * <;> omega
 
 theorem HtifByte.not_alloc {a} (h : HtifByte a) : ¬ allocGlobal a := by
   unfold allocGlobal InRange
-  rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-    simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files] at * <;> omega
+  rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+    simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_print_config] at * <;> omega
 
 theorem KeptByte.lt {a} (ha : KeptByte a) : a < embedLimit := by
   rcases ha with ⟨_, h⟩ | ⟨_, h⟩ | ⟨_, h⟩ | htif
@@ -75,14 +82,16 @@ theorem KeptByte.not_foot {a H} (ha : KeptByte a) : ¬ vsaFoot H a := by
 /-- Kept bytes avoid every low global from `startup_count` up to the arena
 that also avoids htif.c's `files` table. -/
 theorem KeptByte.out_low {a g n} (ha : KeptByte a) (lo : Layout.sym_startup_count ≤ g) (hi : g + n ≤ heapEnd)
-    (files : g + n ≤ Layout.sym_files + 56 ∨ Layout.sym_files + 56 * 64 ≤ g) :
+    (files : HtifApart g n) :
     a < g ∨ g + n ≤ a := by
+  unfold HtifApart at files
   rcases ha with ⟨low, _⟩ | ⟨_, h⟩ | ⟨_, h⟩ | htif
   · right; omega
   · left; unfold Layout.sym_environ Layout.sym_startup_count at *; omega
   · left; unfold Layout.sym_caml_verb_gc Layout.sym_startup_count at *; omega
-  · rcases htif with ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ <;>
-      simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_startup_count] at * <;> omega
+  · rcases htif with ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ <;>
+      simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_startup_count,
+        Layout.sym_print_config] at * <;> omega
 
 structure EmbedFrame (before after : Config) : Prop where
   byte : ∀ a, KeptByte a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
@@ -145,7 +154,7 @@ theorem CustomRegistered.embed_frame {H capacity kind sp s0 head before after}
   have region := w.region
   have node := ha.out_low (g := (vsaReg w.allocated 10).toNat) (n := 16)
     (Nat.le_trans (by decide) region.lower) region.upper
-    (Or.inr (Nat.le_trans (by decide) region.lower))
+    (Or.inr (Or.inl (Nat.le_trans (by decide) region.lower)))
   have table := ha.out_low (g := Layout.sym_custom_ops_table) (n := 8) (by decide) (by decide) (by decide)
   exact customPublish_out_byte region node table
 
@@ -223,8 +232,9 @@ theorem StartupDataFrame.embed {before after} (h : StartupDataFrame before after
     · left; unfold Layout.sym_caml_verb_gc Layout.sym_Caml_state at *; omega
   · have b := htif.bounds
     refine Or.inl ⟨by unfold heapStart Layout.sym_files at *; omega, htif.not_alloc, ?_⟩
-    rcases htif with ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ <;>
-      simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_Caml_state] at * <;> omega
+    rcases htif with ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ <;>
+      simp only [Layout.sym_fs_ready, Layout.sym_impure_ptr, Layout.sym_files, Layout.sym_Caml_state,
+        Layout.sym_print_config] at * <;> omega
 
 /-- Every embed byte still has its loader value. -/
 structure EmbedImage (c : Config) : Prop where
@@ -264,7 +274,7 @@ theorem HtifImage.notReady {c} (h : HtifImage c) :
 /-- Slots 1–63 of `files` are unused. -/
 theorem HtifImage.clear {c} (h : HtifImage c) (j : Nat) (lo : 1 ≤ j) (hi : j < 64) :
     (c.σ.mem[Layout.sym_files + 56 * j]?).getD 0 = 0#8 :=
-  h.zero (Or.inr (Or.inr ⟨by omega, by omega⟩)) (Or.inr (by unfold allocatorImpureAddr Layout.sym_files; omega))
+  h.zero (Or.inr (Or.inr (Or.inl ⟨by omega, by omega⟩))) (Or.inr (by unfold allocatorImpureAddr Layout.sym_files; omega))
 
 /-- `_impure_ptr` is `&_impure_data`. -/
 theorem HtifImage.reent {c} (h : HtifImage c) :
@@ -281,6 +291,12 @@ theorem HtifImage.reent {c} (h : HtifImage c) :
     b 1 (by decide), b 2 (by decide), b 3 (by decide), b 4 (by decide), b 5 (by decide), b 6 (by decide),
     b 7 (by decide)]
   decide
+
+/-- caml_main's `print_config` and `print_magic` are clear. -/
+theorem HtifImage.printFlags {c} (h : HtifImage c) (i : Nat) (hi : i < 8) :
+    (c.σ.mem[Layout.sym_print_config + i]?).getD 0 = 0#8 :=
+  h.zero (Or.inr (Or.inr (Or.inr ⟨by omega, by omega⟩)))
+    (Or.inr (by unfold allocatorImpureAddr Layout.sym_print_config; omega))
 
 theorem HtifImage.frame {before after} (h : HtifImage before) (f : EmbedFrame before after) :
     HtifImage after := ⟨fun a ha => (f.byte a (Or.inr (Or.inr (Or.inr ha)))).trans (h.byte a ha)⟩
@@ -313,26 +329,31 @@ structure LateImage (c : Config) : Prop where
   environ : bytesT c.σ.mem Layout.sym_environ 8 = BitVec.ofNat 64 WhileMinImage.envArray
   verbGc : LPins8 c.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8)
   reent : bytesT c.σ.mem allocatorImpureAddr 8 = BitVec.ofNat 64 Layout.sym_impure_data
+  printFlags : ∀ i, i < 8 → (c.σ.mem[Layout.sym_print_config + i]?).getD 0 = 0#8
 
-theorem KeptImage.late {c} (h : KeptImage c) : LateImage c := ⟨h.embed, h.environ, h.verbGc, h.htif.reent⟩
+theorem KeptImage.late {c} (h : KeptImage c) : LateImage c :=
+  ⟨h.embed, h.environ, h.verbGc, h.htif.reent, h.htif.printFlags⟩
 
 /-- A late image survives any change keeping the embedded image and the three
 low globals. -/
 theorem LateImage.transport {before after} (h : LateImage before) (embed : EmbedImage after)
-    (low : ∀ a, (EnvironByte a ∨ VerbGcByte a ∨ (allocatorImpureAddr ≤ a ∧ a < allocatorImpureAddr + 8)) →
+    (low : ∀ a, (EnvironByte a ∨ VerbGcByte a ∨ (allocatorImpureAddr ≤ a ∧ a < allocatorImpureAddr + 8) ∨
+      (Layout.sym_print_config ≤ a ∧ a < Layout.sym_print_config + 8)) →
       (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0) : LateImage after where
   embed := embed
   environ := (word_observed _ (fun i hi => low _ (Or.inl ⟨by omega, by omega⟩))).trans h.environ
   verbGc := lpins8_observed h.verbGc (fun i hi => low _ (Or.inr (Or.inl ⟨by omega, by omega⟩)))
-  reent := (word_observed _ (fun i hi => low _ (Or.inr (Or.inr ⟨by omega, by omega⟩)))).trans h.reent
+  reent := (word_observed _ (fun i hi => low _ (Or.inr (Or.inr (Or.inl ⟨by omega, by omega⟩))))).trans h.reent
+  printFlags := fun i hi => (low _ (Or.inr (Or.inr (Or.inr ⟨by omega, by omega⟩)))).trans (h.printFlags i hi)
 
 theorem LateImage.frame {before after} (h : LateImage before) (f : EmbedFrame before after) : LateImage after :=
   h.transport (h.embed.frame f) fun a ha => f.byte a (by
-    rcases ha with e | v | ⟨lo, hi⟩
+    rcases ha with e | v | ⟨lo, hi⟩ | p
     · exact Or.inr (Or.inl e)
     · exact Or.inr (Or.inr (Or.inl v))
     · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨by unfold allocatorImpureAddr at lo; exact lo,
-        by unfold allocatorImpureAddr at hi; exact hi⟩)))))
+        by unfold allocatorImpureAddr at hi; exact hi⟩))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr p))))))
 end OCaml.Vm.Boot.Startup
 
 namespace OCaml.Vm.Boot.WhileMinElfParse
@@ -372,10 +393,11 @@ theorem ResetCamlMainWitness.htif {initial atMain : Config}
         (by unfold allocatorImpureAddr Layout.sym_stack_top at *; unfold Layout.sym_files at b; omega)
   · simp only [htifInitByte, imp, ↓reduceIte]
     have bss : Layout.sym_bss_start ≤ a := by
-      rcases ha with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, _⟩
+      rcases ha with ⟨lo, _⟩ | ⟨lo, hi⟩ | ⟨lo, _⟩ | ⟨lo, _⟩
       · unfold Layout.sym_fs_ready Layout.sym_bss_start at *; omega
       · exfalso; apply imp; unfold allocatorImpureAddr; unfold Layout.sym_impure_ptr at lo hi; omega
       · unfold Layout.sym_files Layout.sym_bss_start at *; omega
+      · unfold Layout.sym_print_config Layout.sym_bss_start at *; omega
     have bound : Layout.sym_files + 56 * 64 ≤ Layout.sym_bss_start + 8 * bssWords := by decide
     exact w.post.toCrtCamlMainPost.bss_byte a bss (by omega)
       (mainWrites_between _ _ _ (by unfold Layout.sym_environ Layout.sym_bss_start at *; omega)

@@ -238,6 +238,12 @@ def sym_atexit : Nat := 0x80064d90
 def sym_atexit_recursive_mutex : Nat := 0x80064900
 /-- `__stdio_exit_handler` -/
 def sym_stdio_exit_handler : Nat := 0x80064d38
+/-- `print_config` -/
+def sym_print_config : Nat := 0x800649ac
+/-- `print_magic` -/
+def sym_print_magic : Nat := 0x800649b0
+/-- `magicstr` -/
+def sym_magicstr : Nat := 0x800662c8
 /-- `bf_small_fl` -/
 def sym_bf_small_fl : Nat := 0x800662d8
 /-- `bf_small_map` -/

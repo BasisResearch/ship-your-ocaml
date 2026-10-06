@@ -168,6 +168,7 @@ def main():
     need += ["caml_pending_signals", "caml_channel_mutex_lock", "caml_enter_blocking_section_hook",
              "caml_leave_blocking_section_hook", "_impure_ptr", "caml_channel_mutex_unlock"]
     need += ["caml_verb_gc", "__atexit", "__atexit_recursive_mutex", "__stdio_exit_handler"]
+    need += ["print_config", "print_magic", "magicstr"]
     need += ["bf_small_fl", "bf_small_map", "bf_large_tree", "bf_large_least",
              "caml_fl_cur_wsz"]
     for n in need:
