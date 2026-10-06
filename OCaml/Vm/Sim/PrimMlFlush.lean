@@ -83,26 +83,18 @@ theorem flush_mem {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : Chan
   have b72 : (word c (a + 8) + 72#64).toNat = ch + 72 := by
     rw [ConsoleWrite.bv_add_toNat (by rw [hc]; omega), hc]
   have C := ConsoleWrite.consoleLits
-  have fdw : bytesVal .lw (read8 c.σ.mem (word c (a + 8)).toNat) = BitVec.ofInt 64 chn.fd := by
-    rw [hc]; exact fd_word (by simpa [chanOffFd] using F.fd) console
-  have curr : bytesVal .ld (read8 c.σ.mem (word c (a + 8) + 24#64).toNat) =
-      word c (a + 8) + 72#64 + BitVec.ofNat 64 chn.buf.length := by
-    rw [ConsoleWrite.bv_add_toNat (by rw [hc]; omega), hc, read8_value]
-    apply BitVec.eq_of_toNat_eq
-    have cw := F.curr
-    simp only [chanOffCurr, chanOffBuff, hcur] at cw
-    change (word c (ch + 24)).toNat = _
-    rw [cw, BitVec.toNat_add, b72, BitVec.toNat_ofNat]; omega
+  have W : ChanWords c (word c (a + 8)) chn :=
+    ChanAt.words (by rw [hc]; exact arg.repr) console out (by rw [hc]; omega)
   exact
         { short := by have := F.cursorLe; rw [hcur] at this; simp only [ioBufferSize] at this; omega
           layout := G.flush hc h112 (by decide) (by decide) hfd
-          fdWord := fdw
+          fdWord := W.fd
           descriptor := by
             rcases hfd with e | e <;> rw [e]
             · exact rt.stdout
             · exact rt.stderr
-          curr := curr
-          offset := by rw [ConsoleWrite.bv_add_toNat (by rw [hc]; omega), hc, read8_value]; rfl
+          curr := W.curr
+          offset := by rw [W.offset, hc]
           ram := by rw [b72, C.tohost]; omega
           bytes := by
             intro i x hx
@@ -153,7 +145,13 @@ def flushLog (sp a : Nat) : List WEntry :=
 /-- The console footprint covers the flush footprint. -/
 theorem outL_flushLog {sp a x : Nat} (h : OutL (consoleLog sp a) x) : OutL (flushLog sp a) x := by
   simp only [consoleLog, flushLog, OutL, and_true] at h ⊢
-  omega
+  obtain ⟨st, er, im, o, k, -⟩ := h
+  refine ⟨?_, er, im, o, k⟩
+  rcases st with lo | hi
+  · have le : sp - 512 ≤ sp - 384 := Nat.sub_le_sub_left (by decide) sp
+    exact Or.inl (Nat.lt_of_lt_of_le lo le)
+  · have le : sp - 384 + 384 ≤ sp - 512 + 512 := by omega
+    exact Or.inr (Nat.le_trans le hi)
 
 /-- A run that keeps every byte outside the footprint and the local-roots
 word, and restores the local-roots word's value, keeps every byte outside the
@@ -268,7 +266,7 @@ theorem flush_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : C
     rw [ConsoleWrite.flushedWorld_console _ _ _ streamOut, bytesToString_append, ← setup.input.data.world.output]
     exact post.output
   exact ⟨e, run, framed_of_ret setup inv valid (by simp only [Layout.sym_stack_top]; omega)
-    ⟨post.good, post.image, post.minstret, post.tick, post.idle, post.pc, post.result, post.stack, post.saved⟩
+    ⟨post.good, post.image, post.minstret, post.tick, post.idle, post.pc, post.result, post.stack, post.saved, post.gprs⟩
     memory outside bindings stable arg.chan arg.record rfl rfl rfl repr' console' sem⟩
 
 /-- A closed channel's descriptor word is `-1`: `caml_ml_flush` returns at once. -/
@@ -338,7 +336,7 @@ theorem flush_closed_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} 
     obtain ⟨hlt, heq⟩ := List.getElem?_eq_some_iff.mp arg.chan
     rw [← heq, List.set_getElem_self]
   exact ⟨e, run, framed_of_ret setup inv valid (by simp only [Layout.sym_stack_top]; omega)
-    ⟨post.good, post.image, post.minstret, post.tick, post.idle, post.pc, post.result, post.stack, post.saved⟩
+    ⟨post.good, post.image, post.minstret, post.tick, post.idle, post.pc, post.result, post.stack, post.saved, post.gprs⟩
     memory outside bindings stable arg.chan arg.record chans rfl rfl repr
     (post.output.trans setup.input.data.world.output) sem⟩
 

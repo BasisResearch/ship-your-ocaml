@@ -22,6 +22,7 @@ structure QuietReturn (writes : List Nat) (ra : BitVec 64) (c d : Config) : Prop
   memory : d.σ.mem = c.σ.mem
   output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ
   kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ writes → gpr d n = gpr c n
+  gprs : GprsKept c d
 
 /-- `caml_enter_blocking_section_no_pending` with the default (empty) hook. -/
 theorem enter_blocking {ra c} (h : LeafInput ra c)
@@ -42,7 +43,9 @@ theorem enter_blocking {ra c} (h : LeafInput ra c)
     p2.toEffectPost.htifIdle (p1.toEffectPost.htifIdle idle), p2.pc,
     by rw [p2.memory, p1.memory]; rfl,
     by unfold Vsa.Machine.output; rw [p2.output, p1.output],
-    fun n lo hi hn => (p2.toEffectPost.gpr_frame (by decide) n lo hi (by simp)).trans (keep1 n lo hi hn)⟩
+    fun n lo hi hn => (p2.toEffectPost.gpr_frame (by decide) n lo hi (by simp)).trans (keep1 n lo hi hn),
+    (GprsKept.of_pins p1 (by decide) (by decide) (by simp [keysG, FdWrite.EnterBlocking.hook_regs])).trans
+      (GprsKept.of_pins p2 (by decide) (by decide) (by simp [keysG, FdWrite.EnterDefault.leaf_regs]))⟩
 
 
 /-- The signal scan's index step: `addiw a5, a5, 1` on a small index. -/
@@ -73,6 +76,7 @@ structure ScanFrame (e d : Config) : Prop where
   memory : d.σ.mem = e.σ.mem
   output : Vsa.Machine.output d.σ = Vsa.Machine.output e.σ
   kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [14, 15] → gpr d n = gpr e n
+  gprs : GprsKept e d
 
 inductive ScanState (e : Config) : Config → Prop where
   | scanning {d : Config} (i : Nat) (hi : i < 32) (frame : ScanFrame e d)
@@ -124,7 +128,10 @@ theorem scan_iteration {e d : Config} {i : Nat} (hi : i < 32) (frame : ScanFrame
     (⟨p2.loopOk ok1, p2.image, p2.minstret, by rw [p2.memory, p1.memory]; exact frame.memory,
       by unfold Vsa.Machine.output at *; rw [p2.output, p1.output]; exact frame.output,
       fun n lo hi' hn => (p2.toEffectPost.gpr_frame (by decide) n lo hi' (by simp)).trans
-        ((keep1 n lo hi' hn).trans (keep n lo hi' hn))⟩ : ScanFrame e d2)
+        ((keep1 n lo hi' hn).trans (keep n lo hi' hn)),
+      frame.gprs.trans ((GprsKept.of_pins p1 (by decide) (by decide)
+        (by simp [keysG, FdWrite.LeaveBlocking.slot_regs])).trans (GprsKept.of_pins p2 (by decide) (by decide)
+        (by simp)))⟩ : ScanFrame e d2)
   have measure0 : scanMeasure d = 32 - i := by
     unfold scanMeasure; rw [index]; simp only [Option.getD_some, BitVec.toNat_ofNat]
     rw [Nat.mod_eq_of_lt (by omega)]
@@ -167,7 +174,7 @@ theorem scan_loop {e : Config} (ok : LoopOk e) (image : ExecutableImage e)
     | done _ pc' =>
       exact absurd (pc'.symm.trans head) (by decide)
   have start : ScanState e e := .scanning 0 (by decide)
-    ⟨ok, image, minstret, rfl, rfl, fun _ _ _ _ => rfl⟩ pc (by rw [index])
+    ⟨ok, image, minstret, rfl, rfl, fun _ _ _ _ => rfl, GprsKept.refl e⟩ pc (by rw [index])
   obtain ⟨d, run, state, stopped⟩ := loopFromBody scanMeasure body e start
   cases state with
   | scanning _ _ _ pc' _ => exact absurd pc' stopped
@@ -212,6 +219,7 @@ structure LeavePost (ra sp s0 rp : BitVec 64) (c d : Config) : Prop where
   output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ
   frame : ∀ x, (x < sp.toNat - 16 ∨ sp.toNat ≤ x) → (x < rp.toNat ∨ rp.toNat + 4 ≤ x) →
     (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  gprs : GprsKept c d
 
 theorem leave_blocking {ra sp s0 rp errv c} (h : LeaveInput ra sp s0 rp errv c)
     (entry : pcOf c = some 0x8000d4b8#64) :
@@ -363,7 +371,19 @@ theorem leave_blocking {ra sp s0 rp errv c} (h : LeaveInput ra sp s0 rp errv c)
   have ok12 : LoopOk d12 := p12.loopOk (p11.loopOk (q10.loopOk (p9.loopOk f8.ok)))
   refine ⟨d12, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans
     (run9.trans (run10.trans (run11.trans run12)))))))))),
-    p12.good, p12.image, p12.minstret, p12.tick, ok12.htifIdle, p12.pc, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    p12.good, p12.image, p12.minstret, p12.tick, ok12.htifIdle, p12.pc, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+    ((GprsKept.of_pins p1 (by decide) (by decide) (by simp [keysG, FdWrite.LeaveBlocking.enter_regs])).trans
+    ((GprsKept.of_pins q2 (by decide) (by decide) (by simp [keysG])).trans
+    ((GprsKept.of_pins p3 (by decide) (by decide) (by simp [keysG, FdWrite.Errno.leaf_regs])).trans
+    ((GprsKept.of_pins p4 (by decide) (by decide) (by simp [keysG, FdWrite.LeaveBlocking.hook_regs])).trans
+    ((GprsKept.of_pins q5 (by decide) (by decide) (by simp [keysG])).trans
+    ((GprsKept.of_pins p6 (by decide) (by decide) (by simp [keysG, FdWrite.LeaveDefault.leaf_regs])).trans
+    ((GprsKept.of_pins p7 (by decide) (by decide) (by simp [keysG, FdWrite.LeaveBlocking.scan_regs])).trans
+    ((f8.gprs).trans
+    ((GprsKept.of_pins p9 (by decide) (by decide) (by simp [keysG, FdWrite.LeaveBlocking.errno_regs])).trans
+    ((GprsKept.of_pins q10 (by decide) (by decide) (by simp [keysG])).trans
+    ((GprsKept.of_pins p11 (by decide) (by decide) (by simp [keysG, FdWrite.Errno.leaf_regs])).trans
+    (GprsKept.of_pins p12 (by decide) (by decide) (by simp [keysG, FdWrite.LeaveBlocking.ret_regs])))))))))))))⟩
   · have l : gpr d12 1 = some (bytesVal .ld (read8 (writeLog d11.σ.mem (FdWrite.LeaveBlocking.retLog R11))
         (R11 2 + 8#64).toNat)) := gholds_lookup _ p12.regs rfl
     rw [l, raBack]

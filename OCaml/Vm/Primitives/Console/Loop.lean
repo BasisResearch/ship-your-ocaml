@@ -1,4 +1,5 @@
 import OCaml.Vm.Primitives.Console.Effects
+import OCaml.Vm.Primitives.GprsKept
 import Vsa.Sim.DeriveLoop
 
 /-! `_write`'s console loop: one HTIF putchar per buffer byte. -/
@@ -37,6 +38,7 @@ structure LoopFrame (e d : Config) : Prop where
   minstret : ∃ v, d.σ.regs.get? Register.minstret = some v
   memory : d.σ.mem = e.σ.mem
   kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [11, 12, 15] → gpr d n = gpr e n
+  gprs : GprsKept e d
 
 /-- At the loop head having printed `k` bytes, or finished after all of them. -/
 inductive LoopState (e : Config) (buf : BitVec 64) (bs : List UInt8) :
@@ -140,7 +142,9 @@ theorem loop_iteration {ra buf bs e d} (h : LoopInput ra buf bs e) {k : Nat}
   have frame3 := fun {pc' : BitVec 64} {regs' : GRegs} {d3 : Config}
       (p3 : WriteRegistersPost [] [] d2 pc' (R2 10) regs' d3) =>
     (⟨p3.loopOk ok2, p3.image, p3.minstret, by rw [p3.memory]; exact mem2,
-      fun n lo hi hn => (p3.toEffectPost.gpr_frame (by decide) n lo hi (by simp)).trans (kept2 n lo hi hn)⟩ :
+      fun n lo hi hn => (p3.toEffectPost.gpr_frame (by decide) n lo hi (by simp)).trans (kept2 n lo hi hn),
+      frame.gprs.trans ((GprsKept.of_pins p1 (by decide) (by decide) (by simp [keysG, byte_regs])).trans
+        ((GprsKept.of_gprs p2.gpr).trans (GprsKept.of_pins p3 (by decide) (by decide) (by simp))))⟩ :
       LoopFrame e d3)
   by_cases more : k + 1 < bs.length
   · have ne : R2 13 ≠ R2 11 := by
@@ -195,7 +199,7 @@ theorem console_loop {ra buf bs e} (h : LoopInput ra buf bs e) (nonempty : 0 < b
       have bad : some (0x80000f84#64 : BitVec 64) = some 0x80000f6c#64 := pc'.symm.trans head
       exact absurd bad (by decide)
   have start : LoopState e buf bs e := .looping 0 nonempty
-    ⟨h.ok, h.image, h.minstret, rfl, fun _ _ _ _ => rfl⟩ pc (by rw [cursor]; simp)
+    ⟨h.ok, h.image, h.minstret, rfl, fun _ _ _ _ => rfl, GprsKept.refl e⟩ pc (by rw [cursor]; simp)
     (by simp [bytesToString])
   obtain ⟨d, run, state, stopped⟩ := loopFromBody loopMeasure body e start
   cases state with

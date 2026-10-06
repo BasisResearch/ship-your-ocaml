@@ -111,7 +111,7 @@ structure ImageLits : Prop where
 theorem imageLits : ImageLits := ⟨consoleLits.textEnd, consoleLits.rodataEnd, consoleLits.tohost⟩
 
 theorem ConsoleGeometry.write {sp ch dom v len : Nat} (g : ConsoleGeometry sp ch dom v len)
-    {s fd chB : BitVec 64} {off : Nat} (hc : chB.toNat = ch) (hs : s.toNat + off = sp) (hoff : off ≤ 288)
+    {s fd chB : BitVec 64} {off : Nat} (hc : chB.toNat = ch) (hs : s.toNat + off = sp) (hoff : off ≤ 1900)
     (al : off % 16 = 0) (hfd : fd = 1#64 ∨ fd = 2#64) : WriteLayout s fd (chB + 72#64) len := by
   have G := g.lits
   have C := consoleLits
@@ -139,7 +139,7 @@ theorem frame_window0 {s : BitVec 64} {b off : Nat} (hs : s.toNat = b) (hlow : 0
   exact ⟨by rw [e]; omega, by rw [e]; omega, by rw [e, consoleLits.tohost]; omega, by rw [e]; omega⟩
 
 theorem ConsoleGeometry.writeCall {sp ch dom v len : Nat} (g : ConsoleGeometry sp ch dom v len)
-    {s fd chB : BitVec 64} {off : Nat} (hc : chB.toNat = ch) (hs : s.toNat + off = sp) (hoff : off ≤ 272)
+    {s fd chB : BitVec 64} {off : Nat} (hc : chB.toNat = ch) (hs : s.toNat + off = sp) (hoff : off ≤ 1800)
     (al : off % 16 = 0) (hfd : fd = 1#64 ∨ fd = 2#64) : WriteCallLayout s fd (chB + 72#64) len := by
   have G := g.lits
   have C := consoleLits
@@ -161,7 +161,7 @@ theorem ConsoleGeometry.writeCall {sp ch dom v len : Nat} (g : ConsoleGeometry s
 abbrev impureData : BitVec 64 := BitVec.ofNat 64 Layout.sym_impure_data
 
 theorem ConsoleGeometry.writeFd {sp ch dom v len : Nat} (g : ConsoleGeometry sp ch dom v len)
-    {s fd chB : BitVec 64} {off : Nat} (hc : chB.toNat = ch) (hs : s.toNat + off = sp) (hoff : off ≤ 192)
+    {s fd chB : BitVec 64} {off : Nat} (hc : chB.toNat = ch) (hs : s.toNat + off = sp) (hoff : off ≤ 1700)
     (al : off % 16 = 0) (hfd : fd = 1#64 ∨ fd = 2#64) : WriteFdLayout s fd (chB + 72#64) impureData len := by
   have G := g.lits
   have C := consoleLits
@@ -202,7 +202,7 @@ theorem arena_write {chB : BitVec 64} {ch k : Nat} (hc : chB.toNat = ch) (low : 
   exact ⟨by rw [e]; omega, by rw [e]; omega, by rw [e, consoleLits.tohost]; omega, by rw [e]; omega⟩
 
 theorem ConsoleGeometry.flush {sp ch dom v len : Nat} (g : ConsoleGeometry sp ch dom v len)
-    {s fd chB : BitVec 64} {off : Nat} (hc : chB.toNat = ch) (hs : s.toNat + off = sp) (hoff : off ≤ 112)
+    {s fd chB : BitVec 64} {off : Nat} (hc : chB.toNat = ch) (hs : s.toNat + off = sp) (hoff : off ≤ 1600)
     (al : off % 16 = 0) (hfd : fd = 1#64 ∨ fd = 2#64) : FlushLayout s chB fd impureData len := by
   have G := g.lits
   have C := consoleLits

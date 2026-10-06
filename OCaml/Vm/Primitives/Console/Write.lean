@@ -58,6 +58,7 @@ structure WritePost (ra sp : BitVec 64) (bs : List UInt8) (c d : Config) : Prop 
   rest : ∀ n ∈ [19, 20, 21, 22, 23, 24, 25, 26, 27], gpr d n = gpr c n
   output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ ++ bytesToString bs
   frame : ∀ x, ((sp.toNat - 96) > x ∨ sp.toNat ≤ x) → (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  gprs : GprsKept c d
 
 
 theorem WriteLayout.write {sp fd buf x : BitVec 64} {len : Nat} (h : WriteLayout sp fd buf len)
@@ -143,9 +144,9 @@ theorem write_console {ra sp fd buf bs c} (h : WriteInput ra sp fd buf bs c)
       gpr d 9 = some len → (∃ v, gpr d 10 = some v) →
       (∀ n ∈ [19, 20, 21, 22, 23, 24, 25, 26, 27], gpr d n = gpr c n) →
       d.σ.mem = writeLog c.σ.mem (entryLog R0) →
-      Vsa.Machine.output d.σ = Vsa.Machine.output c.σ ++ bytesToString bs →
+      Vsa.Machine.output d.σ = Vsa.Machine.output c.σ ++ bytesToString bs → GprsKept c d →
       ∃ f, Steps d f ∧ WritePost ra sp bs c f := by
-    intro d ok image mins pc raR spR lenR aR rest mem out
+    intro d ok image mins pc raR spR lenR aR rest mem out kept
     obtain ⟨a, ha⟩ := aR
     let R5 : Nat → BitVec 64 := fun n => if n = 1 then ra else if n = 9 then len else a
     have e5 := result_fast d R5 ⟨ok.good, image, mins, raR, h.aligned, ok.tick⟩ ⟨raR, lenR, ha, True.intro⟩
@@ -185,7 +186,9 @@ theorem write_console {ra sp fd buf bs c} (h : WriteInput ra sp fd buf bs c)
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hn
       rcases hn with rfl | rfl | rfl <;> exact present _ (by simp)
     refine ⟨d6, run5.trans run6, p6.good, p6.image, p6.minstret, p6.tick,
-      ((p6.loopOk (p5.loopOk ok))).htifIdle, p6.pc, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      ((p6.loopOk (p5.loopOk ok))).htifIdle, p6.pc, ?_, ?_, ?_, ?_, ?_, ?_,
+      kept.trans ((GprsKept.of_pins p5 (by decide) (by decide) (by simp [keysG, result_regs])).trans
+        (GprsKept.of_pins p6 (by decide) (by decide) (by simp [keysG, leave_regs])))⟩
     · have l : gpr d6 10 = some (R6 10) := gholds_lookup _ p6.regs rfl
       exact l
     · have l : gpr d6 2 = some (sp - 96#64 + 96#64) := gholds_lookup _ p6.regs rfl
@@ -244,6 +247,11 @@ theorem write_console {ra sp fd buf bs c} (h : WriteInput ra sp fd buf bs c)
       show writeLog d2.σ.mem [] = d2.σ.mem from rfl, p2.memory, show writeLog d1.σ.mem [] = d1.σ.mem from rfl, mem1]
   have out4 : Vsa.Machine.output d4.σ = Vsa.Machine.output c.σ := by
     unfold Vsa.Machine.output; rw [p4.output, p3.output, p2.output, p1.output]
+  have k4 : GprsKept c d4 :=
+    (GprsKept.of_pins p1 (by decide) (by decide) (by simp [keysG, entry_regs])).trans
+      ((GprsKept.of_pins p2 (by decide) (by decide) (by simp [keysG, range_regs])).trans
+        ((GprsKept.of_pins p3 (by decide) (by decide) (by simp [keysG, kind_regs])).trans
+          (GprsKept.of_pins p4 (by decide) (by decide) (by simp [keysG, console_regs]))))
   let R4 : Nat → BitVec 64 := fun n => if n = 1 then ra else if n = 9 then len else if n = 10 then fd else buf
   have ra4 : gpr d4 1 = some ra := (keep4 1 (by decide) (by decide) (by simp)).trans (gholds_lookup _ p1.regs rfl)
   have regs4 : GHolds d4.σ (empty_input R4) := ⟨ra4,
@@ -267,6 +275,7 @@ theorem write_console {ra sp fd buf bs c} (h : WriteInput ra sp fd buf bs c)
       (by unfold Vsa.Machine.output; rw [p5.output]
           have := out4; unfold Vsa.Machine.output at this; rw [this, List.length_eq_zero_iff.mp zero]
           simp [bytesToString])
+      (k4.trans (GprsKept.of_pins p5 (by decide) (by decide) (by simp [keysG, empty_regs])))
     exact ⟨f, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans runf)))), post⟩
   · have nonempty : 0 < bs.length := Nat.pos_of_ne_zero zero
     have e4 := start_fast d4 R4 leaf4 regs4 (by
@@ -324,4 +333,6 @@ theorem write_console {ra sp fd buf bs c} (h : WriteInput ra sp fd buf bs c)
           have o5 : Vsa.Machine.output d5.σ = Vsa.Machine.output c.σ := by
             have := out4; unfold Vsa.Machine.output at this ⊢; rw [p5.output, this]
           rw [o5])
+      (k4.trans ((GprsKept.of_pins p5 (by decide) (by decide) (by simp [keysG, start_regs])).trans
+        (frame6.gprs.trans (GprsKept.of_pins p7 (by decide) (by decide) (by simp [keysG, jump_regs])))))
     exact ⟨f, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans runf)))))), post⟩

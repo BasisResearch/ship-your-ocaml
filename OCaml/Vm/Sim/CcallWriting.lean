@@ -1,4 +1,5 @@
 import OCaml.Vm.Sim.CcallReturn
+import OCaml.Vm.Primitives.GprsKept
 
 /-!
 # Writing primitives at the C_CALL return boundary
@@ -124,6 +125,9 @@ structure FramedPrimitivePost (runtimeOk : Config → Prop) (P : Prog) (s : St)
   loop : LoopRegisters after
   resultRepr : valWord pl v = some w
   semantics : primF1Impl name args s.heap s.world = .ok v heapAfter worldAfter
+  /-- register presence and `gp` kept, so the C_CALL return re-establishes
+  `LoopRegisters.gprs` -/
+  gprs : OCaml.Vm.Primitives.GprsKept before after
 
 /-- **Adapt a framed primitive summary to the C_CALL return boundary.** -/
 theorem ccall_framed_summary {L : OCaml.Layout} {P : Prog} {s : St}

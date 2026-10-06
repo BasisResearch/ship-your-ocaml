@@ -65,9 +65,9 @@ theorem f1_console_stable : ConsoleStable Gc.f1Layout := by
     simp only [Gc.chanRecordBytes, chanOffBuff]; omega
   simp only [consoleWindows, List.mem_cons, List.not_mem_nil, or_false] at hw
   rcases hw with rfl | rfl | rfl | rfl | rfl | rfl
-  · have hn : Vsa.Sim.DlHeap.heapEnd + 384 ≤ sp :=
-      Nat.le_trans (Nat.add_le_add_left (by decide : 384 ≤ nativeHeadroom) _) low
-    exact Or.inl (native_safe (lo := sp - 384) (hi := sp) (Nat.le_sub_of_add_le hn))
+  · have hn : Vsa.Sim.DlHeap.heapEnd + 512 ≤ sp :=
+      Nat.le_trans (Nat.add_le_add_left (by decide : 512 ≤ nativeHeadroom) _) low
+    exact Or.inl (native_safe (lo := sp - 512) (hi := sp) (Nat.le_sub_of_add_le hn))
   · exact Or.inl (mutable_safe errno_mutable)
   · exact Or.inl (mutable_safe impure_mutable)
   all_goals

@@ -172,6 +172,7 @@ structure FlushPost (ra sp ch rp off : BitVec 64) (bs : List UInt8) (c d : Confi
   frame : ∀ x, (x < sp.toNat - 272 ∨ sp.toNat ≤ x) → (x < errnoGlobal.toNat ∨ errnoGlobal.toNat + 4 ≤ x) →
     (x < rp.toNat ∨ rp.toNat + 4 ≤ x) → (x < ch.toNat + 8 ∨ ch.toNat + 16 ≤ x) →
     (x < ch.toNat + 24 ∨ ch.toNat + 32 ≤ x) → (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  gprs : GprsKept c d
 
 /-- The registers `caml_flush_partial`'s prologue saves. -/
 def flushSaveRegs (ra sp ch : BitVec 64) (c : Config) : Nat → BitVec 64 :=
@@ -210,6 +211,7 @@ structure FlushHead (ra sp ch : BitVec 64) (c d : Config) : Prop where
   rest : ∀ n, 22 ≤ n → n ≤ 27 → gpr d n = gpr c n
   memory : d.σ.mem = writeLog c.σ.mem (flushSaveLog ra sp ch c)
   output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ
+  gprs : GprsKept c d
 
 theorem flush_head {ra sp ch fd rp off bs c} (h : FlushInput ra sp ch fd rp off bs c)
     (entry : pcOf c = some 0x80015408#64) :
@@ -295,7 +297,12 @@ theorem flush_head {ra sp ch fd rp off bs c} (h : FlushInput ra sp ch fd rp off 
       memory := by rw [p5.memory, show writeLog d4.σ.mem [] = d4.σ.mem from rfl, mem4, mem1]
       output := by
         unfold Vsa.Machine.output
-        rw [p5.output, p4.output, q3.output, p2.output, p1.output] }⟩
+        rw [p5.output, p4.output, q3.output, p2.output, p1.output]
+      gprs := ((GprsKept.of_pins p1 (by decide) (by decide) (by simp [keysG, Flush.FlushPartial.pro_regs])).trans
+      ((GprsKept.of_pins p2 (by decide) (by decide) (by simp [keysG, Flush.FlushPartial.head_regs])).trans
+      ((GprsKept.of_pins q3 (by decide) (by decide) (by simp [keysG])).trans
+      ((GprsKept.of_pins p4 (by decide) (by decide) (by simp [keysG, Flush.CheckPending.leaf_regs])).trans
+      (GprsKept.of_pins p5 (by decide) (by decide) (by simp [keysG, Flush.FlushPartial.pending_regs])))))) }⟩
 
 /-- `caml_flush_partial` at its epilogue with `curr = buff`: the saves read
 back from the frame, `s6`–`s11` kept. -/
@@ -330,6 +337,7 @@ structure FlushRet (ra sp : BitVec 64) (c d e : Config) : Prop where
   saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gpr e n = gpr c n
   memory : e.σ.mem = d.σ.mem
   output : Vsa.Machine.output e.σ = Vsa.Machine.output d.σ
+  gprs : GprsKept d e
 
 theorem flush_epi {ra sp ch fd rp off bs c lk d} (h : FlushInput ra sp ch fd rp off bs c)
     (t : FlushTail ra sp ch lk c d) : ∃ e, Steps d e ∧ FlushRet ra sp c d e := by
@@ -393,7 +401,8 @@ theorem flush_epi {ra sp ch fd rp off bs c lk d} (h : FlushInput ra sp ch fd rp 
       (b : bytesVal .ld (read8 d.σ.mem (sp - 80#64 + BitVec.ofNat 64 k).toNat) = v) =>
     (show gpr e n = some v by rw [l, b])
   refine ⟨e, run13, p13.good, p13.image, p13.minstret, p13.tick, p13.toEffectPost.htifIdle t.idle,
-    p13.pc, load 1 72 ra (gholds_lookup _ p13.regs rfl) raBack, ?_, ?_, ?_, by rw [p13.memory]; rfl, ?_⟩
+    p13.pc, load 1 72 ra (gholds_lookup _ p13.regs rfl) raBack, ?_, ?_, ?_, by rw [p13.memory]; rfl, ?_,
+    GprsKept.of_pins p13 (by decide) (by decide) (by simp [keysG, Flush.FlushPartial.epi_regs])⟩
   · have l : gpr e 10 = some (compareValue true (R12 18 - R12 10) 1#64) := gholds_lookup _ p13.regs rfl
     rw [l]; exact congrArg some (seqz_same _)
   · have l : gpr e 2 = some (R12 2 + 80#64) := gholds_lookup _ p13.regs rfl
@@ -464,7 +473,7 @@ theorem flush_empty {ra sp ch fd rp off bs c d5} (h : FlushInput ra sp ch fd rp 
   have ro := r.output
   have o6 := p6.output
   refine ⟨e, run6.trans run7, r.good, r.image, r.minstret, r.tick, r.idle, r.pc, r.raReg, r.result, r.stack,
-    r.saved, ?_, ?_, ?_, ?_⟩
+    r.saved, ?_, ?_, ?_, ?_, H.gprs.trans ((GprsKept.of_pins p6 (by decide) (by decide) (by simp [keysG, Flush.FlushPartial.empty_regs])).trans r.gprs)⟩
   · unfold Vsa.Machine.output at *
     rw [ro, o6, ho]; simp [bytesToString]
   · rw [r.memory, mem6, read5 _ (by rw [chOff 24 (by decide)]; omega), h.curr]
@@ -726,7 +735,15 @@ theorem flush_written {ra sp ch fd rp off bs c d5} (h : FlushInput ra sp ch fd r
   have ho := H.output
   have ro := r.output
   refine ⟨e, run6.trans (run7.trans (run8.trans (run9.trans (run10.trans (run11.trans (run12.trans run13)))))),
-    r.good, r.image, r.minstret, r.tick, r.idle, r.pc, r.raReg, r.result, r.stack, r.saved, ?_, ?_, ?_, ?_⟩
+    r.good, r.image, r.minstret, r.tick, r.idle, r.pc, r.raReg, r.result, r.stack, r.saved, ?_, ?_, ?_, ?_,
+    H.gprs.trans ((GprsKept.of_pins p6 (by decide) (by decide) (by simp [keysG, Flush.FlushPartial.more_regs])).trans
+      ((GprsKept.of_pins p7 (by decide) (by decide) (by simp [keysG, Flush.FlushPartial.write_regs])).trans
+      ((GprsKept.of_pins q8 (by decide) (by decide) (by simp [keysG])).trans
+      ((p9.gprs).trans
+      ((GprsKept.of_pins p10 (by decide) (by decide) (by simp [keysG, Flush.FlushPartial.result_regs])).trans
+      ((GprsKept.of_pins p11 (by decide) (by decide) (by simp [keysG, Flush.FlushPartial.adjust_regs])).trans
+      ((GprsKept.of_pins p12 (by decide) (by decide) (by simp [keysG, Flush.FlushPartial.shift_regs])).trans
+      (r.gprs))))))))⟩
   · unfold Vsa.Machine.output at *
     rw [ro, p12.output, p11.output, p10.output, o9, q8.output, p7.output, p6.output, ho]
   · rw [r.memory, mem12, read8_value]

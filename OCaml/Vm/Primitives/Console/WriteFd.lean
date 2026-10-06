@@ -81,6 +81,7 @@ structure WriteFdPost (ra sp rp : BitVec 64) (bs : List UInt8) (c d : Config) : 
   output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ ++ bytesToString bs
   frame : ∀ x, (x < sp.toNat - 192 ∨ sp.toNat ≤ x) → (x < errnoGlobal.toNat ∨ errnoGlobal.toNat + 4 ≤ x) →
     (x < rp.toNat ∨ rp.toNat + 4 ≤ x) → (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  gprs : GprsKept c d
 
 theorem write_fd {ra sp fd buf rp bs c} (h : WriteFdInput ra sp fd buf rp bs c)
     (entry : pcOf c = some 0x80025274#64) :
@@ -349,7 +350,19 @@ theorem write_fd {ra sp fd buf rp bs c} (h : WriteFdInput ra sp fd buf rp bs c)
   refine ⟨d12, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans
     (run9.trans (run10.trans (run11.trans run12)))))))))),
     p12.good, p12.image, p12.minstret, p12.tick, p12.toEffectPost.htifIdle (p11.toEffectPost.htifIdle l10.idle),
-    p12.pc, load 1 72 ra (gholds_lookup _ p12.regs rfl) raBack, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    p12.pc, load 1 72 ra (gholds_lookup _ p12.regs rfl) raBack, ?_, ?_, ?_, ?_, ?_, ?_,
+      ((GprsKept.of_pins p1 (by decide) (by decide) (by simp [keysG, FdWrite.WriteFd.pro_regs])).trans
+      ((GprsKept.of_pins p2 (by decide) (by decide) (by simp [keysG, FdWrite.WriteFd.enter_regs])).trans
+      ((GprsKept.of_pins q3 (by decide) (by decide) (by simp [keysG])).trans
+      ((e4.gprs).trans
+      ((GprsKept.of_pins p5 (by decide) (by decide) (by simp [keysG, FdWrite.WriteFd.call_regs])).trans
+      ((GprsKept.of_pins q6 (by decide) (by decide) (by simp [keysG])).trans
+      ((p7.gprs).trans
+      ((GprsKept.of_pins p8 (by decide) (by decide) (by simp [keysG, FdWrite.WriteFd.leave_regs])).trans
+      ((GprsKept.of_pins q9 (by decide) (by decide) (by simp [keysG])).trans
+      ((l10.gprs).trans
+      ((GprsKept.of_pins p11 (by decide) (by decide) (by simp [keysG, FdWrite.WriteFd.check_regs])).trans
+      (GprsKept.of_pins p12 (by decide) (by decide) (by simp [keysG, FdWrite.WriteFd.epi_regs])))))))))))))⟩
   · have l : gpr d12 10 = some (R11 8) := gholds_lookup _ p12.regs rfl
     exact l
   · have l : gpr d12 2 = some (R11 2 + 80#64) := gholds_lookup _ p12.regs rfl

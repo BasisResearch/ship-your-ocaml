@@ -324,6 +324,8 @@ import OCaml.Vm.Primitives.Console.Runtime
 import OCaml.Vm.Primitives.ChannelFrame
 import OCaml.Vm.Sim.PrimMlFlush
 import OCaml.Vm.Sim.PrimMlOutputChar
+import OCaml.Vm.Primitives.Flush.MlOutput
+import OCaml.Vm.Sim.PrimMlOutput
 import OCaml.Vm.Primitives.Console.Geometry
 import OCaml.Vm.Sim.PrimStringLength
 import OCaml.Vm.Sim.PrimFreshOoId
@@ -5290,3 +5292,62 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Format.ParseFormat.append
 #print axioms OCaml.Vm.Primitives.Format.ParseFormat.finish
 #print axioms OCaml.Vm.Primitives.Format.ParseFormat.parse_format_call
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_pro
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_exit
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.untag_shift
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ObPro.read
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_none
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_go
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_restore
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ObHead.step
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_flushed
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_next
+#print axioms OCaml.Vm.Primitives.LibraryReady.of_kept
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.sext_small
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.blt_small
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.blt_small_zero
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.signExtend_nonneg
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.bge_zero
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.bge_max
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.free_subw
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.LibraryReady.of_block
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_small
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.stdioFoot_high
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_move
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_test
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.bv_ofNat_toNat
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ObSource.move
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_room
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ob_fill
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.wroteWorld_lookupFd
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.wroteWorld_exited
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.wroteWorld_chans
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.putBlock_room
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.putBlock_full
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.putBlock_full_fits
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.putBlock_fuel
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.putBlock_nil
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.putBlock_shape
+#print axioms OCaml.Vm.Primitives.GprsKept.of_pins
+#print axioms OCaml.Vm.Primitives.GprsKept.of_gprs
+#print axioms OCaml.Vm.Primitives.GprsKept.gprPresent
+#print axioms OCaml.Vm.Primitives.imageLive_image
+#print axioms OCaml.Vm.Primitives.imageLive_present
+#print axioms OCaml.Vm.Primitives.snpText_image
+#print axioms OCaml.Vm.Sim.console_geometry_upto
+#print axioms OCaml.Vm.Sim.console_geometry_full
+#print axioms OCaml.Vm.Sim.ChanAt.words
+#print axioms OCaml.Vm.Sim.frameOnD_of_consoleLog
+#print axioms OCaml.Vm.Sim.ObLoop.byte_now
+#print axioms OCaml.Vm.Sim.ObLoop.src_toNat
+#print axioms OCaml.Vm.Sim.ObLoop.small
+#print axioms OCaml.Vm.Sim.ObHead.runtime
+#print axioms OCaml.Vm.Sim.ob_iter_room
+#print axioms OCaml.Vm.Sim.ob_iter_full
+#print axioms OCaml.Vm.Sim.ObHead.read_entry
+#print axioms OCaml.Vm.Sim.ob_finish
+#print axioms OCaml.Vm.Sim.ObLoop.measure
+#print axioms OCaml.Vm.Sim.ob_step
+#print axioms OCaml.Vm.Sim.ob_loop
+#print axioms OCaml.Vm.Sim.ob_bytes
+#print axioms OCaml.Vm.ChanAt.of_bytes

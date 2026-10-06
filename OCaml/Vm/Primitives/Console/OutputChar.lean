@@ -68,6 +68,7 @@ structure OcPro (ra sp v cv ch dom lr : BitVec 64) (c d : Config) : Prop where
   savedS0 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 96).toNat) = (gpr c 8).getD 0
   savedS1 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 88).toNat) = (gpr c 9).getD 0
   savedS2 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 80).toNat) = (gpr c 18).getD 0
+  gprs : GprsKept c d
 
 theorem oc_pro {ra sp v cv ch fd rp dom lr len c} (h : OcInput ra sp v cv ch fd rp dom lr len c)
     (entry : pcOf c = some 0x80016350#64) :
@@ -227,7 +228,7 @@ theorem oc_pro {ra sp v cv ch fd rp dom lr len c} (h : OcInput ra sp v cv ch fd 
   refine ⟨d1, run1, p1.good, p1.image, p1.minstret, p1.tick, p1.toEffectPost.htifIdle h.idle, p1.pc,
     gholds_lookup _ p1.regs rfl, gholds_lookup _ p1.regs rfl, ch1, lr1, gholds_lookup _ p1.regs rfl,
     gholds_lookup _ p1.regs rfl, fun n lo hi hn => p1.toEffectPost.gpr_frame (by decide) n lo hi hn,
-    by unfold Vsa.Machine.output; rw [p1.output], same1, cBack, raBack, ?_, ?_, ?_⟩
+    by unfold Vsa.Machine.output; rw [p1.output], same1, cBack, raBack, ?_, ?_, ?_, GprsKept.of_pins p1 (by decide) (by decide) (by simp [keysG, Flush.MlOutputChar.pro_regs])⟩
   · exact s0Back
   · exact s1Back
   · exact s2Back
@@ -284,6 +285,7 @@ structure OcTailPost (ra sp cv ch dom lr : BitVec 64) (k : Nat) (c0 d e : Config
   roots : bytesVal .ld (read8 e.σ.mem (dom + 288#64).toNat) = lr
   frame : ∀ x, x ≠ (ch + 72#64 + BitVec.ofNat 64 k).toNat → (x < ch.toNat + 24 ∨ ch.toNat + 32 ≤ x) →
     (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) → (e.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0
+  gprs : GprsKept d e
 
 theorem oc_tail {ra sp v cv ch fd rp dom lr len k c0 d} (h : OcTailInput ra sp v cv ch fd rp dom lr len k c0 d) :
     ∃ e, Steps d e ∧ OcTailPost ra sp cv ch dom lr k c0 d e := by
@@ -410,7 +412,7 @@ theorem oc_tail {ra sp v cv ch fd rp dom lr len k c0 d} (h : OcTailInput ra sp v
   refine ⟨d3, run1.trans (run2.trans run3), p3.good, p3.image, p3.minstret, p3.tick,
     p3.toEffectPost.htifIdle (p2.toEffectPost.htifIdle (p1.toEffectPost.htifIdle h.idle)), p3.pc,
     load 1 104 (by decide) ra (gholds_lookup _ p3.regs rfl) h.savedRa, gholds_lookup _ p3.regs rfl, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, (GprsKept.of_pins p1 (by decide) (by decide) (by simp [keysG, Flush.MlOutputChar.put_regs])).trans ((GprsKept.of_pins p2 (by decide) (by decide) (by simp [keysG, Flush.MlOutputChar.unlock_regs])).trans (GprsKept.of_pins p3 (by decide) (by decide) (by simp [keysG, Flush.MlOutputChar.ret_regs])))⟩
   · have l : gpr d3 2 = some (R2 2 + 112#64) := gholds_lookup _ p3.regs rfl
     rw [l]; simp only [R2, ↓reduceIte, Nat.reduceEqDiff, BitVec.sub_add_cancel]
   · intro n hn
@@ -475,6 +477,7 @@ structure OcPost (ra sp cv ch dom lr : BitVec 64) (k : Nat) (c e : Config) : Pro
   frame : ∀ x, (x < sp.toNat - 112 ∨ sp.toNat ≤ x) → x ≠ (ch + 72#64 + BitVec.ofNat 64 k).toNat →
     (x < ch.toNat + 24 ∨ ch.toNat + 32 ≤ x) → (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) →
     (e.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  gprs : GprsKept c e
 
 theorem oc_room {ra sp v cv ch fd rp dom lr len c} (h : OcInput ra sp v cv ch fd rp dom lr len c)
     (entry : pcOf c = some 0x80016350#64) (room : len < 65536)
@@ -564,7 +567,8 @@ theorem oc_room {ra sp v cv ch fd rp dom lr len c} (h : OcInput ra sp v cv ch fd
     | none => rw [e] at this; cases this
     | some v => rfl
   refine ⟨e, run1.trans (run2.trans run3), ⟨T.good, T.image, T.minstret, T.tick, T.idle, T.pc, T.raReg, T.result,
-    T.stack, ?_, T.byte, T.curr, T.roots, fun x a b w r => by rw [T.frame x b w r, mem2]; exact P.outside x a r⟩, ?_⟩
+    T.stack, ?_, T.byte, T.curr, T.roots, fun x a b w r => by rw [T.frame x b w r, mem2]; exact P.outside x a r,
+    P.gprs.trans ((GprsKept.of_pins p2 (by decide) (by decide) (by simp [keysG, Flush.MlOutputChar.room_regs])).trans T.gprs)⟩, ?_⟩
   · intro n hn
     rw [present n hn]
     have hn' := hn
@@ -599,6 +603,7 @@ structure OcCall (ra sp cv ch fd rp off dom lr : BitVec 64) (bs : List UInt8) (c
   savedS0 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 96).toNat) = (gpr c 8).getD 0
   savedS1 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 88).toNat) = (gpr c 9).getD 0
   savedS2 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 80).toNat) = (gpr c 18).getD 0
+  gprs : GprsKept c d
 
 theorem oc_full_enter {ra sp v cv ch fd rp off dom lr bs c} (h : OcInput ra sp v cv ch fd rp dom lr bs.length c)
     (entry : pcOf c = some 0x80016350#64) (F : FlushMem (sp - 112#64) ch fd rp off bs c) (full : bs.length = 65536)
@@ -688,7 +693,8 @@ theorem oc_full_enter {ra sp v cv ch fd rp off dom lr bs c} (h : OcInput ra sp v
     q4.pc, (k4 8 (by decide) (by decide) (by simp)).trans P.chReg, (k4 9 (by decide) (by decide) (by simp)).trans P.lrReg,
     (k4 18 (by decide) (by decide) (by simp)).trans P.globalReg, rest4, ?_, fun x a b => by rw [mem4]; exact P.outside x a b,
     by rw [mem4]; exact P.charWord, by rw [mem4]; exact P.savedRa, by rw [mem4]; exact P.savedS0,
-    by rw [mem4]; exact P.savedS1, by rw [mem4]; exact P.savedS2⟩
+    by rw [mem4]; exact P.savedS1, by rw [mem4]; exact P.savedS2,
+    P.gprs.trans ((GprsKept.of_pins p2 (by decide) (by decide) (by simp [keysG, Flush.MlOutputChar.full_regs])).trans ((GprsKept.of_pins p3 (by decide) (by decide) (by simp [keysG, Flush.MlOutputChar.flush_regs])).trans (GprsKept.of_pins q4 (by decide) (by decide) (by simp [keysG]))))⟩
   have o := P.output
   unfold Vsa.Machine.output at *
   rw [q4.output, p3.output, p2.output, o]
@@ -705,6 +711,7 @@ structure OcFlushed (ra sp v cv ch fd rp off dom lr : BitVec 64) (bs : List UInt
     (x < rp.toNat ∨ rp.toNat + 4 ≤ x) → (x < ch.toNat + 8 ∨ ch.toNat + 16 ≤ x) →
     (x < ch.toNat + 24 ∨ ch.toNat + 32 ≤ x) → (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) →
     (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  gprs : GprsKept c d
 
 theorem oc_full_flushed {ra sp v cv ch fd rp off dom lr bs c} (h : OcInput ra sp v cv ch fd rp dom lr bs.length c)
     (entry : pcOf c = some 0x80016350#64) (F : FlushMem (sp - 112#64) ch fd rp off bs c) (full : bs.length = 65536)
@@ -771,7 +778,8 @@ theorem oc_full_flushed {ra sp v cv ch fd rp off dom lr bs c} (h : OcInput ra sp
     (keep6 2 (by decide) (by decide) (by decide)).trans f5.stack,
     (keep6 8 (by decide) (by decide) (by decide)).trans ch5, (keep6 9 (by decide) (by decide) (by decide)).trans lr5,
     ⟨_, (keep6 10 (by decide) (by decide) (by decide)).trans f5.result⟩, ?_,
-    (keep6 18 (by decide) (by decide) (by decide)).trans g5, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_⟩
+    (keep6 18 (by decide) (by decide) (by decide)).trans g5, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, ?_, ?_,
+    M.gprs.trans (f5.gprs.trans (GprsKept.of_pins p6 (by decide) (by decide) (by simp [keysG, Flush.MlOutputChar.reload_regs])))⟩
   · have l : gpr d6 15 = some (bytesVal .ld (read8 d5.σ.mem (R5 8 + 24#64).toNat)) := gholds_lookup _ p6.regs rfl
     rw [l]; show some (bytesVal .ld (read8 d5.σ.mem (ch + 24#64).toNat)) = _
     rw [f5.curr]; simp
@@ -822,6 +830,7 @@ structure OcFullPost (ra sp cv ch rp off dom lr : BitVec 64) (bs : List UInt8) (
     (x < rp.toNat ∨ rp.toNat + 4 ≤ x) → (x < ch.toNat + 8 ∨ ch.toNat + 16 ≤ x) →
     (x < ch.toNat + 24 ∨ ch.toNat + 32 ≤ x) → x ≠ (ch + 72#64 + BitVec.ofNat 64 0).toNat →
     (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) → (e.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  gprs : GprsKept c e
 
 theorem oc_full {ra sp v cv ch fd rp off dom lr bs c} (h : OcInput ra sp v cv ch fd rp dom lr bs.length c)
     (entry : pcOf c = some 0x80016350#64) (F : FlushMem (sp - 112#64) ch fd rp off bs c) (full : bs.length = 65536)
@@ -845,7 +854,7 @@ theorem oc_full {ra sp v cv ch fd rp off dom lr bs c} (h : OcInput ra sp v cv ch
   have byteAt : (ch + 72#64 + BitVec.ofNat 64 0).toNat = ch.toNat + 72 := by
     rw [BitVec.toNat_add, BitVec.toNat_add]; simp only [BitVec.toNat_ofNat]; omega
   refine ⟨e, run1.trans run2, T.good, T.image, T.minstret, T.tick, T.idle, T.pc, T.raReg, T.result, T.stack, ?_,
-    ?_, T.byte, T.curr, ?_, T.roots, ?_⟩
+    ?_, T.byte, T.curr, ?_, T.roots, ?_, D.gprs.trans T.gprs⟩
   · intro n hn
     rw [present n hn]
     have hn' := hn

@@ -230,7 +230,7 @@ theorem oc_room_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp :
       rw [byte_total, byte_total]
       exact frame x (by omega) ne cu (by omega))
   exact ⟨e, run, framed_of_ret setup inv valid (by simp only [Layout.sym_stack_top]; omega)
-    ⟨post.good, post.image, post.minstret, post.tick, post.idle, post.pc, post.result, post.stack, post.saved⟩
+    ⟨post.good, post.image, post.minstret, post.tick, post.idle, post.pc, post.result, post.stack, post.saved, post.gprs⟩
     memory outside bindings stable arg.chan arg.record rfl rfl rfl repr'
     (outEq.trans setup.input.data.world.output) sem⟩
 
@@ -363,7 +363,7 @@ theorem oc_full_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp :
     rw [ConsoleWrite.wroteWorld_console _ _ streamOut, bytesToString_append, ← setup.input.data.world.output]
     exact post.output
   exact ⟨e, run, framed_of_ret setup inv valid (by simp only [Layout.sym_stack_top]; omega)
-    ⟨post.good, post.image, post.minstret, post.tick, post.idle, post.pc, post.result, post.stack, post.saved⟩
+    ⟨post.good, post.image, post.minstret, post.tick, post.idle, post.pc, post.result, post.stack, post.saved, post.gprs⟩
     memory outside bindings stable arg.chan arg.record rfl rfl rfl repr' console' sem⟩
 
 /-- **`caml_ml_output_char`'s input** at a represented console channel and an

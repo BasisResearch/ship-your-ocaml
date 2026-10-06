@@ -1,4 +1,5 @@
 import OCaml.Vm.Primitives.Console.Flush
+import OCaml.Vm.Primitives.GprsKept
 import OCaml.Vm.Primitives.Flush.MlFlush
 
 /-! `caml_ml_flush(vchannel)` on a console output channel with a nonempty
@@ -173,6 +174,7 @@ structure MlFlushPost (ra sp ch rp off dom lr : BitVec 64) (bs : List UInt8) (c 
     (x < rp.toNat ∨ rp.toNat + 4 ≤ x) → (x < ch.toNat + 8 ∨ ch.toNat + 16 ≤ x) →
     (x < ch.toNat + 24 ∨ ch.toNat + 32 ≤ x) → (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) →
     (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  gprs : GprsKept c d
 
 /-- `caml_ml_flush` after its prologue: the frame saved, the local root
 registered, the channel and its fd loaded; `t` is the lock block (open
@@ -199,6 +201,7 @@ structure MlFlushPro (ra sp v ch dom lr t : BitVec 64) (c d : Config) : Prop whe
   savedS0 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 96).toNat) = (gpr c 8).getD 0
   savedS1 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 88).toNat) = (gpr c 9).getD 0
   savedS2 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 80).toNat) = (gpr c 18).getD 0
+  gprs : GprsKept c d
 
 theorem ml_flush_pro_gen {ra sp v ch dom lr c} (h : MlFlushEntry ra sp v ch dom lr c)
     (entry : pcOf c = some 0x80016238#64) (closed : Bool)
@@ -350,7 +353,7 @@ theorem ml_flush_pro_gen {ra sp v ch dom lr c} (h : MlFlushEntry ra sp v ch dom 
   refine ⟨d1, run1, p1.good, p1.image, p1.minstret, p1.tick, p1.toEffectPost.htifIdle h.idle, p1.pc, ra1,
     gholds_lookup _ p1.regs rfl, ch1, lr1, gholds_lookup _ p1.regs rfl, gholds_lookup _ p1.regs rfl, dom1,
     fun n lo hi hn => p1.toEffectPost.gpr_frame (by decide) n lo hi hn,
-    by unfold Vsa.Machine.output; rw [p1.output], same1, raBack, ?_, ?_, ?_⟩
+    by unfold Vsa.Machine.output; rw [p1.output], same1, raBack, ?_, ?_, ?_, GprsKept.of_pins p1 (by decide) (by decide) (by simp [keysG, Flush.MlFlush.pro_regs])⟩
   · rw [s0Back]; exact rfl
   · rw [s1Back]; exact rfl
   · rw [s2Back]; exact rfl
@@ -377,6 +380,7 @@ structure MlFlushCall (ra sp ch fd rp off dom lr : BitVec 64) (bs : List UInt8) 
   savedS0 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 96).toNat) = (gpr c 8).getD 0
   savedS1 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 88).toNat) = (gpr c 9).getD 0
   savedS2 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 80).toNat) = (gpr c 18).getD 0
+  gprs : GprsKept c d
 
 theorem ml_flush_enter {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch fd rp off dom lr bs c)
     (entry : pcOf c = some 0x80016238#64) :
@@ -457,7 +461,8 @@ theorem ml_flush_enter {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra s
     (k4 8 (by decide) (by decide) (by simp)).trans P.chReg, (k4 9 (by decide) (by decide) (by simp)).trans P.lrReg,
     (k4 18 (by decide) (by decide) (by simp)).trans P.globalReg, rest4, ?_, ?_,
     by rw [mem4]; exact P.savedRa, by rw [mem4]; exact P.savedS0, by rw [mem4]; exact P.savedS1,
-    by rw [mem4]; exact P.savedS2⟩
+    by rw [mem4]; exact P.savedS2,
+    P.gprs.trans ((GprsKept.of_pins p2 (by decide) (by decide) (by simp [keysG, Flush.MlFlush.lock_regs])).trans ((GprsKept.of_pins p3 (by decide) (by decide) (by simp [keysG, Flush.MlFlush.call_regs])).trans (GprsKept.of_pins q4 (by decide) (by decide) (by simp [keysG]))))⟩
   · have o := P.output
     unfold Vsa.Machine.output at *
     rw [q4.output, p3.output, p2.output, o]
@@ -530,6 +535,7 @@ structure MlFlushWritten (ra sp ch rp off dom lr : BitVec 64) (bs : List UInt8) 
     (x < rp.toNat ∨ rp.toNat + 4 ≤ x) → (x < ch.toNat + 8 ∨ ch.toNat + 16 ≤ x) →
     (x < ch.toNat + 24 ∨ ch.toNat + 32 ≤ x) → (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) →
     (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  gprs : GprsKept c d
 
 /-- `caml_ml_flush` after the flush and the (null) unlock: the frame words,
 the channel words and `Caml_state` read as before the call. -/
@@ -558,6 +564,7 @@ structure MlFlushDone (ra sp ch rp off dom lr : BitVec 64) (bs : List UInt8) (c 
     (x < rp.toNat ∨ rp.toNat + 4 ≤ x) → (x < ch.toNat + 8 ∨ ch.toNat + 16 ≤ x) →
     (x < ch.toNat + 24 ∨ ch.toNat + 32 ≤ x) → (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) →
     (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  gprs : GprsKept c d
 
 theorem ml_flush_written {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch fd rp off dom lr bs c)
     (entry : pcOf c = some 0x80016238#64) :
@@ -590,7 +597,7 @@ theorem ml_flush_written {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra
     (f5.saved 18 (by simp)).trans M.globalReg, ?_, ?_, ?_,
     by rw [frame5 104 (by decide)]; exact M.savedRa, by rw [frame5 96 (by decide)]; exact M.savedS0,
     by rw [frame5 88 (by decide)]; exact M.savedS1, by rw [frame5 80 (by decide)]; exact M.savedS2,
-    f5.curr, f5.offset, ?_⟩
+    f5.curr, f5.offset, ?_, M.gprs.trans f5.gprs⟩
   · rw [read5 _ S.unlockFlush, read4 _ S.unlockPro]
     have := h.unlockNull; simp only [channelUnlock] at this
     rwa [show (0x80064b50#64 : BitVec 64).toNat = 2147896144 by decide] at this
@@ -637,7 +644,8 @@ theorem ml_flush_flushed {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra
     (keep7 18 (by decide) (by decide) (by decide)).trans ((keep6 18 (by decide) (by decide)).trans W.globalReg),
     ?_, ?_, by rw [mem7]; exact W.domain, by rw [mem7]; exact W.savedRa, by rw [mem7]; exact W.savedS0,
     by rw [mem7]; exact W.savedS1, by rw [mem7]; exact W.savedS2, by rw [mem7]; exact W.curr,
-    by rw [mem7]; exact W.offset, fun x a b r o k z => by rw [mem7]; exact W.frame x a b r o k z⟩
+    by rw [mem7]; exact W.offset, fun x a b r o k z => by rw [mem7]; exact W.frame x a b r o k z,
+    W.gprs.trans ((GprsKept.of_pins p6 (by decide) (by decide) (by simp [keysG, Flush.MlFlush.done_regs])).trans (GprsKept.of_pins p7 (by decide) (by decide) (by simp [keysG, Flush.MlFlush.unlock_regs])))⟩
   · intro n hn
     have b := hn; simp only [List.mem_cons, List.mem_nil_iff, or_false] at b
     rw [keep7 n (by omega) (by omega) (by omega), keep6 n (by omega) (by omega)]
@@ -665,6 +673,7 @@ structure MlFlushTail (ra sp dom lr lk : BitVec 64) (c d : Config) : Prop where
   savedS0 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 96).toNat) = (gpr c 8).getD 0
   savedS1 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 88).toNat) = (gpr c 9).getD 0
   savedS2 : bytesVal .ld (read8 d.σ.mem (sp - 112#64 + BitVec.ofNat 64 80).toNat) = (gpr c 18).getD 0
+  gprs : GprsKept c d
 
 /-- Return through `caml_ml_flush`'s epilogue: `Val_unit`, the saves restored,
 `local_roots` restored, nothing else written. -/
@@ -682,6 +691,7 @@ structure MlFlushRet (ra sp dom lr : BitVec 64) (c d e : Config) : Prop where
   output : Vsa.Machine.output e.σ = Vsa.Machine.output d.σ
   roots : bytesVal .ld (read8 e.σ.mem (dom + 288#64).toNat) = lr
   frame : ∀ x, (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) → (e.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0
+  gprs : GprsKept d e
 
 theorem ml_flush_tail {ra sp v ch dom lr lk c d} (h : MlFlushEntry ra sp v ch dom lr c)
     (t : MlFlushTail ra sp dom lr lk c d) : ∃ e, Steps d e ∧ MlFlushRet ra sp dom lr c d e := by
@@ -730,7 +740,7 @@ theorem ml_flush_tail {ra sp v ch dom lr lk c d} (h : MlFlushEntry ra sp v ch do
     (show gpr e n = some w by rw [l, readFrame k hk, b])
   refine ⟨e, run9, p9.good, p9.image, p9.minstret, p9.tick, p9.toEffectPost.htifIdle t.idle, p9.pc,
     load 1 104 (by decide) ra (gholds_lookup _ p9.regs rfl) t.savedRa, gholds_lookup _ p9.regs rfl, ?_, ?_, ?_,
-    ?_, ?_⟩
+    ?_, ?_, GprsKept.of_pins p9 (by decide) (by decide) (by simp [keysG, Flush.MlFlush.tail_regs])⟩
   · have l : gpr e 2 = some (R8 2 + 112#64) := gholds_lookup _ p9.regs rfl
     rw [l]; simp only [R8, ↓reduceIte, Nat.reduceEqDiff, BitVec.sub_add_cancel]
   · intro n hn
@@ -786,13 +796,15 @@ theorem ml_flush {ra sp v ch fd rp off dom lr bs c} (h : MlFlushInput ra sp v ch
       savedRa := by rw [mem8]; exact p7'.savedRa
       savedS0 := by rw [mem8]; exact p7'.savedS0
       savedS1 := by rw [mem8]; exact p7'.savedS1
-      savedS2 := by rw [mem8]; exact p7'.savedS2 }
+      savedS2 := by rw [mem8]; exact p7'.savedS2
+      gprs := p7'.gprs.trans (GprsKept.of_pins p8 (by decide) (by decide) (by simp [keysG, Flush.MlFlush.ret_regs])) }
   have chApart := ra'.2.2.2
   have chRam := h.flush.layout.chanRam
   have chOff : ∀ k, k ≤ 72 → (ch + BitVec.ofNat 64 k).toNat = ch.toNat + k := by
     intro k hk; rw [BitVec.toNat_add]; simp only [BitVec.toNat_ofNat]; omega
   refine ⟨e, run7.trans (run8.trans run9), r.good, r.image, r.minstret, r.tick, r.idle, r.pc, r.raReg, r.result,
-    r.stack, r.saved, ?_, ?_, ?_, r.roots, ?_⟩
+    r.stack, r.saved, ?_, ?_, ?_, r.roots, ?_,
+    (p7'.gprs.trans (GprsKept.of_pins p8 (by decide) (by decide) (by simp [keysG, Flush.MlFlush.ret_regs]))).trans r.gprs⟩
   · have o := p7'.output
     have ro := r.output
     unfold Vsa.Machine.output at *
@@ -824,6 +836,7 @@ structure MlFlushClosedPost (ra sp dom lr : BitVec 64) (c e : Config) : Prop whe
   roots : bytesVal .ld (read8 e.σ.mem (dom + 288#64).toNat) = lr
   frame : ∀ x, (x < sp.toNat - 112 ∨ sp.toNat ≤ x) → (x < dom.toNat + 288 ∨ dom.toNat + 296 ≤ x) →
     (e.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  gprs : GprsKept c e
 
 theorem ml_flush_closed {ra sp v ch dom lr c} (h : MlFlushEntry ra sp v ch dom lr c)
     (entry : pcOf c = some 0x80016238#64)
@@ -836,9 +849,10 @@ theorem ml_flush_closed {ra sp v ch dom lr c} (h : MlFlushEntry ra sp v ch dom l
       rest := fun n hn => by
         have b := hn; simp only [List.mem_cons, List.mem_nil_iff, or_false] at b
         exact P.kept n (by omega) (by omega) (by simp; omega)
-      savedRa := P.savedRa, savedS0 := P.savedS0, savedS1 := P.savedS1, savedS2 := P.savedS2 }
+      savedRa := P.savedRa, savedS0 := P.savedS0, savedS1 := P.savedS1, savedS2 := P.savedS2
+      gprs := P.gprs }
   refine ⟨e, run1.trans run2, r.good, r.image, r.minstret, r.tick, r.idle, r.pc, r.raReg, r.result, r.stack,
-    r.saved, ?_, r.roots, ?_⟩
+    r.saved, ?_, r.roots, ?_, P.gprs.trans r.gprs⟩
   · have o := r.output
     have po := P.output
     unfold Vsa.Machine.output at *

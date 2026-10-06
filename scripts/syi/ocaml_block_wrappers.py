@@ -203,7 +203,7 @@ def emit_fast(E, b, name, regs, fast):
         pc = 'ra' if 'ra' in fast else 'R 1'
     elif kind == 'fallthrough':
         pc = f'0x{b.instrs[-1].addr + 4:08x}#64'
-    elif kind == 'j':
+    elif kind in ('j', 'tailj'):
         pc = f'0x{_jal_target(term.word, term.addr):08x}#64'
     else:
         taken = fast.get('taken', False)
@@ -254,7 +254,7 @@ def emit_fast(E, b, name, regs, fast):
         bullets += ['    · ' + head, addr_simp]
     if stores:
         params.append(f'(outside : ImageOutside ({log}))')
-    branch = kind not in ('jal', 'jalrcall', 'ret', 'fallthrough', 'j')
+    branch = kind not in ('jal', 'jalrcall', 'ret', 'fallthrough', 'j', 'tailj')
     if branch:
         op = {0: 'BEQ', 1: 'BNE', 4: 'BLT', 5: 'BGE', 6: 'BLTU', 7: 'BGEU'}[(term.word >> 12) & 7]
         val = lambda r: '0#64' if r == 0 else out[r].replace('loads', L)

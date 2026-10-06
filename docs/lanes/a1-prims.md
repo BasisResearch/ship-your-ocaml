@@ -75,6 +75,26 @@
   Waiting on a1-arms (`CcallSetupPost.calleeSaved`; channel-record apartness at full extent;
   transport with a weaker `chans` premise) and a6-gc (`f1_console_stable`) for
   `prim_caml_ml_flush_returns` / `prim_caml_ml_output_char_returns`.
+* `caml_ml_output_bytes` (machine, `Console/OutputBytes.lean`; model loop,
+  `Sim/PrimMlOutput.lean`). Phases: `ob_pro`, `ob_none` (len ≤ 0), `ob_go`, the chunk
+  blocks `ob_small` (no INT_MAX clip below 2^31), `ob_test` (room/full), `ob_room`
+  (memmove, `curr += n`, exit), `ob_fill` (memmove `free` bytes), `ob_flushed`
+  (`curr := end`, `caml_flush_partial`), `ob_next`, `ob_restore`, `ob_exit`; memmove calls
+  through `ob_move` (memmove_leaf + `MoveRet`). Loop: `ObLoop` (machine state + model
+  channel/world, `ChanAt`, console), `ob_iter_room` / `ob_iter_full` against
+  `putBlock_room` / `putBlock_full`, measure `obMeasure` (2·rem + [buffer full]),
+  `ob_loop` by `loopFromBody`; `ob_finish` and `ob_bytes` (whole function against
+  `putBlock`, posts `ObDone`). Model lemmas in `Console/World.lean`: `putBlock_full_fits`,
+  `putBlock_fuel`, `putBlock_nil`, `putBlock_shape` (only the channel and the OS change).
+  `caml_ml_output` is the generated tail `j` (`Flush/MlOutput.lean`; `tailj` wrappers in
+  `ocaml_block_wrappers.py`). Remaining: the C_CALL4 framed theorem (string argument
+  from `ObjAt` + StackGeometry's heapLow/heapArena/heapChannels/domainHeap).
+* `GprsKept` (`Primitives/GprsKept.lean`: register presence and gp, `of_pins`/`of_gprs`/
+  `gprPresent`) is carried by every console post (loop, write, write_call, blocking hooks,
+  write_fd, flush_partial, ml_flush, output_char, output_bytes) and by
+  `FramedPrimitivePost.gprs`; `LibraryReady.of_kept` re-derives memmove readiness after
+  calls. The console native window is `sp - 512` (output_bytes reaches 448 deep).
+  `console_geometry_full` gives the channel record at full extent (65536).
 * whileMin `PrimReturnsAt` summaries (picked up by `scripts/gen_f1_table.py`; regenerate
   WhileMinTable.lean in the same batch): `prim_caml_ml_string_length_returns` and
   `prim_caml_fresh_oo_id_returns` (`f1_counterStable` from a6-gc's `f1_ignoredStatic`) done.
