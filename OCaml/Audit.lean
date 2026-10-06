@@ -321,6 +321,7 @@ import OCaml.Vm.Primitives.Console.World
 import OCaml.Vm.Primitives.Console.Runtime
 import OCaml.Vm.Primitives.ChannelFrame
 import OCaml.Vm.Sim.PrimMlFlush
+import OCaml.Vm.Sim.PrimMlOutputChar
 import OCaml.Vm.Primitives.Console.Geometry
 import OCaml.Vm.Sim.PrimStringLength
 import OCaml.Vm.Sim.PrimFreshOoId
@@ -2763,6 +2764,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.channel_arg
 #print axioms OCaml.Vm.Sim.console_geometry
 #print axioms OCaml.Vm.Sim.flush_input
+#print axioms OCaml.Vm.Sim.flush_entry
+#print axioms OCaml.Vm.Sim.flushed_chanAt
+#print axioms OCaml.Vm.Sim.flush_framed
+#print axioms OCaml.Vm.Sim.flush_closed_framed
+#print axioms OCaml.Vm.Sim.output_char_semantics
+#print axioms OCaml.Vm.Sim.putChar_cases
+#print axioms OCaml.Vm.Sim.char_byte
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.ConsoleGeometry.mlFlushFrame
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.oc_room
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.oc_full
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.flushChan_stream

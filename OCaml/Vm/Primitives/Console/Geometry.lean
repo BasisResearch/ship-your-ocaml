@@ -284,4 +284,28 @@ theorem ConsoleGeometry.mlFlush {sp ch dom v len : Nat} (g : ConsoleGeometry sp 
   · rw [v8]
     exact ⟨by omega, by rw [C.errno]; omega, by rw [C.impureData]; omega, by rw [hc]; omega, by rw [hd]; omega⟩
 
+/-- `caml_ml_flush`'s prologue/epilogue frame, open or closed channel. -/
+theorem ConsoleGeometry.mlFlushFrame {sp ch dom v len : Nat} (g : ConsoleGeometry sp ch dom v len)
+    {s vB chB domB : BitVec 64} (hc : chB.toNat = ch) (hv : vB.toNat = v) (hd : domB.toNat = dom)
+    (hs : s.toNat = sp) : MlFlushFrame s vB chB domB := by
+  have G := g.lits
+  have C := consoleLits
+  have l1 := G.low; have l2 := G.high; have l3 := G.aligned; have l4 := G.chanHigh; have l5 := G.chanLow
+  have l7 := G.domLow; have l8 := G.domHigh; have l9 := G.domAligned; have l10 := G.chanDom
+  have l11 := G.valLow; have l12 := G.valHigh; have l13 := G.valChan; have l14 := G.valDom
+  have T := C.textEnd; have R := C.rodataEnd
+  have v8 : (vB + 8#64).toNat = v + 8 := by rw [bv_add_toNat (by omega), hv]
+  have slots : ∀ k ∈ [8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104],
+      WriteWindow (s - 112#64 + BitVec.ofNat 64 k) 8 := by
+    intro k hk
+    have hk' : k + 8 ≤ 112 ∧ k % 8 = 0 := by
+      simp only [List.mem_cons, List.mem_nil_iff, or_false] at hk; omega
+    exact frame_window hs (by omega) (by omega) hk'.1 (by omega)
+  have fdW : ReadWindow chB 4 := by
+    have := arena_read (k := 0) (n := 4) hc (by omega) (by omega)
+    simpa using this
+  exact ⟨slots, by omega, by omega, by omega, by omega, arena_write hd (by omega) (by omega) (by omega),
+    by omega, by omega, by omega, by omega, ⟨by rw [C.state]; omega, by rw [C.state]; omega⟩,
+    ⟨by rw [v8]; omega, by rw [v8]; omega⟩, arena_read hv (by omega) (by omega), fdW, ⟨by omega, by omega⟩⟩
+
 end OCaml.Vm.Primitives.ConsoleWrite

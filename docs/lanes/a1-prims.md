@@ -59,17 +59,19 @@
   pins it for F1 (`f1_consoleRuntime`). Console streams: bprime's `GoodF1.consoles`
   (`OCaml.ConsoleChannels`, out channels with fd ≠ -1). BcSem guards (a2-sem, landed):
   `offsetFits` (offset + n < 2^63) and `isOut` on flushChan/putChar/putBlock.
-* Flush adapter (in progress, `Sim/PrimMlFlush.lean`): `flush_semantics` (model inversion),
-  `channel_arg` (`ChannelArg`: custom block, record, `ChanAt` at the callee entry),
-  `console_geometry` (`ConsoleGeometry` from `LoopGeometry` + `NativeValid`) and
-  `flush_input` (`MlFlushInput` for an open console channel) are proved; layouts from
-  `Console/Geometry.lean` (`ConsoleGeometry.write`…`.mlFlush`; console addresses checked
-  against the ELF symbols by `console_symbols`). Footprint `flushWindows sp a`; runtime
-  stability is the named premise `FlushStable L` over a getD frame (`FrameOnD`; a6-gc:
-  `f1_flush_stable`, FIXED `flushStable`). Waiting on: a1-arms' `CcallSetupPost.calleeSaved`
-  and channel-record apartness (`channelCode/Atoms/Prims/channelsApart`, full extent).
-  Remaining: the post (`FramedPrimitivePost` via `VmPayload.frame_chan`), the closed path,
-  `prim_caml_ml_flush_returns`.
+* Console C_CALL adapters. Shared pieces in `Sim/ConsoleCall.lean`: `consoleWindows sp a`
+  (native stack, errno words, a channel record's offset/curr words and buffer) and the named
+  premise `ConsoleStable L` over a getD frame (`FrameOnD`; a6-gc: `f1_console_stable`, FIXED
+  `consoleStable`), `ChannelArg`/`channel_arg`, `console_geometry` (`ConsoleGeometry` from
+  `LoopGeometry` + `NativeValid`; layouts in `Console/Geometry.lean`, addresses checked
+  against the ELF by `console_symbols`), `LoopRegisters.of_restored`.
+  `caml_ml_flush` (`Sim/PrimMlFlush.lean`): `flush_framed` (open console channel) and
+  `flush_closed_framed` (fd = -1) give `FramedPrimitivePost`; the payload/binding apartness
+  of the footprint are premises. Waiting on a1-arms (`CcallSetupPost.calleeSaved`,
+  channel-record apartness at full extent, transport with a weaker `chans` premise) for
+  `prim_caml_ml_flush_returns`. `caml_ml_output_char` (`Sim/PrimMlOutputChar.lean`):
+  model inversion (`output_char_semantics`, `PutCharCase`) and the stored byte
+  (`char_byte`); next its input (OcLayout from the full-extent geometry) and posts.
 * whileMin `PrimReturnsAt` summaries (picked up by `scripts/gen_f1_table.py`; regenerate
   WhileMinTable.lean in the same batch): `prim_caml_ml_string_length_returns` and
   `prim_caml_fresh_oo_id_returns` (`f1_counterStable` from a6-gc's `f1_ignoredStatic`) done.
