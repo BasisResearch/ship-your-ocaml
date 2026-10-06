@@ -435,6 +435,12 @@ structure GrowDone (H : List (Nat × Nat)) (capacity : Nat) (slot v ra sp tbl ws
   base : bytesT after.σ.mem tbl.toNat 8 = p
   ptr : bytesT after.σ.mem (tbl + BitVec.ofNat 64 24).toNat 8 = p + 8#64
   entry : bytesT after.σ.mem (p + BitVec.ofNat 64 0).toNat 8 = slot
+  /-- every byte the callee keeps (above the barrier's `sp`, a low static
+  outside the allocator, inside a live block but not the table struct) is
+  unchanged, except the slot -/
+  kept : ∀ a, Realloc.Kept H sp tbl a →
+    (a < (slot + BitVec.ofNat 64 0).toNat ∨ (slot + BitVec.ofNat 64 0).toNat + 8 ≤ a) →
+    (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
 
 /-- A word inside a live block misses the fresh block's first word. -/
 theorem fresh_apart {H : List (Nat × Nat)} {p r q n x : Nat}
@@ -597,7 +603,7 @@ theorem barrier_grow {H capacity charge slot v ra sp dom ys ye old tbl ptr limit
     rcases hy with rfl | rfl
     · left; exact ⟨t24, rfl⟩
     · right; exact ⟨p0, rfl⟩
-  refine ⟨d6, run4.trans (run5.trans run6), ⟨⟨D.p, R.ready, R.pc, ?_, ⟨D.low, D.high⟩, D.disjoint, ?_, ?_, ?_, ?_⟩⟩⟩
+  refine ⟨d6, run4.trans (run5.trans run6), ⟨⟨D.p, R.ready, R.pc, ?_, ⟨D.low, D.high⟩, D.disjoint, ?_, ?_, ?_, ?_, ?_⟩⟩⟩
   · intro k hk
     have b : 1 ≤ k ∧ k ≤ 31 ∧ k ∉ [1, 2, 10, 13, 14, 15] := by
       simp only [calleeSaved, Realloc.calleeRest, List.cons_append, List.nil_append, List.mem_cons,
@@ -642,5 +648,43 @@ theorem barrier_grow {H capacity charge slot v ra sp dom ys ye old tbl ptr limit
     · left; omega
   · rw [R.memory]
     exact word_writeLog_at _ _ 1 _ _ rfl trivial
+  · intro a k notSlot
+    have pl := D.low
+    have ph := D.high
+    have rb := g.requestBig
+    have r6 : (d6.σ.mem[a]?).getD 0 = (d5.σ.mem[a]?).getD 0 := by
+      rw [R.memory, writeLog_out _ _ _ (outL_of_range (n := 1) (outLRange_of_forall fun y hy => ?_)
+        (Nat.le_refl a) (Nat.lt_succ_self a))]
+      rcases reloadEntries y hy with ⟨h, w⟩ | ⟨h, w⟩ <;> rw [h, w]
+      · rcases k with k | ⟨k, _⟩ | ⟨q', n', _, _, _, _, _, t⟩
+        · right; omega
+        · left; unfold heapStart at k; omega
+        · simp only [Realloc.tableBytes] at t; omega
+      · rcases k with k | ⟨k, _⟩ | ⟨q', n', mem', _, _, alo, ahi, _⟩
+        · right; unfold heapEnd at ph; omega
+        · left; unfold heapStart at k pl; omega
+        · rcases Nat.lt_or_ge a D.p.toNat with o | o
+          · left; omega
+          · rcases Nat.lt_or_ge a (D.p.toNat + 8) with o' | o'
+            · exact absurd ⟨alo, ahi⟩ (D.disjoint _ mem' a ⟨o, by omega⟩)
+            · right; omega
+    have r5 : (d5.σ.mem[a]?).getD 0 = (d4.σ.mem[a]?).getD 0 := D.kept a (by
+      rcases k with k | k | k
+      · exact Or.inl (by rw [fspNat]; omega)
+      · exact Or.inr (Or.inl k)
+      · exact Or.inr (Or.inr k))
+    have r4 : (d4.σ.mem[a]?).getD 0 = (d.σ.mem[a]?).getD 0 := by
+      rw [mem4, writeLog_out _ _ _ (outL_of_range (n := 1) ?_ (Nat.le_refl a) (Nat.lt_succ_self a))]
+      have below : a < sp.toNat - 32 ∨ sp.toNat ≤ a := by
+        rcases k with k | ⟨k, _⟩ | ⟨q', n', _, _, qh', _, ahi, _⟩
+        · right; exact k
+        · left; unfold heapStart at k; omega
+        · left; unfold heapEnd at qh'; omega
+      refine ⟨?_, ?_, ?_, ?_, trivial⟩ <;> dsimp only
+      · rw [n24]; omega
+      · rw [slot_exact]; omega
+      · rw [n8]; omega
+      · rw [n0]; omega
+    exact r6.trans (r5.trans r4)
 
 end OCaml.Vm.Gc.Barrier
