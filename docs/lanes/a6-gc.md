@@ -29,7 +29,19 @@ Done (F1 side of the GC):
     `OpenChannels.unique` makes the list determined by memory.
   * `F1Pins.gcIdle` (`f1_gcIdle`, a2-sem's `BarrierRuntime.idle`).
   * `Remembered.frameApart`/`aboveCode` are guarded by room.
-  * Next: `NurseryGeometry.channelsListed` (299ea97e, lands with a1-arms'
+  * `LibHeapAt.table : RefTableAt H chs c`: `Caml_state->ref_table` is
+    the cut's struct, and the table is unallocated (as at the cut) or its
+    storage is a live block apart from `f1Covered` and the open records
+    (`RefStorage`). `f1Extents` (the writable class) excludes the table
+    words, and a0-boot's obligation covers `f1Covered` (requested sizes).
+    `F1Pins.codeWord`/`primsWord` pin `caml_start_code` and the prim
+    table's contents to their blocks.
+  * LibraryReady's platform facts (F1-split row) cannot be runtimeOk
+    fields. `WindowStable`/`MemoryStable` allow arbitrary registers in c',
+    and `FrameOnD`/window frames do not keep byte presence. a1-arms carries
+    `LoopRegisters.gp`/`htifIdle` and states C_CALL entries at `fillZero c`.
+    a6-gc supplies `whileMin_gp`(`_fillZero`) and `fillZero_ram` (any c).
+  * Next: `NurseryGeometry.channelsListed` (landed with a1-arms'
     channel-extent commit), `f1_console_stable` (a1-prims' `ConsoleStable`),
     the `refTable` pin, `BarrierRuntime f1Layout`, `BarrierGrowth f1Layout`
     (unallocated table, from `barrier_grow`).

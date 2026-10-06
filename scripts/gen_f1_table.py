@@ -175,7 +175,7 @@ def render_whilemin(fields, users):
              '/-- **What `whileMin`\'s machine run still needs** from the arm lanes. -/',
              'structure WhileMinOpen : Prop where']
     lines += ['  /-- newlib\'s heap at the cut covers the runtime\'s blocks (a0-boot) -/',
-              '  libHeap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Extents']
+              '  libHeap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered']
     for fname, ty in open_.items():
         lines.append(f'  {fname} : {ty}')
     lines += ['', 'theorem whileMin_premises (o : WhileMinOpen) :',

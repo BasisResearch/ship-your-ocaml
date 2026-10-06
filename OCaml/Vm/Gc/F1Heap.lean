@@ -28,17 +28,41 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap OCaml.Vm.Boot.Startup VsaIris.VsaHeap
 /-- The bytes of a channel record: the header fields and the buffer. -/
 def chanRecordBytes : Nat := chanOffBuff + OCaml.Bytecode.ioBufferSize
 
-/-- The runtime regions F1 writes, as `(start, bytes)`, each in one live
-malloc block at the whileMin cut:
-* the `Caml_state` record;
-* the remembered-set struct (`Caml_state->ref_table`, 7 words);
-* the minor heap `[young_start, young_end)` (`minorRegion`);
-* the major heap chunk (`majorRegion`);
-* the VM stack `[stack_low, stack_high)`. -/
+/-- The remembered-set struct (`Caml_state->ref_table`, `caml_ref_table`, 7 words). -/
+def refTable : Nat := Boot.WhileMinHeapChunks.refTablePayload
+
+/-- The runtime's blocks, as `(start, bytes)`, each in one live malloc block at
+the whileMin cut: the `Caml_state` record, the remembered-set struct, the
+minor heap (`minorRegion`), the major heap chunk (`majorRegion`), the VM stack
+`[stack_low, stack_high)`, the code buffer (`caml_load_code`'s request: whileMin's
+191 words) and the primitive table's contents (`8 ×` its capacity 768). The
+sizes are the blocks' requested bytes, which a0-boot's `HeapReady` records. -/
+def f1Covered : List (Nat × Nat) :=
+  [(Boot.WhileMinRuntime.domain, Layout.domainStateBytes), (refTable, 56),
+   (minorRegion.lo, minorRegion.hi - minorRegion.lo), (majorRegion.lo, majorRegion.hi - majorRegion.lo),
+   (Boot.WhileMinEntry.high - Layout.stackBytes, Layout.stackBytes),
+   (Boot.WhileMinHeapChunks.codeBufferPayload, 764), (Boot.WhileMinHeapChunks.primTablePayload, 6144)]
+
+/-- The regions F1's ordinary windows write: the `Caml_state` record around
+its `ref_table` word, the minor heap, the major chunk, the VM stack. The
+remembered set changes only through the write barrier's own lemmas. -/
 def f1Extents : List (Nat × Nat) :=
-  [(Boot.WhileMinRuntime.domain, Layout.domainStateBytes), (Boot.WhileMinHeapChunks.refTablePayload, 56),
+  [(Boot.WhileMinRuntime.domain, Layout.off_ref_table),
+   (Boot.WhileMinRuntime.domain + Layout.off_ref_table + 8, Layout.domainStateBytes - Layout.off_ref_table - 8),
    (minorRegion.lo, minorRegion.hi - minorRegion.lo), (majorRegion.lo, majorRegion.hi - majorRegion.lo),
    (Boot.WhileMinEntry.high - Layout.stackBytes, Layout.stackBytes)]
+
+theorem extent_covered : ∀ x ∈ f1Extents, ∃ y ∈ f1Covered, y.1 ≤ x.1 ∧ x.1 + x.2 ≤ y.1 + y.2 := by decide
+
+/-- The remembered set's words: the `Caml_state->ref_table` pointer and the struct. -/
+def InTableWords (y : Nat) : Prop :=
+  (Boot.WhileMinRuntime.domain + Layout.off_ref_table ≤ y ∧ y < Boot.WhileMinRuntime.domain + Layout.off_ref_table + 8) ∨
+    (refTable ≤ y ∧ y < refTable + 56)
+
+theorem extents_miss_table : ∀ x ∈ f1Extents,
+    (x.1 + x.2 ≤ Boot.WhileMinRuntime.domain + Layout.off_ref_table ∨
+      Boot.WhileMinRuntime.domain + Layout.off_ref_table + 8 ≤ x.1) ∧
+    (x.1 + x.2 ≤ refTable ∨ refTable + 56 ≤ x.1) := by decide
 
 /-- `x` lies inside a live block of `H`. -/
 def Covered (H : List (Nat × Nat)) (x : Nat × Nat) : Prop :=
@@ -51,16 +75,57 @@ def F1HeapSafe (w : W) : Prop :=
     (∀ a, w.lo ≤ a → a < w.hi → a ∈ errnoBytes) ∨
     (w.hi ≤ heapStart ∧ ∀ a, w.lo ≤ a → a < w.hi → ¬ allocGlobal a ∧ ¬ HeapPinned a)
 
+/-- The remembered set's storage `[b, e)` with insertion pointer `p` and
+limit `l` (`caml_alloc_table`: `limit = threshold ≤ end`): its own live block,
+apart from the runtime's blocks and the open records. -/
+structure RefStorage (H : List (Nat × Nat)) (chs : List Nat) (b e p l : Nat) : Prop where
+  nonzero : b ≠ 0
+  aligned : b % 8 = 0
+  ptrAligned : p % 8 = 0
+  limitAligned : l % 8 = 0
+  low : b ≤ p
+  ptrLimit : p ≤ l
+  limitEnd : l ≤ e
+  covered : Covered H (b, e - b)
+  apartBlocks : ∀ x ∈ f1Covered, e ≤ x.1 ∨ x.1 + x.2 ≤ b
+  apartRecords : ∀ a ∈ chs, e ≤ a ∨ a + chanRecordBytes ≤ b
+
+/-- **The remembered set at an F1 state**: `Caml_state->ref_table` is the
+cut's struct; the table is unallocated (as at the cut) or has its storage. -/
+structure RefTableAt (H : List (Nat × Nat)) (chs : List Nat) (c : Config) : Prop where
+  pointer : word c (Boot.WhileMinRuntime.domain + Layout.off_ref_table) = BitVec.ofNat 64 refTable
+  shape : ((word c (refTable + Layout.off_ref_table_base)).toNat = 0 ∧
+      (word c (refTable + Layout.off_ref_table_ptr)).toNat = 0 ∧
+      (word c (refTable + Layout.off_ref_table_limit)).toNat = 0) ∨
+    RefStorage H chs (word c (refTable + Layout.off_ref_table_base)).toNat
+      (word c (refTable + Layout.off_ref_table_end)).toNat (word c (refTable + Layout.off_ref_table_ptr)).toNat
+      (word c (refTable + Layout.off_ref_table_limit)).toNat
+
+/-- The remembered set survives byte equality on its words. -/
+theorem RefTableAt.congr {H : List (Nat × Nat)} {chs : List Nat} {c c' : Config} (t : RefTableAt H chs c)
+    (same : ∀ y, InTableWords y → (c'.σ.mem[y]?).getD 0 = (c.σ.mem[y]?).getD 0) : RefTableAt H chs c' := by
+  have w : ∀ x, (∀ j, j < 8 → InTableWords (x + j)) → word c' x = word c x := fun x h => by
+    apply Reloc.bytesT_congr
+    intro j hj
+    simp only [bytesT, same _ (h j hj)]
+  have tw : ∀ off, off + 8 ≤ 56 → word c' (refTable + off) = word c (refTable + off) := fun off h =>
+    w _ fun j hj => Or.inr ⟨by omega, by omega⟩
+  refine ⟨by rw [w _ fun j hj => Or.inl ⟨by omega, by omega⟩]; exact t.pointer, ?_⟩
+  rw [tw _ (by decide), tw _ (by decide), tw _ (by decide), tw _ (by decide)]
+  exact t.shape
+
 /-- **newlib's heap at an F1 state**, with live blocks `H` and open channels `chs`. -/
 structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Config) : Prop where
   room : 2 ^ 24 ≤ cap
   ready : HeapReady H cap c
-  extents : ∀ x ∈ f1Extents, Covered H x
+  extents : ∀ x ∈ f1Covered, Covered H x
   channels : OpenChannelList c.σ.mem chs
   records : ∀ a ∈ chs, Covered H (a, chanRecordBytes)
-  recordsApart : ∀ a ∈ chs, ∀ x ∈ f1Extents, a + chanRecordBytes ≤ x.1 ∨ x.1 + x.2 ≤ a
+  recordsApart : ∀ a ∈ chs, ∀ x ∈ f1Covered, a + chanRecordBytes ≤ x.1 ∨ x.1 + x.2 ≤ a
   /-- distinct open records are disjoint (each its own malloc block) -/
   recordsDisjoint : ∀ a ∈ chs, ∀ b ∈ chs, a ≠ b → a + chanRecordBytes ≤ b ∨ b + chanRecordBytes ≤ a
+  /-- the remembered set -/
+  table : RefTableAt H chs c
 
 /-- The F1 heap invariant. -/
 def LibHeap (c : Config) : Prop := ∃ H cap chs, LibHeapAt H cap chs c
@@ -68,7 +133,8 @@ def LibHeap (c : Config) : Prop := ∃ H cap chs, LibHeapAt H cap chs c
 theorem F1HeapSafe.heapSafe {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
     (h : LibHeapAt H cap chs c) {w : W} (s : F1HeapSafe w) : HeapSafe H w := by
   rcases s with ⟨x, hx, lo, hi⟩ | s | s | s
-  · obtain ⟨e, he, elo, ehi⟩ := h.extents x hx
+  · obtain ⟨y, hy, ylo, yhi⟩ := extent_covered x hx
+    obtain ⟨e, he, elo, ehi⟩ := h.extents y hy
     exact Or.inl ⟨e, he, by omega, by omega⟩
   · exact Or.inr (Or.inl s)
   · exact Or.inr (Or.inr (Or.inl s))
@@ -86,12 +152,33 @@ theorem F1HeapSafe.outside {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} 
   rcases Nat.lt_or_ge y w.hi with g | g
   · exfalso
     rcases s with ⟨x, hx, xlo, xhi⟩ | s | s | ⟨s, _⟩
-    · rcases h.recordsApart a ha x hx with r | r <;> omega
+    · obtain ⟨z, hz, zlo, zhi⟩ := extent_covered x hx
+      rcases h.recordsApart a ha z hz with r | r <;> omega
     · omega
     · have := errnoBytes_mem.1 (s y l g)
       unfold InRange heapStart at *
       omega
     · omega
+  · exact Or.inr g
+
+/-- A safe window misses the remembered set's words. -/
+theorem F1HeapSafe.misses_table {w : W} (s : F1HeapSafe w) {y : Nat} (hy : InTableWords y) :
+    y < w.lo ∨ w.hi ≤ y := by
+  have yr : 0x8007d140 ≤ y ∧ y < 0x86800000 := by
+    unfold InTableWords refTable at hy
+    simp only [Boot.WhileMinRuntime.domain, Layout.off_ref_table, Boot.WhileMinHeapChunks.refTablePayload] at hy
+    omega
+  rcases Nat.lt_or_ge y w.lo with l | l
+  · exact Or.inl l
+  rcases Nat.lt_or_ge y w.hi with g | g
+  · exfalso
+    rcases s with ⟨x, hx, xlo, xhi⟩ | s | s | ⟨s, _⟩
+    · have := extents_miss_table x hx
+      unfold InTableWords at hy
+      omega
+    · unfold heapEnd at s; omega
+    · have := errnoBytes_mem.1 (s y l g); unfold InRange at this; omega
+    · unfold heapStart at s; omega
   · exact Or.inr g
 
 /-- **The F1 heap invariant survives writes confined to safe windows**, given
@@ -117,6 +204,7 @@ theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List N
   records := h.records
   recordsApart := h.recordsApart
   recordsDisjoint := h.recordsDisjoint
+  table := h.table.congr fun y hy => keep y fun w hw => (safe w hw).misses_table hy
 
 /-- `LibHeapAt.keep_windows` for a frame. -/
 theorem LibHeapAt.frame_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c c' : Config}
@@ -138,6 +226,17 @@ theorem LibHeapAt.open_mem {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} 
 /-- A write window inside the open record at `a` that misses its `next` word. -/
 def RecordWindow (a : Nat) (w : W) : Prop :=
   a ≤ w.lo ∧ w.hi ≤ a + chanRecordBytes ∧ (w.hi ≤ a + chanOffNext ∨ a + chanOffNext + 8 ≤ w.lo)
+
+/-- An open record misses the remembered set's words. -/
+theorem RecordWindow.misses_table {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
+    (h : LibHeapAt H cap chs c) {a : Nat} (ha : a ∈ chs) {w : W} (r : RecordWindow a w) {y : Nat}
+    (hy : InTableWords y) : y < w.lo ∨ w.hi ≤ y := by
+  obtain ⟨lo, hi, -⟩ := r
+  have d := h.recordsApart a ha _ (List.mem_cons_self (a := (Boot.WhileMinRuntime.domain, Layout.domainStateBytes)))
+  have t := h.recordsApart a ha (refTable, 56) (by decide)
+  unfold InTableWords at hy
+  simp only [Layout.domainStateBytes, Layout.off_ref_table] at d hy ⊢
+  omega
 
 /-- **The F1 heap invariant survives writes to one open record** (missing its
 `next` word) together with safe windows. -/
@@ -174,5 +273,9 @@ theorem LibHeapAt.keep_records {H : List (Nat × Nat)} {cap : Nat} {chs : List N
   records := h.records
   recordsApart := h.recordsApart
   recordsDisjoint := h.recordsDisjoint
+  table := h.table.congr fun y hy => keep y fun w hw => by
+    rcases safe w hw with s | r
+    · exact s.misses_table hy
+    · exact r.misses_table h ha hy
 
 end OCaml.Vm.Gc

@@ -64,6 +64,10 @@ structure F1Pins (c : Config) : Prop where
   libHeap : LibHeap c
   /-- the collector is idle (`Phase_idle`): G1 never starts a cycle -/
   gcIdle : word32 c Layout.sym_caml_gc_phase = 3#32
+  /-- the bytecode and the primitive table stay in their startup blocks -/
+  codeWord : word c Layout.sym_caml_start_code = BitVec.ofNat 64 WhileMinHeapChunks.codeBufferPayload
+  primsWord : word c (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
+    BitVec.ofNat 64 WhileMinHeapChunks.primTablePayload
 
 /-- The F1 runtime invariant. -/
 def f1Runtime : Config → Prop := RuntimeOk F1Pins
@@ -409,7 +413,10 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
       (by decide))];
        exact pins.channelUnlock,
     ConsoleRuntime.transfer (fun x hx side => keep x 8 (b hx side)) pins.console, heap pins.libHeap,
-    by rw [w4 _ (b (by simp [Layout.sym_caml_gc_phase, Layout.sym_bss_end]) (by decide))]; exact pins.gcIdle⟩, fields⟩
+    by rw [w4 _ (b (by simp [Layout.sym_caml_gc_phase, Layout.sym_bss_end]) (by decide))]; exact pins.gcIdle,
+    by rw [w8 _ (b (by simp [Layout.sym_caml_start_code, Layout.sym_bss_end]) (by decide))]; exact pins.codeWord,
+    by rw [w8 _ (b (by simp [Layout.sym_caml_prim_table, Layout.off_prim_contents, Layout.sym_bss_end])
+      (by decide))]; exact pins.primsWord⟩, fields⟩
   · exact {
       nonnull := shape.nonnull
       aligned := shape.aligned
@@ -567,9 +574,15 @@ theorem heapSafe_extent {lo hi : Nat} {x : Nat × Nat} (member : x ∈ f1Extents
     (high : hi ≤ x.1 + x.2) : F1HeapSafe ⟨lo, hi⟩ :=
   Or.inl ⟨x, member, low, high⟩
 
-theorem heapSafe_domain {lo hi : Nat} (low : f1Domain ≤ lo) (high : hi ≤ f1Domain + Layout.domainStateBytes) :
-    F1HeapSafe ⟨lo, hi⟩ :=
-  heapSafe_extent (x := (f1Domain, Layout.domainStateBytes)) List.mem_cons_self low high
+/-- A `Caml_state` window other than the `ref_table` word. -/
+theorem heapSafe_domain {lo hi : Nat} (low : f1Domain ≤ lo) (high : hi ≤ f1Domain + Layout.domainStateBytes)
+    (table : hi ≤ f1Domain + Layout.off_ref_table ∨ f1Domain + Layout.off_ref_table + 8 ≤ lo) :
+    F1HeapSafe ⟨lo, hi⟩ := by
+  rcases table with t | t
+  · exact heapSafe_extent (x := (f1Domain, Layout.off_ref_table)) List.mem_cons_self low (by simpa using t)
+  · exact heapSafe_extent (x := (f1Domain + Layout.off_ref_table + 8,
+      Layout.domainStateBytes - Layout.off_ref_table - 8)) (by simp [f1Extents, f1Domain]) t
+      (by simp only [Layout.domainStateBytes, Layout.off_ref_table] at *; omega)
 
 theorem heapSafe_minor {lo hi : Nat} (low : minorRegion.lo ≤ lo) (high : hi ≤ minorRegion.hi) :
     F1HeapSafe ⟨lo, hi⟩ :=
@@ -678,7 +691,8 @@ theorem f1_domainField {off : Nat} (notYoung : 64 ≤ off)
       (Layout.off_stack_threshold + 8 ≤ off ∧ off + 8 ≤ Layout.off_trap_barrier) ∨
       (Layout.off_trap_barrier + 8 ≤ off ∧ off + 8 ≤ Layout.off_backtrace_active) ∨
       Layout.off_backtrace_active + 8 ≤ off)
-    (inRecord : off + 8 ≤ Layout.domainStateBytes) :
+    (inRecord : off + 8 ≤ Layout.domainStateBytes)
+    (notTable : off + 8 ≤ Layout.off_ref_table ∨ Layout.off_ref_table + 8 ≤ off) :
     WindowStable f1Runtime [⟨f1Domain + off, f1Domain + off + 8⟩] := by
   simp only [Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
     Layout.off_backtrace_active] at notPinned
@@ -690,22 +704,22 @@ theorem f1_domainField {off : Nat} (notYoung : 64 ≤ off)
   · simp only [Layout.off_backtrace_active]; omega
   · simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.domainStateBytes] at *
     omega
-  · exact heapSafe_domain (by omega) (by omega)
+  · exact heapSafe_domain (by omega) (by omega) (by omega)
 
 theorem f1_trapsp : WindowStable f1Runtime [⟨f1Domain + Layout.off_trapsp, f1Domain + Layout.off_trapsp + 8⟩] :=
-  f1_domainField (by decide) (by decide) (by decide)
+  f1_domainField (by decide) (by decide) (by decide) (by decide)
 theorem f1_extern_sp :
     WindowStable f1Runtime [⟨f1Domain + Layout.off_extern_sp, f1Domain + Layout.off_extern_sp + 8⟩] :=
-  f1_domainField (by decide) (by decide) (by decide)
+  f1_domainField (by decide) (by decide) (by decide) (by decide)
 theorem f1_local_roots :
     WindowStable f1Runtime [⟨f1Domain + Layout.off_local_roots, f1Domain + Layout.off_local_roots + 8⟩] :=
-  f1_domainField (by decide) (by decide) (by decide)
+  f1_domainField (by decide) (by decide) (by decide) (by decide)
 theorem f1_exn_bucket :
     WindowStable f1Runtime [⟨f1Domain + Layout.off_exn_bucket, f1Domain + Layout.off_exn_bucket + 8⟩] :=
-  f1_domainField (by decide) (by decide) (by decide)
+  f1_domainField (by decide) (by decide) (by decide) (by decide)
 theorem f1_external_raise :
     WindowStable f1Runtime [⟨f1Domain + Layout.off_external_raise, f1Domain + Layout.off_external_raise + 8⟩] :=
-  f1_domainField (by decide) (by decide) (by decide)
+  f1_domainField (by decide) (by decide) (by decide) (by decide)
 
 /-- (b) Any window inside the nursery `[young_start, young_end)` of the cut,
 in particular the field windows of objects placed there. -/
@@ -921,6 +935,7 @@ theorem f1_allocFrame_core' {P : Prog} {s : St} {c : Config} {pl : Place} {cp : 
       subst hy
       exact heapSafe_domain (by simp only [Layout.off_young_ptr]; omega)
         (by simp only [Layout.off_young_ptr, Layout.domainStateBytes]; omega)
+        (Or.inl (by simp only [Layout.off_young_ptr, Layout.off_ref_table]; omega))
     · rcases entries e hl with hin | hin | hin
       · have nl := g.nurseryLow
         have nh := g.nurseryHigh
@@ -1018,17 +1033,22 @@ theorem consoleRuntime_of {c : Config}
   · rw [rd ConsoleWrite.channelLock _ _ (by decide) (WhileMinEntry.read_caml_channel_mutex_lock memory)]; decide
   · rw [rd ConsoleWrite.channelUnlock _ _ (by decide) (WhileMinEntry.read_caml_channel_mutex_unlock memory)]; decide
 
-/-- newlib's heap readiness covering `f1Extents` (the body of a0-boot's
+/-- newlib's heap readiness covering `f1Covered` (the body of a0-boot's
 `WhileMin.cut_heapReady_covers_Statement`, at any configuration). -/
 def HeapCovers (c : Config) : Prop :=
-  ∃ H cap, 2 ^ 24 ≤ cap ∧ Startup.HeapReady H cap c ∧ ∀ x ∈ f1Extents, ∃ e ∈ H, e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2
+  ∃ H cap, 2 ^ 24 ≤ cap ∧ Startup.HeapReady H cap c ∧ ∀ x ∈ f1Covered, ∃ e ∈ H, e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2
 
 /-- newlib's heap at the cut: no channel is open yet. -/
 theorem libHeap_of {c : Config}
     (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) (heap : HeapCovers c) :
     LibHeap c := by
   obtain ⟨H, cap, room, ready, covers⟩ := heap
-  refine ⟨H, cap, [], ⟨room, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h), (fun _ h => by cases h)⟩⟩
+  refine ⟨H, cap, [], ⟨room, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h),
+    (fun _ h => by cases h), ⟨WhileMinEntry.read_ref_table memory, Or.inl ⟨?_, ?_, ?_⟩⟩⟩⟩
+  rotate_left
+  · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl
+  · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_ptr memory]; rfl
+  · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_limit memory]; rfl
   have head := WhileMinEntry.read_caml_all_opened_channels memory
   change bytesT c.σ.mem _ 8 = _ at head
   unfold OpenChannelList
@@ -1051,7 +1071,7 @@ theorem f1Pins_of {c : Config}
       simp at root total
       omega
   subst same
-  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact WhileMinEntry.read_stack_high memory
   · exact WhileMinEntry.read_stack_threshold memory
   · have z : ∀ (g : BitVec 64) (n : Nat), g.toNat = n → word c n = 0#64 →
@@ -1067,6 +1087,8 @@ theorem f1Pins_of {c : Config}
   · exact consoleRuntime_of memory
   · exact libHeap_of memory heap
   · exact WhileMinEntry.read_caml_gc_phase memory
+  · rw [WhileMinEntry.read_caml_start_code memory]; rfl
+  · rw [WhileMinEntry.read_prim_contents memory]; rfl
 
 /-- `f1Runtime` on the certified cut memory. -/
 theorem f1Runtime_of {c : Config}
@@ -1085,7 +1107,7 @@ theorem Loaded.retarget {L L' : OCaml.Layout} {P : Prog} {c : Config} (h : OCaml
 
 /-- a0-boot's covering readiness at the densified cut holds at the cut itself:
 `HeapReady` reads total bytes only. -/
-theorem heapCovers_cut (heap : WhileMin.cut_heapReady_covers_Statement f1Extents) : HeapCovers WhileMin.cut := by
+theorem heapCovers_cut (heap : WhileMin.cut_heapReady_covers_Statement f1Covered) : HeapCovers WhileMin.cut := by
   obtain ⟨H, cap, room, ready, covers⟩ := heap
   refine ⟨H, cap, room, HeapReady.frame_read ready fun a _ _ => ?_, covers⟩
   have := Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem a
@@ -1093,18 +1115,41 @@ theorem heapCovers_cut (heap : WhileMin.cut_heapReady_covers_Statement f1Extents
   exact this
 
 /-- **`Loaded f1Layout whileMin`** at the captured cut, given a0-boot's named
-obligation `WhileMin.cut_heapReady_covers_Statement f1Extents` (newlib's heap
+obligation `WhileMin.cut_heapReady_covers_Statement f1Covered` (newlib's heap
 at the cut covers the runtime's blocks). -/
-theorem whileMin_loaded_f1 (heap : WhileMin.cut_heapReady_covers_Statement f1Extents) :
+theorem whileMin_loaded_f1 (heap : WhileMin.cut_heapReady_covers_Statement f1Covered) :
     OCaml.Loaded f1Layout OCaml.Programs.whileMin WhileMin.cut :=
   Loaded.retarget WhileMin.loaded (f1Runtime_of WhileMin.memory_equiv (heapCovers_cut heap)) rfl
 
 /-- The densified entry, as a0-boot's `loaded_fillZero`. -/
-theorem whileMin_loaded_f1_fillZero (heap : WhileMin.cut_heapReady_covers_Statement f1Extents) :
+theorem whileMin_loaded_f1_fillZero (heap : WhileMin.cut_heapReady_covers_Statement f1Covered) :
     OCaml.Loaded f1Layout OCaml.Programs.whileMin (Vsa.Densify.fillZero WhileMin.cut) :=
   Loaded.retarget WhileMin.loaded_fillZero
     (f1Runtime_of ((Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem).symm.trans WhileMin.memory_equiv) heap) rfl
 
+/-- The global pointer at the cut (the captured register table), for a1-arms'
+`LoopRegisters.gp` and newlib calls' `LibraryReady.gp`. -/
+theorem whileMin_gp : gpr WhileMin.cut 3 = some VsaIris.MallocFast.gpV := by
+  show WhileMinRegisters.registers.get? .x3 = _
+  rw [WhileMinRegisters.get_x3]
+  rfl
+
+/-- Densification leaves the registers alone. -/
+theorem gpr_fillZero (c : Config) (n : Nat) : gpr (Vsa.Densify.fillZero c) n = gpr c n := rfl
+
+theorem whileMin_gp_fillZero : gpr (Vsa.Densify.fillZero WhileMin.cut) 3 = some VsaIris.MallocFast.gpV :=
+  (gpr_fillZero _ 3).trans whileMin_gp
+
 end Cut
+
+/-- Densified memory has every RAM byte present (`PlatformOk.ram`,
+`LibraryReady.ram`), whatever the configuration. -/
+theorem fillZero_ram (c : Config) (a : Nat) (low : Vsa.Densify.ramBase ≤ a)
+    (high : a < Vsa.Densify.ramBase + Vsa.Densify.ramSize) : ((Vsa.Densify.fillZero c).σ.mem[a]?).isSome := by
+  show ((Vsa.Densify.fillZeroMem c.σ.mem)[a]?).isSome
+  rw [Vsa.Densify.fillZeroMem_get]
+  split
+  · rfl
+  · rename_i h; exact absurd (And.intro low high) h
 
 end OCaml.Vm.Gc

@@ -28,10 +28,10 @@ theorem f1_vmWindow_heapSafe {w : W} (vm : VmWindow Gc.f1High Gc.f1Domain w) : G
   rcases vm with ⟨low, high⟩ | ⟨off, member, rfl⟩
   · exact Gc.heapSafe_stack low high
   · simp only [vmDomainOffsets, List.mem_cons, List.not_mem_nil, or_false] at member
-    refine Gc.heapSafe_domain (Nat.le_add_right _ _) ?_
+    refine Gc.heapSafe_domain (Nat.le_add_right _ _) ?_ (Or.inr ?_) <;>
     rcases member with rfl | rfl | rfl | rfl <;>
       simp only [Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots, Layout.off_exn_bucket,
-        Layout.domainStateBytes] <;> omega
+        Layout.domainStateBytes, Layout.off_ref_table] <;> omega
 
 /-- **`RuntimeFrame` for the pinned F1 layout.** -/
 theorem f1_runtimeFrame : RuntimeFrame Gc.f1Layout Gc.f1High Gc.f1Domain where

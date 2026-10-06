@@ -609,6 +609,14 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.libHeap_of
 #print axioms OCaml.Vm.Gc.f1_records
 #print axioms OCaml.Vm.Gc.f1_gcIdle
+#print axioms OCaml.Vm.Gc.RefTableAt.congr
+#print axioms OCaml.Vm.Gc.F1HeapSafe.misses_table
+#print axioms OCaml.Vm.Gc.RecordWindow.misses_table
+#print axioms OCaml.Vm.Gc.extent_covered
+#print axioms OCaml.Vm.Gc.whileMin_gp
+#print axioms OCaml.Vm.Gc.whileMin_gp_fillZero
+#print axioms OCaml.Vm.Gc.gpr_fillZero
+#print axioms OCaml.Vm.Gc.fillZero_ram
 #print axioms OCaml.Vm.Gc.record_footprint_apart
 #print axioms OCaml.Vm.Gc.LibHeapAt.keep_records
 #print axioms OCaml.Vm.Gc.OpenChannels.unique
