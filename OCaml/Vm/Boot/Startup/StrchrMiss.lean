@@ -524,4 +524,38 @@ theorem strchr_miss (c : Config) (a ra : BitVec 64) (len : Nat) (leaf : LeafInpu
       ⟨scanned.good, scanned.image, scanned.minstret, (scanned.frame .x1 (by decide) (by decide)).trans
         looped.leaf.raReg, leaf.aligned, scanned.tick⟩ scanned.pc scanned.regs
     exact ⟨d, run6.trans (run7.trans run8), done⟩
+theorem testBit7_mod (n : Nat) : n.testBit 7 = (n % 256).testBit 7 := by
+  have h := Nat.testBit_mod_two_pow n 8 7
+  simp only [show (2 : Nat) ^ 8 = 256 from rfl, show (7 < 8) = True from by decide, decide_true,
+    Bool.true_and] at h
+  exact h.symm
+
+theorem sum_bit7 (x y : BitVec 64) (hx : x.toNat % 256 = 0) (hy : y.toNat % 256 = 255) :
+    (x + y).getLsbD 7 = true := by
+  rw [BitVec.getLsbD, BitVec.toNat_add, testBit7_mod]
+  have : (x.toNat + y.toNat) % 2 ^ 64 % 256 = 255 := by
+    rw [Nat.mod_mod_of_dvd _ (by decide : 256 ∣ 2 ^ 64)]
+    omega
+  rw [this]; decide
+
+theorem bit7_zero (x : BitVec 64) (hx : x.toNat % 256 = 0) : x.getLsbD 7 = false := by
+  rw [BitVec.getLsbD, testBit7_mod, hx]; decide
+
+/-- A word whose first byte is NUL always hits the loop's test. -/
+theorem loopTest_low_zero {x : BitVec 64} (hx : x.toNat % 256 = 0) : loopTest x ≠ 0#64 := by
+  intro z
+  have bit := congrArg (fun v : BitVec 64 => v.getLsbD 7) z
+  simp only [loopTest, BitVec.getLsbD_and, BitVec.getLsbD_or, BitVec.getLsbD_xor] at bit
+  rw [sum_bit7 x lowOnes hx (by decide), bit7_zero x hx] at bit
+  generalize ((x ^^^ slashPattern) + lowOnes).getLsbD 7 = t at bit
+  cases t <;> revert bit <;> decide
+
+/-- A word whose first byte is NUL always hits the first test. -/
+theorem setupTest_low_zero {x : BitVec 64} (hx : x.toNat % 256 = 0) : setupTest x ≠ 0#64 := by
+  intro z
+  have bit := congrArg (fun v : BitVec 64 => v.getLsbD 7) z
+  simp only [setupTest, BitVec.getLsbD_and, BitVec.getLsbD_or, BitVec.getLsbD_xor] at bit
+  rw [sum_bit7 x lowOnes hx (by decide), bit7_zero x hx] at bit
+  generalize ((slashPattern ^^^ x) + lowOnes).getLsbD 7 = t at bit
+  cases t <;> revert bit <;> decide
 end OCaml.Vm.Boot.Startup
