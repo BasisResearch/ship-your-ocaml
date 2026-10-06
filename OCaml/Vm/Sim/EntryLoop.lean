@@ -254,3 +254,18 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
   | succ n => exact ⟨n, run⟩
 
 end OCaml.Vm.Sim
+
+namespace OCaml.Vm.Sim
+open OCaml.Bytecode Vsa.Machine
+
+/-- **`ArmSim.entry` from `Loaded`**: the caller and the initial placement
+are fields of `LoadedAt`; only the runtime invariant's stability under
+entry's three write windows is a property of the layout `L`. -/
+theorem entry_of_loaded {L : OCaml.Layout} {P : Prog} {c : Config}
+    (stable : ∀ sp d, OCaml.Vm.Primitives.WindowStable L.runtimeOk (entryWindows sp d))
+    (h : OCaml.Loaded L P c) : ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P P.init c' := by
+  obtain ⟨pl, cp, high, h⟩ := h
+  obtain ⟨sp, regs, saved, caller⟩ := h.caller
+  exact entry_loopAt h caller h.geometry (stable _ _)
+
+end OCaml.Vm.Sim

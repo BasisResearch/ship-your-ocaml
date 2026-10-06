@@ -48,23 +48,4 @@ theorem argSize : gpr cut 11 = some (BitVec.ofNat 64 (4 * whileMin.code.size)) :
 
 theorem console : output cut.σ = "" := rfl
 
-/-- All remaining platform and call-register facts for the captured cut. -/
-theorem control : WhileMinEntry.EntryControl cut where
-  atEntry := atEntry
-  argCode := argCode
-  argSize := argSize
-  console := console
-  control := WhileMinRegisters.good_state memory
-  image := WhileMinImage.executable (c := cut) memory_eq
-  primitives := WhileMinPrimitives.bindings (c := cut) (initial := WhileMinImage.initialMem) memory_equiv
-
-/-- The captured machine entry satisfies the complete loaded-state relation. -/
-theorem loaded : Loaded (runtimeLayout BestFitSingleton) whileMin cut :=
-  WhileMinEntry.loaded (c := cut) (initial := WhileMinImage.initialMem) memory_equiv control
-
-/-- A0's closed densified-entry witness, with the concrete collector invariant. -/
-theorem loaded_fillZero :
-    Loaded (runtimeLayout BestFitSingleton) whileMin (Vsa.Densify.fillZero cut) :=
-  WhileMinEntry.loaded_fillZero (c := cut) (initial := WhileMinImage.initialMem) memory_eq control
-
 end OCaml.Vm.Boot.WhileMin

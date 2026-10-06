@@ -204,6 +204,7 @@ import OCaml.Vm.Primitives.SmallAllocation
 import OCaml.Vm.Primitives.StringFast
 import OCaml.Vm.Primitives.LibraryStrlen
 import OCaml.Vm.Boot.WhileMin
+import OCaml.Vm.Boot.WhileMinLoaded
 import OCaml.Vm.Boot.WhileMinEntry
 import OCaml.Vm.Boot.WhileMinRuntime
 import OCaml.Vm.Boot.Heap
@@ -366,6 +367,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.Invocation.word_eq
 #print axioms OCaml.LoadedAt.payload
 #print axioms OCaml.Vm.Sim.entry_loopAt
+#print axioms OCaml.Vm.Sim.entry_of_loaded
+#print axioms OCaml.Vm.Sim.f1_entryStable
+#print axioms OCaml.Vm.Sim.f1_entry
 #print axioms OCaml.Vm.Sim.read8_writeLog_out
 #print axioms OCaml.Vm.Sim.stop_do_exit_summary
 #print axioms OCaml.Vm.Sim.stop_ready
@@ -374,6 +378,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Sim.valWord_ordinary
 #print axioms OCaml.Vm.Sim.stop_row
 #print axioms OCaml.Vm.Sim.stopExitReady_of
+#print axioms OCaml.Vm.Sim.stop_row_f1
 #print axioms OCaml.Logic.bytecode_adequacy
 #print axioms OCaml.Logic.bytecodeLogicAdequacy
 #print axioms OCaml.boot_meaning

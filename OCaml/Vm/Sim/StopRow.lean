@@ -2,6 +2,7 @@ import OCaml.Vm.Sim.StopReady
 import OCaml.Vm.Sim.StopArm
 import OCaml.Vm.Sim.DecodeFetch
 import OCaml.RefinementF1
+import OCaml.Vm.Gc.F1Runtime
 
 /-!
 # The STOP row of the F1 arm table
@@ -88,5 +89,18 @@ theorem stop_row {L : OCaml.Layout} {P : Prog} (good : OCaml.GoodF1 P)
         (stopExitReady_of valid ai.geometry.domainLow (globals s c reach h) (htifIdle s c reach h))
       rw [ai.world.1] at cont
       exact stop_halt_step_arm ai invocation encoded cont step
+
+end OCaml.Vm.Sim
+
+namespace OCaml.Vm.Sim
+open OCaml.Bytecode Vsa.Machine
+
+/-- **The STOP row for the pinned F1 layout**, unconditional on F1 programs:
+the quiet-exit globals come from the runtime invariant (`Gc.f1_exitGlobals`)
+and HTIF idleness from the loop registers. -/
+theorem stop_row_f1 {P : Prog} (good : OCaml.GoodF1 P) :
+    OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .STOP :=
+  stop_row good (fun _ _ _ h => Gc.f1_exitGlobals h.running.platform.runtime)
+    (fun _ _ _ h => h.running.loop.htifIdle)
 
 end OCaml.Vm.Sim

@@ -61,6 +61,7 @@ import OCaml.Vm.Sim.InterpEntryResumeSegment
 import OCaml.Vm.Sim.InterpEntryResumePins
 import OCaml.Vm.Sim.EntrySave
 import OCaml.Vm.Sim.EntryLoop
+import OCaml.Vm.Sim.EntryF1
 import OCaml.Vm.Sim.StopReady
 import OCaml.Vm.Sim.StopRow
 import OCaml.Vm.Runtime

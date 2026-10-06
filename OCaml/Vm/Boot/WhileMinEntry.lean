@@ -18,6 +18,11 @@ structure EntryControl (c : Config) : Prop where
   image : ExecutableImage c
   /-- Startup resolves the PRIM names to their native function pointers. -/
   primitives : PrimitiveBindings whileMin c
+  /-- caml_main's call of caml_interprete (`WhileMinCaller.interpCaller`) -/
+  caller : ∃ sp callerRegs mainSaved,
+    InterpCaller whileMin c place (fun _ => none) high sp callerRegs mainSaved
+  /-- the placement of the initial state (`WhileMinCaller.stackGeometry`, nursery geometry) -/
+  geometry : OCaml.Vm.Sim.ArmGeometry whileMin whileMin.init c place (fun _ => none) high
 
 /-- All heap, code, globals, stack and runtime obligations follow from the
 certified store-log memory. Control, image and primitive bindings remain explicit. -/
@@ -41,6 +46,8 @@ theorem loaded {c : Config} {initial : Vsa.MemRepr.Mem}
     platform := ⟨entry.control, entry.image, WhileMinRuntime.runtimeOk memory⟩
     primitives := entry.primitives
     atomBase := congrArg BitVec.toNat (WhileMinHeap.read_atom_table memory)
+    caller := entry.caller
+    geometry := entry.geometry
   }⟩
   · rw [dom]; exact congrArg BitVec.toNat (read_stack_high memory)
   · rw [dom]; exact congrArg BitVec.toNat (read_extern_sp memory)
@@ -65,6 +72,13 @@ theorem EntryControl.fillZero {c : Config} (h : EntryControl c) :
 
   primitives := h.primitives.of_words fun a =>
     bytesT_memEqv (Vsa.Densify.memEqv_fillZeroMem c.σ.mem).symm a 8
+  caller := let ⟨sp, regs, saved, hc⟩ := h.caller
+    ⟨sp, regs, saved, hc.of_mem rfl (Vsa.Densify.memEqv_fillZeroMem c.σ.mem).symm rfl⟩
+  geometry :=
+    have hw : ∀ a, word (Vsa.Densify.fillZero c) a = word c a :=
+      fun a => bytesT_memEqv (Vsa.Densify.memEqv_fillZeroMem c.σ.mem).symm a 8
+    h.geometry.transport (fun _ o' ho => ⟨o', ho, rfl⟩) rfl (hw _) (hw _)
+      (by simp only [runtimeFields, domainWord, hw]) (by simp only [runtimeFields, domainWord, hw])
 
 /-- The requested densified entry statement, conditional only on the actual
 cut's memory projection and remaining control/image/binding certificate. -/

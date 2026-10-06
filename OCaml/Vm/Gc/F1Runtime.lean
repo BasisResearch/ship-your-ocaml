@@ -1,4 +1,4 @@
-import OCaml.Vm.Boot.WhileMin
+import OCaml.Vm.Boot.WhileMinLoaded
 import OCaml.Vm.Reloc
 import OCaml.Vm.Primitives.Write
 import OCaml.Vm.Primitives.Allocation

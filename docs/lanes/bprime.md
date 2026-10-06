@@ -114,23 +114,19 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `GoodF1.stopAccu` (new: STOP never returns a `.raw` word, which caml_main
   would read as an exception; `whileMin` still checks in one kernel run).
 
-**Open / next** (2026-10-06)
-- Landed: `b0689bc2` (entry, STOP exit pieces); `ae04104c` (`NativeValid.rootSaved`
-  proved at entry; `StopExitCallPost.present`; `valWord_ordinary`).
-- STOP row: write `stop_row : OpArm P (LoopAt Gc.f1Layout P) .STOP` from
-  `ArmInput.of_loop` + `stop_halt_step_arm` + `stop_exit_continuation`. Waiting on:
-  * a1-arms `WordPlace` (alignment for `ordinary`) and `htif` preservation on
-    `InterpRuntimeReturnPost` plus `LoopRegisters.htifIdle`;
-  * a1-prims `ExitOk` (do_exit reads only ra, sp, a0, s0–s10);
-  * a6-gc `Gc.f1_exitGlobals`.
-
-  Then `StopExitReady` reduces to these invariant facts.
-- `caml_sys_exit` halt: a1-arms' C_CALL rows with a1-prims' `caml_sys_exit_halts`.
-- Entry premises into `LoadedAt`: a0-boot's `WhileMinCaller.lean` (`interpCaller`,
-  `stackGeometry` for the captured cut) is queued. Then add the fields and fill
-  `WhileMin.loaded`; runtime window stability from a1-arms' `f1_runtimeFrame`.
-- Final: `F1Arms P c (LoopAt Gc.f1Layout P)` from the rows, then
-  `ocamlrun_refinement_F1_Statement Gc.f1Layout g1Budget` and the whileMin `Halts`.
+**Open / next** (2026-10-06, later)
+- **Entry done for the pinned layout**: `f1_entry` (`EntryF1.lean`) takes
+  `Loaded Gc.f1Layout P c` to a loop head representing `P.init`.
+  * `LoadedAt` carries `caller` (InterpCaller) and `geometry` (ArmGeometry).
+  * The closed whileMin witness fills them from a0-boot's
+    `WhileMinCaller` and a6-gc's nursery geometry (`WhileMinLoaded.lean`).
+  * `f1_entryStable`: entry's windows miss the F1 runtime footprint, after
+    a6-gc carved out `caml_callback_depth`.
+- **STOP row done**: `stop_row_f1 : GoodF1 P → OpArm P (LoopAt Gc.f1Layout P) .STOP`.
+- Next: the F1 table assembly over a1-arms'/a2-sem's rows. C_CALL exit
+  outcomes come through a1-arms' `CcallEffects` with a1-prims'
+  `caml_sys_exit_halts`. Then `ocamlrun_refinement_F1_Statement Gc.f1Layout g1Budget`
+  and the whileMin `Halts` (`whileMin_halts_of_arms` + `Gc.whileMin_loaded_f1`).
 
 ## Status
 

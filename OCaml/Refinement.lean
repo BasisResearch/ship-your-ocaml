@@ -2,6 +2,7 @@ import OCaml.Bytecode.GcSafe
 import OCaml.Vm.Platform
 import Vsa.Densify
 import OCaml.Run.Machine
+import OCaml.Vm.Caller
 import OCaml.Run.Clock
 import OCaml.Vm.Sim.Invariant
 import OCaml.Vm.Sim.ArmGeometry
@@ -85,6 +86,11 @@ structure LoadedAt (L : Layout) (P : Prog) (c : Config) (pl : Place) (cp : ChanP
   platform : PlatformOk L.runtimeOk c
   primitives : PrimitiveBindings P c
   atomBase : (word c Layout.sym_caml_atom_table).toNat = pl.atomBase
+  /-- caml_main called caml_interprete: return address, native frame, separation of
+  the prologue's writes, dispatch clock and HTIF idleness (`OCaml/Vm/Caller.lean`) -/
+  caller : ∃ sp callerRegs mainSaved, InterpCaller P c pl cp high sp callerRegs mainSaved
+  /-- the stack/heap/code/nursery placement of the initial state (`OCaml/Vm/Sim/ArmGeometry.lean`) -/
+  geometry : Vm.Sim.ArmGeometry P P.init c pl cp high
 
 def Loaded (L : Layout) (P : Prog) (c : Config) : Prop :=
   ∃ (pl : Place) (cp : ChanPlace) (high : Nat), LoadedAt L P c pl cp high
