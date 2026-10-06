@@ -198,6 +198,12 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
     · exact low6 a (by unfold Layout.sym_caml_verb_gc at lo; omega) (by unfold Layout.sym_caml_verb_gc at hi; omega)⟩
   have heapBelow : heapEnd ≤ sp.toNat - 176 := by
     unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom heapEnd at *; omega
+  have hRS : (resolveStack (nativeStack (nativeStack sp 80) 16)).toNat = sp.toNat - 272 := by
+    have n3 : NativeFrame (nativeStack (nativeStack (nativeStack sp 80) 16) 80) (96 + (96 + (64 + allocHeadroom))) :=
+      n2.nested (front := 80) (by decide)
+    have h4 := (n3.resize (small := 96) (by unfold allocHeadroom; omega) (by decide)).stack_nat
+    unfold resolveStack
+    rw [h4]; unfold nativeFrameBase; rw [nat2]; unfold nativeFrameBase; rw [h2]; omega
   obtain ⟨blk, blkH, blkLo, blkHi⟩ := home
   have blkB := ready.heap.block_bounds (q := blk.1) (n := blk.2) blkH
   obtain ⟨d7, run7, ⟨R⟩⟩ := (resolve_ocamlrun d6 H capacity charge (nativeStack (nativeStack sp 80) 16)
@@ -220,12 +226,68 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
     (name.transport fun k hk => high6 _ (by unfold heapStart at blkB; omega) (by omega))
     ⟨blk, blkH, blkLo, blkHi⟩
     (by
-      have n3 : NativeFrame (nativeStack (nativeStack (nativeStack sp 80) 16) 80) (96 + (96 + (64 + allocHeadroom))) :=
-        n2.nested (front := 80) (by decide)
-      have h4 := (n3.resize (small := 96) (by unfold allocHeadroom; omega) (by decide)).stack_nat
-      unfold resolveStack nativeFrameBase
-      rw [h4]; unfold nativeFrameBase; rw [nat2]; unfold nativeFrameBase; rw [h2]
+      unfold nativeFrameBase; rw [hRS]
       unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom heapEnd at *; omega)
     charged).run d6 ⟨p6'.pc, rfl⟩
+  -- _open: ENOENT
+  have sp2Nat : nativeFrameBase (nativeStack (nativeStack sp 80) 16) 80 = sp.toNat - 176 := by
+    unfold nativeFrameBase; rw [h2]; omega
+  obtain ⟨d8, run8, p8⟩ := (htif_open_errno_call d7 (nativeStack (nativeStack sp 80) 16) (-1#64) _ _ R.ready.toLeafInput f2
+    ⟨gholds_lookup (n := 2) _ R.regs rfl, gholds_lookup (n := 8) _ R.regs rfl, gholds_lookup (n := 9) _ R.regs rfl,
+      gholds_lookup (n := 10) _ R.regs rfl, trivial⟩ R.kind rfl).run d7 ⟨R.pc, rfl⟩
+  have ready8 := R.ready.stack_log p8 (by decide) (by simp only [keysG]; decide) (by decide)
+    (gholds_lookup (n := 2) _ p8.regs rfl) (gholds_lookup (n := 1) _ p8.regs rfl) (by decide) f2
+    (by simp only [LogInW])
+  obtain ⟨d9, run9, p9⟩ := (errno_return d8 _ ready8.toLeafInput ⟨gholds_lookup (n := 1) _ p8.regs rfl, trivial⟩).run d8
+    ⟨p8.pc, rfl⟩
+  have ready9 := ready8.stack_log p9 (by decide) (by simp only [keysG]; decide) (by decide)
+    ((p9.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans ready8.stack)
+    (gholds_lookup (n := 1) _ p9.regs rfl) (by decide) f2 (by simp only [LogInW])
+  have reent8 : getenvReent d8 = 0x80064668#64 := by
+    unfold getenvReent
+    rw [p8.memory, show writeLog d7.σ.mem [] = d7.σ.mem from rfl, word_observed (m := d6.σ.mem) _ (fun i hi => by
+      apply R.low
+      · unfold allocatorImpureAddr heapStart; omega
+      · unfold allocGlobal InRange allocatorImpureAddr; omega
+      · simp only [OutW, fsWindows, and_true, nativeFrameBase, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready,
+          allocatorImpureAddr]
+        refine ⟨Or.inl ?_, by omega, by omega, by omega⟩
+        rw [hRS]
+        unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at *
+        omega
+      · unfold slotOne Layout.sym_files allocatorImpureAddr; omega)]
+    rw [word_observed (m := c.σ.mem) _ (fun i hi => low6 _ (by unfold allocatorImpureAddr; omega)
+      (by unfold allocatorImpureAddr; omega))]
+    exact impure
+  -- _open's saved words, from its prologue through resolve
+  have saved9 (off : Nat) (value : BitVec 64)
+      (member : (off, value) ∈ [(64, getenvReent c), (72, jal_8004d7cc_call.link), (48, s2), (56, s1)]) :
+      bytesT d9.σ.mem (nativeFrameBase (nativeStack (nativeStack sp 80) 16) 80 + off) 8 = value := by
+    have range : 48 ≤ off ∧ off + 8 ≤ 80 := by
+      simp only [List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member; omega
+    rw [p9.memory, show writeLog d8.σ.mem [] = d8.σ.mem from rfl, p8.memory, show writeLog d7.σ.mem [] = d7.σ.mem from rfl,
+      word_observed (m := d6.σ.mem) _ (fun i hi => R.above _ (by omega)), p6'.memory,
+      show writeLog d5.σ.mem [] = d5.σ.mem from rfl, p5.memory, htifOpenLog, writeLog_append,
+      bytesT_writeLog_out _ (by
+        have lower := f2.lower
+        simp only [OutLRange, resAt_nat f2 (by decide : 4 ≤ 80), resAt_nat f2 (by decide : 36 ≤ 80), and_true]
+        simp only [nativeFrameBase] at *
+        omega),
+      show ∀ (sp' : BitVec 64) (a b : List (Nat × BitVec 64)), nativeWordLog sp' 80 a ++ nativeWordLog sp' 80 b =
+        nativeWordLog sp' 80 (a ++ b) from fun _ _ _ => (List.map_append ..).symm]
+    apply f2.word_log_read
+    · intro k v hk
+      simp only [List.cons_append, List.nil_append, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at hk
+      omega
+    · simp
+    · simp only [List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member
+      simp only [List.cons_append, List.nil_append, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false]
+      rcases member with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp
+  obtain ⟨d10, run10, p10⟩ := (htif_open_fail d9 (nativeStack (nativeStack sp 80) 16) jal_8004d7cc_call.link
+    (getenvReent c) s1 s2 _ ready9.toLeafInput f2
+    ⟨by rw [← reent8]; exact gholds_lookup (n := 10) _ p9.regs rfl,
+      (p9.toEffectPost.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans
+        (gholds_lookup (n := 9) _ p8.regs rfl), ready9.stack, trivial⟩
+    saved9 (by decide)).run d9 ⟨p9.pc, rfl⟩
   sorry
 end OCaml.Vm.Boot.Startup
