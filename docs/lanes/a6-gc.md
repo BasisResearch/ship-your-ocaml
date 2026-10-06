@@ -173,6 +173,16 @@ runtime invariant: the long pole for whileMin's `Halts`.
   (the Muldi3Spec battery, regenerated), `caml_gc_message` (quiet path),
   `caml_stat_alloc_noexc`.
 
+- (2026-10-06) Large MAKEBLOCK/caml_alloc_shr/caml_initialize: the foreman
+  moved wosize > Max_young_wosize out of F1 (InF1 + Fragment ledger); design
+  recorded for F2 (ShrAllocated; no major slice under Fits g1Budget given
+  caml_allocated_words ≈ 0 at the cut; lower heapWords to the free block or
+  prove expand_heap; dynamic privateRegion via Split.placed).
+- `scripts/gen_gc_rows.py` now also emits rows and code pins for
+  `caml_realloc_ref_table` (ReallocRef), `realloc_generic_table.isra.0`
+  (Realloc), the realloc callee's building blocks (`caml_gc_message` is
+  a0-boot's `gc_message_quiet`; it is off the base == NULL path anyway).
+
 Open: G2 (collector proper); status and next design step below. F1 asks from a1-arms/bprime are all landed (last: `72d88e40`).
 
 G2 progress after F1:
