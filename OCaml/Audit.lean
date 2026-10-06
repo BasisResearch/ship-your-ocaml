@@ -315,6 +315,7 @@ import OCaml.Vm.Primitives.Console.MlFlush
 import OCaml.Vm.Primitives.Console.OutputChar
 import OCaml.Vm.Primitives.Console.World
 import OCaml.Vm.Sim.PrimStringLength
+import OCaml.Vm.Sim.PrimFreshOoId
 import OCaml.Vm.Primitives.PairLayout
 import OCaml.Vm.Primitives.AccessPlanObservation
 import OCaml.Vm.Boot.Startup.ChildCheck
@@ -2696,6 +2697,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.flushChan_stream
 #print axioms OCaml.Vm.Primitives.string_length_inv
 #print axioms OCaml.Vm.Sim.prim_caml_ml_string_length_returns
+#print axioms OCaml.Vm.Sim.prim_caml_fresh_oo_id_returns
+#print axioms OCaml.Vm.Sim.f1_counterStable
 #print axioms OCaml.Vm.Primitives.accessPlan_of_pure
 #print axioms OCaml.Vm.Primitives.indirect_registers_summary
 

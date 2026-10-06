@@ -44,6 +44,7 @@ FIXED = {
     'fits': 'fits',
     'capacity': 'g1_capacity',
     'good': 'good',
+    'counterStable': 'f1_counterStable',
 }
 # Program-level parameters shared by several rows: one premise field each.
 SHARED = {'values': 'values', 'ints': 'ints', 'extra': 'extra', 'extraBounded': 'extra', 'exotic': 'exotic', 'trapBounded': 'trapBounded',

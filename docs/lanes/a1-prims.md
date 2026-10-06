@@ -48,7 +48,13 @@
   byte at `buff`). Phases `oc_pro` / `oc_tail` / `oc_full_enter` / `oc_full_flushed`.
 * Repr: WorldRepr carries the object-ID counter (`WorldRepr.ooId`), ChanAt the buffer end
   and a clear unbuffered flag; PayloadOutside/PayloadCoreOutside an `ooId` window.
-* `prim_caml_ml_string_length_returns` (C_CALL1) is on main for bprime's whileMin table.
+* whileMin `PrimReturnsAt` summaries (picked up by `scripts/gen_f1_table.py`; regenerate
+  WhileMinTable.lean in the same batch): `prim_caml_ml_string_length_returns` and
+  `prim_caml_fresh_oo_id_returns` (`f1_counterStable` from a6-gc's `f1_ignoredStatic`) done.
+* Split agreed with bprime (2026-10-06, foreman): bprime takes `caml_format_int` (C_CALL2)
+  and `caml_ml_open_descriptor_out` (C_CALL1); a1-prims keeps `caml_ml_flush` (C_CALL1),
+  `caml_ml_output_char` (C_CALL2) and `caml_ml_output` (C_CALL4), the flush_partial →
+  caml_write_fd → _write chain.
 * Next: the C_CALL adapter for flush via a1-arms' `ccall_framed_summary` (7d3d4f09):
   `FramedCall` footprint = native stack window + errno words + channel words + roots word;
   then `output_bytes`/`output`/`output_char`, `Ready.lean`.
