@@ -1134,7 +1134,8 @@ def pushAccu (s : St) : St := { s with stack := s.accu :: s.stack }
 instruction at `pc`. Index operands (stack slots, fields, globals, sizes,
 tags, primitive numbers) are signed `int32` words in `interp.c`; a negative
 one indexes outside the object, so it is `.unsupported` here rather than
-clamped by `Int.toNat`. -/
+clamped by `Int.toNat`. Likewise `C_CALLk` reads `k - 1` stack words: a
+shorter stack is `.unsupported` rather than passing fewer arguments. -/
 def stepI (i : Instr) : Res :=
   let pc := s.pc
   let stk := s.stack
@@ -1392,10 +1393,10 @@ def stepI (i : Instr) : Res :=
   | .CHECK_SIGNALS, [] => .next (s.adv 1)
   -- C calls
   | .C_CALL1, [p] => if p < 0 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm [s.accu]
-  | .C_CALL2, [p] => if p < 0 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 1)
-  | .C_CALL3, [p] => if p < 0 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 2)
-  | .C_CALL4, [p] => if p < 0 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 3)
-  | .C_CALL5, [p] => if p < 0 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 4)
+  | .C_CALL2, [p] => if p < 0 ∨ stk.length < 1 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 1)
+  | .C_CALL3, [p] => if p < 0 ∨ stk.length < 2 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 2)
+  | .C_CALL4, [p] => if p < 0 ∨ stk.length < 3 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 3)
+  | .C_CALL5, [p] => if p < 0 ∨ stk.length < 4 then .unsupported else opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: stk.take 4)
   | .C_CALLN, [n, p] => if p < 0 then .unsupported else
       if n ≤ 0 ∨ stk.length < n.toNat - 1 then .wrong else
       opt P.prims[p.toNat]? fun nm => cCall P s 3 nm (s.accu :: stk.take (n.toNat - 1))
