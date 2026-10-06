@@ -17,9 +17,27 @@
   Parts: `enter_blocking`, `write_call` (write → `_write_r` → `write_console`),
   `leave_blocking` (`scan_loop` over the 32 pending-signal slots by `loopFromBody`);
   `indirect_registers_summary` (`IndirectCall.lean`) for the hook's `jalr`.
-* Next: `caml_flush_partial`/`caml_flush`/`caml_ml_flush` with `ChanAt` and `writeFd`
-  (OS `.write` on the console stream), then `output_bytes`/`output`/`output_char`;
-  `Ready.lean` against a1-arms' `CcallReturns` (335fac20) and `ccall_writing_summary`.
+* `ConsoleWrite.flush_partial` (`Console/Flush.lean`): a nonempty console channel's whole
+  buffer through one `caml_write_fd`; `offset += n`, `curr := buff`, result 1. Its memory
+  premises are `FlushMem`, transferable by `FlushMem.transfer` over `FlushReads`.
+* `ConsoleWrite.ml_flush` (`Console/MlFlush.lean`): `caml_ml_flush(vchannel)` with null
+  channel-mutex hooks: local root registered and restored, `flush_partial` once, `Val_unit`.
+  Post `MlFlushPost`: output ++ bytes, curr/offset, s0–s11 and sp preserved, memory framed
+  outside [sp-384, sp), the errno words, the two channel words and `local_roots`.
+  Split by phase (`ml_flush_pro/_enter/_written/_flushed`) to stay within the elaboration
+  budget; separation facts in `MlFlushLayout.sep`.
+* Generated block wrappers: `scripts/syi/ocaml_block_wrappers.py` emits `<block>_fast`
+  from an access spec (windows, logs over loads, `@k` addresses, branch conditions,
+  reloaded ra). Loads after the block's own stores use `BlockPins.accessPlan_of_pure`
+  (each load misses only the stores before it). Used for the flush path; the earlier
+  hand wrappers (FdWrite/Console/ExitPath `Effects.lean`) are to be migrated, after
+  which a discipline rule should forbid hand `registers_of_blocks` wrappers.
+* Lean notes: `omega` hits max recursion on `s - 112 - 272` with disjunctions (normalize
+  with `Nat.sub_sub`), and evaluates `def` constants like `errnoGlobal.toNat` in
+  hypotheses (rewrite them to numerals first).
+* Next: the C_CALL adapter for flush via a1-arms' `ccall_framed_summary` (7d3d4f09):
+  `FramedCall` footprint = native stack window + errno words + channel words + roots word;
+  then `output_bytes`/`output`/`output_char`, `Ready.lean`.
 * Exit path weakened to `ExitOk` (registers read: ra, sp, a0, s0–s10) for STOP;
   `EffectPost.htifIdle` (`HtifFrame.lean`) for a1-arms' `LoopRegisters.htifIdle`.
 
