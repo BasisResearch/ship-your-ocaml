@@ -367,4 +367,87 @@ theorem errno_return (c : Config) (ra : BitVec 64) (leaf : LeafInput ra c) (regs
       List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of, read8_value, getenvReent]
   · rfl
   · decide
+
+def htifOpenRestoreLoads (m : Std.ExtHashMap Nat (BitVec 8)) (sp : BitVec 64) : List (List (BitVec 8)) :=
+  [64, 72, 48, 56].map fun off => read8 m (nativeFrameBase sp 80 + off)
+
+/-- `*__errno() = ENOENT`; restore and return -1. -/
+theorem htif_open_fail (c : Config) (sp ra s0 s1 s2 oldra : BitVec 64) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 80)
+    (regs : GHolds c.σ [(10, 0x80064668#64), (9, 2#64), (2, nativeStack sp 80)])
+    (saved : ∀ off value, (off, value) ∈ [(64, s0), (72, ra), (48, s2), (56, s1)] →
+      bytesT c.σ.mem (nativeFrameBase sp 80 + off) 8 = value) (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x80000948#64 (fun e => e = c) (WriteRegistersPost [2, 9, 10, 18, 1, 8] [(0x80064668, 4, 2#64)] c ra (-1#64)
+      [(2, sp), (9, s1), (10, -1#64), (18, s2), (1, ra), (8, s0)]) := by
+  have savedRa := saved 72 ra (by simp)
+  apply registers_of_blocks leaf.image (by constructor <;> simp only [OutLRange] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput (openX0948Seg ++ openX09f4Seg) 0x80000948#64
+        [(10, 0x80064668#64), (9, 2#64), (2, nativeStack sp 80)] (htifOpenRestoreLoads c.σ.mem sp) c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 9, 2]; decide
+      shape := by change ChainOK _ [10, 9, 2] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := htifOpenErrnoSet_code leaf.image
+        have slotNat (k : Nat) (h : k ≤ 80) :
+            (nativeStack sp 80 + BitVec.ofNat 64 k).toNat = nativeFrameBase sp 80 + k := by
+          rw [nativeStack, frame.address k h, frame.slot_nat h]
+        chain_facts code with "Vsa.Sim.Code._open_at_"
+        · exact (show WriteWindow (BitVec.ofNat 64 0x80064668) 4 by constructor <;> decide).sw rfl
+            (by simp only [htifopenerrnoset_line_80000948, htifopenerrnoset_line_8000094c, htifopenerrnoset_line_80000950, htifopenreturn_line_800009f4, htifopenreturn_line_800009f8, htifopenreturn_line_800009fc, htifopenreturn_line_80000a00, htifopenreturn_line_80000a04, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true,
+                  ite_false, Nat.reduceEqDiff, open_se0, BitVec.add_zero])
+        · rw [stepMemM_store (by rfl)]
+          exact memFacts_writeLog ((frame.read_slot (off := 64) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide)))
+            (fun _ => by
+            simp only [htifopenerrnoset_line_80000948, htifopenerrnoset_line_8000094c, htifopenerrnoset_line_80000950, htifopenreturn_line_800009f4, htifopenreturn_line_800009f8, htifopenreturn_line_800009fc, htifopenreturn_line_80000a00, htifopenreturn_line_80000a04, wlogM, wentryM, widthOfM, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM,
+              Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, OutLRange, and_true, open_se0, BitVec.add_zero,
+              stepMemM_skip, IsStore, Nat.reduceAdd, BitVec.toNat_ofNat, Nat.reduceMod, show Functions.sign_extend (m := 64) 64#12 = 64#64 by decide, show Functions.sign_extend (m := 64) 72#12 = 72#64 by decide, show Functions.sign_extend (m := 64) 48#12 = 48#64 by decide, show Functions.sign_extend (m := 64) 56#12 = 56#64 by decide]
+            rw [slotNat _ (by decide)]
+            have := frame.lower; unfold nativeFrameBase heapEnd at *; omega)
+        · exact memFacts_writeLog ((frame.read_slot (off := 72) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide)))
+            (fun _ => by
+            simp only [htifopenerrnoset_line_80000948, htifopenerrnoset_line_8000094c, htifopenerrnoset_line_80000950, htifopenreturn_line_800009f4, htifopenreturn_line_800009f8, htifopenreturn_line_800009fc, htifopenreturn_line_80000a00, htifopenreturn_line_80000a04, wlogM, wentryM, widthOfM, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM,
+              Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, OutLRange, and_true, open_se0, BitVec.add_zero,
+              stepMemM_skip, IsStore, Nat.reduceAdd, BitVec.toNat_ofNat, Nat.reduceMod, show Functions.sign_extend (m := 64) 64#12 = 64#64 by decide, show Functions.sign_extend (m := 64) 72#12 = 72#64 by decide, show Functions.sign_extend (m := 64) 48#12 = 48#64 by decide, show Functions.sign_extend (m := 64) 56#12 = 56#64 by decide]
+            rw [slotNat _ (by decide)]
+            have := frame.lower; unfold nativeFrameBase heapEnd at *; omega)
+        · simp only [htifopenerrnoset_line_80000948, htifopenerrnoset_line_8000094c, htifopenerrnoset_line_80000950, htifopenreturn_line_800009f4, htifopenreturn_line_800009f8, htifopenreturn_line_800009fc, htifopenreturn_line_80000a00, htifopenreturn_line_80000a04, stepMemM_skip, IsStore]
+          exact memFacts_writeLog ((frame.read_slot (off := 48) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide)))
+            (fun _ => by
+            simp only [htifopenerrnoset_line_80000948, htifopenerrnoset_line_8000094c, htifopenerrnoset_line_80000950, htifopenreturn_line_800009f4, htifopenreturn_line_800009f8, htifopenreturn_line_800009fc, htifopenreturn_line_80000a00, htifopenreturn_line_80000a04, wlogM, wentryM, widthOfM, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM,
+              Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, OutLRange, and_true, open_se0, BitVec.add_zero,
+              stepMemM_skip, IsStore, Nat.reduceAdd, BitVec.toNat_ofNat, Nat.reduceMod, show Functions.sign_extend (m := 64) 64#12 = 64#64 by decide, show Functions.sign_extend (m := 64) 72#12 = 72#64 by decide, show Functions.sign_extend (m := 64) 48#12 = 48#64 by decide, show Functions.sign_extend (m := 64) 56#12 = 56#64 by decide]
+            rw [slotNat _ (by decide)]
+            have := frame.lower; unfold nativeFrameBase heapEnd at *; omega)
+        · simp only [htifopenerrnoset_line_80000948, htifopenerrnoset_line_8000094c, htifopenerrnoset_line_80000950, htifopenreturn_line_800009f4, htifopenreturn_line_800009f8, htifopenreturn_line_800009fc, htifopenreturn_line_80000a00, htifopenreturn_line_80000a04, stepMemM_skip, IsStore]
+          exact memFacts_writeLog ((frame.read_slot (off := 56) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide)))
+            (fun _ => by
+            simp only [htifopenerrnoset_line_80000948, htifopenerrnoset_line_8000094c, htifopenerrnoset_line_80000950, htifopenreturn_line_800009f4, htifopenreturn_line_800009f8, htifopenreturn_line_800009fc, htifopenreturn_line_80000a00, htifopenreturn_line_80000a04, wlogM, wentryM, widthOfM, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM,
+              Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, OutLRange, and_true, open_se0, BitVec.add_zero,
+              stepMemM_skip, IsStore, Nat.reduceAdd, BitVec.toNat_ofNat, Nat.reduceMod, show Functions.sign_extend (m := 64) 64#12 = 64#64 by decide, show Functions.sign_extend (m := 64) 72#12 = 72#64 by decide, show Functions.sign_extend (m := 64) 48#12 = 48#64 by decide, show Functions.sign_extend (m := 64) 56#12 = 56#64 by decide]
+            rw [slotNat _ (by decide)]
+            have := frame.lower; unfold nativeFrameBase heapEnd at *; omega)
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 80 + 72)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [read8_value, savedRa, ret_tgt ra aligned]
+          exact aligned }))
+  · simp only [openX0948Seg, openX09f4Seg, evalBlocks, evalBlock, SegEvalState.init, htifopenerrnoset_line_80000948, htifopenerrnoset_line_8000094c, htifopenerrnoset_line_80000950, htifopenreturn_line_800009f4, htifopenreturn_line_800009f8, htifopenreturn_line_800009fc, htifopenreturn_line_80000a00, htifopenreturn_line_80000a04, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, List.cons_append, List.nil_append,
+      open_se0, BitVec.add_zero]
+    rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 80 + 72)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [read8_value, savedRa, ret_tgt ra aligned]
+  · simp only [openX0948Seg, openX09f4Seg, evalBlocks, evalBlock, SegEvalState.init, htifopenerrnoset_line_80000948, htifopenerrnoset_line_8000094c, htifopenerrnoset_line_80000950, htifopenreturn_line_800009f4, htifopenreturn_line_800009f8, htifopenreturn_line_800009fc, htifopenreturn_line_80000a00, htifopenreturn_line_80000a04, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, htifOpenRestoreLoads, List.map_cons,
+      List.map_nil, read8_value, List.cons_append, List.nil_append]
+    rw [show Functions.sign_extend (m := 64) 80#12 = 80#64 by decide, nativeStack_restore, open_se0, BitVec.add_zero,
+      show (0#64 + Functions.sign_extend (m := 64) 4095#12) = -1#64 by decide,
+      saved 56 s1 (by simp), saved 48 s2 (by simp), savedRa, saved 64 s0 (by simp)]
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
