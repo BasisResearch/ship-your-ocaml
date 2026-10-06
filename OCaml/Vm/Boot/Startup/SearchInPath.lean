@@ -22,6 +22,7 @@ structure SearchInPathDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1
   bytes : ∀ k, k ≤ len → (after.σ.mem[copy.toNat + k]?).getD 0 = imgM before.σ.mem (name.toNat + k)
   kept : ∀ a, StrdupKept H (nativeStack sp 176) a → (a < nativeFrameBase sp 176 ∨ sp.toNat ≤ a) →
     (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
+  aligned : copy.toNat % 16 = 0
 
 theorem search_in_path_plain (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra s0 s1 s2 s3 tbl name : BitVec 64) (len : Nat)
@@ -146,7 +147,7 @@ theorem search_in_path_plain (c : Config) (H : List (Nat × Nat)) (capacity char
     gholds_lookup (n := 8) _ returned.regs (by rfl),
     (returned.toEffectPost.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans S.saved1,
     gholds_lookup (n := 18) _ returned.regs (by rfl), gholds_lookup (n := 19) _ returned.regs (by rfl),
-    readyR, S.fresh, S.disjoint, ?_, ?_⟩⟩⟩
+    readyR, S.fresh, S.disjoint, ?_, ?_, S.aligned⟩⟩⟩
   · intro k hk
     rw [memR, S.bytes k hk]
     change (f.σ.mem[_]?).getD 0 = (c.σ.mem[_]?).getD 0

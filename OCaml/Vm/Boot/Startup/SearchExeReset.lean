@@ -28,6 +28,7 @@ structure ResetSearchExeReturned (initial after : Config) where
     (after.σ.mem[copy.toNat + k]?).getD 0 = BitVec.ofNat 8 (byteVal WhileMinImage.argv0Chars k)
   kept : KeptImage after
   run : Steps (Vsa.Densify.fillZero initial) after
+  aligned : copy.toNat % 16 = 0
 
 theorem reset_search_exe_returned_exists : ∃ initial after, Nonempty (ResetSearchExeReturned initial after) := by
   obtain ⟨initial, atD, ⟨w⟩⟩ := reset_path_missed_exists
@@ -214,7 +215,7 @@ theorem reset_search_exe_returned_exists : ∃ initial after, Nonempty (ResetSea
     gholds_lookup (n := 9) _ returned.regs (by rfl), toR 18 (by decide) _ found.saved2,
     toR 19 (by decide) _ found.saved3, readyRet, found.fresh, ?_, ?_,
     w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans
-      (run8.trans run9))))))))⟩⟩
+      (run8.trans run9)))))))), found.aligned⟩⟩
   · intro k hk
     have inside : InExt (found.copy.toNat, 8 + 1) (found.copy.toNat + k) := ⟨by omega, by omega⟩
     rw [sameRet, tableFreed.live_byte frameFree (Nat.le_refl _) (List.mem_cons_self ..) inside

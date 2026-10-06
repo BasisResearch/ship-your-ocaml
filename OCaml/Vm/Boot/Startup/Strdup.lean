@@ -61,6 +61,7 @@ structure StrdupDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 name 
   disjoint : ∀ e ∈ H, ∀ a, InExt (copy.toNat, len + 1) a → ¬ InExt e a
   bytes : ∀ k, k ≤ len → (after.σ.mem[copy.toNat + k]?).getD 0 = imgM before.σ.mem (name.toNat + k)
   kept : ∀ a, StrdupKept H sp a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
+  aligned : copy.toNat % 16 = 0
 
 theorem strdup_full (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 name : BitVec 64)
     (len : Nat) (ready : RuntimeReady H (capacity + charge) sp ra c) (frame : NativeFrame sp (48 + allocHeadroom))
@@ -259,7 +260,8 @@ theorem strdup_full (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
   refine ⟨after, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans run6)))), ⟨⟨vsaReg b 10,
     gholds_lookup (n := 10) _ E.regs (by rfl), E.pc, gholds_lookup (n := 2) _ E.regs (by rfl),
     gholds_lookup (n := 8) _ E.regs (by rfl), gholds_lookup (n := 9) _ E.regs (by rfl), keep23, readyE,
-    ⟨pLow, pHigh⟩, fun e member a inside => pDisjoint e member a (by rw [sizeNat]; exact inside), ?_, ?_⟩⟩⟩
+    ⟨pLow, pHigh⟩, fun e member a inside => pDisjoint e member a (by rw [sizeNat]; exact inside), ?_, ?_,
+    B.allocation.result.align⟩⟩⟩
   · intro k hk
     rw [sameE]
     have copied := D.bytes k (by omega)
