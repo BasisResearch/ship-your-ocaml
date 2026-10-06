@@ -26,6 +26,7 @@ import OCaml.Vm.Sim.SignalRows
 import OCaml.Vm.Sim.ControlRows
 import OCaml.Vm.Sim.OperandTableRows
 import OCaml.Vm.Sim.RaiseRows
+import OCaml.Vm.Sim.CcallRows
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -4744,3 +4745,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.raise_row
 #print axioms OCaml.Vm.Sim.reraise_row
 #print axioms OCaml.Vm.Sim.raise_notrace_row
+#print axioms OCaml.Vm.Sim.Ccall1WriteOk.of_geometry
+#print axioms OCaml.Vm.Sim.CcallReady.of_loop
+#print axioms OCaml.Vm.Sim.ccall_row_of
+#print axioms OCaml.Vm.Sim.c_call1_row
+#print axioms OCaml.Vm.Sim.c_call2_row
+#print axioms OCaml.Vm.Sim.c_call3_row
+#print axioms OCaml.Vm.Sim.c_call4_row
+#print axioms OCaml.Vm.Sim.c_call5_row
+#print axioms OCaml.Vm.PrimitiveEntries.lookup_aligned

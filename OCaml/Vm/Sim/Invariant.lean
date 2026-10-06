@@ -2,6 +2,7 @@ import OCaml.Vm.Repr
 import OCaml.Vm.ImageData
 import Vsa.Sim.FrameOn
 import Vsa.Sim.DlHeap
+import OCaml.Vm.Sim.ReadGeometry
 
 /-!
 # The running invariant: VM stack geometry (a1-arms)
@@ -101,6 +102,8 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
   heapChannels : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     ∀ id ch b, s.world.chans[id]? = some ch → cp id = some b →
       OutWRange [⟨b, b + (chanOffBuff + ch.buffer.length)⟩] (a - 8) (8 * o.wosize + 8)
+  /-- the program's primitive-table slots are readable RAM -/
+  primsRam : ∀ i name, P.prims[i]? = some name → RamReadAt ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
   heapPrims : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     ∀ i name, P.prims[i]? = some name →
       OutWRange [⟨(word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i, (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8⟩] (a - 8) (8 * o.wosize + 8)
@@ -176,6 +179,7 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
   heapChannels l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     rw [chans, ← size]; exact g.heapChannels l a o placed ho
+  primsRam := by rw [prims]; exact g.primsRam
   heapPrims l a o' placed object := by
     obtain ⟨o, ho, size⟩ := objects l o' object
     rw [prims, ← size]; exact g.heapPrims l a o placed ho
@@ -281,6 +285,7 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
     rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
     · exact g.heapChannels l a' o' found old
     · rw [placed] at found; cases found; exact channelsApart
+  primsRam := g.primsRam
   heapPrims l a' o' found object := by
     rw [heap] at object
     rcases heap_alloc_get object with old | ⟨rfl, rfl⟩

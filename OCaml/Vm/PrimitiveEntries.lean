@@ -4,39 +4,40 @@ import OCaml.Vm.Layout
 namespace OCaml.Vm.PrimitiveEntries
 set_option autoImplicit false
 
-/-- All 403 native primitive names resolved by this runtime image. -/
-def lookup (name : String) : Option Nat :=
-  if name = "caml_int64_mul" then some 0x80011168
+/-- All 403 native primitive names resolved by this runtime image, with
+their entry points in instruction words (every entry is 4-aligned). -/
+def lookupWord (name : String) : Option Nat :=
+  if name = "caml_int64_mul" then some 0x2000445a
   else if name < "caml_int64_mul" then
-    if name = "caml_ephe_set_data" then some 0x80022518
+    if name = "caml_ephe_set_data" then some 0x20008946
     else if name < "caml_ephe_set_data" then
-      if name = "caml_ba_uint8_set32" then some 0x800273f8
+      if name = "caml_ba_uint8_set32" then some 0x20009cfe
       else if name < "caml_ba_uint8_set32" then
-        if name = "caml_ba_change_layout" then some 0x80027868
+        if name = "caml_ba_change_layout" then some 0x20009e1a
         else if name < "caml_ba_change_layout" then
-          if name = "caml_array_get" then some 0x80014360
+          if name = "caml_array_get" then some 0x200050d8
           else if name < "caml_array_get" then
-            if name = "caml_alloc_dummy_function" then some 0x8000c538
+            if name = "caml_alloc_dummy_function" then some 0x2000314e
             else if name < "caml_alloc_dummy_function" then
-              if name = "caml_add_float" then some 0x80012a70
+              if name = "caml_add_float" then some 0x20004a9c
               else if name < "caml_add_float" then
-                if name = "caml_acos_float" then some 0x800130e0
+                if name = "caml_acos_float" then some 0x20004c38
                 else if name < "caml_acos_float" then
-                  if name = "caml_abs_float" then some 0x800129d0
+                  if name = "caml_abs_float" then some 0x20004a74
                   else if name < "caml_abs_float" then
                     none
                   else
                     none
                 else
-                  if name = "caml_acosh_float" then some 0x80013100
+                  if name = "caml_acosh_float" then some 0x20004c40
                   else if name < "caml_acosh_float" then
                     none
                   else
                     none
               else
-                if name = "caml_alloc_dummy_float" then some 0x8000c544
+                if name = "caml_alloc_dummy_float" then some 0x20003151
                 else if name < "caml_alloc_dummy_float" then
-                  if name = "caml_alloc_dummy" then some 0x8000c52c
+                  if name = "caml_alloc_dummy" then some 0x2000314b
                   else if name < "caml_alloc_dummy" then
                     none
                   else
@@ -44,11 +45,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_array_blit" then some 0x80014a70
+              if name = "caml_array_blit" then some 0x2000529c
               else if name < "caml_array_blit" then
-                if name = "caml_array_append" then some 0x80014bc4
+                if name = "caml_array_append" then some 0x200052f1
                 else if name < "caml_array_append" then
-                  if name = "caml_alloc_dummy_infix" then some 0x8000c550
+                  if name = "caml_alloc_dummy_infix" then some 0x20003154
                   else if name < "caml_alloc_dummy_infix" then
                     none
                   else
@@ -56,9 +57,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_array_fill" then some 0x80014d90
+                if name = "caml_array_fill" then some 0x20005364
                 else if name < "caml_array_fill" then
-                  if name = "caml_array_concat" then some 0x80014c14
+                  if name = "caml_array_concat" then some 0x20005305
                   else if name < "caml_array_concat" then
                     none
                   else
@@ -66,27 +67,27 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_asin_float" then some 0x800130a4
+            if name = "caml_asin_float" then some 0x20004c29
             else if name < "caml_asin_float" then
-              if name = "caml_array_sub" then some 0x80014b88
+              if name = "caml_array_sub" then some 0x200052e2
               else if name < "caml_array_sub" then
-                if name = "caml_array_set" then some 0x80014418
+                if name = "caml_array_set" then some 0x20005106
                 else if name < "caml_array_set" then
-                  if name = "caml_array_get_addr" then some 0x80014290
+                  if name = "caml_array_get_addr" then some 0x200050a4
                   else if name < "caml_array_get_addr" then
                     none
                   else
                     none
                 else
-                  if name = "caml_array_set_addr" then some 0x800143a0
+                  if name = "caml_array_set_addr" then some 0x200050e8
                   else if name < "caml_array_set_addr" then
                     none
                   else
                     none
               else
-                if name = "caml_array_unsafe_set" then some 0x80014578
+                if name = "caml_array_unsafe_set" then some 0x2000515e
                 else if name < "caml_array_unsafe_set" then
-                  if name = "caml_array_unsafe_get" then some 0x80014538
+                  if name = "caml_array_unsafe_get" then some 0x2000514e
                   else if name < "caml_array_unsafe_get" then
                     none
                   else
@@ -94,11 +95,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_atan_float" then some 0x8001311c
+              if name = "caml_atan_float" then some 0x20004c47
               else if name < "caml_atan_float" then
-                if name = "caml_atan2_float" then some 0x80013158
+                if name = "caml_atan2_float" then some 0x20004c56
                 else if name < "caml_atan2_float" then
-                  if name = "caml_asinh_float" then some 0x800130c4
+                  if name = "caml_asinh_float" then some 0x20004c31
                   else if name < "caml_asinh_float" then
                     none
                   else
@@ -106,9 +107,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_ba_blit" then some 0x80027b78
+                if name = "caml_ba_blit" then some 0x20009ede
                 else if name < "caml_ba_blit" then
-                  if name = "caml_atanh_float" then some 0x8001313c
+                  if name = "caml_atanh_float" then some 0x20004c4f
                   else if name < "caml_atanh_float" then
                     none
                   else
@@ -116,29 +117,29 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
         else
-          if name = "caml_ba_num_dims" then some 0x80027510
+          if name = "caml_ba_num_dims" then some 0x20009d44
           else if name < "caml_ba_num_dims" then
-            if name = "caml_ba_get_1" then some 0x80027150
+            if name = "caml_ba_get_1" then some 0x20009c54
             else if name < "caml_ba_get_1" then
-              if name = "caml_ba_dim_2" then some 0x8002758c
+              if name = "caml_ba_dim_2" then some 0x20009d63
               else if name < "caml_ba_dim_2" then
-                if name = "caml_ba_dim" then some 0x80027520
+                if name = "caml_ba_dim" then some 0x20009d48
                 else if name < "caml_ba_dim" then
-                  if name = "caml_ba_create" then some 0x80026eb0
+                  if name = "caml_ba_create" then some 0x20009bac
                   else if name < "caml_ba_create" then
                     none
                   else
                     none
                 else
-                  if name = "caml_ba_dim_1" then some 0x80027560
+                  if name = "caml_ba_dim_1" then some 0x20009d58
                   else if name < "caml_ba_dim_1" then
                     none
                   else
                     none
               else
-                if name = "caml_ba_fill" then some 0x80027d00
+                if name = "caml_ba_fill" then some 0x20009f40
                 else if name < "caml_ba_fill" then
-                  if name = "caml_ba_dim_3" then some 0x800275bc
+                  if name = "caml_ba_dim_3" then some 0x20009d6f
                   else if name < "caml_ba_dim_3" then
                     none
                   else
@@ -146,11 +147,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_ba_get_generic" then some 0x800271d0
+              if name = "caml_ba_get_generic" then some 0x20009c74
               else if name < "caml_ba_get_generic" then
-                if name = "caml_ba_get_3" then some 0x800271a0
+                if name = "caml_ba_get_3" then some 0x20009c68
                 else if name < "caml_ba_get_3" then
-                  if name = "caml_ba_get_2" then some 0x80027174
+                  if name = "caml_ba_get_2" then some 0x20009c5d
                   else if name < "caml_ba_get_2" then
                     none
                   else
@@ -158,9 +159,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_ba_layout" then some 0x80027600
+                if name = "caml_ba_layout" then some 0x20009d80
                 else if name < "caml_ba_layout" then
-                  if name = "caml_ba_kind" then some 0x800275ec
+                  if name = "caml_ba_kind" then some 0x20009d7b
                   else if name < "caml_ba_kind" then
                     none
                   else
@@ -168,13 +169,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_ba_slice" then some 0x80027618
+            if name = "caml_ba_slice" then some 0x20009d86
             else if name < "caml_ba_slice" then
-              if name = "caml_ba_set_2" then some 0x80027328
+              if name = "caml_ba_set_2" then some 0x20009cca
               else if name < "caml_ba_set_2" then
-                if name = "caml_ba_set_1" then some 0x80027300
+                if name = "caml_ba_set_1" then some 0x20009cc0
                 else if name < "caml_ba_set_1" then
-                  if name = "caml_ba_reshape" then some 0x800282f8
+                  if name = "caml_ba_reshape" then some 0x2000a0be
                   else if name < "caml_ba_reshape" then
                     none
                   else
@@ -182,9 +183,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_ba_set_generic" then some 0x800273a0
+                if name = "caml_ba_set_generic" then some 0x20009ce8
                 else if name < "caml_ba_set_generic" then
-                  if name = "caml_ba_set_3" then some 0x80027354
+                  if name = "caml_ba_set_3" then some 0x20009cd5
                   else if name < "caml_ba_set_3" then
                     none
                   else
@@ -192,11 +193,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_ba_uint8_get32" then some 0x80027224
+              if name = "caml_ba_uint8_get32" then some 0x20009c89
               else if name < "caml_ba_uint8_get32" then
-                if name = "caml_ba_uint8_get16" then some 0x800271e0
+                if name = "caml_ba_uint8_get16" then some 0x20009c78
                 else if name < "caml_ba_uint8_get16" then
-                  if name = "caml_ba_sub" then some 0x80027984
+                  if name = "caml_ba_sub" then some 0x20009e61
                   else if name < "caml_ba_sub" then
                     none
                   else
@@ -204,9 +205,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_ba_uint8_set16" then some 0x800273b0
+                if name = "caml_ba_uint8_set16" then some 0x20009cec
                 else if name < "caml_ba_uint8_set16" then
-                  if name = "caml_ba_uint8_get64" then some 0x8002727c
+                  if name = "caml_ba_uint8_get64" then some 0x20009c9f
                   else if name < "caml_ba_uint8_get64" then
                     none
                   else
@@ -214,31 +215,31 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
       else
-        if name = "caml_classify_float" then some 0x8001352c
+        if name = "caml_classify_float" then some 0x20004d4b
         else if name < "caml_classify_float" then
-          if name = "caml_bytes_greaterthan" then some 0x80013d70
+          if name = "caml_bytes_greaterthan" then some 0x20004f5c
           else if name < "caml_bytes_greaterthan" then
-            if name = "caml_bytes_equal" then some 0x80013af0
+            if name = "caml_bytes_equal" then some 0x20004ebc
             else if name < "caml_bytes_equal" then
-              if name = "caml_blit_string" then some 0x80013e34
+              if name = "caml_blit_string" then some 0x20004f8d
               else if name < "caml_blit_string" then
-                if name = "caml_backtrace_status" then some 0x8000efa0
+                if name = "caml_backtrace_status" then some 0x20003be8
                 else if name < "caml_backtrace_status" then
-                  if name = "caml_ba_uint8_set64" then some 0x80027464
+                  if name = "caml_ba_uint8_set64" then some 0x20009d19
                   else if name < "caml_ba_uint8_set64" then
                     none
                   else
                     none
                 else
-                  if name = "caml_blit_bytes" then some 0x80013e04
+                  if name = "caml_blit_bytes" then some 0x20004f81
                   else if name < "caml_blit_bytes" then
                     none
                   else
                     none
               else
-                if name = "caml_bytes_compare" then some 0x80013bd4
+                if name = "caml_bytes_compare" then some 0x20004ef5
                 else if name < "caml_bytes_compare" then
-                  if name = "caml_bswap16" then some 0x800108b0
+                  if name = "caml_bswap16" then some 0x2000422c
                   else if name < "caml_bswap16" then
                     none
                   else
@@ -246,11 +247,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_bytes_get32" then some 0x800138b4
+              if name = "caml_bytes_get32" then some 0x20004e2d
               else if name < "caml_bytes_get32" then
-                if name = "caml_bytes_get16" then some 0x800137f0
+                if name = "caml_bytes_get16" then some 0x20004dfc
                 else if name < "caml_bytes_get16" then
-                  if name = "caml_bytes_get" then some 0x800136c0
+                  if name = "caml_bytes_get" then some 0x20004db0
                   else if name < "caml_bytes_get" then
                     none
                   else
@@ -258,9 +259,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_bytes_greaterequal" then some 0x80013dd4
+                if name = "caml_bytes_greaterequal" then some 0x20004f75
                 else if name < "caml_bytes_greaterequal" then
-                  if name = "caml_bytes_get64" then some 0x80013950
+                  if name = "caml_bytes_get64" then some 0x20004e54
                   else if name < "caml_bytes_get64" then
                     none
                   else
@@ -268,13 +269,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_bytes_set16" then some 0x80013954
+            if name = "caml_bytes_set16" then some 0x20004e55
             else if name < "caml_bytes_set16" then
-              if name = "caml_bytes_notequal" then some 0x80013b14
+              if name = "caml_bytes_notequal" then some 0x20004ec5
               else if name < "caml_bytes_notequal" then
-                if name = "caml_bytes_lessthan" then some 0x80013ca4
+                if name = "caml_bytes_lessthan" then some 0x20004f29
                 else if name < "caml_bytes_lessthan" then
-                  if name = "caml_bytes_lessequal" then some 0x80013d08
+                  if name = "caml_bytes_lessequal" then some 0x20004f42
                   else if name < "caml_bytes_lessequal" then
                     none
                   else
@@ -282,9 +283,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_bytes_set" then some 0x80013708
+                if name = "caml_bytes_set" then some 0x20004dc2
                 else if name < "caml_bytes_set" then
-                  if name = "caml_bytes_of_string" then some 0x80013f98
+                  if name = "caml_bytes_of_string" then some 0x20004fe6
                   else if name < "caml_bytes_of_string" then
                     none
                   else
@@ -292,11 +293,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_cbrt_float" then some 0x80012fc0
+              if name = "caml_cbrt_float" then some 0x20004bf0
               else if name < "caml_cbrt_float" then
-                if name = "caml_bytes_set64" then some 0x80013a0c
+                if name = "caml_bytes_set64" then some 0x20004e83
                 else if name < "caml_bytes_set64" then
-                  if name = "caml_bytes_set32" then some 0x800139a8
+                  if name = "caml_bytes_set32" then some 0x20004e6a
                   else if name < "caml_bytes_set32" then
                     none
                   else
@@ -304,9 +305,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_channel_descriptor" then some 0x80016134
+                if name = "caml_channel_descriptor" then some 0x2000584d
                 else if name < "caml_channel_descriptor" then
-                  if name = "caml_ceil_float" then some 0x80013178
+                  if name = "caml_ceil_float" then some 0x20004c5e
                   else if name < "caml_ceil_float" then
                     none
                   else
@@ -314,29 +315,29 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
         else
-          if name = "caml_dynlink_lookup_symbol" then some 0x800250a8
+          if name = "caml_dynlink_lookup_symbol" then some 0x2000942a
           else if name < "caml_dynlink_lookup_symbol" then
-            if name = "caml_create_bytes" then some 0x80013650
+            if name = "caml_create_bytes" then some 0x20004d94
             else if name < "caml_create_bytes" then
-              if name = "caml_copysign_float" then some 0x80013254
+              if name = "caml_copysign_float" then some 0x20004c95
               else if name < "caml_copysign_float" then
-                if name = "caml_convert_raw_backtrace" then some 0x8000f564
+                if name = "caml_convert_raw_backtrace" then some 0x20003d59
                 else if name < "caml_convert_raw_backtrace" then
-                  if name = "caml_compare" then some 0x8000ffe4
+                  if name = "caml_compare" then some 0x20003ff9
                   else if name < "caml_compare" then
                     none
                   else
                     none
                 else
-                  if name = "caml_convert_raw_backtrace_slot" then some 0x8000f52c
+                  if name = "caml_convert_raw_backtrace_slot" then some 0x20003d4b
                   else if name < "caml_convert_raw_backtrace_slot" then
                     none
                   else
                     none
               else
-                if name = "caml_cosh_float" then some 0x80013050
+                if name = "caml_cosh_float" then some 0x20004c14
                 else if name < "caml_cosh_float" then
-                  if name = "caml_cos_float" then some 0x80013034
+                  if name = "caml_cos_float" then some 0x20004c0d
                   else if name < "caml_cos_float" then
                     none
                   else
@@ -344,11 +345,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_dynlink_add_primitive" then some 0x800250f0
+              if name = "caml_dynlink_add_primitive" then some 0x2000943c
               else if name < "caml_dynlink_add_primitive" then
-                if name = "caml_div_float" then some 0x80012c14
+                if name = "caml_div_float" then some 0x20004b05
                 else if name < "caml_div_float" then
-                  if name = "caml_create_string" then some 0x80013628
+                  if name = "caml_create_string" then some 0x20004d8a
                   else if name < "caml_create_string" then
                     none
                   else
@@ -356,9 +357,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_dynlink_get_current_libs" then some 0x8002511c
+                if name = "caml_dynlink_get_current_libs" then some 0x20009447
                 else if name < "caml_dynlink_get_current_libs" then
-                  if name = "caml_dynlink_close_lib" then some 0x80025088
+                  if name = "caml_dynlink_close_lib" then some 0x20009422
                   else if name < "caml_dynlink_close_lib" then
                     none
                   else
@@ -366,13 +367,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_ephe_check_key" then some 0x80022e18
+            if name = "caml_ephe_check_key" then some 0x20008b86
             else if name < "caml_ephe_check_key" then
-              if name = "caml_ephe_blit_data" then some 0x80023230
+              if name = "caml_ephe_blit_data" then some 0x20008c8c
               else if name < "caml_ephe_blit_data" then
-                if name = "caml_ensure_stack_capacity" then some 0x80004210
+                if name = "caml_ensure_stack_capacity" then some 0x20001084
                 else if name < "caml_ensure_stack_capacity" then
-                  if name = "caml_dynlink_open_lib" then some 0x80024ff8
+                  if name = "caml_dynlink_open_lib" then some 0x200093fe
                   else if name < "caml_dynlink_open_lib" then
                     none
                   else
@@ -380,9 +381,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_ephe_check_data" then some 0x80023030
+                if name = "caml_ephe_check_data" then some 0x20008c0c
                 else if name < "caml_ephe_check_data" then
-                  if name = "caml_ephe_blit_key" then some 0x800230b4
+                  if name = "caml_ephe_blit_key" then some 0x20008c2d
                   else if name < "caml_ephe_blit_key" then
                     none
                   else
@@ -390,11 +391,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_ephe_get_data_copy" then some 0x80022d20
+              if name = "caml_ephe_get_data_copy" then some 0x20008b48
               else if name < "caml_ephe_get_data_copy" then
-                if name = "caml_ephe_get_data" then some 0x80022794
+                if name = "caml_ephe_get_data" then some 0x200089e5
                 else if name < "caml_ephe_get_data" then
-                  if name = "caml_ephe_create" then some 0x80021f64
+                  if name = "caml_ephe_create" then some 0x200087d9
                   else if name < "caml_ephe_create" then
                     none
                   else
@@ -402,9 +403,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_ephe_get_key_copy" then some 0x80022ac0
+                if name = "caml_ephe_get_key_copy" then some 0x20008ab0
                 else if name < "caml_ephe_get_key_copy" then
-                  if name = "caml_ephe_get_key" then some 0x8002268c
+                  if name = "caml_ephe_get_key" then some 0x200089a3
                   else if name < "caml_ephe_get_key" then
                     none
                   else
@@ -412,33 +413,33 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
     else
-      if name = "caml_get_global_data" then some 0x8001d4bc
+      if name = "caml_get_global_data" then some 0x2000752f
       else if name < "caml_get_global_data" then
-        if name = "caml_floatarray_unsafe_set" then some 0x8001455c
+        if name = "caml_floatarray_unsafe_set" then some 0x20005157
         else if name < "caml_floatarray_unsafe_set" then
-          if name = "caml_fill_bytes" then some 0x80013e64
+          if name = "caml_fill_bytes" then some 0x20004f99
           else if name < "caml_fill_bytes" then
-            if name = "caml_erfc_float" then some 0x8001321c
+            if name = "caml_erfc_float" then some 0x20004c87
             else if name < "caml_erfc_float" then
-              if name = "caml_eq_float" then some 0x80013358
+              if name = "caml_eq_float" then some 0x20004cd6
               else if name < "caml_eq_float" then
-                if name = "caml_ephe_unset_data" then some 0x80022544
+                if name = "caml_ephe_unset_data" then some 0x20008951
                 else if name < "caml_ephe_unset_data" then
-                  if name = "caml_ephe_set_key" then some 0x800221b8
+                  if name = "caml_ephe_set_key" then some 0x2000886e
                   else if name < "caml_ephe_set_key" then
                     none
                   else
                     none
                 else
-                  if name = "caml_ephe_unset_key" then some 0x80022370
+                  if name = "caml_ephe_unset_key" then some 0x200088dc
                   else if name < "caml_ephe_unset_key" then
                     none
                   else
                     none
               else
-                if name = "caml_erf_float" then some 0x800131fc
+                if name = "caml_erf_float" then some 0x20004c7f
                 else if name < "caml_erf_float" then
-                  if name = "caml_equal" then some 0x80010054
+                  if name = "caml_equal" then some 0x20004015
                   else if name < "caml_equal" then
                     none
                   else
@@ -446,11 +447,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_exp2_float" then some 0x80012cc0
+              if name = "caml_exp2_float" then some 0x20004b30
               else if name < "caml_exp2_float" then
-                if name = "caml_eventlog_resume" then some 0x800121dc
+                if name = "caml_eventlog_resume" then some 0x20004877
                 else if name < "caml_eventlog_resume" then
-                  if name = "caml_eventlog_pause" then some 0x800121e4
+                  if name = "caml_eventlog_pause" then some 0x20004879
                   else if name < "caml_eventlog_pause" then
                     none
                   else
@@ -458,9 +459,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_expm1_float" then some 0x800131c0
+                if name = "caml_expm1_float" then some 0x20004c70
                 else if name < "caml_expm1_float" then
-                  if name = "caml_exp_float" then some 0x80012ca0
+                  if name = "caml_exp_float" then some 0x20004b28
                   else if name < "caml_exp_float" then
                     none
                   else
@@ -468,27 +469,27 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_float_of_string" then some 0x80012558
+            if name = "caml_float_of_string" then some 0x20004956
             else if name < "caml_float_of_string" then
-              if name = "caml_final_release" then some 0x800245ec
+              if name = "caml_final_release" then some 0x2000917b
               else if name < "caml_final_release" then
-                if name = "caml_final_register" then some 0x80024594
+                if name = "caml_final_register" then some 0x20009165
                 else if name < "caml_final_register" then
-                  if name = "caml_fill_string" then some 0x80013e94
+                  if name = "caml_fill_string" then some 0x20004fa5
                   else if name < "caml_fill_string" then
                     none
                   else
                     none
                 else
-                  if name = "caml_final_register_called_without_value" then some 0x800245c0
+                  if name = "caml_final_register_called_without_value" then some 0x20009170
                   else if name < "caml_final_register_called_without_value" then
                     none
                   else
                     none
               else
-                if name = "caml_float_of_int" then some 0x800128a4
+                if name = "caml_float_of_int" then some 0x20004a29
                 else if name < "caml_float_of_int" then
-                  if name = "caml_float_compare" then some 0x8001345c
+                  if name = "caml_float_compare" then some 0x20004d17
                   else if name < "caml_float_compare" then
                     none
                   else
@@ -496,11 +497,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_floatarray_get" then some 0x800142c0
+              if name = "caml_floatarray_get" then some 0x200050b0
               else if name < "caml_floatarray_get" then
-                if name = "caml_floatarray_create" then some 0x800145c0
+                if name = "caml_floatarray_create" then some 0x20005170
                 else if name < "caml_floatarray_create" then
-                  if name = "caml_floatarray_blit" then some 0x80014a34
+                  if name = "caml_floatarray_blit" then some 0x2000528d
                   else if name < "caml_floatarray_blit" then
                     none
                   else
@@ -508,9 +509,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_floatarray_unsafe_get" then some 0x80014494
+                if name = "caml_floatarray_unsafe_get" then some 0x20005125
                 else if name < "caml_floatarray_unsafe_get" then
-                  if name = "caml_floatarray_set" then some 0x800143e0
+                  if name = "caml_floatarray_set" then some 0x200050f8
                   else if name < "caml_floatarray_set" then
                     none
                   else
@@ -518,29 +519,29 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
         else
-          if name = "caml_gc_major" then some 0x8001f080
+          if name = "caml_gc_major" then some 0x20007c20
           else if name < "caml_gc_major" then
-            if name = "caml_frexp_float" then some 0x80012da4
+            if name = "caml_frexp_float" then some 0x20004b69
             else if name < "caml_frexp_float" then
-              if name = "caml_format_float" then some 0x8001228c
+              if name = "caml_format_float" then some 0x200048a3
               else if name < "caml_format_float" then
-                if name = "caml_fma_float" then some 0x80012d60
+                if name = "caml_fma_float" then some 0x20004b58
                 else if name < "caml_fma_float" then
-                  if name = "caml_floor_float" then some 0x80012d1c
+                  if name = "caml_floor_float" then some 0x20004b47
                   else if name < "caml_floor_float" then
                     none
                   else
                     none
                 else
-                  if name = "caml_fmod_float" then some 0x80012d84
+                  if name = "caml_fmod_float" then some 0x20004b61
                   else if name < "caml_fmod_float" then
                     none
                   else
                     none
               else
-                if name = "caml_fresh_oo_id" then some 0x80020d3c
+                if name = "caml_fresh_oo_id" then some 0x2000834f
                 else if name < "caml_fresh_oo_id" then
-                  if name = "caml_format_int" then some 0x80010918
+                  if name = "caml_format_int" then some 0x20004246
                   else if name < "caml_format_int" then
                     none
                   else
@@ -548,11 +549,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_gc_full_major" then some 0x8001f0bc
+              if name = "caml_gc_full_major" then some 0x20007c2f
               else if name < "caml_gc_full_major" then
-                if name = "caml_gc_counters" then some 0x8001eaa0
+                if name = "caml_gc_counters" then some 0x20007aa8
                 else if name < "caml_gc_counters" then
-                  if name = "caml_gc_compaction" then some 0x8001f178
+                  if name = "caml_gc_compaction" then some 0x20007c5e
                   else if name < "caml_gc_compaction" then
                     none
                   else
@@ -560,9 +561,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_gc_huge_fallback_count" then some 0x8001ebac
+                if name = "caml_gc_huge_fallback_count" then some 0x20007aeb
                 else if name < "caml_gc_huge_fallback_count" then
-                  if name = "caml_gc_get" then some 0x8001ebc0
+                  if name = "caml_gc_get" then some 0x20007af0
                   else if name < "caml_gc_get" then
                     none
                   else
@@ -570,13 +571,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_gc_stat" then some 0x8001e404
+            if name = "caml_gc_stat" then some 0x20007901
             else if name < "caml_gc_stat" then
-              if name = "caml_gc_minor_words" then some 0x8001ea3c
+              if name = "caml_gc_minor_words" then some 0x20007a8f
               else if name < "caml_gc_minor_words" then
-                if name = "caml_gc_minor" then some 0x8001f05c
+                if name = "caml_gc_minor" then some 0x20007c17
                 else if name < "caml_gc_minor" then
-                  if name = "caml_gc_major_slice" then some 0x8001f124
+                  if name = "caml_gc_major_slice" then some 0x20007c49
                   else if name < "caml_gc_major_slice" then
                     none
                   else
@@ -584,9 +585,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_gc_set" then some 0x8001ed5c
+                if name = "caml_gc_set" then some 0x20007b57
                 else if name < "caml_gc_set" then
-                  if name = "caml_gc_quick_stat" then some 0x8001e798
+                  if name = "caml_gc_quick_stat" then some 0x200079e6
                   else if name < "caml_gc_quick_stat" then
                     none
                   else
@@ -594,11 +595,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_get_current_environment" then some 0x8001d8f8
+              if name = "caml_get_current_environment" then some 0x2000763e
               else if name < "caml_get_current_environment" then
-                if name = "caml_get_current_callstack" then some 0x8000f94c
+                if name = "caml_get_current_callstack" then some 0x20003e53
                 else if name < "caml_get_current_callstack" then
-                  if name = "caml_ge_float" then some 0x800133f4
+                  if name = "caml_ge_float" then some 0x20004cfd
                   else if name < "caml_ge_float" then
                     none
                   else
@@ -606,9 +607,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_get_exception_raw_backtrace" then some 0x8000f35c
+                if name = "caml_get_exception_raw_backtrace" then some 0x20003cd7
                 else if name < "caml_get_exception_raw_backtrace" then
-                  if name = "caml_get_exception_backtrace" then some 0x8000f820
+                  if name = "caml_get_exception_backtrace" then some 0x20003e08
                   else if name < "caml_get_exception_backtrace" then
                     none
                   else
@@ -616,31 +617,31 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
       else
-        if name = "caml_int32_neg" then some 0x800109d4
+        if name = "caml_int32_neg" then some 0x20004275
         else if name < "caml_int32_neg" then
-          if name = "caml_input_value_from_bytes" then some 0x8001b4d4
+          if name = "caml_input_value_from_bytes" then some 0x20006d35
           else if name < "caml_input_value_from_bytes" then
-            if name = "caml_greaterthan" then some 0x80010204
+            if name = "caml_greaterthan" then some 0x20004081
             else if name < "caml_greaterthan" then
-              if name = "caml_get_public_method" then some 0x80020cb8
+              if name = "caml_get_public_method" then some 0x2000832e
               else if name < "caml_get_public_method" then
-                if name = "caml_get_major_credit" then some 0x8001f290
+                if name = "caml_get_major_credit" then some 0x20007ca4
                 else if name < "caml_get_major_credit" then
-                  if name = "caml_get_major_bucket" then some 0x8001f218
+                  if name = "caml_get_major_bucket" then some 0x20007c86
                   else if name < "caml_get_major_bucket" then
                     none
                   else
                     none
                 else
-                  if name = "caml_get_minor_free" then some 0x8001f1f4
+                  if name = "caml_get_minor_free" then some 0x20007c7d
                   else if name < "caml_get_minor_free" then
                     none
                   else
                     none
               else
-                if name = "caml_greaterequal" then some 0x80010268
+                if name = "caml_greaterequal" then some 0x2000409a
                 else if name < "caml_greaterequal" then
-                  if name = "caml_get_section_table" then some 0x8001d4c8
+                  if name = "caml_get_section_table" then some 0x20007532
                   else if name < "caml_get_section_table" then
                     none
                   else
@@ -648,11 +649,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_hexstring_of_float" then some 0x80012294
+              if name = "caml_hexstring_of_float" then some 0x200048a5
               else if name < "caml_hexstring_of_float" then
-                if name = "caml_hash" then some 0x8001bdfc
+                if name = "caml_hash" then some 0x20006f7f
                 else if name < "caml_hash" then
-                  if name = "caml_gt_float" then some 0x80013424
+                  if name = "caml_gt_float" then some 0x20004d09
                   else if name < "caml_gt_float" then
                     none
                   else
@@ -660,9 +661,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_input_value" then some 0x8001b2f8
+                if name = "caml_input_value" then some 0x20006cbe
                 else if name < "caml_input_value" then
-                  if name = "caml_hypot_float" then some 0x80013198
+                  if name = "caml_hypot_float" then some 0x20004c66
                   else if name < "caml_hypot_float" then
                     none
                   else
@@ -670,13 +671,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_int32_compare" then some 0x80010f10
+            if name = "caml_int32_compare" then some 0x200043c4
             else if name < "caml_int32_compare" then
-              if name = "caml_int32_and" then some 0x80010be4
+              if name = "caml_int32_and" then some 0x200042f9
               else if name < "caml_int32_and" then
-                if name = "caml_int32_add" then some 0x80010a14
+                if name = "caml_int32_add" then some 0x20004285
                 else if name < "caml_int32_add" then
-                  if name = "caml_install_signal_handler" then some 0x8000d95c
+                  if name = "caml_install_signal_handler" then some 0x20003657
                   else if name < "caml_install_signal_handler" then
                     none
                   else
@@ -684,9 +685,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_int32_bswap" then some 0x80010db0
+                if name = "caml_int32_bswap" then some 0x2000436c
                 else if name < "caml_int32_bswap" then
-                  if name = "caml_int32_bits_of_float" then some 0x80010fec
+                  if name = "caml_int32_bits_of_float" then some 0x200043fb
                   else if name < "caml_int32_bits_of_float" then
                     none
                   else
@@ -694,11 +695,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_int32_format" then some 0x80010f30
+              if name = "caml_int32_format" then some 0x200043cc
               else if name < "caml_int32_format" then
-                if name = "caml_int32_float_of_bits" then some 0x80011030
+                if name = "caml_int32_float_of_bits" then some 0x2000440c
                 else if name < "caml_int32_float_of_bits" then
-                  if name = "caml_int32_div" then some 0x80010ae4
+                  if name = "caml_int32_div" then some 0x200042b9
                   else if name < "caml_int32_div" then
                     none
                   else
@@ -706,9 +707,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_int32_mul" then some 0x80010a9c
+                if name = "caml_int32_mul" then some 0x200042a7
                 else if name < "caml_int32_mul" then
-                  if name = "caml_int32_mod" then some 0x80010b58
+                  if name = "caml_int32_mod" then some 0x200042d6
                   else if name < "caml_int32_mod" then
                     none
                   else
@@ -716,29 +717,29 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
         else
-          if name = "caml_int64_add_native" then some 0x80011114
+          if name = "caml_int64_add_native" then some 0x20004445
           else if name < "caml_int64_add_native" then
-            if name = "caml_int32_shift_right_unsigned" then some 0x80010d38
+            if name = "caml_int32_shift_right_unsigned" then some 0x2000434e
             else if name < "caml_int32_shift_right_unsigned" then
-              if name = "caml_int32_or" then some 0x80010c28
+              if name = "caml_int32_or" then some 0x2000430a
               else if name < "caml_int32_or" then
-                if name = "caml_int32_of_int" then some 0x80010e1c
+                if name = "caml_int32_of_int" then some 0x20004387
                 else if name < "caml_int32_of_int" then
-                  if name = "caml_int32_of_float" then some 0x80010e88
+                  if name = "caml_int32_of_float" then some 0x200043a2
                   else if name < "caml_int32_of_float" then
                     none
                   else
                     none
                 else
-                  if name = "caml_int32_of_string" then some 0x80010f6c
+                  if name = "caml_int32_of_string" then some 0x200043db
                   else if name < "caml_int32_of_string" then
                     none
                   else
                     none
               else
-                if name = "caml_int32_shift_right" then some 0x80010cf4
+                if name = "caml_int32_shift_right" then some 0x2000433d
                 else if name < "caml_int32_shift_right" then
-                  if name = "caml_int32_shift_left" then some 0x80010cb0
+                  if name = "caml_int32_shift_left" then some 0x2000432c
                   else if name < "caml_int32_shift_left" then
                     none
                   else
@@ -746,11 +747,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_int32_to_int" then some 0x80010e5c
+              if name = "caml_int32_to_int" then some 0x20004397
               else if name < "caml_int32_to_int" then
-                if name = "caml_int32_to_float" then some 0x80010ee4
+                if name = "caml_int32_to_float" then some 0x200043b9
                 else if name < "caml_int32_to_float" then
-                  if name = "caml_int32_sub" then some 0x80010a58
+                  if name = "caml_int32_sub" then some 0x20004296
                   else if name < "caml_int32_sub" then
                     none
                   else
@@ -758,9 +759,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_int64_add" then some 0x800110d0
+                if name = "caml_int64_add" then some 0x20004434
                 else if name < "caml_int64_add" then
-                  if name = "caml_int32_xor" then some 0x80010c6c
+                  if name = "caml_int32_xor" then some 0x2000431b
                   else if name < "caml_int32_xor" then
                     none
                   else
@@ -768,13 +769,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_int64_div" then some 0x800111c8
+            if name = "caml_int64_div" then some 0x20004472
             else if name < "caml_int64_div" then
-              if name = "caml_int64_bits_of_float" then some 0x80011a50
+              if name = "caml_int64_bits_of_float" then some 0x20004694
               else if name < "caml_int64_bits_of_float" then
-                if name = "caml_int64_and_native" then some 0x80011384
+                if name = "caml_int64_and_native" then some 0x200044e1
                 else if name < "caml_int64_and_native" then
-                  if name = "caml_int64_and" then some 0x80011340
+                  if name = "caml_int64_and" then some 0x200044d0
                   else if name < "caml_int64_and" then
                     none
                   else
@@ -782,9 +783,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_int64_compare" then some 0x80011824
+                if name = "caml_int64_compare" then some 0x20004609
                 else if name < "caml_int64_compare" then
-                  if name = "caml_int64_bswap" then some 0x80011574
+                  if name = "caml_int64_bswap" then some 0x2000455d
                   else if name < "caml_int64_bswap" then
                     none
                   else
@@ -792,11 +793,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_int64_format" then some 0x80011844
+              if name = "caml_int64_format" then some 0x20004611
               else if name < "caml_int64_format" then
-                if name = "caml_int64_float_of_bits" then some 0x80011a90
+                if name = "caml_int64_float_of_bits" then some 0x200046a4
                 else if name < "caml_int64_float_of_bits" then
-                  if name = "caml_int64_div_native" then some 0x80011234
+                  if name = "caml_int64_div_native" then some 0x2000448d
                   else if name < "caml_int64_div_native" then
                     none
                   else
@@ -804,9 +805,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_int64_mod_native" then some 0x800112f0
+                if name = "caml_int64_mod_native" then some 0x200044bc
                 else if name < "caml_int64_mod_native" then
-                  if name = "caml_int64_mod" then some 0x80011284
+                  if name = "caml_int64_mod" then some 0x200044a1
                   else if name < "caml_int64_mod" then
                     none
                   else
@@ -814,35 +815,35 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
   else
-    if name = "caml_nativeint_xor" then some 0x80011d74
+    if name = "caml_nativeint_xor" then some 0x2000475d
     else if name < "caml_nativeint_xor" then
-      if name = "caml_ml_enable_runtime_warnings" then some 0x8001f5f0
+      if name = "caml_ml_enable_runtime_warnings" then some 0x20007d7c
       else if name < "caml_ml_enable_runtime_warnings" then
-        if name = "caml_invoke_traced_function" then some 0x8001d90c
+        if name = "caml_invoke_traced_function" then some 0x20007643
         else if name < "caml_invoke_traced_function" then
-          if name = "caml_int64_shift_right_unsigned" then some 0x800114ac
+          if name = "caml_int64_shift_right_unsigned" then some 0x2000452b
           else if name < "caml_int64_shift_right_unsigned" then
-            if name = "caml_int64_of_nativeint" then some 0x80011794
+            if name = "caml_int64_of_nativeint" then some 0x200045e5
             else if name < "caml_int64_of_nativeint" then
-              if name = "caml_int64_of_float" then some 0x8001169c
+              if name = "caml_int64_of_float" then some 0x200045a7
               else if name < "caml_int64_of_float" then
-                if name = "caml_int64_neg" then some 0x80011088
+                if name = "caml_int64_neg" then some 0x20004422
                 else if name < "caml_int64_neg" then
-                  if name = "caml_int64_mul_native" then some 0x800111b0
+                  if name = "caml_int64_mul_native" then some 0x2000446c
                   else if name < "caml_int64_mul_native" then
                     none
                   else
                     none
                 else
-                  if name = "caml_int64_neg_native" then some 0x800110c8
+                  if name = "caml_int64_neg_native" then some 0x20004432
                   else if name < "caml_int64_neg_native" then
                     none
                   else
                     none
               else
-                if name = "caml_int64_of_int32" then some 0x80011714
+                if name = "caml_int64_of_int32" then some 0x200045c5
                 else if name < "caml_int64_of_int32" then
-                  if name = "caml_int64_of_int" then some 0x80011634
+                  if name = "caml_int64_of_int" then some 0x2000458d
                   else if name < "caml_int64_of_int" then
                     none
                   else
@@ -850,11 +851,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_int64_or_native" then some 0x800113d0
+              if name = "caml_int64_or_native" then some 0x200044f4
               else if name < "caml_int64_or_native" then
-                if name = "caml_int64_or" then some 0x8001138c
+                if name = "caml_int64_or" then some 0x200044e3
                 else if name < "caml_int64_or" then
-                  if name = "caml_int64_of_string" then some 0x80011880
+                  if name = "caml_int64_of_string" then some 0x20004620
                   else if name < "caml_int64_of_string" then
                     none
                   else
@@ -862,9 +863,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_int64_shift_right" then some 0x80011468
+                if name = "caml_int64_shift_right" then some 0x2000451a
                 else if name < "caml_int64_shift_right" then
-                  if name = "caml_int64_shift_left" then some 0x80011424
+                  if name = "caml_int64_shift_left" then some 0x20004509
                   else if name < "caml_int64_shift_left" then
                     none
                   else
@@ -872,27 +873,27 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_int64_xor" then some 0x800113d8
+            if name = "caml_int64_xor" then some 0x200044f6
             else if name < "caml_int64_xor" then
-              if name = "caml_int64_to_int" then some 0x80011674
+              if name = "caml_int64_to_int" then some 0x2000459d
               else if name < "caml_int64_to_int" then
-                if name = "caml_int64_sub_native" then some 0x80011160
+                if name = "caml_int64_sub_native" then some 0x20004458
                 else if name < "caml_int64_sub_native" then
-                  if name = "caml_int64_sub" then some 0x8001111c
+                  if name = "caml_int64_sub" then some 0x20004447
                   else if name < "caml_int64_sub" then
                     none
                   else
                     none
                 else
-                  if name = "caml_int64_to_float" then some 0x800116f8
+                  if name = "caml_int64_to_float" then some 0x200045be
                   else if name < "caml_int64_to_float" then
                     none
                   else
                     none
               else
-                if name = "caml_int64_to_nativeint" then some 0x800117d4
+                if name = "caml_int64_to_nativeint" then some 0x200045f5
                 else if name < "caml_int64_to_nativeint" then
-                  if name = "caml_int64_to_int32" then some 0x80011754
+                  if name = "caml_int64_to_int32" then some 0x200045d5
                   else if name < "caml_int64_to_int32" then
                     none
                   else
@@ -900,11 +901,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_int_compare" then some 0x800108d4
+              if name = "caml_int_compare" then some 0x20004235
               else if name < "caml_int_compare" then
-                if name = "caml_int_as_pointer" then some 0x80020d54
+                if name = "caml_int_as_pointer" then some 0x20008355
                 else if name < "caml_int_as_pointer" then
-                  if name = "caml_int64_xor_native" then some 0x8001141c
+                  if name = "caml_int64_xor_native" then some 0x20004507
                   else if name < "caml_int64_xor_native" then
                     none
                   else
@@ -912,9 +913,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_int_of_string" then some 0x800108ec
+                if name = "caml_int_of_string" then some 0x2000423b
                 else if name < "caml_int_of_string" then
-                  if name = "caml_int_of_float" then some 0x80012880
+                  if name = "caml_int_of_float" then some 0x20004a20
                   else if name < "caml_int_of_float" then
                     none
                   else
@@ -922,29 +923,29 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
         else
-          if name = "caml_make_float_vect" then some 0x800148b0
+          if name = "caml_make_float_vect" then some 0x2000522c
           else if name < "caml_make_float_vect" then
-            if name = "caml_log10_float" then some 0x80012e84
+            if name = "caml_log10_float" then some 0x20004ba1
             else if name < "caml_log10_float" then
-              if name = "caml_lessequal" then some 0x80010190
+              if name = "caml_lessequal" then some 0x20004064
               else if name < "caml_lessequal" then
-                if name = "caml_ldexp_float" then some 0x80012e44
+                if name = "caml_ldexp_float" then some 0x20004b91
                 else if name < "caml_ldexp_float" then
-                  if name = "caml_lazy_make_forward" then some 0x80020c24
+                  if name = "caml_lazy_make_forward" then some 0x20008309
                   else if name < "caml_lazy_make_forward" then
                     none
                   else
                     none
                 else
-                  if name = "caml_le_float" then some 0x80013390
+                  if name = "caml_le_float" then some 0x20004ce4
                   else if name < "caml_le_float" then
                     none
                   else
                     none
               else
-                if name = "caml_lex_engine" then some 0x80020d5c
+                if name = "caml_lex_engine" then some 0x20008357
                 else if name < "caml_lex_engine" then
-                  if name = "caml_lessthan" then some 0x8001011c
+                  if name = "caml_lessthan" then some 0x20004047
                   else if name < "caml_lessthan" then
                     none
                   else
@@ -952,11 +953,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_log_float" then some 0x80012e68
+              if name = "caml_log_float" then some 0x20004b9a
               else if name < "caml_log_float" then
-                if name = "caml_log2_float" then some 0x80012ec4
+                if name = "caml_log2_float" then some 0x20004bb1
                 else if name < "caml_log2_float" then
-                  if name = "caml_log1p_float" then some 0x800131dc
+                  if name = "caml_log1p_float" then some 0x20004c77
                   else if name < "caml_log1p_float" then
                     none
                   else
@@ -964,9 +965,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_make_array" then some 0x800148b4
+                if name = "caml_make_array" then some 0x2000522d
                 else if name < "caml_make_array" then
-                  if name = "caml_lt_float" then some 0x800133c8
+                  if name = "caml_lt_float" then some 0x20004cf2
                   else if name < "caml_lt_float" then
                     none
                   else
@@ -974,13 +975,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_memprof_stop" then some 0x8002a688
+            if name = "caml_memprof_stop" then some 0x2000a9a2
             else if name < "caml_memprof_stop" then
-              if name = "caml_md5_chan" then some 0x80020714
+              if name = "caml_md5_chan" then some 0x200081c5
               else if name < "caml_md5_chan" then
-                if name = "caml_marshal_data_size" then some 0x80019fd4
+                if name = "caml_marshal_data_size" then some 0x200067f5
                 else if name < "caml_marshal_data_size" then
-                  if name = "caml_make_vect" then some 0x80014698
+                  if name = "caml_make_vect" then some 0x200051a6
                   else if name < "caml_make_vect" then
                     none
                   else
@@ -988,9 +989,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_memprof_start" then some 0x8002a24c
+                if name = "caml_memprof_start" then some 0x2000a893
                 else if name < "caml_memprof_start" then
-                  if name = "caml_md5_string" then some 0x80020564
+                  if name = "caml_md5_string" then some 0x20008159
                   else if name < "caml_md5_string" then
                     none
                   else
@@ -998,11 +999,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_ml_channel_size_64" then some 0x80016218
+              if name = "caml_ml_channel_size_64" then some 0x20005886
               else if name < "caml_ml_channel_size_64" then
-                if name = "caml_ml_channel_size" then some 0x800161d8
+                if name = "caml_ml_channel_size" then some 0x20005876
                 else if name < "caml_ml_channel_size" then
-                  if name = "caml_ml_bytes_length" then some 0x800135b8
+                  if name = "caml_ml_bytes_length" then some 0x20004d6e
                   else if name < "caml_ml_bytes_length" then
                     none
                   else
@@ -1010,9 +1011,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_ml_debug_info_status" then some 0x8000f33c
+                if name = "caml_ml_debug_info_status" then some 0x20003ccf
                 else if name < "caml_ml_debug_info_status" then
-                  if name = "caml_ml_close_channel" then some 0x8001616c
+                  if name = "caml_ml_close_channel" then some 0x2000585b
                   else if name < "caml_ml_close_channel" then
                     none
                   else
@@ -1020,31 +1021,31 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
       else
-        if name = "caml_ml_set_channel_name" then some 0x80015fb4
+        if name = "caml_ml_set_channel_name" then some 0x200057ed
         else if name < "caml_ml_set_channel_name" then
-          if name = "caml_ml_output_int" then some 0x8001644c
+          if name = "caml_ml_output_int" then some 0x20005913
           else if name < "caml_ml_output_int" then
-            if name = "caml_ml_open_descriptor_in" then some 0x80015ef0
+            if name = "caml_ml_open_descriptor_in" then some 0x200057bc
             else if name < "caml_ml_open_descriptor_in" then
-              if name = "caml_ml_input_int" then some 0x8001696c
+              if name = "caml_ml_input_int" then some 0x20005a5b
               else if name < "caml_ml_input_int" then
-                if name = "caml_ml_input" then some 0x80016a1c
+                if name = "caml_ml_input" then some 0x20005a87
                 else if name < "caml_ml_input" then
-                  if name = "caml_ml_flush" then some 0x80016238
+                  if name = "caml_ml_flush" then some 0x2000588e
                   else if name < "caml_ml_flush" then
                     none
                   else
                     none
                 else
-                  if name = "caml_ml_input_char" then some 0x800168a0
+                  if name = "caml_ml_input_char" then some 0x20005a28
                   else if name < "caml_ml_input_char" then
                     none
                   else
                     none
               else
-                if name = "caml_ml_is_buffered" then some 0x80016330
+                if name = "caml_ml_is_buffered" then some 0x200058cc
                 else if name < "caml_ml_is_buffered" then
-                  if name = "caml_ml_input_scan_line" then some 0x80016e20
+                  if name = "caml_ml_input_scan_line" then some 0x20005b88
                   else if name < "caml_ml_input_scan_line" then
                     none
                   else
@@ -1052,11 +1053,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_ml_output" then some 0x800166cc
+              if name = "caml_ml_output" then some 0x200059b3
               else if name < "caml_ml_output" then
-                if name = "caml_ml_out_channels_list" then some 0x80016020
+                if name = "caml_ml_out_channels_list" then some 0x20005808
                 else if name < "caml_ml_out_channels_list" then
-                  if name = "caml_ml_open_descriptor_out" then some 0x80015f50
+                  if name = "caml_ml_open_descriptor_out" then some 0x200057d4
                   else if name < "caml_ml_open_descriptor_out" then
                     none
                   else
@@ -1064,9 +1065,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_ml_output_char" then some 0x80016350
+                if name = "caml_ml_output_char" then some 0x200058d4
                 else if name < "caml_ml_output_char" then
-                  if name = "caml_ml_output_bytes" then some 0x8001652c
+                  if name = "caml_ml_output_bytes" then some 0x2000594b
                   else if name < "caml_ml_output_bytes" then
                     none
                   else
@@ -1074,13 +1075,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_ml_seek_in" then some 0x80016c50
+            if name = "caml_ml_seek_in" then some 0x20005b14
             else if name < "caml_ml_seek_in" then
-              if name = "caml_ml_pos_out" then some 0x80016838
+              if name = "caml_ml_pos_out" then some 0x20005a0e
               else if name < "caml_ml_pos_out" then
-                if name = "caml_ml_pos_in_64" then some 0x80016e04
+                if name = "caml_ml_pos_in_64" then some 0x20005b81
                 else if name < "caml_ml_pos_in_64" then
-                  if name = "caml_ml_pos_in" then some 0x80016db8
+                  if name = "caml_ml_pos_in" then some 0x20005b6e
                   else if name < "caml_ml_pos_in" then
                     none
                   else
@@ -1088,9 +1089,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_ml_runtime_warnings_enabled" then some 0x8001f608
+                if name = "caml_ml_runtime_warnings_enabled" then some 0x20007d82
                 else if name < "caml_ml_runtime_warnings_enabled" then
-                  if name = "caml_ml_pos_out_64" then some 0x80016884
+                  if name = "caml_ml_pos_out_64" then some 0x20005a21
                   else if name < "caml_ml_pos_out_64" then
                     none
                   else
@@ -1098,11 +1099,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_ml_seek_out_64" then some 0x80016784
+              if name = "caml_ml_seek_out_64" then some 0x200059e1
               else if name < "caml_ml_seek_out_64" then
-                if name = "caml_ml_seek_out" then some 0x800166d0
+                if name = "caml_ml_seek_out" then some 0x200059b4
                 else if name < "caml_ml_seek_out" then
-                  if name = "caml_ml_seek_in_64" then some 0x80016d04
+                  if name = "caml_ml_seek_in_64" then some 0x20005b41
                   else if name < "caml_ml_seek_in_64" then
                     none
                   else
@@ -1110,9 +1111,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_ml_set_buffered" then some 0x800162e8
+                if name = "caml_ml_set_buffered" then some 0x200058ba
                 else if name < "caml_ml_set_buffered" then
-                  if name = "caml_ml_set_binary_mode" then some 0x80016230
+                  if name = "caml_ml_set_binary_mode" then some 0x2000588c
                   else if name < "caml_ml_set_binary_mode" then
                     none
                   else
@@ -1120,29 +1121,29 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
         else
-          if name = "caml_nativeint_of_float" then some 0x8001202c
+          if name = "caml_nativeint_of_float" then some 0x2000480b
           else if name < "caml_nativeint_of_float" then
-            if name = "caml_nativeint_compare" then some 0x80012134
+            if name = "caml_nativeint_compare" then some 0x2000484d
             else if name < "caml_nativeint_compare" then
-              if name = "caml_nativeint_add" then some 0x80011b14
+              if name = "caml_nativeint_add" then some 0x200046c5
               else if name < "caml_nativeint_add" then
-                if name = "caml_modf_float" then some 0x80012eec
+                if name = "caml_modf_float" then some 0x20004bbb
                 else if name < "caml_modf_float" then
-                  if name = "caml_ml_string_length" then some 0x80013590
+                  if name = "caml_ml_string_length" then some 0x20004d64
                   else if name < "caml_ml_string_length" then
                     none
                   else
                     none
                 else
-                  if name = "caml_mul_float" then some 0x80012b88
+                  if name = "caml_mul_float" then some 0x20004ae2
                   else if name < "caml_mul_float" then
                     none
                   else
                     none
               else
-                if name = "caml_nativeint_bswap" then some 0x80011f08
+                if name = "caml_nativeint_bswap" then some 0x200047c2
                 else if name < "caml_nativeint_bswap" then
-                  if name = "caml_nativeint_and" then some 0x80011cec
+                  if name = "caml_nativeint_and" then some 0x2000473b
                   else if name < "caml_nativeint_and" then
                     none
                   else
@@ -1150,11 +1151,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_nativeint_mod" then some 0x80011c5c
+              if name = "caml_nativeint_mod" then some 0x20004717
               else if name < "caml_nativeint_mod" then
-                if name = "caml_nativeint_format" then some 0x80012154
+                if name = "caml_nativeint_format" then some 0x20004855
                 else if name < "caml_nativeint_format" then
-                  if name = "caml_nativeint_div" then some 0x80011be4
+                  if name = "caml_nativeint_div" then some 0x200046f9
                   else if name < "caml_nativeint_div" then
                     none
                   else
@@ -1162,9 +1163,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_nativeint_neg" then some 0x80011ad4
+                if name = "caml_nativeint_neg" then some 0x200046b5
                 else if name < "caml_nativeint_neg" then
-                  if name = "caml_nativeint_mul" then some 0x80011b9c
+                  if name = "caml_nativeint_mul" then some 0x200046e7
                   else if name < "caml_nativeint_mul" then
                     none
                   else
@@ -1172,13 +1173,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_nativeint_shift_right" then some 0x80011dfc
+            if name = "caml_nativeint_shift_right" then some 0x2000477f
             else if name < "caml_nativeint_shift_right" then
-              if name = "caml_nativeint_of_string" then some 0x80012190
+              if name = "caml_nativeint_of_string" then some 0x20004864
               else if name < "caml_nativeint_of_string" then
-                if name = "caml_nativeint_of_int32" then some 0x800120a4
+                if name = "caml_nativeint_of_int32" then some 0x20004829
                 else if name < "caml_nativeint_of_int32" then
-                  if name = "caml_nativeint_of_int" then some 0x80011fc4
+                  if name = "caml_nativeint_of_int" then some 0x200047f1
                   else if name < "caml_nativeint_of_int" then
                     none
                   else
@@ -1186,9 +1187,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_nativeint_shift_left" then some 0x80011db8
+                if name = "caml_nativeint_shift_left" then some 0x2000476e
                 else if name < "caml_nativeint_shift_left" then
-                  if name = "caml_nativeint_or" then some 0x80011d30
+                  if name = "caml_nativeint_or" then some 0x2000474c
                   else if name < "caml_nativeint_or" then
                     none
                   else
@@ -1196,11 +1197,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_nativeint_to_float" then some 0x80012088
+              if name = "caml_nativeint_to_float" then some 0x20004822
               else if name < "caml_nativeint_to_float" then
-                if name = "caml_nativeint_sub" then some 0x80011b58
+                if name = "caml_nativeint_sub" then some 0x200046d6
                 else if name < "caml_nativeint_sub" then
-                  if name = "caml_nativeint_shift_right_unsigned" then some 0x80011e40
+                  if name = "caml_nativeint_shift_right_unsigned" then some 0x20004790
                   else if name < "caml_nativeint_shift_right_unsigned" then
                     none
                   else
@@ -1208,9 +1209,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_nativeint_to_int32" then some 0x800120e4
+                if name = "caml_nativeint_to_int32" then some 0x20004839
                 else if name < "caml_nativeint_to_int32" then
-                  if name = "caml_nativeint_to_int" then some 0x80012004
+                  if name = "caml_nativeint_to_int" then some 0x20004801
                   else if name < "caml_nativeint_to_int" then
                     none
                   else
@@ -1218,33 +1219,33 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
     else
-      if name = "caml_string_lessequal" then some 0x80013cd4
+      if name = "caml_string_lessequal" then some 0x20004f35
       else if name < "caml_string_lessequal" then
-        if name = "caml_realloc_global" then some 0x8001d7f0
+        if name = "caml_realloc_global" then some 0x200075fc
         else if name < "caml_realloc_global" then
-          if name = "caml_obj_set_tag" then some 0x8002083c
+          if name = "caml_obj_set_tag" then some 0x2000820f
           else if name < "caml_obj_set_tag" then
-            if name = "caml_obj_block" then some 0x800208a8
+            if name = "caml_obj_block" then some 0x2000822a
             else if name < "caml_obj_block" then
-              if name = "caml_nextafter_float" then some 0x80012d3c
+              if name = "caml_nextafter_float" then some 0x20004b4f
               else if name < "caml_nextafter_float" then
-                if name = "caml_neq_float" then some 0x800132a4
+                if name = "caml_neq_float" then some 0x20004ca9
                 else if name < "caml_neq_float" then
-                  if name = "caml_neg_float" then some 0x8001292c
+                  if name = "caml_neg_float" then some 0x20004a4b
                   else if name < "caml_neg_float" then
                     none
                   else
                     none
                 else
-                  if name = "caml_new_lex_engine" then some 0x80020eb8
+                  if name = "caml_new_lex_engine" then some 0x200083ae
                   else if name < "caml_new_lex_engine" then
                     none
                   else
                     none
               else
-                if name = "caml_obj_add_offset" then some 0x80020c18
+                if name = "caml_obj_add_offset" then some 0x20008306
                 else if name < "caml_obj_add_offset" then
-                  if name = "caml_notequal" then some 0x800100b8
+                  if name = "caml_notequal" then some 0x2000402e
                   else if name < "caml_notequal" then
                     none
                   else
@@ -1252,11 +1253,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_obj_raw_field" then some 0x8002084c
+              if name = "caml_obj_raw_field" then some 0x20008213
               else if name < "caml_obj_raw_field" then
-                if name = "caml_obj_make_forward" then some 0x8002087c
+                if name = "caml_obj_make_forward" then some 0x2000821f
                 else if name < "caml_obj_make_forward" then
-                  if name = "caml_obj_dup" then some 0x80020ae0
+                  if name = "caml_obj_dup" then some 0x200082b8
                   else if name < "caml_obj_dup" then
                     none
                   else
@@ -1264,9 +1265,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_obj_set_raw_field" then some 0x80020860
+                if name = "caml_obj_set_raw_field" then some 0x20008218
                 else if name < "caml_obj_set_raw_field" then
-                  if name = "caml_obj_reachable_words" then some 0x80019118
+                  if name = "caml_obj_reachable_words" then some 0x20006446
                   else if name < "caml_obj_reachable_words" then
                     none
                   else
@@ -1274,27 +1275,27 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_output_value_to_string" then some 0x800188c8
+            if name = "caml_output_value_to_string" then some 0x20006232
             else if name < "caml_output_value_to_string" then
-              if name = "caml_output_value" then some 0x80018708
+              if name = "caml_output_value" then some 0x200061c2
               else if name < "caml_output_value" then
-                if name = "caml_obj_truncate" then some 0x80020af4
+                if name = "caml_obj_truncate" then some 0x200082bd
                 else if name < "caml_obj_truncate" then
-                  if name = "caml_obj_tag" then some 0x800207dc
+                  if name = "caml_obj_tag" then some 0x200081f7
                   else if name < "caml_obj_tag" then
                     none
                   else
                     none
                 else
-                  if name = "caml_obj_with_tag" then some 0x8002094c
+                  if name = "caml_obj_with_tag" then some 0x20008253
                   else if name < "caml_obj_with_tag" then
                     none
                   else
                     none
               else
-                if name = "caml_output_value_to_bytes" then some 0x800187cc
+                if name = "caml_output_value_to_bytes" then some 0x200061f3
                 else if name < "caml_output_value_to_bytes" then
-                  if name = "caml_output_value_to_buffer" then some 0x80018980
+                  if name = "caml_output_value_to_buffer" then some 0x20006260
                   else if name < "caml_output_value_to_buffer" then
                     none
                   else
@@ -1302,11 +1303,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_raw_backtrace_length" then some 0x8000f6ec
+              if name = "caml_raw_backtrace_length" then some 0x20003dbb
               else if name < "caml_raw_backtrace_length" then
-                if name = "caml_power_float" then some 0x80012fdc
+                if name = "caml_power_float" then some 0x20004bf7
                 else if name < "caml_power_float" then
-                  if name = "caml_parse_engine" then some 0x8001d980
+                  if name = "caml_parse_engine" then some 0x20007660
                   else if name < "caml_parse_engine" then
                     none
                   else
@@ -1314,9 +1315,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_raw_backtrace_slot" then some 0x8000f700
+                if name = "caml_raw_backtrace_slot" then some 0x20003dc0
                 else if name < "caml_raw_backtrace_slot" then
-                  if name = "caml_raw_backtrace_next_slot" then some 0x8000f748
+                  if name = "caml_raw_backtrace_next_slot" then some 0x20003dd2
                   else if name < "caml_raw_backtrace_next_slot" then
                     none
                   else
@@ -1324,29 +1325,29 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
         else
-          if name = "caml_sin_float" then some 0x80012ffc
+          if name = "caml_sin_float" then some 0x20004bff
           else if name < "caml_sin_float" then
-            if name = "caml_runtime_parameters" then some 0x8001f550
+            if name = "caml_runtime_parameters" then some 0x20007d54
             else if name < "caml_runtime_parameters" then
-              if name = "caml_reset_afl_instrumentation" then some 0x800251fc
+              if name = "caml_reset_afl_instrumentation" then some 0x2000947f
               else if name < "caml_reset_afl_instrumentation" then
-                if name = "caml_register_named_value" then some 0x800213d0
+                if name = "caml_register_named_value" then some 0x200084f4
                 else if name < "caml_register_named_value" then
-                  if name = "caml_record_backtrace" then some 0x8000ef70
+                  if name = "caml_record_backtrace" then some 0x20003bdc
                   else if name < "caml_record_backtrace" then
                     none
                   else
                     none
                 else
-                  if name = "caml_reify_bytecode" then some 0x8001d4ec
+                  if name = "caml_reify_bytecode" then some 0x2000753b
                   else if name < "caml_reify_bytecode" then
                     none
                   else
                     none
               else
-                if name = "caml_round_float" then some 0x80012d00
+                if name = "caml_round_float" then some 0x20004b40
                 else if name < "caml_round_float" then
-                  if name = "caml_restore_raw_backtrace" then some 0x8000f448
+                  if name = "caml_restore_raw_backtrace" then some 0x20003d12
                   else if name < "caml_restore_raw_backtrace" then
                     none
                   else
@@ -1354,11 +1355,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_set_parser_trace" then some 0x8001e300
+              if name = "caml_set_parser_trace" then some 0x200078c0
               else if name < "caml_set_parser_trace" then
-                if name = "caml_set_oo_id" then some 0x80020d20
+                if name = "caml_set_oo_id" then some 0x20008348
                 else if name < "caml_set_oo_id" then
-                  if name = "caml_runtime_variant" then some 0x8001f544
+                  if name = "caml_runtime_variant" then some 0x20007d51
                   else if name < "caml_runtime_variant" then
                     none
                   else
@@ -1366,9 +1367,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_signbit_float" then some 0x8001328c
+                if name = "caml_signbit_float" then some 0x20004ca3
                 else if name < "caml_signbit_float" then
-                  if name = "caml_signbit" then some 0x80013278
+                  if name = "caml_signbit" then some 0x20004c9e
                   else if name < "caml_signbit" then
                     none
                   else
@@ -1376,13 +1377,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_string_get" then some 0x80013678
+            if name = "caml_string_get" then some 0x20004d9e
             else if name < "caml_string_get" then
-              if name = "caml_static_release_bytecode" then some 0x8001d78c
+              if name = "caml_static_release_bytecode" then some 0x200075e3
               else if name < "caml_static_release_bytecode" then
-                if name = "caml_sqrt_float" then some 0x80012fa0
+                if name = "caml_sqrt_float" then some 0x20004be8
                 else if name < "caml_sqrt_float" then
-                  if name = "caml_sinh_float" then some 0x80013018
+                  if name = "caml_sinh_float" then some 0x20004c06
                   else if name < "caml_sinh_float" then
                     none
                   else
@@ -1390,9 +1391,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_string_equal" then some 0x80013a90
+                if name = "caml_string_equal" then some 0x20004ea4
                 else if name < "caml_string_equal" then
-                  if name = "caml_string_compare" then some 0x80013b34
+                  if name = "caml_string_compare" then some 0x20004ecd
                   else if name < "caml_string_compare" then
                     none
                   else
@@ -1400,11 +1401,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_string_get64" then some 0x800138b8
+              if name = "caml_string_get64" then some 0x20004e2e
               else if name < "caml_string_get64" then
-                if name = "caml_string_get32" then some 0x80013848
+                if name = "caml_string_get32" then some 0x20004e12
                 else if name < "caml_string_get32" then
-                  if name = "caml_string_get16" then some 0x80013798
+                  if name = "caml_string_get16" then some 0x20004de6
                   else if name < "caml_string_get16" then
                     none
                   else
@@ -1412,9 +1413,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_string_greaterthan" then some 0x80013d3c
+                if name = "caml_string_greaterthan" then some 0x20004f4f
                 else if name < "caml_string_greaterthan" then
-                  if name = "caml_string_greaterequal" then some 0x80013da4
+                  if name = "caml_string_greaterequal" then some 0x20004f69
                   else if name < "caml_string_greaterequal" then
                     none
                   else
@@ -1422,31 +1423,31 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
       else
-        if name = "caml_sys_is_directory" then some 0x8001c988
+        if name = "caml_sys_is_directory" then some 0x20007262
         else if name < "caml_sys_is_directory" then
-          if name = "caml_sys_const_naked_pointers_checked" then some 0x8001d4b4
+          if name = "caml_sys_const_naked_pointers_checked" then some 0x2000752d
           else if name < "caml_sys_const_naked_pointers_checked" then
-            if name = "caml_sys_chdir" then some 0x8001cbd8
+            if name = "caml_sys_chdir" then some 0x200072f6
             else if name < "caml_sys_chdir" then
-              if name = "caml_string_set" then some 0x80013750
+              if name = "caml_string_set" then some 0x20004dd4
               else if name < "caml_string_set" then
-                if name = "caml_string_notequal" then some 0x80013af4
+                if name = "caml_string_notequal" then some 0x20004ebd
                 else if name < "caml_string_notequal" then
-                  if name = "caml_string_lessthan" then some 0x80013c74
+                  if name = "caml_string_lessthan" then some 0x20004f1d
                   else if name < "caml_string_lessthan" then
                     none
                   else
                     none
                 else
-                  if name = "caml_string_of_bytes" then some 0x80013f94
+                  if name = "caml_string_of_bytes" then some 0x20004fe5
                   else if name < "caml_string_of_bytes" then
                     none
                   else
                     none
               else
-                if name = "caml_sys_argv" then some 0x8001cfb8
+                if name = "caml_sys_argv" then some 0x200073ee
                 else if name < "caml_sys_argv" then
-                  if name = "caml_sub_float" then some 0x80012afc
+                  if name = "caml_sub_float" then some 0x20004abf
                   else if name < "caml_sub_float" then
                     none
                   else
@@ -1454,11 +1455,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_sys_const_big_endian" then some 0x8001d260
+              if name = "caml_sys_const_big_endian" then some 0x20007498
               else if name < "caml_sys_const_big_endian" then
-                if name = "caml_sys_const_backend_type" then some 0x8001d29c
+                if name = "caml_sys_const_backend_type" then some 0x200074a7
                 else if name < "caml_sys_const_backend_type" then
-                  if name = "caml_sys_close" then some 0x8001c8d4
+                  if name = "caml_sys_close" then some 0x20007235
                   else if name < "caml_sys_close" then
                     none
                   else
@@ -1466,9 +1467,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_sys_const_max_wosize" then some 0x8001d278
+                if name = "caml_sys_const_max_wosize" then some 0x2000749e
                 else if name < "caml_sys_const_max_wosize" then
-                  if name = "caml_sys_const_int_size" then some 0x8001d270
+                  if name = "caml_sys_const_int_size" then some 0x2000749c
                   else if name < "caml_sys_const_int_size" then
                     none
                   else
@@ -1476,13 +1477,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_sys_exit" then some 0x8001c7ac
+            if name = "caml_sys_exit" then some 0x200071eb
             else if name < "caml_sys_exit" then
-              if name = "caml_sys_const_ostype_win32" then some 0x8001d28c
+              if name = "caml_sys_const_ostype_win32" then some 0x200074a3
               else if name < "caml_sys_const_ostype_win32" then
-                if name = "caml_sys_const_ostype_unix" then some 0x8001d284
+                if name = "caml_sys_const_ostype_unix" then some 0x200074a1
                 else if name < "caml_sys_const_ostype_unix" then
-                  if name = "caml_sys_const_ostype_cygwin" then some 0x8001d294
+                  if name = "caml_sys_const_ostype_cygwin" then some 0x200074a5
                   else if name < "caml_sys_const_ostype_cygwin" then
                     none
                   else
@@ -1490,9 +1491,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_sys_executable_name" then some 0x8001cfec
+                if name = "caml_sys_executable_name" then some 0x200073fb
                 else if name < "caml_sys_executable_name" then
-                  if name = "caml_sys_const_word_size" then some 0x8001d268
+                  if name = "caml_sys_const_word_size" then some 0x2000749a
                   else if name < "caml_sys_const_word_size" then
                     none
                   else
@@ -1500,11 +1501,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_sys_get_config" then some 0x8001d2a4
+              if name = "caml_sys_get_config" then some 0x200074a9
               else if name < "caml_sys_get_config" then
-                if name = "caml_sys_get_argv" then some 0x8001cf08
+                if name = "caml_sys_get_argv" then some 0x200073c2
                 else if name < "caml_sys_get_argv" then
-                  if name = "caml_sys_file_exists" then some 0x8001c908
+                  if name = "caml_sys_file_exists" then some 0x20007242
                   else if name < "caml_sys_file_exists" then
                     none
                   else
@@ -1512,9 +1513,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_sys_getenv" then some 0x8001ceb0
+                if name = "caml_sys_getenv" then some 0x200073ac
                 else if name < "caml_sys_getenv" then
-                  if name = "caml_sys_getcwd" then some 0x8001ce44
+                  if name = "caml_sys_getcwd" then some 0x20007391
                   else if name < "caml_sys_getcwd" then
                     none
                   else
@@ -1522,29 +1523,29 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
         else
-          if name = "caml_sys_unsafe_getenv" then some 0x8001ce58
+          if name = "caml_sys_unsafe_getenv" then some 0x20007396
           else if name < "caml_sys_unsafe_getenv" then
-            if name = "caml_sys_remove" then some 0x8001ca70
+            if name = "caml_sys_remove" then some 0x2000729c
             else if name < "caml_sys_remove" then
-              if name = "caml_sys_open" then some 0x8001c7c0
+              if name = "caml_sys_open" then some 0x200071f0
               else if name < "caml_sys_open" then
-                if name = "caml_sys_mkdir" then some 0x8001cc9c
+                if name = "caml_sys_mkdir" then some 0x20007327
                 else if name < "caml_sys_mkdir" then
-                  if name = "caml_sys_isatty" then some 0x8001d47c
+                  if name = "caml_sys_isatty" then some 0x2000751f
                   else if name < "caml_sys_isatty" then
                     none
                   else
                     none
                 else
-                  if name = "caml_sys_modify_argv" then some 0x8001cfc4
+                  if name = "caml_sys_modify_argv" then some 0x200073f1
                   else if name < "caml_sys_modify_argv" then
                     none
                   else
                     none
               else
-                if name = "caml_sys_read_directory" then some 0x8001d358
+                if name = "caml_sys_read_directory" then some 0x200074d6
                 else if name < "caml_sys_read_directory" then
-                  if name = "caml_sys_random_seed" then some 0x8001d200
+                  if name = "caml_sys_random_seed" then some 0x20007480
                   else if name < "caml_sys_random_seed" then
                     none
                   else
@@ -1552,11 +1553,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_sys_system_command" then some 0x8001d030
+              if name = "caml_sys_system_command" then some 0x2000740c
               else if name < "caml_sys_system_command" then
-                if name = "caml_sys_rmdir" then some 0x8001cd7c
+                if name = "caml_sys_rmdir" then some 0x2000735f
                 else if name < "caml_sys_rmdir" then
-                  if name = "caml_sys_rename" then some 0x8001cb34
+                  if name = "caml_sys_rename" then some 0x200072cd
                   else if name < "caml_sys_rename" then
                     none
                   else
@@ -1564,9 +1565,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_sys_time_include_children" then some 0x8001d06c
+                if name = "caml_sys_time_include_children" then some 0x2000741b
                 else if name < "caml_sys_time_include_children" then
-                  if name = "caml_sys_time" then some 0x8001d0bc
+                  if name = "caml_sys_time" then some 0x2000742f
                   else if name < "caml_sys_time" then
                     none
                   else
@@ -1574,13 +1575,13 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
           else
-            if name = "caml_weak_blit" then some 0x800230e8
+            if name = "caml_weak_blit" then some 0x20008c3a
             else if name < "caml_weak_blit" then
-              if name = "caml_terminfo_rows" then some 0x80016ed0
+              if name = "caml_terminfo_rows" then some 0x20005bb4
               else if name < "caml_terminfo_rows" then
-                if name = "caml_tanh_float" then some 0x80013088
+                if name = "caml_tanh_float" then some 0x20004c22
                 else if name < "caml_tanh_float" then
-                  if name = "caml_tan_float" then some 0x8001306c
+                  if name = "caml_tan_float" then some 0x20004c1b
                   else if name < "caml_tan_float" then
                     none
                   else
@@ -1588,9 +1589,9 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_update_dummy" then some 0x8000c5ac
+                if name = "caml_update_dummy" then some 0x2000316b
                 else if name < "caml_update_dummy" then
-                  if name = "caml_trunc_float" then some 0x80012ce0
+                  if name = "caml_trunc_float" then some 0x20004b38
                   else if name < "caml_trunc_float" then
                     none
                   else
@@ -1598,11 +1599,11 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
             else
-              if name = "caml_weak_get" then some 0x800226b4
+              if name = "caml_weak_get" then some 0x200089ad
               else if name < "caml_weak_get" then
-                if name = "caml_weak_create" then some 0x80021f80
+                if name = "caml_weak_create" then some 0x200087e0
                 else if name < "caml_weak_create" then
-                  if name = "caml_weak_check" then some 0x80022ef0
+                  if name = "caml_weak_check" then some 0x20008bbc
                   else if name < "caml_weak_check" then
                     none
                   else
@@ -1610,15 +1611,24 @@ def lookup (name : String) : Option Nat :=
                 else
                   none
               else
-                if name = "caml_weak_set" then some 0x800223d0
+                if name = "caml_weak_set" then some 0x200088f4
                 else if name < "caml_weak_set" then
-                  if name = "caml_weak_get_copy" then some 0x80022ae8
+                  if name = "caml_weak_get_copy" then some 0x20008aba
                   else if name < "caml_weak_get_copy" then
                     none
                   else
                     none
                 else
                   none
+
+/-- The entry point of a native primitive. -/
+def lookup (name : String) : Option Nat := (lookupWord name).map (4 * ·)
+
+/-- Every primitive entry point is instruction-aligned. -/
+theorem lookup_aligned {name : String} {entry : Nat} (h : lookup name = some entry) :
+    entry % 4 = 0 := by
+  obtain ⟨k, -, rfl⟩ := Option.map_eq_some_iff.mp h
+  omega
 
 theorem entry_caml_register_named_value : lookup "caml_register_named_value" = some Layout.sym_caml_register_named_value := by decide
 
