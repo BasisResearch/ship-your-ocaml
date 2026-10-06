@@ -348,11 +348,11 @@ theorem caml_ml_bytes_length_summary (c : Config) (ra x : BitVec 64) (h : LeafIn
 open OCaml.Bytecode
 
 theorem caml_ml_bytes_length_primitive {runtimeOk : Config → Prop} (stable : MemoryStable runtimeOk)
-    {P s pl cp sp high ra l b a c}
-    (h : StringInput runtimeOk P s pl cp sp high ra l b a c) :
+    {P s pl cp sp high ra l o n a c}
+    (h : StringInput runtimeOk P s pl cp sp high ra l o n a c) :
     FnSummary (BitVec.ofNat 64 Layout.sym_caml_ml_bytes_length) (fun x => x = c)
       (ImmediatePost runtimeOk P s pl cp sp high "caml_ml_bytes_length" [.ptr l 0]
-        (BitVec.ofNat 63 b.length) [10, 14, 15] c ra) := by
+        (BitVec.ofNat 63 n) [10, 14, 15] c ra) := by
   apply string_length_contract stable h
   · apply caml_ml_bytes_length_summary c ra (BitVec.ofNat 64 a) h.toLeafInput
     · apply h.arguments.get (i := 0) rfl
