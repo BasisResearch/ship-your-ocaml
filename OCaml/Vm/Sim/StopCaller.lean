@@ -32,6 +32,8 @@ structure StopExitCallPost (before : Config) (nativeSp : Nat) (vmSp : BitVec 64)
   /-- the callee-saved registers caml_do_exit's run reads are present: s0–s4
   restored by caml_main's epilogue, s5–s10 by the interpreter's -/
   present : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26], (gprGet after.σ n).isSome
+  /-- the HTIF payload counter is unchanged since STOP -/
+  htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
 
 /-- Run both actual native callers after STOP returns to caml_main. -/
 theorem stop_callers {nativeSp : Nat} {interpSaved mainSaved : Nat → BitVec 64}
@@ -54,7 +56,8 @@ theorem stop_callers {nativeSp : Nat} {interpSaved mainSaved : Nat → BitVec 64
   refine ⟨mainCount + exitCount, after, mainRun.append exitRun, exitPost.good, exitPost.image,
     exitPost.tick, exitPost.pc, (exitPost.frame.frame _ (by decide)).trans mainPost.stack,
     exitPost.status, exitPost.memory.trans (mainPost.memory.trans returned.memory),
-    exitPost.frame.out.trans (mainPost.frame.out.trans returned.output), exitPost.returnAddress, ?_⟩
+    exitPost.frame.out.trans (mainPost.frame.out.trans returned.output), exitPost.returnAddress, ?_,
+    (exitPost.frame.frame _ (by decide)).trans ((mainPost.frame.frame _ (by decide)).trans returned.htif)⟩
   have keepExit := exitPost.frame.gpr_list (L := [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26])
     (by decide +kernel)
   have keepMain := mainPost.frame.gpr_list (L := [21, 22, 23, 24, 25, 26]) (by decide +kernel)
