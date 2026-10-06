@@ -645,4 +645,149 @@ theorem append {live : Nat → Prop} {sp : BitVec 64} {f buf n : Nat} (d e : Con
   · rw [toE 2 (by decide) (by decide) (by decide), dc.stack]
   · exact toE
 
+/-- The six words parse_format's prologue saved, still in its frame. -/
+structure SavedSlots (sp : BitVec 64) (ra s0 s1 s2 s3 s4 : BitVec 64) (c : Config) : Prop where
+  ra : bytesT c.σ.mem (nativeFrameBase sp 48 + 40) 8 = ra
+  s0 : bytesT c.σ.mem (nativeFrameBase sp 48 + 32) 8 = s0
+  s1 : bytesT c.σ.mem (nativeFrameBase sp 48 + 24) 8 = s1
+  s2 : bytesT c.σ.mem (nativeFrameBase sp 48 + 16) 8 = s2
+  s3 : bytesT c.σ.mem (nativeFrameBase sp 48 + 8) 8 = s3
+  s4 : bytesT c.σ.mem (nativeFrameBase sp 48) 8 = s4
+
+/-- The registers `finish` may change. -/
+def finishWritten : List Nat := [1, 2, 8, 9, 10, 15, 18, 19, 20]
+
+/-- parse_format returned: the conversion byte, the saved registers, and the
+terminator after the conversion. -/
+structure Finished (live : Nat → Prop) (sp ra s0 s1 s2 s3 s4 : BitVec 64) (buf n : Nat) (conv : BitVec 8)
+    (before after : Config) : Prop extends LeafInput ra after where
+  libraryGood : VsaOk live after
+  globalPointer : ROHolds (vsaModel live) after roR []
+  pc : OCaml.Vm.pcOf after = some ra
+  result : gpr after 10 = some (conv.setWidth 64)
+  conversion : byte after (buf + n) = conv
+  nul : byte after (buf + n + 1) = 0#8
+  rest : ∀ a, a < buf + n ∨ buf + n + 2 ≤ a → byte after a = byte before a
+  output : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
+  stack : gpr after 2 = some sp
+  savedS0 : gpr after 8 = some s0
+  savedS1 : gpr after 9 = some s1
+  savedS2 : gpr after 18 = some s2
+  savedS3 : gpr after 19 = some s3
+  savedS4 : gpr after 20 = some s4
+  kept : ∀ k, 1 ≤ k → k ≤ 31 → k ∉ finishWritten → gpr after k = gpr before k
+
+theorem buffer_succ {f buf n : Nat} (hb : BufferInput f buf n) (k : Nat) (hk : k + 1 < 32) :
+    BitVec.ofNat 64 (buf + k) + 1#64 = BitVec.ofNat 64 (buf + (k + 1)) := by
+  have := hb.bufHigh
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
+    show (2:Nat)^64 = 18446744073709551616 from rfl]
+  rw [Nat.mod_eq_of_lt (a := buf + k) (by omega), Nat.mod_eq_of_lt (a := 1) (by omega)]
+  omega
+
+theorem buffer_byte_window {f buf n : Nat} (hb : BufferInput f buf n) (k : Nat) (hk : k < 32) :
+    WriteWindow (BitVec.ofNat 64 (buf + k)) 1 := by
+  have := hb.bufHigh; have := hb.bufLow
+  have e := ofNat_toNat_buffer hb k hk
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> rw [e] <;> (try simp only [Layout.sym_tohost]) <;> omega
+
+theorem setWidth_zext (b : BitVec 8) : b.setWidth 64 = LeanRV64DExecutable.zero_extend (m := 64) b := rfl
+
+/-- **The conversion byte, the terminator and the return.** -/
+theorem finish {live : Nat → Prop} {sp ra s0 s1 s2 s3 s4 : BitVec 64} {f buf n : Nat} (d e a : Config)
+    (da : Appended live sp f buf n d e a) (hb : BufferInput f buf n) (long : 2 ≤ n)
+    (frame : NativeFrame sp 48) (above : sp.toNat ≤ buf)
+    (slots : SavedSlots sp ra s0 s1 s2 s3 s4 a) (aligned : ra.toNat % 4 = 0) :
+    FnSummary append_call.link (fun x => x = a)
+      (Finished live sp ra s0 s1 s2 s3 s4 buf n (byte d (f + (n - 1))) a) := by
+  let R := entryRegs a
+  have fits := hb.fits
+  have h2 : R 2 = sp - 48#64 := entry_value da.stack
+  have h8 : R 8 = (byte d (f + (n - 1))).setWidth 64 := entry_value da.conversion
+  have h9 : R 9 = 1#64 := entry_value da.suffixLength
+  have h10 : R 10 = BitVec.ofNat 64 (buf + (n - 1)) := entry_value da.cursor
+  have at0 : R 10 + R 9 = BitVec.ofNat 64 (buf + n) := by
+    rw [h10, h9, buffer_succ hb _ (by omega)]; congr 2; omega
+  have succ : BitVec.ofNat 64 (buf + n) + 1#64 = BitVec.ofNat 64 (buf + (n + 1)) := buffer_succ hb _ (by omega)
+  have at1 : R 10 + R 9 + 1#64 = BitVec.ofNat 64 (buf + (n + 1)) := by rw [at0, succ]
+  have regs : GHolds a.σ (finish_input R) := holds_entry da.libraryGood [2, 8, 9, 10] (by decide)
+  have leaf : LeafInput (R 1) a := by rw [show R 1 = append_call.link from entry_value da.raReg]; exact da.toLeafInput
+  have top : nativeFrameBase sp 48 + 48 = sp.toNat := by
+    have := frame.lower; unfold nativeFrameBase; simp only [Vsa.Sim.DlHeap.heapEnd] at this; omega
+  have slotNat (off : Nat) (h : off + 8 ≤ 48) : (R 2 + BitVec.ofNat 64 off).toNat = nativeFrameBase sp 48 + off := by
+    rw [h2, frame_slot frame off (by omega)]; exact frame.slot_nat (by omega)
+  have slot0 : (R 2).toNat = nativeFrameBase sp 48 := by
+    rw [h2, frame_base frame]; simpa using frame.slot_nat (off := 0) (by decide)
+  have win (off : Nat) (h : off + 8 ≤ 48) (al : off % 8 = 0) : ReadWindow (R 2 + BitVec.ofNat 64 off) 8 := by
+    rw [h2]; exact (frame_word frame off h al).read
+  have win0 : ReadWindow (R 2) 8 := by
+    rw [h2, frame_base frame]; simpa using (frame.word (off := 0) (by decide) (by decide)).read
+  have bufNat0 : (BitVec.ofNat 64 (buf + n)).toNat = buf + n := ofNat_toNat_buffer hb _ (by omega)
+  have bufNat1 : (BitVec.ofNat 64 (buf + (n + 1))).toNat = buf + (n + 1) := ofNat_toNat_buffer hb _ (by omega)
+  have apart (x : Nat) (hx : x + 8 ≤ sp.toNat) (loads : List (List (BitVec 8))) :
+      OutLRange ((finishLog R loads).take 2) x 8 := by
+    simp only [finishLog, List.take, OutLRange]
+    rw [at0, succ, bufNat0, bufNat1]
+    exact ⟨Or.inl (by omega), Or.inl (by omega), trivial⟩
+  have outside (loads : List (List (BitVec 8))) : ImageOutside (finishLog R loads) := by
+    have := hb.bufLow
+    constructor <;> simp only [finishLog, OutLRange, Image.textBase, Image.textSize, Image.rodataBase,
+      Image.rodataSize] <;> rw [at0, succ, bufNat0, bufNat1] <;> exact ⟨Or.inl (by omega), Or.inl (by omega), trivial⟩
+  have savedRa : bytesVal .ld (read8 a.σ.mem (R 2 + 40#64).toNat) = ra := by
+    rw [read8_value, slotNat 40 (by decide)]; exact slots.ra
+  have S := finish_fast a ra R leaf regs (by rw [at0]; exact buffer_byte_window hb _ (by omega))
+    (by rw [at1]; exact buffer_byte_window hb _ (by omega))
+    (win 40 (by decide) (by decide)) (apart _ (by rw [slotNat 40 (by decide)]; omega) _)
+    (win 32 (by decide) (by decide)) (apart _ (by rw [slotNat 32 (by decide)]; omega) _)
+    (win 24 (by decide) (by decide)) (apart _ (by rw [slotNat 24 (by decide)]; omega) _)
+    (win 16 (by decide) (by decide)) (apart _ (by rw [slotNat 16 (by decide)]; omega) _)
+    (win 8 (by decide) (by decide)) (apart _ (by rw [slotNat 8 (by decide)]; omega) _)
+    win0 (apart _ (by rw [slot0]; omega) _) (outside _) savedRa aligned
+  apply S.weaken (fun _ eq => eq)
+  intro after p
+  have logEq : finishLog R (finish_loads a.σ.mem R) =
+      [] ++ (buf + n, 1, R 8) :: [(buf + (n + 1), 1, 0#64)] := by
+    simp only [finishLog, List.nil_append]; rw [at0, succ, bufNat0, bufNat1]
+  have mem : after.σ.mem = writeLog a.σ.mem ([] ++ (buf + n, 1, R 8) :: [(buf + (n + 1), 1, 0#64)]) := by
+    rw [p.memory, logEq]
+  have load (k : Nat) (off : Nat) (h : off + 8 ≤ 48) {v : BitVec 64}
+      (slot : bytesT a.σ.mem (nativeFrameBase sp 48 + off) 8 = v) :
+      bytesVal .ld (read8 a.σ.mem (R 2 + BitVec.ofNat 64 off).toNat) = v := by
+    rw [read8_value, slotNat off h]; exact slot
+  have pin (k : Nat) {v : BitVec 64} (hv : lookupG k (finish_regs R (finish_loads a.σ.mem R)) = some v) :
+      gpr after k = some v := gholds_lookup _ p.regs hv
+  refine ⟨⟨p.good, p.image, p.minstret, ?_, aligned, p.tick⟩,
+    p.vsaOk da.libraryGood (by decide) (by simp [finish_regs, keysG]),
+    p.toEffectPost.readOnly_log (text := []) (by decide) (by decide) da.globalPointer (fun _ hq => nomatch hq),
+    p.pc, by rw [p.result, h8], ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact (pin 1 rfl).trans (by simp only [finish_loads, List.getD_cons_zero]; exact congrArg some savedRa)
+  · rw [StringLength.byte_getD, mem, pin1_of_writeLog _ _ _ _ _
+      (by unfold OutL OutL; exact ⟨Or.inl (by dsimp only; omega), trivial⟩), h8]
+    simp only [Option.getD_some, setWidth_zext, Vsa.Sim.sbData_zext]
+  · rw [StringLength.byte_getD, mem, show buf + n + 1 = buf + (n + 1) by omega,
+      show [] ++ (buf + n, 1, R 8) :: [(buf + (n + 1), 1, 0#64)] =
+        [(buf + n, 1, R 8)] ++ (buf + (n + 1), 1, 0#64) :: [] from rfl,
+      pin1_of_writeLog _ _ _ _ _ (by simp only [OutL])]
+    rfl
+  · intro x hx
+    simp only [byte]
+    rw [mem, bytesT_writeLog_out _ (by
+      simp only [OutLRange, List.nil_append]
+      refine ⟨?_, ?_, trivial⟩ <;> omega)]
+  · simp only [Vsa.Machine.output, p.output]
+  · rw [pin 2 rfl, h2, BitVec.sub_add_cancel]
+  · rw [pin 8 rfl]; simp only [finish_loads, List.getD_cons_succ, List.getD_cons_zero]
+    exact congrArg some (load 8 32 (by decide) slots.s0)
+  · rw [pin 9 rfl]; simp only [finish_loads, List.getD_cons_succ, List.getD_cons_zero]
+    exact congrArg some (load 9 24 (by decide) slots.s1)
+  · rw [pin 18 rfl]; simp only [finish_loads, List.getD_cons_succ, List.getD_cons_zero]
+    exact congrArg some (load 18 16 (by decide) slots.s2)
+  · rw [pin 19 rfl]; simp only [finish_loads, List.getD_cons_succ, List.getD_cons_zero]
+    exact congrArg some (load 19 8 (by decide) slots.s3)
+  · rw [pin 20 rfl]; simp only [finish_loads, List.getD_cons_succ, List.getD_cons_zero]
+    exact congrArg some (by rw [read8_value, slot0]; exact slots.s4)
+  · intro k lo hi out
+    exact p.toEffectPost.gpr_frame (by decide) k lo hi out
+
 end OCaml.Vm.Primitives.Format.ParseFormat
