@@ -129,4 +129,74 @@ theorem division_zero_setup_input {L : OCaml.Layout} {P : Prog} {s : St} {op : O
     · simp only [envN]; omega
     · simp only [extN]; omega
 
+/-! ## The native scratch window
+
+The C runtime's raise path (`caml_raise_zero_divide`, `caml_raise`, the
+pending-action check) stores into frames at most a few hundred bytes below
+the interpreter's native stack pointer. `NativeValid.headroom` keeps
+`nativeHeadroom` bytes there above the allocator arena. -/
+
+/-- The free native stack below the interpreter frame. -/
+def nativeScratch (D : InvocationData) : W := ⟨D.nativeSp - nativeHeadroom, D.nativeSp⟩
+
+/-- An aligned native slot within the headroom is writable RAM. -/
+theorem NativeValid.scratch_write {D : InvocationData} (v : NativeValid D) {k : Nat}
+    (lo : 8 ≤ k) (hi : k ≤ nativeHeadroom) (al : k % 8 = 0) :
+    WriteWindow (BitVec.ofNat 64 (D.nativeSp - k)) 8 := by
+  have hh := v.headroom
+  have ht := v.high
+  have ha := v.aligned
+  have hn : (BitVec.ofNat 64 (D.nativeSp - k)).toNat = D.nativeSp - k := Nat.mod_eq_of_lt (by
+    simp only [Layout.sym_stack_top] at ht; omega)
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> rw [hn] <;>
+    simp only [nativeHeadroom, Vsa.Sim.DlHeap.heapEnd, Layout.sym_stack_top, Layout.sym_tohost,
+      Layout.interpFrameBytes, Layout.camlMainFrameBytes] at * <;> omega
+
+/-- The native scratch window lies above the allocator arena. -/
+theorem NativeValid.scratch_above {D : InvocationData} (v : NativeValid D) :
+    Vsa.Sim.DlHeap.heapEnd ≤ (nativeScratch D).lo := by
+  have := v.headroom; simp only [nativeScratch]; omega
+
+/-- `ofNat nsp - ofNat a = ofNat (nsp - a)` without wraparound. -/
+theorem ofNat_sub_ofNat {nsp a : Nat} (le : a ≤ nsp) (small : nsp < 2 ^ 64) :
+    BitVec.ofNat 64 nsp - BitVec.ofNat 64 a = BitVec.ofNat 64 (nsp - a) := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_sub, BitVec.toNat_ofNat]
+  rw [Nat.mod_eq_of_lt small, Nat.mod_eq_of_lt (by omega : a < 2 ^ 64), Nat.mod_eq_of_lt (by omega : nsp - a < 2 ^ 64)]
+  omega
+
+/-- `ofNat x + ofNat b = ofNat (x + b)`. -/
+theorem ofNat_add_ofNat' (x b : Nat) : BitVec.ofNat 64 x + BitVec.ofNat 64 b = BitVec.ofNat 64 (x + b) :=
+  (BitVec.ofNat_add_ofNat x b).symm ▸ rfl
+
+theorem raiseZeroRa_at {nsp : Nat} (le : 16 ≤ nsp) (small : nsp < 2 ^ 64) :
+    raiseZeroRa (BitVec.ofNat 64 nsp) = BitVec.ofNat 64 (nsp - 8) := by
+  simp only [raiseZeroRa, raiseZeroStack, Layout.raiseZeroFrameBytes, Layout.raiseZeroSaveRaOffset,
+    ofNat_sub_ofNat le small, ofNat_add_ofNat']
+  congr 1; omega
+
+theorem raiseRuntimeRa_at {nsp : Nat} (le : 48 ≤ nsp) (small : nsp < 2 ^ 64) :
+    raiseRuntimeRa (raiseZeroStack (BitVec.ofNat 64 nsp)) = BitVec.ofNat 64 (nsp - 24) := by
+  simp only [raiseRuntimeRa, raiseRuntimeStack, raiseZeroStack, Layout.raiseZeroFrameBytes,
+    Layout.raiseRuntimeFrameBytes, Layout.raiseRuntimeSaveRaOffset,
+    ofNat_sub_ofNat (by omega : 16 ≤ nsp) small, ofNat_sub_ofNat (by omega : 32 ≤ nsp - 16) (by omega),
+    ofNat_add_ofNat']
+  congr 1; omega
+
+theorem pendingRootRa_at {nsp : Nat} (le : 160 ≤ nsp) (small : nsp < 2 ^ 64) :
+    pendingRootRa (raiseRuntimeStack (raiseZeroStack (BitVec.ofNat 64 nsp))) = BitVec.ofNat 64 (nsp - 56) := by
+  simp only [pendingRootRa, pendingRootStack, raiseRuntimeStack, raiseZeroStack, Layout.raiseZeroFrameBytes,
+    Layout.raiseRuntimeFrameBytes, Layout.pendingRootFrameBytes, Layout.pendingRootSaveRaOffset,
+    ofNat_sub_ofNat (by omega : 16 ≤ nsp) small, ofNat_sub_ofNat (by omega : 32 ≤ nsp - 16) (by omega),
+    ofNat_sub_ofNat (by omega : 112 ≤ nsp - 16 - 32) (by omega), ofNat_add_ofNat']
+  congr 1; omega
+
+theorem pendingRootValue_at {nsp : Nat} (le : 160 ≤ nsp) (small : nsp < 2 ^ 64) :
+    pendingRootValue (raiseRuntimeStack (raiseZeroStack (BitVec.ofNat 64 nsp))) = BitVec.ofNat 64 (nsp - 136) := by
+  simp only [pendingRootValue, pendingRootStack, raiseRuntimeStack, raiseZeroStack, Layout.raiseZeroFrameBytes,
+    Layout.raiseRuntimeFrameBytes, Layout.pendingRootFrameBytes, Layout.pendingRootSaveValueOffset,
+    ofNat_sub_ofNat (by omega : 16 ≤ nsp) small, ofNat_sub_ofNat (by omega : 32 ≤ nsp - 16) (by omega),
+    ofNat_sub_ofNat (by omega : 112 ≤ nsp - 16 - 32) (by omega), ofNat_add_ofNat']
+  rw [show nsp - 16 - 32 - 112 + 24 = nsp - 136 by omega]
+
 end OCaml.Vm.Sim
