@@ -140,17 +140,18 @@ runtime invariant: the long pole for whileMin's `Halts`.
   `slot_regs`/`slot_access`/`slot_control`, `old_regs` (frame as
   `sp + -32#64`, AllocEntry's `frameSp` idiom), and the memory helpers
   `stepMemM_of_addi`/`lpins8_stepMemM_sd` for a load after a store in one block.
-- OBSTRUCTION (reproducible): any simp proof that computes the `a9cc` block's
-  store entry (`sd ra,24(sp)` after `addi sp,sp,-32`) — `wentryM`/`wlogM` or
-  `stepMemM` with the symbolic stack pointer — fails kernel checking with
-  "(kernel) deep recursion detected", independent of maxRecDepth (100000 and
-  1000000) and of whether `sign_extend` is unfolded or rewritten by decided
-  lemmas (`sign_extend 4064#12 = -32#64` by decide is fine on its own). `rfl`
-  for the log fails elaboration (not defeq at default transparency). The
-  full simp over the stepped memory in `old_access` does not finish in 20 min.
-  Next: replicate exactly how `Generated/AllocEntry.lean` states and proves
-  `head_log` (its rfl succeeds for an `addi sp,-N; sd` prefix), or extend
-  gen_gc_rows with a MODIFY template emitting these lemmas in its idiom.
+- RESOLVED: the earlier "kernel deep recursion" came from stating the block's
+  store addresses in a normalized shape. Stated in the evaluator's exact
+  shape (`frame sp + BitVec.ofNat 64 24`, `fp + 0 + 0`) the logs and load/store
+  addresses are `rfl`; a load after a store in one block goes through
+  `stepMemM_of_addi`/`lpins8_stepMemM_sd`.
+- `ModifySlow.prefix_run`: the actual machine route from `caml_modify`'s entry
+  to its `jal caml_realloc_ref_table` (whileMin's barrier path), from a named
+  `Route` of scalar observations (windows, pins, branch conditions);
+  `ModifySlow.log`/`registers` give its exact store log and parked registers.
+  Next: the realloc callee (caml_alloc_table → caml_stat_alloc_noexc → malloc,
+  with a0-boot's HeapReady), the post-call insertion chain (aa88, aa38, aa44),
+  and the represented ModifyReturn.
 
 Open: G2 (collector proper); status and next design step below. F1 asks from a1-arms/bprime are all landed (last: `72d88e40`).
 

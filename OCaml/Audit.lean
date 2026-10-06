@@ -428,6 +428,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.ModifySlow.slot_control
 #print axioms OCaml.Vm.Gc.ModifySlow.old_regs
 #print axioms OCaml.Vm.Gc.ModifySlow.lpins8_stepMemM_sd
+#print axioms OCaml.Vm.Gc.ModifySlow.prefix_run
+#print axioms OCaml.Vm.Gc.ModifySlow.log
+#print axioms OCaml.Vm.Gc.ModifySlow.registers
 #print axioms OCaml.Vm.Gc.whileMin_nurseryGeometry
 #print axioms OCaml.Vm.Gc.f1_stable
 #print axioms OCaml.Vm.Gc.f1_allocation
