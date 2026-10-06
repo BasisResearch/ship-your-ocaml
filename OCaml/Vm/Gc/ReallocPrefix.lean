@@ -197,6 +197,17 @@ theorem windows_image {sp tbl : BitVec 64} (frame : NativeFrame sp 64) (low : he
   constructor <;> apply OCaml.Vm.Sim.outLRange_of_windows inside <;>
     simp only [windows, OutWRange, heapStart, heapEnd] at * <;> refine ⟨?_, ?_, trivial⟩ <;> omega
 
+/-- The callee-saved registers the callee never touches (gp, tp, s4–s11). -/
+def calleeRest : List Nat := [3, 4, 20, 21, 22, 23, 24, 25, 26, 27]
+
+theorem calleeRest_bounds : ∀ k ∈ calleeRest, 1 ≤ k ∧ k ≤ 31 := by decide
+
+/-- A register frame outside a write set keeps `calleeRest`. -/
+theorem callee_of_frame {before after : Config} {W : List Nat}
+    (f : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ W → gprGet after.σ n = gprGet before.σ n)
+    (out : ∀ k ∈ calleeRest, k ∉ W) : ∀ k ∈ calleeRest, gprGet after.σ k = gprGet before.σ k :=
+  fun k hk => f k (calleeRest_bounds k hk).1 (calleeRest_bounds k hk).2 (out k hk)
+
 /-- At the size product's `__muldi3` call (`9774`). -/
 structure AtSizeCall (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra tbl s0 s1 s2 s3 wsz : BitVec 64)
     (before after : Config) : Prop where
@@ -204,6 +215,7 @@ structure AtSizeCall (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra tbl 
   pc : after.σ.regs.get? Register.PC = some ReallocEntry.call.pc
   regs : GHolds after.σ (ReallocEntry.state3 sp s0 s3 ra s2 tbl s1 0#64 firstDomainPtr wsz)
   memory : after.σ.mem = writeLog before.σ.mem (entryLog sp tbl s0 s1 s2 s3 ra wsz)
+  callee : ∀ k ∈ calleeRest, gprGet after.σ k = gprGet before.σ k
 
 /-- **The entry chain under readiness.** -/
 theorem entry_step {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
@@ -235,7 +247,8 @@ theorem entry_step {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
   obtain ⟨c1, run, post⟩ := W.run d ⟨pc, rfl⟩
   rw [b1, b2, b3] at post
   have sep := separate (H := H) f64 e.table tLow tHigh
-  refine ⟨c1, run, ⟨?_, post.pc, post.regs, post.memory⟩⟩
+  refine ⟨c1, run, ⟨?_, post.pc, post.regs, post.memory,
+    callee_of_frame (fun n lo hi out => post.toEffectPost.gpr_frame (by decide) n lo hi out) (by decide)⟩⟩
   exact e.ready.window_log post (by decide) (by simp only [ReallocEntry.state3, keysG]; decide) (by decide)
     (gholds_lookup (n := 2) _ post.regs rfl) (gholds_lookup (n := 1) _ post.regs rfl) e.ready.aligned
     inside sep.pins sep.domain sep.pool sep.heap
@@ -276,6 +289,7 @@ structure Allocated (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2
   s1Reg : gprGet atAlloc.σ 9 = some s1
   s2Reg : gprGet atAlloc.σ 18 = some 0#64
   s3Reg : gprGet atAlloc.σ 19 = some 0x8#64
+  callee : ∀ k ∈ calleeRest, gprGet atAlloc.σ k = gprGet before.σ k
 
 /-- **The prefix**: the entry chain, the size product and the allocation. -/
 theorem prefix_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
@@ -312,6 +326,8 @@ theorem prefix_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
     (C.frame n lower upper (by simp at other; omega)).trans (keep n lower upper other)
   exact ⟨c4, run1.trans (run2.trans (run3.trans run4)), ⟨⟨c3, S, by rw [C.memory, M.memory, A.memory],
     (via 8 (by decide) (by decide) (by decide)).trans h8, (via 9 (by decide) (by decide) (by decide)).trans h9,
-    (via 18 (by decide) (by decide) (by decide)).trans h18, (via 19 (by decide) (by decide) (by decide)).trans h19⟩⟩⟩
+    (via 18 (by decide) (by decide) (by decide)).trans h18, (via 19 (by decide) (by decide) (by decide)).trans h19,
+    fun k hk => (via k (calleeRest_bounds k hk).1 (calleeRest_bounds k hk).2 (by revert k; decide)).trans
+      (A.callee k hk)⟩⟩⟩
 
 end OCaml.Vm.Gc.Realloc

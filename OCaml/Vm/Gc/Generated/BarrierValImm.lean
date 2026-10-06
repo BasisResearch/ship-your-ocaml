@@ -2,6 +2,7 @@ import OCaml.Vm.Gc.Generated.Modify
 import OCaml.Vm.Gc.ChainGen
 import OCaml.Vm.Gc.ChainPlan
 import OCaml.Vm.Primitives.Blocks
+import OCaml.Vm.Boot.Startup.GprPresence
 import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.Muldi3Spec
 import Vsa.Sim.ElfDecode.Part019
@@ -98,6 +99,13 @@ theorem registers (a4 : BitVec 64) :
       state1 a4  := by
   simp only [blocks, loads, regs, evalBlocks, evalBlock, SegEvalState.init, block0_regs, block0_loads, block0_log]
 theorem written : ∀ n ∈ wrChain blocks, n ∈ [12] := by decide
+
+/-- The chain keeps every GPR present (its writes are all pinned). -/
+theorem gpr_present {a4 : BitVec 64} {before after : Config}
+    (post : BlockPost blocks pc (regs a4) (loads ) before after)
+    (p : OCaml.Vm.Boot.Startup.GprPresent before.σ) : OCaml.Vm.Boot.Startup.GprPresent after.σ :=
+  OCaml.Vm.Boot.Startup.BlockPost.gpr_present post p (by decide) (by
+    rw [registers]; simp only [state1, keysG, List.map]; decide)
 
 /-- Where the chain falls through. -/
 theorem endpoint (a4 : BitVec 64) (lds : List (List (BitVec 8))) :

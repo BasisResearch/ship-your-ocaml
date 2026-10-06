@@ -222,6 +222,22 @@ runtime invariant: the long pole for whileMin's `Halts`.
   represented `ModifyCallee`. The generator now tracks the evaluator's exact
   in-block forms (`mv` leaves `x + 0`), supports `lw`, unsigned branches and
   `ret`/fall-through endpoints.
+- **Machine caml_modify, growth path** (`OCaml/Vm/Gc/BarrierGrow.lean:barrier_grow`):
+  with `Grow` (a0-boot's `RuntimeReady H (capacity + charge) sp ra` at the
+  barrier entry, which carries VsaOk's full GPR presence; a native frame for
+  the barrier, the callee and malloc; the remembered set unallocated; the slot
+  in a live block apart from the table and `minor_heap_wsz`) and the path
+  conditions (major slot, old not young, value young, `limit ≤ ptr`), the
+  barrier runs `grow_to_call` (head, old class, `value_full`, readiness by
+  `ready_step`, `ready_call`), `realloc_run` and `reload_run`, and returns with
+  `GrowDone`: the fresh block `p`, `RuntimeReady ((p, request) :: H) capacity
+  sp ra`, the callee-saved registers, the slot = v, `base = p`,
+  `ptr = p + 8`, `*p = slot`. Every barrier step post now carries
+  `present : GprPresent before → GprPresent after`; `realloc_run`'s `Done`
+  gained `kept` (`Kept`: caller stack, low memory outside malloc's globals,
+  live blocks but the table), `callee` (gp, tp, s4–s11) and `aligned`.
+  This is whileMin's SETGLOBAL path. a2-sem is building the represented
+  `ModifyCallee` on `barrier_fast`/`barrier_grow`.
 - **Machine caml_modify, fast path** (`OCaml/Vm/Gc/BarrierRun.lean:barrier_fast`):
   from `Entry` (slot/value/ra/sp registers, `Caml_state`, young_start/end,
   the old value, `Phase_idle`, the frame and slot windows, separation from

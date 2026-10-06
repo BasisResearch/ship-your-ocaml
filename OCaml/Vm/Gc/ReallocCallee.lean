@@ -51,6 +51,71 @@ theorem limitLog_inside {sp tbl v : BitVec 64} (high : tbl.toNat + tableBytes �
     tableBytes]
   refine ⟨?_, ?_, trivial⟩ <;> right <;> left <;> omega
 
+/-- The allocation keeps the callee-saved registers it never touches. -/
+theorem stat_rest_gpr {H capacity n sp ra before after k}
+    (w : StatAllocated H capacity n sp ra before after) (member : k ∈ calleeRest) :
+    gprGet after.σ k = gprGet before.σ k := by
+  have range : 1 ≤ k ∧ k ≤ 31 ∧ k ≠ 15 := by simp [calleeRest] at member; omega
+  have notin : ∀ k ∈ calleeRest, k ∉ VsaIris.Sym.aRegs := by decide
+  have mid : gprGet w.atMalloc.σ k = gprGet before.σ k := by
+    apply gprGet_of_frame k range.1 range.2.1 (gpr_avoids_noise k (by omega) range.1)
+    · intro m hm
+      have hm15 : m = 15 := List.mem_singleton.1 hm
+      subst hm15
+      exact gprReg_beq_false 15 (by decide) k (by omega) (by decide) range.1 (fun e => range.2.2 e.symm)
+    · intro r noise outside
+      exact w.dispatch.frame r (fun m hm => by
+        have ne := outside m hm
+        exact fun e => by rw [e, beq_self_eq_true] at ne; contradiction) noise
+  exact (library_register_frame w.platform w.allocation.good range.1 range.2.1
+    (w.allocation.registers k (notin k member))).trans mid
+
+/-- Bytes the callee never writes: its caller's stack, low memory outside
+malloc's globals, and every live block but the table. -/
+def Kept (H : List (Nat × Nat)) (sp tbl : BitVec 64) (a : Nat) : Prop :=
+  sp.toNat ≤ a ∨ (a < heapStart ∧ ¬ allocGlobal a) ∨
+    (∃ q n, (q, n) ∈ H ∧ heapStart ≤ q ∧ q + n ≤ heapEnd ∧ q ≤ a ∧ a < q + n ∧
+      (a < tbl.toNat ∨ tbl.toNat + tableBytes ≤ a))
+
+theorem outWRange_one {ws : List W} {a : Nat} (h : OutW ws a) : OutWRange ws a 1 := by
+  induction ws with
+  | nil => trivial
+  | cons w ws ih => exact ⟨by rcases h.1 with h | h <;> omega, ih h.2⟩
+
+theorem outL_of_windows {ws : List W} {log : List WEntry} {a : Nat} (inside : LogInW ws log) (out : OutW ws a) :
+    OutL log a :=
+  outL_of_range (n := 1) (OCaml.Vm.Sim.outLRange_of_windows inside (outWRange_one out)) (Nat.le_refl a)
+    (Nat.lt_succ_self a)
+
+/-- A kept byte misses the callee's frame and the table. -/
+theorem Kept.out_windows {H sp tbl a} (k : Kept H sp tbl a) (frame : NativeFrame sp (64 + allocHeadroom))
+    (tLow : heapStart ≤ tbl.toNat) (tHigh : tbl.toNat + tableBytes ≤ heapEnd) :
+    OutW (windows sp tbl) a := by
+  have lower := frame.lower
+  unfold Kept at k
+  simp only [windows, OutW, heapStart, heapEnd, allocHeadroom, tableBytes] at *
+  rcases k with h | ⟨h, -⟩ | ⟨q, n, -, hq, hn, ha, hb, ht⟩ <;> refine ⟨?_, ?_, trivial⟩ <;> omega
+
+/-- A kept byte is outside the allocation's footprint. -/
+theorem Kept.not_mS {H sp tbl a} (k : Kept H sp tbl a) (frame : NativeFrame sp (64 + allocHeadroom)) :
+    ¬ mS H (sp + -64#64) a := by
+  have lower := frame.lower
+  have base : (sp + -64#64).toNat = sp.toNat - 64 := (frame.resize (small := 64) (by decide) (by decide)).stack_nat
+  unfold Kept at k
+  change ¬ (stackWin (sp + -64#64) allocHeadroom a ∨ vsaFoot H a)
+  rintro (scratch | foot)
+  · unfold stackWin InExt at scratch
+    rw [base] at scratch
+    simp only [heapStart, heapEnd, allocHeadroom] at *
+    rcases k with h | ⟨h, -⟩ | ⟨q, n, -, hq, hn, ha, hb, -⟩ <;> omega
+  · rcases k with h | ⟨h, g⟩ | ⟨q, n, member, hq, hn, ha, hb, -⟩
+    · have := allocator_foot_below foot
+      simp only [heapEnd, allocHeadroom] at *; omega
+    · rcases foot with g' | ⟨h', _, _⟩
+      · exact g g'
+      · omega
+    · rcases allocator_payload_outside member hq foot with h | h <;> omega
+
 /-- The callee's result: the fresh table storage `p` and the filled table. -/
 structure Done (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2 s3 wsz : BitVec 64)
     (before after : Config) where
@@ -61,6 +126,7 @@ structure Done (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2 s3 w
   nonzero : p.toNat ≠ 0
   low : heapStart ≤ p.toNat
   high : p.toNat + (request wsz).toNat ≤ heapEnd
+  aligned : p.toNat % 16 = 0
   disjoint : ∀ e ∈ H, ∀ a, InExt (p.toNat, (request wsz).toNat) a → ¬ InExt e a
   base : bytesT after.σ.mem tbl.toNat 8 = p
   endField : bytesT after.σ.mem (tbl.toNat + 8) 8 = p + (size wsz + 0x100#64) * 0x8#64
@@ -69,6 +135,8 @@ structure Done (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2 s3 w
   limit : bytesT after.σ.mem (tbl.toNat + 32) 8 = p + 0x8#64 * size wsz
   size : bytesT after.σ.mem (tbl.toNat + 40) 8 = size wsz
   reserve : bytesT after.σ.mem (tbl.toNat + 48) 8 = 0x100#64
+  kept : ∀ a, Kept H sp tbl a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
+  callee : ∀ k ∈ calleeRest, gprGet after.σ k = gprGet before.σ k
 
 /-- **`caml_realloc_ref_table` on an unallocated table**, entry to return. -/
 theorem realloc_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
@@ -182,7 +250,45 @@ theorem realloc_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
       subst hx; simp only [t8]; omega)
   rw [← R.memory] at rest9
   refine ⟨c9, run4.trans (run5.trans (run6.trans (run7.trans (run8.trans run9)))), ⟨⟨vsaReg c4 10, R.ready, R.pc,
-    ⟨g8, g9, g18, g19, trivial⟩, pNonzero, pLow, pHigh, pDisjoint, ?_, ?_, ?_, ?_, ?_, rest9.size, rest9.reserve⟩⟩⟩
+    ⟨g8, g9, g18, g19, trivial⟩, pNonzero, pLow, pHigh, S.allocation.result.align, pDisjoint, ?_, ?_, ?_, ?_, ?_, rest9.size, rest9.reserve,
+    ?_, ?_⟩⟩⟩
+  rotate_left 5
+  · -- kept bytes
+    intro a k
+    have out := k.out_windows e.frame tLow tHigh
+    have tableOut : ∀ x : WEntry, tbl.toNat ≤ x.1 → x.1 + x.2.1 ≤ tbl.toNat + 40 → OutL [x] a := by
+      intro x lo hi
+      refine ⟨?_, trivial⟩
+      simp only [windows, OutW] at out
+      have := e.frame.lower
+      simp only [heapStart, heapEnd, allocHeadroom, tableBytes] at *
+      omega
+    have logOut : ∀ log : List WEntry, (∀ x ∈ log, tbl.toNat ≤ x.1 ∧ x.1 + x.2.1 ≤ tbl.toNat + 40) → OutL log a := by
+      intro log h
+      induction log with
+      | nil => trivial
+      | cons x rest ih =>
+        have hx := h x List.mem_cons_self
+        exact ⟨(tableOut x hx.1 hx.2).1, ih fun y hy => h y (List.mem_cons_of_mem _ hy)⟩
+    have entryLogOut : OutL (entryLog sp tbl s0 s1 s2 s3 ra wsz) a := by
+      have inside := entryLog_inside (s0 := s0) (s1 := s1) (s2 := s2) (s3 := s3) (ra := ra) (wsz := wsz) f64 tHigh
+      exact outL_of_windows inside out
+    rw [memory9, writeLog_out _ _ _ (logOut _ ?_), writeLog_out _ _ _ (logOut _ ?_), writeLog_out _ _ _ (logOut _ ?_)]
+    · have alloc := S.allocation.memory a (k.not_mS e.frame)
+      change (c4.σ.mem[a]?).getD 0 = (S.atMalloc.σ.mem[a]?).getD 0 at alloc
+      rw [alloc, S.dispatch.memory, A.memory, writeLog_out _ _ _ entryLogOut]
+    all_goals
+      intro x hx
+      simp only [installLog, limitLog, endLog, List.mem_cons, List.not_mem_nil, or_false] at hx
+      first
+        | (rcases hx with rfl | rfl <;> simp only [t0, t8, t16, t24, t32] <;> omega)
+        | (subst hx; simp only [t0, t8, t16, t24, t32]; omega)
+  · -- callee-saved registers
+    intro k hk
+    have b := calleeRest_bounds k hk
+    have out : ∀ k ∈ calleeRest, k ∉ [1, 10, 11, 12, 13] := by decide
+    exact (R.callee k hk).trans ((N.frame k b.1 b.2 (out k hk)).trans ((L.callee k hk).trans
+      ((M.frame k b.1 b.2 (out k hk)).trans ((I.callee k hk).trans ((stat_rest_gpr S hk).trans (A.callee k hk))))))
   · -- base
     rw [memory9, out _ (fun x hx => by
         simp only [endLog, List.mem_cons, List.not_mem_nil, or_false] at hx; subst hx; simp only [t8]; omega),

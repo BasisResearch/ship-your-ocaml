@@ -3,6 +3,7 @@ import OCaml.Vm.Gc.Generated.ReallocRef
 import OCaml.Vm.Gc.ChainGen
 import OCaml.Vm.Gc.ChainPlan
 import OCaml.Vm.Primitives.Blocks
+import OCaml.Vm.Boot.Startup.GprPresence
 import Vsa.Sim.ChainFactsTac
 import Vsa.Sim.Muldi3Spec
 import Vsa.Sim.ElfDecode.Part005
@@ -236,6 +237,13 @@ theorem registers (sp s0 s3 ra s2 a0 s1 : BitVec 64) (b1 b2 b3 : List (BitVec 8)
       state3 sp s0 s3 ra s2 a0 s1 (bytesVal .ld b1) (bytesVal .ld b2) (bytesVal .ld b3) := by
   simp only [blocks, loads, regs, evalBlocks, evalBlock, SegEvalState.init, block0_regs, block0_loads, block0_log, block1_regs, block1_loads, block1_log, block2_regs, block2_loads, block2_log]
 theorem written : ∀ n ∈ wrChain blocks, n ∈ [2, 8, 10, 11, 12, 13, 14, 15, 18, 19] := by decide
+
+/-- The chain keeps every GPR present (its writes are all pinned). -/
+theorem gpr_present {sp s0 s3 ra s2 a0 s1 : BitVec 64} {b1 b2 b3 : List (BitVec 8)} {before after : Config}
+    (post : BlockPost blocks pc (regs sp s0 s3 ra s2 a0 s1) (loads b1 b2 b3) before after)
+    (p : OCaml.Vm.Boot.Startup.GprPresent before.σ) : OCaml.Vm.Boot.Startup.GprPresent after.σ :=
+  OCaml.Vm.Boot.Startup.BlockPost.gpr_present post p (by decide) (by
+    rw [registers]; simp only [state3, keysG, List.map]; decide)
 
 def call : CallInstr := ⟨0x80009774#64, 0x2c12d0ef#32, 0xef#8, 0xd0#8, 0x12#8, 0x2c#8, 0x2dac0#21⟩
 theorem call_shape : CallShape call := by constructor <;> decide

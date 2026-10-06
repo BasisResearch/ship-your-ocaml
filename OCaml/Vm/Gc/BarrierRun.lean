@@ -7,6 +7,7 @@ import OCaml.Vm.Gc.Generated.BarrierOldLow
 import OCaml.Vm.Gc.Generated.BarrierOldYoung
 import OCaml.Vm.Gc.Readback
 import OCaml.Vm.Gc.CodeFrame
+import OCaml.Vm.Boot.Startup.GprPresence
 import OCaml.Vm.Gc.Generated.BarrierValImm
 import OCaml.Vm.Gc.Generated.BarrierValHigh
 import OCaml.Vm.Gc.Generated.BarrierValLow
@@ -28,6 +29,7 @@ the major-slot body at `a9cc` (`major_head`).
 
 namespace OCaml.Vm.Gc.Barrier
 open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives VsaIris.Inst LeanRV64DExecutable
+open OCaml.Vm.Boot.Startup (GprPresent)
 
 /-- The major-slot stores: `ra` into the native frame, then the slot. -/
 def majorLog (sp ra slot v : BitVec 64) : List WEntry :=
@@ -96,6 +98,7 @@ structure YoungDone (ra : BitVec 64) (slot v : BitVec 64) (before after : Config
   frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ wrChain BarrierYoung.blocks, (gprReg n == r) = false) →
     after.σ.regs.get? r = before.σ.regs.get? r
+  present : GprPresent before.σ → GprPresent after.σ
 
 /-- **A slot in the minor heap**: store and return. -/
 theorem young_run {slot v ra sp dom ys ye old} {c : Config} (e : Entry slot v ra sp dom ys ye old c)
@@ -120,7 +123,7 @@ theorem young_run {slot v ra sp dom ys ye old} {c : Config} (e : Entry slot v ra
         write1 := e.slotWrite
         control2 := e.raAligned } }
   obtain ⟨d', run, post⟩ := (BarrierYoung.run input).run d ⟨pc, rfl⟩
-  refine ⟨d', run, ⟨post.good, post.tick, post.minstret, ?_, ?_, post.output, post.frame⟩⟩
+  refine ⟨d', run, ⟨post.good, post.tick, post.minstret, ?_, ?_, post.output, post.frame, fun p => BarrierYoung.gpr_present post p⟩⟩
   · rw [post.pc, BarrierYoung.endpoint _ _ _ _ _ _ e.raAligned]
   · rw [post.memory, BarrierYoung.log]; rfl
 
@@ -145,6 +148,7 @@ structure AtMajor (slot v ra sp : BitVec 64) (before after : Config) : Prop wher
   regs : GHolds after.σ [(10, slot), (11, v), (1, ra), (2, sp), (13, 0x80064d08#64)]
   frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ [13, 14, 15], (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+  present : GprPresent before.σ → GprPresent after.σ
 
 /-- **A major (or static) slot**: classify it and reach the body. -/
 theorem major_head {slot v ra sp dom ys ye old} {c : Config} (e : Entry slot v ra sp dom ys ye old c)
@@ -173,7 +177,7 @@ theorem major_head {slot v ra sp dom ys ye old} {c : Config} (e : Entry slot v r
       ⟨h10, (keep 11 (by decide) (by decide) (by decide)).trans e.valueReg,
        (keep 1 (by decide) (by decide) (by decide)).trans e.raReg,
        (keep 2 (by decide) (by decide) (by decide)).trans e.stackReg, h13, trivial⟩,
-      fun q noise out => post.frame q noise fun n hn => out n (BarrierAbove.written n hn)⟩⟩
+      fun q noise out => post.frame q noise fun n hn => out n (BarrierAbove.written n hn), fun p => BarrierAbove.gpr_present post p⟩⟩
     rw [post.memory, BarrierAbove.log]; rfl
   · have below : slot.toNat < ye.toNat ∧ slot.toNat ≤ ys.toNat := by
       unfold YoungIn at major; omega
@@ -199,7 +203,7 @@ theorem major_head {slot v ra sp dom ys ye old} {c : Config} (e : Entry slot v r
       ⟨h10, (keep 11 (by decide) (by decide) (by decide)).trans e.valueReg,
        (keep 1 (by decide) (by decide) (by decide)).trans e.raReg,
        (keep 2 (by decide) (by decide) (by decide)).trans e.stackReg, h13, trivial⟩,
-      fun q noise out => post.frame q noise fun n hn => out n (BarrierBelow.written n hn)⟩⟩
+      fun q noise out => post.frame q noise fun n hn => out n (BarrierBelow.written n hn), fun p => BarrierBelow.gpr_present post p⟩⟩
     rw [post.memory, BarrierBelow.log]; rfl
 
 /-- The old value is a young block: the slot is already remembered. -/
@@ -216,6 +220,7 @@ structure AtBody (slot v ra sp : BitVec 64) (before after : Config) : Prop where
   regs : GHolds after.σ [(14, v), (15, slot), (13, 0x80064d08#64), (2, sp + -32#64), (1, ra)]
   frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ [2, 10, 11, 12, 14, 15], (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+  present : GprPresent before.σ → GprPresent after.σ
 
 /-- At the return (`aa44`), after the major-slot stores. -/
 structure AtReturn (slot v ra sp : BitVec 64) (before after : Config) : Prop where
@@ -228,6 +233,7 @@ structure AtReturn (slot v ra sp : BitVec 64) (before after : Config) : Prop whe
   regs : GHolds after.σ [(2, sp + -32#64)]
   frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ [2, 10, 11, 12, 14, 15], (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+  present : GprPresent before.σ → GprPresent after.σ
 
 /-- The old-value classification's outcome. -/
 def OldPost (slot v ra sp ys ye old : BitVec 64) (before after : Config) : Prop :=
@@ -323,7 +329,7 @@ theorem old_high {slot v ra sp dom ys ye old} {d : Config} (e : Entry slot v ra 
   obtain ⟨-, -, r14, -, r15, r2, r1, r13, -⟩ := r
   exact ⟨d1, run, post.good, post.tick, post.minstret, by rw [post.pc]; rfl,
     by rw [post.memory, BarrierOldHigh.log]; rfl, post.output, ⟨r14, r15, r13, r2, r1, trivial⟩,
-    fun q noise out => post.frame q noise fun n hn => out n (BarrierOldHigh.written n hn)⟩
+    fun q noise out => post.frame q noise fun n hn => out n (BarrierOldHigh.written n hn), fun p => BarrierOldHigh.gpr_present post p⟩
 
 /-- An old block at or below `young_start`. -/
 theorem old_low {slot v ra sp dom ys ye old} {d : Config} (e : Entry slot v ra sp dom ys ye old d)
@@ -362,7 +368,7 @@ theorem old_low {slot v ra sp dom ys ye old} {d : Config} (e : Entry slot v ra s
   obtain ⟨-, -, r14, -, r15, r2, r1, r13, -⟩ := r
   exact ⟨d1, run, post.good, post.tick, post.minstret, by rw [post.pc]; rfl,
     by rw [post.memory, BarrierOldLow.log]; rfl, post.output, ⟨r14, r15, r13, r2, r1, trivial⟩,
-    fun q noise out => post.frame q noise fun n hn => out n (BarrierOldLow.written n hn)⟩
+    fun q noise out => post.frame q noise fun n hn => out n (BarrierOldLow.written n hn), fun p => BarrierOldLow.gpr_present post p⟩
 
 /-- A young old value: the slot is already remembered. -/
 theorem old_young {slot v ra sp dom ys ye old} {d : Config} (e : Entry slot v ra sp dom ys ye old d)
@@ -394,7 +400,7 @@ theorem old_young {slot v ra sp dom ys ye old} {d : Config} (e : Entry slot v ra
   obtain ⟨-, -, -, -, -, r2, -⟩ := r
   exact ⟨d1, run, post.good, post.tick, post.minstret, by rw [post.pc]; rfl,
     by rw [post.memory, BarrierOldYoung.log]; rfl, post.output, ⟨r2, trivial⟩,
-    fun q noise out => post.frame q noise fun n hn => out n (BarrierOldYoung.written n hn)⟩
+    fun q noise out => post.frame q noise fun n hn => out n (BarrierOldYoung.written n hn), fun p => BarrierOldYoung.gpr_present post p⟩
 
 /-- An immediate old value. -/
 theorem old_imm {slot v ra sp dom ys ye old} {d : Config} (e : Entry slot v ra sp dom ys ye old d)
@@ -417,7 +423,7 @@ theorem old_imm {slot v ra sp dom ys ye old} {d : Config} (e : Entry slot v ra s
     by rw [post.memory, BarrierOldImm.log]; rfl, post.output, ⟨r14, r15, r13, r2, r1, trivial⟩,
     fun q noise out => post.frame q noise fun n hn => out n (by
       have h := BarrierOldImm.written n hn
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega)⟩
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega), fun p => BarrierOldImm.gpr_present post p⟩
 
 /-- **The old value's classification** from the major-slot body. -/
 theorem old_run {slot v ra sp dom ys ye old} {c d : Config} (e : Entry slot v ra sp dom ys ye old c)
@@ -497,6 +503,7 @@ structure ValueDone (fsp : BitVec 64) (log : List WEntry) (before after : Config
   stack : gprGet after.σ 2 = some fsp
   frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ [10, 12, 13, 14], (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+  present : GprPresent before.σ → GprPresent after.σ
 
 /-- The new value is a young block. -/
 def ValueYoung (ys ye v : BitVec 64) : Prop := v &&& 1#64 = 0#64 ∧ YoungIn ys ye v
@@ -546,7 +553,7 @@ theorem value_skip {slot v fsp dom ys ye} {d : Config} (b : Body slot v fsp dom 
         (keep 2 (by decide) (by decide) (by decide)).trans b.stack,
         fun q noise out => post.frame q noise fun n hn => out n (by
           have h := BarrierValHigh.written n hn
-          simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega)⟩
+          simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega), fun p => BarrierValHigh.gpr_present post p⟩
     · have low : v.toNat ≤ ys.toNat :=
         Nat.le_of_not_lt fun h => skip ⟨imm, h, by omega⟩
       have input : BarrierValLow.Input v (0x80064d08#64) (Primitives.read8 d.σ.mem Layout.sym_Caml_state)
@@ -572,7 +579,7 @@ theorem value_skip {slot v fsp dom ys ye} {d : Config} (b : Body slot v fsp dom 
         (keep 2 (by decide) (by decide) (by decide)).trans b.stack,
         fun q noise out => post.frame q noise fun n hn => out n (by
           have h := BarrierValLow.written n hn
-          simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega)⟩
+          simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega), fun p => BarrierValLow.gpr_present post p⟩
   · have input : BarrierValImm.Input v d :=
       { good := b.good, tick := b.tick, minstret := b.minstret, code0 := b.code
         registers := ⟨b.value, trivial⟩
@@ -584,7 +591,7 @@ theorem value_skip {slot v fsp dom ys ye} {d : Config} (b : Body slot v fsp dom 
       (keep 2 (by decide) (by decide) (by decide)).trans b.stack,
       fun q noise out => post.frame q noise fun n hn => out n (by
         have h := BarrierValImm.written n hn
-        simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega)⟩
+        simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega), fun p => BarrierValImm.gpr_present post p⟩
 
 /-- **A young value with room in the remembered set**: insert, then return. -/
 theorem value_insert {slot v fsp dom ys ye tbl ptr limit} {d : Config} (b : Body slot v fsp dom ys ye d)
@@ -632,7 +639,7 @@ theorem value_insert {slot v fsp dom ys ye tbl ptr limit} {d : Config} (b : Body
   have keep := keep_gpr post (by decide) BarrierInsert.written
   refine ⟨d1, run, post.good, post.tick, post.minstret, by rw [post.pc]; rfl, ?_, post.output,
     (keep 2 (by decide) (by decide) (by decide)).trans b.stack,
-    fun q noise out => post.frame q noise fun n hn => out n (BarrierInsert.written n hn)⟩
+    fun q noise out => post.frame q noise fun n hn => out n (BarrierInsert.written n hn), fun p => BarrierInsert.gpr_present post p⟩
   rw [post.memory, BarrierInsert.log, tblV, ptrV]; rfl
 
 /-! ### Return and the fast-path run -/
@@ -649,6 +656,7 @@ structure Returned (ra sp : BitVec 64) (log : List WEntry) (before after : Confi
   output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ [1, 2, 10, 11, 12, 13, 14, 15], (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+  present : GprPresent before.σ → GprPresent after.σ
 
 theorem frame_pop32 (sp : BitVec 64) : sp + -32#64 + 32#64 = sp := by
   rw [BitVec.add_assoc]; simp
@@ -675,7 +683,7 @@ theorem return_run {ra sp : BitVec 64} {d : Config} (good : GoodState d.σ) (tic
   refine ⟨d1, run, post.good, post.tick, post.minstret, ?_, r1, r2, by rw [post.memory, BarrierReturn.log],
     post.output, fun q noise out => post.frame q noise fun n hn => out n (by
       have h := BarrierReturn.written n hn
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega)⟩
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega), fun p => BarrierReturn.gpr_present post p⟩
   rw [post.pc, BarrierReturn.endpoint _ _ (by rw [raV]; exact aligned), raV]
 
 /-- The remembered set, as the insertion path needs it: its words at the
@@ -771,7 +779,7 @@ theorem barrier_fast {slot v ra sp dom ys ye old tbl ptr limit} {c : Config}
         (keep 2 (by decide) (by decide) (by decide)).trans e.stackReg, Y.memory, Y.output,
         fun r noise out => Y.frame r noise fun n hn => out n (by
           have h := BarrierYoung.written n hn
-          simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega)⟩⟩⟩
+          simp only [List.mem_cons, List.not_mem_nil, or_false] at h ⊢; omega), fun p => Y.present p⟩⟩⟩
   obtain ⟨d1, run1, M⟩ := (major_head e young).run d ⟨pc, rfl⟩
   obtain ⟨d2, run2, O⟩ := (old_run e M).run d1 ⟨M.pc, rfl⟩
   have sub1 : ∀ n ∈ [13, 14, 15], n ∈ [1, 2, 10, 11, 12, 13, 14, 15] := by decide
@@ -787,7 +795,7 @@ theorem barrier_fast {slot v ra sp dom ys ye old tbl ptr limit} {c : Config}
       ⟨T.good, T.tick, T.minstret, T.pc, T.link, T.stack, by rw [T.memory, mem2, writeLog_nil_eq], by
         rw [T.output, R.output, M.output],
         frame_chain (frame_chain M.frame R.frame sub1 sub2) T.frame
-          (fun n h => h) (fun n h => h)⟩⟩⟩
+          (fun n h => h) (fun n h => h), fun p => T.present (R.present (M.present p))⟩⟩⟩
   · have mem2 : d2.σ.mem = writeLog d.σ.mem (majorLog sp ra slot v) := by rw [B.memory, M.memory]
     obtain ⟨h14, h15, h13, h2, -, -⟩ := B.regs
     have body : Body slot v (sp + -32#64) dom ys ye d2 :=
@@ -814,7 +822,7 @@ theorem barrier_fast {slot v ra sp dom ys ye old tbl ptr limit} {c : Config}
         ⟨T.good, T.tick, T.minstret, T.pc, T.link, T.stack, by rw [T.memory, mem3, writeLog_nil_eq, writeLog_append], by
           rw [T.output, V.output, B.output, M.output],
           frame_chain (frame_chain (frame_chain M.frame B.frame sub1 sub2) V.frame (fun n h => h) sub3) T.frame
-            (fun n h => h) (fun n h => h)⟩⟩⟩
+            (fun n h => h) (fun n h => h), fun p => T.present (V.present (B.present (M.present p)))⟩⟩⟩
     · obtain ⟨d3, run3, V⟩ := value_skip body B.pc valueYoung
       have mem3 : d3.σ.mem = writeLog d.σ.mem (majorLog sp ra slot v) := by rw [V.memory, mem2, writeLog_nil_eq]
       obtain ⟨d4, run4, T⟩ := return_run (ra := ra) V.good V.tick V.minstret
@@ -825,6 +833,6 @@ theorem barrier_fast {slot v ra sp dom ys ye old tbl ptr limit} {c : Config}
         ⟨T.good, T.tick, T.minstret, T.pc, T.link, T.stack, by rw [T.memory, mem3, writeLog_nil_eq], by
           rw [T.output, V.output, B.output, M.output],
           frame_chain (frame_chain (frame_chain M.frame B.frame sub1 sub2) V.frame (fun n h => h) sub3) T.frame
-            (fun n h => h) (fun n h => h)⟩⟩⟩
+            (fun n h => h) (fun n h => h), fun p => T.present (V.present (B.present (M.present p)))⟩⟩⟩
 
 end OCaml.Vm.Gc.Barrier

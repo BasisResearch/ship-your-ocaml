@@ -332,6 +332,7 @@ def emit(module, ns, doc, spec, decode_modules):
     rows = sorted({p[0] for p, _, _, _ in blocks})
     imports = ['import ' + r[:-5].replace('/', '.') for r in rows]
     imports += ['import OCaml.Vm.Gc.ChainGen', 'import OCaml.Vm.Gc.ChainPlan', 'import OCaml.Vm.Primitives.Blocks',
+                'import OCaml.Vm.Boot.Startup.GprPresence',
                 'import Vsa.Sim.ChainFactsTac', 'import Vsa.Sim.Muldi3Spec']
     imports += ['import ' + m for m in sorted({decode_modules[w] for w in words})]
     seg_names = [seg for _, seg, _, _ in blocks]
@@ -627,6 +628,13 @@ def finish(L, ch, loaded, inputs, n, preds):
     E_(f'  simp only [blocks, loads, regs, evalBlocks, evalBlock, SegEvalState.init, {lemmas}]')
     endpc = None
     E_(f'theorem written : ∀ n ∈ wrChain blocks, n ∈ {ch.written} := by decide')
+    E_('')
+    E_('/-- The chain keeps every GPR present (its writes are all pinned). -/')
+    E_(f'theorem gpr_present {{{inp} : BitVec 64}}{bdecl} {{before after : Config}}')
+    E_(f'    (post : BlockPost blocks pc (regs {inp}) (loads {ball}) before after)')
+    E_('    (p : OCaml.Vm.Boot.Startup.GprPresent before.σ) : OCaml.Vm.Boot.Startup.GprPresent after.σ :=')
+    E_('  OCaml.Vm.Boot.Startup.BlockPost.gpr_present post p (by decide) (by')
+    E_(f'    rw [registers]; simp only [state{n}, keysG, List.map]; decide)')
     E_('')
 
 
