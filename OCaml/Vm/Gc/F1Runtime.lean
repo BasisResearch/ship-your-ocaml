@@ -7,6 +7,7 @@ import OCaml.Vm.Sim.CheckSignals
 import OCaml.Vm.Gc.Readback
 import OCaml.Vm.Gc.NurseryDefs
 import OCaml.Vm.Primitives.ExitPath.Machine
+import OCaml.Vm.Sim.NurseryInput
 
 /-!
 # The F1 runtime invariant, pinned at the cut
@@ -501,6 +502,68 @@ theorem f1_objectField {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanP
   · simp only [Layout.domainStateBytes, Layout.off_trap_barrier] at hd ⊢; omega
   · simp only [Layout.domainStateBytes, Layout.off_backtrace_active] at hd ⊢; omega
   · omega
+
+theorem mem_of_logInW {ws : List W} {log : List WEntry} (h : LogInW ws log) :
+    ∀ e ∈ log, InsideW ws e.1 e.2.1 := by
+  induction log with
+  | nil => intro e he; cases he
+  | cons x rest ih =>
+    intro e he
+    rcases List.mem_cons.1 he with rfl | hr
+    · exact h.1
+    · exact ih h.2 e hr
+
+/-- **Nursery reservations keep `f1Runtime`** (a1-arms' `AllocFrame` for the
+pinned layout): the `young_ptr` store to `a - 8` within the free nursery, then
+any stores inside the free nursery `[young_limit, young_ptr)`. -/
+theorem f1_allocFrame_core {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high a : Nat} {log : List WEntry} (ok : f1Runtime c) (g : NurseryGeometry P s c pl cp high)
+    (inside : LogInW [nurseryFree c] log)
+    (low : (runtimeFields c).youngLimit ≤ a - 8) (below : a - 8 ≤ (runtimeFields c).youngPtr)
+    (aligned : (a - 8) % 8 = 0) :
+    AllocationRuntime f1Runtime c
+      (Sim.grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log) := by
+  have dom := f1_domain ok
+  have stat := g.statics
+  have priv := g.belowPrivate
+  have top := g.top
+  obtain ⟨domainApart, -⟩ := g.domain
+  rw [dom] at domainApart
+  simp only [nurseryFree, privateRegion, Layout.sym_bss_end, Layout.domainStateBytes, f1Domain,
+    WhileMinRuntime.domain] at stat priv domainApart
+  have entries := mem_of_logInW inside
+  apply f1_allocation
+  · intro e he v hv
+    simp only [keptFootprint, List.mem_cons, List.not_mem_nil, or_false] at hv
+    rcases List.mem_append.1 he with hy | hl
+    · simp only [Sim.grabReserveLog, dom, List.mem_cons, List.not_mem_nil, or_false] at hy
+      subst hy
+      simp only [f1Domain, WhileMinRuntime.domain, Layout.off_young_ptr] at *
+      rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+        simp only [WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth,
+          Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
+          Layout.off_backtrace_active] <;> omega
+    · have hin := entries e hl
+      simp only [InsideW, nurseryFree, or_false] at hin
+      simp only [f1Domain, WhileMinRuntime.domain] at *
+      rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+        simp only [WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth,
+          Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
+          Layout.off_backtrace_active] <;> omega
+  · intro after memory
+    have readback : word after (f1Domain + Layout.off_young_ptr) = BitVec.ofNat 64 (a - 8) := by
+      change bytesT after.σ.mem _ 8 = _
+      rw [memory]
+      apply word_writeLog_at _ _ 0 _ _ (by simp [Sim.grabReserveLog, dom])
+      simp only [Sim.grabReserveLog, List.drop_succ_cons, List.drop_zero, List.nil_append]
+      apply outLRange_of_forall
+      intro e he
+      have hin := entries e he
+      simp only [InsideW, nurseryFree, or_false] at hin
+      simp only [f1Domain, WhileMinRuntime.domain, Layout.off_young_ptr] at *
+      omega
+    rw [readback, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+    exact ⟨low, below, aligned⟩
 
 section Cut
 open Vsa.Sim.Boot WhileMinLog
