@@ -3,6 +3,15 @@
 ## F1 status (2026-10-05) — current
 
 Done (F1 side of the GC):
+- `OCaml/Vm/Gc/F1Heap.lean`: newlib's heap under F1. `f1Extents` (the
+  `Caml_state` record, the remembered-set struct, the minor heap, the major
+  chunk, the VM stack), `LibHeapAt H cap chs c` (a0-boot's `HeapReady` with
+  room 2^24, the extents and the open channel records `chs` covered by live
+  blocks, records apart from the extents), and `F1HeapSafe w`, a window
+  class that does not depend on `H`. `LibHeapAt.frame_windows` keeps the
+  invariant under a frame on safe windows when `caml_all_opened_channels` is
+  unchanged. Next: `F1Pins.libHeap`, with the window lemmas taking
+  `F1HeapSafe`.
 - `F1Pins.console : ConsoleRuntime c` (a1-prims' console statics):
   `ConsoleRuntime.transfer` keeps it under any change to non-ignored static
   words; `consoleRuntime_of` reads it at the cut (file table, signals, lock

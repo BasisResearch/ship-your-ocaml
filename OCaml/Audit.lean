@@ -197,6 +197,7 @@ import OCaml.Vm.Gc.ModifyInsert
 import OCaml.Vm.Gc.BarrierRun
 import OCaml.Vm.Gc.BarrierGrow
 import OCaml.Vm.Gc.LibHeap
+import OCaml.Vm.Gc.F1Heap
 import OCaml.Vm.Gc.Generated.BarrierAbove
 import OCaml.Vm.Gc.Generated.BarrierBelow
 import OCaml.Vm.Gc.Generated.BarrierFull
@@ -587,6 +588,10 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.f1_consoleRuntime
 #print axioms OCaml.Vm.Gc.consoleRuntime_of
 #print axioms OCaml.Vm.Gc.ConsoleRuntime.transfer
+#print axioms OCaml.Vm.Gc.LibHeapAt.frame_windows
+#print axioms OCaml.Vm.Gc.F1HeapSafe.heapSafe
+#print axioms OCaml.Vm.Gc.F1HeapSafe.outside
+#print axioms OCaml.Vm.Gc.OpenChannels.congr
 #print axioms OCaml.Vm.Gc.stackWindow_apart
 #print axioms OCaml.Vm.Gc.domainField_apart
 #print axioms OCaml.Vm.Gc.whileMin_loaded_f1

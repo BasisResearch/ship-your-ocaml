@@ -53,7 +53,7 @@ def HeapSafe (H : List (Nat × Nat)) (w : W) : Prop :=
     (∀ a, w.lo ≤ a → a < w.hi → a ∈ errnoBytes) ∨
     (w.hi ≤ heapStart ∧ ∀ a, w.lo ≤ a → a < w.hi → ¬ allocGlobal a ∧ ¬ HeapPinned a)
 
-private theorem outW_all {ws : List W} {a : Nat} (h : ∀ w ∈ ws, a < w.lo ∨ w.hi ≤ a) : OutW ws a := by
+theorem outW_all {ws : List W} {a : Nat} (h : ∀ w ∈ ws, a < w.lo ∨ w.hi ≤ a) : OutW ws a := by
   induction ws with
   | nil => trivial
   | cons w ws ih => exact ⟨h w List.mem_cons_self, ih fun v hv => h v (List.mem_cons_of_mem _ hv)⟩
