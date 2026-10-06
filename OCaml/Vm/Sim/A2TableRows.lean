@@ -132,12 +132,12 @@ theorem ugeint_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
       ugeint_next stable h code (by simpa using stack_fits fits capacity reach (k := 0)) step)
     (shape0 (fun _ _ _ => rfl)) (fun _ _ _ => cmpOp_no_halt (f := fun a b => b.ule a))
 
-/-- **The MULINT row**; `scratch` (defined a2/a3) is named. -/
+/-- **The MULINT row**. -/
 theorem mulint_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
-    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B) (scratch : ∀ s c, Reach P s → OCaml.LoopAt L P s c → BinaryLibScratch c) :
+    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B) :
     OCaml.OpArm P (OCaml.LoopAt L P) .MULINT :=
   opArm_of_next0 (fun s _ _ reach _ h code step =>
-      mulint_next stable h code (by simpa using stack_fits fits capacity reach (k := 0)) (scratch s _ reach h) step)
+      mulint_next stable h code (by simpa using stack_fits fits capacity reach (k := 0)) step)
     (shape0 (fun _ _ _ => rfl)) (fun _ _ _ => intOp_no_halt (f := fun a b => tag64 (untag a * untag b)))
 
 /-- **The DIVINT row**; a zero divisor is the named `zero` (the raise row). -/

@@ -15,7 +15,7 @@ theorem mulint_setup {L : OCaml.Layout} {P : Prog} {s : OCaml.Bytecode.St} {c d 
     {pl : Place} {cp : ChanPlace} {sp high : Nat} {m n : BitVec 63} {rest : List Val}
     (h : ArmInput L P s .MULINT c pl cp sp high)
     (accu : s.accu = .int m) (stack : s.stack = .int n :: rest)
-    (read : ReadWindow (BitVec.ofNat 64 sp) 8) (scratch : MulintScratch c)
+    (read : ReadWindow (BitVec.ofNat 64 sp) 8)
     (dp : DispatchPost c .MULINT (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d) :
     ∃ nb after, StepsN nb d after ∧ MulintCall d pl (s.pc + 1) (sp + 8) m n after := by
   have source := represented_register h.accu (by rw [accu]; rfl : valWord pl s.accu = some (tag64 m))
@@ -42,15 +42,9 @@ theorem mulint_setup {L : OCaml.Layout} {P : Prog} {s : OCaml.Bytecode.St} {c d 
     ⟨by simpa only [memory] using (dp.image h.dispatch.image).text,
      by simpa only [memory] using (dp.image h.dispatch.image).rodata⟩
   refine ⟨nb, after, steps, ?_, ?_, post.pcAt⟩
-  · refine ⟨⟨post.good, image, post.good.minstret, PinsHold.get post.pins ⟨0, by simp⟩,
+  · exact ⟨⟨post.good, image, post.good.minstret, PinsHold.get post.pins ⟨0, by simp⟩,
       by decide, post.tick⟩, PinsHold.get post.pins ⟨1, by simp⟩,
-      PinsHold.get post.pins ⟨3, by simp⟩, ?_, ?_⟩
-    · obtain ⟨v, hv⟩ := scratch.a2
-      exact ⟨v, (frame.frame Register.x12 (by decide)).trans
-        ((dp.frame.frame Register.x12 (by decide)).trans hv)⟩
-    · obtain ⟨v, hv⟩ := scratch.a3
-      exact ⟨v, (frame.frame Register.x13 (by decide)).trans
-        ((dp.frame.frame Register.x13 (by decide)).trans hv)⟩
+      PinsHold.get post.pins ⟨3, by simp⟩⟩
   · refine ⟨?_, ?_, memory, frame.out, fun r hr => frame.frame r (by revert r; decide)⟩
     · have hp : gpr after 23 = some
           (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) :=

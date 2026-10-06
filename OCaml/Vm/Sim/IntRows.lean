@@ -203,15 +203,15 @@ theorem ugeint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
   top_read_row h code space (cmpOp_nonempty (f := fun a b => b.ule a) step)
     fun input read => ugeint_step_arm stable input read step
 
-/-- **MULINT from the loop head.** The libgcc call needs defined a2/a3
-(`BinaryLibScratch`), which the loop-head invariant does not yet carry. -/
+/-- **MULINT from the loop head.** (`__muldi3` needs no scratch registers:
+`muldi3_spec_any`.) -/
 theorem mulint_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .MULINT)
-    (space : 8 * s.stack.length ≤ Layout.stackBytes) (scratch : BinaryLibScratch c)
+    (space : 8 * s.stack.length ≤ Layout.stackBytes)
     (step : stepI P s ⟨.MULINT, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (intOp_nonempty (f := fun a b => tag64 (untag a * untag b)) step)
-    fun input read => mulint_step_arm stable input read scratch step
+    fun input read => mulint_step_arm stable input read step
 
 /-- A successful DIVINT/MODINT step has integer operands. -/
 theorem division_operands (kind : DivisionKind) {P : Prog} {s s' : St}

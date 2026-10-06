@@ -103,9 +103,8 @@ BINARY = [
 for op, helper, f in BINARY:
     ROWS.append(row(op, 0, ['stable','budget'], f'{op.lower()}_next stable h code {SPACE0} step', '',
         reach_used=True, nohalt_term=f'fun _ _ _ => {helper}_no_halt (f := {f})'))
-ROWS.append(row('MULINT', 0, ['stable','budget','scratch'],
-    f'mulint_next stable h code {SPACE0} (scratch s _ reach h) step',
-    '; `scratch` (defined a2/a3) is named', reach_used=True, nohalt_term='fun _ _ _ => intOp_no_halt (f := fun a b => tag64 (untag a * untag b))'))
+ROWS.append(row('MULINT', 0, ['stable','budget'],
+    f'mulint_next stable h code {SPACE0} step', '', reach_used=True, nohalt_term='fun _ _ _ => intOp_no_halt (f := fun a b => tag64 (untag a * untag b))'))
 for op, kind in [('DIVINT','quotient'),('MODINT','remainder')]:
     ROWS.append(row(op, 0, ['stable','budget','scratch'],
         f'division_next .{kind} stable h code {SPACE0} (scratch s _ reach h) (zero s _ _ reach h code step) step',
