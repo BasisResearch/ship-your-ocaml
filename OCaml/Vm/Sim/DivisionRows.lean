@@ -2,6 +2,7 @@ import OCaml.Vm.Sim.DivisionZeroCaught
 import OCaml.Vm.Sim.RaiseRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.LongjmpState
+import OCaml.Vm.Sim.PayloadWindows
 
 /-!
 # The DIVINT/MODINT zero-divisor row (in progress)
@@ -668,23 +669,41 @@ theorem division_control_outside {L : OCaml.Layout} {P : Prog} {s : St} {op : Op
     simp only [Layout.off_trapsp, Layout.off_trap_barrier, Layout.off_backtrace_active, Layout.off_extern_sp, Layout.off_exn_bucket,
       Layout.sym_Caml_state] <;> omega
 
-/-! ## The zero path's log lies in three windows -/
+/-! ## The zero path's log lies in payload windows -/
 
-/-- The `Caml_state` record. -/
-def domainWindow (c : Config) : W :=
-  ⟨(word c Layout.sym_Caml_state).toNat, (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩
+/-- The zero path's store windows: the divisor and environment slots below
+the raise state's stack, the two `Caml_state` fields it publishes, and the
+native scratch window. -/
+def divisionWindows (c : Config) (sp : Nat) (D : InvocationData) : List W :=
+  [⟨sp - 8, sp + 8⟩,
+   ⟨(word c Layout.sym_Caml_state).toNat + Layout.off_extern_sp,
+    (word c Layout.sym_Caml_state).toNat + Layout.off_extern_sp + 8⟩,
+   ⟨(word c Layout.sym_Caml_state).toNat + Layout.off_exn_bucket,
+    (word c Layout.sym_Caml_state).toNat + Layout.off_exn_bucket + 8⟩,
+   nativeScratch D]
 
-/-- The VM stack allocation, the `Caml_state` record and the native scratch window. -/
-def divisionWindows (c : Config) (high : Nat) (D : InvocationData) : List W :=
-  [stackWindow high, domainWindow c, nativeScratch D]
+/-- **Each zero-path window is a payload window** of the raise state at `sp + 8`. -/
+theorem division_windows_payload {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high : Nat} {D : InvocationData} (g : StackGeometry P s c pl cp high)
+    (arena : ArenaBounds P s c cp) (v : NativeValid D)
+    (low : high - Layout.stackBytes + 8 ≤ sp) :
+    ∀ w ∈ divisionWindows c sp D, PayloadWindow P s c pl cp (sp + 8) high w := by
+  intro w hw
+  simp only [divisionWindows, List.mem_cons, List.not_mem_nil, or_false] at hw
+  rcases hw with rfl | rfl | rfl | rfl
+  · exact .belowStack (show high - Layout.stackBytes ≤ sp - 8 by omega) (Nat.le_refl _)
+  · exact .field (by simp [payloadFreeOffsets])
+  · exact .field (by simp [payloadFreeOffsets])
+  · exact .separated (WindowSeparated.of_above g arena (by
+      have := v.headroom; simp only [nativeScratch, nativeHeadroom] at this ⊢; omega))
 
-/-- **Every store of the zero path lies in one of the three windows.** -/
+/-- **Every store of the zero path lies in a zero-path window.** -/
 theorem division_log_in {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
     {c : Config} {pl : Place} {cp : ChanPlace} {sp high : Nat} {rest : List Val} {env value : BitVec 64}
     {D : InvocationData}
     (h : ArmInput L P s op c pl cp sp high) (stack : s.stack = .int 0#63 :: rest)
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes) (v : NativeValid D) :
-    LogInW (divisionWindows c high D)
+    LogInW (divisionWindows c sp D)
       (divisionZeroNativeLog (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) (BitVec.ofNat 64 sp) env
         (word c Layout.sym_Caml_state) (BitVec.ofNat 64 D.nativeSp) value) := by
   have g := h.geometry.toArmGeometry
@@ -713,14 +732,13 @@ theorem division_log_in {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
     rw [pendingRootRa_at le small, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
   have pvN : (pendingRootValue (raiseRuntimeStack (raiseZeroStack (BitVec.ofNat 64 D.nativeSp)))).toNat = D.nativeSp - 136 := by
     rw [pendingRootValue_at le small, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
-  simp only [divisionWindows, domainWindow, nativeScratch, stackWindow, divisionZeroNativeLog,
+  simp only [divisionWindows, nativeScratch, divisionZeroNativeLog,
     divisionZeroSetupLog, divisionZeroStackLog, raiseZeroFullLog, raiseZeroLog, raiseNativeLog,
     raisePendingLog, raiseRuntimeLog, pendingRootLog, raiseBucketLog, List.cons_append, List.nil_append,
-    List.append_assoc, LogInW, InsideW, spN, envN, extN, raN, rtN, prN, pvN, and_true, or_false]
+    LogInW, InsideW, spN, envN, extN, raN, rtN, prN, pvN, and_true, or_false]
   rw [show (raiseBucket (word c Layout.sym_Caml_state)).toNat =
       (word c Layout.sym_Caml_state).toNat + Layout.off_exn_bucket from by rw [raiseBucket, bkt]]
-  simp only [Layout.stackBytes, Layout.domainStateBytes, Layout.off_extern_sp, Layout.off_exn_bucket,
-    nativeHeadroom] at low space hh ⊢
+  simp only [Layout.stackBytes, Layout.off_extern_sp, Layout.off_exn_bucket, nativeHeadroom] at low space hh ⊢
   omega
 
 end OCaml.Vm.Sim
