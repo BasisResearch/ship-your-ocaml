@@ -2,6 +2,15 @@ import OCaml.Vm.Boot.Startup.LibOpenEntryNormalized
 import OCaml.Vm.Boot.Startup.LibOpenEntryImage
 import OCaml.Vm.Boot.Startup.LibOpenEntryCallInterface
 import OCaml.Vm.Boot.Startup.ResolveRun
+import OCaml.Vm.Boot.Startup.HtifOpenKindNormalized
+import OCaml.Vm.Boot.Startup.HtifOpenKindImage
+import OCaml.Vm.Boot.Startup.HtifOpenNoneNormalized
+import OCaml.Vm.Boot.Startup.HtifOpenNoneImage
+import OCaml.Vm.Boot.Startup.HtifOpenEnoentNormalized
+import OCaml.Vm.Boot.Startup.HtifOpenEnoentImage
+import OCaml.Vm.Boot.Startup.HtifOpenErrnoCallNormalized
+import OCaml.Vm.Boot.Startup.HtifOpenErrnoCallImage
+import OCaml.Vm.Boot.Startup.HtifOpenErrnoCallCallInterface
 import OCaml.Vm.Boot.Startup.HtifOpenEntryNormalized
 import OCaml.Vm.Boot.Startup.HtifOpenEntryImage
 import OCaml.Vm.Boot.Startup.HtifOpenEntryCallInterface
@@ -248,6 +257,59 @@ theorem htif_open_entry (c : Config) (sp ra s0 s1 s2 path : BitVec 64) (leaf : L
       show Functions.sign_extend (m := 64) 2#12 = 2#64 by decide,
       open_mode_mask, open_creat_dir, open_flags_none]
     rfl
+  · rfl
+  · decide
+
+theorem open_se0 : Functions.sign_extend (m := 64) 0#12 = 0#64 := by decide
+
+theorem kind_none_value : bytesVal .lw [2#8, 0#8, 0#8, 0#8] = 2#64 := by decide
+
+theorem kind_not_err : guardB bop.BEQ 2#64 (0#64 + Functions.sign_extend (m := 64) 3#12) = false := by decide
+
+theorem kind_is_none : guardB bop.BEQ 2#64 2#64 = true := by decide
+
+theorem no_creat : guardB bop.BEQ (0#64 &&& Functions.sign_extend (m := 64) 512#12) 0#64 = true := by decide
+
+/-- After `resolve`: `R_NONE` without `O_CREAT` is ENOENT. -/
+theorem htif_open_enoent (c : Config) (sp a0 : BitVec 64) (slash : List (BitVec 8)) (ra : BitVec 64) (leaf : LeafInput ra c)
+    (frame : NativeFrame sp 80) (regs : GHolds c.σ [(2, nativeStack sp 80), (8, 0#64), (9, 2#64), (10, a0)])
+    (kind : read4 c.σ.mem (resAt sp 0) = [2#8, 0#8, 0#8, 0#8]) (slashWord : read4 c.σ.mem (resAt sp 36) = slash) :
+    FnSummary 0x800008fc#64 (fun e => e = c) (WriteRegistersPost [9, 14, 15, 13, 11] [] c 0x80000944#64 a0
+      [(9, 2#64), (14, 0#64), (15, 0#64), (13, bytesVal .lw slash), (11, 2#64), (2, nativeStack sp 80), (8, 0#64),
+        (10, a0)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (openX08fcFSeg ++ openX0908TSeg ++ openX0958TSeg ++ openX0b08Seg)
+        0x800008fc#64 [(2, nativeStack sp 80), (8, 0#64), (9, 2#64), (10, a0)] [[2#8, 0#8, 0#8, 0#8], slash] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 8, 9, 10]; decide
+      shape := by change ChainOK _ [2, 8, 9, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := htifOpenKind_code leaf.image
+        have word (off : Nat) (bound : off + 4 ≤ 80) (aligned : off % 4 = 0) :
+            ReadWindow (nativeStack sp 80 + BitVec.ofNat 64 off) 4 := by
+          have w : WriteWindow (nativeStack sp 80 + BitVec.ofNat 64 off) 4 := by
+            rw [nativeStack, frame.address _ (by omega)]
+            exact frame.word32 bound aligned
+          exact w.read
+        chain_facts code with "Vsa.Sim.Code._open_at_"
+        · exact (word 0 (by decide) (by decide)).lw rfl rfl (by rw [← kind]; exact read4_pins _ _)
+        · change guardB bop.BEQ (bytesVal .lw [2#8, 0#8, 0#8, 0#8]) (0#64 + Functions.sign_extend (m := 64) 3#12) = false
+          rw [kind_none_value]; exact kind_not_err
+        · refine memFacts_writeLog ((word 36 (by decide) (by decide)).lw rfl rfl (by rw [← slashWord]; exact read4_pins _ _))
+            (fun _ => by simp only [htifopenkind_line_800008fc, htifopenkind_line_80000900, htifopenkind_line_80000908, htifopenkind_line_8000090c, htifopenkind_line_80000910, htifopenkind_line_80000914, htifopenenoent_line_80000b08, wlogM]; trivial)
+        · change guardB bop.BEQ (bytesVal .lw [2#8, 0#8, 0#8, 0#8]) 2#64 = true
+          rw [kind_none_value]; exact kind_is_none
+        · change guardB bop.BEQ (0#64 &&& Functions.sign_extend (m := 64) 512#12) 0#64 = true
+          exact no_creat }))
+  · rfl
+  · rfl
+  · simp only [openX08fcFSeg, openX0908TSeg, openX0958TSeg, openX0b08Seg, evalBlocks, evalBlock, SegEvalState.init,
+      htifopenkind_line_800008fc, htifopenkind_line_80000900, htifopenkind_line_80000908, htifopenkind_line_8000090c, htifopenkind_line_80000910, htifopenkind_line_80000914, htifopenenoent_line_80000b08, runGM, ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM,
+      List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of,
+      List.cons_append, List.nil_append, kind_none_value, BitVec.zero_and, open_se0, BitVec.add_zero]
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
