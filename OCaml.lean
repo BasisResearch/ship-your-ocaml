@@ -658,3 +658,4 @@ import OCaml.Vm.Sim.DivisionZeroCaught
 
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
+import OCaml.Vm.Primitives.Memmove

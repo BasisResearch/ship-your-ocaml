@@ -1,3 +1,4 @@
+import OCaml.Vm.Primitives.Memmove
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
@@ -5114,3 +5115,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.RaiseRuntimeReady.of_frame
 #print axioms OCaml.Vm.Sim.division_zero_any
 #print axioms OCaml.Vm.Sim.division_zero_raised
+#print axioms OCaml.Vm.Primitives.memmove_symbolic
+#print axioms OCaml.Vm.Primitives.memmove_summary
