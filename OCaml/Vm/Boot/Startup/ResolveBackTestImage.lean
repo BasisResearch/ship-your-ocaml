@@ -4,6 +4,6 @@ import OCaml.Vm.Boot.Startup.ResolveEntryImage
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine
 
-theorem resolveBackLoop_code {c : Config} (h : ExecutableImage c) :
+theorem resolveBackTest_code {c : Config} (h : ExecutableImage c) :
     Vsa.Sim.Code.ResolveLoaded c.σ.mem := resolveEntry_code h
 end OCaml.Vm.Boot.Startup
