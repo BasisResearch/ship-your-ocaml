@@ -3,6 +3,7 @@ import OCaml.Vm.Sim.Makeblock1
 import OCaml.Vm.Sim.Makeblock2
 import OCaml.Vm.Sim.Makeblock3
 import OCaml.Vm.Sim.OperandTableRows
+import OCaml.Vm.Gc.F1Runtime
 
 /-!
 # MAKEBLOCK1..3 from the loop head
@@ -28,6 +29,10 @@ structure AllocFrame (L : OCaml.Layout) : Prop where
     L.runtimeOk c → Gc.NurseryGeometry P s c pl cp high → LogInW [Gc.nurseryFree c] log →
     (runtimeFields c).youngLimit ≤ a - 8 → a - 8 ≤ (runtimeFields c).youngPtr → (a - 8) % 8 = 0 →
     AllocationRuntime L.runtimeOk c (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log)
+
+/-- `AllocFrame` for the pinned F1 layout (a6-gc's `f1_allocFrame_core`). -/
+theorem f1_allocFrame : AllocFrame Gc.f1Layout :=
+  ⟨fun _ _ _ _ _ _ _ _ ok g inside low below aligned => Gc.f1_allocFrame_core ok g inside low below aligned⟩
 
 /-- **Every reachable `op`'s tag operand fits the header** (named per-program
 code fact). -/

@@ -29,6 +29,7 @@ NON_F1 = set('MAKEFLOATBLOCK GETFLOATFIELD SETFLOATFIELD VECTLENGTH GETVECTITEM 
 FIXED = {
     'stable': 'f1_memoryStable',
     'rf': 'f1_runtimeFrame',
+    'allocFrame': 'f1_allocFrame',
     'fits': 'fits',
     'capacity': 'g1_capacity',
     'good': 'good',
@@ -36,7 +37,7 @@ FIXED = {
 # Program-level parameters shared by several rows: one premise field each.
 SHARED = {'values': 'values', 'ints': 'ints', 'extra': 'extra', 'extraBounded': 'extra',
           'raises': 'raises', 'exotic': 'exotic', 'trapBounded': 'trapBounded',
-          'scratch': 'scratch', 'field': 'field', 'allocFrame': 'allocFrame'}
+          'scratch': 'scratch', 'field': 'field'}
 SUBST = [(r'\bL\b', 'Gc.f1Layout'), (r'\bB\b', 'Gc.g1Budget'),
          (r'\bhigh0\b', 'Gc.f1High'), (r'\bdom0\b', 'Gc.f1Domain')]
 
