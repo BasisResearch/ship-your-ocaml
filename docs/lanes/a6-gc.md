@@ -105,6 +105,29 @@ a remembered-set state field. Path (5) needs the library-heap invariant
 (a0-boot's `RuntimeReady H capacity`, `stat_alloc_ready`) inside the F1
 runtime invariant: the long pole for whileMin's `Halts`.
 
+### caml_modify — composition design and library heap (2026-10-06)
+
+- CFG (gen_fn): 18 blocks, 10 data-dependent branches (`a9a8`,`a9bc` slot
+  young?; `a9cc` old immediate?; `a9ec`,`a9f8` old young?; `aa00` mark
+  phase (dead: gcIdle); `aa0c`,`aa14`,`aa20` value young?; `aa28` table room?),
+  returns at `a9c4`/`aa44`, calls at `aa50` (darken, dead) and `aa7c`
+  (realloc). About 26 straight-line paths. Do NOT hand-write one route per
+  path: build the missing abstraction first, a generated "branch-determined
+  block DAG" summary (each branch's polarity a decidable predicate of the
+  entry registers/loads; the summary is the disjunction of path posts,
+  each path's ChainAccess composed from per-block access lemmas). Extend
+  gen_fn/gen_gc_rows to emit the per-block access lemmas and the DAG fold.
+- Library heap (a0-boot, 2026-10-06): `HeapReady H cap c` is memory-only and
+  reads allocator globals and `vsaFoot H` (bytes outside live extents);
+  `HeapReady.frame_live` frames windows inside live extents;
+  `WhileMin.cut_heapReady_covers_Statement E` gives the cut fact covering
+  chosen extents. F1 extents (payload address, request): Caml_state
+  0x8007d150/928, ref_table struct 0x8007d500/56, nursery inside chunk
+  0x80081730, major chunk 0x80282740 (free block + globals), VM stack
+  0x803837b0/32768, code buffer 0x8038d7f0/764, prim table 0x8038fb10.
+  Plan: `F1Pins.libHeap : ∃ H cap, extents covered ∧ HeapReady H cap c`;
+  `f1_stable` additionally requires each window inside one F1 extent.
+
 Open: G2 (collector proper); status and next design step below. F1 asks from a1-arms/bprime are all landed (last: `72d88e40`).
 
 G2 progress after F1:
