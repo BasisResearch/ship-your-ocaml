@@ -36,9 +36,19 @@
   `St.shapeOk`); no per-program premises in the headline. Primitive premises are
   native-layout/runtime facts at the call site; the flush adapter's "channel fd is an OS
   output stream" premise belongs to the running-platform invariant.
+* Debt: the saved-frame readbacks (`back`/`apart` tuples in write_fd, flush_partial,
+  ml_flush, output_char) repeat per primitive; factor a frame-log readback lemma (entries
+  `(base + k, 8, v)` plus one extra word) before caml_ml_output_bytes.
 * Lean notes: `omega` hits max recursion on `s - 112 - 272` with disjunctions (normalize
   with `Nat.sub_sub`), and evaluates `def` constants like `errnoGlobal.toNat` in
   hypotheses (rewrite them to numerals first).
+* `ConsoleWrite.oc_room` / `oc_full` (`Console/OutputChar.lean`): `caml_ml_output_char`
+  on a buffered console channel with null mutex hooks; room in the buffer (byte at
+  `curr`, `curr + 1`) or full (one `flush_partial` of the 65536-byte buffer, then the
+  byte at `buff`). Phases `oc_pro` / `oc_tail` / `oc_full_enter` / `oc_full_flushed`.
+* Repr: WorldRepr carries the object-ID counter (`WorldRepr.ooId`), ChanAt the buffer end
+  and a clear unbuffered flag; PayloadOutside/PayloadCoreOutside an `ooId` window.
+* `prim_caml_ml_string_length_returns` (C_CALL1) is on main for bprime's whileMin table.
 * Next: the C_CALL adapter for flush via a1-arms' `ccall_framed_summary` (7d3d4f09):
   `FramedCall` footprint = native stack window + errno words + channel words + roots word;
   then `output_bytes`/`output`/`output_char`, `Ready.lean`.

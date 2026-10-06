@@ -294,6 +294,7 @@ import OCaml.Vm.Primitives.HtifFrame
 import OCaml.Vm.Primitives.Console.Write
 import OCaml.Vm.Primitives.Console.WriteFd
 import OCaml.Vm.Primitives.Console.MlFlush
+import OCaml.Vm.Primitives.Console.OutputChar
 import OCaml.Vm.Primitives.Console.World
 import OCaml.Vm.Sim.PrimStringLength
 import OCaml.Vm.Primitives.PairLayout
@@ -2579,6 +2580,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.flush_partial
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.FlushMem.transfer
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.ml_flush
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.oc_room
+#print axioms OCaml.Vm.Primitives.ConsoleWrite.oc_full
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.flushChan_stream
 #print axioms OCaml.Vm.Primitives.string_length_inv
 #print axioms OCaml.Vm.Sim.prim_caml_ml_string_length_returns
