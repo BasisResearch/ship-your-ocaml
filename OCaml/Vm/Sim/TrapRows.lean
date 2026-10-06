@@ -61,11 +61,12 @@ theorem PushtrapWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place
 theorem pushtrap_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     {high0 dom0 : Nat} (rf : RuntimeFrame L high0 dom0) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s .PUSHTRAP) (fetch : P.code[s.pc + 1]? = some w)
-    (trapBound : s.trap ≤ s.stack.length + 4)
     (space : 8 * (s.stack.length + 4) ≤ Layout.stackBytes)
     (step : stepI P s ⟨.PUSHTRAP, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
-  have shape := step
+  -- BcSem's guard: the trap pointer lies inside the stack
+  have trapBound : s.trap ≤ s.stack.length + 4 := by have := Res.guard_ok step; omega
+  have shape := Res.unguard step
   change opt (target s.pc 0 w.toInt) (fun hd => .next { (s.adv 2) with
     stack := .code hd :: Val.ofInt (s.stack.length + 4 - s.trap) :: s.env :: Val.ofInt s.extra :: s.stack,
     trap := s.stack.length + 4 }) = .next s' at shape

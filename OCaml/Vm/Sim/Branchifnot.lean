@@ -8,27 +8,33 @@ open OCaml.Bytecode Vsa.Machine
 open OCaml.Vm.Primitives
 
 /-- Both paths of BRANCHIFNOT implement its successful semantic step.
-Alignment and exclusion of raw values identify the native false word. -/
+Alignment and exclusion of raw values (BcSem's guard) identify the native
+false word. -/
 theorem branchifnot_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     {pl : Place} {cp : ChanPlace} {sp high : Nat} {w : BitVec 32}
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s .BRANCHIFNOT c pl cp sp high)
-    (aligned : EvenPlace pl) (notRaw : ∀ x, s.accu ≠ .raw x)
+    (aligned : EvenPlace pl)
     (operand : OperandAt P pl (s.pc + 1) w)
     (step : stepI P s ⟨.BRANCHIFNOT, [w.toInt]⟩ = .next s') :
     ∃ c', Plus c c' ∧ Running L P s' c' := by
+  have raw : s.accu.isRaw = false := by
+    cases hr : s.accu.isRaw
+    · rfl
+    · simp [stepI, hr] at step
+  have notRaw : ∀ x, s.accu ≠ .raw x := fun x hx => by simp [hx, Val.isRaw] at raw
   by_cases test : s.accu = .int (0#63)
   ·
     cases ht : target s.pc 0 w.toInt with
-    | none => simp [stepI, test, ht, opt] at step
+    | none => simp [stepI, raw, Val.isRaw, test, ht, opt] at step
     | some dest =>
       have state : {s with pc := dest} = s' := by
-        simpa [stepI, test, ht, opt] using step
+        simpa [stepI, raw, Val.isRaw, test, ht, opt] using step
       rw [← state]
       exact branchifnot_jump_arm stable h test operand ht
   ·
     have state : {s with pc := s.pc + 2} = s' := by
-      simpa [stepI, test, St.adv] using step
+      simpa [stepI, raw, Val.isRaw, test, St.adv] using step
     rw [← state]
     exact branchifnot_next_arm stable h aligned notRaw test
 

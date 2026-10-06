@@ -25,10 +25,6 @@ WHILEMIN = ROOT / 'OCaml/Vm/Sim/WhileMinTable.lean'
 # Premise fields already proved for whileMin (one shape run, WhileMinShape.lean).
 WHILEMIN_KNOWN = {
     'c_call1_exit': 'CcallExit.of_ok OCaml.Programs.whileMin_ccall1Ok',
-    'extra': 'OCaml.Programs.whileMin_extraBounded',
-    'values': 'OCaml.Programs.whileMin_valuesInRange',
-    'trapBounded': 'OCaml.Programs.whileMin_trapBounded.bounded',
-    'ints': 'OCaml.Programs.whileMin_branchInts',
     'divint_zero': 'DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inl rfl)',
     'modint_zero': 'DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inr rfl)',
 }

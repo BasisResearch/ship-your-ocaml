@@ -164,18 +164,18 @@ theorem modint_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
 
 /-- **The EQ row**. -/
 theorem eq_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
-    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B) (values : ValuesInRange P) :
+    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B) :
     OCaml.OpArm P (OCaml.LoopAt L P) .EQ :=
   opArm_of_next0 (fun s _ _ reach _ h code step =>
-      eq_next stable h code (by simpa using stack_fits fits capacity reach (k := 0)) (values s reach) step)
+      eq_next stable h code (by simpa using stack_fits fits capacity reach (k := 0)) step)
     (shape0 (fun _ _ _ => rfl)) (fun s e w step => by no_halt step)
 
 /-- **The NEQ row**. -/
 theorem neq_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
-    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B) (values : ValuesInRange P) :
+    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B) :
     OCaml.OpArm P (OCaml.LoopAt L P) .NEQ :=
   opArm_of_next0 (fun s _ _ reach _ h code step =>
-      neq_next stable h code (by simpa using stack_fits fits capacity reach (k := 0)) (values s reach) step)
+      neq_next stable h code (by simpa using stack_fits fits capacity reach (k := 0)) step)
     (shape0 (fun _ _ _ => rfl)) (fun s e w step => by no_halt step)
 
 /-- **The CONST0 row**. -/
@@ -276,18 +276,18 @@ theorem atom_row {L : OCaml.Layout} {P : Prog}
 
 /-- **The BRANCHIF row**. -/
 theorem branchif_row {L : OCaml.Layout} {P : Prog}
-    (stable : MemoryStable L.runtimeOk) (values : ValuesInRange P) :
+    (stable : MemoryStable L.runtimeOk) :
     OCaml.OpArm P (OCaml.LoopAt L P) .BRANCHIF :=
-  opArm_of_next1 (fun s _ _ _ reach _ h code fetch step =>
-      branchif_next stable h code fetch (values.accu_notRaw reach) step)
+  opArm_of_next1 (fun s _ _ _ _ _ h code fetch step =>
+      branchif_next stable h code fetch step)
     (shape1 (fun _ => rfl) (fun _ _ _ _ => rfl)) (fun s a e w step => by no_halt step)
 
 /-- **The BRANCHIFNOT row**. -/
 theorem branchifnot_row {L : OCaml.Layout} {P : Prog}
-    (stable : MemoryStable L.runtimeOk) (values : ValuesInRange P) :
+    (stable : MemoryStable L.runtimeOk) :
     OCaml.OpArm P (OCaml.LoopAt L P) .BRANCHIFNOT :=
-  opArm_of_next1 (fun s _ _ _ reach _ h code fetch step =>
-      branchifnot_next stable h code fetch (values.accu_notRaw reach) step)
+  opArm_of_next1 (fun s _ _ _ _ _ h code fetch step =>
+      branchifnot_next stable h code fetch step)
     (shape1 (fun _ => rfl) (fun _ _ _ _ => rfl)) (fun s a e w step => by no_halt step)
 
 /-- **The BLTINT row**. -/
@@ -338,22 +338,20 @@ theorem bugeint_row {L : OCaml.Layout} {P : Prog}
       bugeint_next stable h code fetch fetchOfs step)
     (shape2 (fun _ => rfl) (fun _ _ => rfl) (fun _ _ _ _ _ => rfl)) (fun _ _ _ _ _ => brOp_no_halt (f := fun a b => b.ule a))
 
-/-- **The BEQ row**; an integer accumulator comes from `BranchInts` (`beq_pointer_guard_obstruction`). -/
+/-- **The BEQ row**. -/
 theorem beq_row {L : OCaml.Layout} {P : Prog}
-    (stable : MemoryStable L.runtimeOk)
-    (ints : BranchInts P) :
+    (stable : MemoryStable L.runtimeOk) :
     OCaml.OpArm P (OCaml.LoopAt L P) .BEQ :=
-  opArm_of_next2 (fun s _ _ _ _ reach _ h code fetch fetchOfs step =>
-      beq_next stable h code fetch fetchOfs (ints.integer s reach (.inl code.fetch)) step)
+  opArm_of_next2 (fun s _ _ _ _ _ _ h code fetch fetchOfs step =>
+      beq_next stable h code fetch fetchOfs step)
     (shape2 (fun _ => rfl) (fun _ _ => rfl) (fun _ _ _ _ _ => rfl)) (fun _ _ _ _ _ => beq_no_halt)
 
-/-- **The BNEQ row**; an integer accumulator comes from `BranchInts` (`beq_pointer_guard_obstruction`). -/
+/-- **The BNEQ row**. -/
 theorem bneq_row {L : OCaml.Layout} {P : Prog}
-    (stable : MemoryStable L.runtimeOk)
-    (ints : BranchInts P) :
+    (stable : MemoryStable L.runtimeOk) :
     OCaml.OpArm P (OCaml.LoopAt L P) .BNEQ :=
-  opArm_of_next2 (fun s _ _ _ _ reach _ h code fetch fetchOfs step =>
-      bneq_next stable h code fetch fetchOfs (ints.integer s reach (.inr code.fetch)) step)
+  opArm_of_next2 (fun s _ _ _ _ _ _ h code fetch fetchOfs step =>
+      bneq_next stable h code fetch fetchOfs step)
     (shape2 (fun _ => rfl) (fun _ _ => rfl) (fun _ _ _ _ _ => rfl)) (fun _ _ _ _ _ => bneq_no_halt)
 
 /-- **The PUSHCONST0 row**. -/

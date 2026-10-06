@@ -1,18 +1,35 @@
 # Lane a2-sem
 
-## NEEDS KIRAN
+## F1 domain, option (b): use-site guards (2026-10-06) — current
 
-**F1 domain shape (asked the foreman 2026-10-06).** Four row premises are
-per-program reachability facts, each proved for whileMin by one checked run:
-`ValuesInRange` (EQ/NEQ word equality, BRANCHIF parity), `ExtraBounded`
-(RETURN/GRAB/RAISE saved counts), `TrapBounded` (PUSHTRAP link), `BranchInts`
-(BEQ/BNEQ only on integers; `beq_pointer_guard_obstruction`). Some are false
-for arbitrary `Good` bytecode (POP past a trap frame, OFFSETCLOSURE out of its
-block, BEQ on a pointer). Either (a) carry them as one named structure in
-`OcamlrunRefinementF1`'s domain beside `Fits`/`GcSafe` (per-program checked
-run), or (b) make BcSem reject each violation and prove them generally
-(preservation over every opcode/primitive). Recommendation: (a) for F1, (b)
-after.
+Kiran chose (b); the foreman approved use-site guards only (a weaker, true
+statement than reachable-state invariants, rejecting fewer programs). Each
+guard sits where its fact is consumed, and each row reads the fact off its
+own step (`Res.unguard`/`Res.guard_ok`):
+
+* EQ/NEQ: both operands `Val.inRange` (`top_equality`, `eq_step_arm`).
+* BRANCHIF/NOT: accumulator not raw (`branchif_arm` derives `notRaw`).
+* BEQ/BNEQ: a pointer/atom accumulator must be in range with immediate
+  `< 2^30`; then natively `Long_val(addr) ≥ 2^30` (addresses above
+  `sym_bss_end ≥ 0x80000000`, `StackGeometry.word_high`, `imm_ne_high`), so
+  "not equal" holds on both sides (`imm_test_pointer`, generated
+  `beq/bneq_step_arm`).
+* RETURN/GRAB: `extra < 2^62`; RETURN/GRAB/`raiseTo`: saved count `≥ 0`
+  (`RaiseFrame.saved_of_step`).
+* PUSHTRAP: `trap ≤ stack length`.
+
+Retired: `ValuesInRange`, `ExtraBounded`, `TrapBounded`, `BranchInts`
+(definitions and `ExtraBound.lean`/`TrapBound.lean` deleted), their whileMin
+theorems and shape conjuncts, `RaisesCaught.of_check`/`St.raisesOk`.
+
+Validation (no guard firing, final semantics): boot/ocamlc hello.ml
+differential byte-identical (hello.cmo/.cmi, exit 0, 1,650,759 steps,
+unchanged); difftest_bc 10/10; callbacks 6/6; lexer; 16 OFFSET boundary
+differentials. Two proposed guards failed validation and were reported:
+BEQ/BNEQ "integer only" (f8_objects BNEQ pc 18228, ocamlc BEQ pc 464461;
+narrowed as above) and MAKEBLOCK wosize > 256 (ocamlc pc 224213, wosize 852;
+moved to `InF1.minor` by bprime, not a BcSem guard). CLOSURE/CLOSUREREC size
+probes never fired.
 
 ## F1 round (2026-10-05) — current
 
@@ -114,7 +131,6 @@ Open / next (row premises to discharge, owner):
   states; the copied files are untouched). `BinaryLibScratch` is deleted;
   MULINT/DIVINT/MODINT rows need no register-presence premise, and a1-arms'
   `GprPresent` invariant round is unnecessary.
-* General discharges of ValuesInRange / ExtraBounded / TrapBounded.
 
 Premise census of the existing conditional bridges (my families):
 * Step-shape bridges (take `stepI P s ⟨op, args⟩ = .next s'`): ADDINT SUBINT

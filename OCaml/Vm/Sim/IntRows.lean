@@ -244,18 +244,16 @@ theorem division_next (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s s' 
   · exact top_read_row h code space (by simp [stack])
       fun input read => division_step_arm kind stable input accu stack hy read step
 
-/-- The EQ/NEQ operands: physical equality reflects word equality for the
-accumulator and the top of stack, given that the state's live values lie in
-their regions (`ValuesInRange`, per program). -/
+/-- The EQ/NEQ operands: physical equality reflects word equality for an
+accumulator and a stack top that lie in their regions (BcSem's EQ/NEQ guard). -/
 theorem top_equality {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
-    {pl : Place} {cp : ChanPlace} {sp high : Nat} (input : ArmInput L P s op c pl cp sp high)
-    (ranged : s.valuesInRange P.code.size = true) :
-    ∀ b, s.stack[0]? = some b → WordEquality pl s.accu b := by
-  intro b top
-  simp only [St.valuesInRange, Bool.and_eq_true, List.all_eq_true] at ranged
+    {pl : Place} {cp : ChanPlace} {sp high : Nat} (input : ArmInput L P s op c pl cp sp high) :
+    ∀ b, s.stack[0]? = some b → s.accu.inRange P.code.size s.heap = true →
+      b.inRange P.code.size s.heap = true → WordEquality pl s.accu b := by
+  intro b top accu ranged
   have mem : b ∈ s.stack := List.mem_of_getElem? top
   exact WordEquality.of_place input.toVmReprAt input.geometry.toStackGeometry (by simp [roots])
-    (by simp [roots, mem]) ranged.1 (ranged.2 b mem)
+    (by simp [roots, mem]) accu ranged
 
 theorem physOp_nonempty {P : Prog} {s s' : St} {op : Opcode} (eqop : op = .EQ ∨ op = .NEQ)
     (step : stepI P s ⟨op, []⟩ = .next s') : 0 < s.stack.length := by
@@ -266,20 +264,20 @@ theorem physOp_nonempty {P : Prog} {s s' : St} {op : Opcode} (eqop : op = .EQ �
 /-- **EQ from the loop head.** -/
 theorem eq_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .EQ)
-    (space : 8 * s.stack.length ≤ Layout.stackBytes) (ranged : s.valuesInRange P.code.size = true)
+    (space : 8 * s.stack.length ≤ Layout.stackBytes)
     (step : stepI P s ⟨.EQ, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (physOp_nonempty (by simp) step)
-    fun input read => eq_step_arm stable input read (top_equality input ranged) step
+    fun input read => eq_step_arm stable input read (top_equality input) step
 
 /-- **NEQ from the loop head.** -/
 theorem neq_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .NEQ)
-    (space : 8 * s.stack.length ≤ Layout.stackBytes) (ranged : s.valuesInRange P.code.size = true)
+    (space : 8 * s.stack.length ≤ Layout.stackBytes)
     (step : stepI P s ⟨.NEQ, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' :=
   top_read_row h code space (physOp_nonempty (by simp) step)
-    fun input read => neq_step_arm stable input read (top_equality input ranged) step
+    fun input read => neq_step_arm stable input read (top_equality input) step
 
 /-- A program that never divides by zero discharges the DIVINT/MODINT
 zero-divisor row premise vacuously. -/

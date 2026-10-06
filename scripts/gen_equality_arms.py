@@ -96,7 +96,7 @@ end OCaml.Vm.Sim
             truth = equal if op == 'EQ' else not equal
             cases += f'''      | {str(equal).lower()} =>
         have state : {{s with pc := s.pc + 1, accu := .int ({1 if truth else 0}#63), stack := rest}} = s' := by
-          simpa [stepI, stack, test, opt, St.adv, Val.ofBool] using step
+          simpa [stepI, stack, ranged, test, opt, St.adv, Val.ofBool] using step
         rw [← state]
         exact {op.lower()}_{'true' if truth else 'false'}_arm stable h stack read ready test
 '''
@@ -115,15 +115,22 @@ theorem {op.lower()}_step_arm {{L : OCaml.Layout}} {{P : Prog}} {{s s' : St}} {{
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s .{op} c pl cp sp high)
     (read : ReadWindow (BitVec.ofNat 64 sp) 8)
-    (equality : ∀ b, s.stack[0]? = some b → WordEquality pl s.accu b)
+    (equality : ∀ b, s.stack[0]? = some b → s.accu.inRange P.code.size s.heap = true →
+      b.inRange P.code.size s.heap = true → WordEquality pl s.accu b)
     (step : stepI P s ⟨.{op}, []⟩ = .next s') :
     ∃ c', Plus c c' ∧ Running L P s' c' := by
   cases stack : s.stack with
   | nil => simp [stepI, stack] at step
   | cons b rest =>
-    have ready := equality b (by simp [stack])
+    -- BcSem's guard: both operands lie in their regions
+    have ranged : (s.accu.inRange P.code.size s.heap && b.inRange P.code.size s.heap) = true := by
+      cases hr : (s.accu.inRange P.code.size s.heap && b.inRange P.code.size s.heap)
+      · simp [stepI, stack, hr] at step
+      · rfl
+    have both := Bool.and_eq_true_iff.1 ranged
+    have ready := equality b (by simp [stack]) both.1 both.2
     cases test : physEq? s.accu b with
-    | none => simp [stepI, stack, test, opt] at step
+    | none => simp [stepI, stack, ranged, test, opt] at step
     | some equal =>
       cases equal with
 {cases}

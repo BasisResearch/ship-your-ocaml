@@ -1,7 +1,5 @@
 import OCaml.Programs.WhileMinChecks
 import OCaml.Bytecode.PtrOffsets
-import OCaml.Bytecode.ExtraBound
-import OCaml.Bytecode.TrapBound
 import OCaml.Vm.Sim.RaiseRows
 import OCaml.Vm.Sim.ClosureAllocRows
 import OCaml.Vm.Sim.MakeblockNRows
@@ -12,34 +10,17 @@ import OCaml.Programs.Validation
 # The F1 shape facts of `whileMin`, kernel-checked by one run
 
 One `decide +kernel` of `Run.checkAll` over the 2,161-step run checks, at
-every state, the per-program reachability facts the F1 arms name: live values
-in their regions (`ValuesInRange`), small extra counts (`ExtraBounded`), the
-trap pointer inside the stack (`TrapBounded`), immediate branches on integers
-(`BranchInts`), caught raises (`RaisesCaught`), and the decoded instruction is
-F1, STOP returns no raw word, and its opcode is one of the program's
-(`St.decodedOk`: `GoodF1` and the reached opcodes of the F1 table). One combined run, not one
+every state, the per-program facts the F1 table still takes: the decoded
+instruction is F1, STOP returns no raw word, and its opcode is one of the
+program's (`St.decodedOk`: `GoodF1` and the reached opcodes of the table), no
+zero divisor, the C_CALL results and names, `Fits` and `NoForward`. The
+former shape facts (values in range, extra counts, the trap pointer, BEQ on
+integers) are BcSem's use-site guards, read off each row's step. One combined run, not one
 per fact: each run of the kernel costs several GB.
 -/
 
 namespace OCaml.Vm.Sim
 open OCaml.Bytecode
-
-/-- The per-state raise check: at a raise opcode, a trap frame is installed. -/
-def St.raisesOk (P : Prog) (s : St) : Bool :=
-  if s.atOp P .RAISE ∨ s.atOp P .RERAISE ∨ s.atOp P .RAISE_NOTRACE then s.trap != 0 else true
-
-theorem RaisesCaught.of_check {P : Prog} (h : ∀ s, Reach P s → St.raisesOk P s = true) :
-    RaisesCaught P where
-  caught s op reach member code := by
-    have ok := h s reach
-    have at_ : s.atOp P .RAISE ∨ s.atOp P .RERAISE ∨ s.atOp P .RAISE_NOTRACE := by
-      simp only [raiseOps, List.mem_cons, List.not_mem_nil, or_false] at member
-      rcases member with rfl | rfl | rfl
-      · exact .inl code.fetch
-      · exact .inr (.inl code.fetch)
-      · exact .inr (.inr code.fetch)
-    simp only [St.raisesOk, if_pos at_, bne_iff_ne, ne_eq] at ok
-    exact ok
 
 /-- The decode check: an F1 instruction (`GoodF1.inF1`), STOP returns no raw word
 (`GoodF1.stopAccu`), and its opcode is among `ops` (the rows the table needs). -/
@@ -114,8 +95,7 @@ def St.callNamesOk (P : Prog) (names : Opcode → List String) (s : St) : Bool :
 
 /-- All F1 shape checks at one state. -/
 def St.shapeOk (P : Prog) (ops : List Opcode) (names : Opcode → List String) (s : St) : Bool :=
-  s.valuesInRange P.code.size && s.extraOk && s.trapOk && s.branchIntsOk P && St.raisesOk P s &&
-    St.decodedOk P ops s && s.divisorsOk P && St.operandOk P .CLOSURE 254 s &&
+  St.decodedOk P ops s && s.divisorsOk P && St.operandOk P .CLOSURE 254 s &&
     St.operandOk P .MAKEBLOCK 256 s && St.ccallOk P .C_CALL1 0 s && St.ccallOk P .C_CALL2 1 s &&
     St.ccallOk P .C_CALL3 2 s && St.ccallOk P .C_CALL4 3 s && St.ccallOk P .C_CALL5 4 s &&
     s.heap.noForward &&
@@ -124,11 +104,6 @@ def St.shapeOk (P : Prog) (ops : List Opcode) (names : Opcode → List String) (
 
 /-- The F1 shape checks of one state, by name. -/
 structure ShapeFacts (P : Prog) (ops : List Opcode) (names : Opcode → List String) (s : St) : Prop where
-  values : s.valuesInRange P.code.size = true
-  extra : s.extraOk = true
-  trap : s.trapOk = true
-  branches : s.branchIntsOk P = true
-  raises : St.raisesOk P s = true
   decoded : St.decodedOk P ops s = true
   divisors : s.divisorsOk P = true
   closures : St.operandOk P .CLOSURE 254 s = true
@@ -147,10 +122,9 @@ structure ShapeFacts (P : Prog) (ops : List Opcode) (names : Opcode → List Str
 theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {names : Opcode → List String} {s : St}
     (h : St.shapeOk P ops names s = true) : ShapeFacts P ops names s := by
   simp only [St.shapeOk, Bool.and_eq_true, decide_eq_true_eq] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩, divisors⟩, closures⟩, blocks⟩,
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨decoded, divisors⟩, closures⟩, blocks⟩,
     c1⟩, c2⟩, c3⟩, c4⟩, c5⟩, noForward⟩, fits⟩, callNames⟩ := h
-  exact ⟨values, extra, trap, branches, raises, decoded, divisors, closures, blocks, c1, c2, c3, c4, c5,
-    noForward, fits, callNames⟩
+  exact ⟨decoded, divisors, closures, blocks, c1, c2, c3, c4, c5, noForward, fits, callNames⟩
 
 /-- The decode check, by name. -/
 theorem ShapeFacts.decode {P : Prog} {ops : List Opcode} {names : Opcode → List String} {s : St}
@@ -202,25 +176,6 @@ theorem whileMin_noForward : NoForward whileMin := fun _ reach => (whileMin_shap
 
 /-- **`GcSafe whileMin`**. -/
 theorem whileMin_gcSafe : GcSafe whileMin := gcSafe_of_noForward whileMin_noForward
-
-/-- **`whileMin`'s live values lie in their regions.** -/
-theorem whileMin_valuesInRange : ValuesInRange whileMin := fun _ reach => (whileMin_shapeOk reach).values
-
-/-- **`whileMin`'s extra-argument counts are bounded.** -/
-theorem whileMin_extraBounded : ExtraBounded whileMin :=
-  .of_check fun _ reach => (whileMin_shapeOk reach).extra
-
-/-- **`whileMin`'s trap pointer stays inside the stack.** -/
-theorem whileMin_trapBounded : TrapBounded whileMin :=
-  .of_check fun _ reach => (whileMin_shapeOk reach).trap
-
-/-- **`whileMin`'s immediate branches see integers.** -/
-theorem whileMin_branchInts : BranchInts whileMin :=
-  .of_check fun _ reach => (whileMin_shapeOk reach).branches
-
-/-- **Every reachable raise in `whileMin` is caught.** -/
-theorem whileMin_raisesCaught : RaisesCaught whileMin :=
-  .of_check fun _ reach => (whileMin_shapeOk reach).raises
 
 /-- **`while_min.byte` stays in F1**: `Good`, F1 instructions, STOP never raw. -/
 theorem whileMin_goodF1 : OCaml.GoodF1 whileMin where

@@ -986,6 +986,7 @@ def raiseTo (P : Prog) (s : St) (exn : Val) : Res :=
   | .code h :: .int link :: env :: .int ex :: rest =>
       let d := s.trap
       if link.toNat > d then .wrong else
+      if ex.toInt < 0 then .unsupported else
       .next { s with pc := h, accu := exn, stack := rest, env := env, extra := ex.toNat, trap := d - link.toNat }
   | _ => .wrong
 
@@ -1208,11 +1209,14 @@ def stepI (i : Instr) : Res :=
       if slot < 3 ∨ stk.length < slot.toNat then .wrong else
       enter s (stk.take 3 ++ stk.drop slot.toNat) (s.extra + 2)
   | .RETURN, [n] => if n < 0 then .unsupported else
+      -- `extra_args` is a native `long` saved as `Val_long`
+      if 2 ^ 62 ≤ s.extra then .unsupported else
       let rest := stk.drop n.toNat
       if stk.length < n.toNat then .wrong else
       if s.extra > 0 then enter s rest (s.extra - 1)
       else match rest with
         | .code r :: env :: .int ex :: rest' =>
+            if ex.toInt < 0 then .unsupported else
             .next { s with pc := r, env := env, extra := ex.toNat, stack := rest' }
         | _ => .wrong
   | .RESTART, [] =>
@@ -1225,6 +1229,7 @@ def stepI (i : Instr) : Res :=
         | _ => .wrong
       | _ => .wrong
   | .GRAB, [req] => if req < 0 then .unsupported else
+      if 2 ^ 62 ≤ s.extra then .unsupported else
       if req.toNat ≤ s.extra then .next { (s.adv 2) with extra := s.extra - req.toNat }
       else
         let na := 1 + s.extra
@@ -1235,6 +1240,7 @@ def stepI (i : Instr) : Res :=
           (.code (pc - 1) :: Val.ofInt 2 :: s.env :: stk.take na))
         match stk.drop na with
         | .code r :: env :: .int ex :: rest =>
+            if ex.toInt < 0 then .unsupported else
             .next { s with pc := r, accu := .ptr l 0, heap := h, env := env, extra := ex.toNat, stack := rest }
         | _ => .wrong
   | .CLOSURE, [nv, ofs] => if nv < 0 then .unsupported else
@@ -1368,9 +1374,9 @@ def stepI (i : Instr) : Res :=
       | _, _ => .wrong
   -- Branches
   | .BRANCH, [ofs] => opt (target pc 0 ofs) fun t => .next { s with pc := t }
-  | .BRANCHIF, [ofs] =>
+  | .BRANCHIF, [ofs] => if s.accu.isRaw then .unsupported else
       if s.accu = .int 0 then .next (s.adv 2) else opt (target pc 0 ofs) fun t => .next { s with pc := t }
-  | .BRANCHIFNOT, [ofs] =>
+  | .BRANCHIFNOT, [ofs] => if s.accu.isRaw then .unsupported else
       if s.accu = .int 0 then opt (target pc 0 ofs) fun t => .next { s with pc := t } else .next (s.adv 2)
   | .SWITCH, sizes :: tbl => if s.accu.switchExotic then .unsupported else
       let nc := sizes.toNat % 65536
@@ -1383,7 +1389,7 @@ def stepI (i : Instr) : Res :=
       | .int n => .next { (s.adv 1) with accu := .int (1 - n) }
       | _ => .wrong
   -- Exceptions
-  | .PUSHTRAP, [ofs] => opt (target pc 0 ofs) fun h =>
+  | .PUSHTRAP, [ofs] => if stk.length < s.trap then .unsupported else opt (target pc 0 ofs) fun h =>
       let d := stk.length + 4
       .next { (s.adv 2) with stack := .code h :: Val.ofInt (d - s.trap) :: s.env :: Val.ofInt s.extra :: stk, trap := d }
   | .POPTRAP, [] => match stk with
@@ -1435,7 +1441,10 @@ def stepI (i : Instr) : Res :=
   | .LSRINT, [] => intOp s fun a b => (a >>> ((untag b).toNat % 64)) ||| 1
   | .ASRINT, [] => intOp s fun a b => (a.sshiftRight ((untag b).toNat % 64)) ||| 1
   | .EQ, [] | .NEQ, [] => match stk with
-      | b :: rest => opt (physEq? s.accu b) fun e =>
+      | b :: rest =>
+          -- word equality reflects physical equality only for in-region values
+          if (s.accu.inRange P.code.size s.heap && b.inRange P.code.size s.heap) = false then .unsupported else
+          opt (physEq? s.accu b) fun e =>
           .next { (s.adv 1) with accu := Val.ofBool (if i.op = .EQ then e else !e), stack := rest }
       | [] => .wrong
   | .LTINT, [] => cmpOp s fun a b => a.slt b
@@ -1457,7 +1466,19 @@ def stepI (i : Instr) : Res :=
   | .BEQ, [n, o] | .BNEQ, [n, o] =>
       match s.accu with
       | .int _ => brOp s n o (if i.op = .BEQ then fun a b => a == b else fun a b => a != b)
+      -- Natively `n` is compared with `Long_val(accu)` (`accu >> 1`). For a
+      -- block, atom or code pointer that is its address halved, and every such
+      -- address lies at or above RAM's base `0x80000000`: blocks and the atom
+      -- table above `.bss` (`StackGeometry.heapLow`/`atomLow`/`codeLow`, all
+      -- `≥ Layout.sym_bss_end`), and an in-range one (`Val.inRange`) stays
+      -- below the arena's end. So `Long_val(accu) ≥ 2^30`, and every
+      -- immediate `n < 2^30` (every negative one included) is "not equal"
+      -- whatever the address. A larger immediate would compare the address,
+      -- which the abstract heap does not have: outside the model
+      -- (`beq_pointer_guard_obstruction`). Compiled code compares with
+      -- constructor indices, far below the bound.
       | .ptr .. | .atom _ =>
+        if 2 ^ 30 ≤ n ∨ s.accu.inRange P.code.size s.heap = false then .unsupported else
         if i.op = .BEQ then .next (s.adv 3)
         else opt (target pc 1 o) fun t => .next { s with pc := t }
       | _ => .wrong

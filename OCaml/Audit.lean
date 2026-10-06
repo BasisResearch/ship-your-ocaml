@@ -1448,7 +1448,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms Vsa.Sim.pushgetglobalfield_code_store
 
 #print axioms OCaml.Vm.Sim.beq_pointer_guard_obstruction
-#print axioms OCaml.Vm.Sim.beq_pointer_falls_through
 #print axioms OCaml.Vm.Sim.beq_step_arm
 #print axioms OCaml.Vm.Sim.beq_jump_arm
 #print axioms Vsa.Sim.tr_beq_jump
@@ -4718,12 +4717,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.SingleField.child_original
 #print axioms OCaml.Vm.Gc.SingleField.Returned.payload_fixed
 #print axioms OCaml.Vm.Gc.SingleField.Returned.payload_nonpointer
-#print axioms OCaml.Programs.whileMin_valuesInRange
-#print axioms OCaml.Programs.whileMin_extraBounded
-#print axioms OCaml.Bytecode.ExtraBounded.of_check
 #print axioms OCaml.Bytecode.Res.unguard
 #print axioms OCaml.Bytecode.Res.guard_ok
-#print axioms OCaml.Programs.whileMin_trapBounded
 #print axioms OCaml.Vm.Sim.isint_next
 #print axioms OCaml.Vm.Sim.branchif_next
 #print axioms OCaml.Vm.Sim.branchifnot_next
@@ -4811,8 +4806,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.pushconstint_row
 #print axioms OCaml.Vm.Sim.pushatom_row
 #print axioms OCaml.Vm.Sim.offsetref_row
-#print axioms OCaml.Programs.whileMin_branchInts
-#print axioms OCaml.Bytecode.BranchInts.of_check
 #print axioms OCaml.Vm.Sim.VmWindow.young
 #print axioms OCaml.Vm.Sim.YoungOutside.of_windows
 #print axioms OCaml.Vm.Sim.YoungOutside.of_stack
@@ -4869,7 +4862,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ccall_framed_summary
 #print axioms OCaml.Vm.Sim.FieldWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.f1_fieldWriteReady
-#print axioms OCaml.Programs.whileMin_raisesCaught
 #print axioms OCaml.Vm.VmReprAt.put
 #print axioms OCaml.Vm.HeapRepr.put
 #print axioms OCaml.Vm.Sim.ArmInput.put
@@ -4957,3 +4949,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.LogWindows.stackSlot
 #print axioms OCaml.Vm.Gc.WindowSeparated.of_above
 #print axioms OCaml.Vm.Gc.WindowSeparated.sub
+#print axioms OCaml.Vm.Sim.imm_ne_high
+#print axioms OCaml.Vm.Sim.StackGeometry.word_high
+#print axioms OCaml.Vm.Sim.imm_test_int
+#print axioms OCaml.Vm.Sim.imm_test_pointer
+#print axioms OCaml.Vm.Sim.beq_pointer_step
+#print axioms OCaml.Vm.Sim.bneq_pointer_step
+#print axioms OCaml.Vm.Sim.beq_pointer_unsupported
+#print axioms OCaml.Vm.Sim.RaiseFrame.saved_of_step

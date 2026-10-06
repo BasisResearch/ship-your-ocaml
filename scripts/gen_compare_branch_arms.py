@@ -54,11 +54,24 @@ def outputs():
             args = '(longVal n) (BitVec.ofInt 64 imm.toInt)' if reversed_args else '(BitVec.ofInt 64 imm.toInt) (longVal n)'
             guard = f'''  have guard : {guard_fn} {args} = {str(not jumping).lower()} := by
     simp only [{guard_lemma}, test, Bool.not_{str(jumping).lower()}]'''
+            n_binder = ' {n : BitVec 63}'
+            accu_input = '    (accu : s.accu = .int n)\n'
+            test_type = f'({comparison}) = {str(jumping).lower()}'
+            word_intro = '''  have represented : valWord pl s.accu = some (tag64 n) := by rw [accu]; rfl
+  have equal : w = tag64 n := Option.some.inj (value.symm.trans represented)
+  subst w
+'''
+            word = 'tag64 n'
+            native_simp = 'longVal_native'
             if cmpop in ('EQ', 'NEQ'):
+                # physical comparison with an immediate: any represented word
                 taken = jumping if cmpop == 'EQ' else not jumping
-                proof = 'exact test' if cmpop == 'EQ' else 'simpa only [bne, Bool.not_not, Bool.not_true, Bool.not_false] using congrArg Bool.not test'
-                guard = f'''  have guard : ((BitVec.ofInt 64 imm.toInt) == longVal n) = {str(taken).lower()} := by
-    {proof}'''
+                n_binder, accu_input, word_intro, word = '', '', '', 'w'
+                native_simp = 'codePc_succ'
+                test_type = (f'∀ w, valWord pl s.accu = some w → ((BitVec.ofInt 64 imm.toInt) == '
+                             f'shift_bits_right_arith w (Sail.BitVec.extractLsb (0x01#6) 5 0)) = {str(taken).lower()}')
+                guard = '  have guard := test w value'
+            word_arg = word if word == 'w' else f'({word})'
             result[ROOT / f'OCaml/Vm/Sim/{stem}.lean'] = f'''import OCaml.Vm.Sim.BranchCompare
 import OCaml.Vm.Sim.{stem}Segment
 import OCaml.Vm.Sim.{stem}Pins
@@ -72,31 +85,27 @@ open OCaml.Vm.Primitives
 /-- The {'jump' if jumping else 'fallthrough'} path of {op} preserves the represented accumulator.
 The generated branch guard is derived from the exact semantic comparison. -/
 theorem {lower}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}
-    {{pl : Place}} {{cp : ChanPlace}} {{sp high : Nat}} {{n : BitVec 63}} {{imm : BitVec 32}}{extra_binders}
+    {{pl : Place}} {{cp : ChanPlace}} {{sp high : Nat}}{n_binder} {{imm : BitVec 32}}{extra_binders}
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s .{op} c pl cp sp high)
-    (accu : s.accu = .int n)
-    (operand : OperandAt P pl (s.pc + 1) imm)
-    (test : ({comparison}) = {str(jumping).lower()})
+{accu_input}    (operand : OperandAt P pl (s.pc + 1) imm)
+    (test : {test_type})
 {extra_inputs}    : ∃ c', Plus c c' ∧ Running L P {{s with pc := {target}}} c' := by
   apply control_arm stable h
   intro d dp w accuWord value
-  have represented : valWord pl s.accu = some (tag64 n) := by rw [accu]; rfl
-  have equal : w = tag64 n := Option.some.inj (value.symm.trans represented)
-  subst w
-  have read : bytesT4 d.σ.mem (pl.codeBase + 4 * (s.pc + 1)) = imm :=
+{word_intro}  have read : bytesT4 d.σ.mem (pl.codeBase + 4 * (s.pc + 1)) = imm :=
     operand.read32 h.code dp.memory
 {extra_reads}{guard}
   have bp : SegSt ({entry}#64)
-      [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩, ⟨Register.x21, tag64 n⟩]
+      [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩, ⟨Register.x21, {word}⟩]
       (fun σ => Vsa.Sim.Code.Caml{stem}Loaded σ.mem ∧ σ.mem = d.σ.mem ∧ σ = d.σ) d :=
     ⟨dp.good, dp.pc,
       ⟨(dp.frame.frame Register.x8 (by decide)).trans h.pc, accuWord, trivial⟩,
       dp.good.minstret, dp.tick, {lower}_loaded (dp.image h.dispatch.image), rfl, rfl⟩
-  have run := tr_{lower} (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) (tag64 n) d.σ.mem d.σ
+  have run := tr_{lower} (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) {word_arg} d.σ.mem d.σ
   simp only [show sign_extend (m := 64) (0x004#12) = 4#64 from by decide,
     {increment_simp},
-    codePc_succ, operand.geometry.toNat, read, {extra_simp}longVal_native] at run
+    codePc_succ, operand.geometry.toNat, read, {extra_simp}{native_simp}] at run
   obtain ⟨nb, after, _, hb, post⟩ := run operand.geometry.lower operand.geometry.upper
     operand.geometry.htif guard{extra_args} d bp
   obtain ⟨_, hm, frame⟩ := post.extra
@@ -106,13 +115,9 @@ theorem {lower}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}
 
 end OCaml.Vm.Sim
 '''
-        integer_input = '    (integer : s.accu.isInt = true)\n' if cmpop in ('EQ', 'NEQ') else ''
-        step_proof = 'step'
         if cmpop in ('EQ', 'NEQ'):
-            step_proof = '''by
-    obtain ⟨value, accu⟩ : ∃ value, s.accu = .int value := by
-      cases ha : s.accu <;> simp_all [Val.isInt]
-    simpa [stepI, accu] using step'''
+            result[ROOT / f'OCaml/Vm/Sim/{stem_base}.lean'] = physical_composition(op, cmpop, stem_base, semantic)
+            continue
         result[ROOT / f'OCaml/Vm/Sim/{stem_base}.lean'] = f'''import OCaml.Vm.Sim.{stem_base}Jump
 import OCaml.Vm.Sim.{stem_base}Next
 
@@ -127,11 +132,11 @@ theorem {op.lower()}_step_arm {{L : OCaml.Layout}} {{P : Prog}} {{s s' : St}} {{
     {{pl : Place}} {{cp : ChanPlace}} {{sp high : Nat}} {{imm ofs : BitVec 32}}
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s .{op} c pl cp sp high)
-{integer_input}    (operand : OperandAt P pl (s.pc + 1) imm)
+    (operand : OperandAt P pl (s.pc + 1) imm)
     (offset : OperandAt P pl (s.pc + 2) ofs)
     (step : stepI P s ⟨.{op}, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', Plus c c' ∧ Running L P s' c' := by
-  have step' : brOp s imm.toInt ofs.toInt (fun a b => {semantic}) = .next s' := {step_proof}
+  have step' : brOp s imm.toInt ofs.toInt (fun a b => {semantic}) = .next s' := step
   obtain ⟨n, accu⟩ := brOp_accu step'
   cases test : ({comparison}) with
   | false =>
@@ -151,6 +156,72 @@ theorem {op.lower()}_step_arm {{L : OCaml.Layout}} {{P : Prog}} {{s s' : St}} {{
 end OCaml.Vm.Sim
 '''
     return result
+
+
+def physical_composition(op, cmpop, stem_base, semantic):
+    """BEQ/BNEQ: integers compare by value; an in-range pointer or atom is
+    "not equal" to any immediate below `2^30` (BcSem's guard), natively too."""
+    low = op.lower()
+    eq_path, ne_path = ('jump', 'next') if cmpop == 'EQ' else ('next', 'jump')
+    def path(kind, test):
+        if kind == 'next':
+            return f"""      have state : {{s with pc := s.pc + 3}} = s' := by
+        simpa [stepI, hv, brOp, test, bne, St.adv] using step
+      rw [← state]
+      exact {low}_next_arm stable h operand {test}"""
+        return f"""      cases ht : target s.pc 1 ofs.toInt with
+      | none => simp [stepI, hv, brOp, test, bne, ht, opt] at step
+      | some dest =>
+        have state : {{s with pc := dest}} = s' := by
+          simpa [stepI, hv, brOp, test, bne, ht, opt] using step
+        rw [← state]
+        exact {low}_jump_arm stable h operand {test} offset ht"""
+    pointer = (f"""    obtain ⟨small, ranged, state⟩ := beq_pointer_step pointer step
+    rw [← state]
+    exact {low}_next_arm stable h operand
+      (imm_test_pointer h.geometry.toArmGeometry.toStackGeometry ranged pointer small)""" if cmpop == 'EQ' else
+               f"""    obtain ⟨small, ranged, dest, ht, state⟩ := bneq_pointer_step pointer step
+    rw [← state]
+    exact {low}_jump_arm stable h operand
+      (imm_test_pointer h.geometry.toArmGeometry.toStackGeometry ranged pointer small) offset ht""")
+    return f"""import OCaml.Vm.Sim.{stem_base}Jump
+import OCaml.Vm.Sim.{stem_base}Next
+
+/-! GENERATED by scripts/gen_compare_branch_arms.py. Immediate branch composition. -/
+namespace OCaml.Vm.Sim
+set_option autoImplicit false
+open OCaml.Bytecode Vsa.Machine
+open OCaml.Vm.Primitives
+
+/-- Both paths of {op} implement the successful semantic step: an integer
+accumulator by value, an in-range pointer or atom as "not equal" (BcSem's
+guard bounds the immediate below `2^30`; `imm_test_pointer`). -/
+theorem {low}_step_arm {{L : OCaml.Layout}} {{P : Prog}} {{s s' : St}} {{c : Config}}
+    {{pl : Place}} {{cp : ChanPlace}} {{sp high : Nat}} {{imm ofs : BitVec 32}}
+    (stable : MemoryStable L.runtimeOk)
+    (h : ArmInput L P s .{op} c pl cp sp high)
+    (operand : OperandAt P pl (s.pc + 1) imm)
+    (offset : OperandAt P pl (s.pc + 2) ofs)
+    (step : stepI P s ⟨.{op}, [imm.toInt, ofs.toInt]⟩ = .next s') :
+    ∃ c', Plus c c' ∧ Running L P s' c' := by
+  have pointerCase : ((∃ l k, s.accu = .ptr l k) ∨ ∃ t, s.accu = .atom t) →
+      ∃ c', Plus c c' ∧ Running L P s' c' := by
+    intro pointer
+{pointer}
+  cases hv : s.accu with
+  | int n =>
+    cases test : ((BitVec.ofInt 64 imm.toInt) == longVal n) with
+    | false =>
+{path(ne_path, '(imm_test_int hv test)')}
+    | true =>
+{path(eq_path, '(imm_test_int hv test)')}
+  | ptr l k => exact pointerCase (.inl ⟨l, k, hv⟩)
+  | atom t => exact pointerCase (.inr ⟨t, hv⟩)
+  | code pc => simp [stepI, hv] at step
+  | raw w => simp [stepI, hv] at step
+
+end OCaml.Vm.Sim
+"""
 
 
 if __name__ == '__main__':

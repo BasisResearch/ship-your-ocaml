@@ -3,14 +3,13 @@ import OCaml.Vm.Sim.GlobalRows
 import OCaml.Vm.Sim.ApplyGenericRows
 import OCaml.Vm.Sim.ReturnRows
 import OCaml.Vm.Sim.ControlRows
-import OCaml.Bytecode.ExtraBound
 
 /-!
 # F1 table rows for the operand-taking stack, environment, global and call opcodes
 
 Each row instantiates a loop-head simulation through `opArm_of_next1/2`.
 Stack bounds come from the budget (`stack_fits`, `stack_fits_threshold`);
-RETURN's saved-extra facts come from `ExtraBounded` (a2-sem).
+RETURN's saved-extra facts come from BcSem's guards.
 -/
 
 namespace OCaml.Vm.Sim
@@ -163,15 +162,12 @@ theorem appterm3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom
         (by simpa using stack_fits_threshold fits capacity reach (k := 0)) step)
     (shape1 (fun _ => rfl) (fun _ _ _ _ => rfl)) (fun s a e w step => by no_halt step)
 
-/-- **The RETURN n row**, under a2-sem's `ExtraBounded`. -/
+/-- **The RETURN n row**. -/
 theorem return_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
-    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (extra : ExtraBounded P) :
+    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B) :
     OCaml.OpArm P (OCaml.LoopAt L P) .RETURN :=
   opArm_of_next1 (fun s _ _ w reach _ h code fetch step =>
       return_next stable h code fetch
-        (by have := extra.small s reach; omega)
-        (fun dest env ex rest frame => extra.saved s _ dest env ex rest reach frame)
         (by simpa using stack_fits fits capacity reach (k := 0)) step)
     (shape1 (fun _ => rfl) (fun _ _ _ _ => rfl)) (fun s a e w step => by no_halt step)
 

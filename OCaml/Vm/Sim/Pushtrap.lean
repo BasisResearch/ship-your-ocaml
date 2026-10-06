@@ -178,7 +178,7 @@ theorem pushtrap_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (step : stepI P s ⟨.PUSHTRAP, [ofs.toInt]⟩ = .next s') :
     ∃ after, Plus c after ∧ Running L P s' after := by
   have state : {s with pc := s.pc + 2, stack := .code dest :: Val.ofInt (s.stack.length + 4 - s.trap : Nat) :: s.env :: Val.ofInt s.extra :: s.stack, trap := s.stack.length + 4} = s' := by
-    simpa [stepI, jump, opt, St.adv, Int.ofNat_sub space.trapBound] using step
+    simpa [stepI, jump, opt, St.adv, Int.ofNat_sub space.trapBound] using Res.unguard step
   rw [← state]
   exact pushtrap_arm stable h operand jump envWord space
 

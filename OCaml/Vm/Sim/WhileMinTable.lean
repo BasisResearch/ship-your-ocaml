@@ -23,15 +23,12 @@ structure WhileMinOpen : Prop where
 
 theorem whileMin_premises (o : WhileMinOpen) :
     F1PremisesFor (fun op => OCaml.Programs.whileMinOps.contains op) OCaml.Programs.whileMin where
-  extra _ := OCaml.Programs.whileMin_extraBounded
   setglobal_barrier _ := o.setglobal_barrier
   setfield0_barrier h := absurd h (by decide)
   setfield1_barrier h := absurd h (by decide)
   setfield2_barrier h := absurd h (by decide)
   setfield3_barrier h := absurd h (by decide)
   setfield_barrier h := absurd h (by decide)
-  values _ := OCaml.Programs.whileMin_valuesInRange
-  trapBounded _ := OCaml.Programs.whileMin_trapBounded.bounded
   c_call1_returns _ := whileMin_ccallReturns (by decide) fun _ h => by
     simp only [OCaml.Programs.whileMinCalls, List.mem_cons, List.mem_nil_iff, or_false] at h
     rcases h with rfl | rfl | rfl | rfl
@@ -53,7 +50,6 @@ theorem whileMin_premises (o : WhileMinOpen) :
   c_call5_returns h := absurd h (by decide)
   divint_zero h := absurd h (by decide)
   modint_zero _ := DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inr rfl)
-  ints h := absurd h (by decide)
 
 /-- **The `whileMin` machine run** from the open premises only. -/
 theorem whileMin_halts_open (o : WhileMinOpen) :

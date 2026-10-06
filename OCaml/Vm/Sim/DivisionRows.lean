@@ -922,8 +922,6 @@ theorem division_zero_caught_next (kind : DivisionKind) {L : OCaml.Layout} {P : 
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s (divisionOpcode kind))
     (space : 8 * (s.stack.length + 1) ≤ Layout.stackBytes)
-    (trapSaved : ∀ n dest link env (ex : BitVec 63) rest,
-      s.stack.drop n = .code dest :: .int link :: env :: .int ex :: rest → 0 ≤ ex.toInt)
     (caught : s.trap ≠ 0)
     (notRaw : ∀ exn, field? s.heap P.globals 5 = some exn → ∀ r, exn ≠ .raw r)
     (step : stepI P s ⟨divisionOpcode kind, []⟩ = .next s')
@@ -943,10 +941,7 @@ theorem division_zero_caught_next (kind : DivisionKind) {L : OCaml.Layout} {P : 
   have stack0 : s.stack = .int 0#63 :: rest := stack
   obtain ⟨dest, link, envV, extra, restV, frame⟩ :=
     RaiseFrame.of_step (division_zero_raise kind accu stack0 field caught step) caught
-  have nonnegative := trapSaved _ _ _ _ _ _ (by
-    have fs := frame.stack
-    simp only [divisionRaiseState, List.drop_drop] at fs
-    exact fs)
+  have nonnegative := frame.saved_of_step (division_zero_raise kind accu stack0 field caught step)
   have g := input.geometry.toArmGeometry
   have hs := input.stack.1
   have low := stack_space input.stack (by omega : 8 * s.stack.length ≤ Layout.stackBytes)

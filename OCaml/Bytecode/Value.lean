@@ -170,6 +170,21 @@ def Val.switchExotic : Val → Bool
   | .ptr _ (_ + 1) => true
   | _ => false
 
+/-- A value's word lies in its region (`n` is the code size). -/
+def Val.inRange (n : Nat) (h : Heap) : Val → Bool
+  | .ptr l k => match h.get? l with
+    | some o => decide (k < o.wosize)
+    | none => false
+  | .code pc => decide (pc < n)
+  | .atom t => decide (t < 256)
+  | .raw _ => false
+  | .int _ => true
+
+/-- A word that is not a value (`CLOSUREREC`'s infix headers). -/
+def Val.isRaw : Val → Bool
+  | .raw _ => true
+  | _ => false
+
 /-- Write field `i` (`caml_modify` / `Field(v,i) = x`). -/
 def setField? (h : Heap) : Val → Nat → Val → Option Heap
   | .ptr l k, i, x => match h.get? l with

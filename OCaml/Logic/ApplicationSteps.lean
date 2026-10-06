@@ -30,29 +30,33 @@ arguments. It does not pop a caller return frame. -/
 theorem return_over (P : Prog) (pc dest : Nat) (f env : Val) (extra trap : Nat)
     (h : Heap) (w : World) (args tail : List Val)
     (decode : decodeAt P.code pc = some ⟨.RETURN, [args.length]⟩)
-    (code : field? h f 0 = some (.code dest)) :
+    (code : field? h f 0 = some (.code dest)) (small : extra + 1 < 2 ^ 62) :
     Run.iter (bcK P) 1 ⟨pc, f, args ++ tail, env, extra + 1, trap, h, w⟩ =
       .ok ⟨dest, f, tail, f, extra, trap, h, w⟩ := by
   apply sym_instr decode
   have guard : ¬ ((args.length : Int) < 0) := by omega
-  simp [stepI, guard, enter, code, opt]
+  have fits : ¬ 2 ^ 62 ≤ extra + 1 := by omega
+  simp [stepI, guard, fits, enter, code, opt]
 
 /-- Under-applied GRAB allocates a partial closure and immediately restores
 the caller frame. RESTART's address is the instruction preceding GRAB. -/
 theorem grab_under (P : Prog) (pc req ret : Nat) (a env caller : Val)
     (extra trap : Nat) (saved : BitVec 63) (h : Heap) (w : World) (args tail : List Val)
     (decode : decodeAt P.code pc = some ⟨.GRAB, [req]⟩)
-    (arity : extra < req) (count : args.length = 1 + extra) (restart : 1 ≤ pc) :
+    (arity : extra < req) (count : args.length = 1 + extra) (restart : 1 ≤ pc)
+    (small : extra < 2 ^ 62) (nonnegative : 0 ≤ saved.toInt) :
     Run.iter (bcK P) 1
       ⟨pc, a, args ++ .code ret :: caller :: .int saved :: tail, env, extra, trap, h, w⟩ =
       .ok ⟨ret, .ptr h.objs.length 0, tail, caller, saved.toNat, trap,
         (h.alloc (.block closureTag (.code (pc - 1) :: Val.ofInt 2 :: env :: args))).1, w⟩ := by
   apply sym_instr decode
   have guard : ¬ ((req : Int) < 0) := by omega
-  simp only [stepI, guard, if_false]
+  have fits : ¬ 2 ^ 62 ≤ extra := by omega
+  simp only [stepI, guard, fits, if_false]
   have hn : ¬ req ≤ extra := by omega
   have hp : ¬ pc < 1 := by omega
-  simp [hn, hp, ← count, Heap.alloc]
+  have hs : ¬ saved.toInt < 0 := by omega
+  simp [hn, hp, hs, ← count, Heap.alloc]
 
 /-- RESTART reads a partial closure, prepends its captured arguments and
 restores its original environment before the next GRAB. -/

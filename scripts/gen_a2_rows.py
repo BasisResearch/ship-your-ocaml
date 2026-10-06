@@ -6,8 +6,8 @@ ImmediateRows / OperandRows / PushConstRows / HeapRows) through
 `opArm_of_next0/1/2` (DecodeFetch.lean). Mis-shaped operand lists are
 `shape0`/`shape1`/`shape2`; non-halting is `no_halt`. Contracts become row
 premises: `stable` (MemoryStable), `rf` (RuntimeFrame), `fits`/`capacity`
-(stack budget), `values` (ValuesInRange), and the named obligations
-`scratch`, `zero`, `integer`, `field`."""
+(stack budget) and the named obligations
+`zero`, `field`."""
 import argparse
 from census import ROOT
 
@@ -41,7 +41,6 @@ P = {
     'stable': '(stable : MemoryStable L.runtimeOk)',
     'rf': '(rf : RuntimeFrame L high0 dom0)',
     'budget': '(fits : OCaml.Fits B P) (capacity : StackCapacity B)',
-    'values': '(values : ValuesInRange P)',
     'scratch': '(scratch : ∀ s c, Reach P s → OCaml.LoopAt L P s c → BinaryLibScratch c)',
     'field': '(field : ∀ s c, Reach P s → OCaml.LoopAt L P s c → FieldWriteReady L P s c)',
 }
@@ -113,15 +112,15 @@ for op, kind in [('DIVINT','quotient'),('MODINT','remainder')]:
         extra_prem=f'(zero : ∀ s s\' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .{op} →\n      stepI P s ⟨.{op}, []⟩ = .next s\' →\n      ∀ rest, s.stack = .int 0 :: rest → ∃ c\', OCaml.Plus c c\' ∧ OCaml.Running L P s\' c\')',
         reach_used=True))
 for op in ['EQ','NEQ']:
-    ROWS.append(row(op, 0, ['stable','budget','values'],
-        f'{op.lower()}_next stable h code {SPACE0} (values s reach) step', '', reach_used=True))
+    ROWS.append(row(op, 0, ['stable','budget'],
+        f'{op.lower()}_next stable h code {SPACE0} step', '', reach_used=True))
 for op in ['CONST0','CONST1','CONST2','CONST3','ATOM0','NEGINT','BOOLNOT','ISINT']:
     ROWS.append(row(op, 0, ['stable'], f'{op.lower()}_next stable h code step', ''))
 for op in ['OFFSETINT','CONSTINT','BRANCH','ATOM']:
     ROWS.append(row(op, 1, ['stable'], f'{op.lower()}_next stable h code fetch step', ''))
 for op in ['BRANCHIF','BRANCHIFNOT']:
-    ROWS.append(row(op, 1, ['stable','values'],
-        f'{op.lower()}_next stable h code fetch (values.accu_notRaw reach) step', '', reach_used=True))
+    ROWS.append(row(op, 1, ['stable'],
+        f'{op.lower()}_next stable h code fetch step', ''))
 BRANCH = [('BLTINT', 'fun a b => a.slt b'), ('BLEINT', 'fun a b => a.sle b'),
           ('BGTINT', 'fun a b => b.slt a'), ('BGEINT', 'fun a b => b.sle a'),
           ('BULTINT', 'fun a b => a.ult b'), ('BUGEINT', 'fun a b => b.ule a')]
@@ -130,10 +129,8 @@ for op, f in BRANCH:
         nohalt_term=f'fun _ _ _ _ _ => brOp_no_halt (f := {f})'))
 for op in ['BEQ','BNEQ']:
     ROWS.append(row(op, 2, ['stable'],
-        f'{op.lower()}_next stable h code fetch fetchOfs (ints.integer s reach (.{"inl" if op == "BEQ" else "inr"} code.fetch)) step',
-        '; an integer accumulator comes from `BranchInts` (`beq_pointer_guard_obstruction`)',
-        extra_prem='(ints : BranchInts P)',
-        reach_used=True, nohalt_term=f'fun _ _ _ _ _ => {op.lower()}_no_halt'))
+        f'{op.lower()}_next stable h code fetch fetchOfs step', '',
+        nohalt_term=f'fun _ _ _ _ _ => {op.lower()}_no_halt'))
 for op in ['PUSHCONST0','PUSHCONST1','PUSHCONST2','PUSHCONST3','PUSHATOM0']:
     ROWS.append(row(op, 0, ['rf','budget'], f'{op.lower()}_next rf h code {SPACE1} step', '', reach_used=True))
 for op in ['PUSHCONSTINT','PUSHATOM']:

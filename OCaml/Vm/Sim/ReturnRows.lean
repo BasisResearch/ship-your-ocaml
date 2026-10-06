@@ -7,10 +7,8 @@ import OCaml.Vm.Sim.ApplyRows
 Both paths from `LoopAt`: with pending extra arguments RETURN re-enters the
 accumulator's closure (its code field read through the placement); without,
 it pops the three-word return frame (read windows from the stack geometry).
-Two facts about the bytecode state stay named, because they are BcSem
-reachability invariants rather than machine facts: the extra-argument count
-fits a native long (`small`), and saved frame extra counts are nonnegative
-(`savedNonnegative`; `APPLY` saves `Val.ofInt s.extra`).
+The extra-argument count fitting a native long and the saved frame's count
+being nonnegative are BcSem's RETURN guards, read off the step.
 -/
 
 namespace OCaml.Vm.Sim
@@ -21,14 +19,14 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 theorem return_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : BitVec 32}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c) (code : DispatchCode P s .RETURN)
     (fetch : P.code[s.pc + 1]? = some w)
-    (small : s.extra < 2^63)
-    (savedNonnegative : ∀ dest env (extra : BitVec 63) rest,
-      s.stack.drop w.toInt.toNat = .code dest :: env :: .int extra :: rest → 0 ≤ extra.toInt)
     (space : 8 * s.stack.length ≤ Layout.stackBytes)
     (step : stepI P s ⟨.RETURN, [w.toInt]⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
   have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
-  have unguarded := Res.unguard step
+  -- BcSem's guards: a small extra count, and a nonnegative saved one
+  have counted := Res.unguard step
+  have small : s.extra < 2^63 := by have := Res.guard_ok counted; omega
+  have unguarded := Res.unguard counted
   obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
   have operand := OperandAt.of_fetch input.geometry.toArmGeometry fetch
   have bound : w.toInt.toNat ≤ s.stack.length := by
@@ -57,7 +55,7 @@ theorem return_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config} {w : 
           input.geometry.read input.stack (stack_space input.stack space)
             (i := w.toInt.toNat + j) (by omega)
       obtain ⟨c', run, running⟩ := return_frame_step_arm stable input operand nonnegative noExtra
-        (savedNonnegative dest env extra rest frame) frame
+        (Int.not_lt.mp (Res.guard_ok shape)) frame
         ⟨by simpa using rd 0 (by decide), by simpa using rd 1 (by decide), by simpa using rd 2 (by decide)⟩
         step
       exact ⟨c', run, h.of_plus run running⟩

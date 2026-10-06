@@ -50,7 +50,8 @@ theorem grab_alloc_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Confi
     omega
   have state : grabState s dest savedEnv savedExtra rest = s' := by
     simpa only [stepI, insufficient, valid, ite_false, stack, grabClosure, grabState,
-      List.cons_append, List.nil_append, Res.next.injEq] using Res.unguard step
+      List.cons_append, List.nil_append, show ¬ savedExtra.toInt < 0 by omega,
+      Res.next.injEq] using Res.unguard (Res.unguard step)
   rw [← state]
   exact grab_alloc_arm runtime h operand short environment stack savedNonnegative space
 

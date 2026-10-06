@@ -53,21 +53,19 @@ theorem restart_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
         · cases step
       · cases step)
 
-/-- **The PUSHTRAP row**, under the BcSem invariant that the trap pointer
-never exceeds the stack (a2-sem). -/
+/-- **The PUSHTRAP row**; the trap pointer lies inside the stack by
+BcSem's PUSHTRAP guard. -/
 theorem pushtrap_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
-    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (trapBounded : ∀ s, Reach P s → s.trap ≤ s.stack.length) :
+    (rf : RuntimeFrame L high0 dom0) (fits : OCaml.Fits B P) (capacity : StackCapacity B) :
     OCaml.OpArm P (OCaml.LoopAt L P) .PUSHTRAP :=
   opArm_of_next1 (fun s _ _ _ reach _ h code fetch step =>
-      pushtrap_next rf h code fetch (by have := trapBounded s reach; omega)
-        (stack_fits fits capacity reach) step)
+      pushtrap_next rf h code fetch (stack_fits fits capacity reach) step)
     (fun s args ne => by
       rcases args with _ | ⟨a, _ | ⟨b, rest⟩⟩
       · exact Or.inr rfl
       · exact absurd rfl (ne a)
       · exact Or.inr rfl)
-    (fun s a e w => opt_not_halt)
+    (fun s a e w step => opt_not_halt (Res.unguard_halt step))
 
 /-- **The PUSH_RETADDR row.** -/
 theorem push_retaddr_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}

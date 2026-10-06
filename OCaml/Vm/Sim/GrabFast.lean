@@ -72,7 +72,7 @@ theorem grab_fast_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config
     (step : stepI P s ⟨.GRAB, [count.toInt]⟩ = .next s') :
     ∃ after, Plus c after ∧ Running L P s' after := by
   have state : {s with pc := s.pc + 2, extra := s.extra - count.toInt.toNat} = s' := by
-    simpa only [stepI, enough, ite_true, St.adv, Res.next.injEq] using Res.unguard step
+    simpa only [stepI, enough, ite_true, St.adv, Res.next.injEq] using Res.unguard (Res.unguard step)
   rw [← state]
   exact grab_fast_arm stable h operand nonnegative small enough
 

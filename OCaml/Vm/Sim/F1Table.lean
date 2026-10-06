@@ -37,15 +37,12 @@ theorem g1_capacity : StackCapacity Gc.g1Budget := by unfold StackCapacity; deci
 /-- **Program-level premises of the F1 rows**, each guarded by the kept
 opcodes that use it, and the rows still open. -/
 structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
-  extra : (keep .RETURN || keep .GRAB || keep .RAISE || keep .RERAISE || keep .RAISE_NOTRACE) = true → ExtraBounded P
   setglobal_barrier : (keep .SETGLOBAL) = true → GlobalBarrier Gc.f1Layout P
   setfield0_barrier : (keep .SETFIELD0) = true → FieldBarrierK Gc.f1Layout P .SETFIELD0 0 (0x800021bc#64) (0#64)
   setfield1_barrier : (keep .SETFIELD1) = true → FieldBarrierK Gc.f1Layout P .SETFIELD1 1 (0x800021a0#64) (8#64)
   setfield2_barrier : (keep .SETFIELD2) = true → FieldBarrierK Gc.f1Layout P .SETFIELD2 2 (0x80002184#64) (16#64)
   setfield3_barrier : (keep .SETFIELD3) = true → FieldBarrierK Gc.f1Layout P .SETFIELD3 3 (0x80002168#64) (24#64)
   setfield_barrier : (keep .SETFIELD) = true → FieldBarrier Gc.f1Layout P
-  values : (keep .BRANCHIF || keep .BRANCHIFNOT || keep .EQ || keep .NEQ) = true → ValuesInRange P
-  trapBounded : (keep .PUSHTRAP) = true → ∀ s, Reach P s → s.trap ≤ s.stack.length
   c_call1_returns : (keep .C_CALL1) = true → CcallReturns Gc.f1Layout P .C_CALL1 (0x80003060#64) 0
   c_call1_exit : (keep .C_CALL1) = true → CcallExit Gc.f1Layout P .C_CALL1 0
   c_call2_returns : (keep .C_CALL2) = true → CcallReturns Gc.f1Layout P .C_CALL2 (0x80003004#64) 1
@@ -54,7 +51,6 @@ structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   c_call5_returns : (keep .C_CALL5) = true → CcallReturns Gc.f1Layout P .C_CALL5 (0x80002ed8#64) 4
   divint_zero : (keep .DIVINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .DIVINT → stepI P s ⟨.DIVINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
   modint_zero : (keep .MODINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .MODINT → stepI P s ⟨.MODINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
-  ints : (keep .BEQ || keep .BNEQ) = true → BranchInts P
 
 /-- All rows kept: the premises of the general F1 statement. -/
 abbrev F1Premises (P : Prog) : Prop := F1PremisesFor (fun _ => true) P
@@ -149,11 +145,11 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .APPTERM3, _ => if h : keep .APPTERM3 = true then appterm3_row f1_runtimeFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .RETURN, _ => if h : keep .RETURN = true then return_row f1_memoryStable fits g1_capacity (pre.extra (by simp [h]))
+    | .RETURN, _ => if h : keep .RETURN = true then return_row f1_memoryStable fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .RESTART, _ => if h : keep .RESTART = true then restart_row f1_runtimeFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .GRAB, _ => if h : keep .GRAB = true then grab_row f1_memoryStable f1_allocFrame fits g1_capacity f1_budgetSmall (pre.extra (by simp [h]))
+    | .GRAB, _ => if h : keep .GRAB = true then grab_row f1_memoryStable f1_allocFrame fits g1_capacity f1_budgetSmall
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .CLOSURE, _ => if h : keep .CLOSURE = true then closure_row f1_runtimeFrame f1_allocFrame fits g1_capacity good
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
@@ -231,19 +227,19 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
     | .SETBYTESCHAR, h => absurd h (by decide)
     | .BRANCH, _ => if h : keep .BRANCH = true then branch_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .BRANCHIF, _ => if h : keep .BRANCHIF = true then branchif_row f1_memoryStable (pre.values (by simp [h]))
+    | .BRANCHIF, _ => if h : keep .BRANCHIF = true then branchif_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .BRANCHIFNOT, _ => if h : keep .BRANCHIFNOT = true then branchifnot_row f1_memoryStable (pre.values (by simp [h]))
+    | .BRANCHIFNOT, _ => if h : keep .BRANCHIFNOT = true then branchifnot_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .SWITCH, _ => if h : keep .SWITCH = true then switch_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .BOOLNOT, _ => if h : keep .BOOLNOT = true then boolnot_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .PUSHTRAP, _ => if h : keep .PUSHTRAP = true then pushtrap_row f1_runtimeFrame fits g1_capacity (pre.trapBounded (by simp [h]))
+    | .PUSHTRAP, _ => if h : keep .PUSHTRAP = true then pushtrap_row f1_runtimeFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .POPTRAP, _ => if h : keep .POPTRAP = true then poptrap_row f1_runtimeFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .RAISE, _ => if h : keep .RAISE = true then raise_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.extra (by simp [h])) good
+    | .RAISE, _ => if h : keep .RAISE = true then raise_row f1_memoryStable f1_runtimeFrame fits g1_capacity good
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .CHECK_SIGNALS, _ => if h : keep .CHECK_SIGNALS = true then check_signals_row f1_memoryStable f1_runtimeFrame
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
@@ -302,9 +298,9 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .ASRINT, _ => if h : keep .ASRINT = true then asrint_row f1_memoryStable fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .EQ, _ => if h : keep .EQ = true then eq_row f1_memoryStable fits g1_capacity (pre.values (by simp [h]))
+    | .EQ, _ => if h : keep .EQ = true then eq_row f1_memoryStable fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .NEQ, _ => if h : keep .NEQ = true then neq_row f1_memoryStable fits g1_capacity (pre.values (by simp [h]))
+    | .NEQ, _ => if h : keep .NEQ = true then neq_row f1_memoryStable fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .LTINT, _ => if h : keep .LTINT = true then ltint_row f1_memoryStable fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
@@ -321,9 +317,9 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
     | .ISINT, _ => if h : keep .ISINT = true then isint_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .GETMETHOD, h => absurd h (by decide)
-    | .BEQ, _ => if h : keep .BEQ = true then beq_row f1_memoryStable (pre.ints (by simp [h]))
+    | .BEQ, _ => if h : keep .BEQ = true then beq_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .BNEQ, _ => if h : keep .BNEQ = true then bneq_row f1_memoryStable (pre.ints (by simp [h]))
+    | .BNEQ, _ => if h : keep .BNEQ = true then bneq_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .BLTINT, _ => if h : keep .BLTINT = true then bltint_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
@@ -346,9 +342,9 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
     | .STOP, _ => stop_row_f1 good
     | .EVENT, h => absurd h (by decide)
     | .BREAK, h => absurd h (by decide)
-    | .RERAISE, _ => if h : keep .RERAISE = true then reraise_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.extra (by simp [h])) good
+    | .RERAISE, _ => if h : keep .RERAISE = true then reraise_row f1_memoryStable f1_runtimeFrame fits g1_capacity good
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .RAISE_NOTRACE, _ => if h : keep .RAISE_NOTRACE = true then raise_notrace_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.extra (by simp [h])) good
+    | .RAISE_NOTRACE, _ => if h : keep .RAISE_NOTRACE = true then raise_notrace_row f1_memoryStable f1_runtimeFrame fits g1_capacity good
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .GETSTRINGCHAR, h => absurd h (by decide)
 

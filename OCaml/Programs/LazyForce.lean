@@ -96,6 +96,7 @@ theorem force_forward_test (P : Prog) (obj v env retEnv : Val) (ret trap : Nat)
 /-- The payload read and return use the same heap and caller continuation. -/
 theorem force_forward_return (P : Prog) (image : ForceCode P) (v env retEnv : Val)
     (l ret trap : Nat) (ex : BitVec 63) (rest : List Val) (h : Heap) (w : World)
+    (saved : 0 ≤ ex.toInt)
     (block : h.get? l = some (.block 250 [v])) :
     Run.iter (exec P) 4
       (tested 12 (.ptr l 0) 250 (.int 1) env retEnv ret trap ex rest h w) =
@@ -117,14 +118,15 @@ theorem force_forward_return (P : Prog) (image : ForceCode P) (v env retEnv : Va
       .code ret :: retEnv :: .int ex :: rest, env, 0, trap, h, w⟩ = _
   rw [Run.iter_one]
   change (match (if rest.length + 7 < 4 then Res.wrong else
-    .next (returned v retEnv ret trap ex rest h w)) with
+    if ex.toInt < 0 then Res.unsupported else .next (returned v retEnv ret trap ex rest h w)) with
     | .next s => Except.ok s | r => Except.error r) = _
-  rw [if_neg (by omega)]
+  rw [if_neg (by omega), if_neg (by omega)]
 
 /-- The real stdlib Forward branch returns its payload in twelve instructions,
 for any payload, surrounding heap, caller stack, environment and world. -/
 theorem force_forward (P : Prog) (image : ForceCode P) (obj v a env retEnv : Val)
     (l ret trap : Nat) (ex : BitVec 63) (rest : List Val) (h : Heap) (w : World)
+    (saved : 0 ≤ ex.toInt)
     (constants : ObjConstants h P.globals obj)
     (block : h.get? l = some (.block 250 [v])) :
     Run.iter (bcK P) 12 (entry (.ptr l 0) a env retEnv ret trap ex rest h w) =
@@ -137,7 +139,7 @@ theorem force_forward (P : Prog) (image : ForceCode P) (obj v a env retEnv : Val
   rw [Run.iter_add, force_tag P image _ a env retEnv 250 ret trap ex rest h w tag]
   change Run.iter (exec P) (4 + 4) _ = _
   rw [Run.iter_add, force_forward_test P obj _ env retEnv ret trap ex rest h w constants]
-  exact force_forward_return P image v env retEnv l ret trap ex rest h w block
+  exact force_forward_return P image v env retEnv l ret trap ex rest h w saved block
 
 /-- A non-Forward tag selects the ordinary-value test. -/
 theorem force_value_test (P : Prog) (obj v env retEnv : Val) (tag : BitVec 63)
@@ -164,6 +166,7 @@ theorem force_value_test (P : Prog) (obj v env retEnv : Val) (tag : BitVec 63)
 /-- A non-Lazy, non-Forward value is returned unchanged. -/
 theorem force_value_return (P : Prog) (obj v env retEnv : Val) (tag : BitVec 63)
     (ret trap : Nat) (ex : BitVec 63) (rest : List Val) (h : Heap) (w : World)
+    (saved : 0 ≤ ex.toInt)
     (constants : ObjConstants h P.globals obj) (different : tag ≠ 246) :
     Run.iter (exec P) 6 (tested 18 v tag (.int 0) env retEnv ret trap ex rest h w) =
       .ok (returned v retEnv ret trap ex rest h w) := by
@@ -182,14 +185,15 @@ theorem force_value_return (P : Prog) (obj v env retEnv : Val) (tag : BitVec 63)
     exact beq_eq_false_iff_ne.mpr (fun eq => different (Val.int.inj eq))
   simp only [physEq?, cmp, opt]
   change (match (if rest.length + 7 < 4 then Res.wrong else
-    .next (returned v retEnv ret trap ex rest h w)) with
+    if ex.toInt < 0 then Res.unsupported else .next (returned v retEnv ret trap ex rest h w)) with
     | .next s => Except.ok s | r => Except.error r) >>= Run.iter (exec P) 0 = _
-  rw [if_neg (by omega)]
+  rw [if_neg (by omega), if_neg (by omega)]
   rfl
 
 /-- The payload path reaches the same caller state as the Forward path. -/
 theorem force_value (P : Prog) (image : ForceCode P) (obj v a env retEnv : Val)
     (tag : BitVec 63) (ret trap : Nat) (ex : BitVec 63) (rest : List Val) (h : Heap) (w : World)
+    (saved : 0 ≤ ex.toInt)
     (constants : ObjConstants h P.globals obj)
     (read : prim P "caml_obj_tag" [v] h w = .ok (.int tag) h w)
     (notForward : tag ≠ 250) (notLazy : tag ≠ 246) :
@@ -200,21 +204,22 @@ theorem force_value (P : Prog) (image : ForceCode P) (obj v a env retEnv : Val)
   rw [Run.iter_add, force_tag P image v a env retEnv tag ret trap ex rest h w read]
   change Run.iter (exec P) (4 + 6) _ = _
   rw [Run.iter_add, force_value_test P obj v env retEnv tag ret trap ex rest h w constants notForward]
-  exact force_value_return P obj v env retEnv tag ret trap ex rest h w constants notLazy
+  exact force_value_return P obj v env retEnv tag ret trap ex rest h w saved constants notLazy
 
 /-- Forward and payload calls have equal output/exit and divergence observations
 for every caller continuation, by confluence after twelve versus fourteen steps.
 The tag-reading premise is the actual primitive equation, not a run assumption. -/
 theorem force_observations (P : Prog) (image : ForceCode P) (obj v a env retEnv : Val)
     (tag : BitVec 63) (l ret trap : Nat) (ex : BitVec 63) (rest : List Val) (h : Heap) (w : World)
+    (saved : 0 ≤ ex.toInt)
     (constants : ObjConstants h P.globals obj)
     (block : h.get? l = some (.block 250 [v]))
     (read : prim P "caml_obj_tag" [v] h w = .ok (.int tag) h w)
     (notForward : tag ≠ 250) (notLazy : tag ≠ 246) :
     FwdObservations P (entry (.ptr l 0) a env retEnv ret trap ex rest h w)
       (entry v a env retEnv ret trap ex rest h w) :=
-  .of_common_result (force_forward P image obj v a env retEnv l ret trap ex rest h w constants block)
-    (force_value P image obj v a env retEnv tag ret trap ex rest h w constants read notForward notLazy)
+  .of_common_result (force_forward P image obj v a env retEnv l ret trap ex rest h w saved constants block)
+    (force_value P image obj v a env retEnv tag ret trap ex rest h w saved constants read notForward notLazy)
 
 /-- The two force arguments differ by exactly one permitted contextual shortcut. -/
 theorem force_argument_edit (v a env retEnv : Val) (l ret trap : Nat)
@@ -229,11 +234,12 @@ returns the immediate-value pseudo-tag 1000. -/
 theorem force_integer_observations (P : Prog) (image : ForceCode P)
     (obj a env retEnv : Val) (n : BitVec 63) (l ret trap : Nat)
     (ex : BitVec 63) (rest : List Val) (h : Heap) (w : World)
+    (saved : 0 ≤ ex.toInt)
     (constants : ObjConstants h P.globals obj)
     (block : h.get? l = some (.block 250 [.int n])) :
     FwdObservations P (entry (.ptr l 0) a env retEnv ret trap ex rest h w)
       (entry (.int n) a env retEnv ret trap ex rest h w) := by
-  apply force_observations P image obj (.int n) a env retEnv 1000 l ret trap ex rest h w constants block
+  apply force_observations P image obj (.int n) a env retEnv 1000 l ret trap ex rest h w saved constants block
   · rw [tag_primitive]; rfl
   · decide
   · decide

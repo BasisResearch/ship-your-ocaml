@@ -69,6 +69,17 @@ theorem RaiseFrame.state_of_step {P : Prog} {s s' : St} {dest : Nat} {link extra
   have active : s.trap ≠ 0 := by have := h.active; omega
   have bound : ¬ s.stack.length < s.trap := Nat.not_lt.mpr h.bound
   have linkBound : ¬ link.toNat > s.trap := Nat.not_lt.mpr h.linkBound
-  simpa only [raiseTo, active, ite_false, bound, h.stack, linkBound, Res.next.injEq] using step
+  simp only [raiseTo, active, ite_false, bound, h.stack, linkBound] at step
+  exact Res.next.inj (Res.unguard step)
+
+/-- The handler frame's saved extra count is nonnegative (BcSem's `raiseTo` guard). -/
+theorem RaiseFrame.saved_of_step {P : Prog} {s s' : St} {dest : Nat} {link extra : BitVec 63}
+    {env : Val} {rest : List Val} (h : RaiseFrame s dest link env extra rest)
+    (step : raiseTo P s s.accu = .next s') : 0 ≤ extra.toInt := by
+  have active : s.trap ≠ 0 := by have := h.active; omega
+  have bound : ¬ s.stack.length < s.trap := Nat.not_lt.mpr h.bound
+  have linkBound : ¬ link.toNat > s.trap := Nat.not_lt.mpr h.linkBound
+  simp only [raiseTo, active, ite_false, bound, h.stack, linkBound] at step
+  exact Int.not_lt.mp (Res.guard_ok step)
 
 end OCaml.Vm.Sim

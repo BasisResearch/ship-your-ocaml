@@ -7,34 +7,43 @@ set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine
 open OCaml.Vm.Primitives
 
-/-- Both paths of BEQ implement the successful semantic step. -/
+/-- Both paths of BEQ implement the successful semantic step: an integer
+accumulator by value, an in-range pointer or atom as "not equal" (BcSem's
+guard bounds the immediate below `2^30`; `imm_test_pointer`). -/
 theorem beq_step_arm {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     {pl : Place} {cp : ChanPlace} {sp high : Nat} {imm ofs : BitVec 32}
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s .BEQ c pl cp sp high)
-    (integer : s.accu.isInt = true)
     (operand : OperandAt P pl (s.pc + 1) imm)
     (offset : OperandAt P pl (s.pc + 2) ofs)
     (step : stepI P s ⟨.BEQ, [imm.toInt, ofs.toInt]⟩ = .next s') :
     ∃ c', Plus c c' ∧ Running L P s' c' := by
-  have step' : brOp s imm.toInt ofs.toInt (fun a b => a == b) = .next s' := by
-    obtain ⟨value, accu⟩ : ∃ value, s.accu = .int value := by
-      cases ha : s.accu <;> simp_all [Val.isInt]
-    simpa [stepI, accu] using step
-  obtain ⟨n, accu⟩ := brOp_accu step'
-  cases test : ((BitVec.ofInt 64 imm.toInt) == (longVal n)) with
-  | false =>
-    have state : {s with pc := s.pc + 3} = s' := by
-      simpa [brOp, accu, test, St.adv] using step'
+  have pointerCase : ((∃ l k, s.accu = .ptr l k) ∨ ∃ t, s.accu = .atom t) →
+      ∃ c', Plus c c' ∧ Running L P s' c' := by
+    intro pointer
+    obtain ⟨small, ranged, state⟩ := beq_pointer_step pointer step
     rw [← state]
-    exact beq_next_arm stable h accu operand test
-  | true =>
-    cases ht : target s.pc 1 ofs.toInt with
-    | none => simp [brOp, accu, test, ht, opt] at step'
-    | some dest =>
-      have state : {s with pc := dest} = s' := by
-        simpa [brOp, accu, test, ht, opt] using step'
+    exact beq_next_arm stable h operand
+      (imm_test_pointer h.geometry.toArmGeometry.toStackGeometry ranged pointer small)
+  cases hv : s.accu with
+  | int n =>
+    cases test : ((BitVec.ofInt 64 imm.toInt) == longVal n) with
+    | false =>
+      have state : {s with pc := s.pc + 3} = s' := by
+        simpa [stepI, hv, brOp, test, bne, St.adv] using step
       rw [← state]
-      exact beq_jump_arm stable h accu operand test offset ht
+      exact beq_next_arm stable h operand (imm_test_int hv test)
+    | true =>
+      cases ht : target s.pc 1 ofs.toInt with
+      | none => simp [stepI, hv, brOp, test, bne, ht, opt] at step
+      | some dest =>
+        have state : {s with pc := dest} = s' := by
+          simpa [stepI, hv, brOp, test, bne, ht, opt] using step
+        rw [← state]
+        exact beq_jump_arm stable h operand (imm_test_int hv test) offset ht
+  | ptr l k => exact pointerCase (.inl ⟨l, k, hv⟩)
+  | atom t => exact pointerCase (.inr ⟨t, hv⟩)
+  | code pc => simp [stepI, hv] at step
+  | raw w => simp [stepI, hv] at step
 
 end OCaml.Vm.Sim

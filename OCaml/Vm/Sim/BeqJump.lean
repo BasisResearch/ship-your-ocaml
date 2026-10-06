@@ -11,38 +11,33 @@ open OCaml.Vm.Primitives
 /-- The jump path of BEQ preserves the represented accumulator.
 The generated branch guard is derived from the exact semantic comparison. -/
 theorem beq_jump_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
-    {pl : Place} {cp : ChanPlace} {sp high : Nat} {n : BitVec 63} {imm : BitVec 32} {dest : Nat} {ofs : BitVec 32}
+    {pl : Place} {cp : ChanPlace} {sp high : Nat} {imm : BitVec 32} {dest : Nat} {ofs : BitVec 32}
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s .BEQ c pl cp sp high)
-    (accu : s.accu = .int n)
     (operand : OperandAt P pl (s.pc + 1) imm)
-    (test : ((BitVec.ofInt 64 imm.toInt) == (longVal n)) = true)
+    (test : ∀ w, valWord pl s.accu = some w → ((BitVec.ofInt 64 imm.toInt) == shift_bits_right_arith w (Sail.BitVec.extractLsb (0x01#6) 5 0)) = true)
     (offset : OperandAt P pl (s.pc + 2) ofs)
     (jump : target s.pc 1 ofs.toInt = some dest)
     : ∃ c', Plus c c' ∧ Running L P {s with pc := dest} c' := by
   apply control_arm stable h
   intro d dp w accuWord value
-  have represented : valWord pl s.accu = some (tag64 n) := by rw [accu]; rfl
-  have equal : w = tag64 n := Option.some.inj (value.symm.trans represented)
-  subst w
   have read : bytesT4 d.σ.mem (pl.codeBase + 4 * (s.pc + 1)) = imm :=
     operand.read32 h.code dp.memory
   have readOffset : bytesT4 d.σ.mem (pl.codeBase + 4 * (s.pc + 2)) = ofs :=
     offset.read32 h.code dp.memory
   have offsetBase : BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 8#64 =
       BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2)) := codePc_add pl s.pc 2
-  have guard : ((BitVec.ofInt 64 imm.toInt) == longVal n) = true := by
-    exact test
+  have guard := test w value
   have bp : SegSt (0x800031d8#64)
-      [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩, ⟨Register.x21, tag64 n⟩]
+      [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩, ⟨Register.x21, w⟩]
       (fun σ => Vsa.Sim.Code.CamlBeqJumpLoaded σ.mem ∧ σ.mem = d.σ.mem ∧ σ = d.σ) d :=
     ⟨dp.good, dp.pc,
       ⟨(dp.frame.frame Register.x8 (by decide)).trans h.pc, accuWord, trivial⟩,
       dp.good.minstret, dp.tick, beq_jump_loaded (dp.image h.dispatch.image), rfl, rfl⟩
-  have run := tr_beq_jump (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) (tag64 n) d.σ.mem d.σ
+  have run := tr_beq_jump (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) w d.σ.mem d.σ
   simp only [show sign_extend (m := 64) (0x004#12) = 4#64 from by decide,
     show sign_extend (m := 64) (0x008#12) = 8#64 from by decide,
-    codePc_succ, operand.geometry.toNat, read, offsetBase, offset.geometry.toNat, readOffset, longVal_native] at run
+    codePc_succ, operand.geometry.toNat, read, offsetBase, offset.geometry.toNat, readOffset, codePc_succ] at run
   obtain ⟨nb, after, _, hb, post⟩ := run operand.geometry.lower operand.geometry.upper
     operand.geometry.htif guard offset.geometry.lower offset.geometry.upper offset.geometry.htif d bp
   obtain ⟨_, hm, frame⟩ := post.extra

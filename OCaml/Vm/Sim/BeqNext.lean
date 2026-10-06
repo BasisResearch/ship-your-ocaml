@@ -11,32 +11,27 @@ open OCaml.Vm.Primitives
 /-- The fallthrough path of BEQ preserves the represented accumulator.
 The generated branch guard is derived from the exact semantic comparison. -/
 theorem beq_next_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
-    {pl : Place} {cp : ChanPlace} {sp high : Nat} {n : BitVec 63} {imm : BitVec 32}
+    {pl : Place} {cp : ChanPlace} {sp high : Nat} {imm : BitVec 32}
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s .BEQ c pl cp sp high)
-    (accu : s.accu = .int n)
     (operand : OperandAt P pl (s.pc + 1) imm)
-    (test : ((BitVec.ofInt 64 imm.toInt) == (longVal n)) = false)
+    (test : ∀ w, valWord pl s.accu = some w → ((BitVec.ofInt 64 imm.toInt) == shift_bits_right_arith w (Sail.BitVec.extractLsb (0x01#6) 5 0)) = false)
     : ∃ c', Plus c c' ∧ Running L P {s with pc := s.pc + 3} c' := by
   apply control_arm stable h
   intro d dp w accuWord value
-  have represented : valWord pl s.accu = some (tag64 n) := by rw [accu]; rfl
-  have equal : w = tag64 n := Option.some.inj (value.symm.trans represented)
-  subst w
   have read : bytesT4 d.σ.mem (pl.codeBase + 4 * (s.pc + 1)) = imm :=
     operand.read32 h.code dp.memory
-  have guard : ((BitVec.ofInt 64 imm.toInt) == longVal n) = false := by
-    exact test
+  have guard := test w value
   have bp : SegSt (0x800031d8#64)
-      [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩, ⟨Register.x21, tag64 n⟩]
+      [⟨Register.x8, BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)⟩, ⟨Register.x21, w⟩]
       (fun σ => Vsa.Sim.Code.CamlBeqNextLoaded σ.mem ∧ σ.mem = d.σ.mem ∧ σ = d.σ) d :=
     ⟨dp.good, dp.pc,
       ⟨(dp.frame.frame Register.x8 (by decide)).trans h.pc, accuWord, trivial⟩,
       dp.good.minstret, dp.tick, beq_next_loaded (dp.image h.dispatch.image), rfl, rfl⟩
-  have run := tr_beq_next (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) (tag64 n) d.σ.mem d.σ
+  have run := tr_beq_next (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) w d.σ.mem d.σ
   simp only [show sign_extend (m := 64) (0x004#12) = 4#64 from by decide,
     show sign_extend (m := 64) (0x00c#12) = 12#64 from by decide,
-    codePc_succ, operand.geometry.toNat, read, longVal_native] at run
+    codePc_succ, operand.geometry.toNat, read, codePc_succ] at run
   obtain ⟨nb, after, _, hb, post⟩ := run operand.geometry.lower operand.geometry.upper
     operand.geometry.htif guard d bp
   obtain ⟨_, hm, frame⟩ := post.extra

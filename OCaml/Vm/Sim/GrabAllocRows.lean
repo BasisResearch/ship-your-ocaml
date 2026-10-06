@@ -1,7 +1,6 @@
 import OCaml.Vm.Sim.MakeblockRows
 import OCaml.Vm.Sim.GrabAlloc
 import OCaml.Vm.Sim.GrabRows
-import OCaml.Bytecode.ExtraBound
 
 /-!
 # GRAB's allocating path at the loop head
@@ -113,17 +112,21 @@ theorem grab_alloc_shape {P : Prog} {s s' : St} {w : BitVec 32}
     (step : stepI P s ⟨.GRAB, [w.toInt]⟩ = .next s') (short : ¬ w.toInt.toNat ≤ s.extra) :
     s.extra + 4 ≤ s.stack.length ∧ 0 < s.pc ∧ s'.heap = (s.heap.alloc (grabClosure s)).1 ∧
       ∃ (dest : Nat) (savedEnv : Val) (savedExtra : BitVec 63) (rest : List Val),
-        s.stack.drop (1 + s.extra) = .code dest :: savedEnv :: .int savedExtra :: rest := by
-  have body := Res.unguard step
+        s.stack.drop (1 + s.extra) = .code dest :: savedEnv :: .int savedExtra :: rest ∧
+        0 ≤ savedExtra.toInt := by
+  have body := Res.unguard (Res.unguard step)
   simp only [stepI, short, ite_false] at body
   by_cases valid : s.stack.length < 1 + s.extra + 3 ∨ s.pc < 1
   · rw [if_pos valid] at body; cases body
   · rw [if_neg valid] at body
     split at body
     · rename_i dest savedEnv savedExtra rest frame
-      simp only [Res.next.injEq] at body
-      subst body
-      exact ⟨by omega, by omega, by simp [grabClosure], dest, savedEnv, savedExtra, rest, frame⟩
+      -- BcSem's guard: the saved count is nonnegative
+      have saved := Int.not_lt.mp (Res.guard_ok body)
+      have next := Res.unguard body
+      simp only [Res.next.injEq] at next
+      subst next
+      exact ⟨by omega, by omega, by simp [grabClosure], dest, savedEnv, savedExtra, rest, frame, saved⟩
     · cases body
 
 /-- `F1`'s heap budget is small. -/
@@ -133,14 +136,15 @@ theorem f1_budgetSmall : Gc.f1Layout.budget.heapWords < 2^31 := by decide
 the allocating path otherwise. -/
 theorem grab_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable L.runtimeOk)
     (allocFrame : AllocFrame L) (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
-    (budgetSmall : L.budget.heapWords < 2^31) (extra : ExtraBounded P) :
+    (budgetSmall : L.budget.heapWords < 2^31) :
     OCaml.OpArm P (OCaml.LoopAt L P) .GRAB :=
   opArm_of_next1 (fun s s' c w reach reach' h code fetch step => by
       have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
-      have smallExtra := extra.small s reach
+      -- BcSem's guard: the extra count fits a native long
+      have smallExtra : s.extra < 2 ^ 62 := Nat.not_le.mp (Res.guard_ok (Res.unguard step))
       by_cases enough : w.toInt.toNat ≤ s.extra
       · exact grab_fast_next stable h code fetch nonnegative (by omega) enough step
-      · obtain ⟨frame, pcPositive, heapEq, dest, savedEnv, savedExtra, rest, shape⟩ :=
+      · obtain ⟨frame, pcPositive, heapEq, dest, savedEnv, savedExtra, rest, shape, savedOk⟩ :=
           grab_alloc_shape step enough
         have budget := (fits s' reach').2
         rw [heapEq, Heap.words_alloc, grabClosure_wosize (by omega)] at budget
@@ -167,7 +171,7 @@ theorem grab_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable L.runtimeO
           (b.free partialIn) b.capacity (by have := b.young; omega) (by have := b.aligned; omega)
         obtain ⟨after, run, running⟩ := grab_alloc_step_arm runtime input
           (OperandAt.of_fetch input.geometry.toArmGeometry fetch) (by omega) environment shape
-          (extra.saved s (1 + s.extra) dest savedEnv savedExtra rest reach shape) grab step
+          savedOk grab step
         exact ⟨after, run, h.of_plus run running⟩)
     (shape1 (fun _ => rfl) (fun _ _ _ _ => rfl))
     (fun s a e w step => by
@@ -178,6 +182,10 @@ theorem grab_row {L : OCaml.Layout} {P : Prog} (stable : MemoryStable L.runtimeO
         · cases step
         · split at step
           · cases step
-          · split at step <;> cases step)
+          · split at step
+            · cases step
+            · split at step
+              · split at step <;> cases step
+              · cases step)
 
 end OCaml.Vm.Sim
