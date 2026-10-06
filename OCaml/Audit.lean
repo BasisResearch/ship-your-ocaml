@@ -4633,3 +4633,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.pushconstint_row
 #print axioms OCaml.Vm.Sim.pushatom_row
 #print axioms OCaml.Vm.Sim.offsetref_row
+#print axioms OCaml.Programs.whileMin_branchInts
+#print axioms OCaml.Bytecode.BranchInts.of_check

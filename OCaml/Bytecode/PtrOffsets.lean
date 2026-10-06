@@ -63,4 +63,32 @@ theorem ValuesInRange.accu_notRaw {P : Prog} (h : ValuesInRange P) {s : St} (rea
     ∀ w, s.accu ≠ .raw w :=
   Val.inRange_notRaw (h.accu reach)
 
+/-! ## Immediate branches see integers
+
+`BEQ`/`BNEQ` compare an immediate with `Long_val(accu)`; on a pointer the
+native comparison depends on its address (`beq_pointer_guard_obstruction`).
+Compiled code emits them only on integers; `BranchInts P` states it. -/
+
+/-- The opcode word at the PC is `op`. -/
+def St.atOp (P : Prog) (s : St) (op : Opcode) : Prop :=
+  P.code[s.pc]? = some (BitVec.ofNat 32 op.toNat)
+
+instance (P : Prog) (s : St) (op : Opcode) : Decidable (s.atOp P op) := by
+  unfold St.atOp; infer_instance
+
+/-- The per-state check. -/
+def St.branchIntsOk (P : Prog) (s : St) : Bool :=
+  if s.atOp P .BEQ ∨ s.atOp P .BNEQ then s.accu.isInt else true
+
+/-- **Every reachable `BEQ`/`BNEQ` sees an integer accumulator.** -/
+structure BranchInts (P : Prog) : Prop where
+  integer : ∀ s, Reach P s → s.atOp P .BEQ ∨ s.atOp P .BNEQ → s.accu.isInt = true
+
+theorem BranchInts.of_check {P : Prog} (h : ∀ s, Reach P s → s.branchIntsOk P = true) :
+    BranchInts P where
+  integer s reach at_ := by
+    have := h s reach
+    simp only [St.branchIntsOk, if_pos at_] at this
+    exact this
+
 end OCaml.Bytecode

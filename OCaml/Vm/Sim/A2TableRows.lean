@@ -336,24 +336,22 @@ theorem bugeint_row {L : OCaml.Layout} {P : Prog}
       bugeint_next stable h code fetch fetchOfs step)
     (shape2 (fun _ => rfl) (fun _ _ => rfl) (fun _ _ _ _ _ => rfl)) (fun _ _ _ _ _ => brOp_no_halt (f := fun a b => b.ule a))
 
-/-- **The BEQ row**; an integer accumulator is the named `integer` (`beq_pointer_guard_obstruction`). -/
+/-- **The BEQ row**; an integer accumulator comes from `BranchInts` (`beq_pointer_guard_obstruction`). -/
 theorem beq_row {L : OCaml.Layout} {P : Prog}
     (stable : MemoryStable L.runtimeOk)
-    (integer : ∀ s, Reach P s → P.code[s.pc]? = some (BitVec.ofNat 32 Opcode.BEQ.toNat) →
-      s.accu.isInt = true) :
+    (ints : BranchInts P) :
     OCaml.OpArm P (OCaml.LoopAt L P) .BEQ :=
   opArm_of_next2 (fun s _ _ _ _ reach _ h code fetch fetchOfs step =>
-      beq_next stable h code fetch fetchOfs (integer s reach code.fetch) step)
+      beq_next stable h code fetch fetchOfs (ints.integer s reach (.inl code.fetch)) step)
     (shape2 (fun _ => rfl) (fun _ _ => rfl) (fun _ _ _ _ _ => rfl)) (fun _ _ _ _ _ => beq_no_halt)
 
-/-- **The BNEQ row**; an integer accumulator is the named `integer` (`beq_pointer_guard_obstruction`). -/
+/-- **The BNEQ row**; an integer accumulator comes from `BranchInts` (`beq_pointer_guard_obstruction`). -/
 theorem bneq_row {L : OCaml.Layout} {P : Prog}
     (stable : MemoryStable L.runtimeOk)
-    (integer : ∀ s, Reach P s → P.code[s.pc]? = some (BitVec.ofNat 32 Opcode.BNEQ.toNat) →
-      s.accu.isInt = true) :
+    (ints : BranchInts P) :
     OCaml.OpArm P (OCaml.LoopAt L P) .BNEQ :=
   opArm_of_next2 (fun s _ _ _ _ reach _ h code fetch fetchOfs step =>
-      bneq_next stable h code fetch fetchOfs (integer s reach code.fetch) step)
+      bneq_next stable h code fetch fetchOfs (ints.integer s reach (.inr code.fetch)) step)
     (shape2 (fun _ => rfl) (fun _ _ => rfl) (fun _ _ _ _ _ => rfl)) (fun _ _ _ _ _ => bneq_no_halt)
 
 /-- **The PUSHCONST0 row**. -/

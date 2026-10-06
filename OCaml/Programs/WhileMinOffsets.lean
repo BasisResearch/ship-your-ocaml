@@ -20,4 +20,13 @@ theorem whileMin_valuesChecked :
 theorem whileMin_valuesInRange : ValuesInRange whileMin := fun _ reach =>
   reach_of_checkAll whileMin_valuesChecked reach
 
+set_option maxRecDepth 100000 in
+theorem whileMin_branchChecked :
+    Run.checkAll (bcK whileMin) (St.branchIntsOk whileMin) 2200 whileMin.init = true := by
+  decide +kernel
+
+/-- **`whileMin`'s immediate branches see integers.** -/
+theorem whileMin_branchInts : BranchInts whileMin :=
+  .of_check fun _ reach => reach_of_checkAll whileMin_branchChecked reach
+
 end OCaml.Programs

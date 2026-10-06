@@ -131,9 +131,9 @@ for op, f in BRANCH:
         nohalt_term=f'fun _ _ _ _ _ => brOp_no_halt (f := {f})'))
 for op in ['BEQ','BNEQ']:
     ROWS.append(row(op, 2, ['stable'],
-        f'{op.lower()}_next stable h code fetch fetchOfs (integer s reach code.fetch) step',
-        '; an integer accumulator is the named `integer` (`beq_pointer_guard_obstruction`)',
-        extra_prem=f'(integer : ∀ s, Reach P s → P.code[s.pc]? = some (BitVec.ofNat 32 Opcode.{op}.toNat) →\n      s.accu.isInt = true)',
+        f'{op.lower()}_next stable h code fetch fetchOfs (ints.integer s reach (.{"inl" if op == "BEQ" else "inr"} code.fetch)) step',
+        '; an integer accumulator comes from `BranchInts` (`beq_pointer_guard_obstruction`)',
+        extra_prem='(ints : BranchInts P)',
         reach_used=True, nohalt_term=f'fun _ _ _ _ _ => {op.lower()}_no_halt'))
 for op in ['PUSHCONST0','PUSHCONST1','PUSHCONST2','PUSHCONST3','PUSHATOM0']:
     ROWS.append(row(op, 0, ['rf','budget'], f'{op.lower()}_next rf h code {SPACE1} step', '', reach_used=True))
