@@ -77,6 +77,7 @@ structure WriteFdPost (ra sp rp : BitVec 64) (bs : List UInt8) (c d : Config) : 
   result : gpr d 10 = some (BitVec.ofNat 64 bs.length)
   stack : gpr d 2 = some sp
   saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23], gpr d n = gpr c n
+  rest : ∀ n ∈ [24, 25, 26, 27], gpr d n = gpr c n
   output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ ++ bytesToString bs
   frame : ∀ x, (x < sp.toNat - 192 ∨ sp.toNat ≤ x) → (x < errnoGlobal.toNat ∨ errnoGlobal.toNat + 4 ≤ x) →
     (x < rp.toNat ∨ rp.toNat + 4 ≤ x) → (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
@@ -348,7 +349,7 @@ theorem write_fd {ra sp fd buf rp bs c} (h : WriteFdInput ra sp fd buf rp bs c)
   refine ⟨d12, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans
     (run9.trans (run10.trans (run11.trans run12)))))))))),
     p12.good, p12.image, p12.minstret, p12.tick, p12.toEffectPost.htifIdle (p11.toEffectPost.htifIdle l10.idle),
-    p12.pc, load 1 72 ra (gholds_lookup _ p12.regs rfl) raBack, ?_, ?_, ?_, ?_, ?_⟩
+    p12.pc, load 1 72 ra (gholds_lookup _ p12.regs rfl) raBack, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · have l : gpr d12 10 = some (R11 8) := gholds_lookup _ p12.regs rfl
     exact l
   · have l : gpr d12 2 = some (R11 2 + 80#64) := gholds_lookup _ p12.regs rfl
@@ -365,6 +366,15 @@ theorem write_fd {ra sp fd buf rp bs c} (h : WriteFdInput ra sp fd buf rp bs c)
     · exact load 21 24 _ (gholds_lookup _ p12.regs rfl) s5Back
     · exact load 22 16 _ (gholds_lookup _ p12.regs rfl) s6Back
     · exact load 23 8 _ (gholds_lookup _ p12.regs rfl) s7Back
+  · intro n hn
+    have b := hn; simp only [List.mem_cons, List.mem_nil_iff, or_false] at b
+    rw [p12.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega),
+      p11.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp),
+      l10.kept n (by omega) (by omega) (by simp; omega),
+      q9.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega),
+      p8.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega),
+      p7.rest n (by simp; omega), k6 n (by omega) (by omega) (by simp; omega),
+      p1.toEffectPost.gpr_frame (by decide) n (by omega) (by omega) (by simp; omega)]
   · have o := p7.output
     have o10 := l10.output
     unfold Vsa.Machine.output at *
