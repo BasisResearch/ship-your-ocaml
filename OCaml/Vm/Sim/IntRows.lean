@@ -232,7 +232,7 @@ that row is the named premise `zero`, supplied by the zero-divisor arm
 theorem division_next (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Config}
     (stable : MemoryStable L.runtimeOk) (h : OCaml.LoopAt L P s c)
     (code : DispatchCode P s (divisionOpcode kind))
-    (space : 8 * s.stack.length ≤ Layout.stackBytes) (scratch : BinaryLibScratch c)
+    (space : 8 * s.stack.length ≤ Layout.stackBytes)
     (zero : ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c')
     (step : stepI P s ⟨divisionOpcode kind, []⟩ = .next s') :
     ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P s' c' := by
@@ -242,7 +242,7 @@ theorem division_next (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s s' 
     obtain ⟨c', run, running⟩ := zero rest stack
     exact ⟨c', run, h.of_plus run running⟩
   · exact top_read_row h code space (by simp [stack])
-      fun input read => division_step_arm kind stable input accu stack hy read scratch step
+      fun input read => division_step_arm kind stable input accu stack hy read step
 
 /-- The EQ/NEQ operands: physical equality reflects word equality for the
 accumulator and the top of stack, given that the state's live values lie in

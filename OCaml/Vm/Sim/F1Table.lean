@@ -59,7 +59,6 @@ structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   c_call4_effects : (keep .C_CALL4) = true → CcallEffects Gc.f1Layout P .C_CALL4 3
   c_call5_returns : (keep .C_CALL5) = true → CcallReturns Gc.f1Layout P .C_CALL5 (0x80002ed8#64) 4
   c_call5_effects : (keep .C_CALL5) = true → CcallEffects Gc.f1Layout P .C_CALL5 4
-  scratch : (keep .DIVINT || keep .MODINT) = true → ∀ s c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → BinaryLibScratch c
   divint_zero : (keep .DIVINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .DIVINT → stepI P s ⟨.DIVINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
   modint_zero : (keep .MODINT) = true → ∀ s s' c, Reach P s → OCaml.LoopAt Gc.f1Layout P s c → DispatchCode P s .MODINT → stepI P s ⟨.MODINT, []⟩ = .next s' → ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running Gc.f1Layout P s' c'
   ints : (keep .BEQ || keep .BNEQ) = true → BranchInts P
@@ -294,9 +293,9 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .MULINT, _ => if h : keep .MULINT = true then mulint_row f1_memoryStable fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .DIVINT, _ => if h : keep .DIVINT = true then divint_row f1_memoryStable fits g1_capacity (pre.scratch (by simp [h])) (pre.divint_zero (by simp [h]))
+    | .DIVINT, _ => if h : keep .DIVINT = true then divint_row f1_memoryStable fits g1_capacity (pre.divint_zero (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .MODINT, _ => if h : keep .MODINT = true then modint_row f1_memoryStable fits g1_capacity (pre.scratch (by simp [h])) (pre.modint_zero (by simp [h]))
+    | .MODINT, _ => if h : keep .MODINT = true then modint_row f1_memoryStable fits g1_capacity (pre.modint_zero (by simp [h]))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .ANDINT, _ => if h : keep .ANDINT = true then andint_row f1_memoryStable fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)

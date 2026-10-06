@@ -38,7 +38,9 @@ def divisionWrites : List Register :=
 
 /-- Nonzero signed operands use the common binary-library entry contract. -/
 structure SignedDivisionInput (x y ra : BitVec 64) (c : Config) : Prop
-    extends BinaryLibInput x y ra c where
+    extends LeafInput ra c where
+  left : gpr c 10 = some x
+  right : gpr c 11 = some y
   nonzero : y ≠ 0
 
 /-- Exact native normalization boundary before the shared unsigned core. -/

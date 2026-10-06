@@ -90,9 +90,13 @@ Open / next (row premises to discharge, owner):
   from bprime's `NativeValid.jumpRa/jumpSp`), `ReentryMemory`, the caught
   readiness via `caught_log_restore`, and the final composition. whileMin
   needs none of it (`whileMin_divisorsNonzero`).
-* `scratch` (MULINT/DIVINT/MODINT a2/a3 presence): an artifact of the copied
-  libgcc specs' state records; a1-arms adds `GprPresent` to `LoopRegisters`
-  next round, then `BinaryLibScratch.of_loop`.
+* `scratch` retired: the copied libgcc specs pinned a2/a3 at entry although
+  the code writes them first. `Vsa/Sim/Muldi3Any.lean` (`muldi3_spec_any`) and
+  `Vsa/Sim/DivAny.lean` (`udivdi3_spec_any`) run them from any scratch state
+  (conditional pins until the first write, then the copied specs' own pinned
+  states; the copied files are untouched). `BinaryLibScratch` is deleted;
+  MULINT/DIVINT/MODINT rows need no register-presence premise, and a1-arms'
+  `GprPresent` invariant round is unnecessary.
 * General discharges of ValuesInRange / ExtraBounded / TrapBounded.
 
 Premise census of the existing conditional bridges (my families):

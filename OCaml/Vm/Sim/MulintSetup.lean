@@ -8,7 +8,6 @@ set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable LeanRV64DExecutable.Functions
 open OCaml.Vm.Primitives
 
-abbrev MulintScratch := BinaryLibScratch
 
 /-- The generated five-step prefix establishes the exact libgcc call boundary. -/
 theorem mulint_setup {L : OCaml.Layout} {P : Prog} {s : OCaml.Bytecode.St} {c d : Config}

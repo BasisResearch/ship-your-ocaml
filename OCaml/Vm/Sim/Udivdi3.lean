@@ -1,14 +1,17 @@
 import OCaml.Vm.Sim.BinaryLibInput
 import OCaml.Vm.Sim.Udivdi3Pins
 import Vsa.Sim.DivLoops
+import Vsa.Sim.DivAny
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable OCaml.Vm.Primitives
 
-/-- Unsigned division needs a nonzero divisor and the common binary interface. -/
-structure Udivdi3Input (x y ra : BitVec 64) (c : Config) : Prop
-    extends BinaryLibInput x y ra c where
+/-- Unsigned division needs its operands, a nonzero divisor and a return
+address; the scratch registers need not be present (`udivdi3_spec_any`). -/
+structure Udivdi3Input (x y ra : BitVec 64) (c : Config) : Prop extends LeafInput ra c where
+  left : gpr c 10 = some x
+  right : gpr c 11 = some y
   nonzero : y ≠ 0
 
 /-- The existing division core returns quotient and remainder together. -/
@@ -42,8 +45,6 @@ theorem udivdi3_summary {before : Config} {x y ra : BitVec 64}
     FnSummary 0x800372a0#64 (fun c => c = before) (Udivdi3Post before ra (x / y) (x % y)) := by
   constructor
   rintro c ⟨pc, rfl⟩
-  obtain ⟨v2, h2⟩ := input.scratch2
-  obtain ⟨v3, h3⟩ := input.scratch3
   have divisor : 0 < y.toNat := by
     have nonzero := input.nonzero
     have positive : y.toNat ≠ 0 := by
@@ -52,11 +53,11 @@ theorem udivdi3_summary {before : Config} {x y ra : BitVec 64}
       apply BitVec.eq_of_toNat_eq
       exact zero
     omega
-  have pre : udivdi3_pre c.σ.regs.get? x y ra c.σ.mem c.σ.sailOutput c :=
-    ⟨⟨v2, v3, input.good, udivdi3_loaded input.image, rfl, rfl, pc,
-      input.left, input.right, h2, h3, input.raReg, input.minstret,
+  have pre : udivdi3_pre_any c.σ.regs.get? x y ra c.σ.mem c.σ.sailOutput c :=
+    ⟨⟨none, none, input.good, udivdi3_loaded input.image, rfl, rfl, pc,
+      input.left, input.right, nofun, nofun, input.raReg, input.minstret,
       input.tick, fun _ _ => rfl⟩, divisor, input.aligned⟩
-  obtain ⟨after, run, post⟩ := udivdi3_spec _ x y ra _ _ c pre
+  obtain ⟨after, run, post⟩ := udivdi3_spec_any _ x y ra _ _ c pre
   exact ⟨after, run, udivdi3_post_named input post⟩
 
 end OCaml.Vm.Sim

@@ -38,13 +38,9 @@ theorem division_prepared {kind : DivisionKind} {before after : Config} {x y ra 
   refine {
     good := good, image := ?_, minstret := good.minstret,
     raReg := ret, aligned := division_return_aligned kind x y ra input.aligned, tick := tick,
-    left := left, right := right, scratch2 := ?_, scratch3 := ?_,
+    left := left, right := right,
     nonzero := division_magnitude_nonzero input.nonzero, pc := pc, returnAligned := input.aligned, savedReturn := saved,
     memory := memory, frame := frame }
-  · exact image_of_writeLog (log := []) input.image ⟨trivial, trivial⟩ memory
-  · obtain ⟨v, hv⟩ := input.scratch2
-    exact ⟨v, (frame.frame Register.x12 (by decide)).trans hv⟩
-  · obtain ⟨v, hv⟩ := input.scratch3
-    exact ⟨v, (frame.frame Register.x13 (by decide)).trans hv⟩
+  exact image_of_writeLog (log := []) input.image ⟨trivial, trivial⟩ memory
 
 end OCaml.Vm.Sim

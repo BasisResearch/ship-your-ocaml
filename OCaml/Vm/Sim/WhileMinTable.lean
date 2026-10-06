@@ -18,7 +18,6 @@ structure WhileMinOpen : Prop where
   c_call2_effects : CcallEffects Gc.f1Layout OCaml.Programs.whileMin .C_CALL2 1
   c_call4_returns : CcallReturns Gc.f1Layout OCaml.Programs.whileMin .C_CALL4 (0x80002f40#64) 3
   c_call4_effects : CcallEffects Gc.f1Layout OCaml.Programs.whileMin .C_CALL4 3
-  scratch : ∀ s c, Reach OCaml.Programs.whileMin s → OCaml.LoopAt Gc.f1Layout OCaml.Programs.whileMin s c → BinaryLibScratch c
 
 theorem whileMin_premises (o : WhileMinOpen) :
     F1PremisesFor (fun op => OCaml.Programs.whileMinOps.contains op) OCaml.Programs.whileMin where
@@ -45,7 +44,6 @@ theorem whileMin_premises (o : WhileMinOpen) :
   c_call4_effects _ := o.c_call4_effects
   c_call5_returns h := absurd h (by decide)
   c_call5_effects h := absurd h (by decide)
-  scratch _ := o.scratch
   divint_zero h := absurd h (by decide)
   modint_zero _ := DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inr rfl)
   ints h := absurd h (by decide)

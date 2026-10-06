@@ -15,7 +15,7 @@ theorem modint_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     {pl : Place} {cp : ChanPlace} {sp high : Nat} {x y : BitVec 63} {rest : List Val}
     (h : ArmInput L P s .MODINT c pl cp sp high)
     (accu : s.accu = .int x) (stack : s.stack = .int y :: rest) (nonzero : y ≠ 0)
-    (read : ReadWindow (BitVec.ofNat 64 sp) 8) (scratch : BinaryLibScratch c)
+    (read : ReadWindow (BitVec.ofNat 64 sp) 8)
     (dp : DispatchPost c .MODINT (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d) :
     ∃ n after, StepsN n d after ∧ DivisionCall .remainder d pl (s.pc + 1) sp x y after := by
   have source := represented_register h.accu (by rw [accu]; rfl : valWord pl s.accu = some (tag64 x))
@@ -42,14 +42,10 @@ theorem modint_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     good := post.good, image := image, minstret := post.good.minstret,
     raReg := PinsHold.get post.pins ⟨0, by simp⟩, aligned := by decide, tick := post.tick,
     left := PinsHold.get post.pins ⟨1, by simp⟩, right := PinsHold.get post.pins ⟨2, by simp⟩,
-    scratch2 := ?_, scratch3 := ?_, nonzero := division_unbox_nonzero nonzero,
+    nonzero := division_unbox_nonzero nonzero,
     nextCode := ?_, stack := PinsHold.get post.pins ⟨3, by simp⟩,
     memory := memory, output := frame.out,
     preserved := fun r hr => frame.frame r (by revert r; decide), calleePC := post.pcAt }
-  · obtain ⟨v, hv⟩ := scratch.a2
-    exact ⟨v, (frame.frame Register.x12 (by decide)).trans ((dp.frame.frame Register.x12 (by decide)).trans hv)⟩
-  · obtain ⟨v, hv⟩ := scratch.a3
-    exact ⟨v, (frame.frame Register.x13 (by decide)).trans ((dp.frame.frame Register.x13 (by decide)).trans hv)⟩
   · have observed : gpr after 23 = some (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) :=
       (frame.frame Register.x23 (by decide)).trans dp.nextCode
     simpa only [codePc_succ] using observed

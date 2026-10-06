@@ -142,24 +142,24 @@ theorem mulint_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
 
 /-- **The DIVINT row**; a zero divisor is the named `zero` (the raise row). -/
 theorem divint_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
-    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B) (scratch : ∀ s c, Reach P s → OCaml.LoopAt L P s c → BinaryLibScratch c)
+    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
     (zero : ∀ s s' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .DIVINT →
       stepI P s ⟨.DIVINT, []⟩ = .next s' →
       ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c') :
     OCaml.OpArm P (OCaml.LoopAt L P) .DIVINT :=
   opArm_of_next0 (fun s _ _ reach _ h code step =>
-      division_next .quotient stable h code (by simpa using stack_fits fits capacity reach (k := 0)) (scratch s _ reach h) (zero s _ _ reach h code step) step)
+      division_next .quotient stable h code (by simpa using stack_fits fits capacity reach (k := 0)) (zero s _ _ reach h code step) step)
     (shape0 (fun _ _ _ => rfl)) (fun _ _ _ => division_no_halt .quotient)
 
 /-- **The MODINT row**; a zero divisor is the named `zero` (the raise row). -/
 theorem modint_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog}
-    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B) (scratch : ∀ s c, Reach P s → OCaml.LoopAt L P s c → BinaryLibScratch c)
+    (stable : MemoryStable L.runtimeOk) (fits : OCaml.Fits B P) (capacity : StackCapacity B)
     (zero : ∀ s s' c, Reach P s → OCaml.LoopAt L P s c → DispatchCode P s .MODINT →
       stepI P s ⟨.MODINT, []⟩ = .next s' →
       ∀ rest, s.stack = .int 0 :: rest → ∃ c', OCaml.Plus c c' ∧ OCaml.Running L P s' c') :
     OCaml.OpArm P (OCaml.LoopAt L P) .MODINT :=
   opArm_of_next0 (fun s _ _ reach _ h code step =>
-      division_next .remainder stable h code (by simpa using stack_fits fits capacity reach (k := 0)) (scratch s _ reach h) (zero s _ _ reach h code step) step)
+      division_next .remainder stable h code (by simpa using stack_fits fits capacity reach (k := 0)) (zero s _ _ reach h code step) step)
     (shape0 (fun _ _ _ => rfl)) (fun _ _ _ => division_no_halt .remainder)
 
 /-- **The EQ row**. -/

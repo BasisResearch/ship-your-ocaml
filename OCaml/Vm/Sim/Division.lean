@@ -12,12 +12,12 @@ theorem division_setup (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s : 
     {pl : Place} {cp : ChanPlace} {sp high : Nat} {x y : BitVec 63} {rest : List Val}
     (h : ArmInput L P s (divisionOpcode kind) c pl cp sp high)
     (accu : s.accu = .int x) (stack : s.stack = .int y :: rest) (nonzero : y ≠ 0)
-    (read : ReadWindow (BitVec.ofNat 64 sp) 8) (scratch : BinaryLibScratch c)
+    (read : ReadWindow (BitVec.ofNat 64 sp) 8)
     (dp : DispatchPost c (divisionOpcode kind) (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d) :
     ∃ n after, StepsN n d after ∧ DivisionCall kind d pl (s.pc + 1) sp x y after := by
   cases kind with
-  | quotient => exact divint_setup h accu stack nonzero read scratch dp
-  | remainder => exact modint_setup h accu stack nonzero read scratch dp
+  | quotient => exact divint_setup h accu stack nonzero read dp
+  | remainder => exact modint_setup h accu stack nonzero read dp
 
 /-- Select the generated retagging and stack-consuming suffix. -/
 theorem division_return (kind : DivisionKind) {before : Config} {pl : Place} {pc sp : Nat} {x y : BitVec 63} :
@@ -34,7 +34,7 @@ theorem division_arm (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s : St
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s (divisionOpcode kind) c pl cp sp high)
     (accu : s.accu = .int x) (stack : s.stack = .int y :: rest) (nonzero : y ≠ 0)
-    (read : ReadWindow (BitVec.ofNat 64 sp) 8) (scratch : BinaryLibScratch c) :
+    (read : ReadWindow (BitVec.ofNat 64 sp) 8) :
     ∃ after, Plus c after ∧
       Running L P {s with pc := s.pc + 1, accu := .int (divisionResult kind x y), stack := rest} after := by
   have bound : 1 ≤ s.stack.length := by simp only [stack, List.length_cons]; omega
@@ -42,7 +42,7 @@ theorem division_arm (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s : St
   simp only [stack, List.drop_succ_cons, List.drop_zero, Nat.mul_one] at restore
   apply restore
   intro d dp
-  obtain ⟨n, call, run, post⟩ := division_setup kind h accu stack nonzero read scratch dp
+  obtain ⟨n, call, run, post⟩ := division_setup kind h accu stack nonzero read dp
   have start : Vsa.Logic.Triple (fun e => e = d) (DivisionCall kind d pl (s.pc + 1) sp x y) := by
     rintro e rfl
     exact ⟨call, run.toSteps, post⟩
@@ -55,13 +55,13 @@ theorem division_step_arm (kind : DivisionKind) {L : OCaml.Layout} {P : Prog} {s
     (stable : MemoryStable L.runtimeOk)
     (h : ArmInput L P s (divisionOpcode kind) c pl cp sp high)
     (accu : s.accu = .int x) (stack : s.stack = .int y :: rest) (nonzero : y ≠ 0)
-    (read : ReadWindow (BitVec.ofNat 64 sp) 8) (scratch : BinaryLibScratch c)
+    (read : ReadWindow (BitVec.ofNat 64 sp) 8)
     (step : stepI P s ⟨divisionOpcode kind, []⟩ = .next s') :
     ∃ after, Plus c after ∧ Running L P s' after := by
   have nonzeroWord : y ≠ 0#63 := nonzero
   have state : {s with pc := s.pc + 1, accu := .int (divisionResult kind x y), stack := rest} = s' := by
     cases kind <;> simpa [stepI, divisionOpcode, divisionResult, accu, stack, ints?, opt, nonzeroWord, St.adv] using step
   rw [← state]
-  exact division_arm kind stable h accu stack nonzero read scratch
+  exact division_arm kind stable h accu stack nonzero read
 
 end OCaml.Vm.Sim
