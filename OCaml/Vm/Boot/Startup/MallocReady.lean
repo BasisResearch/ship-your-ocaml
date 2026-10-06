@@ -32,4 +32,29 @@ theorem malloc_ready (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat
       aligned := ready.aligned }
   obtain ⟨after, run, allocation⟩ := (allocator_summary c H n ra sp capacity charge input charged).run c ⟨pc, rfl⟩
   exact ⟨after, run, ⟨allocation, ready.malloc_result frame.lower allocation⟩⟩
+theorem MallocReturned.fresh {H capacity n sp ra before after} (w : MallocReturned H capacity n sp ra before after) :
+    (vsaReg after 10).toNat ≠ 0 ∧ heapStart ≤ (vsaReg after 10).toNat ∧
+      (vsaReg after 10).toNat + n.toNat ≤ heapEnd ∧
+      ∀ e ∈ H, ∀ a, InExt ((vsaReg after 10).toNat, n.toNat) a → ¬ InExt e a :=
+  w.allocation.result.fresh.destruct
+
+theorem MallocReturned.pc {H capacity n sp ra before after} (w : MallocReturned H capacity n sp ra before after) :
+    PCAt ra after :=
+  library_pc w.allocation.good w.allocation.result.frame.pc
+
+theorem MallocReturned.result {H capacity n sp ra before after} (w : MallocReturned H capacity n sp ra before after) :
+    gprGet after.σ 10 = some (vsaReg after 10) :=
+  library_gpr w.ready.platform (by decide) (by decide) rfl
+
+/-- malloc keeps every library-saved register. -/
+theorem MallocReturned.saved_gpr {H capacity n sp ra before after k}
+    (w : MallocReturned H capacity n sp ra before after) (platform : VsaOk startupLive before)
+    (member : k ∈ vsaSaved) : gprGet after.σ k = gprGet before.σ k :=
+  allocator_saved_register platform w.allocation.good w.allocation.result.frame k member
+
+/-- malloc keeps every byte at or above its caller's stack pointer. -/
+theorem MallocReturned.caller_byte {H capacity n sp ra before after a}
+    (w : MallocReturned H capacity n sp ra before after) (frame : NativeFrame sp allocHeadroom)
+    (caller : sp.toNat ≤ a) : (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0 :=
+  w.allocation.memory a (allocator_caller_outside frame.lower caller)
 end OCaml.Vm.Boot.Startup
