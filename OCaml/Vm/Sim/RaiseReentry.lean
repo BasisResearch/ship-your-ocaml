@@ -25,6 +25,8 @@ structure RaiseReentryReady (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) 
   geometry : ArmGeometry P s c pl cp high
   /-- the native invocation, held while the C stack unwinds (`InvariantUse.lean`) -/
   native : NativeHeld nativeSp c
+  /-- the HTIF device is idle -/
+  htifIdle : c.σ.regs.get? Register.htif_payload_writes = some 0#4
 
 /-- The native re-entry observations restore the represented common exception-check input. -/
 theorem raise_reentry_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
@@ -66,7 +68,8 @@ theorem raise_reentry_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place
           (by simp only [List.mem_singleton, forall_eq]
               exact h.geometry.domain_below (off := Layout.off_local_roots + 8) (by decide))
           (by simp only [reentryLog, LogInW, InsideW, or_false, and_true]; omega)))
-        post.memory post.nativeStack }
+        post.memory post.nativeStack
+      htifIdle := post.htif.trans h.htifIdle }
     pc := post.pc
     trapReg := post.trap.trans (congrArg some trap)
     domainReg := ?_ }

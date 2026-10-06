@@ -156,7 +156,7 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
     simp at this; omega
   obtain ⟨n, c5, run, p⟩ := entry_native (regs := callerRegs) (a0 := BitVec.ofNat 64 pl.codeBase)
     ⟨⟨h.platform.control, h.platform.image, caller.tick, h.atEntry, caller.stack, caller.regs, h.argCode,
-      nonzero, frame⟩, domain⟩
+      nonzero, frame⟩, domain, caller.htifIdle⟩
   have cover := entryLog_cover (regs := callerRegs) (a0 := BitVec.ofNat 64 pl.codeBase) (c := c) frame
   -- the loaded payload framed to the loop head
   have payload := h.payload.frame_log (caller.outside.cover cover) p.memory p.output

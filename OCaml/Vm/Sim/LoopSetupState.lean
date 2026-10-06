@@ -16,6 +16,7 @@ structure LoopSetupInput (c : Config) : Prop where
   image : ExecutableImage c
   tick : c.tick < 2
   pc : pcOf c = some (0x80001f40#64)
+  htifIdle : c.σ.regs.get? Register.htif_payload_writes = some 0#4
 
 /-- The exact read-only frame and initialized dispatch registers at loop entry. -/
 structure LoopSetupPost (before after : Config) : Prop where

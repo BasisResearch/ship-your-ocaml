@@ -19,6 +19,8 @@ structure RaiseContext (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp :
   geometry : ArmGeometry P s c pl cp high
   /-- the native invocation (`Invocation.lean`) -/
   native : NativePlaced c
+  /-- the HTIF device is idle (the loop registers' fact, carried to the handler) -/
+  htifIdle : c.σ.regs.get? Register.htif_payload_writes = some 0#4
 
 /-- Native exception cuts retain the domain and current trap pointer. -/
 structure RaiseAt (entry : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
@@ -46,12 +48,13 @@ theorem RaiseContext.after_read {L : OCaml.Layout} {P : Prog} {s : St} {pl : Pla
     (stable : MemoryStable L.runtimeOk) (good : GoodState after.σ) (tick : after.tick < 2)
     (memory : after.σ.mem = c.σ.mem) (out : after.σ.sailOutput = c.σ.sailOutput)
     (accu : gpr after Layout.reg_accu = gpr c Layout.reg_accu)
-    (nativeSp : gpr after 2 = gpr c 2) :
+    (nativeSp : gpr after 2 = gpr c 2)
+    (htif : after.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes) :
     RaiseContext L P s pl cp sp high dest link env extra rest after := by
   refine ⟨h.data.frame memory out, h.bindings.frame memory,
     ⟨good, image_of_writeLog (log := []) h.platform.image ⟨trivial, trivial⟩ memory,
       stable c after memory h.platform.runtime⟩, h.frame, ?_, tick,
-    h.geometry.same rfl rfl memory, h.native.frame_read memory nativeSp⟩
+    h.geometry.same rfl rfl memory, h.native.frame_read memory nativeSp, htif.trans h.htifIdle⟩
   obtain ⟨w, reg, value⟩ := h.accu
   exact ⟨w, accu.trans reg, value⟩
 

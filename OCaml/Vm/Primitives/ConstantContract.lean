@@ -41,10 +41,12 @@ theorem constant_contract {runtimeOk : Config → Prop} (stable : MemoryStable r
   intro after post
   refine ⟨post, (h.data.accu_int n).frame post.memory post.output, h.primitives.frame post.memory,
     ⟨post.good, post.image, stable _ _ post.memory h.runtime⟩, ?_, rfl, model⟩
-  refine ⟨?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · exact (post.frame (gprReg Layout.reg_dispatchTable) (by decide) (by decide)).trans h.loop.dispatchTable
   · exact (post.frame (gprReg Layout.reg_opcodeBound) (by decide) (by decide)).trans h.loop.opcodeBound
   · exact (post.frame (gprReg Layout.reg_pending) (by decide) (by decide)).trans h.loop.pending
   · exact (post.frame (gprReg Layout.reg_domain) (by decide) (by decide)).trans h.loop.domain
+  · exact (post.frame Register.htif_payload_writes (by decide) (by decide)).trans
+      h.loop.htifIdle
 
 end OCaml.Vm.Primitives

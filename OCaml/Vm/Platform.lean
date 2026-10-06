@@ -44,5 +44,8 @@ structure LoopRegisters (c : Config) : Prop where
   opcodeBound : gpr c Layout.reg_opcodeBound = some (BitVec.ofNat 64 Layout.opcodeBound)
   pending : gpr c Layout.reg_pending = some (BitVec.ofNat 64 Layout.sym_caml_something_to_do)
   domain : gpr c Layout.reg_domain = some (BitVec.ofNat 64 Layout.sym_Caml_state)
+  /-- no HTIF command is half-written (the console device is idle between
+  complete `tohost` commands; caml_do_exit's exit command needs it) -/
+  htifIdle : c.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some 0#4
 
 end OCaml.Vm

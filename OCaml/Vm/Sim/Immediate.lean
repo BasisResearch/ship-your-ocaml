@@ -9,7 +9,8 @@ accumulator with an immediate or an existing live root. Use the generated regist
 def immediatePreserved : List Register :=
   [gprReg Layout.reg_sp, gprReg Layout.reg_env, gprReg Layout.reg_extra,
    gprReg Layout.reg_dispatchTable, gprReg Layout.reg_opcodeBound,
-   gprReg Layout.reg_pending, gprReg Layout.reg_domain, gprReg 2]
+   gprReg Layout.reg_pending, gprReg Layout.reg_domain, gprReg 2,
+   LeanRV64DExecutable.Register.htif_payload_writes]
 
 /-- Machine observations sufficient to restore an accumulator-result VM state.
 The generated segment supplies execution and its complete frame separately. -/

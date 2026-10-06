@@ -9,7 +9,7 @@ open OCaml.Vm.Primitives
 /-- Fixed loop registers, independent of the current opcode's data registers. -/
 def loopPreserved : List Register :=
   [gprReg Layout.reg_dispatchTable, gprReg Layout.reg_opcodeBound,
-   gprReg Layout.reg_pending, gprReg Layout.reg_domain]
+   gprReg Layout.reg_pending, gprReg Layout.reg_domain, Register.htif_payload_writes]
 
 /-- Reconstruct all fixed loop registers from one finite frame check. -/
 theorem loopRegisters_frame {before after : Config}
@@ -18,7 +18,8 @@ theorem loopRegisters_frame {before after : Config}
   ⟨(frame _ (by decide)).trans loop.dispatchTable,
    (frame _ (by decide)).trans loop.opcodeBound,
    (frame _ (by decide)).trans loop.pending,
-   (frame _ (by decide)).trans loop.domain⟩
+   (frame _ (by decide)).trans loop.domain,
+   (frame _ (by decide)).trans loop.htifIdle⟩
 
 /-- Register observations common to all read-only arm results. Memory payload
 and platform preservation are separate so stack-consuming arms can reuse them. -/

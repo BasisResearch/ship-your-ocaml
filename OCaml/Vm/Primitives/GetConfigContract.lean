@@ -103,7 +103,7 @@ theorem get_config_contract {runtimeOk P s pl cp sp high arg live Dt DA R bd br 
     primitives := bindings_frame_outsideLog h.primitives h.bindingsOutside outside
     platform := ⟨post.good, post.image,
       runtime after (fun x => (byte_total after x).trans (post.memory x)) h.runtime⟩
-    loop := loop_of_abi_frame post.registers (by decide) h.loop
+    loop := loop_of_abi_frame post.registers (by decide) h.loop post.libraryGood.htifIdle
     resultRepr := by simp [valWord, h.triplePlaced]
     semantics := rfl }
 
