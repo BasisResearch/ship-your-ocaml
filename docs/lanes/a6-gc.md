@@ -65,7 +65,9 @@ Done (F1 side of the GC):
   `F1Pins.trapBarrier`/`backtraceOff` (a1-arms, RAISE): `f1_trapBarrier`,
   `f1_backtrace`. `F1Pins.channelUnlock`/`f1_channelUnlock` (a2-sem). `f1_callbackDepth` (bprime, entry/STOP): the footprint's .bss
   window excludes `caml_callback_depth`. `f1_allocFrame_core` (a1-arms' `AllocFrame`):
-  nursery reservations keep `f1Runtime`. `stackWindow_apart`/`domainField_apart` let `Sim.F1Frame`
+  nursery reservations keep `f1Runtime`; `f1_allocFrame_core'` also allows
+  VM-stack stores (CLOSUREREC). `NurseryGeometry.stackAbove`: young_ptr lies
+  below the stack allocation. `stackWindow_apart`/`domainField_apart` let `Sim.F1Frame`
   avoid enumerating the footprint.
 - `OCaml/Vm/Gc/G1Guards.lean`: the C fast paths' `young_ptr - bytes <u
   young_limit` guards. `double_room`, `small_room`, `string_room` give the

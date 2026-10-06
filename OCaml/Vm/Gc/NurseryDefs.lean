@@ -60,5 +60,8 @@ structure NurseryGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   heapPrivate : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     OutWRange [privateRegion] (a - 8) (8 * o.wosize + 8)
   belowPrivate : (runtimeFields c).youngPtr ≤ privateRegion.lo
+  /-- the nursery lies below the VM stack allocation, so a reserved block sits
+  below every stack slot the arms write (a1-arms' CLOSUREREC) -/
+  stackAbove : (runtimeFields c).youngPtr ≤ high - Layout.stackBytes
 
 end OCaml.Vm.Gc

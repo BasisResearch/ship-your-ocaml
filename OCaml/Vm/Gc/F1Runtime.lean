@@ -522,12 +522,13 @@ theorem mem_of_logInW {ws : List W} {log : List WEntry} (h : LogInW ws log) :
     · exact h.1
     · exact ih h.2 e hr
 
-/-- **Nursery reservations keep `f1Runtime`** (a1-arms' `AllocFrame` for the
-pinned layout): the `young_ptr` store to `a - 8` within the free nursery, then
-any stores inside the free nursery `[young_limit, young_ptr)`. -/
-theorem f1_allocFrame_core {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+/-- **Nursery reservations keep `f1Runtime`, with VM-stack stores** (a1-arms'
+two-window `AllocFrame`, e.g. CLOSUREREC pushing closure pointers): the
+`young_ptr` store to `a - 8`, then stores inside the free nursery or the VM
+stack allocation. -/
+theorem f1_allocFrame_core' {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {high a : Nat} {log : List WEntry} (ok : f1Runtime c) (g : NurseryGeometry P s c pl cp high)
-    (inside : LogInW [nurseryFree c] log)
+    (inside : LogInW [nurseryFree c, Sim.stackWindow f1High] log)
     (low : (runtimeFields c).youngLimit ≤ a - 8) (below : a - 8 ≤ (runtimeFields c).youngPtr)
     (aligned : (a - 8) % 8 = 0) :
     AllocationRuntime f1Runtime c
@@ -541,24 +542,33 @@ theorem f1_allocFrame_core {P : Prog} {s : St} {c : Config} {pl : Place} {cp : C
   simp only [nurseryFree, privateRegion, Layout.sym_bss_end, Layout.domainStateBytes, f1Domain,
     WhileMinRuntime.domain] at stat priv domainApart
   have entries := mem_of_logInW inside
+  /- a store inside the VM stack allocation misses every footprint window -/
+  have stackApart : ∀ e : WEntry, (Sim.stackWindow f1High).lo ≤ e.1 →
+      e.1 + e.2.1 ≤ (Sim.stackWindow f1High).hi →
+      ∀ v ∈ f1Footprint, e.1 + e.2.1 ≤ v.lo ∨ v.hi ≤ e.1 := fun e lo hi v hv =>
+    stackWindow_apart (lo := e.1) (hi := e.1 + e.2.1) (by simpa [Sim.stackWindow] using lo)
+      (by simpa [Sim.stackWindow] using hi) v hv
   apply f1_allocation
   · intro e he v hv
-    simp only [keptFootprint, List.mem_cons, List.not_mem_nil, or_false] at hv
     rcases List.mem_append.1 he with hy | hl
-    · simp only [Sim.grabReserveLog, dom, List.mem_cons, List.not_mem_nil, or_false] at hy
+    · simp only [keptFootprint, List.mem_cons, List.not_mem_nil, or_false] at hv
+      simp only [Sim.grabReserveLog, dom, List.mem_cons, List.not_mem_nil, or_false] at hy
       subst hy
       simp only [f1Domain, WhileMinRuntime.domain, Layout.off_young_ptr] at *
       rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
         simp only [WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth,
           Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
           Layout.off_backtrace_active] <;> omega
-    · have hin := entries e hl
-      simp only [InsideW, nurseryFree, or_false] at hin
-      simp only [f1Domain, WhileMinRuntime.domain] at *
-      rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-        simp only [WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth,
-          Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-          Layout.off_backtrace_active] <;> omega
+    · rcases entries e hl with hin | hin | hin
+      · simp only [keptFootprint, List.mem_cons, List.not_mem_nil, or_false] at hv
+        simp only [nurseryFree] at hin
+        simp only [f1Domain, WhileMinRuntime.domain] at *
+        rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+          simp only [WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth,
+            Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
+            Layout.off_backtrace_active] <;> omega
+      · exact stackApart e hin.1 hin.2 v (List.mem_cons_of_mem _ hv)
+      · cases hin
   · intro after memory
     have readback : word after (f1Domain + Layout.off_young_ptr) = BitVec.ofNat 64 (a - 8) := by
       change bytesT after.σ.mem _ 8 = _
@@ -567,12 +577,28 @@ theorem f1_allocFrame_core {P : Prog} {s : St} {c : Config} {pl : Place} {cp : C
       simp only [Sim.grabReserveLog, List.drop_succ_cons, List.drop_zero, List.nil_append]
       apply outLRange_of_forall
       intro e he
-      have hin := entries e he
-      simp only [InsideW, nurseryFree, or_false] at hin
-      simp only [f1Domain, WhileMinRuntime.domain, Layout.off_young_ptr] at *
-      omega
+      rcases entries e he with hin | hin | hin
+      · simp only [nurseryFree] at hin
+        simp only [f1Domain, WhileMinRuntime.domain, Layout.off_young_ptr] at *
+        omega
+      · have := stackApart e hin.1 hin.2 youngWord List.mem_cons_self
+        simp only [youngWord] at this
+        omega
+      · cases hin
     rw [readback, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
     exact ⟨low, below, aligned⟩
+
+/-- The nursery-only `AllocFrame` (MAKEBLOCK, GRAB, CLOSURE), by widening. -/
+theorem f1_allocFrame_core {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high a : Nat} {log : List WEntry} (ok : f1Runtime c) (g : NurseryGeometry P s c pl cp high)
+    (inside : LogInW [nurseryFree c] log)
+    (low : (runtimeFields c).youngLimit ≤ a - 8) (below : a - 8 ≤ (runtimeFields c).youngPtr)
+    (aligned : (a - 8) % 8 = 0) :
+    AllocationRuntime f1Runtime c
+      (Sim.grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log) :=
+  f1_allocFrame_core' ok g (Sim.log_in_windows_of_mem fun e he => Or.inl (by
+      have := mem_of_logInW inside e he
+      simpa [InsideW] using this)) low below aligned
 
 section Cut
 open Vsa.Sim.Boot WhileMinLog

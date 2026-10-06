@@ -70,7 +70,8 @@ theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : P
     heapPrivate := fun l a o' placed object => by
       obtain ⟨o, ho, size⟩ := objects l o' object
       rw [← size]; exact g.heapPrivate l a o placed ho
-    belowPrivate := by rw [ptr]; exact g.belowPrivate }
+    belowPrivate := by rw [ptr]; exact g.belowPrivate
+    stackAbove := by rw [ptr]; exact g.stackAbove }
 
 /-- **Transport across a write log** missing the `Caml_state` and
 primitive-table pointers and the `young_limit`/`young_ptr` words (VM-stack
@@ -151,7 +152,8 @@ theorem NurseryGeometry.alloc {P : Prog} {s s' : St} {c c' : Config} {pl : Place
         cases found
         have := g.belowPrivate
         exact ⟨Or.inl (by omega), trivial⟩
-    belowPrivate := by have := g.belowPrivate; omega }
+    belowPrivate := by have := g.belowPrivate; omega
+    stackAbove := by have := g.stackAbove; omega }
 
 /-- A step that keeps heap, world and memory keeps the geometry. -/
 theorem NurseryGeometry.same {P : Prog} {s s' : St} {c c' : Config} {pl : Place} {cp : ChanPlace}

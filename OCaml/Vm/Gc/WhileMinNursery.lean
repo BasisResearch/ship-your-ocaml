@@ -64,6 +64,7 @@ theorem whileMin_nurseryGeometry :
       have := whileMin_addresses_high a member
       rw [domNat]; exact ⟨Or.inr (by dsimp only; simp only [Layout.domainStateBytes]; omega), trivial⟩
     heapPrivate := fun l a o placed object => whileMin_heapPrivate placed object
-    belowPrivate := by rw [rf]; decide }
+    belowPrivate := by rw [rf]; decide
+    stackAbove := by rw [rf]; simp [WhileMinEntry.high, Layout.stackBytes, WhileMinObservation.observed] }
 
 end OCaml.Vm.Gc

@@ -455,6 +455,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.f1_backtrace
 #print axioms OCaml.Vm.Gc.f1_callbackDepth
 #print axioms OCaml.Vm.Gc.f1_allocFrame_core
+#print axioms OCaml.Vm.Gc.f1_allocFrame_core'
 #print axioms OCaml.Vm.Gc.f1_channelUnlock
 #print axioms OCaml.Vm.Gc.stackWindow_apart
 #print axioms OCaml.Vm.Gc.domainField_apart
