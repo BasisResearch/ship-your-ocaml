@@ -17,10 +17,21 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   `malloc_ready`.
 * `gen_startup_rows.py` pads normalized segment names to 4 hex digits
   (needed for `child`/`new_node` at 0x800000xx).
+* **`fs_init` (FsInit.lean) proves the complete `fs_init.part.0` over the
+  embedded table**: prefix (`fs_init_prefix`, block steps chained by
+  `blocks_then`), `fs_init_scan` (`strchr_ready` → NULL, `strlen_ready`
+  → 4, `child_miss`), `fs_init_tail` (`new_node_slot1`, the file's
+  extent, the table's end, restore). Its post `FsTail` gives readiness
+  with the name block live, the embedded image and the caller registers.
+  `strchr_miss` (StrchrMiss.lean) is `strchr(s, '/')` for any '/'-free
+  string with a `StrchrPlan`. `FsInitPath.lean` reads "/prog" from any
+  `EmbedImage` state.
+* `HeapReady.frame_errno`: stores to newlib's two errno words keep
+  `HeapReady` (asked for by a6-gc).
 
-Next: `fs_init.part.0` (embedded-file table read from the image, `strchr`,
-`strlen`, `child_miss`, `new_node_slot1`, data/size/ro stores), then
-`resolve("ocamlrun")`, `_open`'s ENOENT path, `_open_r`, `open`.
+Next: `FsTail` gains the slot-1/fs_ready/descriptor memory facts that
+`resolve` reads; then `resolve("ocamlrun")`, `_open`'s ENOENT path,
+`_open_r`, `open`, and the retry with "/prog".
 
 ## Round 2 status (2026-10-06, search)
 

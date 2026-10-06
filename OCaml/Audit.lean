@@ -324,6 +324,7 @@ import OCaml.Vm.Boot.Startup.NewNodeSteps
 import OCaml.Vm.Boot.Startup.NewNode
 import OCaml.Vm.Boot.Startup.HeapReady
 import OCaml.Vm.Boot.Startup.HeapFrame
+import OCaml.Vm.Boot.Startup.FsInit
 import OCaml.Vm.Boot.Startup.Strdup
 import OCaml.Vm.Boot.Startup.ExtTableFree
 import OCaml.Vm.Boot.Startup.DecomposeNull
@@ -2409,6 +2410,48 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.HeapReady.block_bounds
 #print axioms OCaml.Vm.Boot.Startup.HeapReady.frame
 #print axioms OCaml.Vm.Boot.Startup.HeapReady.frame_live
+#print axioms OCaml.Vm.Boot.Startup.HeapReady.frame_errno
+#print axioms OCaml.Vm.Boot.Startup.vsaRoomB_errno
+#print axioms OCaml.Vm.Boot.Startup.MallocReturned.other_gpr
+#print axioms OCaml.Vm.Boot.Startup.slotOne_write
+#print axioms OCaml.Vm.Boot.Startup.write_post_seq
+#print axioms OCaml.Vm.Boot.Startup.blocks_then
+#print axioms OCaml.Vm.Boot.Startup.strchr_entry
+#print axioms OCaml.Vm.Boot.Startup.strchr_byte_step
+#print axioms OCaml.Vm.Boot.Startup.strchr_load
+#print axioms OCaml.Vm.Boot.Startup.strchr_masks
+#print axioms OCaml.Vm.Boot.Startup.strchr_test
+#print axioms OCaml.Vm.Boot.Startup.strchr_word_step
+#print axioms OCaml.Vm.Boot.Startup.strchr_finish
+#print axioms OCaml.Vm.Boot.Startup.strchr_miss
+#print axioms OCaml.Vm.Boot.Startup.strlen_ready
+#print axioms OCaml.Vm.Boot.Startup.strchr_ready
+#print axioms OCaml.Vm.Boot.Startup.fs_init_save
+#print axioms OCaml.Vm.Boot.Startup.fs_init_header
+#print axioms OCaml.Vm.Boot.Startup.fs_init_fds
+#print axioms OCaml.Vm.Boot.Startup.fs_init_first
+#print axioms OCaml.Vm.Boot.Startup.fs_init_loop_save
+#print axioms OCaml.Vm.Boot.Startup.fs_init_skip
+#print axioms OCaml.Vm.Boot.Startup.fs_init_strchr_call
+#print axioms OCaml.Vm.Boot.Startup.fs_init_strlen_call
+#print axioms OCaml.Vm.Boot.Startup.fs_init_child_call
+#print axioms OCaml.Vm.Boot.Startup.fs_init_new_call
+#print axioms OCaml.Vm.Boot.Startup.fs_init_file
+#print axioms OCaml.Vm.Boot.Startup.fs_init_return
+#print axioms OCaml.Vm.Boot.Startup.EmbedImage.fs_header
+#print axioms OCaml.Vm.Boot.Startup.EmbedImage.fs_path
+#print axioms OCaml.Vm.Boot.Startup.EmbedImage.prog_slash
+#print axioms OCaml.Vm.Boot.Startup.EmbedImage.prog_plan
+#print axioms OCaml.Vm.Boot.Startup.EmbedImage.prog_cbytes
+#print axioms OCaml.Vm.Boot.Startup.writeLog_point
+#print axioms OCaml.Vm.Boot.Startup.writeLog_skip
+#print axioms OCaml.Vm.Boot.Startup.gholds_carry
+#print axioms OCaml.Vm.Boot.Startup.StrchrFrame.gpr
+#print axioms OCaml.Vm.Boot.Startup.fsWindows_apart
+#print axioms OCaml.Vm.Boot.Startup.fs_init_prefix
+#print axioms OCaml.Vm.Boot.Startup.fs_init_scan
+#print axioms OCaml.Vm.Boot.Startup.fs_init_tail
+#print axioms OCaml.Vm.Boot.Startup.fs_init
 #print axioms OCaml.Vm.Boot.Startup.child_check
 #print axioms OCaml.Vm.Boot.Startup.child_next
 #print axioms OCaml.Vm.Boot.Startup.child_prologue
