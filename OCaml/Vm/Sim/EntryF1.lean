@@ -20,17 +20,24 @@ theorem f1_entryStable {sp : Nat} (frame : EntryFrame sp) :
     WindowStable Gc.f1Runtime (entryWindows sp Gc.f1Domain) := by
   obtain ⟨b1, b2, b3⟩ := frame.nat
   apply Gc.f1_stable
-  intro w hw v hv
+  intro w hw
   simp only [entryWindows, footprintWindows, entryFootprint, List.map, List.mem_cons, List.mem_nil_iff,
     or_false] at hw
-  simp only [Gc.f1Footprint, Gc.keptFootprint, Gc.youngWord, List.mem_cons, List.mem_nil_iff,
-    or_false] at hv
-  rcases hw with rfl | rfl | rfl <;>
-  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-  simp only [Gc.Apart, Gc.f1Domain, Boot.WhileMinRuntime.domain, Boot.WhileMinRuntime.freeBlock,
-    Layout.sym_caml_callback_depth, Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_errno, Layout.sym_bss_end, Layout.off_young_ptr, Layout.off_stack_high,
-    Layout.off_stack_threshold, Layout.off_trap_barrier, Layout.off_backtrace_active,
-    Layout.off_external_raise, interpFrame, Layout.interpFrameBytes] <;> omega
+  rcases hw with rfl | rfl | rfl
+  rotate_left
+  · exact Gc.footprint_apart_ignored ⟨⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩,
+      by simp [Gc.ignoredStatics], Nat.le_refl _, Nat.le_refl _⟩
+  all_goals
+    refine Gc.footprint_apart (Or.inl ?_) ?_
+    · simp only [Gc.f1Domain, Boot.WhileMinRuntime.domain, Layout.sym_bss_end, Layout.off_external_raise,
+        interpFrame, Layout.interpFrameBytes] at *; omega
+    intro v hv
+    simp only [Gc.youngWord, Gc.dynamicKept, List.mem_cons, List.mem_nil_iff, or_false] at hv
+    rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    simp only [Gc.Apart, Gc.f1Domain, Boot.WhileMinRuntime.domain, Boot.WhileMinRuntime.freeBlock,
+      Layout.sym_bss_end, Layout.off_young_ptr, Layout.off_stack_high,
+      Layout.off_stack_threshold, Layout.off_trap_barrier, Layout.off_backtrace_active,
+      Layout.off_external_raise, interpFrame, Layout.interpFrameBytes] <;> omega
 
 /-- **`ArmSim.entry` for the pinned F1 layout.** -/
 theorem f1_entry {P : Prog} {c : Config} (h : OCaml.Loaded Gc.f1Layout P c) :

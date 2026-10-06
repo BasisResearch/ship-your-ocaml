@@ -8,6 +8,7 @@ import OCaml.Vm.Gc.Readback
 import OCaml.Vm.Gc.NurseryDefs
 import OCaml.Vm.Primitives.ExitPath.Machine
 import OCaml.Vm.Sim.NurseryInput
+import VsaIris.Vsa.HeapShape
 
 /-!
 # The F1 runtime invariant, pinned at the cut
@@ -60,14 +61,25 @@ def f1Runtime : Config → Prop := RuntimeOk F1Pins
 /-- The F1 layout. -/
 def f1Layout : OCaml.Layout := runtimeLayout F1Pins g1Budget
 
-/-- **Static words `f1Runtime` never reads**, in address order: newlib's
-reentrant errno (`_impure_data._errno`, offset 0 of `struct _reent`),
-`caml_fresh_oo_id`'s counter `oo_last_id`, `caml_callback_depth` (moved by the
-interpreter's entry and `STOP`), and the global `errno`. Writes to them keep
-the invariant (`f1_ignoredStatic`). -/
+/-- **Static words `f1Runtime` never reads**, in address order: newlib
+malloc's globals (`allocGlobal`: the bins, `_impure_data._errno`, the
+sbrk/top-pad words, `errno`, the malloc lock words), `caml_fresh_oo_id`'s
+counter `oo_last_id`, and `caml_callback_depth` (moved by the interpreter's
+entry and `STOP`). Writes to them keep the invariant (`f1_ignoredStatic`). -/
 def ignoredStatics : List W :=
-  [⟨Layout.sym_impure_data, Layout.sym_impure_data + 4⟩, ⟨Layout.sym_oo_last_id, Layout.sym_oo_last_id + 8⟩,
-   ⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩, ⟨Layout.sym_errno, Layout.sym_errno + 4⟩]
+  [⟨0x80063b90, 0x800643a0⟩, ⟨Layout.sym_impure_data, Layout.sym_impure_data + 4⟩,
+   ⟨Layout.sym_oo_last_id, Layout.sym_oo_last_id + 8⟩, ⟨0x800648e8, 0x800648f8⟩,
+   ⟨0x80064910, 0x80064910 + 8⟩, ⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩,
+   ⟨0x80064d20, 0x80064d38⟩, ⟨Layout.sym_errno, Layout.sym_errno + 4⟩, ⟨0x8007c9e8, 0x8007ca38⟩]
+
+/-- Every malloc global lies in an ignored static window (the windows are
+`allocGlobal`'s, checked here). -/
+theorem allocGlobal_ignored {a : Nat} (h : VsaIris.VsaHeap.allocGlobal a) :
+    ∃ w ∈ ignoredStatics, w.lo ≤ a ∧ a < w.hi := by
+  unfold VsaIris.VsaHeap.allocGlobal VsaIris.VsaHeap.InRange at h
+  simp only [ignoredStatics, List.mem_cons, List.not_mem_nil, or_false, exists_eq_or_imp, exists_eq_left,
+    Layout.sym_impure_data, Layout.sym_errno]
+  omega
 
 /-- A static range misses every ignored static word. -/
 def StaticApart (x n : Nat) : Prop := ∀ w ∈ ignoredStatics, x + n ≤ w.lo ∨ w.hi ≤ x
@@ -75,24 +87,54 @@ def StaticApart (x n : Nat) : Prop := ∀ w ∈ ignoredStatics, x + n ≤ w.lo �
 instance (x n : Nat) : Decidable (StaticApart x n) := by unfold StaticApart; infer_instance
 
 /-- Everything above the last ignored static word. -/
-theorem StaticApart.above {x n : Nat} (h : Layout.sym_errno + 4 ≤ x) : StaticApart x n := by
+theorem StaticApart.above {x n : Nat} (h : 0x8007ca38 ≤ x) : StaticApart x n := by
   intro w hw
   simp only [ignoredStatics, List.mem_cons, List.not_mem_nil, or_false] at hw
   simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_callback_depth, Layout.sym_errno] at *
-  rcases hw with rfl | rfl | rfl | rfl <;> dsimp only <;> omega
+  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
 
-/-- The memory `f1Runtime` reads, except the `young_ptr` word. -/
-def keptFootprint : List W :=
-  [⟨0, Layout.sym_impure_data⟩, ⟨Layout.sym_impure_data + 4, Layout.sym_oo_last_id⟩,
-   ⟨Layout.sym_oo_last_id + 8, Layout.sym_caml_callback_depth⟩,
-   ⟨Layout.sym_caml_callback_depth + 4, Layout.sym_errno⟩, ⟨Layout.sym_errno + 4, Layout.sym_bss_end⟩,
-   ⟨f1Domain, f1Domain + Layout.off_young_ptr⟩,
+/-- Between `errno` and the last malloc global window (the best-fit lists). -/
+theorem StaticApart.between {x n : Nat} (low : 0x80064d4c ≤ x) (high : x + n ≤ 0x8007c9e8) :
+    StaticApart x n := by
+  intro w hw
+  simp only [ignoredStatics, List.mem_cons, List.not_mem_nil, or_false] at hw
+  simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_callback_depth, Layout.sym_errno] at *
+  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
+
+/-- The gaps of `[lo, hi)` around the windows `ws`. -/
+def gaps : Nat → List W → Nat → List W
+  | lo, [], hi => [⟨lo, hi⟩]
+  | lo, w :: ws, hi => ⟨lo, w.lo⟩ :: gaps w.hi ws hi
+
+/-- A range apart from every window lies in one gap. -/
+theorem in_gaps {x n : Nat} : ∀ {lo hi : Nat} {ws : List W}, lo ≤ x → x + n ≤ hi →
+    (∀ w ∈ ws, x + n ≤ w.lo ∨ w.hi ≤ x) → ∃ v ∈ gaps lo ws hi, v.lo ≤ x ∧ x + n ≤ v.hi
+  | lo, hi, [], low, high, _ => ⟨⟨lo, hi⟩, List.mem_singleton_self _, low, high⟩
+  | lo, hi, w :: ws, low, high, apart => by
+    rcases apart w List.mem_cons_self with below | above
+    · exact ⟨⟨lo, w.lo⟩, List.mem_cons_self, low, below⟩
+    · obtain ⟨v, member, h⟩ := in_gaps (ws := ws) above high fun u hu => apart u (List.mem_cons_of_mem _ hu)
+      exact ⟨v, List.mem_cons_of_mem _ member, h⟩
+
+/-- The static memory `f1Runtime` reads: `[0, bss_end)` minus the ignored statics. -/
+def staticKept : List W := gaps 0 ignoredStatics Layout.sym_bss_end
+
+theorem staticKept_below : ∀ v ∈ staticKept, v.hi ≤ Layout.sym_bss_end := by decide
+
+theorem staticKept_apart : ∀ v ∈ staticKept, ∀ i ∈ ignoredStatics, v.hi ≤ i.lo ∨ i.hi ≤ v.lo := by decide
+
+/-- The `Caml_state` fields and the free block `f1Runtime` reads, except `young_ptr`. -/
+def dynamicKept : List W :=
+  [⟨f1Domain, f1Domain + Layout.off_young_ptr⟩,
    ⟨f1Domain + Layout.off_young_ptr + 8, f1Domain + 64⟩,
    ⟨f1Domain + Layout.off_stack_high, f1Domain + Layout.off_stack_threshold + 8⟩,
    ⟨f1Domain + Layout.off_trap_barrier, f1Domain + Layout.off_trap_barrier + 8⟩,
    ⟨f1Domain + Layout.off_backtrace_active, f1Domain + Layout.off_backtrace_active + 8⟩,
    ⟨WhileMinRuntime.freeBlock.block - 8,
     WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words⟩]
+
+/-- The memory `f1Runtime` reads, except the `young_ptr` word. -/
+def keptFootprint : List W := staticKept ++ dynamicKept
 
 /-- The `young_ptr` word, which allocation moves. -/
 def youngWord : W := ⟨f1Domain + Layout.off_young_ptr, f1Domain + Layout.off_young_ptr + 8⟩
@@ -102,6 +144,49 @@ def f1Footprint : List W := youngWord :: keptFootprint
 
 /-- Two windows do not overlap. -/
 def Apart (w v : W) : Prop := w.hi ≤ v.lo ∨ v.hi ≤ w.lo
+
+/-- **Apartness from the kept footprint** reduces to the dynamic windows: a
+window above `.bss` or inside one ignored static word misses every static gap. -/
+theorem kept_apart {w : W}
+    (static : Layout.sym_bss_end ≤ w.lo ∨ ∃ i ∈ ignoredStatics, i.lo ≤ w.lo ∧ w.hi ≤ i.hi)
+    (dynamic : ∀ v ∈ dynamicKept, Apart w v) : ∀ v ∈ keptFootprint, Apart w v := by
+  intro v hv
+  rcases List.mem_append.1 hv with st | dy
+  · have below := staticKept_below v st
+    rcases static with above | ⟨i, member, lo, hi⟩
+    · exact Or.inr (by omega)
+    · rcases staticKept_apart v st i member with h | h
+      · exact Or.inr (by omega)
+      · exact Or.inl (by omega)
+  · exact dynamic v dy
+
+/-- `kept_apart` for the whole footprint. -/
+theorem footprint_apart {w : W}
+    (static : Layout.sym_bss_end ≤ w.lo ∨ ∃ i ∈ ignoredStatics, i.lo ≤ w.lo ∧ w.hi ≤ i.hi)
+    (dynamic : ∀ v ∈ youngWord :: dynamicKept, Apart w v) : ∀ v ∈ f1Footprint, Apart w v := by
+  intro v hv
+  rcases List.mem_cons.1 hv with rfl | kept
+  · exact dynamic _ List.mem_cons_self
+  · exact kept_apart static (fun u hu => dynamic u (List.mem_cons_of_mem _ hu)) v kept
+
+theorem ignored_below : ∀ w ∈ ignoredStatics, w.hi ≤ Layout.sym_bss_end := by decide
+
+theorem dynamic_above : ∀ v ∈ youngWord :: dynamicKept, Layout.sym_bss_end ≤ v.lo := by
+  intro v hv
+  simp only [youngWord, dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
+  simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
+    Layout.off_backtrace_active] at *
+  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
+
+/-- A window inside one ignored static word misses the whole footprint. -/
+theorem footprint_apart_ignored {w : W} (inside : ∃ i ∈ ignoredStatics, i.lo ≤ w.lo ∧ w.hi ≤ i.hi) :
+    ∀ v ∈ f1Footprint, Apart w v := by
+  apply footprint_apart (Or.inr inside)
+  intro v hv
+  obtain ⟨i, member, _, hi⟩ := inside
+  have := ignored_below i member
+  have := dynamic_above v hv
+  exact Or.inl (by omega)
 
 /-- A range lies inside one footprint window. -/
 def InFootprint (x n : Nat) : Prop := ∃ v ∈ f1Footprint, v.lo ≤ x ∧ x + n ≤ v.hi
@@ -132,51 +217,33 @@ theorem footprint_keep {ws : List W} {m m' : Std.ExtHashMap Nat (BitVec 8)} (fra
 
 /-- A static read missing the ignored statics. -/
 theorem in_bss {x n : Nat} (h : x + n ≤ Layout.sym_bss_end) (side : StaticApart x n) : InKept x n := by
-  have s1 := side ⟨Layout.sym_impure_data, Layout.sym_impure_data + 4⟩ (by simp [ignoredStatics])
-  have s2 := side ⟨Layout.sym_oo_last_id, Layout.sym_oo_last_id + 8⟩ (by simp [ignoredStatics])
-  have s3 := side ⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩ (by simp [ignoredStatics])
-  have s4 := side ⟨Layout.sym_errno, Layout.sym_errno + 4⟩ (by simp [ignoredStatics])
-  dsimp only at s1 s2 s3 s4
-  simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_callback_depth, Layout.sym_errno,
-    Layout.sym_bss_end] at s1 s2 s3 s4 h
-  rcases s1 with s1 | s1
-  · exact ⟨⟨0, Layout.sym_impure_data⟩, by simp [keptFootprint], Nat.zero_le _, by simp only [Layout.sym_impure_data]; omega⟩
-  rcases s2 with s2 | s2
-  · exact ⟨⟨Layout.sym_impure_data + 4, Layout.sym_oo_last_id⟩, by simp [keptFootprint],
-      by simp only [Layout.sym_impure_data]; omega, by simp only [Layout.sym_oo_last_id]; omega⟩
-  rcases s3 with s3 | s3
-  · exact ⟨⟨Layout.sym_oo_last_id + 8, Layout.sym_caml_callback_depth⟩, by simp [keptFootprint],
-      by simp only [Layout.sym_oo_last_id]; omega, by simp only [Layout.sym_caml_callback_depth]; omega⟩
-  rcases s4 with s4 | s4
-  · exact ⟨⟨Layout.sym_caml_callback_depth + 4, Layout.sym_errno⟩, by simp [keptFootprint],
-      by simp only [Layout.sym_caml_callback_depth]; omega, by simp only [Layout.sym_errno]; omega⟩
-  · exact ⟨⟨Layout.sym_errno + 4, Layout.sym_bss_end⟩, by simp [keptFootprint],
-      by simp only [Layout.sym_errno]; omega, by simp only [Layout.sym_bss_end]; omega⟩
+  obtain ⟨v, member, low, high⟩ := in_gaps (lo := 0) (Nat.zero_le x) h side
+  exact ⟨v, List.mem_append_left _ member, low, high⟩
 
 theorem in_youngLimit {x n : Nat} (low : f1Domain ≤ x) (h : x + n ≤ f1Domain + Layout.off_young_ptr) :
     InKept x n :=
-  ⟨⟨f1Domain, f1Domain + Layout.off_young_ptr⟩, by simp [keptFootprint], low, h⟩
+  ⟨⟨f1Domain, f1Domain + Layout.off_young_ptr⟩, by simp [keptFootprint, dynamicKept], low, h⟩
 
 theorem in_youngRest {x n : Nat} (low : f1Domain + Layout.off_young_ptr + 8 ≤ x) (h : x + n ≤ f1Domain + 64) :
     InKept x n :=
-  ⟨⟨f1Domain + Layout.off_young_ptr + 8, f1Domain + 64⟩, by simp [keptFootprint], low, h⟩
+  ⟨⟨f1Domain + Layout.off_young_ptr + 8, f1Domain + 64⟩, by simp [keptFootprint, dynamicKept], low, h⟩
 
 theorem in_stackFields {x n : Nat} (low : f1Domain + Layout.off_stack_high ≤ x)
     (h : x + n ≤ f1Domain + Layout.off_stack_threshold + 8) : InKept x n :=
-  ⟨⟨f1Domain + Layout.off_stack_high, f1Domain + Layout.off_stack_threshold + 8⟩, by simp [keptFootprint], low, h⟩
+  ⟨⟨f1Domain + Layout.off_stack_high, f1Domain + Layout.off_stack_threshold + 8⟩, by simp [keptFootprint, dynamicKept], low, h⟩
 
 theorem in_trapBarrier : InKept (f1Domain + Layout.off_trap_barrier) 8 :=
-  ⟨⟨f1Domain + Layout.off_trap_barrier, f1Domain + Layout.off_trap_barrier + 8⟩, by simp [keptFootprint],
+  ⟨⟨f1Domain + Layout.off_trap_barrier, f1Domain + Layout.off_trap_barrier + 8⟩, by simp [keptFootprint, dynamicKept],
     Nat.le_refl _, Nat.le_refl _⟩
 
 theorem in_backtrace : InKept (f1Domain + Layout.off_backtrace_active) 8 :=
   ⟨⟨f1Domain + Layout.off_backtrace_active, f1Domain + Layout.off_backtrace_active + 8⟩,
-    by simp [keptFootprint], Nat.le_refl _, Nat.le_refl _⟩
+    by simp [keptFootprint, dynamicKept], Nat.le_refl _, Nat.le_refl _⟩
 
 theorem in_block {x n : Nat} (low : WhileMinRuntime.freeBlock.block - 8 ≤ x)
     (h : x + n ≤ WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words) : InKept x n :=
   ⟨⟨WhileMinRuntime.freeBlock.block - 8, WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words⟩,
-    by simp [keptFootprint], low, h⟩
+    by simp [keptFootprint, dynamicKept], low, h⟩
 
 /-- Equal `n`-byte reads agree byte by byte. -/
 theorem byte_of_bytesT {m m' : Std.ExtHashMap Nat (BitVec 8)} {a n : Nat}
@@ -274,8 +341,8 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
           simp only [smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.sym_bss_end,
             Layout.bf_small_count] at hi ⊢
           omega
-        exact ⟨by rw [w8 _ (b (by simp only [Layout.off_bf_small_free]; omega) (StaticApart.above (by simp only [Layout.off_bf_small_free, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.sym_errno]; omega)))]; exact e.head,
-          by rw [w8 _ (b (by simp only [Layout.off_bf_small_merge]; omega) (StaticApart.above (by simp only [Layout.off_bf_small_merge, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.sym_errno]; omega)))]; exact e.merge⟩
+        exact ⟨by rw [w8 _ (b (by simp only [Layout.off_bf_small_free]; omega) (StaticApart.between (by simp only [Layout.off_bf_small_free, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size] at hi ⊢; omega) (by simp only [Layout.off_bf_small_free, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.bf_small_count] at hi ⊢; omega)))]; exact e.head,
+          by rw [w8 _ (b (by simp only [Layout.off_bf_small_merge]; omega) (StaticApart.between (by simp only [Layout.off_bf_small_merge, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size] at hi ⊢; omega) (by simp only [Layout.off_bf_small_merge, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.bf_small_count] at hi ⊢; omega)))]; exact e.merge⟩
       bitmap := by rw [w4 _ (b (by simp [Layout.sym_bf_small_map, Layout.sym_bss_end]) (by decide))]; exact shape.bitmap
       root := by rw [w8 _ (b (by simp [Layout.sym_bf_large_tree, Layout.sym_bss_end]) (by decide))]; exact shape.root
       least := by rw [w8 _ (b (by simp [Layout.sym_bf_large_least, Layout.sym_bss_end]) (by decide))]; exact shape.least
@@ -338,17 +405,14 @@ theorem f1_window_of {lo hi : Nat}
       WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words ≤ lo) :
     WindowStable f1Runtime [⟨lo, hi⟩] := by
   apply f1_window
+  refine footprint_apart (w := ⟨lo, hi⟩) (Or.inl bss) ?_
   intro v hv
-  simp only [f1Footprint, keptFootprint, youngWord, List.mem_cons, List.not_mem_nil, or_false] at hv
+  simp only [youngWord, dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
   simp only [Layout.off_young_ptr] at *
-  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
-  · dsimp only; omega
-  iterate 4
-    · exact Or.inr (by simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_callback_depth,
-        Layout.sym_errno, Layout.sym_bss_end] at bss ⊢; omega)
-  · exact Or.inr bss
-  · dsimp only; omega
-  · dsimp only; omega
+  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  · dsimp only [Apart]; omega
+  · dsimp only [Apart]; omega
+  · dsimp only [Apart]; omega
   · exact stack
   · exact barrier
   · exact backtrace
@@ -480,52 +544,43 @@ theorem f1_backtrace {c : Config} (ok : f1Runtime c) :
 (for consumers that enumerate `f1Footprint`, e.g. `Sim.F1Frame`). -/
 theorem stackWindow_apart {lo hi : Nat} (low : f1High - Layout.stackBytes ≤ lo) (high : hi ≤ f1High) :
     ∀ v ∈ f1Footprint, Apart ⟨lo, hi⟩ v := by
+  refine footprint_apart (Or.inl (by
+    simp only [f1High, WhileMinEntry.high, Layout.stackBytes, Layout.sym_bss_end] at *; omega)) ?_
   intro v hv
-  simp only [f1Footprint, keptFootprint, youngWord, List.mem_cons, List.not_mem_nil, or_false] at hv
+  simp only [youngWord, dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
   simp only [f1High, f1Domain, WhileMinEntry.high, WhileMinRuntime.domain, WhileMinRuntime.freeBlock,
-    Layout.stackBytes, Layout.sym_bss_end, Layout.sym_caml_callback_depth, Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_errno, Layout.off_young_ptr, Layout.off_stack_high,
-    Layout.off_stack_threshold, Layout.off_trap_barrier, Layout.off_backtrace_active] at *
-  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;> omega
+    Layout.stackBytes, Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
+    Layout.off_backtrace_active] at *
+  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;> omega
 
 /-- The VM-owned `Caml_state` fields miss the whole footprint. -/
 theorem domainField_apart {off : Nat}
     (member : off ∈ [Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots,
       Layout.off_exn_bucket, Layout.off_external_raise]) :
     ∀ v ∈ f1Footprint, Apart ⟨f1Domain + off, f1Domain + off + 8⟩ v := by
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  refine footprint_apart (Or.inl (by
+    simp only [f1Domain, WhileMinRuntime.domain, Layout.sym_bss_end]; omega)) ?_
   intro v hv
-  simp only [f1Footprint, keptFootprint, youngWord, List.mem_cons, List.not_mem_nil, or_false] at hv member
-  simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth, Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_errno,
-    Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
+  simp only [youngWord, dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
+  simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
     Layout.off_backtrace_active, Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots,
     Layout.off_exn_bucket, Layout.off_external_raise] at *
   rcases member with rfl | rfl | rfl | rfl | rfl <;>
-    rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;> omega
+    rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;> omega
 
 /-- **`caml_callback_depth` is not read by `f1Runtime`**: the interpreter's
 entry (`entry_prep`, depth + 1) and `STOP` (depth − 1) keep the invariant. -/
 theorem f1_callbackDepth :
-    WindowStable f1Runtime [⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩] := by
-  apply f1_window
-  intro v hv
-  simp only [f1Footprint, keptFootprint, youngWord, List.mem_cons, List.not_mem_nil, or_false] at hv
-  simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth, Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_errno,
-    Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-    Layout.off_backtrace_active] at *
-  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only <;> omega
+    WindowStable f1Runtime [⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩] :=
+  f1_window fun v hv => footprint_apart_ignored
+    ⟨⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩, by simp [ignoredStatics],
+      Nat.le_refl _, Nat.le_refl _⟩ v hv
 
 /-- **The ignored statics are runtime-stable**: writes to `errno`,
 `_impure_data._errno`, `oo_last_id` or `caml_callback_depth` keep `f1Runtime`. -/
-theorem f1_ignoredStatic : WindowStable f1Runtime ignoredStatics := by
-  apply f1_stable
-  intro w hw v hv
-  simp only [ignoredStatics, List.mem_cons, List.not_mem_nil, or_false] at hw
-  simp only [f1Footprint, keptFootprint, youngWord, List.mem_cons, List.not_mem_nil, or_false] at hv
-  simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth,
-    Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_errno,
-    Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-    Layout.off_backtrace_active] at *
-  rcases hw with rfl | rfl | rfl | rfl <;>
-    rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;> omega
+theorem f1_ignoredStatic : WindowStable f1Runtime ignoredStatics :=
+  f1_stable fun w hw => footprint_apart_ignored ⟨w, hw, Nat.le_refl _, Nat.le_refl _⟩
 
 /-- The channel-mutex unlock hook is unset (a2-sem's division-by-zero row). -/
 theorem f1_channelUnlock {c : Config} (ok : f1Runtime c) :
@@ -604,22 +659,28 @@ theorem f1_allocFrame_core' {P : Prog} {s : St} {c : Config} {pl : Place} {cp : 
   apply f1_allocation
   · intro e he v hv
     rcases List.mem_append.1 he with hy | hl
-    · simp only [keptFootprint, List.mem_cons, List.not_mem_nil, or_false] at hv
-      simp only [Sim.grabReserveLog, dom, List.mem_cons, List.not_mem_nil, or_false] at hy
+    · simp only [Sim.grabReserveLog, dom, List.mem_cons, List.not_mem_nil, or_false] at hy
       subst hy
+      refine kept_apart (w := ⟨f1Domain + Layout.off_young_ptr, f1Domain + Layout.off_young_ptr + 8⟩) (Or.inl ?_) ?_ v hv
+      · simp only [f1Domain, WhileMinRuntime.domain, Layout.off_young_ptr, Layout.sym_bss_end] at *; omega
+      intro v hv
+      simp only [dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
       simp only [f1Domain, WhileMinRuntime.domain, Layout.off_young_ptr] at *
-      rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-        simp only [WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth, Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_errno,
+      rcases hv with rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;>
+        (try simp only [WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth,
           Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-          Layout.off_backtrace_active] <;> omega
+          Layout.off_backtrace_active]) <;> omega
     · rcases entries e hl with hin | hin | hin
-      · simp only [keptFootprint, List.mem_cons, List.not_mem_nil, or_false] at hv
-        simp only [nurseryFree] at hin
+      · simp only [nurseryFree] at hin
+        refine kept_apart (w := ⟨e.1, e.1 + e.2.1⟩) (Or.inl (by
+          simp only [f1Domain, WhileMinRuntime.domain, Layout.sym_bss_end] at *; omega)) ?_ v hv
+        intro v hv
+        simp only [dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
         simp only [f1Domain, WhileMinRuntime.domain] at *
-        rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-          simp only [WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth, Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_errno,
+        rcases hv with rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;>
+          (try simp only [WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth,
             Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-            Layout.off_backtrace_active] <;> omega
+            Layout.off_backtrace_active]) <;> omega
       · exact stackApart e hin.1 hin.2 v (List.mem_cons_of_mem _ hv)
       · cases hin
   · intro after memory

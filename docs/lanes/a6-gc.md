@@ -196,7 +196,13 @@ runtime invariant: the long pole for whileMin's `Halts`.
   `oo_last_id`, `caml_callback_depth` and `errno` are carved out of
   `keptFootprint`; `f1_ignoredStatic : WindowStable f1Runtime ignoredStatics`.
   `in_bss` now takes `StaticApart x n` (decidable; `StaticApart.above` for
-  ranges past `errno`). `keptFootprint` has 11 windows (12 in `f1Footprint`).
+  ranges past `errno`). Follow-up: `ignoredStatics` now also covers every
+  malloc global (`allocGlobal_ignored`), so `f1Runtime` survives malloc's
+  static writes. `keptFootprint = staticKept ++ dynamicKept`, where
+  `staticKept = gaps 0 ignoredStatics bss_end`. Consumers prove apartness with
+  `footprint_apart` (static side: above `.bss` or inside one ignored word;
+  then enumerate only the 7 windows of `youngWord :: dynamicKept`) or
+  `footprint_apart_ignored`. Never enumerate `f1Footprint` directly.
 
 Open: G2 (collector proper); status and next design step below. F1 asks from a1-arms/bprime are all landed (last: `72d88e40`).
 
