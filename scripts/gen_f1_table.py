@@ -33,6 +33,11 @@ WHILEMIN_KNOWN = {
     'modint_zero': 'DivisorsNonzero.zero OCaml.Programs.whileMin_divisorsNonzero (.inr rfl)',
     'closure_sizes': 'OCaml.Programs.whileMin_closureSizes',
     'makeblock_sizes': 'OCaml.Programs.whileMin_blockSizes',
+    'c_call1_effects': 'CcallEffects.of_ok OCaml.Programs.whileMin_ccall1Ok',
+    'c_call2_effects': 'CcallEffects.of_ok OCaml.Programs.whileMin_ccall2Ok',
+    'c_call3_effects': 'CcallEffects.of_ok OCaml.Programs.whileMin_ccall3Ok',
+    'c_call4_effects': 'CcallEffects.of_ok OCaml.Programs.whileMin_ccall4Ok',
+    'c_call5_effects': 'CcallEffects.of_ok OCaml.Programs.whileMin_ccall5Ok',
 }
 
 NON_F1 = set('MAKEFLOATBLOCK GETFLOATFIELD SETFLOATFIELD VECTLENGTH GETVECTITEM SETVECTITEM '

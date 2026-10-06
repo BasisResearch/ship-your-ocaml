@@ -64,11 +64,44 @@ theorem St.operandOk_bound {P : Prog} {op : Opcode} {bound : Nat} {s : St} {w : 
   simp only [St.operandOk, if_pos at_, fetch, decide_eq_true_eq] at ok
   exact ok
 
+/-- A primitive result that returns normally. -/
+def _root_.OCaml.Bytecode.PRes.isOk : PRes → Bool
+  | .ok .. => true
+  | _ => false
+
+theorem _root_.OCaml.Bytecode.PRes.isOk_ok {r : PRes} (h : r.isOk = true) : ∃ v heap world, r = .ok v heap world := by
+  cases r <;> simp_all [PRes.isOk]
+
+/-- The per-state C_CALL check: at `op` (`C_CALLk`, `k` stack arguments)
+naming an F1 primitive, the primitive returns normally on the actual
+arguments. -/
+def St.ccallOk (P : Prog) (op : Opcode) (k : Nat) (s : St) : Bool :=
+  if s.atOp P op then
+    match P.code[s.pc + 1]? with
+    | some w =>
+      if 0 ≤ w.toInt then
+        match P.prims[w.toInt.toNat]? with
+        | some name =>
+          if name ∈ primsF1 then (primF1Impl name (s.accu :: s.stack.take k) s.heap s.world).isOk else true
+        | none => true
+      else true
+    | none => true
+  else true
+
+theorem St.ccallOk_ok {P : Prog} {op : Opcode} {k : Nat} {s : St} {w : BitVec 32} {name : String}
+    (ok : St.ccallOk P op k s = true) (code : DispatchCode P s op) (fetch : P.code[s.pc + 1]? = some w)
+    (nonnegative : 0 ≤ w.toInt) (hp : P.prims[w.toInt.toNat]? = some name) (member : name ∈ primsF1) :
+    ∃ v heap world, primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .ok v heap world := by
+  have at_ : s.atOp P op := code.fetch
+  simp only [St.ccallOk, if_pos at_, fetch, if_pos nonnegative, hp, if_pos member] at ok
+  exact PRes.isOk_ok ok
+
 /-- All F1 shape checks at one state. -/
 def St.shapeOk (P : Prog) (ops : List Opcode) (s : St) : Bool :=
   s.valuesInRange P.code.size && s.extraOk && s.trapOk && s.branchIntsOk P && St.raisesOk P s &&
     St.decodedOk P ops s && s.divisorsOk P && St.operandOk P .CLOSURE 254 s &&
-    St.operandOk P .MAKEBLOCK 256 s
+    St.operandOk P .MAKEBLOCK 256 s && St.ccallOk P .C_CALL1 0 s && St.ccallOk P .C_CALL2 1 s &&
+    St.ccallOk P .C_CALL3 2 s && St.ccallOk P .C_CALL4 3 s && St.ccallOk P .C_CALL5 4 s
 
 /-- The F1 shape checks of one state, by name. -/
 structure ShapeFacts (P : Prog) (ops : List Opcode) (s : St) : Prop where
@@ -81,12 +114,18 @@ structure ShapeFacts (P : Prog) (ops : List Opcode) (s : St) : Prop where
   divisors : s.divisorsOk P = true
   closures : St.operandOk P .CLOSURE 254 s = true
   blocks : St.operandOk P .MAKEBLOCK 256 s = true
+  ccall1 : St.ccallOk P .C_CALL1 0 s = true
+  ccall2 : St.ccallOk P .C_CALL2 1 s = true
+  ccall3 : St.ccallOk P .C_CALL3 2 s = true
+  ccall4 : St.ccallOk P .C_CALL4 3 s = true
+  ccall5 : St.ccallOk P .C_CALL5 4 s = true
 
 theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {s : St} (h : St.shapeOk P ops s = true) :
     ShapeFacts P ops s := by
   simp only [St.shapeOk, Bool.and_eq_true] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩, divisors⟩, closures⟩, blocks⟩ := h
-  exact ⟨values, extra, trap, branches, raises, decoded, divisors, closures, blocks⟩
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨values, extra⟩, trap⟩, branches⟩, raises⟩, decoded⟩, divisors⟩, closures⟩, blocks⟩,
+    c1⟩, c2⟩, c3⟩, c4⟩, c5⟩ := h
+  exact ⟨values, extra, trap, branches, raises, decoded, divisors, closures, blocks, c1, c2, c3, c4, c5⟩
 
 /-- The decode check, by name. -/
 theorem ShapeFacts.decode {P : Prog} {ops : List Opcode} {s : St} (h : ShapeFacts P ops s) :
@@ -167,5 +206,45 @@ theorem whileMin_closureSizes : ClosureSizes whileMin :=
 /-- **`whileMin`'s blocks fit the minor heap.** -/
 theorem whileMin_blockSizes : BlockSizes whileMin :=
   ⟨fun _ _ reach code fetch => St.operandOk_bound (whileMin_shapeOk reach).blocks code fetch⟩
+
+/-- **`whileMin`'s C_CALL1 primitives return normally.** -/
+theorem whileMin_ccall1Ok : ∀ s (w : BitVec 32) name, Reach whileMin s → DispatchCode whileMin s .C_CALL1 →
+    whileMin.code[s.pc + 1]? = some w → 0 ≤ w.toInt → whileMin.prims[w.toInt.toNat]? = some name →
+    name ∈ primsF1 →
+    ∃ v heap world, primF1Impl name (s.accu :: s.stack.take 0) s.heap s.world = .ok v heap world :=
+  fun _ _ _ reach code fetch nonnegative hp member =>
+    St.ccallOk_ok (whileMin_shapeOk reach).ccall1 code fetch nonnegative hp member
+
+/-- **`whileMin`'s C_CALL2 primitives return normally.** -/
+theorem whileMin_ccall2Ok : ∀ s (w : BitVec 32) name, Reach whileMin s → DispatchCode whileMin s .C_CALL2 →
+    whileMin.code[s.pc + 1]? = some w → 0 ≤ w.toInt → whileMin.prims[w.toInt.toNat]? = some name →
+    name ∈ primsF1 →
+    ∃ v heap world, primF1Impl name (s.accu :: s.stack.take 1) s.heap s.world = .ok v heap world :=
+  fun _ _ _ reach code fetch nonnegative hp member =>
+    St.ccallOk_ok (whileMin_shapeOk reach).ccall2 code fetch nonnegative hp member
+
+/-- **`whileMin`'s C_CALL3 primitives return normally.** -/
+theorem whileMin_ccall3Ok : ∀ s (w : BitVec 32) name, Reach whileMin s → DispatchCode whileMin s .C_CALL3 →
+    whileMin.code[s.pc + 1]? = some w → 0 ≤ w.toInt → whileMin.prims[w.toInt.toNat]? = some name →
+    name ∈ primsF1 →
+    ∃ v heap world, primF1Impl name (s.accu :: s.stack.take 2) s.heap s.world = .ok v heap world :=
+  fun _ _ _ reach code fetch nonnegative hp member =>
+    St.ccallOk_ok (whileMin_shapeOk reach).ccall3 code fetch nonnegative hp member
+
+/-- **`whileMin`'s C_CALL4 primitives return normally.** -/
+theorem whileMin_ccall4Ok : ∀ s (w : BitVec 32) name, Reach whileMin s → DispatchCode whileMin s .C_CALL4 →
+    whileMin.code[s.pc + 1]? = some w → 0 ≤ w.toInt → whileMin.prims[w.toInt.toNat]? = some name →
+    name ∈ primsF1 →
+    ∃ v heap world, primF1Impl name (s.accu :: s.stack.take 3) s.heap s.world = .ok v heap world :=
+  fun _ _ _ reach code fetch nonnegative hp member =>
+    St.ccallOk_ok (whileMin_shapeOk reach).ccall4 code fetch nonnegative hp member
+
+/-- **`whileMin`'s C_CALL5 primitives return normally.** -/
+theorem whileMin_ccall5Ok : ∀ s (w : BitVec 32) name, Reach whileMin s → DispatchCode whileMin s .C_CALL5 →
+    whileMin.code[s.pc + 1]? = some w → 0 ≤ w.toInt → whileMin.prims[w.toInt.toNat]? = some name →
+    name ∈ primsF1 →
+    ∃ v heap world, primF1Impl name (s.accu :: s.stack.take 4) s.heap s.world = .ok v heap world :=
+  fun _ _ _ reach code fetch nonnegative hp member =>
+    St.ccallOk_ok (whileMin_shapeOk reach).ccall5 code fetch nonnegative hp member
 
 end OCaml.Programs

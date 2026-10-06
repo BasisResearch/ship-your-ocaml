@@ -4878,3 +4878,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.CcallEffects.of_ok
 #print axioms Vsa.Sim.muldi3_spec_any
 #print axioms Vsa.Sim.udivdi3_spec_any
+#print axioms OCaml.Programs.whileMin_ccall1Ok
+#print axioms OCaml.Programs.whileMin_ccall2Ok
+#print axioms OCaml.Programs.whileMin_ccall3Ok
+#print axioms OCaml.Programs.whileMin_ccall4Ok
+#print axioms OCaml.Programs.whileMin_ccall5Ok

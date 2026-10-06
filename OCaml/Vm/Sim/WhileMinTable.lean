@@ -13,11 +13,8 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 structure WhileMinOpen : Prop where
   setglobal_barrier : GlobalBarrier Gc.f1Layout OCaml.Programs.whileMin
   c_call1_returns : CcallReturns Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0
-  c_call1_effects : CcallEffects Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 0
   c_call2_returns : CcallReturns Gc.f1Layout OCaml.Programs.whileMin .C_CALL2 (0x80003004#64) 1
-  c_call2_effects : CcallEffects Gc.f1Layout OCaml.Programs.whileMin .C_CALL2 1
   c_call4_returns : CcallReturns Gc.f1Layout OCaml.Programs.whileMin .C_CALL4 (0x80002f40#64) 3
-  c_call4_effects : CcallEffects Gc.f1Layout OCaml.Programs.whileMin .C_CALL4 3
 
 theorem whileMin_premises (o : WhileMinOpen) :
     F1PremisesFor (fun op => OCaml.Programs.whileMinOps.contains op) OCaml.Programs.whileMin where
@@ -35,13 +32,13 @@ theorem whileMin_premises (o : WhileMinOpen) :
   trapBounded _ := OCaml.Programs.whileMin_trapBounded.bounded
   raises _ := OCaml.Programs.whileMin_raisesCaught
   c_call1_returns _ := o.c_call1_returns
-  c_call1_effects _ := o.c_call1_effects
+  c_call1_effects _ := CcallEffects.of_ok OCaml.Programs.whileMin_ccall1Ok
   c_call2_returns _ := o.c_call2_returns
-  c_call2_effects _ := o.c_call2_effects
+  c_call2_effects _ := CcallEffects.of_ok OCaml.Programs.whileMin_ccall2Ok
   c_call3_returns h := absurd h (by decide)
   c_call3_effects h := absurd h (by decide)
   c_call4_returns _ := o.c_call4_returns
-  c_call4_effects _ := o.c_call4_effects
+  c_call4_effects _ := CcallEffects.of_ok OCaml.Programs.whileMin_ccall4Ok
   c_call5_returns h := absurd h (by decide)
   c_call5_effects h := absurd h (by decide)
   divint_zero h := absurd h (by decide)
