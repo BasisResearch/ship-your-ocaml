@@ -389,4 +389,51 @@ theorem AllocLogOk.of_block {P : Prog} {s : St} {c : Config} {pl : Place} {cp : 
       (logInW_widen inside fun w hw => by
         simp only [List.mem_singleton] at hw; subst hw; simp only [arenaWindow]; omega)
 
+/-- **An allocation log after a VM-stack prefix** (CLOSURE's pushed
+accumulator): the prefix lies below the stack pointer, apart from every word
+the reservation observes. -/
+theorem AllocLogOk.of_prefixed {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high a n : Nat} {pre log : List WEntry} (b : ReservedBlock c a n)
+    (g : Gc.NurseryGeometry P s c pl cp high) (sg : StackGeometry P s c pl cp high)
+    (stack : StackRepr c pl sp high s.stack) (space : high - Layout.stackBytes ≤ sp)
+    (preIn : LogInW [freeWindow sp high] pre) (inside : LogInW [⟨a - 8, a + 8 * n⟩] log) :
+    AllocLogOk P s c pl cp sp a n (pre ++ (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log)) := by
+  have ok := AllocLogOk.of_block b g sg stack space inside
+  have hs := stack.1
+  have hd := sg.domain.1
+  simp only [stackWindow] at hd
+  have hy : Layout.off_young_ptr + 8 ≤ Layout.domainStateBytes := by decide
+  have hl : Layout.off_young_limit + 8 ≤ Layout.domainStateBytes := by decide
+  have preMiss : ∀ off, off + 8 ≤ Layout.domainStateBytes → OutLRange pre ((word c Layout.sym_Caml_state).toNat + off) 8 := fun off hoff =>
+    outLRange_of_windows preIn ⟨by simp only [freeWindow]; omega, trivial⟩
+  have prePay := sg.payload stack preIn
+  have apart := b.domainApart g
+  have logMiss : ∀ off, off + 8 ≤ Layout.domainStateBytes → OutLRange log ((word c Layout.sym_Caml_state).toNat + off) 8 := fun off hoff =>
+    outLRange_of_windows inside ⟨by dsimp only; have := b.room; omega, trivial⟩
+  have pay := prePay.append ok.payload
+  refine ⟨pay, (sg.image preIn).append ok.image, (sg.bindings stack preIn).append ok.bindings,
+    ⟨b.young, Nat.le_refl _, b.room, by have := b.aligned; have := b.room; omega, b.capacity,
+      fun c' memory => ?_⟩, ?_⟩
+  · have keep : ∀ x, OutLRange (pre ++ (grabReserveLog (word c Layout.sym_Caml_state).toNat a ++ log)) x 8 → word c' x = word c x :=
+      fun x hx => by
+        change bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8
+        rw [memory, bytesT_writeLog_out _ hx]
+    have domainKeep := keep _ pay.domain
+    have youngNew : word c' ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr) = BitVec.ofNat 64 (a - 8) := by
+      change bytesT c'.σ.mem _ 8 = _
+      rw [memory, writeLog_append]
+      exact Gc.word_writeLog_at _ _ 0 _ _ (by simp [grabReserveLog])
+        (by simpa [grabReserveLog] using logMiss _ hy)
+    have limitOut : OutLRange (grabReserveLog (word c Layout.sym_Caml_state).toNat a) ((word c Layout.sym_Caml_state).toNat + Layout.off_young_limit) 8 :=
+      grab_out (by simp only [Layout.off_young_limit, Layout.off_young_ptr]; omega)
+    have limitKeep := keep _ (outLRange_append (preMiss _ hl) (outLRange_append limitOut (logMiss _ hl)))
+    have top := b.top
+    refine ⟨?_, ?_⟩
+    · simp only [runtimeFields, domainWord, domainKeep, youngNew, BitVec.toNat_ofNat]
+      omega
+    · simp only [runtimeFields, domainWord, domainKeep, limitKeep]
+  · have arenaEnd := sg.arena
+    exact logInW_append' (logInW_widen preIn fun w hw => by
+      simp only [List.mem_singleton] at hw; subst hw; simp only [freeWindow, arenaWindow]; omega) ok.arena
+
 end OCaml.Vm.Sim
