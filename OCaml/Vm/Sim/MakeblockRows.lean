@@ -10,11 +10,11 @@ import OCaml.Vm.Gc.F1Runtime
 
 The fresh block is placed at `young_ptr - 8 * count` (`ArmInput.put`), its
 capacity comes from the G1 room and the budget at the successor state, and
-the arm's input is `MakeblockInput.of_input`. Two named premises remain:
+the arm's input is `MakeblockInput.of_input`. The tag bound comes from the
+step (`makeBlock` makes a tag of 256 or more `.unsupported`). One named
+premise remains:
 * `AllocFrame L`: the layout's runtime invariant survives a nursery
-  reservation (a6-gc, `Gc.f1_allocation` for F1);
-* `BlockTags P op`: every reachable MAKEBLOCKk's tag operand is below 256
-  (a per-program code fact; the header encodes 8 tag bits).
+  reservation (a6-gc, `Gc.f1_allocation` for F1).
 -/
 
 namespace OCaml.Vm.Sim
@@ -34,16 +34,12 @@ structure AllocFrame (L : OCaml.Layout) : Prop where
 theorem f1_allocFrame : AllocFrame Gc.f1Layout :=
   ⟨fun _ _ _ _ _ _ _ _ ok g inside low below aligned => Gc.f1_allocFrame_core ok g inside low below aligned⟩
 
-/-- **Every reachable `op`'s tag operand fits the header** (named per-program
-code fact). -/
-structure BlockTags (P : Prog) (op : Opcode) (offset : Nat) : Prop where
-  small : ∀ s (w : BitVec 32), Reach P s → DispatchCode P s op → P.code[s.pc + offset]? = some w →
-    w.toInt.toNat < 256
-
-/-- A continuing `makeBlock` had its fields on the stack. -/
+/-- A continuing `makeBlock` had a header-sized tag and its fields on the stack. -/
 theorem makeBlock_next {s s' : St} {len size tag : Nat} (step : makeBlock s len size tag = .next s') :
-    0 < size ∧ size - 1 ≤ s.stack.length ∧ makeblockState s len size tag = s' := by
-  unfold makeBlock at step
+    tag < 256 ∧ 0 < size ∧ size - 1 ≤ s.stack.length ∧ makeblockState s len size tag = s' := by
+  have small : tag < 256 := Nat.not_le.mp (Res.guard_ok step)
+  refine ⟨small, ?_⟩
+  replace step := Res.unguard step
   by_cases zero : size = 0
   · simp [zero] at step
   · by_cases short : s.stack.length < size - 1
@@ -91,19 +87,19 @@ theorem makeblock_fixed_next {L : OCaml.Layout} {P : Prog} {s s' : St} {c : Conf
 
 /-- **The MAKEBLOCK1 row.** -/
 theorem makeblock1_row {L : OCaml.Layout} {P : Prog} (allocFrame : AllocFrame L)
-    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
-    (tags : BlockTags P .MAKEBLOCK1 1) : OCaml.OpArm P (OCaml.LoopAt L P) .MAKEBLOCK1 :=
+    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget) :
+    OCaml.OpArm P (OCaml.LoopAt L P) .MAKEBLOCK1 :=
   opArm_of_next1 (fun s s' c w reach reach' h code fetch step => by
       have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
       have body := Res.unguard step
-      obtain ⟨positive, bound, state⟩ := makeBlock_next body
+      obtain ⟨tagBound, positive, bound, state⟩ := makeBlock_next body
       have budget := (fits s' reach').2
       rw [← state] at budget
       simp only [makeblockState, Heap.words_alloc, makeblockObject_wosize positive bound] at budget
       exact makeblock_fixed_next allocFrame
         (fun _ _ _ _ _ _ _ _ runtime input operand nonnegative value mk =>
           makeblock1_step_arm runtime input operand nonnegative value mk step)
-        h code fetch nonnegative (tags.small s w reach code fetch) positive (by decide) bound (by omega)
+        h code fetch nonnegative tagBound positive (by decide) bound (by omega)
         (by simpa using stack_fits fits capacity reach (k := 0)))
     (shape1 (fun _ => rfl) (fun _ _ _ _ => rfl))
     (fun s a e w step => by
@@ -116,19 +112,19 @@ theorem makeblock1_row {L : OCaml.Layout} {P : Prog} (allocFrame : AllocFrame L)
 
 /-- **The MAKEBLOCK2 row.** -/
 theorem makeblock2_row {L : OCaml.Layout} {P : Prog} (allocFrame : AllocFrame L)
-    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
-    (tags : BlockTags P .MAKEBLOCK2 1) : OCaml.OpArm P (OCaml.LoopAt L P) .MAKEBLOCK2 :=
+    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget) :
+    OCaml.OpArm P (OCaml.LoopAt L P) .MAKEBLOCK2 :=
   opArm_of_next1 (fun s s' c w reach reach' h code fetch step => by
       have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
       have body := Res.unguard step
-      obtain ⟨positive, bound, state⟩ := makeBlock_next body
+      obtain ⟨tagBound, positive, bound, state⟩ := makeBlock_next body
       have budget := (fits s' reach').2
       rw [← state] at budget
       simp only [makeblockState, Heap.words_alloc, makeblockObject_wosize positive bound] at budget
       exact makeblock_fixed_next allocFrame
         (fun _ _ _ _ _ _ _ _ runtime input operand nonnegative value mk =>
           makeblock2_step_arm runtime input operand nonnegative value mk step)
-        h code fetch nonnegative (tags.small s w reach code fetch) positive (by decide) bound (by omega)
+        h code fetch nonnegative tagBound positive (by decide) bound (by omega)
         (by simpa using stack_fits fits capacity reach (k := 0)))
     (shape1 (fun _ => rfl) (fun _ _ _ _ => rfl))
     (fun s a e w step => by
@@ -141,19 +137,19 @@ theorem makeblock2_row {L : OCaml.Layout} {P : Prog} (allocFrame : AllocFrame L)
 
 /-- **The MAKEBLOCK3 row.** -/
 theorem makeblock3_row {L : OCaml.Layout} {P : Prog} (allocFrame : AllocFrame L)
-    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
-    (tags : BlockTags P .MAKEBLOCK3 1) : OCaml.OpArm P (OCaml.LoopAt L P) .MAKEBLOCK3 :=
+    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget) :
+    OCaml.OpArm P (OCaml.LoopAt L P) .MAKEBLOCK3 :=
   opArm_of_next1 (fun s s' c w reach reach' h code fetch step => by
       have nonnegative : 0 ≤ w.toInt := Int.not_lt.mp (Res.guard_ok step)
       have body := Res.unguard step
-      obtain ⟨positive, bound, state⟩ := makeBlock_next body
+      obtain ⟨tagBound, positive, bound, state⟩ := makeBlock_next body
       have budget := (fits s' reach').2
       rw [← state] at budget
       simp only [makeblockState, Heap.words_alloc, makeblockObject_wosize positive bound] at budget
       exact makeblock_fixed_next allocFrame
         (fun _ _ _ _ _ _ _ _ runtime input operand nonnegative value mk =>
           makeblock3_step_arm runtime input operand nonnegative value mk step)
-        h code fetch nonnegative (tags.small s w reach code fetch) positive (by decide) bound (by omega)
+        h code fetch nonnegative tagBound positive (by decide) bound (by omega)
         (by simpa using stack_fits fits capacity reach (k := 0)))
     (shape1 (fun _ => rfl) (fun _ _ _ _ => rfl))
     (fun s a e w step => by

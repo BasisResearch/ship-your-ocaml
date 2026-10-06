@@ -39,9 +39,6 @@ structure F1PremisesFor (keep : Opcode → Bool) (P : Prog) : Prop where
   row_CLOSUREREC : (keep .CLOSUREREC) = true → OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .CLOSUREREC
   setglobal_barrier : (keep .SETGLOBAL) = true → GlobalBarrier Gc.f1Layout P
   row_MAKEBLOCK : (keep .MAKEBLOCK) = true → OCaml.OpArm P (OCaml.LoopAt Gc.f1Layout P) .MAKEBLOCK
-  makeblock1_tags : (keep .MAKEBLOCK1) = true → BlockTags P .MAKEBLOCK1 1
-  makeblock2_tags : (keep .MAKEBLOCK2) = true → BlockTags P .MAKEBLOCK2 1
-  makeblock3_tags : (keep .MAKEBLOCK3) = true → BlockTags P .MAKEBLOCK3 1
   setfield0_barrier : (keep .SETFIELD0) = true → FieldBarrierK Gc.f1Layout P .SETFIELD0 0 (0x800021bc#64) (0#64)
   setfield1_barrier : (keep .SETFIELD1) = true → FieldBarrierK Gc.f1Layout P .SETFIELD1 1 (0x800021a0#64) (8#64)
   setfield2_barrier : (keep .SETFIELD2) = true → FieldBarrierK Gc.f1Layout P .SETFIELD2 2 (0x80002184#64) (16#64)
@@ -205,11 +202,11 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .MAKEBLOCK, _ => if h : keep .MAKEBLOCK = true then pre.row_MAKEBLOCK (by simp [h])
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .MAKEBLOCK1, _ => if h : keep .MAKEBLOCK1 = true then makeblock1_row f1_allocFrame fits g1_capacity (pre.makeblock1_tags (by simp [h]))
+    | .MAKEBLOCK1, _ => if h : keep .MAKEBLOCK1 = true then makeblock1_row f1_allocFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .MAKEBLOCK2, _ => if h : keep .MAKEBLOCK2 = true then makeblock2_row f1_allocFrame fits g1_capacity (pre.makeblock2_tags (by simp [h]))
+    | .MAKEBLOCK2, _ => if h : keep .MAKEBLOCK2 = true then makeblock2_row f1_allocFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .MAKEBLOCK3, _ => if h : keep .MAKEBLOCK3 = true then makeblock3_row f1_allocFrame fits g1_capacity (pre.makeblock3_tags (by simp [h]))
+    | .MAKEBLOCK3, _ => if h : keep .MAKEBLOCK3 = true then makeblock3_row f1_allocFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .MAKEFLOATBLOCK, h => absurd h (by decide)
     | .GETFIELD0, _ => if h : keep .GETFIELD0 = true then getfield0_row f1_memoryStable
