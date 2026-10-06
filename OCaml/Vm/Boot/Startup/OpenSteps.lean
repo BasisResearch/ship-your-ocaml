@@ -2,6 +2,12 @@ import OCaml.Vm.Boot.Startup.LibOpenEntryNormalized
 import OCaml.Vm.Boot.Startup.LibOpenEntryImage
 import OCaml.Vm.Boot.Startup.LibOpenEntryCallInterface
 import OCaml.Vm.Boot.Startup.ResolveRun
+import OCaml.Vm.Boot.Startup.ErrnoNormalized
+import OCaml.Vm.Boot.Startup.ErrnoImage
+import OCaml.Vm.Boot.Startup.HtifOpenErrnoSetNormalized
+import OCaml.Vm.Boot.Startup.HtifOpenErrnoSetImage
+import OCaml.Vm.Boot.Startup.HtifOpenReturnNormalized
+import OCaml.Vm.Boot.Startup.HtifOpenReturnImage
 import OCaml.Vm.Boot.Startup.HtifOpenKindNormalized
 import OCaml.Vm.Boot.Startup.HtifOpenKindImage
 import OCaml.Vm.Boot.Startup.HtifOpenNoneNormalized
@@ -310,6 +316,55 @@ theorem htif_open_enoent (c : Config) (sp a0 : BitVec 64) (slash : List (BitVec 
       htifopenkind_line_800008fc, htifopenkind_line_80000900, htifopenkind_line_80000908, htifopenkind_line_8000090c, htifopenkind_line_80000910, htifopenkind_line_80000914, htifopenenoent_line_80000b08, runGM, ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM,
       List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of,
       List.cons_append, List.nil_append, kind_none_value, BitVec.zero_and, open_se0, BitVec.add_zero]
+  · rfl
+  · decide
+
+theorem htif_open_errno_call (c : Config) (sp a0 : BitVec 64) (slash : List (BitVec 8)) (ra : BitVec 64)
+    (leaf : LeafInput ra c) (frame : NativeFrame sp 80)
+    (regs : GHolds c.σ [(2, nativeStack sp 80), (8, 0#64), (9, 2#64), (10, a0)])
+    (kind : read4 c.σ.mem (resAt sp 0) = [2#8, 0#8, 0#8, 0#8]) (slashWord : read4 c.σ.mem (resAt sp 36) = slash) :
+    FnSummary 0x800008fc#64 (fun e => e = c)
+      (WriteRegistersPost ([9, 14, 15, 13, 11] ++ [1]) [] c jal_80000944_call.target a0
+        ((1, jal_80000944_call.link) :: [(9, 2#64), (14, 0#64), (15, 0#64), (13, bytesVal .lw slash), (11, 2#64),
+          (2, nativeStack sp 80), (8, 0#64), (10, a0)])) :=
+  block_then_call c jal_80000944_call_shape jal_80000944_call_decode (fun _ h => jal_80000944_call_pins h)
+    (htif_open_enoent c sp a0 slash ra leaf frame regs kind slashWord) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+open Sail in
+/-- `auipc a0; ld a0,992(a0)` at 0x80042518: `_impure_ptr`. -/
+theorem errno_impure_auipc : 2147755288#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 140567#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 992#12 = BitVec.ofNat 64 allocatorImpureAddr := by decide
+
+/-- `__errno()` returns `_impure_ptr`. -/
+theorem errno_return (c : Config) (ra : BitVec 64) (leaf : LeafInput ra c) (regs : GHolds c.σ [(1, ra)]) :
+    FnSummary 0x80042518#64 (fun e => e = c)
+      (WriteRegistersPost [10] [] c ra (getenvReent c) [(10, getenvReent c), (1, ra)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput errnoX2518Seg 0x80042518#64 [(1, ra)]
+        [read8 c.σ.mem allocatorImpureAddr] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [1]; decide
+      shape := by change ChainOK _ [1] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := errno_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.__errno_at_"
+        · exact (show ReadWindow (BitVec.ofNat 64 allocatorImpureAddr) 8 by constructor <;> decide).ld rfl
+            (by simp only [errno_line_80042518, errno_line_8004251c, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true,
+                  ite_false, imm20Of, Nat.reduceEqDiff]
+                exact errno_impure_auipc) (read8_pins _ _)
+        · change (Sail.BitVec.update (ra + Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [ret_tgt ra leaf.aligned]
+          exact leaf.aligned }))
+  · rfl
+  · change Sail.BitVec.update (ra + Functions.sign_extend (m := 64) 0#12) 0 0#1 = ra
+    rw [ret_tgt ra leaf.aligned]
+  · simp only [errnoX2518Seg, evalBlocks, evalBlock, SegEvalState.init, errno_line_80042518, errno_line_8004251c, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of, read8_value, getenvReent]
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
