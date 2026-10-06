@@ -47,9 +47,10 @@ structure MemcpyFreshDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra p src 
   kept : ∀ x, ¬ InExt (p.toNat, n) x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   registers : ∀ k, 1 ≤ k → k ≤ 31 → k ∉ mRegs → gprGet after.σ k = gprGet before.σ k
 
-/-- `memcpy(p, src, n)` into a live block from a source outside it. -/
-theorem memcpy_fresh (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra p src : BitVec 64) (n : Nat)
-    (ready : RuntimeReady H capacity sp ra c) (member : (p.toNat, n) ∈ H)
+/-- `memcpy(p, src, n)` into the first `n` bytes of a live block `(p, m)` from
+a source outside them. -/
+theorem memcpy_fresh (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra p src : BitVec 64) (n m : Nat)
+    (ready : RuntimeReady H capacity sp ra c) (member : (p.toNat, m) ∈ H) (fits : n ≤ m)
     (regs : GHolds c.σ [(10, p), (11, src), (12, BitVec.ofNat 64 n)])
     (apart : ∀ k, k < n → ¬ InExt (p.toNat, n) (src.toNat + k))
     (sourceLow : 0x80000000 ≤ src.toNat) (sourceHigh : src.toNat + n ≤ 0x100000000)
@@ -63,6 +64,7 @@ theorem memcpy_fresh (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp r
     { dlo := by have : 0x80000000 ≤ heapStart := by decide
                 omega
       dhi := by have : heapEnd ≤ 0x100000000 := by decide
+                have := bounds.2
                 omega
       dhtif := by have : Layout.sym_tohost + 16 ≤ heapStart := by decide
                   omega
@@ -102,7 +104,9 @@ theorem memcpy_fresh (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp r
     library_register_frame ready.platform D.observations.good lower upper (D.observations.registers k unwritten)
   have stackD := (regD 2 (by decide) (by decide) (by decide)).trans ready.stack
   refine ⟨d, run, {
-    ready := ready.of_block_frame D.observations (by decide) D.toLeafInput stackD member bounds.1
+    ready := ready.of_block_frame (n := m) { D.observations with
+      memory := fun a out => D.observations.memory a (fun inside => out (by unfold InExt at *; omega)) }
+      (by decide) D.toLeafInput stackD member bounds.1
     pc := D.pc
     result := D.result
     bytes := fun k hk => by
