@@ -1299,12 +1299,12 @@ theorem plain_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
     Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?, BitVec.add_assoc]
 
 def plain_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
-  [[(m[(R 8 + (R 19 - 1#64) - 1#64).toNat]?).getD 0], [(m[(R 8 + (R 19 - 1#64)).toNat]?).getD 0]]
+  [[(m[(R 8 + (R 19 + 18446744073709551615#64) + 18446744073709551615#64).toNat]?).getD 0], [(m[(R 8 + (R 19 + 18446744073709551615#64)).toNat]?).getD 0]]
 
 theorem plain_fast (c : Config) (R : Nat → BitVec 64)
     (h : LeafInput (R 1) c) (regs : GHolds c.σ (plain_input R))
-    (w0 : ReadWindow (R 8 + (R 19 - 1#64) - 1#64) 1)
-    (w1 : ReadWindow (R 8 + (R 19 - 1#64)) 1)
+    (w0 : ReadWindow (R 8 + (R 19 + 18446744073709551615#64) + 18446744073709551615#64) 1)
+    (w1 : ReadWindow (R 8 + (R 19 + 18446744073709551615#64)) 1)
     (ok : guardB .BLTU (34#64) (BitVec.signExtend 64 (Sail.BitVec.extractLsb (bytesVal .lbu ((plain_loads c.σ.mem R).getD 0 []) + 18446744073709551540#64) 31 0) &&& 255#64) = true) :
     FnSummary 0x80010458#64 (fun d => d = c)
       (WriteRegistersPost [8, 13, 14, 15, 19] [] c (0x80010490#64) (R 10) (plain_regs R (plain_loads c.σ.mem R))) := by
@@ -1312,9 +1312,9 @@ theorem plain_fast (c : Config) (R : Nat → BitVec 64)
     simp only [AccessPlan, plain_body, plain_loads]
     chain_facts True.intro
     · apply w0.lbu rfl ?_ rfl
-      simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, plain_input]
+      simp only [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, ↓reduceIte, Nat.reduceEqDiff, Option.getD_some, List.headD_cons, BitVec.add_zero, plain_input, shamtOf, Sail.BitVec.extractLsb, (show BitVec.signExtend 64 4095#12 = 18446744073709551615#64 by decide), (show BitVec.signExtend 64 34#12 = 34#64 by decide), (show BitVec.signExtend 64 0#12 = 0#64 by decide), (show BitVec.signExtend 64 4020#12 = 18446744073709551540#64 by decide), (show BitVec.signExtend 64 255#12 = 255#64 by decide)]
     · apply w1.lbu rfl ?_ rfl
-      simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, plain_input]
+      simp only [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, ↓reduceIte, Nat.reduceEqDiff, Option.getD_some, List.headD_cons, BitVec.add_zero, plain_input, shamtOf, Sail.BitVec.extractLsb, (show BitVec.signExtend 64 4095#12 = 18446744073709551615#64 by decide), (show BitVec.signExtend 64 34#12 = 34#64 by decide), (show BitVec.signExtend 64 0#12 = 0#64 by decide), (show BitVec.signExtend 64 4020#12 = 18446744073709551540#64 by decide), (show BitVec.signExtend 64 255#12 = 255#64 by decide)]
   have control : TermFactsO (runGM plain_body (plain_input R) (plain_loads c.σ.mem R)) (some plain_term) := by rw [plain_eval]; exact ok
   apply registers_of_blocks h.image (log := []) ⟨True.intro, True.intro⟩ (plain_summary c (R 1) R _ h regs access control)
   · exact readonly_log _ (by unfold ReadOnlyBody; decide) _ _

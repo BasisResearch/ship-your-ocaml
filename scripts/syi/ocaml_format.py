@@ -15,7 +15,7 @@ def functions_spec(ld, rest):
         (0x80013570, 'length', [1, 10],
          f'[(10, {ld(0)} >>> 10 <<< 3 + (18446744073709551615#64 + -{ld(1, "lbu")})), (15, {ld(0)} >>> 10 <<< 3 + 18446744073709551615#64), {rest([1])}]',
          {'mem': [('R 10 + 18446744073709551608#64', 'window'),
-                  ('R 10 + (@0 >>> 10 <<< 3 + 18446744073709551615#64)', 'window')], 'shiftAddr': True}),
+                  ('R 10 + (@0 >>> 10 <<< 3 + 18446744073709551615#64)', 'window')], 'addrSimpOnly': True}),
       ]),
       # `parse_format(fmt, suffix, buf)`: copy fmt and the suffix into buf,
       # then the conversion byte and the terminator; returns the conversion.
@@ -36,7 +36,8 @@ def functions_spec(ld, rest):
         (0x80010458, 'plain', [1, 2, 8, 9, 10, 18, 19],
          f'[(13, BitVec.signExtend 64 (Sail.BitVec.extractLsb ({ld(0, "lbu")} + 18446744073709551540#64) 31 0) &&& 255#64), '
          f'(8, {ld(1, "lbu")}), (14, 34#64), (15, R 8 + (R 19 - 1#64)), (19, R 19 - 1#64), {rest([1, 2, 9, 10, 18])}]',
-         {'mem': [('R 8 + (R 19 - 1#64) - 1#64', 'window'), ('R 8 + (R 19 - 1#64)', 'window')]}),
+         {'mem': [('R 8 + (R 19 + 18446744073709551615#64) + 18446744073709551615#64', 'window'),
+                  ('R 8 + (R 19 + 18446744073709551615#64)', 'window')], 'addrSimpOnly': True}),
         (0x80010490, 'append', [1, 2, 8, 9, 10, 15, 18],
          f'[(10, R 15), (12, R 9), (11, R 18), {rest([1, 2, 8, 9, 15, 18])}]', {}),
         (0x800104a0, 'finish', [2, 8, 9, 10],

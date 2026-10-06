@@ -17,9 +17,10 @@ reloaded ra, the saved word. The spec of a block (`fast`) gives
 * `taken`: the routed outcome of a branch (its condition becomes the premise
   `ok : guardB op v1 v2 = taken` over the block's output registers);
 * `ra`: the load index of a reloaded return address;
-* `shiftAddr`: an address depends on an immediate shift of a loaded value.
-  Its address goals then close by a targeted `simp only`: shift amounts as
-  literals, Sail shifts as `Nat` shifts. Full `simp` there yields a proof
+* `addrSimpOnly`: the block's address goals close by a targeted `simp only`
+  (immediates as unsigned literals, shift amounts as literals, Sail shifts as
+  `Nat` shifts); addresses are then written in that normal form. Full `simp`
+  on some address goals (shifted loads, chained lbu offsets) yields a proof
   term the kernel rejects (deep recursion).
 """
 import re
@@ -225,7 +226,7 @@ def emit_fast(E, b, name, regs, fast):
         else:
             params.append(f'({w} : {typ} ({addr}) {a[2]})')
         addr_simp = (f'      simp only [{SHIFT_ADDR}, {name}_input, ' + ', '.join(_shift_addr_facts(b.instrs)) + ']'
-                     if fast.get('shiftAddr') else f'      simp [{SIMP_ADDR}, {name}_input]')
+                     if fast.get('addrSimpOnly') else f'      simp [{SIMP_ADDR}, {name}_input]')
         if a[1] == 'ld' and mode == 'view':
             bullets += [f'    · apply {w}.ld rfl', '      · ' + addr_simp.strip(),
                         f'      · apply ArgvTuple.lpins8_of_view (m\' := {view(m)[1:-1]})',

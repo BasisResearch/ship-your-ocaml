@@ -668,6 +668,8 @@ def ocaml_literal_mline(pc, word):
         kind = {4: 'xor', 6: 'or', 7: 'and'}[funct3]
     elif opcode == 0x3b and funct3 == 1 and word >> 25 == 0:
         kind = 'sllw'
+    elif opcode == 0x33 and funct3 in (1, 5) and word >> 25 == 0:
+        kind = {1: 'sll', 5: 'srl'}[funct3]
     else:
         raise ValueError(f'unsupported read-only instruction {word:08x}')
     rd, rs1 = (word >> 7) & 31, (word >> 15) & 31
