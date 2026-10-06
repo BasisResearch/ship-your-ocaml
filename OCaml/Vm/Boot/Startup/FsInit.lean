@@ -16,12 +16,41 @@ and the run from its entry to the `strchr` call. -/
 def fsFilesWindow : W := ⟨Layout.sym_files, Layout.sym_files + 56 * 64⟩
 
 def fsWindows (sp : BitVec 64) : List W :=
-  [⟨nativeFrameBase sp 96, sp.toNat⟩, fsFilesWindow, ⟨Layout.sym_fds, Layout.sym_fds + 52⟩,
+  [⟨nativeFrameBase sp 96, sp.toNat⟩, ⟨Layout.sym_files, Layout.sym_files + 2⟩, ⟨Layout.sym_fds, Layout.sym_fds + 52⟩,
     ⟨Layout.sym_fs_ready, Layout.sym_fs_ready + 4⟩]
 
 theorem fsWindows_stack {sp : BitVec 64} {log : List WEntry}
     (inside : LogInW [⟨nativeFrameBase sp 96, sp.toNat⟩] log) : LogInW (fsWindows sp) log :=
   OCaml.Vm.Sim.logInW_mono inside fun w hw => by simp at hw; simp [fsWindows, hw]
+
+/-- `fs_init`'s writes outside its frame: `files[0]`, the descriptors and `fs_ready`. -/
+def fsGlobalLog : List WEntry := [(Layout.sym_files, 2, 257#64)] ++ fdsLog ++ fsReadyLog
+
+theorem fsPrefixLog_split (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64) :
+    fsInitLog sp ra s0 s3 s6 s7 ++ [] ++ fdsLog ++ fsReadyLog ++ fsLoopLog sp s1 s2 s4 s5 s8 s9 ++ [] =
+      nativeWordLog sp 96 (fsInitSlots ra s0 s3 s6 s7) ++ fsGlobalLog ++ fsLoopLog sp s1 s2 s4 s5 s8 s9 := by
+  simp only [fsInitLog, fsGlobalLog, List.append_nil, List.append_assoc]
+
+private theorem logReadNewest_congr {i1 i2 : Nat → Option (BitVec 8)} {x : Nat} (h : i1 x = i2 x) :
+    ∀ l : List WEntry, logReadNewest i1 l x = logReadNewest i2 l x
+  | [] => h
+  | e :: rest => by
+    simp only [logReadNewest]
+    split
+    · rfl
+    · exact logReadNewest_congr h rest
+
+/-- A write log reads the same at `x` from any memories that agree there. -/
+theorem writeLog_point {m1 m2 : Std.ExtHashMap Nat (BitVec 8)} {x : Nat} (h : m1[x]? = m2[x]?) (log : List WEntry) :
+    (writeLog m1 log)[x]? = (writeLog m2 log)[x]? := by
+  rw [writeLog_getElem?_logRead, writeLog_getElem?_logRead]
+  exact logReadNewest_congr h _
+
+/-- Writes elsewhere in the middle of a log do not change a byte. -/
+theorem writeLog_skip (m : Std.ExtHashMap Nat (BitVec 8)) (a g b : List WEntry) {x : Nat} (out : OutL g x) :
+    (writeLog m (a ++ g ++ b))[x]? = (writeLog m (a ++ b))[x]? := by
+  rw [writeLog_append, writeLog_append, writeLog_append]
+  exact writeLog_point (writeLog_out _ _ _ out) b
 
 theorem fsWindows_kept {sp : BitVec 64} (deep : embedLimit + 96 ≤ sp.toNat) (a : Nat) (kept : KeptByte a) :
     OutW (fsWindows sp) a := by
@@ -44,7 +73,7 @@ theorem fsInitLog_inside {sp ra s0 s3 s6 s7} (frame : NativeFrame sp 96) :
     simp only [fsInitSlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member
     omega)) (by
       simp only [LogInW, InsideW, fsWindows, fsFilesWindow]
-      exact ⟨Or.inr (Or.inl ⟨Nat.le_refl _, by unfold Layout.sym_files; omega⟩), trivial⟩)
+      exact ⟨Or.inr (Or.inl ⟨Nat.le_refl _, Nat.le_refl _⟩), trivial⟩)
 
 theorem fdsLog_inside {sp : BitVec 64} : LogInW (fsWindows sp) fdsLog := by
   simp only [fdsLog, LogInW, InsideW, fsWindows, fsFilesWindow, Layout.sym_fds]
@@ -379,4 +408,123 @@ theorem fs_init_tail (e : Config) (H : List (Nat × Nat)) (capacity charge : Nat
     regs := p3.regs
     ready := readyH
     embed := embedG.frame ⟨fun a _ => by rw [p3.memory]; rfl⟩ }⟩⟩
+
+theorem fsPrefixLog_inside {sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64} (frame : NativeFrame sp 96) :
+    LogInW (fsWindows sp) (fsPrefixLog sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9) :=
+  OCaml.Vm.Sim.logInW_append' (OCaml.Vm.Sim.logInW_append' (OCaml.Vm.Sim.logInW_append'
+    (OCaml.Vm.Sim.logInW_append' (OCaml.Vm.Sim.logInW_append' (fsInitLog_inside frame) trivial) fdsLog_inside)
+    fsReadyLog_inside) (fsWindows_stack (fsLoopLog_inside frame))) trivial
+
+/-- `fs_init`'s windows miss the allocator's text pins, footprint and protected words. -/
+structure FsWindowsApart (sp : BitVec 64) : Prop where
+  pins : ∀ pin ∈ VsaIris.Sym.allocText, OutW (fsWindows sp) pin.1
+  domain : OutWRange (fsWindows sp) Layout.sym_Caml_state 8
+  pool : OutWRange (fsWindows sp) Layout.sym_pool 8
+  heap : ∀ H a, vsaFoot H a → OutW (fsWindows sp) a
+
+theorem fsWindows_apart {sp : BitVec 64} (frame : NativeFrame sp 96) : FsWindowsApart sp where
+  pins := fun pin member => by
+    have lower := frame.lower
+    have source := allocator_sources pin member
+    unfold AllocatorByteSource at source
+    simp only [OutW, fsWindows, and_true]
+    split at source <;> simp only [Image.textBase, Image.textSize, allocatorImpureAddr, Layout.sym_files,
+      Layout.sym_fds, Layout.sym_fs_ready, nativeFrameBase, heapEnd] at * <;> omega
+  domain := by
+    have lower := frame.lower
+    simp only [OutWRange, fsWindows, and_true, nativeFrameBase, Layout.sym_Caml_state, Layout.sym_files,
+      Layout.sym_fds, Layout.sym_fs_ready, heapEnd] at *
+    omega
+  pool := by
+    have lower := frame.lower
+    simp only [OutWRange, fsWindows, and_true, nativeFrameBase, Layout.sym_pool, Layout.sym_files,
+      Layout.sym_fds, Layout.sym_fs_ready, heapEnd] at *
+    omega
+  heap := fun H a foot => by
+    have lower := frame.lower
+    have below := allocator_foot_below foot
+    simp only [OutW, fsWindows, and_true]
+    rcases foot with global | ⟨lo, _⟩
+    · unfold allocGlobal InRange at global
+      simp only [Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready, nativeFrameBase, heapEnd] at *
+      omega
+    · simp only [Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready, nativeFrameBase, heapEnd, heapStart] at *
+      omega
+
+/-- **`fs_init()` over the embedded table "/prog"**: slot 1 becomes the file
+`prog` under the root, the descriptors and `fs_ready` are set, and the
+caller's registers are restored. -/
+theorem fs_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+    (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 a0 : BitVec 64)
+    (ready : RuntimeReady H (capacity + charge) sp ra c)
+    (frame : NativeFrame sp (96 + (64 + allocHeadroom))) (deep : embedLimit + 96 + (64 + allocHeadroom) ≤ sp.toNat)
+    (image : EmbedImage c) (regs : GHolds c.σ (fsInitEntry sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 a0))
+    (clear : ∀ j, 1 ≤ j → j < 64 → slotUsed c.σ.mem (Layout.sym_files + 56 * j) = 0#8)
+    (charged : vsaChg 5 charge) :
+    FnSummary 0x80000350#64 (fun d => d = c)
+      (fun after => Nonempty (FsTail H capacity sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 c after)) := by
+  constructor
+  intro before ⟨pc, eq⟩
+  subst before
+  have frame96 := frame.resize (small := 96) (by unfold allocHeadroom; omega) (by decide)
+  have inner : NativeFrame (nativeStack sp 96) (64 + allocHeadroom) := frame.nested (front := 96) (by decide)
+  have inner64 := inner.resize (small := 64) (by unfold allocHeadroom; omega) (by decide)
+  have spNat := frame96.stack_nat
+  have deep96 : embedLimit + 96 ≤ sp.toNat := by omega
+  have lower := frame.lower
+  -- entry to the strchr call
+  obtain ⟨d, run1, p1⟩ := (fs_init_prefix c sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 a0 ready.toLeafInput frame96 deep96
+    image regs).run c ⟨pc, rfl⟩
+  have inside := fsPrefixLog_inside (ra := ra) (s0 := s0) (s1 := s1) (s2 := s2) (s3 := s3) (s4 := s4) (s5 := s5)
+    (s6 := s6) (s7 := s7) (s8 := s8) (s9 := s9) frame96
+  have apart := fsWindows_apart frame96
+  have readyD := ready.window_log p1 (by decide) (by simp only [fsPrefixWrites, fsSkipped, keysG]; decide)
+    (by decide) (gholds_lookup (n := 2) _ p1.regs rfl) (gholds_lookup (n := 1) _ p1.regs rfl) (by decide) inside
+    apart.pins apart.domain apart.pool (apart.heap H)
+  have embedD : EmbedImage d := EmbedImage.of_fs image deep96 p1.memory inside
+  have keepD (x : Nat) (out : OutW (fsWindows sp) x) : (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    rw [p1.memory, frameOn_writeLog _ _ _ inside x out]
+  have clearD (j : Nat) (lo : 1 ≤ j) (hi : j < 64) : slotUsed d.σ.mem (Layout.sym_files + 56 * j) = 0#8 := by
+    unfold slotUsed
+    rw [keepD _ (by
+      simp only [OutW, fsWindows, and_true, nativeFrameBase, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready,
+        heapEnd] at *
+      omega)]
+    exact clear j lo hi
+  -- the scan to new_node
+  obtain ⟨e, run2, S⟩ := (fs_init_scan d H (capacity + charge) sp s9 readyD inner64 p1.regs embedD clearD).run d
+    ⟨p1.pc, rfl⟩
+  have keptE (x : Nat) (high : nativeFrameBase sp 96 ≤ x) : (e.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0 :=
+    S.kept x (Or.inr (by rw [spNat]; exact high))
+  have embedE : EmbedImage e := embedD.frame ⟨fun a ka => S.kept a (Or.inl (by
+    have := ka.lt
+    unfold nativeFrameBase; rw [spNat]; unfold nativeFrameBase allocHeadroom at *; omega))⟩
+  have freeE : (e.σ.mem[slotOne]?).getD 0 = 0#8 := by
+    rw [S.kept _ (Or.inl (by
+      unfold nativeFrameBase; rw [spNat]; unfold nativeFrameBase slotOne Layout.sym_files heapEnd at *; omega))]
+    exact clearD 1 (by decide) (by decide)
+  have savedE (off : Nat) (value : BitVec 64) (member : (off, value) ∈ fsInitRestored ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9) :
+      bytesT e.σ.mem (nativeFrameBase sp 96 + off) 8 = value := by
+    have range : 8 ≤ off ∧ off + 8 ≤ 96 := by
+      simp only [fsInitRestored, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member
+      omega
+    rw [word_observed (m := writeLog c.σ.mem (nativeWordLog sp 96 (fsInitSlots ra s0 s3 s6 s7) ++
+        fsLoopLog sp s1 s2 s4 s5 s8 s9)) _ (fun i hi => by
+      rw [keptE _ (by omega), p1.memory, fsPrefixLog, fsPrefixLog_split, writeLog_skip]
+      simp only [fsGlobalLog, fdsLog, fsReadyLog, List.cons_append, List.nil_append, OutL]
+      unfold nativeFrameBase heapEnd Layout.sym_files Layout.sym_fds Layout.sym_fs_ready at *
+      refine ⟨?_, ?_, ?_, ?_, ?_, trivial⟩ <;> omega),
+      fsLoopLog, nativeWordLog, nativeWordLog, ← List.map_append, ← nativeWordLog]
+    apply frame96.word_log_read
+    · intro k v hk
+      simp only [fsInitSlots, fsLoopSlots, List.cons_append, List.nil_append, List.mem_cons, Prod.mk.injEq,
+        List.not_mem_nil, or_false] at hk
+      omega
+    · simp [fsInitSlots, fsLoopSlots]
+    · simp only [fsInitRestored, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member
+      rcases member with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ |
+        ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp [fsInitSlots, fsLoopSlots]
+  obtain ⟨after, run3, ⟨T⟩⟩ := (fs_init_tail e H capacity charge sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 S.ready frame
+    deep S.regs S.carried embedE freeE savedE ready.aligned charged).run e ⟨S.pc, rfl⟩
+  exact ⟨after, run1.trans (run2.trans run3), ⟨⟨T.node, T.pc, T.regs, T.ready, T.embed⟩⟩⟩
 end OCaml.Vm.Boot.Startup
