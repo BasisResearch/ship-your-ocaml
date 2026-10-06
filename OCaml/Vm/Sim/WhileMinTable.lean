@@ -18,19 +18,14 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 structure WhileMinOpen : Prop where
   /-- newlib's heap at the cut covers the runtime's blocks (a0-boot) -/
   libHeap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered [(Gc.refTable, 56)]
-  setglobal_barrier : GlobalBarrier Gc.f1Layout OCaml.Programs.whileMin
+  /-- the remembered set's growth paths (a6-gc) -/
+  growth : BarrierGrowthPaths Gc.f1Layout
   ml_open_descriptor_out_c_call1 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0 "caml_ml_open_descriptor_out"
   format_int_c_call2 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL2 (0x80003004#64) 1 "caml_format_int"
   ml_output_c_call4 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL4 (0x80002f40#64) 3 "caml_ml_output"
 
 theorem whileMin_premises (o : WhileMinOpen) :
     F1PremisesFor (fun op => OCaml.Programs.whileMinOps.contains op) OCaml.Programs.whileMin where
-  setglobal_barrier _ := o.setglobal_barrier
-  setfield0_barrier h := absurd h (by decide)
-  setfield1_barrier h := absurd h (by decide)
-  setfield2_barrier h := absurd h (by decide)
-  setfield3_barrier h := absurd h (by decide)
-  setfield_barrier h := absurd h (by decide)
   c_call1_returns _ := whileMin_ccallReturns (by decide) fun _ h => by
     simp only [OCaml.Programs.whileMinCalls, List.mem_cons, List.mem_nil_iff, or_false] at h
     rcases h with rfl | rfl | rfl | rfl
@@ -53,6 +48,6 @@ theorem whileMin_premises (o : WhileMinOpen) :
 /-- **The `whileMin` machine run** from the open premises only. -/
 theorem whileMin_halts_open (o : WhileMinOpen) :
     Halts Boot.WhileMin.cut "55\n2500\n36\n" 0 :=
-  whileMin_halts_f1 o.libHeap (whileMin_premises o)
+  whileMin_halts_f1 o.libHeap o.growth (whileMin_premises o)
 
 end OCaml.Vm.Sim

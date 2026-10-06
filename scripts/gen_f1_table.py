@@ -56,6 +56,15 @@ SUBST = [(r'\bL\b', 'Gc.f1Layout'), (r'\bB\b', 'Gc.g1Budget'),
          (r'\bhigh0\b', 'Gc.f1High'), (r'\bdom0\b', 'Gc.f1Domain')]
 
 
+def barrier_proof(ty):
+    """A barrier row's callee, from the represented barrier (`BarrierF1.lean`)
+    over the layout's growth paths."""
+    head = ty.split()[0]
+    base = (f'f1_{head[0].lower()}{head[1:]} f1_barrierRuntime growth.empty growth.full'
+            ' fits g1_capacity')
+    return f'({base} (by decide))' if head == 'FieldBarrierK' else f'({base})'
+
+
 def opcodes():
     text = (ROOT / 'OCaml/Bytecode/Opcode.lean').read_text()
     ops = re.findall(r'^\s*\|\s*([A-Z_0-9]+)\s*$', text, re.M)
@@ -181,7 +190,9 @@ def render_whilemin(fields, users):
              '/-- **What `whileMin`\'s machine run still needs** from the arm lanes. -/',
              'structure WhileMinOpen : Prop where']
     lines += ['  /-- newlib\'s heap at the cut covers the runtime\'s blocks (a0-boot) -/',
-              '  libHeap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered [(Gc.refTable, 56)]']
+              '  libHeap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered [(Gc.refTable, 56)]',
+              '  /-- the remembered set\'s growth paths (a6-gc) -/',
+              '  growth : BarrierGrowthPaths Gc.f1Layout']
     for fname, ty in open_.items():
         lines.append(f'  {fname} : {ty}')
     lines += ['', 'theorem whileMin_premises (o : WhileMinOpen) :',
@@ -190,7 +201,7 @@ def render_whilemin(fields, users):
     lines += ['', '/-- **The `whileMin` machine run** from the open premises only. -/',
               'theorem whileMin_halts_open (o : WhileMinOpen) :',
               '    Halts Boot.WhileMin.cut "55\\n2500\\n36\\n" 0 :=',
-              '  whileMin_halts_f1 o.libHeap (whileMin_premises o)', '', 'end OCaml.Vm.Sim', '']
+              '  whileMin_halts_f1 o.libHeap o.growth (whileMin_premises o)', '', 'end OCaml.Vm.Sim', '']
     return '\n'.join(lines)
 
 
@@ -214,7 +225,10 @@ def render():
         imports.add(mod)
         call = [name]
         for p, ty in ps:
-            if p in FIXED:
+            if p == 'barrier':
+                imports.add('OCaml.Vm.Sim.F1BarrierRuntime')
+                call.append(barrier_proof(ty))
+            elif p in FIXED:
                 call.append(FIXED[p])
             else:
                 fname = SHARED.get(p, f'{op.lower()}_{p}')
@@ -247,7 +261,7 @@ def render():
               '    (loaded : OCaml.Loaded Gc.f1Layout P c) (good : OCaml.GoodF1 P)',
               '    (fits : OCaml.Fits Gc.g1Budget P)',
               '    (reached : ∀ s i, Reach P s → decodeAt P.code s.pc = some i → keep i.op = true)',
-              '    (pre : F1PremisesFor keep P) :',
+              '    (growth : BarrierGrowthPaths Gc.f1Layout) (pre : F1PremisesFor keep P) :',
               '    OCaml.F1Arms P c (OCaml.LoopAt Gc.f1Layout P) where',
               '  entry := f1_entry loaded',
               '  arm op hop := match op, hop with']
@@ -261,9 +275,10 @@ def render():
             lines.append(f'        else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)')
     lines += ['', '/-- **The F1 arm table** for the pinned layout. -/',
               'theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)',
-              '    (good : OCaml.GoodF1 P) (fits : OCaml.Fits Gc.g1Budget P) (pre : F1Premises P) :',
+              '    (good : OCaml.GoodF1 P) (fits : OCaml.Fits Gc.g1Budget P)',
+              '    (growth : BarrierGrowthPaths Gc.f1Layout) (pre : F1Premises P) :',
               '    OCaml.F1Arms P c (OCaml.LoopAt Gc.f1Layout P) :=',
-              '  f1_table_for loaded good fits (fun _ _ _ _ => rfl) pre', '',
+              '  f1_table_for loaded good fits (fun _ _ _ _ => rfl) growth pre', '',
               'end OCaml.Vm.Sim', '']
     return '\n'.join(lines), render_whilemin(fields, users)
 

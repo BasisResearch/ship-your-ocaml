@@ -16,7 +16,7 @@ premises. a2-sem found that four facts are missing.
 | decode-to-fetch: the decoded instruction at `pcOf c` is the one the ELF image holds (via `Vsa.Sim.ElfDecode` and the image pins) | **a2-sem** |
 | a reachable bytecode PC is not an object method-cache slot (F1 never writes code) | **a2-sem** |
 | code-address geometry: bytecode PCs map into the loaded code region, in bounds and aligned | **a2-sem** |
-| `LibraryReady c` (`OCaml/Vm/Primitives/Memmove.lean`) at every C_CALL entry that calls newlib (memmove, strlen, …): every GPR 1..31 present (`isSome` only, monotone: a write keeps presence, `GprPresent.of_frame`), every RAM byte present, `gp = gpV`, idle HTIF payload. Consumed by `memmove_leaf` (a1-prims' output_bytes takes it as a named premise) | **a1-arms** (foreman, 2026-10-06): derives `LibraryReady` at C_CALL entries from `LoopAt` (GPR presence is already in its loop invariant). **a6-gc** supplies the platform facts it needs and `F1Pins`/`runtimeOk` lacks (every RAM byte present, `gp = gpV`, idle HTIF payload) as named `F1Pins` fields. a1-prims then discharges its named premise from a1-arms' lemma. |
+| `LibraryReady c` (`OCaml/Vm/Primitives/Memmove.lean`: GPR presence, `gp`, idle HTIF; no RAM presence) at C_CALL entries that call newlib | **a1-arms**: `CcallSetupPost.libraryReady` (`LoopRegisters.gp`); a1-prims carries it through console calls (`GprsKept`, `LibraryReady.of_kept`) |
 
 a2-sem's three facts go in `OCaml/Vm/Sim/CodeFacts.lean`, a new file owned
 by a2-sem. a1-arms consumes them and states its own in

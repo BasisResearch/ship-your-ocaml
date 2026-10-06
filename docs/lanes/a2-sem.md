@@ -10,7 +10,7 @@
 three logs (young slot; frame store + slot; + remembered-set insertion)
 through `BarrierState` (`separated_step` for stores in `WindowSeparated`
 windows, `field_step` for the slot); `modify_return_of_done` gives the row's
-`ModifyReturn`. For frame-form calls (malloc/realloc in the growth path), `BarrierKeep.lean` gives `BarrierObserved` (every byte the represented state reads, over every placed object) and `keep_step`/`keep_field_step` (one frame over the whole call, the slot word holding the stored value). Named premises (GC lane, a6-gc discharges): `BarrierRuntime`
+`ModifyReturn`. The F1 table discharges the six barrier rows with them (`gen_f1_table.py`'s `barrier_proof`), so `F1PremisesFor` has no barrier fields; `f1_table`, `ocamlrun_refinement_F1_pinned` and `whileMin_halts_f1` take `BarrierGrowthPaths Gc.f1Layout` (empty + full growth) instead. For frame-form calls (malloc/realloc in the growth path), `BarrierKeep.lean` gives `BarrierObserved` (every byte the represented state reads, over every placed object) and `keep_step`/`keep_field_step` (one frame over the whole call, the slot word holding the stored value). Named premises (GC lane, a6-gc discharges): `BarrierRuntime`
 (idle collector, the ref table's words/arena/separation, insertion keeps the
 runtime) and `BarrierGrowth` (the growth path's `BarrierDone`). Also:
 `ModifyInput` carries `geometry`/`native` (a1-arms agreed); `caml_modify_loaded`

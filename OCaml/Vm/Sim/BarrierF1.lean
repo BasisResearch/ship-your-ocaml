@@ -566,6 +566,12 @@ structure BarrierGrowthFull (L : OCaml.Layout) : Prop where
     FnSummary (0x8000a9a8#64) (fun e => e = c)
       (BarrierDone L P {s with heap := s.heap.set l (.block tag (fields.set i vVal))} pl cp sp high D ra c)
 
+/-- **Both growth paths** of the remembered set (GC lane): the layout-level
+premise of the F1 barrier rows. -/
+structure BarrierGrowthPaths (L : OCaml.Layout) : Prop where
+  empty : BarrierGrowth L
+  full : BarrierGrowthFull L
+
 /-- **`caml_modify` from a represented call**, fast or growing. -/
 theorem barrier_summary {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
     {sp high codeReg : Nat} {ra codeWord stackWord value : BitVec 64} {c : Config}
