@@ -88,10 +88,18 @@ def _items(regs):
     return out
 
 
+def _shifts(instrs):
+    return any(i.word & 127 in (0x13, 0x1b) and (i.word >> 12) & 7 in (1, 5) for i in instrs)
+
+
 def _imm_facts(instrs):
-    """`signExtend` facts of the block's 12-bit immediates."""
+    """`signExtend` facts of the block's 12-bit immediates, and the 6-bit
+    amounts of its immediate shifts."""
     facts = set()
     for i in instrs:
+        if i.word & 127 in (0x13, 0x1b) and (i.word >> 12) & 7 in (1, 5):
+            raw = (i.word >> 20) & 0xfff
+            facts.add(f"show BitVec.extractLsb 5 0 (BitVec.extractLsb' 0 6 {raw}#12) = {raw & 0x3f}#6 by decide")
         op = i.word & 0x7f
         if op in (0x03, 0x13, 0x1b):
             raw = (i.word >> 20) & 0xfff
@@ -143,7 +151,7 @@ def emit_fast(E, b, name, regs, fast):
           f'  change [] ++ wlogM {name}_body ({name}_input R) loads = _',
           f'  simp only [List.nil_append, {name}_body, wlogM, {name}_input, wentryM, widthOfM, eaddrM, srcVal, stepGM,',
           '    lookupG, eraseG, stepLdsM, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, Nat.reduceAdd, wvalM,',
-          '    Functions.sign_extend, Sail.BitVec.signExtend]',
+          '    Functions.sign_extend, Sail.BitVec.signExtend' + (', shamtOf, Sail.BitVec.extractLsb' if _shifts(b.instrs) else '') + ']',
           '  simp only [' + ', '.join(_imm_facts(b.instrs) + ['← BitVec.sub_eq_add_neg', 'BitVec.add_zero']) + ']',
           f'  simp only [{name}Log, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,',
           '    List.getElem?_tail, BitVec.zero_add]', '')
@@ -231,7 +239,9 @@ def emit_fast(E, b, name, regs, fast):
     if not b.instrs:
         E(f'  have access : AccessPlan c.σ.mem ({name}_input R) {L} {name}_body := trivial')
     elif pure:
-        miss = ', '.join(misses.get(t, 'fun h => by simp [IsLoad] at h') for t in range(len(b.instrs)))
+        loadPos = {pos_of[k] for k, (_, a) in enumerate(mems) if a[0] == 'load'}
+        miss = ', '.join(misses.get(t, 'fun _ => by simp [OutLRange]' if t in loadPos else 'fun h => by simp [IsLoad] at h')
+                         for t in range(len(b.instrs)))
         E(f'  have wl : wlogM {name}_body ({name}_input R) {L} = {log} := by rw [← {name}_log_eq R _]; rfl',
           f'  have access : AccessPlan c.σ.mem ({name}_input R) {L} {name}_body := by',
           '    apply accessPlan_of_pure',
