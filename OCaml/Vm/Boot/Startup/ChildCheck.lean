@@ -36,29 +36,30 @@ def slotMissValue (m : Std.ExtHashMap Nat (BitVec 8)) (p : Nat) (d : BitVec 64) 
   if slotUsed m p = 0#8 then 0#64 else if slotLinked m p = 0#8 then 0#64
   else if slotParent m p ≠ d then slotParent m p else slotLength m p
 
-/-- A slot inside RAM below the HTIF registers. -/
+/-- A slot inside RAM, apart from the HTIF registers. -/
 structure SlotWindow (p : BitVec 64) : Prop where
   lower : 0x80000000 ≤ p.toNat
-  upper : p.toNat + 24 ≤ Layout.sym_tohost
+  upper : p.toNat + 24 ≤ 0x100000000
+  htif : p.toNat + 24 ≤ Layout.sym_tohost ∨ Layout.sym_tohost + 8 ≤ p.toNat
+
+theorem SlotWindow.nat {p : BitVec 64} (h : SlotWindow p) {off : Nat} (fits : off ≤ 24) :
+    (p + BitVec.ofNat 64 off).toNat = p.toNat + off := by
+  have hi := h.upper
+  rw [BitVec.toNat_add, BitVec.toNat_ofNat]
+  have : off < 2 ^ 64 := by omega
+  rw [Nat.mod_eq_of_lt this, Nat.mod_eq_of_lt (by omega)]
 
 theorem SlotWindow.read {p : BitVec 64} (h : SlotWindow p) (off w : Nat) (fits : off + w ≤ 24) :
     ReadWindow (p + BitVec.ofNat 64 off) w := by
   have lo := h.lower
   have hi := h.upper
-  have tohost : Layout.sym_tohost < 0x100000000 := by decide
-  have nat : (p + BitVec.ofNat 64 off).toNat = p.toNat + off := by
-    rw [BitVec.toNat_add, BitVec.toNat_ofNat]
-    have : off < 2 ^ 64 := by omega
-    rw [Nat.mod_eq_of_lt this, Nat.mod_eq_of_lt (by omega)]
-  exact ⟨by omega, by omega, Or.inl (by omega)⟩
-
-theorem SlotWindow.nat {p : BitVec 64} (h : SlotWindow p) {off : Nat} (fits : off ≤ 24) :
-    (p + BitVec.ofNat 64 off).toNat = p.toNat + off := by
-  have hi := h.upper
-  have tohost : Layout.sym_tohost < 0x100000000 := by decide
-  rw [BitVec.toNat_add, BitVec.toNat_ofNat]
-  have : off < 2 ^ 64 := by omega
-  rw [Nat.mod_eq_of_lt this, Nat.mod_eq_of_lt (by omega)]
+  rw [show p + BitVec.ofNat 64 off = p + BitVec.ofNat 64 off from rfl]
+  constructor <;> rw [h.nat (by omega)]
+  · omega
+  · omega
+  · rcases h.htif with below | above
+    · exact Or.inl (by omega)
+    · exact Or.inr (by omega)
 
 def childCheckInput (p d k a0 : BitVec 64) : GRegs := [(8, p), (19, d), (20, k), (10, a0)]
 
