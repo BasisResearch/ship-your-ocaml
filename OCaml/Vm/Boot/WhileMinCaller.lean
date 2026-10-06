@@ -241,6 +241,19 @@ theorem stackGeometry_of {c : Config} (memory : Vsa.Densify.MemEqv c.σ.mem
         have band := obj ha ho
         simp only [OutWRange, WhileMinHeap.place, OCaml.Vm.Sim.atomTableBytes]
         exact ⟨Or.inl (by omega), trivial⟩
+      heapChannels := fun _ _ _ _ _ _ _ _ _ hb => by cases hb
+      primsRam := fun i name hi => by
+        have bound : i < whileMin.prims.size := (Array.getElem?_eq_some_iff.mp hi).1
+        have size : whileMin.prims.size ≤ 512 := by decide +kernel
+        have ht : Layout.sym_tohost + 8 ≤ 0x8038fb10 := by decide
+        rw [prim_table_word]
+        simp only [BitVec.toNat_ofNat]
+        exact ⟨by omega, by omega, Or.inr (by omega)⟩
+      heapPrims := fun l a o ha ho i name hi => by
+        have band := obj ha ho
+        rw [prim_table_word]
+        simp only [OutWRange, BitVec.toNat_ofNat]
+        exact ⟨Or.inl (by omega), trivial⟩
       domainCode := by rw [domain_word, code_size]; simp only [OutWRange, WhileMinHeap.place]; decide
       domainHeap := fun l a o ha ho => by
         have band := obj ha ho
