@@ -653,7 +653,7 @@ def ocaml_literal_mline(pc, word):
     if opcode == 3:
         kind = {2: 'lw', 3: 'ld', 4: 'lbu'}[funct3]
     elif opcode == 0x13:
-        kind = {0: 'addi', 1: 'slli', 5: 'srai' if word >> 26 == 0x10 else 'srli', 6: 'ori', 7: 'andi'}[funct3]
+        kind = {0: 'addi', 1: 'slli', 2: 'slti false', 3: 'slti true', 5: 'srai' if word >> 26 == 0x10 else 'srli', 6: 'ori', 7: 'andi'}[funct3]
     elif opcode == 0x1b and funct3 == 0:
         kind = 'addiw'
     elif opcode == 0x17:

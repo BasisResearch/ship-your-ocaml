@@ -39,6 +39,11 @@ def emit_write(root, functions, decode, code, text_base, lib, build_cfg, literal
         result.update(emit_tuple_blocks(*args, fn, stem, f'OCaml.Vm.Primitives.FdWrite.{ns}',
             f'OCaml/Vm/Primitives/FdWrite/{ns}.lean', sel, starts=[a for a, _, _, _ in fblocks],
             chunked=(), flag=FLAG, route=route))
+    for fn, stem, ns, route, taken, fblocks in flushers(ld, rest):
+        sel = [(blk[1], blk[2], blk[3], blk[1] in taken) + tuple(blk[4:]) for blk in fblocks]
+        result.update(emit_tuple_blocks(*args, fn, stem, f'OCaml.Vm.Primitives.Flush.{ns}',
+            f'OCaml/Vm/Primitives/Flush/{ns}.lean', sel, starts=[blk[0] for blk in fblocks],
+            chunked=(), flag=FLAG, route=route))
     return result
 
 
@@ -80,4 +85,58 @@ def callers(ld, rest):
         (0x8000d2a4, 'leaf', [1, 10], f'[{rest([1, 10])}]')]),
       ('caml_leave_blocking_section_default', 'Caml_leave_blocking_section_default', 'LeaveDefault', None, (), [
         (0x8000d2a8, 'leaf', [1, 10], f'[{rest([1, 10])}]')]),
+    ]
+
+
+def flushers(ld, rest):
+    """`caml_ml_flush` of an output channel: no channel mutex hooks, no pending
+    actions, one `caml_write_fd` of the whole buffer."""
+    return [
+      ('caml_ml_flush', 'Caml_ml_flush', 'MlFlush',
+       {0x8001628c: 'F', 0x80016298: 'T', 0x800162ac: 'F', 0x800162b8: 'T'}, ('lock', 'unlock'), [
+        (0x80016238, 'pro', [1, 2, 8, 9, 10, 18],
+         f'[(13, {ld(3, "lw")}), (14, 18446744073709551615#64), (8, {ld(2)}), (12, R 2 - 112#64 + 16#64), (9, {ld(1)}), (15, {ld(0)}), (18, 0x80064d08#64), (2, R 2 - 112#64), {rest([1, 10])}]'),
+        (0x80016290, 'lock', [1, 8, 9, 10, 18], f'[(15, {ld(0)}), {rest([1, 8, 9, 10, 18])}]',
+         {'mem': [('0x80064b58#64', 'global')]}),
+        (0x800162a4, 'call', [1, 8, 9, 18], f'[(10, R 8), {rest([1, 8, 9, 18])}]', {}),
+        (0x800162ac, 'done', [1, 8, 9, 10, 18], f'[{rest([1, 8, 9, 10, 18])}]', {}),
+        (0x800162b0, 'unlock', [1, 8, 9, 10, 18], f'[(15, {ld(0)}), {rest([1, 8, 9, 10, 18])}]',
+         {'mem': [('0x80064b50#64', 'global')]}),
+        (0x800162c4, 'ret', [2, 9, 10, 18], f'[(15, {ld(0)}), {rest([2, 9, 10, 18])}]', {'mem': [('R 18', 'window')]}),
+        (0x800162c8, 'tail', [2, 9, 15],
+         f'[(2, R 2 + 112#64), (10, 1#64), (18, {ld(3)}), (9, {ld(2)}), (8, {ld(1)}), (1, {ld(0)}), {rest([15])}]',
+         {'mem': [('R 15 + 288#64', 'window'), ('R 2 + 104#64', 'view'), ('R 2 + 96#64', 'view'),
+                  ('R 2 + 88#64', 'view'), ('R 2 + 80#64', 'view')],
+          'log': '[((R 15 + 288#64).toNat, 8, R 9)]', 'ra': 0})]),
+      ('caml_flush_partial', 'Caml_flush_partial', 'FlushPartial',
+       {0x80015460: 'T', 0x80015498: 'TF', 0x80015458: 'T', 0x800154d4: 'F'}, ('pending', 'more', 'result'), [
+        (0x80015408, 'pro', [1, 2, 8, 9, 10, 18, 19, 20, 21],
+         f'[(19, 18446744073709551615#64), (20, 0x80064b58#64), (21, 0x80064b50#64), (18, R 10 + 72#64), (8, R 10), (2, R 2 - 80#64), {rest([1, 9, 10])}]',
+         {'mem': [(f'R 2 - 80#64 + {k}#64', 'window') for k in (64, 48, 40, 32, 24, 72, 56)],
+          'log': '[((R 2 - 80#64 + 64#64).toNat, 8, R 8), ((R 2 - 80#64 + 48#64).toNat, 8, R 18), '
+                 '((R 2 - 80#64 + 40#64).toNat, 8, R 19), ((R 2 - 80#64 + 32#64).toNat, 8, R 20), '
+                 '((R 2 - 80#64 + 24#64).toNat, 8, R 21), ((R 2 - 80#64 + 72#64).toNat, 8, R 1), '
+                 '((R 2 - 80#64 + 56#64).toNat, 8, R 9)]'}),
+        (0x8001545c, 'head', [1, 8, 10, 18], f'[{rest([1, 8, 10, 18])}]', {}),
+        (0x80015460, 'pending', [1, 8, 10, 18], f'[{rest([1, 8, 10, 18])}]', {}),
+        (0x80015488, 'more', [1, 8, 18],
+         f'[(13, BitVec.signExtend 64 (Sail.BitVec.extractLsb ({ld(0)}) 31 0 - Sail.BitVec.extractLsb (R 18) 31 0)), (9, BitVec.signExtend 64 (Sail.BitVec.extractLsb ({ld(0)}) 31 0 - Sail.BitVec.extractLsb (R 18) 31 0)), (12, R 18), (10, {ld(0)}), {rest([1, 8, 18])}]',
+         {'mem': [('R 8 + 24#64', 'window')]}),
+        (0x80015488, 'empty', [1, 8, 18],
+         f'[(13, BitVec.signExtend 64 (Sail.BitVec.extractLsb ({ld(0)}) 31 0 - Sail.BitVec.extractLsb (R 18) 31 0)), (9, BitVec.signExtend 64 (Sail.BitVec.extractLsb ({ld(0)}) 31 0 - Sail.BitVec.extractLsb (R 18) 31 0)), (12, R 18), (10, {ld(0)}), {rest([1, 8, 18])}]',
+         {'mem': [('R 8 + 24#64', 'window')]}),
+        (0x80015448, 'write', [1, 8, 9, 12, 13, 18], f'[(10, {ld(1, "lw")}), (11, {ld(0, "lw")}), {rest([1, 8, 9, 12, 13, 18])}]',
+         {'mem': [('R 8 + 68#64', 'window'), ('R 8', 'window')]}),
+        (0x80015454, 'result', [1, 8, 9, 10, 18, 19], f'[(15, R 10), {rest([1, 8, 9, 10, 18, 19])}]', {}),
+        (0x800154c8, 'adjust', [1, 8, 9, 10, 15, 18], f'[(14, {ld(0)} + R 10), {rest([1, 8, 9, 10, 15, 18])}]',
+         {'mem': [('R 8 + 8#64', 'window'), ('R 8 + 8#64', 'window')],
+          'log': f'[((R 8 + 8#64).toNat, 8, {ld(0)} + R 10)]'}),
+        (0x800154d8, 'shift', [1, 8, 15, 18], f'[(10, {ld(0)} - R 15), {rest([1, 8, 15, 18])}]',
+         {'mem': [('R 8 + 24#64', 'window'), ('R 8 + 24#64', 'window')],
+          'log': f'[((R 8 + 24#64).toNat, 8, {ld(0)} - R 15)]'}),
+        (0x8001549c, 'epi', [2, 10, 18],
+         f'[(2, R 2 + 80#64), (10, compareValue true (R 18 - R 10) 1#64), (21, {ld(6)}), (20, {ld(5)}), (19, {ld(4)}), (18, {ld(3)}), (9, {ld(2)}), (8, {ld(1)}), (1, {ld(0)})]',
+         {'mem': [(f'R 2 + {k}#64', 'window') for k in (72, 64, 56, 48, 40, 32, 24)], 'ra': 0})]),
+      ('caml_check_pending_actions', 'Caml_check_pending_actions', 'CheckPending', None, (), [
+        (0x8000d6e0, 'leaf', [1], f'[(10, {ld(0, "lw")}), (1, R 1)]', {'mem': [('0x80064b30#64', 'global')]})]),
     ]
