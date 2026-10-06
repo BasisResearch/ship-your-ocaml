@@ -297,6 +297,25 @@ theorem fsFileLog_inside (start stop : BitVec 64) : LogInW [fsFilesWindow] (fsFi
   simp only [fsFileLog, LogInW, InsideW, fsFilesWindow, slotOne, Layout.sym_files]
   refine ⟨?_, ?_, ?_, ?_, trivial⟩ <;> omega
 
+/-- Slot 1 of `files` as `fs_init` leaves it: the file "prog" in the root,
+named by the block at `node`, with the embedded extent, read-only. -/
+structure FsSlotOne (m : Std.ExtHashMap Nat (BitVec 8)) (node : BitVec 64) : Prop where
+  used : (m[slotOne]?).getD 0 = 1#8
+  dirByte : (m[slotOne + 1]?).getD 0 = 0#8
+  linked : (m[slotOne + 2]?).getD 0 = 1#8
+  parent : slotParent m slotOne = 0#64
+  namePtr : bytesT m (slotOne + 8) 8 = node
+  length : slotLength m slotOne = 4#64
+  data : bytesT m (slotOne + 24) 8 = 0x86800090#64
+  size : bytesT m (slotOne + 32) 8 = 0x24ac#64
+  cap : bytesT m (slotOne + 40) 8 = 0x24ac#64
+  ro : (m[slotOne + 52]?).getD 0 = 1#8
+  name : ∀ j, j < 4 → (m[node.toNat + j]?).getD 0 = progByte (j + 1)
+  nul : (m[node.toNat + 4]?).getD 0 = 0#8
+
+local macro "file_out" : tactic =>
+  `(tactic| (simp only [fsFileLog, OutL, OutLRange, slotOne, Layout.sym_files, List.drop, and_true]; omega))
+
 /-- `fs_init` after slot 1 is set up: back at its caller. -/
 structure FsTail (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64)
     (before after : Config) where
@@ -306,6 +325,9 @@ structure FsTail (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 
     (20, s4), (18, s2), (9, s1), (10, 1#64)]
   ready : RuntimeReady ((node.toNat, 5) :: H) capacity sp ra after
   embed : EmbedImage after
+  slot : FsSlotOne after.σ.mem node
+  low : ∀ x, x < heapStart → ¬ allocGlobal x → (x < slotOne ∨ slotOne + 56 ≤ x) →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 /-- `new_node(0, "prog", 4, 0)` takes slot 1; `fs_init` records the file's
 extent there, finds the table's end and returns. -/
@@ -402,12 +424,56 @@ theorem fs_init_tail (e : Config) (H : List (Nat × Nat)) (capacity charge : Nat
   have readyH := readyG.stack_log p3 (by decide) (by simp only [keysG]; decide) (by decide)
     (gholds_lookup (n := 2) _ p3.regs rfl) (gholds_lookup (n := 1) _ p3.regs rfl) aligned frame96
     (by simp only [LogInW])
+  -- slot 1 and the name, at g (= h)
+  have memH : h.σ.mem = g.σ.mem := p3.memory
+  have memG : g.σ.mem = writeLog f.σ.mem (fsFileLog 0x86800090#64 0x8680253c#64) := by
+    rw [p2.memory, embedF.fs_start, embedF.fs_stop]
+  have fileOut (x : Nat) (out : OutL (fsFileLog 0x86800090#64 0x8680253c#64) x) :
+      (g.σ.mem[x]?).getD 0 = (f.σ.mem[x]?).getD 0 := by
+    rw [memG, writeLog_out _ _ _ out]
+  have nodeLo := fresh.1
+  obtain ⟨par0, par1, par2, par3⟩ := N.parent
+  have slot : FsSlotOne g.σ.mem N.node := {
+    used := (fileOut slotOne (by file_out)).trans N.used
+    dirByte := (fileOut (slotOne + 1) (by file_out)).trans (N.dirByte.trans (by decide))
+    linked := (fileOut (slotOne + 2) (by file_out)).trans N.linked
+    parent := by
+      unfold slotParent read4
+      rw [fileOut (slotOne + 4) (by file_out), fileOut (slotOne + 4 + 1) (by file_out),
+        fileOut (slotOne + 4 + 2) (by file_out), fileOut (slotOne + 4 + 3) (by file_out), par0, par1, par2, par3]
+      decide
+    namePtr := by rw [memG, bytesT_writeLog_out _ (by file_out)]; exact N.namePtr
+    length := by unfold slotLength; rw [memG, bytesT_writeLog_out _ (by file_out)]; exact N.length
+    data := by rw [memG]; exact word_writeLog_at _ _ 0 _ _ rfl (by file_out)
+    size := by rw [memG]; exact word_writeLog_at _ _ 3 _ _ rfl trivial
+    cap := by rw [memG]; exact word_writeLog_at _ _ 2 _ _ rfl (by file_out)
+    ro := by rw [memG]; exact (byte_writeLog_at _ _ 1 _ _ rfl (by file_out)).trans (by decide)
+    name := fun j hj => by
+      rw [fileOut (N.node.toNat + j) (by unfold heapStart at nodeLo; file_out), N.copied j (by rw [show (4#64).toNat = 4 from rfl]; exact hj)]
+      have := embed.fs_byte (j + 1) (by omega)
+      rw [show WhileMinImage.embedPath0 + (j + 1) = progName.toNat + j by
+        unfold WhileMinImage.embedPath0; simp only [progName]; rw [BitVec.toNat_ofNat]; omega] at this
+      exact this
+    nul := by
+      rw [fileOut (N.node.toNat + 4) (by unfold heapStart at nodeLo; file_out)]
+      exact N.terminated }
   refine ⟨h, run1.trans (run2.trans run3), ⟨{
     node := N.node
     pc := p3.pc
     regs := p3.regs
     ready := readyH
-    embed := embedG.frame ⟨fun a _ => by rw [p3.memory]; rfl⟩ }⟩⟩
+    embed := embedG.frame ⟨fun a _ => by rw [memH]⟩
+    slot := memH ▸ slot
+    low := fun x below global apart => by
+      rw [memH, fileOut x (by unfold heapStart at below; unfold slotOne Layout.sym_files at apart; file_out)]
+      apply N.kept
+      refine ⟨Or.inl ?_, fun foot => ?_, apart, fun inside => ?_⟩
+      · unfold nativeFrameBase; rw [spNat]
+        unfold nativeFrameBase heapStart allocHeadroom embedLimit Layout.sym_stack_top Layout.sym_stack_size at *; omega
+      · rcases foot with g' | ⟨lo, _⟩
+        · exact global g'
+        · omega
+      · unfold InExt at inside; omega }⟩⟩
 
 theorem fsPrefixLog_inside {sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64} (frame : NativeFrame sp 96) :
     LogInW (fsWindows sp) (fsPrefixLog sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9) :=
@@ -451,6 +517,21 @@ theorem fsWindows_apart {sp : BitVec 64} (frame : NativeFrame sp 96) : FsWindows
     · simp only [Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready, nativeFrameBase, heapEnd, heapStart] at *
       omega
 
+/-- What `fs_init()` leaves: slot 1 = "prog", the other slots unused, every
+other low byte outside its windows unchanged, readiness with the name live. -/
+structure FsInitDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64)
+    (before after : Config) where
+  node : BitVec 64
+  pc : PCAt ra after
+  regs : GHolds after.σ [(2, sp), (23, s7), (22, s6), (19, s3), (8, s0), (1, ra), (25, s9), (24, s8), (21, s5),
+    (20, s4), (18, s2), (9, s1), (10, 1#64)]
+  ready : RuntimeReady ((node.toNat, 5) :: H) capacity sp ra after
+  embed : EmbedImage after
+  slot : FsSlotOne after.σ.mem node
+  rest : ∀ j, 2 ≤ j → j < 64 → slotUsed after.σ.mem (Layout.sym_files + 56 * j) = 0#8
+  low : ∀ x, x < heapStart → ¬ allocGlobal x → OutW (fsWindows sp) x → (x < slotOne ∨ slotOne + 56 ≤ x) →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+
 /-- **`fs_init()` over the embedded table "/prog"**: slot 1 becomes the file
 `prog` under the root, the descriptors and `fs_ready` are set, and the
 caller's registers are restored. -/
@@ -462,7 +543,7 @@ theorem fs_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (clear : ∀ j, 1 ≤ j → j < 64 → slotUsed c.σ.mem (Layout.sym_files + 56 * j) = 0#8)
     (charged : vsaChg 5 charge) :
     FnSummary 0x80000350#64 (fun d => d = c)
-      (fun after => Nonempty (FsTail H capacity sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 c after)) := by
+      (fun after => Nonempty (FsInitDone H capacity sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 c after)) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
@@ -526,5 +607,25 @@ theorem fs_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
         ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp [fsInitSlots, fsLoopSlots]
   obtain ⟨after, run3, ⟨T⟩⟩ := (fs_init_tail e H capacity charge sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 S.ready frame
     deep S.regs S.carried embedE freeE savedE ready.aligned charged).run e ⟨S.pc, rfl⟩
-  exact ⟨after, run1.trans (run2.trans run3), ⟨⟨T.node, T.pc, T.regs, T.ready, T.embed⟩⟩⟩
+  have lowE (x : Nat) (below : x < heapStart) (out : OutW (fsWindows sp) x) :
+      (e.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    rw [S.kept x (Or.inl (by
+      unfold nativeFrameBase; rw [spNat]
+      unfold nativeFrameBase heapStart heapEnd at *; omega)), keepD x out]
+  refine ⟨after, run1.trans (run2.trans run3), ⟨{
+    node := T.node
+    pc := T.pc
+    regs := T.regs
+    ready := T.ready
+    embed := T.embed
+    slot := T.slot
+    rest := fun j lo hi => ?_
+    low := fun x below global out apart => (T.low x below global apart).trans (lowE x below out) }⟩⟩
+  have lowJ : Layout.sym_files + 56 * j < heapStart := by unfold heapStart Layout.sym_files; omega
+  unfold slotUsed
+  rw [T.low _ lowJ (by unfold allocGlobal InRange Layout.sym_files; omega)
+    (Or.inr (by unfold slotOne; omega)), S.kept _ (Or.inl (by
+      unfold nativeFrameBase; rw [spNat]
+      unfold nativeFrameBase heapStart heapEnd at *; omega))]
+  exact clearD j (by omega) hi
 end OCaml.Vm.Boot.Startup
