@@ -436,4 +436,48 @@ theorem raise_native_memory {P : Prog} {s : St} {c : Config} {pl : Place} {cp : 
       OutLRange, rtN, prN, pvN, and_true, raiseBuffer, raiseBufOffset]
     omega
 
+/-- **The zero helper's complete memory**: setup, `caml_raise`'s native
+memory, and the helper's saved return address apart from every word the
+rest of the path reads. -/
+theorem raise_zero_memory {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {high : Nat}
+    {exn : Val} {D : InvocationData} {value : BitVec 64} (v : NativeValid D) (inv : Invocation D c)
+    (g : ArmGeometry P s c pl cp high) (ex : DivisionException P s pl c exn value)
+    (rr : RaiseRuntimeReady c D value) :
+    RaiseZeroMemory (BitVec.ofNat 64 D.nativeSp) 0x80003cb0#64 (word c Layout.sym_caml_global_data)
+      (word c Layout.sym_Caml_state) value (raiseBuffer D) (raiseSaved D c) c := by
+  have hh := v.headroom
+  have ht := v.high
+  have small : D.nativeSp < 2 ^ 64 := by simp only [Layout.sym_stack_top] at ht; omega
+  have le : 16 ≤ D.nativeSp := by simp only [nativeHeadroom, Vsa.Sim.DlHeap.heapEnd] at hh; omega
+  have raN : (raiseZeroRa (BitVec.ofNat 64 D.nativeSp)).toNat = D.nativeSp - 8 := by
+    rw [raiseZeroRa_at le small, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have hda := g.domainArena
+  have ext := domain_field_nat g (off := Layout.off_external_raise) (by decide)
+  have fb := ex.fieldBelow
+  have statics : Layout.sym_caml_global_data + 8 ≤ Layout.sym_bss_end ∧
+      Layout.sym_caml_channel_mutex_unlock_exn + 8 ≤ Layout.sym_bss_end ∧
+      Layout.sym_Caml_state + 8 ≤ Layout.sym_bss_end ∧
+      Layout.sym_caml_something_to_do + 8 ≤ Layout.sym_bss_end ∧
+      Layout.sym_bss_end ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+  obtain ⟨sg, sm, sc, sp, sb⟩ := statics
+  have offs : ∀ r ∈ Layout.jumpSavedRegs, Layout.jumpSaveOffset r ≤ 104 := by decide
+  refine ⟨raise_zero_setup_memory v ex, raise_native_memory v inv g rr, ?_, ?_, ?_⟩
+  · intro a ha
+    simp only [raiseMemoryWords, List.mem_cons, List.not_mem_nil, or_false] at ha
+    simp only [raiseZeroLog, OutLRange, raN, and_true]
+    simp only [nativeHeadroom] at hh
+    rcases ha with rfl | rfl | rfl
+    · omega
+    · omega
+    · rw [raiseExternal, ext]
+      simp only [Layout.domainStateBytes, Layout.off_external_raise] at hda ⊢
+      omega
+  · simp only [raiseZeroLog, OutLRange, raN, and_true]
+    simp only [nativeHeadroom] at hh
+    omega
+  · intro r hr
+    have o := offs r hr
+    simp only [raiseZeroLog, OutLRange, raN, and_true, raiseBuffer, raiseBufOffset]
+    omega
+
 end OCaml.Vm.Sim
