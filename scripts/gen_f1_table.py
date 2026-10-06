@@ -36,7 +36,7 @@ FIXED = {
 # Program-level parameters shared by several rows: one premise field each.
 SHARED = {'values': 'values', 'ints': 'ints', 'extra': 'extra', 'extraBounded': 'extra',
           'raises': 'raises', 'exotic': 'exotic', 'trapBounded': 'trapBounded',
-          'scratch': 'scratch', 'field': 'field'}
+          'scratch': 'scratch', 'field': 'field', 'allocFrame': 'allocFrame'}
 SUBST = [(r'\bL\b', 'Gc.f1Layout'), (r'\bB\b', 'Gc.g1Budget'),
          (r'\bhigh0\b', 'Gc.f1High'), (r'\bdom0\b', 'Gc.f1Domain')]
 

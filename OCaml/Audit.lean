@@ -30,6 +30,9 @@ import OCaml.Vm.Sim.CcallRows
 import OCaml.Vm.Sim.CcallWriting
 import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.BarrierRows
+import OCaml.Vm.Sim.MakeblockRows
+import OCaml.Vm.Sim.AllocInput
+import OCaml.Vm.Sim.PlacePut
 import OCaml.Vm.Sim.InvariantUse
 import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
@@ -4813,3 +4816,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.FieldWriteOk.of_geometry
 #print axioms OCaml.Vm.Sim.f1_fieldWriteReady
 #print axioms OCaml.Programs.whileMin_raisesCaught
+#print axioms OCaml.Vm.VmReprAt.put
+#print axioms OCaml.Vm.HeapRepr.put
+#print axioms OCaml.Vm.Sim.ArmInput.put
+#print axioms OCaml.Vm.Sim.StackGeometry.put
+#print axioms OCaml.Vm.Sim.MakeblockInput.of_input
+#print axioms OCaml.Vm.Sim.makeblock_fixed_next
+#print axioms OCaml.Vm.Sim.makeblock1_row
+#print axioms OCaml.Vm.Sim.makeblock2_row
+#print axioms OCaml.Vm.Sim.makeblock3_row
