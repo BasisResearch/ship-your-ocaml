@@ -677,3 +677,4 @@ import OCaml.Vm.Primitives.Named.NamedHash
 import OCaml.Vm.Sim.F1GrowthPaths
 import OCaml.Vm.Primitives.Named.NamedFront
 import OCaml.Vm.Primitives.Named.NamedChain
+import OCaml.Vm.Primitives.Named.NamedLookup

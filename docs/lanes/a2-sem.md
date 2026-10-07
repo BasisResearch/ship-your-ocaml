@@ -12,7 +12,7 @@ the layout-level `F1GrowthPremises` (`GrowthCallState`: RAM density + GPR presen
 `BarrierGrowthFull` (a6-gc, realloc branch); C_CALL returns (a1-prims); `libHeap`
 (a0-boot).
 
-**In progress: Layer A's uncaught-exception path** (`OCaml/Vm/Primitives/Named/`: `--ocaml-named` blocks, `umoddi3_summary`, `hash_loop`). F1
+**In progress: Layer A's uncaught-exception path.** Done: `caml_named_value` as a call summary (`named_value_summary`, `OCaml/Vm/Primitives/Named/`; `--ocaml-named` blocks, `umoddi3_summary`, `hash_loop`, `walk`). F1
 excludes it (`uncaught_unreachable`). Machine path after
 `raise_uncaught_return` (proved): `caml_main`'s `Is_exception_result` test →
 `caml_fatal_uncaught_exception` (`0x8000df50`, default handler inlined) →
