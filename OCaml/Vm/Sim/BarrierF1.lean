@@ -338,8 +338,9 @@ structure BarrierDone (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : 
   tick : after.tick < 2
   minstret : ∃ w, after.σ.regs.get? Register.minstret = some w
   pc : after.σ.regs.get? Register.PC = some ra
-  frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
-    (∀ n ∈ barrierClobber, (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+  /-- the integer registers outside `barrierClobber` are kept -/
+  frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ barrierClobber → gprGet after.σ n = gprGet before.σ n
+  htifIdle : after.σ.regs.get? Register.htif_payload_writes = some 0#4
 
 /-- The native frame store misses the invocation and lies in the native
 scratch window. -/
@@ -404,8 +405,12 @@ theorem barrier_core {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : C
   have finish : ∀ st : BarrierState L P {s with heap := s.heap.set l (.block tag (fields.set i vVal))}
       pl cp sp high D after,
       BarrierDone L P {s with heap := s.heap.set l (.block tag (fields.set i vVal))} pl cp sp high D ra c after :=
-    fun st => ⟨st, ret.good, ret.tick, ret.minstret, ret.pc, fun r noise out =>
-      ret.frame r noise fun n hn => out n (by revert n; decide)⟩
+    fun st => ⟨st, ret.good, ret.tick, ret.minstret, ret.pc,
+      fun n lo hi out => Gc.Barrier.frame_gpr (by decide) ret.frame n lo hi (fun hn => out (by
+        simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+        simp only [barrierClobber, List.mem_cons, List.not_mem_nil, or_false]
+        omega)),
+      (ret.frame _ (by decide) (by decide)).trans input.loop.htifIdle⟩
   -- the frame store, shared by both major paths
   have major : ∀ c2 : Config, c2.σ.mem = writeLog c.σ.mem (Gc.Barrier.majorLog
       (BitVec.ofNat 64 D.nativeSp) ra (BitVec.ofNat 64 (a + 8 * i)) value) →
@@ -507,14 +512,24 @@ theorem modify_return_of_done {L : OCaml.Layout} {P : Prog} {s s' target : St} {
     (codeLow : 1 ≤ codeReg) (codeHigh : codeReg ≤ 31)
     (codeOut : codeReg ∉ barrierClobber) :
     ModifyReturn L P target pl cp targetSp high codeReg ra codeWord stackWord after := by
-  have keep := Gc.Barrier.frame_gpr (by decide) done.frame
+  have keep : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ barrierClobber → gpr after n = gpr c n := done.frame
   obtain ⟨w, reg, val⟩ := input.env
   exact
     { data := data done.state.data
       primitives := done.state.primitives
       platform := ⟨done.good, done.state.image, done.state.runtime⟩
-      loop := loopRegisters_frame (fun r hr => done.frame r (by revert r; decide) (by revert r; decide))
-        input.loop
+      loop :=
+        { dispatchTable := (keep _ (by decide) (by decide) (by decide)).trans input.loop.dispatchTable
+          opcodeBound := (keep _ (by decide) (by decide) (by decide)).trans input.loop.opcodeBound
+          pending := (keep _ (by decide) (by decide) (by decide)).trans input.loop.pending
+          domain := (keep _ (by decide) (by decide) (by decide)).trans input.loop.domain
+          htifIdle := done.htifIdle
+          saved := fun n hn => by
+            simp only [unpinnedSaved, List.mem_cons, List.not_mem_nil, or_false] at hn
+            rcases hn with rfl | rfl
+            · rw [keep 26 (by decide) (by decide) (by decide)]; exact input.loop.saved 26 (by decide)
+            · rw [keep 27 (by decide) (by decide) (by decide)]; exact input.loop.saved 27 (by decide)
+          gp := (keep 3 (by decide) (by decide) (by decide)).trans input.loop.gp }
       tick := done.tick
       returnPC := done.pc
       code := (keep codeReg codeLow codeHigh codeOut).trans input.code
