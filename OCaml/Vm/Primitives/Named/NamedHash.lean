@@ -63,6 +63,7 @@ structure HashAt (c0 : Config) (ra a : BitVec 64) (name : List (BitVec 8)) (i : 
   memory : c.σ.mem = c0.σ.mem
   output : c.σ.sailOutput = c0.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [10, 13, 14, 15] → gprGet c.σ n = gprGet c0.σ n
+  htif : c.σ.regs.get? Register.htif_payload_writes = c0.σ.regs.get? Register.htif_payload_writes
 
 /-- The loop has hashed the whole name. -/
 structure HashDone (c0 : Config) (ra : BitVec 64) (name : List (BitVec 8)) (c : Config) : Prop where
@@ -72,6 +73,9 @@ structure HashDone (c0 : Config) (ra : BitVec 64) (name : List (BitVec 8)) (c : 
   memory : c.σ.mem = c0.σ.mem
   output : c.σ.sailOutput = c0.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [10, 13, 14, 15] → gprGet c.σ n = gprGet c0.σ n
+  htif : c.σ.regs.get? Register.htif_payload_writes = c0.σ.regs.get? Register.htif_payload_writes
+
+theorem wl_nil (m : Std.ExtHashMap Nat (BitVec 8)) : writeLog m [] = m := rfl
 
 /-- The registers at `c` as the blocks' symbolic inputs. -/
 def regsAt (c : Config) : Nat → BitVec 64 := fun k => (gprGet c.σ k).getD 0
@@ -113,15 +117,16 @@ theorem hash_more {c0 c : Config} {ra a : BitVec 64} {name : List (BitVec 8)} {i
   simp only [hashMore_regs, GHolds] at out
   obtain ⟨o14, o10, o13, -, -⟩ := out
   refine ⟨d, run, ⟨⟨post.good, post.image, post.minstret, ?_, h.leaf.aligned, post.tick⟩, post.pc,
-    more, ?_, ?_, ?_, ?_, ?_, ?_⟩⟩
+    more, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩⟩
   · rw [← h.leaf.raReg]; exact post.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)
   · rw [o13, next]
   · simpa using o14
   · rw [o10, r10, r14, hash_step, take_succ_eq (by omega : i < name.length), hashBytes_snoc]
-  · rw [post.memory, h.memory]; rfl
+  · rw [post.memory, h.memory, wl_nil]
   · rw [post.output, h.output]
   · intro n lo hi out
     exact (post.gpr_frame (by decide) n lo hi out).trans (h.frame n lo hi out)
+  · exact (post.frame _ (by decide) (by decide)).trans h.htif
 
 /-- The last iteration: the terminator. -/
 theorem hash_end {c0 c : Config} {ra a : BitVec 64} {name : List (BitVec 8)} {i : Nat}
@@ -148,14 +153,15 @@ theorem hash_end {c0 c : Config} {ra a : BitVec 64} {name : List (BitVec 8)} {i 
   simp only [hashEnd_regs, GHolds] at out
   obtain ⟨-, o10, -, -, -⟩ := out
   refine ⟨d, run, ⟨⟨post.good, post.image, post.minstret, ?_, h.leaf.aligned, post.tick⟩, post.pc,
-    ?_, ?_, ?_, ?_⟩⟩
+    ?_, ?_, ?_, ?_, ?_⟩⟩
   · rw [← h.leaf.raReg]; exact post.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)
   · have full : name.take (i + 1) = name := by rw [last]; exact List.take_length
     rw [o10, r10, r14, hash_step, ← hashBytes_snoc, ← take_succ_eq (by omega : i < name.length), full]
-  · rw [post.memory, h.memory]; rfl
+  · rw [post.memory, h.memory, wl_nil]
   · rw [post.output, h.output]
   · intro n lo hi out
     exact (post.gpr_frame (by decide) n lo hi out).trans (h.frame n lo hi out)
+  · exact (post.frame _ (by decide) (by decide)).trans h.htif
 
 /-- **The hash loop**, from any byte to the terminator. -/
 theorem hash_loop {c0 : Config} {ra a : BitVec 64} {name : List (BitVec 8)} (named : NameAt c0.σ.mem a name) :

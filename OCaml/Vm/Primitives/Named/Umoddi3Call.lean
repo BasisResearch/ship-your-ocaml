@@ -32,6 +32,8 @@ structure UmodPost (before : Config) (ra value : BitVec 64) (after : Config) : P
   memory : after.σ.mem = before.σ.mem
   output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ umodWrites → gprGet after.σ n = gprGet before.σ n
+  /-- `ra` holds the internal link of the `__udivdi3` call -/
+  link : gprGet after.σ 1 = some 0x800372f0#64
   htifIdle : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
 
 /-- A noise-and-writes register frame keeps every unwritten integer register. -/
@@ -121,6 +123,7 @@ theorem umoddi3_summary {c : Config} {x y ra : BitVec 64} (input : Udivdi3Input 
         simp only [umodWrites, List.mem_cons, List.not_mem_nil, or_false, not_or] at out
         exact (frame4 n lo hi (by simp; omega)).trans ((frame3 n lo hi (by simp; omega)).trans
           ((p2.gpr_frame (by decide) n lo hi (by simp; omega)).trans (p1.gpr_frame (by decide) n lo hi (by simp; omega))))
+      link := (frame4 1 (by decide) (by decide) (by decide)).trans p3.raReg
       htifIdle := by
         rw [p4.frame _ (by decide) (by decide), p3.frame _ (by decide),
           p2.frame _ (by decide) (by decide), p1.frame _ (by decide) (by decide)] }
