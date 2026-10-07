@@ -673,3 +673,4 @@ import OCaml.Vm.Sim.BarrierF1
 import OCaml.Vm.Sim.BarrierKeep
 import OCaml.Vm.Primitives.Named.NamedValue
 import OCaml.Vm.Primitives.Named.Umoddi3Call
+import OCaml.Vm.Primitives.Named.NamedHash
