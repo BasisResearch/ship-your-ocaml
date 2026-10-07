@@ -137,6 +137,7 @@ structure Done (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2 s3 w
   reserve : bytesT after.σ.mem (tbl.toNat + 48) 8 = 0x100#64
   kept : ∀ a, Kept H sp tbl a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
   callee : ∀ k ∈ calleeRest, gprGet after.σ k = gprGet before.σ k
+  out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
 
 /-- **`caml_realloc_ref_table` on an unallocated table**, entry to return. -/
 theorem realloc_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
@@ -249,9 +250,13 @@ theorem realloc_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
       simp only [endLog, List.mem_cons, List.not_mem_nil, or_false] at hx
       subst hx; simp only [t8]; omega)
   rw [← R.memory] at rest9
+  have outEq : Vsa.Machine.output c9.σ = Vsa.Machine.output d.σ := by
+    rw [R.out, show Vsa.Machine.output c8.σ = Vsa.Machine.output c7.σ by simp only [Vsa.Machine.output, N.output],
+      L.out, show Vsa.Machine.output c6.σ = Vsa.Machine.output c5.σ by simp only [Vsa.Machine.output, M.output],
+      I.out, A.out]
   refine ⟨c9, run4.trans (run5.trans (run6.trans (run7.trans (run8.trans run9)))), ⟨⟨vsaReg c4 10, R.ready, R.pc,
     ⟨g8, g9, g18, g19, trivial⟩, pNonzero, pLow, pHigh, S.allocation.result.align, pDisjoint, ?_, ?_, ?_, ?_, ?_, rest9.size, rest9.reserve,
-    ?_, ?_⟩⟩⟩
+    ?_, ?_, outEq⟩⟩⟩
   rotate_left 5
   · -- kept bytes
     intro a k

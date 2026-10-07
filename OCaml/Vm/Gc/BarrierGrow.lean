@@ -181,6 +181,7 @@ structure AtRealloc (H : List (Nat × Nat)) (capacity charge : Nat) (slot v ra s
   memory : after.σ.mem = writeLog before.σ.mem
     (majorLog sp ra slot v ++ fullLog (sp + -32#64) slot tbl)
   saved : ∀ k ∈ calleeSaved, gprGet after.σ k = gprGet before.σ k
+  out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
 
 theorem frame32 {sp : BitVec 64} (f : NativeFrame sp (32 + (64 + allocHeadroom))) (off : Nat) (h : off + 8 ≤ 32)
     (aligned : off % 8 = 0) :
@@ -298,7 +299,9 @@ theorem grow_to_call {H capacity charge slot v ra sp dom ys ye old tbl ptr limit
     rw [keep4 k mem]
     have b : 1 ≤ k ∧ k ≤ 31 := by simp only [List.mem_cons, List.not_mem_nil, or_false] at hk; omega
     exact library_gpr g.ready.platform b.1 b.2 rfl
-  refine ⟨d4, run1.trans (run2.trans (run3.trans run4)), ⟨?_, ?_, mem4, keep4⟩⟩
+  have outEq : Vsa.Machine.output d4.σ = Vsa.Machine.output d.σ := by
+    simp only [Vsa.Machine.output, C.output, G.output, B.output, M.output]
+  refine ⟨d4, run1.trans (run2.trans (run3.trans run4)), ⟨?_, ?_, mem4, keep4, outEq⟩⟩
   · exact {
       ready := by have r := C.ready; rw [BarrierFull.call_link] at r; exact r
       frame := g.frame.nested (front := 32) (by decide)
@@ -441,6 +444,7 @@ structure GrowDone (H : List (Nat × Nat)) (capacity : Nat) (slot v ra sp tbl ws
   kept : ∀ a, Realloc.Kept H sp tbl a →
     (a < (slot + BitVec.ofNat 64 0).toNat ∨ (slot + BitVec.ofNat 64 0).toNat + 8 ≤ a) →
     (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
+  out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
 
 /-- A word inside a live block misses the fresh block's first word. -/
 theorem fresh_apart {H : List (Nat × Nat)} {p r q n x : Nat}
@@ -603,7 +607,11 @@ theorem barrier_grow {H capacity charge slot v ra sp dom ys ye old tbl ptr limit
     rcases hy with rfl | rfl
     · left; exact ⟨t24, rfl⟩
     · right; exact ⟨p0, rfl⟩
-  refine ⟨d6, run4.trans (run5.trans run6), ⟨⟨D.p, R.ready, R.pc, ?_, ⟨D.low, D.high⟩, D.disjoint, ?_, ?_, ?_, ?_, ?_⟩⟩⟩
+  have outEq : Vsa.Machine.output d6.σ = Vsa.Machine.output d.σ := by
+    rw [show Vsa.Machine.output d6.σ = Vsa.Machine.output d5.σ by simp only [Vsa.Machine.output, R.output],
+      D.out, A.out]
+  refine ⟨d6, run4.trans (run5.trans run6), ⟨⟨D.p, R.ready, R.pc, ?_, ⟨D.low, D.high⟩, D.disjoint, ?_, ?_, ?_, ?_, ?_,
+    outEq⟩⟩⟩
   · intro k hk
     have b : 1 ≤ k ∧ k ≤ 31 ∧ k ∉ [1, 2, 10, 13, 14, 15] := by
       simp only [calleeSaved, Realloc.calleeRest, List.cons_append, List.nil_append, List.mem_cons,

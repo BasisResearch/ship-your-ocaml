@@ -158,6 +158,7 @@ structure AtThresholdCall (H : List (Nat × Nat)) (capacity : Nat) (sp tbl wsz p
   pc : after.σ.regs.get? Register.PC = some ReallocInstall.call.pc
   regs : GHolds after.σ (ReallocInstall.state3 p tbl 0x8#64 0#64 (size wsz))
   memory : after.σ.mem = writeLog before.σ.mem (installLog tbl p)
+  out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
   callee : ∀ k ∈ calleeRest, gprGet after.σ k = gprGet before.σ k
 
 /-- **`base == NULL`, so no free; `base` and `ptr` are installed.** -/
@@ -193,6 +194,7 @@ theorem install_step {H capacity sp tbl s0 s1 s2 s3 ra wsz p} {c : Config}
   obtain ⟨c1, run, post⟩ := W.run d ⟨pc, rfl⟩
   rw [b1, b2] at post
   refine ⟨c1, run, ⟨?_, post.pc, post.regs, post.memory,
+    by simp only [Vsa.Machine.output, post.output],
     callee_of_frame (fun n lo hi out => post.toEffectPost.gpr_frame (by decide) n lo hi out) (by decide)⟩⟩
   exact chain_ready a.ready post (by decide) (by simp only [ReallocInstall.state3, keysG]; decide) (by decide)
     (by decide) (by decide) inside (separate f64 a.table tLow tHigh)
@@ -252,6 +254,7 @@ structure AtEndCall (H : List (Nat × Nat)) (capacity : Nat) (sp tbl wsz p link 
   pc : after.σ.regs.get? Register.PC = some ReallocLimit.call.pc
   regs : GHolds after.σ (ReallocLimit.state1 tbl p (0x8#64 * size wsz) 0x8#64 (size wsz) 0x100#64)
   memory : after.σ.mem = writeLog before.σ.mem (limitLog tbl (p + 0x8#64 * size wsz))
+  out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
   callee : ∀ k ∈ calleeRest, gprGet after.σ k = gprGet before.σ k
 
 /-- **`threshold := limit := base + size * 8`.** -/
@@ -282,6 +285,7 @@ theorem limit_step {H capacity sp tbl s0 s1 s2 s3 ra wsz p link} {c : Config}
   obtain ⟨c1, run, post⟩ := W.run d ⟨pc, rfl⟩
   rw [b1] at post
   refine ⟨c1, run, ⟨?_, post.pc, post.regs, post.memory,
+    by simp only [Vsa.Machine.output, post.output],
     callee_of_frame (fun n lo hi out => post.toEffectPost.gpr_frame (by decide) n lo hi out) (by decide)⟩⟩
   exact chain_ready b.ready post (by decide) (by simp only [ReallocLimit.state1, keysG]; decide) (by decide)
     (by decide) (by decide) inside (separate f64 b.table tLow tHigh)
@@ -310,6 +314,7 @@ structure Returned (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2 s3 
   pc : after.σ.regs.get? Register.PC = some ra
   regs : GHolds after.σ (ReallocReturn.state1 p ((size wsz + 0x100#64) * 0x8#64) tbl (sp + -64#64) ra s0 s1 s2 s3)
   memory : after.σ.mem = writeLog before.σ.mem (endLog tbl (p + (size wsz + 0x100#64) * 0x8#64))
+  out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
   callee : ∀ k ∈ calleeRest, gprGet after.σ k = gprGet before.σ k
 
 theorem frame_pop (sp : BitVec 64) : sp + -64#64 + 64#64 = sp := by
@@ -371,6 +376,7 @@ theorem return_step {H capacity sp tbl s0 s1 s2 s3 ra wsz p link} {c : Config}
   rw [v1, value 48 (by decide) _ b.rest.savedS0, value 40 (by decide) _ b.rest.savedS1,
     value 32 (by decide) _ b.rest.savedS2, value 24 (by decide) _ b.rest.savedS3] at post
   refine ⟨c1, run, ⟨?_, post.pc, post.regs, post.memory,
+    by simp only [Vsa.Machine.output, post.output],
     callee_of_frame (fun n lo hi out => post.toEffectPost.gpr_frame (by decide) n lo hi out) (by decide)⟩⟩
   have sep := separate f64 b.table tLow tHigh
   exact b.ready.window_log post (by decide) (by simp only [ReallocReturn.state1, keysG]; decide) (by decide)

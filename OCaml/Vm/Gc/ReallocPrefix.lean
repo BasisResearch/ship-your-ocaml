@@ -215,6 +215,7 @@ structure AtSizeCall (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra tbl 
   pc : after.σ.regs.get? Register.PC = some ReallocEntry.call.pc
   regs : GHolds after.σ (ReallocEntry.state3 sp s0 s3 ra s2 tbl s1 0#64 firstDomainPtr wsz)
   memory : after.σ.mem = writeLog before.σ.mem (entryLog sp tbl s0 s1 s2 s3 ra wsz)
+  out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
   callee : ∀ k ∈ calleeRest, gprGet after.σ k = gprGet before.σ k
 
 /-- **The entry chain under readiness.** -/
@@ -248,6 +249,7 @@ theorem entry_step {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
   rw [b1, b2, b3] at post
   have sep := separate (H := H) f64 e.table tLow tHigh
   refine ⟨c1, run, ⟨?_, post.pc, post.regs, post.memory,
+    by simp only [Vsa.Machine.output, post.output],
     callee_of_frame (fun n lo hi out => post.toEffectPost.gpr_frame (by decide) n lo hi out) (by decide)⟩⟩
   exact e.ready.window_log post (by decide) (by simp only [ReallocEntry.state3, keysG]; decide) (by decide)
     (gholds_lookup (n := 2) _ post.regs rfl) (gholds_lookup (n := 1) _ post.regs rfl) e.ready.aligned
@@ -290,6 +292,7 @@ structure Allocated (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2
   s2Reg : gprGet atAlloc.σ 18 = some 0#64
   s3Reg : gprGet atAlloc.σ 19 = some 0x8#64
   callee : ∀ k ∈ calleeRest, gprGet atAlloc.σ k = gprGet before.σ k
+  out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
 
 /-- **The prefix**: the entry chain, the size product and the allocation. -/
 theorem prefix_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
@@ -324,10 +327,13 @@ theorem prefix_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
   have via (n : Nat) (lower : 1 ≤ n) (upper : n ≤ 31) (other : n ∉ [1, 10, 11, 12, 13]) :
       gprGet c3.σ n = gprGet c1.σ n :=
     (C.frame n lower upper (by simp at other; omega)).trans (keep n lower upper other)
-  exact ⟨c4, run1.trans (run2.trans (run3.trans run4)), ⟨⟨c3, S, by rw [C.memory, M.memory, A.memory],
+  refine ⟨c4, run1.trans (run2.trans (run3.trans run4)), ⟨⟨c3, S, by rw [C.memory, M.memory, A.memory],
     (via 8 (by decide) (by decide) (by decide)).trans h8, (via 9 (by decide) (by decide) (by decide)).trans h9,
     (via 18 (by decide) (by decide) (by decide)).trans h18, (via 19 (by decide) (by decide) (by decide)).trans h19,
     fun k hk => (via k (calleeRest_bounds k hk).1 (calleeRest_bounds k hk).2 (by revert k; decide)).trans
-      (A.callee k hk)⟩⟩⟩
+      (A.callee k hk), ?_⟩⟩⟩
+  have alloc : Vsa.Machine.output c4.σ = Vsa.Machine.output S.atMalloc.σ := S.allocation.output
+  rw [alloc, ← A.out]
+  simp only [Vsa.Machine.output, S.dispatch.output, C.output, M.output]
 
 end OCaml.Vm.Gc.Realloc

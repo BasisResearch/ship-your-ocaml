@@ -22,6 +22,7 @@ structure CallDone (H : List (Nat × Nat)) (capacity : Nat) (sp : BitVec 64) (ca
   pc : after.σ.regs.get? Register.PC = some call.target
   regs : GHolds after.σ args
   memory : after.σ.mem = before.σ.mem
+  output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ≠ 1 → gprGet after.σ n = gprGet before.σ n
 
 /-- **A direct call keeps readiness.** -/
@@ -36,7 +37,7 @@ theorem ready_call {H capacity sp ra} {call : CallInstr} (shape : CallShape call
   have frame (n : Nat) (lower : 1 ≤ n) (upper : n ≤ 31) (other : n ≠ 1) : gprGet after.σ n = gprGet c.σ n :=
     post.toEffectPost.gpr_frame (by decide) n lower upper (by simpa using other)
   have stack : gprGet after.σ 2 = some sp := (frame 2 (by decide) (by decide) (by decide)).trans ready.stack
-  refine ⟨?_, post.pc, post.regs.2, post.memory, frame⟩
+  refine ⟨?_, post.pc, post.regs.2, post.memory, post.output, frame⟩
   exact ready.effect post (by decide) (by simp [keysG]) (by decide) stack post.regs.1 linkAligned
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ h => h)
 
@@ -47,6 +48,7 @@ structure MulDone (H : List (Nat × Nat)) (capacity : Nat) (sp link x y : BitVec
   pc : after.σ.regs.get? Register.PC = some link
   result : gprGet after.σ 10 = some (x * y)
   memory : after.σ.mem = before.σ.mem
+  output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 10, 11, 12, 13] → gprGet after.σ n = gprGet before.σ n
 
 /-- **A `jal __muldi3` site keeps readiness** and returns the product. -/
@@ -69,7 +71,7 @@ theorem ready_muldi3 {H capacity sp ra x y} {call : CallInstr} (shape : CallShap
     (frame 2 (by decide) (by decide) (by decide)).trans C.ready.stack
   have link : gprGet c2.σ 1 = some call.link :=
     (frame 1 (by decide) (by decide) (by decide)).trans C.ready.raReg
-  refine ⟨c2, run1.trans run2, ⟨?_, P.pc, P.regs.1, P.memory.trans C.memory, ?_⟩⟩
+  refine ⟨c2, run1.trans run2, ⟨?_, P.pc, P.regs.1, P.memory.trans C.memory, P.output.trans C.output, ?_⟩⟩
   · exact C.ready.effect P (by decide) (by simp [keysG]) (by decide) stack link linkAligned
       (fun _ _ => rfl) (fun _ _ => rfl) (fun _ h => h)
   · intro n lower upper other
