@@ -202,6 +202,7 @@ import OCaml.Vm.Gc.BarrierGrow
 import OCaml.Vm.Gc.LibHeap
 import OCaml.Vm.Gc.F1Heap
 import OCaml.Vm.Gc.F1Barrier
+import OCaml.Vm.Gc.F1Grow
 import OCaml.Vm.Sim.F1BarrierRuntime
 import OCaml.Vm.Sim.ReallocRefTableImage
 import OCaml.Vm.Sim.ReallocGenericImage
@@ -635,6 +636,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.LibHeapAt.insert
 #print axioms OCaml.Vm.Gc.LibHeapAt.link
 #print axioms OCaml.Vm.Gc.LibHeapAt.grow
+#print axioms OCaml.Vm.Gc.f1_grow
 #print axioms OCaml.Vm.Gc.fresh_apart_covered
 #print axioms OCaml.Vm.Gc.f1_insert
 #print axioms OCaml.Vm.Sim.f1_barrierRuntime
