@@ -36,6 +36,16 @@ Done (F1 side of the GC):
     words, and a0-boot's obligation covers `f1Covered` (requested sizes).
     `F1Pins.codeWord`/`primsWord` pin `caml_start_code` and the prim
     table's contents to their blocks.
+  * **`Sim.f1_barrierGrowth_dense`** (`OCaml/Vm/Sim/F1Growth.lean`): the body
+    of `BarrierGrowth f1Layout`'s `grow` (caml_modify growing an unallocated
+    remembered set, entry to return) at a call state with dense RAM (`dense`)
+    and all GPRs present (`gprs`), which newlib's VSA model needs. Built from
+    `f1_grow` (precondition), `barrier_grow`, `observed_kept` (every
+    `BarrierObserved` byte is `Kept`), a2-sem's `keep_field_step`, and
+    `f1_afterGrow` (f1Runtime after; the storage block via `LibHeapAt.grow`).
+    Open: `gprs` comes from a1-arms' `LoopRegisters.gprs`; `dense` awaits the
+    foreman's choice between (B) density in PlatformOk and (C) a generated
+    key-monotonicity lemma for Sail steps.
   * C-heap room: `LibHeapAt.room : reserved base #open ≤ cap`, which
     reserves `tableCharge = 2^19` while the remembered set is unallocated,
     plus `recordCharge = 2^17` per channel not yet opened, up to

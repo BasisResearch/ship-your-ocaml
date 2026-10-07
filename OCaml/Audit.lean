@@ -642,6 +642,8 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.footprint_kept
 #print axioms OCaml.Vm.Gc.footprint_notSlot
 #print axioms OCaml.Vm.Sim.observed_kept
+#print axioms OCaml.Vm.Sim.f1_barrierGrowth_dense
+#print axioms OCaml.Vm.Sim.table_unique
 #print axioms OCaml.Vm.Gc.fresh_apart_covered
 #print axioms OCaml.Vm.Gc.f1_insert
 #print axioms OCaml.Vm.Sim.f1_barrierRuntime
