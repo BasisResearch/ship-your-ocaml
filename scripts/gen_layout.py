@@ -169,6 +169,8 @@ def main():
              "caml_leave_blocking_section_hook", "_impure_ptr", "caml_channel_mutex_unlock"]
     need += ["caml_verb_gc", "__atexit", "__atexit_recursive_mutex", "__stdio_exit_handler"]
     need += ["print_config", "print_magic", "magicstr"]
+    need += ["named_value_table", "caml_named_value", "caml_fatal_uncaught_exception",
+             "caml_format_exception", "caml_callback_exn"]
     need += ["bf_small_fl", "bf_small_map", "bf_large_tree", "bf_large_least",
              "caml_fl_cur_wsz"]
     for n in need:

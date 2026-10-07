@@ -244,6 +244,16 @@ def sym_print_config : Nat := 0x800649ac
 def sym_print_magic : Nat := 0x800649b0
 /-- `magicstr` -/
 def sym_magicstr : Nat := 0x800662c8
+/-- `named_value_table` -/
+def sym_named_value_table : Nat := 0x8006bff0
+/-- `caml_named_value` -/
+def sym_caml_named_value : Nat := 0x800214fc
+/-- `caml_fatal_uncaught_exception` -/
+def sym_caml_fatal_uncaught_exception : Nat := 0x8000df50
+/-- `caml_format_exception` -/
+def sym_caml_format_exception : Nat := 0x8000dbec
+/-- `caml_callback_exn` -/
+def sym_caml_callback_exn : Nat := 0x800212b8
 /-- `bf_small_fl` -/
 def sym_bf_small_fl : Nat := 0x800662d8
 /-- `bf_small_map` -/

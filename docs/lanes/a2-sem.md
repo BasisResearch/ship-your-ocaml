@@ -1,5 +1,34 @@
 # Lane a2-sem
 
+## Status (2026-10-06)
+
+**Done (F1):** a2-sem's 50 F1 rows; validated BcSem use-site guards (all
+per-program shape premises retired); DIV/MOD zero; `RaiseRuntimeFrame`;
+the represented write barrier (`BarrierF1`, `BarrierKeep`), wired into the F1
+table so `F1PremisesFor` has only the C_CALL returns left (a1-prims), plus
+the layout-level `BarrierGrowthPaths` (a6-gc); `memmove_leaf`/`LibraryReady`.
+
+**Open, owned elsewhere:** `BarrierGrowthPaths` (a6-gc: `.empty` =
+`f1_barrierGrowth` once the dense-call-state route is decided by the
+foreman; `.full` = realloc branch); C_CALL returns (a1-prims); `libHeap`
+(a0-boot).
+
+**Next (foreman's fallback): Layer A's uncaught-exception path.** F1
+excludes it (`uncaught_unreachable`). Machine path after
+`raise_uncaught_return` (proved): `caml_main`'s `Is_exception_result` test →
+`caml_fatal_uncaught_exception` (`0x8000df50`, default handler inlined) →
+`caml_named_value "Printexc.handle_uncaught_exception"` → (absent)
+`caml_format_exception` (`0x8000dbec`) → `caml_named_value
+"Pervasives.do_at_exit"` → `caml_callback_exn` (`0x800212b8`, a nested
+`caml_interprete`: F4) → `fprintf(stderr, …)` → `exit(2)`. Order: (1) the
+named-value table (`named_value_table`, 13 buckets of malloc'd
+`{val, next, name}` nodes) as a representation of `world.named`, and
+`caml_named_value`'s summary (hash loop + bucket walk with the startup
+`strcmp` summary); (2) `caml_format_exception`; (3) the nested callback
+(needs a nested `Invocation`; agree its shape with bprime/a1-arms);
+(4) stderr `fprintf` (a0-lib's stdio tables) and `exit(2)` (a1-prims'
+exit path).
+
 ## The write barrier, represented (2026-10-06, with a6-gc)
 
 `OCaml/Vm/Sim/BarrierF1.lean` discharges the F1 table's `GlobalBarrier`,

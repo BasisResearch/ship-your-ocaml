@@ -323,8 +323,13 @@ theorem majorLog_eq {nsp a i : Nat} {ra v : BitVec 64} (low : 32 ≤ nsp) (small
 
 /-! ## The fast path, represented -/
 
+/-- The registers a `caml_modify` call may change: the ABI's caller-saved
+registers and `sp` (the growth path runs newlib's malloc). The interpreter's
+loop registers are callee-saved. -/
+def barrierClobber : List Nat := [1, 2, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 28, 29, 30, 31]
+
 /-- **The barrier returned**: the represented state with the written field,
-and the native return (pc = `ra`, registers outside `x1`, `x2`, `x10..x15`
+and the native return (pc = `ra`, registers outside `barrierClobber`
 kept). -/
 structure BarrierDone (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
     (sp high : Nat) (D : InvocationData) (ra : BitVec 64) (before after : Config) : Prop where
@@ -334,7 +339,7 @@ structure BarrierDone (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : 
   minstret : ∃ w, after.σ.regs.get? Register.minstret = some w
   pc : after.σ.regs.get? Register.PC = some ra
   frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
-    (∀ n ∈ [1, 2, 10, 11, 12, 13, 14, 15], (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+    (∀ n ∈ barrierClobber, (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
 
 /-- The native frame store misses the invocation and lies in the native
 scratch window. -/
@@ -399,7 +404,8 @@ theorem barrier_core {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : C
   have finish : ∀ st : BarrierState L P {s with heap := s.heap.set l (.block tag (fields.set i vVal))}
       pl cp sp high D after,
       BarrierDone L P {s with heap := s.heap.set l (.block tag (fields.set i vVal))} pl cp sp high D ra c after :=
-    fun st => ⟨st, ret.good, ret.tick, ret.minstret, ret.pc, ret.frame⟩
+    fun st => ⟨st, ret.good, ret.tick, ret.minstret, ret.pc, fun r noise out =>
+      ret.frame r noise fun n hn => out n (by revert n; decide)⟩
   -- the frame store, shared by both major paths
   have major : ∀ c2 : Config, c2.σ.mem = writeLog c.σ.mem (Gc.Barrier.majorLog
       (BitVec.ofNat 64 D.nativeSp) ra (BitVec.ofNat 64 (a + 8 * i)) value) →
@@ -499,7 +505,7 @@ theorem modify_return_of_done {L : OCaml.Layout} {P : Prog} {s s' target : St} {
     (geometry : OCaml.LoopGeometry L P s' after pl cp high → OCaml.LoopGeometry L P target after pl cp high)
     (env : target.env = s.env) (extra : target.extra = s.extra) (unit : target.accu = .unit)
     (codeLow : 1 ≤ codeReg) (codeHigh : codeReg ≤ 31)
-    (codeOut : codeReg ∉ [1, 2, 10, 11, 12, 13, 14, 15]) :
+    (codeOut : codeReg ∉ barrierClobber) :
     ModifyReturn L P target pl cp targetSp high codeReg ra codeWord stackWord after := by
   have keep := Gc.Barrier.frame_gpr (by decide) done.frame
   obtain ⟨w, reg, val⟩ := input.env
@@ -671,7 +677,7 @@ theorem f1_field_callee {P : Prog} {op : Opcode} (br : BarrierRuntime Gc.f1Layou
     (source : valWord pl s.accu = some base) (stack : s.stack = v :: rest)
     (encoded : valWord pl v = some value) (update : setField? s.heap s.accu j v = some heap)
     (slotEq : slot = base + BitVec.ofNat 64 (8 * j))
-    (codeLow : 1 ≤ codeReg) (codeHigh : codeReg ≤ 31) (codeOut : codeReg ∉ [1, 2, 10, 11, 12, 13, 14, 15]) :
+    (codeLow : 1 ≤ codeReg) (codeHigh : codeReg ≤ 31) (codeOut : codeReg ∉ barrierClobber) :
     ModifyCallee Gc.f1Layout P s {s with pc := pcNext, accu := .unit, heap := heap, stack := rest} pl cp sp
       (sp + 8) high codeReg ra codeWord stackWord slot value := by
   obtain ⟨l, k, tag, fs, acc, got, room, heapEq⟩ := setField?_inv update
