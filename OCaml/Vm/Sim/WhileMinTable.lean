@@ -18,8 +18,8 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 structure WhileMinOpen : Prop where
   /-- newlib's heap at the cut covers the runtime's blocks (a0-boot) -/
   libHeap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered [(Gc.refTable, 56)]
-  /-- the remembered set's growth paths (a6-gc) -/
-  growth : BarrierGrowthPaths Gc.f1Layout
+  /-- the call state at `caml_modify` and the realloc branch (GC lane) -/
+  growth : F1GrowthPremises
   ml_open_descriptor_out_c_call1 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0 "caml_ml_open_descriptor_out"
   format_int_c_call2 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL2 (0x80003004#64) 1 "caml_format_int"
   ccall_entry_gprs : CcallEntryGprs Gc.f1Layout

@@ -6,14 +6,13 @@
 per-program shape premises retired); DIV/MOD zero; `RaiseRuntimeFrame`;
 the represented write barrier (`BarrierF1`, `BarrierKeep`), wired into the F1
 table so `F1PremisesFor` has only the C_CALL returns left (a1-prims), plus
-the layout-level `BarrierGrowthPaths` (a6-gc); `memmove_leaf`/`LibraryReady`.
+the layout-level `F1GrowthPremises` (`GrowthCallState`: RAM density + GPR presence at `caml_modify`'s entry, pending the foreman's (B)/(C) and a1-arms' `LoopRegisters.gprs`; `BarrierGrowthFull`: the realloc branch); `f1_barrierGrowth` discharges the empty table's growth over a6-gc's `f1_barrierGrowth_dense`; `memmove_leaf`/`LibraryReady`.
 
-**Open, owned elsewhere:** `BarrierGrowthPaths` (a6-gc: `.empty` =
-`f1_barrierGrowth` once the dense-call-state route is decided by the
-foreman; `.full` = realloc branch); C_CALL returns (a1-prims); `libHeap`
+**Open, owned elsewhere:** `GrowthCallState` (foreman (B)/(C), a1-arms),
+`BarrierGrowthFull` (a6-gc, realloc branch); C_CALL returns (a1-prims); `libHeap`
 (a0-boot).
 
-**Next (foreman's fallback): Layer A's uncaught-exception path.** F1
+**In progress: Layer A's uncaught-exception path** (`OCaml/Vm/Primitives/Named/`: `--ocaml-named` blocks, `umoddi3_summary`, `hash_loop`). F1
 excludes it (`uncaught_unreachable`). Machine path after
 `raise_uncaught_return` (proved): `caml_main`'s `Is_exception_result` test →
 `caml_fatal_uncaught_exception` (`0x8000df50`, default handler inlined) →

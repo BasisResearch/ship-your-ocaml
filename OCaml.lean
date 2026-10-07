@@ -674,3 +674,4 @@ import OCaml.Vm.Sim.BarrierKeep
 import OCaml.Vm.Primitives.Named.NamedValue
 import OCaml.Vm.Primitives.Named.Umoddi3Call
 import OCaml.Vm.Primitives.Named.NamedHash
+import OCaml.Vm.Sim.F1GrowthPaths

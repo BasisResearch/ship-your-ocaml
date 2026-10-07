@@ -5439,3 +5439,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ob_empty
 #print axioms OCaml.Vm.Primitives.Named.Umoddi3.umoddi3_summary
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.hash_loop
+#print axioms OCaml.Vm.Sim.f1_barrierGrowth
+#print axioms OCaml.Vm.Sim.F1GrowthPremises.paths

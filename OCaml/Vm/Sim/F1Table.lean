@@ -9,6 +9,7 @@ import OCaml.Vm.Sim.ControlRows
 import OCaml.Vm.Sim.EntryF1
 import OCaml.Vm.Sim.F1BarrierRuntime
 import OCaml.Vm.Sim.F1Frame
+import OCaml.Vm.Sim.F1GrowthPaths
 import OCaml.Vm.Sim.F1RaiseRuntime
 import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.FieldRows
@@ -53,7 +54,7 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
     (loaded : OCaml.Loaded Gc.f1Layout P c) (good : OCaml.GoodF1 P)
     (fits : OCaml.Fits Gc.g1Budget P)
     (reached : ∀ s i, Reach P s → decodeAt P.code s.pc = some i → keep i.op = true)
-    (growth : BarrierGrowthPaths Gc.f1Layout) (pre : F1PremisesFor keep P) :
+    (growth : F1GrowthPremises) (pre : F1PremisesFor keep P) :
     OCaml.F1Arms P c (OCaml.LoopAt Gc.f1Layout P) where
   entry := f1_entry loaded
   arm op hop := match op, hop with
@@ -171,7 +172,7 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .PUSHGETGLOBALFIELD, _ => if h : keep .PUSHGETGLOBALFIELD = true then pushgetglobalfield_row f1_runtimeFrame fits g1_capacity
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .SETGLOBAL, _ => if h : keep .SETGLOBAL = true then setglobal_row f1_memoryStable (f1_globalBarrier f1_barrierRuntime growth.empty growth.full fits g1_capacity)
+    | .SETGLOBAL, _ => if h : keep .SETGLOBAL = true then setglobal_row f1_memoryStable (f1_globalBarrier f1_barrierRuntime growth.paths.empty growth.paths.full fits g1_capacity)
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .ATOM0, _ => if h : keep .ATOM0 = true then atom0_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
@@ -201,15 +202,15 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
     | .GETFIELD, _ => if h : keep .GETFIELD = true then getfield_row f1_memoryStable
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .GETFLOATFIELD, h => absurd h (by decide)
-    | .SETFIELD0, _ => if h : keep .SETFIELD0 = true then setfield0_row f1_memoryStable fits g1_capacity (f1_fieldBarrierK f1_barrierRuntime growth.empty growth.full fits g1_capacity (by decide))
+    | .SETFIELD0, _ => if h : keep .SETFIELD0 = true then setfield0_row f1_memoryStable fits g1_capacity (f1_fieldBarrierK f1_barrierRuntime growth.paths.empty growth.paths.full fits g1_capacity (by decide))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .SETFIELD1, _ => if h : keep .SETFIELD1 = true then setfield1_row f1_memoryStable fits g1_capacity (f1_fieldBarrierK f1_barrierRuntime growth.empty growth.full fits g1_capacity (by decide))
+    | .SETFIELD1, _ => if h : keep .SETFIELD1 = true then setfield1_row f1_memoryStable fits g1_capacity (f1_fieldBarrierK f1_barrierRuntime growth.paths.empty growth.paths.full fits g1_capacity (by decide))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .SETFIELD2, _ => if h : keep .SETFIELD2 = true then setfield2_row f1_memoryStable fits g1_capacity (f1_fieldBarrierK f1_barrierRuntime growth.empty growth.full fits g1_capacity (by decide))
+    | .SETFIELD2, _ => if h : keep .SETFIELD2 = true then setfield2_row f1_memoryStable fits g1_capacity (f1_fieldBarrierK f1_barrierRuntime growth.paths.empty growth.paths.full fits g1_capacity (by decide))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .SETFIELD3, _ => if h : keep .SETFIELD3 = true then setfield3_row f1_memoryStable fits g1_capacity (f1_fieldBarrierK f1_barrierRuntime growth.empty growth.full fits g1_capacity (by decide))
+    | .SETFIELD3, _ => if h : keep .SETFIELD3 = true then setfield3_row f1_memoryStable fits g1_capacity (f1_fieldBarrierK f1_barrierRuntime growth.paths.empty growth.paths.full fits g1_capacity (by decide))
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .SETFIELD, _ => if h : keep .SETFIELD = true then setfield_row f1_memoryStable fits g1_capacity (f1_fieldBarrier f1_barrierRuntime growth.empty growth.full fits g1_capacity)
+    | .SETFIELD, _ => if h : keep .SETFIELD = true then setfield_row f1_memoryStable fits g1_capacity (f1_fieldBarrier f1_barrierRuntime growth.paths.empty growth.paths.full fits g1_capacity)
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .SETFLOATFIELD, h => absurd h (by decide)
     | .VECTLENGTH, h => absurd h (by decide)
@@ -343,7 +344,7 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
 /-- **The F1 arm table** for the pinned layout. -/
 theorem f1_table {P : Prog} {c : Config} (loaded : OCaml.Loaded Gc.f1Layout P c)
     (good : OCaml.GoodF1 P) (fits : OCaml.Fits Gc.g1Budget P)
-    (growth : BarrierGrowthPaths Gc.f1Layout) (pre : F1Premises P) :
+    (growth : F1GrowthPremises) (pre : F1Premises P) :
     OCaml.F1Arms P c (OCaml.LoopAt Gc.f1Layout P) :=
   f1_table_for loaded good fits (fun _ _ _ _ => rfl) growth pre
 

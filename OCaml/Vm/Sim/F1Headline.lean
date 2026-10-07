@@ -7,8 +7,8 @@ import OCaml.Theorems
 
 The F1 arm table (`f1_table`, generated) gives the F1 refinement statement for
 the pinned layout `Gc.f1Layout` and the G1 budget, given the stack capacity
-of the budget (`g1_capacity`), the remembered set's growth paths
-(`BarrierGrowthPaths`, GC lane) and the program-level premises of the rows (`F1Premises`), and
+of the budget (`g1_capacity`), the call state at `caml_modify` and the remembered set's realloc branch
+(`F1GrowthPremises`, GC lane) and the program-level premises of the rows (`F1Premises`), and
 its `whileMin` instance at the captured cut.
 -/
 
@@ -17,7 +17,7 @@ set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine
 
 /-- **Layer A for F1, pinned layout**, from the rows' program-level premises. -/
-theorem ocamlrun_refinement_F1_pinned (growth : BarrierGrowthPaths Gc.f1Layout)
+theorem ocamlrun_refinement_F1_pinned (growth : F1GrowthPremises)
     (pre : ∀ P, OCaml.GoodF1 P → OCaml.Fits Gc.g1Budget P → GcSafe P → F1Premises P) :
     OCaml.ocamlrun_refinement_F1_Statement Gc.f1Layout Gc.g1Budget :=
   OCaml.ocamlrun_refinement_F1_of_arms fun P c loaded good fits gc =>
@@ -30,7 +30,7 @@ shape run) and a0-boot's newlib heap at the cut
 (`cut_heapReady_covers_Statement`); the other rows are vacuous. -/
 theorem whileMin_halts_f1
     (heap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered [(Gc.refTable, 56)])
-    (growth : BarrierGrowthPaths Gc.f1Layout)
+    (growth : F1GrowthPremises)
     (pre : F1PremisesFor (fun op => OCaml.Programs.whileMinOps.contains op) OCaml.Programs.whileMin) :
     Halts Boot.WhileMin.cut "55\n2500\n36\n" 0 :=
   have table := f1_table_for (Gc.whileMin_loaded_f1 heap) OCaml.Programs.whileMin_goodF1
