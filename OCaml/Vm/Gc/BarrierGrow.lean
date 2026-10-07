@@ -445,6 +445,10 @@ structure GrowDone (H : List (Nat × Nat)) (capacity : Nat) (slot v ra sp tbl ws
     (a < (slot + BitVec.ofNat 64 0).toNat ∨ (slot + BitVec.ofNat 64 0).toNat + 8 ≤ a) →
     (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
   out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
+  nonzero : p.toNat ≠ 0
+  aligned : p.toNat % 16 = 0
+  endField : bytesT after.σ.mem (tbl.toNat + 8) 8 = p + (Realloc.size wsz + 0x100#64) * 0x8#64
+  limit : bytesT after.σ.mem (tbl.toNat + 32) 8 = p + 0x8#64 * Realloc.size wsz
 
 /-- A word inside a live block misses the fresh block's first word. -/
 theorem fresh_apart {H : List (Nat × Nat)} {p r q n x : Nat}
@@ -610,8 +614,24 @@ theorem barrier_grow {H capacity charge slot v ra sp dom ys ye old tbl ptr limit
   have outEq : Vsa.Machine.output d6.σ = Vsa.Machine.output d.σ := by
     rw [show Vsa.Machine.output d6.σ = Vsa.Machine.output d5.σ by simp only [Vsa.Machine.output, R.output],
       D.out, A.out]
+  have endEq : bytesT d6.σ.mem (tbl.toNat + 8) 8 = D.p + (Realloc.size wsz + 0x100#64) * 0x8#64 := by
+    rw [out6 _ fun y hy => by
+      rcases reloadEntries y hy with ⟨h, w⟩ | ⟨h, w⟩ <;> rw [h, w]
+      · left; omega
+      · rcases tblP with t | t
+        · right; omega
+        · left; omega]
+    exact D.endField
+  have limitEq : bytesT d6.σ.mem (tbl.toNat + 32) 8 = D.p + 0x8#64 * Realloc.size wsz := by
+    rw [out6 _ fun y hy => by
+      rcases reloadEntries y hy with ⟨h, w⟩ | ⟨h, w⟩ <;> rw [h, w]
+      · right; omega
+      · rcases tblP with t | t
+        · right; omega
+        · left; omega]
+    exact D.limit
   refine ⟨d6, run4.trans (run5.trans run6), ⟨⟨D.p, R.ready, R.pc, ?_, ⟨D.low, D.high⟩, D.disjoint, ?_, ?_, ?_, ?_, ?_,
-    outEq⟩⟩⟩
+    outEq, D.nonzero, D.aligned, endEq, limitEq⟩⟩⟩
   · intro k hk
     have b : 1 ≤ k ∧ k ≤ 31 ∧ k ∉ [1, 2, 10, 13, 14, 15] := by
       simp only [calleeSaved, Realloc.calleeRest, List.cons_append, List.nil_append, List.mem_cons,
