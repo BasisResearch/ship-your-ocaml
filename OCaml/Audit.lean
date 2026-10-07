@@ -5442,3 +5442,4 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.f1_barrierGrowth
 #print axioms OCaml.Vm.Sim.F1GrowthPremises.paths
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.front
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.walk
