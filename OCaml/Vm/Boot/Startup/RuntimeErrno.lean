@@ -8,8 +8,8 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap LeanRV64DExecutable VsaIris VsaIris.Inst
 /-! Readiness across stores to newlib's `errno` words: the heap shape reads
 `vsaRead`, which excludes them (`vsaRoomB_errno`). -/
 
-/-- `RuntimeReady.effect_framed` with the heap frame relaxed to `vsaRead`. -/
-theorem RuntimeReady.errno_framed {H capacity oldsp oldra before after writes mem pc value regs sp ra}
+/-- `RuntimeReadyL.effect_framed` with the heap frame relaxed to `vsaRead`. -/
+theorem RuntimeReadyL.errno_framed {H capacity oldsp oldra before after writes mem pc value regs sp ra}
     (ready : RuntimeReady H capacity oldsp oldra before)
     (post : RegistersPost writes mem before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) (gpFrame : 3 ∉ writes)
@@ -53,7 +53,7 @@ theorem RuntimeReady.errno_framed {H capacity oldsp oldra before after writes me
 def errnoWindows : List W := [⟨0x80064668, 0x8006466c⟩, ⟨0x80064d48, 0x80064d4c⟩]
 
 /-- A log inside the frame window and the `errno` words keeps readiness. -/
-theorem RuntimeReady.errno_log {H capacity oldsp oldra before after writes log pc value regs sp ra frameSp size}
+theorem RuntimeReadyL.errno_log {H capacity oldsp oldra before after writes log pc value regs sp ra frameSp size}
     (ready : RuntimeReady H capacity oldsp oldra before)
     (post : WriteRegistersPost writes log before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) (gpFrame : 3 ∉ writes)

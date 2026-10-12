@@ -39,6 +39,13 @@ theorem CrtCamlMainPost.image {initial c : Config} (post : CrtCamlMainPost initi
         Image.rodataBase + Image.rodataSize ≤ Layout.sym_environ ∧
         Image.rodataBase + Image.rodataSize ≤ Layout.sym_stack_top - 8 := by decide
     exact post.memory_below a (by omega) (mainWrites_before _ _ a (by omega) (by omega))
+  · intro i hi
+    have bounds : Layout.sym_impure_ptr + 8 ≤ Layout.sym_bss_start ∧
+        Layout.sym_environ + 8 ≤ Layout.sym_impure_ptr ∧
+        Layout.sym_impure_ptr + 8 ≤ Layout.sym_stack_top - 8 := by decide
+    obtain ⟨b1, b2, b3⟩ := bounds
+    rw [post.memory_below _ (by omega) ⟨Or.inl (by omega), Or.inr (by dsimp only; omega), trivial⟩]
+    exact image.impure i hi
 
 theorem CrtCamlMainPost.leaf {initial c : Config} (post : CrtCamlMainPost initial c)
     (image : ExecutableImage initial) : LeafInput 0x80001df0#64 c :=

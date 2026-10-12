@@ -108,7 +108,8 @@ theorem indirect_registers_summary {a : IndirectCallInstr} (shape : IndirectShap
     toEffectPost := {
       good := post.good
       image := ⟨fun i hi => by rw [memory]; exact image.text i hi,
-        fun i hi => by rw [memory]; exact image.rodata i hi⟩
+        fun i hi => by rw [memory]; exact image.rodata i hi,
+        fun i hi => by rw [memory]; exact image.impure i hi⟩
       minstret := post.minstret
       tick := post.tick
       pc := post.pc

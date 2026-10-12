@@ -34,7 +34,8 @@ theorem udivdi3_post_named {before after : Config} {x y ra : BitVec 64}
   obtain ⟨good, memory, output, pc, quotient, remainder, ret, tick, frame, scratch2, scratch3⟩ := post
   have image : ExecutableImage after :=
     ⟨by simpa only [memory] using input.image.text,
-     by simpa only [memory] using input.image.rodata⟩
+     by simpa only [memory] using input.image.rodata,
+     by simpa only [memory] using input.image.impure⟩
   exact ⟨⟨good, image, good.minstret, ret, input.aligned, tick⟩,
     pc, quotient, remainder, memory, output, frame, scratch2, scratch3⟩
 

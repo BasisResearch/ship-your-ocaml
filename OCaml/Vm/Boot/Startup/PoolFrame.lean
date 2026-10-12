@@ -15,8 +15,8 @@ theorem pool_allocator_outside (H : List (Nat × Nat)) (s : BitVec 64)
   omega
 
 /-- A confined allocator call preserves the disabled-pooling test. -/
-theorem allocator_pool_zero {H s Q before after}
-    (post : LocalPost startupLive VsaIris.MallocFast.roR VsaIris.Sym.allocText
+theorem allocator_pool_zero {live : Nat → Prop} {H s Q before after}
+    (post : LocalPost live VsaIris.MallocFast.roR VsaIris.Sym.allocText
       VsaIris.Sym.aRegs (mS H s) Q before after)
     (high : heapEnd + allocHeadroom ≤ s.toNat)
     (pins : LPins8 before.σ.mem Layout.sym_pool (List.replicate 8 0#8)) :

@@ -49,7 +49,8 @@ theorem boundary_of_blocks {bs entry before L loads writes ra pc regs}
     output := post.output
     frame := frame }
   · exact ⟨fun i hi => by rw [memory]; exact h.image.text i hi,
-      fun i hi => by rw [memory]; exact h.image.rodata i hi⟩
+      fun i hi => by rw [memory]; exact h.image.rodata i hi,
+      fun i hi => by rw [memory]; exact h.image.impure i hi⟩
   · exact (frame _ hra (by decide)).trans h.raReg
 
 /-- Compose frames at CFG joins without tracking individual unchanged registers. -/

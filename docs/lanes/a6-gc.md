@@ -1,6 +1,19 @@
 # Lane a6-gc
 
-## F1 status (2026-10-05) — current
+## Library live sets (2026-10-12) — current
+
+- a0-boot's runtime readiness is generic over the live set:
+  `RuntimeReadyL live` (with `abbrev RuntimeReady := RuntimeReadyL startupLive`),
+  `AllocatorInputL`, `MallocReturnedL`, `StatAllocatedL`, and the class
+  `LibraryLive live` (`AllocLive` + `ImageLive`; instance for `startupLive`).
+- `ExecutableImage.impure`: the 8 bytes of `_impure_ptr` (the one `.data`
+  word in `allocText`) are present. `ImageLive.impure` and `imageLive` include
+  it, and `PlatformFrame` frames it.
+- Next: `LibraryLive imageLive`, then the Gc growth chain on `imageLive`, which
+  drops `f1_barrierGrowth_dense`'s `dense` premise; and `Gc.f1_observation`
+  (`ObservationRuntime` for a write log's total view) for a1-prims.
+
+## F1 status (2026-10-05)
 
 Done (F1 side of the GC):
 - **`F1Pins.libHeap : LibHeap c`** (`OCaml/Vm/Gc/F1Heap.lean`). This is

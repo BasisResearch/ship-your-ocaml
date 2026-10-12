@@ -39,7 +39,8 @@ theorem mulint_setup {L : OCaml.Layout} {P : Prog} {s : OCaml.Bytecode.St} {c d 
   obtain ⟨_, memory, frame⟩ := post.extra
   have image : ExecutableImage after :=
     ⟨by simpa only [memory] using (dp.image h.dispatch.image).text,
-     by simpa only [memory] using (dp.image h.dispatch.image).rodata⟩
+     by simpa only [memory] using (dp.image h.dispatch.image).rodata,
+     by simpa only [memory] using (dp.image h.dispatch.image).impure⟩
   refine ⟨nb, after, steps, ?_, ?_, post.pcAt⟩
   · exact ⟨⟨post.good, image, post.good.minstret, PinsHold.get post.pins ⟨0, by simp⟩,
       by decide, post.tick⟩, PinsHold.get post.pins ⟨1, by simp⟩,

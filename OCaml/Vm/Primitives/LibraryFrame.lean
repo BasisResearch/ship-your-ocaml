@@ -44,6 +44,7 @@ theorem bindings_observed {P before after} (h : PrimitiveBindings P before)
 structure ImageLive (live : Nat → Prop) : Prop where
   text : ∀ i, i < Image.textSize → live (Image.textBase + i)
   rodata : ∀ i, i < Image.rodataSize → live (Image.rodataBase + i)
+  impure : ∀ i, i < 8 → live (Layout.sym_impure_ptr + i)
 
 /-- Presence recovers exact code pins from equality of total byte reads. -/
 theorem fixedBytes_observed {base size bytes m m'}
@@ -62,7 +63,8 @@ theorem image_observed {live c c'} (image : ExecutableImage c)
     (good : VsaOk live c') (liveImage : ImageLive live)
     (memory : Vsa.Densify.MemEqv c'.σ.mem c.σ.mem) : ExecutableImage c' :=
   ⟨fixedBytes_observed image.text memory (fun i hi => good.live _ (liveImage.text i hi)),
-   fixedBytes_observed image.rodata memory (fun i hi => good.live _ (liveImage.rodata i hi))⟩
+   fixedBytes_observed image.rodata memory (fun i hi => good.live _ (liveImage.rodata i hi)),
+   fun i hi => good.live _ (liveImage.impure i hi)⟩
 
 /-- A library's mutable footprint excludes both immutable ELF sections. -/
 structure ImageSeparate (S : Nat → Prop) : Prop where
@@ -87,5 +89,6 @@ theorem image_local {live S c c'} (image : ExecutableImage c)
     change (c'.σ.mem[Image.rodataBase + i]?).getD 0 = (c.σ.mem[Image.rodataBase + i]?).getD 0 at agree
     rw [agree, image.rodata i hi]
     rfl
+  · exact fun i hi => good.live _ (liveImage.impure i hi)
 
 end OCaml.Vm.Primitives

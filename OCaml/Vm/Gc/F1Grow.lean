@@ -51,7 +51,7 @@ theorem f1_grow {c : Config} {ra sp slot v : BitVec 64} (ok : f1Runtime c)
     exact ⟨q, n, he, bl, bh, by dsimp only at elo; omega, by dsimp only at ehi; omega⟩
   refine ⟨H, cap, chs, h, ?_⟩
   exact {
-    ready := by rw [capEq]; exact RuntimeReady.of_heap h.ready leaf platform readOnly stack
+    ready := by rw [capEq]; exact RuntimeReadyL.of_heap h.ready leaf platform readOnly stack
     frame := frame
     table := by rw [tblNat]; exact h.tableIn
     tableAligned := by decide

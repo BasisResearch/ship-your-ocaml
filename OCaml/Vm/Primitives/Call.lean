@@ -103,7 +103,8 @@ theorem call_registers_summary {a : CallInstr} (shape : CallShape a) (decode : C
       frame := ?_ }
     regs := ⟨post.ra, post.registers⟩ }
   · exact ⟨fun i hi => by rw [memory]; exact image.text i hi,
-      fun i hi => by rw [memory]; exact image.rodata i hi⟩
+      fun i hi => by rw [memory]; exact image.rodata i hi,
+      fun i hi => by rw [memory]; exact image.impure i hi⟩
   · intro r hr hn
     exact post.frame r hn (by simp [wrChain]) (beq_eq_false_iff_ne.mpr (hr 1 (by simp)))
 

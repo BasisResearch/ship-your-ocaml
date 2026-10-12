@@ -13,7 +13,7 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap Vsa
 
 /-- A library call that leaves memory unchanged and the global pointer intact
 keeps startup readiness. -/
-theorem RuntimeReady.of_same_memory {H capacity sp ra oldsp oldra before after}
+theorem RuntimeReadyL.of_same_memory {H capacity sp ra oldsp oldra before after}
     (ready : RuntimeReady H capacity oldsp oldra before) (leaf : LeafInput ra after)
     (good : VsaOk startupLive after) (memory : Vsa.Densify.MemEqv after.σ.mem before.σ.mem)
     (globalPointer : gpr after 3 = gpr before 3) (stack : gprGet after.σ 2 = some sp) :

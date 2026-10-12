@@ -127,7 +127,7 @@ theorem walk_compare {base c : Config} {q node : BitVec 64} {qs key : String}
   refine ⟨d, run1.trans (run2.trans run3), ⟨?_, post.pc, ?_, ⟨x, hx, iff⟩⟩⟩
   · exact
       { good := post.good
-        image := ⟨by simpa only [md] using h.image.text, by simpa only [md] using h.image.rodata⟩
+        image := ⟨by simpa only [md] using h.image.text, by simpa only [md] using h.image.rodata, by simpa only [md] using h.image.impure⟩
         minstret := post.good.minstret, tick := post.tick
         link := ⟨_, post.ra, by decide⟩
         a0 := by change (d.σ.regs.get? Register.x10).isSome; rw [hx]; rfl

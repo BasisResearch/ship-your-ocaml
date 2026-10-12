@@ -83,7 +83,8 @@ theorem DispatchPost.image {before after : Config} {op : Opcode} {a : BitVec 64}
     (h : DispatchPost before op a after) (image : ExecutableImage before) :
     ExecutableImage after :=
   ⟨fun i hi => by rw [h.memory]; exact image.text i hi,
-   fun i hi => by rw [h.memory]; exact image.rodata i hi⟩
+   fun i hi => by rw [h.memory]; exact image.rodata i hi,
+   fun i hi => by rw [h.memory]; exact image.impure i hi⟩
 
 /-- Shared composition for generated read-only accumulator bodies. The body premise
 is discharged by each generated segment; it is not a headline assumption. -/

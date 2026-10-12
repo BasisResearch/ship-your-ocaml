@@ -88,7 +88,7 @@ theorem field_write {tbl : BitVec 64} (low : heapStart ≤ tbl.toNat) (high : tb
 def windows (sp tbl : BitVec 64) : List W :=
   [⟨sp.toNat - 64, sp.toNat⟩, ⟨tbl.toNat, tbl.toNat + tableBytes⟩]
 
-/-- What a0-boot's `RuntimeReady.window_log` needs of the windows. -/
+/-- What a0-boot's `RuntimeReadyL.window_log` needs of the windows. -/
 structure Separate (H : List (Nat × Nat)) (sp tbl : BitVec 64) : Prop where
   pins : ∀ pin ∈ VsaIris.Sym.allocText, OutW (windows sp tbl) pin.1
   domain : OutWRange (windows sp tbl) Layout.sym_Caml_state 8

@@ -14,7 +14,7 @@ theorem TableReady.effect {H capacity oldra before after writes mem pc value reg
     (heap : ∀ a, vsaFoot H a → (mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0)
     (present : ∀ a : Nat, (before.σ.mem[a]?).isSome → (mem[a]?).isSome) :
     TableReady H capacity ra after where
-  toRuntimeReady := ready.toRuntimeReady.effect post keys cover gpFrame
+  toRuntimeReadyL := ready.toRuntimeReadyL.effect post keys cover gpFrame
     ((post.toEffectPost.gpr_frame keys 2 (by decide) (by decide) stackFrame).trans ready.stack)
     link aligned below heap present
   globalReg := (post.toEffectPost.gpr_frame keys 8 (by decide) (by decide) globalFrame).trans ready.globalReg
@@ -44,7 +44,7 @@ theorem TableReady.zero {H capacity oldra before after second base}
       (tableZeroCall second).link (BitVec.ofNat 64 base) (tableZeroFinalRegs second base) after) :
     TableReady H capacity (tableZeroCall second).link after := by
   constructor
-  · exact ready.toRuntimeReady.zero post (by decide)
+  · exact ready.toRuntimeReadyL.zero post (by decide)
       (by simp only [keysG, tableZeroFinalRegs, memset56Regs]; decide) (by decide)
       ((post.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans ready.stack)
       (gholds_lookup _ post.regs (by rfl)) (by cases second <;> decide) member region

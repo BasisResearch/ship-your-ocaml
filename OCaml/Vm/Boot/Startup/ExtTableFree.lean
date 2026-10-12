@@ -31,7 +31,7 @@ theorem outWRange_below {ws : List W} (above : ∀ w ∈ ws, heapEnd ≤ w.lo) {
 
 /-- Stores confined to windows above the arena (native frames, stack-local
 tables) keep startup readiness. -/
-theorem RuntimeReady.above_log {H capacity oldsp oldra before after writes log pc value regs sp ra ws}
+theorem RuntimeReadyL.above_log {H capacity oldsp oldra before after writes log pc value regs sp ra ws}
     (ready : RuntimeReady H capacity oldsp oldra before)
     (post : WriteRegistersPost writes log before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) (gpFrame : 3 ∉ writes)

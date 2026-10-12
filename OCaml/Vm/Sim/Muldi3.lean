@@ -33,7 +33,7 @@ theorem muldi3_post_named {before after : Config} {x y ra : BitVec 64}
   obtain ⟨good, memory, output, pc, result, ret, tick, frame⟩ := post
   have image : ExecutableImage after :=
     ⟨by simpa only [memory] using input.image.text,
-     by simpa only [memory] using input.image.rodata⟩
+     by simpa only [memory] using input.image.rodata, by simpa only [memory] using input.image.impure⟩
   exact ⟨⟨good, image, good.minstret, ret, input.aligned, tick⟩,
     pc, result, memory, output, frame⟩
 
@@ -52,7 +52,7 @@ theorem muldi3_summary {before : Config} {x y ra : BitVec 64}
 
 /-- **`__muldi3` as a register effect**: writes exactly `a0..a3` (product in
 `a0`, the scratch values present), keeps memory and every other register.
-This is the shape a0-boot's readiness transport (`RuntimeReady.effect`)
+This is the shape a0-boot's readiness transport (`RuntimeReadyL.effect`)
 consumes. -/
 theorem muldi3_registers {before : Config} {x y ra : BitVec 64}
     (input : Muldi3Input x y ra before) :

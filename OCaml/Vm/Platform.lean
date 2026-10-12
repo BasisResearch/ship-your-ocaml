@@ -24,6 +24,9 @@ open Vsa.Machine Vsa.Sim.Code
 structure ExecutableImage (c : Config) : Prop where
   text : FixedBytesLoaded Image.textBase Image.textSize Image.textByte c.σ.mem
   rodata : FixedBytesLoaded Image.rodataBase Image.rodataSize Image.rodataByte c.σ.mem
+  /-- `_impure_ptr`, the one static data word newlib's allocator pins
+  (`allocText`), is present; its value is read total (`getD 0`) -/
+  impure : ∀ i, i < 8 → (c.σ.mem[Layout.sym_impure_ptr + i]?).isSome
 
 /-- Cut-point platform state, shared by startup and the dispatch loop.
 The runtime parameter is `L.runtimeOk`; allocation/GC proofs must preserve it. -/

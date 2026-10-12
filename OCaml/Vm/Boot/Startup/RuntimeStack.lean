@@ -5,7 +5,7 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris.Inst OCaml.Vm.Primitives
 
 /-- Native stack saves cannot change the allocator arena or runtime globals.
 This transports the complete startup contract across generated frame effects. -/
-theorem RuntimeReady.stack_log {H capacity oldsp oldra before after writes log pc value regs sp ra frameSp size}
+theorem RuntimeReadyL.stack_log {H capacity oldsp oldra before after writes log pc value regs sp ra frameSp size}
     (ready : RuntimeReady H capacity oldsp oldra before)
     (post : WriteRegistersPost writes log before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) (gpFrame : 3 ∉ writes)

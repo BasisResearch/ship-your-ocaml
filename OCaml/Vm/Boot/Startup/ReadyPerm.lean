@@ -1,6 +1,7 @@
 import OCaml.Vm.Boot.Startup.RuntimeReady
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
+variable {live : Nat → Prop}
 
 theorem vsaFoot_perm {H H' : List (Nat × Nat)} (perm : H.Perm H') (a : Nat) : vsaFoot H a ↔ vsaFoot H' a := by
   unfold vsaFoot
@@ -24,7 +25,7 @@ theorem vsaRoomB_perm {img : Nat → BitVec 8} {H H' : List (Nat × Nat)} {k : N
         exact := fun e he hr => hp.exact e (perm.mem_iff.2 he) (perm.mem_iff.2 hr) }, topRoom⟩, page, bb⟩
 
 /-- Readiness depends on the live blocks only as a set. -/
-theorem RuntimeReady.perm {H H' : List (Nat × Nat)} {capacity sp ra c} (ready : RuntimeReady H capacity sp ra c)
+theorem RuntimeReadyL.perm {H H' : List (Nat × Nat)} {capacity sp ra c} (ready : RuntimeReady H capacity sp ra c)
     (perm : H.Perm H') : RuntimeReady H' capacity sp ra c :=
   { ready with room := vsaRoomB_perm perm ready.room }
 
@@ -40,7 +41,7 @@ theorem chunkWalk_mem_bounds {m : Vsa.MemRepr.Mem} {p top : Nat} {cs : List Chun
       omega
 
 /-- Every live block lies inside the allocator arena. -/
-theorem RuntimeReady.block_bounds {H capacity sp ra c} (ready : RuntimeReady H capacity sp ra c)
+theorem RuntimeReadyL.block_bounds {H capacity sp ra c} (ready : RuntimeReadyL live H capacity sp ra c)
     {q n : Nat} (member : (q, n) ∈ H) : heapStart ≤ q ∧ q + n ≤ heapEnd := by
   obtain ⟨_, m, top, brkv, chunks, bins, _, ⟨⟨hp, topRoom⟩, _, _⟩, _⟩ := ready.room
   obtain ⟨chunk, inChunks, _, low, high⟩ := hp.live (q, n) member

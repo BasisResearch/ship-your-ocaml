@@ -112,7 +112,8 @@ theorem readOnly_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Confi
     (geometry.same rfl rfl memory) (native.frame_read memory nativeSp)
   exact ⟨good,
     ⟨fun i hi => by rw [memory]; exact platform.image.text i hi,
-     fun i hi => by rw [memory]; exact platform.image.rodata i hi⟩,
+     fun i hi => by rw [memory]; exact platform.image.rodata i hi,
+     fun i hi => by rw [memory]; exact platform.image.impure i hi⟩,
     stable c after memory platform.runtime⟩
 
 end OCaml.Vm.Sim

@@ -105,7 +105,7 @@ theorem umoddi3_summary {c : Config} {x y ra : BitVec 64} (input : Udivdi3Input 
     apply gholds_lookup _ (regs4 ▸ p4.regs); simp [back_regs, lookupG, R3]
   exact
     { good := p4.good
-      image := ⟨by simpa only [memory] using input.image.text, by simpa only [memory] using input.image.rodata⟩
+      image := ⟨by simpa only [memory] using input.image.text, by simpa only [memory] using input.image.rodata, by simpa only [memory] using input.image.impure⟩
       minstret := p4.minstret
       tick := p4.tick
       pc := by

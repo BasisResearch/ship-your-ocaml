@@ -1,22 +1,30 @@
 import OCaml.Vm.Boot.Startup.TableHeap
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap LeanRV64DExecutable VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
+variable {live : Nat → Prop}
 
-/-- Runtime and allocator facts retained across startup calls, independent
-of any one function's choice of saved registers or stack-frame size. -/
-structure RuntimeReady (H : List (Nat × Nat)) (capacity : Nat) (sp ra : BitVec 64) (c : Config) : Prop
-    extends LeafInput ra c where
-  platform : VsaOk startupLive c
-  readOnly : ROHolds (vsaModel startupLive) c VsaIris.MallocFast.roR VsaIris.Sym.allocText
-  room : vsaRoomB ((vsaModel startupLive).mem c) H capacity
+/-- Runtime and allocator facts retained across calls, independent of any one
+function's choice of saved registers or stack-frame size, over the library
+model's live set `live` (the bytes the VSA model keeps present). Startup uses
+all of RAM (`RuntimeReady`); a caller whose memory is not dense uses the
+program image (`imageLive`), whose presence `ExecutableImage` gives. -/
+structure RuntimeReadyL (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp ra : BitVec 64)
+    (c : Config) : Prop extends LeafInput ra c where
+  platform : VsaOk live c
+  readOnly : ROHolds (vsaModel live) c VsaIris.MallocFast.roR VsaIris.Sym.allocText
+  room : vsaRoomB ((vsaModel live).mem c) H capacity
   stack : gprGet c.σ 2 = some sp
   domainWord : bytesT c.σ.mem Layout.sym_Caml_state 8 = firstDomainPtr
   poolZero : LPins8 c.σ.mem Layout.sym_pool (List.replicate 8 0#8)
 
+/-- Startup readiness: the library's live set is all of RAM. -/
+abbrev RuntimeReady (H : List (Nat × Nat)) (capacity : Nat) (sp ra : BitVec 64) (c : Config) : Prop :=
+  RuntimeReadyL startupLive H capacity sp ra c
+
 /-- A summary transports runtime readiness from its complete register
 interface and ordinary heap/global memory frame. -/
-theorem RuntimeReady.effect_framed {H capacity oldsp oldra before after writes mem pc value regs sp ra}
-    (ready : RuntimeReady H capacity oldsp oldra before)
+theorem RuntimeReadyL.effect_framed {H capacity oldsp oldra before after writes mem pc value regs sp ra}
+    (ready : RuntimeReadyL live H capacity oldsp oldra before)
     (post : RegistersPost writes mem before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs)
     (gpFrame : 3 ∉ writes)
@@ -27,7 +35,7 @@ theorem RuntimeReady.effect_framed {H capacity oldsp oldra before after writes m
     (pool : LPins8 mem Layout.sym_pool (List.replicate 8 0#8))
     (heap : ∀ a, vsaFoot H a → (mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0)
     (present : ∀ a : Nat, (before.σ.mem[a]?).isSome → (mem[a]?).isSome) :
-    RuntimeReady H capacity sp ra after where
+    RuntimeReadyL live H capacity sp ra after where
   good := post.good
   image := post.image
   minstret := post.minstret
@@ -61,8 +69,8 @@ theorem RuntimeReady.effect_framed {H capacity oldsp oldra before after writes m
 
 /-- A summary transports runtime readiness from its complete register
 interface and ordinary heap/global memory frame. -/
-theorem RuntimeReady.effect {H capacity oldsp oldra before after writes mem pc value regs sp ra}
-    (ready : RuntimeReady H capacity oldsp oldra before)
+theorem RuntimeReadyL.effect {H capacity oldsp oldra before after writes mem pc value regs sp ra}
+    (ready : RuntimeReadyL live H capacity oldsp oldra before)
     (post : RegistersPost writes mem before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs)
     (gpFrame : 3 ∉ writes)
@@ -71,8 +79,8 @@ theorem RuntimeReady.effect {H capacity oldsp oldra before after writes mem pc v
     (below : ∀ a, a < heapStart → mem[a]? = before.σ.mem[a]?)
     (heap : ∀ a, vsaFoot H a → (mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0)
     (present : ∀ a : Nat, (before.σ.mem[a]?).isSome → (mem[a]?).isSome) :
-    RuntimeReady H capacity sp ra after := by
-  apply ready.effect_framed post keys cover gpFrame stack link aligned
+    RuntimeReadyL live H capacity sp ra after := by
+  apply RuntimeReadyL.effect_framed ready post keys cover gpFrame stack link aligned
   · intro pin hp
     rw [below pin.1 (allocator_sources pin hp).geometry.high]
   · rw [Vsa.Sim.Boot.bytesT_local_eq (m' := before.σ.mem) Layout.sym_Caml_state 8 (fun i hi => below _ (by
@@ -85,14 +93,14 @@ theorem RuntimeReady.effect {H capacity oldsp oldra before after writes mem pc v
   · exact present
 
 /-- A finite store log confined to one live payload preserves startup readiness. -/
-theorem RuntimeReady.payload_log {H capacity oldsp oldra before after writes log pc value regs sp ra base size}
-    (ready : RuntimeReady H capacity oldsp oldra before)
+theorem RuntimeReadyL.payload_log {H capacity oldsp oldra before after writes log pc value regs sp ra base size}
+    (ready : RuntimeReadyL live H capacity oldsp oldra before)
     (post : WriteRegistersPost writes log before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) (gpFrame : 3 ∉ writes)
     (stack : gprGet after.σ 2 = some sp) (link : gprGet after.σ 1 = some ra) (aligned : ra.toNat % 4 = 0)
     (member : (base, size) ∈ H) (lower : heapStart ≤ base)
-    (inside : LogInW [⟨base, base + size⟩] log) : RuntimeReady H capacity sp ra after := by
-  apply ready.effect post keys cover gpFrame stack link aligned
+    (inside : LogInW [⟨base, base + size⟩] log) : RuntimeReadyL live H capacity sp ra after := by
+  apply RuntimeReadyL.effect ready post keys cover gpFrame stack link aligned
   · intro a ha
     exact frameOn_writeLog _ _ _ inside a ⟨Or.inl (Nat.lt_of_lt_of_le ha lower), trivial⟩
   · intro a ha
@@ -101,13 +109,13 @@ theorem RuntimeReady.payload_log {H capacity oldsp oldra before after writes log
     exact writeLog_present _ _ _ ha
 
 /-- Complete 56-byte native zeroing preserves every other live allocation. -/
-theorem RuntimeReady.zero {H capacity oldsp oldra before after writes pc value regs sp ra base}
-    (ready : RuntimeReady H capacity oldsp oldra before)
+theorem RuntimeReadyL.zero {H capacity oldsp oldra before after writes pc value regs sp ra base}
+    (ready : RuntimeReadyL live H capacity oldsp oldra before)
     (post : RegistersPost writes (memset56Memory before.σ.mem base) before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) (gpFrame : 3 ∉ writes)
     (stack : gprGet after.σ 2 = some sp) (link : gprGet after.σ 1 = some ra) (aligned : ra.toNat % 4 = 0)
-    (member : (base, 56) ∈ H) (region : Memset56Region base) : RuntimeReady H capacity sp ra after := by
-  apply ready.effect post keys cover gpFrame stack link aligned
+    (member : (base, 56) ∈ H) (region : Memset56Region base) : RuntimeReadyL live H capacity sp ra after := by
+  apply RuntimeReadyL.effect ready post keys cover gpFrame stack link aligned
   · intro a ha
     exact memset56Memory_out region _ a (Or.inl (Nat.lt_of_lt_of_le ha region.lower))
   · intro a ha

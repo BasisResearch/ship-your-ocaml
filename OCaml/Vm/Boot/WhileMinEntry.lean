@@ -72,6 +72,11 @@ theorem EntryControl.fillZero {c : Config} (h : EntryControl c) :
   image := {
     text := fun i hi => Vsa.Densify.fillZeroMem_some (h.image.text i hi)
     rodata := fun i hi => Vsa.Densify.fillZeroMem_some (h.image.rodata i hi)
+    impure := fun i hi => by
+      show ((Vsa.Densify.fillZeroMem _)[_]?).isSome = true
+      rw [Vsa.Densify.fillZeroMem_ram _ (by simp only [Vsa.Densify.ramBase, Layout.sym_impure_ptr]; omega)
+        (by simp only [Vsa.Densify.ramBase, Vsa.Densify.ramSize, Layout.sym_impure_ptr]; omega)]
+      rfl
   }
 
   primitives := h.primitives.of_words fun a =>

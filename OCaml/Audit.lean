@@ -2351,6 +2351,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinImage.initial_rodata
 #print axioms OCaml.Vm.Boot.WhileMinImage.observed_text
 #print axioms OCaml.Vm.Boot.WhileMinImage.observed_rodata
+#print axioms OCaml.Vm.Boot.WhileMinImage.initial_impure
+#print axioms OCaml.Vm.Boot.WhileMinImage.observed_impure
+#print axioms OCaml.Vm.Primitives.insert_isSome
+#print axioms OCaml.Vm.Primitives.writeLog_isSome
 #print axioms OCaml.Vm.Boot.WhileMinImage.executable
 #print axioms OCaml.Vm.Boot.WhileMinRegisters.assignments_distinct
 #print axioms OCaml.Vm.Boot.WhileMinRegisters.register_get
@@ -2504,14 +2508,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.setup_input
 #print axioms OCaml.Vm.Boot.Startup.setup_summary
 -- a0-boot: the startup reset run
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.heap
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.of_heap
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.heap
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.of_heap
 #print axioms OCaml.Vm.Boot.Startup.HeapReady.block_bounds
 #print axioms OCaml.Vm.Boot.Startup.HeapReady.frame
 #print axioms OCaml.Vm.Boot.Startup.HeapReady.frame_live
 #print axioms OCaml.Vm.Boot.Startup.HeapReady.frame_errno
 #print axioms OCaml.Vm.Boot.Startup.vsaRoomB_errno
-#print axioms OCaml.Vm.Boot.Startup.MallocReturned.other_gpr
+#print axioms OCaml.Vm.Boot.Startup.MallocReturnedL.other_gpr
 #print axioms OCaml.Vm.Boot.Startup.slotOne_write
 #print axioms OCaml.Vm.Boot.Startup.write_post_seq
 #print axioms OCaml.Vm.Boot.Startup.blocks_then
@@ -2586,8 +2590,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.resolve_scan
 #print axioms OCaml.Vm.Boot.Startup.resolve_finish
 #print axioms OCaml.Vm.Boot.Startup.resolve_ocamlrun
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.errno_framed
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.errno_log
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.errno_framed
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.errno_log
 #print axioms OCaml.Vm.Boot.Startup.block_then_call_select
 #print axioms OCaml.Vm.Boot.Startup.lib_open_entry
 #print axioms OCaml.Vm.Boot.Startup.open_r_entry
@@ -2643,8 +2647,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.child_miss
 #print axioms OCaml.Vm.Boot.Startup.SlotSame.miss
 #print axioms OCaml.Vm.Boot.Startup.malloc_ready
-#print axioms OCaml.Vm.Boot.Startup.MallocReturned.saved_gpr
-#print axioms OCaml.Vm.Boot.Startup.MallocReturned.caller_byte
+#print axioms OCaml.Vm.Boot.Startup.MallocReturnedL.saved_gpr
+#print axioms OCaml.Vm.Boot.Startup.MallocReturnedL.caller_byte
 #print axioms OCaml.Vm.Boot.Startup.memcpy_fresh
 #print axioms OCaml.Vm.Boot.Startup.new_node_save
 #print axioms OCaml.Vm.Boot.Startup.new_node_free
@@ -2674,9 +2678,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.stat_alloc_ready
 #print axioms OCaml.Vm.Boot.Startup.snp_text_loaded
 #print axioms OCaml.Vm.Boot.Startup.memcpy_text_loaded
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.free_result
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.of_block_frame
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.above_log
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.free_result
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.of_block_frame
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.above_log
 #print axioms OCaml.Vm.Boot.WhileMin.interpCaller
 #print axioms OCaml.Vm.Boot.WhileMin.interpCaller_fillZero
 #print axioms OCaml.Vm.Boot.WhileMin.cut_gprs
@@ -2697,7 +2701,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.search_exe_free_table
 #print axioms OCaml.Vm.Boot.Startup.search_exe_return
 #print axioms OCaml.Vm.Boot.Startup.vsaRoomB_perm
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.perm
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.perm
 #print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.size_byte
 #print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.contents_word
 #print axioms OCaml.Vm.Boot.Startup.fS_outside
@@ -2707,7 +2711,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.CallerFrame.mono
 #print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.above
 #print axioms OCaml.Vm.Boot.Startup.chunkWalk_mem_bounds
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.block_bounds
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.block_bounds
 #print axioms OCaml.Vm.Boot.Startup.cstr_getD_le
 #print axioms OCaml.Vm.Boot.Startup.argv0_plain
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetSearchTableReturned.exe_name
@@ -4526,9 +4530,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTablesReturn.domain_word
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_domain_returned_exists
 
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.effect
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.payload_log
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.zero
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.effect
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.payload_log
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.zero
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetTablesReturn.ready
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetDomainReturned.ready
 #print axioms OCaml.Vm.Boot.Startup.identity_zero
@@ -4544,7 +4548,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.secure_compare
 #print axioms OCaml.Vm.Boot.Startup.secure_getenv_tail
 #print axioms OCaml.Vm.Boot.Startup.secure_getenv_to_getenv
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.stack_log
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.stack_log
 #print axioms OCaml.Vm.Boot.Startup.secure_getenv_ready
 #print axioms OCaml.Vm.Boot.Startup.scalar_leaf_call
 #print axioms OCaml.Vm.Boot.Startup.lock_noop
@@ -4659,7 +4663,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterEntry.input
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_parameter_returned_exists
 #print axioms OCaml.Vm.Boot.Startup.StartupDataFrame.environment
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.effect_framed
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.effect_framed
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetParameterReturned.controls
 #print axioms OCaml.Vm.Boot.Startup.caml_aux_call
 #print axioms OCaml.Vm.Boot.Startup.startup_aux
@@ -4670,14 +4674,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.caml_locale
 #print axioms OCaml.Vm.Boot.Startup.caml_locale_ready
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_custom_entry_exists
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.malloc_result
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.malloc_result
 #print axioms OCaml.Vm.Boot.Startup.allocator_caller_outside
 #print axioms OCaml.Vm.Boot.Startup.stat_checked_prefix
 #print axioms OCaml.Vm.Boot.Startup.stat_checked_return
 #print axioms OCaml.Vm.Boot.Startup.stat_checked_allocate
 #print axioms OCaml.Vm.Boot.Startup.StatCheckedAllocated.saved_word
 #print axioms OCaml.Vm.Boot.Startup.stat_checked
-#print axioms OCaml.Vm.Boot.Startup.RuntimeReady.disjoint_log
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.disjoint_log
 #print axioms OCaml.Vm.Boot.Startup.StatCheckedReturned.framed_byte
 #print axioms OCaml.Vm.Boot.Startup.custom_save
 #print axioms OCaml.Vm.Boot.Startup.custom_publish

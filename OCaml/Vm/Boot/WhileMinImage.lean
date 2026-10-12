@@ -32,6 +32,24 @@ theorem initial_rodata : FixedBytesLoaded Image.rodataBase Image.rodataSize Imag
   unfold imageByte
   rw [if_neg (by omega), if_pos ⟨by omega, by omega⟩, Nat.add_sub_cancel_left]
 
+private theorem impure_pieces : ∀ i, i < 8 → inPieces pieces (Layout.sym_impure_ptr + i) = true := by decide
+
+private theorem impure_in_pieces {i : Nat} (h : i < 8) :
+    inPieces pieces (Layout.sym_impure_ptr + i) = true := impure_pieces i h
+
+theorem initial_impure : ∀ i, i < 8 → (initialMem[Layout.sym_impure_ptr + i]?).isSome := by
+  intro i h
+  rw [initialMem, loaderMem_get, impure_in_pieces h]
+  rfl
+
+theorem observed_impure : ∀ i, i < 8 → ((observedMem initialMem log)[Layout.sym_impure_ptr + i]?).isSome := by
+  intro i h
+  rw [observedMem, memory_view]
+  unfold logView
+  split
+  · rfl
+  · exact initial_impure i h
+
 theorem observed_text : FixedBytesLoaded Image.textBase Image.textSize Image.textByte
     (observedMem initialMem log) := by
   intro off bound
@@ -52,5 +70,6 @@ theorem executable {c : Config} (memory : c.σ.mem = observedMem initialMem log)
     ExecutableImage c where
   text := by rw [memory]; exact observed_text
   rodata := by rw [memory]; exact observed_rodata
+  impure := by rw [memory]; exact observed_impure
 
 end OCaml.Vm.Boot.WhileMinImage

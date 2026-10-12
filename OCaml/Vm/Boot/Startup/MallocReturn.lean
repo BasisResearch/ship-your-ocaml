@@ -5,7 +5,7 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCa
 theorem startup_image_live : ImageLive startupLive := by
   constructor <;> intro i hi <;>
     simp only [startupLive, Vsa.Densify.ramBase, Vsa.Densify.ramSize,
-      Image.textBase, Image.textSize, Image.rodataBase, Image.rodataSize] at * <;> omega
+      Image.textBase, Image.textSize, Image.rodataBase, Image.rodataSize, Layout.sym_impure_ptr] at * <;> omega
 
 /-- Runtime code and read-only data are outside every startup allocator call's
 metadata and stack ownership. -/

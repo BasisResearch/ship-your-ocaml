@@ -6,7 +6,7 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.Sym VsaIris
   OCaml.Vm.Primitives
 
 /-- A library call that writes only inside one live block keeps startup readiness. -/
-theorem RuntimeReady.of_block_frame {H capacity oldsp oldra sp ra before after text rs dst n}
+theorem RuntimeReadyL.of_block_frame {H capacity oldsp oldra sp ra before after text rs dst n}
     (ready : RuntimeReady H capacity oldsp oldra before)
     (frame : LocalFrame startupLive [] text rs (InExt (dst, n)) before after)
     (gpKept : 3 ∉ rs) (leaf : LeafInput ra after) (stack : gprGet after.σ 2 = some sp)

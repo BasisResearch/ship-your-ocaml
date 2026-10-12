@@ -51,7 +51,8 @@ theorem appterm_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   have fullMemory := memory.trans dp.memory
   have image : ExecutableImage after :=
     ⟨fun i hi => by rw [fullMemory]; exact h.dispatch.image.text i hi,
-      fun i hi => by rw [fullMemory]; exact h.dispatch.image.rodata i hi⟩
+      fun i hi => by rw [fullMemory]; exact h.dispatch.image.rodata i hi,
+      fun i hi => by rw [fullMemory]; exact h.dispatch.image.impure i hi⟩
   have frame := (dp.frame.trans rawFrame).widenChecked (allowed := apptermSetupWrites) (by decide)
   refine ⟨nb, after, steps, ?_⟩
   constructor

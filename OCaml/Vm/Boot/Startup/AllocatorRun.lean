@@ -1,13 +1,15 @@
+import OCaml.Vm.Boot.Startup.LibraryLive
 import OCaml.Vm.Boot.Startup.MallocRun
 import VsaIris.Vsa.MallocRunAll
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.Sym VsaIris.VsaHeap
+variable {live : Nat → Prop}
 open VsaIris.MallocFast OCaml.Vm.Primitives
 
 /-- Recover any allocator-preserved ABI register from the shared return frame. -/
 theorem allocator_saved_register {before after : Config} {r s : BitVec 64}
-    (pre : VsaOk startupLive before) (post : VsaOk startupLive after)
-    (frame : RetFrame ((vsaModel startupLive).reg after) r s (firstMallocSaved (vsaReg before)))
+    (pre : VsaOk live before) (post : VsaOk live after)
+    (frame : RetFrame ((vsaModel live).reg after) r s (firstMallocSaved (vsaReg before)))
     (n : Nat) (member : n ∈ vsaSaved) : gprGet after.σ n = gprGet before.σ n := by
   have range : 1 ≤ n ∧ n ≤ 31 := by simp [vsaSaved] at member; omega
   have saved := frame.saved (n, vsaReg before n) (by
@@ -47,11 +49,11 @@ theorem allocator_stack_disjoint (H : List (Nat × Nat)) (s : BitVec 64)
 
 /-- Concrete startup observations and capacity instantiate the landed allocator
 contract. No initialized-heap execution or success is assumed. -/
-structure AllocatorInput (H : List (Nat × Nat)) (n r s : BitVec 64) (capacity : Nat)
+structure AllocatorInputL (live : Nat → Prop) (H : List (Nat × Nat)) (n r s : BitVec 64) (capacity : Nat)
     (c : Config) : Prop where
-  good : VsaOk startupLive c
-  readOnly : ROHolds (vsaModel startupLive) c roR allocText
-  room : vsaRoomB ((vsaModel startupLive).mem c) H capacity
+  good : VsaOk live c
+  readOnly : ROHolds (vsaModel live) c roR allocText
+  room : vsaRoomB ((vsaModel live).mem c) H capacity
   request : gprGet c.σ 10 = some n
   stack : gprGet c.σ 2 = some s
   link : gprGet c.σ 1 = some r
@@ -59,13 +61,16 @@ structure AllocatorInput (H : List (Nat × Nat)) (n r s : BitVec 64) (capacity :
   high : heapEnd + allocHeadroom ≤ s.toNat
   aligned : r.toNat % 4 = 0
 
+abbrev AllocatorInput (H : List (Nat × Nat)) (n r s : BitVec 64) (capacity : Nat) (c : Config) : Prop :=
+  AllocatorInputL startupLive H n r s capacity c
+
 /-- Reusable successful malloc summary for every later startup allocation.
 The library charges its request, and the run kernel folds its certificate. -/
-theorem allocator_summary (c : Config) (H : List (Nat × Nat)) (n r s : BitVec 64)
-    (k charge : Nat) (input : AllocatorInput H n r s (k + charge) c)
+theorem allocator_summary [LibraryLive live] (c : Config) (H : List (Nat × Nat)) (n r s : BitVec 64)
+    (k charge : Nat) (input : AllocatorInputL live H n r s (k + charge) c)
     (charged : vsaChg n.toNat charge) :
     FnSummary mallocEntryBV (fun d => d = c)
-      (LocalPost startupLive roR allocText aRegs (mS H s)
+      (LocalPost live roR allocText aRegs (mS H s)
         (MallocRoomEnd vsaLayoutP vsaRoomB H n r s (firstMallocSaved (vsaReg c)) k) c) := by
   constructor
   rintro before ⟨pc, eq⟩
@@ -81,8 +86,8 @@ theorem allocator_summary (c : Config) (H : List (Nat × Nat)) (n r s : BitVec 6
     · change (gprGet c.σ 2).getD 0 = _
       rw [input.stack]; rfl
     · exact firstMallocSaved_values _
-  obtain ⟨fuel, certificate⟩ := mallocChgRun_proved startupLive startup_alloc_live
-    H n s r (firstMallocSaved (vsaReg c)) (vsaReg c) ((vsaModel startupLive).mem c) k charge
+  obtain ⟨fuel, certificate⟩ := mallocChgRun_proved live LibraryLive.alloc
+    H n s r (firstMallocSaved (vsaReg c)) (vsaReg c) ((vsaModel live).mem c) k charge
     (firstMallocSaved_keys _) charged input.stackOk input.aligned entry
     (room_shape input.room) input.room (allocator_stack_disjoint H s input.high)
   exact localRun_triple c (allocator_separate H s input.high) input.good input.readOnly certificate c rfl

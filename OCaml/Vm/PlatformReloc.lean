@@ -15,6 +15,8 @@ structure PlatformFrame (runtimeOk : Config → Prop) (c c' : Config) : Prop whe
     c'.σ.mem[Image.textBase + i]? = c.σ.mem[Image.textBase + i]?
   rodata : ∀ i, i < Image.rodataSize →
     c'.σ.mem[Image.rodataBase + i]? = c.σ.mem[Image.rodataBase + i]?
+  impure : ∀ i, i < 8 →
+    c'.σ.mem[Layout.sym_impure_ptr + i]? = c.σ.mem[Layout.sym_impure_ptr + i]?
   runtime : runtimeOk c'
 
 /-- A placement-independent atom for the existing equivariance calculus.
@@ -24,7 +26,8 @@ def platformEqv (runtimeOk : Config → Prop) : Eqv where
   Img := fun _ _ _ _ c c' => PlatformFrame runtimeOk c c'
   transport := fun _ _ _ _ _ _ h f =>
     ⟨f.control, ⟨fun i hi => (f.text i hi).trans (h.image.text i hi),
-      fun i hi => (f.rodata i hi).trans (h.image.rodata i hi)⟩, f.runtime⟩
+      fun i hi => (f.rodata i hi).trans (h.image.rodata i hi),
+      fun i hi => by rw [f.impure i hi]; exact h.image.impure i hi⟩, f.runtime⟩
 
 /-- The collector's platform side of a relocation uses `Eqv.transport`.
 Its obligations are independent of the old and new abstract placements. -/

@@ -10,12 +10,18 @@ theorem reset_image {elf : ELF64File} {c : Config} (image : WhileMinElf elf)
     (reset : ElfResetReady elf c) : ExecutableImage c where
   text := by rw [reset.memory, image.memory]; exact WhileMinImage.initial_text
   rodata := by rw [reset.memory, image.memory]; exact WhileMinImage.initial_rodata
+  impure := by rw [reset.memory, image.memory]; exact WhileMinImage.initial_impure
 
 /-- The same exact image pins hold after totalizing absent memory bytes. -/
 theorem reset_image_fillZero {elf : ELF64File} {c : Config} (image : WhileMinElf elf)
     (reset : ElfResetReady elf c) : ExecutableImage (Vsa.Densify.fillZero c) where
   text := fun i hi => Vsa.Densify.fillZeroMem_some ((reset_image image reset).text i hi)
   rodata := fun i hi => Vsa.Densify.fillZeroMem_some ((reset_image image reset).rodata i hi)
+  impure := fun i hi => by
+    show ((Vsa.Densify.fillZeroMem _)[_]?).isSome = true
+    rw [Vsa.Densify.fillZeroMem_ram _ (by simp only [Vsa.Densify.ramBase, Layout.sym_impure_ptr]; omega)
+      (by simp only [Vsa.Densify.ramBase, Vsa.Densify.ramSize, Layout.sym_impure_ptr]; omega)]
+    rfl
 
 structure ResetCamlMainPost (initial after : Config) : Prop extends CrtCamlMainPost (Vsa.Densify.fillZero initial) after where
   run : Steps (Vsa.Densify.fillZero initial) after

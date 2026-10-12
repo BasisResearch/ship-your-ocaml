@@ -19,7 +19,7 @@ theorem ResetTablesReturn.ready
     simp [firstTableHeap, firstDomainHeap]
   have published := ready.publish domain w.publication
   refine ⟨_, domain, ?_⟩
-  exact published.toRuntimeReady.zero w.post (by decide)
+  exact published.toRuntimeReadyL.zero w.post (by decide)
     (by simp only [tableTailFinalRegs, List.cons_append, List.nil_append, memset56Regs, keysG]; decide)
     (by decide) (gholds_lookup _ w.post.regs (by rfl)) (gholds_lookup _ w.post.regs (by rfl))
     (by decide) (by simp) w.third.region

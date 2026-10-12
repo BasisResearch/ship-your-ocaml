@@ -108,7 +108,7 @@ theorem fS_coarse {H q n s a} (blockLow : heapStart ≤ q.toNat) (blockHigh : q.
 
 /-- A landed successful free contract returns the same runtime interface with
 the block removed from the live list and the remaining capacity kept. -/
-theorem RuntimeReady.free_result {H q n capacity sp ra before after}
+theorem RuntimeReadyL.free_result {H q n capacity sp ra before after}
     (ready : RuntimeReady ((q.toNat, n) :: H) capacity sp ra before)
     (high : heapEnd + allocHeadroom ≤ sp.toNat) (blockLow : heapStart ≤ q.toNat)
     (blockHigh : q.toNat + n ≤ heapEnd)

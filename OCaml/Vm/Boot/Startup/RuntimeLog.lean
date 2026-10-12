@@ -4,7 +4,7 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCa
 
 /-- A finite write log can update unowned runtime globals and live payloads
 while retaining the common allocator/platform interface. -/
-theorem RuntimeReady.disjoint_log {H capacity oldsp oldra before after writes log pc value regs sp ra}
+theorem RuntimeReadyL.disjoint_log {H capacity oldsp oldra before after writes log pc value regs sp ra}
     (ready : RuntimeReady H capacity oldsp oldra before)
     (post : WriteRegistersPost writes log before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) (gpFrame : 3 ∉ writes)

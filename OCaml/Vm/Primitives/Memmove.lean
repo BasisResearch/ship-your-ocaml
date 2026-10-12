@@ -184,20 +184,24 @@ needs present. Their presence is `ExecutableImage`, so no RAM presence is
 demanded (reads elsewhere are total, `getD 0`). -/
 def imageLive (a : Nat) : Prop :=
   (Image.textBase ≤ a ∧ a < Image.textBase + Image.textSize) ∨
-    (Image.rodataBase ≤ a ∧ a < Image.rodataBase + Image.rodataSize)
+    (Image.rodataBase ≤ a ∧ a < Image.rodataBase + Image.rodataSize) ∨
+    (Layout.sym_impure_ptr ≤ a ∧ a < Layout.sym_impure_ptr + 8)
 
 theorem imageLive_image : ImageLive imageLive :=
-  ⟨fun i hi => .inl ⟨Nat.le_add_right _ _, by omega⟩, fun i hi => .inr ⟨Nat.le_add_right _ _, by omega⟩⟩
+  ⟨fun i hi => .inl ⟨Nat.le_add_right _ _, by omega⟩, fun i hi => .inr (.inl ⟨Nat.le_add_right _ _, by omega⟩),
+   fun i hi => .inr (.inr ⟨Nat.le_add_right _ _, by omega⟩)⟩
 
 theorem imageLive_present {c : Config} (image : ExecutableImage c) :
     ∀ a, imageLive a → (c.σ.mem[a]?).isSome := by
-  rintro a (⟨lo, hi⟩ | ⟨lo, hi⟩)
+  rintro a (⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩)
   · have h := image.text (a - Image.textBase) (by omega)
     rw [Nat.add_sub_cancel' lo] at h
     rw [h]; rfl
   · have h := image.rodata (a - Image.rodataBase) (by omega)
     rw [Nat.add_sub_cancel' lo] at h
     rw [h]; rfl
+  · have h := image.impure (a - Layout.sym_impure_ptr) (by omega)
+    rwa [Nat.add_sub_cancel' lo] at h
 
 theorem snpText_image : ∀ p ∈ snpText, imageLive p.1 := by
   apply forall_piecesText (P := fun a _ => imageLive a)
