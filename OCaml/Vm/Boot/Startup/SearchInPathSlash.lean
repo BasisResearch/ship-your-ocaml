@@ -138,6 +138,10 @@ theorem search_in_path_rooted (c : Config) (H : List (Nat × Nat)) (capacity cha
     gholds_lookup (n := 8) _ returned.regs (by rfl),
     (returned.toEffectPost.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans S.saved1,
     gholds_lookup (n := 18) _ returned.regs (by rfl), gholds_lookup (n := 19) _ returned.regs (by rfl),
+    fun k lo hi => (returned.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)).trans
+      ((S.upper k lo hi).trans ((dup.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)).trans
+        ((firstPost.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)).trans
+          (saved.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega))))),
     readyR, S.fresh, S.disjoint, ?_, ?_, S.aligned⟩⟩⟩
   · intro k hk
     rw [memR, S.bytes k hk]

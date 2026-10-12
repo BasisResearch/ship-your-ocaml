@@ -56,6 +56,8 @@ structure StrdupDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 name 
   saved0 : gprGet after.σ 8 = some s0
   saved1 : gprGet after.σ 9 = some s1
   saved23 : ∀ k ∈ [18, 19], gprGet after.σ k = gprGet before.σ k
+  /-- s4–s11 are never written. -/
+  upper : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
   ready : RuntimeReady ((copy.toNat, len + 1) :: H) capacity sp ra after
   fresh : heapStart ≤ copy.toNat ∧ copy.toNat + (len + 1) ≤ heapEnd
   disjoint : ∀ e ∈ H, ∀ a, InExt (copy.toNat, len + 1) a → ¬ InExt e a
@@ -257,9 +259,17 @@ theorem strdup_full (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
           ((B.saved_gpr (by decide)).trans ((A.toEffectPost.gpr_frame (by decide) _ (by decide) (by decide)
             (by decide)).trans ((M.measured.registers _ (by decide) (by decide) (by decide)).trans
               (M.opening.toEffectPost.gpr_frame (by decide) _ (by decide) (by decide) (by decide)))))))
+  have keepUpper (k : Nat) (lo : 20 ≤ k) (hi : k ≤ 27) : gprGet after.σ k = gprGet c.σ k := by
+    have range : 1 ≤ k ∧ k ≤ 31 := by omega
+    exact (E.toEffectPost.gpr_frame (by decide) _ range.1 range.2 (by simp; omega)).trans
+      ((regD _ range.1 range.2 (by simp only [mRegs, VsaIris.PC, List.mem_cons, List.mem_nil_iff, or_false]; omega)).trans
+        ((C.toEffectPost.gpr_frame (by decide) _ range.1 range.2 (by simp; omega)).trans
+          ((B.saved_gpr (by simp [abiSaved]; omega)).trans ((A.toEffectPost.gpr_frame (by decide) _ range.1 range.2
+            (by simp; omega)).trans ((M.measured.registers _ range.1 range.2 (by simp; omega)).trans
+              (M.opening.toEffectPost.gpr_frame (by decide) _ range.1 range.2 (by simp; omega)))))))
   refine ⟨after, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans run6)))), ⟨⟨vsaReg b 10,
     gholds_lookup (n := 10) _ E.regs (by rfl), E.pc, gholds_lookup (n := 2) _ E.regs (by rfl),
-    gholds_lookup (n := 8) _ E.regs (by rfl), gholds_lookup (n := 9) _ E.regs (by rfl), keep23, readyE,
+    gholds_lookup (n := 8) _ E.regs (by rfl), gholds_lookup (n := 9) _ E.regs (by rfl), keep23, keepUpper, readyE,
     ⟨pLow, pHigh⟩, fun e member a inside => pDisjoint e member a (by rw [sizeNat]; exact inside), ?_, ?_,
     B.allocation.result.align⟩⟩⟩
   · intro k hk

@@ -110,12 +110,12 @@ theorem ExtTableReturned.above {H capacity sp ra s0 t n before after}
     w.allocation.call.memory, w.allocation.setup.memory,
     frameOn_writeLog _ _ _ (extTableLog_inside short) a ⟨Or.inr caller, Or.inr above, trivial⟩]
 
-/-- Freeing the table keeps the caller's s0, s2 and s3. -/
+/-- Freeing the table keeps every callee-saved register except s1, which it restores from its frame. -/
 theorem ExtTableFreed.saved_gpr {H q n capacity sp ra s1 t before after k}
-    (w : ExtTableFreed H q n capacity sp ra s1 t before after) (member : k ∈ [8, 18, 19]) :
+    (w : ExtTableFreed H q n capacity sp ra s1 t before after) (member : k ∈ abiSaved) (notS1 : k ≠ 9) :
     gprGet after.σ k = gprGet before.σ k := by
-  have range : 1 ≤ k ∧ k ≤ 31 ∧ k ≠ 2 ∧ k ≠ 9 ∧ k ≠ 10 ∧ k ≠ 1 := by simp at member; omega
-  have freed := w.freed.saved_gpr (k := k) (by simp [vsaSaved] at member ⊢; omega)
+  have range : 1 ≤ k ∧ k ≤ 31 ∧ k ≠ 2 ∧ k ≠ 9 ∧ k ≠ 10 ∧ k ≠ 1 := by simp [abiSaved] at member; omega
+  have freed := w.freed.saved_gpr (k := k) member
   have tail := w.tail.toEffectPost.gpr_frame (by decide) k range.1 range.2.1 (by simp; omega)
   have zero := w.zero.toEffectPost.gpr_frame (by decide) k range.1 range.2.1 (by simp; omega)
   exact freed.trans (tail.trans zero)

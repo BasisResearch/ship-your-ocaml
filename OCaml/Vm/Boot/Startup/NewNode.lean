@@ -188,7 +188,7 @@ theorem new_node_slot1 (c : Config) (H : List (Nat × Nat)) (capacity charge : N
   have reg (n : Nat) (v : BitVec 64) (lower : 1 ≤ n) (upper : n ≤ 31) (member : n ∈ vsaSaved)
       (copyOut : n ∉ [11, 12] ++ [1]) (memOut : n ∉ mRegs) (hv : gprGet m0.σ n = some v) : gprGet y.σ n = some v :=
     (Y.registers n lower upper memOut).trans ((copy.toEffectPost.gpr_frame (by decide) n lower upper copyOut).trans
-      ((M.saved_gpr readyM.platform member).trans hv))
+      ((M.saved_gpr readyM.platform (abiSaved_of_vsaSaved member)).trans hv))
   have pNat : ((vsaReg m 10) + k).toNat = (vsaReg m 10).toNat + k.toNat := by
     rw [BitVec.toNat_add]
     apply Nat.mod_eq_of_lt

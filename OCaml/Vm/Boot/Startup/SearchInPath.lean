@@ -16,6 +16,8 @@ structure SearchInPathDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1
   saved1 : gprGet after.σ 9 = some s1
   saved2 : gprGet after.σ 18 = some s2
   saved3 : gprGet after.σ 19 = some s3
+  /-- s4–s11 are never written. -/
+  upper : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
   ready : RuntimeReady ((copy.toNat, len + 1) :: H) capacity sp ra after
   fresh : heapStart ≤ copy.toNat ∧ copy.toNat + (len + 1) ≤ heapEnd
   disjoint : ∀ e ∈ H, ∀ a, InExt (copy.toNat, len + 1) a → ¬ InExt e a
@@ -147,6 +149,11 @@ theorem search_in_path_plain (c : Config) (H : List (Nat × Nat)) (capacity char
     gholds_lookup (n := 8) _ returned.regs (by rfl),
     (returned.toEffectPost.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans S.saved1,
     gholds_lookup (n := 18) _ returned.regs (by rfl), gholds_lookup (n := 19) _ returned.regs (by rfl),
+    fun k lo hi => (returned.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)).trans
+      ((S.upper k lo hi).trans ((dup.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)).trans
+        ((scanned.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)).trans
+          ((firstPost.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)).trans
+            (saved.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)))))),
     readyR, S.fresh, S.disjoint, ?_, ?_, S.aligned⟩⟩⟩
   · intro k hk
     rw [memR, S.bytes k hk]

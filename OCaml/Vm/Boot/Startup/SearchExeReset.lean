@@ -192,7 +192,7 @@ theorem reset_search_exe_returned_exists : ∃ initial after, Nonempty (ResetSea
         (gholds_lookup (n := 8) _ fcall.regs (by rfl)))
   obtain ⟨atRet, run9, returned⟩ := (search_exe_return atR attemptStack jal_800048ec_call.link trailSlot
     (BitVec.ofNat 64 WhileMinImage.argvArray) found.copy _ tableFreed.ready.toLeafInput searchFrame
-    ⟨tableFreed.ready.stack, (tableFreed.saved_gpr (k := 8) (by decide)).trans copyE, trivial⟩
+    ⟨tableFreed.ready.stack, (tableFreed.saved_gpr (k := 8) (by decide) (by decide)).trans copyE, trivial⟩
     (slotWord 40 _ (by simp [searchExeSlots])) (slotWord 32 _ (by simp [searchExeSlots]))
     (slotWord 24 _ (by simp [searchExeSlots])) (by decide)).run atR
     ⟨library_pc tableFreed.freed.free.good tableFreed.freed.free.result.frame.pc, rfl⟩
@@ -210,7 +210,7 @@ theorem reset_search_exe_returned_exists : ∃ initial after, Nonempty (ResetSea
     have range : 1 ≤ n ∧ n ≤ 31 := by simp at member; omega
     have unwritten : n ∉ [1, 10, 8, 9, 2] := by simp at member ⊢; omega
     exact (returned.toEffectPost.gpr_frame (by decide) n range.1 range.2 unwritten).trans
-      ((tableFreed.saved_gpr (k := n) (by simp at member ⊢; omega)).trans
+      ((tableFreed.saved_gpr (k := n) (by simp [abiSaved] at member ⊢; omega) (by simp at member; omega)).trans
         (toE n v range.1 range.2 (by simp at member ⊢; omega) hv))
   have callerA : CallerFrame attemptStack w.table.atSaved atRet := by
     constructor

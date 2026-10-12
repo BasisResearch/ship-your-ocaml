@@ -12,6 +12,19 @@ theorem RegistersPost.keep9 {writes mem before pc value regs after v}
     (unwritten : 9 ∉ writes) (h : gprGet before.σ 9 = some v) : gprGet after.σ 9 = some v :=
   (post.toEffectPost.gpr_frame keys 9 (by decide) (by decide) unwritten).trans h
 
+theorem BoundaryPost.keep {writes before ra pc regs after v} (k : Nat) (lower : 1 ≤ k) (upper : k ≤ 31)
+    (post : BoundaryPost writes before ra pc regs after) (keys : KeysOK writes)
+    (unwritten : k ∉ writes) (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
+  refine Eq.trans ?_ h
+  apply gprGet_of_frame k lower upper (gpr_avoids_noise k (by omega) lower)
+  · intro m hm
+    have bounds := keys m hm
+    exact gprReg_beq_false m (by omega) k (by omega) bounds.1 lower (fun e => unwritten (e ▸ hm))
+  · intro r noise outside
+    exact post.frame r (fun m hm => by
+      have ne := outside m hm
+      exact fun eq => by rw [eq, beq_self_eq_true] at ne; contradiction) noise
+
 theorem BoundaryPost.keep9 {writes before ra pc regs after v}
     (post : BoundaryPost writes before ra pc regs after) (keys : KeysOK writes)
     (unwritten : 9 ∉ writes) (h : gprGet before.σ 9 = some v) : gprGet after.σ 9 = some v := by
@@ -47,6 +60,33 @@ theorem allocator_keep9 {before after : Config} {r s v : BitVec 64}
     exact List.mem_map.mpr ⟨9, by decide, rfl⟩)
   rw [vsaReg_of_gprGet (by decide) h] at saved
   exact library_gpr post (by decide) (by decide) saved
+
+/-- The allocator never writes s4–s11. -/
+theorem allocator_keep_upper {before after : Config} {k : Nat} {v : BitVec 64}
+    (post : VsaOk startupLive after)
+    (registers : ∀ r, r ∉ VsaIris.Sym.aRegs → (vsaModel startupLive).reg after r = (vsaModel startupLive).reg before r)
+    (lo : 20 ≤ k) (hi : k ≤ 27) (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
+  have kept := registers k (by simp [VsaIris.Sym.aRegs]; omega)
+  rw [show (vsaModel startupLive).reg before k = vsaReg before k from rfl,
+    vsaReg_of_gprGet (by unfold VsaIris.PC; omega) h] at kept
+  exact library_gpr post (by omega) (by omega) kept
+
+theorem StatCheckedReturned.keep_upper {H capacity sp ra s0 n before after v k}
+    (w : StatCheckedReturned H capacity sp ra s0 n before after) (lo : 20 ≤ k) (hi : k ≤ 27)
+    (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
+  have a := (w.allocation.setup.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans h
+  have b := (w.allocation.call.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans a
+  have c := allocator_keep_upper w.allocation.allocation.good w.allocation.allocation.registers lo hi b
+  exact (w.returned.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans c
+
+theorem ExtTableReturned.keep_upper {H capacity sp ra s0 t n before after v k}
+    (w : ExtTableReturned H capacity sp ra s0 t n before after) (lo : 20 ≤ k) (hi : k ≤ 27)
+    (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
+  have a := (w.allocation.setup.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans h
+  have b := (w.allocation.call.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans a
+  have c := w.allocation.allocation.keep_upper lo hi b
+  have d := (w.publication.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans c
+  exact (w.post.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans d
 
 theorem StatCheckedReturned.keep9 {H capacity sp ra s0 n before after v}
     (w : StatCheckedReturned H capacity sp ra s0 n before after)

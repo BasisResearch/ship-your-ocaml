@@ -6,6 +6,12 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.Sym VsaIris
 variable {live : Nat → Prop}
 open VsaIris.MallocFast OCaml.Vm.Primitives
 
+/-- The RISC-V callee-saved integer registers s0–s11. -/
+def abiSaved : List Nat := [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
+
+theorem abiSaved_of_vsaSaved {k : Nat} (member : k ∈ vsaSaved) : k ∈ abiSaved := by
+  simp [vsaSaved, abiSaved] at member ⊢; omega
+
 /-- Recover any allocator-preserved ABI register from the shared return frame. -/
 theorem allocator_saved_register {before after : Config} {r s : BitVec 64}
     (pre : VsaOk live before) (post : VsaOk live after)
@@ -91,4 +97,16 @@ theorem allocator_summary [LibraryLive live] (c : Config) (H : List (Nat × Nat)
     (firstMallocSaved_keys _) charged input.stackOk input.aligned entry
     (room_shape input.room) input.room (allocator_stack_disjoint H s input.high)
   exact localRun_triple c (allocator_separate H s input.high) input.good input.readOnly certificate c rfl
+/-- The allocator keeps every callee-saved register: s0–s3 through its return
+frame, s4–s11 because it never writes them. -/
+theorem allocator_abi_register {before after : Config} {r s : BitVec 64}
+    (pre : VsaOk live before) (post : VsaOk live after)
+    (frame : RetFrame ((vsaModel live).reg after) r s (firstMallocSaved (vsaReg before)))
+    (registers : ∀ k, k ∉ aRegs → (vsaModel live).reg after k = (vsaModel live).reg before k)
+    (n : Nat) (member : n ∈ abiSaved) : gprGet after.σ n = gprGet before.σ n := by
+  by_cases saved : n ∈ vsaSaved
+  · exact allocator_saved_register pre post frame n saved
+  · have range : 1 ≤ n ∧ n ≤ 31 := by simp [abiSaved] at member; omega
+    exact library_register_frame pre post range.1 range.2 (registers n (by
+      simp [vsaSaved] at saved; simp [abiSaved] at member; simp [aRegs]; omega))
 end OCaml.Vm.Boot.Startup

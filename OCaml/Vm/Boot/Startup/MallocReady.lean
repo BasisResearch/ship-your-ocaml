@@ -57,11 +57,11 @@ theorem MallocReturnedL.other_gpr {H capacity n sp ra before after} (w : MallocR
     gprGet after.σ k = gprGet before.σ k :=
   library_register_frame platform w.allocation.good lower upper (w.allocation.registers k outside)
 
-/-- malloc keeps every library-saved register. -/
+/-- malloc keeps every callee-saved register. -/
 theorem MallocReturnedL.saved_gpr {H capacity n sp ra before after k}
     (w : MallocReturnedL live H capacity n sp ra before after) (platform : VsaOk live before)
-    (member : k ∈ vsaSaved) : gprGet after.σ k = gprGet before.σ k :=
-  allocator_saved_register platform w.allocation.good w.allocation.result.frame k member
+    (member : k ∈ abiSaved) : gprGet after.σ k = gprGet before.σ k :=
+  allocator_abi_register platform w.allocation.good w.allocation.result.frame w.allocation.registers k member
 
 /-- malloc keeps every byte at or above its caller's stack pointer. -/
 theorem MallocReturnedL.caller_byte {H capacity n sp ra before after a}

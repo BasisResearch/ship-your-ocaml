@@ -71,9 +71,9 @@ theorem StatAllocatedL.caller_byte {H capacity n sp ra before after a}
 
 /-- The allocation keeps every library-saved register. -/
 theorem StatAllocatedL.saved_gpr {H capacity n sp ra before after k}
-    (w : StatAllocatedL live H capacity n sp ra before after) (member : k ∈ vsaSaved) :
+    (w : StatAllocatedL live H capacity n sp ra before after) (member : k ∈ abiSaved) :
     gprGet after.σ k = gprGet before.σ k := by
-  have range : 1 ≤ k ∧ k ≤ 31 ∧ k ≠ 15 := by simp [vsaSaved] at member; omega
+  have range : 1 ≤ k ∧ k ≤ 31 ∧ k ≠ 15 := by simp [abiSaved] at member; omega
   have mid : gprGet w.atMalloc.σ k = gprGet before.σ k := by
     apply gprGet_of_frame k range.1 range.2.1 (gpr_avoids_noise k (by omega) range.1)
     · intro m hm
@@ -84,5 +84,6 @@ theorem StatAllocatedL.saved_gpr {H capacity n sp ra before after k}
       exact w.dispatch.frame r (fun m hm => by
         have ne := outside m hm
         exact fun e => by rw [e, beq_self_eq_true] at ne; contradiction) noise
-  exact (allocator_saved_register w.platform w.allocation.good w.allocation.result.frame k member).trans mid
+  exact (allocator_abi_register w.platform w.allocation.good w.allocation.result.frame w.allocation.registers k
+    member).trans mid
 end OCaml.Vm.Boot.Startup

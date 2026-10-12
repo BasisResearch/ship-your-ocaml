@@ -61,9 +61,9 @@ theorem stat_free_block (c : Config) (H : List (Nat × Nat)) (q : BitVec 64) (n 
 
 /-- The free keeps every library-saved register. -/
 theorem StatFreed.saved_gpr {H q n capacity sp ra before after k}
-    (w : StatFreed H q n capacity sp ra before after) (member : k ∈ vsaSaved) :
+    (w : StatFreed H q n capacity sp ra before after) (member : k ∈ abiSaved) :
     gprGet after.σ k = gprGet before.σ k := by
-  have range : 1 ≤ k ∧ k ≤ 31 ∧ k ≠ 15 ∧ k ≠ 14 := by simp [vsaSaved] at member; omega
+  have range : 1 ≤ k ∧ k ≤ 31 ∧ k ≠ 15 ∧ k ≠ 14 := by simp [abiSaved] at member; omega
   have mid : gprGet w.atFree.σ k = gprGet before.σ k := by
     apply gprGet_of_frame k range.1 range.2.1 (gpr_avoids_noise k (by omega) range.1)
     · intro m hm
@@ -78,5 +78,5 @@ theorem StatFreed.saved_gpr {H q n capacity sp ra before after k}
       exact w.dispatch.frame r (fun m hm => by
         have ne := outside m hm
         exact fun e => by rw [e, beq_self_eq_true] at ne; contradiction) noise
-  exact (allocator_saved_register w.platform w.ready.platform w.free.result.frame k member).trans mid
+  exact (allocator_abi_register w.platform w.ready.platform w.free.result.frame w.free.registers k member).trans mid
 end OCaml.Vm.Boot.Startup
