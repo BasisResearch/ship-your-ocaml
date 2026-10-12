@@ -5456,3 +5456,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.front
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.walk
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.named_value_summary
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.table_find
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.named_value_table

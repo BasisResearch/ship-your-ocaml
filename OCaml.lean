@@ -678,3 +678,4 @@ import OCaml.Vm.Sim.F1GrowthPaths
 import OCaml.Vm.Primitives.Named.NamedFront
 import OCaml.Vm.Primitives.Named.NamedChain
 import OCaml.Vm.Primitives.Named.NamedLookup
+import OCaml.Vm.Primitives.Named.NamedTable
