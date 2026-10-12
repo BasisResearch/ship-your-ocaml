@@ -614,12 +614,14 @@ theorem ob_bytes {ra sp v str ch dom lr : BitVec 64} {no nl : BitVec 63} {id fue
 
 /-- `caml_ml_output`'s model: a channel, a byte slice of a string at
 nonnegative offset and length, `putBlock` of the slice, `Val_unit`. -/
-theorem output_semantics {a b o n v : Val} {h h' : Heap} {w w' : World}
-    (sem : primF1Impl "caml_ml_output" [a, b, o, n] h w = .ok v h' w') :
+theorem output_semantics {name : String} {a b o n v : Val} {h h' : Heap} {w w' : World}
+    (nameOk : name = "caml_ml_output" ∨ name = "caml_ml_output_bytes")
+    (sem : primF1Impl name [a, b, o, n] h w = .ok v h' w') :
     ∃ id chn oi ni bs, chanOf? h a = some id ∧ w.chans[id]? = some chn ∧ intArg? o = some oi ∧
       intArg? n = some ni ∧ 0 ≤ oi ∧ 0 ≤ ni ∧
       byteSlice? h b oi.toNat ni.toNat = some bs ∧ putBlock w id bs (ni.toNat + 1) = some w' ∧
       v = Val.unit ∧ h' = h := by
+  rcases nameOk with rfl | rfl <;>
   cases hc : chanOf? h a with
   | none => simp [primF1Impl, hc] at sem
   | some id =>
@@ -764,29 +766,32 @@ theorem toInt_toNat_nonneg (n : BitVec 63) (h : 0 ≤ n.toInt) : n.toInt.toNat =
 
 /-- **`caml_ml_output` at a `C_CALL4` site**: the framed summary, for a
 console output channel. -/
-theorem output_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
-    {sp high domain : Nat} {env ra : BitVec 64} {c : Config} {l a id ch : Nat} {chn : Chan}
-    {D : InvocationData} {v : Val} {heap : Heap} {world : World}
-    (setup : CcallSetupPost ra (s.accu :: s.stack.take 3) L P s pl cp sp high domain 0x800166cc env c)
+theorem output_framed_at {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
+    {sp high domain entry : Nat} {env ra : BitVec 64} {c : Config} {l a id ch : Nat} {chn : Chan}
+    {D : InvocationData} {v : Val} {heap : Heap} {world : World} {name : String}
+    (nameOk : name = "caml_ml_output" ∨ name = "caml_ml_output_bytes")
+    (enter : LeafInput ra c → pcOf c = some (BitVec.ofNat 64 entry) → gpr c 10 = some (BitVec.ofNat 64 a) →
+      ∃ d regs, Steps c d ∧ WriteRegistersPost [] [] c 0x8001652c#64 (BitVec.ofNat 64 a) regs d)
+    (setup : CcallSetupPost ra (s.accu :: s.stack.take 3) L P s pl cp sp high domain entry env c)
     (arg : ChannelArg s c pl cp l a id ch chn) (inv : Invocation D c) (valid : NativeValid D)
     (rt : ConsoleWrite.ConsoleRuntime c) (ready : LibraryReady c)
     (consoleOf : chn.isOut = true → chn.fd ≠ -1 → OCaml.ConsoleChan s.world chn)
     (outside : PayloadChanOutside (consoleLog D.nativeSp ch) P s c pl cp sp id)
     (bindings : BindingsOutside (consoleLog D.nativeSp ch) P c)
     (stable : ConsoleStable L)
-    (sem : primF1Impl "caml_ml_output" (s.accu :: s.stack.take 3) s.heap s.world = .ok v heap world) :
-    FnSummary (BitVec.ofNat 64 0x800166cc) (fun x => x = c)
-      (FramedPrimitivePost L.runtimeOk P s pl cp sp high "caml_ml_output" (s.accu :: s.stack.take 3) v 1#64
+    (sem : primF1Impl name (s.accu :: s.stack.take 3) s.heap s.world = .ok v heap world) :
+    FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
+      (FramedPrimitivePost L.runtimeOk P s pl cp sp high name (s.accu :: s.stack.take 3) v 1#64
         heap world (consoleLog D.nativeSp ch) c ra) := by
   -- the model: three stack arguments, a slice of a placed string, `putBlock`
   obtain ⟨x1, x2, x3, rest, hst⟩ : ∃ x1 x2 x3 rest, s.stack = x1 :: x2 :: x3 :: rest := by
     match h : s.stack with
     | x1 :: x2 :: x3 :: rest => exact ⟨x1, x2, x3, rest, rfl⟩
-    | [] | [_] | [_, _] => rw [h] at sem; simp [primF1Impl] at sem
+    | [] | [_] | [_, _] => rw [h] at sem; rcases nameOk with rfl | rfl <;> simp [primF1Impl] at sem
   have args : s.accu :: s.stack.take 3 = [s.accu, x1, x2, x3] := by rw [hst]; rfl
   have sem0 := sem
   rw [args] at sem
-  obtain ⟨id', -, oi, ni, bs, hc, -, ho, hn, opos, npos, slice, model, rfl, rfl⟩ := output_semantics sem
+  obtain ⟨id', -, oi, ni, bs, hc, -, ho, hn, opos, npos, slice, model, rfl, rfl⟩ := output_semantics nameOk sem
   have hid : id' = id := by
     rw [arg.accu] at hc; simp [chanOf?, arg.object] at hc; exact hc.symm
   subst id'
@@ -839,9 +844,7 @@ theorem output_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : 
       rw [← heq, List.set_getElem_self]
     refine ⟨fun c0 ⟨pc0, e0⟩ => ?_⟩
     subst c0
-    let R : Nat → BitVec 64 := fun n => if n = 1 then ra else BitVec.ofNat 64 a
-    obtain ⟨d1, run1, p1⟩ := (Flush.MlOutput.tail_fast c R ⟨I.good, I.image, I.minstret, I.raReg, I.aligned, I.tick⟩
-      ⟨I.raReg, I.valReg, True.intro⟩).run c ⟨pc0, rfl⟩
+    obtain ⟨d1, regs1, run1, p1⟩ := enter ⟨I.good, I.image, I.minstret, I.raReg, I.aligned, I.tick⟩ pc0 I.valReg
     obtain ⟨e, run2, Dn⟩ := ob_empty (ObInput.jump I p1) p1.pc npos (by simpa using blen.symm)
       (ChanAt.of_bytes (by rw [arg.pointer]; exact arg.repr) fun x _ _ => b1 p1 x)
       (by rw [← setup.input.data.world.output]; unfold Vsa.Machine.output; rw [p1.output])
@@ -866,10 +869,8 @@ theorem output_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : 
       rt := rt, ready := ready }
   refine ⟨fun c0 ⟨pc0, e0⟩ => ?_⟩
   subst c0
-  -- the tail jump into `caml_ml_output_bytes`
-  let R : Nat → BitVec 64 := fun n => if n = 1 then ra else BitVec.ofNat 64 a
-  obtain ⟨d1, run1, p1⟩ := (Flush.MlOutput.tail_fast c R ⟨I.good, I.image, I.minstret, I.raReg, I.aligned, I.tick⟩
-    ⟨I.raReg, I.valReg, True.intro⟩).run c ⟨pc0, rfl⟩
+  -- into `caml_ml_output_bytes`' entry
+  obtain ⟨d1, regs1, run1, p1⟩ := enter ⟨I.good, I.image, I.minstret, I.raReg, I.aligned, I.tick⟩ pc0 I.valReg
   obtain ⟨e, chnF, run2, Dn, chanF⟩ := ob_bytes (ObInput.jump I p1) p1.pc
     opos npos blen (M.jump p1) model
   obtain ⟨cF, hshape⟩ := ConsoleWrite.putBlock_shape arg.chan model
@@ -883,5 +884,63 @@ theorem output_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : 
   exact ⟨e, run1.trans run2, framed_of_ret setup inv valid (by simp only [Layout.sym_stack_top]; have := GL.high; omega)
     (ConsoleRet.jump p1 Dn.ret) memory outside bindings stable arg.chan arg.record
     (by rw [hshape]) (by rw [hshape]) (by rw [hshape]; rfl) (by rw [← arg.pointer]; exact Dn.repr) Dn.console sem0⟩
+
+/-- A configuration is its own empty run's register post. -/
+theorem WriteRegistersPost.refl {c : Config} {pc value : BitVec 64} (good : GoodState c.σ)
+    (image : ExecutableImage c) (minstret : ∃ w, c.σ.regs.get? LeanRV64DExecutable.Register.minstret = some w)
+    (tick : c.tick < 2) (pcAt : pcOf c = some pc) (result : gpr c 10 = some value) :
+    WriteRegistersPost [] [] c pc value [] c :=
+  ⟨⟨good, image, minstret, tick, pcAt, result, rfl, rfl, fun _ _ _ => rfl⟩, True.intro⟩
+
+/-- Entering `caml_ml_output_bytes`' body from an entry `entry`: registers and
+memory unchanged. -/
+def ObEnter (entry : Nat) : Prop :=
+  ∀ (c : Config) (ra : BitVec 64) (a : Nat), LeafInput ra c → pcOf c = some (BitVec.ofNat 64 entry) →
+    gpr c 10 = some (BitVec.ofNat 64 a) →
+    ∃ d regs, Steps c d ∧ WriteRegistersPost [] [] c 0x8001652c#64 (BitVec.ofNat 64 a) regs d
+
+/-- `caml_ml_output` is a tail `j` into `caml_ml_output_bytes`. -/
+theorem output_enter : ObEnter 0x800166cc := fun c ra a leaf pc0 a0 => by
+  let R : Nat → BitVec 64 := fun n => if n = 1 then ra else BitVec.ofNat 64 a
+  obtain ⟨d1, run1, p1⟩ := (Flush.MlOutput.tail_fast c R leaf ⟨leaf.raReg, a0, True.intro⟩).run c ⟨pc0, rfl⟩
+  exact ⟨d1, _, run1, p1⟩
+
+/-- `caml_ml_output_bytes` is entered directly. -/
+theorem output_bytes_enter : ObEnter 0x8001652c := fun c _ _ leaf pc0 a0 =>
+  ⟨c, [], Steps.refl c, WriteRegistersPost.refl leaf.good leaf.image leaf.minstret leaf.tick pc0 a0⟩
+
+/-- **`caml_ml_output`**: the tail `j` into `caml_ml_output_bytes`, then its run. -/
+theorem output_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
+    {sp high domain : Nat} {env ra : BitVec 64} {c : Config} {l a id ch : Nat} {chn : Chan}
+    {D : InvocationData} {v : Val} {heap : Heap} {world : World}
+    (setup : CcallSetupPost ra (s.accu :: s.stack.take 3) L P s pl cp sp high domain 0x800166cc env c)
+    (arg : ChannelArg s c pl cp l a id ch chn) (inv : Invocation D c) (valid : NativeValid D)
+    (rt : ConsoleWrite.ConsoleRuntime c) (ready : LibraryReady c)
+    (consoleOf : chn.isOut = true → chn.fd ≠ -1 → OCaml.ConsoleChan s.world chn)
+    (outside : PayloadChanOutside (consoleLog D.nativeSp ch) P s c pl cp sp id)
+    (bindings : BindingsOutside (consoleLog D.nativeSp ch) P c)
+    (stable : ConsoleStable L)
+    (sem : primF1Impl "caml_ml_output" (s.accu :: s.stack.take 3) s.heap s.world = .ok v heap world) :
+    FnSummary (BitVec.ofNat 64 0x800166cc) (fun x => x = c)
+      (FramedPrimitivePost L.runtimeOk P s pl cp sp high "caml_ml_output" (s.accu :: s.stack.take 3) v 1#64
+        heap world (consoleLog D.nativeSp ch) c ra) :=
+  output_framed_at (Or.inl rfl) (output_enter c ra a) setup arg inv valid rt ready consoleOf outside bindings stable sem
+
+/-- **`caml_ml_output_bytes`**: entered directly. -/
+theorem output_bytes_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
+    {sp high domain : Nat} {env ra : BitVec 64} {c : Config} {l a id ch : Nat} {chn : Chan}
+    {D : InvocationData} {v : Val} {heap : Heap} {world : World}
+    (setup : CcallSetupPost ra (s.accu :: s.stack.take 3) L P s pl cp sp high domain 0x8001652c env c)
+    (arg : ChannelArg s c pl cp l a id ch chn) (inv : Invocation D c) (valid : NativeValid D)
+    (rt : ConsoleWrite.ConsoleRuntime c) (ready : LibraryReady c)
+    (consoleOf : chn.isOut = true → chn.fd ≠ -1 → OCaml.ConsoleChan s.world chn)
+    (outside : PayloadChanOutside (consoleLog D.nativeSp ch) P s c pl cp sp id)
+    (bindings : BindingsOutside (consoleLog D.nativeSp ch) P c)
+    (stable : ConsoleStable L)
+    (sem : primF1Impl "caml_ml_output_bytes" (s.accu :: s.stack.take 3) s.heap s.world = .ok v heap world) :
+    FnSummary (BitVec.ofNat 64 0x8001652c) (fun x => x = c)
+      (FramedPrimitivePost L.runtimeOk P s pl cp sp high "caml_ml_output_bytes" (s.accu :: s.stack.take 3) v 1#64
+        heap world (consoleLog D.nativeSp ch) c ra) :=
+  output_framed_at (Or.inr rfl) (output_bytes_enter c ra a) setup arg inv valid rt ready consoleOf outside bindings stable sem
 
 end OCaml.Vm.Sim

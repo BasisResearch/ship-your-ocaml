@@ -333,6 +333,9 @@ import OCaml.Vm.Primitives.ChannelFrame
 import OCaml.Vm.Sim.PrimMlFlush
 import OCaml.Vm.Sim.PrimMlOutputChar
 import OCaml.Vm.Sim.PrimConsoleReturns
+import OCaml.Vm.Sim.PrimIntCompareReturns
+import OCaml.Vm.Primitives.AllocPlaces
+import OCaml.Vm.Sim.PrimConstReturns
 import OCaml.Vm.Primitives.Flush.MlOutput
 import OCaml.Vm.Sim.PrimMlOutput
 import OCaml.Vm.Primitives.Console.Geometry
@@ -5468,3 +5471,24 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms VsaIris.Sym.svf_convL
 #print axioms VsaIris.Sym.svf_intL
 #print axioms VsaIris.Sym.svf_iterLD
+#print axioms OCaml.Vm.Sim.prim_output_returns_at
+#print axioms OCaml.Vm.Sim.prim_caml_ml_output_bytes_returns
+#print axioms OCaml.Vm.Primitives.LeafPost.toRegisterPost
+#print axioms OCaml.Vm.Sim.prim_constant_returns
+#print axioms OCaml.Vm.Sim.prim_caml_sys_const_naked_pointers_checked_returns
+#print axioms OCaml.Vm.Sim.prim_caml_sys_const_big_endian_returns
+#print axioms OCaml.Vm.Sim.prim_caml_sys_const_word_size_returns
+#print axioms OCaml.Vm.Sim.prim_caml_sys_const_int_size_returns
+#print axioms OCaml.Vm.Sim.prim_caml_sys_const_max_wosize_returns
+#print axioms OCaml.Vm.Sim.prim_caml_sys_const_ostype_unix_returns
+#print axioms OCaml.Vm.Sim.prim_caml_sys_const_ostype_win32_returns
+#print axioms OCaml.Vm.Sim.prim_caml_sys_const_ostype_cygwin_returns
+#print axioms OCaml.Vm.Sim.prim_caml_sys_const_backend_type_returns
+#print axioms OCaml.Vm.Sim.prim_caml_int_compare_returns
+#print axioms OCaml.Vm.Sim.output_framed_at
+#print axioms OCaml.Vm.Sim.WriteRegistersPost.refl
+#print axioms OCaml.Vm.Sim.output_enter
+#print axioms OCaml.Vm.Sim.output_bytes_enter
+#print axioms OCaml.Vm.Sim.output_bytes_framed
+#print axioms OCaml.Vm.Sim.prim_length_returns
+#print axioms OCaml.Vm.Sim.prim_caml_ml_bytes_length_returns

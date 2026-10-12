@@ -107,6 +107,11 @@
   `ob_empty`; console facts from `putBlock_open` + `ConsoleChannels`), `LibraryReady` from
   `CcallSetupPost.libraryReady` with the named premise `CcallEntryGprs L` (OPEN_PARAMS
   `ccall_entry_gprs` in `gen_f1_table.py`; a1-arms discharges it with `LoopRegisters.gprs`).
+* **Read-only `PrimReturnsAt` at every C_CALL opcode** (for `CcallReturns.of_primsF1`):
+  `prim_constant_returns` (`LeafPost.toRegisterPost`, `const_shape`) for the nine
+  `caml_sys_const_*`; `prim_length_returns` for string/bytes length; `prim_caml_int_compare_returns`.
+  `prim_caml_ml_output_bytes_returns` via `prim_output_returns_at` (`ObEnter`: `output_enter` is
+  the tail `j`, `output_bytes_enter` the identity). Gaps for the rest of `primsF1`: see PHASES.
 * whileMin `PrimReturnsAt` summaries (picked up by `scripts/gen_f1_table.py`; regenerate
   WhileMinTable.lean in the same batch): `prim_caml_ml_string_length_returns` and
   `prim_caml_fresh_oo_id_returns` (`f1_counterStable` from a6-gc's `f1_ignoredStatic`) done.

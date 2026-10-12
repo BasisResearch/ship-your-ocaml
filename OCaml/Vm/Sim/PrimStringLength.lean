@@ -1,20 +1,34 @@
 import OCaml.Vm.Sim.CcallNames
 import OCaml.Vm.Primitives.CamlMlStringLength
+import OCaml.Vm.Primitives.CamlMlBytesLength
 
-/-! `caml_ml_string_length` at a `C_CALL1` site: its represented read-only
-summary, from the call-site contract and the heap geometry of the string. -/
+/-! `caml_ml_string_length` and `caml_ml_bytes_length` at every `C_CALL`
+site: the represented read-only summary, from the call-site contract and the
+heap geometry of the string. -/
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
-open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
+open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
-theorem prim_caml_ml_string_length_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64}
-    (stable : MemoryStable L.runtimeOk) :
-    PrimReturnsAt L P .C_CALL1 ra 0 "caml_ml_string_length" := by
+/-- **A length primitive returns at every `C_CALL` site.** -/
+theorem prim_length_returns {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
+    {name : String} {sym : Nat}
+    (nameOk : name = "caml_ml_string_length" ∨ name = "caml_ml_bytes_length")
+    (lookup : PrimitiveEntries.lookup name = some sym)
+    (prim : ∀ {P s pl cp sp high ra l o n a c},
+      StringInput L.runtimeOk P s pl cp sp high ra l o n a c →
+      FnSummary (BitVec.ofNat 64 sym) (fun x => x = c)
+        (OCaml.Vm.Primitives.ImmediatePost L.runtimeOk P s pl cp sp high name [.ptr l 0] (BitVec.ofNat 63 n) [10, 14, 15] c ra)) :
+    PrimReturnsAt L P op ra k name := by
   intro s c pl cp sp high table entry value env index v heap world reach ready sem
-  simp only [List.take_zero] at sem ⊢
-  obtain ⟨l, o, n, hx, ho, hn, rfl, rfl, rfl⟩ := string_length_inv (Or.inl rfl) sem
-  have hentry : entry = Layout.sym_caml_ml_string_length := by
-    exact Option.some.inj (ready.entryName.symm.trans PrimitiveEntries.entry_caml_ml_string_length)
+  have one : s.stack.take k = [] := by
+    cases e : s.stack.take k with
+    | nil => rfl
+    | cons y ys =>
+      rw [e] at sem
+      rcases nameOk with rfl | rfl <;> cases ys <;> simp [primF1Impl] at sem
+  rw [one] at sem ⊢
+  obtain ⟨l, o, n, hx, ho, hn, rfl, rfl, rfl⟩ := string_length_inv nameOk sem
+  have hentry : entry = sym := Option.some.inj (ready.entryName.symm.trans lookup)
   subst hentry
   have live : Live s.heap (roots P s) l := Live.root (v := .ptr l 0) (by simp [roots, hx]) rfl
   obtain ⟨a, o', placed, obj', -⟩ := ready.heap.1 l live
@@ -32,13 +46,26 @@ theorem prim_caml_ml_string_length_returns {L : OCaml.Layout} {P : Prog} {ra : B
   have ofInt : Val.ofInt (n : Int) = .int (BitVec.ofNat 63 n) := by simp [Val.ofInt]
   rw [ofInt]
   refine ⟨tag64 (BitVec.ofNat 63 n), ?_⟩
-  have model : primF1Impl "caml_ml_string_length" [s.accu] s.heap s.world =
+  have model : primF1Impl name [s.accu] s.heap s.world =
       .ok (.int (BitVec.ofNat 63 n)) s.heap s.world := by
-    rw [hx, string_length_semantics ho hn (Or.inl rfl), ofInt]
-  apply ccall_callee_of_readOnly (writes := [10, 14, 15]) (by decide) model (by decide)
+    rw [hx, string_length_semantics ho hn nameOk, ofInt]
+  apply ccall_callee_of_readOnly (writes := [10, 14, 15]) (by rcases nameOk with rfl | rfl <;> decide) model
+    (by decide)
   intro c' input
   rw [hx] at input ⊢
-  exact caml_ml_string_length_primitive stable
+  exact prim
     { input with accu := hx, placed := placed, heapObject := ho, length := hn, geometry := geom }
+
+theorem prim_caml_ml_string_length_returns {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64}
+    {k : Nat} (stable : MemoryStable L.runtimeOk) :
+    PrimReturnsAt L P op ra k "caml_ml_string_length" :=
+  prim_length_returns (Or.inl rfl) PrimitiveEntries.entry_caml_ml_string_length
+    (caml_ml_string_length_primitive stable)
+
+theorem prim_caml_ml_bytes_length_returns {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64}
+    {k : Nat} (stable : MemoryStable L.runtimeOk) :
+    PrimReturnsAt L P op ra k "caml_ml_bytes_length" :=
+  prim_length_returns (Or.inr rfl) PrimitiveEntries.entry_caml_ml_bytes_length
+    (caml_ml_bytes_length_primitive stable)
 
 end OCaml.Vm.Sim

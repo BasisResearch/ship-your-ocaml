@@ -138,29 +138,46 @@ def CcallEntryGprs (L : OCaml.Layout) : Prop :=
     (sp high domain entry : Nat) (env : BitVec 64) (c : Config),
     CcallSetupPost ra args L P s pl cp sp high domain entry env c → OCaml.Vm.Boot.Startup.GprPresent c.σ
 
-/-- **`caml_ml_output` returns at a `C_CALL4` site.** -/
-theorem prim_caml_ml_output_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64}
+/-- **`caml_ml_output` / `caml_ml_output_bytes` return at a `C_CALL4` site.** -/
+theorem prim_output_returns_at {L : OCaml.Layout} {P : Prog} {ra : BitVec 64} {name : String} {sym : Nat}
+    (nameOk : name = "caml_ml_output" ∨ name = "caml_ml_output_bytes")
+    (lookup : PrimitiveEntries.lookup name = some sym) (enter : ObEnter sym)
     (consoleStable : ConsoleStable L) (consoleRt : ∀ c, L.runtimeOk c → ConsoleWrite.ConsoleRuntime c)
     (consoles : OCaml.ConsoleChannels P) (entryGprs : CcallEntryGprs L) :
-    PrimReturnsAt L P .C_CALL4 ra 3 "caml_ml_output" := by
+    PrimReturnsAt L P .C_CALL4 ra 3 name := by
   intro s c0 pl cp sp high table entry value env index v heap world reach ready sem
   obtain ⟨x1, x2, x3, rest, hst⟩ : ∃ x1 x2 x3 rest, s.stack = x1 :: x2 :: x3 :: rest := by
     match h : s.stack with
     | x1 :: x2 :: x3 :: rest => exact ⟨x1, x2, x3, rest, rfl⟩
-    | [] | [_] | [_, _] => rw [h] at sem; simp [primF1Impl] at sem
+    | [] | [_] | [_, _] => rw [h] at sem; rcases nameOk with rfl | rfl <;> simp [primF1Impl] at sem
   have args : s.accu :: s.stack.take 3 = [s.accu, x1, x2, x3] := by rw [hst]; rfl
   have sem0 := sem
   rw [args] at sem
-  obtain ⟨id, chn, oi, ni, bs, hc, hw, ho, hn, opos, npos, slice, model, rfl, rfl⟩ := output_semantics sem
-  have hentry : entry = Layout.sym_caml_ml_output :=
-    Option.some.inj (ready.entryName.symm.trans PrimitiveEntries.entry_caml_ml_output)
+  obtain ⟨id, chn, oi, ni, bs, hc, hw, ho, hn, opos, npos, slice, model, rfl, rfl⟩ := output_semantics nameOk sem
+  have hentry : entry = sym := Option.some.inj (ready.entryName.symm.trans lookup)
   subst hentry
   obtain ⟨cF, hshape⟩ := ConsoleWrite.putBlock_shape hw model
-  refine ⟨1#64, by decide, sem0, fun c setup => ?_⟩
+  refine ⟨1#64, by rcases nameOk with rfl | rfl <;> decide, sem0, fun c setup => ?_⟩
   obtain ⟨D, l, a, ch, site⟩ := console_site ready setup (by rw [args]; rfl) hc hw
   exact console_callee_summary ready setup site.inv site.valid site.arg rfl (by rw [hshape])
-    (output_framed setup site.arg site.inv site.valid (consoleRt c setup.input.runtime)
+    (output_framed_at nameOk (enter c ra a) setup site.arg site.inv site.valid (consoleRt c setup.input.runtime)
       (setup.libraryReady (entryGprs _ _ _ _ _ _ _ _ _ _ _ _ setup))
       (consoles s reach id chn hw) site.outside site.bindings consoleStable sem0)
+
+/-- **`caml_ml_output` returns at a `C_CALL4` site.** -/
+theorem prim_caml_ml_output_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64}
+    (consoleStable : ConsoleStable L) (consoleRt : ∀ c, L.runtimeOk c → ConsoleWrite.ConsoleRuntime c)
+    (consoles : OCaml.ConsoleChannels P) (entryGprs : CcallEntryGprs L) :
+    PrimReturnsAt L P .C_CALL4 ra 3 "caml_ml_output" :=
+  prim_output_returns_at (Or.inl rfl) PrimitiveEntries.entry_caml_ml_output output_enter
+    consoleStable consoleRt consoles entryGprs
+
+/-- **`caml_ml_output_bytes` returns at a `C_CALL4` site.** -/
+theorem prim_caml_ml_output_bytes_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64}
+    (consoleStable : ConsoleStable L) (consoleRt : ∀ c, L.runtimeOk c → ConsoleWrite.ConsoleRuntime c)
+    (consoles : OCaml.ConsoleChannels P) (entryGprs : CcallEntryGprs L) :
+    PrimReturnsAt L P .C_CALL4 ra 3 "caml_ml_output_bytes" :=
+  prim_output_returns_at (Or.inr rfl) PrimitiveEntries.entry_caml_ml_output_bytes output_bytes_enter
+    consoleStable consoleRt consoles entryGprs
 
 end OCaml.Vm.Sim
