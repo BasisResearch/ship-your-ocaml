@@ -3,9 +3,9 @@ from census import ROOT, read_mem
 from stdio_layout import layout
 
 
-def image_source(old,new,secs,relocate):
+def image_source(old,new,secs,relocate,extra=()):
     code=[]
-    for name in old['functions']:
+    for name in list(old['functions'])+list(extra):
         for pc,w,*_ in new[name]['insts']:
             code.extend((pc+i,(w>>(8*i))&255) for i in range(4))
     base,size=old['conversion_table']; lo=relocate(base); hi=relocate(base+size)

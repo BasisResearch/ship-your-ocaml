@@ -322,6 +322,13 @@ private theorem snp_10_1 : TextAgrees snpCodeImg 0x800528d0 148 := by
 private theorem snp_range_10 : TextAgrees snpCodeImg 0x800527d0 404 :=
   (textAgrees_split (n := 256) (by decide) snp_10_0 snp_10_1)
 
+private theorem snp_11_0 : TextAgrees snpCodeImg 0x8004018c 188 := by
+  unfold TextAgrees
+  decide +kernel
+
+private theorem snp_range_11 : TextAgrees snpCodeImg 0x8004018c 188 :=
+  snp_11_0
+
 /-- The snprintf/strlen footprint is present in every executable image. -/
 theorem snp_text_loaded {c : Vsa.Machine.Config} (image : ExecutableImage c) :
     ∀ p ∈ snpText, c.σ.mem[p.1]? = some p.2 := by
@@ -331,7 +338,7 @@ theorem snp_text_loaded {c : Vsa.Machine.Config} (image : ExecutableImage c) :
   subst hq
   obtain ⟨r, hr, low, high⟩ := inRangesB_iff.1 ha
   simp only [snpCodeRanges, List.mem_cons, List.not_mem_nil, or_false] at hr
-  rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · exact textAgrees_loaded image snp_range_0 (by decide) (by decide) a low (by simpa using high)
   · exact textAgrees_loaded image snp_range_1 (by decide) (by decide) a low (by simpa using high)
   · exact textAgrees_loaded image snp_range_2 (by decide) (by decide) a low (by simpa using high)
@@ -343,6 +350,7 @@ theorem snp_text_loaded {c : Vsa.Machine.Config} (image : ExecutableImage c) :
   · exact textAgrees_loaded image snp_range_8 (by decide) (by decide) a low (by simpa using high)
   · exact textAgrees_loaded image snp_range_9 (by decide) (by decide) a low (by simpa using high)
   · exact textAgrees_loaded image snp_range_10 (by decide) (by decide) a low (by simpa using high)
+  · exact textAgrees_loaded image snp_range_11 (by decide) (by decide) a low (by simpa using high)
 
 private theorem memcpy_0 : TextAgrees (fun a => memcpyCode.getD (a - memcpyBase) 0#8)
     (memcpyBase + 0) 256 := by

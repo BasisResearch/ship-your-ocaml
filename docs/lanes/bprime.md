@@ -137,9 +137,29 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
     `BufferInput`, `2 ≤ n`, the buffer above the frame (`buf = sp` at
     caml_format_int's call), and the conversion test. The test is proved for
     all bytes by one kernel check (`plain_guard_all`).
-  * Next: caml_alloc_sprintf, i.e. vsnprintf `%ld` (the LONGINT variant of
-    upstream `svf_iterLLD`), then caml_alloc_initialized_string, then
-    caml_format_int and its C_CALL2 adapter.
+  * `_svfprintf_r` on `%ld` (`Format/SvfLong.lean`): `svf_convL`,
+    `svf_intL` and `svf_iterLD` are proved, alongside upstream's `%lld`.
+    `IntAt` admits the LONGINT flag 16 (template change). Restored after
+    41c1c810 dropped it in a rebase.
+  * `vsnprintf` joins `snpText`: `retarget_stdio_specs.EXTRA_CODE`, its bytes
+    in `snpCodeImg`, `LibraryText` regenerated. Its step table
+    (`Format/VsnprintfSteps.lean`, 72 lemmas, all 47 instructions) comes from
+    `scripts/syi/gen_snp_extra.py`, ported from syi's `gen_interp_steps.py
+    --target snp` (stage a5).
+  * **Obstruction (the vsnprintf wrapper):** the retargeted `_svfprintf_r`
+    battery is specialized to `snprintf`'s caller layout.
+    - svf's entry fixes `R 2 = s - 272` and the FILE at `s - 264`, so for
+      vsnprintf (224-byte frame) `s = sp + 48`.
+    - `SnpGeom.d_sep` puts the buffer outside `[s - 1024, s)`, but
+      caml_alloc_sprintf's buffer is at `sp + 16`.
+    - The va_list must lie in `[s - 40, s)`, owned stack (`hap1`/`hap2`,
+      `ld_ap`, `ArgsAt`); caml_alloc_sprintf's spill is at its `sp + 184`.
+    vsnprintf is therefore not an instance. The fix is a generalization of the
+    battery's caller layout: frame base, buffer placement, and the va_list
+    region as data or owned bytes, across the stdio templates (~300 uses of
+    `s - 864`, `snpFP`, `s - 40`, `d_sep`).
+  * Then caml_alloc_initialized_string (`alloc_string_nursery` + memcpy),
+    caml_format_int, and its C_CALL2 adapter.
   * Library calls need `VsaOk` (all 31 GPRs present) at the C_CALL callee
     entry. For now it is a premise (as in a1-prims' primitives); a0-boot is
     asked whether `VsaOk.gpr` can be weakened.
@@ -159,6 +179,13 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   * `heapBlock : (a, recordBytes) ∈ H'` over a0-boot's `HeapReady`;
   * a frame: the open writes only the new record, the list head, the old
     head's `prev`, and malloc's footprint.
+  * a6-gc's `Gc.LibHeapAt.link` (F1Heap.lean) consumes it:
+    - `ready` (caml_stat_alloc's `HeapReady` over `(a, req) :: H`, with
+      `cap = cap' + charge`, `charge ≤ 2^17`);
+    - `big` (`72 + 65536 ≤ req`), `fresh` (disjoint from H), `linked`;
+    - `keepTable`/`keepLinks`, from the byte frame;
+    - `chs.length < 64`, which stays a premise of the open.
+    a6-gc writes `f1_open` once the post's shape is fixed.
 
 **F1 output is console output; primitive split (2026-10-06)**
 - `GoodF1.consoles : ConsoleChannels P`: in every reachable state, every open

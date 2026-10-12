@@ -668,6 +668,8 @@ import OCaml.Vm.Primitives.Format.StringLengthCall
 import OCaml.Vm.Primitives.Format.AllocSprintf
 import OCaml.Vm.Primitives.Format.FormatInt
 import OCaml.Vm.Primitives.Format.ParseFormatCall
+import OCaml.Vm.Primitives.Format.SvfLong
+import OCaml.Vm.Primitives.Format.VsnprintfSteps
 import OCaml.Vm.Sim.CamlModifyImage
 import OCaml.Vm.Sim.BarrierF1
 import OCaml.Vm.Sim.BarrierKeep
