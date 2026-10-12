@@ -88,6 +88,35 @@ theorem ExtTableReturned.keep_upper {H capacity sp ra s0 t n before after v k}
   have d := (w.publication.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans c
   exact (w.post.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans d
 
+theorem allocator_keep_saved {before after : Config} {r s v : BitVec 64} {k : Nat}
+    (post : VsaOk startupLive after)
+    (frame : RetFrame ((vsaModel startupLive).reg after) r s (firstMallocSaved (vsaReg before)))
+    (member : k ∈ vsaSaved) (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
+  have range : 1 ≤ k ∧ k ≤ 31 := by simp [vsaSaved] at member; omega
+  have saved := frame.saved (k, vsaReg before k) (by
+    change (k, vsaReg before k) ∈ vsaSaved.map (fun k => (k, vsaReg before k))
+    exact List.mem_map.mpr ⟨k, member, rfl⟩)
+  rw [vsaReg_of_gprGet (by unfold VsaIris.PC; omega) h] at saved
+  exact library_gpr post range.1 range.2 saved
+
+/-- Table initialization keeps s1, s2 and s3. -/
+theorem ExtTableReturned.keep_saved {H capacity sp ra s0 t n before after v k}
+    (w : ExtTableReturned H capacity sp ra s0 t n before after) (member : k ∈ [9, 18, 19])
+    (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
+  have range : 1 ≤ k ∧ k ≤ 31 := by simp at member; omega
+  have a := (w.allocation.setup.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢; omega)).trans h
+  have b := (w.allocation.call.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢; omega)).trans a
+  have b2 := (w.allocation.allocation.allocation.setup.toEffectPost.gpr_frame (by decide) k range.1 range.2
+    (by simp at member ⊢; omega)).trans b
+  have b3 := (w.allocation.allocation.allocation.call.toEffectPost.gpr_frame (by decide) k range.1 range.2
+    (by simp at member ⊢; omega)).trans b2
+  have c := allocator_keep_saved w.allocation.allocation.allocation.allocation.good
+    w.allocation.allocation.allocation.allocation.result.frame (by simp [vsaSaved] at member ⊢; omega) b3
+  have c2 := (w.allocation.allocation.returned.toEffectPost.gpr_frame (by decide) k range.1 range.2
+    (by simp at member ⊢; omega)).trans c
+  have d := (w.publication.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢ <;> omega)).trans c2
+  exact (w.post.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢; omega)).trans d
+
 theorem StatCheckedReturned.keep9 {H capacity sp ra s0 n before after v}
     (w : StatCheckedReturned H capacity sp ra s0 n before after)
     (h : gprGet before.σ 9 = some v) : gprGet after.σ 9 = some v := by
