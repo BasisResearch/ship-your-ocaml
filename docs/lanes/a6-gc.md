@@ -9,9 +9,12 @@
 - `ExecutableImage.impure`: the 8 bytes of `_impure_ptr` (the one `.data`
   word in `allocText`) are present. `ImageLive.impure` and `imageLive` include
   it, and `PlatformFrame` frames it.
+- `Gc.f1_observation_of` (`F1Observation.lean`): every
+  `AllocationRuntime f1Runtime c log` gives
+  `ObservationRuntime f1Runtime c (writeLog view)`, via `f1_totalMemory`
+  (F1 reads memory only totally). For a1-prims' allocating primitives.
 - Next: `LibraryLive imageLive`, then the Gc growth chain on `imageLive`, which
-  drops `f1_barrierGrowth_dense`'s `dense` premise; and `Gc.f1_observation`
-  (`ObservationRuntime` for a write log's total view) for a1-prims.
+  drops `f1_barrierGrowth_dense`'s `dense` premise.
 
 ## F1 status (2026-10-05)
 
