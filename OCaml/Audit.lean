@@ -354,6 +354,7 @@ import OCaml.Vm.Boot.Startup.ResolveRun
 import OCaml.Vm.Boot.Startup.OpenRun
 import OCaml.Vm.Boot.Startup.OpenOcamlrunReset
 import OCaml.Vm.Boot.Startup.AttemptFailReset
+import OCaml.Vm.Boot.Startup.RetryReset
 import OCaml.Vm.Boot.Startup.Strdup
 import OCaml.Vm.Boot.Startup.ExtTableFree
 import OCaml.Vm.Boot.Startup.DecomposeNull
@@ -2618,6 +2619,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.attempt_open_return
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetSearchTableReturned.attempt_slot
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_attempt_failed_exists
+#print axioms OCaml.Vm.Boot.Startup.argv1_entry
+#print axioms OCaml.Vm.Boot.Startup.argv1_byte
+#print axioms OCaml.Vm.Boot.Startup.caml_retry_test
+#print axioms OCaml.Vm.Boot.Startup.caml_executable_name_null
+#print axioms OCaml.Vm.Boot.Startup.caml_retry_noname
+#print axioms OCaml.Vm.Boot.Startup.caml_retry_argv1
+#print axioms OCaml.Vm.Boot.Startup.caml_retry_dash
+#print axioms OCaml.Vm.Boot.Startup.caml_retry_config
+#print axioms OCaml.Vm.Boot.Startup.caml_retry_prog_test
+#print axioms OCaml.Vm.Boot.Startup.caml_retry_prog_call
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_retry_call_exists
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
 #print axioms OCaml.Vm.Boot.Startup.resAt36_window
 #print axioms OCaml.Vm.Boot.Startup.fs_init

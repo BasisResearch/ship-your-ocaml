@@ -58,8 +58,14 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   `LateImage` (embed, environ, verb_gc, `_impure_ptr`, print flags) is what
   survives fs_init; `print_config`/`print_magic` are `HtifByte`s.
 
-Next: caml_main's retry (`caml_executable_name` → NULL, `argv[1]`, the
-`print_config` test) and caml_attempt_open("/prog", 1).
+* **`reset_retry_call_exists` (RetryReset.lean, CamlRetrySteps.lean)**:
+  caml_main's retry up to `caml_attempt_open(&exe_name, &trail, 1)` with
+  `exe_name = argv[1]` ("/prog") stored at `parameterStack + 32`.
+
+Next: the second caml_attempt_open: `caml_search_exe_in_path("/prog")`
+(the name has a slash, so `caml_search_in_path` returns a strdup), then
+`open("/prog")` (resolve's child hit), the script check `read(fd, buf, 2)`,
+`lseek`, the trailer `read` and the magic test.
 
 ## Round 2 status (2026-10-06, search)
 
