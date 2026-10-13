@@ -292,4 +292,48 @@ theorem htif_open_succeed (c : Config) (sp ra s0 s1 s2 fd oldra : BitVec 64) (le
       saved 56 s1 (by simp), saved 48 s2 (by simp), savedRa, saved 64 s0 (by simp)]
   · rfl
   · decide
+
+/-- `_open` succeeded: return its descriptor. -/
+theorem open_r_succeed (c : Config) (sp ra s0 fd oldra : BitVec 64) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 16) (regs : GHolds c.σ [(10, fd), (2, nativeStack sp 16)]) (ok : fd ≠ -1#64)
+    (saved : ∀ off value, (off, value) ∈ [(8, ra), (0, s0)] →
+      bytesT c.σ.mem (nativeFrameBase sp 16 + off) 8 = value) (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x8004d7d0#64 (fun e => e = c)
+      (WriteRegistersPost [2, 8, 1, 15] [] c ra fd [(2, sp), (8, s0), (1, ra), (15, -1#64), (10, fd)]) := by
+  have savedRa := saved 8 ra (by simp)
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (open_rXd7d0FSeg ++ open_rXd7d8Seg) 0x8004d7d0#64
+        [(10, fd), (2, nativeStack sp 16)]
+        [read8 c.σ.mem (nativeFrameBase sp 16 + 8), read8 c.σ.mem (nativeFrameBase sp 16 + 0)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 2]; decide
+      shape := by change ChainOK _ [10, 2] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := openRCheck_code leaf.image
+        chain_facts code with "Vsa.Sim.Code._open_r_at_"
+        · change guardB bop.BEQ fd (0#64 + Functions.sign_extend (m := 64) 4095#12) = false
+          rw [show 0#64 + Functions.sign_extend (m := 64) 4095#12 = -1#64 by decide]
+          exact beq_eq_false_iff_ne.mpr ok
+        · exact (frame.read_slot (off := 8) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 0) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 16 + 8)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [read8_value, savedRa, ret_tgt ra aligned]
+          exact aligned }))
+  · rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 16 + 8)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [read8_value, savedRa, ret_tgt ra aligned]
+  · simp only [open_rXd7d0FSeg, open_rXd7d8Seg, evalBlocks, evalBlock, SegEvalState.init, openrcheck_line_8004d7d0,
+      openrreturn_line_8004d7d8, openrreturn_line_8004d7dc, openrreturn_line_8004d7e0, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, read8_value,
+      List.cons_append, List.nil_append]
+    rw [show Functions.sign_extend (m := 64) 16#12 = 16#64 by decide, nativeStack_restore, savedRa,
+      saved 0 s0 (by simp), show 0#64 + Functions.sign_extend (m := 64) 4095#12 = -1#64 by decide]
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
