@@ -181,10 +181,26 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
     that is open and not a file (`SeekFd`) returns -1 (ESPIPE) with an exact
     write log (`seekLog`); `htif_lseek` is its `_lseek` part. This is BcSem's
     `openChan` offset (-1 for streams).
-  * Next: `caml_open_descriptor_in` over `stat_checked_allocate`, the
-    blocking sections and `lseek_call`; then the primitives.
-    `caml_alloc_custom_mem` stays a named premise: it is a collector-
-    integrated allocation (custom table, GC speed accounting).
+  * `open_descriptor_in` (`Channel/OpenDescriptorCall.lean`) is proved, in
+    three phases with named posts:
+    - `open_allocate`: prologue and the checked `caml_stat_alloc(65616)`;
+    - `open_seek`: `fd`, `enter_blocking`, `lseek_call` (-1), `offset`,
+      `leave_blocking`, framed by `seekWindows`;
+    - `open_link`: record initialization (`recordInitLog`), the old head's
+      `prev` when there is one, the list head, the epilogue.
+    `OpenedIn` gives `HeapReady ((record, 65616) :: H)`, `StaticKept`
+    (every runtime global except the allocator's and the list head reads the
+    same, so `ConsoleRuntime` and `SeekFd` carry over) and a byte frame
+    outside `openWindows` and the allocator's footprint. Entry premises
+    (`OpenInput`): `ConsoleRuntime`, `SeekFd fd`, the old head a word-aligned
+    live block. stdin's `SeekFd` is not in `ConsoleRuntime` yet (a0-boot).
+  * Next: the primitives over `open_descriptor_in`, with
+    `caml_alloc_custom_mem` a named premise: it is a collector-integrated
+    allocation (custom table, GC speed accounting). Then their C_CALL
+    adapters and `gen_f1_table.py`.
+  * `omega` exhausts the recursion depth on chained literal subtractions
+    (`s - 32 - 544`) and on some goals with the arena bounds unfolded;
+    `arena_omega` normalizes `Nat.sub_sub` and generalizes the bounds first.
 - open_descriptor_out: obligations its post must supply, named premises
   until the pieces land:
   * `ChanAt` for the new record, with cursor ≤ ioBufferSize,

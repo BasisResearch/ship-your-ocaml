@@ -674,6 +674,7 @@ import OCaml.Vm.Primitives.Channel.OpenDescriptor
 import OCaml.Vm.Primitives.Channel.OpenIn
 import OCaml.Vm.Primitives.Channel.OpenOut
 import OCaml.Vm.Primitives.Channel.LseekCall
+import OCaml.Vm.Primitives.Channel.OpenDescriptorCall
 import OCaml.Vm.Primitives.Format.AllocSprintf
 import OCaml.Vm.Primitives.Format.FormatInt
 import OCaml.Vm.Primitives.Format.ParseFormatCall
