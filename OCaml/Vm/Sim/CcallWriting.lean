@@ -183,6 +183,7 @@ theorem ccall_framed_summary {L : OCaml.Layout} {P : Prog} {s : St}
   have frame := post.call.memory
   have regs := post.call.saved
   have kept := saved.frame_outside outside frame regs
+  refine ⟨cp, ?_⟩
   exact { toCcall1Saved := { kept with pc := kept.pc }
           toCcallResult :=
             { geometry := (geometry after frame).state rfl rfl

@@ -13,7 +13,7 @@ result, including saved VM registers and the complete platform invariant. -/
 theorem c_call3_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     {cp : ChanPlace} {sp high : Nat} {domain frameSp result env : BitVec 64} {c : Config}
     (stable : MemoryStable L.runtimeOk)
-    (h : CcallReturn (0x80002fa4#64) L P s pl cp sp high domain frameSp result env c)
+    (h : CcallReturnAt (0x80002fa4#64) L P s pl cp sp high domain frameSp result env c)
     (bound : 2 ≤ s.stack.length) :
     ∃ after, Plus c after ∧ Running L P {s with stack := s.stack.drop 2} after := by
   have loaded (a : Nat) : sign_extend (m := 64) (bytesT8 c.σ.mem a) = word c a := by
@@ -55,7 +55,7 @@ theorem c_call3_return_triple {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place
     (stable : MemoryStable L.runtimeOk)
     (bound : 2 ≤ s.stack.length) :
     Vsa.Logic.Triple (CcallReturn (0x80002fa4#64) L P s pl cp sp high domain frameSp result env) (Running L P {s with stack := s.stack.drop 2}) := by
-  intro c h
+  intro c ⟨_, h⟩
   obtain ⟨after, ⟨n, steps⟩, repr⟩ := c_call3_return stable h bound
   exact ⟨after, steps.toSteps, repr⟩
 

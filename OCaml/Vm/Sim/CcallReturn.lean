@@ -61,12 +61,21 @@ structure CcallResult (ra : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St)
   /-- the native invocation at the primitive's return (`x2` is callee-saved) -/
   native : NativePlaced c
 
-/-- Fixed-arity return combines the represented result and the saved frame. -/
-structure CcallReturn (ra : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St)
+/-- Fixed-arity return combines the represented result and the saved frame,
+under the channel placement `cp` of the return state. -/
+structure CcallReturnAt (ra : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St)
     (pl : Place) (cp : ChanPlace) (sp high : Nat)
     (domain frameSp result env : BitVec 64) (c : Config) : Prop
     extends Ccall1Saved s pl sp domain frameSp env c,
       CcallResult ra L P s pl cp sp high result c
+
+/-- **A C_CALL return**: some channel placement (a primitive that opens a
+channel places its record, which malloc chose during the call). `cp` is the
+call-site placement; the callee may return under another. -/
+def CcallReturn (ra : BitVec 64) (L : OCaml.Layout) (P : Prog) (s : St)
+    (pl : Place) (_cp : ChanPlace) (sp high : Nat)
+    (domain frameSp result env : BitVec 64) (c : Config) : Prop :=
+  ∃ cp', CcallReturnAt ra L P s pl cp' sp high domain frameSp result env c
 
 /-- Retain the unary return interface while sharing its saved-frame contract. -/
 abbrev Ccall1Return (L : OCaml.Layout) (P : Prog) (s : St)
@@ -111,8 +120,7 @@ theorem ccall_primitive_return {L : OCaml.Layout} {P : Prog} {s : St}
     (native : NativePlaced after) :
     CcallReturn ra L P {s with pc := pc, accu := v, heap := heap, world := world}
       pl cp sp high domain frameSp result env after :=
-  { toCcall1Saved := { saved with pc := saved.pc }
-    toCcallResult := ccall_primitive_result pc post geometry native }
+  ⟨cp, ⟨{ saved with pc := saved.pc }, ccall_primitive_result pc post geometry native⟩⟩
 
 /-- Consume a1-prims' represented postcondition without reproving a primitive.
 C_CALL1 advances two code words and leaves its argument stack unchanged. -/
@@ -193,7 +201,7 @@ returned accumulator as a root, then discard only consumed stack arguments. -/
 theorem ccall_return_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     {cp : ChanPlace} {sp high count : Nat} {ra domain frameSp result env : BitVec 64}
     {c after : Config} (stable : MemoryStable L.runtimeOk)
-    (h : CcallReturn ra L P s pl cp sp high domain frameSp result env c)
+    (h : CcallReturnAt ra L P s pl cp sp high domain frameSp result env c)
     (bound : count ≤ s.stack.length)
     (regs : VmRegisters {s with stack := s.stack.drop count} pl (sp + 8 * count) after)
     (loop : LoopRegisters after) (good : GoodState after.σ)

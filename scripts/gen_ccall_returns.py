@@ -25,7 +25,7 @@ result, including saved VM registers and the complete platform invariant. -/
 theorem c_call@ARITY@_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     {cp : ChanPlace} {sp high : Nat} {domain frameSp result env : BitVec 64} {c : Config}
     (stable : MemoryStable L.runtimeOk)
-    (h : CcallReturn (@PC@#64) L P s pl cp sp high domain frameSp result env c)@BOUND@ :
+    (h : CcallReturnAt (@PC@#64) L P s pl cp sp high domain frameSp result env c)@BOUND@ :
     ∃ after, Plus c after ∧ Running L P @STATE@ after := by
   have loaded (a : Nat) : sign_extend (m := 64) (bytesT8 c.σ.mem a) = word c a := by
     simp only [word, bytesT_eight_eq, sign_extend, Sail.BitVec.signExtend, BitVec.signExtend_eq]
@@ -65,7 +65,7 @@ theorem c_call@ARITY@_return_triple {L : OCaml.Layout} {P : Prog} {s : St} {pl :
     {cp : ChanPlace} {sp high : Nat} {domain frameSp result env : BitVec 64}
     (stable : MemoryStable L.runtimeOk)@BOUND@ :
     Vsa.Logic.Triple (CcallReturn (@PC@#64) L P s pl cp sp high domain frameSp result env) (Running L P @STATE@) := by
-  intro c h
+  intro c ⟨_, h⟩
   obtain ⟨after, ⟨n, steps⟩, repr⟩ := c_call@ARITY@_return stable h@BOUND_ARG@
   exact ⟨after, steps.toSteps, repr⟩
 
