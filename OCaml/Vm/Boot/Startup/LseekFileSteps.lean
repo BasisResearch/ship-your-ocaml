@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.OpenSteps
+import OCaml.Vm.Boot.Startup.OpenProgSteps
 import OCaml.Vm.Boot.Startup.LibLseekNormalized
 import OCaml.Vm.Boot.Startup.LibLseekImage
 import OCaml.Vm.Boot.Startup.LseekREntryNormalized
@@ -272,6 +273,49 @@ theorem htif_lseek_end (c : Config) (sp ra : BitVec 64) (leaf : LeafInput ra c)
     rw [show Functions.sign_extend (m := 64) 48#12 = BitVec.ofNat 64 48 by decide, nativeStack_restore]
     repeat' constructor
     all_goals decide
+  · rfl
+  · decide
+
+/-- `_lseek` succeeded: restore and return its result. -/
+theorem lseek_r_succeed (c : Config) (sp ra s0 v oldra : BitVec 64) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 16) (regs : GHolds c.σ [(10, v), (2, nativeStack sp 16)]) (ok : v ≠ -1#64)
+    (saved : ∀ off value, (off, value) ∈ [(8, ra), (0, s0)] →
+      bytesT c.σ.mem (nativeFrameBase sp 16 + off) 8 = value) (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x80042354#64 (fun e => e = c)
+      (WriteRegistersPost [2, 8, 1, 15] [] c ra v [(2, sp), (8, s0), (1, ra), (15, -1#64), (10, v)]) := by
+  have savedRa := saved 8 ra (by simp)
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (lseek_rX2354FSeg ++ lseek_rX235cSeg) 0x80042354#64
+        [(10, v), (2, nativeStack sp 16)]
+        [read8 c.σ.mem (nativeFrameBase sp 16 + 8), read8 c.σ.mem (nativeFrameBase sp 16 + 0)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 2]; decide
+      shape := by change ChainOK _ [10, 2] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := lseekRReturn_code leaf.image
+        chain_facts code with "Vsa.Sim.Code._lseek_r_at_"
+        · change guardB bop.BEQ v (0#64 + Functions.sign_extend (m := 64) 4095#12) = false
+          rw [show 0#64 + Functions.sign_extend (m := 64) 4095#12 = -1#64 by decide]
+          exact beq_eq_false_iff_ne.mpr ok
+        · exact (frame.read_slot (off := 8) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 0) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 16 + 8)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [read8_value, savedRa, ret_tgt ra aligned]
+          exact aligned }))
+  · rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 16 + 8)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [read8_value, savedRa, ret_tgt ra aligned]
+  · simp only [lseek_rX2354FSeg, lseek_rX235cSeg, evalBlocks, evalBlock, SegEvalState.init, lseekrreturn_line_80042354, lseekrreturn_line_8004235c, lseekrreturn_line_80042360, lseekrreturn_line_80042364, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, read8_value,
+      List.cons_append, List.nil_append]
+    rw [show Functions.sign_extend (m := 64) 16#12 = 16#64 by decide, nativeStack_restore, savedRa,
+      saved 0 s0 (by simp), show 0#64 + Functions.sign_extend (m := 64) 4095#12 = -1#64 by decide]
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup

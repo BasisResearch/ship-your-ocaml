@@ -374,6 +374,7 @@ import OCaml.Vm.Boot.Startup.ResolveProg
 import OCaml.Vm.Boot.Startup.OpenProg
 import OCaml.Vm.Boot.Startup.ProgOpenReset
 import OCaml.Vm.Boot.Startup.LseekFileSteps
+import OCaml.Vm.Boot.Startup.LseekFile
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2705,6 +2706,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.lseek_r_entry
 #print axioms OCaml.Vm.Boot.Startup.htif_lseek_entry
 #print axioms OCaml.Vm.Boot.Startup.htif_lseek_end
+#print axioms OCaml.Vm.Boot.Startup.lseek_r_succeed
+#print axioms OCaml.Vm.Boot.Startup.lseek_file
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
