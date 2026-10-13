@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.OldifyImmediate
 import OCaml.Vm.Gc.NonYoungCall
 import OCaml.Vm.Gc.OldifyReturned
 import OCaml.Vm.Gc.F1Observation
@@ -655,6 +656,13 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.OldifyEntry.Post.read_input
 #print axioms OCaml.Vm.Gc.OldifyEntry.carried_after_reject
 #print axioms OCaml.Vm.Gc.NonYoung.call
+#print axioms OCaml.Vm.Gc.OldifyImmediate.call
+#print axioms OCaml.Vm.Gc.OldifyImmediate.ret_access
+#print axioms OCaml.Vm.Gc.OldifyImmediate.ret_regs
+#print axioms OCaml.Vm.Gc.OldifyImmediate.ret_log
+#print axioms OCaml.Vm.Gc.OldifyImmediate.head_accessL
+#print axioms OCaml.Vm.Gc.OldifyImmediate.head_controlL
+#print axioms OCaml.Vm.Gc.OldifyImmediate.saved_word
 #print axioms OCaml.Vm.Gc.f1_channelUnlock
 #print axioms OCaml.Vm.Gc.f1_consoleRuntime
 #print axioms OCaml.Vm.Gc.consoleRuntime_of

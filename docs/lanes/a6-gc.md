@@ -46,8 +46,9 @@
   `StoreReturn`), as `OldifyReturned` plus the root value. The `ref_table`
   loop calls `caml_oldify_one` on every entry (immediate, old or young), the
   stack loop filters through `Oldify`.
-- Next (G2): the immediate route's `SegPre` supplier, the slot-level oldify
-  spec and route dispatcher, then the
+- G2: `OldifyImmediate.call`, the whole call on an odd value (blocks
+  `0x80009a70` taken + `0x80009b80`), as `OldifyReturned` plus the root value.
+- Next (G2): the slot-level oldify spec and route dispatcher, then the
   stack/`ref_table` root loops, the mopup outer loop, a quiet-route
   `caml_empty_minor_heap`, and the concrete `CollectionEffect`.
 
