@@ -209,6 +209,11 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
       `HeapReady`) and returns a block whose data word is writable and
       apart from the record, keeping s0–s11, the caller frame, the record
       and the list head (`CustomMemReturned`).
+    - a6-gc (2026-10-13): the fields fit the quiet path. `Ready` will
+      carry the custom-table and resource-counter state. The custom table's
+      first `realloc` (a C-heap charge) and the GC-speed and
+      minor-resource triggers (`caml_something_to_do`, requested
+      collections) are G2.
     - Post (`OpenedOut`): the record's words as `ChanAt` reads them
       (`OutRecord`: fd, offset -1, end, curr, `max = NULL`, next,
       refcount 1, flags 4), `OpenChannelsLinked c d record`,
