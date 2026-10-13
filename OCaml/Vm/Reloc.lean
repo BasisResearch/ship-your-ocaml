@@ -234,13 +234,17 @@ theorem valWord_relocates :
 byte-range framing law. The predicate decides which cell values are known. -/
 def bytePayload {α : Type} (b : List α) (p : α → BitVec 8 → Prop) : Eqv :=
   Eqv.and (Eqv.list b fun i x => Eqv.rawB (· + i) (p x))
-    (Eqv.rawB (fun a => a + 8 * (b.length / 8 + 1) - 1)
+    (Eqv.and (Eqv.rawB (fun a => a + 8 * (b.length / 8 + 1) - 1)
       fun y => y.toNat = 8 * (b.length / 8 + 1) - 1 - b.length)
+      (Eqv.all fun i => Eqv.guard (b.length ≤ i) (Eqv.guard (i < 8 * (b.length / 8 + 1) - 1)
+        (Eqv.rawB (· + i) (· = 0)))))
 
 theorem bytePayload_copyIn {α : Type} (b : List α) (p : α → BitVec 8 → Prop) :
     (bytePayload b p).CopyIn (8 * (b.length / 8 + 1)) := by
   refine Eqv.and_copyIn (Eqv.list_copyIn fun i x hx => ?_)
-    (Eqv.rawB_copyIn (8 * (b.length / 8 + 1) - 1) (fun _ => by omega) (by omega))
+    (Eqv.and_copyIn (Eqv.rawB_copyIn (8 * (b.length / 8 + 1) - 1) (fun _ => by omega) (by omega))
+      fun μ pl a a' c c' h hc i lo hi =>
+        Eqv.rawB_copyIn (R := (· = 0)) i (fun _ => rfl) (by omega) μ pl a a' c c' (h i lo hi) hc)
   have := (List.getElem?_eq_some_iff.1 hx).1
   exact Eqv.rawB_copyIn i (fun _ => rfl) (by omega)
 

@@ -12,8 +12,9 @@ structure StringPairInput (runtimeOk : Config → Prop) (P : Prog) (s : St)
     extends ImmediateInput runtimeOk P s pl cp sp high ra [.ptr l 0, .ptr l' 0] c where
   placed : pl.φ l = some a
   placed' : pl.φ l' = some a'
-  object : s.heap.get? l = some (.bytes bs)
-  object' : s.heap.get? l' = some (.bytes bs')
+  /-- the strings' model contents (initialized `.bytes` or `.partialBytes`) -/
+  str : strOf? s.heap (.ptr l 0) = some bs
+  str' : strOf? s.heap (.ptr l' 0) = some bs'
   canonical : PaddedString c a bs
   canonical' : PaddedString c a' bs'
   geometry : StringGeometry a bs.length
@@ -67,6 +68,6 @@ theorem string_equal_contract {runtimeOk : Config → Prop} (stable : MemoryStab
   · simp [PreservesLoopRegisters, StringScan.scanWrites, Layout.reg_dispatchTable,
       Layout.reg_opcodeBound, Layout.reg_pending, Layout.reg_domain, gprReg]
   · by_cases same : bs = bs' <;>
-      simp [primF1Impl, strOf?, h.object, h.object', stringEqualityResult, Val.ofBool, same]
+      simp [primF1Impl, h.str, h.str', stringEqualityResult, Val.ofBool, same]
 
 end OCaml.Vm.Primitives

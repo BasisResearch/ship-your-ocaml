@@ -79,7 +79,7 @@ theorem StringShell.object {c a b pl cp} (shell : StringShell c a b.length)
     omega
   change HeaderOk _ _ _ ∧ _
   rw [size]
-  exact ⟨shell.header, data, shell.padding⟩
+  exact ⟨shell.header, data, shell.padding, shell.zeroPad⟩
 
 /-- The same stores also establish the canonical padding used by equality. -/
 theorem StringShell.padded {c a b} (shell : StringShell c a b.length)

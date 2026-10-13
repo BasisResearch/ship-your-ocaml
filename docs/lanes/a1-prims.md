@@ -112,6 +112,11 @@
   `caml_sys_const_*`; `prim_length_returns` for string/bytes length; `prim_caml_int_compare_returns`.
   `prim_caml_ml_output_bytes_returns` via `prim_output_returns_at` (`ObEnter`: `output_enter` is
   the tail `j`, `output_bytes_enter` the identity). Gaps for the rest of `primsF1`: see PHASES.
+* **String padding in `ObjAt`**: `.bytes`/`.partialBytes` now record the zero bytes between the
+  string and the pad byte (`caml_alloc_string` zeroes the last word). Producers: `StringShell.object`,
+  `gen_boot_heap.py` (asserts and proves them from the capture), `Reloc.bytePayload`. Consumers:
+  `paddedString_of_objAt`, `prim_caml_string_equal_returns` (contracts take `strOf?`, so initialized
+  `.partialBytes` too).
 * whileMin `PrimReturnsAt` summaries (picked up by `scripts/gen_f1_table.py`; regenerate
   WhileMinTable.lean in the same batch): `prim_caml_ml_string_length_returns` and
   `prim_caml_fresh_oo_id_returns` (`f1_counterStable` from a6-gc's `f1_ignoredStatic`) done.

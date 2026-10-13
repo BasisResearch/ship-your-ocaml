@@ -181,10 +181,14 @@ def ObjAt (c : Config) (pl : Place) (cp : ChanPlace) (a : Nat) (o : Obj) : Prop 
   | .bytes b =>
       (∀ i (x : UInt8), b[i]? = some x → byte c (a + i) = BitVec.ofNat 8 x.toNat) ∧
       -- `caml_alloc_string` padding: the last byte is `wosize*8 - 1 - len`
-      (byte c (a + 8 * o.wosize - 1)).toNat = 8 * o.wosize - 1 - b.length
+      (byte c (a + 8 * o.wosize - 1)).toNat = 8 * o.wosize - 1 - b.length ∧
+      -- and the bytes between the string and that last byte are zero (the last
+      -- word is zeroed first; `caml_string_equal` compares whole words)
+      (∀ i, b.length ≤ i → i < 8 * o.wosize - 1 → byte c (a + i) = 0)
   | .partialBytes b =>
       (∀ i x, b[i]? = some x → ∀ v, x = some v → byte c (a + i) = BitVec.ofNat 8 v.toNat) ∧
-      (byte c (a + 8 * o.wosize - 1)).toNat = 8 * o.wosize - 1 - b.length
+      (byte c (a + 8 * o.wosize - 1)).toNat = 8 * o.wosize - 1 - b.length ∧
+      (∀ i, b.length ≤ i → i < 8 * o.wosize - 1 → byte c (a + i) = 0)
   | .double d => word c a = d
   | .doubleArray ds => ∀ i d, ds[i]? = some d → word c (a + 8 * i) = d
   | .int64 n => (word c a).toNat = Layout.sym_caml_int64_ops ∧ word c (a + 8) = n

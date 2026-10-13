@@ -334,6 +334,7 @@ import OCaml.Vm.Sim.PrimMlFlush
 import OCaml.Vm.Sim.PrimMlOutputChar
 import OCaml.Vm.Sim.PrimConsoleReturns
 import OCaml.Vm.Sim.PrimIntCompareReturns
+import OCaml.Vm.Sim.PrimStringEqualReturns
 import OCaml.Vm.Primitives.AllocPlaces
 import OCaml.Vm.Sim.PrimConstReturns
 import OCaml.Vm.Primitives.Flush.MlOutput
@@ -5485,7 +5486,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.prim_caml_ml_output_char_returns
 #print axioms OCaml.Vm.Sim.prim_caml_ml_flush_returns
 #print axioms OCaml.Vm.Sim.output_semantics
-#print axioms OCaml.Vm.Sim.mapM_id_get
 #print axioms OCaml.Vm.Sim.slice_bytes
 #print axioms OCaml.Vm.Sim.ObInput.jump
 #print axioms OCaml.Vm.Sim.ObModel.jump
@@ -5532,3 +5532,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.prim_caml_ml_bytes_length_returns
 #print axioms OCaml.Vm.Primitives.Channel.htif_lseek
 #print axioms OCaml.Vm.Primitives.Channel.lseek_call
+#print axioms OCaml.Vm.Primitives.mapM_id_get
+#print axioms OCaml.Vm.Sim.paddedString_of_objAt
+#print axioms OCaml.Vm.Sim.string_arg
+#print axioms OCaml.Vm.Sim.prim_caml_string_equal_returns

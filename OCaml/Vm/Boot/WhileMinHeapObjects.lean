@@ -239,6 +239,18 @@ theorem read_pad2 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad08 + 8 * obj2.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero2_13 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad08 + 13) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad08 + 13) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero2_14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad08 + 14) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad08 + 14) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object2 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037ad08 obj2 := by
   constructor
@@ -246,7 +258,13 @@ theorem object2 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log))
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj2_0 memory) (Fin.cases (read_obj2_1 memory) (Fin.cases (read_obj2_2 memory) (Fin.cases (read_obj2_3 memory) (Fin.cases (read_obj2_4 memory) (Fin.cases (read_obj2_5 memory) (Fin.cases (read_obj2_6 memory) (Fin.cases (read_obj2_7 memory) (Fin.cases (read_obj2_8 memory) (Fin.cases (read_obj2_9 memory) (Fin.cases (read_obj2_10 memory) (Fin.cases (read_obj2_11 memory) (Fin.cases (read_obj2_12 memory) (fun i => Fin.elim0 i)))))))))))))
-    · rw [read_pad2 memory]; decide +kernel
+    · constructor
+      · rw [read_pad2 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj2, Obj.wosize, List.length] at lo hi
+        obtain rfl | rfl : k = 13 ∨ k = 14 := by omega
+        · exact read_zero2_13 memory
+        · exact read_zero2_14 memory
 
 def obj3 : Obj := (.block 248 [(.ptr 4 0), (.int 9223372036854775806#63)])
 theorem read_header3 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -341,6 +359,42 @@ theorem read_pad4 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad20 + 8 * obj4.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero4_9 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad20 + 9) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad20 + 9) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero4_10 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad20 + 10) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad20 + 10) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero4_11 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad20 + 11) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad20 + 11) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero4_12 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad20 + 12) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad20 + 12) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero4_13 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad20 + 13) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad20 + 13) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero4_14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad20 + 14) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad20 + 14) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object4 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037ad20 obj4 := by
   constructor
@@ -348,7 +402,17 @@ theorem object4 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log))
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj4_0 memory) (Fin.cases (read_obj4_1 memory) (Fin.cases (read_obj4_2 memory) (Fin.cases (read_obj4_3 memory) (Fin.cases (read_obj4_4 memory) (Fin.cases (read_obj4_5 memory) (Fin.cases (read_obj4_6 memory) (Fin.cases (read_obj4_7 memory) (Fin.cases (read_obj4_8 memory) (fun i => Fin.elim0 i)))))))))
-    · rw [read_pad4 memory]; decide +kernel
+    · constructor
+      · rw [read_pad4 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj4, Obj.wosize, List.length] at lo hi
+        obtain rfl | rfl | rfl | rfl | rfl | rfl : k = 9 ∨ k = 10 ∨ k = 11 ∨ k = 12 ∨ k = 13 ∨ k = 14 := by omega
+        · exact read_zero4_9 memory
+        · exact read_zero4_10 memory
+        · exact read_zero4_11 memory
+        · exact read_zero4_12 memory
+        · exact read_zero4_13 memory
+        · exact read_zero4_14 memory
 
 def obj5 : Obj := (.block 248 [(.ptr 6 0), (.int 9223372036854775805#63)])
 theorem read_header5 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -438,7 +502,11 @@ theorem object6 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log))
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj6_0 memory) (Fin.cases (read_obj6_1 memory) (Fin.cases (read_obj6_2 memory) (Fin.cases (read_obj6_3 memory) (Fin.cases (read_obj6_4 memory) (Fin.cases (read_obj6_5 memory) (Fin.cases (read_obj6_6 memory) (fun i => Fin.elim0 i)))))))
-    · rw [read_pad6 memory]; decide +kernel
+    · constructor
+      · rw [read_pad6 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj6, Obj.wosize, List.length] at lo hi
+        omega
 
 def obj7 : Obj := (.block 248 [(.ptr 8 0), (.int 9223372036854775804#63)])
 theorem read_header7 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -575,6 +643,48 @@ theorem read_pad8 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad48 + 8 * obj8.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero8_16 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad48 + 16) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad48 + 16) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero8_17 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad48 + 17) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad48 + 17) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero8_18 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad48 + 18) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad48 + 18) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero8_19 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad48 + 19) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad48 + 19) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero8_20 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad48 + 20) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad48 + 20) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero8_21 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad48 + 21) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad48 + 21) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero8_22 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad48 + 22) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad48 + 22) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object8 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037ad48 obj8 := by
   constructor
@@ -582,7 +692,18 @@ theorem object8 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log))
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj8_0 memory) (Fin.cases (read_obj8_1 memory) (Fin.cases (read_obj8_2 memory) (Fin.cases (read_obj8_3 memory) (Fin.cases (read_obj8_4 memory) (Fin.cases (read_obj8_5 memory) (Fin.cases (read_obj8_6 memory) (Fin.cases (read_obj8_7 memory) (Fin.cases (read_obj8_8 memory) (Fin.cases (read_obj8_9 memory) (Fin.cases (read_obj8_10 memory) (Fin.cases (read_obj8_11 memory) (Fin.cases (read_obj8_12 memory) (Fin.cases (read_obj8_13 memory) (Fin.cases (read_obj8_14 memory) (Fin.cases (read_obj8_15 memory) (fun i => Fin.elim0 i))))))))))))))))
-    · rw [read_pad8 memory]; decide +kernel
+    · constructor
+      · rw [read_pad8 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj8, Obj.wosize, List.length] at lo hi
+        obtain rfl | rfl | rfl | rfl | rfl | rfl | rfl : k = 16 ∨ k = 17 ∨ k = 18 ∨ k = 19 ∨ k = 20 ∨ k = 21 ∨ k = 22 := by omega
+        · exact read_zero8_16 memory
+        · exact read_zero8_17 memory
+        · exact read_zero8_18 memory
+        · exact read_zero8_19 memory
+        · exact read_zero8_20 memory
+        · exact read_zero8_21 memory
+        · exact read_zero8_22 memory
 
 def obj9 : Obj := (.block 248 [(.ptr 10 0), (.int 9223372036854775803#63)])
 theorem read_header9 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -689,6 +810,30 @@ theorem read_pad10 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial lo
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad68 + 8 * obj10.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero10_11 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad68 + 11) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad68 + 11) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero10_12 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad68 + 12) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad68 + 12) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero10_13 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad68 + 13) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad68 + 13) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero10_14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad68 + 14) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad68 + 14) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object10 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037ad68 obj10 := by
   constructor
@@ -696,7 +841,15 @@ theorem object10 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj10_0 memory) (Fin.cases (read_obj10_1 memory) (Fin.cases (read_obj10_2 memory) (Fin.cases (read_obj10_3 memory) (Fin.cases (read_obj10_4 memory) (Fin.cases (read_obj10_5 memory) (Fin.cases (read_obj10_6 memory) (Fin.cases (read_obj10_7 memory) (Fin.cases (read_obj10_8 memory) (Fin.cases (read_obj10_9 memory) (Fin.cases (read_obj10_10 memory) (fun i => Fin.elim0 i)))))))))))
-    · rw [read_pad10 memory]; decide +kernel
+    · constructor
+      · rw [read_pad10 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj10, Obj.wosize, List.length] at lo hi
+        obtain rfl | rfl | rfl | rfl : k = 11 ∨ k = 12 ∨ k = 13 ∨ k = 14 := by omega
+        · exact read_zero10_11 memory
+        · exact read_zero10_12 memory
+        · exact read_zero10_13 memory
+        · exact read_zero10_14 memory
 
 def obj11 : Obj := (.block 248 [(.ptr 12 0), (.int 9223372036854775802#63)])
 theorem read_header11 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -833,6 +986,48 @@ theorem read_pad12 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial lo
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad80 + 8 * obj12.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero12_16 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad80 + 16) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad80 + 16) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero12_17 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad80 + 17) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad80 + 17) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero12_18 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad80 + 18) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad80 + 18) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero12_19 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad80 + 19) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad80 + 19) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero12_20 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad80 + 20) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad80 + 20) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero12_21 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad80 + 21) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad80 + 21) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero12_22 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ad80 + 22) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ad80 + 22) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object12 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037ad80 obj12 := by
   constructor
@@ -840,7 +1035,18 @@ theorem object12 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj12_0 memory) (Fin.cases (read_obj12_1 memory) (Fin.cases (read_obj12_2 memory) (Fin.cases (read_obj12_3 memory) (Fin.cases (read_obj12_4 memory) (Fin.cases (read_obj12_5 memory) (Fin.cases (read_obj12_6 memory) (Fin.cases (read_obj12_7 memory) (Fin.cases (read_obj12_8 memory) (Fin.cases (read_obj12_9 memory) (Fin.cases (read_obj12_10 memory) (Fin.cases (read_obj12_11 memory) (Fin.cases (read_obj12_12 memory) (Fin.cases (read_obj12_13 memory) (Fin.cases (read_obj12_14 memory) (Fin.cases (read_obj12_15 memory) (fun i => Fin.elim0 i))))))))))))))))
-    · rw [read_pad12 memory]; decide +kernel
+    · constructor
+      · rw [read_pad12 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj12, Obj.wosize, List.length] at lo hi
+        obtain rfl | rfl | rfl | rfl | rfl | rfl | rfl : k = 16 ∨ k = 17 ∨ k = 18 ∨ k = 19 ∨ k = 20 ∨ k = 21 ∨ k = 22 := by omega
+        · exact read_zero12_16 memory
+        · exact read_zero12_17 memory
+        · exact read_zero12_18 memory
+        · exact read_zero12_19 memory
+        · exact read_zero12_20 memory
+        · exact read_zero12_21 memory
+        · exact read_zero12_22 memory
 
 def obj13 : Obj := (.block 248 [(.ptr 14 0), (.int 9223372036854775801#63)])
 theorem read_header13 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -935,6 +1141,42 @@ theorem read_pad14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial lo
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ada0 + 8 * obj14.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero14_9 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ada0 + 9) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ada0 + 9) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero14_10 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ada0 + 10) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ada0 + 10) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero14_11 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ada0 + 11) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ada0 + 11) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero14_12 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ada0 + 12) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ada0 + 12) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero14_13 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ada0 + 13) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ada0 + 13) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero14_14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ada0 + 14) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ada0 + 14) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037ada0 obj14 := by
   constructor
@@ -942,7 +1184,17 @@ theorem object14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj14_0 memory) (Fin.cases (read_obj14_1 memory) (Fin.cases (read_obj14_2 memory) (Fin.cases (read_obj14_3 memory) (Fin.cases (read_obj14_4 memory) (Fin.cases (read_obj14_5 memory) (Fin.cases (read_obj14_6 memory) (Fin.cases (read_obj14_7 memory) (Fin.cases (read_obj14_8 memory) (fun i => Fin.elim0 i)))))))))
-    · rw [read_pad14 memory]; decide +kernel
+    · constructor
+      · rw [read_pad14 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj14, Obj.wosize, List.length] at lo hi
+        obtain rfl | rfl | rfl | rfl | rfl | rfl : k = 9 ∨ k = 10 ∨ k = 11 ∨ k = 12 ∨ k = 13 ∨ k = 14 := by omega
+        · exact read_zero14_9 memory
+        · exact read_zero14_10 memory
+        · exact read_zero14_11 memory
+        · exact read_zero14_12 memory
+        · exact read_zero14_13 memory
+        · exact read_zero14_14 memory
 
 def obj15 : Obj := (.block 248 [(.ptr 16 0), (.int 9223372036854775800#63)])
 theorem read_header15 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -1061,6 +1313,18 @@ theorem read_pad16 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial lo
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037adb8 + 8 * obj16.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero16_13 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037adb8 + 13) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037adb8 + 13) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero16_14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037adb8 + 14) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037adb8 + 14) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object16 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037adb8 obj16 := by
   constructor
@@ -1068,7 +1332,13 @@ theorem object16 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj16_0 memory) (Fin.cases (read_obj16_1 memory) (Fin.cases (read_obj16_2 memory) (Fin.cases (read_obj16_3 memory) (Fin.cases (read_obj16_4 memory) (Fin.cases (read_obj16_5 memory) (Fin.cases (read_obj16_6 memory) (Fin.cases (read_obj16_7 memory) (Fin.cases (read_obj16_8 memory) (Fin.cases (read_obj16_9 memory) (Fin.cases (read_obj16_10 memory) (Fin.cases (read_obj16_11 memory) (Fin.cases (read_obj16_12 memory) (fun i => Fin.elim0 i)))))))))))))
-    · rw [read_pad16 memory]; decide +kernel
+    · constructor
+      · rw [read_pad16 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj16, Obj.wosize, List.length] at lo hi
+        obtain rfl | rfl : k = 13 ∨ k = 14 := by omega
+        · exact read_zero16_13 memory
+        · exact read_zero16_14 memory
 
 def obj17 : Obj := (.block 248 [(.ptr 18 0), (.int 9223372036854775799#63)])
 theorem read_header17 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -1193,6 +1463,12 @@ theorem read_pad18 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial lo
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037add0 + 8 * obj18.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero18_14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037add0 + 14) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037add0 + 14) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object18 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037add0 obj18 := by
   constructor
@@ -1200,7 +1476,12 @@ theorem object18 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj18_0 memory) (Fin.cases (read_obj18_1 memory) (Fin.cases (read_obj18_2 memory) (Fin.cases (read_obj18_3 memory) (Fin.cases (read_obj18_4 memory) (Fin.cases (read_obj18_5 memory) (Fin.cases (read_obj18_6 memory) (Fin.cases (read_obj18_7 memory) (Fin.cases (read_obj18_8 memory) (Fin.cases (read_obj18_9 memory) (Fin.cases (read_obj18_10 memory) (Fin.cases (read_obj18_11 memory) (Fin.cases (read_obj18_12 memory) (Fin.cases (read_obj18_13 memory) (fun i => Fin.elim0 i))))))))))))))
-    · rw [read_pad18 memory]; decide +kernel
+    · constructor
+      · rw [read_pad18 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj18, Obj.wosize, List.length] at lo hi
+        obtain rfl : k = 14 := by omega
+        exact read_zero18_14 memory
 
 def obj19 : Obj := (.block 248 [(.ptr 20 0), (.int 9223372036854775798#63)])
 theorem read_header19 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -1325,6 +1606,12 @@ theorem read_pad20 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial lo
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ade8 + 8 * obj20.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero20_14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ade8 + 14) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ade8 + 14) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object20 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037ade8 obj20 := by
   constructor
@@ -1332,7 +1619,12 @@ theorem object20 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj20_0 memory) (Fin.cases (read_obj20_1 memory) (Fin.cases (read_obj20_2 memory) (Fin.cases (read_obj20_3 memory) (Fin.cases (read_obj20_4 memory) (Fin.cases (read_obj20_5 memory) (Fin.cases (read_obj20_6 memory) (Fin.cases (read_obj20_7 memory) (Fin.cases (read_obj20_8 memory) (Fin.cases (read_obj20_9 memory) (Fin.cases (read_obj20_10 memory) (Fin.cases (read_obj20_11 memory) (Fin.cases (read_obj20_12 memory) (Fin.cases (read_obj20_13 memory) (fun i => Fin.elim0 i))))))))))))))
-    · rw [read_pad20 memory]; decide +kernel
+    · constructor
+      · rw [read_pad20 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj20, Obj.wosize, List.length] at lo hi
+        obtain rfl : k = 14 := by omega
+        exact read_zero20_14 memory
 
 def obj21 : Obj := (.block 248 [(.ptr 22 0), (.int 9223372036854775797#63)])
 theorem read_header21 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -1457,6 +1749,12 @@ theorem read_pad22 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial lo
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae00 + 8 * obj22.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero22_14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae00 + 14) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae00 + 14) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object22 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037ae00 obj22 := by
   constructor
@@ -1464,7 +1762,12 @@ theorem object22 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj22_0 memory) (Fin.cases (read_obj22_1 memory) (Fin.cases (read_obj22_2 memory) (Fin.cases (read_obj22_3 memory) (Fin.cases (read_obj22_4 memory) (Fin.cases (read_obj22_5 memory) (Fin.cases (read_obj22_6 memory) (Fin.cases (read_obj22_7 memory) (Fin.cases (read_obj22_8 memory) (Fin.cases (read_obj22_9 memory) (Fin.cases (read_obj22_10 memory) (Fin.cases (read_obj22_11 memory) (Fin.cases (read_obj22_12 memory) (Fin.cases (read_obj22_13 memory) (fun i => Fin.elim0 i))))))))))))))
-    · rw [read_pad22 memory]; decide +kernel
+    · constructor
+      · rw [read_pad22 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj22, Obj.wosize, List.length] at lo hi
+        obtain rfl : k = 14 := by omega
+        exact read_zero22_14 memory
 
 def obj23 : Obj := (.block 248 [(.ptr 24 0), (.int 9223372036854775796#63)])
 theorem read_header23 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -1661,6 +1964,36 @@ theorem read_pad24 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial lo
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae18 + 8 * obj24.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero24_26 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae18 + 26) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae18 + 26) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero24_27 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae18 + 27) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae18 + 27) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero24_28 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae18 + 28) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae18 + 28) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero24_29 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae18 + 29) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae18 + 29) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero24_30 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae18 + 30) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae18 + 30) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object24 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037ae18 obj24 := by
   constructor
@@ -1668,7 +2001,16 @@ theorem object24 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj24_0 memory) (Fin.cases (read_obj24_1 memory) (Fin.cases (read_obj24_2 memory) (Fin.cases (read_obj24_3 memory) (Fin.cases (read_obj24_4 memory) (Fin.cases (read_obj24_5 memory) (Fin.cases (read_obj24_6 memory) (Fin.cases (read_obj24_7 memory) (Fin.cases (read_obj24_8 memory) (Fin.cases (read_obj24_9 memory) (Fin.cases (read_obj24_10 memory) (Fin.cases (read_obj24_11 memory) (Fin.cases (read_obj24_12 memory) (Fin.cases (read_obj24_13 memory) (Fin.cases (read_obj24_14 memory) (Fin.cases (read_obj24_15 memory) (Fin.cases (read_obj24_16 memory) (Fin.cases (read_obj24_17 memory) (Fin.cases (read_obj24_18 memory) (Fin.cases (read_obj24_19 memory) (Fin.cases (read_obj24_20 memory) (Fin.cases (read_obj24_21 memory) (Fin.cases (read_obj24_22 memory) (Fin.cases (read_obj24_23 memory) (Fin.cases (read_obj24_24 memory) (Fin.cases (read_obj24_25 memory) (fun i => Fin.elim0 i))))))))))))))))))))))))))
-    · rw [read_pad24 memory]; decide +kernel
+    · constructor
+      · rw [read_pad24 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj24, Obj.wosize, List.length] at lo hi
+        obtain rfl | rfl | rfl | rfl | rfl : k = 26 ∨ k = 27 ∨ k = 28 ∨ k = 29 ∨ k = 30 := by omega
+        · exact read_zero24_26 memory
+        · exact read_zero24_27 memory
+        · exact read_zero24_28 memory
+        · exact read_zero24_29 memory
+        · exact read_zero24_30 memory
 
 def obj25 : Obj := (.bytes [37, 100])
 theorem read_header25 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -1695,6 +2037,36 @@ theorem read_pad25 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial lo
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae58 + 8 * obj25.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero25_2 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae58 + 2) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae58 + 2) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero25_3 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae58 + 3) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae58 + 3) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero25_4 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae58 + 4) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae58 + 4) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero25_5 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae58 + 5) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae58 + 5) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero25_6 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae58 + 6) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae58 + 6) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object25 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037ae58 obj25 := by
   constructor
@@ -1702,7 +2074,16 @@ theorem object25 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj25_0 memory) (Fin.cases (read_obj25_1 memory) (fun i => Fin.elim0 i))
-    · rw [read_pad25 memory]; decide +kernel
+    · constructor
+      · rw [read_pad25 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj25, Obj.wosize, List.length] at lo hi
+        obtain rfl | rfl | rfl | rfl | rfl : k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨ k = 6 := by omega
+        · exact read_zero25_2 memory
+        · exact read_zero25_3 memory
+        · exact read_zero25_4 memory
+        · exact read_zero25_5 memory
+        · exact read_zero25_6 memory
 
 def obj26 : Obj := (.bytes [87, 104, 105, 108, 101, 95, 109, 105, 110, 46, 69, 120, 105, 116])
 theorem read_header26 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -1801,6 +2182,12 @@ theorem read_pad26 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial lo
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae40 + 8 * obj26.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero26_14 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8037ae40 + 14) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8037ae40 + 14) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object26 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x8037ae40 obj26 := by
   constructor
@@ -1808,7 +2195,12 @@ theorem object26 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj26_0 memory) (Fin.cases (read_obj26_1 memory) (Fin.cases (read_obj26_2 memory) (Fin.cases (read_obj26_3 memory) (Fin.cases (read_obj26_4 memory) (Fin.cases (read_obj26_5 memory) (Fin.cases (read_obj26_6 memory) (Fin.cases (read_obj26_7 memory) (Fin.cases (read_obj26_8 memory) (Fin.cases (read_obj26_9 memory) (Fin.cases (read_obj26_10 memory) (Fin.cases (read_obj26_11 memory) (Fin.cases (read_obj26_12 memory) (Fin.cases (read_obj26_13 memory) (fun i => Fin.elim0 i))))))))))))))
-    · rw [read_pad26 memory]; decide +kernel
+    · constructor
+      · rw [read_pad26 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj26, Obj.wosize, List.length] at lo hi
+        obtain rfl : k = 14 := by omega
+        exact read_zero26_14 memory
 
 def obj27 : Obj := (.bytes [47, 112, 114, 111, 103])
 theorem read_header27 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
@@ -1853,6 +2245,18 @@ theorem read_pad27 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial lo
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x80281ce8 + 8 * obj27.wosize - 1) (w := 1) (by decide +kernel)]
   decide +kernel
 
+theorem read_zero27_5 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x80281ce8 + 5) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x80281ce8 + 5) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_zero27_6 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x80281ce8 + 6) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x80281ce8 + 6) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem object27 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     ObjAt c place cp 0x80281ce8 obj27 := by
   constructor
@@ -1860,7 +2264,13 @@ theorem object27 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
   · constructor
     · apply list_get_of_fin
       exact Fin.cases (read_obj27_0 memory) (Fin.cases (read_obj27_1 memory) (Fin.cases (read_obj27_2 memory) (Fin.cases (read_obj27_3 memory) (Fin.cases (read_obj27_4 memory) (fun i => Fin.elim0 i)))))
-    · rw [read_pad27 memory]; decide +kernel
+    · constructor
+      · rw [read_pad27 memory]; decide +kernel
+      · intro k lo hi
+        simp only [obj27, Obj.wosize, List.length] at lo hi
+        obtain rfl | rfl : k = 5 ∨ k = 6 := by omega
+        · exact read_zero27_5 memory
+        · exact read_zero27_6 memory
 
 def obj28 : Obj := (.block 0 [(.ptr 27 0)])
 theorem read_header28 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :

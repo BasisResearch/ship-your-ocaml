@@ -62,6 +62,6 @@ theorem string_notequal_contract {runtimeOk P s pl cp sp high ra nativeSp l l' a
       semantics := ?_ }
     nativeStack := gholds_lookup _ post.regs rfl }
   by_cases same : bs = bs' <;>
-    simp [primF1Impl, strOf?, h.object, h.object', stringInequalityResult, Val.ofBool, same]
+    simp [primF1Impl, h.str, h.str', stringInequalityResult, Val.ofBool, same]
 
 end OCaml.Vm.Primitives

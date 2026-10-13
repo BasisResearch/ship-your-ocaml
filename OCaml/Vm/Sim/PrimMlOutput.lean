@@ -646,21 +646,6 @@ theorem output_semantics {name : String} {a b o n v : Val} {h h' : Heap} {w w' :
               exact ⟨id, chn, oi, ni, bs, rfl, hk, rfl, rfl, pos.1, pos.2, hs, hp, rfl, rfl⟩
         · simp [primF1Impl, hc, hk, ho, hn, pos] at sem
 
-theorem mapM_id_get : ∀ (cells : List (Option UInt8)) (bs : List UInt8), cells.mapM id = some bs →
-    ∀ (i : Nat) (x : UInt8), bs[i]? = some x → cells[i]? = some (some x)
-  | [], bs, h, i, x, hx => by simp at h; subst h; simp at hx
-  | c :: cs, bs, h, i, x, hx => by
-    cases c with
-    | none => simp at h
-    | some y =>
-      cases e : cs.mapM id with
-      | none => simp [e] at h
-      | some ys =>
-        simp [e] at h; subst h
-        cases i with
-        | zero => simpa using hx
-        | succ i => simpa using mapM_id_get cs ys e i x (by simpa using hx)
-
 /-- **A byte slice of a placed string** lies in its block, byte for byte. -/
 theorem slice_bytes {c : Config} {pl : Place} {cp : ChanPlace} {h : Heap} {l a off n : Nat} {o : Obj}
     {bs : List UInt8} (layout : ObjAt c pl cp a o) (object : h.get? l = some o)

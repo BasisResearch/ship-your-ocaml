@@ -56,6 +56,8 @@ while pending:
     else:
         assert [read(a+i,1) for i in range(len(contents))]==contents
         assert header//1024*8-read(a+header//1024*8-1,1)-1==len(contents)
+        # caml_alloc_string zeroes the last word before the pad byte
+        assert all(read(a+k,1)==0 for k in range(len(contents),header//1024*8-1))
 assert len(placements)==len(objects)
 out=['import OCaml.Vm.Boot.WhileMinLogChecks','import Vsa.Sim.Boot.Bytes',
      'import OCaml.Vm.Boot.Heap','import OCaml.Programs.WhileMin','',
@@ -77,17 +79,32 @@ for i,(kind,tag,contents,lean) in enumerate(objects):
         emit_read(out,f'obj{i}_{j}',f'{a:#x} + {width*j}',read(addr,width),width)
         if kind=='block':proofs.append(f'(congrArg some (read_obj{i}_{j} memory)).symm')
         else:proofs.append(f'read_obj{i}_{j} memory')
+    zeros=[]
     if kind=='bytes':
         pad=a+read(a-8)//1024*8-1
         emit_read(out,f'pad{i}',f'{a:#x} + 8 * obj{i}.wosize - 1',read(pad,1),1)
+        zeros=list(range(len(contents),read(a-8)//1024*8-1))
+        for k in zeros:
+            emit_read(out,f'zero{i}_{k}',f'{a:#x} + {k}',read(a+k,1),1)
     out += [f'theorem object{i} (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :',
             f'    ObjAt c place cp {a:#x} obj{i} := by',
             '  constructor',f'  · rw [read_header{i} memory]; unfold HeaderOk; decide +kernel']
     if kind=='block':
         out += ['  · apply list_get_of_fin','    exact '+finite_cases(proofs)]
     else:
+        if zeros:
+            cases=' | '.join(['rfl']*len(zeros))
+            zero=[f'      · intro k lo hi',
+                  f'        simp only [obj{i}, Obj.wosize, List.length] at lo hi',
+                  f'        obtain {cases} : ' + ' ∨ '.join(f'k = {k}' for k in zeros) + ' := by omega']
+            zero += [f'        · exact read_zero{i}_{k} memory' for k in zeros] if len(zeros)>1 else [f'        exact read_zero{i}_{zeros[0]} memory']
+        else:
+            zero=[f'      · intro k lo hi',
+                  f'        simp only [obj{i}, Obj.wosize, List.length] at lo hi',
+                  f'        omega']
         out += ['  · constructor','    · apply list_get_of_fin','      exact '+finite_cases(proofs),
-                f'    · rw [read_pad{i} memory]; decide +kernel']
+                '    · constructor',
+                f'      · rw [read_pad{i} memory]; decide +kernel'] + zero
     out.append('')
 out += ['theorem objects (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :',
         '    ∀ l o, whileMin.heap0.get? l = some o →',

@@ -21,6 +21,22 @@ theorem mapM_id_length : ∀ (cells : List (Option UInt8)) (bs : List UInt8),
       | none => simp [e] at h
       | some ys => simp [e] at h; subst h; simp [mapM_id_length xs ys e]
 
+/-- An initialized cell list's bytes, cell by cell. -/
+theorem mapM_id_get : ∀ (cells : List (Option UInt8)) (bs : List UInt8), cells.mapM id = some bs →
+    ∀ (i : Nat) (x : UInt8), bs[i]? = some x → cells[i]? = some (some x)
+  | [], bs, h, i, x, hx => by simp at h; subst h; simp at hx
+  | c :: cs, bs, h, i, x, hx => by
+    cases c with
+    | none => simp at h
+    | some y =>
+      cases e : cs.mapM id with
+      | none => simp [e] at h
+      | some ys =>
+        simp [e] at h; subst h
+        cases i with
+        | zero => simpa using hx
+        | succ i => simpa using mapM_id_get cs ys e i x (by simpa using hx)
+
 /-- `caml_ml_string_length` / `caml_ml_bytes_length` on a string-like object. -/
 theorem string_length_semantics {h : Heap} {w : World} {l n : Nat} {o : Obj} {name : String}
     (object : h.get? l = some o) (len : o.byteLength? = some n)
@@ -103,12 +119,12 @@ theorem StringInput.shape {runtimeOk P s pl cp sp high ra l o n a c}
   cases o with
   | bytes b =>
     simp only [Obj.byteLength?, Option.some.injEq] at len; subst len
-    obtain ⟨header, _, padding⟩ := layout
+    obtain ⟨header, _, padding, -⟩ := layout
     have hw : (Obj.bytes b).wosize = (b.length + 8) / 8 := by simp only [Obj.wosize]; omega
     exact ⟨by simpa only [hw] using header.2, by simpa only [hw] using padding⟩
   | partialBytes b =>
     simp only [Obj.byteLength?, Option.some.injEq] at len; subst len
-    obtain ⟨header, _, padding⟩ := layout
+    obtain ⟨header, _, padding, -⟩ := layout
     have hw : (Obj.partialBytes b).wosize = (b.length + 8) / 8 := by simp only [Obj.wosize]; omega
     exact ⟨by simpa only [hw] using header.2, by simpa only [hw] using padding⟩
   | _ => simp [Obj.byteLength?] at len
