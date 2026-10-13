@@ -15,25 +15,27 @@ heap chunk, a live block apart from the struct and `minor_heap_wsz`.
 -/
 
 namespace OCaml.Vm.Gc
+variable {live : Nat → Prop} [OCaml.Vm.Boot.Startup.LibraryLive live]
 set_option autoImplicit false
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap OCaml.Vm.Primitives OCaml.Vm.Boot.Startup VsaIris VsaIris.Inst VsaIris.VsaHeap Boot
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- **The growth call's precondition at an F1 state.** -/
 theorem f1_grow {c : Config} {ra sp slot v : BitVec 64} (ok : f1Runtime c)
-    (leaf : LeafInput ra c) (platform : VsaOk startupLive c)
+    (leaf : LeafInput ra c) (platform : VsaOk live c)
     (gp : gprGet c.σ 3 = some VsaIris.MallocFast.gpV) (stack : gprGet c.σ 2 = some sp)
     (frame : NativeFrame sp (32 + (64 + allocHeadroom)))
     (empty : (word c (refTable + Layout.off_ref_table_base)).toNat = 0)
     (slotChunks : InHeapChunks (slot + BitVec.ofNat 64 0).toNat 8) :
     ∃ H cap chs, LibHeapAt H cap chs c ∧
-      Barrier.Grow H (cap - tableCharge) tableCharge slot v ra sp (BitVec.ofNat 64 refTable) 0x40000#64 c := by
+      Barrier.Grow live H (cap - tableCharge) tableCharge slot v ra sp (BitVec.ofNat 64 refTable) 0x40000#64 c := by
   obtain ⟨H, cap, chs, h⟩ := ok.freeListShape.libHeap
   have room := h.room
   rw [empty] at room
   simp only [reserved, ite_true] at room
   have capEq : cap - tableCharge + tableCharge = cap := by omega
   have tblNat : (BitVec.ofNat 64 refTable).toNat = refTable := by decide
-  have readOnly : ∀ p ∈ VsaIris.MallocFast.roR, (vsaModel startupLive).reg c p.1 = p.2 := by
+  have readOnly : ∀ p ∈ VsaIris.MallocFast.roR, (vsaModel live).reg c p.1 = p.2 := by
     intro p hp
     simp only [VsaIris.MallocFast.roR, List.mem_singleton] at hp
     subst hp
@@ -97,9 +99,10 @@ theorem kept_static {H : List (Nat × Nat)} {sp tbl : BitVec 64} {a : Nat} (low 
     (notAlloc : ¬ allocGlobal a) : Realloc.Kept H sp tbl a :=
   Or.inr (Or.inl ⟨low, notAlloc⟩)
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- A word whose bytes the growth call keeps (and that misses the slot) is unchanged. -/
 theorem grow_word {H : List (Nat × Nat)} {capacity : Nat} {slot v ra sp tbl wsz : BitVec 64} {c c' : Config}
-    (g : Barrier.GrowDone H capacity slot v ra sp tbl wsz c c') {x : Nat}
+    (g : Barrier.GrowDone live H capacity slot v ra sp tbl wsz c c') {x : Nat}
     (k : ∀ j, j < 8 → Realloc.Kept H sp tbl (x + j))
     (apart : x + 8 ≤ (slot + BitVec.ofNat 64 0).toNat ∨ (slot + BitVec.ofNat 64 0).toNat + 8 ≤ x) :
     bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8 := by
@@ -164,6 +167,7 @@ theorem toNat_of_add {x p K : BitVec 64} {k : Nat} (e : x = p + K) (hk : K.toNat
   rw [e, BitVec.toNat_add, hk]
   omega
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- **After the remembered set's growth, `f1Runtime` holds**: the footprint
 the runtime invariant reads is kept by the call (static words, the
 `Caml_state` record, the private free block), and newlib's heap gains the
@@ -171,7 +175,7 @@ storage block (`LibHeapAt.grow`). -/
 theorem f1_afterGrow {c c' : Config} {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {slot v ra sp : BitVec 64}
     (ok : f1Runtime c) (h : LibHeapAt H cap chs c)
     (empty : (word c (refTable + Layout.off_ref_table_base)).toNat = 0)
-    (g : Barrier.GrowDone H (cap - tableCharge) slot v ra sp (BitVec.ofNat 64 refTable) 0x40000#64 c c')
+    (g : Barrier.GrowDone live H (cap - tableCharge) slot v ra sp (BitVec.ofNat 64 refTable) 0x40000#64 c c')
     (slotChunks : InHeapChunks (slot + BitVec.ofNat 64 0).toNat 8)
     (slotPrivate : (slot + BitVec.ofNat 64 0).toNat + 8 ≤ privateRegion.lo ∨
       privateRegion.hi ≤ (slot + BitVec.ofNat 64 0).toNat) :

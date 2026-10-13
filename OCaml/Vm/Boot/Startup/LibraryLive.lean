@@ -12,4 +12,10 @@ class LibraryLive (live : Nat → Prop) : Prop where
   image : ImageLive live
 
 instance : LibraryLive startupLive := ⟨startup_alloc_live, startup_image_live⟩
+
+/-- Every `.text` byte is live. -/
+theorem LibraryLive.text {live : Nat → Prop} [LibraryLive live] {a : Nat}
+    (lo : Image.textBase ≤ a) (hi : a < Image.textBase + Image.textSize) : live a := by
+  have h := (LibraryLive.image (live := live)).text (a - Image.textBase) (by omega)
+  rwa [Nat.add_sub_cancel' lo] at h
 end OCaml.Vm.Boot.Startup

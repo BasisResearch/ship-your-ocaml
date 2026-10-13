@@ -12,12 +12,14 @@ fields.
 -/
 
 namespace OCaml.Vm.Gc.Realloc
+variable {live : Nat → Prop} [OCaml.Vm.Boot.Startup.LibraryLive live]
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap OCaml.Vm.Primitives OCaml.Vm.Boot.Startup VsaIris VsaIris.VsaHeap
   VsaIris.Inst LeanRV64DExecutable
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- The allocation keeps the code bytes below the arena. -/
-theorem alloc_lowKept {H capacity n sp ra before after} (w : StatAllocated H capacity n sp ra before after)
-    (frame : NativeFrame sp allocHeadroom) : LowKept before.σ.mem after.σ.mem := by
+theorem alloc_lowKept {H capacity n sp ra before after} (w : StatAllocatedL live H capacity n sp ra before after)
+    (frame : NativeFrame sp allocHeadroom) : LowKept live before.σ.mem after.σ.mem := by
   intro a live below notGlobal
   have unchanged := w.allocation.memory a (by
     intro owned
@@ -51,9 +53,10 @@ theorem limitLog_inside {sp tbl v : BitVec 64} (high : tbl.toNat + tableBytes �
     tableBytes]
   refine ⟨?_, ?_, trivial⟩ <;> right <;> left <;> omega
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- The allocation keeps the callee-saved registers it never touches. -/
 theorem stat_rest_gpr {H capacity n sp ra before after k}
-    (w : StatAllocated H capacity n sp ra before after) (member : k ∈ calleeRest) :
+    (w : StatAllocatedL live H capacity n sp ra before after) (member : k ∈ calleeRest) :
     gprGet after.σ k = gprGet before.σ k := by
   have range : 1 ≤ k ∧ k ≤ 31 ∧ k ≠ 15 := by simp [calleeRest] at member; omega
   have notin : ∀ k ∈ calleeRest, k ∉ VsaIris.Sym.aRegs := by decide
@@ -117,10 +120,10 @@ theorem Kept.not_mS {H sp tbl a} (k : Kept H sp tbl a) (frame : NativeFrame sp (
     · rcases allocator_payload_outside member hq foot with h | h <;> omega
 
 /-- The callee's result: the fresh table storage `p` and the filled table. -/
-structure Done (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2 s3 wsz : BitVec 64)
+structure Done (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2 s3 wsz : BitVec 64)
     (before after : Config) where
   p : BitVec 64
-  ready : RuntimeReady ((p.toNat, (request wsz).toNat) :: H) capacity sp ra after
+  ready : RuntimeReadyL live ((p.toNat, (request wsz).toNat) :: H) capacity sp ra after
   pc : after.σ.regs.get? Register.PC = some ra
   saved : GHolds after.σ [(8, s0), (9, s1), (18, s2), (19, s3)]
   nonzero : p.toNat ≠ 0
@@ -141,9 +144,9 @@ structure Done (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2 s3 w
 
 /-- **`caml_realloc_ref_table` on an unallocated table**, entry to return. -/
 theorem realloc_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
-    (e : Entry H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) :
+    (e : Entry live H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) :
     FnSummary ReallocEntry.pc (fun d => d = c)
-      (fun after => Nonempty (Done H capacity sp ra tbl s0 s1 s2 s3 wsz c after)) := by
+      (fun after => Nonempty (Done live H capacity sp ra tbl s0 s1 s2 s3 wsz c after)) := by
   constructor
   rintro d ⟨pc, rfl⟩
   have f64 : NativeFrame sp 64 := e.frame.resize (by decide) (by decide)
@@ -158,8 +161,8 @@ theorem realloc_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
   change (vsaReg c4 10).toNat + (request wsz).toNat ≤ heapEnd at pHigh
   have pReg : gprGet c4.σ 10 = some (vsaReg c4 10) := library_gpr S.ready.platform (by decide) (by decide) rfl
   have codeAt : Code.Realloc_generic_table_isra_0Loaded A.atAlloc.σ.mem := by
-    rw [A.memory]; exact genCode_keep e.genCode (lowKept_windows f64 tLow (entryLog_inside f64 tHigh))
-  have after : AfterAlloc ((((vsaReg c4 10).toNat, (request wsz).toNat)) :: H) capacity sp tbl s0 s1 s2 s3 ra wsz
+    rw [A.memory]; exact genCode_keep (live := live) e.genCode (lowKept_windows f64 tLow (entryLog_inside f64 tHigh))
+  have after : AfterAlloc live ((((vsaReg c4 10).toNat, (request wsz).toNat)) :: H) capacity sp tbl s0 s1 s2 s3 ra wsz
       (vsaReg c4 10) c4 :=
     { ready := S.ready, frame := e.frame, table := List.mem_cons_of_mem _ e.table, tableAligned := e.tableAligned
       words := words_alloc S e.frame e.table tLow tHigh (by rw [A.memory]; exact words_entry e)
@@ -175,14 +178,14 @@ theorem realloc_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
   simp only [ReallocInstall.state3, GHolds] at r5
   obtain ⟨h10, h11, h18, h9, h8, h19, -⟩ := r5
   have code5 : Code.Realloc_generic_table_isra_0Loaded c5.σ.mem := by
-    rw [I.memory]; exact genCode_keep after.code (lowKept_windows f64 tLow (installLog_inside tHigh))
+    rw [I.memory]; exact genCode_keep (live := live) after.code (lowKept_windows f64 tLow (installLog_inside tHigh))
   -- threshold product
   obtain ⟨c6, run6, M⟩ := (ready_muldi3 ReallocInstall.call_shape ReallocInstall.call_decode
     ReallocInstall.call_target (ReallocInstall.call_pins code5) I.ready h10 h11 (by decide)).run c5 ⟨I.pc, rfl⟩
   have keep6 (n : Nat) (h : n ∈ [8, 9, 18, 19]) : gprGet c6.σ n = gprGet c5.σ n := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h
     exact M.frame n (by omega) (by omega) (by simp; omega)
-  have before6 : BeforeLimit ((((vsaReg c4 10).toNat, (request wsz).toNat)) :: H) capacity sp tbl s0 s1 s2 s3 ra
+  have before6 : BeforeLimit live ((((vsaReg c4 10).toNat, (request wsz).toNat)) :: H) capacity sp tbl s0 s1 s2 s3 ra
       wsz (vsaReg c4 10) ReallocInstall.call.link c6 :=
     { ready := M.ready, frame := e.frame, table := List.mem_cons_of_mem _ e.table, tableAligned := e.tableAligned
       rest := by
@@ -204,14 +207,14 @@ theorem realloc_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
   simp only [ReallocLimit.state1, GHolds] at r7
   obtain ⟨l10, l11, -, -, l8, l9, -, -, -⟩ := r7
   have code7 : Code.Realloc_generic_table_isra_0Loaded c7.σ.mem := by
-    rw [L.memory]; exact genCode_keep before6.code (lowKept_windows f64 tLow (limitLog_inside tHigh))
+    rw [L.memory]; exact genCode_keep (live := live) before6.code (lowKept_windows f64 tLow (limitLog_inside tHigh))
   -- end product
   obtain ⟨c8, run8, N⟩ := (ready_muldi3 ReallocLimit.call_shape ReallocLimit.call_decode
     ReallocLimit.call_target (ReallocLimit.call_pins code7) L.ready l10 l11 (by decide)).run c7 ⟨L.pc, rfl⟩
   have keep8 (n : Nat) (h : n ∈ [8, 9]) : gprGet c8.σ n = gprGet c7.σ n := by
     simp only [List.mem_cons, List.not_mem_nil, or_false] at h
     exact N.frame n (by omega) (by omega) (by simp; omega)
-  have before8 : BeforeReturn ((((vsaReg c4 10).toNat, (request wsz).toNat)) :: H) capacity sp tbl s0 s1 s2 s3 ra
+  have before8 : BeforeReturn live ((((vsaReg c4 10).toNat, (request wsz).toNat)) :: H) capacity sp tbl s0 s1 s2 s3 ra
       wsz (vsaReg c4 10) ReallocLimit.call.link c8 :=
     { ready := N.ready, frame := e.frame, table := List.mem_cons_of_mem _ e.table, tableAligned := e.tableAligned
       rest := by

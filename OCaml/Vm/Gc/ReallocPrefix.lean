@@ -22,6 +22,7 @@ transport lemmas.
 -/
 
 namespace OCaml.Vm.Gc.Realloc
+variable {live : Nat → Prop} [OCaml.Vm.Boot.Startup.LibraryLive live]
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap OCaml.Vm.Primitives OCaml.Vm.Boot.Startup VsaIris VsaIris.VsaHeap
   LeanRV64DExecutable
 
@@ -36,9 +37,9 @@ def request (wsz : BitVec 64) : BitVec 64 := (size wsz + 0x100#64) * 0x8#64
 
 /-- The callee's entry: readiness, a native frame with allocator headroom
 below its 64-byte frame, the table as a live block with `base == NULL`. -/
-structure Entry (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra tbl s0 s1 s2 s3 wsz : BitVec 64)
+structure Entry (live : Nat → Prop) (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra tbl s0 s1 s2 s3 wsz : BitVec 64)
     (c : Config) : Prop where
-  ready : RuntimeReady H (capacity + charge) sp ra c
+  ready : RuntimeReadyL live H (capacity + charge) sp ra c
   frame : NativeFrame sp (64 + allocHeadroom)
   saved : GHolds c.σ [(8, s0), (9, s1), (18, s2), (19, s3), (10, tbl)]
   refCode : Code.Caml_realloc_ref_tableLoaded c.σ.mem
@@ -114,9 +115,10 @@ theorem separate {H : List (Nat × Nat)} {sp tbl : BitVec 64} (frame : NativeFra
     simp only [windows, OutW, heapStart, heapEnd, tableBytes] at *
     refine ⟨?_, ?_, trivial⟩ <;> omega
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- **The entry chain's route** from the callee's entry. -/
 theorem entry_route {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
-    (e : Entry H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) :
+    (e : Entry live H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) :
     ReallocEntry.Route c.σ.mem sp s0 s3 ra s2 tbl s1 (read8 c.σ.mem tbl.toNat)
       (read8 c.σ.mem Layout.sym_Caml_state) (read8 c.σ.mem (firstDomainPtr.toNat + 80)) := by
   have f64 : NativeFrame sp 64 := e.frame.resize (by decide) (by decide)
@@ -209,19 +211,20 @@ theorem callee_of_frame {before after : Config} {W : List Nat}
   fun k hk => f k (calleeRest_bounds k hk).1 (calleeRest_bounds k hk).2 (out k hk)
 
 /-- At the size product's `__muldi3` call (`9774`). -/
-structure AtSizeCall (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra tbl s0 s1 s2 s3 wsz : BitVec 64)
+structure AtSizeCall (live : Nat → Prop) (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra tbl s0 s1 s2 s3 wsz : BitVec 64)
     (before after : Config) : Prop where
-  ready : RuntimeReady H (capacity + charge) (sp + -64#64) ra after
+  ready : RuntimeReadyL live H (capacity + charge) (sp + -64#64) ra after
   pc : after.σ.regs.get? Register.PC = some ReallocEntry.call.pc
   regs : GHolds after.σ (ReallocEntry.state3 sp s0 s3 ra s2 tbl s1 0#64 firstDomainPtr wsz)
   memory : after.σ.mem = writeLog before.σ.mem (entryLog sp tbl s0 s1 s2 s3 ra wsz)
   out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
   callee : ∀ k ∈ calleeRest, gprGet after.σ k = gprGet before.σ k
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- **The entry chain under readiness.** -/
 theorem entry_step {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
-    (e : Entry H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) :
-    FnSummary ReallocEntry.pc (fun d => d = c) (AtSizeCall H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) := by
+    (e : Entry live H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) :
+    FnSummary ReallocEntry.pc (fun d => d = c) (AtSizeCall live H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) := by
   constructor
   rintro d ⟨pc, rfl⟩
   have f64 : NativeFrame sp 64 := e.frame.resize (by decide) (by decide)
@@ -256,25 +259,26 @@ theorem entry_step {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
     inside sep.pins sep.domain sep.pool sep.heap
 
 /-- Memory below the arena and outside malloc's globals: the realloc code. -/
-def LowKept (m m' : Std.ExtHashMap Nat (BitVec 8)) : Prop :=
-  ∀ a, startupLive a → a < heapStart → ¬ allocGlobal a → m'[a]? = m[a]?
+def LowKept (live : Nat → Prop) (m m' : Std.ExtHashMap Nat (BitVec 8)) : Prop :=
+  ∀ a, live a → a < heapStart → ¬ allocGlobal a → m'[a]? = m[a]?
 
 theorem genCode_keep {m m' : Std.ExtHashMap Nat (BitVec 8)} (code : Code.Realloc_generic_table_isra_0Loaded m)
-    (same : LowKept m m') : Code.Realloc_generic_table_isra_0Loaded m' :=
+    (same : LowKept live m m') : Code.Realloc_generic_table_isra_0Loaded m' :=
   Code.realloc_generic_table_isra_0_transport code fun a lo hi =>
-    same a (by unfold startupLive Vsa.Densify.ramBase Vsa.Densify.ramSize; omega) (by unfold heapStart; omega)
+    same a (OCaml.Vm.Boot.Startup.LibraryLive.text (by unfold Image.textBase at *; omega) (by unfold Image.textBase Image.textSize at *; omega)) (by unfold heapStart; omega)
       (by unfold allocGlobal InRange; omega)
 
 theorem refCode_keep {m m' : Std.ExtHashMap Nat (BitVec 8)} (code : Code.Caml_realloc_ref_tableLoaded m)
-    (same : LowKept m m') : Code.Caml_realloc_ref_tableLoaded m' :=
+    (same : LowKept live m m') : Code.Caml_realloc_ref_tableLoaded m' :=
   Code.caml_realloc_ref_table_transport code fun a lo hi =>
-    same a (by unfold startupLive Vsa.Densify.ramBase Vsa.Densify.ramSize; omega) (by unfold heapStart; omega)
+    same a (OCaml.Vm.Boot.Startup.LibraryLive.text (by unfold Image.textBase at *; omega) (by unfold Image.textBase Image.textSize at *; omega)) (by unfold heapStart; omega)
       (by unfold allocGlobal InRange; omega)
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- A store log inside the callee's windows keeps the low memory. -/
 theorem lowKept_windows {sp tbl : BitVec 64} (frame : NativeFrame sp 64) (low : heapStart ≤ tbl.toNat)
     {m : Std.ExtHashMap Nat (BitVec 8)} {log : List WEntry} (inside : LogInW (windows sp tbl) log) :
-    LowKept m (writeLog m log) := by
+    LowKept live m (writeLog m log) := by
   intro a _ below _
   apply frameOn_writeLog _ _ _ inside a
   have := frame.lower
@@ -282,10 +286,10 @@ theorem lowKept_windows {sp tbl : BitVec 64} (frame : NativeFrame sp 64) (low : 
   exact ⟨Or.inl (by omega), Or.inl (by omega), trivial⟩
 
 /-- After `caml_stat_alloc_noexc` returns (`977c`). -/
-structure Allocated (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2 s3 wsz : BitVec 64)
+structure Allocated (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2 s3 wsz : BitVec 64)
     (before after : Config) where
   atAlloc : Config
-  stat : StatAllocated H capacity (request wsz) (sp + -64#64) 0x8000977c#64 atAlloc after
+  stat : StatAllocatedL live H capacity (request wsz) (sp + -64#64) 0x8000977c#64 atAlloc after
   memory : atAlloc.σ.mem = writeLog before.σ.mem (entryLog sp tbl s0 s1 s2 s3 ra wsz)
   s0Reg : gprGet atAlloc.σ 8 = some tbl
   s1Reg : gprGet atAlloc.σ 9 = some s1
@@ -296,9 +300,9 @@ structure Allocated (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl s0 s1 s2
 
 /-- **The prefix**: the entry chain, the size product and the allocation. -/
 theorem prefix_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
-    (e : Entry H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) :
+    (e : Entry live H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) :
     FnSummary ReallocEntry.pc (fun d => d = c)
-      (fun after => Nonempty (Allocated H capacity sp ra tbl s0 s1 s2 s3 wsz c after)) := by
+      (fun after => Nonempty (Allocated live H capacity sp ra tbl s0 s1 s2 s3 wsz c after)) := by
   constructor
   rintro d ⟨pc, rfl⟩
   obtain ⟨c1, run1, A⟩ := (entry_step e).run d ⟨pc, rfl⟩
@@ -308,7 +312,7 @@ theorem prefix_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
   have f64 : NativeFrame sp 64 := e.frame.resize (by decide) (by decide)
   obtain ⟨tLow, tHigh⟩ := e.ready.block_bounds e.table
   have code1 : Code.Realloc_generic_table_isra_0Loaded c1.σ.mem := by
-    rw [A.memory]; exact genCode_keep e.genCode (lowKept_windows f64 tLow (entryLog_inside f64 tHigh))
+    rw [A.memory]; exact genCode_keep (live := live) e.genCode (lowKept_windows f64 tLow (entryLog_inside f64 tHigh))
   obtain ⟨c2, run2, M⟩ := (ready_muldi3 ReallocEntry.call_shape ReallocEntry.call_decode
     ReallocEntry.call_target (ReallocEntry.call_pins code1) A.ready ha0 h11 (by decide)).run c1 ⟨A.pc, rfl⟩
   rw [ReallocEntry.call_link] at M
@@ -318,7 +322,7 @@ theorem prefix_run {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
   obtain ⟨c3, run3, C⟩ := (ready_call ReallocAllocCall.call_shape ReallocAllocCall.call_decode
     (ReallocAllocCall.call_pins code2) M.ready [(10, request wsz)] ⟨M.result, trivial⟩
     (by simp only [keysG, List.map]; decide) (by simp [KeysAvoidRa, keysG]) _ rfl (by decide)).run c2 ⟨M.pc, rfl⟩
-  have ready3 : RuntimeReady H (capacity + charge) (sp + -64#64) 0x8000977c#64 c3 := by
+  have ready3 : RuntimeReadyL live H (capacity + charge) (sp + -64#64) 0x8000977c#64 c3 := by
     have r := C.ready; rw [ReallocAllocCall.call_link] at r; exact r
   have frameA : NativeFrame (sp + -64#64) allocHeadroom := e.frame.nested (front := 64) (by decide)
   obtain ⟨c4, run4, ⟨S⟩⟩ := (stat_alloc_ready c3 H capacity charge (request wsz) _ _ ready3 frameA

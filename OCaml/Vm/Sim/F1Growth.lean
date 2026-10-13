@@ -1,5 +1,6 @@
 import OCaml.Vm.Sim.BarrierKeep
 import OCaml.Vm.Gc.F1Grow
+import OCaml.Vm.Gc.ImageLibrary
 import OCaml.Vm.Sim.F1BarrierRuntime
 
 /-!
@@ -119,9 +120,9 @@ theorem table_unique {dom tbl ptr limit tbl' ptr' limit' : BitVec 64} {m : Std.E
   exact ⟨rfl, t.ptrWord.symm.trans t'.ptrWord, t.limitWord.symm.trans t'.limitWord⟩
 
 /-- **`caml_modify` growing an unallocated remembered set, at an F1 state
-whose RAM is dense** (every startup-live byte present, as newlib's VSA model
-requires) and whose integer registers are all present. -/
-theorem f1_barrierGrowth_dense {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high codeReg : Nat}
+whose integer registers are all present.** newlib's library model runs over
+the program image alone (`imageLive`), present by `ExecutableImage`. -/
+theorem f1_barrierGrowth_gprs {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high codeReg : Nat}
     {ra codeWord stackWord value : BitVec 64} {c : Config} {l a i tag : Nat} {fields : List Val}
     {vVal : Val} {D : InvocationData} {tbl ptr limit : BitVec 64}
     (input : ModifyInput Gc.f1Layout P s pl cp sp high codeReg ra codeWord stackWord
@@ -138,7 +139,7 @@ theorem f1_barrierGrowth_dense {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
       (bytesT c.σ.mem (word c Layout.sym_Caml_state + BitVec.ofNat 64 40).toNat 8)
       (BitVec.ofNat 64 (a + 8 * i)) (bytesT c.σ.mem (BitVec.ofNat 64 (a + 8 * i) + BitVec.ofNat 64 0).toNat 8)
       value ptr limit)
-    (dense : ∀ x, startupLive x → (c.σ.mem[x]?).isSome) (gprs : GprPresent c.σ) :
+    (gprs : GprPresent c.σ) :
     FnSummary (0x8000a9a8#64) (fun e => e = c)
       (BarrierDone Gc.f1Layout P {s with heap := s.heap.set l (.block tag (fields.set i vVal))} pl cp sp high D ra c) := by
   have ok : f1Runtime c := input.runtime
@@ -176,8 +177,9 @@ theorem f1_barrierGrowth_dense {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
     rw [sn]; rcases hc with o | o
     · left; omega
     · right; omega
-  have platform : VsaIris.Inst.VsaOk startupLive c :=
-    ⟨input.good, input.tick, fun n lo hi => gprs.get n lo (by omega), dense, input.loop.htifIdle⟩
+  have platform : VsaIris.Inst.VsaOk imageLive c :=
+    ⟨input.good, input.tick, fun n lo hi => gprs.get n lo (by omega), imageLive_present input.image,
+      input.loop.htifIdle⟩
   have frame : NativeFrame (BitVec.ofNat 64 D.nativeSp) (32 + (64 + VsaIris.VsaHeap.allocHeadroom)) :=
     ⟨by rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt small]
         exact Nat.le_trans (Nat.add_le_add_left (by decide : 32 + (64 + VsaIris.VsaHeap.allocHeadroom) ≤ nativeHeadroom) _) hh,

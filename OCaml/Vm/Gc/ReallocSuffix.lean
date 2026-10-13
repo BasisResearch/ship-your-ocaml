@@ -14,6 +14,7 @@ From `caml_stat_alloc_noexc`'s return: `base`/`ptr` installed
 -/
 
 namespace OCaml.Vm.Gc.Realloc
+variable {live : Nat → Prop} [OCaml.Vm.Boot.Startup.LibraryLive live]
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap OCaml.Vm.Primitives OCaml.Vm.Boot.Startup VsaIris VsaIris.VsaHeap
   LeanRV64DExecutable
 
@@ -29,9 +30,10 @@ structure Words (m : Std.ExtHashMap Nat (BitVec 8)) (sp tbl s0 s1 s2 s3 ra wsz :
   savedS2 : bytesT m (sp.toNat - 64 + 32) 8 = s2
   savedS1 : bytesT m (sp.toNat - 64 + 40) 8 = s1
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- The entry chain leaves the words in place. -/
 theorem words_entry {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
-    (e : Entry H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) :
+    (e : Entry live H capacity charge sp ra tbl s0 s1 s2 s3 wsz c) :
     Words (writeLog c.σ.mem (entryLog sp tbl s0 s1 s2 s3 ra wsz)) sp tbl s0 s1 s2 s3 ra wsz := by
   have f64 : NativeFrame sp 64 := e.frame.resize (by decide) (by decide)
   obtain ⟨tLow, tHigh⟩ := e.ready.block_bounds e.table
@@ -83,8 +85,9 @@ theorem words_entry {H capacity charge sp ra tbl s0 s1 s2 s3 wsz} {c : Config}
         simp only [entryLog, List.drop_succ_cons, List.drop_zero, List.mem_cons, List.not_mem_nil, or_false] at hx
         rcases hx with rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [n48, n24, n56, n32, n40, t48, t40] <;> omega)
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- The allocation keeps every byte of another live block. -/
-theorem alloc_live_byte {H capacity n sp ra before after} (w : StatAllocated H capacity n sp ra before after)
+theorem alloc_live_byte {H capacity n sp ra before after} (w : StatAllocatedL live H capacity n sp ra before after)
     (frame : NativeFrame sp allocHeadroom) {q m a : Nat} (member : (q, m) ∈ H) (low : heapStart ≤ q)
     (high : q + m ≤ heapEnd) (inside : q ≤ a ∧ a < q + m) :
     (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0 := by
@@ -101,9 +104,10 @@ theorem alloc_live_byte {H capacity n sp ra before after} (w : StatAllocated H c
 theorem frameSp_nat {sp : BitVec 64} (f : NativeFrame sp 64) : (sp + -64#64).toNat = sp.toNat - 64 :=
   f.stack_nat
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- The words survive the allocation. -/
 theorem words_alloc {H capacity n sp ra' before after} {ra tbl s0 s1 s2 s3 wsz : BitVec 64}
-    (w : StatAllocated H capacity n (sp + -64#64) ra' before after)
+    (w : StatAllocatedL live H capacity n (sp + -64#64) ra' before after)
     (frame : NativeFrame sp (64 + allocHeadroom)) (member : (tbl.toNat, tableBytes) ∈ H)
     (low : heapStart ≤ tbl.toNat) (high : tbl.toNat + tableBytes ≤ heapEnd)
     (words : Words before.σ.mem sp tbl s0 s1 s2 s3 ra wsz) : Words after.σ.mem sp tbl s0 s1 s2 s3 ra wsz := by
@@ -122,21 +126,22 @@ theorem words_alloc {H capacity n sp ra' before after} {ra tbl s0 s1 s2 s3 wsz :
     by rw [slot 24 (by decide)]; exact words.savedS3, by rw [slot 56 (by decide)]; exact words.savedRa,
     by rw [slot 32 (by decide)]; exact words.savedS2, by rw [slot 40 (by decide)]; exact words.savedS1⟩
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- A store chain inside the callee's windows that keeps `sp` and `ra` keeps readiness. -/
 theorem chain_ready {H capacity fsp ra before after writes log pc value regs} {sp tbl : BitVec 64}
-    (ready : RuntimeReady H capacity fsp ra before) (post : WriteRegistersPost writes log before pc value regs after)
+    (ready : RuntimeReadyL live H capacity fsp ra before) (post : WriteRegistersPost writes log before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) (gp : 3 ∉ writes)
     (noSp : 2 ∉ writes) (noRa : 1 ∉ writes) (inside : LogInW (windows sp tbl) log)
-    (sep : Separate H sp tbl) : RuntimeReady H capacity fsp ra after :=
+    (sep : Separate H sp tbl) : RuntimeReadyL live H capacity fsp ra after :=
   ready.window_log post keys cover gp
     ((post.toEffectPost.gpr_frame keys 2 (by decide) (by decide) noSp).trans ready.stack)
     ((post.toEffectPost.gpr_frame keys 1 (by decide) (by decide) noRa).trans ready.raReg) ready.aligned
     inside sep.pins sep.domain sep.pool sep.heap
 
 /-- After the allocation, at `977c`. -/
-structure AfterAlloc (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2 s3 ra wsz p : BitVec 64)
+structure AfterAlloc (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2 s3 ra wsz p : BitVec 64)
     (c : Config) : Prop where
-  ready : RuntimeReady H capacity (sp + -64#64) 0x8000977c#64 c
+  ready : RuntimeReadyL live H capacity (sp + -64#64) 0x8000977c#64 c
   frame : NativeFrame sp (64 + allocHeadroom)
   table : (tbl.toNat, tableBytes) ∈ H
   tableAligned : tbl.toNat % 8 = 0
@@ -152,19 +157,20 @@ def installLog (tbl p : BitVec 64) : List WEntry :=
   [((tbl + BitVec.ofNat 64 0).toNat, 8, p), ((tbl + BitVec.ofNat 64 24).toNat, 8, p)]
 
 /-- At the threshold product's `__muldi3` call (`97a4`). -/
-structure AtThresholdCall (H : List (Nat × Nat)) (capacity : Nat) (sp tbl wsz p : BitVec 64)
+structure AtThresholdCall (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp tbl wsz p : BitVec 64)
     (before after : Config) : Prop where
-  ready : RuntimeReady H capacity (sp + -64#64) 0x8000977c#64 after
+  ready : RuntimeReadyL live H capacity (sp + -64#64) 0x8000977c#64 after
   pc : after.σ.regs.get? Register.PC = some ReallocInstall.call.pc
   regs : GHolds after.σ (ReallocInstall.state3 p tbl 0x8#64 0#64 (size wsz))
   memory : after.σ.mem = writeLog before.σ.mem (installLog tbl p)
   out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
   callee : ∀ k ∈ calleeRest, gprGet after.σ k = gprGet before.σ k
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- **`base == NULL`, so no free; `base` and `ptr` are installed.** -/
 theorem install_step {H capacity sp tbl s0 s1 s2 s3 ra wsz p} {c : Config}
-    (a : AfterAlloc H capacity sp tbl s0 s1 s2 s3 ra wsz p c) :
-    FnSummary ReallocInstall.pc (fun d => d = c) (AtThresholdCall H capacity sp tbl wsz p c) := by
+    (a : AfterAlloc live H capacity sp tbl s0 s1 s2 s3 ra wsz p c) :
+    FnSummary ReallocInstall.pc (fun d => d = c) (AtThresholdCall live H capacity sp tbl wsz p c) := by
   constructor
   rintro d ⟨pc, rfl⟩
   have f64 : NativeFrame sp 64 := a.frame.resize (by decide) (by decide)
@@ -233,9 +239,9 @@ def limitLog (tbl v : BitVec 64) : List WEntry :=
   [((tbl + BitVec.ofNat 64 16).toNat, 8, v), ((tbl + BitVec.ofNat 64 32).toNat, 8, v)]
 
 /-- Before the threshold/limit stores, at `97a8`. -/
-structure BeforeLimit (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2 s3 ra wsz p link : BitVec 64)
+structure BeforeLimit (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2 s3 ra wsz p link : BitVec 64)
     (c : Config) : Prop where
-  ready : RuntimeReady H capacity (sp + -64#64) link c
+  ready : RuntimeReadyL live H capacity (sp + -64#64) link c
   frame : NativeFrame sp (64 + allocHeadroom)
   table : (tbl.toNat, tableBytes) ∈ H
   tableAligned : tbl.toNat % 8 = 0
@@ -248,19 +254,20 @@ structure BeforeLimit (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2 
   code : Code.Realloc_generic_table_isra_0Loaded c.σ.mem
 
 /-- At the end product's `__muldi3` call (`97c0`). -/
-structure AtEndCall (H : List (Nat × Nat)) (capacity : Nat) (sp tbl wsz p link : BitVec 64)
+structure AtEndCall (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp tbl wsz p link : BitVec 64)
     (before after : Config) : Prop where
-  ready : RuntimeReady H capacity (sp + -64#64) link after
+  ready : RuntimeReadyL live H capacity (sp + -64#64) link after
   pc : after.σ.regs.get? Register.PC = some ReallocLimit.call.pc
   regs : GHolds after.σ (ReallocLimit.state1 tbl p (0x8#64 * size wsz) 0x8#64 (size wsz) 0x100#64)
   memory : after.σ.mem = writeLog before.σ.mem (limitLog tbl (p + 0x8#64 * size wsz))
   out : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
   callee : ∀ k ∈ calleeRest, gprGet after.σ k = gprGet before.σ k
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- **`threshold := limit := base + size * 8`.** -/
 theorem limit_step {H capacity sp tbl s0 s1 s2 s3 ra wsz p link} {c : Config}
-    (b : BeforeLimit H capacity sp tbl s0 s1 s2 s3 ra wsz p link c) :
-    FnSummary ReallocLimit.pc (fun d => d = c) (AtEndCall H capacity sp tbl wsz p link c) := by
+    (b : BeforeLimit live H capacity sp tbl s0 s1 s2 s3 ra wsz p link c) :
+    FnSummary ReallocLimit.pc (fun d => d = c) (AtEndCall live H capacity sp tbl wsz p link c) := by
   constructor
   rintro d ⟨pc, rfl⟩
   have f64 : NativeFrame sp 64 := b.frame.resize (by decide) (by decide)
@@ -294,9 +301,9 @@ theorem limit_step {H capacity sp tbl s0 s1 s2 s3 ra wsz p link} {c : Config}
 def endLog (tbl v : BitVec 64) : List WEntry := [((tbl + BitVec.ofNat 64 8).toNat, 8, v)]
 
 /-- Before `end` and the return, at `97c4`. -/
-structure BeforeReturn (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2 s3 ra wsz p link : BitVec 64)
+structure BeforeReturn (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2 s3 ra wsz p link : BitVec 64)
     (c : Config) : Prop where
-  ready : RuntimeReady H capacity (sp + -64#64) link c
+  ready : RuntimeReadyL live H capacity (sp + -64#64) link c
   frame : NativeFrame sp (64 + allocHeadroom)
   table : (tbl.toNat, tableBytes) ∈ H
   tableAligned : tbl.toNat % 8 = 0
@@ -307,10 +314,10 @@ structure BeforeReturn (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2
   result : gprGet c.σ 10 = some ((size wsz + 0x100#64) * 0x8#64)
   code : Code.Realloc_generic_table_isra_0Loaded c.σ.mem
 
-/-- Returned to the caller. -/
-structure Returned (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2 s3 ra wsz p : BitVec 64)
+/-- Returned live to the caller. -/
+structure Returned (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2 s3 ra wsz p : BitVec 64)
     (before after : Config) : Prop where
-  ready : RuntimeReady H capacity sp ra after
+  ready : RuntimeReadyL live H capacity sp ra after
   pc : after.σ.regs.get? Register.PC = some ra
   regs : GHolds after.σ (ReallocReturn.state1 p ((size wsz + 0x100#64) * 0x8#64) tbl (sp + -64#64) ra s0 s1 s2 s3)
   memory : after.σ.mem = writeLog before.σ.mem (endLog tbl (p + (size wsz + 0x100#64) * 0x8#64))
@@ -320,10 +327,11 @@ structure Returned (H : List (Nat × Nat)) (capacity : Nat) (sp tbl s0 s1 s2 s3 
 theorem frame_pop (sp : BitVec 64) : sp + -64#64 + 64#64 = sp := by
   rw [BitVec.add_assoc]; simp
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- **`end := base + (size + reserve) * 8`, restore and `ret`.** -/
 theorem return_step {H capacity sp tbl s0 s1 s2 s3 ra wsz p link} {c : Config}
-    (b : BeforeReturn H capacity sp tbl s0 s1 s2 s3 ra wsz p link c) :
-    FnSummary ReallocReturn.pc (fun d => d = c) (Returned H capacity sp tbl s0 s1 s2 s3 ra wsz p c) := by
+    (b : BeforeReturn live H capacity sp tbl s0 s1 s2 s3 ra wsz p link c) :
+    FnSummary ReallocReturn.pc (fun d => d = c) (Returned live H capacity sp tbl s0 s1 s2 s3 ra wsz p c) := by
   constructor
   rintro d ⟨pc, rfl⟩
   have f64 : NativeFrame sp 64 := b.frame.resize (by decide) (by decide)

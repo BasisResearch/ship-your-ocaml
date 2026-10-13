@@ -1,6 +1,7 @@
 import OCaml.Vm.Sim.Muldi3
 import OCaml.Vm.Primitives.Call
 import OCaml.Vm.Boot.Startup.RuntimeReady
+import OCaml.Vm.Boot.Startup.LibraryLive
 
 /-!
 # Direct calls under allocator readiness
@@ -12,25 +13,27 @@ register frame (`ready_muldi3`). Both are stated for any call site, so every
 -/
 
 namespace OCaml.Vm.Gc
+variable {live : Nat → Prop} [OCaml.Vm.Boot.Startup.LibraryLive live]
 open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives OCaml.Vm.Boot.Startup OCaml.Vm.Sim LeanRV64DExecutable
 
 /-- After a direct call: readiness with the new link, the target reached,
 the carried argument registers, memory unchanged. -/
-structure CallDone (H : List (Nat × Nat)) (capacity : Nat) (sp : BitVec 64) (call : CallInstr)
+structure CallDone (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp : BitVec 64) (call : CallInstr)
     (args : GRegs) (before after : Config) : Prop where
-  ready : RuntimeReady H capacity sp call.link after
+  ready : RuntimeReadyL live H capacity sp call.link after
   pc : after.σ.regs.get? Register.PC = some call.target
   regs : GHolds after.σ args
   memory : after.σ.mem = before.σ.mem
   output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ≠ 1 → gprGet after.σ n = gprGet before.σ n
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- **A direct call keeps readiness.** -/
 theorem ready_call {H capacity sp ra} {call : CallInstr} (shape : CallShape call) (decode : CallDecode call)
-    {c : Config} (pins : CallPins call c) (ready : RuntimeReady H capacity sp ra c)
+    {c : Config} (pins : CallPins call c) (ready : RuntimeReadyL live H capacity sp ra c)
     (args : GRegs) (holds : GHolds c.σ args) (keys : KeysOK (keysG args)) (avoid : KeysAvoidRa args)
     (value : BitVec 64) (result : lookupG 10 args = some value) (linkAligned : call.link.toNat % 4 = 0) :
-    FnSummary call.pc (fun d => d = c) (CallDone H capacity sp call args c) := by
+    FnSummary call.pc (fun d => d = c) (CallDone live H capacity sp call args c) := by
   apply (call_registers_summary shape decode c pins ready.good ready.image ready.tick ready.minstret
     args holds keys avoid result).weaken (fun _ h => h)
   intro after post
@@ -42,21 +45,22 @@ theorem ready_call {H capacity sp ra} {call : CallInstr} (shape : CallShape call
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ h => h)
 
 /-- After `__muldi3` returns to a call's link. -/
-structure MulDone (H : List (Nat × Nat)) (capacity : Nat) (sp link x y : BitVec 64) (before after : Config) :
+structure MulDone (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp link x y : BitVec 64) (before after : Config) :
     Prop where
-  ready : RuntimeReady H capacity sp link after
+  ready : RuntimeReadyL live H capacity sp link after
   pc : after.σ.regs.get? Register.PC = some link
   result : gprGet after.σ 10 = some (x * y)
   memory : after.σ.mem = before.σ.mem
   output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 10, 11, 12, 13] → gprGet after.σ n = gprGet before.σ n
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- **A `jal __muldi3` site keeps readiness** and returns the product. -/
 theorem ready_muldi3 {H capacity sp ra x y} {call : CallInstr} (shape : CallShape call)
     (decode : CallDecode call) (target : call.target = 0x80037234#64) {c : Config} (pins : CallPins call c)
-    (ready : RuntimeReady H capacity sp ra c) (left : gprGet c.σ 10 = some x) (right : gprGet c.σ 11 = some y)
+    (ready : RuntimeReadyL live H capacity sp ra c) (left : gprGet c.σ 10 = some x) (right : gprGet c.σ 11 = some y)
     (linkAligned : call.link.toNat % 4 = 0) :
-    FnSummary call.pc (fun d => d = c) (MulDone H capacity sp call.link x y c) := by
+    FnSummary call.pc (fun d => d = c) (MulDone live H capacity sp call.link x y c) := by
   constructor
   rintro d ⟨pc, rfl⟩
   obtain ⟨c1, run1, C⟩ := (ready_call shape decode pins ready [(10, x), (11, y)] ⟨left, right, trivial⟩

@@ -12,14 +12,16 @@ barrier's entry through its store chains (`ready_step`) to the call.
 -/
 
 namespace OCaml.Vm.Gc.Barrier
+variable {live : Nat → Prop} [OCaml.Vm.Boot.Startup.LibraryLive live]
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap OCaml.Vm.Primitives OCaml.Vm.Boot.Startup VsaIris VsaIris.Inst
   VsaIris.VsaHeap LeanRV64DExecutable
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- **Readiness across a barrier step**: a run whose stores lie at or above
 `heapStart` and miss the allocator footprint, keeping x3 and the HTIF state
 and every GPR present. -/
 theorem ready_step {H capacity sp ra sp' ra' before after} {log : List WEntry} {W : List Nat}
-    (ready : RuntimeReady H capacity sp ra before)
+    (ready : RuntimeReadyL live H capacity sp ra before)
     (good : GoodState after.σ) (tick : after.tick < 2)
     (minstret : ∃ w, after.σ.regs.get? Register.minstret = some w)
     (memory : after.σ.mem = writeLog before.σ.mem log)
@@ -28,7 +30,7 @@ theorem ready_step {H capacity sp ra sp' ra' before after} {log : List WEntry} {
     (present : GprPresent after.σ) (keys : KeysOK W) (gp : 3 ∉ W)
     (stack : gprGet after.σ 2 = some sp') (link : gprGet after.σ 1 = some ra') (aligned : ra'.toNat % 4 = 0)
     (arena : ∀ e ∈ log, heapStart ≤ e.1) (foot : ∀ a, vsaFoot H a → OutL log a) :
-    RuntimeReady H capacity sp' ra' after := by
+    RuntimeReadyL live H capacity sp' ra' after := by
   have low (a : Nat) (h : a < heapStart) : after.σ.mem[a]? = before.σ.mem[a]? := by
     rw [memory]
     apply writeLog_out
@@ -148,9 +150,9 @@ theorem value_full {slot v fsp dom ys ye tbl ptr limit} {d : Config} (b : Body s
 /-- The extra facts the growth path needs at `caml_modify`'s entry:
 readiness for malloc, a native frame with room for the callee and malloc,
 the remembered set unallocated, and where the slot lives. -/
-structure Grow (H : List (Nat × Nat)) (capacity charge : Nat) (slot v ra sp tbl wsz : BitVec 64) (c : Config) :
+structure Grow (live : Nat → Prop) (H : List (Nat × Nat)) (capacity charge : Nat) (slot v ra sp tbl wsz : BitVec 64) (c : Config) :
     Prop where
-  ready : RuntimeReady H (capacity + charge) sp ra c
+  ready : RuntimeReadyL live H (capacity + charge) sp ra c
   frame : NativeFrame sp (32 + (64 + allocHeadroom))
   table : (tbl.toNat, Realloc.tableBytes) ∈ H
   tableAligned : tbl.toNat % 8 = 0
@@ -173,9 +175,9 @@ structure Grow (H : List (Nat × Nat)) (capacity charge : Nat) (slot v ra sp tbl
 def calleeSaved : List Nat := [8, 9, 18, 19] ++ Realloc.calleeRest
 
 /-- At `caml_realloc_ref_table`'s entry, from the barrier. -/
-structure AtRealloc (H : List (Nat × Nat)) (capacity charge : Nat) (slot v ra sp tbl wsz : BitVec 64)
+structure AtRealloc (live : Nat → Prop) (H : List (Nat × Nat)) (capacity charge : Nat) (slot v ra sp tbl wsz : BitVec 64)
     (before after : Config) : Prop where
-  entry : Realloc.Entry H capacity charge (sp + -32#64) 0x8000aa88#64 tbl (vsaReg before 8) (vsaReg before 9)
+  entry : Realloc.Entry live H capacity charge (sp + -32#64) 0x8000aa88#64 tbl (vsaReg before 8) (vsaReg before 9)
     (vsaReg before 18) (vsaReg before 19) wsz after
   pc : after.σ.regs.get? Register.PC = some ReallocEntry.pc
   memory : after.σ.mem = writeLog before.σ.mem
@@ -192,10 +194,11 @@ theorem frame32 {sp : BitVec 64} (f : NativeFrame sp (32 + (64 + allocHeadroom))
   rw [a]
   exact ⟨f32.word h aligned, f32.slot_nat (by omega)⟩
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- The barrier's stores before the growth call: native-frame slots above the
 arena, or the slot's word. -/
 theorem grow_log_class {H capacity charge slot v ra sp tbl wsz} {c : Config}
-    (g : Grow H capacity charge slot v ra sp tbl wsz c) :
+    (g : Grow live H capacity charge slot v ra sp tbl wsz c) :
     ∀ x ∈ majorLog sp ra slot v ++ fullLog (sp + -32#64) slot tbl,
       (heapEnd + 512 ≤ x.1 ∧ x.1 + x.2.1 ≤ sp.toNat) ∨
         (x.1 = (slot + BitVec.ofNat 64 0).toNat ∧ x.2.1 = 8) := by
@@ -215,10 +218,10 @@ theorem grow_log_class {H capacity charge slot v ra sp tbl wsz} {c : Config}
 /-- **From `caml_modify`'s entry to `caml_realloc_ref_table`'s**, on the growth path. -/
 theorem grow_to_call {H capacity charge slot v ra sp dom ys ye old tbl ptr limit wsz} {c : Config}
     (e : Entry slot v ra sp dom ys ye old c) (rem : Remembered sp ra slot v dom tbl ptr limit c)
-    (g : Grow H capacity charge slot v ra sp tbl wsz c)
+    (g : Grow live H capacity charge slot v ra sp tbl wsz c)
     (notYoung : ¬ YoungIn ys ye slot) (notOld : ¬ OldYoung ys ye old) (young : ValueYoung ys ye v)
     (full : limit.toNat ≤ ptr.toNat) :
-    FnSummary BarrierYoung.pc (fun d => d = c) (AtRealloc H capacity charge slot v ra sp tbl wsz c) := by
+    FnSummary BarrierYoung.pc (fun d => d = c) (AtRealloc live H capacity charge slot v ra sp tbl wsz c) := by
   constructor
   rintro d ⟨pc, rfl⟩
   obtain ⟨d1, run1, M⟩ := (major_head e notYoung).run d ⟨pc, rfl⟩
@@ -268,7 +271,7 @@ theorem grow_to_call {H capacity charge slot v ra sp dom ys ye old tbl ptr limit
   have frame3 := frame_chain (frame_chain M.frame B.frame W1 W2) G.frame (fun n h => h) W3
   have keep3 := frame_gpr (by decide) frame3
   have present0 : GprPresent d.σ := ⟨fun n lo hi => g.ready.platform.gpr n lo (by omega)⟩
-  have ready3 : RuntimeReady H (capacity + charge) (sp + -32#64) ra d3 :=
+  have ready3 : RuntimeReadyL live H (capacity + charge) (sp + -32#64) ra d3 :=
     ready_step g.ready G.good G.tick G.minstret mem3 frame3 (G.present (B.present (M.present present0)))
       (by decide) (by decide) G.stack ((keep3 1 (by decide) (by decide) (by decide)).trans e.raReg) e.raAligned
       arena foot
@@ -288,7 +291,7 @@ theorem grow_to_call {H capacity charge slot v ra sp dom ys ye old tbl ptr limit
         List.not_mem_nil, or_false] at hk ⊢
       omega
     exact (C.frame k b.1 b.2.1 b.2.2.1).trans (keep3 k b.1 b.2.1 b.2.2.2)
-  have low : Realloc.LowKept d.σ.mem d4.σ.mem := by
+  have low : Realloc.LowKept live d.σ.mem d4.σ.mem := by
     intro a _ below _
     rw [mem4]
     apply writeLog_out
@@ -337,9 +340,9 @@ def reloadLog (tbl p slot : BitVec 64) : List WEntry :=
 
 /-- At `aa88` after `caml_realloc_ref_table` returns: the saved frame words,
 the new `ptr`, the windows and readiness. -/
-structure Reloading (H : List (Nat × Nat)) (capacity : Nat) (sp ra slot tbl p link : BitVec 64) (d : Config) :
+structure Reloading (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp ra slot tbl p link : BitVec 64) (d : Config) :
     Prop where
-  ready : RuntimeReady H capacity (sp + -32#64) link d
+  ready : RuntimeReadyL live H capacity (sp + -32#64) link d
   code : Code.Caml_modifyLoaded d.σ.mem
   savedTbl : bytesT d.σ.mem ((sp + -32#64) + BitVec.ofNat 64 0).toNat 8 = tbl
   savedSlot : bytesT d.σ.mem ((sp + -32#64) + BitVec.ofNat 64 8).toNat 8 = slot
@@ -357,19 +360,20 @@ structure Reloading (H : List (Nat × Nat)) (capacity : Nat) (sp ra slot tbl p l
   foot : ∀ a, vsaFoot H a → OutL (reloadLog tbl p slot) a
 
 /-- Returned from the growth path. -/
-structure Reloaded (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl p slot : BitVec 64) (before after : Config) :
+structure Reloaded (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp ra tbl p slot : BitVec 64) (before after : Config) :
     Prop where
-  ready : RuntimeReady H capacity sp ra after
+  ready : RuntimeReadyL live H capacity sp ra after
   pc : after.σ.regs.get? Register.PC = some ra
   memory : after.σ.mem = writeLog before.σ.mem (reloadLog tbl p slot)
   output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
     (∀ n ∈ [1, 2, 10, 13, 14, 15], (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
 
+omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- **Insert after the growth and return** (`aa88`). -/
 theorem reload_run {H capacity sp ra slot tbl p link} {d : Config}
-    (r : Reloading H capacity sp ra slot tbl p link d) (pc : PCAt BarrierReload.pc d) :
-    ∃ d1, Steps d d1 ∧ Reloaded H capacity sp ra tbl p slot d d1 := by
+    (r : Reloading live H capacity sp ra slot tbl p link d) (pc : PCAt BarrierReload.pc d) :
+    ∃ d1, Steps d d1 ∧ Reloaded live H capacity sp ra tbl p slot d d1 := by
   have word (x : Nat) : bytesVal .ld (Primitives.read8 d.σ.mem x) = bytesT d.σ.mem x 8 := read8_value _ _
   have tblV : bytesVal .ld (Primitives.read8 d.σ.mem ((sp + -32#64) + BitVec.ofNat 64 0).toNat) = tbl := by
     rw [word]; exact r.savedTbl
@@ -426,10 +430,10 @@ theorem option_of_getD {m m' : Std.ExtHashMap Nat (BitVec 8)} {a : Nat} (h' : (m
   cases m'[a]? <;> cases m[a]? <;> simp_all
 
 /-- The growth path's outcome. -/
-structure GrowDone (H : List (Nat × Nat)) (capacity : Nat) (slot v ra sp tbl wsz : BitVec 64)
+structure GrowDone (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (slot v ra sp tbl wsz : BitVec 64)
     (before after : Config) where
   p : BitVec 64
-  ready : RuntimeReady ((p.toNat, (Realloc.request wsz).toNat) :: H) capacity sp ra after
+  ready : RuntimeReadyL live ((p.toNat, (Realloc.request wsz).toNat) :: H) capacity sp ra after
   pc : after.σ.regs.get? Register.PC = some ra
   saved : ∀ k ∈ calleeSaved, gprGet after.σ k = gprGet before.σ k
   fresh : heapStart ≤ p.toNat ∧ p.toNat + (Realloc.request wsz).toNat ≤ heapEnd
@@ -466,11 +470,11 @@ theorem fresh_apart {H : List (Nat × Nat)} {p r q n x : Nat}
 /-- **`caml_modify` growing an unallocated remembered set**, entry to return. -/
 theorem barrier_grow {H capacity charge slot v ra sp dom ys ye old tbl ptr limit wsz} {c : Config}
     (e : Entry slot v ra sp dom ys ye old c) (rem : Remembered sp ra slot v dom tbl ptr limit c)
-    (g : Grow H capacity charge slot v ra sp tbl wsz c)
+    (g : Grow live H capacity charge slot v ra sp tbl wsz c)
     (notYoung : ¬ YoungIn ys ye slot) (notOld : ¬ OldYoung ys ye old) (young : ValueYoung ys ye v)
     (full : limit.toNat ≤ ptr.toNat) :
     FnSummary BarrierYoung.pc (fun d => d = c)
-      (fun after => Nonempty (GrowDone H capacity slot v ra sp tbl wsz c after)) := by
+      (fun after => Nonempty (GrowDone live H capacity slot v ra sp tbl wsz c after)) := by
   constructor
   rintro d ⟨pc, rfl⟩
   obtain ⟨d4, run4, A⟩ := (grow_to_call e rem g notYoung notOld young full).run d ⟨pc, rfl⟩
@@ -540,8 +544,9 @@ theorem barrier_grow {H capacity charge slot v ra sp dom ys ye old tbl ptr limit
   have code5 : Code.Caml_modifyLoaded d5.σ.mem := by
     apply Code.caml_modify_transport e.code
     intro a lo hi
-    have live : startupLive a := by unfold startupLive Vsa.Densify.ramBase Vsa.Densify.ramSize; omega
-    rw [option_of_getD (D.ready.platform.live a live) (A.entry.ready.platform.live a live)
+    have hl : live a := OCaml.Vm.Boot.Startup.LibraryLive.text (by unfold Image.textBase at *; omega)
+      (by unfold Image.textBase Image.textSize at *; omega)
+    rw [option_of_getD (D.ready.platform.live a hl) (A.entry.ready.platform.live a hl)
       (D.kept a (Or.inr (Or.inl ⟨by unfold heapStart; omega, by unfold allocGlobal InRange; omega⟩)))]
     rw [mem4]
     apply writeLog_out
@@ -566,7 +571,7 @@ theorem barrier_grow {H capacity charge slot v ra sp dom ys ye old tbl ptr limit
     have al := D.aligned
     have pl := D.low
     constructor <;> rw [p0] <;> (try simp only [heapStart, heapEnd, Layout.sym_tohost] at *) <;> omega
-  have reloading : Reloading ((D.p.toNat, (Realloc.request wsz).toNat) :: H) capacity sp ra slot tbl D.p
+  have reloading : Reloading live ((D.p.toNat, (Realloc.request wsz).toNat) :: H) capacity sp ra slot tbl D.p
       0x8000aa88#64 d5 :=
     { ready := D.ready, code := code5, savedTbl := tbl5, savedSlot := slot5, savedRa := ra5
       ptr := by rw [t24]; exact D.ptr

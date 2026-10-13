@@ -136,6 +136,7 @@ import OCaml.Vm.Sim.AccPins
 
 import OCaml.Vm.Gc.Barrier
 import OCaml.Vm.Gc.F1Observation
+import OCaml.Vm.Gc.ImageLibrary
 import OCaml.Vm.Primitives.Constants
 import OCaml.Vm.Primitives.RuntimeFrame
 
