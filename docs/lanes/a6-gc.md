@@ -66,8 +66,12 @@
   entry (`ForwardingTable.publish_then`).
 - `SlotCall R copies pl c` (∃ copies', a call with `SlotDone`) is the
   dispatcher interface; every proved route supplies it (`SlotCall.*`).
-- Next (G2): then the
-  stack/`ref_table` root loops, the mopup outer loop, a quiet-route
+- G2: generated segment rows and code pins for `caml_oldify_local_roots`,
+  `caml_scan_global_young_roots`, `caml_skiplist_empty`,
+  `caml_final_oldify_young_roots`, `caml_memprof_oldify_young_roots`
+  (`gen_gc_rows.py`).
+- Next (G2): quiet-path summaries of the root callees, the VM-stack and
+  `ref_table` root loops over `SlotCall`, the mopup outer loop, a quiet-route
   `caml_empty_minor_heap`, and the concrete `CollectionEffect`.
 
 ## F1 status (2026-10-05)

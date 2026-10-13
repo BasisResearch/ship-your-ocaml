@@ -504,7 +504,12 @@ def outputs():
         for name, stem in [('caml_oldify_one', 'OldifyOne'), ('caml_modify', 'Modify'),
                            ('caml_oldify_mopup', 'Mopup'), ('caml_alloc_shr_for_minor_gc', 'AllocMinor'), ('bf_allocate', 'BestFit'), ('bf_split', 'BestFitSplitFn'), ('ffs', 'Ffs'),
                            ('caml_realloc_ref_table', 'ReallocRef'),
-                           ('realloc_generic_table.isra.0', 'Realloc')]:
+                           ('realloc_generic_table.isra.0', 'Realloc'),
+                           ('caml_oldify_local_roots', 'LocalRoots'),
+                           ('caml_scan_global_young_roots', 'GlobalYoungRoots'),
+                           ('caml_skiplist_empty', 'SkiplistEmpty'),
+                           ('caml_final_oldify_young_roots', 'FinalYoungRoots'),
+                           ('caml_memprof_oldify_young_roots', 'MemprofYoungRoots')]:
             entry, end = extents[name]
             words = [(a, di[a].word) for a in sorted(di) if entry <= a < end]
             ident = code.lean_ident(name)
