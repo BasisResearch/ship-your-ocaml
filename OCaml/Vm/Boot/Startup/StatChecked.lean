@@ -2,9 +2,10 @@ import OCaml.Vm.Boot.Startup.StatCheckedAllocate
 import OCaml.Vm.Boot.Startup.StatCheckedReturn
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap VsaIris.MallocFast OCaml.Vm.Primitives
+variable {live : Nat → Prop}
 
-theorem StatCheckedAllocated.saved_word {H capacity sp ra s0 n before after off value}
-    (w : StatCheckedAllocated H capacity sp ra s0 n before after)
+theorem StatCheckedAllocatedL.saved_word {H capacity sp ra s0 n before after off value}
+    (w : StatCheckedAllocatedL live H capacity sp ra s0 n before after)
     (frame : NativeFrame sp 544) (member : (off, value) ∈ [(16, s0), (24, ra)]) :
     bytesT after.σ.mem (nativeFrameBase sp 32 + off) 8 = value := by
   have short := frame.resize (small := 32) (by decide) (by decide)
@@ -19,27 +20,38 @@ theorem StatCheckedAllocated.saved_word {H capacity sp ra s0 n before after off 
   · simp
   · exact member
 
-structure StatCheckedReturned (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 n : BitVec 64)
-    (before after : Config) where
+theorem StatCheckedAllocated.saved_word {H capacity sp ra s0 n before after off value}
+    (w : StatCheckedAllocated H capacity sp ra s0 n before after)
+    (frame : NativeFrame sp 544) (member : (off, value) ∈ [(16, s0), (24, ra)]) :
+    bytesT after.σ.mem (nativeFrameBase sp 32 + off) 8 = value :=
+  StatCheckedAllocatedL.saved_word w frame member
+
+structure StatCheckedReturnedL (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat)
+    (sp ra s0 n : BitVec 64) (before after : Config) where
   allocated : Config
-  allocation : StatCheckedAllocated H capacity sp ra s0 n before allocated
+  allocation : StatCheckedAllocatedL live H capacity sp ra s0 n before allocated
   returned : WriteRegistersPost [1, 8, 2] [] allocated ra (vsaReg allocated 10)
     (statCheckedReturnRegs sp ra s0 (vsaReg allocated 10)) after
-  ready : RuntimeReady (((vsaReg allocated 10).toNat, n.toNat) :: H) capacity sp ra after
+  ready : RuntimeReadyL live (((vsaReg allocated 10).toNat, n.toNat) :: H) capacity sp ra after
+
+/-- At startup, the library's live set is all of RAM. -/
+abbrev StatCheckedReturned (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 n : BitVec 64)
+    (before after : Config) :=
+  StatCheckedReturnedL startupLive H capacity sp ra s0 n before after
 
 /-- Complete successful nonpooling caml_stat_alloc, using the landed malloc run
 and restoring the original native caller rather than assuming a return. -/
-theorem stat_checked (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
-    (sp ra s0 n : BitVec 64) (ready : RuntimeReady H (capacity + charge) sp ra c)
+theorem stat_checkedL [LibraryLive live] (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+    (sp ra s0 n : BitVec 64) (ready : RuntimeReadyL live H (capacity + charge) sp ra c)
     (frame : NativeFrame sp 544) (saved0 : gprGet c.σ 8 = some s0)
     (request : gprGet c.σ 10 = some n) (charged : vsaChg n.toNat charge) :
     FnSummary 0x8000bb2c#64 (fun d => d = c)
-      (fun after => Nonempty (StatCheckedReturned H capacity sp ra s0 n c after)) := by
+      (fun after => Nonempty (StatCheckedReturnedL live H capacity sp ra s0 n c after)) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
   obtain ⟨allocated, run1, ⟨w⟩⟩ :=
-    (stat_checked_allocate c H capacity charge sp ra s0 n ready frame saved0 request charged).run c ⟨pc, rfl⟩
+    (stat_checked_allocateL c H capacity charge sp ra s0 n ready frame saved0 request charged).run c ⟨pc, rfl⟩
   have input : StatCheckedReturnInput sp ra s0 (vsaReg allocated 10) jal_8000bb88_call.link allocated := {
     toLeafInput := w.ready.toLeafInput
     frame := frame.resize (by decide) (by decide)
@@ -56,4 +68,12 @@ theorem stat_checked (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat
     (gholds_lookup (n := 1) _ returned.regs (by rfl)) ready.aligned
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ h => h)
   exact ⟨after, run1.trans run2, ⟨allocated, w, returned, finalReady⟩⟩
+
+theorem stat_checked (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+    (sp ra s0 n : BitVec 64) (ready : RuntimeReady H (capacity + charge) sp ra c)
+    (frame : NativeFrame sp 544) (saved0 : gprGet c.σ 8 = some s0)
+    (request : gprGet c.σ 10 = some n) (charged : vsaChg n.toNat charge) :
+    FnSummary 0x8000bb2c#64 (fun d => d = c)
+      (fun after => Nonempty (StatCheckedReturned H capacity sp ra s0 n c after)) :=
+  stat_checkedL c H capacity charge sp ra s0 n ready frame saved0 request charged
 end OCaml.Vm.Boot.Startup

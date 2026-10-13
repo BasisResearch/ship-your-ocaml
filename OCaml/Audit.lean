@@ -4825,6 +4825,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.stat_checked_allocate
 #print axioms OCaml.Vm.Boot.Startup.StatCheckedAllocated.saved_word
 #print axioms OCaml.Vm.Boot.Startup.stat_checked
+#print axioms OCaml.Vm.Boot.Startup.stat_checkedL
+#print axioms OCaml.Vm.Boot.Startup.stat_checked_allocateL
+#print axioms OCaml.Vm.Boot.Startup.StatCheckedAllocatedL.saved_word
+#print axioms OCaml.Vm.Boot.Startup.StatCheckedReturnedL.caller_frame
+#print axioms OCaml.Vm.Boot.Startup.StatCheckedReturnedL.keep_upper
+#print axioms OCaml.Vm.Boot.Startup.StatCheckedReturnedL.keep_saved
+#print axioms OCaml.Vm.Boot.Startup.StatCheckedReturnedL.kept_byte
 #print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.disjoint_log
 #print axioms OCaml.Vm.Boot.Startup.StatCheckedReturned.framed_byte
 #print axioms OCaml.Vm.Boot.Startup.custom_save

@@ -62,22 +62,27 @@ theorem allocator_keep9 {before after : Config} {r s v : BitVec 64}
   exact library_gpr post (by decide) (by decide) saved
 
 /-- The allocator never writes s4–s11. -/
-theorem allocator_keep_upper {before after : Config} {k : Nat} {v : BitVec 64}
-    (post : VsaOk startupLive after)
-    (registers : ∀ r, r ∉ VsaIris.Sym.aRegs → (vsaModel startupLive).reg after r = (vsaModel startupLive).reg before r)
+theorem allocator_keep_upper {live : Nat → Prop} {before after : Config} {k : Nat} {v : BitVec 64}
+    (post : VsaOk live after)
+    (registers : ∀ r, r ∉ VsaIris.Sym.aRegs → (vsaModel live).reg after r = (vsaModel live).reg before r)
     (lo : 20 ≤ k) (hi : k ≤ 27) (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
   have kept := registers k (by simp [VsaIris.Sym.aRegs]; omega)
-  rw [show (vsaModel startupLive).reg before k = vsaReg before k from rfl,
+  rw [show (vsaModel live).reg before k = vsaReg before k from rfl,
     vsaReg_of_gprGet (by unfold VsaIris.PC; omega) h] at kept
   exact library_gpr post (by omega) (by omega) kept
 
-theorem StatCheckedReturned.keep_upper {H capacity sp ra s0 n before after v k}
-    (w : StatCheckedReturned H capacity sp ra s0 n before after) (lo : 20 ≤ k) (hi : k ≤ 27)
+theorem StatCheckedReturnedL.keep_upper {live : Nat → Prop} {H capacity sp ra s0 n before after v k}
+    (w : StatCheckedReturnedL live H capacity sp ra s0 n before after) (lo : 20 ≤ k) (hi : k ≤ 27)
     (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
   have a := (w.allocation.setup.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans h
   have b := (w.allocation.call.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans a
   have c := allocator_keep_upper w.allocation.allocation.good w.allocation.allocation.registers lo hi b
   exact (w.returned.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans c
+
+theorem StatCheckedReturned.keep_upper {H capacity sp ra s0 n before after v k}
+    (w : StatCheckedReturned H capacity sp ra s0 n before after) (lo : 20 ≤ k) (hi : k ≤ 27)
+    (h : gprGet before.σ k = some v) : gprGet after.σ k = some v :=
+  StatCheckedReturnedL.keep_upper w lo hi h
 
 theorem ExtTableReturned.keep_upper {H capacity sp ra s0 t n before after v k}
     (w : ExtTableReturned H capacity sp ra s0 t n before after) (lo : 20 ≤ k) (hi : k ≤ 27)
@@ -88,9 +93,9 @@ theorem ExtTableReturned.keep_upper {H capacity sp ra s0 t n before after v k}
   have d := (w.publication.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans c
   exact (w.post.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp <;> omega)).trans d
 
-theorem allocator_keep_saved {before after : Config} {r s v : BitVec 64} {k : Nat}
-    (post : VsaOk startupLive after)
-    (frame : RetFrame ((vsaModel startupLive).reg after) r s (firstMallocSaved (vsaReg before)))
+theorem allocator_keep_saved {live : Nat → Prop} {before after : Config} {r s v : BitVec 64} {k : Nat}
+    (post : VsaOk live after)
+    (frame : RetFrame ((vsaModel live).reg after) r s (firstMallocSaved (vsaReg before)))
     (member : k ∈ vsaSaved) (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
   have range : 1 ≤ k ∧ k ≤ 31 := by simp [vsaSaved] at member; omega
   have saved := frame.saved (k, vsaReg before k) (by
@@ -118,8 +123,8 @@ theorem ExtTableReturned.keep_saved {H capacity sp ra s0 t n before after v k}
   exact (w.post.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢; omega)).trans d
 
 /-- caml_stat_alloc keeps s1, s2 and s3. -/
-theorem StatCheckedReturned.keep_saved {H capacity sp ra s0 n before after v k}
-    (w : StatCheckedReturned H capacity sp ra s0 n before after) (member : k ∈ [9, 18, 19])
+theorem StatCheckedReturnedL.keep_saved {live : Nat → Prop} {H capacity sp ra s0 n before after v k}
+    (w : StatCheckedReturnedL live H capacity sp ra s0 n before after) (member : k ∈ [9, 18, 19])
     (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
   have range : 1 ≤ k ∧ k ≤ 31 := by simp at member; omega
   have a := (w.allocation.setup.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢; omega)).trans h
@@ -127,6 +132,11 @@ theorem StatCheckedReturned.keep_saved {H capacity sp ra s0 n before after v k}
   have c := allocator_keep_saved w.allocation.allocation.good w.allocation.allocation.result.frame
     (by simp [vsaSaved] at member ⊢; omega) b
   exact (w.returned.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢; omega)).trans c
+
+theorem StatCheckedReturned.keep_saved {H capacity sp ra s0 n before after v k}
+    (w : StatCheckedReturned H capacity sp ra s0 n before after) (member : k ∈ [9, 18, 19])
+    (h : gprGet before.σ k = some v) : gprGet after.σ k = some v :=
+  StatCheckedReturnedL.keep_saved w member h
 
 theorem StatCheckedReturned.keep9 {H capacity sp ra s0 n before after v}
     (w : StatCheckedReturned H capacity sp ra s0 n before after)

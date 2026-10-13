@@ -2,17 +2,18 @@ import OCaml.Vm.Boot.Startup.RuntimeReady
 import OCaml.Vm.Boot.Startup.NativeFrame
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris.Inst OCaml.Vm.Primitives
+variable {live : Nat → Prop}
 
 /-- Native stack saves cannot change the allocator arena or runtime globals.
 This transports the complete startup contract across generated frame effects. -/
 theorem RuntimeReadyL.stack_log_written {H capacity oldsp oldra before after writes log pc value regs sp ra frameSp size}
-    (ready : RuntimeReady H capacity oldsp oldra before)
+    (ready : RuntimeReadyL live H capacity oldsp oldra before)
     (post : WriteRegistersPost writes log before pc value regs after)
     (keys : KeysOK writes) (gprs : WrittenPresent writes after) (gpFrame : 3 ∉ writes)
     (stack : gprGet after.σ 2 = some sp) (link : gprGet after.σ 1 = some ra) (aligned : ra.toNat % 4 = 0)
     (frame : NativeFrame frameSp size)
     (inside : LogInW [⟨nativeFrameBase frameSp size, frameSp.toNat⟩] log) :
-    RuntimeReady H capacity sp ra after := by
+    RuntimeReadyL live H capacity sp ra after := by
   have lower : heapEnd ≤ nativeFrameBase frameSp size := by
     have := frame.lower
     unfold nativeFrameBase
@@ -30,13 +31,13 @@ theorem RuntimeReadyL.stack_log_written {H capacity oldsp oldra before after wri
   · intro a ha
     exact writeLog_present _ _ _ ha
 theorem RuntimeReadyL.stack_log {H capacity oldsp oldra before after writes log pc value regs sp ra frameSp size}
-    (ready : RuntimeReady H capacity oldsp oldra before)
+    (ready : RuntimeReadyL live H capacity oldsp oldra before)
     (post : WriteRegistersPost writes log before pc value regs after)
     (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) (gpFrame : 3 ∉ writes)
     (stack : gprGet after.σ 2 = some sp) (link : gprGet after.σ 1 = some ra) (aligned : ra.toNat % 4 = 0)
     (frame : NativeFrame frameSp size)
     (inside : LogInW [⟨nativeFrameBase frameSp size, frameSp.toNat⟩] log) :
-    RuntimeReady H capacity sp ra after :=
+    RuntimeReadyL live H capacity sp ra after :=
   ready.stack_log_written post keys (post.writtenPresent cover) gpFrame stack link aligned frame inside
 
 end OCaml.Vm.Boot.Startup

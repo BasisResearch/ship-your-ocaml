@@ -16,6 +16,7 @@ open OCaml.Vm.Boot.Startup
 open OCaml.Vm.Sim (FrameOnD)
 open ExitPath (LogWithin)
 set_option autoImplicit false
+variable {live : Nat → Prop}
 
 /-- `Int_val(v)` as the prologue computes it (`srai 1; sext.w`). -/
 def fdOf (v : BitVec 64) : BitVec 64 :=
@@ -59,9 +60,9 @@ theorem outSaveLog_inside {sp ra s0} (frame : NativeFrame sp 16) :
 
 /-- What `caml_ml_open_descriptor_out(v)` needs: `open_descriptor_in`'s
 premises for `Int_val(v)`, with room for the primitive's own 16-byte frame. -/
-structure OutInput (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 v head : BitVec 64)
+structure OutInput (live : Nat → Prop) (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 v head : BitVec 64)
     (c : Config) : Prop where
-  ready : RuntimeReady H (capacity + charge) sp ra c
+  ready : RuntimeReadyL live H (capacity + charge) sp ra c
   frame : NativeFrame sp 592
   saved0 : gprGet c.σ 8 = some s0
   saved1 : gprGet c.σ 9 = some s1
@@ -76,9 +77,9 @@ structure OutInput (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 
 
 /-- At the entry of `caml_open_descriptor_in`: its premises one frame down,
 after the prologue's two saves. -/
-structure OutEntered (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 v head : BitVec 64)
+structure OutEntered (live : Nat → Prop) (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 v head : BitVec 64)
     (c d : Config) : Prop where
-  input : OpenInput H capacity charge (sp - 16#64) OpenOut.pro_call.link s0 s1 s2 (fdOf v) head d
+  input : OpenInput live H capacity charge (sp - 16#64) OpenOut.pro_call.link s0 s1 s2 (fdOf v) head d
   pc : pcOf d = some 0x80015130#64
   memory : d.σ.mem = writeLog c.σ.mem (outSaveLog sp ra s0)
   kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 2, 10] → gprGet d.σ n = gprGet c.σ n
@@ -87,8 +88,8 @@ structure OutEntered (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s
 /-- From the entry of `caml_ml_open_descriptor_out` to the call of
 `caml_open_descriptor_in`. -/
 theorem out_enter (c : Config) {H : List (Nat × Nat)} {capacity charge : Nat}
-    {sp ra s0 s1 s2 v head : BitVec 64} (h : OutInput H capacity charge sp ra s0 s1 s2 v head c) :
-    FnSummary 0x80015f50#64 (fun d => d = c) (OutEntered H capacity charge sp ra s0 s1 s2 v head c) := by
+    {sp ra s0 s1 s2 v head : BitVec 64} (h : OutInput live H capacity charge sp ra s0 s1 s2 v head c) :
+    FnSummary 0x80015f50#64 (fun d => d = c) (OutEntered live H capacity charge sp ra s0 s1 s2 v head c) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
@@ -106,7 +107,7 @@ theorem out_enter (c : Config) {H : List (Nat × Nat)} {capacity charge : Nat}
       have w := outFrame_word short (off := 0) (by decide) (by decide)
       rwa [show BitVec.ofNat 64 0 = 0#64 from rfl, BitVec.add_zero] at w)
     (short.image_outside insideBase)).run c ⟨pc, rfl⟩
-  have savedReady : RuntimeReady H (capacity + charge) (sp - 16#64) ra saved :=
+  have savedReady : RuntimeReadyL live H (capacity + charge) (sp - 16#64) ra saved :=
     h.ready.stack_log setup (by decide) (by simp only [OpenOut.pro_regs, keysG]; decide) (by decide)
       (gholds_lookup (n := 2) _ setup.regs (by rfl))
       (gholds_lookup (n := 1) _ setup.regs (by rfl)) h.ready.aligned short insideBase
@@ -116,7 +117,7 @@ theorem out_enter (c : Config) {H : List (Nat × Nat)} {capacity charge : Nat}
     (OpenOut.pro_call_pins setup.image) setup.good setup.image setup.tick setup.minstret _ args
     (by change KeysOK [10, 2, 8]; decide) (by simp only [KeysAvoidRa, keysG, outCallArgs]; decide)
     (by rfl)).run saved ⟨setup.pc, rfl⟩
-  have calledReady : RuntimeReady H (capacity + charge) (sp - 16#64) OpenOut.pro_call.link called :=
+  have calledReady : RuntimeReadyL live H (capacity + charge) (sp - 16#64) OpenOut.pro_call.link called :=
     savedReady.effect call (by decide)
       (by simp only [keysG, outCallArgs]; decide) (by decide)
       (gholds_lookup (n := 2) _ call.regs (by rfl))
@@ -165,7 +166,7 @@ theorem out_enter (c : Config) {H : List (Nat × Nat)} {capacity charge : Nat}
 /-- `caml_open_descriptor_in` keeps x20–x27: the checked allocation keeps
 them (`StatCheckedReturned.keep_upper`), and no other phase writes them. -/
 theorem OpenedIn.keep_upper {H : List (Nat × Nat)} {capacity : Nat} {sp ra s0 s1 s2 fd head : BitVec 64}
-    {c d : Config} (o : OpenedIn H capacity sp ra s0 s1 s2 fd head c d) {k : Nat} {x : BitVec 64}
+    {c d : Config} (o : OpenedIn live H capacity sp ra s0 s1 s2 fd head c d) {k : Nat} {x : BitVec 64}
     (lo : 20 ≤ k) (hi : k ≤ 27) (h : gprGet c.σ k = some x) : gprGet d.σ k = some x := by
   have a := (o.allocation.setup.toEffectPost.gpr_frame (by decide) k (by omega) (by omega)
     (by simp; omega)).trans h
@@ -336,8 +337,8 @@ theorem linkLog_out {p head : BitVec 64} {x n : Nat} (above : 2147896136 ≤ x)
 /-- The record and the list head as `caml_open_descriptor_in` returns them. -/
 theorem OpenedIn.record_words {H : List (Nat × Nat)} {capacity charge : Nat}
     {sp ra s0 s1 s2 fd head : BitVec 64} {c d : Config}
-    (h : OpenInput H capacity charge sp ra s0 s1 s2 fd head c)
-    (o : OpenedIn H capacity sp ra s0 s1 s2 fd head c d) :
+    (h : OpenInput live H capacity charge sp ra s0 s1 s2 fd head c)
+    (o : OpenedIn live H capacity sp ra s0 s1 s2 fd head c d) :
     OpenedRecord d.σ.mem o.record fd head ∧ bytesT d.σ.mem 2147896128 8 = o.record := by
   have low := o.low
   have high := o.high
@@ -613,15 +614,15 @@ theorem out_done (a : Config) {sp ra s0 p v : BitVec 64} {f : Config}
 /-- `caml_ml_open_descriptor_out(v)` returned the custom block `value` holding
 the new output channel `record`, linked at the head of
 `caml_all_opened_channels`. -/
-structure OpenedOut (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 v head : BitVec 64)
+structure OpenedOut (live : Nat → Prop) (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 v head : BitVec 64)
     (c d : Config) where
   entered : Config
   opened : Config
   flagged : Config
   allocated : Config
   value : BitVec 64
-  enter : OutEntered H capacity charge sp ra s0 s1 s2 v head c entered
-  opening : OpenedIn H capacity (sp - 16#64) OpenOut.pro_call.link s0 s1 s2 (fdOf v) head entered opened
+  enter : OutEntered live H capacity charge sp ra s0 s1 s2 v head c entered
+  opening : OpenedIn live H capacity (sp - 16#64) OpenOut.pro_call.link s0 s1 s2 (fdOf v) head entered opened
   flags : OutFlagged (sp - 16#64) opening.record opened flagged
   custom : CustomMemReturned sp opening.record value flagged allocated
   done : OutDone sp ra s0 opening.record value allocated d
@@ -631,11 +632,11 @@ structure OpenedOut (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1
   channel : bytesT d.σ.mem (value.toNat + 8) 8 = opening.record
   ops : bytesT d.σ.mem value.toNat 8 = 2147891728#64
 
-theorem ml_open_descriptor_out (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra s0 s1 s2 v head : BitVec 64) {Ready : Config → Prop} (custom : CustomMemCall Ready)
-    (ready : Ready c) (h : OutInput H capacity charge sp ra s0 s1 s2 v head c) :
+    (ready : Ready c) (h : OutInput live H capacity charge sp ra s0 s1 s2 v head c) :
     FnSummary 0x80015f50#64 (fun d => d = c)
-      (fun d => Nonempty (OpenedOut H capacity charge sp ra s0 s1 s2 v head c d)) := by
+      (fun d => Nonempty (OpenedOut live H capacity charge sp ra s0 s1 s2 v head c d)) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
@@ -777,7 +778,7 @@ theorem ml_open_descriptor_out (c : Config) (H : List (Nat × Nat)) (capacity ch
 `env`, accumulator and dispatch registers). -/
 theorem OpenedOut.keep_upper {H : List (Nat × Nat)} {capacity charge : Nat}
     {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
-    (o : OpenedOut H capacity charge sp ra s0 s1 s2 v head c d) {k : Nat} {x : BitVec 64}
+    (o : OpenedOut live H capacity charge sp ra s0 s1 s2 v head c d) {k : Nat} {x : BitVec 64}
     (lo : 20 ≤ k) (hi : k ≤ 27) (h : gprGet c.σ k = some x) : gprGet d.σ k = some x := by
   have a := (o.enter.kept k (by omega) (by omega) (by simp; omega)).trans h
   have b := o.opening.keep_upper lo hi a

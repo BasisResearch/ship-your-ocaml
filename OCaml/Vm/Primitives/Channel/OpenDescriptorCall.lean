@@ -23,36 +23,11 @@ open FdWrite (errnoGlobal impurePtr enterHook leaveHook pendingSignals)
 open ConsoleWrite (fsReady kindAddress enter_blocking leave_blocking LeaveInput LeavePost QuietReturn)
 open OCaml.Vm.Sim (FrameOnD)
 open OpenDescriptor
+variable {live : Nat → Prop}
 
 /-- `struct channel`'s size, `sizeof(struct channel)`: the header words and
 the `IO_BUFFER_SIZE` buffer, then the name pointer. -/
 def recordBytes : Nat := 65616
-
-/-- `allocator_keep9` for every library-saved register. -/
-theorem allocator_keep_saved {before after : Config} {r s v : BitVec 64} {k : Nat}
-    (post : VsaOk startupLive after)
-    (frame : RetFrame ((vsaModel startupLive).reg after) r s (firstMallocSaved (vsaReg before)))
-    (member : k ∈ vsaSaved) (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
-  have range : 1 ≤ k ∧ k ≤ 31 := by simp [vsaSaved] at member; omega
-  have saved := frame.saved (k, vsaReg before k) (by
-    change (k, vsaReg before k) ∈ vsaSaved.map (fun k => (k, vsaReg before k))
-    exact List.mem_map.mpr ⟨k, member, rfl⟩)
-  rw [vsaReg_of_gprGet (by unfold VsaIris.PC; omega) h] at saved
-  exact library_gpr post range.1 range.2 saved
-
-/-- The checked allocation preserves every saved register of the library ABI. -/
-theorem _root_.OCaml.Vm.Boot.Startup.StatCheckedReturned.saved_gpr {H capacity sp ra s0 n before after k v}
-    (w : StatCheckedReturned H capacity sp ra s0 n before after)
-    (member : k ∈ vsaSaved) (unwritten : k ∉ [1, 2, 8, 15]) (h : gprGet before.σ k = some v) :
-    gprGet after.σ k = some v := by
-  have range : 1 ≤ k ∧ k ≤ 31 := by simp [vsaSaved] at member; omega
-  have a := (w.allocation.setup.toEffectPost.gpr_frame (by decide) k range.1 range.2
-    (by simp at unwritten ⊢; omega)).trans h
-  have b := (w.allocation.call.toEffectPost.gpr_frame (by decide) k range.1 range.2
-    (by simp at unwritten ⊢; omega)).trans a
-  have c := allocator_keep_saved w.allocation.allocation.good w.allocation.allocation.result.frame member b
-  exact (w.returned.toEffectPost.gpr_frame (by decide) k range.1 range.2
-    (by simp at unwritten ⊢; omega)).trans c
 
 /-- The entry registers `caml_open_descriptor_in` reads: `ra`, `sp`, the
 saved `s0`–`s2` and the descriptor in `a0`. -/
@@ -100,7 +75,7 @@ theorem openSaveLog_inside {sp ra s0 s1 s2} (frame : NativeFrame sp 32) :
   all_goals unfold nativeFrameBase at *; omega
 
 /-- The prologue and the checked allocation of the channel record. -/
-structure OpenAllocated (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 fd : BitVec 64)
+structure OpenAllocated (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 fd : BitVec 64)
     (before after : Config) where
   saved : Config
   called : Config
@@ -108,17 +83,17 @@ structure OpenAllocated (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2
     65616#64 (pro_regs (openR sp ra s0 s1 s2 fd) []) saved
   call : RegistersPost [1] saved.σ.mem saved pro_call.target 65616#64
     ((1, pro_call.link) :: openCallArgs sp s0 s1 fd) called
-  allocation : StatCheckedReturned H capacity (sp - 32#64) pro_call.link s0 65616#64 called after
+  allocation : StatCheckedReturnedL live H capacity (sp - 32#64) pro_call.link s0 65616#64 called after
 
 /-- From the entry of `caml_open_descriptor_in` to the return of its checked
 `caml_stat_alloc(sizeof(struct channel))`. -/
-theorem open_allocate (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
-    (sp ra s0 s1 s2 fd : BitVec 64) (ready : RuntimeReady H (capacity + charge) sp ra c)
+theorem open_allocate [LibraryLive live] (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+    (sp ra s0 s1 s2 fd : BitVec 64) (ready : RuntimeReadyL live H (capacity + charge) sp ra c)
     (frame : NativeFrame sp 576) (saved0 : gprGet c.σ 8 = some s0)
     (saved1 : gprGet c.σ 9 = some s1) (saved2 : gprGet c.σ 18 = some s2)
     (fdReg : gprGet c.σ 10 = some fd) (charged : vsaChg recordBytes charge) :
     FnSummary 0x80015130#64 (fun d => d = c)
-      (fun after => Nonempty (OpenAllocated H capacity sp ra s0 s1 s2 fd c after)) := by
+      (fun after => Nonempty (OpenAllocated live H capacity sp ra s0 s1 s2 fd c after)) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
@@ -138,7 +113,7 @@ theorem open_allocate (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
     (openFrame_word short (off := 16) (by decide) (by decide))
     (openFrame_word short (off := 8) (by decide) (by decide))
     (short.image_outside inside)).run c ⟨pc, rfl⟩
-  have savedReady : RuntimeReady H (capacity + charge) (sp - 32#64) ra saved :=
+  have savedReady : RuntimeReadyL live H (capacity + charge) (sp - 32#64) ra saved :=
     ready.stack_log setup (by decide) (by simp only [pro_regs, keysG]; decide) (by decide)
       (gholds_lookup (n := 2) _ setup.regs (by rfl))
       (gholds_lookup (n := 1) _ setup.regs (by rfl)) ready.aligned short inside
@@ -153,7 +128,7 @@ theorem open_allocate (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
     (gholds_lookup (n := 2) _ call.regs (by rfl))
     (gholds_lookup (n := 1) _ call.regs (by rfl)) (by decide)
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ h => h)
-  obtain ⟨after, run3, ⟨allocated⟩⟩ := (stat_checked called H capacity charge _ pro_call.link s0
+  obtain ⟨after, run3, ⟨allocated⟩⟩ := (stat_checkedL called H capacity charge _ pro_call.link s0
     65616#64 calledReady nested (gholds_lookup (n := 8) _ call.regs (by rfl)) call.result
     charged).run called ⟨call.pc, rfl⟩
   exact ⟨after, run1.trans (run2.trans run3), ⟨saved, called, setup, call, allocated⟩⟩
@@ -863,8 +838,8 @@ theorem open_link (c : Config) {sp ra s0 s1 s2 p head : BitVec 64}
 
 /-- `StatCheckedReturned.framed_byte` beyond the arena: the checked allocation
 keeps every byte outside its stack frame that the allocator does not own. -/
-theorem _root_.OCaml.Vm.Boot.Startup.StatCheckedReturned.kept_byte {H capacity sp ra s0 n before after a}
-    (w : StatCheckedReturned H capacity sp ra s0 n before after)
+theorem _root_.OCaml.Vm.Boot.Startup.StatCheckedReturnedL.kept_byte {H capacity sp ra s0 n before after a}
+    (w : StatCheckedReturnedL live H capacity sp ra s0 n before after)
     (frame : NativeFrame sp 544) (apart : a < nativeFrameBase sp 544 ∨ sp.toNat ≤ a)
     (outside : ¬ vsaFoot H a) :
     (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0 := by
@@ -915,9 +890,9 @@ theorem read8_keep {m m' : Std.ExtHashMap Nat (BitVec 8)} {a : Nat}
 /-- What `caml_open_descriptor_in(fd)` needs: a ready runtime with room for the
 record, a 576-byte native frame, a seekable console descriptor, the console
 runtime, and the current list head inside a live block when there is one. -/
-structure OpenInput (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 fd head : BitVec 64)
+structure OpenInput (live : Nat → Prop) (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 fd head : BitVec 64)
     (c : Config) : Prop where
-  ready : RuntimeReady H (capacity + charge) sp ra c
+  ready : RuntimeReadyL live H (capacity + charge) sp ra c
   frame : NativeFrame sp 576
   saved0 : gprGet c.σ 8 = some s0
   saved1 : gprGet c.σ 9 = some s1
@@ -932,12 +907,12 @@ structure OpenInput (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1
 
 /-- `caml_open_descriptor_in(fd)` returned the record `record`: allocated,
 `fd` and `offset` stored in the blocking section, initialized and linked. -/
-structure OpenedIn (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 fd head : BitVec 64)
+structure OpenedIn (live : Nat → Prop) (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 fd head : BitVec 64)
     (c d : Config) where
   allocated : Config
   linked : Config
   record : BitVec 64
-  allocation : OpenAllocated H capacity sp ra s0 s1 s2 fd c allocated
+  allocation : OpenAllocated live H capacity sp ra s0 s1 s2 fd c allocated
   recordReg : record = vsaReg allocation.allocation.allocated 10
   seek : OpenSeekPost sp record fd allocated linked
   link : OpenLinkPost sp ra s0 s1 s2 record (recordInitLog record head ++ linkLog record head) linked d
@@ -951,10 +926,10 @@ structure OpenedIn (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 fd h
   frame : ∀ a, OutW (openWindows sp record head) a → ¬ vsaFoot H a →
     (d.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
 
-theorem open_descriptor_in (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
-    (sp ra s0 s1 s2 fd head : BitVec 64) (h : OpenInput H capacity charge sp ra s0 s1 s2 fd head c) :
+theorem open_descriptor_in [LibraryLive live] (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+    (sp ra s0 s1 s2 fd head : BitVec 64) (h : OpenInput live H capacity charge sp ra s0 s1 s2 fd head c) :
     FnSummary 0x80015130#64 (fun d => d = c)
-      (fun d => Nonempty (OpenedIn H capacity sp ra s0 s1 s2 fd head c d)) := by
+      (fun d => Nonempty (OpenedIn live H capacity sp ra s0 s1 s2 fd head c d)) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
@@ -994,7 +969,7 @@ theorem open_descriptor_in (c : Config) (H : List (Nat × Nat)) (capacity charge
       · exact notAlloc g
       · arena_omega) (Or.inl (by arena_omega))
   have fdAt : gprGet allocated.σ 18 = some fd :=
-    w.saved_gpr (by decide) (by decide) (gholds_lookup (n := 18) _ A.call.regs (by rfl))
+    w.keep_saved (by decide) (gholds_lookup (n := 18) _ A.call.regs (by rfl))
   have seekIn : OpenSeekInput sp p fd allocated := {
     toLeafInput := w.ready.toLeafInput
     idle := w.ready.platform.htifIdle

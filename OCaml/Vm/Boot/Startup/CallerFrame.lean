@@ -13,8 +13,8 @@ theorem CallerFrame.trans {sp before middle after} (first : CallerFrame sp befor
 theorem CallerFrame.of_memory {sp before after} (same : after.σ.mem = before.σ.mem) :
     CallerFrame sp before after := ⟨fun _ _ => by rw [same]⟩
 
-theorem StatCheckedReturned.caller_frame {H capacity sp ra s0 n before after}
-    (w : StatCheckedReturned H capacity sp ra s0 n before after)
+theorem StatCheckedReturnedL.caller_frame {live : Nat → Prop} {H capacity sp ra s0 n before after}
+    (w : StatCheckedReturnedL live H capacity sp ra s0 n before after)
     (frame : NativeFrame sp 544) : CallerFrame sp before after := by
   constructor
   intro a caller
@@ -26,4 +26,9 @@ theorem StatCheckedReturned.caller_frame {H capacity sp ra s0 n before after}
   have restored : after.σ.mem = w.allocated.σ.mem := w.returned.memory
   rw [restored, unchanged, w.allocation.call.memory, w.allocation.setup.memory,
     frameOn_writeLog _ _ _ (statCheckedLog_inside short) a ⟨Or.inr caller, trivial⟩]
+
+theorem StatCheckedReturned.caller_frame {H capacity sp ra s0 n before after}
+    (w : StatCheckedReturned H capacity sp ra s0 n before after)
+    (frame : NativeFrame sp 544) : CallerFrame sp before after :=
+  StatCheckedReturnedL.caller_frame w frame
 end OCaml.Vm.Boot.Startup
