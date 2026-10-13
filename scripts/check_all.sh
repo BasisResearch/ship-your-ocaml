@@ -101,6 +101,7 @@ python3 scripts/gen_boot_runtime.py --check || fail "stage a5: boot runtime read
 python3 scripts/gen_boot_chunks.py --check || fail "stage a5: boot heap chunk drift"
 python3 scripts/gen_boot_heap.py --check || fail "stage a5: boot heap certificate drift"
 python3 scripts/gen_boot_entry.py --check || fail "stage a5: boot entry certificate drift"
+python3 scripts/gen_reent_wrappers.py --check || fail "stage a5: newlib reentrant wrapper drift"
 python3 scripts/gen_boot_image.py --check || fail "stage a5: boot image drift"
 python3 scripts/gen_boot_elf.py --check || fail "stage a5: boot ELF data drift"
 python3 scripts/gen_boot_allocator.py --check || fail "stage a5: boot allocator metadata drift"

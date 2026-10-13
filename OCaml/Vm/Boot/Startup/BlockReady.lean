@@ -5,12 +5,14 @@ namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.Sym VsaIris.VsaHeap VsaIris.MallocFast
   OCaml.Vm.Primitives
 
-/-- A library call that writes only inside one live block keeps startup readiness. -/
-theorem RuntimeReadyL.of_block_frame {H capacity oldsp oldra sp ra before after text rs dst n}
+/-- A library call that writes only inside a window above the runtime globals
+and apart from the allocator's footprint keeps startup readiness. -/
+theorem RuntimeReadyL.of_window_frame {H capacity oldsp oldra sp ra before after text rs dst n}
     (ready : RuntimeReady H capacity oldsp oldra before)
     (frame : LocalFrame startupLive [] text rs (InExt (dst, n)) before after)
     (gpKept : 3 ∉ rs) (leaf : LeafInput ra after) (stack : gprGet after.σ 2 = some sp)
-    (member : (dst, n) ∈ H) (lower : heapStart ≤ dst) : RuntimeReady H capacity sp ra after := by
+    (apart : ∀ a, vsaFoot H a → a < dst ∨ dst + n ≤ a) (lower : heapStart ≤ dst) :
+    RuntimeReady H capacity sp ra after := by
   have low (a : Nat) (below : a < heapStart) : (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0 :=
     frame.memory a (fun inside => by unfold InExt at inside; omega)
   refine ⟨leaf, frame.good, ⟨?_, ?_⟩, ?_, stack, ?_, ?_⟩
@@ -26,8 +28,15 @@ theorem RuntimeReadyL.of_block_frame {H capacity oldsp oldra sp ra before after 
     intro a ha
     exact (frame.memory a (fun inside => by
       unfold InExt at inside
-      rcases allocator_payload_outside member lower ha with h | h <;> omega)).symm
+      rcases apart a ha with h | h <;> omega)).symm
   · rw [word_observed (m := before.σ.mem) _ (fun i _ => low _ (by unfold heapStart Layout.sym_Caml_state; omega))]
     exact ready.domainWord
   · exact lpins8_observed ready.poolZero (fun i _ => low _ (by unfold heapStart Layout.sym_pool; omega))
+/-- A library call that writes only inside one live block keeps startup readiness. -/
+theorem RuntimeReadyL.of_block_frame {H capacity oldsp oldra sp ra before after text rs dst n}
+    (ready : RuntimeReady H capacity oldsp oldra before)
+    (frame : LocalFrame startupLive [] text rs (InExt (dst, n)) before after)
+    (gpKept : 3 ∉ rs) (leaf : LeafInput ra after) (stack : gprGet after.σ 2 = some sp)
+    (member : (dst, n) ∈ H) (lower : heapStart ≤ dst) : RuntimeReady H capacity sp ra after :=
+  ready.of_window_frame frame gpKept leaf stack (fun _ ha => allocator_payload_outside member lower ha) lower
 end OCaml.Vm.Boot.Startup

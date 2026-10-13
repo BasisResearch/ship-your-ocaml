@@ -47,10 +47,11 @@ structure MemcpyFreshDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra p src 
   kept : ∀ x, ¬ InExt (p.toNat, n) x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   registers : ∀ k, 1 ≤ k → k ≤ 31 → k ∉ mRegs → gprGet after.σ k = gprGet before.σ k
 
-/-- `memcpy(p, src, n)` into the first `n` bytes of a live block `(p, m)` from
-a source outside them. -/
-theorem memcpy_fresh (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra p src : BitVec 64) (n m : Nat)
-    (ready : RuntimeReady H capacity sp ra c) (member : (p.toNat, m) ∈ H) (fits : n ≤ m)
+/-- `memcpy(p, src, n)` into a window `(p, n)` above the runtime globals, apart
+from the allocator's footprint, from a source outside it. -/
+theorem memcpy_window (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra p src : BitVec 64) (n : Nat)
+    (ready : RuntimeReady H capacity sp ra c) (lower : heapStart ≤ p.toNat) (upper : p.toNat + n ≤ 0x100000000)
+    (foot : ∀ a, vsaFoot H a → a < p.toNat ∨ p.toNat + n ≤ a)
     (regs : GHolds c.σ [(10, p), (11, src), (12, BitVec.ofNat 64 n)])
     (apart : ∀ k, k < n → ¬ InExt (p.toNat, n) (src.toNat + k))
     (sourceLow : 0x80000000 ≤ src.toNat) (sourceHigh : src.toNat + n ≤ 0x100000000)
@@ -59,13 +60,10 @@ theorem memcpy_fresh (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp r
   constructor
   intro before ⟨pc, eq⟩
   subst before
-  have bounds := ready.block_bounds member
   have geometry : Geo p src ra n :=
     { dlo := by have : 0x80000000 ≤ heapStart := by decide
                 omega
-      dhi := by have : heapEnd ≤ 0x100000000 := by decide
-                have := bounds.2
-                omega
+      dhi := upper
       dhtif := by have : Layout.sym_tohost + 16 ≤ heapStart := by decide
                   omega
       slo := sourceLow
@@ -104,9 +102,7 @@ theorem memcpy_fresh (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp r
     library_register_frame ready.platform D.observations.good lower upper (D.observations.registers k unwritten)
   have stackD := (regD 2 (by decide) (by decide) (by decide)).trans ready.stack
   refine ⟨d, run, {
-    ready := ready.of_block_frame (n := m) { D.observations with
-      memory := fun a out => D.observations.memory a (fun inside => out (by unfold InExt at *; omega)) }
-      (by decide) D.toLeafInput stackD member bounds.1
+    ready := ready.of_window_frame D.observations (by decide) D.toLeafInput stackD foot lower
     pc := D.pc
     result := D.result
     bytes := fun k hk => by
@@ -115,4 +111,19 @@ theorem memcpy_fresh (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp r
       exact copied
     kept := fun x out => D.observations.memory x out
     registers := regD }⟩
+/-- `memcpy(p, src, n)` into the first `n` bytes of a live block `(p, m)` from
+a source outside them. -/
+theorem memcpy_fresh (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra p src : BitVec 64) (n m : Nat)
+    (ready : RuntimeReady H capacity sp ra c) (member : (p.toNat, m) ∈ H) (fits : n ≤ m)
+    (regs : GHolds c.σ [(10, p), (11, src), (12, BitVec.ofNat 64 n)])
+    (apart : ∀ k, k < n → ¬ InExt (p.toNat, n) (src.toNat + k))
+    (sourceLow : 0x80000000 ≤ src.toNat) (sourceHigh : src.toNat + n ≤ 0x100000000)
+    (sourceHtif : src.toNat + n ≤ Layout.sym_tohost ∨ Layout.sym_tohost + 16 ≤ src.toNat) :
+    FnSummary 0x80042848#64 (fun d => d = c) (MemcpyFreshDone H capacity sp ra p src n c) := by
+  have bounds := ready.block_bounds member
+  exact memcpy_window c H capacity sp ra p src n ready bounds.1
+    (by have : heapEnd ≤ 0x100000000 := by decide
+        omega)
+    (fun a ha => by rcases allocator_payload_outside member bounds.1 ha with h | h <;> omega)
+    regs apart sourceLow sourceHigh sourceHtif
 end OCaml.Vm.Boot.Startup
