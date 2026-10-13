@@ -188,9 +188,24 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
       `sign_extend (imm20Of i +++ 0) = k` lemmas.
     * Fully concrete blocks close by `decide`.
 
-Next: the rest of `caml_init_gc` (`caml_set_minor_heap_size`,
-`caml_set_allocation_policy`, `caml_init_major_heap`, the messages) and
-onward to the cut.
+Next: the rest of `caml_init_gc`. `caml_set_minor_heap_size` adds the
+2 MB minor heap's 512 pages to the page table (`caml_page_table_add` →
+`caml_page_table_modify`). The heap address is only `FreshBlock`, so
+insertion is proved generically:
+* `PageHash.lean` holds the pure model.
+  * `pageCount` is the number of nonzero slots. The occupancy field equals
+    it.
+  * `pageCount_empty`: an empty slot exists while the count is below 2048.
+  * `probe_distance`: linear probing reaches it within `probeDistance`
+    steps. That is the loop measure; no pigeonhole argument is needed.
+  * `pageCount_fill` and `pageCount_update` keep the count equal to the
+    occupancy.
+* The hash stays the evaluator's own expression. Only `hash < 2048` is
+  used: the final shift is by 53.
+* Rows for `caml_page_table_modify` (split at each `auipc` and loop block)
+  and `caml_page_table_add` are generated.
+Then `caml_set_allocation_policy`, `caml_init_major_heap` (its chunk's
+pages go through the same insertion) and onward to the cut.
 
 ## Round 2 status (2026-10-06, search)
 
