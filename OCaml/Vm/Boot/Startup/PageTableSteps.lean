@@ -6,6 +6,8 @@ import OCaml.Vm.Boot.Startup.PageTableShiftNormalized
 import OCaml.Vm.Boot.Startup.PageTableShiftImage
 import OCaml.Vm.Boot.Startup.PageTableLoopNormalized
 import OCaml.Vm.Boot.Startup.PageTableLoopImage
+import OCaml.Vm.Boot.Startup.PageTableSizeNormalized
+import OCaml.Vm.Boot.Startup.PageTableSizeImage
 import OCaml.Vm.Boot.Startup.NativeSave
 import Vsa.Sim.IndexedLoop
 import OCaml.Vm.Boot.Startup.RuntimeStack
@@ -246,4 +248,46 @@ theorem page_table_doubling_loop {H capacity sp ra start} (frame : NativeFrame s
         bound := by omega
         mem := p.memory.trans h.mem }⟩)
   exact loop start D
+
+local macro "pzk" : tactic => `(tactic| simp only [pagetablesize_line_8000ad1c, pagetablesize_line_8000ad20, pagetablesize_line_8000ad24, pagetablesize_line_8000ad28, pagetablesize_line_8000ad2c, pagetablesize_line_8000ad30, pagetablesize_line_8000ad34, pagetablesize_line_8000ad38, pagetablesize_line_8000ad3c, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+def pageTableFieldsLog : List WEntry :=
+  [(pageTable + 8, 4, 53#64), (pageTable + 0, 8, 2048#64), (pageTable + 0x18, 8, 0#64), (pageTable + 0x10, 8, 2047#64)]
+
+theorem pageTableFieldsLog_outside : ImageOutside pageTableFieldsLog := by
+  have text : Image.textBase + Image.textSize ≤ pageTable := by decide
+  have rodata : Image.rodataBase + Image.rodataSize ≤ pageTable := by decide
+  constructor <;> simp only [pageTableFieldsLog, OutLRange, and_true] <;> omega
+
+/-- The final geometry: `shift = 53`, `size = 2048`, `occupancy = 0`, `mask = 2047`. -/
+theorem page_table_fields (c : Config) (ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(12, 2048#64), (14, 53#64), (10, 1520#64)]) :
+    FnSummary 0x8000ad1c#64 (fun e => e = c) (WriteRegistersPost [15, 13, 14] pageTableFieldsLog c
+      0x8000ad40#64 1520#64 [(14, 0x80067d38#64), (13, 0x80067d28#64), (15, 2047#64), (12, 2048#64),
+        (10, 1520#64)]) := by
+  apply registers_of_blocks leaf.image pageTableFieldsLog_outside
+    (block_summary _ _ _ _ _ (show BlockInput caml_page_table_initializeXad1cSeg 0x8000ad1c#64
+        [(12, 2048#64), (14, 53#64), (10, 1520#64)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [12, 14, 10]; decide
+      shape := by change ChainOK _ [12, 14, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageTableSize_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_initialize_at_"
+        · exact (show WriteWindow (BitVec.ofNat 64 (pageTable + 8)) 4 by constructor <;> decide).sw rfl
+            (by pzk; decide)
+        · exact (show WriteWindow (BitVec.ofNat 64 (pageTable + 0)) 8 by constructor <;> decide).sd rfl
+            (by pzk; decide)
+        · exact (show WriteWindow (BitVec.ofNat 64 (pageTable + 0x18)) 8 by constructor <;> decide).sd rfl
+            (by pzk; decide)
+        · exact (show WriteWindow (BitVec.ofNat 64 (pageTable + 0x10)) 8 by constructor <;> decide).sd rfl
+            (by pzk; decide) }))
+  · decide
+  · rfl
+  · decide
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
