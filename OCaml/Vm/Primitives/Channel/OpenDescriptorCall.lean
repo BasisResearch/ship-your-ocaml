@@ -209,6 +209,25 @@ theorem _root_.OCaml.Vm.Primitives.ConsoleWrite.ConsoleFd.keep {fd : BitVec 64} 
   exact ⟨by rw [ready]; exact h.ready, range, h.kindWindow, by rw [word]; exact h.console,
     by rw [word]; exact h.notFile⟩
 
+/-- A console descriptor is seekable in `_lseek`'s sense: the same descriptor
+table slot, live and not a file. -/
+theorem _root_.OCaml.Vm.Primitives.ConsoleWrite.ConsoleFd.seekFd {fd : BitVec 64} {c : Config}
+    (h : ConsoleWrite.ConsoleFd fd c) : SeekFd fd c := by
+  have range := h.range
+  have same : slotAddress fd = kindAddress fd := by
+    apply BitVec.eq_of_toNat_eq
+    rw [slotAddress_toNat range]
+    unfold kindAddress
+    rw [BitVec.toNat_add, BitVec.add_def]
+    simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ofNat]
+    omega
+  refine ⟨h.ready, range, same ▸ h.kindWindow, ?_, by rw [same]; exact h.notFile⟩
+  rw [same]
+  intro zero
+  have console := h.console
+  rw [zero] at console
+  exact absurd console (by decide)
+
 theorem _root_.OCaml.Vm.Primitives.ConsoleWrite.ConsoleRuntime.keep {c d : Config} (h : ConsoleWrite.ConsoleRuntime c) (k : StaticKept c d) :
     ConsoleWrite.ConsoleRuntime d where
   stdout := h.stdout.keep k

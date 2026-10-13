@@ -22,6 +22,10 @@ variable {live : Nat → Prop}
 def fdOf (v : BitVec 64) : BitVec 64 :=
   BitVec.signExtend 64 (BitVec.extractLsb 31 0 (Functions.shift_bits_right_arith v 1#6))
 
+/-- `Int_val` of the tagged console descriptors. -/
+theorem fdOf_stdout : fdOf 3#64 = 1#64 := by decide
+theorem fdOf_stderr : fdOf 5#64 = 2#64 := by decide
+
 /-- The entry registers the prologue reads. -/
 def outR (sp ra s0 v : BitVec 64) : Nat → BitVec 64 := fun n =>
   if n = 1 then ra else if n = 2 then sp else if n = 8 then s0 else v
