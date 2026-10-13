@@ -161,11 +161,11 @@ theorem attempt_ok (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (name n
     rw [mem3]; exact glob2 x (by unfold Layout.sym_fds heapEnd at *; omega)
       (by simp only [OutW, errnoWindows, and_true, Layout.sym_fds] at *; omega) (Or.inl hi)
   obtain ⟨d4, run4, R⟩ := (read_file d3 H capacity WhileMinElfParse.attemptStack jal_80004958_call.link
-    WhileMinElfParse.trailSlot WhileMinElfParse.trailSlot ready3 (by constructor <;> decide)
+    WhileMinElfParse.trailSlot WhileMinElfParse.trailSlot 0x249c#64 16#64 16 ready3 (by constructor <;> decide)
     ⟨ready3.stack, gholds_lookup (n := 1) _ p3.regs rfl, gholds_lookup (n := 8) _ p3.regs rfl,
       gholds_lookup (n := 10) _ p3.regs rfl, gholds_lookup (n := 11) _ p3.regs rfl,
       gholds_lookup (n := 12) _ p3.regs rfl, trivial⟩
-    (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide)
     (A.words.transport fun x hx => by
       rw [mem3]; exact glob2 x (by have := hx.htif.bounds; unfold Layout.sym_files heapEnd at *; omega) hx.htif.out_errno
         (by rcases hx with ⟨_, h⟩ | ⟨_, h⟩ <;> simp only [Layout.sym_fs_ready, Layout.sym_fds] at * <;> omega))
@@ -182,13 +182,13 @@ theorem attempt_ok (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (name n
           rw [mem3]; exact glob2 _ (by unfold Layout.sym_fds heapEnd; omega)
             (by simp only [OutW, errnoWindows, and_true, Layout.sym_fds]; omega) (Or.inr (by omega))]
         exact A.flags)
-    (by rw [mem3]; exact pos2)).run d3 ⟨p3.pc, rfl⟩
+    (by rw [mem3]; exact pos2) (by decide) (Or.inl ⟨by decide, by decide⟩) (by decide)).run d3 ⟨p3.pc, rfl⟩
   -- the trailer, as read
   let T : Nat → BitVec 8 := fun k => (WhileMinImage.initialMem[trailerSource + k]?).getD 0
   have hsp : WhileMinElfParse.attemptStack.toNat = 0x87ffff40 := by decide
   have trail4 (k : Nat) (hk : k < 16) :
       (d4.σ.mem[WhileMinElfParse.trailSlot.toNat + k]?).getD 0 = T k := by
-    rw [R.trailer k hk, mem3, L.mem _ (Or.inl (by rw [hsp]; unfold trailerSource; omega))
+    rw [R.trailer k hk, show (0x86800090#64 + 0x249c#64).toNat = trailerSource by decide, mem3, L.mem _ (Or.inl (by rw [hsp]; unfold trailerSource; omega))
         (by simp only [OutW, errnoWindows, and_true, trailerSource]; omega),
       writeLog_out _ _ _ (by simp only [lseekLog, OutL, and_true, trailerSource, Layout.sym_fds]; omega), mem1]
     exact A.late.embed.byte _ ⟨by unfold trailerSource heapEnd; omega, by
@@ -452,7 +452,7 @@ theorem attempt_ok (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (name n
   · rw [mem15, word_observed (m := d10.σ.mem) _ fun i hi => mem14 _ (Or.inl (by
         have : WhileMinElfParse.exeNameSlot.toNat = 0x87ffffa0 := by decide
         unfold Layout.sym_fds; omega)),
-      word_observed (m := writeLog d3.σ.mem readLog) _ fun i hi => by
+      word_observed (m := writeLog d3.σ.mem (readLog 0x249c#64 16)) _ fun i hi => by
         have trail : WhileMinElfParse.trailSlot.toNat = 0x87ffffa8 := by decide
         rw [p10.memory, writeLog_out _ _ _ (by simp only [magicNulLog, OutL, and_true, Layout.sym_magicstr, Layout.sym_fds]; omega),
           p9.memory, writeLog_out _ _ _ (by simp only [magicCLog, OutL, and_true, Layout.sym_magicstr, Layout.sym_fds]; omega),

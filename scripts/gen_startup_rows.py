@@ -293,6 +293,7 @@ def outputs():
                 ('_read', 'HtifReadEntry', (0x80000bf8, 0x80000c14)),
                 ('_read', 'HtifReadCheck', (0x80000c28, 0x80000ca4)),
                 ('_read', 'HtifReadClamp', (0x80000d10, 0x80000d20)),
+                ('_read', 'HtifReadShort', (0x80000d20, 0x80000d2c)),
                 ('_read', 'HtifReadCopy', (0x80000ca4, 0x80000cd0)),
                 ('_read', 'HtifReadAdvance', (0x80000cd0, 0x80000d10)),
                 ('_open_r', 'OpenREntry', (0x8004d7a4, 0x8004d7d0)),
