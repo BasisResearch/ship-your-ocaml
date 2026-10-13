@@ -147,7 +147,7 @@ theorem sections_bytes (i : MInstr) (word : i.word = 3445915#32) :
   rw [shamt5Of, word]; decide
 
 /-- `num_sections * 8` into `s1`, then `caml_stat_alloc(s1)`. -/
-theorem read_sections_num (c : Config) (ra fd trail stack : BitVec 64) (leaf : LeafInput ra c)
+theorem read_sections_num (c : Config) (ra fd trail : BitVec 64) (leaf : LeafInput ra c)
     (regs : GHolds c.σ [(10, fd), (11, trail)]) (window : ReadWindow trail 4)
     (numWord : read4 c.σ.mem trail.toNat = sectionsWord) :
     FnSummary 0x80004b20#64 (fun e => e = c) (WriteRegistersPost [9, 18, 8, 10] [] c jal_80004b34_call.pc 56#64
@@ -270,4 +270,33 @@ theorem read_sections_test (c : Config) (ra trail : BitVec 64) (leaf : LeafInput
     decide
   · rfl
   · decide
+theorem read_sections_num_call (c : Config) (ra fd trail : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, fd), (11, trail)]) (window : ReadWindow trail 4)
+    (numWord : read4 c.σ.mem trail.toNat = sectionsWord) :
+    FnSummary 0x80004b20#64 (fun e => e = c) (WriteRegistersPost ([9, 18, 8, 10] ++ [1]) [] c
+      jal_80004b34_call.target 56#64
+      ((1, jal_80004b34_call.link) :: [(10, 56#64), (9, 56#64), (8, trail), (18, fd), (11, trail)])) :=
+  block_then_call c jal_80004b34_call_shape jal_80004b34_call_decode (fun _ h => jal_80004b34_call_pins h)
+    (read_sections_num c ra fd trail leaf regs window numWord) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+theorem read_sections_seek_call (c : Config) (ra fd trail blk : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(9, 56#64), (10, blk), (8, trail), (18, fd)]) (window : WriteWindow (trail + 16#64) 8)
+    (outside : ImageOutside [((trail + 16#64).toNat, 8, blk)]) :
+    FnSummary 0x80004b38#64 (fun e => e = c) (WriteRegistersPost ([10, 12, 11] ++ [1])
+      [((trail + 16#64).toNat, 8, blk)] c jal_80004b4c_call.target fd
+      ((1, jal_80004b4c_call.link) :: [(10, fd), (12, 2#64), (11, -72#64), (9, 56#64), (8, trail), (18, fd)])) :=
+  block_then_call c jal_80004b4c_call_shape jal_80004b4c_call_decode (fun _ h => jal_80004b4c_call_pins h)
+    (read_sections_seek_front c ra fd trail blk leaf regs window outside) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+theorem read_sections_read_call (c : Config) (ra fd trail blk : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(8, trail), (9, 56#64), (18, fd)]) (window : ReadWindow (trail + 16#64) 8)
+    (blkWord : bytesT c.σ.mem (trail + 16#64).toNat 8 = blk) :
+    FnSummary 0x80004b50#64 (fun e => e = c) (WriteRegistersPost ([10, 12, 11] ++ [1]) [] c
+      jal_80004b5c_call.target fd
+      ((1, jal_80004b5c_call.link) :: [(10, fd), (12, 56#64), (11, blk), (8, trail), (9, 56#64), (18, fd)])) :=
+  block_then_call c jal_80004b5c_call_shape jal_80004b5c_call_decode (fun _ h => jal_80004b5c_call_pins h)
+    (read_sections_read_front c ra fd trail blk leaf regs window blkWord) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
 end OCaml.Vm.Boot.Startup
