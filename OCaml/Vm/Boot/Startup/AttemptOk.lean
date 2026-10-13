@@ -126,13 +126,13 @@ theorem attempt_ok (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (name n
       constructor <;> decide) (by simp only [LogInW])
   have mem1 : d1.σ.mem = c.σ.mem := p1.memory
   obtain ⟨d2, run2, L⟩ := (lseek_file d1 H capacity WhileMinElfParse.attemptStack jal_80004940_call.link
-    WhileMinElfParse.trailSlot ready1 (by constructor <;> decide)
+    WhileMinElfParse.trailSlot (-16#64) ready1 (by constructor <;> decide)
     ⟨ready1.stack, gholds_lookup (n := 1) _ p1.regs rfl,
       keep1 8 _ (by decide) (by decide) (by decide) (gholds_lookup (n := 8) _ regs rfl),
       gholds_lookup (n := 10) _ p1.regs rfl, gholds_lookup (n := 11) _ p1.regs rfl,
       gholds_lookup (n := 12) _ p1.regs rfl, trivial⟩
     (by rw [mem1]; exact A.words) node (by rw [mem1]; exact A.slot) (by rw [mem1]; exact A.kind)
-    (by rw [mem1]; exact A.nodeWord)).run d1 ⟨p1.pc, rfl⟩
+    (by rw [mem1]; exact A.nodeWord) (by decide) (by decide) (by decide)).run d1 ⟨p1.pc, rfl⟩
   have stackLow : heapEnd + 64 ≤ WhileMinElfParse.attemptStack.toNat := by decide
   -- memory after lseek: the position store over the entry's, away from its stack and errno
   have glob2 (x : Nat) (hx : x < heapEnd) (errno : OutW errnoWindows x)
@@ -140,9 +140,9 @@ theorem attempt_ok (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (name n
       (d2.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
     rw [L.mem x (Or.inl (by omega)) errno, writeLog_out _ _ _ (by simp only [lseekLog, OutL, and_true]; omega), mem1]
   have pos2 : bytesT d2.σ.mem (Layout.sym_fds + 80) 8 = 0x249c#64 := by
-    rw [word_observed (m := writeLog d1.σ.mem lseekLog) _ fun i hi => L.mem _ (Or.inl (by unfold Layout.sym_fds heapEnd at *; omega))
+    rw [word_observed (m := writeLog d1.σ.mem (lseekLog (-16#64))) _ fun i hi => L.mem _ (Or.inl (by unfold Layout.sym_fds heapEnd at *; omega))
       (by simp only [OutW, errnoWindows, and_true, Layout.sym_fds]; omega)]
-    exact word_writeLog_at _ _ 0 _ _ rfl trivial
+    exact (word_writeLog_at d1.σ.mem (lseekLog (-16#64)) 0 (Layout.sym_fds + 80) _ rfl trivial).trans (by decide)
   -- read(3, trail, 16)
   have keepL (n : Nat) (v : BitVec 64) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ lseekWrites)
       (hv : gprGet d1.σ n = some v) : gprGet d2.σ n = some v := (L.kept n lo hi out).trans hv
