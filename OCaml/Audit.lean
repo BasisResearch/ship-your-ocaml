@@ -5410,6 +5410,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.links_of_channels
 #print axioms OCaml.Vm.Sim.CcallSetupPost.libraryReady
 #print axioms OCaml.Vm.Sim.allocPlaces_ok
+#print axioms OCaml.Vm.Sim.NativeValid.high
+#print axioms OCaml.Vm.Sim.NativeValid.interpReturn
 #print axioms OCaml.Vm.Sim.putAll_placed
 #print axioms OCaml.Vm.Sim.ArmInput.putAll
 #print axioms OCaml.Vm.Primitives.BlockPost.kept

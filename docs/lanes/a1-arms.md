@@ -186,6 +186,15 @@ outside certificates (`PayloadOutside`/`PayloadObsOutside`/`PayloadCoreOutside`/
 `.bss` end), relocation via `VmImage.argv`, the barrier via `barrierStatics`; the
 whileMin cut from a0-boot's `read_main_argv`.
 
+Done: `NativeValid D` = `NativeCore D` (any caller of caml_interprete: arena/
+headroom/alignment bounds, `raise_buf`, the frame's saved return address
+`D.caller.ret` and the caller frame `D.caller.frameBytes`) + `RootCaller D`
+(`D.caller = mainCaller`, `mainReturn`, `rootSaved`, read by the exits and the
+uncaught-exception path). `InvocationData.caller : NativeCaller`; entry builds
+the root with `mainCaller`. A nested `caml_callback_exn` invocation is a
+`NativeCore` with its own caller; `NativeValid.high`/`interpReturn` keep the
+root's old statements.
+
 Row premises for generic `L`:
 * `MemoryStable L.runtimeOk` and `RuntimeFrame L high dom`; both discharged
   for a6-gc's pinned `Gc.f1Layout` (`f1_memoryStable`, `f1_runtimeFrame`,

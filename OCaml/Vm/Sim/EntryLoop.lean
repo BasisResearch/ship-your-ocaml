@@ -191,8 +191,10 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
 
   -- the native invocation fixed here
   have native : NativePlaced c5 := by
-    refine ⟨⟨sp - Layout.interpFrameBytes, word c Layout.sym_Caml_state, fun a => byte c5 a⟩,
-      ⟨p.stack, dom5, fun _ _ _ _ => rfl, ?_⟩, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩⟩
+    refine ⟨⟨sp - Layout.interpFrameBytes, word c Layout.sym_Caml_state, fun a => byte c5 a, mainCaller⟩,
+      ⟨p.stack, dom5, fun _ _ _ _ => rfl, ?_⟩,
+      { low := ?_, highCaller := ?_, aligned := ?_, interpCaller := ?_, mainReturn := ?_, rootSaved := ?_,
+        headroom := ?_, jumpRa := ?_, jumpSp := ?_, caller := rfl }⟩
     · -- the resume's store: `Caml_state->external_raise = &raise_buf`
       dsimp only
       rw [word, p.memory]
@@ -204,7 +206,7 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
           List.getElem?_cons_succ, List.getElem?_cons_zero])
         (by simp [entryLog, entrySaveLog, entryPrepLog, setjmpLog, entryResumeLog, Layout.interpSavedRegs, OutLRange])
     · dsimp only; simp only [Layout.interpFrameBytes, Vsa.Sim.DlHeap.heapEnd]; omega
-    · dsimp only; simp only [Layout.interpFrameBytes, Layout.camlMainFrameBytes, Layout.sym_stack_top]; omega
+    · dsimp only; simp only [mainCaller, Layout.interpFrameBytes, Layout.camlMainFrameBytes, Layout.sym_stack_top]; omega
     · dsimp only; simp only [Layout.interpFrameBytes]; omega
     · intro c' inv
       have e := inv.word_eq (c := c5) (fun _ => rfl) (r := (200, 440)) (off := 320) (by decide) (by decide)
@@ -213,32 +215,7 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
       have ra := OCaml.Vm.Gc.word_writeLog_at c.σ.mem (entryLog sp callerRegs (BitVec.ofNat 64 pl.codeBase) c)
         0 (sp - Layout.interpFrameBytes + Layout.interpSaveOffset 1) (callerRegs 1) rfl (by log_out)
       simp only [show Layout.interpSaveOffset 1 = 200 + 320 from rfl, ← Nat.add_assoc] at ra
-      rw [ra, caller.ra]
-    · intro c' inv
-      have e := inv.word_eq (c := c5) (fun _ => rfl) (r := (200, 440)) (off := 432) (by decide) (by decide)
-      have addr : sp - Layout.interpFrameBytes + Layout.interpFrameBytes + Layout.camlMainSaveOffset 1 =
-          sp - Layout.interpFrameBytes + 200 + 432 := by
-            simp only [Layout.interpFrameBytes, Layout.camlMainSaveOffset] <;> omega
-      rw [addr, e, ← addr, show sp - Layout.interpFrameBytes + Layout.interpFrameBytes = sp by
-        simp only [Layout.interpFrameBytes]; omega]
-      rw [word_of_log p.memory (by log_out), caller.mainFrame 1 (by decide), caller.mainReturn]
-    · intro c' inv
-      have e0 := inv.word_eq (c := c5) (fun _ => rfl) (r := (0, 32)) (off := 0) (by decide) (by decide)
-      have e8 := inv.word_eq (c := c5) (fun _ => rfl) (r := (0, 32)) (off := 8) (by decide) (by decide)
-      simp only [Nat.add_zero] at e0 e8
-      dsimp only
-      rw [e0, e8, word, word, p.memory]
-      have hi := OCaml.Vm.Gc.word_writeLog_at c.σ.mem (entryLog sp callerRegs (BitVec.ofNat 64 pl.codeBase) c)
-        15 (sp - Layout.interpFrameBytes + 0) (domainField c Layout.off_stack_high)
-        (by simp only [entryLog, entrySaveLog, entryPrepLog, Layout.interpSavedRegs, List.map, List.cons_append, List.nil_append, List.getElem?_cons_succ, List.getElem?_cons_zero, Nat.add_zero]) (by log_out)
-      have ex := OCaml.Vm.Gc.word_writeLog_at c.σ.mem (entryLog sp callerRegs (BitVec.ofNat 64 pl.codeBase) c)
-        17 (sp - Layout.interpFrameBytes + 8) (domainField c Layout.off_extern_sp)
-        (by simp only [entryLog, entrySaveLog, entryPrepLog, Layout.interpSavedRegs, List.map, List.cons_append, List.nil_append, List.getElem?_cons_succ, List.getElem?_cons_zero, Nat.add_zero]) (by log_out)
-      simp only [Nat.add_zero] at hi
-      rw [hi, ex]
-      apply BitVec.eq_of_toNat_eq
-      simp only [domainField]
-      rw [h.stackHigh, h.externSp]
+      rw [ra, caller.ra]; rfl
     · have low := caller.frameLow
       rw [Nat.add_right_comm] at low
       exact Nat.le_sub_of_add_le low
@@ -266,6 +243,31 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
           Nat.add_zero, Option.some.injEq, Prod.mk.injEq, and_true] <;> omega)
         (by log_out)
       exact spw
+    · intro c' inv
+      have e := inv.word_eq (c := c5) (fun _ => rfl) (r := (200, 440)) (off := 432) (by decide) (by decide)
+      have addr : sp - Layout.interpFrameBytes + Layout.interpFrameBytes + Layout.camlMainSaveOffset 1 =
+          sp - Layout.interpFrameBytes + 200 + 432 := by
+            simp only [Layout.interpFrameBytes, Layout.camlMainSaveOffset] <;> omega
+      rw [addr, e, ← addr, show sp - Layout.interpFrameBytes + Layout.interpFrameBytes = sp by
+        simp only [Layout.interpFrameBytes]; omega]
+      rw [word_of_log p.memory (by log_out), caller.mainFrame 1 (by decide), caller.mainReturn]
+    · intro c' inv
+      have e0 := inv.word_eq (c := c5) (fun _ => rfl) (r := (0, 32)) (off := 0) (by decide) (by decide)
+      have e8 := inv.word_eq (c := c5) (fun _ => rfl) (r := (0, 32)) (off := 8) (by decide) (by decide)
+      simp only [Nat.add_zero] at e0 e8
+      dsimp only
+      rw [e0, e8, word, word, p.memory]
+      have hi := OCaml.Vm.Gc.word_writeLog_at c.σ.mem (entryLog sp callerRegs (BitVec.ofNat 64 pl.codeBase) c)
+        15 (sp - Layout.interpFrameBytes + 0) (domainField c Layout.off_stack_high)
+        (by simp only [entryLog, entrySaveLog, entryPrepLog, Layout.interpSavedRegs, List.map, List.cons_append, List.nil_append, List.getElem?_cons_succ, List.getElem?_cons_zero, Nat.add_zero]) (by log_out)
+      have ex := OCaml.Vm.Gc.word_writeLog_at c.σ.mem (entryLog sp callerRegs (BitVec.ofNat 64 pl.codeBase) c)
+        17 (sp - Layout.interpFrameBytes + 8) (domainField c Layout.off_extern_sp)
+        (by simp only [entryLog, entrySaveLog, entryPrepLog, Layout.interpSavedRegs, List.map, List.cons_append, List.nil_append, List.getElem?_cons_succ, List.getElem?_cons_zero, Nat.add_zero]) (by log_out)
+      simp only [Nat.add_zero] at hi
+      rw [hi, ex]
+      apply BitVec.eq_of_toNat_eq
+      simp only [domainField]
+      rw [h.stackHigh, h.externSp]
   -- the runtime invariant through entry's windows
   have platform : PlatformOk L.runtimeOk c5 :=
     ⟨p.good, p.image, stable c c5 (by rw [p.memory]; exact frameOn_writeLog _ _ _ (logInW_of_cover cover))

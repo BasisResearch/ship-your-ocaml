@@ -32,12 +32,25 @@ open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 def invocationRanges : List (Nat × Nat) := [(0, 32), (Layout.interpSavedRootsOffset,
   Layout.interpFrameBytes + Layout.camlMainFrameBytes - Layout.interpSavedRootsOffset)]
 
+/-- Who called `caml_interprete`: the return address saved in its frame, the
+caller's frame size above it, and whether the VM stack was empty at entry.
+The root invocation's caller is `caml_main` (`mainCaller`); a nested
+invocation (`caml_callback_exn`) has its own. -/
+structure NativeCaller where
+  ret : BitVec 64
+  frameBytes : Nat
+  emptyStack : Bool
+
+/-- `caml_main`, the root invocation's caller. -/
+def mainCaller : NativeCaller := ⟨0x80004ff8#64, Layout.camlMainFrameBytes, true⟩
+
 /-- What entry fixes: the native sp at the loop head, the `Caml_state`
-pointer, and the bytes of `invocationRanges` above that sp. -/
+pointer, and the bytes of `invocationRanges` above that sp, and the caller. -/
 structure InvocationData where
   nativeSp : Nat
   domain : BitVec 64
   snapshot : Nat → BitVec 8
+  caller : NativeCaller
 
 /-- `raise_buf`, the interpreter's jump buffer, in its native frame. -/
 def raiseBufOffset : Nat := 208
@@ -95,20 +108,15 @@ theorem Invocation.frame_read {D : InvocationData} {c c' : Config}
 (primitives, `caml_raise`, the exit) that push frames under it. -/
 def nativeHeadroom : Nat := 4096
 
-/-- What the exits (STOP, caml_sys_exit) need from the entry snapshot: the
-native frames lie above the allocator arena and below the stack top, and the
-saved return addresses of caml_interprete (into caml_main) and of caml_main
-(into main) are the ones startup installed. D-only: preserved trivially. -/
-structure NativeValid (D : InvocationData) : Prop where
+/-- **What every invocation of `caml_interprete` needs** from its entry
+snapshot, for any caller: the native frames lie above the allocator arena with
+headroom and below the stack top, the frame's saved return address is the
+caller's, and `raise_buf` (filled by entry's setjmp) returns to the resume. -/
+structure NativeCore (D : InvocationData) : Prop where
   low : Vsa.Sim.DlHeap.heapEnd ≤ D.nativeSp
-  high : D.nativeSp + Layout.interpFrameBytes + Layout.camlMainFrameBytes ≤ Layout.sym_stack_top
+  highCaller : D.nativeSp + Layout.interpFrameBytes + D.caller.frameBytes ≤ Layout.sym_stack_top
   aligned : D.nativeSp % 16 = 0
-  interpReturn : ∀ c, Invocation D c → word c (D.nativeSp + Layout.interpSaveOffset 1) = 0x80004ff8#64
-  mainReturn : ∀ c, Invocation D c →
-    word c (D.nativeSp + Layout.interpFrameBytes + Layout.camlMainSaveOffset 1) = 0x80001df0#64
-  /-- the root invocation's saved `initial_sp_offset` source (`stack_high`, at
-  sp+0) equals its saved `extern_sp` (sp+8): the VM stack was empty at entry -/
-  rootSaved : ∀ c, Invocation D c → word c D.nativeSp = word c (D.nativeSp + 8)
+  interpCaller : ∀ c, Invocation D c → word c (D.nativeSp + Layout.interpSaveOffset 1) = D.caller.ret
   /-- free native stack below the interpreter frame, above the arena -/
   headroom : Vsa.Sim.DlHeap.heapEnd + nativeHeadroom ≤ D.nativeSp
   /-- `raise_buf` (filled by entry's setjmp) returns to caml_interprete's resume -/
@@ -117,6 +125,29 @@ structure NativeValid (D : InvocationData) : Prop where
   /-- … with the interpreter frame's native sp -/
   jumpSp : ∀ c, Invocation D c →
     word c (D.nativeSp + raiseBufOffset + Layout.jumpSaveOffset 2) = BitVec.ofNat 64 D.nativeSp
+
+/-- **The root invocation**: called by `caml_main` (whose own frame returns
+into `main`), with an empty VM stack at entry. Read by the exits (STOP,
+caml_sys_exit) and the uncaught-exception path. -/
+structure RootCaller (D : InvocationData) : Prop where
+  caller : D.caller = mainCaller
+  mainReturn : ∀ c, Invocation D c →
+    word c (D.nativeSp + Layout.interpFrameBytes + Layout.camlMainSaveOffset 1) = 0x80001df0#64
+  /-- the root invocation's saved `initial_sp_offset` source (`stack_high`, at
+  sp+0) equals its saved `extern_sp` (sp+8): the VM stack was empty at entry -/
+  rootSaved : ∀ c, Invocation D c → word c D.nativeSp = word c (D.nativeSp + 8)
+
+/-- The root interpreter's native invocation: generic facts and `caml_main`
+as the caller. -/
+structure NativeValid (D : InvocationData) : Prop extends NativeCore D, RootCaller D
+
+theorem NativeValid.high {D : InvocationData} (v : NativeValid D) :
+    D.nativeSp + Layout.interpFrameBytes + Layout.camlMainFrameBytes ≤ Layout.sym_stack_top := by
+  have h := v.highCaller; rw [v.caller] at h; exact h
+
+theorem NativeValid.interpReturn {D : InvocationData} (v : NativeValid D) :
+    ∀ c, Invocation D c → word c (D.nativeSp + Layout.interpSaveOffset 1) = 0x80004ff8#64 := fun c inv => by
+  have h := v.interpCaller c inv; rw [v.caller] at h; exact h
 
 /-- The native invocation at a loop-head configuration: some entry snapshot
 that is intact and valid (`Running.native`). -/
