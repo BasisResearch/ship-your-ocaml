@@ -381,6 +381,8 @@ import OCaml.Vm.Boot.Startup.ReadFileSteps
 import OCaml.Vm.Boot.Startup.ReadFile
 import OCaml.Vm.Boot.Startup.StrncmpWord
 import OCaml.Vm.Boot.Startup.AttemptOkSteps
+import OCaml.Vm.Boot.Startup.AttemptOk
+import OCaml.Vm.Boot.Startup.AttemptOkReset
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2738,6 +2740,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.attempt_quiet
 #print axioms OCaml.Vm.Boot.Startup.attempt_magic_call
 #print axioms OCaml.Vm.Boot.Startup.attempt_name_store
+#print axioms OCaml.Vm.Boot.Startup.attempt_ok
+#print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport_opens
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_attempt_ok_exists
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport

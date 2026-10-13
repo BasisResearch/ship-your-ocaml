@@ -130,10 +130,19 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   unaligned, so `strncmp_equal` applies. `strncmp_magic` (StrncmpWord.lean)
   covers the aligned word path.
 
-Next: generate the embedded file's trailer bytes (initialMem at
-`trailerSource`), compose the success path from `ResetProgOpened` to
-caml_attempt_open's return of descriptor 3, then caml_main's
-`read_section_descriptors`.
+* **`attempt_ok`** (AttemptOk.lean): from `open` returning 3 to
+  caml_attempt_open's return: lseek, read, swap, magicstr, the
+  `print_magic` test, `strncmp_equal` on the trailer's magic against rodata's
+  (`exec_magic_trailer`, `exec_magic_rodata`), `*name = truename`, return 3.
+  `AttemptOk` records the swapped trailer (`swappedTrailer`), the name, the
+  descriptor position (0x24ac) and everything else kept.
+* **`reset_attempt_ok_exists`** (AttemptOkReset.lean): the CLOSED reset run
+  reaches caml_attempt_open's return of descriptor 3 for "/prog".
+  `gen_boot_image.py` now emits the embedded file's trailer bytes.
+
+Next: caml_main after caml_attempt_open: `read_section_descriptors(fd,
+&trail)` (lseek to the section table, `caml_stat_alloc`, `read`), then
+`init_gc` and onward to the cut.
 
 ## Round 2 status (2026-10-06, search)
 

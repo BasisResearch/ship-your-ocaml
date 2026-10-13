@@ -372,25 +372,31 @@ open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.V
   LeanRV64DExecutable
 
 /-- Slot 1's facts survive any change that keeps slot 1 and the name block. -/
-theorem FsSlotOne.transport {m m' : Std.ExtHashMap Nat (BitVec 8)} {node : BitVec 64} (h : FsSlotOne m node)
-    (slot : ∀ x, slotOne ≤ x → x < slotOne + 56 → (m'[x]?).getD 0 = (m[x]?).getD 0)
+theorem FsSlotOne.transport_opens {m m' : Std.ExtHashMap Nat (BitVec 8)} {node : BitVec 64} (h : FsSlotOne m node)
+    (slot : ∀ x, slotOne ≤ x → x < slotOne + 56 → (x < slotOne + 48 ∨ slotOne + 52 ≤ x) →
+      (m'[x]?).getD 0 = (m[x]?).getD 0)
     (name : ∀ j, j ≤ 4 → (m'[node.toNat + j]?).getD 0 = (m[node.toNat + j]?).getD 0) : FsSlotOne m' node := by
-  have word (off : Nat) (fits : off + 8 ≤ 56) : bytesT m' (slotOne + off) 8 = bytesT m (slotOne + off) 8 :=
-    word_observed _ fun i hi => slot _ (by omega) (by omega)
-  refine ⟨(slot _ (by omega) (by omega)).trans h.used, (slot _ (by omega) (by omega)).trans h.dirByte,
-    (slot _ (by omega) (by omega)).trans h.linked, ?_, (word 8 (by decide)).trans h.namePtr, ?_,
+  have word (off : Nat) (fits : off + 8 ≤ 48) : bytesT m' (slotOne + off) 8 = bytesT m (slotOne + off) 8 :=
+    word_observed _ fun i hi => slot _ (by omega) (by omega) (by omega)
+  refine ⟨(slot _ (by omega) (by omega) (by omega)).trans h.used, (slot _ (by omega) (by omega) (by omega)).trans h.dirByte,
+    (slot _ (by omega) (by omega) (by omega)).trans h.linked, ?_, (word 8 (by decide)).trans h.namePtr, ?_,
     (word 24 (by decide)).trans h.data, (word 32 (by decide)).trans h.size, (word 40 (by decide)).trans h.cap,
-    (slot _ (by omega) (by omega)).trans h.ro, fun j hj => (name j (by omega)).trans (h.name j hj),
+    (slot _ (by omega) (by omega) (by omega)).trans h.ro, fun j hj => (name j (by omega)).trans (h.name j hj),
     (name 4 (by decide)).trans h.nul⟩
   · have p := h.parent
     unfold slotParent read4 at *
-    rw [slot (slotOne + 4) (by omega) (by omega), slot (slotOne + 4 + 1) (by omega) (by omega),
-      slot (slotOne + 4 + 2) (by omega) (by omega), slot (slotOne + 4 + 3) (by omega) (by omega)]
+    rw [slot (slotOne + 4) (by omega) (by omega) (by omega), slot (slotOne + 4 + 1) (by omega) (by omega) (by omega),
+      slot (slotOne + 4 + 2) (by omega) (by omega) (by omega), slot (slotOne + 4 + 3) (by omega) (by omega) (by omega)]
     exact p
   · have l := h.length
     unfold slotLength at *
     rw [show slotOne + 16 = slotOne + 16 from rfl, word 16 (by decide)]
     exact l
+
+theorem FsSlotOne.transport {m m' : Std.ExtHashMap Nat (BitVec 8)} {node : BitVec 64} (h : FsSlotOne m node)
+    (slot : ∀ x, slotOne ≤ x → x < slotOne + 56 → (m'[x]?).getD 0 = (m[x]?).getD 0)
+    (name : ∀ j, j ≤ 4 → (m'[node.toNat + j]?).getD 0 = (m[node.toNat + j]?).getD 0) : FsSlotOne m' node :=
+  h.transport_opens (fun x lo hi _ => slot x lo hi) name
 
 theorem resolveNoneLog_struct {spo d path len : BitVec 64} (frame : NativeFrame spo 80) :
     LogInW [structWin spo] (resolveNoneLog spo d path len) := by
