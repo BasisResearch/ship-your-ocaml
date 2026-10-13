@@ -7,6 +7,14 @@ import OCaml.Vm.Boot.Startup.ResolveAgainNormalized
 import OCaml.Vm.Boot.Startup.ResolveAgainCallInterface
 import OCaml.Vm.Boot.Startup.ResolveAgainImage
 import OCaml.Vm.Boot.Startup.ResolveNoSlashImage
+import OCaml.Vm.Boot.Startup.ResolveAgainTestNormalized
+import OCaml.Vm.Boot.Startup.ResolveAgainTestImage
+import OCaml.Vm.Boot.Startup.ResolveIsDirNormalized
+import OCaml.Vm.Boot.Startup.ResolveIsDirImage
+import OCaml.Vm.Boot.Startup.ResolveFileTailNormalized
+import OCaml.Vm.Boot.Startup.ResolveFileTailImage
+import OCaml.Vm.Boot.Startup.ResolveFileNormalized
+import OCaml.Vm.Boot.Startup.ResolveFileImage
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives LeanRV64DExecutable
 
@@ -176,6 +184,114 @@ theorem resolve_skip_empty (c : Config) (path ra : BitVec 64) (b : BitVec 8) (le
       show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide,
       show 0#64 + Functions.sign_extend (m := 64) 47#12 = 47#64 by decide, BitVec.sub_self, name_lbu_value]
     simp only [BitVec.add_zero]
+  · rfl
+  · decide
+
+/-- No further '/': the component's length, `strlen(p)`. -/
+theorem resolve_again_strlen (c : Config) (path ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, 0#64), (25, path)]) :
+    FnSummary 0x800006e8#64 (fun e => e = c)
+      (WriteRegistersPost ([10] ++ [1]) [] c jal_800006f0_call.target path
+        ((1, jal_800006f0_call.link) :: [(10, path), (25, path)])) := by
+  apply block_then_call c jal_800006f0_call_shape jal_800006f0_call_decode (fun _ h => jal_800006f0_call_pins h)
+    _ (by simp only [keysG]; decide) (by simp only [KeysAvoidRa, keysG]; decide) rfl
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (resolveX06e8FSeg ++ resolveX06ecSeg) 0x800006e8#64
+        [(10, 0#64), (25, path)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 25]; decide
+      shape := by change ChainOK _ [10, 25] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := resolveAgainTest_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.resolve_at_"
+        · change guardB bop.BNE 0#64 0#64 = false
+          decide }))
+  · rfl
+  · rfl
+  · simp only [resolveX06e8FSeg, resolveX06ecSeg, evalBlocks, evalBlock, SegEvalState.init,
+      resolvelength_line_800006ec, runGM, ldsRunM, wlogM, stepGM, stepLdsM, srcVal, lookupG, eraseG, wvalM, wentryM,
+      widthOfM, List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false,
+      List.cons_append, List.nil_append, show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]
+  · rfl
+  · decide
+
+def resolveFileLog (spo d node path len : BitVec 64) : List WEntry :=
+  [(resAt spo 4, 4, d), (resAt spo 8, 4, node), (resAt spo 16, 8, path), (resAt spo 24, 8, len), (resAt spo 0, 4, 1#64)]
+
+/-- `child` found slot `node`, a file, and no component follows: `R_FILE`. -/
+theorem resolve_file (c : Config) (spo path len d node ra : BitVec 64) (leaf : LeafInput ra c)
+    (frame : NativeFrame spo 80)
+    (regs : GHolds c.σ [(10, node), (22, BitVec.ofNat 64 Layout.sym_files), (26, 0#64), (20, d),
+      (19, nativeStack spo 80), (25, path), (8, len)])
+    (nonneg : guardB bop.BLT node 0#64 = false) (slot : node = 1#64)
+    (file : (c.σ.mem[Layout.sym_files + 56 + 1]?).getD 0 = 0#8) :
+    FnSummary 0x800006b4#64 (fun e => e = c)
+      (WriteRegistersPost [15] (resolveFileLog spo d node path len) c 0x80000700#64 node
+        [(15, 1#64), (10, node), (22, BitVec.ofNat 64 Layout.sym_files), (26, 0#64), (20, d), (19, nativeStack spo 80),
+          (25, path), (8, len)]) := by
+  subst slot
+  apply registers_of_blocks leaf.image (frame.image_outside (by
+      have lower := frame.lower
+      simp only [resolveFileLog, LogInW, InsideW, resAt_nat frame (by decide : 4 ≤ 80),
+        resAt_nat frame (by decide : 8 ≤ 80), resAt_nat frame (by decide : 16 ≤ 80),
+        resAt_nat frame (by decide : 24 ≤ 80), resAt_nat frame (by decide : 0 ≤ 80), or_false, and_true]
+      unfold nativeFrameBase at *
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> omega))
+    (block_summary _ _ _ _ _ (show BlockInput (resolveX06b4FSeg ++ resolveX06b8TSeg ++ resolveX0860TSeg ++
+        resolveX0884Seg) 0x800006b4#64
+        [(10, 1#64), (22, BitVec.ofNat 64 Layout.sym_files), (26, 0#64), (20, d), (19, nativeStack spo 80),
+          (25, path), (8, len)] [[0#8]] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 22, 26, 20, 19, 25, 8]; decide
+      shape := by change ChainOK _ [10, 22, 26, 20, 19, 25, 8] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := resolveMissed_code leaf.image
+        have word (off : Nat) (bound : off + 8 ≤ 80) (aligned : off % 8 = 0) :
+            WriteWindow (nativeStack spo 80 + BitVec.ofNat 64 off) 8 := by
+          rw [nativeStack, frame.address _ (by omega)]
+          exact frame.word bound aligned
+        have half (off : Nat) (bound : off + 4 ≤ 80) (aligned : off % 4 = 0) :
+            WriteWindow (nativeStack spo 80 + BitVec.ofNat 64 off) 4 := by
+          rw [nativeStack, frame.address _ (by omega)]
+          exact frame.word32 bound aligned
+        chain_facts code with "Vsa.Sim.Code.resolve_at_"
+        · change guardB bop.BLT 1#64 0#64 = false
+          decide
+        · exact (show ReadWindow (BitVec.ofNat 64 (Layout.sym_files + 56 + 1)) 1 by constructor <;> decide).lbu rfl
+            (by simp only [resolveisdir_line_800006b8, resolveisdir_line_800006bc, resolveisdir_line_800006c0, resolveisdir_line_800006c4, resolveisdir_line_800006c8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true,
+                  ite_false, Nat.reduceEqDiff]
+                decide)
+            (by rw [show (BitVec.ofNat 64 (Layout.sym_files + 56 + 1)).toNat = Layout.sym_files + 56 + 1 by decide]
+                exact file)
+        · change guardB bop.BEQ (bytesVal .lbu [0#8]) 0#64 = true
+          decide
+        · change guardB bop.BEQ 0#64 0#64 = true
+          decide
+        · exact (half 4 (by decide) (by decide)).sw rfl (by simp only [resolveisdir_line_800006b8, resolveisdir_line_800006bc, resolveisdir_line_800006c0, resolveisdir_line_800006c4, resolveisdir_line_800006c8, resolvefile_line_80000884, resolvefile_line_80000888, resolvefile_line_8000088c, resolvefile_line_80000890, resolvefile_line_80000894, resolvefile_line_80000898, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; rw [show Functions.sign_extend (m := 64) 4#12 = 4#64 by decide])
+        · exact (half 8 (by decide) (by decide)).sw rfl (by simp only [resolveisdir_line_800006b8, resolveisdir_line_800006bc, resolveisdir_line_800006c0, resolveisdir_line_800006c4, resolveisdir_line_800006c8, resolvefile_line_80000884, resolvefile_line_80000888, resolvefile_line_8000088c, resolvefile_line_80000890, resolvefile_line_80000894, resolvefile_line_80000898, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; rw [show Functions.sign_extend (m := 64) 8#12 = 8#64 by decide])
+        · exact (word 16 (by decide) (by decide)).sd rfl (by simp only [resolveisdir_line_800006b8, resolveisdir_line_800006bc, resolveisdir_line_800006c0, resolveisdir_line_800006c4, resolveisdir_line_800006c8, resolvefile_line_80000884, resolvefile_line_80000888, resolvefile_line_8000088c, resolvefile_line_80000890, resolvefile_line_80000894, resolvefile_line_80000898, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; rw [show Functions.sign_extend (m := 64) 16#12 = 16#64 by decide])
+        · exact (word 24 (by decide) (by decide)).sd rfl (by simp only [resolveisdir_line_800006b8, resolveisdir_line_800006bc, resolveisdir_line_800006c0, resolveisdir_line_800006c4, resolveisdir_line_800006c8, resolvefile_line_80000884, resolvefile_line_80000888, resolvefile_line_8000088c, resolvefile_line_80000890, resolvefile_line_80000894, resolvefile_line_80000898, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; rw [show Functions.sign_extend (m := 64) 24#12 = 24#64 by decide])
+        · exact (half 0 (by decide) (by decide)).sw rfl (by simp only [resolveisdir_line_800006b8, resolveisdir_line_800006bc, resolveisdir_line_800006c0, resolveisdir_line_800006c4, resolveisdir_line_800006c8, resolvefile_line_80000884, resolvefile_line_80000888, resolvefile_line_8000088c, resolvefile_line_80000890, resolvefile_line_80000894, resolvefile_line_80000898, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide]) }))
+  · simp only [resolveX06b4FSeg, resolveX06b8TSeg, resolveX0860TSeg, resolveX0884Seg, evalBlocks, evalBlock,
+      SegEvalState.init, resolveisdir_line_800006b8, resolveisdir_line_800006bc, resolveisdir_line_800006c0, resolveisdir_line_800006c4, resolveisdir_line_800006c8, resolvefile_line_80000884, resolvefile_line_80000888, resolvefile_line_8000088c, resolvefile_line_80000890, resolvefile_line_80000894, resolvefile_line_80000898, runGM, ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM,
+      wentryM, widthOfM, List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false,
+      imm20Of, List.cons_append, List.nil_append, resolveFileLog, resAt,
+      show Functions.sign_extend (m := 64) 4#12 = 4#64 by decide, show Functions.sign_extend (m := 64) 8#12 = 8#64 by decide,
+      show Functions.sign_extend (m := 64) 16#12 = 16#64 by decide, show Functions.sign_extend (m := 64) 24#12 = 24#64 by decide,
+      show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide,
+      BitVec.zero_add]
+  · rfl
+  · simp only [resolveX06b4FSeg, resolveX06b8TSeg, resolveX0860TSeg, resolveX0884Seg, evalBlocks, evalBlock,
+      SegEvalState.init, resolveisdir_line_800006b8, resolveisdir_line_800006bc, resolveisdir_line_800006c0, resolveisdir_line_800006c4, resolveisdir_line_800006c8, resolvefile_line_80000884, resolvefile_line_80000888, resolvefile_line_8000088c, resolvefile_line_80000890, resolvefile_line_80000894, resolvefile_line_80000898, runGM, ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM,
+      wentryM, widthOfM, List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false,
+      imm20Of, List.cons_append, List.nil_append]
+    rw [show 0#64 + Functions.sign_extend (m := 64) 1#12 = 1#64 by decide]
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
