@@ -5650,6 +5650,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Channel.out_flags
 #print axioms OCaml.Vm.Primitives.Channel.out_done
 #print axioms OCaml.Vm.Primitives.Channel.ml_open_descriptor_out
+#print axioms OCaml.Vm.Primitives.Channel.OpenedIn.keep_upper
+#print axioms OCaml.Vm.Primitives.Channel.OpenedOut.keep_upper
 #print axioms OCaml.Vm.Sim.ccall_writing_summary_below
 #print axioms OCaml.Vm.Sim.f1_native_stable
 #print axioms OCaml.Vm.Sim.LoopGeometry.of_above

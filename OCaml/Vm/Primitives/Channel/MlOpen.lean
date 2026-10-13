@@ -162,6 +162,19 @@ theorem out_enter (c : Config) {H : List (Nat × Nat)} {capacity charge : Nat}
     gprs := (GprsKept.of_pins setup (by decide) (by decide) (by simp [keysG, OpenOut.pro_regs])).trans
       (GprsKept.of_pins call (by decide) (by decide) (by simp [keysG])) }
 
+/-- `caml_open_descriptor_in` keeps x20–x27: the checked allocation keeps
+them (`StatCheckedReturned.keep_upper`), and no other phase writes them. -/
+theorem OpenedIn.keep_upper {H : List (Nat × Nat)} {capacity : Nat} {sp ra s0 s1 s2 fd head : BitVec 64}
+    {c d : Config} (o : OpenedIn H capacity sp ra s0 s1 s2 fd head c d) {k : Nat} {x : BitVec 64}
+    (lo : 20 ≤ k) (hi : k ≤ 27) (h : gprGet c.σ k = some x) : gprGet d.σ k = some x := by
+  have a := (o.allocation.setup.toEffectPost.gpr_frame (by decide) k (by omega) (by omega)
+    (by simp; omega)).trans h
+  have b := (o.allocation.call.toEffectPost.gpr_frame (by decide) k (by omega) (by omega)
+    (by simp; omega)).trans a
+  have e := o.allocation.allocation.keep_upper lo hi b
+  have f := (o.seek.kept k (by omega) (by omega) (by simp; omega)).trans e
+  exact (o.link.kept k (by omega) (by omega) (by simp; omega)).trans f
+
 /-! ### The record's words -/
 
 /-- A record word's address, inside the arena. -/
@@ -742,5 +755,17 @@ theorem ml_open_descriptor_out (c : Config) (H : List (Nat × Nat)) (capacity ch
     ops := by
       rw [D.memory, bytesT_writeLog_out _ (by simp only [OutLRange, and_true, v8]; omega)]
       exact C.ops }⟩⟩
+
+/-- `caml_ml_open_descriptor_out` keeps x20–x27 (among them `caml_interprete`'s
+`env`, accumulator and dispatch registers). -/
+theorem OpenedOut.keep_upper {H : List (Nat × Nat)} {capacity charge : Nat}
+    {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
+    (o : OpenedOut H capacity charge sp ra s0 s1 s2 v head c d) {k : Nat} {x : BitVec 64}
+    (lo : 20 ≤ k) (hi : k ≤ 27) (h : gprGet c.σ k = some x) : gprGet d.σ k = some x := by
+  have a := (o.enter.kept k (by omega) (by omega) (by simp; omega)).trans h
+  have b := o.opening.keep_upper lo hi a
+  have e := (o.flags.kept k (by omega) (by omega) (by simp; omega)).trans b
+  have f := (o.custom.saved k (by simp; omega)).trans e
+  exact (o.done.kept k (by omega) (by omega) (by simp; omega)).trans f
 
 end OCaml.Vm.Primitives.Channel

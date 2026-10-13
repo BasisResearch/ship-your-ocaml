@@ -214,38 +214,28 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
       refcount 1, flags 4), `OpenChannelsLinked c d record`,
       `Channel(v) = record` and the ops word.
   * Gaps for the C_CALL adapter (`prim_caml_ml_open_descriptor_out_returns`):
-    - The malloc contract (`RetFrame`, `vsaSaved = [8, 9, 18, 19]`) says
-      nothing about x20–x27 after `caml_stat_alloc`, but `CcallReturn` needs
-      `reg_env` (x25). Either a0-boot's malloc contract keeps the untouched
-      registers, or this stays a named premise.
+    - x20–x27 (`reg_env` among them) survive the whole primitive
+      (`OpenedOut.keep_upper`, over a0-boot's `StatCheckedReturned.keep_upper`).
     - `CcallCallee` fixes `pl`/`cp` across the call, but the record address
       is chosen by malloc at run time. This needs an `allocPlaced`-style
-      channel placement fact (`cp chans.length = some record`) and an
-      `allocPlaces` entry for the custom block. To be decided with a1-arms
-      and a2-sem.
+      channel placement fact. Agreed with a1-arms: `CcallReturn` becomes
+      `∃ cp', CcallReturnAt … cp' …`, so the adapter supplies
+      `cp.set id record`. a1-prims adds the `allocPlaces` entry (the block's
+      value at young − 16, through `Alloc_small`).
     - `caml_ml_open_descriptor_in` is not reached by whileMin, so it is
       not composed yet; it is `out` without the `max := NULL` store.
   * `omega` exhausts the recursion depth on chained literal subtractions
     (`s - 32 - 544`) and on some goals with the arena bounds unfolded;
     `arena_omega` normalizes `Nat.sub_sub` and generalizes the bounds first.
-- open_descriptor_out: obligations its post must supply, named premises
-  until the pieces land:
-  * `ChanAt` for the new record, with cursor ≤ ioBufferSize,
-    buffer.length ≤ ioBufferSize and 8-byte alignment (from malloc);
-  * a1-arms' StackGeometry channel-apartness fields (channelCode/Atoms/Prims/
-    channelsApart), from malloc disjointness;
-  * a6-gc's `OpenChannelsLinked before after a` (`Gc/OpenChannels.lean`,
-    link_channel's stores);
-  * `heapBlock : (a, recordBytes) ∈ H'` over a0-boot's `HeapReady`;
-  * a frame: the open writes only the new record, the list head, the old
-    head's `prev`, and malloc's footprint.
-  * a6-gc's `Gc.LibHeapAt.link` (F1Heap.lean) consumes it:
-    - `ready` (caml_stat_alloc's `HeapReady` over `(a, req) :: H`, with
-      `cap = cap' + charge`, `charge ≤ 2^17`);
-    - `big` (`72 + 65536 ≤ req`), `fresh` (disjoint from H), `linked`;
-    - `keepTable`/`keepLinks`, from the byte frame;
-    - `chs.length < 64`, which stays a premise of the open.
-    a6-gc writes `f1_open` once the post's shape is fixed.
+- open_descriptor_out obligations, status:
+  * Supplied by `OpenedOut`/`OpenedIn`:
+    - the `ChanAt` words (`OutRecord`), with 16-byte alignment;
+    - `OpenChannelsLinked`, `HeapReady ((record, 65616) :: H)`;
+    - `fresh`, and the byte frame for `keepTable`/`keepLinks`.
+    So a6-gc's `Gc.LibHeapAt.link` has every input except `chs.length < 64`,
+    which stays a premise of the open.
+  * Still to derive in the adapter: a1-arms' StackGeometry
+    channel-apartness fields, from `fresh` and the arena bounds.
 
 **F1 output is console output; primitive split (2026-10-06)**
 - `GoodF1.consoles : ConsoleChannels P`: in every reachable state, every open
