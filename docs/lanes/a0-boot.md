@@ -116,10 +116,15 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   and apart from the allocator's footprint (`memcpy_fresh` is its heap-block
   instance), with `RuntimeReadyL.of_window_frame`.
 
-Next: `_lseek_r`'s return, then `read(fd, trail, 16)` (htif `_read` with
-`memcpy` from the embedded file), the trailer byte swaps into `magicstr`, the
-`print_magic` test, `strncmp` against the exec magic, and caml_attempt_open's
-return.
+* **`lseek_file`** (LseekFile.lean): `lseek(3, -16, SEEK_END)` returns 0x249c
+  and stores fds[3]'s position. **`read_file`** (ReadFile.lean):
+  `read(3, buf, 16)` returns 16 with the file's last 16 bytes (from
+  `trailerSource` = 0x8680252c) in `buf`, through `memcpy_window`, and
+  advances the position to 0x24ac.
+
+Next: caml_attempt_open's trailer path. Compose `lseek_file` and `read_file`
+at its call sites, then the byte swaps into `magicstr`, the `print_magic` test,
+`strncmp` against the exec magic, and the return of descriptor 3.
 
 ## Round 2 status (2026-10-06, search)
 
