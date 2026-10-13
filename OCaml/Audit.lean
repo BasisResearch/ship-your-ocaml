@@ -367,6 +367,7 @@ import OCaml.Vm.Boot.Startup.RetryReset
 import OCaml.Vm.Boot.Startup.SecondAttemptReset
 import OCaml.Vm.Boot.Startup.OpenProgSteps
 import OCaml.Vm.Boot.Startup.ResolveHit
+import OCaml.Vm.Boot.Startup.ResolveProg
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2684,6 +2685,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.htif_open_stores
 #print axioms OCaml.Vm.Boot.Startup.htif_open_succeed
 #print axioms OCaml.Vm.Boot.Startup.open_r_succeed
+#print axioms OCaml.Vm.Boot.Startup.back_loop_upto
+#print axioms OCaml.Vm.Boot.Startup.resolve_scan_prog
+#print axioms OCaml.Vm.Boot.Startup.strchr_slash_ready
+#print axioms OCaml.Vm.Boot.Startup.resolve_finish_prog
+#print axioms OCaml.Vm.Boot.Startup.read4_observed
+#print axioms OCaml.Vm.Boot.Startup.resolve_prog
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.stack_log_written
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
 #print axioms OCaml.Vm.Boot.Startup.resAt36_window
 #print axioms OCaml.Vm.Boot.Startup.fs_init

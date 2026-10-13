@@ -99,6 +99,12 @@ theorem child_hit_test (c : Config) (ra : BitVec 64) (leaf : LeafInput ra c) (re
 def childHitResult (sp ra s0 s1 s2 s3 s4 s5 : BitVec 64) : GRegs :=
   [(2, sp), (9, s1), (10, 1#64), (21, s5), (20, s4), (19, s3), (18, s2), (8, s0), (1, ra)]
 
+/-- `child` returned 1, every register present. -/
+structure ChildHitDone (sp ra s0 s1 s2 s3 s4 s5 : BitVec 64) (before after : Config) : Prop where
+  post : WriteRegistersPost [2, 19, 21, 20, 8, 9, 18, 15, 10, 12, 11, 1, 13, 14] (childLog sp ra s0 s1 s2 s3 s4 s5)
+    before ra 1#64 (childHitResult sp ra s0 s1 s2 s3 s4 s5) after
+  present : GprPresent after.σ
+
 /-- **`child(d, name, k)` when slot 1 is the entry**: it returns 1. -/
 theorem child_hit (c : Config) (sp ra s0 s1 s2 s3 s4 s5 d name a5 node : BitVec 64) (k : Nat)
     (leaf : LeafInput ra c) (present : GprPresent c.σ) (frame : NativeFrame sp 64)
@@ -111,9 +117,7 @@ theorem child_hit (c : Config) (sp ra s0 s1 s2 s3 s4 s5 d name a5 node : BitVec 
     (lo : 1 ≤ k) (hi : k ≤ 7) (nodeWin : ReadWindow node (k + 1)) (nameWin : ReadWindow name (k + 1))
     (nodeLow : node.toNat + k < nativeFrameBase sp 64) (nameLow : name.toNat + k < nativeFrameBase sp 64)
     (same : ∀ j, j < k → (c.σ.mem[node.toNat + j]?).getD 0 = (c.σ.mem[name.toNat + j]?).getD 0) :
-    FnSummary 0x80000040#64 (fun e => e = c)
-      (WriteRegistersPost [2, 19, 21, 20, 8, 9, 18, 15, 10, 12, 11, 1, 13, 14] (childLog sp ra s0 s1 s2 s3 s4 s5) c ra
-        1#64 (childHitResult sp ra s0 s1 s2 s3 s4 s5)) := by
+    FnSummary 0x80000040#64 (fun e => e = c) (ChildHitDone sp ra s0 s1 s2 s3 s4 s5 c) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
@@ -172,7 +176,9 @@ theorem child_hit (c : Config) (sp ra s0 s1 s2 s3 s4 s5 d name a5 node : BitVec 
         omega
       · simp [childSlots]
       · exact member) leaf.aligned).run f ⟨T.pc, rfl⟩
-  refine ⟨g, run1.trans (run2.trans (run3.trans (run4.trans run5))), {
+  have presentF := T.present D.present (by decide) (by simp only [keysG]; decide)
+  have presentG := returned.present presentF (by decide) (by simp only [childHitResult, keysG]; decide)
+  refine ⟨g, run1.trans (run2.trans (run3.trans (run4.trans run5))), ⟨{
     good := returned.good
     image := returned.image
     minstret := returned.minstret
@@ -185,7 +191,7 @@ theorem child_hit (c : Config) (sp ra s0 s1 s2 s3 s4 s5 d name a5 node : BitVec 
     kept := opened.kept.trans (cmp.kept.trans ((GprsKept.of_regFrame (W := memcmpWrites) (by decide) (by decide)
       (fun n hn => have b := (show KeysOK memcmpWrites by decide) n hn; D.present.get n b.1 (by omega))
       D.frame).trans (T.kept.trans returned.kept)))
-    regs := returned.regs }⟩
+    regs := returned.regs }, presentG⟩⟩
   have mem (l : List Nat) (sub : ∀ n ∈ l, n ∈ [2, 19, 21, 20, 8, 9, 18, 15, 10, 12, 11, 1, 13, 14]) :
       ∀ n ∈ l, gprReg n ≠ r := fun n hn => outside n (sub n hn)
   exact (returned.frame r (mem _ (by decide)) noise).trans ((T.frame r (mem _ (by decide)) noise).trans
