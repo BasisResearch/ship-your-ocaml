@@ -1,4 +1,12 @@
 import OCaml.Vm.Boot.Startup.ResolveRun
+import OCaml.Vm.Boot.Startup.ResolveRestNormalized
+import OCaml.Vm.Boot.Startup.ResolveRestImage
+import OCaml.Vm.Boot.Startup.ResolveEmptyNormalized
+import OCaml.Vm.Boot.Startup.ResolveEmptyImage
+import OCaml.Vm.Boot.Startup.ResolveAgainNormalized
+import OCaml.Vm.Boot.Startup.ResolveAgainCallInterface
+import OCaml.Vm.Boot.Startup.ResolveAgainImage
+import OCaml.Vm.Boot.Startup.ResolveNoSlashImage
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives LeanRV64DExecutable
 
@@ -120,6 +128,54 @@ theorem resolve_back_rooted (c : Config) (spo path len ra : BitVec 64) (leaf : L
       show Functions.sign_extend (m := 64) 2#12 = 2#64 by decide,
       show Functions.sign_extend (m := 64) 4095#12 = -1#64 by decide, BitVec.zero_add]
     rw [name_lbu_value]
+  · rfl
+  · decide
+
+/-- `strchr` found the leading '/': the first component is empty, so move past
+it and call `strchr(rest, '/')`. -/
+theorem resolve_skip_empty (c : Config) (path ra : BitVec 64) (b : BitVec 8) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, path), (25, path), (18, 47#64)])
+    (nonzero : path ≠ 0#64) (window : ReadWindow (path + 1#64) 1)
+    (next : (c.σ.mem[(path + 1#64).toNat]?).getD 0 = b) (notSlash : b ≠ 47#8) :
+    FnSummary 0x80000670#64 (fun e => e = c)
+      (WriteRegistersPost ([14, 26, 15, 8, 25, 11, 10] ++ [1]) [] c jal_800006e4_call.target (path + 1#64)
+        ((1, jal_800006e4_call.link) :: [(10, path + 1#64), (11, 47#64), (25, path + 1#64), (8, 0#64),
+          (15, path + 1#64), (26, path + 1#64), (14, nameByteWord b), (18, 47#64)])) := by
+  apply block_then_call c jal_800006e4_call_shape jal_800006e4_call_decode (fun _ h => jal_800006e4_call_pins h)
+    _ (by simp only [keysG]; decide) (by simp only [KeysAvoidRa, keysG]; decide) rfl
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (resolveX0670FSeg ++ resolveX0674TSeg ++ resolveX0694TSeg ++
+        resolveAgainSave) 0x80000670#64 [(10, path), (25, path), (18, 47#64)] [[b]] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 25, 18]; decide
+      shape := by change ChainOK _ [10, 25, 18] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := resolveNoSlash_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.resolve_at_"
+        · change guardB bop.BEQ path 0#64 = false
+          exact beq_eq_false_iff_ne.mpr nonzero
+        · exact window.lbu rfl (by
+            change path + Functions.sign_extend (m := 64) 1#12 = path + 1#64
+            rw [show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide]) next
+        · change guardB bop.BNE (bytesVal .lbu [b]) 47#64 = true
+          rw [name_lbu_value]
+          exact bne_iff_ne.mpr (nameByteWord_ne_of notSlash (by decide))
+        · change guardB bop.BEQ (path - path) 0#64 = true
+          simp [guardB] }))
+  · rfl
+  · rfl
+  · simp only [resolveX0670FSeg, resolveX0674TSeg, resolveX0694TSeg, resolveAgainSave, evalBlocks, evalBlock,
+      SegEvalState.init, resolverest_line_80000674, resolverest_line_80000678, resolverest_line_8000067c,
+      resolverest_line_80000680, resolveagain_line_800006d8, resolveagain_line_800006dc, resolveagain_line_800006e0,
+      runGM, ldsRunM, wlogM, stepGM, stepLdsM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, List.cons_append, List.nil_append]
+    rw [show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide,
+      show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide,
+      show 0#64 + Functions.sign_extend (m := 64) 47#12 = 47#64 by decide, BitVec.sub_self, name_lbu_value]
+    simp only [BitVec.add_zero]
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
