@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.OpenSteps
+import OCaml.Vm.Boot.Startup.ChildScan
 import OCaml.Vm.Boot.Startup.HtifOpenFlagsNormalized
 import OCaml.Vm.Boot.Startup.HtifOpenFlagsImage
 import OCaml.Vm.Boot.Startup.HtifOpenAccessNormalized
@@ -73,6 +74,60 @@ theorem htif_open_file_front (c : Config) (sp a0 : BitVec 64) (ra : BitVec 64) (
     simp only [List.cons.injEq, Prod.mk.injEq, and_true, true_and]
     refine ⟨by decide, by decide, ?_, open_fds_auipc, by decide, by decide, by decide⟩
     rw [open_fds_auipc, show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]
+  · rfl
+  · decide
+
+def fdSlot (i : Nat) : BitVec 64 := BitVec.ofNat 64 (Layout.sym_fds + 24 * i)
+
+theorem fdSlot_nat {i : Nat} (small : i ≤ 32) : (fdSlot i).toNat = Layout.sym_fds + 24 * i := by
+  unfold fdSlot; rw [BitVec.toNat_ofNat]; unfold Layout.sym_fds; omega
+
+theorem fdSlot_window {i : Nat} (small : i < 32) : ReadWindow (fdSlot i) 4 := by
+  have h := fdSlot_nat (i := i) (by omega)
+  refine ⟨?_, ?_, Or.inr ?_⟩ <;> rw [h] <;> simp only [Layout.sym_fds, Layout.sym_tohost] <;> omega
+
+theorem fdSlot_next (i : Nat) : fdSlot i + Functions.sign_extend (m := 64) 24#12 = fdSlot (i + 1) := by
+  unfold fdSlot
+  rw [show Functions.sign_extend (m := 64) 24#12 = 24#64 by decide, show (24#64 : BitVec 64) = BitVec.ofNat 64 24 from rfl,
+    ← BitVec.ofNat_add]
+  congr 1
+
+/-- Descriptor `i` is taken: try `i + 1`. -/
+theorem htif_open_slot_busy (c : Config) (ra a0 : BitVec 64) (i : Nat) (k : List (BitVec 8)) (leaf : LeafInput ra c)
+    (small : i + 1 < 32) (regs : GHolds c.σ [(14, fdSlot i), (9, BitVec.ofNat 64 i), (12, 32#64), (10, a0)])
+    (word : read4 c.σ.mem (Layout.sym_fds + 24 * i) = k) (busy : bytesVal .lw k ≠ 0#64) :
+    FnSummary 0x80000980#64 (fun e => e = c) (WriteRegistersPost [13, 14, 9] [] c 0x80000980#64 a0
+      [(9, BitVec.ofNat 64 (i + 1)), (14, fdSlot (i + 1)), (13, bytesVal .lw k), (12, 32#64), (10, a0)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (openX0980TSeg ++ openX0978FSeg) 0x80000980#64
+        [(14, fdSlot i), (9, BitVec.ofNat 64 i), (12, 32#64), (10, a0)] [k] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [14, 9, 12, 10]; decide
+      shape := by change ChainOK _ [14, 9, 12, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := htifOpenSlot_code leaf.image
+        chain_facts code with "Vsa.Sim.Code._open_at_"
+        · exact (fdSlot_window (by omega)).lw rfl (BitVec.add_zero _)
+            (by rw [fdSlot_nat (by omega), ← word]; exact read4_pins _ _)
+        · change guardB bop.BNE (bytesVal .lw k) 0#64 = true
+          exact bne_iff_ne.mpr busy
+        · change guardB bop.BEQ (Functions.sign_extend (m := 64) (Sail.BitVec.extractLsb
+            (BitVec.ofNat 64 i + Functions.sign_extend (m := 64) 1#12) 31 0)) 32#64 = false
+          rw [addiw_one i (by omega)]
+          refine beq_eq_false_iff_ne.mpr fun e => ?_
+          have := congrArg BitVec.toNat e
+          simp only [BitVec.toNat_ofNat] at this
+          omega }))
+  · rfl
+  · rfl
+  · simp only [openX0980TSeg, openX0978FSeg, evalBlocks, evalBlock, SegEvalState.init, htifopenslot_line_80000980,
+      htifopenslot_line_80000984, htifopennext_line_80000978, runGM, ldsRunM, wlogM, stepGM, stepLdsM, srcVal, lookupG,
+      eraseG, wvalM, wentryM, widthOfM, List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true,
+      ite_false, List.cons_append, List.nil_append]
+    rw [addiw_one i (by omega), fdSlot_next]
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
