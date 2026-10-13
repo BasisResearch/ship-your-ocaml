@@ -53,6 +53,7 @@ structure RenewPost (before : Config) (ra sp dom start trig : BitVec 64) (after 
   leaf : LeafInput ra after
   pc : pcOf after = some ra
   stack : gprGet after.σ 2 = some sp
+  a0 : (gprGet after.σ 10).isSome
   memory : after.σ.mem = writeLog before.σ.mem (renewLog sp ra dom start trig)
   output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 2, 10, 11, 12, 13, 14, 15, 16, 17] → gprGet after.σ n = gprGet before.σ n
@@ -169,6 +170,7 @@ theorem renew_summary {c : Config} {ra sp dom start trig : BitVec 64} (h : Renew
   exact
     { leaf := p7.leaf, pc := p7.pc
       stack := (p7.frame 2 (by decide) (by decide) (by decide)).trans s6
+      a0 := gpr_some_of ((p7.frame 10 (by decide) (by decide) (by decide)).trans a6)
       memory := by rw [p7.memory, m6, ← writeLog_append, ← writeLog_append]; rfl
       output := by rw [p7.output, p6.output, p5.output, p4.output, p3.output, p2.output, p1.output]
       frame := fun n lo hi out => by

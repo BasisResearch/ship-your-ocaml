@@ -66,9 +66,10 @@ theorem choose {c : Config} {ra dom trig memp : BitVec 64} (h : LimitInput ra do
     have o := p.regs
     simp only [triggerHigh_regs, triggerHigh_loads, List.getD_cons_zero, List.getD_cons_succ, h.domain, h.trigger,
       h.memprof, GHolds] at o
+    obtain ⟨o15, -, o14, o13, o10, -⟩ := o
     refine ⟨d, run, ⟨p.good, p.image, p.minstret, (p.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans
-      h.leaf.raReg, h.leaf.aligned, p.tick⟩, p.pc, by rw [o.1]; simp [limitValue, high], o.2.2.1, o.2.2.2.1,
-      Named.NamedValue.gpr_some_of o.2.2.2.2.1, by rw [p.memory, wl_nil], p.output,
+      h.leaf.raReg, h.leaf.aligned, p.tick⟩, p.pc, by rw [o15]; simp [limitValue, high], o14, o13,
+      Named.NamedValue.gpr_some_of o10, by rw [p.memory, wl_nil], p.output,
       fun n lo hi out => p.gpr_frame (by decide) n lo hi out,
       p.frame _ (fun n _ => gprReg_ne_htif n) (by decide)⟩
   · obtain ⟨d1, run1, p1⟩ := (triggerLow_fast c (regsAt c) l0 regs0 w2 (by
@@ -77,20 +78,22 @@ theorem choose {c : Config} {ra dom trig memp : BitVec 64} (h : LimitInput ra do
     have o1 := p1.regs
     simp only [triggerLow_regs, triggerLow_loads, List.getD_cons_zero, List.getD_cons_succ, h.domain, h.trigger,
       h.memprof, GHolds] at o1
+    obtain ⟨-, q12, q14, q13, q10, -⟩ := o1
     have leaf1 : LeafInput ra d1 := ⟨p1.good, p1.image, p1.minstret,
       (p1.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans h.leaf.raReg, h.leaf.aligned, p1.tick⟩
     have l1 : LeafInput (regsAt d1 1) d1 := by rw [regsAt_of leaf1.raReg]; exact leaf1
     obtain ⟨d2, run2, p2⟩ := (memprof_fast d1 (regsAt d1) l1 (by
-        simp only [memprof_input, GHolds, regsAt_of o1.2.2.2.2.1, regsAt_of o1.2.1]
-        exact ⟨o1.2.2.2.2.1, o1.2.1, trivial⟩)).run d1 ⟨p1.pc, rfl⟩
+        simp only [memprof_input, GHolds, regsAt_of q10, regsAt_of q12]
+        exact ⟨q10, q12, trivial⟩)).run d1 ⟨p1.pc, rfl⟩
     have o2 := p2.regs
-    simp only [memprof_regs, regsAt_of o1.2.1, GHolds] at o2
+    simp only [memprof_regs, regsAt_of q12, GHolds] at o2
+    obtain ⟨m15, m10, -, -⟩ := o2
     have k2 : ∀ n, n ≠ 15 → 1 ≤ n → n ≤ 31 → gprGet d2.σ n = gprGet d1.σ n :=
       fun n ne lo hi => p2.gpr_frame (by decide) n lo hi (by simpa using ne)
     refine ⟨d2, run1.trans run2, ⟨p2.good, p2.image, p2.minstret,
       (k2 1 (by decide) (by decide) (by decide)).trans leaf1.raReg, h.leaf.aligned, p2.tick⟩, p2.pc,
-      by rw [o2.1]; simp [limitValue, high], (k2 14 (by decide) (by decide) (by decide)).trans o1.2.2.1,
-      (k2 13 (by decide) (by decide) (by decide)).trans o1.2.2.2.1, Named.NamedValue.gpr_some_of o2.2.1,
+      by rw [m15]; simp [limitValue, high], (k2 14 (by decide) (by decide) (by decide)).trans q14,
+      (k2 13 (by decide) (by decide) (by decide)).trans q13, Named.NamedValue.gpr_some_of m10,
       by rw [p2.memory, wl_nil, p1.memory, wl_nil], by rw [p2.output, p1.output],
       fun n lo hi out => by
         simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at out

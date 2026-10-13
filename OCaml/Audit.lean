@@ -5693,3 +5693,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.int64_float_semantics
 #print axioms OCaml.Vm.Sim.prim_caml_int64_float_of_bits_returns
 #print axioms OCaml.Vm.Sim.prim_caml_sys_argv_returns
+#print axioms OCaml.Vm.Primitives.Memprof.Eqdf2.eqdf2_zero
+#print axioms OCaml.Vm.Primitives.Memprof.UpdateYoungLimit.update_young_limit
+#print axioms OCaml.Vm.Primitives.Memprof.RenewMinorSample.renew_summary
+#print axioms OCaml.Vm.Primitives.Memprof.SetSuspended.set_suspended_summary

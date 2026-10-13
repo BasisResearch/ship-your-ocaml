@@ -703,3 +703,7 @@ import OCaml.Vm.Primitives.Memprof.Eqdf2
 import OCaml.Vm.Primitives.Memprof.UpdateYoungLimit
 import OCaml.Vm.Primitives.Memprof.RenewMinorSample
 import OCaml.Vm.Primitives.Memprof.SetSuspended
+import OCaml.Vm.Primitives.Memprof.Eqdf2Call
+import OCaml.Vm.Primitives.Memprof.YoungLimitCall
+import OCaml.Vm.Primitives.Memprof.RenewCall
+import OCaml.Vm.Primitives.Memprof.SuspendCall
