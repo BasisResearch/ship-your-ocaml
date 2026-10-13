@@ -60,9 +60,11 @@
 - G2: `SlotDone R copies copies' pl` (`OldifySlot.lean`): one
   `caml_oldify_one(v, p)` call at the slot level, `*p = relocation copies' v`
   over the published forwarding table, which grows and keeps its view.
-  Instances: `OldifyImmediate.slot`, `NonYoung.slot`, `ForwardedCall.slot`.
-- Next (G2): the fresh routes as `SlotDone` (publication through the enqueue
-  prefix, `ForwardingTable.publish_then`), the route dispatcher, then the
+  Instances: `OldifyImmediate.slot`, `NonYoung.slot`, `ForwardedCall.slot`,
+  `Fresh.QueueResult.slot` (both allocators; `Enqueued.slot` through
+  `toQueue`), `Fresh.SingleResult.slot`, each fresh route publishing its
+  entry (`ForwardingTable.publish_then`).
+- Next (G2): the route dispatcher, then the
   stack/`ref_table` root loops, the mopup outer loop, a quiet-route
   `caml_empty_minor_heap`, and the concrete `CollectionEffect`.
 
