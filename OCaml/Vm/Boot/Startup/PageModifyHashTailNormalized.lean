@@ -60,20 +60,4 @@ theorem pagemodifyhashtail_line_8000ae6c :
     mkLine 0x8000ae6c#64 0x00c787b3#32 =
       ⟨0x8000ae6c#64, 0x00c787b3#32, 0xb3#8, 0x87#8, 0xc7#8, 0x00#8, .add, 15, 15, 12, 0x000#12⟩ := by rfl
 
-theorem pagemodifyhashtail_line_8000ae70 :
-    mkLine 0x8000ae70#64 0x0127d7b3#32 =
-      ⟨0x8000ae70#64, 0x0127d7b3#32, 0xb3#8, 0xd7#8, 0x27#8, 0x01#8, .srl, 15, 15, 18, 0x000#12⟩ := by rfl
-
-theorem pagemodifyhashtail_line_8000ae74 :
-    mkLine 0x8000ae74#64 0x00379613#32 =
-      ⟨0x8000ae74#64, 0x00379613#32, 0x13#8, 0x96#8, 0x37#8, 0x00#8, .slli, 12, 15, 0, 0x003#12⟩ := by rfl
-
-theorem pagemodifyhashtail_line_8000ae78 :
-    mkLine 0x8000ae78#64 0x00c68633#32 =
-      ⟨0x8000ae78#64, 0x00c68633#32, 0x33#8, 0x86#8, 0xc6#8, 0x00#8, .add, 12, 13, 12, 0x000#12⟩ := by rfl
-
-theorem pagemodifyhashtail_line_8000ae7c :
-    mkLine 0x8000ae7c#64 0x00063703#32 =
-      ⟨0x8000ae7c#64, 0x00063703#32, 0x03#8, 0x37#8, 0x06#8, 0x00#8, .ld, 14, 12, 0, 0x000#12⟩ := by rfl
-
 end OCaml.Vm.Boot.Startup
