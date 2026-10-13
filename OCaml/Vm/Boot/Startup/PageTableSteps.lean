@@ -8,6 +8,14 @@ import OCaml.Vm.Boot.Startup.PageTableLoopNormalized
 import OCaml.Vm.Boot.Startup.PageTableLoopImage
 import OCaml.Vm.Boot.Startup.PageTableSizeNormalized
 import OCaml.Vm.Boot.Startup.PageTableSizeImage
+import OCaml.Vm.Boot.Startup.PageTableAllocNormalized
+import OCaml.Vm.Boot.Startup.PageTableAllocImage
+import OCaml.Vm.Boot.Startup.PageTableAllocCallInterface
+import OCaml.Vm.Boot.Startup.PageTableClearNormalized
+import OCaml.Vm.Boot.Startup.PageTableClearImage
+import OCaml.Vm.Boot.Startup.PageTableClearCallInterface
+import OCaml.Vm.Boot.Startup.PageTableReturnNormalized
+import OCaml.Vm.Boot.Startup.PageTableReturnImage
 import OCaml.Vm.Boot.Startup.NativeSave
 import Vsa.Sim.IndexedLoop
 import OCaml.Vm.Boot.Startup.RuntimeStack
@@ -288,6 +296,94 @@ theorem page_table_fields (c : Config) (ra : BitVec 64) (leaf : LeafInput ra c)
   · decide
   · rfl
   · decide
+  · rfl
+  · decide
+
+theorem page_table_bytes (i : MInstr) (hi : i.imm = 3#12) :
+    Sail.shift_bits_left 2048#64 (Sail.BitVec.extractLsb (shamtOf i) 5 0) = 16384#64 := by
+  rw [shamtOf, hi]; decide
+
+/-- `caml_stat_alloc_noexc(2048 * 8)`, keeping the size at `0(sp)`. -/
+theorem page_table_alloc_front (c : Config) (sp ra : BitVec 64) (leaf : LeafInput ra c) (frame : NativeFrame sp 32)
+    (regs : GHolds c.σ [(12, 2048#64), (2, nativeStack sp 32)]) :
+    FnSummary 0x8000ad40#64 (fun e => e = c) (WriteRegistersPost [12, 10] (nativeWordLog sp 32 [(0, 16384#64)]) c
+      jal_8000ad4c_call.pc 16384#64 [(10, 16384#64), (12, 16384#64), (2, nativeStack sp 32)]) := by
+  have inside : LogInW [⟨nativeFrameBase sp 32, sp.toNat⟩] (nativeWordLog sp 32 [(0, 16384#64)]) :=
+    frame.word_log_inside fun off value member => by simp at member; omega
+  apply registers_of_blocks leaf.image (frame.image_outside inside)
+    (block_summary _ _ _ _ _ (show BlockInput caml_page_table_initializeXad40Seg 0x8000ad40#64
+        [(12, 2048#64), (2, nativeStack sp 32)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [12, 2]; decide
+      shape := by change ChainOK _ [12, 2] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageTableAlloc_code leaf.image
+        have slot : WriteWindow (nativeStack sp 32 + BitVec.ofNat 64 0) 8 := by
+          rw [nativeStack, frame.address _ (by decide)]
+          exact frame.word (by decide) (by decide)
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_initialize_at_"
+        exact slot.sd rfl rfl }))
+  · rfl
+  · rfl
+  · simp only [caml_page_table_initializeXad40Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, srcVal,
+      lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, pagetablealloc_line_8000ad40,
+      pagetablealloc_line_8000ad44, pagetablealloc_line_8000ad48]
+    rw [page_table_bytes _ rfl, show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]
+  · rfl
+  · decide
+
+theorem page_table_alloc_call (c : Config) (sp ra : BitVec 64) (leaf : LeafInput ra c) (frame : NativeFrame sp 32)
+    (regs : GHolds c.σ [(12, 2048#64), (2, nativeStack sp 32)]) :
+    FnSummary 0x8000ad40#64 (fun e => e = c) (WriteRegistersPost ([12, 10] ++ [1])
+      (nativeWordLog sp 32 [(0, 16384#64)]) c jal_8000ad4c_call.target 16384#64
+      ((1, jal_8000ad4c_call.link) :: [(10, 16384#64), (12, 16384#64), (2, nativeStack sp 32)])) :=
+  block_then_call c jal_8000ad4c_call_shape jal_8000ad4c_call_decode (fun _ h => jal_8000ad4c_call_pins h)
+    (page_table_alloc_front c sp ra leaf frame regs) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+/-- The allocation succeeded: `memset(table, 0, 16384)`, keeping the table at `8(sp)`. -/
+theorem page_table_clear_front (c : Config) (sp ra blk : BitVec 64) (leaf : LeafInput ra c)
+    (frame : NativeFrame sp 32) (regs : GHolds c.σ [(10, blk), (2, nativeStack sp 32)])
+    (nonzero : blk ≠ 0#64) (size : bytesT c.σ.mem (nativeFrameBase sp 32 + 0) 8 = 16384#64) :
+    FnSummary 0x8000ad50#64 (fun e => e = c) (WriteRegistersPost [15, 14, 12, 11] (nativeWordLog sp 32 [(8, blk)]) c
+      jal_8000ad68_call.pc blk [(11, 0#64), (12, 16384#64), (14, -1#64), (15, blk), (10, blk),
+        (2, nativeStack sp 32)]) := by
+  have inside : LogInW [⟨nativeFrameBase sp 32, sp.toNat⟩] (nativeWordLog sp 32 [(8, blk)]) :=
+    frame.word_log_inside fun off value member => by simp at member; omega
+  have word : bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 32 + 0)) = 16384#64 := by rw [read8_value]; exact size
+  apply registers_of_blocks leaf.image (frame.image_outside inside)
+    (block_summary _ _ _ _ _ (show BlockInput (caml_page_table_initializeXad50FSeg ++
+        caml_page_table_initializeXad5cSeg) 0x8000ad50#64 [(10, blk), (2, nativeStack sp 32)]
+        [read8 c.σ.mem (nativeFrameBase sp 32 + 0)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 2]; decide
+      shape := by change ChainOK _ [10, 2] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageTableClear_code leaf.image
+        have slot : WriteWindow (nativeStack sp 32 + BitVec.ofNat 64 8) 8 := by
+          rw [nativeStack, frame.address _ (by decide)]
+          exact frame.word (by decide) (by decide)
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_initialize_at_"
+        · change guardB bop.BEQ blk 0#64 = false
+          exact beq_eq_false_iff_ne.mpr nonzero
+        · exact (frame.read_slot (off := 0) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact slot.sd rfl rfl }))
+  · rfl
+  · rfl
+  · simp only [caml_page_table_initializeXad50FSeg, caml_page_table_initializeXad5cSeg, List.cons_append,
+      List.nil_append, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM, ldsRunM, srcVal, lookupG,
+      eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, List.headD_cons, List.tail_cons,
+      pagetableclear_line_8000ad50, pagetableclear_line_8000ad54, pagetableclear_line_8000ad5c,
+      pagetableclear_line_8000ad60, pagetableclear_line_8000ad64]
+    rw [word, show 0#64 + Functions.sign_extend (m := 64) 0#12 = 0#64 by decide,
+      show 0#64 + Functions.sign_extend (m := 64) 4095#12 = -1#64 by decide,
+      show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
