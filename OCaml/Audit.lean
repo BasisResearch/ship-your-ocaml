@@ -5674,6 +5674,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.ConsoleFd.seekFd
 #print axioms OCaml.Vm.Primitives.Channel.fdOf_stdout
 #print axioms OCaml.Vm.Primitives.Channel.fdOf_stderr
+#print axioms OCaml.Vm.Primitives.Channel.out_input
 #print axioms OCaml.Vm.Sim.ccall_writing_summary_below
 #print axioms OCaml.Vm.Sim.f1_native_stable
 #print axioms OCaml.Vm.Sim.LoopGeometry.of_above

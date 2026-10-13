@@ -1,6 +1,7 @@
 import OCaml.Vm.Primitives.Channel.OpenDescriptorCall
 import OCaml.Vm.Primitives.Channel.OpenOut
 import OCaml.Vm.Gc.OpenChannels
+import OCaml.Vm.Gc.F1Heap
 
 /-! `caml_ml_open_descriptor_out(v)` as a call summary:
 * untag the descriptor and open it with `caml_open_descriptor_in`
@@ -789,5 +790,56 @@ theorem OpenedOut.keep_upper {H : List (Nat × Nat)} {capacity charge : Nat}
   have e := (o.flags.kept k (by omega) (by omega) (by simp; omega)).trans b
   have f := (o.custom.saved k (by simp; omega)).trans e
   exact (o.done.kept k (by omega) (by omega) (by simp; omega)).trans f
+
+/-! ### The premises from the F1 heap invariant -/
+
+/-- **`caml_ml_open_descriptor_out(v)`'s premises from newlib's heap
+invariant** (`Gc.LibHeapAt`), for a console descriptor while fewer than
+`maxChannels` channels are open. The record's charge (65616) is within one
+record's reservation, and the old list head is an open record. -/
+theorem out_input {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
+    {sp ra s0 s1 s2 v : BitVec 64}
+    (heap : Gc.LibHeapAt H cap chs c) (bound : chs.length < Gc.maxChannels)
+    (leaf : LeafInput ra c) (platform : VsaOk live c)
+    (gp : ∀ p ∈ VsaIris.MallocFast.roR, (vsaModel live).reg c p.1 = p.2)
+    (stack : gprGet c.σ 2 = some sp) (frame : NativeFrame sp 592)
+    (saved0 : gprGet c.σ 8 = some s0) (saved1 : gprGet c.σ 9 = some s1)
+    (saved2 : gprGet c.σ 18 = some s2) (value : gprGet c.σ 10 = some v)
+    (runtime : ConsoleWrite.ConsoleRuntime c) (console : v = 3#64 ∨ v = 5#64) :
+    OutInput live H (cap - 65616) 65616 sp ra s0 s1 s2 v
+      (bytesVal .ld (read8 c.σ.mem (2147896128#64).toNat)) c := by
+  have room := heap.room
+  have capEq : cap - 65616 + 65616 = cap := by
+    unfold Gc.reserved Gc.recordCharge Gc.maxChannels Gc.tableCharge at room
+    unfold Gc.maxChannels at bound
+    split at room <;> omega
+  refine {
+    ready := by rw [capEq]; exact RuntimeReadyL.of_heap heap.ready leaf platform gp stack
+    frame := frame
+    saved0 := saved0
+    saved1 := saved1
+    saved2 := saved2
+    value := value
+    charged := by unfold vsaChg recordBytes Vsa.Sim.roundUp16; decide
+    runtime := runtime
+    descriptor := by
+      rcases console with rfl | rfl
+      · rw [fdOf_stdout]; exact runtime.stdout.seekFd
+      · rw [fdOf_stderr]; exact runtime.stderr.seekFd
+    headWord := rfl
+    headLive := fun hz => ?_ }
+  have channels := heap.channels
+  unfold Gc.OpenChannelList at channels
+  rw [show Layout.sym_caml_all_opened_channels = (2147896128#64).toNat from rfl, ← read8_value] at channels
+  generalize hhead : bytesVal .ld (read8 c.σ.mem (2147896128#64).toNat) = head at channels hz ⊢
+  generalize hx : head.toNat = x at channels
+  cases channels with
+  | nil => exact absurd (BitVec.eq_of_toNat_eq (by rw [hx]; rfl)) hz
+  | @cons _ rest _ _ =>
+    obtain ⟨e, he, lo, hi⟩ := heap.records x List.mem_cons_self
+    have aligned := heap.recordsAligned x List.mem_cons_self
+    dsimp only at lo hi
+    unfold Gc.chanRecordBytes chanOffBuff ioBufferSize at hi
+    exact ⟨⟨e, he, lo, by omega⟩, by omega⟩
 
 end OCaml.Vm.Primitives.Channel

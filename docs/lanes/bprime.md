@@ -218,6 +218,12 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
       (`OutRecord`: fd, offset -1, end, curr, `max = NULL`, next,
       refcount 1, flags 4), `OpenChannelsLinked c d record`,
       `Channel(v) = record` and the ops word.
+  * The summaries take any library live set (`OpenInput live …`, over
+    `stat_checkedL`), so the adapter uses `imageLive`. `out_input` builds
+    `OutInput` from `Gc.LibHeapAt` (charge 65616, `recordsAligned` for the
+    old head), the C_CALL entry facts and `ConsoleRuntime` (stdout/stderr's
+    `SeekFd` by `ConsoleFd.seekFd`), with `chs.length < maxChannels` a
+    premise.
   * Gaps for the C_CALL adapter (`prim_caml_ml_open_descriptor_out_returns`):
     - x20–x27 (`reg_env` among them) survive the whole primitive
       (`OpenedOut.keep_upper`, over a0-boot's `StatCheckedReturned.keep_upper`).
