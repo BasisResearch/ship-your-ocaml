@@ -290,6 +290,20 @@ def sym_named_value_table : Nat := 0x8006bff0
 def sym_caml_named_value : Nat := 0x800214fc
 /-- `caml_fatal_uncaught_exception` -/
 def sym_caml_fatal_uncaught_exception : Nat := 0x8000df50
+/-- `caml_memprof_set_suspended` -/
+def sym_caml_memprof_set_suspended : Nat := 0x800295d8
+/-- `caml_memprof_renew_minor_sample` -/
+def sym_caml_memprof_renew_minor_sample : Nat := 0x80029558
+/-- `__eqdf2` -/
+def sym_eqdf2 : Nat := 0x80034740
+/-- `caml_update_young_limit` -/
+def sym_caml_update_young_limit : Nat := 0x8000d590
+/-- `caml_memprof_young_trigger` -/
+def sym_caml_memprof_young_trigger : Nat := 0x80064cc8
+/-- `lambda` -/
+def sym_lambda : Nat := 0x80064cf0
+/-- `local` -/
+def sym_local : Nat := 0x800648d8
 /-- `caml_format_exception` -/
 def sym_caml_format_exception : Nat := 0x8000dbec
 /-- `caml_callback_exn` -/

@@ -94,6 +94,7 @@ python3 scripts/syi/gen_fn.py --ocaml-format --check || fail "stage a5: format_i
 python3 scripts/syi/gen_snp_extra.py --check || fail "stage a5: vsnprintf step table drift"
 python3 scripts/syi/gen_fn.py --ocaml-channel --check || fail "stage a5: channel-opening path drift"
 python3 scripts/syi/gen_fn.py --ocaml-named --check || fail "stage a5: caml_named_value blocks drift"
+python3 scripts/syi/gen_fn.py --ocaml-memprof --check || fail "stage a5: memprof suspension blocks drift"
 python3 scripts/gen_layout.py | cmp -s - OCaml/Vm/Layout.lean || fail "stage a5: Layout.lean differs from gen_layout.py"
 python3 scripts/gen_boot_observation.py results/boot/while_min-cut.json | cmp -s - OCaml/Vm/Boot/WhileMinObservation.lean || fail "stage a5: boot observation differs from generator"
 python3 scripts/gen_boot_log.py --check || fail "stage a5: boot log certificate drift"

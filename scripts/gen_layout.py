@@ -176,6 +176,8 @@ def main():
              "caml_init_max_percent_free", "caml_init_major_window", "caml_init_custom_minor_max_bsz",
              "caml_init_custom_minor_ratio", "caml_init_custom_major_ratio", "caml_init_max_stack_wsz"]
     need += ["named_value_table", "caml_named_value", "caml_fatal_uncaught_exception",
+             "caml_memprof_set_suspended", "caml_memprof_renew_minor_sample", "__eqdf2",
+             "caml_update_young_limit", "caml_memprof_young_trigger", "lambda", "local",
              "caml_format_exception", "caml_callback_exn"]
     need += ["bf_small_fl", "bf_small_map", "bf_large_tree", "bf_large_least",
              "caml_fl_cur_wsz"]
