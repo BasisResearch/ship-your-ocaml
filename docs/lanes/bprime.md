@@ -194,10 +194,37 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
     outside `openWindows` and the allocator's footprint. Entry premises
     (`OpenInput`): `ConsoleRuntime`, `SeekFd fd`, the old head a word-aligned
     live block. stdin's `SeekFd` is not in `ConsoleRuntime` yet (a0-boot).
-  * Next: the primitives over `open_descriptor_in`, with
-    `caml_alloc_custom_mem` a named premise: it is a collector-integrated
-    allocation (custom table, GC speed accounting). Then their C_CALL
-    adapters and `gen_f1_table.py`.
+  * `OpenedIn` also gives the record's bounds, 16-byte alignment and
+    freshness against `H` (`low`/`high`/`align`/`fresh`), the facts a6-gc's
+    `LibHeapAt.link` consumes.
+  * `ml_open_descriptor_out` (`Channel/MlOpen.lean`) is proved at the
+    machine level, composed in three phases (`out_enter`, `out_flags`,
+    `out_done`) around `open_descriptor_in` and `caml_alloc_custom_mem`.
+    - Premises: `OutInput` (`open_descriptor_in`'s, one 16-byte frame
+      down, so `NativeFrame sp 592`) and `CustomMemCall Ready` with
+      `Ready c`.
+    - `CustomMemCall Ready` is a named obligation for a6-gc: the
+      collector-integrated allocation. It sees `c`'s memory except the
+      opening's stores (`CustomMemInput.kept`, `StaticKept`, the record's
+      `HeapReady`) and returns a block whose data word is writable and
+      apart from the record, keeping s0–s11, the caller frame, the record
+      and the list head (`CustomMemReturned`).
+    - Post (`OpenedOut`): the record's words as `ChanAt` reads them
+      (`OutRecord`: fd, offset -1, end, curr, `max = NULL`, next,
+      refcount 1, flags 4), `OpenChannelsLinked c d record`,
+      `Channel(v) = record` and the ops word.
+  * Gaps for the C_CALL adapter (`prim_caml_ml_open_descriptor_out_returns`):
+    - The malloc contract (`RetFrame`, `vsaSaved = [8, 9, 18, 19]`) says
+      nothing about x20–x27 after `caml_stat_alloc`, but `CcallReturn` needs
+      `reg_env` (x25). Either a0-boot's malloc contract keeps the untouched
+      registers, or this stays a named premise.
+    - `CcallCallee` fixes `pl`/`cp` across the call, but the record address
+      is chosen by malloc at run time. This needs an `allocPlaced`-style
+      channel placement fact (`cp chans.length = some record`) and an
+      `allocPlaces` entry for the custom block. To be decided with a1-arms
+      and a2-sem.
+    - `caml_ml_open_descriptor_in` is not reached by whileMin, so it is
+      not composed yet; it is `out` without the `max := NULL` store.
   * `omega` exhausts the recursion depth on chained literal subtractions
     (`s - 32 - 544`) and on some goals with the arena bounds unfolded;
     `arena_omega` normalizes `Nat.sub_sub` and generalizes the bounds first.

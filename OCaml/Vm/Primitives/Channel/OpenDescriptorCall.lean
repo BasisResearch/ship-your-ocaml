@@ -191,7 +191,7 @@ theorem StaticKept.of_log {c : Config} {ws : List W} {log : List WEntry} (inside
 
 /-- `omega` with the arena bounds as atoms (`omega` exhausts the recursion
 depth on some goals that mention them unfolded). -/
-local macro "arena_omega" : tactic =>
+macro "arena_omega" : tactic =>
   `(tactic| (try simp only [Nat.sub_sub] at *
              generalize heapEnd = E at *
              generalize heapStart = S at *
@@ -942,6 +942,11 @@ structure OpenedIn (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 fd h
   seek : OpenSeekPost sp record fd allocated linked
   link : OpenLinkPost sp ra s0 s1 s2 record (recordInitLog record head ++ linkLog record head) linked d
   heap : HeapReady ((record.toNat, recordBytes) :: H) capacity d
+  /-- the record is a fresh, 16-byte-aligned block of the arena -/
+  low : heapStart ≤ record.toNat
+  high : record.toNat + recordBytes ≤ heapEnd
+  align : record.toNat % 16 = 0
+  fresh : ∀ e ∈ H, ∀ y, VsaIris.InExt (record.toNat, recordBytes) y → ¬ VsaIris.InExt e y
   static : StaticKept c d
   frame : ∀ a, OutW (openWindows sp record head) a → ¬ vsaFoot H a →
     (d.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
@@ -1167,6 +1172,7 @@ theorem open_descriptor_in (c : Config) (H : List (Nat × Nat)) (capacity charge
     ⟨{ allocated := allocated, linked := linked, record := p, allocation := A
        recordReg := by rw [← hw]; exact hp.symm
        seek := S, link := L, heap := heap
+       low := pLow, high := pHigh, align := pAlign, fresh := pFresh
        static := staticAlloc.trans ((StaticKept.of_frame S.frame (seekWindows_static frame pLow)).trans staticD)
        frame := frameP }⟩⟩
 

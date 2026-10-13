@@ -407,6 +407,7 @@ import OCaml.Vm.Boot.Startup.ExtTableFinish
 import OCaml.Vm.Boot.Startup.SearchExeFrames
 import OCaml.Vm.Primitives.Channel.LseekCall
 import OCaml.Vm.Primitives.Channel.OpenDescriptorCall
+import OCaml.Vm.Primitives.Channel.MlOpen
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -5642,6 +5643,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Channel.open_epilogue
 #print axioms OCaml.Vm.Primitives.Channel.open_link
 #print axioms OCaml.Vm.Primitives.Channel.open_descriptor_in
+#print axioms OCaml.Vm.Primitives.Channel.OpenedIn.record_words
+#print axioms OCaml.Vm.Primitives.Channel.OpenedRecord.flags
+#print axioms OCaml.Vm.Primitives.Channel.flagsLog_eq
+#print axioms OCaml.Vm.Primitives.Channel.out_enter
+#print axioms OCaml.Vm.Primitives.Channel.out_flags
+#print axioms OCaml.Vm.Primitives.Channel.out_done
+#print axioms OCaml.Vm.Primitives.Channel.ml_open_descriptor_out
 #print axioms OCaml.Vm.Sim.ccall_writing_summary_below
 #print axioms OCaml.Vm.Sim.f1_native_stable
 #print axioms OCaml.Vm.Sim.LoopGeometry.of_above
