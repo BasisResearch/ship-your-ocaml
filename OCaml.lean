@@ -720,3 +720,4 @@ import OCaml.Vm.Primitives.Memprof.RenewCall
 import OCaml.Vm.Primitives.Memprof.SuspendCall
 import OCaml.Vm.Primitives.Uncaught.FormatException
 import OCaml.Vm.Primitives.Uncaught.FormatFront
+import OCaml.Vm.Primitives.Uncaught.FormatCopy
