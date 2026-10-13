@@ -196,7 +196,8 @@ theorem f1_barrierGrowth_gprs {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} 
     ⟨input.data, input.primitives, input.image, input.runtime, input.geometry, inv, low⟩
   refine ⟨state0.keep_field_step v live placed selected bound represented root fieldStable ?_ ?_ gd.ready.image
     (Gc.f1_afterGrow ok h emptyNat gd slotChunks slotPrivate) gd.out ?_, gd.ready.good, gd.ready.tick,
-    gd.ready.minstret, gd.pc, ?_, gd.ready.platform.htifIdle⟩
+    gd.ready.minstret, gd.pc, ?_, gd.ready.platform.htifIdle,
+    fun _ => ⟨fun n lo hi => gd.ready.platform.gpr n lo (by omega)⟩⟩
   · intro x obs ns
     have kk := observed_kept ok h g input.data low small x obs
     unfold InSpan at ns

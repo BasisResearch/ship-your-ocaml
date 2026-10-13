@@ -22,7 +22,8 @@ theorem smod_neg_return_finish {before c : Config} {x y ra : BitVec 64}
   obtain ⟨_, memory, frame⟩ := post.extra
   refine ⟨n, after, run, post.good, image_of_writeLog (log := []) h.image ⟨trivial, trivial⟩ memory,
     post.good.minstret, post.tick, ?_, ?_, memory.trans h.memory,
-    (h.frame.trans frame).widenChecked (allowed := divisionWrites) (by decide)⟩
+    (h.frame.trans frame).widenChecked (allowed := divisionWrites) (by decide),
+    h.kept.trans (GprsKept.of_segment frame post.pins (by seg_cover))⟩
   · have observedPc : pcOf after = some (Sail.BitVec.update (ra + sign_extend (m := 64) (0x000#12)) 0 0#1) := post.pcAt
     simpa only [ret_tgt ra h.returnAligned] using observedPc
   · have observed : gpr after 10 = some (((0#64) - unsigned)) := PinsHold.get post.pins ⟨0, by simp⟩

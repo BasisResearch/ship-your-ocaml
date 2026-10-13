@@ -59,7 +59,8 @@ theorem check_signals_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
   obtain ⟨_, memory, frame⟩ := post.extra
   refine ⟨nb, after, steps, post.good, post.pcAt, ?_,
     (frame.frame Register.x21 (by decide)).trans accu, memory, frame.out,
-    immediate_preserved frame (by decide)⟩
+    immediate_preserved frame (by decide),
+    GprsKept.of_segment frame post.pins (by seg_cover)⟩
   have pc : gpr after Layout.reg_pc = some
       (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) := PinsHold.get post.pins ⟨1, by simp⟩
   simpa only [codePc_succ] using pc

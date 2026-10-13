@@ -44,7 +44,8 @@ theorem forward_copy_last {a target i : Nat} {words : List (BitVec 64)} {initial
     (image_entry_code region.image entry (by decide) (by decide)) nextMemory written guard c bp
   obtain ⟨_, memory, rawFrame⟩ := post.extra
   have observed : ForwardCopyPost a target words.length i words[i] c after := by
-    refine ⟨post.good, post.tick, ?_, PinsHold.get post.pins ⟨3, by simp⟩, PinsHold.get post.pins ⟨0, by simp⟩, ?_, PinsHold.get post.pins ⟨4, by simp⟩, ?_, ?_⟩
+    refine ⟨post.good, post.tick, ?_, PinsHold.get post.pins ⟨3, by simp⟩, PinsHold.get post.pins ⟨0, by simp⟩, ?_, PinsHold.get post.pins ⟨4, by simp⟩, ?_, ?_,
+      GprsKept.of_segment rawFrame post.pins (by seg_cover)⟩
     · simp only [last, Nat.lt_irrefl, ite_false]; exact post.pcAt
     · have counter : gpr after 15 = some (BitVec.ofNat 64 (3 + i + 1)) := PinsHold.get post.pins ⟨1, by simp⟩
       simpa only [Nat.add_assoc] using counter

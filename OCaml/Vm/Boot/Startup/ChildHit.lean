@@ -182,6 +182,9 @@ theorem child_hit (c : Config) (sp ra s0 s1 s2 s3 s4 s5 d name a5 node : BitVec 
     memory := (show g.σ.mem = f.σ.mem from returned.memory).trans (memF.trans opened.memory)
     output := returned.output.trans (T.output.trans (D.output.trans (cmp.output.trans opened.output)))
     frame := fun r outside noise => ?_
+    kept := opened.kept.trans (cmp.kept.trans ((GprsKept.of_regFrame (W := memcmpWrites) (by decide) (by decide)
+      (fun n hn => have b := (show KeysOK memcmpWrites by decide) n hn; D.present.get n b.1 (by omega))
+      D.frame).trans (T.kept.trans returned.kept)))
     regs := returned.regs }⟩
   have mem (l : List Nat) (sub : ∀ n ∈ l, n ∈ [2, 19, 21, 20, 8, 9, 18, 15, 10, 12, 11, 1, 13, 14]) :
       ∀ n ∈ l, gprReg n ≠ r := fun n hn => outside n (sub n hn)

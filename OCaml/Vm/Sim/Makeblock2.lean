@@ -150,6 +150,7 @@ theorem makeblock2_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     · exact (frame.frame Register.x18 (by decide)).trans ((dp.frame.frame Register.x18 (by decide)).trans h.extra)
     · exact loopRegisters_frame (fun r hr =>
         (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))) h.dispatch.loop
+        (dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover)))
   exact ⟨nb, after, steps, makeblock_restore runtime h.toVmReprAt h.running.platform value space.toMakeblockWriteOk observed h.geometry h.native⟩
 
 /-- The successful fixed-arity bytecode constructor selects this represented block. -/

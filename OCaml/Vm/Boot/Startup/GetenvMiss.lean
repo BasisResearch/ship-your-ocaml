@@ -144,6 +144,6 @@ theorem getenv_miss (c : Config) (sp env entry name ra s0 s1 s2 s3 s4 s5 s6 : Bi
   have effects := ((called.toEffectPost.trans missed.toEffectPost).trans returned.toEffectPost).widen
     (writes' := [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
   exact ⟨after, run1.trans (run2.trans run3), ⟨⟨effects.good, effects.image, effects.minstret, effects.tick,
-    effects.pc, effects.result, returned.memory.trans memoryB, effects.output, effects.frame⟩,
+    effects.pc, effects.result, returned.memory.trans memoryB, effects.output, effects.frame, effects.kept⟩,
     (gholds_append _ _).mpr ⟨returned.regs, kept⟩⟩⟩
 end OCaml.Vm.Boot.Startup

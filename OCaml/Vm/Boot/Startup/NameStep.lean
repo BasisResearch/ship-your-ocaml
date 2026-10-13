@@ -68,6 +68,7 @@ theorem name_step (c : Config) (cursor value ra : BitVec 64) (b : BitVec 8) (fin
         value (nameStepRegs cursor value b)) := by
   apply registers_of_blocks h.image (by constructor <;> trivial)
     (block_summary _ _ _ _ _ (nameStep_input h))
+    (keys := by cases finished <;> decide) (no3 := by cases finished <;> decide)
   · cases finished <;> rfl
   · cases finished <;> rfl
   · exact nameStep_regs cursor value b finished

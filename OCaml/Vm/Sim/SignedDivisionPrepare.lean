@@ -33,14 +33,14 @@ theorem division_prepared {kind : DivisionKind} {before after : Config} {x y ra 
     (right : gpr after 11 = some (divisionMagnitude y))
     (saved : kind = .remainder ∨ divisionNegative kind x y = true → gpr after 5 = some ra)
     (memory : after.σ.mem = before.σ.mem)
-    (frame : StepFrameOut divisionPrefixWrites before.σ after.σ) :
+    (frame : StepFrameOut divisionPrefixWrites before.σ after.σ) (kept : GprsKept before after) :
     SignedDivisionPrepared kind before x y ra after := by
   refine {
     good := good, image := ?_, minstret := good.minstret,
     raReg := ret, aligned := division_return_aligned kind x y ra input.aligned, tick := tick,
     left := left, right := right,
     nonzero := division_magnitude_nonzero input.nonzero, pc := pc, returnAligned := input.aligned, savedReturn := saved,
-    memory := memory, frame := frame }
+    memory := memory, frame := frame, kept := kept }
   exact image_of_writeLog (log := []) input.image ⟨trivial, trivial⟩ memory
 
 end OCaml.Vm.Sim

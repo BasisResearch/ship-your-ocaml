@@ -110,7 +110,8 @@ theorem {lower}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}
     operand.geometry.htif guard{extra_args} d bp
   obtain ⟨_, hm, frame⟩ := post.extra
   refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, hm, frame.out,
-    immediate_preserved frame (by decide)⟩
+    immediate_preserved frame (by decide),
+    GprsKept.of_segment frame post.pins (by seg_cover)⟩
 {pc_proof}  · exact (frame.frame Register.x21 (by decide)).trans accuWord
 
 end OCaml.Vm.Sim

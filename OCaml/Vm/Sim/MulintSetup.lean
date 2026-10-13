@@ -45,7 +45,8 @@ theorem mulint_setup {L : OCaml.Layout} {P : Prog} {s : OCaml.Bytecode.St} {c d 
   · exact ⟨⟨post.good, image, post.good.minstret, PinsHold.get post.pins ⟨0, by simp⟩,
       by decide, post.tick⟩, PinsHold.get post.pins ⟨1, by simp⟩,
       PinsHold.get post.pins ⟨3, by simp⟩⟩
-  · refine ⟨?_, ?_, memory, frame.out, fun r hr => frame.frame r (by revert r; decide)⟩
+  · refine ⟨?_, ?_, memory, frame.out, fun r hr => frame.frame r (by revert r; decide),
+      GprsKept.of_segment frame post.pins (by seg_cover)⟩
     · have hp : gpr after 23 = some
           (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) :=
         (frame.frame Register.x23 (by decide)).trans dp.nextCode

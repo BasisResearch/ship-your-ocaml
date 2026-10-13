@@ -56,5 +56,7 @@ structure ClosurerecFirst (before : Config) (pl : Place) (pc sp functions count 
   memory : after.σ.mem = writeLog before.σ.mem (closurerecReadyLog before sp functions count a domain accuWord ++
     closurerecFirstLog pl sp functions count dest a)
   frame : StepFrameOut closurerecMetadataWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 end OCaml.Vm.Sim

@@ -49,7 +49,7 @@ theorem raise_native {sp ra domain value : BitVec 64} {buffer : Nat}
   obtain ⟨middle, pendingRun, post⟩ := (raise_pending h.pending).run c ⟨pc, rfl⟩
   obtain ⟨after, jumpRun, jump⟩ := (raise_longjmp (raise_native_jump_input h post)).run middle ⟨post.pc, rfl⟩
   refine ⟨after, pendingRun.trans jumpRun, jump.good, jump.image, jump.tick, jump.pc,
-    jump.registers, jump.result, ?_, ?_⟩
+    jump.registers, jump.result, ?_, ?_, post.kept.trans jump.kept⟩
   · rw [jump.memory, post.memory, raiseNativeLog, writeLog_append]
   · exact (post.frame.trans jump.frame).widenChecked (by decide)
 

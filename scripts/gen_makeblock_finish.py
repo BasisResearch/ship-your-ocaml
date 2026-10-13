@@ -91,9 +91,8 @@ theorem makeblock_finish_{kind} {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c
     · obtain ⟨w, reg, value⟩ := h.env
       exact ⟨w, (frame.frame Register.x25 (by decide)).trans reg, value⟩
     · exact (frame.frame Register.x18 (by decide)).trans h.extra
-    · exact loopRegisters_of (fun r hr => frame.frame r (by revert r; decide)) h.dispatch.loop
-        (saved_of h.dispatch.loop (forall_saved (.inr (isSome_of_pin ((rawFrame.frame Register.x26 (by decide)).trans codeReg)))
-          (.inl (frame.frame Register.x27 (by decide)))))
+    · exact loopRegisters_frame (fun r hr => frame.frame r (by revert r; decide)) h.dispatch.loop
+        {'(front.kept.trans (copied.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))))' if more else '(front.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover)))'}
   exact ⟨nb, after, steps, makeblock_restore runtime h.toVmReprAt h.running.platform value space observed h.geometry h.native⟩
 
 end OCaml.Vm.Sim

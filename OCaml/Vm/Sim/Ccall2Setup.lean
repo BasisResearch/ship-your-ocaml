@@ -115,6 +115,7 @@ theorem c_call2_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   have image := image_of_writeLog h.dispatch.image space.image written
   have loop : LoopRegisters after := loopRegisters_frame (fun r hr =>
     (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))) h.dispatch.loop
+    (dp.gprs.trans (GprsKept.of_segment frame post.pins (by seg_cover)))
   have argument : gpr after 10 = some value := PinsHold.get post.pins ⟨5, by simp⟩
   refine ⟨n, after, steps, ?_⟩
   constructor

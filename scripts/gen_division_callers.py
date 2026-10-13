@@ -69,7 +69,8 @@ theorem {lower}_setup {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c d : Confi
     nonzero := division_unbox_nonzero nonzero,
     nextCode := ?_, stack := PinsHold.get post.pins ⟨{pp['x9']}, by simp⟩,
     memory := memory, output := frame.out,
-    preserved := fun r hr => frame.frame r (by revert r; decide), calleePC := post.pcAt }}
+    preserved := fun r hr => frame.frame r (by revert r; decide), calleePC := post.pcAt
+    gprs := GprsKept.of_segment frame post.pins (by seg_cover) }}
   · have observed : gpr after 23 = some (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) :=
       (frame.frame Register.x23 (by decide)).trans dp.nextCode
     simpa only [codePc_succ] using observed
@@ -90,7 +91,8 @@ theorem {lower}_return {{before : Config}} {{pl : Place}} {{pc sp : Nat}} {{x y 
   obtain ⟨_, memory, frame⟩ := post.extra
   refine ⟨after, run.toSteps, post.good, post.pcAt, ?_, ?_, ?_,
     memory.trans h.memory, frame.out.trans h.output,
-    fun r hr => (frame.frame r (by revert r; decide)).trans (h.preserved r hr)⟩
+    fun r hr => (frame.frame r (by revert r; decide)).trans (h.preserved r hr),
+    h.gprs.trans (GprsKept.of_segment frame post.pins (by seg_cover))⟩
   · have observed : gpr after Layout.reg_pc = some (BitVec.ofNat 64 (pl.codeBase + 4 * pc) + sign_extend (m := 64) (0x000#12)) :=
       PinsHold.get post.pins ⟨{sp['x8']}, by simp⟩
     simpa only [show sign_extend (m := 64) (0x000#12) = 0#64 from rfl, BitVec.add_zero] using observed

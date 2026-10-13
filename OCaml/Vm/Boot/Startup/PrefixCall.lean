@@ -10,7 +10,7 @@ theorem prefix_readonly_post {writes writesTail log before mid after pc value ta
     WriteRegistersPost (writes ++ writesTail) log before target result output after := by
   have effects := front.toEffectPost.trans call.toEffectPost
   exact ⟨⟨effects.good, effects.image, effects.minstret, effects.tick, effects.pc,
-    effects.result, call.memory.trans front.memory, effects.output, effects.frame⟩, call.regs⟩
+    effects.result, call.memory.trans front.memory, effects.output, effects.frame, effects.kept⟩, call.regs⟩
 /-- A generated direct call is the one-register special case. -/
 theorem prefix_call_post {writes log before mid after pc value target result input output}
     (front : WriteRegistersPost writes log before pc value input mid)

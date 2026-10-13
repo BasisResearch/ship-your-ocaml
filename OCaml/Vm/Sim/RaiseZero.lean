@@ -41,7 +41,8 @@ theorem raise_zero {sp ra global domain value : BitVec 64} {buffer : Nat}
   obtain ⟨after, raiseRun, raised⟩ := (raise_native input).run raiseStart
     ⟨called.pc.trans (congrArg some caml_raise_zero_divide_8000d1f4_call_target), rfl⟩
   refine ⟨after, setupRun.trans (callRun.trans raiseRun), raised.good, raised.image, raised.tick,
-    raised.pc, raised.registers, raised.result, ?_, ?_⟩
+    raised.pc, raised.registers, raised.result, ?_, ?_,
+    setup.kept.trans (called.toEffectPost.kept.trans raised.kept)⟩
   · rw [raised.memory, memory, raiseZeroFullLog, writeLog_append]
   · exact ((setup.frame.trans called.toEffectPost.nativeFrame).trans raised.frame).widenChecked (by decide)
 

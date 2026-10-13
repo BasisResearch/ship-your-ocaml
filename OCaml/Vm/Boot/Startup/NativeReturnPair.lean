@@ -98,6 +98,7 @@ theorem native_return_pair (c : Config) (kind : NativePairKind) (sp ra s0 p oldr
       (WriteRegistersPost [1, 8, 2] [] c ra p (nativePairRegs sp ra s0 p)) := by
   apply registers_of_blocks h.image (by constructor <;> trivial)
     (block_summary _ _ _ _ _ (nativePair_input h))
+    (keys := by cases kind <;> decide) (no3 := by cases kind <;> decide)
   · cases kind <;> rfl
   · cases kind
     all_goals change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem _) + Functions.sign_extend (m := 64) 0#12) 0 0#1 = _

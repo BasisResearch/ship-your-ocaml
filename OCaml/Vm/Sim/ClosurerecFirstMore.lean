@@ -94,7 +94,8 @@ theorem closurerec_first_more {L : OCaml.Layout} {P : Prog} {s : St} {c d : Conf
   have localMemory := memory.trans fullMemory
   refine ⟨nb, after, steps, post.good, post.tick, image_of_writeLog front.image space.image localMemory,
     ?_, front.fields.frame frame (by decide), (frame.frame Register.x21 (by decide)).trans front.accu,
-    PinsHold.get post.pins ⟨7, by simp⟩, ?_, ?_, (front.frame.trans frame).widenChecked (allowed := closurerecMetadataWrites) (by decide)⟩
+    PinsHold.get post.pins ⟨7, by simp⟩, ?_, ?_, (front.frame.trans frame).widenChecked (allowed := closurerecMetadataWrites) (by decide),
+    front.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
   · simp only [branch, ite_true]; exact post.pcAt
   · intro _
     exact ⟨PinsHold.get post.pins ⟨5, by simp⟩, PinsHold.get post.pins ⟨4, by simp⟩, PinsHold.get post.pins ⟨1, by simp⟩, PinsHold.get post.pins ⟨0, by simp⟩, PinsHold.get post.pins ⟨2, by simp⟩, PinsHold.get post.pins ⟨3, by simp⟩⟩

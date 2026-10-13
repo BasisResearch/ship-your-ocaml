@@ -848,6 +848,7 @@ theorem division_caught_log_ready {L : OCaml.Layout} {P : Prog} {s : St} {op : O
     young := YoungOutside.of_payloadWindows sgD topD inside each
     htifIdle := (dp.frame.frame Register.htif_payload_writes (by decide)).trans h.running.loop.htifIdle
     gp := (dp.frame.frame (gprReg 3) (by decide)).trans h.running.loop.gp
+    gprs := dp.gprs.gprPresent h.running.loop.gprs
     rootsPayloadOutside := PayloadOutside.of_windows sgD stackD lowD rootsIn rootsEach
     rootsBindingsOutside := BindingsOutside.of_windows sgD topD rootsIn rootsEach
     savedOutside := fun off _ => above _ _ (Nat.le_add_right _ _)

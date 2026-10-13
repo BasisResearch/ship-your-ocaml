@@ -44,7 +44,8 @@ theorem closure_copy_more {source target i : Nat} {words : List (BitVec 64)} {in
     (image_entry_code region.image entry (by decide) (by decide)) nextMemory written guard c bp
   obtain ⟨_, memory, rawFrame⟩ := post.extra
   have observed : ClosureCopyPost source target words.length i words[i] c after := by
-    refine ⟨post.good, post.tick, ?_, PinsHold.get post.pins ⟨0, by simp⟩, PinsHold.get post.pins ⟨4, by simp⟩, ?_, PinsHold.get post.pins ⟨5, by simp⟩, ?_, ?_⟩
+    refine ⟨post.good, post.tick, ?_, PinsHold.get post.pins ⟨0, by simp⟩, PinsHold.get post.pins ⟨4, by simp⟩, ?_, PinsHold.get post.pins ⟨5, by simp⟩, ?_, ?_,
+      GprsKept.of_segment rawFrame post.pins (by seg_cover)⟩
     · simp only [more, ite_true]; exact post.pcAt
     · have counter : gpr after 15 = some (BitVec.ofNat 64 (2 + i + 1)) := PinsHold.get post.pins ⟨1, by simp⟩
       simpa only [Nat.add_assoc] using counter

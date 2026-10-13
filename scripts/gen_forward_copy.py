@@ -104,7 +104,8 @@ theorem {name}_copy_{kind} {{{origin} target i : Nat}} {{words : List (BitVec 64
     (image_entry_code region.image entry (by decide) (by decide)) nextMemory written guard c bp
   obtain ⟨_, memory, rawFrame⟩ := post.extra
   have observed : {prefix}CopyPost {origin} target words.length i words[i] c after := by
-    refine ⟨post.good, post.tick, ?_, {observed}, ?_, ?_⟩
+    refine ⟨post.good, post.tick, ?_, {observed}, ?_, ?_,
+      GprsKept.of_segment rawFrame post.pins (by seg_cover)⟩
     · {pcproof}
 {counter_post}    · rw [memory, written]; rfl
     · exact rawFrame.widenChecked (allowed := {writes}) (by decide)

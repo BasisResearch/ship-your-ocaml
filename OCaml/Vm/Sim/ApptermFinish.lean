@@ -33,6 +33,7 @@ theorem appterm_finish {L : OCaml.Layout} {P : Prog} {s : St} {c middle d : Conf
     (copied.frame.frame Register.x11 (by decide)).trans front.base
   have loop : LoopRegisters d := loopRegisters_frame (fun r hr =>
     (copied.frame.frame r (by revert r; decide)).trans (front.frame.frame r (by revert r; decide))) h.dispatch.loop
+    (front.kept.trans copied.kept)
   have fieldWord : word c (a + 8 * k) = BitVec.ofNat 64 (pl.codeBase + 4 * dest) :=
     (Option.some.inj (field.read h.toVmReprAt (by simp [roots])).word).symm
   have closureRead := (space.payload.accu_field_load (payload_of_repr h.toVmReprAt) field written).trans fieldWord
@@ -83,6 +84,7 @@ theorem appterm_finish {L : OCaml.Layout} {P : Prog} {s : St} {c middle d : Conf
         PinsHold.get post.pins ⟨4, by simp⟩
       simpa only [tailcallState, tailcall_extra s.extra count positive] using counter
     · exact loopRegisters_frame (fun r hr => frame.frame r (by revert r; decide)) loop
+        (GprsKept.of_segment frame post.pins (by seg_cover))
   have arguments := stack_value_words h.stack (Nat.le_trans space.fits space.bound)
   exact ⟨nb, after, steps, tailcall_restore_of_log stable h.toVmReprAt h.running.platform space.toTailcallMemoryOk
     (reverse_copy_log_words arguments observations.memory) observations h.geometry h.native⟩

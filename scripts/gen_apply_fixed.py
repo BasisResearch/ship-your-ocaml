@@ -166,6 +166,7 @@ theorem apply{n}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}
   have frame := rawFrame.widenChecked (allowed := {allowed}) (by decide)
   have loop : LoopRegisters after := loopRegisters_frame (fun r hr =>
     (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))) h.dispatch.loop
+    (dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover)))
   have observed : ApplyPost c s pl sp dest (stackWords c sp {n}) env after := by
     refine ⟨⟨post.pcAt, {get('x8')}, ?_,
       ⟨_, {get('x21')}, field.sourceWord⟩,

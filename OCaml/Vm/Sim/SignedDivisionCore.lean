@@ -16,6 +16,8 @@ structure SignedDivisionDivided (kind : DivisionKind) (before : Config) (x y ra 
   savedReturn : kind = .remainder ∨ divisionNegative kind x y = true → gpr after 5 = some ra
   memory : after.σ.mem = before.σ.mem
   frame : StepFrameOut divisionWrites before.σ after.σ
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 /-- Both wrappers consume the same total unsigned-core summary. -/
 theorem signed_division_core {kind : DivisionKind} {before c : Config} {x y ra : BitVec 64}
@@ -37,9 +39,23 @@ theorem signed_division_core {kind : DivisionKind} {before c : Config} {x y ra :
       hr Register.mcycle (by decide),
       hr Register.mtime (by decide),
       hr Register.mip (by decide)⟩
+  have kept : GprsKept c after := by
+    refine GprsKept.of_stepFrame (W := [10, 11, 12, 13]) (by decide) (by decide) ?_
+      ⟨post.output, fun r hr => post.frame r ⟨hr Register.x10 (by decide), hr Register.x11 (by decide),
+        hr Register.x12 (by decide), hr Register.x13 (by decide), hr Register.PC (by decide),
+        hr Register.nextPC (by decide), hr Register.minstret (by decide),
+        hr Register.minstret_increment (by decide), hr Register.mcycle (by decide),
+        hr Register.mtime (by decide), hr Register.mip (by decide)⟩⟩
+    intro n hn
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+    rcases hn with rfl | rfl | rfl | rfl
+    · change (gpr after 10).isSome; rw [post.quotientReg]; rfl
+    · change (gpr after 11).isSome; rw [post.remainderReg]; rfl
+    · obtain ⟨v, hv⟩ := post.scratch2; change (gpr after 12).isSome; rw [hv]; rfl
+    · obtain ⟨v, hv⟩ := post.scratch3; change (gpr after 13).isSome; rw [hv]; rfl
   refine ⟨after, run, post.toLeafInput, post.pc, post.quotientReg, post.remainderReg,
     h.returnAligned, ?_, post.memory.trans h.memory,
-    (h.frame.trans frame).widenChecked (allowed := divisionWrites) (by decide)⟩
+    (h.frame.trans frame).widenChecked (allowed := divisionWrites) (by decide), h.kept.trans kept⟩
   intro needed
   exact (post.frame Register.x5 (by decide)).trans (h.savedReturn needed)
 
@@ -48,7 +64,7 @@ theorem signed_division_done {before c : Config} {x y ra : BitVec 64}
     (h : SignedDivisionDivided .quotient before x y ra c)
     (positive : divisionNegative .quotient x y = false) :
     SignedDivisionPost before ra (divisionResult .quotient x y) c := by
-  refine ⟨h.good, h.image, h.minstret, h.tick, ?_, ?_, h.memory, h.frame⟩
+  refine ⟨h.good, h.image, h.minstret, h.tick, ?_, ?_, h.memory, h.frame, h.kept⟩
   · simpa only [divisionReturn, positive, Bool.false_eq_true, ite_false] using h.pc
   · rw [division_result_sign, positive]
     exact h.quotientReg

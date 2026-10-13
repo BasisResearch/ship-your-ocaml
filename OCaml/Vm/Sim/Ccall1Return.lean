@@ -46,6 +46,7 @@ theorem c_call1_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     · exact (frame.frame (gprReg Layout.reg_extra) (by decide)).trans h.extra
   · exact loopRegisters_frame
       (fun r hr => frame.frame r (by revert r; decide)) h.loop
+      (GprsKept.of_segment frame post.pins (by seg_cover))
 
 /-- Triple interface for the generated represented return, for callSeg splices. -/
 theorem c_call1_return_triple {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}

@@ -19,7 +19,8 @@ theorem sdiv_pos_neg_prepare {c : Config} {x y ra : BitVec 64}
   obtain ⟨n, after, _, run, post⟩ := tr_sdiv_pos_neg x y ra c.σ.mem c.σ hguard_80037298 hguard_8003729c c bp
   obtain ⟨_, memory, rawFrame⟩ := post.extra
   have frame := rawFrame.widenChecked (allowed := divisionPrefixWrites) (by decide)
-  refine ⟨n, after, run, division_prepared input post.good post.tick post.pcAt ?_ ?_ ?_ ?_ memory frame⟩
+  refine ⟨n, after, run, division_prepared input post.good post.tick post.pcAt ?_ ?_ ?_ ?_ memory frame
+    (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
   ·
     have observed : gpr after 1 = some ((0x80037314#64 : BitVec 64)) := PinsHold.get post.pins ⟨0, by simp⟩
     simpa only [divisionReturn, divisionNegative, divisionMagnitude, hx, hy, Bool.false_eq_true, Bool.true_eq_false, Bool.bne_false, Bool.bne_true, ite_true, ite_false, Bool.not_false, Bool.not_true, show Functions.sign_extend (m := 64) (0x000#12) = 0#64 from rfl, BitVec.add_zero, BitVec.zero_sub] using observed

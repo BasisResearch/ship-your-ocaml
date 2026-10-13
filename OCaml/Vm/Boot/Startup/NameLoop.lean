@@ -99,7 +99,13 @@ theorem name_scan (c : Config) (p ra value : BitVec 64) (cs : List Char)
     frame := fun _ _ _ => rfl }
   obtain ⟨after, run, post⟩ := name_scan_loop c data c start
   refine ⟨after, run, ⟨⟨post.leaf.good, post.leaf.image, post.leaf.minstret,
-    post.leaf.tick, ?_, post.valueReg, post.memory, post.output, post.frame⟩, ?_⟩⟩
+    post.leaf.tick, ?_, post.valueReg, post.memory, post.output, post.frame,
+    GprsKept.of_regFrame (W := [14, 12, 15]) (by decide) (by decide) (fun n hn => by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+      rcases hn with rfl | rfl | rfl
+      · rw [gholds_lookup (n := 14) _ (post.endRegs rfl) rfl]; rfl
+      · rw [post.cursorReg]; rfl
+      · rw [gholds_lookup (n := 15) _ (post.endRegs rfl) rfl]; rfl) post.frame⟩, ?_⟩⟩
   · change PCAt _ after
     simpa only [Nat.lt_irrefl, ite_false] using post.pc
   · obtain ⟨last14, last15, _⟩ := post.endRegs rfl

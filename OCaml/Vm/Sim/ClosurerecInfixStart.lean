@@ -21,7 +21,7 @@ theorem ClosurerecFirst.infix_start {pl : Place} {pc sp count dest a domain : Na
   have positive : 1 < targets.length + 1 := by omega
   have regs := front.infixRegisters positive
   refine ⟨front.good, front.tick, front.image, Nat.zero_le _, ?_, ⟨?_, ?_, ?_, ?_, ?_, front.fields.codeBase, regs.limit⟩,
-    rfl, (StepFrameOut.refl after.σ).widenChecked (allowed := infixWrites) (by decide)⟩
+    rfl, (StepFrameOut.refl after.σ).widenChecked (allowed := infixWrites) (by decide), OCaml.Vm.Primitives.GprsKept.refl _⟩
   · simpa only [positive, more, ite_true] using front.pcAt
   · exact regs.counter
   · simpa only [Nat.zero_add, Nat.mul_one] using regs.targetReg

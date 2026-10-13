@@ -29,12 +29,14 @@ structure ClosureReady (before : Config) (pl : Place) (pc sp count a domain : Na
   targetReg : gpr after 16 = some (BitVec.ofNat 64 a)
   memory : after.σ.mem = writeLog before.σ.mem (closureReadyLog before sp count a domain accuWord)
   frame : StepFrameOut closureSetupWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 theorem ClosureInitialized.ready_zero {before after : Config} {pl : Place}
     {pc sp count a domain : Nat} {accu : BitVec 64}
     (front : ClosureInitialized before pl pc sp count a domain accu after) (zero : count = 0) :
     ClosureReady before pl pc sp count a domain accu after := by
-  refine ⟨front.good, front.tick, front.image, ?_, front.fields, front.accu, front.value, front.targetReg, ?_, front.frame⟩
+  refine ⟨front.good, front.tick, front.image, ?_, front.fields, front.accu, front.value, front.targetReg, ?_, front.frame, front.kept⟩
   · simpa only [zero, Nat.lt_irrefl, ite_false] using front.pcAt
   · simp only [closureReadyLog, closureWords, zero, Nat.lt_irrefl, ite_false, valueLog, valueEntries,
       indexedLog, List.length_nil, List.range_zero, List.map_nil, List.append_nil]
@@ -50,7 +52,8 @@ theorem ClosureInitialized.ready_copy {before middle after : Config} {pl : Place
     (back.frame.frame Register.x21 (by decide)).trans front.accu,
     (back.frame.frame Register.x10 (by decide)).trans front.value,
     (back.frame.frame Register.x16 (by decide)).trans front.targetReg, ?_,
-    (front.frame.trans back.frame).widenChecked (allowed := closureSetupWrites) (by decide)⟩
+    (front.frame.trans back.frame).widenChecked (allowed := closureSetupWrites) (by decide),
+    front.kept.trans back.kept⟩
   · simpa only [Nat.lt_irrefl, ite_false] using back.pc
   · change after.σ.mem = writeLog before.σ.mem (closureSetupLog sp count a domain accu ++
       valueLog (a + 16) (closureWords before sp count accu))

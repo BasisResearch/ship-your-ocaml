@@ -153,7 +153,8 @@ theorem pushtrap_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
         decide)).trans accuReg),
       memory.trans written, frame.out, fun r hr => frame.frame r (by
         simp only [List.forall_mem_append, List.forall_mem_cons]
-        revert r; decide)⟩
+        revert r; decide),
+      GprsKept.of_segment frame post.pins (by seg_cover)⟩
     have pc : gpr after Layout.reg_pc = some
         (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + sign_extend (m := 64) (0x008#12)) :=
       PinsHold.get post.pins ⟨1, by simp⟩

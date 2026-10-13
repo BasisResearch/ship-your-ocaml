@@ -41,6 +41,7 @@ theorem strncmp_test (c : Config) (p q stop ra : BitVec 64) (b : BitVec 8) (fini
         (strncmpTestRegs p q stop b)) := by
   apply registers_of_blocks leaf.image (by constructor <;> trivial)
     (block_summary _ _ _ _ _ (strncmpTest_input leaf regs last))
+    (keys := by cases finished <;> decide) (no3 := by cases finished <;> decide)
   · cases finished <;> rfl
   · cases finished <;> rfl
   · cases finished <;> rfl

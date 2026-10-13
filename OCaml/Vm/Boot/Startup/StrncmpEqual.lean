@@ -70,10 +70,15 @@ theorem strncmp_equal (c : Config) (p q ra : BitVec 64) (last : Nat) (byte : Nat
   have exitLeaf : LeafInput ra exitState := ⟨tested.good, tested.image, tested.minstret,
     (tested.frame .x1 (by decide) (by decide)).trans finished.leaf.raReg, leaf.aligned, tested.tick⟩
   obtain ⟨after, returnRun, returned⟩ := (strncmp_return exitState ra exitLeaf).run exitState ⟨tested.pc, rfl⟩
+  have finKept : GprsKept c lastState :=
+    GprsKept.of_holds (W := [10, 11, 12, 14, 15]) (by decide) (by decide) finished.regs
+      (by intro n hn; simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+          rcases hn with rfl | rfl | rfl | rfl | rfl <;> simp [strncmpTestInput, keysG]) finished.frame
+  have kept := finKept.trans (tested.kept.trans returned.kept)
   refine ⟨after, dispatchRun.trans (firstRun.trans (loopRun.trans (testRun.trans returnRun))), ⟨⟨returned.good,
     returned.image, returned.minstret, returned.tick, returned.pc, returned.result,
     returned.memory.trans (tested.memory.trans finished.memory),
-    returned.output.trans (tested.output.trans finished.output), ?_⟩, ?_⟩⟩
+    returned.output.trans (tested.output.trans finished.output), ?_, kept⟩, ?_⟩⟩
   · intro r outside noise
     exact (returned.frame r (fun n hn => outside n (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega)) noise).trans
       ((tested.frame r (fun n hn => outside n (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega)) noise).trans (finished.frame r outside noise))

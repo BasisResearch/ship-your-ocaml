@@ -59,7 +59,7 @@ theorem restart_setup_more {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   constructor
   · have length : (stackWords c (a + 24) (fields.length - 3)).length = fields.length - 3 := by simp [stackWords]
     refine ⟨post.good, post.tick, image, Nat.zero_le _, ?_, PinsHold.get post.pins ⟨6, by simp⟩,
-      ?_, PinsHold.get post.pins ⟨5, by simp⟩, ?_, rfl, ?_⟩
+      ?_, PinsHold.get post.pins ⟨5, by simp⟩, ?_, rfl, ?_, GprsKept.refl _⟩
     · have positiveCount : 0 < fields.length - 3 := by omega
       simp only [length, positiveCount, ite_true]; exact post.pcAt
     · simp only [Nat.mul_zero, Nat.add_zero, restartStart]
@@ -76,5 +76,6 @@ theorem restart_setup_more {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   · exact PinsHold.get post.pins ⟨4, by simp⟩
   · exact fullMemory
   · exact frame
+  · exact dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))
 
 end OCaml.Vm.Sim

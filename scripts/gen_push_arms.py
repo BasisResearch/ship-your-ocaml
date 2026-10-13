@@ -267,7 +267,8 @@ theorem {lower}_arm {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c : Config}}
   simp only [push_address space.room{load_simp}] at run
 {run_application}
   obtain ⟨_, hm, frame⟩ := post.extra
-  refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, ?_, hm.trans memoryEq, frame.out, ?_⟩
+  refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, ?_, hm.trans memoryEq, frame.out, ?_,
+    GprsKept.of_segment frame post.pins (by seg_cover)⟩
 {pc_proof}
   · exact PinsHold.get post.pins ⟨{sp_pin}, by simp⟩
 {accu}

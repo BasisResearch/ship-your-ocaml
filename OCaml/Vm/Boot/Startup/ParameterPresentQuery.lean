@@ -44,7 +44,7 @@ theorem parameter_present_query (c : Config) (sp env entry ra s0 s1 s2 s3 s4 s5 
   have effects := (called.toEffectPost.trans post.toEffectPost).widen
     (writes' := [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
   refine ⟨after, run1.trans run2, ⟨⟨effects.good, effects.image, effects.minstret, effects.tick,
-    effects.pc, effects.result, ?_, effects.output, effects.frame⟩, post.regs⟩⟩
+    effects.pc, effects.result, ?_, effects.output, effects.frame, effects.kept⟩, post.regs⟩⟩
   have same : mid.σ.mem = c.σ.mem := called.memory
   rw [post.memory, same]
 end OCaml.Vm.Boot.Startup

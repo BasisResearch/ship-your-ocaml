@@ -60,6 +60,7 @@ theorem closurerec_reserve {pl : Place} {pc sp functions count a domain limit : 
     rw [reserveMemory, front.memory, writeLog_append]
   exact ⟨nb, after, steps, post.good, post.tick, image_of_writeLog front.image nursery.image reserveMemory,
     post.pcAt, front.fields.frame frame (by decide), (frame.frame Register.x10 (by decide)).trans front.sizeReg, PinsHold.get post.pins ⟨0, by simp⟩, fullMemory,
-    (front.frame.trans frame).widenChecked (allowed := closurerecReservationWrites) (by decide)⟩
+    (front.frame.trans frame).widenChecked (allowed := closurerecReservationWrites) (by decide),
+    front.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
 
 end OCaml.Vm.Sim

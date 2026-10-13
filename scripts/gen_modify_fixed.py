@@ -70,7 +70,8 @@ theorem {lower}_setup {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c d : Confi
       aligned := by decide, tick := post.tick, entry := post.pcAt,
       code := ?_, stack := ?_, slot := ?_, value := PinsHold.get post.pins ⟨{pins['x11']}, by simp⟩,
       memory := memory.trans dp.memory, output := frame.out.trans dp.frame.out,
-      preserved := fun r hr => (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide)) }}
+      preserved := fun r hr => (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))
+      gprs := dp.gprs.trans (GprsKept.of_segment frame post.pins (by seg_cover)) }}
     · have observed : gpr after 23 = some (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) :=
         (frame.frame Register.x23 (by decide)).trans dp.nextCode
       simpa only [codePc_succ] using observed

@@ -149,6 +149,7 @@ through the generated no-growth/no-pending tail. -/
   have frame := rawFrame.widenChecked (allowed := {allowed}) (by decide)
   have loop : LoopRegisters after := loopRegisters_frame (fun r hr =>
     (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))) h.dispatch.loop
+    (dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover)))
   have observed : TailcallPost c s pl sp slot.toInt.toNat dest (stackWords c sp {n}) after := by
     refine ⟨⟨post.pcAt, {get('x8')}, ?_,
       ⟨_, {get('x21')}, field.sourceWord⟩,

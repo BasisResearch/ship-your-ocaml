@@ -43,6 +43,7 @@ theorem table_zero_prefix (c : Config) (second : Bool) (p ra : BitVec 64) (h : L
       have code := minorTables_code h.image
       cases second <;> chain_facts code with "Vsa.Sim.Code.caml_alloc_minor_tables_at_" }
   apply boundary_of_blocks h (block_summary _ _ _ _ _ input)
+    (keys := by cases second <;> decide) (no3 := by cases second <;> decide)
   · cases second <;> rfl
   · cases second <;> rfl
   · intro σ pins
@@ -87,7 +88,8 @@ theorem table_zero_registers (c : Config) (second : Bool) (base : Nat) (ra : Bit
   have atMemset : PCAt 0x8004276c#64 b := by cases second <;> exact call.pc
   obtain ⟨d, zeroRun, zeroed⟩ := (memset56_registers b base _ region input).run b ⟨atMemset, rfl⟩
   refine ⟨d, front.trans (callRun.trans zeroRun), ?_, ?_⟩
-  · refine { zeroed.toEffectPost with memory := ?_, output := ?_, frame := ?_ }
+  · have kept := setup.kept.trans (call.kept.trans zeroed.kept)
+    refine { zeroed.toEffectPost with memory := ?_, output := ?_, frame := ?_, kept := kept }
     · rw [zeroed.memory, call.memory, setup.memory]
     · exact zeroed.output.trans (call.output.trans setup.output)
     · have memIncl : ∀ n ∈ [6, 14, 15, 13, 12, 5], n ∈ [12, 11, 1, 6, 14, 15, 13, 5] := by decide

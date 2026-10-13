@@ -105,7 +105,12 @@ theorem slash_scan (c : Config) (p ra a0 : BitVec 64) (len : Nat) (name : PlainN
   obtain ⟨after, run, post⟩ := slash_scan_loop c name c start
   have zero : nameByteWord (imgM c.σ.mem (p.toNat + len)) = 0#64 := by rw [name.bytes.nul]; rfl
   refine ⟨after, run, ⟨⟨post.leaf.good, post.leaf.image, post.leaf.minstret, post.leaf.tick, ?_, post.value,
-    post.memory, post.output, post.frame⟩, ⟨post.cursor, ?_, post.slash, post.value, trivial⟩⟩⟩
+    post.memory, post.output, post.frame,
+    GprsKept.of_regFrame (W := [14, 15]) (by decide) (by decide) (fun n hn => by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+      rcases hn with rfl | rfl
+      · rw [post.cursor]; rfl
+      · rw [post.current]; rfl) post.frame⟩, ⟨post.cursor, ?_, post.slash, post.value, trivial⟩⟩⟩
   · change PCAt _ after
     simpa only [Nat.lt_irrefl, ite_false] using post.pc
   · rw [← zero]; exact post.current

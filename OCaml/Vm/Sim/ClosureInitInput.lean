@@ -50,6 +50,8 @@ structure ClosureInitialized (before : Config) (pl : Place) (pc sp count a domai
   copyRegisters : 0 < count → ClosureCopyRegisters sp count after
   memory : after.σ.mem = writeLog before.σ.mem (closureSetupLog sp count a domain accuWord)
   frame : StepFrameOut closureSetupWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 theorem ClosureInitialized.copy_start {before after : Config} {pl : Place}
     {pc sp count a domain : Nat} {accu : BitVec 64}
@@ -57,7 +59,7 @@ theorem ClosureInitialized.copy_start {before after : Config} {pl : Place}
     ClosureCopyAt (closureSource sp count) a (closureWords before sp count accu) after 0 after := by
   have regs := front.copyRegisters positive
   refine ⟨front.good, front.tick, front.image, Nat.zero_le _, ?_, ?_, front.targetReg, ?_, ?_, rfl,
-    (StepFrameOut.refl after.σ).widenChecked (allowed := closureCopyWrites) (by decide)⟩
+    (StepFrameOut.refl after.σ).widenChecked (allowed := closureCopyWrites) (by decide), GprsKept.refl _⟩
   · simpa only [closure_words_length, positive, ite_true] using front.pcAt
   · simpa only [IndexedCopyShape.sourceWord, closureCopyShape, Bool.false_eq_true, ite_false, Nat.mul_zero, Nat.add_zero] using regs.sourceReg
   · exact regs.counter

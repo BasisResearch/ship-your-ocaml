@@ -85,6 +85,7 @@ theorem grab_reserve {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   exact ⟨nb, after, steps, post.good, post.tick, image_of_writeLog h.dispatch.image space.image fullMemory,
     post.pcAt, PinsHold.get post.pins ⟨4, by simp⟩, PinsHold.get post.pins ⟨2, by simp⟩, bytes,
     PinsHold.get post.pins ⟨0, by simp⟩, fullMemory,
-    (dp.frame.trans rawFrame).widenChecked (allowed := grabReserveWrites) (by decide)⟩
+    (dp.frame.trans rawFrame).widenChecked (allowed := grabReserveWrites) (by decide),
+    dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
 
 end OCaml.Vm.Sim

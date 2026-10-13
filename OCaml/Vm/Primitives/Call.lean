@@ -100,12 +100,15 @@ theorem call_registers_summary {a : CallInstr} (shape : CallShape a) (decode : C
       result := gholds_lookup _ post.registers result
       memory := memory
       output := post.output
-      frame := ?_ }
+      frame := ?_
+      kept := ?_ }
     regs := ⟨post.ra, post.registers⟩ }
   · exact ⟨fun i hi => by rw [memory]; exact image.text i hi,
       fun i hi => by rw [memory]; exact image.rodata i hi,
       fun i hi => by rw [memory]; exact image.impure i hi⟩
   · intro r hr hn
     exact post.frame r hn (by simp [wrChain]) (beq_eq_false_iff_ne.mpr (hr 1 (by simp)))
+  · exact GprsKept.of_x1 (by change (after.σ.regs.get? Register.x1).isSome = true; rw [post.ra]; rfl)
+      (fun R hn h1 => post.frame R hn (by simp [wrChain]) h1)
 
 end OCaml.Vm.Primitives

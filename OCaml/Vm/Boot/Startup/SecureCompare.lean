@@ -33,6 +33,7 @@ theorem secure_compare (group : Bool) (c : Config) (stack name ra : BitVec 64) (
       (WriteRegistersPost [] [] c (secureCompareExit group) 0#64 (secureCompareRegs stack name)) := by
   apply registers_of_blocks h.image (by constructor <;> trivial)
     (block_summary _ _ _ _ _ (secureCompare_input group h regs))
+    (keys := by cases group <;> decide) (no3 := by cases group <;> decide)
   · cases group <;> rfl
   · cases group <;> rfl
   · cases group <;> rfl

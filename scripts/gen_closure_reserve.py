@@ -64,7 +64,8 @@ theorem @family@_reserve {pl : Place} {pc sp @functions@count a domain limit : N
     rw [reserveMemory, front.memory, writeLog_append]
   exact ⟨nb, after, steps, post.good, post.tick, image_of_writeLog front.image nursery.image reserveMemory,
     post.pcAt, front.fields.frame frame (by decide), @sizePost@PinsHold.get post.pins ⟨0, by simp⟩, fullMemory,
-    (front.frame.trans frame).widenChecked (allowed := @family@ReservationWrites) (by decide)⟩
+    (front.frame.trans frame).widenChecked (allowed := @family@ReservationWrites) (by decide),
+    front.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
 
 end OCaml.Vm.Sim
 '''

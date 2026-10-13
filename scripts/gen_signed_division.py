@@ -72,7 +72,7 @@ def outputs():
                  f'  obtain ⟨n, after, _, run, post⟩ := tr_{lower} {args} c.σ.mem c.σ {" ".join(guards)} c bp',
                  '  obtain ⟨_, memory, rawFrame⟩ := post.extra',
                  '  have frame := rawFrame.widenChecked (allowed := divisionPrefixWrites) (by decide)',
-                 '  refine ⟨n, after, run, division_prepared input post.good post.tick post.pcAt ?_ ?_ ?_ ?_ memory frame⟩']
+                 '  refine ⟨n, after, run, division_prepared input post.good post.tick post.pcAt ?_ ?_ ?_ ?_ memory frame\n    (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩']
         def result_lines(reg, indent):
             expression = dict(emitter.pins).get(reg, {'x1': 'v1'}.get(reg))
             expression = re.sub(r'\bv\d+\b', lambda m: values[m[0]], expression)
@@ -131,7 +131,8 @@ theorem {lower}_finish {{before c : Config}} {{x y ra : BitVec 64}}
   obtain ⟨_, memory, frame⟩ := post.extra
   refine ⟨n, after, run, post.good, image_of_writeLog (log := []) h.image ⟨trivial, trivial⟩ memory,
     post.good.minstret, post.tick, ?_, ?_, memory.trans h.memory,
-    (h.frame.trans frame).widenChecked (allowed := divisionWrites) (by decide)⟩
+    (h.frame.trans frame).widenChecked (allowed := divisionWrites) (by decide),
+    h.kept.trans (GprsKept.of_segment frame post.pins (by seg_cover))⟩
   · have observedPc : pcOf after = some (Sail.BitVec.update (ra + sign_extend (m := 64) (0x000#12)) 0 0#1) := post.pcAt
     simpa only [ret_tgt ra h.returnAligned] using observedPc
   · have observed : gpr after 10 = some ({expression}) := PinsHold.get post.pins ⟨{positions['x10']}, by simp⟩

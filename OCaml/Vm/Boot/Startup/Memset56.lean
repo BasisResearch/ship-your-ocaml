@@ -93,7 +93,11 @@ theorem memset56_registers (c : Config) (base : Nat) (ra : BitVec 64)
     outside := region.tail_outside }
   obtain ⟨e, bytes, post⟩ := (memset_bytes d _ _ ra bytesInput).run d ⟨tail.pc, rfl⟩
   refine ⟨e, front.trans (loop.trans (dispatch.trans bytes)), ?_, ?_⟩
-  · refine { post.toEffectPost with memory := ?_, output := ?_, frame := ?_ }
+  · have pairsKept : GprsKept a b :=
+      GprsKept.of_regFrame (W := [14]) (by decide) (by decide)
+        (fun n hn => by rw [List.mem_singleton.mp hn, pairs.cursor]; rfl) pairs.frame
+    have kept := frontPost.kept.trans (pairsKept.trans (tail.kept.trans post.kept))
+    refine { post.toEffectPost with memory := ?_, output := ?_, frame := ?_, kept := kept }
     · rw [post.memory, tail.memory, pairs.memory, frontPost.memory]
       rfl
     · exact post.output.trans (tail.output.trans (pairs.output.trans frontPost.output))

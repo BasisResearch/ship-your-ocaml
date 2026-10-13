@@ -33,6 +33,7 @@ theorem secure_stage_prefix (group : Bool) (c : Config) (stack name ra : BitVec 
       (WriteRegistersPost [8] [] c (secureStageCall group).pc 0#64 (secureStageRegs stack name)) := by
   apply registers_of_blocks h.image (by constructor <;> trivial)
     (block_summary _ _ _ _ _ (secureStage_input group h regs))
+    (keys := by cases group <;> decide) (no3 := by cases group <;> decide)
   · cases group <;> rfl
   · cases group <;> rfl
   · cases group <;> rfl

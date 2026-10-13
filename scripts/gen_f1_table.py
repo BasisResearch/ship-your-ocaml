@@ -50,7 +50,7 @@ FIXED = {
 # Modules a FIXED instance lives in, beyond the table's base imports.
 FIXED_IMPORTS = {'consoleStable': 'OCaml.Vm.Sim.F1Console'}
 # Summary parameters with no instance yet: one named `WhileMinOpen` field each.
-OPEN_PARAMS = {'entryGprs': ('ccall_entry_gprs', 'CcallEntryGprs Gc.f1Layout')}
+OPEN_PARAMS = {}
 # Program-level parameters shared by several rows: one premise field each.
 SHARED = {'values': 'values', 'ints': 'ints', 'extra': 'extra', 'extraBounded': 'extra', 'exotic': 'exotic', 'trapBounded': 'trapBounded',
           'scratch': 'scratch', 'field': 'field'}

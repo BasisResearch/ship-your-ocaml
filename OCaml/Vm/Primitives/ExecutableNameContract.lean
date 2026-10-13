@@ -45,7 +45,8 @@ theorem executable_name_contract {runtimeOk P s pl cp sp high ra nativeSp arg li
     data := ?_
     primitives := bindings_frame_outsideLog h.primitives h.bindingsOutside post.footprint
     platform := ⟨post.good, post.image, runtime after post.memory_complete h.runtime⟩
-    loop := loop_of_abi_frame post.registers (by decide) h.loop post.libraryGood.htifIdle
+    loop := loop_of_abi_frame post.registers (by decide) h.loop post.libraryGood.gpr
+      post.libraryGood.htifIdle
     resultRepr := ?_
     semantics := ?_ }
   · exact (h.data.frame_outsideLog h.payloadOutside post.footprint post.output).allocate

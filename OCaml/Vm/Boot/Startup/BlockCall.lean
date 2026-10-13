@@ -26,7 +26,7 @@ theorem write_post_seq {w1 w2 : List Nat} {l1 l2 : List WEntry} {before mid afte
     WriteRegistersPost (w1 ++ w2) (l1 ++ l2) before pc2 v2 r2 after := by
   have effects := front.toEffectPost.trans back.toEffectPost
   exact ⟨⟨effects.good, effects.image, effects.minstret, effects.tick, effects.pc, effects.result,
-    by rw [back.memory, front.memory, writeLog_append], effects.output, effects.frame⟩, back.regs⟩
+    by rw [back.memory, front.memory, writeLog_append], effects.output, effects.frame, effects.kept⟩, back.regs⟩
 
 /-- A write-log summary followed by another from its end state. -/
 theorem blocks_then {entry pc1 v1 pc2 v2 : BitVec 64} {w1 w2 : List Nat} {l1 l2 : List WEntry} {r1 r2 : GRegs}

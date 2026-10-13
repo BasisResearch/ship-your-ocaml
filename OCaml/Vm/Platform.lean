@@ -68,10 +68,10 @@ structure LoopRegisters (c : Config) : Prop where
   /-- no HTIF command is half-written (the console device is idle between
   complete `tohost` commands; caml_do_exit's exit command needs it) -/
   htifIdle : c.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes = some 0#4
-  /-- the unpinned callee-saved registers hold values (C paths spill them:
-  caml_sys_exit's and the console primitives' prologues) -/
-  saved : ∀ n ∈ unpinnedSaved, (gpr c n).isSome
-  /-- the global pointer the C runtime was linked with (no arm or C path writes `gp`) -/
+  /-- every integer register holds a value (C paths spill the callee-saved
+  ones, and newlib's model requires all of x1–x31: `LibraryReady`) -/
+  gprs : OCaml.Vm.Boot.Startup.GprPresent c.σ
+  /-- the global pointer the C runtime was linked with (no arm writes `gp`) -/
   gp : gpr c 3 = some Vsa.Sim.LibraryLayout.gpV
 
 /-- Full GPR presence gives the unpinned callee-saved registers. -/
@@ -82,5 +82,9 @@ theorem _root_.OCaml.Vm.Boot.Startup.GprPresent.saved {c : Config}
     simp only [unpinnedSaved, List.mem_cons, List.not_mem_nil, or_false] at hn
     omega
   exact p.get n b.1 b.2
+
+/-- The unpinned callee-saved registers hold values. -/
+theorem LoopRegisters.saved {c : Config} (h : LoopRegisters c) : ∀ n ∈ unpinnedSaved, (gpr c n).isSome :=
+  h.gprs.saved
 
 end OCaml.Vm

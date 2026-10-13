@@ -37,7 +37,7 @@ theorem table_tail_zero (c : Config) (base : Nat) (s0 s1 ra : BitVec 64)
     (writes' := [8, 1, 9, 12, 11, 2, 6, 14, 15, 13, 5]) (by decide)
   refine ⟨after, restoreRun.trans zeroRun, ?_, ?_⟩
   · refine ⟨effect.good, effect.image, effect.minstret, effect.tick, effect.pc,
-      effect.result, ?_, effect.output, effect.frame⟩
+      effect.result, ?_, effect.output, effect.frame, effect.kept⟩
     exact zeroed.memory.trans (congrArg (fun m => memset56Memory m base) restore.memory)
   · have restored : GHolds a.σ [(8, s0), (9, s1), (2, firstMallocStack), (1, jal_8002a934_call.link), (11, 0#64)] :=
       holds_project restore.regs (by simp [tableTailRegs, lookupG])

@@ -22,13 +22,15 @@ theorem registers_of_blocks {bs entry before L loads writes pc value regs log}
     (hpc : evalBlocksPC entry (SegEvalState.init L loads) bs = pc)
     (hregs : (evalBlocks bs (SegEvalState.init L loads)).regs = regs)
     (result : lookupG 10 regs = some value)
-    (writesOk : ∀ n ∈ wrChain bs, n ∈ writes) :
+    (writesOk : ∀ n ∈ wrChain bs, n ∈ writes)
+    (keys : KeysOK (wrChain bs) := by first | decide | exact of_decide_eq_true rfl)
+    (no3 : 3 ∉ wrChain bs := by first | decide | exact of_decide_eq_true rfl) :
     FnSummary entry (fun c => c = before) (WriteRegistersPost writes log before pc value regs) := by
   apply S.weaken (fun _ h => h)
   intro after post
   have call := post.effect image outside hlog hpc (fun _ h => by
     rw [hregs] at h
-    exact gholds_lookup _ h result) writesOk
+    exact gholds_lookup _ h result) writesOk keys no3
   exact ⟨call, hregs ▸ post.regs⟩
 
 /-- Compose exact effects once; every nonwritten register frame follows. -/
@@ -38,7 +40,8 @@ theorem EffectPost.trans {w1 w2 m1 m2 before mid after p1 p2 v1 v2}
     EffectPost (w1 ++ w2) m2 before p2 v2 after := by
   refine { h' with
     output := h'.output.trans h.output
-    frame := ?_ }
+    frame := ?_
+    kept := h.kept.trans h'.kept }
   intro r hr hn
   exact (h'.frame r (fun n hm => hr n (List.mem_append_right _ hm)) hn).trans
     (h.frame r (fun n hm => hr n (List.mem_append_left _ hm)) hn)
@@ -56,7 +59,8 @@ theorem BoundaryPost.then_write {w1 w2 before mid after ra pc regs log target va
     (h' : WritePost w2 log mid target value after) :
     WritePost (w1 ++ w2) log before target value after := by
   refine ⟨h'.good, h'.image, h'.minstret, h'.tick, h'.pc, h'.result,
-    h'.memory.trans (congrArg (fun m => writeLog m log) h.memory), h'.output.trans h.output, ?_⟩
+    h'.memory.trans (congrArg (fun m => writeLog m log) h.memory), h'.output.trans h.output, ?_,
+    h.kept.trans h'.kept⟩
   intro r hr hn
   exact (h'.frame r (fun n hm => hr n (List.mem_append_right _ hm)) hn).trans
     (h.frame r (fun n hm => hr n (List.mem_append_left _ hm)) hn)

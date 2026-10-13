@@ -29,5 +29,7 @@ structure GrabReserved (before : Config) (extra a domain : Nat) (after : Config)
   savedExtra : gpr after 23 = some (BitVec.ofNat 64 extra)
   memory : after.σ.mem = writeLog before.σ.mem (grabReserveLog domain a)
   frame : StepFrameOut grabReserveWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 end OCaml.Vm.Sim

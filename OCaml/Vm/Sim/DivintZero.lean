@@ -1,4 +1,5 @@
 import OCaml.Vm.Sim.DivisionZeroState
+import OCaml.Vm.Sim.SegmentGprs
 import OCaml.Vm.Sim.DivintZeroSegment
 import OCaml.Vm.Sim.DivintZeroPins
 import Vsa.Sim.FnSummary
@@ -25,6 +26,7 @@ theorem divint_zero {sp : BitVec 64} {c : Config} (h : DivisionZeroInput sp c) :
   obtain ⟨count, after, _, run, post⟩ := native h.read.lower h.read.upper h.read.htif 1#64 loaded.symm (by decide) c bp
   obtain ⟨_, memory, frame⟩ := post.extra
   exact ⟨after, run.toSteps, post.good, image_of_writeLog (log := []) h.image ⟨trivial, trivial⟩ memory,
-    post.tick, post.pcAt, PinsHold.get post.pins ⟨1, by simp⟩, memory, frame.widenChecked (by decide)⟩
+    post.tick, post.pcAt, PinsHold.get post.pins ⟨1, by simp⟩, memory, frame.widenChecked (by decide),
+    GprsKept.of_segment frame post.pins (by seg_cover)⟩
 
 end OCaml.Vm.Sim

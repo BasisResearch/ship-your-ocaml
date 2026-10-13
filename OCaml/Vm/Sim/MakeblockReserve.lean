@@ -91,6 +91,7 @@ theorem makeblock_reserve {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   exact ⟨nb, after, steps, post.good, post.tick, image_of_writeLog h.dispatch.image reserveImage fullMemory,
     post.pcAt, PinsHold.get post.pins ⟨8, by simp⟩, PinsHold.get post.pins ⟨6, by simp⟩,
     PinsHold.get post.pins ⟨0, by simp⟩, PinsHold.get post.pins ⟨5, by simp⟩, fullMemory,
-    (dp.frame.trans rawFrame).widenChecked (allowed := makeblockReserveWrites) (by decide)⟩
+    (dp.frame.trans rawFrame).widenChecked (allowed := makeblockReserveWrites) (by decide),
+    dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
 
 end OCaml.Vm.Sim

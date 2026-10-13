@@ -105,7 +105,8 @@ theorem {family}_initialize_{kind} {{pl : Place}} {{pc sp {functions}count a dom
     rw [memory, headerWritten]; rfl
   refine ⟨nb, after, steps, post.good, post.tick, image_of_writeLog front.image space.headerImage initialized,
     ?_, front.fields.frame frame (by decide), {observed}, ?_, memory.trans headerLog,
-    (front.frame.trans frame).widenChecked (allowed := {family}SetupWrites) (by decide)⟩
+    (front.frame.trans frame).widenChecked (allowed := {family}SetupWrites) (by decide),
+    front.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
   · simp only [{'branch, ite_true' if more else 'branch, Nat.lt_irrefl, ite_false'}]; exact post.pcAt
 {copy}
 

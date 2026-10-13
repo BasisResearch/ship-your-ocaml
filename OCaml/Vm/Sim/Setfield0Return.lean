@@ -30,7 +30,8 @@ theorem setfield0_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp
     PinsHold.get post.pins ⟨0, by simp⟩
   have observed : StackPost c pl s.pc sp (tag64 0) c.σ.mem after := by
     refine ⟨post.good, post.pcAt, ?_, ?_, ?_, memory, frame.out,
-      fun r hr => frame.frame r (by revert r; decide)⟩
+      fun r hr => frame.frame r (by revert r; decide),
+      GprsKept.of_segment frame post.pins (by seg_cover)⟩
     · simpa only [show sign_extend (m := 64) (0x000#12) = 0#64 from by decide,
       show sign_extend (m := 64) (0x001#12) = 1#64 from by decide,
       show sign_extend (m := 64) (0x008#12) = 8#64 from by decide,

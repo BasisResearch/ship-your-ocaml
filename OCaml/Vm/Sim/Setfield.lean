@@ -57,7 +57,8 @@ theorem setfield_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
       aligned := by decide, tick := post.tick, entry := post.pcAt,
       code := ?_, stack := ?_, slot := ?_, value := ?_,
       memory := memory.trans dp.memory, output := frame.out.trans dp.frame.out,
-      preserved := fun r hr => (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide)) }
+      preserved := fun r hr => (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))
+      gprs := dp.gprs.trans (GprsKept.of_segment frame post.pins (by seg_cover)) }
     · have observed := PinsHold.get post.pins ⟨2, by simp⟩
       change gpr after 8 = some _ at observed
       simp only [Fin.getElem_fin, List.getElem_cons_zero, List.getElem_cons_succ] at observed

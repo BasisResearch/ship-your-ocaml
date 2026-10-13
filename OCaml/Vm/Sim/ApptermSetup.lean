@@ -57,7 +57,7 @@ theorem appterm_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   refine ⟨nb, after, steps, ?_⟩
   constructor
   · have length : (stackWords c sp count.toInt.toNat).length = count.toInt.toNat := by simp [stackWords]
-    refine ⟨post.good, post.tick, image, Nat.le_refl _, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨post.good, post.tick, image, Nat.le_refl _, ?_, ?_, ?_, ?_, ?_, ?_, ?_, GprsKept.refl _⟩
     · simp only [length, countPositive, ite_true]
       exact post.pcAt
     · simp only [length]
@@ -76,5 +76,6 @@ theorem appterm_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   · exact PinsHold.get post.pins ⟨4, by simp⟩
   · exact fullMemory
   · exact frame
+  · exact dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))
 
 end OCaml.Vm.Sim

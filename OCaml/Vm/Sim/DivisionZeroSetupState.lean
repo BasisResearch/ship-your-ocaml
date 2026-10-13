@@ -40,5 +40,7 @@ structure DivisionZeroSetupPost (code sp env domain : BitVec 64) (before after :
   stack : gpr after 9 = some (divisionZeroEnvSp sp)
   memory : after.σ.mem = writeLog before.σ.mem (divisionZeroSetupLog code sp env domain)
   frame : StepFrameOut ([Register.x1, Register.x8, Register.x9, Register.x15] ++ noiseRegs) before.σ after.σ
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 end OCaml.Vm.Sim

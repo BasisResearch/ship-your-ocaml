@@ -24,7 +24,7 @@ theorem pending_root_summary {sp ra value : BitVec 64} {c : Config} (h : Pending
     exact ret_tgt ra h.aligned
   refine ⟨post.good, image_of_writeLog h.image h.imageOutside memory, post.tick,
     post.pc.trans (congrArg some target), gholds_lookup _ regs (by rfl),
-    gholds_lookup _ regs (by rfl), memory, post.output, ?_⟩
+    gholds_lookup _ regs (by rfl), memory, ⟨post.output, ?_⟩, post.kept (by decide) (by decide)⟩
   intro r outside
   apply post.frame r
   · intro q member

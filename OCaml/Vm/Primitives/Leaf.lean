@@ -39,6 +39,7 @@ theorem leaf_of_blocks {bs : List BBlock} {entry : BitVec 64} {before : Config}
     FnSummary entry (fun c => c = before) (LeafPost before ra value) := by
   have S' := register_of_blocks (writes := [10]) image S hlog hpc hresult
     (fun n hn => List.mem_singleton.mpr (hwrites n hn))
+    (fun n hn => by rw [hwrites n hn]; decide) (fun hn => absurd (hwrites 3 hn) (by decide))
   apply S'.weaken (fun _ h => h)
   intro after h
   refine ⟨h.good, h.image, h.minstret, h.tick, h.pc, h.result, h.memory, h.output, ?_⟩
@@ -48,5 +49,19 @@ theorem leaf_of_blocks {bs : List BBlock} {entry : BitVec 64} {before : Config}
   have he : n = 10 := List.mem_singleton.mp hn
   subst n
   exact Ne.symm hr
+
+/-- A leaf writes only `a0`, which it pins: register presence and `gp` are kept. -/
+theorem LeafPost.kept {before after : Config} {ra value : BitVec 64}
+    (h : LeafPost before ra value after) : GprsKept before after := by
+  have frame : ∀ n, 1 ≤ n → n ≤ 31 → n ≠ 10 → gprGet after.σ n = gprGet before.σ n :=
+    fun n lo hi e => gprGet_of_frame (wrs := [10]) n lo hi (by gpr_cases n => decide)
+      (fun m hm => by
+        rw [List.mem_singleton.mp hm]
+        exact gprReg_beq_false 10 (by decide) n (by omega) (by decide) lo (Ne.symm e))
+      (fun R hn hw => h.frame R (fun eq => by subst eq; exact absurd (hw 10 (by simp)) (by decide)) hn)
+  refine ⟨fun n lo hi p => ?_, frame 3 (by decide) (by decide) (by decide)⟩
+  by_cases e : n = 10
+  · subst e; change (gpr after 10).isSome; rw [h.result]; rfl
+  · rw [frame n lo hi e]; exact p
 
 end OCaml.Vm.Primitives

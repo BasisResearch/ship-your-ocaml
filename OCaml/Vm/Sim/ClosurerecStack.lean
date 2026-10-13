@@ -39,7 +39,8 @@ theorem closurerec_stack {pl : Place} {pc sp count dest a domain : Nat} {targets
   refine ⟨nb, after, steps, post.good, post.tick, image_of_writeLog (log := []) back.image ⟨trivial, trivial⟩ memory, post.pcAt,
     (front.fields.frame back.frame (by decide)).frame frame (by decide),
     (whole.frame Register.x21 (by decide)).trans front.accu, PinsHold.get post.pins ⟨0, by simp⟩, ?_,
-    (front.frame.trans whole).widenChecked (allowed := closurerecMetadataWrites) (by decide)⟩
+    (front.frame.trans whole).widenChecked (allowed := closurerecMetadataWrites) (by decide),
+    front.kept.trans (back.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover)))⟩
   rw [memory, back.memory, show targets.length = (infixGroups pl a (closurerecStackStart sp count) targets).length from
     (infix_groups_length _ _ _ _).symm, grouped_log_complete, front.memory, closurerecFullLog]
   simp only [writeLog_append]

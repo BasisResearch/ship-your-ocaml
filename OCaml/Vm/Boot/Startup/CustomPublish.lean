@@ -140,6 +140,7 @@ theorem custom_publish (c : Config) (kind : CustomKind) (p head ra : BitVec 64)
         (customPublishRegs kind p head)) := by
   apply registers_of_blocks h.image (customPublish_outside kind h.region)
     (block_summary _ _ _ _ _ (customPublish_input kind h))
+    (keys := by cases kind <;> decide) (no3 := by cases kind <;> decide)
   · cases kind <;> simp only [CustomKind.blocks, customPublish0Save,
       customPublish1Save, customPublish2Save,
       customPublish3Save, evalBlocks, evalBlock, SegEvalState.init]

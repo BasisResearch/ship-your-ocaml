@@ -120,7 +120,8 @@ theorem closurerec_first_{kind} {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c
   have localMemory := memory.trans fullMemory
   refine ⟨nb, after, steps, post.good, post.tick, image_of_writeLog front.image space.image localMemory,
     ?_, front.fields.frame frame (by decide), (frame.frame Register.x21 (by decide)).trans front.accu,
-    {get('x9')}, ?_, ?_, (front.frame.trans frame).widenChecked (allowed := closurerecMetadataWrites) (by decide)⟩
+    {get('x9')}, ?_, ?_, (front.frame.trans frame).widenChecked (allowed := closurerecMetadataWrites) (by decide),
+    front.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
   · simp only [{'branch, ite_true' if more else 'branch, Nat.lt_irrefl, ite_false'}]; exact post.pcAt
 {copied}
   · rw [localMemory, front.memory, writeLog_append]

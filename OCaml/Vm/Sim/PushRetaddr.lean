@@ -90,7 +90,8 @@ theorem push_retaddr_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
         (tag64 (BitVec.ofNat 63 s.extra)))) after := by
     refine ⟨post.good, post.pcAt, ?_, PinsHold.get post.pins ⟨0, by simp⟩,
       (frame.frame Register.x21 (by decide)).trans ((dp.frame.frame Register.x21 (by decide)).trans accuReg),
-      memory.trans written, frame.out, fun r hr => frame.frame r (by revert r; decide)⟩
+      memory.trans written, frame.out, fun r hr => frame.frame r (by revert r; decide),
+      GprsKept.of_segment frame post.pins (by seg_cover)⟩
     have pc : gpr after Layout.reg_pc = some
         (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + sign_extend (m := 64) (0x008#12)) :=
       PinsHold.get post.pins ⟨1, by simp⟩

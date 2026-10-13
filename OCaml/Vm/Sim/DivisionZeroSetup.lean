@@ -1,4 +1,5 @@
 import OCaml.Vm.Sim.StackStore
+import OCaml.Vm.Sim.SegmentGprs
 import OCaml.Vm.Sim.DivisionZeroSetupState
 import OCaml.Vm.Sim.DivisionZeroSetupSegment
 import OCaml.Vm.Sim.DivisionZeroSetupPins
@@ -54,6 +55,6 @@ theorem division_zero_setup {code sp env domain : BitVec 64} {c : Config}
   have writes := memory.trans memoryLog
   exact ⟨after, run.toSteps, post.good, image_of_writeLog h.image h.imageOutside writes,
     post.tick, post.pcAt, PinsHold.get post.pins ⟨0, by simp⟩, PinsHold.get post.pins ⟨1, by simp⟩,
-    writes, frame.widenChecked (by decide)⟩
+    writes, frame.widenChecked (by decide), GprsKept.of_segment frame post.pins (by seg_cover)⟩
 
 end OCaml.Vm.Sim

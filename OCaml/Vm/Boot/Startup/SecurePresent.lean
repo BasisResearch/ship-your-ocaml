@@ -59,6 +59,6 @@ theorem secure_getenv_present (c : Config) (sp env entry name ra s0 s1 s2 s3 s4 
   have effects := (prepared.toEffectPost.trans post.toEffectPost).widen
     (writes' := [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
   refine ⟨⟨effects.good, effects.image, effects.minstret, effects.tick, effects.pc,
-    effects.result, ?_, effects.output, effects.frame⟩, post.regs⟩
+    effects.result, ?_, effects.output, effects.frame, effects.kept⟩, post.regs⟩
   rw [post.memory, prepared.memory, securePresentLog, writeLog_append]
 end OCaml.Vm.Boot.Startup

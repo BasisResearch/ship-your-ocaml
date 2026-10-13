@@ -53,6 +53,8 @@ structure ClosurerecInitialized (before : Config) (pl : Place) (pc sp functions 
   copyRegisters : 0 < count → ClosurerecCopyRegisters a functions count after
   memory : after.σ.mem = writeLog before.σ.mem (closurerecSetupLog sp functions count a domain accuWord)
   frame : StepFrameOut closurerecSetupWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 theorem ClosurerecInitialized.copy_start {before after : Config} {pl : Place}
     {pc sp functions count a domain : Nat} {accu : BitVec 64}
@@ -61,7 +63,7 @@ theorem ClosurerecInitialized.copy_start {before after : Config} {pl : Place}
       (closureWords before sp count accu) after 0 after := by
   have regs := front.copyRegisters positive
   refine ⟨front.good, front.tick, front.image, Nat.zero_le _, ?_, front.fields.sourceReg, ?_, ?_, rfl,
-    (StepFrameOut.refl after.σ).widenChecked (allowed := closurerecCopyWrites) (by decide)⟩
+    (StepFrameOut.refl after.σ).widenChecked (allowed := closurerecCopyWrites) (by decide), GprsKept.refl _⟩
   · simpa only [closure_words_length, positive, ite_true] using front.pcAt
   · simpa only [Nat.mul_zero, Nat.add_zero] using regs.cursor
   · change gpr after 11 = some (BitVec.ofNat 64 (closurerecCaptureBase a functions + 8 * (closureWords before sp count accu).length))

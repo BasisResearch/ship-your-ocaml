@@ -59,7 +59,7 @@ theorem find_prelude (c : Config) (sp reent name offset env ra s1 s2 s3 s4 s5 s6
   have effects := ((locked.toEffectPost.trans started.toEffectPost).trans scanned.toEffectPost).widen
     (writes' := [1, 2, 9, 10, 12, 14, 15, 18, 19, 21, 22]) (by decide)
   refine ⟨after, run1.trans (run2.trans run3), ⟨⟨effects.good, effects.image, effects.minstret, effects.tick,
-    effects.pc, effects.result, scanned.memory.trans memoryB, effects.output, effects.frame⟩, ?_⟩⟩
+    effects.pc, effects.result, scanned.memory.trans memoryB, effects.output, effects.frame, effects.kept⟩, ?_⟩⟩
   refine ⟨gholds_lookup (n := 12) _ scanned.regs (by rfl),
     gholds_lookup (n := 14) _ scanned.regs (by rfl), gholds_lookup (n := 15) _ scanned.regs (by rfl), scanned.result,
     (scanned.frame .x9 (by decide) (by decide)).trans (gholds_lookup (n := 9) _ started.regs (by rfl)),

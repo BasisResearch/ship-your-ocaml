@@ -59,6 +59,8 @@ structure InfixAt (pl : Place) (pc a stackStart : Nat) (targets : List Nat) (ini
   regs : InfixRegisters pl pc a stackStart (targets.length + 1) copied c
   memory : c.σ.mem = writeLog initial.σ.mem (groupedLog (infixGroups pl a stackStart targets) copied)
   frame : StepFrameOut infixWrites initial.σ c.σ
+  /-- register presence and `gp` survive the loop so far -/
+  kept : GprsKept initial c
 
 def infixIndex (c : Config) : Nat := ((gpr c 13).getD 0).toNat / 3 - 1
 
@@ -91,6 +93,8 @@ structure InfixPost (pl : Place) (pc a stackStart : Nat) (targets : List Nat) (i
   regs : InfixRegisters pl pc a stackStart (targets.length + 1) (i + 1) after
   memory : after.σ.mem = writeLog before.σ.mem (infixStores pl a stackStart (targets.length + 1) (i + 1) ((targets[i]?).getD 0))
   frame : StepFrameOut infixWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 theorem InfixAt.advance {pl : Place} {pc a stackStart i : Nat} {targets : List Nat}
     {offsets : Nat → BitVec 32} {initial c d : Config} (region : InfixRegion pl pc a stackStart targets offsets initial)
@@ -102,7 +106,7 @@ theorem InfixAt.advance {pl : Place} {pc a stackStart i : Nat} {targets : List N
     simpa only [List.getElem?_eq_getElem bound, Option.getD_some] using post.memory
   obtain ⟨image, fullMemory⟩ := grouped_log_advance gb h.image region.image h.memory memory
   exact ⟨post.good, post.tick, image, by omega, post.pcAt, post.regs, fullMemory,
-    (h.frame.trans post.frame).widenChecked (allowed := infixWrites) (by decide)⟩
+    (h.frame.trans post.frame).widenChecked (allowed := infixWrites) (by decide), h.kept.trans post.kept⟩
 
 /-- The common native counted-loop fold handles continuing and final infix branches. -/
 theorem infix_run_of_branches {pl : Place} {pc a stackStart : Nat} {targets : List Nat}

@@ -25,6 +25,8 @@ structure StackPost (before : Config) (pl : Place) (pc sp : Nat) (w : BitVec 64)
   memory : after.σ.mem = memoryAfter
   output : after.σ.sailOutput = before.σ.sailOutput
   preserved : ∀ r ∈ consumePreserved, after.σ.regs.get? r = before.σ.regs.get? r
+  /-- register presence and `gp` survive the body -/
+  gprs : GprsKept before after
 
 /-- Stack bodies keep the native stack pointer. -/
 theorem StackPost.nativeSp {before after : Config} {pl : Place} {pc sp : Nat} {w : BitVec 64}
@@ -51,7 +53,7 @@ theorem StackPost.loopRegisters {c after : Config} {pl : Place} {pc sp : Nat} {w
     {memoryAfter : Std.ExtHashMap Nat (BitVec 8)}
     (post : StackPost c pl pc sp w memoryAfter after) (loop : LoopRegisters c) :
     LoopRegisters after :=
-  loopRegisters_frame (fun r hr => post.preserved r (by revert r; decide)) loop
+  loopRegisters_frame (fun r hr => post.preserved r (by revert r; decide)) loop post.gprs
 
 /-- Transport the shared body observations through dispatch's complete frame. -/
 theorem StackPost.after_dispatch {before d after : Config} {op : Opcode} {a : BitVec 64}
@@ -60,7 +62,7 @@ theorem StackPost.after_dispatch {before d after : Config} {op : Opcode} {a : Bi
     StackPost before pl pc sp w memoryAfter after :=
   ⟨post.good, post.head, post.code, post.stack, post.accu, post.memory,
     post.output.trans dp.frame.out, fun r hr => (post.preserved r hr).trans
-      (dp.frame.frame r (by revert r; decide))⟩
+      (dp.frame.frame r (by revert r; decide)), dp.gprs.trans post.gprs⟩
 
 /-- Read-only specialization for stack-consuming bodies. -/
 abbrev ConsumeValuePost (before : Config) (pl : Place) (pc sp : Nat) (w : BitVec 64)

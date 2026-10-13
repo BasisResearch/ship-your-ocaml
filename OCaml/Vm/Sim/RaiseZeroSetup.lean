@@ -26,6 +26,8 @@ structure RaiseZeroSetupPost (sp ra value : BitVec 64) (before after : Config) :
   result : gpr after 10 = some value
   memory : after.σ.mem = writeLog before.σ.mem (raiseZeroLog sp ra)
   frame : StepFrameOut ([Register.x1, Register.x2, Register.x10, Register.x15] ++ noiseRegs) before.σ after.σ
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 /-- Execute the zero-divisor frame save, global check call/return and exception load. -/
 theorem raise_zero_setup {sp ra global value : BitVec 64} {c : Config}
@@ -66,7 +68,8 @@ theorem raise_zero_setup {sp ra global value : BitVec 64} {c : Config}
   obtain ⟨after, loadRun, loaded⟩ := (raise_zero_value valueInput).run loadStart ⟨checked.pc, rfl⟩
   have loadedFrame := loaded.toEffectPost.nativeFrame
   refine ⟨after, saveRun.trans (callRun.trans (checkRun.trans loadRun)), loaded.good, loaded.image, loaded.tick,
-    loaded.pc, ?_, loaded.result, loaded.memory.trans loadMemory, ?_⟩
+    loaded.pc, ?_, loaded.result, loaded.memory.trans loadMemory, ?_,
+    save.toEffectPost.kept.trans (called.toEffectPost.kept.trans (checked.kept.trans loaded.toEffectPost.kept))⟩
   · exact (loadedFrame.frame Register.x2 (by decide)).trans
       ((checked.frame.frame Register.x2 (by decide)).trans (gholds_lookup (n := 2) _ called.regs (by rfl)))
   · exact (((save.toEffectPost.nativeFrame.trans called.toEffectPost.nativeFrame).trans checked.frame).trans loadedFrame).widenChecked (by decide)

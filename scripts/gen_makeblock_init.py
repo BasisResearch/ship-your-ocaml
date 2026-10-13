@@ -123,7 +123,8 @@ theorem makeblock_initialize_{kind} {{L : OCaml.Layout}} {{P : Prog}} {{s : St}}
     rw [memory, written, headerWritten, front.memory, makeblockSetupLog, writeLog_append]; rfl
   refine ⟨nb, after, steps, post.good, post.tick, image_of_writeLog h.dispatch.image setupImage fullMemory,
     ?_, {get('x11')}, ?_, ?_, ?_, fullMemory,
-    (front.frame.trans frame).widenChecked (allowed := makeblockSetupWrites) (by decide)⟩
+    (front.frame.trans frame).widenChecked (allowed := makeblockSetupWrites) (by decide),
+    front.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
   · simp only [{'branch, ite_true' if more else 'branch, Nat.lt_irrefl, ite_false'}]; exact post.pcAt
   · exact (frame.frame Register.x9 (by decide)).trans ((front.frame.frame Register.x9 (by decide)).trans h.spReg)
   · exact (frame.frame Register.x26 (by decide)).trans front.nextCode

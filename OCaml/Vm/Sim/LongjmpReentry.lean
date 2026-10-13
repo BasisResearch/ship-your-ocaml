@@ -39,7 +39,7 @@ theorem longjmp_reentry {buffer nativeSp : Nat} {saved : Nat → BitVec 64}
   obtain ⟨count, after, run, post⟩ := reentry_quiet input
   refine ⟨after, jumpRun.trans run.toSteps,
     post.toReentryControl.before_read jump.memory jump.frame.out (jump.frame.frame _ (by decide))
-      (jump.frame.frame (gprReg 3) (by decide)), ?_⟩
+      jump.kept, ?_⟩
   exact (jump.frame.trans post.frame).widenChecked (by decide)
 
 end OCaml.Vm.Sim

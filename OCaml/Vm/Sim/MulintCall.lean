@@ -32,12 +32,16 @@ structure MulintReturn (before : Config) (pl : Place) (pc sp : Nat)
 theorem mulint_callee {before : Config} {pl : Place} {pc sp : Nat} {m n : BitVec 63} :
     Vsa.Logic.Triple (MulintCall before pl pc sp m n) (MulintReturn before pl pc sp m n) := by
   intro c h
-  obtain ⟨after, run, post⟩ := (muldi3_summary h.toMuldi3Input).run c ⟨h.calleePC, rfl⟩
-  refine ⟨after, run, post.toLeafInput, ?_, post.pc, post.result⟩
-  exact ⟨(post.frame Register.x23 (by decide)).trans h.nextCode,
-    (post.frame Register.x9 (by decide)).trans h.stack,
+  obtain ⟨after, run, a1, a2, a3, post⟩ := (muldi3_registers h.toMuldi3Input).run c ⟨h.calleePC, rfl⟩
+  have fr : ∀ r ∈ [Register.x1, Register.x23, Register.x9] ++ consumePreserved,
+      after.σ.regs.get? r = c.σ.regs.get? r :=
+    fun r hr => post.frame r (by revert r; decide) (by revert r; decide)
+  refine ⟨after, run, ⟨post.good, post.image, post.minstret, (fr Register.x1 (by simp)).trans h.raReg,
+    h.aligned, post.tick⟩, ?_, post.pc, post.result⟩
+  exact ⟨(fr Register.x23 (by simp)).trans h.nextCode,
+    (fr Register.x9 (by simp)).trans h.stack,
     post.memory.trans h.memory, post.output.trans h.output,
-    fun r hr => (post.frame r (by revert r; decide)).trans (h.preserved r hr)⟩
+    fun r hr => (fr r (List.mem_append_right _ hr)).trans (h.preserved r hr), h.gprs.trans post.kept⟩
 
 /-- Retag the libgcc result and restore the interpreter loop observations. -/
 theorem mulint_return {before : Config} {pl : Place} {pc sp : Nat} {m n : BitVec 63} :
@@ -54,7 +58,8 @@ theorem mulint_return {before : Config} {pl : Place} {pc sp : Nat} {m n : BitVec
   refine ⟨after, run.toSteps, post.good, post.pcAt, ?_,
     (frame.frame Register.x9 (by decide)).trans h.stack, ?_,
     memory.trans h.memory, frame.out.trans h.output,
-    fun r hr => (frame.frame r (by revert r; decide)).trans (h.preserved r hr)⟩
+    fun r hr => (frame.frame r (by revert r; decide)).trans (h.preserved r hr),
+    h.gprs.trans (GprsKept.of_segment frame post.pins (by seg_cover))⟩
   · have hp : gpr after Layout.reg_pc = some
         (BitVec.ofNat 64 (pl.codeBase + 4 * pc) + Functions.sign_extend (0x000#12)) :=
       PinsHold.get post.pins ⟨1, by simp⟩

@@ -49,11 +49,14 @@ def htifIdleEqv : Eqv where
     c.σ.regs.get? LeanRV64DExecutable.Register.htif_payload_writes
   transport := fun _ _ _ _ _ _ h f => f.trans h
 
-/-- Presence of the unpinned callee-saved registers: register reads only. -/
-def savedEqv : Eqv where
-  P := fun _ _ c => ∀ n ∈ unpinnedSaved, (gpr c n).isSome
-  Img := fun _ _ _ _ c c' => ∀ n ∈ unpinnedSaved, gpr c' n = gpr c n
-  transport := fun _ _ _ _ _ _ h f n hn => by rw [f n hn]; exact h n hn
+/-- Presence of every integer register: register reads only. -/
+def gprsEqv : Eqv where
+  P := fun _ _ c => OCaml.Vm.Boot.Startup.GprPresent c.σ
+  Img := fun _ _ _ _ c c' => ∀ n, 1 ≤ n → n < 32 → gpr c' n = gpr c n
+  transport := fun _ _ _ _ c c' h f => ⟨fun n lo hi => by
+    have e := f n lo hi
+    simp only [gpr] at e
+    rw [e]; exact h.get n lo hi⟩
 
 /-- Product of the fixed loop-register atoms. -/
 def loopRegistersEqv : Eqv :=
@@ -62,13 +65,13 @@ def loopRegistersEqv : Eqv :=
   Eqv.and (fixedGprEqv Layout.reg_pending (BitVec.ofNat 64 Layout.sym_caml_something_to_do)) <|
   Eqv.and (fixedGprEqv Layout.reg_domain (BitVec.ofNat 64 Layout.sym_Caml_state)) <|
   Eqv.and htifIdleEqv <|
-  Eqv.and savedEqv (fixedGprEqv 3 Vsa.Sim.LibraryLayout.gpV)
+  Eqv.and gprsEqv (fixedGprEqv 3 Vsa.Sim.LibraryLayout.gpV)
 
 /-- Named interface to the product assertion. -/
 theorem loopRegisters_iff (pl : Place) (c : Config) :
     LoopRegisters c ↔ loopRegistersEqv.P pl 0 c :=
-  ⟨fun h => ⟨h.dispatchTable, h.opcodeBound, h.pending, h.domain, h.htifIdle, h.saved, h.gp⟩,
-    fun ⟨table, bound, pending, domain, idle, saved, gp⟩ => ⟨table, bound, pending, domain, idle, saved, gp⟩⟩
+  ⟨fun h => ⟨h.dispatchTable, h.opcodeBound, h.pending, h.domain, h.htifIdle, h.gprs, h.gp⟩,
+    fun ⟨table, bound, pending, domain, idle, gprs, gp⟩ => ⟨table, bound, pending, domain, idle, gprs, gp⟩⟩
 
 /-- Relocation of heap pointers does not change these fixed-address registers. -/
 theorem loopRegisters_reloc {c c' : Config} (μ : Nat → Nat) (pl : Place)

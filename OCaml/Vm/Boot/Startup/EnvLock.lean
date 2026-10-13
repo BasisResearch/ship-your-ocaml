@@ -60,6 +60,7 @@ theorem env_lock_prefix (release : Bool) (c : Config) (ra : BitVec 64) (h : Leaf
       (WriteRegistersPost [10] [] c (lockEntry release) (envLockValue release) [(10, envLockValue release), (1, ra)]) := by
   apply registers_of_blocks h.image (by constructor <;> trivial)
     (block_summary _ _ _ _ _ (envLock_input release h))
+    (keys := by cases release <;> decide) (no3 := by cases release <;> decide)
   · cases release <;> rfl
   · cases release <;> rfl
   · cases release <;> rfl

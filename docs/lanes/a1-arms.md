@@ -155,13 +155,21 @@ take the certificate's `channels`/`openHead`, which give a6-gc's
 `channelsListed` its list head and record links (`links_of_channels`);
 `frame_vm` derives both from its VM windows (`VmWindow.channel`/`openHead`).
 
-Done: `LoopRegisters.gp` (x3 = newlib's `gpV`). Every arm frames it,
-entry takes it from `InterpCaller.gp`, and the raise paths carry it
-(`RaiseContext.gp`, `ReentryControl.gpEq`, `CaughtLogReady.gp`).
-`CcallSetupPost.libraryReady (setup) (gprs)` gives `LibraryReady` at a C_CALL
-entry. GPR presence is still an argument; next is the sweep making it a loop
-field (C_CALL returns rebuild it from a1-prims' `GprsKept`, arms via
-`GprsKept.of_segment`).
+Done: `LoopRegisters` carries `gprs : GprPresent` (all of x1–x31) and
+`gp` (x3 = newlib's `gpV`); `saved` is gone. `CcallSetupPost.libraryReady
+setup : LibraryReady c` at every C_CALL entry, which discharges a1-prims'
+former open field `ccall_entry_gprs`. Presence is carried as
+`GprsKept before after` (presence monotone + `gp` unchanged):
+* `EffectPost.kept` / `BoundaryPost.kept`: block constructors prove it once
+  (`BlockPost.kept`, with `KeysOK`/`3 ∉ wrChain` as autoParam `decide`s);
+* generated segments: `GprsKept.of_segment frame post.pins (by seg_cover)`
+  (`SegmentGprs.lean`), composed with `DispatchPost.gprs`;
+* intermediate arm posts (`AccuPost`, `StackPost`, the Reserved/Init/CopyStart
+  families, `PointerCopyAt`/`IndexedCopyAt`/`BackwardCopyAt`/`InfixAt` loop
+  states, `ArithmeticCallFrame`, `ModifySetup`, signed division, the C-raise
+  chain incl. `NativeRaisePost`, `LongjmpPost.kept`) carry a `kept` field;
+* library summaries with their own presence (`VsaOk.gpr`, `Udivdi3Post`
+  scratch pins, `muldi3_registers`, a6-gc's `Returned.present`) feed it.
 
 Row premises for generic `L`:
 * `MemoryStable L.runtimeOk` and `RuntimeFrame L high dom`; both discharged

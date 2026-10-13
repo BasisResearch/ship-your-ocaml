@@ -41,6 +41,6 @@ theorem division_callee {kind : DivisionKind} {before : Config} {pl : Place} {pc
   exact ⟨(post.frame.frame Register.x23 (by decide)).trans h.nextCode,
     (post.frame.frame Register.x9 (by decide)).trans h.stack,
     post.memory.trans h.memory, post.frame.out.trans h.output,
-    fun r hr => (post.frame.frame r (by revert r; decide)).trans (h.preserved r hr)⟩
+    fun r hr => (post.frame.frame r (by revert r; decide)).trans (h.preserved r hr), h.gprs.trans post.kept⟩
 
 end OCaml.Vm.Sim

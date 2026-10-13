@@ -32,5 +32,7 @@ structure ClosureReserved (before : Config) (pl : Place) (pc sp count a domain :
   header : gpr after 15 = some (BitVec.ofNat 64 (a - 8))
   memory : after.σ.mem = writeLog before.σ.mem (closurePushLog sp count accu ++ grabReserveLog domain a)
   frame : StepFrameOut closureReservationWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 end OCaml.Vm.Sim

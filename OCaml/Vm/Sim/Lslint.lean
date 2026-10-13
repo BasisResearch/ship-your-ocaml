@@ -43,7 +43,8 @@ theorem lslint_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
   obtain ⟨nb, after, _, hb, post⟩ := run read.lower read.upper read.htif d bp
   obtain ⟨_, hm, frame⟩ := post.extra
   refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, ?_, hm, frame.out,
-    fun r hr => frame.frame r ?_⟩
+    fun r hr => frame.frame r ?_,
+    GprsKept.of_segment frame post.pins (by seg_cover)⟩
   · have hp : gpr after Layout.reg_pc = some
         (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) := PinsHold.get post.pins ⟨3, by simp⟩
     simpa only [codePc_succ] using hp

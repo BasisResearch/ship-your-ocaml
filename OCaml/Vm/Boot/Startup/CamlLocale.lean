@@ -32,7 +32,7 @@ theorem caml_locale (c : Config) (sp ra s0 s2 s3 s4 : BitVec 64)
   have effects := ((saved.toEffectPost.trans called.toEffectPost).trans returned.toEffectPost).widen
     (writes' := [1]) (by decide)
   refine ⟨after, run1.trans (run2.trans run3), ⟨⟨effects.good, effects.image, effects.minstret, effects.tick,
-    effects.pc, effects.result, ?_, effects.output, effects.frame⟩, regs⟩⟩
+    effects.pc, effects.result, ?_, effects.output, effects.frame, effects.kept⟩, regs⟩⟩
   have same : after.σ.mem = b.σ.mem := returned.memory
   rw [same, called.memory, saved.memory]
 end OCaml.Vm.Boot.Startup

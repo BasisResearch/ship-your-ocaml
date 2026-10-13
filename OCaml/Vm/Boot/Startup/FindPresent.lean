@@ -64,7 +64,7 @@ theorem findenv_present (c : Config) (sp reent name offset env entry ra s0 s1 s2
   have effects := ((prepared.toEffectPost.trans matched.toEffectPost).trans returned.toEffectPost).widen
     (writes' := [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
   refine ⟨after, run1.trans (run2.trans run3), ⟨⟨effects.good, effects.image, effects.minstret, effects.tick,
-    effects.pc, effects.result, ?_, effects.output, effects.frame⟩, ?_⟩⟩
+    effects.pc, effects.result, ?_, effects.output, effects.frame, effects.kept⟩, ?_⟩⟩
   · rw [returned.memory, memoryB, findPresentLog, writeLog_append]
   · apply (gholds_append _ _).mpr
     exact ⟨returned.regs,

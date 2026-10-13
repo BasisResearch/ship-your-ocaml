@@ -25,6 +25,8 @@ structure ApptermCopyStart (before : Config) (sp count slots : Nat) (after : Con
   base : gpr after 11 = some (BitVec.ofNat 64 (tailcallStart sp count slots))
   memory : after.σ.mem = before.σ.mem
   frame : StepFrameOut apptermSetupWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 /-- Memory-preserving prefix execution transports the original copy snapshot. -/
 theorem ApptermWriteOk.copy_after {P : Prog} {s : St} {c after : Config} {pl : Place} {cp : ChanPlace}

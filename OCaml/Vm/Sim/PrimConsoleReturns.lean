@@ -130,20 +130,12 @@ theorem prim_caml_ml_flush_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64
       (flush_framed setup arg inv valid (consoleRt c setup.input.runtime) console out ofits streamOut
         setup.calleeSaved outside bindings consoleStable sem)
 
-/-- **GPR presence at every C_CALL callee entry** (memmove's `LibraryReady`
-needs it). A named premise: supplied by `setup.input.loop.gprs` once
-`LoopRegisters` carries GPR presence (a1-arms' GPR sweep). -/
-def CcallEntryGprs (L : OCaml.Layout) : Prop :=
-  ∀ (ra : BitVec 64) (args : List Val) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
-    (sp high domain entry : Nat) (env : BitVec 64) (c : Config),
-    CcallSetupPost ra args L P s pl cp sp high domain entry env c → OCaml.Vm.Boot.Startup.GprPresent c.σ
-
 /-- **`caml_ml_output` / `caml_ml_output_bytes` return at a `C_CALL4` site.** -/
 theorem prim_output_returns_at {L : OCaml.Layout} {P : Prog} {ra : BitVec 64} {name : String} {sym : Nat}
     (nameOk : name = "caml_ml_output" ∨ name = "caml_ml_output_bytes")
     (lookup : PrimitiveEntries.lookup name = some sym) (enter : ObEnter sym)
     (consoleStable : ConsoleStable L) (consoleRt : ∀ c, L.runtimeOk c → ConsoleWrite.ConsoleRuntime c)
-    (consoles : OCaml.ConsoleChannels P) (entryGprs : CcallEntryGprs L) :
+    (consoles : OCaml.ConsoleChannels P) :
     PrimReturnsAt L P .C_CALL4 ra 3 name := by
   intro s c0 pl cp sp high table entry value env index v heap world reach ready sem
   obtain ⟨x1, x2, x3, rest, hst⟩ : ∃ x1 x2 x3 rest, s.stack = x1 :: x2 :: x3 :: rest := by
@@ -161,23 +153,23 @@ theorem prim_output_returns_at {L : OCaml.Layout} {P : Prog} {ra : BitVec 64} {n
   obtain ⟨D, l, a, ch, site⟩ := console_site ready setup (by rw [args]; rfl) hc hw
   exact console_callee_summary ready setup site.inv site.valid site.arg rfl (by rw [hshape])
     (output_framed_at nameOk (enter c ra a) setup site.arg site.inv site.valid (consoleRt c setup.input.runtime)
-      (setup.libraryReady (entryGprs _ _ _ _ _ _ _ _ _ _ _ _ setup))
+      setup.libraryReady
       (consoles s reach id chn hw) site.outside site.bindings consoleStable sem0)
 
 /-- **`caml_ml_output` returns at a `C_CALL4` site.** -/
 theorem prim_caml_ml_output_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64}
     (consoleStable : ConsoleStable L) (consoleRt : ∀ c, L.runtimeOk c → ConsoleWrite.ConsoleRuntime c)
-    (consoles : OCaml.ConsoleChannels P) (entryGprs : CcallEntryGprs L) :
+    (consoles : OCaml.ConsoleChannels P) :
     PrimReturnsAt L P .C_CALL4 ra 3 "caml_ml_output" :=
   prim_output_returns_at (Or.inl rfl) PrimitiveEntries.entry_caml_ml_output output_enter
-    consoleStable consoleRt consoles entryGprs
+    consoleStable consoleRt consoles
 
 /-- **`caml_ml_output_bytes` returns at a `C_CALL4` site.** -/
 theorem prim_caml_ml_output_bytes_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64}
     (consoleStable : ConsoleStable L) (consoleRt : ∀ c, L.runtimeOk c → ConsoleWrite.ConsoleRuntime c)
-    (consoles : OCaml.ConsoleChannels P) (entryGprs : CcallEntryGprs L) :
+    (consoles : OCaml.ConsoleChannels P) :
     PrimReturnsAt L P .C_CALL4 ra 3 "caml_ml_output_bytes" :=
   prim_output_returns_at (Or.inr rfl) PrimitiveEntries.entry_caml_ml_output_bytes output_bytes_enter
-    consoleStable consoleRt consoles entryGprs
+    consoleStable consoleRt consoles
 
 end OCaml.Vm.Sim

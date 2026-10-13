@@ -31,6 +31,8 @@ structure NativeRaisePost (log : List WEntry) (saved : Nat → BitVec 64)
   memory : after.σ.mem = writeLog before.σ.mem log
   frame : StepFrameOut ([Register.x1, Register.x10, Register.x11, Register.x13,
     Register.x14, Register.x15] ++ longjmpWrites) before.σ after.σ
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 abbrev RaiseLongjmpPost (domain value : BitVec 64) (saved : Nat → BitVec 64) (before : Config) :=
   NativeRaisePost (raiseBucketLog domain value) saved before
@@ -62,7 +64,8 @@ theorem raise_longjmp {domain value : BitVec 64} {buffer : Nat}
   obtain ⟨after, jumpRun, jump⟩ := (longjmp_summary input).run jumpStart
     ⟨callPost.pc.trans (congrArg some caml_raise_8000ce70_call_target), rfl⟩
   refine ⟨after, prefixRun.trans (callRun.trans jumpRun), jump.good, jump.image, jump.tick,
-    jump.pc, jump.registers, ?_, jump.memory.trans memory, ?_⟩
+    jump.pc, jump.registers, ?_, jump.memory.trans memory, ?_,
+    publish.toEffectPost.kept.trans (callPost.toEffectPost.kept.trans jump.kept)⟩
   · exact jump.value
   · exact ((publish.toEffectPost.nativeFrame.trans callPost.toEffectPost.nativeFrame).trans jump.frame).widenChecked (by decide)
 

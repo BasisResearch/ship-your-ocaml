@@ -76,7 +76,8 @@ theorem backward_copy_{kind} {{source target i : Nat}} {{words : List (BitVec 64
   obtain ⟨_, memory, rawFrame⟩ := post.extra
   have observed : BackwardCopyPost source target i words[i] c after := by
     refine ⟨post.good, post.tick, ?_, {pin('x9')}, {pin('x15')}, {pin('x14')},
-      {pin('x12')}, ?_, ?_⟩
+      {pin('x12')}, ?_, ?_,
+      GprsKept.of_segment rawFrame post.pins (by seg_cover)⟩
     · {pcproof}
     · rw [memory, written]; rfl
     · exact rawFrame.widenChecked (allowed := backwardWrites) (by decide)

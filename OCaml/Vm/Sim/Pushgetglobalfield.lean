@@ -90,7 +90,8 @@ theorem pushgetglobalfield_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Confi
     firstWindow.lower firstWindow.upper firstWindow.htif
     secondWindow.lower secondWindow.upper secondWindow.htif d bp
   obtain ⟨_, hm, frame⟩ := post.extra
-  refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, ?_, hm.trans memoryEq, frame.out, ?_⟩
+  refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, ?_, hm.trans memoryEq, frame.out, ?_,
+    GprsKept.of_segment frame post.pins (by seg_cover)⟩
   · have hp : gpr after Layout.reg_pc = some
         (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 12#64) :=
       PinsHold.get post.pins ⟨2, by simp⟩

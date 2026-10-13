@@ -57,6 +57,7 @@ theorem return_stub (kind : ReturnStub) (c : Config) (ra value : BitVec 64) (h :
       (WriteRegistersPost [] [] c ra value [(1, ra), (10, value)]) := by
   apply registers_of_blocks h.image (by constructor <;> trivial)
     (block_summary _ _ _ _ _ (returnStub_input kind h valueReg))
+    (keys := by cases kind <;> decide) (no3 := by cases kind <;> decide)
   · cases kind <;> rfl
   · cases kind <;> exact ret_tgt ra h.aligned
   · cases kind <;> rfl

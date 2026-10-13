@@ -51,5 +51,7 @@ structure ClosurePrefixed (before : Config) (pl : Place) (pc sp count : Nat)
   fields : ClosureFields pl pc sp count after
   memory : after.σ.mem = writeLog before.σ.mem (closurePushLog sp count accu)
   frame : StepFrameOut closurePrefixWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 end OCaml.Vm.Sim

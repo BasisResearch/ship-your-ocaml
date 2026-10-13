@@ -120,7 +120,8 @@ theorem {family}_prefix_{kind} {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c 
     {memory}
   refine ⟨nb, after, steps, post.good, post.tick, image_of_writeLog h.dispatch.image space.image fullMemory,
     post.pcAt, {metadata}, fullMemory,
-    (dp.frame.trans rawFrame).widenChecked (allowed := {family}PrefixWrites) (by decide)⟩
+    (dp.frame.trans rawFrame).widenChecked (allowed := {family}PrefixWrites) (by decide),
+    dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
   · simp only [closureSource, {'branch, ite_true' if more else 'empty, ite_false'}]
     exact {get('x23')}
 

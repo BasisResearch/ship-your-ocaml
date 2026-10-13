@@ -17,8 +17,8 @@ structure LoopSetupInput (c : Config) : Prop where
   tick : c.tick < 2
   pc : pcOf c = some (0x80001f40#64)
   htifIdle : c.σ.regs.get? Register.htif_payload_writes = some 0#4
-  /-- the unpinned callee-saved registers hold values -/
-  saved : ∀ n ∈ unpinnedSaved, (gpr c n).isSome
+  /-- every integer register holds a value -/
+  gprs : OCaml.Vm.Boot.Startup.GprPresent c.σ
   /-- the C runtime's global pointer -/
   gp : gpr c 3 = some Vsa.Sim.LibraryLayout.gpV
 

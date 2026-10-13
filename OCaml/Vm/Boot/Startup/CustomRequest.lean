@@ -76,6 +76,7 @@ theorem custom_request (c : Config) (kind : CustomLater) (sp ra : BitVec 64)
       (WriteRegistersPost [10] [] c kind.call.pc 16#64 (customRequestRegs sp)) := by
     apply registers_of_blocks leaf.image (by constructor <;> trivial)
       (block_summary _ _ _ _ _ (customRequest_input kind leaf regs))
+      (keys := by cases kind <;> decide) (no3 := by cases kind <;> decide)
     · cases kind <;> rfl
     · cases kind <;> rfl
     · cases kind <;> rfl

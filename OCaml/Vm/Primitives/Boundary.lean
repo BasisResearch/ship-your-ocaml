@@ -23,6 +23,8 @@ structure BoundaryPost (writes : List Nat) (before : Config) (ra pc : BitVec 64)
   output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ r : Register, (∀ n ∈ writes, gprReg n ≠ r) →
     (∀ q ∈ noiseRegs, (q == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 /-- One packaging rule for every generated read-only CFG block. -/
 theorem boundary_of_blocks {bs entry before L loads writes ra pc regs}
@@ -32,7 +34,9 @@ theorem boundary_of_blocks {bs entry before L loads writes ra pc regs}
     (hpc : evalBlocksPC entry (SegEvalState.init L loads) bs = pc)
     (hregs : ∀ σ, GHolds σ (evalBlocks bs (SegEvalState.init L loads)).regs → GHolds σ regs)
     (hwrites : ∀ n ∈ wrChain bs, n ∈ writes)
-    (hra : ∀ n ∈ writes, gprReg n ≠ gprReg 1) :
+    (hra : ∀ n ∈ writes, gprReg n ≠ gprReg 1)
+    (keys : KeysOK (wrChain bs) := by first | decide | exact of_decide_eq_true rfl)
+    (no3 : 3 ∉ wrChain bs := by first | decide | exact of_decide_eq_true rfl) :
     FnSummary entry (fun c => c = before) (BoundaryPost writes before ra pc regs) := by
   apply S.weaken (fun _ h => h)
   intro after post
@@ -47,7 +51,8 @@ theorem boundary_of_blocks {bs entry before L loads writes ra pc regs}
     regs := hregs _ post.regs
     memory := memory
     output := post.output
-    frame := frame }
+    frame := frame
+    kept := post.kept keys no3 }
   · exact ⟨fun i hi => by rw [memory]; exact h.image.text i hi,
       fun i hi => by rw [memory]; exact h.image.rodata i hi,
       fun i hi => by rw [memory]; exact h.image.impure i hi⟩
@@ -61,13 +66,14 @@ theorem BoundaryPost.then {writes before mid after ra pc pc' regs regs'}
   { h' with
     memory := h'.memory.trans h.memory
     output := h'.output.trans h.output
-    frame := fun r hr hn => (h'.frame r hr hn).trans (h.frame r hr hn) }
+    frame := fun r hr hn => (h'.frame r hr hn).trans (h.frame r hr hn)
+    kept := h.kept.trans h'.kept }
 
 theorem BoundaryPost.finish {writes before after ra regs value}
     (h : BoundaryPost writes before ra ra regs after)
     (result : lookupG 10 regs = some value) : RegisterPost writes before ra value after :=
   ⟨h.good, h.image, h.minstret, h.tick, h.pc, gholds_lookup _ h.regs result,
-    h.memory, h.output, h.frame⟩
+    h.memory, h.output, h.frame, h.kept⟩
 
 /-- Forget surplus symbolic registers at a join. -/
 theorem BoundaryPost.select {writes before after ra pc source target}

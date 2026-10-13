@@ -48,9 +48,6 @@ theorem constant_contract {runtimeOk : Config → Prop} (stable : MemoryStable r
   · exact (post.frame (gprReg Layout.reg_domain) (by decide) (by decide)).trans h.loop.domain
   · exact (post.frame Register.htif_payload_writes (by decide) (by decide)).trans
       h.loop.htifIdle
-  · intro n hn
-    rw [forall_saved (P := fun n => gpr after n = gpr c n)
-      (post.frame (gprReg 26) (by decide) (by decide)) (post.frame (gprReg 27) (by decide) (by decide)) n hn]
-    exact h.loop.saved n hn
+  · exact post.kept.gprPresent h.loop.gprs
 
 end OCaml.Vm.Primitives

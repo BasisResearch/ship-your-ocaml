@@ -106,7 +106,8 @@ theorem makeblock_initialize_more {L : OCaml.Layout} {P : Prog} {s : St} {c d : 
     rw [memory, written, headerWritten, front.memory, makeblockSetupLog, writeLog_append]; rfl
   refine ⟨nb, after, steps, post.good, post.tick, image_of_writeLog h.dispatch.image setupImage fullMemory,
     ?_, PinsHold.get post.pins ⟨4, by simp⟩, ?_, ?_, ?_, fullMemory,
-    (front.frame.trans frame).widenChecked (allowed := makeblockSetupWrites) (by decide)⟩
+    (front.frame.trans frame).widenChecked (allowed := makeblockSetupWrites) (by decide),
+    front.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
   · simp only [branch, ite_true]; exact post.pcAt
   · exact (frame.frame Register.x9 (by decide)).trans ((front.frame.frame Register.x9 (by decide)).trans h.spReg)
   · exact (frame.frame Register.x26 (by decide)).trans front.nextCode

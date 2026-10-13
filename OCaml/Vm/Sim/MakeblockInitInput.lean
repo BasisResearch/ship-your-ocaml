@@ -39,6 +39,8 @@ structure MakeblockInitialized (before : Config) (pl : Place) (pc sp count tag a
   copyRegisters : 1 < count → MakeblockCopyRegisters sp count a after
   memory : after.σ.mem = writeLog before.σ.mem (makeblockSetupLog domain a count tag accu)
   frame : StepFrameOut makeblockSetupWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 theorem MakeblockInitialized.copy_start {before after : Config} {pl : Place}
     {pc sp count tag a domain : Nat} {accu : BitVec 64}
@@ -46,7 +48,7 @@ theorem MakeblockInitialized.copy_start {before after : Config} {pl : Place}
     (more : 1 < count) :
     MakeblockCopyAt sp (a + 8) (stackWords before sp (count - 1)) after 0 after := by
   have regs := front.copyRegisters more
-  refine ⟨front.good, front.tick, front.image, by omega, ?_, ?_, ?_, ?_, ?_, (StepFrameOut.refl after.σ).widenChecked (allowed := cursorCopyWrites) (by decide)⟩
+  refine ⟨front.good, front.tick, front.image, by omega, ?_, ?_, ?_, ?_, ?_, (StepFrameOut.refl after.σ).widenChecked (allowed := cursorCopyWrites) (by decide), GprsKept.refl _⟩
   · simpa only [stackWords, List.length_map, List.length_range,
       show 0 < count - 1 by omega, more, ite_true] using front.pcAt
   · simpa only [cursorCopyShape, PointerCopyShape.sourceWord, Bool.false_eq_true,

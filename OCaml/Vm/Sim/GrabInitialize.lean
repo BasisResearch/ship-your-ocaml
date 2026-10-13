@@ -81,7 +81,7 @@ theorem grab_initialize {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   refine ⟨nb, after, steps, ?_⟩
   constructor
   · have length : (stackWords c sp (1 + s.extra)).length = 1 + s.extra := by simp [stackWords]
-    refine ⟨post.good, post.tick, image, Nat.zero_le _, ?_, ?_, ?_, ?_, rfl, ?_⟩
+    refine ⟨post.good, post.tick, image, Nat.zero_le _, ?_, ?_, ?_, ?_, rfl, ?_, GprsKept.refl _⟩
     · simp only [length, show 0 < 1 + s.extra by omega, ite_true]; exact post.pcAt
     · simp only [Nat.mul_zero, Nat.add_zero]; exact PinsHold.get post.pins ⟨1, by simp⟩
     · simp only [Nat.mul_zero, Nat.add_zero]; exact PinsHold.get post.pins ⟨0, by simp⟩
@@ -93,5 +93,6 @@ theorem grab_initialize {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   · exact (frame.frame Register.x16 (by decide)).trans front.bytes
   · exact fullMemory
   · exact (front.frame.trans frame).widenChecked (allowed := grabSetupWrites) (by decide)
+  · exact front.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))
 
 end OCaml.Vm.Sim

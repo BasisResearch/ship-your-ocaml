@@ -43,7 +43,8 @@ theorem closure_prefix_zero {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config
     simp only [closurePushLog, empty, ite_false]; exact memory.trans dp.memory
   refine ⟨nb, after, steps, post.good, post.tick, image_of_writeLog h.dispatch.image space.image fullMemory,
     post.pcAt, ⟨nursery, PinsHold.get post.pins ⟨3, by simp⟩, PinsHold.get post.pins ⟨1, by simp⟩, PinsHold.get post.pins ⟨2, by simp⟩, ?_⟩, fullMemory,
-    (dp.frame.trans rawFrame).widenChecked (allowed := closurePrefixWrites) (by decide)⟩
+    (dp.frame.trans rawFrame).widenChecked (allowed := closurePrefixWrites) (by decide),
+    dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
   · simp only [closureSource, empty, ite_false]
     exact PinsHold.get post.pins ⟨0, by simp⟩
 

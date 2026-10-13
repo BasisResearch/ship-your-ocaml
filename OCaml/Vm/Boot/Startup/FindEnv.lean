@@ -57,7 +57,7 @@ theorem findenv_empty (c : Config) (sp reent name offset env ra s1 s2 s3 s4 s5 s
   have effects := ((prepared.toEffectPost.trans missing.toEffectPost).trans post.toEffectPost).widen
     (writes' := [1, 2, 9, 10, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
   refine ⟨after, run1.trans (run2.trans run3), ⟨⟨effects.good, effects.image, effects.minstret, effects.tick,
-    effects.pc, effects.result, post.memory.trans memoryB, effects.output, effects.frame⟩, ?_⟩⟩
+    effects.pc, effects.result, post.memory.trans memoryB, effects.output, effects.frame, effects.kept⟩, ?_⟩⟩
   apply (gholds_append _ _).mpr
   exact ⟨post.regs,
     (post.frame .x12 (by decide) (by decide)).trans ((missing.frame .x12 (by decide) (by decide)).trans (gholds_lookup (n := 12) _ prepared.regs (by rfl))),

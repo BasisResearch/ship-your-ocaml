@@ -2,7 +2,7 @@ import OCaml.Vm.Sim.MakeblockInput
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
-open Vsa.Machine Vsa.Sim LeanRV64DExecutable
+open Vsa.Machine Vsa.Sim LeanRV64DExecutable OCaml.Vm.Primitives
 
 def makeblockReserveWrites : List Register :=
   [Register.x8, Register.x11, Register.x12, Register.x13, Register.x14,
@@ -21,5 +21,7 @@ structure MakeblockReserved (before : Config) (pl : Place) (pc count a domain : 
   nextCode : gpr after 26 = some (BitVec.ofNat 64 (pl.codeBase + 4 * (pc + 3)))
   memory : after.σ.mem = writeLog before.σ.mem (grabReserveLog domain a)
   frame : StepFrameOut makeblockReserveWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 end OCaml.Vm.Sim

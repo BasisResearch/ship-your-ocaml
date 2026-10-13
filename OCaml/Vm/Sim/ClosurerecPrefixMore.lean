@@ -73,7 +73,8 @@ theorem closurerec_prefix_more {L : OCaml.Layout} {P : Prog} {s : St} {c d : Con
     rw [memory, written, dp.memory]; simp only [closurePushLog, branch, ite_true]; rfl
   refine ⟨nb, after, steps, post.good, post.tick, image_of_writeLog h.dispatch.image space.image fullMemory,
     post.pcAt, ⟨positive, nursery, PinsHold.get post.pins ⟨6, by simp⟩, PinsHold.get post.pins ⟨3, by simp⟩, PinsHold.get post.pins ⟨4, by simp⟩, PinsHold.get post.pins ⟨5, by simp⟩, ?_⟩, PinsHold.get post.pins ⟨2, by simp⟩, fullMemory,
-    (dp.frame.trans rawFrame).widenChecked (allowed := closurerecPrefixWrites) (by decide)⟩
+    (dp.frame.trans rawFrame).widenChecked (allowed := closurerecPrefixWrites) (by decide),
+    dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
   · simp only [closureSource, branch, ite_true]
     exact PinsHold.get post.pins ⟨0, by simp⟩
 

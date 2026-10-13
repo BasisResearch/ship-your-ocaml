@@ -60,6 +60,6 @@ theorem parameter_query (fallback : Bool) (c : Config) (sp env ra s0 s1 s2 s3 s4
   have effects := called.toEffectPost.trans post.toEffectPost
   have widened := effects.widen (writes' := [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
   refine ⟨⟨widened.good, widened.image, widened.minstret, widened.tick, widened.pc,
-    widened.result, ?_, widened.output, widened.frame⟩, post.regs⟩
+    widened.result, ?_, widened.output, widened.frame, widened.kept⟩, post.regs⟩
   rw [post.memory, called.memory]
 end OCaml.Vm.Boot.Startup

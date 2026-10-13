@@ -94,6 +94,6 @@ theorem parse_parameters_present_empty (c : Config) (sp env entry ra s0 s1 s2 s3
   have effects := ((prepared.toEffectPost.trans queried.toEffectPost).trans returned.toEffectPost).widen
     (writes' := [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
   refine ⟨after, run1.trans (run2.trans run3), ⟨⟨effects.good, effects.image, effects.minstret, effects.tick,
-    effects.pc, effects.result, ?_, effects.output, effects.frame⟩, (gholds_append _ _).mpr ⟨returned.regs, kept⟩⟩⟩
+    effects.pc, effects.result, ?_, effects.output, effects.frame, effects.kept⟩, (gholds_append _ _).mpr ⟨returned.regs, kept⟩⟩⟩
   rw [returned.memory, memoryB, parameterPresentLog, writeLog_append]
 end OCaml.Vm.Boot.Startup

@@ -341,6 +341,8 @@ structure BarrierDone (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : 
   /-- the integer registers outside `barrierClobber` are kept -/
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ barrierClobber → gprGet after.σ n = gprGet before.σ n
   htifIdle : after.σ.regs.get? Register.htif_payload_writes = some 0#4
+  /-- complete register presence survives the call -/
+  present : OCaml.Vm.Boot.Startup.GprPresent before.σ → OCaml.Vm.Boot.Startup.GprPresent after.σ
 
 /-- The native frame store misses the invocation and lies in the native
 scratch window. -/
@@ -410,7 +412,7 @@ theorem barrier_core {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : C
         simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
         simp only [barrierClobber, List.mem_cons, List.not_mem_nil, or_false]
         omega)),
-      (ret.frame _ (by decide) (by decide)).trans input.loop.htifIdle⟩
+      (ret.frame _ (by decide) (by decide)).trans input.loop.htifIdle, ret.present⟩
   -- the frame store, shared by both major paths
   have major : ∀ c2 : Config, c2.σ.mem = writeLog c.σ.mem (Gc.Barrier.majorLog
       (BitVec.ofNat 64 D.nativeSp) ra (BitVec.ofNat 64 (a + 8 * i)) value) →
@@ -524,11 +526,7 @@ theorem modify_return_of_done {L : OCaml.Layout} {P : Prog} {s s' target : St} {
           pending := (keep _ (by decide) (by decide) (by decide)).trans input.loop.pending
           domain := (keep _ (by decide) (by decide) (by decide)).trans input.loop.domain
           htifIdle := done.htifIdle
-          saved := fun n hn => by
-            simp only [unpinnedSaved, List.mem_cons, List.not_mem_nil, or_false] at hn
-            rcases hn with rfl | rfl
-            · rw [keep 26 (by decide) (by decide) (by decide)]; exact input.loop.saved 26 (by decide)
-            · rw [keep 27 (by decide) (by decide) (by decide)]; exact input.loop.saved 27 (by decide)
+          gprs := done.present input.loop.gprs
           gp := (keep 3 (by decide) (by decide) (by decide)).trans input.loop.gp }
       tick := done.tick
       returnPC := done.pc

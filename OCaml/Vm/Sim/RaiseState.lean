@@ -21,8 +21,9 @@ structure RaiseContext (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp :
   native : NativePlaced c
   /-- the HTIF device is idle (the loop registers' fact, carried to the handler) -/
   htifIdle : c.σ.regs.get? Register.htif_payload_writes = some 0#4
-  /-- `s10` holds a value (the loop registers' fact, carried to the handler) -/
-  saved : ∀ n ∈ unpinnedSaved, (gpr c n).isSome
+  /-- every integer register holds a value (the loop registers' fact, carried
+  to the handler) -/
+  gprs : OCaml.Vm.Boot.Startup.GprPresent c.σ
   /-- the C runtime's global pointer -/
   gp : gpr c 3 = some Vsa.Sim.LibraryLayout.gpV
 
@@ -54,13 +55,13 @@ theorem RaiseContext.after_read {L : OCaml.Layout} {P : Prog} {s : St} {pl : Pla
     (accu : gpr after Layout.reg_accu = gpr c Layout.reg_accu)
     (nativeSp : gpr after 2 = gpr c 2)
     (htif : after.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes)
-    (saved : ∀ n ∈ unpinnedSaved, gpr after n = gpr c n) (gpEq : gpr after 3 = gpr c 3) :
+    (kept : GprsKept c after) :
     RaiseContext L P s pl cp sp high dest link env extra rest after := by
   refine ⟨h.data.frame memory out, h.bindings.frame memory,
     ⟨good, image_of_writeLog (log := []) h.platform.image ⟨trivial, trivial⟩ memory,
       stable c after memory h.platform.runtime⟩, h.frame, ?_, tick,
     h.geometry.same rfl rfl memory, h.native.frame_read memory nativeSp, htif.trans h.htifIdle,
-    saved_keep saved h.saved, gpEq.trans h.gp⟩
+    kept.gprPresent h.gprs, kept.gp.trans h.gp⟩
   obtain ⟨w, reg, value⟩ := h.accu
   exact ⟨w, accu.trans reg, value⟩
 

@@ -116,7 +116,9 @@ theorem indirect_registers_summary {a : IndirectCallInstr} (shape : IndirectShap
       result := gholds_lookup _ post.registers resultReg
       memory := memory
       output := post.output
-      frame := fun r hr hn => post.frame r hn (by simp [wrChain]) (beq_eq_false_iff_ne.mpr (hr 1 (by simp))) }
+      frame := fun r hr hn => post.frame r hn (by simp [wrChain]) (beq_eq_false_iff_ne.mpr (hr 1 (by simp)))
+      kept := GprsKept.of_x1 (by change (after.σ.regs.get? Register.x1).isSome = true; rw [post.ra]; rfl)
+        (fun R hn h1 => post.frame R hn (by simp [wrChain]) h1) }
     regs := ⟨post.ra, post.registers⟩ }
 
 end OCaml.Vm.Primitives

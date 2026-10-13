@@ -86,5 +86,5 @@ theorem parse_parameters_empty (c : Config) (sp env ra s0 s1 s2 s3 s4 s5 s6 : Bi
   have widened := effects.widen (writes' := [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
   exact ⟨after, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans run6)))),
     ⟨⟨widened.good, widened.image, widened.minstret, widened.tick, widened.pc, widened.result,
-      post.memory.trans memoryF, widened.output, widened.frame⟩, (gholds_append _ _).mpr ⟨post.regs, kept⟩⟩⟩
+      post.memory.trans memoryF, widened.output, widened.frame, widened.kept⟩, (gholds_append _ _).mpr ⟨post.regs, kept⟩⟩⟩
 end OCaml.Vm.Boot.Startup

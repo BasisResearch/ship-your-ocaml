@@ -38,6 +38,7 @@ theorem grab_finish {L : OCaml.Layout} {P : Prog} {s : St} {c middle d : Config}
     (copied.frame.frame Register.x16 (by decide)).trans front.bytes
   have loop : LoopRegisters d := loopRegisters_frame (fun r hr =>
     (copied.frame.frame r (by revert r; decide)).trans (front.frame.frame r (by revert r; decide))) h.dispatch.loop
+    (front.kept.trans copied.kept)
   have valueAddress : BitVec.ofNat 64 (a - 8) + sign_extend (m := 64) (0x008#12) = BitVec.ofNat 64 a := by
     change BitVec.ofNat 64 (a - 8) + BitVec.ofNat 64 8 = _
     rw [← BitVec.ofNat_add]; congr 1; have room := space.nursery.room; omega
@@ -125,6 +126,7 @@ theorem grab_finish {L : OCaml.Layout} {P : Prog} {s : St} {c middle d : Config}
         (Sail.BitVec.extractLsb (0x01#6) 5 0)) := PinsHold.get post.pins ⟨0, by simp⟩
       simpa only [grabState, longVal_native, longVal_nonnegative savedExtra savedNonnegative] using untagged
     · exact loopRegisters_frame (fun r hr => frame.frame r (by revert r; decide)) loop
+        (GprsKept.of_segment rawFrame post.pins (by seg_cover))
   exact ⟨nb, after, steps, grab_restore runtime h.toVmReprAt h.running.platform stack space.allocation
     (grab_allocation_layout h.toVmReprAt space environment stack observations.memory) observations h.geometry h.native⟩
 

@@ -51,7 +51,7 @@ theorem division_zero (kind : DivisionKind) {code sp env domain nativeSp global 
   obtain ⟨middle, selectRun, post⟩ := (division_zero_select kind select).run c ⟨pc, rfl⟩
   obtain ⟨after, raiseRun, raised⟩ := (division_zero_native (h.after_select post)).run middle ⟨post.pc, rfl⟩
   refine ⟨after, selectRun.trans raiseRun, raised.good, raised.image, raised.tick, raised.pc,
-    raised.registers, raised.result, ?_, ?_⟩
+    raised.registers, raised.result, ?_, ?_, post.kept.trans raised.kept⟩
   · simpa only [post.memory] using raised.memory
   · exact (post.frame.trans raised.frame).widenChecked (by decide)
 

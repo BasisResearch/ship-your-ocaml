@@ -98,7 +98,8 @@ theorem infix_{kind} {{pl : Place}} {{pc a stackStart i : Nat}} {{targets : List
   obtain ⟨_, memory, rawFrame⟩ := post.extra
   have observed : InfixPost pl pc a stackStart targets i c after := by
     refine ⟨post.good, post.tick, ?_, ⟨{get('x13')}, {get('x15')}, {get('x11')}, {get('x8')}, {get('x12')}, {get('x16')}, {get('x10')}⟩, ?_,
-      rawFrame.widenChecked (allowed := infixWrites) (by decide)⟩
+      rawFrame.widenChecked (allowed := infixWrites) (by decide),
+      GprsKept.of_segment rawFrame post.pins (by seg_cover)⟩
     · simp only [{'branch, ite_true' if more else 'branch, Nat.lt_irrefl, ite_false'}]; exact post.pcAt
     · simpa only [List.getElem?_eq_getElem bound, Option.getD_some] using memory.trans fullMemory
   exact ⟨nb, after, steps, h.advance region bound observed⟩

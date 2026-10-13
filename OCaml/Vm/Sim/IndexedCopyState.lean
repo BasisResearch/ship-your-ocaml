@@ -56,6 +56,8 @@ structure IndexedCopyAt (shape : IndexedCopyShape) (source target : Nat)
   limit : gpr c shape.limitReg = some (BitVec.ofNat 64 (words.length + shape.bias))
   memory : c.σ.mem = writeLog initial.σ.mem (forwardCopyLog (shape.targetStart target) words copied)
   frame : StepFrameOut shape.writes initial.σ c.σ
+  /-- register presence and `gp` survive the loop so far -/
+  kept : GprsKept initial c
 
 def indexedCopyIndex (shape : IndexedCopyShape) (c : Config) : Nat :=
   ((gpr c shape.counterReg).getD 0).toNat - shape.bias
@@ -87,6 +89,8 @@ structure IndexedCopyPost (shape : IndexedCopyShape) (source target count copied
   limit : gpr after shape.limitReg = some (BitVec.ofNat 64 (count + shape.bias))
   memory : after.σ.mem = writeLog before.σ.mem [(shape.targetStart target + 8 * copied, 8, value)]
   frame : StepFrameOut shape.writes before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 theorem IndexedCopyAt.advance {shape : IndexedCopyShape} {source target i : Nat}
     {words : List (BitVec 64)} {initial c d : Config}
@@ -97,7 +101,8 @@ theorem IndexedCopyAt.advance {shape : IndexedCopyShape} {source target i : Nat}
   obtain ⟨image, memory⟩ := forward_copy_memory_step bound h.image region.image h.memory post.memory
   exact ⟨post.good, post.tick, image, by omega, post.pc, post.sourceReg, post.targetReg,
     post.counter, post.limit, memory,
-    (h.frame.trans post.frame).widen (by intro r hr; simpa only [List.mem_append, or_self] using hr)⟩
+    (h.frame.trans post.frame).widen (by intro r hr; simpa only [List.mem_append, or_self] using hr),
+    h.kept.trans post.kept⟩
 
 theorem indexed_copy_loop {shape : IndexedCopyShape} {source target : Nat}
     {words : List (BitVec 64)} {initial : Config}

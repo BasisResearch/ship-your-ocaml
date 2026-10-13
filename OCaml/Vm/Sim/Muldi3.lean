@@ -67,15 +67,25 @@ theorem muldi3_registers {before : Config} {x y ra : BitVec 64}
       input.tick, fun _ _ => rfl⟩, input.aligned⟩
   obtain ⟨after, run, post, a1, a2, a3, h1, h2, h3⟩ := muldi3_spec_present _ x y ra _ _ c pre
   have named := muldi3_post_named input post
+  have frame : ∀ r : Register, (∀ n ∈ [10, 11, 12, 13], gprReg n ≠ r) →
+      (∀ q ∈ noiseRegs, (q == r) = false) → after.σ.regs.get? r = c.σ.regs.get? r := by
+    intro r written noise
+    apply named.frame r
+    have w : ∀ n ∈ [10, 11, 12, 13], (gprReg n == r) = false := fun n hn => beq_eq_false_iff_ne.mpr (written n hn)
+    simp only [noiseRegs, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, forall_eq] at noise
+    simp only [List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, forall_eq] at w
+    obtain ⟨w10, w11, w12, w13⟩ := w
+    obtain ⟨minstret, pc, nextPC, increment, mcycle, mtime, mip⟩ := noise
+    exact ⟨w10, w11, w12, w13, pc, nextPC, minstret, increment, mcycle, mtime, mip⟩
   refine ⟨after, run, a1, a2, a3, ⟨⟨named.good, named.image, named.minstret, named.tick, named.pc,
-    named.result, named.memory, named.output, ?_⟩, named.result, h1, h2, h3, trivial⟩⟩
-  intro r written noise
-  apply named.frame r
-  have w : ∀ n ∈ [10, 11, 12, 13], (gprReg n == r) = false := fun n hn => beq_eq_false_iff_ne.mpr (written n hn)
-  simp only [noiseRegs, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, forall_eq] at noise
-  simp only [List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp, forall_eq] at w
-  obtain ⟨w10, w11, w12, w13⟩ := w
-  obtain ⟨minstret, pc, nextPC, increment, mcycle, mtime, mip⟩ := noise
-  exact ⟨w10, w11, w12, w13, pc, nextPC, minstret, increment, mcycle, mtime, mip⟩
+    named.result, named.memory, named.output, frame, ?_⟩, named.result, h1, h2, h3, trivial⟩⟩
+  refine GprsKept.of_regFrame (W := [10, 11, 12, 13]) (by decide) (by decide) ?_ frame
+  intro n hn
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+  rcases hn with rfl | rfl | rfl | rfl
+  · change (gpr after 10).isSome; rw [named.result]; rfl
+  · change (after.σ.regs.get? Register.x11).isSome = true; rw [h1]; rfl
+  · change (after.σ.regs.get? Register.x12).isSome = true; rw [h2]; rfl
+  · change (after.σ.regs.get? Register.x13).isSome = true; rw [h3]; rfl
 
 end OCaml.Vm.Sim

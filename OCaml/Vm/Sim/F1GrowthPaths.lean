@@ -24,6 +24,11 @@ structure GrowthCallState (L : OCaml.Layout) : Prop where
     ModifyInput L P s pl cp sp high codeReg ra codeWord stackWord slot value c →
     Boot.Startup.GprPresent c.σ
 
+/-- **GPR presence at `caml_modify`'s entry**: the barrier call's input carries
+the loop registers, which carry complete GPR presence. -/
+theorem growthCallState (L : OCaml.Layout) : GrowthCallState L :=
+  ⟨fun _ _ _ _ _ _ _ _ _ _ _ _ _ input => input.loop.gprs⟩
+
 /-- **The unallocated remembered set's growth path for F1**, over a6-gc's
 `f1_barrierGrowth_gprs`. -/
 theorem f1_barrierGrowth (st : GrowthCallState Gc.f1Layout) : BarrierGrowth Gc.f1Layout where
@@ -33,12 +38,11 @@ theorem f1_barrierGrowth (st : GrowthCallState Gc.f1Layout) : BarrierGrowth Gc.f
       table emptyW grows (st.gprs _ _ _ _ _ _ _ _ _ _ _ _ _ input)
 
 /-- **The F1 table's layout-level premises**: the call state at `caml_modify`'s
-entry and the full table's realloc branch (GC lane). -/
+entry is `growthCallState`; the full table's realloc branch (GC lane). -/
 structure F1GrowthPremises : Prop where
-  callState : GrowthCallState Gc.f1Layout
   full : BarrierGrowthFull Gc.f1Layout
 
 theorem F1GrowthPremises.paths (h : F1GrowthPremises) : BarrierGrowthPaths Gc.f1Layout :=
-  ⟨f1_barrierGrowth h.callState, h.full⟩
+  ⟨f1_barrierGrowth (growthCallState _), h.full⟩
 
 end OCaml.Vm.Sim

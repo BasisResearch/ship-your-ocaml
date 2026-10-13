@@ -3,6 +3,7 @@ import OCaml.Vm.Sim.ForwardCopyArithmetic
 import OCaml.Vm.Sim.WriteGeometry
 import OCaml.Run.CountedLoop
 import Vsa.Sim.FrameWriteSet
+import OCaml.Vm.Sim.SegmentGprs
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -68,6 +69,8 @@ structure PointerCopyAt (shape : PointerCopyShape) (entry exit : BitVec 64) (sou
   limit : gpr c shape.limitReg = some (BitVec.ofNat 64 (shape.counterBase source target + 8 * words.length))
   memory : c.σ.mem = writeLog initial.σ.mem (forwardCopyLog target words copied)
   frame : StepFrameOut shape.writes initial.σ c.σ
+  /-- register presence and `gp` survive the copied prefix -/
+  kept : GprsKept initial c
 
 def pointerCopyIndex (shape : PointerCopyShape) (source target : Nat) (c : Config) : Nat :=
   (((gpr c shape.counterReg).getD 0).toNat - shape.counterBase source target) / 8
@@ -118,6 +121,8 @@ structure PointerCopyPost (shape : PointerCopyShape) (entry exit : BitVec 64) (s
   limit : gpr after shape.limitReg = some (BitVec.ofNat 64 (shape.counterBase source target + 8 * count))
   memory : after.σ.mem = writeLog before.σ.mem [(target + 8 * copied, 8, value)]
   frame : StepFrameOut shape.writes before.σ after.σ
+  /-- register presence and `gp` survive the iteration -/
+  kept : GprsKept before after
 
 theorem PointerCopyAt.advance {shape : PointerCopyShape} {entry exit : BitVec 64} {source target i : Nat} {words : List (BitVec 64)} {initial c d : Config}
     (region : PointerCopyRegion shape source target words initial) (h : PointerCopyAt shape entry exit source target words initial i c)
@@ -125,7 +130,8 @@ theorem PointerCopyAt.advance {shape : PointerCopyShape} {entry exit : BitVec 64
     PointerCopyAt shape entry exit source target words initial (i + 1) d := by
   obtain ⟨image, memory⟩ := forward_copy_memory_step bound h.image region.image h.memory post.memory
   exact ⟨post.good, post.tick, image, by omega, post.pc, post.sourceReg, post.targetReg, post.limit,
-    memory, (h.frame.trans post.frame).widen (by intro r hr; simpa only [List.mem_append, or_self] using hr)⟩
+    memory, (h.frame.trans post.frame).widen (by intro r hr; simpa only [List.mem_append, or_self] using hr),
+    h.kept.trans post.kept⟩
 
 /-- The common counted-loop rule folds either pointer counter at the supplied code addresses. -/
 theorem cursor_copy_loop_at {shape : PointerCopyShape} {entry exit : BitVec 64} {source target : Nat} {words : List (BitVec 64)} {initial : Config}

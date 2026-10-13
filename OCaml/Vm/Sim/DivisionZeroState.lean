@@ -24,5 +24,7 @@ structure DivisionZeroPost (sp : BitVec 64) (before after : Config) : Prop where
   stack : gpr after 9 = some sp
   memory : after.σ.mem = before.σ.mem
   frame : StepFrameOut ([Register.x11] ++ noiseRegs) before.σ after.σ
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 end OCaml.Vm.Sim

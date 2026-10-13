@@ -8,7 +8,7 @@ open Vsa.Machine Vsa.Sim
 theorem BoundaryPost.registers {writes before ra pc regs after value}
     (h : BoundaryPost writes before ra pc regs after) (result : lookupG 10 regs = some value) :
     RegistersPost writes before.σ.mem before pc value regs after :=
-  ⟨⟨h.good, h.image, h.minstret, h.tick, h.pc, gholds_lookup _ h.regs result, h.memory, h.output, h.frame⟩,
+  ⟨⟨h.good, h.image, h.minstret, h.tick, h.pc, gholds_lookup _ h.regs result, h.memory, h.output, h.frame, h.kept⟩,
     h.regs⟩
 end OCaml.Vm.Primitives
 

@@ -76,10 +76,8 @@ structure ReentryControl (nativeSp : Nat) (before after : Config) : Prop where
   memory : after.σ.mem = writeLog before.σ.mem (reentryLog nativeSp before)
   output : after.σ.sailOutput = before.σ.sailOutput
   htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
-  /-- the loop's unpinned callee-saved registers hold values -/
-  saved : ∀ n ∈ unpinnedSaved, (gpr after n).isSome
-  /-- `gp` is unchanged (no C code writes it) -/
-  gpEq : gpr after 3 = gpr before 3
+  /-- register presence and `gp` survive the re-entry -/
+  kept : GprsKept before after
 
 /-- The direct interpreter re-entry additionally preserves its native register frame. -/
 structure ReentryQuietPost (nativeSp : Nat) (before after : Config) : Prop
@@ -91,11 +89,11 @@ theorem ReentryControl.before_read {nativeSp : Nat} {before middle after : Confi
     (h : ReentryControl nativeSp middle after) (memory : middle.σ.mem = before.σ.mem)
     (output : middle.σ.sailOutput = before.σ.sailOutput)
     (htif : middle.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes)
-    (gp : gpr middle 3 = gpr before 3) :
+    (kept : GprsKept before middle) :
     ReentryControl nativeSp before after := by
   have words (a : Nat) : word middle a = word before a := by simp only [word, memory]
   refine ⟨h.good, h.image, h.tick, h.pc, ?_, ?_, ?_, ?_, h.nativeStack, ?_, h.output.trans output,
-    h.htif.trans htif, h.saved, h.gpEq.trans gp⟩
+    h.htif.trans htif, kept.trans h.kept⟩
   · simpa only [words] using h.domain
   · simpa only [words] using h.trap
   · simpa only [words] using h.vmStack

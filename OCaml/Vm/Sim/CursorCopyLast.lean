@@ -42,7 +42,8 @@ theorem cursor_copy_last {source target i : Nat} {words : List (BitVec 64)} {ini
     (image_entry_code region.image entry (by decide) (by decide)) nextMemory written guard c bp
   obtain ⟨_, memory, rawFrame⟩ := post.extra
   have observed : CursorCopyPost source target words.length i words[i] c after := by
-    refine ⟨post.good, post.tick, ?_, PinsHold.get post.pins ⟨1, by simp⟩, PinsHold.get post.pins ⟨0, by simp⟩, PinsHold.get post.pins ⟨3, by simp⟩, ?_, ?_⟩
+    refine ⟨post.good, post.tick, ?_, PinsHold.get post.pins ⟨1, by simp⟩, PinsHold.get post.pins ⟨0, by simp⟩, PinsHold.get post.pins ⟨3, by simp⟩, ?_, ?_,
+      GprsKept.of_segment rawFrame post.pins (by seg_cover)⟩
     · simp only [last, Nat.lt_irrefl, ite_false]; exact post.pcAt
     · rw [memory, written]; rfl
     · exact rawFrame.widenChecked (allowed := cursorCopyWrites) (by decide)

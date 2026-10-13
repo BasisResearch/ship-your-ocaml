@@ -49,5 +49,7 @@ structure ClosurerecPrefixed (before : Config) (pl : Place) (pc sp functions cou
   sizeReg : gpr after 10 = some (BitVec.ofNat 64 (closurerecSize functions count))
   memory : after.σ.mem = writeLog before.σ.mem (closurePushLog sp count accu)
   frame : StepFrameOut closurerecPrefixWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 end OCaml.Vm.Sim

@@ -875,7 +875,7 @@ theorem WriteRegistersPost.refl {c : Config} {pc value : BitVec 64} (good : Good
     (image : ExecutableImage c) (minstret : ∃ w, c.σ.regs.get? LeanRV64DExecutable.Register.minstret = some w)
     (tick : c.tick < 2) (pcAt : pcOf c = some pc) (result : gpr c 10 = some value) :
     WriteRegistersPost [] [] c pc value [] c :=
-  ⟨⟨good, image, minstret, tick, pcAt, result, rfl, rfl, fun _ _ _ => rfl⟩, True.intro⟩
+  ⟨⟨good, image, minstret, tick, pcAt, result, rfl, rfl, fun _ _ _ => rfl, GprsKept.refl c⟩, True.intro⟩
 
 /-- Entering `caml_ml_output_bytes`' body from an entry `entry`: registers and
 memory unchanged. -/

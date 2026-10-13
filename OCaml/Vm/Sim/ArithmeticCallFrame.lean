@@ -11,5 +11,7 @@ structure ArithmeticCallFrame (before : Config) (pl : Place) (pc sp : Nat) (c : 
   memory : c.σ.mem = before.σ.mem
   output : c.σ.sailOutput = before.σ.sailOutput
   preserved : ∀ r ∈ consumePreserved, c.σ.regs.get? r = before.σ.regs.get? r
+  /-- register presence and `gp` survive -/
+  gprs : GprsKept before c
 
 end OCaml.Vm.Sim

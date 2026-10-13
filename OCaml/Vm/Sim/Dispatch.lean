@@ -1,9 +1,10 @@
+import OCaml.Vm.Sim.SegmentGprs
 import OCaml.Vm.Sim.DispatchSegment
 import OCaml.Vm.Sim.DispatchPins
 import OCaml.Vm.Sim.DispatchTable
 
 namespace OCaml.Vm.Sim
-open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable LeanRV64DExecutable.Functions
+open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable LeanRV64DExecutable.Functions OCaml.Vm.Primitives
 
 /-- The dispatch loop's concrete inputs. The VM representation supplies the
 opcode and registers; code placement supplies RAM geometry. No machine run
@@ -30,6 +31,8 @@ structure DispatchPost (before : Config) (op : Opcode) (a : BitVec 64)
   nextCode : gpr after 23 = some (a + 4#64)
   memory : after.σ.mem = before.σ.mem
   frame : StepFrameOut ([Register.x15, Register.x23] ++ noiseRegs) before.σ after.σ
+  /-- register presence and `gp` survive dispatch -/
+  gprs : GprsKept before after
 
 /-- Connect the generated eight-step path to the pinned table. The remaining
 arm proof starts exactly at its census target, with a complete read-only frame. -/
@@ -56,7 +59,8 @@ theorem dispatch_run {op : Opcode} {a : BitVec 64} {c : Config}
     (dispatchIndex_lower op) (dispatchIndex_upper op) (dispatchIndex_htif op)
     (dispatchTarget_aligned op) c pre
   obtain ⟨_, hm, frame⟩ := post.extra
-  refine ⟨n, after, hn, steps, post.good, post.tick, post.pcAt, ?_, hm, ?_⟩
+  refine ⟨n, after, hn, steps, post.good, post.tick, post.pcAt, ?_, hm, ?_,
+    GprsKept.of_segment frame post.pins (by seg_cover)⟩
   · exact PinsHold.get post.pins ⟨1, by simp⟩
   · refine ⟨frame.out, ?_⟩
     intro r hr

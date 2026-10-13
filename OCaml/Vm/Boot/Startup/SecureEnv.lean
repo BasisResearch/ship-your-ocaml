@@ -53,7 +53,7 @@ theorem secure_getenv_empty (c : Config) (sp name env ra s0 s1 s2 s3 s4 s5 s6 : 
   refine ⟨?_, ?_⟩
   · have widened := effects.widen (writes' := [1, 2, 8, 9, 10, 11, 12, 14, 15, 18, 19, 20, 21, 22]) (by decide)
     refine ⟨widened.good, widened.image, widened.minstret, widened.tick, widened.pc,
-      widened.result, ?_, widened.output, widened.frame⟩
+      widened.result, ?_, widened.output, widened.frame, widened.kept⟩
     rw [post.memory, prepared.memory, secureEnvLog, writeLog_append]
   · apply (gholds_append _ _).mpr
     exact ⟨post.regs, (post.frame .x8 (by decide) (by decide)).trans (gholds_lookup (n := 8) _ prepared.regs (by rfl)), trivial⟩

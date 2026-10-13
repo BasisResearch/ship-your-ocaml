@@ -40,6 +40,6 @@ theorem modify_return_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place
     · obtain ⟨w, reg, value⟩ := h.env
       exact ⟨w, (post.preserved _ (by decide)).trans reg, value⟩
     · exact (post.preserved _ (by decide)).trans h.extra
-  · exact loopRegisters_frame (fun r hr => post.preserved r (by revert r; decide)) h.loop
+  · exact loopRegisters_frame (fun r hr => post.preserved r (by revert r; decide)) h.loop post.gprs
 
 end OCaml.Vm.Sim

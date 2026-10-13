@@ -44,7 +44,8 @@ theorem branchifnot_jump_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     operand.geometry.htif d (by simpa only [codePc_succ] using bp)
   obtain ⟨_, hm, frame⟩ := post.extra
   refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, hm, frame.out,
-    immediate_preserved frame (by decide)⟩
+    immediate_preserved frame (by decide),
+    GprsKept.of_segment frame post.pins (by seg_cover)⟩
   · have hp : gpr after Layout.reg_pc = some
         (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 1)) +
           (BitVec.ofInt 64 w.toInt <<< (2 : Nat))) := PinsHold.get post.pins ⟨0, by simp⟩

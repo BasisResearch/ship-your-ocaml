@@ -37,7 +37,7 @@ theorem division_zero_native {code sp env domain nativeSp global value : BitVec 
     returnReg := setup.returnReg }
   obtain ⟨after, raiseRun, raised⟩ := (raise_zero input).run middle ⟨setup.pc, rfl⟩
   refine ⟨after, setupRun.trans raiseRun, raised.good, raised.image, raised.tick, raised.pc,
-    raised.registers, raised.result, ?_, ?_⟩
+    raised.registers, raised.result, ?_, ?_, setup.kept.trans raised.kept⟩
   · rw [raised.memory, setup.memory, divisionZeroNativeLog, writeLog_append]
   · exact (setup.frame.trans raised.frame).widenChecked (by decide)
 

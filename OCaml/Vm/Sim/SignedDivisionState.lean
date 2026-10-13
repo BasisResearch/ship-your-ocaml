@@ -1,5 +1,6 @@
 import OCaml.Vm.Sim.Udivdi3
 import OCaml.Vm.Sim.FramePins
+import OCaml.Vm.Sim.SegmentGprs
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -52,6 +53,8 @@ structure SignedDivisionPrepared (kind : DivisionKind) (before : Config) (x y ra
   savedReturn : kind = .remainder ∨ divisionNegative kind x y = true → gpr after 5 = some ra
   memory : after.σ.mem = before.σ.mem
   frame : StepFrameOut divisionPrefixWrites before.σ after.σ
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 /-- A signed wrapper's complete return observations. -/
 structure SignedDivisionPost (before : Config) (ra value : BitVec 64) (after : Config) : Prop where
@@ -63,6 +66,8 @@ structure SignedDivisionPost (before : Config) (ra value : BitVec 64) (after : C
   result : gpr after 10 = some value
   memory : after.σ.mem = before.σ.mem
   frame : StepFrameOut divisionWrites before.σ after.σ
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 /-- The absolute divisor is nonzero even for the most-negative native word. -/
 theorem division_magnitude_nonzero {x : BitVec 64} (nonzero : x ≠ 0) : divisionMagnitude x ≠ 0 := by

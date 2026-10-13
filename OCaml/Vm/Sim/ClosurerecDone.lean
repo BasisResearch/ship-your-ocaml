@@ -23,12 +23,14 @@ structure ClosurerecDone (before : Config) (pl : Place) (pc sp count dest a doma
   stackReg : gpr after 9 = some (BitVec.ofNat 64 (closurerecStackStart sp count - 8 * targets.length))
   memory : after.σ.mem = writeLog before.σ.mem (closurerecFullLog before pl sp count dest a domain accuWord targets)
   frame : StepFrameOut closurerecMetadataWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 theorem ClosurerecFirst.done_one {pl : Place} {pc sp count dest a domain : Nat}
     {accu : BitVec 64} {before after : Config}
     (front : ClosurerecFirst before pl pc sp 1 count dest a domain accu after) :
     ClosurerecDone before pl pc sp count dest a domain accu [] after := by
-  refine ⟨front.good, front.tick, front.image, ?_, front.fields, front.accu, front.stackReg, ?_, front.frame⟩
+  refine ⟨front.good, front.tick, front.image, ?_, front.fields, front.accu, front.stackReg, ?_, front.frame, front.kept⟩
   · simpa only [Nat.lt_irrefl, ite_false] using front.pcAt
   · simpa only [closurerecFullLog, infixGroups, List.length_nil, List.range_zero, List.map_nil,
       List.flatten_nil, List.append_nil] using front.memory

@@ -20,6 +20,8 @@ structure ModifySetup (before : Config) (codeReg : Nat)
   memory : c.σ.mem = before.σ.mem
   output : c.σ.sailOutput = before.σ.sailOutput
   preserved : ∀ r ∈ consumePreserved, c.σ.regs.get? r = before.σ.regs.get? r
+  /-- register presence and `gp` survive the setup -/
+  gprs : GprsKept before c
 
 /-- Full represented precondition at the barrier call, before its heap mutation.
 The logical stack still includes any operands already popped in registers. -/
@@ -50,7 +52,7 @@ theorem modify_input {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : C
     data := (payload_of_repr data).frame post.memory post.output
     primitives := data.primitives.frame post.memory
     runtime := stable c after post.memory platform.runtime
-    loop := loopRegisters_frame (fun r hr => post.preserved r (by revert r; decide)) loop
+    loop := loopRegisters_frame (fun r hr => post.preserved r (by revert r; decide)) loop post.gprs
     env := ?_, extra := (post.preserved _ (by decide)).trans data.extra
     geometry := geometry.same rfl rfl post.memory
     native := native.frame_read post.memory (post.preserved _ (by decide)) }

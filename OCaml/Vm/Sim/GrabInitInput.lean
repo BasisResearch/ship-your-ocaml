@@ -38,6 +38,8 @@ structure GrabCopyStart (before : Config) (sp extra a domain : Nat) (env : BitVe
   bytes : gpr after 16 = some (BitVec.ofNat 64 (8 * (extra + 4)))
   memory : after.σ.mem = writeLog before.σ.mem (grabSetupLog domain a extra env)
   frame : StepFrameOut grabSetupWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 /-- Reservation and initialization preserve the copy's original source words. -/
 theorem GrabInitInput.copy_after {sp extra a domain : Nat} {env : BitVec 64} {c after : Config}

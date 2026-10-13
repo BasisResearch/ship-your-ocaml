@@ -32,6 +32,7 @@ theorem restart_finish {L : OCaml.Layout} {P : Prog} {s : St} {c middle d : Conf
     (copied.frame.frame Register.x9 (by decide)).trans front.spReg
   have loop : LoopRegisters d := loopRegisters_frame (fun r hr =>
     (copied.frame.frame r (by revert r; decide)).trans (front.frame.frame r (by revert r; decide))) h.dispatch.loop
+    (front.kept.trans copied.kept)
   have field := block.field environment
   have rawRead := space.payload.env_field_load (payload_of_repr h.toVmReprAt) field written
   have envRead : sign_extend (m := 64) (bytesT8 d.σ.mem (a + 16)) = word c (a + 16) :=
@@ -64,6 +65,7 @@ theorem restart_finish {L : OCaml.Layout} {P : Prog} {s : St} {c middle d : Conf
       exact ⟨w, (frame.frame Register.x21 (by decide)).trans
         ((copied.frame.frame Register.x21 (by decide)).trans ((front.frame.frame Register.x21 (by decide)).trans reg)), value⟩
     · exact loopRegisters_frame (fun r hr => frame.frame r (by revert r; decide)) loop
+        (GprsKept.of_segment frame post.pins (by seg_cover))
   exact ⟨nb, after, steps, restart_restore stable h.toVmReprAt h.running.platform block environment space.toRestartWriteOk observations h.geometry h.native⟩
 
 end OCaml.Vm.Sim

@@ -63,6 +63,7 @@ theorem memset_pair (c : Config) (dest p limit ra : BitVec 64) (taken : Bool)
       (WriteRegistersPost [14] (memsetPairLog p) c
         (if taken then 0x80042790#64 else 0x800427a0#64) dest (memsetPairRegs dest p limit)) := by
   apply registers_of_blocks h.image h.outside (block_summary _ _ _ _ _ (memsetPair_input h))
+    (keys := by cases taken <;> decide) (no3 := by cases taken <;> decide)
   · exact memsetPair_log _ _ _ _
   · cases taken <;> rfl
   · exact memsetPair_regs _ _ _ _

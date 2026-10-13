@@ -33,6 +33,8 @@ structure RaisePendingPost (sp ra value : BitVec 64) (before after : Config) : P
   result : gpr after 10 = some value
   memory : after.σ.mem = writeLog before.σ.mem (raisePendingLog sp ra value)
   frame : StepFrameOut ([Register.x1, Register.x2, Register.x15] ++ noiseRegs) before.σ after.σ
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 /-- Execute the disabled-hook prefix, its actual call, and the no-pending return. -/
 theorem raise_pending {sp ra value : BitVec 64} {c : Config} (h : RaisePendingInput sp ra value c) :
@@ -63,7 +65,8 @@ theorem raise_pending {sp ra value : BitVec 64} {c : Config} (h : RaisePendingIn
   obtain ⟨after, pendingRun, post⟩ := (pending_root_summary input).run pendingStart
     ⟨callPost.pc.trans (congrArg some caml_raise_8000ce40_call_target), rfl⟩
   refine ⟨after, saveRun.trans (callRun.trans pendingRun), post.good, post.image, post.tick,
-    post.pc, post.stack, post.result, ?_, ?_⟩
+    post.pc, post.stack, post.result, ?_, ?_,
+    save.toEffectPost.kept.trans (callPost.toEffectPost.kept.trans post.kept)⟩
   · rw [post.memory, memory, raisePendingLog, writeLog_append]
   · exact ((save.toEffectPost.nativeFrame.trans callPost.toEffectPost.nativeFrame).trans post.frame).widenChecked (by decide)
 

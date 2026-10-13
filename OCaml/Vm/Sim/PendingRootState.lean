@@ -45,6 +45,8 @@ structure PendingRootPost (sp ra value : BitVec 64) (before after : Config) : Pr
   result : gpr after 10 = some value
   memory : after.σ.mem = writeLog before.σ.mem (pendingRootLog sp ra value)
   frame : StepFrameOut ([Register.x1, Register.x2, Register.x15] ++ noiseRegs) before.σ after.σ
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 /-- A later argument save does not overwrite the saved native return address. -/
 theorem pending_root_return_word {sp ra value : BitVec 64} {c : Config}

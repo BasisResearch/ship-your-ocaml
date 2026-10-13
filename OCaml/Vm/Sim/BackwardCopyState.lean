@@ -39,6 +39,8 @@ structure BackwardCopyAt (source target : Nat) (words : List (BitVec 64)) (initi
   sentinel : gpr c 12 = some (-(1#64))
   memory : c.σ.mem = writeLog initial.σ.mem (reverseCopyLog target words remaining)
   frame : StepFrameOut backwardWrites initial.σ c.σ
+  /-- register presence and `gp` survive the loop so far -/
+  kept : GprsKept initial c
 
 /-- The source cursor determines the remaining count, including the zero exit. -/
 def backwardRemaining (source : Nat) (c : Config) : Nat :=
@@ -87,6 +89,8 @@ structure BackwardCopyPost (source target remaining : Nat) (value : BitVec 64)
   sentinel : gpr after 12 = some (-(1#64))
   memory : after.σ.mem = writeLog before.σ.mem [(target + 8 * remaining, 8, value)]
   frame : StepFrameOut backwardWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 /-- Append one high-to-low store and preserve the shared loop invariant. -/
 theorem BackwardCopyAt.advance {source target i : Nat} {words : List (BitVec 64)} {initial c d : Config}
@@ -97,7 +101,7 @@ theorem BackwardCopyAt.advance {source target i : Nat} {words : List (BitVec 64)
   have entry := region.entry bound
   have image := imageOutside_sublist (List.singleton_sublist.mpr entry) region.image
   refine ⟨post.good, post.tick, image_of_writeLog h.image image post.memory, by omega,
-    post.pc, post.sourceReg, post.targetReg, post.counter, post.sentinel, ?_, ?_⟩
+    post.pc, post.sourceReg, post.targetReg, post.counter, post.sentinel, ?_, ?_, h.kept.trans post.kept⟩
   · rw [post.memory, h.memory, reverse_copy_log_step target words i bound, writeLog_append]
   · exact (h.frame.trans post.frame).widenChecked (allowed := backwardWrites) (by decide)
 

@@ -49,6 +49,7 @@ theorem table_next_prefix (c : Config) (last : Bool) (ra : BitVec 64) (h : LeafI
       all_goals apply ReadWindow.ld (x := BitVec.ofNat 64 Layout.sym_Caml_state) (by constructor <;> decide) rfl rfl
       all_goals exact read8_pins _ _ }
   apply boundary_of_blocks h (block_summary _ _ _ _ _ input)
+    (keys := by cases last <;> decide) (no3 := by cases last <;> decide)
   · cases last <;> rfl
   · cases last <;> rfl
   · intro σ pins
@@ -69,7 +70,7 @@ theorem table_next (c : Config) (last : Bool) (ra : BitVec 64) (h : LeafInput ra
   intro a setup
   have front : WriteRegistersPost [10, 9] [] c (tableNextCall last).pc 56#64 tableNextRegs a :=
     ⟨⟨setup.good, setup.image, setup.minstret, setup.tick, setup.pc,
-      gholds_lookup _ setup.regs (by rfl), setup.memory, setup.output, setup.frame⟩, setup.regs⟩
+      gholds_lookup _ setup.regs (by rfl), setup.memory, setup.output, setup.frame, setup.kept⟩, setup.regs⟩
   have call := call_registers_summary (tableNext_shape last) (tableNext_decode last) a
     (tableNext_pins last setup.image) setup.good setup.image setup.tick setup.minstret
     tableNextRegs setup.regs (by decide) (by simp [KeysAvoidRa, keysG, tableNextRegs]) (by rfl)

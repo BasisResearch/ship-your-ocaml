@@ -19,7 +19,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 theorem _root_.OCaml.Vm.Primitives.LeafPost.toRegisterPost {c d : Config} {ra v : BitVec 64} (p : LeafPost c ra v d) :
     RegisterPost [10] c ra v d :=
   ⟨p.good, p.image, p.minstret, p.tick, p.pc, p.result, p.memory, p.output,
-    fun r hr hq => p.frame r (fun e => hr 10 (by simp) (by rw [e]; rfl)) hq⟩
+    fun r hr hq => p.frame r (fun e => hr 10 (by simp) (by rw [e]; rfl)) hq, p.kept⟩
 
 /-- **A constant primitive returns at every `C_CALL` site**: its model is
 defined on one argument only, with a fixed `int` result, and its machine

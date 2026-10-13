@@ -144,7 +144,8 @@ theorem {lower}_setup {{L : OCaml.Layout}} {{P : Prog}} {{s : St}} {{c d : Confi
       aligned := by decide, tick := post.tick, entry := post.pcAt,
       code := ?_, stack := ?_, slot := ?_, value := ?_,
       memory := memory.trans dp.memory, output := frame.out.trans dp.frame.out,
-      preserved := fun r hr => (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide)) }}
+      preserved := fun r hr => (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))
+      gprs := dp.gprs.trans (GprsKept.of_segment frame post.pins (by seg_cover)) }}
 {chr(10).join(obs)}
   exact ⟨count, after, run, modify_input stable h.toVmReprAt h.running.platform h.dispatch.loop h.geometry h.native setup⟩
 

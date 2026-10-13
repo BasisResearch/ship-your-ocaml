@@ -55,4 +55,14 @@ structure LongjmpPost (before : Config) (saved : Nat → BitVec 64) (value : Bit
   memory : after.σ.mem = before.σ.mem
   frame : StepFrameOut longjmpWrites before.σ after.σ
 
+/-- longjmp writes only registers it restores (pinned) and `a0`. -/
+theorem LongjmpPost.kept {before after : Config} {saved : Nat → BitVec 64} {value : BitVec 64}
+    (h : LongjmpPost before saved value after) : OCaml.Vm.Primitives.GprsKept before after :=
+  OCaml.Vm.Primitives.GprsKept.of_stepFrame (W := Layout.jumpSavedRegs ++ [10]) (by decide) (by decide)
+    (fun n hn => by
+      rcases List.mem_append.mp hn with hn | hn
+      · change (gpr after n).isSome; rw [h.registers n hn]; rfl
+      · rw [List.mem_singleton.mp hn]; change (gpr after 10).isSome; rw [h.value]; rfl)
+    (h.frame.widenChecked (by decide))
+
 end OCaml.Vm.Sim

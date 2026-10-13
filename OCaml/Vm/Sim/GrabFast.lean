@@ -59,7 +59,8 @@ theorem grab_fast_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
   refine ⟨nb, after, steps, ?_⟩
   apply readOnly_restore stable (payload_pc (payload_extra (payload_of_repr h.toVmReprAt)
     (s.extra - count.toInt.toNat)) (s.pc + 2)) h.primitives h.running.platform regs
-    (loopRegisters_frame (fun r hr => preserved r (by revert r; decide) (by revert r; decide)) h.dispatch.loop)
+    (loopRegisters_frame (fun r hr => preserved r (by revert r; decide) (by revert r; decide)) h.dispatch.loop
+      (dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))))
     post.good (memory.trans dp.memory) (frame.out.trans dp.frame.out)
     (h.geometry.state rfl rfl) h.native (preserved (gprReg 2) (by decide) (by decide))
 

@@ -432,7 +432,11 @@ theorem child_miss (c : Config) (sp ra s0 s1 s2 s3 s4 s5 d name k a5 : BitVec 64
     result := returned.result
     memory := (show f.σ.mem = e.σ.mem from returned.memory).trans (memE.trans opened.memory)
     output := returned.output.trans (exited.output.trans (scanned.output.trans opened.output))
-    frame := fun r outside noise => ?_ }, ?_⟩⟩
+    frame := fun r outside noise => ?_
+    kept := opened.kept.trans ((GprsKept.of_holds (W := [8, 9, 15]) (by decide) (by decide) scanned.regs
+      (by intro n hn; simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
+          rcases hn with rfl | rfl | rfl <;> simp [childNextInput, keysG]) scanned.frame).trans
+      (exited.kept.trans returned.kept)) }, ?_⟩⟩
   · have mem (l : List Nat) (sub : ∀ n ∈ l, n ∈ [2, 19, 21, 20, 8, 9, 18, 15, 1, 10]) : ∀ n ∈ l, gprReg n ≠ r :=
       fun n hn => outside n (sub n hn)
     exact (returned.frame r (mem _ (by decide)) noise).trans ((exited.frame r (mem _ (by decide)) noise).trans

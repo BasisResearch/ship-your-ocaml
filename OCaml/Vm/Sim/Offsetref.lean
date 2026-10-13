@@ -66,7 +66,8 @@ theorem offsetref_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     refine ⟨post.good, post.pcAt, ?_,
       (frame.frame Register.x9 (by decide)).trans ((dp.frame.frame Register.x9 (by decide)).trans h.spReg),
       PinsHold.get post.pins ⟨0, by simp⟩, memory.trans memoryEq, frame.out,
-      fun r hr => frame.frame r (by revert r; decide)⟩
+      fun r hr => frame.frame r (by revert r; decide),
+      GprsKept.of_segment frame post.pins (by seg_cover)⟩
     have pc : gpr after Layout.reg_pc = some
         (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + sign_extend (m := 64) (0x008#12)) :=
       PinsHold.get post.pins ⟨3, by simp⟩

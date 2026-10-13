@@ -67,7 +67,8 @@ theorem closure_initialize_zero {pl : Place} {pc sp count a domain limit : Nat} 
     rw [memory, headerWritten]; rfl
   refine ⟨nb, after, steps, post.good, post.tick, image_of_writeLog front.image space.headerImage initialized,
     ?_, front.fields.frame frame (by decide), PinsHold.get post.pins ⟨1, by simp⟩, PinsHold.get post.pins ⟨2, by simp⟩, PinsHold.get post.pins ⟨0, by simp⟩, ?_, memory.trans headerLog,
-    (front.frame.trans frame).widenChecked (allowed := closureSetupWrites) (by decide)⟩
+    (front.frame.trans frame).widenChecked (allowed := closureSetupWrites) (by decide),
+    front.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover))⟩
   · simp only [branch, Nat.lt_irrefl, ite_false]; exact post.pcAt
   · intro impossible
     omega

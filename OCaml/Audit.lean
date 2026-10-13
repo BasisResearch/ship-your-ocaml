@@ -41,6 +41,8 @@ import OCaml.Vm.Sim.GrabAllocRows
 import OCaml.Vm.Sim.ClosureAllocRows
 import OCaml.Vm.Sim.ClosurerecAllocRows
 import OCaml.Vm.Sim.LibraryEntry
+import OCaml.Vm.Primitives.BlockGprs
+import OCaml.Vm.Sim.SegmentGprs
 import OCaml.Vm.Sim.MakeblockNRows
 import OCaml.Vm.Sim.AllocInput
 import OCaml.Vm.Sim.PlacePut
@@ -5313,7 +5315,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Bytecode.primF1Impl_exit
 #print axioms OCaml.Vm.Sim.CcallExit.of_arity
 #print axioms OCaml.Vm.Sim.CcallExit.of_ok
-#print axioms OCaml.Vm.Sim.loopRegisters_of
 #print axioms OCaml.Vm.Sim.saved_eq_of_frame
 #print axioms OCaml.Vm.Sim.CcallSetupPost.calleeSaved
 #print axioms OCaml.Vm.Sim.chan_back
@@ -5324,6 +5325,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.VmWindow.channel
 #print axioms OCaml.Vm.Sim.links_of_channels
 #print axioms OCaml.Vm.Sim.CcallSetupPost.libraryReady
+#print axioms OCaml.Vm.Primitives.BlockPost.kept
+#print axioms OCaml.Vm.Primitives.GprsKept.of_stepFrame
+#print axioms OCaml.Vm.Sim.GprsKept.of_segment
+#print axioms OCaml.Vm.Sim.loopRegisters_frame
+#print axioms OCaml.Vm.Sim.LongjmpPost.kept
 #print axioms OCaml.Vm.Sim.loopSetup_saved
 #print axioms OCaml.Vm.Boot.Startup.GprPresent.saved
 #print axioms OCaml.Vm.Sim.MakeblockInitInput.of_block
@@ -5502,6 +5508,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.hash_loop
 #print axioms OCaml.Vm.Sim.f1_barrierGrowth
 #print axioms OCaml.Vm.Sim.F1GrowthPremises.paths
+#print axioms OCaml.Vm.Sim.growthCallState
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.front
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.walk
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.named_value_summary

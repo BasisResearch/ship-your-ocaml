@@ -118,6 +118,7 @@ theorem table_publish (c : Config) (slot : MinorTableSlot) (p ra : BitVec 64)
       (WriteRegistersPost [15, 10] (tablePublishLog slot p) c slot.exit p (tablePublishRegs p)) := by
   apply registers_of_blocks h.image (tablePublish_image slot p)
     (block_summary _ _ _ _ _ (tablePublish_input slot h))
+    (keys := by cases slot <;> decide) (no3 := by cases slot <;> decide)
   · exact tablePublish_log _ _ _ h.domainWord
   · cases slot <;> rfl
   · exact tablePublish_regs _ _ _ h.domainWord

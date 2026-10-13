@@ -56,6 +56,7 @@ theorem identity_zero (kind : IdentityKind) (c : Config) (ra : BitVec 64) (h : L
       (WriteRegistersPost [10] [] c ra 0#64 [(10, 0#64), (1, ra)]) := by
   apply registers_of_blocks h.image (by constructor <;> trivial)
     (block_summary _ _ _ _ _ (identity_input kind h))
+    (keys := by cases kind <;> decide) (no3 := by cases kind <;> decide)
   · cases kind <;> rfl
   · cases kind <;> exact ret_tgt ra h.aligned
   · cases kind <;> rfl

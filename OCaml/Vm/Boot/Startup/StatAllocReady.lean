@@ -46,7 +46,7 @@ theorem stat_alloc_ready [LibraryLive live] (c : Config) (H : List (Nat × Nat))
   have post : RegistersPost [15] c.σ.mem c (BitVec.ofNat 64 Layout.sym_malloc) n [(15, 0#64)] atMalloc :=
     ⟨⟨dispatch.good, dispatch.image, dispatch.minstret, dispatch.tick, dispatch.pc,
       (kept 10 (by decide) (by decide) (by decide)).trans request, dispatch.memory, dispatch.output,
-      dispatch.frame⟩, dispatch.regs⟩
+      dispatch.frame, dispatch.kept⟩, dispatch.regs⟩
   have mid := RuntimeReadyL.effect ready post (by decide) (by simp [keysG]) (by decide)
     ((kept 2 (by decide) (by decide) (by decide)).trans ready.stack)
     ((kept 1 (by decide) (by decide) (by decide)).trans ready.raReg) ready.aligned

@@ -18,6 +18,8 @@ structure ClosurerecReturned (before : Config) (pl : Place) (pc sp count dest a 
   accu : gpr after 21 = some (BitVec.ofNat 64 a)
   memory : after.σ.mem = writeLog before.σ.mem (closurerecFullLog before pl sp count dest a domain accuWord targets)
   frame : StepFrameOut closurerecMetadataWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
   /-- `s10` keeps the capture count -/
   countReg : gpr after 26 = some (BitVec.ofNat 64 count)
   /-- `s11` keeps the environment offset -/
@@ -49,6 +51,7 @@ theorem closurerec_return {pl : Place} {pc sp count dest a domain : Nat} {target
     (frame.frame Register.x9 (by decide)).trans front.stackReg,
     (frame.frame Register.x21 (by decide)).trans front.accu, memory.trans front.memory,
     (front.frame.trans frame).widenChecked (allowed := closurerecMetadataWrites) (by decide),
+    front.kept.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover)),
     (frame.frame Register.x26 (by decide)).trans front.fields.countReg,
     (frame.frame Register.x27 (by decide)).trans front.fields.environmentOffset⟩
 

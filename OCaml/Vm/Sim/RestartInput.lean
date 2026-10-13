@@ -31,6 +31,8 @@ structure RestartCopyStart (before : Config) (sp a code : Nat) (fields : List Va
   extraCount : gpr after 11 = some (BitVec.ofNat 64 (fields.length - 3))
   memory : after.σ.mem = before.σ.mem
   frame : StepFrameOut restartSetupWrites before.σ after.σ
+  /-- register presence and `gp` survive -/
+  kept : GprsKept before after
 
 /-- Live-object separation supplies the entire closure-field source window. -/
 theorem RestartInput.copy_region {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}

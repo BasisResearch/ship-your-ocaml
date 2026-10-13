@@ -24,6 +24,8 @@ structure AccuPost (before : Config) (pl : Place) (pc : Nat) (w : BitVec 64)
   memory : after.σ.mem = before.σ.mem
   output : after.σ.sailOutput = before.σ.sailOutput
   preserved : ∀ r ∈ immediatePreserved, after.σ.regs.get? r = before.σ.regs.get? r
+  /-- register presence and `gp` survive the arm -/
+  gprs : GprsKept before after
 
 /-- Immediate results specialize the shared accumulator-word postcondition. -/
 abbrev ImmediatePost (before : Config) (pl : Place) (pc : Nat) (n : BitVec 63)
@@ -59,7 +61,7 @@ theorem accu_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
       exact ⟨w, (post.preserved _ (by decide)).trans hw, hv⟩
     · exact (post.preserved _ (by decide)).trans data.extra
   · exact loopRegisters_frame
-      (fun r hr => post.preserved r (by revert r; decide)) loop
+      (fun r hr => post.preserved r (by revert r; decide)) loop post.gprs
 
 /-- Immediate results introduce no heap root. -/
 theorem immediate_restore {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
@@ -105,7 +107,7 @@ theorem accu_arm {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode}
   exact ⟨post.good, post.head, post.code, post.accu,
       post.memory.trans dp.memory, post.output.trans dp.frame.out,
       fun r hr => (post.preserved r hr).trans
-        (immediate_preserved dp.frame (by decide) r hr)⟩
+        (immediate_preserved dp.frame (by decide) r hr), dp.gprs.trans post.gprs⟩
 
 /-- A control-flow arm retains the represented accumulator. Its generated
 body receives the preserved accumulator word at the dispatch boundary. -/

@@ -27,6 +27,8 @@ structure CheckGlobalDataPost (before : Config) (ra : BitVec 64) (after : Config
   pc : pcOf after = some ra
   memory : after.σ.mem = before.σ.mem
   frame : StepFrameOut ([Register.x15] ++ noiseRegs) before.σ after.σ
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 def checkGlobalBlocks : List BBlock := check_global_dataXcde0FSeg ++ check_global_dataXcdf0Seg
 
@@ -63,7 +65,8 @@ theorem check_global_data_summary {ra : BitVec 64} {c : Config} (h : CheckGlobal
       [read8 c.σ.mem Layout.sym_caml_global_data])).log = [] := by rfl
   have memory : after.σ.mem = c.σ.mem := by
     simpa only [log, writeLog, List.foldl_nil] using post.memory
-  refine ⟨post.good, image_of_writeLog (log := []) h.image ⟨trivial, trivial⟩ memory, post.tick, ?_, memory, post.output, ?_⟩
+  refine ⟨post.good, image_of_writeLog (log := []) h.image ⟨trivial, trivial⟩ memory, post.tick, ?_, memory, ⟨post.output, ?_⟩,
+    post.kept (by decide) (by decide)⟩
   · have target : evalBlocksPC 0x8000cde0#64 (SegEvalState.init [(1, ra)]
         [read8 c.σ.mem Layout.sym_caml_global_data]) checkGlobalBlocks = ra := by
       change Sail.BitVec.update (ra + sign_extend (m := 64) (0#12)) 0 0#1 = ra

@@ -80,7 +80,8 @@ theorem infix_more {pl : Place} {pc a stackStart i : Nat} {targets : List Nat}
   obtain ⟨_, memory, rawFrame⟩ := post.extra
   have observed : InfixPost pl pc a stackStart targets i c after := by
     refine ⟨post.good, post.tick, ?_, ⟨PinsHold.get post.pins ⟨5, by simp⟩, PinsHold.get post.pins ⟨1, by simp⟩, PinsHold.get post.pins ⟨3, by simp⟩, PinsHold.get post.pins ⟨2, by simp⟩, PinsHold.get post.pins ⟨0, by simp⟩, PinsHold.get post.pins ⟨6, by simp⟩, PinsHold.get post.pins ⟨7, by simp⟩⟩, ?_,
-      rawFrame.widenChecked (allowed := infixWrites) (by decide)⟩
+      rawFrame.widenChecked (allowed := infixWrites) (by decide),
+      GprsKept.of_segment rawFrame post.pins (by seg_cover)⟩
     · simp only [branch, ite_true]; exact post.pcAt
     · simpa only [List.getElem?_eq_getElem bound, Option.getD_some] using memory.trans fullMemory
   exact ⟨nb, after, steps, h.advance region bound observed⟩

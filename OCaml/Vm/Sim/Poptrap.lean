@@ -81,7 +81,8 @@ theorem poptrap_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
       (writeLog d.σ.mem (trapLog (word c Layout.sym_Caml_state).toNat high (s.stack.length - link.toNat))) after := by
     refine ⟨post.good, post.pcAt, ?_, ?_,
       (frame.frame Register.x21 (by decide)).trans ((dp.frame.frame Register.x21 (by decide)).trans accuReg),
-      memory.trans memoryEq, frame.out, fun r hr => frame.frame r (by revert r; decide)⟩
+      memory.trans memoryEq, frame.out, fun r hr => frame.frame r (by revert r; decide),
+      GprsKept.of_segment frame post.pins (by seg_cover)⟩
     · have pc : gpr after Layout.reg_pc = some ((BitVec.ofNat 64 (pl.codeBase + 4 * s.pc) + 4#64) +
           sign_extend (m := 64) (0x000#12)) := PinsHold.get post.pins ⟨2, by simp⟩
       simpa only [show sign_extend (m := 64) (0x000#12) = 0#64 from by decide, BitVec.add_zero, codePc_succ] using pc

@@ -159,6 +159,7 @@ theorem apply2_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
   have frame := rawFrame.widenChecked (allowed := [Register.x14, Register.x15, Register.x18, Register.x25, Register.x8, Register.x9] ++ noiseRegs) (by decide)
   have loop : LoopRegisters after := loopRegisters_frame (fun r hr =>
     (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))) h.dispatch.loop
+    (dp.gprs.trans (GprsKept.of_segment rawFrame post.pins (by seg_cover)))
   have observed : ApplyPost c s pl sp dest (stackWords c sp 2) env after := by
     refine ⟨⟨post.pcAt, PinsHold.get post.pins ⟨3, by simp⟩, ?_,
       ⟨_, PinsHold.get post.pins ⟨8, by simp⟩, field.sourceWord⟩,

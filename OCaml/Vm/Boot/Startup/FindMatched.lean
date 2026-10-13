@@ -50,7 +50,7 @@ theorem find_matched (c : Config) (sp s0 env name entry ra : BitVec 64) (count :
   have effects := ((loaded.toEffectPost.trans compared.toEffectPost).trans matched.toEffectPost).widen
     (writes' := [20, 10, 8, 12, 11, 1, 14, 15]) (by decide)
   refine ⟨after, run1.trans (run2.trans run3), ⟨⟨effects.good, effects.image, effects.minstret, effects.tick,
-    effects.pc, effects.result, matched.memory.trans memoryB, effects.output, effects.frame⟩, ?_⟩⟩
+    effects.pc, effects.result, matched.memory.trans memoryB, effects.output, effects.frame, effects.kept⟩, ?_⟩⟩
   apply (gholds_append _ _).mpr
   refine ⟨matched.regs, ?_, ?_, ?_, ?_, ?_, trivial⟩
   · have cursor := gholds_lookup (n := 11) _ compared.regs (by rfl)

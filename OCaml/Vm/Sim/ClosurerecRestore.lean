@@ -89,6 +89,6 @@ theorem closurerec_restore {L : OCaml.Layout} {P : Prog} {s : St} {before after 
     · obtain ⟨w, reg, represented⟩ := data.env
       exact ⟨w, (post.frame.frame Register.x25 (by decide)).trans reg, represented⟩
     · exact (post.frame.frame Register.x18 (by decide)).trans data.extra
-  · exact loopRegisters_of (fun r hr => post.frame.frame r (by revert r; decide)) loop (forall_saved (isSome_of_pin post.countReg) (isSome_of_pin post.envReg))
+  · exact loopRegisters_frame (fun r hr => post.frame.frame r (by revert r; decide)) loop post.kept
 
 end OCaml.Vm.Sim

@@ -47,7 +47,8 @@ def outputs():
 '''
         run_setup = f'  have body := tr_{lower} {args} d.σ.mem d.σ\n'
         final = '''  refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, hm, frame.out,
-    immediate_preserved frame (by decide)⟩'''
+    immediate_preserved frame (by decide),
+    GprsKept.of_segment frame post.pins (by seg_cover)⟩'''
         stack_result, preserved = '', ''
         if push:
             lo = int(spec['entry'], 16)
@@ -71,7 +72,7 @@ def outputs():
     space.window.htif space.window.aligned (by simpa only [space.toNat] using code)
     memoryAfter (by rw [space.toNat]; exact memoryEq)
 '''
-            final = '  refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, ?_, hm.trans memoryEq, frame.out, ?_⟩'
+            final = '  refine ⟨nb, after, hb, post.good, post.pcAt, ?_, ?_, ?_, hm.trans memoryEq, frame.out, ?_,\n    GprsKept.of_segment frame post.pins (by seg_cover)⟩'
             stack_result = f'  · exact PinsHold.get post.pins ⟨{regs.index("x9")}, by simp⟩\n'
             preserved = '''
   · intro r hr
