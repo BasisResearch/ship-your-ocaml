@@ -383,6 +383,7 @@ import OCaml.Vm.Boot.Startup.StrncmpWord
 import OCaml.Vm.Boot.Startup.AttemptOkSteps
 import OCaml.Vm.Boot.Startup.AttemptOk
 import OCaml.Vm.Boot.Startup.AttemptOkReset
+import OCaml.Vm.Boot.Startup.ReadSectionsLoop
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2744,6 +2745,23 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.attempt_ok
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport_opens
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_attempt_ok_exists
+#print axioms OCaml.Vm.Boot.Startup.caml_read_sections_call
+#print axioms OCaml.Vm.Boot.Startup.read_sections_save
+#print axioms OCaml.Vm.Boot.Startup.read_sections_num_call
+#print axioms OCaml.Vm.Boot.Startup.read_sections_seek_call
+#print axioms OCaml.Vm.Boot.Startup.read_sections_read_call
+#print axioms OCaml.Vm.Boot.Startup.read_sections_test
+#print axioms OCaml.Vm.Boot.Startup.read_sections_swap
+#print axioms OCaml.Vm.Boot.Startup.read_sections_again
+#print axioms OCaml.Vm.Boot.Startup.read_sections_done
+#print axioms OCaml.Vm.Boot.Startup.read_sections_return
+#print axioms OCaml.Vm.Boot.Startup.OpenFile.transport
+#print axioms OCaml.Vm.Boot.Startup.StatCheckedReturned.keep_saved
+#print axioms OCaml.Vm.Boot.Startup.FreshBlock.out_kept
+#print axioms OCaml.Vm.Boot.Startup.read_sections_load
+#print axioms OCaml.Vm.Boot.Startup.read_sections_iteration
+#print axioms OCaml.Vm.Boot.Startup.read_sections_loop
+#print axioms OCaml.Vm.Boot.Startup.read_section_descriptors
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport

@@ -140,9 +140,28 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   reaches caml_attempt_open's return of descriptor 3 for "/prog".
   `gen_boot_image.py` now emits the embedded file's trailer bytes.
 
-Next: caml_main after caml_attempt_open: `read_section_descriptors(fd,
-&trail)` (lseek to the section table, `caml_stat_alloc`, `read`), then
-`init_gc` and onward to the cut.
+* `lseek_file` and `read_file` take any offset, position and length
+  (`htif_read_front` plus `htif_read_clamp` for both clamp branches). The
+  `_lseek_r`/`_read_r` wrappers are generated (`gen_reent_wrappers.py`).
+* **`read_section_descriptors`** (ReadSections.lean,
+  ReadSectionsLoop.lean): caml_main's `caml_read_section_descriptors(3,
+  &trail)`. It runs `caml_stat_alloc(56)` (fresh block `blk`, disjoint from
+  every live block by `FreshBlock`), stores `trail.section = blk`, runs
+  `lseek(3, -72, SEEK_END)` and `read(3, blk, 56)` (short clamp), then
+  reverses the 7 lengths' bytes. The loop is one
+  `read_sections_iteration` folded by `indexedLoop`. `ReadSectionsDone`
+  gives:
+  * the table as `sectionByte` (from `embedSections0_byte_*`, which
+    `gen_boot_image.py` emits);
+  * the position 0x249c;
+  * `OpenFile` (descriptor 3's htif.c state, one transport);
+  * `EmbedImage`;
+  * the caller's frame;
+  * low memory outside the allocator.
+
+Next: compose it into the reset run after `reset_attempt_ok_exists`
+(the retry test `caml_read_sections_call`), then `init_gc` and onward to
+the cut.
 
 ## Round 2 status (2026-10-06, search)
 

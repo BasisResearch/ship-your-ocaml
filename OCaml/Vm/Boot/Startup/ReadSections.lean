@@ -61,6 +61,18 @@ structure ReadSectionsCall (H : List (Nat × Nat)) (capacity charge : Nat) (node
   nodeOwned : ∀ j, j ≤ 4 → ∃ e ∈ H, InExt e (node.toNat + j)
   numWord : read4 c.σ.mem WhileMinElfParse.trailSlot.toNat = sectionsWord
 
+/-- The open file's bytes are low memory outside the allocator's footprint. -/
+theorem ReadSectionsCall.file_kept {H capacity charge node ra s0 s1 s2 c}
+    (A : ReadSectionsCall H capacity charge node ra s0 s1 s2 c) {x : Nat} (hx : OpenFileByte node x) :
+    x < heapEnd ∧ ¬ vsaFoot H x := by
+  rcases hx with ⟨htif, _⟩ | ⟨lo, hi⟩
+  · have := htif.bounds
+    exact ⟨by unfold Layout.sym_files heapEnd at *; omega, KeptByte.not_foot (Or.inr (Or.inr (Or.inr htif)))⟩
+  · obtain ⟨e, he, inside⟩ := A.nodeOwned (x - node.toNat) (by omega)
+    have bounds := A.ready.block_bounds (q := e.1) (n := e.2) he
+    rw [show node.toNat + (x - node.toNat) = x by omega] at inside
+    exact ⟨by unfold InExt at inside; omega, owned_not_foot (by unfold InExt at inside; omega) ⟨e, he, inside⟩⟩
+
 /-- The section table read into the fresh block `blk`, before its lengths are
 swapped. -/
 structure ReadSectionsLoaded (H : List (Nat × Nat)) (capacity : Nat) (node ra s0 s1 s2 blk : BitVec 64)
@@ -154,15 +166,7 @@ theorem read_sections_load (c : Config) (H : List (Nat × Nat)) (capacity charge
   have low4 (x : Nat) (hx : x < heapEnd) (kept : ¬ vsaFoot H x) : (d4.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
     rw [mem4 x (Or.inl (by unfold heapEnd at hx; omega)), low3 x hx kept, mem2, mem1 x (Or.inl (by
       unfold heapEnd at hx; omega))]
-  have fileSame (x : Nat) (hx : OpenFileByte node x) : x < heapEnd ∧ ¬ vsaFoot H x := by
-    rcases hx with ⟨htif, _⟩ | ⟨lo, hi⟩
-    · have := htif.bounds
-      exact ⟨by unfold Layout.sym_files heapEnd at *; omega,
-        KeptByte.not_foot (Or.inr (Or.inr (Or.inr htif)))⟩
-    · obtain ⟨e, he, inside⟩ := A.nodeOwned (x - node.toNat) (by omega)
-      have bounds := A.ready.block_bounds (q := e.1) (n := e.2) he
-      rw [show node.toNat + (x - node.toNat) = x by omega] at inside
-      exact ⟨by unfold InExt at inside; omega, owned_not_foot (by unfold InExt at inside; omega) ⟨e, he, inside⟩⟩
+  have fileSame (x : Nat) (hx : OpenFileByte node x) : x < heapEnd ∧ ¬ vsaFoot H x := A.file_kept hx
   have file4 : OpenFile d4.σ.mem node := A.file.transport fun x hx => low4 x (fileSame x hx).1 (fileSame x hx).2
   have frame64 : NativeFrame sectionsStack (16 + 48) := by constructor <;> decide
   obtain ⟨d5, run5, L⟩ := (lseek_file d4 ((blk.toNat, 56) :: H) capacity sectionsStack jal_80004b4c_call.link
@@ -301,14 +305,9 @@ theorem read_sections_load (c : Config) (H : List (Nat × Nat)) (capacity charge
       (Or.inl (by unfold heapStart Layout.sym_fds at *; omega))]
     exact (word_writeLog_at d6.σ.mem (readLog 0x2464#64 56) 0 (Layout.sym_fds + 80) _ rfl trivial).trans (by decide)
   · have f := fileLow x hx
-    rw [mem8, read7 x (Or.inl (by unfold heapEnd at f; omega)) f.2.1 (by
-        rcases hx with ⟨htif, _⟩ | ⟨lo, hi⟩
-        · have := htif.bounds; left; unfold heapStart Layout.sym_files at *; omega
-        · obtain ⟨e, he, inside⟩ := A.nodeOwned (x - node.toNat) (by omega)
-          rw [show node.toNat + (x - node.toNat) = x by omega] at inside
-          exact FreshBlock.out_kept fresh f.1 (owned_not_foot (by
-            have bounds := A.ready.block_bounds (q := e.1) (n := e.2) he; unfold InExt at inside; omega)
-            ⟨e, he, inside⟩)) f.2.2, mem6, mem5 x (Or.inl (by unfold heapEnd at f; omega)) f.2.1 f.2.2]
+    rw [mem8, read7 x (Or.inl (by unfold heapEnd at f; omega)) f.2.1
+      (FreshBlock.out_kept fresh f.1 (fileSame x hx).2) f.2.2, mem6,
+      mem5 x (Or.inl (by unfold heapEnd at f; omega)) f.2.1 f.2.2]
   · have range : off + 8 ≤ 32 := by
       simp only [readSectionsSlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member; omega
     rw [mem8, word_observed (m := d1.σ.mem) _ fun i hi => high7 _ (by unfold nativeFrameBase; omega)
