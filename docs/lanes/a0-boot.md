@@ -159,9 +159,13 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   * the caller's frame;
   * low memory outside the allocator.
 
-Next: compose it into the reset run after `reset_attempt_ok_exists`
-(the retry test `caml_read_sections_call`), then `init_gc` and onward to
-the cut.
+* **`reset_read_sections_exists`** (ReadSectionsReset.lean): the CLOSED
+  reset run reaches the return of `caml_read_section_descriptors`.
+  `ResetAttemptOk` now also carries the `AttemptOpened` state it was built
+  from.
+
+Next: caml_main after the section table (`caml_init_gc` and onward) to the
+cut.
 
 ## Round 2 status (2026-10-06, search)
 

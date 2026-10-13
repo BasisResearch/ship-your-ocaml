@@ -85,6 +85,11 @@ for "/prog", with the trailer read and the name recorded. -/
 structure ResetAttemptOk (initial after : Config) where
   atOpen : Config
   opened : ResetProgOpened initial atOpen
+  /-- caml_attempt_open's state at `open`'s return. -/
+  attempt : AttemptOpened ((opened.call.call.copy.toNat, 5 + 1) :: (opened.call.retry.failed.opened.opened.node.toNat, 5) ::
+      opened.call.retry.failed.opened.call.search.path.table.H) (startupAllocatorCredits - 592) opened.call.call.copy
+    opened.call.retry.failed.opened.opened.node jal_8000512c_call.link (vsaReg opened.call.atRetry 8) argvPtr
+    (vsaReg opened.call.atRetry 18) (vsaReg opened.call.atRetry 19) (vsaReg opened.call.atRetry 20) atOpen
   ok : AttemptOk ((opened.call.call.copy.toNat, 5 + 1) :: (opened.call.retry.failed.opened.opened.node.toNat, 5) ::
       opened.call.retry.failed.opened.call.search.path.table.H) (startupAllocatorCredits - 592)
     opened.call.call.copy jal_8000512c_call.link (vsaReg opened.call.atRetry 8) argvPtr
@@ -166,5 +171,5 @@ theorem reset_attempt_ok_exists : ∃ initial after, Nonempty (ResetAttemptOk in
         openProgLog_read4 _ [(Layout.sym_files + 56 + 48, 4, _), (Layout.sym_fds + 72 + 4, 4, 1#64), (Layout.sym_fds + 72 + 8, 8, 0#64)] [(Layout.sym_fds + 72, 4, 4#64)] (Layout.sym_fds + 72 + 16) 0#64 rfl (by simp only [OutLRange, and_true] <;> (simp only [Layout.sym_fds]; omega))]
       decide }
   obtain ⟨after, run, ok⟩ := attempt_ok d _ _ _ _ _ _ _ _ _ _ A
-  exact ⟨initial, after, ⟨⟨d, w, ok, w.run.trans run⟩⟩⟩
+  exact ⟨initial, after, ⟨⟨d, w, A, ok, w.run.trans run⟩⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse
