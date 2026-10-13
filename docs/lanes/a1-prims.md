@@ -146,6 +146,15 @@
   (`Sim/PrimInt64FloatReturns.lean`): `FastMemory` from the reserved block.
 * `prim_caml_sys_argv_returns` (`Sim/PrimSysArgvReturns.lean`): read-only, from a1-arms'
   `VmPayload.argv` (861f1ce1); result word `(valWord pl world.argv).getD 0`.
+* String-allocator infrastructure (for `get_config`, `get_argv`, `executable_name`):
+  `PrimAllocFrame L` (`Sim/PrimAllocFrame.lean`; F1: `f1_primAllocFrame` over a6-gc's
+  `f1_allocation`): stores in the free nursery, above the arena, or in the domain's
+  `young_ptr`/`local_roots` keep the runtime. `LoopGeometry.reserve` (`Sim/AllocChain.lean`):
+  chained reservations on virtual configs. `ccall_observed_summary` + `framed_of_library`
+  (`CcallAllocation.lean`): library-style posts at the C_CALL return. `StringAllocEntry`
+  (entry scalars), `getConfigLog_in` (the get_config log in four windows), `StringAllocReturn`.
+* `allocPlaces` covers `caml_ml_open_descriptor_out/in` (bprime): the channel's custom block at
+  `young − 16` (`caml_alloc_custom_mem`, wosize 2).
 * The string allocators (`executable_name`, `get_argv`, `get_config`) need their StringCopy stage
   inputs (`CopyInput`, `FinishStageInput`) discharged at the callee entry. `executable_name` and
   `get_argv` also need an `exeName` C-string binding beside `PrimitiveBindings` (a1-prims drafts

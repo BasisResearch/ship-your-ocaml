@@ -150,4 +150,66 @@ theorem _root_.OCaml.LoopGeometry.bytes {L : OCaml.Layout} {P : Prog} {s : St} {
     (by simp only [runtimeFields, domainWord, w]) (by simp only [runtimeFields, domainWord, w]) (w _)
     (fun _ _ _ _ _ => w _) rfl
 
+/-- **A library-style primitive post as a framed call** whose memory is the
+log's exact effect, byte for byte. -/
+theorem framed_of_library {runtimeOk : Config → Prop} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
+    {sp high : Nat} {name : String} {args : List Val} {v : Val} {w : BitVec 64} {heap : Heap} {world : World}
+    {ra : BitVec 64} {log : List WEntry} {before after : Config}
+    (post : LibraryPrimitivePost runtimeOk P s pl cp sp high name args v w heap world ra after)
+    (present : ∀ n, 1 ≤ n → n ≤ 31 → (gprGet after.σ n).isSome)
+    (memory : ∀ x, byte after x = ((writeLog before.σ.mem log)[x]?).getD 0)
+    (saved : ∀ r ∈ callSavedRegs, after.σ.regs.get? r = before.σ.regs.get? r)
+    (gp : gpr after 3 = gpr before 3) :
+    FramedPrimitivePost runtimeOk P s pl cp sp high name args v w heap world log before ra after where
+  call :=
+    { good := post.good, image := post.image, minstret := post.minstret, tick := post.tick, pc := post.pc
+      result := post.result
+      memory := fun x hx => by rw [memory x, byte_total, writeLog_out _ _ _ hx]
+      saved }
+  data := post.data
+  primitives := post.primitives
+  platform := post.platform
+  loop := post.loop
+  resultRepr := post.resultRepr
+  semantics := post.semantics
+  gprs := ⟨fun n lo hi _ => present n lo hi, gp⟩
+
+/-- **Adapt an observed framed summary to the C_CALL return boundary**: the
+geometry after the call may use the predicted byte of every address. -/
+theorem ccall_observed_summary {L : OCaml.Layout} {P : Prog} {s : St}
+    {pl : Place} {cp : ChanPlace} {sp high : Nat} {name : String} {v : Val}
+    {heap : Heap} {world : World} {domain frameSp result env entry ra : BitVec 64} {pc : Nat}
+    {args : List Val} {footprint : List WEntry} {expected : Nat → BitVec 8} {before : Config}
+    (S : FnSummary entry (fun c => c = before) (fun after =>
+      FramedPrimitivePost L.runtimeOk P s pl cp sp high name args v result heap world footprint before ra after ∧
+        ∀ x, byte after x = expected x))
+    (saved : Ccall1Saved {s with pc := pc} pl sp domain frameSp env before)
+    (outside : CcallSavedOutside footprint domain frameSp)
+    (below : ∀ n, gpr before 2 = some (BitVec.ofNat 64 n) → LogInW [⟨0, n⟩] footprint)
+    (geometry : ∀ after : Config, (∀ x, byte after x = expected x) →
+      OCaml.LoopGeometry L P {s with accu := v, heap := heap, world := world} after pl cp high)
+    (native : NativePlaced before) :
+    FnSummary entry (fun c => c = before)
+      (CcallReturn ra L P {s with pc := pc, accu := v, heap := heap, world := world}
+        pl cp sp high domain frameSp result env) := by
+  apply S.weaken (fun _ h => h)
+  intro after ⟨post, observed⟩
+  have frame := post.call.memory
+  have regs := post.call.saved
+  have kept := saved.frame_outside outside frame regs
+  refine ⟨cp, ?_⟩
+  exact { toCcall1Saved := { kept with pc := kept.pc }
+          toCcallResult :=
+            { geometry := (geometry after observed).state rfl rfl
+              native := native.frame_below below outside.domainPtr (saved.domainWord ▸ outside.externalRaise)
+                frame (regs _ (by decide))
+              data := payload_pc post.data pc
+              primitives := post.primitives
+              platform := post.platform
+              loop := post.loop
+              tick := post.call.tick
+              returnPC := post.call.pc
+              resultReg := post.call.result
+              resultRepr := post.resultRepr } }
+
 end OCaml.Vm.Sim

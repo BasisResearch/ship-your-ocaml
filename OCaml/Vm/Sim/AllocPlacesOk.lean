@@ -57,6 +57,20 @@ theorem allocPlaces_ok (name : String) (s : St) (young : BitVec 64) (al : young.
         · simp
       · exact .nil _
     · exact .nil _
+  · split
+    · refine ⟨?_, ?_, ?_⟩
+      · simp only [List.mem_singleton]; rintro p rfl; simp [Heap.alloc, Heap.get?]
+      · simp only [List.mem_singleton]; rintro p rfl
+        simp only [BitVec.toNat_sub, BitVec.toNat_ofNat]; omega
+      · simp
+    · exact .nil _
+  · split
+    · refine ⟨?_, ?_, ?_⟩
+      · simp only [List.mem_singleton]; rintro p rfl; simp [Heap.alloc, Heap.get?]
+      · simp only [List.mem_singleton]; rintro p rfl
+        simp only [BitVec.toNat_sub, BitVec.toNat_ofNat]; omega
+      · simp
+    · exact .nil _
   · refine ⟨?_, ?_, ?_⟩
     · simp only [List.mem_singleton]; rintro p rfl; simp [Heap.alloc, Heap.get?]
     · simp only [List.mem_singleton]; rintro p rfl; exact resultWord_aligned _ _ al

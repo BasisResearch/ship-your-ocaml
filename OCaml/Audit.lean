@@ -6,6 +6,7 @@ import OCaml.Vm.Primitives.GprsKept
 import OCaml.Vm.Primitives.Named.RegisterFront
 import OCaml.Vm.Sim.PrimInt64FloatReturns
 import OCaml.Vm.Sim.PrimSysArgvReturns
+import OCaml.Vm.Sim.StringAllocReturn
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
@@ -5718,3 +5719,19 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Memprof.UpdateYoungLimit.update_young_limit
 #print axioms OCaml.Vm.Primitives.Memprof.RenewMinorSample.renew_summary
 #print axioms OCaml.Vm.Primitives.Memprof.SetSuspended.set_suspended_summary
+#print axioms OCaml.Vm.Sim.f1_primAllocFrame
+#print axioms OCaml.Vm.Sim.young_sub_safe
+#print axioms OCaml.Vm.Sim.roots_sub_safe
+#print axioms OCaml.Vm.Sim.reserved_word
+#print axioms OCaml.Vm.Sim.GrabOutside.of_geometry
+#print axioms OCaml.Vm.Sim.NurseryReserve.grab
+#print axioms OCaml.LoopGeometry.reserve
+#print axioms OCaml.Vm.Sim.reserved_young
+#print axioms OCaml.Vm.Sim.framed_of_library
+#print axioms OCaml.Vm.Sim.ccall_observed_summary
+#print axioms OCaml.Vm.Sim.StringAllocEntry.of_setup
+#print axioms OCaml.Vm.Sim.window_of_nat
+#print axioms OCaml.Vm.Sim.getConfigLog_in
+#print axioms OCaml.Vm.Sim.StringAllocEntry.below
+#print axioms OCaml.Vm.Sim.StringAllocEntry.entries
+#print axioms OCaml.Vm.Sim.allocPlaces_ok

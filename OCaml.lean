@@ -44,6 +44,11 @@ import OCaml.Vm.Sim.CcallWriting
 import OCaml.Vm.Sim.CcallAllocation
 import OCaml.Vm.Sim.PrimInt64FloatReturns
 import OCaml.Vm.Sim.PrimSysArgvReturns
+import OCaml.Vm.Sim.PrimAllocFrame
+import OCaml.Vm.Sim.AllocChain
+import OCaml.Vm.Sim.StringAllocEntry
+import OCaml.Vm.Sim.ConfigLogWindows
+import OCaml.Vm.Sim.StringAllocReturn
 import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.BarrierRows
 import OCaml.Vm.Sim.MakeblockRows

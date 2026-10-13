@@ -22,6 +22,11 @@ def allocPlaces (name : String) (s : St) (young : BitVec 64) : List (Nat × Nat)
       | some (.int64 bits) => [((s.heap.alloc (.double bits)).2, (young - 16#64).toNat + 8)]
       | _ => []
     | _ => []
+  | "caml_ml_open_descriptor_out" | "caml_ml_open_descriptor_in" =>
+    -- the channel's custom block (`caml_alloc_custom_mem`: ops and one data word)
+    match s.accu with
+    | .int _ => [((s.heap.alloc (.channel s.world.chans.length)).2, (young - 24#64).toNat + 8)]
+    | _ => []
   | "caml_sys_executable_name" =>
     [((s.heap.alloc (.bytes s.world.exeName)).2,
       (StringCopy.resultWord young s.world.exeName.length).toNat)]
