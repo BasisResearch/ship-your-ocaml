@@ -204,6 +204,15 @@ insertion is proved generically:
   used: the final shift is by 53.
 * Rows for `caml_page_table_modify` (split at each `auipc` and loop block)
   and `caml_page_table_add` are generated.
+* **`LinearChain`** (`linRun_sound`): a straight-line `slli`/`add`/`sub`
+  chain is evaluated over coefficients (each register is `k * y`), so the
+  hash's multiply-by-constant chain is never unfolded symbolically. Plain
+  evaluation of it blows up exponentially.
+  * `page_hash_chain` gives `a5 = HASH_FACTOR * (page >> 12)`. The factor
+    `0x9E3779B97F4A7C16` is computed by `decide`.
+  * `page_slot` covers the home slot `pageHash page`, below 2048, and its
+    first load.
+  * `page_probe_step` is one linear-probing step past another page.
 Then `caml_set_allocation_policy`, `caml_init_major_heap` (its chunk's
 pages go through the same insertion) and onward to the cut.
 

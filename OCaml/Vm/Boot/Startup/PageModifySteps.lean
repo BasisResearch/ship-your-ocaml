@@ -4,6 +4,10 @@ import OCaml.Vm.Boot.Startup.PageModifyHashTailNormalized
 import OCaml.Vm.Boot.Startup.PageModifyHashTailImage
 import OCaml.Vm.Boot.Startup.PageModifySlotNormalized
 import OCaml.Vm.Boot.Startup.PageModifySlotImage
+import OCaml.Vm.Boot.Startup.PageModifyNextNormalized
+import OCaml.Vm.Boot.Startup.PageModifyNextImage
+import OCaml.Vm.Boot.Startup.PageModifyStepNormalized
+import OCaml.Vm.Boot.Startup.PageModifyStepImage
 import OCaml.Vm.Boot.Startup.LinearChain
 import OCaml.Vm.Boot.Startup.PageHash
 import OCaml.Vm.Boot.Startup.ReadSectionsSteps
@@ -161,5 +165,79 @@ theorem page_slot (c : Config) (ra page ent : BitVec 64) (empty : Bool) (leaf : 
       rw [srl_shift, slli_three _ _ rfl, word] at pins
       exact pins
   · unfold pageSlotBlocks; split <;> decide
+  · decide
+
+theorem next_index (h : Nat) (hh : h < 2048) :
+    (BitVec.ofNat 64 h + Functions.sign_extend (m := 64) 1#12) &&& 2047#64 = BitVec.ofNat 64 ((h + 1) % 2048) := by
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_and, show (2047#64).toNat = 2 ^ 11 - 1 from by decide, Nat.and_two_pow_sub_one_eq_mod,
+    show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide, BitVec.toNat_add, BitVec.toNat_ofNat,
+    BitVec.toNat_ofNat]
+  simp only [BitVec.toNat_ofNat]
+  omega
+
+def probeStepBlocks (empty : Bool) : List BBlock :=
+  caml_page_table_modifyXae9cTSeg ++ if empty then caml_page_table_modifyXae90TSeg else caml_page_table_modifyXae90FSeg
+
+local macro "pqk" : tactic => `(tactic| simp only [pagemodifystep_line_8000ae9c, pagemodifystep_line_8000aea0, pagemodifystep_line_8000aea4, pagemodifystep_line_8000aea8, pagemodifynext_line_8000ae90, pagemodifynext_line_8000ae94, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+/-- One probe past a slot holding another page: advance and load the next slot. -/
+theorem page_probe_step (c : Config) (ra page ent e : BitVec 64) (h : Nat) (hh : h < 2048) (empty : Bool)
+    (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(15, BitVec.ofNat 64 h), (14, e), (17, 2047#64), (16, 4096#64), (8, page), (13, ent)])
+    (other : guardB bop.BGEU (page ^^^ e) 4096#64 = true)
+    (window : ReadWindow (slotAddr ent (BitVec.ofNat 64 ((h + 1) % 2048))) 8)
+    (test : (bytesT c.σ.mem (slotAddr ent (BitVec.ofNat 64 ((h + 1) % 2048))).toNat 8 == 0#64) = empty) :
+    FnSummary 0x8000ae9c#64 (fun d => d = c) (BoundaryPost [15, 11, 10, 12, 14] c ra
+      (if empty then 0x8000aee4#64 else 0x8000ae9c#64)
+      [(14, bytesT c.σ.mem (slotAddr ent (BitVec.ofNat 64 ((h + 1) % 2048))).toNat 8),
+        (12, slotAddr ent (BitVec.ofNat 64 ((h + 1) % 2048))), (15, BitVec.ofNat 64 ((h + 1) % 2048)),
+        (17, 2047#64), (16, 4096#64), (8, page), (13, ent)]) := by
+  have word : bytesVal .ld (read8 c.σ.mem (slotAddr ent (BitVec.ofNat 64 ((h + 1) % 2048))).toNat) =
+      bytesT c.σ.mem (slotAddr ent (BitVec.ofNat 64 ((h + 1) % 2048))).toNat 8 := read8_value _ _
+  have input : BlockInput (probeStepBlocks empty) 0x8000ae9c#64
+      [(15, BitVec.ofNat 64 h), (14, e), (17, 2047#64), (16, 4096#64), (8, page), (13, ent)]
+      [read8 c.σ.mem (slotAddr ent (BitVec.ofNat 64 ((h + 1) % 2048))).toNat] c := {
+    good := leaf.good
+    minstret := leaf.minstret
+    regs := regs
+    keys := by change KeysOK [15, 14, 17, 16, 8, 13]; decide
+    shape := by unfold probeStepBlocks; split <;> (change ChainOK _ [15, 14, 17, 16, 8, 13] _; decide)
+    tick := leaf.tick
+    facts := by
+      have code := pageModifyStep_code leaf.image
+      have code2 := pageModifyNext_code leaf.image
+      unfold probeStepBlocks
+      split
+      all_goals
+        rename_i hb
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_modify_at_"
+        · pqk; exact other
+        · refine memFacts_writeLog ?_ (fun _ => ?_)
+          · refine window.ld rfl ?_ (read8_pins _ _)
+            pqk
+            rw [next_index h hh, slli_three _ _ rfl, (show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide),
+              BitVec.add_zero]
+            rfl
+          · pqk; simp only [wlogM]; trivial
+        · pqk; rw [word]; simp only [guardB]
+          first | (rw [hb] at test; exact test) | (rw [Bool.not_eq_true] at hb; rw [hb] at test; exact test) }
+  apply boundary_of_blocks leaf (block_summary _ _ _ _ _ input)
+    (keys := by unfold probeStepBlocks; split <;> decide) (no3 := by unfold probeStepBlocks; split <;> decide)
+  · unfold probeStepBlocks; split <;> rfl
+  · unfold probeStepBlocks; split <;> rfl
+  · intro σ pins
+    unfold probeStepBlocks at pins
+    split at pins <;>
+    · simp only [caml_page_table_modifyXae9cTSeg, caml_page_table_modifyXae90TSeg, caml_page_table_modifyXae90FSeg,
+        List.cons_append, List.nil_append, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM, ldsRunM,
+        srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, List.headD_cons,
+        List.tail_cons, pagemodifystep_line_8000ae9c, pagemodifystep_line_8000aea0, pagemodifystep_line_8000aea4,
+        pagemodifystep_line_8000aea8, pagemodifynext_line_8000ae90, pagemodifynext_line_8000ae94] at pins
+      rw [next_index h hh, slli_three _ _ rfl, word] at pins
+      exact ⟨gholds_lookup (n := 14) _ pins rfl, gholds_lookup (n := 12) _ pins rfl, gholds_lookup (n := 15) _ pins rfl,
+        gholds_lookup (n := 17) _ pins rfl, gholds_lookup (n := 16) _ pins rfl, gholds_lookup (n := 8) _ pins rfl,
+        gholds_lookup (n := 13) _ pins rfl, trivial⟩
+  · unfold probeStepBlocks; split <;> decide
   · decide
 end OCaml.Vm.Boot.Startup
