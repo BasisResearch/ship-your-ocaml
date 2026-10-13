@@ -1,6 +1,8 @@
 import OCaml.Vm.Gc.F1Observation
 import OCaml.Vm.Primitives.Memmove
 import OCaml.Vm.Primitives.GprsKept
+import OCaml.Vm.Primitives.Named.RegisterFront
+import OCaml.Vm.Sim.PrimInt64FloatReturns
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
@@ -5580,3 +5582,23 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.LoopGeometry.of_above
 #print axioms OCaml.Vm.Sim.out_of_above
 #print axioms OCaml.Vm.Sim.prim_caml_string_notequal_returns
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.hashCode
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.frontCode
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.hashed_nonempty
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.hashed_empty
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.bucketed_of_hashed
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.walkCode
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.frontCode
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.walkCode
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.bucketed_of_hashed
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.front
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.bucket_addr
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.walk_restart
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.look
+#print axioms OCaml.Vm.Sim.ccall_logged_summary
+#print axioms OCaml.Vm.Sim.ccall_allocation_entry
+#print axioms OCaml.Vm.Sim.int64_float_entry
+#print axioms OCaml.Vm.Sim.word_of_bytes
+#print axioms OCaml.LoopGeometry.bytes
+#print axioms OCaml.Vm.Sim.int64_float_semantics
+#print axioms OCaml.Vm.Sim.prim_caml_int64_float_of_bits_returns

@@ -137,11 +137,26 @@
 * Exit path weakened to `ExitOk` (registers read: ra, sp, a0, s0–s10) for STOP;
   `EffectPost.htifIdle` (`HtifFrame.lean`) for a1-arms' `LoopRegisters.htifIdle`.
 
-**Next (remaining 9, all deep; path-specific callees):**
-* `caml_register_named_value`: `strlen` (landed `strlen_summary`), `__umoddi3` hash
-  (`DivSpec` battery), `strcmp` chain walk; first registration: `caml_stat_alloc`
-  (malloc specs) + `memcpy` (landed) + `caml_register_generational_global_root`
-  (skiplist insert, needs a summary); repeat name: `caml_modify_generational_global_root`.
+* Allocating primitives at C_CALL (`Sim/CcallAllocation.lean`): `ccall_allocation_entry` takes a
+  primitive's represented contract for one object reserved below `young_ptr`, and builds
+  `AllocationInput` (`AllocLogOk.of_block`), the runtime frame (`AllocFrame`, F1: `f1_allocFrame`)
+  and the C_CALL return (`ccall_logged_summary`: the geometry after the call uses the exact log,
+  `LoopGeometry.alloc_log`). Inputs: the entry placement and the post-call budget, both from
+  a1-arms. CcallCallee/PrimReturnsAt change (928bff62). `prim_caml_int64_float_of_bits_returns` (every C_CALL, premise `AllocFrame L`) from `int64_float_entry`
+  (`Sim/PrimInt64FloatReturns.lean`): `FastMemory` from the reserved block.
+* The string allocators (`executable_name`, `get_argv`, `get_config`) need their StringCopy stage
+  inputs (`CopyInput`, `FinishStageInput`) discharged at the callee entry. `executable_name` and
+  `get_argv` also need an `exeName` C-string binding beside `PrimitiveBindings` (a1-prims drafts
+  it; a6-gc places the string relative to the nursery; a1-arms frames it).
+
+**Next (remaining, path-specific callees):**
+* `caml_register_named_value`: generated blocks `Named/NamedRegister.lean`
+  (`gen_fn.py --ocaml-named`). The hash loop, `% 13` and chain walk are shared with
+  `caml_named_value` through `HashCode`/`FrontCode`/`WalkCode`; `RegisterFront.look`
+  runs to the found/new split. Remaining: the new node (`strlen`, checked `caml_stat_alloc`,
+  `memcpy`, link stores), the in-place update, the epilogue, `NamedTableAt` across the insert.
+  `caml_register_generational_global_root` / `caml_modify_generational_global_root` (skiplist,
+  page table) enter as named callee contracts (agreed with a0-boot 2026-10-13).
 * channels: `open_descriptor_in/out` → `caml_open_descriptor_in` (`caml_stat_alloc`,
   `lseek`) + `caml_alloc_custom_mem`; `output_bytes`/`output_char` (buffer `memmove`,
   `caml_flush_partial` when full); `flush` → `caml_flush_partial` → `caml_write_fd` →

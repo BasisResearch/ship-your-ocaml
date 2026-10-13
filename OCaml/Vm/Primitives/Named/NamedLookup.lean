@@ -97,7 +97,7 @@ theorem named_value_summary {ra sp a s0 s1 : BitVec 64} {name : List (BitVec 8)}
   have readHead : bytesVal .ld (read8 cb.σ.mem (bucketAddr idx).toNat) = head := by
     rw [pb.memory]; exact headVal
   -- to the return block, with the answer in s0
-  have toDone : ∃ cw, Steps cb cw ∧ WalkDone cb a (chainFind qs nodes) cw := by
+  have toDone : ∃ cw, Steps cb cw ∧ WalkDone 0x80021588#64 0x80021588#64 cb a (chainFind qs nodes) cw := by
     by_cases empty : head = 0#64
     · obtain ⟨c2, run2, p2⟩ := (bucketEmpty_fast cb (regsAt cb) w0.leaf regsB (by rw [addr]; exact bucket.window)
         (by simp only [bucketEmpty_loads, addr, List.getD_cons_zero, readHead, empty]; decide)).run cb ⟨pb.pc, rfl⟩
@@ -109,7 +109,7 @@ theorem named_value_summary {ra sp a s0 s1 : BitVec 64} {name : List (BitVec 8)}
         (gpr_some_of ((p3.gpr_frame (by decide) 10 (by decide) (by decide) (by simp)).trans (gpr_some s2.a0)))
       subst empty
       cases chainAt
-      · exact ⟨c3, run2.trans run3, s3, p3.pc,
+      · exact ⟨c3, run2.trans run3, s3, by rw [ite_self]; exact p3.pc,
           (p3.gpr_frame (by decide) 8 (by decide) (by decide) (by simp)).trans o2.1⟩
       · exact absurd rfl (by assumption : (0#64 : BitVec 64) ≠ 0#64)
     · obtain ⟨c2, run2, p2⟩ := (bucketHit_fast cb (regsAt cb) w0.leaf regsB (by rw [addr]; exact bucket.window)
@@ -118,10 +118,11 @@ theorem named_value_summary {ra sp a s0 s1 : BitVec 64} {name : List (BitVec 8)}
       have o2 := p2.regs
       simp only [bucketHit_regs, bucketHit_loads, addr, List.getD_cons_zero, readHead, GHolds] at o2
       have s2 := w0.after_block p2 (by decide) (by decide) (by decide) (by decide) (gpr_some_of o2.2.2.1)
-      obtain ⟨cw, run3, done⟩ := walk nodes head c2 (by rw [pb.memory]; exact chainAt) empty s2
+      obtain ⟨cw, run3, done⟩ := walk walkCode nodes head c2 (by rw [pb.memory]; exact chainAt) empty s2
         p2.pc o2.1
       exact ⟨cw, run2.trans run3, done⟩
   obtain ⟨cw, run2, pw⟩ := toDone
+  have pwpc : PCAt 0x80021588#64 cw := by have := pw.pc; rwa [ite_self] at this
   -- the return block
   have spw : gprGet cw.σ 2 = some (sp + 18446744073709551584#64) :=
     (pw.state.frame 2 (by decide) (by decide) (by decide)).trans pb.stack
@@ -153,7 +154,7 @@ theorem named_value_summary {ra sp a s0 s1 : BitVec 64} {name : List (BitVec 8)}
   have regsD : GHolds cw.σ (done_input (regsAt cw)) :=
     ⟨by rw [r2]; exact spw, by rw [r8]; exact pw.result, gpr_some pw.state.a0, trivial⟩
   obtain ⟨d, run3, pd⟩ := (done_fast cw ra (regsAt cw) pw.state.leaf regsD (win 24 (by simp)) (win 16 (by simp))
-    (win 8 (by simp)) readRa h.leaf.aligned).run cw ⟨pw.pc, rfl⟩
+    (win 8 (by simp)) readRa h.leaf.aligned).run cw ⟨pwpc, rfl⟩
   have od := pd.regs
   simp only [done_regs, done_loads, List.getD_cons_zero, List.getD_cons_succ, GHolds] at od
   rw [readRa, readS0, readS1] at od

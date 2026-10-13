@@ -41,6 +41,8 @@ import OCaml.Vm.Sim.CcallRows
 import OCaml.Vm.Sim.LibraryEntry
 import OCaml.Vm.Sim.AllocPlacesOk
 import OCaml.Vm.Sim.CcallWriting
+import OCaml.Vm.Sim.CcallAllocation
+import OCaml.Vm.Sim.PrimInt64FloatReturns
 import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.BarrierRows
 import OCaml.Vm.Sim.MakeblockRows
@@ -692,3 +694,5 @@ import OCaml.Vm.Primitives.Named.NamedFront
 import OCaml.Vm.Primitives.Named.NamedChain
 import OCaml.Vm.Primitives.Named.NamedLookup
 import OCaml.Vm.Primitives.Named.NamedTable
+import OCaml.Vm.Primitives.Named.NamedRegister
+import OCaml.Vm.Primitives.Named.RegisterFront

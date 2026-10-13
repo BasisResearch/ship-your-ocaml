@@ -2,12 +2,15 @@ import OCaml.Vm.Primitives.Named.NamedValue
 import OCaml.Vm.Primitives.LibraryEffects
 
 /-!
-# `hash_value_name`'s byte loop in `caml_named_value`
+# `hash_value_name`'s byte loop
 
 `h = h * 19 + *name` over the name's bytes in 32-bit arithmetic, kept
 sign-extended in `a0` by the word instructions (`slliw`/`addw`/`subw`). The
 loop's generated blocks are `hashMore` (another byte) and `hashEnd` (the
 terminator); `hash_loop` folds them by induction on the bytes left.
+`caml_named_value` and `caml_register_named_value` inline the same loop at
+two addresses; `HashCode head exit` is either copy's pair of block
+summaries.
 -/
 
 namespace OCaml.Vm.Primitives.Named.NamedValue
@@ -52,10 +55,34 @@ structure NameAt (m : Std.ExtHashMap Nat (BitVec 8)) (a : BitVec 64) (name : Lis
   nul : (m[(a + BitVec.ofNat 64 name.length).toNat]?).getD 0 = 0#8
   window : ∀ i, i ≤ name.length → ReadWindow (a + BitVec.ofNat 64 i) 1
 
+/-- The hash block's `a0` as its generated summary reports it. -/
+def hashValue (R : Nat → BitVec 64) : BitVec 64 :=
+  BitVec.signExtend 64 (BitVec.extractLsb 31 0 (R 14) + BitVec.extractLsb 31 0 (BitVec.signExtend 64
+    (BitVec.extractLsb 31 0 (BitVec.signExtend 64 (BitVec.extractLsb 31 0 (BitVec.signExtend 64
+      (BitVec.extractLsb 31 0 (BitVec.signExtend 64 (BitVec.extractLsb 31 0 (R 10) <<< 2)) +
+        BitVec.extractLsb 31 0 (R 10))) <<< 2)) + -BitVec.extractLsb 31 0 (R 10))))
+
+/-- **A copy of the hash loop**: its two generated blocks at `head`, back to
+`head` on a nonzero byte and on to `exit` at the terminator. -/
+structure HashCode (head exit : BitVec 64) : Prop where
+  more : ∀ (c : Config) (R : Nat → BitVec 64), LeafInput (R 1) c → GHolds c.σ (hashMore_input R) →
+    ReadWindow (R 13 + 1#64) 1 →
+    guardB .BNE (bytesVal .lbu ((hashMore_loads c.σ.mem R).getD 0 [])) (0#64) = true →
+    FnSummary head (fun d => d = c)
+      (WriteRegistersPost [10, 13, 14, 15] [] c head (hashValue R) (hashMore_regs R (hashMore_loads c.σ.mem R)))
+  stop : ∀ (c : Config) (R : Nat → BitVec 64), LeafInput (R 1) c → GHolds c.σ (hashEnd_input R) →
+    ReadWindow (R 13 + 1#64) 1 →
+    guardB .BNE (bytesVal .lbu ((hashEnd_loads c.σ.mem R).getD 0 [])) (0#64) = false →
+    FnSummary head (fun d => d = c)
+      (WriteRegistersPost [10, 13, 14, 15] [] c exit (hashValue R) (hashEnd_regs R (hashEnd_loads c.σ.mem R)))
+
+/-- `caml_named_value`'s copy. -/
+theorem hashCode : HashCode 0x80021520#64 0x80021540#64 := ⟨hashMore_fast, hashEnd_fast⟩
+
 /-- At the hash loop's head, about to fold byte `i`. -/
-structure HashAt (c0 : Config) (ra a : BitVec 64) (name : List (BitVec 8)) (i : Nat) (c : Config) : Prop where
+structure HashAt (head : BitVec 64) (c0 : Config) (ra a : BitVec 64) (name : List (BitVec 8)) (i : Nat) (c : Config) : Prop where
   leaf : LeafInput ra c
-  pc : PCAt 0x80021520#64 c
+  pc : PCAt head c
   bound : i < name.length
   cursor : gprGet c.σ 13 = some (a + BitVec.ofNat 64 i)
   byte : gprGet c.σ 14 = some (bytesVal .lbu [name[i]])
@@ -66,9 +93,9 @@ structure HashAt (c0 : Config) (ra a : BitVec 64) (name : List (BitVec 8)) (i : 
   htif : c.σ.regs.get? Register.htif_payload_writes = c0.σ.regs.get? Register.htif_payload_writes
 
 /-- The loop has hashed the whole name. -/
-structure HashDone (c0 : Config) (ra : BitVec 64) (name : List (BitVec 8)) (c : Config) : Prop where
+structure HashDone (exit : BitVec 64) (c0 : Config) (ra : BitVec 64) (name : List (BitVec 8)) (c : Config) : Prop where
   leaf : LeafInput ra c
-  pc : PCAt 0x80021540#64 c
+  pc : PCAt exit c
   hash : gprGet c.σ 10 = some (BitVec.signExtend 64 (hashBytes name))
   memory : c.σ.mem = c0.σ.mem
   output : c.σ.sailOutput = c0.σ.sailOutput
@@ -83,14 +110,26 @@ def regsAt (c : Config) : Nat → BitVec 64 := fun k => (gprGet c.σ k).getD 0
 theorem regsAt_of {c : Config} {k : Nat} {v : BitVec 64} (h : gprGet c.σ k = some v) : regsAt c k = v := by
   simp only [regsAt, h, Option.getD_some]
 
+theorem gpr_some {c : Config} {k : Nat} (h : (gprGet c.σ k).isSome) : gprGet c.σ k = some (regsAt c k) := by
+  simp only [regsAt]; cases e : gprGet c.σ k with
+  | none => rw [e] at h; cases h
+  | some v => rfl
+
+theorem gprReg_ne_htif (n : Nat) : gprReg n ≠ Register.htif_payload_writes := by
+  unfold gprReg; split <;> decide
+
+theorem gpr_some_of {c : Config} {k : Nat} {v : BitVec 64} (h : gprGet c.σ k = some v) :
+    (gprGet c.σ k).isSome := by rw [h]; rfl
+
 theorem take_succ_eq {name : List (BitVec 8)} {i : Nat} (hi : i < name.length) :
     name.take (i + 1) = name.take i ++ [name[i]] := by
   rw [List.take_succ, List.getElem?_eq_getElem hi]; rfl
 
 /-- One iteration: another nonzero byte. -/
-theorem hash_more {c0 c : Config} {ra a : BitVec 64} {name : List (BitVec 8)} {i : Nat}
-    (named : NameAt c0.σ.mem a name) (h : HashAt c0 ra a name i c) (more : i + 1 < name.length) :
-    ∃ d, Steps c d ∧ HashAt c0 ra a name (i + 1) d := by
+theorem hash_more {head exit : BitVec 64} (code : HashCode head exit) {c0 c : Config} {ra a : BitVec 64}
+    {name : List (BitVec 8)} {i : Nat}
+    (named : NameAt c0.σ.mem a name) (h : HashAt head c0 ra a name i c) (more : i + 1 < name.length) :
+    ∃ d, Steps c d ∧ HashAt head c0 ra a name (i + 1) d := by
   have r13 := regsAt_of h.cursor
   have r14 := regsAt_of h.byte
   have r10 := regsAt_of h.hash
@@ -110,7 +149,7 @@ theorem hash_more {c0 c : Config} {ra a : BitVec 64} {name : List (BitVec 8)} {i
     simp [zero_extend, Sail.BitVec.zeroExtend]
     intro e; apply nz; apply BitVec.eq_of_toNat_eq
     have := congrArg BitVec.toNat e; have lt := (name[i + 1]).isLt; simp at this ⊢; omega
-  obtain ⟨d, run, post⟩ := (hashMore_fast c (regsAt c) leaf regs (by rw [next]; exact named.window _ (by omega)) ok).run c
+  obtain ⟨d, run, post⟩ := (code.more c (regsAt c) leaf regs (by rw [next]; exact named.window _ (by omega)) ok).run c
     ⟨h.pc, rfl⟩
   have out := post.regs
   rw [read] at out
@@ -129,9 +168,10 @@ theorem hash_more {c0 c : Config} {ra a : BitVec 64} {name : List (BitVec 8)} {i
   · exact (post.frame _ (by decide) (by decide)).trans h.htif
 
 /-- The last iteration: the terminator. -/
-theorem hash_end {c0 c : Config} {ra a : BitVec 64} {name : List (BitVec 8)} {i : Nat}
-    (named : NameAt c0.σ.mem a name) (h : HashAt c0 ra a name i c) (last : i + 1 = name.length) :
-    ∃ d, Steps c d ∧ HashDone c0 ra name d := by
+theorem hash_end {head exit : BitVec 64} (code : HashCode head exit) {c0 c : Config} {ra a : BitVec 64}
+    {name : List (BitVec 8)} {i : Nat}
+    (named : NameAt c0.σ.mem a name) (h : HashAt head c0 ra a name i c) (last : i + 1 = name.length) :
+    ∃ d, Steps c d ∧ HashDone exit c0 ra name d := by
   have r13 := regsAt_of h.cursor
   have r14 := regsAt_of h.byte
   have r10 := regsAt_of h.hash
@@ -146,7 +186,7 @@ theorem hash_end {c0 c : Config} {ra a : BitVec 64} {name : List (BitVec 8)} {i 
     rw [regsAt_of h.leaf.raReg]; exact h.leaf
   have ok : guardB .BNE (bytesVal .lbu ((hashEnd_loads c.σ.mem (regsAt c)).getD 0 [])) (0#64) = false := by
     rw [read]; decide
-  obtain ⟨d, run, post⟩ := (hashEnd_fast c (regsAt c) leaf regs (by rw [next]; exact named.window _ (Nat.le_refl _)) ok).run c
+  obtain ⟨d, run, post⟩ := (code.stop c (regsAt c) leaf regs (by rw [next]; exact named.window _ (Nat.le_refl _)) ok).run c
     ⟨h.pc, rfl⟩
   have out := post.regs
   rw [read] at out
@@ -164,14 +204,15 @@ theorem hash_end {c0 c : Config} {ra a : BitVec 64} {name : List (BitVec 8)} {i 
   · exact (post.frame _ (by decide) (by decide)).trans h.htif
 
 /-- **The hash loop**, from any byte to the terminator. -/
-theorem hash_loop {c0 : Config} {ra a : BitVec 64} {name : List (BitVec 8)} (named : NameAt c0.σ.mem a name) :
-    ∀ k i c, i + 1 + k = name.length → HashAt c0 ra a name i c → ∃ d, Steps c d ∧ HashDone c0 ra name d := by
+theorem hash_loop {head exit : BitVec 64} (code : HashCode head exit) {c0 : Config} {ra a : BitVec 64}
+    {name : List (BitVec 8)} (named : NameAt c0.σ.mem a name) :
+    ∀ k i c, i + 1 + k = name.length → HashAt head c0 ra a name i c → ∃ d, Steps c d ∧ HashDone exit c0 ra name d := by
   intro k
   induction k with
-  | zero => intro i c e h; exact hash_end named h (by omega)
+  | zero => intro i c e h; exact hash_end code named h (by omega)
   | succ k ih =>
     intro i c e h
-    obtain ⟨d, run, hd⟩ := hash_more named h (by omega)
+    obtain ⟨d, run, hd⟩ := hash_more code named h (by omega)
     obtain ⟨d', run', done⟩ := ih (i + 1) d (by omega) hd
     exact ⟨d', run.trans run', done⟩
 

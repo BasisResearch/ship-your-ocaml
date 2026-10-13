@@ -76,6 +76,165 @@ theorem NameAt.saved {m : Std.ExtHashMap Nat (BitVec 8)} {a : BitVec 64} {name :
   exact ⟨fun i hi => (keep i (by omega)).trans (h.bytes i hi), h.nonzero,
     (keep _ (Nat.le_refl _)).trans h.nul, h.window⟩
 
+/-- **A copy of the hash-to-bucket code**: the hash loop's entry block at
+`start` (cursor and `h = 0`), the loop (`HashCode`), the `% 13` block at
+`modPc` and its `__umoddi3` call returning to `bucket`, and the empty name's
+block at `empty` (hash 0, on to `bucket`). -/
+structure FrontCode (call : CallInstr) (start head modPc empty bucket : BitVec 64) : Prop where
+  start : ∀ (c : Config) (R : Nat → BitVec 64), LeafInput (R 1) c → GHolds c.σ (start_input R) →
+    FnSummary start (fun d => d = c)
+      (WriteRegistersPost [10, 13] [] c head (0#64) (start_regs R (start_loads c.σ.mem R)))
+  hash : HashCode head modPc
+  mod : ∀ (c : Config) (R : Nat → BitVec 64), LeafInput (R 1) c → GHolds c.σ (mod_input R) →
+    FnSummary modPc (fun d => d = c)
+      (WriteRegistersPost [10, 11] [] c call.pc (R 10 <<< 32 >>> 32) (mod_regs R (mod_loads c.σ.mem R)))
+  shape : CallShape call
+  decode : CallDecode call
+  pins : ∀ {c : Config}, ExecutableImage c → CallPins call c
+  target : call.target = 0x800372e8#64
+  link : call.link = bucket
+  aligned : bucket.toNat % 4 = 0
+  empty : ∀ (c : Config) (R : Nat → BitVec 64), LeafInput (R 1) c → GHolds c.σ (empty_input R) →
+    FnSummary empty (fun d => d = c)
+      (WriteRegistersPost [10] [] c bucket (0#64) (empty_regs R (empty_loads c.σ.mem R)))
+
+/-- `caml_named_value`'s copy. -/
+theorem frontCode :
+    FrontCode mod_call 0x80021518#64 0x80021520#64 0x80021540#64 0x800215a0#64 0x80021550#64 :=
+  ⟨start_fast, hashCode, mod_fast, mod_call_shape, mod_call_decode, mod_call_pins, by decide, by decide,
+    by decide, empty_fast⟩
+
+/-- The registers the hash-to-bucket code may change. -/
+def hashWrites : List Nat := [1, 5, 10, 11, 12, 13, 14, 15]
+
+/-- At the bucket load with `a0 = hash % 13`, memory and output as at `before`. -/
+structure Hashed (before : Config) (bucket : BitVec 64) (name : List (BitVec 8)) (c : Config) : Prop where
+  good : GoodState c.σ
+  image : ExecutableImage c
+  minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
+  tick : c.tick < 2
+  link : ∃ r : BitVec 64, gprGet c.σ 1 = some r ∧ r.toNat % 4 = 0
+  pc : PCAt bucket c
+  index : gprGet c.σ 10 = some (BitVec.ofNat 64 ((hashBytes name).toNat % 13))
+  memory : c.σ.mem = before.σ.mem
+  output : c.σ.sailOutput = before.σ.sailOutput
+  frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ hashWrites → gprGet c.σ n = gprGet before.σ n
+  htifIdle : c.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
+
+/-- **A nonempty name from the hash loop's entry to the bucket load.** -/
+theorem hashed_nonempty {call : CallInstr} {start head modPc empty bucket : BitVec 64}
+    (code : FrontCode call start head modPc empty bucket) {ra a : BitVec 64} {name : List (BitVec 8)}
+    {c1 : Config} (ne : 0 < name.length) (leaf : LeafInput ra c1) (pc : PCAt start c1)
+    (arg : gprGet c1.σ 10 = some a) (byte : gprGet c1.σ 14 = some (bytesVal .lbu [name[0]]))
+    (named : NameAt c1.σ.mem a name) :
+    ∃ d, Steps c1 d ∧ Hashed c1 bucket name d := by
+  have regs1 : GHolds c1.σ (start_input (regsAt c1)) := by
+    simp only [start_input, GHolds, regsAt_of arg]; exact ⟨arg, trivial⟩
+  have leaf1 : LeafInput (regsAt c1 1) c1 := by rw [regsAt_of leaf.raReg]; exact leaf
+  obtain ⟨c2, run2, p2⟩ := (code.start c1 (regsAt c1) leaf1 regs1).run c1 ⟨pc, rfl⟩
+  have o2 := p2.regs
+  simp only [start_regs, GHolds, regsAt_of arg] at o2
+  obtain ⟨c2_10, c2_13, -⟩ := o2
+  have m2 : c2.σ.mem = c1.σ.mem := by rw [p2.memory, wl_nil]
+  have named2 : NameAt c2.σ.mem a name := by rw [m2]; exact named
+  have at0 : HashAt head c2 ra a name 0 c2 :=
+    { leaf := ⟨p2.good, p2.image, p2.minstret,
+        (p2.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans leaf.raReg, leaf.aligned, p2.tick⟩
+      pc := p2.pc, bound := ne
+      cursor := by rw [c2_13]; simp
+      byte := (p2.gpr_frame (by decide) 14 (by decide) (by decide) (by decide)).trans byte
+      hash := by rw [c2_10]; rfl
+      memory := rfl, output := rfl, frame := fun _ _ _ _ => rfl, htif := rfl }
+  obtain ⟨c3, run3, p3⟩ := hash_loop code.hash named2 (name.length - 1) 0 c2 (by omega) at0
+  -- h % 13
+  have leaf3 : LeafInput (regsAt c3 1) c3 := by rw [regsAt_of p3.leaf.raReg]; exact p3.leaf
+  have regs3 : GHolds c3.σ (mod_input (regsAt c3)) := by
+    simp only [mod_input, GHolds, regsAt_of p3.leaf.raReg, regsAt_of p3.hash]
+    exact ⟨p3.leaf.raReg, p3.hash, trivial⟩
+  obtain ⟨c4, run4, p4⟩ := (code.mod c3 (regsAt c3) leaf3 regs3).run c3 ⟨p3.pc, rfl⟩
+  have args : GHolds c4.σ [(10, (hashBytes name).zeroExtend 64), (11, 13#64)] := by
+    apply holds_project p4.regs
+    simp [mod_regs, lookupG, regsAt_of p3.hash, zext_low]
+  obtain ⟨c5, run5, p5⟩ := (call_registers_summary code.shape code.decode c4 (code.pins p4.image)
+    p4.good p4.image p4.tick p4.minstret _ args (by change KeysOK [10, 11]; decide)
+    (by simp [KeysAvoidRa, keysG]) rfl).run c4 ⟨p4.pc, rfl⟩
+  have div : Udivdi3Input ((hashBytes name).zeroExtend 64) 13#64 bucket c5 :=
+    { good := p5.good, image := p5.image, minstret := p5.minstret
+      raReg := gholds_lookup (n := 1) _ p5.regs (by simp [lookupG, code.link])
+      aligned := code.aligned, tick := p5.tick
+      left := gholds_lookup (n := 10) _ p5.regs rfl, right := gholds_lookup (n := 11) _ p5.regs rfl
+      nonzero := by decide }
+  obtain ⟨c6, run6, p6⟩ := (Umoddi3.umoddi3_summary div).run c5
+    ⟨by have := p5.pc; rw [code.target] at this; exact this, rfl⟩
+  refine ⟨c6, run2.trans (run3.trans (run4.trans (run5.trans run6))), ?_⟩
+  exact
+    { good := p6.good, image := p6.image, minstret := p6.minstret, tick := p6.tick
+      link := ⟨_, p6.link, by decide⟩
+      pc := p6.pc
+      index := by have := p6.result; rw [mod13] at this; exact this
+      memory := by rw [p6.memory, p5.memory, p4.memory, wl_nil, p3.memory, m2]
+      output := by rw [p6.output, p5.output, p4.output, p3.output, p2.output]
+      frame := fun n lo hi out => by
+        simp only [hashWrites, List.mem_cons, List.not_mem_nil, or_false, not_or] at out
+        exact (p6.frame n lo hi (by simp [Umoddi3.umodWrites]; omega)).trans
+          ((p5.gpr_frame (by decide) n lo hi (by simp; omega)).trans
+          ((p4.gpr_frame (by decide) n lo hi (by simp; omega)).trans
+          ((p3.frame n lo hi (by simp; omega)).trans
+          (p2.gpr_frame (by decide) n lo hi (by simp; omega)))))
+      htifIdle := by
+        rw [p6.htifIdle, p5.frame _ (by decide) (by decide), p4.frame _ (by decide) (by decide), p3.htif,
+          p2.frame _ (by decide) (by decide)] }
+
+/-- **The empty name from its block to the bucket load** (hash 0). -/
+theorem hashed_empty {call : CallInstr} {start head modPc empty bucket : BitVec 64}
+    (code : FrontCode call start head modPc empty bucket) {ra : BitVec 64} {name : List (BitVec 8)}
+    {c1 : Config} (e : name.length = 0) (leaf : LeafInput ra c1) (pc : PCAt empty c1)
+    (a0 : (gprGet c1.σ 10).isSome) :
+    ∃ d, Steps c1 d ∧ Hashed c1 bucket name d := by
+  have nil : name = [] := List.eq_nil_of_length_eq_zero e
+  have c1_10 := gpr_some a0
+  have regs1 : GHolds c1.σ (empty_input (regsAt c1)) := by
+    simp only [empty_input, GHolds]; exact ⟨c1_10, trivial⟩
+  have leaf1 : LeafInput (regsAt c1 1) c1 := by rw [regsAt_of leaf.raReg]; exact leaf
+  obtain ⟨c2, run2, p2⟩ := (code.empty c1 (regsAt c1) leaf1 regs1).run c1 ⟨pc, rfl⟩
+  have o2 := p2.regs
+  simp only [empty_regs, GHolds] at o2
+  refine ⟨c2, run2, ?_⟩
+  exact
+    { good := p2.good, image := p2.image, minstret := p2.minstret, tick := p2.tick
+      link := ⟨ra, (p2.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans leaf.raReg, leaf.aligned⟩
+      pc := p2.pc
+      index := by rw [o2.1, nil]; rfl
+      memory := by rw [p2.memory, wl_nil]
+      output := p2.output
+      frame := fun n lo hi out => p2.gpr_frame (by decide) n lo hi (fun m => out (by
+        simp only [List.mem_cons, List.not_mem_nil, or_false] at m; subst m; decide))
+      htifIdle := p2.frame _ (by decide) (by decide) }
+
+/-- The prologue's facts and the shared hash-to-bucket run give `Bucketed`. -/
+theorem bucketed_of_hashed {ra sp a s0 s1 : BitVec 64} {name : List (BitVec 8)} {c c1 : Config}
+    {pc v : BitVec 64} {writes : List Nat} {log : List WEntry} {regs : GRegs}
+    (h : LookupInput ra sp a s0 s1 name c) (p1 : WriteRegistersPost writes log c pc v regs c1)
+    (keys : KeysOK writes) (sub : ∀ n ∈ writes, n ∈ [1, 2, 5, 9, 10, 11, 12, 13, 14, 15])
+    (c1_9 : gprGet c1.σ 9 = some a) (c1_2 : gprGet c1.σ 2 = some (sp + 18446744073709551584#64))
+    (m1 : c1.σ.mem = writeLog c.σ.mem (saveLog sp ra s0 s1))
+    (run : ∃ d, Steps c d ∧ Hashed c1 0x80021550#64 name d) :
+    ∃ d, Steps c d ∧ Bucketed c ra sp a s0 s1 name d := by
+  obtain ⟨d, run, p⟩ := run
+  refine ⟨d, run, ?_⟩
+  exact
+    { good := p.good, image := p.image, minstret := p.minstret, tick := p.tick, link := p.link
+      pc := p.pc, index := p.index
+      name := (p.frame 9 (by decide) (by decide) (by decide)).trans c1_9
+      stack := (p.frame 2 (by decide) (by decide) (by decide)).trans c1_2
+      memory := p.memory.trans m1
+      output := p.output.trans p1.output
+      frame := fun n lo hi out => by
+        have o1 : n ∉ writes := fun m => out (sub n m)
+        simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at out
+        exact (p.frame n lo hi (by simp [hashWrites]; omega)).trans (p1.gpr_frame keys n lo hi o1)
+      htifIdle := p.htifIdle.trans (p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide)) }
+
 /-- **A nonempty name to the bucket**: prologue, hash loop, `% 13`. -/
 theorem front_nonempty {ra sp a s0 s1 : BitVec 64} {name : List (BitVec 8)} {c : Config}
     (h : LookupInput ra sp a s0 s1 name c) (ne : 0 < name.length) :
@@ -115,77 +274,11 @@ theorem front_nonempty {ra sp a s0 s1 : BitVec 64} {name : List (BitVec 8)} {c :
   rw [first] at o1
   simp only [pro_regs, GHolds, r1, r2, r8, r10] at o1
   obtain ⟨c1_9, c1_14, c1_2, c1_1, c1_8, c1_10, -⟩ := o1
-  -- the hash loop's entry
-  have regs1 : GHolds c1.σ (start_input (regsAt c1)) := by
-    simp only [start_input, GHolds, regsAt_of c1_10]; exact ⟨c1_10, trivial⟩
-  have leaf1 : LeafInput (regsAt c1 1) c1 := by
-    rw [regsAt_of c1_1]; exact ⟨p1.good, p1.image, p1.minstret, c1_1, h.leaf.aligned, p1.tick⟩
-  obtain ⟨c2, run2, p2⟩ := (start_fast c1 (regsAt c1) leaf1 regs1).run c1 ⟨p1.pc, rfl⟩
-  have o2 := p2.regs
-  simp only [start_regs, GHolds, regsAt_of c1_10] at o2
-  obtain ⟨c2_10, c2_13, -⟩ := o2
-  have m2 : c2.σ.mem = writeLog c.σ.mem (saveLog sp ra s0 s1) := by
-    rw [p2.memory, wl_nil, p1.memory, logEq]
-  have named2 : NameAt c2.σ.mem a name := by rw [m2]; exact h.named.saved h.apart
-  have at0 : HashAt c2 ra a name 0 c2 :=
-    { leaf := ⟨p2.good, p2.image, p2.minstret,
-        (p2.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans c1_1, h.leaf.aligned, p2.tick⟩
-      pc := p2.pc, bound := ne
-      cursor := by rw [c2_13]; simp
-      byte := (p2.gpr_frame (by decide) 14 (by decide) (by decide) (by decide)).trans c1_14
-      hash := by rw [c2_10]; rfl
-      memory := rfl, output := rfl, frame := fun _ _ _ _ => rfl, htif := rfl }
-  obtain ⟨c3, run3, p3⟩ := hash_loop named2 (name.length - 1) 0 c2 (by omega) at0
-  -- h % 13
-  have leaf3 : LeafInput (regsAt c3 1) c3 := by rw [regsAt_of p3.leaf.raReg]; exact p3.leaf
-  have regs3 : GHolds c3.σ (mod_input (regsAt c3)) := by
-    simp only [mod_input, GHolds, regsAt_of p3.leaf.raReg, regsAt_of p3.hash]
-    exact ⟨p3.leaf.raReg, p3.hash, trivial⟩
-  obtain ⟨c4, run4, p4⟩ := (mod_fast c3 (regsAt c3) leaf3 regs3).run c3 ⟨p3.pc, rfl⟩
-  have args : GHolds c4.σ [(10, (hashBytes name).zeroExtend 64), (11, 13#64)] := by
-    apply holds_project p4.regs
-    simp [mod_regs, lookupG, regsAt_of p3.hash, zext_low]
-  obtain ⟨c5, run5, p5⟩ := (call_registers_summary mod_call_shape mod_call_decode c4 (mod_call_pins p4.image)
-    p4.good p4.image p4.tick p4.minstret _ args (by change KeysOK [10, 11]; decide)
-    (by simp [KeysAvoidRa, keysG]) rfl).run c4 ⟨p4.pc, rfl⟩
-  have div : Udivdi3Input ((hashBytes name).zeroExtend 64) 13#64 0x80021550#64 c5 :=
-    { good := p5.good, image := p5.image, minstret := p5.minstret
-      raReg := gholds_lookup (n := 1) _ p5.regs rfl, aligned := by decide, tick := p5.tick
-      left := gholds_lookup (n := 10) _ p5.regs rfl, right := gholds_lookup (n := 11) _ p5.regs rfl
-      nonzero := by decide }
-  obtain ⟨c6, run6, p6⟩ := (Umoddi3.umoddi3_summary div).run c5
-    ⟨by have := p5.pc; rw [show mod_call.target = 0x800372e8#64 from by decide] at this; exact this, rfl⟩
-  have keep : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 2, 5, 9, 10, 11, 12, 13, 14, 15] → gprGet c6.σ n = gprGet c.σ n := by
-    intro n lo hi out
-    simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at out
-    exact (p6.frame n lo hi (by simp [Umoddi3.umodWrites]; omega)).trans
-      ((p5.gpr_frame (by decide) n lo hi (by simp; omega)).trans
-      ((p4.gpr_frame (by decide) n lo hi (by simp; omega)).trans
-      ((p3.frame n lo hi (by simp; omega)).trans
-      ((p2.gpr_frame (by decide) n lo hi (by simp; omega)).trans
-      (p1.gpr_frame (by decide) n lo hi (by simp; omega))))))
-  refine ⟨c6, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans run6)))), ?_⟩
-  exact
-    { good := p6.good, image := p6.image, minstret := p6.minstret, tick := p6.tick
-      link := ⟨_, p6.link, by decide⟩
-      pc := p6.pc
-      index := by have := p6.result; rw [mod13] at this; exact this
-      name := (p6.frame 9 (by decide) (by decide) (by decide)).trans
-        ((p5.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans
-        ((p4.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans
-        ((p3.frame 9 (by decide) (by decide) (by decide)).trans
-        ((p2.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans c1_9))))
-      stack := (p6.frame 2 (by decide) (by decide) (by decide)).trans
-        ((p5.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans
-        ((p4.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans
-        ((p3.frame 2 (by decide) (by decide) (by decide)).trans
-        ((p2.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans c1_2))))
-      memory := by rw [p6.memory, p5.memory, p4.memory, wl_nil, p3.memory, m2]
-      output := by rw [p6.output, p5.output, p4.output, p3.output, p2.output, p1.output]
-      frame := keep
-      htifIdle := by
-        rw [p6.htifIdle, p5.frame _ (by decide) (by decide), p4.frame _ (by decide) (by decide), p3.htif,
-          p2.frame _ (by decide) (by decide), p1.frame _ (by decide) (by decide)] }
+  have m1 : c1.σ.mem = writeLog c.σ.mem (saveLog sp ra s0 s1) := by rw [p1.memory, logEq]
+  obtain ⟨d, run, p⟩ := hashed_nonempty frontCode ne
+    ⟨p1.good, p1.image, p1.minstret, c1_1, h.leaf.aligned, p1.tick⟩ p1.pc c1_10 c1_14
+    (by rw [m1]; exact h.named.saved h.apart)
+  exact bucketed_of_hashed h p1 (by decide) (by decide) c1_9 c1_2 m1 ⟨d, run1.trans run, p⟩
 
 /-- **The empty name to the bucket**: the prologue sees the terminator first; the hash is 0. -/
 theorem front_empty {ra sp a s0 s1 : BitVec 64} {name : List (BitVec 8)} {c : Config}
@@ -196,7 +289,6 @@ theorem front_empty {ra sp a s0 s1 : BitVec 64} {name : List (BitVec 8)} {c : Co
   have r8 := regsAt_of h.saved0
   have r9 := regsAt_of h.saved1
   have r10 := regsAt_of h.arg
-  have nil : name = [] := List.eq_nil_of_length_eq_zero e
   have logEq : proEmptyLog (regsAt c) (proEmpty_loads c.σ.mem (regsAt c)) = saveLog sp ra s0 s1 := by
     simp only [proEmptyLog, saveLog, r1, r2, r8, r9]
   have first : proEmpty_loads c.σ.mem (regsAt c) = [[0#8]] := by
@@ -222,28 +314,10 @@ theorem front_empty {ra sp a s0 s1 : BitVec 64} {name : List (BitVec 8)} {c : Co
   rw [first] at o1
   simp only [proEmpty_regs, GHolds, r1, r2, r8, r10] at o1
   obtain ⟨c1_9, -, c1_2, c1_1, -, c1_10, -⟩ := o1
-  have regs1 : GHolds c1.σ (empty_input (regsAt c1)) := by
-    simp only [empty_input, GHolds, regsAt_of c1_10]; exact ⟨c1_10, trivial⟩
-  have leaf1 : LeafInput (regsAt c1 1) c1 := by
-    rw [regsAt_of c1_1]; exact ⟨p1.good, p1.image, p1.minstret, c1_1, h.leaf.aligned, p1.tick⟩
-  obtain ⟨c2, run2, p2⟩ := (empty_fast c1 (regsAt c1) leaf1 regs1).run c1 ⟨p1.pc, rfl⟩
-  have o2 := p2.regs
-  simp only [empty_regs, GHolds] at o2
-  refine ⟨c2, run1.trans run2, ?_⟩
-  exact
-    { good := p2.good, image := p2.image, minstret := p2.minstret, tick := p2.tick
-      link := ⟨ra, (p2.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans c1_1, h.leaf.aligned⟩
-      pc := p2.pc
-      index := by rw [o2.1, nil]; rfl
-      name := (p2.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans c1_9
-      stack := (p2.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans c1_2
-      memory := by rw [p2.memory, wl_nil, p1.memory, logEq]
-      output := by rw [p2.output, p1.output]
-      frame := fun n lo hi out => by
-        simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at out
-        exact (p2.gpr_frame (by decide) n lo hi (by simp; omega)).trans
-          (p1.gpr_frame (by decide) n lo hi (by simp; omega))
-      htifIdle := by rw [p2.frame _ (by decide) (by decide), p1.frame _ (by decide) (by decide)] }
+  have m1 : c1.σ.mem = writeLog c.σ.mem (saveLog sp ra s0 s1) := by rw [p1.memory, logEq]
+  obtain ⟨d, run, p⟩ := hashed_empty frontCode e
+    ⟨p1.good, p1.image, p1.minstret, c1_1, h.leaf.aligned, p1.tick⟩ p1.pc (gpr_some_of c1_10)
+  exact bucketed_of_hashed h p1 (by decide) (by decide) c1_9 c1_2 m1 ⟨d, run1.trans run, p⟩
 
 /-- **`caml_named_value` to the bucket load**, for any name. -/
 theorem front {ra sp a s0 s1 : BitVec 64} {name : List (BitVec 8)} {c : Config}
