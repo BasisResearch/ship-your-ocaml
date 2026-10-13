@@ -3,6 +3,7 @@ import OCaml.Vm.Primitives.Memmove
 import OCaml.Vm.Primitives.GprsKept
 import OCaml.Vm.Primitives.Named.RegisterFront
 import OCaml.Vm.Sim.PrimInt64FloatReturns
+import OCaml.Vm.Sim.PrimSysArgvReturns
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
@@ -5618,3 +5619,4 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.LoopGeometry.bytes
 #print axioms OCaml.Vm.Sim.int64_float_semantics
 #print axioms OCaml.Vm.Sim.prim_caml_int64_float_of_bits_returns
+#print axioms OCaml.Vm.Sim.prim_caml_sys_argv_returns

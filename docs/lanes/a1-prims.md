@@ -144,6 +144,8 @@
   `LoopGeometry.alloc_log`). Inputs: the entry placement and the post-call budget, both from
   a1-arms. CcallCallee/PrimReturnsAt change (928bff62). `prim_caml_int64_float_of_bits_returns` (every C_CALL, premise `AllocFrame L`) from `int64_float_entry`
   (`Sim/PrimInt64FloatReturns.lean`): `FastMemory` from the reserved block.
+* `prim_caml_sys_argv_returns` (`Sim/PrimSysArgvReturns.lean`): read-only, from a1-arms'
+  `VmPayload.argv` (861f1ce1); result word `(valWord pl world.argv).getD 0`.
 * The string allocators (`executable_name`, `get_argv`, `get_config`) need their StringCopy stage
   inputs (`CopyInput`, `FinishStageInput`) discharged at the callee entry. `executable_name` and
   `get_argv` also need an `exeName` C-string binding beside `PrimitiveBindings` (a1-prims drafts
