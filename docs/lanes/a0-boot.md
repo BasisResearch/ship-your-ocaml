@@ -95,10 +95,13 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   (`RuntimeReadyL.*_written`, `WrittenPresent`); `child_hit` exports
   `GprPresent` (`ChildHitDone`).
 
-Next: compose `open_prog` into the reset run after `ResetProgOpenCall`
-(`ProgPath` from `argv1_rooted` and the 16-aligned copy, `FsUp` from
-`ResetProgOpenCall.fs`), then caml_attempt_open's success path: `lseek`,
-the trailer `read` and the magic test.
+* **`reset_prog_opened_exists`** (ProgOpenReset.lean): the CLOSED reset
+  run reaches the return of `open("/prog", O_RDONLY)` = 3
+  (`ResetProgOpened`), with `ProgPath` for caml_attempt_open's copy
+  (`ResetProgOpenCall.prog_path`) and `FsUp` from the first open.
+
+Next: caml_attempt_open's success path after the descriptor: `lseek`, the
+trailer `read` and the magic test.
 
 ## Round 2 status (2026-10-06, search)
 

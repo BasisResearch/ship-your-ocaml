@@ -65,7 +65,7 @@ theorem open_prog (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
     (reent : getenvReent c = 0x80064668#64)
     (fs : FsUp c.σ.mem node) (nodeWin : ReadWindow node 5) (nodeHigh : heapStart ≤ node.toNat)
     (nodeLow : node.toNat + 5 ≤ heapEnd) (prog : ProgPath c.σ.mem path) (pathHigh : heapStart ≤ path.toNat)
-    (pathLow : path.toNat + 16 ≤ heapEnd) :
+    (pathLow : path.toNat + 6 ≤ heapEnd) (pathBelow : path.toNat + 16 ≤ sp.toNat - openProgDepth) :
     FnSummary 0x80042590#64 (fun d => d = c) (OpenProg H capacity sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 c) := by
   constructor
   intro before ⟨pc, eq⟩
@@ -79,6 +79,7 @@ theorem open_prog (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
   have f2 : NativeFrame (nativeStack (nativeStack sp 80) 16) 80 := n2.resize (by decide) (by decide)
   have lower : heapEnd + 336 ≤ sp.toNat := frame.lower
   have lowerN : 0x86800000 + 336 ≤ sp.toNat := frame.lower
+  have pathBelow' : path.toNat + 16 ≤ sp.toNat - 336 := pathBelow
   have nat0 := f0.stack_nat
   have nat1 := f1.stack_nat
   have nat2 := f2.stack_nat
