@@ -36,6 +36,7 @@ structure AttemptAtOpen (H : List (Nat × Nat)) (capacity : Nat) (ra s0 s1 s2 s3
   caller : CallerFrame parameterStack before after
   /-- Every block of `H` is untouched. -/
   live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  kept : EmbedFrame before after
   late : LateImage after
   run : Steps before after
 
@@ -84,8 +85,9 @@ theorem attempt_open_to_open {c s : Config} {H : List (Nat × Nat)} {capacity ch
       by omega, by omega⟩)))
     (Or.inr (by have := S.fresh.1; unfold heapStart at this; unfold Layout.sym_tohost; omega)) (by omega)
     charged).run atDup ⟨dcall.pc, rfl⟩
-  have lateMsg : LateImage atMsg :=
-    S.late.frame ((EmbedFrame.of_memory sameDup).trans ⟨fun a ha => D.kept a (ha.strdup_kept (by decide))⟩)
+  have keptMsg : EmbedFrame s atMsg :=
+    (EmbedFrame.of_memory sameDup).trans ⟨fun a ha => D.kept a (ha.strdup_kept (by decide))⟩
+  have lateMsg : LateImage atMsg := S.late.frame keptMsg
   -- caml_gc_message(0x100, fmt, copy2)
   obtain ⟨atGc, run3, mcall⟩ := (attempt_open_message atMsg _ attemptStack D.copy D.ready.toLeafInput
     ⟨D.result, D.stack, trivial⟩).run atMsg ⟨D.pc, rfl⟩
@@ -181,6 +183,11 @@ theorem attempt_open_to_open {c s : Config} {H : List (Nat × Nat)} {capacity ch
       D.kept _ (Or.inr (Or.inr (Or.inr ⟨q, m, List.mem_cons_of_mem _ he, bounds.1, bounds.2, inside'.1,
         inside'.2⟩))), sameDup]
     exact S.live (q, m) he x inside
+  have keptCall : EmbedFrame atMsg atCall :=
+    (EmbedFrame.of_memory mcall.memory).trans
+      ((EmbedFrame.stack gc.memory (gcMessageLog_inside frameGc) (by decide)).trans
+        ((EmbedFrame.of_memory fcall.memory).trans ((freed.embed_frame frameA (by decide) D.fresh.1 D.fresh.2).trans
+          (EmbedFrame.of_memory ocall.memory))))
   refine ⟨atCall, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans run7))))), ⟨{
       copy := S.copy
       pc := ocall.pc
@@ -220,9 +227,7 @@ theorem attempt_open_to_open {c s : Config} {H : List (Nat × Nat)} {capacity ch
         exact S.slots off value member
       caller := S.caller.trans (tail.mono (by decide))
       live := liveCall
-      late := (lateMsg.frame (EmbedFrame.of_memory mcall.memory)).frame
-        ((EmbedFrame.stack gc.memory (gcMessageLog_inside frameGc) (by decide)).trans
-          ((EmbedFrame.of_memory fcall.memory).trans ((freed.embed_frame frameA (by decide) D.fresh.1 D.fresh.2).trans
-            (EmbedFrame.of_memory ocall.memory))))
+      kept := S.kept.trans (keptMsg.trans keptCall)
+      late := lateMsg.frame keptCall
       run := S.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans run7)))))) }⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse

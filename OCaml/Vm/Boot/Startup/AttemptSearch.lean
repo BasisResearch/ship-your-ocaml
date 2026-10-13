@@ -37,6 +37,7 @@ structure AttemptSearched (H : List (Nat × Nat)) (capacity : Nat) (ra s0 s1 s2 
   caller : CallerFrame parameterStack before after
   /-- Every block of `H` is untouched. -/
   live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  kept : EmbedFrame before after
   late : LateImage after
   run : Steps before after
 
@@ -122,12 +123,13 @@ theorem attempt_open_search (c : Config) (H : List (Nat × Nat)) (capacity charg
       gprGet source.σ k = some v :=
     T.keep_upper (by omega) hi (toTable k v (by omega) (by omega) (by simp; omega)
       (savedArg k v (by omega) (by omega) (by simp; omega) h))
-  have lateSource : LateImage source :=
-    (((late.frame (EmbedFrame.stack save.memory (attemptOpenLog_inside attemptFrame) (by decide))).frame
-      (EmbedFrame.of_memory nameCall.memory)).frame
-      (EmbedFrame.stack search.memory (searchExeLog_inside searchFrame) (by decide))).frame
-      (T.embed_frame tableFrame (ExtTableSite.at_sp (tableFrame.resize (by decide) (by decide)) (by decide))
-        (by decide))
+  have keptSource : EmbedFrame c source :=
+    (EmbedFrame.stack save.memory (attemptOpenLog_inside attemptFrame) (by decide)).trans
+      ((EmbedFrame.of_memory nameCall.memory).trans
+        ((EmbedFrame.stack search.memory (searchExeLog_inside searchFrame) (by decide)).trans
+          (T.embed_frame tableFrame (ExtTableSite.at_sp (tableFrame.resize (by decide) (by decide)) (by decide))
+            (by decide))))
+  have lateSource : LateImage source := late.frame keptSource
   -- getenv("PATH"): absent
   obtain ⟨atGetenv, run6, pcall⟩ := (search_exe_path source _ readyS.toLeafInput).run source ⟨T.post.pc, rfl⟩
   have keep (n : Nat) (lower : 1 ≤ n) (upper : n ≤ 31) (unwritten : n ∉ [10, 1]) :
@@ -243,11 +245,12 @@ theorem attempt_open_search (c : Config) (H : List (Nat × Nat)) (capacity charg
     (CallerFrame.of_memory pcall.memory).trans ((CallerFrame.of_log missed.memory
       (getenvMissLog_inside frame112)).trans ((CallerFrame.of_memory dcall.memory).trans
       ((CallerFrame.of_log dnull.memory (decomposeLog_inside frame32)).trans (CallerFrame.of_memory scall.memory))))
-  have lateP : LateImage atP :=
-    lateSource.frame ((EmbedFrame.of_memory pcall.memory).trans ((EmbedFrame.stack missed.memory
+  have keptP : EmbedFrame source atP :=
+    (EmbedFrame.of_memory pcall.memory).trans ((EmbedFrame.stack missed.memory
       (getenvMissLog_inside frame112) (by decide)).trans ((EmbedFrame.of_memory dcall.memory).trans
       ((EmbedFrame.stack dnull.memory (decomposeLog_inside frame32) (by decide)).trans
-        (EmbedFrame.of_memory scall.memory)))))
+        (EmbedFrame.of_memory scall.memory))))
+  have lateP : LateImage atP := lateSource.frame keptP
   have frameP : NativeFrame searchStack (176 + (48 + allocHeadroom)) := by constructor <;> decide
   have readyP16 : RuntimeReady (((vsaReg T.allocation.allocation.allocated 10).toNat,
       (extTableRequest 8#64).toNat) :: H) (capacity + charge) searchStack jal_80025574_call.link atP := readyP
@@ -437,6 +440,15 @@ theorem attempt_open_search (c : Config) (H : List (Nat × Nat)) (capacity charg
       frameOn_writeLog _ _ _ (searchExeLog_inside searchFrame) x ⟨Or.inl (low _ (by decide)), trivial⟩,
       show atSearch.σ.mem = atSaved.σ.mem from nameCall.memory, save.memory,
       frameOn_writeLog _ _ _ (attemptOpenLog_inside attemptFrame) x ⟨Or.inl (low _ (by decide)), trivial⟩]
+  have keptRet : EmbedFrame atP atRet := by
+    have strdup : EmbedFrame atP atF :=
+      ⟨fun a ha => found.kept a (ha.strdup_kept (by decide))
+        (Or.inl (by
+          have := ha.lt
+          have limit : embedLimit < nativeFrameBase searchStack 176 := by decide
+          omega))⟩
+    exact strdup.trans ((EmbedFrame.of_memory sameE).trans ((tableFreed.embed_frame frameFree
+      (by decide) (Nat.le_refl _) bounds.1 bounds.2).trans (EmbedFrame.of_memory sameRet)))
   refine ⟨atRet, run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans (run9.trans
     (run10.trans (run11.trans (run12.trans (run13.trans (run14.trans (run15.trans run16))))))))))))), ⟨{
       copy := found.copy
@@ -469,15 +481,8 @@ theorem attempt_open_search (c : Config) (H : List (Nat × Nat)) (capacity charg
         · exact member
       caller := aboveSaved.trans (callerA.mono (by decide))
       live := liveRet
-      late := by
-        have strdup : EmbedFrame atP atF :=
-          ⟨fun a ha => found.kept a (ha.strdup_kept (by decide))
-            (Or.inl (by
-              have := ha.lt
-              have limit : embedLimit < nativeFrameBase searchStack 176 := by decide
-              omega))⟩
-        exact lateP.frame (strdup.trans ((EmbedFrame.of_memory sameE).trans ((tableFreed.embed_frame frameFree
-          (by decide) (Nat.le_refl _) bounds.1 bounds.2).trans (EmbedFrame.of_memory sameRet))))
+      kept := keptSource.trans (keptP.trans keptRet)
+      late := lateP.frame keptRet
       run := run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans (run9.trans
         (run10.trans (run11.trans (run12.trans (run13.trans (run14.trans (run15.trans run16))))))))))))) }⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse

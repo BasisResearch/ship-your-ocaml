@@ -51,6 +51,9 @@ structure OpenOcamlrun (H : List (Nat × Nat)) (capacity : Nat) (sp ra path : Bi
   /-- The node's name block is apart from every other live block. -/
   apart : ∀ e ∈ H, ∀ a, InExt (node.toNat, 5) a → ¬ InExt e a
   words : FsWords after.σ.mem
+  /-- Descriptors 3–31 are untouched. -/
+  fdsKept : ∀ x, Layout.sym_fds + 52 ≤ x → x < Layout.sym_fds + 24 * 32 →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   name : OcamlrunName after.σ.mem path
   caller : CallerFrame sp before after
 
@@ -427,6 +430,22 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
       (fun j hj => mem12 _ (by
         have := (R.ready.heap.block_bounds (q := R.node.toNat) (n := 5) (List.mem_cons_self ..)).1
         simp only [OutW, errnoWindows, and_true, heapStart] at *; omega))
+    fdsKept := fun x lo hi => by
+      rw [mem12 x (by simp only [OutW, errnoWindows, and_true, Layout.sym_fds] at lo hi ⊢; omega)]
+      rw [R.low x (by unfold heapStart; unfold Layout.sym_fds at hi; omega)
+          (by unfold allocGlobal InRange; unfold Layout.sym_fds at lo hi; omega)
+          (by
+            simp only [OutW, fsWindows, and_true, nativeFrameBase, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready]
+              at lo hi ⊢
+            refine ⟨Or.inl ?_, by omega, by omega, by omega⟩
+            rw [hRS]
+            unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at deep
+            omega)
+          (by unfold slotOne Layout.sym_files; unfold Layout.sym_fds at hi; omega)]
+      exact mem6 x (Or.inl (by
+          unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at deep
+          unfold Layout.sym_fds at hi; omega))
+        (Or.inr (by unfold Layout.sym_fds at lo; omega)) (Or.inr (by unfold Layout.sym_fds at lo; omega))
     words := R.words.transport fun x hx => mem12 x (by
       rcases hx with ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
         simp only [OutW, errnoWindows, and_true, Layout.sym_fs_ready, Layout.sym_fds] at lo hi ⊢ <;> omega)
