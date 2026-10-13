@@ -81,10 +81,24 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   `child_hit` (ChildHit), `strchr_slash_first` (StrchrHit), the second
   resolve's new blocks (ResolveHit: ready entry, rooted back scan, empty
   component, R_FILE tail) and `_open`/`_open_r`'s success blocks
-  (OpenProgSteps). Their composition is next.
+  (OpenProgSteps).
 
-Next: compose `open("/prog")`'s success path (fs_ready = 1, resolve's child hit,
-the fd), then `lseek`, the trailer `read` and the magic test.
+* **`resolve_prog`** (ResolveProg.lean): the second `resolve("/prog")`
+  returns `R_FILE` for slot 1 (`ResolveProgDone`: `r`'s kind, node and
+  slash words). It scans with `back_loop_upto`, the backward loop stopped
+  after K bytes.
+* **`open_prog`** (OpenProg.lean): `open("/prog", O_RDONLY)` returns
+  descriptor 3. Its `OpenProg.mem` field says memory is `openProgLog`
+  (`files[1].opens++`, `fds[3]`) over the caller's, outside the stack it
+  used and the errno words.
+* Readiness transport takes register presence directly
+  (`RuntimeReadyL.*_written`, `WrittenPresent`); `child_hit` exports
+  `GprPresent` (`ChildHitDone`).
+
+Next: compose `open_prog` into the reset run after `ResetProgOpenCall`
+(`ProgPath` from `argv1_rooted` and the 16-aligned copy, `FsUp` from
+`ResetProgOpenCall.fs`), then caml_attempt_open's success path: `lseek`,
+the trailer `read` and the magic test.
 
 ## Round 2 status (2026-10-06, search)
 
