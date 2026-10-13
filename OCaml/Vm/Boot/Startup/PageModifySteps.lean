@@ -16,6 +16,7 @@ import OCaml.Vm.Boot.Startup.LinearChain
 import OCaml.Vm.Boot.Startup.PageHash
 import OCaml.Vm.Boot.Startup.ReadSectionsSteps
 import OCaml.Vm.Boot.Startup.PageTable
+import Vsa.Sim.DeriveLoop
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
   LeanRV64DExecutable
@@ -299,4 +300,127 @@ theorem page_insert (c : Config) (ra page kind slot occ v : BitVec 64) (leaf : L
     rw [word, show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide]
   · rfl
   · decide
+
+/-- A boundary over fewer written registers is one over more. -/
+theorem BoundaryPost.widen {w w' before ra pc regs after} (h : BoundaryPost w before ra pc regs after)
+    (sub : ∀ n ∈ w, n ∈ w') : BoundaryPost w' before ra pc regs after :=
+  { h with frame := fun r hr hn => h.frame r (fun n hn' => hr n (sub n hn')) hn }
+
+/-- The registers the probe loop writes. -/
+abbrev probeWrites : List Nat := [15, 11, 10, 12, 14]
+
+/-- Slot `i`'s word, read through the native address. -/
+def slotWord (m : Std.ExtHashMap Nat (BitVec 8)) (ent : BitVec 64) (i : Nat) : BitVec 64 :=
+  bytesT m (slotAddr ent (BitVec.ofNat 64 i)).toNat 8
+
+/-- The probe loop's head after `j` occupied probes from the home slot `h₀`. -/
+structure ProbeAt (start : Config) (ra page ent : BitVec 64) (h₀ j : Nat) (d : Config) : Prop where
+  post : BoundaryPost probeWrites start ra 0x8000ae9c#64
+    [(15, BitVec.ofNat 64 (probe h₀ j)), (14, slotWord start.σ.mem ent (probe h₀ j)), (17, 2047#64),
+      (16, 4096#64), (8, page), (13, ent)] d
+  occupied : ∀ i, i ≤ j → slotWord start.σ.mem ent (probe h₀ i) ≠ 0#64
+
+/-- The loop's exit: an empty slot `i` on the probe path. -/
+structure ProbeFound (start : Config) (ra page ent : BitVec 64) (h₀ slot steps : Nat) (d : Config) : Prop where
+  at_slot : slot = probe h₀ steps
+  post : BoundaryPost probeWrites start ra 0x8000aee4#64
+    [(12, slotAddr ent (BitVec.ofNat 64 slot)), (8, page), (13, ent)] d
+  empty : slotWord start.σ.mem ent slot = 0#64
+  occupied : ∀ i, i < steps → slotWord start.σ.mem ent (probe h₀ i) ≠ 0#64
+
+theorem probe_lt (h j : Nat) : probe h j < 2048 := by unfold probe; omega
+
+theorem page_probe_loop (start : Config) (ra page ent : BitVec 64) (h₀ e : Nat) (hh : h₀ < 2048) (he : e < 2048)
+    (hole : slotWord start.σ.mem ent e = 0#64)
+    (windows : ∀ i, i < 2048 → ReadWindow (slotAddr ent (BitVec.ofNat 64 i)) 8)
+    (absent : ∀ i, i < 2048 → slotWord start.σ.mem ent i ≠ 0#64 →
+      guardB bop.BGEU (page ^^^ slotWord start.σ.mem ent i) 4096#64 = true)
+    (d : Config) (P : ProbeAt start ra page ent h₀ 0 d) :
+    ∃ f slot steps, Steps d f ∧ ProbeFound start ra page ent h₀ slot steps f := by
+  have dist := probe_distance (h := h₀) he
+  have distLt := probeDistance_lt h₀ e
+  -- the loop at its head never reaches the hole
+  have below (j : Nat) (occ : ∀ i, i ≤ j → slotWord start.σ.mem ent (probe h₀ i) ≠ 0#64) :
+      j < probeDistance h₀ e := by
+    apply Classical.byContradiction
+    intro ge
+    exact occ (probeDistance h₀ e) (by omega) (by rw [dist]; exact hole)
+  let head : BitVec 64 := 0x8000ae9c#64
+  let I : Config → Prop := fun c => (∃ j, ProbeAt start ra page ent h₀ j c) ∨
+    (∃ slot steps, ProbeFound start ra page ent h₀ slot steps c)
+  let B : Config → Prop := fun c => c.σ.regs.get? Register.PC = some head
+  let μ : Config → Nat := fun c => if c.σ.regs.get? Register.PC = some head then
+    probeDistance h₀ e - (((gprGet c.σ 15).getD 0).toNat + 2048 - h₀) % 2048 else 0
+  have index (j : Nat) (hj : j < 2048) : ((BitVec.ofNat 64 (probe h₀ j)).toNat + 2048 - h₀) % 2048 = j := by
+    have small : probe h₀ j < 2 ^ 64 := Nat.lt_of_lt_of_le (probe_lt h₀ j) (by decide)
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt small]
+    unfold probe; omega
+  have body : ∀ n, Triple (fun c => I c ∧ B c ∧ μ c = n) (fun c => I c ∧ μ c < n) := by
+    intro n c ⟨inv, atHead, measure⟩
+    rcases inv with ⟨j, P⟩ | ⟨slot, steps, F⟩
+    · have jd := below j P.occupied
+      have hm : c.σ.mem = start.σ.mem := P.post.memory
+      have pc : PCAt 0x8000ae9c#64 c := P.post.pc
+      have next : (probe h₀ j + 1) % 2048 = probe h₀ (j + 1) := probe_next h₀ j
+      let empty := slotWord start.σ.mem ent (probe h₀ (j + 1)) == 0#64
+      obtain ⟨d', run, step⟩ := (page_probe_step c ra page ent (slotWord start.σ.mem ent (probe h₀ j)) (probe h₀ j)
+        (probe_lt h₀ j) empty P.post.toLeafInput P.post.regs
+        (absent _ (probe_lt h₀ j) (P.occupied j (Nat.le_refl j)))
+        (by rw [next]; exact windows _ (probe_lt h₀ (j + 1)))
+        (by rw [hm, next]; rfl)).run c ⟨pc, rfl⟩
+      have joined := P.post.then (BoundaryPost.widen step (by decide))
+      rw [next, hm] at joined
+      have μc : μ c = probeDistance h₀ e - j := by
+        have pcc : c.σ.regs.get? Register.PC = some head := atHead
+        simp only [μ, pcc, ite_true, gholds_lookup (n := 15) _ P.post.regs rfl, Option.getD_some,
+          index j (by omega)]
+      by_cases isEmpty : slotWord start.σ.mem ent (probe h₀ (j + 1)) = 0#64
+      · have et : empty = true := by simp [empty, isEmpty]
+        refine ⟨d', run, Or.inr ⟨probe h₀ (j + 1), j + 1, {
+          at_slot := rfl
+          post := (by rw [et] at joined; exact joined.select (fun n v mem => by
+            simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at mem
+            rcases mem with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl))
+          empty := isEmpty
+          occupied := fun i hi => P.occupied i (by omega) }⟩, ?_⟩
+        have pcd : d'.σ.regs.get? Register.PC ≠ some head := by
+          rw [show d'.σ.regs.get? Register.PC = some 0x8000aee4#64 by
+            have := step.pc; rw [et] at this; exact this]
+          decide
+        simp only [μ, pcd, ite_false]
+        omega
+      · have ef : empty = false := by simp [empty, isEmpty]
+        have jd' : j + 1 < probeDistance h₀ e := by
+          rcases Nat.lt_or_ge (j + 1) (probeDistance h₀ e) with lt | ge
+          · exact lt
+          · exfalso
+            have eq : j + 1 = probeDistance h₀ e := by omega
+            exact isEmpty (by rw [eq, dist]; exact hole)
+        have post' : BoundaryPost probeWrites start ra 0x8000ae9c#64
+            [(15, BitVec.ofNat 64 (probe h₀ (j + 1))), (14, slotWord start.σ.mem ent (probe h₀ (j + 1))),
+              (17, 2047#64), (16, 4096#64), (8, page), (13, ent)] d' := by
+          rw [ef] at joined
+          exact joined.select (fun n v mem => by
+            simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at mem
+            rcases mem with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rfl)
+        refine ⟨d', run, Or.inl ⟨j + 1, {
+          post := post'
+          occupied := fun i hi => by
+            rcases Nat.lt_or_ge i (j + 1) with lt | ge
+            · exact P.occupied i (by omega)
+            · rw [show i = j + 1 by omega]; exact isEmpty }⟩, ?_⟩
+        have pcd : d'.σ.regs.get? Register.PC = some head := post'.pc
+        simp only [μ, pcd, ite_true, gholds_lookup (n := 15) _ post'.regs rfl, Option.getD_some,
+          index (j + 1) (by omega)]
+        rw [← measure, μc]
+        omega
+    · exfalso
+      have pcf : c.σ.regs.get? Register.PC = some 0x8000aee4#64 := F.post.pc
+      have : c.σ.regs.get? Register.PC = some head := atHead
+      rw [pcf] at this
+      exact absurd this (by decide)
+  obtain ⟨f, run, inv, notHead⟩ := loopFromBody μ body d (Or.inl ⟨0, P⟩)
+  rcases inv with ⟨j, P'⟩ | ⟨slot, steps, F⟩
+  · exact absurd P'.post.pc notHead
+  · exact ⟨f, slot, steps, run, F⟩
 end OCaml.Vm.Boot.Startup
