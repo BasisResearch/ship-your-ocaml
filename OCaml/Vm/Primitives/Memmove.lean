@@ -1,4 +1,4 @@
-import OCaml.Vm.Primitives.LibraryStrlen
+import OCaml.Vm.Primitives.LibraryStrlenCall
 import VsaIris.Vsa.SnpMove
 import VsaIris.Vsa.LibraryStdioFoot
 import OCaml.Vm.Boot.Startup.LibraryText
@@ -245,6 +245,31 @@ theorem memmove_leaf {d src len : Nat} {ra : BitVec 64} (c : Config)
     · change (c.σ.mem[p.1]?).getD 0 = p.2
       rw [code p text]; rfl
     · obtain ⟨a, -, rfl⟩ := List.mem_map.1 data
+      rfl
+
+/-- **strlen from a leaf call with the library facts**: the string's bytes are read in the caller's
+memory (nonzero, then the terminator), in RAM below the HTIF words. -/
+theorem strlen_ready {a len : Nat} {ra : BitVec 64} (c : Config)
+    (leaf : LeafInput ra c) (ready : LibraryReady c)
+    (nz : ∀ i, i < len → (c.σ.mem[a + i]?).getD 0 ≠ 0)
+    (nul : (c.σ.mem[a + len]?).getD 0 = 0)
+    (lo : 0x80000000 ≤ a) (hi : a + len + 8 ≤ 0x100000000) (htif : a + len + 8 ≤ 0x80061fc0 ∨ 0x80061fc8 ≤ a)
+    (argument : gpr c 10 = some (BitVec.ofNat 64 a)) :
+    FnSummary 0x80042970#64 (fun e => e = c) (StrlenCallPost imageLive ra len c) := by
+  have code := OCaml.Vm.Boot.Startup.snp_text_loaded leaf.image
+  refine strlen_call (Dt := c.σ.mem) (DA := List.range' a (len + 1)) (g := imgM c.σ.mem) c snpText_image
+    ⟨fun x xlo xhi => .inl ⟨List.mem_range'_1.2 ⟨xlo, by omega⟩, rfl⟩, nz, nul, lo, hi, htif⟩
+    ⟨leaf.good, leaf.tick, ready.gprs, imageLive_present leaf.image, ready.htifIdle⟩ leaf.image imageLive_image
+    ⟨fun p hp => ?_, fun p hp => ?_⟩ argument leaf.raReg leaf.aligned
+  · rw [List.mem_singleton.1 hp]
+    change vsaReg c 3 = gpV
+    simp only [vsaReg, show ((3 : Nat) = VsaIris.PC) = False from by decide, ite_false]
+    change (gpr c 3).getD 0 = gpV
+    rw [ready.gp]; rfl
+  · rcases List.mem_append.1 hp with text | data
+    · change (c.σ.mem[p.1]?).getD 0 = p.2
+      rw [code p text]; rfl
+    · obtain ⟨x, -, rfl⟩ := List.mem_map.1 data
       rfl
 
 end OCaml.Vm.Primitives

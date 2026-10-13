@@ -5753,3 +5753,4 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.StringAllocEntry.below
 #print axioms OCaml.Vm.Sim.StringAllocEntry.entries
 #print axioms OCaml.Vm.Sim.allocPlaces_ok
+#print axioms OCaml.Vm.Primitives.strlen_ready
