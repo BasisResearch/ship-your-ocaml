@@ -28,24 +28,4 @@ theorem pagetableentry_line_8000acf0 :
     mkLine 0x8000acf0#64 0x00151513#32 =
       ⟨0x8000acf0#64, 0x00151513#32, 0x13#8, 0x15#8, 0x15#8, 0x00#8, .slli, 10, 10, 0, 0x001#12⟩ := by rfl
 
-theorem pagetableentry_line_8000acf4 :
-    mkLine 0x8000acf4#64 0x0005d717#32 =
-      ⟨0x8000acf4#64, 0x0005d717#32, 0x17#8, 0xd7#8, 0x05#8, 0x00#8, .auipc, 14, 0, 0, 0x000#12⟩ := by rfl
-
-theorem pagetableentry_line_8000acf8 :
-    mkLine 0x8000acf8#64 0x7cc73223#32 =
-      ⟨0x8000acf8#64, 0x7cc73223#32, 0x23#8, 0x32#8, 0xc7#8, 0x7c#8, .sd, 0, 14, 12, 0x7c4#12⟩ := by rfl
-
-theorem pagetableentry_line_8000acfc :
-    mkLine 0x8000acfc#64 0x0005d717#32 =
-      ⟨0x8000acfc#64, 0x0005d717#32, 0x17#8, 0xd7#8, 0x05#8, 0x00#8, .auipc, 14, 0, 0, 0x000#12⟩ := by rfl
-
-theorem pagetableentry_line_8000ad00 :
-    mkLine 0x8000ad00#64 0x7cf72223#32 =
-      ⟨0x8000ad00#64, 0x7cf72223#32, 0x23#8, 0x22#8, 0xf7#8, 0x7c#8, .sw, 0, 14, 15, 0x7c4#12⟩ := by rfl
-
-theorem pagetableentry_line_8000ad08 :
-    mkLine 0x8000ad08#64 0x03f00793#32 =
-      ⟨0x8000ad08#64, 0x03f00793#32, 0x93#8, 0x07#8, 0xf0#8, 0x03#8, .addi, 15, 0, 0, 0x03f#12⟩ := by rfl
-
 end OCaml.Vm.Boot.Startup
