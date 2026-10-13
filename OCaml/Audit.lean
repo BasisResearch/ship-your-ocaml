@@ -2722,7 +2722,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.memcpy_window
 #print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.of_window_frame
 #print axioms OCaml.Vm.Boot.Startup.htif_read_entry
-#print axioms OCaml.Vm.Boot.Startup.htif_read_check
+#print axioms OCaml.Vm.Boot.Startup.htif_read_front
+#print axioms OCaml.Vm.Boot.Startup.htif_read_clamp
 #print axioms OCaml.Vm.Boot.Startup.htif_read_copy_call
 #print axioms OCaml.Vm.Boot.Startup.htif_read_advance
 #print axioms OCaml.Vm.Boot.Startup.read_file
