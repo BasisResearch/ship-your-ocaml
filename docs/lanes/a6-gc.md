@@ -70,6 +70,9 @@
   `caml_scan_global_young_roots`, `caml_skiplist_empty`,
   `caml_final_oldify_young_roots`, `caml_memprof_oldify_young_roots`
   (`gen_gc_rows.py`).
+- `SlotSite Loaded` / `SlotSite.slot` (`SlotBridge.lean`): any decoded
+  `jal caml_oldify_one` in a caller with code image `Loaded`, composed with a
+  `SlotCall` supplied at the jumped-to state.
 - Next (G2): quiet-path summaries of the root callees, the VM-stack and
   `ref_table` root loops over `SlotCall`, the mopup outer loop, a quiet-route
   `caml_empty_minor_heap`, and the concrete `CollectionEffect`.

@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.SlotBridge
 import OCaml.Vm.Gc.OldifySlot
 import OCaml.Vm.Gc.OldifyImmediate
 import OCaml.Vm.Gc.NonYoungCall
@@ -679,6 +680,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.Fresh.SlotCall.single_large
 #print axioms OCaml.Vm.Gc.Fresh.SlotCall.single_nonYoung_small
 #print axioms OCaml.Vm.Gc.Fresh.SlotCall.single_nonYoung_large
+#print axioms OCaml.Vm.Gc.SlotSite.slot
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_access
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_regs
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_log
