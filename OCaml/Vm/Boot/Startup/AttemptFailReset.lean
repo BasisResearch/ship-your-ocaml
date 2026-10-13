@@ -37,6 +37,7 @@ structure ResetAttemptFailed (initial after : Config) where
   late : LateImage after
   caller : CallerFrame parameterStack opened.call.search.path.table.atSaved after
   run : Steps (Vsa.Densify.fillZero initial) after
+  fs : FsUp after.σ.mem opened.opened.node
 
 theorem reset_attempt_failed_exists : ∃ initial after, Nonempty (ResetAttemptFailed initial after) := by
   obtain ⟨initial, c0, ⟨w⟩⟩ := reset_ocamlrun_opened_exists
@@ -157,9 +158,28 @@ theorem reset_attempt_failed_exists : ∃ initial after, Nonempty (ResetAttemptF
   have late8 : LateImage c8 :=
     (late6.frame (EmbedFrame.of_memory p7.memory)).frame ((EmbedFrame.of_memory memR).trans
       (EmbedFrame.of_memory p8.memory))
+  have fs8 : FsUp c8.σ.mem w.opened.node := by
+    have nodeBounds := w.opened.ready.block_bounds (List.mem_cons_self ..)
+    have kept8 : EmbedFrame c0 c8 :=
+      embed3.trans ((EmbedFrame.of_memory p4.memory).trans ((EmbedFrame.stack gc.memory (gcMessageLog_inside frameGc)
+        (by decide)).trans ((EmbedFrame.of_memory p6'.memory).trans ((EmbedFrame.of_memory p7.memory).trans
+          ((EmbedFrame.of_memory memR).trans (EmbedFrame.of_memory p8.memory))))))
+    refine w.fs.frame kept8 fun j hj => ?_
+    have inside : InExt (w.opened.node.toNat, 5) (w.opened.node.toNat + j) := ⟨by omega, by omega⟩
+    have apart : ¬ InExt (w.call.search.copy.toNat, 9) (w.opened.node.toNat + j) :=
+      w.opened.apart _ (List.mem_cons_self ..) _ inside
+    have below : w.opened.node.toNat + j < nativeFrameBase attemptStack 80 := by
+      have : heapEnd ≤ nativeFrameBase attemptStack 80 := by decide
+      omega
+    rw [show c8.σ.mem = cR.σ.mem from p8.memory, memR, show c7.σ.mem = c6.σ.mem from p7.memory,
+      show c6.σ.mem = c5.σ.mem from p6'.memory, gc.memory,
+      frameOn_writeLog _ _ _ (gcMessageLog_inside frameGc) _ ⟨Or.inl below, trivial⟩,
+      show c4.σ.mem = c3.σ.mem from p4.memory,
+      freed.live_byte frameA (List.mem_cons_self ..) inside apart ⟨by omega, by omega⟩,
+      show c2.σ.mem = c1.σ.mem from p2.memory, show c1.σ.mem = c0.σ.mem from p1.memory]
   refine ⟨initial, c8, ⟨c0, w, v, neg, p8.pc, gholds_lookup (n := 10) _ p8.regs rfl,
     gholds_lookup (n := 2) _ p8.regs rfl, gholds_lookup (n := 9) _ p8.regs rfl, ready8, late8,
     (callerR.mono (by decide)).trans (CallerFrame.of_memory p8.memory),
     w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans
-      (runR.trans run8))))))))⟩⟩
+      (runR.trans run8)))))))), fs8⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse

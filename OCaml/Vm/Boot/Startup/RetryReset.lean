@@ -19,6 +19,7 @@ structure ResetRetryCall (initial after : Config) where
   late : LateImage after
   exeName : bytesT after.σ.mem (parameterStack + 32#64).toNat 8 = argv1Ptr
   run : Steps (Vsa.Densify.fillZero initial) after
+  fs : FsUp after.σ.mem failed.opened.opened.node
 
 theorem reset_retry_call_exists : ∃ initial after, Nonempty (ResetRetryCall initial after) := by
   obtain ⟨initial, c0, ⟨w⟩⟩ := reset_attempt_failed_exists
@@ -112,12 +113,31 @@ theorem reset_retry_call_exists : ∃ initial after, Nonempty (ResetRetryCall in
     (late7.frame (EmbedFrame.of_memory p8.memory)).frame (EmbedFrame.stack p9.memory
       (by simp only [camlRetryLog, LogInW, InsideW]; decide : LogInW [⟨nativeFrameBase (parameterStack + 48#64) 32,
         (parameterStack + 48#64).toNat⟩] (camlRetryLog parameterStack)) (by decide))
+  have fs9 : FsUp c9.σ.mem w.opened.opened.node := by
+    have nodeBounds := w.ready.block_bounds (List.mem_cons_self ..)
+    have frameW : LogInW [⟨nativeFrameBase (parameterStack + 48#64) 32, (parameterStack + 48#64).toNat⟩]
+        (camlRetryLog parameterStack) := by simp only [camlRetryLog, LogInW, InsideW]; decide
+    have kept9 : EmbedFrame c0 c9 :=
+      (EmbedFrame.of_memory p1.memory).trans ((EmbedFrame.of_memory p2'.memory).trans
+        ((EmbedFrame.of_memory p3.memory).trans ((EmbedFrame.of_memory p4.memory).trans
+          ((EmbedFrame.of_memory p5.memory).trans ((EmbedFrame.of_memory p6.memory).trans
+            ((EmbedFrame.of_memory p7.memory).trans ((EmbedFrame.of_memory p8.memory).trans
+              (EmbedFrame.stack p9.memory frameW (by decide)))))))))
+    refine w.fs.frame kept9 fun j hj => ?_
+    have below : w.opened.opened.node.toNat + j < nativeFrameBase (parameterStack + 48#64) 32 := by
+      have : heapEnd ≤ nativeFrameBase (parameterStack + 48#64) 32 := by decide
+      omega
+    rw [p9.memory, frameOn_writeLog _ _ _ frameW _ ⟨Or.inl below, trivial⟩,
+      show c8.σ.mem = c7.σ.mem from p8.memory, show c7.σ.mem = c6.σ.mem from p7.memory,
+      show c6.σ.mem = c5.σ.mem from p6.memory, show c5.σ.mem = c4.σ.mem from p5.memory,
+      show c4.σ.mem = c3.σ.mem from p4.memory, show c3.σ.mem = c2.σ.mem from p3.memory,
+      show c2.σ.mem = c1.σ.mem from p2'.memory, show c1.σ.mem = c0.σ.mem from p1.memory]
   refine ⟨initial, c9, ⟨c0, w, p9.pc, p9.regs,
     (p9.toEffectPost.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans
       ((p8.toEffectPost.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans argv7),
     ready9, late9, ?_,
     w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans
-      (run8.trans run9))))))))⟩⟩
+      (run8.trans run9)))))))), fs9⟩⟩
   rw [p9.memory]
   exact OCaml.Vm.Sim.word_writeLog_at _ _ 0 _ _ rfl (by simp only [camlRetryLog, OutLRange, List.drop]; decide)
 end OCaml.Vm.Boot.WhileMinElfParse

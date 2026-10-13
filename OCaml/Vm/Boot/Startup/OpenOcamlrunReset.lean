@@ -1,5 +1,5 @@
 import OCaml.Vm.Boot.Startup.OpenCallReset
-import OCaml.Vm.Boot.Startup.OpenRun
+import OCaml.Vm.Boot.Startup.FsUp
 namespace OCaml.Vm.Boot.WhileMinElfParse
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap Startup VsaIris VsaIris.Inst VsaIris.VsaHeap VsaIris.MallocFast
   OCaml.Vm.Primitives
@@ -39,6 +39,7 @@ structure ResetOcamlrunOpened (initial after : Config) where
   opened : OpenOcamlrun ((call.search.copy.toNat, 9) :: call.search.path.table.H) (startupAllocatorCredits - 496)
     attemptStack jal_80004920_call.link call.search.copy s0 s1 call.search.copy s3 s4 s5 s6 s7 s8 s9 s10 atCall after
   run : Steps (Vsa.Densify.fillZero initial) after
+  fs : FsUp after.σ.mem opened.node
 
 theorem reset_ocamlrun_opened_exists : ∃ initial after, Nonempty (ResetOcamlrunOpened initial after) := by
   obtain ⟨initial, c, ⟨w⟩⟩ := reset_open_call_exists
@@ -67,5 +68,6 @@ theorem reset_ocamlrun_opened_exists : ∃ initial after, Nonempty (ResetOcamlru
     jal_80004920_call.link w.search.copy _ _ _ _ _ _ _ _ w.search.copy _ _ _ _ _ _ _ _ ready frame (by decide)
     w.kept.late regs w.kept.htif.notReady w.kept.htif.clear w.ocamlrun_name home pathLow
     ⟨by decide, by decide⟩).run c ⟨w.pc, rfl⟩
-  exact ⟨initial, after, ⟨⟨c, w, r 8, r 9, r 19, r 20, r 21, r 22, r 23, r 24, r 25, r 26, o, w.run.trans run⟩⟩⟩
+  exact ⟨initial, after, ⟨⟨c, w, r 8, r 9, r 19, r 20, r 21, r 22, r 23, r 24, r 25, r 26, o, w.run.trans run,
+    o.fs_up w.kept.htif⟩⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse

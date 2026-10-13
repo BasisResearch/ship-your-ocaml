@@ -34,6 +34,7 @@ structure ResetProgOpenCall (initial after : Config) where
     (startupAllocatorCredits - 592) jal_8000512c_call.link (vsaReg atRetry 8) argvPtr (vsaReg atRetry 18)
     (vsaReg atRetry 19) (vsaReg atRetry 20) 1#64 argv1Ptr 5 atRetry after
   run : Steps (Vsa.Densify.fillZero initial) after
+  fs : FsUp after.σ.mem retry.failed.opened.opened.node
 
 theorem reset_prog_open_call_exists : ∃ initial after, Nonempty (ResetProgOpenCall initial after) := by
   obtain ⟨initial, c, ⟨w⟩⟩ := reset_retry_call_exists
@@ -52,5 +53,6 @@ theorem reset_prog_open_call_exists : ∃ initial after, Nonempty (ResetProgOpen
     ⟨by decide, by decide⟩).run c ⟨w.pc, rfl⟩
   obtain ⟨after, run2, ⟨A⟩⟩ := attempt_open_to_open S argv1_embedded (fun d h => Or.inr (argv1_rooted h))
     (by decide) ⟨by decide, by decide⟩
-  exact ⟨initial, after, ⟨c, w, A, w.run.trans (run1.trans run2)⟩⟩
+  exact ⟨initial, after, ⟨c, w, A, w.run.trans (run1.trans run2),
+    w.fs.frame A.kept fun j hj => A.live _ (List.mem_cons_self ..) _ ⟨by omega, by omega⟩⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse
