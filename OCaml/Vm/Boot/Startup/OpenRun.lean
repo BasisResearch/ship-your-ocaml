@@ -48,6 +48,7 @@ structure OpenOcamlrun (H : List (Nat × Nat)) (capacity : Nat) (sp ra path : Bi
   ready : RuntimeReady ((node.toNat, 5) :: H) capacity sp ra after
   late : LateImage after
   slot : FsSlotOne after.σ.mem node
+  words : FsWords after.σ.mem
   name : OcamlrunName after.σ.mem path
   caller : CallerFrame sp before after
 
@@ -423,6 +424,9 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
       (fun j hj => mem12 _ (by
         have := (R.ready.heap.block_bounds (q := R.node.toNat) (n := 5) (List.mem_cons_self ..)).1
         simp only [OutW, errnoWindows, and_true, heapStart] at *; omega))
+    words := R.words.transport fun x hx => mem12 x (by
+      rcases hx with ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+        simp only [OutW, errnoWindows, and_true, Layout.sym_fs_ready, Layout.sym_fds] at lo hi ⊢ <;> omega)
     name := R.name.transport fun k hk => mem12 _ (by
       have := (ready.heap.block_bounds (q := blk.1) (n := blk.2) blkH).1
       simp only [OutW, errnoWindows, and_true, heapStart] at *; omega)

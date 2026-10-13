@@ -28,6 +28,7 @@ structure ResolveInit (H : List (Nat × Nat)) (capacity : Nat)
   ready : RuntimeReady ((node.toNat, 5) :: H) capacity (resolveStack spo) jal_80000594_call.link after
   embed : EmbedImage after
   slot : FsSlotOne after.σ.mem node
+  words : FsWords after.σ.mem
   rest : ∀ j, 2 ≤ j → j < 64 → slotUsed after.σ.mem (Layout.sym_files + 56 * j) = 0#8
   saved : ∀ off value, (off, value) ∈ resolveSlots ra s3 s4 s9 →
     bytesT after.σ.mem (nativeFrameBase (nativeStack spo 80) 96 + off) 8 = value
@@ -127,6 +128,7 @@ theorem resolve_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat
     ready := F.ready
     embed := F.embed
     slot := F.slot
+    words := F.words
     rest := F.rest
     saved := fun off value member => by
       have range : 8 ≤ off ∧ off + 8 ≤ 96 := by
@@ -415,6 +417,7 @@ structure ResolveDone (H : List (Nat × Nat)) (capacity : Nat)
     (22, s6), (21, s5), (18, s2), (9, s1), (1, ra), (8, s0), (10, -1#64)]
   ready : RuntimeReady H capacity (nativeStack spo 80) ra after
   slot : FsSlotOne after.σ.mem node
+  words : FsWords after.σ.mem
   name : OcamlrunName after.σ.mem path
   kept : ∀ x, x < nativeFrameBase (resolveStack spo) 64 ∨ nativeFrameBase spo 80 + 48 ≤ x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
@@ -427,7 +430,7 @@ theorem resolve_finish (e : Config) (H : List (Nat × Nat)) (capacity : Nat)
     (regs : GHolds e.σ ([(20, 0#64), (10, 8#64), (25, path), (19, nativeStack spo 80), (2, resolveStack spo)] ++
       resolveCarried s0 s1 s2 s5 s6 s7 s8 s10))
     (name : OcamlrunName e.σ.mem path) (below : path.toNat + 16 ≤ nativeFrameBase (resolveStack spo) 64)
-    (slot : FsSlotOne e.σ.mem node) (nodeBelow : node.toNat + 5 ≤ nativeFrameBase (resolveStack spo) 64)
+    (slot : FsSlotOne e.σ.mem node) (words : FsWords e.σ.mem) (nodeBelow : node.toNat + 5 ≤ nativeFrameBase (resolveStack spo) 64)
     (rest : ∀ j, 2 ≤ j → j < 64 → slotUsed e.σ.mem (Layout.sym_files + 56 * j) = 0#8)
     (saved : ∀ off value, (off, value) ∈ resolveSlots ra0 s3 s4 s9 →
       bytesT e.σ.mem (nativeFrameBase (nativeStack spo 80) 96 + off) 8 = value) (aligned0 : ra0.toNat % 4 = 0) :
@@ -624,6 +627,7 @@ theorem resolve_finish (e : Config) (H : List (Nat × Nat)) (capacity : Nat)
     regs := p8.regs
     ready := ready8
     slot := slot.transport (fun x _ hi => back x (Or.inl (slotLow x hi))) (fun j hj => back _ (Or.inl (by omega)))
+    words := words.transport (fun x hx => back x (Or.inl (slotLow x hx.lt)))
     name := name.transport fun k hk => back _ (pathLow k hk)
     kept := back
     none := ?_
@@ -660,6 +664,7 @@ structure ResolveOcamlrun (H : List (Nat × Nat)) (capacity : Nat)
   ready : RuntimeReady ((node.toNat, 5) :: H) capacity (nativeStack spo 80) ra after
   embed : EmbedImage after
   slot : FsSlotOne after.σ.mem node
+  words : FsWords after.σ.mem
   name : OcamlrunName after.σ.mem path
   none : bytesT after.σ.mem (resAt spo 16) 8 = path
   kind : read4 after.σ.mem (resAt spo 0) = [2#8, 0#8, 0#8, 0#8]
@@ -721,6 +726,7 @@ theorem resolve_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge :
     s4 s5 s6 s7 s8 s9 s10 B.ready frameC B.regs B.name below
     (A.slot.transport (fun x _ hi => keptB x (by simp only [slotOne, Layout.sym_files, heapEnd, baseO] at *; omega))
       (fun j hj => keptB _ (by simp only [heapEnd, baseO] at *; omega)))
+    (A.words.transport (fun x hx => keptB x (by have hi := hx.lt; simp only [slotOne, Layout.sym_files, heapEnd, baseO] at *; omega)))
     (by simp only [nativeFrameBase, hR, heapEnd] at *; omega)
     (fun j lo hi => by
       unfold slotUsed
@@ -746,6 +752,7 @@ theorem resolve_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge :
         simp only [nativeFrameBase, hR] at *; omega
       exact toC a (Or.inl (by omega)) (Or.inl (by simp only [nativeFrameBase, hR, baseO] at *; omega))⟩
     slot := C.slot
+    words := C.words
     name := C.name
     none := C.none
     kind := C.kind

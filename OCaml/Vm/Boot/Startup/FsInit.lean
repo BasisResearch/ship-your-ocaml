@@ -551,6 +551,64 @@ theorem fsWindows_apart {sp : BitVec 64} (frame : NativeFrame sp 96) : FsWindows
 
 /-- What `fs_init()` leaves: slot 1 = "prog", the other slots unused, every
 other low byte outside its windows unchanged, readiness with the name live. -/
+theorem read4_of_pin4 {m : Std.ExtHashMap Nat (BitVec 8)} {A : Nat} {w : BitVec 32} (h : Pin4 m A w) :
+    read4 m A = [w.extractLsb' 0 8, w.extractLsb' 8 8, w.extractLsb' 16 8, w.extractLsb' 24 8] := by
+  obtain ⟨a, b, c, d⟩ := h
+  simp [read4, a, b, c, d]
+
+/-- htif.c's file system is up: `fs_ready` is set and descriptors 0–2 are
+stdin, stdout and stderr. -/
+structure FsWords (m : Std.ExtHashMap Nat (BitVec 8)) : Prop where
+  ready : read4 m Layout.sym_fs_ready = [1#8, 0#8, 0#8, 0#8]
+  stdin : read4 m Layout.sym_fds = [1#8, 0#8, 0#8, 0#8]
+  stdout : read4 m (Layout.sym_fds + 24) = [2#8, 0#8, 0#8, 0#8]
+  stderr : read4 m (Layout.sym_fds + 48) = [3#8, 0#8, 0#8, 0#8]
+
+/-- The bytes of `fs_ready` and descriptors 0–2. -/
+def FsWordByte (x : Nat) : Prop :=
+  (Layout.sym_fs_ready ≤ x ∧ x < Layout.sym_fs_ready + 4) ∨ (Layout.sym_fds ≤ x ∧ x < Layout.sym_fds + 52)
+
+theorem FsWordByte.lt {x : Nat} (h : FsWordByte x) : x < slotOne + 56 := by
+  rcases h with ⟨_, h⟩ | ⟨_, h⟩ <;> simp only [slotOne, Layout.sym_files, Layout.sym_fs_ready, Layout.sym_fds] at * <;>
+    omega
+
+theorem FsWords.transport {m m' : Std.ExtHashMap Nat (BitVec 8)} (h : FsWords m)
+    (same : ∀ x, FsWordByte x → (m'[x]?).getD 0 = (m[x]?).getD 0) : FsWords m' := by
+  have w (A : Nat) (inside : ∀ i, i < 4 → FsWordByte (A + i)) : read4 m' A = read4 m A := by
+    simp only [read4]
+    rw [show (m'[A]?).getD 0 = (m[A]?).getD 0 from by simpa using same A (by simpa using inside 0 (by decide)),
+      same (A + 1) (inside 1 (by decide)), same (A + 2) (inside 2 (by decide)), same (A + 3) (inside 3 (by decide))]
+  exact ⟨(w _ (fun i hi => Or.inl ⟨by omega, by omega⟩)).trans h.ready,
+    (w _ (fun i hi => Or.inr ⟨by omega, by omega⟩)).trans h.stdin,
+    (w _ (fun i hi => Or.inr ⟨by omega, by omega⟩)).trans h.stdout,
+    (w _ (fun i hi => Or.inr ⟨by omega, by omega⟩)).trans h.stderr⟩
+
+/-- fs_init's descriptor and `fs_ready` words: low globals apart from slot 1. -/
+theorem fsGlobal_low {A i : Nat}
+    (range : (Layout.sym_fds ≤ A ∧ A + 4 ≤ Layout.sym_fds + 52) ∨ A = Layout.sym_fs_ready) (hi : i < 4) :
+    A + i < heapStart ∧ ¬ allocGlobal (A + i) ∧ (A + i < slotOne ∨ slotOne + 56 ≤ A + i) := by
+  unfold allocGlobal InRange
+  rcases range with ⟨lo, up⟩ | rfl <;>
+    simp only [heapStart, slotOne, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready] at * <;> omega
+
+/-- One of fs_init's global word stores, read back after its prefix. -/
+theorem fsPrefix_word {sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64} (frame : NativeFrame sp 96)
+    (m : Std.ExtHashMap Nat (BitVec 8)) (A : Nat) (v : BitVec 64) (l1 l2 : List WEntry)
+    (split : fsPrefixLog sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 = l1 ++ (A, 4, v) :: (l2 ++ fsLoopLog sp s1 s2 s4 s5 s8 s9))
+    (out : OutLRange l2 A 4) (low : A + 4 ≤ nativeFrameBase sp 96) :
+    read4 (writeLog m (fsPrefixLog sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9)) A =
+      [(swData v).extractLsb' 0 8, (swData v).extractLsb' 8 8, (swData v).extractLsb' 16 8,
+        (swData v).extractLsb' 24 8] := by
+  rw [split]
+  apply read4_of_pin4
+  apply pin4_of_writeLog
+  have loop : OutLRange (fsLoopLog sp s1 s2 s4 s5 s8 s9) A 4 :=
+    OCaml.Vm.Sim.outLRange_of_windows (fsLoopLog_inside frame) ⟨Or.inl low, trivial⟩
+  clear split
+  induction l2 with
+  | nil => exact loop
+  | cons e l ih => exact ⟨out.1, ih out.2⟩
+
 structure FsInitDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64)
     (before after : Config) where
   node : BitVec 64
@@ -566,6 +624,7 @@ structure FsInitDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3
   live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   high : ∀ n, 26 ≤ n → n ≤ 27 → gprGet after.σ n = gprGet before.σ n
   above : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  words : FsWords after.σ.mem
 
 /-- **`fs_init()` over the embedded table "/prog"**: slot 1 becomes the file
 `prog` under the root, the descriptors and `fs_ready` are set, and the
@@ -647,7 +706,49 @@ theorem fs_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     rw [S.kept x (Or.inl (by
       unfold nativeFrameBase; rw [spNat]
       unfold nativeFrameBase heapStart heapEnd at *; omega)), keepD x out]
+  -- fs_init's global words, from its prefix to its return
+  have global4 (A : Nat)
+      (range : (Layout.sym_fds ≤ A ∧ A + 4 ≤ Layout.sym_fds + 52) ∨ A = Layout.sym_fs_ready) :
+      read4 after.σ.mem A = read4 d.σ.mem A := by
+    have byte (i : Nat) (hi4 : i < 4) : (after.σ.mem[A + i]?).getD 0 = (d.σ.mem[A + i]?).getD 0 := by
+      obtain ⟨lowA, notAlloc, apart⟩ := fsGlobal_low range hi4
+      rw [T.low _ lowA notAlloc apart, S.kept _ (Or.inl (by
+          unfold nativeFrameBase; rw [spNat]
+          unfold nativeFrameBase heapStart heapEnd at *; omega))]
+    simp only [read4]
+    rw [show (after.σ.mem[A]?).getD 0 = (d.σ.mem[A]?).getD 0 from by simpa using byte 0 (by decide),
+      byte 1 (by decide), byte 2 (by decide), byte 3 (by decide)]
+  have lowFrame : Layout.sym_fds + 52 ≤ nativeFrameBase sp 96 := by
+    unfold nativeFrameBase heapEnd at *; unfold Layout.sym_fds; omega
+  have lowReady : Layout.sym_fs_ready + 4 ≤ nativeFrameBase sp 96 := by
+    unfold nativeFrameBase heapEnd at *; unfold Layout.sym_fs_ready; omega
   refine ⟨after, run1.trans (run2.trans run3), ⟨{
+    words.ready := by
+      rw [global4 _ (Or.inr rfl), p1.memory]
+      rw [fsPrefix_word frame96 _ Layout.sym_fs_ready 1#64 (fsInitLog sp ra s0 s3 s6 s7 ++ fdsLog) []
+        (by simp [fsPrefixLog, fsReadyLog]) trivial lowReady]
+      decide
+    words.stdin := by
+      rw [global4 _ (Or.inl ⟨Nat.le_refl _, by omega⟩), p1.memory]
+      rw [fsPrefix_word frame96 _ Layout.sym_fds 1#64
+        (fsInitLog sp ra s0 s3 s6 s7 ++ [(Layout.sym_fds + 24, 4, 2#64), (Layout.sym_fds + 48, 4, 3#64)])
+        [(Layout.sym_fs_ready, 4, 1#64)] (by simp [fsPrefixLog, fdsLog, fsReadyLog])
+        (by simp only [OutLRange, Layout.sym_fds, Layout.sym_fs_ready, and_true]; omega) (by omega)]
+      decide
+    words.stdout := by
+      rw [global4 _ (Or.inl ⟨by omega, by omega⟩), p1.memory]
+      rw [fsPrefix_word frame96 _ (Layout.sym_fds + 24) 2#64 (fsInitLog sp ra s0 s3 s6 s7)
+        [(Layout.sym_fds + 48, 4, 3#64), (Layout.sym_fds, 4, 1#64), (Layout.sym_fs_ready, 4, 1#64)]
+        (by simp [fsPrefixLog, fdsLog, fsReadyLog])
+        (by simp only [OutLRange, Layout.sym_fds, Layout.sym_fs_ready, and_true]; omega) (by omega)]
+      decide
+    words.stderr := by
+      rw [global4 _ (Or.inl ⟨by omega, by omega⟩), p1.memory]
+      rw [fsPrefix_word frame96 _ (Layout.sym_fds + 48) 3#64
+        (fsInitLog sp ra s0 s3 s6 s7 ++ [(Layout.sym_fds + 24, 4, 2#64)])
+        [(Layout.sym_fds, 4, 1#64), (Layout.sym_fs_ready, 4, 1#64)] (by simp [fsPrefixLog, fdsLog, fsReadyLog])
+        (by simp only [OutLRange, Layout.sym_fds, Layout.sym_fs_ready, and_true]; omega) (by omega)]
+      decide
     node := T.node
     pc := T.pc
     regs := T.regs
