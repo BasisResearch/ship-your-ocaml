@@ -209,6 +209,15 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
       `HeapReady`) and returns a block whose data word is writable and
       apart from the record, keeping s0–s11, the caller frame, the record
       and the list head (`CustomMemReturned`).
+    - Agreed shape (a6-gc proves it): `memory` is an exact log, `allocLog`
+      (the block at young − 16, as `allocPlaces`) followed by `extra` (custom
+      table and resource counters) inside windows that are stable for
+      `f1Runtime`. The first call after the cut also grows the empty
+      `custom_table` (a 792576-byte `caml_stat_alloc`), so the post gives
+      `HeapReady` over that block. The 6th open since the cut requests a
+      major slice, so a6-gc's `Ready` carries "fewer than 5 opens since
+      the cut" (from `LibHeapAt`'s channel accounting). The major-slice
+      path stays a named open premise. whileMin has one open site.
     - a6-gc (2026-10-13): the fields fit the quiet path. `Ready` will
       carry the custom-table and resource-counter state. The custom table's
       first `realloc` (a C-heap charge) and the GC-speed and
