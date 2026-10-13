@@ -4,7 +4,11 @@ import OCaml.Vm.Boot.Startup.PageTableTopNormalized
 import OCaml.Vm.Boot.Startup.PageTableTopImage
 import OCaml.Vm.Boot.Startup.PageTableShiftNormalized
 import OCaml.Vm.Boot.Startup.PageTableShiftImage
+import OCaml.Vm.Boot.Startup.PageTableLoopNormalized
+import OCaml.Vm.Boot.Startup.PageTableLoopImage
 import OCaml.Vm.Boot.Startup.NativeSave
+import Vsa.Sim.IndexedLoop
+import OCaml.Vm.Boot.Startup.RuntimeStack
 import OCaml.Vm.Boot.Startup.ReadSectionsSteps
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
@@ -141,4 +145,105 @@ theorem page_table_shift (c : Config) (ra pages : BitVec 64) (leaf : LeafInput r
     rw [page_table_upper _ rfl, show 0#64 + Functions.sign_extend (m := 64) 63#12 = 63#64 by decide]
   · rfl
   · decide
+
+local macro "plk" : tactic => `(tactic| simp only [pagetableloop_line_8000ad0c, pagetableloop_line_8000ad10, pagetableloop_line_8000ad14, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+theorem page_table_double (i : MInstr) (hi : i.imm = 1#12) (k : Nat) (hk : k < 11) :
+    Sail.shift_bits_left (BitVec.ofNat 64 (2 ^ k)) (Sail.BitVec.extractLsb (shamtOf i) 5 0) =
+      BitVec.ofNat 64 (2 ^ (k + 1)) := by
+  rw [shamtOf, hi]
+  rcases (by omega : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨ k = 6 ∨ k = 7 ∨ k = 8 ∨ k = 9 ∨ k = 10) with
+    rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+
+theorem page_table_count (k : Nat) (hk : k < 11) :
+    Functions.sign_extend (m := 64) (Sail.BitVec.extractLsb
+      (BitVec.ofNat 64 (63 - k) + Functions.sign_extend (m := 64) 4095#12) 31 0) = BitVec.ofNat 64 (62 - k) := by
+  rcases (by omega : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨ k = 6 ∨ k = 7 ∨ k = 8 ∨ k = 9 ∨ k = 10) with
+    rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+
+theorem page_table_more (k : Nat) (hk : k < 11) :
+    guardB bop.BLTU (BitVec.ofNat 64 (2 ^ (k + 1))) 1520#64 = decide (k + 1 < 11) := by
+  rcases (by omega : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨ k = 6 ∨ k = 7 ∨ k = 8 ∨ k = 9 ∨ k = 10) with
+    rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide
+
+def pageTableLoopBlocks (k : Nat) : List BBlock :=
+  if k + 1 < 11 then caml_page_table_initializeXad0cTSeg else caml_page_table_initializeXad0cFSeg
+
+/-- One doubling step: `size <<= 1`, `shift--`, back while `size < pages`. -/
+theorem page_table_doubling (c : Config) (ra : BitVec 64) (k : Nat) (hk : k < 11) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(12, BitVec.ofNat 64 (2 ^ k)), (15, BitVec.ofNat 64 (63 - k)), (10, 1520#64)]) :
+    FnSummary 0x8000ad0c#64 (fun e => e = c) (WriteRegistersPost [12, 14, 15] [] c
+      (if k + 1 < 11 then 0x8000ad0c#64 else 0x8000ad1c#64) 1520#64
+      [(15, BitVec.ofNat 64 (62 - k)), (14, BitVec.ofNat 64 (63 - k)), (12, BitVec.ofNat 64 (2 ^ (k + 1))),
+        (10, 1520#64)]) := by
+  have input : BlockInput (pageTableLoopBlocks k) 0x8000ad0c#64
+      [(12, BitVec.ofNat 64 (2 ^ k)), (15, BitVec.ofNat 64 (63 - k)), (10, 1520#64)] [] c := {
+    good := leaf.good
+    minstret := leaf.minstret
+    regs := regs
+    keys := by change KeysOK [12, 15, 10]; decide
+    shape := by unfold pageTableLoopBlocks; split <;> (change ChainOK _ [12, 15, 10] _; decide)
+    tick := leaf.tick
+    facts := by
+      have code := pageTableLoop_code leaf.image
+      have more := page_table_more k hk
+      unfold pageTableLoopBlocks
+      split
+      · chain_facts code with "Vsa.Sim.Code.caml_page_table_initialize_at_"
+        plk; rw [page_table_double _ rfl k hk, more]; simp [*]
+      · chain_facts code with "Vsa.Sim.Code.caml_page_table_initialize_at_"
+        plk; rw [page_table_double _ rfl k hk, more]; simp [*] }
+  apply registers_of_blocks leaf.image (by constructor <;> trivial) (block_summary _ _ _ _ _ input)
+    (keys := by unfold pageTableLoopBlocks; split <;> decide)
+    (no3 := by unfold pageTableLoopBlocks; split <;> decide)
+  · unfold pageTableLoopBlocks; split <;> rfl
+  · unfold pageTableLoopBlocks; split <;> rfl
+  · unfold pageTableLoopBlocks
+    split
+    all_goals
+      simp only [caml_page_table_initializeXad0cTSeg, caml_page_table_initializeXad0cFSeg, evalBlocks, evalBlock,
+        SegEvalState.init, runGM, stepGM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff,
+        ite_true, ite_false, pagetableloop_line_8000ad0c, pagetableloop_line_8000ad10, pagetableloop_line_8000ad14]
+      rw [page_table_double _ rfl k hk, page_table_count k hk,
+        show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]
+  · rfl
+  · unfold pageTableLoopBlocks; split <;> decide
+
+/-- The doubling loop after `k` steps: `size = 2^k`, `shift` register `63 - k`. -/
+structure DoublingAt (H : List (Nat × Nat)) (capacity : Nat) (sp ra : BitVec 64) (start : Config) (k : Nat)
+    (d : Config) : Prop where
+  pc : PCAt (if k < 11 then 0x8000ad0c#64 else 0x8000ad1c#64) d
+  regs : GHolds d.σ [(12, BitVec.ofNat 64 (2 ^ k)), (15, BitVec.ofNat 64 (63 - k)), (10, 1520#64)]
+  shift : 0 < k → gprGet d.σ 14 = some (BitVec.ofNat 64 (64 - k))
+  ready : RuntimeReady H capacity sp ra d
+  bound : k ≤ 11
+  mem : d.σ.mem = start.σ.mem
+
+theorem DoublingAt.index {H capacity sp ra start k d} (D : DoublingAt H capacity sp ra start k d) :
+    63 - ((gprGet d.σ 15).getD 0).toNat = k := by
+  rw [gholds_lookup (n := 15) _ D.regs rfl]
+  have := D.bound
+  simp only [Option.getD_some, BitVec.toNat_ofNat]
+  omega
+
+theorem page_table_doubling_loop {H capacity sp ra start} (frame : NativeFrame sp 32)
+    (D : DoublingAt H capacity sp ra start 0 start) :
+    ∃ d, Steps start d ∧ DoublingAt H capacity sp ra start 11 d := by
+  have loop := indexedLoop (I := DoublingAt H capacity sp ra start)
+    (index := fun d => 63 - ((gprGet d.σ 15).getD 0).toNat) (start := 0) (count := 11)
+    (fun _ _ h => h.index) (fun _ _ h => h.bound) (fun k d ⟨h, lt⟩ => by
+      have pc : PCAt 0x8000ad0c#64 d := by have := h.pc; simp only [lt, ite_true] at this; exact this
+      obtain ⟨e, run, p⟩ := (page_table_doubling d ra k lt h.ready.toLeafInput h.regs).run d ⟨pc, rfl⟩
+      exact ⟨e, run, {
+        pc := p.pc
+        regs := ⟨gholds_lookup (n := 12) _ p.regs rfl, by rw [gholds_lookup (n := 15) _ p.regs rfl]; congr 2; omega,
+          gholds_lookup (n := 10) _ p.regs rfl, trivial⟩
+        shift := fun _ => by rw [gholds_lookup (n := 14) _ p.regs rfl]; congr 2; omega
+        ready := h.ready.stack_log p (by decide) (by simp only [keysG]; decide) (by decide)
+          ((p.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans h.ready.stack)
+          ((p.toEffectPost.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans h.ready.raReg)
+          h.ready.aligned frame (by simp only [LogInW])
+        bound := by omega
+        mem := p.memory.trans h.mem }⟩)
+  exact loop start D
 end OCaml.Vm.Boot.Startup
