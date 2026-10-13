@@ -397,9 +397,10 @@ structure NoSlash (m : Std.ExtHashMap Nat (BitVec 8)) (path : BitVec 64) (L : Na
   region : ReadWindow path (L + 1)
   free : ∀ j, j < L → strByte m (path.toNat + j) ≠ 47#8
 
-theorem back_iteration {path L a0 ra start j c} (run : NoSlash start.σ.mem path L) (h : BackAt path L a0 ra start j c)
+theorem back_iteration {path L a0 ra start j c} (region : ReadWindow path (L + 1))
+    (free : strByte start.σ.mem (path.toNat + (L - (j + 1))) ≠ 47#8) (h : BackAt path L a0 ra start j c)
     (hj : j < L) : ∃ d, Steps c d ∧ BackAt path L a0 ra start (j + 1) d := by
-  have small : L < 2 ^ 64 := by have := run.region.upper; omega
+  have small : L < 2 ^ 64 := by have := region.upper; omega
   have kNe : BitVec.ofNat 64 (L - j) ≠ 0#64 := by
     intro e
     have := congrArg BitVec.toNat e
@@ -412,10 +413,10 @@ theorem back_iteration {path L a0 ra start j c} (run : NoSlash start.σ.mem path
     omega
   have cursor : path + (BitVec.ofNat 64 (L - j) - 1#64) = nameCursor path (L - (j + 1)) := by
     rw [kDec]; rfl
-  have nat := nameCursor_nat run.region (k := L - (j + 1)) (by omega)
+  have nat := nameCursor_nat region (k := L - (j + 1)) (by omega)
   obtain ⟨d, run1, post⟩ := (resolve_back_step c path _ a0 ra (strByte start.σ.mem (path.toNat + (L - (j + 1))))
-    h.leaf h.regs kNe (by rw [cursor]; exact name_window run.region (by omega))
-    (by rw [cursor, nat, h.memory]; rfl) (run.free _ (by omega))).run c ⟨h.pc, rfl⟩
+    h.leaf h.regs kNe (by rw [cursor]; exact name_window region (by omega))
+    (by rw [cursor, nat, h.memory]; rfl) free).run c ⟨h.pc, rfl⟩
   refine ⟨d, run1, {
     leaf := ⟨post.good, post.image, post.minstret,
       (post.frame .x1 (by decide) (by decide)).trans h.leaf.raReg, h.leaf.aligned, post.tick⟩
@@ -442,7 +443,19 @@ theorem BackAt.index {path L a0 ra start j c} (small : L < 2 ^ 64) (h : BackAt p
 theorem back_loop {path L a0 ra} (start : Config) (run : NoSlash start.σ.mem path L) :
     Triple (BackAt path L a0 ra start 0) (BackAt path L a0 ra start L) :=
   indexed_loop (backIndex L) L 0 _ (fun _ _ h => h.bound)
-    (fun _ _ h => h.index (by have := run.region.upper; omega)) (fun _ _ h hj => back_iteration run h hj)
+    (fun _ _ h => h.index (by have := run.region.upper; omega))
+    (fun _ _ h hj => back_iteration run.region (run.free _ (by omega)) h hj)
+
+/-- The scan over the last `K` bytes, none '/'. -/
+theorem back_loop_upto {path L a0 ra} (start : Config) (K : Nat) (le : K ≤ L) (region : ReadWindow path (L + 1))
+    (free : ∀ j, j < K → strByte start.σ.mem (path.toNat + (L - (j + 1))) ≠ 47#8) :
+    Triple (BackAt path L a0 ra start 0) (BackAt path L a0 ra start K) := by
+  have loop := indexed_loop (backIndex L) K 0 (fun j c => BackAt path L a0 ra start j c ∧ j ≤ K)
+    (fun _ _ h => h.2) (fun _ _ h => h.1.index (by have := region.upper; omega))
+    (fun j _ h hj => (back_iteration region (free j hj) h.1 (by omega)).elim fun d ⟨r, b⟩ => ⟨d, r, b, hj⟩)
+  intro c h
+  obtain ⟨d, r, b, _⟩ := loop c ⟨h, Nat.zero_le _⟩
+  exact ⟨d, r, b⟩
 
 /-- The last component is the whole path (`b = 0`), neither "." nor "..":
 clear `r->last_dotdot`, start at the root. -/
