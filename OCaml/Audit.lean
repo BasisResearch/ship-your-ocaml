@@ -5796,3 +5796,4 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.config_input
 #print axioms OCaml.Vm.Sim.get_config_entry
 #print axioms OCaml.Vm.Sim.prim_caml_sys_get_config_returns
+#print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_pro
