@@ -61,7 +61,7 @@ theorem prim_caml_ml_output_char_returns {L : OCaml.Layout} {P : Prog} {ra : Bit
     (consoleStable : ConsoleStable L) (consoleRt : ∀ c, L.runtimeOk c → ConsoleWrite.ConsoleRuntime c)
     (consoles : OCaml.ConsoleChannels P) :
     PrimReturnsAt L P .C_CALL2 ra 1 "caml_ml_output_char" := by
-  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem
+  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem _words
   obtain ⟨x, rest, hst⟩ : ∃ x rest, s.stack = x :: rest := by
     match h : s.stack with
     | x :: rest => exact ⟨x, rest, rfl⟩
@@ -77,7 +77,7 @@ theorem prim_caml_ml_output_char_returns {L : OCaml.Layout} {P : Prog} {ra : Bit
   subst hentry
   have open_ : chn.fd ≠ -1 := by omega
   obtain ⟨console, live, st, stream, streamOut⟩ := consoles s reach id chn hw out open_
-  refine ⟨1#64, by decide, sem0, fun c setup => ?_⟩
+  refine ⟨1#64, by decide, sem0, fun c setup _ => ?_⟩
   obtain ⟨D, l, a, ch, site⟩ := console_site ready setup (by rw [args]; rfl) hc hw
   have I := oc_input setup site.arg site.inv site.valid (consoleRt c setup.input.runtime) console out
     (console_geometry_full setup.geometry site.arg site.valid) (by rw [args]; rfl) setup.calleeSaved
@@ -99,7 +99,7 @@ theorem prim_caml_ml_flush_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64
     (consoleStable : ConsoleStable L) (consoleRt : ∀ c, L.runtimeOk c → ConsoleWrite.ConsoleRuntime c)
     (consoles : OCaml.ConsoleChannels P) :
     PrimReturnsAt L P .C_CALL1 ra 0 "caml_ml_flush" := by
-  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem
+  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem _words
   simp only [List.take_zero] at sem ⊢
   obtain ⟨id, hc, flushed, rfl, rfl⟩ := flush_semantics sem
   have hentry : entry = Layout.sym_caml_ml_flush :=
@@ -109,7 +109,7 @@ theorem prim_caml_ml_flush_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64
     cases e : s.world.chans[id]? with
     | none => simp [flushChan, e] at flushed
     | some chn => exact ⟨chn, rfl⟩
-  refine ⟨1#64, by decide, sem, fun c setup => ?_⟩
+  refine ⟨1#64, by decide, sem, fun c setup _ => ?_⟩
   obtain ⟨D, l, a, ch, ⟨inv, valid, arg, outside, bindings⟩⟩ := console_site ready setup rfl hc hw
   by_cases closed : chn.fd = -1
   · have hworld : world = s.world := by
@@ -137,7 +137,7 @@ theorem prim_output_returns_at {L : OCaml.Layout} {P : Prog} {ra : BitVec 64} {n
     (consoleStable : ConsoleStable L) (consoleRt : ∀ c, L.runtimeOk c → ConsoleWrite.ConsoleRuntime c)
     (consoles : OCaml.ConsoleChannels P) :
     PrimReturnsAt L P .C_CALL4 ra 3 name := by
-  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem
+  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem _words
   obtain ⟨x1, x2, x3, rest, hst⟩ : ∃ x1 x2 x3 rest, s.stack = x1 :: x2 :: x3 :: rest := by
     match h : s.stack with
     | x1 :: x2 :: x3 :: rest => exact ⟨x1, x2, x3, rest, rfl⟩
@@ -149,7 +149,7 @@ theorem prim_output_returns_at {L : OCaml.Layout} {P : Prog} {ra : BitVec 64} {n
   have hentry : entry = sym := Option.some.inj (ready.entryName.symm.trans lookup)
   subst hentry
   obtain ⟨cF, hshape⟩ := ConsoleWrite.putBlock_shape hw model
-  refine ⟨1#64, by rcases nameOk with rfl | rfl <;> decide, sem0, fun c setup => ?_⟩
+  refine ⟨1#64, by rcases nameOk with rfl | rfl <;> decide, sem0, fun c setup _ => ?_⟩
   obtain ⟨D, l, a, ch, site⟩ := console_site ready setup (by rw [args]; rfl) hc hw
   exact console_callee_summary ready setup site.inv site.valid site.arg rfl (by rw [hshape])
     (output_framed_at nameOk (enter c ra a) setup site.arg site.inv site.valid (consoleRt c setup.input.runtime)

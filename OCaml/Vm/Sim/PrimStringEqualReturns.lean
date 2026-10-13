@@ -70,7 +70,7 @@ theorem string_arg {L : OCaml.Layout} {P : Prog} {op : Opcode} {s : St} {c : Con
 theorem prim_caml_string_equal_returns {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
     (stable : MemoryStable L.runtimeOk) :
     PrimReturnsAt L P op ra k "caml_string_equal" := by
-  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem
+  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem _words
   obtain ⟨y, args⟩ : ∃ y, s.accu :: s.stack.take k = [s.accu, y] ∧ y ∈ s.stack := by
     cases e : s.stack.take k with
     | nil => rw [e] at sem; simp [primF1Impl] at sem

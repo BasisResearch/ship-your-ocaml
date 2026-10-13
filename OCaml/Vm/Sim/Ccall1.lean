@@ -27,12 +27,12 @@ theorem c_call1_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
       Running L P {s with pc := s.pc + 2, accu := v, heap := heap, world := world} after := by
   apply dispatch_compose h.dispatch
   intro d dp
-  obtain ⟨n, call, prefixSteps, setup⟩ := c_call1_setup writeStable h.toArmInput h.operand h.nonnegative
+  obtain ⟨n, call, prefixSteps, setup, youngKept⟩ := c_call1_setup writeStable h.toArmInput h.operand h.nonnegative
     h.primitive h.entryName h.aligned h.domainWord h.tableWord h.targetRead h.value h.environment h.space dp
   have pre : Triple (fun x => x = d) (fun x => PCAt (BitVec.ofNat 64 entry) x ∧ x = call) := by
     rintro x rfl
     exact ⟨call, prefixSteps.toSteps, setup.target, rfl⟩
-  have composed := callSeg pre (callee.summary call setup).run (c_call1_return_triple readStable)
+  have composed := callSeg pre (callee.summary call setup (by rw [youngKept]; exact h.allocPlaced)).run (c_call1_return_triple readStable)
   obtain ⟨after, run, represented⟩ := composed d rfl
   exact ⟨_, after, run.toN_of_stepsField, represented⟩
 
@@ -78,7 +78,7 @@ theorem c_call1_sys_argv_callee {L : OCaml.Layout} {P : Prog} {s : St}
     Ccall1Callee L P s pl cp sp high domain Layout.sym_caml_sys_argv env
       "caml_sys_argv" s.world.argv result s.heap s.world := by
   refine ⟨by decide, rfl, ?_⟩
-  intro c setup
+  intro c setup _
   have S := caml_sys_argv_primitive stable setup.input (by rw [global c setup]; exact value)
   rw [global c setup] at S
   exact c_call1_readOnly_summary S (by decide) setup.saved setup.geometry setup.native

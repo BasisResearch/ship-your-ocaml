@@ -59,6 +59,7 @@ structure CcallCallee (ra : BitVec 64) (args : List Val) (L : OCaml.Layout) (P :
   fragment : name ∈ primsF1
   semantics : primF1Impl name args s.heap s.world = .ok v heap world
   summary : ∀ c, CcallSetupPost ra args L P s pl cp sp high domain entry env c →
+    (∀ p ∈ allocPlaces name s (BitVec.ofNat 64 (runtimeFields c).youngPtr), pl.φ p.1 = some p.2) →
     FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
       (CcallReturn ra L P {s with pc := s.pc + 2, accu := v, heap := heap, world := world}
         pl cp sp high (BitVec.ofNat 64 domain) (BitVec.ofNat 64 (sp - 16)) result env)
@@ -75,7 +76,7 @@ theorem ccall_callee_of_readOnly {ra : BitVec 64} {args : List Val} {L : OCaml.L
       FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
         (ReadOnlyPost L.runtimeOk P s pl cp sp high name args v result writes c ra)) :
     CcallCallee ra args L P s pl cp sp high domain entry env name v result s.heap s.world :=
-  ⟨fragment, model, fun c setup =>
+  ⟨fragment, model, fun c setup _ =>
     ccall_readOnly_summary (summary c setup.input) preserved setup.saved setup.geometry
       setup.native⟩
 

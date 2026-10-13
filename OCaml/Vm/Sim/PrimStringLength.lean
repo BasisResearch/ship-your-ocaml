@@ -19,7 +19,7 @@ theorem prim_length_returns {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : Bi
       FnSummary (BitVec.ofNat 64 sym) (fun x => x = c)
         (OCaml.Vm.Primitives.ImmediatePost L.runtimeOk P s pl cp sp high name [.ptr l 0] (BitVec.ofNat 63 n) [10, 14, 15] c ra)) :
     PrimReturnsAt L P op ra k name := by
-  intro s c pl cp sp high table entry value env index v heap world reach ready sem
+  intro s c pl cp sp high table entry value env index v heap world reach ready sem _words
   have one : s.stack.take k = [] := by
     cases e : s.stack.take k with
     | nil => rfl

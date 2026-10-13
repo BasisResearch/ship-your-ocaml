@@ -42,7 +42,7 @@ theorem f1_counterStable : WindowStable Gc.f1Layout.runtimeOk counterWindows := 
 theorem prim_caml_fresh_oo_id_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64}
     (counterStable : WindowStable L.runtimeOk counterWindows) :
     PrimReturnsAt L P .C_CALL1 ra 0 "caml_fresh_oo_id" := by
-  intro s c pl cp sp high table entry value env index v heap world reach ready sem
+  intro s c pl cp sp high table entry value env index v heap world reach ready sem _words
   simp only [List.take_zero] at sem ⊢
   have model : primF1Impl "caml_fresh_oo_id" [s.accu] s.heap s.world =
       .ok (Val.ofInt s.world.ooId) s.heap { s.world with ooId := s.world.ooId + 1 } := rfl
@@ -52,7 +52,7 @@ theorem prim_caml_fresh_oo_id_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec
   have hentry : entry = Layout.sym_caml_fresh_oo_id :=
     Option.some.inj (ready.entryName.symm.trans PrimitiveEntries.entry_caml_fresh_oo_id)
   subst hentry
-  refine ⟨counterWord s.world.ooId, by decide, model, fun c' setup => ?_⟩
+  refine ⟨counterWord s.world.ooId, by decide, model, fun c' setup _ => ?_⟩
   have g := setup.geometry
   have SG := g.toArmGeometry.toStackGeometry
   have fits := ready.stackFits

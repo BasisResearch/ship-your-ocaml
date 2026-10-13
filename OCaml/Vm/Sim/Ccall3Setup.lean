@@ -27,7 +27,8 @@ theorem c_call3_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     (space : Ccall1WriteOk P s c pl cp sp domain (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) env)
     (arguments : CcallArguments s sp 2)
     (dp : DispatchPost c .C_CALL3 (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d) :
-    ∃ n after, StepsN n d after ∧ CcallSetupPost (0x80002fa4#64) (s.accu :: s.stack.take 2) L P s pl cp sp high domain entry env after := by
+    ∃ n after, StepsN n d after ∧ CcallSetupPost (0x80002fa4#64) (s.accu :: s.stack.take 2) L P s pl cp sp high domain entry env after ∧
+      (runtimeFields after).youngPtr = (runtimeFields c).youngPtr := by
   have room8 : 8 ≤ sp := by have := space.room; omega
   have sp16Nat : (BitVec.ofNat 64 (sp - 16)).toNat = sp - 16 := Nat.mod_eq_of_lt (by have := space.stackNat; omega)
   have sp8Nat : (BitVec.ofNat 64 (sp - 8)).toNat = sp - 8 := Nat.mod_eq_of_lt (by have := space.stackNat; omega)
@@ -121,7 +122,7 @@ theorem c_call3_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))) h.dispatch.loop
     (dp.gprs.trans (GprsKept.of_segment frame post.pins (by seg_cover)))
   have argument : gpr after 10 = some value := PinsHold.get post.pins ⟨6, by simp⟩
-  refine ⟨n, after, steps, ?_⟩
+  refine ⟨n, after, steps, ?_, space.young.youngPtr space.payload.domain written⟩
   constructor
   · refine ⟨⟨post.good, image, post.good.minstret, PinsHold.get post.pins ⟨0, by simp⟩,
       by decide, post.tick⟩,

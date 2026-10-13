@@ -44,6 +44,20 @@ structure YoungOutside (log : List WEntry) (c : Config) : Prop where
   ptr : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr) 8
   external : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_external_raise) 8
 
+/-- A write log outside `Caml_state` and its `young_ptr` word keeps the young pointer. -/
+theorem YoungOutside.youngPtr {log : List WEntry} {c c' : Config} (h : YoungOutside log c)
+    (domain : OutLRange log Layout.sym_Caml_state 8) (written : c'.σ.mem = writeLog c.σ.mem log) :
+    (runtimeFields c').youngPtr = (runtimeFields c).youngPtr := by
+  have wd : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state := by
+    simp only [word, written]; exact bytesT_writeLog_out _ domain
+  change (word c' ((word c' Layout.sym_Caml_state).toNat + Layout.off_young_ptr)).toNat =
+    (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr)).toNat
+  rw [wd]
+  have hp := h.ptr
+  simp only [word] at hp
+  simp only [word, written]
+  rw [bytesT_writeLog_out _ hp]
+
 /-- Separation from each window of a list is separation from the list. -/
 theorem outWRange_of_each {ws : List W} {a n : Nat} (each : ∀ w ∈ ws, OutWRange [w] a n) :
     OutWRange ws a n := by

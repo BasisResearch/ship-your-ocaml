@@ -44,7 +44,7 @@ theorem c_call{arity}_exit_arm {params} :
     Halts c (bytesToString world.console) code := by
   apply dispatch_halts h.dispatch
   intro d dp
-  obtain ⟨count, call, run, setup⟩ := c_call{arity}_setup writeStable h.toArmInput {setup} dp
+  obtain ⟨count, call, run, {'setup' if variable else 'setup, -'}⟩ := c_call{arity}_setup writeStable h.toArmInput {setup} dp
   exact Halts.of_steps run.toSteps (callee.summary call setup)
 
 /-- Match the actual bytecode primitive-exit outcome, including world and status. -/

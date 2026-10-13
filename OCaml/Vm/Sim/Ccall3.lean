@@ -23,12 +23,12 @@ theorem c_call3_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
       Running L P {s with pc := s.pc + 2, accu := v, heap := heap, world := world, stack := s.stack.drop 2} after := by
   apply dispatch_compose h.dispatch
   intro d dp
-  obtain ⟨n, call, prefixSteps, setup⟩ := c_call3_setup writeStable h.toArmInput h.operand h.nonnegative
+  obtain ⟨n, call, prefixSteps, setup, youngKept⟩ := c_call3_setup writeStable h.toArmInput h.operand h.nonnegative
     h.primitive h.entryName h.aligned h.domainWord h.tableWord h.targetRead h.value h.environment h.space arguments dp
   have pre : Triple (fun x => x = d) (fun x => PCAt (BitVec.ofNat 64 entry) x ∧ x = call) := by
     rintro x rfl
     exact ⟨call, prefixSteps.toSteps, setup.target, rfl⟩
-  have composed := callSeg pre (callee.summary call setup).run (c_call3_return_triple readStable arguments.bound)
+  have composed := callSeg pre (callee.summary call setup (by rw [youngKept]; exact h.allocPlaced)).run (c_call3_return_triple readStable arguments.bound)
   obtain ⟨after, run, represented⟩ := composed d rfl
   exact ⟨_, after, run.toN_of_stepsField, represented⟩
 

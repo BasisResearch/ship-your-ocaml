@@ -111,6 +111,7 @@ structure CcallReturns (L : OCaml.Layout) (P : Prog) (op : Opcode) (ra : BitVec 
   callee : ∀ s c pl cp sp high table entry value env index name v heap world, Reach P s →
     CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
     name ∈ primsF1 → primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .ok v heap world →
+    heap.words ≤ L.budget.heapWords →
     ∃ result, CcallCallee ra (s.accu :: s.stack.take k) L P s pl cp sp high (domainAt c) entry env
       name v result heap world
 
@@ -146,9 +147,9 @@ theorem CcallExit.of_ok {L : OCaml.Layout} {P : Prog} {op : Opcode} {k : Nat}
     cases result⟩
 
 /-- The shared C_CALLk row. -/
-theorem ccall_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opcode} {ra : BitVec 64}
+theorem ccall_row_of {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64}
     {k high0 dom0 : Nat} (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
-    (fits : OCaml.Fits B P) (capacity : StackCapacity B) (small : k ≤ 4)
+    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget) (small : k ≤ 4)
     (semantics : ∀ s p, stepI P s ⟨op, [p]⟩ = if p < 0 ∨ s.stack.length < k then .unsupported else
       opt P.prims[p.toNat]? fun nm => cCall P s 2 nm (s.accu :: s.stack.take k))
     (shape : ∀ s args, (∀ a, args ≠ [a]) → stepI P s ⟨op, args⟩ = .unsupported)
@@ -186,8 +187,15 @@ theorem ccall_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opco
           have space := stack_fits fits capacity reach (k := 2)
           obtain ⟨pl, cp, sp, high, entry, value, env, ready⟩ :=
             CcallReady.of_loop h code fetch nonnegative hp space (places name s)
+          have words : heap.words ≤ L.budget.heapWords := by
+            have budget := (fits s' (reach_next reach hd step)).2
+            have step0 := step
+            rw [semantics, if_neg neg, hp] at step0
+            simp only [opt, cCall, prim, primF1, member, if_true, result] at step0
+            cases step0
+            exact budget
           obtain ⟨res, callee⟩ := returns.callee s c pl cp sp high _ entry value env w name v heap world
-            reach ready member result
+            reach ready member result words
           have hs := ready.stack.1
           have same : high = high0 := ready.stackHigh.symm.trans (rf.stackHigh c ready.runtime)
           subst same
@@ -219,9 +227,9 @@ theorem ccall_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opco
   · rw [shape s args (fun a ha => single ⟨a, ha⟩)]; trivial
 
 /-- **The C_CALL1 row.** -/
-theorem c_call1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
+theorem c_call1_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
-    (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
     (returns : CcallReturns L P .C_CALL1 (0x80003060#64) 0) (exit : CcallExit L P .C_CALL1 0) 
     (places : ∀ name s young, young.toNat % 8 = 0 → AllocPlacesOk name s young):
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL1 :=
@@ -237,9 +245,9 @@ theorem c_call1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     returns exit places
 
 /-- **The C_CALL2 row.** -/
-theorem c_call2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
+theorem c_call2_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
-    (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
     (returns : CcallReturns L P .C_CALL2 (0x80003004#64) 1)
     (places : ∀ name s young, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL2 :=
@@ -255,9 +263,9 @@ theorem c_call2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     returns (.of_arity (by decide)) places
 
 /-- **The C_CALL3 row.** -/
-theorem c_call3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
+theorem c_call3_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
-    (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
     (returns : CcallReturns L P .C_CALL3 (0x80002fa4#64) 2)
     (places : ∀ name s young, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL3 :=
@@ -273,9 +281,9 @@ theorem c_call3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     returns (.of_arity (by decide)) places
 
 /-- **The C_CALL4 row.** -/
-theorem c_call4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
+theorem c_call4_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
-    (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
     (returns : CcallReturns L P .C_CALL4 (0x80002f40#64) 3)
     (places : ∀ name s young, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL4 :=
@@ -291,9 +299,9 @@ theorem c_call4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     returns (.of_arity (by decide)) places
 
 /-- **The C_CALL5 row.** -/
-theorem c_call5_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
+theorem c_call5_row {L : OCaml.Layout} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
-    (fits : OCaml.Fits B P) (capacity : StackCapacity B)
+    (fits : OCaml.Fits L.budget P) (capacity : StackCapacity L.budget)
     (returns : CcallReturns L P .C_CALL5 (0x80002ed8#64) 4)
     (places : ∀ name s young, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL5 :=

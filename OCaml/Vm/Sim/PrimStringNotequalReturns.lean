@@ -54,7 +54,7 @@ theorem out_of_above {log : List WEntry} {A n : Nat} (above : ∀ e ∈ log, Vsa
 theorem prim_caml_string_notequal_returns {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
     (nativeStable : ∀ lo, Vsa.Sim.DlHeap.heapEnd ≤ lo → WindowStable L.runtimeOk [⟨lo, lo + 8⟩]) :
     PrimReturnsAt L P op ra k "caml_string_notequal" := by
-  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem
+  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem _words
   obtain ⟨y, args⟩ : ∃ y, s.accu :: s.stack.take k = [s.accu, y] ∧ y ∈ s.stack := by
     cases e : s.stack.take k with
     | nil => rw [e] at sem; simp [primF1Impl] at sem
@@ -82,7 +82,7 @@ theorem prim_caml_string_notequal_returns {L : OCaml.Layout} {P : Prog} {op : Op
       .ok (.int (stringInequalityResult bs bs')) s.heap s.world := by
     simp [primF1Impl, hx, hy, ← result]
   rw [args, result, hxl]
-  refine ⟨tag64 (stringInequalityResult bs bs'), by decide, model, fun c setup => ?_⟩
+  refine ⟨tag64 (stringInequalityResult bs bs'), by decide, model, fun c setup _ => ?_⟩
   obtain ⟨D, inv, valid⟩ := setup.native
   -- the saved-ra store sits just below the native stack pointer, above the arena
   have he : Vsa.Sim.DlHeap.heapEnd = 0x86800000 := rfl

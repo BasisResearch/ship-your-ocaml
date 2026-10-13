@@ -17,7 +17,7 @@ theorem c_call5_exit_arm {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     Halts c (bytesToString world.console) code := by
   apply dispatch_halts h.dispatch
   intro d dp
-  obtain ⟨count, call, run, setup⟩ := c_call5_setup writeStable h.toArmInput h.operand h.nonnegative h.primitive h.entryName h.aligned
+  obtain ⟨count, call, run, setup, -⟩ := c_call5_setup writeStable h.toArmInput h.operand h.nonnegative h.primitive h.entryName h.aligned
     h.domainWord h.tableWord h.targetRead h.value h.environment h.space arguments dp
   exact Halts.of_steps run.toSteps (callee.summary call setup)
 

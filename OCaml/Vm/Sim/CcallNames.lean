@@ -21,6 +21,7 @@ def PrimReturnsAt (L : OCaml.Layout) (P : Prog) (op : Opcode) (ra : BitVec 64) (
   ∀ s c pl cp sp high table entry value env index v heap world, Reach P s →
     CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
     primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .ok v heap world →
+    heap.words ≤ L.budget.heapWords →
     ∃ result, CcallCallee ra (s.accu :: s.stack.take k) L P s pl cp sp high (domainAt c) entry env
       name v result heap world
 
@@ -31,9 +32,9 @@ theorem CcallReturns.of_names {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : 
       CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
       name ∈ primsF1 → name ∈ names) :
     CcallReturns L P op ra k :=
-  ⟨fun s c pl cp sp high table entry value env index name v heap world reach ready member ok =>
+  ⟨fun s c pl cp sp high table entry value env index name v heap world reach ready member ok words =>
     each name (reached s c pl cp sp high table entry value env index name reach ready member)
-      s c pl cp sp high table entry value env index v heap world reach ready ok⟩
+      s c pl cp sp high table entry value env index v heap world reach ready ok words⟩
 
 /-- **The general instance**: summaries for all F1 primitives give the C_CALL
 returns of every program (no per-program premise). -/

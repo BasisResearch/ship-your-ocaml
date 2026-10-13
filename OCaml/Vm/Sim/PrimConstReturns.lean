@@ -33,7 +33,7 @@ theorem prim_constant_returns {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : 
     (summary : ∀ c ra', LeafInput ra' c →
       FnSummary (BitVec.ofNat 64 entry0) (fun x => x = c) (LeafPost c ra' (tag64 n))) :
     PrimReturnsAt L P op ra k name := by
-  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem
+  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem _words
   obtain ⟨-, rfl, rfl, rfl⟩ := shape _ _ _ _ _ _ sem
   have hentry : entry = entry0 := Option.some.inj (ready.entryName.symm.trans lookup)
   subst hentry

@@ -10,7 +10,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 theorem prim_caml_int_compare_returns {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
     (stable : MemoryStable L.runtimeOk) :
     PrimReturnsAt L P op ra k "caml_int_compare" := by
-  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem
+  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem _words
   obtain ⟨a, b, args⟩ : ∃ a b, s.accu :: s.stack.take k = [.int a, .int b] := by
     cases e : s.stack.take k with
     | nil => rw [e] at sem; simp [primF1Impl] at sem
