@@ -715,3 +715,4 @@ import OCaml.Vm.Primitives.Memprof.Eqdf2Call
 import OCaml.Vm.Primitives.Memprof.YoungLimitCall
 import OCaml.Vm.Primitives.Memprof.RenewCall
 import OCaml.Vm.Primitives.Memprof.SuspendCall
+import OCaml.Vm.Primitives.Uncaught.FormatException
