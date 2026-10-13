@@ -668,6 +668,16 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.Fresh.QueueResult.slot
 #print axioms OCaml.Vm.Gc.Fresh.Enqueued.slot
 #print axioms OCaml.Vm.Gc.Fresh.SingleResult.slot
+#print axioms OCaml.Vm.Gc.SlotCall.immediate
+#print axioms OCaml.Vm.Gc.SlotCall.nonYoung
+#print axioms OCaml.Vm.Gc.SlotCall.forwarded
+#print axioms OCaml.Vm.Gc.Fresh.SlotCall.queue_small
+#print axioms OCaml.Vm.Gc.Fresh.SlotCall.queue_large
+#print axioms OCaml.Vm.Gc.Fresh.SingleTable.slot
+#print axioms OCaml.Vm.Gc.Fresh.SlotCall.single_small
+#print axioms OCaml.Vm.Gc.Fresh.SlotCall.single_large
+#print axioms OCaml.Vm.Gc.Fresh.SlotCall.single_nonYoung_small
+#print axioms OCaml.Vm.Gc.Fresh.SlotCall.single_nonYoung_large
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_access
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_regs
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_log

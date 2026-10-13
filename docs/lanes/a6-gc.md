@@ -64,7 +64,9 @@
   `Fresh.QueueResult.slot` (both allocators; `Enqueued.slot` through
   `toQueue`), `Fresh.SingleResult.slot`, each fresh route publishing its
   entry (`ForwardingTable.publish_then`).
-- Next (G2): the route dispatcher, then the
+- `SlotCall R copies pl c` (∃ copies', a call with `SlotDone`) is the
+  dispatcher interface; every proved route supplies it (`SlotCall.*`).
+- Next (G2): then the
   stack/`ref_table` root loops, the mopup outer loop, a quiet-route
   `caml_empty_minor_heap`, and the concrete `CollectionEffect`.
 

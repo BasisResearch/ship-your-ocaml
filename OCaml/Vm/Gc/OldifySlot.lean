@@ -1,6 +1,8 @@
 import OCaml.Vm.Gc.OldifyImmediate
 import OCaml.Vm.Gc.NonYoungCall
 import OCaml.Vm.Gc.ForwardingDomain
+import OCaml.Vm.Gc.FreshLargeEnqueued
+import OCaml.Vm.Gc.FreshSingleNonYoung
 
 /-! # `caml_oldify_one` at the level of a root slot
 
@@ -161,6 +163,106 @@ theorem Enqueued.slot {R : Nat → BitVec 64} {qs : List PendingCopy} {pl : Plac
     (window : WriteWindow (R 10) 8) :
     SlotDone R copies (pending R before :: copies) pl before after :=
   post.toQueue.slot view allocOutside prefixOutside linkOutside window
+
+end Fresh
+
+/-- **A `caml_oldify_one(R 10, R 11)` call at `c` with a slot-level result**:
+the route dispatcher's interface. Each proved route supplies it from its own
+input; the root-slot loops consume one per slot. -/
+def SlotCall (R : Nat → BitVec 64) (copies : List PendingCopy) (pl : Place) (c : Config) : Prop :=
+  ∃ copies', FnSummary OldifyEntry.pc (fun d => d = c) (SlotDone R copies copies' pl c)
+
+theorem SlotCall.immediate {R c copies pl} (input : OldifyImmediate.Input R c)
+    (view : (ForwardingTable.eqv copies).P pl 0 c)
+    (outside : ForwardingTable.Outside copies (OldifyImmediate.callEffect R))
+    (absent : ∀ q ∈ copies, q.source.toNat ≠ (R 10).toNat) : SlotCall R copies pl c :=
+  ⟨_, OldifyImmediate.slot input view outside absent⟩
+
+theorem SlotCall.nonYoung {R domain c copies pl} (input : NonYoung.Input R domain c)
+    (view : (ForwardingTable.eqv copies).P pl 0 c)
+    (outside : ForwardingTable.Outside copies (NonYoung.effect R))
+    (absent : ∀ q ∈ copies, q.source.toNat ≠ (R 10).toNat) : SlotCall R copies pl c :=
+  ⟨_, NonYoung.slot input view outside absent⟩
+
+theorem SlotCall.forwarded {R domain c copies pl} {q : PendingCopy} (input : ForwardedCall.Input R domain c)
+    (view : (ForwardingTable.eqv copies).P pl 0 c) (member : q ∈ copies) (source : q.source = R 10)
+    (outside : ForwardingTable.Outside copies (ForwardedCall.effect R c)) : SlotCall R copies pl c :=
+  ⟨_, ForwardedCall.slot input view member source outside⟩
+
+namespace Fresh
+
+/-- Table premises of a fresh queue-inserting call at `c`. -/
+structure QueueTable (R : Nat → BitVec 64) (target : BitVec 64) (log : List WEntry) (qs copies : List PendingCopy)
+    (pl : Place) (c : Config) : Prop where
+  view : (ForwardingTable.eqv copies).P pl 0 c
+  allocOutside : ForwardingTable.Outside copies (OldifyEntry.saveLog OldifyEntry.saves R ++ log)
+  prefixOutside : ForwardingTable.Outside copies (Enqueue.prefixLog (R 10) target (R 11))
+  linkOutside : ForwardingTable.Outside (queuePending R target :: copies) (queueLinkLog R target log qs c)
+  window : WriteWindow (R 10) 8
+
+theorem SlotCall.queue_small {R domain size tag c qs pl copies} (input : EntryInput R domain size tag c)
+    (allocation : AllocationConditions R c) (conditions : EnqueueConditions R qs pl c)
+    (table : QueueTable R (allocatedPayload R c)
+      (AllocWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) qs copies pl c) :
+    SlotCall R copies pl c :=
+  ⟨_, (enqueue_fresh input allocation conditions).weaken (fun _ h => h) fun _ post =>
+    post.toQueue.slot table.view table.allocOutside table.prefixOutside table.linkOutside table.window⟩
+
+theorem SlotCall.queue_large {R domain size tag c qs pl copies} (input : EntryInput R domain size tag c)
+    (allocation : LargeAllocationConditions R c) (conditions : LargeEnqueueConditions R qs pl c)
+    (table : QueueTable R (largePayload R c)
+      (AllocLargeWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) qs copies pl c) :
+    SlotCall R copies pl c :=
+  ⟨_, (enqueue_fresh_large input allocation conditions).weaken (fun _ h => h) fun _ post =>
+    QueueResult.slot post table.view table.allocOutside table.prefixOutside table.linkOutside table.window⟩
+
+/-- Table premises of a fresh single-field call at `c`. -/
+structure SingleTable (R : Nat → BitVec 64) (target : BitVec 64) (log : List WEntry) (copies : List PendingCopy)
+    (pl : Place) (c : Config) : Prop where
+  view : (ForwardingTable.eqv copies).P pl 0 c
+  allocOutside : ForwardingTable.Outside copies (OldifyEntry.saveLog OldifyEntry.saves R ++ log)
+  prefixOutside : ForwardingTable.Outside copies (Enqueue.prefixLog (R 10) target (R 11))
+  childOutside : ForwardingTable.Outside (queuePending R target :: copies)
+    (StoreReturn.effect (SingleField.child (queuePending R target) (R 11) (queueSnapshot R log c)) target)
+  window : WriteWindow (R 10) 8
+  rootOutside : OutLRange ((Enqueue.prefixLog (R 10) target (R 11)).drop 1 ++
+    StoreReturn.effect (SingleField.child (queuePending R target) (R 11) (queueSnapshot R log c)) target)
+    (R 11).toNat 8
+
+theorem SingleTable.slot {R target log copies pl before after} (table : SingleTable R target log copies pl before)
+    (post : SingleResult R target log before after) :
+    SlotDone R copies (queuePending R target :: copies) pl before after :=
+  post.slot table.view table.allocOutside table.prefixOutside table.childOutside table.window table.rootOutside
+
+theorem SlotCall.single_small {R domain size tag c pl copies} (input : EntryInput R domain size tag c)
+    (allocation : AllocationConditions R c)
+    (conditions : SingleConditions R (allocatedPayload R c) (AllocWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) c)
+    (table : SingleTable R (allocatedPayload R c) (AllocWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) copies pl c) :
+    SlotCall R copies pl c :=
+  ⟨_, (single_fresh input allocation conditions).weaken (fun _ h => h) fun _ post => table.slot post⟩
+
+theorem SlotCall.single_large {R domain size tag c pl copies} (input : EntryInput R domain size tag c)
+    (allocation : LargeAllocationConditions R c)
+    (conditions : SingleConditions R (largePayload R c) (AllocLargeWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) c)
+    (table : SingleTable R (largePayload R c) (AllocLargeWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) copies pl c) :
+    SlotCall R copies pl c :=
+  ⟨_, (single_fresh_large input allocation conditions).weaken (fun _ h => h) fun _ post => table.slot post⟩
+
+theorem SlotCall.single_nonYoung_small {R domain size tag childDomain c pl copies} (input : EntryInput R domain size tag c)
+    (allocation : AllocationConditions R c)
+    (conditions : NonYoungSingleConditions R (allocatedPayload R c) childDomain
+      (AllocWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) c)
+    (table : SingleTable R (allocatedPayload R c) (AllocWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) copies pl c) :
+    SlotCall R copies pl c :=
+  ⟨_, (single_fresh_nonYoung input allocation conditions).weaken (fun _ h => h) fun _ post => table.slot post⟩
+
+theorem SlotCall.single_nonYoung_large {R domain size tag childDomain c pl copies} (input : EntryInput R domain size tag c)
+    (allocation : LargeAllocationConditions R c)
+    (conditions : NonYoungSingleConditions R (largePayload R c) childDomain
+      (AllocLargeWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) c)
+    (table : SingleTable R (largePayload R c) (AllocLargeWrapper.effect (allocatorRegs R c) (oldifySnapshot R c)) copies pl c) :
+    SlotCall R copies pl c :=
+  ⟨_, (single_fresh_large_nonYoung input allocation conditions).weaken (fun _ h => h) fun _ post => table.slot post⟩
 
 end Fresh
 
