@@ -721,3 +721,4 @@ import OCaml.Vm.Primitives.Memprof.SuspendCall
 import OCaml.Vm.Primitives.Uncaught.FormatException
 import OCaml.Vm.Primitives.Uncaught.FormatFront
 import OCaml.Vm.Primitives.Uncaught.FormatCopy
+import OCaml.Vm.Primitives.Uncaught.FormatFill

@@ -130,4 +130,141 @@ theorem format_copy {ra sp exn np s0 s1 s2 s4 s5 : BitVec 64} {name : List (BitV
         rw [p2.output, p1.output]
         exact m.output }
 
+/-- A zero byte store reads back as zero. -/
+theorem getD_writeLog_zero_byte (m : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) :
+    ((writeLog m [(a, 1, 0#64)])[a]?).getD 0 = 0#8 := by
+  simp only [writeLog, List.foldl_cons, List.foldl_nil, applyW, Std.ExtHashMap.getElem?_insert_self,
+    Option.getD_some]
+  rfl
+
+/-- A byte in the frame is a writable byte. -/
+theorem frame_byte {sp : BitVec 64} (frame : NativeFrame sp 432) {k : Nat} (hk : k < 432) :
+    WriteWindow (BitVec.ofNat 64 (nativeFrameBase sp 432 + k)) 1 := by
+  have lower := frame.lower
+  have upper := frame.upper
+  constructor <;> rw [frame.slot_nat (by omega)]
+  all_goals simp only [nativeFrameBase, Vsa.Sim.DlHeap.heapEnd, Layout.sym_stack_top, Layout.sym_tohost] at *
+  all_goals omega
+
+/-- **`buf.ptr = data + len`, the terminator, and the call
+`caml_stat_alloc_noexc(len + 1)`.** -/
+theorem format_terminate {ra sp exn np s0 s1 s2 s4 s5 : BitVec 64} {name : List (BitVec 8)} {c0 c e : Config}
+    (h : FormatInput ra sp exn np s0 s1 s2 s4 s5 name c0) (cp : Copied c0 sp np name c e) :
+    ∃ f, Steps e f ∧ Filled c0 sp name c f := by
+  have r2 := regsAt_of cp.stack
+  have r8 := regsAt_of cp.cursor
+  have r20 := regsAt_of cp.data
+  have a10 := gpr_some (cp.ready.gprs 10 (by decide) (by decide))
+  have l0 : LeafInput (regsAt e 1) e := by rw [regsAt_of cp.leaf.raReg]; exact cp.leaf
+  have slot80 : sp + 18446744073709551184#64 + 80#64 = BitVec.ofNat 64 (nativeFrameBase sp 432 + 80) :=
+    frame_slot h.frame 80 (by decide)
+  have t80 : (sp + 18446744073709551184#64 + 80#64).toNat = sp.toNat - 352 := by
+    rw [slot80, h.frame.slot_nat (by decide)]; unfold nativeFrameBase; have := h.frame.lower
+    simp only [Vsa.Sim.DlHeap.heapEnd] at this; omega
+  have recLog : recordLog (regsAt e) (record_loads e.σ.mem (regsAt e)) =
+      [((sp + 18446744073709551184#64 + 80#64).toNat, 8, bufData sp + BitVec.ofNat 64 name.length)] := by
+    simp only [recordLog, r2, r8]
+  obtain ⟨e1, run1, p1⟩ := (record_fast e (regsAt e) l0 (by
+      simp only [record_input, GHolds, r2, r8]; exact ⟨cp.stack, cp.cursor, a10, trivial⟩)
+    (by rw [r2, slot80]; exact h.frame.word (by decide) (by decide))
+    (by rw [recLog, slot80]; exact h.frame.image_outside (by
+      simp only [LogInW, InsideW]; rw [h.frame.slot_nat (by decide)]
+      have := h.frame.lower; unfold nativeFrameBase
+      simp only [Vsa.Sim.DlHeap.heapEnd] at this
+      exact ⟨Or.inl ⟨by omega, by omega⟩, trivial⟩))).run e ⟨cp.pc, rfl⟩
+  have k1 : ∀ n, 1 ≤ n → n ≤ 31 → gprGet e1.σ n = gprGet e.σ n :=
+    fun n lo hi => p1.gpr_frame (by decide) n lo hi (by simp)
+  have e1_1 := (k1 1 (by decide) (by decide)).trans cp.leaf.raReg
+  have e1_2 := (k1 2 (by decide) (by decide)).trans cp.stack
+  have e1_8 := (k1 8 (by decide) (by decide)).trans cp.cursor
+  have e1_20 := (k1 20 (by decide) (by decide)).trans cp.data
+  have e1_10 := (k1 10 (by decide) (by decide)).trans a10
+  have l1 : LeafInput (regsAt e1 1) e1 := by
+    rw [regsAt_of e1_1]; exact ⟨p1.good, p1.image, p1.minstret, e1_1, by decide, p1.tick⟩
+  have lo := h.frame.lower
+  have up := h.frame.upper
+  have fitsLen := h.fits
+  simp only [Vsa.Sim.DlHeap.heapEnd, Layout.sym_stack_top] at lo up
+  have endAddr : bufData sp + BitVec.ofNat 64 name.length = BitVec.ofNat 64 (nativeFrameBase sp 432 + (96 + name.length)) := by
+    apply BitVec.eq_of_toNat_eq
+    rw [data_eq h.frame, BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat, h.frame.slot_nat (by omega)]
+    unfold dataNat nativeFrameBase; omega
+  have tEnd : (bufData sp + BitVec.ofNat 64 name.length).toNat = dataNat sp + name.length := by
+    rw [endAddr, h.frame.slot_nat (by omega)]; unfold dataNat nativeFrameBase; omega
+  have m1 : e1.σ.mem = writeLog e.σ.mem [((sp + 18446744073709551184#64 + 80#64).toNat, 8,
+      bufData sp + BitVec.ofNat 64 name.length)] := by rw [p1.memory, recLog]
+  have word80 : bytesVal .ld (read8 e1.σ.mem (sp + 18446744073709551184#64 + 80#64).toNat) =
+      bufData sp + BitVec.ofNat 64 name.length := by
+    rw [read8_value, m1]; exact OCaml.Vm.Sim.word_writeLog_at _ _ 0 _ _ rfl trivial
+  have termLog : terminateLog (regsAt e1) (terminate_loads e1.σ.mem (regsAt e1)) =
+      [((bufData sp + BitVec.ofNat 64 name.length).toNat, 1, 0#64)] := by
+    simp only [terminateLog, regsAt_of e1_8]
+  obtain ⟨e2, run2, p2⟩ := (terminate_fast e1 (regsAt e1) l1 (by
+      simp only [terminate_input, GHolds, regsAt_of e1_1, regsAt_of e1_2, regsAt_of e1_8, regsAt_of e1_20]
+      exact ⟨e1_1, e1_2, e1_8, gpr_some (gpr_some_of e1_10), e1_20, trivial⟩)
+    (by rw [regsAt_of e1_8, endAddr]; exact frame_byte h.frame (by omega))
+    (by rw [regsAt_of e1_2, slot80]; exact (h.frame.word (by decide) (by decide)).read)
+    (by
+      rw [termLog, regsAt_of e1_2, t80, tEnd]
+      simp only [List.take, OutLRange]; unfold dataNat; exact ⟨Or.inl (by omega), trivial⟩)
+    (by rw [termLog, endAddr]; exact h.frame.image_outside (by
+      simp only [LogInW, InsideW]; rw [h.frame.slot_nat (by omega)]
+      unfold nativeFrameBase; exact ⟨Or.inl ⟨by omega, by omega⟩, trivial⟩))).run e1 ⟨p1.pc, rfl⟩
+  have sizeEq : bufData sp + BitVec.ofNat 64 name.length + (-bufData sp + 1#64) = BitVec.ofNat 64 (name.length + 1) := by
+    rw [BitVec.ofNat_add]; bv_omega
+  have o2 := p2.regs
+  simp only [terminate_regs, terminate_loads, List.getD_cons_zero, regsAt_of e1_2, regsAt_of e1_20, word80, sizeEq,
+    GHolds] at o2
+  obtain ⟨g10, g8, g1, g2, g20, -⟩ := o2
+  obtain ⟨f, run3, p3⟩ := (call_registers_summary terminate_call_shape terminate_call_decode e2
+    (terminate_call_pins p2.image) p2.good p2.image p2.tick p2.minstret
+    [(10, BitVec.ofNat 64 (name.length + 1)), (8, BitVec.ofNat 64 (name.length + 1)), (20, bufData sp),
+     (2, sp + 18446744073709551184#64)]
+    ⟨g10, g8, g20, g2, trivial⟩ (by change KeysOK [10, 8, 20, 2]; decide) (by simp [KeysAvoidRa, keysG]) rfl).run e2
+    ⟨p2.pc, rfl⟩
+  have mf : f.σ.mem = writeLog (writeLog e.σ.mem [((sp + 18446744073709551184#64 + 80#64).toNat, 8,
+      bufData sp + BitVec.ofNat 64 name.length)]) [((bufData sp + BitVec.ofNat 64 name.length).toNat, 1, 0#64)] := by
+    rw [p3.memory, p2.memory, termLog, m1]
+  have mf' : f.σ.mem = writeLog (writeLog e.σ.mem [(sp.toNat - 352, 8, bufData sp + BitVec.ofNat 64 name.length)])
+      [(dataNat sp + name.length, 1, 0#64)] := by rw [mf, tEnd, t80]
+  refine ⟨f, run1.trans (run2.trans run3), ?_⟩
+  exact
+    { leaf := ⟨p3.good, p3.image, p3.minstret, gholds_lookup (n := 1) _ p3.regs rfl, by decide, p3.tick⟩
+      ready := ((cp.ready.carry p1.kept (p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide))).carry p2.kept
+        (p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide))).carry p3.kept
+        (p3.frame _ (fun n _ => gprReg_ne_htif n) (by decide))
+      pc := by have := p3.pc; rw [terminate_call_target] at this; exact this
+      size := gholds_lookup (n := 10) _ p3.regs rfl
+      sizeSaved := gholds_lookup (n := 8) _ p3.regs rfl
+      data := gholds_lookup (n := 20) _ p3.regs rfl
+      stack := gholds_lookup (n := 2) _ p3.regs rfl
+      memory :=
+        { buffer := fun i hi => by
+            have o1 : OutL [(dataNat sp + name.length, 1, 0#64)] (dataNat sp + i) := by
+              simp only [OutL]; exact ⟨Or.inl (by omega), trivial⟩
+            have o2 : OutL [(sp.toNat - 352, 8, bufData sp + BitVec.ofNat 64 name.length)] (dataNat sp + i) := by
+              simp only [OutL]; unfold dataNat; exact ⟨Or.inr (by omega), trivial⟩
+            rw [mf', writeLog_out _ _ _ o1, writeLog_out _ _ _ o2]
+            exact cp.buffer i hi
+          term := by rw [mf']; exact getD_writeLog_zero_byte _ _
+          ptr := by
+            have outP : OutLRange [(dataNat sp + name.length, 1, 0#64)] (sp.toNat - 352) 8 := by
+              simp only [OutLRange]; unfold dataNat; exact ⟨Or.inl (by omega), trivial⟩
+            rw [mf', OCaml.Vm.Primitives.bytesT_writeLog_out _ outP]
+            exact OCaml.Vm.Sim.word_writeLog_at _ _ 0 _ _ rfl trivial
+          rest := fun x out slot => by
+            have o1 : OutL [(dataNat sp + name.length, 1, 0#64)] x := by
+              simp only [OutL]; exact ⟨by omega, trivial⟩
+            have o2 : OutL [(sp.toNat - 352, 8, bufData sp + BitVec.ofNat 64 name.length)] x := by
+              refine ⟨?_, trivial⟩
+              rcases slot with hs | hs
+              · exact Or.inl hs
+              · right; show sp.toNat - 352 + 8 ≤ x; omega
+            rw [mf', writeLog_out _ _ _ o1, writeLog_out _ _ _ o2]
+            exact cp.rest x (out.elim Or.inl (fun hx => Or.inr (Nat.le_of_lt hx))) }
+      output := by
+        have o := cp.output
+        simp only [Vsa.Machine.output] at o ⊢
+        rw [p3.output, p2.output, p1.output]; exact o }
+
 end OCaml.Vm.Primitives.Uncaught.FormatException
