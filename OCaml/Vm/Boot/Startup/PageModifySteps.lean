@@ -4,6 +4,10 @@ import OCaml.Vm.Boot.Startup.PageModifyHashTailNormalized
 import OCaml.Vm.Boot.Startup.PageModifyHashTailImage
 import OCaml.Vm.Boot.Startup.PageModifySlotNormalized
 import OCaml.Vm.Boot.Startup.PageModifySlotImage
+import OCaml.Vm.Boot.Startup.PageModifyUpdateNormalized
+import OCaml.Vm.Boot.Startup.PageModifyUpdateImage
+import OCaml.Vm.Boot.Startup.PageModifyInsertNormalized
+import OCaml.Vm.Boot.Startup.PageModifyInsertImage
 import OCaml.Vm.Boot.Startup.PageModifyNextNormalized
 import OCaml.Vm.Boot.Startup.PageModifyNextImage
 import OCaml.Vm.Boot.Startup.PageModifyStepNormalized
@@ -11,6 +15,7 @@ import OCaml.Vm.Boot.Startup.PageModifyStepImage
 import OCaml.Vm.Boot.Startup.LinearChain
 import OCaml.Vm.Boot.Startup.PageHash
 import OCaml.Vm.Boot.Startup.ReadSectionsSteps
+import OCaml.Vm.Boot.Startup.PageTable
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
   LeanRV64DExecutable
@@ -239,5 +244,59 @@ theorem page_probe_step (c : Config) (ra page ent e : BitVec 64) (h : Nat) (hh :
         gholds_lookup (n := 17) _ pins rfl, gholds_lookup (n := 16) _ pins rfl, gholds_lookup (n := 8) _ pins rfl,
         gholds_lookup (n := 13) _ pins rfl, trivial⟩
   · unfold probeStepBlocks; split <;> decide
+  · decide
+
+local macro "pik" : tactic => `(tactic| simp only [pagemodifyinsert_line_8000aee4, pagemodifyinsert_line_8000aee8, pagemodifyinsert_line_8000aeec, pagemodifyinsert_line_8000aef0, pagemodifyinsert_line_8000aef4, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+theorem occupancy_addr : BitVec.ofNat 64 pageTable + Functions.sign_extend (m := 64) 24#12 =
+    BitVec.ofNat 64 (pageTable + 0x18) := by decide
+
+/-- An empty slot: store `page | kind` there and bump the occupancy. -/
+theorem page_insert (c : Config) (ra page kind slot occ v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(9, BitVec.ofNat 64 pageTable), (19, kind), (8, page), (12, slot), (10, v)])
+    (window : WriteWindow slot 8) (occWord : bytesT c.σ.mem (pageTable + 0x18) 8 = occ)
+    (outside : ImageOutside [(slot.toNat, 8, kind ||| page), (pageTable + 0x18, 8, occ + 1#64)]) :
+    FnSummary 0x8000aee4#64 (fun d => d = c) (WriteRegistersPost [15, 8]
+      [(slot.toNat, 8, kind ||| page), (pageTable + 0x18, 8, occ + 1#64)] c 0x8000aec0#64 v
+      [(15, occ + 1#64), (8, kind ||| page), (9, BitVec.ofNat 64 pageTable), (19, kind), (12, slot), (10, v)]) := by
+  have word : bytesVal .ld (read8 c.σ.mem (pageTable + 0x18)) = occ := by rw [read8_value]; exact occWord
+  apply registers_of_blocks leaf.image outside
+    (block_summary _ _ _ _ _ (show BlockInput caml_page_table_modifyXaee4Seg 0x8000aee4#64
+        [(9, BitVec.ofNat 64 pageTable), (19, kind), (8, page), (12, slot), (10, v)]
+        [read8 c.σ.mem (pageTable + 0x18)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [9, 19, 8, 12, 10]; decide
+      shape := by change ChainOK _ [9, 19, 8, 12, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageModifyInsert_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_modify_at_"
+        · exact (show ReadWindow (BitVec.ofNat 64 (pageTable + 0x18)) 8 by constructor <;> decide).ld rfl
+            (by pik; exact occupancy_addr) (by
+              rw [show (BitVec.ofNat 64 (pageTable + 0x18)).toNat = pageTable + 0x18 by decide]
+              exact read8_pins _ _)
+        · exact window.sd rfl (by pik; rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide,
+            BitVec.add_zero])
+        · exact (show WriteWindow (BitVec.ofNat 64 (pageTable + 0x18)) 8 by constructor <;> decide).sd rfl
+            (by pik; exact occupancy_addr) }))
+  · simp only [caml_page_table_modifyXaee4Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, wlogM, wentryM, widthOfM, eaddrM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff,
+      ite_true, ite_false, List.headD_cons, List.tail_cons, pagemodifyinsert_line_8000aee4,
+      pagemodifyinsert_line_8000aee8, pagemodifyinsert_line_8000aeec, pagemodifyinsert_line_8000aef0,
+      pagemodifyinsert_line_8000aef4]
+    rw [word, occupancy_addr, show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero,
+      show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide,
+      show (BitVec.ofNat 64 (pageTable + 0x18)).toNat = pageTable + 0x18 by decide]
+    rfl
+  · rfl
+  · simp only [caml_page_table_modifyXaee4Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, eaddrM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff,
+      ite_true, ite_false, List.headD_cons, List.tail_cons, pagemodifyinsert_line_8000aee4,
+      pagemodifyinsert_line_8000aee8, pagemodifyinsert_line_8000aeec, pagemodifyinsert_line_8000aef0,
+      pagemodifyinsert_line_8000aef4]
+    rw [word, show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide]
+  · rfl
   · decide
 end OCaml.Vm.Boot.Startup
