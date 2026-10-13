@@ -60,4 +60,54 @@ theorem StringAllocEntry.entries (e : StringAllocEntry c N D Y Lm k) (hk : 48 �
   · exact Or.inr (Or.inr (Or.inr ⟨lo, hi⟩))
   · exact f.elim
 
+/-- **The log's separation hub**: the native frame and the nursery block are
+apart from the whole payload, the two domain fields are chosen fields. -/
+theorem StringAllocEntry.logWindows {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {top high : Nat}
+    (e : StringAllocEntry c N D Y Lm k) (hk : 48 ≤ k) (sg : StackGeometry P s c pl cp high)
+    (ng : Gc.NurseryGeometry P s c pl cp high) (topLe : top ≤ high)
+    (inside : LogInW (configWindows N D Y) log) :
+    LogWindows log P s c pl cp top high [Layout.off_young_ptr, Layout.off_local_roots] := by
+  refine ⟨sg, ⟨configWindows N D Y, inside, ?_⟩, topLe, by decide⟩
+  have nl := e.nativeLow; have rm := e.room
+  have he : Vsa.Sim.DlHeap.heapEnd = 0x86800000 := rfl
+  intro w hw
+  simp only [configWindows, List.mem_cons, List.not_mem_nil, or_false] at hw
+  rcases hw with rfl | rfl | rfl | rfl
+  · rw [he] at nl
+    simp only [nativeHeadroom] at nl
+    exact .separated (Gc.WindowSeparated.of_above sg (by rw [he]; dsimp only; omega))
+  · have sep := ng.toWindowSeparated
+    simp only [Gc.nurseryFree, e.young, e.limit] at sep
+    exact .separated (sep.sub (by dsimp only; omega) (by dsimp only; omega))
+  · rw [← e.domain]; exact .field (by simp)
+  · rw [← e.domain]; exact .field (by simp)
+
+/-- **The caller's saved C-call words** miss a log with the string
+allocators' windows. -/
+theorem LogWindows.savedOutside {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high domain : Nat}
+    (lw : LogWindows log P s c pl cp (sp - 16) high [Layout.off_young_ptr, Layout.off_local_roots])
+    (domainWord : BitVec.ofNat 64 domain = word c Layout.sym_Caml_state)
+    (inStack : high - Layout.stackBytes + 16 ≤ sp) (spHigh : sp ≤ high) (small : high < 2 ^ 64) :
+    CcallSavedOutside log (BitVec.ofNat 64 domain) (BitVec.ofNat 64 (sp - 16)) := by
+  have dh := lw.geometry.domainArena
+  have he : Vsa.Sim.DlHeap.heapEnd = 0x86800000 := rfl
+  rw [he] at dh
+  have field : ∀ off, off + 8 ≤ Layout.domainStateBytes → off ∉ [Layout.off_young_ptr, Layout.off_local_roots] →
+      (∀ o ∈ [Layout.off_young_ptr, Layout.off_local_roots], off + 8 ≤ o ∨ o + 8 ≤ off) →
+      OutLRange log ((word c Layout.sym_Caml_state).toNat + off) 8 := fun off fits _ apart =>
+    lw.domainField fits apart
+  refine ⟨lw.static (by decide), ?_, ?_, ?_⟩
+  · rw [domainWord]
+    have e : (word c Layout.sym_Caml_state + BitVec.ofNat 64 Layout.off_extern_sp).toNat =
+        (word c Layout.sym_Caml_state).toNat + Layout.off_extern_sp := by
+      rw [BitVec.toNat_add, BitVec.toNat_ofNat]
+      simp only [Layout.off_extern_sp, Layout.domainStateBytes] at dh ⊢
+      omega
+    rw [e]
+    exact field _ (by decide) (by decide) (by decide)
+  · rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+    exact lw.stackSlot (Nat.le_refl _) (by omega) (by omega)
+  · rw [domainWord]
+    exact field _ (by decide) (by decide) (by decide)
+
 end OCaml.Vm.Sim

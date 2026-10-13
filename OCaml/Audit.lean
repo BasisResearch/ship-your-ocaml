@@ -10,6 +10,7 @@ import OCaml.Vm.Primitives.Named.RegisterFront
 import OCaml.Vm.Sim.PrimInt64FloatReturns
 import OCaml.Vm.Sim.PrimSysArgvReturns
 import OCaml.Vm.Sim.StringAllocReturn
+import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
@@ -5777,3 +5778,21 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.StringAllocEntry.entries
 #print axioms OCaml.Vm.Sim.allocPlaces_ok
 #print axioms OCaml.Vm.Primitives.strlen_ready
+#print axioms OCaml.Vm.Sim.getConfig_young
+#print axioms OCaml.Vm.Sim.beforeSmallLog_in
+#print axioms OCaml.Vm.Sim.StringAllocEntry.logWindows
+#print axioms OCaml.Vm.Sim.LogWindows.savedOutside
+#print axioms OCaml.LoopGeometry.reserve2
+#print axioms OCaml.Vm.Sim.StringAllocEntry.words
+#print axioms OCaml.Vm.Sim.prepare_access
+#print axioms OCaml.Vm.Sim.osType_rodata
+#print axioms OCaml.Vm.Sim.config_sized
+#print axioms OCaml.Vm.Sim.config_allocate
+#print axioms OCaml.Vm.Sim.config_copy
+#print axioms OCaml.Vm.Sim.config_small
+#print axioms OCaml.Vm.Sim.config_finish_layout
+#print axioms OCaml.Vm.Sim.config_savedTail
+#print axioms OCaml.Vm.Sim.config_afterCopy
+#print axioms OCaml.Vm.Sim.config_input
+#print axioms OCaml.Vm.Sim.get_config_entry
+#print axioms OCaml.Vm.Sim.prim_caml_sys_get_config_returns

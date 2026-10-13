@@ -153,6 +153,12 @@
   chained reservations on virtual configs. `ccall_observed_summary` + `framed_of_library`
   (`CcallAllocation.lean`): library-style posts at the C_CALL return. `StringAllocEntry`
   (entry scalars), `getConfigLog_in` (the get_config log in four windows), `StringAllocReturn`.
+* `prim_caml_sys_get_config_returns` (`Sim/PrimGetConfigReturns.lean`): `config_input` discharges the
+  generated contract's `GetConfigInput` at the callee entry from `StringAllocEntry` (`ConfigInput.lean`:
+  `prepare_access`, `config_sized`/`config_allocate`/`config_copy` = `CopyMemory`, `config_small`, the
+  finish layout); `get_config_entry` combines the contract with `PrimAllocFrame` (final `young_ptr`
+  `Y - 48`, `getConfig_young`), `LoopGeometry.reserve2` and `ccall_observed_summary`. `get_argv` and
+  `executable_name` reuse the copy-stage lemmas.
 * `allocPlaces` covers `caml_ml_open_descriptor_out/in` (bprime): the channel's custom block at
   `young − 16` (`caml_alloc_custom_mem`, wosize 2).
 * The string allocators (`executable_name`, `get_argv`, `get_config`) need their StringCopy stage

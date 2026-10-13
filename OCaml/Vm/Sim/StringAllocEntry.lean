@@ -80,4 +80,16 @@ theorem window_of_nat {n : Nat} (lo : Layout.sym_tohost + 16 ≤ n) (hi : n + 8 
   have t : 0x80000000 + 16 ≤ Layout.sym_tohost + 16 := by decide
   exact ⟨by rw [e]; omega, by rw [e]; exact hi, by rw [e]; exact lo, by rw [e]; exact al⟩
 
+/-- The three nursery metadata words at the entry. -/
+theorem StringAllocEntry.words {c : Config} {N D Y Lm k : Nat} (e : StringAllocEntry c N D Y Lm k) :
+    word c Layout.sym_Caml_state = BitVec.ofNat 64 D ∧
+      word c (D + Layout.off_young_ptr) = BitVec.ofNat 64 Y ∧
+      word c (D + Layout.off_young_limit) = BitVec.ofNat 64 Lm := by
+  have y := e.young; have l := e.limit; have d := e.domain
+  simp only [runtimeFields, domainWord, d] at y l
+  refine ⟨?_, ?_, ?_⟩
+  · rw [← d, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+  · rw [← y, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+  · rw [← l, BitVec.ofNat_toNat, BitVec.setWidth_eq]
+
 end OCaml.Vm.Sim
