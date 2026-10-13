@@ -184,7 +184,7 @@ def emit_fast(E, b, name, regs, fast):
           f'  simp only [List.nil_append, {name}_body, wlogM, {name}_input, wentryM, widthOfM, eaddrM, srcVal, stepGM,',
           '    lookupG, eraseG, stepLdsM, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, Nat.reduceAdd, wvalM,',
           '    Functions.sign_extend, Sail.BitVec.signExtend' + (', shamtOf, Sail.BitVec.extractLsb' if _shifts(b.instrs) else '') + ']',
-          '  simp only [' + ', '.join(_imm_facts(b.instrs) + ['← BitVec.sub_eq_add_neg', 'BitVec.add_zero']) + ']',
+          '  simp only [' + ', '.join(_imm_facts(b.instrs) + ['← BitVec.sub_eq_add_neg', 'BitVec.add_zero'] + fast.get('logFacts', [])) + ']',
           f'  simp only [{name}Log, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,',
           '    List.getElem?_tail, BitVec.zero_add]', '')
     E(f'def {name}_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=',
@@ -225,7 +225,7 @@ def emit_fast(E, b, name, regs, fast):
             windows.append(f'  have {w} : {typ} ({addr}) {a[2]} := {proof}')
         else:
             params.append(f'({w} : {typ} ({addr}) {a[2]})')
-        addr_simp = (f'      simp only [{SHIFT_ADDR}, {name}_input, ' + ', '.join(_shift_addr_facts(b.instrs)) + ']'
+        addr_simp = (f'      simp only [{SHIFT_ADDR}, {name}_input, ' + ', '.join(_shift_addr_facts(b.instrs) + fast.get('addrFacts', [])) + ']'
                      if fast.get('addrSimpOnly') else f'      simp [{SIMP_ADDR}, {name}_input]')
         if a[1] == 'ld' and mode == 'view':
             bullets += [f'    · apply {w}.ld rfl', '      · ' + addr_simp.strip(),

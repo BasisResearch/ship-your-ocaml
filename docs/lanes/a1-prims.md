@@ -119,6 +119,10 @@
   and `caml_ml_open_descriptor_out` (C_CALL1); a1-prims keeps `caml_ml_flush` (C_CALL1),
   `caml_ml_output_char` (C_CALL2) and `caml_ml_output` (C_CALL4), the flush_partial →
   caml_write_fd → _write chain.
+  On 2026-10-12, bprime also took `caml_ml_open_descriptor_in`: the two primitives differ
+  only by `max := NULL`, so both are instances of bprime's channel-opening path
+  (`Primitives/Channel/`). `caml_register_named_value` waits on a0-boot's
+  `caml_named_value`.
 * Next: finish the flush adapter (`ccall_framed_summary`), then output_char, then
   `output_bytes` (a2-sem's `memmove_summary`, `Primitives/Memmove.lean`) and `output`.
 * Exit path weakened to `ExitOk` (registers read: ra, sp, a0, s0–s10) for STOP;

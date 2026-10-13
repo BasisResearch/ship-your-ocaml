@@ -782,7 +782,7 @@ def emit_ocaml_counter_body(E, fn, ins):
       '', 'end OCaml.Vm.Primitives', '')
 
 
-def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False, counter=False, scan=False, wrapper=False, allocation=False, exit_path=False, write_path=False, format_path=False, named=False):
+def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False, counter=False, scan=False, wrapper=False, allocation=False, exit_path=False, write_path=False, format_path=False, named=False, channel=False):
     """Read-only F1 leaves: existing CFG extraction + segment kernel fold.
 
     This backend consumes the pinned OCaml ELF and per-word ElfDecode facts,
@@ -814,6 +814,11 @@ def emit_ocaml_constants(check=False, compare=False, argv=False, lengths=False, 
         from ocaml_named import emit_named
         result = emit_named(root, functions, decode, code, text_base, lib, build_cfg, ocaml_literal_mline)
         write_ocaml_artifacts(result, root, check, "--ocaml-named")
+        return
+    if channel:
+        from ocaml_channel import emit_channel
+        result = emit_channel(root, functions, decode, code, text_base, lib, build_cfg, ocaml_literal_mline)
+        write_ocaml_artifacts(result, root, check, "--ocaml-channel")
         return
     if format_path:
         from ocaml_format import emit_format
@@ -1176,6 +1181,7 @@ def main():
     p.add_argument("--ocaml-counter", action="store_true")
     p.add_argument("--ocaml-string-scan", action="store_true")
     p.add_argument("--ocaml-format", action="store_true")
+    p.add_argument("--ocaml-channel", action="store_true")
     p.add_argument("--ocaml-string-wrapper", action="store_true")
     p.add_argument("--ocaml-exit", action="store_true")
     p.add_argument("--ocaml-write", action="store_true")
@@ -1199,8 +1205,8 @@ def main():
     p.add_argument("--cfg-only", action="store_true",
                    help="print the CFG classification and exit")
     args = p.parse_args()
-    if args.ocaml_constants or args.ocaml_compare or args.ocaml_argv or args.ocaml_lengths or args.ocaml_counter or args.ocaml_string_scan or args.ocaml_string_wrapper or args.ocaml_allocation or args.ocaml_exit or args.ocaml_write or args.ocaml_format or args.ocaml_named:
-        emit_ocaml_constants(args.check, compare=args.ocaml_compare, argv=args.ocaml_argv, lengths=args.ocaml_lengths, counter=args.ocaml_counter, scan=args.ocaml_string_scan, wrapper=args.ocaml_string_wrapper, allocation=args.ocaml_allocation, exit_path=args.ocaml_exit, write_path=args.ocaml_write, format_path=args.ocaml_format, named=args.ocaml_named)
+    if args.ocaml_constants or args.ocaml_compare or args.ocaml_argv or args.ocaml_lengths or args.ocaml_counter or args.ocaml_string_scan or args.ocaml_string_wrapper or args.ocaml_allocation or args.ocaml_exit or args.ocaml_write or args.ocaml_format or args.ocaml_named or args.ocaml_channel:
+        emit_ocaml_constants(args.check, compare=args.ocaml_compare, argv=args.ocaml_argv, lengths=args.ocaml_lengths, counter=args.ocaml_counter, scan=args.ocaml_string_scan, wrapper=args.ocaml_string_wrapper, allocation=args.ocaml_allocation, exit_path=args.ocaml_exit, write_path=args.ocaml_write, format_path=args.ocaml_format, named=args.ocaml_named, channel=args.ocaml_channel)
         return
     if not args.fn or not args.entry:
         p.error("--fn and --entry are required outside --ocaml-constants")

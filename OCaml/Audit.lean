@@ -377,6 +377,7 @@ import OCaml.Vm.Boot.Startup.SearchExeTail
 import OCaml.Vm.Boot.Startup.ReadyPerm
 import OCaml.Vm.Boot.Startup.ExtTableFinish
 import OCaml.Vm.Boot.Startup.SearchExeFrames
+import OCaml.Vm.Primitives.Channel.LseekCall
 
 /-! Axiom audit of every proved theorem of the scaffold (`scripts/check_all.sh`
 stage a3 checks the output: only `propext`, `Classical.choice`,
@@ -5509,3 +5510,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.output_bytes_framed
 #print axioms OCaml.Vm.Sim.prim_length_returns
 #print axioms OCaml.Vm.Sim.prim_caml_ml_bytes_length_returns
+#print axioms OCaml.Vm.Primitives.Channel.htif_lseek
+#print axioms OCaml.Vm.Primitives.Channel.lseek_call

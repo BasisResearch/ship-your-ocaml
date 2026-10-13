@@ -168,6 +168,23 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
     through `strlen_call`, caml_alloc_string through a1-prims'
     `alloc_string_nursery`, memcpy through `memcpy_summary`.
   * vsnprintf `%ld` is a LONGINT variant of upstream `svf_iterLLD`.
+- Channel opening, `caml_ml_open_descriptor_{in,out}` (both bprime's since
+  2026-10-12; they differ only by the output store `max := NULL`):
+  * `scripts/syi/ocaml_channel.py` (`gen_fn.py --ocaml-channel`, stage a5)
+    emits block certificates for:
+    - `lseek`, `_lseek_r` and htif.c's `_lseek` (non-file path);
+    - `caml_open_descriptor_in`, with both list-head outcomes;
+    - both primitives.
+    Its opt-in `logFacts`/`addrFacts` close `auipc`/`lui` literals in
+    `emit_fast` without changing other modes' output.
+  * `lseek_call` (`Channel/LseekCall.lean`) is proved: lseek on a descriptor
+    that is open and not a file (`SeekFd`) returns -1 (ESPIPE) with an exact
+    write log (`seekLog`); `htif_lseek` is its `_lseek` part. This is BcSem's
+    `openChan` offset (-1 for streams).
+  * Next: `caml_open_descriptor_in` over `stat_checked_allocate`, the
+    blocking sections and `lseek_call`; then the primitives.
+    `caml_alloc_custom_mem` stays a named premise: it is a collector-
+    integrated allocation (custom table, GC speed accounting).
 - open_descriptor_out: obligations its post must supply, named premises
   until the pieces land:
   * `ChanAt` for the new record, with cursor ≤ ioBufferSize,
