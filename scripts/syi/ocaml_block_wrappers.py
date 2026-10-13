@@ -236,7 +236,10 @@ def emit_fast(E, b, name, regs, fast):
         if a[0] == 'load' and mode != 'view' and before:
             apart = f'a{k}'
             params.append(f'({apart} : OutLRange (({log}).take {before}) ({addr}).toNat {a[2]})')
-            misses[pos_of[k]] = f'fun _ => outLRange_of_eaddr (by simp [{SIMP_ADDR}, {name}_input, {name}_loads]) {apart}'
+            # with `addrSimpOnly`, the address closes by the targeted simp (full simp's term recurses in the kernel)
+            addr_proof = (addr_simp.strip() if fast.get('addrSimpOnly')
+                          else f'simp [{SIMP_ADDR}, {name}_input, {name}_loads]')
+            misses[pos_of[k]] = f'fun _ => outLRange_of_eaddr (by {addr_proof}) {apart}'
             pure = True
         if a[1] == 'lw' and mode == 'view':
             bullets += [f'    · apply ExitPath.ReadWindow.lw {w} rfl', '      · ' + addr_simp.strip(),

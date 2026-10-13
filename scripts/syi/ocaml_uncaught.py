@@ -21,7 +21,23 @@ def functions_spec(ld, rest):
         (0x8000dbec, 'pro', [1, 2, 8, 9, 10, 18, 20, 21],
          reg('[(21, bytesVal .ld (loads.getD 1 [])), (18, R 2 + 18446744073709551535#64), (20, R 2 + 18446744073709551280#64), '
              '(15, bytesVal .lbu (loads.getD 0 [])), (2, R 2 + 18446744073709551184#64), (1, R 1), (8, R 8), (9, R 9), (10, R 10)]'), True,
-         None),  # composed by hand (`pro_run`): the generated wrapper's kernel check recurses too deep
+         fast({'mem': [('R 2 + 18446744073709551184#64 + 400#64', 'window'), ('R 2 + 18446744073709551184#64 + 384#64', 'window'), ('R 2 + 18446744073709551184#64 + 424#64', 'window'), ('R 2 + 18446744073709551184#64 + 416#64', 'window'), ('R 2 + 18446744073709551184#64 + 408#64', 'window'), ('R 2 + 18446744073709551184#64 + 376#64', 'window'),
+                       ('R 10 + 18446744073709551608#64', 'window'), ('R 2 + 18446744073709551184#64 + 80#64', 'window'), ('R 2 + 18446744073709551184#64 + 88#64', 'window'), ('R 10', 'window')],
+               'addrFacts': ['show BitVec.signExtend 64 400#12 = 400#64 by decide',
+                             'show BitVec.signExtend 64 384#12 = 384#64 by decide',
+                             'show BitVec.signExtend 64 424#12 = 424#64 by decide',
+                             'show BitVec.signExtend 64 416#12 = 416#64 by decide',
+                             'show BitVec.signExtend 64 408#12 = 408#64 by decide',
+                             'show BitVec.signExtend 64 376#12 = 376#64 by decide',
+                             'show BitVec.signExtend 64 80#12 = 80#64 by decide',
+                             'show BitVec.signExtend 64 88#12 = 88#64 by decide',
+                             'show BitVec.signExtend 64 4088#12 = 18446744073709551608#64 by decide',
+                             'show BitVec.signExtend 64 0#12 = 0#64 by decide', 'BitVec.add_zero'],
+               'log': '[((R 2 - 432#64 + 400#64).toNat, 8, R 18), ((R 2 - 432#64 + 384#64).toNat, 8, R 20), '
+                      '((R 2 - 432#64 + 424#64).toNat, 8, R 1), ((R 2 - 432#64 + 416#64).toNat, 8, R 8), '
+                      '((R 2 - 432#64 + 408#64).toNat, 8, R 9), ((R 2 - 432#64 + 376#64).toNat, 8, R 21), '
+                      '((R 2 - 432#64 + 80#64).toNat, 8, R 2 - 432#64 + 96#64), '
+                      '((R 2 - 432#64 + 88#64).toNat, 8, R 2 - 432#64 + 351#64)]', 'addrSimpOnly': True})),
 
         # strlen(name)
         (0x8000dd94, 'nameLen', [1, 10, 21], reg('[(10, R 21), (1, R 1), (21, R 21)]'), False, fast({})),
