@@ -360,6 +360,11 @@ import OCaml.Vm.Boot.Startup.OpenOcamlrunReset
 import OCaml.Vm.Boot.Startup.AttemptFailReset
 import OCaml.Vm.Boot.Startup.RetryReset
 import OCaml.Vm.Boot.Startup.SecondAttemptReset
+import OCaml.Vm.Boot.Startup.OpenProgSteps
+import OCaml.Vm.Boot.Startup.ResolveHit
+import OCaml.Vm.Boot.Startup.StrchrHit
+import OCaml.Vm.Boot.Startup.ChildHit
+import OCaml.Vm.Boot.Startup.MemcmpRun
 import OCaml.Vm.Boot.Startup.Strdup
 import OCaml.Vm.Boot.Startup.ExtTableFree
 import OCaml.Vm.Boot.Startup.DecomposeNull
@@ -2658,6 +2663,21 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.FsUp.frame
 #print axioms OCaml.Vm.Boot.Startup.OpenOcamlrun.fs_up
 #print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.live_byte
+#print axioms OCaml.Vm.Boot.Startup.memcmp_equal
+#print axioms OCaml.Vm.Boot.Startup.child_hit
+#print axioms OCaml.Vm.Boot.Startup.strchr_slash_first
+#print axioms OCaml.Vm.Boot.Startup.setupTest_low_slash
+#print axioms OCaml.Vm.Boot.Startup.resolve_entry_ready
+#print axioms OCaml.Vm.Boot.Startup.resolve_back_rooted
+#print axioms OCaml.Vm.Boot.Startup.resolve_skip_empty
+#print axioms OCaml.Vm.Boot.Startup.resolve_again_strlen
+#print axioms OCaml.Vm.Boot.Startup.resolve_file
+#print axioms OCaml.Vm.Boot.Startup.htif_open_file_front
+#print axioms OCaml.Vm.Boot.Startup.htif_open_slot_busy
+#print axioms OCaml.Vm.Boot.Startup.htif_open_take
+#print axioms OCaml.Vm.Boot.Startup.htif_open_stores
+#print axioms OCaml.Vm.Boot.Startup.htif_open_succeed
+#print axioms OCaml.Vm.Boot.Startup.open_r_succeed
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
 #print axioms OCaml.Vm.Boot.Startup.resAt36_window
 #print axioms OCaml.Vm.Boot.Startup.fs_init

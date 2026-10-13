@@ -77,7 +77,13 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   `open("/prog")` by `EmbedFrame` (the fds table is now a `KeptByte`) and the
   node block's `live`/`apart` frames.
 
-Next: `open("/prog")`'s success path (fs_ready = 1, resolve's child hit,
+* Steps for `open("/prog")`'s success path: `memcmp_equal` (MemcmpRun),
+  `child_hit` (ChildHit), `strchr_slash_first` (StrchrHit), the second
+  resolve's new blocks (ResolveHit: ready entry, rooted back scan, empty
+  component, R_FILE tail) and `_open`/`_open_r`'s success blocks
+  (OpenProgSteps). Their composition is next.
+
+Next: compose `open("/prog")`'s success path (fs_ready = 1, resolve's child hit,
 the fd), then `lseek`, the trailer `read` and the magic test.
 
 ## Round 2 status (2026-10-06, search)
