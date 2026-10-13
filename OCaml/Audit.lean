@@ -337,6 +337,8 @@ import OCaml.Vm.Sim.PrimMlOutputChar
 import OCaml.Vm.Sim.PrimConsoleReturns
 import OCaml.Vm.Sim.PrimIntCompareReturns
 import OCaml.Vm.Sim.PrimStringEqualReturns
+import OCaml.Vm.Sim.F1NativeWindow
+import OCaml.Vm.Sim.PrimStringNotequalReturns
 import OCaml.Vm.Primitives.AllocPlaces
 import OCaml.Vm.Sim.PrimConstReturns
 import OCaml.Vm.Primitives.Flush.MlOutput
@@ -5549,3 +5551,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Channel.open_epilogue
 #print axioms OCaml.Vm.Primitives.Channel.open_link
 #print axioms OCaml.Vm.Primitives.Channel.open_descriptor_in
+#print axioms OCaml.Vm.Sim.ccall_writing_summary_below
+#print axioms OCaml.Vm.Sim.f1_native_stable
+#print axioms OCaml.Vm.Sim.LoopGeometry.of_above
+#print axioms OCaml.Vm.Sim.out_of_above
+#print axioms OCaml.Vm.Sim.prim_caml_string_notequal_returns

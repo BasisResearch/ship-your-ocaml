@@ -46,9 +46,10 @@ FIXED = {
     'consoleStable': 'f1_console_stable',
     'consoleRt': 'Gc.f1_consoleRuntime',
     'consoles': 'OCaml.Programs.whileMin_goodF1.consoles',
+    'nativeStable': 'f1_native_stable',
 }
 # Modules a FIXED instance lives in, beyond the table's base imports.
-FIXED_IMPORTS = {'consoleStable': 'OCaml.Vm.Sim.F1Console'}
+FIXED_IMPORTS = {'consoleStable': 'OCaml.Vm.Sim.F1Console', 'nativeStable': 'OCaml.Vm.Sim.F1NativeWindow'}
 # Summary parameters with no instance yet: one named `WhileMinOpen` field each.
 OPEN_PARAMS = {}
 # Program-level parameters shared by several rows: one premise field each.

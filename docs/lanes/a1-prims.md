@@ -117,6 +117,10 @@
   `gen_boot_heap.py` (asserts and proves them from the capture), `Reloc.bytePayload`. Consumers:
   `paddedString_of_objAt`, `prim_caml_string_equal_returns` (contracts take `strOf?`, so initialized
   `.partialBytes` too).
+* `prim_caml_string_notequal_returns`: the saved-`ra` store lies just below the native sp (above
+  the arena); `ccall_writing_summary_below` (CcallWriting.lean: `NativePlaced.frame_below`, callee
+  post and C-call registers given directly since the wrapper writes and restores sp),
+  `LoopGeometry.of_above`, premise `nativeStable` (F1: `f1_native_stable`, FIXED in gen_f1_table.py).
 * whileMin `PrimReturnsAt` summaries (picked up by `scripts/gen_f1_table.py`; regenerate
   WhileMinTable.lean in the same batch): `prim_caml_ml_string_length_returns` and
   `prim_caml_fresh_oo_id_returns` (`f1_counterStable` from a6-gc's `f1_ignoredStatic`) done.

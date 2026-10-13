@@ -100,6 +100,39 @@ theorem NativePlaced.frame_below {c c' : Config} {log : List WEntry} (n : Native
   exact ⟨D, inv.frame ⟨domain, fun r _ => outLRange_of_windows inside ⟨Or.inr (by dsimp only; omega), trivial⟩,
     external⟩ memory stack, valid⟩
 
+/-- **A writing primitive whose footprint lies below the native stack
+pointer** (its own frame's stores, e.g. a saved `ra`): `ccall_writing_summary`
+with the native invocation kept by `NativePlaced.frame_below` instead of the
+arena window, and the C-call frame's registers given directly (the callee may
+write `sp` and restore it). -/
+theorem ccall_writing_summary_below {L : OCaml.Layout} {P : Prog} {s : St}
+    {pl : Place} {cp : ChanPlace} {sp high : Nat} {name : String} {v : Val}
+    {heap : Heap} {world : World} {domain frameSp result env entry ra : BitVec 64} {pc : Nat}
+    {args : List Val} {writes : List Nat} {expected : Std.ExtHashMap Nat (BitVec 8)}
+    {footprint : List WEntry} {before : Config} {Q : Config → Prop}
+    (S : FnSummary entry (fun c => c = before) Q)
+    (post : ∀ after, Q after →
+      PrimitivePost L.runtimeOk P s pl cp sp high name args v result heap world writes expected before ra after)
+    (regs : ∀ after, Q after → ∀ r ∈ callSavedRegs, after.σ.regs.get? r = before.σ.regs.get? r)
+    (memory : ∀ after : Config, after.σ.mem = expected → ∀ x, OutL footprint x → byte after x = byte before x)
+    (saved : Ccall1Saved {s with pc := pc} pl sp domain frameSp env before)
+    (outside : CcallSavedOutside footprint domain frameSp)
+    (below : ∀ n, gpr before 2 = some (BitVec.ofNat 64 n) → LogInW [⟨0, n⟩] footprint)
+    (geometry : ∀ after : Config, (∀ x, OutL footprint x → byte after x = byte before x) →
+      OCaml.LoopGeometry L P {s with accu := v, heap := heap, world := world} after pl cp high)
+    (native : NativePlaced before) :
+    FnSummary entry (fun c => c = before)
+      (CcallReturn ra L P {s with pc := pc, accu := v, heap := heap, world := world}
+        pl cp sp high domain frameSp result env) := by
+  apply S.weaken (fun _ h => h)
+  intro after q
+  have p := post after q
+  have frame := memory after p.call.memory
+  have regs := regs after q
+  exact ccall_primitive_return p (saved.frame_outside outside frame regs) (geometry after frame)
+    (native.frame_below below outside.domainPtr (saved.domainWord ▸ outside.externalRaise) frame
+      (regs _ (by decide)))
+
 /-- **A framed primitive call**: return state, result register, a memory frame
 outside the footprint, and the caller-saved VM registers. No output or exact
 memory claim (console writes extend the output). -/
