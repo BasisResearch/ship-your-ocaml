@@ -384,6 +384,7 @@ import OCaml.Vm.Boot.Startup.AttemptOkSteps
 import OCaml.Vm.Boot.Startup.AttemptOk
 import OCaml.Vm.Boot.Startup.AttemptOkReset
 import OCaml.Vm.Boot.Startup.ReadSectionsReset
+import OCaml.Vm.Boot.Startup.MemsetWords
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2764,6 +2765,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.read_section_descriptors
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.swapped_sections
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_read_sections_exists
+#print axioms OCaml.Vm.Boot.Startup.memset_prefix
+#print axioms OCaml.Vm.Boot.Startup.memset_exit
+#print axioms OCaml.Vm.Boot.Startup.memset_words
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport

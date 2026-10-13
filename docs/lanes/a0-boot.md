@@ -164,8 +164,17 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   `ResetAttemptOk` now also carries the `AttemptOpened` state it was built
   from.
 
-Next: caml_main after the section table (`caml_init_gc` and onward) to the
-cut.
+* **`memset_words`** (MemsetWords.lean): `memset(p, 0, 16 * count)` on an
+  aligned arena extent. It runs the entry checks (`memset_prefix`, generic in
+  the size; `memset56_prefix` is its instance), then `zero_pairs`, then the
+  no-remainder return.
+* Rows for caml_init_gc's entry, `caml_page_table_initialize` and
+  caml_main's init_gc call; `Layout.lean` carries the init_gc symbols and
+  parameters.
+
+Next: `caml_page_table_initialize` (2048 entries: a doubling loop,
+`caml_stat_alloc_noexc(16384)`, `memset_words`), then the rest of
+`caml_init_gc` and onward to the cut.
 
 ## Round 2 status (2026-10-06, search)
 

@@ -169,6 +169,12 @@ def main():
              "caml_leave_blocking_section_hook", "_impure_ptr", "caml_channel_mutex_unlock"]
     need += ["caml_verb_gc", "__atexit", "__atexit_recursive_mutex", "__stdio_exit_handler"]
     need += ["print_config", "print_magic", "magicstr"]
+    need += ["caml_init_gc", "caml_page_table", "caml_page_table_initialize", "caml_set_minor_heap_size",
+             "caml_set_allocation_policy", "caml_init_major_heap", "caml_major_heap_increment",
+             "caml_percent_free", "caml_percent_max", "caml_init_policy", "caml_init_heap_wsz",
+             "caml_init_minor_heap_wsz", "caml_init_heap_chunk_sz", "caml_init_percent_free",
+             "caml_init_max_percent_free", "caml_init_major_window", "caml_init_custom_minor_max_bsz",
+             "caml_init_custom_minor_ratio", "caml_init_custom_major_ratio", "caml_init_max_stack_wsz"]
     need += ["named_value_table", "caml_named_value", "caml_fatal_uncaught_exception",
              "caml_format_exception", "caml_callback_exn"]
     need += ["bf_small_fl", "bf_small_map", "bf_large_tree", "bf_large_least",

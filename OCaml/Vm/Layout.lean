@@ -244,6 +244,46 @@ def sym_print_config : Nat := 0x800649ac
 def sym_print_magic : Nat := 0x800649b0
 /-- `magicstr` -/
 def sym_magicstr : Nat := 0x800662c8
+/-- `caml_init_gc` -/
+def sym_caml_init_gc : Nat := 0x8001f2c4
+/-- `caml_page_table` -/
+def sym_caml_page_table : Nat := 0x800684b8
+/-- `caml_page_table_initialize` -/
+def sym_caml_page_table_initialize : Nat := 0x8000acdc
+/-- `caml_set_minor_heap_size` -/
+def sym_caml_set_minor_heap_size : Nat := 0x8000a23c
+/-- `caml_set_allocation_policy` -/
+def sym_caml_set_allocation_policy : Nat := 0x8000759c
+/-- `caml_init_major_heap` -/
+def sym_caml_init_major_heap : Nat := 0x80009340
+/-- `caml_major_heap_increment` -/
+def sym_caml_major_heap_increment : Nat := 0x80064ad8
+/-- `caml_percent_free` -/
+def sym_caml_percent_free : Nat := 0x80064af0
+/-- `caml_percent_max` -/
+def sym_caml_percent_max : Nat := 0x80064c60
+/-- `caml_init_policy` -/
+def sym_caml_init_policy : Nat := 0x800647f0
+/-- `caml_init_heap_wsz` -/
+def sym_caml_init_heap_wsz : Nat := 0x80064820
+/-- `caml_init_minor_heap_wsz` -/
+def sym_caml_init_minor_heap_wsz : Nat := 0x80064830
+/-- `caml_init_heap_chunk_sz` -/
+def sym_caml_init_heap_chunk_sz : Nat := 0x80064828
+/-- `caml_init_percent_free` -/
+def sym_caml_init_percent_free : Nat := 0x80064840
+/-- `caml_init_max_percent_free` -/
+def sym_caml_init_max_percent_free : Nat := 0x80064838
+/-- `caml_init_major_window` -/
+def sym_caml_init_major_window : Nat := 0x80064810
+/-- `caml_init_custom_minor_max_bsz` -/
+def sym_caml_init_custom_minor_max_bsz : Nat := 0x800647f8
+/-- `caml_init_custom_minor_ratio` -/
+def sym_caml_init_custom_minor_ratio : Nat := 0x80064800
+/-- `caml_init_custom_major_ratio` -/
+def sym_caml_init_custom_major_ratio : Nat := 0x80064808
+/-- `caml_init_max_stack_wsz` -/
+def sym_caml_init_max_stack_wsz : Nat := 0x80064818
 /-- `named_value_table` -/
 def sym_named_value_table : Nat := 0x8006bff0
 /-- `caml_named_value` -/
