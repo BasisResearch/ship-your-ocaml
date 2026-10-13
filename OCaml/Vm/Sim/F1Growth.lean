@@ -23,15 +23,15 @@ theorem barrierStatics_kept : ∀ a ∈ barrierStatics, ∀ x, a ≤ x → x < a
   intro a ha x lo hi
   simp only [barrierStatics, List.mem_cons, List.not_mem_nil, or_false] at ha
   refine ⟨?_, fun g => ?_⟩
-  · rcases ha with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+  · rcases ha with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
       simp only [Layout.sym_Caml_state, Layout.sym_caml_start_code, Layout.sym_caml_atom_table,
         Layout.sym_caml_global_data, Layout.sym_oo_last_id, Layout.sym_caml_all_opened_channels,
-        Layout.sym_caml_prim_table, Layout.off_prim_contents, heapStart] at hi ⊢ <;> omega
+        Layout.sym_caml_prim_table, Layout.off_prim_contents, Layout.sym_main_argv, heapStart] at hi ⊢ <;> omega
   · unfold allocGlobal InRange at g
-    rcases ha with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    rcases ha with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
       simp only [Layout.sym_Caml_state, Layout.sym_caml_start_code, Layout.sym_caml_atom_table,
         Layout.sym_caml_global_data, Layout.sym_oo_last_id, Layout.sym_caml_all_opened_channels,
-        Layout.sym_caml_prim_table, Layout.off_prim_contents] at lo hi <;> omega
+        Layout.sym_caml_prim_table, Layout.off_prim_contents, Layout.sym_main_argv] at lo hi <;> omega
 
 /-- **Every byte the represented barrier state reads is kept by the growth call.** -/
 theorem observed_kept {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {sp high : Nat}

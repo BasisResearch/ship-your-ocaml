@@ -379,7 +379,8 @@ theorem console_outside {P : Prog} {s : St} {c : Config} {pl : Place} {cp : Chan
     by rw [K.code]; exact stat _ (by omega) (by omega) (by omega),
     by rw [K.atoms]; exact stat _ (by omega) (by omega) (by omega),
     by rw [K.globals]; exact stat _ (by omega) (by omega) (by omega), ?_, ?_, ?_, ?_,
-    by rw [K.ooId]; exact stat _ (by omega) (by omega) (by omega)⟩
+    by rw [K.ooId]; exact stat _ (by omega) (by omega) (by omega),
+    by rw [show Layout.sym_main_argv = 0x80064c10 from rfl]; exact stat _ (by omega) (by omega) (by omega)⟩
   · intro i w hw
     have bound : i < P.code.size := (Array.getElem?_eq_some_iff.1 hw).1
     have cl := g.codeLow; have ca := g.codeArena

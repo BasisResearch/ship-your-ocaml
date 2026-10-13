@@ -51,6 +51,7 @@ theorem _root_.OCaml.Vm.Primitives.PayloadOutside.cover {log fp : List WEntry} {
   openHead := outLRange_of_cover cover h.openHead
   atomBase := outLRange_of_cover cover h.atomBase
   globals := outLRange_of_cover cover h.globals
+  argv := outLRange_of_cover cover h.argv
   code i w hi := outLRange_of_cover cover (h.code i w hi)
   stack i v hi := outLRange_of_cover cover (h.stack i v hi)
   heap l a o hl ha ho := ⟨outLRange_of_cover cover (h.heap l a o hl ha ho).header,
@@ -123,6 +124,7 @@ theorem _root_.OCaml.LoadedAt.payload {L : OCaml.Layout} {P : Prog} {c : Config}
   heap := h.heap
   world := h.world
   atomBase := h.atomBase
+  argv := h.argv
 
 /-- Close an `OutLRange` goal over the flattened entry log. -/
 macro "log_out" : tactic =>

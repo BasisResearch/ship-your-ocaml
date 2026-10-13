@@ -75,7 +75,8 @@ theorem prim_caml_fresh_oo_id_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec
         fun l a o _ placed object => by
           have := SG.heapLow l a o placed object
           exact ⟨counter_out_above (by omega), counter_out_above (by omega)⟩,
-        fun id ch a hch hcp => counter_out_above (SG.channelLow id ch a hch hcp)⟩ }
+        fun id ch a hch hcp => counter_out_above (SG.channelLow id ch a hch hcp),
+        counter_out_static (by decide)⟩ }
   have S := caml_fresh_oo_id_primitive counterStable input
   apply ccall_writing_summary (S.weaken (fun _ h => h) (fun _ p => p.toPrimitivePost)) (by decide)
     (fun after m => outsideLog_of_observedLog fun a => by rw [m]) setup.saved

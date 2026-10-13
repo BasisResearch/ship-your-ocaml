@@ -19,6 +19,8 @@ structure PayloadCoreOutside (log : List WEntry) (P : Prog) (s : St) (c : Config
   ooId : OutLRange log Layout.sym_oo_last_id 8
   /-- the open-channel list head (`caml_all_opened_channels`, a `.bss` static) -/
   openHead : OutLRange log Layout.sym_caml_all_opened_channels 8
+  /-- `main_argv`, a static word -/
+  argv : OutLRange log Layout.sym_main_argv 8
 
 /-- Rebuild mutable payload components after a log, copying the fixed
 observations once through total-byte and relocation combinators. -/
@@ -60,6 +62,8 @@ theorem payload_rebuild_accu {P : Prog} {s : St} {before after : Config}
     · rw [hw _ outside.ooId]; exact h.world.ooId
   · rw [hw _ outside.atomBase]
     exact h.atomBase
+  · rw [hw _ outside.argv]
+    exact h.argv
 
 /-- Existing rebuilding interface for arms that retain the accumulator. -/
 theorem payload_rebuild {P : Prog} {s : St} {before after : Config}

@@ -97,6 +97,8 @@ structure LoadedAt (L : Layout) (P : Prog) (c : Config) (pl : Place) (cp : ChanP
   caller : ∃ sp callerRegs mainSaved, InterpCaller P c pl cp high sp callerRegs mainSaved
   /-- the stack/heap/code/nursery placement of the initial state (`OCaml/Vm/Sim/ArmGeometry.lean`) -/
   geometry : LoopGeometry L P P.init c pl cp high
+  /-- `main_argv` holds the program arguments' value -/
+  argv : valWord pl P.argv = some (word c Layout.sym_main_argv)
 
 def Loaded (L : Layout) (P : Prog) (c : Config) : Prop :=
   ∃ (pl : Place) (cp : ChanPlace) (high : Nat), LoadedAt L P c pl cp high

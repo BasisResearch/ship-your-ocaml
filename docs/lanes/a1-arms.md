@@ -179,6 +179,13 @@ call runs under the extended placement, and `CcallReady.allocPlaced` gives
 proves the pairs fresh, distinct and aligned for every primitive; it is the
 rows' `places` argument, FIXED in the F1 table.
 
+Done: `argv : valWord pl s.world.argv = some (word c Layout.sym_main_argv)`
+on `VmReprAt`/`VmPayload`/`LoadedAt` (last field), kept like `globals`: the
+outside certificates (`PayloadOutside`/`PayloadObsOutside`/`PayloadCoreOutside`/
+`PayloadChanOutside`) carry `argv : OutLRange log sym_main_argv 8` (static, below
+`.bss` end), relocation via `VmImage.argv`, the barrier via `barrierStatics`; the
+whileMin cut from a0-boot's `read_main_argv`.
+
 Row premises for generic `L`:
 * `MemoryStable L.runtimeOk` and `RuntimeFrame L high dom`; both discharged
   for a6-gc's pinned `Gc.f1Layout` (`f1_memoryStable`, `f1_runtimeFrame`,

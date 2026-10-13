@@ -107,6 +107,7 @@ theorem caller_outside :
     cases ha
   · simp only [entryFootprint, OutLRange]; decide
   · simp only [entryFootprint, OutLRange]; decide
+  · simp only [entryFootprint, OutLRange]; decide
 
 /-- A register with an assignment in the captured table is present. -/
 theorem present_of_key {r : LeanRV64DExecutable.Register}

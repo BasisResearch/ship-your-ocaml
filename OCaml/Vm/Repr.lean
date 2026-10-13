@@ -299,6 +299,8 @@ structure VmReprAt (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace
   primitives : PrimitiveBindings P c
   /-- Bind atom values to the runtime table pointer, not its global variable address. -/
   atomBase : (word c Layout.sym_caml_atom_table).toNat = pl.atomBase
+  /-- `main_argv` holds the program arguments' value (`caml_sys_argv`) -/
+  argv : valWord pl s.world.argv = some (word c Layout.sym_main_argv)
 
 /-- **`VmRepr P s c`**: the machine is at `caml_interprete`'s loop head in the
 state `s` of program `P`, under SOME placement (a collection may change it). -/

@@ -18,10 +18,12 @@ structure VmPayload (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlac
   heap : HeapRepr c pl cp P s
   world : WorldRepr c cp s.world
   atomBase : (word c Layout.sym_caml_atom_table).toNat = pl.atomBase
+  /-- `main_argv` holds the program arguments' value (`caml_sys_argv`) -/
+  argv : valWord pl s.world.argv = some (word c Layout.sym_main_argv)
 
 theorem payload_of_repr {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp high : Nat} (h : VmReprAt P s c pl cp sp high) : VmPayload P s c pl cp sp high :=
-  ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, h.world, h.atomBase⟩
+  ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, h.world, h.atomBase, h.argv⟩
 
 /-- Frame all data observations at once; no machine execution is assumed. -/
 theorem VmPayload.frame {P : Prog} {s : St} {c c' : Config} {pl : Place} {cp : ChanPlace}
@@ -29,7 +31,7 @@ theorem VmPayload.frame {P : Prog} {s : St} {c c' : Config} {pl : Place} {cp : C
     (hm : c'.σ.mem = c.σ.mem) (ho : c'.σ.sailOutput = c.σ.sailOutput) :
     VmPayload P s c' pl cp sp high := by
   have hw : ∀ a, word c' a = word c a := fun _ => by simp only [word, hm]
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simpa only [hw] using h.stackHigh
   · simpa only [hw] using h.trapsp
   · simpa only [hw] using h.codeBase
@@ -39,6 +41,7 @@ theorem VmPayload.frame {P : Prog} {s : St} {c c' : Config} {pl : Place} {cp : C
   · simpa only [HeapRepr, ObjAt, word, word32, byte, hm] using h.heap
   · simpa only [WorldRepr, output, ChanAt, word, word32, byte, hm, ho] using h.world
   · simpa only [hw] using h.atomBase
+  · simpa only [hw] using h.argv
 
 /-- A root replacement may discard a pointer, but cannot invent a new live block. -/
 theorem live_of_roots {heap : Heap} {rs rs' : List Val} {l : Nat}

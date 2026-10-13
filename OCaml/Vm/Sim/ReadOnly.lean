@@ -75,7 +75,7 @@ theorem running_of_payload {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     (native : NativePlaced c) : Running L P s c := by
   have repr : VmReprAt P s c pl cp sp high := ⟨regs.head, regs.pc, regs.spReg, regs.accu, regs.env, regs.extra,
     data.stackHigh, data.trapsp, data.codeBase, data.code,
-    data.globals, data.stack, data.heap, data.world, primitives, data.atomBase⟩
+    data.globals, data.stack, data.heap, data.world, primitives, data.atomBase, data.argv⟩
   exact ⟨⟨pl, cp, sp, high, repr⟩, platform, loop, ⟨pl, cp, sp, high, repr, geometry⟩, native⟩
 
 /-- Restore any read-only result once its payload and register observations

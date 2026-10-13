@@ -78,6 +78,7 @@ theorem _root_.OCaml.Vm.VmReprAt.put {P : Prog} {s : St} {c : Config} {pl : Plac
     accu := by rw [root _ (by simp [roots])]; exact h.accu
     env := by rw [root _ (by simp [roots])]; exact h.env
     globals := by rw [root _ (by simp [roots])]; exact h.globals
+    argv := by rw [root _ (by simp [roots])]; exact h.argv
     stack := ⟨h.stack.1, fun i v hv => by
       rw [root _ (by simp [roots, List.mem_of_getElem? hv])]; exact h.stack.2 i v hv⟩
     heap := HeapRepr.put h.heap absent }

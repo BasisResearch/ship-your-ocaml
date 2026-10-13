@@ -24,6 +24,8 @@ structure PayloadChanOutside (log : List WEntry) (P : Prog) (s : St) (c : Config
   others : ∀ id' ch a, id' ≠ id → s.world.chans[id']? = some ch → cp id' = some a →
     OutLRange log a (chanOffBuff + ioBufferSize)
   ooId : OutLRange log Layout.sym_oo_last_id 8
+  /-- `main_argv`, a static word -/
+  argv : OutLRange log Layout.sym_main_argv 8
 
 /-- **Transport the VM payload across a channel primitive's footprint**: the
 world changes only channel `id` (now `ch'`, represented at its record) and
@@ -88,5 +90,11 @@ theorem VmPayload.frame_chan {P : Prog} {s : St} {c c' : Config} {pl : Place} {c
       exact h.world.ooId
   · rw [hw _ outside.atomBase]
     exact h.atomBase
+  · have same : w'.argv = s.world.argv := by
+      have e := congrArg (fun l => l[3]?) rootsEq
+      simp only [roots, List.getElem?_cons_succ, List.getElem?_cons_zero] at e
+      exact Option.some.inj e
+    rw [same, hw _ outside.argv]
+    exact h.argv
 
 end OCaml.Vm.Primitives

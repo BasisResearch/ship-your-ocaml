@@ -122,6 +122,8 @@ structure PayloadObsOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
     ObjectOutside log a o
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
     OutLRange log a (chanOffBuff + ioBufferSize)
+  /-- `main_argv`, a static word -/
+  argv : OutLRange log Layout.sym_main_argv 8
 
 /-- `PayloadObsOutside` and the object-ID counter word. -/
 structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
@@ -141,10 +143,12 @@ structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
   ooId : OutLRange log Layout.sym_oo_last_id 8
   /-- the open-channel list head (`caml_all_opened_channels`, a `.bss` static) -/
   openHead : OutLRange log Layout.sym_caml_all_opened_channels 8
+  /-- `main_argv`, a static word -/
+  argv : OutLRange log Layout.sym_main_argv 8
 
 theorem PayloadOutside.obs {log : List WEntry} {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp : Nat} (h : PayloadOutside log P s c pl cp sp) : PayloadObsOutside log P s c pl cp sp :=
-  ⟨h.domain, h.stackHigh, h.trapsp, h.codeBase, h.atomBase, h.globals, h.code, h.stack, h.heap, h.channels⟩
+  ⟨h.domain, h.stackHigh, h.trapsp, h.codeBase, h.atomBase, h.globals, h.code, h.stack, h.heap, h.channels, h.argv⟩
 
 /-- Transport the VM payload across a write footprint that may write the
 object-ID counter: the counter word afterwards represents `n`. -/
@@ -189,6 +193,8 @@ theorem VmPayload.frame_obs {P s c c' pl cp sp high log}
     · exact counter
   · rw [hw _ outside.atomBase]
     exact h.atomBase
+  · rw [hw _ outside.argv]
+    exact h.argv
 
 /-- Transport the complete VM payload across a checked write footprint. -/
 theorem VmPayload.frame_outsideLog {P s c c' pl cp sp high log}
@@ -230,7 +236,7 @@ theorem VmPayload.ooId {P s c pl cp sp high} (h : VmPayload P s c pl cp sp high)
     (counter : word c Layout.sym_oo_last_id = tag64 (BitVec.ofNat 63 n)) :
     VmPayload P {s with world := {s.world with ooId := n}} c pl cp sp high :=
   ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap,
-    ⟨h.world.output, h.world.chans, counter⟩, h.atomBase⟩
+    ⟨h.world.output, h.world.chans, counter⟩, h.atomBase, h.argv⟩
 
 /-- The primitive-table pointer and all referenced entries are outside a write
 log. The caller supplies this from its table allocation and write separation. -/

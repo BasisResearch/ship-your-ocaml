@@ -42,6 +42,7 @@ theorem loaded {c : Config} {initial : Vsa.MemRepr.Mem}
     codeBase := congrArg BitVec.toNat (read_caml_start_code memory)
     code := code memory
     globals := (congrArg some (read_caml_global_data memory)).symm
+    argv := (congrArg some (read_main_argv memory)).symm
     stackHigh := ?_
     externSp := ?_
     trapsp := ?_

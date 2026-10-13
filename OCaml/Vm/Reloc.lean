@@ -489,6 +489,7 @@ structure VmImage (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
   world : (worldEqv cp s.world).Img μ pl 0 0 c c'
   primitives : (primitiveBindingsEqv P).Img μ pl 0 0 c c'
   atomBase : atomBaseEqv.Img μ pl 0 0 c c'
+  argv : (Eqv.val s.world.argv (fun _ => Layout.sym_main_argv)).Img μ pl 0 0 c c'
 
 /-- All loop-head fields transport via Eqv, including code, registers,
 trap-stack metadata, channels, and console output. -/
@@ -499,7 +500,7 @@ theorem vmReprAt_reloc {P s c c' pl cp sp high μ}
   have basePre : codeBaseEqv.P pl 0 c := ⟨pl.codeBase, rfl, h.codeBase⟩
   obtain ⟨base, hb, hp⟩ := (pcEqv s.pc).transport μ pl 0 0 c c' pcPre hi.pc
   obtain ⟨base', hb', hp'⟩ := codeBaseEqv.transport μ pl 0 0 c c' basePre hi.codeBase
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact (Eqv.observe pcOf (· = some (BitVec.ofNat 64 Layout.loopHead))).transport μ pl 0 0 c c' h.atHead hi.atHead
   · change (reloc μ pl).codeBase = base at hb
     change gpr c' Layout.reg_pc = some (BitVec.ofNat 64 (base + 4 * s.pc)) at hp
@@ -525,5 +526,6 @@ theorem vmReprAt_reloc {P s c c' pl cp sp high μ}
     change (reloc μ pl).atomBase = base at hb
     change (word c' Layout.sym_caml_atom_table).toNat = base at hp
     rw [hb]; exact hp
+  · exact (Eqv.val s.world.argv (fun _ => Layout.sym_main_argv)).transport μ pl 0 0 c c' h.argv hi.argv
 
 end OCaml.Vm.Reloc
