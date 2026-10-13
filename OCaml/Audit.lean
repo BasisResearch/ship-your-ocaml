@@ -359,6 +359,7 @@ import OCaml.Vm.Boot.Startup.OpenRun
 import OCaml.Vm.Boot.Startup.OpenOcamlrunReset
 import OCaml.Vm.Boot.Startup.AttemptFailReset
 import OCaml.Vm.Boot.Startup.RetryReset
+import OCaml.Vm.Boot.Startup.SecondAttemptReset
 import OCaml.Vm.Boot.Startup.Strdup
 import OCaml.Vm.Boot.Startup.ExtTableFree
 import OCaml.Vm.Boot.Startup.DecomposeNull
@@ -2640,6 +2641,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.caml_retry_prog_test
 #print axioms OCaml.Vm.Boot.Startup.caml_retry_prog_call
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_retry_call_exists
+#print axioms OCaml.Vm.Boot.Startup.allocator_abi_register
+#print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.keep_upper
+#print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.keep_saved
+#print axioms OCaml.Vm.Boot.Startup.search_scan_slash
+#print axioms OCaml.Vm.Boot.Startup.search_in_path_rooted
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.attempt_open_search
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.attempt_open_to_open
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.argv1_rooted
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_prog_open_call_exists
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
 #print axioms OCaml.Vm.Boot.Startup.resAt36_window
 #print axioms OCaml.Vm.Boot.Startup.fs_init

@@ -62,10 +62,17 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   caml_main's retry up to `caml_attempt_open(&exe_name, &trail, 1)` with
   `exe_name = argv[1]` ("/prog") stored at `parameterStack + 32`.
 
-Next: the second caml_attempt_open: `caml_search_exe_in_path("/prog")`
-(the name has a slash, so `caml_search_in_path` returns a strdup), then
-`open("/prog")` (resolve's child hit), the script check `read(fd, buf, 2)`,
-`lseek`, the trailer `read` and the magic test.
+* **`reset_prog_open_call_exists` (SecondAttemptReset.lean)**: the second
+  caml_attempt_open up to `open("/prog")`, from two generic theorems:
+  `attempt_open_search` (AttemptSearch.lean: saves, ext table, getenv miss,
+  decompose, `search_in_path_plain`/`search_in_path_rooted`, frees, return)
+  and `attempt_open_to_open` (AttemptToOpen.lean). `abiSaved` (s0–s11) is
+  kept by malloc/free/strdup/search (`allocator_abi_register`).
+  The first attempt still uses its reset-specific copies; rederiving it from
+  the generic pair is a pending cleanup.
+
+Next: `open("/prog")`'s success path (fs_ready = 1, resolve's child hit,
+the fd), then `lseek`, the trailer `read` and the magic test.
 
 ## Round 2 status (2026-10-06, search)
 
