@@ -360,6 +360,23 @@ for that snapshot; it does not assert kernel startup reachability.
 
 ## A1: F1 arms (exit: `ocamlrun_refinement_Statement` for F1)
 
+**Status (arms).** Every F1 opcode has a row `*_row : OpArm P (LoopAt L P) op`
+(137 row theorems), dispatched by the generated `f1_table`. The rows' former
+side conditions are discharged at layout level and passed as FIXED arguments
+(`scripts/gen_f1_table.py`): memory/runtime frames, `AllocFrame`,
+`StackCapacity`/`Fits`, `GoodF1` (size bounds and caught raises via `InF1`),
+`allocPlaces_ok`, `ccall1Exit_pinned`, `growthCallState`. The arm-family
+ledger rows above that say "proved conditionally" record the arm theorems;
+their premises are discharged by these rows. What remains of the F1 headline
+is in other lanes: `CcallReturns` for C_CALL1–5 (primitive summaries,
+a1-prims), the whileMin primitive rows (a1-prims), `libHeap` (a0-boot) and
+`BarrierGrowthFull` (a6-gc).
+
+The loop invariant `Running` carries `LoopRegisters` with complete GPR
+presence and `gp` (so `LibraryReady` holds at every C_CALL entry), the
+`main_argv` binding (`VmPayload.argv`), and `NativePlaced` with
+`NativeValid = NativeCore + RootCaller`.
+
 **Repaired contract:** `Running L P s c` has separate `data : VmRepr`,
 `platform : PlatformOk L.runtimeOk`, and `loop : LoopRegisters` fields.
 `PlatformOk` requires Sail `GoodState` (including `htif_done = false`),
