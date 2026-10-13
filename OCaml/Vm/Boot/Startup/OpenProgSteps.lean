@@ -206,4 +206,90 @@ theorem htif_open_take (c : Config) (sp ra a0 : BitVec 64) (opens : List (BitVec
     exact ⟨by decide, rfl, by decide, by decide, by decide⟩
   · rfl
   · decide
+
+/-- `fds[3]`'s fields and the file's open count. -/
+def htifOpenTakeLog (opens : BitVec 64) : List WEntry :=
+  [(Layout.sym_files + 56 + 48, 4, opens), (Layout.sym_fds + 72 + 4, 4, 1#64), (Layout.sym_fds + 72 + 8, 8, 0#64),
+    (Layout.sym_fds + 72 + 16, 4, 0#64), (Layout.sym_fds + 72, 4, 4#64)]
+
+/-- `files[1].opens++`; `fds[3] = {FD_FILE, 1, 0, 0}`. -/
+theorem htif_open_stores (c : Config) (ra opens : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(13, BitVec.ofNat 64 (Layout.sym_files + 56)), (12, opens),
+      (14, BitVec.ofNat 64 (Layout.sym_fds + 72)), (10, 1#64), (8, 0#64), (11, 4#64)]) :
+    FnSummary 0x800009dc#64 (fun e => e = c) (WriteRegistersPost [] (htifOpenTakeLog opens) c 0x800009f0#64 1#64
+      [(13, BitVec.ofNat 64 (Layout.sym_files + 56)), (12, opens), (14, BitVec.ofNat 64 (Layout.sym_fds + 72)),
+        (10, 1#64), (8, 0#64), (11, 4#64)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> simp only [htifOpenTakeLog, OutLRange] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput openX09dcSeg 0x800009dc#64
+        [(13, BitVec.ofNat 64 (Layout.sym_files + 56)), (12, opens), (14, BitVec.ofNat 64 (Layout.sym_fds + 72)),
+          (10, 1#64), (8, 0#64), (11, 4#64)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [13, 12, 14, 10, 8, 11]; decide
+      shape := by change ChainOK _ [13, 12, 14, 10, 8, 11] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := htifOpenStores_code leaf.image
+        chain_facts code with "Vsa.Sim.Code._open_at_"
+        · exact (show WriteWindow (BitVec.ofNat 64 (Layout.sym_files + 56 + 48)) 4 by constructor <;> decide).sw rfl
+            (by simp only [htifopenstores_line_800009dc, htifopenstores_line_800009e0, htifopenstores_line_800009e4, htifopenstores_line_800009e8, htifopenstores_line_800009ec, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; decide)
+        · exact (show WriteWindow (BitVec.ofNat 64 (Layout.sym_fds + 72 + 4)) 4 by constructor <;> decide).sw rfl
+            (by simp only [htifopenstores_line_800009dc, htifopenstores_line_800009e0, htifopenstores_line_800009e4, htifopenstores_line_800009e8, htifopenstores_line_800009ec, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; decide)
+        · exact (show WriteWindow (BitVec.ofNat 64 (Layout.sym_fds + 72 + 8)) 8 by constructor <;> decide).sd rfl
+            (by simp only [htifopenstores_line_800009dc, htifopenstores_line_800009e0, htifopenstores_line_800009e4, htifopenstores_line_800009e8, htifopenstores_line_800009ec, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; decide)
+        · exact (show WriteWindow (BitVec.ofNat 64 (Layout.sym_fds + 72 + 16)) 4 by constructor <;> decide).sw rfl
+            (by simp only [htifopenstores_line_800009dc, htifopenstores_line_800009e0, htifopenstores_line_800009e4, htifopenstores_line_800009e8, htifopenstores_line_800009ec, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; decide)
+        · exact (show WriteWindow (BitVec.ofNat 64 (Layout.sym_fds + 72)) 4 by constructor <;> decide).sw rfl
+            (by simp only [htifopenstores_line_800009dc, htifopenstores_line_800009e0, htifopenstores_line_800009e4, htifopenstores_line_800009e8, htifopenstores_line_800009ec, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; decide) }))
+  · simp only [openX09dcSeg, evalBlocks, evalBlock, SegEvalState.init, htifopenstores_line_800009dc, htifopenstores_line_800009e0, htifopenstores_line_800009e4, htifopenstores_line_800009e8, htifopenstores_line_800009ec, runGM, ldsRunM, wlogM, stepGM, stepLdsM,
+      eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons, List.tail_cons, Option.getD_some,
+      Nat.reduceEqDiff, ite_true, ite_false, List.cons_append, List.nil_append, htifOpenTakeLog]
+    simp only [List.cons.injEq, Prod.mk.injEq, and_true, true_and]
+    exact ⟨by decide, by decide, by decide, by decide, by decide⟩
+  · rfl
+  · rfl
+  · rfl
+  · decide
+
+/-- Restore `_open`'s saves and return the descriptor. -/
+theorem htif_open_succeed (c : Config) (sp ra s0 s1 s2 fd oldra : BitVec 64) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 80) (regs : GHolds c.σ [(9, fd), (2, nativeStack sp 80)])
+    (saved : ∀ off value, (off, value) ∈ [(64, s0), (72, ra), (48, s2), (56, s1)] →
+      bytesT c.σ.mem (nativeFrameBase sp 80 + off) 8 = value) (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x800009f0#64 (fun e => e = c) (WriteRegistersPost [2, 9, 10, 18, 1, 8] [] c ra fd
+      [(2, sp), (9, s1), (10, fd), (18, s2), (1, ra), (8, s0)]) := by
+  have savedRa := saved 72 ra (by simp)
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (openX09f0Seg ++ openX09f4Seg) 0x800009f0#64
+        [(9, fd), (2, nativeStack sp 80)] (htifOpenRestoreLoads c.σ.mem sp) c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [9, 2]; decide
+      shape := by change ChainOK _ [9, 2] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := htifOpenRestore_code leaf.image
+        chain_facts code with "Vsa.Sim.Code._open_at_"
+        · exact (frame.read_slot (off := 64) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 72) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 48) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 56) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 80 + 72)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [read8_value, savedRa, ret_tgt ra aligned]
+          exact aligned }))
+  · rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 80 + 72)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [read8_value, savedRa, ret_tgt ra aligned]
+  · simp only [openX09f0Seg, openX09f4Seg, evalBlocks, evalBlock, SegEvalState.init, htifopenrestore_line_800009f0, htifopenreturn_line_800009f4, htifopenreturn_line_800009f8, htifopenreturn_line_800009fc, htifopenreturn_line_80000a00, htifopenreturn_line_80000a04, runGM,
+      ldsRunM, wlogM, stepGM, stepLdsM, eaddrM, srcVal, lookupG, eraseG, wvalM, wentryM, widthOfM, List.headD_cons,
+      List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, htifOpenRestoreLoads, List.map_cons,
+      List.map_nil, read8_value, List.cons_append, List.nil_append]
+    rw [show Functions.sign_extend (m := 64) 80#12 = 80#64 by decide, nativeStack_restore, open_se0, BitVec.add_zero,
+      saved 56 s1 (by simp), saved 48 s2 (by simp), savedRa, saved 64 s0 (by simp)]
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
