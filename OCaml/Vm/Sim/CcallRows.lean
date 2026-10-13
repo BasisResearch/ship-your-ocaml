@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.PlacePut
 import OCaml.Vm.Sim.Ccall1
 import OCaml.Vm.Sim.Ccall2
 import OCaml.Vm.Sim.Ccall3
@@ -68,16 +69,22 @@ theorem CcallReady.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {
     {index : BitVec 32} {name : String} (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op)
     (fetch : P.code[s.pc + 1]? = some index) (nonnegative : 0 ≤ index.toInt)
     (primitive : P.prims[index.toInt.toNat]? = some name)
-    (space : 8 * (s.stack.length + 2) ≤ Layout.stackBytes) :
+    (space : 8 * (s.stack.length + 2) ≤ Layout.stackBytes)
+    (places : ∀ young : BitVec 64, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
     ∃ pl cp sp high entry value env, CcallReady op L P s c pl cp sp high
       (word c Layout.sym_Caml_state).toNat
       (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat entry value env index name := by
-  obtain ⟨pl, cp, sp, high, input⟩ := ArmInput.of_loop h code
+  obtain ⟨pl0, cp, sp, high, input0⟩ := ArmInput.of_loop h code
+  have top := input0.geometry.nursery.top
+  have youngAligned := input0.geometry.nursery.aligned
+  have ok := places (BitVec.ofNat 64 (runtimeFields c).youngPtr)
+    (by rw [BitVec.toNat_ofNat, Nat.mod_mod_of_dvd _ (by decide : 8 ∣ 2 ^ 64)]; exact youngAligned)
+  have input := input0.putAll _ ok.absent ok.aligned
   obtain ⟨entry, lookup, -⟩ := input.primitives.targets _ name primitive
   obtain ⟨value, -, valueWord⟩ := input.accu
   obtain ⟨env, -, envWord⟩ := input.env
   have aligned := PrimitiveEntries.lookup_aligned lookup
-  exact ⟨pl, cp, sp, high, entry, value, env,
+  exact ⟨_, cp, sp, high, entry, value, env,
     { input with
       operand := OperandAt.of_fetch input.geometry.toArmGeometry fetch
       nonnegative, primitive, entryName := lookup
@@ -88,7 +95,8 @@ theorem CcallReady.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {
       value := valueWord
       environment := envWord
       space := Ccall1WriteOk.of_geometry _ env input.geometry.toArmGeometry input.stack space
-      stackFits := space }⟩
+      stackFits := space
+      allocPlaced := putAll_placed pl0 _ ok.distinct }⟩
 
 /-! ## The C_CALL rows -/
 
@@ -152,7 +160,8 @@ theorem ccall_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opco
       CcallCallee ra (s.accu :: s.stack.take k) L P s pl cp sp high (domainAt c) entry env name v result
         heap world →
       stepI P s ⟨op, [index.toInt]⟩ = .next s' → ∃ after, OCaml.Plus c after ∧ OCaml.Running L P s' after)
-    (returns : CcallReturns L P op ra k) (exit : CcallExit L P op k) :
+    (returns : CcallReturns L P op ra k) (exit : CcallExit L P op k)
+    (places : ∀ name s young, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
     OCaml.OpArm P (OCaml.LoopAt L P) op := by
   intro s c i reach h hd hop f1
   obtain ⟨code, fetches⟩ := decode_fetch hd
@@ -176,7 +185,7 @@ theorem ccall_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opco
         · intro s' step
           have space := stack_fits fits capacity reach (k := 2)
           obtain ⟨pl, cp, sp, high, entry, value, env, ready⟩ :=
-            CcallReady.of_loop h code fetch nonnegative hp space
+            CcallReady.of_loop h code fetch nonnegative hp space (places name s)
           obtain ⟨res, callee⟩ := returns.callee s c pl cp sp high _ entry value env w name v heap world
             reach ready member result
           have hs := ready.stack.1
@@ -213,7 +222,8 @@ theorem ccall_row_of {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {op : Opco
 theorem c_call1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (returns : CcallReturns L P .C_CALL1 (0x80003060#64) 0) (exit : CcallExit L P .C_CALL1 0) :
+    (returns : CcallReturns L P .C_CALL1 (0x80003060#64) 0) (exit : CcallExit L P .C_CALL1 0) 
+    (places : ∀ name s young, young.toNat % 8 = 0 → AllocPlacesOk name s young):
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL1 :=
   ccall_row_of stable rf fits capacity (by decide) (fun _ _ => by simp only [Nat.not_lt_zero, or_false]; rfl)
     (fun s args ne => by
@@ -224,13 +234,14 @@ theorem c_call1_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     (fun _ => rfl)
     (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ stable' ready arguments callee step =>
       c_call1_step_arm stable' stable ready callee step)
-    returns exit
+    returns exit places
 
 /-- **The C_CALL2 row.** -/
 theorem c_call2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (returns : CcallReturns L P .C_CALL2 (0x80003004#64) 1) :
+    (returns : CcallReturns L P .C_CALL2 (0x80003004#64) 1)
+    (places : ∀ name s young, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL2 :=
   ccall_row_of stable rf fits capacity (by decide) (fun _ _ => rfl)
     (fun s args ne => by
@@ -241,13 +252,14 @@ theorem c_call2_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     (fun _ => rfl)
     (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ stable' ready arguments callee step =>
       c_call2_step_arm stable' stable ready arguments callee step)
-    returns (.of_arity (by decide))
+    returns (.of_arity (by decide)) places
 
 /-- **The C_CALL3 row.** -/
 theorem c_call3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (returns : CcallReturns L P .C_CALL3 (0x80002fa4#64) 2) :
+    (returns : CcallReturns L P .C_CALL3 (0x80002fa4#64) 2)
+    (places : ∀ name s young, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL3 :=
   ccall_row_of stable rf fits capacity (by decide) (fun _ _ => rfl)
     (fun s args ne => by
@@ -258,13 +270,14 @@ theorem c_call3_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     (fun _ => rfl)
     (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ stable' ready arguments callee step =>
       c_call3_step_arm stable' stable ready arguments callee step)
-    returns (.of_arity (by decide))
+    returns (.of_arity (by decide)) places
 
 /-- **The C_CALL4 row.** -/
 theorem c_call4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (returns : CcallReturns L P .C_CALL4 (0x80002f40#64) 3) :
+    (returns : CcallReturns L P .C_CALL4 (0x80002f40#64) 3)
+    (places : ∀ name s young, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL4 :=
   ccall_row_of stable rf fits capacity (by decide) (fun _ _ => rfl)
     (fun s args ne => by
@@ -275,13 +288,14 @@ theorem c_call4_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     (fun _ => rfl)
     (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ stable' ready arguments callee step =>
       c_call4_step_arm stable' stable ready arguments callee step)
-    returns (.of_arity (by decide))
+    returns (.of_arity (by decide)) places
 
 /-- **The C_CALL5 row.** -/
 theorem c_call5_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0 : Nat}
     (stable : MemoryStable L.runtimeOk) (rf : RuntimeFrame L high0 dom0)
     (fits : OCaml.Fits B P) (capacity : StackCapacity B)
-    (returns : CcallReturns L P .C_CALL5 (0x80002ed8#64) 4) :
+    (returns : CcallReturns L P .C_CALL5 (0x80002ed8#64) 4)
+    (places : ∀ name s young, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
     OCaml.OpArm P (OCaml.LoopAt L P) .C_CALL5 :=
   ccall_row_of stable rf fits capacity (by decide) (fun _ _ => rfl)
     (fun s args ne => by
@@ -292,6 +306,6 @@ theorem c_call5_row {L : OCaml.Layout} {B : OCaml.Budget} {P : Prog} {high0 dom0
     (fun _ => rfl)
     (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ stable' ready arguments callee step =>
       c_call5_step_arm stable' stable ready arguments callee step)
-    returns (.of_arity (by decide))
+    returns (.of_arity (by decide)) places
 
 end OCaml.Vm.Sim

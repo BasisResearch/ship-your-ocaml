@@ -47,9 +47,11 @@ FIXED = {
     'consoleRt': 'Gc.f1_consoleRuntime',
     'consoles': 'OCaml.Programs.whileMin_goodF1.consoles',
     'nativeStable': 'f1_native_stable',
+    'places': 'allocPlaces_ok',
 }
 # Modules a FIXED instance lives in, beyond the table's base imports.
-FIXED_IMPORTS = {'consoleStable': 'OCaml.Vm.Sim.F1Console', 'nativeStable': 'OCaml.Vm.Sim.F1NativeWindow'}
+FIXED_IMPORTS = {'consoleStable': 'OCaml.Vm.Sim.F1Console', 'nativeStable': 'OCaml.Vm.Sim.F1NativeWindow',
+                 'places': 'OCaml.Vm.Sim.AllocPlacesOk'}
 # Summary parameters with no instance yet: one named `WhileMinOpen` field each.
 OPEN_PARAMS = {}
 # Program-level parameters shared by several rows: one premise field each.
@@ -237,6 +239,8 @@ def render():
                 imports.add('OCaml.Vm.Sim.F1GrowthPaths')
                 call.append(barrier_proof(ty))
             elif p in FIXED:
+                if p in FIXED_IMPORTS:
+                    imports.add(FIXED_IMPORTS[p])
                 call.append(FIXED[p])
             else:
                 fname = SHARED.get(p, f'{op.lower()}_{p}')

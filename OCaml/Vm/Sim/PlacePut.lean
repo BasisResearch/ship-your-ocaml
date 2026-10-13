@@ -137,4 +137,38 @@ theorem ArmInput.put {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : C
 theorem alloc_absent (h : Heap) (o : Obj) : h.get? (h.alloc o).2 = none := by
   simp [Heap.alloc, Heap.get?]
 
+/-- Place a list of fresh `(location, address)` pairs, in order. -/
+def _root_.OCaml.Vm.Place.putAll (pl : Place) (ps : List (Nat × Nat)) : Place :=
+  ps.foldl (fun pl p => pl.put p.1 p.2) pl
+
+/-- Placing fresh locations at aligned addresses keeps an arm's input. -/
+theorem ArmInput.putAll {L : OCaml.Layout} {P : Prog} {s : St} {op : Opcode} {c : Config}
+    {cp : ChanPlace} {sp high : Nat} :
+    ∀ {pl : Place} (ps : List (Nat × Nat)), ArmInput L P s op c pl cp sp high →
+      (∀ p ∈ ps, s.heap.get? p.1 = none) → (∀ p ∈ ps, p.2 % 8 = 0) →
+      ArmInput L P s op c (pl.putAll ps) cp sp high
+  | _, [], h, _, _ => h
+  | _, p :: ps, h, absent, aligned =>
+    ArmInput.putAll ps (h.put (absent p (List.mem_cons_self ..)) (aligned p (List.mem_cons_self ..)))
+      (fun q hq => absent q (List.mem_cons_of_mem _ hq)) (fun q hq => aligned q (List.mem_cons_of_mem _ hq))
+
+theorem putAll_other {l : Nat} : ∀ {pl : Place} (ps : List (Nat × Nat)), (∀ p ∈ ps, p.1 ≠ l) →
+    (pl.putAll ps).φ l = pl.φ l
+  | _, [], _ => rfl
+  | pl, p :: ps, ne => by
+    change ((pl.put p.1 p.2).putAll ps).φ l = _
+    rw [putAll_other ps (fun q hq => ne q (List.mem_cons_of_mem _ hq)),
+      put_ne (Ne.symm (ne p (List.mem_cons_self ..)))]
+
+/-- Every placed pair of a duplicate-free list is placed. -/
+theorem putAll_placed : ∀ (pl : Place) (ps : List (Nat × Nat)), (ps.map Prod.fst).Nodup →
+    ∀ p ∈ ps, (pl.putAll ps).φ p.1 = some p.2
+  | _, [], _, _, h => nomatch h
+  | pl, q :: qs, nodup, p, hp => by
+    rw [List.map_cons, List.nodup_cons] at nodup
+    change ((pl.put q.1 q.2).putAll qs).φ p.1 = _
+    rcases List.mem_cons.mp hp with rfl | hp
+    · rw [putAll_other qs (fun r hr e => nodup.1 (by rw [← e]; exact List.mem_map_of_mem hr)), put_self]
+    · exact putAll_placed _ qs nodup.2 p hp
+
 end OCaml.Vm.Sim

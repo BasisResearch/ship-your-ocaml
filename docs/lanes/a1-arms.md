@@ -171,6 +171,14 @@ former open field `ccall_entry_gprs`. Presence is carried as
 * library summaries with their own presence (`VsaOk.gpr`, `Udivdi3Post`
   scratch pins, `muldi3_registers`, a6-gc's `Returned.present`) feed it.
 
+Done: allocating primitives are placed at the C_CALL entry.
+`CcallReady.of_loop` extends the placement with `Place.putAll pl
+(allocPlaces name s young)` (`ArmInput.putAll`, PlacePut.lean), so the whole
+call runs under the extended placement, and `CcallReady.allocPlaced` gives
+`pl.φ l = some a` for every fresh pair. `allocPlaces_ok` (AllocPlacesOk.lean)
+proves the pairs fresh, distinct and aligned for every primitive; it is the
+rows' `places` argument, FIXED in the F1 table.
+
 Row premises for generic `L`:
 * `MemoryStable L.runtimeOk` and `RuntimeFrame L high dom`; both discharged
   for a6-gc's pinned `Gc.f1Layout` (`f1_memoryStable`, `f1_runtimeFrame`,

@@ -31,7 +31,7 @@ theorem ccall1Exit_f1 {P : Prog} (fits : OCaml.Fits Gc.g1Budget P)
   subst hname
   have space := stack_fits fits g1_capacity reach (k := 2)
   obtain ⟨pl, cp, sp, high, entry, value, env, ready⟩ :=
-    CcallReady.of_loop h code fetch nonnegative hp space
+    CcallReady.of_loop h code fetch nonnegative hp space (fun _ _ => .of_nil (by simp [allocPlaces]))
   have hs := ready.stack.1
   have same : high = Gc.f1High := ready.stackHigh.symm.trans (f1_runtimeFrame.stackHigh c ready.runtime)
   subst same

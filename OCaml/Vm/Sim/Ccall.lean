@@ -1,5 +1,6 @@
 import OCaml.Vm.Sim.CcallSetup
 import OCaml.Logic.Symbolic
+import OCaml.Vm.Primitives.AllocPlaces
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -26,6 +27,27 @@ structure CcallReady (opcode : Opcode) (L : OCaml.Layout) (P : Prog) (s : St) (c
   /-- the stack, the pushed environment and return address fit the VM stack
   (with `StackGeometry.statics`: `sp - 16` lies above `.bss`) -/
   stackFits : 8 * (s.stack.length + 2) ≤ Layout.stackBytes
+  /-- the fresh objects of an allocating primitive are placed in advance at
+  their nursery addresses (`allocPlaces`, from the young pointer at entry) -/
+  allocPlaced : ∀ p ∈ allocPlaces name s (BitVec.ofNat 64 (runtimeFields c).youngPtr), pl.φ p.1 = some p.2
+
+/-- **The fresh placements of a primitive are placeable** (a1-prims, from
+`allocPlaces`'s definition): the locations are absent from the heap and
+distinct, and the addresses are word-aligned when the young pointer is. -/
+structure PlacesOk (heap : Heap) (ps : List (Nat × Nat)) : Prop where
+  absent : ∀ p ∈ ps, heap.get? p.1 = none
+  aligned : ∀ p ∈ ps, p.2 % 8 = 0
+  distinct : (ps.map Prod.fst).Nodup
+
+abbrev AllocPlacesOk (name : String) (s : St) (young : BitVec 64) : Prop :=
+  PlacesOk s.heap (allocPlaces name s young)
+
+theorem PlacesOk.nil (heap : Heap) : PlacesOk heap [] := ⟨nofun, nofun, List.nodup_nil⟩
+
+/-- A primitive that places nothing. -/
+theorem AllocPlacesOk.of_nil {name : String} {s : St} {young : BitVec 64}
+    (h : allocPlaces name s young = []) : AllocPlacesOk name s young := by
+  unfold AllocPlacesOk; rw [h]; exact .nil _
 
 /-- Named obligation for a returning F1 primitive. a1-prims supplies the
 represented machine summary; its frame must retain the caller-owned saved

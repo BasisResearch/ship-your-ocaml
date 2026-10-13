@@ -41,6 +41,7 @@ import OCaml.Vm.Sim.GrabAllocRows
 import OCaml.Vm.Sim.ClosureAllocRows
 import OCaml.Vm.Sim.ClosurerecAllocRows
 import OCaml.Vm.Sim.LibraryEntry
+import OCaml.Vm.Sim.AllocPlacesOk
 import OCaml.Vm.Primitives.BlockGprs
 import OCaml.Vm.Sim.SegmentGprs
 import OCaml.Vm.Sim.MakeblockNRows
@@ -5337,6 +5338,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.VmWindow.channel
 #print axioms OCaml.Vm.Sim.links_of_channels
 #print axioms OCaml.Vm.Sim.CcallSetupPost.libraryReady
+#print axioms OCaml.Vm.Sim.allocPlaces_ok
+#print axioms OCaml.Vm.Sim.putAll_placed
+#print axioms OCaml.Vm.Sim.ArmInput.putAll
 #print axioms OCaml.Vm.Primitives.BlockPost.kept
 #print axioms OCaml.Vm.Primitives.GprsKept.of_stepFrame
 #print axioms OCaml.Vm.Sim.GprsKept.of_segment

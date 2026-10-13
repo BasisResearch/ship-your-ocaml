@@ -1,5 +1,6 @@
 import OCaml.Vm.Sim.A2TableRows
 import OCaml.Vm.Sim.AccRows
+import OCaml.Vm.Sim.AllocPlacesOk
 import OCaml.Vm.Sim.BarrierRows
 import OCaml.Vm.Sim.CcallExitF1
 import OCaml.Vm.Sim.CcallRows
@@ -236,15 +237,15 @@ theorem f1_table_for {keep : Opcode → Bool} {P : Prog} {c : Config}
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .CHECK_SIGNALS, _ => if h : keep .CHECK_SIGNALS = true then check_signals_row f1_memoryStable f1_runtimeFrame
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .C_CALL1, _ => if h : keep .C_CALL1 = true then c_call1_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call1_returns (by simp [h])) (ccall1Exit_pinned fits)
+    | .C_CALL1, _ => if h : keep .C_CALL1 = true then c_call1_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call1_returns (by simp [h])) (ccall1Exit_pinned fits) allocPlaces_ok
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .C_CALL2, _ => if h : keep .C_CALL2 = true then c_call2_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call2_returns (by simp [h]))
+    | .C_CALL2, _ => if h : keep .C_CALL2 = true then c_call2_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call2_returns (by simp [h])) allocPlaces_ok
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .C_CALL3, _ => if h : keep .C_CALL3 = true then c_call3_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call3_returns (by simp [h]))
+    | .C_CALL3, _ => if h : keep .C_CALL3 = true then c_call3_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call3_returns (by simp [h])) allocPlaces_ok
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .C_CALL4, _ => if h : keep .C_CALL4 = true then c_call4_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call4_returns (by simp [h]))
+    | .C_CALL4, _ => if h : keep .C_CALL4 = true then c_call4_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call4_returns (by simp [h])) allocPlaces_ok
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
-    | .C_CALL5, _ => if h : keep .C_CALL5 = true then c_call5_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call5_returns (by simp [h]))
+    | .C_CALL5, _ => if h : keep .C_CALL5 = true then c_call5_row f1_memoryStable f1_runtimeFrame fits g1_capacity (pre.c_call5_returns (by simp [h])) allocPlaces_ok
         else OCaml.OpArm.of_unreached fun s i r d e => h (e ▸ reached s i r d)
     | .C_CALLN, h => absurd h (by decide)
     | .CONST0, _ => if h : keep .CONST0 = true then const0_row f1_memoryStable
