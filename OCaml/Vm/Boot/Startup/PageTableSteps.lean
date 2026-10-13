@@ -386,4 +386,70 @@ theorem page_table_clear_front (c : Config) (sp ra blk : BitVec 64) (leaf : Leaf
       show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]
   · rfl
   · decide
+
+theorem page_table_clear_call (c : Config) (sp ra blk : BitVec 64) (leaf : LeafInput ra c)
+    (frame : NativeFrame sp 32) (regs : GHolds c.σ [(10, blk), (2, nativeStack sp 32)])
+    (nonzero : blk ≠ 0#64) (size : bytesT c.σ.mem (nativeFrameBase sp 32 + 0) 8 = 16384#64) :
+    FnSummary 0x8000ad50#64 (fun e => e = c) (WriteRegistersPost ([15, 14, 12, 11] ++ [1])
+      (nativeWordLog sp 32 [(8, blk)]) c jal_8000ad68_call.target blk
+      ((1, jal_8000ad68_call.link) :: [(11, 0#64), (12, 16384#64), (14, -1#64), (15, blk), (10, blk),
+        (2, nativeStack sp 32)])) :=
+  block_then_call c jal_8000ad68_call_shape jal_8000ad68_call_decode (fun _ h => jal_8000ad68_call_pins h)
+    (page_table_clear_front c sp ra blk leaf frame regs nonzero size) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+theorem page_table_upper3 (i : MInstr) (w : i.word = 382615#32) :
+    Functions.sign_extend (m := 64) (imm20Of i +++ 0#12) = 0x5d000#64 := by
+  rw [imm20Of, w]; decide
+
+/-- `caml_page_table.entries = table`; return 0. -/
+theorem page_table_return (c : Config) (sp ra blk v oldra : BitVec 64) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 32) (regs : GHolds c.σ [(2, nativeStack sp 32), (10, v)])
+    (table : bytesT c.σ.mem (nativeFrameBase sp 32 + 8) 8 = blk)
+    (link : bytesT c.σ.mem (nativeFrameBase sp 32 + 24) 8 = ra) (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x8000ad6c#64 (fun e => e = c) (WriteRegistersPost [15, 14, 1, 13, 10, 2]
+      [(pageTable + 0x20, 8, blk)] c ra 0#64
+      [(2, sp), (10, 0#64), (13, 0x80067d78#64), (1, ra), (14, 0#64), (15, blk)]) := by
+  have tableW : bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 32 + 8)) = blk := by rw [read8_value]; exact table
+  have linkW : bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 32 + 24)) = ra := by rw [read8_value]; exact link
+  apply registers_of_blocks leaf.image (pageTable_outside 0x20 (by decide))
+    (block_summary _ _ _ _ _ (show BlockInput caml_page_table_initializeXad6cSeg 0x8000ad6c#64
+        [(2, nativeStack sp 32), (10, v)]
+        [read8 c.σ.mem (nativeFrameBase sp 32 + 8), read8 c.σ.mem (nativeFrameBase sp 32 + 24)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 10]; decide
+      shape := by change ChainOK _ [2, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageTableReturn_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_initialize_at_"
+        · exact (frame.read_slot (off := 8) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 24) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (show WriteWindow (BitVec.ofNat 64 (pageTable + 0x20)) 8 by constructor <;> decide).sd rfl
+            (by simp only [pagetablereturn_line_8000ad6c, pagetablereturn_line_8000ad70, pagetablereturn_line_8000ad74, pagetablereturn_line_8000ad78, pagetablereturn_line_8000ad7c, pagetablereturn_line_8000ad80, pagetablereturn_line_8000ad84, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true,
+              ite_false, Nat.reduceEqDiff, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons]; decide)
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 32 + 24)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [linkW, ret_tgt ra aligned]
+          exact aligned }))
+  · simp only [caml_page_table_initializeXad6cSeg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, wlogM, wentryM, widthOfM, eaddrM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff,
+      ite_true, ite_false, List.headD_cons, List.tail_cons, pagetablereturn_line_8000ad6c, pagetablereturn_line_8000ad70, pagetablereturn_line_8000ad74, pagetablereturn_line_8000ad78, pagetablereturn_line_8000ad7c, pagetablereturn_line_8000ad80, pagetablereturn_line_8000ad84]
+    rw [page_table_upper3 _ rfl, tableW, show (2147528056#64 + 0x5d000#64 + Functions.sign_extend (m := 64) 1888#12).toNat =
+      pageTable + 0x20 by decide]
+    rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 32 + 24)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [linkW, ret_tgt ra aligned]
+  · simp only [caml_page_table_initializeXad6cSeg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, eaddrM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff,
+      ite_true, ite_false, List.headD_cons, List.tail_cons, pagetablereturn_line_8000ad6c, pagetablereturn_line_8000ad70, pagetablereturn_line_8000ad74, pagetablereturn_line_8000ad78, pagetablereturn_line_8000ad7c, pagetablereturn_line_8000ad80, pagetablereturn_line_8000ad84]
+    rw [show Functions.sign_extend (m := 64) 32#12 = 32#64 by decide, nativeStack_restore, page_table_upper3 _ rfl,
+      linkW, tableW, show 0#64 + Functions.sign_extend (m := 64) 0#12 + Functions.sign_extend (m := 64) 0#12 = 0#64 by
+        decide, show 0#64 + Functions.sign_extend (m := 64) 0#12 = 0#64 by decide,
+      show 2147528056#64 + 0x5d000#64 = 0x80067d78#64 by decide]
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
