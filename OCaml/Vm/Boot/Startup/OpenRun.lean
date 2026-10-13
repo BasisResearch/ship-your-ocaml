@@ -48,6 +48,8 @@ structure OpenOcamlrun (H : List (Nat × Nat)) (capacity : Nat) (sp ra path : Bi
   ready : RuntimeReady ((node.toNat, 5) :: H) capacity sp ra after
   late : LateImage after
   slot : FsSlotOne after.σ.mem node
+  /-- The node's name block is apart from every other live block. -/
+  apart : ∀ e ∈ H, ∀ a, InExt (node.toNat, 5) a → ¬ InExt e a
   words : FsWords after.σ.mem
   name : OcamlrunName after.σ.mem path
   caller : CallerFrame sp before after
@@ -386,6 +388,7 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
   refine ⟨d12, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans
     (run9.trans (run10.trans (run11.trans run12)))))))))), ⟨{
     node := R.node
+    apart := R.apart
     pc := p12.pc
     regs := (gholds_append _ _).2 ⟨p12.regs, (p12.toEffectPost.gpr_frame (by decide) 8 (by decide) (by decide)
         (by decide)).trans (gholds_lookup (n := 8) _ p11.regs rfl),

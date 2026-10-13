@@ -28,6 +28,8 @@ structure ResolveInit (H : List (Nat × Nat)) (capacity : Nat)
   ready : RuntimeReady ((node.toNat, 5) :: H) capacity (resolveStack spo) jal_80000594_call.link after
   embed : EmbedImage after
   slot : FsSlotOne after.σ.mem node
+  /-- The node's name block is apart from every other live block. -/
+  apart : ∀ e ∈ H, ∀ a, InExt (node.toNat, 5) a → ¬ InExt e a
   words : FsWords after.σ.mem
   rest : ∀ j, 2 ≤ j → j < 64 → slotUsed after.σ.mem (Layout.sym_files + 56 * j) = 0#8
   saved : ∀ off value, (off, value) ∈ resolveSlots ra s3 s4 s9 →
@@ -117,6 +119,7 @@ theorem resolve_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat
       exact clear j lo hi) charged).run d2 ⟨p2'.pc, rfl⟩
   refine ⟨d3, run1.trans (run2.trans run3), ⟨{
     node := F.node
+    apart := F.apart
     pc := F.pc
     regs := gholds_select F.regs _ fun n v member => by
       simp only [List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member
@@ -664,6 +667,8 @@ structure ResolveOcamlrun (H : List (Nat × Nat)) (capacity : Nat)
   ready : RuntimeReady ((node.toNat, 5) :: H) capacity (nativeStack spo 80) ra after
   embed : EmbedImage after
   slot : FsSlotOne after.σ.mem node
+  /-- The node's name block is apart from every other live block. -/
+  apart : ∀ e ∈ H, ∀ a, InExt (node.toNat, 5) a → ¬ InExt e a
   words : FsWords after.σ.mem
   name : OcamlrunName after.σ.mem path
   none : bytesT after.σ.mem (resAt spo 16) 8 = path
@@ -743,6 +748,7 @@ theorem resolve_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge :
     (C.kept x h1).trans (B.kept x h2)
   refine ⟨after, runA.trans (runB.trans runC), ⟨{
     node := A.node
+    apart := A.apart
     pc := C.pc
     regs := C.regs
     ready := C.ready

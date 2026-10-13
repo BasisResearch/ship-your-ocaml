@@ -333,6 +333,8 @@ structure FsTail (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 
   ready : RuntimeReady ((node.toNat, 5) :: H) capacity sp ra after
   embed : EmbedImage after
   slot : FsSlotOne after.σ.mem node
+  /-- The node's name block is apart from every other live block. -/
+  apart : ∀ e ∈ H, ∀ a, InExt (node.toNat, 5) a → ¬ InExt e a
   low : ∀ x, x < heapStart → ¬ allocGlobal x → (x < slotOne ∨ slotOne + 56 ≤ x) →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
@@ -467,6 +469,7 @@ theorem fs_init_tail (e : Config) (H : List (Nat × Nat)) (capacity charge : Nat
       exact N.terminated }
   refine ⟨h, run1.trans (run2.trans run3), ⟨{
     node := N.node
+    apart := N.disjoint
     pc := p3.pc
     regs := p3.regs
     ready := readyH
@@ -618,6 +621,8 @@ structure FsInitDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3
   ready : RuntimeReady ((node.toNat, 5) :: H) capacity sp ra after
   embed : EmbedImage after
   slot : FsSlotOne after.σ.mem node
+  /-- The node's name block is apart from every other live block. -/
+  apart : ∀ e ∈ H, ∀ a, InExt (node.toNat, 5) a → ¬ InExt e a
   rest : ∀ j, 2 ≤ j → j < 64 → slotUsed after.σ.mem (Layout.sym_files + 56 * j) = 0#8
   low : ∀ x, x < heapStart → ¬ allocGlobal x → OutW (fsWindows sp) x → (x < slotOne ∨ slotOne + 56 ≤ x) →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
@@ -750,6 +755,7 @@ theorem fs_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
         (by simp only [OutLRange, Layout.sym_fds, Layout.sym_fs_ready, and_true]; omega) (by omega)]
       decide
     node := T.node
+    apart := T.apart
     pc := T.pc
     regs := T.regs
     ready := T.ready
