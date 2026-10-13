@@ -79,4 +79,87 @@ theorem page_hash_chain (c : Config) (ra page : BitVec 64) (leaf : LeafInput ra 
       rw [afterB 12 _ rfl, BitVec.one_mul]), trivial⟩
   · decide
   · decide
+
+/-- The page's home slot: the top 11 bits of the hash product. -/
+def pageHash (page : BitVec 64) : BitVec 64 := (hashFactor * pageNumber page) >>> 53
+
+theorem pageHash_lt (page : BitVec 64) : (pageHash page).toNat < 2048 := by
+  unfold pageHash
+  rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+  have := (hashFactor * pageNumber page).isLt
+  omega
+
+/-- The address of slot `h` of the slots at `ent`. -/
+def slotAddr (ent h : BitVec 64) : BitVec 64 := ent + (h <<< 3)
+
+theorem srl_shift (x : BitVec 64) : Sail.shift_bits_right x (Sail.BitVec.extractLsb (53#64) 5 0) = x >>> 53 := by
+  simp only [Sail.shift_bits_right, BitVec.ushiftRight_eq']
+  rfl
+
+theorem slli_three (x : BitVec 64) (a : MInstr) (imm : a.imm = 3#12) :
+    Sail.shift_bits_left x (Sail.BitVec.extractLsb (shamtOf a) 5 0) = x <<< 3 := by
+  rw [shamtOf, imm]
+  simp only [Sail.shift_bits_left, BitVec.shiftLeft_eq']
+  rfl
+
+def pageSlotBlocks (empty : Bool) : List BBlock :=
+  if empty then caml_page_table_modifyXae70TSeg else caml_page_table_modifyXae70FSeg
+
+local macro "psk" : tactic => `(tactic| simp only [pagemodifyslot_line_8000ae70, pagemodifyslot_line_8000ae74, pagemodifyslot_line_8000ae78, pagemodifyslot_line_8000ae7c, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+/-- The home slot: load its word; empty goes to the insertion, occupied to the probe loop. -/
+theorem page_slot (c : Config) (ra page ent : BitVec 64) (empty : Bool) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(15, hashFactor * pageNumber page), (18, 53#64), (13, ent)])
+    (window : ReadWindow (slotAddr ent (pageHash page)) 8)
+    (test : (bytesT c.σ.mem (slotAddr ent (pageHash page)).toNat 8 == 0#64) = empty) :
+    FnSummary 0x8000ae70#64 (fun e => e = c) (BoundaryPost [15, 12, 14] c ra
+      (if empty then 0x8000aee4#64 else 0x8000ae84#64)
+      [(14, bytesT c.σ.mem (slotAddr ent (pageHash page)).toNat 8), (12, slotAddr ent (pageHash page)),
+        (15, pageHash page), (18, 53#64), (13, ent)]) := by
+  have word : bytesVal .ld (read8 c.σ.mem (slotAddr ent (pageHash page)).toNat) =
+      bytesT c.σ.mem (slotAddr ent (pageHash page)).toNat 8 := read8_value _ _
+  have input : BlockInput (pageSlotBlocks empty) 0x8000ae70#64
+      [(15, hashFactor * pageNumber page), (18, 53#64), (13, ent)]
+      [read8 c.σ.mem (slotAddr ent (pageHash page)).toNat] c := {
+    good := leaf.good
+    minstret := leaf.minstret
+    regs := regs
+    keys := by change KeysOK [15, 18, 13]; decide
+    shape := by unfold pageSlotBlocks; split <;> (change ChainOK _ [15, 18, 13] _; decide)
+    tick := leaf.tick
+    facts := by
+      have code := pageModifySlot_code leaf.image
+      unfold pageSlotBlocks
+      split
+      · chain_facts code with "Vsa.Sim.Code.caml_page_table_modify_at_"
+        · refine window.ld rfl ?_ (read8_pins _ _)
+          psk
+          rw [srl_shift, slli_three _ _ rfl, (show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide),
+            BitVec.add_zero]
+          rfl
+        · rename_i h
+          psk; rw [word]; simp only [guardB]; rw [h] at test; exact test
+      · chain_facts code with "Vsa.Sim.Code.caml_page_table_modify_at_"
+        · refine window.ld rfl ?_ (read8_pins _ _)
+          psk
+          rw [srl_shift, slli_three _ _ rfl, (show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide),
+            BitVec.add_zero]
+          rfl
+        · rename_i h
+          psk; rw [word]; simp only [guardB]; rw [Bool.not_eq_true] at h; rw [h] at test; exact test }
+  apply boundary_of_blocks leaf (block_summary _ _ _ _ _ input)
+    (keys := by unfold pageSlotBlocks; split <;> decide) (no3 := by unfold pageSlotBlocks; split <;> decide)
+  · unfold pageSlotBlocks; split <;> rfl
+  · unfold pageSlotBlocks; split <;> rfl
+  · intro σ pins
+    unfold pageSlotBlocks at pins
+    split at pins <;>
+    · simp only [caml_page_table_modifyXae70TSeg, caml_page_table_modifyXae70FSeg, evalBlocks, evalBlock,
+        SegEvalState.init, runGM, stepGM, stepLdsM, ldsRunM, srcVal, lookupG, eraseG, wvalM, Option.getD_some,
+        Nat.reduceEqDiff, ite_true, ite_false, List.headD_cons, List.tail_cons, pagemodifyslot_line_8000ae70,
+        pagemodifyslot_line_8000ae74, pagemodifyslot_line_8000ae78, pagemodifyslot_line_8000ae7c] at pins
+      rw [srl_shift, slli_three _ _ rfl, word] at pins
+      exact pins
+  · unfold pageSlotBlocks; split <;> decide
+  · decide
 end OCaml.Vm.Boot.Startup
