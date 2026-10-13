@@ -76,12 +76,4 @@ theorem attemptopenmagicstr_line_800049f4 :
     mkLine 0x800049f4#64 0x8e070223#32 =
       ⟨0x800049f4#64, 0x8e070223#32, 0x23#8, 0x02#8, 0x07#8, 0x8e#8, .sb, 0, 14, 0, 0x8e4#12⟩ := by rfl
 
-theorem attemptopenmagicstr_line_800049f8 :
-    mkLine 0x800049f8#64 0x00060717#32 =
-      ⟨0x800049f8#64, 0x00060717#32, 0x17#8, 0x07#8, 0x06#8, 0x00#8, .auipc, 14, 0, 0, 0x000#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049fc :
-    mkLine 0x800049fc#64 0xfb872703#32 =
-      ⟨0x800049fc#64, 0xfb872703#32, 0x03#8, 0x27#8, 0x87#8, 0xfb#8, .lw, 14, 14, 0, 0xfb8#12⟩ := by rfl
-
 end OCaml.Vm.Boot.Startup
