@@ -241,6 +241,23 @@ theorem OutRecord.keep {m m' : Std.ExtHashMap Nat (BitVec 8)} {p fd head : BitVe
     (k 24 8 (by decide)) ▸ h.curr, (k 32 8 (by decide)) ▸ h.max, (k 48 8 (by decide)) ▸ h.next,
     (k 64 4 (by decide)) ▸ h.refcount, (k 68 4 (by decide)) ▸ h.flags⟩
 
+/-- **The returned record represents BcSem's new output channel** (`openChan`
+on a stream: `offset = -1`, empty buffer). -/
+theorem OutRecord.chanAt {c : Config} {p fd head : BitVec 64} {cfd : Int}
+    (h : OutRecord c.σ.mem p fd head) (fdInt : (fd.setWidth 32).toInt = cfd) (open_ : cfd ≠ -1)
+    (high : p.toNat + recordBytes ≤ heapEnd) (align : p.toNat % 16 = 0) :
+    OCaml.Vm.ChanAt c p.toNat ⟨cfd, true, [], [], 0, -1⟩ := by
+  have t (k : Nat) (b : k ≤ 65608) := recordAt (p := p) high b
+  have e72 : (p + 72#64).toNat = p.toNat + 72 := t 72 (by decide)
+  have eEnd : (p + (65536#64 + 72#64)).toNat = p.toNat + 65608 := by
+    rw [show (65536#64 + 72#64 : BitVec 64) = BitVec.ofNat 64 65608 from rfl]; exact t 65608 (by decide)
+  simp only [OCaml.Vm.ChanAt, OCaml.Vm.word, OCaml.Vm.word32, OCaml.Vm.chanOffFd, OCaml.Vm.chanOffOffset,
+    OCaml.Vm.chanOffCurr, OCaml.Vm.chanOffMax, OCaml.Vm.chanOffEnd, OCaml.Vm.chanOffFlags,
+    OCaml.Vm.chanOffBuff, OCaml.Vm.chanFlagUnbuffered, Chan.cursor, Chan.buffer, open_, ite_false,
+    ite_true, Nat.add_zero, List.length_nil, h.fd, h.offset, h.curr, h.max, h.bufEnd, h.flags, e72, eEnd]
+  exact ⟨fdInt, by simp, trivial, rfl, by unfold ioBufferSize; omega, by decide, by simp,
+    Nat.zero_le _, Nat.zero_le _, by omega⟩
+
 /-- `caml_ml_open_descriptor_out`'s three record stores: `max := NULL`, the
 GC flag and the reference. -/
 def outFlagsLog (p : BitVec 64) : List WEntry :=
