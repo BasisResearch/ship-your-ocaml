@@ -507,4 +507,87 @@ theorem page_record_load (c : Config) (ra page occ size ent : BitVec 64) (leaf :
     exact pins
   · decide
   · decide
+
+local macro "pmk" : tactic => `(tactic| simp only [pagemodifyshift_line_8000addc, pagemodifyshift_line_8000ade0, pagemodifyshift_line_8000ade4, pagemodifyshift_line_8000ade8, pagemodifyprobe_line_8000ae84, pagemodifyprobe_line_8000ae88, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+theorem page_shift_addr : 2147528156#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 382231#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 1764#12 = BitVec.ofNat 64 (pageTable + 8) := by decide
+
+theorem page_shift_reg (i : MInstr) (w : i.word = 382231#32) :
+    2147528156#64 + Functions.sign_extend (m := 64) (imm20Of i +++ 0#12) + Functions.sign_extend (m := 64) 1764#12 =
+      BitVec.ofNat 64 (pageTable + 8) := by
+  rw [imm20Of, w]; decide
+
+/-- Load the shift; the table is at most half full, so no resize. -/
+theorem page_shift_check (c : Config) (ra clr kind twice size : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(11, clr), (12, kind), (10, twice), (15, size)])
+    (shiftWord : read4 c.σ.mem (pageTable + 8) = [53#8, 0#8, 0#8, 0#8])
+    (room : guardB bop.BGEU twice size = false) :
+    FnSummary 0x8000addc#64 (fun d => d = c) (BoundaryPost [18, 20, 19] c ra 0x8000adf0#64
+      [(19, kind), (20, clr), (18, 53#64), (11, clr), (12, kind), (10, twice), (15, size)]) := by
+  have shiftV : bytesVal .lw (read4 c.σ.mem (pageTable + 8)) = 53#64 := by rw [shiftWord]; decide
+  apply boundary_of_blocks leaf
+    (block_summary _ _ _ _ _ (show BlockInput caml_page_table_modifyXaddcFSeg 0x8000addc#64
+        [(11, clr), (12, kind), (10, twice), (15, size)] [read4 c.σ.mem (pageTable + 8)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [11, 12, 10, 15]; decide
+      shape := by change ChainOK _ [11, 12, 10, 15] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageModifyShift_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_modify_at_"
+        · refine (show ReadWindow (BitVec.ofNat 64 (pageTable + 8)) 4 by constructor <;> decide).lw rfl ?_ (by
+            rw [show (BitVec.ofNat 64 (pageTable + 8)).toNat = pageTable + 8 by decide]; exact read4_pins _ _)
+          pmk; exact page_shift_addr
+        · pmk; exact room }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_page_table_modifyXaddcFSeg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false,
+      List.headD_cons, List.tail_cons, pagemodifyshift_line_8000addc, pagemodifyshift_line_8000ade0,
+      pagemodifyshift_line_8000ade4, pagemodifyshift_line_8000ade8] at pins
+    rw [shiftV, show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero, BitVec.add_zero] at pins
+    exact pins
+  · decide
+  · decide
+
+/-- Into the probe loop: the mask and the page size. -/
+theorem lui_page (i : MInstr) (w : i.word = 0x00001837#32) :
+    Functions.sign_extend (m := 64) (imm20Of i +++ 0#12) = 4096#64 := by
+  rw [imm20Of, w]; decide
+
+theorem page_probe_init (c : Config) (ra mask : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(9, BitVec.ofNat 64 pageTable)])
+    (maskWord : bytesT c.σ.mem (pageTable + 0x10) 8 = mask) :
+    FnSummary 0x8000ae84#64 (fun d => d = c) (BoundaryPost [17, 16] c ra 0x8000ae9c#64
+      [(16, 4096#64), (17, mask), (9, BitVec.ofNat 64 pageTable)]) := by
+  have maskV : bytesVal .ld (read8 c.σ.mem (pageTable + 0x10)) = mask := by rw [read8_value]; exact maskWord
+  apply boundary_of_blocks leaf
+    (block_summary _ _ _ _ _ (show BlockInput caml_page_table_modifyXae84Seg 0x8000ae84#64
+        [(9, BitVec.ofNat 64 pageTable)] [read8 c.σ.mem (pageTable + 0x10)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [9]; decide
+      shape := by change ChainOK _ [9] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageModifyProbe_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_modify_at_"
+        refine (show ReadWindow (BitVec.ofNat 64 (pageTable + 0x10)) 8 by constructor <;> decide).ld rfl ?_ (by
+          rw [show (BitVec.ofNat 64 (pageTable + 0x10)).toNat = pageTable + 0x10 by decide]; exact read8_pins _ _)
+        pmk; exact page_record_field 0x10 _ (by decide) (by decide) }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_page_table_modifyXae84Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false,
+      List.headD_cons, List.tail_cons, pagemodifyprobe_line_8000ae84, pagemodifyprobe_line_8000ae88] at pins
+    rw [maskV, lui_page _ rfl] at pins
+    exact pins
+  · decide
+  · decide
 end OCaml.Vm.Boot.Startup
