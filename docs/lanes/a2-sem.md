@@ -6,9 +6,9 @@
 per-program shape premises retired); DIV/MOD zero; `RaiseRuntimeFrame`;
 the represented write barrier (`BarrierF1`, `BarrierKeep`), wired into the F1
 table so `F1PremisesFor` has only the C_CALL returns left (a1-prims), plus
-the layout-level `F1GrowthPremises` (`GrowthCallState`: RAM density + GPR presence at `caml_modify`'s entry, pending the foreman's (B)/(C) and a1-arms' `LoopRegisters.gprs`; `BarrierGrowthFull`: the realloc branch); `f1_barrierGrowth` discharges the empty table's growth over a6-gc's `f1_barrierGrowth_dense`; `memmove_leaf`/`LibraryReady`.
+the layout-level `F1GrowthPremises` (`BarrierGrowthFull` only: the realloc branch; `GrowthCallState` is `growthCallState`, from `LoopRegisters.gprs`); `f1_barrierGrowth` discharges the empty table's growth over a6-gc's `f1_barrierGrowth_gprs` (newlib over `imageLive`, no RAM density); `memmove_leaf`/`LibraryReady`.
 
-**Open, owned elsewhere:** `GrowthCallState` (foreman (B)/(C), a1-arms),
+**Open, owned elsewhere:**
 `BarrierGrowthFull` (a6-gc, realloc branch); C_CALL returns (a1-prims); `libHeap`
 (a0-boot).
 
