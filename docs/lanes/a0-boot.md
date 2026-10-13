@@ -213,6 +213,14 @@ insertion is proved generically:
   * `page_slot` covers the home slot `pageHash page`, below 2048, and its
     first load.
   * `page_probe_step` is one linear-probing step past another page.
+  * `page_probe_loop` runs from the home slot to the first empty slot. It
+    uses `loopFromBody`; the measure is the probe distance to a known empty
+    slot minus the steps taken. It assumes the page is absent: every
+    occupied slot holds another page, so the same-page update never runs.
+  * `page_insert` stores `page | kind` and bumps the occupancy.
+  * The record load, shift check, probe set-up, prologue and return are
+    proved. Next: compose `caml_page_table_modify`, then
+    `caml_page_table_add`'s page loop.
 Then `caml_set_allocation_policy`, `caml_init_major_heap` (its chunk's
 pages go through the same insertion) and onward to the cut.
 

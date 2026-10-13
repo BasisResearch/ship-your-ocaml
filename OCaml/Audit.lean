@@ -2836,6 +2836,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.pageHash_lt
 #print axioms OCaml.Vm.Boot.Startup.page_slot
 #print axioms OCaml.Vm.Boot.Startup.page_probe_step
+#print axioms OCaml.Vm.Boot.Startup.page_insert
+#print axioms OCaml.Vm.Boot.Startup.page_probe_loop
+#print axioms OCaml.Vm.Boot.Startup.page_record_load
+#print axioms OCaml.Vm.Boot.Startup.page_shift_check
+#print axioms OCaml.Vm.Boot.Startup.page_probe_init
+#print axioms OCaml.Vm.Boot.Startup.page_modify_save
+#print axioms OCaml.Vm.Boot.Startup.page_modify_return
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport

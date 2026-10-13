@@ -590,4 +590,102 @@ theorem page_probe_init (c : Config) (ra mask : BitVec 64) (leaf : LeafInput ra 
     exact pins
   · decide
   · decide
+
+/-- caml_page_table_modify's saved words. -/
+def pageModifySlots (ra s0 s1 s2 s3 s4 : BitVec 64) : List (Nat × BitVec 64) :=
+  [(80, s0), (72, s1), (64, s2), (56, s3), (48, s4), (88, ra)]
+
+def pageModifyLog (sp ra s0 s1 s2 s3 s4 : BitVec 64) : List WEntry :=
+  nativeWordLog sp 96 (pageModifySlots ra s0 s1 s2 s3 s4)
+
+theorem pageModifyLog_inside {sp ra s0 s1 s2 s3 s4 : BitVec 64} (frame : NativeFrame sp 96) :
+    LogInW [⟨nativeFrameBase sp 96, sp.toNat⟩] (pageModifyLog sp ra s0 s1 s2 s3 s4) :=
+  frame.word_log_inside fun off value member => by
+    simp only [pageModifySlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member; omega
+
+/-- Prologue: save `s0`–`s4` and `ra`. -/
+theorem page_modify_save (c : Config) (sp ra s0 s1 s2 s3 s4 : BitVec 64) (leaf : LeafInput ra c)
+    (frame : NativeFrame sp 96)
+    (page : BitVec 64) (regs : GHolds c.σ [(2, sp), (8, s0), (9, s1), (18, s2), (19, s3), (20, s4), (1, ra), (10, page)]) :
+    FnSummary 0x8000ada4#64 (fun e => e = c) (WriteRegistersPost [2] (pageModifyLog sp ra s0 s1 s2 s3 s4) c
+      0x8000adc0#64 page [(2, nativeStack sp 96), (8, s0), (9, s1), (18, s2), (19, s3), (20, s4), (1, ra),
+        (10, page)]) := by
+  apply registers_of_blocks leaf.image (frame.image_outside (pageModifyLog_inside frame))
+    (block_summary _ _ _ _ _ (show BlockInput caml_page_table_modifyXada4Seg 0x8000ada4#64
+        [(2, sp), (8, s0), (9, s1), (18, s2), (19, s3), (20, s4), (1, ra), (10, page)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 8, 9, 18, 19, 20, 1, 10]; decide
+      shape := by change ChainOK _ [2, 8, 9, 18, 19, 20, 1, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageModifyEntry_code leaf.image
+        have slot (off : Nat) (bound : off + 8 ≤ 96) (aligned : off % 8 = 0) :
+            WriteWindow (nativeStack sp 96 + BitVec.ofNat 64 off) 8 := by
+          rw [nativeStack, frame.address _ (by omega)]
+          exact frame.word bound aligned
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_modify_at_"
+        · exact (slot 80 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 72 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 64 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 56 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 48 (by decide) (by decide)).sd rfl rfl
+        · exact (slot 88 (by decide) (by decide)).sd rfl rfl }))
+  · rfl
+  · rfl
+  · rfl
+  · rfl
+  · decide
+
+/-- Restore the saved registers and return 0. -/
+theorem page_modify_return (c : Config) (sp ra s0 s1 s2 s3 s4 v oldra : BitVec 64) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 96) (regs : GHolds c.σ [(2, nativeStack sp 96), (10, v)])
+    (saved : ∀ off value, (off, value) ∈ pageModifySlots ra s0 s1 s2 s3 s4 →
+      bytesT c.σ.mem (nativeFrameBase sp 96 + off) 8 = value)
+    (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x8000aec0#64 (fun e => e = c) (WriteRegistersPost [1, 8, 9, 18, 19, 20, 10, 2] [] c ra 0#64
+      [(2, sp), (10, 0#64), (20, s4), (19, s3), (18, s2), (9, s1), (8, s0), (1, ra)]) := by
+  have word (off : Nat) (value : BitVec 64) (member : (off, value) ∈ pageModifySlots ra s0 s1 s2 s3 s4) :
+      bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 96 + off)) = value := by
+    rw [read8_value]; exact saved off value member
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput caml_page_table_modifyXaec0Seg 0x8000aec0#64
+        [(2, nativeStack sp 96), (10, v)]
+        [read8 c.σ.mem (nativeFrameBase sp 96 + 88), read8 c.σ.mem (nativeFrameBase sp 96 + 80),
+          read8 c.σ.mem (nativeFrameBase sp 96 + 72), read8 c.σ.mem (nativeFrameBase sp 96 + 64),
+          read8 c.σ.mem (nativeFrameBase sp 96 + 56), read8 c.σ.mem (nativeFrameBase sp 96 + 48)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 10]; decide
+      shape := by change ChainOK _ [2, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageModifyReturn_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_modify_at_"
+        · exact (frame.read_slot (off := 88) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 80) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 72) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 64) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 56) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 48) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 96 + 88)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [word 88 ra (by simp [pageModifySlots]), ret_tgt ra aligned]
+          exact aligned }))
+  · rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 96 + 88)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [word 88 ra (by simp [pageModifySlots]), ret_tgt ra aligned]
+  · simp only [caml_page_table_modifyXaec0Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, eaddrM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false,
+      List.headD_cons, List.tail_cons, pagemodifyreturn_line_8000aec0, pagemodifyreturn_line_8000aec4, pagemodifyreturn_line_8000aec8, pagemodifyreturn_line_8000aecc, pagemodifyreturn_line_8000aed0, pagemodifyreturn_line_8000aed4, pagemodifyreturn_line_8000aed8, pagemodifyreturn_line_8000aedc]
+    rw [show Functions.sign_extend (m := 64) 96#12 = 96#64 by decide, nativeStack_restore,
+      word 48 s4 (by simp [pageModifySlots]), word 56 s3 (by simp [pageModifySlots]),
+      word 64 s2 (by simp [pageModifySlots]), word 72 s1 (by simp [pageModifySlots]),
+      word 80 s0 (by simp [pageModifySlots]), word 88 ra (by simp [pageModifySlots]),
+      show 0#64 + Functions.sign_extend (m := 64) 0#12 = 0#64 by decide]
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
