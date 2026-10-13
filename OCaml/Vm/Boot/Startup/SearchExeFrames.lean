@@ -110,6 +110,44 @@ theorem ExtTableReturned.above {H capacity sp ra s0 t n before after}
     w.allocation.call.memory, w.allocation.setup.memory,
     frameOn_writeLog _ _ _ (extTableLog_inside short) a ⟨Or.inr caller, Or.inr above, trivial⟩]
 
+/-- Table initialization keeps every byte of every live block. -/
+theorem ExtTableReturned.live_byte {H capacity sp ra s0 t n before after}
+    (w : ExtTableReturned H capacity sp ra s0 t n before after) (frame : NativeFrame sp 560)
+    (tableHigh : sp.toNat ≤ t.toNat) {e : Nat × Nat} (member : e ∈ H) {x : Nat} (inside : InExt e x)
+    (bounds : heapStart ≤ e.1 ∧ e.1 + e.2 ≤ heapEnd) :
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0 := by
+  have short := frame.resize (small := 16) (by decide) (by decide)
+  have nested : NativeFrame (nativeStack sp 16) 544 := frame.nested (front := 16) (by decide)
+  have short32 := nested.resize (small := 32) (by decide) (by decide)
+  have lower := frame.lower
+  unfold InExt at inside
+  have hx : x < heapEnd := by omega
+  have below : x < nativeFrameBase sp 16 := by unfold nativeFrameBase; omega
+  have nest := short.stack_nat
+  have below32 : x < nativeFrameBase (nativeStack sp 16) 32 := by
+    unfold nativeFrameBase at nest ⊢; omega
+  have unowned : ¬ mS H (nativeStack (nativeStack sp 16) 32) x := by
+    intro owned
+    rcases owned with scratch | heap
+    · unfold stackWin InExt allocHeadroom at scratch
+      rw [short32.stack_nat] at scratch
+      unfold nativeFrameBase at scratch below32 nest
+      omega
+    · have := allocator_payload_outside member bounds.1 heap
+      omega
+  have alloc := w.allocation.allocation.allocation.allocation.memory x unowned
+  change (w.allocation.allocation.allocated.σ.mem[x]?).getD 0 =
+    (w.allocation.allocation.allocation.atMalloc.σ.mem[x]?).getD 0 at alloc
+  rw [show after.σ.mem = w.published.σ.mem from w.post.memory, w.publication.memory,
+    writeLog_out _ _ _ (show OutL (extTablePublishLog t _) x from ⟨Or.inl (by
+      unfold Layout.off_ext_table_contents; omega), trivial⟩),
+    show w.allocated.σ.mem = w.allocation.allocation.allocated.σ.mem from w.allocation.allocation.returned.memory,
+    alloc, w.allocation.allocation.allocation.call.memory, w.allocation.allocation.allocation.setup.memory,
+    frameOn_writeLog _ _ _ (statCheckedLog_inside short32) x ⟨Or.inl below32, trivial⟩,
+    w.allocation.call.memory, w.allocation.setup.memory,
+    frameOn_writeLog _ _ _ (extTableLog_inside (t := t) short) x ⟨Or.inl below,
+      Or.inl (by show x < t.toNat; unfold nativeFrameBase at below; omega), trivial⟩]
+
 /-- Freeing the table keeps every callee-saved register except s1, which it restores from its frame. -/
 theorem ExtTableFreed.saved_gpr {H q n capacity sp ra s1 t before after k}
     (w : ExtTableFreed H q n capacity sp ra s1 t before after) (member : k ∈ abiSaved) (notS1 : k ≠ 9) :

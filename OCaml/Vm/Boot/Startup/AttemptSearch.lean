@@ -35,6 +35,8 @@ structure AttemptSearched (H : List (Nat × Nat)) (capacity : Nat) (ra s0 s1 s2 
   slots : ∀ off value, (off, value) ∈ attemptOpenSlots ra s0 s1 s2 s3 s4 →
     bytesT after.σ.mem (nativeFrameBase parameterStack 64 + off) 8 = value
   caller : CallerFrame parameterStack before after
+  /-- Every block of `H` is untouched. -/
+  live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   late : LateImage after
   run : Steps before after
 
@@ -414,6 +416,27 @@ theorem attempt_open_search (c : Config) (H : List (Nat × Nat)) (capacity charg
       search.memory, frameOn_writeLog _ _ _ (searchExeLog_inside searchFrame) a ⟨Or.inr bound, trivial⟩,
       nameCall.memory]
     rfl
+  have liveRet (e : Nat × Nat) (he : e ∈ H) (x : Nat) (inside : InExt e x) :
+      (atRet.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    obtain ⟨q, m⟩ := e
+    have bounds := ready.block_bounds (q := q) (n := m) he
+    unfold InExt at inside
+    have hx : heapStart ≤ x ∧ x < heapEnd := ⟨by omega, by omega⟩
+    have low (b : Nat) (hb : heapEnd ≤ b) : x < b := by omega
+    obtain ⟨-, -, -, tableApart⟩ := T.allocation.allocation.allocation.allocation.result.fresh.destruct
+    have apartT : ¬ InExt ((vsaReg T.allocation.allocation.allocated 10).toNat, (extTableRequest 8#64).toNat) x :=
+      fun inT => tableApart _ he x inT inside
+    rw [sameRet, tableFreed.live_byte frameFree (Nat.le_refl _) (List.mem_cons_of_mem _ he) inside apartT hx, sameE,
+      found.kept x (Or.inr (Or.inr (Or.inr ⟨q, m, List.mem_cons_of_mem _ he, bounds.1, bounds.2, inside.1,
+        inside.2⟩))) (Or.inl (low _ (by decide))),
+      show atP.σ.mem = atS.σ.mem from scall.memory, dnull.memory,
+      frameOn_writeLog _ _ _ (decomposeLog_inside frame32) x ⟨Or.inl (low _ (by decide)), trivial⟩,
+      show atDec.σ.mem = atD.σ.mem from dcall.memory, missed.memory,
+      frameOn_writeLog _ _ _ (getenvMissLog_inside frame112) x ⟨Or.inl (low _ (by decide)), trivial⟩, same,
+      T.live_byte tableFrame (Nat.le_refl _) he inside bounds, search.memory,
+      frameOn_writeLog _ _ _ (searchExeLog_inside searchFrame) x ⟨Or.inl (low _ (by decide)), trivial⟩,
+      show atSearch.σ.mem = atSaved.σ.mem from nameCall.memory, save.memory,
+      frameOn_writeLog _ _ _ (attemptOpenLog_inside attemptFrame) x ⟨Or.inl (low _ (by decide)), trivial⟩]
   refine ⟨atRet, run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans (run9.trans
     (run10.trans (run11.trans (run12.trans (run13.trans (run14.trans (run15.trans run16))))))))))))), ⟨{
       copy := found.copy
@@ -445,6 +468,7 @@ theorem attempt_open_search (c : Config) (H : List (Nat × Nat)) (capacity charg
         · simp [attemptOpenSlots]
         · exact member
       caller := aboveSaved.trans (callerA.mono (by decide))
+      live := liveRet
       late := by
         have strdup : EmbedFrame atP atF :=
           ⟨fun a ha => found.kept a (ha.strdup_kept (by decide))

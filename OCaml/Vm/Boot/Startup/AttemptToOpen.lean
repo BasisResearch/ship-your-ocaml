@@ -34,6 +34,8 @@ structure AttemptAtOpen (H : List (Nat × Nat)) (capacity : Nat) (ra s0 s1 s2 s3
   slots : ∀ off value, (off, value) ∈ attemptOpenSlots ra s0 s1 s2 s3 s4 →
     bytesT after.σ.mem (nativeFrameBase parameterStack 64 + off) 8 = value
   caller : CallerFrame parameterStack before after
+  /-- Every block of `H` is untouched. -/
+  live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   late : LateImage after
   run : Steps before after
 
@@ -159,6 +161,26 @@ theorem attempt_open_to_open {c s : Config} {H : List (Nat × Nat)} {capacity ch
     rw [← S.upper k lo hi, gpr_of_ready S.ready k (by omega) (by omega)]
     exact keepCall k (by simp [abiSaved]; omega) (by omega) (by omega) _
       (gpr_of_ready S.ready k (by omega) (by omega))
+  have liveCall (e : Nat × Nat) (he : e ∈ H) (x : Nat) (inside : InExt e x) :
+      (atCall.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    obtain ⟨q, m⟩ := e
+    have bounds := S.ready.block_bounds (q := q) (n := m) (List.mem_cons_of_mem _ he)
+    have inside' := inside
+    unfold InExt at inside'
+    have hx : heapStart ≤ x ∧ x < heapEnd := ⟨by omega, by omega⟩
+    have apart : ¬ InExt (D.copy.toNat, len + 1) x := fun inD =>
+      D.disjoint _ (List.mem_cons_of_mem _ he) _ inD inside
+    have below : x < nativeFrameBase attemptStack 80 := by
+      have : heapEnd ≤ nativeFrameBase attemptStack 80 := by decide
+      omega
+    rw [show atCall.σ.mem = atOpen.σ.mem from ocall.memory,
+      freed.live_byte frameA (List.mem_cons_of_mem _ he) inside apart hx,
+      show atStat.σ.mem = atFree.σ.mem from fcall.memory, gc.memory,
+      frameOn_writeLog _ _ _ (gcMessageLog_inside frameGc) _ ⟨Or.inl below, trivial⟩,
+      show atGc.σ.mem = atMsg.σ.mem from mcall.memory,
+      D.kept _ (Or.inr (Or.inr (Or.inr ⟨q, m, List.mem_cons_of_mem _ he, bounds.1, bounds.2, inside'.1,
+        inside'.2⟩))), sameDup]
+    exact S.live (q, m) he x inside
   refine ⟨atCall, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans run7))))), ⟨{
       copy := S.copy
       pc := ocall.pc
@@ -197,6 +219,7 @@ theorem attempt_open_to_open {c s : Config} {H : List (Nat × Nat)} {capacity ch
         rw [word_observed (m := s.σ.mem) _ (fun i _ => tail.byte _ (by rw [base64] at *; omega))]
         exact S.slots off value member
       caller := S.caller.trans (tail.mono (by decide))
+      live := liveCall
       late := (lateMsg.frame (EmbedFrame.of_memory mcall.memory)).frame
         ((EmbedFrame.stack gc.memory (gcMessageLog_inside frameGc) (by decide)).trans
           ((EmbedFrame.of_memory fcall.memory).trans ((freed.embed_frame frameA (by decide) D.fresh.1 D.fresh.2).trans
