@@ -380,6 +380,7 @@ import OCaml.Vm.Boot.Startup.ReentWrappers
 import OCaml.Vm.Boot.Startup.ReadFileSteps
 import OCaml.Vm.Boot.Startup.ReadFile
 import OCaml.Vm.Boot.Startup.StrncmpWord
+import OCaml.Vm.Boot.Startup.AttemptOkSteps
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2726,6 +2727,17 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.strncmp_bytes_equal
 #print axioms OCaml.Vm.Boot.Startup.strncmp_word_front
 #print axioms OCaml.Vm.Boot.Startup.strncmp_magic
+#print axioms OCaml.Vm.Boot.Startup.attempt_seek_call
+#print axioms OCaml.Vm.Boot.Startup.attempt_read_call
+#print axioms OCaml.Vm.Boot.Startup.attempt_swap
+#print axioms OCaml.Vm.Boot.Startup.magicPtr
+#print axioms OCaml.Vm.Boot.Startup.magicA
+#print axioms OCaml.Vm.Boot.Startup.magicB
+#print axioms OCaml.Vm.Boot.Startup.magicC
+#print axioms OCaml.Vm.Boot.Startup.magicNul
+#print axioms OCaml.Vm.Boot.Startup.attempt_quiet
+#print axioms OCaml.Vm.Boot.Startup.attempt_magic_call
+#print axioms OCaml.Vm.Boot.Startup.attempt_name_store
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport

@@ -7,8 +7,6 @@ import OCaml.Vm.Boot.Startup.AttemptOpenReadImage
 import OCaml.Vm.Boot.Startup.AttemptOpenReadCallInterface
 import OCaml.Vm.Boot.Startup.AttemptOpenTrailerNormalized
 import OCaml.Vm.Boot.Startup.AttemptOpenTrailerImage
-import OCaml.Vm.Boot.Startup.AttemptOpenQuietNormalized
-import OCaml.Vm.Boot.Startup.AttemptOpenQuietImage
 import OCaml.Vm.Boot.Startup.AttemptOpenMagicPtrNormalized
 import OCaml.Vm.Boot.Startup.AttemptOpenMagicPtrImage
 import OCaml.Vm.Boot.Startup.AttemptOpenMagicStrNormalized
@@ -19,6 +17,11 @@ import OCaml.Vm.Boot.Startup.AttemptOpenMagicEndNormalized
 import OCaml.Vm.Boot.Startup.AttemptOpenMagicEndImage
 import OCaml.Vm.Boot.Startup.AttemptOpenMagicNulNormalized
 import OCaml.Vm.Boot.Startup.AttemptOpenMagicNulImage
+import OCaml.Vm.Boot.Startup.AttemptOpenQuietNormalized
+import OCaml.Vm.Boot.Startup.AttemptOpenQuietImage
+import OCaml.Vm.Boot.Startup.AttemptOpenMagicNormalized
+import OCaml.Vm.Boot.Startup.AttemptOpenMagicImage
+import OCaml.Vm.Boot.Startup.AttemptOpenMagicCallInterface
 import OCaml.Vm.Boot.Startup.LseekFileSteps
 import OCaml.Vm.Boot.Startup.SearchTableReset
 namespace OCaml.Vm.Boot.Startup
@@ -499,6 +502,110 @@ theorem magicNul (c : Config) (ra : BitVec 64) (T : Nat → BitVec 8) (leaf : Le
   · simp only [caml_attempt_openX49f0Seg, evalBlocks, evalBlock, SegEvalState.init]
     msk
     rw [magic_nul_auipc]
+  · rfl
+  · decide
+
+local macro "qsk" : tactic => `(tactic| simp only [attemptopenquiet_line_800049f8, attemptopenquiet_line_800049fc, attemptopenmagic_line_80004a04, attemptopenmagic_line_80004a08, attemptopenmagic_line_80004a0c, attemptopenmagic_line_80004a18, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+open Sail in
+theorem print_magic_auipc : 2147502584#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 393495#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 4024#12 = BitVec.ofNat 64 Layout.sym_print_magic := by decide
+
+/-- `print_magic` is clear: on to the magic test. -/
+theorem attempt_quiet (c : Config) (ra a0 : BitVec 64) (leaf : LeafInput ra c) (regs : GHolds c.σ [(10, a0)])
+    (quiet : read4 c.σ.mem Layout.sym_print_magic = [0#8, 0#8, 0#8, 0#8]) :
+    FnSummary 0x800049f8#64 (fun d => d = c) (WriteRegistersPost [14] [] c 0x80004a04#64 a0 [(14, 0#64), (10, a0)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput caml_attempt_openX49f8FSeg 0x800049f8#64 [(10, a0)]
+        [read4 c.σ.mem Layout.sym_print_magic] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10]; decide
+      shape := by change ChainOK _ [10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := attemptOpenQuiet_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_attempt_open_at_"
+        · exact (show ReadWindow (BitVec.ofNat 64 Layout.sym_print_magic) 4 by constructor <;> decide).lw rfl
+            (by qsk; exact print_magic_auipc) (read4_pins _ _)
+        · change guardB bop.BNE (bytesVal .lw (read4 c.σ.mem Layout.sym_print_magic)) 0#64 = false
+          rw [quiet]; decide }))
+  · rfl
+  · rfl
+  · simp only [caml_attempt_openX49f8FSeg, evalBlocks, evalBlock, SegEvalState.init]
+    qsk
+    rw [quiet]
+    simp only [List.cons.injEq, Prod.mk.injEq, and_true, true_and]
+    decide
+  · rfl
+  · decide
+
+open Sail in
+theorem exec_magic_auipc : 2147502600#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 333207#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 3560#12 = 0x800557f0#64 := by decide
+
+/-- `strncmp(trail + 4, EXEC_MAGIC, 12)`. -/
+theorem attempt_magic_front (c : Config) (ra p : BitVec 64) (leaf : LeafInput ra c) (regs : GHolds c.σ [(10, p)]) :
+    FnSummary 0x80004a04#64 (fun d => d = c)
+      (WriteRegistersPost [12, 11] [] c jal_80004a10_call.pc p [(11, 0x800557f0#64), (12, 12#64), (10, p)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput caml_attempt_openX4a04Seg 0x80004a04#64 [(10, p)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10]; decide
+      shape := by change ChainOK _ [10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := attemptOpenMagic_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_attempt_open_at_" }))
+  · rfl
+  · rfl
+  · simp only [caml_attempt_openX4a04Seg, evalBlocks, evalBlock, SegEvalState.init]
+    qsk
+    rw [exec_magic_auipc, show 0#64 + Functions.sign_extend (m := 64) 12#12 = 12#64 by decide]
+  · rfl
+  · decide
+
+theorem attempt_magic_call (c : Config) (ra p : BitVec 64) (leaf : LeafInput ra c) (regs : GHolds c.σ [(10, p)]) :
+    FnSummary 0x80004a04#64 (fun d => d = c)
+      (WriteRegistersPost ([12, 11] ++ [1]) [] c jal_80004a10_call.target p
+        ((1, jal_80004a10_call.link) :: [(11, 0x800557f0#64), (12, 12#64), (10, p)])) :=
+  block_then_call c jal_80004a10_call_shape jal_80004a10_call_decode (fun _ h => jal_80004a10_call_pins h)
+    (attempt_magic_front c ra p leaf regs) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+/-- The magic matched: `*name = truename`. -/
+theorem attempt_name_store (c : Config) (ra name : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, 0#64), (18, name), (19, WhileMinElfParse.exeNameSlot)]) :
+    FnSummary 0x80004a14#64 (fun d => d = c)
+      (WriteRegistersPost [] [(WhileMinElfParse.exeNameSlot.toNat, 8, name)] c 0x80004a1c#64 0#64
+        [(10, 0#64), (18, name), (19, WhileMinElfParse.exeNameSlot)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> simp only [OutLRange] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput (caml_attempt_openX4a14FSeg ++ caml_attempt_openX4a18Seg) 0x80004a14#64
+        [(10, 0#64), (18, name), (19, WhileMinElfParse.exeNameSlot)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 18, 19]; decide
+      shape := by change ChainOK _ [10, 18, 19] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := attemptOpenMagic_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_attempt_open_at_"
+        · qsk; decide
+        · exact (show WriteWindow WhileMinElfParse.exeNameSlot 8 by constructor <;> decide).sd rfl
+            (by qsk; rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]) }))
+  · simp only [caml_attempt_openX4a14FSeg, caml_attempt_openX4a18Seg, evalBlocks, evalBlock, SegEvalState.init,
+      List.cons_append, List.nil_append]
+    qsk
+    simp only [wlogM, wentryM, widthOfM]
+    qsk
+    rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]
+    rfl
+  · rfl
+  · rfl
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup

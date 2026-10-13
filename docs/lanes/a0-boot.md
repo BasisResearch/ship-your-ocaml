@@ -122,9 +122,18 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   `trailerSource` = 0x8680252c) in `buf`, through `memcpy_window`, and
   advances the position to 0x24ac.
 
-Next: caml_attempt_open's trailer path. Compose `lseek_file` and `read_file`
-at its call sites, then the byte swaps into `magicstr`, the `print_magic` test,
-`strncmp` against the exec magic, and the return of descriptor 3.
+* caml_attempt_open's success steps (AttemptOkSteps.lean): the `lseek` and
+  `read` call sites, the trailer's byte swap (`attempt_swap`), the copy into
+  `magicstr` (`magicPtr`/`A`/`B`/`C`/`Nul`, one summary per `auipc` so the
+  stores' addresses stay shallow for the kernel), the `print_magic` test,
+  the `strncmp` call and `*name = truename`. `strncmp(trail + 4, ...)` is
+  unaligned, so `strncmp_equal` applies. `strncmp_magic` (StrncmpWord.lean)
+  covers the aligned word path.
+
+Next: generate the embedded file's trailer bytes (initialMem at
+`trailerSource`), compose the success path from `ResetProgOpened` to
+caml_attempt_open's return of descriptor 3, then caml_main's
+`read_section_descriptors`.
 
 ## Round 2 status (2026-10-06, search)
 
