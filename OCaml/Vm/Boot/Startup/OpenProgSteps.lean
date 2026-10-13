@@ -20,6 +20,10 @@ import OCaml.Vm.Boot.Startup.HtifOpenNodeNormalized
 import OCaml.Vm.Boot.Startup.HtifOpenNodeImage
 import OCaml.Vm.Boot.Startup.HtifOpenStoreNormalized
 import OCaml.Vm.Boot.Startup.HtifOpenStoreImage
+import OCaml.Vm.Boot.Startup.HtifOpenStoresNormalized
+import OCaml.Vm.Boot.Startup.HtifOpenStoresImage
+import OCaml.Vm.Boot.Startup.HtifOpenRestoreNormalized
+import OCaml.Vm.Boot.Startup.HtifOpenRestoreImage
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives LeanRV64DExecutable
 
@@ -128,6 +132,78 @@ theorem htif_open_slot_busy (c : Config) (ra a0 : BitVec 64) (i : Nat) (k : List
       eraseG, wvalM, wentryM, widthOfM, List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true,
       ite_false, List.cons_append, List.nil_append]
     rw [addiw_one i (by omega), fdSlot_next]
+  · rfl
+  · decide
+
+/-- `opens + 1` as `addiw` computes it. -/
+def opensNext (w : List (BitVec 8)) : BitVec 64 :=
+  Functions.sign_extend (m := 64) (Sail.BitVec.extractLsb (bytesVal .lw w + Functions.sign_extend (m := 64) 1#12) 31 0)
+
+/-- Descriptor 3 is free: select `r.node` and read its open count. -/
+theorem htif_open_take (c : Config) (sp ra a0 : BitVec 64) (opens : List (BitVec 8)) (leaf : LeafInput ra c)
+    (frame : NativeFrame sp 80)
+    (regs : GHolds c.σ [(14, fdSlot 3), (9, 3#64), (12, 32#64), (10, a0), (11, 1#64),
+      (2, nativeStack sp 80), (8, 0#64), (18, BitVec.ofNat 64 Layout.sym_fds)])
+    (free : read4 c.σ.mem (Layout.sym_fds + 24 * 3) = [0#8, 0#8, 0#8, 0#8])
+    (dir : List (BitVec 8)) (dirWord : read4 c.σ.mem (resAt sp 4) = dir)
+    (node : read4 c.σ.mem (resAt sp 8) = [1#8, 0#8, 0#8, 0#8])
+    (opensWord : read4 c.σ.mem (Layout.sym_files + 56 + 48) = opens) :
+    FnSummary 0x80000980#64 (fun e => e = c)
+      (WriteRegistersPost [13, 14, 10, 12, 11] [] c 0x800009dc#64 1#64
+        [(11, 4#64), (12, opensNext opens), (14, BitVec.ofNat 64 (Layout.sym_fds + 72)),
+          (13, BitVec.ofNat 64 (Layout.sym_files + 56)), (10, 1#64), (9, 3#64), (2, nativeStack sp 80), (8, 0#64),
+          (18, BitVec.ofNat 64 Layout.sym_fds)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (openX0980FSeg ++ openX098cFSeg ++ openX0994FSeg ++ openX099cSeg ++
+        openX09a0FSeg ++ openX09a8Seg) 0x80000980#64
+        [(14, fdSlot 3), (9, 3#64), (12, 32#64), (10, a0), (11, 1#64), (2, nativeStack sp 80), (8, 0#64),
+          (18, BitVec.ofNat 64 Layout.sym_fds)]
+        [[0#8, 0#8, 0#8, 0#8], dir, [1#8, 0#8, 0#8, 0#8], opens] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [14, 9, 12, 10, 11, 2, 8, 18]; decide
+      shape := by change ChainOK _ [14, 9, 12, 10, 11, 2, 8, 18] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := htifOpenSlot_code leaf.image
+        have word (off : Nat) (bound : off + 4 ≤ 80) (aligned : off % 4 = 0) :
+            ReadWindow (nativeStack sp 80 + BitVec.ofNat 64 off) 4 := by
+          have w : WriteWindow (nativeStack sp 80 + BitVec.ofNat 64 off) 4 := by
+            rw [nativeStack, frame.address _ (by omega)]
+            exact frame.word32 bound aligned
+          exact w.read
+        have opensWin : ReadWindow (BitVec.ofNat 64 (Layout.sym_files + 56 + 48)) 4 := by constructor <;> decide
+        have opensNat : (BitVec.ofNat 64 (Layout.sym_files + 56 + 48)).toNat = Layout.sym_files + 56 + 48 := by decide
+        chain_facts code with "Vsa.Sim.Code._open_at_"
+        · exact (fdSlot_window (i := 3) (by decide)).lw rfl (BitVec.add_zero _)
+            (by rw [fdSlot_nat (i := 3) (by decide), ← free]; exact read4_pins _ _)
+        · change guardB bop.BNE (bytesVal .lw [0#8, 0#8, 0#8, 0#8]) 0#64 = false
+          decide
+        · refine memFacts_writeLog ((word 4 (by decide) (by decide)).lw rfl rfl
+            (by rw [← dirWord]; exact read4_pins _ _)) (fun _ => by simp only [htifopenslot_line_80000980, htifopenslot_line_80000984, htifopennode_line_8000098c, htifopennode_line_80000994, htifopennode_line_8000099c, htifopennode_line_800009a0, htifopenstore_line_800009a8, htifopenstore_line_800009ac, htifopenstore_line_800009b0, htifopenstore_line_800009b4, htifopenstore_line_800009b8, htifopenstore_line_800009bc, htifopenstore_line_800009c0, htifopenstore_line_800009c4, htifopenstore_line_800009c8, htifopenstore_line_800009cc, htifopenstore_line_800009d0, htifopenstore_line_800009d4, htifopenstore_line_800009d8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of]; simp only [wlogM]; trivial)
+        · change guardB bop.BEQ 1#64 0#64 = false
+          decide
+        · simp only [htifopenslot_line_80000980, htifopenslot_line_80000984, htifopennode_line_8000098c, htifopennode_line_80000994, htifopennode_line_8000099c, htifopennode_line_800009a0, htifopenstore_line_800009a8, htifopenstore_line_800009ac, htifopenstore_line_800009b0, htifopenstore_line_800009b4, htifopenstore_line_800009b8, htifopenstore_line_800009bc, htifopenstore_line_800009c0, htifopenstore_line_800009c4, htifopenstore_line_800009c8, htifopenstore_line_800009cc, htifopenstore_line_800009d0, htifopenstore_line_800009d4, htifopenstore_line_800009d8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of]
+          decide
+        · refine memFacts_writeLog ((word 8 (by decide) (by decide)).lw rfl rfl
+            (by rw [← node]; exact read4_pins _ _)) (fun _ => by simp only [htifopenslot_line_80000980, htifopenslot_line_80000984, htifopennode_line_8000098c, htifopennode_line_80000994, htifopennode_line_8000099c, htifopennode_line_800009a0, htifopenstore_line_800009a8, htifopenstore_line_800009ac, htifopenstore_line_800009b0, htifopenstore_line_800009b4, htifopenstore_line_800009b8, htifopenstore_line_800009bc, htifopenstore_line_800009c0, htifopenstore_line_800009c4, htifopenstore_line_800009c8, htifopenstore_line_800009cc, htifopenstore_line_800009d0, htifopenstore_line_800009d4, htifopenstore_line_800009d8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of]; simp only [wlogM]; trivial)
+        · simp only [htifopenslot_line_80000980, htifopenslot_line_80000984, htifopennode_line_8000098c, htifopennode_line_80000994, htifopennode_line_8000099c, htifopennode_line_800009a0, htifopenstore_line_800009a8, htifopenstore_line_800009ac, htifopenstore_line_800009b0, htifopenstore_line_800009b4, htifopenstore_line_800009b8, htifopenstore_line_800009bc, htifopenstore_line_800009c0, htifopenstore_line_800009c4, htifopenstore_line_800009c8, htifopenstore_line_800009cc, htifopenstore_line_800009d0, htifopenstore_line_800009d4, htifopenstore_line_800009d8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of]
+          decide
+        · refine memFacts_writeLog (opensWin.lw rfl ?_ ?_) (fun _ => ?_)
+          · simp only [ldsRunM, stepLdsM, List.headD_cons, List.tail_cons, htifopenslot_line_80000980, htifopenslot_line_80000984, htifopennode_line_8000098c, htifopennode_line_80000994, htifopennode_line_8000099c, htifopennode_line_800009a0, htifopenstore_line_800009a8, htifopenstore_line_800009ac, htifopenstore_line_800009b0, htifopenstore_line_800009b4, htifopenstore_line_800009b8, htifopenstore_line_800009bc, htifopenstore_line_800009c0, htifopenstore_line_800009c4, htifopenstore_line_800009c8, htifopenstore_line_800009cc, htifopenstore_line_800009d0, htifopenstore_line_800009d4, htifopenstore_line_800009d8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of]
+            decide
+          · rw [opensNat, ← opensWord]; exact read4_pins _ _
+          · simp only [htifopenslot_line_80000980, htifopenslot_line_80000984, htifopennode_line_8000098c, htifopennode_line_80000994, htifopennode_line_8000099c, htifopennode_line_800009a0, htifopenstore_line_800009a8, htifopenstore_line_800009ac, htifopenstore_line_800009b0, htifopenstore_line_800009b4, htifopenstore_line_800009b8, htifopenstore_line_800009bc, htifopenstore_line_800009c0, htifopenstore_line_800009c4, htifopenstore_line_800009c8, htifopenstore_line_800009cc, htifopenstore_line_800009d0, htifopenstore_line_800009d4, htifopenstore_line_800009d8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of]; simp only [wlogM]; trivial
+        }))
+  · rfl
+  · rfl
+  · simp only [openX0980FSeg, openX098cFSeg, openX0994FSeg, openX099cSeg, openX09a0FSeg, openX09a8Seg, evalBlocks,
+      evalBlock, SegEvalState.init, htifopenslot_line_80000980, htifopenslot_line_80000984, htifopennode_line_8000098c, htifopennode_line_80000994, htifopennode_line_8000099c, htifopennode_line_800009a0, htifopenstore_line_800009a8, htifopenstore_line_800009ac, htifopenstore_line_800009b0, htifopenstore_line_800009b4, htifopenstore_line_800009b8, htifopenstore_line_800009bc, htifopenstore_line_800009c0, htifopenstore_line_800009c4, htifopenstore_line_800009c8, htifopenstore_line_800009cc, htifopenstore_line_800009d0, htifopenstore_line_800009d4, htifopenstore_line_800009d8, runGM, ldsRunM, wlogM, stepGM, stepLdsM, srcVal, lookupG, eraseG, wvalM,
+      wentryM, widthOfM, List.headD_cons, List.tail_cons, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false,
+      imm20Of, List.cons_append, List.nil_append]
+    simp only [List.cons.injEq, Prod.mk.injEq, and_true, true_and]
+    exact ⟨by decide, rfl, by decide, by decide, by decide⟩
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup

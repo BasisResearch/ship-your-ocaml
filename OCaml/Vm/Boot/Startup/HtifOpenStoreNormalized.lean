@@ -56,28 +56,4 @@ theorem htifopenstore_line_800009d8 :
     mkLine 0x800009d8#64 0x00400593#32 =
       ⟨0x800009d8#64, 0x00400593#32, 0x93#8, 0x05#8, 0x40#8, 0x00#8, .addi, 11, 0, 0, 0x004#12⟩ := by rfl
 
-theorem htifopenstore_line_800009dc :
-    mkLine 0x800009dc#64 0x02c6a823#32 =
-      ⟨0x800009dc#64, 0x02c6a823#32, 0x23#8, 0xa8#8, 0xc6#8, 0x02#8, .sw, 0, 13, 12, 0x030#12⟩ := by rfl
-
-theorem htifopenstore_line_800009e0 :
-    mkLine 0x800009e0#64 0x00a72223#32 =
-      ⟨0x800009e0#64, 0x00a72223#32, 0x23#8, 0x22#8, 0xa7#8, 0x00#8, .sw, 0, 14, 10, 0x004#12⟩ := by rfl
-
-theorem htifopenstore_line_800009e4 :
-    mkLine 0x800009e4#64 0x00073423#32 =
-      ⟨0x800009e4#64, 0x00073423#32, 0x23#8, 0x34#8, 0x07#8, 0x00#8, .sd, 0, 14, 0, 0x008#12⟩ := by rfl
-
-theorem htifopenstore_line_800009e8 :
-    mkLine 0x800009e8#64 0x00872823#32 =
-      ⟨0x800009e8#64, 0x00872823#32, 0x23#8, 0x28#8, 0x87#8, 0x00#8, .sw, 0, 14, 8, 0x010#12⟩ := by rfl
-
-theorem htifopenstore_line_800009ec :
-    mkLine 0x800009ec#64 0x00b72023#32 =
-      ⟨0x800009ec#64, 0x00b72023#32, 0x23#8, 0x20#8, 0xb7#8, 0x00#8, .sw, 0, 14, 11, 0x000#12⟩ := by rfl
-
-theorem htifopenstore_line_800009f0 :
-    mkLine 0x800009f0#64 0x04013403#32 =
-      ⟨0x800009f0#64, 0x04013403#32, 0x03#8, 0x34#8, 0x01#8, 0x04#8, .ld, 8, 2, 0, 0x040#12⟩ := by rfl
-
 end OCaml.Vm.Boot.Startup
