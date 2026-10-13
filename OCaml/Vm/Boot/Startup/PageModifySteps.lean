@@ -4,6 +4,16 @@ import OCaml.Vm.Boot.Startup.PageModifyHashTailNormalized
 import OCaml.Vm.Boot.Startup.PageModifyHashTailImage
 import OCaml.Vm.Boot.Startup.PageModifySlotNormalized
 import OCaml.Vm.Boot.Startup.PageModifySlotImage
+import OCaml.Vm.Boot.Startup.PageModifyReturnNormalized
+import OCaml.Vm.Boot.Startup.PageModifyReturnImage
+import OCaml.Vm.Boot.Startup.PageModifyEntryNormalized
+import OCaml.Vm.Boot.Startup.PageModifyEntryImage
+import OCaml.Vm.Boot.Startup.PageModifyProbeNormalized
+import OCaml.Vm.Boot.Startup.PageModifyProbeImage
+import OCaml.Vm.Boot.Startup.PageModifyShiftNormalized
+import OCaml.Vm.Boot.Startup.PageModifyShiftImage
+import OCaml.Vm.Boot.Startup.PageModifyLoadNormalized
+import OCaml.Vm.Boot.Startup.PageModifyLoadImage
 import OCaml.Vm.Boot.Startup.PageModifyUpdateNormalized
 import OCaml.Vm.Boot.Startup.PageModifyUpdateImage
 import OCaml.Vm.Boot.Startup.PageModifyInsertNormalized
@@ -108,6 +118,12 @@ theorem srl_shift (x : BitVec 64) : Sail.shift_bits_right x (Sail.BitVec.extract
 
 theorem slli_three (x : BitVec 64) (a : MInstr) (imm : a.imm = 3#12) :
     Sail.shift_bits_left x (Sail.BitVec.extractLsb (shamtOf a) 5 0) = x <<< 3 := by
+  rw [shamtOf, imm]
+  simp only [Sail.shift_bits_left, BitVec.shiftLeft_eq']
+  rfl
+
+theorem slli_one (x : BitVec 64) (a : MInstr) (imm : a.imm = 1#12) :
+    Sail.shift_bits_left x (Sail.BitVec.extractLsb (shamtOf a) 5 0) = x <<< 1 := by
   rw [shamtOf, imm]
   simp only [Sail.shift_bits_left, BitVec.shiftLeft_eq']
   rfl
@@ -423,4 +439,72 @@ theorem page_probe_loop (start : Config) (ra page ent : BitVec 64) (h₀ e : Nat
   rcases inv with ⟨j, P'⟩ | ⟨slot, steps, F⟩
   · exact absurd P'.post.pc notHead
   · exact ⟨f, slot, steps, run, F⟩
+
+local macro "plk2" : tactic => `(tactic| simp only [pagemodifyload_line_8000adc0, pagemodifyload_line_8000adc4, pagemodifyload_line_8000adc8, pagemodifyload_line_8000adcc, pagemodifyload_line_8000add0, pagemodifyload_line_8000add4, pagemodifyload_line_8000add8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+theorem page_record_base (i : MInstr) (w : i.word = 382103#32) :
+    2147528128#64 + Functions.sign_extend (m := 64) (imm20Of i +++ 0#12) + Functions.sign_extend (m := 64) 1784#12 =
+      BitVec.ofNat 64 pageTable := by
+  rw [imm20Of, w]; decide
+
+theorem page_record_base' : 2147528128#64 + Functions.sign_extend (m := 64) (BitVec.extractLsb' 12 20 382103#32 +++ 0#12) +
+    Functions.sign_extend (m := 64) 1784#12 = BitVec.ofNat 64 pageTable := by decide
+
+theorem page_record_field (off : Nat) (imm : BitVec 12) (h : Functions.sign_extend (m := 64) imm = BitVec.ofNat 64 off)
+    (small : pageTable + off < 2 ^ 64) :
+    BitVec.ofNat 64 pageTable + Functions.sign_extend (m := 64) imm = BitVec.ofNat 64 (pageTable + off) := by
+  rw [h, ← BitVec.ofNat_add]
+
+/-- Load the record: occupancy, size and entries; `a0 = 2 * occupancy`. -/
+theorem page_record_load (c : Config) (ra page occ size ent : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, page)])
+    (occWord : bytesT c.σ.mem (pageTable + 0x18) 8 = occ) (sizeWord : bytesT c.σ.mem (pageTable + 0) 8 = size)
+    (entWord : bytesT c.σ.mem (pageTable + 0x20) 8 = ent) :
+    FnSummary 0x8000adc0#64 (fun d => d = c) (BoundaryPost [9, 14, 15, 8, 10, 13] c ra 0x8000addc#64
+      [(13, ent), (10, occ <<< 1), (8, page), (15, size), (14, occ), (9, BitVec.ofNat 64 pageTable)]) := by
+  have base (i : MInstr) (w : i.word = 382103#32) := page_record_base i w
+  have occW : bytesVal .ld (read8 c.σ.mem (pageTable + 0x18)) = occ := by rw [read8_value]; exact occWord
+  have sizeW : bytesVal .ld (read8 c.σ.mem (pageTable + 0)) = size := by rw [read8_value]; exact sizeWord
+  have entW : bytesVal .ld (read8 c.σ.mem (pageTable + 0x20)) = ent := by rw [read8_value]; exact entWord
+  have field (off : Nat) (hoff : off ≤ 0x20) (aligned : off % 8 = 0) :
+      ReadWindow (BitVec.ofNat 64 (pageTable + off)) 8 := by
+    constructor <;> rw [BitVec.toNat_ofNat] <;> simp only [pageTable, Layout.sym_caml_page_table, Layout.sym_tohost] <;>
+      omega
+  have pin (off : Nat) (hoff : off ≤ 0x20) :
+      LPins8 c.σ.mem (BitVec.ofNat 64 (pageTable + off)).toNat (read8 c.σ.mem (pageTable + off)) := by
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by simp only [pageTable, Layout.sym_caml_page_table]; omega)]
+    exact read8_pins _ _
+  apply boundary_of_blocks leaf
+    (block_summary _ _ _ _ _ (show BlockInput caml_page_table_modifyXadc0Seg 0x8000adc0#64 [(10, page)]
+        [read8 c.σ.mem (pageTable + 0x18), read8 c.σ.mem (pageTable + 0), read8 c.σ.mem (pageTable + 0x20)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10]; decide
+      shape := by change ChainOK _ [10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageModifyLoad_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_modify_at_"
+        · refine (field 0x18 (by decide) (by decide)).ld rfl ?_ (pin 0x18 (by decide))
+          plk2; rw [page_record_base']; exact page_record_field 0x18 _ (by decide) (by decide)
+        · refine memFacts_stepMem_skip rfl ?_
+          refine (field 0 (by decide) (by decide)).ld rfl ?_ (pin 0 (by decide))
+          plk2; rw [page_record_base']; exact page_record_field 0 _ (by decide) (by decide)
+        · repeat refine memFacts_stepMem_skip rfl ?_
+          refine (field 0x20 (by decide) (by decide)).ld rfl ?_ (pin 0x20 (by decide))
+          plk2; rw [page_record_base']; exact page_record_field 0x20 _ (by decide) (by decide) }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_page_table_modifyXadc0Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false,
+      List.headD_cons, List.tail_cons, pagemodifyload_line_8000adc0, pagemodifyload_line_8000adc4,
+      pagemodifyload_line_8000adc8, pagemodifyload_line_8000adcc, pagemodifyload_line_8000add0,
+      pagemodifyload_line_8000add4, pagemodifyload_line_8000add8] at pins
+    rw [base _ rfl, occW, sizeW, entW, slli_one _ _ rfl, show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide,
+      BitVec.add_zero] at pins
+    exact pins
+  · decide
+  · decide
 end OCaml.Vm.Boot.Startup
