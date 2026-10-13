@@ -4,14 +4,6 @@ import OCaml.Vm.Boot.Startup.AttemptOpenMagicStrRows
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Sim
 
-theorem attemptopenmagicstr_line_800049b0 :
-    mkLine 0x800049b0#64 0x00062797#32 =
-      ⟨0x800049b0#64, 0x00062797#32, 0x97#8, 0x27#8, 0x06#8, 0x00#8, .auipc, 15, 0, 0, 0x000#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049b4 :
-    mkLine 0x800049b4#64 0x91878793#32 =
-      ⟨0x800049b4#64, 0x91878793#32, 0x93#8, 0x87#8, 0x87#8, 0x91#8, .addi, 15, 15, 0, 0x918#12⟩ := by rfl
-
 theorem attemptopenmagicstr_line_800049b8 :
     mkLine 0x800049b8#64 0x00a78323#32 =
       ⟨0x800049b8#64, 0x00a78323#32, 0x23#8, 0x83#8, 0xa7#8, 0x00#8, .sb, 0, 15, 10, 0x006#12⟩ := by rfl
@@ -27,53 +19,5 @@ theorem attemptopenmagicstr_line_800049c0 :
 theorem attemptopenmagicstr_line_800049c4 :
     mkLine 0x800049c4#64 0x01c78123#32 =
       ⟨0x800049c4#64, 0x01c78123#32, 0x23#8, 0x81#8, 0xc7#8, 0x01#8, .sb, 0, 15, 28, 0x002#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049c8 :
-    mkLine 0x800049c8#64 0x006781a3#32 =
-      ⟨0x800049c8#64, 0x006781a3#32, 0xa3#8, 0x81#8, 0x67#8, 0x00#8, .sb, 0, 15, 6, 0x003#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049cc :
-    mkLine 0x800049cc#64 0x01178223#32 =
-      ⟨0x800049cc#64, 0x01178223#32, 0x23#8, 0x82#8, 0x17#8, 0x01#8, .sb, 0, 15, 17, 0x004#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049d0 :
-    mkLine 0x800049d0#64 0x010782a3#32 =
-      ⟨0x800049d0#64, 0x010782a3#32, 0xa3#8, 0x82#8, 0x07#8, 0x01#8, .sb, 0, 15, 16, 0x005#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049d4 :
-    mkLine 0x800049d4#64 0x00b783a3#32 =
-      ⟨0x800049d4#64, 0x00b783a3#32, 0xa3#8, 0x83#8, 0xb7#8, 0x00#8, .sb, 0, 15, 11, 0x007#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049d8 :
-    mkLine 0x800049d8#64 0x00c78423#32 =
-      ⟨0x800049d8#64, 0x00c78423#32, 0x23#8, 0x84#8, 0xc7#8, 0x00#8, .sb, 0, 15, 12, 0x008#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049dc :
-    mkLine 0x800049dc#64 0x00d784a3#32 =
-      ⟨0x800049dc#64, 0x00d784a3#32, 0xa3#8, 0x84#8, 0xd7#8, 0x00#8, .sb, 0, 15, 13, 0x009#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049e0 :
-    mkLine 0x800049e0#64 0x00e78523#32 =
-      ⟨0x800049e0#64, 0x00e78523#32, 0x23#8, 0x85#8, 0xe7#8, 0x00#8, .sb, 0, 15, 14, 0x00a#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049e4 :
-    mkLine 0x800049e4#64 0x00f44703#32 =
-      ⟨0x800049e4#64, 0x00f44703#32, 0x03#8, 0x47#8, 0xf4#8, 0x00#8, .lbu, 14, 8, 0, 0x00f#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049e8 :
-    mkLine 0x800049e8#64 0x00440513#32 =
-      ⟨0x800049e8#64, 0x00440513#32, 0x13#8, 0x05#8, 0x44#8, 0x00#8, .addi, 10, 8, 0, 0x004#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049ec :
-    mkLine 0x800049ec#64 0x00e785a3#32 =
-      ⟨0x800049ec#64, 0x00e785a3#32, 0xa3#8, 0x85#8, 0xe7#8, 0x00#8, .sb, 0, 15, 14, 0x00b#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049f0 :
-    mkLine 0x800049f0#64 0x00062717#32 =
-      ⟨0x800049f0#64, 0x00062717#32, 0x17#8, 0x27#8, 0x06#8, 0x00#8, .auipc, 14, 0, 0, 0x000#12⟩ := by rfl
-
-theorem attemptopenmagicstr_line_800049f4 :
-    mkLine 0x800049f4#64 0x8e070223#32 =
-      ⟨0x800049f4#64, 0x8e070223#32, 0x23#8, 0x02#8, 0x07#8, 0x8e#8, .sb, 0, 14, 0, 0x8e4#12⟩ := by rfl
 
 end OCaml.Vm.Boot.Startup
