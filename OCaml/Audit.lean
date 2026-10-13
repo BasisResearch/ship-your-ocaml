@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.OldifySlot
 import OCaml.Vm.Gc.OldifyImmediate
 import OCaml.Vm.Gc.NonYoungCall
 import OCaml.Vm.Gc.OldifyReturned
@@ -658,6 +659,10 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.OldifyEntry.carried_after_reject
 #print axioms OCaml.Vm.Gc.NonYoung.call
 #print axioms OCaml.Vm.Gc.OldifyImmediate.call
+#print axioms OCaml.Vm.Gc.SlotDone.of_identity
+#print axioms OCaml.Vm.Gc.OldifyImmediate.slot
+#print axioms OCaml.Vm.Gc.NonYoung.slot
+#print axioms OCaml.Vm.Gc.ForwardedCall.slot
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_access
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_regs
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_log

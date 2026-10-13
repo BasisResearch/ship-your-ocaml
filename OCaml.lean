@@ -149,6 +149,7 @@ import OCaml.Vm.Gc.ImageLibrary
 import OCaml.Vm.Gc.OldifyReturned
 import OCaml.Vm.Gc.NonYoungCall
 import OCaml.Vm.Gc.OldifyImmediate
+import OCaml.Vm.Gc.OldifySlot
 import OCaml.Vm.Primitives.Constants
 import OCaml.Vm.Primitives.RuntimeFrame
 

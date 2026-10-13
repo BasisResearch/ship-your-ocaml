@@ -48,7 +48,21 @@
   stack loop filters through `Oldify`.
 - G2: `OldifyImmediate.call`, the whole call on an odd value (blocks
   `0x80009a70` taken + `0x80009b80`), as `OldifyReturned` plus the root value.
-- Next (G2): the slot-level oldify spec and route dispatcher, then the
+- `CustomMemCall` (bprime's obligation for `caml_alloc_custom_mem` in
+  `caml_ml_open_descriptor_out`): at the cut `custom_table` is unallocated, so
+  the first open mallocs 792576 bytes through `realloc_generic_table` (the
+  remembered set's growth function, element size 24); each open adds
+  57424/297968 ≈ 0.193 to `caml_extra_heap_resources`, so the 6th open since the
+  cut requests a major slice. Kiran's decision (2026-10-13): `Ready` carries
+  fewer than 5 prior opens; the major-slice path is a named open premise.
+  To do: generalize the Realloc chain to element size 24, charge the custom
+  table in `reserved`, prove the quiet path with bprime's exact-log post.
+- G2: `SlotDone R copies copies' pl` (`OldifySlot.lean`): one
+  `caml_oldify_one(v, p)` call at the slot level, `*p = relocation copies' v`
+  over the published forwarding table, which grows and keeps its view.
+  Instances: `OldifyImmediate.slot`, `NonYoung.slot`, `ForwardedCall.slot`.
+- Next (G2): the fresh routes as `SlotDone` (publication through the enqueue
+  prefix, `ForwardingTable.publish_then`), the route dispatcher, then the
   stack/`ref_table` root loops, the mopup outer loop, a quiet-route
   `caml_empty_minor_heap`, and the concrete `CollectionEffect`.
 
