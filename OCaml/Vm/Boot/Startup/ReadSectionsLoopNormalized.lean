@@ -4,54 +4,6 @@ import OCaml.Vm.Boot.Startup.ReadSectionsLoopRows
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Sim
 
-theorem readsectionsloop_line_80004b70 :
-    mkLine 0x80004b70#64 0x01043783#32 =
-      ⟨0x80004b70#64, 0x01043783#32, 0x83#8, 0x37#8, 0x04#8, 0x01#8, .ld, 15, 8, 0, 0x010#12⟩ := by rfl
-
-theorem readsectionsloop_line_80004b74 :
-    mkLine 0x80004b74#64 0x00371693#32 =
-      ⟨0x80004b74#64, 0x00371693#32, 0x93#8, 0x16#8, 0x37#8, 0x00#8, .slli, 13, 14, 0, 0x003#12⟩ := by rfl
-
-theorem readsectionsloop_line_80004b78 :
-    mkLine 0x80004b78#64 0x0017071b#32 =
-      ⟨0x80004b78#64, 0x0017071b#32, 0x1b#8, 0x07#8, 0x17#8, 0x00#8, .addiw, 14, 14, 0, 0x001#12⟩ := by rfl
-
-theorem readsectionsloop_line_80004b7c :
-    mkLine 0x80004b7c#64 0x00d787b3#32 =
-      ⟨0x80004b7c#64, 0x00d787b3#32, 0xb3#8, 0x87#8, 0xd7#8, 0x00#8, .add, 15, 15, 13, 0x000#12⟩ := by rfl
-
-theorem readsectionsloop_line_80004b80 :
-    mkLine 0x80004b80#64 0x0047c583#32 =
-      ⟨0x80004b80#64, 0x0047c583#32, 0x83#8, 0xc5#8, 0x47#8, 0x00#8, .lbu, 11, 15, 0, 0x004#12⟩ := by rfl
-
-theorem readsectionsloop_line_80004b84 :
-    mkLine 0x80004b84#64 0x0077c503#32 =
-      ⟨0x80004b84#64, 0x0077c503#32, 0x03#8, 0xc5#8, 0x77#8, 0x00#8, .lbu, 10, 15, 0, 0x007#12⟩ := by rfl
-
-theorem readsectionsloop_line_80004b88 :
-    mkLine 0x80004b88#64 0x0057c683#32 =
-      ⟨0x80004b88#64, 0x0057c683#32, 0x83#8, 0xc6#8, 0x57#8, 0x00#8, .lbu, 13, 15, 0, 0x005#12⟩ := by rfl
-
-theorem readsectionsloop_line_80004b8c :
-    mkLine 0x80004b8c#64 0x0067c603#32 =
-      ⟨0x80004b8c#64, 0x0067c603#32, 0x03#8, 0xc6#8, 0x67#8, 0x00#8, .lbu, 12, 15, 0, 0x006#12⟩ := by rfl
-
-theorem readsectionsloop_line_80004b90 :
-    mkLine 0x80004b90#64 0x00a78223#32 =
-      ⟨0x80004b90#64, 0x00a78223#32, 0x23#8, 0x82#8, 0xa7#8, 0x00#8, .sb, 0, 15, 10, 0x004#12⟩ := by rfl
-
-theorem readsectionsloop_line_80004b94 :
-    mkLine 0x80004b94#64 0x00b783a3#32 =
-      ⟨0x80004b94#64, 0x00b783a3#32, 0xa3#8, 0x83#8, 0xb7#8, 0x00#8, .sb, 0, 15, 11, 0x007#12⟩ := by rfl
-
-theorem readsectionsloop_line_80004b98 :
-    mkLine 0x80004b98#64 0x00c782a3#32 =
-      ⟨0x80004b98#64, 0x00c782a3#32, 0xa3#8, 0x82#8, 0xc7#8, 0x00#8, .sb, 0, 15, 12, 0x005#12⟩ := by rfl
-
-theorem readsectionsloop_line_80004b9c :
-    mkLine 0x80004b9c#64 0x00d78323#32 =
-      ⟨0x80004b9c#64, 0x00d78323#32, 0x23#8, 0x83#8, 0xd7#8, 0x00#8, .sb, 0, 15, 13, 0x006#12⟩ := by rfl
-
 theorem readsectionsloop_line_80004ba0 :
     mkLine 0x80004ba0#64 0x00042783#32 =
       ⟨0x80004ba0#64, 0x00042783#32, 0x83#8, 0x27#8, 0x04#8, 0x00#8, .lw, 15, 8, 0, 0x000#12⟩ := by rfl

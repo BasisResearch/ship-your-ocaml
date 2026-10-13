@@ -117,13 +117,21 @@ theorem ExtTableReturned.keep_saved {H capacity sp ra s0 t n before after v k}
   have d := (w.publication.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢ <;> omega)).trans c2
   exact (w.post.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢; omega)).trans d
 
+/-- caml_stat_alloc keeps s1, s2 and s3. -/
+theorem StatCheckedReturned.keep_saved {H capacity sp ra s0 n before after v k}
+    (w : StatCheckedReturned H capacity sp ra s0 n before after) (member : k ∈ [9, 18, 19])
+    (h : gprGet before.σ k = some v) : gprGet after.σ k = some v := by
+  have range : 1 ≤ k ∧ k ≤ 31 := by simp at member; omega
+  have a := (w.allocation.setup.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢; omega)).trans h
+  have b := (w.allocation.call.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢; omega)).trans a
+  have c := allocator_keep_saved w.allocation.allocation.good w.allocation.allocation.result.frame
+    (by simp [vsaSaved] at member ⊢; omega) b
+  exact (w.returned.toEffectPost.gpr_frame (by decide) k range.1 range.2 (by simp at member ⊢; omega)).trans c
+
 theorem StatCheckedReturned.keep9 {H capacity sp ra s0 n before after v}
     (w : StatCheckedReturned H capacity sp ra s0 n before after)
-    (h : gprGet before.σ 9 = some v) : gprGet after.σ 9 = some v := by
-  have a := w.allocation.setup.keep9 (by decide) (by decide) h
-  have b := w.allocation.call.keep9 (by decide) (by decide) a
-  have c := allocator_keep9 w.allocation.allocation.good w.allocation.allocation.result.frame b
-  exact w.returned.keep9 (by decide) (by decide) c
+    (h : gprGet before.σ 9 = some v) : gprGet after.σ 9 = some v :=
+  w.keep_saved (by decide) h
 
 theorem ExtTableReturned.keep9 {H capacity sp ra s0 t n before after v}
     (w : ExtTableReturned H capacity sp ra s0 t n before after)
