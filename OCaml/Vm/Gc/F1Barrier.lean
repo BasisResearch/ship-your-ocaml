@@ -249,6 +249,7 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
     records := h.records
     recordsApart := h.recordsApart
     recordsDisjoint := h.recordsDisjoint
+    recordsAligned := h.recordsAligned
     table := ⟨?_, ?_, Or.inr ?_⟩
     tableIn := h.tableIn }
   · rcases win w hw with rfl | rfl
@@ -330,12 +331,13 @@ theorem f1_insert (c : Config) (tbl ptr limit slot : BitVec 64) (ok : f1Runtime 
   have := st.ptrLimit; have := st.limitEnd; have := st.low; have := st.limitAligned; have := st.ptrAligned
   have db := st.apartBlocks (WhileMinRuntime.domain, Layout.domainStateBytes) List.mem_cons_self
   have mb := st.apartBlocks (majorRegion.lo, majorRegion.hi - majorRegion.lo) (by decide)
-  dsimp only at db mb
+  have eb := st.apartBlocks (exeNameAddr, 6) (by decide)
+  dsimp only at db mb eb
   have structApart := arena_footprint_apart (w := ⟨refTable + Layout.off_ref_table_ptr,
-    refTable + Layout.off_ref_table_ptr + 8⟩) (by decide) (by decide) (by decide)
+    refTable + Layout.off_ref_table_ptr + 8⟩) (by decide) (by decide) (by decide) (by decide)
   have entryApart := arena_footprint_apart (w := ⟨(word c (refTable + Layout.off_ref_table_ptr)).toNat,
     (word c (refTable + Layout.off_ref_table_ptr)).toNat + 8⟩) (by dsimp only; omega) (by dsimp only; omega)
-    (by simp only [majorRegion] at *; omega)
+    (by simp only [majorRegion] at *; omega) (by dsimp only; omega)
   refine f1_transfer (fun x n inside => ?_) (fun _ => ⟨H, cap, chs, h.insert slot room memory⟩) ok
   obtain ⟨v, member, vlo, vhi⟩ := inside
   rw [memory]

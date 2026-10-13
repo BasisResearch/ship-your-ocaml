@@ -116,6 +116,7 @@ theorem footprint_kept {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c :
     ∀ v ∈ f1Footprint, ∀ a, v.lo ≤ a → a < v.hi → Realloc.Kept H sp (BitVec.ofNat 64 refTable) a := by
   have domCov := h.extents (WhileMinRuntime.domain, Layout.domainStateBytes) List.mem_cons_self
   have majCov := h.extents (majorRegion.lo, majorRegion.hi - majorRegion.lo) (by decide)
+  have exeCov := h.extents (exeNameAddr, 6) (by decide)
   intro w hw a lo hi
   have domByte : 0x8007d150 ≤ a → a < 0x8007d150 + 928 → Realloc.Kept H sp (BitVec.ofNat 64 refTable) a :=
     fun l u => kept_covered h domCov l u (Or.inl (by
@@ -132,7 +133,7 @@ theorem footprint_kept {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c :
     obtain ⟨i, hi', ilo, ihi⟩ := allocGlobal_ignored ga
     rcases staticKept_apart w hs i hi' with o | o <;> omega
   · simp only [dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hd
-    rcases hd with rfl | rfl | rfl | rfl | rfl | rfl <;>
+    rcases hd with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
       simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.off_young_ptr,
         Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
         Layout.off_backtrace_active] at lo hi
@@ -142,6 +143,9 @@ theorem footprint_kept {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c :
     · exact domByte (by omega) (by omega)
     · exact domByte (by omega) (by omega)
     · exact freeByte (by omega) (by omega)
+    · exact kept_covered h exeCov (by dsimp only; simp only [exeNameAddr]; omega)
+        (by dsimp only; simp only [exeNameAddr]; omega) (Or.inr (by
+          simp only [refTable, WhileMinHeapChunks.refTablePayload]; omega))
 
 /-- No footprint byte is the slot: the slot lies in a heap chunk, outside the
 private free block. -/
@@ -157,7 +161,7 @@ theorem footprint_notSlot {s : Nat} (slotChunks : InHeapChunks s 8)
   rcases List.mem_append.1 hw with hs | hd
   · left; have := staticKept_below w hs; simp only [Layout.sym_bss_end] at this; omega
   · simp only [dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hd
-    rcases hd with rfl | rfl | rfl | rfl | rfl | rfl <;>
+    rcases hd with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
       simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.off_young_ptr,
         Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
         Layout.off_backtrace_active] at lo hi <;> omega

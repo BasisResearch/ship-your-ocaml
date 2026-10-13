@@ -25,7 +25,7 @@ theorem nativeScratch_apart {D : InvocationData} (v : NativeValid D) :
     simp only [nativeScratch, nativeHeadroom, Layout.sym_bss_end]; omega)) ?_
   intro x hx
   simp only [Gc.youngWord, Gc.dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hx
-  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
     simp only [Gc.Apart, nativeScratch, nativeHeadroom, Gc.f1Domain, Boot.WhileMinRuntime.domain,
       Boot.WhileMinRuntime.freeBlock, Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold,
       Layout.off_trap_barrier, Layout.off_backtrace_active] <;> omega

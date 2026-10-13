@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.OldifyReturned
 import OCaml.Vm.Gc.F1Observation
 import OCaml.Vm.Primitives.Memmove
 import OCaml.Vm.Primitives.GprsKept
@@ -642,6 +643,12 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.f1_allocFrame_core'
 #print axioms OCaml.Vm.Gc.f1_totalMemory
 #print axioms OCaml.Vm.Gc.f1_observation_of
+#print axioms OCaml.Vm.Gc.in_exeName
+#print axioms OCaml.Vm.Boot.WhileMinEntry.exe_name
+#print axioms OCaml.Vm.Gc.OldifyReturned.frame_of
+#print axioms OCaml.Vm.Gc.ForwardedCall.Post.returned
+#print axioms OCaml.Vm.Gc.Fresh.Enqueued.returned
+#print axioms OCaml.Vm.Gc.Fresh.SingleResult.returned
 #print axioms OCaml.Vm.Gc.f1_channelUnlock
 #print axioms OCaml.Vm.Gc.f1_consoleRuntime
 #print axioms OCaml.Vm.Gc.consoleRuntime_of

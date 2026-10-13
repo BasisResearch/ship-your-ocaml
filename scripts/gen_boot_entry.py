@@ -31,7 +31,7 @@ out=['import OCaml.Vm.Boot.WhileMinHeap','import OCaml.Vm.Boot.WhileMinRuntime',
      'variable {c : Config} {initial : Vsa.MemRepr.Mem}','']
 for name in ['caml_start_code','caml_global_data','caml_verb_gc','caml_cleanup_on_exit','atexit','stdio_exit_handler','caml_channel_mutex_unlock_exn',
              'fs_ready','caml_something_to_do','caml_channel_mutex_lock',
-             'caml_channel_mutex_unlock','caml_all_opened_channels','main_argv']:
+             'caml_channel_mutex_unlock','caml_all_opened_channels','main_argv','caml_exe_name']:
     emit_read(out,name,f'Layout.sym_{name}',read(layout['sym_'+name]))
 for name in ['stack_high','stack_low','stack_threshold','extern_sp','trapsp','trap_barrier','backtrace_active','ref_table','minor_heap_wsz']:
     emit_read(out,name,f'WhileMinRuntime.domain + Layout.off_{name}',read(domain+layout['off_'+name]))
@@ -42,6 +42,14 @@ for f in ['base','ptr','limit']:
     emit_read(out,f'ref_table_{f}',f'WhileMinHeapChunks.refTablePayload + Layout.off_ref_table_{f}',
               read(table+layout['off_ref_table_'+f]))
 emit_read(out,'caml_gc_phase','Layout.sym_caml_gc_phase',read(layout['sym_caml_gc_phase'],4),4)
+exe=read(layout['sym_caml_exe_name'])
+assert exe==0x8007d700 and [mem[exe+i] for i in range(6)]==list(b'/prog\0')
+exeBytes=[emit_read(out,f'exe_name{i}',f'{exe:#x} + {i}',mem[exe+i],1) for i in range(6)]
+out += ['/-- The executable name `caml_exe_name` points to: the `caml_stat_strdup` of',
+        '`"/prog"` (startup\'s retry with `argv[1]`). -/',
+        'theorem exe_name (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :',
+        f'    ∀ i : Fin 6, byte c ({exe:#x} + i.val) = ([{", ".join(f"{mem[exe+i]:#x}#8" for i in range(6))}] : List (BitVec 8)).getD i.val 0 :=',
+        '  '+finite_cases(exeBytes),'']
 for fd in (1,2):
     emit_read(out,f'fd{fd}_kind',f'Layout.sym_fds + {24*fd}',read(layout['sym_fds']+24*fd))
 pending=[emit_read(out,f'pending{i}',f'Layout.sym_caml_pending_signals + 8 * {i}',

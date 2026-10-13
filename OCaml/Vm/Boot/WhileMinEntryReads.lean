@@ -88,6 +88,12 @@ theorem read_main_argv (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initia
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_main_argv) (w := 8) (by decide +kernel)]
   decide +kernel
 
+theorem read_caml_exe_name (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_caml_exe_name) = 0x8007d700#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_exe_name) (w := 8) (by decide +kernel)]
+  decide +kernel
+
 theorem read_stack_high (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word c (WhileMinRuntime.domain + Layout.off_stack_high) = 0x8038b7b0#64 := by
   unfold word
@@ -171,6 +177,48 @@ theorem read_caml_gc_phase (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem in
   unfold word32
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_caml_gc_phase) (w := 4) (by decide +kernel)]
   decide +kernel
+
+theorem read_exe_name0 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8007d700 + 0) = 0x2f#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8007d700 + 0) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_exe_name1 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8007d700 + 1) = 0x70#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8007d700 + 1) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_exe_name2 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8007d700 + 2) = 0x72#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8007d700 + 2) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_exe_name3 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8007d700 + 3) = 0x6f#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8007d700 + 3) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_exe_name4 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8007d700 + 4) = 0x67#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8007d700 + 4) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_exe_name5 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (0x8007d700 + 5) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := 0x8007d700 + 5) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+/-- The executable name `caml_exe_name` points to: the `caml_stat_strdup` of
+`"/prog"` (startup's retry with `argv[1]`). -/
+theorem exe_name (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    ∀ i : Fin 6, byte c (0x8007d700 + i.val) = ([0x2f#8, 0x70#8, 0x72#8, 0x6f#8, 0x67#8, 0x0#8] : List (BitVec 8)).getD i.val 0 :=
+  Fin.cases (read_exe_name0 memory) (Fin.cases (read_exe_name1 memory) (Fin.cases (read_exe_name2 memory) (Fin.cases (read_exe_name3 memory) (Fin.cases (read_exe_name4 memory) (Fin.cases (read_exe_name5 memory) (fun i => Fin.elim0 i))))))
 
 theorem read_fd1_kind (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word c (Layout.sym_fds + 24) = 0x2#64 := by

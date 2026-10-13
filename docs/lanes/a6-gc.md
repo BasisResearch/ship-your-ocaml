@@ -18,8 +18,32 @@
   `LibraryLive imageLive`. `Sim.f1_barrierGrowth_gprs` (was `_dense`) runs it
   at `imageLive`, so RAM density is no longer a premise: a2-sem's
   `GrowthCallState` keeps only `gprs` (a1-arms' `LoopRegisters.gprs`).
-- Open: `BarrierGrowthFull` (the full table's `_realloc_r` branch) needs the
-  allocator machine-run tooling (`SWP`, `gen_alloc_steps.py`, A0).
+- **Obstruction: `BarrierGrowthFull Gc.f1Layout` is not provable as stated.**
+  A full allocated table has `limit == threshold` first.
+  `realloc_generic_table` (minor_gc.c:593) then sets `limit := end` and
+  tail-calls `caml_request_minor_gc` (ELF: `jal x0 0x8000d5f4` at
+  0x8000974c). `caml_set_action_pending` stores `caml_something_to_do = 1`,
+  but `BarrierDone.state.runtime` needs `f1Runtime`, whose `quiet` is
+  `something_to_do = 0`. The doubling branch (`caml_stat_resize_noexc`) is
+  reachable only after that request without a minor GC. Insertions are
+  unbounded by `Fits`: `caml_modify` re-inserts a field toggled young →
+  immediate → young. So under G1 the premise needs a domain decision:
+  Kiran's decision (2026-10-13): keep it a named open premise of the F1
+  headline (no BcSem insertion bound) and discharge it from G2's concrete
+  `CollectionEffect` (oldify/mopup composed), the overflow being a minor GC
+  that preserves `VmReprAt` up to placement.
+- `F1Pins.exeNameWord`/`exeName` (a1-prims): `caml_exe_name` points to
+  `exeNameAddr = 0x8007d700`, the strdup of `"/prog\0"`, kept by F1
+  (`dynamicKept`, `f1Covered`; `f1_window_of`/`arena_footprint_apart` take
+  an `exe` apartness). Cut values from `gen_boot_entry.py`.
+- `LibHeapAt.recordsAligned` (bprime): open records are 16-aligned; `link`
+  takes `aligned`.
+- G2: `OldifyReturned R log` (`OldifyReturned.lean`), the common machine
+  return of `caml_oldify_one`, with projections from the forwarded, fresh
+  enqueued and fresh single-field routes.
+- Next (G2): the slot-level oldify spec and route dispatcher, then the
+  stack/`ref_table` root loops, the mopup outer loop, a quiet-route
+  `caml_empty_minor_heap`, and the concrete `CollectionEffect`.
 
 ## F1 status (2026-10-05)
 

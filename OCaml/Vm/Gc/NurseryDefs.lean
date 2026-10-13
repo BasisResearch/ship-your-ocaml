@@ -30,6 +30,11 @@ def majorRegion : W := ⟨0x80283000, 0x8037b000⟩
 requests `caml_load_code` and the primitive table's growth made (whileMin's
 191 code words; capacity 768 entries). -/
 def f1CodeBytes : Nat := 764
+
+/-- `caml_exe_name`'s target at the cut: startup's `caml_stat_strdup` of
+`"/prog"` (`WhileMinEntry.read_caml_exe_name`, `WhileMinEntry.exe_name`). -/
+def exeNameAddr : Nat := 0x8007d700
+def exeNameBytes : List (BitVec 8) := [0x2f#8, 0x70#8, 0x72#8, 0x6f#8, 0x67#8, 0x0#8]
 def f1PrimCapacity : Nat := 768
 
 /-- `[x, x + n)` lies in the minor heap or in the major heap chunk. -/

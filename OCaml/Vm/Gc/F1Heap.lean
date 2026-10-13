@@ -41,7 +41,8 @@ def f1Covered : List (Nat × Nat) :=
   [(Boot.WhileMinRuntime.domain, Layout.domainStateBytes), (refTable, 56),
    (minorRegion.lo, minorRegion.hi - minorRegion.lo), (majorRegion.lo, majorRegion.hi - majorRegion.lo),
    (Boot.WhileMinEntry.high - Layout.stackBytes, Layout.stackBytes),
-   (Boot.WhileMinHeapChunks.codeBufferPayload, f1CodeBytes), (Boot.WhileMinHeapChunks.primTablePayload, 8 * f1PrimCapacity)]
+   (Boot.WhileMinHeapChunks.codeBufferPayload, f1CodeBytes), (Boot.WhileMinHeapChunks.primTablePayload, 8 * f1PrimCapacity),
+   (exeNameAddr, 6)]
 
 /-- The regions F1's ordinary windows write: the `Caml_state` record around
 its `minor_heap_wsz` and `ref_table` words, the minor heap, the major chunk,
@@ -159,6 +160,8 @@ structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Co
   recordsApart : ∀ a ∈ chs, ∀ x ∈ f1Covered, a + chanRecordBytes ≤ x.1 ∨ x.1 + x.2 ≤ a
   /-- distinct open records are disjoint (each its own malloc block) -/
   recordsDisjoint : ∀ a ∈ chs, ∀ b ∈ chs, a ≠ b → a + chanRecordBytes ≤ b ∨ b + chanRecordBytes ≤ a
+  /-- open records are malloc results, 16-aligned -/
+  recordsAligned : ∀ a ∈ chs, a % 16 = 0
   /-- the remembered set -/
   table : RefTableAt H chs c
   /-- its struct is a live block verbatim (the barrier's growth path frees
@@ -244,6 +247,7 @@ theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List N
   records := h.records
   recordsApart := h.recordsApart
   recordsDisjoint := h.recordsDisjoint
+  recordsAligned := h.recordsAligned
   tableIn := h.tableIn
   table := h.table.congr fun y hy => keep y fun w hw => (safe w hw).misses_table hy
 
@@ -320,6 +324,7 @@ theorem LibHeapAt.keep_records {H : List (Nat × Nat)} {cap : Nat} {chs : List N
   records := h.records
   recordsApart := h.recordsApart
   recordsDisjoint := h.recordsDisjoint
+  recordsAligned := h.recordsAligned
   tableIn := h.tableIn
   table := h.table.congr fun y hy => keep y fun w hw => by
     rcases safe w hw with s | r
@@ -367,7 +372,7 @@ theorem LibHeapAt.link {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
     (h : LibHeapAt H cap chs c) {a req : Nat}
     (bound : chs.length < maxChannels)
     (ready : HeapReady ((a, req) :: H) cap' c') (spend : cap = cap' + charge) (charged : charge ≤ recordCharge)
-    (big : chanRecordBytes ≤ req)
+    (big : chanRecordBytes ≤ req) (aligned : a % 16 = 0)
     (fresh : ∀ e ∈ H, ∀ y, VsaIris.InExt (a, req) y → ¬ VsaIris.InExt e y)
     (linked : OpenChannelsLinked c.σ.mem c'.σ.mem a)
     (keepTable : ∀ y, InTableWords y → (c'.σ.mem[y]?).getD 0 = (c.σ.mem[y]?).getD 0)
@@ -420,6 +425,11 @@ theorem LibHeapAt.link {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
       · exact Or.inr o
       · exact Or.inl o
     · exact h.recordsDisjoint b hb' d hd' ne
+  recordsAligned := by
+    intro b hb
+    rcases List.mem_cons.1 hb with rfl | hb
+    · exact aligned
+    · exact h.recordsAligned b hb
   table := by
     have t := h.table.congr keepTable
     refine ⟨t.pointer, t.minorWsz, ?_⟩
@@ -481,6 +491,7 @@ theorem LibHeapAt.grow {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
   records := fun a ha => (h.records a ha).mono _
   recordsApart := h.recordsApart
   recordsDisjoint := h.recordsDisjoint
+  recordsAligned := h.recordsAligned
   table := by
     refine ⟨by rw [pointer]; exact h.table.pointer, by rw [wsz]; exact h.table.minorWsz, Or.inr ?_⟩
     rw [base', end', ptr', limit']
