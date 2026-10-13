@@ -2650,6 +2650,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.attempt_open_to_open
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.argv1_rooted
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_prog_open_call_exists
+#print axioms OCaml.Vm.Boot.Startup.FsWords.transport
+#print axioms OCaml.Vm.Boot.Startup.FsUp.transport
+#print axioms OCaml.Vm.Boot.Startup.FsUp.frame
+#print axioms OCaml.Vm.Boot.Startup.OpenOcamlrun.fs_up
+#print axioms OCaml.Vm.Boot.Startup.ExtTableReturned.live_byte
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
 #print axioms OCaml.Vm.Boot.Startup.resAt36_window
 #print axioms OCaml.Vm.Boot.Startup.fs_init

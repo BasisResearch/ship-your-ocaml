@@ -71,6 +71,12 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   The first attempt still uses its reset-specific copies; rederiving it from
   the generic pair is a pending cleanup.
 
+* **`FsUp`** (FsUp.lean): `fs_ready`, descriptors 0–2, slot 1 = `prog`,
+  fd 3 free; established after the first open (`OpenOcamlrun.fs_up`,
+  `FsWords` threaded from fs_init through resolve) and carried to
+  `open("/prog")` by `EmbedFrame` (the fds table is now a `KeptByte`) and the
+  node block's `live`/`apart` frames.
+
 Next: `open("/prog")`'s success path (fs_ready = 1, resolve's child hit,
 the fd), then `lseek`, the trailer `read` and the magic test.
 
