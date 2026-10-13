@@ -7,6 +7,19 @@ namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
 variable {live : Nat → Prop}
 
+/-- A byte below the arena's end outside the allocator's footprint misses a
+fresh block. -/
+theorem FreshBlock.out_kept {H : List (Nat × Nat)} {p n x : Nat} (fresh : FreshBlock vsaLayoutP H p n)
+    (hx : x < heapEnd) (kept : ¬ vsaFoot H x) : x < p ∨ p + n ≤ x := by
+  have lo : heapStart ≤ p := fresh.2.1
+  by_cases low : x < heapStart
+  · omega
+  · have owned : ∃ e ∈ H, InExt e x := Classical.byContradiction fun none =>
+      kept (Or.inr ⟨by omega, hx, fun e he inside => none ⟨e, he, inside⟩⟩)
+    obtain ⟨e, he, inside⟩ := owned
+    exact Classical.byContradiction fun apart =>
+      fresh.2.2.2 e he x (show p ≤ x ∧ x < p + n by omega) inside
+
 /-- Clearing words inside one live payload preserves runtime readiness. -/
 theorem RuntimeReadyL.clear {H capacity oldsp oldra before after writes pc value regs sp ra base size n}
     (ready : RuntimeReadyL live H capacity oldsp oldra before)

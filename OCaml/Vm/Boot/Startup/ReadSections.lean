@@ -8,6 +8,7 @@ import OCaml.Vm.Boot.Startup.StatCheckedFrame
 import OCaml.Vm.Boot.Startup.MainArgv
 import OCaml.Vm.Boot.Startup.ReadyPerm
 import OCaml.Vm.Boot.Startup.AttemptOk
+import OCaml.Vm.Boot.Startup.ClearReady
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
   LeanRV64DExecutable
@@ -25,19 +26,6 @@ theorem StatCheckedReturned.fresh {H capacity sp ra s0 n before after}
     (w : StatCheckedReturned H capacity sp ra s0 n before after) :
     FreshBlock vsaLayoutP H (vsaReg w.allocated 10).toNat n.toNat :=
   w.allocation.allocation.result.fresh
-
-/-- A byte below the arena's end outside the allocator's footprint misses a
-fresh block. -/
-theorem FreshBlock.out_kept {H : List (Nat × Nat)} {p n x : Nat} (fresh : FreshBlock vsaLayoutP H p n)
-    (hx : x < heapEnd) (kept : ¬ vsaFoot H x) : x < p ∨ p + n ≤ x := by
-  have lo : heapStart ≤ p := fresh.2.1
-  by_cases low : x < heapStart
-  · omega
-  · have owned : ∃ e ∈ H, InExt e x := Classical.byContradiction fun none =>
-      kept (Or.inr ⟨by omega, hx, fun e he inside => none ⟨e, he, inside⟩⟩)
-    obtain ⟨e, he, inside⟩ := owned
-    exact Classical.byContradiction fun apart =>
-      fresh.2.2.2 e he x (show p ≤ x ∧ x < p + n by omega) inside
 
 /-- Bytes of a live block are outside the allocator's footprint. -/
 theorem owned_not_foot {H : List (Nat × Nat)} {a : Nat} (above : heapStart ≤ a) (owned : ∃ e ∈ H, InExt e a) :

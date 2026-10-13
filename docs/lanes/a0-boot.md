@@ -172,9 +172,25 @@ The htif fs behind `open` is in progress. For "ocamlrun" the path is:
   caml_main's init_gc call; `Layout.lean` carries the init_gc symbols and
   parameters.
 
-Next: `caml_page_table_initialize` (2048 entries: a doubling loop,
-`caml_stat_alloc_noexc(16384)`, `memset_words`), then the rest of
-`caml_init_gc` and onward to the cut.
+* **`page_table_initialize`** (PageTable.lean, PageTableSteps.lean):
+  `caml_page_table_initialize(0x2f8000)` from caml_init_gc.
+  * The doubling loop is one `page_table_doubling` step folded by
+    `indexedLoop`.
+  * Then the geometry stores, `caml_stat_alloc_noexc(16384)` (fresh block,
+    `StatAllocatedL.kept_byte`), `memset_words` (readiness by
+    `RuntimeReadyL.clear`), and the return.
+  * `PageTableAt` records size 2048, shift 53, mask 2047, occupancy 0, the
+    entries pointer, and the cleared table.
+  * Kernel-depth notes:
+    * Blocks with `nativeStack` results close their log and registers by plain
+      `rfl`.
+    * Global `auipc` stores split one per block, using
+      `sign_extend (imm20Of i +++ 0) = k` lemmas.
+    * Fully concrete blocks close by `decide`.
+
+Next: the rest of `caml_init_gc` (`caml_set_minor_heap_size`,
+`caml_set_allocation_policy`, `caml_init_major_heap`, the messages) and
+onward to the cut.
 
 ## Round 2 status (2026-10-06, search)
 
