@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.NonYoungCall
 import OCaml.Vm.Gc.OldifyReturned
 import OCaml.Vm.Gc.F1Observation
 import OCaml.Vm.Primitives.Memmove
@@ -649,6 +650,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.ForwardedCall.Post.returned
 #print axioms OCaml.Vm.Gc.Fresh.Enqueued.returned
 #print axioms OCaml.Vm.Gc.Fresh.SingleResult.returned
+#print axioms OCaml.Vm.Gc.OldifyEntry.Post.read_input
+#print axioms OCaml.Vm.Gc.OldifyEntry.carried_after_reject
+#print axioms OCaml.Vm.Gc.NonYoung.call
 #print axioms OCaml.Vm.Gc.f1_channelUnlock
 #print axioms OCaml.Vm.Gc.f1_consoleRuntime
 #print axioms OCaml.Vm.Gc.consoleRuntime_of

@@ -41,7 +41,13 @@
 - G2: `OldifyReturned R log` (`OldifyReturned.lean`), the common machine
   return of `caml_oldify_one`, with projections from the forwarded, fresh
   enqueued and fresh single-field routes.
-- Next (G2): the slot-level oldify spec and route dispatcher, then the
+- G2: `NonYoung.call` (`NonYoungCall.lean`), the whole `caml_oldify_one`
+  call on a pointer outside the nursery (prologue, rejecting tests,
+  `StoreReturn`), as `OldifyReturned` plus the root value. The `ref_table`
+  loop calls `caml_oldify_one` on every entry (immediate, old or young), the
+  stack loop filters through `Oldify`.
+- Next (G2): the immediate route's `SegPre` supplier, the slot-level oldify
+  spec and route dispatcher, then the
   stack/`ref_table` root loops, the mopup outer loop, a quiet-route
   `caml_empty_minor_heap`, and the concrete `CollectionEffect`.
 
