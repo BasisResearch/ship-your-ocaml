@@ -41,7 +41,10 @@ theorem read_file (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra s
     (ready : RuntimeReady H capacity sp ra c) (frame : NativeFrame sp (16 + 48))
     (regs : GHolds c.σ [(2, sp), (1, ra), (8, s0), (10, 3#64), (11, buf), (12, n)])
     (srcEmbed : heapEnd ≤ (0x86800090#64 + p).toNat) (deep : (0x86800090#64 + p).toNat + count ≤ sp.toNat - 64)
-    (bufAbove : sp.toNat ≤ buf.toNat) (bufTop : buf.toNat + count ≤ 0x100000000)
+    (bufLow : heapStart ≤ buf.toNat) (bufTop : buf.toNat + count ≤ 0x100000000)
+    (bufFoot : ∀ a, vsaFoot H a → a < buf.toNat ∨ buf.toNat + count ≤ a)
+    (bufStack : buf.toNat + count ≤ sp.toNat - 64 ∨ sp.toNat ≤ buf.toNat)
+    (srcBuf : (0x86800090#64 + p).toNat + count ≤ buf.toNat ∨ buf.toNat + count ≤ (0x86800090#64 + p).toNat)
     (fs : FsWords c.σ.mem) (node : BitVec 64) (slot : FsSlotOne c.σ.mem node)
     (kind : read4 c.σ.mem (Layout.sym_fds + 72) = [4#8, 0#8, 0#8, 0#8])
     (nodeWord : read4 c.σ.mem (Layout.sym_fds + 76) = [1#8, 0#8, 0#8, 0#8])
@@ -160,17 +163,12 @@ theorem read_file (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra s
     (gholds_lookup (n := 2) _ p6.regs rfl) (gholds_lookup (n := 1) _ p6.regs rfl) (by decide) f2
     (htifReadSpillLog_inside f2)
   -- memcpy(buf, 0x8680252c, 16)
-  have bufLow : heapEnd ≤ buf.toNat := by omega
   obtain ⟨d7, run7, M⟩ := (memcpy_window d6 H capacity (nativeStack (nativeStack sp 16) 48) jal_80000ccc_call.link
-    buf (0x86800090#64 + p) count ready6 (by unfold heapStart heapEnd at *; omega) bufTop
-    (fun a foot => by
-      rcases foot with global | ⟨_, hi, _⟩
-      · unfold allocGlobal InRange heapEnd at *; omega
-      · omega)
+    buf (0x86800090#64 + p) count ready6 bufLow bufTop bufFoot
     ⟨gholds_lookup (n := 10) _ p6.regs rfl, gholds_lookup (n := 11) _ p6.regs rfl,
       gholds_lookup (n := 12) _ p6.regs rfl, trivial⟩
     (fun k hk inside => by unfold InExt at inside; omega)
-    (by unfold heapEnd at srcEmbed; omega) (by have := lower; omega)
+    (by unfold heapEnd at srcEmbed; omega) (by have := frame.upper; unfold Layout.sym_stack_top at *; omega)
     (Or.inr (by unfold heapEnd at srcEmbed; unfold Layout.sym_tohost; omega))).run d6 ⟨p6.pc, rfl⟩
   have keepM (n : Nat) (v : BitVec 64) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ mRegs)
       (hv : gprGet d6.σ n = some v) : gprGet d7.σ n = some v := (M.registers n lo hi out).trans hv
@@ -187,7 +185,7 @@ theorem read_file (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra s
     have range : off + 8 ≤ 48 := by
       simp only [List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member; omega
     rw [word_observed (m := d6.σ.mem) (nativeFrameBase (nativeStack sp 16) 48 + off)
-      (fun i hi => fromD6 _ (Or.inl (by rw [frameBase]; omega))), p6.memory]
+      (fun i hi => fromD6 _ (by rw [frameBase]; omega)), p6.memory]
     simp only [List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at member
     rcases member with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
     · exact f2.word_log_read (by intro k v hk; simp at hk; omega) (by simp) _ (by simp)
@@ -200,7 +198,7 @@ theorem read_file (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra s
       exact f2.word_log_read (by intro k v hk; simp at hk; omega) (by simp) _ (by simp)
   have pos7 : bytesT d7.σ.mem (Layout.sym_fds + 80) 8 = p := by
     rw [word_observed (m := c.σ.mem) _ fun i hi => by
-      rw [fromD6 _ (Or.inl (by unfold Layout.sym_fds heapEnd at *; omega)), p6.memory,
+      rw [fromD6 _ (Or.inl (by unfold Layout.sym_fds heapStart at *; omega)), p6.memory,
         frameOn_writeLog _ _ _ (htifReadSpillLog_inside f2) _ ⟨Or.inl (by
           dsimp only; rw [frameBase]; unfold Layout.sym_fds heapEnd at *; omega), trivial⟩, mem5]
       exact fdsG _ (by omega) (by omega)]
@@ -221,7 +219,7 @@ theorem read_file (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra s
       (d8.σ.mem[x]?).getD 0 = (d2.σ.mem[x]?).getD 0 := by
     rw [p8.memory, frameOn_writeLog _ _ _ readLogIn x
         (by simp only [OutW, takeWindows, and_true, Layout.sym_files, Layout.sym_fds, heapEnd] at *; omega),
-      fromD6 x (Or.inl (by omega)), p6.memory,
+      fromD6 x (by omega), p6.memory,
       frameOn_writeLog _ _ _ (htifReadSpillLog_inside f2) x ⟨Or.inr (by rw [h1]; omega), trivial⟩, mem5,
       p4.memory, frameOn_writeLog _ _ _ (htifReadLog_inside f2) x ⟨Or.inr (by rw [h1]; omega), trivial⟩,
       p3'.memory]
@@ -274,10 +272,10 @@ theorem read_file (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra s
     trailer := fun k hk => ?_
     mem := fun x stack errno outBuf => ?_ }⟩
   · rw [show d9.σ.mem = d8.σ.mem from p9.memory, p8.memory, frameOn_writeLog _ _ _ readLogIn _
-      (by simp only [OutW, takeWindows, and_true, Layout.sym_files, Layout.sym_fds, heapEnd] at *; omega),
+      (by simp only [OutW, takeWindows, and_true, Layout.sym_files, Layout.sym_fds, heapStart] at *; omega),
       M.bytes k hk]
     exact back _ (Or.inl (by omega)) (by simp only [OutW, errnoWindows, and_true]; unfold heapEnd at srcEmbed; omega)
-      (Or.inl (by omega))
+      (by omega)
   · rw [show d9.σ.mem = d8.σ.mem from p9.memory, p8.memory]
     apply writeLog_getD_congr
     rw [fromD6 x outBuf]

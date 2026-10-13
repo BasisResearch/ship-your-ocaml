@@ -55,6 +55,174 @@ theorem embedPath0_word_86802538 : bytesT initialMem 0x86802538 8 = 0x72702f0031
 theorem embedPath0_word_86802540 : bytesT initialMem 0x86802540 8 = 0x676f#64 :=
   (loaderMem_bytes pieces imageByte 0x86802540 8).trans (by decide +kernel)
 
+theorem embedSections0_byte_0 : initialMem[embedEnd0 - 72 + 0]? = some 67#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 0)).trans (by decide +kernel)
+
+theorem embedSections0_byte_1 : initialMem[embedEnd0 - 72 + 1]? = some 79#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 1)).trans (by decide +kernel)
+
+theorem embedSections0_byte_2 : initialMem[embedEnd0 - 72 + 2]? = some 68#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 2)).trans (by decide +kernel)
+
+theorem embedSections0_byte_3 : initialMem[embedEnd0 - 72 + 3]? = some 69#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 3)).trans (by decide +kernel)
+
+theorem embedSections0_byte_4 : initialMem[embedEnd0 - 72 + 4]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 4)).trans (by decide +kernel)
+
+theorem embedSections0_byte_5 : initialMem[embedEnd0 - 72 + 5]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 5)).trans (by decide +kernel)
+
+theorem embedSections0_byte_6 : initialMem[embedEnd0 - 72 + 6]? = some 2#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 6)).trans (by decide +kernel)
+
+theorem embedSections0_byte_7 : initialMem[embedEnd0 - 72 + 7]? = some 252#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 7)).trans (by decide +kernel)
+
+theorem embedSections0_byte_8 : initialMem[embedEnd0 - 72 + 8]? = some 68#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 8)).trans (by decide +kernel)
+
+theorem embedSections0_byte_9 : initialMem[embedEnd0 - 72 + 9]? = some 76#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 9)).trans (by decide +kernel)
+
+theorem embedSections0_byte_10 : initialMem[embedEnd0 - 72 + 10]? = some 80#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 10)).trans (by decide +kernel)
+
+theorem embedSections0_byte_11 : initialMem[embedEnd0 - 72 + 11]? = some 84#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 11)).trans (by decide +kernel)
+
+theorem embedSections0_byte_12 : initialMem[embedEnd0 - 72 + 12]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 12)).trans (by decide +kernel)
+
+theorem embedSections0_byte_13 : initialMem[embedEnd0 - 72 + 13]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 13)).trans (by decide +kernel)
+
+theorem embedSections0_byte_14 : initialMem[embedEnd0 - 72 + 14]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 14)).trans (by decide +kernel)
+
+theorem embedSections0_byte_15 : initialMem[embedEnd0 - 72 + 15]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 15)).trans (by decide +kernel)
+
+theorem embedSections0_byte_16 : initialMem[embedEnd0 - 72 + 16]? = some 68#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 16)).trans (by decide +kernel)
+
+theorem embedSections0_byte_17 : initialMem[embedEnd0 - 72 + 17]? = some 76#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 17)).trans (by decide +kernel)
+
+theorem embedSections0_byte_18 : initialMem[embedEnd0 - 72 + 18]? = some 76#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 18)).trans (by decide +kernel)
+
+theorem embedSections0_byte_19 : initialMem[embedEnd0 - 72 + 19]? = some 83#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 19)).trans (by decide +kernel)
+
+theorem embedSections0_byte_20 : initialMem[embedEnd0 - 72 + 20]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 20)).trans (by decide +kernel)
+
+theorem embedSections0_byte_21 : initialMem[embedEnd0 - 72 + 21]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 21)).trans (by decide +kernel)
+
+theorem embedSections0_byte_22 : initialMem[embedEnd0 - 72 + 22]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 22)).trans (by decide +kernel)
+
+theorem embedSections0_byte_23 : initialMem[embedEnd0 - 72 + 23]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 23)).trans (by decide +kernel)
+
+theorem embedSections0_byte_24 : initialMem[embedEnd0 - 72 + 24]? = some 80#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 24)).trans (by decide +kernel)
+
+theorem embedSections0_byte_25 : initialMem[embedEnd0 - 72 + 25]? = some 82#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 25)).trans (by decide +kernel)
+
+theorem embedSections0_byte_26 : initialMem[embedEnd0 - 72 + 26]? = some 73#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 26)).trans (by decide +kernel)
+
+theorem embedSections0_byte_27 : initialMem[embedEnd0 - 72 + 27]? = some 77#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 27)).trans (by decide +kernel)
+
+theorem embedSections0_byte_28 : initialMem[embedEnd0 - 72 + 28]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 28)).trans (by decide +kernel)
+
+theorem embedSections0_byte_29 : initialMem[embedEnd0 - 72 + 29]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 29)).trans (by decide +kernel)
+
+theorem embedSections0_byte_30 : initialMem[embedEnd0 - 72 + 30]? = some 30#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 30)).trans (by decide +kernel)
+
+theorem embedSections0_byte_31 : initialMem[embedEnd0 - 72 + 31]? = some 178#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 31)).trans (by decide +kernel)
+
+theorem embedSections0_byte_32 : initialMem[embedEnd0 - 72 + 32]? = some 68#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 32)).trans (by decide +kernel)
+
+theorem embedSections0_byte_33 : initialMem[embedEnd0 - 72 + 33]? = some 65#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 33)).trans (by decide +kernel)
+
+theorem embedSections0_byte_34 : initialMem[embedEnd0 - 72 + 34]? = some 84#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 34)).trans (by decide +kernel)
+
+theorem embedSections0_byte_35 : initialMem[embedEnd0 - 72 + 35]? = some 65#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 35)).trans (by decide +kernel)
+
+theorem embedSections0_byte_36 : initialMem[embedEnd0 - 72 + 36]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 36)).trans (by decide +kernel)
+
+theorem embedSections0_byte_37 : initialMem[embedEnd0 - 72 + 37]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 37)).trans (by decide +kernel)
+
+theorem embedSections0_byte_38 : initialMem[embedEnd0 - 72 + 38]? = some 1#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 38)).trans (by decide +kernel)
+
+theorem embedSections0_byte_39 : initialMem[embedEnd0 - 72 + 39]? = some 46#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 39)).trans (by decide +kernel)
+
+theorem embedSections0_byte_40 : initialMem[embedEnd0 - 72 + 40]? = some 83#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 40)).trans (by decide +kernel)
+
+theorem embedSections0_byte_41 : initialMem[embedEnd0 - 72 + 41]? = some 89#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 41)).trans (by decide +kernel)
+
+theorem embedSections0_byte_42 : initialMem[embedEnd0 - 72 + 42]? = some 77#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 42)).trans (by decide +kernel)
+
+theorem embedSections0_byte_43 : initialMem[embedEnd0 - 72 + 43]? = some 66#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 43)).trans (by decide +kernel)
+
+theorem embedSections0_byte_44 : initialMem[embedEnd0 - 72 + 44]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 44)).trans (by decide +kernel)
+
+theorem embedSections0_byte_45 : initialMem[embedEnd0 - 72 + 45]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 45)).trans (by decide +kernel)
+
+theorem embedSections0_byte_46 : initialMem[embedEnd0 - 72 + 46]? = some 1#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 46)).trans (by decide +kernel)
+
+theorem embedSections0_byte_47 : initialMem[embedEnd0 - 72 + 47]? = some 28#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 47)).trans (by decide +kernel)
+
+theorem embedSections0_byte_48 : initialMem[embedEnd0 - 72 + 48]? = some 67#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 48)).trans (by decide +kernel)
+
+theorem embedSections0_byte_49 : initialMem[embedEnd0 - 72 + 49]? = some 82#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 49)).trans (by decide +kernel)
+
+theorem embedSections0_byte_50 : initialMem[embedEnd0 - 72 + 50]? = some 67#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 50)).trans (by decide +kernel)
+
+theorem embedSections0_byte_51 : initialMem[embedEnd0 - 72 + 51]? = some 83#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 51)).trans (by decide +kernel)
+
+theorem embedSections0_byte_52 : initialMem[embedEnd0 - 72 + 52]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 52)).trans (by decide +kernel)
+
+theorem embedSections0_byte_53 : initialMem[embedEnd0 - 72 + 53]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 53)).trans (by decide +kernel)
+
+theorem embedSections0_byte_54 : initialMem[embedEnd0 - 72 + 54]? = some 0#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 54)).trans (by decide +kernel)
+
+theorem embedSections0_byte_55 : initialMem[embedEnd0 - 72 + 55]? = some 51#8 :=
+  (loaderMem_get pieces imageByte (embedEnd0 - 72 + 55)).trans (by decide +kernel)
+
 theorem embedTrailer0_byte_0 : initialMem[embedEnd0 - 16 + 0]? = some 0#8 :=
   (loaderMem_get pieces imageByte (embedEnd0 - 16 + 0)).trans (by decide +kernel)
 

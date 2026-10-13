@@ -189,6 +189,11 @@ for k, (ptr, text, start, end) in enumerate(files):
         value = int.from_bytes(image_total(w, 8), 'little')
         ecert += [f'theorem embedPath{k}_word_{w:x} : bytesT initialMem {w:#x} 8 = {value:#x}#64 :=',
                   f'  (loaderMem_bytes pieces imageByte {w:#x} 8).trans (by decide +kernel)', '']
+    # The section table before the trailer: 8-byte {name, big-endian length} entries.
+    nsec = int.from_bytes(image_read(end - 16, 4), 'big')
+    for i, value in enumerate(image_read(end - 16 - 8 * nsec, 8 * nsec)):
+        ecert += [f'theorem embedSections{k}_byte_{i} : initialMem[embedEnd{k} - {16 + 8 * nsec} + {i}]? = some {value}#8 :=',
+                  f'  (loaderMem_get pieces imageByte (embedEnd{k} - {16 + 8 * nsec} + {i})).trans (by decide +kernel)', '']
     # The file's last 16 bytes: the bytecode trailer (section count, exec magic).
     for i, value in enumerate(image_read(end - 16, 16)):
         ecert += [f'theorem embedTrailer{k}_byte_{i} : initialMem[embedEnd{k} - 16 + {i}]? = some {value}#8 :=',

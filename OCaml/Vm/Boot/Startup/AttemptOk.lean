@@ -166,6 +166,13 @@ theorem attempt_ok (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (name n
       gholds_lookup (n := 10) _ p3.regs rfl, gholds_lookup (n := 11) _ p3.regs rfl,
       gholds_lookup (n := 12) _ p3.regs rfl, trivial⟩
     (by decide) (by decide) (by decide) (by decide)
+    (fun a foot => by
+      have : WhileMinElfParse.trailSlot.toNat = 0x87ffffa8 := by decide
+      rw [this]
+      rcases foot with global | ⟨_, hi, _⟩
+      · unfold allocGlobal InRange at global; omega
+      · unfold heapEnd at hi; omega)
+    (Or.inr (by decide)) (Or.inl (by decide))
     (A.words.transport fun x hx => by
       rw [mem3]; exact glob2 x (by have := hx.htif.bounds; unfold Layout.sym_files heapEnd at *; omega) hx.htif.out_errno
         (by rcases hx with ⟨_, h⟩ | ⟨_, h⟩ <;> simp only [Layout.sym_fs_ready, Layout.sym_fds] at * <;> omega))
