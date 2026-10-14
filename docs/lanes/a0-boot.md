@@ -223,8 +223,17 @@ insertion is proved generically:
     `kind | page` in the first empty slot on the probe path from
     `pageHash page` and bumps the occupancy. It needs the record
     (`PageTableFields`), an empty slot and the page's absence.
-    Next: `caml_page_table_add`'s page loop. Each insertion keeps an empty
-    slot, the page's absence and `pageCount`, by `pageCount_fill`.
+  * `caml_page_table_add`'s blocks are proved (PageAddSteps.lean), along
+    with the loop's pure invariant (PageAddModel.lean).
+    * `PagesIn` says every nonzero slot holds `kind | page j` for some
+      `j < k`.
+    * `PagesIn.absent` uses `blockPage_other`: different pages differ above
+      bit 12, which is the probe's page test.
+    * `PagesIn.fill` covers the insertion.
+  * `registers_of_blocks'` takes the register list as an implication. A
+    block whose registers come out of a simp over many instructions must be
+    split; the kernel recurses on the simp proof otherwise.
+  Next: compose `caml_page_table_add` (`indexedLoop` over the pages).
 Then `caml_set_allocation_policy`, `caml_init_major_heap` (its chunk's
 pages go through the same insertion) and onward to the cut.
 

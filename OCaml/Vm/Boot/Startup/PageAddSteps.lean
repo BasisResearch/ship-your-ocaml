@@ -162,4 +162,122 @@ theorem page_add_setup (c : Config) (sp ra s2 s3 kind : BitVec 64) (leaf : LeafI
       gholds_lookup (n := 2) _ pins rfl, gholds_lookup (n := 10) _ pins rfl, trivial⟩
   · rfl
   · decide
+
+/-- `caml_page_table_modify(page, 0, kind)`. -/
+theorem page_add_call_front (c : Config) (ra page kind : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(8, page), (18, kind)]) :
+    FnSummary 0x8000b128#64 (fun e => e = c) (WriteRegistersPost [10, 12, 11] [] c jal_8000b134_call.pc page
+      [(11, 0#64), (12, kind), (10, page), (8, page), (18, kind)]) := by
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput caml_page_table_addXb128Seg 0x8000b128#64 [(8, page), (18, kind)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [8, 18]; decide
+      shape := by change ChainOK _ [8, 18] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageAddLoop_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_add_at_" }))
+  · rfl
+  · rfl
+  · simp only [caml_page_table_addXb128Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, srcVal, lookupG,
+      eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, pageaddloop_line_8000b128,
+      pageaddloop_line_8000b12c, pageaddloop_line_8000b130]
+    rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero, BitVec.add_zero, BitVec.add_zero]
+  · rfl
+  · decide
+
+theorem page_add_call (c : Config) (ra page kind : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(8, page), (18, kind)]) :
+    FnSummary 0x8000b128#64 (fun e => e = c) (WriteRegistersPost ([10, 12, 11] ++ [1]) [] c jal_8000b134_call.target page
+      ((1, jal_8000b134_call.link) :: [(11, 0#64), (12, kind), (10, page), (8, page), (18, kind)])) :=
+  block_then_call c jal_8000b134_call_shape jal_8000b134_call_decode (fun _ h => jal_8000b134_call_pins h)
+    (page_add_call_front c ra page kind leaf regs) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+def pageAddNextBlocks (more : Bool) : List BBlock :=
+  caml_page_table_addXb138TSeg ++ if more then caml_page_table_addXb124FSeg else caml_page_table_addXb124TSeg
+
+/-- The page went in: next page; back while it is at most the last. -/
+theorem page_add_next (c : Config) (ra page last : BitVec 64) (more : Bool) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(8, page), (19, 4096#64), (10, 0#64), (9, last)])
+    (test : guardB bop.BLTU last (page + 4096#64) = !more) :
+    FnSummary 0x8000b138#64 (fun e => e = c) (WriteRegistersPost [8] [] c
+      (if more then 0x8000b128#64 else 0x8000b160#64) 0#64
+      [(8, page + 4096#64), (19, 4096#64), (10, 0#64), (9, last)]) := by
+  have input : BlockInput (pageAddNextBlocks more) 0x8000b138#64 [(8, page), (19, 4096#64), (10, 0#64), (9, last)]
+      [] c := {
+    good := leaf.good
+    minstret := leaf.minstret
+    regs := regs
+    keys := by change KeysOK [8, 19, 10, 9]; decide
+    shape := by unfold pageAddNextBlocks; cases more <;> (change ChainOK _ [8, 19, 10, 9] _; decide)
+    tick := leaf.tick
+    facts := by
+      have code := pageAddLoop_code leaf.image
+      have code2 := pageAddEntry_code leaf.image
+      unfold pageAddNextBlocks
+      cases more
+      all_goals
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_add_at_"
+        all_goals simp only [pageaddloop_line_8000b138, srcVal, lookupG, runGM, stepGM, eraseG, wvalM,
+          Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]
+        all_goals first | decide | (rw [test]; rfl) }
+  apply registers_of_blocks leaf.image (by constructor <;> trivial) (block_summary _ _ _ _ _ input)
+    (keys := by unfold pageAddNextBlocks; cases more <;> decide) (no3 := by unfold pageAddNextBlocks; cases more <;> decide)
+  · unfold pageAddNextBlocks; cases more <;> rfl
+  · unfold pageAddNextBlocks; cases more <;> rfl
+  · unfold pageAddNextBlocks; cases more <;> rfl
+  · rfl
+  · unfold pageAddNextBlocks; cases more <;> decide
+
+/-- Restore and return 0. -/
+theorem page_add_return (c : Config) (sp ra s0 s1 s2 s3 v oldra : BitVec 64) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 48) (regs : GHolds c.σ [(2, nativeStack sp 48), (10, v)])
+    (saved : ∀ off value, (off, value) ∈ pageAddSlots ra s0 s1 s2 s3 →
+      bytesT c.σ.mem (nativeFrameBase sp 48 + off) 8 = value)
+    (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x8000b160#64 (fun e => e = c) (WriteRegistersPost [18, 19, 1, 8, 9, 10, 2] [] c ra 0#64
+      [(2, sp), (10, 0#64), (9, s1), (8, s0), (1, ra), (19, s3), (18, s2)]) := by
+  have word (off : Nat) (value : BitVec 64) (member : (off, value) ∈ pageAddSlots ra s0 s1 s2 s3) :
+      bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 48 + off)) = value := by
+    rw [read8_value]; exact saved off value member
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput caml_page_table_addXb160Seg 0x8000b160#64
+        [(2, nativeStack sp 48), (10, v)]
+        [read8 c.σ.mem (nativeFrameBase sp 48 + 16), read8 c.σ.mem (nativeFrameBase sp 48 + 8),
+          read8 c.σ.mem (nativeFrameBase sp 48 + 40), read8 c.σ.mem (nativeFrameBase sp 48 + 32),
+          read8 c.σ.mem (nativeFrameBase sp 48 + 24)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 10]; decide
+      shape := by change ChainOK _ [2, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := pageAddReturn_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_page_table_add_at_"
+        · exact (frame.read_slot (off := 16) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 8) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 40) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 32) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 24) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 48 + 40)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [word 40 ra (by simp [pageAddSlots]), ret_tgt ra aligned]
+          exact aligned }))
+  · rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 48 + 40)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [word 40 ra (by simp [pageAddSlots]), ret_tgt ra aligned]
+  · simp only [caml_page_table_addXb160Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, eaddrM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false,
+      List.headD_cons, List.tail_cons, pageaddreturn_line_8000b160, pageaddreturn_line_8000b164, pageaddreturn_line_8000b168, pageaddreturn_line_8000b16c, pageaddreturn_line_8000b170, pageaddreturn_line_8000b174, pageaddreturn_line_8000b178]
+    rw [show Functions.sign_extend (m := 64) 48#12 = 48#64 by decide, nativeStack_restore,
+      word 16 s2 (by simp [pageAddSlots]), word 8 s3 (by simp [pageAddSlots]),
+      word 40 ra (by simp [pageAddSlots]), word 32 s0 (by simp [pageAddSlots]),
+      word 24 s1 (by simp [pageAddSlots]), show 0#64 + Functions.sign_extend (m := 64) 0#12 = 0#64 by decide]
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
