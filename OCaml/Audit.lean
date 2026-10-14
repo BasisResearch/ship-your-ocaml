@@ -5809,3 +5809,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_measure
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_copy
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_terminate
+#print axioms OCaml.Vm.Primitives.Uncaught.FormatException.ready_transport
+#print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_alloc
+#print axioms OCaml.Vm.Primitives.Uncaught.FormatException.saved_frameLog
+#print axioms OCaml.Vm.Primitives.Uncaught.FormatException.filled_out
+#print axioms OCaml.Vm.Primitives.Uncaught.FormatException.filled_saved
+#print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_out
+#print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_leave
+#print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_exception_constant

@@ -14,6 +14,9 @@ set_option autoImplicit false
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable OCaml.Vm.Primitives OCaml.Vm.Boot.Startup
 open OCaml.Vm.Primitives.Named.NamedValue (regsAt regsAt_of wl_nil gpr_some gpr_some_of NameAt gprReg_ne_htif)
 
+/-- The callee-saved registers `caml_format_exception` never writes (s3, s6–s11). -/
+abbrev formatCallee : List Nat := [19, 22, 23, 24, 25, 26, 27]
+
 /-- The buffer's first byte, as a natural. -/
 abbrev dataNat (sp : BitVec 64) : Nat := sp.toNat - 336
 
@@ -36,6 +39,7 @@ structure Filled (c0 : Config) (sp : BitVec 64) (name : List (BitVec 8)) (base c
   data : gprGet c.σ 20 = some (bufData sp)
   stack : gprGet c.σ 2 = some (sp + 18446744073709551184#64)
   memory : FilledMem c.σ.mem base.σ.mem sp name
+  callee : ∀ k ∈ formatCallee, gprGet c.σ k = gprGet base.σ k
   output : Vsa.Machine.output c.σ = Vsa.Machine.output base.σ
 
 theorem stdioFoot_high {a : Nat} (h : VsaIris.Stdio.stdioFoot a) : a < Layout.sym_bss_end := by
@@ -58,6 +62,7 @@ structure Copied (c0 : Config) (sp np : BitVec 64) (name : List (BitVec 8)) (bas
   stack : gprGet c.σ 2 = some (sp + 18446744073709551184#64)
   buffer : ∀ i (hi : i < name.length), (c.σ.mem[dataNat sp + i]?).getD 0 = name[i]
   rest : ∀ x, (x < dataNat sp ∨ dataNat sp + name.length ≤ x) → (c.σ.mem[x]?).getD 0 = (base.σ.mem[x]?).getD 0
+  callee : ∀ k ∈ formatCallee, gprGet c.σ k = gprGet base.σ k
   output : Vsa.Machine.output c.σ = Vsa.Machine.output base.σ
 
 /-- **`memmove(data, name, len)`.** -/
@@ -123,6 +128,12 @@ theorem format_copy {ra sp exn np s0 s1 s2 s4 s5 : BitVec 64} {name : List (BitV
         have kp := p3.kept x out
         rw [byte_total, byte_total] at kp
         rw [kp, m2]
+      callee := fun k hk => by
+        simp only [formatCallee, List.mem_cons, List.not_mem_nil, or_false] at hk
+        rcases hk with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+          exact (k3 _ (by decide) (by decide) (by decide) (by decide)).trans
+            ((p2.gpr_frame (by decide) _ (by decide) (by decide) (by decide)).trans
+              ((k1 _ (by decide) (by decide) (by decide)).trans (m.frame _ (by decide) (by decide) (by decide))))
       output := by
         have o3 := p3.output
         rw [o3]
@@ -262,6 +273,14 @@ theorem format_terminate {ra sp exn np s0 s1 s2 s4 s5 : BitVec 64} {name : List 
               · right; show sp.toNat - 352 + 8 ≤ x; omega
             rw [mf', writeLog_out _ _ _ o1, writeLog_out _ _ _ o2]
             exact cp.rest x (out.elim Or.inl (fun hx => Or.inr (Nat.le_of_lt hx))) }
+      callee := fun k hk => by
+        have mem := hk
+        simp only [formatCallee, List.mem_cons, List.not_mem_nil, or_false] at mem
+        have out (l : List Nat) (hl : l = [1] ∨ l = [8, 10]) : k ∉ l := fun hm => by
+          rcases hl with rfl | rfl <;> simp only [List.mem_cons, List.not_mem_nil, or_false] at hm <;> omega
+        exact (p3.gpr_frame (by decide) k (by omega) (by omega) (out _ (.inl rfl))).trans
+          ((p2.gpr_frame (by decide) k (by omega) (by omega) (out _ (.inr rfl))).trans
+            ((k1 k (by omega) (by omega)).trans (cp.callee k hk)))
       output := by
         have o := cp.output
         simp only [Vsa.Machine.output] at o ⊢
