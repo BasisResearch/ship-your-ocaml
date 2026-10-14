@@ -4,10 +4,6 @@ import OCaml.Vm.Boot.Startup.PageAddEntryRows
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Sim
 
-theorem pageaddentry_line_8000b0ec :
-    mkLine 0x8000b0ec#64 0xfd010113#32 =
-      ⟨0x8000b0ec#64, 0xfd010113#32, 0x13#8, 0x01#8, 0x01#8, 0xfd#8, .addi, 2, 2, 0, 0xfd0#12⟩ := by rfl
-
 theorem pageaddentry_line_8000b0f0 :
     mkLine 0x8000b0f0#64 0xfffff7b7#32 =
       ⟨0x8000b0f0#64, 0xfffff7b7#32, 0xb7#8, 0xf7#8, 0xff#8, 0xff#8, .lui, 15, 0, 0, 0x000#12⟩ := by rfl
