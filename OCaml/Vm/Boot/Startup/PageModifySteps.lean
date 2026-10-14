@@ -323,7 +323,7 @@ theorem BoundaryPost.widen {w w' before ra pc regs after} (h : BoundaryPost w be
   { h with frame := fun r hr hn => h.frame r (fun n hn' => hr n (sub n hn')) hn }
 
 /-- The registers the probe loop writes. -/
-abbrev probeWrites : List Nat := [15, 11, 10, 12, 14]
+abbrev probeWrites : List Nat := [15, 11, 10, 12, 14, 17, 16]
 
 /-- Slot `i`'s word, read through the native address. -/
 def slotWord (m : Std.ExtHashMap Nat (BitVec 8)) (ent : BitVec 64) (i : Nat) : BitVec 64 :=

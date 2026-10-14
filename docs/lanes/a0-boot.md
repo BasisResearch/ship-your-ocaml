@@ -218,9 +218,13 @@ insertion is proved generically:
     slot minus the steps taken. It assumes the page is absent: every
     occupied slot holds another page, so the same-page update never runs.
   * `page_insert` stores `page | kind` and bumps the occupancy.
-  * The record load, shift check, probe set-up, prologue and return are
-    proved. Next: compose `caml_page_table_modify`, then
-    `caml_page_table_add`'s page loop.
+  * **`page_table_modify_insert`** (PageModify.lean):
+    `caml_page_table_modify(page, 0, kind)` for an absent page. It stores
+    `kind | page` in the first empty slot on the probe path from
+    `pageHash page` and bumps the occupancy. It needs the record
+    (`PageTableFields`), an empty slot and the page's absence.
+    Next: `caml_page_table_add`'s page loop. Each insertion keeps an empty
+    slot, the page's absence and `pageCount`, by `pageCount_fill`.
 Then `caml_set_allocation_policy`, `caml_init_major_heap` (its chunk's
 pages go through the same insertion) and onward to the cut.
 

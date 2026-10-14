@@ -395,6 +395,7 @@ import OCaml.Vm.Boot.Startup.MemsetWords
 import OCaml.Vm.Boot.Startup.PageTable
 import OCaml.Vm.Boot.Startup.PageHash
 import OCaml.Vm.Boot.Startup.PageModifySteps
+import OCaml.Vm.Boot.Startup.PageModify
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2843,6 +2844,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.page_probe_init
 #print axioms OCaml.Vm.Boot.Startup.page_modify_save
 #print axioms OCaml.Vm.Boot.Startup.page_modify_return
+#print axioms OCaml.Vm.Boot.Startup.page_table_modify_insert
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
