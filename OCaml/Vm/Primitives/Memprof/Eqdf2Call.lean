@@ -24,6 +24,8 @@ structure EqZeroPost (before : Config) (ra : BitVec 64) (after : Config) : Prop 
   output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [10, 11, 12, 13, 14, 15, 16, 17] → gprGet after.σ n = gprGet before.σ n
   htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 /-- **`__eqdf2(+0.0, +0.0) = 0`.** -/
 theorem eqdf2_zero {c : Config} {ra : BitVec 64} (leaf : LeafInput ra c) (pc : PCAt 0x80034740#64 c)
@@ -113,6 +115,7 @@ theorem eqdf2_zero {c : Config} {ra : BitVec 64} (leaf : LeafInput ra c) (pc : P
           p4.frame _ (fun n _ => Named.NamedValue.gprReg_ne_htif n) (by decide),
           p3.frame _ (fun n _ => Named.NamedValue.gprReg_ne_htif n) (by decide),
           p2.frame _ (fun n _ => Named.NamedValue.gprReg_ne_htif n) (by decide),
-          p1.frame _ (fun n _ => Named.NamedValue.gprReg_ne_htif n) (by decide)] }
+          p1.frame _ (fun n _ => Named.NamedValue.gprReg_ne_htif n) (by decide)]
+      kept := p1.kept.trans (p2.kept.trans (p3.kept.trans (p4.kept.trans (p5.kept.trans p6.kept)))) }
 
 end OCaml.Vm.Primitives.Memprof.Eqdf2

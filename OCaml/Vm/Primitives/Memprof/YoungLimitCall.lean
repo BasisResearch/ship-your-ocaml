@@ -39,6 +39,8 @@ structure LimitPost (before : Config) (ra dom trig memp : BitVec 64) (after : Co
   output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [12, 13, 14, 15] → gprGet after.σ n = gprGet before.σ n
   htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 /-- At the store: the chosen limit in `a5`, `Caml_state` in `a4`. -/
 structure Chosen (before : Config) (ra dom trig memp : BitVec 64) (c : Config) : Prop where
@@ -52,6 +54,7 @@ structure Chosen (before : Config) (ra dom trig memp : BitVec 64) (c : Config) :
   output : c.σ.sailOutput = before.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [12, 13, 14, 15] → gprGet c.σ n = gprGet before.σ n
   htif : c.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
+  kept : GprsKept before c
 
 theorem choose {c : Config} {ra dom trig memp : BitVec 64} (h : LimitInput ra dom trig memp c) :
     ∃ d, Steps c d ∧ Chosen c ra dom trig memp d := by
@@ -71,7 +74,7 @@ theorem choose {c : Config} {ra dom trig memp : BitVec 64} (h : LimitInput ra do
       h.leaf.raReg, h.leaf.aligned, p.tick⟩, p.pc, by rw [o15]; simp [limitValue, high], o14, o13,
       Named.NamedValue.gpr_some_of o10, by rw [p.memory, wl_nil], p.output,
       fun n lo hi out => p.gpr_frame (by decide) n lo hi out,
-      p.frame _ (fun n _ => gprReg_ne_htif n) (by decide)⟩
+      p.frame _ (fun n _ => gprReg_ne_htif n) (by decide), p.kept⟩
   · obtain ⟨d1, run1, p1⟩ := (triggerLow_fast c (regsAt c) l0 regs0 w2 (by
         simp only [triggerLow_loads, List.getD_cons_zero, List.getD_cons_succ, h.domain, h.trigger, h.memprof]
         simp [guardB, Functions.zopz0zKzJ_u, Sail.BitVec.toNatInt, high])).run c ⟨h.pc, rfl⟩
@@ -98,7 +101,8 @@ theorem choose {c : Config} {ra dom trig memp : BitVec 64} (h : LimitInput ra do
       fun n lo hi out => by
         simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at out
         exact (k2 n out.2.2.2 lo hi).trans (p1.gpr_frame (by decide) n lo hi (by simp; omega)),
-      by rw [p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide), p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide)]⟩
+      by rw [p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide), p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide)],
+      p1.kept.trans p2.kept⟩
 
 /-- **`caml_update_young_limit` with no pending action.** -/
 theorem update_young_limit {c : Config} {ra dom trig memp : BitVec 64} (h : LimitInput ra dom trig memp c) :
@@ -133,6 +137,6 @@ theorem update_young_limit {c : Config} {ra dom trig memp : BitVec 64} (h : Limi
       rw [k3 n lo hi, k2 n out.1 lo hi]
       exact p1.frame n lo hi (by simp; omega),
     by rw [p3.frame _ (fun n _ => gprReg_ne_htif n) (by decide), p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide),
-      p1.htif]⟩
+      p1.htif], p1.kept.trans (p2.kept.trans p3.kept)⟩
 
 end OCaml.Vm.Primitives.Memprof.UpdateYoungLimit

@@ -12,6 +12,8 @@ the layout-level `F1GrowthPremises` (`BarrierGrowthFull` only: the realloc branc
 `BarrierGrowthFull` (a6-gc, realloc branch); C_CALL returns (a1-prims); `libHeap`
 (a0-boot).
 
+**BcSem changes for other lanes (2026-10-19):** `progExeName` (a1-prims, 7222d01e) and the openChan freshness guard (bprime, 4d98b8b3). `kept : GprsKept` on the memprof call posts (`EqZeroPost`, `LimitPost`, `RenewPost`, `SuspendPost`) for a0-boot's readiness across `caml_memprof_renew_minor_sample`.
+
 **In progress: Layer A's uncaught-exception path.** Done: `caml_named_value` as a call summary (`named_value_summary`, `OCaml/Vm/Primitives/Named/`) and over the table (`NamedTableAt`, `named_value_table`); `caml_memprof_set_suspended(1)` (`set_suspended_summary`, `OCaml/Vm/Primitives/Memprof/`); `caml_format_exception` on a constant exception (`format_exception_constant`, `OCaml/Vm/Primitives/Uncaught/`), allocating through a0-boot's `stat_alloc_ready`. `caml_fatal_uncaught_exception`'s 13 blocks are generated (`FatalUncaught.lean`); `caml_stat_free` is now generic in the live set (`stat_free_blockL`, with a0-boot's OK). The fatal path's prologue and handler lookup are proved (`fatal_lookup`, under the named `GprsPersist_Statement`). Next: `caml_memprof_set_suspended(1)` and the call into `caml_format_exception`, then the rest up to the external calls (`fprintf(stderr)`, `caml_callback_exn`, libc `exit` from its entry). F1
 excludes it (`uncaught_unreachable`). Machine path after
 `raise_uncaught_return` (proved): `caml_main`'s `Is_exception_result` test →

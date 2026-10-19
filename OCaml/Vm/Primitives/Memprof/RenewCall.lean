@@ -58,6 +58,8 @@ structure RenewPost (before : Config) (ra sp dom start trig : BitVec 64) (after 
   output : after.σ.sailOutput = before.σ.sailOutput
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 2, 10, 11, 12, 13, 14, 15, 16, 17] → gprGet after.σ n = gprGet before.σ n
   htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 theorem imageOutside_sub {l1 l2 : List WEntry} (sub : l1.Sublist l2) (h : ImageOutside l2) : ImageOutside l1 :=
   imageOutside_sublist sub h
@@ -182,6 +184,7 @@ theorem renew_summary {c : Config} {ra sp dom start trig : BitVec 64} (h : Renew
         rw [p7.htif, p6.frame _ (fun n _ => gprReg_ne_htif n) (by decide),
           p5.frame _ (fun n _ => gprReg_ne_htif n) (by decide), p4.frame _ (fun n _ => gprReg_ne_htif n) (by decide),
           p3.htif, p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide),
-          p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide)] }
+          p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide)]
+      kept := p1.kept.trans (p2.kept.trans (p3.kept.trans (p4.kept.trans (p5.kept.trans (p6.kept.trans p7.kept))))) }
 
 end OCaml.Vm.Primitives.Memprof.RenewMinorSample

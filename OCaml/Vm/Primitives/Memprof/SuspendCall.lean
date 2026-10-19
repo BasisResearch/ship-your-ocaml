@@ -73,6 +73,8 @@ structure SuspendPost (before : Config) (ra sp s0 p dom start trig : BitVec 64) 
   frame : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 2, 8, 10, 11, 12, 13, 14, 15, 16, 17] →
     gprGet after.σ n = gprGet before.σ n
   htif : after.σ.regs.get? Register.htif_payload_writes = before.σ.regs.get? Register.htif_payload_writes
+  /-- every register that held a value still does, and `gp` is unchanged -/
+  kept : GprsKept before after
 
 theorem slot_nat32 {sp : BitVec 64} (w : WriteWindow (sp - 32#64 + 8#64) 8) {k : Nat} (hk : k ≤ 24) :
     (sp - 32#64 + BitVec.ofNat 64 k).toNat = (sp - 32#64).toNat + k := by
@@ -189,6 +191,7 @@ theorem set_suspended_summary {c : Config} {ra sp s0 p dom start trig : BitVec 6
       htif := by
         rw [p5.frame _ (fun n _ => gprReg_ne_htif n) (by decide), p4.frame _ (fun n _ => gprReg_ne_htif n) (by decide),
           p3.htif, p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide),
-          p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide)] }
+          p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide)]
+      kept := p1.kept.trans (p2.kept.trans (p3.kept.trans (p4.kept.trans p5.kept))) }
 
 end OCaml.Vm.Primitives.Memprof.SetSuspended
