@@ -460,4 +460,47 @@ theorem page_table_add (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
     caller := fun x hx => by
       rw [mem5, L.caller x (by rw [stackNat]; omega)]
       exact above3 x hx }⟩
+
+/-- The page mask clears the low twelve bits. -/
+theorem page_mask_shift (x : BitVec 64) : x &&& 0xfffffffffffff000#64 = (x >>> 12) <<< 12 := by
+  rw [show 0xfffffffffffff000#64 = BitVec.allOnes 64 <<< 12 by decide]
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp only [BitVec.getLsbD_and, BitVec.getLsbD_shiftLeft, BitVec.getLsbD_allOnes, BitVec.getLsbD_ushiftRight]
+  by_cases small : i < 12
+  · simp [small]
+  · have back : 12 + (i - 12) = i := by omega
+    have lt : i - 12 < 64 := by omega
+    simp [small, hi, back, lt]
+
+theorem page_mask_nat (x : BitVec 64) : (x &&& 0xfffffffffffff000#64).toNat = x.toNat / 4096 * 4096 := by
+  rw [page_mask_shift, BitVec.toNat_shiftLeft, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow,
+    Nat.shiftLeft_eq]
+  have := x.isLt
+  simp only [Nat.reducePow] at this ⊢
+  rw [Nat.mod_eq_of_lt (by omega)]
+
+/-- caml_page_table_add's range for the `n` pages of an aligned block. -/
+theorem block_first (base : BitVec 64) (aligned : base.toNat % 4096 = 0) :
+    base &&& 0xfffffffffffff000#64 = base := by
+  apply BitVec.eq_of_toNat_eq
+  rw [page_mask_nat]
+  omega
+
+theorem block_last (base : BitVec 64) (n : Nat) (pos : 0 < n) (aligned : base.toNat % 4096 = 0)
+    (fits : base.toNat + 4096 * n < 2 ^ 64) :
+    (base + BitVec.ofNat 64 (4096 * n) + Functions.sign_extend (m := 64) 4095#12) &&& 0xfffffffffffff000#64 =
+      blockPage base (n - 1) := by
+  have p64 : (2 : Nat) ^ 64 = 18446744073709551616 := rfl
+  have top : base + BitVec.ofNat 64 (4096 * n) = blockPage base n := rfl
+  have topNat := blockPage_nat base n fits
+  rw [p64] at fits
+  rw [show Functions.sign_extend (m := 64) 4095#12 = 18446744073709551615#64 by decide, top]
+  apply BitVec.eq_of_toNat_eq
+  rw [page_mask_nat, blockPage_nat base (n - 1) (by rw [p64]; omega), BitVec.toNat_add, topNat,
+    show (18446744073709551615#64).toNat = 18446744073709551615 from rfl, p64]
+  generalize base.toNat = b at *
+  have back : (b + 4096 * n + 18446744073709551615) % 18446744073709551616 = b + 4096 * n - 1 := by omega
+  rw [back]
+  omega
 end OCaml.Vm.Boot.Startup

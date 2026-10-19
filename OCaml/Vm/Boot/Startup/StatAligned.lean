@@ -172,4 +172,23 @@ theorem stat_alloc_aligned (c : Config) (H : List (Nat × Nat)) (capacity charge
       rw [mem5, below4 x outside, keep3 x (by rw [stackNat]; omega), p2.memory,
         frameOn_writeLog _ _ _ inside2 x ⟨Or.inr above, trivial⟩, p1.memory]
       rfl }⟩
+
+/-- `pageAbove raw` is the first page boundary above `raw`. -/
+theorem pageAbove_nat (raw : BitVec 64) (fits : raw.toNat + 4096 < 2 ^ 64) :
+    (pageAbove raw).toNat = (raw.toNat / 4096 + 1) * 4096 := by
+  have p64 : (2 : Nat) ^ 64 = 18446744073709551616 := rfl
+  unfold pageAbove pageNumber
+  rw [BitVec.toNat_shiftLeft, BitVec.toNat_add, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow,
+    Nat.shiftLeft_eq, show (1#64).toNat = 1 from rfl, p64]
+  rw [p64] at fits
+  simp only [Nat.reducePow]
+  generalize raw.toNat = r at *
+  rw [Nat.mod_eq_of_lt (a := r / 4096 + 1) (by omega), Nat.mod_eq_of_lt (by omega)]
+
+/-- The aligned block of `size` bytes lies inside the raw one of `size + 4096`. -/
+theorem pageAbove_inside (raw : BitVec 64) (size : Nat) (fits : raw.toNat + size + 4096 < 2 ^ 64) :
+    raw.toNat < (pageAbove raw).toNat ∧ (pageAbove raw).toNat + size ≤ raw.toNat + (size + 4096) ∧
+      (pageAbove raw).toNat % 4096 = 0 := by
+  rw [pageAbove_nat raw (by omega)]
+  omega
 end OCaml.Vm.Boot.Startup
