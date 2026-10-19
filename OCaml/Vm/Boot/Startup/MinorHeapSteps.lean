@@ -4,6 +4,14 @@ import OCaml.Vm.Boot.Startup.MinorHeapSaveNormalized
 import OCaml.Vm.Boot.Startup.MinorHeapSaveImage
 import OCaml.Vm.Boot.Startup.MinorHeapStateNormalized
 import OCaml.Vm.Boot.Startup.MinorHeapStateImage
+import OCaml.Vm.Boot.Startup.MinorHeapAllocNormalized
+import OCaml.Vm.Boot.Startup.MinorHeapAllocImage
+import OCaml.Vm.Boot.Startup.MinorHeapAllocCallInterface
+import OCaml.Vm.Boot.Startup.MinorHeapAddNormalized
+import OCaml.Vm.Boot.Startup.MinorHeapAddImage
+import OCaml.Vm.Boot.Startup.MinorHeapAddCallInterface
+import OCaml.Vm.Boot.Startup.MinorHeapCheckNormalized
+import OCaml.Vm.Boot.Startup.MinorHeapCheckImage
 import OCaml.Vm.Boot.Startup.PageAddSteps
 import OCaml.Vm.Boot.Startup.DomainInit
 namespace OCaml.Vm.Boot.Startup
@@ -123,6 +131,134 @@ theorem minor_state (c : Config) (ra size : BitVec 64) (leaf : LeafInput ra c) (
     exact ⟨gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl state, gholds_lookup_eq pins rfl
         (by rw [show Functions.sign_extend (m := 64) 0#12 = 0#64 by decide, BitVec.add_zero]),
       gholds_lookup_eq pins rfl young, gholds_lookup_eq pins rfl alloc, gholds_lookup (n := 10) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+theorem sext_zero : Functions.sign_extend (m := 64) 0#12 = 0#64 := by decide
+
+/-- `caml_stat_alloc_aligned_noexc(size, 0, &raw)`, `raw` at `8(sp)`. -/
+theorem minor_alloc_front (c : Config) (sp ra size v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(2, nativeStack sp 64), (18, size), (10, v)]) :
+    FnSummary 0x8000a284#64 (fun e => e = c) (WriteRegistersPost [12, 11, 10] [] c jal_8000a290_call.pc size
+      [(12, nativeStack sp 64 + 8#64), (11, 0#64), (10, size), (2, nativeStack sp 64), (18, size)]) := by
+  apply registers_of_blocks' leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput caml_set_minor_heap_sizeXa284Seg 0x8000a284#64
+        [(2, nativeStack sp 64), (18, size), (10, v)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 18, 10]; decide
+      shape := by change ChainOK _ [2, 18, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := minorHeapAlloc_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_set_minor_heap_size_at_" }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_set_minor_heap_sizeXa284Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, srcVal,
+      lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, minorheapalloc_line_8000a284, minorheapalloc_line_8000a288, minorheapalloc_line_8000a28c] at pins
+    exact ⟨gholds_lookup_eq pins rfl (by rw [show Functions.sign_extend (m := 64) 8#12 = 8#64 by decide]),
+      gholds_lookup_eq pins rfl (by rw [sext_zero]; rfl), gholds_lookup_eq pins rfl (by rw [sext_zero, BitVec.add_zero]),
+      gholds_lookup (n := 2) _ pins rfl, gholds_lookup (n := 18) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+theorem minor_alloc_call (c : Config) (sp ra size v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(2, nativeStack sp 64), (18, size), (10, v)]) :
+    FnSummary 0x8000a284#64 (fun e => e = c) (WriteRegistersPost ([12, 11, 10] ++ [1]) [] c
+      jal_8000a290_call.target size ((1, jal_8000a290_call.link) ::
+        [(12, nativeStack sp 64 + 8#64), (11, 0#64), (10, size), (2, nativeStack sp 64), (18, size)])) :=
+  block_then_call c jal_8000a290_call_shape jal_8000a290_call_decode (fun _ h => jal_8000a290_call_pins h)
+    (minor_alloc_front c sp ra size v leaf regs) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+/-- A nonnull block: `caml_page_table_add(In_young, blk, blk + size)`. -/
+theorem minor_add_front (c : Config) (ra blk size : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, blk), (18, size)]) (nonzero : blk ≠ 0#64) :
+    FnSummary 0x8000a294#64 (fun e => e = c) (WriteRegistersPost [8, 19, 11, 12, 10] [] c jal_8000a2ac_call.pc 2#64
+      [(8, blk), (19, blk + size), (11, blk), (12, blk + size), (10, 2#64), (18, size)]) := by
+  apply registers_of_blocks' leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (caml_set_minor_heap_sizeXa294FSeg ++ caml_set_minor_heap_sizeXa29cSeg)
+        0x8000a294#64 [(10, blk), (18, size)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 18]; decide
+      shape := by change ChainOK _ [10, 18] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := minorHeapAdd_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_set_minor_heap_size_at_"
+        · change guardB bop.BEQ blk 0#64 = false
+          exact beq_eq_false_iff_ne.mpr nonzero }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_set_minor_heap_sizeXa294FSeg, caml_set_minor_heap_sizeXa29cSeg, List.cons_append, List.nil_append,
+      evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, srcVal, lookupG, eraseG, wvalM, Option.getD_some,
+      Nat.reduceEqDiff, ite_true, ite_false, minorheapadd_line_8000a294, minorheapadd_line_8000a29c, minorheapadd_line_8000a2a0, minorheapadd_line_8000a2a4, minorheapadd_line_8000a2a8] at pins
+    simp only [sext_zero, BitVec.add_zero] at pins
+    exact ⟨gholds_lookup (n := 8) _ pins rfl, gholds_lookup (n := 19) _ pins rfl, gholds_lookup (n := 11) _ pins rfl,
+      gholds_lookup (n := 12) _ pins rfl, gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 18) _ pins rfl,
+      trivial⟩
+  · rfl
+  · decide
+
+theorem minor_add_call (c : Config) (ra blk size : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, blk), (18, size)]) (nonzero : blk ≠ 0#64) :
+    FnSummary 0x8000a294#64 (fun e => e = c) (WriteRegistersPost ([8, 19, 11, 12, 10] ++ [1]) [] c
+      jal_8000a2ac_call.target 2#64 ((1, jal_8000a2ac_call.link) ::
+        [(8, blk), (19, blk + size), (11, blk), (12, blk + size), (10, 2#64), (18, size)])) :=
+  block_then_call c jal_8000a2ac_call_shape jal_8000a2ac_call_decode (fun _ h => jal_8000a2ac_call_pins h)
+    (minor_add_front c ra blk size leaf regs nonzero) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+local macro "mck" : tactic => `(tactic| simp only [minorheapcheck_line_8000a2b4, minorheapcheck_line_8000a2b8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+/-- The add succeeded and the domain had no minor heap (`young_start = NULL`):
+nothing to remove or free. -/
+theorem minor_check (c : Config) (ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, 0#64), (9, BitVec.ofNat 64 Layout.sym_Caml_state)])
+    (domain : bytesT c.σ.mem Layout.sym_Caml_state 8 = firstDomainPtr)
+    (noYoung : bytesT c.σ.mem (domainField 32) 8 = 0#64) :
+    FnSummary 0x8000a2b0#64 (fun e => e = c) (WriteRegistersPost [15, 11] [] c 0x8000a2dc#64 0#64
+      [(15, firstDomainPtr), (11, 0#64), (10, 0#64), (9, BitVec.ofNat 64 Layout.sym_Caml_state)]) := by
+  have state : bytesVal .ld (read8 c.σ.mem (BitVec.ofNat 64 Layout.sym_Caml_state).toNat) = firstDomainPtr := by
+    rw [read8_value]; exact domain
+  have start : bytesVal .ld (read8 c.σ.mem (firstDomainPtr + 32#64).toNat) = 0#64 := by
+    rw [read8_value]; exact noYoung
+  apply registers_of_blocks' leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (caml_set_minor_heap_sizeXa2b0FSeg ++ caml_set_minor_heap_sizeXa2b4TSeg)
+        0x8000a2b0#64 [(10, 0#64), (9, BitVec.ofNat 64 Layout.sym_Caml_state)]
+        [read8 c.σ.mem (BitVec.ofNat 64 Layout.sym_Caml_state).toNat, read8 c.σ.mem (firstDomainPtr + 32#64).toNat]
+        c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 9]; decide
+      shape := by change ChainOK _ [10, 9] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := minorHeapCheck_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_set_minor_heap_size_at_"
+        · mck; rfl
+        · exact (show ReadWindow (BitVec.ofNat 64 Layout.sym_Caml_state) 8 by constructor <;> decide).ld rfl
+            (by mck; rw [sext_zero, BitVec.add_zero]) (read8_pins _ _)
+        · exact (show ReadWindow (firstDomainPtr + 32#64) 8 by constructor <;> decide).ld rfl
+            (by mck; rw [state]; decide) (read8_pins _ _)
+        · mck
+          rw [start]
+          rfl }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_set_minor_heap_sizeXa2b0FSeg, caml_set_minor_heap_sizeXa2b4TSeg, List.cons_append,
+      List.nil_append, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM, ldsRunM, srcVal, lookupG,
+      eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, List.headD_cons, List.tail_cons,
+      minorheapcheck_line_8000a2b4, minorheapcheck_line_8000a2b8] at pins
+    exact ⟨gholds_lookup_eq pins rfl state, gholds_lookup_eq pins rfl start, gholds_lookup (n := 10) _ pins rfl,
+      gholds_lookup (n := 9) _ pins rfl, trivial⟩
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
