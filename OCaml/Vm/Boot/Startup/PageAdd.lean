@@ -150,6 +150,7 @@ structure PageAddAt (H : List (Nat × Nat)) (capacity : Nat) (sp ra kind base en
   /-- The first `k` pages are in the table. -/
   present : ∀ j, j < k → ∃ i, i < 2048 ∧ slotWord d.σ.mem ent i = kind ||| blockPage base j
   caller : ∀ x, (nativeStack sp 48).toNat ≤ x → (d.σ.mem[x]?).getD 0 = (start.σ.mem[x]?).getD 0
+  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet d.σ k = gprGet start.σ k
 
 theorem PageAddAt.index {H capacity sp ra kind base ent n m0 start k d} (S : PageAddSpan H sp kind base ent n m0)
     (A : PageAddAt H capacity sp ra kind base ent n m0 start k d) :
@@ -271,6 +272,11 @@ theorem page_add_step {H capacity sp ra kind base ent n m0 start} (S : PageAddSp
       rw [mem3, M.memory, writeLog_out _ _ _ (by simp only [OutL, slotNat, and_true]; omega),
         frameOn_writeLog _ _ _ (pageModifyLog_inside frameM) x ⟨Or.inr (by dsimp only; omega), trivial⟩, mem1]
       exact A.caller x hx
+    saved := fun r lo hi => by
+      have out (L : List Nat) (low : ∀ m ∈ L, m < 20) : r ∉ L := fun mem => by have := low r mem; omega
+      rw [keep3 r (by omega) (by omega) (out _ (by decide)), M.saved r lo hi,
+        keep1 r (by omega) (by omega) (out _ (by decide))]
+      exact A.saved r lo hi
     present := fun j hj => by
       by_cases last : j = k
       · subst last
@@ -355,6 +361,7 @@ structure PageAdded (H : List (Nat × Nat)) (capacity : Nat) (sp ra kind s0 s1 s
   kept : ∀ x, x < heapEnd → OutW [⟨pageTable + 0x18, pageTable + 0x20⟩, ⟨ent.toNat, ent.toNat + 16384⟩] x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
 
 theorem page_table_add (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
     (sp ra kind start stop s0 s1 s2 s3 base ent : BitVec 64) (n : Nat)
@@ -433,7 +440,8 @@ theorem page_table_add (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
     known := fun i hi _ => Or.inl (slotWord_agree S.tableLow agree3 i hi)
     kept := fun x hx _ => agree3 x hx
     present := fun j hj => absurd hj (Nat.not_lt_zero j)
-    caller := fun _ _ => rfl }
+    caller := fun _ _ => rfl
+    saved := fun _ _ _ => rfl }
   have pc4 : PCAt 0x8000b160#64 d4 := by have := L.pc; simp only [Nat.lt_irrefl, ite_false] at this; exact this
   have link : addLink n ra = jal_8000b134_call.link := if_neg (by have := A.nonempty; omega)
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp (L.ready.gpr_some 10 (by decide) (by decide))
@@ -459,7 +467,14 @@ theorem page_table_add (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
     kept := fun x hx out => by rw [mem5]; exact L.kept x hx out
     caller := fun x hx => by
       rw [mem5, L.caller x (by rw [stackNat]; omega)]
-      exact above3 x hx }⟩
+      exact above3 x hx
+    saved := fun r lo hi => by
+      have out (L : List Nat) (low : ∀ m ∈ L, m < 20) : r ∉ L := fun mem => by have := low r mem; omega
+      have five : gprGet d5.σ r = gprGet d4.σ r :=
+        p5.toEffectPost.gpr_frame (by decide) r (by omega) (by omega) (out _ (by decide))
+      rw [five, L.saved r lo hi,
+        keep3 r (by omega) (by omega) (out _ (by decide)), keep2 r (by omega) (by omega) (out _ (by decide)),
+        keep1 r (by omega) (by omega) (out _ (by decide))] }⟩
 
 /-- The page mask clears the low twelve bits. -/
 theorem page_mask_shift (x : BitVec 64) : x &&& 0xfffffffffffff000#64 = (x >>> 12) <<< 12 := by

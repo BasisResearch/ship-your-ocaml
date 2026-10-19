@@ -64,6 +64,8 @@ structure PageModified (H : List (Nat × Nat)) (capacity : Nat) (sp ra page kind
   at_slot : slot = probe (pageHash page).toNat steps
   empty : slotWord before.σ.mem ent slot = 0#64
   occupied : ∀ i, i < steps → slotWord before.σ.mem ent (probe (pageHash page).toNat i) ≠ 0#64
+  /-- s4–s11 are the caller's. -/
+  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
   memory : after.σ.mem = writeLog (writeLog before.σ.mem (pageModifyLog sp ra s0 s1 s2 s3 s4))
     [((slotAddr ent (BitVec.ofNat 64 slot)).toNat, 8, kind ||| page), (pageTable + 0x18, 8, occ + 1#64)]
 
@@ -280,5 +282,20 @@ theorem page_table_modify_insert (c : Config) (H : List (Nat × Nat)) (capacity 
       at_slot := atSlot
       empty := emptySlot
       occupied := occupiedPath
+      saved := fun k lo hi27 => by
+        have hi : k ≤ 31 := by omega
+        by_cases h20 : k = 20
+        · subst h20; rw [gholds_lookup (n := 20) _ p8.regs rfl, gholds_lookup (n := 20) _ A.regs rfl]
+        · obtain ⟨w, hw⟩ := Option.isSome_iff_exists.mp (A.ready.gpr_some k (by omega) hi)
+          have out (L : List Nat) (low : ∀ m ∈ L, m ≤ 20) : k ∉ L := fun mem => by have := low k mem; omega
+          rw [hw]
+          refine (p8.toEffectPost.gpr_frame (by decide) k (by omega) hi (out _ (by decide))).trans
+            ((p7.toEffectPost.gpr_frame (by decide) k (by omega) hi (out _ (by decide))).trans ?_)
+          exact PG.keep k (by omega) hi (by decide) (out _ (by decide))
+            (p5.keep k (by omega) hi (by decide) (out _ (by decide))
+              (p4.keep k (by omega) hi (by decide) (out _ (by decide))
+                (p3.keep k (by omega) hi (by decide) (out _ (by decide))
+                  (p2.keep k (by omega) hi (by decide) (out _ (by decide))
+                    ((p1.toEffectPost.gpr_frame (by decide) k (by omega) hi (out _ (by decide))).trans hw)))))
       memory := by rw [p8.memory, show writeLog d7.σ.mem [] = d7.σ.mem from rfl, mem7, p1.memory] }⟩
 end OCaml.Vm.Boot.Startup
