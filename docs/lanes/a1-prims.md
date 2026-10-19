@@ -176,10 +176,15 @@
   string-wrapper/argv generators use it.
 * `allocPlaces` covers `caml_ml_open_descriptor_out/in` (bprime): the channel's custom block at
   `young − 16` (`caml_alloc_custom_mem`, wosize 2).
-* The string allocators (`executable_name`, `get_argv`, `get_config`) need their StringCopy stage
-  inputs (`CopyInput`, `FinishStageInput`) discharged at the callee entry. `executable_name` and
-  `get_argv` also need an `exeName` C-string binding beside `PrimitiveBindings` (a1-prims drafts
-  it; a6-gc places the string relative to the nursery; a1-arms frames it).
+* `prim_caml_sys_executable_name_returns` (`Sim/PrimExecutableNameReturns.lean`): the primitive
+  tail-calls `caml_copy_string`, so `copy_memory_at` applies at the callee entry (`exe_site`: sp `N`,
+  source `Gc.exeNameAddr`, 5 bytes, span 8). Premise `ExeNameAt L` (pointer, `"/prog\0"`, apart from the
+  domain record; F1: `f1_exeNameAt` from `F1Pins`, FIXED in `gen_f1_table.py`). `copyMemory_eq`: the
+  contract's memory is `completeLog`'s effect; the log lies in `allocWindows N D Y 16` (the four-window
+  hub, now over any nursery block size); young pointer `Y - 16` (`exe_young`); geometry
+  `LoopGeometry.reserve1`.
+* `get_argv`: the same `exe_site`/`ExeNameAt` pieces, then the pair; the copy is called from a
+  native frame (as in `get_config`).
 
 **Next (remaining, path-specific callees):**
 * `caml_register_named_value`: generated blocks `Named/NamedRegister.lean`

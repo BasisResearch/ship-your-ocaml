@@ -14,6 +14,7 @@ import OCaml.Vm.Sim.PrimSysArgvReturns
 import OCaml.Vm.Sim.PrimSysExitReturns
 import OCaml.Vm.Sim.StringAllocReturn
 import OCaml.Vm.Sim.PrimGetConfigReturns
+import OCaml.Vm.Sim.PrimExecutableNameReturns
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
@@ -5857,6 +5858,18 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.config_input
 #print axioms OCaml.Vm.Sim.get_config_entry
 #print axioms OCaml.Vm.Sim.prim_caml_sys_get_config_returns
+#print axioms OCaml.Vm.Sim.configWindows_eq
+#print axioms OCaml.LoopGeometry.reserve1
+#print axioms OCaml.Vm.Sim.word_of_expected
+#print axioms OCaml.Vm.Sim.f1_exeNameAt
+#print axioms OCaml.Vm.Sim.copyMemory_eq
+#print axioms OCaml.Vm.Sim.exeLog_in
+#print axioms OCaml.Vm.Sim.exeFootprint_in
+#print axioms OCaml.Vm.Sim.completeLog_split
+#print axioms OCaml.Vm.Sim.exe_young
+#print axioms OCaml.Vm.Sim.exe_site
+#print axioms OCaml.Vm.Sim.executable_name_entry
+#print axioms OCaml.Vm.Sim.prim_caml_sys_executable_name_returns
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_pro
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_measure
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_copy

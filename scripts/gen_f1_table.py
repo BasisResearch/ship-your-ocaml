@@ -49,10 +49,12 @@ FIXED = {
     'nativeStable': 'f1_native_stable',
     'places': 'allocPlaces_ok',
     'frame': 'f1_primAllocFrame',
+    'exeName': 'f1_exeNameAt',
 }
 # Modules a FIXED instance lives in, beyond the table's base imports.
 FIXED_IMPORTS = {'consoleStable': 'OCaml.Vm.Sim.F1Console', 'nativeStable': 'OCaml.Vm.Sim.F1NativeWindow',
                  'frame': 'OCaml.Vm.Sim.PrimAllocFrame',
+                 'exeName': 'OCaml.Vm.Sim.PrimExecutableNameReturns',
                  'places': 'OCaml.Vm.Sim.AllocPlacesOk'}
 # Summary parameters with no instance yet: one named `WhileMinOpen` field each.
 OPEN_PARAMS = {}

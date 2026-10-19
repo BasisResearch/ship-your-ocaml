@@ -19,12 +19,21 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
 variable {c : Config} {N D Y Lm k : Nat} {log : List WEntry}
 
+/-- The four windows a string-allocating primitive stores into: its native
+frame below `N`, its `k`-byte nursery block below `Y`, and the domain's
+`young_ptr` and `local_roots` (`configWindows` is the 48-byte instance). -/
+def allocWindows (N D Y k : Nat) : List W :=
+  [⟨N - 152, N⟩, ⟨Y - k, Y⟩, ⟨D + Layout.off_young_ptr, D + Layout.off_young_ptr + 8⟩,
+   ⟨D + Layout.off_local_roots, D + Layout.off_local_roots + 8⟩]
+
+theorem configWindows_eq : configWindows N D Y = allocWindows N D Y 48 := rfl
+
 theorem StringAllocEntry.bound (e : StringAllocEntry c N D Y Lm k) : N < 2 ^ 32 := by
   have := e.nativeHigh; simp only [Layout.sym_stack_top] at this; omega
 
 /-- The log lies below the native stack pointer. -/
-theorem StringAllocEntry.below (e : StringAllocEntry c N D Y Lm k) (hk : 48 ≤ k)
-    (inside : LogInW (configWindows N D Y) log) :
+theorem StringAllocEntry.below (e : StringAllocEntry c N D Y Lm k)
+    (inside : LogInW (allocWindows N D Y k) log) :
     ∀ n, gpr c 2 = some (BitVec.ofNat 64 n) → LogInW [⟨0, n⟩] log := by
   intro n hn
   have same : BitVec.ofNat 64 n = BitVec.ofNat 64 N := Option.some.inj (hn.symm.trans e.stack)
@@ -36,16 +45,16 @@ theorem StringAllocEntry.below (e : StringAllocEntry c N D Y Lm k) (hk : 48 ≤ 
   have := e.nativeLow; have := e.domainHigh; have := e.youngHigh; have := e.room
   apply logInW_widen inside
   intro w hw
-  simp only [configWindows, List.mem_cons, List.not_mem_nil, or_false] at hw
+  simp only [allocWindows, List.mem_cons, List.not_mem_nil, or_false] at hw
   simp only [nativeHeadroom, Layout.domainStateBytes] at *
   rcases hw with rfl | rfl | rfl | rfl <;> simp only [Layout.off_young_ptr, Layout.off_local_roots] <;> omega
 
 /-- Every store is a `PrimAllocEntry`. -/
-theorem StringAllocEntry.entries (e : StringAllocEntry c N D Y Lm k) (hk : 48 ≤ k)
-    (inside : LogInW (configWindows N D Y) log) : ∀ x ∈ log, PrimAllocEntry c x := by
+theorem StringAllocEntry.entries (e : StringAllocEntry c N D Y Lm k)
+    (inside : LogInW (allocWindows N D Y k) log) : ∀ x ∈ log, PrimAllocEntry c x := by
   intro x hx
   have mem := logInW_mem inside hx
-  simp only [configWindows, InsideW, Layout.off_young_ptr, Layout.off_local_roots] at mem
+  simp only [allocWindows, InsideW, Layout.off_young_ptr, Layout.off_local_roots] at mem
   have nl := e.nativeLow; have rm := e.room
   have he : Vsa.Sim.DlHeap.heapEnd = 0x86800000 := rfl
   rw [he] at nl
@@ -63,15 +72,15 @@ theorem StringAllocEntry.entries (e : StringAllocEntry c N D Y Lm k) (hk : 48 �
 /-- **The log's separation hub**: the native frame and the nursery block are
 apart from the whole payload, the two domain fields are chosen fields. -/
 theorem StringAllocEntry.logWindows {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {top high : Nat}
-    (e : StringAllocEntry c N D Y Lm k) (hk : 48 ≤ k) (sg : StackGeometry P s c pl cp high)
+    (e : StringAllocEntry c N D Y Lm k) (sg : StackGeometry P s c pl cp high)
     (ng : Gc.NurseryGeometry P s c pl cp high) (topLe : top ≤ high)
-    (inside : LogInW (configWindows N D Y) log) :
+    (inside : LogInW (allocWindows N D Y k) log) :
     LogWindows log P s c pl cp top high [Layout.off_young_ptr, Layout.off_local_roots] := by
-  refine ⟨sg, ⟨configWindows N D Y, inside, ?_⟩, topLe, by decide⟩
+  refine ⟨sg, ⟨allocWindows N D Y k, inside, ?_⟩, topLe, by decide⟩
   have nl := e.nativeLow; have rm := e.room
   have he : Vsa.Sim.DlHeap.heapEnd = 0x86800000 := rfl
   intro w hw
-  simp only [configWindows, List.mem_cons, List.not_mem_nil, or_false] at hw
+  simp only [allocWindows, List.mem_cons, List.not_mem_nil, or_false] at hw
   rcases hw with rfl | rfl | rfl | rfl
   · rw [he] at nl
     simp only [nativeHeadroom] at nl

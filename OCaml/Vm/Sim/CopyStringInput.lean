@@ -31,6 +31,11 @@ theorem roR_of_gp {live : Nat → Prop} {c : Config} (gp : gpr c 3 = some gpV) :
   change (gpr c 3).getD 0 = _
   rw [gp]; rfl
 
+/-- Bytes as predicted give words as predicted. -/
+theorem word_of_expected {after : Config} {m : Std.ExtHashMap Nat (BitVec 8)}
+    (same : ∀ x, byte after x = (m[x]?).getD 0) (a : Nat) : word after a = bytesT m a 8 :=
+  word_of_bytes (c := memoryView after m) (fun x => (same x).trans (byte_total (memoryView after m) x).symm) a
+
 theorem vsa_mem_view {live : Nat → Prop} (c : Config) (mem : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) :
     (vsaModel live).mem (memoryView c mem) a = (mem[a]?).getD 0 := rfl
 

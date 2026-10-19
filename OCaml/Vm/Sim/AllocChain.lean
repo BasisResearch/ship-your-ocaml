@@ -149,4 +149,38 @@ theorem _root_.OCaml.LoopGeometry.reserve2 {L : OCaml.Layout} {P : Prog} {s : St
     have k2 := links_of_channels out2.chans id ch a hc hp
     exact (memory _ k0).trans ((w2 _ k2).trans (w1 _ k1)).symm
 
+
+/-- **One reservation, then the real config**: the object `o` placed at its
+nursery block; the config `after` holds the log's effect on every word the
+geometry reads, and its young pointer is below the object. -/
+theorem _root_.OCaml.LoopGeometry.reserve1 {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
+    {pl : Place} {cp : ChanPlace} {high : Nat} {o : Obj} {log : List WEntry}
+    (g : OCaml.LoopGeometry L P s c pl cp high)
+    (fits : s.heap.words + (o.wosize + 1) ≤ L.budget.heapWords)
+    (placed : pl.φ (s.heap.alloc o).2 = some ((runtimeFields c).youngPtr - 8 * o.wosize))
+    (kept : GeometryWordsKept log s c cp)
+    (memory : ∀ x, OutLRange log x 8 → word after x = word c x)
+    (young : (runtimeFields after).youngPtr = (runtimeFields c).youngPtr - 8 * (o.wosize + 1)) :
+    OCaml.LoopGeometry L P { s with heap := (s.heap.alloc o).1 } after pl cp high := by
+  have b := ReservedBlock.of_reservation g.nursery (⟨g.room, fits⟩ : Reservation L s c o.wosize)
+  have g1 := g.reserve fits placed
+  obtain ⟨y1, l1⟩ := reserved_young b g.toStackGeometry
+  have room := b.room
+  let c1 := reserved c ((runtimeFields c).youngPtr - 8 * o.wosize)
+  have out := GrabOutside.of_geometry g.toStackGeometry ((runtimeFields c).youngPtr - 8 * o.wosize)
+  have w1 : ∀ x, OutLRange (grabReserveLog (word c Layout.sym_Caml_state).toNat
+      ((runtimeFields c).youngPtr - 8 * o.wosize)) x 8 → word c1 x = word c x := fun x h => reserved_word h
+  have dom1 : word c1 Layout.sym_Caml_state = word c Layout.sym_Caml_state := w1 _ out.domain
+  have domA : word after Layout.sym_Caml_state = word c Layout.sym_Caml_state := memory _ kept.domain
+  refine g1.transport (fun l o h => ⟨o, h, rfl⟩) rfl (domA.trans dom1.symm)
+    ((memory _ kept.contents).trans (w1 _ out.contents).symm) ?_ ?_
+    ((memory _ kept.head).trans (w1 _ out.head).symm) ?_ rfl
+  · have lA : (runtimeFields after).youngLimit = (runtimeFields c).youngLimit := by
+      simp only [runtimeFields, domainWord, domA, memory _ kept.limit]
+    rw [lA, l1]
+  · rw [young, y1]; omega
+  · intro id ch a hc hp
+    exact (memory _ (links_of_channels kept.chans id ch a hc hp)).trans
+      (w1 _ (links_of_channels out.chans id ch a hc hp)).symm
+
 end OCaml.Vm.Sim

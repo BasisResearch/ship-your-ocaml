@@ -161,7 +161,7 @@ theorem config_input {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {pl
     (g := imgM (cfgMem c ra)) (D := D) (Y := Y) (by omega) (by omega) (by omega) (by omega) (by omega) h2
   have lw := e.logWindows (log := getConfigLog (cfgR c ra) (BitVec.ofNat 64 D) (bytesVal .ld (cfgBr c (cfgR c ra)))
     (BitVec.ofNat 64 Y) (StringCopy.resultWord (BitVec.ofNat 64 Y) osType.length - 8#64) (imgM (cfgMem c ra)))
-    (by decide) sg ng (top := sp - 16) (by have := stack.1; omega) logIn
+    sg ng (top := sp - 16) (by have := stack.1; omega) logIn
   have low : ∀ x, x < 0x8007d138 → (cfgMem c ra)[x]? = c.σ.mem[x]? := fun x hx => by
     simp only [cfgMem, bdv]
     exact writeLog_out _ _ _ (outL_of_range (outLRange_of_windows (a := x) (n := 1) prepIn (by
@@ -202,11 +202,6 @@ theorem config_input {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {pl
   · rw [bdv]
     exact lw.payload stack.1 space (by omega) (by decide) (by decide)
   · rw [bdv]; exact lw.bindings
-
-/-- Bytes as predicted give words as predicted. -/
-theorem word_of_expected {after : Config} {m : Std.ExtHashMap Nat (BitVec 8)}
-    (same : ∀ x, byte after x = (m[x]?).getD 0) (a : Nat) : word after a = bytesT m a 8 :=
-  word_of_bytes (c := memoryView after m) (fun x => (same x).trans (byte_total (memoryView after m) x).symm) a
 
 /-- **`caml_sys_get_config` at the C_CALL callee entry.** -/
 theorem get_config_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St}
@@ -251,7 +246,7 @@ theorem get_config_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St}
     (BitVec.ofNat 64 Y) (StringCopy.resultWord (BitVec.ofNat 64 Y) osType.length - 8#64) (imgM (cfgMem c ra))
   have logIn : LogInW (configWindows N D Y) log :=
     getConfigLog_in (by omega) (by omega) (by omega) (by omega) (by omega) h2
-  have lw := e.logWindows (log := log) (by decide) sg ng (top := sp - 16) (by have := stack.1; omega) logIn
+  have lw := e.logWindows (log := log) sg ng (top := sp - 16) (by have := stack.1; omega) logIn
   have youngW : bytesT (writeLog c.σ.mem log) (D + Layout.off_young_ptr) 8 = BitVec.ofNat 64 (Y - 48) :=
     getConfig_young (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) (by omega) h2
   -- the runtime frame
@@ -260,7 +255,7 @@ theorem get_config_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St}
         (BitVec.ofNat 64 Y) (StringCopy.resultWord (BitVec.ofNat 64 Y) osType.length - 8#64)
         (imgM (cfgMem c ra))))[x]?).getD 0) := by
     rw [bdv]
-    refine frame.allocW P s c pl cp high log input.runtime ng (e.entries (by decide) logIn) fun after mem => ?_
+    refine frame.allocW P s c pl cp high log input.runtime ng (e.entries logIn) fun after mem => ?_
     have yw : word after ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr) = BitVec.ofNat 64 (Y - 48) := by
       rw [hD]; change bytesT after.σ.mem _ 8 = _; rw [mem]; exact youngW
     rw [yw, toNat_ofNat_small (by omega), hY, hL]
@@ -285,7 +280,7 @@ theorem get_config_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St}
     rw [this, bdv]; rfl
   refine ccall_observed_summary (name := "caml_sys_get_config") (args := [s.accu]) (footprint := log)
     (expected := fun x => ((writeLog c.σ.mem log)[x]?).getD 0)
-    (S.weaken (fun _ h => h) fun after post => ?_) setup.saved ?_ (e.below (by decide) logIn) ?_ setup.native
+    (S.weaken (fun _ h => h) fun after post => ?_) setup.saved ?_ (e.below logIn) ?_ setup.native
   · have obs := expect after post.memory
     have pr := post.toLibraryPrimitivePost
     rw [hR1] at pr
