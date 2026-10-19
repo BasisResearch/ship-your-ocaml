@@ -11,6 +11,7 @@ import OCaml.Vm.Primitives.GprsKept
 import OCaml.Vm.Primitives.Named.RegisterFront
 import OCaml.Vm.Sim.PrimInt64FloatReturns
 import OCaml.Vm.Sim.PrimSysArgvReturns
+import OCaml.Vm.Sim.PrimSysExitReturns
 import OCaml.Vm.Sim.StringAllocReturn
 import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.AccRows
@@ -5804,6 +5805,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.int64_float_semantics
 #print axioms OCaml.Vm.Sim.prim_caml_int64_float_of_bits_returns
 #print axioms OCaml.Vm.Sim.prim_caml_sys_argv_returns
+#print axioms OCaml.Vm.Sim.prim_caml_sys_exit_returns
 #print axioms OCaml.Vm.Primitives.Memprof.Eqdf2.eqdf2_zero
 #print axioms OCaml.Vm.Primitives.Memprof.UpdateYoungLimit.update_young_limit
 #print axioms OCaml.Vm.Primitives.Memprof.RenewMinorSample.renew_summary

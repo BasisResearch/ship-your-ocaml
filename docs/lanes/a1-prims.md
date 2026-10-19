@@ -132,6 +132,17 @@
   only by `max := NULL`, so both are instances of bprime's channel-opening path
   (`Primitives/Channel/`). `caml_register_named_value` waits on a0-boot's
   `caml_named_value`.
+* Split with a1-arms (2026-10-19, foreman: a1-arms joins the C_CALL returns). a1-prims keeps
+  `caml_sys_executable_name`, `caml_sys_get_argv` and `caml_register_named_value`. a1-arms takes
+  `caml_sys_exit` (vacuous: `prim_caml_sys_exit_returns`, `Sim/PrimSysExitReturns.lean`),
+  `caml_ml_out_channels_list`, and the per-arity assembly (`CcallReturns.of_primsF1` into
+  `F1Premises` via `gen_f1_table.py`). For out_channels_list, a1-arms writes:
+  * the site-generic `CustomMemCall` (`Gc/CustomMem.lean`; bprime's and a1-arms' call sites
+    are instances; a6-gc refines `Ready` with the extra-heap-resources bound);
+  * `ChanFields.managed` (flag bit 4);
+  * the ordered `channelsListed`;
+  * the `allocPlaces` entry.
+  bprime keeps `open_descriptor_out/in` and `format_int`.
 * Next: finish the flush adapter (`ccall_framed_summary`), then output_char, then
   `output_bytes` (a2-sem's `memmove_summary`, `Primitives/Memmove.lean`) and `output`.
 * Exit path weakened to `ExitOk` (registers read: ra, sp, a0, s0–s10) for STOP;
