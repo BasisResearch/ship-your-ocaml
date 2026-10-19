@@ -250,8 +250,24 @@ insertion is proved generically:
   * Gap: `PageAdded` doesn't keep x21–x27. caml_page_table_modify saves
     s0–s4 only, and its result names x20 at most. Callers holding values
     in s5–s11 across the call need the modify chain's register frame first.
-Next: `caml_set_minor_heap_size` (the 2 MB allocation, then this add with
-In_young). Then `caml_set_allocation_policy`, `caml_init_major_heap` (its chunk's
+* `stat_alloc_aligned` (StatAligned.lean) is
+  caml_stat_alloc_aligned_noexc(size, 0, out).
+  * It allocates `size + 4096` with `stat_alloc_ready` and stores the raw
+    block through `out`, a slot of the caller's frame.
+  * It returns `pageAbove raw`. `pageAbove_inside` gives the aligned block
+    inside the raw one.
+  * `block_first`/`block_last` (PageAdd.lean) turn an aligned block into
+    `PageAddCall`'s range premises.
+* caml_set_minor_heap_size (MinorHeapSteps.lean): its blocks through the
+  `Caml_state` young-field stores are proved. The path is the first call's,
+  with the minor heap empty and `young_start = NULL`.
+  `young_ptr = young_alloc_end` and `young_start = 0` are premises for
+  `caml_init_gc`'s composition to discharge.
+Next:
+* the ref-table resets and the return;
+* `renew_summary`'s post as a `WriteRegistersPost`, for readiness;
+* then compose caml_set_minor_heap_size.
+Then `caml_set_allocation_policy`, `caml_init_major_heap` (its chunk's
 pages go through the same insertion) and onward to the cut.
 
 ## Round 2 status (2026-10-06, search)

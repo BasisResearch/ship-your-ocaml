@@ -401,6 +401,8 @@ import OCaml.Vm.Boot.Startup.PageModifySteps
 import OCaml.Vm.Boot.Startup.PageModify
 import OCaml.Vm.Boot.Startup.PageAddSteps
 import OCaml.Vm.Boot.Startup.PageAdd
+import OCaml.Vm.Boot.Startup.StatAligned
+import OCaml.Vm.Boot.Startup.MinorHeapSteps
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2878,6 +2880,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.page_add_step
 #print axioms OCaml.Vm.Boot.Startup.page_add_loop
 #print axioms OCaml.Vm.Boot.Startup.page_table_add
+#print axioms OCaml.Vm.Boot.Startup.block_first
+#print axioms OCaml.Vm.Boot.Startup.block_last
+#print axioms OCaml.Vm.Boot.Startup.stat_alloc_aligned
+#print axioms OCaml.Vm.Boot.Startup.pageAbove_inside
+#print axioms OCaml.Vm.Boot.Startup.minor_state
+#print axioms OCaml.Vm.Boot.Startup.minor_alloc_call
+#print axioms OCaml.Vm.Boot.Startup.minor_add_call
+#print axioms OCaml.Vm.Boot.Startup.minor_check
+#print axioms OCaml.Vm.Boot.Startup.minor_fields
+#print axioms OCaml.Vm.Boot.Startup.minor_stores_call
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
