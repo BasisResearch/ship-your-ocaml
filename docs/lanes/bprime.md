@@ -242,6 +242,15 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
       `∃ cp', CcallReturnAt … cp' …`, so the adapter supplies
       `cp.set id record`. a1-prims adds the `allocPlaces` entry (the block's
       value at young − 16, through `Alloc_small`).
+    - The adapter extends the channel placement with `ChanPlace.put id record`
+      (`OpenRepr.lean`), so no old object may name the new id. Instead of a
+      heap invariant, `openChan` has a guard (agreed with a2-sem): it is
+      `.unsupported` if the heap already holds `.channel chans.length`. That
+      is unreachable on loaded programs, and the difftests are unchanged.
+      `openChan_fresh` reads the fact off the primitive's equation.
+      `ObjAt.openChan`, `WorldRepr.openChan` and `channel_copied_links`
+      (the old head's `prev` write is outside what `ChanAt` reads) carry the
+      payload across.
     - `caml_ml_open_descriptor_in` is not reached by whileMin, so it is
       not composed yet; it is `out` without the `max := NULL` store.
   * `omega` exhausts the recursion depth on chained literal subtractions

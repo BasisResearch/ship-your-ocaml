@@ -294,9 +294,16 @@ def intArg? : Val → Option Int
 def decimal (n : Int) : List UInt8 :=
   (toString n).toList.map fun c => c.toNat.toUInt8
 
-/-- Open a channel on `fd` (`caml_ml_open_descriptor_{in,out}`). -/
+/-- Open a channel on `fd` (`caml_ml_open_descriptor_{in,out}`).
+
+The guard is unreachable on loaded programs: every `.channel` object comes
+from `openChan` (with the then-current `chans.length`) or copies an existing
+id, and `chans` only grows. It is there so the C_CALL adapter
+(`prim_caml_ml_open_descriptor_out_returns`) reads "no heap object names the
+new id" off the primitive's equation instead of a heap invariant. -/
 def openChan (h : Heap) (w : World) (fd : Int) (isOut : Bool) : PRes :=
   let id := w.chans.length
+  if h.objs.contains (.channel id) then .unsupported else
   let (h', l) := h.alloc (.channel id)
   .ok (.ptr l 0) h' { w with chans := w.chans ++ [⟨fd, isOut, [], [], 0, (match TCB.Os.lookupFd w.os fd.toNat with | .some (.file _ off _) => (if fd < 0 then -1 else off) | _ => -1)⟩] }
 
