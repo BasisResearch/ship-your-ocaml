@@ -139,9 +139,7 @@ at the callee entry (`vmSaved`: VM sp, accu, next-code pointer).
 * Entry gets it from `InterpCaller.gprs` (`GprPresent.saved`). The raise path
   carries it in `RaiseContext.saved`, and longjmp's restored registers give
   `ReentryControl.s10`.
-* All-31 GPR presence would need a1-prims' `EffectPost` to carry presence of
-  the written temporaries (~85 files). a6-gc states malloc's need as one named
-  premise of caml_modify's realloc branch.
+* Superseded by `LoopRegisters.gprs` (all of x1–x31, below).
 
 Done: channel records at full extent (`chanOffBuff + ioBufferSize`) in
 `StackGeometry` (channels, heapChannels, domainChannels, channelArena, and the
@@ -213,13 +211,20 @@ Certificates are proved once and reused:
 `StackGeometry` places the stack, the Caml_state record, code, atoms and
 objects pairwise apart. bprime's entry supplies it at the cut.
 
-Open, next:
-* Writes outside the VM stack (SETFIELD n, SETGLOBAL, trap and C_CALL
-  setup Caml_state stores) need runtime framing beyond `RuntimeFrame`'s
-  stack windows. Decide the contract with a6-gc (runtimeOk's footprint is
-  the Caml_state record plus allocator metadata).
-* `raiseBuf` (the Invocation field for `caml_raise`'s external path):
-  deferred, off whileMin's path.
+Status (2026-10-19): nothing open in this lane.
+* Every F1 opcode has an unconditional row (`f1_table`; side conditions are
+  FIXED layout-level arguments in `scripts/gen_f1_table.py`).
+* `LibraryReady` holds at every C_CALL entry (`CcallSetupPost.libraryReady`,
+  from `LoopRegisters.gprs`/`gp`/`htifIdle`; 248e4181).
+* The C_CALL interface carries the allocating primitives' placement
+  (`CcallReady.allocPlaced`, `allocPlaces_ok`; 2281fc1d, 928bff62), the
+  result heap's budget, and a callee-chosen channel placement
+  (`CcallReturn := ∃ cp', CcallReturnAt …`; 92e5d030).
+* `VmPayload.argv` binds `main_argv` (861f1ce1); `NativeValid` = `NativeCore`
+  + `RootCaller` for nested invocations (5627067f).
+* The F1 headline's remaining premises are in other lanes: the C_CALL returns
+  and the whileMin primitive rows (a1-prims), `libHeap` (a0-boot),
+  `BarrierGrowthFull` (a6-gc, open until G2's minor collection).
 
 ## Shared heap-field update facts
 
