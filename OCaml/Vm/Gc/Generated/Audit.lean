@@ -15,6 +15,7 @@ import OCaml.Vm.Gc.Generated.SkiplistEmpty
 import OCaml.Vm.Gc.Generated.FinalYoungRoots
 import OCaml.Vm.Gc.Generated.MemprofYoungRoots
 import OCaml.Vm.Gc.Generated.Immediate
+import OCaml.Vm.Gc.Generated.LocalRootsSites
 import OCaml.Vm.Gc.Generated.MopupControl
 import OCaml.Vm.Gc.Generated.MopupPop
 import OCaml.Vm.Gc.Generated.Enqueue
@@ -1780,6 +1781,16 @@ private def gcAuditNames : Array Name := #[
   ``OCaml.Vm.Gc.Immediate.Post.stack,
   ``OCaml.Vm.Gc.Immediate.Post.returns,
   ``OCaml.Vm.Gc.Immediate.run,
+  ``OCaml.Vm.Gc.LocalRootsSites.stackCall_shape,
+  ``OCaml.Vm.Gc.LocalRootsSites.stackCall_decode,
+  ``OCaml.Vm.Gc.LocalRootsSites.stackCall_target,
+  ``OCaml.Vm.Gc.LocalRootsSites.stackCall_pins,
+  ``OCaml.Vm.Gc.LocalRootsSites.localCall_shape,
+  ``OCaml.Vm.Gc.LocalRootsSites.localCall_decode,
+  ``OCaml.Vm.Gc.LocalRootsSites.localCall_target,
+  ``OCaml.Vm.Gc.LocalRootsSites.localCall_pins,
+  ``OCaml.Vm.Gc.LocalRootsSites.stackSite,
+  ``OCaml.Vm.Gc.LocalRootsSites.localSite,
   ``OCaml.Vm.Gc.MopupControl.entry_registers,
   ``OCaml.Vm.Gc.MopupPop.blocks_eq,
   ``OCaml.Vm.Gc.MopupPop.chain_ok,

@@ -73,8 +73,11 @@
 - `SlotSite Loaded` / `SlotSite.slot` (`SlotBridge.lean`): any decoded
   `jal caml_oldify_one` in a caller with code image `Loaded`, composed with a
   `SlotCall` supplied at the jumped-to state.
-- Next (G2): quiet-path summaries of the root callees, the VM-stack and
-  `ref_table` root loops over `SlotCall`, the mopup outer loop, a quiet-route
+- `StackScan.iteration`: one iteration of `caml_oldify_local_roots`' VM-stack
+  loop over any route (`supply : SlotCall` per slot, `CalleeFrame`), with
+  generated `LocalRootsSites` (`SlotSite`s for both `jal caml_oldify_one`).
+- Next (G2): the folded stack loop, quiet-path summaries of the root callees,
+  the `ref_table` loop, the mopup outer loop, a quiet-route
   `caml_empty_minor_heap`, and the concrete `CollectionEffect`.
 
 ## F1 status (2026-10-05)

@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
 import OCaml.Vm.Gc.OldifySlot
 import OCaml.Vm.Gc.OldifyImmediate
@@ -684,6 +685,16 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.Fresh.SlotCall.single_nonYoung_small
 #print axioms OCaml.Vm.Gc.Fresh.SlotCall.single_nonYoung_large
 #print axioms OCaml.Vm.Gc.SlotSite.slot
+#print axioms OCaml.Vm.Gc.SlotSite.linked_regs
+#print axioms OCaml.Vm.Gc.StackScan.iteration
+#print axioms OCaml.Vm.Gc.StackScan.body_access
+#print axioms OCaml.Vm.Gc.StackScan.body_regs
+#print axioms OCaml.Vm.Gc.StackScan.test_access
+#print axioms OCaml.Vm.Gc.StackScan.test_control
+#print axioms OCaml.Vm.Gc.StackScan.test_regs
+#print axioms OCaml.Vm.Gc.StackScan.test_endpoint
+#print axioms OCaml.Vm.Gc.StackScan.carried_at_call
+#print axioms OCaml.Vm.Gc.StackScan.head_of_returned
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_access
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_regs
 #print axioms OCaml.Vm.Gc.OldifyImmediate.ret_log

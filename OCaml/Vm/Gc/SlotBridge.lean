@@ -26,6 +26,16 @@ variable {Loaded : Std.ExtHashMap Nat (BitVec 8) → Prop} (site : SlotSite Load
 /-- The callee's register view: the caller's, with `ra` the site's link. -/
 def linked (R : Nat → BitVec 64) (n : Nat) : BitVec 64 := if n = 1 then site.call.link else R n
 
+theorem linked_regs {R : Nat → BitVec 64} {before after : Config}
+    (post : SegCallFacts [] (OldifyBridge.carried R) [] site.call.target site.call.link before after) :
+    GHolds after.σ (OldifyEntry.regs (site.linked R)) := by
+  have holds : GHolds after.σ ((1, site.call.link) :: OldifyBridge.carried R) := ⟨post.ra, post.registers⟩
+  apply gholds_select holds
+  intro n v member
+  simp only [OldifyEntry.regs, OldifyEntry.entryKeys, List.map_cons, List.map_nil,
+    List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with h | h | h | h | h | h | h | h | h | h | h | h | h | h <;> cases h <;> rfl
+
 /-- The jump and the callee's slot-level result, from the caller's state. -/
 structure Returned (R : Nat → BitVec 64) (copies : List PendingCopy) (pl : Place)
     (before after : Config) : Prop where
