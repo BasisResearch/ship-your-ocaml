@@ -54,4 +54,41 @@ theorem table_after_insert {m m' : Std.ExtHashMap Nat (BitVec 8)} {log : List WE
       rw [word_observed (m := m) _ fun k hk => by
         rw [eq, writeLog_out _ _ _ (by simp only [OutL, slotNat, iNat, hP, and_true]; omega),
           low _ (by rw [iNat, hE]; omega)]]
+
+theorem occ_room (x : BitVec 64) (h : x.toNat < 1024) : guardB bop.BGEU (x <<< 1) 2048#64 = false := by
+  unfold guardB Functions.zopz0zKzJ_u
+  simp only [Sail.BitVec.toNatInt]
+  apply decide_eq_false
+  intro hc
+  have := Int.ofNat_le.mp hc
+  rw [BitVec.toNat_shiftLeft, Nat.shiftLeft_eq] at this
+  simp only [BitVec.toNat_ofNat] at this
+  omega
+
+theorem blockPage_succ (base : BitVec 64) (k : Nat) : blockPage base k + 4096#64 = blockPage base (k + 1) := by
+  unfold blockPage
+  rw [BitVec.add_assoc, ← BitVec.ofNat_add]
+  congr 2 <;> omega
+
+theorem blockPage_nat (base : BitVec 64) (k : Nat) (fits : base.toNat + 4096 * k < 2 ^ 64) :
+    (blockPage base k).toNat = base.toNat + 4096 * k := by
+  have p64 : (2 : Nat) ^ 64 = 18446744073709551616 := rfl
+  unfold blockPage
+  rw [BitVec.toNat_add, BitVec.toNat_ofNat]
+  rw [p64] at fits ⊢
+  rw [Nat.mod_eq_of_lt (a := 4096 * k) (by omega), Nat.mod_eq_of_lt (by omega)]
+
+theorem last_test (base : BitVec 64) (k n : Nat) (hk : k < n) (fits : base.toNat + 4096 * n < 2 ^ 64) :
+    guardB bop.BLTU (blockPage base (n - 1)) (blockPage base k + 4096#64) = !decide (k + 1 < n) := by
+  have p64 : (2 : Nat) ^ 64 = 18446744073709551616 := rfl
+  rw [p64] at fits
+  have a := blockPage_nat base (n - 1) (by rw [p64]; omega)
+  have b := blockPage_nat base (k + 1) (by rw [p64]; omega)
+  rw [blockPage_succ]
+  unfold guardB Functions.zopz0zI_u
+  apply Bool.eq_iff_iff.mpr
+  simp only [decide_eq_true_eq, Bool.not_eq_true', decide_eq_false_iff_not]
+  simp only [Sail.BitVec.toNatInt, Int.ofNat_eq_natCast, Int.ofNat_lt]
+  rw [a, b]
+  omega
 end OCaml.Vm.Boot.Startup
