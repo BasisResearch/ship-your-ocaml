@@ -233,8 +233,25 @@ insertion is proved generically:
   * `registers_of_blocks'` takes the register list as an implication. A
     block whose registers come out of a simp over many instructions must be
     split; the kernel recurses on the simp proof otherwise.
-  Next: compose `caml_page_table_add` (`indexedLoop` over the pages).
-Then `caml_set_allocation_policy`, `caml_init_major_heap` (its chunk's
+* `page_table_add` (PageAdd.lean) is caml_page_table_add(kind, start, stop)
+  over the `n` pages of any 4096-aligned block. `PageAddCall` gives its
+  premises; `PageAddSpan` bundles the loop's:
+  * the table stays at most half full;
+  * the block's pages are not in the table yet.
+  `PageAdded` gives its result:
+  * the table's count rose by `n`;
+  * every page is present;
+  * every entry is the starting table's or a page of the block;
+  * memory below the arena's end changed only in the slots and the
+    occupancy.
+  * The loop is `indexedLoop` over `PageAddAt`, one
+    `page_table_modify_insert` per page. Insertion now also returns
+    readiness, through `RuntimeReadyL.boundary` for read-only blocks.
+  * Gap: `PageAdded` doesn't keep x21–x27. caml_page_table_modify saves
+    s0–s4 only, and its result names x20 at most. Callers holding values
+    in s5–s11 across the call need the modify chain's register frame first.
+Next: `caml_set_minor_heap_size` (the 2 MB allocation, then this add with
+In_young). Then `caml_set_allocation_policy`, `caml_init_major_heap` (its chunk's
 pages go through the same insertion) and onward to the cut.
 
 ## Round 2 status (2026-10-06, search)
