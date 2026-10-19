@@ -6,6 +6,7 @@ import VsaIris.Vsa.FreeRunAll
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.Sym VsaIris.VsaHeap
 open VsaIris.MallocFast OCaml.Vm.Primitives
+variable {live : Nat → Prop}
 
 /-- What the allocator owns while freeing block `(q, n)`: its scratch stack
 window, the heap foot including the block, and the block itself. -/
@@ -49,12 +50,12 @@ theorem free_stack_disjoint (H : List (Nat × Nat)) (q : BitVec 64) (n : Nat) (s
   · unfold InExt at block
     omega
 
-/-- Concrete startup observations for freeing a live block. -/
-structure FreeInput (H : List (Nat × Nat)) (q : BitVec 64) (n : Nat) (r s : BitVec 64) (capacity : Nat)
-    (c : Config) : Prop where
-  good : VsaOk startupLive c
-  readOnly : ROHolds (vsaModel startupLive) c roR allocText
-  room : vsaRoomB ((vsaModel startupLive).mem c) ((q.toNat, n) :: H) capacity
+/-- Concrete observations for freeing a live block, over a library live set. -/
+structure FreeInputL (live : Nat → Prop) (H : List (Nat × Nat)) (q : BitVec 64) (n : Nat) (r s : BitVec 64)
+    (capacity : Nat) (c : Config) : Prop where
+  good : VsaOk live c
+  readOnly : ROHolds (vsaModel live) c roR allocText
+  room : vsaRoomB ((vsaModel live).mem c) ((q.toNat, n) :: H) capacity
   pointer : gprGet c.σ 10 = some q
   stack : gprGet c.σ 2 = some s
   link : gprGet c.σ 1 = some r
@@ -64,12 +65,17 @@ structure FreeInput (H : List (Nat × Nat)) (q : BitVec 64) (n : Nat) (r s : Bit
   blockLow : heapStart ≤ q.toNat
   blockHigh : q.toNat + n ≤ heapEnd
 
+/-- Concrete startup observations for freeing a live block. -/
+abbrev FreeInput (H : List (Nat × Nat)) (q : BitVec 64) (n : Nat) (r s : BitVec 64) (capacity : Nat)
+    (c : Config) : Prop :=
+  FreeInputL startupLive H q n r s capacity c
+
 /-- Reusable successful free summary: the landed `_free_r` capacity run,
 entered through the `free` wrapper, folded by the run kernel. -/
-theorem free_summary (c : Config) (H : List (Nat × Nat)) (q : BitVec 64) (n : Nat) (r s : BitVec 64)
-    (k : Nat) (input : FreeInput H q n r s k c) :
+theorem free_summaryL [LibraryLive live] (c : Config) (H : List (Nat × Nat)) (q : BitVec 64) (n : Nat)
+    (r s : BitVec 64) (k : Nat) (input : FreeInputL live H q n r s k c) :
     FnSummary freeEntryBV (fun d => d = c)
-      (LocalPost startupLive roR allocText aRegs (fS H q n s)
+      (LocalPost live roR allocText aRegs (fS H q n s)
         (FreeRoomEnd vsaLayoutP vsaRoomB H r s (firstMallocSaved (vsaReg c)) k) c) := by
   constructor
   rintro before ⟨pc, eq⟩
@@ -85,12 +91,19 @@ theorem free_summary (c : Config) (H : List (Nat × Nat)) (q : BitVec 64) (n : N
     · change (gprGet c.σ 2).getD 0 = _
       rw [input.stack]; rfl
     · exact firstMallocSaved_values _
-  obtain ⟨fuel, certificate⟩ := freeChgRun_proved startupLive startup_alloc_live
-    H q n s r (firstMallocSaved (vsaReg c)) (vsaReg c) ((vsaModel startupLive).mem c) k
+  obtain ⟨fuel, certificate⟩ := freeChgRun_proved live LibraryLive.alloc
+    H q n s r (firstMallocSaved (vsaReg c)) (vsaReg c) ((vsaModel live).mem c) k
     (firstMallocSaved_keys _) input.stackOk input.aligned entry (room_shape input.room) input.room
     (free_stack_disjoint H q n s input.high input.blockHigh)
   exact localRun_triple c (free_separate H q n s input.high input.blockLow) input.good input.readOnly
     certificate c rfl
+
+theorem free_summary (c : Config) (H : List (Nat × Nat)) (q : BitVec 64) (n : Nat) (r s : BitVec 64)
+    (k : Nat) (input : FreeInput H q n r s k c) :
+    FnSummary freeEntryBV (fun d => d = c)
+      (LocalPost startupLive roR allocText aRegs (fS H q n s)
+        (FreeRoomEnd vsaLayoutP vsaRoomB H r s (firstMallocSaved (vsaReg c)) k) c) :=
+  free_summaryL c H q n r s k input
 
 /-- Everything a free may touch lies in the scratch window, allocator globals
 or the arena. -/
@@ -108,16 +121,16 @@ theorem fS_coarse {H q n s a} (blockLow : heapStart ≤ q.toNat) (blockHigh : q.
 
 /-- A landed successful free contract returns the same runtime interface with
 the block removed from the live list and the remaining capacity kept. -/
-theorem RuntimeReadyL.free_result {H q n capacity sp ra before after}
-    (ready : RuntimeReady ((q.toNat, n) :: H) capacity sp ra before)
+theorem RuntimeReadyL.free_resultL [LibraryLive live] {H q n capacity sp ra before after}
+    (ready : RuntimeReadyL live ((q.toNat, n) :: H) capacity sp ra before)
     (high : heapEnd + allocHeadroom ≤ sp.toNat) (blockLow : heapStart ≤ q.toNat)
     (blockHigh : q.toNat + n ≤ heapEnd)
-    (post : LocalPost startupLive roR allocText aRegs (fS H q n sp)
+    (post : LocalPost live roR allocText aRegs (fS H q n sp)
       (FreeRoomEnd vsaLayoutP vsaRoomB H ra sp (firstMallocSaved (vsaReg before)) capacity) before after) :
-    RuntimeReady H capacity sp ra after where
+    RuntimeReadyL live H capacity sp ra after where
   good := post.good.good
   image := by
-    apply image_local ready.image post.good startup_image_live _ post.memory
+    apply image_local ready.image post.good LibraryLive.image _ post.memory
     constructor <;> intro i hi owned <;>
       rcases fS_coarse blockLow blockHigh owned with stack | global | heap <;>
       simp only [stackWin, InExt, allocHeadroom, allocGlobal, InRange,
@@ -142,4 +155,13 @@ theorem RuntimeReadyL.free_result {H q n capacity sp ra before after}
     rcases fS_coarse blockLow blockHigh owned with stack | global | heap <;>
       simp only [stackWin, InExt, allocHeadroom, allocGlobal, InRange, Layout.sym_pool,
         heapStart, heapEnd] at * <;> omega)
+
+theorem RuntimeReadyL.free_result {H q n capacity sp ra before after}
+    (ready : RuntimeReady ((q.toNat, n) :: H) capacity sp ra before)
+    (high : heapEnd + allocHeadroom ≤ sp.toNat) (blockLow : heapStart ≤ q.toNat)
+    (blockHigh : q.toNat + n ≤ heapEnd)
+    (post : LocalPost startupLive roR allocText aRegs (fS H q n sp)
+      (FreeRoomEnd vsaLayoutP vsaRoomB H ra sp (firstMallocSaved (vsaReg before)) capacity) before after) :
+    RuntimeReady H capacity sp ra after :=
+  ready.free_resultL high blockLow blockHigh post
 end OCaml.Vm.Boot.Startup

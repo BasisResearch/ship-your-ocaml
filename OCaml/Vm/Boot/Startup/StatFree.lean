@@ -15,24 +15,29 @@ end OCaml.Vm.Primitives
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.Sym VsaIris.VsaHeap
 open VsaIris.MallocFast OCaml.Vm.Primitives
+variable {live : Nat → Prop}
 
 /-- Nonpooling `caml_stat_free` of a live block: dispatch, then the landed free. -/
-structure StatFreed (H : List (Nat × Nat)) (q : BitVec 64) (n capacity : Nat) (sp ra : BitVec 64)
-    (before after : Config) where
+structure StatFreedL (live : Nat → Prop) (H : List (Nat × Nat)) (q : BitVec 64) (n capacity : Nat)
+    (sp ra : BitVec 64) (before after : Config) where
   atFree : Config
   dispatch : BoundaryPost [15, 14] before ra (BitVec.ofNat 64 Vsa.Alloc.freeEntry)
     [(15, q + 0#64), (14, 0#64), (10, q)] atFree
-  platform : VsaOk startupLive atFree
-  free : LocalPost startupLive roR allocText aRegs (fS H q n sp)
+  platform : VsaOk live atFree
+  free : LocalPost live roR allocText aRegs (fS H q n sp)
     (FreeRoomEnd vsaLayoutP vsaRoomB H ra sp (firstMallocSaved (vsaReg atFree)) capacity) atFree after
-  ready : RuntimeReady H capacity sp ra after
+  ready : RuntimeReadyL live H capacity sp ra after
 
-theorem stat_free_block (c : Config) (H : List (Nat × Nat)) (q : BitVec 64) (n capacity : Nat)
-    (sp ra : BitVec 64) (ready : RuntimeReady ((q.toNat, n) :: H) capacity sp ra c)
+abbrev StatFreed (H : List (Nat × Nat)) (q : BitVec 64) (n capacity : Nat) (sp ra : BitVec 64)
+    (before after : Config) :=
+  StatFreedL startupLive H q n capacity sp ra before after
+
+theorem stat_free_blockL [LibraryLive live] (c : Config) (H : List (Nat × Nat)) (q : BitVec 64)
+    (n capacity : Nat) (sp ra : BitVec 64) (ready : RuntimeReadyL live ((q.toNat, n) :: H) capacity sp ra c)
     (pointer : gprGet c.σ 10 = some q) (frame : NativeFrame sp allocHeadroom)
     (blockLow : heapStart ≤ q.toNat) (blockHigh : q.toNat + n ≤ heapEnd) :
     FnSummary 0x8000bb98#64 (fun d => d = c)
-      (fun after => Nonempty (StatFreed H q n capacity sp ra c after)) := by
+      (fun after => Nonempty (StatFreedL live H q n capacity sp ra c after)) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
@@ -43,7 +48,7 @@ theorem stat_free_block (c : Config) (H : List (Nat × Nat)) (q : BitVec 64) (n 
     ((dispatch.frame .x2 (by decide) (by decide)).trans ready.stack)
     ((dispatch.frame .x1 (by decide) (by decide)).trans ready.raReg) ready.aligned
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ h => h)
-  have input : FreeInput H q n ra sp capacity atFree :=
+  have input : FreeInputL live H q n ra sp capacity atFree :=
     { good := mid.platform
       readOnly := mid.readOnly
       room := mid.room
@@ -55,13 +60,21 @@ theorem stat_free_block (c : Config) (H : List (Nat × Nat)) (q : BitVec 64) (n 
       aligned := mid.aligned
       blockLow := blockLow
       blockHigh := blockHigh }
-  obtain ⟨after, run2, freed⟩ := (free_summary atFree H q n ra sp capacity input).run atFree ⟨dispatch.pc, rfl⟩
+  obtain ⟨after, run2, freed⟩ := (free_summaryL atFree H q n ra sp capacity input).run atFree ⟨dispatch.pc, rfl⟩
   exact ⟨after, run1.trans run2,
-    ⟨atFree, dispatch, mid.platform, freed, mid.free_result frame.lower blockLow blockHigh freed⟩⟩
+    ⟨atFree, dispatch, mid.platform, freed, mid.free_resultL frame.lower blockLow blockHigh freed⟩⟩
+
+theorem stat_free_block (c : Config) (H : List (Nat × Nat)) (q : BitVec 64) (n capacity : Nat)
+    (sp ra : BitVec 64) (ready : RuntimeReady ((q.toNat, n) :: H) capacity sp ra c)
+    (pointer : gprGet c.σ 10 = some q) (frame : NativeFrame sp allocHeadroom)
+    (blockLow : heapStart ≤ q.toNat) (blockHigh : q.toNat + n ≤ heapEnd) :
+    FnSummary 0x8000bb98#64 (fun d => d = c)
+      (fun after => Nonempty (StatFreed H q n capacity sp ra c after)) :=
+  stat_free_blockL c H q n capacity sp ra ready pointer frame blockLow blockHigh
 
 /-- The free keeps every library-saved register. -/
-theorem StatFreed.saved_gpr {H q n capacity sp ra before after k}
-    (w : StatFreed H q n capacity sp ra before after) (member : k ∈ abiSaved) :
+theorem StatFreedL.saved_gpr {H q n capacity sp ra before after k}
+    (w : StatFreedL live H q n capacity sp ra before after) (member : k ∈ abiSaved) :
     gprGet after.σ k = gprGet before.σ k := by
   have range : 1 ≤ k ∧ k ≤ 31 ∧ k ≠ 15 ∧ k ≠ 14 := by simp [abiSaved] at member; omega
   have mid : gprGet w.atFree.σ k = gprGet before.σ k := by
@@ -79,4 +92,9 @@ theorem StatFreed.saved_gpr {H q n capacity sp ra before after k}
         have ne := outside m hm
         exact fun e => by rw [e, beq_self_eq_true] at ne; contradiction) noise
   exact (allocator_abi_register w.platform w.ready.platform w.free.result.frame w.free.registers k member).trans mid
+
+theorem StatFreed.saved_gpr {H q n capacity sp ra before after k}
+    (w : StatFreed H q n capacity sp ra before after) (member : k ∈ abiSaved) :
+    gprGet after.σ k = gprGet before.σ k :=
+  StatFreedL.saved_gpr w member
 end OCaml.Vm.Boot.Startup

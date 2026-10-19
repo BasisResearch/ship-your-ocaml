@@ -726,3 +726,4 @@ import OCaml.Vm.Primitives.Uncaught.FormatFill
 import OCaml.Vm.Primitives.Uncaught.FormatAlloc
 import OCaml.Vm.Primitives.Uncaught.FormatReturn
 import OCaml.Vm.Primitives.Uncaught.FormatSummary
+import OCaml.Vm.Primitives.Uncaught.FatalUncaught

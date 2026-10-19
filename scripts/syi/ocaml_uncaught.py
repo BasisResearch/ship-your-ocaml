@@ -63,6 +63,49 @@ def functions_spec(ld, rest):
          fast({'mem': [('R 2 + 424#64', 'window'), ('R 2 + 416#64', 'window'), ('R 2 + 400#64', 'window'),
                        ('R 2 + 384#64', 'window'), ('R 2 + 376#64', 'window'), ('R 2 + 408#64', 'window')], 'ra': 0})),
       ]),
+      ('caml_fatal_uncaught_exception', 'Caml_fatal_uncaught_exception', 'FatalUncaught',
+       {0x8000df84: 'T', 0x8000dff4: 'TF', 0x8000e03c: 'T', 0x8000dfac: 'F'}, True, [
+        # prologue: the 48-byte frame, four saves; caml_named_value("Printexc.handle_uncaught_exception")
+        (0x8000df50, 'pro', [1, 2, 8, 9, 10, 18, 19],
+         reg('[(10, 2147837296#64), (9, R 10), (2, R 2 + 18446744073709551568#64), (1, R 1), (8, R 8), (18, R 18), (19, R 19)]'), False,
+         fast({'mem': [(f'R 2 + 18446744073709551568#64 + {k}#64', 'window') for k in (24, 32, 40, 16, 8)],
+               'addrFacts': [f'show BitVec.signExtend 64 {k}#12 = {k}#64 by decide' for k in (24, 32, 40, 16, 8)]
+                            + ['show BitVec.signExtend 64 4048#12 = 18446744073709551568#64 by decide'],
+               'log': '[((R 2 - 48#64 + 24#64).toNat, 8, R 9), ((R 2 - 48#64 + 32#64).toNat, 8, R 8), '
+                      '((R 2 - 48#64 + 40#64).toNat, 8, R 1), ((R 2 - 48#64 + 16#64).toNat, 8, R 18), '
+                      '((R 2 - 48#64 + 8#64).toNat, 8, R 19)]', 'addrSimpOnly': True})),
+        # caml_memprof_set_suspended(1)
+        (0x8000df78, 'suspend', [1, 10], reg('[(10, 1#64), (8, R 10), (1, R 1)]'), False, fast({})),
+        # no handler registered
+        (0x8000df84, 'absent', [8, 10], reg('[(8, R 8), (10, R 10)]'), True, fast({})),
+        # caml_format_exception(exn)
+        (0x8000dfc0, 'format', [1, 9], reg('[(10, R 9), (1, R 1), (9, R 9)]'), False, fast({})),
+        # save and clear the backtrace fields; caml_named_value("Pervasives.do_at_exit")
+        (0x8000dfc8, 'save', [1, 10],
+         reg(f'[(19, {L(1, "lw")}), (9, {L(2, "lw")}), (14, {L(1, "lw")}), (10, 2147833712#64), (18, R 10), (15, {L(0)}), (8, 2147896584#64), (1, R 1)]'), False,
+         fast({'mem': [('0x80064d08#64', 'global'), ('@0 + 232#64', 'window'), ('@0 + 232#64', 'window'), ('@0 + 240#64', 'window')],
+               'log': '[((bytesVal .ld (loads.getD 0 []) + 232#64).toNat, 8, 0#64)]'})),
+        (0x8000dff4, 'atExitNone', [10], reg('[(10, R 10)]'), True, fast({})),
+        (0x8000dff4, 'atExitSome', [10], reg('[(10, R 10)]'), False, fast({})),
+        # caml_callback_exn(*at_exit, Val_unit)
+        (0x8000dff8, 'callback', [1, 10], reg(f'[(11, 1#64), (10, {L(0)}), (1, R 1)]'), False,
+         fast({'mem': [('R 10', 'window')]})),
+        # restore the backtrace fields; fprintf(stderr, "Fatal error: exception %s\n", msg)
+        (0x8000e004, 'report', [1, 8, 9, 18, 19],
+         reg(f'[(11, 2147837040#64), (10, {L(2)}), (12, R 18), (14, {L(1)}), (15, {L(0)}), (1, R 1), (8, R 8), (9, R 9), (18, R 18), (19, R 19)]'), False,
+         fast({'mem': [('R 8', 'window'), ('0x800648f8#64', 'global'), ('@0 + 232#64', 'window'), ('@0 + 240#64', 'window'), ('@1 + 24#64', 'window')],
+               'log': '[((bytesVal .ld (loads.getD 0 []) + 232#64).toNat, 8, R 19), ((bytesVal .ld (loads.getD 0 []) + 240#64).toNat, 8, R 9)]'})),
+        # caml_stat_free(msg)
+        (0x8000e02c, 'release', [1, 18], reg('[(10, R 18), (1, R 1), (18, R 18)]'), False, fast({})),
+        # backtrace inactive
+        (0x8000e034, 'trace', [8, 10], reg(f'[(15, {L(1)}), (8, R 8), (10, R 10)]'), True,
+         fast({'mem': [('R 8', 'window'), ('@0 + 232#64', 'window')]})),
+        # caml_abort_on_uncaught_exn unset
+        (0x8000dfa4, 'abortOff', [10], reg(f'[(15, {L(0, "lw")}), (10, R 10)]'), False,
+         fast({'mem': [('0x80064b34#64', 'global')]})),
+        # exit(2)
+        (0x8000dfb0, 'leave', [1], reg('[(10, 2#64), (1, R 1)]'), False, fast({})),
+      ]),
     ]
 
 

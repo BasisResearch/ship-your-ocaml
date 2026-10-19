@@ -4,13 +4,15 @@ import OCaml.Vm.Boot.Startup.NativeNested
 import OCaml.Vm.Boot.Startup.TableAllocatorInput
 import OCaml.Vm.Boot.Startup.AllocatorImage
 import OCaml.Vm.Gc.ReallocSuffix
+import OCaml.Vm.Gc.ImageLibrary
 
 /-!
 # `caml_format_exception` on a constant exception: `caml_stat_alloc_noexc(len + 1)`
 
 The allocation is a0-boot's `stat_alloc_ready` (dispatch, then the landed
 malloc) under allocator readiness `RuntimeReadyL` over the image-only live set
-`imageLive`, the one the library leaves (`memmove_leaf`, `strlen_ready`) keep.
+`imageLive` (a6-gc's `LibraryLive` instance), the one the library leaves
+(`memmove_leaf`, `strlen_ready`) keep.
 `FormatHeap` is the entry's allocator fact; `ready_transport` carries it from
 the entry to the call, since the front half writes only the native frame.
 -/
@@ -19,19 +21,6 @@ namespace OCaml.Vm.Primitives.Uncaught.FormatException
 set_option autoImplicit false
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap LeanRV64DExecutable OCaml.Vm.Primitives OCaml.Vm.Boot.Startup
   VsaIris VsaIris.VsaHeap VsaIris.MallocFast VsaIris.Inst
-
-/-- The image-only live set serves the allocator: its pins are `.text` bytes
-and `_impure_ptr`. -/
-instance : LibraryLive imageLive where
-  alloc := fun p hp => by
-    have source := allocator_sources p hp
-    unfold AllocatorByteSource at source
-    split at source
-    · exact .inl ⟨source.1, ‹_›⟩
-    · right; right
-      simp only [allocatorImpureAddr, Layout.sym_impure_ptr] at source ⊢
-      omega
-  image := imageLive_image
 
 /-- A leaf caller with the library facts is a platform state of `imageLive`. -/
 theorem _root_.OCaml.Vm.Primitives.LibraryReady.vsaOk {ra : BitVec 64} {c : Config} (r : LibraryReady c)
