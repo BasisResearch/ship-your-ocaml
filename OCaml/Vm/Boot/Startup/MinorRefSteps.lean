@@ -4,6 +4,10 @@ import OCaml.Vm.Boot.Startup.MinorHeapRefBNormalized
 import OCaml.Vm.Boot.Startup.MinorHeapRefBImage
 import OCaml.Vm.Boot.Startup.MinorHeapRefCNormalized
 import OCaml.Vm.Boot.Startup.MinorHeapRefCImage
+import OCaml.Vm.Boot.Startup.MinorHeapRefDNormalized
+import OCaml.Vm.Boot.Startup.MinorHeapRefDImage
+import OCaml.Vm.Boot.Startup.MinorHeapReturnNormalized
+import OCaml.Vm.Boot.Startup.MinorHeapReturnImage
 import OCaml.Vm.Boot.Startup.MinorHeapSteps
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
@@ -300,6 +304,103 @@ theorem minor_ref_third (c : Config) (ra t2 t3 : BitVec 64) (leaf : LeafInput ra
     exact ⟨gholds_lookup_eq pins rfl state, gholds_lookup_eq pins rfl (by simp only [state, s120, tbl]),
       gholds_lookup_eq pins rfl (by simp only [state, s120, tbl, sext_zero, BitVec.add_zero, base]),
       gholds_lookup (n := 9) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+/-- `custom_table`'s remaining fields, in the order the code clears them. -/
+def tableTailLog (t : BitVec 64) : List WEntry :=
+  [((t + 8#64).toNat, 8, 0#64), ((t + 32#64).toNat, 8, 0#64), ((t + 16#64).toNat, 8, 0#64),
+    ((t + 24#64).toNat, 8, 0#64), (t.toNat, 8, 0#64)]
+
+theorem minor_ref_last (c : Config) (ra t v : BitVec 64) (leaf : LeafInput ra c) (regs : GHolds c.σ [(8, t), (10, v)])
+    (spot : RefTableSpot t) :
+    FnSummary 0x8000a394#64 (fun e => e = c) (WriteRegistersPost [] (tableTailLog t) c 0x8000a3a8#64 v
+      [(8, t), (10, v)]) := by
+  have s8 : Functions.sign_extend (m := 64) 8#12 = BitVec.ofNat 64 8 := by decide
+  have s16 : Functions.sign_extend (m := 64) 16#12 = BitVec.ofNat 64 16 := by decide
+  have s24 : Functions.sign_extend (m := 64) 24#12 = BitVec.ofNat 64 24 := by decide
+  have s32 : Functions.sign_extend (m := 64) 32#12 = BitVec.ofNat 64 32 := by decide
+  have f (off : Nat) (h : off ≤ 56) := spot.field_nat off h
+  have low := spot.low
+  unfold heapStart at low
+  have outside : ImageOutside (tableTailLog t) := by
+    constructor <;> simp only [tableTailLog, OutLRange, f 8 (by decide), f 16 (by decide), f 24 (by decide),
+      f 32 (by decide), and_true] <;>
+      simp only [Image.textBase, Image.textSize, Image.rodataBase, Image.rodataSize] <;> omega
+  apply registers_of_blocks' leaf.image outside
+    (block_summary _ _ _ _ _ (show BlockInput caml_set_minor_heap_sizeXa394Seg 0x8000a394#64 [(8, t), (10, v)] [] c
+      from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [8, 10]; decide
+      shape := by change ChainOK _ [8, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := minorHeapRefD_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_set_minor_heap_size_at_"
+        · exact (spot.window 8 (by decide) (by decide)).sd rfl (by simp only [eaddrM, srcVal, lookupG, stepGM, eraseG, wvalM, stepLdsM, List.headD, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, minorheaprefd_line_8000a394, minorheaprefd_line_8000a398, minorheaprefd_line_8000a39c, minorheaprefd_line_8000a3a0, minorheaprefd_line_8000a3a4, s8])
+        · exact (spot.window 32 (by decide) (by decide)).sd rfl (by simp only [eaddrM, srcVal, lookupG, stepGM, eraseG, wvalM, stepLdsM, List.headD, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, minorheaprefd_line_8000a394, minorheaprefd_line_8000a398, minorheaprefd_line_8000a39c, minorheaprefd_line_8000a3a0, minorheaprefd_line_8000a3a4, s32])
+        · exact (spot.window 16 (by decide) (by decide)).sd rfl (by simp only [eaddrM, srcVal, lookupG, stepGM, eraseG, wvalM, stepLdsM, List.headD, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, minorheaprefd_line_8000a394, minorheaprefd_line_8000a398, minorheaprefd_line_8000a39c, minorheaprefd_line_8000a3a0, minorheaprefd_line_8000a3a4, s16])
+        · exact (spot.window 24 (by decide) (by decide)).sd rfl (by simp only [eaddrM, srcVal, lookupG, stepGM, eraseG, wvalM, stepLdsM, List.headD, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, minorheaprefd_line_8000a394, minorheaprefd_line_8000a398, minorheaprefd_line_8000a39c, minorheaprefd_line_8000a3a0, minorheaprefd_line_8000a3a4, s24])
+        · exact (spot.window 0 (by decide) (by decide)).sd rfl
+            (by simp only [eaddrM, srcVal, lookupG, stepGM, eraseG, wvalM, stepLdsM, List.headD, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, minorheaprefd_line_8000a394, minorheaprefd_line_8000a398, minorheaprefd_line_8000a39c, minorheaprefd_line_8000a3a0, minorheaprefd_line_8000a3a4, sext_zero]) }))
+  · simp only [caml_set_minor_heap_sizeXa394Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, wlogM,
+      wentryM, widthOfM, eaddrM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true,
+      ite_false, minorheaprefd_line_8000a394, minorheaprefd_line_8000a398, minorheaprefd_line_8000a39c, minorheaprefd_line_8000a3a0, minorheaprefd_line_8000a3a4, s8, s16, s24, s32, sext_zero, BitVec.add_zero]
+    rfl
+  · rfl
+  · intro σ pins
+    exact pins
+  · rfl
+  · decide
+
+def minorSavedLoads (m : Std.ExtHashMap Nat (BitVec 8)) (sp : BitVec 64) : List (List (BitVec 8)) :=
+  [read8 m (nativeFrameBase sp 64 + 56), read8 m (nativeFrameBase sp 64 + 48), read8 m (nativeFrameBase sp 64 + 40),
+    read8 m (nativeFrameBase sp 64 + 32), read8 m (nativeFrameBase sp 64 + 24)]
+
+/-- Restore ra, s0–s3 and return. -/
+theorem minor_return (c : Config) (sp ra s0 s1 s2 s3 v oldra : BitVec 64) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 64) (regs : GHolds c.σ [(2, nativeStack sp 64), (10, v)])
+    (saved : ∀ off value, (off, value) ∈ minorSlots ra s0 s1 s2 s3 →
+      bytesT c.σ.mem (nativeFrameBase sp 64 + off) 8 = value)
+    (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x8000a3a8#64 (fun e => e = c) (WriteRegistersPost [1, 8, 9, 18, 19, 2] [] c ra v
+      [(2, sp), (19, s3), (18, s2), (9, s1), (8, s0), (1, ra), (10, v)]) := by
+  have word (off : Nat) (value : BitVec 64) (member : (off, value) ∈ minorSlots ra s0 s1 s2 s3) :
+      bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 64 + off)) = value := by
+    rw [read8_value]; exact saved off value member
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput caml_set_minor_heap_sizeXa3a8Seg 0x8000a3a8#64
+        [(2, nativeStack sp 64), (10, v)] (minorSavedLoads c.σ.mem sp) c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 10]; decide
+      shape := by change ChainOK _ [2, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := minorHeapReturn_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_set_minor_heap_size_at_"
+        · exact (frame.read_slot (off := 56) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 48) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 40) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 32) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 24) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 64 + 56)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [word 56 ra (by simp [minorSlots]), ret_tgt ra aligned]
+          exact aligned }))
+  · rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 64 + 56)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [word 56 ra (by simp [minorSlots]), ret_tgt ra aligned]
+  · simp only [caml_set_minor_heap_sizeXa3a8Seg, minorSavedLoads, evalBlocks, evalBlock, SegEvalState.init, runGM,
+      stepGM, stepLdsM, ldsRunM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true,
+      ite_false, List.headD_cons, List.tail_cons, minorheapreturn_line_8000a3a8, minorheapreturn_line_8000a3ac, minorheapreturn_line_8000a3b0, minorheapreturn_line_8000a3b4, minorheapreturn_line_8000a3b8, minorheapreturn_line_8000a3bc]
+    rw [show Functions.sign_extend (m := 64) 64#12 = 64#64 by decide, nativeStack_restore,
+      word 56 ra (by simp [minorSlots]), word 48 s0 (by simp [minorSlots]), word 40 s1 (by simp [minorSlots]),
+      word 32 s2 (by simp [minorSlots]), word 24 s3 (by simp [minorSlots])]
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
