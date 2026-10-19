@@ -113,7 +113,8 @@ theorem stat_aligned_round (c : Config) (sp ra raw out : BitVec 64) (leaf : Leaf
     (outSlot : bytesT c.σ.mem (nativeFrameBase sp 32 + 0) 8 = out)
     (outWindow : WriteWindow out 8) (outside : ImageOutside [(out.toNat, 8, raw)]) :
     FnSummary 0x8000ab9c#64 (fun e => e = c) (WriteRegistersPost [11, 12, 15, 10] [(out.toNat, 8, raw)] c
-      0x8000abc0#64 (pageAbove raw) [(10, pageAbove raw), (2, nativeStack sp 32)]) := by
+      0x8000abc0#64 (pageAbove raw)
+      [(10, pageAbove raw), (15, pageAbove raw), (12, out), (11, 0#64), (2, nativeStack sp 32)]) := by
   have word (off : Nat) (value : BitVec 64) (h : bytesT c.σ.mem (nativeFrameBase sp 32 + off) 8 = value) :
       bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 32 + off)) = value := by rw [read8_value]; exact h
   apply registers_of_blocks' leaf.image outside
@@ -149,6 +150,10 @@ theorem stat_aligned_round (c : Config) (sp ra raw out : BitVec 64) (leaf : Leaf
     exact ⟨gholds_lookup_eq pins rfl (by
         rw [word 8 _ moduloSlot, BitVec.add_zero, srli_page _ _ rfl, slli_twelve _ _ rfl,
           show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide, BitVec.sub_zero]; rfl),
+      gholds_lookup_eq pins rfl (by
+        rw [word 8 _ moduloSlot, BitVec.add_zero, srli_page _ _ rfl, slli_twelve _ _ rfl,
+          show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide]; rfl),
+      gholds_lookup_eq pins rfl (word 0 _ outSlot), gholds_lookup_eq pins rfl (word 8 _ moduloSlot),
       gholds_lookup (n := 2) _ pins rfl, trivial⟩
   · rfl
   · decide
