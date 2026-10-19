@@ -17,14 +17,6 @@ def sectionRaw (k : Nat) : BitVec 8 := (WhileMinImage.initialMem[sectionSource +
 /-- Byte `k` of the section table with every length's byte order reversed. -/
 def sectionByte (k : Nat) : BitVec 8 := sectionRaw (sectionSwap k)
 
-/-- A block of the arena avoids the allocator's text pins. -/
-theorem arenaWindow_out_pins {p n : Nat} (lo : heapStart ≤ p) (pin : Nat × BitVec 8)
-    (member : pin ∈ VsaIris.Sym.allocText) : OutW [⟨p, p + n⟩] pin.1 := by
-  have source := allocator_sources pin member
-  unfold AllocatorByteSource at source
-  simp only [OutW, and_true]
-  split at source <;> simp only [Image.textBase, Image.textSize, allocatorImpureAddr, heapStart] at * <;> omega
-
 /-- The loop at descriptor `i`: the first `i` lengths reversed. -/
 structure SwapAt (H : List (Nat × Nat)) (capacity : Nat) (blk : BitVec 64) (start : Config) (i : Nat)
     (d : Config) : Prop where

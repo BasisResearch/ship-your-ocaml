@@ -1,5 +1,8 @@
 import OCaml.Vm.Boot.Startup.PageModifySteps
 import OCaml.Vm.Boot.Startup.RuntimeStack
+import OCaml.Vm.Boot.Startup.ClearReady
+import OCaml.Vm.Boot.Startup.RuntimeWindows
+import OCaml.Vm.Boot.Startup.PageTable
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
   LeanRV64DExecutable
@@ -23,6 +26,13 @@ theorem slotAddr_nat (ent : BitVec 64) (i : Nat) (hi : i < 2048) (fits : ent.toN
     Nat.mod_eq_of_lt (by omega)]
   omega
 
+/-- The allocator's footprint misses a live block of the arena. -/
+theorem block_foot_out {H : List (Nat × Nat)} {p n a : Nat} (high : heapStart ≤ p) (owned : (p, n) ∈ H)
+    (foot : vsaFoot H a) : a < p ∨ p + n ≤ a := by
+  rcases foot with global | ⟨_, _, out⟩
+  · left; unfold heapStart at high; unfold allocGlobal InRange at global; omega
+  · have := out _ owned; unfold InExt at this; omega
+
 /-- caml_page_table_modify is called to add `page` with `kind`. -/
 structure PageModifyCall (H : List (Nat × Nat)) (capacity : Nat) (sp ra page kind s0 s1 s2 s3 s4 occ ent : BitVec 64)
     (c : Config) : Prop where
@@ -39,6 +49,8 @@ structure PageModifyCall (H : List (Nat × Nat)) (capacity : Nat) (sp ra page ki
   /-- The slots lie in the arena. -/
   tableLow : ent.toNat + 16384 ≤ heapEnd
   tableHigh : heapStart ≤ ent.toNat
+  /-- The slots are a live block. -/
+  tableOwned : (ent.toNat, 16384) ∈ H
   /-- The page is not in the table yet. -/
   absent : ∀ i, i < 2048 → slotWord c.σ.mem ent i ≠ 0#64 →
     guardB bop.BGEU (page ^^^ slotWord c.σ.mem ent i) 4096#64 = true
@@ -48,6 +60,7 @@ structure PageModified (H : List (Nat × Nat)) (capacity : Nat) (sp ra page kind
     (slot steps : Nat) (before after : Config) : Prop where
   pc : PCAt ra after
   regs : GHolds after.σ [(2, sp), (10, 0#64), (20, s4), (19, s3), (18, s2), (9, s1), (8, s0), (1, ra)]
+  ready : RuntimeReady H capacity sp ra after
   at_slot : slot = probe (pageHash page).toNat steps
   empty : slotWord before.σ.mem ent slot = 0#64
   occupied : ∀ i, i < steps → slotWord before.σ.mem ent (probe (pageHash page).toNat i) ≠ 0#64
@@ -184,6 +197,10 @@ theorem page_table_modify_insert (c : Config) (H : List (Nat × Nat)) (capacity 
   have text : Image.textBase + Image.textSize ≤ pageTable := by decide
   have rodata : Image.rodataBase + Image.rodataSize ≤ pageTable := by decide
   have ptStart : pageTable + 0x28 ≤ heapStart := by decide
+  have readyG : RuntimeReady H capacity (nativeStack sp 96) ra g :=
+    ((((ready1.boundary p2 (by decide) (by decide) (by decide)).boundary p3 (by decide) (by decide) (by decide)).boundary
+      p4 (by decide) (by decide) (by decide)).boundary p5 (by decide) (by decide) (by decide)).boundary PG (by decide)
+      (by decide) (by decide)
   obtain ⟨d7, run7, p7⟩ := (page_insert g ra page kind (slotAddr ent (BitVec.ofNat 64 slot)) occ v PG.toLeafInput
     ⟨keepG 9 (by decide) (by decide) (by decide) _
         (p5.keep 9 (by decide) (by decide) (by decide) (by decide)
@@ -223,6 +240,22 @@ theorem page_table_modify_insert (c : Config) (H : List (Nat × Nat)) (capacity 
   have mem7 : d7.σ.mem = writeLog d1.σ.mem
       [((slotAddr ent (BitVec.ofNat 64 slot)).toNat, 8, kind ||| page), (pageTable + 0x18, 8, occ + 1#64)] := by
     rw [p7.memory, memG]
+  have windowsIn : LogInW [⟨pageTable, pageTable + 0x28⟩, ⟨ent.toNat, ent.toNat + 16384⟩]
+      [((slotAddr ent (BitVec.ofNat 64 slot)).toNat, 8, kind ||| page), (pageTable + 0x18, 8, occ + 1#64)] := by
+    simp only [LogInW, InsideW, slotAddrNat]
+    refine ⟨Or.inr (Or.inl ⟨by omega, by omega⟩), Or.inl ⟨by omega, by omega⟩, trivial⟩
+  have ready7 : RuntimeReady H capacity (nativeStack sp 96) ra d7 :=
+    readyG.window_log p7 (by decide) (by simp only [keysG]; decide) (by decide)
+      ((p7.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans readyG.stack)
+      ((p7.toEffectPost.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans readyG.raReg)
+      readyG.aligned windowsIn
+      (fun pin member => ⟨(pageTableWindows_out_pins pin member).1,
+        (arenaWindow_out_pins (n := 16384) A.tableHigh pin member).1, trivial⟩)
+      (by have := A.tableHigh; unfold heapStart at this
+          simp only [OutWRange, and_true, pageTable, Layout.sym_caml_page_table, Layout.sym_Caml_state]; omega)
+      (by have := A.tableHigh; unfold heapStart at this
+          simp only [OutWRange, and_true, pageTable, Layout.sym_caml_page_table, Layout.sym_pool]; omega)
+      (fun a foot => ⟨(pageTableWindows_out_foot foot).1, block_foot_out A.tableHigh A.tableOwned foot, trivial⟩)
   obtain ⟨d8, run8, p8⟩ := (page_modify_return d7 sp ra s0 s1 s2 s3 s4 v ra
     ⟨p7.good, p7.image, p7.minstret, through 1 (by decide) (by decide) ra (by decide)
       (gholds_lookup (n := 1) _ regs rfl), A.ready.aligned, p7.tick⟩ A.frame
@@ -241,6 +274,9 @@ theorem page_table_modify_insert (c : Config) (H : List (Nat × Nat)) (capacity 
   exact ⟨slot, steps, d8, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (runG.trans (run7.trans run8)))))),
     { pc := p8.pc
       regs := p8.regs
+      ready := ready7.stack_log p8 (by decide) (by simp only [keysG]; decide) (by decide)
+        (gholds_lookup (n := 2) _ p8.regs rfl) (gholds_lookup (n := 1) _ p8.regs rfl) A.ready.aligned A.frame
+        (by simp only [LogInW])
       at_slot := atSlot
       empty := emptySlot
       occupied := occupiedPath
