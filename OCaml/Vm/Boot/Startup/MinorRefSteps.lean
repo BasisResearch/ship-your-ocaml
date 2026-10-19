@@ -2,6 +2,8 @@ import OCaml.Vm.Boot.Startup.MinorHeapRefANormalized
 import OCaml.Vm.Boot.Startup.MinorHeapRefAImage
 import OCaml.Vm.Boot.Startup.MinorHeapRefBNormalized
 import OCaml.Vm.Boot.Startup.MinorHeapRefBImage
+import OCaml.Vm.Boot.Startup.MinorHeapRefCNormalized
+import OCaml.Vm.Boot.Startup.MinorHeapRefCImage
 import OCaml.Vm.Boot.Startup.MinorHeapSteps
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
@@ -204,6 +206,99 @@ theorem minor_ref_second (c : Config) (ra t1 t2 : BitVec 64) (leaf : LeafInput r
       List.headD_cons, List.tail_cons, minorheaprefb_line_8000a334, minorheaprefb_line_8000a338, minorheaprefb_line_8000a33c, minorheaprefb_line_8000a340, minorheaprefb_line_8000a344, minorheaprefb_line_8000a348, minorheaprefb_line_8000a34c, minorheaprefb_line_8000a350, minorheaprefb_line_8000a354, minorheaprefb_line_8000a358] at pins
     exact ⟨gholds_lookup_eq pins rfl state, gholds_lookup_eq pins rfl (by simp only [state, s112, tbl]),
       gholds_lookup_eq pins rfl (by simp only [state, s112, tbl, sext_zero, BitVec.add_zero, base]),
+      gholds_lookup (n := 9) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+local macro "rck" : tactic => `(tactic| simp only [minorheaprefc_line_8000a364, minorheaprefc_line_8000a368, minorheaprefc_line_8000a36c, minorheaprefc_line_8000a370, minorheaprefc_line_8000a374, minorheaprefc_line_8000a378, minorheaprefc_line_8000a37c, minorheaprefc_line_8000a380, minorheaprefc_line_8000a384, minorheaprefc_line_8000a388, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+/-- `ephe_ref_table`'s remaining fields; `custom_table`: read its record,
+clear `size` and `reserve`; no storage to free. -/
+theorem minor_ref_third (c : Config) (ra t2 t3 : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(8, t2), (9, BitVec.ofNat 64 Layout.sym_Caml_state)])
+    (domain : bytesT c.σ.mem Layout.sym_Caml_state 8 = firstDomainPtr)
+    (ptr : bytesT c.σ.mem (domainField 120) 8 = t3) (spot2 : RefTableSpot t2) (spot3 : RefTableSpot t3)
+    (empty : bytesT c.σ.mem t3.toNat 8 = 0#64)
+    (apart : t2.toNat + 56 ≤ t3.toNat ∨ t3.toNat + 56 ≤ t2.toNat)
+    (offDomain : t2.toNat + 56 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ t2.toNat) :
+    FnSummary 0x8000a364#64 (fun e => e = c) (WriteRegistersPost [14, 8, 10] (tableResetLog t2 ++ tableClearLog t3)
+      c 0x8000a394#64 0#64
+      [(14, firstDomainPtr), (8, t3), (10, 0#64), (9, BitVec.ofNat 64 Layout.sym_Caml_state)]) := by
+  have state : bytesVal .ld (read8 c.σ.mem (BitVec.ofNat 64 Layout.sym_Caml_state).toNat) = firstDomainPtr := by
+    rw [read8_value]; exact domain
+  have tbl : bytesVal .ld (read8 c.σ.mem (firstDomainPtr + 120#64).toNat) = t3 := by rw [read8_value]; exact ptr
+  have base : bytesVal .ld (read8 c.σ.mem t3.toNat) = 0#64 := by rw [read8_value]; exact empty
+  have s120 : Functions.sign_extend (m := 64) 120#12 = 120#64 := by decide
+  have s8 : Functions.sign_extend (m := 64) 8#12 = BitVec.ofNat 64 8 := by decide
+  have s16 : Functions.sign_extend (m := 64) 16#12 = BitVec.ofNat 64 16 := by decide
+  have s24 : Functions.sign_extend (m := 64) 24#12 = BitVec.ofNat 64 24 := by decide
+  have s32 : Functions.sign_extend (m := 64) 32#12 = BitVec.ofNat 64 32 := by decide
+  have s40 : Functions.sign_extend (m := 64) 40#12 = BitVec.ofNat 64 40 := by decide
+  have s48 : Functions.sign_extend (m := 64) 48#12 = BitVec.ofNat 64 48 := by decide
+  have f2 (off : Nat) (h : off ≤ 56) := spot2.field_nat off h
+  have f3 (off : Nat) (h : off ≤ 56) := spot3.field_nat off h
+  have low2 := spot2.low
+  have low3 := spot3.low
+  have high2 := spot2.high
+  have domNat : firstDomainPtr.toNat = 0x8007d150 := rfl
+  have stateNat : (BitVec.ofNat 64 Layout.sym_Caml_state).toNat = 0x80064d08 := rfl
+  have field120 : (firstDomainPtr + 120#64).toNat = 0x8007d150 + 120 := rfl
+  unfold heapStart at low2 low3
+  unfold heapEnd at high2
+  have outside : ImageOutside (tableResetLog t2 ++ tableClearLog t3) := by
+    constructor <;> simp only [tableResetLog, tableClearLog, List.cons_append, List.nil_append, OutLRange,
+      f2 8 (by decide), f2 16 (by decide), f2 24 (by decide), f2 32 (by decide), f3 40 (by decide),
+      f3 48 (by decide), and_true] <;>
+      simp only [Image.textBase, Image.textSize, Image.rodataBase, Image.rodataSize] <;> omega
+  apply registers_of_blocks' leaf.image outside
+    (block_summary _ _ _ _ _ (show BlockInput caml_set_minor_heap_sizeXa364TSeg 0x8000a364#64
+        [(8, t2), (9, BitVec.ofNat 64 Layout.sym_Caml_state)]
+        [read8 c.σ.mem (BitVec.ofNat 64 Layout.sym_Caml_state).toNat, read8 c.σ.mem (firstDomainPtr + 120#64).toNat,
+          read8 c.σ.mem t3.toNat] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [8, 9]; decide
+      shape := by change ChainOK _ [8, 9] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := minorHeapRefC_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_set_minor_heap_size_at_"
+        all_goals rck
+        · exact (spot2.window 0 (by decide) (by decide)).sd rfl (by simp only [eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff])
+        · past_stores
+          · exact (show ReadWindow (BitVec.ofNat 64 Layout.sym_Caml_state) 8 by constructor <;> decide).ld rfl
+              (by simp only [eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff]) (read8_pins _ _)
+          all_goals (intro _; simp only [OutLRange, wentryM, widthOfM, eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff, f2 8 (by decide), f2 16 (by decide),
+            f2 24 (by decide), f2 32 (by decide), and_true]; (try simp only [stateNat, field120, domNat]); omega)
+        · exact (spot2.window 8 (by decide) (by decide)).sd rfl (by simp only [eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff])
+        · exact (spot2.window 32 (by decide) (by decide)).sd rfl (by simp only [eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff])
+        · exact (spot2.window 16 (by decide) (by decide)).sd rfl (by simp only [eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff])
+        · exact (spot2.window 24 (by decide) (by decide)).sd rfl (by simp only [eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff])
+        · past_stores
+          · exact (show ReadWindow (firstDomainPtr + 120#64) 8 by constructor <;> decide).ld rfl
+              (by simp only [eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff]) (read8_pins _ _)
+          all_goals (intro _; simp only [OutLRange, wentryM, widthOfM, eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff, f2 8 (by decide), f2 16 (by decide),
+            f2 24 (by decide), f2 32 (by decide), and_true]; (try simp only [stateNat, field120, domNat]); omega)
+        · past_stores
+          · exact spot3.read.ld rfl (by simp only [eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff]) (read8_pins _ _)
+          all_goals (intro _; simp only [OutLRange, wentryM, widthOfM, eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff, f2 8 (by decide), f2 16 (by decide),
+            f2 24 (by decide), f2 32 (by decide), and_true]; (try simp only [stateNat, field120, domNat]); omega)
+        · exact (spot3.window 40 (by decide) (by decide)).sd rfl (by simp only [eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff])
+        · exact (spot3.window 48 (by decide) (by decide)).sd rfl (by simp only [eaddrM, srcVal, lookupG, Option.getD_some, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48, s120, state, tbl, ite_true, ite_false, Nat.reduceEqDiff])
+        · simp only [state, s120, tbl, sext_zero, BitVec.add_zero, base]
+          rfl }))
+  · simp only [caml_set_minor_heap_sizeXa364TSeg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, wlogM, wentryM, widthOfM, eaddrM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff,
+      ite_true, ite_false, List.headD_cons, List.tail_cons, minorheaprefc_line_8000a364, minorheaprefc_line_8000a368, minorheaprefc_line_8000a36c, minorheaprefc_line_8000a370, minorheaprefc_line_8000a374, minorheaprefc_line_8000a378, minorheaprefc_line_8000a37c, minorheaprefc_line_8000a380, minorheaprefc_line_8000a384, minorheaprefc_line_8000a388]
+    simp only [state, s120, tbl, sext_zero, BitVec.add_zero, s8, s16, s24, s32, s40, s48]
+    rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_set_minor_heap_sizeXa364TSeg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, eaddrM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false,
+      List.headD_cons, List.tail_cons, minorheaprefc_line_8000a364, minorheaprefc_line_8000a368, minorheaprefc_line_8000a36c, minorheaprefc_line_8000a370, minorheaprefc_line_8000a374, minorheaprefc_line_8000a378, minorheaprefc_line_8000a37c, minorheaprefc_line_8000a380, minorheaprefc_line_8000a384, minorheaprefc_line_8000a388] at pins
+    exact ⟨gholds_lookup_eq pins rfl state, gholds_lookup_eq pins rfl (by simp only [state, s120, tbl]),
+      gholds_lookup_eq pins rfl (by simp only [state, s120, tbl, sext_zero, BitVec.add_zero, base]),
       gholds_lookup (n := 9) _ pins rfl, trivial⟩
   · rfl
   · decide
