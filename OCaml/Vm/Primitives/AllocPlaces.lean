@@ -28,14 +28,14 @@ def allocPlaces (name : String) (s : St) (young : BitVec 64) : List (Nat × Nat)
     | .int _ => [((s.heap.alloc (.channel s.world.chans.length)).2, (young - 24#64).toNat + 8)]
     | _ => []
   | "caml_sys_executable_name" =>
-    [((s.heap.alloc (.bytes s.world.exeName)).2,
-      (StringCopy.resultWord young s.world.exeName.length).toNat)]
+    [((s.heap.alloc (.bytes progExeName)).2,
+      (StringCopy.resultWord young progExeName.length).toNat)]
   | "caml_sys_get_argv" =>
     -- the name string, then the pair whose young pointer is the string's header
-    [((s.heap.alloc (.bytes s.world.exeName)).2,
-      (StringCopy.resultWord young s.world.exeName.length).toNat),
+    [((s.heap.alloc (.bytes progExeName)).2,
+      (StringCopy.resultWord young progExeName.length).toNat),
      (((ArgvTuple.afterName s).heap.alloc (ArgvTuple.argvPair s)).2,
-      (ArgvTuple.tupleWord (StringCopy.resultWord young s.world.exeName.length - 8#64)).toNat)]
+      (ArgvTuple.tupleWord (StringCopy.resultWord young progExeName.length - 8#64)).toNat)]
   | "caml_sys_get_config" =>
     [((s.heap.alloc (.bytes ConfigTuple.osType)).2,
       (StringCopy.resultWord young ConfigTuple.osType.length).toNat),

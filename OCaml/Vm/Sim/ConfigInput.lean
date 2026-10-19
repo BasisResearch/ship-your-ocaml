@@ -1,4 +1,4 @@
-import OCaml.Vm.Sim.StringAllocReturn
+import OCaml.Vm.Sim.CopyStringInput
 import OCaml.Vm.Primitives.CamlSysGetConfig
 import OCaml.Vm.Primitives.Memmove
 import OCaml.Vm.Boot.Startup.LibraryText
@@ -86,16 +86,6 @@ theorem prepare_access (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 6
   · apply t40.sd rfl
     simp [eaddrM, stepGM, stepLdsM, wvalM, prepare_input, srcVal, lookupG, eraseG, imm20Of, prepareLoads, frameSp, DoubleAllocation.domainGlobal, Layout.sym_Caml_state, Functions.sign_extend, Sail.BitVec.signExtend, -BitVec.toNat_add]
 
-/-- `gp` holds `gpV`: the library's read-only register. -/
-theorem roR_of_gp {live : Nat → Prop} {c : Config} (gp : gpr c 3 = some gpV) :
-    ROHolds (vsaModel live) c roR [] := by
-  refine ⟨fun q hq => ?_, fun _ hq => nomatch hq⟩
-  obtain rfl := List.mem_singleton.1 hq
-  change vsaReg c 3 = _
-  simp only [vsaReg]
-  change (gpr c 3).getD 0 = _
-  rw [gp]; rfl
-
 /-- `OCAML_OS_TYPE`'s bytes and terminator in `.rodata`. -/
 def osTypeZ : List (BitVec 8) := [0x55#8, 0x6e#8, 0x69#8, 0x78#8, 0#8]
 
@@ -137,82 +127,8 @@ theorem frame_above_window {N k : Nat} (hN : Vsa.Sim.DlHeap.heapEnd + 4096 ≤ N
   rw [ofNat_add_small]
   exact window_of_nat (by simp only [Layout.sym_tohost]; omega) (by omega) (by omega)
 
-theorem vsa_mem_view {live : Nat → Prop} (c : Config) (mem : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) :
-    (vsaModel live).mem (memoryView c mem) a = (mem[a]?).getD 0 := rfl
-
 /-- The copy's source window, `"Unix\0"`. -/
 abbrev osTypeData : List Nat := List.range' osTypeAddress.toNat 5
-
-/-- **The copy's sizing inputs** on the memory after the prepare block. -/
-theorem config_sized {c : Config} {N D Y : Nat} {R : Nat → BitVec 64} {roots : BitVec 64}
-    (image : ExecutableImage c) (gp : gpr c 3 = some gpV)
-    (hN : Vsa.Sim.DlHeap.heapEnd + 4096 ≤ N) (hN' : N ≤ Layout.sym_stack_top) (al : N % 16 = 0)
-    (hD : D + 1000 < 2 ^ 32) (h2 : R 2 = BitVec.ofNat 64 N)
-    (prepIn : LogInW (configWindows N D Y) (prepareLog R (BitVec.ofNat 64 D) roots))
-    (dataLow : Layout.sym_bss_end ≤ D) (youngLow : Layout.sym_bss_end + 48 ≤ Y) :
-    StringCopy.SizedMemory imageLive (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)) osTypeData
-      prepare_call.link (frameSp (R 2)) osTypeAddress.toNat osType.length
-      (imgM (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)))
-      (memoryView c (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots))) := by
-  have he : Vsa.Sim.DlHeap.heapEnd = 0x86800000 := rfl
-  have hst : Layout.sym_stack_top = 0x88000000 := rfl
-  rw [he] at hN; rw [hst] at hN'
-  have F := frameSp_eq h2 (by omega) (by omega)
-  have bss : Layout.sym_bss_end = 0x8007d138 := rfl
-  rw [bss] at dataLow youngLow
-  -- addresses below `.bss` miss the prepare stores
-  have low : ∀ x, x < 0x8007d138 → OutL (prepareLog R (BitVec.ofNat 64 D) roots) x := fun x hx =>
-    outL_of_range (outLRange_of_windows (a := x) (n := 1) prepIn (by
-      simp only [configWindows, OutWRange, Layout.off_young_ptr, Layout.off_local_roots, and_true]; omega))
-      (Nat.le_refl _) (by omega)
-  have keep : ∀ x, x < 0x8007d138 →
-      (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots))[x]? = c.σ.mem[x]? :=
-    fun x hx => writeLog_out _ _ _ (low x hx)
-  have saveAddr : ∀ k ∈ [8, 24], (frameSp (R 2) - BitVec.ofNat 64 k).toNat = N - 112 - k := by
-    intro k hk
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hk
-    rw [F, ofNat_sub_small (by omega) (by omega), toNat_ofNat_small (by omega)]
-  have s8 := saveAddr 8 (by simp)
-  have s24 := saveAddr 24 (by simp)
-  refine { returnSlot := ?_, sourceSlot := ?_, saveImage := ?_, saveLibrary := ?_,
-           libraryImage := imageLive_image, codeLive := snpText_image, readOnly := ?_, «string» := ?_ }
-  · rw [F]; exact frame_below_window (by rw [he]; omega) (by rw [hst]; omega) al (by decide) (by decide)
-  · rw [F]; exact frame_below_window (by rw [he]; omega) (by rw [hst]; omega) al (by decide) (by decide)
-  · simp only [StringCopy.saveLog, StringCopy.entryRegisters]
-    refine ⟨?_, ?_⟩ <;> simp only [OutLRange, s8, s24, Image.textBase, Image.textSize, Image.rodataBase,
-      Image.rodataSize, and_true] <;> omega
-  · intro p hp
-    have below : p.1 < 0x80055c78 + 5 := by
-      rcases List.mem_append.1 hp with h | h
-      · have := snpText_below p h; omega
-      · obtain ⟨x, hx, rfl⟩ := List.mem_map.1 h
-        obtain ⟨i, hi, rfl⟩ := List.mem_range'.1 hx
-        rw [show osTypeAddress.toNat = 0x80055c78 from rfl]; omega
-    simp only [StringCopy.saveLog, StringCopy.entryRegisters, OutL, s8, s24, and_true]
-    omega
-  · have gpv : gpr (memoryView c (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots))) 3 = some gpV := by
-      rw [memoryView_gpr]; exact gp
-    refine ⟨(roR_of_gp (live := imageLive) gpv).1, fun p hp => ?_⟩
-    rcases List.mem_append.1 hp with h | h
-    · have below := snpText_below p h
-      rw [vsa_mem_view, keep _ (by omega), OCaml.Vm.Boot.Startup.snp_text_loaded image p h]; rfl
-    · obtain ⟨x, -, rfl⟩ := List.mem_map.1 h
-      rw [vsa_mem_view]; simp only [imgM]
-  · have src : ∀ i, i < 5 → imgM (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots))
-        (osTypeAddress.toNat + i) = osTypeZ.getD i 0 := fun i hi => by
-      simp only [imgM]
-      rw [keep _ (by rw [show osTypeAddress.toNat = 0x80055c78 from rfl]; omega)]
-      exact osType_rodata image i hi
-    have a0 : osTypeAddress.toNat = 0x80055c78 := rfl
-    refine ⟨fun x lo hi => Or.inl ⟨List.mem_range'.2 ⟨x - osTypeAddress.toNat, by
-        simp only [osType_length] at hi; omega, by omega⟩, rfl⟩, fun i hi => ?_, ?_, ?_, ?_, ?_⟩
-    · simp only [osType_length] at hi
-      rw [src i (by omega)]
-      rcases i with _ | _ | _ | _ | i <;> first | decide | omega
-    · rw [osType_length, src 4 (by decide)]; decide
-    · rw [a0]; decide
-    · rw [a0, osType_length]; decide
-    · rw [a0, osType_length]; decide
 
 /-- A word apart from the native frame and from `local_roots` misses the
 prepare stores. -/
@@ -229,13 +145,6 @@ theorem view_word {c : Config} {log : List WEntry} {x : Nat} (out : OutLRange lo
     word (memoryView c (writeLog c.σ.mem log)) x = word c x := by
   change bytesT (writeLog c.σ.mem log) x 8 = bytesT c.σ.mem x 8
   rw [bytesT_writeLog_out _ out]
-
-/-- A store window of any width in RAM above `tohost`, from naturals. -/
-theorem window_nat_width {n w : Nat} (lo : Layout.sym_tohost + 16 ≤ n) (hi : n + w ≤ 0x100000000)
-    (al : n % w = 0) : WriteWindow (BitVec.ofNat 64 n) w := by
-  have e : (BitVec.ofNat 64 n).toNat = n := toNat_ofNat_small (by omega)
-  have t : 0x80000000 + 16 ≤ Layout.sym_tohost + 16 := by decide
-  exact ⟨by rw [e]; omega, by rw [e]; exact hi, by rw [e]; exact lo, by rw [e]; exact al⟩
 
 /-- The entry's numbers for the copy and the triple. -/
 structure ConfigNumbers (N D Y Lm : Nat) : Prop where
@@ -263,230 +172,11 @@ theorem nurseryHeader4 (Y : Nat) (h : 16 ≤ Y) (h' : Y < 2 ^ 64) :
   simp only [BitVec.toNat_sub, BitVec.toNat_ofNat, Nat.reducePow]
   omega
 
-theorem youngSlot_eq (D : Nat) (h : D + 8 < 2 ^ 64) :
-    DoubleAllocation.youngSlot (BitVec.ofNat 64 D) = BitVec.ofNat 64 (D + 8) := by
-  simp only [DoubleAllocation.youngSlot, Layout.off_young_ptr, ← BitVec.ofNat_add]
-
-theorem limitSlot_eq (D : Nat) : DoubleAllocation.limitSlot (BitVec.ofNat 64 D) = BitVec.ofNat 64 D := by
-  simp only [DoubleAllocation.limitSlot, Layout.off_young_limit, ← BitVec.ofNat_add, Nat.add_zero]
-
-/-- A log above `.bss` misses the executable image. -/
-theorem imageOutside_of_above {log : List WEntry} (above : ∀ e ∈ log, Layout.sym_bss_end ≤ e.1) :
-    ImageOutside log := by
-  have t : Image.textBase + Image.textSize ≤ Layout.sym_bss_end := by decide
-  have r : Image.rodataBase + Image.rodataSize ≤ Layout.sym_bss_end := by decide
-  refine ⟨Gc.outLRange_of_forall fun e he => .inl ?_, Gc.outLRange_of_forall fun e he => .inl ?_⟩
-  · have := above e he; omega
-  · have := above e he; omega
-
-/-- **The copy's allocation inputs** on the memory after the prepare block. -/
-theorem config_allocate {c : Config} {N D Y Lm : Nat} {R : Nat → BitVec 64} {roots : BitVec 64}
-    (nums : ConfigNumbers N D Y Lm) (h2 : R 2 = BitVec.ofNat 64 N)
-    (wD : word c Layout.sym_Caml_state = BitVec.ofNat 64 D)
-    (wY : word c (D + Layout.off_young_ptr) = BitVec.ofNat 64 Y)
-    (wL : word c (D + Layout.off_young_limit) = BitVec.ofNat 64 Lm)
-    (sized : StringCopy.SizedMemory imageLive (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots))
-      osTypeData prepare_call.link (frameSp (R 2)) osTypeAddress.toNat osType.length
-      (imgM (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)))
-      (memoryView c (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)))) :
-    StringCopy.AllocateMemory imageLive (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)) osTypeData
-      prepare_call.link (frameSp (R 2)) osTypeAddress.toNat osType.length
-      (imgM (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)))
-      (BitVec.ofNat 64 D) (BitVec.ofNat 64 Y) (BitVec.ofNat 64 Lm)
-      (memoryView c (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots))) := by
-  obtain ⟨nl, nh, na, dl, dh, da, yh, ya, ll, rm, ap⟩ := nums
-  have F := frameSp_eq h2 (by omega) (by omega)
-  have tohost : Layout.sym_tohost = 0x80061fc0 := rfl
-  have hY := nurseryHeader4 Y (by omega) (by omega)
-  have ys := youngSlot_eq D (by omega)
-  have ls := limitSlot_eq D
-  have gd : DoubleAllocation.domainGlobal.toNat = Layout.sym_Caml_state := rfl
-  have cs : Layout.sym_Caml_state = 0x80064d08 := rfl
-  have out : ∀ x, (x + 8 ≤ D + 288 ∨ D + 296 ≤ x) → x + 8 ≤ N - 112 →
-      OutLRange (prepareLog R (BitVec.ofNat 64 D) roots) x 8 := fun x r f =>
-    prepare_out (by omega) (by omega) (by omega) h2 r (.inl f)
-  have len4 : (BitVec.ofNat 64 osType.length : BitVec 64) = BitVec.ofNat 64 4 := by rw [osType_length]
-  simp only [osType_length] at sized ⊢
-  rw [F] at sized ⊢
-  have sub : ∀ k, k ≤ 200 → BitVec.ofNat 64 (N - 112) - BitVec.ofNat 64 k = BitVec.ofNat 64 (N - 112 - k) :=
-    fun k hk => ofNat_sub_small (by omega) (by omega)
-  have nat : ∀ n, n < 2 ^ 64 → (BitVec.ofNat 64 n).toNat = n := fun n h => toNat_ofNat_small h
-  refine { sized with
-    lengthSlot := ?_, lengthImage := ?_, metadata := ?_, metadataOutside := ?_, geometry := ?_, separate := ?_ }
-  · rw [sub 32 (by decide)]; exact window_of_nat (by rw [tohost]; omega) (by omega) (by omega)
-  · simp only [StringCopy.sizeLog, StringCopy.lengthRegisters, StringCopy.entryRegisters, sub 32 (by decide),
-      nat _ (show N - 112 - 32 < 2 ^ 64 by omega)]
-    exact ⟨⟨.inl (by simp only [Image.textBase, Image.textSize]; omega), trivial⟩,
-      ⟨.inl (by simp only [Image.rodataBase, Image.rodataSize]; omega), trivial⟩⟩
-  · refine ⟨?_, ?_, ?_⟩
-    · rw [gd, view_word (out _ (by rw [cs]; omega) (by rw [cs]; omega)), wD]
-    · rw [ys, nat _ (by omega), view_word (out _ (by omega) (by omega))]
-      simpa only [Layout.off_young_ptr] using wY
-    · rw [ls, nat _ (by omega), view_word (out _ (by omega) (by omega))]
-      simpa only [Layout.off_young_limit, Nat.add_zero] using wL
-  · simp only [StringCopy.prefixLog, StringCopy.saveLog, StringCopy.entryRegisters, StringCopy.sizeLog,
-      StringCopy.lengthRegisters, sub 8 (by decide), sub 24 (by decide), sub 32 (by decide),
-      nat _ (show N - 112 - 8 < 2 ^ 64 by omega), nat _ (show N - 112 - 24 < 2 ^ 64 by omega),
-      nat _ (show N - 112 - 32 < 2 ^ 64 by omega), List.cons_append, List.nil_append]
-    refine ⟨?_, ?_, ?_⟩ <;> simp only [OutLRange, gd, ys, ls, nat _ (show D + 8 < 2 ^ 64 by omega),
-      nat _ (show D < 2 ^ 64 by omega), cs, and_true] <;> omega
-  · have s40 : BitVec.ofNat 64 (N - 112) - 32#64 - 8#64 = BitVec.ofNat 64 (N - 152) := by
-      rw [sub 32 (by decide), ofNat_sub_small (by omega) (by omega), show N - 112 - 32 - 8 = N - 152 by omega]
-    have last : BitVec.ofNat 64 (Y - 16) + 8#64 + StringAllocation.stringSpan 4#64 - 8#64 = BitVec.ofNat 64 (Y - 8) := by
-      rw [show (4#64 : BitVec 64) = BitVec.ofNat 64 4 from rfl, span4]
-      apply BitVec.eq_of_toNat_eq
-      simp only [BitVec.toNat_sub, BitVec.toNat_add, BitVec.toNat_ofNat, Nat.reducePow]; omega
-    have pad : BitVec.ofNat 64 (Y - 16) + 8#64 + (StringAllocation.stringSpan 4#64 - 1#64) = BitVec.ofNat 64 (Y - 1) := by
-      rw [show (4#64 : BitVec 64) = BitVec.ofNat 64 4 from rfl, span4]
-      apply BitVec.eq_of_toNat_eq
-      simp only [BitVec.toNat_sub, BitVec.toNat_add, BitVec.toNat_ofNat, Nat.reducePow]; omega
-    have hY' : StringAllocation.nurseryHeader (BitVec.ofNat 64 Y) 4#64 = BitVec.ofNat 64 (Y - 16) := hY
-    refine { stackWrite := ?_, youngWrite := ?_, limitRead := ?_, headerWrite := ?_, lastWrite := ?_,
-             paddingWrite := ?_, small := by decide, room := ?_, stackImage := ?_, reserveImage := ?_,
-             initializeImage := ?_ }
-    · rw [s40]; exact window_of_nat (by rw [tohost]; omega) (by omega) (by omega)
-    · rw [ys]; exact window_of_nat (by rw [tohost]; omega) (by omega) (by omega)
-    · rw [ls]; exact (window_of_nat (by rw [tohost]; omega) (by omega) (by omega)).read
-    · rw [hY']; exact window_of_nat (by rw [tohost]; omega) (by omega) (by omega)
-    · rw [hY', last]; exact window_of_nat (by rw [tohost]; omega) (by omega) (by omega)
-    · rw [hY', pad]; exact window_nat_width (by rw [tohost]; omega) (by omega) (by omega)
-    · rw [hY']
-      simp only [guardB]
-      exact Vsa.Sim.bltu_false_of_ge _ _ (by rw [nat _ (by omega), nat _ (by omega)]; omega)
-    · apply imageOutside_of_above
-      intro e he
-      simp only [savedRaLog, s40, List.mem_singleton] at he
-      subst he
-      rw [nat _ (by omega)]; simp only [Layout.sym_bss_end]; omega
-    · apply imageOutside_of_above
-      intro e he
-      simp only [StringAllocation.reservationLog, ys, List.mem_singleton] at he
-      subst he
-      rw [nat _ (by omega)]; simp only [Layout.sym_bss_end]; omega
-    · apply imageOutside_of_above
-      intro e he
-      simp only [StringAllocation.initializationLog, StringAllocation.reservedRegisters, hY', List.mem_cons,
-        List.not_mem_nil, or_false] at he
-      simp only [Layout.sym_bss_end]
-      rcases he with rfl | rfl | rfl
-      · dsimp only; rw [nat _ (by omega)]; omega
-      · dsimp only
-        rw [show (4#64 : BitVec 64) = BitVec.ofNat 64 4 from rfl, span4]
-        simp only [BitVec.toNat_sub, BitVec.toNat_add, BitVec.toNat_ofNat, Nat.reducePow]; omega
-      · dsimp only
-        rw [show (4#64 : BitVec 64) = BitVec.ofNat 64 4 from rfl, span4]
-        simp only [BitVec.toNat_sub, BitVec.toNat_add, BitVec.toNat_ofNat, Nat.reducePow]; omega
-  · have s40 : BitVec.ofNat 64 (N - 112) - 32#64 - 8#64 = BitVec.ofNat 64 (N - 152) := by
-      rw [sub 32 (by decide), ofNat_sub_small (by omega) (by omega), show N - 112 - 32 - 8 = N - 152 by omega]
-    have hY' : StringAllocation.nurseryHeader (BitVec.ofNat 64 Y) 4#64 = BitVec.ofNat 64 (Y - 16) := hY
-    have sp4 : StringAllocation.stringSpan 4#64 = 8#64 := span4
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
-      simp only [savedRaLog, StringAllocation.reservationLog, StringAllocation.initializationLog,
-        StringAllocation.reservedRegisters, s40, hY', sp4, gd, ys, ls, cs, OutLRange, List.cons_append,
-        List.nil_append, nat _ (show N - 152 < 2 ^ 64 by omega), nat _ (show D + 8 < 2 ^ 64 by omega),
-        nat _ (show D < 2 ^ 64 by omega), nat _ (show Y - 16 < 2 ^ 64 by omega), and_true] <;>
-      (try simp only [BitVec.toNat_sub, BitVec.toNat_add, BitVec.toNat_ofNat, Nat.reducePow]) <;> omega
-
-/-- memcpy's code bytes lie in `.text`. -/
-theorem mText_bounds {p : Nat × BitVec 8} (hp : p ∈ mText) : 0x80042848 ≤ p.1 ∧ p.1 < 0x80042848 + 296 := by
-  obtain ⟨⟨b, k⟩, member, rfl⟩ := List.mem_map.1 hp
-  have get := List.mem_zipIdx_iff_getElem?.1 member
-  simp only at get
-  have bound : k < memcpyCode.length := by
-    rcases Nat.lt_or_ge k memcpyCode.length with h | h
-    · exact h
-    · rw [List.getElem?_eq_none h] at get
-      cases get
-  have length : memcpyCode.length = 296 := by decide +kernel
-  change 0x80042848 ≤ memcpyBase + k ∧ memcpyBase + k < 0x80042848 + 296
-  unfold memcpyBase
-  omega
-
-theorem mText_image : ∀ p ∈ mText, imageLive p.1 := fun p hp => by
-  have := mText_bounds hp
-  exact .inl ⟨by simp only [Image.textBase]; omega, by simp only [Image.textBase, Image.textSize]; omega⟩
-
 theorem resultWord4 (Y : Nat) (h : 16 ≤ Y) (h' : Y < 2 ^ 64) :
     StringCopy.resultWord (BitVec.ofNat 64 Y) 4 = BitVec.ofNat 64 (Y - 8) := by
   simp only [StringCopy.resultWord]
   rw [show (BitVec.ofNat 64 4 : BitVec 64) = BitVec.ofNat 64 4 from rfl, nurseryHeader4 Y h h', ofNat_add_small]
   congr 1; omega
-
-/-- **The copy's memcpy inputs**, completing `CopyMemory`. -/
-theorem config_copy {c : Config} {N D Y Lm : Nat} {R : Nat → BitVec 64} {roots : BitVec 64}
-    (nums : ConfigNumbers N D Y Lm) (h2 : R 2 = BitVec.ofNat 64 N) (image : ExecutableImage c)
-    (prepIn : LogInW (configWindows N D Y) (prepareLog R (BitVec.ofNat 64 D) roots))
-    (alloc : StringCopy.AllocateMemory imageLive (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots))
-      osTypeData prepare_call.link (frameSp (R 2)) osTypeAddress.toNat osType.length
-      (imgM (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)))
-      (BitVec.ofNat 64 D) (BitVec.ofNat 64 Y) (BitVec.ofNat 64 Lm)
-      (memoryView c (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)))) :
-    StringCopy.CopyMemory imageLive (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)) osTypeData
-      prepare_call.link (frameSp (R 2)) osTypeAddress.toNat osType.length
-      (imgM (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)))
-      (BitVec.ofNat 64 D) (BitVec.ofNat 64 Y) (BitVec.ofNat 64 Lm)
-      (memoryView c (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots))) := by
-  obtain ⟨nl, nh, na, dl, dh, da, yh, ya, ll, rm, ap⟩ := nums
-  have F := frameSp_eq h2 (by omega) (by omega)
-  have tohost : Layout.sym_tohost = 0x80061fc0 := rfl
-  have hY := nurseryHeader4 Y (by omega) (by omega)
-  have rW := resultWord4 Y (by omega) (by omega)
-  have ys := youngSlot_eq D (by omega)
-  have nat : ∀ n, n < 2 ^ 64 → (BitVec.ofNat 64 n).toNat = n := fun n h => toNat_ofNat_small h
-  have sub : ∀ k, k ≤ 200 → BitVec.ofNat 64 (N - 112) - BitVec.ofNat 64 k = BitVec.ofNat 64 (N - 112 - k) :=
-    fun k hk => ofNat_sub_small (by omega) (by omega)
-  have a0 : osTypeAddress.toNat = 0x80055c78 := rfl
-  have bss : Layout.sym_bss_end = 0x8007d138 := rfl
-  have low : ∀ x, x < 0x8007d138 → OutL (prepareLog R (BitVec.ofNat 64 D) roots) x := fun x hx =>
-    outL_of_range (outLRange_of_windows (a := x) (n := 1) prepIn (by
-      simp only [configWindows, OutWRange, Layout.off_young_ptr, Layout.off_local_roots, and_true]; omega))
-      (Nat.le_refl _) (by omega)
-  simp only [osType_length] at alloc ⊢
-  rw [F] at alloc ⊢
-  have hY' : StringAllocation.nurseryHeader (BitVec.ofNat 64 Y) 4#64 = BitVec.ofNat 64 (Y - 16) := hY
-  have sp4 : StringAllocation.stringSpan 4#64 = 8#64 := span4
-  have lowPoint : ∀ p ∈ mText ++ srcText osTypeAddress.toNat 4
-      (imgM (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots))), p.1 < 0x80055c78 + 4 := by
-    intro p hp
-    rcases List.mem_append.1 hp with h | h
-    · have := mText_bounds h; omega
-    · obtain ⟨-, hi, -⟩ := mem_srcText h; rw [a0] at hi; exact hi
-  refine { alloc with
-    callerSeparate := ?_, copyGeometry := ?_, copyCodeLive := mText_image, copyImage := ?_,
-    copyTextSeparate := ?_, copyReadOnly := ?_, copyReadsOutside := ?_, returnOutsideCopy := ?_ }
-  · refine ⟨?_, ?_, ?_⟩ <;>
-      simp only [StringCopy.sizeLog, StringCopy.lengthRegisters, StringCopy.entryRegisters,
-        StringAllocation.constructorLog, savedRaLog, StringAllocation.reservationLog,
-        StringAllocation.initializationLog, StringAllocation.reservedRegisters, hY', sp4, ys, sub 8 (by decide),
-        sub 24 (by decide), sub 32 (by decide), OutLRange, List.cons_append, List.nil_append,
-        BitVec.toNat_sub, BitVec.toNat_add, BitVec.toNat_ofNat, Nat.reducePow, and_true] <;> omega
-  · refine ⟨?_, ?_, ?_, ?_, ?_, ?_, by decide⟩ <;>
-      simp only [rW, nat _ (show Y - 8 < 2 ^ 64 by omega), nat _ (show osTypeAddress.toNat < 2 ^ 64 by rw [a0]; omega),
-        a0, Layout.sym_tohost, BitVec.toNat_ofNat, Nat.reducePow, Nat.reduceMod] <;> omega
-  · refine ⟨fun i hi h => ?_, fun i hi h => ?_⟩ <;>
-      simp only [InExt, rW, nat _ (show Y - 8 < 2 ^ 64 by omega), Image.textBase, Image.textSize, Image.rodataBase,
-        Image.rodataSize] at h hi <;> omega
-  · intro p hp h
-    have := lowPoint p hp
-    simp only [InExt, rW, nat _ (show Y - 8 < 2 ^ 64 by omega)] at h
-    omega
-  · refine ⟨(fun _ h => nomatch h), fun p hp => ?_⟩
-    rw [vsa_mem_view]
-    rcases List.mem_append.1 hp with h | h
-    · have := mText_bounds h
-      rw [writeLog_out _ _ _ (low _ (by omega)), OCaml.Vm.Boot.Startup.memcpy_text_loaded image p h]; rfl
-    · obtain ⟨-, -, value⟩ := mem_srcText h
-      rw [value]; rfl
-  · intro p hp
-    have := lowPoint p hp
-    simp only [StringCopy.allocationLog, StringCopy.prefixLog, StringCopy.saveLog, StringCopy.entryRegisters,
-      StringCopy.sizeLog, StringCopy.lengthRegisters, StringAllocation.constructorLog, savedRaLog,
-      StringAllocation.reservationLog, StringAllocation.initializationLog, StringAllocation.reservedRegisters,
-      hY', sp4, ys, sub 8 (by decide), sub 24 (by decide), sub 32 (by decide), OutL, List.cons_append,
-      List.nil_append, BitVec.toNat_sub, BitVec.toNat_add, BitVec.toNat_ofNat, Nat.reducePow, and_true]
-    omega
-  · right
-    rw [rW, sub 8 (by decide), nat _ (by omega), nat _ (by omega)]; omega
 
 theorem smallHeader (Y : Nat) (h : 48 ≤ Y) (h' : Y < 2 ^ 64) :
     SmallAllocation.nurseryHeader (BitVec.ofNat 64 (Y - 16)) 3#64 = BitVec.ofNat 64 (Y - 48) := by
@@ -728,5 +418,59 @@ theorem config_afterCopy {N D Y Lm : Nat} {R : Nat → BitVec 64} (nums : Config
     subst he
     simp only [BitVec.toNat_ofNat, Nat.reducePow, Layout.sym_bss_end]
     omega
+
+/-- **The copy's site** in `caml_sys_get_config`: below the 112-byte frame,
+on the memory after the prepare block, copying `"Unix"` from `.rodata`. -/
+theorem config_site {c : Config} {N D Y Lm : Nat} {R : Nat → BitVec 64} {roots : BitVec 64}
+    (nums : ConfigNumbers N D Y Lm) (h2 : R 2 = BitVec.ofNat 64 N) (image : ExecutableImage c)
+    (gp : gpr c 3 = some gpV)
+    (wD : word c Layout.sym_Caml_state = BitVec.ofNat 64 D)
+    (wY : word c (D + Layout.off_young_ptr) = BitVec.ofNat 64 Y)
+    (wL : word c (D + Layout.off_young_limit) = BitVec.ofNat 64 Lm)
+    (prepIn : LogInW (configWindows N D Y) (prepareLog R (BitVec.ofNat 64 D) roots)) :
+    CopySite (memoryView c (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)))
+      (N - 112) D Y Lm osTypeAddress.toNat 4 8 := by
+  obtain ⟨nl, nh, na, dl, dh, da, yh, ya, ll, rm, ap⟩ := nums
+  have low : ∀ x, x < 0x8007d138 → OutL (prepareLog R (BitVec.ofNat 64 D) roots) x := fun x hx =>
+    outL_of_range (outLRange_of_windows (a := x) (n := 1) prepIn (by
+      simp only [configWindows, OutWRange, Layout.off_young_ptr, Layout.off_local_roots, and_true]; omega))
+      (Nat.le_refl _) (by omega)
+  have src : ∀ i, i < 5 → imgM (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots))
+      (osTypeAddress.toNat + i) = osTypeZ.getD i 0 := fun i hi => by
+    simp only [imgM]
+    rw [writeLog_out _ _ _ (low _ (by rw [show osTypeAddress.toNat = 0x80055c78 from rfl]; omega))]
+    exact osType_rodata image i hi
+  have out : ∀ x, (x + 8 ≤ D + 288 ∨ D + 296 ≤ x) → x + 8 ≤ N - 112 →
+      OutLRange (prepareLog R (BitVec.ofNat 64 D) roots) x 8 := fun x r f =>
+    prepare_out (by omega) (by omega) (by omega) h2 r (.inl f)
+  have a0 : osTypeAddress.toNat = 0x80055c78 := rfl
+  have cs : Layout.sym_Caml_state = 0x80064d08 := rfl
+  refine { image := image_of_writeLog image ?_ rfl, gp := by rw [memoryView_gpr]; exact gp,
+           nativeLow := by omega, nativeHigh := by omega, nativeAligned := by omega,
+           domainLow := dl, domainHigh := dh, domainAligned := da, youngHigh := yh, youngAligned := ya,
+           limitLow := ll, room := by omega, apart := ap, span := span4, spanFits := by decide,
+           small := by decide, wD := ?_, wY := ?_, wL := ?_, srcLow := by rw [a0]; decide,
+           srcHtif := by rw [a0]; decide, srcNursery := by rw [a0]; omega, srcDomain := by rw [a0]; omega,
+           bytesNz := ?_, bytesNul := ?_ }
+  · apply imageOutside_of_above
+    intro x hx
+    have := logInW_mem prepIn hx
+    simp only [configWindows, InsideW, Layout.off_young_ptr, Layout.off_local_roots] at this
+    simp only [Layout.sym_bss_end]
+    rcases this with ⟨h, -⟩ | ⟨h, -⟩ | ⟨h, -⟩ | ⟨h, -⟩ | h
+    · omega
+    · omega
+    · omega
+    · omega
+    · exact h.elim
+  · rw [view_word (out _ (by rw [cs]; omega) (by rw [cs]; omega)), wD]
+  · rw [view_word (out _ (by simp only [Layout.off_young_ptr]; omega) (by simp only [Layout.off_young_ptr]; omega)), wY]
+  · rw [view_word (out _ (by simp only [Layout.off_young_limit]; omega) (by simp only [Layout.off_young_limit]; omega)), wL]
+  · intro i hi
+    change imgM (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)) _ ≠ 0
+    rw [src i (by omega)]
+    rcases i with _ | _ | _ | _ | i <;> first | decide | omega
+  · change imgM (writeLog c.σ.mem (prepareLog R (BitVec.ofNat 64 D) roots)) _ = 0
+    rw [src 4 (by decide)]; decide
 
 end OCaml.Vm.Sim

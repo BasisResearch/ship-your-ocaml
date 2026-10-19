@@ -159,6 +159,10 @@
   finish layout); `get_config_entry` combines the contract with `PrimAllocFrame` (final `young_ptr`
   `Y - 48`, `getConfig_young`), `LoopGeometry.reserve2` and `ccall_observed_summary`. `get_argv` and
   `executable_name` reuse the copy-stage lemmas.
+* `copy_memory_at` (`Sim/CopyStringInput.lean`): `caml_copy_string`'s `CopyMemory` from a `CopySite`
+  (native sp, domain, nursery, source C string); `get_config` instantiates it (`config_site`).
+  BcSem's exe name is the constant `progExeName` ("/prog", a2-sem 7606766c); the contracts and the
+  string-wrapper/argv generators use it.
 * `allocPlaces` covers `caml_ml_open_descriptor_out/in` (bprime): the channel's custom block at
   `young − 16` (`caml_alloc_custom_mem`, wosize 2).
 * The string allocators (`executable_name`, `get_argv`, `get_config`) need their StringCopy stage

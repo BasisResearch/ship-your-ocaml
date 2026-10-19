@@ -6,7 +6,7 @@ open OCaml.Bytecode Vsa.Machine Vsa.Sim StringCopy
 
 theorem caml_sys_executable_name_primitive {runtimeOk P s pl cp sp high ra nativeSp arg live Dt DA a g domain young limit c}
     (h : ExecutableNameInput runtimeOk P s pl cp sp high ra nativeSp arg live Dt DA a g domain young limit c)
-    (runtime : ObservationRuntime runtimeOk c (copyMemory c ra nativeSp a s.world.exeName.length g domain young)) :
+    (runtime : ObservationRuntime runtimeOk c (copyMemory c ra nativeSp a progExeName.length g domain young)) :
     FnSummary (BitVec.ofNat 64 Layout.sym_caml_sys_executable_name) (fun d => d = c)
       (ExecutableNamePost runtimeOk P s pl cp sp high ra nativeSp arg live a g domain young c) :=
   executable_name_contract h runtime

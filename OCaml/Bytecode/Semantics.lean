@@ -61,8 +61,9 @@ structure Prog where
   heap0 : Heap
   /-- `caml_global_data`. -/
   globals : Val
-  /-- `caml_exe_name` and `main_argv` (an array of strings in `heap0`), set
-  by `caml_sys_init` before the cut point. -/
+  /-- the loader's record of `caml_exe_name`; the semantics reads the
+  machine's constant `progExeName` instead. `main_argv` (an array of strings
+  in `heap0`) is set by `caml_sys_init` before the cut point. -/
   exeName : List UInt8
   argv : Val
   /-- The files embedded in the image (`src/gen_embed.sh`), `/prog` included. -/
@@ -110,7 +111,7 @@ structure World where
   named : List (String × Val)
   /-- `oo_last_id` (`runtime/obj.c`), untagged. -/
   ooId : Nat
-  /-- `caml_exe_name`. -/
+  /-- `caml_exe_name`: always `progExeName`, which no primitive changes. -/
   exeName : List UInt8
   /-- `main_argv` (`caml_sys_init`, allocated before the cut point). -/
   argv : Val
@@ -138,10 +139,14 @@ structure St where
   heap : Heap
   world : World
 
+/-- `caml_exe_name` on the machine: `src/main.c` opens every program as
+`/prog`, so the executable name is this constant, not a per-program field. -/
+def progExeName : List UInt8 := [47, 112, 114, 111, 103]
+
 /-- `caml_interprete`'s initial registers for the main program:
 `accu = Val_int(0)`, `env = Atom(0)`, `extra_args = 0`, empty stack. -/
 def Prog.init (P : Prog) : St :=
-  ⟨0, .int 0, [], .atom 0, 0, 0, P.heap0, ⟨[], [], 0, P.exeName, P.argv, osInitial P.files0, P.gcSnapshots, [], none⟩⟩
+  ⟨0, .int 0, [], .atom 0, 0, 0, P.heap0, ⟨[], [], 0, progExeName, P.argv, osInitial P.files0, P.gcSnapshots, [], none⟩⟩
 
 /-- Result of one step. -/
 inductive Res where
@@ -382,11 +387,11 @@ def primF1Impl (name : String) (args : List Val) (h : Heap) (w : World) : PRes :
       .ok (.ptr r 0) h2 w
   | "caml_sys_executable_name", [_] =>
       -- `caml_exe_name`: the path `caml_main` opened (`src/main.c`: "/prog")
-      let (h', l) := h.alloc (.bytes w.exeName)
+      let (h', l) := h.alloc (.bytes progExeName)
       .ok (.ptr l 0) h' w
   | "caml_sys_argv", [_] => .ok w.argv h w
   | "caml_sys_get_argv", [_] =>
-      let (h1, e) := h.alloc (.bytes w.exeName)
+      let (h1, e) := h.alloc (.bytes progExeName)
       let (h2, r) := h1.alloc (.block 0 [.ptr e 0, w.argv])
       .ok (.ptr r 0) h2 w
   | "caml_int_compare", [a, b] =>

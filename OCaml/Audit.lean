@@ -5826,9 +5826,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.StringAllocEntry.words
 #print axioms OCaml.Vm.Sim.prepare_access
 #print axioms OCaml.Vm.Sim.osType_rodata
-#print axioms OCaml.Vm.Sim.config_sized
-#print axioms OCaml.Vm.Sim.config_allocate
-#print axioms OCaml.Vm.Sim.config_copy
+#print axioms OCaml.Vm.Sim.copy_memory_at
+#print axioms OCaml.Vm.Sim.config_site
+#print axioms OCaml.Vm.Sim.resultWord_eq
 #print axioms OCaml.Vm.Sim.config_small
 #print axioms OCaml.Vm.Sim.config_finish_layout
 #print axioms OCaml.Vm.Sim.config_savedTail

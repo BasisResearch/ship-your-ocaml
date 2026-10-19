@@ -85,11 +85,8 @@ theorem config_input {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {pl
   have nums := ConfigNumbers.of_entry e
   have tohost : Layout.sym_tohost = 0x80061fc0 := rfl
   -- the copy stage
-  have sized := config_sized (c := c) (D := D) (Y := Y) (roots := bytesVal .ld (cfgBr c (cfgR c ra))) input.image lr.gp
-    (by rw [show Vsa.Sim.DlHeap.heapEnd = 0x86800000 from rfl]; omega) e.nativeHigh na (by omega) h2 prepIn (by simp only [Layout.sym_bss_end]; omega)
-    (by simp only [Layout.sym_bss_end]; omega)
-  have alloc := config_allocate nums h2 wD wY wL sized
-  have copy := config_copy nums h2 input.image prepIn alloc
+  have copy := copy_memory_at prepare_call.link
+    (config_site (R := cfgR c ra) (roots := bytesVal .ld (cfgBr c (cfgR c ra))) nums h2 input.image lr.gp wD wY wL prepIn)
   have regs : GHolds c.σ (prepare_input (cfgR c ra)) := by
     simp only [prepare_input, GHolds]
     refine ⟨?_, cfgR_gpr (by decide) (lr.gprs 2 (by decide) (by decide)),
@@ -126,7 +123,7 @@ theorem config_input {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {pl
       · omega
       · omega
       · exact h.elim
-    · simp only [cfgMem, bdv]; exact copy
+    · simp only [cfgMem, bdv, F, osType_length]; exact copy
   -- the triple's allocation stage
   obtain ⟨strOut, slotOut, resImage⟩ := config_afterCopy (R := cfgR c ra) nums h2
   have small := config_small (R := cfgR c ra) (roots := bytesVal .ld (cfgBr c (cfgR c ra)))

@@ -49,6 +49,7 @@ import OCaml.Vm.Sim.AllocChain
 import OCaml.Vm.Sim.StringAllocEntry
 import OCaml.Vm.Sim.ConfigLogWindows
 import OCaml.Vm.Sim.StringAllocReturn
+import OCaml.Vm.Sim.CopyStringInput
 import OCaml.Vm.Sim.ConfigInput
 import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.FieldOperandRows
