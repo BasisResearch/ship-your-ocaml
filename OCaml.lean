@@ -731,3 +731,7 @@ import OCaml.Vm.Primitives.Uncaught.FormatAlloc
 import OCaml.Vm.Primitives.Uncaught.FormatReturn
 import OCaml.Vm.Primitives.Uncaught.FormatSummary
 import OCaml.Vm.Primitives.Uncaught.FatalUncaught
+import OCaml.Vm.Primitives.Uncaught.FatalNames
+import OCaml.Vm.Primitives.Uncaught.FatalFront
+import OCaml.Vm.Primitives.Named.NamedTransport
+import OCaml.Vm.Primitives.GprsPersist

@@ -27,6 +27,8 @@ structure NodeAt (m : Mem) (pl : Place) (node next : BitVec 64) (key : List (Bit
   nextWindow : ReadWindow (node + 8#64) 8
   name : CString m (node + 16#64).toNat (strOf key)
   slack : ∀ cs, CStr m (node + 16#64).toNat cs → StrcmpWSlack (node + 16#64) cs.length
+  /-- the node and its key lie in the arena (malloc'd) -/
+  arena : node.toNat + 16 + key.length + 1 ≤ Vsa.Sim.DlHeap.heapEnd
 
 /-- A bucket's chain of nodes, `NULL`-terminated. -/
 inductive TableChain (m : Mem) (pl : Place) : BitVec 64 → List (BitVec 64 × List (BitVec 8) × Val) → Prop where

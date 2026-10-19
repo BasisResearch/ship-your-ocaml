@@ -5857,3 +5857,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_out
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_leave
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_exception_constant
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.strcmp_loaded_of
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.mask_pinned_of
+#print axioms Vsa.MemRepr.CStr.transport
+#print axioms Vsa.MemRepr.CStr.unique
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableShape.transport
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.rodata_nameAt
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.rodata_cstring
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.handlerName_rodata
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.atExitName_rodata
+#print axioms OCaml.Vm.Primitives.GprsKept.of_steps
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_lookup
