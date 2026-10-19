@@ -12,7 +12,13 @@ import OCaml.Vm.Boot.Startup.MinorHeapAddImage
 import OCaml.Vm.Boot.Startup.MinorHeapAddCallInterface
 import OCaml.Vm.Boot.Startup.MinorHeapCheckNormalized
 import OCaml.Vm.Boot.Startup.MinorHeapCheckImage
+import OCaml.Vm.Boot.Startup.MinorHeapFieldsNormalized
+import OCaml.Vm.Boot.Startup.MinorHeapFieldsImage
+import OCaml.Vm.Boot.Startup.MinorHeapStoresNormalized
+import OCaml.Vm.Boot.Startup.MinorHeapStoresImage
+import OCaml.Vm.Boot.Startup.MinorHeapStoresCallInterface
 import OCaml.Vm.Boot.Startup.PageAddSteps
+import OCaml.Vm.Boot.Startup.PageModifySteps
 import OCaml.Vm.Boot.Startup.DomainInit
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
@@ -261,4 +267,110 @@ theorem minor_check (c : Config) (ra : BitVec 64) (leaf : LeafInput ra c)
       gholds_lookup (n := 9) _ pins rfl, trivial⟩
   · rfl
   · decide
+
+theorem srli_four (x : BitVec 64) (a : MInstr) (imm : a.imm = 4#12) :
+    Sail.shift_bits_right x (Sail.BitVec.extractLsb (shamtOf a) 5 0) = x >>> 4 := by
+  rw [shamtOf, imm]
+  simp only [Sail.shift_bits_right, BitVec.ushiftRight_eq']
+  rfl
+
+theorem srli_three (x : BitVec 64) (a : MInstr) (imm : a.imm = 3#12) :
+    Sail.shift_bits_right x (Sail.BitVec.extractLsb (shamtOf a) 5 0) = x >>> 3 := by
+  rw [shamtOf, imm]
+  simp only [Sail.shift_bits_right, BitVec.ushiftRight_eq']
+  rfl
+
+/-- The minor heap's midpoint, `young_trigger`. -/
+def youngTrigger (blk size : BitVec 64) : BitVec 64 := blk + ((size >>> 4) <<< 3)
+
+/-- `raw` from `8(sp)`; the trigger; the size in words. -/
+theorem minor_fields (c : Config) (sp ra blk size raw v : BitVec 64) (leaf : LeafInput ra c)
+    (frame : NativeFrame sp 64) (regs : GHolds c.σ [(2, nativeStack sp 64), (18, size), (8, blk), (10, v)])
+    (rawSlot : bytesT c.σ.mem (nativeFrameBase sp 64 + 8) 8 = raw) :
+    FnSummary 0x8000a2dc#64 (fun e => e = c) (WriteRegistersPost [13, 14, 18] [] c 0x8000a2f0#64 v
+      [(13, raw), (14, youngTrigger blk size), (18, size >>> 3), (2, nativeStack sp 64), (8, blk), (10, v)]) := by
+  have word : bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 64 + 8)) = raw := by rw [read8_value]; exact rawSlot
+  apply registers_of_blocks' leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput caml_set_minor_heap_sizeXa2dcSeg 0x8000a2dc#64
+        [(2, nativeStack sp 64), (18, size), (8, blk), (10, v)] [read8 c.σ.mem (nativeFrameBase sp 64 + 8)] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 18, 8, 10]; decide
+      shape := by change ChainOK _ [2, 18, 8, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := minorHeapFields_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_set_minor_heap_size_at_"
+        · exact (frame.read_slot (off := 8) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide)) }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_set_minor_heap_sizeXa2dcSeg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM,
+      ldsRunM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false,
+      List.headD_cons, List.tail_cons, minorheapfields_line_8000a2dc, minorheapfields_line_8000a2e0, minorheapfields_line_8000a2e4, minorheapfields_line_8000a2e8, minorheapfields_line_8000a2ec] at pins
+    exact ⟨gholds_lookup_eq pins rfl word,
+      gholds_lookup_eq pins rfl (by rw [srli_four _ _ rfl, slli_three _ _ rfl]; rfl),
+      gholds_lookup_eq pins rfl (srli_three _ _ rfl), gholds_lookup (n := 2) _ pins rfl,
+      gholds_lookup (n := 8) _ pins rfl, gholds_lookup (n := 10) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+/-- The young fields of the first domain after the minor heap is set. -/
+def minorFieldsLog (blk top trig wsize raw : BitVec 64) : List WEntry :=
+  [(domainField 32, 8, blk), (domainField 48, 8, blk), (domainField 72, 8, blk), (domainField 40, 8, top),
+    (domainField 56, 8, top), (domainField 8, 8, top), (domainField 64, 8, trig), (domainField 80, 8, wsize),
+    (domainField 24, 8, raw)]
+
+local macro "msk2" : tactic => `(tactic| simp only [minorheapstores_line_8000a2f0, minorheapstores_line_8000a2f4, minorheapstores_line_8000a2f8, minorheapstores_line_8000a2fc, minorheapstores_line_8000a300, minorheapstores_line_8000a304, minorheapstores_line_8000a308, minorheapstores_line_8000a30c, minorheapstores_line_8000a310, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff])
+
+/-- Store young_start, young_alloc_start, young_trigger = blk; young_end,
+young_alloc_end, young_ptr = top; young_alloc_mid; minor_heap_wsz;
+young_base = raw. -/
+theorem minor_stores_front (c : Config) (ra blk top trig wsize raw v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(8, blk), (15, firstDomainPtr), (19, top), (14, trig), (18, wsize), (13, raw), (10, v)]) :
+    FnSummary 0x8000a2f0#64 (fun e => e = c) (WriteRegistersPost [] (minorFieldsLog blk top trig wsize raw) c
+      jal_8000a314_call.pc v
+      [(8, blk), (15, firstDomainPtr), (19, top), (14, trig), (18, wsize), (13, raw), (10, v)]) := by
+  have window (off : Nat) (bound : off + 8 ≤ 928) (aligned : off % 8 = 0) :
+      WriteWindow (BitVec.ofNat 64 (domainField off)) 8 := by
+    have : domainField off = 0x8007d150 + off := rfl
+    constructor <;> simp only [this, BitVec.toNat_ofNat, Layout.sym_tohost] <;> omega
+  apply registers_of_blocks' leaf.image (by
+      constructor <;> simp only [minorFieldsLog, OutLRange, domainField, and_true] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput caml_set_minor_heap_sizeXa2f0Seg 0x8000a2f0#64
+        [(8, blk), (15, firstDomainPtr), (19, top), (14, trig), (18, wsize), (13, raw), (10, v)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [8, 15, 19, 14, 18, 13, 10]; decide
+      shape := by change ChainOK _ [8, 15, 19, 14, 18, 13, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := minorHeapStores_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_set_minor_heap_size_at_"
+        · exact (window 32 (by decide) (by decide)).sd rfl (by msk2; decide)
+        · exact (window 48 (by decide) (by decide)).sd rfl (by msk2; decide)
+        · exact (window 72 (by decide) (by decide)).sd rfl (by msk2; decide)
+        · exact (window 40 (by decide) (by decide)).sd rfl (by msk2; decide)
+        · exact (window 56 (by decide) (by decide)).sd rfl (by msk2; decide)
+        · exact (window 8 (by decide) (by decide)).sd rfl (by msk2; decide)
+        · exact (window 64 (by decide) (by decide)).sd rfl (by msk2; decide)
+        · exact (window 80 (by decide) (by decide)).sd rfl (by msk2; decide)
+        · exact (window 24 (by decide) (by decide)).sd rfl (by msk2; decide) }))
+  · rfl
+  · rfl
+  · intro σ pins
+    exact pins
+  · rfl
+  · decide
+
+theorem minor_stores_call (c : Config) (ra blk top trig wsize raw v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(8, blk), (15, firstDomainPtr), (19, top), (14, trig), (18, wsize), (13, raw), (10, v)]) :
+    FnSummary 0x8000a2f0#64 (fun e => e = c) (WriteRegistersPost ([] ++ [1]) (minorFieldsLog blk top trig wsize raw) c
+      jal_8000a314_call.target v ((1, jal_8000a314_call.link) ::
+        [(8, blk), (15, firstDomainPtr), (19, top), (14, trig), (18, wsize), (13, raw), (10, v)])) :=
+  block_then_call c jal_8000a314_call_shape jal_8000a314_call_decode (fun _ h => jal_8000a314_call_pins h)
+    (minor_stores_front c ra blk top trig wsize raw v leaf regs) (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) rfl
 end OCaml.Vm.Boot.Startup
