@@ -76,7 +76,10 @@
 - `StackScan.iteration`: one iteration of `caml_oldify_local_roots`' VM-stack
   loop over any route (`supply : SlotCall` per slot, `CalleeFrame`), with
   generated `LocalRootsSites` (`SlotSite`s for both `jal caml_oldify_one`).
-- Next (G2): the folded stack loop, quiet-path summaries of the root callees,
+- `StackScan.loop` (`StackLoop.lean`): the whole VM-stack loop over a caller
+  invariant (`ScanStep`), by `loop_to_exit`.
+- Next (G2): the rest of `caml_oldify_local_roots` (prologue, local roots,
+  epilogue), quiet-path summaries of the root callees,
   the `ref_table` loop, the mopup outer loop, a quiet-route
   `caml_empty_minor_heap`, and the concrete `CollectionEffect`.
 

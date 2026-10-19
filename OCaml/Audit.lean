@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
 import OCaml.Vm.Gc.OldifySlot
@@ -688,6 +689,7 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.SlotSite.slot
 #print axioms OCaml.Vm.Gc.SlotSite.linked_regs
 #print axioms OCaml.Vm.Gc.StackScan.iteration
+#print axioms OCaml.Vm.Gc.StackScan.loop
 #print axioms OCaml.Vm.Gc.StackScan.body_access
 #print axioms OCaml.Vm.Gc.StackScan.body_regs
 #print axioms OCaml.Vm.Gc.StackScan.test_access
