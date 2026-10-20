@@ -322,7 +322,7 @@ theorem major_tail (c : Config) (sp ra s0 s1 s2 v oldra : BitVec 64) (leaf : Lea
     FnSummary 0x80009498#64 (fun e => e = c) (WriteRegistersPost [8, 1, 9, 18, 15, 12, 11, 10, 2]
       [(allocatedWordsAddr, 8, 0#64)] c 0x8004276c#64 (BitVec.ofNat 64 majorRingAddr)
       [(2, sp), (10, BitVec.ofNat 64 majorRingAddr), (11, 0#64), (12, 400#64), (18, s2), (9, s1), (1, ra),
-        (8, s0)]) := by
+        (8, s0), (15, 0x800644a8#64)]) := by
   have word (off : Nat) (value : BitVec 64) (member : (off, value) ∈ majorSlots ra s0 s1 s2) :
       bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 48 + off)) = value := by
     rw [read8_value]; exact saved off value member
@@ -361,7 +361,7 @@ theorem major_tail (c : Config) (sp ra s0 s1 s2 v oldra : BitVec 64) (leaf : Lea
       word 16 s2 (by simp [majorSlots])] at pins
     exact ⟨gholds_lookup (n := 2) _ pins rfl, gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide),
       gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 18) _ pins rfl, gholds_lookup (n := 9) _ pins rfl,
-      gholds_lookup (n := 1) _ pins rfl, gholds_lookup (n := 8) _ pins rfl, trivial⟩
+      gholds_lookup (n := 1) _ pins rfl, gholds_lookup (n := 8) _ pins rfl, gholds_lookup_eq pins rfl (by decide), trivial⟩
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup

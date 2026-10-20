@@ -1076,4 +1076,184 @@ theorem major_stack_allocated (c d19 : Config) (H : List (Nat × Nat)) (cap c1 c
     back := back
     saved := fun k lo hi => g24.same k (by omega) (by omega) (by simp [abiClobbered]; omega) }⟩
 
+/-- What stage C writes below the arena besides the mark stack's blocks. -/
+def majorStackWindows (stack : Nat) : List W :=
+  [⟨gcPhaseAddr, gcPhaseAddr + 4⟩, ⟨domainField 128, domainField 136⟩, ⟨stack, stack + 24⟩,
+    ⟨extraResourcesAddr, extraResourcesAddr + 8⟩, ⟨allocatedWordsAddr, allocatedWordsAddr + 8⟩]
+
+/-- caml_init_major_heap tail-calls `memset(caml_major_ring, 0, 400)` with the
+mark stack initialised and the caller's frame restored. -/
+structure MajorTailed (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 stack entries : BitVec 64)
+    (base after : Config) : Prop where
+  pc : PCAt 0x8004276c#64 after
+  regs : GHolds after.σ [(2, sp), (10, BitVec.ofNat 64 majorRingAddr), (11, 0#64), (12, 400#64), (18, s2), (9, s1),
+    (1, ra), (8, s0), (15, 0x800644a8#64)]
+  ready : RuntimeReady ((entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) :: H) capacity sp ra after
+  record : bytesT after.σ.mem (domainField 128) 8 = stack
+  entriesWord : bytesT after.σ.mem stack.toNat 8 = entries
+  count : bytesT after.σ.mem (stack + 8#64).toNat 8 = 0#64
+  size : bytesT after.σ.mem (stack + 16#64).toNat 8 = 2048#64
+  extra : bytesT after.σ.mem extraResourcesAddr 8 = 0#64
+  allocated : bytesT after.σ.mem allocatedWordsAddr 8 = 0#64
+  /-- Below the arena, outside stage C's writes, the bytes are those of `base` (bf_make_free_blocks's return). -/
+  back : ∀ x, x < heapEnd → ¬ vsaFoot H x → OutW (majorStackWindows stack.toNat) x →
+    (after.σ.mem[x]?).getD 0 = (base.σ.mem[x]?).getD 0
+  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet base.σ k
+
+theorem major_tailed (c d19 d24 : Config) (H : List (Nat × Nat)) (cap c1 c2 charge : Nat)
+    (sp ra hsize s0 s1 s2 s3 inc mem ent cur stack entries : BitVec 64)
+    (A : MajorHeapCall H (cap + c2 + c1) charge sp ra hsize s0 s1 s2 inc c)
+    (F : MajorFreed H (cap + c2 + c1) sp ra hsize s0 s1 s2 s3 mem ent cur c d19)
+    (S : MajorStackAllocated ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) cap sp stack entries d19 d24) :
+    ∃ after, Steps d24 after ∧
+      MajorTailed ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) cap sp ra s0 s1 s2 stack entries d19 after := by
+  have frame48 : NativeFrame sp 48 := A.frame.resize (by unfold allocHeadroom; omega) (by decide)
+  have stack48 : (nativeStack sp 48).toNat = sp.toNat - 48 := frame48.stack_nat
+  have hE : heapEnd = 0x86800000 := rfl
+  have hS : heapStart = 0x8007d140 := rfl
+  have dom : firstDomainPtr.toNat = 0x8007d150 := rfl
+  have f48 := frame48.lower
+  rw [hE] at f48
+  have domainOwned : (firstDomainPtr.toNat, 928) ∈ (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H :=
+    List.mem_cons_of_mem _ A.domainOwned
+  -- the record's block
+  have sLow : 0x8007d140 ≤ stack.toNat := S.freshStack.2.1
+  have sHigh : stack.toNat + 24 ≤ 0x86800000 := S.freshStack.2.2.1
+  have sAlign := S.alignStack
+  have sDom (x : Nat) (lo : stack.toNat ≤ x) (hi : x < stack.toNat + 24) :
+      x < 0x8007d150 ∨ 0x8007d150 + 928 ≤ x := by
+    have apart := S.freshStack.2.2.2 _ domainOwned x (by unfold InExt; exact ⟨lo, hi⟩)
+    unfold InExt at apart
+    dsimp only at apart
+    rw [dom] at apart
+    omega
+  have s8 : (stack + 8#64).toNat = stack.toNat + 8 := by
+    rw [BitVec.toNat_add]; simp only [BitVec.toNat_ofNat, Nat.reducePow]; omega
+  have s16 : (stack + 16#64).toNat = stack.toNat + 16 := by
+    rw [BitVec.toNat_add]; simp only [BitVec.toNat_ofNat, Nat.reducePow]; omega
+  have stackOwned : (stack.toNat, (24#64).toNat) ∈
+      (entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) :: (mem.toNat,
+        (majorChunkSize hsize + 4152#64).toNat) :: H := by simp
+  -- stack->stack = entries
+  obtain ⟨d25, run25, p25⟩ := (major_stack_store d24 jal_80009460_call.link stack entries S.ready.toLeafInput
+    ⟨gholds_lookup (n := 10) _ S.regs rfl, gholds_lookup (n := 9) _ S.regs rfl, trivial⟩
+    (window_of_heap (by rw [hS]; exact sLow) (by rw [hE]; omega) (by omega))
+    (by constructor <;> simp only [OutLRange, and_true] <;> simp only [Image.textBase, Image.textSize, Image.rodataBase,
+      Image.rodataSize] <;> omega)).run d24 ⟨S.pc, rfl⟩
+  have g25 := GprsSame.of_post p25 (by decide)
+  have stackW : WindowsOk ((entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) ::
+      (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) [⟨stack.toNat, stack.toNat + 24⟩] :=
+    ownedWindow_ok (by rw [hS]; exact sLow) stackOwned (Nat.le_refl _) (by simp)
+  have ready25 := S.ready.window_log p25 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g25.get (by decide) (by decide) (by decide) S.ready.stack) (g25.get (by decide) (by decide) (by decide) S.ready.raReg)
+    (by decide) (by simp only [LogInW, InsideW, and_true]; omega) stackW.pins stackW.domain stackW.pool stackW.heap
+  have domain25 : bytesT d25.σ.mem (domainField 128) 8 = stack := by
+    rw [p25.memory, bytesT_writeLog_out _ (by
+      simp only [OutLRange, domainField, dom, and_true]
+      have a0 := sDom stack.toNat (Nat.le_refl _) (by omega)
+      have a7 := sDom (stack.toNat + 7) (by omega) (by omega)
+      omega)]
+    exact S.record
+  have stored25 : bytesT d25.σ.mem stack.toNat 8 = entries := by
+    rw [p25.memory]; exact word_writeLog_at _ _ 0 _ _ rfl trivial
+  -- reload; nonnull
+  obtain ⟨d26, run26, p26⟩ := (major_stack_check d25 jal_80009460_call.link stack entries entries ready25.toLeafInput
+    ⟨g25.get (by decide) (by decide) (by decide) (gholds_lookup (n := 8) _ S.regs rfl), gholds_lookup (n := 10) _ p25.regs rfl,
+      trivial⟩ ready25.domainWord domain25
+    (window_of_heap (w := 8) (by rw [hS]; exact sLow) (by rw [hE]; omega) (by omega)).read stored25
+    (fun h => S.freshEntries.1 (by rw [h]; rfl))).run d25 ⟨p25.pc, rfl⟩
+  have g26 := GprsSame.of_post p26 (by decide)
+  have ready26 := ready25.stack_log p26 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g26.get (by decide) (by decide) (by decide) ready25.stack) (g26.get (by decide) (by decide) (by decide) ready25.raReg)
+    (by decide) frame48 (by simp only [LogInW])
+  have mem26 : d26.σ.mem = d25.σ.mem := p26.memory
+  -- count, size, caml_extra_heap_resources
+  have extraW := globalWindow_ok (H := (entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) ::
+      (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H)
+    (lo := extraResourcesAddr) (hi := extraResourcesAddr + 8) (by decide) (by decide) (by decide)
+    (fun a lo hi => by unfold extraResourcesAddr at lo hi; unfold allocGlobal InRange; omega) (by decide) (by decide)
+  have initW := stackW.cons extraW
+  obtain ⟨d27, run27, p27⟩ := (major_stack_init d26 jal_80009460_call.link stack entries ready26.toLeafInput
+    ⟨gholds_lookup (n := 14) _ p26.regs rfl, gholds_lookup (n := 15) _ p26.regs rfl, gholds_lookup (n := 10) _ p26.regs rfl,
+      trivial⟩ (by rw [mem26]; exact domain25)
+    (window_of_heap (by rw [s8, hS]; omega) (by rw [s8, hE]; omega) (by rw [s8]; omega))
+    (window_of_heap (by rw [s16, hS]; omega) (by rw [s16, hE]; omega) (by rw [s16]; omega))
+    (by
+      simp only [OutLRange, s8, domainField, dom, and_true]
+      have a8 := sDom (stack.toNat + 8) (by omega) (by omega)
+      have a15 := sDom (stack.toNat + 15) (by omega) (by omega)
+      omega)
+    (by constructor <;> simp only [stackInitLog, OutLRange, s8, s16, extraResourcesAddr, and_true] <;>
+      simp only [Image.textBase, Image.textSize, Image.rodataBase, Image.rodataSize] <;> omega)).run d26 ⟨p26.pc, rfl⟩
+  have g27 := GprsSame.of_post p27 (by decide)
+  have ready27 := ready26.window_log p27 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g27.get (by decide) (by decide) (by decide) ready26.stack) (g27.get (by decide) (by decide) (by decide) ready26.raReg)
+    (by decide) (by simp only [stackInitLog, LogInW, InsideW, s8, s16, extraResourcesAddr, and_true]; omega)
+    initW.pins initW.domain initW.pool initW.heap
+  -- restore; caml_allocated_words = 0; tail call
+  have slots27 (off : Nat) (value : BitVec 64) (member : (off, value) ∈ majorSlots ra s0 s1 s2) :
+      bytesT d27.σ.mem (nativeFrameBase sp 48 + off) 8 = value := by
+    have bound : off + 8 ≤ 48 := by simp [majorSlots] at member; omega
+    rw [word_observed (m := d19.σ.mem) _ fun i hi => by
+      rw [p27.memory, writeLog_out _ _ _ (by
+          simp only [stackInitLog, OutL, s8, s16, extraResourcesAddr, and_true]; unfold nativeFrameBase; omega),
+        mem26, p25.memory, writeLog_out _ _ _ (by simp only [OutL, and_true]; unfold nativeFrameBase; omega),
+        S.back _ (Or.inr (by rw [stack48]; unfold nativeFrameBase; omega))]]
+    exact F.slots off value member
+  obtain ⟨d28, run28, p28⟩ := (major_tail d27 sp ra s0 s1 s2 entries jal_80009460_call.link ready27.toLeafInput frame48
+    ⟨ready27.stack, gholds_lookup (n := 10) _ p27.regs rfl, trivial⟩ slots27).run d27 ⟨p27.pc, rfl⟩
+  have g28 := GprsSame.of_post p28 (by decide)
+  have wordsW := globalWindow_ok (H := (entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) ::
+      (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H)
+    (lo := allocatedWordsAddr) (hi := allocatedWordsAddr + 8) (by decide) (by decide) (by decide)
+    (fun a lo hi => by unfold allocatedWordsAddr at lo hi; unfold allocGlobal InRange; omega) (by decide) (by decide)
+  have ready28 := ready27.window_log p28 (by decide) (by simp only [keysG]; decide) (by decide)
+    (gholds_lookup (n := 2) _ p28.regs rfl) (gholds_lookup (n := 1) _ p28.regs rfl) A.ready.aligned
+    (by simp only [LogInW, InsideW, allocatedWordsAddr]; decide) wordsW.pins wordsW.domain wordsW.pool wordsW.heap
+  -- memory: stage C's writes over d19
+  have back28 (x : Nat) (low : x < heapEnd) (foot : ¬ vsaFoot ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) x)
+      (out : OutW (majorStackWindows stack.toNat) x) : (d28.σ.mem[x]?).getD 0 = (d19.σ.mem[x]?).getD 0 := by
+    simp only [majorStackWindows, OutW, and_true] at out
+    obtain ⟨o1, o2, o3, o4, o5⟩ := out
+    rw [p28.memory, writeLog_out _ _ _ (by simp only [OutL, and_true]; exact o5), p27.memory,
+      writeLog_out _ _ _ (by simp only [stackInitLog, OutL, s8, s16, and_true]; omega), mem26, p25.memory,
+      writeLog_out _ _ _ (by simp only [OutL, and_true]; omega),
+      S.back x (Or.inl ⟨low, foot, by simp only [OutW, and_true]; exact ⟨o1, o2⟩⟩)]
+  have mem28 : d28.σ.mem = writeLog d27.σ.mem [(allocatedWordsAddr, 8, 0#64)] := p28.memory
+  have mem27 : d27.σ.mem = writeLog d26.σ.mem (stackInitLog stack) := p27.memory
+  have aw : OutLRange [(allocatedWordsAddr, 8, 0#64)] (domainField 128) 8 := by
+    simp only [OutLRange, allocatedWordsAddr, domainField, dom, and_true]; omega
+  have g := (((g25.trans g26).trans g27).trans g28)
+  refine ⟨d28, run25.trans (run26.trans (run27.trans run28)), {
+    pc := p28.pc
+    regs := p28.regs
+    ready := ready28
+    record := by
+      rw [mem28, bytesT_writeLog_out _ aw, mem27, bytesT_writeLog_out _ (by
+        simp only [stackInitLog, OutLRange, s8, s16, extraResourcesAddr, domainField, dom, and_true]
+        have a8 := sDom (stack.toNat + 8) (by omega) (by omega)
+        have a23 := sDom (stack.toNat + 23) (by omega) (by omega)
+        omega), mem26]
+      exact domain25
+    entriesWord := by
+      rw [mem28, bytesT_writeLog_out _ (by simp only [OutLRange, allocatedWordsAddr, and_true]; omega), mem27,
+        bytesT_writeLog_out _ (by simp only [stackInitLog, OutLRange, s8, s16, extraResourcesAddr, and_true]; omega), mem26]
+      exact stored25
+    count := by
+      rw [mem28, bytesT_writeLog_out _ (by simp only [OutLRange, allocatedWordsAddr, s8, and_true]; omega), mem27]
+      exact word_writeLog_at _ _ 0 _ _ rfl (by
+        simp only [stackInitLog, List.drop, OutLRange, s8, s16, extraResourcesAddr, and_true]; omega)
+    size := by
+      rw [mem28, bytesT_writeLog_out _ (by simp only [OutLRange, allocatedWordsAddr, s16, and_true]; omega), mem27]
+      exact word_writeLog_at _ _ 1 _ _ rfl (by
+        simp only [stackInitLog, List.drop, OutLRange, s16, extraResourcesAddr, and_true]; omega)
+    extra := by
+      rw [mem28, bytesT_writeLog_out _ (by simp only [OutLRange, allocatedWordsAddr, extraResourcesAddr, and_true]; omega),
+        mem27]
+      exact word_writeLog_at _ _ 2 _ _ rfl trivial
+    allocated := by rw [mem28]; exact word_writeLog_at _ _ 0 _ _ rfl trivial
+    back := back28
+    saved := fun k lo hi => by
+      rw [g.same k (by omega) (by omega) (by simp; omega), S.saved k lo hi] }⟩
+
 end OCaml.Vm.Boot.Startup
