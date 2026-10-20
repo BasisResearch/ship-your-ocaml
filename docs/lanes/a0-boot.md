@@ -393,8 +393,31 @@ insertion is proved generically:
     `ResetDomainKept_Statement`. Only some startup posts carry a `live` frame
     for owned blocks, so this needs an owned-block frame from `DomainHistory`
     to the descriptor read.
-Next: discharge `ResetDomainKept_Statement`, then compose `caml_init_gc` onto
-`reset_init_gc_call` and continue to the cut (caml_init_stack, atom table,
+* **`ResetDomainKept_Statement` is proved** (`reset_domain_kept`), so the reset
+  run reaches caml_init_gc's entry and returns from it with no premise
+  (`reset_init_gc_exists`, `reset_init_gc_returned_exists`):
+  * `ResetDomainReturned.kept`: caml_init_domain's cleared fields
+    (`domainInit_zero_field`, `domainFields_heap_word`) and the three
+    allocate–publish–clear rounds of caml_alloc_minor_tables, one `RoundMem`
+    lemma used three times (`DomainTables.lean`).
+  * `LiveFrame H before after` (`DomainRecord.lean`) carries owned blocks
+    across each later stage: `ReadyKept` for the stages whose `H` is
+    existential, then a `kept_after` theorem per stage (`CustomNodes.live`,
+    `ExtTableReturned.live`, and `live` fields on `ResetSearchExeReturned`,
+    `ResetOpenCall`, `OpenOcamlrun`, `ResetAttemptFailed`, `ResetRetryCall`).
+    The six older ad hoc `live` fields now use `LiveFrame`; rule O9 catches
+    new ones.
+* **Shared adapter taken: stdin's console pin.** `ConsoleRuntime.stdin :
+  Channel.SeekFd 0#64 c` (for bprime's caml_ml_open_descriptor_in). It is a
+  `SeekFd`, not a `ConsoleFd`, because htif.c's `FD_STDIN` kind is 1 and
+  `ConsoleFd` requires a kind above 1. It comes from `read_fd0_kind`
+  (`gen_boot_entry.py` now reads fds 0–2) and is carried by `transfer`/`keep`.
+* For a1-arms' `OutListRuntimeL`, this lane owes newlib's heap at a C_CALL
+  entry: `HeapReady`, the channel records placed apart in blocks of `H`, the
+  minor heap and the domain record inside blocks, and the payload outside
+  `vsaFoot H`. It is needed only for the general F1 statement, after the cut.
+Next: give `InitGcDone` the memory facts later startup needs (`LateImage`,
+the kept low globals), then continue to the cut (caml_init_stack, atom table,
 backtrace, interprete init, debugger, load_code).
 
 ## Round 2 status (2026-10-06, search)

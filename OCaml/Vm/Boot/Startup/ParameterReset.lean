@@ -39,8 +39,12 @@ structure ResetParameterReturned (initial after : Config) where
     (parameterPresentRegs parameterStack parameterEnv parameterEntry jal_80004d98_call.link
       (vsaReg entry 8) (vsaReg entry 9) (vsaReg entry 18) (vsaReg entry 19)
       (vsaReg entry 20) (vsaReg entry 21) (vsaReg entry 22)) after
-  ready : ∃ H, (firstDomainPtr.toNat, 928) ∈ H ∧
-    RuntimeReady H (startupAllocatorCredits - 192) parameterStack jal_80004d98_call.link after
+  domainKept : ReadyKept (startupAllocatorCredits - 192) parameterStack jal_80004d98_call.link after
+
+theorem ResetParameterReturned.ready {initial after} (w : ResetParameterReturned initial after) :
+    ∃ H, (firstDomainPtr.toNat, 928) ∈ H ∧
+      RuntimeReady H (startupAllocatorCredits - 192) parameterStack jal_80004d98_call.link after :=
+  w.domainKept.ready
 
 theorem ResetParameterReturned.reset {initial after} (w : ResetParameterReturned initial after) :
     ElfResetReady elf initial := w.before.reset
@@ -49,8 +53,10 @@ theorem ResetParameterReturned.reset {initial after} (w : ResetParameterReturned
 Only generated function summaries and the shared loop fold are composed. -/
 theorem reset_parameter_returned_exists : ∃ initial after, Nonempty (ResetParameterReturned initial after) := by
   obtain ⟨initial, entry, ⟨w⟩⟩ := reset_parameter_entry_exists
-  obtain ⟨H, domain, ready⟩ := w.ready
+  obtain ⟨H, t1, t2, t3, R⟩ := w.domainKept
+  have ready := R.ready
   have input := w.input ready
   obtain ⟨after, run, post⟩ := (parse_parameters_present_empty entry _ _ _ _ _ _ _ _ _ _ _ _ input).run entry ⟨w.post.pc, rfl⟩
-  exact ⟨initial, after, ⟨entry, w, w.run.trans run, post, H, domain, parameter_present_ready ready input post⟩⟩
+  exact ⟨initial, after, ⟨entry, w, w.run.trans run, post, (R.step (parameter_present_ready ready input post)
+    (arena_of_stack post.memory (parameterPresentLog_inside (by constructor <;> decide)) (by decide))).kept'⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse

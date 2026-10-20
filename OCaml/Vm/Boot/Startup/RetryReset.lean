@@ -20,6 +20,8 @@ structure ResetRetryCall (initial after : Config) where
   exeName : bytesT after.σ.mem (parameterStack + 32#64).toNat 8 = argv1Ptr
   run : Steps (Vsa.Densify.fillZero initial) after
   fs : FsUp after.σ.mem failed.opened.opened.node
+  /-- The owned blocks are kept since the failed attempt. -/
+  live : LiveFrame failed.opened.call.search.path.table.H atFailed after
 
 theorem reset_retry_call_exists : ∃ initial after, Nonempty (ResetRetryCall initial after) := by
   obtain ⟨initial, c0, ⟨w⟩⟩ := reset_attempt_failed_exists
@@ -137,7 +139,25 @@ theorem reset_retry_call_exists : ∃ initial after, Nonempty (ResetRetryCall in
       ((p8.toEffectPost.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans argv7),
     ready9, late9, ?_,
     w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans
-      (run8.trans run9)))))))), fs9⟩⟩
-  rw [p9.memory]
-  exact OCaml.Vm.Sim.word_writeLog_at _ _ 0 _ _ rfl (by simp only [camlRetryLog, OutLRange, List.drop]; decide)
+      (run8.trans run9)))))))), fs9, ?_⟩⟩
+  · rw [p9.memory]
+    exact OCaml.Vm.Sim.word_writeLog_at _ _ 0 _ _ rfl (by simp only [camlRetryLog, OutLRange, List.drop]; decide)
+  · have frameW : LogInW [⟨nativeFrameBase (parameterStack + 48#64) 32, (parameterStack + 48#64).toNat⟩]
+        (camlRetryLog parameterStack) := by simp only [camlRetryLog, LogInW, InsideW]; decide
+    refine LiveFrame.of_arena (fun e he => w.ready.block_bounds (q := e.1) (n := e.2) (List.mem_cons_of_mem _ he))
+      fun x _ hx => ?_
+    have below : x < nativeFrameBase (parameterStack + 48#64) 32 := by
+      have : heapEnd ≤ nativeFrameBase (parameterStack + 48#64) 32 := by decide
+      omega
+    rw [p9.memory, frameOn_writeLog _ _ _ frameW _ ⟨Or.inl below, trivial⟩,
+      show c8.σ.mem = c7.σ.mem from p8.memory, show c7.σ.mem = c6.σ.mem from p7.memory,
+      show c6.σ.mem = c5.σ.mem from p6.memory, show c5.σ.mem = c4.σ.mem from p5.memory,
+      show c4.σ.mem = c3.σ.mem from p4.memory, show c3.σ.mem = c2.σ.mem from p3.memory,
+      show c2.σ.mem = c1.σ.mem from p2'.memory, show c1.σ.mem = c0.σ.mem from p1.memory]
+
+/-- The record and the tables at the retry's `caml_attempt_open` call. -/
+theorem ResetRetryCall.kept_after {initial after} (w : ResetRetryCall initial after) :
+    DomainKept w.failed.opened.call.search.path.table.H after.σ.mem w.failed.opened.call.search.path.table.t1
+      w.failed.opened.call.search.path.table.t2 w.failed.opened.call.search.path.table.t3 :=
+  w.failed.kept_after.live w.live
 end OCaml.Vm.Boot.WhileMinElfParse

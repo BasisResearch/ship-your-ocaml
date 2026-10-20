@@ -1,5 +1,6 @@
 import OCaml.Vm.Boot.Startup.CamlParameterCallInterface
 import OCaml.Vm.Boot.Startup.DomainHistory
+import OCaml.Vm.Boot.Startup.DomainTables
 namespace OCaml.Vm.Boot.WhileMinElfParse
 open Vsa.Machine Vsa.Sim Startup VsaIris.Inst OCaml.Vm.Primitives
 
@@ -11,8 +12,12 @@ structure ResetParameterEntry (initial entry : Config) where
   run : Steps (Vsa.Densify.fillZero initial) entry
   post : RegistersPost [1] before.σ.mem before jal_80004d98_call.target (vsaReg before 10)
     [(1, jal_80004d98_call.link), (2, firstMallocStack + 16#64), (10, vsaReg before 10)] entry
-  ready : ∃ H, (firstDomainPtr.toNat, 928) ∈ H ∧
-    RuntimeReady H (startupAllocatorCredits - 192) (firstMallocStack + 16#64) jal_80004d98_call.link entry
+  domainKept : ReadyKept (startupAllocatorCredits - 192) (firstMallocStack + 16#64) jal_80004d98_call.link entry
+
+theorem ResetParameterEntry.ready {initial entry} (w : ResetParameterEntry initial entry) :
+    ∃ H, (firstDomainPtr.toNat, 928) ∈ H ∧
+      RuntimeReady H (startupAllocatorCredits - 192) (firstMallocStack + 16#64) jal_80004d98_call.link entry :=
+  w.domainKept.ready
 
 theorem ResetParameterEntry.reset {initial entry} (h : ResetParameterEntry initial entry) : ElfResetReady elf initial :=
   h.domain.reset
@@ -20,7 +25,8 @@ theorem ResetParameterEntry.reset {initial entry} (h : ResetParameterEntry initi
 /-- The domain return is followed by caml_main's generated parser call. -/
 theorem reset_parameter_entry_exists : ∃ initial entry, Nonempty (ResetParameterEntry initial entry) := by
   obtain ⟨initial, before, ⟨history⟩⟩ := domain_history_exists
-  obtain ⟨H, domain, ready⟩ := history.witness.ready
+  obtain ⟨H, t1, t2, t3, R⟩ := history.witness.kept
+  have ready := R.ready
   have regs : GHolds before.σ [(2, firstMallocStack + 16#64), (10, vsaReg before 10)] :=
     ⟨ready.stack, library_gpr ready.platform (by decide) (by decide) (by rfl), trivial⟩
   obtain ⟨entry, run, post⟩ :=
@@ -34,5 +40,6 @@ theorem reset_parameter_entry_exists : ∃ initial entry, Nonempty (ResetParamet
     · intro a ha; rfl
     · intro a ha; rfl
     · intro a ha; exact ha
-  exact ⟨initial, entry, ⟨before, history, history.witness.run.trans run, post, H, domain, ready'⟩⟩
+  exact ⟨initial, entry, ⟨before, history, history.witness.run.trans run, post,
+    (R.step ready' fun x _ _ => by rw [post.memory]).kept'⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse

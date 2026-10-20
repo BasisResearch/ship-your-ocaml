@@ -70,4 +70,10 @@ theorem reset_ocamlrun_opened_exists : ∃ initial after, Nonempty (ResetOcamlru
     ⟨by decide, by decide⟩).run c ⟨w.pc, rfl⟩
   exact ⟨initial, after, ⟨⟨c, w, r 8, r 9, r 19, r 20, r 21, r 22, r 23, r 24, r 25, r 26, o, w.run.trans run,
     o.fs_up w.kept.htif⟩⟩⟩
+
+/-- The record and the tables once `open("ocamlrun")` returns. -/
+theorem ResetOcamlrunOpened.kept_after {initial after} (w : ResetOcamlrunOpened initial after) :
+    DomainKept w.call.search.path.table.H after.σ.mem w.call.search.path.table.t1 w.call.search.path.table.t2
+      w.call.search.path.table.t3 :=
+  w.call.kept_after.live (w.opened.live.mono fun _ he => List.mem_cons_of_mem _ he)
 end OCaml.Vm.Boot.WhileMinElfParse

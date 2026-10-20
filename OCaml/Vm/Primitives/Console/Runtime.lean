@@ -1,4 +1,5 @@
 import OCaml.Vm.Primitives.Console.MlFlush
+import OCaml.Vm.Primitives.Channel.LseekCall
 
 /-! The runtime statics the console-output primitives read: constant from
 startup (no F1 arm or primitive writes them), so they belong to the runtime
@@ -21,5 +22,8 @@ structure ConsoleRuntime (c : Config) : Prop where
   quiet : bytesVal .lw (read8 c.σ.mem somethingToDo.toNat) = 0#64
   lockNull : bytesVal .ld (read8 c.σ.mem channelLock.toNat) = 0#64
   unlockNull : bytesVal .ld (read8 c.σ.mem channelUnlock.toNat) = 0#64
+  /-- stdin is live and not a file (htif.c's kind `FD_STDIN` = 1, so not a
+  `ConsoleFd`, whose kind exceeds 1): `lseek` on it takes the console path. -/
+  stdin : Channel.SeekFd 0#64 c
 
 end OCaml.Vm.Primitives.ConsoleWrite

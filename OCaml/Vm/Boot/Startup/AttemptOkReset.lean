@@ -170,4 +170,43 @@ theorem reset_attempt_ok_exists : ∃ initial after, Nonempty (ResetAttemptOk in
       decide }
   obtain ⟨after, run, ok⟩ := attempt_ok d _ _ _ _ _ _ _ _ _ _ A
   exact ⟨initial, after, ⟨⟨d, w, A, ok, w.run.trans run⟩⟩⟩
+
+/-- The record and the tables at `open("/prog")`. -/
+theorem ResetProgOpenCall.kept_after {initial after} (w : ResetProgOpenCall initial after) :
+    DomainKept w.retry.failed.opened.call.search.path.table.H after.σ.mem
+      w.retry.failed.opened.call.search.path.table.t1 w.retry.failed.opened.call.search.path.table.t2
+      w.retry.failed.opened.call.search.path.table.t3 :=
+  w.retry.kept_after.live (w.call.live.mono fun _ he => List.mem_cons_of_mem _ he)
+
+/-- The record and the tables once `open("/prog")` returns descriptor 3. -/
+theorem ResetProgOpened.kept_after {initial after} (w : ResetProgOpened initial after) :
+    DomainKept w.call.retry.failed.opened.call.search.path.table.H after.σ.mem
+      w.call.retry.failed.opened.call.search.path.table.t1 w.call.retry.failed.opened.call.search.path.table.t2
+      w.call.retry.failed.opened.call.search.path.table.t3 := by
+  apply w.call.kept_after.live
+  refine LiveFrame.of_arena (fun e he => w.call.call.ready.block_bounds (q := e.1) (n := e.2)
+    (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ he))) fun x lo hi => ?_
+  have h := OpenApart.heap lo hi
+  rw [w.opened.mem x h.1 h.2.1, writeLog_out _ _ _ (by
+    simp only [openProgLog, htifOpenTakeLog, OutL, and_true]
+    have := h.2.2.1; have := h.2.2.2; omega)]
+
+/-- The record and the tables when caml_attempt_open returns descriptor 3. -/
+theorem ResetAttemptOk.kept_after {initial after} (w : ResetAttemptOk initial after) :
+    DomainKept w.opened.call.retry.failed.opened.call.search.path.table.H after.σ.mem
+      w.opened.call.retry.failed.opened.call.search.path.table.t1
+      w.opened.call.retry.failed.opened.call.search.path.table.t2
+      w.opened.call.retry.failed.opened.call.search.path.table.t3 := by
+  apply w.opened.kept_after.live
+  refine LiveFrame.of_arena (fun e he => w.opened.call.call.ready.block_bounds (q := e.1) (n := e.2)
+    (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ he))) fun x lo hi => ?_
+  have sp : attemptStack.toNat = 0x87ffff40 := by decide
+  have hs : heapStart = 0x8007d140 := rfl
+  have he : heapEnd = 0x86800000 := rfl
+  exact w.ok.kept x (Or.inl (by omega)) (by simp only [OutW, errnoWindows, and_true]; omega)
+    (Or.inr (by unfold Layout.sym_fds; omega)) (by
+      simp only [OutW, attemptWindows, and_true]
+      rw [show WhileMinElfParse.trailSlot.toNat = 0x87ffffa8 by decide,
+        show WhileMinElfParse.exeNameSlot.toNat = 0x87ffffa0 by decide]
+      unfold Layout.sym_magicstr; omega)
 end OCaml.Vm.Boot.WhileMinElfParse

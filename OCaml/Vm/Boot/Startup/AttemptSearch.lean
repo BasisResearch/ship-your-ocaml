@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.DomainRecord
 import OCaml.Vm.Boot.Startup.SearchExeReset
 import OCaml.Vm.Boot.Startup.SearchInPathSlash
 namespace OCaml.Vm.Boot.WhileMinElfParse
@@ -36,7 +37,7 @@ structure AttemptSearched (H : List (Nat × Nat)) (capacity : Nat) (ra s0 s1 s2 
     bytesT after.σ.mem (nativeFrameBase parameterStack 64 + off) 8 = value
   caller : CallerFrame parameterStack before after
   /-- Every block of `H` is untouched. -/
-  live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  live : LiveFrame H before after
   kept : EmbedFrame before after
   late : LateImage after
   run : Steps before after
@@ -480,7 +481,7 @@ theorem attempt_open_search (c : Config) (H : List (Nat × Nat)) (capacity charg
         · simp [attemptOpenSlots]
         · exact member
       caller := aboveSaved.trans (callerA.mono (by decide))
-      live := liveRet
+      live := ⟨liveRet⟩
       kept := keptSource.trans (keptP.trans keptRet)
       late := lateP.frame keptRet
       run := run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans (run9.trans

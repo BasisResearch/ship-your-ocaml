@@ -31,6 +31,10 @@ structure ResetSearchExeReturned (initial after : Config) where
   aligned : copy.toNat % 16 = 0
   /-- caml_attempt_open's frame is kept since its saves. -/
   caller : CallerFrame attemptStack path.table.atSaved after
+  /-- The owned blocks are kept since the path table was built. -/
+  live : LiveFrame path.table.H path.source after
+  /-- The copy is apart from every earlier owned block. -/
+  disjoint : ∀ e ∈ path.table.H, ∀ a, InExt (copy.toNat, 9) a → ¬ InExt e a
 
 theorem reset_search_exe_returned_exists : ∃ initial after, Nonempty (ResetSearchExeReturned initial after) := by
   obtain ⟨initial, atD, ⟨w⟩⟩ := reset_path_missed_exists
@@ -230,7 +234,8 @@ theorem reset_search_exe_returned_exists : ∃ initial after, Nonempty (ResetSea
     gholds_lookup (n := 9) _ returned.regs (by rfl), toR 18 (by decide) _ found.saved2,
     toR 19 (by decide) _ found.saved3, readyRet, found.fresh, ?_, ?_,
     w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans
-      (run8.trans run9)))))))), found.aligned, callerA⟩⟩
+      (run8.trans run9)))))))), found.aligned, callerA, ?_,
+    fun e he a h => found.disjoint e (List.mem_cons_of_mem _ he) a h⟩⟩
   · intro k hk
     have inside : InExt (found.copy.toNat, 8 + 1) (found.copy.toNat + k) := ⟨by omega, by omega⟩
     rw [sameRet, tableFreed.live_byte frameFree (Nat.le_refl _) (List.mem_cons_self ..) inside
@@ -246,4 +251,28 @@ theorem reset_search_exe_returned_exists : ∃ initial after, Nonempty (ResetSea
           omega))⟩
     exact strdup.trans ((EmbedFrame.of_memory sameE).trans ((tableFreed.embed_frame frameFree (by decide)
       (Nat.le_refl _) bounds.1 bounds.2).trans (EmbedFrame.of_memory sameRet)))
+  · constructor
+    intro e he x inside
+    obtain ⟨q, m⟩ := e
+    have bounds := w.table.returned.ready.block_bounds (q := q) (n := m) (List.mem_cons_of_mem _ he)
+    unfold InExt at inside
+    have hx : heapStart ≤ x ∧ x < heapEnd := ⟨by omega, by omega⟩
+    have low (b : Nat) (hb : heapEnd ≤ b) : x < b := by omega
+    obtain ⟨-, -, -, tableApart⟩ := w.table.returned.allocation.allocation.allocation.allocation.result.fresh.destruct
+    have apartT : ¬ InExt ((vsaReg w.table.returned.allocation.allocation.allocated 10).toNat,
+        (extTableRequest 8#64).toNat) x := fun inT => tableApart _ he x inT inside
+    rw [sameRet, tableFreed.live_byte frameFree (Nat.le_refl _) (List.mem_cons_of_mem _ he) inside apartT hx, sameE,
+      found.kept x (Or.inr (Or.inr (Or.inr ⟨q, m, List.mem_cons_of_mem _ he, bounds.1, bounds.2, inside.1,
+        inside.2⟩))) (Or.inl (low _ (by decide))),
+      show atP.σ.mem = atS.σ.mem from scall.memory, dnull.memory,
+      frameOn_writeLog _ _ _ (decomposeLog_inside frame32) x ⟨Or.inl (low _ (by decide)), trivial⟩,
+      show atDec.σ.mem = atD.σ.mem from dcall.memory, w.missed.memory,
+      frameOn_writeLog _ _ _ (getenvMissLog_inside frame112) x ⟨Or.inl (low _ (by decide)), trivial⟩,
+      w.call.memory]
+    rfl
+
+/-- The record and the tables once `caml_search_exe_in_path` returns. -/
+theorem ResetSearchExeReturned.kept_after {initial after} (w : ResetSearchExeReturned initial after) :
+    DomainKept w.path.table.H after.σ.mem w.path.table.t1 w.path.table.t2 w.path.table.t3 :=
+  w.path.table.kept_after.live w.live
 end OCaml.Vm.Boot.WhileMinElfParse

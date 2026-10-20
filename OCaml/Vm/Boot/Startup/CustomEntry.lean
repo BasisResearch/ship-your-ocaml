@@ -2,7 +2,7 @@ import OCaml.Vm.Boot.Startup.StartupAuxReset
 import OCaml.Vm.Boot.Startup.CamlLocaleReady
 import OCaml.Vm.Boot.Startup.CamlCustomCallInterface
 namespace OCaml.Vm.Boot.WhileMinElfParse
-open Vsa.Machine Vsa.Sim Startup VsaIris.Inst OCaml.Vm.Primitives
+open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap Startup VsaIris.Inst OCaml.Vm.Primitives
 
 /-- Actual reset execution at the custom-operation initializer, after the
 successful caller branch, remaining native saves and locale initialization. -/
@@ -17,15 +17,20 @@ structure ResetCustomEntry (initial entry : Config) where
   call : RegistersPost [1] returned.σ.mem returned jal_80004dd0_call.target 1#64
     [(1, jal_80004dd0_call.link), (2, parameterStack), (10, 1#64)] entry
   run : Steps (Vsa.Densify.fillZero initial) entry
-  ready : ∃ H, (firstDomainPtr.toNat, 928) ∈ H ∧
-    RuntimeReady H (startupAllocatorCredits - 192) parameterStack jal_80004dd0_call.link entry
+  domainKept : ReadyKept (startupAllocatorCredits - 192) parameterStack jal_80004dd0_call.link entry
+
+theorem ResetCustomEntry.ready {initial entry} (w : ResetCustomEntry initial entry) :
+    ∃ H, (firstDomainPtr.toNat, 928) ∈ H ∧
+      RuntimeReady H (startupAllocatorCredits - 192) parameterStack jal_80004dd0_call.link entry :=
+  w.domainKept.ready
 
 theorem ResetCustomEntry.reset {initial entry} (w : ResetCustomEntry initial entry) :
     ElfResetReady elf initial := w.auxiliary.reset
 
 theorem reset_custom_entry_exists : ∃ initial entry, Nonempty (ResetCustomEntry initial entry) := by
   obtain ⟨initial, source, ⟨w⟩⟩ := reset_startup_aux_returned_exists
-  obtain ⟨H, domain, ready⟩ := w.ready
+  obtain ⟨H, t1, t2, t3, R⟩ := w.domainKept
+  have ready := R.ready
   have reg (n : Nat) (lo : 0 < n) (hi : n ≤ 31) : gprGet source.σ n = some (vsaReg source n) :=
     library_gpr ready.platform lo hi rfl
   have input : CamlLocaleInput camlMainStack jal_80004da4_call.link
@@ -47,5 +52,10 @@ theorem reset_custom_entry_exists : ∃ initial entry, Nonempty (ResetCustomEntr
     · intro a ha; rfl
     · intro a ha; rfl
     · intro a ha; exact ha
-  exact ⟨initial, entry, ⟨source, w, returned, locale, call, w.run.trans (run1.trans run2), H, domain, ready''⟩⟩
+  have arena : ∀ x, heapStart ≤ x → x < heapEnd → (entry.σ.mem[x]?).getD 0 = (source.σ.mem[x]?).getD 0 := by
+    intro x lo hi
+    rw [call.memory]
+    exact arena_of_stack locale.memory (camlLocaleLog_inside input.frame) (by decide) x lo hi
+  exact ⟨initial, entry, ⟨source, w, returned, locale, call, w.run.trans (run1.trans run2),
+    (R.step ready'' arena).kept'⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse

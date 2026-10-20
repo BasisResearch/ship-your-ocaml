@@ -22,6 +22,12 @@ theorem ResetCustomReturned.ready {initial after} (w : ResetCustomReturned initi
       RuntimeReady H (startupAllocatorCredits - 320) parameterStack jal_80004dd0_call.link after :=
   ⟨_, w.returned.nodes.member w.source.domain, w.returned.ready⟩
 
+/-- The record and the tables after the initializer returns, over its final blocks. -/
+theorem ResetCustomReturned.kept_after {initial after} (w : ResetCustomReturned initial after) :
+    DomainKept (((vsaReg w.returned.nodes.bigarray.registration.allocated 10).toNat, 16) :: w.returned.nodes.H3)
+      after.σ.mem w.source.t1 w.source.t2 w.source.t3 :=
+  (w.source.entryKept.live (w.returned.live (by constructor <;> decide))).mono fun _ he => w.returned.nodes.member he
+
 theorem reset_custom_returned_exists : ∃ initial after, Nonempty (ResetCustomReturned initial after) := by
   obtain ⟨initial, atReturn, ⟨w⟩⟩ := reset_custom_nodes_exists
   obtain ⟨after, run, ⟨returned⟩⟩ := (custom_finish w.entry atReturn w.H (startupAllocatorCredits - 320)

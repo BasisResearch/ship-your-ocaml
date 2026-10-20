@@ -38,6 +38,8 @@ structure ResetAttemptFailed (initial after : Config) where
   caller : CallerFrame parameterStack opened.call.search.path.table.atSaved after
   run : Steps (Vsa.Densify.fillZero initial) after
   fs : FsUp after.σ.mem opened.opened.node
+  /-- The owned blocks are kept since `open("ocamlrun")` returned. -/
+  live : LiveFrame opened.call.search.path.table.H atOpened after
 
 theorem reset_attempt_failed_exists : ∃ initial after, Nonempty (ResetAttemptFailed initial after) := by
   obtain ⟨initial, c0, ⟨w⟩⟩ := reset_ocamlrun_opened_exists
@@ -181,5 +183,27 @@ theorem reset_attempt_failed_exists : ∃ initial after, Nonempty (ResetAttemptF
     gholds_lookup (n := 2) _ p8.regs rfl, gholds_lookup (n := 9) _ p8.regs rfl, ready8, late8,
     (callerR.mono (by decide)).trans (CallerFrame.of_memory p8.memory),
     w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans
-      (runR.trans run8)))))))), fs8⟩⟩
+      (runR.trans run8)))))))), fs8, ?_⟩⟩
+  constructor
+  intro e he x inside
+  have b := w.opened.ready.block_bounds (q := e.1) (n := e.2)
+    (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ he))
+  have inside' := inside
+  unfold InExt at inside'
+  have apart : ¬ InExt (w.call.search.copy.toNat, 9) x := fun inC => w.call.search.disjoint _ he _ inC inside
+  have below : x < nativeFrameBase attemptStack 80 := by
+    have : heapEnd ≤ nativeFrameBase attemptStack 80 := by decide
+    omega
+  rw [show c8.σ.mem = cR.σ.mem from p8.memory, memR, show c7.σ.mem = c6.σ.mem from p7.memory,
+    show c6.σ.mem = c5.σ.mem from p6'.memory, gc.memory,
+    frameOn_writeLog _ _ _ (gcMessageLog_inside frameGc) _ ⟨Or.inl below, trivial⟩,
+    show c4.σ.mem = c3.σ.mem from p4.memory,
+    freed.live_byte frameA (List.mem_cons_of_mem _ he) inside apart ⟨by omega, by omega⟩,
+    show c2.σ.mem = c1.σ.mem from p2.memory, show c1.σ.mem = c0.σ.mem from p1.memory]
+
+/-- The record and the tables back in caml_main after the failed attempt. -/
+theorem ResetAttemptFailed.kept_after {initial after} (w : ResetAttemptFailed initial after) :
+    DomainKept w.opened.call.search.path.table.H after.σ.mem w.opened.call.search.path.table.t1
+      w.opened.call.search.path.table.t2 w.opened.call.search.path.table.t3 :=
+  w.opened.kept_after.live w.live
 end OCaml.Vm.Boot.WhileMinElfParse

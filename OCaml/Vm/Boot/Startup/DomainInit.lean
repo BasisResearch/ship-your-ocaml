@@ -117,6 +117,15 @@ theorem domainInit_log_inside : LogInW domainInitWindows domainInitLog := by
   repeat' apply And.intro
   all_goals decide
 
+local macro "domain_init_tail" : tactic => `(tactic| (
+  simp only [domainInitLog, domainInitBlocks, caml_init_domainXa8ecFSeg,
+    caml_init_domainXa8fcSeg, List.cons_append, List.nil_append, evalBlocks, evalBlock, SegEvalState.init]
+  domain_init_nf
+  rw [domainPtrBytes_value]
+  simp only [List.cons_append, List.nil_append, List.drop, OutLRange]
+  repeat' apply And.intro
+  all_goals decide))
+
 /-- Read back the published domain pointer after all payload stores. -/
 theorem domainInit_domain_word (m : Std.ExtHashMap Nat (BitVec 8)) :
     bytesT (writeLog m domainInitLog) Layout.sym_Caml_state 8 = firstDomainPtr := by
@@ -129,6 +138,21 @@ theorem domainInit_domain_word (m : Std.ExtHashMap Nat (BitVec 8)) :
     simp only [List.cons_append, List.nil_append, List.drop, OutLRange]
     repeat' apply And.intro
     all_goals decide
+
+/-- Read back the cleared `young_limit`, `young_start` and `young_trigger`
+fields (offsets 8, 32, 56: log entries 3, 5, 9). -/
+theorem domainInit_zero_field (m : Std.ExtHashMap Nat (BitVec 8)) (off : Nat) (h : off = 8 ∨ off = 32 ∨ off = 56) :
+    bytesT (writeLog m domainInitLog) (firstDomainPtr.toNat + off) 8 = 0#64 := by
+  rcases h with rfl | rfl | rfl
+  · apply OCaml.Vm.Gc.word_writeLog_at (i := 3)
+    · rfl
+    · domain_init_tail
+  · apply OCaml.Vm.Gc.word_writeLog_at (i := 5)
+    · rfl
+    · domain_init_tail
+  · apply OCaml.Vm.Gc.word_writeLog_at (i := 9)
+    · rfl
+    · domain_init_tail
 
 /-- Publish the first domain and clear its minor-heap fields, reaching the
 minor-table allocation call with an exact source-derived write log. -/

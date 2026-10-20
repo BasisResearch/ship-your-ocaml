@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.DomainRecord
 import OCaml.Vm.Boot.Startup.ResolveSteps
 import OCaml.Vm.Boot.Startup.ResolveName
 import OCaml.Vm.Boot.Startup.HeapFrame
@@ -34,7 +35,7 @@ structure ResolveInit (H : List (Nat × Nat)) (capacity : Nat)
   rest : ∀ j, 2 ≤ j → j < 64 → slotUsed after.σ.mem (Layout.sym_files + 56 * j) = 0#8
   saved : ∀ off value, (off, value) ∈ resolveSlots ra s3 s4 s9 →
     bytesT after.σ.mem (nativeFrameBase (nativeStack spo 80) 96 + off) 8 = value
-  live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  live : LiveFrame H before after
   above : ∀ x, (nativeStack spo 80).toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   low : ∀ x, x < heapStart → ¬ allocGlobal x → OutW (fsWindows (resolveStack spo)) x →
     (x < slotOne ∨ slotOne + 56 ≤ x) → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
@@ -143,10 +144,10 @@ theorem resolve_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat
         intro k v hk
         simp only [resolveSlots, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at hk
         omega) (by simp [resolveSlots]) _ member
-    live := fun e he x inside => by
+    live := LiveFrame.mk fun e he x inside => by
       have bounds := ready.heap.block_bounds (q := e.1) (n := e.2) he
       unfold InExt at inside
-      rw [F.live e he x (by unfold InExt; omega), keep2 x (Or.inl (by rw [base]; unfold heapEnd at *; omega))]
+      rw [F.live.byte e he x (by unfold InExt; omega), keep2 x (Or.inl (by rw [base]; unfold heapEnd at *; omega))]
     above := fun x high => by
       rw [F.above x (by
         unfold resolveStack; rw [rNat, base]; have h' := high; rw [outerNat] at h'; unfold nativeFrameBase at h'; omega),
@@ -679,7 +680,7 @@ structure ResolveOcamlrun (H : List (Nat × Nat)) (capacity : Nat)
   name : OcamlrunName after.σ.mem path
   none : bytesT after.σ.mem (resAt spo 16) 8 = path
   kind : read4 after.σ.mem (resAt spo 0) = [2#8, 0#8, 0#8, 0#8]
-  live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  live : LiveFrame H before after
   above : ∀ x, nativeFrameBase spo 80 + 48 ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   low : ∀ x, x < heapStart → ¬ allocGlobal x → OutW (fsWindows (resolveStack spo)) x →
     (x < slotOne ∨ slotOne + 56 ≤ x) → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
@@ -717,7 +718,7 @@ theorem resolve_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge :
   obtain ⟨d, runA, ⟨A⟩⟩ := (resolve_init c H capacity charge spo ra path s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 ready frame
     deep image entry.1 notReady clear charged).run c ⟨pc, rfl⟩
   have nameD : OcamlrunName d.σ.mem path :=
-    name.transport fun k hk => A.live blk blkH _ ⟨by omega, by omega⟩
+    name.transport fun k hk => A.live.byte blk blkH _ ⟨by omega, by omega⟩
   -- the scan to the component loop
   obtain ⟨e, runB, B⟩ := (resolve_scan d ((A.node.toNat, 5) :: H) capacity spo path s0 s1 s2 s5 s6 s7 s8 s10 _
     A.ready frameO
@@ -768,11 +769,11 @@ theorem resolve_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge :
     name := C.name
     none := C.none
     kind := C.kind
-    live := fun blk' h x inside => by
+    live := LiveFrame.mk fun blk' h x inside => by
       have bounds := ready.heap.block_bounds (q := blk'.1) (n := blk'.2) h
       unfold InExt at inside
       rw [toC x (Or.inl (by simp only [nativeFrameBase, hR, heapEnd] at *; omega))
-        (Or.inl (by simp only [heapEnd, baseO] at *; omega)), A.live blk' h x (by unfold InExt; omega)]
+        (Or.inl (by simp only [heapEnd, baseO] at *; omega)), A.live.byte blk' h x (by unfold InExt; omega)]
     above := fun x high => by
       rw [toC x (Or.inr high) (Or.inr high), A.above x (by rw [hO]; simp only [nativeFrameBase] at high; omega)]
     low := fun x below global out apart => by

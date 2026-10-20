@@ -232,6 +232,7 @@ theorem _root_.OCaml.Vm.Primitives.ConsoleWrite.ConsoleRuntime.keep {c d : Confi
     ConsoleWrite.ConsoleRuntime d where
   stdout := h.stdout.keep k
   stderr := h.stderr.keep k
+  stdin := h.stdin.keep k
   enterHookWord := by
     rw [k.read8 (by rw [show enterHook.toNat = 0x80064870 from rfl]; static_byte)]
     exact h.enterHookWord

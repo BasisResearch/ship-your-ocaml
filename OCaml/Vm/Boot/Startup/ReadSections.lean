@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.DomainRecord
 import OCaml.Vm.Boot.Startup.ReadSectionsSwap
 import OCaml.Vm.Boot.Startup.OpenFile
 import OCaml.Vm.Boot.Startup.LseekFile
@@ -26,14 +27,6 @@ theorem StatCheckedReturned.fresh {H capacity sp ra s0 n before after}
     (w : StatCheckedReturned H capacity sp ra s0 n before after) :
     FreshBlock vsaLayoutP H (vsaReg w.allocated 10).toNat n.toNat :=
   w.allocation.allocation.result.fresh
-
-/-- Bytes of a live block are outside the allocator's footprint. -/
-theorem owned_not_foot {H : List (Nat × Nat)} {a : Nat} (above : heapStart ≤ a) (owned : ∃ e ∈ H, InExt e a) :
-    ¬ vsaFoot H a := by
-  obtain ⟨e, he, inside⟩ := owned
-  rintro (global | ⟨_, _, out⟩)
-  · unfold allocGlobal InRange heapStart at *; omega
-  · exact out e he inside
 
 /-- caml_main calls `caml_read_section_descriptors(3, &trail)` on "/prog". -/
 structure ReadSectionsCall (H : List (Nat × Nat)) (capacity charge : Nat) (node ra s0 s1 s2 : BitVec 64)

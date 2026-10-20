@@ -27,6 +27,8 @@ structure ResetReadSections (initial after : Config) where
   attempted : Config
   attempt : ResetAttemptOk initial attempted
   atCall : Config
+  /-- The descriptor-read call stores nothing. -/
+  callMemory : atCall.σ.mem = attempted.σ.mem
   /-- caml_init_gc's globals at the descriptor read. -/
   params : GcInitImage atCall
   blk : BitVec 64
@@ -110,7 +112,7 @@ theorem reset_read_sections_exists : ∃ initial after, Nonempty (ResetReadSecti
     exact low a (by unfold heapEnd; omega) (by simp only [OutW, errnoWindows, and_true]; omega)
       (by unfold Layout.sym_fds; omega) (by unfold Layout.sym_magicstr; omega)
   obtain ⟨blk, after, run2, done⟩ := read_section_descriptors d1 _ _ _ _ _ _ _ _ R
-  exact ⟨initial, after, ⟨⟨d, w, d1, params, blk, done, w.run.trans (run1.trans run2)⟩⟩⟩
+  exact ⟨initial, after, ⟨⟨d, w, d1, mem1, params, blk, done, w.run.trans (run1.trans run2)⟩⟩⟩
 
 /-- caml_init_gc's globals after the descriptor table is read. -/
 theorem ResetReadSections.gc {initial after} (w : ResetReadSections initial after) : GcInitImage after :=
@@ -119,4 +121,23 @@ theorem ResetReadSections.gc {initial after} (w : ResetReadSections initial afte
     exact w.done.globals a (by unfold heapEnd; omega)
       (KeptByte.not_foot (Or.inr (Or.inr (Or.inr (Or.inr ha)))))
       (by simp only [OutW, errnoWindows, and_true]; omega) (by unfold Layout.sym_fds; omega)
+
+/-- The record and the tables after the section table is read. -/
+theorem ResetReadSections.kept_after {initial after} (w : ResetReadSections initial after) :
+    DomainKept w.attempt.opened.call.retry.failed.opened.call.search.path.table.H after.σ.mem
+      w.attempt.opened.call.retry.failed.opened.call.search.path.table.t1
+      w.attempt.opened.call.retry.failed.opened.call.search.path.table.t2
+      w.attempt.opened.call.retry.failed.opened.call.search.path.table.t3 := by
+  have k := w.attempt.kept_after
+  rw [← w.callMemory] at k
+  apply k.live
+  constructor
+  intro e he x inside
+  have member : e ∈ attemptBlocks w.attempt.opened := List.mem_cons_of_mem _ (List.mem_cons_of_mem _ he)
+  have b := w.done.ready.block_bounds (q := e.1) (n := e.2) (List.mem_cons_of_mem _ member)
+  have inside' := inside
+  unfold InExt at inside'
+  have hs : heapStart = 0x8007d140 := rfl
+  exact w.done.globals x (by omega) (owned_not_foot (by omega) ⟨e, member, inside⟩)
+    (by simp only [OutW, errnoWindows, and_true]; omega) (Or.inr (by unfold Layout.sym_fds; omega))
 end OCaml.Vm.Boot.WhileMinElfParse

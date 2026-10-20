@@ -16,12 +16,6 @@ open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.V
 /-! caml_set_minor_heap_size's reset of the domain's three ref tables
 (`ref_table`, `ephe_ref_table`, `custom_table`), each still without storage. -/
 
-/-- A ref-table record of 56 bytes in the arena. -/
-structure RefTableSpot (t : BitVec 64) : Prop where
-  low : heapStart ≤ t.toNat
-  high : t.toNat + 56 ≤ heapEnd
-  aligned : t.toNat % 8 = 0
-
 theorem RefTableSpot.field_nat {t : BitVec 64} (spot : RefTableSpot t) (off : Nat) (bound : off ≤ 56) :
     (t + BitVec.ofNat 64 off).toNat = t.toNat + off := by
   have high := spot.high

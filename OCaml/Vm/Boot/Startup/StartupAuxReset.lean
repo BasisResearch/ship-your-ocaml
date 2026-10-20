@@ -2,7 +2,7 @@ import OCaml.Vm.Boot.Startup.StartupAuxReady
 import OCaml.Vm.Boot.Startup.StartupControls
 import OCaml.Vm.Boot.Startup.CamlAux
 namespace OCaml.Vm.Boot.WhileMinElfParse
-open Vsa.Machine Vsa.Sim Startup VsaIris.Inst OCaml.Vm.Primitives
+open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap Startup VsaIris.Inst OCaml.Vm.Primitives
 
 /-- The concrete reset run after the once-only startup check and count update. -/
 structure ResetStartupAuxReturned (initial after : Config) where
@@ -15,8 +15,12 @@ structure ResetStartupAuxReturned (initial after : Config) where
     (startupAuxLog parameterStack jal_80004da4_call.link) called jal_80004da4_call.link 1#64
     (startupAuxRegs parameterStack jal_80004da4_call.link) after
   run : Steps (Vsa.Densify.fillZero initial) after
-  ready : ∃ H, (firstDomainPtr.toNat, 928) ∈ H ∧
-    RuntimeReady H (startupAllocatorCredits - 192) parameterStack jal_80004da4_call.link after
+  domainKept : ReadyKept (startupAllocatorCredits - 192) parameterStack jal_80004da4_call.link after
+
+theorem ResetStartupAuxReturned.ready {initial after} (w : ResetStartupAuxReturned initial after) :
+    ∃ H, (firstDomainPtr.toNat, 928) ∈ H ∧
+      RuntimeReady H (startupAllocatorCredits - 192) parameterStack jal_80004da4_call.link after :=
+  w.domainKept.ready
 
 theorem ResetStartupAuxReturned.reset {initial after} (w : ResetStartupAuxReturned initial after) :
     ElfResetReady elf initial := w.parameter.reset
@@ -25,7 +29,8 @@ theorem ResetStartupAuxReturned.reset {initial after} (w : ResetStartupAuxReturn
 pinned ELF's own reset run, with its initial BSS flag values supplied by history. -/
 theorem reset_startup_aux_returned_exists : ∃ initial after, Nonempty (ResetStartupAuxReturned initial after) := by
   obtain ⟨initial, source, ⟨w⟩⟩ := reset_parameter_returned_exists
-  obtain ⟨H, domain, ready⟩ := w.ready
+  obtain ⟨H, t1, t2, t3, R⟩ := w.domainKept
+  have ready := R.ready
   have regs : GHolds source.σ (camlAuxInput parameterStack jal_80004d98_call.link) :=
     ⟨ready.stack, ready.raReg, trivial⟩
   obtain ⟨called, run1, call⟩ := (caml_aux_call source _ _ ready.toLeafInput regs w.controls.cleanup).run source ⟨w.post.pc, rfl⟩
@@ -43,6 +48,17 @@ theorem reset_startup_aux_returned_exists : ∃ initial after, Nonempty (ResetSt
     shutdown := by rw [call.memory]; exact w.controls.shutdown
     count := by rw [call.memory]; exact w.controls.count }
   obtain ⟨after, run2, post⟩ := (startup_aux called _ _ input).run called ⟨call.pc, rfl⟩
-  exact ⟨initial, after, ⟨source, w, called, call, post, w.run.trans (run1.trans run2), H, domain,
-    startup_aux_ready ready' input.frame post⟩⟩
+  have arena : ∀ x, heapStart ≤ x → x < heapEnd → (after.σ.mem[x]?).getD 0 = (source.σ.mem[x]?).getD 0 := by
+    intro x lo hi
+    have count : Layout.sym_startup_count + 4 ≤ heapStart := by decide
+    rw [post.memory, startupAuxLog, writeLog_append,
+      writeLog_out _ _ _ (show OutL [(Layout.sym_startup_count, 4, 1#64)] x by
+        simp only [OutL]; exact ⟨Or.inr (by omega), trivial⟩),
+      frameOn_writeLog _ _ _ (startupAuxSave_inside input.frame) x ⟨Or.inl (by
+        show x < nativeFrameBase parameterStack 16
+        have : heapEnd ≤ nativeFrameBase parameterStack 16 := by decide
+        omega), trivial⟩, call.memory]
+    rfl
+  exact ⟨initial, after, ⟨source, w, called, call, post, w.run.trans (run1.trans run2),
+    (R.step (startup_aux_ready ready' input.frame post) arena).kept'⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse

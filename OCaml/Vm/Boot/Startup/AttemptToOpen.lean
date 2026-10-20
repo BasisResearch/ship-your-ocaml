@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.DomainRecord
 import OCaml.Vm.Boot.Startup.AttemptSearch
 import OCaml.Vm.Boot.Startup.AttemptOpenCalls
 import OCaml.Vm.Boot.Startup.GcMessageQuiet
@@ -35,7 +36,7 @@ structure AttemptAtOpen (H : List (Nat × Nat)) (capacity : Nat) (ra s0 s1 s2 s3
     bytesT after.σ.mem (nativeFrameBase parameterStack 64 + off) 8 = value
   caller : CallerFrame parameterStack before after
   /-- Every block of `H` is untouched. -/
-  live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  live : LiveFrame H before after
   kept : EmbedFrame before after
   late : LateImage after
   run : Steps before after
@@ -182,7 +183,7 @@ theorem attempt_open_to_open {c s : Config} {H : List (Nat × Nat)} {capacity ch
       show atGc.σ.mem = atMsg.σ.mem from mcall.memory,
       D.kept _ (Or.inr (Or.inr (Or.inr ⟨q, m, List.mem_cons_of_mem _ he, bounds.1, bounds.2, inside'.1,
         inside'.2⟩))), sameDup]
-    exact S.live (q, m) he x inside
+    exact S.live.byte (q, m) he x inside
   have keptCall : EmbedFrame atMsg atCall :=
     (EmbedFrame.of_memory mcall.memory).trans
       ((EmbedFrame.stack gc.memory (gcMessageLog_inside frameGc) (by decide)).trans
@@ -226,7 +227,7 @@ theorem attempt_open_to_open {c s : Config} {H : List (Nat × Nat)} {capacity ch
         rw [word_observed (m := s.σ.mem) _ (fun i _ => tail.byte _ (by rw [base64] at *; omega))]
         exact S.slots off value member
       caller := S.caller.trans (tail.mono (by decide))
-      live := liveCall
+      live := ⟨liveCall⟩
       kept := S.kept.trans (keptMsg.trans keptCall)
       late := lateMsg.frame keptCall
       run := S.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans run7)))))) }⟩⟩

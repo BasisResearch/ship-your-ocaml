@@ -377,7 +377,7 @@ theorem ConsoleRuntime.transfer {c c' : Config}
     fun fd hb hs d => ⟨by rw [ready]; exact d.ready, d.range, d.kindWindow, by rw [r _ hb hs]; exact d.console,
       by rw [r _ hb hs]; exact d.notFile⟩
   have signals : ∀ i, i < 32 → StaticApart (FdWrite.pendingSignals.toNat + 8 * i) 8 := by decide
-  refine ⟨fd _ (by decide) (by decide) h.stdout, fd _ (by decide) (by decide) h.stderr, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨fd _ (by decide) (by decide) h.stdout, fd _ (by decide) (by decide) h.stderr, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [r _ (by decide) (by decide : StaticApart FdWrite.enterHook.toNat 8)]; exact h.enterHookWord
   · rw [r _ (by decide) (by decide : StaticApart FdWrite.leaveHook.toNat 8)]; exact h.leaveHookWord
   · rw [r _ (by decide) (by decide : StaticApart FdWrite.impurePtr.toNat 8)]; exact h.impure
@@ -389,6 +389,9 @@ theorem ConsoleRuntime.transfer {c c' : Config}
   · rw [r _ (by decide) (by decide : StaticApart ConsoleWrite.somethingToDo.toNat 8)]; exact h.quiet
   · rw [r _ (by decide) (by decide : StaticApart ConsoleWrite.channelLock.toNat 8)]; exact h.lockNull
   · rw [r _ (by decide) (by decide : StaticApart ConsoleWrite.channelUnlock.toNat 8)]; exact h.unlockNull
+  · have kind := r _ (by decide) (by decide : StaticApart (Channel.slotAddress 0#64).toNat 8)
+    exact ⟨by rw [ready]; exact h.stdin.ready, h.stdin.range, h.stdin.slotWindow, by rw [kind]; exact h.stdin.live,
+      by rw [kind]; exact h.stdin.notFile⟩
 
 /-- **Core transfer**: if every kept footprint read is unchanged, the pins
 survive and only `young_ptr` may differ among the runtime fields. -/
@@ -1058,7 +1061,7 @@ theorem consoleRuntime_of {c : Config}
   refine ⟨fd 1#64 _ _ (by decide) (WhileMinEntry.read_fd1_kind memory) (by decide)
       ⟨by decide, by decide, by decide⟩ (by decide) (by decide),
     fd 2#64 _ _ (by decide) (WhileMinEntry.read_fd2_kind memory) (by decide)
-      ⟨by decide, by decide, by decide⟩ (by decide) (by decide), ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      ⟨by decide, by decide, by decide⟩ (by decide) (by decide), ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [rd FdWrite.enterHook _ _ (by decide) (cut_imageWord memory (a := Layout.sym_caml_enter_blocking_section_hook) (by decide +kernel)
       ((loaderMem_bytes WhileMinImage.pieces WhileMinImage.imageByte _ 8).trans (by decide +kernel) :
         _ = 0x8000d2a4#64))]
@@ -1080,6 +1083,9 @@ theorem consoleRuntime_of {c : Config}
   · rw [rd ConsoleWrite.somethingToDo _ _ (by decide) (WhileMinEntry.read_caml_something_to_do memory)]; decide
   · rw [rd ConsoleWrite.channelLock _ _ (by decide) (WhileMinEntry.read_caml_channel_mutex_lock memory)]; decide
   · rw [rd ConsoleWrite.channelUnlock _ _ (by decide) (WhileMinEntry.read_caml_channel_mutex_unlock memory)]; decide
+  · have kind := rd (Channel.slotAddress 0#64) _ _ (by decide) (WhileMinEntry.read_fd0_kind memory)
+    exact ⟨by rw [ready]; decide, by decide, ⟨by decide, by decide, by decide⟩, by rw [kind]; decide,
+      by rw [kind]; decide⟩
 
 /-- newlib's heap readiness covering `f1Covered` (the body of a0-boot's
 `WhileMin.cut_heapReady_covers_Statement`, at any configuration). -/

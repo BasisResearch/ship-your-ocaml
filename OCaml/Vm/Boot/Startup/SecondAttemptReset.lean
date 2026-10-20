@@ -54,5 +54,5 @@ theorem reset_prog_open_call_exists : ∃ initial after, Nonempty (ResetProgOpen
   obtain ⟨after, run2, ⟨A⟩⟩ := attempt_open_to_open S argv1_embedded (fun d h => Or.inr (argv1_rooted h))
     (by decide) ⟨by decide, by decide⟩
   exact ⟨initial, after, ⟨c, w, A, w.run.trans (run1.trans run2),
-    w.fs.frame A.kept fun j hj => A.live _ (List.mem_cons_self ..) _ ⟨by omega, by omega⟩⟩⟩
+    w.fs.frame A.kept fun j hj => A.live.byte _ (List.mem_cons_self ..) _ ⟨by omega, by omega⟩⟩⟩
 end OCaml.Vm.Boot.WhileMinElfParse

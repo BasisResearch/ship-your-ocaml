@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.DomainRecord
 import OCaml.Vm.Boot.Startup.OpenSteps
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
@@ -56,6 +57,8 @@ structure OpenOcamlrun (H : List (Nat × Nat)) (capacity : Nat) (sp ra path : Bi
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   name : OcamlrunName after.σ.mem path
   caller : CallerFrame sp before after
+  /-- Every owned block is kept. -/
+  live : LiveFrame H before after
 
 theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra path a2 a3 a4 a5 a6 a7 s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 : BitVec 64)
@@ -447,6 +450,15 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
     name := R.name.transport fun k hk => mem12 _ (by
       have := (ready.heap.block_bounds (q := blk.1) (n := blk.2) blkH).1
       simp only [OutW, errnoWindows, and_true, heapStart] at *; omega)
+    live := ⟨fun e he x inside => by
+      have b := ready.block_bounds (q := e.1) (n := e.2) he
+      have inside' := inside
+      unfold InExt at inside'
+      have lower : heapEnd + openDepth ≤ sp.toNat := frame.lower
+      have hs : heapStart = 0x8007d140 := rfl
+      rw [mem12 x (by simp only [OutW, errnoWindows, and_true]; omega), R.live.byte e he x inside]
+      exact mem6 x (Or.inl (by unfold openDepth allocHeadroom at lower; omega))
+        (Or.inr (by omega)) (Or.inr (by omega))⟩
     caller := ⟨fun x bound => by
       have outE : OutW errnoWindows x := by
         simp only [OutW, errnoWindows, and_true]

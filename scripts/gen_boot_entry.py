@@ -50,7 +50,7 @@ out += ['/-- The executable name `caml_exe_name` points to: the `caml_stat_strdu
         'theorem exe_name (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :',
         f'    ∀ i : Fin 6, byte c ({exe:#x} + i.val) = ([{", ".join(f"{mem[exe+i]:#x}#8" for i in range(6))}] : List (BitVec 8)).getD i.val 0 :=',
         '  '+finite_cases(exeBytes),'']
-for fd in (1,2):
+for fd in (0,1,2):
     emit_read(out,f'fd{fd}_kind',f'Layout.sym_fds + {24*fd}',read(layout['sym_fds']+24*fd))
 pending=[emit_read(out,f'pending{i}',f'Layout.sym_caml_pending_signals + 8 * {i}',
                    read(layout['sym_caml_pending_signals']+8*i)) for i in range(32)]

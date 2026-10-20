@@ -220,6 +220,12 @@ theorem exe_name (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)
     ∀ i : Fin 6, byte c (0x8007d700 + i.val) = ([0x2f#8, 0x70#8, 0x72#8, 0x6f#8, 0x67#8, 0x0#8] : List (BitVec 8)).getD i.val 0 :=
   Fin.cases (read_exe_name0 memory) (Fin.cases (read_exe_name1 memory) (Fin.cases (read_exe_name2 memory) (Fin.cases (read_exe_name3 memory) (Fin.cases (read_exe_name4 memory) (Fin.cases (read_exe_name5 memory) (fun i => Fin.elim0 i))))))
 
+theorem read_fd0_kind (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (Layout.sym_fds + 0) = 0x1#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_fds + 0) (w := 8) (by decide +kernel)]
+  decide +kernel
+
 theorem read_fd1_kind (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word c (Layout.sym_fds + 24) = 0x2#64 := by
   unfold word

@@ -13,27 +13,6 @@ namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
   OCaml.Vm.Gc LeanRV64DExecutable
 
-/-- The ref tables' facts that do not mention the page table. -/
-structure RefTablesPre (H : List (Nat × Nat)) (m : Std.ExtHashMap Nat (BitVec 8)) (t1 t2 t3 : BitVec 64) : Prop where
-  ptr1 : bytesT m (domainField 104) 8 = t1
-  ptr2 : bytesT m (domainField 112) 8 = t2
-  ptr3 : bytesT m (domainField 120) 8 = t3
-  spot1 : RefTableSpot t1
-  spot2 : RefTableSpot t2
-  spot3 : RefTableSpot t3
-  empty1 : bytesT m t1.toNat 8 = 0#64
-  empty2 : bytesT m t2.toNat 8 = 0#64
-  empty3 : bytesT m t3.toNat 8 = 0#64
-  apart12 : t1.toNat + 56 ≤ t2.toNat ∨ t2.toNat + 56 ≤ t1.toNat
-  apart23 : t2.toNat + 56 ≤ t3.toNat ∨ t3.toNat + 56 ≤ t2.toNat
-  domain1 : t1.toNat + 56 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ t1.toNat
-  apart13 : t1.toNat + 56 ≤ t3.toNat ∨ t3.toNat + 56 ≤ t1.toNat
-  domain2 : t2.toNat + 56 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ t2.toNat
-  domain3 : t3.toNat + 56 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ t3.toNat
-  owned1 : (t1.toNat, 56) ∈ H
-  owned2 : (t2.toNat, 56) ∈ H
-  owned3 : (t3.toNat, 56) ∈ H
-
 /-- A fresh page table's slots are apart from the ref tables. -/
 theorem RefTablesPre.at {H : List (Nat × Nat)} {m : Std.ExtHashMap Nat (BitVec 8)} {t1 t2 t3 ent : BitVec 64}
     (R : RefTablesPre H m t1 t2 t3) (fresh : FreshBlock vsaLayoutP H ent.toNat 16384) :
@@ -220,18 +199,6 @@ structure InitGcMinored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2
     (x < 0x80064cc8 ∨ 0x80064cc8 + 8 ≤ x) → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   domainHigh : ∀ off, 128 ≤ off → off + 8 ≤ 928 →
     bytesT after.σ.mem (domainField off) 8 = bytesT before.σ.mem (domainField off) 8
-
-/-- A fresh block lies apart from every live block. -/
-theorem FreshBlock.apart {L : DlLayout} {H : List (Nat × Nat)} {p n : Nat} (fresh : FreshBlock L H p n)
-    {q m : Nat} (owned : (q, m) ∈ H) (pos : 0 < n) (qpos : 0 < m) : p + n ≤ q ∨ q + m ≤ p := by
-  have a := fresh.2.2.2 _ owned
-  rcases Nat.lt_or_ge p q with h | h
-  · rcases Nat.lt_or_ge (p + n) (q + 1) with h' | h'
-    · exact Or.inl (by omega)
-    · exact absurd (show InExt (q, m) q by unfold InExt; dsimp only; omega) (a q (by unfold InExt; dsimp only; omega))
-  · rcases Nat.lt_or_ge p (q + m) with h' | h'
-    · exact absurd (show InExt (q, m) p by unfold InExt; dsimp only; omega) (a p (by unfold InExt; dsimp only; omega))
-    · exact Or.inr h'
 
 theorem init_gc_to_minor (c d4 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM cP : Nat)
     (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur blk : BitVec 64)

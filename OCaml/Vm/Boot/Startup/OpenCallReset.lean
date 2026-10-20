@@ -41,6 +41,8 @@ structure ResetOpenCall (initial after : Config) where
   run : Steps (Vsa.Densify.fillZero initial) after
   /-- caml_attempt_open's frame is kept since its saves. -/
   caller : CallerFrame attemptStack search.path.table.atSaved after
+  /-- The owned blocks are kept since the search returned. -/
+  live : LiveFrame search.path.table.H atSearch after
 
 theorem reset_open_call_exists : ∃ initial after, Nonempty (ResetOpenCall initial after) := by
   obtain ⟨initial, atS, ⟨w⟩⟩ := reset_search_exe_returned_exists
@@ -116,7 +118,7 @@ theorem reset_open_call_exists : ∃ initial after, Nonempty (ResetOpenCall init
   refine ⟨initial, atCall, ⟨atS, w, ocall.pc, gholds_lookup (n := 1) _ ocall.regs (by rfl),
     gholds_lookup (n := 10) _ ocall.regs (by rfl), gholds_lookup (n := 11) _ ocall.regs (by rfl),
     gholds_lookup (n := 2) _ ocall.regs (by rfl), gholds_lookup (n := 18) _ ocall.regs (by rfl), readyCall, ?_, ?_,
-    w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans run7)))))), ?_⟩⟩
+    w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans run7)))))), ?_, ?_⟩⟩
   · intro k hk
     have inside : InExt (w.copy.toNat, 9) (w.copy.toNat + k) := ⟨by omega, by omega⟩
     have apart : ¬ InExt (D.copy.toNat, 8 + 1) (w.copy.toNat + k) := fun copy2 =>
@@ -143,4 +145,28 @@ theorem reset_open_call_exists : ∃ initial after, Nonempty (ResetOpenCall init
       show atStat.σ.mem = atFree.σ.mem from fcall.memory, gc.memory,
       frameOn_writeLog _ _ _ (gcMessageLog_inside frameGc) _ ⟨Or.inr bound, trivial⟩,
       show atGc.σ.mem = atMsg.σ.mem from mcall.memory, D.kept a (Or.inl bound), sameDup]
+  · constructor
+    intro e he x inside
+    obtain ⟨q, m⟩ := e
+    have he' := List.mem_cons_of_mem (w.copy.toNat, 9) he
+    have bounds := readyS.block_bounds (q := q) (n := m) he'
+    have inside' := inside
+    unfold InExt at inside'
+    have hx : heapStart ≤ x ∧ x < heapEnd := ⟨by omega, by omega⟩
+    have apart : ¬ InExt (D.copy.toNat, 8 + 1) x := fun inD => D.disjoint _ he' _ inD inside
+    have below : x < nativeFrameBase attemptStack 80 := by
+      have : heapEnd ≤ nativeFrameBase attemptStack 80 := by decide
+      omega
+    rw [show atCall.σ.mem = atOpen.σ.mem from ocall.memory,
+      freed.live_byte frameA he' inside apart hx,
+      show atStat.σ.mem = atFree.σ.mem from fcall.memory, gc.memory,
+      frameOn_writeLog _ _ _ (gcMessageLog_inside frameGc) _ ⟨Or.inl below, trivial⟩,
+      show atGc.σ.mem = atMsg.σ.mem from mcall.memory,
+      D.kept _ (Or.inr (Or.inr (Or.inr ⟨q, m, he', bounds.1, bounds.2, inside'.1, inside'.2⟩))), sameDup]
+
+/-- The record and the tables at `open(truename, O_RDONLY)`. -/
+theorem ResetOpenCall.kept_after {initial after} (w : ResetOpenCall initial after) :
+    DomainKept w.search.path.table.H after.σ.mem w.search.path.table.t1 w.search.path.table.t2
+      w.search.path.table.t3 :=
+  w.search.kept_after.live w.live
 end OCaml.Vm.Boot.WhileMinElfParse

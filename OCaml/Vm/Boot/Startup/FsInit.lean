@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.DomainRecord
 import OCaml.Vm.Boot.Startup.FsInitSteps
 import OCaml.Vm.Boot.Startup.FsInitPath
 import OCaml.Vm.Sim.AllocInput
@@ -337,7 +338,7 @@ structure FsTail (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 
   apart : ∀ e ∈ H, ∀ a, InExt (node.toNat, 5) a → ¬ InExt e a
   low : ∀ x, x < heapStart → ¬ allocGlobal x → (x < slotOne ∨ slotOne + 56 ≤ x) →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
-  live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  live : LiveFrame H before after
   high : ∀ n, 26 ≤ n → n ≤ 27 → gprGet after.σ n = gprGet before.σ n
   above : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
@@ -485,7 +486,7 @@ theorem fs_init_tail (e : Config) (H : List (Nat × Nat)) (capacity charge : Nat
         · exact global g'
         · omega
       · unfold InExt at inside; omega
-    live := fun e he x inside => by
+    live := LiveFrame.mk fun e he x inside => by
       have bounds := ready.heap.block_bounds (q := e.1) (n := e.2) he
       unfold InExt at inside
       rw [memH, fileOut x (by unfold heapStart at bounds; file_out)]
@@ -626,7 +627,7 @@ structure FsInitDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3
   rest : ∀ j, 2 ≤ j → j < 64 → slotUsed after.σ.mem (Layout.sym_files + 56 * j) = 0#8
   low : ∀ x, x < heapStart → ¬ allocGlobal x → OutW (fsWindows sp) x → (x < slotOne ∨ slotOne + 56 ≤ x) →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
-  live : ∀ e ∈ H, ∀ x, InExt e x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  live : LiveFrame H before after
   high : ∀ n, 26 ≤ n → n ≤ 27 → gprGet after.σ n = gprGet before.σ n
   above : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   words : FsWords after.σ.mem
@@ -763,10 +764,10 @@ theorem fs_init (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     slot := T.slot
     rest := fun j lo hi => ?_
     low := fun x below global out apart => (T.low x below global apart).trans (lowE x below out)
-    live := fun e he x inside => by
+    live := LiveFrame.mk fun e he x inside => by
       have bounds := ready.heap.block_bounds (q := e.1) (n := e.2) he
       unfold InExt at inside
-      rw [T.live e he x (by unfold InExt; omega), S.kept x (Or.inl (by
+      rw [T.live.byte e he x (by unfold InExt; omega), S.kept x (Or.inl (by
         unfold nativeFrameBase; rw [spNat]; unfold nativeFrameBase heapEnd at *; omega)), keepD x (by
         simp only [OutW, fsWindows, and_true, nativeFrameBase, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready,
           heapEnd, heapStart] at *

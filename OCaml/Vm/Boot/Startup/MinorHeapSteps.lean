@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.DomainRecord
 import OCaml.Vm.Boot.Startup.MinorHeapFrameNormalized
 import OCaml.Vm.Boot.Startup.MinorHeapFrameImage
 import OCaml.Vm.Boot.Startup.MinorHeapSaveNormalized
@@ -26,9 +27,6 @@ open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.V
 
 /-! caml_set_minor_heap_size(size)'s blocks, on the path from a domain whose
 minor heap is empty and whose ref tables have no storage yet. -/
-
-/-- A field of the first domain's state. -/
-def domainField (off : Nat) : Nat := firstDomainPtr.toNat + off
 
 /-- Open a 64-byte frame. -/
 theorem minor_frame (c : Config) (sp ra v : BitVec 64) (leaf : LeafInput ra c) (regs : GHolds c.σ [(2, sp), (10, v)]) :

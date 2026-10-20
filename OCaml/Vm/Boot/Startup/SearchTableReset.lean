@@ -4,7 +4,7 @@ import OCaml.Vm.Boot.Startup.AttemptOpenPrefix
 import OCaml.Vm.Boot.Startup.SearchExePrefix
 import OCaml.Vm.Boot.Startup.RuntimeStack
 namespace OCaml.Vm.Boot.WhileMinElfParse
-open Vsa.Machine Vsa.Sim Startup VsaIris.Inst OCaml.Vm.Primitives
+open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap Startup VsaIris.Inst OCaml.Vm.Primitives
 
 /-- caml_main's `exe_name` slot and caml_attempt_open's frame. -/
 def exeNameSlot : BitVec 64 := parameterStack + 32#64
@@ -47,6 +47,11 @@ structure ResetSearchTableReturned (initial after : Config) where
       (bytesT atSaved.σ.mem exeNameSlot.toNat 8)) atTable
   H : List (Nat × Nat)
   domain : (firstDomainPtr.toNat, 928) ∈ H
+  t1 : BitVec 64
+  t2 : BitVec 64
+  t3 : BitVec 64
+  /-- caml_init_domain's record and tables at the path table's initialization. -/
+  entryKept : DomainKept H atTable.σ.mem t1 t2 t3
   returned : ExtTableReturned H (startupAllocatorCredits - 448) searchStack jal_8002554c_call.link
     (bytesT atSaved.σ.mem exeNameSlot.toNat 8) searchStack 8#64 atTable after
   run : Steps (Vsa.Densify.fillZero initial) after
@@ -57,7 +62,11 @@ theorem ResetSearchTableReturned.pc {initial after} (w : ResetSearchTableReturne
 theorem reset_search_table_returned_exists :
     ∃ initial after, Nonempty (ResetSearchTableReturned initial after) := by
   obtain ⟨initial, source, ⟨w⟩⟩ := reset_shared_table_returned_exists
-  obtain ⟨H, domain, ready⟩ := w.ready
+  have ready := w.returned.ready
+  have domain := List.mem_cons_of_mem ((vsaReg w.returned.allocation.allocation.allocated 10).toNat, (extTableRequest 8#64).toNat) w.domain
+  have entry := w.kept_after
+  generalize ((vsaReg w.returned.allocation.allocation.allocated 10).toNat, (extTableRequest 8#64).toNat) :: w.H = H
+    at ready domain entry
   have argv := w.argv_array
   -- caml_main: exe_name = argv[0]; call caml_attempt_open
   obtain ⟨atOpen, run1, call⟩ := (caml_attempt_open_call source parameterStack _
@@ -123,6 +132,19 @@ theorem reset_search_table_returned_exists :
     (ExtTableSite.at_sp (tableFrame.resize (by decide) (by decide)) (by decide))
     (gholds_lookup (n := 8) _ search.regs (by rfl)) (gholds_lookup (n := 10) _ search.regs (by rfl))
     (gholds_lookup (n := 11) _ search.regs (by rfl)) (by constructor <;> decide)).run atTable ⟨search.pc, rfl⟩
+  have arena : ∀ x, heapStart ≤ x → x < heapEnd → (atTable.σ.mem[x]?).getD 0 = (source.σ.mem[x]?).getD 0 :=
+    fun x lo hi => by
+      rw [arena_of_stack search.memory (searchExeLog_inside searchFrame) (by decide) x lo hi, name.memory]
+      change ((writeLog atSaved.σ.mem [])[x]?).getD 0 = _
+      rw [show writeLog atSaved.σ.mem [] = atSaved.σ.mem from rfl,
+        arena_of_stack save.memory (attemptOpenLog_inside attemptFrame) (by decide) x lo hi]
+      exact arena_of_stack call.memory (size := 16) (sp := parameterStack + 48#64)
+        (by simp only [camlAttemptLog, LogInW, InsideW]; decide) (by decide) x lo hi
   exact ⟨initial, after, ⟨source, w, atOpen, call, atSaved, save, atSearch, name, atTable, search, H, domain,
-    returned, w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans run5))))⟩⟩
+    _, _, _, entry.of_arena arena, returned, w.run.trans (run1.trans (run2.trans (run3.trans (run4.trans run5))))⟩⟩
+
+/-- The record and the tables after the stack-local path table is built. -/
+theorem ResetSearchTableReturned.kept_after {initial after} (w : ResetSearchTableReturned initial after) :
+    DomainKept w.H after.σ.mem w.t1 w.t2 w.t3 :=
+  w.entryKept.live (w.returned.live (by constructor <;> decide) (Or.inl (by decide)))
 end OCaml.Vm.Boot.WhileMinElfParse

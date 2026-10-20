@@ -83,6 +83,27 @@ theorem domainFields_log_inside : LogInW domainFieldsWindows domainFieldsLog := 
   repeat' apply And.intro
   all_goals decide
 
+local macro "domain_fields_out" : tactic => `(tactic| (
+  simp only [domainFieldsLog, domainFieldsSave, evalBlocks, evalBlock, SegEvalState.init]
+  domain_fields_nf
+  rw [domainPtrBytes_value]
+  simp only [List.nil_append, List.cons_append, List.drop, OutLRange]
+  repeat' apply And.intro
+  all_goals decide))
+
+/-- The later field stores miss the words caml_init_gc reads below them:
+`young_limit`, `young_start`, `young_trigger` and the three ref-table pointers. -/
+theorem domainFields_out (off : Nat) (h : off = 8 ∨ off = 32 ∨ off = 56 ∨ off = 104 ∨ off = 112 ∨ off = 120) :
+    OutLRange domainFieldsLog (firstDomainPtr.toNat + off) 8 := by
+  rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> domain_fields_out
+
+/-- `stat_heap_wsz` (offset 336, log entry 15) is cleared. -/
+theorem domainFields_heap_word (m : Std.ExtHashMap Nat (BitVec 8)) :
+    bytesT (writeLog m domainFieldsLog) (firstDomainPtr.toNat + 336) 8 = 0#64 := by
+  apply OCaml.Vm.Gc.word_writeLog_at (i := 15)
+  · rfl
+  · domain_fields_out
+
 /-- The post-table domain initialization stores, compiled from domain.c. -/
 theorem domain_fields (c : Config) (p ra : BitVec 64) (h : DomainFieldsInput p ra c) :
     FnSummary 0x8002a938#64 (fun d => d = c)

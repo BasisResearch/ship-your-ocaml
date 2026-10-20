@@ -3,39 +3,6 @@ import OCaml.Vm.Boot.Startup.ReadSectionsReset
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
 
-/-- caml_init_domain's record and the minor ref tables as caml_init_gc reads
-them: the record is owned, `young_limit` equals `young_trigger`, there is no
-minor heap and no major heap yet, and the three tables are empty. -/
-structure DomainKept (H : List (Nat × Nat)) (m : Std.ExtHashMap Nat (BitVec 8)) (t1 t2 t3 : BitVec 64) : Prop where
-  owned : (firstDomainPtr.toNat, 928) ∈ H
-  idle : bytesT m (domainField 8) 8 = bytesT m (domainField 56) 8
-  noYoung : bytesT m (domainField 32) 8 = 0#64
-  noHeap : bytesT m (domainField 336) 8 = 0#64
-  refs : RefTablesPre H m t1 t2 t3
-
-/-- The record and the tables survive any change that keeps the memory below the arena's end. -/
-theorem DomainKept.of_low {H : List (Nat × Nat)} {m m' : Std.ExtHashMap Nat (BitVec 8)} {t1 t2 t3 : BitVec 64}
-    (h : DomainKept H m t1 t2 t3) (f : ∀ x, x < heapEnd → (m'[x]?).getD 0 = (m[x]?).getD 0) :
-    DomainKept H m' t1 t2 t3 := by
-  have word (a : Nat) (ha : a + 8 ≤ heapEnd) : bytesT m' a 8 = bytesT m a 8 :=
-    word_observed _ fun i hi => f _ (by omega)
-  have field (off : Nat) (hoff : off + 8 ≤ 928) : bytesT m' (domainField off) 8 = bytesT m (domainField off) 8 :=
-    word _ (by
-      have : firstDomainPtr.toNat + 928 ≤ heapEnd := by decide
-      unfold domainField; omega)
-  have table {t : BitVec 64} (spot : RefTableSpot t) : bytesT m' t.toNat 8 = bytesT m t.toNat 8 :=
-    word _ (by have := spot.high; omega)
-  have R := h.refs
-  exact ⟨h.owned, (field 8 (by decide)).trans (h.idle.trans (field 56 (by decide)).symm),
-    (field 32 (by decide)).trans h.noYoung, (field 336 (by decide)).trans h.noHeap,
-    { R with
-      ptr1 := (field 104 (by decide)).trans R.ptr1
-      ptr2 := (field 112 (by decide)).trans R.ptr2
-      ptr3 := (field 120 (by decide)).trans R.ptr3
-      empty1 := (table R.spot1).trans R.empty1
-      empty2 := (table R.spot2).trans R.empty2
-      empty3 := (table R.spot3).trans R.empty3 }⟩
-
 /-- Eight zero `.bss` bytes of caml_init_gc's globals. -/
 theorem GcInitImage.zero {c : Config} (h : GcInitImage c) (a : Nat) (ha : ∀ i, i < 8 → GcBssByte (a + i)) :
     Primitives.read8 c.σ.mem a = List.replicate 8 0#8 := by
@@ -63,7 +30,7 @@ abbrev ResetReadSections.blocks {initial after} (w : ResetReadSections initial a
 
 /-- caml_main from the section table to caml_init_gc's entry, with the
 default parameters. `dom` is caml_init_domain's record, which every step
-since keeps (supplied by `ResetDomainKept_Statement`). -/
+since keeps (`reset_domain_kept`). -/
 theorem reset_init_gc_call {initial sections : Config} (w : ResetReadSections initial sections)
     {t1 t2 t3 : BitVec 64} (dom : DomainKept w.blocks sections.σ.mem t1 t2 t3) :
     ∃ after, Steps (Vsa.Densify.fillZero initial) after ∧
@@ -157,20 +124,36 @@ theorem reset_init_gc_call {initial sections : Config} (w : ResetReadSections in
       exact ⟨by simpa using b 0 (by decide), b 1 (by decide), b 2 (by decide), b 3 (by decide), b 4 (by decide),
         b 5 (by decide), b 6 (by decide), b 7 (by decide)⟩ }⟩
 
-/-- Named obligation: caml_init_domain's record and the minor ref tables
-(`DomainKept`) hold when the section table is read. Supplied by an owned-block
-frame from `DomainHistory` through every later startup step. -/
+/-- caml_init_domain's record and the minor ref tables (`DomainKept`) hold when
+the section table is read. -/
 def ResetDomainKept_Statement : Prop :=
   ∀ initial sections (w : ResetReadSections initial sections),
     ∃ t1 t2 t3 : BitVec 64, DomainKept w.blocks sections.σ.mem t1 t2 t3
 
-/-- The reset run reaches caml_init_gc's entry with its precondition, given the domain obligation. -/
-theorem reset_init_gc_exists (domain : ResetDomainKept_Statement) :
+/-- Every startup step since caml_init_domain keeps its record and tables
+(`LiveFrame` per stage, `ResetReadSections.kept_after`). -/
+theorem reset_domain_kept : ResetDomainKept_Statement := fun _ _ w =>
+  ⟨_, _, _, w.kept_after.mono fun _ he => List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ he))⟩
+
+/-- The reset run reaches caml_init_gc's entry with its precondition. -/
+theorem reset_init_gc_exists :
     ∃ initial after H cap c1 c2 cA cM cP, Steps (Vsa.Densify.fillZero initial) after ∧
       ∃ sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur,
         InitGcCall H cap c1 c2 cA cM cP sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur after := by
   obtain ⟨initial, sections, ⟨w⟩⟩ := reset_read_sections_exists
-  obtain ⟨t1, t2, t3, dom⟩ := domain initial sections w
+  obtain ⟨t1, t2, t3, dom⟩ := reset_domain_kept initial sections w
   obtain ⟨after, run, call⟩ := reset_init_gc_call w dom
   exact ⟨initial, after, _, _, _, _, _, _, _, run, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, call⟩
+/-- The reset run through caml_init_gc: back in caml_main at the default
+parameters, with readiness over the runtime's new blocks prepended. -/
+theorem reset_init_gc_returned_exists :
+    ∃ initial sections after, Nonempty (ResetReadSections initial sections) ∧
+      Steps (Vsa.Densify.fillZero initial) after ∧
+      ∃ H cap ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 Hfinal before,
+        InitGcDone H cap parameterStack ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 Hfinal before after := by
+  obtain ⟨initial, sections, ⟨w⟩⟩ := reset_read_sections_exists
+  obtain ⟨t1, t2, t3, dom⟩ := reset_domain_kept initial sections w
+  obtain ⟨call, run1, A⟩ := reset_init_gc_call w dom
+  obtain ⟨Hfinal, after, run2, D⟩ := caml_init_gc call _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ A
+  exact ⟨initial, sections, after, ⟨w⟩, run1.trans run2, _, _, _, _, _, _, _, _, _, _, _, _, _, Hfinal, _, D⟩
 end OCaml.Vm.Boot.WhileMinElfParse
