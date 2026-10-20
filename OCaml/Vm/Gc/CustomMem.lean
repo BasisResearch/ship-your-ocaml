@@ -144,6 +144,9 @@ structure CustomMemReturned (state : Config → Nat → Prop) (H : List (Nat × 
     (a + 24 < (runtimeFields f).youngPtr ∨ (runtimeFields f).youngPtr ≤ a) →
     (a + 8 ≤ domainAddr f Layout.off_young_ptr ∨ domainAddr f Layout.off_young_ptr + 8 ≤ a) →
     (d.σ.mem[a]?).getD 0 = (f.σ.mem[a]?).getD 0
+  /-- the runtime's state grows only into newlib's free space at the call
+  (the custom table's storage, first allocated or reallocated) -/
+  grows : ∀ a, state d a → state f a ∨ VsaIris.VsaHeap.vsaFoot H a
 
 /-- **The runtime's channel custom allocations** (named obligation, lane
 a6-gc). `Ready k c`: `k` more calls are safe at `c`, judged from `state c`
