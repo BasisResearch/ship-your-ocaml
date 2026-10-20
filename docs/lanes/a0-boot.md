@@ -306,6 +306,15 @@ insertion is proved generically:
     bits 0–15, and `caml_fl_merge = NULL`.
   * `globalWindow_ok` is readiness across stores to any runtime global
     apart from the allocator's.
+* `make_free_blocks` (MakeFree.lean): bf_make_free_blocks(chunk, size, 1,
+  Caml_white) on a chunk of at most `Max_wosize` words.
+  * The chunk becomes one blue free block, `mfbHeader size`.
+  * bf_insert_block makes it the root of the empty best-fit tree
+    (`TreeRoot`). `bib_find` and `bib_root` split that function at its store
+    block; one chain recursed in the kernel.
+  * `caml_fl_cur_wsz` grows by `size`.
+  * `ownedWindow_ok` carries readiness across stores inside a live block of
+    `H`; `WindowsOk.cons` combines windows.
 Next, the rest of caml_init_major_heap:
 * `__divdi3`/`__muldi3` (`ready_muldi3` exists);
 * the In_heap `caml_page_table_add`, whose disjointness comes from
