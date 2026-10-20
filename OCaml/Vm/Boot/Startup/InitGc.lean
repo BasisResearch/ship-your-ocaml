@@ -6,6 +6,7 @@ import OCaml.Vm.Boot.Startup.PageApart
 import OCaml.Vm.Boot.Startup.StatAligned
 import OCaml.Vm.Boot.Startup.PolicySteps
 import Vsa.Sim.FrameComposition
+import OCaml.Vm.Boot.Startup.MemSame
 
 /-! caml_init_gc, composed with its callees, at the default parameters. -/
 namespace OCaml.Vm.Boot.Startup
@@ -666,5 +667,275 @@ theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA c
         (by simp only [OutL, policyLog, Layout.sym_caml_verb_gc, and_true]; omega)
         (by simp only [OutL, percentFreeAddr, percentMaxAddr, Layout.sym_caml_verb_gc, and_true]; omega)
         (by simp only [OutL, majorIncrementAddr, Layout.sym_caml_verb_gc, and_true]; omega) }⟩
+
+/-- The GC parameters caml_init_gc stores after the major heap. -/
+def gcStoreWindows : List W :=
+  [⟨majorWindowAddr, majorWindowAddr + 4⟩, ⟨customMajorAddr, customMajorAddr + 8⟩,
+    ⟨customMinorAddr, customMinorAddr + 8⟩, ⟨customMaxAddr, customMaxAddr + 8⟩]
+
+/-- Bytes the end of caml_init_gc leaves alone: low memory outside the stored
+parameters, and the caller's side of caml_init_gc's frame pointer. -/
+def GcTailKeep (fsp : BitVec 64) (x : Nat) : Prop := (x < heapEnd ∧ OutW gcStoreWindows x) ∨ fsp.toNat ≤ x
+
+theorem MemSame.chain {c d e : Config} {K : Nat → Prop} (a : MemSame c d K) (b : MemSame d e K) : MemSame c e K :=
+  (a.trans b).mono fun _ h => ⟨h, h⟩
+
+/-- caml_init_gc returned. -/
+structure InitGcDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64)
+    (Hfinal : List (Nat × Nat)) (before after : Config) : Prop where
+  pc : PCAt ra after
+  regs : GHolds after.σ [(2, sp), (1, ra), (8, s0), (9, s1), (18, s2), (19, s3), (20, s4), (21, s5), (22, s6),
+    (23, s7), (24, s8), (25, s9)]
+  ready : RuntimeReady Hfinal capacity sp ra after
+  /-- The runtime's new blocks sit in front of the caller's live list. -/
+  extends_ : ∃ pre, Hfinal = pre ++ H
+
+/-- A global store window misses everything `GcTailKeep` keeps. -/
+theorem gcTail_out {fsp : BitVec 64} (high : heapEnd ≤ fsp.toNat) {a w : Nat} (v : BitVec 64)
+    (store : ⟨a, a + w⟩ ∈ gcStoreWindows) {x : Nat} (h : GcTailKeep fsp x) : OutL [(a, w, v)] x := by
+  have hE : heapEnd = 0x86800000 := rfl
+  simp only [gcStoreWindows, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, List.mem_cons,
+    W.mk.injEq, List.not_mem_nil, or_false] at store
+  rcases h with ⟨low, out⟩ | above
+  · simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true] at out
+    simp only [OutL, and_true]
+    omega
+  · simp only [OutL, and_true]
+    rw [hE] at high
+    omega
+
+/-- A quiet message's spill misses everything `GcTailKeep` keeps. -/
+theorem gcTail_spill {fsp : BitVec 64} (frame : NativeFrame fsp 80) {x : Nat} (h : GcTailKeep fsp x) :
+    OutW [⟨nativeFrameBase fsp 80, fsp.toNat⟩] x := by
+  have := frame.lower
+  simp only [OutW, and_true]
+  rcases h with ⟨low, _⟩ | above
+  · left; unfold nativeFrameBase; omega
+  · right; exact above
+
+/-- The live list when caml_init_gc returns. -/
+abbrev initGcFinal (H : List (Nat × Nat)) (blk raw mem stack entries : BitVec 64) : List (Nat × Nat) :=
+  (entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) ::
+    (mem.toNat, (majorChunkSize 0xf8000#64 + 4152#64).toNat) :: initGcH2 H blk raw
+
+theorem init_gc_finish (c d14 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM cP : Nat)
+    (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur blk raw mem stack entries : BitVec 64)
+    (A : InitGcCall H cap c1 c2 cA cM cP sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur c)
+    (Mj : InitGcMajored H cap sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk raw mem stack entries cur c d14) :
+    ∃ after, Steps d14 after ∧
+      InitGcDone H cap sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 (initGcFinal H blk raw mem stack entries) c after := by
+  have frame96 : NativeFrame sp 96 := A.frame.resize (by unfold allocHeadroom; omega) (by decide)
+  have frameIn : NativeFrame (nativeStack sp 96) (64 + (32 + allocHeadroom)) := A.frame.nested (front := 96) (by decide)
+  have frameMsg : NativeFrame (nativeStack sp 96) 80 := frameIn.resize (by unfold allocHeadroom; omega) (by decide)
+  have frameTail : NativeFrame sp 80 := A.frame.resize (by unfold allocHeadroom; omega) (by decide)
+  have fspHigh : heapEnd ≤ (nativeStack sp 96).toNat := by have := frameIn.lower; omega
+  have stack96 : (nativeStack sp 96).toNat = sp.toNat - 96 := frame96.stack_nat
+  have keepLog (a w : Nat) (v : BitVec 64) (store : ⟨a, a + w⟩ ∈ gcStoreWindows) {c' d' : Config}
+      (h : d'.σ.mem = writeLog c'.σ.mem [(a, w, v)]) : MemSame c' d' (GcTailKeep (nativeStack sp 96)) :=
+    (MemSame.of_log h).mono fun x k => gcTail_out fspHigh v store k
+  have keepEq {c' d' : Config} (h : d'.σ.mem = c'.σ.mem) : MemSame c' d' (GcTailKeep (nativeStack sp 96)) :=
+    (MemSame.of_eq h).mono fun _ _ => trivial
+  have keepCall {c' d' : Config} {l : BitVec 64} (h : GcCallDone (initGcFinal H blk raw mem stack entries) cap
+      (nativeStack sp 96) l c' d') : MemSame c' d' (GcTailKeep (nativeStack sp 96)) :=
+    ⟨fun x k => h.memory x (gcTail_spill frameMsg k)⟩
+  have quietAt {d' : Config} (k : MemSame d14 d' (GcTailKeep (nativeStack sp 96))) :
+      LPins8 d'.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8) :=
+    lpins8_observed Mj.quiet fun i hi => k.same _ (Or.inl ⟨by unfold Layout.sym_caml_verb_gc heapEnd; omega, by
+      simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr,
+        Layout.sym_caml_verb_gc, and_true]; omega⟩)
+  have wordAt {d' : Config} (k : MemSame d14 d' (GcTailKeep (nativeStack sp 96))) (a : Nat)
+      (apart : a + 8 ≤ 0x80064858 ∨ (0x8006485c ≤ a ∧ a + 8 ≤ 0x800648b0) ∨ (0x800648c8 ≤ a ∧ a + 8 ≤ 0x86800000)) :
+      bytesT d'.σ.mem a 8 = bytesT d14.σ.mem a 8 :=
+    k.word fun i hi => Or.inl ⟨by unfold heapEnd; omega, by
+      simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true]
+      omega⟩
+  have regs14 := Mj.regs
+  have link14 : jal_8001f3a4_call.link.toNat % 4 = 0 := by decide
+  -- Max_major_window check
+  obtain ⟨e1, run1, p1⟩ := (init_gc_window_check d14 jal_8001f3a4_call.link (vsaReg d14 10) Mj.ready.toLeafInput
+    ⟨gholds_lookup (n := 23) _ regs14 rfl, OCaml.Vm.Boot.WhileMinElfParse.gpr_of_ready Mj.ready 10 (by decide) (by decide), trivial⟩).run d14
+    ⟨Mj.pc, rfl⟩
+  have g1 := GprsSame.of_post p1 (by decide)
+  have r1 := Mj.ready.stack_log p1 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g1.get (by decide) (by decide) (by decide) Mj.ready.stack) (g1.get (by decide) (by decide) (by decide) Mj.ready.raReg)
+    link14 frameIn (by simp only [LogInW])
+  have k1 := keepEq p1.memory
+  have win := globalWindow_ok (H := initGcFinal H blk raw mem stack entries) (lo := majorWindowAddr) (hi := majorWindowAddr + 4)
+    (by decide) (by decide) (by decide) (fun a lo hi => by unfold majorWindowAddr at lo hi; unfold allocGlobal InRange; omega)
+    (by decide) (by decide)
+  have cmaj := globalWindow_ok (H := initGcFinal H blk raw mem stack entries) (lo := customMajorAddr) (hi := customMajorAddr + 8)
+    (by decide) (by decide) (by decide) (fun a lo hi => by unfold customMajorAddr at lo hi; unfold allocGlobal InRange; omega)
+    (by decide) (by decide)
+  have cmin := globalWindow_ok (H := initGcFinal H blk raw mem stack entries) (lo := customMinorAddr) (hi := customMinorAddr + 8)
+    (by decide) (by decide) (by decide) (fun a lo hi => by unfold customMinorAddr at lo hi; unfold allocGlobal InRange; omega)
+    (by decide) (by decide)
+  have cmax := globalWindow_ok (H := initGcFinal H blk raw mem stack entries) (lo := customMaxAddr) (hi := customMaxAddr + 8)
+    (by decide) (by decide) (by decide) (fun a lo hi => by unfold customMaxAddr at lo hi; unfold allocGlobal InRange; omega)
+    (by decide) (by decide)
+  have cW := cmin.cons cmax
+  -- caml_major_window = 1
+  obtain ⟨e2, run2, p2⟩ := (init_gc_window_store e1 jal_8001f3a4_call.link (vsaReg d14 10) r1.toLeafInput
+    ⟨gholds_lookup (n := 15) _ p1.regs rfl, g1.get (by decide) (by decide) (by decide) (gholds_lookup (n := 24) _ regs14 rfl),
+      gholds_lookup (n := 10) _ p1.regs rfl, trivial⟩).run e1 ⟨p1.pc, rfl⟩
+  have g2 := GprsSame.of_post p2 (by decide)
+  have r2 := r1.window_log p2 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g2.get (by decide) (by decide) (by decide) r1.stack) (g2.get (by decide) (by decide) (by decide) r1.raReg) link14
+    (by simp only [LogInW, InsideW, majorWindowAddr]; decide) win.pins win.domain win.pool win.heap
+  have k2 := keepLog _ _ _ (by simp [gcStoreWindows]) p2.memory
+  -- caml_custom_major_ratio = 44
+  obtain ⟨e3, run3, p3⟩ := (init_gc_custom_major e2 jal_8001f3a4_call.link (vsaReg d14 10) r2.toLeafInput
+    ⟨gholds_lookup (n := 15) _ p2.regs rfl, (g1.trans g2).get (by decide) (by decide) (by decide)
+      (gholds_lookup (n := 25) _ regs14 rfl), gholds_lookup (n := 10) _ p2.regs rfl, trivial⟩).run e2 ⟨p2.pc, rfl⟩
+  have g3 := GprsSame.of_post p3 (by decide)
+  have r3 := r2.window_log p3 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g3.get (by decide) (by decide) (by decide) r2.stack) (g3.get (by decide) (by decide) (by decide) r2.raReg) link14
+    (by simp only [LogInW, InsideW, customMajorAddr]; decide) cmaj.pins cmaj.domain cmaj.pool cmaj.heap
+  have k3 := keepLog _ _ _ (by simp [gcStoreWindows]) p3.memory
+  -- the custom minor parameters; the first message's arguments
+  obtain ⟨e4, run4, p4⟩ := (init_gc_custom_minor e3 jal_8001f3a4_call.link (vsaReg d14 10)
+    (bytesT e3.σ.mem (domainField 80) 8) r3.toLeafInput
+    ⟨gholds_lookup (n := 15) _ p3.regs rfl, ((g1.trans g2).trans g3).get (by decide) (by decide) (by decide)
+      (gholds_lookup (n := 18) _ regs14 rfl), gholds_lookup (n := 10) _ p3.regs rfl, trivial⟩ r3.domainWord rfl).run e3
+    ⟨p3.pc, rfl⟩
+  have g4 := GprsSame.of_post p4 (by decide)
+  have r4 := r3.window_log p4 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g4.get (by decide) (by decide) (by decide) r3.stack) (g4.get (by decide) (by decide) (by decide) r3.raReg) link14
+    (by simp only [initGcCustomLog, LogInW, InsideW, customMinorAddr, customMaxAddr]; decide) cW.pins cW.domain cW.pool
+    cW.heap
+  have k4 : MemSame e3 e4 (GcTailKeep (nativeStack sp 96)) := (MemSame.of_log p4.memory).mono fun x k => by
+    have a := gcTail_out fspHigh 100#64 (a := customMinorAddr) (w := 8) (by simp [gcStoreWindows]) k
+    have b := gcTail_out fspHigh 8192#64 (a := customMaxAddr) (w := 8) (by simp [gcStoreWindows]) k
+    simp only [OutL, and_true] at a b
+    simp only [initGcCustomLog, OutL, and_true]
+    exact ⟨a, b⟩
+  have k04 := ((k1.chain k2).chain k3).chain k4
+  have g04 := ((g1.trans g2).trans g3).trans g4
+  -- caml_gc_message(…, minor heap size)
+  obtain ⟨m1, runm1, M1⟩ := (ready_gc_message_call jal_8001f408_call_shape jal_8001f408_call_decode
+    jal_8001f408_call_target (jal_8001f408_call_pins p4.image) r4 frameMsg (gholds_lookup (n := 10) _ p4.regs rfl)
+    (quietAt k04) (by decide)).run e4 ⟨p4.pc, rfl⟩
+  have km1 := keepCall M1
+  -- message 2: the major heap size
+  obtain ⟨e5, run5, p5⟩ := (init_gc_msg_heap m1 jal_8001f408_call.link (vsaReg m1 10) 0xf8000#64 M1.ready.toLeafInput
+    ⟨(g04.trans M1.same).get (by decide) (by decide) (by decide) (gholds_lookup (n := 8) _ regs14 rfl),
+      OCaml.Vm.Boot.WhileMinElfParse.gpr_of_ready M1.ready 10 (by decide) (by decide), trivial⟩).run m1 ⟨M1.pc, rfl⟩
+  have g5 := GprsSame.of_post p5 (by decide)
+  have r5 := M1.ready.stack_log p5 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g5.get (by decide) (by decide) (by decide) M1.ready.stack) (g5.get (by decide) (by decide) (by decide) M1.ready.raReg)
+    (by decide) frameIn (by simp only [LogInW])
+  have k05 := (k04.chain km1).chain (keepEq p5.memory)
+  obtain ⟨m2, runm2, M2⟩ := (ready_gc_message_call jal_8001f41c_call_shape jal_8001f41c_call_decode
+    jal_8001f41c_call_target (jal_8001f41c_call_pins p5.image) r5 frameMsg (gholds_lookup (n := 10) _ p5.regs rfl)
+    (quietAt k05) (by decide)).run e5 ⟨p5.pc, rfl⟩
+  have k06 := k05.chain (keepCall M2)
+  have g06 := ((g04.trans M1.same).trans g5).trans M2.same
+  -- message 3: caml_percent_free
+  obtain ⟨e6, run6, p6⟩ := (init_gc_msg_free m2 jal_8001f41c_call.link (vsaReg m2 10) 120#64
+    (by rw [wordAt k06 _ (by unfold percentFreeAddr; omega)]; exact Mj.freeWord) M2.ready.toLeafInput
+    ⟨g06.get (by decide) (by decide) (by decide) (gholds_lookup (n := 9) _ regs14 rfl),
+      OCaml.Vm.Boot.WhileMinElfParse.gpr_of_ready M2.ready 10 (by decide) (by decide), trivial⟩).run m2 ⟨M2.pc, rfl⟩
+  have g7' := GprsSame.of_post p6 (by decide)
+  have r6 := M2.ready.stack_log p6 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g7'.get (by decide) (by decide) (by decide) M2.ready.stack) (g7'.get (by decide) (by decide) (by decide) M2.ready.raReg)
+    (by decide) frameIn (by simp only [LogInW])
+  have k07 := k06.chain (keepEq p6.memory)
+  obtain ⟨m3, runm3, M3⟩ := (ready_gc_message_call jal_8001f430_call_shape jal_8001f430_call_decode
+    jal_8001f430_call_target (jal_8001f430_call_pins p6.image) r6 frameMsg (gholds_lookup (n := 10) _ p6.regs rfl)
+    (quietAt k07) (by decide)).run e6 ⟨p6.pc, rfl⟩
+  have k08 := k07.chain (keepCall M3)
+  have g08 := (g06.trans g7').trans M3.same
+  -- message 4: caml_percent_max
+  obtain ⟨e7, run7, p7⟩ := (init_gc_msg_max m3 jal_8001f430_call.link (vsaReg m3 10) 500#64
+    (by rw [wordAt k08 _ (by unfold percentMaxAddr; omega)]; exact Mj.maxWord) M3.ready.toLeafInput
+    ⟨g08.get (by decide) (by decide) (by decide) (gholds_lookup (n := 19) _ regs14 rfl),
+      OCaml.Vm.Boot.WhileMinElfParse.gpr_of_ready M3.ready 10 (by decide) (by decide), trivial⟩).run m3 ⟨M3.pc, rfl⟩
+  have g9' := GprsSame.of_post p7 (by decide)
+  have r7 := M3.ready.stack_log p7 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g9'.get (by decide) (by decide) (by decide) M3.ready.stack) (g9'.get (by decide) (by decide) (by decide) M3.ready.raReg)
+    (by decide) frameIn (by simp only [LogInW])
+  have k09 := k08.chain (keepEq p7.memory)
+  obtain ⟨m4, runm4, M4⟩ := (ready_gc_message_call jal_8001f444_call_shape jal_8001f444_call_decode
+    jal_8001f444_call_target (jal_8001f444_call_pins p7.image) r7 frameMsg (gholds_lookup (n := 10) _ p7.regs rfl)
+    (quietAt k09) (by decide)).run e7 ⟨p7.pc, rfl⟩
+  have k10 := k09.chain (keepCall M4)
+  -- message 5: caml_major_heap_increment (a percentage)
+  obtain ⟨e8, run8, p8⟩ := (init_gc_msg_incr m4 jal_8001f444_call.link (vsaReg m4 10) 15#64
+    (by rw [wordAt k10 _ (by unfold majorIncrementAddr; omega)]; exact Mj.incrWord) (by decide) M4.ready.toLeafInput
+    ⟨OCaml.Vm.Boot.WhileMinElfParse.gpr_of_ready M4.ready 10 (by decide) (by decide), trivial⟩).run m4 ⟨M4.pc, rfl⟩
+  have g11' := GprsSame.of_post p8 (by decide)
+  have r8 := M4.ready.stack_log p8 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g11'.get (by decide) (by decide) (by decide) M4.ready.stack) (g11'.get (by decide) (by decide) (by decide) M4.ready.raReg)
+    (by decide) frameIn (by simp only [LogInW])
+  have k11 := k10.chain (keepEq p8.memory)
+  obtain ⟨m5, runm5, M5⟩ := (ready_gc_message_call jal_8001f464_call_shape jal_8001f464_call_decode
+    jal_8001f464_call_target (jal_8001f464_call_pins p8.image) r8 frameMsg (gholds_lookup (n := 10) _ p8.regs rfl)
+    (quietAt k11) (by decide)).run e8 ⟨p8.pc, rfl⟩
+  have k12 := k11.chain (keepCall M5)
+  -- message 6: caml_allocation_policy
+  obtain ⟨e9, run9, p9⟩ := (init_gc_msg_policy m5 jal_8001f464_call.link (vsaReg m5 10) 2#64
+    (by rw [wordAt k12 _ (by unfold allocationPolicyAddr; omega)]; exact Mj.policyWord) M5.ready.toLeafInput
+    ⟨OCaml.Vm.Boot.WhileMinElfParse.gpr_of_ready M5.ready 10 (by decide) (by decide), trivial⟩).run m5 ⟨M5.pc, rfl⟩
+  have g13' := GprsSame.of_post p9 (by decide)
+  have r9 := M5.ready.stack_log p9 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g13'.get (by decide) (by decide) (by decide) M5.ready.stack) (g13'.get (by decide) (by decide) (by decide) M5.ready.raReg)
+    (by decide) frameIn (by simp only [LogInW])
+  have k13 := k12.chain (keepEq p9.memory)
+  obtain ⟨m6, runm6, M6⟩ := (ready_gc_message_call jal_8001f47c_call_shape jal_8001f47c_call_decode
+    jal_8001f47c_call_target (jal_8001f47c_call_pins p9.image) r9 frameMsg (gholds_lookup (n := 10) _ p9.regs rfl)
+    (quietAt k13) (by decide)).run e9 ⟨p9.pc, rfl⟩
+  have k14 := k13.chain (keepCall M6)
+  -- restore; tail call caml_gc_message(…, caml_major_window)
+  have slots6 (off : Nat) (value : BitVec 64) (member : (off, value) ∈ initGcSlots ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9) :
+      bytesT m6.σ.mem (nativeFrameBase sp 96 + off) 8 = value := by
+    have bound : off + 8 ≤ 96 := by simp [initGcSlots] at member; omega
+    rw [k14.word fun i hi => Or.inr (by rw [stack96]; unfold nativeFrameBase; omega)]
+    exact Mj.slots off value member
+  obtain ⟨e10, run10, p10⟩ := (init_gc_return m6 sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 (vsaReg m6 10) jal_8001f47c_call.link
+    M6.ready.toLeafInput frame96 ⟨M6.ready.stack, OCaml.Vm.Boot.WhileMinElfParse.gpr_of_ready M6.ready 10 (by decide) (by decide), trivial⟩
+    slots6).run m6 ⟨by have h := M6.pc; rwa [show jal_8001f47c_call.link = 0x8001f480#64 from by decide] at h, rfl⟩
+  have g15 := GprsSame.of_post p10 (by decide)
+  have r10 : RuntimeReady (initGcFinal H blk raw mem stack entries) cap sp ra e10 :=
+    M6.ready.stack_log p10 (by decide) (by simp only [keysG]; decide) (by decide) (gholds_lookup (n := 2) _ p10.regs rfl)
+      (gholds_lookup (n := 1) _ p10.regs rfl) A.ready.aligned frame96 (by simp only [LogInW])
+  have k15 := k14.chain (keepEq p10.memory)
+  obtain ⟨fin, runf, Q⟩ := ready_gc_message e10 (initGcFinal H blk raw mem stack entries) cap sp ra 32#64 p10.pc r10
+    frameTail (gholds_lookup (n := 10) _ p10.regs rfl) (quietAt k15)
+  have regs10 := p10.regs
+  have gQ := Q.same
+  refine ⟨fin, run1.trans (run2.trans (run3.trans (run4.trans (runm1.trans (run5.trans (runm2.trans (run6.trans
+    (runm3.trans (run7.trans (runm4.trans (run8.trans (runm5.trans (run9.trans (runm6.trans (run10.trans
+    runf))))))))))))))), {
+    pc := Q.pc
+    regs := ⟨gholds_lookup (n := 2) _ Q.regs rfl, gholds_lookup (n := 1) _ Q.regs rfl,
+      gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 8) _ regs10 rfl),
+      gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 9) _ regs10 rfl),
+      gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 18) _ regs10 rfl),
+      gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 19) _ regs10 rfl),
+      gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 20) _ regs10 rfl),
+      gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 21) _ regs10 rfl),
+      gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 22) _ regs10 rfl),
+      gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 23) _ regs10 rfl),
+      gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 24) _ regs10 rfl),
+      gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 25) _ regs10 rfl), trivial⟩
+    ready := Q.ready
+    extends_ := ⟨[(entries.toNat, (32768#64).toNat), (stack.toNat, (24#64).toNat),
+      (mem.toNat, (majorChunkSize 0xf8000#64 + 4152#64).toNat), (raw.toNat, (0x200000#64 + 4096#64).toNat),
+      (blk.toNat, 16384)], rfl⟩ }⟩
+
+/-- **caml_init_gc** at the default parameters, from its entry to its return:
+the page table, the minor heap, the allocation policy, the major heap and the
+quiet parameter messages. -/
+theorem caml_init_gc (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM cP : Nat)
+    (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur : BitVec 64)
+    (A : InitGcCall H cap c1 c2 cA cM cP sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur c) :
+    ∃ Hfinal after, Steps c after ∧ InitGcDone H cap sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 Hfinal c after := by
+  obtain ⟨blk, d4, run4, T⟩ := init_gc_to_table c H cap c1 c2 cA cM cP sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur A
+  obtain ⟨raw, d7, run7, Mi⟩ := init_gc_to_minor c d4 H cap c1 c2 cA cM cP sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3
+    cur blk A T
+  obtain ⟨mem, stack, entries, d14, run14, Mj⟩ := init_gc_to_major c d7 H cap c1 c2 cA cM cP sp ra s0 s1 s2 s3 s4 s5 s6 s7
+    s8 s9 t1 t2 t3 cur blk raw A Mi
+  obtain ⟨fin, runf, D⟩ := init_gc_finish c d14 H cap c1 c2 cA cM cP sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur blk
+    raw mem stack entries A Mj
+  exact ⟨_, fin, run4.trans (run7.trans (run14.trans runf)), D⟩
 
 end OCaml.Vm.Boot.Startup
