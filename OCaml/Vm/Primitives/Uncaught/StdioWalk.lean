@@ -1,6 +1,7 @@
-import OCaml.Vm.Primitives.Uncaught.StdioFclose
+import OCaml.Vm.Primitives.Uncaught.StdioState
 import OCaml.Vm.Primitives.Uncaught.FwalkSglue
 import OCaml.Vm.Primitives.Uncaught.StdioExitHandler
+import OCaml.Vm.Primitives.ExitPath.LibcExitHandler
 
 /-!
 # `_fwalk_sglue` closing the standard streams
@@ -187,41 +188,7 @@ theorem fwalk_visit {b c : Config} {spw reent g fp e fd : BitVec 64} {ds : List 
     (k6 23 (by decide) (by decide) (by decide)).trans (W5.pin rfl), trivial⟩
 
 open OCaml.Vm.Primitives.Uncaught.StdioFlush (stdinFile stdoutFile stderrFile)
-
-/-- `_impure_data`, newlib's reentrancy structure. -/
-def impure : BitVec 64 := 0x80064668#64
-/-- `__sglue`, the glue of the three standard streams. -/
-def sglue : BitVec 64 := 0x800643a0#64
-
-/-- **A standard stream at exit**: flags, descriptor, no lock flag, closed by
-`__sclose` on itself, no buffers, a live console descriptor. -/
-structure StdStream (m : Std.ExtHashMap Nat (BitVec 8)) (fp fd flags : BitVec 64) : Prop where
-  flagsAt : bytesVal .lh (read8 m (fp + 16#64).toNat) = flags
-  fileAt : bytesVal .lh (read8 m (fp + 18#64).toNat) = fd
-  flags2 : bytesVal .lw (read8 m (fp + 176#64).toNat) &&& 1#64 = 0#64
-  close : bytesVal .ld (read8 m (fp + 80#64).toNat) = scloseFn
-  cookie : bytesVal .ld (read8 m (fp + 48#64).toNat) = fp
-  ub : bytesVal .ld (read8 m (fp + 88#64).toNat) = 0#64
-  lb : bytesVal .ld (read8 m (fp + 120#64).toNat) = 0#64
-  slot : FdLive m fd
-
-/-- **newlib's stdio at exit**: one glue of three streams (stdin read-only and
-never read, stdout never written, stderr unbuffered with nothing pending),
-and `__cleanup` set. Supplied by the state `fprintf(stderr, …)` leaves
-(`FprintfReport`). -/
-structure StdioAtExit (m : Std.ExtHashMap Nat (BitVec 8)) : Prop where
-  next : bytesVal .ld (read8 m sglue.toNat) = 0#64
-  niobs : bytesVal .lw (read8 m (sglue + 8#64).toNat) = 3#64
-  iobs : bytesVal .ld (read8 m (sglue + 16#64).toNat) = stdinFile
-  cleanup : bytesVal .ld (read8 m (impure + 72#64).toNat) ≠ 0#64
-  stdin : StdStream m stdinFile 0#64 4#64
-  stdout : StdStream m stdoutFile 1#64 9#64
-  stderr : StdStream m stderrFile 2#64 0x201a#64
-  stdinR : bytesVal .lw (read8 m (stdinFile + 8#64).toNat) = 0#64
-  stdinUR : bytesVal .lw (read8 m (stdinFile + 112#64).toNat) = 0#64
-  stdoutBase : bytesVal .ld (read8 m (stdoutFile + 24#64).toNat) = 0#64
-  stderrBase : bytesVal .ld (read8 m (stderrFile + 24#64).toNat) ≠ 0#64
-  stderrPos : bytesVal .ld (read8 m stderrFile.toNat) = bytesVal .ld (read8 m (stderrFile + 24#64).toNat)
+open OCaml.Vm.Primitives.Uncaught.StdioState
 
 /-- The address facts of a stream's fields. -/
 structure StreamWindows (fp : BitVec 64) : Prop where
@@ -277,23 +244,6 @@ theorem StdStream.closable {m : Std.ExtHashMap Nat (BitVec 8)} {reent fp fd flag
   lbR := w.lbR
   lb := h.lb
 
-/-- The words a stream's close reads. -/
-def StreamReads (fp fd : BitVec 64) (a : Nat) : Prop :=
-  a = (fp + 16#64).toNat ∨ a = (fp + 18#64).toNat ∨ a = (fp + 176#64).toNat ∨ a = (fp + 80#64).toNat ∨
-    a = (fp + 48#64).toNat ∨ a = (fp + 88#64).toNat ∨ a = (fp + 120#64).toNat ∨ a = (0x80064918#64).toNat ∨
-    a = (fdSlot fd).toNat
-
-theorem StdStream.transport {m m' : Std.ExtHashMap Nat (BitVec 8)} {fp fd flags : BitVec 64}
-    (h : StdStream m fp fd flags) (r : ∀ a, StreamReads fp fd a → read8 m' a = read8 m a) : StdStream m' fp fd flags where
-  flagsAt := by rw [r _ (Or.inl rfl)]; exact h.flagsAt
-  fileAt := by rw [r _ (Or.inr (Or.inl rfl))]; exact h.fileAt
-  flags2 := by rw [r _ (Or.inr (Or.inr (Or.inl rfl)))]; exact h.flags2
-  close := by rw [r _ (Or.inr (Or.inr (Or.inr (Or.inl rfl))))]; exact h.close
-  cookie := by rw [r _ (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))]; exact h.cookie
-  ub := by rw [r _ (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl))))))]; exact h.ub
-  lb := by rw [r _ (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))))]; exact h.lb
-  slot := fdLive_of_read h.slot (r _ (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl rfl)))))))))
-    (r _ (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr rfl)))))))))
 
 theorem readWindow_of {a : BitVec 64} {w : Nat}
     (h : 0x80000000 ≤ a.toNat ∧ a.toNat + w ≤ 0x100000000 ∧
@@ -388,5 +338,243 @@ theorem fwalk_open {c : Config} {sp code : BitVec 64} (ok : ExitOk c) (image : E
     exact OCaml.Vm.Sim.word_writeLog_at _ _ 7 _ _ (by simp only [FwalkSglue.proLog, regsAt_of g8, regsAt_of g2, walkSp, sp80]; rfl)
       (by simp only [FwalkSglue.proLog, List.drop, OutLRange, regsAt_of g2, walkSp, sp80, n 64 (by decide),
             n 56 (by decide), and_true]; omega)
+
+theorem startPins_keys (sp : BitVec 64) : keysG (startPins sp) = [2, 18, 19, 20, 21, 22, 23] := rfl
+
+/-- Repin the stream `s0` after an `addi s0, s0, 184` block. -/
+theorem Walk.setFp {b c d : Config} {spw reent g e acc fp fp' pc v : BitVec 64} {ds : List (BitVec 64 × BitVec 64)}
+    {regs : GRegs} (W : Walk b spw reent g ds fp e acc c) (p : WriteRegistersPost [8] [] c pc v regs d)
+    (cover : 8 ∈ keysG regs) (h8 : gprGet d.σ 8 = some fp') : Walk b spw reent g ds fp' e acc d :=
+  have fr (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [8]) : gprGet d.σ n = gprGet c.σ n :=
+    p.toEffectPost.gpr_frame (by decide) n lo hi out
+  W.stepTo p (fun _ _ => trivial) (by decide) (fun n hn => by simp at hn; subst hn; exact cover) (by decide)
+    ⟨(fr 2 (by decide) (by decide) (by decide)).trans (W.pin rfl), h8,
+      (fr 9 (by decide) (by decide) (by decide)).trans (W.pin rfl), (fr 18 (by decide) (by decide) (by decide)).trans (W.pin rfl),
+      (fr 19 (by decide) (by decide) (by decide)).trans (W.pin rfl), (fr 20 (by decide) (by decide) (by decide)).trans (W.pin rfl),
+      (fr 21 (by decide) (by decide) (by decide)).trans (W.pin rfl), (fr 22 (by decide) (by decide) (by decide)).trans (W.pin rfl),
+      (fr 23 (by decide) (by decide) (by decide)).trans (W.pin rfl), trivial⟩
+
+/-- Repin the glue `s2` after `ld s2, 0(s2)`. -/
+theorem Walk.setGlue {b c d : Config} {spw reent g g' e acc fp pc v : BitVec 64} {ds : List (BitVec 64 × BitVec 64)}
+    {regs : GRegs} (W : Walk b spw reent g ds fp e acc c) (p : WriteRegistersPost [18] [] c pc v regs d)
+    (cover : 18 ∈ keysG regs) (h18 : gprGet d.σ 18 = some g') : Walk b spw reent g' ds fp e acc d :=
+  have fr (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [18]) : gprGet d.σ n = gprGet c.σ n :=
+    p.toEffectPost.gpr_frame (by decide) n lo hi out
+  W.stepTo p (fun _ _ => trivial) (by decide) (fun n hn => by simp at hn; subst hn; exact cover) (by decide)
+    ⟨(fr 2 (by decide) (by decide) (by decide)).trans (W.pin rfl), (fr 8 (by decide) (by decide) (by decide)).trans (W.pin rfl),
+      (fr 9 (by decide) (by decide) (by decide)).trans (W.pin rfl), h18,
+      (fr 19 (by decide) (by decide) (by decide)).trans (W.pin rfl), (fr 20 (by decide) (by decide) (by decide)).trans (W.pin rfl),
+      (fr 21 (by decide) (by decide) (by decide)).trans (W.pin rfl), (fr 22 (by decide) (by decide) (by decide)).trans (W.pin rfl),
+      (fr 23 (by decide) (by decide) (by decide)).trans (W.pin rfl), trivial⟩
+
+/-- **A visit of a standard stream**, from its facts at the walk's call. -/
+theorem fwalk_visit_std {b c d : Config} {spw fp fd flags e : BitVec 64} {ds : List (BitVec 64 × BitVec 64)}
+    (W : Walk b spw impure sglue ds fp e 0#64 d) (frame : NativeFrame spw 80) (hs : StdStream c.σ.mem fp fd flags)
+    (reads : ∀ a, StreamReads fp fd a → read8 d.σ.mem a = read8 c.σ.mem a)
+    (cleanup : read8 d.σ.mem (impure + 72#64).toNat = read8 c.σ.mem (impure + 72#64).toNat)
+    (cleanupNz : bytesVal .ld (read8 c.σ.mem (impure + 72#64).toNat) ≠ 0#64) (win : StreamWindows fp)
+    (pl : Placed impure fp) (flush : FlushCall d spw fp impure) (live : flags ≠ 0#64) (notStr : flags &&& 512#64 = 0#64)
+    (small : flags.toNat < 0x8000) (gt : guardB .BGEU 1#64 flags = false) (fdNe : fd ≠ 18446744073709551615#64) :
+    FnSummary 0x8003f6c8#64 (fun d' => d' = d)
+      (fun d' => PCAt 0x8003f6ec#64 d' ∧ Walk b spw impure sglue ((fp, fd) :: ds) fp e 0#64 d') :=
+  have hs' := hs.transport reads
+  fwalk_visit W frame (StdStream.closable hs' win (readWindow_of (by decide)) (by rw [cleanup]; exact cleanupNz) live notStr) pl
+    flush hs'.fileAt fdNe (by rw [lhu_of_lh _ (by rw [hs'.flagsAt]; exact small), hs'.flagsAt]; exact gt)
+
+/-- The end of the three streams. -/
+def streamsEnd : BitVec 64 := 0x8007cc60#64
+
+/-- **`_fwalk_sglue` over the standard streams, back in `exit`**: one glue of
+three streams, each closed; `s0` (the status) and `ra` restored. -/
+theorem fwalk_rest {c c2 : Config} {sp code : BitVec 64} (S : WalkStarted c sp code c2) (frame : NativeFrame sp 160)
+    (stdio : StdioAtExit c.σ.mem) :
+    FnSummary 0x8003f69c#64 (fun d => d = c2) (ExitPath.HandlerReturned code c) := by
+  have lo := frame.lower
+  simp only [Vsa.Sim.DlHeap.heapEnd] at lo
+  have sp80 : walkSp sp = sp - 80#64 := by unfold walkSp; rw [BitVec.sub_eq_add_neg]; rfl
+  have wN : (walkSp sp).toNat = sp.toNat - 80 := by rw [sp80, BitVec.toNat_sub]; simp; omega
+  have frameW : NativeFrame (walkSp sp) 80 := frame_callee (front := 80) (size := 80) frame (by decide) _ (by decide)
+  have rd {d : Config} {ds : List (BitVec 64 × BitVec 64)} {pins : GRegs}
+      (F : Frame c2 (Done (walkSp sp) ds) pins WalkHold d) (a : Nat) (low : a + 8 ≤ Vsa.Sim.DlHeap.heapEnd)
+      (kept : ∀ j, j < 8 → (a + j < 0x80064d48 ∨ 0x80064d48 + 4 ≤ a + j) ∧
+        ∀ p ∈ ds, (a + j < p.1.toNat ∨ p.1.toNat + 18 ≤ a + j) ∧
+          (a + j < (fdSlot p.2).toNat ∨ (fdSlot p.2).toNat + 4 ≤ a + j)) :
+      read8 d.σ.mem a = read8 c.σ.mem a := by
+    simp only [Vsa.Sim.DlHeap.heapEnd] at low
+    exact (F.ctx.read fun j hj => ⟨Or.inl (by omega), (kept j hj).1, (kept j hj).2⟩).trans
+      (S.ctx.read fun j _ => Or.inl (by omega))
+  have F2 := S.frame
+  have g18 : gprGet c2.σ 18 = some sglue := F2.pin rfl
+  -- `g->_niobs = 3 > 0`
+  apply summary_bind (FwalkSglue.niobs_fast c2 (regsAt c2) F2.leaf
+    (by simp only [FwalkSglue.niobs_input, GHolds]; exact ⟨F2.reg 10 (by decide), gpr_some (gpr_some_of g18), trivial⟩)
+    (by rw [regsAt_of g18]; exact readWindow_of (by decide))
+    (by simp only [FwalkSglue.niobs_loads, List.getD_cons_zero, regsAt_of g18]
+        rw [rd F2 _ (by decide) (by decide), stdio.niobs]; decide)) (fun _ p => p.pc)
+  intro c3 p3
+  have F3 := F2.step p3 (fun _ _ => trivial) (by decide) (by simp [FwalkSglue.niobs_regs, keysG]) (by decide)
+    (by rw [startPins_keys]; decide)
+  have g15 : gprGet c3.σ 15 = some 3#64 := by
+    have := gholds_lookup (n := 15) _ p3.regs rfl
+    simp only [FwalkSglue.niobs_loads, List.getD_cons_zero, regsAt_of g18] at this
+    rw [this, rd F2 _ (by decide) (by decide), stdio.niobs]
+  have g18' : gprGet c3.σ 18 = some sglue := F3.pin rfl
+  -- `fp = g->_iobs`, `end = fp + 184 * 3`
+  apply summary_bind (FwalkSglue.bound_fast c3 (regsAt c3) F3.leaf
+    (by simp only [FwalkSglue.bound_input, GHolds]
+        exact ⟨F3.reg 10 (by decide), gpr_some (gpr_some_of g15), gpr_some (gpr_some_of g18'), trivial⟩)
+    (by rw [regsAt_of g18']; exact readWindow_of (by decide))) (fun _ p => p.pc)
+  intro c4 p4
+  have iobs : bytesVal .ld (read8 c3.σ.mem (sglue + 16#64).toNat) = stdinFile := by
+    rw [rd F3 _ (by decide) (by decide), stdio.iobs]
+  have o4 := p4.regs
+  simp only [FwalkSglue.bound_regs, FwalkSglue.bound_loads, List.getD_cons_zero, regsAt_of g15, regsAt_of g18', iobs,
+    GHolds] at o4
+  obtain ⟨h9, h8, -⟩ := o4
+  have fr4 (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [8, 9, 15]) : gprGet c4.σ n = gprGet c3.σ n :=
+    p4.gpr_frame (by decide) n lo hi out
+  have W4 : Walk c2 (walkSp sp) impure sglue [] stdinFile streamsEnd 0#64 c4 :=
+    F3.stepTo p4 (fun _ _ => trivial) (by decide) (by simp [FwalkSglue.bound_regs, keysG]) (by decide)
+      ⟨(fr4 2 (by decide) (by decide) (by decide)).trans (F3.pin rfl), h8, h9.trans (by decide),
+        (fr4 18 (by decide) (by decide) (by decide)).trans (F3.pin rfl),
+        (fr4 19 (by decide) (by decide) (by decide)).trans (F3.pin rfl),
+        (fr4 20 (by decide) (by decide) (by decide)).trans (F3.pin rfl),
+        (fr4 21 (by decide) (by decide) (by decide)).trans (F3.pin rfl),
+        (fr4 22 (by decide) (by decide) (by decide)).trans (F3.pin rfl),
+        (fr4 23 (by decide) (by decide) (by decide)).trans (F3.pin rfl), trivial⟩
+  have pl (fp : BitVec 64) (h : 0x80065098 ≤ fp.toNat ∧ fp.toNat + 184 ≤ Vsa.Sim.DlHeap.heapEnd) : Placed impure fp :=
+    ⟨h.2, h.1, by decide, by decide⟩
+  have win (fp : BitVec 64) (h : Layout.sym_tohost + 16 ≤ fp.toNat ∧ 0x80061fb0 ≤ fp.toNat ∧
+      fp.toNat + 184 ≤ 0x100000000 ∧ fp.toNat % 8 = 0) : StreamWindows fp :=
+    streamWindows h.1 h.2.1 h.2.2.1 h.2.2.2
+  -- stdin
+  apply summary_bind (fwalk_visit_std W4 frameW stdio.stdin
+    (fun a (ha : StreamReads stdinFile 0#64 a) => by
+      rcases ha with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact rd W4 _ (by decide) (by decide))
+    (rd W4 _ (by decide) (by decide)) stdio.cleanup (win _ (by decide)) (pl _ (by decide))
+    (flushCall_stdin frameW (by rw [rd W4 (stdinFile + 16#64).toNat (by decide) (by decide)]; exact stdio.stdin.flagsAt)
+      (by rw [rd W4 (stdinFile + 8#64).toNat (by decide) (by decide)]; exact stdio.stdinR)
+      (by rw [rd W4 (stdinFile + 112#64).toNat (by decide) (by decide)]; exact stdio.stdinUR))
+    (by decide) (by decide) (by decide) (by decide) (by decide)) (fun _ p => p.1)
+  intro c5 h5
+  have W5 := h5.2
+  apply summary_bind (FwalkSglue.nextMore_fast c5 (regsAt c5) W5.leaf
+    (by simp only [FwalkSglue.nextMore_input, GHolds]
+        exact ⟨gpr_some (gpr_some_of (W5.pin (n := 8) rfl)), gpr_some (gpr_some_of (W5.pin (n := 9) rfl)),
+          W5.reg 10 (by decide), trivial⟩)
+    (by rw [regsAt_of (W5.pin (n := 8) rfl), regsAt_of (W5.pin (n := 9) rfl)]; decide)) (fun _ p => p.pc)
+  intro c6 p6
+  have W6 : Walk c2 (walkSp sp) impure sglue [(stdinFile, 0#64)] stdoutFile streamsEnd 0#64 c6 :=
+    W5.setFp p6 (by simp [FwalkSglue.nextMore_regs, keysG]) (by
+      rw [gholds_lookup (n := 8) _ p6.regs rfl, regsAt_of (W5.pin (n := 8) rfl)]; decide)
+  -- stdout
+  apply summary_bind (fwalk_visit_std W6 frameW stdio.stdout
+    (fun a (ha : StreamReads stdoutFile 1#64 a) => by
+      rcases ha with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact rd W6 _ (by decide) (by decide))
+    (rd W6 _ (by decide) (by decide)) stdio.cleanup (win _ (by decide)) (pl _ (by decide))
+    (flushCall_stdout frameW (by rw [rd W6 (stdoutFile + 16#64).toNat (by decide) (by decide)]; exact stdio.stdout.flagsAt)
+      (by rw [rd W6 (stdoutFile + 24#64).toNat (by decide) (by decide)]; exact stdio.stdoutBase))
+    (by decide) (by decide) (by decide) (by decide) (by decide)) (fun _ p => p.1)
+  intro c7 h7
+  have W7 := h7.2
+  apply summary_bind (FwalkSglue.nextMore_fast c7 (regsAt c7) W7.leaf
+    (by simp only [FwalkSglue.nextMore_input, GHolds]
+        exact ⟨gpr_some (gpr_some_of (W7.pin (n := 8) rfl)), gpr_some (gpr_some_of (W7.pin (n := 9) rfl)),
+          W7.reg 10 (by decide), trivial⟩)
+    (by rw [regsAt_of (W7.pin (n := 8) rfl), regsAt_of (W7.pin (n := 9) rfl)]; decide)) (fun _ p => p.pc)
+  intro c8 p8
+  have W8 : Walk c2 (walkSp sp) impure sglue [(stdoutFile, 1#64), (stdinFile, 0#64)] stderrFile streamsEnd 0#64 c8 :=
+    W7.setFp p8 (by simp [FwalkSglue.nextMore_regs, keysG]) (by
+      rw [gholds_lookup (n := 8) _ p8.regs rfl, regsAt_of (W7.pin (n := 8) rfl)]; decide)
+  -- stderr
+  apply summary_bind (fwalk_visit_std W8 frameW stdio.stderr
+    (fun a (ha : StreamReads stderrFile 2#64 a) => by
+      rcases ha with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> exact rd W8 _ (by decide) (by decide))
+    (rd W8 _ (by decide) (by decide)) stdio.cleanup (win _ (by decide)) (pl _ (by decide))
+    (flushCall_stderr frameW (by rw [rd W8 (stderrFile + 16#64).toNat (by decide) (by decide)]; exact stdio.stderr.flagsAt)
+      (by rw [rd W8 (stderrFile + 24#64).toNat (by decide) (by decide)]) stdio.stderrBase
+      (by rw [rd W8 stderrFile.toNat (by decide) (by decide)]; exact stdio.stderrPos))
+    (by decide) (by decide) (by decide) (by decide) (by decide)) (fun _ p => p.1)
+  intro c9 h9
+  have W9 := h9.2
+  apply summary_bind (FwalkSglue.nextDone_fast c9 (regsAt c9) W9.leaf
+    (by simp only [FwalkSglue.nextDone_input, GHolds]
+        exact ⟨gpr_some (gpr_some_of (W9.pin (n := 8) rfl)), gpr_some (gpr_some_of (W9.pin (n := 9) rfl)),
+          W9.reg 10 (by decide), trivial⟩)
+    (by rw [regsAt_of (W9.pin (n := 8) rfl), regsAt_of (W9.pin (n := 9) rfl)]; decide)) (fun _ p => p.pc)
+  intro c10 p10
+  have W10 : Walk c2 (walkSp sp) impure sglue [(stderrFile, 2#64), (stdoutFile, 1#64), (stdinFile, 0#64)] streamsEnd
+      streamsEnd 0#64 c10 :=
+    W9.setFp p10 (by simp [FwalkSglue.nextDone_regs, keysG]) (by
+      rw [gholds_lookup (n := 8) _ p10.regs rfl, regsAt_of (W9.pin (n := 8) rfl)]; decide)
+  -- `g->_next = NULL`
+  have g18c : gprGet c10.σ 18 = some sglue := W10.pin rfl
+  have nextAt : read8 c10.σ.mem sglue.toNat = read8 c.σ.mem sglue.toNat := rd W10 _ (by decide) (by decide)
+  apply summary_bind (FwalkSglue.glue_fast c10 (regsAt c10) W10.leaf
+    (by simp only [FwalkSglue.glue_input, GHolds]; exact ⟨W10.reg 10 (by decide), gpr_some (gpr_some_of g18c), trivial⟩)
+    (by rw [regsAt_of g18c]; exact readWindow_of (by decide))
+    (by simp only [FwalkSglue.glue_loads, List.getD_cons_zero, regsAt_of g18c, nextAt, stdio.next]; decide))
+    (fun _ p => p.pc)
+  intro c11 p11
+  have W11 : Walk c2 (walkSp sp) impure 0#64 [(stderrFile, 2#64), (stdoutFile, 1#64), (stdinFile, 0#64)] streamsEnd
+      streamsEnd 0#64 c11 :=
+    W10.setGlue p11 (by simp [FwalkSglue.glue_regs, keysG]) (by
+      rw [gholds_lookup (n := 18) _ p11.regs rfl]
+      simp only [FwalkSglue.glue_loads, List.getD_cons_zero, regsAt_of g18c, nextAt, stdio.next])
+  -- the epilogue
+  have spw : gprGet c11.σ 2 = some (walkSp sp) := W11.pin rfl
+  have n (off : Nat) (ho : off ≤ 80) := frame_nat (k := 80) (off := off) frame (by decide) ho
+  have hds : ∀ p ∈ [(stderrFile, 2#64), (stdoutFile, 1#64), (stdinFile, 0#64)],
+      p.1.toNat + 18 ≤ Vsa.Sim.DlHeap.heapEnd ∧ (fdSlot p.2).toNat + 4 ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+  have rdS (off : Nat) (ho : off + 8 ≤ 80) :
+      read8 c11.σ.mem (walkSp sp + BitVec.ofNat 64 off).toNat = read8 c2.σ.mem (walkSp sp + BitVec.ofNat 64 off).toNat := by
+    have e : (walkSp sp + BitVec.ofNat 64 off).toNat = sp.toNat - 80 + off := by rw [sp80]; exact n off (by omega)
+    exact W11.ctx.read fun j _ => by
+      rw [e]
+      exact ⟨Or.inr (by omega), Or.inr (by omega), fun p hp => by
+        have := hds p hp; simp only [Vsa.Sim.DlHeap.heapEnd] at this; exact ⟨Or.inr (by omega), Or.inr (by omega)⟩⟩
+  have w (off : Nat) (ho : off + 8 ≤ 80) (ao : off % 8 = 0) : ReadWindow (regsAt c11 2 + BitVec.ofNat 64 off) 8 := by
+    rw [regsAt_of spw, sp80]; exact (frame_word (k := 80) (off := off) frame (by decide) ho (by decide) ao).read
+  have raAt : bytesVal .ld (read8 c11.σ.mem (walkSp sp + 72#64).toNat) = 0x800373f0#64 := by
+    rw [rdS 72 (by decide)]; exact S.raS
+  have s0At : bytesVal .ld (read8 c11.σ.mem (walkSp sp + 64#64).toNat) = code := by
+    rw [rdS 64 (by decide)]; exact S.s0S
+  apply (FwalkSglue.leave_fast c11 0x800373f0#64 (regsAt c11) W11.leaf
+    (by simp only [FwalkSglue.leave_input, GHolds]
+        exact ⟨gpr_some (gpr_some_of spw), W11.reg 10 (by decide), gpr_some (gpr_some_of (W11.pin (n := 22) rfl)), trivial⟩)
+    (w 72 (by decide) (by decide)) (w 64 (by decide) (by decide)) (w 56 (by decide) (by decide))
+    (w 48 (by decide) (by decide)) (w 40 (by decide) (by decide)) (w 32 (by decide) (by decide))
+    (w 24 (by decide) (by decide)) (w 8 (by decide) (by decide)) (w 16 (by decide) (by decide))
+    (by rw [regsAt_of spw]; exact raAt) (by decide)).weaken (fun _ e => e)
+  intro e p
+  have o := p.regs
+  simp only [FwalkSglue.leave_regs, FwalkSglue.leave_loads, regsAt_of spw, List.getD_cons_zero, List.getD_cons_succ,
+    GHolds] at o
+  obtain ⟨-, -, -, -, -, -, -, -, -, e8, e1, -⟩ := o
+  exact
+    { ok := (W11.ctx.step p (fun _ _ => trivial) (by decide) (by simp [FwalkSglue.leave_regs, keysG])).ok
+      image := p.image
+      minstret := p.minstret
+      pc := p.pc
+      raReg := ⟨0x800373f0#64, show gprGet e.σ 1 = _ by rw [e1, raAt], by decide⟩
+      codeReg := show gprGet e.σ 8 = _ by rw [e8, s0At]
+      output := by unfold Vsa.Machine.output; rw [p.output]; exact W11.ctx.output.trans S.ctx.output }
+
+/-- **`exit`'s stdio handler, discharged**: from the stdio state at exit's
+entry (`StdioAtExit m0`), with a 160-byte native frame below the handler's
+`sp`, `stdio_exit_handler` closes the three standard streams and returns to
+`exit` with `s0` kept and nothing printed. -/
+theorem stdioExitHandler_of {sp code : BitVec 64} {m0 : Std.ExtHashMap Nat (BitVec 8)}
+    (frame : NativeFrame (sp - 16#64) 160) (deep : Vsa.Sim.DlHeap.heapEnd + ExitPath.libcExitDepth ≤ sp.toNat)
+    (stdio : StdioAtExit m0) : ExitPath.StdioExitHandler sp code m0 where
+  returns c pc ok image minstret ra spR codeR agree := by
+    have st : StdioAtExit c.σ.mem := stdio.transport fun a ha =>
+      ConsoleWrite.read8_same fun i hi => agree (a + i) (Or.inl (by
+        have := (ha.low i hi).1
+        simp only [Vsa.Sim.DlHeap.heapStart, Vsa.Sim.DlHeap.heapEnd, ExitPath.libcExitDepth] at this deep ⊢
+        omega))
+    obtain ⟨e, run, h⟩ := (summary_bind (fwalk_open ok image minstret ra spR codeR frame) (fun _ p => p.1)
+      fun d hd => fwalk_rest hd.2 frame st).run c ⟨pc, rfl⟩
+    exact ⟨e, run, h⟩
 
 end OCaml.Vm.Primitives.Uncaught.StdioWalk

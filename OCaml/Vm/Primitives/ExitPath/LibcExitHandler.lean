@@ -7,7 +7,7 @@ import OCaml.Vm.Primitives.ExitPath.LibcExitHandlerBlocks
 Once stdio has been used (`__sinit`), `__stdio_exit_handler` holds
 `stdio_exit_handler`, and `exit` calls it after `__call_exitprocs`: it walks
 the standard streams and closes them (`_fwalk_sglue` with `_fclose_r`). That
-callee is a named obligation (`StdioExitHandler`); the rest of `exit` is
+callee's contract is `StdioExitHandler`; the rest of `exit` is
 `exit_procs_run` and `exit_tail_run`, shared with the null-handler path.
 -/
 
@@ -27,23 +27,24 @@ structure HandlerReturned (code : BitVec 64) (c e : Config) : Prop where
   codeReg : gpr e 8 = some code
   output : Vsa.Machine.output e.σ = Vsa.Machine.output c.σ
 
-/-- **Named obligation: newlib's `stdio_exit_handler` returns** to `exit`,
-keeping `s0` (the status) and printing nothing: the standard streams hold
-no pending stdio output at exit (the runtime writes through its own
-channels, and `stderr` is unbuffered). Supplied by a summary of
-`_fwalk_sglue`/`_fclose_r` on the three standard streams (stdio step tables,
-A0). -/
-structure StdioExitHandler (sp code : BitVec 64) : Prop where
+/-- **newlib's `stdio_exit_handler` returns** to `exit`, keeping `s0` (the
+status) and printing nothing, from a call whose memory agrees with `m0`
+(exit's entry) outside exit's stack window. Discharged by
+`StdioWalk.stdioExitHandler_of` from the stdio state at exit
+(`StdioAtExit m0`): `_fwalk_sglue` closes the three standard streams with
+`_fclose_r`. -/
+structure StdioExitHandler (sp code : BitVec 64) (m0 : Std.ExtHashMap Nat (BitVec 8)) : Prop where
   returns : ∀ c, pcOf c = some stdioExitHandlerFn → ExitOk c → ExecutableImage c →
     (∃ v, c.σ.regs.get? Register.minstret = some v) →
     gpr c 1 = some 0x800373f0#64 → gpr c 2 = some (sp - 16#64) → gpr c 8 = some code →
+    (∀ x, (x < sp.toNat - libcExitDepth ∨ sp.toNat ≤ x) → (c.σ.mem[x]?).getD 0 = (m0[x]?).getD 0) →
     ∃ e, Steps c e ∧ HandlerReturned code c e
 
 /-- **libc `exit(code)` with the stdio exit handler installed** halts the
 machine with the low 32 bits of `code` and the console output so far. -/
 theorem libc_exit_handler_halts {ra sp code d} (h : ExitEntry ra sp code d)
     (installed : bytesVal .ld (read8 d.σ.mem stdioExitHandler.toNat) = stdioExitHandlerFn)
-    (handler : StdioExitHandler sp code) (entry : pcOf d = some 0x800373c8#64) :
+    (handler : StdioExitHandler sp code d.σ.mem) (entry : pcOf d = some 0x800373c8#64) :
     Halts d (Vsa.Machine.output d.σ) (exitStatus code).toNat := by
   have L := h.layout
   obtain ⟨d1, run1, done⟩ := (exit_procs_run h).run d ⟨entry, rfl⟩
@@ -94,7 +95,7 @@ theorem libc_exit_handler_halts {ra sp code d} (h : ExitEntry ra sp code d)
           at this; exact this)
     ctx4.ok ctx4.image ctx4.minstret
     (by have := gholds_lookup (n := 1) _ p4.regs rfl; rw [LibcExitHandlerBlocks.callHandler_call_link] at this; exact this)
-    (gholds_lookup (n := 2) _ p4.regs rfl) (gholds_lookup (n := 8) _ p4.regs rfl)
+    (gholds_lookup (n := 2) _ p4.regs rfl) (gholds_lookup (n := 8) _ p4.regs rfl) ctx4.frame
   obtain ⟨ra5, raReg5, aligned5⟩ := back.raReg
   have ctx5 : ExitCtx (sp.toNat - libcExitDepth) sp.toNat d5 d5 :=
     ⟨back.ok, back.image, back.minstret, rfl, fun _ _ => rfl⟩
