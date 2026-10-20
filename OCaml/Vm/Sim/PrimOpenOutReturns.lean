@@ -45,10 +45,10 @@ structure OpenOutRuntimeAt (L : OCaml.Layout) (Ready : Nat → Config → Prop) 
   /-- the runtime after the opening, from the heap invariant at the entry and
   everything the primitive's summary exports (the call's whole
   `CustomMemReturned` at its site, `Ready k`) -/
-  after : ∀ {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {k : Nat}
+  after : ∀ {code : Channel.OpenCode} {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {k : Nat}
     {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config},
     L.runtimeOk c → Gc.LibHeapAt H cap chs c →
-    Channel.OpenedOut imageLive Ready state k H (cap - 65616) 65616 sp ra s0 s1 s2 v head c d →
+    Channel.OpenedOut code imageLive Ready state k H (cap - 65616) 65616 sp ra s0 s1 s2 v head c d →
     L.runtimeOk d
 
 /-- **The runtime across `caml_ml_open_descriptor_out`** (named premise, lane
@@ -70,7 +70,7 @@ theorem open_out_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
     {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} (rt : OpenOutRuntimeAt L Ready state)
     (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
     (fits : s.heap.words + 3 ≤ L.budget.heapWords) (bound : s.world.chans.length < Gc.maxChannels)
-    {v : BitVec 64} (value : gpr c 10 = some v) (console : v = 3#64 ∨ v = 5#64) :
+    {v : BitVec 64} (value : gpr c 10 = some v) (descriptor : Channel.SeekFd (Channel.fdOf v) c) :
     ∃ (H : List (Nat × Nat)) (cap N k : Nat) (s0 s1 s2 : BitVec 64),
       Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c ∧
       Channel.OutInput imageLive H (cap - 65616) 65616 (BitVec.ofNat 64 N) ra s0 s1 s2 v
@@ -102,7 +102,7 @@ theorem open_out_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
   have lowM := ng.nurseryLow
   refine ⟨H, cap, N, k, s0, s1, s2, heap,
     Channel.out_input heap (Nat.lt_of_le_of_lt (Gc.placedChannels_length _ _) bound) input.toLeafInput platform
-      (roR_of_gp input.loop.gp).1 e.stack frame h0 h1 h2 value (rt.pins c input.runtime).console console,
+      (roR_of_gp input.loop.gp).1 e.stack frame h0 h1 h2 value (rt.pins c input.runtime).console descriptor,
     Channel.out_nursery heap (by omega) e.youngAligned (by omega) ng.nurseryHigh, ready, e.stack⟩
 
 /-- **The opened descriptor is a console stream**: the new output channel is

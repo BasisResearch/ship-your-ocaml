@@ -22,16 +22,16 @@ theorem open_out_payload {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp
     {live : Nat → Prop} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {k : Nat}
     {H : List (Nat × Nat)} {cap cap' charge : Nat} {sp ra r0 r1 r2 v head : BitVec 64} {c d : Config}
     (custom : Gc.CustomMemCall Ready state)
-    (o : OpenedOut live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
+    {code : Channel.OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
     (heap : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c)
     (h : OutInput live H cap' charge sp ra r0 r1 r2 v head c)
     (N : OutNursery H (Gc.placedChannels cp s.world.chans.length) c)
     (pins : Gc.F1Pins c) (data : VmPayload P s c pl cp spV high) (g : OCaml.LoopGeometry L P s c pl cp high)
     (fits : 8 * s.stack.length ≤ Layout.stackBytes)
-    (ok : openChan s.heap s.world fd true = .ok val heap' world')
+    (ok : openChan s.heap s.world fd code.out = .ok val heap' world')
     (fdWord : ((fdOf v).setWidth 32).toInt = fd) (open_ : fd ≠ -1)
     (placed : pl.φ (s.heap.alloc (.channel s.world.chans.length)).2 = some o.value.toNat) :
-    VmPayload P (openedSt s ⟨fd, true, [], [], 0, -1⟩) d pl
+    VmPayload P (openedSt s ⟨fd, code.out, [], [], 0, -1⟩) d pl
       (cp.put s.world.chans.length o.opening.record.toNat) spV high := by
   have kept := VmPayload.keep_observed data (open_out_observed custom o heap h N pins data g fits) o.output
   have block := o.block
@@ -56,7 +56,7 @@ theorem open_out_payload {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp
     simp only [OutWRange, Gc.nurseryFree, and_true] at free
     show o.value.toNat + 8 * 2 ≤ b - 8 ∨ b + 8 * old.wosize ≤ o.value.toNat - 8
     omega
-  have record := OutRecord.chanAt o.record fdWord open_ o.opening.high o.opening.align
+  have record := OpenRecord.chanAt o.record fdWord open_ o.opening.high o.opening.align
   exact VmPayload.openChan kept (openChan_fresh ok) placed layout outside record
 
 end OCaml.Vm.Sim

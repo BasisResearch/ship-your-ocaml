@@ -26,7 +26,7 @@ theorem open_out_geometry {L : OCaml.Layout} {P : Prog} {s s' : St} {pl : Place}
     {live : Nat → Prop} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {k : Nat}
     {H : List (Nat × Nat)} {cap cap' charge : Nat} {sp ra r0 r1 r2 v head : BitVec 64} {c d : Config}
     (custom : Gc.CustomMemCall Ready state)
-    (o : OpenedOut live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
+    {code : Channel.OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
     (heap : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c)
     (h : OutInput live H cap' charge sp ra r0 r1 r2 v head c)
     (N : OutNursery H (Gc.placedChannels cp s.world.chans.length) c)

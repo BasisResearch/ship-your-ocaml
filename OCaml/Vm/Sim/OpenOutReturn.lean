@@ -25,13 +25,13 @@ theorem open_out_return {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} 
     {k : Nat} {H : List (Nat × Nat)} {cap N : Nat} {r0 r1 r2 v head : BitVec 64}
     {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} (rt : OpenOutRuntimeAt L Ready state)
     (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
-    (o : OpenedOut imageLive Ready state k H (cap - 65616) 65616 (BitVec.ofNat 64 N) ra r0 r1 r2 v head c d)
+    {code : Channel.OpenCode} (o : OpenedOut code imageLive Ready state k H (cap - 65616) 65616 (BitVec.ofNat 64 N) ra r0 r1 r2 v head c d)
     (heap : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c)
     (h : OutInput imageLive H (cap - 65616) 65616 (BitVec.ofNat 64 N) ra r0 r1 r2 v head c)
     (Nur : OutNursery H (Gc.placedChannels cp s.world.chans.length) c)
     (nsp : gpr c 2 = some (BitVec.ofNat 64 N))
     (fits : 8 * (s.stack.length + 2) ≤ Layout.stackBytes)
-    (ok : openChan s.heap s.world fd true = .ok val heap' world')
+    (ok : openChan s.heap s.world fd code.out = .ok val heap' world')
     (stream : TCB.Os.lookupFd s.world.os fd.toNat = some (.stream st))
     (fdWord : ((fdOf v).setWidth 32).toInt = fd) (open_ : fd ≠ -1)
     (placed : pl.φ (s.heap.alloc (.channel s.world.chans.length)).2 = some o.value.toNat) :
@@ -136,6 +136,61 @@ theorem console_word {n : BitVec 63} (one : n.toInt = 1 ∨ n.toInt = 2) :
   · have : n = 2#63 := BitVec.eq_of_toInt_eq (by rw [e]; decide)
     subst this; decide
 
+/-- **The shared tail of both opening adapters**: from the primitive's
+equation, the opened descriptor's facts and the call site, the summary at
+every C_CALL entry. -/
+theorem prim_open_tail {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {s : St} {c0 : Config}
+    {pl : Place} {cp : ChanPlace} {sp high table entry : Nat} {value env : BitVec 64} {index : BitVec 32}
+    {name : String} {res : Val} {heap : Heap} {world : World} {n : BitVec 63} {st : TCB.Os.Stream}
+    {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
+    (code : Channel.OpenCode) (rt : OpenOutRuntimeAt L Ready state)
+    (ready : CcallReady op L P s c0 pl cp sp high (domainAt c0) table entry value env index name)
+    (hentry : (BitVec.ofNat 64 entry : BitVec 64) = code.entry)
+    (hacc : s.accu = .int n) (ok : openChan s.heap s.world n.toInt code.out = .ok res heap world)
+    (stream : TCB.Os.lookupFd s.world.os n.toInt.toNat = some (.stream st)) (open_ : n.toInt ≠ -1)
+    (seek : ∀ c, L.runtimeOk c → Channel.SeekFd (Channel.fdOf (tag64 n)) c)
+    (fdWord : ((Channel.fdOf (tag64 n)).setWidth 32).toInt = n.toInt)
+    (places : ∀ young : BitVec 64, allocPlaces name s young =
+      [((s.heap.alloc (.channel s.world.chans.length)).2, (young - 24#64).toNat + 8)])
+    (words : heap.words ≤ L.budget.heapWords) :
+    ∃ result, ∀ c, CcallSetupPost ra [s.accu] L P s pl cp sp high (domainAt c0) entry env c →
+      (∀ p ∈ allocPlaces name s (BitVec.ofNat 64 (runtimeFields c).youngPtr), pl.φ p.1 = some p.2) →
+      FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
+        (CcallReturn ra L P {s with pc := s.pc + 2, accu := res, heap := heap, world := world}
+          pl cp sp high (BitVec.ofNat 64 (domainAt c0)) (BitVec.ofNat 64 (sp - 16)) result env) := by
+  have head0 := ready.allocPlaced _ (by rw [places]; exact List.mem_singleton_self _)
+  refine ⟨BitVec.ofNat 64 ((BitVec.ofNat 64 (runtimeFields c0).youngPtr - 24#64).toNat + 8),
+    fun c setup placedAt => ?_⟩
+  have here := placedAt _ (by rw [places]; exact List.mem_singleton_self _)
+  have same : (BitVec.ofNat 64 (runtimeFields c0).youngPtr - 24#64).toNat + 8 =
+      (BitVec.ofNat 64 (runtimeFields c).youngPtr - 24#64).toNat + 8 :=
+    Option.some.inj (head0.symm.trans here)
+  rw [same]
+  obtain ⟨vRes, hRes⟩ := openChan_ok ok
+  have fits : s.heap.words + 3 ≤ L.budget.heapWords := by
+    rw [hRes.1, Heap.words_alloc] at words; exact words
+  have value : gpr c 10 = some (tag64 n) :=
+    setup.input.arguments.get (i := 0) rfl (by simp [valWord, hacc])
+  obtain ⟨H, cap, N, kk, r0, r1, r2, heapA, inp, nur, readyK, nsp⟩ :=
+    open_out_entry rt setup fits (openChan_bound ok) value (seek c setup.input.runtime)
+  have S := Channel.ml_open_descriptor code c H (cap - 65616) 65616 (BitVec.ofNat 64 N) ra r0 r1 r2 (tag64 n) _
+    rt.custom kk readyK nur inp
+  rw [hentry]
+  apply S.weaken (fun _ h => h)
+  intro d ⟨o⟩
+  have block := o.block
+  have room := nur.room
+  have topY := setup.geometry.nursery.top
+  have yNat : (BitVec.ofNat 64 (runtimeFields c).youngPtr - 24#64).toNat + 8 = o.value.toNat := by
+    rw [show (24#64 : BitVec 64) = BitVec.ofNat 64 24 from rfl, ofNat_sub_small (by omega) (by omega),
+      toNat_ofNat_small (by omega)]
+    omega
+  have placed : pl.φ (s.heap.alloc (.channel s.world.chans.length)).2 = some o.value.toNat := by
+    rw [here, yNat]
+  have r : BitVec.ofNat 64 o.value.toNat = o.value := by simp
+  rw [yNat, r]
+  exact ⟨_, open_out_return rt setup o heapA inp nur nsp ready.stackFits ok stream fdWord open_ placed⟩
+
 /-- **`caml_ml_open_descriptor_out` at every `C_CALL` site** (premises: the
 runtime across the opening, `OpenOutRuntime L`, and `GoodF1`'s console
 channels). -/
@@ -160,42 +215,64 @@ theorem prim_caml_ml_open_descriptor_out_returns {L : OCaml.Layout} {P : Prog} {
   have hentry : entry = Layout.sym_caml_ml_open_descriptor_out :=
     Option.some.inj (ready.entryName.symm.trans PrimitiveEntries.entry_caml_ml_open_descriptor_out)
   subst hentry
-  have places : ∀ young : BitVec 64, allocPlaces "caml_ml_open_descriptor_out" s young =
-      [((s.heap.alloc (.channel s.world.chans.length)).2, (young - 24#64).toNat + 8)] := fun _ => by
-    simp only [allocPlaces, hacc]
-  have head0 := ready.allocPlaced _ (by rw [places]; exact List.mem_singleton_self _)
-  refine ⟨BitVec.ofNat 64 ((BitVec.ofNat 64 (runtimeFields c0).youngPtr - 24#64).toNat + 8),
-    ⟨by decide, sem0, fun c setup placedAt => ?_⟩⟩
-  have here := placedAt _ (by rw [places]; exact List.mem_singleton_self _)
-  have same : (BitVec.ofNat 64 (runtimeFields c0).youngPtr - 24#64).toNat + 8 =
-      (BitVec.ofNat 64 (runtimeFields c).youngPtr - 24#64).toNat + 8 :=
-    Option.some.inj (head0.symm.trans here)
-  rw [same]
-  obtain ⟨vRes, hRes⟩ := openChan_ok ok
-  have fits : s.heap.words + 3 ≤ L.budget.heapWords := by
-    rw [hRes.1, Heap.words_alloc] at words; exact words
-  have value : gpr c 10 = some (tag64 n) :=
-    setup.input.arguments.get (i := 0) rfl (by simp [valWord, hacc])
-  obtain ⟨H, cap, N, kk, r0, r1, r2, heapA, inp, nur, readyK, nsp⟩ :=
-    open_out_entry rt setup fits (openChan_bound ok) value vWord
-  have S := ml_open_descriptor_out c H (cap - 65616) 65616 (BitVec.ofNat 64 N) ra r0 r1 r2 (tag64 n) _
-    rt.custom kk readyK nur inp
-  have pcEq : (BitVec.ofNat 64 Layout.sym_caml_ml_open_descriptor_out : BitVec 64) = 0x80015f50#64 := rfl
-  rw [pcEq]
-  apply S.weaken (fun _ h => h)
-  intro d ⟨o⟩
-  have block := o.block
-  have room := nur.room
-  have topY := setup.geometry.nursery.top
-  have yNat : (BitVec.ofNat 64 (runtimeFields c).youngPtr - 24#64).toNat + 8 = o.value.toNat := by
-    rw [show (24#64 : BitVec 64) = BitVec.ofNat 64 24 from rfl, ofNat_sub_small (by omega) (by omega),
-      toNat_ofNat_small (by omega)]
-    omega
-  have placed : pl.φ (s.heap.alloc (.channel s.world.chans.length)).2 = some o.value.toNat := by
-    rw [here, yNat]
-  have r : BitVec.ofNat 64 o.value.toNat = o.value := by simp
-  rw [yNat, r]
-  exact ⟨_, open_out_return rt setup o heapA inp nur nsp ready.stackFits ok stream fdWord
-    (by rcases one with e | e <;> omega) placed⟩
+  obtain ⟨result, summary⟩ := prim_open_tail Channel.openOutCode rt ready rfl hacc ok stream
+    (by rcases one with e | e <;> omega)
+    (fun c ok => console_seekFd (rt.pins c ok).console vWord) fdWord
+    (fun _ => by simp only [allocPlaces, hacc]) words
+  exact ⟨result, by decide, sem0, summary⟩
+
+/-- The stdin descriptor, tagged. -/
+theorem stdin_word {n : BitVec 63} (zero : n.toInt = 0) :
+    tag64 n = 1#64 ∧ ((Channel.fdOf (tag64 n)).setWidth 32).toInt = n.toInt := by
+  have : n = 0#63 := BitVec.eq_of_toInt_eq (by rw [zero]; decide)
+  subst this; decide
+
+/-- **The opened input descriptor is stdin**: the new input channel is open
+(`openChan_live`) in the reachable successor (`CcallSucc`), so `GoodF1`'s
+`StdinChannels` makes it descriptor 0 on the OS stdin stream. -/
+theorem open_in_stdin {P : Prog} {s : St} {heap : Heap} {world : World} {v : Val} {fd : Int}
+    (stdins : OCaml.StdinChannels P) (succ : CcallSucc P heap world)
+    (ok : openChan s.heap s.world fd false = .ok v heap world) :
+    fd = 0 ∧ TCB.Os.lookupFd s.world.os fd.toNat = some (.stream .stdin) := by
+  obtain ⟨s', reach, -, hw⟩ := succ
+  obtain ⟨live, -⟩ := openChan_live ok
+  obtain ⟨-, -, off, hw'⟩ := openChan_ok ok
+  have get : s'.world.chans[s.world.chans.length]? = some ⟨fd, false, [], [], 0, off⟩ := by
+    rw [hw, hw']; simp
+  obtain ⟨zero, -, stream⟩ := stdins s' reach _ _ get rfl (by dsimp only; omega)
+  rw [hw, hw'] at stream
+  exact ⟨zero, stream⟩
+
+/-- **`caml_ml_open_descriptor_in` at every `C_CALL` site** (premises: the
+runtime across the opening, `GoodF1`'s stdin channels, and stdin's `lseek`
+slot at every runtime config, `stdinSeek`; F1: a0-boot's
+`ConsoleRuntime.stdinSeek`). -/
+theorem prim_caml_ml_open_descriptor_in_returns {L : OCaml.Layout} {P : Prog} {op : Opcode}
+    {ra : BitVec 64} {k : Nat} (runtime : OpenOutRuntime L) (stdins : OCaml.StdinChannels P)
+    (stdinSeek : ∀ c, L.runtimeOk c → Channel.SeekFd 0#64 c) :
+    PrimReturnsAtR L P op ra k "caml_ml_open_descriptor_in" := by
+  obtain ⟨Ready, state, rt⟩ := runtime
+  intro s c0 pl cp sp high table entry value env index res heap world _reach ready sem words succ
+  have nil : s.stack.take k = [] := by
+    cases e : s.stack.take k with
+    | nil => rfl
+    | cons _ _ => rw [e] at sem; simp [primF1Impl] at sem
+  rw [nil] at sem ⊢
+  have sem0 := sem
+  obtain ⟨n, hacc⟩ : ∃ n, s.accu = .int n := by
+    cases h : s.accu <;> simp [primF1Impl, h, intArg?] at sem
+    exact ⟨_, rfl⟩
+  have ok : openChan s.heap s.world n.toInt false = .ok res heap world := by
+    simpa [primF1Impl, hacc, intArg?, opt] using sem
+  obtain ⟨zero, stream⟩ := open_in_stdin stdins succ ok
+  obtain ⟨vWord, fdWord⟩ := stdin_word zero
+  have hentry : entry = Layout.sym_caml_ml_open_descriptor_in :=
+    Option.some.inj (ready.entryName.symm.trans PrimitiveEntries.entry_caml_ml_open_descriptor_in)
+  subst hentry
+  have fd0 : Channel.fdOf (tag64 n) = 0#64 := by rw [vWord]; decide
+  obtain ⟨result, summary⟩ := prim_open_tail Channel.openInCode rt ready rfl hacc ok stream
+    (by omega) (fun c ok => fd0 ▸ stdinSeek c ok) fdWord
+    (fun _ => by simp only [allocPlaces, hacc]) words
+  exact ⟨result, by decide, sem0, summary⟩
 
 end OCaml.Vm.Sim

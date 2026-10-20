@@ -310,8 +310,14 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   stdin stream. `consolesOk` checks it alongside the output channels (option (a),
   agreed with a2-sem), so `runToF1` and `St.shapeOk` are unchanged in shape.
   File input (ocamlc's `open_in`) is outside F1, ledgered in `Fragment.consoleLedger`.
-- `caml_ml_open_descriptor_in` (bprime): the machine side shares MlOpen's
-  composition (only `max := NULL` differs). The descriptor's `SeekFd 0` comes
+- `caml_ml_open_descriptor_in` (bprime): **proved** as
+  `prim_caml_ml_open_descriptor_in_returns`. The composition is generic over
+  `Channel.OpenCode` (entry, call links and the three phase summaries per
+  direction: `openOutCode`, `openInCode`; `OpenRecord out`, `chanFlagsLog out`),
+  and both adapters share `prim_open_tail`. The input phases (`in_enter`,
+  `in_flags`, `in_done`) follow the generated `OpenIn` blocks; the generator
+  could emit these phase lemmas for both directions.
+- The machine side shares MlOpen's composition (only `max := NULL` differs). The descriptor's `SeekFd 0` comes
   from a0-boot's coming `ConsoleRuntime.stdinSeek` (stdin is HTIF kind 1, so
   `ConsoleFd 0` cannot hold).
 - `openChan`'s 64-channel bound is an F1/G1 scoping guard, not interp.c
