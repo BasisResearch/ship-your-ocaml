@@ -2535,3 +2535,13 @@ full integration gate.
   Neither production Fits nor the one-line ocamlc budget claim is changed.
 - Concrete data addresses continue to come from Layout; instruction words
   and code addresses come from the pinned ELF/decode generators.
+- Shared interfaces for peers: `Skiplist.Returned.htif`, `PageTablePost.htif`,
+  `PageTableFrame Table tfoot` (a1-prims' `GenRoots.TableFrame`);
+  `Skiplist.Ops.init` (all-zero `.bss` header is empty; a0-boot's `RootsAt`).
+  a0-boot owns the concrete page-table predicate `PageClasses`
+  (`Boot/Startup/PageClasses.lean`, foot `pageTableFoot`); a6-gc discharges
+  `PageTableLookup`/`PageTableFrame` with it. Custom allocations:
+  `quietBound = 5`, `ReadyOf Customs`; a1-arms carries
+  `Customs c (refcountSum c)` in F1Pins; a6-gc owes the concrete `Customs`,
+  `Customs cut 0` (no channel open at the cut), the step per call and
+  persistence across a minor GC.

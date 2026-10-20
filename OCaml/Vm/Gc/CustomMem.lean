@@ -163,4 +163,24 @@ structure CustomMemCall (Ready : Nat → Config → Prop) (state : Config → Na
     FnSummary customMemEntry (fun d => d = f)
       (fun d => ∃ v, CustomMemReturned state H site v f d ∧ Ready k d)
 
+/-- Quiet channel custom allocations since the cut: each adds
+`57424/297968` to `caml_extra_heap_resources`, so the sixth requests a
+major slice. -/
+def quietBound : Nat := 5
+
+theorem quietBound_spec : quietBound * 57424 ≤ 297968 ∧ 297968 < (quietBound + 1) * 57424 := by decide
+
+/-- `Ready` from a count: `Customs c n` says the runtime's custom-allocation
+state at `c` is the one after `n` channel allocations since the cut (lane
+a6-gc supplies it at the cut with `n = 0` and across each call with `n + 1`;
+lane a1-arms carries `Customs c s.world.customs` in the represented state). -/
+def ReadyOf (Customs : Config → Nat → Prop) (k : Nat) (c : Config) : Prop :=
+  ∃ n, Customs c n ∧ n + k ≤ quietBound
+
+theorem ReadyOf.succ {Customs : Config → Nat → Prop} {k n} {c d : Config} (ready : ReadyOf Customs (k + 1) c)
+    (unique : ∀ n', Customs c n' → n' = n) (step : Customs d (n + 1)) : ReadyOf Customs k d := by
+  obtain ⟨n', at', bound⟩ := ready
+  rw [unique n' at'] at bound
+  exact ⟨n + 1, step, by omega⟩
+
 end OCaml.Vm.Gc

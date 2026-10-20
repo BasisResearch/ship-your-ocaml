@@ -116,6 +116,11 @@ structure Ops (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec 64
   high : ∀ m sk cells, Shape m sk cells → ∀ a, foot m sk cells a → tohostAddr ≤ a
   /-- … and below the native stack -/
   low : ∀ m sk cells, Shape m sk cells → ∀ a, foot m sk cells a → a < Vsa.Sim.DlHeap.heapEnd
+  /-- an all-zero header in `.bss` is the empty skiplist (`level = 0`, every
+  `forward[i] = NULL`); supplied at the startup cut by lane a0-boot -/
+  init : ∀ m sk, tohostAddr ≤ sk → sk + headerBytes ≤ Vsa.Sim.DlHeap.heapStart →
+    (sk + headerBytes ≤ randomSeed ∨ randomSeed + 4 ≤ sk) →
+    (∀ k < headerBytes, (m[sk + k]?).getD 0 = 0) → Shape m sk []
   /-- `caml_skiplist_insert(sk, key, 0)` -/
   insert : ∀ H cap sk cells (key sp ra : BitVec 64) (c : Config), Shape c.σ.mem sk cells →
     CallInput H cap [(10, BitVec.ofNat 64 sk), (11, key), (12, 0#64)] sp ra c →
