@@ -1296,4 +1296,146 @@ theorem major_ring_cleared (d19 d28 : Config) (H : List (Nat × Nat)) (cap : Nat
     memory := M.memory
     saved := fun k lo hi => g29.same k (by omega) (by omega) (by simp; omega) }⟩
 
+theorem major_chunk_bounds {m h c a : Nat} (ml : 0x8007d140 ≤ m) (headLow : m < h) (chunkNat : c = h + 56)
+    (headHigh : h + 56 + a ≤ m + (a + 4152)) (memHigh : m + (a + 4152) ≤ 0x86800000) (big : 8 ≤ a) :
+    0x8007d140 ≤ c ∧ c + 8 ≤ m + (a + 4152) ∧ c + 8 ≤ 0x86800000 := by
+  subst chunkNat; omega
+
+/-- caml_init_major_heap returned: the major heap is one chunk (the new block
+`mem`), a single free block at the root of the best-fit tree; the mark stack
+is the pair of new blocks `stack` and `entries`. -/
+structure MajorHeapInit (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 mem stack entries cur : BitVec 64)
+    (before after : Config) : Prop where
+  pc : PCAt ra after
+  regs : GHolds after.σ [(2, sp), (18, s2), (9, s1), (1, ra), (8, s0)]
+  ready : RuntimeReady ((entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) ::
+    (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) capacity sp ra after
+  fresh : FreshBlock vsaLayoutP H mem.toNat (majorChunkSize hsize + 4152#64).toNat
+  spot : ChunkSpot mem (majorChunkSize hsize).toNat
+  heapStartWord : bytesT after.σ.mem heapStartAddr 8 = chunkStart mem
+  wsz : bytesT after.σ.mem (domainField 336) 8 = majorChunkSize hsize >>> 3
+  header : bytesT after.σ.mem (chunkStart mem).toNat 8 = mfbHeader (majorChunkSize hsize >>> 3)
+  curWsz : bytesT after.σ.mem flCurWszAddr 8 = cur + 1#64 + ((majorChunkSize hsize >>> 3) - 1#64)
+  markStack : bytesT after.σ.mem (domainField 128) 8 = stack
+  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
+
+/-- **caml_init_major_heap(heap_size)**, from its entry to its return. -/
+theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 charge : Nat)
+    (sp ra hsize s0 s1 s2 s3 s4 s5 s6 s7 s8 inc ent cur : BitVec 64)
+    (A : MajorHeapCall H (cap + c2 + c1) charge sp ra hsize s0 s1 s2 inc c) (T : MajorTableAt H c.σ.mem ent)
+    (s3reg : gprGet c.σ 19 = some s3) (room : pageCount c.σ.mem ent.toNat + majorPages hsize ≤ 1024)
+    (G : MajorGlobals c.σ.mem cur) (callee : GHolds c.σ [(20, s4), (21, s5), (22, s6), (23, s7), (24, s8)])
+    (charged1 : vsaChg (24#64).toNat c1) (charged2 : vsaChg (32768#64).toNat c2) :
+    ∃ mem stack entries after, Steps c after ∧
+      MajorHeapInit H cap sp ra hsize s0 s1 s2 mem stack entries cur c after := by
+  obtain ⟨d8, run8, E⟩ := major_to_alloc c H _ charge sp ra hsize s0 s1 s2 inc A
+  obtain ⟨mem, d12, run12, P⟩ := major_to_page_add c d8 H _ charge sp ra hsize s0 s1 s2 s3 inc ent A E T s3reg room
+  obtain ⟨d16, run16, M⟩ := major_merged c d12 H _ charge sp ra hsize s0 s1 s2 s3 inc mem ent cur A P G
+  obtain ⟨d19, run19, F⟩ := major_freed c d16 H _ charge sp ra hsize s0 s1 s2 s3 s4 s5 s6 s7 s8 inc mem ent cur A M G
+    callee
+  obtain ⟨stack, entries, d24, run24, S⟩ := major_stack_allocated c d19 H cap c1 c2 charge sp ra hsize s0 s1 s2 s3 inc
+    mem ent cur A F charged1 charged2
+  obtain ⟨d28, run28, Tl⟩ := major_tailed c d19 d24 H cap c1 c2 charge sp ra hsize s0 s1 s2 s3 inc mem ent cur stack
+    entries A F S
+  obtain ⟨d29, run29, R⟩ := major_ring_cleared d19 d28 _ cap sp ra s0 s1 s2 stack entries Tl
+  have hS : heapStart = 0x8007d140 := rfl
+  have hE : heapEnd = 0x86800000 := rfl
+  have dom : firstDomainPtr.toNat = 0x8007d150 := rfl
+  have sLow : 0x8007d140 ≤ stack.toNat := S.freshStack.2.1
+  -- below the arena, outside stage C's and the ring's writes, the bytes are bf_make_free_blocks's
+  have fin (x : Nat) (low : x < heapEnd)
+      (foot : ¬ vsaFoot ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) x)
+      (outS : OutW (majorStackWindows stack.toNat) x)
+      (outR : x < 0x80068328 ∨ 0x80068328 + 400 ≤ x) :
+      (d29.σ.mem[x]?).getD 0 = (d19.σ.mem[x]?).getD 0 := by
+    rw [R.memory, frameOn_writeLog _ _ _ (memsetShiftLog_in _ 24 (by decide)) x
+      ⟨by simp only [BitVec.toNat_ofNat, majorRingAddr]; omega, trivial⟩, Tl.back x low foot outS]
+  -- a block of the live list apart from the new mark-stack record
+  have stackApart (e : Nat × Nat) (owned : e ∈ (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) (x : Nat)
+      (inside : InExt e x) : x < stack.toNat ∨ stack.toNat + 24 ≤ x := by
+    have apart := S.freshStack.2.2.2 e owned x
+    unfold InExt at apart
+    rcases Nat.lt_or_ge x stack.toNat with h | h
+    · exact Or.inl h
+    · rcases Nat.lt_or_ge x (stack.toNat + 24) with h' | h'
+      · exact absurd inside (apart ⟨h, h'⟩)
+      · exact Or.inr h'
+  have lowGlobal (a : Nat) (i : Nat) (hi : i < 8) (high : a + 8 ≤ 0x8007d140) (alloc : ¬ allocGlobal (a + i))
+      (outS : OutW (majorStackWindows stack.toNat) (a + i)) (outR : a + 8 ≤ 0x80068328 ∨ 0x80068328 + 400 ≤ a) :
+      (d29.σ.mem[a + i]?).getD 0 = (d19.σ.mem[a + i]?).getD 0 :=
+    fin _ (by rw [hE]; omega) (fun f => f.elim alloc fun h => by rw [hS] at h; omega) outS (by omega)
+  have domainOwned : (firstDomainPtr.toNat, 928) ∈ (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H :=
+    List.mem_cons_of_mem _ A.domainOwned
+  have chunkNat := F.spot.chunk_nat
+  obtain ⟨headLow, headHigh, _⟩ := F.spot.bounds
+  have memHigh := F.spot.high
+  rw [hE] at memHigh
+  obtain ⟨_, reqLow, reqHigh⟩ := major_request_nat hsize A.request A.chunkMin
+  obtain ⟨_, reqLe, sizeHigh⟩ := major_chunk_size ((hsize >>> 3) <<< 3) reqHigh
+  change ((hsize >>> 3) <<< 3).toNat ≤ (majorChunkSize hsize).toNat at reqLe
+  have ml := F.spot.low
+  rw [hS] at ml
+  obtain ⟨chunkLow, chunkFit, chunkHigh⟩ := major_chunk_bounds ml headLow chunkNat headHigh memHigh
+    (Nat.le_trans (by decide) (Nat.le_trans reqLow reqLe))
+  have markOut : OutLRange (memsetShiftLog (BitVec.ofNat 64 majorRingAddr) 24) (domainField 128) 8 :=
+    OCaml.Vm.Sim.outLRange_of_windows (memsetShiftLog_in _ 24 (by decide))
+      (by simp only [OutWRange, domainField, dom, BitVec.toNat_ofNat, majorRingAddr, and_true]; omega)
+  refine ⟨mem, stack, entries, d29, run8.trans (run12.trans (run16.trans (run19.trans (run24.trans (run28.trans
+    run29))))), {
+    pc := R.pc
+    regs := R.regs
+    ready := R.ready
+    fresh := F.fresh
+    spot := F.spot
+    heapStartWord := by
+      rw [word_observed (m := d19.σ.mem) _ fun i hi => lowGlobal _ i hi (by decide)
+        (by unfold heapStartAddr allocGlobal InRange; omega)
+        (by simp only [majorStackWindows, OutW, heapStartAddr, gcPhaseAddr, domainField, dom, extraResourcesAddr,
+          allocatedWordsAddr, and_true]; omega) (by decide)]
+      exact F.heapStartWord
+    wsz := by
+      rw [word_observed (m := d19.σ.mem) _ fun i hi => fin _ (by simp only [domainField, dom]; rw [hE]; omega)
+        (owned_not_foot' (by decide) domainOwned (by simp only [domainField]; omega) (by simp only [domainField]; omega))
+        (by
+          have sa := stackApart _ domainOwned (domainField 336 + i) ⟨by simp only [domainField]; omega,
+            by simp only [domainField]; omega⟩
+          simp only [majorStackWindows, OutW, gcPhaseAddr, domainField, dom, extraResourcesAddr, allocatedWordsAddr,
+            and_true] at sa ⊢
+          omega)
+        (by simp only [domainField, dom]; omega)]
+      exact F.wsz
+    header := by
+      have owned : (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) ∈
+          (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H := by simp
+      have sizeNat : (majorChunkSize hsize + 4152#64).toNat = (majorChunkSize hsize).toNat + 4152 := by
+        have := F.fresh.2.2.1
+        rw [BitVec.toNat_add]
+        simp only [BitVec.toNat_ofNat, Nat.reducePow]
+        have sh := memHigh
+        omega
+      rw [word_observed (m := d19.σ.mem) _ fun i hi => fin _ (by rw [hE]; omega)
+        (owned_not_foot' F.spot.low owned (by omega) (by rw [sizeNat]; omega))
+        (by
+          have sa := stackApart _ owned ((chunkStart mem).toNat + i) ⟨by omega, by rw [sizeNat]; omega⟩
+          have da := F.fresh.2.2.2 _ A.domainOwned ((chunkStart mem).toNat + i)
+            (by unfold InExt; rw [sizeNat]; exact ⟨by omega, by omega⟩)
+          unfold InExt at da
+          dsimp only at da
+          rw [dom] at da
+          simp only [majorStackWindows, OutW, gcPhaseAddr, domainField, dom, extraResourcesAddr, allocatedWordsAddr,
+            and_true] at sa ⊢
+          omega)
+        (by omega)]
+      exact F.header
+    curWsz := by
+      rw [word_observed (m := d19.σ.mem) _ fun i hi => lowGlobal _ i hi (by decide)
+        (by unfold flCurWszAddr allocGlobal InRange; omega)
+        (by simp only [majorStackWindows, OutW, flCurWszAddr, gcPhaseAddr, domainField, dom, extraResourcesAddr,
+          allocatedWordsAddr, and_true]; omega) (by decide)]
+      exact F.curWsz
+    markStack := by
+      rw [R.memory, bytesT_writeLog_out _ markOut]
+      exact Tl.record
+    saved := fun k lo hi => by rw [R.saved k lo hi, Tl.saved k lo hi, F.saved k lo hi] }⟩
+
 end OCaml.Vm.Boot.Startup
