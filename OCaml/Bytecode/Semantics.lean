@@ -296,9 +296,12 @@ def decimal (n : Int) : List UInt8 :=
 
 /-- Open a channel on `fd` (`caml_ml_open_descriptor_{in,out}`).
 
-Both guards are unreachable on loaded programs, and both exist so the C_CALL
+The guards are unreachable on loaded programs, and they exist so the C_CALL
 adapter (`prim_caml_ml_open_descriptor_out_returns`) reads its facts off the
 primitive's equation instead of a per-program premise:
+* a live descriptor: `fd ≥ 0` names an open OS descriptor (every open in
+  Stdlib and ocamlc is on a live fd, the result of `caml_sys_open` or a
+  console stream); the machine's `lseek` then reads a live HTIF slot;
 * at most 64 channels: the bound mirrors `Gc.maxChannels`, the number of
   records the F1 heap reservation budgets; loaded programs open at most 3
   (stdin, stdout, stderr);
@@ -307,6 +310,7 @@ primitive's equation instead of a per-program premise:
   and `chans` only grows. -/
 def openChan (h : Heap) (w : World) (fd : Int) (isOut : Bool) : PRes :=
   let id := w.chans.length
+  if fd < 0 ∨ (TCB.Os.lookupFd w.os fd.toNat).isNone then .unsupported else
   if 64 ≤ w.chans.length then .unsupported else
   if h.objs.contains (.channel id) then .unsupported else
   let (h', l) := h.alloc (.channel id)

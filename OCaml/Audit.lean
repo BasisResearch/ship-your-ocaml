@@ -5930,6 +5930,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ObjAt.chanPlace
 #print axioms OCaml.Vm.Primitives.channel_copied_links
 #print axioms OCaml.Vm.Primitives.openChan_bound
+#print axioms OCaml.Vm.Primitives.openChan_live
 #print axioms OCaml.Vm.Primitives.WorldRepr.openChan
 #print axioms OCaml.Vm.Primitives.openChan_fresh
 #print axioms OCaml.Vm.Primitives.ObjAt.openChan

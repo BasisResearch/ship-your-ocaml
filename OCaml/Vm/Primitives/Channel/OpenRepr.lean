@@ -94,6 +94,8 @@ theorem openChan_fresh {h h' : Heap} {w w' : World} {fd : Int} {isOut : Bool} {v
   dsimp only at ok
   split at ok
   · cases ok
+  split at ok
+  · cases ok
   have mem : Obj.channel w.chans.length ∈ h.objs := List.mem_of_getElem? hl
   have contains : h.objs.contains (.channel w.chans.length) = true := List.contains_iff_mem.mpr mem
   simp only [contains, ↓reduceIte] at ok
@@ -109,7 +111,22 @@ theorem openChan_bound {h h' : Heap} {w w' : World} {fd : Int} {isOut : Bool} {v
   dsimp only at ok
   split at ok
   · cases ok
+  split at ok
+  · cases ok
   · omega
+
+/-- **What a successful `openChan` says about the descriptor** (its first
+guard): it is a live OS descriptor. -/
+theorem openChan_live {h h' : Heap} {w w' : World} {fd : Int} {isOut : Bool} {v : Val}
+    (ok : openChan h w fd isOut = .ok v h' w') :
+    0 ≤ fd ∧ ∃ obj, TCB.Os.lookupFd w.os fd.toNat = some obj := by
+  unfold openChan at ok
+  dsimp only at ok
+  split at ok
+  · cases ok
+  · rename_i live
+    simp only [not_or, Int.not_lt, Option.isNone_iff_eq_none] at live
+    exact ⟨live.1, Option.ne_none_iff_exists'.mp live.2⟩
 
 /-- The new id is apart from every channel object of the heap, so extending
 the placement there keeps every old object's layout. -/

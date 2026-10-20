@@ -265,6 +265,11 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
       A second guard (`64 ≤ chans.length` is `.unsupported`, mirroring
       `Gc.maxChannels`) gives `openChan_bound`, the `chs.length < maxChannels`
       that `out_input` charges the record against.
+      A third (agreed with a2-sem): the descriptor is live (`fd ≥ 0` and
+      `lookupFd` some), giving `openChan_live`. Console-ness is not a guard
+      (file opens go through `openChan`); it comes from the F1 world
+      invariant "every live fd is an initial console stream" (bprime, to do),
+      since `caml_sys_open` is F5.
       `ObjAt.openChan`, `WorldRepr.openChan` and `channel_copied_links`
       (the old head's `prev` write is outside what `ChanAt` reads) carry the
       payload across.
