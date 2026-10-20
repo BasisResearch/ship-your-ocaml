@@ -247,7 +247,36 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
     - Entry: `StringAllocEntry.of_setup` (native stack and nursery room), `out_input`
       and `out_nursery` from `LibHeap` (`F1Pins.libHeap` through `after`'s
       premise), `openChan_bound` and `openChan_fresh` from the equation.
+  * Adapter pieces landed (`Sim/{PrimOpenOutReturns,OpenGeometry,PayloadObserved,OpenPayload,OpenOutFrame}.lean`):
+    - `OpenOutRuntime L` and `open_out_entry`: from the C_CALL setup,
+      `LibHeapAt` over `placedChannels cp n` (`OpenChannels.unique` against
+      `channelsListed`), `OutInput` on the native stack, `OutNursery`, and one
+      quiet custom allocation. The console descriptor (`v = 3 ∨ v = 5`) is
+      still a hypothesis (below).
+    - `LoopGeometry.openChan` (+ `StackGeometry`/`NurseryGeometry`): the
+      geometry across the opening, from the new record's separation
+      `NewChannelPlaced` (heap unchanged; the custom block is the separate
+      `alloc` step).
+    - `PayloadObserved`: the bytes `VmPayload` reads, with the records split
+      around their link words. `VmPayload.keep_observed` carries the payload
+      across them, and the barrier's `VmPayload.keep` is now its instance.
+    - `VmPayload.openChan`: the payload of the opened state (`openedSt`),
+      from a kept payload, the custom block's layout and the new `ChanAt`.
+    - `covered_kept`, `record_kept`, `domainField_kept`, `static_kept`:
+      `OpenedOut.kept` discharged per class of observed byte. Two cases are
+      excluded: `young_limit` (it is next to `young_ptr`, whose kept premise is
+      word-sized) comes from the call's `youngLimit`, and `young_ptr` itself
+      is the allocation.
   * Gaps for the C_CALL adapter (`prim_caml_ml_open_descriptor_out_returns`):
+    - The console descriptor. `openChan_live` gives a live fd. The fd ∈ {1, 2}
+      fact is `GoodF1.consoles` at the successor state. Asked a1-prims to pass
+      `Reach P s'` through `CcallReturns.callee`; the alternative is an F1
+      world invariant over all of `stepI`.
+    - The assembly: the alloc geometry step (fictional config with only
+      `young_ptr` written), `NewChannelPlaced` from freshness and `F1Pins`
+      (`OpenOutRuntime` gains `pins`), the `PayloadObserved` discharge,
+      `Ccall1Saved`, bindings, `NativePlaced`, `LoopRegisters`, and
+      `PlatformOk` through `after`.
     - x20–x27 (`reg_env` among them) survive the whole primitive
       (`OpenedOut.keep_upper`, over a0-boot's `StatCheckedReturned.keep_upper`).
     - `CcallCallee` fixes `pl`/`cp` across the call, but the record address

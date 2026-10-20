@@ -558,6 +558,42 @@ theorem out_done (a : Config) {sp ra s0 p v : BitVec 64} {f : Config} {state : C
     gprs := GprsKept.of_pins post (by decide) (by decide) (by simp [keysG, OpenOut.done_regs])
     memory := post.memory }
 
+/-- **A byte outside the opening's windows**: below the arena's end, outside
+the statics the opening writes, apart from the record and from the old head's
+`prev` word. -/
+theorem outW_openWindows {sp p head : BitVec 64} {y : Nat} (frame : NativeFrame sp 592) (below : y < heapEnd)
+    (stat : y < heapStart → 0x80064aa0 ≤ y ∧ y < 0x80064aa8)
+    (recApart : y < p.toNat ∨ p.toNat + recordBytes ≤ y)
+    (hd : head ≠ 0#64 → y < head.toNat + 56 ∨ head.toNat + 64 ≤ y) :
+    OutW (openWindows (sp - 16#64) p head) y := by
+  have lower := frame.lower
+  have sp16 : (sp - 16#64).toNat = sp.toNat - 16 := by
+    have e := outFrame_slot (frame.resize (small := 16) (by decide) (by decide)) (off := 0) (by decide)
+    rw [show BitVec.ofNat 64 0 = 0#64 from rfl, BitVec.add_zero] at e; rw [e]; omega
+  have hS : heapStart = 0x8007d140 := rfl
+  apply OCaml.Vm.Gc.outW_all
+  intro w hw
+  unfold openWindows at hw
+  rcases List.mem_append.mp hw with hw | hw
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
+    rcases hw with rfl | rfl | rfl | rfl | rfl
+    · left; dsimp only; rw [sp16]; arena_omega
+    · rcases Nat.lt_or_ge y heapStart with l | g
+      · have := stat l; dsimp only; omega
+      · right; dsimp only; omega
+    · rcases Nat.lt_or_ge y heapStart with l | g
+      · have := stat l; dsimp only; omega
+      · right; dsimp only; omega
+    · exact recApart
+    · rcases Nat.lt_or_ge y heapStart with l | g
+      · have := stat l; dsimp only; omega
+      · right; dsimp only; omega
+  · by_cases hz : head = 0#64
+    · simp [hz] at hw
+    · simp only [hz, ite_false, List.mem_singleton] at hw
+      subst hw
+      exact hd hz
+
 /-! ### The whole primitive -/
 
 /-- The collector's side at the primitive's entry: `Caml_state` and the minor
@@ -682,33 +718,7 @@ theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat ×
       (apart : y < head.toNat ∨ head.toNat + chanOffBuff + ioBufferSize ≤ y) :
       y < head.toNat + 56 ∨ head.toNat + 64 ≤ y := by
     unfold chanOffBuff ioBufferSize at apart; omega
-  have outOpen (y : Nat) (below : y < heapEnd)
-      (stat : y < heapStart → 0x80064aa0 ≤ y ∧ y < 0x80064aa8)
-      (recApart : y < O.record.toNat ∨ O.record.toNat + recordBytes ≤ y)
-      (hd : head ≠ 0#64 → y < head.toNat + 56 ∨ head.toNat + 64 ≤ y) :
-      OutW (openWindows (sp - 16#64) O.record head) y := by
-    apply OCaml.Vm.Gc.outW_all
-    intro w hw
-    unfold openWindows at hw
-    rcases List.mem_append.mp hw with hw | hw
-    · simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
-      rcases hw with rfl | rfl | rfl | rfl | rfl
-      · left; dsimp only; rw [sp16]; arena_omega
-      · rcases Nat.lt_or_ge y heapStart with l | g
-        · have := stat l; dsimp only; omega
-        · right; dsimp only; omega
-      · rcases Nat.lt_or_ge y heapStart with l | g
-        · have := stat l; dsimp only; omega
-        · right; dsimp only; omega
-      · exact recApart
-      · rcases Nat.lt_or_ge y heapStart with l | g
-        · have := stat l; dsimp only; omega
-        · right; dsimp only; omega
-    · by_cases hz : head = 0#64
-      · simp [hz] at hw
-      · simp only [hz, ite_false, List.mem_singleton] at hw
-        subst hw
-        exact hd hz
+  have outOpen (y : Nat) := outW_openWindows (head := head) (p := O.record) (y := y) h.frame
   have notFootHigh (L : List (Nat × Nat)) (y : Nat) (high : heapEnd ≤ y) : ¬ vsaFoot L y := by
     rintro (g | ⟨_, l, _⟩)
     · unfold allocGlobal InRange at g; unfold heapEnd at high; omega

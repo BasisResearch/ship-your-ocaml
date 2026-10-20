@@ -59,6 +59,20 @@ theorem channel_copied_links {c c' : Config} {a : Nat} {ch : Chan} (h : ChanAt c
         (by simp only [chanOffFlags, chanOffBuff]; omega))
   exact (Reloc.chanEqv a ch).transport id pl 0 0 c c' h img
 
+/-- A channel of the appended table is an old one or the new one. -/
+theorem chans_append_cases {cs : List Chan} {ch ch' : Chan} {id : Nat} (h : (cs ++ [ch])[id]? = some ch') :
+    (cs[id]? = some ch' ∧ id < cs.length) ∨ (id = cs.length ∧ ch' = ch) := by
+  rcases Nat.lt_or_ge id cs.length with lt | ge
+  · rw [List.getElem?_append_left lt] at h
+    exact Or.inl ⟨h, lt⟩
+  · rw [List.getElem?_append_right ge] at h
+    rcases Nat.eq_or_lt_of_le ge with eq | gt
+    · subst eq
+      simp only [Nat.sub_self, List.getElem?_cons_zero, Option.some.injEq] at h
+      exact Or.inr ⟨rfl, h.symm⟩
+    · rw [List.getElem?_eq_none (by simp only [List.length_singleton]; omega)] at h
+      cases h
+
 /-- **The world after `openChan`**: the old channels keep their records
 (`kept`), the new one is represented at `rec`, and the console and the
 object-ID counter are unchanged. -/
@@ -71,18 +85,10 @@ theorem WorldRepr.openChan {c d : Config} {cp : ChanPlace} {w : World} {rec : Na
     WorldRepr d (cp.put w.chans.length rec) {w with chans := w.chans ++ [ch]} := by
   refine ⟨by rw [output]; exact h.output, ?_, by rw [oo]; exact h.ooId⟩
   intro id old hc
-  rcases Nat.lt_or_ge id w.chans.length with lt | ge
-  · rw [List.getElem?_append_left lt] at hc
-    obtain ⟨a, ha, _⟩ := h.chans id old hc
+  rcases chans_append_cases hc with ⟨hc, lt⟩ | ⟨rfl, rfl⟩
+  · obtain ⟨a, ha, _⟩ := h.chans id old hc
     exact ⟨a, by rw [ChanPlace.put_other cp (Nat.ne_of_lt lt)]; exact ha, kept id old a hc ha⟩
-  · rw [List.getElem?_append_right ge] at hc
-    rcases Nat.eq_or_lt_of_le ge with eq | gt
-    · subst eq
-      simp only [Nat.sub_self, List.getElem?_cons_zero, Option.some.injEq] at hc
-      subst hc
-      exact ⟨rec, ChanPlace.put_self cp _ rec, new⟩
-    · rw [List.getElem?_eq_none (by simp only [List.length_singleton]; omega)] at hc
-      cases hc
+  · exact ⟨rec, ChanPlace.put_self cp _ rec, new⟩
 
 /-- **What a successful `openChan` says about the heap** (its guard): no
 object names the new channel id. -/

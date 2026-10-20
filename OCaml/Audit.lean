@@ -20,6 +20,10 @@ import OCaml.Vm.Sim.OutListRun
 import OCaml.Vm.Sim.StringAllocReturn
 import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.PrimExecutableNameReturns
+import OCaml.Vm.Sim.OpenGeometry
+import OCaml.Vm.Sim.OpenPayload
+import OCaml.Vm.Sim.OpenOutFrame
+import OCaml.Vm.Sim.PrimOpenOutReturns
 import OCaml.Vm.Sim.PrimGetArgvReturns
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
@@ -5932,6 +5936,27 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.channel_copied_links
 #print axioms OCaml.Vm.Primitives.openChan_bound
 #print axioms OCaml.Vm.Primitives.openChan_live
+#print axioms OCaml.Vm.Sim.open_out_entry
+#print axioms OCaml.Vm.Sim.opened_cases
+#print axioms OCaml.Vm.Sim.StackGeometry.openChan
+#print axioms OCaml.Vm.Gc.NurseryGeometry.openChan
+#print axioms OCaml.LoopGeometry.openChan
+#print axioms OCaml.Vm.Sim.VmPayload.keep_observed
+#print axioms OCaml.Vm.Sim.PayloadObserved.barrier
+#print axioms OCaml.Vm.Sim.VmPayload.openChan
+#print axioms OCaml.Vm.Primitives.Channel.covered_kept
+#print axioms OCaml.Vm.Primitives.Channel.record_kept
+#print axioms OCaml.Vm.Primitives.Channel.domainField_kept
+#print axioms OCaml.Vm.Primitives.Channel.static_kept
+#print axioms OCaml.Vm.Primitives.Channel.openStatics_apart
+#print axioms OCaml.Vm.Primitives.Channel.f1Covered_arena
+#print axioms OCaml.Vm.Primitives.Channel.f1Covered_domain
+#print axioms OCaml.Vm.Primitives.Channel.f1Covered_minor
+#print axioms OCaml.Vm.Primitives.Channel.outW_openWindows
+#print axioms OCaml.Vm.Sim.allocationRoots_channel
+#print axioms OCaml.Vm.Sim.roots_chans
+#print axioms OCaml.Vm.Primitives.chans_append_cases
+#print axioms OCaml.Vm.Gc.placedChannels_length
 #print axioms OCaml.Vm.Primitives.WorldRepr.openChan
 #print axioms OCaml.Vm.Primitives.openChan_fresh
 #print axioms OCaml.Vm.Primitives.ObjAt.openChan

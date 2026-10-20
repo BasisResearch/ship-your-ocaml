@@ -54,6 +54,10 @@ import OCaml.Vm.Sim.CopyStringInput
 import OCaml.Vm.Sim.ConfigInput
 import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.PrimExecutableNameReturns
+import OCaml.Vm.Sim.OpenGeometry
+import OCaml.Vm.Sim.OpenPayload
+import OCaml.Vm.Sim.OpenOutFrame
+import OCaml.Vm.Sim.PrimOpenOutReturns
 import OCaml.Vm.Sim.ArgvLogWindows
 import OCaml.Vm.Sim.ArgvInput
 import OCaml.Vm.Sim.PrimGetArgvReturns

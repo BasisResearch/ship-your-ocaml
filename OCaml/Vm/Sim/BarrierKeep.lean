@@ -1,4 +1,5 @@
 import OCaml.Vm.Sim.BarrierF1
+import OCaml.Vm.Sim.PayloadObserved
 
 /-!
 # The represented barrier state across a frame
@@ -17,9 +18,6 @@ set_option autoImplicit false
 namespace OCaml.Vm.Sim
 
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives LeanRV64DExecutable
-
-/-- The bytes `[a, a + n)`. -/
-def InSpan (a n x : Nat) : Prop := a ≤ x ∧ x < a + n
 
 /-- The static words the represented state reads. -/
 def barrierStatics : List Nat :=
@@ -52,6 +50,29 @@ inductive BarrierObserved (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   | native {r : Nat × Nat} {x : Nat} : r ∈ invocationRanges → InSpan (D.nativeSp + r.1) r.2 x →
       BarrierObserved P s c pl cp sp D x
 
+/-- Everything the payload reads, the barrier state reads. -/
+theorem PayloadObserved.barrier {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {sp : Nat}
+    {D : InvocationData} {x : Nat} (h : PayloadObserved P s c pl cp sp x) : BarrierObserved P s c pl cp sp D x := by
+  cases h with
+  | static mem hx =>
+    simp only [payloadStatics, List.mem_cons, List.not_mem_nil, or_false] at mem
+    exact .static (by rcases mem with rfl | rfl | rfl | rfl | rfl | rfl <;> simp [barrierStatics]) hx
+  | @domainField off _ mem hx =>
+    have f : off + 8 ≤ Layout.domainStateBytes := by
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at mem
+      rcases mem with rfl | rfl <;> decide
+    exact .domain ⟨by have := hx.1; omega, by have := hx.2; omega⟩
+  | code hi hx => exact .code hi hx
+  | stack hi hx => exact .stack hi hx
+  | header ho ha hx => exact .header ho ha hx
+  | fields ho ha hx => exact .fields ho ha hx
+  | chanFront hc ha hx =>
+    have big : 48 ≤ chanOffBuff + ioBufferSize := by decide
+    exact .channel hc ha ⟨hx.1, by have := hx.2; omega⟩
+  | chanBack hc ha hx =>
+    have big : 64 ≤ chanOffBuff + ioBufferSize := by decide
+    exact .channel hc ha ⟨by have := hx.1; omega, by have := hx.2; omega⟩
+
 section Keep
 
 variable {P : Prog} {s : St} {c c' : Config} {pl : Place} {cp : ChanPlace} {sp : Nat} {D : InvocationData}
@@ -83,35 +104,8 @@ theorem kept_domainField (keep : ∀ x, BarrierObserved P s c pl cp sp D x → b
 /-- The VM payload across kept bytes. -/
 theorem VmPayload.keep {high : Nat} (h : VmPayload P s c pl cp sp high)
     (keep : ∀ x, BarrierObserved P s c pl cp sp D x → byte c' x = byte c x)
-    (outputEq : output c'.σ = output c.σ) : VmPayload P s c' pl cp sp high := by
-  have st := fun {a : Nat} (mem : a ∈ barrierStatics) => kept_static keep mem
-  constructor
-  · rw [kept_domainField keep (by decide)]; exact h.stackHigh
-  · rw [kept_domainField keep (by decide)]; exact h.trapsp
-  · rw [st (by simp [barrierStatics])]; exact h.codeBase
-  · intro i w hi
-    have he : word32 c' (pl.codeBase + 4 * i) = word32 c (pl.codeBase + 4 * i) :=
-      Reloc.bytesT_congr (kept_copied keep fun _ hx => .code hi hx)
-    simpa only [he] using h.code i w hi
-  · rw [st (by simp [barrierStatics])]; exact h.globals
-  · refine ⟨h.stack.1, ?_⟩
-    intro i v hi
-    rw [kept_word keep fun _ hx => .stack hi hx]
-    exact h.stack.2 i v hi
-  · constructor
-    · intro l hl
-      obtain ⟨a, o, ha, ho, layout⟩ := h.heap.1 l hl
-      exact ⟨a, o, ha, ho, object_copied layout (kept_copied keep fun _ hx => .header ho ha hx)
-        (kept_copied keep fun _ hx => .fields ho ha hx)⟩
-    · exact h.heap.2
-  · refine ⟨?_, ?_, ?_⟩
-    · rw [outputEq]; exact h.world.output
-    · intro id ch hc
-      obtain ⟨a, ha, layout⟩ := h.world.chans id ch hc
-      exact ⟨a, ha, channel_copied_full layout (kept_copied keep fun _ hx => .channel hc ha hx)⟩
-    · rw [st (by simp [barrierStatics])]; exact h.world.ooId
-  · rw [st (by simp [barrierStatics])]; exact h.atomBase
-  · rw [st (by simp [barrierStatics])]; exact h.argv
+    (outputEq : output c'.σ = output c.σ) : VmPayload P s c' pl cp sp high :=
+  VmPayload.keep_observed h (fun x obs => keep x obs.barrier) outputEq
 
 /-- The primitive bindings across kept bytes. -/
 theorem bindings_keep (h : PrimitiveBindings P c)
