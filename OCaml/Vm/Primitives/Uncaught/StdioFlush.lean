@@ -58,7 +58,8 @@ theorem flush_epilogue {r ra sp s0 s3 v : BitVec 64} {c : Config} (h : LeafInput
   have o := p.regs
   simp only [Sflush.leave_regs, Sflush.leave_loads, regsAt_of spR, List.getD_cons_zero, List.getD_cons_succ,
     GHolds] at o
-  exact ⟨p.toEffectPost, by rw [o.1, BitVec.add_assoc]; simp, by rw [o.2.2.2.1, s0S], by rw [o.2.2.1, s3S], by rw [o.2.2.2.2.1, raS], trivial⟩
+  obtain ⟨o2, -, o19, o8, o1, -⟩ := o
+  exact ⟨p.toEffectPost, by rw [o2, BitVec.add_assoc]; simp, by rw [o8, s0S], by rw [o19, s3S], by rw [o1, raS], trivial⟩
 
 /-- **`__sflush_r(reent, stdin)`**, stdin never read: returns 0. -/
 theorem flush_stdin {ra sp s0 s3 reent : BitVec 64} {c : Config} (h : LeafInput ra c)
@@ -205,7 +206,8 @@ theorem flush_stdin {ra sp s0 s3 reent : BitVec 64} {c : Config} (h : LeafInput 
   have eff : WritePost ([2, 8, 14, 15, 19] ++ [13, 15] ++ [13] ++ [] ++ [1, 2, 8, 10, 19])
       (stdinFlushLog sp ra s0 s3) c ra 0#64 d :=
     { e with memory := by rw [p5.memory, Named.NamedValue.wl_nil, m4] }
-  exact ⟨eff, by rw [o5.1, BitVec.add_assoc]; simp, by rw [o5.2.2.2.1, s0Saved], by rw [o5.2.2.1, s3Saved], by rw [o5.2.2.2.2.1, raSaved], trivial⟩
+  obtain ⟨o2, -, o19, o8, o1, -⟩ := o5
+  exact ⟨eff, by rw [o2, BitVec.add_assoc]; simp, by rw [o8, s0Saved], by rw [o19, s3Saved], by rw [o1, raSaved], trivial⟩
 
 /-- **`__sflush_r`'s prologue on a write stream**: the three saves, `s0 = fp`,
 `s3 = reent`, the flags in `a4`. -/

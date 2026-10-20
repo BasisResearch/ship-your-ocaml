@@ -76,10 +76,10 @@ theorem stepS2 {c d : Config} {writes : List Nat} {log : List WEntry} {pc value 
     (s18 : gprGet d.σ 18 = some s2') : Body b sp0 fp reent keep s2' d :=
   have fr (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ writes) : gprGet d.σ n = gprGet c.σ n :=
     post.toEffectPost.gpr_frame keys n lo hi out
-  Frame.stepTo h post out keys cover (fun n m => ⟨(avoid n m).1, by have := (avoid n m).2.2.2.2; omega⟩)
-    ⟨(fr 2 (by decide) (by decide) fun m => (avoid 2 m).2.1 rfl).trans (Body.sp h),
-      (fr 8 (by decide) (by decide) fun m => (avoid 8 m).2.2.1 rfl).trans (Body.s0 h),
-      (fr 9 (by decide) (by decide) fun m => (avoid 9 m).2.2.2.1 rfl).trans (Body.s1 h), s18, trivial⟩
+  Frame.stepTo h post out keys cover (fun n m => by have := avoid n m; exact ⟨by omega, by omega⟩)
+    ⟨(fr 2 (by decide) (by decide) fun m => by have := avoid 2 m; omega).trans (Body.sp h),
+      (fr 8 (by decide) (by decide) fun m => by have := avoid 8 m; omega).trans (Body.s0 h),
+      (fr 9 (by decide) (by decide) fun m => by have := avoid 9 m; omega).trans (Body.s1 h), s18, trivial⟩
 
 /-- A generated block that writes none of the body's registers and no kept byte. -/
 theorem step {c d : Config} {writes : List Nat} {log : List WEntry} {pc value : BitVec 64} {regs : GRegs}
@@ -88,7 +88,7 @@ theorem step {c d : Config} {writes : List Nat} {log : List WEntry} {pc value : 
     (avoid : ∀ n ∈ writes, n ≠ 1 ∧ n ≠ 2 ∧ n ≠ 8 ∧ n ≠ 9 ∧ (n < 18 ∨ 27 < n)) : Body b sp0 fp reent keep v d :=
   h.stepS2 post out keys cover (fun n m => by have := avoid n m; omega)
     ((post.toEffectPost.gpr_frame keys 18 (by decide) (by decide) fun m => by
-      have := (avoid 18 m).2.2.2.2; omega).trans (Body.s2 h))
+      have := avoid 18 m; omega).trans (Body.s2 h))
 
 /-- A direct call: only `ra` changes, to the aligned link. -/
 theorem call {c d : Config} {target value link : BitVec 64} {regs : GRegs} (h : Body b sp0 fp reent keep v c)
