@@ -2,6 +2,7 @@ import OCaml.Vm.Primitives.CamlInt64FloatOfBits
 import OCaml.Vm.Primitives.CamlSysGetArgv
 import OCaml.Vm.Primitives.CamlSysExecutableName
 import OCaml.Vm.Primitives.CamlSysGetConfig
+import OCaml.Vm.Primitives.OutChannelsList
 
 /-! Where the allocating F1 primitives place their fresh objects, as a
 function of the state at the `C_CALL` and the young pointer at entry. The
@@ -41,6 +42,9 @@ def allocPlaces (name : String) (s : St) (young : BitVec 64) : List (Nat × Nat)
       (StringCopy.resultWord young ConfigTuple.osType.length).toNat),
      (((ConfigTuple.afterOsType s).heap.alloc (ConfigTuple.configTriple s)).2,
       (ConfigTuple.tripleWord (StringCopy.resultWord young ConfigTuple.osType.length - 8#64)).toNat)]
+  | "caml_ml_out_channels_list" =>
+    -- per listed channel, its custom block and then the cons cell
+    outListPlaces s young
   | _ => []
 
 end OCaml.Vm.Primitives

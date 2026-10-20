@@ -96,7 +96,61 @@ def functions_spec(ld, rest):
                   ('R 2 + 8#64', 'window'), ('R 2', 'window')],
           'log': '[(2147896128, 8, R 8)]', 'ra': 0, 'logFacts': ['imm20Of', AUIPC_FACT(0x800151c0, 0x00050797, -1664)]}),
       ]),
-    ] + [ml_open(ld, rest, out) for out in (False, True)]
+    ] + [ml_open(ld, rest, out) for out in (False, True)] + [out_list(ld, rest)]
+
+
+def out_list(ld, rest):
+    """`caml_ml_out_channels_list(unit)`: under a CAMLlocal3 frame, walk
+    `caml_all_opened_channels` (`next` at +48); for each output record
+    (`max == NULL`) managed by the GC (`flags & 4`), `caml_alloc_channel`
+    (inlined: refcount + 1, `caml_alloc_custom_mem`, store the record) and cons
+    it with `caml_alloc_small(2, 0)`. Each branch block has a twin per
+    direction (the walk's loop)."""
+    sp = lambda k: f'R 2 - 128#64 + {k}#64'
+    count = 'BitVec.signExtend 64 (Sail.BitVec.extractLsb (bytesVal .lw (loads.getD 0 []) + 1#64) 31 0)'
+    pro_regs = (f'[(12, {sp(40)}), (11, {sp(32)}), (16, {sp(24)}), (17, 3#64), (10, 1#64), (14, {ld(2)}), '
+                f'(8, {ld(1)}), (15, {ld(0)}), (13, 2147896584#64), (2, R 2 - 128#64), (1, R 1)]')
+    pro_mem = {'mem': [(sp(112), 'window'), (sp(120), 'window'), ('2147896584#64', 'global'),
+                       ('2147896128#64', 'global'), ('@0 + 288#64', 'window'), ('@0 + 288#64', 'window')]
+                      + [(sp(k), 'window') for k in (48, 24, 32, 40, 64, 56, 72, 80, 88)],
+               'log': f'[(({sp(112)}).toNat, 8, R 8), (({sp(120)}).toNat, 8, R 1), (({ld(0)} + 288#64).toNat, 8, {sp(48)}), '
+                      f'(({sp(48)}).toNat, 8, {ld(2)}), (({sp(24)}).toNat, 8, 1#64), (({sp(32)}).toNat, 8, 1#64), '
+                      f'(({sp(40)}).toNat, 8, 1#64), (({sp(64)}).toNat, 8, 1#64), (({sp(56)}).toNat, 8, 3#64), '
+                      f'(({sp(72)}).toNat, 8, {sp(24)}), (({sp(80)}).toNat, 8, {sp(32)}), (({sp(88)}).toNat, 8, {sp(40)})]'}
+    test = (f'[(15, {ld(0)}), {rest([2, 8, 10, 13, 14])}]', {'mem': [('R 8 + 32#64', 'window')]})
+    flags = (f'[(15, {ld(0, "lw")} &&& 4#64), {rest([2, 8, 10, 13, 14])}]', {'mem': [('R 8 + 68#64', 'window')]})
+    skip = (f'[(8, {ld(0)}), {rest([2, 10, 13, 14])}]', {'mem': [('R 8 + 48#64', 'window')]})
+    link = (f'[(8, {ld(4)}), (13, 2147896584#64), (15, {ld(3)}), (12, {ld(2)}), (14, {ld(1)}), (2, R 2), (10, R 10)]',
+            {'mem': [('R 2 + 40#64', 'window'), ('R 2 + 24#64', 'window'), ('R 2 + 8#64', 'window'), ('R 10', 'window'),
+                     ('R 2 + 32#64', 'window'), ('R 2 + 24#64', 'window'), ('@3 + 8#64', 'window'),
+                     ('R 8 + 48#64', 'window')],
+             'log': f'[((R 2 + 24#64).toNat, 8, R 10), ((R 10).toNat, 8, {ld(0)}), (({ld(3)} + 8#64).toNat, 8, {ld(2)})]'})
+    return ('caml_ml_out_channels_list', 'Caml_ml_out_channels_list', 'OutList', None,
+            ('pro', 'testSkip', 'flagsSkip', 'linkNext', 'skipLast'), [
+        (0x80016020, 'pro', [1, 2, 8], pro_regs, pro_mem),
+        (0x80016020, 'proEmpty', [1, 2, 8], pro_regs, pro_mem),
+        (0x80016088, 'empty', [2, 10, 14, 15], f'[{rest([2, 10, 14, 15])}]', {}),
+        (0x80016094, 'testSkip', [2, 8, 10, 13, 14]) + test,
+        (0x80016094, 'testOut', [2, 8, 10, 13, 14]) + test,
+        (0x8001609c, 'flagsSkip', [2, 8, 10, 13, 14]) + flags,
+        (0x8001609c, 'flagsGo', [2, 8, 10, 13, 14]) + flags,
+        (0x800160a8, 'call', [2, 8, 13, 14],
+         f'[(10, 2147891728#64), (11, 8#64), (15, {count}), (12, 65616#64), {rest([2, 8, 13, 14])}]',
+         {'mem': [('R 8 + 64#64', 'window'), ('R 8 + 64#64', 'window'), ('R 2 + 8#64', 'window')],
+          'log': f'[((R 8 + 64#64).toNat, 4, {count}), ((R 2 + 8#64).toNat, 8, R 14)]'}),
+        (0x800160d0, 'cons', [2, 8, 10], f'[(10, 2#64), (11, 0#64), (15, {ld(0)}), {rest([2, 8])}]',
+         {'mem': [('R 10 + 8#64', 'window'), ('R 2 + 24#64', 'window'), ('R 2 + 40#64', 'window'), ('R 2 + 32#64', 'window')],
+          'log': f'[((R 10 + 8#64).toNat, 8, R 8), ((R 2 + 40#64).toNat, 8, R 10), ((R 2 + 32#64).toNat, 8, {ld(0)})]'}),
+        (0x800160ec, 'linkNext', [2, 8, 10]) + link,
+        (0x800160ec, 'linkLast', [2, 8, 10]) + link,
+        (0x8001608c, 'skipLast', [2, 8, 10, 13, 14]) + skip,
+        (0x8001608c, 'skipNext', [2, 8, 10, 13, 14]) + skip,
+        (0x80016118, 'leave', [2, 10, 13, 14], f'[(10, {ld(1)}), (15, {ld(0)}), {rest([2, 13, 14])}]',
+         {'mem': [('R 13', 'window'), ('R 2 + 24#64', 'window')]}),
+        (0x80016120, 'done', [2, 10, 14, 15], f'[(2, R 2 + 128#64), (8, {ld(1)}), (1, {ld(0)}), {rest([10, 14, 15])}]',
+         {'mem': [('R 15 + 288#64', 'window'), ('R 2 + 120#64', 'window'), ('R 2 + 112#64', 'window')],
+          'log': '[((R 15 + 288#64).toNat, 8, R 14)]', 'ra': 0}),
+    ])
 
 
 def ml_open(ld, rest, out):

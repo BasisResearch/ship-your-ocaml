@@ -41,6 +41,24 @@ theorem alloc_alloc_absent (h : Heap) (o o' : Obj) : h.get? ((h.alloc o).1.alloc
 theorem alloc_alloc_ne (h : Heap) (o o' : Obj) : (h.alloc o).2 ≠ ((h.alloc o).1.alloc o').2 := by
   simp [Heap.alloc]
 
+/-- `caml_ml_out_channels_list`'s placements: locations past the heap,
+24-byte steps below `young − 16`. -/
+theorem outListPlaces_ok (s : St) (young : BitVec 64) (al : young.toNat % 8 = 0) :
+    PlacesOk s.heap (outListPlaces s young) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro p hp
+    simp only [outListPlaces, List.mem_map, List.mem_range] at hp
+    obtain ⟨i, -, rfl⟩ := hp
+    simp [Heap.get?, Heap.size]
+  · intro p hp
+    simp only [outListPlaces, List.mem_map, List.mem_range] at hp
+    obtain ⟨i, -, rfl⟩ := hp
+    simp only [BitVec.toNat_sub, BitVec.toNat_ofNat]
+    omega
+  · simp only [outListPlaces, List.map_map]
+    exact List.Pairwise.map _ (fun a b hab h => hab (by simp only [Function.comp] at h; omega))
+      List.nodup_range
+
 /-- **`allocPlaces` is placeable** for every primitive, state and aligned
 young pointer. -/
 theorem allocPlaces_ok (name : String) (s : St) (young : BitVec 64) (al : young.toNat % 8 = 0) :
@@ -99,6 +117,7 @@ theorem allocPlaces_ok (name : String) (s : St) (young : BitVec 64) (al : young.
     · simp only [List.map_cons, List.map_nil, List.nodup_cons, List.mem_singleton, List.not_mem_nil,
         not_false_eq_true, List.nodup_nil, and_true]
       exact alloc_alloc_ne _ _ _
+  · exact outListPlaces_ok s young al
   · exact .nil _
 
 end OCaml.Vm.Sim
