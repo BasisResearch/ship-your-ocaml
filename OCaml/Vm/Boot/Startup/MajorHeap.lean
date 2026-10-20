@@ -5,6 +5,7 @@ import OCaml.Vm.Boot.Startup.MakeFree
 import OCaml.Vm.Boot.Startup.PageApart
 import OCaml.Vm.Boot.Startup.PageAdd
 import OCaml.Vm.Boot.Startup.MemSame
+import Vsa.Sim.FrameComposition
 import OCaml.Vm.Boot.Startup.ReadyIndirect
 
 /-! caml_init_major_heap, composed. Stage A runs from the entry through
@@ -580,6 +581,7 @@ structure MajorMerged (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
   tableHigh : heapStart ≤ ent.toNat
+  tableLow : ent.toNat + 16384 ≤ heapEnd
   tableOwned : (ent.toNat, 16384) ∈ H
   tableApart : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat
 
@@ -711,7 +713,258 @@ theorem major_merged (c d12 : Config) (H : List (Nat × Nat)) (capacity charge :
     saved := fun k lo hi => by
       rw [g16.same k (by omega) (by omega) (by simp [abiClobbered]; omega), PA.saved k lo hi, P.saved k lo hi]
     tableHigh := P.call.span.tableHigh
+    tableLow := P.call.span.tableLow
     tableOwned := P.tableOwned
     tableApart := P.tableApart }⟩
+
+/-- The chunk in words: at least `Heap_chunk_min`, exactly the chunk's bytes. -/
+theorem major_words_nat (a : BitVec 64) (pages : a.toNat % 4096 = 0) (big : 0x78000 ≤ a.toNat) (small : a.toNat < 2 ^ 33) :
+    8 * (a >>> 3).toNat = a.toNat ∧ 18 ≤ (a >>> 3).toNat ∧ (a >>> 3).toNat ≤ 2 ^ 54 := by
+  rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
+  simp only [Nat.reducePow] at *
+  omega
+
+theorem above_major_globals {x : Nat} (h : 0x8007d140 ≤ x) :
+    (x < largeTreeAddr ∨ largeTreeAddr + 8 ≤ x) ∧ (x < flCurWszAddr ∨ flCurWszAddr + 8 ≤ x) := by
+  unfold largeTreeAddr flCurWszAddr; omega
+
+/-- What `bf_make_free_blocks` writes below the arena. -/
+def majorFreeWindows : List W :=
+  majorLowWindows ++ [⟨largeTreeAddr, largeTreeAddr + 8⟩, ⟨flCurWszAddr, flCurWszAddr + 8⟩]
+
+/-- bf_make_free_blocks returned into caml_init_major_heap: the chunk is one
+free block, the best-fit tree's root. -/
+structure MajorFreed (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 s3 mem ent cur : BitVec 64)
+    (before after : Config) : Prop where
+  pc : PCAt jalr_80009430_call.link after
+  regs : GHolds after.σ [(2, nativeStack sp 48), (8, BitVec.ofNat 64 Layout.sym_Caml_state), (9, 1#64),
+    (18, 0x80064ad0#64), (19, s3)]
+  ready : RuntimeReady ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) capacity (nativeStack sp 48)
+    jalr_80009430_call.link after
+  fresh : FreshBlock vsaLayoutP H mem.toNat (majorChunkSize hsize + 4152#64).toNat
+  spot : ChunkSpot mem (majorChunkSize hsize).toNat
+  heapStartWord : bytesT after.σ.mem heapStartAddr 8 = chunkStart mem
+  wsz : bytesT after.σ.mem (domainField 336) 8 = majorChunkSize hsize >>> 3
+  slots : ∀ off value, (off, value) ∈ majorSlots ra s0 s1 s2 →
+    bytesT after.σ.mem (nativeFrameBase sp 48 + off) 8 = value
+  count : pageCount after.σ.mem ent.toNat = pageCount before.σ.mem ent.toNat + majorPages hsize
+  present : ∀ j, j < majorPages hsize → ∃ i, i < 2048 ∧
+    slotWord after.σ.mem ent i = 1#64 ||| blockPage (chunkStart mem) j
+  lists : ∀ j, j < 16 → ListReset after.σ.mem j
+  flMerge : bytesT after.σ.mem flMergeAddr 8 = 0#64
+  header : bytesT after.σ.mem (chunkStart mem).toNat 8 = mfbHeader (majorChunkSize hsize >>> 3)
+  tree : TreeRoot after.σ.mem (chunkStart mem + 8#64)
+  curWsz : bytesT after.σ.mem flCurWszAddr 8 = cur + 1#64 + ((majorChunkSize hsize >>> 3) - 1#64)
+  lowSame : ∀ x, x < heapStart → ¬ allocGlobal x → OutW majorFreeWindows x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
+
+theorem major_freed (c d16 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+    (sp ra hsize s0 s1 s2 s3 s4 s5 s6 s7 s8 inc mem ent cur : BitVec 64)
+    (A : MajorHeapCall H capacity charge sp ra hsize s0 s1 s2 inc c)
+    (M : MajorMerged H capacity sp ra hsize s0 s1 s2 s3 mem ent c d16) (G : MajorGlobals c.σ.mem cur)
+    (callee : GHolds c.σ [(20, s4), (21, s5), (22, s6), (23, s7), (24, s8)]) :
+    ∃ after, Steps d16 after ∧ MajorFreed H capacity sp ra hsize s0 s1 s2 s3 mem ent cur c after := by
+  have frame48 : NativeFrame sp 48 := A.frame.resize (by unfold allocHeadroom; omega) (by decide)
+  have stack48 : (nativeStack sp 48).toNat = sp.toNat - 48 := frame48.stack_nat
+  have frame80 : NativeFrame (nativeStack sp 48) 80 :=
+    (A.frame.nested (front := 48) (by decide)).resize (by unfold allocHeadroom; omega) (by decide)
+  obtain ⟨_, reqLow, reqHigh⟩ := major_request_nat hsize A.request A.chunkMin
+  obtain ⟨pagesMod, reqLe, sizeHigh⟩ := major_chunk_size ((hsize >>> 3) <<< 3) reqHigh
+  change (majorChunkSize hsize).toNat % 4096 = 0 at pagesMod
+  change ((hsize >>> 3) <<< 3).toNat ≤ (majorChunkSize hsize).toNat at reqLe
+  change (majorChunkSize hsize).toNat < 2 ^ 33 at sizeHigh
+  obtain ⟨words, large, fits⟩ := major_words_nat (majorChunkSize hsize) pagesMod (by omega) sizeHigh
+  have sizeNat : (majorChunkSize hsize + 4152#64).toNat = (majorChunkSize hsize).toNat + 4152 := by
+    rw [BitVec.toNat_add]; simp only [BitVec.toNat_ofNat, Nat.reducePow] at sizeHigh ⊢; omega
+  obtain ⟨headLow, headHigh, _⟩ := M.spot.bounds
+  have chunkNat := M.spot.chunk_nat
+  have chunkAligned := M.spot.chunk_aligned
+  have memLow := M.spot.low
+  have memHigh := M.spot.high
+  have hS : heapStart = 0x8007d140 := rfl
+  have hE : heapEnd = 0x86800000 := rfl
+  have dom : firstDomainPtr.toNat = 0x8007d150 := rfl
+  have hP : pageTable = 0x800684b8 := rfl
+  rw [hS] at memLow
+  rw [hE] at memHigh
+  -- the chunk lies in the fresh block, apart from every live block
+  have chunkApart (e : Nat × Nat) (owned : e ∈ H) (x : Nat) (inside : InExt e x) :
+      x < (chunkStart mem).toNat ∨ (chunkStart mem).toNat + 8 * (majorChunkSize hsize >>> 3).toNat ≤ x := by
+    have apart := M.fresh.2.2.2 e owned x
+    unfold InExt at apart
+    rw [sizeNat] at apart
+    rw [words, chunkNat]
+    rcases Nat.lt_or_ge x mem.toNat with h | h
+    · left; omega
+    · rcases Nat.lt_or_ge x (mem.toNat + ((majorChunkSize hsize).toNat + 4152)) with h' | h'
+      · exact absurd inside (apart ⟨h, h'⟩)
+      · right; omega
+  -- caml_fl_p_make_free_blocks(caml_heap_start, stat_heap_wsz, 1, Caml_white)
+  have pointer : bytesT d16.σ.mem 0x800649b8 8 = 0x80006fac#64 := by
+    rw [word_observed (m := c.σ.mem) _ fun i hi => M.lowSame _ (by rw [hS]; omega)
+      (by unfold allocGlobal InRange; omega)
+      (by simp only [majorLowWindows, OutW, heapStartAddr, hP, smallListsWindow, flMergeAddr, smallMapAddr, and_true]
+          omega)]
+    exact G.makeFree
+  obtain ⟨d17, run17, p17⟩ := (major_free_front d16 jalr_80009410_call.link (chunkStart mem)
+    (majorChunkSize hsize >>> 3) 0x80006fac#64 M.ready.toLeafInput
+    ⟨gholds_lookup (n := 8) _ M.regs rfl, gholds_lookup (n := 18) _ M.regs rfl, gholds_lookup (n := 9) _ M.regs rfl,
+      trivial⟩ M.ready.domainWord M.heapStartWord pointer M.wsz).run d16 ⟨M.pc, rfl⟩
+  have g17 := GprsSame.of_post p17 (by decide)
+  have ready17 := M.ready.stack_log p17 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g17.get (by decide) (by decide) (by decide) M.ready.stack) (g17.get (by decide) (by decide) (by decide) M.ready.raReg)
+    (by decide) frame48 (by simp only [LogInW])
+  obtain ⟨d18, run18, I⟩ := (ready_indirect jalr_80009430_call_shape jalr_80009430_call_decode
+    (jalr_80009430_call_pins p17.image) ready17 _ p17.regs (by simp only [keysG]; decide)
+    (by simp only [KeysAvoidRa, keysG]; decide) 0x80006fac#64 rfl (by decide) rfl (by decide)).run d17 ⟨p17.pc, rfl⟩
+  have tgt : jalr_80009430_call.target 0x80006fac#64 = 0x80006fac#64 := by decide
+  have mem18 : d18.σ.mem = d16.σ.mem := I.memory.trans p17.memory
+  have g18 := g17.trans I.same
+  have low18 (a : Nat) (low : a + 8 ≤ 0x8007d140) (alloc : ∀ i, i < 8 → ¬ allocGlobal (a + i))
+      (out : ∀ i, i < 8 → OutW majorLowWindows (a + i)) : bytesT d18.σ.mem a 8 = bytesT c.σ.mem a 8 := by
+    rw [mem18]
+    exact word_observed _ fun i hi => M.lowSame _ (by rw [hS]; omega) (alloc i hi) (out i hi)
+  have saved18 (k : Nat) (lo : 20 ≤ k) (hi : k ≤ 24) {v : BitVec 64} (h : gprGet c.σ k = some v) :
+      gprGet d18.σ k = some v := by
+    rw [g18.same k (by omega) (by omega) (by simp; omega), M.saved k lo (by omega)]; exact h
+  have regs16 := M.regs
+  have lowWin (a : Nat) (i : Nat) (hi : i < 8) (h : a + 8 ≤ 0x80064a00) :
+      OutW majorLowWindows (a + i) := by
+    simp only [majorLowWindows, OutW, heapStartAddr, hP, smallListsWindow, flMergeAddr, smallMapAddr, and_true]; omega
+  -- bf_make_free_blocks
+  obtain ⟨d19, run19, F⟩ := make_free_blocks d18 _ capacity (nativeStack sp 48) jalr_80009430_call.link (chunkStart mem)
+    (majorChunkSize hsize >>> 3) (BitVec.ofNat 64 Layout.sym_Caml_state) 1#64 0x80064ad0#64 s3 s4 s5 s6 s7 s8 cur
+    mem.toNat (majorChunkSize hsize + 4152#64).toNat {
+      pc := by rw [← tgt]; exact I.pc
+      regs := ⟨I.ready.stack, I.ready.raReg, gholds_lookup (n := 10) _ I.regs rfl, gholds_lookup (n := 11) _ I.regs rfl,
+        gholds_lookup (n := 12) _ I.regs rfl, gholds_lookup (n := 13) _ I.regs rfl, gholds_lookup (n := 8) _ I.regs rfl,
+        gholds_lookup (n := 9) _ I.regs rfl, gholds_lookup (n := 18) _ I.regs rfl,
+        g18.get (by decide) (by decide) (by decide) (gholds_lookup (n := 19) _ regs16 rfl),
+        saved18 20 (by decide) (by decide) (gholds_lookup (n := 20) _ callee rfl),
+        saved18 21 (by decide) (by decide) (gholds_lookup (n := 21) _ callee rfl),
+        saved18 22 (by decide) (by decide) (gholds_lookup (n := 22) _ callee rfl),
+        saved18 23 (by decide) (by decide) (gholds_lookup (n := 23) _ callee rfl),
+        saved18 24 (by decide) (by decide) (gholds_lookup (n := 24) _ callee rfl), trivial⟩
+      ready := I.ready
+      frame := frame80
+      fits := fits
+      large := large
+      ownedLow := by rw [hS]; exact memLow
+      owned := by simp
+      ownedHigh := by rw [sizeNat, hE]; omega
+      chunkStart := by rw [chunkNat]; omega
+      chunkStop := by rw [chunkNat, words, sizeNat]; omega
+      aligned := by omega
+      tree := by
+        rw [low18 _ (by decide) (fun i hi => by unfold largeTreeAddr allocGlobal InRange; omega)
+          (fun i hi => lowWin _ i hi (by decide))]
+        exact G.tree
+      least := by
+        rw [low18 _ (by decide) (fun i hi => by unfold largeLeastAddr allocGlobal InRange; omega)
+          (fun i hi => lowWin _ i hi (by decide))]
+        exact G.least
+      curWsz := by
+        rw [low18 _ (by decide) (fun i hi => by unfold flCurWszAddr allocGlobal InRange; omega)
+          (fun i hi => by
+            simp only [majorLowWindows, OutW, heapStartAddr, hP, smallListsWindow, flMergeAddr, smallMapAddr, and_true]
+            unfold flCurWszAddr; omega)]
+        exact G.curWsz }
+  -- back to the memory before the call
+  have back (x : Nat) (h : (x < heapEnd ∧ OutW [⟨(chunkStart mem).toNat,
+        (chunkStart mem).toNat + 8 * (majorChunkSize hsize >>> 3).toNat⟩, ⟨largeTreeAddr, largeTreeAddr + 8⟩,
+        ⟨flCurWszAddr, flCurWszAddr + 8⟩] x) ∨ (nativeStack sp 48).toNat ≤ x) :
+      (d19.σ.mem[x]?).getD 0 = (d16.σ.mem[x]?).getD 0 := by
+    rcases h with ⟨low, out⟩ | above
+    · rw [F.kept x low out, mem18]
+    · rw [F.caller x above, mem18]
+  have lowBack (x : Nat) (low : x < 0x8007d140) (tree : x < largeTreeAddr ∨ largeTreeAddr + 8 ≤ x)
+      (cur : x < flCurWszAddr ∨ flCurWszAddr + 8 ≤ x) : (d19.σ.mem[x]?).getD 0 = (d16.σ.mem[x]?).getD 0 :=
+    back x (Or.inl ⟨by rw [hE]; omega, by simp only [OutW, and_true]; rw [chunkNat]; exact ⟨Or.inl (by omega), tree, cur⟩⟩)
+  have tableBack (x : Nat) (inT : InTable ent x) : (d19.σ.mem[x]?).getD 0 = (d16.σ.mem[x]?).getD 0 := by
+    have th := M.tableHigh
+    have tl := M.tableLow
+    rw [hS] at th
+    rw [hE] at tl
+    rcases inT with ⟨lo, hi⟩ | ⟨lo, hi⟩
+    · rw [hP] at lo hi
+      exact lowBack x (by omega) (by unfold largeTreeAddr; omega) (by unfold flCurWszAddr; omega)
+    · exact back x (Or.inl ⟨by rw [hE]; omega, by
+        simp only [OutW, largeTreeAddr, flCurWszAddr, and_true]
+        have ag := above_major_globals (Nat.le_trans th lo)
+        exact ⟨chunkApart _ M.tableOwned x ⟨lo, hi⟩, ag.1, ag.2⟩⟩)
+  have fitsT : ent.toNat + 16384 ≤ 2 ^ 64 := Nat.le_trans M.tableLow (by decide)
+  have regs19 := F.regs
+  refine ⟨d19, run17.trans (run18.trans run19), {
+    pc := F.pc
+    regs := ⟨gholds_lookup (n := 2) _ regs19 rfl, gholds_lookup (n := 8) _ regs19 rfl,
+      gholds_lookup (n := 9) _ regs19 rfl, gholds_lookup (n := 18) _ regs19 rfl, gholds_lookup (n := 19) _ regs19 rfl,
+      trivial⟩
+    ready := F.ready
+    fresh := M.fresh
+    spot := M.spot
+    heapStartWord := by
+      rw [word_observed (m := d16.σ.mem) _ fun i hi => lowBack _ (by unfold heapStartAddr; omega)
+        (by unfold heapStartAddr largeTreeAddr; omega) (by unfold heapStartAddr flCurWszAddr; omega)]
+      exact M.heapStartWord
+    wsz := by
+      rw [word_observed (m := d16.σ.mem) _ fun i hi => back _ (Or.inl ⟨by simp only [domainField, dom]; rw [hE]; omega, by
+        simp only [OutW, largeTreeAddr, flCurWszAddr, and_true]
+        have ag := above_major_globals (x := domainField 336 + i)
+          (Nat.le_trans (by decide : 0x8007d140 ≤ domainField 336) (Nat.le_add_right _ _))
+        exact ⟨chunkApart _ A.domainOwned _ ⟨by simp only [domainField]; omega, by simp only [domainField]; omega⟩,
+          ag.1, ag.2⟩⟩)]
+      exact M.wsz
+    slots := fun off value member => by
+      have bound : off + 8 ≤ 48 := by simp [majorSlots] at member; omega
+      rw [word_observed (m := d16.σ.mem) _ fun i hi => back _ (Or.inr (by rw [stack48]; unfold nativeFrameBase; omega))]
+      exact M.slots off value member
+    count := by
+      have congr : pageCount d19.σ.mem ent.toNat = pageCount d16.σ.mem ent.toNat := pageCount_congr fun i hi => by
+        rw [← slotWord_pageSlot _ _ i hi fitsT, ← slotWord_pageSlot _ _ i hi fitsT]
+        exact slotWord_window_agree fitsT tableBack i hi
+      rw [congr, M.count]
+    present := fun j hj => by
+      obtain ⟨i, hi, slot⟩ := M.present j hj
+      exact ⟨i, hi, by rw [slotWord_window_agree fitsT tableBack i hi]; exact slot⟩
+    lists := fun j hj => by
+      have L := M.lists j hj
+      have n0 := smallList_nat j hj 0 (by decide)
+      have n8 := smallList_nat j hj 8 (by decide)
+      rw [BitVec.add_zero] at n0
+      have near (off : Nat) (h : off ≤ 8) : ∀ i, i < 8 → (d19.σ.mem[0x800662e8 + 16 * j + off + i]?).getD 0 =
+          (d16.σ.mem[0x800662e8 + 16 * j + off + i]?).getD 0 := fun i hi =>
+        lowBack _ (by omega) (by unfold largeTreeAddr; omega) (by unfold flCurWszAddr; omega)
+      constructor
+      · rw [n0, word_observed (m := d16.σ.mem) _ fun i hi => by have := near 0 (by decide) i hi; simpa using this, ← n0]
+        exact L.free
+      · rw [show smallList j + 8#64 = smallList j + BitVec.ofNat 64 8 from rfl, n8,
+          word_observed (m := d16.σ.mem) _ (near 8 (by decide)), ← n8]
+        exact L.merge
+    flMerge := by
+      rw [word_observed (m := d16.σ.mem) _ fun i hi => lowBack _ (by unfold flMergeAddr; omega)
+        (by unfold flMergeAddr largeTreeAddr; omega) (by unfold flMergeAddr flCurWszAddr; omega)]
+      exact M.flMerge
+    header := F.header
+    tree := F.tree
+    curWsz := F.curWsz
+    lowSame := fun x low alloc out => by
+      unfold majorFreeWindows at out
+      rw [outW_append] at out
+      obtain ⟨o1, o2⟩ := out
+      simp only [OutW, and_true] at o2
+      rw [hS] at low
+      rw [lowBack x low o2.1 o2.2]
+      exact M.lowSame x (by rw [hS]; exact low) alloc o1
+    saved := fun k lo hi => by
+      by_cases h : k ≤ 24
+      · have cases : k = 20 ∨ k = 21 ∨ k = 22 ∨ k = 23 ∨ k = 24 := by omega
+        rcases cases with rfl | rfl | rfl | rfl | rfl
+        · rw [gholds_lookup (n := 20) _ regs19 rfl, gholds_lookup (n := 20) _ callee rfl]
+        · rw [gholds_lookup (n := 21) _ regs19 rfl, gholds_lookup (n := 21) _ callee rfl]
+        · rw [gholds_lookup (n := 22) _ regs19 rfl, gholds_lookup (n := 22) _ callee rfl]
+        · rw [gholds_lookup (n := 23) _ regs19 rfl, gholds_lookup (n := 23) _ callee rfl]
+        · rw [gholds_lookup (n := 24) _ regs19 rfl, gholds_lookup (n := 24) _ callee rfl]
+      · rw [F.saved k (by omega) hi, g18.same k (by omega) (by omega) (by simp; omega), M.saved k lo hi] }⟩
 
 end OCaml.Vm.Boot.Startup
