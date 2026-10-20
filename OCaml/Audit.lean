@@ -3267,6 +3267,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.caml_sys_get_config_primitive
 #print axioms OCaml.Vm.Primitives.ExitPath.HtifExit.store_halts
 #print axioms OCaml.Vm.Primitives.ExitPath.do_exit_halts
+#print axioms OCaml.Vm.Primitives.ExitPath.libc_exit_run
+#print axioms OCaml.Vm.Primitives.ExitPath.libc_exit_halts
+#print axioms OCaml.Vm.Primitives.ExitPath.ExitCtx.nest
 #print axioms OCaml.Vm.Primitives.ExitPath.exit_halts
 #print axioms OCaml.Vm.Primitives.ExitPath.caml_sys_exit_halts
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.putchar_step

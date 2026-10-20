@@ -223,6 +223,7 @@
   the four globals), with `exitStatus_zero` for STOP: a1-arms/bprime can discharge
   `StopDoExitSummary` from it; `caml_sys_exit_halts` serves the C_CALL
   `PrimitiveExitSummary`.
+  libc `exit` from its own entry: `ExitPath.libc_exit_run`/`libc_exit_halts` (`LibcExitInput`, 112-byte window; a null `__stdio_exit_handler`), factored out by a2-sem; `do_exit_run` is its prefix spliced onto it.
 
 Done this session:
 * `caml_sys_get_argv`: machine run `ArgvTuple.argv_finish_stage`
