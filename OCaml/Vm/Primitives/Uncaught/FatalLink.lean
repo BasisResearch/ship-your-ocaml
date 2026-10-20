@@ -92,7 +92,7 @@ BcSem's `startUncaught` halts with `e` and world `w'`, the machine from the
 fatal path's entry halts with status `e` and console `w'.console`. The
 message is BcSem's `formatUncaught` of the exception (`message`, supplied by
 the exception's representation: its constructor block and name string).
-Named obligations: `FprintfReport`, `StdioExitHandler`. -/
+Named obligation: `FprintfReport` (with the stdio state at exit, `StdioAtExit`). -/
 theorem fatal_bcsem {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place}
     {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {H : List (Nat × Nat)}
     {capacity charge : Nat} {p dom start trig active pos imp err : BitVec 64} {c0 : Config}
@@ -101,7 +101,6 @@ theorem fatal_bcsem {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 
       active pos c0)
     (std : FatalLowAt p dom start trig imp err c0)
     (printf : ∀ live capacity res, FprintfReport live capacity sp res dom err name)
-    (handler : ExitPath.StdioExitHandler (sp + 18446744073709551568#64) 2#64)
     (inactive : active = 0#64)
     (noAtExit : s.world.named.lookup "Pervasives.do_at_exit" = none)
     (world : Vsa.Machine.output c0.σ = bytesToString s.world.console)
@@ -114,7 +113,7 @@ theorem fatal_bcsem {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 
   obtain ⟨rfl, console⟩ := fatalExit_halt live stderrFd sem
   refine ⟨rfl, ?_⟩
   have h := fatal_halts (printed := "") pre std
-    (fun _ v _ hv => absurd hv (by rw [noAtExit]; simp)) printf handler inactive
+    (fun _ v _ hv => absurd hv (by rw [noAtExit]; simp)) printf inactive
   have quiet : atExitOutput s.world.named "" = "" := by simp only [atExitOutput, noAtExit]
   rw [quiet, String.append_empty, world] at h
   rw [console]

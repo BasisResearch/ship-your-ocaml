@@ -2,6 +2,7 @@ import OCaml.Vm.Primitives.Uncaught.FatalReport
 import OCaml.Vm.Boot.Startup.StatFree
 import OCaml.Vm.Boot.Startup.SearchExeFrames
 import OCaml.Vm.Primitives.ExitPath.LibcExitHandler
+import OCaml.Vm.Primitives.Uncaught.StdioState
 
 /-!
 # `caml_fatal_uncaught_exception`: the report, the free and the call of `exit(2)`
@@ -51,6 +52,8 @@ structure FprintfReturned (live : List (Nat × Nat)) (capacity : Nat) (sp ra res
   printed : Vsa.Machine.output g.σ = Vsa.Machine.output c.σ ++ fatalText name
   /-- stdio is initialized: `__sinit` installed `stdio_exit_handler` -/
   installed : bytesVal .ld (read8 g.σ.mem ExitPath.stdioExitHandler.toNat) = ExitPath.stdioExitHandlerFn
+  /-- the standard streams as `exit`'s stdio handler will find them -/
+  stdio : StdioState.StdioAtExit g.σ.mem
 
 /-- **Named obligation: `fprintf(stderr, "Fatal error: exception %s\n", msg)`
 prints the report and returns.** Supplied by a summary of newlib's
@@ -74,6 +77,7 @@ structure AtExitCall (live : List (Nat × Nat)) (capacity : Nat) (sp : BitVec 64
   callee : ∀ k, 20 ≤ k → k ≤ 27 → gprGet e.σ k = gprGet before.σ k
   tail : TailLow e.σ.mem
   installed : bytesVal .ld (read8 e.σ.mem ExitPath.stdioExitHandler.toNat) = ExitPath.stdioExitHandlerFn
+  stdio : StdioState.StdioAtExit e.σ.mem
   output : Vsa.Machine.output e.σ = Vsa.Machine.output before.σ ++ fatalText name
 
 /-- A free keeps every byte of another live block disjoint from the freed one. -/
@@ -260,6 +264,10 @@ theorem fatal_exit_call {live : List (Nat × Nat)} {capacity : Nat} {sp res dom 
       status := gholds_lookup (n := 10) _ p8.regs rfl
       tail := at_.tail.transport fun a ha => by rw [m8, tailKept a ha]
       installed := by rw [m8]; exact installed4
+      stdio := pr.stdio.transport fun a ha => by
+        rw [m8]
+        exact ConsoleWrite.read8_same (m := g1.σ.mem) fun i hi => by
+          rw [freed.low_byte frame msgLow msgHigh (ha.low i hi).1 (ha.low i hi).2, m3]
       callee := fun k lo hi =>
         (p8.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)).trans
           ((back k (by omega) (by omega) (by omega)).trans

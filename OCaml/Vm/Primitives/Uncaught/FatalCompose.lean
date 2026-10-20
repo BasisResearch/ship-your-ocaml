@@ -1,4 +1,5 @@
 import OCaml.Vm.Primitives.Uncaught.FatalExit
+import OCaml.Vm.Primitives.Uncaught.StdioWalk
 
 /-!
 # `caml_fatal_uncaught_exception` from its entry to the `do_at_exit` lookup
@@ -211,6 +212,7 @@ structure FatalExiting (sp : BitVec 64) (name : List (BitVec 8)) (cbOut : String
   status : gprGet e.σ 10 = some 2#64
   tail : TailLow e.σ.mem
   installed : bytesVal .ld (read8 e.σ.mem ExitPath.stdioExitHandler.toNat) = ExitPath.stdioExitHandlerFn
+  stdio : StdioState.StdioAtExit e.σ.mem
   output : Vsa.Machine.output e.σ = Vsa.Machine.output c0.σ ++ cbOut ++ fatalText name
 
 /-- **`caml_fatal_uncaught_exception` from its entry to the call of
@@ -231,7 +233,7 @@ theorem fatal_to_exit {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVe
   obtain ⟨e, live', capacity'', run2, call⟩ := fatal_exit_call reached.call (printf live capacity' res) pre.domain
     pre.backtrace.activeWindow (pre.heap.formatFrame.resize (by decide) (by decide)) done.low done.high
     (msg_apart done pre.backtrace) inactive
-  refine ⟨e, run.trans run2, ⟨live', capacity'', call.ready⟩, call.pc, call.status, call.tail, call.installed, ?_⟩
+  refine ⟨e, run.trans run2, ⟨live', capacity'', call.ready⟩, call.pc, call.status, call.tail, call.installed, call.stdio, ?_⟩
   rw [call.output, reached.call.output, reached.output]
 
 /-- A native frame with the allocator's headroom holds libc `exit`'s stack. -/
@@ -259,7 +261,8 @@ theorem _root_.OCaml.Vm.Boot.Startup.NativeFrame.exitLayout {sp : BitVec 64} (fr
 backtrace inactive: after what the entry had printed and what the
 `do_at_exit` callback printed, the console gains exactly
 `"Fatal error: exception " ++ name ++ "\n"`. Named obligations:
-`AtExitCallback`, `FprintfReport`, `StdioExitHandler`. -/
+`AtExitCallback`, `FprintfReport` (whose post includes the stdio state
+`exit`'s handler closes, `StdioAtExit`). -/
 theorem fatal_halts {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place}
     {named : List (String × Val)} {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {H : List (Nat × Nat)}
     {capacity charge : Nat} {p dom start trig active pos imp err : BitVec 64} {c0 : Config} {printed : String}
@@ -268,7 +271,6 @@ theorem fatal_halts {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 
     (callback : ∀ res v clo, named.lookup "Pervasives.do_at_exit" = some v → valWord pl v = some clo →
       AtExitCallback H capacity sp clo res dom imp name.length printed)
     (printf : ∀ live capacity res, FprintfReport live capacity sp res dom err name)
-    (handler : ExitPath.StdioExitHandler (sp + 18446744073709551568#64) 2#64)
     (inactive : active = 0#64) :
     Halts c0 (Vsa.Machine.output c0.σ ++ atExitOutput named printed ++ fatalText name) 2 := by
   obtain ⟨e, run, ex⟩ := fatal_to_exit pre std callback printf inactive
@@ -282,6 +284,15 @@ theorem fatal_halts {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 
         (by simp only [ExitPath.exitReads, List.mem_cons, List.not_mem_nil, or_false] at hn; omega)⟩,
       ready.stack, ex.status, frame.exitLayout,
       by rw [show ExitPath.atexitList.toNat = Layout.sym_atexit from rfl]; exact ex.tail.noAtexit⟩
+  -- `exit`'s stdio handler runs 16 bytes down, in a 160-byte native frame
+  have lo := frame.lower
+  have frame16 : NativeFrame (sp + 18446744073709551568#64 - 16#64) 160 := by
+    have f := StdioClose.frame_callee (front := 16) (size := 160) (frame.resize (by decide) (by decide)) (by decide)
+      18446744073709551600#64 (by decide)
+    rwa [show sp + 18446744073709551568#64 + 18446744073709551600#64 = sp + 18446744073709551568#64 - 16#64 by
+      rw [BitVec.sub_eq_add_neg]; rfl] at f
+  have handler := StdioWalk.stdioExitHandler_of (code := 2#64) frame16
+    (by unfold allocHeadroom heapEnd at lo; unfold heapEnd ExitPath.libcExitDepth; omega) ex.stdio
   have h := ExitPath.libc_exit_handler_halts entry ex.installed handler ex.pc
   rw [ex.output, show (ExitPath.exitStatus 2#64).toNat = 2 by decide] at h
   obtain ⟨c', σf, run', halted, o⟩ := h

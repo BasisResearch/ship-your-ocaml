@@ -129,7 +129,6 @@ theorem fatal_bcsem_constant {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List
       active pos c0)
     (std : FatalLowAt p dom start trig imp err c0)
     (printf : ∀ live capacity res, FprintfReport live capacity sp res dom err name)
-    (handler : ExitPath.StdioExitHandler (sp + 18446744073709551568#64) 2#64)
     (inactive : active = 0#64)
     (noAtExit : s.world.named.lookup "Pervasives.do_at_exit" = none)
     (world : Vsa.Machine.output c0.σ = bytesToString s.world.console)
@@ -142,7 +141,7 @@ theorem fatal_bcsem_constant {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List
   have th := pre.thrown
   have hi := th.nameHigh
   have he : Vsa.Sim.DlHeap.heapEnd < 2 ^ 64 := by decide
-  exact fatal_bcsem pre std printf handler inactive noAtExit world live stderrFd
+  exact fatal_bcsem pre std printf inactive noAtExit world live stderrFd
     (formatUncaught_constant block tagNz str strAt th.named th.fits (by omega)) sem
 
 end OCaml.Vm.Primitives.Uncaught.FatalUncaught
