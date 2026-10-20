@@ -315,7 +315,17 @@ insertion is proved generically:
   * `caml_fl_cur_wsz` grows by `size`.
   * `ownedWindow_ok` carries readiness across stores inside a live block of
     `H`; `WindowsOk.cons` combines windows.
-Next, the rest of caml_init_major_heap:
+* caml_init_major_heap's remaining blocks are proved (MajorHeadSteps,
+  MajorTailSteps). They cover:
+  * `caml_heap_start`, the chunk's next link and the heap statistics;
+  * the In_heap caml_page_table_add call;
+  * the `init_merge` and `make_free_blocks` pointer loads before their
+    indirect calls;
+  * `Phase_idle`, the mark stack and `caml_extra_heap_resources`;
+  * the tail call `memset(caml_major_ring, 0, 400)`.
+  Blocks that reload a value they just stored are split at the reload; the
+  evaluator reads a block's loads from its entry memory.
+Next, compose caml_init_major_heap:
 * `__divdi3`/`__muldi3` (`ready_muldi3` exists);
 * the In_heap `caml_page_table_add`, whose disjointness comes from
   `MinorHeapSet.only` and the fresh chunk;

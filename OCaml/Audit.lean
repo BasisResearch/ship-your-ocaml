@@ -415,6 +415,7 @@ import OCaml.Vm.Boot.Startup.MinorHeap
 import OCaml.Vm.Boot.Startup.MajorSteps
 import OCaml.Vm.Boot.Startup.InitMerge
 import OCaml.Vm.Boot.Startup.MakeFree
+import OCaml.Vm.Boot.Startup.MajorTailSteps
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2934,6 +2935,18 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.mfb_block
 #print axioms OCaml.Vm.Boot.Startup.header_wosize
 #print axioms OCaml.Vm.Boot.Startup.make_free_blocks
+#print axioms OCaml.Vm.Boot.Startup.major_heap_start
+#print axioms OCaml.Vm.Boot.Startup.major_chunk_next
+#print axioms OCaml.Vm.Boot.Startup.major_add_call
+#print axioms OCaml.Vm.Boot.Startup.major_merge_front
+#print axioms OCaml.Vm.Boot.Startup.major_free_front
+#print axioms OCaml.Vm.Boot.Startup.major_phase_call
+#print axioms OCaml.Vm.Boot.Startup.major_stack_set
+#print axioms OCaml.Vm.Boot.Startup.major_stack_alloc_call
+#print axioms OCaml.Vm.Boot.Startup.major_stack_store
+#print axioms OCaml.Vm.Boot.Startup.major_stack_check
+#print axioms OCaml.Vm.Boot.Startup.major_stack_init
+#print axioms OCaml.Vm.Boot.Startup.major_tail
 #print axioms OCaml.Vm.Boot.Startup.ownedWindow_ok
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
