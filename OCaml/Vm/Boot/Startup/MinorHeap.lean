@@ -160,9 +160,9 @@ theorem RefTableSpot.byte_out {t ent sp ra start trig blk top tr wsize raw : Bit
       show triggerAddr.toNat = 2147896520 from rfl, and_true] <;> omega
 
 open OCaml.Vm.Primitives.Memprof.RenewMinorSample in
-/-- A byte of the domain's ref-table pointers misses everything written before the resets. -/
-theorem ptr_byte_out {ent sp ra start trig blk top tr wsize raw : BitVec 64} {off i : Nat}
-    (lo : 104 ≤ off) (hi : off + 8 ≤ 128) (hi8 : i < 8)
+/-- A byte of the domain record at or above the ref-table pointers misses everything written before the resets. -/
+theorem domain_byte_out {ent sp ra start trig blk top tr wsize raw : BitVec 64} {off i : Nat}
+    (lo : 104 ≤ off) (hi : off + 8 ≤ 928) (hi8 : i < 8)
     (tableDomain : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat)
     (slotHigh : heapEnd ≤ (sp - 16#64 + 8#64).toNat) :
     EarlierOut ent (minorFieldsLog blk top tr wsize raw) (renewLog sp ra firstDomainPtr start trig)
@@ -174,6 +174,16 @@ theorem ptr_byte_out {ent sp ra start trig blk top tr wsize raw : BitVec 64} {of
     simp only [OutL, minorFieldsLog, renewLog, domainField, dom, show triggerAddr.toNat = 2147896520 from rfl,
       and_true]
     omega
+
+open OCaml.Vm.Primitives.Memprof.RenewMinorSample in
+/-- A byte of the domain's ref-table pointers misses everything written before the resets. -/
+theorem ptr_byte_out {ent sp ra start trig blk top tr wsize raw : BitVec 64} {off i : Nat}
+    (lo : 104 ≤ off) (hi : off + 8 ≤ 128) (hi8 : i < 8)
+    (tableDomain : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat)
+    (slotHigh : heapEnd ≤ (sp - 16#64 + 8#64).toNat) :
+    EarlierOut ent (minorFieldsLog blk top tr wsize raw) (renewLog sp ra firstDomainPtr start trig)
+      (domainField off + i) :=
+  domain_byte_out lo (by omega) hi8 tableDomain slotHigh
 
 theorem RefTableSpot.clear_miss {t : BitVec 64} (spot : RefTableSpot t) {a n : Nat}
     (apart : a + n ≤ t.toNat ∨ t.toNat + 56 ≤ a) : OutLRange (tableClearLog t) a n := by
@@ -489,6 +499,13 @@ structure MinorHeapSet (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 
   present : ∀ j, j < n → ∃ i, i < 2048 ∧ slotWord after.σ.mem ent i = 2#64 ||| blockPage (pageAbove raw) j
   only : ∀ i, i < 2048 → slotWord after.σ.mem ent i ≠ 0#64 →
     ∃ j, j < n ∧ slotWord after.σ.mem ent i = 2#64 ||| blockPage (pageAbove raw) j
+  /-- Domain fields from `mark_stack` on are the caller's. -/
+  domainHigh : ∀ off, 128 ≤ off → off + 8 ≤ 928 →
+    bytesT after.σ.mem (domainField off) 8 = bytesT before.σ.mem (domainField off) 8
+  /-- Below the arena, outside the allocator's globals, the table's occupancy and
+  memprof's trigger, memory is the caller's. -/
+  lowKept : ∀ x, x < heapStart → ¬ allocGlobal x → (x < pageTable + 0x18 ∨ pageTable + 0x20 ≤ x) →
+    (x < 0x80064cc8 ∨ 0x80064cc8 + 8 ≤ x) → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 theorem minor_heap_set (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra size s0 s1 s2 s3 ent t1 t2 t3 : BitVec 64) (n : Nat)
@@ -991,6 +1008,43 @@ theorem minor_heap_set (c : Config) (H : List (Nat × Nat)) (capacity charge : N
       rw [← slotWord_pageSlot d16.σ.mem ent i hi fits64, ← slotWord_pageSlot d7.σ.mem ent i hi fits64]
       exact slots16 i hi, PA.count, count6]
     omega
+  have domainHigh16 (off : Nat) (lo : 128 ≤ off) (hi : off + 8 ≤ 928) :
+      bytesT d16.σ.mem (domainField off) 8 = bytesT c.σ.mem (domainField off) 8 := by
+    rw [p16.memory, show writeLog d15.σ.mem [] = d15.σ.mem from rfl, p15.memory,
+      bytesT_writeLog_out _ (refs.spot3.tail_miss (domain_field_apart hi refs.domain3)), mem14,
+      bytesT_writeLog_out _ (refs.spot3.clear_miss (domain_field_apart hi refs.domain3)),
+      bytesT_writeLog_out _ (refs.spot2.reset_miss (domain_field_apart hi refs.domain2)), mem13,
+      bytesT_writeLog_out _ (refs.spot2.clear_miss (domain_field_apart hi refs.domain2)),
+      bytesT_writeLog_out _ (refs.spot1.reset_miss (domain_field_apart hi refs.domain1)),
+      bytesT_writeLog_out _ (refs.spot1.clear_miss (domain_field_apart hi refs.domain1))]
+    exact word_observed _ fun i hi8 => kept11 _ ((InDomain.field hi hi8).not_foot A.domainOwned)
+      (domain_byte_out (by omega) hi hi8 A.tableDomain slotHigh)
+  have low16 (x : Nat) (low : x < heapStart) (global : ¬ allocGlobal x)
+      (occ : x < pageTable + 0x18 ∨ pageTable + 0x20 ≤ x) (trig : x < 0x80064cc8 ∨ 0x80064cc8 + 8 ≤ x) :
+      (d16.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    have l1 := refs.spot1.low
+    have l2 := refs.spot2.low
+    have l3 := refs.spot3.low
+    have a1 : x + 1 ≤ t1.toNat ∨ t1.toNat + 56 ≤ x := Or.inl (by omega)
+    have a2 : x + 1 ≤ t2.toNat ∨ t2.toNat + 56 ≤ x := Or.inl (by omega)
+    have a3 : x + 1 ≤ t3.toNat ∨ t3.toNat + 56 ≤ x := Or.inl (by omega)
+    rw [p16.memory, show writeLog d15.σ.mem [] = d15.σ.mem from rfl, p15.memory,
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot3.tail_miss a3)), mem14,
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot3.clear_miss a3)),
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot2.reset_miss a2)), mem13,
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot2.clear_miss a2)),
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot1.reset_miss a1)),
+      writeLog_out _ _ _ (outL_of_range1 (refs.spot1.clear_miss a1))]
+    have th := A.tableHigh
+    have sh := slotHigh
+    rw [hS] at low th
+    rw [hE] at sh
+    apply kept11 x (fun f => by rcases f with g | ⟨above, _, _⟩; exact global g; rw [hS] at above; omega)
+    refine ⟨by rw [hE]; omega, by simp only [OutW, and_true]; exact ⟨occ, Or.inl (by omega)⟩, ?_, ?_⟩
+    · simp only [OutL, minorFieldsLog, domainField, dom, and_true]; omega
+    · simp only [OutL, OCaml.Vm.Primitives.Memprof.RenewMinorSample.renewLog, domainField, dom,
+        show OCaml.Vm.Primitives.Memprof.RenewMinorSample.triggerAddr.toNat = 2147896520 from rfl, and_true]
+      omega
   subst hblk
   refine ⟨raw, d16, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans
     (run9.trans (run10.trans (run11.trans (run12.trans (run13.trans (run14.trans (run15.trans run16)))))))))))))), {
@@ -1035,5 +1089,7 @@ theorem minor_heap_set (c : Config) (H : List (Nat × Nat)) (capacity charge : N
       rw [slots16 i hi] at occupied ⊢
       rcases PA.known i hi occupied with old | found
       · exact absurd (old.trans (table6.slot_zero fits64 i hi)) occupied
-      · exact found }⟩
+      · exact found
+    domainHigh := domainHigh16
+    lowKept := low16 }⟩
 end OCaml.Vm.Boot.Startup
