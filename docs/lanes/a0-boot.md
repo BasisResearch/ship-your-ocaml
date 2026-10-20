@@ -427,6 +427,17 @@ insertion is proved generically:
     message. Generator regions `CamlInitStack`/`InitStack*` were added. The 58
     duplicated stem prefixes in `gen_startup_rows.py` are now one
     `CERTIFIED_STEMS`.
+* **Owed to a1-prims' RootCallsG: `RootsAt` at the whileMin cut** (agreed with
+  a1-prims; not at the end of init_gc, because the atom table, load_code and
+  caml_init_stack change its state). It needs four pieces:
+  * `RegisterRoot.YoungAt m D start stop` (RegisterRootRun.lean) plus
+    `startBelow`/`stopBelow`; an adapter is needed from the minor heap's
+    `YoungAt`.
+  * `Table m cls` / `PageTableFrame` (a6-gc, OCaml/Vm/Gc/PageTable.lean), from
+    `MajorTableAt` (the adapter is with a6-gc).
+  * The three skiplist headers empty, as `Shape m sk []` (shape asked of
+    a6-gc).
+  * The address-level apartness facts.
 Next: caml_init_atom_table (`caml_stat_alloc_aligned_noexc` and
 `caml_page_table_add`, both proved for the minor heap), then backtrace,
 interprete init, debugger, load_code, and on to the cut.
