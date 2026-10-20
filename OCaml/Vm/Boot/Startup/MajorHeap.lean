@@ -7,6 +7,7 @@ import OCaml.Vm.Boot.Startup.PageAdd
 import OCaml.Vm.Boot.Startup.MemSame
 import Vsa.Sim.FrameComposition
 import OCaml.Vm.Boot.Startup.ReadyIndirect
+import OCaml.Vm.Boot.Startup.StatAllocDone
 
 /-! caml_init_major_heap, composed. Stage A runs from the entry through
 `caml_clip_heap_chunk_wsz` (the `__divdi3`/`__muldi3` pair) and the heap
@@ -738,7 +739,7 @@ structure MajorFreed (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1
     (before after : Config) : Prop where
   pc : PCAt jalr_80009430_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 48), (8, BitVec.ofNat 64 Layout.sym_Caml_state), (9, 1#64),
-    (18, 0x80064ad0#64), (19, s3)]
+    (18, 0x80064ad0#64), (19, s3), (10, chunkStart mem + 8#64)]
   ready : RuntimeReady ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) capacity (nativeStack sp 48)
     jalr_80009430_call.link after
   fresh : FreshBlock vsaLayoutP H mem.toNat (majorChunkSize hsize + 4152#64).toNat
@@ -899,7 +900,7 @@ theorem major_freed (c d16 : Config) (H : List (Nat × Nat)) (capacity charge : 
     pc := F.pc
     regs := ⟨gholds_lookup (n := 2) _ regs19 rfl, gholds_lookup (n := 8) _ regs19 rfl,
       gholds_lookup (n := 9) _ regs19 rfl, gholds_lookup (n := 18) _ regs19 rfl, gholds_lookup (n := 19) _ regs19 rfl,
-      trivial⟩
+      gholds_lookup (n := 10) _ regs19 rfl, trivial⟩
     ready := F.ready
     fresh := M.fresh
     spot := M.spot
@@ -966,5 +967,113 @@ theorem major_freed (c d16 : Config) (H : List (Nat × Nat)) (capacity charge : 
         · rw [gholds_lookup (n := 23) _ regs19 rfl, gholds_lookup (n := 23) _ callee rfl]
         · rw [gholds_lookup (n := 24) _ regs19 rfl, gholds_lookup (n := 24) _ callee rfl]
       · rw [F.saved k (by omega) hi, g18.same k (by omega) (by omega) (by simp; omega), M.saved k lo hi] }⟩
+
+/-- The mark stack's two blocks are allocated: the record `stack` (its
+address in `Caml_state->mark_stack`) and the entry array `entries`. -/
+structure MajorStackAllocated (H : List (Nat × Nat)) (capacity : Nat) (sp stack entries : BitVec 64)
+    (before after : Config) : Prop where
+  pc : PCAt jal_80009460_call.link after
+  regs : GHolds after.σ [(2, nativeStack sp 48), (8, BitVec.ofNat 64 Layout.sym_Caml_state), (9, stack), (10, entries)]
+  ready : RuntimeReady ((entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) :: H) capacity
+    (nativeStack sp 48) jal_80009460_call.link after
+  freshStack : FreshBlock vsaLayoutP H stack.toNat (24#64).toNat
+  alignStack : stack.toNat % 16 = 0
+  freshEntries : FreshBlock vsaLayoutP ((stack.toNat, (24#64).toNat) :: H) entries.toNat (32768#64).toNat
+  alignEntries : entries.toNat % 16 = 0
+  record : bytesT after.σ.mem (domainField 128) 8 = stack
+  back : ∀ x, ((x < heapEnd ∧ ¬ vsaFoot H x ∧ OutW [⟨gcPhaseAddr, gcPhaseAddr + 4⟩, ⟨domainField 128, domainField 136⟩] x) ∨
+      (nativeStack sp 48).toNat ≤ x) → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
+
+theorem major_stack_allocated (c d19 : Config) (H : List (Nat × Nat)) (cap c1 c2 charge : Nat)
+    (sp ra hsize s0 s1 s2 s3 inc mem ent cur : BitVec 64)
+    (A : MajorHeapCall H (cap + c2 + c1) charge sp ra hsize s0 s1 s2 inc c)
+    (F : MajorFreed H (cap + c2 + c1) sp ra hsize s0 s1 s2 s3 mem ent cur c d19)
+    (charged1 : vsaChg (24#64).toNat c1) (charged2 : vsaChg (32768#64).toNat c2) :
+    ∃ stack entries after, Steps d19 after ∧
+      MajorStackAllocated ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) cap sp stack entries d19 after := by
+  have frame48 : NativeFrame sp 48 := A.frame.resize (by unfold allocHeadroom; omega) (by decide)
+  have stack48 : (nativeStack sp 48).toNat = sp.toNat - 48 := frame48.stack_nat
+  have frameIn : NativeFrame (nativeStack sp 48) (32 + allocHeadroom) := A.frame.nested (front := 48) (by decide)
+  have frameA : NativeFrame (nativeStack sp 48) allocHeadroom := frameIn.resize (by omega) (by decide)
+  have fl := frameIn.lower
+  have hE : heapEnd = 0x86800000 := rfl
+  have hS : heapStart = 0x8007d140 := rfl
+  have dom : firstDomainPtr.toNat = 0x8007d150 := rfl
+  -- caml_gc_phase = Phase_idle; caml_stat_alloc_noexc(sizeof(struct mark_stack))
+  obtain ⟨d20, run20, p20⟩ := (major_phase_call d19 jalr_80009430_call.link (chunkStart mem + 8#64) F.ready.toLeafInput
+    ⟨gholds_lookup (n := 8) _ F.regs rfl, gholds_lookup (n := 10) _ F.regs rfl, trivial⟩ F.ready.domainWord).run d19
+    ⟨F.pc, rfl⟩
+  have g20 := GprsSame.of_post p20 (by decide)
+  have phaseW := globalWindow_ok (H := (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H)
+    (lo := gcPhaseAddr) (hi := gcPhaseAddr + 4) (by decide) (by decide) (by decide)
+    (fun a lo hi => by unfold gcPhaseAddr at lo hi; unfold allocGlobal InRange; omega) (by decide) (by decide)
+  have ready20 := F.ready.window_log p20 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g20.get (by decide) (by decide) (by decide) F.ready.stack) (gholds_lookup (n := 1) _ p20.regs rfl) (by decide)
+    (by simp only [LogInW, InsideW, gcPhaseAddr]; decide) phaseW.pins phaseW.domain phaseW.pool phaseW.heap
+  obtain ⟨stack, d21, run21, S1⟩ := stat_alloc_done d20 _ (cap + c2) c1 24#64 (nativeStack sp 48) jal_80009448_call.link
+    ready20 frameA (gholds_lookup (n := 10) _ p20.regs rfl) charged1
+    (by rw [show BitVec.ofNat 64 Layout.sym_caml_stat_alloc_noexc = jal_80009448_call.target by decide]; exact p20.pc)
+  -- Caml_state->mark_stack = stack
+  have regs20 := p20.regs
+  obtain ⟨d22, run22, p22⟩ := (major_stack_set d21 jal_80009448_call.link stack S1.ready.toLeafInput
+    ⟨(S1.saved 8 (by decide)).trans (gholds_lookup (n := 8) _ regs20 rfl), S1.result,
+      (S1.saved 9 (by decide)).trans (gholds_lookup (n := 9) _ regs20 rfl), trivial⟩ S1.ready.domainWord).run d21
+    ⟨S1.pc, rfl⟩
+  have g22 := GprsSame.of_post p22 (by decide)
+  have domainW : WindowsOk ((stack.toNat, (24#64).toNat) :: (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H)
+      [⟨domainField 128, domainField 136⟩] :=
+    ownedWindow_ok (by decide) (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ A.domainOwned)) (by decide) (by decide)
+  have ready22 := S1.ready.window_log p22 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g22.get (by decide) (by decide) (by decide) S1.ready.stack) (g22.get (by decide) (by decide) (by decide) S1.ready.raReg)
+    (by decide) (by simp only [LogInW, InsideW, domainField]; decide) domainW.pins domainW.domain domainW.pool domainW.heap
+  have stackNonzero : stack ≠ 0#64 := fun h => S1.fresh.1 (by rw [h]; rfl)
+  have record22 : bytesT d22.σ.mem (domainField 128) 8 = stack := by
+    rw [p22.memory]; exact word_writeLog_at _ _ 0 _ _ rfl trivial
+  -- caml_stat_alloc_noexc(MARK_STACK_INIT_SIZE * sizeof(mark_entry))
+  obtain ⟨d23, run23, p23⟩ := (major_stack_alloc_call d22 jal_80009448_call.link stack ready22.toLeafInput
+    ⟨gholds_lookup (n := 15) _ p22.regs rfl, gholds_lookup (n := 10) _ p22.regs rfl, trivial⟩ record22
+    stackNonzero).run d22 ⟨p22.pc, rfl⟩
+  have g23 := GprsSame.of_post p23 (by decide)
+  have ready23 := ready22.stack_log p23 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g23.get (by decide) (by decide) (by decide) ready22.stack) (gholds_lookup (n := 1) _ p23.regs rfl) (by decide)
+    frame48 (by simp only [LogInW])
+  obtain ⟨entries, d24, run24, S2⟩ := stat_alloc_done d23 _ cap c2 32768#64 (nativeStack sp 48) jal_80009460_call.link
+    ready23 frameA (gholds_lookup (n := 10) _ p23.regs rfl) charged2
+    (by rw [show BitVec.ofNat 64 Layout.sym_caml_stat_alloc_noexc = jal_80009460_call.target by decide]; exact p23.pc)
+  have mem23 : d23.σ.mem = d22.σ.mem := p23.memory
+  have back (x : Nat) (h : (x < heapEnd ∧
+        ¬ vsaFoot ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) x ∧
+        OutW [⟨gcPhaseAddr, gcPhaseAddr + 4⟩, ⟨domainField 128, domainField 136⟩] x) ∨ (nativeStack sp 48).toNat ≤ x) :
+      (d24.σ.mem[x]?).getD 0 = (d19.σ.mem[x]?).getD 0 := by
+    rcases h with ⟨low, foot, out⟩ | above
+    · simp only [OutW, and_true] at out
+      have below : x < (nativeStack sp 48).toNat - allocHeadroom := by omega
+      rw [S2.kept x below (fun f => foot (vsaFoot_of_cons f)), mem23, p22.memory,
+        writeLog_out _ _ _ (by simp only [OutL, and_true]; exact out.2), S1.kept x below foot, p20.memory,
+        writeLog_out _ _ _ (by simp only [OutL, and_true]; exact out.1)]
+    · rw [S2.caller x above, mem23, p22.memory,
+        writeLog_out _ _ _ (by simp only [OutL, domainField, dom, and_true]; omega), S1.caller x above, p20.memory,
+        writeLog_out _ _ _ (by simp only [OutL, gcPhaseAddr, and_true]; omega)]
+  have g24 := (((g20.trans (GprsSame.of_saved S1.saved)).trans g22).trans g23).trans (GprsSame.of_saved S2.saved)
+  refine ⟨stack, entries, d24, run20.trans (run21.trans (run22.trans (run23.trans run24))), {
+    pc := S2.pc
+    regs := ⟨S2.ready.stack, (S2.saved 8 (by decide)).trans
+        (g23.get (by decide) (by decide) (by decide) (gholds_lookup (n := 8) _ p22.regs rfl)),
+      (S2.saved 9 (by decide)).trans (gholds_lookup (n := 9) _ p23.regs rfl), S2.result, trivial⟩
+    ready := S2.ready
+    freshStack := S1.fresh
+    alignStack := S1.align
+    freshEntries := S2.fresh
+    alignEntries := S2.align
+    record := by
+      have domLow : 0x8007d140 ≤ domainField 128 := by decide
+      rw [word_observed (m := d22.σ.mem) _ fun i hi => by
+        rw [S2.kept _ (by simp only [domainField, dom] at *; omega)
+          (owned_not_foot' (by decide) (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ A.domainOwned))
+            (by simp only [domainField]; omega) (by simp only [domainField]; omega)), mem23]]
+      exact record22
+    back := back
+    saved := fun k lo hi => g24.same k (by omega) (by omega) (by simp [abiClobbered]; omega) }⟩
 
 end OCaml.Vm.Boot.Startup
