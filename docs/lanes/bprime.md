@@ -242,6 +242,9 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
       `.unsupported` if the heap already holds `.channel chans.length`. That
       is unreachable on loaded programs, and the difftests are unchanged.
       `openChan_fresh` reads the fact off the primitive's equation.
+      A second guard (`64 ≤ chans.length` is `.unsupported`, mirroring
+      `Gc.maxChannels`) gives `openChan_bound`, the `chs.length < maxChannels`
+      that `out_input` charges the record against.
       `ObjAt.openChan`, `WorldRepr.openChan` and `channel_copied_links`
       (the old head's `prev` write is outside what `ChanAt` reads) carry the
       payload across.

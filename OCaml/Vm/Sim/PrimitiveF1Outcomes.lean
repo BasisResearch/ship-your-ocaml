@@ -16,7 +16,9 @@ theorem openChan_outcome (heap : Heap) (world : World) (fd : Int) (isOut : Bool)
   dsimp only
   split
   · exact True.intro
-  · exact True.intro
+  · split
+    · exact True.intro
+    · exact True.intro
 
 /-- The current F1 table cannot produce a raising or callback outcome. -/
 theorem primF1_outcome (name : String) (args : List Val) (heap : Heap) (world : World) :

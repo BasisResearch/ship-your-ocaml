@@ -1,4 +1,5 @@
 import OCaml.Vm.Primitives.MemoryFrame
+import OCaml.Vm.Gc.F1Heap
 
 /-! The representation across a channel opening: the channel placement gains
 the new record (`ChanPlace.put`), every old object and channel keeps its
@@ -91,10 +92,24 @@ theorem openChan_fresh {h h' : Heap} {w w' : World} {fd : Int} {isOut : Bool} {v
   intro l hl
   unfold openChan at ok
   dsimp only at ok
+  split at ok
+  · cases ok
   have mem : Obj.channel w.chans.length ∈ h.objs := List.mem_of_getElem? hl
   have contains : h.objs.contains (.channel w.chans.length) = true := List.contains_iff_mem.mpr mem
   simp only [contains, ↓reduceIte] at ok
   cases ok
+
+/-- **What a successful `openChan` says about the world** (its first guard):
+fewer than `Gc.maxChannels` channels were open. -/
+theorem openChan_bound {h h' : Heap} {w w' : World} {fd : Int} {isOut : Bool} {v : Val}
+    (ok : openChan h w fd isOut = .ok v h' w') : w.chans.length < Gc.maxChannels := by
+  have m : Gc.maxChannels = 64 := rfl
+  rw [m]
+  unfold openChan at ok
+  dsimp only at ok
+  split at ok
+  · cases ok
+  · omega
 
 /-- The new id is apart from every channel object of the heap, so extending
 the placement there keeps every old object's layout. -/
