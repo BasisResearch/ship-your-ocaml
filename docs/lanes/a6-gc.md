@@ -78,6 +78,19 @@
   generated `LocalRootsSites` (`SlotSite`s for both `jal caml_oldify_one`).
 - `StackScan.loop` (`StackLoop.lean`): the whole VM-stack loop over a caller
   invariant (`ScanStep`), by `loop_to_exit`.
+- Root scan is not quiet at the cut (checked store log): `caml_global_roots`
+  holds `Caml_state->backtrace_last_exn` (`Val_unit`), `caml_global_roots_young`
+  holds `main_argv` (value 0x80281cf8, inside the minor heap). So
+  `caml_scan_global_young_roots` oldifies it, `caml_skiplist_insert`s it into
+  `caml_global_roots_old` (malloc of a cell, `random_level` LCG state) and
+  `caml_skiplist_empty` frees the young cell. F1 programs can register more
+  (`caml_register_named_value`). G2 needs the skiplist iterate/insert/empty
+  summaries over a0-boot's `allocator_summary`/`free_summary`.
+- `FinalQuiet.call`: `caml_final_oldify_young_roots` with no young finaliser.
+  Kernel-recursion lessons: state later blocks over a variable frame pointer,
+  route `auipc` addresses through a named prefix-register lemma, read loads
+  after stores through `memAfter_eq`, and prove 64-bit literal sums in a
+  standalone lemma.
 - Next (G2): the rest of `caml_oldify_local_roots` (prologue, local roots,
   epilogue), quiet-path summaries of the root callees,
   the `ref_table` loop, the mopup outer loop, a quiet-route

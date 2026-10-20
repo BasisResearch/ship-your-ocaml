@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.FinalQuiet
 import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
@@ -695,6 +696,16 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.SlotSite.linked_regs
 #print axioms OCaml.Vm.Gc.StackScan.iteration
 #print axioms OCaml.Vm.Gc.StackScan.loop
+#print axioms OCaml.Vm.Gc.memAfter_eq
+#print axioms OCaml.Vm.Gc.FinalQuiet.call
+#print axioms OCaml.Vm.Gc.FinalQuiet.entry_access
+#print axioms OCaml.Vm.Gc.FinalQuiet.last_access
+#print axioms OCaml.Vm.Gc.FinalQuiet.ret_access
+#print axioms OCaml.Vm.Gc.FinalQuiet.entry_control
+#print axioms OCaml.Vm.Gc.FinalQuiet.last_control
+#print axioms OCaml.Vm.Gc.FinalQuiet.prefix_regs
+#print axioms OCaml.Vm.Gc.FinalQuiet.frame_restore
+#print axioms OCaml.Vm.Gc.FinalQuiet.saved_word
 #print axioms OCaml.Vm.Gc.StackScan.body_access
 #print axioms OCaml.Vm.Gc.StackScan.body_regs
 #print axioms OCaml.Vm.Gc.StackScan.test_access

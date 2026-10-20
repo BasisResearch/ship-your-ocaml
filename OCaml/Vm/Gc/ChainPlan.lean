@@ -47,4 +47,19 @@ theorem segmentPost_of_block {bs entry L lds before after}
     SegmentPost bs L lds entry before.σ.mem after :=
   ⟨post.good, post.memory, post.pc, post.tick, post.minstret, post.regs⟩
 
+/-- The memory `AccessPlan` threads through a body: each store applied in turn. -/
+def memAfter : Std.ExtHashMap Nat (BitVec 8) → List MInstr → GRegs → List (List (BitVec 8)) →
+    Std.ExtHashMap Nat (BitVec 8)
+  | m, [], _, _ => m
+  | m, a :: rest, L, lds => memAfter (stepMemM m a L) rest (stepGM a L (lds.headD [])) (stepLdsM a.kind lds)
+
+/-- The threaded memory is the body's write log applied: a store mid-body
+is read back through `writeLog`, not by unfolding the store chain. -/
+theorem memAfter_eq (m : Std.ExtHashMap Nat (BitVec 8)) (body : List MInstr) (L : GRegs)
+    (lds : List (List (BitVec 8))) : memAfter m body L lds = writeLog m (wlogM body L lds) := by
+  induction body generalizing m L lds with
+  | nil => rfl
+  | cons a rest ih =>
+    cases hk : a.kind <;> simp [memAfter, wlogM, stepMemM, stepGM, stepLdsM, hk, ih, writeLog]
+
 end OCaml.Vm.Gc

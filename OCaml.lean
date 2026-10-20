@@ -158,6 +158,7 @@ import OCaml.Vm.Gc.OldifySlot
 import OCaml.Vm.Gc.SlotBridge
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.StackLoop
+import OCaml.Vm.Gc.FinalQuiet
 import OCaml.Vm.Primitives.Constants
 import OCaml.Vm.Primitives.RuntimeFrame
 
