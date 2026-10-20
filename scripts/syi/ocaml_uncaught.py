@@ -120,6 +120,8 @@ STDIO_FAST = {
         {'mem': []},
     'FwalkSglue.pro':
         {'mem': [('R 2 + 18446744073709551536#64 + 48#64', 'window'), ('R 2 + 18446744073709551536#64 + 40#64', 'window'), ('R 2 + 18446744073709551536#64 + 32#64', 'window'), ('R 2 + 18446744073709551536#64 + 24#64', 'window'), ('R 2 + 18446744073709551536#64 + 16#64', 'window'), ('R 2 + 18446744073709551536#64 + 8#64', 'window'), ('R 2 + 18446744073709551536#64 + 72#64', 'window'), ('R 2 + 18446744073709551536#64 + 64#64', 'window'), ('R 2 + 18446744073709551536#64 + 56#64', 'window')], 'log': '[((R 2 - 80#64 + 48#64).toNat, 8, R 18), ((R 2 - 80#64 + 40#64).toNat, 8, R 19), ((R 2 - 80#64 + 32#64).toNat, 8, R 20), ((R 2 - 80#64 + 24#64).toNat, 8, R 21), ((R 2 - 80#64 + 16#64).toNat, 8, R 22), ((R 2 - 80#64 + 8#64).toNat, 8, R 23), ((R 2 - 80#64 + 72#64).toNat, 8, R 1), ((R 2 - 80#64 + 64#64).toNat, 8, R 8), ((R 2 - 80#64 + 56#64).toNat, 8, R 9)]', 'addrSimpOnly': True, 'addrFacts': ['show BitVec.signExtend 64 0#12 = 0#64 by decide', 'show BitVec.signExtend 64 8#12 = 8#64 by decide', 'show BitVec.signExtend 64 16#12 = 16#64 by decide', 'show BitVec.signExtend 64 24#12 = 24#64 by decide', 'show BitVec.signExtend 64 32#12 = 32#64 by decide', 'show BitVec.signExtend 64 40#12 = 40#64 by decide', 'show BitVec.signExtend 64 48#12 = 48#64 by decide', 'show BitVec.signExtend 64 56#12 = 56#64 by decide', 'show BitVec.signExtend 64 64#12 = 64#64 by decide', 'show BitVec.signExtend 64 72#12 = 72#64 by decide']},
+    'FwalkSglue.niobs':
+        {'mem': [('R 18 + 8#64', 'window')]},
     'FwalkSglue.bound':
         {'mem': [('R 18 + 16#64', 'window')]},
     'FwalkSglue.flagsOk':
@@ -239,6 +241,8 @@ STDIO_REGS = {
         '[(10, 2147894888#64), (11, 2147798632#64), (12, 2147894176#64), (1, R 1)]',
     'FwalkSglue.pro':
         '[(19, 18446744073709551615#64), (23, 1#64), (22, 0#64), (21, R 11), (20, R 10), (18, R 12), (2, R 2 + 18446744073709551536#64), (1, R 1), (8, R 8), (9, R 9), (10, R 10), (11, R 11), (12, R 12)]',
+    'FwalkSglue.niobs':
+        '[(15, bytesVal .lw (loads.getD 0 [])), (10, R 10), (18, R 18)]',
     'FwalkSglue.bound':
         '[(9, bytesVal .ld (loads.getD 0 []) + (R 15 <<< 32 >>> 32 <<< 7 + (R 15 <<< 32 >>> 32 <<< 6 + (-R 15 <<< 32 >>> 32) <<< 3))), (8, bytesVal .ld (loads.getD 0 [])), (15, R 15 <<< 32 >>> 32), (10, R 10), (18, R 18)]',
     'FwalkSglue.flagsOk':
@@ -369,6 +373,7 @@ def stdio_exit_spec():
       fn('_fwalk_sglue', '_fwalk_sglue', 'FwalkSglue', {0x8003f6a0: 'F', 0x8003f6cc: 'F', 0x8003f6dc: 'F',
         0x8003f6f0: 'TF', 0x8003f6f8: 'F'}, [
         blk(0x8003f65c, 'pro', [1, 2, 8, 9, 10, 11, 12, 18, 19, 20, 21, 22, 23]),
+        blk(0x8003f69c, 'niobs', [10, 18]),
         blk(0x8003f6a4, 'bound', [10, 15, 18]),
         blk(0x8003f6c8, 'flagsOk', [8, 10, 23]),
         blk(0x8003f6d0, 'fileOk', [8, 10, 19, 20]),

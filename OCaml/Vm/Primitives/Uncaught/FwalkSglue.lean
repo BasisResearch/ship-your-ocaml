@@ -996,6 +996,67 @@ theorem pro_fast (c : Config) (R : Nat → BitVec 64)
   · rfl
   · decide
 
+def niobs_body : List MInstr := [
+  ⟨0x8003f69c#64, 0x00892783#32, 0x83#8, 0x27#8, 0x89#8, 0x00#8, .lw, 15, 18, 0, 0x008#12⟩
+]
+def niobs_term : TInstr := ⟨0x8003f6a0#64, 0x04f05a63#32, 0x63#8, 0x5a#8, 0xf0#8, 0x04#8, .br bop.BGE false, 0, 15, 0x0054#13, 0#21, 0#12⟩
+def niobs_blocks : List BBlock := [{ body := niobs_body, term := some niobs_term }]
+def niobs_input (R : Nat → BitVec 64) : GRegs := [(10, R 10), (18, R 18)]
+
+theorem niobs_code {c : Config} (image : ExecutableImage c) : CodeFacts c.σ.mem niobs_body := by
+  have hc := loaded image
+  simp only [CodeFacts, niobs_body]
+  chain_facts hc with "Vsa.Sim.Code._fwalk_sglue_at_"
+
+theorem niobs_shape : ChainOK 0x8003f69c#64 [10, 18] niobs_blocks := by
+  simp only [ChainOK, BBlockOK, niobs_blocks, niobs_body, niobs_term, BlockOKM]
+  repeat' apply And.intro
+  all_goals decide
+
+theorem niobs_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)
+    (loads : List (List (BitVec 8))) (h : LeafInput ra c)
+    (regs : GHolds c.σ (niobs_input R))
+    (access : AccessPlan c.σ.mem (niobs_input R) loads niobs_body)
+    (control : TermFactsO (runGM niobs_body (niobs_input R) loads) (some niobs_term)) :
+    FnSummary 0x8003f69c#64 (fun d => d = c)
+      (BlockPost niobs_blocks 0x8003f69c#64 (niobs_input R) loads c) := by
+  apply block_summary niobs_blocks _ _ _ c
+  refine ⟨h.good, h.minstret, regs, ?_, ?_, niobs_shape, h.tick⟩
+  · change KeysOK [10, 18]; decide
+  · apply singleton_chain_facts (accessPlan_facts (niobs_code h.image) access) ?_ control
+    have hc := loaded h.image
+    chain_facts hc with "Vsa.Sim.Code._fwalk_sglue_at_"
+
+def niobs_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs :=
+  [(15, bytesVal .lw (loads.getD 0 [])), (10, R 10), (18, R 18)]
+theorem niobs_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM niobs_body (niobs_input R) loads = niobs_regs R loads := by
+  simp [niobs_body, niobs_input, niobs_regs, runGM, stepGM, stepLdsM,
+    wvalM, srcVal, lookupG, eraseG, imm20Of, DoubleAllocation.domainGlobal, Layout.sym_Caml_state,
+    Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?, BitVec.add_assoc]
+
+def niobs_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
+  [read8 m (R 18 + 8#64).toNat]
+
+theorem niobs_fast (c : Config) (R : Nat → BitVec 64)
+    (h : LeafInput (R 1) c) (regs : GHolds c.σ (niobs_input R))
+    (w0 : ReadWindow (R 18 + 8#64) 4)
+    (ok : guardB .BGE (0#64) (bytesVal .lw ((niobs_loads c.σ.mem R).getD 0 [])) = false) :
+    FnSummary 0x8003f69c#64 (fun d => d = c)
+      (WriteRegistersPost [15] [] c (0x8003f6a4#64) (R 10) (niobs_regs R (niobs_loads c.σ.mem R))) := by
+  have access : AccessPlan c.σ.mem (niobs_input R) (niobs_loads c.σ.mem R) niobs_body := by
+    simp only [AccessPlan, niobs_body, niobs_loads]
+    chain_facts True.intro
+    · apply ExitPath.ReadWindow.lw w0 rfl ?_ (ExitPath.read8_pins4 _ _)
+      simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, niobs_input]
+  have control : TermFactsO (runGM niobs_body (niobs_input R) (niobs_loads c.σ.mem R)) (some niobs_term) := by rw [niobs_eval]; exact ok
+  apply registers_of_blocks h.image (log := []) ⟨True.intro, True.intro⟩ (niobs_summary c (R 1) R _ h regs access control)
+  · exact readonly_log _ (by unfold ReadOnlyBody; decide) _ _
+  · rfl
+  · exact niobs_eval R _
+  · rfl
+  · decide
+
 def bound_body : List MInstr := [
   ⟨0x8003f6a4#64, 0x02079793#32, 0x93#8, 0x97#8, 0x07#8, 0x02#8, .slli, 15, 15, 0, 0x020#12⟩,
   ⟨0x8003f6a8#64, 0x0207d793#32, 0x93#8, 0xd7#8, 0x07#8, 0x02#8, .srli, 15, 15, 0, 0x020#12⟩,
