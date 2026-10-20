@@ -3014,6 +3014,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.init_gc_to_table
 #print axioms OCaml.Vm.Boot.Startup.init_gc_to_minor
 #print axioms OCaml.Vm.Boot.Startup.init_gc_to_major
+#print axioms OCaml.Vm.Boot.Startup.init_gc_finish
+#print axioms OCaml.Vm.Boot.Startup.caml_init_gc
 #print axioms OCaml.Vm.Boot.Startup.ownedWindow_ok
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
