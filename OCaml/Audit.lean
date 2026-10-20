@@ -5979,3 +5979,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.rodata_lookup
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_atexit
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_to_atexit
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableShape.transport_below
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableChain.node_of_mem
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableShape.value_of_mem
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.MessageAt.transport
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.StderrAt.transport
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_doAtExit
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_report
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_to_fprintf

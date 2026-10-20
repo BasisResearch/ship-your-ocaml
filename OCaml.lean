@@ -743,6 +743,7 @@ import OCaml.Vm.Primitives.Uncaught.FatalFront
 import OCaml.Vm.Primitives.Uncaught.FatalSuspend
 import OCaml.Vm.Primitives.Uncaught.FatalFormat
 import OCaml.Vm.Primitives.Uncaught.FatalAtExit
+import OCaml.Vm.Primitives.Uncaught.FatalReport
 import OCaml.Vm.Primitives.Uncaught.FatalCompose
 import OCaml.Vm.Primitives.Named.NamedTransport
 import OCaml.Vm.Primitives.GprsPersist

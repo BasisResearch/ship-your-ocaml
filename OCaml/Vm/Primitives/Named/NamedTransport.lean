@@ -181,14 +181,42 @@ theorem TableShape.transport {m m' : Mem} {pl : Place} {named : List (String × 
   code := code
   mask := mask
 
+/-- The table across memory that agrees exactly on its bytes below `heapEnd`. -/
+theorem TableShape.transport_below {m m' : Mem} {pl : Place} {named : List (String × Val)}
+    {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} (h : TableShape m pl named chains)
+    (same : ∀ a, a < Vsa.Sim.DlHeap.heapEnd → TableFoot chains a → m'[a]? = m[a]?) (code : Code.StrcmpLoaded m')
+    (mask : MaskPinned m') : TableShape m' pl named chains :=
+  h.transport (fun a foot => agree_of_eq (same a (by
+    rcases foot with ⟨-, hi⟩ | ⟨b, hb, e, he, lo, hi⟩
+    · simp only [Layout.sym_named_value_table, Vsa.Sim.DlHeap.heapEnd] at hi ⊢; omega
+    · have := (h.heads b hb).arena e he; omega) foot)) code mask
+
 /-- The table across memory that agrees exactly below `heapEnd`. -/
 theorem TableShape.transport_low {m m' : Mem} {pl : Place} {named : List (String × Val)}
     {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} (h : TableShape m pl named chains)
     (same : ∀ a, a < Vsa.Sim.DlHeap.heapEnd → m'[a]? = m[a]?) (code : Code.StrcmpLoaded m')
     (mask : MaskPinned m') : TableShape m' pl named chains :=
-  h.transport (fun a foot => agree_of_eq (same a (by
-    rcases foot with ⟨-, hi⟩ | ⟨b, hb, e, he, lo, hi⟩
-    · simp only [Layout.sym_named_value_table, Vsa.Sim.DlHeap.heapEnd] at hi ⊢; omega
-    · have := (h.heads b hb).arena e he; omega))) code mask
+  h.transport_below (fun a ha _ => same a ha) code mask
+
+/-- A chain's member is a node of it. -/
+theorem TableChain.node_of_mem {m : Mem} {pl : Place} {head : BitVec 64}
+    {nodes : List (BitVec 64 × List (BitVec 8) × Val)} (h : TableChain m pl head nodes) :
+    ∀ e ∈ nodes, ∃ next, NodeAt m pl e.1 next e.2.1 e.2.2 := by
+  -- discipline: allow(O5-run-induction) induction on a C string / chain of heap nodes, not a run relation
+  induction h with
+  | nil => intro e he; cases he
+  | cons node _ ih =>
+    intro e he
+    rcases List.mem_cons.1 he with rfl | he
+    · exact ⟨_, node⟩
+    · exact ih e he
+
+/-- **A table entry's value slot** represents its value. -/
+theorem TableShape.value_of_mem {m : Mem} {pl : Place} {named : List (String × Val)}
+    {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} (h : TableShape m pl named chains)
+    {b : Nat} (hb : b < 13) {e : BitVec 64 × List (BitVec 8) × Val} (he : e ∈ chains b) :
+    valWord pl e.2.2 = some (bytesT m e.1.toNat 8) := by
+  obtain ⟨_, node⟩ := (h.heads b hb).node_of_mem e he
+  exact node.value
 
 end OCaml.Vm.Primitives.Named.NamedValue
