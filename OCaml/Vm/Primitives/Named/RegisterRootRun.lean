@@ -63,15 +63,6 @@ structure RootInput (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bit
   table : Table c.σ.mem cls
   young : YoungAt c.σ.mem D start stop
 
-/-- One of the three global-root lists. -/
-def IsList (sk : Nat) : Prop := sk = globalRoots ∨ sk = globalRootsYoung ∨ sk = globalRootsOld
-
-/-- The three lists' footprints. -/
-def ListsFoot (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec 64) → Prop)
-    (foot : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec 64) → Nat → Prop)
-    (m : Std.ExtHashMap Nat (BitVec 8)) (a : Nat) : Prop :=
-  ∃ sk cells, IsList sk ∧ Shape m sk cells ∧ foot m sk cells a
-
 /-- **The root filed**: back at `ra` with `sp` and the callee-saved registers;
 the young list gains `r` when `v` is young, the old list when it is old;
 newlib's heap ready; every byte outside the two lists, newlib's footprint, the
@@ -89,7 +80,10 @@ structure RootFiled (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bit
   saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet d.σ n = gprGet c.σ n
   gprs : GprsKept c d
   output : d.σ.sailOutput = c.σ.sailOutput
-  heap : ∃ H' cap', HeapReady H' cap' d
+  heap : ∃ H' cap', HeapReady H' cap' d ∧
+    ∀ a, VsaIris.VsaHeap.vsaFoot H' a → VsaIris.VsaHeap.vsaFoot H a ∨ ListsFoot Shape foot c.σ.mem a
+  /-- the lists' footprints lie in the old ones and newlib's footprint -/
+  feet : ∀ a, ListsFoot Shape foot d.σ.mem a → ListsFoot Shape foot c.σ.mem a ∨ VsaIris.VsaHeap.vsaFoot H a
   roots : ∃ ys' os', GlobalRoots Shape foot d.σ.mem rs ys' os' ∧
     (∀ k, k ∈ ys' ↔ (Young start stop (rootValue c r) ∧ k = r) ∨ k ∈ ys) ∧
     (∀ k, k ∈ os' ↔ (Old start stop cls (rootValue c r) ∧ k = r) ∨ k ∈ os)
@@ -146,7 +140,8 @@ theorem imm_path {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec
       saved := ?_
       gprs := GprsKept.of_steps gprsPersist (run1.trans run2) (keep 3 (by decide) (by decide) (by decide))
       output := p2.output.trans p1.output
-      heap := ⟨H, cap, HeapReady.of_mem h.heap mem⟩
+      heap := ⟨H, cap, HeapReady.of_mem h.heap mem, fun _ f => Or.inl f⟩
+      feet := fun a l => Or.inl (by rw [mem] at l; exact l)
       roots := ⟨ys, os, by rw [mem]; exact h.roots, lists_kept notYoung, lists_kept notOld⟩
       kept := fun a _ _ _ _ => by rw [mem] }⟩
   · have := p2.pc; rwa [show R1 1 = ra from regsAt_of c1_1] at this
@@ -168,11 +163,15 @@ theorem filed_of_returned {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → Lis
     (savedE : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet e.σ n = gprGet c.σ n)
     (gpE : gpr e 3 = gpr c 3) (outE : e.σ.sailOutput = c.σ.sailOutput)
     (ret : Returned H (foot e.σ.mem hdr cells) sp ra e d)
+    (feet : ∀ a, ListsFoot Shape foot d.σ.mem a → ListsFoot Shape foot e.σ.mem a ∨ VsaIris.VsaHeap.vsaFoot H a)
     (roots : ∃ ys' os', GlobalRoots Shape foot d.σ.mem rs ys' os' ∧
       (∀ k, k ∈ ys' ↔ (Young start stop (rootValue c r) ∧ k = r) ∨ k ∈ ys) ∧
       (∀ k, k ∈ os' ↔ (Old start stop cls (rootValue c r) ∧ k = r) ∨ k ∈ os)) :
     RootFiled Shape foot H rs ys os cls start stop sp ra r c d := by
-  obtain ⟨-, ft, -⟩ := ops.keep_list sh fun a f => low a (ops.low _ _ _ sh a f)
+  obtain ⟨she, ft, -⟩ := ops.keep_list sh fun a f => low a (ops.low _ _ _ sh a f)
+  have lists : ∀ a, ListsFoot Shape foot e.σ.mem a ↔ ListsFoot Shape foot c.σ.mem a :=
+    h.roots.listsFoot_keep ops fun a ⟨_, _, _, sh', f⟩ => low a (ops.low _ _ _ sh' a f)
+  obtain ⟨H', cap', hr, hb⟩ := ret.heap
   exact
     { good := ret.good
       image := ret.image
@@ -183,7 +182,8 @@ theorem filed_of_returned {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → Lis
       saved := fun n hn => (ret.saved n hn).trans (savedE n hn)
       gprs := GprsKept.of_steps gprsPersist run (ret.gprs.gp.trans gpE)
       output := ret.output.trans outE
-      heap := let ⟨H', cap', hr, _⟩ := ret.heap; ⟨H', cap', hr⟩
+      heap := ⟨H', cap', hr, fun a f => (hb a f).imp id fun t => (lists a).1 ⟨hdr, cells, Or.inr list, she, t⟩⟩
+      feet := fun a l => (feet a l).imp (lists a).1 id
       roots := roots
       kept := fun a nl nf win seed => by
         rw [ret.kept a (fun f => nl ⟨hdr, cells, Or.inr list, sh, (ft a).1 f⟩) nf win seed]
@@ -386,7 +386,10 @@ theorem lookup_path {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bit
         gprs := GprsKept.of_steps gprsPersist (run.trans (run1.trans (run2.trans (run3.trans (run4.trans run5)))))
           ((keep 3 (by decide) (by decide) (by decide)).trans gp3)
         output := p5.output.trans (p4.output.trans out3)
-        heap := ⟨H, cap, heapAt d fun a out => by rw [mem5, mem3, frameMem a out]⟩
+        heap := ⟨H, cap, heapAt d fun a out => by rw [mem5, mem3, frameMem a out], fun _ f => Or.inl f⟩
+        feet := fun a l => Or.inl (((h.roots.listsFoot_keep (m' := d.σ.mem) ops (fun a' l' => by
+          obtain ⟨_, _, _, sh', f⟩ := l'
+          rw [mem5]; exact low3 a' (ops.low _ _ _ sh' a' f))) a).1 l)
         roots := ⟨ys, os, (GlobalRoots.keep_low ops h.roots fun a ha => by rw [mem5]; exact low3 a ha).1,
           lists_kept notYoung', lists_kept notOld⟩
         kept := fun a _ _ win _ => by rw [mem5]; exact outside3 a win }⟩
@@ -447,7 +450,7 @@ theorem lookup_path {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bit
     refine ⟨d, run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans run6))))),
       filed_of_returned ops h (run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans run6))))))
         (Or.inr rfl) shc low5 outside5 ?_ ((keep 3 (by decide) (by decide) (by decide)).trans gp3)
-        (p5.output.trans (p4.output.trans out3)) ret
+        (p5.output.trans (p4.output.trans out3)) ret (g5.feet_old ops sh5 sho' footIn fr)
         ⟨ys, keys d.σ.mem co', g', lists_kept notYoung', fun k => (memOld k).trans
           ⟨fun h => h.elim (fun e => Or.inl ⟨isOld, e⟩) Or.inr, fun h => h.elim (fun p => Or.inl p.2) Or.inr⟩⟩⟩
     intro n hn
@@ -607,6 +610,7 @@ theorem register_root_run {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → Lis
           exact keepAll n hr.1 hr.2 (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega))
         (keepAll 3 (by decide) (by decide) (by decide))
         (p5.output.trans (p4.output.trans (p3.output.trans (p2.output.trans p1.output)))) ret
+        (g5.feet_young ops sh5 shy' footIn fr)
         ⟨keys d.σ.mem cy', os, g', fun k => (memY k).trans
           ⟨fun h => h.elim (fun e => Or.inl ⟨isYoung, e⟩) Or.inr, fun h => h.elim (fun p => Or.inl p.2) Or.inr⟩,
           lists_kept notOld⟩⟩

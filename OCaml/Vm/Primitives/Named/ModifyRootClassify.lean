@@ -19,7 +19,7 @@ set_option autoImplicit false
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable OCaml.Vm OCaml.Vm.Primitives OCaml.Vm.Gc OCaml.Vm.Gc.Skiplist
 open OCaml.Vm.Boot.Startup (NativeFrame HeapReady nativeFrameBase)
 open NamedValue (regsAt regsAt_of gpr_some gpr_some_of gprReg_ne_htif wl_nil)
-open RegisterRoot (Young Old rootValue YoungAt ListsFoot IsList lists_kept)
+open RegisterRoot (Young Old rootValue YoungAt lists_kept)
 
 variable {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec 64) → Prop}
   {foot : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec 64) → Nat → Prop}

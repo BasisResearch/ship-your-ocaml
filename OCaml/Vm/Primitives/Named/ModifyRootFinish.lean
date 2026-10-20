@@ -17,7 +17,7 @@ set_option autoImplicit false
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable OCaml.Vm OCaml.Vm.Primitives OCaml.Vm.Gc OCaml.Vm.Gc.Skiplist
 open OCaml.Vm.Boot.Startup (NativeFrame HeapReady nativeFrameBase)
 open NamedValue (regsAt regsAt_of gpr_some gpr_some_of gprReg_ne_htif wl_nil)
-open RegisterRoot (Young Old rootValue YoungAt ListsFoot IsList lists_kept frame32)
+open RegisterRoot (Young Old rootValue YoungAt lists_kept frame32)
 
 variable {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec 64) → Prop}
   {foot : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec 64) → Nat → Prop}
@@ -256,8 +256,10 @@ theorem Acting.finish {Table : Std.ExtHashMap Nat (BitVec 8) → (Nat → Nat) �
           · exact keepD a ((hb a rd.1).symm)
           · exact offSlot a (Or.inl (Nat.lt_of_lt_of_le (HeapPinned.low pin) slotLow)),
         fun a f => (hb a f).imp id (listsEq a).1⟩
+      feet := fun a l => (act.feet a ((act.roots.listsFoot_keep ops (fun a l' => keepD a (act.feet a l')) a).1 l)).imp
+        (listsEq a).1 id
       roots := ⟨ys', os', act.roots.keep ops (fun sk cells list sh a f => keepD a
-          (act.feet sk cells list sh a f)), memb, place⟩
+          (act.feet a ⟨sk, cells, list, sh, f⟩)), memb, place⟩
       slot := by rw [memD]; exact Gc.word_writeLog_at _ _ 0 _ _ rfl trivial
       kept := fun a nl nf out win seed => by
         have win' : a < sp.toNat - 32 - opStack ∨ sp.toNat - 32 ≤ a := by

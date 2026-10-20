@@ -21,7 +21,7 @@ set_option autoImplicit false
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable OCaml.Vm OCaml.Vm.Primitives OCaml.Vm.Gc OCaml.Vm.Gc.Skiplist
 open OCaml.Vm.Boot.Startup (NativeFrame HeapReady nativeFrameBase)
 open NamedValue (regsAt regsAt_of gpr_some gpr_some_of gprReg_ne_htif wl_nil)
-open RegisterRoot (Young Old rootValue YoungAt ListsFoot IsList lists_kept)
+open RegisterRoot (Young Old rootValue YoungAt lists_kept)
 
 /-- **Where a generational root lies** by its value `w`: a young value's
 root in the young list only, an old value's in either, any other value's in
@@ -58,8 +58,7 @@ structure Acting (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec
   heap : ∃ H cap, HeapReady H cap x ∧
     ∀ a, VsaIris.VsaHeap.vsaFoot H a → VsaIris.VsaHeap.vsaFoot H0 a ∨ ListsFoot Shape foot m1 a
   roots : GlobalRoots Shape foot x.σ.mem rs ys os
-  feet : ∀ sk cells, IsList sk → Shape x.σ.mem sk cells →
-    ∀ a, foot x.σ.mem sk cells a → ListsFoot Shape foot m1 a ∨ VsaIris.VsaHeap.vsaFoot H0 a
+  feet : ∀ a, ListsFoot Shape foot x.σ.mem a → ListsFoot Shape foot m1 a ∨ VsaIris.VsaHeap.vsaFoot H0 a
   kept : ∀ a, ¬ ListsFoot Shape foot m1 a → ¬ VsaIris.VsaHeap.vsaFoot H0 a →
     (a < (sp.toNat - 32) - opStack ∨ sp.toNat - 32 ≤ a) → (a < randomSeed ∨ randomSeed + 4 ≤ a) →
     (x.σ.mem[a]?).getD 0 = (m1[a]?).getD 0
@@ -101,7 +100,7 @@ theorem Acting.returned {H0 : List (Nat × Nat)} {m1 : Std.ExtHashMap Nat (BitVe
       (d.σ.mem[a]?).getD 0 = (m1[a]?).getD 0 := by
   have shx : Shape x.σ.mem hdr cells := by rw [← entry.memory]; exact sh
   have touchedIn : ∀ a, foot z.σ.mem hdr cells a → ListsFoot Shape foot m1 a ∨ VsaIris.VsaHeap.vsaFoot H0 a :=
-    fun a f => act.feet hdr cells (Or.inr list) shx a (by rw [← entry.memory]; exact f)
+    fun a f => act.feet a ⟨hdr, cells, Or.inr list, shx, by rw [← entry.memory]; exact f⟩
   have sv (n : Nat) (hn : n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]) : gprGet d.σ n = gprGet x.σ n :=
     (ret.saved n hn).trans (entry.saved n hn)
   obtain ⟨H', cap', hr, hb⟩ := ret.heap
@@ -120,15 +119,6 @@ theorem Acting.returned {H0 : List (Nat × Nat)} {m1 : Std.ExtHashMap Nat (BitVe
       (fun f => by rcases bound a f with v | l; exact nf v; exact nl l) (by rw [spNat]; exact win) seed,
       entry.memory]
     exact act.kept a nl nf win seed
-
-/-- The list footprints at `z` bounded as at `x` when `z` has `x`'s memory. -/
-theorem feet_of_memory {H0 : List (Nat × Nat)} {m1 : Std.ExtHashMap Nat (BitVec 8)} {x z : Config}
-    (feet : ∀ sk cells, IsList sk → Shape x.σ.mem sk cells →
-      ∀ a, foot x.σ.mem sk cells a → ListsFoot Shape foot m1 a ∨ VsaIris.VsaHeap.vsaFoot H0 a)
-    (mem : z.σ.mem = x.σ.mem) :
-    ∀ sk cells, IsList sk → Shape z.σ.mem sk cells →
-      ∀ a, foot z.σ.mem sk cells a → ListsFoot Shape foot m1 a ∨ VsaIris.VsaHeap.vsaFoot H0 a := by
-  rw [mem]; exact feet
 
 /-- **A call on the young list steps `Acting`**: any callee shaped like
 `Ops.insert`/`Ops.remove`, whose new keys `Q` stay apart from the other lists. -/
@@ -156,29 +146,13 @@ theorem Acting.step_young (ops : Ops Shape foot) {H0 : List (Nat × Nat)} {m1 : 
     { live := fun sk cells sh a f => (ops.live _ _ _ sh H cap z rfl hrz a f).1
       seed := fun sk cells sh a f => (ops.live _ _ _ sh H cap z rfl hrz a f).2
       kept := fun a nt nf lo seed => ret.kept a nt nf (Or.inl (by unfold opStack at lowSp ⊢; omega)) seed }
-  have feetZ := feet_of_memory act.feet entry.memory
   refine ⟨d, keys d.σ.mem cy', run, pc',
     { good, image, minstret, tick, link := ⟨link, link1, aligned⟩, stack, s0, s1, a0, saved, gp, output, heap,
       roots := gz.replace_young ops shz sh' (apartKeys _ q) footIn fr, feet := ?_, kept }, q⟩
-  intro sk cells list sh a f
-  rcases list with rfl | rfl | rfl
-  · obtain ⟨c1, sh1, -⟩ := gz.roots
-    obtain ⟨sh1', ft⟩ := gz.roots_kept_young ops shz fr sh1
-    have e := ops.unique sh sh1'
-    subst e
-    exact feetZ _ _ (Or.inl rfl) sh1 a ((ft a).1 f)
-  · have e := ops.unique sh sh'
-    subst e
-    rcases footIn a f with old | free
-    · exact feetZ _ _ (Or.inr (Or.inl rfl)) shz a old
-    · rcases hb a free with v' | l
-      · exact Or.inr v'
-      · exact Or.inl l
-  · obtain ⟨co, sho, -⟩ := gz.old
-    obtain ⟨sho', ft⟩ := gz.old_kept ops shz fr sho
-    have e := ops.unique sh sho'
-    subst e
-    exact feetZ _ _ (Or.inr (Or.inr rfl)) sho a ((ft a).1 f)
+  intro a l
+  rcases gz.feet_young ops shz sh' footIn fr a l with l' | v'
+  · exact act.feet a (by rw [← entry.memory]; exact l')
+  · exact (hb a v').symm
 
 /-- **A call on the old list steps `Acting`.** -/
 theorem Acting.step_old (ops : Ops Shape foot) {H0 : List (Nat × Nat)} {m1 : Std.ExtHashMap Nat (BitVec 8)}
@@ -205,29 +179,13 @@ theorem Acting.step_old (ops : Ops Shape foot) {H0 : List (Nat × Nat)} {m1 : St
     { live := fun sk cells sh a f => (ops.live _ _ _ sh H cap z rfl hrz a f).1
       seed := fun sk cells sh a f => (ops.live _ _ _ sh H cap z rfl hrz a f).2
       kept := fun a nt nf lo seed => ret.kept a nt nf (Or.inl (by unfold opStack at lowSp ⊢; omega)) seed }
-  have feetZ := feet_of_memory act.feet entry.memory
   refine ⟨d, keys d.σ.mem co', run, pc',
     { good, image, minstret, tick, link := ⟨link, link1, aligned⟩, stack, s0, s1, a0, saved, gp, output, heap,
       roots := gz.replace_old ops shz sh' (apartKeys _ q) footIn fr, feet := ?_, kept }, q⟩
-  intro sk cells list sh a f
-  rcases list with rfl | rfl | rfl
-  · obtain ⟨c1, sh1, -⟩ := gz.roots
-    obtain ⟨sh1', ft⟩ := gz.roots_kept_old ops shz fr sh1
-    have e := ops.unique sh sh1'
-    subst e
-    exact feetZ _ _ (Or.inl rfl) sh1 a ((ft a).1 f)
-  · obtain ⟨cy, shy, -⟩ := gz.young
-    obtain ⟨shy', ft⟩ := gz.young_kept ops shz fr shy
-    have e := ops.unique sh shy'
-    subst e
-    exact feetZ _ _ (Or.inr (Or.inl rfl)) shy a ((ft a).1 f)
-  · have e := ops.unique sh sh'
-    subst e
-    rcases footIn a f with old | free
-    · exact feetZ _ _ (Or.inr (Or.inr rfl)) shz a old
-    · rcases hb a free with v' | l
-      · exact Or.inr v'
-      · exact Or.inl l
+  intro a l
+  rcases gz.feet_old ops shz sh' footIn fr a l with l' | v'
+  · exact act.feet a (by rw [← entry.memory]; exact l')
+  · exact (hb a v').symm
 
 /-! ### The call, its input and its post -/
 
@@ -287,6 +245,8 @@ structure RootModified (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (
   output : d.σ.sailOutput = c.σ.sailOutput
   heap : ∃ H' cap', HeapReady H' cap' d ∧
     ∀ a, VsaIris.VsaHeap.vsaFoot H' a → VsaIris.VsaHeap.vsaFoot H a ∨ ListsFoot Shape foot c.σ.mem a
+  /-- the lists' footprints lie in the old ones and newlib's footprint -/
+  feet : ∀ a, ListsFoot Shape foot d.σ.mem a → ListsFoot Shape foot c.σ.mem a ∨ VsaIris.VsaHeap.vsaFoot H a
   roots : ∃ ys' os', GlobalRoots Shape foot d.σ.mem rs ys' os' ∧
     (∀ k, k ≠ r → (k ∈ ys' ↔ k ∈ ys) ∧ (k ∈ os' ↔ k ∈ os)) ∧ RootAt start stop cls v r ys' os'
   slot : bytesT d.σ.mem r.toNat 8 = v
@@ -298,23 +258,8 @@ structure RootModified (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (
 theorem listsFoot_low (ops : Ops Shape foot) {m m' : Std.ExtHashMap Nat (BitVec 8)} {rs ys os : List (BitVec 64)}
     (g : GlobalRoots Shape foot m rs ys os)
     (agree : ∀ a, a < Vsa.Sim.DlHeap.heapEnd → (m'[a]?).getD 0 = (m[a]?).getD 0) (a : Nat) :
-    ListsFoot Shape foot m' a ↔ ListsFoot Shape foot m a := by
-  obtain ⟨-, keep⟩ := g.keep_low ops agree
-  constructor
-  · rintro ⟨sk, cells, list, sh', f⟩
-    have cellsM : ∃ cs, Shape m sk cs := by
-      rcases list with rfl | rfl | rfl
-      · obtain ⟨cs, sh, -⟩ := g.roots; exact ⟨cs, sh⟩
-      · obtain ⟨cs, sh, -⟩ := g.young; exact ⟨cs, sh⟩
-      · obtain ⟨cs, sh, -⟩ := g.old; exact ⟨cs, sh⟩
-    obtain ⟨cs, sh⟩ := cellsM
-    obtain ⟨shm', ft, -⟩ := keep _ _ sh
-    have e := ops.unique sh' shm'
-    subst e
-    exact ⟨sk, cells, list, sh, (ft a).1 f⟩
-  · rintro ⟨sk, cells, list, sh, f⟩
-    obtain ⟨sh', ft, -⟩ := keep _ _ sh
-    exact ⟨sk, cells, list, sh', (ft a).2 f⟩
+    ListsFoot Shape foot m' a ↔ ListsFoot Shape foot m a :=
+  g.listsFoot_keep ops (fun a ⟨_, _, _, sh, f⟩ => agree a (ops.low _ _ _ sh a f)) a
 
 /-! ### The prologue -/
 
@@ -388,7 +333,7 @@ theorem prologue {Table : Std.ExtHashMap Nat (BitVec 8) → (Nat → Nat) → Pr
         (fun a out => by rw [mem, frameOn_writeLog _ _ _ log0 a ⟨out _ List.mem_cons_self, trivial⟩]),
         fun a f => Or.inl f⟩
       roots := by rw [mem]; exact (h.roots.keep_low ops low).1
-      feet := fun sk cells list sh a f => Or.inl ⟨sk, cells, list, by rw [← mem]; exact sh, by rw [← mem]; exact f⟩
+      feet := fun a l => Or.inl (by rw [← mem]; exact l)
       kept := fun a _ _ _ _ => by rw [mem] }
 
 /-! ### Steps that keep memory -/

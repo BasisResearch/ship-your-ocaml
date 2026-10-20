@@ -29,6 +29,7 @@ import OCaml.Vm.Primitives.Named.RegisterTail
 import OCaml.Vm.Primitives.Named.RootsUpdate
 import OCaml.Vm.Primitives.Named.RegisterRootRun
 import OCaml.Vm.Primitives.Named.ModifyRootPaths
+import OCaml.Vm.Primitives.Named.GenRoots
 import OCaml.Vm.Sim.PrimInt64FloatReturns
 import OCaml.Vm.Sim.PrimSysArgvReturns
 import OCaml.Vm.Sim.PrimSysExitReturns
@@ -6521,7 +6522,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Named.RegisterRoot.lookup_path
 #print axioms OCaml.Vm.Primitives.Named.RegisterRoot.register_root_run
 #print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.returned
-#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.feet_of_memory
 #print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.step_young
 #print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.step_old
 #print axioms OCaml.Vm.Primitives.Named.ModifyRoot.listsFoot_low
@@ -6595,3 +6595,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.f1_c_call4_returns
 #print axioms OCaml.Vm.Sim.f1_c_call5_returns
 #print axioms OCaml.Vm.Sim.OutListWalk.customMemGrows
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.Off.carry
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.read8_carry
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.EnvAt.carry
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.RootAt.of_iff
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.RootsAt.value
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.RootsAt.register
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.RootsAt.modify
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.arena_window
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.rootCallsG
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.feet_young
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.feet_old
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.listsFoot_keep
