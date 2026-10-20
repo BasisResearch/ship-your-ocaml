@@ -363,13 +363,19 @@ insertion is proved generically:
     eleven saves and the two argument loads in one chain, the kernel hit
     deep recursion. The policy span is split at its stores for the same
     reason.
-Next, compose caml_init_gc with its callees:
-* page_table_initialize;
-* minor_heap_set (its `only` facts give `MajorTableAt.occupied`);
-* set_allocation_policy (its log gives `MajorGlobals`' pointers);
-* caml_init_major_heap;
-* gc_message_quiet ×6.
-Then onward to the whileMin cut.
+* caml_init_gc is composed from its entry to caml_init_major_heap's return
+  (InitGc: `init_gc_to_table`, `init_gc_to_minor`, `init_gc_to_major`). The
+  precondition `InitGcCall` holds the default parameters and the domain,
+  ref-table, memprof and best-fit facts at entry. To compose, the callee
+  posts gained frame facts:
+  * `PageTableDone.saved` and `.aligned`;
+  * `MinorHeapSet.caller`, `.lowKept` and `.domainHigh`;
+  * caller frames in every caml_init_major_heap stage, plus
+    `MajorHeapInit.lowKept` and `.s3`.
+  `ready_gc_message_call` covers a quiet message site under readiness.
+Next, the rest of caml_init_gc: the window and custom stores, five quiet
+messages, and the return with its tail call. Then onward to the whileMin
+cut.
 Then onward to the cut.
 
 ## Round 2 status (2026-10-06, search)

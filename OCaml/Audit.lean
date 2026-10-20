@@ -421,6 +421,7 @@ import OCaml.Vm.Boot.Startup.MajorTailSteps
 import OCaml.Vm.Boot.Startup.MajorHeap
 import OCaml.Vm.Boot.Startup.MemsetShifted
 import OCaml.Vm.Boot.Startup.InitGcSteps
+import OCaml.Vm.Boot.Startup.InitGc
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -3005,6 +3006,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.init_gc_msg_incr
 #print axioms OCaml.Vm.Boot.Startup.init_gc_msg_policy
 #print axioms OCaml.Vm.Boot.Startup.init_gc_return
+#print axioms OCaml.Vm.Boot.Startup.ready_gc_message
+#print axioms OCaml.Vm.Boot.Startup.ready_gc_message_call
+#print axioms OCaml.Vm.Boot.Startup.RefTablesPre.at
+#print axioms OCaml.Vm.Boot.Startup.FreshBlock.apart
+#print axioms OCaml.Vm.Boot.Startup.minor_slot_inBlock
+#print axioms OCaml.Vm.Boot.Startup.init_gc_to_table
+#print axioms OCaml.Vm.Boot.Startup.init_gc_to_minor
+#print axioms OCaml.Vm.Boot.Startup.init_gc_to_major
 #print axioms OCaml.Vm.Boot.Startup.ownedWindow_ok
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
