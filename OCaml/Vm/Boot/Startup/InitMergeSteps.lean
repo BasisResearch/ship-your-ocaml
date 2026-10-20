@@ -172,4 +172,43 @@ theorem init_merge_step (c : Config) (ra t1 : BitVec 64) (k : Nat) (lt : k < 16)
       trivial⟩
   · rfl
   · unfold initMergeBlocks; split <;> decide
+
+/-- Some list was emptied: store the map; return. -/
+theorem init_merge_tail (c : Config) (ra t1 v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(29, 1#64), (6, t1), (1, ra), (10, v)]) :
+    FnSummary 0x80006254#64 (fun e => e = c) (WriteRegistersPost [15] [(smallMapAddr, 4, t1)] c ra v
+      [(15, 0x80064220#64), (29, 1#64), (6, t1), (1, ra), (10, v)]) := by
+  apply registers_of_blocks' leaf.image (by constructor <;> simp only [OutLRange, smallMapAddr] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput (bf_init_mergeX6254Seg ++ bf_init_mergeX621cFSeg ++ bf_init_mergeX6220Seg ++
+        bf_init_mergeX6228Seg) 0x80006254#64 [(29, 1#64), (6, t1), (1, ra), (10, v)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [29, 6, 1, 10]; decide
+      shape := by change ChainOK _ [29, 6, 1, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := initMergeTail_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.bf_init_merge_at_"
+        · simp only [initmergetail_line_80006220, initmergetail_line_80006224, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of]; rfl
+        · exact (show WriteWindow (BitVec.ofNat 64 smallMapAddr) 4 by constructor <;> decide).sw rfl (by simp only [initmergetail_line_80006220, initmergetail_line_80006224, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of]; decide)
+        · change (Sail.BitVec.update (ra + Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [ret_tgt ra leaf.aligned]
+          exact leaf.aligned }))
+  · simp only [bf_init_mergeX6254Seg, bf_init_mergeX621cFSeg, bf_init_mergeX6220Seg, bf_init_mergeX6228Seg,
+      List.cons_append, List.nil_append, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, wlogM, wentryM,
+      widthOfM, eaddrM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of,
+      initmergetail_line_80006220, initmergetail_line_80006224]
+    rw [show (2147508768#64 + Functions.sign_extend (BitVec.extractLsb' 12 20 0x0005e797#32 +++ 0#12) +
+      Functions.sign_extend (m := 64) 2016#12).toNat = smallMapAddr by decide]
+  · change Sail.BitVec.update (ra + Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [ret_tgt ra leaf.aligned]
+  · intro σ pins
+    simp only [bf_init_mergeX6254Seg, bf_init_mergeX621cFSeg, bf_init_mergeX6220Seg, bf_init_mergeX6228Seg,
+      List.cons_append, List.nil_append, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, srcVal, lookupG,
+      eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of, initmergetail_line_80006220, initmergetail_line_80006224] at pins
+    exact ⟨gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 29) _ pins rfl, gholds_lookup (n := 6) _ pins rfl,
+      gholds_lookup (n := 1) _ pins rfl, gholds_lookup (n := 10) _ pins rfl, trivial⟩
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
