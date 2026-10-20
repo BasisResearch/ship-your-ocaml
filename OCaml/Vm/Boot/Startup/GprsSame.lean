@@ -33,6 +33,11 @@ theorem GprsSame.trans {c d e : Config} {ws vs : List Nat} (first : GprsSame c d
     rw [List.mem_append, not_or] at out
     exact (second.same n lo hi out.1).trans (first.same n lo hi out.2)⟩
 
+/-- Widen the written set (one `decide` on inclusion). -/
+theorem GprsSame.mono {c d : Config} {ws vs : List Nat} (k : GprsSame c d ws) (sub : ∀ n ∈ ws, n ∈ vs) :
+    GprsSame c d vs :=
+  ⟨fun n lo hi out => k.same n lo hi fun w => out (sub n w)⟩
+
 /-- A register's value carried from `before` to `after`. -/
 theorem GprsSame.get {c d : Config} {ws : List Nat} (k : GprsSame c d ws) {n : Nat} (lo : 1 ≤ n) (hi : n ≤ 31)
     (out : n ∉ ws) {v : BitVec 64} (h : gprGet c.σ n = some v) : gprGet d.σ n = some v :=
