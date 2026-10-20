@@ -2,6 +2,7 @@ import OCaml.Vm.Gc.FinalQuiet
 import OCaml.Vm.Gc.MemprofQuiet
 import OCaml.Vm.Gc.LocalRootsTail
 import OCaml.Vm.Gc.ChainScan
+import OCaml.Vm.Gc.Skiplist
 import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
