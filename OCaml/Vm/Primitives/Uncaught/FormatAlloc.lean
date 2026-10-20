@@ -107,6 +107,8 @@ structure Allocated (H : List (Nat × Nat)) (capacity : Nat) (sp : BitVec 64) (l
   caller : ∀ a, sp.toNat - 432 ≤ a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
   blocks : ∀ q m a, (q, m) ∈ H → heapStart ≤ q → q + m ≤ heapEnd → q ≤ a → a < q + m →
     (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
+  /-- low memory outside the allocator's globals -/
+  globals : ∀ a, a < heapStart → ¬ allocGlobal a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
   output : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
 
 /-- **`caml_stat_alloc_noexc(len + 1)`** from the filled buffer. -/
@@ -144,6 +146,20 @@ theorem format_alloc {H : List (Nat × Nat)} {capacity charge : Nat} {sp ra : Bi
       caller := fun a ha => S.caller_byte frameA (by rw [stackNat]; exact ha)
       blocks := fun q m a member lo hi qa aq =>
         OCaml.Vm.Gc.Realloc.alloc_live_byte S frameA member lo hi ⟨qa, aq⟩
+      globals := fun a lo ng => by
+        have unchanged := S.allocation.memory a (by
+          intro owned
+          rcases owned with scratch | foot
+          · unfold stackWin InExt at scratch
+            have := frameA.lower
+            simp only [heapStart, heapEnd, allocHeadroom] at *
+            omega
+          · rcases foot with g | ⟨h, _, _⟩
+            · exact ng g
+            · have : vsaLayoutP.lo = heapStart := rfl
+              omega)
+        change (g.σ.mem[a]?).getD 0 = (S.atMalloc.σ.mem[a]?).getD 0 at unchanged
+        rw [unchanged, S.dispatch.memory]
       output := by
         have alloc : Vsa.Machine.output g.σ = Vsa.Machine.output S.atMalloc.σ := S.allocation.output
         rw [alloc]

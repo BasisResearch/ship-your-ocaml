@@ -27,4 +27,11 @@ theorem GprsKept.of_steps (persist : GprsPersist_Statement) {c d : Config} (run 
     (gp : gpr d 3 = gpr c 3) : GprsKept c d :=
   ⟨fun n _ _ p => persist c d run n p, gp⟩
 
+/-- **Named statement**: every memory byte present at `c` is present after
+any run from `c` (stores insert; nothing removes a byte). Library summaries
+state memory as total reads (`getD 0`); the presence-based C-string facts
+(`CStr`) need this to cross them. Supplied like `GprsPersist_Statement`. -/
+def MemPersist_Statement : Prop :=
+  ∀ c d : Config, Steps c d → ∀ a : Nat, (c.σ.mem[a]?).isSome → (d.σ.mem[a]?).isSome
+
 end OCaml.Vm.Primitives

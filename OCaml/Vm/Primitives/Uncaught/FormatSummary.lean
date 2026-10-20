@@ -39,6 +39,8 @@ structure FormatDone (H : List (Nat × Nat)) (capacity : Nat) (ra sp s0 s1 s2 s4
   /-- every other live block -/
   blocks : ∀ q m a, (q, m) ∈ H → heapStart ≤ q → q + m ≤ heapEnd → q ≤ a → a < q + m →
     (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
+  /-- low memory outside the allocator's globals -/
+  globals : ∀ a, a < heapStart → ¬ allocGlobal a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
   output : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
 
 /-- **`caml_format_exception` on a constant exception**, entry to return. -/
@@ -107,6 +109,10 @@ theorem format_exception_constant {H : List (Nat × Nat)} {capacity charge : Nat
           · omega
         rw [R.memory, co.kept a apart, A.blocks q m a member lo hi qa aq]
         exact filled_out h pd fl (Or.inl (Nat.lt_of_lt_of_le (Nat.lt_of_lt_of_le aq hi) hbase))
+      globals := fun a lo ng => by
+        have order : heapStart ≤ res.toNat := A.low
+        rw [R.memory, co.kept a (Or.inl (by omega)), A.globals a lo ng]
+        exact filled_out h pd fl (Or.inl (Nat.lt_of_lt_of_le (Nat.lt_of_lt_of_le lo (by decide)) hbase))
       output := by
         rw [R.output, co.output, A.output, fl.output]
         simp only [Vsa.Machine.output]
