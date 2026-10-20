@@ -555,7 +555,10 @@ structure InsertIterated (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List
     Skiplist.Returned H (foot e.σ.mem Skiplist.globalRootsOld cells) (frame sp) insertLink e d ∧
     (∃ cells', Shape d.σ.mem Skiplist.globalRootsOld cells' ∧
       ChainScan.key c.σ.mem cell ∈ Skiplist.keys d.σ.mem cells' ∧
-      ∀ k ∈ Skiplist.keys e.σ.mem cells, k ∈ Skiplist.keys d.σ.mem cells') ∧
+      (∀ k ∈ Skiplist.keys e.σ.mem cells, k ∈ Skiplist.keys d.σ.mem cells') ∧
+      (∀ k ∈ Skiplist.keys d.σ.mem cells', k = ChainScan.key c.σ.mem cell ∨ k ∈ Skiplist.keys e.σ.mem cells) ∧
+      (∀ a, foot d.σ.mem Skiplist.globalRootsOld cells' a →
+        foot e.σ.mem Skiplist.globalRootsOld cells a ∨ VsaIris.VsaHeap.vsaFoot H a)) ∧
     after.σ.mem = d.σ.mem ∧
     PCAt (if ChainScan.next c.σ.mem cell != 0#64 then insertPc else tailPc) after
   registers : GHolds after.σ (ChainScan.ChainLoop.headRegs (scanR R sp f) (ChainScan.next c.σ.mem cell))
@@ -615,7 +618,7 @@ theorem insert_iteration {R sp f cell c} (ops : Skiplist.Ops Shape foot) (input 
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with h | h | h | h <;> cases h <;> rfl
   have target : GlobalRootsSites.insertCall.target = Skiplist.insertPc := by decide
-  obtain ⟨d, run3, ret, cells', shape', mem', old'⟩ :=
+  obtain ⟨d, run3, ret, cells', shape', mem', old', only', foot'⟩ :=
     (ops.insert H cap Skiplist.globalRootsOld cells _ (frame sp) insertLink e rd.shape callInput).run e
       ⟨by rw [← target]; exact called.pc, rfl⟩
   have next : gprGet d.σ 8 = some (ChainScan.next c0.σ.mem cell) := by
@@ -655,7 +658,7 @@ theorem insert_iteration {R sp f cell c} (ops : Skiplist.Ops Shape foot) (input 
       cases hm
   have amem : after.σ.mem = d.σ.mem := by rw [tp.memory, insertTest_log]; rfl
   refine ⟨after, run1.trans (run2.trans (run3.trans run4)), ⟨⟨e, d, H, cap, cells, emem, rd, ret,
-    ⟨cells', shape', mem', old'⟩, amem, ?_⟩, headAfter, tp.good, tp.tick, tp.minstret, ?_⟩⟩
+    ⟨cells', shape', mem', old', only', foot'⟩, amem, ?_⟩, headAfter, tp.good, tp.tick, tp.minstret, ?_⟩⟩
   · rw [PCAt, tp.pc, insertTest_endpoint]
   · exact image_of_writeLog (log := []) ret.image ⟨trivial, trivial⟩ (by rw [amem]; rfl)
 
@@ -764,7 +767,8 @@ structure Finished (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitV
     (R : Nat → BitVec 64) (sp ra : BitVec 64) (mem : Std.ExtHashMap Nat (BitVec 8)) (after : Config) : Prop where
   emptied : ∃ e H cap cells, e.σ.mem = mem ∧ EmptyReady Shape H cap cells sp e ∧
     Skiplist.Returned H (foot e.σ.mem Skiplist.globalRootsYoung cells) sp ra e after ∧
-    Shape after.σ.mem Skiplist.globalRootsYoung []
+    Shape after.σ.mem Skiplist.globalRootsYoung [] ∧
+    (∀ a, foot after.σ.mem Skiplist.globalRootsYoung [] a → foot e.σ.mem Skiplist.globalRootsYoung cells a)
   registers : GHolds after.σ ([(2, sp), (8, R 8), (9, R 9), (18, R 18)] ++ calleeSaved R)
 
 /-- **The epilogue**: restore the frame and tail-call `caml_skiplist_empty`. -/
@@ -804,7 +808,7 @@ theorem stage_tail {R sp ra c0 d} {mem : Std.ExtHashMap Nat (BitVec 8)} {L : GRe
     simp only [List.mem_cons, List.not_mem_nil, or_false] at member
     rcases member with h | h <;> cases h <;> rfl
   have epc : PCAt Skiplist.emptyPc e := by rw [PCAt, post.pc, tail_endpoint]
-  obtain ⟨after, run2, ret, shape⟩ :=
+  obtain ⟨after, run2, ret, shape, shrinks⟩ :=
     (ops.empty H cap Skiplist.globalRootsYoung cells sp ra e rd.shape callInput).run e ⟨epc, rfl⟩
   have four : GHolds after.σ [(2, sp), (8, R 8), (9, R 9), (18, R 18)] := by
     refine ⟨ret.stack, ?_, ?_, ?_, trivial⟩
@@ -820,7 +824,7 @@ theorem stage_tail {R sp ra c0 d} {mem : Std.ExtHashMap Nat (BitVec 8)} {L : GRe
     · rw [ret.saved 23 (by decide)]; exact gholds_lookup _ calleeE rfl
     · rw [ret.saved 24 (by decide)]; exact gholds_lookup _ calleeE rfl
     · rw [ret.saved 25 (by decide)]; exact gholds_lookup _ calleeE rfl
-  exact ⟨after, run1.trans run2, ⟨e, H, cap, cells, emem, rd, ret, shape⟩, (gholds_append _ _).mpr ⟨four, calleeA⟩⟩
+  exact ⟨after, run1.trans run2, ⟨e, H, cap, cells, emem, rd, ret, shape, shrinks⟩, (gholds_append _ _).mpr ⟨four, calleeA⟩⟩
 
 end Tail
 

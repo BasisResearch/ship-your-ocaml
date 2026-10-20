@@ -4,6 +4,10 @@ import OCaml.Vm.Gc.LocalRootsTail
 import OCaml.Vm.Gc.ChainScan
 import OCaml.Vm.Gc.Skiplist
 import OCaml.Vm.Gc.GlobalScan
+import OCaml.Vm.Gc.SlotSupply
+import OCaml.Vm.Gc.RootLoops
+import OCaml.Vm.Gc.PageTable
+import OCaml.Vm.Gc.OldifyLocalRoots
 import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
@@ -740,6 +744,22 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.ChainScan.ChainLoop.iteration
 #print axioms OCaml.Vm.Gc.ChainScan.ChainLoop.walk
 #print axioms OCaml.Vm.Gc.GlobalScan.stage_head
+#print axioms OCaml.Vm.Gc.RootLoops.walkStep
+#print axioms OCaml.Vm.Gc.RootLoops.call_keeps
+#print axioms OCaml.Vm.Gc.RootLoops.walk_next
+#print axioms OCaml.Vm.Gc.RootLoops.walk_done
+#print axioms OCaml.Vm.Gc.RootLoops.walk_progress
+#print axioms OCaml.Vm.Gc.RootLoops.rank_eq
+#print axioms OCaml.Vm.Gc.RootLoops.chain_congr
+#print axioms OCaml.Vm.Gc.RootLoops.Stack.scanStep
+#print axioms OCaml.Vm.Gc.RootLoops.Stack.stack_next
+#print axioms OCaml.Vm.Gc.RootLoops.Stack.stack_done
+#print axioms OCaml.Vm.Gc.RootLoops.Stack.callee_frame
+#print axioms OCaml.Vm.Gc.Skiplist.Chain.unique
+#print axioms OCaml.Vm.Gc.OldifyLocalRoots.stage_head
+#print axioms OCaml.Vm.Gc.OldifyLocalRoots.head_access
+#print axioms OCaml.Vm.Gc.OldifyLocalRoots.head_control
+#print axioms OCaml.Vm.Gc.StackScan.iteration
 #print axioms OCaml.Vm.Gc.GlobalScan.stage_test
 #print axioms OCaml.Vm.Gc.GlobalScan.insert_iteration
 #print axioms OCaml.Vm.Gc.GlobalScan.insert_loop

@@ -198,6 +198,8 @@ structure Iterated (R : Nat → BitVec 64) (p : BitVec 64) (copies : List Pendin
   good : GoodState after.σ
   tick : after.tick < 2
   minstret : ∃ w, after.σ.regs.get? Register.minstret = some w
+  /-- the bound test leaves the domain record in `a5` -/
+  domain : gprGet after.σ 15 = some (bytesT after.σ.mem Layout.sym_Caml_state 8)
 
 /-- The head registers other than `s0`, untouched by the setup block. -/
 def keptRegs (R : Nat → BitVec 64) : GRegs :=
@@ -311,8 +313,14 @@ theorem iteration {R : Nat → BitVec 64} {p : BitVec 64} {copies : List Pending
     rcases member with h | h | h | h | h | h | h | h | h | h | h <;> cases h <;>
       simp [testRegs, keptRegs, lookupG]
   refine ⟨after, run2.trans run3, ⟨⟨e, copies', mid, jumped, done, ?_, ?_⟩,
-    test_frame tp.frame headMid, tp.good, tp.tick, tp.minstret⟩⟩
+    test_frame tp.frame headMid, tp.good, tp.tick, tp.minstret, ?_⟩⟩
   · rw [tp.memory, test_log]; rfl
   · rw [PCAt, tp.pc, test_endpoint]
+  · have tested := tp.regs
+    rw [show (evalBlocks [testBlock (continues (p + 8#64) mid.σ.mem)]
+        (SegEvalState.init (testRegs (p + 8#64)) (testLoads mid.σ.mem))).regs =
+        testedRegs (p + 8#64) mid.σ.mem from test_regs _ _ _] at tested
+    rw [tp.memory, test_log]
+    exact gholds_lookup _ tested rfl
 
 end OCaml.Vm.Gc.StackScan

@@ -105,6 +105,17 @@
   (`GlobalRootsSites.image_loaded`, generated per byte), since `kept` is
   only `getD`-level. Next: `MinorInvariant`, the per-slot-call state that
   supplies `WalkStep`/`ScanStep`/`InsertStep` for every root loop.
+- `SlotSupply` (named obligation) with fixed `writes`/`support` regions:
+  footprints that depend on the copies or memory cannot be kept across
+  iterations, a fixed region makes "the loop's data lie outside" a static
+  premise. `RootLoops.walkStep` / `Stack.scanStep` derive both loops' per-call
+  obligations from it. Code survives every call because `.text` ends at
+  `0x80053180` and all writes are at or above `tohost + 16`.
+- For a1-prims (generational global roots): `Skiplist.Ops.remove`, `nodup`,
+  `low`, key-set and footprint facts on insert/remove/empty, `GlobalRoots`,
+  `Skiplist.Chain.unique`, `PageTableLookup` (`PageTable.lean`).
+- `StackScan.Iterated.domain`: the bound test leaves the domain in `a5`,
+  which `LocalRootsTail.exitRegs` needs.
 - G2: `SlotDone R copies copies' pl` (`OldifySlot.lean`): one
   `caml_oldify_one(v, p)` call at the slot level, `*p = relocation copies' v`
   over the published forwarding table, which grows and keeps its view.
