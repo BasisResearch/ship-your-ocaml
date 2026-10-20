@@ -1001,7 +1001,7 @@ structure MajorStackAllocated (H : List (Nat × Nat)) (capacity : Nat) (sp stack
   record : bytesT after.σ.mem (domainField 128) 8 = stack
   back : ∀ x, ((x < heapEnd ∧ ¬ vsaFoot H x ∧ OutW [⟨gcPhaseAddr, gcPhaseAddr + 4⟩, ⟨domainField 128, domainField 136⟩] x) ∨
       (nativeStack sp 48).toNat ≤ x) → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
-  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
+  saved : ∀ k, 19 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
 
 theorem major_stack_allocated (c d19 : Config) (H : List (Nat × Nat)) (cap c1 c2 charge : Nat)
     (sp ra hsize s0 s1 s2 s3 inc mem ent cur : BitVec 64)
@@ -1116,7 +1116,7 @@ structure MajorTailed (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s
   /-- Below the arena, outside stage C's writes, the bytes are those of `base` (bf_make_free_blocks's return). -/
   back : ∀ x, x < heapEnd → ¬ vsaFoot H x → OutW (majorStackWindows stack.toNat) x →
     (after.σ.mem[x]?).getD 0 = (base.σ.mem[x]?).getD 0
-  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet base.σ k
+  saved : ∀ k, 19 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet base.σ k
   caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (base.σ.mem[x]?).getD 0
 
 theorem major_tailed (c d19 d24 : Config) (H : List (Nat × Nat)) (cap c1 c2 charge : Nat)
@@ -1290,7 +1290,7 @@ structure MajorRingCleared (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1
   regs : GHolds after.σ [(2, sp), (18, s2), (9, s1), (1, ra), (8, s0)]
   ready : RuntimeReady H capacity sp ra after
   memory : after.σ.mem = writeLog base.σ.mem (memsetShiftLog (BitVec.ofNat 64 majorRingAddr) 24)
-  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet base.σ k
+  saved : ∀ k, 19 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet base.σ k
 
 theorem major_ring_cleared (d19 d28 : Config) (H : List (Nat × Nat)) (cap : Nat)
     (sp ra s0 s1 s2 stack entries : BitVec 64)
@@ -1346,6 +1346,7 @@ structure MajorHeapInit (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0
   curWsz : bytesT after.σ.mem flCurWszAddr 8 = cur + 1#64 + ((majorChunkSize hsize >>> 3) - 1#64)
   markStack : bytesT after.σ.mem (domainField 128) 8 = stack
   saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
+  s3 : gprGet after.σ 19 = gprGet before.σ 19
   caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   lowKept : ∀ x, x < heapStart → ¬ allocGlobal x → OutW majorInitLowWindows x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
@@ -1467,7 +1468,8 @@ theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cha
     markStack := by
       rw [R.memory, bytesT_writeLog_out _ markOut]
       exact Tl.record
-    saved := fun k lo hi => by rw [R.saved k lo hi, Tl.saved k lo hi, F.saved k lo hi]
+    saved := fun k lo hi => by rw [R.saved k (by omega) hi, Tl.saved k (by omega) hi, F.saved k lo hi]
+    s3 := by rw [R.saved 19 (by decide) (by decide), Tl.saved 19 (by decide) (by decide), gholds_lookup (n := 19) _ F.regs rfl, s3reg]
     caller := fun x hx => by
       have ringHi : (BitVec.ofNat 64 majorRingAddr).toNat + 16 * 24 + 16 ≤ heapEnd := by decide
       rw [R.memory, frameOn_writeLog _ _ _ (memsetShiftLog_in _ 24 (by decide)) x
