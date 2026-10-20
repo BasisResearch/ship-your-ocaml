@@ -765,5 +765,6 @@ import OCaml.Vm.Primitives.Uncaught.FatalReport
 import OCaml.Vm.Primitives.Uncaught.FatalExit
 import OCaml.Vm.Primitives.Uncaught.FatalCompose
 import OCaml.Vm.Primitives.Uncaught.FatalLink
+import OCaml.Vm.Primitives.Uncaught.FatalMessage
 import OCaml.Vm.Primitives.Named.NamedTransport
 import OCaml.Vm.Primitives.GprsPersist
