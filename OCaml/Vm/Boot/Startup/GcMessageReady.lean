@@ -2,6 +2,7 @@ import OCaml.Vm.Boot.Startup.GcMessageQuiet
 import OCaml.Vm.Boot.Startup.SearchTableReset
 import OCaml.Vm.Boot.Startup.RuntimeStack
 import OCaml.Vm.Boot.Startup.GprsSame
+import OCaml.Vm.Gc.ReadyCalls
 
 /-! `caml_gc_message` at verbosity zero under readiness: the arguments it
 spills are whatever the registers hold, the spill stays below `sp`, and it
@@ -36,5 +37,31 @@ theorem ready_gc_message (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (
     regs := gc.regs
     memory := gc.memory
     same := GprsSame.of_post gc (by decide) }⟩
+
+/-- A `jal caml_gc_message` site at verbosity zero returned to its link. -/
+structure GcCallDone (H : List (Nat × Nat)) (capacity : Nat) (sp link : BitVec 64) (before after : Config) : Prop where
+  pc : PCAt link after
+  ready : RuntimeReady H capacity sp link after
+  /-- Only the message's spill area below `sp` changed. -/
+  memory : ∀ x, OutW [⟨nativeFrameBase sp 80, sp.toNat⟩] x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  same : GprsSame before after [6, 2, 10, 1]
+
+theorem ready_gc_message_call {H capacity sp ra v} {call : CallInstr} (shape : CallShape call) (decode : CallDecode call)
+    (target : call.target = 0x80003cb0#64) {c : Config} (pins : CallPins call c) (ready : RuntimeReady H capacity sp ra c)
+    (frame : NativeFrame sp 80) (a0 : gprGet c.σ 10 = some v)
+    (quiet : LPins8 c.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8)) (linkAligned : call.link.toNat % 4 = 0) :
+    FnSummary call.pc (fun d => d = c) (GcCallDone H capacity sp call.link c) := by
+  constructor
+  rintro d ⟨pc, rfl⟩
+  obtain ⟨c1, run1, C⟩ := (OCaml.Vm.Gc.ready_call shape decode pins ready [(10, v)] ⟨a0, trivial⟩
+    (by simp only [keysG]; decide) (by simp [KeysAvoidRa, keysG]) v rfl linkAligned).run d ⟨pc, rfl⟩
+  obtain ⟨c2, run2, Q⟩ := ready_gc_message c1 H capacity sp call.link v (by rw [← target]; exact C.pc) C.ready frame
+    C.regs.1 (by
+      have same : ∀ i, i < 8 → (c1.σ.mem[Layout.sym_caml_verb_gc + i]?).getD 0 =
+          (d.σ.mem[Layout.sym_caml_verb_gc + i]?).getD 0 := fun i _ => by rw [C.memory]
+      exact lpins8_observed quiet same)
+  have g1 : GprsSame d c1 [1] := ⟨fun n lo hi out => C.frame n lo hi (by simpa using out)⟩
+  refine ⟨c2, run1.trans run2, Q.pc, Q.ready, fun x out => ?_, (g1.trans Q.same).mono (by decide)⟩
+  rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frame) x out, C.memory]
 
 end OCaml.Vm.Boot.Startup
