@@ -142,6 +142,12 @@
   and `NoForgery`/`RememberedComplete` at the collection's start (`LoopHead`).
   `writes` = major-heap arena ∪ nursery ∪ the domain's minor-GC words ∪
   queue head; `support` = the same plus the published sources.
+- `RouteSupply`: `SlotCall` for the immediate, non-young and forwarded
+  routes from a call's `SlotEntry` and named facts (`SourcesApart`,
+  `DomainApart`, value words apart, table view). The fresh routes' inputs
+  (`AllocationConditions` → `AllocWrapper.Conditions` → `BestFitExact` …)
+  are per allocator path; supplying them needs a best-fit shape invariant
+  over the major heap's free structures that selects the path. Next.
 - G2: `SlotDone R copies copies' pl` (`OldifySlot.lean`): one
   `caml_oldify_one(v, p)` call at the slot level, `*p = relocation copies' v`
   over the published forwarding table, which grows and keeps its view.

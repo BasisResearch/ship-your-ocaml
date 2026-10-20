@@ -9,6 +9,7 @@ import OCaml.Vm.Gc.RootLoops
 import OCaml.Vm.Gc.PageTable
 import OCaml.Vm.Gc.OldifyLocalRoots
 import OCaml.Vm.Gc.RefLoops
+import OCaml.Vm.Gc.RouteSupply
 import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
@@ -754,6 +755,13 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.RefScan.test_access
 #print axioms OCaml.Vm.Gc.RefScan.body_access
 #print axioms OCaml.Vm.Gc.RefLoops.scanStep
+#print axioms OCaml.Vm.Gc.RouteSupply.immediate_call
+#print axioms OCaml.Vm.Gc.RouteSupply.nonYoung_call
+#print axioms OCaml.Vm.Gc.RouteSupply.forwarded_call
+#print axioms OCaml.Vm.Gc.RouteSupply.slot_outside
+#print axioms OCaml.Vm.Gc.RouteSupply.frame_top
+#print axioms OCaml.Vm.Gc.RouteSupply.table_outside
+#print axioms OCaml.Vm.Gc.RouteSupply.domain_outside
 #print axioms OCaml.Vm.Gc.RefLoops.refs_next
 #print axioms OCaml.Vm.Gc.RefLoops.refs_done
 #print axioms OCaml.Vm.Gc.RefLoops.call_keeps
