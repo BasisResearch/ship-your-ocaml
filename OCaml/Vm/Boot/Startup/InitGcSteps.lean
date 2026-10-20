@@ -12,6 +12,9 @@ import OCaml.Vm.Boot.Startup.InitGcMajorCallNormalized
 import OCaml.Vm.Boot.Startup.InitGcMajorCallImage
 import OCaml.Vm.Boot.Startup.InitGcMajorCallCallInterface
 import OCaml.Vm.Boot.Startup.InitGcArgsCallInterface
+import OCaml.Vm.Boot.Startup.InitGcWindowNormalized
+import OCaml.Vm.Boot.Startup.InitGcWindowImage
+import OCaml.Vm.Boot.Startup.InitGcWindowCallInterface
 import OCaml.Vm.Boot.Startup.MajorHeap
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Logic Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
@@ -259,4 +262,101 @@ theorem init_gc_major_front (c : Config) (ra bytes v : BitVec 64) (leaf : LeafIn
     exact ⟨gholds_lookup_eq pins rfl (by rw [sext_zero, BitVec.add_zero]), gholds_lookup (n := 8) _ pins rfl, trivial⟩
   · rfl
   · decide
+
+local macro "igw" : tactic => `(tactic| simp only [initgcwindow_line_8001f3a8, initgcwindow_line_8001f3ac, initgcwindow_line_8001f3b8, initgcwindow_line_8001f3bc, initgcwindow_line_8001f3c0, initgcwindow_line_8001f3c4, initgcwindow_line_8001f3cc, initgcwindow_line_8001f3d0, initgcwindow_line_8001f3d4, initgcwindow_line_8001f3dc, initgcwindow_line_8001f3e0, initgcwindow_line_8001f3e4, initgcwindow_line_8001f3e8, initgcwindow_line_8001f3ec, initgcwindow_line_8001f3f0, initgcwindow_line_8001f3f4, initgcwindow_line_8001f3f8, initgcwindow_line_8001f3fc, initgcwindow_line_8001f400, initgcwindow_line_8001f404, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, Nat.reduceAdd, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+/-- `caml_major_window`, `caml_custom_major_ratio`, `caml_custom_minor_ratio`, `caml_custom_minor_max_bsz`. -/
+def majorWindowAddr : Nat := 0x80064858
+def customMajorAddr : Nat := 0x800648c0
+def customMinorAddr : Nat := 0x800648b8
+def customMaxAddr : Nat := 0x800648b0
+
+/-- The window (1) is within `1..Max_major_window`. -/
+theorem init_gc_window_check (c : Config) (ra v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(23, 1#64), (10, v)]) :
+    FnSummary 0x8001f3a8#64 (fun e => e = c) (WriteRegistersPost [14, 15] [] c 0x8001f3bc#64 v
+      [(14, 50#64), (15, 1#64), (23, 1#64), (10, v)]) := by
+  apply registers_of_blocks' leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (caml_init_gcXf3a8FSeg ++ caml_init_gcXf3b4TSeg) 0x8001f3a8#64
+        [(23, 1#64), (10, v)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [23, 10]; decide
+      shape := by change ChainOK _ [23, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := initGcWindow_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_init_gc_at_"
+        all_goals igw
+        all_goals decide }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_init_gcXf3a8FSeg, caml_init_gcXf3b4TSeg, List.cons_append, List.nil_append, evalBlocks, evalBlock,
+      SegEvalState.init, initgcwindow_line_8001f3a8, initgcwindow_line_8001f3ac, initgcwindow_line_8001f3b8, initgcwindow_line_8001f3bc, initgcwindow_line_8001f3c0, initgcwindow_line_8001f3c4, initgcwindow_line_8001f3cc, initgcwindow_line_8001f3d0, initgcwindow_line_8001f3d4, initgcwindow_line_8001f3dc, initgcwindow_line_8001f3e0, initgcwindow_line_8001f3e4, initgcwindow_line_8001f3e8, initgcwindow_line_8001f3ec, initgcwindow_line_8001f3f0, initgcwindow_line_8001f3f4, initgcwindow_line_8001f3f8, initgcwindow_line_8001f3fc, initgcwindow_line_8001f400, initgcwindow_line_8001f404, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true,
+      ite_false, Nat.reduceEqDiff, Nat.reduceAdd, imm20Of] at pins
+    exact ⟨gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 23) _ pins rfl,
+      gholds_lookup (n := 10) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+/-- `caml_major_window = 1`; the custom major ratio (44) is nonzero. -/
+theorem init_gc_window_store (c : Config) (ra v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(15, 1#64), (24, 44#64), (10, v)]) :
+    FnSummary 0x8001f3bc#64 (fun e => e = c) (WriteRegistersPost [14, 15] [(majorWindowAddr, 4, 1#64)] c 0x8001f3cc#64 v
+      [(14, 0x800643bc#64), (15, 44#64), (24, 44#64), (10, v)]) := by
+  apply registers_of_blocks' leaf.image (by constructor <;> simp only [OutLRange, majorWindowAddr] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput caml_init_gcXf3bcFSeg 0x8001f3bc#64 [(15, 1#64), (24, 44#64), (10, v)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [15, 24, 10]; decide
+      shape := by change ChainOK _ [15, 24, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := initGcWindow_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_init_gc_at_"
+        · exact (show WriteWindow (BitVec.ofNat 64 majorWindowAddr) 4 by constructor <;> decide).sw rfl (by igw; decide)
+        · igw; decide }))
+  · simp only [caml_init_gcXf3bcFSeg, evalBlocks, evalBlock, SegEvalState.init, wlogM, wentryM, widthOfM]
+    igw
+    decide
+  · rfl
+  · intro σ pins
+    simp only [caml_init_gcXf3bcFSeg, evalBlocks, evalBlock, SegEvalState.init] at pins
+    simp only [initgcwindow_line_8001f3a8, initgcwindow_line_8001f3ac, initgcwindow_line_8001f3b8, initgcwindow_line_8001f3bc, initgcwindow_line_8001f3c0, initgcwindow_line_8001f3c4, initgcwindow_line_8001f3cc, initgcwindow_line_8001f3d0, initgcwindow_line_8001f3d4, initgcwindow_line_8001f3dc, initgcwindow_line_8001f3e0, initgcwindow_line_8001f3e4, initgcwindow_line_8001f3e8, initgcwindow_line_8001f3ec, initgcwindow_line_8001f3f0, initgcwindow_line_8001f3f4, initgcwindow_line_8001f3f8, initgcwindow_line_8001f3fc, initgcwindow_line_8001f400, initgcwindow_line_8001f404, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, Nat.reduceAdd, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons] at pins
+    exact ⟨gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 10) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+/-- `caml_custom_major_ratio = 44`; the custom minor ratio (100) is nonzero. -/
+theorem init_gc_custom_major (c : Config) (ra v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(15, 44#64), (25, 100#64), (10, v)]) :
+    FnSummary 0x8001f3cc#64 (fun e => e = c) (WriteRegistersPost [14, 15] [(customMajorAddr, 8, 44#64)] c 0x8001f3dc#64 v
+      [(14, 0x800643cc#64), (15, 100#64), (25, 100#64), (10, v)]) := by
+  apply registers_of_blocks' leaf.image (by constructor <;> simp only [OutLRange, customMajorAddr] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput caml_init_gcXf3ccFSeg 0x8001f3cc#64 [(15, 44#64), (25, 100#64), (10, v)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [15, 25, 10]; decide
+      shape := by change ChainOK _ [15, 25, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := initGcWindow_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_init_gc_at_"
+        · exact (show WriteWindow (BitVec.ofNat 64 customMajorAddr) 8 by constructor <;> decide).sd rfl (by igw; decide)
+        · igw; decide }))
+  · simp only [caml_init_gcXf3ccFSeg, evalBlocks, evalBlock, SegEvalState.init, wlogM, wentryM, widthOfM]
+    igw
+    decide
+  · rfl
+  · intro σ pins
+    simp only [caml_init_gcXf3ccFSeg, evalBlocks, evalBlock, SegEvalState.init] at pins
+    simp only [initgcwindow_line_8001f3a8, initgcwindow_line_8001f3ac, initgcwindow_line_8001f3b8, initgcwindow_line_8001f3bc, initgcwindow_line_8001f3c0, initgcwindow_line_8001f3c4, initgcwindow_line_8001f3cc, initgcwindow_line_8001f3d0, initgcwindow_line_8001f3d4, initgcwindow_line_8001f3dc, initgcwindow_line_8001f3e0, initgcwindow_line_8001f3e4, initgcwindow_line_8001f3e8, initgcwindow_line_8001f3ec, initgcwindow_line_8001f3f0, initgcwindow_line_8001f3f4, initgcwindow_line_8001f3f8, initgcwindow_line_8001f3fc, initgcwindow_line_8001f400, initgcwindow_line_8001f404, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, Nat.reduceAdd, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons] at pins
+    exact ⟨gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 10) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
 end OCaml.Vm.Boot.Startup
