@@ -1,9 +1,8 @@
-import OCaml.Vm.Primitives.Uncaught.StdioReturned
+import OCaml.Vm.Primitives.Uncaught.StdioFrame
 import OCaml.Vm.Primitives.Uncaught.Fclose
 import OCaml.Vm.Primitives.Uncaught.SfpLockAcquire
 import OCaml.Vm.Primitives.Uncaught.SfpLockRelease
 import OCaml.Vm.Primitives.Uncaught.RetargetLockClose
-import OCaml.Vm.Primitives.ExitPath.Context
 
 /-!
 # `_fclose_r` on a standard stream
@@ -12,11 +11,11 @@ import OCaml.Vm.Primitives.ExitPath.Context
 flushes the stream (`__sflush_r`), closes its descriptor through the
 stream's close function (`__sclose`), frees no buffer (none was allocated),
 clears `_flags` and returns the flush's result. Between its prologue and
-epilogue the function keeps `sp - 32`, `s0 = fp`, `s1 = reent` and the
-`s2` (the result so far) and the callee-saved registers above it (`Body`). Each block, call and returned
-callee is one step of that state (`Body.step`, `Body.call`,
-`Body.returned`); the flush is a premise of the composition, discharged per
-stream from `StdioReturned`.
+epilogue the function pins `sp - 32`, `s0 = fp`, `s1 = reent` and `s2` (the
+result so far) and holds `s3`–`s11` (`Body`, a `StdioFrame.Frame`). Each
+block, call and returned callee is one step of that state; the flush is a
+premise of the composition (`FlushCall`), discharged per stream from
+`StdioReturned`.
 -/
 
 namespace OCaml.Vm.Primitives.Uncaught.StdioFclose
@@ -26,120 +25,92 @@ open OCaml.Vm.Primitives.Named.NamedValue (regsAt regsAt_of gpr_some gpr_some_of
 open OCaml.Vm.Boot.Startup (NativeFrame)
 open OCaml.Vm.Primitives.ExitPath (KeepCtx ExitOk exitReads)
 open OCaml.Vm.Primitives.Uncaught.StdioReturned
+open OCaml.Vm.Primitives.Uncaught.StdioFrame (Frame)
 open OCaml.Vm.Primitives.Uncaught.StdioFlush (stdinFile stdoutFile stderrFile)
 open OCaml.Vm.Primitives.Uncaught.StdioClose (fdSlot fdSlot_toNat FdLive frame_nat frame_word frame_callee
   frame_outside)
 
-/-- `_fclose_r`'s state between its prologue and epilogue, relative to `b`:
-the frame 32 bytes down, `s0 = fp`, `s1 = reent`, `s3`–`s11` as at `b`, an
-aligned `ra`, `s2`, and the bytes of `keep` as at `b`. -/
-structure Body (b : Config) (sp fp reent : BitVec 64) (keep : Nat → Prop) (s2 : BitVec 64) (c : Config) : Prop where
-  ctx : KeepCtx keep b c
-  ra : ∃ r : BitVec 64, gprGet c.σ 1 = some r ∧ r.toNat % 4 = 0
-  sp : gprGet c.σ 2 = some (sp + 18446744073709551584#64)
-  s0 : gprGet c.σ 8 = some fp
-  s1 : gprGet c.σ 9 = some reent
-  s2 : gprGet c.σ 18 = some s2
-  high : ∀ k, 19 ≤ k → k ≤ 27 → gprGet c.σ k = gprGet b.σ k
-  gprs : GprsKept b c
+/-- `_fclose_r`'s pinned registers: the frame 32 bytes down, `s0 = fp`,
+`s1 = reent`, `s2` (the result so far). -/
+def bodyPins (sp fp reent s2 : BitVec 64) : GRegs :=
+  [(2, sp + 18446744073709551584#64), (8, fp), (9, reent), (18, s2)]
+
+theorem bodyPins_keys (sp fp reent s2 : BitVec 64) : keysG (bodyPins sp fp reent s2) = [2, 8, 9, 18] := rfl
+
+/-- `s3`–`s11`, held as after the prologue. -/
+abbrev BodyHold (k : Nat) : Prop := 19 ≤ k ∧ k ≤ 27
+
+/-- `_fclose_r`'s state between its prologue and epilogue, relative to `b`
+(a `Frame`). -/
+abbrev Body (b : Config) (sp fp reent : BitVec 64) (keep : Nat → Prop) (s2 : BitVec 64) :=
+  Frame b keep (bodyPins sp fp reent s2) BodyHold
 
 namespace Body
-variable {b : Config} {sp fp reent s2 : BitVec 64} {keep : Nat → Prop}
+variable {b : Config} {sp0 fp reent v : BitVec 64} {keep : Nat → Prop}
 
-theorem leaf {c : Config} (h : Body b sp fp reent keep s2 c) : LeafInput (regsAt c 1) c := by
-  obtain ⟨r, hr, al⟩ := h.ra
-  rw [regsAt_of hr]; exact h.ctx.leaf hr al
+theorem sp {c : Config} (h : Body b sp0 fp reent keep v c) : gprGet c.σ 2 = some (sp0 + 18446744073709551584#64) :=
+  h.pin rfl
+theorem s0 {c : Config} (h : Body b sp0 fp reent keep v c) : gprGet c.σ 8 = some fp := h.pin rfl
+theorem s1 {c : Config} (h : Body b sp0 fp reent keep v c) : gprGet c.σ 9 = some reent := h.pin rfl
+theorem s2 {c : Config} (h : Body b sp0 fp reent keep v c) : gprGet c.σ 18 = some v := h.pin rfl
+theorem high {c : Config} (h : Body b sp0 fp reent keep v c) (k : Nat) (lo : 19 ≤ k) (hi : k ≤ 27) :
+    gprGet c.σ k = gprGet b.σ k :=
+  h.held k (by omega) (by omega) ⟨lo, hi⟩
 
-theorem reg {c : Config} (h : Body b sp fp reent keep s2 c) (n : Nat) (hn : n ∈ exitReads) :
+theorem leaf {c : Config} (h : Body b sp0 fp reent keep v c) : LeafInput (regsAt c 1) c := Frame.leaf h
+
+theorem reg {c : Config} (h : Body b sp0 fp reent keep v c) (n : Nat) (hn : n ∈ exitReads) :
     gprGet c.σ n = some (regsAt c n) :=
-  gpr_some (h.ctx.ok.present n hn)
+  Frame.reg h n hn
 
-/-- Fewer kept bytes. -/
-theorem mono {keep' : Nat → Prop} {c : Config} (h : Body b sp fp reent keep s2 c) (sub : ∀ x, keep' x → keep x) :
-    Body b sp fp reent keep' s2 c :=
-  { h with ctx := h.ctx.mono sub }
+theorem mono {keep' : Nat → Prop} {c : Config} (h : Body b sp0 fp reent keep v c) (sub : ∀ x, keep' x → keep x) :
+    Body b sp0 fp reent keep' v c :=
+  Frame.mono h sub
 
 /-- A generated block that writes none of the body's registers but possibly
 `s2`, and no kept byte. -/
 theorem stepS2 {c d : Config} {writes : List Nat} {log : List WEntry} {pc value s2' : BitVec 64} {regs : GRegs}
-    (h : Body b sp fp reent keep s2 c) (post : WriteRegistersPost writes log c pc value regs d)
+    (h : Body b sp0 fp reent keep v c) (post : WriteRegistersPost writes log c pc value regs d)
     (out : ∀ x, keep x → OutL log x) (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs)
     (avoid : ∀ n ∈ writes, n ≠ 1 ∧ n ≠ 2 ∧ n ≠ 8 ∧ n ≠ 9 ∧ (n < 19 ∨ 27 < n))
-    (s18 : gprGet d.σ 18 = some s2') : Body b sp fp reent keep s2' d where
-  ctx := h.ctx.step post out keys cover
-  ra := by
-    obtain ⟨r, hr, al⟩ := h.ra
-    exact ⟨r, (post.toEffectPost.gpr_frame keys 1 (by decide) (by decide) fun m => (avoid 1 m).1 rfl).trans hr, al⟩
-  sp := (post.toEffectPost.gpr_frame keys 2 (by decide) (by decide) fun m => (avoid 2 m).2.1 rfl).trans h.sp
-  s0 := (post.toEffectPost.gpr_frame keys 8 (by decide) (by decide) fun m => (avoid 8 m).2.2.1 rfl).trans h.s0
-  s1 := (post.toEffectPost.gpr_frame keys 9 (by decide) (by decide) fun m => (avoid 9 m).2.2.2.1 rfl).trans h.s1
-  s2 := s18
-  high k lo hi := (post.toEffectPost.gpr_frame keys k (by omega) (by omega) fun m => by
-    have := (avoid k m).2.2.2.2; omega).trans (h.high k lo hi)
-  gprs := h.gprs.trans post.kept
+    (s18 : gprGet d.σ 18 = some s2') : Body b sp0 fp reent keep s2' d :=
+  have fr (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ writes) : gprGet d.σ n = gprGet c.σ n :=
+    post.toEffectPost.gpr_frame keys n lo hi out
+  Frame.stepTo h post out keys cover (fun n m => ⟨(avoid n m).1, by have := (avoid n m).2.2.2.2; omega⟩)
+    ⟨(fr 2 (by decide) (by decide) fun m => (avoid 2 m).2.1 rfl).trans (Body.sp h),
+      (fr 8 (by decide) (by decide) fun m => (avoid 8 m).2.2.1 rfl).trans (Body.s0 h),
+      (fr 9 (by decide) (by decide) fun m => (avoid 9 m).2.2.2.1 rfl).trans (Body.s1 h), s18, trivial⟩
 
 /-- A generated block that writes none of the body's registers and no kept byte. -/
 theorem step {c d : Config} {writes : List Nat} {log : List WEntry} {pc value : BitVec 64} {regs : GRegs}
-    (h : Body b sp fp reent keep s2 c) (post : WriteRegistersPost writes log c pc value regs d)
+    (h : Body b sp0 fp reent keep v c) (post : WriteRegistersPost writes log c pc value regs d)
     (out : ∀ x, keep x → OutL log x) (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs)
-    (avoid : ∀ n ∈ writes, n ≠ 1 ∧ n ≠ 2 ∧ n ≠ 8 ∧ n ≠ 9 ∧ (n < 18 ∨ 27 < n)) : Body b sp fp reent keep s2 d :=
+    (avoid : ∀ n ∈ writes, n ≠ 1 ∧ n ≠ 2 ∧ n ≠ 8 ∧ n ≠ 9 ∧ (n < 18 ∨ 27 < n)) : Body b sp0 fp reent keep v d :=
   h.stepS2 post out keys cover (fun n m => by have := avoid n m; omega)
     ((post.toEffectPost.gpr_frame keys 18 (by decide) (by decide) fun m => by
-      have := (avoid 18 m).2.2.2.2; omega).trans h.s2)
+      have := (avoid 18 m).2.2.2.2; omega).trans (Body.s2 h))
 
 /-- A direct call: only `ra` changes, to the aligned link. -/
-theorem call {c d : Config} {target value link : BitVec 64} {regs : GRegs} (h : Body b sp fp reent keep s2 c)
+theorem call {c d : Config} {target value link : BitVec 64} {regs : GRegs} (h : Body b sp0 fp reent keep v c)
     (post : RegistersPost [1] c.σ.mem c target value ((1, link) :: regs) d) (al : link.toNat % 4 = 0) :
-    Body b sp fp reent keep s2 d where
-  ctx := h.ctx.call post (by simp [keysG])
-  ra := ⟨link, gholds_lookup _ post.regs (by simp [lookupG]), al⟩
-  sp := (post.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by decide)).trans h.sp
-  s0 := (post.toEffectPost.gpr_frame (by decide) 8 (by decide) (by decide) (by decide)).trans h.s0
-  s1 := (post.toEffectPost.gpr_frame (by decide) 9 (by decide) (by decide) (by decide)).trans h.s1
-  s2 := (post.toEffectPost.gpr_frame (by decide) 18 (by decide) (by decide) (by decide)).trans h.s2
-  high k lo hi := (post.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)).trans
-    (h.high k lo hi)
-  gprs := h.gprs.trans post.kept
+    Body b sp0 fp reent keep v d :=
+  Frame.call h post al (by decide) (by rw [bodyPins_keys]; decide)
 
 /-- A returned callee that kept every byte of `keep`. -/
-theorem returned {c d : Config} {ra : BitVec 64} {K : Nat → Prop} (h : Body b sp fp reent keep s2 c)
-    (r : Returned ra K c d) (al : ra.toNat % 4 = 0) (sub : ∀ x, keep x → K x) : Body b sp fp reent keep s2 d where
-  ctx :=
-    { ok := ⟨r.good, r.tick, r.htif.trans h.ctx.ok.htifIdle, fun n hn => by
-        have bounds : 1 ≤ n ∧ n ≤ 31 := by simp [exitReads] at hn; omega
-        exact r.gprs.present n bounds.1 bounds.2 (h.ctx.ok.present n hn)⟩
-      image := r.image
-      minstret := r.minstret
-      output := r.output.trans h.ctx.output
-      frame := fun x hx => (r.kept x (sub x hx)).trans (h.ctx.frame x hx) }
-  ra := ⟨ra, r.raReg, al⟩
-  sp := (r.saved 2 (Or.inl rfl)).trans h.sp
-  s0 := (r.saved 8 (Or.inr (Or.inl rfl))).trans h.s0
-  s1 := (r.saved 9 (Or.inr (Or.inr (Or.inl rfl)))).trans h.s1
-  s2 := (r.saved 18 (Or.inr (Or.inr (Or.inr ⟨by decide, by decide⟩)))).trans h.s2
-  high k lo hi := (r.saved k (Or.inr (Or.inr (Or.inr ⟨by omega, hi⟩)))).trans (h.high k lo hi)
-  gprs := h.gprs.trans r.gprs
-
-/-- A `ret` leaf (no writes) returns to `ra` in the same state. -/
-theorem ret {c : Config} {t r : BitVec 64} {regs : GRegs} (h : Body b sp fp reent keep s2 c)
-    (raReg : gprGet c.σ 1 = some r)
-    (leaf : FnSummary t (fun d => d = c) (WriteRegistersPost [] [] c (regsAt c 1) (regsAt c 10) regs)) :
-    FnSummary t (fun d => d = c) (fun d => Body b sp fp reent keep s2 d ∧ PCAt r d) :=
-  leaf.weaken (fun _ e => e) fun _ p =>
-    ⟨h.step p (fun _ _ => trivial) (by decide) (by simp) (by simp), by
-      have := p.pc; rw [regsAt_of raReg] at this; exact this⟩
+theorem returned {c d : Config} {ra : BitVec 64} {K : Nat → Prop} (h : Body b sp0 fp reent keep v c)
+    (r : Returned ra K c d) (al : ra.toNat % 4 = 0) (sub : ∀ x, keep x → K x) : Body b sp0 fp reent keep v d :=
+  Frame.returned h r al sub (by
+    intro n hn
+    simp only [bodyPins, keysG, List.mem_cons, List.not_mem_nil, or_false] at hn
+    unfold CalleeKept; omega) fun n hn => Or.inr (Or.inr (Or.inr ⟨by omega, hn.2⟩))
 
 /-- A direct call whose callee returns to the link in the body's state. -/
-theorem callThen {c : Config} {call : CallInstr} (h : Body b sp fp reent keep s2 c) (shape : CallShape call)
+theorem callThen {c : Config} {call : CallInstr} (h : Body b sp0 fp reent keep v c) (shape : CallShape call)
     (decode : CallDecode call) (pins : CallPins call c) (al : call.link.toNat % 4 = 0)
-    (callee : ∀ d, Body b sp fp reent keep s2 d → gprGet d.σ 1 = some call.link →
-      FnSummary call.target (fun e => e = d) (fun e => Body b sp fp reent keep s2 e ∧ PCAt call.link e)) :
-    FnSummary call.pc (fun e => e = c) (fun e => Body b sp fp reent keep s2 e ∧ PCAt call.link e) := by
-  apply summary_bind (call_registers_summary shape decode c pins h.ctx.ok.good h.ctx.image h.ctx.ok.tick
-    h.ctx.minstret [(10, regsAt c 10)] ⟨h.reg 10 (by decide), trivial⟩ (by change KeysOK [10]; decide)
-    (by simp [KeysAvoidRa, keysG]) rfl) (fun _ q => q.pc)
-  intro d q
-  exact callee d (h.call q al) (gholds_lookup _ q.regs (by simp [lookupG]))
+    (callee : ∀ d, Body b sp0 fp reent keep v d → gprGet d.σ 1 = some call.link →
+      FnSummary call.target (fun e => e = d) (fun e => Body b sp0 fp reent keep v e ∧ PCAt call.link e)) :
+    FnSummary call.pc (fun e => e = c) (fun e => Body b sp0 fp reent keep v e ∧ PCAt call.link e) :=
+  Frame.callThen h shape decode pins al (by decide) (by rw [bodyPins_keys]; decide) callee
 
 end Body
 
@@ -149,20 +120,16 @@ theorem lockLeaf {b c : Config} {sp fp reent s2 r t : BitVec 64} {keep : Nat →
     (leaf : ∀ (c : Config) (R : Nat → BitVec 64), LeafInput (R 1) c → GHolds c.σ [(1, R 1), (10, R 10)] →
       FnSummary t (fun d => d = c) (WriteRegistersPost [] [] c (R 1) (R 10) [(1, R 1), (10, R 10)])) :
     FnSummary t (fun d => d = c) (fun d => Body b sp fp reent keep s2 d ∧ PCAt r d) :=
-  h.ret raReg (leaf c (regsAt c) h.leaf ⟨h.reg 1 (by decide), h.reg 10 (by decide), trivial⟩)
+  StdioFrame.lockLeaf h raReg (by rw [bodyPins_keys]; decide) leaf
 
-/-- `__sfp_lock_acquire`/`__sfp_lock_release`: `a0` set to the global lock,
-then a tail jump into the lock leaf, which returns. -/
+/-- `__sfp_lock_acquire`/`__sfp_lock_release` from the body. -/
 theorem sfpTail {b c : Config} {sp fp reent s2 r e t v : BitVec 64} {keep : Nat → Prop} {regs : GRegs}
     (h : Body b sp fp reent keep s2 c) (raReg : gprGet c.σ 1 = some r)
     (enter : FnSummary e (fun d => d = c) (WriteRegistersPost [10] [] c t v regs)) (cover : 10 ∈ keysG regs)
     (leaf : ∀ (c : Config) (R : Nat → BitVec 64), LeafInput (R 1) c → GHolds c.σ [(1, R 1), (10, R 10)] →
       FnSummary t (fun d => d = c) (WriteRegistersPost [] [] c (R 1) (R 10) [(1, R 1), (10, R 10)])) :
-    FnSummary e (fun d => d = c) (fun d => Body b sp fp reent keep s2 d ∧ PCAt r d) := by
-  apply summary_bind enter (fun _ p => p.pc)
-  intro d p
-  exact lockLeaf (h.step p (fun _ _ => trivial) (by decide) (fun n hn => by simp at hn; subst hn; exact cover)
-    (by decide)) ((p.toEffectPost.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans raReg) leaf
+    FnSummary e (fun d => d = c) (fun d => Body b sp fp reent keep s2 d ∧ PCAt r d) :=
+  StdioFrame.sfpTail h raReg (by rw [bodyPins_keys]; decide) (by decide) enter cover leaf
 
 /-- `_fclose_r`'s saves: `ra` and `s0`–`s2` in its 32-byte frame. -/
 def saveLog (sp ra s0 s1 s2 : BitVec 64) : List WEntry :=
@@ -259,8 +226,8 @@ theorem fclose_save {ra sp s0 s1 s2 fp reent : BitVec 64} {c : Config} (h : Leaf
   have high (k : Nat) (lo : 19 ≤ k) (hi : k ≤ 27) : gprGet c2.σ k = gprGet c.σ k :=
     (k2 k (by omega) (by omega) (by simp; omega)).trans (k1 k (by omega) (by omega) (by simp; omega))
   have h18 := (k2 18 (by decide) (by decide) (by decide)).trans ((k1 18 (by decide) (by decide) (by decide)).trans s2r)
-  refine ⟨p2.pc, ⟨⟨KeepCtx.refl ctx.ok p2.image p2.minstret, ⟨ra, h1, h.aligned⟩, h2, h8, h9, h18,
-    fun _ _ _ => rfl, GprsKept.refl _⟩, h10, ctx, ?_, high, p1.kept.trans p2.kept⟩⟩
+  refine ⟨p2.pc, ⟨Frame.start ctx.ok p2.image p2.minstret ⟨ra, h1, h.aligned⟩ ⟨h2, h8, h9, h18, trivial⟩, h10, ctx, ?_,
+    high, p1.kept.trans p2.kept⟩⟩
   rw [p2.memory, log2, p1.memory, log1, saveLog]
   exact (writeLog_append _ _ _).symm
 
