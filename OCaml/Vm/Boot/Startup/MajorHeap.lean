@@ -308,6 +308,7 @@ structure MajorPageAddEntered (H : List (Nat × Nat)) (capacity : Nat) (sp ra hs
   count : pageCount after.σ.mem ent.toNat = pageCount before.σ.mem ent.toNat
   tableApart : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat
   tableOwned : (ent.toNat, 16384) ∈ H
+  caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 theorem major_to_page_add (c d8 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra hsize s0 s1 s2 s3 inc ent : BitVec 64) (A : MajorHeapCall H capacity charge sp ra hsize s0 s1 s2 inc c)
@@ -537,6 +538,13 @@ theorem major_to_page_add (c d8 : Config) (H : List (Nat × Nat)) (capacity char
     count := count12
     tableApart := T.apartDomain
     tableOwned := T.owned
+    caller := fun x hx => by
+      have f48 := frame48.lower
+      rw [hE] at f48
+      rw [frameByte x (by omega), E.memory, majorAllocMemory,
+        writeLog_out _ _ _ (by simp only [majorSizeLog, OutL, domainField, dom, and_true]; omega),
+        frameOn_writeLog _ _ _ (frame48.word_log_inside slots3) x ⟨Or.inr hx, trivial⟩,
+        frameOn_writeLog _ _ _ (frame48.word_log_inside slots2) x ⟨Or.inr hx, trivial⟩]
     saved := fun k lo hi => by
       have range : k ∉ [18, 11, 14, 9, 15, 10, 12, 1] := by simp; omega
       rw [g912.same k (by omega) (by omega) range,
@@ -586,6 +594,7 @@ structure MajorMerged (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s
   tableLow : ent.toNat + 16384 ≤ heapEnd
   tableOwned : (ent.toNat, 16384) ∈ H
   tableApart : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat
+  caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 theorem major_merged (c d12 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra hsize s0 s1 s2 s3 inc mem ent cur : BitVec 64)
@@ -717,7 +726,11 @@ theorem major_merged (c d12 : Config) (H : List (Nat × Nat)) (capacity charge :
     tableHigh := P.call.span.tableHigh
     tableLow := P.call.span.tableLow
     tableOwned := P.tableOwned
-    tableApart := P.tableApart }⟩
+    tableApart := P.tableApart
+    caller := fun x hx => by
+      rw [back x (by simp only [OutW, smallListsWindow, flMergeAddr, smallMapAddr, and_true]; omega)
+        (Or.inr (by rw [stack48]; omega))]
+      exact P.caller x hx }⟩
 
 /-- The chunk in words: at least `Heap_chunk_min`, exactly the chunk's bytes. -/
 theorem major_words_nat (a : BitVec 64) (pages : a.toNat % 4096 = 0) (big : 0x78000 ≤ a.toNat) (small : a.toNat < 2 ^ 33) :
@@ -760,6 +773,7 @@ structure MajorFreed (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1
   lowSame : ∀ x, x < heapStart → ¬ allocGlobal x → OutW majorFreeWindows x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
+  caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 theorem major_freed (c d16 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra hsize s0 s1 s2 s3 s4 s5 s6 s7 s8 inc mem ent cur : BitVec 64)
@@ -967,7 +981,10 @@ theorem major_freed (c d16 : Config) (H : List (Nat × Nat)) (capacity charge : 
         · rw [gholds_lookup (n := 22) _ regs19 rfl, gholds_lookup (n := 22) _ callee rfl]
         · rw [gholds_lookup (n := 23) _ regs19 rfl, gholds_lookup (n := 23) _ callee rfl]
         · rw [gholds_lookup (n := 24) _ regs19 rfl, gholds_lookup (n := 24) _ callee rfl]
-      · rw [F.saved k (by omega) hi, g18.same k (by omega) (by omega) (by simp; omega), M.saved k lo hi] }⟩
+      · rw [F.saved k (by omega) hi, g18.same k (by omega) (by omega) (by simp; omega), M.saved k lo hi]
+    caller := fun x hx => by
+      rw [back x (Or.inr (by rw [stack48]; omega))]
+      exact M.caller x hx }⟩
 
 /-- The mark stack's two blocks are allocated: the record `stack` (its
 address in `Caml_state->mark_stack`) and the entry array `entries`. -/
@@ -1100,6 +1117,7 @@ structure MajorTailed (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s
   back : ∀ x, x < heapEnd → ¬ vsaFoot H x → OutW (majorStackWindows stack.toNat) x →
     (after.σ.mem[x]?).getD 0 = (base.σ.mem[x]?).getD 0
   saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet base.σ k
+  caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (base.σ.mem[x]?).getD 0
 
 theorem major_tailed (c d19 d24 : Config) (H : List (Nat × Nat)) (cap c1 c2 charge : Nat)
     (sp ra hsize s0 s1 s2 s3 inc mem ent cur stack entries : BitVec 64)
@@ -1255,7 +1273,12 @@ theorem major_tailed (c d19 d24 : Config) (H : List (Nat × Nat)) (cap c1 c2 cha
     allocated := by rw [mem28]; exact word_writeLog_at _ _ 0 _ _ rfl trivial
     back := back28
     saved := fun k lo hi => by
-      rw [g.same k (by omega) (by omega) (by simp; omega), S.saved k lo hi] }⟩
+      rw [g.same k (by omega) (by omega) (by simp; omega), S.saved k lo hi]
+    caller := fun x hx => by
+      rw [p28.memory, writeLog_out _ _ _ (by simp only [OutL, allocatedWordsAddr, and_true]; omega), p27.memory,
+        writeLog_out _ _ _ (by simp only [stackInitLog, OutL, s8, s16, extraResourcesAddr, and_true]; omega), mem26,
+        p25.memory, writeLog_out _ _ _ (by simp only [OutL, and_true]; omega),
+        S.back x (Or.inr (by rw [stack48]; omega))] }⟩
 
 /-- `caml_major_ring`'s 400 bytes. -/
 def majorRingWindow : W := ⟨(BitVec.ofNat 64 majorRingAddr).toNat, (BitVec.ofNat 64 majorRingAddr).toNat + 16 * 24 + 16⟩
@@ -1301,6 +1324,11 @@ theorem major_chunk_bounds {m h c a : Nat} (ml : 0x8007d140 ≤ m) (headLow : m 
     0x8007d140 ≤ c ∧ c + 8 ≤ m + (a + 4152) ∧ c + 8 ≤ 0x86800000 := by
   subst chunkNat; omega
 
+/-- Every runtime global caml_init_major_heap writes below the arena. -/
+def majorInitLowWindows : List W :=
+  majorFreeWindows ++ [⟨gcPhaseAddr, gcPhaseAddr + 4⟩, ⟨extraResourcesAddr, extraResourcesAddr + 8⟩,
+    ⟨allocatedWordsAddr, allocatedWordsAddr + 8⟩, majorRingWindow]
+
 /-- caml_init_major_heap returned: the major heap is one chunk (the new block
 `mem`), a single free block at the root of the best-fit tree; the mark stack
 is the pair of new blocks `stack` and `entries`. -/
@@ -1318,6 +1346,9 @@ structure MajorHeapInit (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0
   curWsz : bytesT after.σ.mem flCurWszAddr 8 = cur + 1#64 + ((majorChunkSize hsize >>> 3) - 1#64)
   markStack : bytesT after.σ.mem (domainField 128) 8 = stack
   saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
+  caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  lowKept : ∀ x, x < heapStart → ¬ allocGlobal x → OutW majorInitLowWindows x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 /-- **caml_init_major_heap(heap_size)**, from its entry to its return. -/
 theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 charge : Nat)
@@ -1436,6 +1467,23 @@ theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cha
     markStack := by
       rw [R.memory, bytesT_writeLog_out _ markOut]
       exact Tl.record
-    saved := fun k lo hi => by rw [R.saved k lo hi, Tl.saved k lo hi, F.saved k lo hi] }⟩
+    saved := fun k lo hi => by rw [R.saved k lo hi, Tl.saved k lo hi, F.saved k lo hi]
+    caller := fun x hx => by
+      have ringHi : (BitVec.ofNat 64 majorRingAddr).toNat + 16 * 24 + 16 ≤ heapEnd := by decide
+      rw [R.memory, frameOn_writeLog _ _ _ (memsetShiftLog_in _ 24 (by decide)) x
+          ⟨Or.inr (Nat.le_trans ringHi (Nat.le_trans (Nat.le_trans (Nat.le_add_right _ _) A.frame.lower) hx)), trivial⟩,
+        Tl.caller x hx, F.caller x hx]
+    lowKept := fun x low alloc out => by
+      unfold majorInitLowWindows at out
+      rw [outW_append] at out
+      obtain ⟨o1, o2⟩ := out
+      simp only [OutW, majorRingWindow, BitVec.toNat_ofNat, and_true] at o2
+      obtain ⟨g, e, w, r⟩ := o2
+      rw [hS] at low
+      rw [R.memory, frameOn_writeLog _ _ _ (memsetShiftLog_in _ 24 (by decide)) x
+          ⟨by simp only [BitVec.toNat_ofNat, majorRingAddr] at r ⊢; omega, trivial⟩,
+        Tl.back x (by rw [hE]; omega) (fun f => f.elim alloc fun h => by rw [hS] at h; omega)
+          (by simp only [majorStackWindows, OutW, domainField, dom, and_true]; omega)]
+      exact F.lowSame x (by rw [hS]; exact low) alloc o1 }⟩
 
 end OCaml.Vm.Boot.Startup
