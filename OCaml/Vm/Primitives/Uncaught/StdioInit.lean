@@ -150,9 +150,11 @@ theorem memset_call {c : Config} {call : CallInstr} {p : BitVec 64} (shape : Cal
   rw [q.memory] at t
   exact ⟨t, (m.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans (gholds_lookup (n := 1) _ q.regs rfl)⟩
 
-/-- **`jal __retarget_lock_init_recursive`** (a `ret`), back at the link. -/
-theorem lockInit_call {c : Config} {call : CallInstr} {v : BitVec 64} (shape : CallShape call)
-    (decode : CallDecode call) (pins : CallPins call c) (target : call.target = 0x80042528#64)
+/-- **A `jal` to a `ret` leaf** (the `__retarget_lock_*` stubs), back at the link. -/
+theorem retLeaf_call {c : Config} {call : CallInstr} {t v : BitVec 64} (shape : CallShape call)
+    (decode : CallDecode call) (pins : CallPins call c) (target : call.target = t)
+    (leaf : ∀ (c : Config) (R : Nat → BitVec 64), LeafInput (R 1) c → GHolds c.σ [(1, R 1), (10, R 10)] →
+      FnSummary t (fun d => d = c) (WriteRegistersPost [] [] c (R 1) (R 10) [(1, R 1), (10, R 10)]))
     (al : call.link.toNat % 4 = 0) (good : GoodState c.σ) (image : ExecutableImage c) (tick : c.tick < 2)
     (minstret : ∃ w, c.σ.regs.get? Register.minstret = some w) (a0 : gprGet c.σ 10 = some v) :
     FnSummary call.pc (fun d => d = c)
@@ -162,7 +164,7 @@ theorem lockInit_call {c : Config} {call : CallInstr} {v : BitVec 64} (shape : C
   rw [target]
   have l1 := gholds_lookup (n := 1) _ q.regs rfl
   have l10 := gholds_lookup (n := 10) _ q.regs rfl
-  apply (RetargetLockInit.leaf_fast d (regsAt d) (by rw [regsAt_of l1]; exact ⟨q.good, q.image, q.minstret, l1, al, q.tick⟩)
+  apply (leaf d (regsAt d) (by rw [regsAt_of l1]; exact ⟨q.good, q.image, q.minstret, l1, al, q.tick⟩)
     ⟨gpr_some (gpr_some_of l1), gpr_some (gpr_some_of l10), trivial⟩).weaken (fun _ e => e)
   intro e l
   have t := q.toEffectPost.trans l.toEffectPost
@@ -170,6 +172,15 @@ theorem lockInit_call {c : Config} {call : CallInstr} {v : BitVec 64} (shape : C
   have r := gholds_lookup (n := 1) _ l.regs rfl
   rw [regsAt_of l1] at r
   exact ⟨t, r⟩
+
+/-- **`jal __retarget_lock_init_recursive`**, back at the link. -/
+theorem lockInit_call {c : Config} {call : CallInstr} {v : BitVec 64} (shape : CallShape call)
+    (decode : CallDecode call) (pins : CallPins call c) (target : call.target = 0x80042528#64)
+    (al : call.link.toNat % 4 = 0) (good : GoodState c.σ) (image : ExecutableImage c) (tick : c.tick < 2)
+    (minstret : ∃ w, c.σ.regs.get? Register.minstret = some w) (a0 : gprGet c.σ 10 = some v) :
+    FnSummary call.pc (fun d => d = c)
+      (fun d => EffectPost ([1] ++ []) c.σ.mem c call.link v d ∧ gprGet d.σ 1 = some call.link) :=
+  retLeaf_call shape decode pins target RetargetLockInit.leaf_fast al good image tick minstret a0
 
 /-- Everything `global_stdio_init` stores after its own saves: the
 standard streams, within `__sf`. -/
@@ -205,7 +216,7 @@ theorem global_stdio_init_run {c : Config} {ra sp s0 s1 s2 s3 s4 : BitVec 64} (h
     (a0r : (gprGet c.σ 10).isSome) (frame : NativeFrame sp 48) :
     FnSummary 0x8003ea0c#64 (fun d => d = c)
       (fun d => EffectPost initWrites (writeLog c.σ.mem (initLog (regsAt c))) c ra
-        2147994696#64 d ∧ GHolds d.σ [(2, sp), (8, s0), (9, s1), (18, s2), (19, s3), (20, s4)]) := by
+        2147994696#64 d ∧ GHolds d.σ [(1, ra), (2, sp), (8, s0), (9, s1), (18, s2), (19, s3), (20, s4)]) := by
   have r1 := regsAt_of h.raReg
   have r2 := regsAt_of sp0
   have lo := frame.lower
@@ -497,8 +508,228 @@ theorem global_stdio_init_run {c : Config} {ra sp s0 s1 s2 s3 s4 : BitVec 64} (h
   have pc : pcOf c17 = some ra := by have := l17.pc; rwa [regsAt_of d1] at this
   have res : gpr c17 10 = some 2147994696#64 := by have := l17.result; rwa [regsAt_of d10] at this
   exact ⟨⟨E.good, E.image, E.minstret, E.tick, pc, res, mem, E.output, E.frame, E.kept⟩,
-    ⟨k17 2 (by decide) (by decide) d2', k17 8 (by decide) (by decide) d8, k17 9 (by decide) (by decide) d9,
+    ⟨k17 1 (by decide) (by decide) d1, k17 2 (by decide) (by decide) d2', k17 8 (by decide) (by decide) d8, k17 9 (by decide) (by decide) d9,
       k17 18 (by decide) (by decide) d18, k17 19 (by decide) (by decide) d19, k17 20 (by decide) (by decide) d20,
       trivial⟩⟩
+
+theorem outLRange_append {left right : List WEntry} {a n : Nat}
+    (hl : OutLRange left a n) (hr : OutLRange right a n) : OutLRange (left ++ right) a n := by
+  induction left with
+  | nil => exact hr
+  | cons entry left ih => exact ⟨hl.1, ih hl.2⟩
+
+open OCaml.Vm.Primitives.Uncaught.StdioState (impure)
+
+/-- The registers `__sinit` hands `global_stdio_init`: the link, `sp - 16`,
+`s0 = reent`, and `s1`–`s4` as at its own call. -/
+def sinitR (sp s1 s2 s3 s4 : BitVec 64) (n : Nat) : BitVec 64 :=
+  if n = 1 then 0x8003ed50#64 else if n = 2 then sp + 18446744073709551600#64 else if n = 8 then impure
+  else if n = 9 then s1 else if n = 18 then s2 else if n = 19 then s3 else if n = 20 then s4 else 0#64
+
+/-- `__sinit`'s stores: its saves, `reent->__cleanup = cleanup_stdio`, then
+`global_stdio_init`'s. -/
+def sinitLog (sp ra s0 s1 s2 s3 s4 : BitVec 64) : List WEntry :=
+  [((sp - 16#64).toNat, 8, s0), ((sp - 16#64 + 8#64).toNat, 8, ra), ((impure + 72#64).toNat, 8, 0x8003e91c#64)] ++
+    initLog (sinitR sp s1 s2 s3 s4)
+
+/-- The registers `__sinit` writes (its saved ones restored). -/
+def sinitWrites : List Nat := [1, 2, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20]
+
+/-- **`__sinit(reent)` on the first stdio call** (`reent->__cleanup` and
+`__stdio_exit_handler` unset): `cleanup_stdio` installed, then
+`global_stdio_init`; back at `ra` with `sp` and `s0`–`s4` restored. -/
+theorem sinit_run {c : Config} {ra sp s0 s1 s2 s3 s4 : BitVec 64} (h : LeafInput ra c)
+    (sp0 : gprGet c.σ 2 = some sp) (a0 : gprGet c.σ 10 = some impure) (s0r : gprGet c.σ 8 = some s0)
+    (s1r : gprGet c.σ 9 = some s1) (s2r : gprGet c.σ 18 = some s2) (s3r : gprGet c.σ 19 = some s3)
+    (s4r : gprGet c.σ 20 = some s4) (frame : NativeFrame sp 64)
+    (fresh : bytesVal .ld (read8 c.σ.mem (impure + 72#64).toNat) = 0#64)
+    (noHandler : bytesVal .ld (read8 c.σ.mem (0x80064d38#64).toNat) = 0#64) :
+    FnSummary 0x8003ecf8#64 (fun d => d = c)
+      (fun d => EffectPost sinitWrites (writeLog c.σ.mem (sinitLog sp ra s0 s1 s2 s3 s4)) c ra 0x80064d88#64 d ∧
+        GHolds d.σ [(2, sp), (8, s0), (9, s1), (18, s2), (19, s3), (20, s4)]) := by
+  have r1 := regsAt_of h.raReg
+  have r2 := regsAt_of sp0
+  have lo := frame.lower
+  simp only [Vsa.Sim.DlHeap.heapEnd] at lo
+  have sp16 : sp + 18446744073709551600#64 = sp - 16#64 := by rw [BitVec.sub_eq_add_neg]; rfl
+  have e0 : sp - 16#64 = sp - BitVec.ofNat 64 16 + BitVec.ofNat 64 0 := by simp
+  have n0 : (sp - 16#64).toNat = sp.toNat - 16 := by rw [BitVec.toNat_sub]; simp; omega
+  have n8 : (sp - 16#64 + 8#64).toNat = sp.toNat - 16 + 8 := frame_nat (k := 16) (off := 8) frame (by decide) (by decide)
+  -- `pro`: save `s0`, `ra`; `s0 = reent`; `__lock_acquire_recursive(&__sfp_recursive_mutex)`
+  apply summary_bind (Sinit.pro_fast c (regsAt c) (by rw [r1]; exact h)
+    (by simp only [Sinit.pro_input, GHolds]
+        exact ⟨gpr_some (gpr_some_of h.raReg), gpr_some (gpr_some_of sp0), gpr_some (gpr_some_of s0r),
+          gpr_some (gpr_some_of a0), trivial⟩)
+    (by rw [r2, sp16, e0]; exact frame_word (k := 16) (off := 0) frame (by decide) (by decide) (by decide) (by decide))
+    (by rw [r2, sp16]; exact frame_word (k := 16) (off := 8) frame (by decide) (by decide) (by decide) (by decide))
+    (StdioFrame.imageOutside_above fun e he => by
+      simp only [Sinit.proLog, r2, List.mem_cons, List.not_mem_nil, or_false] at he
+      rcases he with rfl | rfl <;> simp only [n0, n8] <;> omega)) (fun _ p => p.pc)
+  intro c1 p1
+  have M1 : c1.σ.mem = writeLog c.σ.mem [((sp - 16#64).toNat, 8, s0), ((sp - 16#64 + 8#64).toNat, 8, ra)] := by
+    rw [p1.memory]; simp only [Sinit.proLog, r2, regsAt_of s0r, r1]
+  have W1 : ExitPath.LogWithin [((sp - 16#64).toNat, 8, s0), ((sp - 16#64 + 8#64).toNat, 8, ra)]
+      (sp.toNat - 16) sp.toNat := by
+    intro e he
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at he
+    rcases he with rfl | rfl <;> simp only [n0, n8] <;> omega
+  have rd1 (a : Nat) (ha : a + 8 ≤ sp.toNat - 16) : read8 c1.σ.mem a = read8 c.σ.mem a := by
+    rw [M1]; exact ConsoleWrite.read8_outside W1 (Or.inl ha)
+  have q8 : gprGet c1.σ 8 = some impure := by have := gholds_lookup (n := 8) _ p1.regs rfl; rwa [regsAt_of a0] at this
+  have q2 : gprGet c1.σ 2 = some (sp + 18446744073709551600#64) := by
+    have := gholds_lookup (n := 2) _ p1.regs rfl; rwa [r2] at this
+  have g1 := GprsSame.of_post p1 (by decide)
+  apply summary_bind (retLeaf_call Sinit.pro_call_shape Sinit.pro_call_decode (Sinit.pro_call_pins p1.image)
+    Sinit.pro_call_target ExitPath.RetargetLockAcquireRecursive.leaf_fast (by decide) p1.good p1.image p1.tick
+    p1.minstret (gholds_lookup (n := 10) _ p1.regs rfl)) (fun _ m => m.1.pc)
+  intro c3 m3
+  have g3 := GprsSame.of_effect m3.1 (by decide)
+  have s8_3 : gprGet c3.σ 8 = some impure := g3.get (by decide) (by decide) (by decide) q8
+  have l3 : LeafInput (regsAt c3 1) c3 := by
+    rw [regsAt_of m3.2]; exact ⟨m3.1.good, m3.1.image, m3.1.minstret, m3.2, by decide, m3.1.tick⟩
+  have mem3 : c3.σ.mem = c1.σ.mem := m3.1.memory
+  -- `reent->__cleanup` is unset
+  apply summary_bind (Sinit.fresh_fast c3 (regsAt c3) l3
+    (by simp only [Sinit.fresh_input, GHolds]
+        exact ⟨gpr_some (gpr_some_of s8_3), gpr_some (gpr_some_of m3.1.result), trivial⟩)
+    (by rw [regsAt_of s8_3]; exact ⟨by decide, by decide, by decide⟩)
+    (by simp only [Sinit.fresh_loads, List.getD_cons_zero, regsAt_of s8_3, mem3]
+        rw [rd1 _ (by rw [show (impure + 72#64).toNat = 2147894960 by decide]; omega), fresh]; decide)) (fun _ p => p.pc)
+  intro c4 p4
+  have g4 := GprsSame.of_post p4 (by decide)
+  have s8_4 : gprGet c4.σ 8 = some impure := g4.get (by decide) (by decide) (by decide) s8_3
+  have ra4 : gprGet c4.σ 1 = some 0x8003ed14#64 := g4.get (by decide) (by decide) (by decide) m3.2
+  have mem4 : c4.σ.mem = c1.σ.mem := by rw [p4.memory, Named.NamedValue.wl_nil, mem3]
+  -- `__cleanup = cleanup_stdio`; no `__stdio_exit_handler` yet
+  apply summary_bind (Sinit.install_fast c4 (regsAt c4) (by rw [regsAt_of ra4]; exact ⟨p4.good, p4.image, p4.minstret,
+      ra4, by decide, p4.tick⟩)
+    (by simp only [Sinit.install_input, GHolds]
+        exact ⟨gpr_some (gpr_some_of s8_4), gpr_some (gpr_some_of p4.result), trivial⟩)
+    (by rw [regsAt_of s8_4]; exact ⟨by decide, by decide, by decide, by decide⟩)
+    (by simp only [Sinit.installLog, regsAt_of s8_4]
+        exact ⟨by simp only [OutLRange]; decide, by simp only [OutLRange]; decide⟩)
+    (by simp only [Sinit.install_loads, List.getD_cons_zero, mem4]
+        rw [rd1 _ (by rw [show (0x80064d38#64 : BitVec 64).toNat = 2147896632 by decide]; omega), noHandler]; decide))
+    (fun _ p => p.pc)
+  intro c5 p5
+  have g5 := GprsSame.of_post p5 (by decide)
+  have ra5 : gprGet c5.σ 1 = some 0x8003ed14#64 := g5.get (by decide) (by decide) (by decide) ra4
+  have M5 : c5.σ.mem = writeLog c1.σ.mem [((impure + 72#64).toNat, 8, 0x8003e91c#64)] := by
+    rw [p5.memory, mem4]; simp only [Sinit.installLog, regsAt_of s8_4]
+  -- `jal global_stdio_init`
+  apply summary_bind (Sinit.init_fast c5 (regsAt c5) (by rw [regsAt_of ra5]; exact ⟨p5.good, p5.image, p5.minstret,
+      ra5, by decide, p5.tick⟩)
+    (by simp only [Sinit.init_input, GHolds]
+        exact ⟨gpr_some (gpr_some_of ra5), gpr_some (gpr_some_of p5.result), trivial⟩)) (fun _ p => p.pc)
+  intro c6 p6
+  have g6 := GprsSame.of_post p6 (by decide)
+  apply summary_bind (call_from Sinit.init_call_shape Sinit.init_call_decode (Sinit.init_call_pins p6.image) p6.good
+    p6.image p6.tick p6.minstret p6.result) (fun _ q => q.pc)
+  intro c7 q7
+  rw [show Sinit.init_call.target = 0x8003ea0c#64 by decide]
+  have g7 := GprsSame.of_post q7 (by decide)
+  have run17 := (((g3.trans g4).trans g5).trans g6).trans g7
+  have link7 : gprGet c7.σ 1 = some 0x8003ed50#64 := gholds_lookup (n := 1) _ q7.regs rfl
+  have get7 (k : Nat) {v : BitVec 64} (hk : k = 2 ∨ k = 8 ∨ k = 9 ∨ k = 18 ∨ k = 19 ∨ k = 20)
+      (hv : gprGet c1.σ k = some v) : gprGet c7.σ k = some v :=
+    run17.get (by omega) (by omega) (by rcases hk with rfl | rfl | rfl | rfl | rfl | rfl <;> decide) hv
+  have get1 (k : Nat) {v : BitVec 64} (hk : k = 9 ∨ k = 18 ∨ k = 19 ∨ k = 20) (hv : gprGet c.σ k = some v) :
+      gprGet c1.σ k = some v :=
+    g1.get (by omega) (by omega) (by rcases hk with rfl | rfl | rfl | rfl <;> decide) hv
+  have sp7 := get7 2 (by decide) q2
+  have s8_7 := get7 8 (by decide) q8
+  have s9_7 := get7 9 (by decide) (get1 9 (by decide) s1r)
+  have s18_7 := get7 18 (by decide) (get1 18 (by decide) s2r)
+  have s19_7 := get7 19 (by decide) (get1 19 (by decide) s3r)
+  have s20_7 := get7 20 (by decide) (get1 20 (by decide) s4r)
+  have frame' : NativeFrame (sp + 18446744073709551600#64) 48 :=
+    StdioClose.frame_callee (front := 16) (size := 48) frame (by decide) _ (by decide)
+  apply summary_bind (global_stdio_init_run ⟨q7.good, q7.image, q7.minstret, link7, by decide, q7.tick⟩ sp7 s8_7 s9_7
+    s18_7 s19_7 s20_7 (gpr_some_of (gholds_lookup (n := 10) _ q7.regs rfl)) frame') (fun _ e => e.1.pc)
+  intro c8 e8
+  obtain ⟨E8, ra8, sp8, -, t9, t18, t19, t20, -⟩ := e8
+  -- the log so far, from `__sinit`'s entry
+  have St : GlobalStdioInit.stdinLog (regsAt c7) [] = GlobalStdioInit.stdinLog (sinitR sp s1 s2 s3 s4) [] := by
+    have e1 : sinitR sp s1 s2 s3 s4 1 = 0x8003ed50#64 := rfl
+    have e2 : sinitR sp s1 s2 s3 s4 2 = sp + 18446744073709551600#64 := rfl
+    have e8 : sinitR sp s1 s2 s3 s4 8 = impure := rfl
+    have e9 : sinitR sp s1 s2 s3 s4 9 = s1 := rfl
+    have e18 : sinitR sp s1 s2 s3 s4 18 = s2 := rfl
+    have e19 : sinitR sp s1 s2 s3 s4 19 = s3 := rfl
+    have e20 : sinitR sp s1 s2 s3 s4 20 = s4 := rfl
+    simp only [GlobalStdioInit.stdinLog, regsAt_of link7, regsAt_of sp7, regsAt_of s8_7, regsAt_of s9_7,
+      regsAt_of s18_7, regsAt_of s19_7, regsAt_of s20_7, e1, e2, e8, e9, e18, e19, e20]
+  have I7 : initLog (regsAt c7) = initLog (sinitR sp s1 s2 s3 s4) := by
+    rw [initLog_eq, initLog_eq, St]
+  have M8 : c8.σ.mem = writeLog c.σ.mem (sinitLog sp ra s0 s1 s2 s3 s4) := by
+    rw [E8.memory, I7, q7.memory, p6.memory, Named.NamedValue.wl_nil, M5, M1, sinitLog, ← writeLog_append,
+      ← writeLog_append]
+    simp only [List.cons_append, List.nil_append]
+  -- the saved words, untouched since the prologue
+  have nn (off : Nat) (ho : off ≤ 48) := frame_nat (k := 64) (off := off) frame (by decide) (by omega)
+  have rest (a : Nat) (ha : sp.toNat - 16 ≤ a) (ha' : a + 8 ≤ sp.toNat) :
+      OutLRange ([((impure + 72#64).toNat, 8, 0x8003e91c#64)] ++ initLog (sinitR sp s1 s2 s3 s4)) a 8 := by
+    rw [initLog_eq, ← List.append_assoc]
+    refine outLRange_append (outLRange_append ?_ ?_) (ExitPath.LogWithin.outLRange streamsLog_within (Or.inr (by omega)))
+    · simp only [OutLRange, show (impure + 72#64).toNat = 2147894960 by decide, and_true]; omega
+    · have sR : sinitR sp s1 s2 s3 s4 2 = sp - 16#64 := by simp only [sinitR]; exact sp16
+      have m48 : (sp - 16#64 - 48#64).toNat = sp.toNat - 64 := by
+        rw [BitVec.toNat_sub, BitVec.toNat_sub]; simp; omega
+      have mk (k : Nat) (hk : k ≤ 48) : (sp - 16#64 - 48#64 + BitVec.ofNat 64 k).toNat = sp.toNat - 64 + k := by
+        rw [BitVec.toNat_add, m48, BitVec.toNat_ofNat]; omega
+      simp only [GlobalStdioInit.stdinLog, sR, OutLRange, mk 40 (by decide), mk 32 (by decide), mk 24 (by decide),
+        mk 16 (by decide), mk 8 (by decide), m48, BitVec.toNat_ofNat, and_true]
+      omega
+  have slotS0 : bytesVal .ld (read8 c8.σ.mem (sp + 18446744073709551600#64).toNat) = s0 := by
+    rw [read8_value, M8, sp16]
+    exact OCaml.Vm.Sim.word_writeLog_at _ _ 0 _ _ rfl (by
+      simp only [sinitLog, List.drop, List.cons_append, List.nil_append]
+      exact ⟨Or.inl (by rw [n0, n8]; omega), by
+        exact (outLRange_append (show OutLRange [((sp - 16#64 + 8#64).toNat, 8, ra)] (sp - 16#64).toNat 8 from
+          ⟨Or.inl (by rw [n0, n8]; omega), trivial⟩) (rest (sp - 16#64).toNat (by rw [n0]; omega)
+            (by rw [n0]; omega))).2⟩)
+  have slotRa : bytesVal .ld (read8 c8.σ.mem (sp + 18446744073709551600#64 + 8#64).toNat) = ra := by
+    rw [read8_value, M8, sp16]
+    exact OCaml.Vm.Sim.word_writeLog_at _ _ 1 _ _ rfl (by
+      simp only [sinitLog, List.drop, List.cons_append, List.nil_append]
+      exact rest _ (by rw [n8]; omega) (by rw [n8]; omega))
+  -- `leave`: `s0`, `ra` reloaded; `j __retarget_lock_release_recursive`
+  have w (off : Nat) (ho : off + 8 ≤ 16) (ao : off % 8 = 0) : ReadWindow (sp - 16#64 + BitVec.ofNat 64 off) 8 :=
+    (frame_word (k := 16) (off := off) frame (by decide) ho (by decide) ao).read
+  apply summary_bind (Sinit.leave_fast c8 (regsAt c8) (by rw [regsAt_of ra8]; exact ⟨E8.good, E8.image, E8.minstret,
+      ra8, by decide, E8.tick⟩)
+    (by simp only [Sinit.leave_input, GHolds]
+        exact ⟨gpr_some (gpr_some_of sp8), gpr_some (gpr_some_of E8.result), trivial⟩)
+    (by rw [regsAt_of sp8, sp16, e0]; exact w 0 (by decide) (by decide))
+    (by rw [regsAt_of sp8, sp16]; exact w 8 (by decide) (by decide))) (fun _ p => p.pc)
+  intro c9 p9
+  have o9 := p9.regs
+  simp only [Sinit.leave_regs, Sinit.leave_loads, regsAt_of sp8, List.getD_cons_zero, List.getD_cons_succ,
+    GHolds] at o9
+  obtain ⟨d2, d10, d1, d8, -⟩ := o9
+  rw [slotRa] at d1
+  rw [slotS0] at d8
+  apply (ExitPath.RetargetLockReleaseRecursive.leaf_fast c9 (regsAt c9) (by rw [regsAt_of d1]; exact ⟨p9.good,
+      p9.image, p9.minstret, d1, h.aligned, p9.tick⟩)
+    ⟨gpr_some (gpr_some_of d1), gpr_some (gpr_some_of d10), trivial⟩).weaken (fun _ e => e)
+  intro c10 l10
+  have g9 := GprsSame.of_post p9 (by decide)
+  have g10 := GprsSame.of_post l10 (by decide)
+  have k (n : Nat) {v : BitVec 64} (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [] ++ [1, 2, 8, 10])
+      (hv : gprGet c8.σ n = some v) : gprGet c10.σ n = some v := (g9.trans g10).get lo hi out hv
+  have k' (n : Nat) {v : BitVec 64} (lo : 1 ≤ n) (hi : n ≤ 31) (hv : gprGet c9.σ n = some v) :
+      gprGet c10.σ n = some v := g10.get lo hi (by simp) hv
+  have E := ((((((((p1.toEffectPost.trans m3.1).trans p4.toEffectPost).trans p5.toEffectPost).trans
+    p6.toEffectPost).trans q7.toEffectPost).trans E8).trans p9.toEffectPost).trans l10.toEffectPost).widen
+    (writes' := sinitWrites) (by decide)
+  have mem : c10.σ.mem = writeLog c.σ.mem (sinitLog sp ra s0 s1 s2 s3 s4) := by
+    rw [l10.memory, Named.NamedValue.wl_nil, p9.memory, Named.NamedValue.wl_nil, M8]
+  have pc : pcOf c10 = some ra := by have := l10.pc; rwa [regsAt_of d1] at this
+  have res : gpr c10 10 = some 0x80064d88#64 := by have := l10.result; rwa [regsAt_of d10] at this
+  have d2' : gprGet c9.σ 2 = some sp := by rw [d2, BitVec.add_assoc]; simp
+  exact ⟨⟨E.good, E.image, E.minstret, E.tick, pc, res, mem, E.output, E.frame, E.kept⟩,
+    ⟨k' 2 (by decide) (by decide) d2', k' 8 (by decide) (by decide) d8, k 9 (by decide) (by decide) (by decide) t9,
+      k 18 (by decide) (by decide) (by decide) t18, k 19 (by decide) (by decide) (by decide) t19,
+      k 20 (by decide) (by decide) (by decide) t20, trivial⟩⟩
 
 end OCaml.Vm.Primitives.Uncaught.StdioInit

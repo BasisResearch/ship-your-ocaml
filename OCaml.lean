@@ -784,5 +784,9 @@ import OCaml.Vm.Primitives.Uncaught.StdioFrame
 import OCaml.Vm.Primitives.Uncaught.StdioFclose
 import OCaml.Vm.Primitives.Uncaught.StdioState
 import OCaml.Vm.Primitives.Uncaught.StdioWalk
+import OCaml.Vm.Primitives.Uncaught.Sinit
+import OCaml.Vm.Primitives.Uncaught.GlobalStdioInit
+import OCaml.Vm.Primitives.Uncaught.RetargetLockInit
+import OCaml.Vm.Primitives.Uncaught.StdioInit
 import OCaml.Vm.Primitives.Named.NamedTransport
 import OCaml.Vm.Primitives.GprsPersist
