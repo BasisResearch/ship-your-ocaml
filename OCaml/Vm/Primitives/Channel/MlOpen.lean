@@ -259,10 +259,10 @@ theorem OutRecord.chanAt {c : Config} {p fd head : BitVec 64} {cfd : Int}
     rw [show (65536#64 + 72#64 : BitVec 64) = BitVec.ofNat 64 65608 from rfl]; exact t 65608 (by decide)
   simp only [OCaml.Vm.ChanAt, OCaml.Vm.word, OCaml.Vm.word32, OCaml.Vm.chanOffFd, OCaml.Vm.chanOffOffset,
     OCaml.Vm.chanOffCurr, OCaml.Vm.chanOffMax, OCaml.Vm.chanOffEnd, OCaml.Vm.chanOffFlags,
-    OCaml.Vm.chanOffBuff, OCaml.Vm.chanFlagUnbuffered, Chan.cursor, Chan.buffer, open_, ite_false,
+    OCaml.Vm.chanOffBuff, OCaml.Vm.chanFlagUnbuffered, OCaml.Vm.chanFlagManaged, Chan.cursor, Chan.buffer, open_, ite_false,
     ite_true, Nat.add_zero, List.length_nil, h.fd, h.offset, h.curr, h.max, h.bufEnd, h.flags, e72, eEnd]
   exact ⟨fdInt, by simp, trivial, rfl, by unfold ioBufferSize; omega, by decide, by simp,
-    Nat.zero_le _, Nat.zero_le _, by omega⟩
+    ⟨Nat.zero_le _, Nat.zero_le _, by omega⟩, by decide⟩
 
 /-- `caml_ml_open_descriptor_out`'s three record stores: `max := NULL`, the
 GC flag and the reference. -/

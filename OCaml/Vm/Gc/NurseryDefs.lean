@@ -59,6 +59,29 @@ structure WindowSeparated (w : W) (P : Prog) (s : St) (c : Config) (pl : Place) 
 /-- The unallocated nursery, `[young_limit, young_ptr)`. -/
 def nurseryFree (c : Config) : W := ⟨(runtimeFields c).youngLimit, (runtimeFields c).youngPtr⟩
 
+/-- The placed channel records, newest first (`caml_all_opened_channels`'s
+order: each open links its record at the head, with id `chans.length`). -/
+def placedChannels (cp : ChanPlace) (n : Nat) : List Nat := (List.range n).reverse.filterMap cp
+
+theorem mem_placedChannels {cp : ChanPlace} {n b : Nat} :
+    b ∈ placedChannels cp n ↔ ∃ id, id < n ∧ cp id = some b := by
+  simp [placedChannels, List.mem_filterMap]
+
+/-- Opening channel `n` at `a` puts its record at the head. -/
+theorem placedChannels_push {cp cp' : ChanPlace} {n a : Nat} (below : ∀ id, id < n → cp' id = cp id)
+    (new : cp' n = some a) : placedChannels cp' (n + 1) = a :: placedChannels cp n := by
+  simp only [placedChannels, List.range_succ, List.reverse_append, List.reverse_cons, List.reverse_nil,
+    List.nil_append, List.singleton_append, List.filterMap_cons, new]
+  congr 1
+  have congr : ∀ l : List Nat, (∀ x ∈ l, cp' x = cp x) → l.filterMap cp' = l.filterMap cp := by
+    intro l
+    induction l with
+    | nil => intro _; rfl
+    | cons x l ih =>
+      intro h
+      simp only [List.filterMap_cons, h x List.mem_cons_self, ih fun y hy => h y (List.mem_cons_of_mem _ hy)]
+  exact congr _ fun x hx => below x (by simpa using hx)
+
 /-- **Nursery geometry**: the free nursery misses the represented payload and
 lies in RAM; the `Caml_state` record lies in aligned RAM above `tohost`. -/
 structure NurseryGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace)
@@ -93,9 +116,7 @@ structure NurseryGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
     OutWRange [privateRegion] a (chanOffBuff + ioBufferSize)
   /-- the runtime's open-channel list is exactly the placed channel records
   (`caml_ml_open_descriptor_*` links each new record; nothing unlinks under G1) -/
-  channelsListed : ∃ chs, OpenChannelList c.σ.mem chs ∧
-    (∀ id ch a, s.world.chans[id]? = some ch → cp id = some a → a ∈ chs) ∧
-    ∀ b ∈ chs, ∃ id ch, s.world.chans[id]? = some ch ∧ cp id = some b
+  channelsListed : OpenChannelList c.σ.mem (placedChannels cp s.world.chans.length)
   /-- the nursery lies below the VM stack allocation, so a reserved block sits
   below every stack slot the arms write (a1-arms' CLOSUREREC) -/
   stackAbove : (runtimeFields c).youngPtr ≤ high - Layout.stackBytes
@@ -103,5 +124,16 @@ structure NurseryGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   malloc block misses its code and its primitive entries -/
   codeFits : 4 * P.code.size ≤ f1CodeBytes
   primsFit : P.prims.size ≤ f1PrimCapacity
+
+/-- The open-channel list holds exactly the placed records. -/
+theorem NurseryGeometry.channelsListed_mem {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high : Nat} (g : NurseryGeometry P s c pl cp high) :
+    ∃ chs, OpenChannelList c.σ.mem chs ∧
+      (∀ id ch a, s.world.chans[id]? = some ch → cp id = some a → a ∈ chs) ∧
+      ∀ b ∈ chs, ∃ id ch, s.world.chans[id]? = some ch ∧ cp id = some b := by
+  refine ⟨_, g.channelsListed, fun id ch a hc hp => mem_placedChannels.2 ⟨id, ?_, hp⟩, fun b hb => ?_⟩
+  · exact (List.getElem?_eq_some_iff.mp hc).1
+  · obtain ⟨id, lt, hp⟩ := mem_placedChannels.1 hb
+    exact ⟨id, _, List.getElem?_eq_getElem lt, hp⟩
 
 end OCaml.Vm.Gc

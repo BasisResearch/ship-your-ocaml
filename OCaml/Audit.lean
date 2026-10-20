@@ -215,6 +215,7 @@ import OCaml.Programs.WhileMinShape
 import OCaml.Vm.Gc.WhileMinG1
 import OCaml.Vm.Gc.NurseryGeometry
 import OCaml.Vm.Gc.NurseryTransport
+import OCaml.Vm.Gc.CustomMem
 import OCaml.Vm.Gc.G1Reserve
 import OCaml.Vm.Gc.ModifyInsert
 import OCaml.Vm.Gc.BarrierRun
@@ -5845,6 +5846,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.prim_caml_int64_float_of_bits_returns
 #print axioms OCaml.Vm.Sim.prim_caml_sys_argv_returns
 #print axioms OCaml.Vm.Sim.prim_caml_sys_exit_returns
+#print axioms OCaml.Vm.Gc.customHeader_ok
+#print axioms OCaml.Vm.Gc.mem_placedChannels
+#print axioms OCaml.Vm.Gc.placedChannels_push
+#print axioms OCaml.Vm.Gc.NurseryGeometry.channelsListed_mem
 #print axioms OCaml.Vm.Primitives.Memprof.Eqdf2.eqdf2_zero
 #print axioms OCaml.Vm.Primitives.Memprof.UpdateYoungLimit.update_young_limit
 #print axioms OCaml.Vm.Primitives.Memprof.RenewMinorSample.renew_summary

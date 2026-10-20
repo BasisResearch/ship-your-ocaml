@@ -83,7 +83,7 @@ theorem channel_copied {c c' : Config} {a : Nat} {ch : Chan}
     (copied : Reloc.Copied c c' a a (chanOffBuff + ch.buffer.length)) : ChanAt c' a ch := by
   let pl : Place := ⟨fun _ => none, 0, 0⟩
   have img : (Reloc.chanEqv a ch).Img id pl 0 0 c c' := by
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, h.cursorLe, h.bufferLe, h.aligned⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ⟨h.cursorLe, h.bufferLe, h.aligned⟩, ?_⟩
     · exact Reloc.bytesT_congr (copied.mono chanOffFd 4 (by simp only [chanOffFd, chanOffBuff]; omega))
     · exact Reloc.bytesT_congr (copied.mono chanOffOffset 8 (by simp only [chanOffOffset, chanOffBuff]; omega))
     · exact Reloc.bytesT_congr (copied.mono chanOffCurr 8 (by simp only [chanOffCurr, chanOffBuff]; omega))
@@ -94,6 +94,7 @@ theorem channel_copied {c c' : Config} {a : Nat} {ch : Chan}
       have hi := (List.getElem?_eq_some_iff.mp hb).1
       change byte c' (a + chanOffBuff + i) = byte c (a + chanOffBuff + i)
       simpa only [Nat.add_assoc] using copied (chanOffBuff + i) (by omega)
+    · exact Reloc.bytesT_congr (copied.mono chanOffFlags 4 (by simp only [chanOffFlags, chanOffBuff]; omega))
   exact (Reloc.chanEqv a ch).transport id pl 0 0 c c' h img
 
 /-- The same from the record's full extent (the geometry's separation facts). -/

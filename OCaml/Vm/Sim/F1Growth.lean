@@ -90,7 +90,7 @@ theorem observed_kept {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPl
     · exact block (majorRegion.lo, majorRegion.hi - majorRegion.lo) (by decide) (by decide) x
         (by dsimp only; have := span.1; omega) (by dsimp only; have := span.2; simp only [majorRegion] at *; omega)
   | channel hc hp span =>
-    obtain ⟨chs', list, placed, -⟩ := g.nursery.channelsListed
+    obtain ⟨chs', list, placed, -⟩ := g.nursery.channelsListed_mem
     have ha := placed _ _ _ hc hp
     rw [h.records_of list] at ha
     have st := h.recordsApart _ ha (refTable, 56) (by decide)

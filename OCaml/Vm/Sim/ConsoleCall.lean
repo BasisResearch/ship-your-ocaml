@@ -293,7 +293,7 @@ theorem _root_.OCaml.Vm.ChanAt.update {c e : Config} {ch : Nat} {chn chn' : Chan
   have F := repr.fields
   have copy := fun (k n : Nat) (lo : k + n ≤ 8 ∨ (16 ≤ k ∧ k + n ≤ 24) ∨ (32 ≤ k ∧ k + n ≤ 72)) =>
     (show Reloc.Copied c e (ch + k) (ch + k) n from fun j hj => keep _ (by omega) (by omega) (by omega) (by omega))
-  refine ⟨?_, offset, curr, ?_, ?_, ?_, bytes, cursorLe, bufferLe, F.aligned⟩
+  refine ⟨?_, offset, curr, ?_, ?_, ?_, bytes, ⟨cursorLe, bufferLe, F.aligned⟩, ?_⟩
   · rw [show word32 e (ch + chanOffFd) = word32 c (ch + chanOffFd) from
       Reloc.bytesT_congr (copy chanOffFd 4 (by simp only [chanOffFd]; omega)), same.fd]
     exact F.fd
@@ -306,6 +306,9 @@ theorem _root_.OCaml.Vm.ChanAt.update {c e : Config} {ch : Nat} {chn chn' : Chan
   · rw [show word32 e (ch + chanOffFlags) = word32 c (ch + chanOffFlags) from
       Reloc.bytesT_congr (copy chanOffFlags 4 (by simp only [chanOffFlags]; omega))]
     exact F.flags
+  · rw [show word32 e (ch + chanOffFlags) = word32 c (ch + chanOffFlags) from
+      Reloc.bytesT_congr (copy chanOffFlags 4 (by simp only [chanOffFlags]; omega))]
+    exact F.managed
 
 /-- **A channel record whose bytes are unchanged** (header and full buffer)
 still represents the channel. -/

@@ -58,7 +58,7 @@ theorem impure_mutable : (⟨Layout.sym_impure_data, Layout.sym_impure_data + 4�
 /-- **`ConsoleStable` for the pinned F1 layout.** -/
 theorem f1_console_stable : ConsoleStable Gc.f1Layout := by
   intro P s c pl cp high id chn a sp g ok hc hp low _ c' frame
-  obtain ⟨chs, list, placed, -⟩ := g.nursery.channelsListed
+  obtain ⟨chs, list, placed, -⟩ := g.nursery.channelsListed_mem
   refine Gc.f1_records (a := a) ?_ ⟨chs, list, placed id chn a hc hp⟩ frame ok
   intro w hw
   have room : a + 72 + OCaml.Bytecode.ioBufferSize ≤ a + Gc.chanRecordBytes := by

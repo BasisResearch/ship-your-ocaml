@@ -35,29 +35,25 @@ theorem OutWRange.shrink {c c' : Config} {x n : Nat}
 /-- The open-channel list survives when its head and every placed record's
 `next` word are unchanged and the channel ids are kept. -/
 theorem channelsListed_transfer {s s' : St} {c c' : Config} {cp : ChanPlace}
-    (h : ∃ chs, OpenChannelList c.σ.mem chs ∧
-      (∀ id ch a, s.world.chans[id]? = some ch → cp id = some a → a ∈ chs) ∧
-      ∀ b ∈ chs, ∃ id ch, s.world.chans[id]? = some ch ∧ cp id = some b)
+    (h : OpenChannelList c.σ.mem (placedChannels cp s.world.chans.length))
     (ids : ∀ id : Nat, (s'.world.chans[id]?).isSome = (s.world.chans[id]?).isSome)
     (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
     (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
       word c' (a + chanOffNext) = word c (a + chanOffNext)) :
-    ∃ chs, OpenChannelList c'.σ.mem chs ∧
-      (∀ id ch a, s'.world.chans[id]? = some ch → cp id = some a → a ∈ chs) ∧
-      ∀ b ∈ chs, ∃ id ch, s'.world.chans[id]? = some ch ∧ cp id = some b := by
-  obtain ⟨chs, list, placed, listed⟩ := h
-  refine ⟨chs, ?_, fun id _ a h hp => let ⟨ch, hc⟩ := Sim.chan_back ids h; placed id ch a hc hp,
-    fun b hb => ?_⟩
-  rotate_left
-  · obtain ⟨id, ch, hc, hp⟩ := listed b hb
-    obtain ⟨ch', hc'⟩ := Sim.chan_back (s := s') (s' := s) (fun id => (ids id).symm) hc
-    exact ⟨id, ch', hc', hp⟩
-  unfold OpenChannelList
+    OpenChannelList c'.σ.mem (placedChannels cp s'.world.chans.length) := by
+  have len : s'.world.chans.length = s.world.chans.length := by
+    apply Nat.le_antisymm <;> apply Nat.le_of_not_lt <;> intro lt
+    · have := ids s.world.chans.length
+      simp [List.getElem?_eq_getElem lt] at this
+    · have := ids s'.world.chans.length
+      simp [List.getElem?_eq_getElem lt] at this
+  rw [len]
+  unfold OpenChannelList at h ⊢
   change bytesT c'.σ.mem _ 8 = bytesT c.σ.mem _ 8 at head
   rw [head]
-  refine OpenChannels.congr list fun b hb => ?_
-  obtain ⟨id, ch, hc, hp⟩ := listed b hb
-  exact links id ch b hc hp
+  refine OpenChannels.congr h fun b hb => ?_
+  obtain ⟨id, lt, hp⟩ := mem_placedChannels.1 hb
+  exact links id _ b (List.getElem?_eq_getElem lt) hp
 
 /-- **Transport** across a step that keeps object sizes, the channel ids, the
 `Caml_state` and primitive-table pointers, and the `young_limit`/`young_ptr`

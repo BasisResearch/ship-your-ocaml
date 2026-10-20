@@ -41,7 +41,7 @@ theorem channel_copied_links {c c' : Config} {a : Nat} {ch : Chan} (h : ChanAt c
     have e := back (off - 64 + j) (by omega)
     rwa [show a + 64 + (off - 64 + j) = a + off + j by omega] at e
   have img : (Reloc.chanEqv a ch).Img id pl 0 0 c c' := by
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, h.cursorLe, h.bufferLe, h.aligned⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ⟨h.cursorLe, h.bufferLe, h.aligned⟩, ?_⟩
     · exact Reloc.bytesT_congr (front.mono chanOffFd 4 (by simp only [chanOffFd]; omega))
     · exact Reloc.bytesT_congr (front.mono chanOffOffset 8 (by simp only [chanOffOffset]; omega))
     · exact Reloc.bytesT_congr (front.mono chanOffCurr 8 (by simp only [chanOffCurr]; omega))
@@ -54,6 +54,8 @@ theorem channel_copied_links {c c' : Config} {a : Nat} {ch : Chan} (h : ChanAt c
       change byte c' (a + chanOffBuff + i) = byte c (a + chanOffBuff + i)
       have e := backAt chanOffBuff (i + 1) (by simp only [chanOffBuff]; omega) (by omega) i (by omega)
       exact e
+    · exact Reloc.bytesT_congr (backAt chanOffFlags 4 (by simp only [chanOffFlags]; omega)
+        (by simp only [chanOffFlags, chanOffBuff]; omega))
   exact (Reloc.chanEqv a ch).transport id pl 0 0 c c' h img
 
 /-- **The world after `openChan`**: the old channels keep their records

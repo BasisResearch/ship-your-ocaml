@@ -120,6 +120,8 @@ def chanOffFlags : Nat := 68
 
 /-- `CHANNEL_FLAG_UNBUFFERED` (`runtime/caml/io.h`). -/
 def chanFlagUnbuffered : BitVec 32 := 16#32
+/-- `CHANNEL_FLAG_MANAGED_BY_GC`: the channel belongs to a custom block. -/
+def chanFlagManaged : BitVec 32 := 4#32
 
 /-- The active bytes and cursor of either kind of C channel. -/
 def _root_.OCaml.Bytecode.Chan.buffer (ch : Chan) : List UInt8 :=
@@ -137,8 +139,10 @@ def ChanAt (c : Config) (a : Nat) (ch : Chan) : Prop :=
   word32 c (a + chanOffFlags) &&& chanFlagUnbuffered = 0#32 ∧
   (∀ i (b : UInt8), ch.buffer[i]? = some b → byte c (a + chanOffBuff + i) = BitVec.ofNat 8 b.toNat) ∧
   -- `curr` never passes `end` (`Putch` flushes first when `curr >= end`); the
-  -- record is malloc'd, so word-aligned
-  (ch.cursor ≤ ioBufferSize ∧ ch.buffer.length ≤ ioBufferSize ∧ a % 8 = 0)
+  -- record is malloc'd, so word-aligned; both `caml_ml_open_descriptor_*`
+  -- mark it managed by the collector
+  (ch.cursor ≤ ioBufferSize ∧ ch.buffer.length ≤ ioBufferSize ∧ a % 8 = 0) ∧
+  word32 c (a + chanOffFlags) &&& chanFlagManaged = chanFlagManaged
 
 /-- `ChanAt`'s components by name. -/
 structure ChanFields (c : Config) (a : Nat) (ch : Chan) : Prop where
@@ -152,10 +156,11 @@ structure ChanFields (c : Config) (a : Nat) (ch : Chan) : Prop where
   cursorLe : ch.cursor ≤ ioBufferSize
   bufferLe : ch.buffer.length ≤ ioBufferSize
   aligned : a % 8 = 0
+  managed : word32 c (a + chanOffFlags) &&& chanFlagManaged = chanFlagManaged
 
 theorem ChanAt.fields {c : Config} {a : Nat} {ch : Chan} (h : ChanAt c a ch) : ChanFields c a ch := by
-  obtain ⟨fd, offset, curr, max, bufEnd, flags, bytes, cursorLe, bufferLe, aligned⟩ := h
-  exact ⟨fd, offset, curr, max, bufEnd, flags, bytes, cursorLe, bufferLe, aligned⟩
+  obtain ⟨fd, offset, curr, max, bufEnd, flags, bytes, ⟨cursorLe, bufferLe, aligned⟩, managed⟩ := h
+  exact ⟨fd, offset, curr, max, bufEnd, flags, bytes, cursorLe, bufferLe, aligned, managed⟩
 
 /-- The cursor bound of a represented channel. -/
 theorem ChanAt.cursorLe {c : Config} {a : Nat} {ch : Chan} (h : ChanAt c a ch) : ch.cursor ≤ ioBufferSize := by

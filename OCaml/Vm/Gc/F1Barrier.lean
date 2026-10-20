@@ -54,7 +54,7 @@ theorem windowSeparated_of {P : Prog} {s : St} {c : Config} {pl : Place} {cp : C
     rw [ok.freeListShape.primsWord]; simp [WhileMinHeapChunks.primTablePayload]
   have codeFits := g.nursery.codeFits
   have primsFit := g.nursery.primsFit
-  obtain ⟨chs, list, placed, -⟩ := g.nursery.channelsListed
+  obtain ⟨chs, list, placed, -⟩ := g.nursery.channelsListed_mem
   exact {
     statics := bss
     domain := by

@@ -689,6 +689,7 @@ import OCaml.Vm.Sim.CaughtLogRestore
 import OCaml.Vm.Sim.DivisionZeroLog
 import OCaml.Vm.Primitives.Memmove
 import OCaml.Vm.Gc.OpenChannels
+import OCaml.Vm.Gc.CustomMem
 import OCaml.Vm.Primitives.Format.StringLength
 import OCaml.Vm.Primitives.Format.ParseFormat
 import OCaml.Vm.Primitives.Format.StringLengthCall
