@@ -374,4 +374,39 @@ theorem memset_shifted (c : Config) (p n ra : BitVec 64) (count : Nat) (leaf : L
     have f7 := regFrame_trans f6 T.frame (W := [6, 14, 15, 13, 5, 12, 1]) (by decide) (by decide)
     exact regFrame_trans f7 B2.frame (W := [6, 14, 15, 13, 5, 12, 1]) (by decide) (by decide)
 
+theorem LogInW.append {ws : List W} : ∀ {l1 l2 : List WEntry}, LogInW ws l1 → LogInW ws l2 → LogInW ws (l1 ++ l2)
+  | [], _, _, h2 => h2
+  | _ :: _, _, h1, h2 => ⟨h1.1, LogInW.append h1.2 h2⟩
+
+theorem clearLog_in {lo hi base : Nat} : ∀ n, lo ≤ base → base + 8 * n ≤ hi → LogInW [⟨lo, hi⟩] (clearLog base n)
+  | 0, _, _ => trivial
+  | n + 1, h1, h2 => LogInW.append (clearLog_in n h1 (by omega))
+      ⟨by simp only [InsideW, or_false]; omega, trivial⟩
+
+theorem bytesLog_in (q : BitVec 64) {lo hi : Nat} (h1 : lo ≤ q.toNat) (h2 : q.toNat + 8 ≤ hi) (fits : q.toNat + 8 ≤ heapEnd) :
+    LogInW [⟨lo, hi⟩] (memsetBytesLog q) := by
+  have a (k : Nat) (hk : k < 8) := bytes_add_nat q fits k hk
+  simp only [memsetBytesLog, LogInW, InsideW, or_false, a 7 (by decide), a 6 (by decide), a 5 (by decide),
+    a 4 (by decide), a 3 (by decide), a 2 (by decide), a 1 (by decide), and_true]
+  omega
+
+/-- The shifted path writes only `[p, p + n)`. -/
+theorem memsetShiftLog_in (p : BitVec 64) (count : Nat) (upper : p.toNat + 16 * count + 16 ≤ heapEnd) :
+    LogInW [⟨p.toNat, p.toNat + 16 * count + 16⟩] (memsetShiftLog p count) := by
+  have hE : heapEnd = 0x86800000 := rfl
+  have cur : (pairCursor (p.toNat + 8) count).toNat = p.toNat + 8 + 16 * count := by
+    unfold pairCursor
+    rw [BitVec.toNat_ofNat]
+    rw [hE] at upper
+    exact Nat.mod_eq_of_lt (by omega)
+  have up := upper
+  rw [hE] at up
+  exact LogInW.append
+    (LogInW.append (bytesLog_in p (lo := p.toNat) (hi := p.toNat + 16 * count + 16) (Nat.le_refl _) (by omega)
+        (by rw [hE]; omega))
+      (clearLog_in (lo := p.toNat) (hi := p.toNat + 16 * count + 16) (base := p.toNat + 8) (2 * count) (by omega)
+        (by omega)))
+    (bytesLog_in _ (lo := p.toNat) (hi := p.toNat + 16 * count + 16) (by rw [cur]; omega) (by rw [cur]; omega)
+      (by rw [cur, hE]; omega))
+
 end OCaml.Vm.Boot.Startup
