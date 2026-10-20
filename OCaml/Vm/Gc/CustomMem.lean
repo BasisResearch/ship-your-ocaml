@@ -3,6 +3,7 @@ import OCaml.Vm.Primitives.GprsKeptCore
 import OCaml.Vm.Boot.Startup.NativeFrame
 import OCaml.Vm.Gc.NurseryDefs
 import OCaml.Vm.Boot.Startup.HeapReady
+import OCaml.Vm.Gc.F1Heap
 
 /-!
 # `caml_alloc_custom_mem` for a channel's custom block, from any call site
@@ -22,8 +23,12 @@ since the cut requests a major slice). newlib's heap enters as `HeapReady H cap`
 at the call and returns as `HeapReady H' cap'` over every block of `H` (the
 first call since the cut adds the custom table's block), so a caller with
 several calls (`caml_ml_out_channels_list`) chains it. `Ready` reads only the
-runtime's own state (`CustomMemCall.state`: the counters and the custom
-table, not newlib's free space), which lies apart from what callers write:
+runtime's own state (`CustomMemCall.state`): the static
+`caml_extra_heap_resources`, the domain's `extra_heap_resources_minor`, and the
+custom table's struct and storage (live blocks of newlib's heap). It lies apart
+from what callers write (`CallerApart`):
+* newlib's free space and allocator globals;
+* F1's covered regions other than the domain record;
 * the native stack;
 * the minor heap;
 * the open channel records;
@@ -82,6 +87,16 @@ structure CallerApart (c : Config) (a : Nat) : Prop where
   youngPtr : a + 8 ≤ domainAddr c Layout.off_young_ptr ∨ domainAddr c Layout.off_young_ptr + 8 ≤ a
   youngLimit : a + 8 ≤ domainAddr c Layout.off_young_limit ∨ domainAddr c Layout.off_young_limit + 8 ≤ a
   localRoots : a + 8 ≤ domainAddr c Layout.off_local_roots ∨ domainAddr c Layout.off_local_roots + 8 ≤ a
+  /-- the one static word: `caml_extra_heap_resources` (`caml_adjust_gc_speed`) -/
+  static : a < Vsa.Sim.DlHeap.heapStart → VsaIris.InExt (Layout.sym_caml_extra_heap_resources, 8) a
+  /-- within the domain record, only `extra_heap_resources_minor` -/
+  domainField : VsaIris.InExt (domainAddr c 0, Layout.domainStateBytes) a →
+    VsaIris.InExt (domainAddr c Layout.off_extra_heap_resources_minor, 8) a
+  /-- apart from F1's regions other than the domain record (the custom table's
+  struct and storage are blocks of their own) -/
+  covered : ∀ e ∈ f1Covered, e.1 ≠ Boot.WhileMinRuntime.domain → ¬ VsaIris.InExt e a
+  /-- in live blocks or statics, never newlib's free space or globals -/
+  free : ∀ H cap, HeapReady H cap c → ¬ VsaIris.VsaHeap.vsaFoot H a
 
 /-- At the call: the link and argument registers, the callee's stack room,
 and nursery room for the block (`caml_alloc_small`'s fast path). -/
@@ -113,6 +128,8 @@ structure CustomMemReturned (state : Config → Nat → Prop) (H : List (Nat × 
   result : gprGet d.σ 10 = some v
   saved : ∀ n ∈ [9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet d.σ n = gprGet f.σ n
   gprs : GprsKept f d
+  idle : d.σ.regs.get? Register.htif_payload_writes = some 0#4
+  output : d.σ.sailOutput = f.σ.sailOutput
   block : v.toNat + 16 = (runtimeFields f).youngPtr
   youngPtr : (runtimeFields d).youngPtr = (runtimeFields f).youngPtr - 24
   youngLimit : (runtimeFields d).youngLimit = (runtimeFields f).youngLimit

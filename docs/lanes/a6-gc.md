@@ -59,6 +59,16 @@
   fewer than 5 prior opens; the major-slice path is a named open premise.
   To do: generalize the Realloc chain to element size 24, charge the custom
   table in `reserved`, prove the quiet path with bprime's exact-log post.
+- `CustomMemCall` interface (bprime, a1-arms): `HeapReady` in, `∃ H' cap'`
+  out; `CallerApart` places `state` in the static `caml_extra_heap_resources`,
+  the domain's `extra_heap_resources_minor` and live newlib blocks outside
+  `f1Covered` (fields `static`, `domainField`, `covered`, `free`); the return
+  keeps the HTIF payload idle (`idle`) and the console output (`output`).
+- G2: rows and code pins for memprof's hook route (`th_ctx_iter_default`,
+  `call_on_entry_array`, `entry_array_oldify_young_roots`). The quiet path:
+  `entries_global` empty, `caml_memprof_th_ctx_iter_hook` =
+  `th_ctx_iter_default`, tail jumps to `call_on_entry_array` and the main
+  context's `entry_array_oldify_young_roots`, also empty.
 - G2: `SlotDone R copies copies' pl` (`OldifySlot.lean`): one
   `caml_oldify_one(v, p)` call at the slot level, `*p = relocation copies' v`
   over the published forwarding table, which grows and keeps its view.

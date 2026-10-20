@@ -155,7 +155,8 @@ def main():
             "__heap_end", "__stack_top", "__stack_size", "caml_prim_table", "_start",
             "__bss_start", "__bss_end", "__global_pointer$", "environ",
             "custom_ops_table", "caml_ba_ops", "caml_stat_alloc", "caml_shared_libs_path",
-            "caml_startup_aux", "shutdown_happened", "startup_count", "caml_cleanup_on_exit"]
+            "caml_startup_aux", "shutdown_happened", "startup_count", "caml_cleanup_on_exit",
+            "caml_extra_heap_resources"]
     need += ["_open", "_read", "_write", "_lseek", "_close", "_fstat", "_stat",
              "_unlink", "rename", "opendir", "readdir", "closedir", "_gettimeofday",
              "_times", "files", "fds", "dirs", "fs_ready"]
@@ -434,7 +435,7 @@ def main():
               "stat_minor_collections", "stat_major_collections", "stat_heap_wsz",
               "stat_top_heap_wsz", "stat_compactions", "stat_forced_major_collections",
               "stat_heap_chunks", "ref_table", "ephe_ref_table", "custom_table",
-              "in_minor_collection"]:
+              "in_minor_collection", "extra_heap_resources_minor"]:
         w(f"def off_{f} : Nat := {off[f]}\n")
     w("\n/-! Collector structure offsets and constants, measured by the RV64 compiler\n"
       "from runtime/freelist.c. -/\n")

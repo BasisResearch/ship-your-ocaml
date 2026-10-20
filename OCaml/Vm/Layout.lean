@@ -82,6 +82,8 @@ def sym_shutdown_happened : Nat := 0x80064988
 def sym_startup_count : Nat := 0x8006498c
 /-- `caml_cleanup_on_exit` -/
 def sym_caml_cleanup_on_exit : Nat := 0x80064990
+/-- `caml_extra_heap_resources` -/
+def sym_caml_extra_heap_resources : Nat := 0x80064aa0
 /-- `_open` -/
 def sym_open : Nat := 0x800008b8
 /-- `_read` -/
@@ -447,6 +449,7 @@ def off_ref_table : Nat := 104
 def off_ephe_ref_table : Nat := 112
 def off_custom_table : Nat := 120
 def off_in_minor_collection : Nat := 88
+def off_extra_heap_resources_minor : Nat := 96
 
 /-! Collector structure offsets and constants, measured by the RV64 compiler
 from runtime/freelist.c. -/

@@ -510,7 +510,10 @@ def outputs():
                            ('caml_scan_global_young_roots', 'GlobalYoungRoots'),
                            ('caml_skiplist_empty', 'SkiplistEmpty'),
                            ('caml_final_oldify_young_roots', 'FinalYoungRoots'),
-                           ('caml_memprof_oldify_young_roots', 'MemprofYoungRoots')]:
+                           ('caml_memprof_oldify_young_roots', 'MemprofYoungRoots'),
+                           ('th_ctx_iter_default', 'MemprofIterDefault'),
+                           ('call_on_entry_array', 'MemprofCallOnArray'),
+                           ('entry_array_oldify_young_roots', 'MemprofEntryArray')]:
             entry, end = extents[name]
             words = [(a, di[a].word) for a in sorted(di) if entry <= a < end]
             ident = code.lean_ident(name)
