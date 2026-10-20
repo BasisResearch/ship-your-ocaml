@@ -409,7 +409,7 @@ structure InitGcMajored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2
     (mem.toNat, (majorChunkSize 0xf8000#64 + 4152#64).toNat) :: initGcH2 H blk raw) capacity (nativeStack sp 96)
     jal_8001f3a4_call.link after
   major : ∃ mid, MajorHeapInit (initGcH2 H blk raw) capacity (nativeStack sp 96) jal_8001f3a4_call.link 0xf8000#64
-    0xf8000#64 (BitVec.ofNat 64 percentFreeAddr) 8192#64 mem stack entries cur mid after
+    0xf8000#64 (BitVec.ofNat 64 percentFreeAddr) 8192#64 mem stack entries cur blk mid after
   minorFresh : FreshBlock vsaLayoutP ((blk.toNat, 16384) :: H) raw.toNat (0x200000#64 + 4096#64).toNat
   tableFresh : FreshBlock vsaLayoutP H blk.toNat 16384
   slots : ∀ off value, (off, value) ∈ initGcSlots ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 →
@@ -421,6 +421,9 @@ structure InitGcMajored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2
   quiet : LPins8 after.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8)
   /-- Low globals outside caml_init_gc's stores are kept from its entry. -/
   low : ∀ x, GcLowKeep x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  /-- The page table over the live list. -/
+  table : MajorTableAt ((entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) ::
+    (mem.toNat, (majorChunkSize 0xf8000#64 + 4152#64).toNat) :: initGcH2 H blk raw) after.σ.mem blk
 
 theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM cP : Nat)
     (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur blk raw : BitVec 64)
@@ -679,7 +682,8 @@ theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA c
         (by simp only [OutL, majorIncrementAddr, Layout.sym_caml_verb_gc, and_true]; omega)
     low := fun x k => by
       rw [MH.lowKept x k.low k.notAlloc k.major]
-      exact glob x k.low k.notAlloc k.table k.trigger k.policy k.percent k.increment }⟩
+      exact glob x k.low k.notAlloc k.table k.trigger k.policy k.percent k.increment
+    table := MH.table }⟩
 
 /-- Bytes the end of caml_init_gc leaves alone: low memory outside the stored
 parameters, and the caller's side of caml_init_gc's frame pointer. -/
@@ -699,6 +703,8 @@ structure InitGcDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3
   extends_ : ∃ pre, Hfinal = pre ++ H
   /-- Low globals outside caml_init_gc's stores are kept. -/
   low : ∀ x, GcLowKeep x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  /-- The page table over the final live list. -/
+  table : ∃ ent, MajorTableAt Hfinal after.σ.mem ent
 
 /-- A global store window misses everything `GcTailKeep` keeps. -/
 theorem gcTail_out {fsp : BitVec 64} (high : heapEnd ≤ fsp.toNat) {a w : Nat} (v : BitVec 64)
@@ -937,6 +943,24 @@ theorem init_gc_finish (c d14 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM
       rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x ⟨Or.inl below, trivial⟩,
         k15.same x (Or.inl ⟨by omega, k.stores⟩)]
       exact Mj.low x k
+    table := ⟨blk, Mj.table.agree fun x inT => by
+      have lower := frameTail.lower
+      have hS : heapStart = 0x8007d140 := rfl
+      have hE : heapEnd = 0x86800000 := rfl
+      have hP : pageTable = 0x800684b8 := rfl
+      have th := Mj.table.high
+      have tl := Mj.table.low
+      have below : x < heapEnd := by
+        rcases inT with ⟨_, hi⟩ | ⟨_, hi⟩
+        · rw [hP] at hi; rw [hE]; omega
+        · omega
+      have base : x < nativeFrameBase sp 80 := by unfold nativeFrameBase; omega
+      rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x ⟨Or.inl base, trivial⟩,
+        k15.same x (Or.inl ⟨below, by
+          simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true]
+          rcases inT with ⟨lo, _⟩ | ⟨lo, _⟩
+          · rw [hP] at lo; omega
+          · rw [hS] at th; omega⟩)]⟩
     extends_ := ⟨[(entries.toNat, (32768#64).toNat), (stack.toNat, (24#64).toNat),
       (mem.toNat, (majorChunkSize 0xf8000#64 + 4152#64).toNat), (raw.toNat, (0x200000#64 + 4096#64).toNat),
       (blk.toNat, 16384)], rfl⟩ }⟩

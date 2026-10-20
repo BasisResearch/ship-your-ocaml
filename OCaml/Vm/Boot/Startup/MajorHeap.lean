@@ -309,6 +309,11 @@ structure MajorPageAddEntered (H : List (Nat × Nat)) (capacity : Nat) (sp ra hs
   tableApart : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat
   tableOwned : (ent.toNat, 16384) ∈ H
   caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  /-- The page table is the caller's. -/
+  table : MajorTableAt H after.σ.mem ent
+  /-- Each page of the new chunk lies in the new block. -/
+  pages : ∀ j, j < majorPages hsize → SlotInBlock ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H)
+    (1#64 ||| blockPage (chunkStart mem) j)
 
 theorem major_to_page_add (c d8 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra hsize s0 s1 s2 s3 inc ent : BitVec 64) (A : MajorHeapCall H capacity charge sp ra hsize s0 s1 s2 inc c)
@@ -548,7 +553,17 @@ theorem major_to_page_add (c d8 : Config) (H : List (Nat × Nat)) (capacity char
     saved := fun k lo hi => by
       have range : k ∉ [18, 11, 14, 9, 15, 10, 12, 1] := by simp; omega
       rw [g912.same k (by omega) (by omega) range,
-        D.saved k (by simp [abiSaved]; omega), E.same.same k (by omega) (by omega) (by simp; omega)] }⟩
+        D.saved k (by simp [abiSaved]; omega), E.same.same k (by omega) (by omega) (by simp; omega)]
+    table := table12
+    pages := fun j hj => by
+      obtain ⟨lo', hi', fit'⟩ := major_page_in_block hj pagesFit (by rw [chunkNat]; omega) memHigh
+      have page := blockPage_nat (chunkStart mem) j fit'
+      exact ⟨1#64, blockPage (chunkStart mem) j, (mem.toNat, (majorChunkSize hsize + 4152#64).toNat), {
+        owned := List.mem_cons_self ..
+        inBlock := by unfold InExt; dsimp only; rw [page, sizeNat]; omega
+        aligned := by rw [page]; omega
+        small := by decide
+        word := rfl }⟩ }⟩
 
 /-- The runtime globals the rest of caml_init_major_heap reads: the policy's
 function pointers (`caml_set_allocation_policy` set best-fit), and the empty
@@ -595,6 +610,8 @@ structure MajorMerged (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s
   tableOwned : (ent.toNat, 16384) ∈ H
   tableApart : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat
   caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  /-- The page table, now also naming the chunk's pages. -/
+  table : MajorTableAt ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) after.σ.mem ent
 
 theorem major_merged (c d12 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra hsize s0 s1 s2 s3 inc mem ent cur : BitVec 64)
@@ -730,7 +747,22 @@ theorem major_merged (c d12 : Config) (H : List (Nat × Nat)) (capacity charge :
     caller := fun x hx => by
       rw [back x (by simp only [OutW, smallListsWindow, flMergeAddr, smallMapAddr, and_true]; omega)
         (Or.inr (by rw [stack48]; omega))]
-      exact P.caller x hx }⟩
+      exact P.caller x hx
+    table := by
+      have t13 : MajorTableAt ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) d13.σ.mem ent := {
+        fields := by rw [PA.count]; exact PA.fields
+        low := P.table.low
+        high := P.table.high
+        owned := List.mem_cons_of_mem _ P.table.owned
+        windows := P.table.windows
+        apartDomain := P.table.apartDomain
+        occupied := fun i hi occ => by
+          rcases PA.known i hi occ with same | ⟨j, hj, eq⟩
+          · rw [same] at occ ⊢
+            obtain ⟨kind, page, block, e⟩ := P.table.occupied i hi occ
+            exact ⟨kind, page, block, { e with owned := List.mem_cons_of_mem _ e.owned }⟩
+          · rw [eq]; exact P.pages j hj }
+      exact t13.agree tableSame }⟩
 
 /-- The chunk in words: at least `Heap_chunk_min`, exactly the chunk's bytes. -/
 theorem major_words_nat (a : BitVec 64) (pages : a.toNat % 4096 = 0) (big : 0x78000 ≤ a.toNat) (small : a.toNat < 2 ^ 33) :
@@ -774,6 +806,7 @@ structure MajorFreed (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
   caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  table : MajorTableAt ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) after.σ.mem ent
 
 theorem major_freed (c d16 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra hsize s0 s1 s2 s3 s4 s5 s6 s7 s8 inc mem ent cur : BitVec 64)
@@ -984,7 +1017,8 @@ theorem major_freed (c d16 : Config) (H : List (Nat × Nat)) (capacity charge : 
       · rw [F.saved k (by omega) hi, g18.same k (by omega) (by omega) (by simp; omega), M.saved k lo hi]
     caller := fun x hx => by
       rw [back x (Or.inr (by rw [stack48]; omega))]
-      exact M.caller x hx }⟩
+      exact M.caller x hx 
+    table := M.table.agree tableBack }⟩
 
 /-- The mark stack's two blocks are allocated: the record `stack` (its
 address in `Caml_state->mark_stack`) and the entry array `entries`. -/
@@ -1332,7 +1366,7 @@ def majorInitLowWindows : List W :=
 /-- caml_init_major_heap returned: the major heap is one chunk (the new block
 `mem`), a single free block at the root of the best-fit tree; the mark stack
 is the pair of new blocks `stack` and `entries`. -/
-structure MajorHeapInit (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 mem stack entries cur : BitVec 64)
+structure MajorHeapInit (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 mem stack entries cur ent : BitVec 64)
     (before after : Config) : Prop where
   pc : PCAt ra after
   regs : GHolds after.σ [(2, sp), (18, s2), (9, s1), (1, ra), (8, s0)]
@@ -1350,6 +1384,9 @@ structure MajorHeapInit (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0
   caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   lowKept : ∀ x, x < heapStart → ¬ allocGlobal x → OutW majorInitLowWindows x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  /-- The page table, naming the chunk's pages, over the final live list. -/
+  table : MajorTableAt ((entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) ::
+    (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) after.σ.mem ent
 
 /-- **caml_init_major_heap(heap_size)**, from its entry to its return. -/
 theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 charge : Nat)
@@ -1359,7 +1396,7 @@ theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cha
     (G : MajorGlobals c.σ.mem cur) (callee : GHolds c.σ [(20, s4), (21, s5), (22, s6), (23, s7), (24, s8)])
     (charged1 : vsaChg (24#64).toNat c1) (charged2 : vsaChg (32768#64).toNat c2) :
     ∃ mem stack entries after, Steps c after ∧
-      MajorHeapInit H cap sp ra hsize s0 s1 s2 mem stack entries cur c after := by
+      MajorHeapInit H cap sp ra hsize s0 s1 s2 mem stack entries cur ent c after := by
   obtain ⟨d8, run8, E⟩ := major_to_alloc c H _ charge sp ra hsize s0 s1 s2 inc A
   obtain ⟨mem, d12, run12, P⟩ := major_to_page_add c d8 H _ charge sp ra hsize s0 s1 s2 s3 inc ent A E T s3reg room
   obtain ⟨d16, run16, M⟩ := major_merged c d12 H _ charge sp ra hsize s0 s1 s2 s3 inc mem ent cur A P G
@@ -1486,6 +1523,27 @@ theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cha
           ⟨by simp only [BitVec.toNat_ofNat, majorRingAddr] at r ⊢; omega, trivial⟩,
         Tl.back x (by rw [hE]; omega) (fun f => f.elim alloc fun h => by rw [hS] at h; omega)
           (by simp only [majorStackWindows, OutW, domainField, dom, and_true]; omega)]
-      exact F.lowSame x (by rw [hS]; exact low) alloc o1 }⟩
+      exact F.lowSame x (by rw [hS]; exact low) alloc o1
+    table := by
+      have T19 := F.table
+      have hP : pageTable = 0x800684b8 := rfl
+      refine ((T19.agree fun x inT => ?_).cons _).cons _
+      have th := T19.high
+      have tl := T19.low
+      have ta := T19.apartDomain
+      rw [hS] at th
+      rw [dom] at ta
+      rcases inT with ⟨lo, hi⟩ | ⟨lo, hi⟩
+      · rw [hP] at lo hi
+        exact fin x (by rw [hE]; omega)
+          (fun f => f.elim (fun g => by unfold allocGlobal InRange at g; omega) fun h => by rw [hS] at h; omega)
+          (by simp only [majorStackWindows, OutW, gcPhaseAddr, domainField, dom, extraResourcesAddr, allocatedWordsAddr,
+            and_true]; omega)
+          (by omega)
+      · have sa := stackApart _ T19.owned x ⟨lo, hi⟩
+        exact fin x (by rw [hE] at tl; omega) (owned_not_foot' (by rw [hS]; exact th) T19.owned lo hi)
+          (by simp only [majorStackWindows, OutW, gcPhaseAddr, domainField, dom, extraResourcesAddr, allocatedWordsAddr,
+            and_true]; omega)
+          (by omega) }⟩
 
 end OCaml.Vm.Boot.Startup

@@ -25,7 +25,7 @@ spec.loader.exec_module(code)
 
 
 # Region stems that get normalized lines and call interfaces.
-CERTIFIED_STEMS = ('Memset', 'MinorTable', 'Secure', 'CamlParameter', 'Find', 'Getenv', 'Parameter', 'Strncmp', 'StartupAux', 'CamlAux', 'CamlLocale', 'CamlCustom', 'StatChecked', 'Custom', 'CamlShared', 'ExtTable', 'CamlAttempt', 'AttemptOpen', 'SearchExe', 'StatFree', 'FreeWrap', 'FreeNull', 'Decompose', 'ExtTableFree', 'Strdup', 'SearchInPath', 'GcMessage', 'Child', 'NewNode', 'Strchr', 'FsInit', 'Resolve', 'LibOpen', 'OpenR', 'HtifOpen', 'Errno', 'Memcmp', 'LibLseek', 'LseekR', 'HtifLseek', 'LibRead', 'ReadR', 'HtifRead', 'ReadSections', 'CamlReadSections', 'CamlInitGc', 'InitGc', 'PageTable', 'PageModify', 'PageAdd', 'StatAligned', 'MinorHeap', 'Policy', 'HeapAlloc', 'Major', 'InitMerge', 'Mfb', 'Bib', 'CamlInitStack', 'InitStack')
+CERTIFIED_STEMS = ('Memset', 'MinorTable', 'Secure', 'CamlParameter', 'Find', 'Getenv', 'Parameter', 'Strncmp', 'StartupAux', 'CamlAux', 'CamlLocale', 'CamlCustom', 'StatChecked', 'Custom', 'CamlShared', 'ExtTable', 'CamlAttempt', 'AttemptOpen', 'SearchExe', 'StatFree', 'FreeWrap', 'FreeNull', 'Decompose', 'ExtTableFree', 'Strdup', 'SearchInPath', 'GcMessage', 'Child', 'NewNode', 'Strchr', 'FsInit', 'Resolve', 'LibOpen', 'OpenR', 'HtifOpen', 'Errno', 'Memcmp', 'LibLseek', 'LseekR', 'HtifLseek', 'LibRead', 'ReadR', 'HtifRead', 'ReadSections', 'CamlReadSections', 'CamlInitGc', 'InitGc', 'PageTable', 'PageModify', 'PageAdd', 'StatAligned', 'MinorHeap', 'Policy', 'HeapAlloc', 'Major', 'InitMerge', 'Mfb', 'Bib', 'CamlInitStack', 'InitStack', 'CamlInitAtoms', 'Atom')
 
 def literal_names(di, extents, elf_sections, function, names, stem, register=10):
     """Certify AUIPC/ADDI-selected literal C strings of one function from pinned rodata."""
@@ -194,6 +194,13 @@ def outputs():
                 ('caml_read_section_descriptors', 'ReadSectionsReturn', (0x80004ba8, 0x80004bc0)),
                 ('caml_main', 'CamlInitGc', (0x80004e14, 0x80004e70)),
                 ('caml_main', 'CamlInitStack', (0x80004e70, 0x80004e7c)),
+                ('caml_main', 'CamlInitAtoms', (0x80004e7c, 0x80004e80)),
+                ('caml_init_atom_table', 'AtomSave', (0x800044a4, 0x800044bc)),
+                ('caml_init_atom_table', 'AtomPublish', (0x800044bc, 0x800044d4)),
+                ('caml_init_atom_table', 'AtomLoop', (0x800044d4, 0x800044f0)),
+                ('caml_init_atom_table', 'AtomPageAdd', (0x800044f0, 0x80004500)),
+                ('caml_init_atom_table', 'AtomTest', (0x80004500, 0x80004504)),
+                ('caml_init_atom_table', 'AtomReturn', (0x80004504, 0x80004510)),
                 ('caml_init_stack', 'InitStackSave', (0x80004064, 0x80004078)),
                 ('caml_init_stack', 'InitStackState', (0x80004078, 0x80004090)),
                 ('caml_init_stack', 'InitStackFields', (0x80004090, 0x800040d8)),
