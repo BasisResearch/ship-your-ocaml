@@ -64,6 +64,17 @@ theorem GprsSame.of_stepFrame {c d : Config} {W : List Nat} (keys : KeysOK W)
           exact hw k hk
         · exact hn q hq)⟩
 
+/-- A register frame over all registers outside `W` and the noise registers
+(the `frame` field of `BoundaryPost` and `EffectPost`). -/
+theorem GprsSame.of_regFrame {c d : Config} {W : List Nat} (keys : KeysOK W)
+    (frame : ∀ r : LeanRV64DExecutable.Register, (∀ n ∈ W, gprReg n ≠ r) →
+      (∀ q ∈ noiseRegs, (q == r) = false) → d.σ.regs.get? r = c.σ.regs.get? r) : GprsSame c d W :=
+  ⟨fun n lo hi w => gprGet_of_frame n lo hi (by gpr_cases n => decide)
+      (fun m hm => by
+        obtain ⟨b1, b2⟩ := keys m hm
+        exact gprReg_beq_false m (by omega) n (by omega) b1 lo (fun e => w (e ▸ hm)))
+      (fun R hn hw => frame R (fun m hm e => by have := hw m hm; rw [e] at this; simp at this) hn)⟩
+
 /-- Register presence follows when each written register holds a value and `gp` is unwritten. -/
 theorem GprsSame.kept {c d : Config} {ws : List Nat} (k : GprsSame c d ws) (no3 : 3 ∉ ws)
     (written : ∀ n ∈ ws, (gprGet d.σ n).isSome) : GprsKept c d :=
