@@ -416,9 +416,20 @@ insertion is proved generically:
   entry: `HeapReady`, the channel records placed apart in blocks of `H`, the
   minor heap and the domain record inside blocks, and the payload outside
   `vsaFoot H`. It is needed only for the general F1 statement, after the cut.
-Next: give `InitGcDone` the memory facts later startup needs (`LateImage`,
-the kept low globals), then continue to the cut (caml_init_stack, atom table,
-backtrace, interprete init, debugger, load_code).
+* **The reset run continues through caml_init_stack**
+  (`reset_init_stack_returned_exists`):
+  * `InitGcDone.low` keeps every low global outside caml_init_gc's stores
+    (`GcLowKeep`, a named-field structure; `GcLowKeep.of_range` covers the
+    parameter words, `caml_verb_gc` and `Caml_state`).
+  * caml_init_stack is proved end to end (`caml_init_stack`, post
+    `InitStackDone`): `caml_stat_alloc` of the 32 KiB stack, its six bounds in
+    the domain record (`initStackCells`), `caml_max_stack_size`, and a quiet
+    message. Generator regions `CamlInitStack`/`InitStack*` were added. The 58
+    duplicated stem prefixes in `gen_startup_rows.py` are now one
+    `CERTIFIED_STEMS`.
+Next: caml_init_atom_table (`caml_stat_alloc_aligned_noexc` and
+`caml_page_table_add`, both proved for the minor heap), then backtrace,
+interprete init, debugger, load_code, and on to the cut.
 
 ## Round 2 status (2026-10-06, search)
 

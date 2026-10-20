@@ -357,6 +357,47 @@ theorem initLow_out (x : Nat) (h : (0x80064848 ≤ x ∧ x < 0x80064850) ∨ (0x
 abbrev initGcH2 (H : List (Nat × Nat)) (blk raw : BitVec 64) : List (Nat × Nat) :=
   (raw.toNat, (0x200000#64 + 4096#64).toNat) :: (blk.toNat, 16384) :: H
 
+/-- The GC parameters caml_init_gc stores after the major heap. -/
+def gcStoreWindows : List W :=
+  [⟨majorWindowAddr, majorWindowAddr + 4⟩, ⟨customMajorAddr, customMajorAddr + 8⟩,
+    ⟨customMinorAddr, customMinorAddr + 8⟩, ⟨customMaxAddr, customMaxAddr + 8⟩]
+
+/-- A low global caml_init_gc leaves alone: below the arena, outside the
+allocator's globals, the page table header, memprof's young trigger, the
+parameter and policy stores, caml_init_major_heap's globals and the final
+parameter stores. -/
+structure GcLowKeep (x : Nat) : Prop where
+  low : x < heapStart
+  notAlloc : ¬ allocGlobal x
+  table : x < pageTable ∨ pageTable + 0x28 ≤ x
+  trigger : x < 0x80064cc8 ∨ 0x80064cc8 + 8 ≤ x
+  policy : OutL policyLog x
+  percent : OutL [(percentFreeAddr, 8, 120#64), (percentMaxAddr, 8, 500#64)] x
+  increment : OutL [(majorIncrementAddr, 8, 15#64)] x
+  major : OutW majorInitLowWindows x
+  stores : OutW gcStoreWindows x
+
+/-- caml_init_gc's parameter words, `caml_verb_gc` and `Caml_state` are among
+the low globals it keeps. -/
+theorem GcLowKeep.of_range {x : Nat} (h : (0x800647f0 ≤ x ∧ x < 0x80064848) ∨ (0x80064930 ≤ x ∧ x < 0x80064938) ∨
+    (Layout.sym_Caml_state ≤ x ∧ x < Layout.sym_Caml_state + 8)) : GcLowKeep x := by
+  unfold Layout.sym_Caml_state at h
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · unfold heapStart; omega
+  · unfold allocGlobal InRange; omega
+  · unfold pageTable Layout.sym_caml_page_table; omega
+  · omega
+  · simp only [policyLog, OutL, and_true]; omega
+  · simp only [OutL, percentFreeAddr, percentMaxAddr, and_true]; omega
+  · simp only [OutL, majorIncrementAddr, and_true]; omega
+  · unfold majorInitLowWindows majorFreeWindows
+    simp only [outW_append, majorLowWindows, OutW, heapStartAddr, pageTable, Layout.sym_caml_page_table,
+      smallListsWindow, flMergeAddr, smallMapAddr, largeTreeAddr, flCurWszAddr, gcPhaseAddr, extraResourcesAddr,
+      allocatedWordsAddr, majorRingWindow, BitVec.toNat_ofNat, majorRingAddr, and_true]
+    omega
+  · simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true]
+    omega
+
 /-- caml_init_major_heap returned into caml_init_gc. -/
 structure InitGcMajored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk raw : BitVec 64)
     (mem stack entries cur : BitVec 64) (before after : Config) : Prop where
@@ -378,6 +419,8 @@ structure InitGcMajored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2
   maxWord : bytesT after.σ.mem percentMaxAddr 8 = 500#64
   policyWord : bytesT after.σ.mem allocationPolicyAddr 8 = 2#64
   quiet : LPins8 after.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8)
+  /-- Low globals outside caml_init_gc's stores are kept from its entry. -/
+  low : ∀ x, GcLowKeep x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM cP : Nat)
     (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur blk raw : BitVec 64)
@@ -633,12 +676,10 @@ theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA c
         (by rw [hP]; unfold Layout.sym_caml_verb_gc; omega) (by unfold Layout.sym_caml_verb_gc; omega)
         (by simp only [OutL, policyLog, Layout.sym_caml_verb_gc, and_true]; omega)
         (by simp only [OutL, percentFreeAddr, percentMaxAddr, Layout.sym_caml_verb_gc, and_true]; omega)
-        (by simp only [OutL, majorIncrementAddr, Layout.sym_caml_verb_gc, and_true]; omega) }⟩
-
-/-- The GC parameters caml_init_gc stores after the major heap. -/
-def gcStoreWindows : List W :=
-  [⟨majorWindowAddr, majorWindowAddr + 4⟩, ⟨customMajorAddr, customMajorAddr + 8⟩,
-    ⟨customMinorAddr, customMinorAddr + 8⟩, ⟨customMaxAddr, customMaxAddr + 8⟩]
+        (by simp only [OutL, majorIncrementAddr, Layout.sym_caml_verb_gc, and_true]; omega)
+    low := fun x k => by
+      rw [MH.lowKept x k.low k.notAlloc k.major]
+      exact glob x k.low k.notAlloc k.table k.trigger k.policy k.percent k.increment }⟩
 
 /-- Bytes the end of caml_init_gc leaves alone: low memory outside the stored
 parameters, and the caller's side of caml_init_gc's frame pointer. -/
@@ -656,6 +697,8 @@ structure InitGcDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3
   ready : RuntimeReady Hfinal capacity sp ra after
   /-- The runtime's new blocks sit in front of the caller's live list. -/
   extends_ : ∃ pre, Hfinal = pre ++ H
+  /-- Low globals outside caml_init_gc's stores are kept. -/
+  low : ∀ x, GcLowKeep x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 /-- A global store window misses everything `GcTailKeep` keeps. -/
 theorem gcTail_out {fsp : BitVec 64} (high : heapEnd ≤ fsp.toNat) {a w : Nat} (v : BitVec 64)
@@ -885,6 +928,15 @@ theorem init_gc_finish (c d14 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM
       gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 24) _ regs10 rfl),
       gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 25) _ regs10 rfl), trivial⟩
     ready := Q.ready
+    low := fun x k => by
+      have lower := frameTail.lower
+      have xl := k.low
+      have hS : heapStart = 0x8007d140 := rfl
+      have hE : heapEnd = 0x86800000 := rfl
+      have below : x < nativeFrameBase sp 80 := by unfold nativeFrameBase; omega
+      rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x ⟨Or.inl below, trivial⟩,
+        k15.same x (Or.inl ⟨by omega, k.stores⟩)]
+      exact Mj.low x k
     extends_ := ⟨[(entries.toNat, (32768#64).toNat), (stack.toNat, (24#64).toNat),
       (mem.toNat, (majorChunkSize 0xf8000#64 + 4152#64).toNat), (raw.toNat, (0x200000#64 + 4096#64).toNat),
       (blk.toNat, 16384)], rfl⟩ }⟩

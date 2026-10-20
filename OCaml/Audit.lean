@@ -450,6 +450,7 @@ import OCaml.Vm.Boot.Startup.MemsetShifted
 import OCaml.Vm.Boot.Startup.InitGcSteps
 import OCaml.Vm.Boot.Startup.InitGc
 import OCaml.Vm.Boot.Startup.InitGcReset
+import OCaml.Vm.Boot.Startup.InitStackReset
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -3118,6 +3119,15 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetReadSections.gc
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_gc_call
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_gc_exists
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_stack_returned_exists
+#print axioms OCaml.Vm.Boot.Startup.caml_init_stack
+#print axioms OCaml.Vm.Boot.Startup.caml_init_stack_call
+#print axioms OCaml.Vm.Boot.Startup.init_stack_save
+#print axioms OCaml.Vm.Boot.Startup.init_stack_state
+#print axioms OCaml.Vm.Boot.Startup.init_stack_fields
+#print axioms OCaml.Vm.Boot.Startup.init_stack_return
+#print axioms OCaml.Vm.Boot.Startup.GcLowKeep.of_range
+#print axioms OCaml.Vm.Boot.Startup.gcParam_of_data
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_domain_kept
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_gc_returned_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetDomainReturned.kept

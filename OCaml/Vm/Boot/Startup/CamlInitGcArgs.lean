@@ -26,13 +26,14 @@ theorem gcParam_layout : gcParamAddr = 0x800647f0 ∧ gcParamBytes = 88 := by de
 def gcLoad (m : Std.ExtHashMap Nat (BitVec 8)) (k : Nat) : List (BitVec 8) :=
   Primitives.read8 m (BitVec.ofNat 64 (gcParamAddr + 8 * k)).toNat
 
-/-- A parameter word of a kept image. -/
-theorem GcInitImage.param {c : Config} (h : GcInitImage c) (k : Nat) (hk : k < 11) :
-    bytesVal .ld (gcLoad c.σ.mem k) = gcParamWord k := by
+/-- A parameter word of a memory whose parameter bytes have their loader values. -/
+theorem gcParam_of_data {m : Std.ExtHashMap Nat (BitVec 8)}
+    (data : ∀ a, GcDataByte a → (m[a]?).getD 0 = (WhileMinImage.initialMem[a]?).getD 0) (k : Nat) (hk : k < 11) :
+    bytesVal .ld (gcLoad m k) = gcParamWord k := by
   have addr : (BitVec.ofNat 64 (gcParamAddr + 8 * k)).toNat = gcParamAddr + 8 * k := by
     rw [BitVec.toNat_ofNat]; unfold gcParamAddr; exact Nat.mod_eq_of_lt (by omega)
-  have b (i : Nat) (hi : i < 8) : (c.σ.mem[gcParamAddr + 8 * k + i]?).getD 0 = gcParamByte (8 * k + i) := by
-    rw [h.data _ (by unfold GcDataByte gcParamAddr; omega), Nat.add_assoc,
+  have b (i : Nat) (hi : i < 8) : (m[gcParamAddr + 8 * k + i]?).getD 0 = gcParamByte (8 * k + i) := by
+    rw [data _ (by unfold GcDataByte gcParamAddr; omega), Nat.add_assoc,
       gc_param_initial _ (Nat.zero_le _) (by omega)]
     rfl
   have b0 := b 0 (by decide)
@@ -40,6 +41,11 @@ theorem GcInitImage.param {c : Config} (h : GcInitImage c) (k : Nat) (hk : k < 1
   rw [gcLoad, addr, Primitives.read8, b0, b 1 (by decide), b 2 (by decide), b 3 (by decide), b 4 (by decide), b 5 (by decide),
     b 6 (by decide), b 7 (by decide)]
   rfl
+
+/-- A parameter word of a kept image. -/
+theorem GcInitImage.param {c : Config} (h : GcInitImage c) (k : Nat) (hk : k < 11) :
+    bytesVal .ld (gcLoad c.σ.mem k) = gcParamWord k :=
+  gcParam_of_data h.data k hk
 
 /-- caml_main's outgoing stack arguments: `policy` at 8(sp), `custom_minor_max_bsz` at 0(sp). -/
 def camlInitGcArgSlots : List (Nat × BitVec 64) := [(8, 2#64), (0, 8192#64)]

@@ -37,7 +37,8 @@ theorem reset_init_gc_call {initial sections : Config} (w : ResetReadSections in
       InitGcCall w.blocks (startupAllocatorCredits - 656 - initGcCredits) 32 32768 1019968 2101248 16384
         parameterStack jal_80004e6c_call.link 3#64 argvPtr (vsaReg w.attempt.opened.call.atRetry 18)
         (vsaReg sections 19) (vsaReg sections 20) (vsaReg sections 21) (vsaReg sections 22) (vsaReg sections 23)
-        (vsaReg sections 24) (vsaReg sections 25) t1 t2 t3 (bytesT sections.σ.mem flCurWszAddr 8) after := by
+        (vsaReg sections 24) (vsaReg sections 25) t1 t2 t3 (bytesT sections.σ.mem flCurWszAddr 8) after ∧
+      GcInitImage after := by
   have D := w.done
   obtain ⟨after, run, post⟩ := (caml_init_gc_call sections jal_80004e10_call.link D.ready.toLeafInput
     ⟨gholds_lookup (n := 2) _ D.regs rfl, trivial⟩ w.gc).run sections ⟨D.pc, rfl⟩
@@ -68,7 +69,8 @@ theorem reset_init_gc_call {initial sections : Config} (w : ResetReadSections in
   have bss (a : Nat) (lo hi : Nat) (inside : lo ≤ a ∧ a + 8 ≤ hi) (window : ∀ x, lo ≤ x → x < hi → GcBssByte x) :
       bytesT after.σ.mem a 8 = 0#64 :=
     gc.word a fun i _ => window _ (by omega) (by omega)
-  refine ⟨after, w.run.trans run, {
+  refine ⟨after, w.run.trans run, ?_, gc⟩
+  exact {
     pc := by have := post.pc; rwa [jal_80004e6c_call_target] at this
     regs := ⟨gholds_lookup (n := 2) _ post.regs rfl,
       keep 9 _ (by decide) (by decide) (by decide) (gholds_lookup (n := 9) _ D.regs rfl),
@@ -122,7 +124,7 @@ theorem reset_init_gc_call {initial sections : Config} (w : ResetReadSections in
       have b (i : Nat) (hi : i < 8) : (after.σ.mem[Layout.sym_caml_verb_gc + i]?).getD 0 = 0#8 :=
         gc.bss _ (by unfold GcBssByte Layout.sym_caml_verb_gc; omega)
       exact ⟨by simpa using b 0 (by decide), b 1 (by decide), b 2 (by decide), b 3 (by decide), b 4 (by decide),
-        b 5 (by decide), b 6 (by decide), b 7 (by decide)⟩ }⟩
+        b 5 (by decide), b 6 (by decide), b 7 (by decide)⟩ }
 
 /-- caml_init_domain's record and the minor ref tables (`DomainKept`) hold when
 the section table is read. -/
@@ -142,7 +144,7 @@ theorem reset_init_gc_exists :
         InitGcCall H cap c1 c2 cA cM cP sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur after := by
   obtain ⟨initial, sections, ⟨w⟩⟩ := reset_read_sections_exists
   obtain ⟨t1, t2, t3, dom⟩ := reset_domain_kept initial sections w
-  obtain ⟨after, run, call⟩ := reset_init_gc_call w dom
+  obtain ⟨after, run, call, -⟩ := reset_init_gc_call w dom
   exact ⟨initial, after, _, _, _, _, _, _, _, run, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, call⟩
 /-- The reset run through caml_init_gc: back in caml_main at the default
 parameters, with readiness over the runtime's new blocks prepended. -/
@@ -153,7 +155,7 @@ theorem reset_init_gc_returned_exists :
         InitGcDone H cap parameterStack ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 Hfinal before after := by
   obtain ⟨initial, sections, ⟨w⟩⟩ := reset_read_sections_exists
   obtain ⟨t1, t2, t3, dom⟩ := reset_domain_kept initial sections w
-  obtain ⟨call, run1, A⟩ := reset_init_gc_call w dom
+  obtain ⟨call, run1, A, -⟩ := reset_init_gc_call w dom
   obtain ⟨Hfinal, after, run2, D⟩ := caml_init_gc call _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ A
   exact ⟨initial, sections, after, ⟨w⟩, run1.trans run2, _, _, _, _, _, _, _, _, _, _, _, _, _, Hfinal, _, D⟩
 end OCaml.Vm.Boot.WhileMinElfParse
