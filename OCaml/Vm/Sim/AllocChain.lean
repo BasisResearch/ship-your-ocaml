@@ -183,4 +183,80 @@ theorem _root_.OCaml.LoopGeometry.reserve1 {L : OCaml.Layout} {P : Prog} {s : St
     exact (memory _ (links_of_channels kept.chans id ch a hc hp)).trans
       (w1 _ (links_of_channels out.chans id ch a hc hp)).symm
 
+/-- The heap after allocating `os` in order. -/
+def allocAll (h : Heap) : List Obj → Heap
+  | [] => h
+  | o :: os => allocAll (h.alloc o).1 os
+
+/-- The words `os` take in the nursery, headers included. -/
+def blockWords : List Obj → Nat
+  | [] => 0
+  | o :: os => (o.wosize + 1) + blockWords os
+
+/-- Each object of `os` placed at its nursery block, below young pointer `y`,
+in allocation order. -/
+def AllPlaced (pl : Place) (h : Heap) (y : Nat) : List Obj → Prop
+  | [] => True
+  | o :: os => pl.φ (h.alloc o).2 = some (y - 8 * o.wosize) ∧ AllPlaced pl (h.alloc o).1 (y - 8 * (o.wosize + 1)) os
+
+/-- **Chained reservations, on virtual configs**: the geometry of the heap
+with every object of `os` placed, at a config that agrees with `c` on the
+words the geometry reads and whose young pointer is below them all. -/
+theorem _root_.OCaml.LoopGeometry.reserve_chain {L : OCaml.Layout} {P : Prog} {pl : Place} {cp : ChanPlace}
+    {high : Nat} (os : List Obj) : ∀ {s : St} {c : Config}, OCaml.LoopGeometry L P s c pl cp high →
+    s.heap.words + blockWords os ≤ L.budget.heapWords → AllPlaced pl s.heap (runtimeFields c).youngPtr os →
+    ∃ c', OCaml.LoopGeometry L P { s with heap := allocAll s.heap os } c' pl cp high ∧
+      word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state ∧
+      word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
+        word c (Layout.sym_caml_prim_table + Layout.off_prim_contents) ∧
+      (runtimeFields c').youngLimit = (runtimeFields c).youngLimit ∧
+      (runtimeFields c').youngPtr = (runtimeFields c).youngPtr - 8 * blockWords os ∧
+      word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels ∧
+      ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+        word c' (a + Gc.chanOffNext) = word c (a + Gc.chanOffNext) := by
+  induction os with
+  | nil =>
+    intro s c g _ _
+    exact ⟨c, g, rfl, rfl, rfl, by simp [blockWords], rfl, fun _ _ _ _ _ => rfl⟩
+  | cons o os ih =>
+    intro s c g fits placed
+    simp only [blockWords] at fits
+    have b1 := ReservedBlock.of_reservation g.nursery (⟨g.room, by omega⟩ : Reservation L s c o.wosize)
+    have g1 := g.reserve (by omega) placed.1
+    obtain ⟨y1, l1⟩ := reserved_young b1 g.toStackGeometry
+    have room1 := b1.room
+    have out1 := GrabOutside.of_geometry g.toStackGeometry ((runtimeFields c).youngPtr - 8 * o.wosize)
+    have w1 : ∀ x, OutLRange (grabReserveLog (word c Layout.sym_Caml_state).toNat
+        ((runtimeFields c).youngPtr - 8 * o.wosize)) x 8 →
+        word (reserved c ((runtimeFields c).youngPtr - 8 * o.wosize)) x = word c x := fun x h => reserved_word h
+    obtain ⟨c', g', d, p, l, y, hd, k⟩ := ih g1 (by simp only [Heap.words_alloc]; omega) (by
+      rw [y1, show (runtimeFields c).youngPtr - 8 * o.wosize - 8 = (runtimeFields c).youngPtr - 8 * (o.wosize + 1)
+        by omega]
+      exact placed.2)
+    refine ⟨c', g', d.trans (w1 _ out1.domain), p.trans (w1 _ out1.contents), l.trans l1, ?_,
+      hd.trans (w1 _ out1.head), fun id ch a hc hp => (k id ch a hc hp).trans
+        (w1 _ (links_of_channels out1.chans id ch a hc hp))⟩
+    rw [y, y1, blockWords]; omega
+
+/-- **Any number of reservations, then the real config**: the objects `os`
+placed at their nursery blocks in order; the config `after` agrees with `c`
+on the words the geometry reads and its young pointer is below them all. -/
+theorem _root_.OCaml.LoopGeometry.reserveN {L : OCaml.Layout} {P : Prog} {s : St} {c after : Config}
+    {pl : Place} {cp : ChanPlace} {high : Nat} {os : List Obj} (g : OCaml.LoopGeometry L P s c pl cp high)
+    (fits : s.heap.words + blockWords os ≤ L.budget.heapWords)
+    (placed : AllPlaced pl s.heap (runtimeFields c).youngPtr os)
+    (domain : word after Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (prims : word after (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
+    (limit : (runtimeFields after).youngLimit = (runtimeFields c).youngLimit)
+    (young : (runtimeFields after).youngPtr = (runtimeFields c).youngPtr - 8 * blockWords os)
+    (head : word after Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
+    (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+      word after (a + Gc.chanOffNext) = word c (a + Gc.chanOffNext)) :
+    OCaml.LoopGeometry L P { s with heap := allocAll s.heap os } after pl cp high := by
+  obtain ⟨c', g', d, p, l, y, hd, k⟩ := OCaml.LoopGeometry.reserve_chain os g fits placed
+  exact g'.transport (fun l o h => ⟨o, h, rfl⟩) rfl (domain.trans d.symm) (prims.trans p.symm)
+    (limit.trans l.symm) (young.trans y.symm) (head.trans hd.symm)
+    (fun id ch a hc hp => (links id ch a hc hp).trans (k id ch a hc hp).symm) rfl
+
 end OCaml.Vm.Sim

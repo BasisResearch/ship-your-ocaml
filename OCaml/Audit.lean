@@ -18,6 +18,7 @@ import OCaml.Vm.Sim.PrimSysArgvReturns
 import OCaml.Vm.Sim.PrimSysExitReturns
 import OCaml.Vm.Sim.OutListWalk
 import OCaml.Vm.Sim.OutListRun
+import OCaml.Vm.Sim.CcallFootprint
 import OCaml.Vm.Sim.StringAllocReturn
 import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.PrimExecutableNameReturns
@@ -6159,3 +6160,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.OutListWalk.out_list_finish
 #print axioms OCaml.Vm.Sim.OutListWalk.out_list_none
 #print axioms OCaml.Vm.Sim.OutListWalk.out_list_machine
+#print axioms OCaml.LoopGeometry.reserve_chain
+#print axioms OCaml.LoopGeometry.reserveN
+#print axioms OCaml.Vm.Sim.Invocation.frame_on
+#print axioms OCaml.Vm.Sim.NativePlaced.frame_below_on
+#print axioms OCaml.Vm.Sim.Ccall1Saved.frame_on
+#print axioms OCaml.Vm.Sim.ccall_observed_summary_on
+#print axioms OCaml.Vm.Sim.Misses.of_outLRange

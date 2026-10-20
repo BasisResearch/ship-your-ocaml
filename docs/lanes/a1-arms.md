@@ -263,6 +263,15 @@ head's first visit to `leave` over every open-channel record.
   The prologue is `pro_go`/`pro_empty` (`pro_keeps` and `pro_saved` are
   shared by both paths), then `walk_start` and `walk_loop`, then `leave_step`
   and `done_step` (or `empty_step`).
+* Shared tools for the adapter (agreed with a1-prims, 2026-10-20):
+  - `LoopGeometry.reserveN` (`AllocChain.lean`: `allocAll`, `blockWords`,
+    `AllPlaced`, `reserve_chain`), the nursery geometry after any number of
+    reservations, from the words the geometry reads (no log);
+  - `ccall_observed_summary_on` (`Sim/CcallFootprint.lean`), the C_CALL
+    return framed by a footprint predicate `W`, with `Misses`,
+    `FramedCallOn`, `FramedPrimitivePostOn`, `Ccall1Saved.frame_on`,
+    `NativePlaced.frame_below_on` and `Invocation.frame_on`. The log forms
+    are the instance `W x := ¬ OutL log x` (`Misses.of_outLRange`).
 * Next:
   - the representation: `objWords` as `ObjAt` of `outChannelsList`'s objects
     at `outListPlaces`, the result value, and `VmPayload` across `Written`
