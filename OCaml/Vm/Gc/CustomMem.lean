@@ -2,6 +2,7 @@ import OCaml.Vm.Primitives.Leaf
 import OCaml.Vm.Primitives.GprsKeptCore
 import OCaml.Vm.Boot.Startup.NativeFrame
 import OCaml.Vm.Gc.NurseryDefs
+import OCaml.Vm.Boot.Startup.HeapReady
 
 /-!
 # `caml_alloc_custom_mem` for a channel's custom block, from any call site
@@ -17,8 +18,12 @@ A call site (`CustomMemSite`) is its return address, its stack pointer, the
 record in `s0` and the caller's frame above `sp`. The call is safe for `k + 1`
 more such allocations (`Ready (k + 1)`); each one consumes one
 (`caml_extra_heap_resources` grows by `57424/297968` per call, and the sixth
-since the cut requests a major slice). `Ready` reads only the runtime's own
-state (`CustomMemRuntime.state`), which lies apart from what callers write:
+since the cut requests a major slice). newlib's heap enters as `HeapReady H cap`
+at the call and returns as `HeapReady H' cap'` over every block of `H` (the
+first call since the cut adds the custom table's block), so a caller with
+several calls (`caml_ml_out_channels_list`) chains it. `Ready` reads only the
+runtime's own state (`CustomMemCall.state`: the counters and the custom
+table, not newlib's free space), which lies apart from what callers write:
 * the native stack;
 * the minor heap;
 * the open channel records;
@@ -29,7 +34,7 @@ Callers therefore keep `Ready` across their own stores (`CustomMemRuntime.frame`
 
 namespace OCaml.Vm.Gc
 open Vsa.Machine Vsa.Sim OCaml.Vm OCaml.Vm.Primitives LeanRV64DExecutable
-open OCaml.Vm.Boot.Startup (NativeFrame)
+open OCaml.Vm.Boot.Startup (NativeFrame HeapReady)
 set_option autoImplicit false
 
 /-- `caml_alloc_custom_mem`'s entry. -/
@@ -80,8 +85,10 @@ structure CallerApart (c : Config) (a : Nat) : Prop where
 
 /-- At the call: the link and argument registers, the callee's stack room,
 and nursery room for the block (`caml_alloc_small`'s fast path). -/
-structure CustomMemInput (site : CustomMemSite) (f : Config) : Prop where
+structure CustomMemInput (H : List (Nat × Nat)) (cap : Nat) (site : CustomMemSite) (f : Config) : Prop where
   leaf : LeafInput site.link f
+  /-- newlib's heap, for the custom table's first allocation -/
+  heap : HeapReady H cap f
   pc : pcOf f = some customMemEntry
   regs : GHolds f.σ site.args
   frame : NativeFrame site.sp customStackBytes
@@ -93,8 +100,8 @@ header and operations word written. The callee-saved registers, `sp`, the
 young limit, the local roots, and memory outside its own footprint are kept.
 The footprint is: the runtime's state, the callee's stack, the block, and the
 `young_ptr` word. -/
-structure CustomMemReturned (state : Config → Nat → Prop) (site : CustomMemSite) (v : BitVec 64)
-    (f d : Config) : Prop where
+structure CustomMemReturned (state : Config → Nat → Prop) (H : List (Nat × Nat)) (site : CustomMemSite)
+    (v : BitVec 64) (f d : Config) : Prop where
   good : GoodState d.σ
   image : ExecutableImage d
   minstret : ∃ x, d.σ.regs.get? Register.minstret = some x
@@ -112,7 +119,11 @@ structure CustomMemReturned (state : Config → Nat → Prop) (site : CustomMemS
   domain : word d Layout.sym_Caml_state = word f Layout.sym_Caml_state
   header : bytesT d.σ.mem (v.toNat - 8) 8 = customHeader
   ops : bytesT d.σ.mem v.toNat 8 = channelOps
-  kept : ∀ a, ¬ state f a → (a < site.sp.toNat - customStackBytes ∨ site.sp.toNat ≤ a) →
+  /-- newlib's heap over every block of `H` (plus the custom table's on the
+  first call), ready for the next call -/
+  heap : ∃ H' cap', HeapReady H' cap' d ∧ ∀ e ∈ H, e ∈ H'
+  kept : ∀ a, ¬ state f a → ¬ VsaIris.VsaHeap.vsaFoot H a →
+    (a < site.sp.toNat - customStackBytes ∨ site.sp.toNat ≤ a) →
     (a + 24 < (runtimeFields f).youngPtr ∨ (runtimeFields f).youngPtr ≤ a) →
     (a + 8 ≤ domainAddr f Layout.off_young_ptr ∨ domainAddr f Layout.off_young_ptr + 8 ≤ a) →
     (d.σ.mem[a]?).getD 0 = (f.σ.mem[a]?).getD 0
@@ -120,14 +131,16 @@ structure CustomMemReturned (state : Config → Nat → Prop) (site : CustomMemS
 /-- **The runtime's channel custom allocations** (named obligation, lane
 a6-gc). `Ready k c`: `k` more calls are safe at `c`, judged from `state c`
 alone: the bytes `Ready` reads and the call may write besides its stack, the
-block and `young_ptr` (counters, custom table, newlib's free space). -/
+block, `young_ptr` and newlib's own bytes (`vsaFoot H`): the counters and the
+custom table. -/
 structure CustomMemCall (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) : Prop where
   apart : ∀ c a, state c a → CallerApart c a
   /-- a caller's stores outside the runtime's state keep it ready -/
   frame : ∀ k c c', Ready k c → (∀ a, state c a → (c'.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) →
     word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state → Ready k c' ∧ (∀ a, state c' a ↔ state c a)
-  call : ∀ (site : CustomMemSite) (k : Nat) (f : Config), Ready (k + 1) f → CustomMemInput site f →
+  call : ∀ (H : List (Nat × Nat)) (cap : Nat) (site : CustomMemSite) (k : Nat) (f : Config),
+    Ready (k + 1) f → CustomMemInput H cap site f →
     FnSummary customMemEntry (fun d => d = f)
-      (fun d => ∃ v, CustomMemReturned state site v f d ∧ Ready k d)
+      (fun d => ∃ v, CustomMemReturned state H site v f d ∧ Ready k d)
 
 end OCaml.Vm.Gc
