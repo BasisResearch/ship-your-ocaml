@@ -263,12 +263,33 @@ insertion is proved generically:
   with the minor heap empty and `young_start = NULL`.
   `young_ptr = young_alloc_end` and `young_start = 0` are premises for
   `caml_init_gc`'s composition to discharge.
-Next:
-* the ref-table resets and the return;
-* `renew_summary`'s post as a `WriteRegistersPost`, for readiness;
-* then compose caml_set_minor_heap_size.
-Then `caml_set_allocation_policy`, `caml_init_major_heap` (its chunk's
-pages go through the same insertion) and onward to the cut.
+* caml_set_minor_heap_size's ref-table resets and return are proved
+  (MinorRefSteps.lean). The ref-table blocks read past their own stores
+  with `past_stores`.
+  * Its composition `minor_heap_set` waits on `RenewPost.kept` (a2-sem).
+    Readiness across `caml_memprof_renew_minor_sample` then follows from
+    `RuntimeReadyL.of_kept` (RuntimeKept.lean).
+  * `PageModified`/`PageAdded` now keep s4–s11 (`saved`). caml_init_gc
+    holds values in s1–s9 across these calls.
+* `set_allocation_policy` (PolicySteps.lean): caml_set_allocation_policy(2)
+  stores the best-fit functions; every value is a link-time constant.
+* `alloc_for_heap` (HeapAlloc.lean): caml_alloc_for_heap(req) with huge
+  pages off.
+  * It allocates `round_up(req, 4096) + 4152`.
+  * The 56-byte chunk head sits just below the page boundary above
+    `mem + 56` (`ChunkSpot`). `ChunkHeadAt` names its fields.
+* Duplication signal: "restore ra, pop the frame, ret" blocks are proved one
+  per function (`stat_aligned_return`, `heap_alloc_return`,
+  `page_add_return`, `minor_return`, …). The generator could emit them
+  generically.
+Next: land `minor_heap_set`, then caml_init_major_heap:
+* `__divdi3`/`__muldi3` (`ready_muldi3` exists);
+* the In_heap `caml_page_table_add`, whose disjointness comes from
+  `MinorHeapSet.only` and the fresh chunk;
+* the best-fit `init_merge`/`make_free_blocks`;
+* the gray-vals allocations;
+* the tail `memset`.
+Then onward to the cut.
 
 ## Round 2 status (2026-10-06, search)
 
