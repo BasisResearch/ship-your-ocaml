@@ -71,6 +71,7 @@ structure PageTableDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra blk : Bi
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   saved : ∀ k ∈ abiSaved, gprGet after.σ k = gprGet before.σ k
+  aligned : blk.toNat % 16 = 0
 
 theorem page_table_initialize (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra : BitVec 64)
     (A : PageTableCall H capacity charge sp ra c) :
@@ -292,6 +293,7 @@ theorem page_table_initialize (c : Config) (H : List (Nat × Nat)) (capacity cha
         pageTableSaveLog]
       rw [frameOn_writeLog _ _ _ (frame32.word_log_inside fun o w h => by simp at h; omega) x
         ⟨Or.inr hx, trivial⟩] 
+    aligned := align
     saved := fun k member => by
       have total := ((((((((GprsSame.of_post p1 (by decide)).trans (GprsSame.of_post p2 (by decide))).trans
         (GprsSame.of_post p3 (by decide))).trans D.same).trans (GprsSame.of_post p5 (by decide))).trans
