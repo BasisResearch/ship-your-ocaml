@@ -13,6 +13,7 @@ import OCaml.Vm.Primitives.Named.RegisterFront
 import OCaml.Vm.Sim.PrimInt64FloatReturns
 import OCaml.Vm.Sim.PrimSysArgvReturns
 import OCaml.Vm.Sim.PrimSysExitReturns
+import OCaml.Vm.Sim.OutListWalk
 import OCaml.Vm.Sim.StringAllocReturn
 import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.PrimExecutableNameReturns
@@ -6002,3 +6003,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_doAtExit
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_report
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_to_fprintf
+#print axioms OCaml.Vm.Primitives.Channel.OutList.visit_skip
+#print axioms OCaml.Vm.Primitives.Channel.OutList.visit_go
+#print axioms OCaml.Vm.Primitives.Channel.OutList.alloc_enter
+#print axioms OCaml.Vm.Primitives.Channel.OutList.cons_enter
+#print axioms OCaml.Vm.Primitives.Channel.OutList.link_step
+#print axioms OCaml.Vm.Sim.SmallAllocation.constructorLog_words
+#print axioms OCaml.Vm.Sim.SmallAllocation.NurseryMemory.of_words
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_skip
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_enter
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_after
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_listed_run
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_listed
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_loop

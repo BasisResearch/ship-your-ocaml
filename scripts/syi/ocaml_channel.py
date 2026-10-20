@@ -120,13 +120,17 @@ def out_list(ld, rest):
     test = (f'[(15, {ld(0)}), {rest([2, 8, 10, 13, 14])}]', {'mem': [('R 8 + 32#64', 'window')]})
     flags = (f'[(15, {ld(0, "lw")} &&& 4#64), {rest([2, 8, 10, 13, 14])}]', {'mem': [('R 8 + 68#64', 'window')]})
     skip = (f'[(8, {ld(0)}), {rest([2, 10, 13, 14])}]', {'mem': [('R 8 + 48#64', 'window')]})
-    link = (f'[(8, {ld(4)}), (13, 2147896584#64), (15, {ld(3)}), (12, {ld(2)}), (14, {ld(1)}), (2, R 2), (10, R 10)]',
+    # `res` is stored at sp + 24 and read back: the block splits at 0x80016100
+    # (`SPLITS`), so the read-back starts `tail` and sees the store.
+    link = (f'[(12, {ld(2)}), (14, {ld(1)}), (15, {ld(0)}), {rest([2, 8, 10])}]',
             {'mem': [('R 2 + 40#64', 'window'), ('R 2 + 24#64', 'window'), ('R 2 + 8#64', 'window'), ('R 10', 'window'),
-                     ('R 2 + 32#64', 'window'), ('R 2 + 24#64', 'window'), ('@3 + 8#64', 'window'),
-                     ('R 8 + 48#64', 'window')],
-             'log': f'[((R 2 + 24#64).toNat, 8, R 10), ((R 10).toNat, 8, {ld(0)}), (({ld(3)} + 8#64).toNat, 8, {ld(2)})]'})
+                     ('R 2 + 32#64', 'window')],
+             'log': f'[((R 2 + 24#64).toNat, 8, R 10), ((R 10).toNat, 8, {ld(0)})]'})
+    tail = (f'[(8, {ld(1)}), (13, 2147896584#64), (15, {ld(0)}), {rest([2, 10, 12, 14])}]',
+            {'mem': [('R 2 + 24#64', 'window'), ('@0 + 8#64', 'window'), ('R 8 + 48#64', 'window')],
+             'log': f'[(({ld(0)} + 8#64).toNat, 8, R 12)]'})
     return ('caml_ml_out_channels_list', 'Caml_ml_out_channels_list', 'OutList', None,
-            ('pro', 'testSkip', 'flagsSkip', 'linkNext', 'skipLast'), [
+            ('pro', 'testSkip', 'flagsSkip', 'tailNext', 'skipLast'), [
         (0x80016020, 'pro', [1, 2, 8], pro_regs, pro_mem),
         (0x80016020, 'proEmpty', [1, 2, 8], pro_regs, pro_mem),
         (0x80016088, 'empty', [2, 10, 14, 15], f'[{rest([2, 10, 14, 15])}]', {}),
@@ -141,8 +145,9 @@ def out_list(ld, rest):
         (0x800160d0, 'cons', [2, 8, 10], f'[(10, 2#64), (11, 0#64), (15, {ld(0)}), {rest([2, 8])}]',
          {'mem': [('R 10 + 8#64', 'window'), ('R 2 + 24#64', 'window'), ('R 2 + 40#64', 'window'), ('R 2 + 32#64', 'window')],
           'log': f'[((R 10 + 8#64).toNat, 8, R 8), ((R 2 + 40#64).toNat, 8, R 10), ((R 2 + 32#64).toNat, 8, {ld(0)})]'}),
-        (0x800160ec, 'linkNext', [2, 8, 10]) + link,
-        (0x800160ec, 'linkLast', [2, 8, 10]) + link,
+        (0x800160ec, 'link', [2, 8, 10]) + link,
+        (0x80016100, 'tailNext', [2, 8, 10, 12, 14]) + tail,
+        (0x80016100, 'tailLast', [2, 8, 10, 12, 14]) + tail,
         (0x8001608c, 'skipLast', [2, 8, 10, 13, 14]) + skip,
         (0x8001608c, 'skipNext', [2, 8, 10, 13, 14]) + skip,
         (0x80016118, 'leave', [2, 10, 13, 14], f'[(10, {ld(1)}), (15, {ld(0)}), {rest([2, 13, 14])}]',
@@ -180,6 +185,10 @@ def ml_open(ld, rest, out):
 
 
 
+# Extra block leaders (`build_cfg`'s `splits`) per function.
+SPLITS = {'caml_ml_out_channels_list': (0x80016100,)}
+
+
 def emit_channel(root, functions, decode, code, text_base, lib, build_cfg, literal):
     ld = lambda n, k='ld': f'bytesVal .{k} (loads.getD {n} [])'
     rest = lambda ks: ', '.join(f'({k}, R {k})' for k in ks)
@@ -189,5 +198,5 @@ def emit_channel(root, functions, decode, code, text_base, lib, build_cfg, liter
         sel = [(blk[1], blk[2], blk[3], blk[1] in taken) + tuple(blk[4:]) for blk in fblocks]
         result.update(emit_tuple_blocks(*args, fn, stem, f'OCaml.Vm.Primitives.Channel.{ns}',
             f'OCaml/Vm/Primitives/Channel/{ns}.lean', sel, starts=[blk[0] for blk in fblocks],
-            chunked=(), flag=FLAG, route=route))
+            chunked=(), flag=FLAG, route=route, splits=SPLITS.get(fn, ())))
     return result

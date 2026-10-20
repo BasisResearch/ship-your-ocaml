@@ -1960,229 +1960,277 @@ theorem cons_fast (c : Config) (R : Nat → BitVec 64)
   · rfl
   · decide
 
-def linkNext_body : List MInstr := [
+def link_body : List MInstr := [
   ⟨0x800160ec#64, 0x02813783#32, 0x83#8, 0x37#8, 0x81#8, 0x02#8, .ld, 15, 2, 0, 0x028#12⟩,
   ⟨0x800160f0#64, 0x00a13c23#32, 0x23#8, 0x3c#8, 0xa1#8, 0x00#8, .sd, 0, 2, 10, 0x018#12⟩,
   ⟨0x800160f4#64, 0x00813703#32, 0x03#8, 0x37#8, 0x81#8, 0x00#8, .ld, 14, 2, 0, 0x008#12⟩,
   ⟨0x800160f8#64, 0x00f53023#32, 0x23#8, 0x30#8, 0xf5#8, 0x00#8, .sd, 0, 10, 15, 0x000#12⟩,
-  ⟨0x800160fc#64, 0x02013603#32, 0x03#8, 0x36#8, 0x01#8, 0x02#8, .ld, 12, 2, 0, 0x020#12⟩,
-  ⟨0x80016100#64, 0x01813783#32, 0x83#8, 0x37#8, 0x81#8, 0x01#8, .ld, 15, 2, 0, 0x018#12⟩,
-  ⟨0x80016104#64, 0x0004f697#32, 0x97#8, 0xf6#8, 0x04#8, 0x00#8, .auipc, 13, 0, 0, 0x000#12⟩,
-  ⟨0x80016108#64, 0xc0468693#32, 0x93#8, 0x86#8, 0x46#8, 0xc0#8, .addi, 13, 13, 0, 0xc04#12⟩,
-  ⟨0x8001610c#64, 0x00c7b423#32, 0x23#8, 0xb4#8, 0xc7#8, 0x00#8, .sd, 0, 15, 12, 0x008#12⟩,
-  ⟨0x80016110#64, 0x03043403#32, 0x03#8, 0x34#8, 0x04#8, 0x03#8, .ld, 8, 8, 0, 0x030#12⟩
+  ⟨0x800160fc#64, 0x02013603#32, 0x03#8, 0x36#8, 0x01#8, 0x02#8, .ld, 12, 2, 0, 0x020#12⟩
 ]
-def linkNext_term : TInstr := ⟨0x80016114#64, 0xf80410e3#32, 0xe3#8, 0x10#8, 0x04#8, 0xf8#8, .br bop.BNE true, 8, 0, 0x1f80#13, 0#21, 0#12⟩
-def linkNext_blocks : List BBlock := [{ body := linkNext_body, term := some linkNext_term }]
-def linkNext_input (R : Nat → BitVec 64) : GRegs := [(2, R 2), (8, R 8), (10, R 10)]
+def link_blocks : List BBlock := [{ body := link_body, term := none }]
+def link_input (R : Nat → BitVec 64) : GRegs := [(2, R 2), (8, R 8), (10, R 10)]
 
-theorem linkNext_code {c : Config} (image : ExecutableImage c) : CodeFacts c.σ.mem linkNext_body := by
+theorem link_code {c : Config} (image : ExecutableImage c) : CodeFacts c.σ.mem link_body := by
   have hc := loaded image
-  simp only [CodeFacts, linkNext_body]
+  simp only [CodeFacts, link_body]
   chain_facts hc with "Vsa.Sim.Code.caml_ml_out_channels_list_at_"
 
-theorem linkNext_shape : ChainOK 0x800160ec#64 [2, 8, 10] linkNext_blocks := by
-  simp only [ChainOK, BBlockOK, linkNext_blocks, linkNext_body, linkNext_term, BlockOKM]
+theorem link_shape : ChainOK 0x800160ec#64 [2, 8, 10] link_blocks := by
+  simp only [ChainOK, BBlockOK, link_blocks, link_body, BlockOKM]
   repeat' apply And.intro
   all_goals decide
 
-theorem linkNext_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)
+theorem link_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)
     (loads : List (List (BitVec 8))) (h : LeafInput ra c)
-    (regs : GHolds c.σ (linkNext_input R))
-    (access : AccessPlan c.σ.mem (linkNext_input R) loads linkNext_body)
-    (control : TermFactsO (runGM linkNext_body (linkNext_input R) loads) (some linkNext_term)) :
+    (regs : GHolds c.σ (link_input R))
+    (access : AccessPlan c.σ.mem (link_input R) loads link_body)
+    (control : TermFactsO (runGM link_body (link_input R) loads) (none)) :
     FnSummary 0x800160ec#64 (fun d => d = c)
-      (BlockPost linkNext_blocks 0x800160ec#64 (linkNext_input R) loads c) := by
-  apply block_summary linkNext_blocks _ _ _ c
-  refine ⟨h.good, h.minstret, regs, ?_, ?_, linkNext_shape, h.tick⟩
+      (BlockPost link_blocks 0x800160ec#64 (link_input R) loads c) := by
+  apply block_summary link_blocks _ _ _ c
+  refine ⟨h.good, h.minstret, regs, ?_, ?_, link_shape, h.tick⟩
   · change KeysOK [2, 8, 10]; decide
-  · apply singleton_chain_facts (accessPlan_facts (linkNext_code h.image) access) ?_ control
-    have hc := loaded h.image
-    chain_facts hc with "Vsa.Sim.Code.caml_ml_out_channels_list_at_"
+  · apply singleton_chain_facts (accessPlan_facts (link_code h.image) access) ?_ control
+    trivial
 
-def linkNext_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs :=
-  [(8, bytesVal .ld (loads.getD 4 [])), (13, 2147896584#64), (15, bytesVal .ld (loads.getD 3 [])), (12, bytesVal .ld (loads.getD 2 [])), (14, bytesVal .ld (loads.getD 1 [])), (2, R 2), (10, R 10)]
-theorem linkNext_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
-    runGM linkNext_body (linkNext_input R) loads = linkNext_regs R loads := by
-  simp [linkNext_body, linkNext_input, linkNext_regs, runGM, stepGM, stepLdsM,
+def link_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs :=
+  [(12, bytesVal .ld (loads.getD 2 [])), (14, bytesVal .ld (loads.getD 1 [])), (15, bytesVal .ld (loads.getD 0 [])), (2, R 2), (8, R 8), (10, R 10)]
+theorem link_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM link_body (link_input R) loads = link_regs R loads := by
+  simp [link_body, link_input, link_regs, runGM, stepGM, stepLdsM,
     wvalM, srcVal, lookupG, eraseG, imm20Of, DoubleAllocation.domainGlobal, Layout.sym_Caml_state,
     Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?, BitVec.add_assoc]
 
-def linkNextLog (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry :=
-  [((R 2 + 24#64).toNat, 8, R 10), ((R 10).toNat, 8, bytesVal .ld (loads.getD 0 [])), ((bytesVal .ld (loads.getD 3 []) + 8#64).toNat, 8, bytesVal .ld (loads.getD 2 []))]
+def linkLog (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry :=
+  [((R 2 + 24#64).toNat, 8, R 10), ((R 10).toNat, 8, bytesVal .ld (loads.getD 0 []))]
 
-theorem linkNext_log_eq (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
-    (evalBlocks linkNext_blocks (SegEvalState.init (linkNext_input R) loads)).log = linkNextLog R loads := by
-  change [] ++ wlogM linkNext_body (linkNext_input R) loads = _
-  simp only [List.nil_append, linkNext_body, wlogM, linkNext_input, wentryM, widthOfM, eaddrM, srcVal, stepGM,
+theorem link_log_eq (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    (evalBlocks link_blocks (SegEvalState.init (link_input R) loads)).log = linkLog R loads := by
+  change [] ++ wlogM link_body (link_input R) loads = _
+  simp only [List.nil_append, link_body, wlogM, link_input, wentryM, widthOfM, eaddrM, srcVal, stepGM,
     lookupG, eraseG, stepLdsM, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, Nat.reduceAdd, wvalM,
     Functions.sign_extend, Sail.BitVec.signExtend]
-  simp only [show BitVec.signExtend 64 0#12 = 0#64 by decide, show BitVec.signExtend 64 24#12 = 24#64 by decide, show BitVec.signExtend 64 3076#12 = -1020#64 by decide, show BitVec.signExtend 64 32#12 = 32#64 by decide, show BitVec.signExtend 64 40#12 = 40#64 by decide, show BitVec.signExtend 64 48#12 = 48#64 by decide, show BitVec.signExtend 64 8#12 = 8#64 by decide, ← BitVec.sub_eq_add_neg, BitVec.add_zero]
-  simp only [linkNextLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,
+  simp only [show BitVec.signExtend 64 0#12 = 0#64 by decide, show BitVec.signExtend 64 24#12 = 24#64 by decide, show BitVec.signExtend 64 32#12 = 32#64 by decide, show BitVec.signExtend 64 40#12 = 40#64 by decide, show BitVec.signExtend 64 8#12 = 8#64 by decide, ← BitVec.sub_eq_add_neg, BitVec.add_zero]
+  simp only [linkLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,
     List.getElem?_tail, BitVec.zero_add]
 
-def linkNext_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
-  [read8 m (R 2 + 40#64).toNat, read8 m (R 2 + 8#64).toNat, read8 m (R 2 + 32#64).toNat, read8 m (R 2 + 24#64).toNat, read8 m (R 8 + 48#64).toNat]
+def link_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
+  [read8 m (R 2 + 40#64).toNat, read8 m (R 2 + 8#64).toNat, read8 m (R 2 + 32#64).toNat]
 
-theorem linkNext_fast (c : Config) (R : Nat → BitVec 64)
-    (h : LeafInput (R 1) c) (regs : GHolds c.σ (linkNext_input R))
+theorem link_fast (c : Config) (R : Nat → BitVec 64)
+    (h : LeafInput (R 1) c) (regs : GHolds c.σ (link_input R))
     (w0 : ReadWindow (R 2 + 40#64) 8)
     (w1 : WriteWindow (R 2 + 24#64) 8)
     (w2 : ReadWindow (R 2 + 8#64) 8)
-    (a2 : OutLRange ((linkNextLog R (linkNext_loads c.σ.mem R)).take 1) (R 2 + 8#64).toNat 8)
+    (a2 : OutLRange ((linkLog R (link_loads c.σ.mem R)).take 1) (R 2 + 8#64).toNat 8)
     (w3 : WriteWindow (R 10) 8)
     (w4 : ReadWindow (R 2 + 32#64) 8)
-    (a4 : OutLRange ((linkNextLog R (linkNext_loads c.σ.mem R)).take 2) (R 2 + 32#64).toNat 8)
-    (w5 : ReadWindow (R 2 + 24#64) 8)
-    (a5 : OutLRange ((linkNextLog R (linkNext_loads c.σ.mem R)).take 2) (R 2 + 24#64).toNat 8)
-    (w6 : WriteWindow ((bytesVal .ld (read8 c.σ.mem (R 2 + 24#64).toNat)) + 8#64) 8)
-    (w7 : ReadWindow (R 8 + 48#64) 8)
-    (a7 : OutLRange ((linkNextLog R (linkNext_loads c.σ.mem R)).take 3) (R 8 + 48#64).toNat 8)
-    (outside : ImageOutside (linkNextLog R (linkNext_loads c.σ.mem R)))
-    (ok : guardB .BNE (bytesVal .ld ((linkNext_loads c.σ.mem R).getD 4 [])) (0#64) = true) :
+    (a4 : OutLRange ((linkLog R (link_loads c.σ.mem R)).take 2) (R 2 + 32#64).toNat 8)
+    (outside : ImageOutside (linkLog R (link_loads c.σ.mem R))) :
     FnSummary 0x800160ec#64 (fun d => d = c)
-      (WriteRegistersPost [8, 12, 13, 14, 15] (linkNextLog R (linkNext_loads c.σ.mem R)) c (0x80016094#64) (R 10) (linkNext_regs R (linkNext_loads c.σ.mem R))) := by
-  have wl : wlogM linkNext_body (linkNext_input R) (linkNext_loads c.σ.mem R) = linkNextLog R (linkNext_loads c.σ.mem R) := by rw [← linkNext_log_eq R _]; rfl
-  have access : AccessPlan c.σ.mem (linkNext_input R) (linkNext_loads c.σ.mem R) linkNext_body := by
+      (WriteRegistersPost [12, 14, 15] (linkLog R (link_loads c.σ.mem R)) c (0x80016100#64) (R 10) (link_regs R (link_loads c.σ.mem R))) := by
+  have wl : wlogM link_body (link_input R) (link_loads c.σ.mem R) = linkLog R (link_loads c.σ.mem R) := by rw [← link_log_eq R _]; rfl
+  have access : AccessPlan c.σ.mem (link_input R) (link_loads c.σ.mem R) link_body := by
     apply accessPlan_of_pure
-    · simp only [AccessPure, linkNext_body, linkNext_loads]
+    · simp only [AccessPure, link_body, link_loads]
       chain_facts True.intro
       · apply w0.ld rfl ?_ (read8_pins _ _)
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input]
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, link_input]
       · apply w1.sd rfl
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input]
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, link_input]
       · apply w2.ld rfl ?_ (read8_pins _ _)
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input]
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, link_input]
       · apply w3.sd rfl
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input]
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, link_input]
       · apply w4.ld rfl ?_ (read8_pins _ _)
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input]
-      · apply w5.ld rfl ?_ (read8_pins _ _)
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input]
-      · apply w6.sd rfl
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input]
-      · apply w7.ld rfl ?_ (read8_pins _ _)
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input]
-    · rw [wl]; simp only [LoadMiss, linkNext_body, IsStore, Bool.false_eq_true, ↓reduceIte, Nat.reduceAdd]
-      exact ⟨fun _ => by simp [OutLRange], fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input, linkNext_loads]) a2, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input, linkNext_loads]) a4, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input, linkNext_loads]) a5, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkNext_input, linkNext_loads]) a7, trivial⟩
-  have control : TermFactsO (runGM linkNext_body (linkNext_input R) (linkNext_loads c.σ.mem R)) (some linkNext_term) := by rw [linkNext_eval]; exact ok
-  apply registers_of_blocks h.image outside (linkNext_summary c (R 1) R _ h regs access control)
-  · exact linkNext_log_eq R _
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, link_input]
+    · rw [wl]; simp only [LoadMiss, link_body, IsStore, Bool.false_eq_true, ↓reduceIte, Nat.reduceAdd]
+      exact ⟨fun _ => by simp [OutLRange], fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, link_input, link_loads]) a2, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, link_input, link_loads]) a4, trivial⟩
+  have control : TermFactsO (runGM link_body (link_input R) (link_loads c.σ.mem R)) (none) := True.intro
+  apply registers_of_blocks h.image outside (link_summary c (R 1) R _ h regs access control)
+  · exact link_log_eq R _
   · rfl
-  · exact linkNext_eval R _
+  · exact link_eval R _
   · rfl
   · decide
 
-def linkLast_body : List MInstr := [
-  ⟨0x800160ec#64, 0x02813783#32, 0x83#8, 0x37#8, 0x81#8, 0x02#8, .ld, 15, 2, 0, 0x028#12⟩,
-  ⟨0x800160f0#64, 0x00a13c23#32, 0x23#8, 0x3c#8, 0xa1#8, 0x00#8, .sd, 0, 2, 10, 0x018#12⟩,
-  ⟨0x800160f4#64, 0x00813703#32, 0x03#8, 0x37#8, 0x81#8, 0x00#8, .ld, 14, 2, 0, 0x008#12⟩,
-  ⟨0x800160f8#64, 0x00f53023#32, 0x23#8, 0x30#8, 0xf5#8, 0x00#8, .sd, 0, 10, 15, 0x000#12⟩,
-  ⟨0x800160fc#64, 0x02013603#32, 0x03#8, 0x36#8, 0x01#8, 0x02#8, .ld, 12, 2, 0, 0x020#12⟩,
+def tailNext_body : List MInstr := [
   ⟨0x80016100#64, 0x01813783#32, 0x83#8, 0x37#8, 0x81#8, 0x01#8, .ld, 15, 2, 0, 0x018#12⟩,
   ⟨0x80016104#64, 0x0004f697#32, 0x97#8, 0xf6#8, 0x04#8, 0x00#8, .auipc, 13, 0, 0, 0x000#12⟩,
   ⟨0x80016108#64, 0xc0468693#32, 0x93#8, 0x86#8, 0x46#8, 0xc0#8, .addi, 13, 13, 0, 0xc04#12⟩,
   ⟨0x8001610c#64, 0x00c7b423#32, 0x23#8, 0xb4#8, 0xc7#8, 0x00#8, .sd, 0, 15, 12, 0x008#12⟩,
   ⟨0x80016110#64, 0x03043403#32, 0x03#8, 0x34#8, 0x04#8, 0x03#8, .ld, 8, 8, 0, 0x030#12⟩
 ]
-def linkLast_term : TInstr := ⟨0x80016114#64, 0xf80410e3#32, 0xe3#8, 0x10#8, 0x04#8, 0xf8#8, .br bop.BNE false, 8, 0, 0x1f80#13, 0#21, 0#12⟩
-def linkLast_blocks : List BBlock := [{ body := linkLast_body, term := some linkLast_term }]
-def linkLast_input (R : Nat → BitVec 64) : GRegs := [(2, R 2), (8, R 8), (10, R 10)]
+def tailNext_term : TInstr := ⟨0x80016114#64, 0xf80410e3#32, 0xe3#8, 0x10#8, 0x04#8, 0xf8#8, .br bop.BNE true, 8, 0, 0x1f80#13, 0#21, 0#12⟩
+def tailNext_blocks : List BBlock := [{ body := tailNext_body, term := some tailNext_term }]
+def tailNext_input (R : Nat → BitVec 64) : GRegs := [(2, R 2), (8, R 8), (10, R 10), (12, R 12), (14, R 14)]
 
-theorem linkLast_code {c : Config} (image : ExecutableImage c) : CodeFacts c.σ.mem linkLast_body := by
+theorem tailNext_code {c : Config} (image : ExecutableImage c) : CodeFacts c.σ.mem tailNext_body := by
   have hc := loaded image
-  simp only [CodeFacts, linkLast_body]
+  simp only [CodeFacts, tailNext_body]
   chain_facts hc with "Vsa.Sim.Code.caml_ml_out_channels_list_at_"
 
-theorem linkLast_shape : ChainOK 0x800160ec#64 [2, 8, 10] linkLast_blocks := by
-  simp only [ChainOK, BBlockOK, linkLast_blocks, linkLast_body, linkLast_term, BlockOKM]
+theorem tailNext_shape : ChainOK 0x80016100#64 [2, 8, 10, 12, 14] tailNext_blocks := by
+  simp only [ChainOK, BBlockOK, tailNext_blocks, tailNext_body, tailNext_term, BlockOKM]
   repeat' apply And.intro
   all_goals decide
 
-theorem linkLast_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)
+theorem tailNext_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)
     (loads : List (List (BitVec 8))) (h : LeafInput ra c)
-    (regs : GHolds c.σ (linkLast_input R))
-    (access : AccessPlan c.σ.mem (linkLast_input R) loads linkLast_body)
-    (control : TermFactsO (runGM linkLast_body (linkLast_input R) loads) (some linkLast_term)) :
-    FnSummary 0x800160ec#64 (fun d => d = c)
-      (BlockPost linkLast_blocks 0x800160ec#64 (linkLast_input R) loads c) := by
-  apply block_summary linkLast_blocks _ _ _ c
-  refine ⟨h.good, h.minstret, regs, ?_, ?_, linkLast_shape, h.tick⟩
-  · change KeysOK [2, 8, 10]; decide
-  · apply singleton_chain_facts (accessPlan_facts (linkLast_code h.image) access) ?_ control
+    (regs : GHolds c.σ (tailNext_input R))
+    (access : AccessPlan c.σ.mem (tailNext_input R) loads tailNext_body)
+    (control : TermFactsO (runGM tailNext_body (tailNext_input R) loads) (some tailNext_term)) :
+    FnSummary 0x80016100#64 (fun d => d = c)
+      (BlockPost tailNext_blocks 0x80016100#64 (tailNext_input R) loads c) := by
+  apply block_summary tailNext_blocks _ _ _ c
+  refine ⟨h.good, h.minstret, regs, ?_, ?_, tailNext_shape, h.tick⟩
+  · change KeysOK [2, 8, 10, 12, 14]; decide
+  · apply singleton_chain_facts (accessPlan_facts (tailNext_code h.image) access) ?_ control
     have hc := loaded h.image
     chain_facts hc with "Vsa.Sim.Code.caml_ml_out_channels_list_at_"
 
-def linkLast_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs :=
-  [(8, bytesVal .ld (loads.getD 4 [])), (13, 2147896584#64), (15, bytesVal .ld (loads.getD 3 [])), (12, bytesVal .ld (loads.getD 2 [])), (14, bytesVal .ld (loads.getD 1 [])), (2, R 2), (10, R 10)]
-theorem linkLast_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
-    runGM linkLast_body (linkLast_input R) loads = linkLast_regs R loads := by
-  simp [linkLast_body, linkLast_input, linkLast_regs, runGM, stepGM, stepLdsM,
+def tailNext_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs :=
+  [(8, bytesVal .ld (loads.getD 1 [])), (13, 2147896584#64), (15, bytesVal .ld (loads.getD 0 [])), (2, R 2), (10, R 10), (12, R 12), (14, R 14)]
+theorem tailNext_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM tailNext_body (tailNext_input R) loads = tailNext_regs R loads := by
+  simp [tailNext_body, tailNext_input, tailNext_regs, runGM, stepGM, stepLdsM,
     wvalM, srcVal, lookupG, eraseG, imm20Of, DoubleAllocation.domainGlobal, Layout.sym_Caml_state,
     Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?, BitVec.add_assoc]
 
-def linkLastLog (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry :=
-  [((R 2 + 24#64).toNat, 8, R 10), ((R 10).toNat, 8, bytesVal .ld (loads.getD 0 [])), ((bytesVal .ld (loads.getD 3 []) + 8#64).toNat, 8, bytesVal .ld (loads.getD 2 []))]
+def tailNextLog (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry :=
+  [((bytesVal .ld (loads.getD 0 []) + 8#64).toNat, 8, R 12)]
 
-theorem linkLast_log_eq (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
-    (evalBlocks linkLast_blocks (SegEvalState.init (linkLast_input R) loads)).log = linkLastLog R loads := by
-  change [] ++ wlogM linkLast_body (linkLast_input R) loads = _
-  simp only [List.nil_append, linkLast_body, wlogM, linkLast_input, wentryM, widthOfM, eaddrM, srcVal, stepGM,
+theorem tailNext_log_eq (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    (evalBlocks tailNext_blocks (SegEvalState.init (tailNext_input R) loads)).log = tailNextLog R loads := by
+  change [] ++ wlogM tailNext_body (tailNext_input R) loads = _
+  simp only [List.nil_append, tailNext_body, wlogM, tailNext_input, wentryM, widthOfM, eaddrM, srcVal, stepGM,
     lookupG, eraseG, stepLdsM, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, Nat.reduceAdd, wvalM,
     Functions.sign_extend, Sail.BitVec.signExtend]
-  simp only [show BitVec.signExtend 64 0#12 = 0#64 by decide, show BitVec.signExtend 64 24#12 = 24#64 by decide, show BitVec.signExtend 64 3076#12 = -1020#64 by decide, show BitVec.signExtend 64 32#12 = 32#64 by decide, show BitVec.signExtend 64 40#12 = 40#64 by decide, show BitVec.signExtend 64 48#12 = 48#64 by decide, show BitVec.signExtend 64 8#12 = 8#64 by decide, ← BitVec.sub_eq_add_neg, BitVec.add_zero]
-  simp only [linkLastLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,
+  simp only [show BitVec.signExtend 64 24#12 = 24#64 by decide, show BitVec.signExtend 64 3076#12 = -1020#64 by decide, show BitVec.signExtend 64 48#12 = 48#64 by decide, show BitVec.signExtend 64 8#12 = 8#64 by decide, ← BitVec.sub_eq_add_neg, BitVec.add_zero]
+  simp only [tailNextLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,
     List.getElem?_tail, BitVec.zero_add]
 
-def linkLast_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
-  [read8 m (R 2 + 40#64).toNat, read8 m (R 2 + 8#64).toNat, read8 m (R 2 + 32#64).toNat, read8 m (R 2 + 24#64).toNat, read8 m (R 8 + 48#64).toNat]
+def tailNext_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
+  [read8 m (R 2 + 24#64).toNat, read8 m (R 8 + 48#64).toNat]
 
-theorem linkLast_fast (c : Config) (R : Nat → BitVec 64)
-    (h : LeafInput (R 1) c) (regs : GHolds c.σ (linkLast_input R))
-    (w0 : ReadWindow (R 2 + 40#64) 8)
-    (w1 : WriteWindow (R 2 + 24#64) 8)
-    (w2 : ReadWindow (R 2 + 8#64) 8)
-    (a2 : OutLRange ((linkLastLog R (linkLast_loads c.σ.mem R)).take 1) (R 2 + 8#64).toNat 8)
-    (w3 : WriteWindow (R 10) 8)
-    (w4 : ReadWindow (R 2 + 32#64) 8)
-    (a4 : OutLRange ((linkLastLog R (linkLast_loads c.σ.mem R)).take 2) (R 2 + 32#64).toNat 8)
-    (w5 : ReadWindow (R 2 + 24#64) 8)
-    (a5 : OutLRange ((linkLastLog R (linkLast_loads c.σ.mem R)).take 2) (R 2 + 24#64).toNat 8)
-    (w6 : WriteWindow ((bytesVal .ld (read8 c.σ.mem (R 2 + 24#64).toNat)) + 8#64) 8)
-    (w7 : ReadWindow (R 8 + 48#64) 8)
-    (a7 : OutLRange ((linkLastLog R (linkLast_loads c.σ.mem R)).take 3) (R 8 + 48#64).toNat 8)
-    (outside : ImageOutside (linkLastLog R (linkLast_loads c.σ.mem R)))
-    (ok : guardB .BNE (bytesVal .ld ((linkLast_loads c.σ.mem R).getD 4 [])) (0#64) = false) :
-    FnSummary 0x800160ec#64 (fun d => d = c)
-      (WriteRegistersPost [8, 12, 13, 14, 15] (linkLastLog R (linkLast_loads c.σ.mem R)) c (0x80016118#64) (R 10) (linkLast_regs R (linkLast_loads c.σ.mem R))) := by
-  have wl : wlogM linkLast_body (linkLast_input R) (linkLast_loads c.σ.mem R) = linkLastLog R (linkLast_loads c.σ.mem R) := by rw [← linkLast_log_eq R _]; rfl
-  have access : AccessPlan c.σ.mem (linkLast_input R) (linkLast_loads c.σ.mem R) linkLast_body := by
+theorem tailNext_fast (c : Config) (R : Nat → BitVec 64)
+    (h : LeafInput (R 1) c) (regs : GHolds c.σ (tailNext_input R))
+    (w0 : ReadWindow (R 2 + 24#64) 8)
+    (w1 : WriteWindow ((bytesVal .ld (read8 c.σ.mem (R 2 + 24#64).toNat)) + 8#64) 8)
+    (w2 : ReadWindow (R 8 + 48#64) 8)
+    (a2 : OutLRange ((tailNextLog R (tailNext_loads c.σ.mem R)).take 1) (R 8 + 48#64).toNat 8)
+    (outside : ImageOutside (tailNextLog R (tailNext_loads c.σ.mem R)))
+    (ok : guardB .BNE (bytesVal .ld ((tailNext_loads c.σ.mem R).getD 1 [])) (0#64) = true) :
+    FnSummary 0x80016100#64 (fun d => d = c)
+      (WriteRegistersPost [8, 13, 15] (tailNextLog R (tailNext_loads c.σ.mem R)) c (0x80016094#64) (R 10) (tailNext_regs R (tailNext_loads c.σ.mem R))) := by
+  have wl : wlogM tailNext_body (tailNext_input R) (tailNext_loads c.σ.mem R) = tailNextLog R (tailNext_loads c.σ.mem R) := by rw [← tailNext_log_eq R _]; rfl
+  have access : AccessPlan c.σ.mem (tailNext_input R) (tailNext_loads c.σ.mem R) tailNext_body := by
     apply accessPlan_of_pure
-    · simp only [AccessPure, linkLast_body, linkLast_loads]
+    · simp only [AccessPure, tailNext_body, tailNext_loads]
       chain_facts True.intro
       · apply w0.ld rfl ?_ (read8_pins _ _)
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input]
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, tailNext_input]
       · apply w1.sd rfl
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input]
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, tailNext_input]
       · apply w2.ld rfl ?_ (read8_pins _ _)
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input]
-      · apply w3.sd rfl
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input]
-      · apply w4.ld rfl ?_ (read8_pins _ _)
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input]
-      · apply w5.ld rfl ?_ (read8_pins _ _)
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input]
-      · apply w6.sd rfl
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input]
-      · apply w7.ld rfl ?_ (read8_pins _ _)
-        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input]
-    · rw [wl]; simp only [LoadMiss, linkLast_body, IsStore, Bool.false_eq_true, ↓reduceIte, Nat.reduceAdd]
-      exact ⟨fun _ => by simp [OutLRange], fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input, linkLast_loads]) a2, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input, linkLast_loads]) a4, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input, linkLast_loads]) a5, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, linkLast_input, linkLast_loads]) a7, trivial⟩
-  have control : TermFactsO (runGM linkLast_body (linkLast_input R) (linkLast_loads c.σ.mem R)) (some linkLast_term) := by rw [linkLast_eval]; exact ok
-  apply registers_of_blocks h.image outside (linkLast_summary c (R 1) R _ h regs access control)
-  · exact linkLast_log_eq R _
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, tailNext_input]
+    · rw [wl]; simp only [LoadMiss, tailNext_body, IsStore, Bool.false_eq_true, ↓reduceIte, Nat.reduceAdd]
+      exact ⟨fun _ => by simp [OutLRange], fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, tailNext_input, tailNext_loads]) a2, trivial⟩
+  have control : TermFactsO (runGM tailNext_body (tailNext_input R) (tailNext_loads c.σ.mem R)) (some tailNext_term) := by rw [tailNext_eval]; exact ok
+  apply registers_of_blocks h.image outside (tailNext_summary c (R 1) R _ h regs access control)
+  · exact tailNext_log_eq R _
   · rfl
-  · exact linkLast_eval R _
+  · exact tailNext_eval R _
+  · rfl
+  · decide
+
+def tailLast_body : List MInstr := [
+  ⟨0x80016100#64, 0x01813783#32, 0x83#8, 0x37#8, 0x81#8, 0x01#8, .ld, 15, 2, 0, 0x018#12⟩,
+  ⟨0x80016104#64, 0x0004f697#32, 0x97#8, 0xf6#8, 0x04#8, 0x00#8, .auipc, 13, 0, 0, 0x000#12⟩,
+  ⟨0x80016108#64, 0xc0468693#32, 0x93#8, 0x86#8, 0x46#8, 0xc0#8, .addi, 13, 13, 0, 0xc04#12⟩,
+  ⟨0x8001610c#64, 0x00c7b423#32, 0x23#8, 0xb4#8, 0xc7#8, 0x00#8, .sd, 0, 15, 12, 0x008#12⟩,
+  ⟨0x80016110#64, 0x03043403#32, 0x03#8, 0x34#8, 0x04#8, 0x03#8, .ld, 8, 8, 0, 0x030#12⟩
+]
+def tailLast_term : TInstr := ⟨0x80016114#64, 0xf80410e3#32, 0xe3#8, 0x10#8, 0x04#8, 0xf8#8, .br bop.BNE false, 8, 0, 0x1f80#13, 0#21, 0#12⟩
+def tailLast_blocks : List BBlock := [{ body := tailLast_body, term := some tailLast_term }]
+def tailLast_input (R : Nat → BitVec 64) : GRegs := [(2, R 2), (8, R 8), (10, R 10), (12, R 12), (14, R 14)]
+
+theorem tailLast_code {c : Config} (image : ExecutableImage c) : CodeFacts c.σ.mem tailLast_body := by
+  have hc := loaded image
+  simp only [CodeFacts, tailLast_body]
+  chain_facts hc with "Vsa.Sim.Code.caml_ml_out_channels_list_at_"
+
+theorem tailLast_shape : ChainOK 0x80016100#64 [2, 8, 10, 12, 14] tailLast_blocks := by
+  simp only [ChainOK, BBlockOK, tailLast_blocks, tailLast_body, tailLast_term, BlockOKM]
+  repeat' apply And.intro
+  all_goals decide
+
+theorem tailLast_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)
+    (loads : List (List (BitVec 8))) (h : LeafInput ra c)
+    (regs : GHolds c.σ (tailLast_input R))
+    (access : AccessPlan c.σ.mem (tailLast_input R) loads tailLast_body)
+    (control : TermFactsO (runGM tailLast_body (tailLast_input R) loads) (some tailLast_term)) :
+    FnSummary 0x80016100#64 (fun d => d = c)
+      (BlockPost tailLast_blocks 0x80016100#64 (tailLast_input R) loads c) := by
+  apply block_summary tailLast_blocks _ _ _ c
+  refine ⟨h.good, h.minstret, regs, ?_, ?_, tailLast_shape, h.tick⟩
+  · change KeysOK [2, 8, 10, 12, 14]; decide
+  · apply singleton_chain_facts (accessPlan_facts (tailLast_code h.image) access) ?_ control
+    have hc := loaded h.image
+    chain_facts hc with "Vsa.Sim.Code.caml_ml_out_channels_list_at_"
+
+def tailLast_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs :=
+  [(8, bytesVal .ld (loads.getD 1 [])), (13, 2147896584#64), (15, bytesVal .ld (loads.getD 0 [])), (2, R 2), (10, R 10), (12, R 12), (14, R 14)]
+theorem tailLast_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM tailLast_body (tailLast_input R) loads = tailLast_regs R loads := by
+  simp [tailLast_body, tailLast_input, tailLast_regs, runGM, stepGM, stepLdsM,
+    wvalM, srcVal, lookupG, eraseG, imm20Of, DoubleAllocation.domainGlobal, Layout.sym_Caml_state,
+    Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?, BitVec.add_assoc]
+
+def tailLastLog (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : List WEntry :=
+  [((bytesVal .ld (loads.getD 0 []) + 8#64).toNat, 8, R 12)]
+
+theorem tailLast_log_eq (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    (evalBlocks tailLast_blocks (SegEvalState.init (tailLast_input R) loads)).log = tailLastLog R loads := by
+  change [] ++ wlogM tailLast_body (tailLast_input R) loads = _
+  simp only [List.nil_append, tailLast_body, wlogM, tailLast_input, wentryM, widthOfM, eaddrM, srcVal, stepGM,
+    lookupG, eraseG, stepLdsM, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, Nat.reduceAdd, wvalM,
+    Functions.sign_extend, Sail.BitVec.signExtend]
+  simp only [show BitVec.signExtend 64 24#12 = 24#64 by decide, show BitVec.signExtend 64 3076#12 = -1020#64 by decide, show BitVec.signExtend 64 48#12 = 48#64 by decide, show BitVec.signExtend 64 8#12 = 8#64 by decide, ← BitVec.sub_eq_add_neg, BitVec.add_zero]
+  simp only [tailLastLog, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,
+    List.getElem?_tail, BitVec.zero_add]
+
+def tailLast_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
+  [read8 m (R 2 + 24#64).toNat, read8 m (R 8 + 48#64).toNat]
+
+theorem tailLast_fast (c : Config) (R : Nat → BitVec 64)
+    (h : LeafInput (R 1) c) (regs : GHolds c.σ (tailLast_input R))
+    (w0 : ReadWindow (R 2 + 24#64) 8)
+    (w1 : WriteWindow ((bytesVal .ld (read8 c.σ.mem (R 2 + 24#64).toNat)) + 8#64) 8)
+    (w2 : ReadWindow (R 8 + 48#64) 8)
+    (a2 : OutLRange ((tailLastLog R (tailLast_loads c.σ.mem R)).take 1) (R 8 + 48#64).toNat 8)
+    (outside : ImageOutside (tailLastLog R (tailLast_loads c.σ.mem R)))
+    (ok : guardB .BNE (bytesVal .ld ((tailLast_loads c.σ.mem R).getD 1 [])) (0#64) = false) :
+    FnSummary 0x80016100#64 (fun d => d = c)
+      (WriteRegistersPost [8, 13, 15] (tailLastLog R (tailLast_loads c.σ.mem R)) c (0x80016118#64) (R 10) (tailLast_regs R (tailLast_loads c.σ.mem R))) := by
+  have wl : wlogM tailLast_body (tailLast_input R) (tailLast_loads c.σ.mem R) = tailLastLog R (tailLast_loads c.σ.mem R) := by rw [← tailLast_log_eq R _]; rfl
+  have access : AccessPlan c.σ.mem (tailLast_input R) (tailLast_loads c.σ.mem R) tailLast_body := by
+    apply accessPlan_of_pure
+    · simp only [AccessPure, tailLast_body, tailLast_loads]
+      chain_facts True.intro
+      · apply w0.ld rfl ?_ (read8_pins _ _)
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, tailLast_input]
+      · apply w1.sd rfl
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, tailLast_input]
+      · apply w2.ld rfl ?_ (read8_pins _ _)
+        simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, tailLast_input]
+    · rw [wl]; simp only [LoadMiss, tailLast_body, IsStore, Bool.false_eq_true, ↓reduceIte, Nat.reduceAdd]
+      exact ⟨fun _ => by simp [OutLRange], fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun h => by simp [IsLoad] at h, fun _ => outLRange_of_eaddr (by simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, tailLast_input, tailLast_loads]) a2, trivial⟩
+  have control : TermFactsO (runGM tailLast_body (tailLast_input R) (tailLast_loads c.σ.mem R)) (some tailLast_term) := by rw [tailLast_eval]; exact ok
+  apply registers_of_blocks h.image outside (tailLast_summary c (R 1) R _ h regs access control)
+  · exact tailLast_log_eq R _
+  · rfl
+  · exact tailLast_eval R _
   · rfl
   · decide
 

@@ -226,6 +226,42 @@ Status (2026-10-19): nothing open in this lane.
   and the whileMin primitive rows (a1-prims), `libHeap` (a0-boot),
   `BarrierGrowthFull` (a6-gc, open until G2's minor collection).
 
+## caml_ml_out_channels_list (C_CALL returns share, 2026-10-20)
+
+The machine walk is proved: `walk_loop` (`Sim/OutListWalk.lean`) runs from the
+head's first visit to `leave` over every open-channel record.
+* Phases (`Primitives/Channel/OutListLoop.lean`, over the generated
+  `Channel/OutList.lean`):
+  - `visit_skip` (`max`/flags tests, `next`) and `visit_go`;
+  - `alloc_enter` (refcount + 1, `local_roots` saved, the call of
+    `caml_alloc_custom_mem`);
+  - `cons_enter` (data word, CAMLlocal slots, the call of `caml_alloc_small`);
+  - `link_step` (car, cdr, `res`, the back edge).
+  The generator splits the link block at `0x80016100` (`SPLITS`, `build_cfg`'s
+  `splits`), so the read-back of `res` sees its store.
+* Invariant `WalkAt`:
+  - the listed records' six words each below the head's `young_ptr`
+    (`NurseryList`, `objWords`), and `res`;
+  - `young_ptr` (−48 per listed record);
+  - the byte frame outside `Written` (scratch slots and callees' stack, the
+    free nursery, refcounts, `young_limit`/`young_ptr`, `StateAt`,
+    `vsaFoot H0`);
+  - readiness (`Ready (k + listed rest)`) and `HeapReady` over `H ⊇ H0`.
+  Geometry premises: `WalkGeometry` (records apart and covered by `H0` blocks).
+* One listed record is `ListedStep` (`walk_listed_run`), consumed field by field
+  (`ListedStep.frame`/`fresh`/`older`/`ready`/`heap`).
+* `caml_alloc_small`'s input from the domain words:
+  `SmallAllocation.NurseryMemory.of_words` (`Sim/SmallNurseryWords.lean`).
+* Next:
+  - the prologue (`pro`: CAMLlocal3 frame, `local_roots := sp + 48`) to
+    `WalkAt [] chs`, and the epilogue (`leave`, `done`);
+  - the representation: `objWords` as `ObjAt` of `outChannelsList`'s objects
+    at `outListPlaces`, the result value, and `VmPayload` across `Written`
+    (a predicate frame);
+  - the `PrimReturnsAt` adapter, with `runtimeOk` across `Written` a named
+    premise;
+  - the per-arity assembly.
+
 ## Shared heap-field update facts
 
 `live_field_edit` proves that writing an already-live value introduces no new

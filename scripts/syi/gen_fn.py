@@ -138,7 +138,7 @@ def _branch_target(ins):
     return None
 
 
-def build_cfg(fn, entry, di, extents, route=None, region_exits=None, region_end=None):
+def build_cfg(fn, entry, di, extents, route=None, region_exits=None, region_end=None, splits=()):
     """Extract the function body and partition into classified basic blocks.
 
     `route` (dict pc -> 'T'|'F'|'TF') is the RESOLVED-PATH mode for functions
@@ -147,7 +147,9 @@ def build_cfg(fn, entry, di, extents, route=None, region_exits=None, region_end=
     'F' only the fall twin, 'TF' both — an unrolled two-visit head).  Budgets
     are then enforced on the PRUNED subgraph. `region_end` restricts the
     extraction to a validated subregion of the named function; its rows
-    retain their actual PCs and the same instruction/branch budgets."""
+    retain their actual PCs and the same instruction/branch budgets. `splits`
+    are extra leaders: a block running into one ends as a fallthrough (no
+    pruning), e.g. before a load that reads back the block's own store."""
     start, end = extents[fn]
     if region_exits is not None and (route is not None or region_end is not None):
         raise SystemExit("--region-exits cannot be combined with --route or --region-end")
@@ -189,6 +191,7 @@ def build_cfg(fn, entry, di, extents, route=None, region_exits=None, region_end=
         if entry in region_exits:
             raise SystemExit("--region-exits: entry cannot also be an exit")
         leaders.update([entry, *region_exits])
+    leaders.update(splits)
     for i in body:
         if i.is_branch or i.mnem == "j":
             t = _branch_target(i)
