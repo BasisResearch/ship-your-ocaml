@@ -420,6 +420,7 @@ import OCaml.Vm.Boot.Startup.MakeFree
 import OCaml.Vm.Boot.Startup.MajorTailSteps
 import OCaml.Vm.Boot.Startup.MajorHeap
 import OCaml.Vm.Boot.Startup.MemsetShifted
+import OCaml.Vm.Boot.Startup.InitGcSteps
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2988,6 +2989,22 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.memsetShiftLog_in
 #print axioms OCaml.Vm.Boot.Startup.major_ring_cleared
 #print axioms OCaml.Vm.Boot.Startup.caml_init_major_heap
+#print axioms OCaml.Vm.Boot.Startup.init_gc_save
+#print axioms OCaml.Vm.Boot.Startup.init_gc_args
+#print axioms OCaml.Vm.Boot.Startup.init_gc_minor_front
+#print axioms OCaml.Vm.Boot.Startup.init_gc_increment
+#print axioms OCaml.Vm.Boot.Startup.init_gc_percent
+#print axioms OCaml.Vm.Boot.Startup.init_gc_major_front
+#print axioms OCaml.Vm.Boot.Startup.init_gc_window_check
+#print axioms OCaml.Vm.Boot.Startup.init_gc_window_store
+#print axioms OCaml.Vm.Boot.Startup.init_gc_custom_major
+#print axioms OCaml.Vm.Boot.Startup.init_gc_custom_minor
+#print axioms OCaml.Vm.Boot.Startup.init_gc_msg_heap
+#print axioms OCaml.Vm.Boot.Startup.init_gc_msg_free
+#print axioms OCaml.Vm.Boot.Startup.init_gc_msg_max
+#print axioms OCaml.Vm.Boot.Startup.init_gc_msg_incr
+#print axioms OCaml.Vm.Boot.Startup.init_gc_msg_policy
+#print axioms OCaml.Vm.Boot.Startup.init_gc_return
 #print axioms OCaml.Vm.Boot.Startup.ownedWindow_ok
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv

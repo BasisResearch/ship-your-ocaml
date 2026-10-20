@@ -355,8 +355,21 @@ insertion is proved generically:
   * `caml_heap_start` and the statistics are set;
   * the chunk is one free block at the root of the best-fit tree;
   * `caml_fl_cur_wsz` is updated and the mark-stack record is in place.
-Next, the rest of caml_init_gc after caml_init_major_heap, then onward to the
-whileMin cut.
+* caml_init_gc's own blocks are proved (InitGcSteps).
+  * The default parameters (minor 262144 words, major 126976 words,
+    increment 15, percent 120/500, window 1, custom 44/100/8192, policy 2)
+    decide every branch, so the parameter blocks state concrete values.
+  * The entry region is split into InitGcSave and InitGcArgs. With the
+    eleven saves and the two argument loads in one chain, the kernel hit
+    deep recursion. The policy span is split at its stores for the same
+    reason.
+Next, compose caml_init_gc with its callees:
+* page_table_initialize;
+* minor_heap_set (its `only` facts give `MajorTableAt.occupied`);
+* set_allocation_policy (its log gives `MajorGlobals`' pointers);
+* caml_init_major_heap;
+* gc_message_quiet ×6.
+Then onward to the whileMin cut.
 Then onward to the cut.
 
 ## Round 2 status (2026-10-06, search)
