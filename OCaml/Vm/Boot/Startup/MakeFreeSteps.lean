@@ -245,4 +245,126 @@ theorem mfb_block (c : Config) (ra p size color merge : BitVec 64) (leaf : LeafI
       gholds_lookup (n := 24) _ pins rfl, gholds_lookup (n := 19) _ pins rfl, gholds_lookup (n := 20) _ pins rfl, trivial⟩
   · rfl
   · decide
+
+/-- `caml_fl_cur_wsz += Whsize_wosize(wosize)`. -/
+theorem mfb_count (c : Config) (ra wos cur v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(21, 0x80064a40#64), (8, wos), (10, v)]) (curWord : bytesT c.σ.mem flCurWszAddr 8 = cur) :
+    FnSummary 0x8000709c#64 (fun e => e = c) (WriteRegistersPost [15] [(flCurWszAddr, 8, cur + 1#64 + wos)] c
+      0x80007020#64 v [(15, cur + 1#64 + wos), (21, 0x80064a40#64), (8, wos), (10, v)]) := by
+  have word : bytesVal .ld (read8 c.σ.mem (0x80064a40#64).toNat) = cur := by rw [read8_value]; exact curWord
+  apply registers_of_blocks' leaf.image (by constructor <;> simp only [OutLRange, flCurWszAddr] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput bf_make_free_blocksX709cSeg 0x8000709c#64
+        [(21, 0x80064a40#64), (8, wos), (10, v)] [read8 c.σ.mem (0x80064a40#64).toNat] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [21, 8, 10]; decide
+      shape := by change ChainOK _ [21, 8, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := mfbCount_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.bf_make_free_blocks_at_"
+        · exact (show ReadWindow (0x80064a40#64) 8 by constructor <;> decide).ld rfl
+            (by simp only [mfbcount_line_8000709c, mfbcount_line_800070a0, mfbcount_line_800070a4, mfbcount_line_800070a8, eaddrM, srcVal, lookupG, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff]; decide)
+            (read8_pins _ _)
+        · exact (show WriteWindow (BitVec.ofNat 64 flCurWszAddr) 8 by constructor <;> decide).sd rfl
+            (by simp only [mfbcount_line_8000709c, mfbcount_line_800070a0, mfbcount_line_800070a4, mfbcount_line_800070a8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false,
+              Nat.reduceEqDiff, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons]; decide) }))
+  · simp only [bf_make_free_blocksX709cSeg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM, ldsRunM,
+      wlogM, wentryM, widthOfM, eaddrM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true,
+      ite_false, List.headD_cons, List.tail_cons, mfbcount_line_8000709c, mfbcount_line_800070a0, mfbcount_line_800070a4, mfbcount_line_800070a8]
+    rw [word, sext_zero, BitVec.add_zero, show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide]
+    rfl
+  · rfl
+  · intro σ pins
+    simp only [bf_make_free_blocksX709cSeg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM, ldsRunM,
+      srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, List.headD_cons,
+      List.tail_cons, mfbcount_line_8000709c, mfbcount_line_800070a0, mfbcount_line_800070a4, mfbcount_line_800070a8] at pins
+    rw [word, show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide] at pins
+    exact ⟨gholds_lookup (n := 15) _ pins rfl, gholds_lookup (n := 21) _ pins rfl, gholds_lookup (n := 8) _ pins rfl,
+      gholds_lookup (n := 10) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+/-- The chunk is used up. -/
+theorem mfb_next (c : Config) (ra size p v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(18, size), (9, size), (19, p), (10, v)]) :
+    FnSummary 0x80007020#64 (fun e => e = c) (WriteRegistersPost [18, 9, 19] [] c 0x80007068#64 v
+      [(18, 0#64), (9, size <<< 3), (19, p + size <<< 3), (10, v)]) := by
+  apply registers_of_blocks' leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput bf_make_free_blocksX7020TSeg 0x80007020#64
+        [(18, size), (9, size), (19, p), (10, v)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [18, 9, 19, 10]; decide
+      shape := by change ChainOK _ [18, 9, 19, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := mfbNext_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.bf_make_free_blocks_at_"
+        · simp only [mfbnext_line_80007020, mfbnext_line_80007024, mfbnext_line_80007028, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false,
+            Nat.reduceEqDiff, BitVec.sub_self]
+          rfl }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [bf_make_free_blocksX7020TSeg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, srcVal, lookupG,
+      eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, BitVec.sub_self, mfbnext_line_80007020, mfbnext_line_80007024, mfbnext_line_80007028] at pins
+    exact ⟨gholds_lookup (n := 18) _ pins rfl, gholds_lookup_eq pins rfl (slli_three _ _ rfl),
+      gholds_lookup_eq pins rfl (by rw [slli_three _ _ rfl]), gholds_lookup (n := 10) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+def mfbSavedLoads (m : Std.ExtHashMap Nat (BitVec 8)) (sp : BitVec 64) : List (List (BitVec 8)) :=
+  [Primitives.read8 m (nativeFrameBase sp 80 + 72), Primitives.read8 m (nativeFrameBase sp 80 + 64), Primitives.read8 m (nativeFrameBase sp 80 + 56), Primitives.read8 m (nativeFrameBase sp 80 + 48), Primitives.read8 m (nativeFrameBase sp 80 + 40), Primitives.read8 m (nativeFrameBase sp 80 + 32), Primitives.read8 m (nativeFrameBase sp 80 + 24), Primitives.read8 m (nativeFrameBase sp 80 + 16), Primitives.read8 m (nativeFrameBase sp 80 + 8), Primitives.read8 m (nativeFrameBase sp 80 + 0)]
+
+/-- Restore ra, s0–s8 and return. -/
+theorem mfb_return (c : Config) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 v oldra : BitVec 64) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 80) (regs : GHolds c.σ [(2, nativeStack sp 80), (10, v)])
+    (saved : ∀ off value, (off, value) ∈ mfbSlots ra s0 s1 s2 s3 s4 s5 s6 s7 s8 →
+      bytesT c.σ.mem (nativeFrameBase sp 80 + off) 8 = value)
+    (aligned : ra.toNat % 4 = 0) :
+    FnSummary 0x80007068#64 (fun e => e = c) (WriteRegistersPost [1, 8, 9, 18, 19, 20, 21, 22, 23, 24, 2] [] c ra v
+      [(2, sp), (24, s8), (23, s7), (22, s6), (21, s5), (20, s4), (19, s3), (18, s2), (9, s1), (8, s0), (1, ra),
+        (10, v)]) := by
+  have word (off : Nat) (value : BitVec 64) (member : (off, value) ∈ mfbSlots ra s0 s1 s2 s3 s4 s5 s6 s7 s8) :
+      bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 80 + off)) = value := by
+    rw [read8_value]; exact saved off value member
+  apply registers_of_blocks leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput bf_make_free_blocksX7068Seg 0x80007068#64
+        [(2, nativeStack sp 80), (10, v)] (mfbSavedLoads c.σ.mem sp) c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 10]; decide
+      shape := by change ChainOK _ [2, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := mfbReturn_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.bf_make_free_blocks_at_"
+        · exact (frame.read_slot (off := 72) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 64) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 56) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 48) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 40) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 32) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 24) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 16) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 8) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 0) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 80 + 72)) +
+            Functions.sign_extend (m := 64) 0#12) 0 0#1).toNat % 4 = 0
+          rw [word 72 ra (by simp [mfbSlots]), ret_tgt ra aligned]
+          exact aligned }))
+  · rfl
+  · change Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 80 + 72)) +
+      Functions.sign_extend (m := 64) 0#12) 0 0#1 = _
+    rw [word 72 ra (by simp [mfbSlots]), ret_tgt ra aligned]
+  · simp only [bf_make_free_blocksX7068Seg, mfbSavedLoads, evalBlocks, evalBlock, SegEvalState.init, runGM,
+      stepGM, stepLdsM, ldsRunM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true,
+      ite_false, List.headD_cons, List.tail_cons, mfbreturn_line_80007068, mfbreturn_line_8000706c, mfbreturn_line_80007070, mfbreturn_line_80007074, mfbreturn_line_80007078, mfbreturn_line_8000707c, mfbreturn_line_80007080, mfbreturn_line_80007084, mfbreturn_line_80007088, mfbreturn_line_8000708c, mfbreturn_line_80007090]
+    rw [show Functions.sign_extend (m := 64) 80#12 = 80#64 by decide, nativeStack_restore, word 72 ra (by simp [mfbSlots]), word 64 s0 (by simp [mfbSlots]), word 56 s1 (by simp [mfbSlots]), word 48 s2 (by simp [mfbSlots]), word 40 s3 (by simp [mfbSlots]), word 32 s4 (by simp [mfbSlots]), word 24 s5 (by simp [mfbSlots]), word 16 s6 (by simp [mfbSlots]), word 8 s7 (by simp [mfbSlots]), word 0 s8 (by simp [mfbSlots])]
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
