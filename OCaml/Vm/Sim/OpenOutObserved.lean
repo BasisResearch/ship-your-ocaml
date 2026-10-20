@@ -138,4 +138,91 @@ theorem open_out_observed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {c
     have big : 64 ≤ chanOffBuff + ioBufferSize := by decide
     exact record_kept custom o heap h N mem (by omega) (by unfold Gc.chanRecordBytes; omega) (fun _ => Or.inr lo)
 
+section More
+
+variable {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {spV high : Nat}
+  {live : Nat → Prop} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {k : Nat}
+  {H : List (Nat × Nat)} {cap cap' charge : Nat} {sp ra r0 r1 r2 v head : BitVec 64} {c d : Config}
+
+/-- **A VM stack byte is kept.** -/
+theorem vmStack_kept (custom : Gc.CustomMemCall Ready state)
+    (o : OpenedOut live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
+    (heap : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c)
+    (h : OutInput live H cap' charge sp ra r0 r1 r2 v head c)
+    (N : OutNursery H (Gc.placedChannels cp s.world.chans.length) c)
+    (pins : Gc.F1Pins c) (data : VmPayload P s c pl cp spV high) {x : Nat}
+    (lo : high - Layout.stackBytes ≤ x) (hi : x < high) :
+    (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+  have top := high_eq pins data h.domain
+  have he : (Boot.WhileMinEntry.high - Layout.stackBytes, Layout.stackBytes) ∈ Gc.f1Covered := by
+    simp [Gc.f1Covered]
+  have below : Layout.stackBytes ≤ Boot.WhileMinEntry.high := by decide
+  have ix : VsaIris.InExt (Boot.WhileMinEntry.high - Layout.stackBytes, Layout.stackBytes) x := by
+    rw [top] at lo hi; constructor <;> dsimp only <;> omega
+  have m := Channel.f1Covered_minor _ he (by decide)
+  exact covered_kept custom o heap h he (by decide) ix
+    (block_of_outside_minor N.low N.high (by obtain ⟨xl, xh⟩ := ix; dsimp only at m xl xh; omega))
+
+/-- **A primitive-table byte is kept.** -/
+theorem primTable_kept (custom : Gc.CustomMemCall Ready state)
+    (o : OpenedOut live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
+    (heap : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c)
+    (h : OutInput live H cap' charge sp ra r0 r1 r2 v head c)
+    (N : OutNursery H (Gc.placedChannels cp s.world.chans.length) c) {x : Nat}
+    (lo : Boot.WhileMinHeapChunks.primTablePayload ≤ x)
+    (hi : x < Boot.WhileMinHeapChunks.primTablePayload + 8 * Gc.f1PrimCapacity) :
+    (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+  have he : (Boot.WhileMinHeapChunks.primTablePayload, 8 * Gc.f1PrimCapacity) ∈ Gc.f1Covered := by
+    simp [Gc.f1Covered]
+  have m := Channel.f1Covered_minor _ he (by decide)
+  exact covered_kept custom o heap h he (by decide) ⟨lo, hi⟩
+    (block_of_outside_minor N.low N.high (by dsimp only at m; omega))
+
+/-- **A byte at or above the C call's native stack pointer is kept** (the
+interpreter's frames). -/
+theorem native_kept (custom : Gc.CustomMemCall Ready state)
+    (o : OpenedOut live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
+    (h : OutInput live H cap' charge sp ra r0 r1 r2 v head c)
+    (N : OutNursery H (Gc.placedChannels cp s.world.chans.length) c) {x : Nat}
+    (above : sp.toNat ≤ x) :
+    (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+  have lower := h.frame.lower
+  have lowM := N.low
+  have highM := N.high
+  have hSE : Vsa.Sim.DlHeap.heapStart ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+  have hM : Gc.minorRegion.hi ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+  have hD : Boot.WhileMinRuntime.domain + Layout.off_young_ptr + 8 ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+  have far : Vsa.Sim.DlHeap.heapEnd ≤ x := Nat.le_trans (Nat.le_add_right _ _) (Nat.le_trans lower above)
+  refine o.kept x (fun st => by have := (custom.apart c x st).belowStack; omega) ?_ ?_ (Or.inr above)
+    (Or.inr (by omega)) (Or.inr (by unfold Gc.domainAddr; rw [h.domain]; exact Nat.le_trans hD far))
+  · rintro (g | ⟨_, l, _⟩)
+    · rcases VsaIris.VsaHeap.allocGlobal_off_arena _ g with y | y
+      · omega
+      · unfold VsaIris.VsaHeap.allocGlobal VsaIris.VsaHeap.InRange at g; unfold Vsa.Sim.DlHeap.heapEnd at y; omega
+    · omega
+  · have pHigh := o.opening.high
+    unfold recordBytes at pHigh
+    have hSt : 0x80064d4c ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+    have sp16 : (sp - 16#64).toNat = sp.toNat - 16 := by
+      have e := outFrame_slot (h.frame.resize (small := 16) (by decide) (by decide)) (off := 0) (by decide)
+      rw [show BitVec.ofNat 64 0 = 0#64 from rfl, BitVec.add_zero] at e; rw [e]; omega
+    apply OCaml.Vm.Gc.outW_all
+    intro w hw
+    unfold openWindows at hw
+    rcases List.mem_append.mp hw with hw | hw
+    · simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
+      rcases hw with rfl | rfl | rfl | rfl | rfl
+      · right; dsimp only; rw [sp16]; omega
+      all_goals (right; dsimp only; try unfold recordBytes
+                 omega)
+    · by_cases hz : head = 0#64
+      · simp [hz] at hw
+      · simp only [hz, ite_false, List.mem_singleton] at hw
+        subst hw
+        obtain ⟨⟨e, he, _, hi'⟩, _⟩ := h.headLive hz
+        have bounds := h.ready.heap.block_bounds (q := e.1) (n := e.2) he
+        right; dsimp only; omega
+
+end More
+
 end OCaml.Vm.Sim

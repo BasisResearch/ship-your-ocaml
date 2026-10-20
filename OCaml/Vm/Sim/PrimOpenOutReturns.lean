@@ -32,9 +32,8 @@ open OCaml.Vm.Boot.Startup (NativeFrame)
 a6-gc, who discharges it for `Gc.f1Layout` together with `CustomMemCall`).
 `L.runtimeOk` carries no custom-allocation state, so the call's readiness and
 the runtime after the opening are supplied here. -/
-structure OpenOutRuntime (L : OCaml.Layout) where
-  Ready : Nat → Config → Prop
-  state : Config → Nat → Prop
+structure OpenOutRuntimeAt (L : OCaml.Layout) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) :
+    Prop where
   custom : Gc.CustomMemCall Ready state
   /-- **The agreed major-slice open premise**: one more channel custom
   allocation is quiet. False after the fifth since the cut, when
@@ -52,6 +51,13 @@ structure OpenOutRuntime (L : OCaml.Layout) where
     Channel.OpenedOut imageLive Ready state k H (cap - 65616) 65616 sp ra s0 s1 s2 v head c d →
     L.runtimeOk d
 
+/-- **The runtime across `caml_ml_open_descriptor_out`** (named premise, lane
+a6-gc, who discharges it for `Gc.f1Layout` together with `CustomMemCall`):
+some custom-allocation readiness `Ready` over the runtime's `state`, as
+`OpenOutRuntimeAt`. `L.runtimeOk` carries no custom-allocation state. -/
+def OpenOutRuntime (L : OCaml.Layout) : Prop :=
+  ∃ Ready state, OpenOutRuntimeAt L Ready state
+
 theorem _root_.OCaml.Vm.Gc.placedChannels_length (cp : ChanPlace) (n : Nat) : (Gc.placedChannels cp n).length ≤ n := by
   unfold Gc.placedChannels
   exact Nat.le_trans (List.length_filterMap_le _ _) (by simp)
@@ -61,14 +67,15 @@ heap over the placed channel records, the primitive's input on the native
 stack, the collector's side, and one quiet custom allocation. -/
 theorem open_out_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     {cp : ChanPlace} {sp high domain entry : Nat} {env : BitVec 64} {c : Config}
-    (rt : OpenOutRuntime L) (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
+    {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} (rt : OpenOutRuntimeAt L Ready state)
+    (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
     (fits : s.heap.words + 3 ≤ L.budget.heapWords) (bound : s.world.chans.length < Gc.maxChannels)
     {v : BitVec 64} (value : gpr c 10 = some v) (console : v = 3#64 ∨ v = 5#64) :
     ∃ (H : List (Nat × Nat)) (cap N k : Nat) (s0 s1 s2 : BitVec 64),
       Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c ∧
       Channel.OutInput imageLive H (cap - 65616) 65616 (BitVec.ofNat 64 N) ra s0 s1 s2 v
         (bytesVal .ld (read8 c.σ.mem (2147896128#64).toNat)) c ∧
-      Channel.OutNursery H (Gc.placedChannels cp s.world.chans.length) c ∧ rt.Ready (k + 1) c ∧
+      Channel.OutNursery H (Gc.placedChannels cp s.world.chans.length) c ∧ Ready (k + 1) c ∧
       gpr c 2 = some (BitVec.ofNat 64 N) := by
   have input := setup.input
   obtain ⟨H, cap, chs, heap⟩ := (rt.pins c input.runtime).libHeap

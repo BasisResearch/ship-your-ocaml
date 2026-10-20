@@ -60,7 +60,9 @@ import OCaml.Vm.Sim.OpenOutFrame
 import OCaml.Vm.Sim.OpenOutObserved
 import OCaml.Vm.Sim.OpenOutPlaced
 import OCaml.Vm.Sim.OpenOutGeometry
+import OCaml.Vm.Sim.OpenOutPayload
 import OCaml.Vm.Sim.PrimOpenOutReturns
+import OCaml.Vm.Sim.OpenOutReturn
 import OCaml.Vm.Sim.ArgvLogWindows
 import OCaml.Vm.Sim.ArgvInput
 import OCaml.Vm.Sim.PrimGetArgvReturns

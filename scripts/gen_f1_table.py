@@ -57,7 +57,7 @@ FIXED_IMPORTS = {'consoleStable': 'OCaml.Vm.Sim.F1Console', 'nativeStable': 'OCa
                  'exeName': 'OCaml.Vm.Sim.PrimExecutableNameReturns',
                  'places': 'OCaml.Vm.Sim.AllocPlacesOk'}
 # Summary parameters with no instance yet: one named `WhileMinOpen` field each.
-OPEN_PARAMS = {}
+OPEN_PARAMS = {'runtime': ('openOutRuntime', 'OpenOutRuntime Gc.f1Layout')}
 # Program-level parameters shared by several rows: one premise field each.
 SHARED = {'values': 'values', 'ints': 'ints', 'extra': 'extra', 'extraBounded': 'extra', 'exotic': 'exotic', 'trapBounded': 'trapBounded',
           'scratch': 'scratch', 'field': 'field'}
@@ -137,10 +137,10 @@ def prim_summaries():
     found = {}
     for f in sorted((ROOT / 'OCaml').rglob('*.lean')):
         text = f.read_text()
-        for m in re.finditer(r'^theorem (prim_([a-z_0-9]+)_returns)((?:(?!^theorem).)*?):\s*\n?\s*PrimReturnsAt',
+        for m in re.finditer(r'^theorem (prim_([a-z_0-9]+)_returns)((?:(?!^theorem).)*?):\s*\n?\s*PrimReturnsAt(R?)\b',
                              text, re.M | re.S):
             mod = str(f.relative_to(ROOT))[:-5].replace('/', '.')
-            found[m.group(2)] = (m.group(1), params(m.group(3)), mod)
+            found[m.group(2)] = (m.group(1), params(m.group(3)), mod, m.group(4) == 'R')
     return found
 
 
@@ -166,19 +166,20 @@ def render_whilemin(fields, users):
             proofs = []
             for name in calls.get(op, []):
                 if name in summaries:
-                    thm, ps, mod = summaries[name]
+                    thm, ps, mod, succ = summaries[name]
                     imports.add(mod)
                     imports.update(FIXED_IMPORTS[p] for p, _ in ps if p in FIXED_IMPORTS)
                     for p, _ in ps:
                         if p in OPEN_PARAMS:
                             open_[OPEN_PARAMS[p][0]] = OPEN_PARAMS[p][1]
-                    proofs.append(' '.join([thm] + [FIXED[p] if p in FIXED else f'o.{OPEN_PARAMS[p][0]}'
-                                                    for p, _ in ps if p in FIXED or p in OPEN_PARAMS]))
+                    proof = ' '.join([thm] + [FIXED[p] if p in FIXED else f'o.{OPEN_PARAMS[p][0]}'
+                                              for p, _ in ps if p in FIXED or p in OPEN_PARAMS])
+                    proofs.append(proof if succ else f'({proof}).toR')
                 else:
                     field = f'{name.removeprefix("caml_")}_{op.lower()}'
                     open_[field] = (f'PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .{op} {ra} {k} '
                                     f'"{name}"')
-                    proofs.append(f'o.{field}')
+                    proofs.append(f'o.{field}.toR')
             n = len(proofs)
             pats = ' | '.join(['rfl'] * n) if n else ''
             fill.append(f'  {fname} _ := whileMin_ccallReturns (by decide) fun _ h => by')

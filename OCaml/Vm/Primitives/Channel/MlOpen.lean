@@ -90,6 +90,7 @@ structure OutEntered (live : Nat → Prop) (H : List (Nat × Nat)) (capacity cha
   memory : d.σ.mem = writeLog c.σ.mem (outSaveLog sp ra s0)
   kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 2, 10] → gprGet d.σ n = gprGet c.σ n
   gprs : GprsKept c d
+  output : d.σ.sailOutput = c.σ.sailOutput
 
 /-- From the entry of `caml_ml_open_descriptor_out` to the call of
 `caml_open_descriptor_in`. -/
@@ -167,18 +168,22 @@ theorem out_enter (c : Config) {H : List (Nat × Nat)} {capacity charge : Nat}
     memory := memory
     kept := kept
     gprs := (GprsKept.of_pins setup (by decide) (by decide) (by simp [keysG, OpenOut.pro_regs])).trans
-      (GprsKept.of_pins call (by decide) (by decide) (by simp [keysG])) }
+      (GprsKept.of_pins call (by decide) (by decide) (by simp [keysG]))
+    output := call.output.trans setup.output }
 
 /-- `caml_open_descriptor_in` keeps x20–x27: the checked allocation keeps
 them (`StatCheckedReturned.keep_upper`), and no other phase writes them. -/
 theorem OpenedIn.keep_upper {H : List (Nat × Nat)} {capacity : Nat} {sp ra s0 s1 s2 fd head : BitVec 64}
     {c d : Config} (o : OpenedIn live H capacity sp ra s0 s1 s2 fd head c d) {k : Nat} {x : BitVec 64}
-    (lo : 20 ≤ k) (hi : k ≤ 27) (h : gprGet c.σ k = some x) : gprGet d.σ k = some x := by
+    (lo : 19 ≤ k) (hi : k ≤ 27) (h : gprGet c.σ k = some x) : gprGet d.σ k = some x := by
   have a := (o.allocation.setup.toEffectPost.gpr_frame (by decide) k (by omega) (by omega)
     (by simp; omega)).trans h
   have b := (o.allocation.call.toEffectPost.gpr_frame (by decide) k (by omega) (by omega)
     (by simp; omega)).trans a
-  have e := o.allocation.allocation.keep_upper lo hi b
+  have e : gprGet o.allocated.σ k = some x := by
+    rcases Nat.eq_or_lt_of_le lo with rfl | gt
+    · exact o.allocation.allocation.keep_saved (by simp) b
+    · exact o.allocation.allocation.keep_upper gt hi b
   have f := (o.seek.kept k (by omega) (by omega) (by simp; omega)).trans e
   exact (o.link.kept k (by omega) (by omega) (by simp; omega)).trans f
 
@@ -439,6 +444,7 @@ structure OutFlagged (sp p : BitVec 64) (c d : Config) : Prop where
   memory : d.σ.mem = writeLog c.σ.mem (outFlagsLog p)
   kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 8, 10, 11, 12, 14, 15] → gprGet d.σ n = gprGet c.σ n
   gprs : GprsKept c d
+  output : d.σ.sailOutput = c.σ.sailOutput
 
 /-- From `caml_open_descriptor_in`'s return to the call of
 `caml_alloc_custom_mem`: `max := NULL`, the GC flag, one reference. -/
@@ -483,7 +489,8 @@ theorem out_flags (o : Config) {sp p : BitVec 64} (leaf : LeafInput OpenOut.pro_
       exact (call.toEffectPost.gpr_frame (by decide) n lo hi (by simp; omega)).trans
         (F.toEffectPost.gpr_frame (by decide) n lo hi (by simp; omega))
     gprs := (GprsKept.of_pins F (by decide) (by decide) (by simp [keysG, OpenOut.flags_regs])).trans
-      (GprsKept.of_pins call (by decide) (by decide) (by simp [keysG])) }
+      (GprsKept.of_pins call (by decide) (by decide) (by simp [keysG]))
+    output := call.output.trans F.output }
 
 /-- The return: the record stored in the block, the saved `ra`/`s0` reloaded. -/
 structure OutDone (sp ra s0 p v : BitVec 64) (c d : Config) : Prop where
@@ -499,6 +506,8 @@ structure OutDone (sp ra s0 p v : BitVec 64) (c d : Config) : Prop where
   kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 2, 8] → gprGet d.σ n = gprGet c.σ n
   gprs : GprsKept c d
   memory : d.σ.mem = writeLog c.σ.mem [((v + 8#64).toNat, 8, p)]
+  output : d.σ.sailOutput = c.σ.sailOutput
+  idle : d.σ.regs.get? Register.htif_payload_writes = some (0#4)
 
 theorem out_done (a : Config) {sp ra s0 p v : BitVec 64} {f : Config} {state : Config → Nat → Prop}
     {H : List (Nat × Nat)} (ret : Gc.CustomMemReturned state H (outSite (sp - 16#64) p) v f a)
@@ -556,7 +565,9 @@ theorem out_done (a : Config) {sp ra s0 p v : BitVec 64} {f : Config} {state : C
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
       exact post.toEffectPost.gpr_frame (by decide) n lo hi (by simp; omega)
     gprs := GprsKept.of_pins post (by decide) (by decide) (by simp [keysG, OpenOut.done_regs])
-    memory := post.memory }
+    memory := post.memory
+    output := post.output
+    idle := post.toEffectPost.htifIdle ret.idle }
 
 /-- **A byte outside the opening's windows**: below the arena's end, outside
 the statics the opening writes, apart from the record and from the old head's
@@ -643,6 +654,8 @@ structure OpenedOut (live : Nat → Prop) (Ready : Nat → Config → Prop) (sta
   /-- `Channel(res) = chan` -/
   channel : bytesT d.σ.mem (value.toNat + 8) 8 = opening.record
   ops : bytesT d.σ.mem value.toNat 8 = 2147891728#64
+  /-- the custom block's header (wosize 2, `Custom_tag`) -/
+  header : bytesT d.σ.mem (value.toNat - 8) 8 = Gc.customHeader
   ready : Ready k d
   /-- the custom block lies just below the entry's young pointer, which drops by 24 -/
   block : value.toNat + 16 = (runtimeFields c).youngPtr
@@ -923,6 +936,9 @@ theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat ×
       rw [D.memory, bytesT_writeLog_out _ (by simp only [OutLRange, and_true, v8]; omega)]
       exact C.ops
     ready := readyD
+    header := by
+      rw [bytesT_keep (m := allocated.σ.mem) fun j hj => doneOut _ (Or.inl (by omega))]
+      exact C.header
     block := block
     youngPtr := ptrD
     youngLimit := limD
@@ -948,12 +964,62 @@ theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat ×
 theorem OpenedOut.keep_upper {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {left : Nat}
     {H : List (Nat × Nat)} {capacity charge : Nat} {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
     (o : OpenedOut live Ready state left H capacity charge sp ra s0 s1 s2 v head c d) {k : Nat} {x : BitVec 64}
-    (lo : 20 ≤ k) (hi : k ≤ 27) (h : gprGet c.σ k = some x) : gprGet d.σ k = some x := by
+    (lo : 19 ≤ k) (hi : k ≤ 27) (h : gprGet c.σ k = some x) : gprGet d.σ k = some x := by
   have a := (o.enter.kept k (by omega) (by omega) (by simp; omega)).trans h
   have b := o.opening.keep_upper lo hi a
   have e := (o.flags.kept k (by omega) (by omega) (by simp; omega)).trans b
   have f := (o.custom.saved k (by simp; omega)).trans e
   exact (o.done.kept k (by omega) (by omega) (by simp; omega)).trans f
+
+/-- Library readiness pins `gp`. -/
+theorem _root_.OCaml.Vm.Boot.Startup.RuntimeReadyL.gp {H : List (Nat × Nat)} {capacity : Nat}
+    {sp ra : BitVec 64} {c : Config} (r : RuntimeReadyL live H capacity sp ra c) :
+    gprGet c.σ 3 = some VsaIris.MallocFast.gpV := by
+  have v := r.readOnly.1 (3, VsaIris.MallocFast.gpV) (by simp [VsaIris.MallocFast.roR, VsaIris.gp])
+  obtain ⟨x, hx⟩ := Option.isSome_iff_exists.mp (r.platform.gpr 3 (by decide) (by decide))
+  change (gprGet c.σ 3).getD 0 = _ at v
+  rw [hx] at v ⊢
+  exact congrArg some v
+
+/-- `caml_open_descriptor_in` keeps register presence and `gp`. -/
+theorem OpenedIn.gprs {H : List (Nat × Nat)} {capacity : Nat} {sp ra s0 s1 s2 fd head : BitVec 64}
+    {c d : Config} (o : OpenedIn live H capacity sp ra s0 s1 s2 fd head c d)
+    (gp : gprGet c.σ 3 = some VsaIris.MallocFast.gpV) : GprsKept c d where
+  present n lo hi _ := o.link.gprs.present n lo hi (o.seek.gprs.present n lo hi
+    (o.allocation.allocation.ready.platform.gpr n lo hi))
+  gp := by
+    show gprGet d.σ 3 = gprGet c.σ 3
+    rw [gp]
+    exact o.link.gprs.gp.trans (o.seek.gprs.gp.trans o.allocation.allocation.ready.gp)
+
+/-- **`caml_ml_open_descriptor_out` keeps register presence and `gp`.** -/
+theorem OpenedOut.gprs {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {left : Nat}
+    {H : List (Nat × Nat)} {capacity charge : Nat} {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
+    (o : OpenedOut live Ready state left H capacity charge sp ra s0 s1 s2 v head c d) : GprsKept c d :=
+  o.enter.gprs.trans ((o.opening.gprs o.enter.input.ready.gp).trans
+    (o.flags.gprs.trans (o.custom.gprs.trans o.done.gprs)))
+
+/-- **`caml_ml_open_descriptor_out` restores `s0`, `s1`, `s2`.** -/
+theorem OpenedOut.keep_saved {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {left : Nat}
+    {H : List (Nat × Nat)} {capacity charge : Nat} {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
+    (o : OpenedOut live Ready state left H capacity charge sp ra s0 s1 s2 v head c d) :
+    gprGet d.σ 8 = some s0 ∧ gprGet d.σ 9 = some s1 ∧ gprGet d.σ 18 = some s2 := by
+  refine ⟨o.done.s0Reg, ?_, ?_⟩
+  · have e := (o.flags.kept 9 (by decide) (by decide) (by decide)).trans o.opening.link.s1Reg
+    have f := (o.custom.saved 9 (by simp)).trans e
+    exact (o.done.kept 9 (by decide) (by decide) (by decide)).trans f
+  · have e := (o.flags.kept 18 (by decide) (by decide) (by decide)).trans o.opening.link.s2Reg
+    have f := (o.custom.saved 18 (by simp)).trans e
+    exact (o.done.kept 18 (by decide) (by decide) (by decide)).trans f
+
+/-- `caml_ml_open_descriptor_out` keeps the console output. -/
+theorem OpenedOut.output {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {left : Nat}
+    {H : List (Nat × Nat)} {capacity charge : Nat} {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
+    (o : OpenedOut live Ready state left H capacity charge sp ra s0 s1 s2 v head c d) :
+    Vsa.Machine.output d.σ = Vsa.Machine.output c.σ := by
+  have i := o.opening.output
+  simp only [Vsa.Machine.output] at i ⊢
+  rw [o.done.output, o.custom.output, o.flags.output, i, o.enter.output]
 
 /-! ### The premises from the F1 heap invariant -/
 

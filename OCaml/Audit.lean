@@ -31,7 +31,9 @@ import OCaml.Vm.Sim.OpenOutFrame
 import OCaml.Vm.Sim.OpenOutObserved
 import OCaml.Vm.Sim.OpenOutPlaced
 import OCaml.Vm.Sim.OpenOutGeometry
+import OCaml.Vm.Sim.OpenOutPayload
 import OCaml.Vm.Sim.PrimOpenOutReturns
+import OCaml.Vm.Sim.OpenOutReturn
 import OCaml.Vm.Sim.PrimGetArgvReturns
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
@@ -5946,6 +5948,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Channel.ml_open_descriptor_out
 #print axioms OCaml.Vm.Primitives.Channel.OpenedIn.keep_upper
 #print axioms OCaml.Vm.Primitives.Channel.OpenedOut.keep_upper
+#print axioms OCaml.Vm.Primitives.Channel.OpenedOut.output
+#print axioms OCaml.Vm.Primitives.Channel.OpenedIn.output
+#print axioms OCaml.Vm.Boot.Startup.StatCheckedAllocatedL.output
+#print axioms OCaml.Vm.Boot.Startup.StatCheckedReturnedL.output
 #print axioms OCaml.Vm.Primitives.Channel.OutRecord.chanAt
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.ConsoleFd.seekFd
 #print axioms OCaml.Vm.Primitives.Channel.fdOf_stdout
@@ -5963,6 +5969,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.open_out_observed
 #print axioms OCaml.Vm.Sim.open_out_placed
 #print axioms OCaml.Vm.Sim.open_out_geometry
+#print axioms OCaml.Vm.Sim.open_out_payload
+#print axioms OCaml.Vm.Sim.vmStack_kept
+#print axioms OCaml.Vm.Sim.primTable_kept
+#print axioms OCaml.Vm.Sim.native_kept
+#print axioms OCaml.Vm.Sim.open_out_return
+#print axioms OCaml.Vm.Sim.prim_caml_ml_open_descriptor_out_returns
+#print axioms OCaml.Vm.Sim.console_word
+#print axioms OCaml.Vm.Primitives.Channel.OpenedOut.gprs
+#print axioms OCaml.Vm.Primitives.Channel.OpenedOut.keep_saved
+#print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.gp
 #print axioms OCaml.Vm.Sim.word_of_kept
 #print axioms OCaml.Vm.Gc.OpenChannelsLinked.list
 #print axioms OCaml.Vm.Sim.fresh_outW

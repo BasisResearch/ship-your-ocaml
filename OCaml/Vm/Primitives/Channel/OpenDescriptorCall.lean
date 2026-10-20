@@ -354,6 +354,7 @@ structure OpenSeekPost (sp p fd : BitVec 64) (c d : Config) : Prop where
   fdWord : bytesT d.σ.mem p.toNat 4 = fd.setWidth 32
   offsetWord : bytesT d.σ.mem (p.toNat + 8) 8 = -1#64
   frame : FrameOnD (seekWindows sp p) c.σ.mem d.σ.mem
+  output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ
 
 theorem open_seek (c : Config) (sp p fd : BitVec 64) (h : OpenSeekInput sp p fd c) :
     FnSummary 0x80015154#64 (fun d => d = c) (fun d => OpenSeekPost sp p fd c d) := by
@@ -596,7 +597,11 @@ theorem open_seek (c : Config) (sp p fd : BitVec 64) (h : OpenSeekInput sp p fd 
     { good := post9.good, image := post9.image, minstret := post9.minstret, tick := post9.tick,
       idle := post9.idle, pc := by rw [post9.pc]; rfl, link := post9.raReg, stack := post9.stack,
       record := post9.s0Reg, a0 := ⟨_, post9.result⟩,
-      kept := kept, gprs := gprs, fdWord := fdWord, offsetWord := offsetWord, frame := frame }⟩
+      kept := kept, gprs := gprs, fdWord := fdWord, offsetWord := offsetWord, frame := frame
+      output := by
+        have p9 := post9.output; have p6 := post6.output; have pq := q.output
+        simp only [Vsa.Machine.output] at p9 p6 pq ⊢
+        rw [p9, call3.output, st7.output, p6, call2.output, st4.output, pq, call1.output, st1.output] }⟩
 
 /-! ### Initialization, linking, epilogue -/
 
@@ -683,6 +688,7 @@ structure OpenLinkPost (sp ra s0 s1 s2 p : BitVec 64) (log : List WEntry) (c d :
   kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 2, 8, 9, 10, 13, 14, 15, 18] → gprGet d.σ n = gprGet c.σ n
   gprs : GprsKept c d
   memory : d.σ.mem = writeLog c.σ.mem log
+  output : d.σ.sailOutput = c.σ.sailOutput
 
 theorem stack_above {sp x : BitVec 64} {k : Nat} (lower : heapEnd + 576 ≤ sp.toNat)
     (hx : x.toNat = sp.toNat - 32 + k) : heapEnd ≤ x.toNat := by
@@ -698,7 +704,7 @@ theorem open_epilogue {sp ra s0 s1 s2 p head : BitVec 64} {c e : Config} (h : Op
     (link : gprGet e.σ 1 = some offset_call.link) (stack : gprGet e.σ 2 = some (sp - 32#64))
     (record : gprGet e.σ 8 = some p)
     (kept : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [9, 13, 14, 15] → gprGet e.σ n = gprGet c.σ n)
-    (gprs : GprsKept c e) :
+    (gprs : GprsKept c e) (output : e.σ.sailOutput = c.σ.sailOutput) :
     ∃ d, Steps e d ∧ OpenLinkPost sp ra s0 s1 s2 p (log ++ [(2147896128, 8, p)]) c d := by
   have frame := h.frame
   have hE : heapEnd = 0x86800000 := rfl
@@ -764,7 +770,8 @@ theorem open_epilogue {sp ra s0 s1 s2 p head : BitVec 64} {c e : Config} (h : Op
       exact (post.toEffectPost.gpr_frame (by decide) n lo hi (by simp; omega)).trans
         (kept n lo hi (by simp; omega))
     gprs := gprs.trans (GprsKept.of_pins post (by decide) (by decide) (by simp [keysG, done_regs]))
-    memory := by rw [post.memory, memory, ← writeLog_append]; rfl }
+    memory := by rw [post.memory, memory, ← writeLog_append]; rfl
+    output := post.output.trans output }
 
 /-- Initialize the record, link it at the head of `caml_all_opened_channels`
 (updating the old head's `prev`) and return it. -/
@@ -810,7 +817,7 @@ theorem open_link (c : Config) {sp ra s0 s1 s2 p head : BitVec 64}
       ((st.toEffectPost.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans h.raReg)
       (gholds_lookup (n := 2) _ st.regs (by rfl)) (gholds_lookup (n := 8) _ st.regs (by rfl))
       (fun n lo hi hn => st.toEffectPost.gpr_frame (by decide) n lo hi hn)
-      (GprsKept.of_pins st (by decide) (by decide) (by simp [keysG, first_regs]))
+      (GprsKept.of_pins st (by decide) (by decide) (by simp [keysG, first_regs])) st.output
     have shape : recordInitLog p head ++ linkLog p head = recordInitLog p head ++ [(2147896128, 8, p)] := by
       simp [linkLog, hz]
     exact ⟨d, run1.trans run2, shape ▸ post⟩
@@ -848,10 +855,26 @@ theorem open_link (c : Config) {sp ra s0 s1 s2 p head : BitVec 64}
         (st.toEffectPost.gpr_frame (by decide) n lo hi hn))
       ((GprsKept.of_pins st (by decide) (by decide) (by simp [keysG, link_regs])).trans
         (GprsKept.of_pins st2 (by decide) (by decide) (by simp [keysG, prev_regs])))
+      (st2.output.trans st.output)
     have shape : recordInitLog p head ++ linkLog p head =
         recordInitLog p head ++ [((head + 56#64).toNat, 8, p)] ++ [(2147896128, 8, p)] := by
       simp [linkLog, hz]
     exact ⟨d, run1.trans (run2.trans run3), shape ▸ post⟩
+
+/-- The checked allocation keeps the console output. -/
+theorem _root_.OCaml.Vm.Boot.Startup.StatCheckedAllocatedL.output {live : Nat → Prop} {H : List (Nat × Nat)}
+    {capacity : Nat} {sp ra s0 n : BitVec 64} {before after : Config}
+    (h : OCaml.Vm.Boot.Startup.StatCheckedAllocatedL live H capacity sp ra s0 n before after) :
+    Vsa.Machine.output after.σ = Vsa.Machine.output before.σ := by
+  have a : Vsa.Machine.output after.σ = Vsa.Machine.output h.atMalloc.σ := h.allocation.output
+  rw [a]; simp only [Vsa.Machine.output, h.call.output, h.setup.output]
+
+theorem _root_.OCaml.Vm.Boot.Startup.StatCheckedReturnedL.output {live : Nat → Prop} {H : List (Nat × Nat)}
+    {capacity : Nat} {sp ra s0 n : BitVec 64} {before after : Config}
+    (h : OCaml.Vm.Boot.Startup.StatCheckedReturnedL live H capacity sp ra s0 n before after) :
+    Vsa.Machine.output after.σ = Vsa.Machine.output before.σ := by
+  rw [← h.allocation.output]; simp only [Vsa.Machine.output, h.returned.output]
+
 
 /-! ### The whole call -/
 
@@ -1169,5 +1192,14 @@ theorem open_descriptor_in [LibraryLive live] (c : Config) (H : List (Nat × Nat
        low := pLow, high := pHigh, align := pAlign, fresh := pFresh
        static := staticAlloc.trans ((StaticKept.of_frame S.frame (seekWindows_static frame pLow)).trans staticD)
        frame := frameP }⟩⟩
+
+/-- `caml_open_descriptor_in` keeps the console output. -/
+theorem OpenedIn.output {live : Nat → Prop} {H : List (Nat × Nat)} {capacity : Nat}
+    {sp ra s0 s1 s2 fd head : BitVec 64} {c d : Config} (o : OpenedIn live H capacity sp ra s0 s1 s2 fd head c d) :
+    Vsa.Machine.output d.σ = Vsa.Machine.output c.σ := by
+  have a := o.allocation.allocation.output
+  have s := o.seek.output
+  simp only [Vsa.Machine.output] at a s ⊢
+  rw [o.link.output, s, a, o.allocation.call.output, o.allocation.setup.output]
 
 end OCaml.Vm.Primitives.Channel

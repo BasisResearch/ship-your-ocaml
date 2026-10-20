@@ -2,6 +2,7 @@ import OCaml.Vm.Sim.F1Headline
 import OCaml.Programs.WhileMinShape
 import OCaml.Vm.Sim.WhileMinCalls
 import OCaml.Vm.Sim.F1Console
+import OCaml.Vm.Sim.OpenOutReturn
 import OCaml.Vm.Sim.PrimConsoleReturns
 import OCaml.Vm.Sim.PrimFreshOoId
 import OCaml.Vm.Sim.PrimStringLength
@@ -20,7 +21,7 @@ structure WhileMinOpen : Prop where
   libHeap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered [(Gc.refTable, 56)]
   /-- the call state at `caml_modify` and the realloc branch (GC lane) -/
   growth : F1GrowthPremises
-  ml_open_descriptor_out_c_call1 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL1 (0x80003060#64) 0 "caml_ml_open_descriptor_out"
+  openOutRuntime : OpenOutRuntime Gc.f1Layout
   format_int_c_call2 : PrimReturnsAt Gc.f1Layout OCaml.Programs.whileMin .C_CALL2 (0x80003004#64) 1 "caml_format_int"
 
 theorem whileMin_premises (o : WhileMinOpen) :
@@ -28,20 +29,20 @@ theorem whileMin_premises (o : WhileMinOpen) :
   c_call1_returns _ := whileMin_ccallReturns (by decide) fun _ h => by
     simp only [OCaml.Programs.whileMinCalls, List.mem_cons, List.mem_nil_iff, or_false] at h
     rcases h with rfl | rfl | rfl | rfl
-    · exact prim_caml_fresh_oo_id_returns f1_counterStable
-    · exact o.ml_open_descriptor_out_c_call1
-    · exact prim_caml_ml_string_length_returns f1_memoryStable
-    · exact prim_caml_ml_flush_returns f1_console_stable Gc.f1_consoleRuntime OCaml.Programs.whileMin_goodF1.consoles
+    · exact (prim_caml_fresh_oo_id_returns f1_counterStable).toR
+    · exact prim_caml_ml_open_descriptor_out_returns o.openOutRuntime OCaml.Programs.whileMin_goodF1.consoles
+    · exact (prim_caml_ml_string_length_returns f1_memoryStable).toR
+    · exact (prim_caml_ml_flush_returns f1_console_stable Gc.f1_consoleRuntime OCaml.Programs.whileMin_goodF1.consoles).toR
   c_call2_returns _ := whileMin_ccallReturns (by decide) fun _ h => by
     simp only [OCaml.Programs.whileMinCalls, List.mem_cons, List.mem_nil_iff, or_false] at h
     rcases h with rfl | rfl
-    · exact o.format_int_c_call2
-    · exact prim_caml_ml_output_char_returns f1_console_stable Gc.f1_consoleRuntime OCaml.Programs.whileMin_goodF1.consoles
+    · exact o.format_int_c_call2.toR
+    · exact (prim_caml_ml_output_char_returns f1_console_stable Gc.f1_consoleRuntime OCaml.Programs.whileMin_goodF1.consoles).toR
   c_call3_returns h := absurd h (by decide)
   c_call4_returns _ := whileMin_ccallReturns (by decide) fun _ h => by
     simp only [OCaml.Programs.whileMinCalls, List.mem_cons, List.mem_nil_iff, or_false] at h
     subst h
-    exact prim_caml_ml_output_returns f1_console_stable Gc.f1_consoleRuntime OCaml.Programs.whileMin_goodF1.consoles
+    exact (prim_caml_ml_output_returns f1_console_stable Gc.f1_consoleRuntime OCaml.Programs.whileMin_goodF1.consoles).toR
   c_call5_returns h := absurd h (by decide)
 
 /-- **The `whileMin` machine run** from the open premises only. -/
