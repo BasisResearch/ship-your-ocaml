@@ -201,32 +201,26 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
     machine level, composed in three phases (`out_enter`, `out_flags`,
     `out_done`) around `open_descriptor_in` and `caml_alloc_custom_mem`.
     - Premises: `OutInput` (`open_descriptor_in`'s, one 16-byte frame
-      down, so `NativeFrame sp 592`) and `CustomMemCall Ready` with
-      `Ready c`.
-    - `CustomMemCall Ready` is a named obligation for a6-gc: the
-      collector-integrated allocation. It sees `c`'s memory except the
-      opening's stores (`CustomMemInput.kept`, `StaticKept`, the record's
-      `HeapReady`) and returns a block whose data word is writable and
-      apart from the record, keeping s0–s11, the caller frame, the record
-      and the list head (`CustomMemReturned`).
-    - Agreed shape (a6-gc proves it): `memory` is an exact log, `allocLog`
-      (the block at young − 16, as `allocPlaces`) followed by `extra` (custom
-      table and resource counters) inside windows that are stable for
-      `f1Runtime`. The first call after the cut also grows the empty
-      `custom_table` (a 792576-byte `caml_stat_alloc`), so the post gives
-      `HeapReady` over that block. The 6th open since the cut requests a
-      major slice, so a6-gc's `Ready` carries "fewer than 5 opens since
-      the cut" (from `LibHeapAt`'s channel accounting). The major-slice
-      path stays a named open premise. whileMin has one open site.
-    - a6-gc (2026-10-13): the fields fit the quiet path. `Ready` will
-      carry the custom-table and resource-counter state. The custom table's
-      first `realloc` (a C-heap charge) and the GC-speed and
-      minor-resource triggers (`caml_something_to_do`, requested
-      collections) are G2.
+      down, so `NativeFrame sp 592`), a6-gc's site-generic
+      `Gc.CustomMemCall Ready state` with `Ready (k + 1) c`, and
+      `OutNursery H chs c` (`Caml_state` and the minor heap covered by `H`,
+      the open records apart from `Caml_state`, nursery room for the
+      24-byte block). `out_nursery` builds it from `LibHeapAt` and the
+      young-pointer bounds.
+    - The call site is `outSite (sp − 16) record` (link `0x80015fa0`).
+      `Ready` is framed from `c` to the call through `CallerApart`
+      (`static`, `free`, `records`): the runtime's state is apart from the
+      opening's save, malloc and flag stores. The young fields are kept
+      because `Caml_state` is a live block apart from the record. After
+      the call, `kept` gives the caller frame, the record and the list
+      head, and `Ready k` survives `Channel(res) = chan` (the block is in
+      the minor heap, apart from `state`).
     - Post (`OpenedOut`): the record's words as `ChanAt` reads them
       (`OutRecord`: fd, offset -1, end, curr, `max = NULL`, next,
       refcount 1, flags 4), `OpenChannelsLinked c d record`,
-      `Channel(v) = record` and the ops word.
+      `Channel(v) = record`, the ops word, the call's
+      `Gc.CustomMemReturned` (block at young − 16, `∃ H' cap', HeapReady`)
+      and `Ready k d`.
   * The summaries take any library live set (`OpenInput live …`, over
     `stat_checkedL`), so the adapter uses `imageLive`. `out_input` builds
     `OutInput` from `Gc.LibHeapAt` (charge 65616, `recordsAligned` for the

@@ -2,6 +2,7 @@ import OCaml.Vm.Primitives.Channel.OpenDescriptorCall
 import OCaml.Vm.Primitives.Channel.OpenOut
 import OCaml.Vm.Gc.OpenChannels
 import OCaml.Vm.Gc.F1Heap
+import OCaml.Vm.Gc.CustomMem
 
 /-! `caml_ml_open_descriptor_out(v)` as a call summary:
 * untag the descriptor and open it with `caml_open_descriptor_in`
@@ -314,20 +315,6 @@ theorem flagsLog_eq {m : Std.ExtHashMap Nat (BitVec 8)} {p : BitVec 64} {R : Nat
     List.getD_cons_succ, l68, l64, outFlagsLog]
   rfl
 
-/-- A fresh block lies apart from every range inside a live block. -/
-theorem fresh_apart {H : List (Nat × Nat)} {p n : Nat}
-    (fresh : ∀ e ∈ H, ∀ y, InExt (p, n) y → ¬ InExt e y) (pos : 0 < n)
-    {e : Nat × Nat} (he : e ∈ H) {x k : Nat} (kpos : 0 < k) (lo : e.1 ≤ x) (hi : x + k ≤ e.1 + e.2) :
-    x + k ≤ p ∨ p + n ≤ x := by
-  rcases Nat.lt_or_ge p (x + k) with l | l
-  · rcases Nat.lt_or_ge x (p + n) with g | g
-    · exfalso
-      rcases Nat.le_total p x with o | o
-      · exact fresh e he x ⟨o, by dsimp only; omega⟩ ⟨lo, by omega⟩
-      · exact fresh e he p ⟨Nat.le_refl _, by dsimp only; omega⟩ ⟨by omega, by omega⟩
-    · exact Or.inr g
-  · exact Or.inl l
-
 /-- The list update misses every range above the list head's word and apart
 from the old head's `prev`. -/
 theorem linkLog_out {p head : BitVec 64} {x n : Nat} (above : 2147896136 ≤ x)
@@ -357,10 +344,11 @@ theorem OpenedIn.record_words {H : List (Nat × Nat)} {capacity charge : Nat}
     have bounds := h.ready.heap.block_bounds (q := e.1) (n := e.2) he
     have prevNat : (head + 56#64).toNat = head.toNat + 56 := record_toNat (by omega)
     rw [prevNat]
-    rcases fresh_apart o.fresh (by unfold recordBytes; decide) he (x := head.toNat + 56) (k := 8)
-      (by decide) (by omega) (by omega) with l | l
-    · right; omega
-    · left; unfold recordBytes at l; omega
+    rcases Gc.fresh_apart_covered o.fresh (x := (head.toNat + 56, 8)) ⟨e, he, by dsimp only; omega,
+      by dsimp only; omega⟩ (by dsimp only; omega) (n := recordBytes) (by unfold recordBytes; decide) (Nat.le_refl _)
+      with l | l
+    · left; dsimp only at l; unfold recordBytes at l; omega
+    · right; dsimp only at l; omega
   have linkOut {x n : Nat} (inside : o.record.toNat ≤ x) (hi : x + n ≤ o.record.toNat + 65616) :
       OutLRange (linkLog o.record head) x n :=
     linkLog_out (by rw [hS] at low; omega) fun hz => prevApart hz inside hi
@@ -431,10 +419,13 @@ theorem OpenedIn.record_words {H : List (Nat × Nat)} {capacity charge : Nat}
 
 /-! ### The flags block and the custom block -/
 
+/-- The call of `caml_alloc_custom_mem` inside the primitive's 16-byte frame,
+returning to `0x80015fa0` with the record in `s0`. -/
+def outSite (sp p : BitVec 64) : Gc.CustomMemSite := ⟨OpenOut.flags_call.link, sp, p, 16⟩
+
 /-- The registers handed to `caml_alloc_custom_mem(&channel_operations,
-sizeof(struct channel *), sizeof(struct channel))`, with the record in `s0`. -/
-def customArgs (sp p : BitVec 64) : GRegs :=
-  [(10, 2147891728#64), (11, 8#64), (12, 65616#64), (8, p), (2, sp)]
+sizeof(struct channel *), sizeof(struct channel))`. -/
+def customArgs (sp p : BitVec 64) : GRegs := (outSite sp p).args
 
 /-- At the call of `caml_alloc_custom_mem`: the record's three stores done. -/
 structure OutFlagged (sp p : BitVec 64) (c d : Config) : Prop where
@@ -474,17 +465,18 @@ theorem out_flags (o : Config) {sp p : BitVec 64} (leaf : LeafInput OpenOut.pro_
     (win 32 8 (by decide) (by omega)) (win 68 4 (by decide) (by omega)) (win 64 4 (by decide) (by omega))
     (by rw [hlog]; exact heap_image_outside inside)).run o ⟨pc, rfl⟩
   have args : GHolds flagged.σ (customArgs sp p) :=
-    holds_project F.regs (by simp [customArgs, OpenOut.flags_regs, R, lookupG])
+    holds_project F.regs (by simp [customArgs, outSite, Gc.CustomMemSite.args, Gc.channelOps, Gc.channelMem,
+      OpenOut.flags_regs, R, lookupG])
   obtain ⟨called, run2, call⟩ := (call_registers_summary OpenOut.flags_call_shape OpenOut.flags_call_decode
     flagged (OpenOut.flags_call_pins F.image) F.good F.image F.tick F.minstret _ args
-    (by change KeysOK [10, 11, 12, 8, 2]; decide) (by simp only [KeysAvoidRa, keysG, customArgs]; decide)
+    (by change KeysOK [10, 11, 12, 8, 2]; decide) (by simp only [KeysAvoidRa, keysG, customArgs, outSite, Gc.CustomMemSite.args]; decide)
     (by rfl)).run flagged ⟨F.pc, rfl⟩
   refine ⟨called, run1.trans run2, ?_⟩
   exact {
     good := call.good, image := call.image, minstret := call.minstret, tick := call.tick
     pc := by rw [call.pc, OpenOut.flags_call_target]
     link := gholds_lookup (n := 1) _ call.regs (by rfl)
-    regs := holds_project call.regs (by simp [customArgs, lookupG])
+    regs := holds_project call.regs (by simp [customArgs, outSite, Gc.CustomMemSite.args, lookupG])
     memory := by rw [call.memory, F.memory, hlog]; rfl
     kept := fun n lo hi hn => by
       simp only [List.mem_cons, List.not_mem_nil, or_false] at hn
@@ -492,55 +484,6 @@ theorem out_flags (o : Config) {sp p : BitVec 64} (leaf : LeafInput OpenOut.pro_
         (F.toEffectPost.gpr_frame (by decide) n lo hi (by simp; omega))
     gprs := (GprsKept.of_pins F (by decide) (by decide) (by simp [keysG, OpenOut.flags_regs])).trans
       (GprsKept.of_pins call (by decide) (by decide) (by simp [keysG])) }
-
-/-- At the call of `caml_alloc_custom_mem` from `caml_ml_open_descriptor_out`
-entered at `c` with stack `sp`: the record `p` is a fresh block of the
-allocator, and memory reads as at `c` outside the opening's windows, the
-allocator's footprint and the primitive's frame. -/
-structure CustomMemInput (H : List (Nat × Nat)) (capacity : Nat) (sp p head : BitVec 64)
-    (c f : Config) : Prop where
-  leaf : LeafInput OpenOut.flags_call.link f
-  pc : pcOf f = some 0x800247f8#64
-  regs : GHolds f.σ (customArgs (sp - 16#64) p)
-  frame : NativeFrame (sp - 16#64) 576
-  heap : HeapReady ((p.toNat, recordBytes) :: H) capacity f
-  low : heapStart ≤ p.toNat
-  high : p.toNat + recordBytes ≤ heapEnd
-  static : StaticKept c f
-  kept : ∀ a, OutW (openWindows (sp - 16#64) p head) a → ¬ vsaFoot H a →
-    (a < sp.toNat - 16 ∨ sp.toNat ≤ a) → (f.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
-
-/-- `caml_alloc_custom_mem` returned the custom block `v`: its operations
-word set, its data word writable and apart from the record, the callee-saved
-registers, the caller's frame, the record and the list head kept. -/
-structure CustomMemReturned (sp p v : BitVec 64) (f d : Config) : Prop where
-  good : GoodState d.σ
-  image : ExecutableImage d
-  minstret : ∃ x, d.σ.regs.get? Register.minstret = some x
-  tick : d.tick < 2
-  link : ∃ r, gprGet d.σ 1 = some r ∧ r.toNat % 4 = 0
-  pc : pcOf d = some OpenOut.flags_call.link
-  stack : gprGet d.σ 2 = some (sp - 16#64)
-  record : gprGet d.σ 8 = some p
-  result : gprGet d.σ 10 = some v
-  saved : ∀ n ∈ [9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet d.σ n = gprGet f.σ n
-  gprs : GprsKept f d
-  block : heapStart ≤ v.toNat ∧ v.toNat + 16 ≤ heapEnd ∧ v.toNat % 8 = 0
-  apart : v.toNat + 16 ≤ p.toNat ∨ p.toNat + recordBytes ≤ v.toNat
-  ops : bytesT d.σ.mem v.toNat 8 = 2147891728#64
-  callerFrame : ∀ a, sp.toNat - 16 ≤ a → a < sp.toNat → (d.σ.mem[a]?).getD 0 = (f.σ.mem[a]?).getD 0
-  recordKept : ∀ a, p.toNat ≤ a → a < p.toNat + recordBytes → (d.σ.mem[a]?).getD 0 = (f.σ.mem[a]?).getD 0
-  headKept : ∀ a, 2147896128 ≤ a → a < 2147896136 → (d.σ.mem[a]?).getD 0 = (f.σ.mem[a]?).getD 0
-
-/-- **`caml_alloc_custom_mem` returns a custom block** (named obligation,
-a6-gc). It is the collector-integrated allocation: `Alloc_small` in the minor
-heap, the custom table, the GC speed accounting. `Ready` is the collector's
-state at the primitive's entry `c`, which a6-gc chooses; the call sees `c`'s
-memory except for the opening's stores (`CustomMemInput.kept`). -/
-def CustomMemCall (Ready : Config → Prop) : Prop :=
-  ∀ (H : List (Nat × Nat)) (capacity : Nat) (sp p head : BitVec 64) (c f : Config),
-    Ready c → CustomMemInput H capacity sp p head c f →
-    FnSummary 0x800247f8#64 (fun d => d = f) (fun d => ∃ v, CustomMemReturned sp p v f d)
 
 /-- The return: the record stored in the block, the saved `ra`/`s0` reloaded. -/
 structure OutDone (sp ra s0 p v : BitVec 64) (c d : Config) : Prop where
@@ -557,8 +500,10 @@ structure OutDone (sp ra s0 p v : BitVec 64) (c d : Config) : Prop where
   gprs : GprsKept c d
   memory : d.σ.mem = writeLog c.σ.mem [((v + 8#64).toNat, 8, p)]
 
-theorem out_done (a : Config) {sp ra s0 p v : BitVec 64} {f : Config}
-    (ret : CustomMemReturned sp p v f a) (frame : NativeFrame sp 592)
+theorem out_done (a : Config) {sp ra s0 p v : BitVec 64} {f : Config} {state : Config → Nat → Prop}
+    {H : List (Nat × Nat)} (ret : Gc.CustomMemReturned state H (outSite (sp - 16#64) p) v f a)
+    (vLow : heapStart ≤ v.toNat) (vHigh : v.toNat + 16 ≤ heapEnd) (vAlign : v.toNat % 8 = 0)
+    (frame : NativeFrame sp 592)
     (savedRa : bytesT a.σ.mem (sp.toNat - 8) 8 = ra) (savedS0 : bytesT a.σ.mem (sp.toNat - 16) 8 = s0)
     (raAligned : ra.toNat % 4 = 0) :
     FnSummary 0x80015fa0#64 (fun d => d = a) (OutDone sp ra s0 p v a) := by
@@ -566,7 +511,6 @@ theorem out_done (a : Config) {sp ra s0 p v : BitVec 64} {f : Config}
   intro before ⟨pc, eq⟩
   subst before
   obtain ⟨r, rReg, rAligned⟩ := ret.link
-  obtain ⟨vLow, vHigh, vAlign⟩ := ret.block
   have lower := frame.lower
   have upper := frame.upper
   have short := frame.resize (small := 16) (by decide) (by decide)
@@ -616,11 +560,37 @@ theorem out_done (a : Config) {sp ra s0 p v : BitVec 64} {f : Config}
 
 /-! ### The whole primitive -/
 
+/-- The collector's side at the primitive's entry: `Caml_state` and the minor
+heap are live blocks of `H`, the open records `chs` lie apart from
+`Caml_state`, and the nursery has room for the custom block. -/
+structure OutNursery (H : List (Nat × Nat)) (chs : List Nat) (c : Config) : Prop where
+  domain : Gc.Covered H (Boot.WhileMinRuntime.domain, Layout.domainStateBytes)
+  minor : Gc.Covered H (Gc.minorRegion.lo, Gc.minorRegion.hi - Gc.minorRegion.lo)
+  channels : Gc.OpenChannelList c.σ.mem chs
+  recordsApart : ∀ r ∈ chs, r + Gc.chanRecordBytes ≤ Boot.WhileMinRuntime.domain ∨
+    Boot.WhileMinRuntime.domain + Layout.domainStateBytes ≤ r
+  room : (runtimeFields c).youngLimit + 24 ≤ (runtimeFields c).youngPtr
+  aligned : (runtimeFields c).youngPtr % 8 = 0
+  low : Gc.minorRegion.lo + 24 ≤ (runtimeFields c).youngPtr
+  high : (runtimeFields c).youngPtr ≤ Gc.minorRegion.hi
+
+/-- A nonzero list head is an open record. -/
+theorem head_mem {m : Std.ExtHashMap Nat (BitVec 8)} {chs : List Nat} {head : BitVec 64}
+    (channels : Gc.OpenChannelList m chs) (headWord : bytesVal .ld (read8 m (2147896128#64).toNat) = head)
+    (hz : head ≠ 0#64) : head.toNat ∈ chs := by
+  unfold Gc.OpenChannelList at channels
+  rw [show Layout.sym_caml_all_opened_channels = (2147896128#64).toNat from rfl, ← read8_value, headWord]
+    at channels
+  generalize hx : head.toNat = x at channels ⊢
+  cases channels with
+  | nil => exact absurd (BitVec.eq_of_toNat_eq (by rw [hx]; rfl)) hz
+  | cons => exact List.mem_cons_self
+
 /-- `caml_ml_open_descriptor_out(v)` returned the custom block `value` holding
 the new output channel `record`, linked at the head of
-`caml_all_opened_channels`. -/
-structure OpenedOut (live : Nat → Prop) (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 v head : BitVec 64)
-    (c d : Config) where
+`caml_all_opened_channels`, with `k` custom allocations still safe. -/
+structure OpenedOut (live : Nat → Prop) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (k : Nat)
+    (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 v head : BitVec 64) (c d : Config) where
   entered : Config
   opened : Config
   flagged : Config
@@ -629,25 +599,33 @@ structure OpenedOut (live : Nat → Prop) (H : List (Nat × Nat)) (capacity char
   enter : OutEntered live H capacity charge sp ra s0 s1 s2 v head c entered
   opening : OpenedIn live H capacity (sp - 16#64) OpenOut.pro_call.link s0 s1 s2 (fdOf v) head entered opened
   flags : OutFlagged (sp - 16#64) opening.record opened flagged
-  custom : CustomMemReturned sp opening.record value flagged allocated
+  custom : Gc.CustomMemReturned state ((opening.record.toNat, recordBytes) :: H)
+    (outSite (sp - 16#64) opening.record) value flagged allocated
   done : OutDone sp ra s0 opening.record value allocated d
   record : OutRecord d.σ.mem opening.record (fdOf v) head
   linked : OCaml.Vm.Gc.OpenChannelsLinked c.σ.mem d.σ.mem opening.record.toNat
   /-- `Channel(res) = chan` -/
   channel : bytesT d.σ.mem (value.toNat + 8) 8 = opening.record
   ops : bytesT d.σ.mem value.toNat 8 = 2147891728#64
+  ready : Ready k d
 
 theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
-    (sp ra s0 s1 s2 v head : BitVec 64) {Ready : Config → Prop} (custom : CustomMemCall Ready)
-    (ready : Ready c) (h : OutInput live H capacity charge sp ra s0 s1 s2 v head c) :
+    (sp ra s0 s1 s2 v head : BitVec 64) {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
+    (custom : Gc.CustomMemCall Ready state) (k : Nat) (ready : Ready (k + 1) c) {chs : List Nat}
+    (N : OutNursery H chs c) (h : OutInput live H capacity charge sp ra s0 s1 s2 v head c) :
     FnSummary 0x80015f50#64 (fun d => d = c)
-      (fun d => Nonempty (OpenedOut live H capacity charge sp ra s0 s1 s2 v head c d)) := by
+      (fun d => Nonempty (OpenedOut live Ready state k H capacity charge sp ra s0 s1 s2 v head c d)) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
   have lower := h.frame.lower
   have hSE : heapStart ≤ heapEnd := by decide
   have hS : heapStart = 0x8007d140 := rfl
+  have hD : Boot.WhileMinRuntime.domain = 0x8007d150 := rfl
+  have hDB : Layout.domainStateBytes = 928 := rfl
+  have lowM := N.low
+  have highM := N.high
+  simp only [Gc.minorRegion] at lowM highM
   obtain ⟨entered, run1, E⟩ := (out_enter c h).run c ⟨pc, rfl⟩
   obtain ⟨opened, run2, ⟨O⟩⟩ := (open_descriptor_in entered H capacity charge (sp - 16#64) _ s0 s1 s2
     (fdOf v) head E.input).run entered ⟨E.pc, rfl⟩
@@ -679,37 +657,131 @@ theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat ×
     obtain ⟨_, _, _, o4, _⟩ := base
     unfold recordBytes at o4
     omega
-  have input : CustomMemInput H capacity sp O.record head c flagged := {
-    leaf := ⟨F.good, F.image, F.minstret, F.link, by decide, F.tick⟩
-    pc := F.pc
-    regs := F.regs
-    frame := E.input.frame
+  have keptF (a : Nat) (o : OutW (openWindows (sp - 16#64) O.record head) a) (notFoot : ¬ vsaFoot H a)
+      (frame : a < sp.toNat - 16 ∨ sp.toNat ≤ a) : (flagged.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0 := by
+    rw [flagsOut a (openOut a o), O.frame a o notFoot, E.memory, frameOn_writeLog _ _ _ saveIn a ⟨frame, trivial⟩]
+  -- where the record, `Caml_state` and the minor heap lie
+  have heapC := h.ready.heap
+  have recordFree (a : Nat) (lo : O.record.toNat ≤ a) (hi : a < O.record.toNat + recordBytes) : vsaFoot H a :=
+    Or.inr ⟨by arena_omega, by unfold recordBytes at hi; arena_omega, fun e he ie => O.fresh e he a ⟨lo, hi⟩ ie⟩
+  have recMinor := Gc.fresh_apart_covered O.fresh N.minor (by decide) (n := recordBytes)
+    (by unfold recordBytes; decide) (Nat.le_refl _)
+  have recDomain := Gc.fresh_apart_covered O.fresh N.domain (by decide) (n := recordBytes)
+    (by unfold recordBytes; decide) (Nat.le_refl _)
+  simp only [Gc.minorRegion] at recMinor recDomain
+  unfold recordBytes at recMinor recDomain
+  have headApart (y : Nat) (hz : head ≠ 0#64)
+      (apart : y < head.toNat ∨ head.toNat + chanOffBuff + ioBufferSize ≤ y) :
+      y < head.toNat + 56 ∨ head.toNat + 64 ≤ y := by
+    unfold chanOffBuff ioBufferSize at apart; omega
+  have outOpen (y : Nat) (below : y < heapEnd)
+      (stat : y < heapStart → 0x80064aa0 ≤ y ∧ y < 0x80064aa8)
+      (recApart : y < O.record.toNat ∨ O.record.toNat + recordBytes ≤ y)
+      (hd : head ≠ 0#64 → y < head.toNat + 56 ∨ head.toNat + 64 ≤ y) :
+      OutW (openWindows (sp - 16#64) O.record head) y := by
+    apply OCaml.Vm.Gc.outW_all
+    intro w hw
+    unfold openWindows at hw
+    rcases List.mem_append.mp hw with hw | hw
+    · simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
+      rcases hw with rfl | rfl | rfl | rfl | rfl
+      · left; dsimp only; rw [sp16]; arena_omega
+      · rcases Nat.lt_or_ge y heapStart with l | g
+        · have := stat l; dsimp only; omega
+        · right; dsimp only; omega
+      · rcases Nat.lt_or_ge y heapStart with l | g
+        · have := stat l; dsimp only; omega
+        · right; dsimp only; omega
+      · exact recApart
+      · rcases Nat.lt_or_ge y heapStart with l | g
+        · have := stat l; dsimp only; omega
+        · right; dsimp only; omega
+    · by_cases hz : head = 0#64
+      · simp [hz] at hw
+      · simp only [hz, ite_false, List.mem_singleton] at hw
+        subst hw
+        exact hd hz
+  have notFootHigh (L : List (Nat × Nat)) (y : Nat) (high : heapEnd ≤ y) : ¬ vsaFoot L y := by
+    rintro (g | ⟨_, l, _⟩)
+    · unfold allocGlobal InRange at g; unfold heapEnd at high; omega
+    · omega
+  -- the runtime's custom-allocation state is apart from the opening's stores
+  have stateOut (a : Nat) (s : state c a) : (flagged.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0 := by
+    have ap := custom.apart c a s
+    have below := ap.belowStack
+    have free := ap.free H _ heapC
+    refine keptF a (outOpen a below (fun l => ?_) ?_ fun hz => headApart a hz
+      (ap.records chs N.channels _ (head_mem N.channels h.headWord hz))) free (Or.inl (by arena_omega))
+    · have e := ap.static l
+      simp only [VsaIris.InExt, Layout.sym_caml_extra_heap_resources] at e
+      omega
+    · rcases Nat.lt_or_ge a O.record.toNat with l | g
+      · exact Or.inl l
+      · exact Or.inr (Nat.le_of_not_lt fun hi => free (recordFree a g hi))
+  have staticC : StaticKept c flagged := staticE.trans (O.static.trans staticF)
+  have domF : word flagged Layout.sym_Caml_state = word c Layout.sym_Caml_state := by
+    unfold word
+    apply bytesT_keep
+    intro j hj
+    exact staticC _ ⟨by unfold Layout.sym_Caml_state; omega,
+      by unfold allocGlobal InRange Layout.sym_Caml_state; omega,
+      Or.inr (by unfold Layout.sym_Caml_state Layout.sym_caml_all_opened_channels; omega)⟩
+  have domC : (word c Layout.sym_Caml_state).toNat = Boot.WhileMinRuntime.domain := by
+    unfold word; rw [h.ready.domainWord]; rfl
+  obtain ⟨readyF, stateEq⟩ := custom.frame (k + 1) c flagged ready stateOut domF
+  have fieldKept (off : Nat) (b : off + 8 ≤ Layout.domainStateBytes) :
+      word flagged (Boot.WhileMinRuntime.domain + off) = word c (Boot.WhileMinRuntime.domain + off) := by
+    unfold word
+    apply bytesT_keep
+    intro j hj
+    obtain ⟨e, he, elo, ehi⟩ := N.domain
+    dsimp only at elo ehi
+    refine keptF _ (outOpen _ (by arena_omega) (fun l => by omega) (by omega) fun hz => ?_) ?_
+      (Or.inl (by arena_omega))
+    · have r := N.recordsApart _ (head_mem N.channels h.headWord hz)
+      unfold Gc.chanRecordBytes chanOffBuff ioBufferSize at r
+      omega
+    · rintro (g | ⟨_, _, no⟩)
+      · unfold allocGlobal InRange at g; omega
+      · exact no e he ⟨by omega, by omega⟩
+  have ptrF : (runtimeFields flagged).youngPtr = (runtimeFields c).youngPtr := by
+    simp only [runtimeFields, domainWord]
+    rw [domF, domC, fieldKept Layout.off_young_ptr (by decide)]
+  have limF : (runtimeFields flagged).youngLimit = (runtimeFields c).youngLimit := by
+    simp only [runtimeFields, domainWord]
+    rw [domF, domC, fieldKept Layout.off_young_limit (by decide)]
+  have domainF : (word flagged Layout.sym_Caml_state).toNat = Boot.WhileMinRuntime.domain := by
+    rw [domF, domC]
+  have input : Gc.CustomMemInput ((O.record.toNat, recordBytes) :: H) capacity
+      (outSite (sp - 16#64) O.record) flagged := {
+    leaf := ⟨F.good, F.image, F.minstret, F.link, by show OpenOut.flags_call.link.toNat % 4 = 0; decide, F.tick⟩
     heap := OCaml.Vm.Gc.HeapReady.keep_windows O.heap (ws := [⟨O.record.toNat, O.record.toNat + 72⟩])
       (fun w hw => by
         simp only [List.mem_singleton] at hw
         subst hw
         exact Or.inl ⟨_, List.mem_cons_self, Nat.le_refl _, by dsimp only; unfold recordBytes; omega⟩)
       (fun a out => flagsOut a (out _ List.mem_cons_self))
-    low := O.low
-    high := O.high
-    static := staticE.trans (O.static.trans staticF)
-    kept := fun a o notFoot frame => by
-      rw [flagsOut a (openOut a o), O.frame a o notFoot, E.memory,
-        frameOn_writeLog _ _ _ saveIn a ⟨frame, trivial⟩] }
-  obtain ⟨allocated, run4, ⟨value, C⟩⟩ := (custom H capacity sp O.record head c flagged ready input).run
-    flagged ⟨F.pc, rfl⟩
+    pc := F.pc
+    regs := F.regs
+    frame := E.input.frame
+    room := by rw [ptrF, limF]; exact N.room
+    youngAligned := by rw [ptrF]; exact N.aligned }
+  obtain ⟨allocated, run4, ⟨value, C, readyA⟩⟩ :=
+    (custom.call _ capacity (outSite (sp - 16#64) O.record) k flagged readyF input).run flagged ⟨F.pc, rfl⟩
+  have block := C.block
+  rw [ptrF] at block
+  have vLow : heapStart ≤ value.toNat := by arena_omega
+  have vHigh : value.toNat + 16 ≤ heapEnd := by arena_omega
+  have vAlign : value.toNat % 8 = 0 := by have := N.aligned; omega
+  have youngWord (a : Nat) (apart : a + 8 ≤ Boot.WhileMinRuntime.domain + 8 ∨ Boot.WhileMinRuntime.domain + 16 ≤ a) :
+      a + 8 ≤ Gc.domainAddr flagged Layout.off_young_ptr ∨ Gc.domainAddr flagged Layout.off_young_ptr + 8 ≤ a := by
+    unfold Gc.domainAddr; rw [domainF]; unfold Layout.off_young_ptr; omega
   -- the primitive's saves survive the opening, the flags and the custom block
   have slotKept (x : Nat) (lo : sp.toNat - 16 ≤ x) (hi : x + 8 ≤ sp.toNat) :
       bytesT allocated.σ.mem x 8 = bytesT entered.σ.mem x 8 := by
     apply bytesT_keep
     intro j hj
     have aboveHeap : heapEnd ≤ x + j := by arena_omega
-    have notFoot : ¬ vsaFoot H (x + j) := by
-      rintro (g | ⟨_, l, _⟩)
-      · rcases allocGlobal_off_arena _ g with y | y
-        · unfold heapStart heapEnd at *; omega
-        · unfold allocGlobal InRange at g; unfold heapEnd at aboveHeap; omega
-      · omega
     have o : OutW (openWindows (sp - 16#64) O.record head) (x + j) := by
       apply OCaml.Vm.Gc.outW_all
       intro w hw
@@ -727,8 +799,10 @@ theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat ×
           obtain ⟨⟨e, he, _, hi'⟩, _⟩ := h.headLive hz
           have bounds := h.ready.heap.block_bounds (q := e.1) (n := e.2) he
           right; dsimp only; arena_omega
-    rw [C.callerFrame _ (by omega) (by omega), flagsOut _ (Or.inr (by arena_omega)),
-      O.frame _ o notFoot]
+    rw [C.kept _ (fun s => by have := (custom.apart flagged _ s).belowStack; omega) (notFootHigh _ _ aboveHeap)
+        (Or.inr (by show (sp - 16#64).toNat ≤ x + j; rw [sp16]; omega)) (Or.inr (by unfold heapEnd at aboveHeap; omega))
+        (youngWord _ (Or.inr (by arena_omega))),
+      flagsOut _ (Or.inr (by arena_omega)), O.frame _ o (notFootHigh _ _ aboveHeap)]
   have s8 : (sp - 16#64 + 8#64).toNat = sp.toNat - 8 := by
     have e := outFrame_slot (h.frame.resize (small := 16) (by decide) (by decide)) (off := 8) (by decide)
     rw [e]; omega
@@ -739,22 +813,30 @@ theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat ×
   have savedS0 : bytesT allocated.σ.mem (sp.toNat - 16) 8 = s0 := by
     rw [slotKept _ (by omega) (by omega), E.memory, ← sp16]
     exact OCaml.Vm.Gc.word_writeLog_at _ (outSaveLog sp ra s0) 1 _ _ rfl trivial
-  obtain ⟨d, run5, D⟩ := (out_done allocated C h.frame savedRa savedS0 h.ready.aligned).run
-    allocated ⟨C.pc, rfl⟩
+  obtain ⟨d, run5, D⟩ := (out_done allocated C vLow vHigh vAlign h.frame savedRa savedS0
+    h.ready.aligned).run allocated ⟨C.pc, rfl⟩
   -- the record, the list head and the block at the return
-  obtain ⟨vLow, vHigh, _⟩ := C.block
   have v8 : (value + 8#64).toNat = value.toNat + 8 := record_toNat (off := 8) (by omega)
   have doneOut (a : Nat) (out : a < value.toNat + 8 ∨ value.toNat + 16 ≤ a) :
       (d.σ.mem[a]?).getD 0 = (allocated.σ.mem[a]?).getD 0 := by
     have inside : LogInW [⟨value.toNat + 8, value.toNat + 16⟩] [((value + 8#64).toNat, 8, O.record)] :=
       ⟨Or.inl ⟨by dsimp only; rw [v8]; exact Nat.le_refl _, by dsimp only; rw [v8]; omega⟩, trivial⟩
     rw [D.memory, frameOn_writeLog _ _ _ inside a ⟨out, trivial⟩]
-  have apart := C.apart
+  have recordKept (a : Nat) (lo : O.record.toNat ≤ a) (hi : a < O.record.toNat + recordBytes) :
+      (allocated.σ.mem[a]?).getD 0 = (flagged.σ.mem[a]?).getD 0 := by
+    have hi' : a < O.record.toNat + 65616 := hi
+    refine C.kept a (fun s => (custom.apart c a ((stateEq a).mp s)).free H _ heapC (recordFree a lo hi))
+      ?_ (Or.inl ?_) ?_ (youngWord a (by omega))
+    · rintro (g | ⟨_, _, no⟩)
+      · rcases allocGlobal_off_arena _ g with y | y <;> omega
+      · exact no _ List.mem_cons_self ⟨lo, hi⟩
+    · show a < (sp - 16#64).toNat - 576; rw [sp16]; arena_omega
+    · rw [ptrF]; omega
   have recordD : OutRecord d.σ.mem O.record (fdOf v) head := by
     have r := rec.flags
     rw [← F.memory] at r
-    exact (r.keep fun a lo hi => C.recordKept a lo (by unfold recordBytes; omega)).keep
-      fun a lo hi => doneOut a (by unfold recordBytes at apart; omega)
+    exact (r.keep fun a lo hi => recordKept a lo (by unfold recordBytes; omega)).keep
+      fun a lo hi => doneOut a (by omega)
   have headC : bytesT c.σ.mem 2147896128 8 = head := by
     have e := h.headWord
     rwa [read8_value] at e
@@ -762,8 +844,27 @@ theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat ×
     rw [← headW]
     apply bytesT_keep
     intro j hj
-    rw [doneOut _ (Or.inl (by arena_omega)), C.headKept _ (by omega) (by omega),
+    have notState (s : state flagged (2147896128 + j)) : False := by
+      have e := (custom.apart flagged _ s).static (by omega)
+      simp only [VsaIris.InExt, Layout.sym_caml_extra_heap_resources] at e
+      omega
+    rw [doneOut _ (Or.inl (by omega)), C.kept _ notState
+        (by
+          rintro (g | ⟨l, _, _⟩)
+          · unfold allocGlobal InRange at g; omega
+          · omega)
+        (Or.inl (by show 2147896128 + j < (sp - 16#64).toNat - 576; rw [sp16]; arena_omega))
+        (Or.inl (by rw [ptrF]; omega)) (youngWord _ (Or.inl (by omega))),
       flagsOut _ (Or.inl (by arena_omega))]
+  have domD : word d Layout.sym_Caml_state = word allocated Layout.sym_Caml_state := by
+    unfold word
+    apply bytesT_keep
+    intro j hj
+    exact doneOut _ (Or.inl (by unfold Layout.sym_Caml_state; omega))
+  have readyD := (custom.frame k allocated d readyA (fun a s => doneOut a (by
+    have m := (custom.apart allocated a s).minor
+    simp only [Gc.minorRegion] at m
+    omega)) domD).1
   refine ⟨d, run1.trans (run2.trans (run3.trans (run4.trans run5))), ⟨{
     entered := entered, opened := opened, flagged := flagged, allocated := allocated, value := value
     enter := E, opening := O, flags := F, custom := C, done := D
@@ -777,13 +878,14 @@ theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat ×
       exact OCaml.Vm.Gc.word_writeLog_at _ [((value + 8#64).toNat, 8, O.record)] 0 _ _ rfl trivial
     ops := by
       rw [D.memory, bytesT_writeLog_out _ (by simp only [OutLRange, and_true, v8]; omega)]
-      exact C.ops }⟩⟩
+      exact C.ops
+    ready := readyD }⟩⟩
 
 /-- `caml_ml_open_descriptor_out` keeps x20–x27 (among them `caml_interprete`'s
 `env`, accumulator and dispatch registers). -/
-theorem OpenedOut.keep_upper {H : List (Nat × Nat)} {capacity charge : Nat}
-    {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
-    (o : OpenedOut live H capacity charge sp ra s0 s1 s2 v head c d) {k : Nat} {x : BitVec 64}
+theorem OpenedOut.keep_upper {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {left : Nat}
+    {H : List (Nat × Nat)} {capacity charge : Nat} {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
+    (o : OpenedOut live Ready state left H capacity charge sp ra s0 s1 s2 v head c d) {k : Nat} {x : BitVec 64}
     (lo : 20 ≤ k) (hi : k ≤ 27) (h : gprGet c.σ k = some x) : gprGet d.σ k = some x := by
   have a := (o.enter.kept k (by omega) (by omega) (by simp; omega)).trans h
   have b := o.opening.keep_upper lo hi a
@@ -828,18 +930,29 @@ theorem out_input {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Conf
       · rw [fdOf_stderr]; exact runtime.stderr.seekFd
     headWord := rfl
     headLive := fun hz => ?_ }
-  have channels := heap.channels
-  unfold Gc.OpenChannelList at channels
-  rw [show Layout.sym_caml_all_opened_channels = (2147896128#64).toNat from rfl, ← read8_value] at channels
-  generalize hhead : bytesVal .ld (read8 c.σ.mem (2147896128#64).toNat) = head at channels hz ⊢
-  generalize hx : head.toNat = x at channels
-  cases channels with
-  | nil => exact absurd (BitVec.eq_of_toNat_eq (by rw [hx]; rfl)) hz
-  | @cons _ rest _ _ =>
-    obtain ⟨e, he, lo, hi⟩ := heap.records x List.mem_cons_self
-    have aligned := heap.recordsAligned x List.mem_cons_self
-    dsimp only at lo hi
-    unfold Gc.chanRecordBytes chanOffBuff ioBufferSize at hi
-    exact ⟨⟨e, he, lo, by omega⟩, by omega⟩
+  have mem := head_mem heap.channels rfl hz
+  obtain ⟨e, he, lo, hi⟩ := heap.records _ mem
+  have aligned := heap.recordsAligned _ mem
+  dsimp only at lo hi
+  unfold Gc.chanRecordBytes chanOffBuff ioBufferSize at hi
+  exact ⟨⟨e, he, lo, by omega⟩, by omega⟩
+
+/-- **The collector's side from the F1 heap invariant**: `Caml_state` and the
+minor heap are covered regions, and every open record lies apart from them. -/
+theorem out_nursery {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
+    (heap : Gc.LibHeapAt H cap chs c)
+    (room : (runtimeFields c).youngLimit + 24 ≤ (runtimeFields c).youngPtr)
+    (aligned : (runtimeFields c).youngPtr % 8 = 0)
+    (low : Gc.minorRegion.lo + 24 ≤ (runtimeFields c).youngPtr)
+    (high : (runtimeFields c).youngPtr ≤ Gc.minorRegion.hi) : OutNursery H chs c where
+  domain := heap.extents _ (by simp [Gc.f1Covered])
+  minor := heap.extents _ (by simp [Gc.f1Covered])
+  channels := heap.channels
+  recordsApart r hr := heap.recordsApart r hr (Boot.WhileMinRuntime.domain, Layout.domainStateBytes)
+    (by simp [Gc.f1Covered])
+  room := room
+  aligned := aligned
+  low := low
+  high := high
 
 end OCaml.Vm.Primitives.Channel
