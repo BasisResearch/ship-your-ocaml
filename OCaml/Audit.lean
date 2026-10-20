@@ -3,6 +3,7 @@ import OCaml.Vm.Gc.MemprofQuiet
 import OCaml.Vm.Gc.LocalRootsTail
 import OCaml.Vm.Gc.ChainScan
 import OCaml.Vm.Gc.Skiplist
+import OCaml.Vm.Gc.GlobalScan
 import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
@@ -737,6 +738,16 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.IndirectSlotSite.linked_regs
 #print axioms OCaml.Vm.Gc.ChainScan.ChainLoop.iteration
 #print axioms OCaml.Vm.Gc.ChainScan.ChainLoop.walk
+#print axioms OCaml.Vm.Gc.GlobalScan.stage_head
+#print axioms OCaml.Vm.Gc.GlobalScan.stage_test
+#print axioms OCaml.Vm.Gc.GlobalScan.insert_iteration
+#print axioms OCaml.Vm.Gc.GlobalScan.insert_loop
+#print axioms OCaml.Vm.Gc.GlobalScan.stage_tail
+#print axioms OCaml.Vm.Gc.GlobalScan.head_access
+#print axioms OCaml.Vm.Gc.GlobalScan.youngTest_plan
+#print axioms OCaml.Vm.Gc.GlobalScan.youngRetest_plan
+#print axioms OCaml.Vm.Gc.GlobalScan.insert_access
+#print axioms OCaml.Vm.Gc.GlobalScan.tail_access
 #print axioms OCaml.Vm.Gc.ChainScan.ChainLoop.carried_at_call
 #print axioms OCaml.Vm.Gc.ChainScan.ChainLoop.head_of_returned
 #print axioms OCaml.Vm.Gc.LocalRootsTail.stage_exit

@@ -87,6 +87,8 @@ structure Ops (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec 64
   space, globals or `random_seed` -/
   live : ∀ m sk cells, Shape m sk cells → ∀ H cap c, c.σ.mem = m → HeapReady H cap c → ∀ a,
     foot m sk cells a → ¬ VsaIris.VsaHeap.vsaFoot H a ∧ (a < randomSeed ∨ randomSeed + 4 ≤ a)
+  /-- the footprint lies above the code (headers in `.bss`, cells in the heap) -/
+  high : ∀ m sk cells, Shape m sk cells → ∀ a, foot m sk cells a → tohostAddr ≤ a
   /-- `caml_skiplist_insert(sk, key, 0)` -/
   insert : ∀ H cap sk cells (key sp ra : BitVec 64) (c : Config), Shape c.σ.mem sk cells →
     CallInput H cap [(10, BitVec.ofNat 64 sk), (11, key), (12, 0#64)] sp ra c →

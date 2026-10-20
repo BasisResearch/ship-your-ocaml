@@ -97,6 +97,14 @@
   `caml_global_roots{,_young,_old}` (shape predicate, `caml_skiplist_insert`,
   `caml_skiplist_empty`). `caml_register_named_value` →
   `caml_register_generational_global_root` reuses the insert.
+- `Skiplist.Ops Shape foot`: named obligation for insert/empty (ABI return
+  over `HeapReady`, footprint above `tohost`). `GlobalScan.lean`: the scan's
+  prologue, both young tests (one `TestSite` lemma), the insert loop
+  (`InsertStep`, `loop_to_exit`) and the epilogue's tail call through
+  `Ops.empty`. Code pins after a skiplist call come from `Returned.image`
+  (`GlobalRootsSites.image_loaded`, generated per byte), since `kept` is
+  only `getD`-level. Next: `MinorInvariant`, the per-slot-call state that
+  supplies `WalkStep`/`ScanStep`/`InsertStep` for every root loop.
 - G2: `SlotDone R copies copies' pl` (`OldifySlot.lean`): one
   `caml_oldify_one(v, p)` call at the slot level, `*p = relocation copies' v`
   over the published forwarding table, which grows and keeps its view.
