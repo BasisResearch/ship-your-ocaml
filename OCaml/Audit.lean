@@ -11,6 +11,9 @@ import OCaml.Vm.Gc.PageTable
 import OCaml.Vm.Gc.OldifyLocalRoots
 import OCaml.Vm.Gc.RefLoops
 import OCaml.Vm.Gc.RouteSupply
+import OCaml.Vm.Gc.FirstSlot
+import OCaml.Vm.Gc.FieldStep
+import OCaml.Vm.Gc.BfShape
 import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
@@ -759,6 +762,16 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.RefScan.body_access
 #print axioms OCaml.Vm.Gc.RefLoops.scanStep
 #print axioms OCaml.Vm.Gc.RouteSupply.immediate_call
+#print axioms OCaml.Vm.Gc.OldifyBridge.slot_resume
+#print axioms OCaml.Vm.Gc.MopupCall.slot_advance
+#print axioms OCaml.Vm.Gc.FirstField.first_slot
+#print axioms OCaml.Vm.Gc.FieldCopy.CopyEffect.stepped
+#print axioms OCaml.Vm.Gc.FieldCopy.SlotAdvanced.stepped
+#print axioms OCaml.Vm.Gc.FieldCopy.again_after
+#print axioms OCaml.Vm.Gc.BfShape.core_of_nonempty
+#print axioms OCaml.Vm.Gc.BfShape.slot_toNat
+#print axioms OCaml.Vm.Gc.BfShape.slot_write
+#print axioms OCaml.Vm.Gc.BfShape.merge_read
 #print axioms OCaml.Vm.Gc.RouteSupply.nonYoung_call
 #print axioms OCaml.Vm.Gc.RouteSupply.forwarded_call
 #print axioms OCaml.Vm.Gc.RouteSupply.slot_outside

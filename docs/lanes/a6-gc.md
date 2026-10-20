@@ -148,6 +148,14 @@
   (`AllocationConditions` → `AllocWrapper.Conditions` → `BestFitExact` …)
   are per allocator path; supplying them needs a best-fit shape invariant
   over the major heap's free structures that selects the path. Next.
+- Mopup over any route: `OldifyBridge.slot_resume` generalises the
+  forwarded-only `forwarded_resume` (a `Site` is a `SlotSite` over mopup's
+  code); `MopupCall.slot_advance` and `FirstField.first_slot` are the two
+  call sites. `FieldStepped` puts every later-field path in `SlotDone`
+  terms (the copy path's `again` reads the header after its store, so it
+  equals `advanceAgain` at the post-state).
+- `BfShape`: the small free lists and the exact path's core conditions;
+  `slot` in closed form (`bf_small_fl + 16·s`).
 - G2: `SlotDone R copies copies' pl` (`OldifySlot.lean`): one
   `caml_oldify_one(v, p)` call at the slot level, `*p = relocation copies' v`
   over the published forwarding table, which grows and keeps its view.
