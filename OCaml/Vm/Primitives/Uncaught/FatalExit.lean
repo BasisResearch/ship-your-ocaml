@@ -1,6 +1,7 @@
 import OCaml.Vm.Primitives.Uncaught.FatalReport
 import OCaml.Vm.Boot.Startup.StatFree
 import OCaml.Vm.Boot.Startup.SearchExeFrames
+import OCaml.Vm.Primitives.ExitPath.LibcExitHandler
 
 /-!
 # `caml_fatal_uncaught_exception`: the report, the free and the call of `exit(2)`
@@ -36,7 +37,7 @@ def fatalText (name : List (BitVec 8)) : String := "Fatal error: exception " ++ 
 /-- The bytes read after the report: `backtrace_active` and
 `caml_abort_on_uncaught_exn`'s word. -/
 def ExitReads (dom : BitVec 64) (a : Nat) : Prop :=
-  ((dom + 232#64).toNat ≤ a ∧ a < (dom + 232#64).toNat + 8) ∨ AbortBytes a
+  ((dom + 232#64).toNat ≤ a ∧ a < (dom + 232#64).toNat + 8) ∨ TailBytes a
 
 /-- What `fprintf` keeps, from its call to its return to `0x8000e02c`. -/
 structure FprintfReturned (live : List (Nat × Nat)) (capacity : Nat) (sp ra res dom : BitVec 64)
@@ -48,6 +49,8 @@ structure FprintfReturned (live : List (Nat × Nat)) (capacity : Nat) (sp ra res
   domainLive : ∀ q n, (q, n) ∈ before → q ≤ (dom + 232#64).toNat → (dom + 232#64).toNat + 16 ≤ q + n → (q, n) ∈ live
   kept : ∀ a, ExitReads dom a → (g.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
   printed : Vsa.Machine.output g.σ = Vsa.Machine.output c.σ ++ fatalText name
+  /-- stdio is initialized: `__sinit` installed `stdio_exit_handler` -/
+  installed : bytesVal .ld (read8 g.σ.mem ExitPath.stdioExitHandler.toNat) = ExitPath.stdioExitHandlerFn
 
 /-- **Named obligation: `fprintf(stderr, "Fatal error: exception %s\n", msg)`
 prints the report and returns.** Supplied by a summary of newlib's
@@ -69,6 +72,8 @@ structure AtExitCall (live : List (Nat × Nat)) (capacity : Nat) (sp : BitVec 64
   pc : PCAt 0x800373c8#64 e
   status : gprGet e.σ 10 = some 2#64
   callee : ∀ k, 20 ≤ k → k ≤ 27 → gprGet e.σ k = gprGet before.σ k
+  tail : TailLow e.σ.mem
+  installed : bytesVal .ld (read8 e.σ.mem ExitPath.stdioExitHandler.toNat) = ExitPath.stdioExitHandlerFn
   output : Vsa.Machine.output e.σ = Vsa.Machine.output before.σ ++ fatalText name
 
 /-- A free keeps every byte of another live block disjoint from the freed one. -/
@@ -170,11 +175,18 @@ theorem fatal_exit_call {live : List (Nat × Nat)} {capacity : Nat} {sp res dom 
         have := msgApart x inside.1 (by have := inside.2; omega)
         unfold FieldsApart at this; omega)
       ⟨by omega, by omega⟩)
-  have flagKept (x : Nat) (lo : Layout.sym_caml_abort_on_uncaught_exn ≤ x)
-      (hi : x < Layout.sym_caml_abort_on_uncaught_exn + 8) : (c4.σ.mem[x]?).getD 0 = (g.σ.mem[x]?).getD 0 :=
-    fromG x (Or.inr ⟨lo, hi⟩) (freed.low_byte frame msgLow msgHigh
-      (by unfold Layout.sym_caml_abort_on_uncaught_exn at hi; omega)
-      (by unfold allocGlobal InRange; unfold Layout.sym_caml_abort_on_uncaught_exn at lo hi; omega))
+  have tailKept (x : Nat) (hx : TailBytes x) : (c4.σ.mem[x]?).getD 0 = (g.σ.mem[x]?).getD 0 :=
+    fromG x (Or.inr hx) (freed.low_byte frame msgLow msgHigh
+      (by unfold TailBytes Layout.sym_caml_abort_on_uncaught_exn Layout.sym_atexit at hx; unfold heapStart; omega)
+      (by unfold allocGlobal InRange; unfold TailBytes Layout.sym_caml_abort_on_uncaught_exn Layout.sym_atexit at hx
+          omega))
+  -- `__stdio_exit_handler`, installed by `fprintf`, survives the free
+  have installed4 : bytesVal .ld (read8 c4.σ.mem ExitPath.stdioExitHandler.toNat) = ExitPath.stdioExitHandlerFn := by
+    have slot : ExitPath.stdioExitHandler.toNat = Layout.sym_stdio_exit_handler := rfl
+    rw [ConsoleWrite.read8_same (m := g1.σ.mem) fun i hi => by
+      rw [freed.low_byte frame msgLow msgHigh (by rw [slot]; unfold Layout.sym_stdio_exit_handler heapStart; omega)
+        (by rw [slot]; unfold allocGlobal InRange Layout.sym_stdio_exit_handler; omega), m3]]
+    exact pr.installed
   -- `backtrace_active` is zero
   have stateAddr : (0x80064d08#64 : BitVec 64).toNat = Layout.sym_Caml_state := rfl
   have dw : bytesVal .ld (read8 c4.σ.mem (0x80064d08#64).toNat) = dom := by
@@ -200,8 +212,8 @@ theorem fatal_exit_call {live : List (Nat × Nat)} {capacity : Nat} {sp res dom 
   -- `caml_abort_on_uncaught_exn` is zero
   have flag0 : bytesVal .lw (read8 c5.σ.mem (0x80064b34#64).toNat) = 0#64 := by
     have fa : (0x80064b34#64 : BitVec 64).toNat = Layout.sym_caml_abort_on_uncaught_exn := rfl
-    rw [m5, fa, ConsoleWrite.read8_same (m := g.σ.mem) fun i hi => flagKept _ (by omega) (by omega)]
-    exact at_.abortOff
+    rw [m5, fa, ConsoleWrite.read8_same (m := g.σ.mem) fun i hi => tailKept _ (Or.inl ⟨by omega, by omega⟩)]
+    exact at_.tail.abort
   have e1 : gprGet c5.σ 1 = some 0x8000e034#64 := (k5 1 (by decide) (by decide) (by decide)).trans ready4.raReg
   have e10 : gprGet c5.σ 10 = some (regsAt c4 10) := (k5 10 (by decide) (by decide) (by decide)).trans a10
   have l5 : LeafInput (regsAt c5 1) c5 := by
@@ -246,6 +258,8 @@ theorem fatal_exit_call {live : List (Nat × Nat)} {capacity : Nat} {sp res dom 
         (gholds_lookup (n := 2) _ p8.regs rfl)
       pc := by have := p8.pc; rw [leave_call_target] at this; exact this
       status := gholds_lookup (n := 10) _ p8.regs rfl
+      tail := at_.tail.transport fun a ha => by rw [m8, tailKept a ha]
+      installed := by rw [m8]; exact installed4
       callee := fun k lo hi =>
         (p8.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)).trans
           ((back k (by omega) (by omega) (by omega)).trans

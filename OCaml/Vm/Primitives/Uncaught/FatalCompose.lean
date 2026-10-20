@@ -127,8 +127,8 @@ structure FatalLowAt (p dom start trig imp err : BitVec 64) (c : Config) : Prop 
   stream : StderrAt c.σ.mem imp err
   low : ∀ a, StderrBytes imp a → a < heapStart ∧ ¬ allocGlobal a
   apart : ∀ a, StderrBytes imp a → OutL (memprofStores p dom start trig) a
-  abort : AbortOff c.σ.mem
-  abortApart : ∀ a, AbortBytes a → OutL (memprofStores p dom start trig) a
+  abort : TailLow c.σ.mem
+  tailApart : ∀ a, TailBytes a → OutL (memprofStores p dom start trig) a
 
 /-- The domain record named by `Caml_state` is the first domain's. -/
 theorem FatalPre.domain {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place}
@@ -191,9 +191,9 @@ theorem fatal_to_fprintf {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (Bi
   obtain ⟨e, live, capacity', ra', run5, at_⟩ := fatal_doAtExit looked table ⟨done.bytes, done.term⟩
     (std.stream.transport fun a ha => reached.low a (std.low a ha).1 (std.low a ha).2 (std.apart a ha))
     (std.abort.transport fun a ha => reached.low a
-      (by unfold AbortBytes Layout.sym_caml_abort_on_uncaught_exn at ha; unfold heapStart; omega)
-      (by unfold AbortBytes Layout.sym_caml_abort_on_uncaught_exn at ha; unfold allocGlobal InRange; omega)
-      (std.abortApart a ha))
+      (by unfold TailBytes Layout.sym_caml_abort_on_uncaught_exn Layout.sym_atexit at ha; unfold heapStart; omega)
+      (by unfold TailBytes Layout.sym_caml_abort_on_uncaught_exn Layout.sym_atexit at ha; unfold allocGlobal InRange; omega)
+      (std.tailApart a ha))
     done.high msgApart errApart ⟨q, n, member, qlo, qhi, qa, aq⟩
     (fun b hb e he => by
       obtain ⟨q', n', -, qlo', qhi', qe, eq⟩ := pre.tableBlocks b hb e he
@@ -208,6 +208,8 @@ structure FatalExiting (sp : BitVec 64) (name : List (BitVec 8)) (c0 e : Config)
   ready : ∃ live capacity, RuntimeReadyL imageLive live capacity (sp + 18446744073709551568#64) 0x8000dfb8#64 e
   pc : PCAt 0x800373c8#64 e
   status : gprGet e.σ 10 = some 2#64
+  tail : TailLow e.σ.mem
+  installed : bytesVal .ld (read8 e.σ.mem ExitPath.stdioExitHandler.toNat) = ExitPath.stdioExitHandlerFn
   output : ∃ out, Vsa.Machine.output e.σ = Vsa.Machine.output c0.σ ++ out ++ fatalText name
 
 /-- **`caml_fatal_uncaught_exception` from its entry to the call of
@@ -228,8 +230,62 @@ theorem fatal_to_exit {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVe
   obtain ⟨e, live', capacity'', run2, call⟩ := fatal_exit_call reached.call (printf live capacity' res) pre.domain
     pre.backtrace.activeWindow (pre.heap.formatFrame.resize (by decide) (by decide)) done.low done.high
     (msg_apart done pre.backtrace) inactive
-  refine ⟨e, run.trans run2, ⟨live', capacity'', call.ready⟩, call.pc, call.status, ?_⟩
+  refine ⟨e, run.trans run2, ⟨live', capacity'', call.ready⟩, call.pc, call.status, call.tail, call.installed, ?_⟩
   obtain ⟨out, h⟩ := reached.call.output
   exact ⟨out, by rw [call.output, h, reached.output]⟩
+
+/-- A native frame with the allocator's headroom holds libc `exit`'s stack. -/
+theorem _root_.OCaml.Vm.Boot.Startup.NativeFrame.exitLayout {sp : BitVec 64} (frame : NativeFrame sp allocHeadroom) :
+    ExitPath.ExitLayout ExitPath.libcExitDepth sp := by
+  have lo := frame.lower
+  have hi := frame.upper
+  have al := frame.aligned
+  unfold allocHeadroom heapEnd at lo
+  unfold Layout.sym_stack_top at hi
+  have deep : heapEnd + ExitPath.libcExitDepth ≤ sp.toNat := by
+    unfold heapEnd ExitPath.libcExitDepth; omega
+  refine ⟨by unfold ExitPath.libcExitDepth; omega, by omega, by unfold Layout.sym_tohost ExitPath.libcExitDepth; omega,
+    al, Or.inl (Nat.le_sub_of_add_le (Nat.le_trans (by decide) deep)),
+    Or.inl (Nat.le_sub_of_add_le (Nat.le_trans (by decide) deep)), ?_⟩
+  intro g hg
+  refine Or.inl (Nat.le_sub_of_add_le (Nat.le_trans ?_ deep))
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hg
+  rcases hg with rfl | rfl | rfl | rfl | rfl <;>
+    simp only [ExitPath.verbGc, ExitPath.cleanupOnExit, ExitPath.atexitList, ExitPath.atexitMutex,
+      ExitPath.stdioExitHandler, BitVec.toNat_ofNat, Layout.sym_caml_verb_gc, Layout.sym_caml_cleanup_on_exit,
+      Layout.sym_atexit, Layout.sym_atexit_recursive_mutex, Layout.sym_stdio_exit_handler, heapEnd] <;> omega
+
+/-- **`caml_fatal_uncaught_exception` halts the machine with status 2**, the
+backtrace inactive: after what the entry had printed and what the
+`do_at_exit` callback printed, the console gains exactly
+`"Fatal error: exception " ++ name ++ "\n"`. Named obligations:
+`AtExitCallback`, `FprintfReport`, `StdioExitHandler`. -/
+theorem fatal_halts {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place}
+    {named : List (String × Val)} {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {H : List (Nat × Nat)}
+    {capacity charge : Nat} {p dom start trig active pos imp err : BitVec 64} {c0 : Config}
+    (pre : FatalPre ra sp exn s0 s1 s2 s3 np name pl named chains H capacity charge p dom start trig active pos c0)
+    (std : FatalLowAt p dom start trig imp err c0)
+    (callback : ∀ res v clo, named.lookup "Pervasives.do_at_exit" = some v → valWord pl v = some clo →
+      AtExitCallback H capacity sp clo res dom imp name.length)
+    (printf : ∀ live capacity res, FprintfReport live capacity sp res dom err name)
+    (handler : ExitPath.StdioExitHandler (sp + 18446744073709551568#64) 2#64)
+    (inactive : active = 0#64) :
+    ∃ out, Halts c0 (Vsa.Machine.output c0.σ ++ out ++ fatalText name) 2 := by
+  obtain ⟨e, run, ex⟩ := fatal_to_exit pre std callback printf inactive
+  obtain ⟨live, cap, ready⟩ := ex.ready
+  have frame : NativeFrame (sp + 18446744073709551568#64) allocHeadroom :=
+    pre.heap.formatFrame.resize (by decide) (by decide)
+  have entry : ExitPath.ExitEntry 0x8000dfb8#64 (sp + 18446744073709551568#64) 2#64 e :=
+    ⟨ready.toLeafInput,
+      ⟨ready.good, ready.tick, ready.platform.htifIdle, fun n hn => ready.platform.gpr n
+        (by simp only [ExitPath.exitReads, List.mem_cons, List.not_mem_nil, or_false] at hn; omega)
+        (by simp only [ExitPath.exitReads, List.mem_cons, List.not_mem_nil, or_false] at hn; omega)⟩,
+      ready.stack, ex.status, frame.exitLayout,
+      by rw [show ExitPath.atexitList.toNat = Layout.sym_atexit from rfl]; exact ex.tail.noAtexit⟩
+  obtain ⟨out, hout⟩ := ex.output
+  have h := ExitPath.libc_exit_handler_halts entry ex.installed handler ex.pc
+  rw [hout, show (ExitPath.exitStatus 2#64).toNat = 2 by decide] at h
+  obtain ⟨c', σf, run', halted, o⟩ := h
+  exact ⟨out, c', σf, run.trans run', halted, o⟩
 
 end OCaml.Vm.Primitives.Uncaught.FatalUncaught

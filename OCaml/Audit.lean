@@ -3273,6 +3273,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.ExitPath.libc_exit_run
 #print axioms OCaml.Vm.Primitives.ExitPath.libc_exit_halts
 #print axioms OCaml.Vm.Primitives.ExitPath.ExitCtx.nest
+#print axioms OCaml.Vm.Primitives.ExitPath.exit_procs_run
+#print axioms OCaml.Vm.Primitives.ExitPath.exit_tail_run
+#print axioms OCaml.Vm.Primitives.ExitPath.LibcExitInput.entry
+#print axioms OCaml.Vm.Primitives.ExitPath.libc_exit_handler_halts
 #print axioms OCaml.Vm.Primitives.ExitPath.exit_halts
 #print axioms OCaml.Vm.Primitives.ExitPath.caml_sys_exit_halts
 #print axioms OCaml.Vm.Primitives.ConsoleWrite.putchar_step
@@ -6158,7 +6162,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.OutListWalk.walk_listed_run
 #print axioms OCaml.Vm.Sim.OutListWalk.walk_listed
 #print axioms OCaml.Vm.Sim.OutListWalk.walk_loop
-#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.AbortOff.transport
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatalFormat_rodata
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatalFormat_at
 #print axioms OCaml.Vm.Boot.Startup.StatFreedL.live_byte
@@ -6167,6 +6170,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.FatalPre.domain
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.msg_apart
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_to_exit
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.TailLow.transport
+#print axioms OCaml.Vm.Boot.Startup.NativeFrame.exitLayout
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_halts
 #print axioms Vsa.Densify.stepOnce_covers
 #print axioms Vsa.Machine.Steps.covers
 #print axioms OCaml.Vm.Primitives.gprsPersist

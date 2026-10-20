@@ -104,11 +104,32 @@ structure LibcExitInput (ra sp code : BitVec 64) (d : Config) : Prop
   layout : ExitLayout libcExitDepth sp
   globals : ExitGlobals d
 
-/-- **libc `exit(code)` from its own entry** with no atexit registrations and
-stdio never initialized: `__call_exitprocs` finds the list empty, the stdio
-handler is null, and `_exit` parks at its HTIF store. -/
-theorem libc_exit_run {ra sp code d} (h : LibcExitInput ra sp code d) :
-    FnSummary 0x800373c8#64 (fun e => e = d) (Parked libcExitDepth sp code d) := by
+/-- What `exit`'s own frame and `__call_exitprocs` need: `LibcExitInput`
+without the stdio handler. -/
+structure ExitEntry (ra sp code : BitVec 64) (d : Config) : Prop
+    extends LeafInput ra d where
+  ok : ExitOk d
+  stack : gpr d 2 = some sp
+  arg : gpr d 10 = some code
+  layout : ExitLayout libcExitDepth sp
+  noAtexit : bytesVal .ld (read8 d.σ.mem atexitList.toNat) = 0#64
+
+theorem LibcExitInput.entry {ra sp code d} (h : LibcExitInput ra sp code d) : ExitEntry ra sp code d :=
+  ⟨h.toLeafInput, h.ok, h.stack, h.arg, h.layout, h.globals.noAtexit⟩
+
+/-- Back in `exit` at the stdio-handler test, `__call_exitprocs` done. -/
+structure ProcsDone (sp code : BitVec 64) (d e : Config) : Prop where
+  ctx : ExitCtx (sp.toNat - libcExitDepth) sp.toNat d e
+  pc : pcOf e = some 0x800373e0#64
+  raReg : gpr e 1 = some LibcExit.enter_call.link
+  stack : gpr e 2 = some (sp - 16#64)
+  codeReg : gpr e 8 = some code
+
+/-- **`exit(code)` to its stdio-handler test**: save `s0`/`ra`, then
+`__call_exitprocs(code, NULL)` takes the lock, finds the atexit list empty,
+restores and releases. -/
+theorem exit_procs_run {ra sp code d} (h : ExitEntry ra sp code d) :
+    FnSummary 0x800373c8#64 (fun e => e = d) (ProcsDone sp code d) := by
   have L := h.layout
   have ctx12 : ExitCtx (sp.toNat - libcExitDepth) sp.toNat d d :=
     ⟨h.ok, h.image, h.minstret, rfl, fun _ _ => rfl⟩
@@ -197,7 +218,7 @@ theorem libc_exit_run {ra sp code d} (h : LibcExitInput ra sp code d) :
       gholds_lookup _ p10.regs rfl, (keep 20 (by decide)).trans (gholds_lookup _ q9.regs rfl),
       (keep 23 (by decide)).trans (gholds_lookup _ q9.regs rfl), True.intro⟩
     (by simp only [R10, ↓reduceIte, Nat.reduceEqDiff]; decide) (global_window _ (by simp))
-    (by rw [ctx17.read (L.globals _ (by simp))]; exact h.globals.noAtexit)
+    (by rw [ctx17.read (L.globals _ (by simp))]; exact h.noAtexit)
   apply summary_bind e11 (fun _ p => p.pc)
   intro d17 p11
   have ctx18 := ctx17.step p11 LogWithin.nil (by decide) (by simp [ExitProcs.empty_regs, keysG])
@@ -229,7 +250,7 @@ theorem libc_exit_run {ra sp code d} (h : LibcExitInput ra sp code d) :
   have a18 := ctx19.present 10 (by decide)
   let R12 : Nat → BitVec 64 := fun n => if n = 1 then LibcExit.enter_call.link else (gpr d18 10).getD 0
   have l12 := RetargetLockReleaseRecursive.leaf_fast d18 R12 (ctx19.leaf ra18 (by simp only [R12, ↓reduceIte]; decide)) ⟨ra18, a18, True.intro⟩
-  apply summary_bind l12 (fun _ p => p.pc)
+  apply l12.weaken (fun _ eq => eq)
   intro d19 p13
   have ctx20 := ctx19.step p13 LogWithin.nil (by decide) (by simp)
   have code19 : gpr d19 8 = some (code) := by
@@ -240,21 +261,25 @@ theorem libc_exit_run {ra sp code d} (h : LibcExitInput ra sp code d) :
       q9.toEffectPost.gpr_frame (by decide) 8 (by decide) (by decide) (by simp),
       p9.toEffectPost.gpr_frame (by decide) 8 (by decide) (by decide) (by simp)]
     exact gholds_lookup _ q8.regs rfl
-  -- back in exit: the stdio exit handler is null; _exit(code)
-  have a19 := ctx20.present 10 (by decide)
-  let R13 : Nat → BitVec 64 := fun n => if n = 1 then LibcExit.enter_call.link else
-    if n = 8 then code else (gpr d19 10).getD 0
-  have e14 := LibcExit.handler_fast d19 R13 (ctx20.leaf (gholds_lookup _ p13.regs rfl) (by simp only [R13, ↓reduceIte]; decide))
-    ⟨gholds_lookup _ p13.regs rfl, code19, a19, True.intro⟩ (global_window _ (by simp))
-    (by rw [ctx20.read (L.globals _ (by simp))]; exact h.globals.noHandler)
-  apply summary_bind e14 (fun _ p => p.pc)
-  intro d20 p14
-  have ctx21 := ctx20.step p14 LogWithin.nil (by decide) (by simp [LibcExit.handler_regs, keysG])
-  have e15 := LibcExit.tail_fast d20 R13 (ctx21.leaf (gholds_lookup _ p14.regs rfl) (by simp only [R13, ↓reduceIte]; decide))
-    ⟨gholds_lookup _ p14.regs rfl, gholds_lookup _ p14.regs rfl, True.intro⟩
+  have sp18 : gpr d18 2 = some (sp - 16#64) := by
+    have := gholds_lookup (n := 2) _ p12.regs rfl
+    simp only [ExitProcs.leave_regs, R11, sp224, ↓reduceIte, Nat.reduceEqDiff, BitVec.sub_add_cancel] at this
+    exact this
+  exact ⟨ctx20, p13.pc, gholds_lookup _ p13.regs rfl,
+    (p13.toEffectPost.gpr_frame (by decide) 2 (by decide) (by decide) (by simp)).trans sp18, code19⟩
+
+/-- **From `exit`'s restored state to `_exit`'s HTIF store**: `a0 = s0`, then
+`_exit(code)` parks. -/
+theorem exit_tail_run {depth : Nat} {sp code ra : BitVec 64} {c e : Config}
+    (ctx : ExitCtx (sp.toNat - depth) sp.toNat c e) (raReg : gpr e 1 = some ra) (aligned : ra.toNat % 4 = 0)
+    (codeReg : gpr e 8 = some code) :
+    FnSummary 0x800373f0#64 (fun f => f = e) (Parked depth sp code c) := by
+  let R13 : Nat → BitVec 64 := fun n => if n = 1 then ra else code
+  have e15 := LibcExit.tail_fast e R13 (ctx.leaf raReg (by simp only [R13, ↓reduceIte]; exact aligned))
+    ⟨raReg, codeReg, True.intro⟩
   apply summary_bind e15 (fun _ p => p.pc)
   intro d21 p15
-  have ctx22 := ctx21.step p15 LogWithin.nil (by decide) (by simp [LibcExit.tail_regs, keysG])
+  have ctx22 := ctx.step p15 LogWithin.nil (by decide) (by simp [LibcExit.tail_regs, keysG])
   let a15 : GRegs := [(10, code)]
   have J15 := call_registers_summary LibcExit.tail_call_shape LibcExit.tail_call_decode d21
     (LibcExit.tail_call_pins p15.image) p15.good p15.image p15.tick p15.minstret a15
@@ -270,6 +295,26 @@ theorem libc_exit_run {ra sp code d} (h : LibcExitInput ra sp code d) :
   intro d23 p16
   exact ⟨ctx23.step p16 LogWithin.nil (by decide) (by simp [HtifExit.store_regs, keysG]), p16.pc,
     gholds_lookup _ p16.regs rfl, gholds_lookup _ p16.regs rfl⟩
+
+/-- **libc `exit(code)` from its own entry** with no atexit registrations and
+stdio never initialized: `__call_exitprocs` finds the list empty, the stdio
+handler is null, and `_exit` parks at its HTIF store. -/
+theorem libc_exit_run {ra sp code d} (h : LibcExitInput ra sp code d) :
+    FnSummary 0x800373c8#64 (fun e => e = d) (Parked libcExitDepth sp code d) := by
+  have L := h.layout
+  apply summary_bind (exit_procs_run h.entry) (fun _ p => p.pc)
+  intro d19 done
+  have a19 := done.ctx.present 10 (by decide)
+  let R13 : Nat → BitVec 64 := fun n => if n = 1 then LibcExit.enter_call.link else
+    if n = 8 then code else (gpr d19 10).getD 0
+  have e14 := LibcExit.handler_fast d19 R13 (done.ctx.leaf done.raReg (by show LibcExit.enter_call.link.toNat % 4 = 0; decide))
+    ⟨done.raReg, done.codeReg, a19, True.intro⟩ (global_window _ (by simp))
+    (by rw [done.ctx.read (L.globals _ (by simp))]; exact h.globals.noHandler)
+  apply summary_bind e14 (fun _ p => p.pc)
+  intro d20 p14
+  have ctx21 := done.ctx.step p14 LogWithin.nil (by decide) (by simp [LibcExit.handler_regs, keysG])
+  exact exit_tail_run (ra := LibcExit.enter_call.link) ctx21 (gholds_lookup _ p14.regs rfl) (by decide)
+    (gholds_lookup _ p14.regs rfl)
 
 /-- A nested exit context: the inner window lies in the outer one. -/
 theorem ExitCtx.nest {lo hi lo' hi' : Nat} {c d e : Config} (outer : ExitCtx lo hi c d)

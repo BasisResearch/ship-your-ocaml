@@ -55,18 +55,24 @@ theorem StderrAt.transport {m m' : Mem} {imp err : BitVec 64} (h : StderrAt m im
   · rw [ConsoleWrite.read8_same (m := m) fun i hi => same _ (Or.inr ⟨by omega, by omega⟩)]
     exact h.stderrWord
 
-/-- The bytes of `caml_abort_on_uncaught_exn`'s word. -/
-def AbortBytes (a : Nat) : Prop :=
-  Layout.sym_caml_abort_on_uncaught_exn ≤ a ∧ a < Layout.sym_caml_abort_on_uncaught_exn + 8
+/-- The low words the path's tail reads: `caml_abort_on_uncaught_exn` and
+newlib's atexit list `__atexit`. -/
+def TailBytes (a : Nat) : Prop :=
+  (Layout.sym_caml_abort_on_uncaught_exn ≤ a ∧ a < Layout.sym_caml_abort_on_uncaught_exn + 8) ∨
+    (Layout.sym_atexit ≤ a ∧ a < Layout.sym_atexit + 8)
 
-/-- `caml_abort_on_uncaught_exn` is zero (no abort after the report). -/
-def AbortOff (m : Mem) : Prop := bytesVal .lw (read8 m Layout.sym_caml_abort_on_uncaught_exn) = 0#64
+/-- No abort after the report, and no atexit registrations. -/
+structure TailLow (m : Mem) : Prop where
+  abort : bytesVal .lw (read8 m Layout.sym_caml_abort_on_uncaught_exn) = 0#64
+  noAtexit : bytesVal .ld (read8 m Layout.sym_atexit) = 0#64
 
-theorem AbortOff.transport {m m' : Mem} (h : AbortOff m)
-    (same : ∀ a, AbortBytes a → (m'[a]?).getD 0 = (m[a]?).getD 0) : AbortOff m' := by
-  unfold AbortOff at h ⊢
-  rw [ConsoleWrite.read8_same (m := m) fun i hi => same _ ⟨by omega, by omega⟩]
-  exact h
+theorem TailLow.transport {m m' : Mem} (h : TailLow m)
+    (same : ∀ a, TailBytes a → (m'[a]?).getD 0 = (m[a]?).getD 0) : TailLow m' := by
+  refine ⟨?_, ?_⟩
+  · rw [ConsoleWrite.read8_same (m := m) fun i hi => same _ (Or.inl ⟨by omega, by omega⟩)]
+    exact h.abort
+  · rw [ConsoleWrite.read8_same (m := m) fun i hi => same _ (Or.inr ⟨by omega, by omega⟩)]
+    exact h.noAtexit
 
 /-- What `caml_callback_exn` keeps, from its call to its return to `0x8000e004`:
 the callee-saved registers, readiness with the message block first and the
@@ -80,7 +86,7 @@ structure CallbackReturned (live : List (Nat × Nat)) (capacity : Nat) (sp ra re
   domainLive : ∀ q n, (q, n) ∈ before → q ≤ (dom + 232#64).toNat → (dom + 232#64).toNat + 16 ≤ q + n → (q, n) ∈ live
   message : ∀ a, res.toNat ≤ a → a ≤ res.toNat + len → (e.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
   stderr : ∀ a, StderrBytes imp a → (e.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
-  abortKept : ∀ a, AbortBytes a → (e.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
+  tailKept : ∀ a, TailBytes a → (e.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
   output : ∃ out, Vsa.Machine.output e.σ = Vsa.Machine.output c.σ ++ out
 
 /-- **Named obligation: `caml_callback_exn(*at_exit, Val_unit)` returns.**
@@ -113,7 +119,7 @@ structure AtReport (live : List (Nat × Nat)) (capacity : Nat) (sp ra res dom ac
     (dom + 232#64).toNat + 16 ≤ q + n
   message : MessageAt e.σ.mem res name
   stderr : StderrAt e.σ.mem imp err
-  abortOff : AbortOff e.σ.mem
+  tail : TailLow e.σ.mem
   output : ∃ out, Vsa.Machine.output e.σ = Vsa.Machine.output before.σ ++ out
 
 /-- **`if (at_exit != NULL) caml_callback_exn(*at_exit, Val_unit)`**, both
@@ -123,7 +129,7 @@ theorem fatal_doAtExit {H : List (Nat × Nat)} {capacity : Nat} {sp res dom acti
     {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {r d : Config}
     (looked : AtExitLooked H capacity sp res dom active pos name.length named chains r x d)
     (table : TableShape d.σ.mem pl named chains)
-    (message : MessageAt r.σ.mem res name) (stderr : StderrAt r.σ.mem imp err) (abortOff : AbortOff r.σ.mem)
+    (message : MessageAt r.σ.mem res name) (stderr : StderrAt r.σ.mem imp err) (tail : TailLow r.σ.mem)
     (msgHigh : res.toNat + (name.length + 1) ≤ heapEnd)
     (msgApart : ∀ a, res.toNat ≤ a → a ≤ res.toNat + name.length → FieldsApart dom a)
     (stderrApart : ∀ a, StderrBytes imp a → FieldsApart dom a)
@@ -148,9 +154,9 @@ theorem fatal_doAtExit {H : List (Nat × Nat)} {capacity : Nat} {sp res dom acti
   have errD : StderrAt d.σ.mem imp err :=
     stderr.transport fun a ha => fromR a (errLow a ha) (stderrApart a ha)
   obtain ⟨q, n, member, qlo, qhi, qa, aq⟩ := domainBlock
-  have abortD : AbortOff d.σ.mem := abortOff.transport fun a ha => fromR a
-    (by unfold AbortBytes Layout.sym_caml_abort_on_uncaught_exn at ha; unfold heapEnd; omega)
-    (Or.inl (by unfold AbortBytes Layout.sym_caml_abort_on_uncaught_exn at ha; unfold heapStart at qlo; omega))
+  have abortD : TailLow d.σ.mem := tail.transport fun a ha => fromR a
+    (by unfold TailBytes Layout.sym_caml_abort_on_uncaught_exn Layout.sym_atexit at ha; unfold heapEnd; omega)
+    (Or.inl (by unfold TailBytes Layout.sym_caml_abort_on_uncaught_exn Layout.sym_atexit at ha; unfold heapStart at qlo; omega))
   have leafD := looked.ready.toLeafInput
   have r1 := regsAt_of leafD.raReg
   have r10 := regsAt_of looked.result
@@ -179,7 +185,7 @@ theorem fatal_doAtExit {H : List (Nat × Nat)} {capacity : Nat} {sp res dom acti
         domainBlock := ⟨q, n, member, qlo, qhi, qa, aq⟩
         message := msgD.transport fun a _ _ => by rw [me]
         stderr := errD.transport fun a _ => by rw [me]
-        abortOff := abortD.transport fun a _ => by rw [me]
+        tail := abortD.transport fun a _ => by rw [me]
         output := ⟨"", by
           rw [String.append_empty, ← looked.output]; simp only [Vsa.Machine.output]; rw [p.output]⟩ }
   · -- the callback: `ld a0, 0(a0); li a1, 1; call caml_callback_exn`
@@ -245,7 +251,7 @@ theorem fatal_doAtExit {H : List (Nat × Nat)} {capacity : Nat} {sp res dom acti
         domainBlock := ⟨q, n, cb.domainLive q n member qa aq, qlo, qhi, qa, aq⟩
         message := msgD.transport fun a lo hi => by rw [cb.message a lo hi, m3]
         stderr := errD.transport fun a ha => by rw [cb.stderr a ha, m3]
-        abortOff := abortD.transport fun a ha => by rw [cb.abortKept a ha, m3]
+        tail := abortD.transport fun a ha => by rw [cb.tailKept a ha, m3]
         output := by
           obtain ⟨out, h⟩ := cb.output
           refine ⟨out, ?_⟩
@@ -271,7 +277,7 @@ structure AtFprintf (live : List (Nat × Nat)) (capacity : Nat) (sp res dom acti
   message : MessageAt g.σ.mem res name
   activeRestored : bytesT g.σ.mem (dom + 232#64).toNat 8 = active
   posRestored : bytesT g.σ.mem (dom + 240#64).toNat 8 = pos
-  abortOff : AbortOff g.σ.mem
+  tail : TailLow g.σ.mem
   output : ∃ out, Vsa.Machine.output g.σ = Vsa.Machine.output before.σ ++ out
 
 /-- **The restore and the call of `fprintf`**: `backtrace_active` and
@@ -378,8 +384,8 @@ theorem fatal_report {live : List (Nat × Nat)} {capacity : Nat} {sp ra res dom 
         rw [mg]
         exact word_writeLog_at _ _ 0 _ _ rfl (by simp only [List.drop, OutLRange, d240]; exact ⟨Or.inl (by omega), trivial⟩)
       posRestored := by rw [mg]; exact word_writeLog_at _ _ 1 _ _ rfl trivial
-      abortOff := at_.abortOff.transport fun a ha => keep a (low a (by
-        unfold AbortBytes Layout.sym_caml_abort_on_uncaught_exn at ha; omega))
+      tail := at_.tail.transport fun a ha => keep a (low a (by
+        unfold TailBytes Layout.sym_caml_abort_on_uncaught_exn Layout.sym_atexit at ha; omega))
       output := by
         obtain ⟨out, h⟩ := at_.output
         refine ⟨out, ?_⟩
