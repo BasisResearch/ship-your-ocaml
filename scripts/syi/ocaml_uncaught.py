@@ -222,6 +222,28 @@ STDIO_FAST = {
         {'mem': []},
     'Close.leave':
         {'mem': [('R 2 + 24#64', 'window')], 'ra': 0, 'addrSimpOnly': True, 'addrFacts': ['show BitVec.signExtend 64 0#12 = 0#64 by decide', 'show BitVec.signExtend 64 24#12 = 24#64 by decide']},
+    'Sinit.pro':
+        {'mem': [('R 2 + 18446744073709551600#64', 'window'), ('R 2 + 18446744073709551600#64 + 8#64', 'window')], 'log': '[((R 2 - 16#64).toNat, 8, R 8), ((R 2 - 16#64 + 8#64).toNat, 8, R 1)]', 'addrSimpOnly': True, 'addrFacts': ['show BitVec.signExtend 64 0#12 = 0#64 by decide', 'show BitVec.signExtend 64 8#12 = 8#64 by decide']},
+    'Sinit.fresh':
+        {'mem': [('R 8 + 72#64', 'window')]},
+    'Sinit.install':
+        {'mem': [('0x80064d38#64', 'global'), ('R 8 + 72#64', 'window')], 'log': '[((R 8 + 72#64).toNat, 8, 0x8003e91c#64)]', 'logFacts': ['imm20Of', 'BitVec.reduceAdd', 'BitVec.reduceSub', "show BitVec.signExtend 64 (BitVec.extractLsb' 12 20 1815#32 ++ 0#12) = 0#64 by decide"]},
+    'Sinit.init':
+        {'mem': ()},
+    'Sinit.leave':
+        {'mem': [('R 2', 'window'), ('R 2 + 8#64', 'window')], 'addrSimpOnly': True},
+    'GlobalStdioInit.stdin':
+        {'mem': [('R 2 + 18446744073709551568#64 + 40#64', 'window'), ('R 2 + 18446744073709551568#64 + 32#64', 'window'), ('R 2 + 18446744073709551568#64 + 24#64', 'window'), ('R 2 + 18446744073709551568#64 + 16#64', 'window'), ('R 2 + 18446744073709551568#64 + 8#64', 'window'), ('R 2 + 18446744073709551568#64', 'window'), ('0x80064d38#64', 'global'), ('0x8007ca48#64', 'global'), ('0x8007ca38#64', 'global'), ('0x8007ca40#64', 'global'), ('0x8007cae8#64', 'global'), ('0x8007ca50#64', 'global'), ('0x8007ca58#64', 'global'), ('0x8007ca60#64', 'global')], 'log': '[((R 2 - 48#64 + 40#64).toNat, 8, R 1), ((R 2 - 48#64 + 32#64).toNat, 8, R 8), ((R 2 - 48#64 + 24#64).toNat, 8, R 9), ((R 2 - 48#64 + 16#64).toNat, 8, R 18), ((R 2 - 48#64 + 8#64).toNat, 8, R 19), ((R 2 - 48#64).toNat, 8, R 20), ((0x80064d38#64).toNat, 8, 0x8003e900#64), ((0x8007ca48#64).toNat, 4, 0x4#64), ((0x8007ca38#64).toNat, 8, 0#64), ((0x8007ca40#64).toNat, 8, 0#64), ((0x8007cae8#64).toNat, 4, 0#64), ((0x8007ca50#64).toNat, 8, 0#64), ((0x8007ca58#64).toNat, 4, 0#64), ((0x8007ca60#64).toNat, 4, 0#64)]', 'addrSimpOnly': True, 'autoFacts': True},
+    'GlobalStdioInit.stdinFns':
+        {'mem': [('R 8 + 56#64', 'window'), ('R 8 + 64#64', 'window'), ('R 8 + 72#64', 'window'), ('R 8 + 80#64', 'window'), ('R 8 + 48#64', 'window')], 'log': '[((R 8 + 56#64).toNat, 8, 0x80040034#64), ((R 8 + 64#64).toNat, 8, 0x80040098#64), ((R 8 + 72#64).toNat, 8, 0x80040120#64), ((R 8 + 80#64).toNat, 8, 0x80040184#64), ((R 8 + 48#64).toNat, 8, R 8)]', 'autoFacts': True, 'addrSimpOnly': True},
+    'GlobalStdioInit.stdout':
+        {'mem': [('R 8 + 200#64', 'window'), ('R 8 + 184#64', 'window'), ('R 8 + 192#64', 'window'), ('R 8 + 360#64', 'window'), ('R 8 + 208#64', 'window'), ('R 8 + 216#64', 'window'), ('R 8 + 224#64', 'window')], 'log': '[((R 8 + 200#64).toNat, 4, 0x10009#64), ((R 8 + 184#64).toNat, 8, 0#64), ((R 8 + 192#64).toNat, 8, 0#64), ((R 8 + 360#64).toNat, 4, 0#64), ((R 8 + 208#64).toNat, 8, 0#64), ((R 8 + 216#64).toNat, 4, 0#64), ((R 8 + 224#64).toNat, 4, 0#64)]', 'autoFacts': True, 'addrSimpOnly': True},
+    'GlobalStdioInit.stdoutFns':
+        {'mem': [('R 8 + 232#64', 'window'), ('R 8 + 240#64', 'window'), ('R 8 + 248#64', 'window'), ('R 8 + 256#64', 'window'), ('R 8 + 264#64', 'window')], 'log': '[((R 8 + 232#64).toNat, 8, 0x8007caf0#64), ((R 8 + 240#64).toNat, 8, R 20), ((R 8 + 248#64).toNat, 8, R 19), ((R 8 + 256#64).toNat, 8, R 18), ((R 8 + 264#64).toNat, 8, R 9)]', 'autoFacts': True, 'addrSimpOnly': True},
+    'GlobalStdioInit.stderr':
+        {'mem': [('R 8 + 384#64', 'window'), ('R 8 + 368#64', 'window'), ('R 8 + 376#64', 'window'), ('R 8 + 544#64', 'window'), ('R 8 + 392#64', 'window'), ('R 8 + 400#64', 'window'), ('R 8 + 408#64', 'window')], 'log': '[((R 8 + 384#64).toNat, 4, 0x20012#64), ((R 8 + 368#64).toNat, 8, 0#64), ((R 8 + 376#64).toNat, 8, 0#64), ((R 8 + 544#64).toNat, 4, 0#64), ((R 8 + 392#64).toNat, 8, 0#64), ((R 8 + 400#64).toNat, 4, 0#64), ((R 8 + 408#64).toNat, 4, 0#64)]', 'autoFacts': True, 'addrSimpOnly': True},
+    'GlobalStdioInit.stderrFns':
+        {'mem': [('R 8 + 424#64', 'window'), ('R 8 + 432#64', 'window'), ('R 8 + 440#64', 'window'), ('R 8 + 448#64', 'window'), ('R 8 + 416#64', 'window'), ('R 2 + 32#64', 'window'), ('R 2 + 40#64', 'window'), ('R 2 + 24#64', 'window'), ('R 2 + 16#64', 'window'), ('R 2 + 8#64', 'window'), ('R 2', 'window')], 'log': '[((R 8 + 424#64).toNat, 8, R 20), ((R 8 + 432#64).toNat, 8, R 19), ((R 8 + 440#64).toNat, 8, R 18), ((R 8 + 448#64).toNat, 8, R 9), ((R 8 + 416#64).toNat, 8, 0x8007cba8#64)]', 'addrSimpOnly': True, 'autoFacts': True},
     'SfpLockAcquire.enter':
         {'mem': []},
     'SfpLockRelease.enter':
@@ -349,6 +371,20 @@ STDIO_REGS = {
         '[(10, 0#64), (12, R 12 + (R 15 <<< 3 + R 13 <<< 3)), (15, R 15 <<< 3 + R 13 <<< 3), (13, R 13)]',
     'Close.leave':
         '[(2, R 2 + 32#64), (1, bytesVal .ld (loads.getD 0 [])), (10, R 10)]',
+    'Sinit.pro':
+        '[(10, 2147896712#64), (8, R 10), (2, R 2 + 18446744073709551600#64), (1, R 1)]', 'Sinit.fresh':
+        '[(15, bytesVal .ld (loads.getD 0 [])), (8, R 8), (10, R 10)]', 'Sinit.install':
+        '[(14, 2147739932#64), (15, bytesVal .ld (loads.getD 0 [])), (8, R 8), (10, R 10)]', 'Sinit.init':
+        '[(1, R 1), (10, R 10)]', 'Sinit.leave':
+        '[(2, R 2 + 16#64), (10, 2147896712#64), (1, bytesVal .ld (loads.getD 1 [])), (8, bytesVal .ld (loads.getD 0 []))]',
+    'GlobalStdioInit.stdin':
+        '[(15, 4#64), (10, 2147994336#64), (14, 2147895872#64), (11, 0#64), (12, 8#64), (8, 2147994168#64), (2, R 2 + 18446744073709551568#64), (1, R 1), (9, R 9), (18, R 18), (19, R 19), (20, R 20)]', 'GlobalStdioInit.stdinFns':
+        '[(10, 2147994328#64), (9, 2147746180#64), (18, 2147746080#64), (19, 2147745944#64), (20, 2147745844#64), (1, R 1), (8, R 8)]', 'GlobalStdioInit.stdout':
+        '[(10, 2147994520#64), (11, 0#64), (12, 8#64), (15, 65545#64), (1, R 1), (8, R 8)]',
+    'GlobalStdioInit.stdoutFns':
+        '[(10, 2147994512#64), (15, 2147994352#64), (1, R 1), (8, R 8), (9, R 9), (18, R 18), (19, R 19), (20, R 20)]', 'GlobalStdioInit.stderr':
+        '[(10, 2147994704#64), (11, 0#64), (12, 8#64), (15, 131090#64), (1, R 1), (8, R 8)]', 'GlobalStdioInit.stderrFns':
+        '[(2, R 2 + 48#64), (10, 2147994696#64), (20, bytesVal .ld (loads.getD 5 [])), (19, bytesVal .ld (loads.getD 4 [])), (18, bytesVal .ld (loads.getD 3 [])), (9, bytesVal .ld (loads.getD 2 [])), (1, bytesVal .ld (loads.getD 1 [])), (8, bytesVal .ld (loads.getD 0 [])), (15, 2147994536#64)]',
     'SfpLockAcquire.enter':
         '[(10, 2147896712#64), (1, R 1)]',
     'SfpLockRelease.enter':
@@ -435,6 +471,19 @@ def stdio_exit_spec():
         blk(0x80000b74, 'file', [10, 11]),
         blk(0x80000b7c, 'clear', [10, 12, 13, 15]),
         blk(0x80000b90, 'leave', [2, 10])]),
+      fn('__sinit', '__sinit', 'Sinit', {0x8003ed18: 'F', 0x8003ed30: 'T'}, [
+        blk(0x8003ecf8, 'pro', [1, 2, 8, 10]),
+        blk(0x8003ed14, 'fresh', [8, 10]),
+        blk(0x8003ed1c, 'install', [8, 10], t=True),
+        blk(0x8003ed4c, 'init', [1, 10]),
+        blk(0x8003ed50, 'leave', [2, 10])]),
+      fn('global_stdio_init.part.0', 'Global_stdio_init_part_0', 'GlobalStdioInit', None, [
+        blk(0x8003ea0c, 'stdin', [1, 2, 8, 9, 10, 18, 19, 20]),
+        blk(0x8003ea74, 'stdinFns', [1, 8, 10]),
+        blk(0x8003eab4, 'stdout', [1, 8, 10]),
+        blk(0x8003eaec, 'stdoutFns', [1, 8, 9, 10, 18, 19, 20]),
+        blk(0x8003eb14, 'stderr', [1, 8, 10]),
+        blk(0x8003eb4c, 'stderrFns', [2, 8, 9, 10, 18, 19, 20])]),
       fn('__sfp_lock_acquire', '__sfp_lock_acquire', 'SfpLockAcquire', None, [
         blk(0x8003ed68, 'enter', [1, 10])]),
       fn('__sfp_lock_release', '__sfp_lock_release', 'SfpLockRelease', None, [

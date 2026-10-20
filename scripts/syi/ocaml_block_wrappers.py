@@ -118,6 +118,24 @@ def _imm_facts(instrs):
     return sorted(facts)
 
 
+def _auto_addr_facts(instrs):
+    """With `autoFacts`: the `signExtend` facts of store offsets and the
+    `auipc`/`lui` upper immediates, which addresses of globals and frame stores
+    need under `addrSimpOnly`."""
+    facts = []
+    for i in instrs:
+        op = i.word & 0x7f
+        if op == 0x23:
+            raw = ((i.word >> 25) << 5) | ((i.word >> 7) & 31)
+            facts.append(f'(show BitVec.signExtend 64 {raw}#12 = {_signed(raw, 12) % (1 << 64)}#64 by decide)')
+        elif op in (0x17, 0x37):
+            up = _signed(i.word & 0xfffff000, 32) % (1 << 64)
+            facts.append(f"(show BitVec.signExtend 64 (BitVec.extractLsb' 12 20 {i.word}#32 ++ 0#12) = {up}#64 by decide)")
+    if any(i.word & 0x7f in (0x17, 0x37) for i in instrs):
+        facts += ['imm20Of', 'BitVec.reduceAdd', 'BitVec.reduceSub']
+    return list(dict.fromkeys(facts))
+
+
 def _shift_addr_facts(instrs):
     """Simp facts for an address over immediate shifts of 64-bit values: the
     shift amounts as literals, then each Sail shift as the `Nat` shift (`rfl`),
@@ -184,7 +202,8 @@ def emit_fast(E, b, name, regs, fast):
           f'  simp only [List.nil_append, {name}_body, wlogM, {name}_input, wentryM, widthOfM, eaddrM, srcVal, stepGM,',
           '    lookupG, eraseG, stepLdsM, Nat.reduceEqDiff, ite_true, ite_false, Option.getD_some, Nat.reduceAdd, wvalM,',
           '    Functions.sign_extend, Sail.BitVec.signExtend' + (', shamtOf, Sail.BitVec.extractLsb' if _shifts(b.instrs) else '') + ']',
-          '  simp only [' + ', '.join(_imm_facts(b.instrs) + ['← BitVec.sub_eq_add_neg', 'BitVec.add_zero'] + fast.get('logFacts', [])) + ']',
+          '  simp only [' + ', '.join(_imm_facts(b.instrs) + ['← BitVec.sub_eq_add_neg', 'BitVec.add_zero']
+                                + (_auto_addr_facts(b.instrs) if fast.get('autoFacts') else []) + fast.get('logFacts', [])) + ']',
           f'  simp only [{name}Log, List.headD_eq_head?_getD, List.head?_eq_getElem?, List.getD_eq_getElem?_getD,',
           '    List.getElem?_tail, BitVec.zero_add]', '')
     E(f'def {name}_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=',
@@ -225,7 +244,8 @@ def emit_fast(E, b, name, regs, fast):
             windows.append(f'  have {w} : {typ} ({addr}) {a[2]} := {proof}')
         else:
             params.append(f'({w} : {typ} ({addr}) {a[2]})')
-        addr_simp = (f'      simp only [{SHIFT_ADDR}, {name}_input, ' + ', '.join(_shift_addr_facts(b.instrs) + fast.get('addrFacts', [])) + ']'
+        addr_simp = (f'      simp only [{SHIFT_ADDR}, {name}_input, ' + ', '.join(_shift_addr_facts(b.instrs) + (_auto_addr_facts(b.instrs) if fast.get('autoFacts') else [])
+                                         + fast.get('addrFacts', [])) + ']'
                      if fast.get('addrSimpOnly') else f'      simp [{SIMP_ADDR}, {name}_input]')
         if a[1] == 'ld' and mode == 'view':
             bullets += [f'    · apply {w}.ld rfl', '      · ' + addr_simp.strip(),
