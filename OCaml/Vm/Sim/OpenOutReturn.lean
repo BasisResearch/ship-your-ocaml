@@ -275,4 +275,9 @@ theorem prim_caml_ml_open_descriptor_in_returns {L : OCaml.Layout} {P : Prog} {o
     (fun _ => by simp only [allocPlaces, hacc]) words
   exact ⟨result, by decide, sem0, summary⟩
 
+/-- **stdin's `lseek` slot at every F1 runtime config** (a0-boot's
+`ConsoleRuntime.stdin`), the input adapter's `stdinSeek` for `Gc.f1Layout`. -/
+theorem f1_stdinSeek : ∀ c, Gc.f1Layout.runtimeOk c → Channel.SeekFd 0#64 c :=
+  fun c ok => (Gc.f1_consoleRuntime c ok).stdin
+
 end OCaml.Vm.Sim

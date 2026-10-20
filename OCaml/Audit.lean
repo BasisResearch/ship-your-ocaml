@@ -6053,6 +6053,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.open_out_return
 #print axioms OCaml.Vm.Sim.prim_caml_ml_open_descriptor_out_returns
 #print axioms OCaml.Vm.Sim.prim_caml_ml_open_descriptor_in_returns
+#print axioms OCaml.Vm.Sim.f1_stdinSeek
 #print axioms OCaml.Vm.Sim.prim_open_tail
 #print axioms OCaml.Vm.Sim.open_in_stdin
 #print axioms OCaml.Vm.Sim.stdin_word

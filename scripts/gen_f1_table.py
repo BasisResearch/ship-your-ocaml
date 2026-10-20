@@ -46,6 +46,8 @@ FIXED = {
     'consoleStable': 'f1_console_stable',
     'consoleRt': 'Gc.f1_consoleRuntime',
     'consoles': 'OCaml.Programs.whileMin_goodF1.consoles',
+    'stdins': 'OCaml.Programs.whileMin_goodF1.stdins',
+    'stdinSeek': 'f1_stdinSeek',
     'nativeStable': 'f1_native_stable',
     'places': 'allocPlaces_ok',
     'frame': 'f1_primAllocFrame',
