@@ -489,6 +489,8 @@ def outputs():
                 ('memset', 'MemsetLoop', (0x80042790, 0x800427a0)),
                 ('memset', 'MemsetTail', (0x800427a0, 0x800427fc)),
                 ('memset', 'MemsetBytes', (0x800427d8, 0x800427fc)),
+                ('memset', 'MemsetShiftHead', (0x8004281c, 0x80042830)),
+                ('memset', 'MemsetShiftFix', (0x80042830, 0x80042848)),
                 ('caml_alloc_minor_tables', 'MinorTablePublish0', (0x8000982c, 0x8000983c)),
                 ('caml_alloc_minor_tables', 'MinorTablePublish1', (0x80009854, 0x80009864)),
                 ('caml_alloc_minor_tables', 'MinorTablePublish2', (0x8000987c, 0x8000988c)),

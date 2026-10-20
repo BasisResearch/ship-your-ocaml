@@ -61,7 +61,7 @@ theorem memset56_registers (c : Config) (base : Nat) (ra : BitVec 64)
   intro before ⟨pc, eq⟩
   subst before
   obtain ⟨a, front, frontPost⟩ := (memset56_prefix c _ ra h).run c ⟨pc, rfl⟩
-  have entry : ZeroPairsAt base 3 0 ra a a := {
+  have entry : ZeroPairsAt base 3 0 ra (BitVec.ofNat 64 base) a a := {
     leaf := frontPost.toLeafInput
     bound := by decide
     pc := frontPost.pc
@@ -78,7 +78,7 @@ theorem memset56_registers (c : Config) (base : Nat) (ra : BitVec 64)
     memory := rfl
     output := rfl
     frame := fun _ _ _ => rfl }
-  obtain ⟨b, loop, pairs⟩ := zero_pairs region.pairs a a entry
+  obtain ⟨b, loop, pairs⟩ := zero_pairs region.pairs.span a a entry
   have size : gprGet b.σ 12 = some 8#64 :=
     (pairs.frame .x12 (by decide) (by decide)).trans (gholds_lookup (n := 12) _ frontPost.regs (by rfl))
   have mask : gprGet b.σ 6 = some 15#64 :=

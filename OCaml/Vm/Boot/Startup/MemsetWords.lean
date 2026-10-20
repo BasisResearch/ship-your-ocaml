@@ -53,7 +53,7 @@ theorem memset_words (c : Config) (base count : Nat) (n ra : BitVec 64) (region 
   obtain ⟨a, front, frontPost⟩ := (memset_prefix c _ n ra h).run c ⟨pc, rfl⟩
   have regsA := frontPost.regs
   simp only [memsetPrefixRegsN, limit, rem] at regsA
-  have entry : ZeroPairsAt base count 0 ra a a := {
+  have entry : ZeroPairsAt base count 0 ra (BitVec.ofNat 64 base) a a := {
     leaf := frontPost.toLeafInput
     bound := by omega
     pc := by simp only [pos, ite_true]; exact frontPost.pc
@@ -70,7 +70,7 @@ theorem memset_words (c : Config) (base count : Nat) (n ra : BitVec 64) (region 
     memory := rfl
     output := rfl
     frame := fun _ _ _ => rfl }
-  obtain ⟨b, loop, pairs⟩ := zero_pairs region a a entry
+  obtain ⟨b, loop, pairs⟩ := zero_pairs region.span a a entry
   have pcB : PCAt 0x800427a0#64 b := by have := pairs.pc; simp only [Nat.lt_irrefl, ite_false] at this; exact this
   obtain ⟨d, exitRun, post⟩ := (memset_exit b ra (BitVec.ofNat 64 base) pairs.leaf
     ⟨(pairs.frame .x12 (by decide) (by decide)).trans (gholds_lookup (n := 12) _ regsA rfl), pairs.destination,
