@@ -195,4 +195,33 @@ theorem SmallShape.pop {m m' : Std.ExtHashMap Nat (BitVec 8)} {lists : Nat → L
     · simp only [popped, if_neg same] at hx
       exact shape.heap t lo hi x hx
 
+/-! ## The small-list bitmap -/
+
+/-- `bf_small_map`: bit `s - 1` for size `s`. -/
+def mapBits (m : Std.ExtHashMap Nat (BitVec 8)) : BitVec 32 := bytesT m Layout.sym_bf_small_map 4
+
+/-- The bitmap agrees with the lists. -/
+def MapConsistent (m : Std.ExtHashMap Nat (BitVec 8)) (lists : Nat → List (BitVec 64)) : Prop :=
+  ∀ s, 1 ≤ s → s ≤ Layout.bf_small_count → ((mapBits m).getLsbD (s - 1) = true ↔ lists s ≠ [])
+
+/-- Clearing bit `s - 1` when list `s` empties keeps the bitmap consistent. -/
+theorem MapConsistent.clear {m m' : Std.ExtHashMap Nat (BitVec 8)} {lists : Nat → List (BitVec 64)} {s : Nat}
+    {bs : List (BitVec 64)} (map : MapConsistent m lists) (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count)
+    (emptied : bs = []) (bits : mapBits m' = mapBits m &&& ~~~(1#32 <<< (s - 1))) :
+    MapConsistent m' (popped lists s bs) := by
+  intro t lt ht
+  have small : s - 1 < 32 := by simp only [Layout.bf_small_count] at hi; omega
+  have smallT : t - 1 < 32 := by simp only [Layout.bf_small_count] at ht; omega
+  rw [bits, BitVec.getLsbD_and, BitVec.getLsbD_not, BitVec.getLsbD_shiftLeft]
+  by_cases same : t = s
+  · subst same
+    simp [popped, emptied, smallT]
+  · have ne : t - 1 ≠ s - 1 := by omega
+    have old := map t lt ht
+    simp only [popped, if_neg same]
+    have cond : t - 1 < s - 1 ∨ ¬t - 1 - (s - 1) = 0 := by omega
+    simp only [smallT, decide_true, Bool.true_and, Bool.not_eq_true', Bool.and_eq_true, cond]
+    simp [smallT, ne, ← old, BitVec.getLsbD_eq_getElem]
+    omega
+
 end OCaml.Vm.Gc.BfShape
