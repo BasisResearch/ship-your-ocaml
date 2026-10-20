@@ -325,12 +325,18 @@ insertion is proved generically:
   * the tail call `memset(caml_major_ring, 0, 400)`.
   Blocks that reload a value they just stored are split at the reload; the
   evaluator reads a block's loads from its entry memory.
-Next, compose caml_init_major_heap:
-* `__divdi3`/`__muldi3` (`ready_muldi3` exists);
-* the In_heap `caml_page_table_add`, whose disjointness comes from
-  `MinorHeapSet.only` and the fresh chunk;
-* the best-fit `init_merge`/`make_free_blocks`;
-* the gray-vals allocations;
+* caml_init_major_heap is composed from its entry to the caml_page_table_add
+  call (MajorHeap: `major_to_alloc`, `major_to_page_add`). The supporting
+  pieces:
+  * `GprsSame` replaces hand-chained per-step register frames (rule O8);
+  * `ready_divdi3` covers the `__divdi3` site, for nonnegative operands;
+  * `fresh_page_apart` discharges the page table's `disjoint` obligation for a
+    fresh block, against slots of live blocks;
+  * `MajorTableAt` carries the table facts across memory agreement.
+Next, the rest of caml_init_major_heap:
+* the caml_page_table_add run (`page_table_add`);
+* the indirect calls to `init_merge` and `make_free_blocks`;
+* the two mark-stack allocations (`stat_alloc_ready`);
 * the tail `memset`.
 Then onward to the cut.
 

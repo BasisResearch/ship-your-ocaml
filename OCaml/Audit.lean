@@ -418,6 +418,7 @@ import OCaml.Vm.Boot.Startup.MajorSteps
 import OCaml.Vm.Boot.Startup.InitMerge
 import OCaml.Vm.Boot.Startup.MakeFree
 import OCaml.Vm.Boot.Startup.MajorTailSteps
+import OCaml.Vm.Boot.Startup.MajorHeap
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2960,6 +2961,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.major_stack_check
 #print axioms OCaml.Vm.Boot.Startup.major_stack_init
 #print axioms OCaml.Vm.Boot.Startup.major_tail
+#print axioms OCaml.Vm.Boot.Startup.GprsSame.trans
+#print axioms OCaml.Vm.Boot.Startup.GprsSame.of_saved
+#print axioms OCaml.Vm.Boot.Startup.GprsSame.of_stepFrame
+#print axioms OCaml.Vm.Boot.Startup.ready_divdi3
+#print axioms OCaml.Vm.Boot.Startup.fresh_page_apart
+#print axioms OCaml.Vm.Boot.Startup.MajorTableAt.agree
+#print axioms OCaml.Vm.Boot.Startup.major_to_alloc
+#print axioms OCaml.Vm.Boot.Startup.major_to_page_add
 #print axioms OCaml.Vm.Boot.Startup.ownedWindow_ok
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
