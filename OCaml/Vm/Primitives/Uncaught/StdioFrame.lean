@@ -37,6 +37,17 @@ structure Frame (b : Config) (keep : Nat → Prop) (pins : GRegs) (hold : Nat �
   held : ∀ k, 1 ≤ k → k ≤ 31 → hold k → gprGet c.σ k = gprGet b.σ k
   gprs : GprsKept b c
 
+/-- A log at or above `.rodata`'s end misses the image (as
+`NamedRegister.imageOutside_of_rodata`, which sits in a heavier module). -/
+theorem imageOutside_above {log : List WEntry} (above : ∀ e ∈ log, 0x80061fb0 ≤ e.1) : ImageOutside log := by
+  have t : Image.textBase + Image.textSize ≤ 0x80061fb0 := by decide
+  have r : Image.rodataBase + Image.rodataSize ≤ 0x80061fb0 := by decide
+  have go (A n : Nat) (h : A + n ≤ 0x80061fb0) : OutLRange log A n := by
+    induction log with
+    | nil => trivial
+    | cons e rest ih => exact ⟨.inl (Nat.le_trans h (above e (by simp))), ih fun e' he => above e' (by simp [he])⟩
+  exact ⟨go _ _ t, go _ _ r⟩
+
 namespace Frame
 variable {b : Config} {keep : Nat → Prop} {pins : GRegs} {hold : Nat → Prop}
 
