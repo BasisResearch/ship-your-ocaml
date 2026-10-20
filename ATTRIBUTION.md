@@ -41,6 +41,12 @@ contains none of ship-your-interpreter's WHILE semantics or representation
 (`Vsa.While.*`, `Vsa.MemRepr*`, `Vsa.Refinement`); `OCaml/Refinement.lean`
 restates the refinement pattern of `Vsa/Refinement.lean` for `BcSem`.
 
+`scripts/gen_resp.py` and its input `experiments/densify/{Closure.lean,README.md,closure.tsv}`
+are ported from ship-your-interpreter commit `56d51b1a` (same paths); the
+generator here emits `Resp Rel` (`Resp` is generic in the state relation,
+`Vsa/Densify/Resp.lean`, so `Vsa/Densify/Keys.lean` can reuse the generated
+proofs), and the closure regenerates identically from this repository's model.
+
 **Retargeting.** The copied proofs of library code were stated at the
 WHILE ELF's addresses. `scripts/retarget_syi.py` rewrites, in 30 files,
 every address inside the 66 functions that are byte-identical in the two
