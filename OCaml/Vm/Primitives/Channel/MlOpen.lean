@@ -608,6 +608,14 @@ structure OpenedOut (live : Nat → Prop) (Ready : Nat → Config → Prop) (sta
   channel : bytesT d.σ.mem (value.toNat + 8) 8 = opening.record
   ops : bytesT d.σ.mem value.toNat 8 = 2147891728#64
   ready : Ready k d
+  /-- **The primitive's memory frame**: every byte outside the runtime's
+  custom state, newlib's free space, the opening's windows, the primitive's
+  frame, the 24-byte block and the `young_ptr` word reads as at the entry. -/
+  kept : ∀ a, ¬ state c a → ¬ vsaFoot H a → OutW (openWindows (sp - 16#64) opening.record head) a →
+    (a < sp.toNat - 16 ∨ sp.toNat ≤ a) →
+    (a + 24 < (runtimeFields c).youngPtr ∨ (runtimeFields c).youngPtr ≤ a) →
+    (a + 8 ≤ Gc.domainAddr c Layout.off_young_ptr ∨ Gc.domainAddr c Layout.off_young_ptr + 8 ≤ a) →
+    (d.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
 
 theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra s0 s1 s2 v head : BitVec 64) {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
@@ -879,7 +887,22 @@ theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat ×
     ops := by
       rw [D.memory, bytesT_writeLog_out _ (by simp only [OutLRange, and_true, v8]; omega)]
       exact C.ops
-    ready := readyD }⟩⟩
+    ready := readyD
+    kept := fun a notState notFoot o frame blk yw => by
+      have youngW : a + 8 ≤ Gc.domainAddr flagged Layout.off_young_ptr ∨
+          Gc.domainAddr flagged Layout.off_young_ptr + 8 ≤ a := by
+        unfold Gc.domainAddr at yw ⊢; rw [domF]; exact yw
+      have recOut := openOut a o
+      rw [doneOut a (by omega), C.kept a (fun s => notState ((stateEq a).mp s)) ?_ ?_ (by rw [ptrF]; exact blk) youngW,
+        keptF a o notFoot frame]
+      · rintro (g | ⟨lo, hi, no⟩)
+        · exact notFoot (Or.inl g)
+        · exact notFoot (Or.inr ⟨lo, hi, fun e he => no e (List.mem_cons_of_mem _ he)⟩)
+      · have base := ((outW_append _ _ a).mp o).1
+        simp only [OutW, and_true] at base
+        obtain ⟨st, _⟩ := base
+        show a < (sp - 16#64).toNat - 576 ∨ (sp - 16#64).toNat ≤ a
+        rw [sp16]; rw [sp16] at st; omega }⟩⟩
 
 /-- `caml_ml_open_descriptor_out` keeps x20–x27 (among them `caml_interprete`'s
 `env`, accumulator and dispatch registers). -/

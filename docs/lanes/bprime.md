@@ -227,6 +227,26 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
     old head), the C_CALL entry facts and `ConsoleRuntime` (stdout/stderr's
     `SeekFd` by `ConsoleFd.seekFd`), with `chs.length < maxChannels` a
     premise.
+  * Adapter plan (`prim_caml_ml_open_descriptor_out_returns`):
+    - Named premise `OpenOutRuntime L` (agreed with a6-gc, who discharges
+      it for `f1Layout` together with `CustomMemCall`): `Ready`/`state`/
+      `custom`, `budget` (the major-slice open premise) and `after`, which
+      maps `LibHeapAt` at the entry plus the whole `OpenedOut` to
+      `L.runtimeOk` at the return.
+    - The frame is not a write log (newlib's free space and `state` are
+      predicates), so the return uses `BarrierState.keep_field_step`'s shape:
+      * an intermediate config `cm := writeLog c openLog` copies the
+        return's bytes on the observed windows the primitive changes (the
+        record, the old head's `prev` word, the list head, the block, the
+        `young_ptr` word);
+      * at `cm`, the log-based lemmas build `VmPayload`/`LoopGeometry` for
+        the opened state under `cp.put n record`;
+      * the `keep` lemmas (`VmPayload.keep`, `LoopGeometry.keep`,
+        `bindings_keep`, `Invocation.keep`) carry them from `cm` to the
+        return through `OpenedOut.kept`.
+    - Entry: `StringAllocEntry.of_setup` (native stack and nursery room), `out_input`
+      and `out_nursery` from `LibHeap` (`F1Pins.libHeap` through `after`'s
+      premise), `openChan_bound` and `openChan_fresh` from the equation.
   * Gaps for the C_CALL adapter (`prim_caml_ml_open_descriptor_out_returns`):
     - x20–x27 (`reg_env` among them) survive the whole primitive
       (`OpenedOut.keep_upper`, over a0-boot's `StatCheckedReturned.keep_upper`).
