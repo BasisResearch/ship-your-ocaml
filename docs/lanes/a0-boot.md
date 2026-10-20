@@ -435,8 +435,12 @@ insertion is proved generically:
     `YoungAt`.
   * `Table m cls` / `PageTableFrame` (a6-gc, OCaml/Vm/Gc/PageTable.lean), from
     `MajorTableAt` (the adapter is with a6-gc).
-  * The three skiplist headers empty, as `Shape m sk []` (shape asked of
-    a6-gc).
+  * The three skiplist headers empty, through a6-gc's `Skiplist.Ops.init`
+    (main b05e0daa): `tohostAddr ≤ sk`, `sk + 144 ≤ heapStart`, apart from
+    `random_seed` (4 bytes), and 144 zero header bytes.
+  * `PageClasses m cls` (this lane, PageClasses.lean) is the concrete
+    `Table`, with `tfoot = pageTableFoot` and `PageClasses.frame`; it comes
+    from `MajorTableAt.pageClasses`. Ping a6-gc when it lands.
   * The address-level apartness facts.
 Next: caml_init_atom_table (`caml_stat_alloc_aligned_noexc` and
 `caml_page_table_add`, both proved for the minor heap), then backtrace,
