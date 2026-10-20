@@ -48,8 +48,8 @@ def _jal_target(word, pc):
     return pc + _signed(imm, 21)
 
 
-LOADS = {(3, 2): ('lw', 4), (3, 3): ('ld', 8), (3, 4): ('lbu', 1)}
-STORES = {(0x23, 0): ('sb', 1), (0x23, 2): ('sw', 4), (0x23, 3): ('sd', 8)}
+LOADS = {(3, 1): ('lh', 2), (3, 2): ('lw', 4), (3, 3): ('ld', 8), (3, 4): ('lbu', 1), (3, 5): ('lhu', 2)}
+STORES = {(0x23, 0): ('sb', 1), (0x23, 1): ('sh', 2), (0x23, 2): ('sw', 4), (0x23, 3): ('sd', 8)}
 
 
 def _access(i):
@@ -250,6 +250,9 @@ def emit_fast(E, b, name, regs, fast):
         assert mode != 'view', f'{name}: view loads must be ld or lw'
         head = {'ld': f'apply {w}.ld rfl ?_ (read8_pins _ _)',
                 'lbu': f'apply {w}.lbu rfl ?_ rfl',
+                'lh': f'apply OCaml.Vm.Primitives.ReadWindow.lh {w} rfl',
+                'lhu': f'apply OCaml.Vm.Primitives.ReadWindow.lhu {w} rfl',
+                'sh': f'apply OCaml.Vm.Primitives.WriteWindow.sh {w} rfl',
                 'lw': f'apply ExitPath.ReadWindow.lw {w} rfl ?_ (ExitPath.read8_pins4 _ _)',
                 'sd': f'apply {w}.sd rfl',
                 'sb': f'apply {w}.sb rfl',

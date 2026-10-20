@@ -67,4 +67,28 @@ theorem truncate_signed_word (value : BitVec 32) :
     BitVec.getLsbD_signExtend,bound]
   omega
 
+/-! Halfword accesses (`lh`, `lhu`, `sh`) for generated block wrappers. -/
+
+theorem ReadWindow.lh {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs}
+    {a : MInstr} {x : BitVec 64} (h : ReadWindow x 2)
+    (kind : a.kind = .lh) (address : eaddrM a L = x) : MemFacts m L (read8 m x.toNat) a := by
+  simp only [MemFacts, kind, address]
+  refine ⟨⟨h.lower, h.upper, ?_⟩, by simp [read8], by simp [read8]⟩
+  simpa only [tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using h.htif
+
+theorem ReadWindow.lhu {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs}
+    {a : MInstr} {x : BitVec 64} (h : ReadWindow x 2)
+    (kind : a.kind = .lhu) (address : eaddrM a L = x) : MemFacts m L (read8 m x.toNat) a := by
+  simp only [MemFacts, kind, address]
+  refine ⟨⟨h.lower, h.upper, ?_⟩, by simp [read8], by simp [read8]⟩
+  simpa only [tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using h.htif
+
+/-- An aligned 16-bit store stays in RAM above the HTIF registers. -/
+theorem WriteWindow.sh {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs}
+    {a : MInstr} {x : BitVec 64} {bs : List (BitVec 8)} (h : WriteWindow x 2)
+    (kind : a.kind = .sh) (address : eaddrM a L = x) : MemFacts m L bs a := by
+  simp only [MemFacts, kind, address]
+  refine ⟨h.lower, h.upper, ?_, h.aligned⟩
+  simpa only [tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using h.htif
+
 end OCaml.Vm.Primitives
