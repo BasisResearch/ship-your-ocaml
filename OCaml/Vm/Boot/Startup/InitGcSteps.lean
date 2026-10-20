@@ -585,4 +585,60 @@ theorem init_gc_msg_policy (c : Config) (ra v w : BitVec 64) (word : bytesT c.σ
   · rfl
   · decide
 
+
+def initGcSavedLoads (m : Std.ExtHashMap Nat (BitVec 8)) (sp : BitVec 64) : List (List (BitVec 8)) :=
+  [Primitives.read8 m (nativeFrameBase sp 96 + 80), Primitives.read8 m (nativeFrameBase sp 96 + 88), Primitives.read8 m (nativeFrameBase sp 96 + 72), Primitives.read8 m (nativeFrameBase sp 96 + 64), Primitives.read8 m (nativeFrameBase sp 96 + 56), Primitives.read8 m (nativeFrameBase sp 96 + 48), Primitives.read8 m (nativeFrameBase sp 96 + 40), Primitives.read8 m (nativeFrameBase sp 96 + 32), Primitives.read8 m (nativeFrameBase sp 96 + 24), Primitives.read8 m (nativeFrameBase sp 96 + 16), Primitives.read8 m (nativeFrameBase sp 96 + 8), read4 m majorWindowAddr]
+
+/-- Restore s0–s9 and ra; tail call `caml_gc_message(…, caml_major_window)`. -/
+theorem init_gc_return (c : Config) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 v oldra : BitVec 64) (leaf : LeafInput oldra c)
+    (frame : NativeFrame sp 96) (regs : GHolds c.σ [(2, nativeStack sp 96), (10, v)])
+    (saved : ∀ off value, (off, value) ∈ initGcSlots ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 →
+      bytesT c.σ.mem (nativeFrameBase sp 96 + off) 8 = value) :
+    FnSummary 0x8001f480#64 (fun e => e = c) (WriteRegistersPost [8, 1, 9, 18, 19, 20, 21, 22, 23, 24, 25, 12, 11, 10, 2]
+      [] c 0x80003cb0#64 32#64
+      [(8, s0), (1, ra), (9, s1), (18, s2), (19, s3), (20, s4), (21, s5), (22, s6), (23, s7), (24, s8), (25, s9),
+        (12, bytesVal .lw (read4 c.σ.mem majorWindowAddr)), (11, 0x80057848#64), (10, 32#64), (2, sp)]) := by
+  have word (off : Nat) (value : BitVec 64) (member : (off, value) ∈ initGcSlots ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9) :
+      bytesVal .ld (read8 c.σ.mem (nativeFrameBase sp 96 + off)) = value := by
+    rw [read8_value]; exact saved off value member
+  apply registers_of_blocks' leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput caml_init_gcXf480Seg 0x8001f480#64
+        [(2, nativeStack sp 96), (10, v)] (initGcSavedLoads c.σ.mem sp) c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [2, 10]; decide
+      shape := by change ChainOK _ [2, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := initGcReturn_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_init_gc_at_"
+        · exact (frame.read_slot (off := 80) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 88) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 72) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 64) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 56) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 48) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 40) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 32) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 24) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 16) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (frame.read_slot (off := 8) (by decide) (by decide)).ld rfl rfl (frame.pins_slot c (by decide))
+        · exact (show ReadWindow (BitVec.ofNat 64 majorWindowAddr) 4 by constructor <;> decide).lw rfl
+            (by simp only [runGM, stepGM, stepLdsM, ldsRunM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, Nat.reduceAdd, ite_true, ite_false, List.headD_cons, List.tail_cons, imm20Of, eaddrM, initgcreturn_line_8001f480, initgcreturn_line_8001f484, initgcreturn_line_8001f488, initgcreturn_line_8001f48c, initgcreturn_line_8001f490, initgcreturn_line_8001f494, initgcreturn_line_8001f498, initgcreturn_line_8001f49c, initgcreturn_line_8001f4a0, initgcreturn_line_8001f4a4, initgcreturn_line_8001f4a8, initgcreturn_line_8001f4ac, initgcreturn_line_8001f4b0, initgcreturn_line_8001f4b4, initgcreturn_line_8001f4b8, initgcreturn_line_8001f4bc, initgcreturn_line_8001f4c0]; decide) (read4_pins _ _) }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_init_gcXf480Seg, initGcSavedLoads, evalBlocks, evalBlock, SegEvalState.init] at pins
+    simp only [runGM, stepGM, stepLdsM, ldsRunM, srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, Nat.reduceAdd, ite_true, ite_false, List.headD_cons, List.tail_cons, imm20Of, eaddrM, initgcreturn_line_8001f480, initgcreturn_line_8001f484, initgcreturn_line_8001f488, initgcreturn_line_8001f48c, initgcreturn_line_8001f490, initgcreturn_line_8001f494, initgcreturn_line_8001f498, initgcreturn_line_8001f49c, initgcreturn_line_8001f4a0, initgcreturn_line_8001f4a4, initgcreturn_line_8001f4a8, initgcreturn_line_8001f4ac, initgcreturn_line_8001f4b0, initgcreturn_line_8001f4b4, initgcreturn_line_8001f4b8, initgcreturn_line_8001f4bc, initgcreturn_line_8001f4c0] at pins
+    rw [show Functions.sign_extend (m := 64) 96#12 = 96#64 by decide, nativeStack_restore, word 80 s0 (by simp [initGcSlots]), word 88 ra (by simp [initGcSlots]), word 72 s1 (by simp [initGcSlots]), word 64 s2 (by simp [initGcSlots]), word 56 s3 (by simp [initGcSlots]), word 48 s4 (by simp [initGcSlots]), word 40 s5 (by simp [initGcSlots]), word 32 s6 (by simp [initGcSlots]), word 24 s7 (by simp [initGcSlots]), word 16 s8 (by simp [initGcSlots]), word 8 s9 (by simp [initGcSlots])] at pins
+    exact ⟨gholds_lookup (n := 8) _ pins rfl, gholds_lookup (n := 1) _ pins rfl, gholds_lookup (n := 9) _ pins rfl,
+      gholds_lookup (n := 18) _ pins rfl, gholds_lookup (n := 19) _ pins rfl, gholds_lookup (n := 20) _ pins rfl,
+      gholds_lookup (n := 21) _ pins rfl, gholds_lookup (n := 22) _ pins rfl, gholds_lookup (n := 23) _ pins rfl,
+      gholds_lookup (n := 24) _ pins rfl, gholds_lookup (n := 25) _ pins rfl, gholds_lookup (n := 12) _ pins rfl,
+      gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 2) _ pins rfl,
+      trivial⟩
+  · rfl
+  · decide
+
 end OCaml.Vm.Boot.Startup
