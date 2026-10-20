@@ -293,7 +293,20 @@ insertion is proved generically:
   per function (`stat_aligned_return`, `heap_alloc_return`,
   `page_add_return`, `minor_return`, …). The generator could emit them
   generically.
-Next: caml_init_major_heap:
+* caml_init_major_heap (MajorSteps.lean): the blocks through the
+  caml_alloc_for_heap call are proved. The path:
+  * `caml_major_heap_increment ≤ 1000`, so `__divdi3`/`__muldi3` run on
+    `stat_heap_wsz`;
+  * the size in words is at least `Heap_chunk_min` and the increment.
+  The generator now emits indirect-call interfaces (`jalr ra`, via
+  `emit_indirect`) for the free-list function pointers.
+* `init_merge` (InitMerge.lean): bf_init_merge over 16 empty small lists.
+  * `merge_loop` folds `init_merge_step` with `indexedLoop`.
+  * Each list becomes `{free = NULL, merge = &free}`, `bf_small_map` loses
+    bits 0–15, and `caml_fl_merge = NULL`.
+  * `globalWindow_ok` is readiness across stores to any runtime global
+    apart from the allocator's.
+Next, the rest of caml_init_major_heap:
 * `__divdi3`/`__muldi3` (`ready_muldi3` exists);
 * the In_heap `caml_page_table_add`, whose disjointness comes from
   `MinorHeapSet.only` and the fresh chunk;

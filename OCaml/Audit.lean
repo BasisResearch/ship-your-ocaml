@@ -412,6 +412,8 @@ import OCaml.Vm.Boot.Startup.RuntimeKept
 import OCaml.Vm.Boot.Startup.PolicySteps
 import OCaml.Vm.Boot.Startup.HeapAlloc
 import OCaml.Vm.Boot.Startup.MinorHeap
+import OCaml.Vm.Boot.Startup.MajorSteps
+import OCaml.Vm.Boot.Startup.InitMerge
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2918,6 +2920,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.set_allocation_policy
 #print axioms OCaml.Vm.Boot.Startup.alloc_for_heap
 #print axioms OCaml.Vm.Boot.Startup.minor_heap_set
+#print axioms OCaml.Vm.Boot.Startup.major_entry
+#print axioms OCaml.Vm.Boot.Startup.major_div_call
+#print axioms OCaml.Vm.Boot.Startup.major_mul_call
+#print axioms OCaml.Vm.Boot.Startup.major_size
+#print axioms OCaml.Vm.Boot.Startup.major_alloc_call
+#print axioms OCaml.Vm.Boot.Startup.init_merge_step
+#print axioms OCaml.Vm.Boot.Startup.merge_loop
+#print axioms OCaml.Vm.Boot.Startup.init_merge
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
