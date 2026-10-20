@@ -6215,6 +6215,11 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.TailLow.transport
 #print axioms OCaml.Vm.Boot.Startup.NativeFrame.exitLayout
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_halts
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.bytesToString_report
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.find?_key
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.startUncaught_quiet
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatalExit_halt
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_bcsem
 #print axioms Vsa.Densify.stepOnce_covers
 #print axioms Vsa.Machine.Steps.covers
 #print axioms OCaml.Vm.Primitives.gprsPersist

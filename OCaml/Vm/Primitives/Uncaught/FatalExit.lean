@@ -108,8 +108,8 @@ theorem _root_.OCaml.Vm.Boot.Startup.StatFreedL.low_byte {live : Nat → Prop} {
 /-- **From `fprintf`'s call to `exit(2)`'s**: the report, `caml_stat_free(msg)`,
 the backtrace test and the abort test. -/
 theorem fatal_exit_call {live : List (Nat × Nat)} {capacity : Nat} {sp res dom active pos err : BitVec 64}
-    {name : List (BitVec 8)} {r g : Config}
-    (at_ : AtFprintf live capacity sp res dom active pos err name r g)
+    {name : List (BitVec 8)} {cbOut : String} {r g : Config}
+    (at_ : AtFprintf live capacity sp res dom active pos err name cbOut r g)
     (printf : FprintfReport live capacity sp res dom err name)
     (domain : dom = firstDomainPtr) (activeWindow : WriteWindow (dom + 232#64) 8)
     (frame : NativeFrame (sp + 18446744073709551568#64) allocHeadroom)

@@ -155,11 +155,11 @@ theorem msg_apart {H : List (Nat × Nat)} {capacity : Nat} {ra sp s0 s1 s2 s4 s5
 
 /-- At `fprintf`'s call, with what the rest of the path reads. -/
 structure FprintfReached (H : List (Nat × Nat)) (capacity : Nat) (sp exn s2 : BitVec 64) (name : List (BitVec 8))
-    (dom active pos err : BitVec 64) (c0 f r : Config) (res : BitVec 64) (live : List (Nat × Nat)) (capacity' : Nat)
-    (g : Config) : Prop where
+    (dom active pos err : BitVec 64) (cbOut : String) (c0 f r : Config) (res : BitVec 64) (live : List (Nat × Nat))
+    (capacity' : Nat) (g : Config) : Prop where
   format : FormatDone H capacity 0x8000dfc8#64 (sp + 18446744073709551568#64) 0#64 exn s2 (regsAt f 20)
     (regsAt f 21) name res f r
-  call : AtFprintf live capacity' sp res dom active pos err name r g
+  call : AtFprintf live capacity' sp res dom active pos err name cbOut r g
   output : Vsa.Machine.output r.σ = Vsa.Machine.output c0.σ
 
 /-- **`caml_fatal_uncaught_exception` from its entry to the call of
@@ -168,13 +168,14 @@ structure FprintfReached (H : List (Nat × Nat)) (capacity : Nat) (sp exn s2 : B
 restore of the backtrace fields. -/
 theorem fatal_to_fprintf {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place} {named : List (String × Val)}
     {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {H : List (Nat × Nat)} {capacity charge : Nat}
-    {p dom start trig active pos imp err : BitVec 64} {c0 : Config}
+    {p dom start trig active pos imp err : BitVec 64} {c0 : Config} {printed : String}
     (pre : FatalPre ra sp exn s0 s1 s2 s3 np name pl named chains H capacity charge p dom start trig active pos c0)
     (std : FatalLowAt p dom start trig imp err c0)
     (callback : ∀ res v clo, named.lookup "Pervasives.do_at_exit" = some v → valWord pl v = some clo →
-      AtExitCallback H capacity sp clo res dom imp name.length) :
+      AtExitCallback H capacity sp clo res dom imp name.length printed) :
     ∃ f r res g live capacity', Steps c0 g ∧
-      FprintfReached H capacity sp exn s2 name dom active pos err c0 f r res live capacity' g := by
+      FprintfReached H capacity sp exn s2 name dom active pos err (atExitOutput named printed) c0 f r res live
+        capacity' g := by
   obtain ⟨f, r, res, d, x, run, reached⟩ := fatal_to_atexit pre
   have done := reached.format
   have looked := reached.looked
@@ -204,35 +205,34 @@ theorem fatal_to_fprintf {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (Bi
 
 /-- At `exit`'s call with status 2, having printed the report after what the
 entry had printed (and whatever the `do_at_exit` callback printed). -/
-structure FatalExiting (sp : BitVec 64) (name : List (BitVec 8)) (c0 e : Config) : Prop where
+structure FatalExiting (sp : BitVec 64) (name : List (BitVec 8)) (cbOut : String) (c0 e : Config) : Prop where
   ready : ∃ live capacity, RuntimeReadyL imageLive live capacity (sp + 18446744073709551568#64) 0x8000dfb8#64 e
   pc : PCAt 0x800373c8#64 e
   status : gprGet e.σ 10 = some 2#64
   tail : TailLow e.σ.mem
   installed : bytesVal .ld (read8 e.σ.mem ExitPath.stdioExitHandler.toNat) = ExitPath.stdioExitHandlerFn
-  output : ∃ out, Vsa.Machine.output e.σ = Vsa.Machine.output c0.σ ++ out ++ fatalText name
+  output : Vsa.Machine.output e.σ = Vsa.Machine.output c0.σ ++ cbOut ++ fatalText name
 
 /-- **`caml_fatal_uncaught_exception` from its entry to the call of
 `exit(2)`**, with the backtrace inactive: the report printed by `fprintf`
 (the named `FprintfReport`), the message freed, the abort flag clear. -/
 theorem fatal_to_exit {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place} {named : List (String × Val)}
     {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {H : List (Nat × Nat)} {capacity charge : Nat}
-    {p dom start trig active pos imp err : BitVec 64} {c0 : Config}
+    {p dom start trig active pos imp err : BitVec 64} {c0 : Config} {printed : String}
     (pre : FatalPre ra sp exn s0 s1 s2 s3 np name pl named chains H capacity charge p dom start trig active pos c0)
     (std : FatalLowAt p dom start trig imp err c0)
     (callback : ∀ res v clo, named.lookup "Pervasives.do_at_exit" = some v → valWord pl v = some clo →
-      AtExitCallback H capacity sp clo res dom imp name.length)
+      AtExitCallback H capacity sp clo res dom imp name.length printed)
     (printf : ∀ live capacity res, FprintfReport live capacity sp res dom err name)
     (inactive : active = 0#64) :
-    ∃ e, Steps c0 e ∧ FatalExiting sp name c0 e := by
+    ∃ e, Steps c0 e ∧ FatalExiting sp name (atExitOutput named printed) c0 e := by
   obtain ⟨f, r, res, g, live, capacity', run, reached⟩ := fatal_to_fprintf pre std callback
   have done := reached.format
   obtain ⟨e, live', capacity'', run2, call⟩ := fatal_exit_call reached.call (printf live capacity' res) pre.domain
     pre.backtrace.activeWindow (pre.heap.formatFrame.resize (by decide) (by decide)) done.low done.high
     (msg_apart done pre.backtrace) inactive
   refine ⟨e, run.trans run2, ⟨live', capacity'', call.ready⟩, call.pc, call.status, call.tail, call.installed, ?_⟩
-  obtain ⟨out, h⟩ := reached.call.output
-  exact ⟨out, by rw [call.output, h, reached.output]⟩
+  rw [call.output, reached.call.output, reached.output]
 
 /-- A native frame with the allocator's headroom holds libc `exit`'s stack. -/
 theorem _root_.OCaml.Vm.Boot.Startup.NativeFrame.exitLayout {sp : BitVec 64} (frame : NativeFrame sp allocHeadroom) :
@@ -262,15 +262,15 @@ backtrace inactive: after what the entry had printed and what the
 `AtExitCallback`, `FprintfReport`, `StdioExitHandler`. -/
 theorem fatal_halts {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place}
     {named : List (String × Val)} {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {H : List (Nat × Nat)}
-    {capacity charge : Nat} {p dom start trig active pos imp err : BitVec 64} {c0 : Config}
+    {capacity charge : Nat} {p dom start trig active pos imp err : BitVec 64} {c0 : Config} {printed : String}
     (pre : FatalPre ra sp exn s0 s1 s2 s3 np name pl named chains H capacity charge p dom start trig active pos c0)
     (std : FatalLowAt p dom start trig imp err c0)
     (callback : ∀ res v clo, named.lookup "Pervasives.do_at_exit" = some v → valWord pl v = some clo →
-      AtExitCallback H capacity sp clo res dom imp name.length)
+      AtExitCallback H capacity sp clo res dom imp name.length printed)
     (printf : ∀ live capacity res, FprintfReport live capacity sp res dom err name)
     (handler : ExitPath.StdioExitHandler (sp + 18446744073709551568#64) 2#64)
     (inactive : active = 0#64) :
-    ∃ out, Halts c0 (Vsa.Machine.output c0.σ ++ out ++ fatalText name) 2 := by
+    Halts c0 (Vsa.Machine.output c0.σ ++ atExitOutput named printed ++ fatalText name) 2 := by
   obtain ⟨e, run, ex⟩ := fatal_to_exit pre std callback printf inactive
   obtain ⟨live, cap, ready⟩ := ex.ready
   have frame : NativeFrame (sp + 18446744073709551568#64) allocHeadroom :=
@@ -282,10 +282,9 @@ theorem fatal_halts {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 
         (by simp only [ExitPath.exitReads, List.mem_cons, List.not_mem_nil, or_false] at hn; omega)⟩,
       ready.stack, ex.status, frame.exitLayout,
       by rw [show ExitPath.atexitList.toNat = Layout.sym_atexit from rfl]; exact ex.tail.noAtexit⟩
-  obtain ⟨out, hout⟩ := ex.output
   have h := ExitPath.libc_exit_handler_halts entry ex.installed handler ex.pc
-  rw [hout, show (ExitPath.exitStatus 2#64).toNat = 2 by decide] at h
+  rw [ex.output, show (ExitPath.exitStatus 2#64).toNat = 2 by decide] at h
   obtain ⟨c', σf, run', halted, o⟩ := h
-  exact ⟨out, c', σf, run.trans run', halted, o⟩
+  exact ⟨c', σf, run.trans run', halted, o⟩
 
 end OCaml.Vm.Primitives.Uncaught.FatalUncaught
