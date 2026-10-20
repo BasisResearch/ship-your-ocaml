@@ -381,16 +381,16 @@ theorem init_gc_custom_major (c : Config) (ra v : BitVec 64) (leaf : LeafInput r
 `Caml_state->minor_heap_wsz / 1024`. -/
 def initGcCustomLog : List WEntry := [(customMinorAddr, 8, 100#64), (customMaxAddr, 8, 8192#64)]
 
-theorem init_gc_custom_minor (c : Config) (ra v : BitVec 64) (leaf : LeafInput ra c)
+theorem init_gc_custom_minor (c : Config) (ra v w : BitVec 64) (leaf : LeafInput ra c)
     (regs : GHolds c.σ [(15, 100#64), (18, 8192#64), (10, v)])
     (domain : bytesT c.σ.mem Layout.sym_Caml_state 8 = firstDomainPtr)
-    (minorWsz : bytesT c.σ.mem (domainField 80) 8 = 262144#64) :
+    (minorWsz : bytesT c.σ.mem (domainField 80) 8 = w) :
     FnSummary 0x8001f3dc#64 (fun e => e = c) (WriteRegistersPost [14, 15, 11, 10, 12] initGcCustomLog c
       jal_8001f408_call.pc 32#64
-      [(14, 0x800643dc#64), (15, firstDomainPtr), (11, 0x80057750#64), (10, 32#64), (12, 256#64), (18, 8192#64)]) := by
+      [(14, 0x800643dc#64), (15, firstDomainPtr), (11, 0x80057750#64), (10, 32#64), (12, w >>> 10), (18, 8192#64)]) := by
   have dw : bytesVal .ld (read8 c.σ.mem (BitVec.ofNat 64 Layout.sym_Caml_state).toNat) = firstDomainPtr := by
     rw [read8_value]; exact domain
-  have mw : bytesVal .ld (read8 c.σ.mem (firstDomainPtr + 80#64).toNat) = 262144#64 := by
+  have mw : bytesVal .ld (read8 c.σ.mem (firstDomainPtr + 80#64).toNat) = w := by
     rw [read8_value]; exact minorWsz
   apply registers_of_blocks' leaf.image
     (by constructor <;> simp only [initGcCustomLog, OutLRange, customMinorAddr, customMaxAddr] <;> decide)
@@ -426,7 +426,7 @@ theorem init_gc_custom_minor (c : Config) (ra v : BitVec 64) (leaf : LeafInput r
       Nat.reduceEqDiff, Nat.reduceAdd, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons] at pins
     rw [mw, srli_ten _ _ rfl] at pins
     exact ⟨gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl dw, gholds_lookup_eq pins rfl (by decide),
-      gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 18) _ pins rfl,
+      gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 12) _ pins rfl, gholds_lookup (n := 18) _ pins rfl,
       trivial⟩
   · rfl
   · decide
