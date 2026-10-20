@@ -20,6 +20,9 @@ import OCaml.Vm.Primitives.Memmove
 import OCaml.Vm.Primitives.GprsKept
 import OCaml.Vm.Primitives.Named.RegisterFront
 import OCaml.Vm.Primitives.Named.RegisterTail
+import OCaml.Vm.Primitives.Named.RootsUpdate
+import OCaml.Vm.Primitives.Named.RegisterRootRun
+import OCaml.Vm.Primitives.Named.ModifyRootPaths
 import OCaml.Vm.Sim.PrimInt64FloatReturns
 import OCaml.Vm.Sim.PrimSysArgvReturns
 import OCaml.Vm.Sim.PrimSysExitReturns
@@ -6318,3 +6321,73 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.listed_of_chanAt
 #print axioms OCaml.Vm.Sim.listedRecs_placed
 #print axioms OCaml.Vm.Sim.listObjs_objAt
+#print axioms OCaml.Vm.Gc.Skiplist.Ops.unique
+#print axioms OCaml.Vm.Gc.Skiplist.Ops.keep_list
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.old_kept
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.young_kept
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.roots_kept_young
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.roots_kept_old
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.replace_young
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.replace_old
+#print axioms OCaml.Vm.Gc.Skiplist.insert_keys
+#print axioms OCaml.Vm.Gc.Skiplist.remove_keys
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.insert_young
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.insert_old
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.remove_young
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.remove_old
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.keep
+#print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.keep_low
+#print axioms OCaml.Vm.Primitives.Named.RegisterRoot.HeapReady.of_mem
+#print axioms OCaml.Vm.Primitives.Named.RegisterRoot.lists_kept
+#print axioms OCaml.Vm.Primitives.Named.RegisterRoot.imm_path
+#print axioms OCaml.Vm.Primitives.Named.RegisterRoot.filed_of_returned
+#print axioms OCaml.Vm.Primitives.Named.RegisterRoot.frame32
+#print axioms OCaml.Vm.Primitives.Named.RegisterRoot.lookup_path
+#print axioms OCaml.Vm.Primitives.Named.RegisterRoot.register_root_run
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.returned
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.feet_of_memory
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.step_young
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.step_old
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.listsFoot_low
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.prologue
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.block
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.temps
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.lookup
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.enter
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.holds_at
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.classify
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.classifyImm
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.leaf
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.line
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.branch
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Settled.look
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.wClassify
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.oBlocks
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.xBlocks
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.vClassify
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.yClassify
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.OpEntry.insert
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.OpEntry.remove
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.young_apart
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.old_apart
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.inner_frame
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.above_arena
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.store_block
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.xStore_block
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.oStore_block
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.Acting.finish
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.RootAt.of_young
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.RootAt.of_old
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.RootAt.of_none
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.memb_refl
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.read8_low
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.ModifyInput.kept1
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.yInsertTail
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.yRemoveTail
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.oInsertTail
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.xRemoveYoungTail
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.xRemoveOldTail
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.xPath
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.oPath
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.yPath
+#print axioms OCaml.Vm.Primitives.Named.ModifyRoot.modify_root_run

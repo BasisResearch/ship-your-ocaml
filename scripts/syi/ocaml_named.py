@@ -119,7 +119,108 @@ def functions_spec(ld, rest):
          f'[(2, R 2 + 64#64), (10, 1#64), (20, {ld(5)}), (19, {ld(4)}), (18, {ld(3)}), (9, {ld(2)}), (8, {ld(1)}), (1, {ld(0)})]', False,
          {'mem': [(f'R 2 + {k}#64', 'window') for k in (56, 48, 40, 32, 24, 16)], 'ra': 0}),
       ]),
+      # `caml_register_generational_global_root(r)` (`runtime/globroots.c`): a
+      # block value is filed in `caml_global_roots_young` (Is_young) or, when the
+      # page table says In_heap, `caml_global_roots_old`
+      ('caml_register_generational_global_root', 'Caml_register_generational_global_root', 'RegisterRoot',
+       {0x8000ca10: 'TF', 0x8000ca20: 'TF', 0x8000ca28: 'TF', 0x8000ca40: 'TF'}, [
+        # the root's value; an immediate returns at once
+        (0x8000ca04, 'imm', [10], f'[(15, {ld(0)} &&& 1#64), (10, {ld(0)}), (11, R 10)]', True,
+         {'mem': [('R 10', 'window')]}),
+        (0x8000ca04, 'isBlock', [10], f'[(15, {ld(0)} &&& 1#64), (10, {ld(0)}), (11, R 10)]', False,
+         {'mem': [('R 10', 'window')]}),
+        # `Caml_state`, then Is_young: below `young_end`, above `young_start`
+        (0x8000ca14, 'state', [10, 11], f'[(15, {ld(0)}), {rest([10, 11])}]', False,
+         {'mem': [('0x80064d08#64', 'global')]}),
+        (0x8000ca1c, 'aboveEnd', [10, 11, 15], f'[(14, {ld(0)}), {rest([10, 11, 15])}]', True,
+         {'mem': [('R 15 + 40#64', 'window')]}),
+        (0x8000ca1c, 'belowEnd', [10, 11, 15], f'[(14, {ld(0)}), {rest([10, 11, 15])}]', False,
+         {'mem': [('R 15 + 40#64', 'window')]}),
+        (0x8000ca24, 'young', [10, 11, 15], f'[(15, {ld(0)}), {rest([10, 11])}]', True,
+         {'mem': [('R 15 + 32#64', 'window')]}),
+        (0x8000ca24, 'notYoung', [10, 11, 15], f'[(15, {ld(0)}), {rest([10, 11])}]', False,
+         {'mem': [('R 15 + 32#64', 'window')]}),
+        # In_heap by `caml_page_table_lookup(v)`, ra and r saved in a 32-byte frame
+        (0x8000ca2c, 'lookup', [1, 2, 10, 11], f'[(2, R 2 + 18446744073709551584#64), {rest([1, 10, 11])}]', False,
+         {'mem': [('R 2 - 32#64 + 24#64', 'window'), ('R 2 - 32#64 + 8#64', 'window')],
+          'log': '[((R 2 - 32#64 + 24#64).toNat, 8, R 1), ((R 2 - 32#64 + 8#64).toNat, 8, R 11)]'}),
+        (0x8000ca3c, 'inHeap', [10], '[(10, R 10 &&& 1#64)]', False, {}),
+        (0x8000ca3c, 'notHeap', [10], '[(10, R 10 &&& 1#64)]', True, {}),
+        # the tail calls `caml_skiplist_insert(list, r, 0)`
+        (0x8000ca44, 'old', [2], f'[(2, R 2 + 32#64), (10, 2147911024#64), (12, 0#64), (1, {ld(1)}), (11, {ld(0)})]', False,
+         {'mem': [('R 2 + 8#64', 'window'), ('R 2 + 24#64', 'window')]}),
+        (0x8000ca60, 'toYoung', [], '[(10, 2147911168#64), (12, 0#64)]', False, {}),
+        # the returns
+        (0x8000ca70, 'heapless', [2, 10], f'[(2, R 2 + 32#64), (1, {ld(0)}), {rest([10])}]', False,
+         {'mem': [('R 2 + 24#64', 'window')], 'ra': 0}),
+        (0x8000ca7c, 'immRet', [1, 10], f'[{rest([1, 10])}]', False, {}),
+      ], (0x8000ca1c,)),
+      # `caml_modify_generational_global_root(r, v)`: by the classes of `v` and
+      # the old `*r` (immediate, young, In_heap, other), remove `r` from the
+      # lists it leaves, insert it in the one it joins, then `*r = v`
+      ('caml_modify_generational_global_root', 'Caml_modify_generational_global_root', 'ModifyRoot',
+       {a: 'TF' for a in (0x8000cb24, 0x8000cb34, 0x8000cb3c, 0x8000cb4c, 0x8000cb58, 0x8000cb68, 0x8000cb70,
+                          0x8000cb7c, 0x8000cba0, 0x8000cba4, 0x8000cba8, 0x8000cbb4, 0x8000cbe8, 0x8000cbf8,
+                          0x8000cc00, 0x8000cc0c)},
+       mod_blocks(ld, rest), (0x8000cb30, 0x8000cb64, 0x8000cbf4)),
     ]
+
+
+def mod_blocks(ld, rest):
+    """The blocks of `caml_modify_generational_global_root`."""
+    frame = lambda k: f'R 2 - 32#64 + {k}#64'
+    state = lambda keys: (f'[(15, {ld(0)}), {rest(keys)}]', {'mem': [('0x80064d08#64', 'global')]})
+    above = lambda reg, keys: (f'[({reg}, {ld(0)}), {rest(keys)}]', {'mem': [('R 15 + 40#64', 'window')]})
+    start = lambda keys: (f'[(15, {ld(0)}), {rest(keys)}]', {'mem': [('R 15 + 32#64', 'window')]})
+    heap = (f'[(10, R 10 &&& 1#64), {rest([8, 9])}]', {})
+    old = lambda src, bit: (f'[({bit}, {ld(0)} &&& 1#64), (10, {ld(0)}), {rest([8, 9] + ([13, 15] if bit == 14 else []))}]',
+                            {'mem': [(src, 'window')]})
+    store = (f'[(2, R 2 + 32#64), (9, {ld(2)}), (8, {ld(1)}), (1, {ld(0)}), {rest([10])}]',
+             {'mem': [('R 9', 'window'), ('R 2 + 24#64', 'window'), ('R 2 + 16#64', 'window'), ('R 2 + 8#64', 'window')],
+              'log': '[((R 9).toNat, 8, R 8)]', 'ra': 0})
+    lookup = (f'[{rest([1, 8, 9, 10])}]', {})
+    OLD, YOUNG = '2147911024#64', '2147911168#64'
+    two = lambda a, n1, n2, keys, spec: [(a, n1, keys, spec[0], True, spec[1]), (a, n2, keys, spec[0], False, spec[1])]
+    blocks = []
+    blocks += two(0x8000cb08, 'newImm', 'newBlock', [1, 2, 8, 9, 10, 11],
+                  (f'[(9, R 10), (8, R 11), (15, R 11 &&& 1#64), (2, R 2 + 18446744073709551584#64), {rest([1, 10, 11])}]',
+                   {'mem': [(frame(16), 'window'), (frame(8), 'window'), (frame(24), 'window')],
+                    'log': f'[(({frame(16)}).toNat, 8, R 8), (({frame(8)}).toNat, 8, R 9), (({frame(24)}).toNat, 8, R 1)]'}))
+    blocks += [(0x8000cb28, 'newState', [8, 9, 10, 11]) + state([8, 9, 10, 11]) [:0] + (state([8, 9, 10, 11])[0], False, state([8, 9, 10, 11])[1])]
+    blocks += two(0x8000cb30, 'newAboveEnd', 'newBelowEnd', [8, 9, 10, 11, 15], above(13, [8, 9, 10, 11, 15]))
+    blocks += two(0x8000cb38, 'newYoung', 'newNotYoung', [8, 9, 10, 11, 13, 15], start([8, 9, 10, 11, 13]))
+    blocks += [(0x8000cb40, 'newLookup', [1, 8, 9, 10], f'[(10, R 8), {rest([1, 8, 9])}]', False, {})]
+    blocks += two(0x8000cb48, 'newNotHeap', 'newHeap', [8, 9, 10], heap)
+    blocks += two(0x8000cb50, 'oldImm', 'oldBlock', [8, 9, 10], old('R 9', 15))
+    blocks += [(0x8000cb5c, 'oldState', [8, 9, 10], state([8, 9, 10])[0], False, state([8, 9, 10])[1])]
+    blocks += two(0x8000cb64, 'oldAboveEnd', 'oldBelowEnd', [8, 9, 10, 15], above(14, [8, 9, 10, 15]))
+    blocks += two(0x8000cb6c, 'oldYoung', 'oldNotYoung', [8, 9, 10, 15], start([8, 9, 10]))
+    blocks += [(0x8000cb74, 'oldLookup', [1, 8, 9, 10]) + lookup[:1] + (False, lookup[1])]
+    blocks += two(0x8000cb78, 'oldNotHeap', 'oldHeap', [8, 9, 10], heap)
+    blocks += [(0x8000cb80, 'store', [2, 8, 9, 10], store[0], False, store[1])]
+    # a young `v`
+    blocks += two(0x8000cb98, 'yImm', 'yBlock', [8, 9, 10, 13, 15], old('R 10', 14))
+    blocks += two(0x8000cba4, 'yAboveEnd', 'yBelowEnd', [8, 9, 10, 13, 15], (f'[{rest([8, 9, 10, 13, 15])}]', {}))
+    blocks += two(0x8000cba8, 'yYoung', 'yNotYoung', [8, 9, 10, 15], (f'[{rest([8, 9, 10, 15])}]', {}))
+    blocks += [(0x8000cbac, 'yLookup', [1, 8, 9, 10]) + lookup[:1] + (False, lookup[1])]
+    blocks += two(0x8000cbb0, 'yNotHeap', 'yHeap', [8, 9, 10], heap)
+    blocks += [(0x8000cbb8, 'yRemove', [1, 8, 9], f'[(10, {OLD}), (11, R 9), {rest([1, 8, 9])}]', False, {})]
+    blocks += [(0x8000cbc8, 'yInsert', [1, 8, 9], f'[(10, {YOUNG}), (11, R 9), (12, 0#64), {rest([1, 8, 9])}]', False, {})]
+    blocks += [(0x8000cbdc, 'yJoin', [10], f'[{rest([10])}]', False, {})]
+    # an immediate or unboxed `v`
+    blocks += two(0x8000cbe0, 'xImm', 'xBlock', [8, 9, 10], old('R 9', 15))
+    blocks += [(0x8000cbec, 'xState', [8, 9, 10], state([8, 9, 10])[0], False, state([8, 9, 10])[1])]
+    blocks += two(0x8000cbf4, 'xAboveEnd', 'xBelowEnd', [8, 9, 10, 15], above(14, [8, 9, 10, 15]))
+    blocks += two(0x8000cbfc, 'xYoung', 'xNotYoung', [8, 9, 10, 15], start([8, 9, 10]))
+    blocks += [(0x8000cc04, 'xLookup', [1, 8, 9, 10]) + lookup[:1] + (False, lookup[1])]
+    blocks += two(0x8000cc08, 'xNotHeap', 'xHeap', [8, 9, 10], heap)
+    blocks += [(0x8000cc10, 'xRemoveOld', [1, 8, 9], f'[(10, {OLD}), (11, R 9), {rest([1, 8, 9])}]', False, {})]
+    blocks += [(0x8000cc20, 'xRemoveYoung', [1, 8, 9], f'[(10, {YOUNG}), (11, R 9), {rest([1, 8, 9])}]', False, {})]
+    blocks += [(0x8000cc30, 'xStore', [2, 8, 9, 10], store[0], False, store[1])]
+    # an old `v` over an immediate or unboxed `*r`
+    blocks += [(0x8000cc48, 'oInsert', [1, 8, 9], f'[(10, {OLD}), (12, 0#64), (11, R 9), {rest([1, 8, 9])}]', False, {})]
+    blocks += [(0x8000cc5c, 'oStore', [2, 8, 9, 10], store[0], False, store[1])]
+    return blocks
 
 
 def emit_named(root, functions, decode, code, text_base, lib, build_cfg, literal):
@@ -127,9 +228,11 @@ def emit_named(root, functions, decode, code, text_base, lib, build_cfg, literal
     rest = lambda ks: ', '.join(f'({k}, R {k})' for k in ks)
     result = {}
     args = (root, functions, decode, code, text_base, lib, build_cfg, literal)
-    for fn, stem, ns, route, fblocks in functions_spec(ld, rest):
+    for spec in functions_spec(ld, rest):
+        fn, stem, ns, route, fblocks = spec[:5]
+        splits = spec[5] if len(spec) > 5 else ()
         sel = [(blk[1], blk[2], blk[3], blk[4]) + ((blk[5],) if blk[5] is not None else ()) for blk in fblocks]
         result.update(emit_tuple_blocks(*args, fn, stem, f'OCaml.Vm.Primitives.Named.{ns}',
             f'OCaml/Vm/Primitives/Named/{ns}.lean', sel, starts=[blk[0] for blk in fblocks],
-            chunked=(), flag=FLAG, route=route, render_code=fn != '__umoddi3'))
+            chunked=(), flag=FLAG, route=route, render_code=fn != '__umoddi3', splits=splits))
     return result
