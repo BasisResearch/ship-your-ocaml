@@ -333,11 +333,22 @@ insertion is proved generically:
   * `fresh_page_apart` discharges the page table's `disjoint` obligation for a
     fresh block, against slots of live blocks;
   * `MajorTableAt` carries the table facts across memory agreement.
-Next, the rest of caml_init_major_heap:
-* the caml_page_table_add run (`page_table_add`);
-* the indirect calls to `init_merge` and `make_free_blocks`;
-* the two mark-stack allocations (`stat_alloc_ready`);
-* the tail `memset`.
+* caml_init_major_heap is composed through its tail call to `memset`. Each
+  stage has a named post: `major_merged`, `major_freed`,
+  `major_stack_allocated` and `major_tailed`. The supporting pieces:
+  * `MemSame` composes byte frames, the memory counterpart of `GprsSame`;
+  * `ready_indirect` covers `jalr` sites;
+  * `StatAllocDone` is the named destructuring of a `caml_stat_alloc_noexc`
+    run;
+  * `MadeFree` gained `caller`, `kept` and `saved`.
+  The 4-byte `caml_gc_phase` read-back is not exported yet; the cut does not
+  need it.
+Next, `memset(caml_major_ring, 0, 400)`. The ring is only 8-byte aligned,
+so this is memset's misaligned-head path: a computed `jalr` into the byte
+stores, then the pair loop, then the byte tail. That needs:
+* rows for 0x8004281c-0x80042848;
+* `ZeroPairRegion` generalized from `heapStart` to the end of the image.
+Then the whole caml_init_major_heap summary.
 Then onward to the cut.
 
 ## Round 2 status (2026-10-06, search)

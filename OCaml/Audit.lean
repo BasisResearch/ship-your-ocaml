@@ -2969,6 +2969,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.MajorTableAt.agree
 #print axioms OCaml.Vm.Boot.Startup.major_to_alloc
 #print axioms OCaml.Vm.Boot.Startup.major_to_page_add
+#print axioms OCaml.Vm.Boot.Startup.MemSame.trans
+#print axioms OCaml.Vm.Boot.Startup.ready_indirect
+#print axioms OCaml.Vm.Boot.Startup.StatAllocatedL.done
+#print axioms OCaml.Vm.Boot.Startup.stat_alloc_done
+#print axioms OCaml.Vm.Boot.Startup.major_merged
+#print axioms OCaml.Vm.Boot.Startup.major_freed
+#print axioms OCaml.Vm.Boot.Startup.major_stack_allocated
+#print axioms OCaml.Vm.Boot.Startup.major_tailed
 #print axioms OCaml.Vm.Boot.Startup.ownedWindow_ok
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
