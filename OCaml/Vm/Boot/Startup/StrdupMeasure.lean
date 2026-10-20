@@ -12,13 +12,13 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap Vsa
   LeanRV64DExecutable OCaml.Vm.Primitives
 
 /-- A library call that leaves memory unchanged and the global pointer intact
-keeps startup readiness. -/
-theorem RuntimeReadyL.of_same_memory {H capacity sp ra oldsp oldra before after}
-    (ready : RuntimeReady H capacity oldsp oldra before) (leaf : LeafInput ra after)
-    (good : VsaOk startupLive after) (memory : Vsa.Densify.MemEqv after.σ.mem before.σ.mem)
+keeps readiness. -/
+theorem RuntimeReadyL.of_same_memory {live : Nat → Prop} {H capacity sp ra oldsp oldra before after}
+    (ready : RuntimeReadyL live H capacity oldsp oldra before) (leaf : LeafInput ra after)
+    (good : VsaOk live after) (memory : Vsa.Densify.MemEqv after.σ.mem before.σ.mem)
     (globalPointer : gpr after 3 = gpr before 3) (stack : gprGet after.σ 2 = some sp) :
-    RuntimeReady H capacity sp ra after := by
-  have same : (vsaModel startupLive).mem after = (vsaModel startupLive).mem before := by
+    RuntimeReadyL live H capacity sp ra after := by
+  have same : (vsaModel live).mem after = (vsaModel live).mem before := by
     funext a
     exact memory a
   refine ⟨leaf, good, ?_, ?_, stack, ?_, ?_⟩
@@ -34,7 +34,7 @@ theorem RuntimeReadyL.of_same_memory {H capacity sp ra oldsp oldra before after}
       rw [globalPointer]; exact this
     · intro p hp
       have := ready.readOnly.2 p hp
-      change (vsaModel startupLive).mem after p.1 = p.2
+      change (vsaModel live).mem after p.1 = p.2
       rw [same]; exact this
   · rw [same]; exact ready.room
   · rw [word_observed (m := before.σ.mem) _ (fun i _ => memory _)]

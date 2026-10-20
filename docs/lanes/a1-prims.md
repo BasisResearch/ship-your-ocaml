@@ -193,13 +193,20 @@
   string-then-block primitive must factor them first (rule 3).
 
 **Next (remaining, path-specific callees):**
-* `caml_register_named_value`: generated blocks `Named/NamedRegister.lean`
-  (`gen_fn.py --ocaml-named`). The hash loop, `% 13` and chain walk are shared with
-  `caml_named_value` through `HashCode`/`FrontCode`/`WalkCode`; `RegisterFront.look`
-  runs to the found/new split. Remaining: the new node (`strlen`, checked `caml_stat_alloc`,
-  `memcpy`, link stores), the in-place update, the epilogue, `NamedTableAt` across the insert.
-  `caml_register_generational_global_root` / `caml_modify_generational_global_root` (skiplist,
-  page table) enter as named callee contracts (agreed with a0-boot 2026-10-13).
+* `caml_register_named_value`: `register_named_value_run` (`Named/RegisterTail.lean`) proves the
+  whole function from `RegisterTable` to `Registered`. Pieces:
+  * `NamedTableUpdate.lean` (over a2-sem's `Agree`/`TableFoot` transport): `TableShape.update`/`insert` (the found
+    node's new value, an absent key's fresh node at its bucket's head) and `TableBlocks` (keys distinct per
+    bucket, nodes apart, in live malloc blocks).
+  * `RegisterTail.lean`: `epilogue`, `found_tail`, `miss_allocate` (`strlen`, checked `caml_stat_alloc`),
+    `miss_link` (`memcpy`, link stores, root registration).
+  * The global-root callees are the named contract `RootCalls`.
+  * a0-boot's `strlen_ready`, `memcpy_window`/`memcpy_fresh`, `of_same_memory` and `of_window_frame` now
+    take any `LibraryLive` set (`…L` structures with startup abbrevs); `MemcpyFreshDoneL` gained `output`.
+  * Open before `PrimReturnsAt` (user decision 2026-10-20: machine run first, invariants recorded):
+    `NamedTableAt` in the loop invariant, node and skiplist room in `LibHeapAt`, RAM presence at the C_CALL
+    entry (boot density plus a2-sem's `memPersist`), a `RootCalls` instance (a6-gc's `Skiplist.Ops` is the
+    skiplist side). `GprsPersist_Statement` is proved (`gprsPersist`). See PHASES.md.
 * channels: `open_descriptor_in/out` → `caml_open_descriptor_in` (`caml_stat_alloc`,
   `lseek`) + `caml_alloc_custom_mem`; `output_bytes`/`output_char` (buffer `memmove`,
   `caml_flush_partial` when full); `flush` → `caml_flush_partial` → `caml_write_fd` →

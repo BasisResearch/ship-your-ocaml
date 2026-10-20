@@ -738,6 +738,8 @@ import OCaml.Vm.Primitives.Named.NamedLookup
 import OCaml.Vm.Primitives.Named.NamedTable
 import OCaml.Vm.Primitives.Named.NamedRegister
 import OCaml.Vm.Primitives.Named.RegisterFront
+import OCaml.Vm.Primitives.Named.NamedTableUpdate
+import OCaml.Vm.Primitives.Named.RegisterTail
 import OCaml.Vm.Primitives.Memprof.Eqdf2
 import OCaml.Vm.Primitives.Memprof.UpdateYoungLimit
 import OCaml.Vm.Primitives.Memprof.RenewMinorSample

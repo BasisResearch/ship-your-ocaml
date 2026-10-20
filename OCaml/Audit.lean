@@ -15,6 +15,7 @@ import OCaml.Vm.Gc.F1Observation
 import OCaml.Vm.Primitives.Memmove
 import OCaml.Vm.Primitives.GprsKept
 import OCaml.Vm.Primitives.Named.RegisterFront
+import OCaml.Vm.Primitives.Named.RegisterTail
 import OCaml.Vm.Sim.PrimInt64FloatReturns
 import OCaml.Vm.Sim.PrimSysArgvReturns
 import OCaml.Vm.Sim.PrimSysExitReturns
@@ -6059,6 +6060,40 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Named.NamedRegister.bucket_addr
 #print axioms OCaml.Vm.Primitives.Named.NamedRegister.walk_restart
 #print axioms OCaml.Vm.Primitives.Named.NamedRegister.look
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.NodeAt.withValue
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.NodeAt.same_key
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.setNode_fst
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.setNode_key
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableChain.setValue
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.bucketAddr_toNat
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.head_keep
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.registerNamedValue_present_mem
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.registerNamedValue_present_keys
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.registerNamedValue_absent
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.key_unique
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableShape.update
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableShape.insert
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableBlocks.mono
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.frame64
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.slot_toNat
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.saveLog_words
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.epilogue
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.not_foot_high
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.saveLog_inside
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.ready_at_call
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.found_tail
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.miss_allocate
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.imageOutside_of_rodata
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.vsaFoot_cons
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.foot_of_fresh
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.bucket_not_foot
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.miss_link
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.chainFind_mem
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.opt_of_getD
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.register_named_value_run
+#print axioms Vsa.MemRepr.CStr.shift
+#print axioms OCaml.Vm.Boot.Startup.snp_text_library
+#print axioms OCaml.Vm.Boot.Startup.memcpy_text_library
 #print axioms OCaml.Vm.Sim.ccall_logged_summary
 #print axioms OCaml.Vm.Sim.ccall_allocation_entry
 #print axioms OCaml.Vm.Sim.int64_float_entry
