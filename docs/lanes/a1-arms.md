@@ -252,9 +252,18 @@ head's first visit to `leave` over every open-channel record.
   (`ListedStep.frame`/`fresh`/`older`/`ready`/`heap`).
 * `caml_alloc_small`'s input from the domain words:
   `SmallAllocation.NurseryMemory.of_words` (`Sim/SmallNurseryWords.lean`).
+* The whole primitive at the machine level: `out_list_machine`
+  (`Sim/OutListRun.lean`), from `OutListInput` at the entry to
+  `OutListReturned`:
+  - `res` in `a0`, with the listed objects in the nursery;
+  - `ra`, `sp`, `s0` and the callee-saved registers;
+  - `local_roots` restored;
+  - a byte frame outside `Written`, the 128-byte frame and `local_roots`;
+  - `Ready k` and `HeapReady`.
+  The prologue is `pro_go`/`pro_empty` (`pro_keeps` and `pro_saved` are
+  shared by both paths), then `walk_start` and `walk_loop`, then `leave_step`
+  and `done_step` (or `empty_step`).
 * Next:
-  - the prologue (`pro`: CAMLlocal3 frame, `local_roots := sp + 48`) to
-    `WalkAt [] chs`, and the epilogue (`leave`, `done`);
   - the representation: `objWords` as `ObjAt` of `outChannelsList`'s objects
     at `outListPlaces`, the result value, and `VmPayload` across `Written`
     (a predicate frame);

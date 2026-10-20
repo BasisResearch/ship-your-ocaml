@@ -706,6 +706,7 @@ import OCaml.Vm.Primitives.Channel.OutList
 import OCaml.Vm.Primitives.Channel.OutListLoop
 import OCaml.Vm.Sim.SmallNurseryWords
 import OCaml.Vm.Sim.OutListWalk
+import OCaml.Vm.Sim.OutListRun
 import OCaml.Vm.Primitives.Channel.OpenRepr
 import OCaml.Vm.Primitives.Format.AllocSprintf
 import OCaml.Vm.Primitives.Format.FormatInt

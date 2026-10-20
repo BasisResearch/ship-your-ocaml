@@ -16,6 +16,7 @@ import OCaml.Vm.Sim.PrimInt64FloatReturns
 import OCaml.Vm.Sim.PrimSysArgvReturns
 import OCaml.Vm.Sim.PrimSysExitReturns
 import OCaml.Vm.Sim.OutListWalk
+import OCaml.Vm.Sim.OutListRun
 import OCaml.Vm.Sim.StringAllocReturn
 import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.PrimExecutableNameReturns
@@ -6113,3 +6114,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.gprsPersist
 #print axioms OCaml.Vm.Primitives.memPersist
 #print axioms Vsa.Densify.stepOnce_resp
+#print axioms OCaml.Vm.Sim.OutListWalk.pro_go
+#print axioms OCaml.Vm.Sim.OutListWalk.pro_empty
+#print axioms OCaml.Vm.Sim.OutListWalk.done_step
+#print axioms OCaml.Vm.Sim.OutListWalk.leave_step
+#print axioms OCaml.Vm.Sim.OutListWalk.empty_step
+#print axioms OCaml.Vm.Sim.OutListWalk.pro_keeps
+#print axioms OCaml.Vm.Sim.OutListWalk.pro_saved
+#print axioms OCaml.Vm.Sim.OutListWalk.walk_start
+#print axioms OCaml.Vm.Sim.OutListWalk.restore_keeps
+#print axioms OCaml.Vm.Sim.OutListWalk.out_list_walked
+#print axioms OCaml.Vm.Sim.OutListWalk.out_list_finish
+#print axioms OCaml.Vm.Sim.OutListWalk.out_list_none
+#print axioms OCaml.Vm.Sim.OutListWalk.out_list_machine
