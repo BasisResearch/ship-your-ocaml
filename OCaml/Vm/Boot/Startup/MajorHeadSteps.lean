@@ -3,6 +3,12 @@ import OCaml.Vm.Boot.Startup.MajorHeadImage
 import OCaml.Vm.Boot.Startup.MajorAddCallNormalized
 import OCaml.Vm.Boot.Startup.MajorAddCallImage
 import OCaml.Vm.Boot.Startup.MajorAddCallCallInterface
+import OCaml.Vm.Boot.Startup.MajorMergeNormalized
+import OCaml.Vm.Boot.Startup.MajorMergeImage
+import OCaml.Vm.Boot.Startup.MajorMergeCallInterface
+import OCaml.Vm.Boot.Startup.MajorFreeNormalized
+import OCaml.Vm.Boot.Startup.MajorFreeImage
+import OCaml.Vm.Boot.Startup.MajorFreeCallInterface
 import OCaml.Vm.Boot.Startup.MajorSteps
 import OCaml.Vm.Boot.Startup.MinorRefSteps
 namespace OCaml.Vm.Boot.Startup
@@ -176,4 +182,85 @@ theorem major_add_call (c : Config) (ra chunk asize : BitVec 64) (leaf : LeafInp
   block_then_call c jal_80009400_call_shape jal_80009400_call_decode (fun _ h => jal_80009400_call_pins h)
     (major_add_front c ra chunk asize leaf regs sizeWindow sizeWord) (by simp only [keysG]; decide)
     (by simp only [KeysAvoidRa, keysG]; decide) rfl
+
+local macro "mmk" : tactic => `(tactic| simp only [majormerge_line_80009408, majormerge_line_8000940c, majorfree_line_80009414, majorfree_line_80009418, majorfree_line_8000941c, majorfree_line_80009420, majorfree_line_80009424, majorfree_line_80009428, majorfree_line_8000942c, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
+
+/-- The page-table add succeeded; `a5 = caml_fl_p_init_merge`. -/
+theorem major_merge_front (c : Config) (ra fn : BitVec 64) (leaf : LeafInput ra c) (regs : GHolds c.σ [(10, 0#64)])
+    (pointer : bytesT c.σ.mem 0x800649e0 8 = fn) :
+    FnSummary 0x80009404#64 (fun e => e = c) (WriteRegistersPost [15] [] c 0x80009410#64 0#64 [(15, fn), (10, 0#64)]) := by
+  have word : bytesVal .ld (read8 c.σ.mem (BitVec.ofNat 64 0x800649e0).toNat) = fn := by rw [read8_value]; exact pointer
+  apply registers_of_blocks' leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (caml_init_major_heapX9404FSeg ++ caml_init_major_heapX9408Seg)
+        0x80009404#64 [(10, 0#64)] [read8 c.σ.mem (BitVec.ofNat 64 0x800649e0).toNat] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10]; decide
+      shape := by change ChainOK _ [10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := majorMerge_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_init_major_heap_at_"
+        · mmk; rfl
+        · exact (show ReadWindow (BitVec.ofNat 64 0x800649e0) 8 by constructor <;> decide).ld rfl (by mmk; decide)
+            (read8_pins _ _) }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_init_major_heapX9404FSeg, caml_init_major_heapX9408Seg, List.cons_append, List.nil_append,
+      evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM, ldsRunM, srcVal, lookupG, eraseG, wvalM,
+      Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, List.headD_cons, List.tail_cons, imm20Of, majormerge_line_80009408, majormerge_line_8000940c] at pins
+    exact ⟨gholds_lookup_eq pins rfl word, gholds_lookup (n := 10) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+/-- `caml_fl_p_make_free_blocks(caml_heap_start, stat_heap_wsz, 1, Caml_white)`'s arguments. -/
+theorem major_free_front (c : Config) (ra chunk w fn : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(8, BitVec.ofNat 64 Layout.sym_Caml_state), (18, 0x80064ad0#64), (9, 1#64)])
+    (domain : bytesT c.σ.mem Layout.sym_Caml_state 8 = firstDomainPtr)
+    (heapWord : bytesT c.σ.mem heapStartAddr 8 = chunk) (pointer : bytesT c.σ.mem 0x800649b8 8 = fn)
+    (wsz : bytesT c.σ.mem (domainField 336) 8 = w) :
+    FnSummary 0x80009414#64 (fun e => e = c) (WriteRegistersPost [14, 10, 15, 11, 12, 13] [] c 0x80009430#64 chunk
+      [(14, firstDomainPtr), (10, chunk), (15, fn), (11, w), (12, 1#64), (13, 0#64), (8, BitVec.ofNat 64 Layout.sym_Caml_state),
+        (18, 0x80064ad0#64), (9, 1#64)]) := by
+  have dw : bytesVal .ld (read8 c.σ.mem (BitVec.ofNat 64 Layout.sym_Caml_state).toNat) = firstDomainPtr := by
+    rw [read8_value]; exact domain
+  have hw : bytesVal .ld (read8 c.σ.mem (0x80064ad0#64).toNat) = chunk := by rw [read8_value]; exact heapWord
+  have fw : bytesVal .ld (read8 c.σ.mem (BitVec.ofNat 64 0x800649b8).toNat) = fn := by rw [read8_value]; exact pointer
+  have ww : bytesVal .ld (read8 c.σ.mem (firstDomainPtr + 336#64).toNat) = w := by rw [read8_value]; exact wsz
+  apply registers_of_blocks' leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput caml_init_major_heapX9414Seg 0x80009414#64
+        [(8, BitVec.ofNat 64 Layout.sym_Caml_state), (18, 0x80064ad0#64), (9, 1#64)]
+        [read8 c.σ.mem (BitVec.ofNat 64 Layout.sym_Caml_state).toNat, read8 c.σ.mem (0x80064ad0#64).toNat,
+          read8 c.σ.mem (BitVec.ofNat 64 0x800649b8).toNat, read8 c.σ.mem (firstDomainPtr + 336#64).toNat] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [8, 18, 9]; decide
+      shape := by change ChainOK _ [8, 18, 9] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := majorFree_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_init_major_heap_at_"
+        · exact (show ReadWindow (BitVec.ofNat 64 Layout.sym_Caml_state) 8 by constructor <;> decide).ld rfl
+            (by mmk; rw [sext_zero, BitVec.add_zero]) (read8_pins _ _)
+        · exact (show ReadWindow (0x80064ad0#64) 8 by constructor <;> decide).ld rfl
+            (by mmk; rw [sext_zero, BitVec.add_zero]) (read8_pins _ _)
+        · exact (show ReadWindow (BitVec.ofNat 64 0x800649b8) 8 by constructor <;> decide).ld rfl (by mmk; decide)
+            (read8_pins _ _)
+        · exact (show ReadWindow (firstDomainPtr + 336#64) 8 by constructor <;> decide).ld rfl
+            (by mmk; rw [dw]; decide) (read8_pins _ _) }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_init_major_heapX9414Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, stepLdsM, ldsRunM,
+      srcVal, lookupG, eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, List.headD_cons,
+      List.tail_cons, imm20Of, majorfree_line_80009414, majorfree_line_80009418, majorfree_line_8000941c, majorfree_line_80009420, majorfree_line_80009424, majorfree_line_80009428, majorfree_line_8000942c] at pins
+    exact ⟨gholds_lookup_eq pins rfl dw, gholds_lookup_eq pins rfl hw, gholds_lookup_eq pins rfl fw,
+      gholds_lookup_eq pins rfl ww, gholds_lookup_eq pins rfl (by rw [sext_zero, BitVec.add_zero]),
+      gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 8) _ pins rfl, gholds_lookup (n := 18) _ pins rfl,
+      gholds_lookup (n := 9) _ pins rfl, trivial⟩
+  · rfl
+  · decide
 end OCaml.Vm.Boot.Startup
