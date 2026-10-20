@@ -772,6 +772,9 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.BfShape.slot_toNat
 #print axioms OCaml.Vm.Gc.BfShape.slot_write
 #print axioms OCaml.Vm.Gc.BfShape.merge_read
+#print axioms OCaml.Vm.Gc.BfShape.exact_of_nonempty
+#print axioms OCaml.Vm.Gc.BfShape.SmallShape.pop
+#print axioms OCaml.Vm.Gc.BfShape.SmallList.congr
 #print axioms OCaml.Vm.Gc.RouteSupply.nonYoung_call
 #print axioms OCaml.Vm.Gc.RouteSupply.forwarded_call
 #print axioms OCaml.Vm.Gc.RouteSupply.slot_outside

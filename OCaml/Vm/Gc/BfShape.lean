@@ -1,4 +1,6 @@
 import OCaml.Vm.Gc.BestFitSmall
+import OCaml.Vm.Gc.BestFitExact
+import Vsa.Sim.DlHeap
 
 /-! # The best-fit allocator's free structures
 
@@ -24,6 +26,8 @@ structure SmallShape (m : Std.ExtHashMap Nat (BitVec 8)) (lists : Nat → List (
   linked : ∀ s, 1 ≤ s → s ≤ Layout.bf_small_count → SmallList m (bytesT m (slot s).toNat 8) (lists s)
   /-- every listed block's link word is readable -/
   blocks : ∀ s, 1 ≤ s → s ≤ Layout.bf_small_count → ∀ b ∈ lists s, ReadWindow b 8
+  /-- free blocks lie in the heap, above every static -/
+  heap : ∀ s, 1 ≤ s → s ≤ Layout.bf_small_count → ∀ b ∈ lists s, Vsa.Sim.DlHeap.heapStart ≤ b.toNat
 
 theorem slot_toNat (s : Nat) (hi : s ≤ Layout.bf_small_count) :
     (slot s).toNat = Layout.sym_bf_small_fl + 16 * s := by
@@ -76,5 +80,119 @@ theorem core_of_nonempty {m : Std.ExtHashMap Nat (BitVec 8)} {lists : Nat → Li
     rw [show BestFitSmall.slot (BitVec.ofNat 64 s) = slot s from rfl, h]
     simp only [Layout.sym_bf_small_fl, Layout.sym_caml_fl_cur_wsz]
     omega
+
+theorem merge_toNat (s : Nat) (hi : s ≤ Layout.bf_small_count) :
+    (slot s + BitVec.ofNat 64 Layout.off_bf_small_merge).toNat = Layout.sym_bf_small_fl + 16 * s + 8 := by
+  have h := slot_toNat s hi
+  simp only [Layout.bf_small_count] at hi
+  rw [BitVec.toNat_add, h]; simp only [BitVec.toNat_ofNat, Layout.off_bf_small_merge, Layout.sym_bf_small_fl]; omega
+
+theorem merge_write (s : Nat) (hi : s ≤ Layout.bf_small_count) :
+    WriteWindow (slot s + BitVec.ofNat 64 Layout.off_bf_small_merge) 8 := by
+  have addr := merge_toNat s hi
+  simp only [Layout.bf_small_count] at hi
+  constructor <;> rw [addr] <;> simp only [Layout.sym_bf_small_fl, Layout.sym_tohost] <;> omega
+
+/-- **A nonempty small list** supplies the exact-size path's conditions. -/
+theorem exact_of_nonempty {m : Std.ExtHashMap Nat (BitVec 8)} {lists : Nat → List (BitVec 64)} {c : Config}
+    (shape : SmallShape m lists) (memory : c.σ.mem = m) {s : Nat} (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count)
+    (nonempty : lists s ≠ []) : BestFitExact.Conditions (BitVec.ofNat 64 s) c := by
+  have core := core_of_nonempty shape memory lo hi nonempty
+  obtain ⟨b, bs, hb⟩ : ∃ b bs, lists s = b :: bs := by
+    cases h : lists s with
+    | nil => exact absurd h nonempty
+    | cons b bs => exact ⟨b, bs, rfl⟩
+  have head : BestFitSmall.first (BitVec.ofNat 64 s) c = b := by
+    have linked := shape.linked s lo hi
+    rw [hb] at linked
+    unfold BestFitSmall.first word; rw [memory]; exact linked.1
+  have inHeap := shape.heap s lo hi b (by rw [hb]; exact List.mem_cons_self ..)
+  have mergeAddr := merge_toNat s hi
+  have slotAddr := slot_toNat s hi
+  have small : s ≤ 16 := by simpa only [Layout.bf_small_count] using hi
+  have slotEq : BestFitSmall.slot (BitVec.ofNat 64 s) = slot s := rfl
+  refine ⟨core, fun _ => ⟨merge_write s hi, ?_, ?_⟩, fun _ => ?_⟩
+  · rw [head]
+    apply outLRange_of_forall
+    intro e member
+    simp only [BestFitSmall.repairLog, List.mem_singleton] at member
+    subst member
+    simp only [slotEq, mergeAddr, Vsa.Sim.DlHeap.heapStart, Layout.sym_bf_small_fl] at inHeap ⊢
+    omega
+  · apply outLRange_of_forall
+    intro e member
+    simp only [BestFitSmall.repairLog, List.mem_singleton] at member
+    subst member
+    simp only [slotEq, mergeAddr, Layout.sym_bf_small_fl, Layout.sym_caml_fl_cur_wsz]
+    omega
+  · apply outLRange_of_forall
+    intro e member
+    have mapApart : ∀ a, a = (slot s + BitVec.ofNat 64 Layout.off_bf_small_merge).toNat ∨ a = (slot s).toNat →
+        Layout.sym_bf_small_map + 4 ≤ a := by
+      intro a h
+      rcases h with rfl | rfl
+      · rw [mergeAddr]; simp only [Layout.sym_bf_small_fl, Layout.sym_bf_small_map]; omega
+      · rw [slotAddr]; simp only [Layout.sym_bf_small_fl, Layout.sym_bf_small_map]; omega
+    have which : e.1 = (slot s + BitVec.ofNat 64 Layout.off_bf_small_merge).toNat ∨ e.1 = (slot s).toNat := by
+      unfold BestFitEmpty.effect at member
+      split at member
+      · simp only [BestFitSmall.repairLog, List.cons_append, List.nil_append, List.mem_cons, List.not_mem_nil,
+          or_false] at member
+        rcases member with rfl | rfl
+        · exact Or.inl rfl
+        · exact Or.inr rfl
+      · simp only [List.nil_append, List.mem_cons, List.not_mem_nil, or_false] at member
+        subst member
+        exact Or.inr rfl
+    exact Or.inl (mapApart _ which)
+
+/-- A small list survives memory that keeps its blocks' link words. -/
+theorem SmallList.congr {m m' : Std.ExtHashMap Nat (BitVec 8)} :
+    ∀ (p : BitVec 64) (bs : List (BitVec 64)), (∀ x ∈ bs, bytesT m' x.toNat 8 = bytesT m x.toNat 8) →
+      SmallList m p bs → SmallList m' p bs
+  | _, [], _, h => h
+  | p, x :: xs, same, ⟨hp, hx, rest⟩ => by
+    refine ⟨hp, hx, ?_⟩
+    rw [same x (List.mem_cons_self ..)]
+    exact SmallList.congr _ xs (fun y hy => same y (List.mem_cons_of_mem _ hy)) rest
+
+/-- The lists after popping the head of size `s`. -/
+def popped (lists : Nat → List (BitVec 64)) (s : Nat) (bs : List (BitVec 64)) (t : Nat) : List (BitVec 64) :=
+  if t = s then bs else lists t
+
+/-- **Popping a small list's head** keeps the shape, given that the head
+slot now holds the block's link and every other slot and link word is kept. -/
+theorem SmallShape.pop {m m' : Std.ExtHashMap Nat (BitVec 8)} {lists : Nat → List (BitVec 64)} {s : Nat}
+    {b : BitVec 64} {bs : List (BitVec 64)} (shape : SmallShape m lists) (hb : lists s = b :: bs)
+    (headStore : bytesT m' (slot s).toNat 8 = bytesT m b.toNat 8)
+    (otherSlots : ∀ t, 1 ≤ t → t ≤ Layout.bf_small_count → t ≠ s → bytesT m' (slot t).toNat 8 = bytesT m (slot t).toNat 8)
+    (links : ∀ t, 1 ≤ t → t ≤ Layout.bf_small_count → ∀ x ∈ popped lists s bs t, bytesT m' x.toNat 8 = bytesT m x.toNat 8) :
+    SmallShape m' (popped lists s bs) := by
+  refine ⟨fun t lo hi => ?_, fun t lo hi x hx => ?_, fun t lo hi x hx => ?_⟩
+  · by_cases same : t = s
+    · subst same
+      have linked := shape.linked t lo hi
+      rw [hb] at linked
+      obtain ⟨-, -, rest⟩ := linked
+      have l := links t lo hi
+      simp only [popped, if_pos] at l ⊢
+      rw [headStore]
+      exact SmallList.congr _ _ l rest
+    · have l := links t lo hi
+      simp only [popped, if_neg same] at l ⊢
+      rw [otherSlots t lo hi same]
+      exact SmallList.congr _ _ l (shape.linked t lo hi)
+  · by_cases same : t = s
+    · subst same
+      simp only [popped, if_pos] at hx
+      exact shape.blocks t lo hi x (by rw [hb]; exact List.mem_cons_of_mem _ hx)
+    · simp only [popped, if_neg same] at hx
+      exact shape.blocks t lo hi x hx
+  · by_cases same : t = s
+    · subst same
+      simp only [popped, if_pos] at hx
+      exact shape.heap t lo hi x (by rw [hb]; exact List.mem_cons_of_mem _ hx)
+    · simp only [popped, if_neg same] at hx
+      exact shape.heap t lo hi x hx
 
 end OCaml.Vm.Gc.BfShape
