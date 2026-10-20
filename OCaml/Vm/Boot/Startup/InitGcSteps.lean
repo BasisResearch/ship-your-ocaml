@@ -2,6 +2,15 @@ import OCaml.Vm.Boot.Startup.InitGcSaveNormalized
 import OCaml.Vm.Boot.Startup.InitGcSaveImage
 import OCaml.Vm.Boot.Startup.InitGcArgsNormalized
 import OCaml.Vm.Boot.Startup.InitGcArgsImage
+import OCaml.Vm.Boot.Startup.InitGcMinorNormalized
+import OCaml.Vm.Boot.Startup.InitGcMinorImage
+import OCaml.Vm.Boot.Startup.InitGcMinorCallInterface
+import OCaml.Vm.Boot.Startup.InitGcPolicyNormalized
+import OCaml.Vm.Boot.Startup.InitGcPolicyImage
+import OCaml.Vm.Boot.Startup.InitGcPolicyCallInterface
+import OCaml.Vm.Boot.Startup.InitGcMajorCallNormalized
+import OCaml.Vm.Boot.Startup.InitGcMajorCallImage
+import OCaml.Vm.Boot.Startup.InitGcMajorCallCallInterface
 import OCaml.Vm.Boot.Startup.InitGcArgsCallInterface
 import OCaml.Vm.Boot.Startup.MajorHeap
 namespace OCaml.Vm.Boot.Startup
@@ -118,6 +127,136 @@ theorem init_gc_args (c : Config) (fsp ra a0 a1 a2 a3 a4 a5 a6 a7 arg0 arg1 : Bi
       gholds_lookup (n := 23) _ pins rfl, gholds_lookup (n := 24) _ pins rfl, gholds_lookup (n := 25) _ pins rfl,
       gholds_lookup (n := 15) _ pins rfl, gholds_lookup (n := 8) _ pins rfl, gholds_lookup (n := 10) _ pins rfl,
       gholds_lookup (n := 11) _ pins rfl, gholds_lookup (n := 2) _ pins rfl, gholds_lookup (n := 6) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+/-- `caml_page_table_initialize` succeeded; the minor heap size (262144
+words) is in range; `caml_set_minor_heap_size(caml_norm_minsize(…))`. -/
+theorem init_gc_minor_front (c : Config) (ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(10, 0#64), (9, 262144#64)]) :
+    FnSummary 0x8001f348#64 (fun e => e = c) (WriteRegistersPost [15, 10] [] c jal_8001f36c_call.pc 0x200000#64
+      [(15, 4096#64), (10, 0x200000#64), (9, 262144#64)]) := by
+  apply registers_of_blocks' leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput (caml_init_gcXf348FSeg ++ caml_init_gcXf34cFSeg ++ caml_init_gcXf358FSeg ++
+        caml_init_gcXf360Seg) 0x8001f348#64 [(10, 0#64), (9, 262144#64)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [10, 9]; decide
+      shape := by change ChainOK _ [10, 9] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := initGcMinor_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_init_gc_at_"
+        all_goals simp only [initgcminor_line_8001f34c, initgcminor_line_8001f350, initgcminor_line_8001f358, initgcminor_line_8001f360, initgcminor_line_8001f364, initgcminor_line_8001f368, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true,
+          ite_false, Nat.reduceEqDiff, imm20Of]
+        all_goals decide }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_init_gcXf348FSeg, caml_init_gcXf34cFSeg, caml_init_gcXf358FSeg, caml_init_gcXf360Seg,
+      List.cons_append, List.nil_append, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, srcVal, lookupG,
+      eraseG, wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, imm20Of, initgcminor_line_8001f34c, initgcminor_line_8001f350, initgcminor_line_8001f358, initgcminor_line_8001f360, initgcminor_line_8001f364, initgcminor_line_8001f368] at pins
+    exact ⟨gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide),
+      gholds_lookup (n := 9) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+/-- `caml_percent_free`, `caml_percent_max`. -/
+def percentFreeAddr : Nat := 0x80064af0
+def percentMaxAddr : Nat := 0x80064c60
+
+local macro "igp" : tactic => `(tactic| simp only [initgcpolicy_line_8001f370, initgcpolicy_line_8001f374, initgcpolicy_line_8001f378, initgcpolicy_line_8001f37c, initgcpolicy_line_8001f380, initgcpolicy_line_8001f388, initgcpolicy_line_8001f38c, initgcpolicy_line_8001f390, initgcpolicy_line_8001f394, initgcpolicy_line_8001f398, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, Nat.reduceAdd, imm20Of, List.headD_cons])
+
+/-- `caml_major_heap_increment = 15`; `caml_percent_free`'s value is nonzero. -/
+theorem init_gc_increment (c : Config) (ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(20, 15#64), (21, 120#64), (10, 0#64)]) :
+    FnSummary 0x8001f370#64 (fun e => e = c) (WriteRegistersPost [15, 9] [(majorIncrementAddr, 8, 15#64)] c 0x8001f388#64 0#64
+      [(15, 120#64), (9, BitVec.ofNat 64 percentFreeAddr), (20, 15#64), (21, 120#64), (10, 0#64)]) := by
+  apply registers_of_blocks' leaf.image (by constructor <;> simp only [OutLRange, majorIncrementAddr] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput caml_init_gcXf370FSeg 0x8001f370#64 [(20, 15#64), (21, 120#64), (10, 0#64)]
+        [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [20, 21, 10]; decide
+      shape := by change ChainOK _ [20, 21, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := initGcPolicy_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_init_gc_at_"
+        · exact (show WriteWindow (BitVec.ofNat 64 majorIncrementAddr) 8 by constructor <;> decide).sd rfl (by igp; decide)
+        · igp; decide }))
+  · simp only [caml_init_gcXf370FSeg, evalBlocks, evalBlock, SegEvalState.init, wlogM, wentryM, widthOfM]
+    igp
+    decide
+  · rfl
+  · intro σ pins
+    simp only [caml_init_gcXf370FSeg, evalBlocks, evalBlock, SegEvalState.init] at pins
+    simp only [initgcpolicy_line_8001f370, initgcpolicy_line_8001f374, initgcpolicy_line_8001f378, initgcpolicy_line_8001f37c, initgcpolicy_line_8001f380, initgcpolicy_line_8001f388, initgcpolicy_line_8001f38c, initgcpolicy_line_8001f390, initgcpolicy_line_8001f394, initgcpolicy_line_8001f398, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false,
+      Nat.reduceEqDiff, Nat.reduceAdd, imm20Of, List.headD_cons] at pins
+    exact ⟨gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 20) _ pins rfl,
+      gholds_lookup (n := 21) _ pins rfl, gholds_lookup (n := 10) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+/-- `caml_percent_free = 120`, `caml_percent_max = 500`; `caml_set_allocation_policy(2)`. -/
+theorem init_gc_percent (c : Config) (ra : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(19, 2#64), (15, 120#64), (9, BitVec.ofNat 64 percentFreeAddr), (22, 500#64)]) :
+    FnSummary 0x8001f388#64 (fun e => e = c) (WriteRegistersPost [10, 19]
+      [(percentFreeAddr, 8, 120#64), (percentMaxAddr, 8, 500#64)] c jal_8001f39c_call.pc 2#64
+      [(10, 2#64), (19, BitVec.ofNat 64 percentMaxAddr), (15, 120#64), (9, BitVec.ofNat 64 percentFreeAddr),
+        (22, 500#64)]) := by
+  apply registers_of_blocks' leaf.image
+    (by constructor <;> simp only [OutLRange, percentFreeAddr, percentMaxAddr] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput caml_init_gcXf388Seg 0x8001f388#64
+        [(19, 2#64), (15, 120#64), (9, BitVec.ofNat 64 percentFreeAddr), (22, 500#64)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [19, 15, 9, 22]; decide
+      shape := by change ChainOK _ [19, 15, 9, 22] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := initGcPolicy_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_init_gc_at_"
+        · exact (show WriteWindow (BitVec.ofNat 64 percentFreeAddr) 8 by constructor <;> decide).sd rfl (by igp; decide)
+        · exact (show WriteWindow (BitVec.ofNat 64 percentMaxAddr) 8 by constructor <;> decide).sd rfl (by igp; decide) }))
+  · simp only [caml_init_gcXf388Seg, evalBlocks, evalBlock, SegEvalState.init, wlogM, wentryM, widthOfM]
+    igp
+    decide
+  · rfl
+  · intro σ pins
+    simp only [caml_init_gcXf388Seg, evalBlocks, evalBlock, SegEvalState.init] at pins
+    simp only [initgcpolicy_line_8001f370, initgcpolicy_line_8001f374, initgcpolicy_line_8001f378, initgcpolicy_line_8001f37c, initgcpolicy_line_8001f380, initgcpolicy_line_8001f388, initgcpolicy_line_8001f38c, initgcpolicy_line_8001f390, initgcpolicy_line_8001f394, initgcpolicy_line_8001f398, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false,
+      Nat.reduceEqDiff, Nat.reduceAdd, imm20Of, List.headD_cons] at pins
+    exact ⟨gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 15) _ pins rfl,
+      gholds_lookup (n := 9) _ pins rfl, gholds_lookup (n := 22) _ pins rfl, trivial⟩
+  · rfl
+  · decide
+
+/-- `caml_init_major_heap(major_bytes)`. -/
+theorem init_gc_major_front (c : Config) (ra bytes v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(8, bytes), (10, v)]) :
+    FnSummary 0x8001f3a0#64 (fun e => e = c) (WriteRegistersPost [10] [] c jal_8001f3a4_call.pc bytes
+      [(10, bytes), (8, bytes)]) := by
+  apply registers_of_blocks' leaf.image (by constructor <;> trivial)
+    (block_summary _ _ _ _ _ (show BlockInput caml_init_gcXf3a0Seg 0x8001f3a0#64 [(8, bytes), (10, v)] [] c from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [8, 10]; decide
+      shape := by change ChainOK _ [8, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := initGcMajorCall_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_init_gc_at_" }))
+  · rfl
+  · rfl
+  · intro σ pins
+    simp only [caml_init_gcXf3a0Seg, evalBlocks, evalBlock, SegEvalState.init, runGM, stepGM, srcVal, lookupG, eraseG,
+      wvalM, Option.getD_some, Nat.reduceEqDiff, ite_true, ite_false, initgcmajorcall_line_8001f3a0] at pins
+    exact ⟨gholds_lookup_eq pins rfl (by rw [sext_zero, BitVec.add_zero]), gholds_lookup (n := 8) _ pins rfl, trivial⟩
   · rfl
   · decide
 end OCaml.Vm.Boot.Startup
