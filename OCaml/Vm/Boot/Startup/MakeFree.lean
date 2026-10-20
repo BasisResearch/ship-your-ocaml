@@ -78,6 +78,12 @@ structure MadeFree (H : List (Nat × Nat)) (capacity : Nat) (sp ra p size s0 s1 
   header : bytesT after.σ.mem p.toNat 8 = mfbHeader size
   tree : TreeRoot after.σ.mem (p + 8#64)
   curWsz : bytesT after.σ.mem flCurWszAddr 8 = cur + 1#64 + (size - 1#64)
+  /-- The caller's frame and everything above it are untouched. -/
+  caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  /-- Below the arena only the chunk, the tree root and `caml_fl_cur_wsz` change. -/
+  kept : ∀ x, x < heapEnd →
+    OutW [⟨p.toNat, p.toNat + 8 * size.toNat⟩, ⟨largeTreeAddr, largeTreeAddr + 8⟩, ⟨flCurWszAddr, flCurWszAddr + 8⟩] x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
 
 theorem make_free_blocks (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
     (sp ra p size s0 s1 s2 s3 s4 s5 s6 s7 s8 cur : BitVec 64) (q n : Nat)
@@ -290,6 +296,29 @@ theorem make_free_blocks (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
     ready9.toLeafInput A.frame ⟨ready9.stack, gholds_lookup (n := 10) _ p9.regs rfl, trivial⟩ saved9
     A.ready.aligned).run d9 ⟨p9.pc, rfl⟩
   have mem10 : d10.σ.mem = d9.σ.mem := p10.memory
+  have back (x : Nat) (h : (x < heapEnd ∧ OutW [⟨p.toNat, p.toNat + 8 * size.toNat⟩, ⟨largeTreeAddr, largeTreeAddr + 8⟩,
+        ⟨flCurWszAddr, flCurWszAddr + 8⟩] x) ∨ sp.toNat ≤ x) :
+      (d10.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    have spHigh : 0x86800000 ≤ nativeFrameBase sp 80 := frameHighN
+    have out : (x < p.toNat ∨ p.toNat + 8 * size.toNat ≤ x) ∧ (x < 0x800649f8 ∨ 0x800649f8 + 8 ≤ x) ∧
+        (x < 0x80064a40 ∨ 0x80064a40 + 8 ≤ x) ∧ (x < nativeFrameBase sp 80 ∨ sp.toNat ≤ x) := by
+      rcases h with ⟨low, o⟩ | above
+      · simp only [OutW, largeTreeAddr, flCurWszAddr, and_true] at o
+        have : x < 0x86800000 := low
+        omega
+      · unfold nativeFrameBase at spHigh; omega
+    obtain ⟨o1, o2, o3, o4⟩ := out
+    rw [mem10, mem9, writeLog_out _ _ _ (by simp only [OutL, flCurWszAddr, and_true]; omega),
+      writeLog_out _ _ _ (by
+        simp only [rootLog, OutL, show p + 8#64 + 16#64 = p + 8#64 + BitVec.ofNat 64 16 from rfl,
+          show p + 8#64 + 8#64 = p + 8#64 + BitVec.ofNat 64 8 from rfl,
+          show p + 8#64 + 32#64 = p + 8#64 + BitVec.ofNat 64 32 from rfl,
+          show p + 8#64 + 24#64 = p + 8#64 + BitVec.ofNat 64 24 from rfl, pf 16 (by decide), pf 8 (by decide),
+          pf 32 (by decide), pf 24 (by decide), pb, largeTreeAddr, and_true]
+        omega),
+      mem5, writeLog_out _ _ _ (by simp only [OutL, and_true]; omega), p3.memory,
+      show writeLog d2.σ.mem [] = d2.σ.mem from rfl, p2.memory, frameOn_writeLog _ _ _ inside2 x ⟨o4, trivial⟩, p1.memory]
+    rfl
   refine ⟨d10, run1.trans (run2.trans (run3.trans (run4.trans (run5.trans (run6.trans (run7.trans (run8.trans
     (run9.trans run10)))))))), {
     pc := p10.pc
@@ -316,5 +345,7 @@ theorem make_free_blocks (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
         exact word_writeLog_at _ _ 3 _ _ rfl (by simp only [rootLog, List.drop, OutLRange, show p + 8#64 + 16#64 = p + 8#64 + BitVec.ofNat 64 16 from rfl, show p + 8#64 + 8#64 = p + 8#64 + BitVec.ofNat 64 8 from rfl, show p + 8#64 + 32#64 = p + 8#64 + BitVec.ofNat 64 32 from rfl, show p + 8#64 + 24#64 = p + 8#64 + BitVec.ofNat 64 24 from rfl, pf 16 (by decide), pf 8 (by decide), pf 32 (by decide), pf 24 (by decide), pb, largeTreeAddr, and_true]; omega)
       · rw [bytesT_writeLog_out _ (cur _ (by rw [show p + 8#64 + 32#64 = p + 8#64 + BitVec.ofNat 64 32 from rfl, pf 32 (by decide)]; omega))]
         exact word_writeLog_at _ _ 2 _ _ rfl (by simp only [rootLog, List.drop, OutLRange, show p + 8#64 + 16#64 = p + 8#64 + BitVec.ofNat 64 16 from rfl, show p + 8#64 + 8#64 = p + 8#64 + BitVec.ofNat 64 8 from rfl, show p + 8#64 + 32#64 = p + 8#64 + BitVec.ofNat 64 32 from rfl, show p + 8#64 + 24#64 = p + 8#64 + BitVec.ofNat 64 24 from rfl, pf 16 (by decide), pf 8 (by decide), pf 32 (by decide), pf 24 (by decide), pb, largeTreeAddr, and_true]; omega)
-    curWsz := by rw [mem10, mem9]; exact word_writeLog_at _ _ 0 _ _ rfl trivial }⟩
+    curWsz := by rw [mem10, mem9]; exact word_writeLog_at _ _ 0 _ _ rfl trivial
+    caller := fun x above => back x (Or.inr above)
+    kept := fun x low out => back x (Or.inl ⟨low, out⟩) }⟩
 end OCaml.Vm.Boot.Startup
