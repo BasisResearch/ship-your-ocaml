@@ -70,6 +70,7 @@ structure PageTableDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra blk : Bi
   kept : ∀ x, x < sp.toNat - (32 + allocHeadroom) → ¬ vsaFoot H x → OutW pageTableWindows x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   caller : ∀ x, sp.toNat ≤ x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  saved : ∀ k ∈ abiSaved, gprGet after.σ k = gprGet before.σ k
 
 theorem page_table_initialize (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra : BitVec 64)
     (A : PageTableCall H capacity charge sp ra c) :
@@ -105,7 +106,8 @@ theorem page_table_initialize (c : Config) (H : List (Nat × Nat)) (capacity cha
     shift := fun h => absurd h (by decide)
     ready := ready3
     bound := by decide
-    mem := rfl }
+    mem := rfl
+    same := (GprsSame.refl d3).mono (by decide) }
   have pc4 : PCAt 0x8000ad1c#64 d4 := by have := D.pc; simp only [Nat.lt_irrefl, ite_false] at this; exact this
   obtain ⟨d5, run5, p5⟩ := (page_table_fields d4 ra D.ready.toLeafInput
     ⟨gholds_lookup (n := 12) _ D.regs rfl, D.shift (by decide), gholds_lookup (n := 10) _ D.regs rfl, trivial⟩).run d4
@@ -289,5 +291,13 @@ theorem page_table_initialize (c : Config) (H : List (Nat × Nat)) (capacity cha
           (Or.inr (by unfold nativeFrameBase; omega)) (Or.inr (by omega)) (stackPt x (by omega)), p1.memory,
         pageTableSaveLog]
       rw [frameOn_writeLog _ _ _ (frame32.word_log_inside fun o w h => by simp at h; omega) x
-        ⟨Or.inr hx, trivial⟩] }⟩
+        ⟨Or.inr hx, trivial⟩] 
+    saved := fun k member => by
+      have total := ((((((((GprsSame.of_post p1 (by decide)).trans (GprsSame.of_post p2 (by decide))).trans
+        (GprsSame.of_post p3 (by decide))).trans D.same).trans (GprsSame.of_post p5 (by decide))).trans
+        (GprsSame.of_post p6 (by decide))).trans (GprsSame.of_saved fun _ m => B.saved_gpr m)).trans
+        (GprsSame.of_post p8 (by decide))).trans ((GprsSame.of_post M (by decide)).trans (GprsSame.of_post p10 (by decide)))
+      have range : 1 ≤ k ∧ k ≤ 31 := by simp [abiSaved] at member; omega
+      exact (total.mono (vs := abiClobbered) (by decide)).same k range.1 range.2 (by
+        simp only [abiClobbered, abiSaved, List.mem_cons, List.not_mem_nil, or_false] at member ⊢; omega) }⟩
 end OCaml.Vm.Boot.Startup

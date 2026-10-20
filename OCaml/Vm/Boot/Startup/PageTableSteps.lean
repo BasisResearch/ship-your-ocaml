@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.PageTableEntryNormalized
+import OCaml.Vm.Boot.Startup.GprsSame
 import OCaml.Vm.Boot.Startup.PageTableEntryImage
 import OCaml.Vm.Boot.Startup.PageTableTopNormalized
 import OCaml.Vm.Boot.Startup.PageTableTopImage
@@ -228,6 +229,7 @@ structure DoublingAt (H : List (Nat × Nat)) (capacity : Nat) (sp ra : BitVec 64
   ready : RuntimeReady H capacity sp ra d
   bound : k ≤ 11
   mem : d.σ.mem = start.σ.mem
+  same : GprsSame start d [12, 14, 15]
 
 theorem DoublingAt.index {H capacity sp ra start k d} (D : DoublingAt H capacity sp ra start k d) :
     63 - ((gprGet d.σ 15).getD 0).toNat = k := by
@@ -254,7 +256,8 @@ theorem page_table_doubling_loop {H capacity sp ra start} (frame : NativeFrame s
           ((p.toEffectPost.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans h.ready.raReg)
           h.ready.aligned frame (by simp only [LogInW])
         bound := by omega
-        mem := p.memory.trans h.mem }⟩)
+        mem := p.memory.trans h.mem
+        same := (h.same.trans (GprsSame.of_post p (by decide))).mono (by decide) }⟩)
   exact loop start D
 
 local macro "pzk" : tactic => `(tactic| simp only [pagetablesize_line_8000ad1c, pagetablesize_line_8000ad20, pagetablesize_line_8000ad24, pagetablesize_line_8000ad28, pagetablesize_line_8000ad2c, pagetablesize_line_8000ad30, pagetablesize_line_8000ad34, pagetablesize_line_8000ad38, pagetablesize_line_8000ad3c, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons])
