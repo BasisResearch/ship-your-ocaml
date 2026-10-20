@@ -28,16 +28,18 @@ structure Returned (ra : BitVec 64) (keep : Nat → Prop) (c d : Config) : Prop 
   pc : pcOf d = some ra
   result : gprGet d.σ 10 = some 0#64
   saved : ∀ k, CalleeKept k → gprGet d.σ k = gprGet c.σ k
-  output : d.σ.sailOutput = c.σ.sailOutput
+  output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ
   htif : d.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes
   gprs : GprsKept c d
+  raReg : gprGet d.σ 1 = some ra
   kept : ∀ a, keep a → (d.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
 
 /-- Read a `Returned` off an exact post: the saved registers from the post's
 register list and frame, the kept bytes from a log that misses them. -/
 theorem Returned.of_post {writes : List Nat} {log : List WEntry} {ra : BitVec 64} {regs : GRegs}
     {keep : Nat → Prop} {c d : Config} (p : WriteRegistersPost writes log c ra 0#64 regs d)
-    (saved : ∀ k, CalleeKept k → gprGet d.σ k = gprGet c.σ k) (out : ∀ a, keep a → OutL log a) :
+    (saved : ∀ k, CalleeKept k → gprGet d.σ k = gprGet c.σ k) (raReg : gprGet d.σ 1 = some ra)
+    (out : ∀ a, keep a → OutL log a) :
     Returned ra keep c d where
   good := p.good
   image := p.image
@@ -46,9 +48,10 @@ theorem Returned.of_post {writes : List Nat} {log : List WEntry} {ra : BitVec 64
   pc := p.pc
   result := p.result
   saved := saved
-  output := p.output
+  output := by unfold Vsa.Machine.output; rw [p.output]
   htif := p.frame _ (fun n _ => gprReg_ne_htif n) (by decide)
   gprs := p.kept
+  raReg := raReg
   kept a ha := by rw [p.memory, writeLog_out _ _ _ (out a ha)]
 
 /-- Weaken the kept set. -/
@@ -61,9 +64,9 @@ open OCaml.Vm.Primitives.Uncaught.StdioFlush
 open OCaml.Vm.Primitives.Uncaught.StdioClose (frame_nat fdSlot fdSlot_toNat FdLive sclose_console scloseLog closeLog)
 
 /-- Bytes a flush of `fp` leaves alone: outside its 48-byte frame below `sp`
-and outside the `FILE`'s first 24 bytes. -/
+and outside the `FILE`'s first 18 bytes (up to `_file`). -/
 def FlushKeep (sp fp : BitVec 64) (a : Nat) : Prop :=
-  (a < sp.toNat - 48 ∨ sp.toNat ≤ a) ∧ (a < fp.toNat ∨ fp.toNat + 24 ≤ a)
+  (a < sp.toNat - 48 ∨ sp.toNat ≤ a) ∧ (a < fp.toNat ∨ fp.toNat + 18 ≤ a)
 
 theorem flushSaves_out {sp ra s0 s3 fp : BitVec 64} (frame : NativeFrame sp 48) {a : Nat} (h : FlushKeep sp fp a) :
     OutL (flushSaves sp ra s0 s3) a := by
@@ -83,8 +86,8 @@ theorem flush_stdin_returned {ra sp s0 s3 reent : BitVec 64} {c : Config} (h : L
     FnSummary 0x8003e4f4#64 (fun d => d = c) (Returned ra (FlushKeep sp stdinFile) c) := by
   apply (flush_stdin h sp0 s0r s3r a0 a1 frame flags r ur).weaken (fun _ e => e)
   intro d p
-  obtain ⟨d2, d8, d19, -⟩ := p.regs
-  refine Returned.of_post p (fun k hk => ?_) (fun a ha => ?_)
+  obtain ⟨d2, d8, d19, d1, -⟩ := p.regs
+  refine Returned.of_post p (fun k hk => ?_) d1 (fun a ha => ?_)
   · rcases hk with rfl | rfl | rfl | ⟨lo, hi⟩
     · rw [d2, sp0]
     · rw [d8, s0r]
@@ -109,12 +112,12 @@ theorem flush_stdout_returned {ra sp s0 s2 s3 reent : BitVec 64} {c : Config} (h
     FnSummary 0x8003e4f4#64 (fun d => d = c) (Returned ra (FlushKeep sp stdoutFile) c) := by
   apply (flush_stdout h sp0 s0r s2r s3r a0 a1 frame flags base).weaken (fun _ e => e)
   intro d p
-  obtain ⟨d2, d8, d18, d19, -⟩ := p.regs
+  obtain ⟨d2, d8, d18, d19, d1, -⟩ := p.regs
   have n16 := frame_nat (k := 48) (off := 16) frame (by decide) (by decide)
   have sp48 : sp + 18446744073709551568#64 = sp - 48#64 := by rw [BitVec.sub_eq_add_neg]; rfl
   have lo := frame.lower
   simp only [Vsa.Sim.DlHeap.heapEnd] at lo
-  refine Returned.of_post p (fun k hk => ?_) (fun a ha => ?_)
+  refine Returned.of_post p (fun k hk => ?_) d1 (fun a ha => ?_)
   · rcases hk with rfl | rfl | rfl | ⟨lo, hi⟩
     · rw [d2, sp0]
     · rw [d8, s0r]
@@ -140,13 +143,13 @@ theorem flush_stderr_returned {ra sp s0 s1 s2 s3 reent nb : BitVec 64} {c : Conf
     FnSummary 0x8003e4f4#64 (fun d => d = c) (Returned ra (FlushKeep sp stderrFile) c) := by
   apply (flush_stderr h sp0 s0r s1r s2r s3r a0 a1 frame flags base nz pos).weaken (fun _ e => e)
   intro d p
-  obtain ⟨d2, d8, d9, d18, d19, -⟩ := p.regs
+  obtain ⟨d2, d8, d9, d18, d19, d1, -⟩ := p.regs
   have n16 := frame_nat (k := 48) (off := 16) frame (by decide) (by decide)
   have n24 := frame_nat (k := 48) (off := 24) frame (by decide) (by decide)
   have sp48 : sp + 18446744073709551568#64 = sp - 48#64 := by rw [BitVec.sub_eq_add_neg]; rfl
   have lo := frame.lower
   simp only [Vsa.Sim.DlHeap.heapEnd] at lo
-  refine Returned.of_post p (fun k hk => ?_) (fun a ha => ?_)
+  refine Returned.of_post p (fun k hk => ?_) d1 (fun a ha => ?_)
   · rcases hk with rfl | rfl | rfl | ⟨lo, hi⟩
     · rw [d2, sp0]
     · rw [d8, s0r]
@@ -179,7 +182,7 @@ theorem sclose_returned {ra sp s0 reent fp : BitVec 64} {c : Config} (h : LeafIn
   rw [hfd] at S
   apply S.weaken (fun _ e => e)
   intro d p
-  obtain ⟨d2, d8, -⟩ := p.regs
+  obtain ⟨d2, d8, d1, -⟩ := p.regs
   have lo := frame.lower
   simp only [Vsa.Sim.DlHeap.heapEnd] at lo
   have n0 : (sp - 16#64).toNat = sp.toNat - 16 := by rw [BitVec.toNat_sub, BitVec.toNat_ofNat]; omega
@@ -187,7 +190,7 @@ theorem sclose_returned {ra sp s0 reent fp : BitVec 64} {c : Config} (h : LeafIn
   have n24 : ((sp + 18446744073709551600#64) - 32#64 + 24#64).toNat = sp.toNat - 24 := by
     rw [show sp + 18446744073709551600#64 = sp - 16#64 by rw [BitVec.sub_eq_add_neg]; rfl, BitVec.toNat_add,
       BitVec.toNat_sub, n0, BitVec.toNat_ofNat, BitVec.toNat_ofNat]; omega
-  refine Returned.of_post p (fun k hk => ?_) (fun a ha => ?_)
+  refine Returned.of_post p (fun k hk => ?_) d1 (fun a ha => ?_)
   · rcases hk with rfl | rfl | rfl | ⟨lo, hi⟩
     · rw [d2, sp0]
     · rw [d8, s0r]

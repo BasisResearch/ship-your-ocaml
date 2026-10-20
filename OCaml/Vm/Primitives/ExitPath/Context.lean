@@ -31,19 +31,23 @@ structure ExitOk (d : Config) : Prop where
   htifIdle : d.σ.regs.get? Register.htif_payload_writes = some (0#4)
   present : ∀ n ∈ exitReads, (gprGet d.σ n).isSome
 
-/-- The exit-path invariant relative to the configuration at the call. -/
-structure ExitCtx (lo hi : Nat) (c d : Config) : Prop where
+/-- The exit-path invariant relative to the configuration at the call: health,
+the image, the console, and every byte of `keep`. -/
+structure KeepCtx (keep : Nat → Prop) (c d : Config) : Prop where
   ok : ExitOk d
   image : ExecutableImage d
   minstret : ∃ v, d.σ.regs.get? Register.minstret = some v
   output : Vsa.Machine.output d.σ = Vsa.Machine.output c.σ
-  frame : ∀ x, (x < lo ∨ hi ≤ x) → (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
+  frame : ∀ x, keep x → (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0
 
-theorem ExitCtx.leaf {lo hi c d} (h : ExitCtx lo hi c d) {ra : BitVec 64}
+/-- The invariant keeping all memory outside the window `[lo, hi)`. -/
+abbrev ExitCtx (lo hi : Nat) := KeepCtx (fun x => x < lo ∨ hi ≤ x)
+
+theorem KeepCtx.leaf {keep c d} (h : KeepCtx keep c d) {ra : BitVec 64}
     (raReg : gpr d 1 = some ra) (aligned : ra.toNat % 4 = 0) : LeafInput ra d :=
   ⟨h.ok.good, h.image, h.minstret, raReg, aligned, h.ok.tick⟩
 
-theorem ExitCtx.present {lo hi c d} (h : ExitCtx lo hi c d) (n : Nat)
+theorem KeepCtx.present {keep c d} (h : KeepCtx keep c d) (n : Nat)
     (read : n ∈ exitReads) : gpr d n = some ((gpr d n).getD 0) := by
   have := h.ok.present n read
   change gprGet d.σ n = some ((gprGet d.σ n).getD 0)
@@ -51,11 +55,36 @@ theorem ExitCtx.present {lo hi c d} (h : ExitCtx lo hi c d) (n : Nat)
   | none => rw [e] at this; cases this
   | some v => rfl
 
+theorem ExitCtx.leaf {lo hi c d} (h : ExitCtx lo hi c d) {ra : BitVec 64}
+    (raReg : gpr d 1 = some ra) (aligned : ra.toNat % 4 = 0) : LeafInput ra d :=
+  KeepCtx.leaf h raReg aligned
+
+theorem ExitCtx.present {lo hi c d} (h : ExitCtx lo hi c d) (n : Nat)
+    (read : n ∈ exitReads) : gpr d n = some ((gpr d n).getD 0) :=
+  KeepCtx.present h n read
+
+/-- The invariant at the call itself. -/
+theorem KeepCtx.refl {keep : Nat → Prop} {c : Config} (ok : ExitOk c) (image : ExecutableImage c)
+    (minstret : ∃ v, c.σ.regs.get? Register.minstret = some v) : KeepCtx keep c c :=
+  ⟨ok, image, minstret, rfl, fun _ _ => rfl⟩
+
+/-- Fewer kept bytes. -/
+theorem KeepCtx.mono {keep keep' : Nat → Prop} {c d : Config} (h : KeepCtx keep c d)
+    (sub : ∀ x, keep' x → keep x) : KeepCtx keep' c d :=
+  { h with frame := fun x hx => h.frame x (sub x hx) }
+
+/-- Two stretches keeping the same bytes. -/
+theorem KeepCtx.trans {keep : Nat → Prop} {b c d : Config} (h : KeepCtx keep b c) (h' : KeepCtx keep c d) :
+    KeepCtx keep b d :=
+  { h' with
+    output := h'.output.trans h.output
+    frame := fun x hx => (h'.frame x hx).trans (h.frame x hx) }
+
 /-- One generated block preserves the invariant when its log stays in the window. -/
-theorem ExitCtx.step {lo hi c d e writes log pc value regs}
-    (h : ExitCtx lo hi c d) (post : WriteRegistersPost writes log d pc value regs e)
-    (within : LogWithin log lo hi) (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) :
-    ExitCtx lo hi c e where
+theorem KeepCtx.step {keep c d e writes log pc value regs}
+    (h : KeepCtx keep c d) (post : WriteRegistersPost writes log d pc value regs e)
+    (out : ∀ x, keep x → OutL log x) (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) :
+    KeepCtx keep c e where
   ok := by
     refine ⟨post.good, post.tick, ?_, ?_⟩
     · rw [post.frame _ (fun n _ => by
@@ -79,14 +108,20 @@ theorem ExitCtx.step {lo hi c d e writes log pc value regs}
     rw [post.output]
     exact h.output
   frame := by
-    intro x out
-    rw [post.memory, writeLog_out _ _ _ (within.outL out)]
-    exact h.frame x out
+    intro x hx
+    rw [post.memory, writeLog_out _ _ _ (out x hx)]
+    exact h.frame x hx
+
+theorem ExitCtx.step {lo hi c d e writes log pc value regs}
+    (h : ExitCtx lo hi c d) (post : WriteRegistersPost writes log d pc value regs e)
+    (within : LogWithin log lo hi) (keys : KeysOK writes) (cover : ∀ n ∈ writes, n ∈ keysG regs) :
+    ExitCtx lo hi c e :=
+  KeepCtx.step h post (fun _ hx => within.outL hx) keys cover
 
 /-- A direct call changes only `ra` and the pc. -/
-theorem ExitCtx.call {lo hi c d e target value regs}
-    (h : ExitCtx lo hi c d) (post : RegistersPost [1] d.σ.mem d target value regs e)
-    (cover : 1 ∈ keysG regs) : ExitCtx lo hi c e where
+theorem KeepCtx.call {keep c d e target value regs}
+    (h : KeepCtx keep c d) (post : RegistersPost [1] d.σ.mem d target value regs e)
+    (cover : 1 ∈ keysG regs) : KeepCtx keep c e where
   ok := by
     refine ⟨post.good, post.tick, ?_, ?_⟩
     · rw [post.frame _ (fun n _ => by
@@ -111,16 +146,28 @@ theorem ExitCtx.call {lo hi c d e target value regs}
     rw [post.output]
     exact h.output
   frame := by
-    intro x out
+    intro x hx
     rw [post.memory]
-    exact h.frame x out
+    exact h.frame x hx
+
+theorem ExitCtx.call {lo hi c d e target value regs}
+    (h : ExitCtx lo hi c d) (post : RegistersPost [1] d.σ.mem d target value regs e)
+    (cover : 1 ∈ keysG regs) : ExitCtx lo hi c e :=
+  KeepCtx.call h post cover
 
 /-- Loads of a word outside the window see the value at the call. -/
-theorem ExitCtx.read {lo hi c d} (h : ExitCtx lo hi c d) {a : Nat}
-    (outside : a + 8 ≤ lo ∨ hi ≤ a) : read8 d.σ.mem a = read8 c.σ.mem a := by
+theorem KeepCtx.read {keep c d} (h : KeepCtx keep c d) {a : Nat}
+    (kept : ∀ i, i < 8 → keep (a + i)) : read8 d.σ.mem a = read8 c.σ.mem a := by
+  have h0 := kept 0 (by decide)
+  simp only [Nat.add_zero] at h0
   simp only [read8]
-  rw [h.frame a (by omega), h.frame (a + 1) (by omega), h.frame (a + 2) (by omega),
-    h.frame (a + 3) (by omega), h.frame (a + 4) (by omega), h.frame (a + 5) (by omega),
-    h.frame (a + 6) (by omega), h.frame (a + 7) (by omega)]
+  rw [h.frame a h0, h.frame (a + 1) (kept 1 (by decide)), h.frame (a + 2) (kept 2 (by decide)),
+    h.frame (a + 3) (kept 3 (by decide)), h.frame (a + 4) (kept 4 (by decide)),
+    h.frame (a + 5) (kept 5 (by decide)), h.frame (a + 6) (kept 6 (by decide)),
+    h.frame (a + 7) (kept 7 (by decide))]
+
+theorem ExitCtx.read {lo hi c d} (h : ExitCtx lo hi c d) {a : Nat}
+    (outside : a + 8 ≤ lo ∨ hi ≤ a) : read8 d.σ.mem a = read8 c.σ.mem a :=
+  KeepCtx.read h fun i _ => by omega
 
 end OCaml.Vm.Primitives.ExitPath

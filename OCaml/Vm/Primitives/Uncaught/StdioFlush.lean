@@ -42,7 +42,7 @@ theorem flush_epilogue {r ra sp s0 s3 v : BitVec 64} {c : Config} (h : LeafInput
     (s0S : bytesVal .ld (read8 c.σ.mem (sp + 18446744073709551568#64 + 32#64).toNat) = s0)
     (s3S : bytesVal .ld (read8 c.σ.mem (sp + 18446744073709551568#64 + 8#64).toNat) = s3) :
     FnSummary 0x8003e620#64 (fun d => d = c)
-      (WriteRegistersPost [1, 2, 8, 10, 19] [] c ra 0#64 [(2, sp), (8, s0), (19, s3)]) := by
+      (WriteRegistersPost [1, 2, 8, 10, 19] [] c ra 0#64 [(2, sp), (8, s0), (19, s3), (1, ra)]) := by
   have sp48 : sp + 18446744073709551568#64 = sp - 48#64 := by rw [BitVec.sub_eq_add_neg]; rfl
   have l : LeafInput (regsAt c 1) c := by rw [regsAt_of h.raReg]; exact h
   have w (off : Nat) (ho : off + 8 ≤ 48) (al : off % 8 = 0) : ReadWindow (sp + 18446744073709551568#64 +
@@ -58,7 +58,7 @@ theorem flush_epilogue {r ra sp s0 s3 v : BitVec 64} {c : Config} (h : LeafInput
   have o := p.regs
   simp only [Sflush.leave_regs, Sflush.leave_loads, regsAt_of spR, List.getD_cons_zero, List.getD_cons_succ,
     GHolds] at o
-  exact ⟨p.toEffectPost, by rw [o.1, BitVec.add_assoc]; simp, by rw [o.2.2.2.1, s0S], by rw [o.2.2.1, s3S], trivial⟩
+  exact ⟨p.toEffectPost, by rw [o.1, BitVec.add_assoc]; simp, by rw [o.2.2.2.1, s0S], by rw [o.2.2.1, s3S], by rw [o.2.2.2.2.1, raS], trivial⟩
 
 /-- **`__sflush_r(reent, stdin)`**, stdin never read: returns 0. -/
 theorem flush_stdin {ra sp s0 s3 reent : BitVec 64} {c : Config} (h : LeafInput ra c)
@@ -69,7 +69,7 @@ theorem flush_stdin {ra sp s0 s3 reent : BitVec 64} {c : Config} (h : LeafInput 
     (ur : bytesVal .lw (read8 c.σ.mem (stdinFile + 112#64).toNat) = 0#64) :
     FnSummary 0x8003e4f4#64 (fun d => d = c)
       (WriteRegistersPost ([2, 8, 14, 15, 19] ++ [13, 15] ++ [13] ++ [] ++ [1, 2, 8, 10, 19])
-        (stdinFlushLog sp ra s0 s3) c ra 0#64 [(2, sp), (8, s0), (19, s3)]) := by
+        (stdinFlushLog sp ra s0 s3) c ra 0#64 [(2, sp), (8, s0), (19, s3), (1, ra)]) := by
   have r1 := regsAt_of h.raReg
   have r2 := regsAt_of sp0
   have r8 := regsAt_of s0r
@@ -205,7 +205,7 @@ theorem flush_stdin {ra sp s0 s3 reent : BitVec 64} {c : Config} (h : LeafInput 
   have eff : WritePost ([2, 8, 14, 15, 19] ++ [13, 15] ++ [13] ++ [] ++ [1, 2, 8, 10, 19])
       (stdinFlushLog sp ra s0 s3) c ra 0#64 d :=
     { e with memory := by rw [p5.memory, Named.NamedValue.wl_nil, m4] }
-  exact ⟨eff, by rw [o5.1, BitVec.add_assoc]; simp, by rw [o5.2.2.2.1, s0Saved], by rw [o5.2.2.1, s3Saved], trivial⟩
+  exact ⟨eff, by rw [o5.1, BitVec.add_assoc]; simp, by rw [o5.2.2.2.1, s0Saved], by rw [o5.2.2.1, s3Saved], by rw [o5.2.2.2.2.1, raSaved], trivial⟩
 
 /-- **`__sflush_r`'s prologue on a write stream**: the three saves, `s0 = fp`,
 `s3 = reent`, the flags in `a4`. -/
@@ -264,7 +264,7 @@ theorem flush_stdout {ra sp s0 s2 s3 reent : BitVec 64} {c : Config} (h : LeafIn
     (base : bytesVal .ld (read8 c.σ.mem (stdoutFile + 24#64).toNat) = 0#64) :
     FnSummary 0x8003e4f4#64 (fun d => d = c)
       (WriteRegistersPost ([2, 8, 14, 15, 19] ++ [18] ++ [18] ++ [1, 2, 8, 10, 19]) (stdoutFlushLog sp ra s0 s2 s3) c ra
-        0#64 [(2, sp), (8, s0), (18, s2), (19, s3)]) := by
+        0#64 [(2, sp), (8, s0), (18, s2), (19, s3), (1, ra)]) := by
   have lo := frame.lower
   have hiS := frame.upper
   simp only [Vsa.Sim.DlHeap.heapEnd, Layout.sym_stack_top] at lo hiS
@@ -358,13 +358,13 @@ theorem flush_stdout {ra sp s0 s2 s3 reent : BitVec 64} {c : Config} (h : LeafIn
   intro d p4
   have k4 (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [1, 2, 8, 10, 19]) : gprGet d.σ n = gprGet c3.σ n :=
     p4.gpr_frame (by decide) n lo hi out
-  obtain ⟨d2, d8, d19, -⟩ := p4.regs
+  obtain ⟨d2, d8, d19, d1, -⟩ := p4.regs
   have e := ((p1.toEffectPost.trans p2.toEffectPost).trans p3.toEffectPost).trans p4.toEffectPost
   have eff : WritePost ([2, 8, 14, 15, 19] ++ [18] ++ [18] ++ [1, 2, 8, 10, 19]) (stdoutFlushLog sp ra s0 s2 s3) c ra
       0#64 d :=
     ⟨e.good, e.image, e.minstret, e.tick, e.pc, e.result, by rw [p4.memory, Named.NamedValue.wl_nil, m3], e.output,
       e.frame, e.kept⟩
-  exact ⟨eff, d2, d8, (k4 18 (by decide) (by decide) (by decide)).trans i18, d19, trivial⟩
+  exact ⟨eff, d2, d8, (k4 18 (by decide) (by decide) (by decide)).trans i18, d19, d1, trivial⟩
 
 /-- stderr's flush: the saves, `s2`'s and `s1`'s saves, `_p = _base`, `_w = 0`. -/
 def stderrFlushLog (sp ra s0 s1 s2 s3 nb : BitVec 64) : List WEntry :=
@@ -383,7 +383,7 @@ theorem flush_stderr {ra sp s0 s1 s2 s3 reent nb : BitVec 64} {c : Config} (h : 
     (pos : bytesVal .ld (read8 c.σ.mem stderrFile.toNat) = nb) :
     FnSummary 0x8003e4f4#64 (fun d => d = c)
       (WriteRegistersPost ([2, 8, 14, 15, 19] ++ [18] ++ [9, 14, 15] ++ [] ++ [] ++ [9] ++ [18] ++ [1, 2, 8, 10, 19])
-        (stderrFlushLog sp ra s0 s1 s2 s3 nb) c ra 0#64 [(2, sp), (8, s0), (9, s1), (18, s2), (19, s3)]) := by
+        (stderrFlushLog sp ra s0 s1 s2 s3 nb) c ra 0#64 [(2, sp), (8, s0), (9, s1), (18, s2), (19, s3), (1, ra)]) := by
   have lo := frame.lower
   have hiS := frame.upper
   simp only [Vsa.Sim.DlHeap.heapEnd, Layout.sym_stack_top] at lo hiS
@@ -583,7 +583,7 @@ theorem flush_stderr {ra sp s0 s1 s2 s3 reent nb : BitVec 64} {c : Config} (h : 
   intro d p8
   have k8 (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [1, 2, 8, 10, 19]) : gprGet d.σ n = gprGet c7.σ n :=
     p8.gpr_frame (by decide) n lo hi out
-  obtain ⟨d2, d8, d19, -⟩ := p8.regs
+  obtain ⟨d2, d8, d19, d1, -⟩ := p8.regs
   have e := ((((((p1.toEffectPost.trans p2.toEffectPost).trans p3.toEffectPost).trans p4.toEffectPost).trans
     p5.toEffectPost).trans p6.toEffectPost).trans p7.toEffectPost).trans p8.toEffectPost
   have eff : WritePost ([2, 8, 14, 15, 19] ++ [18] ++ [9, 14, 15] ++ [] ++ [] ++ [9] ++ [18] ++ [1, 2, 8, 10, 19])
@@ -591,6 +591,6 @@ theorem flush_stderr {ra sp s0 s1 s2 s3 reent nb : BitVec 64} {c : Config} (h : 
     ⟨e.good, e.image, e.minstret, e.tick, e.pc, e.result, by rw [p8.memory, Named.NamedValue.wl_nil, m7], e.output,
       e.frame, e.kept⟩
   exact ⟨eff, d2, d8, (k8 9 (by decide) (by decide) (by decide)).trans ((k7 9 (by decide) (by decide) (by decide)).trans r9),
-    (k8 18 (by decide) (by decide) (by decide)).trans t18, d19, trivial⟩
+    (k8 18 (by decide) (by decide) (by decide)).trans t18, d19, d1, trivial⟩
 
 end OCaml.Vm.Primitives.Uncaught.StdioFlush

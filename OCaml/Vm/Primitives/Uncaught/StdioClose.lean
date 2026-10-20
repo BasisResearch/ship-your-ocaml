@@ -258,7 +258,7 @@ theorem sclose_console {ra sp s0 reent fp : BitVec 64} {c : Config} (h : LeafInp
     FnSummary 0x80040184#64 (fun d => d = c)
       (WriteRegistersPost ([11] ++ [2, 8, 10, 15] ++ [1] ++ [2, 13, 15, 15, 11, 12, 14, 15, 10, 10, 12, 15, 1, 2] ++
         [15] ++ [1, 2, 8]) (scloseLog sp ra s0 (bytesVal .lh (read8 c.σ.mem (fp + 18#64).toNat))) c ra 0#64
-        [(2, sp), (8, s0)]) := by
+        [(2, sp), (8, s0), (1, ra)]) := by
   generalize hfd : bytesVal .lh (read8 c.σ.mem (fp + 18#64).toNat) = fd at fdOk ⊢
   have r1 := regsAt_of h.raReg
   have r2 := regsAt_of sp0
@@ -403,6 +403,7 @@ theorem sclose_console {ra sp s0 reent fp : BitVec 64} {c : Config} (h : LeafInp
       memory := by rw [p6.memory, Named.NamedValue.wl_nil, m5] }
   have spBack : gprGet d.σ 2 = some sp := by rw [o6.1, BitVec.add_assoc]; simp
   have s0Back : gprGet d.σ 8 = some s0 := by rw [o6.2.1, savedS0]
-  exact ⟨eff, spBack, s0Back, trivial⟩
+  have raBack : gprGet d.σ 1 = some ra := by rw [o6.2.2.1, savedRa]
+  exact ⟨eff, spBack, s0Back, raBack, trivial⟩
 
 end OCaml.Vm.Primitives.Uncaught.StdioClose
