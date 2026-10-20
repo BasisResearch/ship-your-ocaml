@@ -5991,7 +5991,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Channel.open_descriptor_in
 #print axioms OCaml.Vm.Primitives.Channel.OpenedIn.record_words
 #print axioms OCaml.Vm.Primitives.Channel.OpenedRecord.flags
-#print axioms OCaml.Vm.Primitives.Channel.flagsLog_eq
+#print axioms OCaml.Vm.Primitives.Channel.flagsLog_eq_out
 #print axioms OCaml.Vm.Primitives.Channel.out_enter
 #print axioms OCaml.Vm.Primitives.Channel.out_flags
 #print axioms OCaml.Vm.Primitives.Channel.out_done

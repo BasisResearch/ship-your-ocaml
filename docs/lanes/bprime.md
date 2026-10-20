@@ -314,9 +314,10 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   `prim_caml_ml_open_descriptor_in_returns`. The composition is generic over
   `Channel.OpenCode` (entry, call links and the three phase summaries per
   direction: `openOutCode`, `openInCode`; `OpenRecord out`, `chanFlagsLog out`),
-  and both adapters share `prim_open_tail`. The input phases (`in_enter`,
-  `in_flags`, `in_done`) follow the generated `OpenIn` blocks; the generator
-  could emit these phase lemmas for both directions.
+  and both adapters share `prim_open_tail`. The phase lemmas of both
+  directions (`{out,in}_{enter,flags,done}`, `flagsLog_eq_{out,in}`) are
+  generated into `Channel/OpenPhases.lean` by `scripts/gen_open_phases.py`
+  (stage a5 `--check`), between `MlOpenDefs.lean` and `MlOpen.lean`.
 - The machine side shares MlOpen's composition (only `max := NULL` differs). The descriptor's `SeekFd 0` comes
   from a0-boot's coming `ConsoleRuntime.stdinSeek` (stdin is HTIF kind 1, so
   `ConsoleFd 0` cannot hold).
