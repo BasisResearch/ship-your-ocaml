@@ -1,6 +1,7 @@
 import OCaml.Vm.Gc.FinalQuiet
 import OCaml.Vm.Gc.MemprofQuiet
 import OCaml.Vm.Gc.LocalRootsTail
+import OCaml.Vm.Gc.ChainScan
 import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
@@ -722,6 +723,12 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.memAfter_eq
 #print axioms OCaml.Vm.Gc.MemprofQuiet.call
 #print axioms OCaml.Vm.Gc.LocalRootsTail.tail
+#print axioms OCaml.Vm.Gc.IndirectSlotSite.slot
+#print axioms OCaml.Vm.Gc.IndirectSlotSite.linked_regs
+#print axioms OCaml.Vm.Gc.ChainScan.ChainLoop.iteration
+#print axioms OCaml.Vm.Gc.ChainScan.ChainLoop.walk
+#print axioms OCaml.Vm.Gc.ChainScan.ChainLoop.carried_at_call
+#print axioms OCaml.Vm.Gc.ChainScan.ChainLoop.head_of_returned
 #print axioms OCaml.Vm.Gc.LocalRootsTail.stage_exit
 #print axioms OCaml.Vm.Gc.LocalRootsTail.stage_scan
 #print axioms OCaml.Vm.Gc.LocalRootsTail.stage_final

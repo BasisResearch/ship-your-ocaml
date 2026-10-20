@@ -19,6 +19,8 @@ import OCaml.Vm.Gc.Generated.MemprofCallOnArray
 import OCaml.Vm.Gc.Generated.MemprofEntryArray
 import OCaml.Vm.Gc.Generated.Immediate
 import OCaml.Vm.Gc.Generated.LocalRootsSites
+import OCaml.Vm.Gc.Generated.GlobalRootsSites
+import OCaml.Vm.Gc.Generated.GlobalScanLoops
 import OCaml.Vm.Gc.Generated.MopupControl
 import OCaml.Vm.Gc.Generated.MopupPop
 import OCaml.Vm.Gc.Generated.Enqueue
@@ -1869,6 +1871,14 @@ private def gcAuditNames : Array Name := #[
   ``OCaml.Vm.Gc.LocalRootsSites.memprofCall_pins,
   ``OCaml.Vm.Gc.LocalRootsSites.stackSite,
   ``OCaml.Vm.Gc.LocalRootsSites.localSite,
+  ``OCaml.Vm.Gc.GlobalRootsSites.allCall_shape,
+  ``OCaml.Vm.Gc.GlobalRootsSites.allCall_decode,
+  ``OCaml.Vm.Gc.GlobalRootsSites.allCall_pins,
+  ``OCaml.Vm.Gc.GlobalRootsSites.youngCall_shape,
+  ``OCaml.Vm.Gc.GlobalRootsSites.youngCall_decode,
+  ``OCaml.Vm.Gc.GlobalRootsSites.youngCall_pins,
+  ``OCaml.Vm.Gc.GlobalRootsSites.allSite,
+  ``OCaml.Vm.Gc.GlobalRootsSites.youngSite,
   ``OCaml.Vm.Gc.MopupControl.entry_registers,
   ``OCaml.Vm.Gc.MopupPop.blocks_eq,
   ``OCaml.Vm.Gc.MopupPop.chain_ok,

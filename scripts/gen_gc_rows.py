@@ -456,6 +456,7 @@ def outputs():
     pin_audits = []
     immediate_audits = []
     local_sites_audits = []
+    global_sites_audits = []
     control_audits = []
     pop_audits = []
     enqueue_audits = []
@@ -1131,6 +1132,33 @@ def outputs():
                 immediate = immediate_route(name, entry, di, extents)
                 result[ROOT / "OCaml/Vm/Gc/Generated/Immediate.lean"] = immediate
                 immediate_audits = re.findall(r"^theorem ([\w.]+)", immediate, re.M)
+            if name == "caml_scan_global_young_roots":
+                decoder = dict(line.split('\t') for line in decodes)
+                jalrs = []
+                for a in sorted(x for x in di if entry <= x < end):
+                    w = di[a].word
+                    if w & 0x7f == 0x67 and (w >> 7) & 31 == 1 and (w >> 12) & 7 == 0:
+                        jalrs.append((a, w, (w >> 15) & 31, (w >> 20) & 0xfff))
+                assert len(jalrs) == 2 and all(r == 9 and i == 0 for _, _, r, i in jalrs), jalrs
+                text = GLOBAL_SITES_HEAD.replace('@DECODE_IMPORTS@',
+                    '\n'.join('import ' + m for m in sorted({decoder[f'{w:08x}'] for _, w, _, _ in jalrs})))
+                for label, (a, w, r, i) in zip(['all', 'young'], jalrs):
+                    bs = [(w >> (8*k)) & 255 for k in range(4)]
+                    value = '⟨'+', '.join([f'{hex(a)}#64', f'{hex(w)}#32'] + [f'{hex(b)}#8' for b in bs] + [f'{hex(i)}#12', str(r)])+'⟩'
+                    text += GLOBAL_SITE.replace('@L@', label).replace('@CALL@', value).replace(
+                        '@WORD@', f'{w:08x}').replace('@PCHEX@', f'{a:08x}')
+                text += 'end OCaml.Vm.Gc.GlobalRootsSites\n'
+                result[ROOT / 'OCaml/Vm/Gc/Generated/GlobalRootsSites.lean'] = text
+                loops = GLOBAL_LOOPS_HEAD
+                for label, (a, w, r, i) in zip(['all', 'young'], jalrs):
+                    body = next(x for x in sorted(di) if x < a and a - x == 12)
+                    loops += GLOBAL_LOOP.replace('@L@', label).replace('@BODYPC@', hex(body)).replace(
+                        '@TESTPC@', f'{(a + 4) & 0xffff:04x}').replace('@BODYHEX@', f'{body & 0xffff:04x}').replace('@EXITPC@', hex(a + 8))
+                loops += 'end OCaml.Vm.Gc.GlobalScanLoops\n'
+                result[ROOT / 'OCaml/Vm/Gc/Generated/GlobalScanLoops.lean'] = loops
+                global_sites_audits += ['GlobalScanLoops.' + n for n in re.findall(r'^theorem ([\w.]+)', loops, re.M)]
+                global_sites_audits += ['GlobalScanLoops.' + n for n in re.findall(r'^def (\w+Loop)\b', loops, re.M)]
+                global_sites_audits = re.findall(r'^theorem ([\w.]+)', text, re.M) + re.findall(r'^def (\w+Site)', text, re.M)
             if name == "caml_oldify_local_roots":
                 decoder = dict(line.split('\t') for line in decodes)
                 target = extents['caml_oldify_one'][0]
@@ -1177,6 +1205,8 @@ def outputs():
     names = ['Vsa.Sim.' + n for n in audits] + ['Vsa.Sim.Code.' + n for n in pin_audits]
     names += ['OCaml.Vm.Gc.Immediate.' + n for n in immediate_audits]
     names += ['OCaml.Vm.Gc.LocalRootsSites.' + n for n in local_sites_audits]
+    names += ['OCaml.Vm.Gc.' + (n if n.startswith('GlobalScanLoops.') else 'GlobalRootsSites.' + n)
+              for n in global_sites_audits]
     names += ['OCaml.Vm.Gc.MopupControl.' + n for n in control_audits]
     names += ['OCaml.Vm.Gc.MopupPop.' + n for n in pop_audits]
     names += ['OCaml.Vm.Gc.Enqueue.' + n for n in enqueue_audits]
@@ -1210,7 +1240,7 @@ def outputs():
     names += ['OCaml.Vm.Gc.Young.' + n for n in young_audits]
     literals = ',\n'.join('  ``' + n for n in names)
     result[ROOT / 'OCaml/Vm/Gc/Generated/Audit.lean'] = (
-        ''.join('import OCaml.Vm.Gc.Generated.' + module + '\n' for module in modules + ['Immediate', 'LocalRootsSites', 'MopupControl', 'MopupPop', 'Enqueue', 'SingleField', 'ChildClassify', 'StoreReturn', 'FieldCopy', 'Young', 'Forwarded', 'OldifyReturn', 'OldifyEntry', 'OldifyYoung', 'OldifyNonYoung', 'MopupCall', 'FirstCall', 'FirstYoung', 'Fresh', 'AllocEntry', 'BestFitSmall', 'BestFitBitmap', 'BestFitFinish', 'BestFitEmpty', 'BestFitSplit', 'AllocReturn', 'AllocAccount', 'AllocColor', 'AllocSelect', 'FfsZero', 'BestFitFallback', 'BestFitLarge', 'BestFitLargeReturn']) + '\n' +
+        ''.join('import OCaml.Vm.Gc.Generated.' + module + '\n' for module in modules + ['Immediate', 'LocalRootsSites', 'GlobalRootsSites', 'GlobalScanLoops', 'MopupControl', 'MopupPop', 'Enqueue', 'SingleField', 'ChildClassify', 'StoreReturn', 'FieldCopy', 'Young', 'Forwarded', 'OldifyReturn', 'OldifyEntry', 'OldifyYoung', 'OldifyNonYoung', 'MopupCall', 'FirstCall', 'FirstYoung', 'Fresh', 'AllocEntry', 'BestFitSmall', 'BestFitBitmap', 'BestFitFinish', 'BestFitEmpty', 'BestFitSplit', 'AllocReturn', 'AllocAccount', 'AllocColor', 'AllocSelect', 'FfsZero', 'BestFitFallback', 'BestFitLarge', 'BestFitLargeReturn']) + '\n' +
         '/-! GENERATED by scripts/gen_gc_rows.py. Every generated row, segment and code pin. -/\n'
         'open Lean Elab Command\n\n'
         'private def gcAuditNames : Array Name := #[\n' + literals + '\n]\n\n'
@@ -1285,6 +1315,124 @@ theorem @L@Call_pins {c : Config} (h : Code.Caml_oldify_local_rootsLoaded c.σ.m
 
 def @L@Site : SlotSite Code.Caml_oldify_local_rootsLoaded :=
   ⟨@L@Call, @L@Call_shape, @L@Call_decode, @L@Call_target, by decide, @L@Call_pins⟩
+"""
+
+GLOBAL_LOOPS_HEAD = """import OCaml.Vm.Gc.ChainScan
+import OCaml.Vm.Gc.Generated.GlobalRootsSites
+import OCaml.Vm.Gc.Generated.GlobalYoungRoots
+
+/-! GENERATED by scripts/gen_gc_rows.py. The two level-0 chain walks of
+`caml_scan_global_young_roots` as `ChainScan.ChainLoop`s. -/
+namespace OCaml.Vm.Gc.GlobalScanLoops
+open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable ChainScan
+"""
+
+GLOBAL_LOOP = """
+def @L@Body : BBlock := caml_scan_global_young_rootsX@BODYHEX@Seg.getD 0 {body := [], term := none}
+def @L@Test (t : Bool) : BBlock :=
+  if t then caml_scan_global_young_rootsX@TESTPC@TSeg.getD 0 {body := [], term := none}
+  else caml_scan_global_young_rootsX@TESTPC@FSeg.getD 0 {body := [], term := none}
+
+theorem @L@_body_regs (cell : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) :
+    (evalBlocks [@L@Body] (SegEvalState.init [(8, cell)] (bodyLoads cell m))).regs = setRegs cell m := by
+  simp [evalBlocks, evalBlock, SegEvalState.init, @L@Body, caml_scan_global_young_rootsX@BODYHEX@Seg, bodyLoads,
+    setRegs, key, next, runGM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, mkLine, decodeM, read8_value,
+    Functions.sign_extend, Sail.BitVec.signExtend]
+
+theorem @L@_body_access (cell : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) (w0 : ReadWindow cell 8)
+    (w16 : ReadWindow (cell + 16#64) 8) (wk : ReadWindow (key m cell) 8) :
+    ChainAccess m [(8, cell)] (bodyLoads cell m) [@L@Body] := by
+  apply ChainAccess.cons ⟨?_, by simp [@L@Body, caml_scan_global_young_rootsX@BODYHEX@Seg, TermFactsO]⟩ ChainAccess.nil
+  simp only [@L@Body, caml_scan_global_young_rootsX@BODYHEX@Seg, List.getD_cons_zero, AccessPlan]
+  chain_facts True.intro
+  · refine w0.ld rfl ?_ (read8_pins _ _)
+    simp [eaddrM, mkLine, decodeM, srcVal, lookupG, Functions.sign_extend, Sail.BitVec.signExtend]
+  · refine w16.ld rfl ?_ (read8_pins _ _)
+    simp [eaddrM, mkLine, decodeM, srcVal, lookupG, stepGM, wvalM, eraseG, Functions.sign_extend,
+      Sail.BitVec.signExtend]
+  · refine wk.ld rfl ?_ (read8_pins _ _)
+    simp [bodyLoads, key, eaddrM, mkLine, decodeM, srcVal, lookupG, stepGM, stepLdsM, wvalM, eraseG, read8_value,
+      Functions.sign_extend, Sail.BitVec.signExtend]
+
+theorem @L@_test_access (s0 : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) :
+    ChainAccess m [(8, s0)] [] [@L@Test (s0 != 0#64)] := by
+  apply ChainAccess.cons ⟨?_, ?_⟩ ChainAccess.nil
+  · generalize (s0 != 0#64) = t
+    cases t <;> simp [@L@Test, caml_scan_global_young_rootsX@TESTPC@TSeg, caml_scan_global_young_rootsX@TESTPC@FSeg,
+      AccessPlan]
+  · generalize h : (s0 != 0#64) = t
+    cases t
+    · have : s0 = 0#64 := by simpa using h
+      simp [@L@Test, caml_scan_global_young_rootsX@TESTPC@FSeg, TermFactsO, TermFactsT, runGM, srcVal, lookupG,
+        guardB, this]
+    · have : s0 ≠ 0#64 := by simpa using h
+      simp [@L@Test, caml_scan_global_young_rootsX@TESTPC@TSeg, TermFactsO, TermFactsT, runGM, srcVal, lookupG,
+        guardB, this]
+
+def @L@Loop : ChainLoop Code.Caml_scan_global_young_rootsLoaded where
+  bodyPc := @BODYPC@#64
+  exitPc := @EXITPC@#64
+  bodyBlock := @L@Body
+  testBlock := @L@Test
+  site := GlobalRootsSites.@L@Site
+  source := rfl
+  exit_ne_body := by decide
+  body_chain_ok := by decide
+  body_code := fun hc => by
+    intro b hb
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
+    subst b
+    constructor
+    all_goals simp only [@L@Body, caml_scan_global_young_rootsX@BODYHEX@Seg, List.getD_cons_zero, CodeFacts]
+    all_goals chain_facts hc with "Vsa.Sim.Code.caml_scan_global_young_roots_at_"
+  body_regs := @L@_body_regs
+  body_log := fun _ _ => rfl
+  body_endpoint := fun _ _ => rfl
+  body_access := @L@_body_access
+  body_written := by decide
+  test_chain_ok := fun t => by cases t <;> decide
+  test_code := fun hc t => by
+    intro b hb
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
+    subst b
+    cases t <;> constructor
+    all_goals simp only [@L@Test, caml_scan_global_young_rootsX@TESTPC@TSeg, caml_scan_global_young_rootsX@TESTPC@FSeg,
+      List.getD_cons_zero, CodeFacts, if_true, if_false, Bool.false_eq_true]
+    all_goals chain_facts hc with "Vsa.Sim.Code.caml_scan_global_young_roots_at_"
+  test_access := @L@_test_access
+  test_endpoint := fun s0 => by
+    generalize (s0 != 0#64) = t
+    cases t <;> rfl
+  test_log := fun _ t => by cases t <;> rfl
+  test_written := fun t => by cases t <;> rfl
+"""
+
+GLOBAL_SITES_HEAD = """import OCaml.Vm.Gc.IndirectSlot
+import Vsa.Sim.Code.Caml_scan_global_young_roots
+@DECODE_IMPORTS@
+
+/-! GENERATED by scripts/gen_gc_rows.py. The two `jalr s1` sites of
+`caml_scan_global_young_roots` (the `scanning_action` on `caml_global_roots`,
+then on `caml_global_roots_young`) as `IndirectSlotSite`s. -/
+namespace OCaml.Vm.Gc.GlobalRootsSites
+open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
+"""
+
+GLOBAL_SITE = """
+def @L@Call : IndirectCallInstr := @CALL@
+
+theorem @L@Call_shape : IndirectShape @L@Call := by constructor <;> decide
+
+theorem @L@Call_decode : IndirectDecode @L@Call := by
+  intro s hm hp he
+  exact Vsa.Sim.ElfDecode.decode_@WORD@ s hm hp he
+
+theorem @L@Call_pins {c : Config} (h : Code.Caml_scan_global_young_rootsLoaded c.σ.mem) : IndirectPins @L@Call c := by
+  obtain ⟨h0,h1,h2,h3⟩ := Code.caml_scan_global_young_roots_at_@PCHEX@ h
+  exact ⟨h0,h1,h2,h3⟩
+
+def @L@Site : IndirectSlotSite Code.Caml_scan_global_young_rootsLoaded :=
+  ⟨@L@Call, @L@Call_shape, @L@Call_decode, by decide, rfl, by decide, @L@Call_pins⟩
 """
 
 LOCAL_ROOTS_CALLEE = """

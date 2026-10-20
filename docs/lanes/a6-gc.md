@@ -87,6 +87,16 @@
   data `+8`, header level at `+136`) with iterate (`jalr f`), insert
   (`random_level` LCG on `random_seed`, `caml_stat_alloc`, per-level splice)
   and empty (`caml_stat_free` per cell, `memset` of `(level+1)*8`).
+- `IndirectSlotSite` / `.slot` (`IndirectSlot.lean`): `SlotSite` for a `jalr`
+  through a carried register holding `caml_oldify_one`'s entry.
+- `ChainScan.ChainLoop.walk`: the level-0 chain walk over `ChainLoop` facts
+  (generated per instance in `GlobalScanLoops.lean` by `gen_gc_rows.py`), with
+  the caller's invariant, exit and rank in `WalkStep`. Both of
+  `caml_scan_global_young_roots`' walks instantiate it.
+- Claimed (a6-gc, unclaimed shared adapter): the skiplist abstraction for
+  `caml_global_roots{,_young,_old}` (shape predicate, `caml_skiplist_insert`,
+  `caml_skiplist_empty`). `caml_register_named_value` →
+  `caml_register_generational_global_root` reuses the insert.
 - G2: `SlotDone R copies copies' pl` (`OldifySlot.lean`): one
   `caml_oldify_one(v, p)` call at the slot level, `*p = relocation copies' v`
   over the published forwarding table, which grows and keeps its view.
