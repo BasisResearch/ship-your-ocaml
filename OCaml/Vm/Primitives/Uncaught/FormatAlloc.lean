@@ -33,12 +33,17 @@ theorem _root_.OCaml.Vm.Boot.Startup.RuntimeReadyL.library {live : Nat → Prop}
   ⟨r.platform.gpr, library_gpr r.platform (by decide) (by decide) (r.readOnly.1 (gp, gpV) (by simp [roR])),
     r.platform.htifIdle⟩
 
-/-- **Readiness across a run that keeps the low memory and the allocator's
-footprint**, landing at a leaf caller with the library facts. -/
-theorem ready_transport {H : List (Nat × Nat)} {capacity : Nat} {sp ra oldsp oldra : BitVec 64} {before after : Config}
+/-- **Readiness across a run that keeps what the allocator observes**: its
+code pins, the `Caml_state` word, the pool word and its footprint; landing at
+a leaf caller with the library facts. -/
+theorem ready_transport_framed {H : List (Nat × Nat)} {capacity : Nat} {sp ra oldsp oldra : BitVec 64}
+    {before after : Config}
     (ready : RuntimeReadyL imageLive H capacity oldsp oldra before) (leaf : LeafInput ra after)
     (library : LibraryReady after)
-    (low : ∀ a, a < heapStart → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0)
+    (pins : ∀ p ∈ VsaIris.Sym.allocText, (after.σ.mem[p.1]?).getD 0 = (before.σ.mem[p.1]?).getD 0)
+    (domain : ∀ i, i < 8 → (after.σ.mem[Layout.sym_Caml_state + i]?).getD 0 =
+      (before.σ.mem[Layout.sym_Caml_state + i]?).getD 0)
+    (pool : ∀ i, i < 8 → (after.σ.mem[Layout.sym_pool + i]?).getD 0 = (before.σ.mem[Layout.sym_pool + i]?).getD 0)
     (heap : ∀ a, vsaFoot H a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0)
     (stack : gprGet after.σ 2 = some sp) : RuntimeReadyL imageLive H capacity sp ra after := by
   refine ⟨leaf, library.vsaOk leaf, ⟨?_, ?_⟩, ?_, stack, ?_, ?_⟩
@@ -51,14 +56,26 @@ theorem ready_transport {H : List (Nat × Nat)} {capacity : Nat} {sp ra oldsp ol
     rw [library.gp]; rfl
   · intro p hp
     change (after.σ.mem[p.1]?).getD 0 = p.2
-    rw [low p.1 (allocator_sources p hp).geometry.high]
+    rw [pins p hp]
     exact ready.readOnly.2 p hp
   · apply roomLocal_vsaRoomB H _ _ capacity ?_ ready.room
     intro a ha
     exact (heap a ha).symm
-  · rw [word_observed (m := before.σ.mem) _ (fun i _ => low _ (by unfold heapStart Layout.sym_Caml_state; omega))]
+  · rw [word_observed (m := before.σ.mem) _ domain]
     exact ready.domainWord
-  · exact lpins8_observed ready.poolZero (fun i _ => low _ (by unfold heapStart Layout.sym_pool; omega))
+  · exact lpins8_observed ready.poolZero pool
+
+/-- **Readiness across a run that keeps the low memory and the allocator's
+footprint**, landing at a leaf caller with the library facts. -/
+theorem ready_transport {H : List (Nat × Nat)} {capacity : Nat} {sp ra oldsp oldra : BitVec 64} {before after : Config}
+    (ready : RuntimeReadyL imageLive H capacity oldsp oldra before) (leaf : LeafInput ra after)
+    (library : LibraryReady after)
+    (low : ∀ a, a < heapStart → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0)
+    (heap : ∀ a, vsaFoot H a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0)
+    (stack : gprGet after.σ 2 = some sp) : RuntimeReadyL imageLive H capacity sp ra after :=
+  ready_transport_framed ready leaf library (fun p hp => low p.1 (allocator_sources p hp).geometry.high)
+    (fun i _ => low _ (by unfold heapStart Layout.sym_Caml_state; omega))
+    (fun i _ => low _ (by unfold heapStart Layout.sym_pool; omega)) heap stack
 
 /-- **The allocator facts at entry**: readiness with room for the copy, and
 stack for `caml_stat_alloc_noexc` below the 432-byte frame. -/

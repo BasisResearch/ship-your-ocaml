@@ -5916,3 +5916,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.atExitName_rodata
 #print axioms OCaml.Vm.Primitives.GprsKept.of_steps
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_lookup
+#print axioms OCaml.Vm.Primitives.Uncaught.FormatException.ready_transport_framed
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_suspend
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.ExnAt.transport
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_format
