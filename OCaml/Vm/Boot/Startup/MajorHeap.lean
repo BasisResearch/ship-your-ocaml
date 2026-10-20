@@ -8,6 +8,7 @@ import OCaml.Vm.Boot.Startup.MemSame
 import Vsa.Sim.FrameComposition
 import OCaml.Vm.Boot.Startup.ReadyIndirect
 import OCaml.Vm.Boot.Startup.StatAllocDone
+import OCaml.Vm.Boot.Startup.MemsetShifted
 
 /-! caml_init_major_heap, composed. Stage A runs from the entry through
 `caml_clip_heap_chunk_wsz` (the `__divdi3`/`__muldi3` pair) and the heap
@@ -1255,5 +1256,44 @@ theorem major_tailed (c d19 d24 : Config) (H : List (Nat × Nat)) (cap c1 c2 cha
     back := back28
     saved := fun k lo hi => by
       rw [g.same k (by omega) (by omega) (by simp; omega), S.saved k lo hi] }⟩
+
+/-- `caml_major_ring`'s 400 bytes. -/
+def majorRingWindow : W := ⟨(BitVec.ofNat 64 majorRingAddr).toNat, (BitVec.ofNat 64 majorRingAddr).toNat + 16 * 24 + 16⟩
+
+/-- memset cleared `caml_major_ring` and returned to caml_init_major_heap's caller. -/
+structure MajorRingCleared (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 : BitVec 64) (base after : Config) :
+    Prop where
+  pc : PCAt ra after
+  regs : GHolds after.σ [(2, sp), (18, s2), (9, s1), (1, ra), (8, s0)]
+  ready : RuntimeReady H capacity sp ra after
+  memory : after.σ.mem = writeLog base.σ.mem (memsetShiftLog (BitVec.ofNat 64 majorRingAddr) 24)
+  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet base.σ k
+
+theorem major_ring_cleared (d19 d28 : Config) (H : List (Nat × Nat)) (cap : Nat)
+    (sp ra s0 s1 s2 stack entries : BitVec 64)
+    (T : MajorTailed H cap sp ra s0 s1 s2 stack entries d19 d28) :
+    ∃ after, Steps d28 after ∧
+      MajorRingCleared ((entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) :: H) cap sp ra s0 s1 s2
+        d28 after := by
+  obtain ⟨d29, run29, M⟩ := (memset_shifted d28 (BitVec.ofNat 64 majorRingAddr) 400#64 ra 24 T.ready.toLeafInput
+    ⟨gholds_lookup (n := 10) _ T.regs rfl, gholds_lookup (n := 11) _ T.regs rfl, gholds_lookup (n := 12) _ T.regs rfl,
+      trivial⟩ (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)).run d28 ⟨T.pc, rfl⟩
+  have g29 := GprsSame.of_post M (by decide)
+  have ringW := globalWindow_ok (H := (entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) :: H)
+    (lo := majorRingWindow.lo) (hi := majorRingWindow.hi) (by decide) (by decide) (by decide)
+    (fun a lo hi => by
+      simp only [majorRingWindow, majorRingAddr, BitVec.toNat_ofNat] at lo hi
+      unfold allocGlobal InRange; omega) (by decide) (by decide)
+  have ready29 := T.ready.window_log M (by decide) (by simp only [memsetShiftRegs, keysG]; decide) (by decide)
+    (g29.get (by decide) (by decide) (by decide) T.ready.stack) (gholds_lookup (n := 1) _ M.regs rfl) T.ready.aligned
+    (memsetShiftLog_in _ 24 (by decide)) ringW.pins ringW.domain ringW.pool ringW.heap
+  refine ⟨d29, run29, {
+    pc := M.pc
+    regs := ⟨ready29.stack, g29.get (by decide) (by decide) (by decide) (gholds_lookup (n := 18) _ T.regs rfl),
+      g29.get (by decide) (by decide) (by decide) (gholds_lookup (n := 9) _ T.regs rfl), ready29.raReg,
+      g29.get (by decide) (by decide) (by decide) (gholds_lookup (n := 8) _ T.regs rfl), trivial⟩
+    ready := ready29
+    memory := M.memory
+    saved := fun k lo hi => g29.same k (by omega) (by omega) (by simp; omega) }⟩
 
 end OCaml.Vm.Boot.Startup
