@@ -6107,3 +6107,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.FatalPre.domain
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.msg_apart
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_to_exit
+#print axioms Vsa.Densify.stepOnce_covers
+#print axioms Vsa.Machine.Steps.covers
+#print axioms OCaml.Vm.Primitives.gprsPersist
+#print axioms OCaml.Vm.Primitives.memPersist
+#print axioms Vsa.Densify.stepOnce_resp

@@ -62,30 +62,62 @@ theorem SEqv.trans {σ₁ σ₂ σ₃} (h : SEqv σ₁ σ₂) (h' : SEqv σ₂ �
   ⟨h.regs.trans h'.regs, h.choice.trans h'.choice, h.mem.trans h'.mem, h.cycle.trans h'.cycle,
     h.out.trans h'.out⟩
 
-/-- Related results: equal values (or errors) and zero-equivalent states. -/
-def REqv {α : Type} : EStateM.Result (Sail.Error exception) MState α →
+/-- **A state relation the lean-sail primitives respect**: related states read
+the same registers, total bytes and cycle counter, and stay related under the
+primitives' updates (register insert, byte insert, cycle tick, console push).
+`seqvRel` (zero-equivalence) is the densification instance; `Vsa.Keys`
+instantiates it with "the same state, covering a key set". -/
+structure StateRelB where
+  R : MState → MState → Prop
+  regs : ∀ {σ σ' : MState}, R σ σ' → σ.regs = σ'.regs
+  mem : ∀ {σ σ' : MState}, R σ σ' → MemEqv σ.mem σ'.mem
+  cycle : ∀ {σ σ' : MState}, R σ σ' → σ.cycleCount = σ'.cycleCount
+  writeReg : ∀ {σ σ' : MState} (r : Register) (v : RegisterType r), R σ σ' →
+    R { σ with regs := σ.regs.insert r v } { σ' with regs := σ'.regs.insert r v }
+  writeByte : ∀ {σ σ' : MState} (a : Nat) (v : BitVec 8), R σ σ' →
+    R { σ with mem := σ.mem.insert a v } { σ' with mem := σ'.mem.insert a v }
+  tick : ∀ {σ σ' : MState}, R σ σ' →
+    R { σ with cycleCount := σ.cycleCount + 1 } { σ' with cycleCount := σ'.cycleCount + 1 }
+  print : ∀ {σ σ' : MState} (str : String), R σ σ' →
+    R { σ with sailOutput := σ.sailOutput.push str } { σ' with sailOutput := σ'.sailOutput.push str }
+
+/-- Zero-equivalence as a respected relation. -/
+def seqvRel : StateRelB where
+  R := SEqv
+  regs h := h.regs
+  mem h := h.mem
+  cycle h := h.cycle
+  writeReg r v h := ⟨by simp only [h.regs], h.choice, h.mem, h.cycle, h.out⟩
+  writeByte a v h := ⟨h.regs, h.choice, h.mem.insert a v, h.cycle, h.out⟩
+  tick h := ⟨h.regs, h.choice, h.mem, by simp only [h.cycle], h.out⟩
+  print str h := ⟨h.regs, h.choice, h.mem, h.cycle, by simp only [h.out]⟩
+
+/-- Related results: equal values (or errors) and related states. -/
+def REqv (Rel : StateRelB) {α : Type} : EStateM.Result (Sail.Error exception) MState α →
     EStateM.Result (Sail.Error exception) MState α → Prop
-  | .ok a s, .ok a' s' => a = a' ∧ SEqv s s'
-  | .error e s, .error e' s' => e = e' ∧ SEqv s s'
+  | .ok a s, .ok a' s' => a = a' ∧ Rel.R s s'
+  | .error e s, .error e' s' => e = e' ∧ Rel.R s s'
   | _, _ => False
 
 /-- A respectful computation. A structure, so that `intro` never unfolds it. -/
-structure Resp {α : Type} (x : SailM α) : Prop where
-  run : ∀ σ σ', SEqv σ σ' → REqv (x σ) (x σ')
+structure Resp (Rel : StateRelB) {α : Type} (x : SailM α) : Prop where
+  run : ∀ σ σ', Rel.R σ σ' → REqv Rel (x σ) (x σ')
 
 /-- A respectful early-return block (`SailME ε α = ExceptT _ SailM α`). -/
-structure RespE {ε α : Type} (x : SailME ε α) : Prop where
-  run : Resp (ExceptT.run x)
+structure RespE (Rel : StateRelB) {ε α : Type} (x : SailME ε α) : Prop where
+  run : Resp Rel (ExceptT.run x)
+
+variable {Rel : StateRelB}
 
 /-! ## Monad combinators -/
 
-theorem Resp.pure (a : α) : Resp (pure a : SailM α) :=
+theorem Resp.pure (a : α) : Resp Rel (pure a : SailM α) :=
   ⟨fun _ _ h => ⟨rfl, h⟩⟩
 
-theorem Resp.bind {x : SailM α} {f : α → SailM β} (hx : Resp x) (hf : ∀ a, Resp (f a)) :
-    Resp (x >>= f) := ⟨fun σ σ' h => by
+theorem Resp.bind {x : SailM α} {f : α → SailM β} (hx : Resp Rel x) (hf : ∀ a, Resp Rel (f a)) :
+    Resp Rel (x >>= f) := ⟨fun σ σ' h => by
   have hx := hx.run σ σ' h
-  show REqv (EStateM.bind x f σ) (EStateM.bind x f σ')
+  show REqv Rel (EStateM.bind x f σ) (EStateM.bind x f σ')
   unfold EStateM.bind
   revert hx
   cases x σ <;> cases x σ' <;> intro hx <;> simp only [REqv] at hx ⊢
@@ -93,9 +125,9 @@ theorem Resp.bind {x : SailM α} {f : α → SailM β} (hx : Resp x) (hf : ∀ a
     exact (hf _).run _ _ hs
   · exact hx⟩
 
-theorem Resp.map {x : SailM α} (f : α → β) (hx : Resp x) : Resp (f <$> x) := ⟨fun σ σ' h => by
+theorem Resp.map {x : SailM α} (f : α → β) (hx : Resp Rel x) : Resp Rel (f <$> x) := ⟨fun σ σ' h => by
   have hx := hx.run σ σ' h
-  show REqv (EStateM.map f x σ) (EStateM.map f x σ')
+  show REqv Rel (EStateM.map f x σ) (EStateM.map f x σ')
   unfold EStateM.map
   revert hx
   cases x σ <;> cases x σ' <;> intro hx <;> simp only [REqv] at hx ⊢
@@ -103,23 +135,23 @@ theorem Resp.map {x : SailM α} (f : α → β) (hx : Resp x) : Resp (f <$> x) :
     exact ⟨rfl, hs⟩
   · exact hx⟩
 
-theorem Resp.seqRight {x : SailM α} {y : Unit → SailM β} (hx : Resp x) (hy : Resp (y ())) :
-    Resp (x *> y ()) := ⟨fun σ σ' h => by
+theorem Resp.seqRight {x : SailM α} {y : Unit → SailM β} (hx : Resp Rel x) (hy : Resp Rel (y ())) :
+    Resp Rel (x *> y ()) := ⟨fun σ σ' h => by
   have hx := hx.run σ σ' h
-  show REqv (EStateM.seqRight x y σ) (EStateM.seqRight x y σ')
+  show REqv Rel (EStateM.seqRight x y σ) (EStateM.seqRight x y σ')
   unfold EStateM.seqRight
   revert hx
   cases x σ <;> cases x σ' <;> intro hx <;> simp only [REqv] at hx ⊢
   · exact hy.run _ _ hx.2
   · exact hx⟩
 
-theorem Resp.throw (e : Sail.Error exception) : Resp (MonadExcept.throw e : SailM α) :=
+theorem Resp.throw (e : Sail.Error exception) : Resp Rel (MonadExcept.throw e : SailM α) :=
   ⟨fun _ _ h => ⟨rfl, h⟩⟩
 
-theorem Resp.tryCatch {x : SailM α} {h : Sail.Error exception → SailM α} (hx : Resp x)
-    (hh : ∀ e, Resp (h e)) : Resp (EStateM.tryCatch x h) := ⟨fun σ σ' hs => by
+theorem Resp.tryCatch {x : SailM α} {h : Sail.Error exception → SailM α} (hx : Resp Rel x)
+    (hh : ∀ e, Resp Rel (h e)) : Resp Rel (EStateM.tryCatch x h) := ⟨fun σ σ' hs => by
   have hx := hx.run σ σ' hs
-  show REqv (EStateM.tryCatch x h σ) (EStateM.tryCatch x h σ')
+  show REqv Rel (EStateM.tryCatch x h σ) (EStateM.tryCatch x h σ')
   unfold EStateM.tryCatch
   revert hx
   cases x σ <;> cases x σ' <;> intro hx <;> simp only [REqv] at hx ⊢
@@ -127,46 +159,46 @@ theorem Resp.tryCatch {x : SailM α} {h : Sail.Error exception → SailM α} (hx
   · obtain ⟨rfl, hs⟩ := hx
     exact (hh _).run _ _ hs⟩
 
-theorem Resp.ite {c : Prop} [Decidable c] {x y : SailM α} (hx : Resp x) (hy : Resp y) :
-    Resp (if c then x else y) := by
+theorem Resp.ite {c : Prop} [Decidable c] {x y : SailM α} (hx : Resp Rel x) (hy : Resp Rel y) :
+    Resp Rel (if c then x else y) := by
   split
   · exact hx
   · exact hy
 
-theorem Resp.ite_h {c : Prop} [Decidable c] {x y : SailM α} (hx : c → Resp x) (hy : ¬ c → Resp y) :
-    Resp (_root_.ite c x y) := by
+theorem Resp.ite_h {c : Prop} [Decidable c] {x y : SailM α} (hx : c → Resp Rel x) (hy : ¬ c → Resp Rel y) :
+    Resp Rel (_root_.ite c x y) := by
   split
   · exact hx ‹_›
   · exact hy ‹_›
 
 theorem Resp.dite {c : Prop} [Decidable c] {x : c → SailM α} {y : ¬ c → SailM α}
-    (hx : ∀ h, Resp (x h)) (hy : ∀ h, Resp (y h)) : Resp (_root_.dite c x y) := by
+    (hx : ∀ h, Resp Rel (x h)) (hy : ∀ h, Resp Rel (y h)) : Resp Rel (_root_.dite c x y) := by
   split
   · exact hx _
   · exact hy _
 
 theorem RespE.of_resp {ε α : Type} {x : SailM (Except (Sail.Error exception ⊕ ε) α)}
-    (h : Resp x) : RespE (ε := ε) (α := α) x := ⟨h⟩
+    (h : Resp Rel x) : RespE Rel (ε := ε) (α := α) x := ⟨h⟩
 
-theorem RespE.pure (a : α) : RespE (pure a : SailME ε α) := ⟨Resp.pure _⟩
+theorem RespE.pure (a : α) : RespE Rel (pure a : SailME ε α) := ⟨Resp.pure _⟩
 
-theorem RespE.bind {x : SailME ε α} {f : α → SailME ε β} (hx : RespE x) (hf : ∀ a, RespE (f a)) :
-    RespE (x >>= f) := ⟨by
-  show Resp (ExceptT.run x >>= ExceptT.bindCont f)
+theorem RespE.bind {x : SailME ε α} {f : α → SailME ε β} (hx : RespE Rel x) (hf : ∀ a, RespE Rel (f a)) :
+    RespE Rel (x >>= f) := ⟨by
+  show Resp Rel (ExceptT.run x >>= ExceptT.bindCont f)
   refine Resp.bind hx.run fun r => ?_
   cases r with
   | ok a => exact (hf a).run
   | error e => exact Resp.pure _⟩
 
-theorem RespE.lift {x : SailM α} (hx : Resp x) : RespE (liftM x : SailME ε α) :=
+theorem RespE.lift {x : SailM α} (hx : Resp Rel x) : RespE Rel (liftM x : SailME ε α) :=
   ⟨Resp.map _ hx⟩
 
-theorem RespE.throw (e : ε) : RespE (SailME.throw e : SailME ε α) := ⟨Resp.pure _⟩
+theorem RespE.throw (e : ε) : RespE Rel (SailME.throw e : SailME ε α) := ⟨Resp.pure _⟩
 
-theorem RespE.throwL (e : Sail.Error exception) : RespE (MonadExcept.throw e : SailME ε α) := ⟨Resp.pure _⟩
+theorem RespE.throwL (e : Sail.Error exception) : RespE Rel (MonadExcept.throw e : SailME ε α) := ⟨Resp.pure _⟩
 
-theorem Resp.runME {x : SailME α α} (hx : RespE x) : Resp (SailME.run x) := by
-  show Resp (PreSailME.run x)
+theorem Resp.runME {x : SailME α α} (hx : RespE Rel x) : Resp Rel (SailME.run x) := by
+  show Resp Rel (PreSailME.run x)
   unfold PreSailME.run
   refine Resp.bind hx.run fun r => ?_
   rcases r with (e | e) | a
@@ -174,14 +206,14 @@ theorem Resp.runME {x : SailME α α} (hx : RespE x) : Resp (SailME.run x) := by
   · exact Resp.pure _
   · exact Resp.pure _
 
-theorem RespE.ite_h {c : Prop} [Decidable c] {x y : SailME ε α} (hx : c → RespE x)
-    (hy : ¬ c → RespE y) : RespE (_root_.ite c x y) := by
+theorem RespE.ite_h {c : Prop} [Decidable c] {x y : SailME ε α} (hx : c → RespE Rel x)
+    (hy : ¬ c → RespE Rel y) : RespE Rel (_root_.ite c x y) := by
   split
   · exact hx ‹_›
   · exact hy ‹_›
 
 theorem RespE.dite {c : Prop} [Decidable c] {x : c → SailME ε α} {y : ¬ c → SailME ε α}
-    (hx : ∀ h, RespE (x h)) (hy : ∀ h, RespE (y h)) : RespE (_root_.dite c x y) := by
+    (hx : ∀ h, RespE Rel (x h)) (hy : ∀ h, RespE Rel (y h)) : RespE Rel (_root_.dite c x y) := by
   split
   · exact hx _
   · exact hy _
@@ -192,67 +224,67 @@ arm, exponentially. These lemmas prove the join point once and give the body a
 hypothesis about it. -/
 
 theorem Resp.letFun0 {τ β : Type} {v : SailM τ} {f : SailM τ → SailM β}
-    (hv : Resp v) (hf : ∀ g, Resp g → Resp (f g)) : Resp (letFun v f) := hf v hv
+    (hv : Resp Rel v) (hf : ∀ g, Resp Rel g → Resp Rel (f g)) : Resp Rel (letFun v f) := hf v hv
 
 theorem Resp.letFun1 {A τ β : Type} {v : A → SailM τ} {f : (A → SailM τ) → SailM β}
-    (hv : ∀ a, Resp (v a)) (hf : ∀ g, (∀ a, Resp (g a)) → Resp (f g)) : Resp (letFun v f) :=
+    (hv : ∀ a, Resp Rel (v a)) (hf : ∀ g, (∀ a, Resp Rel (g a)) → Resp Rel (f g)) : Resp Rel (letFun v f) :=
   hf v hv
 
 theorem Resp.letFun2 {A B τ β : Type} {v : A → B → SailM τ} {f : (A → B → SailM τ) → SailM β}
-    (hv : ∀ a b, Resp (v a b)) (hf : ∀ g, (∀ a b, Resp (g a b)) → Resp (f g)) :
-    Resp (letFun v f) := hf v hv
+    (hv : ∀ a b, Resp Rel (v a b)) (hf : ∀ g, (∀ a b, Resp Rel (g a b)) → Resp Rel (f g)) :
+    Resp Rel (letFun v f) := hf v hv
 
 theorem RespE.letFun0 {τ β : Type} {v : SailME ε τ} {f : SailME ε τ → SailME ε β}
-    (hv : RespE v) (hf : ∀ g, RespE g → RespE (f g)) : RespE (letFun v f) := hf v hv
+    (hv : RespE Rel v) (hf : ∀ g, RespE Rel g → RespE Rel (f g)) : RespE Rel (letFun v f) := hf v hv
 
 theorem RespE.letFun1 {A τ β : Type} {v : A → SailME ε τ} {f : (A → SailME ε τ) → SailME ε β}
-    (hv : ∀ a, RespE (v a)) (hf : ∀ g, (∀ a, RespE (g a)) → RespE (f g)) : RespE (letFun v f) :=
+    (hv : ∀ a, RespE Rel (v a)) (hf : ∀ g, (∀ a, RespE Rel (g a)) → RespE Rel (f g)) : RespE Rel (letFun v f) :=
   hf v hv
 
 theorem RespE.letFun2 {A B τ β : Type} {v : A → B → SailME ε τ}
     {f : (A → B → SailME ε τ) → SailME ε β}
-    (hv : ∀ a b, RespE (v a b)) (hf : ∀ g, (∀ a b, RespE (g a b)) → RespE (f g)) :
-    RespE (letFun v f) := hf v hv
+    (hv : ∀ a b, RespE Rel (v a b)) (hf : ∀ g, (∀ a b, RespE Rel (g a b)) → RespE Rel (f g)) :
+    RespE Rel (letFun v f) := hf v hv
 
 /-- The cast a literal-pattern matcher puts on its alternatives. -/
-theorem Resp.ndrec_symm {γ : Sort u} {a b : γ} {m : SailM α} (h : b = a) (hm : Resp m) :
-    Resp (@Eq.ndrec_symm γ a (fun _ => SailM α) m b h) := by
+theorem Resp.ndrec_symm {γ : Sort u} {a b : γ} {m : SailM α} (h : b = a) (hm : Resp Rel m) :
+    Resp Rel (@Eq.ndrec_symm γ a (fun _ => SailM α) m b h) := by
   subst h; exact hm
 
-theorem RespE.ndrec_symm {γ : Sort u} {a b : γ} {m : SailME ε α} (h : b = a) (hm : RespE m) :
-    RespE (@Eq.ndrec_symm γ a (fun _ => SailME ε α) m b h) := by
+theorem RespE.ndrec_symm {γ : Sort u} {a b : γ} {m : SailME ε α} (h : b = a) (hm : RespE Rel m) :
+    RespE Rel (@Eq.ndrec_symm γ a (fun _ => SailME ε α) m b h) := by
   subst h; exact hm
 
 /-- `panic` in the Sail monad is `pure default`. -/
 theorem Resp.panic [Inhabited α] (msg : String) :
-    Resp (@_root_.panic (SailM α) instInhabitedOfMonad msg) := by
-  show Resp (Pure.pure default)
+    Resp Rel (@_root_.panic (SailM α) instInhabitedOfMonad msg) := by
+  show Resp Rel (Pure.pure default)
   exact Resp.pure _
 
 /-- `panic` at a function type into the Sail monad. -/
 theorem Resp.panic_fun {β : Type} [Inhabited α] (msg : String) (b : β) :
-    Resp ((@_root_.panic (β → SailM α) (@Pi.instInhabited β (fun _ => SailM α) fun _ => instInhabitedOfMonad)
+    Resp Rel ((@_root_.panic (β → SailM α) (@Pi.instInhabited β (fun _ => SailM α) fun _ => instInhabitedOfMonad)
       msg) b) := by
-  show Resp (Pure.pure default)
+  show Resp Rel (Pure.pure default)
   exact Resp.pure _
 
-theorem RespE.ite {c : Prop} [Decidable c] {x y : SailME ε α} (hx : RespE x) (hy : RespE y) :
-    RespE (if c then x else y) := by
+theorem RespE.ite {c : Prop} [Decidable c] {x y : SailME ε α} (hx : RespE Rel x) (hy : RespE Rel y) :
+    RespE Rel (if c then x else y) := by
   split
   · exact hx
   · exact hy
 
 /-! ## Loops -/
 
-theorem Resp.forM {f : β → SailM PUnit} (hf : ∀ b, Resp (f b)) :
-    ∀ l : List β, Resp (l.forM f)
+theorem Resp.forM {f : β → SailM PUnit} (hf : ∀ b, Resp Rel (f b)) :
+    ∀ l : List β, Resp Rel (l.forM f)
   | [] => Resp.pure _
   | b :: l => by
-    show Resp (f b >>= fun _ => l.forM f)
+    show Resp Rel (f b >>= fun _ => l.forM f)
     exact Resp.bind (hf b) fun _ => Resp.forM hf l
 
-theorem Resp.untilFuelM_go {cond : β → SailM Bool} {f : β → SailM β} (hc : ∀ b, Resp (cond b))
-    (hf : ∀ b, Resp (f b)) : ∀ (n : Nat) (b : β), Resp (untilFuelM.go cond f b n)
+theorem Resp.untilFuelM_go {cond : β → SailM Bool} {f : β → SailM β} (hc : ∀ b, Resp Rel (cond b))
+    (hf : ∀ b, Resp Rel (f b)) : ∀ (n : Nat) (b : β), Resp Rel (untilFuelM.go cond f b n)
   | 0, b => by unfold untilFuelM.go; exact Resp.pure _
   | n + 1, b => by
     unfold untilFuelM.go
@@ -262,12 +294,12 @@ theorem Resp.untilFuelM_go {cond : β → SailM Bool} {f : β → SailM β} (hc 
     · exact Resp.untilFuelM_go hc hf n b'
 
 theorem Resp.untilFuelM {cond : β → SailM Bool} {f : β → SailM β} (fuel : Nat) (init : β)
-    (hc : ∀ b, Resp (cond b)) (hf : ∀ b, Resp (f b)) : Resp (untilFuelM fuel cond init f) :=
+    (hc : ∀ b, Resp Rel (cond b)) (hf : ∀ b, Resp Rel (f b)) : Resp Rel (untilFuelM fuel cond init f) :=
   Resp.untilFuelM_go hc hf fuel init
 
 theorem RespE.untilFuelM_go {cond : β → SailME ε Bool} {f : β → SailME ε β}
-    (hc : ∀ b, RespE (cond b)) (hf : ∀ b, RespE (f b)) :
-    ∀ (n : Nat) (b : β), RespE (untilFuelM.go cond f b n)
+    (hc : ∀ b, RespE Rel (cond b)) (hf : ∀ b, RespE Rel (f b)) :
+    ∀ (n : Nat) (b : β), RespE Rel (untilFuelM.go cond f b n)
   | 0, b => by unfold untilFuelM.go; exact RespE.pure _
   | n + 1, b => by
     unfold untilFuelM.go
@@ -277,7 +309,7 @@ theorem RespE.untilFuelM_go {cond : β → SailME ε Bool} {f : β → SailME ε
     · exact RespE.untilFuelM_go hc hf n b'
 
 theorem RespE.untilFuelM {cond : β → SailME ε Bool} {f : β → SailME ε β} (fuel : Nat) (init : β)
-    (hc : ∀ b, RespE (cond b)) (hf : ∀ b, RespE (f b)) : RespE (untilFuelM fuel cond init f) :=
+    (hc : ∀ b, RespE Rel (cond b)) (hf : ∀ b, RespE Rel (f b)) : RespE Rel (untilFuelM fuel cond init f) :=
   RespE.untilFuelM_go hc hf fuel init
 
 
@@ -313,13 +345,13 @@ theorem forIn_range_of {β : Type} (r : IntRange) (init : β) (f : Int → β �
 end ForIn
 
 theorem Resp.forIn_range {β : Type} (r : IntRange) (init : β) (f : Int → β → SailM (ForInStep β))
-    (hf : ∀ i b, Resp (f i b)) : Resp (forIn r init f) :=
-  forIn_range_of (m := SailM) (fun x => Resp x) (fun a => Resp.pure a)
+    (hf : ∀ i b, Resp Rel (f i b)) : Resp Rel (forIn r init f) :=
+  forIn_range_of (m := SailM) (fun x => Resp Rel x) (fun a => Resp.pure a)
     (fun _ _ hx hf => Resp.bind hx hf) r init f hf
 
 theorem RespE.forIn_range {ε β : Type} (r : IntRange) (init : β)
-    (f : Int → β → SailME ε (ForInStep β)) (hf : ∀ i b, RespE (f i b)) : RespE (forIn r init f) :=
-  forIn_range_of (m := SailME ε) (fun x => RespE x) (fun a => RespE.pure a)
+    (f : Int → β → SailME ε (ForInStep β)) (hf : ∀ i b, RespE Rel (f i b)) : RespE Rel (forIn r init f) :=
+  forIn_range_of (m := SailME ε) (fun x => RespE Rel x) (fun a => RespE.pure a)
     (fun _ _ hx hf => RespE.bind hx hf) r init f hf
 
 /-! ## The lean-sail primitives -/
@@ -332,79 +364,79 @@ macro "resp_prim" : tactic => `(tactic| (
     MonadStateOf.get, EStateM.get, modify, modifyGet, MonadStateOf.modifyGet, EStateM.modifyGet,
     throw, throwThe, MonadExceptOf.throw, EStateM.throw, EStateM.run]))
 
-theorem readReg_resp (r : Register) : Resp (PreSail.readReg r : SailM (RegisterType r)) := by
+theorem readReg_resp (r : Register) : Resp Rel (PreSail.readReg r : SailM (RegisterType r)) := by
   unfold PreSail.readReg
   refine ⟨fun σ σ' h => ?_⟩
   resp_prim
-  rw [h.regs]
+  rw [Rel.regs h]
   cases σ'.regs.get? r <;> exact ⟨rfl, h⟩
 
 theorem writeReg_resp (r : Register) (v : RegisterType r) :
-    Resp (PreSail.writeReg r v : SailM PUnit) := by
+    Resp Rel (PreSail.writeReg r v : SailM PUnit) := by
   unfold PreSail.writeReg
   refine ⟨fun σ σ' h => ?_⟩
   resp_prim
-  exact ⟨rfl, ⟨by simp only [h.regs], h.choice, h.mem, h.cycle, h.out⟩⟩
+  exact ⟨rfl, Rel.writeReg r v h⟩
 
 theorem readRegRef_resp (rr : @RegisterRef Register RegisterType α) :
-    Resp (PreSail.readRegRef rr : SailM α) := by
+    Resp Rel (PreSail.readRegRef rr : SailM α) := by
   unfold PreSail.readRegRef
   split
   exact readReg_resp _
 
 theorem writeRegRef_resp (rr : @RegisterRef Register RegisterType α) (a : α) :
-    Resp (PreSail.writeRegRef rr a : SailM Unit) := by
+    Resp Rel (PreSail.writeRegRef rr a : SailM Unit) := by
   unfold PreSail.writeRegRef
   split
   exact writeReg_resp _ _
 
 theorem reg_deref_resp (rr : @RegisterRef Register RegisterType α) :
-    Resp (PreSail.reg_deref rr : SailM α) := readRegRef_resp rr
+    Resp Rel (PreSail.reg_deref rr : SailM α) := readRegRef_resp rr
 
-theorem assert_resp (p : Bool) (s : String) : Resp (PreSail.assert p s : SailM Unit) := by
+theorem assert_resp (p : Bool) (s : String) : Resp Rel (PreSail.assert p s : SailM Unit) := by
   unfold PreSail.assert
   split
   · exact Resp.pure _
   · exact Resp.throw _
 
-theorem sailThrow_resp (e : exception) : Resp (PreSail.sailThrow e : SailM α) := Resp.throw _
+theorem sailThrow_resp (e : exception) : Resp Rel (PreSail.sailThrow e : SailM α) := Resp.throw _
 
-theorem sailTryCatch_resp {x : SailM α} {h : exception → SailM α} (hx : Resp x)
-    (hh : ∀ e, Resp (h e)) : Resp (PreSail.sailTryCatch x h) := by
+theorem sailTryCatch_resp {x : SailM α} {h : exception → SailM α} (hx : Resp Rel x)
+    (hh : ∀ e, Resp Rel (h e)) : Resp Rel (PreSail.sailTryCatch x h) := by
   unfold PreSail.sailTryCatch
   refine Resp.tryCatch hx fun e => ?_
   split
   · exact hh _
   · exact Resp.throw _
 
-theorem writeByte_resp (a : Nat) (v : BitVec 8) : Resp (PreSail.writeByte a v : SailM PUnit) := by
+theorem writeByte_resp (a : Nat) (v : BitVec 8) : Resp Rel (PreSail.writeByte a v : SailM PUnit) := by
   unfold PreSail.writeByte
   refine ⟨fun σ σ' h => ?_⟩
   resp_prim
-  exact ⟨rfl, ⟨h.regs, h.choice, h.mem.insert a v, h.cycle, h.out⟩⟩
+  exact ⟨rfl, Rel.writeByte a v h⟩
 
 theorem writeBytes_resp (a : Nat) (v : BitVec (8 * n)) :
-    Resp (PreSail.writeBytes a v : SailM Bool) := by
+    Resp Rel (PreSail.writeBytes a v : SailM Bool) := by
   unfold PreSail.writeBytes
   exact Resp.bind (Resp.forM (fun p : Nat × BitVec 8 => writeByte_resp p.1 p.2) _) fun _ => Resp.pure _
 
 theorem writeByteVec_resp (a : Nat) (v : Vector (BitVec 8) n) :
-    Resp (PreSail.writeByteVec a v : SailM Bool) := by
+    Resp Rel (PreSail.writeByteVec a v : SailM Bool) := by
   unfold PreSail.writeByteVec
   exact Resp.bind (Resp.forM (fun p : Nat × BitVec 8 => writeByte_resp p.1 p.2) _) fun _ => Resp.pure _
 
 theorem write_ram_resp (as ds : Nat) (h a : BitVec as) (v : BitVec (8 * ds)) :
-    Resp (PreSail.write_ram as ds h a v : SailM Unit) := by
+    Resp Rel (PreSail.write_ram as ds h a v : SailM Unit) := by
   unfold PreSail.write_ram
   exact Resp.bind (writeBytes_resp _ _) fun _ => Resp.pure _
 
-theorem readByte_resp (a : Nat) : Resp (PreSail.readByte a : SailM (BitVec 8)) := by
+theorem readByte_resp (a : Nat) : Resp Rel (PreSail.readByte a : SailM (BitVec 8)) := by
   unfold PreSail.readByte
   refine ⟨fun σ σ' h => ?_⟩
   resp_prim
-  exact ⟨h.mem a, h⟩
+  exact ⟨Rel.mem h a, h⟩
 
-theorem readBytes_resp : ∀ (n a : Nat), Resp (PreSail.readBytes n a : SailM (BitVec (8 * n) × Option Bool))
+theorem readBytes_resp : ∀ (n a : Nat), Resp Rel (PreSail.readBytes n a : SailM (BitVec (8 * n) × Option Bool))
   | 0, a => by
     simp only [PreSail.readBytes]
     exact Resp.pure _
@@ -417,7 +449,7 @@ theorem readBytes_resp : ∀ (n a : Nat), Resp (PreSail.readBytes n a : SailM (B
       Resp.pure _
 
 theorem sail_mem_write_resp [Arch] (req : Mem_write_request n vasize (BitVec pa_size) ts arch) :
-    Resp (PreSail.sail_mem_write req : SailM (Result (Option Bool) Arch.abort)) := by
+    Resp Rel (PreSail.sail_mem_write req : SailM (Result (Option Bool) Arch.abort)) := by
   unfold PreSail.sail_mem_write
   dsimp only
   split
@@ -425,44 +457,44 @@ theorem sail_mem_write_resp [Arch] (req : Mem_write_request n vasize (BitVec pa_
   · exact Resp.bind (Resp.pure _) fun _ => Resp.pure _
 
 theorem sail_mem_read_resp [Arch] (req : Mem_read_request n vasize (BitVec pa_size) ts arch) :
-    Resp (PreSail.sail_mem_read req : SailM (Result (BitVec (8 * n) × Option Bool) Arch.abort)) := by
+    Resp Rel (PreSail.sail_mem_read req : SailM (Result (BitVec (8 * n) × Option Bool) Arch.abort)) := by
   unfold PreSail.sail_mem_read
   exact Resp.bind (readBytes_resp _ _) fun _ => Resp.pure _
 
 theorem read_ram_resp (as ds : Nat) (h a : BitVec as) :
-    Resp (PreSail.read_ram as ds h a : SailM (BitVec (8 * ds))) := by
+    Resp Rel (PreSail.read_ram as ds h a : SailM (BitVec (8 * ds))) := by
   unfold PreSail.read_ram
   refine Resp.bind (readBytes_resp _ _) fun r => ?_
   try split
   exact Resp.pure _
 
-theorem sail_barrier_resp (a : α) : Resp (PreSail.sail_barrier a : SailM Unit) := Resp.pure _
+theorem sail_barrier_resp (a : α) : Resp Rel (PreSail.sail_barrier a : SailM Unit) := Resp.pure _
 
-theorem cycle_count_resp (u : Unit) : Resp (PreSail.cycle_count u : SailM Unit) := by
+theorem cycle_count_resp (u : Unit) : Resp Rel (PreSail.cycle_count u : SailM Unit) := by
   unfold PreSail.cycle_count
   refine ⟨fun σ σ' h => ?_⟩
   resp_prim
-  exact ⟨rfl, ⟨h.regs, h.choice, h.mem, by simp only [h.cycle], h.out⟩⟩
+  exact ⟨rfl, Rel.tick h⟩
 
-theorem get_cycle_count_resp (u : Unit) : Resp (PreSail.get_cycle_count u : SailM Nat) := by
+theorem get_cycle_count_resp (u : Unit) : Resp Rel (PreSail.get_cycle_count u : SailM Nat) := by
   unfold PreSail.get_cycle_count
   refine ⟨fun σ σ' h => ?_⟩
   resp_prim
-  exact ⟨h.cycle, h⟩
+  exact ⟨Rel.cycle h, h⟩
 
-theorem print_effect_resp (s : String) : Resp (PreSail.print_effect s : SailM Unit) := by
+theorem print_effect_resp (s : String) : Resp Rel (PreSail.print_effect s : SailM Unit) := by
   unfold PreSail.print_effect
   refine ⟨fun σ σ' h => ?_⟩
   resp_prim
-  exact ⟨rfl, ⟨h.regs, h.choice, h.mem, h.cycle, by simp only [h.out]⟩⟩
+  exact ⟨rfl, Rel.print s h⟩
 
-theorem print_int_effect_resp (s : String) (n : Int) : Resp (PreSail.print_int_effect s n : SailM Unit) :=
+theorem print_int_effect_resp (s : String) (n : Int) : Resp Rel (PreSail.print_int_effect s n : SailM Unit) :=
   print_effect_resp _
 
 theorem print_bits_effect_resp (s : String) (x : BitVec w) :
-    Resp (PreSail.print_bits_effect s x : SailM Unit) := print_effect_resp _
+    Resp Rel (PreSail.print_bits_effect s x : SailM Unit) := print_effect_resp _
 
-theorem print_endline_effect_resp (s : String) : Resp (PreSail.print_endline_effect s : SailM Unit) :=
+theorem print_endline_effect_resp (s : String) : Resp Rel (PreSail.print_endline_effect s : SailM Unit) :=
   print_effect_resp _
 
 end PS

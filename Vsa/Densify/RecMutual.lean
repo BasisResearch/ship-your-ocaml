@@ -18,6 +18,8 @@ open Sail ConcurrencyInterfaceV1 LeanRV64DExecutable LeanRV64DExecutable.Functio
 open Sail.ConcurrencyInterfaceV1.PreSail
 open Vsa.Densify.Gen
 
+variable {Rel : StateRelB}
+
 /-- One case of the block's induction: unfold the head and discharge. -/
 macro "mutual_case" : tactic => `(tactic| (
   intros
@@ -28,76 +30,76 @@ macro "mutual_case" : tactic => `(tactic| (
     | rw [virtual_memory_supported.eq_def]
   resp_auto))
 
-theorem check_stateen_bit_resp : ∀ (a0 : _) (a1 : _) (a2 : _), Resp (@check_stateen_bit a0 a1 a2) := by
-  apply check_stateen_bit.induct (motive1 := fun p b n => Resp (check_stateen_bit p b n))
-    (motive2 := fun i => Resp (get_hstateen i)) (motive3 := fun x => Resp (is_hstateen_accessible x))
-    (motive4 := fun e => Resp (currentlyEnabled e)) (motive5 := fun x => Resp (virtual_memory_supported x))
-    (motive6 := fun p => Resp (get_xLPE p)) (motive7 := fun x => Resp (is_zfinx_enabled_by_stateen x))
-    (motive8 := fun i => Resp (get_sstateen i)) (motive9 := fun x => Resp (is_sstateen_accessible x))
+theorem check_stateen_bit_resp : ∀ (a0 : _) (a1 : _) (a2 : _), Resp Rel (@check_stateen_bit a0 a1 a2) := by
+  apply check_stateen_bit.induct (motive1 := fun p b n => Resp Rel (check_stateen_bit p b n))
+    (motive2 := fun i => Resp Rel (get_hstateen i)) (motive3 := fun x => Resp Rel (is_hstateen_accessible x))
+    (motive4 := fun e => Resp Rel (currentlyEnabled e)) (motive5 := fun x => Resp Rel (virtual_memory_supported x))
+    (motive6 := fun p => Resp Rel (get_xLPE p)) (motive7 := fun x => Resp Rel (is_zfinx_enabled_by_stateen x))
+    (motive8 := fun i => Resp Rel (get_sstateen i)) (motive9 := fun x => Resp Rel (is_sstateen_accessible x))
     <;> mutual_case
 
-theorem currentlyEnabled_resp : ∀ (a0 : _), Resp (@currentlyEnabled a0) := by
-  apply currentlyEnabled.induct (motive1 := fun p b n => Resp (check_stateen_bit p b n))
-    (motive2 := fun i => Resp (get_hstateen i)) (motive3 := fun x => Resp (is_hstateen_accessible x))
-    (motive4 := fun e => Resp (currentlyEnabled e)) (motive5 := fun x => Resp (virtual_memory_supported x))
-    (motive6 := fun p => Resp (get_xLPE p)) (motive7 := fun x => Resp (is_zfinx_enabled_by_stateen x))
-    (motive8 := fun i => Resp (get_sstateen i)) (motive9 := fun x => Resp (is_sstateen_accessible x))
+theorem currentlyEnabled_resp : ∀ (a0 : _), Resp Rel (@currentlyEnabled a0) := by
+  apply currentlyEnabled.induct (motive1 := fun p b n => Resp Rel (check_stateen_bit p b n))
+    (motive2 := fun i => Resp Rel (get_hstateen i)) (motive3 := fun x => Resp Rel (is_hstateen_accessible x))
+    (motive4 := fun e => Resp Rel (currentlyEnabled e)) (motive5 := fun x => Resp Rel (virtual_memory_supported x))
+    (motive6 := fun p => Resp Rel (get_xLPE p)) (motive7 := fun x => Resp Rel (is_zfinx_enabled_by_stateen x))
+    (motive8 := fun i => Resp Rel (get_sstateen i)) (motive9 := fun x => Resp Rel (is_sstateen_accessible x))
     <;> mutual_case
 
-theorem get_hstateen_resp : ∀ (a0 : _), Resp (@get_hstateen a0) := by
-  apply get_hstateen.induct (motive1 := fun p b n => Resp (check_stateen_bit p b n))
-    (motive2 := fun i => Resp (get_hstateen i)) (motive3 := fun x => Resp (is_hstateen_accessible x))
-    (motive4 := fun e => Resp (currentlyEnabled e)) (motive5 := fun x => Resp (virtual_memory_supported x))
-    (motive6 := fun p => Resp (get_xLPE p)) (motive7 := fun x => Resp (is_zfinx_enabled_by_stateen x))
-    (motive8 := fun i => Resp (get_sstateen i)) (motive9 := fun x => Resp (is_sstateen_accessible x))
+theorem get_hstateen_resp : ∀ (a0 : _), Resp Rel (@get_hstateen a0) := by
+  apply get_hstateen.induct (motive1 := fun p b n => Resp Rel (check_stateen_bit p b n))
+    (motive2 := fun i => Resp Rel (get_hstateen i)) (motive3 := fun x => Resp Rel (is_hstateen_accessible x))
+    (motive4 := fun e => Resp Rel (currentlyEnabled e)) (motive5 := fun x => Resp Rel (virtual_memory_supported x))
+    (motive6 := fun p => Resp Rel (get_xLPE p)) (motive7 := fun x => Resp Rel (is_zfinx_enabled_by_stateen x))
+    (motive8 := fun i => Resp Rel (get_sstateen i)) (motive9 := fun x => Resp Rel (is_sstateen_accessible x))
     <;> mutual_case
 
-theorem get_sstateen_resp : ∀ (a0 : _), Resp (@get_sstateen a0) := by
-  apply get_sstateen.induct (motive1 := fun p b n => Resp (check_stateen_bit p b n))
-    (motive2 := fun i => Resp (get_hstateen i)) (motive3 := fun x => Resp (is_hstateen_accessible x))
-    (motive4 := fun e => Resp (currentlyEnabled e)) (motive5 := fun x => Resp (virtual_memory_supported x))
-    (motive6 := fun p => Resp (get_xLPE p)) (motive7 := fun x => Resp (is_zfinx_enabled_by_stateen x))
-    (motive8 := fun i => Resp (get_sstateen i)) (motive9 := fun x => Resp (is_sstateen_accessible x))
+theorem get_sstateen_resp : ∀ (a0 : _), Resp Rel (@get_sstateen a0) := by
+  apply get_sstateen.induct (motive1 := fun p b n => Resp Rel (check_stateen_bit p b n))
+    (motive2 := fun i => Resp Rel (get_hstateen i)) (motive3 := fun x => Resp Rel (is_hstateen_accessible x))
+    (motive4 := fun e => Resp Rel (currentlyEnabled e)) (motive5 := fun x => Resp Rel (virtual_memory_supported x))
+    (motive6 := fun p => Resp Rel (get_xLPE p)) (motive7 := fun x => Resp Rel (is_zfinx_enabled_by_stateen x))
+    (motive8 := fun i => Resp Rel (get_sstateen i)) (motive9 := fun x => Resp Rel (is_sstateen_accessible x))
     <;> mutual_case
 
-theorem get_xLPE_resp : ∀ (a0 : _), Resp (@get_xLPE a0) := by
-  apply get_xLPE.induct (motive1 := fun p b n => Resp (check_stateen_bit p b n))
-    (motive2 := fun i => Resp (get_hstateen i)) (motive3 := fun x => Resp (is_hstateen_accessible x))
-    (motive4 := fun e => Resp (currentlyEnabled e)) (motive5 := fun x => Resp (virtual_memory_supported x))
-    (motive6 := fun p => Resp (get_xLPE p)) (motive7 := fun x => Resp (is_zfinx_enabled_by_stateen x))
-    (motive8 := fun i => Resp (get_sstateen i)) (motive9 := fun x => Resp (is_sstateen_accessible x))
+theorem get_xLPE_resp : ∀ (a0 : _), Resp Rel (@get_xLPE a0) := by
+  apply get_xLPE.induct (motive1 := fun p b n => Resp Rel (check_stateen_bit p b n))
+    (motive2 := fun i => Resp Rel (get_hstateen i)) (motive3 := fun x => Resp Rel (is_hstateen_accessible x))
+    (motive4 := fun e => Resp Rel (currentlyEnabled e)) (motive5 := fun x => Resp Rel (virtual_memory_supported x))
+    (motive6 := fun p => Resp Rel (get_xLPE p)) (motive7 := fun x => Resp Rel (is_zfinx_enabled_by_stateen x))
+    (motive8 := fun i => Resp Rel (get_sstateen i)) (motive9 := fun x => Resp Rel (is_sstateen_accessible x))
     <;> mutual_case
 
-theorem is_hstateen_accessible_resp : ∀ (a0 : _), Resp (@is_hstateen_accessible a0) := by
-  apply is_hstateen_accessible.induct (motive1 := fun p b n => Resp (check_stateen_bit p b n))
-    (motive2 := fun i => Resp (get_hstateen i)) (motive3 := fun x => Resp (is_hstateen_accessible x))
-    (motive4 := fun e => Resp (currentlyEnabled e)) (motive5 := fun x => Resp (virtual_memory_supported x))
-    (motive6 := fun p => Resp (get_xLPE p)) (motive7 := fun x => Resp (is_zfinx_enabled_by_stateen x))
-    (motive8 := fun i => Resp (get_sstateen i)) (motive9 := fun x => Resp (is_sstateen_accessible x))
+theorem is_hstateen_accessible_resp : ∀ (a0 : _), Resp Rel (@is_hstateen_accessible a0) := by
+  apply is_hstateen_accessible.induct (motive1 := fun p b n => Resp Rel (check_stateen_bit p b n))
+    (motive2 := fun i => Resp Rel (get_hstateen i)) (motive3 := fun x => Resp Rel (is_hstateen_accessible x))
+    (motive4 := fun e => Resp Rel (currentlyEnabled e)) (motive5 := fun x => Resp Rel (virtual_memory_supported x))
+    (motive6 := fun p => Resp Rel (get_xLPE p)) (motive7 := fun x => Resp Rel (is_zfinx_enabled_by_stateen x))
+    (motive8 := fun i => Resp Rel (get_sstateen i)) (motive9 := fun x => Resp Rel (is_sstateen_accessible x))
     <;> mutual_case
 
-theorem is_sstateen_accessible_resp : ∀ (a0 : _), Resp (@is_sstateen_accessible a0) := by
-  apply is_sstateen_accessible.induct (motive1 := fun p b n => Resp (check_stateen_bit p b n))
-    (motive2 := fun i => Resp (get_hstateen i)) (motive3 := fun x => Resp (is_hstateen_accessible x))
-    (motive4 := fun e => Resp (currentlyEnabled e)) (motive5 := fun x => Resp (virtual_memory_supported x))
-    (motive6 := fun p => Resp (get_xLPE p)) (motive7 := fun x => Resp (is_zfinx_enabled_by_stateen x))
-    (motive8 := fun i => Resp (get_sstateen i)) (motive9 := fun x => Resp (is_sstateen_accessible x))
+theorem is_sstateen_accessible_resp : ∀ (a0 : _), Resp Rel (@is_sstateen_accessible a0) := by
+  apply is_sstateen_accessible.induct (motive1 := fun p b n => Resp Rel (check_stateen_bit p b n))
+    (motive2 := fun i => Resp Rel (get_hstateen i)) (motive3 := fun x => Resp Rel (is_hstateen_accessible x))
+    (motive4 := fun e => Resp Rel (currentlyEnabled e)) (motive5 := fun x => Resp Rel (virtual_memory_supported x))
+    (motive6 := fun p => Resp Rel (get_xLPE p)) (motive7 := fun x => Resp Rel (is_zfinx_enabled_by_stateen x))
+    (motive8 := fun i => Resp Rel (get_sstateen i)) (motive9 := fun x => Resp Rel (is_sstateen_accessible x))
     <;> mutual_case
 
-theorem is_zfinx_enabled_by_stateen_resp : ∀ (a0 : _), Resp (@is_zfinx_enabled_by_stateen a0) := by
-  apply is_zfinx_enabled_by_stateen.induct (motive1 := fun p b n => Resp (check_stateen_bit p b n))
-    (motive2 := fun i => Resp (get_hstateen i)) (motive3 := fun x => Resp (is_hstateen_accessible x))
-    (motive4 := fun e => Resp (currentlyEnabled e)) (motive5 := fun x => Resp (virtual_memory_supported x))
-    (motive6 := fun p => Resp (get_xLPE p)) (motive7 := fun x => Resp (is_zfinx_enabled_by_stateen x))
-    (motive8 := fun i => Resp (get_sstateen i)) (motive9 := fun x => Resp (is_sstateen_accessible x))
+theorem is_zfinx_enabled_by_stateen_resp : ∀ (a0 : _), Resp Rel (@is_zfinx_enabled_by_stateen a0) := by
+  apply is_zfinx_enabled_by_stateen.induct (motive1 := fun p b n => Resp Rel (check_stateen_bit p b n))
+    (motive2 := fun i => Resp Rel (get_hstateen i)) (motive3 := fun x => Resp Rel (is_hstateen_accessible x))
+    (motive4 := fun e => Resp Rel (currentlyEnabled e)) (motive5 := fun x => Resp Rel (virtual_memory_supported x))
+    (motive6 := fun p => Resp Rel (get_xLPE p)) (motive7 := fun x => Resp Rel (is_zfinx_enabled_by_stateen x))
+    (motive8 := fun i => Resp Rel (get_sstateen i)) (motive9 := fun x => Resp Rel (is_sstateen_accessible x))
     <;> mutual_case
 
-theorem virtual_memory_supported_resp : ∀ (a0 : _), Resp (@virtual_memory_supported a0) := by
-  apply virtual_memory_supported.induct (motive1 := fun p b n => Resp (check_stateen_bit p b n))
-    (motive2 := fun i => Resp (get_hstateen i)) (motive3 := fun x => Resp (is_hstateen_accessible x))
-    (motive4 := fun e => Resp (currentlyEnabled e)) (motive5 := fun x => Resp (virtual_memory_supported x))
-    (motive6 := fun p => Resp (get_xLPE p)) (motive7 := fun x => Resp (is_zfinx_enabled_by_stateen x))
-    (motive8 := fun i => Resp (get_sstateen i)) (motive9 := fun x => Resp (is_sstateen_accessible x))
+theorem virtual_memory_supported_resp : ∀ (a0 : _), Resp Rel (@virtual_memory_supported a0) := by
+  apply virtual_memory_supported.induct (motive1 := fun p b n => Resp Rel (check_stateen_bit p b n))
+    (motive2 := fun i => Resp Rel (get_hstateen i)) (motive3 := fun x => Resp Rel (is_hstateen_accessible x))
+    (motive4 := fun e => Resp Rel (currentlyEnabled e)) (motive5 := fun x => Resp Rel (virtual_memory_supported x))
+    (motive6 := fun p => Resp Rel (get_xLPE p)) (motive7 := fun x => Resp Rel (is_zfinx_enabled_by_stateen x))
+    (motive8 := fun i => Resp Rel (get_sstateen i)) (motive9 := fun x => Resp Rel (is_sstateen_accessible x))
     <;> mutual_case
 
 end Vsa.Densify.RecMutual

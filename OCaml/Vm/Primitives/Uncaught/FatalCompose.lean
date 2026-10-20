@@ -60,14 +60,13 @@ structure AtExitReached (H : List (Nat × Nat)) (capacity : Nat) (sp exn s2 : Bi
 /-- **`caml_fatal_uncaught_exception` from its entry to the `do_at_exit`
 lookup**: the message is formatted (`FormatDone`), the backtrace saved and
 the lookup done (`AtExitLooked`). -/
-theorem fatal_to_atexit (persist : GprsPersist_Statement) (memPersist : MemPersist_Statement)
-    {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place} {named : List (String × Val)}
+theorem fatal_to_atexit {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place} {named : List (String × Val)}
     {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {H : List (Nat × Nat)} {capacity charge : Nat}
     {p dom start trig active pos : BitVec 64} {c0 : Config}
     (pre : FatalPre ra sp exn s0 s1 s2 s3 np name pl named chains H capacity charge p dom start trig active pos c0) :
     ∃ f r res d x, Steps c0 d ∧
       AtExitReached H capacity sp exn s2 name pl named chains p dom start trig active pos c0 res f r x d := by
-  obtain ⟨d1, run1, look⟩ := fatal_lookup persist pre.input
+  obtain ⟨d1, run1, look⟩ := fatal_lookup pre.input
   obtain ⟨f, run2, atf⟩ := fatal_suspend pre.input.frame look pre.memprof
   obtain ⟨res, r, run3, done⟩ := fatal_format pre.heap pre.thrown pre.exnApart atf
   have run := run1.trans (run2.trans run3)
@@ -118,7 +117,7 @@ theorem fatal_to_atexit (persist : GprsPersist_Statement) (memPersist : MemPersi
             (pre.tableApart a (Or.inr ⟨b, hb, e, hmem, lo, hi⟩)).1)
       (memPersist c0 r run a))
       (strcmp_loaded done.ready.image) (mask_pinned done.ready.image)
-  obtain ⟨d, x, run4, ae⟩ := fatal_atexit persist pre.input.frame done btR tableR
+  obtain ⟨d, x, run4, ae⟩ := fatal_atexit pre.input.frame done btR tableR
     (fun a foot => (pre.tableApart a foot).2)
   exact ⟨f, r, res, d, x, run.trans run4, ⟨done, ae, tableR, inLow, done.output.trans atf.output⟩⟩
 
@@ -167,8 +166,7 @@ structure FprintfReached (H : List (Nat × Nat)) (capacity : Nat) (sp exn s2 : B
 `fprintf(stderr, "Fatal error: exception %s\n", msg)`**, through
 `do_at_exit` (a registered callback under the named `AtExitCallback`) and the
 restore of the backtrace fields. -/
-theorem fatal_to_fprintf (persist : GprsPersist_Statement) (memPersist : MemPersist_Statement)
-    {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place} {named : List (String × Val)}
+theorem fatal_to_fprintf {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place} {named : List (String × Val)}
     {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {H : List (Nat × Nat)} {capacity charge : Nat}
     {p dom start trig active pos imp err : BitVec 64} {c0 : Config}
     (pre : FatalPre ra sp exn s0 s1 s2 s3 np name pl named chains H capacity charge p dom start trig active pos c0)
@@ -177,7 +175,7 @@ theorem fatal_to_fprintf (persist : GprsPersist_Statement) (memPersist : MemPers
       AtExitCallback H capacity sp clo res dom imp name.length) :
     ∃ f r res g live capacity', Steps c0 g ∧
       FprintfReached H capacity sp exn s2 name dom active pos err c0 f r res live capacity' g := by
-  obtain ⟨f, r, res, d, x, run, reached⟩ := fatal_to_atexit persist memPersist pre
+  obtain ⟨f, r, res, d, x, run, reached⟩ := fatal_to_atexit pre
   have done := reached.format
   have looked := reached.looked
   have bt := pre.backtrace
@@ -215,8 +213,7 @@ structure FatalExiting (sp : BitVec 64) (name : List (BitVec 8)) (c0 e : Config)
 /-- **`caml_fatal_uncaught_exception` from its entry to the call of
 `exit(2)`**, with the backtrace inactive: the report printed by `fprintf`
 (the named `FprintfReport`), the message freed, the abort flag clear. -/
-theorem fatal_to_exit (persist : GprsPersist_Statement) (memPersist : MemPersist_Statement)
-    {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place} {named : List (String × Val)}
+theorem fatal_to_exit {ra sp exn s0 s1 s2 s3 np : BitVec 64} {name : List (BitVec 8)} {pl : Place} {named : List (String × Val)}
     {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {H : List (Nat × Nat)} {capacity charge : Nat}
     {p dom start trig active pos imp err : BitVec 64} {c0 : Config}
     (pre : FatalPre ra sp exn s0 s1 s2 s3 np name pl named chains H capacity charge p dom start trig active pos c0)
@@ -226,7 +223,7 @@ theorem fatal_to_exit (persist : GprsPersist_Statement) (memPersist : MemPersist
     (printf : ∀ live capacity res, FprintfReport live capacity sp res dom err name)
     (inactive : active = 0#64) :
     ∃ e, Steps c0 e ∧ FatalExiting sp name c0 e := by
-  obtain ⟨f, r, res, g, live, capacity', run, reached⟩ := fatal_to_fprintf persist memPersist pre std callback
+  obtain ⟨f, r, res, g, live, capacity', run, reached⟩ := fatal_to_fprintf pre std callback
   have done := reached.format
   obtain ⟨e, live', capacity'', run2, call⟩ := fatal_exit_call reached.call (printf live capacity' res) pre.domain
     pre.backtrace.activeWindow (pre.heap.formatFrame.resize (by decide) (by decide)) done.low done.high

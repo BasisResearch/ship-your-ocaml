@@ -173,7 +173,7 @@ theorem rodata_lookup {sp link s0 s1 : BitVec 64} {off : Nat} {key : List (BitVe
       exact ⟨by omega, by omega, by omega, Or.inr (by omega), Or.inl (by omega)⟩)
 
 /-- **The prologue and the handler lookup**: `caml_named_value` returns `NULL`. -/
-theorem fatal_lookup (persist : GprsPersist_Statement) {ra sp exn s0 s1 s2 s3 : BitVec 64} {pl : Place}
+theorem fatal_lookup {ra sp exn s0 s1 s2 s3 : BitVec 64} {pl : Place}
     {named : List (String × Val)} {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {c : Config}
     (h : FatalInput ra sp exn s0 s1 s2 s3 pl named chains c) :
     ∃ d, Steps c d ∧ Looked c sp exn s0 s2 s3 d := by
@@ -235,7 +235,7 @@ theorem fatal_lookup (persist : GprsPersist_Statement) {ra sp exn s0 s1 s2 s3 : 
   refine ⟨d, run, ?_⟩
   exact
     { leaf := ⟨nf.good, nf.image, nf.minstret, nf.returned, by decide, nf.tick⟩
-      ready := h.ready.carry (GprsKept.of_steps persist run (keep 3 (by decide) (by decide) (by decide)))
+      ready := h.ready.carry (GprsKept.of_steps gprsPersist run (keep 3 (by decide) (by decide) (by decide)))
         (nf.htif.trans ((p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans
           (p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide))))
       pc := nf.pc

@@ -19,6 +19,7 @@ import Vsa.Densify.RecPt
 import Vsa.Densify.Resp
 import Vsa.Densify.Tactic
 import Vsa.Densify.Transport
+import Vsa.Densify.Keys
 import Vsa.Elf
 import Vsa.Machine
 import Vsa.Sim.Attr

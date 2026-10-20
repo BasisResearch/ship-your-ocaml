@@ -52,7 +52,7 @@ structure AtExitLooked (H : List (Nat × Nat)) (capacity : Nat) (sp res dom acti
   output : Vsa.Machine.output d.σ = Vsa.Machine.output before.σ
 
 /-- **The backtrace save and `caml_named_value("Pervasives.do_at_exit")`.** -/
-theorem fatal_atexit (persist : GprsPersist_Statement) {H : List (Nat × Nat)} {capacity : Nat}
+theorem fatal_atexit {H : List (Nat × Nat)} {capacity : Nat}
     {sp exn s2 s4 s5 res dom active pos : BitVec 64} {name : List (BitVec 8)} {pl : Place}
     {named : List (String × Val)} {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {f r : Config}
     (frame : NativeFrame sp 128)
@@ -115,7 +115,7 @@ theorem fatal_atexit (persist : GprsPersist_Statement) {H : List (Nat × Nat)} {
       (d.σ.mem[a]?).getD 0 = (r.σ.mem[a]?).getD 0 := by rw [kept a ha out]
   have order : heapStart ≤ q := qlo
   have lib : LibraryReady d := done.ready.library.carry
-    (GprsKept.of_steps persist run (keep 3 (by decide) (by decide) (by decide)))
+    (GprsKept.of_steps gprsPersist run (keep 3 (by decide) (by decide) (by decide)))
     (nf.htif.trans ((p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans
       (p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide))))
   have leafD : LeafInput 0x8000dff4#64 d := ⟨nf.good, nf.image, nf.minstret, nf.returned, by decide, nf.tick⟩

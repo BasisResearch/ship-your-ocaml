@@ -34,8 +34,8 @@ def respGoal (goal : MVarId) : MetaM (Expr × Array Expr × Expr) := do
   let t ← if t.hasMVar then instantiateMVars t else pure t
   let fn := t.getAppFn
   let args := t.getAppArgs
-  unless (fn.isConstOf ``Vsa.Densify.Resp && args.size == 2) ||
-      (fn.isConstOf ``Vsa.Densify.RespE && args.size == 3) do
+  unless (fn.isConstOf ``Vsa.Densify.Resp && args.size == 3) ||
+      (fn.isConstOf ``Vsa.Densify.RespE && args.size == 4) do
     throwError "not a Resp/RespE goal"
   return (fn, args, args.back!)
 

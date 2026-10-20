@@ -30,7 +30,7 @@ theorem output_of_seqv {σ σ' : MState} (h : SEqv σ σ') : output σ = output 
 
 section Sim
 
-variable (hres : ∀ i u, Resp (Vsa.stepOnce i u))
+variable (hres : ∀ i u, Resp seqvRel (Vsa.stepOnce i u))
 include hres
 
 /-- Lockstep: a step of one configuration is matched by the other. -/
@@ -46,7 +46,7 @@ theorem step_sim {c c₁ c' : Config} (h : CEqv c c') (hs : Step c c₁) :
     simp only [EStateM.run] at e
     rw [e] at hr
     revert hr
-    cases hx : (Vsa.stepOnce i u) σ' <;> intro hr <;> simp only [REqv] at hr
+    cases hx : (Vsa.stepOnce i u) σ' <;> intro hr <;> simp only [REqv, seqvRel] at hr
     obtain ⟨rfl, hs⟩ := hr
     exact ⟨⟨_, i₁, u₁⟩, .mk hx, ⟨hs, rfl, rfl⟩⟩
 
@@ -62,7 +62,7 @@ theorem halted_sim {c c' : Config} {e : Nat} {σf : MState} (h : CEqv c c') (hh 
     simp only [EStateM.run] at hx0
     rw [hx0] at hr
     revert hr
-    cases hx : (Vsa.stepOnce i u) σ' <;> intro hr <;> simp only [REqv] at hr
+    cases hx : (Vsa.stepOnce i u) σ' <;> intro hr <;> simp only [REqv, seqvRel] at hr
     obtain ⟨rfl, hs⟩ := hr
     exact ⟨_, .mk hx, hs⟩
 

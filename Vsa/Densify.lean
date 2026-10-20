@@ -17,7 +17,7 @@ namespace Vsa.Densify
 open Vsa.Machine
 
 /-- `stepOnce` respects zero-equivalence. -/
-theorem stepOnce_resp (i u : Nat) : Resp (Vsa.stepOnce i u) := Gen.stepOnce_resp i u
+theorem stepOnce_resp (i u : Nat) : Resp seqvRel (Vsa.stepOnce i u) := Gen.stepOnce_resp i u
 
 /-- **Halting is invariant under `fillZero`.** -/
 theorem halts_fillZero (c : Config) (out : String) (e : Nat) :
