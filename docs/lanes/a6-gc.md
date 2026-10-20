@@ -69,6 +69,13 @@
   `entries_global` empty, `caml_memprof_th_ctx_iter_hook` =
   `th_ctx_iter_default`, tail jumps to `call_on_entry_array` and the main
   context's `entry_array_oldify_young_roots`, also empty.
+- `MemprofQuiet.call`: that quiet path, entry to return, as six `Stage`
+  pieces (head, hook `jalr` via `indirect_summary`, two `jr` tail-jump blocks,
+  the entry array, the return). The heartbeat budget is per declaration: a
+  long composed proof times out at `whnf` with no single slow step; split it
+  into per-piece lemmas over one named intermediate-state structure. Eval
+  lemmas (`(evalBlocks …).regs = …` by `simp only [evalBlocks, evalBlock, …]`)
+  replace `show … from` defeq checks, which time out.
 - G2: `SlotDone R copies copies' pl` (`OldifySlot.lean`): one
   `caml_oldify_one(v, p)` call at the slot level, `*p = relocation copies' v`
   over the published forwarding table, which grows and keeps its view.

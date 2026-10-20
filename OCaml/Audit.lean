@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.FinalQuiet
+import OCaml.Vm.Gc.MemprofQuiet
 import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
@@ -709,6 +710,17 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.StackScan.iteration
 #print axioms OCaml.Vm.Gc.StackScan.loop
 #print axioms OCaml.Vm.Gc.memAfter_eq
+#print axioms OCaml.Vm.Gc.MemprofQuiet.call
+#print axioms OCaml.Vm.Gc.MemprofQuiet.stage_head
+#print axioms OCaml.Vm.Gc.MemprofQuiet.stage_hook
+#print axioms OCaml.Vm.Gc.MemprofQuiet.stage_iter
+#print axioms OCaml.Vm.Gc.MemprofQuiet.stage_onArray
+#print axioms OCaml.Vm.Gc.MemprofQuiet.stage_array
+#print axioms OCaml.Vm.Gc.MemprofQuiet.stage_ret
+#print axioms OCaml.Vm.Gc.MemprofQuiet.head_access
+#print axioms OCaml.Vm.Gc.MemprofQuiet.array_access
+#print axioms OCaml.Vm.Gc.MemprofQuiet.bankLog_split
+#print axioms OCaml.Vm.Gc.MemprofQuiet.jump_facts
 #print axioms OCaml.Vm.Gc.FinalQuiet.call
 #print axioms OCaml.Vm.Gc.FinalQuiet.entry_access
 #print axioms OCaml.Vm.Gc.FinalQuiet.last_access
