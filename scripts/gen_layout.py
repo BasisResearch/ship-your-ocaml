@@ -179,7 +179,7 @@ def main():
     need += ["named_value_table", "caml_named_value", "caml_fatal_uncaught_exception",
              "caml_memprof_set_suspended", "caml_memprof_renew_minor_sample", "__eqdf2",
              "caml_update_young_limit", "caml_memprof_young_trigger", "lambda", "local",
-             "caml_format_exception", "caml_callback_exn"]
+             "caml_format_exception", "caml_callback_exn", "caml_abort_on_uncaught_exn", "fprintf"]
     need += ["bf_small_fl", "bf_small_map", "bf_large_tree", "bf_large_least",
              "caml_fl_cur_wsz"]
     for n in need:

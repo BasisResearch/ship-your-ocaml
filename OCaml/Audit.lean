@@ -6029,3 +6029,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.OutListWalk.walk_listed_run
 #print axioms OCaml.Vm.Sim.OutListWalk.walk_listed
 #print axioms OCaml.Vm.Sim.OutListWalk.walk_loop
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.AbortOff.transport
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatalFormat_rodata
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatalFormat_at
+#print axioms OCaml.Vm.Boot.Startup.StatFreedL.live_byte
+#print axioms OCaml.Vm.Boot.Startup.StatFreedL.low_byte
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_exit_call
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.FatalPre.domain
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.msg_apart
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_to_exit

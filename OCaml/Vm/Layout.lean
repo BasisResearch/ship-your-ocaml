@@ -310,6 +310,10 @@ def sym_local : Nat := 0x800648d8
 def sym_caml_format_exception : Nat := 0x8000dbec
 /-- `caml_callback_exn` -/
 def sym_caml_callback_exn : Nat := 0x800212b8
+/-- `caml_abort_on_uncaught_exn` -/
+def sym_caml_abort_on_uncaught_exn : Nat := 0x80064b34
+/-- `fprintf` -/
+def sym_fprintf : Nat := 0x8003ee20
 /-- `bf_small_fl` -/
 def sym_bf_small_fl : Nat := 0x800662d8
 /-- `bf_small_map` -/

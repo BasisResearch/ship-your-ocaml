@@ -55,19 +55,32 @@ theorem StderrAt.transport {m m' : Mem} {imp err : BitVec 64} (h : StderrAt m im
   · rw [ConsoleWrite.read8_same (m := m) fun i hi => same _ (Or.inr ⟨by omega, by omega⟩)]
     exact h.stderrWord
 
+/-- The bytes of `caml_abort_on_uncaught_exn`'s word. -/
+def AbortBytes (a : Nat) : Prop :=
+  Layout.sym_caml_abort_on_uncaught_exn ≤ a ∧ a < Layout.sym_caml_abort_on_uncaught_exn + 8
+
+/-- `caml_abort_on_uncaught_exn` is zero (no abort after the report). -/
+def AbortOff (m : Mem) : Prop := bytesVal .lw (read8 m Layout.sym_caml_abort_on_uncaught_exn) = 0#64
+
+theorem AbortOff.transport {m m' : Mem} (h : AbortOff m)
+    (same : ∀ a, AbortBytes a → (m'[a]?).getD 0 = (m[a]?).getD 0) : AbortOff m' := by
+  unfold AbortOff at h ⊢
+  rw [ConsoleWrite.read8_same (m := m) fun i hi => same _ ⟨by omega, by omega⟩]
+  exact h
+
 /-- What `caml_callback_exn` keeps, from its call to its return to `0x8000e004`:
-the callee-saved registers, readiness for some live list that still holds the
-message and the domain record, the message and `stderr`, and the console up
-to what the callback printed. -/
+the callee-saved registers, readiness with the message block first and the
+domain record among the other live blocks, the message, `stderr` and the abort flag, and
+the console up to what the callback printed. -/
 structure CallbackReturned (live : List (Nat × Nat)) (capacity : Nat) (sp ra res dom imp : BitVec 64) (len : Nat)
     (before : List (Nat × Nat)) (c e : Config) : Prop where
-  ready : RuntimeReadyL imageLive live capacity (sp + 18446744073709551568#64) ra e
+  ready : RuntimeReadyL imageLive ((res.toNat, len + 1) :: live) capacity (sp + 18446744073709551568#64) ra e
   pc : PCAt 0x8000e004#64 e
   callee : ∀ k, (k = 8 ∨ k = 9 ∨ (18 ≤ k ∧ k ≤ 27)) → gprGet e.σ k = gprGet c.σ k
-  msgLive : (res.toNat, len + 1) ∈ live
   domainLive : ∀ q n, (q, n) ∈ before → q ≤ (dom + 232#64).toNat → (dom + 232#64).toNat + 16 ≤ q + n → (q, n) ∈ live
   message : ∀ a, res.toNat ≤ a → a ≤ res.toNat + len → (e.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
   stderr : ∀ a, StderrBytes imp a → (e.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
+  abortKept : ∀ a, AbortBytes a → (e.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
   output : ∃ out, Vsa.Machine.output e.σ = Vsa.Machine.output c.σ ++ out
 
 /-- **Named obligation: `caml_callback_exn(*at_exit, Val_unit)` returns.**
@@ -79,26 +92,28 @@ this covers both outcomes. -/
 structure AtExitCallback (live : List (Nat × Nat)) (capacity : Nat) (sp clo res dom imp : BitVec 64) (len : Nat) :
     Prop where
   returns : ∀ c, PCAt 0x800212b8#64 c →
-    RuntimeReadyL imageLive live capacity (sp + 18446744073709551568#64) 0x8000e004#64 c →
+    RuntimeReadyL imageLive ((res.toNat, len + 1) :: live) capacity (sp + 18446744073709551568#64) 0x8000e004#64 c →
     gprGet c.σ 10 = some clo → gprGet c.σ 11 = some 1#64 →
     ∃ e live' capacity' ra, Steps c e ∧ CallbackReturned live' capacity' sp ra res dom imp len live c e
 
-/-- At `0x8000e004`, after `do_at_exit` (either branch). -/
+/-- At `0x8000e004`, after `do_at_exit` (either branch); the message block
+heads the live list. -/
 structure AtReport (live : List (Nat × Nat)) (capacity : Nat) (sp ra res dom active pos imp err : BitVec 64)
     (name : List (BitVec 8)) (before e : Config) : Prop where
-  ready : RuntimeReadyL imageLive live capacity (sp + 18446744073709551568#64) ra e
+  ready : RuntimeReadyL imageLive ((res.toNat, name.length + 1) :: live) capacity (sp + 18446744073709551568#64)
+    ra e
   pc : PCAt 0x8000e004#64 e
   stateReg : gprGet e.σ 8 = some 0x80064d08#64
   posReg : gprGet e.σ 9 = some pos
   msgReg : gprGet e.σ 18 = some res
   activeReg : gprGet e.σ 19 = some active
   callee : ∀ k, 20 ≤ k → k ≤ 27 → gprGet e.σ k = gprGet before.σ k
-  msgLive : (res.toNat, name.length + 1) ∈ live
   /-- the domain record is a live block -/
   domainBlock : ∃ q n, (q, n) ∈ live ∧ heapStart ≤ q ∧ q + n ≤ heapEnd ∧ q ≤ (dom + 232#64).toNat ∧
     (dom + 232#64).toNat + 16 ≤ q + n
   message : MessageAt e.σ.mem res name
   stderr : StderrAt e.σ.mem imp err
+  abortOff : AbortOff e.σ.mem
   output : ∃ out, Vsa.Machine.output e.σ = Vsa.Machine.output before.σ ++ out
 
 /-- **`if (at_exit != NULL) caml_callback_exn(*at_exit, Val_unit)`**, both
@@ -108,7 +123,7 @@ theorem fatal_doAtExit {H : List (Nat × Nat)} {capacity : Nat} {sp res dom acti
     {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} {r d : Config}
     (looked : AtExitLooked H capacity sp res dom active pos name.length named chains r x d)
     (table : TableShape d.σ.mem pl named chains)
-    (message : MessageAt r.σ.mem res name) (stderr : StderrAt r.σ.mem imp err)
+    (message : MessageAt r.σ.mem res name) (stderr : StderrAt r.σ.mem imp err) (abortOff : AbortOff r.σ.mem)
     (msgHigh : res.toNat + (name.length + 1) ≤ heapEnd)
     (msgApart : ∀ a, res.toNat ≤ a → a ≤ res.toNat + name.length → FieldsApart dom a)
     (stderrApart : ∀ a, StderrBytes imp a → FieldsApart dom a)
@@ -116,7 +131,7 @@ theorem fatal_doAtExit {H : List (Nat × Nat)} {capacity : Nat} {sp res dom acti
       (dom + 232#64).toNat + 16 ≤ q + n)
     (nodeWindows : ∀ b, b < 13 → ∀ e ∈ chains b, ReadWindow e.1 8)
     (callback : ∀ v clo, named.lookup "Pervasives.do_at_exit" = some v → valWord pl v = some clo →
-      AtExitCallback ((res.toNat, name.length + 1) :: H) capacity sp clo res dom imp name.length) :
+      AtExitCallback H capacity sp clo res dom imp name.length) :
     ∃ e live capacity' ra, Steps d e ∧ AtReport live capacity' sp ra res dom active pos imp err name r e := by
   have he : heapEnd < 2 ^ 64 := by decide
   have fromR (a : Nat) (ha : a < heapEnd) (apart : FieldsApart dom a) :
@@ -132,12 +147,15 @@ theorem fatal_doAtExit {H : List (Nat × Nat)} {capacity : Nat} {sp res dom acti
     omega
   have errD : StderrAt d.σ.mem imp err :=
     stderr.transport fun a ha => fromR a (errLow a ha) (stderrApart a ha)
+  obtain ⟨q, n, member, qlo, qhi, qa, aq⟩ := domainBlock
+  have abortD : AbortOff d.σ.mem := abortOff.transport fun a ha => fromR a
+    (by unfold AbortBytes Layout.sym_caml_abort_on_uncaught_exn at ha; unfold heapEnd; omega)
+    (Or.inl (by unfold AbortBytes Layout.sym_caml_abort_on_uncaught_exn at ha; unfold heapStart at qlo; omega))
   have leafD := looked.ready.toLeafInput
   have r1 := regsAt_of leafD.raReg
   have r10 := regsAt_of looked.result
   have l0 : LeafInput (regsAt d 1) d := by rw [r1]; exact leafD
   have regs0 : GHolds d.σ [(10, regsAt d 10)] := by rw [r10]; exact ⟨looked.result, trivial⟩
-  obtain ⟨q, n, member, qlo, qhi, qa, aq⟩ := domainBlock
   by_cases hx : x = 0#64
   · -- nothing registered: `beqz a0` to the report
     obtain ⟨e, run, p⟩ := (atExitNone_fast d (regsAt d) l0 regs0 (by rw [r10, hx]; decide)).run d ⟨looked.pc, rfl⟩
@@ -146,7 +164,7 @@ theorem fatal_doAtExit {H : List (Nat × Nat)} {capacity : Nat} {sp res dom acti
       p.gpr_frame (by decide) n lo hi (by simp)
     have leafE : LeafInput 0x8000dff4#64 e :=
       ⟨p.good, p.image, p.minstret, (k 1 (by decide) (by decide)).trans leafD.raReg, by decide, p.tick⟩
-    refine ⟨e, (res.toNat, name.length + 1) :: H, capacity, 0x8000dff4#64, run, ?_⟩
+    refine ⟨e, H, capacity, 0x8000dff4#64, run, ?_⟩
     exact
       { ready := ready_transport_framed looked.ready leafE
           (looked.ready.library.carry p.kept (p.frame _ (fun n _ => gprReg_ne_htif n) (by decide)))
@@ -158,10 +176,10 @@ theorem fatal_doAtExit {H : List (Nat × Nat)} {capacity : Nat} {sp res dom acti
         msgReg := (k 18 (by decide) (by decide)).trans looked.msgReg
         activeReg := (k 19 (by decide) (by decide)).trans looked.activeReg
         callee := fun j lo hi => (k j (by omega) (by omega)).trans (looked.callee j lo hi)
-        msgLive := List.mem_cons_self
-        domainBlock := ⟨q, n, List.mem_cons_of_mem _ member, qlo, qhi, qa, aq⟩
+        domainBlock := ⟨q, n, member, qlo, qhi, qa, aq⟩
         message := msgD.transport fun a _ _ => by rw [me]
         stderr := errD.transport fun a _ => by rw [me]
+        abortOff := abortD.transport fun a _ => by rw [me]
         output := ⟨"", by
           rw [String.append_empty, ← looked.output]; simp only [Vsa.Machine.output]; rw [p.output]⟩ }
   · -- the callback: `ld a0, 0(a0); li a1, 1; call caml_callback_exn`
@@ -224,10 +242,10 @@ theorem fatal_doAtExit {H : List (Nat × Nat)} {capacity : Nat} {sp res dom acti
         msgReg := (saved 18 (by decide)).trans looked.msgReg
         activeReg := (saved 19 (by decide)).trans looked.activeReg
         callee := fun j lo hi => (saved j (by omega)).trans (looked.callee j lo hi)
-        msgLive := cb.msgLive
-        domainBlock := ⟨q, n, cb.domainLive q n (List.mem_cons_of_mem _ member) qa aq, qlo, qhi, qa, aq⟩
+        domainBlock := ⟨q, n, cb.domainLive q n member qa aq, qlo, qhi, qa, aq⟩
         message := msgD.transport fun a lo hi => by rw [cb.message a lo hi, m3]
         stderr := errD.transport fun a ha => by rw [cb.stderr a ha, m3]
+        abortOff := abortD.transport fun a ha => by rw [cb.abortKept a ha, m3]
         output := by
           obtain ⟨out, h⟩ := cb.output
           refine ⟨out, ?_⟩
@@ -239,7 +257,8 @@ theorem fatal_doAtExit {H : List (Nat × Nat)} {capacity : Nat} {sp res dom acti
 returning to `0x8000e02c`, with the backtrace fields restored. -/
 structure AtFprintf (live : List (Nat × Nat)) (capacity : Nat) (sp res dom active pos err : BitVec 64)
     (name : List (BitVec 8)) (before g : Config) : Prop where
-  ready : RuntimeReadyL imageLive live capacity (sp + 18446744073709551568#64) 0x8000e02c#64 g
+  ready : RuntimeReadyL imageLive ((res.toNat, name.length + 1) :: live) capacity (sp + 18446744073709551568#64)
+    0x8000e02c#64 g
   pc : PCAt 0x8003ee20#64 g
   stream : gprGet g.σ 10 = some err
   format : gprGet g.σ 11 = some 0x80056470#64
@@ -247,12 +266,12 @@ structure AtFprintf (live : List (Nat × Nat)) (capacity : Nat) (sp res dom acti
   stateReg : gprGet g.σ 8 = some 0x80064d08#64
   msgReg : gprGet g.σ 18 = some res
   callee : ∀ k, 20 ≤ k → k ≤ 27 → gprGet g.σ k = gprGet before.σ k
-  msgLive : (res.toNat, name.length + 1) ∈ live
   domainBlock : ∃ q n, (q, n) ∈ live ∧ heapStart ≤ q ∧ q + n ≤ heapEnd ∧ q ≤ (dom + 232#64).toNat ∧
     (dom + 232#64).toNat + 16 ≤ q + n
   message : MessageAt g.σ.mem res name
   activeRestored : bytesT g.σ.mem (dom + 232#64).toNat 8 = active
   posRestored : bytesT g.σ.mem (dom + 240#64).toNat 8 = pos
+  abortOff : AbortOff g.σ.mem
   output : ∃ out, Vsa.Machine.output g.σ = Vsa.Machine.output before.σ ++ out
 
 /-- **The restore and the call of `fprintf`**: `backtrace_active` and
@@ -343,7 +362,7 @@ theorem fatal_report {live : List (Nat × Nat)} {capacity : Nat} {sp ra res dom 
         (fun i hi => keep _ (low _ (by unfold Layout.sym_pool; omega)))
         (fun a ha => keep a (by
           unfold FieldsApart
-          rcases allocator_payload_outside member qlo ha with h | h <;> omega))
+          rcases allocator_payload_outside (List.mem_cons_of_mem _ member) qlo ha with h | h <;> omega))
         (gholds_lookup (n := 2) _ p2.regs rfl)
       pc := by have := p2.pc; rw [report_call_target] at this; exact this
       stream := gholds_lookup (n := 10) _ p2.regs rfl
@@ -353,13 +372,14 @@ theorem fatal_report {live : List (Nat × Nat)} {capacity : Nat} {sp ra res dom 
       msgReg := gholds_lookup (n := 18) _ p2.regs rfl
       callee := fun k lo hi => (p2.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)).trans
         ((k1 k (by omega) (by omega) (by simp; omega)).trans (at_.callee k lo hi))
-      msgLive := at_.msgLive
       domainBlock := ⟨q, n, member, qlo, qhi, qa, aq⟩
       message := at_.message.transport fun a lo hi => keep a (msgApart a lo hi)
       activeRestored := by
         rw [mg]
         exact word_writeLog_at _ _ 0 _ _ rfl (by simp only [List.drop, OutLRange, d240]; exact ⟨Or.inl (by omega), trivial⟩)
       posRestored := by rw [mg]; exact word_writeLog_at _ _ 1 _ _ rfl trivial
+      abortOff := at_.abortOff.transport fun a ha => keep a (low a (by
+        unfold AbortBytes Layout.sym_caml_abort_on_uncaught_exn at ha; omega))
       output := by
         obtain ⟨out, h⟩ := at_.output
         refine ⟨out, ?_⟩
