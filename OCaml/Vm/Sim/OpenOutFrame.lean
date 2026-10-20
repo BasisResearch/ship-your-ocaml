@@ -68,13 +68,13 @@ theorem covered_kept (custom : Gc.CustomMemCall Ready state)
       omega
   · unfold Gc.domainAddr; rw [h.domain]; unfold Layout.off_young_ptr; omega
 
-/-- **An open record is kept outside its link words**: the opening rewrites
-only the old head's `prev` word (bytes 56–63). -/
+/-- **An open record is kept**, except the old head's `prev` word (bytes
+56–63), which the opening rewrites. -/
 theorem record_kept (custom : Gc.CustomMemCall Ready state)
     (o : OpenedOut live Ready state k H cap' charge sp ra s0 s1 s2 v head c d)
     (heap : Gc.LibHeapAt H cap chs c) (h : OutInput live H cap' charge sp ra s0 s1 s2 v head c)
     (N : OutNursery H chs c) {r x : Nat} (hr : r ∈ chs) (lo : r ≤ x) (hi : x < r + Gc.chanRecordBytes)
-    (link : x < r + 48 ∨ r + 64 ≤ x) :
+    (link : r = head.toNat → x < r + 56 ∨ r + 64 ≤ x) :
     (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
   obtain ⟨b, hb, blo, bhi⟩ := heap.records r hr
   dsimp only at blo bhi
@@ -103,7 +103,7 @@ theorem record_kept (custom : Gc.CustomMemCall Ready state)
       dsimp only at f; unfold recordBytes at f ⊢; omega
     · have mh := head_mem heap.channels h.headWord hz
       by_cases same : r = head.toNat
-      · omega
+      · have := link same; omega
       · have a := heap.recordsDisjoint r hr _ mh same
         omega
   · omega

@@ -45,6 +45,6 @@ theorem whileMin_ccallReturns {op : Opcode} {ra : BitVec 64} {k : Nat}
     (hop : op = .C_CALL1 ∨ op = .C_CALL2 ∨ op = .C_CALL3 ∨ op = .C_CALL4 ∨ op = .C_CALL5)
     (each : ∀ name ∈ whileMinCalls op, PrimReturnsAt Gc.f1Layout whileMin op ra k name) :
     CcallReturns Gc.f1Layout whileMin op ra k :=
-  .of_names each fun _ _ _ _ _ _ _ _ _ _ _ _ reach ready _ => whileMin_call_named hop reach ready
+  .of_names (fun name h => (each name h).toR) fun _ _ _ _ _ _ _ _ _ _ _ _ reach ready _ => whileMin_call_named hop reach ready
 
 end OCaml.Vm.Sim

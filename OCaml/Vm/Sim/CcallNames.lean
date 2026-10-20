@@ -6,7 +6,8 @@ import OCaml.Vm.Sim.CcallRows
 `CcallReturns L P op ra k` asks, at every reachable `C_CALLk` site, for the
 callee's machine summary of whichever F1 primitive the site names. A
 primitive's summary is stated once, per name, as `PrimReturnsAt` (exactly the
-`CcallReturns.callee` shape; a1-prims' adapters produce it). `of_names`
+`CcallReturns.callee` shape without the successor's reachability; a1-prims'
+adapters produce it, and `PrimReturnsAtR` adds `CcallSucc`). `of_names`
 assembles a list of them, given that every reached call names one of the list
 (a per-program checked fact, or `primsF1` itself via `GoodF1`: `of_primsF1`).
 -/
@@ -25,21 +26,38 @@ def PrimReturnsAt (L : OCaml.Layout) (P : Prog) (op : Opcode) (ra : BitVec 64) (
     ∃ result, CcallCallee ra (s.accu :: s.stack.take k) L P s pl cp sp high (domainAt c) entry env
       name v result heap world
 
+/-- **A primitive's summary that may read its successor's reachability**
+(`CcallSucc`): a primitive that changes the world reads `GoodF1`'s facts about
+the state after the call. Every `PrimReturnsAt` is one (`PrimReturnsAt.toR`). -/
+def PrimReturnsAtR (L : OCaml.Layout) (P : Prog) (op : Opcode) (ra : BitVec 64) (k : Nat)
+    (name : String) : Prop :=
+  ∀ s c pl cp sp high table entry value env index v heap world, Reach P s →
+    CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
+    primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .ok v heap world →
+    heap.words ≤ L.budget.heapWords → CcallSucc P heap world →
+    ∃ result, CcallCallee ra (s.accu :: s.stack.take k) L P s pl cp sp high (domainAt c) entry env
+      name v result heap world
+
+theorem PrimReturnsAt.toR {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
+    {name : String} (h : PrimReturnsAt L P op ra k name) : PrimReturnsAtR L P op ra k name :=
+  fun s c pl cp sp high table entry value env index v heap world reach ready ok words _ =>
+    h s c pl cp sp high table entry value env index v heap world reach ready ok words
+
 /-- **Assembly**: every reached call names a summarized primitive. -/
 theorem CcallReturns.of_names {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
-    {names : List String} (each : ∀ name ∈ names, PrimReturnsAt L P op ra k name)
+    {names : List String} (each : ∀ name ∈ names, PrimReturnsAtR L P op ra k name)
     (reached : ∀ s c pl cp sp high table entry value env index name, Reach P s →
       CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
       name ∈ primsF1 → name ∈ names) :
     CcallReturns L P op ra k :=
-  ⟨fun s c pl cp sp high table entry value env index name v heap world reach ready member ok words =>
+  ⟨fun s c pl cp sp high table entry value env index name v heap world reach ready member ok words succ =>
     each name (reached s c pl cp sp high table entry value env index name reach ready member)
-      s c pl cp sp high table entry value env index v heap world reach ready ok words⟩
+      s c pl cp sp high table entry value env index v heap world reach ready ok words succ⟩
 
 /-- **The general instance**: summaries for all F1 primitives give the C_CALL
 returns of every program (no per-program premise). -/
 theorem CcallReturns.of_primsF1 {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
-    (each : ∀ name ∈ primsF1, PrimReturnsAt L P op ra k name) : CcallReturns L P op ra k :=
+    (each : ∀ name ∈ primsF1, PrimReturnsAtR L P op ra k name) : CcallReturns L P op ra k :=
   .of_names each fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ member => member
 
 theorem _root_.OCaml.Bytecode.Opcode.toNat_lt (o : Opcode) : o.toNat < 149 := by cases o <;> decide

@@ -25,6 +25,9 @@ import OCaml.Vm.Sim.PrimExecutableNameReturns
 import OCaml.Vm.Sim.OpenGeometry
 import OCaml.Vm.Sim.OpenPayload
 import OCaml.Vm.Sim.OpenOutFrame
+import OCaml.Vm.Sim.OpenOutObserved
+import OCaml.Vm.Sim.OpenOutPlaced
+import OCaml.Vm.Sim.OpenOutGeometry
 import OCaml.Vm.Sim.PrimOpenOutReturns
 import OCaml.Vm.Sim.PrimGetArgvReturns
 import OCaml.Vm.Sim.AccRows
@@ -5945,6 +5948,22 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.openChan_bound
 #print axioms OCaml.Vm.Primitives.openChan_live
 #print axioms OCaml.Vm.Sim.open_out_entry
+#print axioms OCaml.Vm.Sim.PrimReturnsAt.toR
+#print axioms OCaml.Vm.Sim.open_out_console
+#print axioms OCaml.Vm.Sim.open_out_observed
+#print axioms OCaml.Vm.Sim.open_out_placed
+#print axioms OCaml.Vm.Sim.open_out_geometry
+#print axioms OCaml.Vm.Sim.word_of_kept
+#print axioms OCaml.Vm.Gc.OpenChannelsLinked.list
+#print axioms OCaml.Vm.Sim.fresh_outW
+#print axioms OCaml.Vm.Sim.fresh_outW_rev
+#print axioms OCaml.Vm.Sim.codeBase_eq
+#print axioms OCaml.Vm.Sim.atomBase_eq
+#print axioms OCaml.Vm.Sim.high_eq
+#print axioms OCaml.Vm.Sim.payloadStatics_open
+#print axioms OCaml.Vm.Sim.block_of_outside_minor
+#print axioms OCaml.Vm.Primitives.openChan_ok
+#print axioms OCaml.Vm.Primitives.openChan_stream
 #print axioms OCaml.Vm.Sim.opened_cases
 #print axioms OCaml.Vm.Sim.StackGeometry.openChan
 #print axioms OCaml.Vm.Gc.NurseryGeometry.openChan

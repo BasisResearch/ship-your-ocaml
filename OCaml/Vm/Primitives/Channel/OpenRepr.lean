@@ -143,4 +143,49 @@ theorem ObjAt.openChan {c : Config} {pl : Place} {cp : ChanPlace} {a rec l : Nat
     subst hj
     exact ChanPlace.put_other cp fun e => fresh l (e ▸ ho)
 
+/-- **A successful `openChan`**: the custom block's fresh location, the heap
+with it, and the world with the new channel (its offset as the OS has it). -/
+theorem openChan_ok {h h' : Heap} {w w' : World} {fd : Int} {isOut : Bool} {v : Val}
+    (ok : openChan h w fd isOut = .ok v h' w') :
+    v = .ptr (h.alloc (.channel w.chans.length)).2 0 ∧ h' = (h.alloc (.channel w.chans.length)).1 ∧
+      ∃ off, w' = { w with chans := w.chans ++ [⟨fd, isOut, [], [], 0, off⟩] } := by
+  unfold openChan at ok
+  dsimp only at ok
+  split at ok
+  · cases ok
+  split at ok
+  · cases ok
+  split at ok
+  · cases ok
+  cases ok
+  exact ⟨rfl, rfl, _, rfl⟩
+
+/-- **`openChan` on a stream descriptor**: the new channel's offset is `-1`
+(as `lseek` on a console returns). -/
+theorem openChan_stream {h h' : Heap} {w w' : World} {fd : Int} {isOut : Bool} {v : Val}
+    {st : TCB.Os.Stream} (ok : openChan h w fd isOut = .ok v h' w')
+    (stream : TCB.Os.lookupFd w.os fd.toNat = some (.stream st)) :
+    w' = { w with chans := w.chans ++ [⟨fd, isOut, [], [], 0, -1⟩] } := by
+  unfold openChan at ok
+  dsimp only at ok
+  split at ok
+  · cases ok
+  split at ok
+  · cases ok
+  split at ok
+  · cases ok
+  simp only [stream] at ok
+  cases ok
+  rfl
+
+/-- **The list after `link_channel`**: the new record heads the old list, whose
+`next` words are kept. -/
+theorem _root_.OCaml.Vm.Gc.OpenChannelsLinked.list {m m' : Std.ExtHashMap Nat (BitVec 8)} {a : Nat}
+    {chs : List Nat} (h : Gc.OpenChannelList m chs) (link : Gc.OpenChannelsLinked m m' a) (small : a < 2 ^ 64)
+    (kept : ∀ b ∈ chs, bytesT m' (b + Gc.chanOffNext) 8 = bytesT m (b + Gc.chanOffNext) 8) :
+    Gc.OpenChannelList m' (a :: chs) := by
+  unfold Gc.OpenChannelList at *
+  rw [link.head, BitVec.toNat_ofNat, Nat.mod_eq_of_lt small]
+  exact .cons link.nonzero (by rw [link.next]; exact Gc.OpenChannels.congr h kept)
+
 end OCaml.Vm.Primitives

@@ -5,15 +5,17 @@ import OCaml.Vm.Sim.CcallNames
 import OCaml.Vm.Gc.ImageLibrary
 import OCaml.Vm.Primitives.Channel.MlOpen
 import OCaml.Vm.Primitives.Channel.OpenRepr
+import OCaml.Vm.Gc.F1Runtime
+import OCaml.RefinementF1
 
 /-!
 # `caml_ml_open_descriptor_out` at a C_CALL site
 
 The runtime side is the named premise `OpenOutRuntime L` (lane a6-gc, who
 discharges it for `Gc.f1Layout` with `CustomMemCall`): the custom
-allocation's readiness, the agreed major-slice open premise (`budget`), newlib's
-heap invariant and the console statics at every runtime config, and the
-runtime after the opening (`after`).
+allocation's readiness, the agreed major-slice open premise (`budget`), the
+cut's pins at every runtime config (`F1Pins`), and the runtime after the
+opening (`after`).
 
 `open_out_entry` turns the C_CALL entry into `ml_open_descriptor_out`'s
 premises: `OutInput` from `LibHeapAt` (`out_input`), `OutNursery`
@@ -38,10 +40,9 @@ structure OpenOutRuntime (L : OCaml.Layout) where
   allocation is quiet. False after the fifth since the cut, when
   `caml_alloc_custom_mem` requests a major slice (G2). -/
   budget : ∀ c, L.runtimeOk c → ∃ k, Ready (k + 1) c
-  /-- newlib's heap invariant (F1: `F1Pins.libHeap`) -/
-  heap : ∀ c, L.runtimeOk c → Gc.LibHeap c
-  /-- the console statics (F1: `F1Pins.console`) -/
-  console : ∀ c, L.runtimeOk c → ConsoleWrite.ConsoleRuntime c
+  /-- the cut's pins: newlib's heap, the console statics, the code, stack,
+  primitive-table and atom-table words (F1: `RuntimeOk.freeListShape`) -/
+  pins : ∀ c, L.runtimeOk c → Gc.F1Pins c
   /-- the runtime after the opening, from the heap invariant at the entry and
   everything the primitive's summary exports (the call's whole
   `CustomMemReturned` at its site, `Ready k`) -/
@@ -70,7 +71,7 @@ theorem open_out_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
       Channel.OutNursery H (Gc.placedChannels cp s.world.chans.length) c ∧ rt.Ready (k + 1) c ∧
       gpr c 2 = some (BitVec.ofNat 64 N) := by
   have input := setup.input
-  obtain ⟨H, cap, chs, heap⟩ := rt.heap c input.runtime
+  obtain ⟨H, cap, chs, heap⟩ := (rt.pins c input.runtime).libHeap
   have ng := setup.geometry.nursery
   have same : chs = Gc.placedChannels cp s.world.chans.length :=
     Gc.OpenChannels.unique heap.channels ng.channelsListed
@@ -94,7 +95,24 @@ theorem open_out_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
   have lowM := ng.nurseryLow
   refine ⟨H, cap, N, k, s0, s1, s2, heap,
     Channel.out_input heap (Nat.lt_of_le_of_lt (Gc.placedChannels_length _ _) bound) input.toLeafInput platform
-      (roR_of_gp input.loop.gp).1 e.stack frame h0 h1 h2 value (rt.console c input.runtime) console,
+      (roR_of_gp input.loop.gp).1 e.stack frame h0 h1 h2 value (rt.pins c input.runtime).console console,
     Channel.out_nursery heap (by omega) e.youngAligned (by omega) ng.nurseryHigh, ready, e.stack⟩
+
+/-- **The opened descriptor is a console stream**: the new output channel is
+open (`openChan_live`: `fd ≥ 0`) in the reachable successor (`CcallSucc`), so
+`GoodF1`'s `ConsoleChannels` makes it descriptor 1 or 2 on a non-`stdin`
+stream. -/
+theorem open_out_console {P : Prog} {s : St} {heap : Heap} {world : World} {v : Val} {fd : Int}
+    (consoles : OCaml.ConsoleChannels P) (succ : CcallSucc P heap world)
+    (ok : openChan s.heap s.world fd true = .ok v heap world) :
+    (fd = 1 ∨ fd = 2) ∧ ∃ st, TCB.Os.lookupFd s.world.os fd.toNat = some (.stream st) ∧ st ≠ .stdin := by
+  obtain ⟨s', reach, -, hw⟩ := succ
+  obtain ⟨live, -⟩ := openChan_live ok
+  obtain ⟨-, -, off, hw'⟩ := openChan_ok ok
+  have get : s'.world.chans[s.world.chans.length]? = some ⟨fd, true, [], [], 0, off⟩ := by
+    rw [hw, hw']; simp
+  obtain ⟨one, -, st, stream, notIn⟩ := consoles s' reach _ _ get rfl (by dsimp only; omega)
+  rw [hw, hw'] at stream
+  exact ⟨one, st, stream, notIn⟩
 
 end OCaml.Vm.Sim

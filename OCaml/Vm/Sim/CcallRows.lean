@@ -103,6 +103,12 @@ theorem CcallReady.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {
 /-- `Caml_state`'s address at a configuration. -/
 abbrev domainAt (c : Config) : Nat := (word c Layout.sym_Caml_state).toNat
 
+/-- The C_CALL's successor is reachable, with the primitive's heap and world
+(what a primitive that changes the world reads off `GoodF1`'s reachable-state
+facts, such as `ConsoleChannels` for a new channel). -/
+def CcallSucc (P : Prog) (heap : Heap) (world : World) : Prop :=
+  ∃ s', Reach P s' ∧ s'.heap = heap ∧ s'.world = world
+
 /-- **Returning F1 primitives at a `C_CALLk` site** (named obligation, lane
 a1-prims): for every call-site contract and successful primitive result, the
 callee's machine summary. `k` stack words are passed after the accumulator;
@@ -111,7 +117,7 @@ structure CcallReturns (L : OCaml.Layout) (P : Prog) (op : Opcode) (ra : BitVec 
   callee : ∀ s c pl cp sp high table entry value env index name v heap world, Reach P s →
     CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
     name ∈ primsF1 → primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .ok v heap world →
-    heap.words ≤ L.budget.heapWords →
+    heap.words ≤ L.budget.heapWords → CcallSucc P heap world →
     ∃ result, CcallCallee ra (s.accu :: s.stack.take k) L P s pl cp sp high (domainAt c) entry env
       name v result heap world
 
@@ -194,8 +200,14 @@ theorem ccall_row_of {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64
             simp only [opt, cCall, prim, primF1, member, if_true, result] at step0
             cases step0
             exact budget
+          have succ : CcallSucc P heap world := by
+            have step0 := step
+            rw [semantics, if_neg neg, hp] at step0
+            simp only [opt, cCall, prim, primF1, member, if_true, result] at step0
+            cases step0
+            exact ⟨_, reach_next reach hd step, rfl, rfl⟩
           obtain ⟨res, callee⟩ := returns.callee s c pl cp sp high _ entry value env w name v heap world
-            reach ready member result words
+            reach ready member result words succ
           have hs := ready.stack.1
           have same : high = high0 := ready.stackHigh.symm.trans (rf.stackHigh c ready.runtime)
           subst same

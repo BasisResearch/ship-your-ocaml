@@ -644,6 +644,11 @@ structure OpenedOut (live : Nat → Prop) (Ready : Nat → Config → Prop) (sta
   channel : bytesT d.σ.mem (value.toNat + 8) 8 = opening.record
   ops : bytesT d.σ.mem value.toNat 8 = 2147891728#64
   ready : Ready k d
+  /-- the custom block lies just below the entry's young pointer, which drops by 24 -/
+  block : value.toNat + 16 = (runtimeFields c).youngPtr
+  youngPtr : (runtimeFields d).youngPtr = (runtimeFields c).youngPtr - 24
+  youngLimit : (runtimeFields d).youngLimit = (runtimeFields c).youngLimit
+  domain : word d Layout.sym_Caml_state = word c Layout.sym_Caml_state
   /-- **The primitive's memory frame**: every byte outside the runtime's
   custom state, newlib's free space, the opening's windows, the primitive's
   frame, the 24-byte block and the `young_ptr` word reads as at the entry. -/
@@ -879,6 +884,26 @@ theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat ×
     apply bytesT_keep
     intro j hj
     exact doneOut _ (Or.inl (by unfold Layout.sym_Caml_state; omega))
+  have domainD : word d Layout.sym_Caml_state = word c Layout.sym_Caml_state := by
+    rw [domD, C.domain, domF]
+  have fieldD (off : Nat) (b : off + 8 ≤ Layout.domainStateBytes) :
+      word d ((word d Layout.sym_Caml_state).toNat + off) = word allocated ((word allocated Layout.sym_Caml_state).toNat + off) := by
+    have dc : (word allocated Layout.sym_Caml_state).toNat = Boot.WhileMinRuntime.domain := by
+      rw [C.domain, domF, domC]
+    rw [domD, dc]
+    unfold word
+    apply bytesT_keep
+    intro j hj
+    have hE : Boot.WhileMinRuntime.domain + 928 ≤ 0x80082000 := by decide
+    exact doneOut _ (Or.inl (by unfold Layout.domainStateBytes at b; omega))
+  have ptrD : (runtimeFields d).youngPtr = (runtimeFields c).youngPtr - 24 := by
+    have e : (runtimeFields d).youngPtr = (runtimeFields allocated).youngPtr := by
+      simp only [runtimeFields, domainWord]; rw [fieldD Layout.off_young_ptr (by decide)]
+    rw [e, C.youngPtr, ptrF]
+  have limD : (runtimeFields d).youngLimit = (runtimeFields c).youngLimit := by
+    have e : (runtimeFields d).youngLimit = (runtimeFields allocated).youngLimit := by
+      simp only [runtimeFields, domainWord]; rw [fieldD Layout.off_young_limit (by decide)]
+    rw [e, C.youngLimit, limF]
   have readyD := (custom.frame k allocated d readyA (fun a s => doneOut a (by
     have m := (custom.apart allocated a s).minor
     simp only [Gc.minorRegion] at m
@@ -898,6 +923,10 @@ theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat ×
       rw [D.memory, bytesT_writeLog_out _ (by simp only [OutLRange, and_true, v8]; omega)]
       exact C.ops
     ready := readyD
+    block := block
+    youngPtr := ptrD
+    youngLimit := limD
+    domain := domainD
     kept := fun a notState notFoot o frame blk yw => by
       have youngW : a + 8 ≤ Gc.domainAddr flagged Layout.off_young_ptr ∨
           Gc.domainAddr flagged Layout.off_young_ptr + 8 ≤ a := by

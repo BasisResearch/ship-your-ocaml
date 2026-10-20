@@ -57,6 +57,9 @@ import OCaml.Vm.Sim.PrimExecutableNameReturns
 import OCaml.Vm.Sim.OpenGeometry
 import OCaml.Vm.Sim.OpenPayload
 import OCaml.Vm.Sim.OpenOutFrame
+import OCaml.Vm.Sim.OpenOutObserved
+import OCaml.Vm.Sim.OpenOutPlaced
+import OCaml.Vm.Sim.OpenOutGeometry
 import OCaml.Vm.Sim.PrimOpenOutReturns
 import OCaml.Vm.Sim.ArgvLogWindows
 import OCaml.Vm.Sim.ArgvInput

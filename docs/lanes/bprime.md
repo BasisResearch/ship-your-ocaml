@@ -267,16 +267,21 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
       excluded: `young_limit` (it is next to `young_ptr`, whose kept premise is
       word-sized) comes from the call's `youngLimit`, and `young_ptr` itself
       is the allocation.
+    - `CcallSucc`/`PrimReturnsAtR` (a1-prims' option (b), taken by bprime):
+      `CcallReturns.callee` passes the successor's reachability, so
+      `open_out_console` gets fd ∈ {1, 2} on a stream from `GoodF1.consoles`.
+      `PrimReturnsAt.toR` lifts the other adapters unchanged.
+    - `open_out_observed`: every `PayloadObserved` byte is kept.
+      `open_out_placed`: the record's `NewChannelPlaced`.
+      `open_out_geometry`: the loop geometry at the return (alloc to a
+      config with only `young_ptr` written, then `openChan`).
+    - `caml_format_int` is deferred (Kiran, via the foreman); bprime works
+      on `open_descriptor_out` instead.
   * Gaps for the C_CALL adapter (`prim_caml_ml_open_descriptor_out_returns`):
-    - The console descriptor. `openChan_live` gives a live fd. The fd ∈ {1, 2}
-      fact is `GoodF1.consoles` at the successor state. Asked a1-prims to pass
-      `Reach P s'` through `CcallReturns.callee`; the alternative is an F1
-      world invariant over all of `stepI`.
-    - The assembly: the alloc geometry step (fictional config with only
-      `young_ptr` written), `NewChannelPlaced` from freshness and `F1Pins`
-      (`OpenOutRuntime` gains `pins`), the `PayloadObserved` discharge,
-      `Ccall1Saved`, bindings, `NativePlaced`, `LoopRegisters`, and
-      `PlatformOk` through `after`.
+    - The assembly: the payload of the opened state (`keep_observed` then
+      `VmPayload.openChan`, with the custom block's `ObjAt` and the output
+      kept), `Ccall1Saved`, bindings, `NativePlaced`, `LoopRegisters`,
+      `PlatformOk` through `after`, and `CcallReturnAt` under `cp.put`.
     - x20–x27 (`reg_env` among them) survive the whole primitive
       (`OpenedOut.keep_upper`, over a0-boot's `StatCheckedReturned.keep_upper`).
     - `CcallCallee` fixes `pl`/`cp` across the call, but the record address
