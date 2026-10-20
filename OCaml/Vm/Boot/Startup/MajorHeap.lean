@@ -4,6 +4,8 @@ import OCaml.Vm.Boot.Startup.HeapAlloc
 import OCaml.Vm.Boot.Startup.MakeFree
 import OCaml.Vm.Boot.Startup.PageApart
 import OCaml.Vm.Boot.Startup.PageAdd
+import OCaml.Vm.Boot.Startup.MemSame
+import OCaml.Vm.Boot.Startup.ReadyIndirect
 
 /-! caml_init_major_heap, composed. Stage A runs from the entry through
 `caml_clip_heap_chunk_wsz` (the `__divdi3`/`__muldi3` pair) and the heap
@@ -300,6 +302,8 @@ structure MajorPageAddEntered (H : List (Nat × Nat)) (capacity : Nat) (sp ra hs
     OutW (majorChunkWindows mem.toNat (majorChunkSize hsize + 4152#64).toNat) x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
+  count : pageCount after.σ.mem ent.toNat = pageCount before.σ.mem ent.toNat
+  tableApart : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat
 
 theorem major_to_page_add (c d8 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra hsize s0 s1 s2 s3 inc ent : BitVec 64) (A : MajorHeapCall H capacity charge sp ra hsize s0 s1 s2 inc c)
@@ -526,9 +530,180 @@ theorem major_to_page_add (c d8 : Config) (H : List (Nat × Nat)) (capacity char
         bytesT_writeLog_out _ (by simp only [nativeWordLog, List.map, OutLRange, s8, and_true]; omega)]
       exact frame48.word_log_read slots2 (by simp [majorSlots]) _ member
     kept := kept
+    count := count12
+    tableApart := T.apartDomain
     saved := fun k lo hi => by
       have range : k ∉ [18, 11, 14, 9, 15, 10, 12, 1] := by simp; omega
       rw [g912.same k (by omega) (by omega) range,
         D.saved k (by simp [abiSaved]; omega), E.same.same k (by omega) (by omega) (by simp; omega)] }⟩
+
+/-- The runtime globals the rest of caml_init_major_heap reads: the policy's
+function pointers (`caml_set_allocation_policy` set best-fit), and the empty
+best-fit structures. -/
+structure MajorGlobals (m : Std.ExtHashMap Nat (BitVec 8)) (cur : BitVec 64) : Prop where
+  initMerge : bytesT m 0x800649e0 8 = 0x800061a0#64
+  makeFree : bytesT m 0x800649b8 8 = 0x80006fac#64
+  lists : ∀ j, j < 16 → bytesT m (smallList j).toNat 8 = 0#64
+  tree : bytesT m largeTreeAddr 8 = 0#64
+  least : bytesT m largeLeastAddr 8 = 0#64
+  curWsz : bytesT m flCurWszAddr 8 = cur
+
+/-- What stage B writes below the arena: `caml_heap_start`, the table's
+occupancy, the best-fit small lists, `caml_fl_merge` and the small-list map. -/
+def majorLowWindows : List W :=
+  [⟨heapStartAddr, heapStartAddr + 8⟩, ⟨pageTable + 0x18, pageTable + 0x20⟩, smallListsWindow,
+    ⟨flMergeAddr, flMergeAddr + 8⟩, ⟨smallMapAddr, smallMapAddr + 4⟩]
+
+/-- bf_init_merge returned into caml_init_major_heap. -/
+structure MajorMerged (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 s3 mem ent : BitVec 64)
+    (before after : Config) : Prop where
+  pc : PCAt jalr_80009410_call.link after
+  regs : GHolds after.σ [(2, nativeStack sp 48), (8, BitVec.ofNat 64 Layout.sym_Caml_state), (9, 1#64),
+    (18, 0x80064ad0#64), (19, s3)]
+  ready : RuntimeReady ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) capacity (nativeStack sp 48)
+    jalr_80009410_call.link after
+  fresh : FreshBlock vsaLayoutP H mem.toNat (majorChunkSize hsize + 4152#64).toNat
+  spot : ChunkSpot mem (majorChunkSize hsize).toNat
+  heapStartWord : bytesT after.σ.mem heapStartAddr 8 = chunkStart mem
+  wsz : bytesT after.σ.mem (domainField 336) 8 = majorChunkSize hsize >>> 3
+  slots : ∀ off value, (off, value) ∈ majorSlots ra s0 s1 s2 →
+    bytesT after.σ.mem (nativeFrameBase sp 48 + off) 8 = value
+  count : pageCount after.σ.mem ent.toNat = pageCount before.σ.mem ent.toNat + majorPages hsize
+  present : ∀ j, j < majorPages hsize → ∃ i, i < 2048 ∧
+    slotWord after.σ.mem ent i = 1#64 ||| blockPage (chunkStart mem) j
+  lists : ∀ j, j < 16 → ListReset after.σ.mem j
+  flMerge : bytesT after.σ.mem flMergeAddr 8 = 0#64
+  /-- Below the arena, outside the runtime's own writes, memory is the caller's. -/
+  lowSame : ∀ x, x < heapStart → ¬ allocGlobal x → OutW majorLowWindows x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
+
+theorem major_merged (c d12 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+    (sp ra hsize s0 s1 s2 s3 inc mem ent cur : BitVec 64)
+    (A : MajorHeapCall H capacity charge sp ra hsize s0 s1 s2 inc c)
+    (P : MajorPageAddEntered H capacity sp ra hsize s0 s1 s2 s3 mem ent c d12) (G : MajorGlobals c.σ.mem cur) :
+    ∃ after, Steps d12 after ∧ MajorMerged H capacity sp ra hsize s0 s1 s2 s3 mem ent c after := by
+  have frame48 : NativeFrame sp 48 := A.frame.resize (by unfold allocHeadroom; omega) (by decide)
+  have stack48 : (nativeStack sp 48).toNat = sp.toNat - 48 := frame48.stack_nat
+  have entLow := P.call.span.tableHigh
+  have memLow := P.spot.low
+  have hS : heapStart = 0x8007d140 := rfl
+  have hE : heapEnd = 0x86800000 := rfl
+  have dom : firstDomainPtr.toNat = 0x8007d150 := rfl
+  have hP : pageTable = 0x800684b8 := rfl
+  rw [hS] at entLow memLow
+  -- caml_page_table_add runs
+  obtain ⟨d13, run13, PA⟩ := page_table_add d12 _ capacity _ _ _ _ _ _ _ _ _ _ _ _ P.call
+  have k13 : MemSame d12 d13 fun x =>
+      (x < heapEnd ∧ OutW [⟨pageTable + 0x18, pageTable + 0x20⟩, ⟨ent.toNat, ent.toNat + 16384⟩] x) ∨
+        (nativeStack sp 48).toNat ≤ x :=
+    ⟨fun x h => h.elim (fun h => PA.kept x h.1 h.2) (PA.caller x)⟩
+  -- below the arena, the caller's bytes so far
+  have low13 (x : Nat) (low : x < 0x8007d140) (alloc : ¬ allocGlobal x)
+      (out : OutW [⟨heapStartAddr, heapStartAddr + 8⟩, ⟨pageTable + 0x18, pageTable + 0x20⟩] x) :
+      (d13.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    simp only [OutW, heapStartAddr, hP, and_true] at out
+    obtain ⟨o1, o2⟩ := out
+    rw [k13.same x (Or.inl ⟨by rw [hE]; omega, by simp only [OutW, hP, and_true]; exact ⟨o2, Or.inl (by omega)⟩⟩)]
+    exact P.kept x (by rw [hE]; omega) (fun f => f.elim alloc fun h => by rw [hS] at h; omega)
+      (by simp only [majorChunkWindows, OutW, domainField, dom, heapStartAddr, and_true]; exact ⟨o1, Or.inl (by omega),
+        Or.inl (by omega)⟩)
+  have lowWord13 (a : Nat) (low : a + 8 ≤ 0x8007d140) (alloc : ∀ i, i < 8 → ¬ allocGlobal (a + i))
+      (out : ∀ i, i < 8 → OutW [⟨heapStartAddr, heapStartAddr + 8⟩, ⟨pageTable + 0x18, pageTable + 0x20⟩] (a + i)) :
+      bytesT d13.σ.mem a 8 = bytesT c.σ.mem a 8 :=
+    word_observed _ fun i hi => low13 _ (by omega) (alloc i hi) (out i hi)
+  -- caml_fl_p_init_merge
+  have pointer : bytesT d13.σ.mem 0x800649e0 8 = 0x800061a0#64 := by
+    rw [lowWord13 _ (by decide) (fun i hi => by unfold allocGlobal InRange; omega)
+      (fun i hi => by simp only [OutW, heapStartAddr, hP, and_true]; omega)]
+    exact G.initMerge
+  obtain ⟨d14, run14, p14⟩ := (major_merge_front d13 jal_80009400_call.link 0x800061a0#64 PA.ready.toLeafInput
+    ⟨gholds_lookup (n := 10) _ PA.regs rfl, trivial⟩ pointer).run d13 ⟨PA.pc, rfl⟩
+  have g14 := GprsSame.of_post p14 (by decide)
+  have ready14 := PA.ready.stack_log p14 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g14.get (by decide) (by decide) (by decide) PA.ready.stack) (g14.get (by decide) (by decide) (by decide) PA.ready.raReg)
+    (by decide) frame48 (by simp only [LogInW])
+  obtain ⟨d15, run15, I⟩ := (ready_indirect jalr_80009410_call_shape jalr_80009410_call_decode
+    (jalr_80009410_call_pins p14.image) ready14 [(15, 0x800061a0#64), (10, 0#64)] p14.regs
+    (by simp only [keysG]; decide) (by simp only [KeysAvoidRa, keysG]; decide) 0x800061a0#64 rfl (by decide) rfl
+    (by decide)).run d14 ⟨p14.pc, rfl⟩
+  have tgt : jalr_80009410_call.target 0x800061a0#64 = 0x800061a0#64 := by decide
+  have mem15 : d15.σ.mem = d13.σ.mem := I.memory.trans p14.memory
+  -- bf_init_merge
+  obtain ⟨d16, run16, M⟩ := init_merge d15 _ capacity (nativeStack sp 48) jalr_80009410_call.link
+    (bytesVal .lw (read4 d15.σ.mem smallMapAddr)) 0#64 (by rw [← tgt]; exact I.pc) I.ready
+    (gholds_lookup (n := 10) _ I.regs rfl) rfl (fun j hj => by
+      have n0 := smallList_nat j hj 0 (by decide)
+      rw [BitVec.add_zero] at n0
+      rw [mem15, n0, lowWord13 _ (by omega) (fun i hi => by unfold allocGlobal InRange; omega)
+        (fun i hi => by simp only [OutW, heapStartAddr, hP, and_true]; omega), ← n0]
+      exact G.lists j hj)
+  -- back to the caller's memory
+  have k16 : MemSame d15 d16 (OutW [smallListsWindow, ⟨flMergeAddr, flMergeAddr + 8⟩, ⟨smallMapAddr, smallMapAddr + 4⟩]) :=
+    ⟨M.kept⟩
+  have back (x : Nat) (h1 : OutW [smallListsWindow, ⟨flMergeAddr, flMergeAddr + 8⟩, ⟨smallMapAddr, smallMapAddr + 4⟩] x)
+      (h2 : (x < heapEnd ∧ OutW [⟨pageTable + 0x18, pageTable + 0x20⟩, ⟨ent.toNat, ent.toNat + 16384⟩] x) ∨
+        (nativeStack sp 48).toNat ≤ x) :
+      (d16.σ.mem[x]?).getD 0 = (d12.σ.mem[x]?).getD 0 := by
+    rw [k16.same x h1, mem15, k13.same x h2]
+  have tableInit (x : Nat) (h : InTable ent x) :
+      OutW [smallListsWindow, ⟨flMergeAddr, flMergeAddr + 8⟩, ⟨smallMapAddr, smallMapAddr + 4⟩] x := by
+    simp only [OutW, smallListsWindow, flMergeAddr, smallMapAddr, and_true]
+    rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩
+    · rw [hP] at lo; omega
+    · omega
+  have tableSame (x : Nat) (h : InTable ent x) : (d16.σ.mem[x]?).getD 0 = (d13.σ.mem[x]?).getD 0 := by
+    rw [k16.same x (tableInit x h), mem15]
+  have fits : ent.toNat + 16384 ≤ 2 ^ 64 := Nat.le_trans P.call.span.tableLow (by decide)
+  have g16 := (g14.trans I.same).trans (GprsSame.of_saved M.saved)
+  have regs13 := PA.regs
+  have f48 := frame48.lower
+  rw [hE] at f48
+  have ta := P.tableApart
+  rw [dom] at ta
+  refine ⟨d16, run13.trans (run14.trans (run15.trans run16)), {
+    pc := M.pc
+    regs := ⟨M.ready.stack, g16.get (by decide) (by decide) (by decide) (gholds_lookup (n := 8) _ regs13 rfl),
+      g16.get (by decide) (by decide) (by decide) (gholds_lookup (n := 9) _ regs13 rfl),
+      g16.get (by decide) (by decide) (by decide) (gholds_lookup (n := 18) _ regs13 rfl),
+      g16.get (by decide) (by decide) (by decide) (gholds_lookup (n := 19) _ regs13 rfl), trivial⟩
+    ready := M.ready
+    fresh := P.fresh
+    spot := P.spot
+    heapStartWord := by
+      rw [word_observed (m := d12.σ.mem) _ fun i hi => back _
+        (by simp only [OutW, smallListsWindow, flMergeAddr, smallMapAddr, heapStartAddr, and_true]; omega)
+        (Or.inl ⟨by unfold heapStartAddr; rw [hE]; omega,
+          by simp only [OutW, heapStartAddr, hP, and_true]; omega⟩)]
+      exact P.heapStart
+    wsz := by
+      rw [word_observed (m := d12.σ.mem) _ fun i hi => back _
+        (by simp only [OutW, smallListsWindow, flMergeAddr, smallMapAddr, domainField, dom, and_true]; omega)
+        (Or.inl ⟨by simp only [domainField, dom]; rw [hE]; omega,
+          by simp only [OutW, domainField, dom, hP, and_true]; omega⟩)]
+      exact P.wsz
+    slots := fun off value member => by
+      have bound : off + 8 ≤ 48 := by simp [majorSlots] at member; omega
+      rw [word_observed (m := d12.σ.mem) _ fun i hi => back _
+        (by simp only [OutW, smallListsWindow, flMergeAddr, smallMapAddr, and_true]; unfold nativeFrameBase; omega)
+        (Or.inr (by rw [stack48]; unfold nativeFrameBase; omega))]
+      exact P.slots off value member
+    count := by
+      have congr : pageCount d16.σ.mem ent.toNat = pageCount d13.σ.mem ent.toNat := pageCount_congr fun i hi => by
+        rw [← slotWord_pageSlot _ _ i hi fits, ← slotWord_pageSlot _ _ i hi fits]
+        exact slotWord_window_agree fits tableSame i hi
+      rw [congr, PA.count, P.count]
+    present := fun j hj => by
+      obtain ⟨i, hi, slot⟩ := PA.present j hj
+      exact ⟨i, hi, by rw [slotWord_window_agree fits tableSame i hi]; exact slot⟩
+    lists := M.lists
+    flMerge := M.flMerge
+    lowSame := fun x low alloc out => by
+      simp only [majorLowWindows, OutW, and_true] at out
+      obtain ⟨o1, o2, o3, o4, o5⟩ := out
+      rw [k16.same x (by simp only [OutW, and_true]; exact ⟨o3, o4, o5⟩), mem15]
+      exact low13 x (by rw [hS] at low; exact low) alloc (by simp only [OutW, and_true]; exact ⟨o1, o2⟩)
+    saved := fun k lo hi => by
+      rw [g16.same k (by omega) (by omega) (by simp [abiClobbered]; omega), PA.saved k lo hi, P.saved k lo hi] }⟩
 
 end OCaml.Vm.Boot.Startup
