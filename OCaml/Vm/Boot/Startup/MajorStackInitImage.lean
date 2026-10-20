@@ -4,6 +4,6 @@ import OCaml.Vm.Boot.Startup.MajorFrameImage
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine
 
-theorem majorGrayFill_code {c : Config} (h : ExecutableImage c) :
+theorem majorStackInit_code {c : Config} (h : ExecutableImage c) :
     Vsa.Sim.Code.Caml_init_major_heapLoaded c.σ.mem := majorFrame_code h
 end OCaml.Vm.Boot.Startup
