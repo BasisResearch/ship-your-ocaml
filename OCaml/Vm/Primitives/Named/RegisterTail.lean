@@ -10,6 +10,7 @@ import OCaml.Vm.Boot.Startup.MemcpyFresh
 import OCaml.Vm.Boot.Startup.CallerFrame
 import OCaml.Vm.Primitives.Channel.OpenDescriptorCall
 import OCaml.Vm.Sim.CopyStringInput
+import OCaml.Vm.Primitives.Named.GenRoots
 
 /-!
 # `caml_register_named_value` after the found/new split
@@ -21,11 +22,12 @@ of the prologue from the 64-byte frame and returns `Val_unit`
 copies the key into a fresh `caml_stat_alloc` block, links it at the bucket's
 head and files its value slot with `caml_register_generational_global_root`.
 
-The two global-root callees are a named contract (`RootCalls`, agreed with
-a0-boot 2026-10-13; a6-gc supplies it with the skiplist): from a ready
-native caller they return with readiness on a grown live set, the
-callee-saved registers, and every byte kept outside the roots' own statics
-`G`, the allocator's footprint and their stack window.
+The two global-root callees are `GenRoots.RootCallsG` (proved from their
+machine runs, `rootCallsG`). The caller carries the roots' invariant
+`RootsAt` with the table's value slots registered (`RegisterTable.roots`,
+`registered`); both paths return `Registered`, whose post is `NamedRootsAt` on
+newlib's new blocks. Every byte outside the lists, `random_seed` (`RootsG`),
+the allocator's footprint, the path's writes and the stack window is kept.
 -/
 
 namespace OCaml.Vm.Primitives.Named.NamedRegister
@@ -33,37 +35,6 @@ set_option autoImplicit false
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap Vsa.MemRepr LeanRV64DExecutable OCaml.Vm.Primitives OCaml.Vm.Sim
   OCaml.Vm.Boot.Startup VsaIris VsaIris.Inst VsaIris.VsaHeap
 open NamedValue (regsAt regsAt_of gpr_some gpr_some_of gprReg_ne_htif wl_nil)
-
-/-- The registers a C callee keeps (sp, gp, tp, s0–s11). -/
-def calleeSaved : List Nat := [2, 3, 4, 8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
-
-/-- **A global-root call's return**: readiness on a live set grown from `H`,
-the callee-saved registers, the output, and every byte kept outside the
-roots' statics `G`, the allocator's footprint, the call's own writes `own`
-and the stack window below `sp`. -/
-structure RootCallPost (live : Nat → Prop) (G : Nat → Prop) (depth : Nat) (H : List (Nat × Nat))
-    (own : Nat → Prop) (sp ra : BitVec 64) (before after : Config) : Prop where
-  pc : PCAt ra after
-  ready : ∃ H' cap', RuntimeReadyL live H' cap' sp ra after ∧ ∀ e ∈ H, e ∈ H'
-  output : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
-  saved : ∀ n ∈ calleeSaved, gprGet after.σ n = gprGet before.σ n
-  kept : ∀ x, ¬ G x → ¬ vsaFoot H x → ¬ own x → (x < nativeFrameBase sp depth ∨ sp.toNat ≤ x) →
-    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
-
-/-- **The generational global-root calls** (named contract; supplied by
-a6-gc's skiplist summaries over a0-boot's allocator). `register(r)` files the
-slot `r` as a root; `modify(r, v)` also stores `v` into it. -/
-structure RootCalls (live : Nat → Prop) (G : Nat → Prop) (depth : Nat) : Prop where
-  /-- the roots' statics lie below the arena -/
-  low : ∀ x, G x → x < heapStart
-  register : ∀ (c : Config) (H : List (Nat × Nat)) (cap : Nat) (sp ra r : BitVec 64),
-    RuntimeReadyL live H cap sp ra c → NativeFrame sp depth → gprGet c.σ 10 = some r →
-    FnSummary 0x8000ca04#64 (fun d => d = c) (RootCallPost live G depth H (fun _ => False) sp ra c)
-  modify : ∀ (c : Config) (H : List (Nat × Nat)) (cap : Nat) (sp ra r v : BitVec 64),
-    RuntimeReadyL live H cap sp ra c → NativeFrame sp depth → gprGet c.σ 10 = some r →
-    gprGet c.σ 11 = some v → heapStart ≤ r.toNat → r.toNat + 8 ≤ heapEnd →
-    FnSummary 0x8000cb08#64 (fun d => d = c)
-      (fun d => RootCallPost live G depth H (VsaIris.InExt (r.toNat, 8)) sp ra c d ∧ bytesT d.σ.mem r.toNat 8 = v)
 
 /-! ### The frame's saves -/
 
@@ -185,16 +156,31 @@ theorem epilogue {live : Nat → Prop} {H : List (Nat × Nat)} {cap : Nat} {R : 
 
 /-! ### The found path -/
 
+/-- The bytes a roots call may change besides newlib's: the lists' footprints
+at `m` and `random_seed`. -/
+def RootsG (Shape : Mem → Nat → List (BitVec 64) → Prop) (foot : Mem → Nat → List (BitVec 64) → Nat → Prop)
+    (m : Mem) (a : Nat) : Prop :=
+  OCaml.Vm.Gc.Skiplist.ListsFoot Shape foot m a ∨ (OCaml.Vm.Gc.Skiplist.randomSeed ≤ a ∧
+    a < OCaml.Vm.Gc.Skiplist.randomSeed + 4)
+
+/-- **Readiness after either path**, on newlib's blocks `H'`: newlib's
+footprint within the old one and `G`, and `Post H'` of the memory. -/
+structure ReadyAfter (live : Nat → Prop) (G : Nat → Prop) (Post : List (Nat × Nat) → Mem → Prop)
+    (H H' : List (Nat × Nat)) (cap' : Nat) (sp ra : BitVec 64) (after : Config) : Prop where
+  ready : RuntimeReadyL live H' cap' sp ra after
+  heap : ∀ a, vsaFoot H' a → vsaFoot H a ∨ G a
+  post : Post H' after.σ.mem
+
 /-- **At the return of either path**: `Val_unit`, the caller's registers,
-readiness on a grown live set, and every byte kept outside the roots'
-statics, the allocator's footprint, the path's own writes `own` and the
-stack window below the caller's `sp`. -/
-structure Returned (live : Nat → Prop) (G : Nat → Prop) (depth : Nat) (H : List (Nat × Nat))
-    (R : Nat → BitVec 64) (own : Nat → Prop) (before after : Config) : Prop where
+readiness on newlib's new blocks with `Post`, and every byte kept outside `G`,
+the allocator's footprint, the path's own writes `own` and the stack window
+below the caller's `sp`. -/
+structure Returned (live : Nat → Prop) (G : Nat → Prop) (Post : List (Nat × Nat) → Mem → Prop) (depth : Nat)
+    (H : List (Nat × Nat)) (R : Nat → BitVec 64) (own : Nat → Prop) (before after : Config) : Prop where
   pc : PCAt (R 1) after
   result : gprGet after.σ 10 = some 1#64
   saved : ∀ n ∈ [8, 9, 18, 19, 20], gprGet after.σ n = some (R n)
-  ready : ∃ H' cap', RuntimeReadyL live H' cap' (R 2) (R 1) after ∧ ∀ e ∈ H, e ∈ H'
+  ready : ∃ H' cap', ReadyAfter live G Post H H' cap' (R 2) (R 1) after
   output : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
   kept : ∀ x, ¬ G x → ¬ vsaFoot H x → ¬ own x → (x < (R 2).toNat - (64 + depth) ∨ (R 2).toNat ≤ x) →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
@@ -238,19 +224,30 @@ theorem ready_at_call {live : Nat → Prop} {H : List (Nat × Nat)} {cap : Nat} 
   · exact l
 
 /-- **The found path**, from the split at `0x80021470` with the query's node
-`n0` in `s0`: `caml_modify_generational_global_root(&n0->val, v)` stores the
-value, then the epilogue returns `Val_unit`. -/
-theorem found_tail {live : Nat → Prop} {G : Nat → Prop} {depth : Nat} (roots : RootCalls live G depth)
+`n0` in `s0`, a registered slot: `caml_modify_generational_global_root(&n0->val,
+v)` stores the value (`RootCallsG.modify`), then the epilogue returns
+`Val_unit`; the roots after it are at `S` with new lists. -/
+theorem found_tail {live : Nat → Prop} {depth : Nat}
+    {Shape : Mem → Nat → List (BitVec 64) → Prop} {foot : Mem → Nat → List (BitVec 64) → Nat → Prop}
+    {Table : Mem → (Nat → Nat) → Prop} {tfoot : Mem → Nat → Prop}
+    (ops : OCaml.Vm.Gc.Skiplist.Ops Shape foot) (tf : OCaml.Vm.Gc.PageTableFrame Table tfoot)
+    (roots : GenRoots.RootCallsG Shape foot Table tfoot)
     (persist : GprsPersist_Statement) {H : List (Nat × Nat)} {cap : Nat} {R : Nat → BitVec 64}
-    {name : List (BitVec 8)} {n0 : BitVec 64} {c d : Config}
+    {name : List (BitVec 8)} {n0 : BitVec 64} {S : GenRoots.RootsState} {c d : Config}
     (ready : RuntimeReadyL live H cap (R 2) (R 1) c) (frame : NativeFrame (R 2) (64 + depth))
+    (deepR : 32 + OCaml.Vm.Gc.Skiplist.opStack ≤ depth)
     (depthAligned : depth % 16 = 0) (run : Steps c d) (looked : Looked R name n0 c d) (nz : n0 ≠ 0#64)
-    (nodeLow : heapStart ≤ n0.toNat) (nodeHigh : n0.toNat + 8 ≤ heapEnd) :
-    ∃ f, Steps d f ∧ Returned live G depth H R (VsaIris.InExt (n0.toNat, 8)) c f ∧ bytesT f.σ.mem n0.toNat 8 = R 11 := by
+    (I : GenRoots.RootsAt Shape foot Table tfoot H S c.σ.mem) (registered : n0 ∈ S.slots) :
+    ∃ f, Steps d f ∧
+      Returned live (RootsG Shape foot c.σ.mem)
+        (fun H' m => ∃ ys' os', GenRoots.RootsAt Shape foot Table tfoot H' { S with ys := ys', os := os' } m)
+        depth H R (VsaIris.InExt (n0.toNat, 8)) c f ∧
+      bytesT f.σ.mem n0.toNat 8 = R 11 := by
   have big : 64 ≤ 64 + depth := Nat.le_add_right _ _
   have lower := frame.lower
   have upper := frame.upper
   have hE : heapEnd = 0x86800000 := rfl
+  have nodeHigh := I.slotHigh n0 registered
   have pc0 : PCAt 0x80021470#64 d := by have := looked.pc; rwa [if_neg nz] at this
   let D := regsAt d
   obtain ⟨r1, hr1, al1⟩ := looked.link
@@ -286,9 +283,28 @@ theorem found_tail {live : Nat → Prop} {G : Nat → Prop} {depth : Nat} (roots
   have frame2 : NativeFrame (R 2 + 18446744073709551552#64) depth := by
     have n := frame.nested (front := 64) (by decide)
     rwa [nativeStack, show -BitVec.ofNat 64 64 = (18446744073709551552#64 : BitVec 64) by decide] at n
-  obtain ⟨d3, run3, rp, slot⟩ := (roots.modify d2 H cap _ _ n0 (R 11) ready2 frame2
-    (gholds_lookup _ p2.regs rfl) (gholds_lookup _ p2.regs rfl) nodeLow nodeHigh).run d2 ⟨p2.pc, rfl⟩
-  obtain ⟨H3, cap3, ready3, grown⟩ := rp.ready
+  have sp2Nat : (R 2 + 18446744073709551552#64).toNat = (R 2).toNat - 64 := by
+    rw [frame64 frame big, BitVec.toNat_ofNat]; omega
+  -- the roots at the call
+  have low2 : ∀ a, a < heapEnd → (d2.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0 := fun a ha => by
+    rw [mem2, frameOn_writeLog _ _ _ (saveLog_inside frame big) a ⟨Or.inl (show a < (R 2).toNat - 64 by omega),
+      trivial⟩]
+  have I2 := I.of_low ops tf low2
+  have lists2 : ∀ a, OCaml.Vm.Gc.Skiplist.ListsFoot Shape foot d2.σ.mem a ↔
+      OCaml.Vm.Gc.Skiplist.ListsFoot Shape foot c.σ.mem a :=
+    I.roots.listsFoot_keep ops fun a ⟨_, _, _, sh, f⟩ => low2 a (ops.low _ _ _ sh a f)
+  have entry : GenRoots.ModifyEntry H cap (R 2 + 18446744073709551552#64) found_call.link n0 (R 11) d2 :=
+    { leaf := leaf2
+      slot := gholds_lookup _ p2.regs rfl
+      value := gholds_lookup _ p2.regs rfl
+      stack := sp2
+      heap := ready2.heap
+      frame := frame2.resize deepR (by decide)
+      s0 := ready2.platform.gpr 8 (by decide) (by decide)
+      s1 := ready2.platform.gpr 9 (by decide) (by decide) }
+  obtain ⟨d3, run3, rp, slot, H3, cap3, ys', os', next⟩ :=
+    (roots.modify d2 H cap S _ _ n0 (R 11) I2 registered entry).run d2 ⟨p2.pc, rfl⟩
+  have ready3 := rp.ready ready2 run3 (by decide) next.heap
   let J := regsAt d3
   have leaf3 : LeafInput (J 1) d3 := by rw [show J 1 = _ from regsAt_of ready3.raReg]; exact ready3.toLeafInput
   obtain ⟨d4, run4, p4⟩ := (foundJoin_fast d3 J leaf3 ⟨gpr_some (ready3.gpr_some 10 (by decide) (by decide)), trivial⟩).run
@@ -299,39 +315,51 @@ theorem found_tail {live : Nat → Prop} {G : Nat → Prop} {depth : Nat} (roots
       ((p4.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans ready3.raReg) (by decide)
       (fun a _ => by rw [wl_nil]) (fun a _ => by rw [wl_nil]) (fun a h => by rw [wl_nil]; exact h)
   have mem4 : d4.σ.mem = d3.σ.mem := by rw [p4.memory, wl_nil]
-  -- the frame's bytes survive the callee
-  have sp2Nat : (R 2 + 18446744073709551552#64).toNat = (R 2).toNat - 64 := by
-    rw [frame64 frame big, BitVec.toNat_ofNat]; omega
-  have keep3 (x : Nat) (nG : ¬ G x) (nF : ¬ vsaFoot H x) (nOwn : ¬ VsaIris.InExt (n0.toNat, 8) x)
+  -- the bytes the call keeps, in the caller's terms
+  have offOf (x : Nat) (nG : ¬ RootsG Shape foot c.σ.mem x) (nF : ¬ vsaFoot H x) :
+      GenRoots.Off Shape foot H d2.σ.mem x :=
+    ⟨fun l => nG (Or.inl ((lists2 x).1 l)), nF, by
+      rcases Nat.lt_or_ge x OCaml.Vm.Gc.Skiplist.randomSeed with h | h
+      · exact Or.inl h
+      · exact Or.inr (Nat.le_of_not_lt fun l => nG (Or.inr ⟨h, l⟩))⟩
+  have keep3 (x : Nat) (nG : ¬ RootsG Shape foot c.σ.mem x) (nF : ¬ vsaFoot H x)
+      (nOwn : ¬ VsaIris.InExt (n0.toNat, 8) x)
       (win : x < (R 2).toNat - (64 + depth) ∨ (R 2).toNat - 64 ≤ x) :
       (d3.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 ∨ (R 2).toNat - 64 ≤ x := by
     rcases win with lo | hi
     · left
-      rw [rp.kept x nG nF nOwn (Or.inl (by unfold nativeFrameBase; rw [sp2Nat]; omega)), mem2,
+      rw [next.kept x (offOf x nG nF) (fun i => nOwn i) (Or.inl (by rw [sp2Nat]; unfold OCaml.Vm.Gc.Skiplist.opStack at deepR ⊢; omega)), mem2,
         frameOn_writeLog _ _ _ (saveLog_inside frame big) x ⟨Or.inl (show x < (R 2).toNat - 64 by omega), trivial⟩]
     · exact Or.inr hi
+  have high (x : Nat) (hx : heapEnd ≤ x) : ¬ RootsG Shape foot c.σ.mem x := by
+    rintro (⟨_, _, _, sh, f⟩ | ⟨-, l⟩)
+    · have := ops.low _ _ _ sh x f; omega
+    · unfold OCaml.Vm.Gc.Skiplist.randomSeed at l; omega
   have slots : ∀ k, 16 ≤ k → k < 64 → (d4.σ.mem[(R 2).toNat - 64 + k]?).getD 0 =
       ((writeLog c.σ.mem (saveLog R))[(R 2).toNat - 64 + k]?).getD 0 := by
     intro k lo hi
-    rw [mem4, rp.kept _ (fun g => by have := roots.low _ g; unfold heapStart at this; omega)
-      (not_foot_high (by omega)) (fun i => by unfold VsaIris.InExt at i; dsimp only at i; omega)
-      (Or.inr (by rw [sp2Nat]; omega)), mem2]
+    rw [mem4, next.kept _ (offOf _ (high _ (by omega)) (not_foot_high (by omega)))
+      (fun i => by unfold GenRoots.InWord at i; omega) (Or.inr (by rw [sp2Nat]; omega)), mem2]
   obtain ⟨f, run5, ep⟩ := epilogue ready4 p4.pc ready.aligned frame big slots
   refine ⟨f, run1.trans (run2.trans (run3.trans (run4.trans run5))), ?_, ?_⟩
-  · refine { pc := ep.pc, result := ep.result, saved := ep.saved, ready := ⟨H3, cap3, ep.ready, grown⟩, output := ?_,
-             kept := ?_ }
+  · refine { pc := ep.pc, result := ep.result, saved := ep.saved,
+             ready := ⟨H3, cap3, ep.ready, fun a v => (next.heapIn a v).imp id fun l => Or.inl ((lists2 a).1 l),
+               ys', os', by rw [ep.memory, mem4]; exact next.roots⟩,
+             output := ?_, kept := ?_ }
     · have a : Vsa.Machine.output f.σ = Vsa.Machine.output d3.σ := by
         simp only [Vsa.Machine.output, ep.output, p4.output]
       have b : Vsa.Machine.output d2.σ = Vsa.Machine.output c.σ := by
         simp only [Vsa.Machine.output, p2.output, p1.output, looked.output]
-      rw [a, rp.output, b]
+      have e3 : Vsa.Machine.output d3.σ = Vsa.Machine.output d2.σ := by
+        simp only [Vsa.Machine.output, rp.output]
+      rw [a, e3, b]
     · intro x nG nF nOwn win
       rw [ep.memory, mem4]
       rcases win with lo | hi
       · rcases keep3 x nG nF nOwn (Or.inl lo) with e | e
         · exact e
         · omega
-      · rw [rp.kept x nG nF nOwn (Or.inr (by rw [sp2Nat]; omega)), mem2,
+      · rw [next.kept x (offOf x nG nF) (fun i => nOwn i) (Or.inr (by rw [sp2Nat]; omega)), mem2,
           frameOn_writeLog _ _ _ (saveLog_inside frame big) x ⟨Or.inr hi, trivial⟩]
   · rw [ep.memory, mem4]; exact slot
 
@@ -589,10 +617,10 @@ theorem bucket_not_foot {H : List (Nat × Nat)} {a : Nat}
 head is the node, whose value word is `v`, next word the old head, key the
 query's bytes; the frame's saves and every byte outside the roots' statics,
 the allocator's footprint and the bucket word are kept. -/
-structure MissLinked (live : Nat → Prop) (G : Nat → Prop) (depth : Nat) (H : List (Nat × Nat))
-    (R : Nat → BitVec 64) (name : List (BitVec 8)) (p : BitVec 64) (c d : Config) : Prop where
-  ready : ∃ H' cap', RuntimeReadyL live H' cap' (R 2 + 18446744073709551552#64) link_call.link d ∧
-    (p.toNat, name.length + 24) ∈ H' ∧ ∀ e ∈ H, e ∈ H'
+structure MissLinked (live : Nat → Prop) (G : Nat → Prop) (Post : List (Nat × Nat) → Mem → Prop) (depth : Nat)
+    (H : List (Nat × Nat)) (R : Nat → BitVec 64) (name : List (BitVec 8)) (p : BitVec 64) (c d : Config) : Prop where
+  ready : ∃ H' cap', ReadyAfter live G Post ((p.toNat, name.length + 24) :: H) H' cap'
+    (R 2 + 18446744073709551552#64) link_call.link d
   pc : PCAt link_call.link d
   slots : ∀ k, 16 ≤ k → k < 64 → (d.σ.mem[(R 2).toNat - 64 + k]?).getD 0 =
     ((writeLog c.σ.mem (saveLog R))[(R 2).toNat - 64 + k]?).getD 0
@@ -608,14 +636,24 @@ structure MissLinked (live : Nat → Prop) (G : Nat → Prop) (depth : Nat) (H :
 
 /-- **The new-node path from its block to the join**: `memcpy(nv->name, name,
 len + 1)`, the three link stores, `caml_register_generational_global_root(&nv->val)`. -/
-theorem miss_link {live : Nat → Prop} [LibraryLive live] {G : Nat → Prop} {depth : Nat}
-    (roots : RootCalls live G depth) {H : List (Nat × Nat)} {cap : Nat} {R : Nat → BitVec 64}
-    {name : List (BitVec 8)} {p : BitVec 64} {c d : Config}
-    (frame : NativeFrame (R 2) (64 + depth)) (M : MissAllocated live depth H cap R name p c d)
+theorem miss_link {live : Nat → Prop} [LibraryLive live] {depth : Nat}
+    {Shape : Mem → Nat → List (BitVec 64) → Prop} {foot : Mem → Nat → List (BitVec 64) → Nat → Prop}
+    {Table : Mem → (Nat → Nat) → Prop} {tfoot : Mem → Nat → Prop}
+    (ops : OCaml.Vm.Gc.Skiplist.Ops Shape foot) (tf : OCaml.Vm.Gc.PageTableFrame Table tfoot)
+    (roots : GenRoots.RootCallsG Shape foot Table tfoot) {H : List (Nat × Nat)} {cap : Nat} {R : Nat → BitVec 64}
+    {name : List (BitVec 8)} {p : BitVec 64} {S : GenRoots.RootsState} {c d : Config}
+    (frame : NativeFrame (R 2) (64 + depth)) (deepR : 32 + OCaml.Vm.Gc.Skiplist.opStack ≤ depth)
+    (M : MissAllocated live depth H cap R name p c d)
     (keyLow : heapStart ≤ (R 10).toNat) (keyHigh : (R 10).toNat + name.length + 8 ≤ heapEnd)
     (keyBlock : ∃ e ∈ H, heapStart ≤ e.1 ∧ e.1 ≤ (R 10).toNat ∧ (R 10).toNat + name.length + 1 ≤ e.1 + e.2)
-    (bucketG : ∀ a, Layout.sym_named_value_table ≤ a → a < Layout.sym_named_value_table + 104 → ¬ G a) :
-    ∃ e, Steps d e ∧ MissLinked live G depth H R name p c e := by
+    (I : GenRoots.RootsAt Shape foot Table tfoot H S c.σ.mem)
+    (listsLive : ∀ a, OCaml.Vm.Gc.Skiplist.ListsFoot Shape foot c.σ.mem a → ¬ vsaFoot H a)
+    (bucketG : ∀ a, Layout.sym_named_value_table ≤ a → a < Layout.sym_named_value_table + 104 →
+      ¬ RootsG Shape foot c.σ.mem a ∧ ¬ tfoot c.σ.mem a ∧ ¬ GenRoots.StateWord S a) :
+    ∃ e, Steps d e ∧ MissLinked live (RootsG Shape foot c.σ.mem)
+      (fun H' m => ∃ ys' os', GenRoots.RootsAt Shape foot Table tfoot H'
+        { S with ys := ys', os := os', slots := p :: S.slots } m)
+      depth H R name p c e := by
   have big : 64 ≤ 64 + depth := Nat.le_add_right _ _
   have lower := frame.lower
   have upper := frame.upper
@@ -793,14 +831,9 @@ theorem miss_link {live : Nat → Prop} [LibraryLive live] {G : Nat → Prop} {d
   have ready11 := ready10.effect p11 (by decide) (by simp [args11, keysG]) (by decide) (gholds_lookup _ p11.regs rfl)
     (gholds_lookup _ p11.regs rfl) (by decide) (fun a _ => rfl) (fun a _ => rfl) (fun a h => h)
   have pc11 : PCAt 0x8000ca04#64 d11 := by have h := p11.pc; rwa [link_call_target] at h
-  obtain ⟨d12, run12, rp⟩ := (roots.register d11 _ cap _ link_call.link p ready11 frame2
-    (gholds_lookup _ p11.regs rfl)).run d11 ⟨pc11, rfl⟩
-  -- the memory across the link stores and the root call
-  have sp'Low := frame2.lower
-  have through12 (x : Nat) (nG : ¬ G x) (nF : ¬ vsaFoot ((p.toNat, name.length + 24) :: H) x)
-      (win : x < (R 2).toNat - 64 - depth ∨ (R 2).toNat - 64 ≤ x) :
-      (d12.σ.mem[x]?).getD 0 = ((writeLog d9.σ.mem (linkLog K (link_loads d9.σ.mem K)))[x]?).getD 0 := by
-    rw [rp.kept x nG nF (fun h => h) (by unfold nativeFrameBase; rw [sp2Nat]; exact win), p11.memory, p10.memory]
+  -- the memory at the root call
+  have mem11 : d11.σ.mem = writeLog d9.σ.mem (linkLog K (link_loads d9.σ.mem K)) := by
+    rw [p11.memory, p10.memory]
   have linkOut (x : Nat) (nb : x < p.toNat ∨ p.toNat + 16 ≤ x)
       (nw : x < Layout.sym_named_value_table + 8 * k ∨ Layout.sym_named_value_table + 8 * k + 8 ≤ x) :
       (writeLog d9.σ.mem (linkLog K (link_loads d9.σ.mem K)))[x]? = d9.σ.mem[x]? :=
@@ -808,31 +841,136 @@ theorem miss_link {live : Nat → Prop} [LibraryLive live] {G : Nat → Prop} {d
   have toD (x : Nat) (out : ¬ InExt ((p + 16#64).toNat, name.length + 1) x) :
       (d9.σ.mem[x]?).getD 0 = (d.σ.mem[x]?).getD 0 := by
     rw [D9.kept x out, p8.memory, p7.memory, wl_nil]
-  have gLow (x : Nat) (hx : heapStart ≤ x) : ¬ G x := fun g => by have := roots.low x g; omega
+  have blockFoot (x : Nat) (lo : p.toNat ≤ x) (hi : x < p.toNat + (name.length + 24)) : vsaFoot H x :=
+    foot_of_fresh M.fresh pLow pHigh lo hi
+  -- what the root call may own: the bucket word and the node's block
+  let own : Nat → Prop := fun x => BucketWord k x ∨ InExt (p.toNat, name.length + 24) x
+  have keep11 (x : Nat) (hx : x < heapEnd) (nF : ¬ vsaFoot H x) (nOwn : ¬ own x) :
+      (d11.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    have nb : x < p.toNat ∨ p.toNat + (name.length + 24) ≤ x := by
+      rcases Nat.lt_or_ge x p.toNat with h | h
+      · exact Or.inl h
+      · rcases Nat.lt_or_ge x (p.toNat + (name.length + 24)) with h' | h'
+        · exact absurd (Or.inr ⟨h, h'⟩) nOwn
+        · exact Or.inr h'
+    have nw : x < Layout.sym_named_value_table + 8 * k ∨ Layout.sym_named_value_table + 8 * k + 8 ≤ x := by
+      rcases Nat.lt_or_ge x (Layout.sym_named_value_table + 8 * k) with h | h
+      · exact Or.inl h
+      · rcases Nat.lt_or_ge x (Layout.sym_named_value_table + 8 * k + 8) with h' | h'
+        · exact absurd (Or.inl ⟨h, h'⟩) nOwn
+        · exact Or.inr h'
+    rw [mem11, linkOut _ (by omega) nw, toD _ (fun h => by rw [p16] at h; unfold InExt at h; dsimp only at h; omega)]
+    exact M.kept x nF (Or.inl (by omega))
+  have listAgree : ∀ x, OCaml.Vm.Gc.Skiplist.ListsFoot Shape foot c.σ.mem x →
+      (d11.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := fun x l => by
+    obtain ⟨_, _, _, sh, f⟩ := id l
+    refine keep11 x (ops.low _ _ _ sh x f) (listsLive x l) ?_
+    rintro (b | ⟨lo, hi⟩)
+    · exact (bucketG x (by unfold BucketWord at b; rw [tbl] at *; omega)
+        (by unfold BucketWord at b; rw [tbl] at *; omega)).1 (Or.inl l)
+    · exact listsLive x l (blockFoot x lo (by dsimp only at hi; omega))
+  have lists11 : ∀ x, OCaml.Vm.Gc.Skiplist.ListsFoot Shape foot d11.σ.mem x ↔
+      OCaml.Vm.Gc.Skiplist.ListsFoot Shape foot c.σ.mem x := I.roots.listsFoot_keep ops listAgree
+  have cr : GenRoots.Carry Shape foot H ((p.toNat, name.length + 24) :: H) own c.σ.mem d11.σ.mem :=
+    { heap := fun x f => Or.inl (vsaFoot_cons f)
+      feet := fun x l => Or.inl ((lists11 x).1 l)
+      kept := fun x hx o n => keep11 x hx o.heap n }
+  have ownApart : ∀ x, own x → ¬ tfoot c.σ.mem x ∧ ¬ GenRoots.StateWord S x ∧ ¬ GenRoots.InSlots S.slots x := by
+    rintro x (b | ⟨lo, hi⟩)
+    · unfold BucketWord at b
+      obtain ⟨-, nt, ns⟩ := bucketG x (by rw [tbl] at *; omega) (by rw [tbl] at *; omega)
+      refine ⟨nt, ns, fun ⟨r, hr, iw⟩ => ?_⟩
+      have := I.slotLow r hr; unfold GenRoots.InWord at iw; rw [tbl] at *; omega
+    · have v := blockFoot x lo (by dsimp only at hi; omega)
+      exact ⟨fun t => (I.env.tableOff x t).1.heap v, fun sw => (I.env.stateOff x sw).1.heap v,
+        fun ⟨r, hr, iw⟩ => (I.slotOff r hr x iw).heap v⟩
+  have I11 := I.keep tf cr ownApart (I.roots.keep ops fun _ _ list sh x f => listAgree x ⟨_, _, list, sh, f⟩)
+  -- the node's value word is a fresh slot
+  have pWord (x : Nat) (iw : GenRoots.InWord p.toNat x) : vsaFoot H x :=
+    blockFoot x iw.1 (by unfold GenRoots.InWord at iw; omega)
+  have tf11 : ∀ x, tfoot d11.σ.mem x ↔ tfoot c.σ.mem x :=
+    (tf.frame c.σ.mem d11.σ.mem S.cls I.env.table fun x t => keep11 x (tf.low _ _ I.env.table x t)
+      (I.env.tableOff x t).1.heap fun o => (ownApart x o).1 t).2
+  have fresh : GenRoots.Fresh Shape foot tfoot ((p.toNat, name.length + 24) :: H) S d11.σ.mem p :=
+    { notSlot := fun hr => (I.slotOff p hr p.toNat ⟨Nat.le_refl _, by omega⟩).heap
+        (pWord _ ⟨Nat.le_refl _, by omega⟩)
+      notGlobal := fun hr => (I.globalOff p hr p.toNat ⟨Nat.le_refl _, by omega⟩).heap
+        (pWord _ ⟨Nat.le_refl _, by omega⟩)
+      low := pLow
+      high := by omega
+      aligned := by omega
+      off := fun x iw => ⟨fun l => listsLive x ((lists11 x).1 l) (pWord x iw),
+        fun f => by
+          rcases f with g | ⟨-, -, out⟩
+          · rcases VsaIris.VsaHeap.allocGlobal_off_arena x g with l | l <;>
+              (unfold GenRoots.InWord at iw; omega)
+          · exact out _ member ⟨iw.1, by unfold GenRoots.InWord at iw; dsimp only; omega⟩,
+        Or.inr (by unfold GenRoots.InWord at iw; unfold OCaml.Vm.Gc.Skiplist.randomSeed; omega)⟩
+      apart := fun r hr => by
+        rcases Nat.lt_or_ge (r.toNat + 8) (p.toNat + 1) with h | h
+        · exact Or.inr (by omega)
+        · rcases Nat.lt_or_ge (p.toNat + 8) (r.toNat + 1) with h' | h'
+          · exact Or.inl (by omega)
+          · exfalso
+            rcases Nat.le_total r.toNat p.toNat with o | o
+            · exact (I.slotOff r hr p.toNat ⟨o, by omega⟩).heap (pWord _ ⟨Nat.le_refl _, by omega⟩)
+            · exact (I.slotOff r hr r.toNat ⟨Nat.le_refl _, by omega⟩).heap (pWord _ ⟨o, by omega⟩)
+      notTable := fun x iw t => (I.env.tableOff x ((tf11 x).1 t)).1.heap (pWord x iw)
+      notState := fun x iw sw => (I.env.stateOff x sw).1.heap (pWord x iw) }
+  have entry : GenRoots.RegisterEntry ((p.toNat, name.length + 24) :: H) cap (R 2 + 18446744073709551552#64)
+      link_call.link p d11 :=
+    { leaf := ready11.toLeafInput
+      slot := gholds_lookup _ p11.regs rfl
+      stack := ready11.stack
+      heap := ready11.heap
+      frame := frame2.resize (by unfold OCaml.Vm.Gc.Skiplist.opStack at deepR ⊢; omega) (by decide) }
+  obtain ⟨d12, run12, rp, H'', cap'', ys', os', next⟩ :=
+    (roots.register d11 _ cap S _ link_call.link p I11 fresh entry).run d11 ⟨pc11, rfl⟩
+  -- the memory across the root call
+  have sp'Low := frame2.lower
+  have through12 (x : Nat) (nG : ¬ RootsG Shape foot c.σ.mem x) (nF : ¬ vsaFoot ((p.toNat, name.length + 24) :: H) x)
+      (win : x < (R 2).toNat - 64 - depth ∨ (R 2).toNat - 64 ≤ x) :
+      (d12.σ.mem[x]?).getD 0 = ((writeLog d9.σ.mem (linkLog K (link_loads d9.σ.mem K)))[x]?).getD 0 := by
+    have off : GenRoots.Off Shape foot ((p.toNat, name.length + 24) :: H) d11.σ.mem x :=
+      ⟨fun l => nG (Or.inl ((lists11 x).1 l)), nF, by
+        rcases Nat.lt_or_ge x OCaml.Vm.Gc.Skiplist.randomSeed with h | h
+        · exact Or.inl h
+        · exact Or.inr (Nat.le_of_not_lt fun l => nG (Or.inr ⟨h, l⟩))⟩
+    rw [next.kept x off (fun f => f) (by
+        rw [sp2Nat]; unfold OCaml.Vm.Gc.Skiplist.opStack at deepR ⊢; rcases win with h | h <;> omega), mem11]
+  have blockNotG (x : Nat) (lo : p.toNat ≤ x) (hi : x < p.toNat + (name.length + 24)) :
+      ¬ RootsG Shape foot c.σ.mem x := by
+    rintro (l | ⟨-, l⟩)
+    · exact listsLive x l (blockFoot x lo hi)
+    · unfold OCaml.Vm.Gc.Skiplist.randomSeed at l; omega
+  have highNotG (x : Nat) (hx : heapEnd ≤ x) : ¬ RootsG Shape foot c.σ.mem x := by
+    rintro (⟨_, _, _, sh, f⟩ | ⟨-, l⟩)
+    · have := ops.low _ _ _ sh x f; omega
+    · unfold OCaml.Vm.Gc.Skiplist.randomSeed at l; omega
   have blockLive (x : Nat) (lo : p.toNat ≤ x) (hi : x < p.toNat + (name.length + 24)) :
       ¬ vsaFoot ((p.toNat, name.length + 24) :: H) x := fun foot => by
     rcases allocator_payload_outside member pLow foot with h | h <;> omega
   have entries := Gc.word_writeLog_at d9.σ.mem (linkLog K (link_loads d9.σ.mem K))
   refine ⟨d12, run7.trans (run8.trans (run9.trans (run10.trans (run11.trans run12)))), ?_⟩
-  obtain ⟨H'', cap'', r12, grown⟩ := rp.ready
-  refine { ready := ⟨H'', cap'', r12, grown _ List.mem_cons_self, fun e he => grown e (List.mem_cons_of_mem _ he)⟩,
+  refine { ready := ⟨H'', cap'', rp.ready ready11 run12 (by decide) next.heap,
+             fun x v => (next.heapIn x v).imp id fun l => Or.inl ((lists11 x).1 l), ys', os', next.roots⟩,
            pc := rp.pc, slots := ?_, head := ?_, valueWord := ?_, nextWord := ?_, keyBytes := ?_, kept := ?_,
            output := ?_ }
   · intro j lo hi
-    rw [through12 _ (gLow _ (by omega)) (not_foot_high (by omega)) (Or.inr (by omega)),
+    rw [through12 _ (highNotG _ (by omega)) (not_foot_high (by omega)) (Or.inr (by omega)),
       linkOut _ (Or.inr (by omega)) (Or.inr (by rw [tbl]; omega)),
       toD _ (fun i => by rw [p16] at i; unfold InExt at i; dsimp only at i; omega)]
     exact M.slots j lo hi
   · rw [hk, word_observed (m := writeLog d9.σ.mem (linkLog K (link_loads d9.σ.mem K))) _ fun i hi => through12 _
-      (bucketG _ (by omega) (by omega)) (bucket_not_foot (by omega)) (Or.inl (by rw [tbl]; omega))]
+      (bucketG _ (by omega) (by omega)).1 (bucket_not_foot (by omega)) (Or.inl (by rw [tbl]; omega))]
     rw [← bucketNat, entries 2 _ (K 8) (by simp [linkLog]) (by simp [linkLog, OutLRange]), k8]
   · rw [word_observed (m := writeLog d9.σ.mem (linkLog K (link_loads d9.σ.mem K))) _ fun i hi => through12 _
-      (gLow _ (by omega)) (blockLive _ (by omega) (by omega)) (Or.inl (by omega))]
+      (blockNotG _ (by omega) (by omega)) (blockLive _ (by omega) (by omega)) (Or.inl (by omega))]
     rw [show p.toNat = (K 8).toNat by rw [k8],
       entries 0 _ (K 20) (by simp [linkLog]) (by
         simp only [linkLog, List.drop, OutLRange, p8Nat, bucketNat, k8, and_true]; omega), k20]
   · rw [word_observed (m := writeLog d9.σ.mem (linkLog K (link_loads d9.σ.mem K))) _ fun i hi => through12 _
-      (gLow _ (by omega)) (blockLive _ (by omega) (by omega)) (Or.inl (by omega))]
+      (blockNotG _ (by omega) (by omega)) (blockLive _ (by omega) (by omega)) (Or.inl (by omega))]
     rw [hk, ← p8Nat, entries 1 _ (bytesVal .ld ((link_loads d9.σ.mem K).getD 0 [])) (by simp [linkLog]) (by
         simp only [linkLog, List.drop, OutLRange, bucketNat, and_true]; rw [p8Nat, tbl]; omega)]
     simp only [link_loads, List.getD_cons_zero]
@@ -842,7 +980,7 @@ theorem miss_link {live : Nat → Prop} [LibraryLive live] {G : Nat → Prop} {d
     rw [toD _ (fun h => by rw [p16] at h; unfold InExt at h; dsimp only at h; rw [tbl] at *; omega),
       M.kept _ (bucket_not_foot (by omega)) (Or.inl (by rw [tbl]; omega))]
   · intro j hj
-    rw [through12 _ (gLow _ (by omega)) (blockLive _ (by omega) (by omega)) (Or.inl (by omega)),
+    rw [through12 _ (blockNotG _ (by omega) (by omega)) (blockLive _ (by omega) (by omega)) (Or.inl (by omega)),
       linkOut _ (Or.inr (by omega)) (Or.inr (by rw [tbl]; omega))]
     have b := D9.bytes j hj
     rw [p16] at b
@@ -864,7 +1002,8 @@ theorem miss_link {live : Nat → Prop} [LibraryLive live] {G : Nat → Prop} {d
       toD _ (fun h => by rw [p16] at h; unfold InExt at h; dsimp only at h; omega)]
     exact M.kept x nF win
   · have a : Vsa.Machine.output d12.σ = Vsa.Machine.output d9.σ := by
-      rw [rp.output]; simp only [Vsa.Machine.output, p11.output, p10.output]
+      rw [show Vsa.Machine.output d12.σ = Vsa.Machine.output d11.σ by simp only [Vsa.Machine.output, rp.output]]
+      simp only [Vsa.Machine.output, p11.output, p10.output]
     have b : Vsa.Machine.output d8.σ = Vsa.Machine.output d.σ := by
       simp only [Vsa.Machine.output, p8.output, p7.output]
     rw [a, D9.output, b, M.output]
@@ -892,11 +1031,31 @@ theorem chainFind_mem {qs : String} :
       obtain ⟨x, hx, k', f⟩ := chainFind_mem h'
       exact ⟨x, List.mem_cons_of_mem _ hx, k', by simp [chainFind, e, f]⟩
 
+/-- The table's blocks stay allocated when newlib's footprint shrinks. -/
+theorem _root_.OCaml.Vm.Primitives.Named.NamedValue.TableBlocks.shrink {H H' : List (Nat × Nat)}
+    {chains : Nat → List Entry} (h : TableBlocks H chains) (sub : ∀ a, vsaFoot H' a → vsaFoot H a) :
+    TableBlocks H' chains :=
+  ⟨h.keys, h.low, h.apart, fun b hb e he a na f => h.live b hb e he a na (sub a f)⟩
+
+/-- The table's blocks stay allocated when newlib's new footprint lies in the
+old one and bytes `X` the nodes avoid. -/
+theorem _root_.OCaml.Vm.Primitives.Named.NamedValue.TableBlocks.carry {H H' : List (Nat × Nat)}
+    {chains : Nat → List Entry} {X : Nat → Prop} (h : TableBlocks H chains)
+    (sub : ∀ a, vsaFoot H' a → vsaFoot H a ∨ X a)
+    (apart : ∀ b, b < 13 → ∀ e ∈ chains b, ∀ a, NamedValue.NodeBytes e.1 e.2.1 a → ¬ X a) :
+    TableBlocks H' chains :=
+  ⟨h.keys, h.low, h.apart, fun b hb e he a na f =>
+    (sub a f).elim (h.live b hb e he a na) (apart b hb e he a na)⟩
+
+/-- A grown block list has a smaller footprint. -/
+theorem vsaFoot_grown {H H' : List (Nat × Nat)} (grown : ∀ e ∈ H, e ∈ H') : ∀ a, vsaFoot H' a → vsaFoot H a := by
+  rintro a (g | ⟨h1, h2, h3⟩)
+  · exact .inl g
+  · exact .inr ⟨h1, h2, fun e he => h3 e (grown e he)⟩
+
 theorem _root_.OCaml.Vm.Primitives.Named.NamedValue.TableBlocks.mono {H H' : List (Nat × Nat)} {chains : Nat → List Entry} (h : TableBlocks H chains)
     (grown : ∀ e ∈ H, e ∈ H') : TableBlocks H' chains :=
-  ⟨h.keys, h.low, h.apart, fun b hb e he => by
-    obtain ⟨x, hx, lo, hi⟩ := h.live b hb e he
-    exact ⟨x, grown x hx, lo, hi⟩⟩
+  h.shrink (vsaFoot_grown grown)
 
 /-- Total reads and presence on both sides give the partial read. -/
 theorem opt_of_getD {m m' : Vsa.MemRepr.Mem} {a b : Nat} (same : (m'[b]?).getD 0 = (m[a]?).getD 0)
@@ -925,17 +1084,23 @@ prologue's input, readiness with room for the node, a frame for the deepest
 callee, the table and its blocks, the key as a C string in a live block, the
 value's word, RAM below the arena's end live, the roots' statics apart from
 the table. -/
-structure RegisterTable (live : Nat → Prop) (G : Nat → Prop) (depth : Nat) (H : List (Nat × Nat))
+structure RegisterTable (live : Nat → Prop) (Shape : Mem → Nat → List (BitVec 64) → Prop)
+    (foot : Mem → Nat → List (BitVec 64) → Nat → Prop) (Table : Mem → (Nat → Nat) → Prop)
+    (tfoot : Mem → Nat → Prop) (depth : Nat) (H : List (Nat × Nat))
     (cap charge : Nat) (R : Nat → BitVec 64) (name : List (BitVec 8)) (pl : Place)
-    (named : List (String × Val)) (chains : Nat → List Entry) (v : Val) (c : Config) : Prop where
+    (named : List (String × Val)) (chains : Nat → List Entry) (v : Val) (S : GenRoots.RootsState) (c : Config) :
+    Prop where
   input : RegisterInput R name c
   ready : RuntimeReadyL live H (cap + charge) (R 2) (R 1) c
   charged : vsaChg (name.length + 24) charge
   frame : NativeFrame (R 2) (64 + depth)
-  deep : 544 ≤ depth
+  deepR : 32 + OCaml.Vm.Gc.Skiplist.opStack ≤ depth
   depthAligned : depth % 16 = 0
   table : TableShape c.σ.mem pl named chains
   blocks : TableBlocks H chains
+  /-- the generational roots, with the table's value slots registered -/
+  roots : GenRoots.RootsAt Shape foot Table tfoot H S c.σ.mem
+  registered : ∀ b, b < 13 → ∀ e ∈ chains b, e.1 ∈ S.slots
   query : CString c.σ.mem (R 10).toNat (strOf name)
   qslack : ∀ cs, CStr c.σ.mem (R 10).toNat cs → StrcmpWSlack (R 10) cs.length
   value : valWord pl v = some (R 11)
@@ -943,31 +1108,51 @@ structure RegisterTable (live : Nat → Prop) (G : Nat → Prop) (depth : Nat) (
   keyHigh : (R 10).toNat + name.length + 8 ≤ heapEnd
   keyBlock : ∃ e ∈ H, heapStart ≤ e.1 ∧ e.1 ≤ (R 10).toNat ∧ (R 10).toNat + name.length + 1 ≤ e.1 + e.2
   ramLive : ∀ a, 0x80000000 ≤ a → a < heapEnd → live a
-  tableG : ∀ a, TableFoot chains a → ¬ G a
+  /-- the table is off the lists, `random_seed`, the page table and the state words -/
+  tableOff : ∀ a, TableFoot chains a →
+    ¬ RootsG Shape foot c.σ.mem a ∧ ¬ tfoot c.σ.mem a ∧ ¬ GenRoots.StateWord S a
+
+/-- **The named table with registered value slots** at `m`: the table, its
+blocks allocated in `H`, the generational roots, every node's value slot
+registered. -/
+structure NamedRootsAt (Shape : Mem → Nat → List (BitVec 64) → Prop)
+    (foot : Mem → Nat → List (BitVec 64) → Nat → Prop) (Table : Mem → (Nat → Nat) → Prop)
+    (tfoot : Mem → Nat → Prop) (H : List (Nat × Nat)) (pl : Place) (named : List (String × Val))
+    (chains : Nat → List Entry) (S : GenRoots.RootsState) (m : Mem) : Prop where
+  table : TableShape m pl named chains
+  blocks : TableBlocks H chains
+  roots : GenRoots.RootsAt Shape foot Table tfoot H S m
+  registered : ∀ b, b < 13 → ∀ e ∈ chains b, e.1 ∈ S.slots
 
 /-- **`caml_register_named_value` returned**: `Val_unit` at the caller with
-its registers, the table now representing `registerNamedValue` of the key and
-`v`, on a live set grown from `H`; every byte outside the roots' statics, the
-allocator's footprint, the table's bucket word and value slots and the stack
-window is kept. -/
-structure Registered (live : Nat → Prop) (G : Nat → Prop) (depth : Nat) (H : List (Nat × Nat))
+its registers; readiness on newlib's new blocks, with the table representing
+`registerNamedValue` of the key and `v` and the roots' invariant; every byte
+outside the lists, `random_seed`, the allocator's footprint, the table's bucket
+word and value slots and the stack window is kept. -/
+structure Registered (live : Nat → Prop) (Shape : Mem → Nat → List (BitVec 64) → Prop)
+    (foot : Mem → Nat → List (BitVec 64) → Nat → Prop) (Table : Mem → (Nat → Nat) → Prop)
+    (tfoot : Mem → Nat → Prop) (depth : Nat) (H : List (Nat × Nat))
     (R : Nat → BitVec 64) (name : List (BitVec 8)) (pl : Place) (named : List (String × Val))
     (chains : Nat → List Entry) (v : Val) (c f : Config) : Prop where
-  returned : Returned live G depth H R (TableWrite chains ((NamedValue.hashBytes name).toNat % 13)) c f
-  table : ∃ H' cap' chains', RuntimeReadyL live H' cap' (R 2) (R 1) f ∧ (∀ e ∈ H, e ∈ H') ∧
-    TableShape f.σ.mem pl (registerNamedValue (strOf name) v named) chains' ∧ TableBlocks H' chains'
+  returned : Returned live (RootsG Shape foot c.σ.mem)
+    (fun H' m => ∃ chains' S', NamedRootsAt Shape foot Table tfoot H' pl (registerNamedValue (strOf name) v named)
+      chains' S' m)
+    depth H R (TableWrite chains ((NamedValue.hashBytes name).toNat % 13)) c f
 
 /-- **`caml_register_named_value(name, v)`** from its entry: the prologue,
 the hash and the walk (`look`), then the found path (`found_tail`, the node's
 value through `caml_modify_generational_global_root`) or the new-node path
 (`miss_allocate`, `miss_link`, the epilogue). The table then represents
 `registerNamedValue (strOf name) v named`. -/
-theorem register_named_value_run {live : Nat → Prop} [LibraryLive live] {G : Nat → Prop} {depth : Nat}
-    (roots : RootCalls live G depth) (persist : GprsPersist_Statement)
+theorem register_named_value_run {live : Nat → Prop} [LibraryLive live] {depth : Nat}
+    {Shape : Mem → Nat → List (BitVec 64) → Prop} {foot : Mem → Nat → List (BitVec 64) → Nat → Prop}
+    {Table : Mem → (Nat → Nat) → Prop} {tfoot : Mem → Nat → Prop}
+    (ops : OCaml.Vm.Gc.Skiplist.Ops Shape foot) (tf : OCaml.Vm.Gc.PageTableFrame Table tfoot)
+    (roots : GenRoots.RootCallsG Shape foot Table tfoot) (persist : GprsPersist_Statement)
     {H : List (Nat × Nat)} {cap charge : Nat} {R : Nat → BitVec 64} {name : List (BitVec 8)} {pl : Place}
-    {named : List (String × Val)} {chains : Nat → List Entry} {v : Val} {c : Config}
-    (h : RegisterTable live G depth H cap charge R name pl named chains v c) :
-    ∃ f, Steps c f ∧ Registered live G depth H R name pl named chains v c f := by
+    {named : List (String × Val)} {chains : Nat → List Entry} {v : Val} {S : GenRoots.RootsState} {c : Config}
+    (h : RegisterTable live Shape foot Table tfoot depth H cap charge R name pl named chains v S c) :
+    ∃ f, Steps c f ∧ Registered live Shape foot Table tfoot depth H R name pl named chains v c f := by
   have frame := h.frame
   have big : 64 ≤ 64 + depth := Nat.le_add_right _ _
   have lower := frame.lower
@@ -1010,11 +1195,7 @@ theorem register_named_value_run {live : Nat → Prop} [LibraryLive live] {G : N
     intro a ha foot
     rcases ha with bucket | ⟨b, hb, e, he, node⟩
     · exact bucket_not_foot bucket foot
-    · obtain ⟨x, hx, lo, hi⟩ := h.blocks.live b hb e he
-      have bounds := h.ready.block_bounds (q := x.1) (n := x.2) hx
-      have pay : a < x.1 ∨ x.1 + x.2 ≤ a := allocator_payload_outside (p := x.1) (n := x.2) hx bounds.1 foot
-      unfold NamedValue.NodeBytes at node
-      rcases pay with l | l <;> omega
+    · exact h.blocks.live b hb e he a node foot
   have tableLow : ∀ a, TableFoot chains a → a < heapEnd := by
     intro a ha
     rcases ha with bucket | ⟨b, hb, e, he, node⟩
@@ -1030,20 +1211,27 @@ theorem register_named_value_run {live : Nat → Prop} [LibraryLive live] {G : N
     · rw [tbl] at bucket; omega
     · have := h.blocks.low b hb e he; unfold NamedValue.NodeBytes at node; omega
   have window : ∀ a, a < heapEnd → a < (R 2).toNat - (64 + depth) := fun a ha => by omega
+  have listsLive : ∀ a, OCaml.Vm.Gc.Skiplist.ListsFoot Shape foot c.σ.mem a → ¬ vsaFoot H a :=
+    fun a ⟨_, _, _, sh, f⟩ => (ops.live _ _ _ sh H _ c rfl h.ready.heap a f).1
+  have deep : 544 ≤ depth := by have := h.deepR; unfold OCaml.Vm.Gc.Skiplist.opStack at this; omega
   by_cases r0 : chainFind (strOf name) ((chains ((NamedValue.hashBytes name).toNat % 13)).map
       fun e => (e.1, strOf e.2.1)) = 0#64
   · -- the new node
     rw [r0] at looked
-    obtain ⟨e6, p, run6, M⟩ := miss_allocate persist h.ready frame h.deep h.depthAligned h.input.named keyLow keyHigh
+    obtain ⟨e6, p, run6, M⟩ := miss_allocate persist h.ready frame deep h.depthAligned h.input.named keyLow keyHigh
       h.charged run looked
-    obtain ⟨e12, run12, L⟩ := miss_link roots frame M keyLow keyHigh h.keyBlock
-      (fun a lo hi => h.tableG a (Or.inl ⟨lo, hi⟩))
-    obtain ⟨H'', cap'', r12, pIn, grown⟩ := L.ready
+    obtain ⟨e12, run12, L⟩ := miss_link ops tf roots frame h.deepR M keyLow keyHigh h.keyBlock h.roots listsLive
+      (fun a lo hi => h.tableOff a (Or.inl ⟨lo, hi⟩))
+    obtain ⟨H'', cap'', ⟨r12, heapB, ys', os', rootsP⟩⟩ := L.ready
     have pc12 : PCAt 0x800214d0#64 e12 := by have h' := L.pc; rwa [show link_call.link = 0x800214d0#64 by decide] at h'
     obtain ⟨f, runE, ep⟩ := epilogue (m := c.σ.mem) r12 pc12 h.ready.aligned frame big L.slots
-    refine ⟨f, run.trans (run6.trans (run12.trans runE)), ?_, ?_⟩
-    · refine { pc := ep.pc, result := ep.result, saved := ep.saved,
-               ready := ⟨H'', cap'', ep.ready, fun e he => grown e he⟩, output := ?_, kept := ?_ }
+    -- the key is absent
+    suffices post : ∃ chains' S', NamedRootsAt Shape foot Table tfoot H'' pl
+        (registerNamedValue (strOf name) v named) chains' S' f.σ.mem by
+      refine ⟨f, run.trans (run6.trans (run12.trans runE)), ⟨?_⟩⟩
+      refine { pc := ep.pc, result := ep.result, saved := ep.saved,
+               ready := ⟨H'', cap'', ep.ready, fun a v => (heapB a v).imp vsaFoot_cons id, post⟩,
+               output := ?_, kept := ?_ }
       · rw [show Vsa.Machine.output f.σ = Vsa.Machine.output e12.σ by simp only [Vsa.Machine.output, ep.output]]
         exact L.output
       · intro x nG nF nOwn win
@@ -1091,15 +1279,33 @@ theorem register_named_value_run {live : Nat → Prop} [LibraryLive live] {G : N
         (fun a ta out => by
           apply NamedValue.agree_of_getD _ (fun _ => presentF _ (tableLow a ta) (tableHigh a ta))
           rw [ep.memory]
-          refine L.kept a (h.tableG a ta) (tableFoot a ta) ?_ (Or.inl (window a (tableLow a ta)))
+          refine L.kept a (h.tableOff a ta).1 (tableFoot a ta) ?_ (Or.inl (window a (tableLow a ta)))
           rw [NamedValue.bucketAddr_toNat _ kLt] at out; unfold BucketWord; omega)
         (by rw [read8_value, NamedValue.bucketAddr_toNat _ kLt, ep.memory]; exact L.head)
         node M.low M.fresh (by omega) (NamedValue.strcmp_loaded ep.ready.image) (NamedValue.mask_pinned ep.ready.image)
-      exact ⟨H'', cap'', _, ep.ready, fun e he => grown e he, shape',
-        blocks'.mono fun e he => by
-          rcases List.mem_cons.1 he with rfl | t
-          · exact pIn
-          · exact grown e t⟩
+      have rootsF : GenRoots.RootsAt Shape foot Table tfoot H''
+          { S with ys := ys', os := os', slots := p :: S.slots } f.σ.mem := by
+        rw [ep.memory]; exact rootsP
+      refine ⟨_, _, ⟨shape', blocks'.carry heapB ?_, rootsF, ?_⟩⟩
+      · intro b hb e he a na g
+        simp only [NamedValue.insertNode] at he
+        split at he
+        · rcases List.mem_cons.1 he with rfl | t
+          · have hi : a < p.toNat + (name.length + 24) := by
+              unfold NamedValue.NodeBytes at na; dsimp only at na; omega
+            have lo : p.toNat ≤ a := na.1
+            rcases g with l | ⟨-, l⟩
+            · exact listsLive a l (foot_of_fresh M.fresh pLow pHigh lo hi)
+            · unfold OCaml.Vm.Gc.Skiplist.randomSeed at l; omega
+          · exact (h.tableOff a (Or.inr ⟨b, hb, e, t, na⟩)).1 g
+        · exact (h.tableOff a (Or.inr ⟨b, hb, e, he, na⟩)).1 g
+      · intro b hb e he
+        simp only [NamedValue.insertNode] at he
+        split at he
+        · rcases List.mem_cons.1 he with rfl | t
+          · exact List.mem_cons_self
+          · exact List.mem_cons_of_mem _ (h.registered b hb e t)
+        · exact List.mem_cons_of_mem _ (h.registered b hb e he)
   · -- the found node
     obtain ⟨e, he, ek, efst⟩ := chainFind_mem r0
     obtain ⟨⟨n0, kb0, v0⟩, mem0, rfl⟩ := List.mem_map.1 he
@@ -1109,20 +1315,29 @@ theorem register_named_value_run {live : Nat → Prop} [LibraryLive live] {G : N
     have nLow := h.blocks.low _ kLt _ mem0
     have arena := nd.arena
     simp only at nLow arena
-    obtain ⟨f, runF, ret, slot⟩ := found_tail roots persist h.ready frame h.depthAligned run looked nd.nonnull nLow
-      (by omega)
+    obtain ⟨f, runF, ret, slot⟩ := found_tail ops tf roots persist h.ready frame h.deepR h.depthAligned run looked
+      nd.nonnull h.roots (h.registered _ kLt _ mem0)
     have own : ∀ x, ¬ TableWrite chains ((NamedValue.hashBytes name).toNat % 13) x → ¬ InExt (n0.toNat, 8) x :=
       fun x n i => n (Or.inr ⟨_, kLt, _, mem0, i⟩)
-    obtain ⟨H3, cap3, r3, grown⟩ := ret.ready
-    refine ⟨f, run.trans runF, ⟨{ ret with kept := fun x nG nF nOwn win => ret.kept x nG nF (own x nOwn) win }, ?_⟩⟩
+    obtain ⟨H3, cap3, ⟨r3, heapB, ys', os', rootsP⟩⟩ := ret.ready
     have presentF : ∀ a, a < heapEnd → 0x80000000 ≤ a → (f.σ.mem[a]?).isSome := fun a hi lo =>
       r3.platform.live a (h.ramLive a lo hi)
     obtain ⟨shape', blocks'⟩ := h.table.update h.blocks mem0 ek
       (fun a ta out => by
         apply NamedValue.agree_of_getD _ (fun _ => presentF _ (tableLow a ta) (tableHigh a ta))
-        exact ret.kept a (h.tableG a ta) (tableFoot a ta) (fun i => by unfold InExt at i; dsimp only at i; omega)
+        exact ret.kept a (h.tableOff a ta).1 (tableFoot a ta) (fun i => by unfold InExt at i; dsimp only at i; omega)
           (Or.inl (window a (tableLow a ta))))
       slot h.value (NamedValue.strcmp_loaded r3.image) (NamedValue.mask_pinned r3.image)
-    exact ⟨H3, cap3, _, r3, grown, shape', blocks'.mono grown⟩
+    refine ⟨f, run.trans runF, ⟨{ ret with
+      kept := fun x nG nF nOwn win => ret.kept x nG nF (own x nOwn) win
+      ready := ⟨H3, cap3, r3, heapB, _, _, ⟨shape', blocks'.carry heapB ?_, rootsP, ?_⟩⟩ }⟩⟩
+    · intro b hb e he a na g
+      obtain ⟨e0, he0, rfl⟩ := List.mem_map.1 he
+      rw [NamedValue.setNode_fst, NamedValue.setNode_key] at na
+      exact (h.tableOff a (Or.inr ⟨b, hb, e0, he0, na⟩)).1 g
+    · intro b hb e he
+      obtain ⟨e0, he0, rfl⟩ := List.mem_map.1 he
+      rw [NamedValue.setNode_fst]
+      exact h.registered b hb e0 he0
 
 end OCaml.Vm.Primitives.Named.NamedRegister

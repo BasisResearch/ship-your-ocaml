@@ -55,6 +55,7 @@ structure Acting (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec
   saved : ∀ n ∈ [18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet x.σ n = gprGet c.σ n
   gp : gpr x 3 = gpr c 3
   output : x.σ.sailOutput = c.σ.sailOutput
+  htif : x.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes
   heap : ∃ H cap, HeapReady H cap x ∧
     ∀ a, VsaIris.VsaHeap.vsaFoot H a → VsaIris.VsaHeap.vsaFoot H0 a ∨ ListsFoot Shape foot m1 a
   roots : GlobalRoots Shape foot x.σ.mem rs ys os
@@ -76,6 +77,7 @@ structure OpEntry (pc link sp r : BitVec 64) (hdr : Nat) (x z : Config) : Prop w
   saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet z.σ n = gprGet x.σ n
   gp : gpr z 3 = gpr x 3
   output : z.σ.sailOutput = x.σ.sailOutput
+  htif : z.σ.regs.get? Register.htif_payload_writes = x.σ.regs.get? Register.htif_payload_writes
 
 /-- **A skiplist call's return keeps `Acting`'s frame facts**: from the
 callee's `Returned` on the touched list `hdr`, every field but the roots and
@@ -92,7 +94,7 @@ theorem Acting.returned {H0 : List (Nat × Nat)} {m1 : Std.ExtHashMap Nat (BitVe
     PCAt link d ∧ gprGet d.σ 1 = some link ∧ gprGet d.σ 2 = some (sp + 18446744073709551584#64) ∧
     gprGet d.σ 8 = some v ∧ gprGet d.σ 9 = some r ∧ (gprGet d.σ 10).isSome ∧
     (∀ n ∈ [18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet d.σ n = gprGet c.σ n) ∧ gpr d 3 = gpr c 3 ∧
-    d.σ.sailOutput = c.σ.sailOutput ∧
+    d.σ.sailOutput = c.σ.sailOutput ∧ d.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes ∧
     (∃ H' cap', HeapReady H' cap' d ∧ ∀ a, VsaIris.VsaHeap.vsaFoot H' a →
       VsaIris.VsaHeap.vsaFoot H0 a ∨ ListsFoot Shape foot m1 a) ∧
     ∀ a, ¬ ListsFoot Shape foot m1 a → ¬ VsaIris.VsaHeap.vsaFoot H0 a →
@@ -107,6 +109,7 @@ theorem Acting.returned {H0 : List (Nat × Nat)} {m1 : Std.ExtHashMap Nat (BitVe
   refine ⟨ret.good, ret.image, ret.minstret, ret.tick, ret.pc, ?_, ret.stack, (sv 8 (by decide)).trans act.s0,
     (sv 9 (by decide)).trans act.s1, ?_, fun n hn => (sv n (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega)).trans
       (act.saved n hn), ret.gprs.gp.trans (entry.gp.trans act.gp), ret.output.trans (entry.output.trans act.output),
+    ret.htif.trans (entry.htif.trans act.htif),
     ⟨H', cap', hr, fun a f => ?_⟩, fun a nl nf win seed => ?_⟩
   · exact ret.link
   · exact ret.gprs.present 10 (by decide) (by decide) (gpr_some_of entry.list)
@@ -139,7 +142,7 @@ theorem Acting.step_young (ops : Ops Shape foot) {H0 : List (Nat × Nat)} {m1 : 
   have gz : GlobalRoots Shape foot z.σ.mem rs ys os := by rw [entry.memory]; exact act.roots
   obtain ⟨cy, shz, hy⟩ := gz.young
   obtain ⟨d, run, ret, cy', sh', q, footIn⟩ := (op H cap cy shz hy hrz).run z ⟨entry.pc, rfl⟩
-  obtain ⟨good, image, minstret, tick, pc', link1, stack, s0, s1, a0, saved, gp, output, heap, kept⟩ :=
+  obtain ⟨good, image, minstret, tick, pc', link1, stack, s0, s1, a0, saved, gp, output, htif, heap, kept⟩ :=
     act.returned entry (Or.inl rfl) shz hb spNat ret
   have lowSp := frame'.lower
   have fr : InsertFrame Shape foot H globalRootsYoung cy z.σ.mem d.σ.mem :=
@@ -147,7 +150,7 @@ theorem Acting.step_young (ops : Ops Shape foot) {H0 : List (Nat × Nat)} {m1 : 
       seed := fun sk cells sh a f => (ops.live _ _ _ sh H cap z rfl hrz a f).2
       kept := fun a nt nf lo seed => ret.kept a nt nf (Or.inl (by unfold opStack at lowSp ⊢; omega)) seed }
   refine ⟨d, keys d.σ.mem cy', run, pc',
-    { good, image, minstret, tick, link := ⟨link, link1, aligned⟩, stack, s0, s1, a0, saved, gp, output, heap,
+    { good, image, minstret, tick, link := ⟨link, link1, aligned⟩, stack, s0, s1, a0, saved, gp, output, htif, heap,
       roots := gz.replace_young ops shz sh' (apartKeys _ q) footIn fr, feet := ?_, kept }, q⟩
   intro a l
   rcases gz.feet_young ops shz sh' footIn fr a l with l' | v'
@@ -172,7 +175,7 @@ theorem Acting.step_old (ops : Ops Shape foot) {H0 : List (Nat × Nat)} {m1 : St
   have gz : GlobalRoots Shape foot z.σ.mem rs ys os := by rw [entry.memory]; exact act.roots
   obtain ⟨co, shz, ho⟩ := gz.old
   obtain ⟨d, run, ret, co', sh', q, footIn⟩ := (op H cap co shz ho hrz).run z ⟨entry.pc, rfl⟩
-  obtain ⟨good, image, minstret, tick, pc', link1, stack, s0, s1, a0, saved, gp, output, heap, kept⟩ :=
+  obtain ⟨good, image, minstret, tick, pc', link1, stack, s0, s1, a0, saved, gp, output, htif, heap, kept⟩ :=
     act.returned entry (Or.inr rfl) shz hb spNat ret
   have lowSp := frame'.lower
   have fr : InsertFrame Shape foot H globalRootsOld co z.σ.mem d.σ.mem :=
@@ -180,7 +183,7 @@ theorem Acting.step_old (ops : Ops Shape foot) {H0 : List (Nat × Nat)} {m1 : St
       seed := fun sk cells sh a f => (ops.live _ _ _ sh H cap z rfl hrz a f).2
       kept := fun a nt nf lo seed => ret.kept a nt nf (Or.inl (by unfold opStack at lowSp ⊢; omega)) seed }
   refine ⟨d, keys d.σ.mem co', run, pc',
-    { good, image, minstret, tick, link := ⟨link, link1, aligned⟩, stack, s0, s1, a0, saved, gp, output, heap,
+    { good, image, minstret, tick, link := ⟨link, link1, aligned⟩, stack, s0, s1, a0, saved, gp, output, htif, heap,
       roots := gz.replace_old ops shz sh' (apartKeys _ q) footIn fr, feet := ?_, kept }, q⟩
   intro a l
   rcases gz.feet_old ops shz sh' footIn fr a l with l' | v'
@@ -239,10 +242,12 @@ structure RootModified (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (
   minstret : ∃ w, d.σ.regs.get? Register.minstret = some w
   tick : d.tick < 2
   pc : PCAt ra d
+  link : gprGet d.σ 1 = some ra
   stack : gprGet d.σ 2 = some sp
   saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet d.σ n = gprGet c.σ n
   gprs : GprsKept c d
   output : d.σ.sailOutput = c.σ.sailOutput
+  htif : d.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes
   heap : ∃ H' cap', HeapReady H' cap' d ∧
     ∀ a, VsaIris.VsaHeap.vsaFoot H' a → VsaIris.VsaHeap.vsaFoot H a ∨ ListsFoot Shape foot c.σ.mem a
   /-- the lists' footprints lie in the old ones and newlib's footprint -/
@@ -324,6 +329,7 @@ theorem prologue {Table : Std.ExtHashMap Nat (BitVec 8) → (Nat → Nat) → Pr
         (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega)
       gp := keep 3 (by decide) (by decide) (by decide)
       output := p.output
+      htif := p.frame _ (fun n _ => gprReg_ne_htif n) (by decide)
       heap := ⟨H, cap, OCaml.Vm.Gc.HeapReady.keep_windows h.heap (ws := [⟨sp.toNat - 32, sp.toNat⟩])
         (fun w hw => by
           simp only [List.mem_singleton] at hw
@@ -365,6 +371,7 @@ theorem Acting.block {H0 : List (Nat × Nat)} {m1 : Std.ExtHashMap Nat (BitVec 8
         exact (keep n (by omega) (by omega) (by omega)).trans (act.saved n hn)
       gp := (keep 3 (by decide) (by decide) (by decide)).trans act.gp
       output := p.output.trans act.output
+      htif := (p.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans act.htif
       heap := ⟨H, cap, RegisterRoot.HeapReady.of_mem hr mem, hb⟩
       roots := by rw [mem]; exact act.roots
       feet := by rw [mem]; exact act.feet
@@ -426,6 +433,7 @@ theorem Acting.lookup {Table : Std.ExtHashMap Nat (BitVec 8) → (Nat → Nat) �
         (a2.saved n hn)
       gp := (keep3 3 (by decide)).trans a2.gp
       output := p3.output.trans a2.output
+      htif := p3.htif.trans a2.htif
       heap := ⟨H, cap, RegisterRoot.HeapReady.of_mem hr mem3, hb⟩
       roots := by rw [mem3]; exact a2.roots
       feet := by rw [mem3]; exact a2.feet
@@ -466,7 +474,9 @@ theorem Acting.enter {H0 : List (Nat × Nat)} {m1 : Std.ExtHashMap Nat (BitVec 8
       saved := keepX
       gp := (keep 3 (by decide) (by decide) (by decide)).trans
         (p.gpr_frame keys 3 (by decide) (by decide) fun m => by have := temps 3 m; omega)
-      output := q.output.trans p.output }
+      output := q.output.trans p.output
+      htif := (q.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans
+        (p.frame _ (fun n _ => gprReg_ne_htif n) (by decide)) }
   exact ⟨z, run, entry, keep 12 (by decide) (by decide) (by decide)⟩
 
 end OCaml.Vm.Primitives.Named.ModifyRoot

@@ -245,12 +245,14 @@ theorem Acting.finish {Table : Std.ExtHashMap Nat (BitVec 8) → (Nat → Nat) �
       minstret := p.minstret
       tick := p.tick
       pc := p.pc
+      link := holds_at p.regs rfl ((frameV 24 (by decide)).trans saved1.1)
       stack := holds_at p.regs rfl (by
         rw [r2, BitVec.add_assoc, show (18446744073709551584#64 : BitVec 64) + 32#64 = 0#64 by decide,
           BitVec.add_zero])
       saved := fun n hn => ?_
       gprs := GprsKept.of_steps gprsPersist (run0.trans run) gp
       output := p.output.trans act.output
+      htif := (p.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans act.htif
       heap := ⟨H', cap', OCaml.Vm.Gc.HeapReady.frame_read hr fun a _ reads => by
           rcases reads with rd | pin
           · exact keepD a ((hb a rd.1).symm)

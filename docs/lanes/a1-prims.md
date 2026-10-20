@@ -219,8 +219,11 @@
   * `ModifyRootFinish.lean`: the three store blocks are one `StoreBlock`; `Acting.finish` ends every path.
   * `RootsUpdate.lean`: the roots' algebra across a list call (`replace_*`, `insert_*`, `remove_*`,
     `GlobalRoots.keep`).
-  * `RootCallsG` (below) is proved from these two runs (`rootCallsG`, `GenRoots.lean`). Next:
-    `register_named_value_run` over it.
+  * `RootCallsG` (below) is proved from these two runs (`rootCallsG`, `GenRoots.lean`), and
+    `register_named_value_run` is ported onto it: `found_tail` (`RootCallsG.modify` on a registered slot),
+    `miss_link` (`RootsAt.keep` across the allocation and link stores, `Fresh` for the node's value word,
+    `RootCallsG.register`), post `NamedRootsAt`. Posts carry `link` and the HTIF register; readiness after a
+    roots call is `RootsReturn.ready`. `TableBlocks.live` is byte-wise (outside newlib's footprint).
 
 **`RootCallsG` (replaces `RootCalls`; `OCaml/Vm/Primitives/Named/GenRoots.lean`; landed shape).** `RootCalls`
 keeps bytes outside static statics `G`, but the skiplist cells live in the heap, and both calls need the
@@ -229,19 +232,21 @@ roots' state at entry. The new contract carries a roots invariant over memory:
 * `RootsState`: `rs ys os` (the three lists' keys), `cls` (page-table classes), `D start stop`
   (`Caml_state`, `young_start`, `young_end`), `slots` (registered generational slots).
 * `RootsAt Shape foot Table tfoot H S m` (named fields): `env : EnvAt` (`table`, `young`, `startBelow`/
-  `stopBelow`, `tableBelow`, and `tableOff`/`stateOff`: the page table's footprint `tfoot m` and the
+  `stopBelow`, and `tableOff`/`stateOff`: the page table's footprint `tfoot m` and the
   `Caml_state` words are `Off` — off `ListsFoot m`, `vsaFoot H` and `random_seed` — and outside the slots);
   `roots : GlobalRoots Shape foot m rs ys os`; `placed : ∀ r ∈ slots, RootAt start stop cls (*r) r ys os`;
-  `slotLow`/`slotHigh`/`slotAligned`/`slotOff`/`slotsApart`; `listed : ys, os ⊆ slots`; `notGlobal`.
+  `slotLow`/`slotHigh`/`slotAligned`/`slotOff`/`slotsApart`; `listed : ys, os ⊆ slots`; `notGlobal`;
+  `globalOff` (`caml_global_roots`' keys are allocated words off the lists).
 * `Fresh … r`: a slot fit to register (new, aligned in the arena, `Off`, apart from the slots, the page table
   and the state words). `Carry H H' own m m'`: what a call guarantees about memory; `EnvAt.carry`,
   `RootsAt.register`, `RootsAt.modify` move the invariant across it.
-* `TableFrame Table tfoot`: the page table keeps its classes and footprint under stores off `tfoot`
-  (a6-gc; `PageTableLookup.frame` asks agreement on all of the arena, which a skiplist insertion breaks).
+* a6-gc's `PageTableFrame Table tfoot`: the page table keeps its classes and footprint under stores off
+  `tfoot` (`PageTableLookup.frame` asks agreement on all of the arena, which a skiplist insertion breaks).
 * The list footprint is `ListsFoot Shape foot m` (memory-dependent); posts keep every byte outside it, newlib's
   footprint, the stack window, `random_seed` (and the slot for `modify`), and give `RootsAt` again on a
   successor state (`slots` gains `r` for `register`) with `vsaFoot H'` and `ListsFoot d` within the old ones.
-* Supplied by a0-boot at the end of `init_gc`: `RootsAt` with empty lists and slots (`Shape m sk []` for the
+* Supplied by a0-boot at the whileMin cut (agreed 2026-10-20; later startup steps change `cls`, `H` and
+  `Caml_state`): `RootsAt` with empty lists and slots (`Shape m sk []` for the
   three headers), `table`/`tfoot` after the page table's set-up, `young` (`Caml_state`, the minor heap's
   bounds), the apartness fields. By a6-gc: `Skiplist.Ops`, `PageTableLookup`, `TableFrame`. By a1-prims:
   `RootCallsG` from `register_root_run`/`modify_root_run`.

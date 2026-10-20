@@ -6626,3 +6626,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.listsFoot_keep
 #print axioms OCaml.Vm.Sim.f1_premises
 #print axioms OCaml.Vm.Sim.ocamlrun_refinement_F1_open
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.RootsAt.keep
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.RootsAt.of_low
+#print axioms OCaml.Vm.Primitives.Named.GenRoots.RootsReturn.ready
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableBlocks.shrink
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableBlocks.carry
+#print axioms OCaml.Vm.Primitives.Named.NamedRegister.vsaFoot_grown

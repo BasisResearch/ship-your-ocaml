@@ -41,14 +41,6 @@ structure RootsState where
   stop : BitVec 64
   slots : List (BitVec 64)
 
-/-- **The page table's frame** (a6-gc): stores off its footprint `tfoot`
-keep its classes and its footprint. `PageTableLookup.frame` asks agreement on
-the whole arena, which a skiplist insertion breaks. -/
-structure TableFrame (Table : Std.ExtHashMap Nat (BitVec 8) → (Nat → Nat) → Prop)
-    (tfoot : Std.ExtHashMap Nat (BitVec 8) → Nat → Prop) : Prop where
-  frame : ∀ m m' cls, Table m cls → (∀ a, tfoot m a → (m'[a]?).getD 0 = (m[a]?).getD 0) →
-    Table m' cls ∧ ∀ a, tfoot m' a ↔ tfoot m a
-
 /-- A byte the roots calls may leave alone: off the lists, newlib's footprint
 and `random_seed`. -/
 structure Off (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec 64) → Prop)
@@ -78,7 +70,6 @@ structure EnvAt (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec 
   young : YoungAt m S.D S.start S.stop
   startBelow : (S.D + 32#64).toNat + 8 ≤ Vsa.Sim.DlHeap.heapEnd
   stopBelow : (S.D + 40#64).toNat + 8 ≤ Vsa.Sim.DlHeap.heapEnd
-  tableBelow : ∀ a, tfoot m a → a < Vsa.Sim.DlHeap.heapEnd
   tableOff : ∀ a, tfoot m a → Off Shape foot H m a ∧ ¬ InSlots S.slots a
   stateOff : ∀ a, StateWord S a → Off Shape foot H m a ∧ ¬ InSlots S.slots a
 
@@ -99,6 +90,8 @@ structure RootsAt (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVe
   /-- the generational lists hold registered slots only -/
   listed : ∀ k, k ∈ S.ys ∨ k ∈ S.os → k ∈ S.slots
   notGlobal : ∀ r ∈ S.slots, r ∉ S.rs
+  /-- `caml_global_roots`' keys are allocated words off the lists -/
+  globalOff : ∀ k ∈ S.rs, ∀ a, InWord k.toNat a → Off Shape foot H m a
 
 /-- **What a roots call guarantees about memory**: newlib's footprint and the
 lists' footprints within the old ones, and every byte below the arena's end,
@@ -126,34 +119,31 @@ theorem read8_carry {H H' : List (Nat × Nat)} {own : Nat → Prop} {m m' : Std.
   rw [show w = w + 0 from rfl, k 0 (by decide), k 1 (by decide), k 2 (by decide), k 3 (by decide), k 4 (by decide),
     k 5 (by decide), k 6 (by decide), k 7 (by decide)]
 
-/-- **The environment across a call** whose own bytes are slots, onto slots
-`slots'` whose new bytes miss the page table and the state words. -/
-theorem EnvAt.carry (tf : TableFrame Table tfoot) {H H' : List (Nat × Nat)} {S : RootsState}
+/-- **The environment across a call** whose own bytes miss the page table and
+the state words, onto slots `slots'` whose new bytes miss them too. -/
+theorem EnvAt.carry (tf : PageTableFrame Table tfoot) {H H' : List (Nat × Nat)} {S : RootsState}
     {m m' : Std.ExtHashMap Nat (BitVec 8)} {own : Nat → Prop} (e : EnvAt Shape foot Table tfoot H S m)
-    (cr : Carry Shape foot H H' own m m') (ownSlots : ∀ a, own a → InSlots S.slots a) (slots' : List (BitVec 64))
+    (cr : Carry Shape foot H H' own m m') (ownApart : ∀ a, own a → ¬ tfoot m a ∧ ¬ StateWord S a)
+    (slots' : List (BitVec 64))
     (fresh : ∀ a, InSlots slots' a → InSlots S.slots a ∨ (¬ tfoot m a ∧ ¬ StateWord S a)) :
     EnvAt Shape foot Table tfoot H' { S with slots := slots' } m' := by
   have tkeep : ∀ a, tfoot m a → (m'[a]?).getD 0 = (m[a]?).getD 0 := fun a t =>
-    cr.kept a (e.tableBelow a t) (e.tableOff a t).1 fun o => (e.tableOff a t).2 (ownSlots a o)
+    cr.kept a (tf.low m S.cls e.table a t) (e.tableOff a t).1 fun o => (ownApart a o).1 t
   obtain ⟨table', tf'⟩ := tf.frame m m' S.cls e.table tkeep
   have wordKeep (w : Nat) (below : w + 8 ≤ Vsa.Sim.DlHeap.heapEnd) (sw : ∀ a, InWord w a → StateWord S a) :
       read8 m' w = read8 m w :=
-    read8_carry cr below fun a iw => ⟨(e.stateOff a (sw a iw)).1, fun o => (e.stateOff a (sw a iw)).2 (ownSlots a o)⟩
+    read8_carry cr below fun a iw => ⟨(e.stateOff a (sw a iw)).1, fun o => (ownApart a o).2 (sw a iw)⟩
   have y := e.young
   refine
     { table := table'
       young :=
-        { state := by
-            rw [wordKeep (0x80064d08#64).toNat (by decide) fun a iw => Or.inl iw]; exact y.state
-          startWord := by
-            rw [wordKeep _ e.startBelow fun a iw => Or.inr (Or.inl iw)]; exact y.startWord
-          stopWord := by
-            rw [wordKeep _ e.stopBelow fun a iw => Or.inr (Or.inr iw)]; exact y.stopWord
+        { state := by rw [wordKeep (0x80064d08#64).toNat (by decide) fun a iw => Or.inl iw]; exact y.state
+          startWord := by rw [wordKeep _ e.startBelow fun a iw => Or.inr (Or.inl iw)]; exact y.startWord
+          stopWord := by rw [wordKeep _ e.stopBelow fun a iw => Or.inr (Or.inr iw)]; exact y.stopWord
           startWin := y.startWin
           stopWin := y.stopWin }
       startBelow := e.startBelow
       stopBelow := e.stopBelow
-      tableBelow := fun a t => e.tableBelow a ((tf' a).1 t)
       tableOff := fun a t => ?_
       stateOff := fun a sw => ?_ }
   · have t0 := (tf' a).1 t
@@ -200,9 +190,45 @@ theorem RootsAt.value {H H' : List (Nat × Nat)} {S : RootsState} {own : Nat →
     read8 m' r.toNat = read8 m r.toNat :=
   read8_carry cr (I.slotHigh r hr) fun a iw => ⟨I.slotOff r hr a iw, notOwn a iw⟩
 
+/-- **The roots across a call that changes no list and no slot**: memory kept
+off the lists, newlib's footprint and `random_seed`, the lists unchanged. -/
+theorem RootsAt.keep (tf : PageTableFrame Table tfoot) {H H' : List (Nat × Nat)} {S : RootsState}
+    {m m' : Std.ExtHashMap Nat (BitVec 8)} {own : Nat → Prop} (I : RootsAt Shape foot Table tfoot H S m)
+    (cr : Carry Shape foot H H' own m m')
+    (ownApart : ∀ a, own a → ¬ tfoot m a ∧ ¬ StateWord S a ∧ ¬ InSlots S.slots a)
+    (g : GlobalRoots Shape foot m' S.rs S.ys S.os) :
+    RootsAt Shape foot Table tfoot H' S m' := by
+  have env := I.env.carry tf cr (fun a o => ⟨(ownApart a o).1, (ownApart a o).2.1⟩) S.slots fun a i => Or.inl i
+  exact
+    { env := { env with }
+      roots := g
+      placed := fun r hr => by
+        rw [I.value cr hr fun a iw o => (ownApart a o).2.2 ⟨r, hr, iw⟩]; exact I.placed r hr
+      slotLow := I.slotLow
+      slotHigh := I.slotHigh
+      slotAligned := I.slotAligned
+      slotOff := fun r hr a iw => (I.slotOff r hr a iw).carry cr
+      slotsApart := I.slotsApart
+      listed := I.listed
+      notGlobal := I.notGlobal
+      globalOff := fun k hk a iw => (I.globalOff k hk a iw).carry cr }
+
+/-- **The roots across stores above the arena** (native frames). -/
+theorem RootsAt.of_low (ops : Ops Shape foot) (tf : PageTableFrame Table tfoot) {H : List (Nat × Nat)}
+    {S : RootsState} {m m' : Std.ExtHashMap Nat (BitVec 8)} (I : RootsAt Shape foot Table tfoot H S m)
+    (agree : ∀ a, a < Vsa.Sim.DlHeap.heapEnd → (m'[a]?).getD 0 = (m[a]?).getD 0) :
+    RootsAt Shape foot Table tfoot H S m' :=
+  I.keep tf (own := fun _ => False)
+    { heap := fun _ f => Or.inl f
+      feet := fun a l => Or.inl ((I.roots.listsFoot_keep ops (fun a' l' => by
+        obtain ⟨_, _, _, sh, f⟩ := l'
+        exact agree a' (ops.low _ _ _ sh a' f)) a).1 l)
+      kept := fun a ha _ _ => agree a ha }
+    (fun _ f => f.elim) (I.roots.keep_low ops agree).1
+
 /-- **The roots after `caml_register_generational_global_root(r)`**: `r`
 joins the slots, placed for its value. -/
-theorem RootsAt.register (tf : TableFrame Table tfoot) {H H' : List (Nat × Nat)} {S : RootsState}
+theorem RootsAt.register (tf : PageTableFrame Table tfoot) {H H' : List (Nat × Nat)} {S : RootsState}
     {m m' : Std.ExtHashMap Nat (BitVec 8)} {r : BitVec 64} {ys' os' : List (BitVec 64)}
     (I : RootsAt Shape foot Table tfoot H S m) (fresh : Fresh Shape foot tfoot H S m r)
     (cr : Carry Shape foot H H' (fun _ => False) m m') (g : GlobalRoots Shape foot m' S.rs ys' os')
@@ -228,7 +254,8 @@ theorem RootsAt.register (tf : TableFrame Table tfoot) {H H' : List (Nat × Nat)
       slotOff := fun r' hr' a iw => ?_
       slotsApart := fun r1 h1 r2 h2 ne => ?_
       listed := fun k hk => ?_
-      notGlobal := fun r' hr' => ?_ }
+      notGlobal := fun r' hr' => ?_
+      globalOff := fun k hk a iw => ?_ }
   · rcases List.mem_cons.1 hr' with rfl | hr'
     · rw [read8_carry cr fresh.high fun a iw => ⟨fresh.off a iw, id⟩]
       refine ⟨fun yv => ⟨(hy r').2 (Or.inl ⟨yv, rfl⟩), fun h => ?_⟩, fun ov => Or.inr ((ho r').2 (Or.inl ⟨ov, rfl⟩)),
@@ -272,19 +299,21 @@ theorem RootsAt.register (tf : TableFrame Table tfoot) {H H' : List (Nat × Nat)
   · rcases List.mem_cons.1 hr' with rfl | hr'
     · exact fresh.notGlobal
     · exact I.notGlobal r' hr'
+  · exact (I.globalOff k hk a iw).carry cr
 
 /-! ### Modifying a slot -/
 
 /-- **The roots after `caml_modify_generational_global_root(r, v)`** on a
 registered slot `r`: `r` placed for `v`, every other slot where it was. -/
-theorem RootsAt.modify (tf : TableFrame Table tfoot) {H H' : List (Nat × Nat)} {S : RootsState}
+theorem RootsAt.modify (tf : PageTableFrame Table tfoot) {H H' : List (Nat × Nat)} {S : RootsState}
     {m m' : Std.ExtHashMap Nat (BitVec 8)} {r v : BitVec 64} {ys' os' : List (BitVec 64)}
     (I : RootsAt Shape foot Table tfoot H S m) (hr : r ∈ S.slots)
     (cr : Carry Shape foot H H' (InWord r.toNat) m m') (g : GlobalRoots Shape foot m' S.rs ys' os')
     (memb : ∀ k, k ≠ r → (k ∈ ys' ↔ k ∈ S.ys) ∧ (k ∈ os' ↔ k ∈ S.os))
     (place : RootAt S.start S.stop S.cls v r ys' os') (slot : bytesT m' r.toNat 8 = v) :
     RootsAt Shape foot Table tfoot H' { S with ys := ys', os := os' } m' := by
-  have env := I.env.carry tf cr (fun a iw => ⟨r, hr, iw⟩) S.slots fun a i => Or.inl i
+  have env := I.env.carry tf cr (fun a iw => ⟨fun t => (I.env.tableOff a t).2 ⟨r, hr, iw⟩,
+    fun sw => (I.env.stateOff a sw).2 ⟨r, hr, iw⟩⟩) S.slots fun a i => Or.inl i
   refine
     { env := { env with }
       roots := g
@@ -295,7 +324,8 @@ theorem RootsAt.modify (tf : TableFrame Table tfoot) {H H' : List (Nat × Nat)} 
       slotOff := fun r' hr' a iw => (I.slotOff r' hr' a iw).carry cr
       slotsApart := I.slotsApart
       listed := fun k hk => ?_
-      notGlobal := I.notGlobal }
+      notGlobal := I.notGlobal
+      globalOff := fun k hk a iw => (I.globalOff k hk a iw).carry cr }
   · by_cases e : r' = r
     · subst e
       rw [read8_value, slot]
@@ -322,17 +352,43 @@ theorem arena_window {r : BitVec 64} (low : Vsa.Sim.DlHeap.heapStart ≤ r.toNat
   exact ⟨by omega, by omega, by omega, aligned⟩
 
 /-- **A roots call's ABI return**: at `ra` with `sp`, the callee-saved
-registers, every register that held a value, and the output. -/
+registers, every register that held a value, the output and the HTIF payload
+register. -/
 structure RootsReturn (sp ra : BitVec 64) (c d : Config) : Prop where
   good : GoodState d.σ
   image : ExecutableImage d
   minstret : ∃ w, d.σ.regs.get? Register.minstret = some w
   tick : d.tick < 2
   pc : PCAt ra d
+  link : gprGet d.σ 1 = some ra
   stack : gprGet d.σ 2 = some sp
   saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet d.σ n = gprGet c.σ n
   gprs : GprsKept c d
   output : d.σ.sailOutput = c.σ.sailOutput
+  htif : d.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes
+
+/-- **Readiness after a roots call**, on newlib's new heap: the platform
+facts persist along the run (registers, RAM presence by `memPersist`, the HTIF
+register), `gp` is kept. -/
+theorem RootsReturn.ready {live : Nat → Prop} {H H' : List (Nat × Nat)} {cap cap' : Nat}
+    {sp0 ra0 sp ra : BitVec 64} {c d : Config} (ready : OCaml.Vm.Boot.Startup.RuntimeReadyL live H cap sp0 ra0 c)
+    (run : Steps c d) (ret : RootsReturn sp ra c d) (aligned : ra.toNat % 4 = 0) (heap : HeapReady H' cap' d) :
+    OCaml.Vm.Boot.Startup.RuntimeReadyL live H' cap' sp ra d :=
+  OCaml.Vm.Boot.Startup.RuntimeReadyL.of_heap heap
+    ⟨ret.good, ret.image, ret.minstret, ret.link, aligned, ret.tick⟩
+    ⟨ret.good, ret.tick, fun n lo hi => ret.gprs.present n lo hi (ready.platform.gpr n lo hi),
+      fun a ha => memPersist c d run a (ready.platform.live a ha), by rw [ret.htif]; exact ready.platform.htifIdle⟩
+    (fun p hp => by
+      have g := ready.readOnly.1 p hp
+      simp only [List.mem_singleton] at hp
+      subst hp
+      have e : (VsaIris.Inst.vsaModel live).reg d VsaIris.gp = (VsaIris.Inst.vsaModel live).reg c VsaIris.gp := by
+        change VsaIris.Inst.vsaReg d VsaIris.gp = VsaIris.Inst.vsaReg c VsaIris.gp
+        unfold VsaIris.Inst.vsaReg
+        rw [if_neg (by decide), if_neg (by decide)]
+        exact congrArg (fun o => Option.getD o 0) ret.gprs.gp
+      exact e.trans g)
+    ret.stack
 
 /-- **After a roots call**: newlib ready on `H'`, the roots at `S'`, and every
 byte off the lists, newlib's footprint and `random_seed`, outside `own` and the
@@ -343,6 +399,8 @@ structure RootsNext (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bit
     (H H' : List (Nat × Nat)) (cap' : Nat) (S' : RootsState) (sp : BitVec 64) (depth : Nat) (own : Nat → Prop)
     (c d : Config) : Prop where
   heap : HeapReady H' cap' d
+  /-- newlib's footprint after the call lies in the old one and the lists' -/
+  heapIn : ∀ a, VsaIris.VsaHeap.vsaFoot H' a → VsaIris.VsaHeap.vsaFoot H a ∨ ListsFoot Shape foot c.σ.mem a
   roots : RootsAt Shape foot Table tfoot H' S' d.σ.mem
   kept : ∀ a, Off Shape foot H c.σ.mem a → ¬ own a → (a < sp.toNat - depth ∨ sp.toNat ≤ a) →
     (d.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0
@@ -386,8 +444,8 @@ structure RootCallsG (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bi
         (32 + opStack) (InWord r.toNat) c d)
 
 /-- **`RootCallsG` from the two machine runs** over a6-gc's skiplist, page
-table lookup and page-table frame. -/
-theorem rootCallsG (ops : Ops Shape foot) (pt : PageTableLookup Table) (tf : TableFrame Table tfoot) :
+table lookup and page-table frame (`PageTableFrame`). -/
+theorem rootCallsG (ops : Ops Shape foot) (pt : PageTableLookup Table) (tf : PageTableFrame Table tfoot) :
     RootCallsG Shape foot Table tfoot where
   register := fun c H cap S sp ra r I fresh e => by
     have frame := e.frame
@@ -415,8 +473,8 @@ theorem rootCallsG (ops : Ops Shape foot) (pt : PageTableLookup Table) (tf : Tab
       { heap := hb
         feet := f.feet
         kept := fun a ha o _ => f.kept a o.lists o.heap (Or.inl (below a ha)) o.seed }
-    exact ⟨⟨f.good, f.image, f.minstret, f.tick, f.pc, f.stack, f.saved, f.gprs, f.output⟩,
-      H', cap', ys', os', ⟨hr, I.register tf fresh cr g hy ho, fun a o _ win => f.kept a o.lists o.heap win o.seed⟩⟩
+    exact ⟨⟨f.good, f.image, f.minstret, f.tick, f.pc, f.link, f.stack, f.saved, f.gprs, f.output, f.htif⟩,
+      H', cap', ys', os', ⟨hr, hb, I.register tf fresh cr g hy ho, fun a o _ win => f.kept a o.lists o.heap win o.seed⟩⟩
   modify := fun c H cap S sp ra r v I hr e => by
     have frame := e.frame
     have lower : Vsa.Sim.DlHeap.heapEnd + (32 + 768) ≤ sp.toNat := frame.lower
@@ -451,8 +509,8 @@ theorem rootCallsG (ops : Ops Shape foot) (pt : PageTableLookup Table) (tf : Tab
       { heap := hb
         feet := f.feet
         kept := fun a ha o n => f.kept a o.lists o.heap (slotOut a n) (Or.inl (below a ha)) o.seed }
-    exact ⟨⟨f.good, f.image, f.minstret, f.tick, f.pc, f.stack, f.saved, f.gprs, f.output⟩, f.slot,
+    exact ⟨⟨f.good, f.image, f.minstret, f.tick, f.pc, f.link, f.stack, f.saved, f.gprs, f.output, f.htif⟩, f.slot,
       H', cap', ys', os',
-      ⟨hr', I.modify tf hr cr g memb place f.slot, fun a o n win => f.kept a o.lists o.heap (slotOut a n) win o.seed⟩⟩
+      ⟨hr', hb, I.modify tf hr cr g memb place f.slot, fun a o n win => f.kept a o.lists o.heap (slotOut a n) win o.seed⟩⟩
 
 end OCaml.Vm.Primitives.Named.GenRoots

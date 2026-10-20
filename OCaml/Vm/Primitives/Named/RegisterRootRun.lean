@@ -76,10 +76,12 @@ structure RootFiled (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bit
   minstret : ∃ v, d.σ.regs.get? Register.minstret = some v
   tick : d.tick < 2
   pc : PCAt ra d
+  link : gprGet d.σ 1 = some ra
   stack : gprGet d.σ 2 = some sp
   saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet d.σ n = gprGet c.σ n
   gprs : GprsKept c d
   output : d.σ.sailOutput = c.σ.sailOutput
+  htif : d.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes
   heap : ∃ H' cap', HeapReady H' cap' d ∧
     ∀ a, VsaIris.VsaHeap.vsaFoot H' a → VsaIris.VsaHeap.vsaFoot H a ∨ ListsFoot Shape foot c.σ.mem a
   /-- the lists' footprints lie in the old ones and newlib's footprint -/
@@ -136,10 +138,12 @@ theorem imm_path {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec
       minstret := p2.minstret
       tick := p2.tick
       pc := ?_
+      link := (keep 1 (by decide) (by decide) (by decide)).trans h.leaf.raReg
       stack := (keep 2 (by decide) (by decide) (by decide)).trans h.stack
       saved := ?_
       gprs := GprsKept.of_steps gprsPersist (run1.trans run2) (keep 3 (by decide) (by decide) (by decide))
       output := p2.output.trans p1.output
+      htif := (p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans (p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide))
       heap := ⟨H, cap, HeapReady.of_mem h.heap mem, fun _ f => Or.inl f⟩
       feet := fun a l => Or.inl (by rw [mem] at l; exact l)
       roots := ⟨ys, os, by rw [mem]; exact h.roots, lists_kept notYoung, lists_kept notOld⟩
@@ -162,6 +166,7 @@ theorem filed_of_returned {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → Lis
     (outside : ∀ a, (a < sp.toNat - opStack ∨ sp.toNat ≤ a) → (e.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0)
     (savedE : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet e.σ n = gprGet c.σ n)
     (gpE : gpr e 3 = gpr c 3) (outE : e.σ.sailOutput = c.σ.sailOutput)
+    (htifE : e.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes)
     (ret : Returned H (foot e.σ.mem hdr cells) sp ra e d)
     (feet : ∀ a, ListsFoot Shape foot d.σ.mem a → ListsFoot Shape foot e.σ.mem a ∨ VsaIris.VsaHeap.vsaFoot H a)
     (roots : ∃ ys' os', GlobalRoots Shape foot d.σ.mem rs ys' os' ∧
@@ -178,10 +183,12 @@ theorem filed_of_returned {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → Lis
       minstret := ret.minstret
       tick := ret.tick
       pc := ret.pc
+      link := ret.link
       stack := ret.stack
       saved := fun n hn => (ret.saved n hn).trans (savedE n hn)
       gprs := GprsKept.of_steps gprsPersist run (ret.gprs.gp.trans gpE)
       output := ret.output.trans outE
+      htif := ret.htif.trans htifE
       heap := ⟨H', cap', hr, fun a f => (hb a f).imp id fun t => (lists a).1 ⟨hdr, cells, Or.inr list, she, t⟩⟩
       feet := fun a l => (feet a l).imp (lists a).1 id
       roots := roots
@@ -201,6 +208,7 @@ structure AtLookup (c e : Config) (sp ra r : BitVec 64) : Prop where
   saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet e.σ n = gprGet c.σ n
   gp : gpr e 3 = gpr c 3
   output : e.σ.sailOutput = c.σ.sailOutput
+  htif : e.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes
 
 theorem frame32 {sp : BitVec 64} (frame : NativeFrame sp opStack) {k : Nat} (hk : k ≤ 32) :
     sp - 32#64 + BitVec.ofNat 64 k = BitVec.ofNat 64 (sp.toNat - 32 + k) ∧
@@ -333,6 +341,8 @@ theorem lookup_path {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bit
       p1.toEffectPost.gpr_frame (by decide) 3 (by decide) (by decide) (by decide)]
     exact at0.gp
   have out3 : e3.σ.sailOutput = c.σ.sailOutput := by rw [p3.output, p2.output, p1.output, at0.output]
+  have htif3 : e3.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes :=
+    p3.htif.trans ((p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans ((p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans at0.htif))
   have low3 : ∀ a, a < Vsa.Sim.DlHeap.heapEnd → (e3.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0 := fun a ha => by
     rw [mem3, frameMem a (Or.inl (by omega))]
   have outside3 : ∀ a, (a < sp.toNat - opStack ∨ sp.toNat ≤ a) → (e3.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0 :=
@@ -368,6 +378,7 @@ theorem lookup_path {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bit
       ⟨gpr_some (gpr_some_of e4_2), gpr_some (gpr_some_of (gholds_lookup _ p4.regs rfl)), trivial⟩
       (by rw [j2]; exact readW 24 (by decide) (by decide)) savedRa h.leaf.aligned).run e4 ⟨p4.pc, rfl⟩
     have mem5 : d.σ.mem = e3.σ.mem := by rw [p5.memory, wl_nil, mem4]
+    have holds_ra : gprGet d.σ 1 = some ra := (gholds_lookup (n := 1) _ p5.regs rfl).trans (congrArg some savedRa)
     have keep (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [1, 2, 10]) : gprGet d.σ n = gprGet e3.σ n :=
       (p5.gpr_frame (by decide) n lo hi (by simp only [List.mem_cons, List.not_mem_nil, or_false] at out ⊢; omega)).trans
         (p4.gpr_frame (by decide) n lo hi (by simp only [List.mem_cons, List.not_mem_nil, or_false] at out ⊢; omega))
@@ -378,6 +389,7 @@ theorem lookup_path {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bit
         minstret := p5.minstret
         tick := p5.tick
         pc := p5.pc
+        link := holds_ra
         stack := ?_
         saved := fun n hn => by
           have hr : 1 ≤ n ∧ n ≤ 31 := by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn; omega
@@ -386,6 +398,7 @@ theorem lookup_path {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bit
         gprs := GprsKept.of_steps gprsPersist (run.trans (run1.trans (run2.trans (run3.trans (run4.trans run5)))))
           ((keep 3 (by decide) (by decide) (by decide)).trans gp3)
         output := p5.output.trans (p4.output.trans out3)
+        htif := (p5.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans ((p4.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans htif3)
         heap := ⟨H, cap, heapAt d fun a out => by rw [mem5, mem3, frameMem a out], fun _ f => Or.inl f⟩
         feet := fun a l => Or.inl (((h.roots.listsFoot_keep (m' := d.σ.mem) ops (fun a' l' => by
           obtain ⟨_, _, _, sh', f⟩ := l'
@@ -450,7 +463,8 @@ theorem lookup_path {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (Bit
     refine ⟨d, run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans run6))))),
       filed_of_returned ops h (run.trans (run1.trans (run2.trans (run3.trans (run4.trans (run5.trans run6))))))
         (Or.inr rfl) shc low5 outside5 ?_ ((keep 3 (by decide) (by decide) (by decide)).trans gp3)
-        (p5.output.trans (p4.output.trans out3)) ret (g5.feet_old ops sh5 sho' footIn fr)
+        (p5.output.trans (p4.output.trans out3)) ((p5.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans ((p4.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans htif3)) ret
+        (g5.feet_old ops sh5 sho' footIn fr)
         ⟨ys, keys d.σ.mem co', g', lists_kept notYoung', fun k => (memOld k).trans
           ⟨fun h => h.elim (fun e => Or.inl ⟨isOld, e⟩) Or.inr, fun h => h.elim (fun p => Or.inl p.2) Or.inr⟩⟩⟩
     intro n hn
@@ -516,6 +530,7 @@ theorem register_root_run {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → Lis
   have atLookup (y : Config) (run : Steps x y) (good : GoodState y.σ) (image : ExecutableImage y)
       (minstret : ∃ w, y.σ.regs.get? Register.minstret = some w) (tick : y.tick < 2) (ypc : PCAt 0x8000ca2c#64 y)
       (mem : y.σ.mem = x.σ.mem) (out : y.σ.sailOutput = c2.σ.sailOutput)
+      (hy : y.σ.regs.get? Register.htif_payload_writes = c2.σ.regs.get? Register.htif_payload_writes)
       (keep : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [14, 15] → gprGet y.σ n = gprGet c2.σ n) : AtLookup x y sp ra r :=
     { leaf := ⟨good, image, minstret, (keep 1 (by decide) (by decide) (by decide)).trans c2_1, h.leaf.aligned, tick⟩
       pc := ypc
@@ -529,7 +544,8 @@ theorem register_root_run {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → Lis
         rw [keep n hr.1 hr.2 (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega)]
         exact kept2 n hr.1 hr.2 (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega)
       gp := (keep 3 (by decide) (by decide) (by decide)).trans (kept2 3 (by decide) (by decide) (by decide))
-      output := out.trans (p2.output.trans p1.output) }
+      output := out.trans (p2.output.trans p1.output)
+      htif := hy.trans ((p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans (p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide))) }
   cases hEnd : guardB .BGEU (R2 10) ((belowEnd_loads c2.σ.mem R2).getD 0 [] |> bytesVal .ld)
   · -- below `young_end`
     obtain ⟨c3, run3, p3⟩ := (belowEnd_fast c2 R2 (leafAt c2 p2.good p2.image p2.minstret p2.tick c2_1) regs2
@@ -557,7 +573,7 @@ theorem register_root_run {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → Lis
         have := bltu_false _ _ hStart; rwa [r3_10, startV] at this
       exact lookup_path ops pt h (run1.trans (run2.trans (run3.trans run4)))
         (atLookup c4 (run1.trans (run2.trans (run3.trans run4))) p4.good p4.image p4.minstret p4.tick p4.pc
-          (by rw [p4.memory, wl_nil, mem3]) (p4.output.trans p3.output)
+          (by rw [p4.memory, wl_nil, mem3]) (p4.output.trans p3.output) ((p4.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans (p3.frame _ (fun n _ => gprReg_ne_htif n) (by decide)))
           (fun n lo hi out => (p4.gpr_frame (by decide) n lo hi (by
             simp only [List.mem_cons, List.not_mem_nil, or_false] at out ⊢; omega)).trans
             (keep3 n lo hi (by simp only [List.mem_cons, List.not_mem_nil, or_false] at out ⊢; omega))))
@@ -609,7 +625,8 @@ theorem register_root_run {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → Lis
           have hr : 1 ≤ n ∧ n ≤ 31 := by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn; omega
           exact keepAll n hr.1 hr.2 (by simp only [List.mem_cons, List.not_mem_nil, or_false] at hn ⊢; omega))
         (keepAll 3 (by decide) (by decide) (by decide))
-        (p5.output.trans (p4.output.trans (p3.output.trans (p2.output.trans p1.output)))) ret
+        (p5.output.trans (p4.output.trans (p3.output.trans (p2.output.trans p1.output))))
+        ((p5.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans ((p4.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans ((p3.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans ((p2.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans (p1.frame _ (fun n _ => gprReg_ne_htif n) (by decide)))))) ret
         (g5.feet_young ops sh5 shy' footIn fr)
         ⟨keys d.σ.mem cy', os, g', fun k => (memY k).trans
           ⟨fun h => h.elim (fun e => Or.inl ⟨isYoung, e⟩) Or.inr, fun h => h.elim (fun p => Or.inl p.2) Or.inr⟩,
@@ -621,7 +638,7 @@ theorem register_root_run {Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → Lis
       have := bgeu_true _ _ hEnd; rwa [r2_10, stopV] at this
     exact lookup_path ops pt h (run1.trans (run2.trans run3))
       (atLookup c3 (run1.trans (run2.trans run3)) p3.good p3.image p3.minstret p3.tick p3.pc
-        (by rw [p3.memory, wl_nil, mem2]) p3.output
+        (by rw [p3.memory, wl_nil, mem2]) p3.output (p3.frame _ (fun n _ => gprReg_ne_htif n) (by decide))
         (fun n lo hi out => p3.gpr_frame (by decide) n lo hi (by
           simp only [List.mem_cons, List.not_mem_nil, or_false] at out ⊢; omega)))
       blk (fun y => by omega)

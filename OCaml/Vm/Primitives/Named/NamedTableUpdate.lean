@@ -1,5 +1,6 @@
 import OCaml.Vm.Primitives.Named.NamedTransport
 import OCaml.Bytecode.NamedValues
+import VsaIris.Vsa.HeapShape
 
 /-!
 # The named-value table across `caml_register_named_value`
@@ -30,7 +31,8 @@ structure TableBlocks (H : List (Nat × Nat)) (chains : Nat → List Entry) : Pr
   low : ∀ b, b < 13 → ∀ e ∈ chains b, Vsa.Sim.DlHeap.heapStart ≤ e.1.toNat
   apart : ∀ b b', b < 13 → b' < 13 → ∀ e ∈ chains b, ∀ e' ∈ chains b', e.1 ≠ e'.1 →
     e.1.toNat + 16 + e.2.1.length + 1 ≤ e'.1.toNat ∨ e'.1.toNat + 16 + e'.2.1.length + 1 ≤ e.1.toNat
-  live : ∀ b, b < 13 → ∀ e ∈ chains b, ∃ x ∈ H, x.1 ≤ e.1.toNat ∧ e.1.toNat + 16 + e.2.1.length + 1 ≤ x.1 + x.2
+  /-- every node byte is allocated: outside newlib's footprint -/
+  live : ∀ b, b < 13 → ∀ e ∈ chains b, ∀ a, NodeBytes e.1 e.2.1 a → ¬ VsaIris.VsaHeap.vsaFoot H a
 
 /-! ### Nodes and chains under writes -/
 
@@ -320,13 +322,20 @@ theorem TableShape.insert {m m' : Mem} {pl : Place} {named : List (String × Val
   have nodeApart : ∀ b, b < 13 → ∀ e ∈ chains b,
       p.toNat + 16 + name.length + 1 ≤ e.1.toNat ∨ e.1.toNat + 16 + e.2.1.length + 1 ≤ p.toNat := by
     intro b hb e he
-    obtain ⟨x, hx, lo, hi⟩ := blocks.live b hb e he
+    have eLow := blocks.low b hb e he
+    have arenaHigh (a : Nat) (inE : NodeBytes e.1 e.2.1 a) : a < Vsa.Sim.DlHeap.heapEnd := by
+      obtain ⟨nx, nd⟩ := (h.heads b hb).node_of_mem e he
+      have := nd.arena; unfold NodeBytes at inE; omega
+    -- a byte of both would be allocated (the node) and outside every block (the fresh one)
+    have clash (a : Nat) (inE : NodeBytes e.1 e.2.1 a) (inP : p.toNat ≤ a ∧ a < p.toNat + req) : False :=
+      blocks.live b hb e he a inE (Or.inr ⟨by unfold NodeBytes at inE; omega, arenaHigh a inE,
+        fun x hx i => fresh x hx a ⟨inP.1, by dsimp only; omega⟩ i⟩)
     rcases Nat.lt_or_ge e.1.toNat (p.toNat + 16 + name.length + 1) with l | l
     · rcases Nat.lt_or_ge p.toNat (e.1.toNat + 16 + e.2.1.length + 1) with g | g
       · exfalso
         rcases Nat.le_total p.toNat e.1.toNat with o | o
-        · exact fresh x hx e.1.toNat ⟨o, by dsimp only; omega⟩ ⟨by omega, by omega⟩
-        · exact fresh x hx p.toNat ⟨Nat.le_refl _, by dsimp only; omega⟩ ⟨by omega, by omega⟩
+        · exact clash e.1.toNat ⟨Nat.le_refl _, by omega⟩ ⟨o, by omega⟩
+        · exact clash p.toNat ⟨o, g⟩ ⟨Nat.le_refl _, by omega⟩
       · exact Or.inr g
     · exact Or.inl l
   have absentBucket : ∀ e ∈ chains k, e.2.1 ≠ name := by
@@ -409,12 +418,20 @@ theorem TableShape.insert {m m' : Mem} {pl : Place} {named : List (String × Val
       · exact (nodeApart b hb e t).symm
       · exact blocks.apart b b' hb hb' e t e' t' ne
     · simp only [insertNode] at he
+      intro a na f
+      have f' : VsaIris.VsaHeap.vsaFoot H a := by
+        rcases f with g | ⟨h1, h2, h3⟩
+        · exact .inl g
+        · exact .inr ⟨h1, h2, fun e' he' => h3 e' (List.mem_cons_of_mem _ he')⟩
       split at he
       · rcases List.mem_cons.1 he with rfl | t
-        · exact ⟨(p.toNat, req), List.mem_cons_self, Nat.le_refl _, by dsimp only; omega⟩
-        · obtain ⟨x, hx, lo, hi⟩ := blocks.live b hb e t
-          exact ⟨x, List.mem_cons_of_mem _ hx, lo, hi⟩
-      · obtain ⟨x, hx, lo, hi⟩ := blocks.live b hb e he
-        exact ⟨x, List.mem_cons_of_mem _ hx, lo, hi⟩
+        · have pArena := node.arena
+          rcases f with g | ⟨-, -, out⟩
+          · rcases VsaIris.VsaHeap.allocGlobal_off_arena a g with l | l <;>
+              (unfold NodeBytes at na; dsimp only at na; omega)
+          · exact out _ List.mem_cons_self ⟨by unfold NodeBytes at na; dsimp only at na; omega,
+              by unfold NodeBytes at na; dsimp only at na; omega⟩
+        · exact blocks.live b hb e t a na f'
+      · exact blocks.live b hb e he a na f'
 
 end OCaml.Vm.Primitives.Named.NamedValue
