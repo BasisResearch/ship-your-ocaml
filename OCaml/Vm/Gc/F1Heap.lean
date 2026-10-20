@@ -42,7 +42,7 @@ def f1Covered : List (Nat × Nat) :=
    (minorRegion.lo, minorRegion.hi - minorRegion.lo), (majorRegion.lo, majorRegion.hi - majorRegion.lo),
    (Boot.WhileMinEntry.high - Layout.stackBytes, Layout.stackBytes),
    (Boot.WhileMinHeapChunks.codeBufferPayload, f1CodeBytes), (Boot.WhileMinHeapChunks.primTablePayload, 8 * f1PrimCapacity),
-   (exeNameAddr, 6)]
+   (exeNameAddr, 6), (atomTableAddr, 2056)]
 
 /-- The regions F1's ordinary windows write: the `Caml_state` record around
 its `minor_heap_wsz` and `ref_table` words, the minor heap, the major chunk,

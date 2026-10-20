@@ -36,6 +36,8 @@
   `exeNameAddr = 0x8007d700`, the strdup of `"/prog\0"`, kept by F1
   (`dynamicKept`, `f1Covered`; `f1_window_of`/`arena_footprint_apart` take
   an `exe` apartness). Cut values from `gen_boot_entry.py`.
+- `F1Pins.atomsWord` (bprime): `caml_atom_table = atomTableAddr = 0x8038c000`,
+  and `(atomTableAddr, 2056) ∈ f1Covered`.
 - `LibHeapAt.recordsAligned` (bprime): open records are 16-aligned; `link`
   takes `aligned`.
 - G2: `OldifyReturned R log` (`OldifyReturned.lean`), the common machine

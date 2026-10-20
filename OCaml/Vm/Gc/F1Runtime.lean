@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.WhileMinHeapObjects
 import OCaml.Vm.Boot.WhileMinLoaded
 import OCaml.Vm.Reloc
 import OCaml.Vm.Primitives.Write
@@ -72,6 +73,8 @@ structure F1Pins (c : Config) : Prop where
   its pointer and its six bytes `"/prog\0"`, written by no F1 path -/
   exeNameWord : word c Layout.sym_caml_exe_name = BitVec.ofNat 64 exeNameAddr
   exeName : ∀ i : Fin 6, byte c (exeNameAddr + i.val) = exeNameBytes.getD i.val 0
+  /-- the atom table stays in its startup block (no F1 path writes `caml_atom_table`) -/
+  atomsWord : word c Layout.sym_caml_atom_table = BitVec.ofNat 64 atomTableAddr
 
 /-- The F1 runtime invariant. -/
 def f1Runtime : Config → Prop := RuntimeOk F1Pins
@@ -426,7 +429,9 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
     by rw [w8 _ (b (by simp [Layout.sym_caml_prim_table, Layout.off_prim_contents, Layout.sym_bss_end])
       (by decide))]; exact pins.primsWord,
     by rw [w8 _ (b (by simp [Layout.sym_caml_exe_name, Layout.sym_bss_end]) (by decide))]; exact pins.exeNameWord,
-    fun i => by unfold byte; rw [keep _ 1 (in_exeName i.isLt)]; exact pins.exeName i⟩, fields⟩
+    fun i => by unfold byte; rw [keep _ 1 (in_exeName i.isLt)]; exact pins.exeName i,
+    by rw [w8 _ (b (by simp [Layout.sym_caml_atom_table, Layout.sym_bss_end]) (by decide))]; exact pins.atomsWord⟩,
+    fields⟩
   · exact {
       nonnull := shape.nonnull
       aligned := shape.aligned
@@ -1121,7 +1126,7 @@ theorem f1Pins_of {c : Config}
       simp at root total
       omega
   subst same
-  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact WhileMinEntry.read_stack_high memory
   · exact WhileMinEntry.read_stack_threshold memory
   · have z : ∀ (g : BitVec 64) (n : Nat), g.toNat = n → word c n = 0#64 →
@@ -1141,6 +1146,7 @@ theorem f1Pins_of {c : Config}
   · rw [WhileMinEntry.read_prim_contents memory]; rfl
   · rw [WhileMinEntry.read_caml_exe_name memory]; rfl
   · exact WhileMinEntry.exe_name memory
+  · rw [WhileMinHeap.read_atom_table memory]; rfl
 
 /-- `f1Runtime` on the certified cut memory. -/
 theorem f1Runtime_of {c : Config}
