@@ -146,8 +146,9 @@ theorem view_word {c : Config} {log : List WEntry} {x : Nat} (out : OutLRange lo
   change bytesT (writeLog c.σ.mem log) x 8 = bytesT c.σ.mem x 8
   rw [bytesT_writeLog_out _ out]
 
-/-- The entry's numbers for the copy and the triple. -/
-structure ConfigNumbers (N D Y Lm : Nat) : Prop where
+/-- The entry's numbers for a string-allocating primitive whose nursery
+block is `k` bytes. -/
+structure AllocNumbers (N D Y Lm k : Nat) : Prop where
   nativeLow : 0x86800000 + 4096 ≤ N
   nativeHigh : N ≤ 0x88000000
   nativeAligned : N % 16 = 0
@@ -157,13 +158,20 @@ structure ConfigNumbers (N D Y Lm : Nat) : Prop where
   youngHigh : Y ≤ 0x86800000
   youngAligned : Y % 8 = 0
   limitLow : 0x8007d138 ≤ Lm
-  room : Lm + 48 ≤ Y
+  room : Lm + k ≤ Y
   apart : D + 928 ≤ Lm ∨ Y ≤ D
+
+theorem AllocNumbers.of_entry {c : Config} {N D Y Lm k : Nat} (e : StringAllocEntry c N D Y Lm k) :
+    AllocNumbers N D Y Lm k :=
+  ⟨e.nativeLow, e.nativeHigh, e.nativeAligned, e.domainLow, e.domainHigh, e.domainAligned, e.youngHigh,
+    e.youngAligned, e.limitLow, e.room, e.domainApart⟩
+
+/-- The entry's numbers for the copy and the triple (a 48-byte block). -/
+abbrev ConfigNumbers (N D Y Lm : Nat) : Prop := AllocNumbers N D Y Lm 48
 
 theorem ConfigNumbers.of_entry {c : Config} {N D Y Lm : Nat} (e : StringAllocEntry c N D Y Lm 48) :
     ConfigNumbers N D Y Lm :=
-  ⟨e.nativeLow, e.nativeHigh, e.nativeAligned, e.domainLow, e.domainHigh, e.domainAligned, e.youngHigh,
-    e.youngAligned, e.limitLow, e.room, e.domainApart⟩
+  AllocNumbers.of_entry e
 
 theorem nurseryHeader4 (Y : Nat) (h : 16 ≤ Y) (h' : Y < 2 ^ 64) :
     StringAllocation.nurseryHeader (BitVec.ofNat 64 Y) (BitVec.ofNat 64 4) = BitVec.ofNat 64 (Y - 16) := by

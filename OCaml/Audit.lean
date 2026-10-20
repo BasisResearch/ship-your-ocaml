@@ -16,6 +16,7 @@ import OCaml.Vm.Sim.PrimSysExitReturns
 import OCaml.Vm.Sim.StringAllocReturn
 import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.PrimExecutableNameReturns
+import OCaml.Vm.Sim.PrimGetArgvReturns
 import OCaml.Vm.Sim.AccRows
 import OCaml.Vm.Sim.IntRows
 import OCaml.Vm.Sim.ImmediateRows
@@ -5893,6 +5894,35 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.exe_site
 #print axioms OCaml.Vm.Sim.executable_name_entry
 #print axioms OCaml.Vm.Sim.prim_caml_sys_executable_name_returns
+#print axioms OCaml.Vm.Sim.AllocNumbers.of_entry
+#print axioms OCaml.Vm.Sim.argv_prepareLog_in
+#print axioms OCaml.Vm.Sim.argv_completeLog_in
+#print axioms OCaml.Vm.Sim.argv_afterCopyLog_in
+#print axioms OCaml.Vm.Sim.argv_tupleLog_in
+#print axioms OCaml.Vm.Sim.getArgvLog_in
+#print axioms OCaml.Vm.Sim.getArgvLog_split
+#print axioms OCaml.Vm.Sim.getArgv_young
+#print axioms OCaml.Vm.Sim.argv_beforeSmallLog_in
+#print axioms OCaml.Vm.Sim.argv_beforeSmallLog_split
+#print axioms OCaml.Vm.Sim.argv_prepare_access
+#print axioms OCaml.Vm.Sim.argv_prepare_out
+#print axioms OCaml.Vm.Sim.argvBlockYoung_eq
+#print axioms OCaml.Vm.Sim.argvResultWord_eq
+#print axioms OCaml.Vm.Sim.smallHeader2
+#print axioms OCaml.Vm.Sim.tupleWord_eq
+#print axioms OCaml.Vm.Sim.argv_small
+#print axioms OCaml.Vm.Sim.argv_finish_layout
+#print axioms OCaml.Vm.Sim.argv_savedTail
+#print axioms OCaml.Vm.Sim.argv_stringOutsideTuple
+#print axioms OCaml.Vm.Sim.argv_headerOutsideTuple
+#print axioms OCaml.Vm.Sim.argv_afterCopy
+#print axioms OCaml.Vm.Sim.argv_site
+#print axioms OCaml.Vm.Sim.argv_saved_read
+#print axioms OCaml.Vm.Sim.argvBd_val
+#print axioms OCaml.Vm.Sim.argvBe_val
+#print axioms OCaml.Vm.Sim.argv_input
+#print axioms OCaml.Vm.Sim.get_argv_entry
+#print axioms OCaml.Vm.Sim.prim_caml_sys_get_argv_returns
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_pro
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_measure
 #print axioms OCaml.Vm.Primitives.Uncaught.FormatException.format_copy

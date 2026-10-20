@@ -166,7 +166,7 @@
   (entry scalars), `getConfigLog_in` (the get_config log in four windows), `StringAllocReturn`.
 * `prim_caml_sys_get_config_returns` (`Sim/PrimGetConfigReturns.lean`): `config_input` discharges the
   generated contract's `GetConfigInput` at the callee entry from `StringAllocEntry` (`ConfigInput.lean`:
-  `prepare_access`, `config_sized`/`config_allocate`/`config_copy` = `CopyMemory`, `config_small`, the
+  `prepare_access`, `config_site` + `copy_memory_at` = `CopyMemory`, `config_small`, the
   finish layout); `get_config_entry` combines the contract with `PrimAllocFrame` (final `young_ptr`
   `Y - 48`, `getConfig_young`), `LoopGeometry.reserve2` and `ccall_observed_summary`. `get_argv` and
   `executable_name` reuse the copy-stage lemmas.
@@ -183,8 +183,14 @@
   contract's memory is `completeLog`'s effect; the log lies in `allocWindows N D Y 16` (the four-window
   hub, now over any nursery block size); young pointer `Y - 16` (`exe_young`); geometry
   `LoopGeometry.reserve1`.
-* `get_argv`: the same `exe_site`/`ExeNameAt` pieces, then the pair; the copy is called from a
-  native frame (as in `get_config`).
+* `prim_caml_sys_get_argv_returns` (`Sim/PrimGetArgvReturns.lean`): the argv instance of
+  `get_config`. `ArgvLogWindows.lean` puts `getArgvLog` in `allocWindows N D Y 40` (16-byte name block
+  plus the 24-byte pair; young pointer `Y - 40`, `getArgv_young`); `ArgvInput.lean` gives the stage
+  inputs (`argv_prepare_access` with the third load `caml_exe_name`, `argv_small`, `argv_finish_layout`,
+  `argv_site` = `CopySite` on the executable name after the prepare stores). Premises `PrimAllocFrame L`,
+  `ExeNameAt L`; the pair's second field is `main_argv` (`VmPayload.argv`). `ConfigNumbers` is now
+  `AllocNumbers … 48`. The config/argv stage files are two instances of one tuple shape; a third
+  string-then-block primitive must factor them first (rule 3).
 
 **Next (remaining, path-specific callees):**
 * `caml_register_named_value`: generated blocks `Named/NamedRegister.lean`

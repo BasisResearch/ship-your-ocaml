@@ -54,6 +54,9 @@ import OCaml.Vm.Sim.CopyStringInput
 import OCaml.Vm.Sim.ConfigInput
 import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.PrimExecutableNameReturns
+import OCaml.Vm.Sim.ArgvLogWindows
+import OCaml.Vm.Sim.ArgvInput
+import OCaml.Vm.Sim.PrimGetArgvReturns
 import OCaml.Vm.Sim.FieldOperandRows
 import OCaml.Vm.Sim.BarrierRows
 import OCaml.Vm.Sim.MakeblockRows
