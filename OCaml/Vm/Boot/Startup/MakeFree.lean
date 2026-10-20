@@ -84,6 +84,8 @@ structure MadeFree (H : List (Nat × Nat)) (capacity : Nat) (sp ra p size s0 s1 
   kept : ∀ x, x < heapEnd →
     OutW [⟨p.toNat, p.toNat + 8 * size.toNat⟩, ⟨largeTreeAddr, largeTreeAddr + 8⟩, ⟨flCurWszAddr, flCurWszAddr + 8⟩] x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  /-- s9–s11 are the caller's. -/
+  saved : ∀ k, 25 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
 
 theorem make_free_blocks (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
     (sp ra p size s0 s1 s2 s3 s4 s5 s6 s7 s8 cur : BitVec 64) (q n : Nat)
@@ -347,5 +349,15 @@ theorem make_free_blocks (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
         exact word_writeLog_at _ _ 2 _ _ rfl (by simp only [rootLog, List.drop, OutLRange, show p + 8#64 + 16#64 = p + 8#64 + BitVec.ofNat 64 16 from rfl, show p + 8#64 + 8#64 = p + 8#64 + BitVec.ofNat 64 8 from rfl, show p + 8#64 + 32#64 = p + 8#64 + BitVec.ofNat 64 32 from rfl, show p + 8#64 + 24#64 = p + 8#64 + BitVec.ofNat 64 24 from rfl, pf 16 (by decide), pf 8 (by decide), pf 32 (by decide), pf 24 (by decide), pb, largeTreeAddr, and_true]; omega)
     curWsz := by rw [mem10, mem9]; exact word_writeLog_at _ _ 0 _ _ rfl trivial
     caller := fun x above => back x (Or.inr above)
-    kept := fun x low out => back x (Or.inl ⟨low, out⟩) }⟩
+    kept := fun x low out => back x (Or.inl ⟨low, out⟩)
+    saved := fun k lo hi => by
+      have o (L : List Nat) (h : ∀ m ∈ L, m < 25) : k ∉ L := fun mem => by have := h k mem; omega
+      have f10 : gprGet d10.σ k = gprGet d9.σ k :=
+        p10.toEffectPost.gpr_frame (by decide) k (by omega) (by omega) (o _ (by decide))
+      rw [f10,
+        k9 k (by omega) (by omega) (o _ (by decide)), k8 k (by omega) (by omega) (o _ (by decide)),
+        k7 k (by omega) (by omega) (o _ (by decide)), k6 k (by omega) (by omega) (o _ (by decide)),
+        k5 k (by omega) (by omega) (o _ (by decide)), k4 k (by omega) (by omega) (o _ (by decide)),
+        k3 k (by omega) (by omega) (o _ (by decide)), k2 k (by omega) (by omega) (o _ (by decide)),
+        k1 k (by omega) (by omega) (o _ (by decide))] }⟩
 end OCaml.Vm.Boot.Startup

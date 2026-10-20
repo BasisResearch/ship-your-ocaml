@@ -304,6 +304,7 @@ structure MajorPageAddEntered (H : List (Nat × Nat)) (capacity : Nat) (sp ra hs
   saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
   count : pageCount after.σ.mem ent.toNat = pageCount before.σ.mem ent.toNat
   tableApart : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat
+  tableOwned : (ent.toNat, 16384) ∈ H
 
 theorem major_to_page_add (c d8 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra hsize s0 s1 s2 s3 inc ent : BitVec 64) (A : MajorHeapCall H capacity charge sp ra hsize s0 s1 s2 inc c)
@@ -532,6 +533,7 @@ theorem major_to_page_add (c d8 : Config) (H : List (Nat × Nat)) (capacity char
     kept := kept
     count := count12
     tableApart := T.apartDomain
+    tableOwned := T.owned
     saved := fun k lo hi => by
       have range : k ∉ [18, 11, 14, 9, 15, 10, 12, 1] := by simp; omega
       rw [g912.same k (by omega) (by omega) range,
@@ -577,6 +579,9 @@ structure MajorMerged (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s
   lowSame : ∀ x, x < heapStart → ¬ allocGlobal x → OutW majorLowWindows x →
     (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
+  tableHigh : heapStart ≤ ent.toNat
+  tableOwned : (ent.toNat, 16384) ∈ H
+  tableApart : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat
 
 theorem major_merged (c d12 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra hsize s0 s1 s2 s3 inc mem ent cur : BitVec 64)
@@ -704,6 +709,9 @@ theorem major_merged (c d12 : Config) (H : List (Nat × Nat)) (capacity charge :
       rw [k16.same x (by simp only [OutW, and_true]; exact ⟨o3, o4, o5⟩), mem15]
       exact low13 x (by rw [hS] at low; exact low) alloc (by simp only [OutW, and_true]; exact ⟨o1, o2⟩)
     saved := fun k lo hi => by
-      rw [g16.same k (by omega) (by omega) (by simp [abiClobbered]; omega), PA.saved k lo hi, P.saved k lo hi] }⟩
+      rw [g16.same k (by omega) (by omega) (by simp [abiClobbered]; omega), PA.saved k lo hi, P.saved k lo hi]
+    tableHigh := P.call.span.tableHigh
+    tableOwned := P.tableOwned
+    tableApart := P.tableApart }⟩
 
 end OCaml.Vm.Boot.Startup
