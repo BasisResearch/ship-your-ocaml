@@ -2559,7 +2559,7 @@ theorem clear_fast (c : Config) (R : Nat → BitVec 64)
     chain_facts True.intro
     · apply ExitPath.ReadWindow.lw w0 rfl ?_ (ExitPath.read8_pins4 _ _)
       simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, clear_input]
-    · apply OCaml.Vm.Primitives.WriteWindow.sh w1 rfl
+    · apply OCaml.Vm.Primitives.WriteWindow.half w1 rfl
       simp [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, clear_input]
   have control : TermFactsO (runGM clear_body (clear_input R) (clear_loads c.σ.mem R)) (some clear_term) := by rw [clear_eval]; exact ok
   apply registers_of_blocks h.image outside (clear_summary c (R 1) R _ h regs access control)

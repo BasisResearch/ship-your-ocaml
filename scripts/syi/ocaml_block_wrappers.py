@@ -252,7 +252,7 @@ def emit_fast(E, b, name, regs, fast):
                 'lbu': f'apply {w}.lbu rfl ?_ rfl',
                 'lh': f'apply OCaml.Vm.Primitives.ReadWindow.lh {w} rfl',
                 'lhu': f'apply OCaml.Vm.Primitives.ReadWindow.lhu {w} rfl',
-                'sh': f'apply OCaml.Vm.Primitives.WriteWindow.sh {w} rfl',
+                'sh': f'apply OCaml.Vm.Primitives.WriteWindow.half {w} rfl',
                 'lw': f'apply ExitPath.ReadWindow.lw {w} rfl ?_ (ExitPath.read8_pins4 _ _)',
                 'sd': f'apply {w}.sd rfl',
                 'sb': f'apply {w}.sb rfl',

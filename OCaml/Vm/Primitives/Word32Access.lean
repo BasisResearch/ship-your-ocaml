@@ -84,7 +84,7 @@ theorem ReadWindow.lhu {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs}
   simpa only [tohostAddr, LibraryLayout.tohostAddr, Layout.sym_tohost] using h.htif
 
 /-- An aligned 16-bit store stays in RAM above the HTIF registers. -/
-theorem WriteWindow.sh {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs}
+theorem WriteWindow.half {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs}
     {a : MInstr} {x : BitVec 64} {bs : List (BitVec 8)} (h : WriteWindow x 2)
     (kind : a.kind = .sh) (address : eaddrM a L = x) : MemFacts m L bs a := by
   simp only [MemFacts, kind, address]
