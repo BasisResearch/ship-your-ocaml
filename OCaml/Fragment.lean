@@ -84,16 +84,27 @@ def majorAllocLedger : List (Opcode × String) :=
     (.CLOSURE, "2 + nvars > Max_young_wosize: caml_alloc_shr (major heap)"),
     (.CLOSUREREC, "3 nfuncs - 1 + nvars > Max_young_wosize: caml_alloc_shr (major heap)") ]
 
+/-- **The channel-count scoping bound** (`OCaml.Bytecode.openChan`'s
+64-channel guard). OCaml has no such limit; the bound mirrors the F1 heap
+reservation (`Gc.maxChannels` records), like the major-allocation exclusion. -/
+def channelLedger : List (String × String) :=
+  [ ("caml_ml_open_descriptor_out",
+      "channel-count bound lifted when channel records are allocated beyond the F1 reservation"),
+    ("caml_ml_open_descriptor_in",
+      "channel-count bound lifted when channel records are allocated beyond the F1 reservation") ]
+
 /-- **Non-console output outside F1** (`OCaml.GoodF1.consoles`). F1's channel
 primitives write only to console channels (descriptor 1 or 2, an OS
 stdout/stderr stream, a live process): the machine certifies only HTIF's
-console descriptors. File output (the compiler writing `.cmo`/`.cmi`) is the
+console descriptors. File output (the compiler writing `.cmo`/`.cmi`) and file
+input (its `open_in` on sources and `.cmi` files; `OCaml.GoodF1.stdins`) are the
 file-system lane's. -/
 def consoleLedger : List (String × String) :=
   [ ("caml_ml_flush", "a channel whose fd is not an OS stdout/stderr stream"),
     ("caml_ml_output", "a channel whose fd is not an OS stdout/stderr stream"),
     ("caml_ml_output_bytes", "a channel whose fd is not an OS stdout/stderr stream"),
-    ("caml_ml_output_char", "a channel whose fd is not an OS stdout/stderr stream") ]
+    ("caml_ml_output_char", "a channel whose fd is not an OS stdout/stderr stream"),
+    ("caml_ml_open_descriptor_in", "an input channel whose fd is not the OS stdin stream") ]
 
 /-- The ledger lists exactly the non-F1 opcodes. -/
 theorem ledger_exact :

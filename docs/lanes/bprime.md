@@ -305,6 +305,18 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
   * The StackGeometry channel-apartness fields are derived in the adapter
     (`open_out_placed`, from `fresh` and the covered regions).
 
+**F1 input is stdin (2026-10-20)**
+- `GoodF1.stdins : StdinChannels P`: every open input channel is fd 0 on the OS
+  stdin stream. `consolesOk` checks it alongside the output channels (option (a),
+  agreed with a2-sem), so `runToF1` and `St.shapeOk` are unchanged in shape.
+  File input (ocamlc's `open_in`) is outside F1, ledgered in `Fragment.consoleLedger`.
+- `caml_ml_open_descriptor_in` (bprime): the machine side shares MlOpen's
+  composition (only `max := NULL` differs). The descriptor's `SeekFd 0` comes
+  from a0-boot's coming `ConsoleRuntime.stdinSeek` (stdin is HTIF kind 1, so
+  `ConsoleFd 0` cannot hold).
+- `openChan`'s 64-channel bound is an F1/G1 scoping guard, not interp.c
+  behaviour (`Fragment.channelLedger`; foreman).
+
 **F1 output is console output; primitive split (2026-10-06)**
 - `GoodF1.consoles : ConsoleChannels P`: in every reachable state, every open
   output channel has fd 1 or 2, an OS stdout/stderr stream, and a live

@@ -93,7 +93,7 @@ structure ShapeFacts (P : Prog) (ops : List Opcode) (names : Opcode → List Str
   /-- within the F1 budget (a6-gc: `Fits g1Budget`) -/
   fits : s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords
   callNames : St.callNamesOk P names s = true
-  /-- every open output channel is the console (`GoodF1.consoles`) -/
+  /-- every open channel is the console or stdin (`GoodF1.consoles`, `GoodF1.stdins`) -/
   consoles : OCaml.consolesOk s.world = true
 
 theorem ShapeFacts.of_ok {P : Prog} {ops : List Opcode} {names : Opcode → List String} {s : St}
@@ -161,6 +161,7 @@ theorem whileMin_goodF1 : OCaml.GoodF1 whileMin where
     obtain ⟨j, hj, _, ho, _⟩ := (whileMin_shapeOk reach).decode
     rw [hd] at hj; cases hj; exact ho
   consoles s reach := OCaml.consolesOk_sound (whileMin_shapeOk reach).consoles
+  stdins s reach := OCaml.consolesOk_stdin (whileMin_shapeOk reach).consoles
 
 /-- **`while_min.byte` only reaches `whileMinOps`.** -/
 theorem whileMin_ops : ∀ s i, Reach whileMin s → decodeAt whileMin.code s.pc = some i →

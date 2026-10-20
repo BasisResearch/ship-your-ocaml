@@ -97,9 +97,29 @@ def consoleChanB (w : World) (c : Chan) : Bool :=
     | some (.stream st) => st != .stdin
     | _ => false
 
-/-- Every open output channel of a world is a console channel, as a check. -/
+/-- An input channel the F1 machine reads: descriptor 0, the OS stdin stream
+(the HTIF console's input), and a live process. -/
+def StdinChan (w : World) (c : Chan) : Prop :=
+  c.fd = 0 ∧ w.os.proc.exited = none ∧ TCB.Os.lookupFd w.os c.fd.toNat = some (.stream .stdin)
+
+/-- **F1 input is console input**: in every reachable state, every open input
+channel is stdin. Programs reading files (the ocamlc differential's `open_in`)
+are outside F1, like file output (`Fragment.consoleLedger`). -/
+def StdinChannels (P : Prog) : Prop :=
+  ∀ s, Reach P s → ∀ (id : Nat) c, s.world.chans[id]? = some c → c.isOut = false → c.fd ≠ -1 →
+    StdinChan s.world c
+
+/-- `StdinChan`, as a check. -/
+def stdinChanB (w : World) (c : Chan) : Bool :=
+  c.fd == 0 && w.os.proc.exited.isNone &&
+    match TCB.Os.lookupFd w.os c.fd.toNat with
+    | some (.stream st) => st == .stdin
+    | _ => false
+
+/-- Every open channel of a world is a console channel (output) or stdin
+(input), as a check. -/
 def consolesOk (w : World) : Bool :=
-  w.chans.all fun c => !c.isOut || c.fd == -1 || consoleChanB w c
+  w.chans.all fun c => c.fd == -1 || (if c.isOut then consoleChanB w c else stdinChanB w c)
 
 theorem consolesOk_sound {w : World} (h : consolesOk w = true) :
     ∀ (id : Nat) c, w.chans[id]? = some c → c.isOut = true → c.fd ≠ -1 → ConsoleChan w c := by
@@ -107,7 +127,7 @@ theorem consolesOk_sound {w : World} (h : consolesOk w = true) :
   have hc' := List.all_eq_true.1 h c (List.mem_of_getElem? hc)
   have closed : (c.fd == -1) = false := beq_eq_false_iff_ne.2 open_
   rw [out, closed] at hc'
-  simp only [Bool.not_true, Bool.false_or] at hc'
+  simp only [Bool.false_or, ite_true] at hc'
   unfold consoleChanB at hc'
   simp only [Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq, Option.isNone_iff_eq_none] at hc'
   obtain ⟨⟨fd, exited⟩, stream⟩ := hc'
@@ -115,6 +135,22 @@ theorem consolesOk_sound {w : World} (h : consolesOk w = true) :
   split at stream
   · rename_i st hst
     exact ⟨st, hst, by simpa using stream⟩
+  · cases stream
+
+theorem consolesOk_stdin {w : World} (h : consolesOk w = true) :
+    ∀ (id : Nat) c, w.chans[id]? = some c → c.isOut = false → c.fd ≠ -1 → StdinChan w c := by
+  intro id c hc input open_
+  have hc' := List.all_eq_true.1 h c (List.mem_of_getElem? hc)
+  have closed : (c.fd == -1) = false := beq_eq_false_iff_ne.2 open_
+  rw [input, closed] at hc'
+  simp only [Bool.false_or, Bool.false_eq_true, ite_false] at hc'
+  unfold stdinChanB at hc'
+  simp only [Bool.and_eq_true, beq_iff_eq, Option.isNone_iff_eq_none] at hc'
+  obtain ⟨⟨fd, exited⟩, stream⟩ := hc'
+  refine ⟨fd, exited, ?_⟩
+  split at stream
+  · rename_i st hst
+    rw [hst]; simp only [beq_iff_eq] at stream; rw [stream]
   · cases stream
 
 /-- **The F1 domain.** `Good`, every reachable state is at an F1 instruction
@@ -125,6 +161,8 @@ structure GoodF1 (P : Prog) : Prop where
   stopAccu : ∀ s i, Reach P s → decodeAt P.code s.pc = some i → stopOrdinary i s.accu = true
   /-- every open output channel is the console (F1 output goes to HTIF) -/
   consoles : ConsoleChannels P
+  /-- every open input channel is stdin (F1 input comes from HTIF) -/
+  stdins : StdinChannels P
 
 /-- `GoodF1` from a static check of the code plus the dynamic fact that the
 run never leaves it: every decodable word is F1, and reachable PCs decode. -/
@@ -132,11 +170,12 @@ theorem GoodF1.of_static {P : Prog} (hg : Good P)
     (static : ∀ pc i, decodeAt P.code pc = some i → InF1 P i)
     (decodes : ∀ s, Reach P s → decodeAt P.code s.pc ≠ none)
     (stopAccu : ∀ s i, Reach P s → decodeAt P.code s.pc = some i → stopOrdinary i s.accu = true)
-    (consoles : ConsoleChannels P) :
+    (consoles : ConsoleChannels P) (stdins : StdinChannels P) :
     GoodF1 P where
   good := hg
   stopAccu := stopAccu
   consoles := consoles
+  stdins := stdins
   inF1 s hr := by
     cases h : decodeAt P.code s.pc with
     | none => exact absurd h (decodes s hr)

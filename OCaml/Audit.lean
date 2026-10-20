@@ -6001,6 +6001,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.native_kept
 #print axioms OCaml.Vm.Sim.open_out_return
 #print axioms OCaml.Vm.Sim.prim_caml_ml_open_descriptor_out_returns
+#print axioms OCaml.consolesOk_stdin
 #print axioms OCaml.Vm.Sim.console_word
 #print axioms OCaml.Vm.Primitives.Channel.OpenedOut.gprs
 #print axioms OCaml.Vm.Primitives.Channel.OpenedOut.keep_saved

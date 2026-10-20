@@ -296,18 +296,19 @@ def decimal (n : Int) : List UInt8 :=
 
 /-- Open a channel on `fd` (`caml_ml_open_descriptor_{in,out}`).
 
-The guards are unreachable on loaded programs, and they exist so the C_CALL
-adapter (`prim_caml_ml_open_descriptor_out_returns`) reads its facts off the
-primitive's equation instead of a per-program premise:
+The guards let the C_CALL adapter (`prim_caml_ml_open_descriptor_out_returns`)
+read its facts off the primitive's equation instead of a per-program premise:
 * a live descriptor: `fd ≥ 0` names an open OS descriptor (every open in
   Stdlib and ocamlc is on a live fd, the result of `caml_sys_open` or a
   console stream); the machine's `lseek` then reads a live HTIF slot;
-* at most 64 channels: the bound mirrors `Gc.maxChannels`, the number of
-  records the F1 heap reservation budgets; loaded programs open at most 3
-  (stdin, stdout, stderr);
-* no heap object names the new id: every `.channel` object comes from
-  `openChan` (with the then-current `chans.length`) or copies an existing id,
-  and `chans` only grows. -/
+* at most 64 channels: an **F1/G1 scoping guard**, not interp.c behaviour
+  (OCaml has no such limit). It mirrors `Gc.maxChannels`, the number of
+  records the F1 heap reservation budgets, like the major-allocation
+  exclusion (`Fragment.channelLedger`). whileMin opens 3 channels; the
+  compiler differential opens fewer than 64;
+* no heap object names the new id: unreachable on loaded programs, since every
+  `.channel` object comes from `openChan` (with the then-current
+  `chans.length`) or copies an existing id, and `chans` only grows. -/
 def openChan (h : Heap) (w : World) (fd : Int) (isOut : Bool) : PRes :=
   let id := w.chans.length
   if fd < 0 ∨ (TCB.Os.lookupFd w.os fd.toNat).isNone then .unsupported else

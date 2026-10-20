@@ -76,6 +76,10 @@ theorem GoodF1.of_runToF1 {P : Prog} {k : Nat} (h : (runToF1 P k P.init).isSome)
     obtain ⟨n, hn⟩ := hr
     obtain ⟨_, _, _, _, hc⟩ := (runToF1_reach k _ h n s hn).1
     exact consolesOk_sound hc
+  stdins s hr := by
+    obtain ⟨n, hn⟩ := hr
+    obtain ⟨_, _, _, _, hc⟩ := (runToF1_reach k _ h n s hn).1
+    exact consolesOk_stdin hc
 
 namespace Programs
 
