@@ -27,6 +27,8 @@ structure ResetReadSections (initial after : Config) where
   attempted : Config
   attempt : ResetAttemptOk initial attempted
   atCall : Config
+  /-- caml_init_gc's globals at the descriptor read. -/
+  params : GcInitImage atCall
   blk : BitVec 64
   done : ReadSectionsDone (attemptBlocks attempt.opened) (startupAllocatorCredits - 656)
     attempt.opened.call.retry.failed.opened.opened.node jal_80004e10_call.link 3#64 argvPtr
@@ -103,6 +105,18 @@ theorem reset_read_sections_exists : ∃ initial after, Nonempty (ResetReadSecti
       rw [show WhileMinElfParse.trailSlot.toNat = WhileMinElfParse.trailSlot.toNat + 0 from rfl,
         K.trailer 0 (by decide), K.trailer 1 (by decide), K.trailer 2 (by decide), K.trailer 3 (by decide)]
       exact swapped_sections }
+  have params : GcInitImage d1 := A.late.gc.of_bytes fun a ha => by
+    have r := ha.late.range
+    exact low a (by unfold heapEnd; omega) (by simp only [OutW, errnoWindows, and_true]; omega)
+      (by unfold Layout.sym_fds; omega) (by unfold Layout.sym_magicstr; omega)
   obtain ⟨blk, after, run2, done⟩ := read_section_descriptors d1 _ _ _ _ _ _ _ _ R
-  exact ⟨initial, after, ⟨⟨d, w, d1, blk, done, w.run.trans (run1.trans run2)⟩⟩⟩
+  exact ⟨initial, after, ⟨⟨d, w, d1, params, blk, done, w.run.trans (run1.trans run2)⟩⟩⟩
+
+/-- caml_init_gc's globals after the descriptor table is read. -/
+theorem ResetReadSections.gc {initial after} (w : ResetReadSections initial after) : GcInitImage after :=
+  w.params.of_bytes fun a ha => by
+    have r := ha.late.range
+    exact w.done.globals a (by unfold heapEnd; omega)
+      (KeptByte.not_foot (Or.inr (Or.inr (Or.inr (Or.inr ha)))))
+      (by simp only [OutW, errnoWindows, and_true]; omega) (by unfold Layout.sym_fds; omega)
 end OCaml.Vm.Boot.WhileMinElfParse

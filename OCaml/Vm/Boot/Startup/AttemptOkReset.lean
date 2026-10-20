@@ -49,14 +49,12 @@ theorem OpenApart.embed {a : Nat} (h : EmbedByte a) : OpenApart a := by
   exact OpenApart.below (by unfold heapEnd at lo; omega) hi (Or.inr (by unfold heapEnd Layout.sym_files at *; omega))
     (Or.inr (by unfold heapEnd Layout.sym_fds at *; omega))
 
-theorem OpenApart.late_low {a : Nat} (ha : EnvironByte a ∨ VerbGcByte a ∨
-    (allocatorImpureAddr ≤ a ∧ a < allocatorImpureAddr + 8) ∨
-    (Layout.sym_print_config ≤ a ∧ a < Layout.sym_print_config + 8)) : OpenApart a := by
+theorem OpenApart.late_low {a : Nat} (ha : LateByte a) : OpenApart a := by
   have sp : attemptStack.toNat = 0x87ffff40 := by decide
+  have r := ha.range
   refine ⟨Or.inl ?_, ?_, ?_, ?_⟩ <;>
-    rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-    simp only [sp, openProgDepth, OutW, errnoWindows, and_true, Layout.sym_environ, Layout.sym_caml_verb_gc, allocatorImpureAddr,
-      Layout.sym_print_config, Layout.sym_files, Layout.sym_fds] at * <;> omega
+    simp only [sp, openProgDepth, OutW, errnoWindows, and_true, embedLimit, Layout.sym_stack_top, Layout.sym_stack_size,
+      Layout.sym_files, Layout.sym_fds] <;> omega
 
 theorem OpenApart.fsWord {a : Nat} (h : FsWordByte a) : OpenApart a := by
   have sp : attemptStack.toNat = 0x87ffff40 := by decide

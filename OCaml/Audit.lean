@@ -438,6 +438,7 @@ import OCaml.Vm.Boot.Startup.MajorHeap
 import OCaml.Vm.Boot.Startup.MemsetShifted
 import OCaml.Vm.Boot.Startup.InitGcSteps
 import OCaml.Vm.Boot.Startup.InitGc
+import OCaml.Vm.Boot.Startup.InitGcReset
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -3050,6 +3051,20 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.init_gc_to_major
 #print axioms OCaml.Vm.Boot.Startup.init_gc_finish
 #print axioms OCaml.Vm.Boot.Startup.caml_init_gc
+#print axioms OCaml.Vm.Boot.Startup.GcInitImage.frame
+#print axioms OCaml.Vm.Boot.Startup.GcInitImage.of_bytes
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetCamlMainWitness.gc
+#print axioms OCaml.Vm.Boot.Startup.LateByte.apart
+#print axioms OCaml.Vm.Boot.Startup.LateImage.transport
+#print axioms OCaml.Vm.Boot.Startup.gc_param_initial
+#print axioms OCaml.Vm.Boot.Startup.GcInitImage.param
+#print axioms OCaml.Vm.Boot.Startup.caml_init_gc_args
+#print axioms OCaml.Vm.Boot.Startup.caml_init_gc_call
+#print axioms OCaml.Vm.Boot.Startup.DomainKept.of_low
+#print axioms OCaml.Vm.Boot.Startup.GcInitImage.word
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.ResetReadSections.gc
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_gc_call
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_gc_exists
 #print axioms OCaml.Vm.Boot.Startup.ownedWindow_ok
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv

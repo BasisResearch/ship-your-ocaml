@@ -55,7 +55,7 @@ theorem ReadSectionsCall.file_kept {H capacity charge node ra s0 s1 s2 c}
     x < heapEnd ∧ ¬ vsaFoot H x := by
   rcases hx with ⟨htif, _⟩ | ⟨lo, hi⟩
   · have := htif.bounds
-    exact ⟨by unfold Layout.sym_files heapEnd at *; omega, KeptByte.not_foot (Or.inr (Or.inr (Or.inr htif)))⟩
+    exact ⟨by unfold Layout.sym_files heapEnd at *; omega, KeptByte.not_foot (Or.inr (Or.inr (Or.inr (Or.inl htif))))⟩
   · obtain ⟨e, he, inside⟩ := A.nodeOwned (x - node.toNat) (by omega)
     have bounds := A.ready.block_bounds (q := e.1) (n := e.2) he
     rw [show node.toNat + (x - node.toNat) = x by omega] at inside

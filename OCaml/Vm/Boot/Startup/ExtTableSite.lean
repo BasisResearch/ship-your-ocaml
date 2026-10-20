@@ -4,6 +4,15 @@ import OCaml.Vm.Boot.Startup.TableAllocatorInput
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives
 
+/-- Low windows at or above `startup_count` that avoid caml_init_gc's `.bss` globals. -/
+abbrev GcApart (g n : Nat) : Prop :=
+  (g + n ≤ 0x800649f0 ∨ 0x80064a00 ≤ g) ∧ (g + n ≤ 0x80064a40 ∨ 0x80064a48 ≤ g) ∧
+    (g + n ≤ 0x80064b08 ∨ 0x80064b10 ≤ g) ∧ (g + n ≤ 0x80064b30 ∨ 0x80064b38 ≤ g) ∧
+    (g + n ≤ 0x80064cf0 ∨ 0x80064cf8 ≤ g) ∧ (g + n ≤ 0x800662e8 ∨ 0x800663e8 ≤ g)
+
+theorem GcApart.of_high {g n : Nat} (h : 0x800663e8 ≤ g) : GcApart g n := by
+  unfold GcApart; omega
+
 /-- A 16-byte global table header between the startup globals and the arena,
 clear of allocator metadata and the runtime observations `RuntimeReady` pins. -/
 structure ExtTableGlobal (t : Nat) : Prop where
@@ -15,6 +24,7 @@ structure ExtTableGlobal (t : Nat) : Prop where
   files : t + Layout.ext_table_bytes ≤ Layout.sym_print_config ∨ Layout.sym_files + 56 * 64 ≤ t ∨
     (Layout.sym_print_config + 8 ≤ t ∧ t + Layout.ext_table_bytes ≤ Layout.sym_fds) ∨
     (Layout.sym_fds + 24 * 32 ≤ t ∧ t + Layout.ext_table_bytes ≤ Layout.sym_files + 56)
+  gc : GcApart t Layout.ext_table_bytes
 
 /-- Where caml_ext_table_init (entered with stack pointer `sp`) may find its
 `struct ext_table`: a global header, or a header in a caller's native frame at
@@ -28,6 +38,7 @@ structure ExtTableSite (sp t : BitVec 64) : Prop where
 
 theorem ExtTableGlobal.shared : ExtTableGlobal Layout.sym_caml_shared_libs_path where
   files := by decide
+  gc := by decide
   low := by decide
   high := by decide
   domain := by decide

@@ -377,10 +377,25 @@ insertion is proved generically:
   `InitGcDone`). On return the registers are restored and readiness holds over
   the final live list (the new blocks prepended to the caller's). The tail
   uses `MemSame` throughout with one keep predicate, `GcTailKeep`.
-Next, caml_main from the caml_init_gc call site (CamlInitGcCalls) onward to
-the whileMin cut. `InitGcCall`'s premises come from the startup state at that
-call.
-Then onward to the cut.
+* **The reset run reaches caml_init_gc's entry** (`reset_init_gc_call`,
+  `reset_init_gc_exists`), giving `InitGcCall` at the default parameters:
+  * `GcInitImage` (caml_init_gc's `.data` parameters and the zero `.bss`
+    words it reads, including `caml_verb_gc`) is part of `KeptImage` and
+    `LateImage`, so every `EmbedFrame` step carries it. `LateByte`/`LateApart`
+    name the low bytes a late image reads; `ResetReadSections.params` records
+    it at the descriptor read.
+  * `scripts/gen_gc_param_pins.py` generates `GcParamPins.lean` (loader bytes
+    of the ten parameters, drift-checked in a5). `GcInitImage.param` reads a
+    parameter word.
+  * `caml_init_gc_args` and `caml_init_gc_call` cover caml_main's argument
+    block and the `jal`; the stack arguments are a `nativeWordLog`.
+  * The domain record and ref tables (`DomainKept`) are the named obligation
+    `ResetDomainKept_Statement`. Only some startup posts carry a `live` frame
+    for owned blocks, so this needs an owned-block frame from `DomainHistory`
+    to the descriptor read.
+Next: discharge `ResetDomainKept_Statement`, then compose `caml_init_gc` onto
+`reset_init_gc_call` and continue to the cut (caml_init_stack, atom table,
+backtrace, interprete init, debugger, load_code).
 
 ## Round 2 status (2026-10-06, search)
 

@@ -44,7 +44,7 @@ theorem FsUp.frame {before after : Config} {node : BitVec 64} (h : FsUp before.�
     (kept : EmbedFrame before after)
     (name : ∀ j, j ≤ 4 → (after.σ.mem[node.toNat + j]?).getD 0 = (before.σ.mem[node.toNat + j]?).getD 0) :
     FsUp after.σ.mem node :=
-  h.transport (fun x hx => kept.byte x (Or.inr (Or.inr (Or.inr hx)))) name
+  h.transport (fun x hx => kept.byte x (Or.inr (Or.inr (Or.inr (Or.inl hx))))) name
 
 /-- Descriptor 3 is clear while htif.c's globals hold their loader values. -/
 theorem HtifImage.fd3 {c : Config} (h : HtifImage c) (i : Nat) (hi : i < 4) :

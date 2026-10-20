@@ -406,25 +406,20 @@ theorem open_ocamlrun (c : Config) (H : List (Nat × Nat)) (capacity charge : Na
       (gholds_lookup (n := 2) _ p12.regs rfl) (gholds_lookup (n := 1) _ p12.regs rfl) ready.aligned f0
       (by simp only [LogInW])
     late := late.transport embed12 fun a ha => by
-      have g : 0x8006466c ≤ a ∧ a < 0x80064918 ∨ 0x8006491c ≤ a ∧ a < 0x80064d48 := by
-        rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-          simp only [Layout.sym_environ, Layout.sym_caml_verb_gc, allocatorImpureAddr, Layout.sym_print_config] at * <;>
-          omega
-      have ag : ¬ allocGlobal a := by
-        rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
-          simp only [allocGlobal, InRange, Layout.sym_environ, Layout.sym_caml_verb_gc, allocatorImpureAddr,
-            Layout.sym_print_config] at * <;> omega
-      rw [mem12 a (by simp only [OutW, errnoWindows, and_true]; omega)]
-      rw [R.low a (by unfold heapStart; omega) ag (by
+      have o := ha.apart
+      rw [mem12 a (by simp only [OutW, errnoWindows, and_true]; exact ⟨Or.inr o.low, o.errno⟩)]
+      rw [R.low a (by unfold heapStart; have := o.high; omega) o.notAlloc (by
+          have := o.fsReady; have := o.fds; have := o.files; have := o.high
           simp only [OutW, fsWindows, and_true, nativeFrameBase, Layout.sym_files, Layout.sym_fds, Layout.sym_fs_ready]
+            at *
           refine ⟨Or.inl ?_, by omega, by omega, by omega⟩
           rw [hRS]
           unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at *
           omega)
-        (by unfold slotOne Layout.sym_files; omega)]
-      rcases g with ⟨lo, hi⟩ | ⟨lo, hi⟩
-      · exact low6 a lo (by omega)
-      · exact low6 a (by omega) hi
+        (by unfold slotOne; exact o.slot)]
+      exact mem6 a (Or.inl (by
+          have := o.high; unfold openDepth embedLimit Layout.sym_stack_top Layout.sym_stack_size allocHeadroom at *; omega))
+        o.errno (Or.inr o.low)
     slot := R.slot.transport (fun x lo hi => mem12 x (by
         simp only [OutW, errnoWindows, and_true, slotOne, Layout.sym_files] at *; omega))
       (fun j hj => mem12 _ (by
