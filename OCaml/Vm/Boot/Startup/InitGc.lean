@@ -91,6 +91,7 @@ structure InitGcTabled (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 
   ready : RuntimeReady ((blk.toNat, 16384) :: H) capacity (nativeStack sp 96) jal_8001f344_call.link after
   fresh : FreshBlock vsaLayoutP H blk.toNat 16384
   table : PageTableAt after.σ.mem blk
+  aligned : blk.toNat % 16 = 0
   slots : ∀ off value, (off, value) ∈ initGcSlots ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 →
     bytesT after.σ.mem (nativeFrameBase sp 96 + off) 8 = value
   kept : ∀ x, x < heapEnd → ¬ vsaFoot H x → OutW pageTableWindows x →
@@ -177,6 +178,7 @@ theorem init_gc_to_table (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM c
     ready := PT.ready
     fresh := PT.fresh
     table := PT.table
+    aligned := PT.aligned
     slots := fun off value member => by
       have bound := slots off value member
       have stackNat : (nativeStack sp 96).toNat = sp.toNat - 96 := frame96.stack_nat
@@ -190,5 +192,164 @@ theorem init_gc_to_table (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM c
       rw [PT.kept x (by omega) foot out, C.memory, p2.memory,
         show writeLog d1.σ.mem [] = d1.σ.mem from rfl, p1.memory,
         frameOn_writeLog _ _ _ inside x ⟨Or.inl xb, trivial⟩] }⟩
+
+/-- caml_set_minor_heap_size returned into caml_init_gc. -/
+structure InitGcMinored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk raw : BitVec 64)
+    (before after : Config) : Prop where
+  pc : PCAt jal_8001f36c_call.link after
+  regs : GHolds after.σ [(2, nativeStack sp 96), (10, 0#64), (8, 0xf8000#64), (9, 262144#64), (18, 8192#64),
+    (19, 2#64), (20, 15#64), (21, 120#64), (22, 500#64), (23, 1#64), (24, 44#64), (25, 100#64)]
+  ready : RuntimeReady ((raw.toNat, (0x200000#64 + 4096#64).toNat) :: (blk.toNat, 16384) :: H) capacity
+    (nativeStack sp 96) jal_8001f36c_call.link after
+  tableFresh : FreshBlock vsaLayoutP H blk.toNat 16384
+  tableAligned : blk.toNat % 16 = 0
+  minorFresh : FreshBlock vsaLayoutP ((blk.toNat, 16384) :: H) raw.toNat (0x200000#64 + 4096#64).toNat
+  young : YoungAt after.σ.mem (pageAbove raw) 0x200000#64 raw
+  table : PageTableFields after.σ.mem (BitVec.ofNat 64 512) blk
+  count : pageCount after.σ.mem blk.toNat = 512
+  only : ∀ i, i < 2048 → slotWord after.σ.mem blk i ≠ 0#64 →
+    ∃ j, j < 512 ∧ slotWord after.σ.mem blk i = 2#64 ||| blockPage (pageAbove raw) j
+  slots : ∀ off value, (off, value) ∈ initGcSlots ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 →
+    bytesT after.σ.mem (nativeFrameBase sp 96 + off) 8 = value
+  lowKept : ∀ x, x < heapStart → ¬ allocGlobal x → (x < pageTable ∨ pageTable + 0x28 ≤ x) →
+    (x < 0x80064cc8 ∨ 0x80064cc8 + 8 ≤ x) → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  domainHigh : ∀ off, 128 ≤ off → off + 8 ≤ 928 →
+    bytesT after.σ.mem (domainField off) 8 = bytesT before.σ.mem (domainField off) 8
+
+/-- A fresh block lies apart from every live block. -/
+theorem FreshBlock.apart {L : DlLayout} {H : List (Nat × Nat)} {p n : Nat} (fresh : FreshBlock L H p n)
+    {q m : Nat} (owned : (q, m) ∈ H) (pos : 0 < n) (qpos : 0 < m) : p + n ≤ q ∨ q + m ≤ p := by
+  have a := fresh.2.2.2 _ owned
+  rcases Nat.lt_or_ge p q with h | h
+  · rcases Nat.lt_or_ge (p + n) (q + 1) with h' | h'
+    · exact Or.inl (by omega)
+    · exact absurd (show InExt (q, m) q by unfold InExt; dsimp only; omega) (a q (by unfold InExt; dsimp only; omega))
+  · rcases Nat.lt_or_ge p (q + m) with h' | h'
+    · exact absurd (show InExt (q, m) p by unfold InExt; dsimp only; omega) (a p (by unfold InExt; dsimp only; omega))
+    · exact Or.inr h'
+
+theorem init_gc_to_minor (c d4 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM cP : Nat)
+    (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur blk : BitVec 64)
+    (A : InitGcCall H cap c1 c2 cA cM cP sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur c)
+    (T : InitGcTabled H (cap + c2 + c1 + cA + cM) sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk c d4) :
+    ∃ raw after, Steps d4 after ∧
+      InitGcMinored H (cap + c2 + c1 + cA) sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk raw c after := by
+  have frame96 : NativeFrame sp 96 := A.frame.resize (by unfold allocHeadroom; omega) (by decide)
+  have frameIn : NativeFrame (nativeStack sp 96) (64 + (32 + allocHeadroom)) := A.frame.nested (front := 96) (by decide)
+  have hS : heapStart = 0x8007d140 := rfl
+  have hE : heapEnd = 0x86800000 := rfl
+  have hP : pageTable = 0x800684b8 := rfl
+  have dom : firstDomainPtr.toNat = 0x8007d150 := rfl
+  have bLow : 0x8007d140 ≤ blk.toNat := T.fresh.2.1
+  have bHigh : blk.toNat + 16384 ≤ 0x86800000 := T.fresh.2.2.1
+  -- the minor heap's size
+  obtain ⟨d5, run5, p5⟩ := (init_gc_minor_front d4 jal_8001f344_call.link T.ready.toLeafInput
+    ⟨gholds_lookup (n := 10) _ T.regs rfl, gholds_lookup (n := 9) _ T.regs rfl, trivial⟩).run d4 ⟨T.pc, rfl⟩
+  have g5 := GprsSame.of_post p5 (by decide)
+  have ready5 := T.ready.stack_log p5 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g5.get (by decide) (by decide) (by decide) T.ready.stack) (g5.get (by decide) (by decide) (by decide) T.ready.raReg)
+    (by decide) frameIn (by simp only [LogInW])
+  obtain ⟨d6, run6, C⟩ := (ready_call jal_8001f36c_call_shape jal_8001f36c_call_decode (jal_8001f36c_call_pins p5.image)
+    ready5 [(10, 0x200000#64)] ⟨gholds_lookup (n := 10) _ p5.regs rfl, trivial⟩
+    (by simp only [keysG]; decide) (by simp only [KeysAvoidRa, keysG]; decide) _ rfl (by decide)).run d5 ⟨p5.pc, rfl⟩
+  have gC : GprsSame d5 d6 [1] := ⟨fun n lo hi out => C.frame n lo hi (by simpa using out)⟩
+  have g46 := (g5.trans gC).mono (vs := [15, 10, 1]) (by decide)
+  have mem6 : d6.σ.mem = d4.σ.mem := C.memory.trans p5.memory
+  -- d6's memory against the caller's
+  have back (x : Nat) (low : x < heapEnd) (foot : ¬ vsaFoot H x) (out : OutW pageTableWindows x) :
+      (d6.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    rw [mem6, T.kept x low foot out]
+  have domainOwned := A.domainOwned
+  have domainWord (off : Nat) (h : off + 8 ≤ 928) :
+      bytesT d6.σ.mem (domainField off) 8 = bytesT c.σ.mem (domainField off) 8 :=
+    word_observed _ fun i hi => back _ (InDomain.field h hi).below ((InDomain.field h hi).not_foot domainOwned)
+      (by simp only [OutW, pageTableWindows, domainField, dom, hP, and_true]; omega)
+  have heapWord (t : BitVec 64) (spot : RefTableSpot t) (owned : (t.toNat, 56) ∈ H) :
+      bytesT d6.σ.mem t.toNat 8 = bytesT c.σ.mem t.toNat 8 := by
+    have lo := spot.low
+    have hi := spot.high
+    exact word_observed _ fun i hi8 => back _ (by omega) (owned_not_foot' lo owned (by omega) (by omega))
+      (by simp only [OutW, pageTableWindows, and_true]; rw [hP]; rw [hS] at lo; omega)
+  have lowAgree (a : Nat) (ha : a + 8 ≤ 0x8007d140) (alloc : ∀ i, i < 8 → ¬ allocGlobal (a + i))
+      (rec : a + 8 ≤ pageTable ∨ pageTable + 0x28 ≤ a) : ∀ i, i < 8 → (d6.σ.mem[a + i]?).getD 0 = (c.σ.mem[a + i]?).getD 0 :=
+    fun i hi => back _ (by rw [hE]; omega) (fun f => f.elim (alloc i hi) fun h => by rw [hS] at h; omega)
+      (by simp only [OutW, pageTableWindows, and_true]; omega)
+  have R := A.refs
+  have refs6 : RefTablesPre H d6.σ.mem t1 t2 t3 := {
+    R with
+    ptr1 := by rw [domainWord 104 (by decide)]; exact R.ptr1
+    ptr2 := by rw [domainWord 112 (by decide)]; exact R.ptr2
+    ptr3 := by rw [domainWord 120 (by decide)]; exact R.ptr3
+    empty1 := by rw [heapWord t1 R.spot1 R.owned1]; exact R.empty1
+    empty2 := by rw [heapWord t2 R.spot2 R.owned2]; exact R.empty2
+    empty3 := by rw [heapWord t3 R.spot3 R.owned3]; exact R.empty3 }
+  have fits : blk.toNat + 16384 ≤ 2 ^ 64 := by omega
+  -- caml_set_minor_heap_size(0x200000)
+  obtain ⟨raw, d7, run7, M⟩ := minor_heap_set d6 ((blk.toNat, 16384) :: H) (cap + c2 + c1 + cA) cM (nativeStack sp 96)
+    jal_8001f36c_call.link 0x200000#64 0xf8000#64 262144#64 8192#64 2#64 blk t1 t2 t3 512 {
+      pc := by rw [← jal_8001f36c_call_target]; exact C.pc
+      regs := ⟨C.ready.stack, C.ready.raReg, C.regs.1,
+        g46.get (by decide) (by decide) (by decide) (gholds_lookup (n := 8) _ T.regs rfl),
+        g46.get (by decide) (by decide) (by decide) (gholds_lookup (n := 9) _ T.regs rfl),
+        g46.get (by decide) (by decide) (by decide) (gholds_lookup (n := 18) _ T.regs rfl),
+        g46.get (by decide) (by decide) (by decide) (gholds_lookup (n := 19) _ T.regs rfl), trivial⟩
+      ready := C.ready
+      frame := frameIn
+      sizeAt := by decide
+      pages := by decide
+      halfFull := by decide
+      charged := A.chargedM
+      idle := by rw [domainWord 8 (by decide), domainWord 56 (by decide)]; exact A.idle
+      noYoung := by rw [domainWord 32 (by decide)]; exact A.noYoung
+      domainOwned := List.mem_cons_of_mem _ domainOwned
+      table := by rw [mem6]; exact T.table
+      tableLow := by rw [hE]; exact bHigh
+      tableHigh := by rw [hS]; exact bLow
+      tableOwned := by simp
+      tableWindows := fun i hi => by
+        have n := slotAddr_nat blk i hi fits
+        exact window_of_heap (by rw [n, hS]; omega) (by rw [n, hE]; omega) (by rw [n]; have := T.aligned; omega)
+      tableDomain := by
+        have a := FreshBlock.apart T.fresh domainOwned (by decide) (by decide)
+        exact a
+      refs := refs6.at T.fresh
+      lambdaOff := by
+        rw [word_observed (m := c.σ.mem) _ (lowAgree _ (by decide) (fun i hi => by unfold allocGlobal InRange; omega)
+          (by rw [hP]; decide))]
+        exact A.lambdaOff
+      memprofIdle := by
+        rw [read8_agree (lowAgree _ (by decide) (fun i hi => by unfold allocGlobal InRange; omega) (by rw [hP]; decide))]
+        exact A.memprofIdle }
+  have saved7 (k : Nat) (lo : 20 ≤ k) (hi : k ≤ 27) {v : BitVec 64} (h : gprGet d4.σ k = some v) : gprGet d7.σ k = some v := by
+    rw [M.saved k lo hi]; exact g46.get (by omega) (by omega) (by simp; omega) h
+  have stackNat : (nativeStack sp 96).toNat = sp.toNat - 96 := frame96.stack_nat
+  refine ⟨raw, d7, run5.trans (run6.trans run7), {
+    pc := M.pc
+    regs := ⟨gholds_lookup (n := 2) _ M.regs rfl, gholds_lookup (n := 10) _ M.regs rfl,
+      gholds_lookup (n := 8) _ M.regs rfl, gholds_lookup (n := 9) _ M.regs rfl, gholds_lookup (n := 18) _ M.regs rfl,
+      gholds_lookup (n := 19) _ M.regs rfl,
+      saved7 20 (by decide) (by decide) (gholds_lookup (n := 20) _ T.regs rfl),
+      saved7 21 (by decide) (by decide) (gholds_lookup (n := 21) _ T.regs rfl),
+      saved7 22 (by decide) (by decide) (gholds_lookup (n := 22) _ T.regs rfl),
+      saved7 23 (by decide) (by decide) (gholds_lookup (n := 23) _ T.regs rfl),
+      saved7 24 (by decide) (by decide) (gholds_lookup (n := 24) _ T.regs rfl),
+      saved7 25 (by decide) (by decide) (gholds_lookup (n := 25) _ T.regs rfl), trivial⟩
+    ready := M.ready
+    tableFresh := T.fresh
+    tableAligned := T.aligned
+    minorFresh := M.fresh
+    young := M.young
+    table := M.table
+    count := M.count
+    only := M.only
+    slots := fun off value member => by
+      have bound : off + 8 ≤ 96 := by simp [initGcSlots] at member; omega
+      rw [word_observed (m := d6.σ.mem) _ fun i hi => M.caller _ (by rw [stackNat]; unfold nativeFrameBase; omega), mem6]
+      exact T.slots off value member
+    lowKept := fun x low alloc rec trig => by
+      rw [M.lowKept x low alloc (by rw [hP] at rec ⊢; omega) trig]
+      exact back x (by rw [hS] at low; rw [hE]; omega) (fun f => f.elim alloc fun h => by omega)
+        (by simp only [OutW, pageTableWindows, and_true]; exact rec)
+    domainHigh := fun off lo hi => by rw [M.domainHigh off lo hi, domainWord off hi] }⟩
 
 end OCaml.Vm.Boot.Startup
