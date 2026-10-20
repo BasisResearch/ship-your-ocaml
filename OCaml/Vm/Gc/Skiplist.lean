@@ -88,6 +88,7 @@ structure Returned (H : List (Nat × Nat)) (touched : Nat → Prop) (sp ra : Bit
   saved : ∀ n ∈ [8, 9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], gprGet d.σ n = gprGet c.σ n
   gprs : GprsKept c d
   output : d.σ.sailOutput = c.σ.sailOutput
+  htif : d.σ.regs.get? Register.htif_payload_writes = c.σ.regs.get? Register.htif_payload_writes
   /-- newlib's heap after the call; its free bytes were free or touched before -/
   heap : ∃ H' cap', HeapReady H' cap' d ∧
     ∀ a, VsaIris.VsaHeap.vsaFoot H' a → VsaIris.VsaHeap.vsaFoot H a ∨ touched a
