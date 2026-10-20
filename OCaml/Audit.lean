@@ -5971,3 +5971,4 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.agree_of_getD
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.rodata_lookup
 #print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_atexit
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.fatal_to_atexit

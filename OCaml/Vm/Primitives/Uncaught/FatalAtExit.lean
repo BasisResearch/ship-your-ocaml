@@ -27,7 +27,7 @@ structure BacktraceAt (H : List (Nat × Nat)) (m : Mem) (dom active pos : BitVec
   posWindow : ReadWindow (dom + 240#64) 4
   /-- the fields lie in a live block (the domain record) -/
   block : ∃ q n, (q, n) ∈ H ∧ heapStart ≤ q ∧ q + n ≤ heapEnd ∧ q ≤ (dom + 232#64).toNat ∧
-    (dom + 232#64).toNat + 12 ≤ q + n
+    (dom + 232#64).toNat + 16 ≤ q + n
 
 /-- After the lookup of `Pervasives.do_at_exit`: at `0x8000dff4`. -/
 structure AtExitLooked (H : List (Nat × Nat)) (capacity : Nat) (sp res dom active pos : BitVec 64) (len : Nat)
