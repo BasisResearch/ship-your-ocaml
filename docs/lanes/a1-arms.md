@@ -272,6 +272,17 @@ head's first visit to `leave` over every open-channel record.
     `FramedCallOn`, `FramedPrimitivePostOn`, `Ccall1Saved.frame_on`,
     `NativePlaced.frame_below_on` and `Invocation.frame_on`. The log forms
     are the instance `W x := ¬ OutL log x` (`Misses.of_outLRange`).
+* The representation's parts (`Sim/OutListModel.lean`, `Sim/HeapAllocAll.lean`,
+  `Sim/CcallFootprint.lean`):
+  - the model's fold as `allocAll` of `listObjs`, placed at `outListPlaces`
+    (`outList_fold`, `listObjs_placed`, `blockWords_listObjs`);
+  - the walk's listed records as the listed ids' records
+    (`listed_of_chanAt`, `listedRecs_placed`);
+  - every new object represented from the nursery words (`listObjs_objAt`);
+  - a represented heap extended by a chain of objects (`heap_allocate_all`,
+    shared);
+  - the payload across a footprint predicate (`VmPayload.frame_on`,
+    `PayloadMisses`, `chanAt_frame`: refcounts may change; shared).
 * Next:
   - the representation: `objWords` as `ObjAt` of `outChannelsList`'s objects
     at `outListPlaces`, the result value, and `VmPayload` across `Written`

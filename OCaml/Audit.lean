@@ -20,6 +20,8 @@ import OCaml.Vm.Sim.PrimSysExitReturns
 import OCaml.Vm.Sim.OutListWalk
 import OCaml.Vm.Sim.OutListRun
 import OCaml.Vm.Sim.CcallFootprint
+import OCaml.Vm.Sim.HeapAllocAll
+import OCaml.Vm.Sim.OutListModel
 import OCaml.Vm.Sim.StringAllocReturn
 import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.PrimExecutableNameReturns
@@ -6190,3 +6192,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.Ccall1Saved.frame_on
 #print axioms OCaml.Vm.Sim.ccall_observed_summary_on
 #print axioms OCaml.Vm.Sim.Misses.of_outLRange
+#print axioms OCaml.Vm.Sim.chanAt_frame
+#print axioms OCaml.Vm.Sim.VmPayload.frame_on
+#print axioms OCaml.Vm.Sim.live_after_allocAll
+#print axioms OCaml.Vm.Sim.heap_allocate_all
+#print axioms OCaml.Vm.Sim.allocAll_get_new
+#print axioms OCaml.Vm.Sim.allocAll_get_old
+#print axioms OCaml.Vm.Sim.outList_fold
+#print axioms OCaml.Vm.Sim.outChannelsList_alloc
+#print axioms OCaml.Vm.Sim.listObjs_placed
+#print axioms OCaml.Vm.Sim.blockWords_listObjs
+#print axioms OCaml.Vm.Sim.listed_of_chanAt
+#print axioms OCaml.Vm.Sim.listedRecs_placed
+#print axioms OCaml.Vm.Sim.listObjs_objAt

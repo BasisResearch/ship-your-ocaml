@@ -131,4 +131,86 @@ theorem ccall_observed_summary_on {L : OCaml.Layout} {P : Prog} {s : St}
               resultReg := post.call.result
               resultRepr := post.resultRepr } }
 
+/-- **`ChanAt` across a footprint that may write the record's refcount**
+(`+64`, which `ChanAt` does not read). -/
+theorem chanAt_frame {c c' : Config} {a : Nat} {ch : Chan} (h : ChanAt c a ch)
+    (same : ∀ j, j < chanOffBuff + ioBufferSize → (j < 64 ∨ 68 ≤ j) → byte c' (a + j) = byte c (a + j)) :
+    ChanAt c' a ch := by
+  have bf : chanOffBuff + ioBufferSize = 65608 := rfl
+  have w8 : ∀ off, (off + 8 ≤ 64 ∨ 68 ≤ off) → off + 8 ≤ 65608 → word c' (a + off) = word c (a + off) :=
+    fun off h1 h2 => Reloc.bytesT_congr fun i hi => by
+      rw [Nat.add_assoc]; exact same _ (by omega) (by omega)
+  have w4 : ∀ off, (off + 4 ≤ 64 ∨ 68 ≤ off) → off + 4 ≤ 65608 → word32 c' (a + off) = word32 c (a + off) :=
+    fun off h1 h2 => Reloc.bytesT_congr fun i hi => by
+      rw [Nat.add_assoc]; exact same _ (by omega) (by omega)
+  obtain ⟨fd, off, curr, max, end_, unbuf, buf, bounds, managed⟩ := h
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, bounds, ?_⟩
+  · rw [w4 chanOffFd (by simp [chanOffFd]) (by simp [chanOffFd])]; exact fd
+  · rw [w8 chanOffOffset (by simp [chanOffOffset]) (by simp [chanOffOffset])]; exact off
+  · rw [w8 chanOffCurr (by simp [chanOffCurr]) (by simp [chanOffCurr])]; exact curr
+  · rw [w8 chanOffMax (by simp [chanOffMax]) (by simp [chanOffMax])]; exact max
+  · rw [w8 chanOffEnd (by simp [chanOffEnd]) (by simp [chanOffEnd])]; exact end_
+  · rw [w4 chanOffFlags (by simp [chanOffFlags]) (by simp [chanOffFlags])]; exact unbuf
+  · intro i b hb
+    have hi := (List.getElem?_eq_some_iff.mp hb).1
+    have := bounds.2.1
+    rw [Nat.add_assoc, same _ (by simp only [chanOffBuff, ioBufferSize] at this ⊢; omega)
+      (by simp only [chanOffBuff]; omega), ← Nat.add_assoc]
+    exact buf i b hb
+  · rw [w4 chanOffFlags (by simp [chanOffFlags]) (by simp [chanOffFlags])]; exact managed
+
+/-- The VM payload's words miss the footprint `W` (channel records except
+their refcounts). -/
+structure PayloadMisses (W : Nat → Prop) (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace)
+    (sp : Nat) : Prop where
+  domain : Misses W Layout.sym_Caml_state 8
+  stackHigh : Misses W ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high) 8
+  trapsp : Misses W ((word c Layout.sym_Caml_state).toNat + Layout.off_trapsp) 8
+  codeBase : Misses W Layout.sym_caml_start_code 8
+  atomBase : Misses W Layout.sym_caml_atom_table 8
+  globals : Misses W Layout.sym_caml_global_data 8
+  argv : Misses W Layout.sym_main_argv 8
+  ooId : Misses W Layout.sym_oo_last_id 8
+  code : ∀ i w, P.code[i]? = some w → Misses W (pl.codeBase + 4 * i) 4
+  stack : ∀ i v, s.stack[i]? = some v → Misses W (sp + 8 * i) 8
+  header : ∀ l a o, Live s.heap (roots P s) l → pl.φ l = some a → s.heap.get? l = some o → Misses W (a - 8) 8
+  payload : ∀ l a o, Live s.heap (roots P s) l → pl.φ l = some a → s.heap.get? l = some o →
+    Misses W a (8 * o.wosize)
+  channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+    ∀ j, j < chanOffBuff + ioBufferSize → (j < 64 ∨ 68 ≤ j) → ¬ W (a + j)
+
+/-- **The VM payload across a footprint predicate.** -/
+theorem VmPayload.frame_on {P : Prog} {s : St} {c c' : Config} {pl : Place} {cp : ChanPlace} {sp high : Nat}
+    {W : Nat → Prop} (h : VmPayload P s c pl cp sp high) (outside : PayloadMisses W P s c pl cp sp)
+    (memory : ∀ x, ¬ W x → byte c' x = byte c x) (outputEq : output c'.σ = output c.σ) :
+    VmPayload P s c' pl cp sp high := by
+  have copy : ∀ a n, Misses W a n → Reloc.Copied c c' a a n := fun a n m i hi => memory _ (m i hi)
+  have hw : ∀ a, Misses W a 8 → word c' a = word c a := fun a m => m.word memory
+  have domain := hw _ outside.domain
+  constructor
+  · rw [domain, hw _ outside.stackHigh]; exact h.stackHigh
+  · rw [domain, hw _ outside.trapsp]; exact h.trapsp
+  · rw [hw _ outside.codeBase]; exact h.codeBase
+  · intro i w hi
+    have he : word32 c' (pl.codeBase + 4 * i) = word32 c (pl.codeBase + 4 * i) :=
+      Reloc.bytesT_congr (copy _ 4 (outside.code i w hi))
+    simpa only [he] using h.code i w hi
+  · rw [hw _ outside.globals]; exact h.globals
+  · refine ⟨h.stack.1, fun i v hi => ?_⟩
+    rw [hw _ (outside.stack i v hi)]; exact h.stack.2 i v hi
+  · constructor
+    · intro l hl
+      obtain ⟨a, o, ha, ho, layout⟩ := h.heap.1 l hl
+      exact ⟨a, o, ha, ho, object_copied layout (copy _ 8 (outside.header l a o hl ha ho))
+        (copy _ _ (outside.payload l a o hl ha ho))⟩
+    · exact h.heap.2
+  · refine ⟨?_, ?_, ?_⟩
+    · rw [outputEq]; exact h.world.output
+    · intro id ch hc
+      obtain ⟨a, ha, layout⟩ := h.world.chans id ch hc
+      exact ⟨a, ha, chanAt_frame layout fun j hj hn => memory _ (outside.channels id ch a hc ha j hj hn)⟩
+    · rw [hw _ outside.ooId]; exact h.world.ooId
+  · rw [hw _ outside.atomBase]; exact h.atomBase
+  · rw [hw _ outside.argv]; exact h.argv
+
 end OCaml.Vm.Sim
