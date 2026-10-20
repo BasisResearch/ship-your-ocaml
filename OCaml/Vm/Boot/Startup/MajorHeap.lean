@@ -2,6 +2,8 @@ import OCaml.Vm.Boot.Startup.MajorTailSteps
 import OCaml.Vm.Boot.Startup.ReadyDiv
 import OCaml.Vm.Boot.Startup.HeapAlloc
 import OCaml.Vm.Boot.Startup.MakeFree
+import OCaml.Vm.Boot.Startup.PageApart
+import OCaml.Vm.Boot.Startup.PageAdd
 
 /-! caml_init_major_heap, composed. Stage A runs from the entry through
 `caml_clip_heap_chunk_wsz` (the `__divdi3`/`__muldi3` pair) and the heap
@@ -36,6 +38,8 @@ structure MajorHeapCall (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra h
   huge : bytesT c.σ.mem 0x80064b08 8 = 0#64
   charged : vsaChg (heapChunkSize ((hsize >>> 3) <<< 3) + 4152#64).toNat charge
   small : (heapChunkSize ((hsize >>> 3) <<< 3)).toNat + 4152 < 2 ^ 32
+  /-- The requested heap is below 4 GiB, so rounding it to pages does not wrap. -/
+  request : hsize.toNat < 2 ^ 32
 
 /-- The memory when caml_alloc_for_heap is entered: the saved registers, the
 size slot, `stat_heap_wsz` and `stat_top_heap_wsz`. -/
@@ -163,5 +167,368 @@ theorem major_to_alloc (c : Config) (H : List (Nat × Nat)) (capacity charge : N
     stateReg := g8.get (by decide) (by decide) (by decide) ((g7.get (by decide) (by decide) (by decide)
       ((g26.get (by decide) (by decide) (by decide) (gholds_lookup (n := 8) _ p2.regs rfl)))))
     domainReg := g8.get (by decide) (by decide) (by decide) (gholds_lookup (n := 9) _ p7.regs rfl) }⟩
+
+/-- The page table before the chunk is added: its record, its slot array
+inside a live block apart from the domain record, and every occupied slot a
+page of a live block. -/
+structure MajorTableAt (H : List (Nat × Nat)) (m : Std.ExtHashMap Nat (BitVec 8)) (ent : BitVec 64) : Prop where
+  fields : PageTableFields m (BitVec.ofNat 64 (pageCount m ent.toNat)) ent
+  low : ent.toNat + 16384 ≤ heapEnd
+  high : heapStart ≤ ent.toNat
+  owned : (ent.toNat, 16384) ∈ H
+  windows : ∀ i, i < 2048 → WriteWindow (slotAddr ent (BitVec.ofNat 64 i)) 8
+  apartDomain : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat
+  occupied : ∀ i, i < 2048 → slotWord m ent i ≠ 0#64 → SlotInBlock H (slotWord m ent i)
+
+theorem MajorTableAt.agree {H : List (Nat × Nat)} {m m' : Std.ExtHashMap Nat (BitVec 8)} {ent : BitVec 64}
+    (T : MajorTableAt H m ent) (same : ∀ x, InTable ent x → (m'[x]?).getD 0 = (m[x]?).getD 0) :
+    MajorTableAt H m' ent := by
+  have fits : ent.toNat + 16384 ≤ 2 ^ 64 := by have := T.low; unfold heapEnd at this; omega
+  have slots := slotWord_window_agree fits same
+  have count : pageCount m' ent.toNat = pageCount m ent.toNat :=
+    pageCount_congr fun i hi => by
+      rw [← slotWord_pageSlot _ _ i hi fits, ← slotWord_pageSlot _ _ i hi fits, slots i hi]
+  refine ⟨?_, T.low, T.high, T.owned, T.windows, T.apartDomain, fun i hi occ => ?_⟩
+  · rw [count]; exact T.fields.window_agree same
+  · rw [slots i hi] at occ ⊢; exact T.occupied i hi occ
+
+theorem MajorTableAt.cons {H : List (Nat × Nat)} {m : Std.ExtHashMap Nat (BitVec 8)} {ent : BitVec 64}
+    (T : MajorTableAt H m ent) (e : Nat × Nat) : MajorTableAt (e :: H) m ent :=
+  ⟨T.fields, T.low, T.high, List.mem_cons_of_mem _ T.owned, T.windows, T.apartDomain, fun i hi occ => by
+    obtain ⟨k, p, b, E⟩ := T.occupied i hi occ
+    exact ⟨k, p, b, { E with owned := List.mem_cons_of_mem _ E.owned }⟩⟩
+
+/-- The request rounded down to words: below 4 GiB and at least `Heap_chunk_min` words. -/
+theorem major_request_nat (hsize : BitVec 64) (small : hsize.toNat < 2 ^ 32) (chunkMin : 0xf000 ≤ (hsize >>> 3).toNat) :
+    ((hsize >>> 3) <<< 3).toNat = hsize.toNat / 8 * 8 ∧ 0x78000 ≤ ((hsize >>> 3) <<< 3).toNat ∧
+      ((hsize >>> 3) <<< 3).toNat < 2 ^ 32 := by
+  rw [BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow] at chunkMin
+  rw [BitVec.toNat_shiftLeft, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq]
+  simp only [Nat.reducePow] at *
+  omega
+
+/-- The chunk size: whole pages, at least the request, below 8 GiB. -/
+theorem major_chunk_size (req : BitVec 64) (small : req.toNat < 2 ^ 32) :
+    (heapChunkSize req).toNat % 4096 = 0 ∧ req.toNat ≤ (heapChunkSize req).toNat ∧
+      (heapChunkSize req).toNat < 2 ^ 33 := by
+  unfold heapChunkSize
+  rw [page_mask_nat, BitVec.toNat_add]
+  simp only [BitVec.toNat_ofNat, Nat.reducePow] at *
+  omega
+
+/-- A word-multiple survives the `>> 3`, `<< 3` round trip as whole pages. -/
+theorem major_words_pages (a : BitVec 64) (pages : a.toNat % 4096 = 0) :
+    (a >>> 3) <<< 3 = BitVec.ofNat 64 (4096 * (a.toNat / 4096)) := by
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_shiftLeft, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq, BitVec.toNat_ofNat]
+  have := a.isLt
+  simp only [Nat.reducePow] at *
+  omega
+
+/-- The chunk's addresses relative to its head. -/
+theorem ChunkSpot.chunk_nat {mem : BitVec 64} {asize : Nat} (S : ChunkSpot mem asize) :
+    (chunkStart mem).toNat = (chunkHead mem).toNat + 56 := S.field_nat 56 (by decide)
+
+theorem ChunkSpot.chunk_aligned {mem : BitVec 64} {asize : Nat} (S : ChunkSpot mem asize) :
+    (chunkStart mem).toNat % 4096 = 0 := by
+  rw [S.chunk_nat]
+  exact (chunk_inside mem asize (by have := S.high; unfold heapEnd at this; omega)).2.2
+
+theorem ChunkSpot.below_chunk {mem : BitVec 64} {asize : Nat} (S : ChunkSpot mem asize) (k : Nat) (h : k ≤ 56) :
+    chunkStart mem - BitVec.ofNat 64 k = chunkHead mem + BitVec.ofNat 64 (56 - k) := by
+  apply BitVec.eq_of_toNat_eq
+  have hb := S.bounds
+  have f := S.field_nat (56 - k) (by omega)
+  rw [f, BitVec.toNat_sub, S.chunk_nat, BitVec.toNat_ofNat]
+  have hi := S.high
+  unfold heapEnd at hi
+  simp only [Nat.reducePow]
+  omega
+
+/-- The head's fields survive writes that miss the head except its `next` word. -/
+theorem ChunkHeadAt.agree {m m' : Std.ExtHashMap Nat (BitVec 8)} {mem a : BitVec 64} {asize : Nat}
+    (S : ChunkSpot mem asize) (H : ChunkHeadAt m mem a)
+    (same : ∀ x, (chunkHead mem).toNat ≤ x → x < (chunkHead mem).toNat + 56 →
+      (x < (chunkHead mem).toNat + 24 ∨ (chunkHead mem).toNat + 32 ≤ x) → (m'[x]?).getD 0 = (m[x]?).getD 0) :
+    ChunkHeadAt m' mem a := by
+  have field (off : Nat) (h : off + 8 ≤ 56) (apart : off + 8 ≤ 24 ∨ 32 ≤ off) :
+      bytesT m' (chunkHead mem + BitVec.ofNat 64 off).toNat 8 = bytesT m (chunkHead mem + BitVec.ofNat 64 off).toNat 8 :=
+    word_observed _ fun i hi => by rw [S.field_nat off (by omega)] at *; exact same _ (by omega) (by omega) (by omega)
+  have zero : bytesT m' (chunkHead mem).toNat 8 = bytesT m (chunkHead mem).toNat 8 := by
+    have := field 0 (by decide) (by decide)
+    rwa [show chunkHead mem + BitVec.ofNat 64 0 = chunkHead mem from BitVec.add_zero _] at this
+  exact ⟨by rw [zero]; exact H.block, by rw [field 16 (by decide) (by decide)]; exact H.size,
+    by rw [field 32 (by decide) (by decide)]; exact H.stop, by rw [field 40 (by decide) (by decide)]; exact H.redarkenEnd,
+    by rw [field 48 (by decide) (by decide)]; exact H.redarkenFirst⟩
+
+/-- Page `j` of the chunk lies in its raw block and below `2 ^ 64`. -/
+theorem major_page_in_block {mem chunk asize j n : Nat} (hj : j < n) (fit : chunk + 4096 * n ≤ mem + asize + 4152)
+    (above : mem < chunk) (high : mem + (asize + 4152) ≤ 0x86800000) :
+    mem ≤ chunk + 4096 * j ∧ chunk + 4096 * j < mem + (asize + 4152) ∧ chunk + 4096 * j < 2 ^ 64 := by
+  refine ⟨by omega, by omega, ?_⟩
+  have : chunk + 4096 * j < 0x86800000 := by omega
+  exact Nat.lt_trans this (by decide)
+
+/-- The chunk caml_init_major_heap asks for: the request rounded to pages. -/
+abbrev majorChunkSize (hsize : BitVec 64) : BitVec 64 := heapChunkSize ((hsize >>> 3) <<< 3)
+
+/-- Its pages. -/
+abbrev majorPages (hsize : BitVec 64) : Nat := (majorChunkSize hsize).toNat / 4096
+
+/-- What stage B writes below the arena's end: `caml_heap_start`, the domain's
+heap statistics, and the new block. -/
+def majorChunkWindows (mem size : Nat) : List W :=
+  [⟨heapStartAddr, heapStartAddr + 8⟩, ⟨domainField 336, domainField 376⟩, ⟨mem, mem + size⟩]
+
+/-- caml_page_table_add is entered for the new chunk. -/
+structure MajorPageAddEntered (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 s3 mem ent : BitVec 64)
+    (before after : Config) : Prop where
+  call : PageAddCall ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) capacity (nativeStack sp 48)
+    jal_80009400_call.link 1#64 (chunkStart mem) (chunkStart mem + BitVec.ofNat 64 (4096 * majorPages hsize))
+    (BitVec.ofNat 64 Layout.sym_Caml_state) 1#64 0x80064ad0#64 s3 (chunkStart mem) ent (majorPages hsize) after
+  fresh : FreshBlock vsaLayoutP H mem.toNat (majorChunkSize hsize + 4152#64).toNat
+  spot : ChunkSpot mem (majorChunkSize hsize).toNat
+  head : ChunkHeadAt after.σ.mem mem (majorChunkSize hsize)
+  next : bytesT after.σ.mem (chunkHead mem + 24#64).toNat 8 = 0#64
+  heapStart : bytesT after.σ.mem heapStartAddr 8 = chunkStart mem
+  wsz : bytesT after.σ.mem (domainField 336) 8 = majorChunkSize hsize >>> 3
+  topWsz : bytesT after.σ.mem (domainField 344) 8 = majorChunkSize hsize >>> 3
+  chunks : bytesT after.σ.mem (domainField 368) 8 = 1#64
+  slots : ∀ off value, (off, value) ∈ majorSlots ra s0 s1 s2 →
+    bytesT after.σ.mem (nativeFrameBase sp 48 + off) 8 = value
+  kept : ∀ x, x < heapEnd → ¬ vsaFoot H x →
+    OutW (majorChunkWindows mem.toNat (majorChunkSize hsize + 4152#64).toNat) x →
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
+  saved : ∀ k, 20 ≤ k → k ≤ 27 → gprGet after.σ k = gprGet before.σ k
+
+theorem major_to_page_add (c d8 : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
+    (sp ra hsize s0 s1 s2 s3 inc ent : BitVec 64) (A : MajorHeapCall H capacity charge sp ra hsize s0 s1 s2 inc c)
+    (E : MajorAllocEntered H capacity charge sp ra hsize s0 s1 s2 c d8) (T : MajorTableAt H c.σ.mem ent)
+    (s3reg : gprGet c.σ 19 = some s3) (room : pageCount c.σ.mem ent.toNat + majorPages hsize ≤ 1024) :
+    ∃ mem after, Steps d8 after ∧ MajorPageAddEntered H capacity sp ra hsize s0 s1 s2 s3 mem ent c after := by
+  have frame48 : NativeFrame sp 48 := A.frame.resize (by unfold allocHeadroom; omega) (by decide)
+  have frameIn : NativeFrame (nativeStack sp 48) (32 + allocHeadroom) := A.frame.nested (front := 48) (by decide)
+  have stack48 : (nativeStack sp 48).toNat = sp.toNat - 48 := frame48.stack_nat
+  obtain ⟨_, reqLow, reqHigh⟩ := major_request_nat hsize A.request A.chunkMin
+  obtain ⟨pagesMod, reqLe, sizeHigh⟩ := major_chunk_size ((hsize >>> 3) <<< 3) reqHigh
+  change (majorChunkSize hsize).toNat % 4096 = 0 at pagesMod
+  change ((hsize >>> 3) <<< 3).toNat ≤ (majorChunkSize hsize).toNat at reqLe
+  change (majorChunkSize hsize).toNat < 2 ^ 33 at sizeHigh
+  -- caml_alloc_for_heap
+  obtain ⟨mem, d9, run9, D⟩ := alloc_for_heap d8 H capacity charge (nativeStack sp 48) jal_800093bc_call.link
+    ((hsize >>> 3) <<< 3) E.call
+  have sizeNat : (majorChunkSize hsize + 4152#64).toNat = (majorChunkSize hsize).toNat + 4152 := by
+    rw [BitVec.toNat_add]; simp only [BitVec.toNat_ofNat, Nat.reducePow] at sizeHigh ⊢; omega
+  have spot : ChunkSpot mem (majorChunkSize hsize).toNat :=
+    ⟨D.fresh.2.1, by have := D.fresh.2.2.1; rw [sizeNat] at this; exact this⟩
+  obtain ⟨headLow, headHigh, _⟩ := spot.bounds
+  have chunkNat := spot.chunk_nat
+  have chunkAligned := spot.chunk_aligned
+  have memLow := spot.low
+  have memHigh := spot.high
+  have hS : heapStart = 0x8007d140 := rfl
+  have hE : heapEnd = 0x86800000 := rfl
+  have dom : firstDomainPtr.toNat = 0x8007d150 := rfl
+  rw [hS] at memLow
+  rw [hE] at memHigh
+  have nonzero : chunkStart mem ≠ 0#64 := fun h => by
+    have := congrArg BitVec.toNat h; rw [chunkNat] at this; simp at this
+  -- caml_heap_start = chunk
+  obtain ⟨d10, run10, p10⟩ := (major_heap_start d9 jal_800093bc_call.link (chunkStart mem) D.ready.toLeafInput
+    ⟨gholds_lookup (n := 10) _ D.regs rfl, trivial⟩ nonzero).run d9 ⟨D.pc, rfl⟩
+  have g10 := GprsSame.of_post p10 (by decide)
+  have startW := globalWindow_ok (H := (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H)
+    (lo := heapStartAddr) (hi := heapStartAddr + 8) (by decide) (by decide) (by decide)
+    (fun a lo hi => by unfold heapStartAddr at lo hi; unfold allocGlobal InRange; omega) (by decide) (by decide)
+  have ready10 := D.ready.window_log p10 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g10.get (by decide) (by decide) (by decide) D.ready.stack) (g10.get (by decide) (by decide) (by decide) D.ready.raReg)
+    (by decide) (by simp only [LogInW, InsideW, heapStartAddr]; decide) startW.pins startW.domain startW.pool startW.heap
+  have mem10 : d10.σ.mem = writeLog d9.σ.mem [(heapStartAddr, 8, chunkStart mem)] := p10.memory
+  -- Chunk_next (chunk) = NULL
+  have nextAddr : chunkStart mem - 32#64 = chunkHead mem + BitVec.ofNat 64 24 := spot.below_chunk 32 (by decide)
+  have sizeAddr : chunkStart mem - 40#64 = chunkHead mem + BitVec.ofNat 64 16 := spot.below_chunk 40 (by decide)
+  have f24 := spot.field_nat 24 (by decide)
+  have f16 := spot.field_nat 16 (by decide)
+  have stateReg9 : gprGet d9.σ 8 = some (BitVec.ofNat 64 Layout.sym_Caml_state) := (D.saved 8 (by decide)).trans E.stateReg
+  obtain ⟨d11, run11, p11⟩ := (major_chunk_next d10 jal_800093bc_call.link (chunkStart mem) ready10.toLeafInput
+    ⟨gholds_lookup (n := 10) _ p10.regs rfl, gholds_lookup (n := 18) _ p10.regs rfl,
+      g10.get (by decide) (by decide) (by decide) stateReg9, trivial⟩
+    (by rw [nextAddr]; exact spot.window 24 (by decide) (by decide))
+    (by rw [nextAddr, f24]; exact Nat.le_trans memLow (Nat.le_trans (Nat.le_of_lt headLow) (Nat.le_add_right _ _)))
+    (by rw [mem10]; exact word_writeLog_at _ _ 0 _ _ rfl trivial) ready10.domainWord).run d10 ⟨p10.pc, rfl⟩
+  have g11 := GprsSame.of_post p11 (by decide)
+  have freshW : WindowsOk ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H)
+      [⟨(chunkHead mem).toNat + 24, (chunkHead mem).toNat + 32⟩] :=
+    ownedWindow_ok (q := mem.toNat) (n := (majorChunkSize hsize + 4152#64).toNat) (by rw [hS]; exact memLow) (by simp)
+      (by omega) (by rw [sizeNat]; omega)
+  have ready11 := ready10.window_log p11 (by decide) (by simp only [keysG]; decide) (by decide)
+    (g11.get (by decide) (by decide) (by decide) ready10.stack) (g11.get (by decide) (by decide) (by decide) ready10.raReg)
+    (by decide) (by simp only [LogInW, InsideW, nextAddr, f24, and_true]; omega)
+    freshW.pins freshW.domain freshW.pool freshW.heap
+  have mem11 : d11.σ.mem = writeLog d10.σ.mem [((chunkStart mem - 32#64).toNat, 8, 0#64)] := p11.memory
+  -- the size, the statistics, caml_page_table_add(In_heap, chunk, chunk + size)
+  have sizeWord : bytesT d11.σ.mem (chunkStart mem - 40#64).toNat 8 = majorChunkSize hsize := by
+    rw [mem11, bytesT_writeLog_out _ (by simp only [OutLRange, nextAddr, sizeAddr, f24, f16, and_true]; omega), mem10,
+      bytesT_writeLog_out _ (by simp only [OutLRange, sizeAddr, f16, heapStartAddr, and_true]; omega), sizeAddr]
+    exact D.head.size
+  obtain ⟨d12, run12, p12⟩ := (major_add_call d11 jal_800093bc_call.link (chunkStart mem) (majorChunkSize hsize)
+    ready11.toLeafInput ⟨gholds_lookup (n := 11) _ p11.regs rfl, gholds_lookup (n := 9) _ p11.regs rfl,
+      gholds_lookup (n := 14) _ p11.regs rfl, trivial⟩
+    (by rw [sizeAddr]; exact (spot.window 16 (by decide) (by decide)).read) sizeWord).run d11 ⟨p11.pc, rfl⟩
+  have g12 := GprsSame.of_post p12 (by decide)
+  have domainW : WindowsOk ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) [⟨domainField 336, domainField 376⟩] :=
+    ownedWindow_ok (by decide) (List.mem_cons_of_mem _ A.domainOwned) (by decide) (by decide)
+  have ready12 : RuntimeReady ((mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) capacity (nativeStack sp 48)
+      jal_80009400_call.link d12 :=
+    ready11.window_log p12 (by decide) (by simp only [keysG]; decide) (by decide)
+      (g12.get (by decide) (by decide) (by decide) ready11.stack) (gholds_lookup (n := 1) _ p12.regs rfl) (by decide)
+      (by simp only [majorStatLog, LogInW, InsideW, domainField, and_true]; omega)
+      domainW.pins domainW.domain domainW.pool domainW.heap
+  have mem12 : d12.σ.mem = writeLog d11.σ.mem (majorStatLog (majorChunkSize hsize >>> 3)) := p12.memory
+  -- below the arena's end, only the three windows changed
+  have slots2 : ∀ off value, (off, value) ∈ majorSlots ra s0 s1 s2 → off + 8 ≤ 48 := fun off value member => by
+    simp [majorSlots] at member; omega
+  have slots3 : ∀ off value, (off, value) ∈ [(8, hsize)] → off + 8 ≤ 48 := fun off value member => by
+    simp at member; omega
+  have kept (x : Nat) (low : x < heapEnd) (foot : ¬ vsaFoot H x)
+      (out : OutW (majorChunkWindows mem.toNat (majorChunkSize hsize + 4152#64).toNat) x) :
+      (d12.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+    simp only [majorChunkWindows, OutW, domainField, heapStartAddr, sizeNat, and_true] at out
+    obtain ⟨o1, o2, o3⟩ := out
+    have fl := frameIn.lower
+    have f48 := frame48.lower
+    rw [hE] at low fl f48
+    have xb : x < nativeFrameBase sp 48 := by unfold nativeFrameBase; omega
+    rw [mem12, writeLog_out _ _ _ (by simp only [majorStatLog, OutL, domainField, and_true]; omega),
+      mem11, writeLog_out _ _ _ (by simp only [OutL, nextAddr, f24, and_true]; omega),
+      mem10, writeLog_out _ _ _ (by simp only [OutL, heapStartAddr, and_true]; omega),
+      D.kept x (by rw [stack48]; omega) foot (by omega), E.memory, majorAllocMemory,
+      writeLog_out _ _ _ (by simp only [majorSizeLog, OutL, domainField, and_true]; omega),
+      frameOn_writeLog _ _ _ (frame48.word_log_inside slots3) x ⟨Or.inl xb, trivial⟩,
+      frameOn_writeLog _ _ _ (frame48.word_log_inside slots2) x ⟨Or.inl xb, trivial⟩]
+  -- the table is the caller's
+  have tableOut (x : Nat) (inT : InTable ent x) :
+      x < heapEnd ∧ ¬ vsaFoot H x ∧ OutW (majorChunkWindows mem.toNat (majorChunkSize hsize + 4152#64).toNat) x := by
+    have tl := T.low
+    have th := T.high
+    have hP : pageTable = 0x800684b8 := rfl
+    rcases inT with ⟨lo, hi⟩ | ⟨lo, hi⟩
+    · refine ⟨by rw [hP] at lo hi; rw [hE]; omega, pageTable_record_not_foot lo hi, ?_⟩
+      simp only [majorChunkWindows, OutW, domainField, heapStartAddr, sizeNat, and_true]
+      rw [hP] at lo hi
+      omega
+    · refine ⟨by omega, owned_not_foot' T.high T.owned lo hi, ?_⟩
+      have apart : ¬ (mem.toNat ≤ x ∧ x < mem.toNat + ((majorChunkSize hsize).toNat + 4152)) := fun h =>
+        D.fresh.2.2.2 _ T.owned x (by unfold InExt; rw [sizeNat]; exact h) (by unfold InExt; exact ⟨lo, hi⟩)
+      have ad := T.apartDomain
+      simp only [majorChunkWindows, OutW, domainField, heapStartAddr, sizeNat, and_true]
+      rw [hS] at th
+      rw [dom] at ad ⊢
+      omega
+  have table12 : MajorTableAt H d12.σ.mem ent := T.agree fun x inT => by
+    obtain ⟨low, foot, out⟩ := tableOut x inT
+    exact kept x low foot out
+  have pagesEq := major_words_pages (majorChunkSize hsize) pagesMod
+  have pagesPos : 0 < majorPages hsize := by unfold majorPages; omega
+  have pagesFit : (chunkStart mem).toNat + 4096 * majorPages hsize ≤ mem.toNat + (majorChunkSize hsize).toNat + 4152 := by
+    unfold majorPages; omega
+  have count12 : pageCount d12.σ.mem ent.toNat = pageCount c.σ.mem ent.toNat := by
+    have fits : ent.toNat + 16384 ≤ 2 ^ 64 := Nat.le_trans T.low (by decide)
+    exact pageCount_congr fun i hi => by
+      rw [← slotWord_pageSlot _ _ i hi fits, ← slotWord_pageSlot _ _ i hi fits]
+      exact slotWord_window_agree fits (fun x inT => by
+        obtain ⟨low, foot, out⟩ := tableOut x inT; exact kept x low foot out) i hi
+  -- the new block is apart from the domain record
+  have freshDomain (x : Nat) (lo : mem.toNat ≤ x) (hi : x < mem.toNat + (majorChunkSize hsize).toNat + 4152) :
+      x < 0x8007d150 ∨ 0x8007d150 + 928 ≤ x := by
+    have apart := D.fresh.2.2.2 _ A.domainOwned x (by unfold InExt; rw [sizeNat, ← Nat.add_assoc]; exact ⟨lo, hi⟩)
+    unfold InExt at apart
+    dsimp only at apart
+    rw [dom] at apart
+    omega
+  -- the caller's frame
+  have frameByte (y : Nat) (hy : sp.toNat - 48 ≤ y) : (d12.σ.mem[y]?).getD 0 = (d8.σ.mem[y]?).getD 0 := by
+    have f48 := frame48.lower
+    rw [hE] at f48
+    rw [mem12, writeLog_out _ _ _ (by simp only [majorStatLog, OutL, domainField, dom, and_true]; omega),
+      mem11, writeLog_out _ _ _ (by simp only [OutL, nextAddr, f24, and_true]; omega),
+      mem10, writeLog_out _ _ _ (by simp only [OutL, heapStartAddr, and_true]; omega), D.caller y (by rw [stack48]; omega)]
+  -- registers carried to the call
+  have g912 := ((g10.trans g11).trans g12).mono (vs := [18, 11, 14, 9, 15, 10, 12, 1]) (by decide)
+  have g9 (k : Nat) (lo : 1 ≤ k) (hi : k ≤ 31) (out : k ∉ [18, 11, 14, 9, 15, 10, 12, 1]) {v : BitVec 64}
+      (h : gprGet d9.σ k = some v) : gprGet d12.σ k = some v :=
+    g912.get lo hi out h
+  have s3d9 : gprGet d9.σ 19 = some s3 :=
+    (D.saved 19 (by decide)).trans (E.same.get (by decide) (by decide) (by decide) s3reg)
+  refine ⟨mem, d12, run9.trans (run10.trans (run11.trans run12)), {
+    call := {
+      pc := by rw [← jal_80009400_call_target]; exact p12.pc
+      regs := ⟨ready12.stack, ready12.raReg, gholds_lookup (n := 10) _ p12.regs rfl,
+        gholds_lookup (n := 11) _ p12.regs rfl, by rw [← pagesEq]; exact gholds_lookup (n := 12) _ p12.regs rfl,
+        g9 8 (by decide) (by decide) (by decide) stateReg9, gholds_lookup (n := 9) _ p12.regs rfl,
+        (g11.trans g12).get (by decide) (by decide) (by decide) (gholds_lookup (n := 18) _ p10.regs rfl),
+        g9 19 (by decide) (by decide) (by decide) s3d9, trivial⟩
+      ready := ready12
+      first := block_first _ chunkAligned
+      last := block_last _ _ pagesPos chunkAligned (by omega)
+      nonempty := pagesPos
+      fields := table12.fields
+      span := {
+        frame := frameIn.resize (by unfold allocHeadroom; omega) (by decide)
+        aligned := chunkAligned
+        fits := by omega
+        small := by decide
+        kindNonzero := by decide
+        room := by rw [count12]; exact room
+        windows := T.windows
+        tableLow := T.low
+        tableHigh := T.high
+        tableOwned := List.mem_cons_of_mem _ T.owned
+        disjoint := fun i hi occ j hj => by
+          obtain ⟨lo', hi', fit'⟩ := major_page_in_block hj pagesFit (by rw [chunkNat]; omega) memHigh
+          exact fresh_page_apart D.fresh chunkAligned fit' lo' (by rw [sizeNat]; exact hi')
+            (table12.occupied i hi occ) } }
+    fresh := D.fresh
+    spot := spot
+    head := D.head.agree spot fun x lo hi apart => by
+      have d := freshDomain x (by omega) (by omega)
+      rw [mem12, writeLog_out _ _ _ (by simp only [majorStatLog, OutL, domainField, dom, and_true]; omega),
+        mem11, writeLog_out _ _ _ (by simp only [OutL, nextAddr, f24, and_true]; omega),
+        mem10, writeLog_out _ _ _ (by simp only [OutL, heapStartAddr, and_true]; omega)]
+    next := by
+      have d0 := freshDomain ((chunkHead mem).toNat + 24) (by omega) (by omega)
+      have d7 := freshDomain ((chunkHead mem).toNat + 31) (by omega) (by omega)
+      rw [mem12, bytesT_writeLog_out _ (by
+          simp only [majorStatLog, OutLRange, domainField, dom, show (chunkHead mem + 24#64).toNat = (chunkHead mem).toNat + 24
+            from f24, and_true]; omega), mem11, nextAddr]
+      exact word_writeLog_at _ _ 0 _ _ rfl trivial
+    heapStart := by
+      rw [mem12, bytesT_writeLog_out _ (by simp only [majorStatLog, OutLRange, domainField, dom, heapStartAddr, and_true]; omega),
+        mem11, bytesT_writeLog_out _ (by simp only [OutLRange, nextAddr, f24, heapStartAddr, and_true]; omega), mem10]
+      exact word_writeLog_at _ _ 0 _ _ rfl trivial
+    wsz := by
+      rw [mem12]
+      exact word_writeLog_at _ _ 1 _ _ rfl (by simp only [majorStatLog, List.drop, OutLRange, domainField, and_true]; omega)
+    topWsz := by rw [mem12]; exact word_writeLog_at _ _ 2 _ _ rfl trivial
+    chunks := by
+      rw [mem12]
+      exact word_writeLog_at _ _ 0 _ _ rfl (by simp only [majorStatLog, List.drop, OutLRange, domainField, and_true]; omega)
+    slots := fun off value member => by
+      have bound := slots2 off value member
+      have high : 16 ≤ off := by simp [majorSlots] at member; omega
+      have f48 := frame48.lower
+      rw [hE] at f48
+      have s8 : (nativeStack sp 48 + BitVec.ofNat 64 8).toNat = nativeFrameBase sp 48 + 8 := by
+        rw [nativeStack, frame48.address _ (by decide)]; exact frame48.slot_nat (by decide)
+      rw [word_observed (m := d8.σ.mem) _ fun i hi => frameByte _ (by unfold nativeFrameBase; omega), E.memory,
+        majorAllocMemory, bytesT_writeLog_out _ (by
+          simp only [majorSizeLog, OutLRange, domainField, dom, and_true]; unfold nativeFrameBase; omega),
+        bytesT_writeLog_out _ (by simp only [nativeWordLog, List.map, OutLRange, s8, and_true]; omega)]
+      exact frame48.word_log_read slots2 (by simp [majorSlots]) _ member
+    kept := kept
+    saved := fun k lo hi => by
+      have range : k ∉ [18, 11, 14, 9, 15, 10, 12, 1] := by simp; omega
+      rw [g912.same k (by omega) (by omega) range,
+        D.saved k (by simp [abiSaved]; omega), E.same.same k (by omega) (by omega) (by simp; omega)] }⟩
 
 end OCaml.Vm.Boot.Startup
