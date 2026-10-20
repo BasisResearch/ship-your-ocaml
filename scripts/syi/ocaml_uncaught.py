@@ -250,6 +250,8 @@ STDIO_FAST = {
         {'mem': []},
     'RetargetLockClose.leaf':
         {'mem': []},
+    'RetargetLockInit.leaf':
+        {'mem': []},
     'Sflush.read':
         {'mem': [('R 11 + 8#64', 'window'), ('R 11 + 16#64', 'window')], 'log': '[((R 11 + 16#64).toNat, 2, R 14 ||| 2048#64)]', 'logFacts': ['imm20Of', 'BitVec.reduceAdd', 'BitVec.reduceSub', "show BitVec.signExtend 64 (BitVec.extractLsb' 12 20 6071#32 ++ 0#12) = 4096#64 by decide"]},
     'Close.kind':
@@ -391,6 +393,8 @@ STDIO_REGS = {
         '[(10, 2147896712#64), (1, R 1)]',
     'RetargetLockClose.leaf':
         '[(1, R 1), (10, R 10)]',
+    'RetargetLockInit.leaf':
+        '[(1, R 1), (10, R 10)]',
 }
 
 
@@ -490,6 +494,8 @@ def stdio_exit_spec():
         blk(0x8003ed74, 'enter', [1, 10])]),
       fn('__retarget_lock_close_recursive', '__retarget_lock_close_recursive', 'RetargetLockClose', None, [
         blk(0x80042530, 'leaf', [1, 10])]),
+      fn('__retarget_lock_init_recursive', '__retarget_lock_init_recursive', 'RetargetLockInit', None, [
+        blk(0x80042528, 'leaf', [1, 10])]),
     ]
 
 
