@@ -76,6 +76,45 @@ theorem flushSaves_out {sp ra s0 s3 fp : BitVec 64} (frame : NativeFrame sp 48) 
   simp only [flushSaves, OutL, n 32 (by decide), n 8 (by decide), n 40 (by decide)]
   rcases h.1 with h | h <;> exact ⟨by omega, by omega, by omega, trivial⟩
 
+/-- `lhu` and `lh` agree below bit 15, so on the `__SMBF` bit. -/
+theorem ext_mask (x : BitVec 16) : x.zeroExtend 64 &&& 128#64 = x.signExtend 64 &&& 128#64 := by
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp only [BitVec.getLsbD_and, BitVec.getLsbD_signExtend, BitVec.getLsbD_setWidth, BitVec.zeroExtend_eq_setWidth]
+  by_cases h : i < 16
+  · simp [h]
+  · have : (128#64).getLsbD i = false := by
+      rw [BitVec.getLsbD_ofNat]
+      have : (128 : Nat).testBit i = false := Nat.testBit_lt_two_pow (Nat.lt_of_lt_of_le (by decide : 128 < 2 ^ 16)
+        (Nat.pow_le_pow_right (by decide) (by omega)))
+      simp [this]
+    simp [this]
+
+theorem lhu_mask (bs : List (BitVec 8)) : bytesVal .lhu bs &&& 128#64 = bytesVal .lh bs &&& 128#64 := by
+  simp only [bytesVal, Functions.sign_extend, zero_extend, Sail.BitVec.signExtend, Sail.BitVec.zeroExtend]
+  exact ext_mask _
+
+/-- Flags the flush did not write keep `__SMBF` clear. -/
+theorem flags_kept {m : Std.ExtHashMap Nat (BitVec 8)} {log : List WEntry} {fp v : BitVec 64}
+    (out : ∀ i, i < 8 → OutL log ((fp + 16#64).toNat + i)) (flags : bytesVal .lh (read8 m (fp + 16#64).toNat) = v)
+    (clear : v &&& 128#64 = 0#64) : bytesVal .lhu (read8 (writeLog m log) (fp + 16#64).toNat) &&& 128#64 = 0#64 := by
+  rw [lhu_mask, ConsoleWrite.read8_same (m := m) (m' := writeLog m log) (a := (fp + 16#64).toNat)
+    fun i hi => by rw [writeLog_out _ _ _ (out i hi)], flags]
+  exact clear
+
+/-- stdin's flush leaves `_flags = 0x804`: no `__SMBF`. -/
+theorem flags_stdin (m : Std.ExtHashMap Nat (BitVec 8)) (log : List WEntry) (A : Nat) :
+    bytesVal .lhu (read8 (writeLog m (log ++ [(A, 2, 0x804#64)])) A) &&& 128#64 = 0#64 := by
+  rw [writeLog_append]
+  show bytesVal .lhu (read8 (applyW (writeLog m log) (A, 2, 0x804#64)) A) &&& 128#64 = 0#64
+  simp only [applyW, read8, bytesVal, List.getD_cons_zero, List.getD_cons_succ,
+    Std.ExtHashMap.getElem?_insert, beq_iff_eq, Nat.succ_ne_self, ite_false, ite_true, Option.getD_some]
+  decide
+
+/-- A flush's post at `_fclose_r`: returned, and `__SMBF` clear in the flags it leaves. -/
+def Flushed (ra sp fp : BitVec 64) (c d : Config) : Prop :=
+  Returned ra (FlushKeep sp fp) c d ∧ bytesVal .lhu (read8 d.σ.mem (fp + 16#64).toNat) &&& 128#64 = 0#64
+
 /-- `flush_stdin` as a returned call. -/
 theorem flush_stdin_returned {ra sp s0 s3 reent : BitVec 64} {c : Config} (h : LeafInput ra c)
     (sp0 : gprGet c.σ 2 = some sp) (s0r : gprGet c.σ 8 = some s0) (s3r : gprGet c.σ 19 = some s3)
@@ -83,11 +122,11 @@ theorem flush_stdin_returned {ra sp s0 s3 reent : BitVec 64} {c : Config} (h : L
     (flags : bytesVal .lh (read8 c.σ.mem (stdinFile + 16#64).toNat) = 4#64)
     (r : bytesVal .lw (read8 c.σ.mem (stdinFile + 8#64).toNat) = 0#64)
     (ur : bytesVal .lw (read8 c.σ.mem (stdinFile + 112#64).toNat) = 0#64) :
-    FnSummary 0x8003e4f4#64 (fun d => d = c) (Returned ra (FlushKeep sp stdinFile) c) := by
+    FnSummary 0x8003e4f4#64 (fun d => d = c) (Flushed ra sp stdinFile c) := by
   apply (flush_stdin h sp0 s0r s3r a0 a1 frame flags r ur).weaken (fun _ e => e)
   intro d p
   obtain ⟨d2, d8, d19, d1, -⟩ := p.regs
-  refine Returned.of_post p (fun k hk => ?_) d1 (fun a ha => ?_)
+  refine ⟨Returned.of_post p (fun k hk => ?_) d1 (fun a ha => ?_), ?_⟩
   · rcases hk with rfl | rfl | rfl | ⟨lo, hi⟩
     · rw [d2, sp0]
     · rw [d8, s0r]
@@ -101,6 +140,7 @@ theorem flush_stdin_returned {ra sp s0 s3 reent : BitVec 64} {c : Config} (h : L
     have := ha.2
     rw [show (stdinFile + 16#64).toNat = stdinFile.toNat + 16 by decide]
     omega
+  · rw [p.memory]; exact flags_stdin _ _ _
 
 /-- `flush_stdout` as a returned call. -/
 theorem flush_stdout_returned {ra sp s0 s2 s3 reent : BitVec 64} {c : Config} (h : LeafInput ra c)
@@ -109,7 +149,7 @@ theorem flush_stdout_returned {ra sp s0 s2 s3 reent : BitVec 64} {c : Config} (h
     (frame : NativeFrame sp 48)
     (flags : bytesVal .lh (read8 c.σ.mem (stdoutFile + 16#64).toNat) = 9#64)
     (base : bytesVal .ld (read8 c.σ.mem (stdoutFile + 24#64).toNat) = 0#64) :
-    FnSummary 0x8003e4f4#64 (fun d => d = c) (Returned ra (FlushKeep sp stdoutFile) c) := by
+    FnSummary 0x8003e4f4#64 (fun d => d = c) (Flushed ra sp stdoutFile c) := by
   apply (flush_stdout h sp0 s0r s2r s3r a0 a1 frame flags base).weaken (fun _ e => e)
   intro d p
   obtain ⟨d2, d8, d18, d19, d1, -⟩ := p.regs
@@ -117,7 +157,7 @@ theorem flush_stdout_returned {ra sp s0 s2 s3 reent : BitVec 64} {c : Config} (h
   have sp48 : sp + 18446744073709551568#64 = sp - 48#64 := by rw [BitVec.sub_eq_add_neg]; rfl
   have lo := frame.lower
   simp only [Vsa.Sim.DlHeap.heapEnd] at lo
-  refine Returned.of_post p (fun k hk => ?_) d1 (fun a ha => ?_)
+  refine ⟨Returned.of_post p (fun k hk => ?_) d1 (fun a ha => ?_), ?_⟩
   · rcases hk with rfl | rfl | rfl | ⟨lo, hi⟩
     · rw [d2, sp0]
     · rw [d8, s0r]
@@ -131,6 +171,12 @@ theorem flush_stdout_returned {ra sp s0 s2 s3 reent : BitVec 64} {c : Config} (h
     simp only [stdoutFlushLog, List.cons_append, List.nil_append, flushSaves, OutL, sp48, n16] at fo ⊢
     refine ⟨fo.1, fo.2.1, fo.2.2.1, ?_, trivial⟩
     rcases ha.1 with h | h <;> omega
+  · rw [p.memory]
+    refine flags_kept (fun i _ => ?_) flags (by decide)
+    simp only [stdoutFlushLog, flushSaves, List.cons_append, List.nil_append, OutL, sp48, n16,
+      frame_nat (k := 48) (off := 32) frame (by decide) (by decide), frame_nat (k := 48) (off := 8) frame (by decide) (by decide),
+      frame_nat (k := 48) (off := 40) frame (by decide) (by decide), show (stdoutFile + 16#64).toNat = 2147994368 by decide]
+    exact ⟨by omega, by omega, by omega, by omega, trivial⟩
 
 /-- `flush_stderr` as a returned call. -/
 theorem flush_stderr_returned {ra sp s0 s1 s2 s3 reent nb : BitVec 64} {c : Config} (h : LeafInput ra c)
@@ -140,7 +186,7 @@ theorem flush_stderr_returned {ra sp s0 s1 s2 s3 reent nb : BitVec 64} {c : Conf
     (flags : bytesVal .lh (read8 c.σ.mem (stderrFile + 16#64).toNat) = 0x201a#64)
     (base : bytesVal .ld (read8 c.σ.mem (stderrFile + 24#64).toNat) = nb) (nz : nb ≠ 0#64)
     (pos : bytesVal .ld (read8 c.σ.mem stderrFile.toNat) = nb) :
-    FnSummary 0x8003e4f4#64 (fun d => d = c) (Returned ra (FlushKeep sp stderrFile) c) := by
+    FnSummary 0x8003e4f4#64 (fun d => d = c) (Flushed ra sp stderrFile c) := by
   apply (flush_stderr h sp0 s0r s1r s2r s3r a0 a1 frame flags base nz pos).weaken (fun _ e => e)
   intro d p
   obtain ⟨d2, d8, d9, d18, d19, d1, -⟩ := p.regs
@@ -149,7 +195,7 @@ theorem flush_stderr_returned {ra sp s0 s1 s2 s3 reent nb : BitVec 64} {c : Conf
   have sp48 : sp + 18446744073709551568#64 = sp - 48#64 := by rw [BitVec.sub_eq_add_neg]; rfl
   have lo := frame.lower
   simp only [Vsa.Sim.DlHeap.heapEnd] at lo
-  refine Returned.of_post p (fun k hk => ?_) d1 (fun a ha => ?_)
+  refine ⟨Returned.of_post p (fun k hk => ?_) d1 (fun a ha => ?_), ?_⟩
   · rcases hk with rfl | rfl | rfl | ⟨lo, hi⟩
     · rw [d2, sp0]
     · rw [d8, s0r]
@@ -160,9 +206,16 @@ theorem flush_stderr_returned {ra sp s0 s1 s2 s3 reent nb : BitVec 64} {c : Conf
         · subst e18; rw [d18, s2r]
         · exact p.gpr_frame (by decide) k (by omega) (by omega) (by simp; omega)
   · have fo := flushSaves_out (ra := ra) (s0 := s0) (s3 := s3) frame ha
-    simp only [stderrFlushLog, List.cons_append, List.nil_append, List.append_assoc, flushSaves, OutL, sp48, n16, n24,
+    simp only [stderrFlushLog, List.cons_append, List.nil_append, flushSaves, OutL, sp48, n16, n24,
       show (stderrFile + 12#64).toNat = stderrFile.toNat + 12 by decide] at fo ⊢
     refine ⟨fo.1, fo.2.1, fo.2.2.1, ?_, ?_, ?_, ?_, trivial⟩ <;> rcases ha with ⟨h1 | h1, h2 | h2⟩ <;> omega
+  · rw [p.memory]
+    refine flags_kept (fun i _ => ?_) flags (by decide)
+    simp only [stderrFlushLog, flushSaves, List.cons_append, List.nil_append, OutL, sp48, n16, n24,
+      frame_nat (k := 48) (off := 32) frame (by decide) (by decide), frame_nat (k := 48) (off := 8) frame (by decide) (by decide),
+      frame_nat (k := 48) (off := 40) frame (by decide) (by decide), show (stderrFile + 16#64).toNat = 2147994552 by decide,
+      show (stderrFile + 12#64).toNat = 2147994548 by decide, show stderrFile.toNat = 2147994536 by decide]
+    exact ⟨by omega, by omega, by omega, by omega, by omega, by omega, by omega, trivial⟩
 
 /-- Bytes a close of descriptor `fd` leaves alone: outside its 48 bytes of
 frames below `sp`, `errno`, and the descriptor's slot. -/

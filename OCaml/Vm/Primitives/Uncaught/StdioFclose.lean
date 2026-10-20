@@ -26,6 +26,7 @@ open OCaml.Vm.Primitives.Named.NamedValue (regsAt regsAt_of gpr_some gpr_some_of
 open OCaml.Vm.Boot.Startup (NativeFrame)
 open OCaml.Vm.Primitives.ExitPath (KeepCtx ExitOk exitReads)
 open OCaml.Vm.Primitives.Uncaught.StdioReturned
+open OCaml.Vm.Primitives.Uncaught.StdioFlush (stdinFile stdoutFile stderrFile)
 open OCaml.Vm.Primitives.Uncaught.StdioClose (fdSlot fdSlot_toNat FdLive frame_nat frame_word frame_callee
   frame_outside)
 
@@ -331,9 +332,7 @@ def FlushCall (c : Config) (sp fp reent : BitVec 64) : Prop :=
   ∀ c1 : Config, LeafInput 0x8004ceb8#64 c1 → ExitOk c1 →
     gprGet c1.σ 2 = some (sp + 18446744073709551584#64) → gprGet c1.σ 8 = some fp → gprGet c1.σ 9 = some reent →
     gprGet c1.σ 10 = some reent → gprGet c1.σ 11 = some fp → KeepCtx (Out32 sp) c c1 →
-    FnSummary 0x8003e4f4#64 (fun d => d = c1)
-      (fun d => Returned 0x8004ceb8#64 (FlushKeep (sp + 18446744073709551584#64) fp) c1 d ∧
-        bytesVal .lhu (read8 d.σ.mem (fp + 16#64).toNat) &&& 128#64 = 0#64)
+    FnSummary 0x8003e4f4#64 (fun d => d = c1) (Flushed 0x8004ceb8#64 (sp + 18446744073709551584#64) fp c1)
 
 /-- **`_fclose_r` up to the flush**: `reent->__cleanup` set, the stream
 unlocked-by-flag, not a string, live; the lock taken; `a0 = reent`, `a1 = fp`
@@ -772,5 +771,41 @@ theorem fclose_returned {ra sp fp reent : BitVec 64} {c : Config} (h : LeafInput
   intro c16 h16
   obtain ⟨-, b16, a0z, smbf⟩ := h16
   exact fclose_finish ok sp0 s0r s1r s2r h.aligned S file pl frame b16 a0z smbf
+
+theorem stdioRead {c c1 : Config} {sp : BitVec 64} (frame : NativeFrame sp 80) (ctx : KeepCtx (Out32 sp) c c1)
+    (a : Nat) (ha : a + 8 ≤ Vsa.Sim.DlHeap.heapEnd) : read8 c1.σ.mem a = read8 c.σ.mem a := by
+  have lo := frame.lower
+  exact ctx.read fun i _ => Or.inl (by omega)
+
+/-- stdin's flush at `_fclose_r` (never read: `_r = _ur = 0`). -/
+theorem flushCall_stdin {c : Config} {sp reent : BitVec 64} (frame : NativeFrame sp 80)
+    (flags : bytesVal .lh (read8 c.σ.mem (stdinFile + 16#64).toNat) = 4#64)
+    (r : bytesVal .lw (read8 c.σ.mem (stdinFile + 8#64).toNat) = 0#64)
+    (ur : bytesVal .lw (read8 c.σ.mem (stdinFile + 112#64).toNat) = 0#64) : FlushCall c sp stdinFile reent := by
+  intro c1 l ok sp1 s0 _ a0 a1 ctx
+  exact flush_stdin_returned l sp1 s0 (gpr_some (ok.present 19 (by decide))) a0 a1
+    (frame_callee (front := 32) (size := 48) frame (by decide) _ (by decide))
+    (by rw [stdioRead frame ctx _ (by decide)]; exact flags) (by rw [stdioRead frame ctx _ (by decide)]; exact r)
+    (by rw [stdioRead frame ctx _ (by decide)]; exact ur)
+
+/-- stdout's flush at `_fclose_r` (no buffer). -/
+theorem flushCall_stdout {c : Config} {sp reent : BitVec 64} (frame : NativeFrame sp 80)
+    (flags : bytesVal .lh (read8 c.σ.mem (stdoutFile + 16#64).toNat) = 9#64)
+    (base : bytesVal .ld (read8 c.σ.mem (stdoutFile + 24#64).toNat) = 0#64) : FlushCall c sp stdoutFile reent := by
+  intro c1 l ok sp1 s0 _ a0 a1 ctx
+  exact flush_stdout_returned l sp1 s0 (gpr_some (ok.present 18 (by decide))) (gpr_some (ok.present 19 (by decide)))
+    a0 a1 (frame_callee (front := 32) (size := 48) frame (by decide) _ (by decide))
+    (by rw [stdioRead frame ctx _ (by decide)]; exact flags) (by rw [stdioRead frame ctx _ (by decide)]; exact base)
+
+/-- stderr's flush at `_fclose_r` (unbuffered, nothing pending). -/
+theorem flushCall_stderr {c : Config} {sp reent nb : BitVec 64} (frame : NativeFrame sp 80)
+    (flags : bytesVal .lh (read8 c.σ.mem (stderrFile + 16#64).toNat) = 0x201a#64)
+    (base : bytesVal .ld (read8 c.σ.mem (stderrFile + 24#64).toNat) = nb) (nz : nb ≠ 0#64)
+    (pos : bytesVal .ld (read8 c.σ.mem stderrFile.toNat) = nb) : FlushCall c sp stderrFile reent := by
+  intro c1 l ok sp1 s0 s1 a0 a1 ctx
+  exact flush_stderr_returned l sp1 s0 s1 (gpr_some (ok.present 18 (by decide)))
+    (gpr_some (ok.present 19 (by decide))) a0 a1 (frame_callee (front := 32) (size := 48) frame (by decide) _ (by decide))
+    (by rw [stdioRead frame ctx _ (by decide)]; exact flags) (by rw [stdioRead frame ctx _ (by decide)]; exact base) nz
+    (by rw [stdioRead frame ctx _ (by decide)]; exact pos)
 
 end OCaml.Vm.Primitives.Uncaught.StdioFclose
