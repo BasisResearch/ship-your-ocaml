@@ -144,6 +144,7 @@ theorem set_allocation_policy (c : Config) (H : List (Nat × Nat)) (capacity : N
     (pc : PCAt 0x8000759c#64 c) (ready : RuntimeReady H capacity sp ra c) (policy : gprGet c.σ 10 = some 2#64) :
     ∃ d, Steps c d ∧ PolicySet H capacity sp ra c d := by
   obtain ⟨d1, run1, p1⟩ := (policy_test c ra ready.toLeafInput ⟨policy, trivial⟩).run c ⟨pc, rfl⟩
+  -- discipline: allow(O8-hand-gpr-frame) landed before GprsSame; migrate when this composition is next touched
   have k1 (r : Nat) (lo : 1 ≤ r) (hi : r ≤ 31) (out : r ∉ [15]) : gprGet d1.σ r = gprGet c.σ r :=
     p1.toEffectPost.gpr_frame (by decide) r lo hi out
   have ready1 := ready.window_log (windows := []) p1 (by decide) (by simp only [keysG]; decide) (by decide)

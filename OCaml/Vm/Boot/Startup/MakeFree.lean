@@ -88,6 +88,7 @@ theorem make_free_blocks (c : Config) (H : List (Nat × Nat)) (capacity : Nat)
   obtain ⟨d1, run1, p1⟩ := (mfb_entry c sp ra p size A.ready.toLeafInput
     ⟨gholds_lookup (n := 11) _ regs rfl, gholds_lookup (n := 2) _ regs rfl, gholds_lookup (n := 10) _ regs rfl,
       trivial⟩ nonempty).run c ⟨A.pc, rfl⟩
+  -- discipline: allow(O8-hand-gpr-frame) landed before GprsSame; migrate when this composition is next touched
   have k1 (r : Nat) (lo : 1 ≤ r) (hi : r ≤ 31) (out : r ∉ [2]) : gprGet d1.σ r = gprGet c.σ r :=
     p1.toEffectPost.gpr_frame (by decide) r lo hi out
   have ready1 : RuntimeReady H capacity (nativeStack sp 80) ra d1 :=

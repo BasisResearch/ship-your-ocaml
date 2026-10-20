@@ -104,6 +104,7 @@ theorem merge_step {H capacity sp ra map start} (k : Nat) (d : Config)
   have pc : PCAt 0x800061d4#64 d := by have := A.pc; simp only [lt, ite_true] at this; exact this
   obtain ⟨e, run, p⟩ := (init_merge_step d ra (map &&& clearLow k) k lt A.ready.toLeafInput A.regs
     (A.pending k (Nat.le_refl _) lt)).run d ⟨pc, rfl⟩
+  -- discipline: allow(O8-hand-gpr-frame) landed before GprsSame; migrate when this composition is next touched
   have keep (r : Nat) (lo : 1 ≤ r) (hi : r ≤ 31) (out : r ∉ [13, 15, 17, 6, 29, 16]) : gprGet e.σ r = gprGet d.σ r :=
     p.toEffectPost.gpr_frame (by decide) r lo hi out
   have W := smallLists_ok (H := H)

@@ -171,6 +171,7 @@ theorem page_add_step {H capacity sp ra kind base ent n m0 start} (S : PageAddSp
   have pc0 : PCAt 0x8000b128#64 d := by have := A.pc; simp only [lt, ite_true] at this; exact this
   obtain ⟨d1, run1, p1⟩ := (page_add_call d (addLink k ra) (blockPage base k) kind A.ready.toLeafInput
     ⟨gholds_lookup (n := 8) _ A.regs rfl, gholds_lookup (n := 18) _ A.regs rfl, trivial⟩).run d ⟨pc0, rfl⟩
+  -- discipline: allow(O8-hand-gpr-frame) landed before GprsSame; migrate when this composition is next touched
   have keep1 (r : Nat) (lo : 1 ≤ r) (hi : r ≤ 31) (out : r ∉ [10, 12, 11] ++ [1]) : gprGet d1.σ r = gprGet d.σ r :=
     p1.toEffectPost.gpr_frame (by decide) r lo hi out
   have mem1 : d1.σ.mem = d.σ.mem := p1.memory

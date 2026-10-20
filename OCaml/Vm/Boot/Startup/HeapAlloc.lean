@@ -165,6 +165,7 @@ theorem alloc_for_heap (c : Config) (H : List (Nat × Nat)) (capacity charge : N
   have regs := A.regs
   obtain ⟨d1, run1, p1⟩ := (heap_alloc_test c ra req A.ready.toLeafInput ⟨gholds_lookup (n := 10) _ regs rfl, trivial⟩
     A.huge).run c ⟨A.pc, rfl⟩
+  -- discipline: allow(O8-hand-gpr-frame) landed before GprsSame; migrate when this composition is next touched
   have k1 (r : Nat) (lo : 1 ≤ r) (hi : r ≤ 31) (out : r ∉ [15]) : gprGet d1.σ r = gprGet c.σ r :=
     p1.toEffectPost.gpr_frame (by decide) r lo hi out
   have ready1 := A.ready.window_log (windows := []) p1 (by decide) (by simp only [keysG]; decide) (by decide)
