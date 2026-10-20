@@ -76,6 +76,17 @@
   into per-piece lemmas over one named intermediate-state structure. Eval
   lemmas (`(evalBlocks …).regs = …` by `simp only [evalBlocks, evalBlock, …]`)
   replace `show … from` defeq checks, which time out.
+- `LocalRootsTail.tail`: `caml_oldify_local_roots` from the stack loop's exit
+  to its return, with the global scan supplied at its `jal` (`ScanEntry` →
+  `ScanBack` ∧ `Effect`), then `FinalQuiet.call`, `MemprofQuiet.call`, the
+  NULL hook and the epilogue (five `TStage`/stage lemmas). `gen_gc_rows.py`
+  emits the three root-callee `CallInstr`s in `LocalRootsSites`.
+- Global scan scope: F1 includes `caml_register_named_value`, which registers
+  a generational global root, so `caml_global_roots_young` is not fixed. The
+  scan needs a skiplist representation (level-0 chain at `+16`, key `+0`,
+  data `+8`, header level at `+136`) with iterate (`jalr f`), insert
+  (`random_level` LCG on `random_seed`, `caml_stat_alloc`, per-level splice)
+  and empty (`caml_stat_free` per cell, `memset` of `(level+1)*8`).
 - G2: `SlotDone R copies copies' pl` (`OldifySlot.lean`): one
   `caml_oldify_one(v, p)` call at the slot level, `*p = relocation copies' v`
   over the published forwarding table, which grows and keeps its view.

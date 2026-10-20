@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.FinalQuiet
 import OCaml.Vm.Gc.MemprofQuiet
+import OCaml.Vm.Gc.LocalRootsTail
 import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
@@ -715,6 +716,18 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.StackScan.loop
 #print axioms OCaml.Vm.Gc.memAfter_eq
 #print axioms OCaml.Vm.Gc.MemprofQuiet.call
+#print axioms OCaml.Vm.Gc.LocalRootsTail.tail
+#print axioms OCaml.Vm.Gc.LocalRootsTail.stage_exit
+#print axioms OCaml.Vm.Gc.LocalRootsTail.stage_scan
+#print axioms OCaml.Vm.Gc.LocalRootsTail.stage_final
+#print axioms OCaml.Vm.Gc.LocalRootsTail.stage_memprof
+#print axioms OCaml.Vm.Gc.LocalRootsTail.stage_hook
+#print axioms OCaml.Vm.Gc.LocalRootsTail.exit_access
+#print axioms OCaml.Vm.Gc.LocalRootsTail.hook_access
+#print axioms OCaml.Vm.Gc.LocalRootsTail.final_out
+#print axioms OCaml.Vm.Gc.LocalRootsTail.word_apart
+#print axioms OCaml.Vm.Gc.LocalRootsTail.callee_kept
+#print axioms OCaml.Vm.Gc.LocalRootsTail.TailCode.writeLog
 #print axioms OCaml.Vm.Gc.MemprofQuiet.stage_head
 #print axioms OCaml.Vm.Gc.MemprofQuiet.stage_hook
 #print axioms OCaml.Vm.Gc.MemprofQuiet.stage_iter
