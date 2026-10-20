@@ -359,4 +359,58 @@ theorem init_gc_custom_major (c : Config) (ra v : BitVec 64) (leaf : LeafInput r
   · rfl
   · decide
 
+/-- The custom minor parameters; the first message's arguments:
+`Caml_state->minor_heap_wsz / 1024`. -/
+def initGcCustomLog : List WEntry := [(customMinorAddr, 8, 100#64), (customMaxAddr, 8, 8192#64)]
+
+theorem init_gc_custom_minor (c : Config) (ra v : BitVec 64) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(15, 100#64), (18, 8192#64), (10, v)])
+    (domain : bytesT c.σ.mem Layout.sym_Caml_state 8 = firstDomainPtr)
+    (minorWsz : bytesT c.σ.mem (domainField 80) 8 = 262144#64) :
+    FnSummary 0x8001f3dc#64 (fun e => e = c) (WriteRegistersPost [14, 15, 11, 10, 12] initGcCustomLog c
+      jal_8001f408_call.pc 32#64
+      [(14, 0x800643dc#64), (15, firstDomainPtr), (11, 0x80057750#64), (10, 32#64), (12, 256#64), (18, 8192#64)]) := by
+  have dw : bytesVal .ld (read8 c.σ.mem (BitVec.ofNat 64 Layout.sym_Caml_state).toNat) = firstDomainPtr := by
+    rw [read8_value]; exact domain
+  have mw : bytesVal .ld (read8 c.σ.mem (firstDomainPtr + 80#64).toNat) = 262144#64 := by
+    rw [read8_value]; exact minorWsz
+  apply registers_of_blocks' leaf.image
+    (by constructor <;> simp only [initGcCustomLog, OutLRange, customMinorAddr, customMaxAddr] <;> decide)
+    (block_summary _ _ _ _ _ (show BlockInput caml_init_gcXf3dcSeg 0x8001f3dc#64 [(15, 100#64), (18, 8192#64), (10, v)]
+        [read8 c.σ.mem (BitVec.ofNat 64 Layout.sym_Caml_state).toNat, read8 c.σ.mem (firstDomainPtr + 80#64).toNat] c
+        from {
+      good := leaf.good
+      minstret := leaf.minstret
+      regs := regs
+      keys := by change KeysOK [15, 18, 10]; decide
+      shape := by change ChainOK _ [15, 18, 10] _; decide
+      tick := leaf.tick
+      facts := by
+        have code := initGcWindow_code leaf.image
+        chain_facts code with "Vsa.Sim.Code.caml_init_gc_at_"
+        · exact (show WriteWindow (BitVec.ofNat 64 customMinorAddr) 8 by constructor <;> decide).sd rfl (by igw; decide)
+        · exact (show WriteWindow (BitVec.ofNat 64 customMaxAddr) 8 by constructor <;> decide).sd rfl (by igw; decide)
+        · past_stores
+          · exact (show ReadWindow (BitVec.ofNat 64 Layout.sym_Caml_state) 8 by constructor <;> decide).ld rfl
+              (by igw; decide) (read8_pins _ _)
+          all_goals (intro _; simp only [OutLRange, wentryM, widthOfM, and_true]; igw; (try rw [dw]); decide)
+        · past_stores
+          · exact (show ReadWindow (firstDomainPtr + 80#64) 8 by constructor <;> decide).ld rfl
+              (by igw; rw [dw]; decide) (read8_pins _ _)
+          all_goals (intro _; simp only [OutLRange, wentryM, widthOfM, and_true]; igw; (try rw [dw]); decide) }))
+  · simp only [caml_init_gcXf3dcSeg, evalBlocks, evalBlock, SegEvalState.init, wlogM, wentryM, widthOfM]
+    igw
+    decide
+  · rfl
+  · intro σ pins
+    simp only [caml_init_gcXf3dcSeg, evalBlocks, evalBlock, SegEvalState.init] at pins
+    simp only [initgcwindow_line_8001f3a8, initgcwindow_line_8001f3ac, initgcwindow_line_8001f3b8, initgcwindow_line_8001f3bc, initgcwindow_line_8001f3c0, initgcwindow_line_8001f3c4, initgcwindow_line_8001f3cc, initgcwindow_line_8001f3d0, initgcwindow_line_8001f3d4, initgcwindow_line_8001f3dc, initgcwindow_line_8001f3e0, initgcwindow_line_8001f3e4, initgcwindow_line_8001f3e8, initgcwindow_line_8001f3ec, initgcwindow_line_8001f3f0, initgcwindow_line_8001f3f4, initgcwindow_line_8001f3f8, initgcwindow_line_8001f3fc, initgcwindow_line_8001f400, initgcwindow_line_8001f404, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM, Option.getD_some, ite_true, ite_false,
+      Nat.reduceEqDiff, Nat.reduceAdd, imm20Of, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons] at pins
+    rw [mw, srli_ten _ _ rfl] at pins
+    exact ⟨gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl dw, gholds_lookup_eq pins rfl (by decide),
+      gholds_lookup_eq pins rfl (by decide), gholds_lookup_eq pins rfl (by decide), gholds_lookup (n := 18) _ pins rfl,
+      trivial⟩
+  · rfl
+  · decide
+
 end OCaml.Vm.Boot.Startup
