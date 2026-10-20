@@ -2774,8 +2774,9 @@ and dispatch adaptation are still open.
 ## Open / next
 
 Next on the C_CALL share: swap `F1CcallOpen` fields for summaries as
-a1-prims lands them (regenerate), and use `f1_c_callk_returns` in the
-general F1 headline's premises.
+a1-prims lands them (regenerate). `ocamlrun_refinement_F1_open` (generated,
+`Sim/F1Ccall.lean`) is the pinned F1 headline from `F1GrowthPremises` and
+`F1CcallOpen` alone.
 
 Immediate next: bridge loop-head dispatch to the native zero inputs and use
 `caught_log_restore` in the represented zero arm. The native path, explicit-log

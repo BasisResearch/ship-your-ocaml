@@ -6624,3 +6624,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.feet_young
 #print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.feet_old
 #print axioms OCaml.Vm.Gc.Skiplist.GlobalRoots.listsFoot_keep
+#print axioms OCaml.Vm.Sim.f1_premises
+#print axioms OCaml.Vm.Sim.ocamlrun_refinement_F1_open

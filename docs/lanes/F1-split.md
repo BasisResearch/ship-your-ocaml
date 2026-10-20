@@ -80,3 +80,58 @@ row premises are `StackCapacity B` and `RuntimeFrame L high`
 (`StackRows.lean`). `PushWriteOk.of_geometry` and `RuntimeFrame.push`
 supply every one-word push. `StackGeometry.even : EvenPlace pl` serves
 ISINT/BRANCHIF/SWITCH.
+
+## `whileMin_halts_f1`: the premises still open (a1-arms audit, 2026-10-20)
+`whileMin_halts_open (o : WhileMinOpen)` (generated `Sim/WhileMinTable.lean`)
+is `whileMin_halts_f1 heap growth pre`. Its only premises are
+`WhileMinOpen`'s four fields. Every other input is a theorem whose axioms are
+⊆ {propext, Classical.choice, Quot.sound}. whileMin reaches 50 opcodes
+(`whileMinOps`, one shape run). Among them, SETGLOBAL is the only barrier row,
+and C_CALL1/2/4 are the only call rows. C_CALL3 and C_CALL5 are vacuous
+(`absurd h (by decide)`).
+
+| premise (where it enters) | status | owner | discharged by / waiting on |
+|---|---|---|---|
+| `heap`: `cut_heapReady_covers_Statement f1Covered [(refTable, 56)]` (`WhileMinOpen.libHeap`) | **open** | a0-boot | the reset run reaching the cut; caml_init_gc reached end to end (`9ba5a6b9`) |
+| `growth.paths.empty`: the unallocated table's growth (SETGLOBAL's barrier) | **proved** | a2-sem / a6-gc | `f1_barrierGrowth (growthCallState _)` (`6305f769`) over `f1_barrierGrowth_gprs` (`076fd054`) |
+| `growth.full`: `BarrierGrowthFull Gc.f1Layout` (`F1GrowthPremises.full`) | **open**, by decision (2026-10-13) | a6-gc (G2) | G2's `CollectionEffect`. As stated it is not provable under G1, because the overflow requests a minor GC (a6-gc log, "Obstruction") |
+| SETGLOBAL barrier row: `f1_globalBarrier f1_barrierRuntime …` | **proved** | a1-arms / a6-gc | `8811ba3f` |
+| `c_call1_returns`: `caml_fresh_oo_id` | **proved** | a1-prims | `prim_caml_fresh_oo_id_returns` (`03604487`) |
+| `c_call1_returns`: `caml_ml_open_descriptor_out` | **proved given `OpenOutRuntime Gc.f1Layout`** | bprime (summary) | `prim_caml_ml_open_descriptor_out_returns` (`4d98b8b3`) |
+| `OpenOutRuntime Gc.f1Layout` (`WhileMinOpen.openOutRuntime`): `custom`, `after` | **open** | a6-gc | `CustomMemCall` for `f1Layout` (the quiet path of `caml_alloc_custom_mem`) |
+| `OpenOutRuntime Gc.f1Layout`: `pins` | **free** | — | `fun c ok => ok.freeListShape` (`f1Layout.runtimeOk` is `RuntimeOk F1Pins`) |
+| `OpenOutRuntime Gc.f1Layout`: `budget : ∀ c, runtimeOk c → ∃ k, Ready (k + 1) c` | **open, no owner; not derivable from `runtimeOk`** | **a1-arms (taken 2026-10-20)** | see below |
+| `c_call1_returns`: `caml_ml_string_length` | **proved** | a1-prims | `prim_caml_ml_string_length_returns` (`53a7adea`) |
+| `c_call1_returns`: `caml_ml_flush` | **proved** | a1-prims | `prim_caml_ml_flush_returns` (`41c1c810`) |
+| `c_call2_returns`: `caml_format_int` (`WhileMinOpen.format_int_c_call2`) | **open** | bprime (started 2026-10-20) | `prim_caml_format_int_returns` |
+| `c_call2_returns`: `caml_ml_output_char` | **proved** | a1-prims | `prim_caml_ml_output_char_returns` (`41c1c810`) |
+| `c_call4_returns`: `caml_ml_output` | **proved** | a1-prims | `prim_caml_ml_output_returns` (`61c3b012`) |
+| per-site assembly (`whileMin_ccallReturns`, `whileMinCalls`) | **proved** | a1-arms | `9aa10143` |
+
+Outside whileMin, the general headline `ocamlrun_refinement_F1_open`
+(`Sim/F1Ccall.lean`) adds `F1CcallOpen`'s fields:
+* `caml_register_named_value` (a1-prims) and `caml_format_int` (bprime) at
+  every arity;
+* the arity-fixed console and fresh-id summaries at the larger `C_CALLk`;
+* `OutListRuntimeL` (a6-gc / a0-boot). Its `entry` has the same budget gap
+  (`Ready (k + listed)`).
+
+### The custom-allocation budget (a1-arms)
+* **Why it is not derivable.** `budget` quantifies over every
+  `f1Layout.runtimeOk` config. Neither `F1Pins` nor `RuntimeOk` constrains
+  `caml_extra_heap_resources`, and its doc says the premise is "False after
+  the fifth since the cut". The 6th custom allocation requests a major slice
+  (Kiran's decision of 2026-10-13: `Ready` carries fewer than 5 prior
+  allocations, and the major-slice path is a named open premise). The
+  argument is not yet machine-checked: a `runtimeOk` config with the
+  counter past the quiet range is not constructed in Lean.
+* **Consequence.** `WhileMinOpen.openOutRuntime` cannot be discharged, even
+  though whileMin stays on the quiet path.
+* **Plan.**
+  1. Count custom allocations since the cut where they can be read at a C_CALL
+     entry: the represented world's opens and listings, tied to
+     `caml_extra_heap_resources` by the runtime invariant.
+  2. Put the G1 bound in scope as a BcSem guard on the allocating primitives,
+     like the 64-channel guard (`b601b2fe`); a2-sem owns `stepI`.
+  3. Restate `budget` (and `OutListRuntime.entry`'s `Ready`) at the C_CALL
+     entry whose primitive succeeds, so it follows from the guard.
