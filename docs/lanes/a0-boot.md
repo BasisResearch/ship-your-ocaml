@@ -266,9 +266,20 @@ insertion is proved generically:
 * caml_set_minor_heap_size's ref-table resets and return are proved
   (MinorRefSteps.lean). The ref-table blocks read past their own stores
   with `past_stores`.
-  * Its composition `minor_heap_set` waits on `RenewPost.kept` (a2-sem).
-    Readiness across `caml_memprof_renew_minor_sample` then follows from
-    `RuntimeReadyL.of_kept` (RuntimeKept.lean).
+  * `minor_heap_set` (MinorHeap.lean) composes caml_set_minor_heap_size(4096 n)
+    from `MinorHeapCall`. Its premises:
+    * the domain record and the page table caml_page_table_initialize left
+      (`PageTableAt`);
+    * the ref tables without storage (`RefTablesAt`);
+    * memprof off.
+    `MinorHeapSet` gives:
+    * readiness, with the raw block added to `H`;
+    * s4–s11 kept;
+    * the young fields (`YoungAt`);
+    * the table holding exactly the `n` minor-heap pages.
+    Readiness across `caml_memprof_renew_minor_sample` uses
+    `RuntimeReadyL.of_kept` (RuntimeKept.lean) with `RenewPost.kept`
+    (a2-sem, 1cba7df4).
   * `PageModified`/`PageAdded` now keep s4–s11 (`saved`). caml_init_gc
     holds values in s1–s9 across these calls.
 * `set_allocation_policy` (PolicySteps.lean): caml_set_allocation_policy(2)
@@ -282,7 +293,7 @@ insertion is proved generically:
   per function (`stat_aligned_return`, `heap_alloc_return`,
   `page_add_return`, `minor_return`, …). The generator could emit them
   generically.
-Next: land `minor_heap_set`, then caml_init_major_heap:
+Next: caml_init_major_heap:
 * `__divdi3`/`__muldi3` (`ready_muldi3` exists);
 * the In_heap `caml_page_table_add`, whose disjointness comes from
   `MinorHeapSet.only` and the fresh chunk;

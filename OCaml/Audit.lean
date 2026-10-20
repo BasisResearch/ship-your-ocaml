@@ -410,6 +410,7 @@ import OCaml.Vm.Boot.Startup.MinorRefSteps
 import OCaml.Vm.Boot.Startup.RuntimeKept
 import OCaml.Vm.Boot.Startup.PolicySteps
 import OCaml.Vm.Boot.Startup.HeapAlloc
+import OCaml.Vm.Boot.Startup.MinorHeap
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2915,6 +2916,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.RuntimeReadyL.of_kept
 #print axioms OCaml.Vm.Boot.Startup.set_allocation_policy
 #print axioms OCaml.Vm.Boot.Startup.alloc_for_heap
+#print axioms OCaml.Vm.Boot.Startup.minor_heap_set
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv
 #print axioms OCaml.Vm.Boot.Startup.FsSlotOne.transport
