@@ -419,6 +419,7 @@ import OCaml.Vm.Boot.Startup.InitMerge
 import OCaml.Vm.Boot.Startup.MakeFree
 import OCaml.Vm.Boot.Startup.MajorTailSteps
 import OCaml.Vm.Boot.Startup.MajorHeap
+import OCaml.Vm.Boot.Startup.MemsetShifted
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -2977,6 +2978,16 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.Startup.major_freed
 #print axioms OCaml.Vm.Boot.Startup.major_stack_allocated
 #print axioms OCaml.Vm.Boot.Startup.major_tailed
+#print axioms OCaml.Vm.Boot.Startup.GprsSame.of_regFrame
+#print axioms OCaml.Vm.Boot.Startup.clearWords_log
+#print axioms OCaml.Vm.Boot.Startup.memset_shift_entry
+#print axioms OCaml.Vm.Boot.Startup.memset_shift_head
+#print axioms OCaml.Vm.Boot.Startup.memset_shift_fix
+#print axioms OCaml.Vm.Boot.Startup.memset_realign
+#print axioms OCaml.Vm.Boot.Startup.memset_shifted
+#print axioms OCaml.Vm.Boot.Startup.memsetShiftLog_in
+#print axioms OCaml.Vm.Boot.Startup.major_ring_cleared
+#print axioms OCaml.Vm.Boot.Startup.caml_init_major_heap
 #print axioms OCaml.Vm.Boot.Startup.ownedWindow_ok
 #print axioms OCaml.Vm.Boot.Startup.memFacts_stepMem_store
 #print axioms OCaml.Vm.Boot.WhileMinEntry.read_main_argv

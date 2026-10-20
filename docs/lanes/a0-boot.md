@@ -343,12 +343,20 @@ insertion is proved generically:
   * `MadeFree` gained `caller`, `kept` and `saved`.
   The 4-byte `caml_gc_phase` read-back is not exported yet; the cut does not
   need it.
-Next, `memset(caml_major_ring, 0, 400)`. The ring is only 8-byte aligned,
-so this is memset's misaligned-head path: a computed `jalr` into the byte
-stores, then the pair loop, then the byte tail. That needs:
-* rows for 0x8004281c-0x80042848;
-* `ZeroPairRegion` generalized from `heapStart` to the end of the image.
-Then the whole caml_init_major_heap summary.
+* `memset_shifted` proves newlib memset for `p ≡ 8 (mod 16)` and
+  `n = 16 count + 16`. It runs the misaligned head (a computed `jalr` into the
+  byte table), the fixup back to the aligned path, the pair loop and the
+  computed tail. For it, the pair loop's extent was generalized to
+  `ZeroPairSpan`, whose floor is the image's end, and `ZeroPairsAt` gained a
+  free destination.
+* **caml_init_major_heap is proved end to end** (`caml_init_major_heap`,
+  post `MajorHeapInit`). On return:
+  * readiness holds over the chunk block and the mark stack's two blocks;
+  * `caml_heap_start` and the statistics are set;
+  * the chunk is one free block at the root of the best-fit tree;
+  * `caml_fl_cur_wsz` is updated and the mark-stack record is in place.
+Next, the rest of caml_init_gc after caml_init_major_heap, then onward to the
+whileMin cut.
 Then onward to the cut.
 
 ## Round 2 status (2026-10-06, search)
