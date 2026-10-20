@@ -283,13 +283,26 @@ head's first visit to `leave` over every open-channel record.
     shared);
   - the payload across a footprint predicate (`VmPayload.frame_on`,
     `PayloadMisses`, `chanAt_frame`: refcounts may change; shared).
+* **`prim_caml_ml_out_channels_list_returns`** (`Sim/OutListAdapter.lean`):
+  the C_CALL return at every site, given `OutListRuntimeL L`.
+  - `out_list_entry`: the walk's inputs from `CcallSetupPost`.
+  - `out_list_machine`: the run.
+  - `out_list_post`: the represented return.
+    - The payload is framed by the footprint predicate `outW`: the windows'
+      `synLog`, refcounts, the entry state `state c`, `vsaFoot H0`.
+    - Payload points (`VmPoint`) miss `outW` (`outW_payload`, by
+      `LogWindows.payload`, `VmPoint.not_refcount` and the premise).
+    - The heap is extended by `heap_allocate_all`.
+    - The geometry is given by `reserveN`.
+  - `ccall_observed_summary_on` closes the return.
+  - The runtime's side is the named obligation `OutListRuntime` (PHASES row,
+    lanes a6-gc and a0-boot).
+  - whileMin does not call the primitive, so its table is unchanged. The
+    generator registers the premise as the open parameter `outListRuntime`
+    for programs that call it.
 * Next:
-  - the representation: `objWords` as `ObjAt` of `outChannelsList`'s objects
-    at `outListPlaces`, the result value, and `VmPayload` across `Written`
-    (a predicate frame);
-  - the `PrimReturnsAt` adapter, with `runtimeOk` across `Written` a named
-    premise;
-  - the per-arity assembly.
+  - the per-arity assembly (`CcallReturns.of_primsF1` over every F1
+    primitive's `prim_*_returns`), once the other lanes' rows land.
 
 ## Shared heap-field update facts
 
@@ -2747,7 +2760,22 @@ window, which rules out wraparound. Default capped builds pass: geometry 0.836s,
 restore 0.842s, log/readback 0.800s. Full loop-head footprint/runtime suppliers
 and dispatch adaptation are still open.
 
+## Per-arity C_CALL assembly (2026-10-20)
+
+* `scripts/gen_f1_table.py` also writes `Sim/F1Ccall.lean`:
+  `f1_c_call{1..5}_returns (good : GoodF1 P) (o : F1CcallOpen P)` by
+  `CcallReturns.of_primsF1`, one `prim_*_returns` per (name, arity) when its
+  opcode fits, `PrimReturnsAtR.of_short` (`Sim/CcallShort.lean`) when the
+  model needs more than `k + 1` arguments, else a named `F1CcallOpen` field.
+* `OutListRuntime` is stated at the entry config (`Walk.S := state c`,
+  `WalkGeometry.stateApart`); `CustomMemGrows` is a6-gc's
+  `CustomMemReturned.grows` (`customMemGrows`).
+
 ## Open / next
+
+Next on the C_CALL share: swap `F1CcallOpen` fields for summaries as
+a1-prims lands them (regenerate), and use `f1_c_callk_returns` in the
+general F1 headline's premises.
 
 Immediate next: bridge loop-head dispatch to the native zero inputs and use
 `caught_log_restore` in the represented zero arm. The native path, explicit-log

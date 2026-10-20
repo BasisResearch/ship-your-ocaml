@@ -166,17 +166,19 @@ open Vsa.Machine Vsa.Sim OCaml.Vm OutListWalk in
 the `j`-th listed id's channel object (header, `channel_operations`, the
 record) and its cons cell (header, the channel object, the previous list). -/
 theorem listObjs_objAt {c : Config} {pl : Place} {cp : ChanPlace} {R : Nat → Nat} {Y : Nat}
-    (hR : ∀ id, cp id = some (R id)) (rFit : ∀ id, R id < 2 ^ 64) (yFit : Y < 2 ^ 64) :
-    ∀ (ids : List Nat) (k size : Nat) (acc : Val), ListWords c.σ.mem Y k ids R →
+    (yFit : Y < 2 ^ 64) :
+    ∀ (ids : List Nat) (k size : Nat) (acc : Val), (∀ id ∈ ids, cp id = some (R id) ∧ R id < 2 ^ 64) →
+      ListWords c.σ.mem Y k ids R →
       valWord pl acc = some (resWord Y k) →
       (∀ i, i < 2 * ids.length → pl.φ (size + i) = some (Y - 24 * (2 * k + i) - 16)) →
       48 * (k + ids.length) ≤ Y →
       ∀ i o, (listObjs size acc ids)[i]? = some o → ObjAt c pl cp (Y - 24 * (2 * k + i) - 16) o := by
   intro ids
   induction ids with
-  | nil => intro k size acc _ _ _ _ i o h; simp [listObjs] at h
+  | nil => intro k size acc _ _ _ _ _ i o h; simp [listObjs] at h
   | cons id ids ih =>
-    intro k size acc words accRepr placed room i o hio
+    intro k size acc hR words accRepr placed room i o hio
+    obtain ⟨hRid, rFit⟩ := hR id List.mem_cons_self
     have w0 := words 0 id rfl
     simp only [Nat.add_zero, objWords, List.mem_cons, List.not_mem_nil, or_false, forall_eq_or_imp,
       forall_eq] at w0
@@ -196,7 +198,7 @@ theorem listObjs_objAt {c : Config} {pl : Place} {cp : ChanPlace} {R : Nat → N
       refine ⟨?_, ?_, ?_⟩
       · unfold word; rw [a8, wh]; exact Gc.customHeader_ok
       · unfold word; rw [a0, wo]; rfl
-      · unfold word; rw [a1, wr, hR, toNat_ofNat_small (rFit id)]
+      · unfold word; rw [a1, wr, hRid, toNat_ofNat_small rFit]
     | 1, hio =>
       simp only [listObjs, List.getElem?_cons_succ, List.getElem?_cons_zero, Option.some.injEq] at hio
       subst hio
@@ -222,7 +224,7 @@ theorem listObjs_objAt {c : Config} {pl : Place} {cp : ChanPlace} {R : Nat → N
         | n + 2, hv => simp at hv
     | i + 2, hio =>
       simp only [listObjs, List.getElem?_cons_succ] at hio
-      have r := ih (k + 1) (size + 2) (.ptr (size + 1) 0)
+      have r := ih (k + 1) (size + 2) (.ptr (size + 1) 0) (fun id' h' => hR id' (List.mem_cons_of_mem _ h'))
         (fun t id' hid x hx => by
           have := words (t + 1) id' (by simpa using hid) x
           rw [show k + 1 + t = k + (t + 1) by omega] at hx; exact this hx)

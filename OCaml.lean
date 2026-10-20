@@ -719,6 +719,7 @@ import OCaml.Vm.Sim.OutListRun
 import OCaml.Vm.Sim.CcallFootprint
 import OCaml.Vm.Sim.HeapAllocAll
 import OCaml.Vm.Sim.OutListModel
+import OCaml.Vm.Sim.OutListAdapter
 import OCaml.Vm.Primitives.Channel.OpenRepr
 import OCaml.Vm.Primitives.Format.AllocSprintf
 import OCaml.Vm.Primitives.Format.FormatInt

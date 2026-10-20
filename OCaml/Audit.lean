@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.F1Ccall
 import OCaml.Vm.Gc.FinalQuiet
 import OCaml.Vm.Gc.MemprofQuiet
 import OCaml.Vm.Gc.LocalRootsTail
@@ -33,6 +34,7 @@ import OCaml.Vm.Sim.OutListRun
 import OCaml.Vm.Sim.CcallFootprint
 import OCaml.Vm.Sim.HeapAllocAll
 import OCaml.Vm.Sim.OutListModel
+import OCaml.Vm.Sim.OutListAdapter
 import OCaml.Vm.Sim.StringAllocReturn
 import OCaml.Vm.Sim.PrimGetConfigReturns
 import OCaml.Vm.Sim.PrimExecutableNameReturns
@@ -6549,3 +6551,31 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Named.ModifyRoot.oPath
 #print axioms OCaml.Vm.Primitives.Named.ModifyRoot.yPath
 #print axioms OCaml.Vm.Primitives.Named.ModifyRoot.modify_root_run
+#print axioms OCaml.Vm.Sim.OutListWalk.PayloadMisses.of_points
+#print axioms OCaml.Vm.Sim.OutListWalk.VmPoint.outL
+#print axioms OCaml.Vm.Sim.OutListWalk.VmPoint.not_refcount
+#print axioms OCaml.Vm.Sim.OutListWalk.out_list_entry
+#print axioms OCaml.Vm.Sim.OutListWalk.synLog_windows
+#print axioms OCaml.Vm.Sim.OutListWalk.outW_payload
+#print axioms OCaml.Vm.Sim.OutListWalk.outW_frame
+#print axioms OCaml.Vm.Sim.OutListWalk.outW_writes
+#print axioms OCaml.Vm.Sim.OutListWalk.bindings_frame_on
+#print axioms OCaml.Vm.Sim.OutListWalk.listObjs_fields
+#print axioms OCaml.Vm.Sim.OutListWalk.listVal_loc
+#print axioms OCaml.Vm.Sim.OutListWalk.listObjs_wosize
+#print axioms OCaml.Vm.Sim.OutListWalk.out_list_payload
+#print axioms OCaml.Vm.Sim.OutListWalk.listVal_word
+#print axioms OCaml.Vm.Sim.OutListWalk.out_list_loop
+#print axioms OCaml.Vm.Sim.OutListWalk.head_not_outW
+#print axioms OCaml.Vm.Sim.OutListWalk.primF1Impl_outList
+#print axioms OCaml.Vm.Sim.OutListWalk.out_list_post
+#print axioms OCaml.Vm.Sim.OutListWalk.domainField_not_outW
+#print axioms OCaml.Vm.Sim.OutListWalk.outW_below
+#print axioms OCaml.Vm.Sim.prim_caml_ml_out_channels_list_returns
+#print axioms OCaml.Vm.Sim.PrimReturnsAtR.of_short
+#print axioms OCaml.Vm.Sim.f1_c_call1_returns
+#print axioms OCaml.Vm.Sim.f1_c_call2_returns
+#print axioms OCaml.Vm.Sim.f1_c_call3_returns
+#print axioms OCaml.Vm.Sim.f1_c_call4_returns
+#print axioms OCaml.Vm.Sim.f1_c_call5_returns
+#print axioms OCaml.Vm.Sim.OutListWalk.customMemGrows
