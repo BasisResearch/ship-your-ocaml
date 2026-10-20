@@ -8,6 +8,7 @@ import OCaml.Vm.Gc.SlotSupply
 import OCaml.Vm.Gc.RootLoops
 import OCaml.Vm.Gc.PageTable
 import OCaml.Vm.Gc.OldifyLocalRoots
+import OCaml.Vm.Gc.RefLoops
 import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
@@ -748,6 +749,15 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.ChainScan.ChainLoop.walk
 #print axioms OCaml.Vm.Gc.GlobalScan.stage_head
 #print axioms OCaml.Vm.Gc.RootLoops.walkStep
+#print axioms OCaml.Vm.Gc.RefScan.iteration
+#print axioms OCaml.Vm.Gc.RefScan.loop
+#print axioms OCaml.Vm.Gc.RefScan.test_access
+#print axioms OCaml.Vm.Gc.RefScan.body_access
+#print axioms OCaml.Vm.Gc.RefLoops.scanStep
+#print axioms OCaml.Vm.Gc.RefLoops.refs_next
+#print axioms OCaml.Vm.Gc.RefLoops.refs_done
+#print axioms OCaml.Vm.Gc.RefLoops.call_keeps
+#print axioms OCaml.Vm.Gc.RefLoops.words_kept
 #print axioms OCaml.Vm.Gc.RootLoops.call_keeps
 #print axioms OCaml.Vm.Gc.RootLoops.walk_next
 #print axioms OCaml.Vm.Gc.RootLoops.walk_done

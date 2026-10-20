@@ -457,6 +457,7 @@ def outputs():
     immediate_audits = []
     local_sites_audits = []
     global_sites_audits = []
+    refs_sites_audits = []
     control_audits = []
     pop_audits = []
     enqueue_audits = []
@@ -512,6 +513,7 @@ def outputs():
                            ('caml_skiplist_empty', 'SkiplistEmpty'),
                            ('caml_final_oldify_young_roots', 'FinalYoungRoots'),
                            ('caml_memprof_oldify_young_roots', 'MemprofYoungRoots'),
+                           ('caml_empty_minor_heap', 'EmptyMinorRefs'),
                            ('th_ctx_iter_default', 'MemprofIterDefault'),
                            ('call_on_entry_array', 'MemprofCallOnArray'),
                            ('entry_array_oldify_young_roots', 'MemprofEntryArray')]:
@@ -525,6 +527,29 @@ def outputs():
             result[ROOT / f'Vsa/Sim/Code/{pin_name}.lean'] = pins
             pin_audits += re.findall(r'^theorem (\w+)', pins, re.M)
             jobs = [(entry, stem, None)]
+            if name == 'caml_empty_minor_heap':
+                # only the remembered-set loop (after the local roots, up to mopup)
+                def jal_to(fn):
+                    return next(a for a in sorted(di) if entry <= a < end and di[a].word & 0x7f == 0x6f and
+                                a + (lambda i: i - (1 << 21) if i & (1 << 20) else i)(gen_fn.lib._jal_imm(di[a].word))
+                                == extents[fn][0])
+                refs = jal_to('caml_oldify_local_roots') + 4
+                mopup_call = jal_to('caml_oldify_mopup')
+                jobs = [(refs, 'EmptyMinorRefs', [mopup_call])]
+                decoder = dict(line.split('\t') for line in decodes)
+                a = jal_to('caml_oldify_one')
+                w = di[a].word
+                imm = gen_fn.lib._jal_imm(w)
+                bs = [(w >> (8*k)) & 255 for k in range(4)]
+                value = '⟨'+', '.join([f'{hex(a)}#64', f'{hex(w)}#32'] + [f'{hex(b)}#8' for b in bs] + [f'{hex(imm)}#21'])+'⟩'
+                site = LOCAL_ROOTS_SITE.replace('@L@', 'refs').replace('@CALL@', value).replace(
+                    '@WORD@', f'{w:08x}').replace('@PCHEX@', f'{a:08x}').replace(
+                    'Code.Caml_oldify_local_rootsLoaded', 'Code.Caml_empty_minor_heapLoaded').replace(
+                    'Code.caml_oldify_local_roots_at_', 'Code.caml_empty_minor_heap_at_')
+                text = REFS_SITES_HEAD.replace('@DECODE_IMPORTS@', 'import ' + decoder[f'{w:08x}']) + site + \
+                    'end OCaml.Vm.Gc.EmptyMinorRefsSites\n'
+                result[ROOT / 'OCaml/Vm/Gc/Generated/EmptyMinorRefsSites.lean'] = text
+                refs_sites_audits = re.findall(r'^theorem ([\w.]+)', text, re.M) + re.findall(r'^def (\w+Site)', text, re.M)
             if name == 'caml_alloc_shr_for_minor_gc':
                 _, alloc_blocks = gen_fn.build_cfg(name,entry,di,extents)
                 epilogue = next(b for b in alloc_blocks if b.kind == 'ret')
@@ -1235,6 +1260,7 @@ def outputs():
     names = ['Vsa.Sim.' + n for n in audits] + ['Vsa.Sim.Code.' + n for n in pin_audits]
     names += ['OCaml.Vm.Gc.Immediate.' + n for n in immediate_audits]
     names += ['OCaml.Vm.Gc.LocalRootsSites.' + n for n in local_sites_audits]
+    names += ['OCaml.Vm.Gc.EmptyMinorRefsSites.' + n for n in refs_sites_audits]
     names += ['OCaml.Vm.Gc.' + (n if n.startswith('GlobalScanLoops.') else 'GlobalRootsSites.' + n)
               for n in global_sites_audits]
     names += ['OCaml.Vm.Gc.MopupControl.' + n for n in control_audits]
@@ -1270,7 +1296,7 @@ def outputs():
     names += ['OCaml.Vm.Gc.Young.' + n for n in young_audits]
     literals = ',\n'.join('  ``' + n for n in names)
     result[ROOT / 'OCaml/Vm/Gc/Generated/Audit.lean'] = (
-        ''.join('import OCaml.Vm.Gc.Generated.' + module + '\n' for module in modules + ['Immediate', 'LocalRootsSites', 'GlobalRootsSites', 'GlobalScanLoops', 'MopupControl', 'MopupPop', 'Enqueue', 'SingleField', 'ChildClassify', 'StoreReturn', 'FieldCopy', 'Young', 'Forwarded', 'OldifyReturn', 'OldifyEntry', 'OldifyYoung', 'OldifyNonYoung', 'MopupCall', 'FirstCall', 'FirstYoung', 'Fresh', 'AllocEntry', 'BestFitSmall', 'BestFitBitmap', 'BestFitFinish', 'BestFitEmpty', 'BestFitSplit', 'AllocReturn', 'AllocAccount', 'AllocColor', 'AllocSelect', 'FfsZero', 'BestFitFallback', 'BestFitLarge', 'BestFitLargeReturn']) + '\n' +
+        ''.join('import OCaml.Vm.Gc.Generated.' + module + '\n' for module in modules + ['Immediate', 'LocalRootsSites', 'GlobalRootsSites', 'GlobalScanLoops', 'EmptyMinorRefsSites', 'MopupControl', 'MopupPop', 'Enqueue', 'SingleField', 'ChildClassify', 'StoreReturn', 'FieldCopy', 'Young', 'Forwarded', 'OldifyReturn', 'OldifyEntry', 'OldifyYoung', 'OldifyNonYoung', 'MopupCall', 'FirstCall', 'FirstYoung', 'Fresh', 'AllocEntry', 'BestFitSmall', 'BestFitBitmap', 'BestFitFinish', 'BestFitEmpty', 'BestFitSplit', 'AllocReturn', 'AllocAccount', 'AllocColor', 'AllocSelect', 'FfsZero', 'BestFitFallback', 'BestFitLarge', 'BestFitLargeReturn']) + '\n' +
         '/-! GENERATED by scripts/gen_gc_rows.py. Every generated row, segment and code pin. -/\n'
         'open Lean Elab Command\n\n'
         'private def gcAuditNames : Array Name := #[\n' + literals + '\n]\n\n'
@@ -1325,6 +1351,16 @@ import Vsa.Sim.Code.Caml_oldify_local_roots
 of `caml_oldify_local_roots` (VM stack, local C roots) as `SlotSite`s, and its
 calls of the global, finaliser and memprof root scans. -/
 namespace OCaml.Vm.Gc.LocalRootsSites
+open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
+"""
+
+REFS_SITES_HEAD = """import OCaml.Vm.Gc.SlotBridge
+import Vsa.Sim.Code.Caml_empty_minor_heap
+@DECODE_IMPORTS@
+
+/-! GENERATED by scripts/gen_gc_rows.py. The `jal caml_oldify_one` site of
+`caml_empty_minor_heap`'s remembered-set loop as a `SlotSite`. -/
+namespace OCaml.Vm.Gc.EmptyMinorRefsSites
 open Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 """
 

@@ -116,6 +116,32 @@
   `Skiplist.Chain.unique`, `PageTableLookup` (`PageTable.lean`).
 - `StackScan.Iterated.domain`: the bound test leaves the domain in `a5`,
   which `LocalRootsTail.exitRegs` needs.
+- `RefScan` / `RefLoops.scanStep`: `caml_empty_minor_heap`'s remembered-set
+  loop (`caml_oldify_one(**r, *r)` over `[base, ptr)`), generated region
+  `EmptyMinorRefs` (the function exceeds gen_fn's 150-instruction limit, so
+  only the loop is generated) and `EmptyMinorRefsSites.refsSite`; its
+  per-call obligations from `SlotSupply` (entries and the bound test's three
+  words outside the calls' writes and every root slot).
+- Remaining G2 tree under `caml_empty_minor_heap` (4.14 `minor_gc.c`):
+  prologue (`young_ptr == young_alloc_end` early exit, begin hook, gc
+  message); `caml_oldify_local_roots` (prologue, stack loop, tail: proved
+  over `SlotSupply` and a supplied global scan); the remembered-set loop
+  (proved over `SlotSupply`); `caml_oldify_mopup` (segments and several
+  routes proved; outer loop open); the ephemeron table pass; the custom
+  table pass (young custom blocks: promoted ones adjust the GC speed,
+  dead ones are finalised through `jalr` — channels' `caml_finalize_channel`);
+  `caml_final_update_minor_roots`, `caml_memprof_minor_update`, soft-float
+  clock arithmetic (`__floatdidf`, `__adddf3`, `__divdf3`),
+  `caml_final_empty_young`, `caml_memprof_renew_minor_sample`, the end hook.
+- Design of `Ready copies m` (to instantiate `SlotSupply`): built from the
+  existing partial-relocation views: `ForwardingTable.eqv copies` and
+  `.Complete` over the original young sources, `SettledRoots` for slots
+  already rewritten, the grey queue's `PendingCopy` links and
+  `RelocatingGrey` payloads, the major allocator's free space
+  (`alloc_shr_for_minor_gc` readiness), the nursery bounds in `Caml_state`,
+  and `NoForgery`/`RememberedComplete` at the collection's start (`LoopHead`).
+  `writes` = major-heap arena ∪ nursery ∪ the domain's minor-GC words ∪
+  queue head; `support` = the same plus the published sources.
 - G2: `SlotDone R copies copies' pl` (`OldifySlot.lean`): one
   `caml_oldify_one(v, p)` call at the slot level, `*p = relocation copies' v`
   over the published forwarding table, which grows and keeps its view.
