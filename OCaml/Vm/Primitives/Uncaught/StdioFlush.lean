@@ -366,4 +366,231 @@ theorem flush_stdout {ra sp s0 s2 s3 reent : BitVec 64} {c : Config} (h : LeafIn
       e.frame, e.kept⟩
   exact ⟨eff, d2, d8, (k4 18 (by decide) (by decide) (by decide)).trans i18, d19, trivial⟩
 
+/-- stderr's flush: the saves, `s2`'s and `s1`'s saves, `_p = _base`, `_w = 0`. -/
+def stderrFlushLog (sp ra s0 s1 s2 s3 nb : BitVec 64) : List WEntry :=
+  flushSaves sp ra s0 s3 ++ [((sp + 18446744073709551568#64 + 16#64).toNat, 8, s2)] ++
+    [((sp + 18446744073709551568#64 + 24#64).toNat, 8, s1), (stderrFile.toNat, 8, nb)] ++
+    [((stderrFile + 12#64).toNat, 4, 0#64)]
+
+/-- **`__sflush_r(reent, stderr)`**, stderr unbuffered with nothing pending
+(`_p = _base`): `_p` and `_w` reset, returns 0. -/
+theorem flush_stderr {ra sp s0 s1 s2 s3 reent nb : BitVec 64} {c : Config} (h : LeafInput ra c)
+    (sp0 : gprGet c.σ 2 = some sp) (s0r : gprGet c.σ 8 = some s0) (s1r : gprGet c.σ 9 = some s1)
+    (s2r : gprGet c.σ 18 = some s2) (s3r : gprGet c.σ 19 = some s3) (a0 : gprGet c.σ 10 = some reent)
+    (a1 : gprGet c.σ 11 = some stderrFile) (frame : NativeFrame sp 48)
+    (flags : bytesVal .lh (read8 c.σ.mem (stderrFile + 16#64).toNat) = 0x201a#64)
+    (base : bytesVal .ld (read8 c.σ.mem (stderrFile + 24#64).toNat) = nb) (nz : nb ≠ 0#64)
+    (pos : bytesVal .ld (read8 c.σ.mem stderrFile.toNat) = nb) :
+    FnSummary 0x8003e4f4#64 (fun d => d = c)
+      (WriteRegistersPost ([2, 8, 14, 15, 19] ++ [18] ++ [9, 14, 15] ++ [] ++ [] ++ [9] ++ [18] ++ [1, 2, 8, 10, 19])
+        (stderrFlushLog sp ra s0 s1 s2 s3 nb) c ra 0#64 [(2, sp), (8, s0), (9, s1), (18, s2), (19, s3)]) := by
+  have lo := frame.lower
+  have hiS := frame.upper
+  simp only [Vsa.Sim.DlHeap.heapEnd, Layout.sym_stack_top] at lo hiS
+  have nat (off : Nat) (ho : off ≤ 48) : (sp - 48#64 + BitVec.ofNat 64 off).toNat = sp.toNat - 48 + off :=
+    frame_nat (k := 48) frame (by decide) ho
+  have sp48 : sp + 18446744073709551568#64 = sp - 48#64 := by rw [BitVec.sub_eq_add_neg]; rfl
+  have slot (off : Nat) (ho : off ≤ 48) : (sp + 18446744073709551568#64 + BitVec.ofNat 64 off).toNat =
+      sp.toNat - 48 + off := by rw [sp48, nat off ho]
+  have fpN : stderrFile.toNat = 2147994536 := by decide
+  have fp12 : (stderrFile + 12#64).toNat = 2147994548 := by decide
+  have fp24 : (stderrFile + 24#64).toNat = 2147994560 := by decide
+  have w16 := frame_word (k := 48) (off := 16) frame (by decide) (by decide) (by decide) (by decide)
+  have w24 := frame_word (k := 48) (off := 24) frame (by decide) (by decide) (by decide) (by decide)
+  apply summary_bind (flush_write_pro h sp0 s0r s3r a0 a1 frame ⟨by decide, by decide, Or.inr (by decide)⟩ flags
+    (by decide)) (fun _ p => p.pc)
+  intro c1 p1
+  obtain ⟨-, g8, -, g2, g14, g1, g10, g11, -⟩ := p1.regs
+  have k1 (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [2, 8, 14, 15, 19]) : gprGet c1.σ n = gprGet c.σ n :=
+    p1.gpr_frame (by decide) n lo hi out
+  have g18 := (k1 18 (by decide) (by decide) (by decide)).trans s2r
+  have g9 := (k1 9 (by decide) (by decide) (by decide)).trans s1r
+  have l1 : LeafInput (regsAt c1 1) c1 := by
+    rw [regsAt_of g1]; exact ⟨p1.good, p1.image, p1.minstret, g1, h.aligned, p1.tick⟩
+  have saveOut (a : Nat) (ha : a + 8 ≤ sp.toNat - 48) :
+      OutL (flushSaves sp ra s0 s3 ++ [((sp + 18446744073709551568#64 + 16#64).toNat, 8, s2)]) a := by
+    simp only [flushSaves, List.cons_append, List.nil_append, OutL, nat 32 (by decide), nat 8 (by decide),
+      nat 40 (by decide), slot 16 (by decide)]
+    exact ⟨by omega, by omega, by omega, by omega, trivial⟩
+  -- save `s2`; a buffer
+  apply summary_bind (Sflush.base_fast c1 (regsAt c1) l1
+    (by simp only [Sflush.base_input, GHolds, regsAt_of g2, regsAt_of g10, regsAt_of g11, regsAt_of g18]
+        exact ⟨g2, g10, g11, g18, trivial⟩)
+    (by rw [regsAt_of g2, sp48]; exact w16)
+    (by rw [regsAt_of g11]; exact ⟨by decide, by decide, Or.inr (by decide)⟩)
+    (by simp only [Sflush.baseLog, regsAt_of g2, regsAt_of g18, regsAt_of g11, List.take, OutLRange, slot 16 (by decide),
+          fp24]
+        exact ⟨Or.inl (by omega), trivial⟩)
+    (by simp only [Sflush.baseLog, regsAt_of g2, regsAt_of g18]
+        have f := frame_outside (k := 48) (off := 16) (w := 8) (v := s2) frame (by decide) (by decide)
+        rw [sp48]; exact f)
+    (by simp only [Sflush.base_loads, List.getD_cons_zero, regsAt_of g11]
+        rw [p1.memory, ConsoleWrite.read8_same (m := c.σ.mem) fun i hi => by
+          rw [writeLog_out _ _ _ (show OutL (flushSaves sp ra s0 s3) ((stderrFile + 24#64).toNat + i) by
+            simp only [flushSaves, OutL, nat 32 (by decide), nat 8 (by decide), nat 40 (by decide), fp24]
+            exact ⟨by omega, by omega, by omega, trivial⟩)], base]
+        simp only [guardB]; simpa using nz)) (fun _ p => p.pc)
+  intro c2 p2
+  have o2 := p2.regs
+  simp only [Sflush.base_regs, Sflush.base_loads, regsAt_of g2, regsAt_of g10, regsAt_of g11, GHolds] at o2
+  obtain ⟨-, h2, h10, h11, -⟩ := o2
+  have k2 (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [18]) : gprGet c2.σ n = gprGet c1.σ n :=
+    p2.gpr_frame (by decide) n lo hi out
+  have h1 := (k2 1 (by decide) (by decide) (by decide)).trans g1
+  have h9 := (k2 9 (by decide) (by decide) (by decide)).trans g9
+  have h14 := (k2 14 (by decide) (by decide) (by decide)).trans g14
+  have h8 := (k2 8 (by decide) (by decide) (by decide)).trans g8
+  have m2 : c2.σ.mem = writeLog c.σ.mem (flushSaves sp ra s0 s3 ++ [((sp + 18446744073709551568#64 + 16#64).toNat, 8, s2)]) := by
+    rw [p2.memory, p1.memory, writeLog_append]
+    simp only [Sflush.baseLog, regsAt_of g2, regsAt_of g18]
+  -- `_base` from the load (the `ld` pins it), then `s2` reloads it below
+  have b18 : gprGet c2.σ 18 = some nb := by
+    have := gholds_lookup (n := 18) _ p2.regs rfl
+    rw [this]; simp only [Sflush.base_loads, List.getD_cons_zero, regsAt_of g11]
+    rw [p1.memory, ConsoleWrite.read8_same (m := c.σ.mem) fun i hi => by
+      rw [writeLog_out _ _ _ (show OutL (flushSaves sp ra s0 s3) ((stderrFile + 24#64).toNat + i) by
+        simp only [flushSaves, OutL, nat 32 (by decide), nat 8 (by decide), nat 40 (by decide), fp24]
+        exact ⟨by omega, by omega, by omega, trivial⟩)], base]
+  have l2 : LeafInput (regsAt c2 1) c2 := by
+    rw [regsAt_of h1]; exact ⟨p2.good, p2.image, p2.minstret, h1, h.aligned, p2.tick⟩
+  have posAt : read8 c2.σ.mem stderrFile.toNat = read8 c.σ.mem stderrFile.toNat := by
+    rw [m2]; exact ConsoleWrite.read8_same fun i hi => by rw [writeLog_out _ _ _ (saveOut _ (by omega))]
+  -- save `s1`; `_p = _base`; unbuffered
+  apply summary_bind (Sflush.unbuf_fast c2 (regsAt c2) l2
+    (by simp only [Sflush.unbuf_input, GHolds, regsAt_of h2, regsAt_of h9, regsAt_of h10, regsAt_of h11, regsAt_of h14,
+          regsAt_of b18]
+        exact ⟨h2, h9, h10, h11, h14, b18, trivial⟩)
+    (by rw [regsAt_of h2, sp48]; exact w24)
+    (by rw [regsAt_of h11]; exact ⟨by decide, by decide, Or.inr (by decide)⟩)
+    (by simp only [Sflush.unbufLog, regsAt_of h2, regsAt_of h9, regsAt_of h11, regsAt_of b18, List.take, OutLRange,
+          slot 24 (by decide), fpN]
+        exact ⟨Or.inl (by omega), trivial⟩)
+    (by rw [regsAt_of h11]; exact ⟨by decide, by decide, by decide, by decide⟩)
+    (by simp only [Sflush.unbufLog, regsAt_of h2, regsAt_of h9, regsAt_of h11, regsAt_of b18]
+        have f := frame_outside (k := 48) (off := 24) (w := 8) (v := s1) frame (by decide) (by decide)
+        rw [sp48]
+        exact ⟨⟨f.1.1, Or.inl (by show Image.textBase + Image.textSize ≤ stderrFile.toNat; rw [fpN]; decide), trivial⟩,
+          ⟨f.2.1, Or.inl (by show Image.rodataBase + Image.rodataSize ≤ stderrFile.toNat; rw [fpN]; decide), trivial⟩⟩)
+    (by rw [regsAt_of h14]; decide)) (fun _ p => p.pc)
+  intro c3 p3
+  have o3 := p3.regs
+  simp only [Sflush.unbuf_regs, Sflush.unbuf_loads, regsAt_of h2, regsAt_of h9, regsAt_of h10, regsAt_of h11,
+    regsAt_of h14, regsAt_of b18, GHolds, List.getD_cons_zero, posAt, pos] at o3
+  obtain ⟨i15, i9, -, i2, i10, -, -, -⟩ := o3
+  rw [show BitVec.signExtend 64 (Sail.BitVec.extractLsb nb 31 0 + -Sail.BitVec.extractLsb nb 31 0) = 0#64 by
+    rw [← BitVec.sub_eq_add_neg, BitVec.sub_self]; decide] at i9
+  have k3 (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [9, 14, 15]) : gprGet c3.σ n = gprGet c2.σ n :=
+    p3.gpr_frame (by decide) n lo hi out
+  have i1 := (k3 1 (by decide) (by decide) (by decide)).trans h1
+  have i8 := (k3 8 (by decide) (by decide) (by decide)).trans h8
+  have l3 : LeafInput (regsAt c3 1) c3 := by
+    rw [regsAt_of i1]; exact ⟨p3.good, p3.image, p3.minstret, i1, h.aligned, p3.tick⟩
+  -- `_w = 0`; nothing pending
+  apply summary_bind (Sflush.w_fast c3 (regsAt c3) l3
+    (by simp only [Sflush.w_input, GHolds, regsAt_of i8, regsAt_of i9, regsAt_of i10, regsAt_of i15]
+        exact ⟨i8, i9, i10, i15, trivial⟩)
+    (by rw [regsAt_of i8]; exact ⟨by decide, by decide, by decide, by decide⟩)
+    (by simp only [Sflush.wLog, regsAt_of i8, regsAt_of i15]
+        exact ⟨⟨Or.inl (by rw [fp12]; decide), trivial⟩, ⟨Or.inl (by rw [fp12]; decide), trivial⟩⟩)
+    (by rw [regsAt_of i9]; decide)) (fun _ p => p.pc)
+  intro c4 p4
+  have k4 (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) : gprGet c4.σ n = gprGet c3.σ n :=
+    p4.gpr_frame (by decide) n lo hi (by simp)
+  have j1 := (k4 1 (by decide) (by decide)).trans i1
+  have j10 := (k4 10 (by decide) (by decide)).trans i10
+  have j2 := (k4 2 (by decide) (by decide)).trans i2
+  have m4 : c4.σ.mem = writeLog c.σ.mem (stderrFlushLog sp ra s0 s1 s2 s3 nb) := by
+    rw [p4.memory, p3.memory, m2]
+    simp only [stderrFlushLog, writeLog_append, Sflush.unbufLog, Sflush.wLog, regsAt_of h2, regsAt_of h9,
+      regsAt_of h11, regsAt_of b18, regsAt_of i8, regsAt_of i15]
+  have l4 : LeafInput (regsAt c4 1) c4 := by
+    rw [regsAt_of j1]; exact ⟨p4.good, p4.image, p4.minstret, j1, h.aligned, p4.tick⟩
+  apply summary_bind (Sflush.toDone_fast c4 (regsAt c4) l4
+    (by simp only [Sflush.toDone_input, GHolds, regsAt_of j10]; exact ⟨j10, trivial⟩)) (fun _ p => p.pc)
+  intro c5 p5
+  have k5 (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) : gprGet c5.σ n = gprGet c4.σ n :=
+    p5.gpr_frame (by decide) n lo hi (by simp)
+  have q1 := (k5 1 (by decide) (by decide)).trans j1
+  have q2 := (k5 2 (by decide) (by decide)).trans j2
+  have q10 := (k5 10 (by decide) (by decide)).trans j10
+  have m5 : c5.σ.mem = writeLog c.σ.mem (stderrFlushLog sp ra s0 s1 s2 s3 nb) := by
+    rw [p5.memory, Named.NamedValue.wl_nil, m4]
+  have later (off : Nat) (ho : off + 8 ≤ 48) (hs : off = 32 ∨ off = 8 ∨ off = 40 ∨ off = 16 ∨ off = 24) :
+      OutLRange [(stderrFile.toNat, 8, nb), ((stderrFile + 12#64).toNat, 4, 0#64)] (sp.toNat - 48 + off) 8 := by
+    simp only [OutLRange, fpN, fp12]; exact ⟨Or.inr (by omega), Or.inr (by omega), trivial⟩
+  have saved (k off : Nat) (v : BitVec 64) (ho : off + 8 ≤ 48) (c' : Config)
+      (mem : c'.σ.mem = writeLog c.σ.mem (stderrFlushLog sp ra s0 s1 s2 s3 nb))
+      (sel : (stderrFlushLog sp ra s0 s1 s2 s3 nb)[k]? =
+        some ((sp + 18446744073709551568#64 + BitVec.ofNat 64 off).toNat, 8, v))
+      (out : OutLRange ((stderrFlushLog sp ra s0 s1 s2 s3 nb).drop (k + 1)) (sp.toNat - 48 + off) 8) :
+      bytesVal .ld (read8 c'.σ.mem (sp + 18446744073709551568#64 + BitVec.ofNat 64 off).toNat) = v := by
+    rw [read8_value, mem]
+    exact OCaml.Vm.Sim.word_writeLog_at _ _ k _ _ sel (by rw [slot off (by omega)]; exact out)
+  have l5 : LeafInput (regsAt c5 1) c5 := by
+    rw [regsAt_of q1]; exact ⟨p5.good, p5.image, p5.minstret, q1, h.aligned, p5.tick⟩
+  -- reload `s1`, then `s2`
+  apply summary_bind (Sflush.done_fast c5 (regsAt c5) l5
+    (by simp only [Sflush.done_input, GHolds, regsAt_of q2, regsAt_of q10]; exact ⟨q2, q10, trivial⟩)
+    (by rw [regsAt_of q2, sp48]; exact w24.read)) (fun _ p => p.pc)
+  intro c6 p6
+  have o6 := p6.regs
+  simp only [Sflush.done_regs, Sflush.done_loads, regsAt_of q2, regsAt_of q10, GHolds, List.getD_cons_zero] at o6
+  obtain ⟨r9, r2, r10, -⟩ := o6
+  rw [saved 4 24 s1 (by decide) c5 m5 (by simp [stderrFlushLog, flushSaves, sp48]) (by
+    simp only [stderrFlushLog, flushSaves, List.drop, List.cons_append, List.nil_append, List.append_assoc]
+    exact later 24 (by decide) (by decide))] at r9
+  have k6 (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [9]) : gprGet c6.σ n = gprGet c5.σ n :=
+    p6.gpr_frame (by decide) n lo hi out
+  have r1 := (k6 1 (by decide) (by decide) (by decide)).trans q1
+  have m6 : c6.σ.mem = writeLog c.σ.mem (stderrFlushLog sp ra s0 s1 s2 s3 nb) := by
+    rw [p6.memory, Named.NamedValue.wl_nil, m5]
+  have l6 : LeafInput (regsAt c6 1) c6 := by
+    rw [regsAt_of r1]; exact ⟨p6.good, p6.image, p6.minstret, r1, h.aligned, p6.tick⟩
+  apply summary_bind (Sflush.noBaseEnd_fast c6 (regsAt c6) l6
+    (by simp only [Sflush.noBaseEnd_input, GHolds, regsAt_of r2, regsAt_of r10]; exact ⟨r2, r10, trivial⟩)
+    (by rw [regsAt_of r2, sp48]; exact w16.read)) (fun _ p => p.pc)
+  intro c7 p7
+  have o7 := p7.regs
+  simp only [Sflush.noBaseEnd_regs, Sflush.noBaseEnd_loads, regsAt_of r2, regsAt_of r10, GHolds,
+    List.getD_cons_zero] at o7
+  obtain ⟨t18, t2, t10, -⟩ := o7
+  rw [saved 3 16 s2 (by decide) c6 m6 (by simp [stderrFlushLog, flushSaves, sp48]) (by
+    simp only [stderrFlushLog, flushSaves, List.drop, List.cons_append, List.nil_append, List.append_assoc, OutLRange,
+      slot 24 (by decide), fpN, fp12]
+    exact ⟨Or.inl (by omega), Or.inr (by omega), Or.inr (by omega), trivial⟩)] at t18
+  have k7 (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [18]) : gprGet c7.σ n = gprGet c6.σ n :=
+    p7.gpr_frame (by decide) n lo hi out
+  have t1 := (k7 1 (by decide) (by decide) (by decide)).trans r1
+  have m7 : c7.σ.mem = writeLog c.σ.mem (stderrFlushLog sp ra s0 s1 s2 s3 nb) := by
+    rw [p7.memory, Named.NamedValue.wl_nil, m6]
+  apply (flush_epilogue (ra := ra) (s0 := s0) (s3 := s3) ⟨p7.good, p7.image, p7.minstret, t1, h.aligned, p7.tick⟩
+    t2 t10 frame
+    (saved 2 40 ra (by decide) c7 m7 (by simp [stderrFlushLog, flushSaves, sp48]) (by
+      simp only [stderrFlushLog, flushSaves, List.drop, List.cons_append, List.nil_append, List.append_assoc, OutLRange,
+        slot 16 (by decide), slot 24 (by decide), fpN, fp12]
+      exact ⟨Or.inr (by omega), Or.inr (by omega), Or.inr (by omega), Or.inr (by omega), trivial⟩))
+    h.aligned
+    (saved 0 32 s0 (by decide) c7 m7 (by simp [stderrFlushLog, flushSaves, sp48]) (by
+      simp only [stderrFlushLog, flushSaves, List.drop, List.cons_append, List.nil_append, List.append_assoc, OutLRange,
+        nat 8 (by decide), nat 40 (by decide), slot 16 (by decide), slot 24 (by decide), fpN, fp12]
+      exact ⟨Or.inr (by omega), Or.inl (by omega), Or.inr (by omega), Or.inr (by omega), Or.inr (by omega),
+        Or.inr (by omega), trivial⟩))
+    (saved 1 8 s3 (by decide) c7 m7 (by simp [stderrFlushLog, flushSaves, sp48]) (by
+      simp only [stderrFlushLog, flushSaves, List.drop, List.cons_append, List.nil_append, List.append_assoc, OutLRange,
+        nat 40 (by decide), slot 16 (by decide), slot 24 (by decide), fpN, fp12]
+      exact ⟨Or.inl (by omega), Or.inl (by omega), Or.inl (by omega), Or.inr (by omega), Or.inr (by omega),
+        trivial⟩))).weaken (fun _ e => e)
+  intro d p8
+  have k8 (n : Nat) (lo : 1 ≤ n) (hi : n ≤ 31) (out : n ∉ [1, 2, 8, 10, 19]) : gprGet d.σ n = gprGet c7.σ n :=
+    p8.gpr_frame (by decide) n lo hi out
+  obtain ⟨d2, d8, d19, -⟩ := p8.regs
+  have e := ((((((p1.toEffectPost.trans p2.toEffectPost).trans p3.toEffectPost).trans p4.toEffectPost).trans
+    p5.toEffectPost).trans p6.toEffectPost).trans p7.toEffectPost).trans p8.toEffectPost
+  have eff : WritePost ([2, 8, 14, 15, 19] ++ [18] ++ [9, 14, 15] ++ [] ++ [] ++ [9] ++ [18] ++ [1, 2, 8, 10, 19])
+      (stderrFlushLog sp ra s0 s1 s2 s3 nb) c ra 0#64 d :=
+    ⟨e.good, e.image, e.minstret, e.tick, e.pc, e.result, by rw [p8.memory, Named.NamedValue.wl_nil, m7], e.output,
+      e.frame, e.kept⟩
+  exact ⟨eff, d2, d8, (k8 9 (by decide) (by decide) (by decide)).trans ((k7 9 (by decide) (by decide) (by decide)).trans r9),
+    (k8 18 (by decide) (by decide) (by decide)).trans t18, d19, trivial⟩
+
 end OCaml.Vm.Primitives.Uncaught.StdioFlush
