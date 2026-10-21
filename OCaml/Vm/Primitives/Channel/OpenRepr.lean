@@ -35,7 +35,7 @@ never `next` (48) or `prev` (56). -/
 theorem channel_copied_links {c c' : Config} {a : Nat} {ch : Chan} (h : ChanAt c a ch)
     (front : Reloc.Copied c c' a a 48)
     (back : Reloc.Copied c c' (a + 64) (a + 64) (chanOffBuff - 64 + ch.buffer.length)) : ChanAt c' a ch := by
-  let pl : Place := ⟨fun _ => none, 0, 0⟩
+  let pl : Place := ⟨fun _ => none, 0, 0, []⟩
   have backAt (off n : Nat) (lo : 64 ≤ off) (hi : off + n ≤ chanOffBuff + ch.buffer.length) :
       ∀ j, j < n → byte c' (a + off + j) = byte c (a + off + j) := by
     intro j hj

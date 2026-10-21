@@ -8,7 +8,7 @@ open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
 theorem self_forwardedValue {q root c} (window : WriteWindow q.source 8)
     (self : child q root c = q.source) : forwardedValue q root c = q.target := by
   have view := forwarding_prefix (q := q) (root := root) (before := c)
-    (after := forwardedSnapshot q root c) (pl := ⟨fun _ => none,0,0⟩) rfl
+    (after := forwardedSnapshot q root c) (pl := ⟨fun _ => none,0,0,[]⟩) rfl
     (by have lower := window.lower; omega)
   simpa only [Reloc.Eqv.rawW,forwardedValue,self] using view.2
 
@@ -36,7 +36,7 @@ theorem return_self {q root sp domain c} (input : Input q root c)
       (fun after => ForwardedReturned q root sp c after ∧ word after q.target.toNat = q.target) := by
   have memory : (forwardedSnapshot q root c).σ.mem =
       writeLog c.σ.mem (Enqueue.prefixLog q.source q.target root) := rfl
-  have view := forwarding_prefix (q := q) (pl := ⟨fun _ => none,0,0⟩) memory
+  have view := forwarding_prefix (q := q) (pl := ⟨fun _ => none,0,0,[]⟩) memory
     (by have lower := input.windows.source.lower; omega)
   have same := OldifyReturn.SavedSame.of_writeLog memory prefixOutside
   have resolved := self_forwardedValue input.windows.source self

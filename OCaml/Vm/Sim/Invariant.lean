@@ -68,6 +68,8 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
     OutWRange [stackWindow high] (a - 8) (8 * o.wosize + 8)
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
     OutWRange [stackWindow high] a (chanOffBuff + ioBufferSize)
+  /-- `named_value_table`'s bucket array and nodes -/
+  named : ∀ a, NamedPlFoot pl s.world.named a → OutWRange [stackWindow high] a 1
   primitives : ∀ i name, P.prims[i]? = some name →
     OutWRange [stackWindow high]
       ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
@@ -176,7 +178,8 @@ theorem StackGeometry.transport_ids {P : Prog} {s s' : St} {c c' : Config} {pl :
     (ids : ∀ id : Nat, (s'.world.chans[id]?).isSome = (s.world.chans[id]?).isSome)
     (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
     (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
-      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)) :
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
+    (namedFoot : ∀ a, NamedPlFoot pl s'.world.named a → NamedPlFoot pl s.world.named a) :
     StackGeometry P s' c' pl cp high where
   statics := g.statics
   top := g.top
@@ -187,6 +190,7 @@ theorem StackGeometry.transport_ids {P : Prog} {s s' : St} {c c' : Config} {pl :
     obtain ⟨o, ho, size⟩ := objects l o' object
     simpa only [size] using g.heap l a o placed ho
   channels id _ a h hp := let ⟨ch, hc⟩ := chan_back ids h; g.channels id ch a hc hp
+  named a f := g.named a (namedFoot a f)
   primitives := by rw [prims]; exact g.primitives
   arena := g.arena
   domainArena := by rw [domain]; exact g.domainArena
@@ -248,9 +252,11 @@ theorem StackGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Pla
     (chans : s'.world.chans = s.world.chans)
     (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
     (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
-      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)) :
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
+    (named : s'.world.named = s.world.named := by
+      first | rfl | assumption | exact congrArg OCaml.Bytecode.World.named ‹_›) :
     StackGeometry P s' c' pl cp high :=
-  g.transport_ids objects (fun id => by rw [chans]) domain prims
+  g.transport_ids objects (fun id => by rw [chans]) domain prims fun a f => by rw [named] at f; exact f
 
 /-- Same heap and world: only the two pointer words need framing. -/
 theorem StackGeometry.same {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
@@ -307,6 +313,7 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
       cases found
       exact np.stackApart
   channels := by rw [world]; exact g.channels
+  named := by rw [world]; exact g.named
   primitives := g.primitives
   arena := g.arena
   domainArena := g.domainArena

@@ -81,7 +81,7 @@ theorem object_copied {c c' : Config} {pl : Place} {cp : ChanPlace} {a : Nat} {o
 theorem channel_copied {c c' : Config} {a : Nat} {ch : Chan}
     (h : ChanAt c a ch)
     (copied : Reloc.Copied c c' a a (chanOffBuff + ch.buffer.length)) : ChanAt c' a ch := by
-  let pl : Place := ⟨fun _ => none, 0, 0⟩
+  let pl : Place := ⟨fun _ => none, 0, 0, []⟩
   have img : (Reloc.chanEqv a ch).Img id pl 0 0 c c' := by
     refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ⟨h.cursorLe, h.bufferLe, h.aligned⟩, ?_⟩
     · exact Reloc.bytesT_congr (copied.mono chanOffFd 4 (by simp only [chanOffFd, chanOffBuff]; omega))
@@ -126,7 +126,7 @@ structure PayloadObsOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
   /-- `main_argv`, a static word -/
   argv : OutLRange log Layout.sym_main_argv 8
   /-- `named_value_table`'s bucket array and nodes -/
-  named : ∀ chains, NamedRepr c pl s.world.named chains → ∀ a, NamedReprFoot chains a → OutLRange log a 1
+  named : ∀ a, NamedPlFoot pl s.world.named a → OutLRange log a 1
 
 /-- `PayloadObsOutside` and the object-ID counter word. -/
 structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
@@ -149,7 +149,7 @@ structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
   /-- `main_argv`, a static word -/
   argv : OutLRange log Layout.sym_main_argv 8
   /-- `named_value_table`'s bucket array and nodes -/
-  named : ∀ chains, NamedRepr c pl s.world.named chains → ∀ a, NamedReprFoot chains a → OutLRange log a 1
+  named : ∀ a, NamedPlFoot pl s.world.named a → OutLRange log a 1
 
 theorem PayloadOutside.obs {log : List WEntry} {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp : Nat} (h : PayloadOutside log P s c pl cp sp) : PayloadObsOutside log P s c pl cp sp :=
@@ -203,7 +203,7 @@ theorem VmPayload.frame_obs {P s c c' pl cp sp high log}
     exact h.argv
   · obtain ⟨chains, r⟩ := h.named
     exact ⟨chains, r.frame fun a f => by
-      simpa using copy a 1 (outside.named chains r a f) 0 (by decide)⟩
+      simpa using copy a 1 (outside.named a (r.foot_sub f)) 0 (by decide)⟩
 
 /-- Transport the complete VM payload across a checked write footprint. -/
 theorem VmPayload.frame_outsideLog {P s c c' pl cp sp high log}

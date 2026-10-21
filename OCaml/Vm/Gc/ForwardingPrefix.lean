@@ -38,6 +38,6 @@ theorem SingleField.YoungHead.self_forwarding {q root sp before after}
     word after (SingleField.child q root before - 8#64).toNat = 0 ∧
       word after (SingleField.child q root before).toNat = q.target := by
   rw [self]
-  exact head.forwarding (pl := ⟨fun _ => none,0,0⟩) window
+  exact head.forwarding (pl := ⟨fun _ => none,0,0,[]⟩) window
 
 end OCaml.Vm.Gc

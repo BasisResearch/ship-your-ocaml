@@ -9,7 +9,7 @@ open OCaml.Bytecode OCaml.Programs
 open Vsa.Machine Vsa.Sim Vsa.Sim.Boot WhileMinLog
 
 def addresses : List Nat := [0x8037af88, 0x8037af70, 0x8037ad08, 0x8037af58, 0x8037ad20, 0x8037af40, 0x8037ad38, 0x8037af28, 0x8037ad48, 0x8037af10, 0x8037ad68, 0x8037aef8, 0x8037ad80, 0x8037aee0, 0x8037ada0, 0x8037aec8, 0x8037adb8, 0x8037aeb0, 0x8037add0, 0x8037ae98, 0x8037ade8, 0x8037ae80, 0x8037ae00, 0x8037ae68, 0x8037ae18, 0x8037ae58, 0x8037ae40, 0x80281ce8, 0x80281cf8]
-def place : Place := ⟨fun l => addresses[l]?, 0x8038d7f0, 0x8038c000⟩
+def place : Place := ⟨fun l => addresses[l]?, 0x8038d7f0, 0x8038c000, []⟩
 variable {c : Config} {initial : Vsa.MemRepr.Mem} {cp : ChanPlace}
 
 theorem read_atom_table (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :

@@ -49,7 +49,7 @@ theorem forwarding_decreases {q : PendingCopy} {root sources} {before after : Co
       OutLRange (Enqueue.prefixLog q.source q.target root) (source - 8#64).toNat 8) :
     tailRemaining sources after < tailRemaining sources before := by
   have zero : word after (q.source - 8#64).toNat = 0 :=
-    (forwarding_prefix (pl := ⟨fun _ => none,0,0⟩) memory (by have lower := window.lower; omega)).1
+    (forwarding_prefix (pl := ⟨fun _ => none,0,0,[]⟩) memory (by have lower := window.lower; omega)).1
   apply countP_strict (a := q.source) member (by simpa using fresh) (by rw [zero]; decide)
   intro source sourceMember nonzero
   by_cases same : source = q.source

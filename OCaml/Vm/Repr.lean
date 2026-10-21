@@ -95,6 +95,8 @@ structure Place where
   codeBase : Nat
   /-- Address stored in caml_atom_table; the allocated static table does not move. -/
   atomBase : Nat
+  /-- the malloc'd node of each `world.named` entry, by index (nodes never move) -/
+  nodes : List Nat
 
 /-- The machine word of a value under a placement. -/
 def valWord (pl : Place) : Val → Option (BitVec 64)
@@ -301,11 +303,35 @@ structure NamedRepr (c : Config) (pl : Place) (named : List (String × Val))
   entries : ∀ k v, (k, v) ∈ named ↔
     ∃ b, b < 13 ∧ ∃ n kb, (n, kb, v) ∈ chains b ∧ Primitives.Named.NamedValue.strOf kb = k
   unique : (named.map Prod.fst).Nodup
+  /-- every node is its entry's placed node -/
+  nodes : ∀ b, b < 13 → ∀ e ∈ chains b, ∃ i : Nat, pl.nodes[i]? = some e.1 ∧
+    named[i]? = some (Primitives.Named.NamedValue.strOf e.2.1, e.2.2)
 
 /-- The table's bytes: the bucket array and every node's header and key. -/
 def NamedReprFoot (chains : Nat → List (Nat × List (BitVec 8) × Val)) (a : Nat) : Prop :=
   (Layout.sym_named_value_table ≤ a ∧ a < Layout.sym_named_value_table + 104) ∨
     ∃ b, b < 13 ∧ ∃ e ∈ chains b, e.1 ≤ a ∧ a < e.1 + 16 + e.2.1.length + 1
+
+/-- **The table's bytes by placement**: the bucket array and, for each entry
+`(k, v)` of `named` with placed node `n`, the node's header and key
+`[n, n + 16 + |k| + 1)`. It depends on the state and the placement only. -/
+def NamedPlFoot (pl : Place) (named : List (String × Val)) (a : Nat) : Prop :=
+  (Layout.sym_named_value_table ≤ a ∧ a < Layout.sym_named_value_table + 104) ∨
+    ∃ (i : Nat) (k : String) (v : Val) (n : Nat), named[i]? = some (k, v) ∧ pl.nodes[i]? = some n ∧ n ≤ a ∧
+      a < n + 16 + k.length + 1
+
+/-- A key's string has its bytes' length. -/
+theorem strOf_length' (key : List (BitVec 8)) : (Primitives.Named.NamedValue.strOf key).length = key.length := by
+  simp [Primitives.Named.NamedValue.strOf, String.length_ofList]
+
+/-- The representation's bytes are the placement's. -/
+theorem NamedRepr.foot_sub {c : Config} {pl : Place} {named : List (String × Val)}
+    {chains : Nat → List (Nat × List (BitVec 8) × Val)} (h : NamedRepr c pl named chains) {a : Nat}
+    (f : NamedReprFoot chains a) : NamedPlFoot pl named a := by
+  rcases f with bucket | ⟨b, hb, e, he, lo, hi⟩
+  · exact Or.inl bucket
+  · obtain ⟨i, hn, hk⟩ := h.nodes b hb e he
+    exact Or.inr ⟨i, _, _, _, hk, hn, lo, by rw [strOf_length']; exact hi⟩
 
 /-- Recognize only GETPUBMET cache operands on a linear instruction decode.
 An opcode-looking operand is never treated as an instruction boundary. -/

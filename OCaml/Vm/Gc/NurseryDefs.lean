@@ -57,6 +57,8 @@ structure WindowSeparated (w : W) (P : Prog) (s : St) (c : Config) (pl : Place) 
   heap : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o → OutWRange [w] (a - 8) (8 * o.wosize + 8)
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
     OutWRange [w] a (chanOffBuff + ioBufferSize)
+  /-- `named_value_table`'s bucket array and nodes -/
+  named : ∀ a, NamedPlFoot pl s.world.named a → OutWRange [w] a 1
   primitives : ∀ i name, P.prims[i]? = some name →
     OutWRange [w] ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
 
