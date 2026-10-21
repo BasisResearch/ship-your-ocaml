@@ -397,6 +397,18 @@ for that snapshot; it does not assert kernel startup reachability.
 
 ## A1: F1 arms (exit: `ocamlrun_refinement_Statement` for F1)
 
+**Named-invariant propagation, 2026-10-21:** preserved WIP through `402ec122`
+is not a passing full build. The last full-build log failed in
+`Gc.NurseryTransport` on two missing `named` fields. Its working-tree
+transport/frame/allocation repair is unchecked: the required 12 GB
+`systemd-run --user --scope` runner cannot connect to the user bus in this
+session (`Operation not permitted`, before Lean starts; 98 GB available).
+Consumer migrations, changed-proof audits and the complete gate remain open.
+The arbitrary-byte named-key bridge also remains open: `NodeAt.name` depends
+on ASCII-only `Vsa.MemRepr.CStr`, whereas `primF1Impl` accepts arbitrary
+initialized bytes before the first NUL. No new F1 premise or semantics guard
+has been added. Details and resume commands are in `docs/lanes/a1-prims.md`.
+
 **Status (arms).** Every F1 opcode has a row `*_row : OpArm P (LoopAt L P) op`
 (137 row theorems), dispatched by the generated `f1_table`. The rows' former
 side conditions are discharged at layout level and passed as FIXED arguments

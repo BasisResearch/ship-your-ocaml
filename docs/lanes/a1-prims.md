@@ -2,6 +2,57 @@
 
 ## Current status
 
+**2026-10-21 preserved named-invariant handoff (blocked on build runner).**
+Started at `402ec122`; the four checked producer repairs in that commit
+(`Caller`, `ChannelFrame`, `InvariantUse`, `IsintArithmetic`) remain intact.
+Ran `scripts/abs_inventory.sh` (output `/tmp/a1-abs-inventory.log`) and
+inspected `/tmp/syo-prims-full.log`: its only failed module was
+`Gc.NurseryTransport`, missing `named` at the two geometry constructors.
+The working-tree repair mirrors `StackGeometry.transport_ids`: explicit
+`NamedPlFoot` inclusion for general transport, named-table equality for
+ordinary transport/frame/allocation, and `OutWRange.shrink` for allocation.
+This repair is **unchecked**, and is not a completed producer migration.
+The existing audit registry already includes `NurseryGeometry.transport_ids`,
+`.transport`, `.frame_log`, and `.alloc`; their changed proofs still need
+rebuilding and auditing.
+
+The required command was attempted after `free -g` reported 98 GB available:
+`systemd-run --user --scope -q -p MemoryMax=12G env LEAN_NUM_THREADS=2 lake build OCaml.Vm.Gc.NurseryTransport`.
+It failed before Lean started: `Failed to connect to user scope bus via local
+transport: Operation not permitted`. Both `XDG_RUNTIME_DIR` and
+`DBUS_SESSION_BUS_ADDRESS` point to the existing `/run/user/2000` user bus.
+The current sandbox cannot use that bus and does not permit escalation.
+No uncapped build, axiom audit, or integration was attempted; no claim is
+made that the full OCaml build now passes. Build output: `/tmp/a1-nursery.log`.
+
+The byte/string issue crosses the shared library boundary. `NamedNode.keyBytes`
+(`Repr.lean`) requires ASCII; independently, `Vsa.MemRepr.CStr.cons` requires
+`b.toNat < 128`. `NamedTable.NodeAt.name` uses `CString`, so `NamedAt.tableAt`
+and the registration table contract cannot represent the one-byte C key
+`[0x80]` with the current shared predicate. In contrast,
+`primF1Impl` accepts that initialized string and `namedValueKey [128]` is
+`String.ofList [Char.ofNat 128]`. This is a source-level contract obstruction,
+not a newly kernel-checked counterexample. `strOf` already embeds arbitrary
+bytes as characters, and `NamedTable.strOf_inj` handles the full byte range;
+the missing step is a general byte C-string/strcmp interface, including the
+arbitrary-byte comparison lemmas in the `StrcmpSpec`/`StrcmpSpecW3` source
+battery (regenerate their outputs through `retarget_library_sites.py`).
+Do not add an ASCII premise or guard to successful F1 calls. Retain first-NUL
+truncation (`namedValueKey`) and character-count footprint lengths, rather
+than treating these names as UTF-8 payloads.
+
+Text checks passed: `check_holes.py` (4643 files), `check_discipline.py`
+(27 rules), and `git diff --check`. `check_abstraction_gate.py` failed because
+`abstractions/clusters.tsv` is stale: regenerated output in
+`/tmp/a1-abstraction-census.tsv` differs only in the inherited
+`Reloc.vmReprAt_reloc` line count (34 to 36). No gate was bypassed.
+
+Resume with the nursery build and affected consumers (`ArmGeometry.transport`
+and `.transport_ids` still need named-footprint propagation), then factor
+shared named-memory frames and generalize the library bridge. `BarrierGrowthFull`
+remains G2, `CustomMemCall` remains a named premise, and C4 round 2 still waits
+for F1. The full gate and `scripts/integrate.sh` remain required before landing.
+
 **Console output (in progress, shared by all channel primitives):**
 * `ConsoleWrite.write_console` (`Console/Write.lean`): newlib `_write(fd, buf, n)` on a
   console descriptor prints the buffer by one HTIF putchar per byte (`putchar_step`,

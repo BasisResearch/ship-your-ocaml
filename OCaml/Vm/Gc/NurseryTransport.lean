@@ -70,7 +70,8 @@ theorem NurseryGeometry.transport_ids {P : Prog} {s s' : St} {c c' : Config} {pl
     (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
     (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
     (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-      word c' (a + chanOffNext) = word c (a + chanOffNext)) :
+      word c' (a + chanOffNext) = word c (a + chanOffNext))
+    (namedFoot : ∀ a, NamedPlFoot pl s'.world.named a → NamedPlFoot pl s.world.named a) :
     NurseryGeometry P s' c' pl cp high := by
   have window : nurseryFree c' = nurseryFree c := by simp only [nurseryFree, limit, ptr]
   exact {
@@ -85,6 +86,7 @@ theorem NurseryGeometry.transport_ids {P : Prog} {s s' : St} {c c' : Config} {pl
       obtain ⟨ch, hc⟩ := Sim.chan_back ids h
       rw [window]; exact g.channels id ch a hc hp
     channelsPrivate := fun id _ a h hp => let ⟨ch, hc⟩ := Sim.chan_back ids h; g.channelsPrivate id ch a hc hp
+    named := fun a f => by rw [window]; exact g.named a (namedFoot a f)
     primitives := by rw [window, prims]; exact g.primitives
     top := by rw [ptr]; exact g.top
     aligned := by rw [ptr]; exact g.aligned
@@ -123,9 +125,11 @@ theorem NurseryGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : P
     (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
     (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
     (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-      word c' (a + chanOffNext) = word c (a + chanOffNext)) :
+      word c' (a + chanOffNext) = word c (a + chanOffNext))
+    (named : s'.world.named = s.world.named := by
+      first | rfl | assumption | exact congrArg OCaml.Bytecode.World.named ‹_›) :
     NurseryGeometry P s' c' pl cp high :=
-  g.transport_ids objects (fun id => by rw [chans]) domain prims limit ptr head links
+  g.transport_ids objects (fun id => by rw [chans]) domain prims limit ptr head links fun a f => by rw [named] at f; exact f
 
 /-- **Transport across a write log** missing the `Caml_state` and
 primitive-table pointers and the `young_limit`/`young_ptr` words (VM-stack
@@ -140,13 +144,15 @@ theorem NurseryGeometry.frame_log {P : Prog} {s s' : St} {c c' : Config} {pl : P
     (ptr : OutLRange log ((word c Layout.sym_Caml_state).toNat + Layout.off_young_ptr) 8)
     (head : OutLRange log Layout.sym_caml_all_opened_channels 8)
     (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a → OutLRange log (a + chanOffNext) 8)
-    (memory : c'.σ.mem = writeLog c.σ.mem log) : NurseryGeometry P s' c' pl cp high := by
+    (memory : c'.σ.mem = writeLog c.σ.mem log)
+    (named : s'.world.named = s.world.named := by
+      first | rfl | assumption | exact congrArg OCaml.Bytecode.World.named ‹_›) : NurseryGeometry P s' c' pl cp high := by
   have keep : ∀ x, OutLRange log x 8 → word c' x = word c x := fun x h => by
     change bytesT c'.σ.mem x 8 = bytesT c.σ.mem x 8
     rw [memory, bytesT_writeLog_out _ h]
   have dom := keep _ domain
   refine g.transport objects chans dom (keep _ contents) ?_ ?_ (keep _ head)
-    (fun id ch a hc hp => keep _ (links id ch a hc hp))
+    (fun id ch a hc hp => keep _ (links id ch a hc hp)) named
   · simp only [runtimeFields, domainWord, dom]; rw [keep _ limit]
   · simp only [runtimeFields, domainWord, dom]; rw [keep _ ptr]
 
@@ -165,7 +171,9 @@ theorem NurseryGeometry.alloc {P : Prog} {s s' : St} {c c' : Config} {pl : Place
     (capacity : (runtimeFields c).youngLimit ≤ a - 8)
     (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
     (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-      word c' (a + chanOffNext) = word c (a + chanOffNext)) :
+      word c' (a + chanOffNext) = word c (a + chanOffNext))
+    (named : s'.world.named = s.world.named := by
+      first | rfl | assumption | exact congrArg OCaml.Bytecode.World.named ‹_›) :
     NurseryGeometry P s' c' pl cp high := by
   have lower : (runtimeFields c').youngPtr ≤ (runtimeFields c).youngPtr := by omega
   have sh : ∀ {x n}, OutWRange [nurseryFree c] x n → OutWRange [nurseryFree c'] x n :=
@@ -185,6 +193,7 @@ theorem NurseryGeometry.alloc {P : Prog} {s s' : St} {c c' : Config} {pl : Place
         simpa only [Nat.add_comm] using this
     channels := by rw [chans]; exact fun id ch x h1 h2 => sh (g.channels id ch x h1 h2)
     channelsPrivate := by rw [chans]; exact g.channelsPrivate
+    named := fun a f => sh (g.named a (by rw [named] at f; exact f))
     primitives := by rw [prims]; exact fun i name h => sh (g.primitives i name h)
     top := by have := g.top; omega
     aligned := by rw [after]; exact aligned

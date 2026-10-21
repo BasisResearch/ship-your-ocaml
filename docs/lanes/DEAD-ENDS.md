@@ -48,3 +48,11 @@
   before symbolic execution, rather than expanding the resulting load terms.
   The interval consequence requires `0 < len`: an empty argument window
   inside a write frame satisfies `ArgsOut.out` vacuously.
+
+- 2026-10-21: removing the ASCII conjunct only from `NamedNode` cannot close
+  the named-table bridge: `NamedTable.NodeAt.name` independently requires
+  `CString`, whose shared `Vsa.MemRepr.CStr.cons` requires bytes below 128.
+  The one-byte key `[0x80]` exposes that contract obstruction by inspection.
+  Generalize the byte C-string/strcmp source interface and regenerate the
+  library battery; do not insert an ASCII guard into `GoodF1` or a premise
+  excluding successful calls. This inspection is not a kernel-checked theorem.
