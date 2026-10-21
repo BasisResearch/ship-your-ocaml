@@ -11,7 +11,7 @@ nohup ./codexwork.sh a0-boot-next tasks/sol-startup.md >/dev/null 2>&1 &
 ```
 
 The runner checks free memory, locks a project worker slot and the worktree,
-requires preserved WIP to be committed, fetches and rebases on `origin/main`,
+requires preserved WIP to be committed, fetches and rebases on current `main`,
 then logs to `logs/sol-<slot>-<time>-<pid>.log`. Each task starts with
 `tasks/RULES.txt` verbatim, followed by one target, files and a completion
 criterion; fewer than 40 lines in total. Every Lean run uses a 12 GB cgroup.

@@ -28,7 +28,8 @@ AVAILABLE=$(free -g | awk '/^Mem:/{print $7}')
 cd "$WORKTREE"
 [[ -z $(git status --porcelain) ]] || stuck 'preserve and commit lane WIP before launch'
 git fetch origin main || stuck 'fetch origin/main failed'
-git rebase origin/main || stuck 'rebase conflict; work preserved for manager'
+git merge-base --is-ancestor origin/main main || stuck 'manager must fast-forward main before launch'
+git rebase main || stuck 'rebase conflict; work preserved for manager'
 START=$(git rev-parse HEAD)
 echo "Worker: gpt-6.1-sol, high reasoning; initial commit: $START"
 set +e
