@@ -53,7 +53,8 @@ def main():
         wait_memory()
         module = f'OCaml.Programs.Generated.{name}'
         (ROOT/f'.lake/build/lib/lean/OCaml/Programs/Generated/{name}.olean').unlink(missing_ok=True)
-        result = subprocess.run(['systemd-run', '--user', '--scope', '-q', '-p', 'MemoryMax=24G',
+        result = subprocess.run(['systemd-run', '--user', '--scope', '-q', '-p', 'MemoryMax=12G',
+                             'env', 'LEAN_NUM_THREADS=2',
                                  '/usr/bin/time', '-v', 'lake', 'build', module],
                                 cwd=ROOT, text=True, capture_output=True)
         print(result.stdout + result.stderr, flush=True)

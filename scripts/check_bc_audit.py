@@ -23,7 +23,8 @@ def wait_memory():
 
 def main():
     wait_memory()
-    result = subprocess.run(['systemd-run', '--user', '--scope', '-q', '-p', 'MemoryMax=24G',
+    result = subprocess.run(['systemd-run', '--user', '--scope', '-q', '-p', 'MemoryMax=12G',
+                             'env', 'LEAN_NUM_THREADS=2',
                              'lake', 'env', 'lean', 'OCaml/Programs/Generated/Audit.lean'],
                             cwd=ROOT, capture_output=True, text=True)
     if result.returncode:
