@@ -19,10 +19,12 @@ def read64 (m : Mem) (a : Nat) : Option Nat := readLE m a 8
 def readI64 (m : Mem) (a : Nat) : Option Int :=
   (read64 m a).map fun n => (BitVec.ofNat 64 n).toInt
 
+/-- A NUL-terminated byte string, embedding each byte as one character.
+This uses character codes 0–255, rather than UTF-8 encoding. -/
 inductive CStr (m : Mem) : Nat → List Char → Prop where
   | nil {a : Nat} : m[a]? = some 0 → CStr m a []
   | cons {a : Nat} {b : BitVec 8} {cs : List Char} :
-    m[a]? = some b → b ≠ 0 → b.toNat < 128 →
+    m[a]? = some b → b ≠ 0 → b.toNat < 256 →
     CStr m (a + 1) cs →
     CStr m a (Char.ofNat b.toNat :: cs)
 

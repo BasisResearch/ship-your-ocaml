@@ -1440,6 +1440,11 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms Vsa.Sim.site_143f0_sp
 
 -- Whole-function strcmp, both aligned and unaligned entry paths.
+#print axioms Vsa.Sim.char_ofNat_toNat
+#print axioms Vsa.Sim.cstr_byte_lt256
+#print axioms Vsa.Sim.byteVal_lt
+#print axioms Vsa.Sim.strcmpSign_sub
+#print axioms Vsa.Sim.strcmpSign_block_sub
 #print axioms Vsa.Sim.strcmp_full_spec_cond
 #print axioms Vsa.Sim.strcmp_full_spec
 #print axioms Vsa.Sim.strcmp_word_spec

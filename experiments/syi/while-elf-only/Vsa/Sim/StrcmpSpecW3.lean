@@ -143,15 +143,15 @@ theorem andi_ff_eq_zext_byte (v : BitVec 64) :
 
 The `f58`/`f70` `ret` returns `a4 - a5` where `a4,a5` are two 16-bit blocks that AGREE
 in their low byte (byte `2t`) and differ in their high byte (byte `2t+1`), each byte
-`< 128`. The sign of the 64-bit difference is `isign` of the high bytes. -/
+`< 256`. The sign of the 64-bit difference is `isign` of the high bytes. -/
 
 /-- **Block-difference sign.** For `x y : BitVec 64` with `toNat < 2^16`, equal low
-bytes (`% 256`), and high bytes (`/ 256`) `< 128`, `strcmpSign (x - y) = isign` of the
+bytes (`% 256`), and high bytes (`/ 256`) `< 256`, `strcmpSign (x - y) = isign` of the
 high bytes. Proven from `toNat` (the difference is `256·(hiX − hiY)`). -/
 theorem strcmpSign_block_sub (x y : BitVec 64)
     (hx : x.toNat < 2^16) (hy : y.toNat < 2^16)
     (hlo : x.toNat % 256 = y.toNat % 256)
-    (hhx : x.toNat / 256 < 128) (hhy : y.toNat / 256 < 128) :
+    (hhx : x.toNat / 256 < 256) (hhy : y.toNat / 256 < 256) :
     strcmpSign (x - y) = isign (x.toNat / 256) (y.toNat / 256) := by
   have hxnat : (x - y).toNat = (2^64 - y.toNat + x.toNat) % 2^64 := by rw [BitVec.toNat_sub]
   generalize hxdef : (x - y) = z at hxnat ⊢
@@ -321,13 +321,13 @@ via `strcmpSign_sub` (byte paths `f74→f80`) or `strcmpSign_block_sub` (block `
 `f58`/`f70`). -/
 
 /-- **`f74 → f80` byte tail.** At `0xf74` with `a4 = v4`, `a5 = v5`, `a1 = r`, where the
-low bytes `ba = v4.extractLsb' 0 8`, `bb = v5.extractLsb' 0 8` are `< 128` and whose
+low bytes `ba = v4.extractLsb' 0 8`, `bb = v5.extractLsb' 0 8` are `< 256` and whose
 `isign` is the spec sign, the `zext.b`/`zext.b`/`sub`/`ret` returns to `r` with the
 correct result sign. -/
 theorem lane_f74_to_done (g : (R : Register) → Option (RegisterType R))
     (r v4 v5 : BitVec 64) (csa csb : List Char)
     (m0 : Std.ExtHashMap Nat (BitVec 8)) (o : Array String) (halignr : r.toNat % 4 = 0)
-    (hba128 : (v4.extractLsb' 0 8).toNat < 128) (hbb128 : (v5.extractLsb' 0 8).toNat < 128)
+    (hba256 : (v4.extractLsb' 0 8).toNat < 256) (hbb256 : (v5.extractLsb' 0 8).toNat < 256)
     (hsign : isign (v4.extractLsb' 0 8).toNat (v5.extractLsb' 0 8).toNat = strcmpSpecSign csa csb)
     (c : Config)
     (hgood : GoodState c.σ) (hloaded : StrcmpLoaded c.σ.mem) (hmem : c.σ.mem = m0)
@@ -397,7 +397,7 @@ theorem lane_f74_to_done (g : (R : Register) → Option (RegisterType R))
     (((Steps.single hs1).trans (Steps.single hs2)).trans (Steps.single hs3)).trans (Steps.single hs4), ?_⟩
   refine ⟨hG4, hpc4, hra_4, by rw [hmem4eq]; exact hmem, hout4, hi4, ?_, hframe_4⟩
   refine ⟨_, ha0_4, ?_⟩
-  rw [strcmpSign_sub (v4.extractLsb' 0 8) (v5.extractLsb' 0 8) hba128 hbb128]; exact hsign
+  rw [strcmpSign_sub (v4.extractLsb' 0 8) (v5.extractLsb' 0 8) hba256 hbb256]; exact hsign
 
 /-- **`f5c → f80` block tail** (a `slli` probe fired; block `{6-s',7-s'}` first differs,
 `s' ∈ {2,4,6}`). At `0xf5c` with `a4 = wa <<< 8s'`, `a5 = wb <<< 8s'`, `a1 = r`: `srli
@@ -409,7 +409,7 @@ theorem lane_f5c_tail (g : (R : Register) → Option (RegisterType R))
     (hs' : s' = 2 ∨ s' = 4 ∨ s' = 6) (hj0lo : j0 = 6 - s' ∨ j0 = 7 - s')
     (hlop : wa.extractLsb' (8*(6-s')) 8 = wb.extractLsb' (8*(6-s')) 8 ∨ j0 = 6 - s')
     (hbytelo_ne : j0 = 6 - s' → wa.extractLsb' (8*(6-s')) 8 ≠ wb.extractLsb' (8*(6-s')) 8)
-    (hba128 : (wa.extractLsb' (8*j0) 8).toNat < 128) (hbb128 : (wb.extractLsb' (8*j0) 8).toNat < 128)
+    (hba256 : (wa.extractLsb' (8*j0) 8).toNat < 256) (hbb256 : (wb.extractLsb' (8*j0) 8).toNat < 256)
     (hsign : isign (wa.extractLsb' (8*j0) 8).toNat (wb.extractLsb' (8*j0) 8).toNat = strcmpSpecSign csa csb)
     (c : Config)
     (hgood : GoodState c.σ) (hloaded : StrcmpLoaded c.σ.mem) (hmem : c.σ.mem = m0)
@@ -540,7 +540,7 @@ theorem lane_f5c_tail (g : (R : Register) → Option (RegisterType R))
       rw [← block_hi _ hblkAlt, hhiA, hj0hi]
     have hhiBeq : ((wb <<< (8*s')) >>> (48:Nat)).toNat / 256 = (wb.extractLsb' (8*j0) 8).toNat := by
       rw [← block_hi _ hblkBlt, hhiB, hj0hi]
-    rw [strcmpSign_block_sub _ _ hblkAlt hblkBlt hlomatch (by rw [hhiAeq]; exact hba128) (by rw [hhiBeq]; exact hbb128)]
+    rw [strcmpSign_block_sub _ _ hblkAlt hblkBlt hlomatch (by rw [hhiAeq]; exact hba256) (by rw [hhiBeq]; exact hbb256)]
     rw [hhiAeq, hhiBeq]; exact hsign
   · -- f74: low byte differs ⇒ j0 = 6-s'
     have hguard : ((((wa <<< (8*s')) >>> (48:Nat) - (wb <<< (8*s')) >>> (48:Nat)) &&& sign_extend (m := 64) (0x0ff#12)) != (0#64)) = true := by
@@ -570,7 +570,7 @@ theorem lane_f5c_tail (g : (R : Register) → Option (RegisterType R))
     have hlowA : ((wa <<< (8*s')) >>> (48:Nat)).extractLsb' 0 8 = wa.extractLsb' (8*j0) 8 := by rw [hloA, hj0lo6]
     have hlowB : ((wb <<< (8*s')) >>> (48:Nat)).extractLsb' 0 8 = wb.extractLsb' (8*j0) 8 := by rw [hloB, hj0lo6]
     obtain ⟨c', hsteps', hDone'⟩ := lane_f74_to_done g r ((wa <<< (8*s')) >>> (48:Nat)) ((wb <<< (8*s')) >>> (48:Nat)) csa csb m0 o halignr
-      (by rw [hlowA]; exact hba128) (by rw [hlowB]; exact hbb128)
+      (by rw [hlowA]; exact hba256) (by rw [hlowB]; exact hbb256)
       (by rw [hlowA, hlowB]; exact hsign)
       ⟨σ5, i5, c.steps + 1 + 1 + 1 + 1 + 1⟩
       hG5 (by rw [hmem5, hmem4, hmem3, hmem2, hmem1]; exact hloaded) (by rw [hmem5, hmem4, hmem3, hmem2, hmem1]; exact hmem)
@@ -589,7 +589,7 @@ theorem lane_fallthrough_tail (g : (R : Register) → Option (RegisterType R))
     (hj0 : 6 ≤ j0) (hj0lt : j0 < 8)
     (hlo6 : wa.extractLsb' (8*6) 8 = wb.extractLsb' (8*6) 8 ∨ j0 = 6)
     (hbyte6ne : j0 = 6 → wa.extractLsb' (8*6) 8 ≠ wb.extractLsb' (8*6) 8)
-    (hba128 : (wa.extractLsb' (8*j0) 8).toNat < 128) (hbb128 : (wb.extractLsb' (8*j0) 8).toNat < 128)
+    (hba256 : (wa.extractLsb' (8*j0) 8).toNat < 256) (hbb256 : (wb.extractLsb' (8*j0) 8).toNat < 256)
     (hsign : isign (wa.extractLsb' (8*j0) 8).toNat (wb.extractLsb' (8*j0) 8).toNat = strcmpSpecSign csa csb)
     (c : Config)
     (hgood : GoodState c.σ) (hloaded : StrcmpLoaded c.σ.mem) (hmem : c.σ.mem = m0)
@@ -734,8 +734,8 @@ theorem lane_fallthrough_tail (g : (R : Register) → Option (RegisterType R))
       have : (wb >>> (48:Nat)).extractLsb' 8 8 = wb.extractLsb' (8*7) 8 := by
         have := shl_shr48_hi wb 0 (by omega); simpa using this
       rw [this]
-    have hba7 : (wa.extractLsb' (8*7) 8).toNat < 128 := by rw [← hj07]; exact hba128
-    have hbb7 : (wb.extractLsb' (8*7) 8).toNat < 128 := by rw [← hj07]; exact hbb128
+    have hba7 : (wa.extractLsb' (8*7) 8).toNat < 256 := by rw [← hj07]; exact hba256
+    have hbb7 : (wb.extractLsb' (8*7) 8).toNat < 256 := by rw [← hj07]; exact hbb256
     rw [strcmpSign_block_sub _ _ hblkA hblkB hlomatch (by rw [hhiA]; exact hba7) (by rw [hhiB]; exact hbb7)]
     rw [hhiA, hhiB, ← hj07]; exact hsign
   · -- bnez taken → f74 (byte 6 differs, j0 = 6)
@@ -771,7 +771,7 @@ theorem lane_fallthrough_tail (g : (R : Register) → Option (RegisterType R))
     have hlowA : (wa >>> (48:Nat)).extractLsb' 0 8 = wa.extractLsb' (8*j0) 8 := by rw [hlobyteA, hj06]
     have hlowB : (wb >>> (48:Nat)).extractLsb' 0 8 = wb.extractLsb' (8*j0) 8 := by rw [hlobyteB, hj06]
     obtain ⟨c', hsteps', hDone'⟩ := lane_f74_to_done g r (wa >>> (48:Nat)) (wb >>> (48:Nat)) csa csb m0 o halignr
-      (by rw [hlowA]; exact hba128) (by rw [hlowB]; exact hbb128)
+      (by rw [hlowA]; exact hba256) (by rw [hlowB]; exact hbb256)
       (by rw [hlowA, hlowB]; exact hsign)
       ⟨σ5, i5, c.steps + 1 + 1 + 1 + 1 + 1⟩
       hG5 (by rw [hmem5, hmem4, hmem3, hmem2, hmem1]; exact hloaded) (by rw [hmem5, hmem4, hmem3, hmem2, hmem1]; exact hmem)
@@ -843,9 +843,9 @@ theorem wlane_to_done (g : (R : Register) → Option (RegisterType R))
     cword_byte_byteVal m0 pa csa hcstra n j0 hj0lt8 (by omega)
   have hbyteb : ((cwordAt m0 (pb.toNat + n)).extractLsb' (8*j0) 8).toNat = byteVal csb (n+j0) :=
     cword_byte_byteVal m0 pb csb hcstrb n j0 hj0lt8 (by omega)
-  have hbytea128 : ((cwordAt m0 (pa.toNat + n)).extractLsb' (8*j0) 8).toNat < 128 := by
+  have hbytea256 : ((cwordAt m0 (pa.toNat + n)).extractLsb' (8*j0) 8).toNat < 256 := by
     rw [hbytea]; exact byteVal_lt m0 pa.toNat csa hcstra (n+j0)
-  have hbyteb128 : ((cwordAt m0 (pb.toNat + n)).extractLsb' (8*j0) 8).toNat < 128 := by
+  have hbyteb256 : ((cwordAt m0 (pb.toNat + n)).extractLsb' (8*j0) 8).toNat < 256 := by
     rw [hbyteb]; exact byteVal_lt m0 pb.toNat csb hcstrb (n+j0)
   have hbytene : byteVal csa (n+j0) ≠ byteVal csb (n+j0) := by
     rw [← hbytea, ← hbyteb]; intro h; exact hj0spec (BitVec.eq_of_toNat_eq h)
@@ -1009,7 +1009,7 @@ theorem wlane_to_done (g : (R : Register) → Option (RegisterType R))
               · left; exact hj0min 6 (by omega)
               · right; omega)
           (by intro h; rw [← h]; exact hj0spec)
-          hbytea128 hbyteb128 hsign
+          hbytea256 hbyteb256 hsign
           ⟨σ9, i9, c.steps + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1⟩
           hG9 (by rw [hmem9, hmem8, hmem7, hmem6, hmem5, hmem4, hmem3, hmem2, hmem1]; exact hloaded)
           (by rw [hmem9, hmem8, hmem7, hmem6, hmem5, hmem4, hmem3, hmem2, hmem1]; exact hmem)
@@ -1046,7 +1046,7 @@ theorem wlane_to_done (g : (R : Register) → Option (RegisterType R))
               · right; omega
               · left; exact hj0min 4 (by omega))
           (by intro h; have hh := hj0spec; rw [h] at hh; exact hh)
-          hbytea128 hbyteb128 hsign
+          hbytea256 hbyteb256 hsign
           ⟨σ9, i9, c.steps + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1⟩
           hG9 (by rw [hmem9, hmem8, hmem7, hmem6, hmem5, hmem4, hmem3, hmem2, hmem1]; exact hloaded)
           (by rw [hmem9, hmem8, hmem7, hmem6, hmem5, hmem4, hmem3, hmem2, hmem1]; exact hmem)
@@ -1083,7 +1083,7 @@ theorem wlane_to_done (g : (R : Register) → Option (RegisterType R))
             · right; omega
             · left; exact hj0min 2 (by omega))
         (by intro h; have hh := hj0spec; rw [h] at hh; exact hh)
-        hbytea128 hbyteb128 hsign
+        hbytea256 hbyteb256 hsign
         ⟨σ6, i6, c.steps + 1 + 1 + 1 + 1 + 1 + 1⟩
         hG6 (by rw [hmem6, hmem5, hmem4, hmem3, hmem2, hmem1]; exact hloaded)
         (by rw [hmem6, hmem5, hmem4, hmem3, hmem2, hmem1]; exact hmem)
@@ -1119,7 +1119,7 @@ theorem wlane_to_done (g : (R : Register) → Option (RegisterType R))
           · right; omega
           · left; exact hj0min 0 (by omega))
       (by intro h; have hh := hj0spec; rw [h] at hh; exact hh)
-      hbytea128 hbyteb128 hsign
+      hbytea256 hbyteb256 hsign
       ⟨σ3, i3, c.steps + 1 + 1 + 1⟩
       hG3 (by rw [hmem3, hmem2, hmem1]; exact hloaded)
       (by rw [hmem3, hmem2, hmem1]; exact hmem)

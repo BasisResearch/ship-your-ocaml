@@ -1,5 +1,16 @@
 # A0 library lane
 
+## Byte-string comparison domain (2026-10-21)
+
+The named-value worker generalized `Vsa.MemRepr.CStr` from ASCII to all
+nonzero bytes, preserving NUL termination and one character per byte.
+The strcmp byte and word comparison proofs and their source templates now
+use bounds below 256. This standalone library increment is extracted from
+named checkpoint `7c6bc6c1`; it does not claim the named-value loop invariant
+or its physical ownership migration is complete. The worker's focused
+comparison build and axiom audit passed; the lead runs the full landing gate.
+
+
 ## Current status
 
 **Lane exit criterion met.** All six requested functions have specs at this

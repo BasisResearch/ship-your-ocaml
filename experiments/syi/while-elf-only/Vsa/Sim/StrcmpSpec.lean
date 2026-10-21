@@ -50,7 +50,7 @@ namespace Vsa.Sim
 /-! ## The spec-level comparison (sign class)
 
 `byteVal cs k` is the C byte at index `k` of the NUL-terminated string whose char
-list is `cs`: the char's code (`< 128`) for `k < cs.length`, else `0` (the NUL
+list is `cs`: the char's code (`< 256`) for `k < cs.length`, else `0` (the NUL
 terminator). `strcmpSpecSign` is the sign of the difference of the first differing
 bytes; `0` when the two strings are equal. -/
 
@@ -79,7 +79,7 @@ def strcmpSpecSign (csa csb : List Char) : Int :=
   isign (byteVal csa k) (byteVal csb k)
 
 /-- The machine sign of the returned `x10` = `sub a2,a3` of two zero-extended bytes:
-the two bytes are `< 128`, so `x10.toInt` is exactly their (signed-small) difference.
+the two bytes are `< 256`, so `x10.toInt` is exactly their (signed-small) difference.
 We read the sign off `x10.toInt`. -/
 def strcmpSign (x : BitVec 64) : Int := if x = 0 then 0 else if x.toInt < 0 then -1 else 1
 
@@ -175,17 +175,17 @@ theorem byte_lbu_bounds (p : BitVec 64) (len k : Nat) (hreg : StrcmpRegion p len
     · left; omega
     · right; omega
 
-/-- Char code round-trips: for `b : BitVec 8` with `b.toNat < 128`,
+/-- Char code round-trips: for `b : BitVec 8` with `b.toNat < 256`,
 `(Char.ofNat b.toNat).toNat = b.toNat`. -/
-theorem char_ofNat_toNat (b : BitVec 8) (hb : b.toNat < 128) :
+theorem char_ofNat_toNat (b : BitVec 8) (hb : b.toNat < 256) :
     (Char.ofNat b.toNat).toNat = b.toNat := by
   rw [Char.toNat, Char.ofNat, dif_pos (by left; show b.toNat < 55296; omega)]
   simp only [Char.ofNatAux, UInt32.toNat]
   rfl
 
-/-- The byte at offset `k < cs.length` in `CStr m p cs` is `< 128` (an ASCII char). -/
-theorem cstr_byte_lt128 (m : Mem) (p : Nat) (cs : List Char) (hcstr : CStr m p cs) :
-    ∀ (k : Nat), k < cs.length → ∀ (b : BitVec 8), m[p + k]? = some b → b.toNat < 128 := by
+/-- The byte at offset `k < cs.length` in `CStr m p cs` is `< 256` (a byte character). -/
+theorem cstr_byte_lt256 (m : Mem) (p : Nat) (cs : List Char) (hcstr : CStr m p cs) :
+    ∀ (k : Nat), k < cs.length → ∀ (b : BitVec 8), m[p + k]? = some b → b.toNat < 256 := by
   induction hcstr with
   | @nil a hnil => intro k hk; simp at hk
   | @cons a b0 cs hb0 hb0ne hb0lt hrest ih =>
@@ -201,7 +201,7 @@ theorem cstr_byte_lt128 (m : Mem) (p : Nat) (cs : List Char) (hcstr : CStr m p c
       exact ih k hk' bb hbb'
 
 /-- The byte value at index `k < cs.length` of `CStr m p cs` matches `byteVal cs k`.
-The stored char is `Char.ofNat b.toNat` with `b.toNat < 128`, so its code is `b.toNat`. -/
+The stored char is `Char.ofNat b.toNat` with `b.toNat < 256`, so its code is `b.toNat`. -/
 theorem cstr_byteVal (m : Mem) (p : Nat) (cs : List Char) (hcstr : CStr m p cs) :
     ∀ (k : Nat), k < cs.length → ∀ (b : BitVec 8), m[p + k]? = some b → b ≠ 0 →
       b.toNat = byteVal cs k := by
@@ -236,7 +236,7 @@ theorem cstr_byte_val (m : Mem) (p : Nat) (cs : List Char) (hcstr : CStr m p cs)
   · have hlt : k < cs.length := by omega
     obtain ⟨b, hb, hbne⟩ := cstr_byte_ne m hcstr k hlt
     refine ⟨b, hb, ⟨fun h => absurd h hbne, fun h => absurd h (by omega)⟩, ?_⟩
-    -- b.toNat = byteVal cs k: the char at k is Char.ofNat b.toNat with b.toNat < 128
+    -- b.toNat = byteVal cs k: the char at k is Char.ofNat b.toNat with b.toNat < 256
     exact cstr_byteVal m p cs hcstr k hlt b hb hbne
 
 /-- Under `CStr m p cs`, `byteVal cs k = 0` forces `k = cs.length` (interior chars
@@ -252,15 +252,15 @@ theorem cstr_byteVal_zero (m : Mem) (p : Nat) (cs : List Char) (hcstr : CStr m p
     rw [hval] at this; exact this hz
   · omega
 
-/-- `byteVal cs k < 128` for all `k` (chars are `< 128`; terminator is `0`). -/
+/-- `byteVal cs k < 256` for all `k` (chars are `< 256`; terminator is `0`). -/
 theorem byteVal_lt (m : Mem) (p : Nat) (cs : List Char) (hcstr : CStr m p cs) :
-    ∀ k, byteVal cs k < 128 := by
+    ∀ k, byteVal cs k < 256 := by
   intro k
   by_cases hk : k < cs.length
   · obtain ⟨b, hb, hbne⟩ := cstr_byte_ne m hcstr k hk
     rw [← cstr_byteVal m p cs hcstr k hk b hb hbne]
-    -- b.toNat < 128 comes from CStr's stored bound; re-derive via the cons chain
-    exact cstr_byte_lt128 m p cs hcstr k hk b hb
+    -- b.toNat < 256 comes from CStr's stored bound; re-derive via the cons chain
+    exact cstr_byte_lt256 m p cs hcstr k hk b hb
   · have : cs[k]? = none := by simp; omega
     simp [byteVal, this]
 
@@ -448,8 +448,8 @@ theorem zext_toNat (b : BitVec 8) : (zero_extend (m := 64) b).toNat = b.toNat :=
     Nat.mod_eq_of_lt (show b.toNat < 2^64 from by have := b.isLt; omega)]
 
 /-- The machine result `sub a2,a3 = zext ba - zext bb` has sign `isign ba bb`, given
-both bytes `< 128`. Computed via the wrapped `toNat` of the subtraction. -/
-theorem strcmpSign_sub (ba bb : BitVec 8) (hba : ba.toNat < 128) (hbb : bb.toNat < 128) :
+both bytes `< 256`. Computed via the wrapped `toNat` of the subtraction. -/
+theorem strcmpSign_sub (ba bb : BitVec 8) (hba : ba.toNat < 256) (hbb : bb.toNat < 256) :
     strcmpSign (zero_extend (m := 64) ba - zero_extend (m := 64) bb)
       = isign ba.toNat bb.toNat := by
   have hza := zext_toNat ba
@@ -558,8 +558,8 @@ structure BF9c (g : (R : Register) → Option (RegisterType R))
   ra : c.σ.regs.get? Register.x1 = some r
   minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
   tick : c.tick < 2
-  hba : ba.toNat < 128
-  hbb : bb.toNat < 128
+  hba : ba.toNat < 256
+  hbb : bb.toNat < 256
   hsign : isign ba.toNat bb.toNat = strcmpSpecSign csa csb
   hframe : ∀ R : Register, NotWrittenStrcmp R → c.σ.regs.get? R = g R
 
@@ -575,8 +575,8 @@ theorem byte_dispatch (g : (R : Register) → Option (RegisterType R))
   intro c hSt
   obtain ⟨hgood, hloaded, hmem, hout, hpc, ha0, ha1, ha2, ha3, hra, ⟨vmi, hmi⟩, htick,
     hrega, hregb, hcstra, hcstrb, hpre, hba, hbb, hframe⟩ := hSt
-  have hba128 : ba.toNat < 128 := by rw [hba]; exact byteVal_lt m0 pa.toNat csa hcstra k
-  have hbb128 : bb.toNat < 128 := by rw [hbb]; exact byteVal_lt m0 pb.toNat csb hcstrb k
+  have hba256 : ba.toNat < 256 := by rw [hba]; exact byteVal_lt m0 pa.toNat csa hcstra k
+  have hbb256 : bb.toNat < 256 := by rw [hbb]; exact byteVal_lt m0 pb.toNat csb hcstrb k
   by_cases hdiff : ba = bb
   · -- bytes equal: bne not taken → f98
     subst hdiff
@@ -693,7 +693,7 @@ theorem byte_dispatch (g : (R : Register) → Option (RegisterType R))
     refine ⟨⟨σ1, i1, c.steps + 1⟩, Steps.single hs1, Or.inr ?_⟩
     exact ⟨ba, bb, hG1, by rw [hmem1]; exact hloaded, by rw [hmem1]; exact hmem,
       hout1,
-      hpc1, ha2_1, ha3_1, hra_1, ⟨vmi1, hmi1'⟩, hi1, hba128, hbb128, hsign, hframe_1⟩
+      hpc1, ha2_1, ha3_1, hra_1, ⟨vmi1, hmi1'⟩, hi1, hba256, hbb256, hsign, hframe_1⟩
 
 /-- `0xf9c → ret → BDone`: `sub a0,a2,a3` writes the byte difference; `ret` returns to
 `r` with `x10`'s sign the spec sign. Needs `r` 4-aligned (bit-0 clear a no-op). -/
@@ -1123,7 +1123,7 @@ theorem strcmp_spec (g : (R : Register) → Option (RegisterType R)) (pa pb r : 
 NUL-terminated byte streams: `0` when equal; the sign of the first differing byte
 otherwise. `strcmpSign x10` reads the sign of the returned `x10` (`= 0`, `toInt < 0`,
 or `> 0`). The bridge `strcmpSign_sub` shows the machine `sub` of two zero-extended
-`< 128` bytes has exactly this sign. **C-usage evidence:** `env.c`/`value.c` use
+`< 256` bytes has exactly this sign. **C-usage evidence:** `env.c`/`value.c` use
 `strcmp(...) == 0` (equality); `interp.c` uses `cmp < 0/<=/>/>=` (ordering) — the
 interpreter consumes the SIGN, so a sign-class `Q` is the honest, sufficient spec.
 
@@ -1140,7 +1140,7 @@ word loop plus a `slli/srli`-probe first-difference-byte lemma).
    and compute `BitVec.toInt` from `toNat` via `BitVec.toInt_eq_msb_cond` /
    `toInt_eq_toNat_of_lt` (the `2^64`-bmod route hits the literal-omega blowup AND
    missing lemmas).
-2. `Char.ofNat b.toNat |>.toNat = b.toNat` (for `b < 128`) is
+2. `Char.ofNat b.toNat |>.toNat = b.toNat` (for `b < 256`) is
    `rw [Char.toNat, Char.ofNat, dif_pos …]; simp only [Char.ofNatAux, UInt32.toNat]; rfl`
    — no single simp set closes it; the `dif_pos` needs `Nat.isValidChar` as
    `Or.inl (b.toNat < 55296)`.
