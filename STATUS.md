@@ -33,8 +33,10 @@ Git and landings outside their workspace-write sandbox. Known failed routes are 
 All F1 opcode rows and interpreter entry/halt composition are present. The
 headline `ocamlrun_refinement_F1_open` still consumes primitive and growth
 premises. The captured `WhileMin.loaded_fillZero` proves the captured state
-is loaded; it does not prove execution from reset. F1 is not yet closed. The exact-arity C_CALL assembly has passed its full
-build and axiom audit; the remaining integration stages are running.
+is loaded; it does not prove execution from reset. F1 is not yet closed. The exact-arity C_CALL assembly landed as `c5c0fff4`
+after the full gate; bytecode audit/measurement caps landed as `a80d71cc`.
+The remaining general C_CALL fields are `openOutRuntime`, `outListRuntime`,
+`register_named_value_c_call2`, and `format_int_c_call2`.
 
 The a2-sem uncaught-exception WIP is preserved in `syo-wt/a2-sem-next`;
 `GoodF1` excludes that path, so it is behind current F1 work in priority.
