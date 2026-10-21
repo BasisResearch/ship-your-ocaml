@@ -24,7 +24,14 @@ cd "$(git rev-parse --show-toplevel)"
 BRANCH=$(git branch --show-current)
 ENTRY="$QUEUE/$$"
 echo "$(git rev-parse HEAD) $BRANCH $(pwd)" > "$ENTRY"
-cleanup() { rm -f "$ENTRY"; git rev-parse --verify -q "train-$$" >/dev/null && { git checkout -q "$BRANCH" 2>/dev/null || true; git branch -q -D "train-$$" 2>/dev/null || true; }; }
+cleanup() {
+  rm -f "$ENTRY"
+  if git rev-parse --verify -q "train-$$" >/dev/null; then
+    git checkout -q "$BRANCH" 2>/dev/null || true
+    git branch -q -D "train-$$" 2>/dev/null || true
+  fi
+  return 0
+}
 trap cleanup EXIT
 
 exec 9>"${SYO_INTEGRATE_LOCK:-$HOME/.syo-integrate.lock}"
