@@ -19,9 +19,9 @@ None currently.
 | Lane | Current work | Worktree |
 | --- | --- | --- |
 | a0-boot / a0-lib | Reset-through-atom milestone reviewed and queued for full integration; reset-to-cut and `libHeap` remain open | `syo-wt/a0-boot-next` |
-| a1-prims / bprime | Named-value representation and primitive returns, then `caml_format_int`; retain existing WIP | `syo-wt/a1-prims-next`, `syo-wt/bprime-next` |
+| a1-prims / bprime | Named-value representation and primitive returns, then `caml_format_int`; retain existing WIP | `syo-wt/a1-prims-next`, `syo-wt/bprime` |
 | a6-gc | Sol worker validating inherited G2 next-size head removal; checked refcount transport queued separately | `syo-wt/a6-gc`, `syo-wt/a6-gc-next2` |
-| foreman / a1-arms / a2-sem | C_CALL arity WIP, shared invariants, table assembly, integration | `syo-wt/a1-arms`; main |
+| foreman / a1-arms / a2-sem | C_CALL arity landed; shared invariants, table assembly, integration | `syo-wt/a1-arms`; main |
 
 The lead now uses separate `codex exec` workers (`gpt-6.1-sol`, high reasoning),
 at most two at a time, launched through `codexwork.sh`. Built-in proof agents
@@ -40,3 +40,9 @@ The remaining general C_CALL fields are `openOutRuntime`, `outListRuntime`,
 
 The a2-sem uncaught-exception WIP is preserved in `syo-wt/a2-sem-next`;
 `GoodF1` excludes that path, so it is behind current F1 work in priority.
+
+The named worker has checked the missing domain-separation witness for the old
+geometry and is repairing the full-byte lookup bridge. This is an invariant
+design task, not a user-only blocker. The next task supplies physical ownership
+and separation, then migrates payload consumers. The formatter WIP is preserved
+in `bprime` at `2c0a97a9`; its next worker must port generated edits into templates.

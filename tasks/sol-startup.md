@@ -9,7 +9,8 @@ Do not add ulimit -v: virtual reservation breaks the large import closure; the c
 Work only in this worktree; preserve inherited WIP and never force-push or reset it away.
 BarrierGrowthFull stays with G2; CustomMemCall remains a named premise; C4 round 2 waits for F1.
 Read docs/lanes/DEAD-ENDS.md before choosing a route; record newly refuted routes there.
-Build affected modules; register audits and update lane log/PHASES accurately; leave checked edits for lead review.
+Build affected modules and a focused #print axioms file; register audits, but leave full OCaml.Audit to the lead gate.
+Update lane log/PHASES accurately; leave checked edits for lead review.
 The lead commits and lands via scripts/integrate.sh; this sandbox makes Git metadata and the landing queue read-only.
 Keep reads targeted (rg, bounded sed); do not scan home or print whole huge ledgers or audit logs.
 No subagents or other Codex workers. Finish with exactly RESULT: landed <commit> or RESULT: stuck <where>.
