@@ -24,3 +24,8 @@
   (`OCaml/Bytecode/Data.lean`), despite older F1 prose saying `%d`. A `%d`-only
   native summary can help whileMin but cannot discharge the general
   `F1CcallOpen.format_int_c_call2` field. Preserve that boundary explicitly.
+
+- `F1Heap.NamedRoom` currently uses `maxNamed = 16` and `maxNameLen = 64`,
+  but the claimed BcSem guards are absent from `primF1Impl` and `GoodF1`.
+  Do not infer those bounds for every F1 call. Generalize the reserve using
+  proved bounds, or surface a real domain decision before adding restrictions.
