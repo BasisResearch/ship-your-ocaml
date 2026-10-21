@@ -17,10 +17,6 @@ namespace OCaml.Vm.Primitives.Named.NamedValue
 set_option autoImplicit false
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable OCaml.Vm.Primitives
 
-/-- `hash_value_name`'s 32-bit accumulator over `bytes` (unsigned `char`). -/
-def hashBytes (bytes : List (BitVec 8)) : BitVec 32 :=
-  bytes.foldl (fun h b => h * 19#32 + b.zeroExtend 32) 0
-
 theorem hashBytes_snoc (bytes : List (BitVec 8)) (b : BitVec 8) :
     hashBytes (bytes ++ [b]) = hashBytes bytes * 19#32 + b.zeroExtend 32 := by
   simp [hashBytes, List.foldl_append]

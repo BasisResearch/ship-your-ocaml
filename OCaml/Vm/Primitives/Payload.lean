@@ -1,4 +1,5 @@
 import OCaml.Vm.Primitives.Leaf
+import OCaml.Vm.Reloc
 
 /-! The VM data visible during a C call. `Setup_for_c_call` temporarily changes
 sp and parks PC inside the primitive, so `VmReprAt.atHead` is not a callee
@@ -6,6 +7,39 @@ precondition. This record keeps its memory/world components; the ABI frame
 and the caller's generated restoration segment supply the register components. -/
 namespace OCaml.Vm.Primitives
 open OCaml.Bytecode Vsa.Machine Vsa.Sim LeanRV64DExecutable
+
+/-- **A named-table chain across memory** whose bytes agree on its nodes. -/
+theorem _root_.OCaml.Vm.NamedChain.frame {c c' : Config} {pl : Place} :
+    ∀ {head : Nat} {l : List (Nat × List (BitVec 8) × Val)}, NamedChain c pl head l →
+      (∀ e ∈ l, ∀ a, e.1 ≤ a → a < e.1 + 16 + e.2.1.length + 1 → byte c' a = byte c a) →
+      NamedChain c' pl head l
+  | _, _, .nil, _ => .nil
+  | _, _, @NamedChain.cons _ _ node next key v rest hnode hrest, agree => by
+    have inNode (a : Nat) (lo : node ≤ a) (hi : a < node + 16 + key.length + 1) : byte c' a = byte c a :=
+      agree _ List.mem_cons_self a lo hi
+    have w0 : word c' node = word c node :=
+      Reloc.bytesT_congr (x := node) (x' := node) fun j hj => inNode (node + j) (by omega) (by omega)
+    have w8 : word c' (node + 8) = word c (node + 8) :=
+      Reloc.bytesT_congr (x := node + 8) (x' := node + 8) fun j hj => inNode (node + 8 + j) (by omega) (by omega)
+    refine .cons ⟨hnode.low, hnode.arena, hnode.aligned, ?_, ?_, fun i hi => ?_, ?_⟩
+      (hrest.frame fun e he => agree e (List.mem_cons_of_mem _ he))
+    · rw [w0]; exact hnode.value
+    · rw [w8]; exact hnode.next
+    · rw [inNode _ (by omega) (by omega)]; exact hnode.keyBytes i hi
+    · rw [inNode _ (by omega) (by omega)]; exact hnode.nul
+
+/-- **The named table across memory** whose bytes agree on its footprint. -/
+theorem _root_.OCaml.Vm.NamedRepr.frame {c c' : Config} {pl : Place} {named : List (String × Val)}
+    {chains : Nat → List (Nat × List (BitVec 8) × Val)} (h : NamedRepr c pl named chains)
+    (agree : ∀ a, NamedReprFoot chains a → byte c' a = byte c a) : NamedRepr c' pl named chains where
+  heads := fun b hb => by
+    have head : word c' (Layout.sym_named_value_table + 8 * b) = word c (Layout.sym_named_value_table + 8 * b) :=
+      Reloc.bytesT_congr fun j hj => agree _ (Or.inl ⟨by omega, by simp only [Layout.sym_named_value_table]; omega⟩)
+    rw [head]
+    exact (h.heads b hb).frame fun e he a lo hi => agree a (Or.inr ⟨b, hb, e, he, lo, hi⟩)
+  placed := h.placed
+  entries := h.entries
+  unique := h.unique
 
 structure VmPayload (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace)
     (sp high : Nat) : Prop where
@@ -20,10 +54,12 @@ structure VmPayload (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlac
   atomBase : (word c Layout.sym_caml_atom_table).toNat = pl.atomBase
   /-- `main_argv` holds the program arguments' value (`caml_sys_argv`) -/
   argv : valWord pl s.world.argv = some (word c Layout.sym_main_argv)
+  /-- `named_value_table` represents `world.named` (`caml_register_named_value`) -/
+  named : ∃ chains, NamedRepr c pl s.world.named chains
 
 theorem payload_of_repr {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp high : Nat} (h : VmReprAt P s c pl cp sp high) : VmPayload P s c pl cp sp high :=
-  ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, h.world, h.atomBase, h.argv⟩
+  ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, h.world, h.atomBase, h.argv, h.named⟩
 
 /-- Frame all data observations at once; no machine execution is assumed. -/
 theorem VmPayload.frame {P : Prog} {s : St} {c c' : Config} {pl : Place} {cp : ChanPlace}
@@ -31,7 +67,7 @@ theorem VmPayload.frame {P : Prog} {s : St} {c c' : Config} {pl : Place} {cp : C
     (hm : c'.σ.mem = c.σ.mem) (ho : c'.σ.sailOutput = c.σ.sailOutput) :
     VmPayload P s c' pl cp sp high := by
   have hw : ∀ a, word c' a = word c a := fun _ => by simp only [word, hm]
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simpa only [hw] using h.stackHigh
   · simpa only [hw] using h.trapsp
   · simpa only [hw] using h.codeBase
@@ -42,6 +78,8 @@ theorem VmPayload.frame {P : Prog} {s : St} {c c' : Config} {pl : Place} {cp : C
   · simpa only [WorldRepr, output, ChanAt, word, word32, byte, hm, ho] using h.world
   · simpa only [hw] using h.atomBase
   · simpa only [hw] using h.argv
+  · obtain ⟨chains, r⟩ := h.named
+    exact ⟨chains, r.frame fun a _ => by simp only [byte, hm]⟩
 
 /-- A root replacement may discard a pointer, but cannot invent a new live block. -/
 theorem live_of_roots {heap : Heap} {rs rs' : List Val} {l : Nat}

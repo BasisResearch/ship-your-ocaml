@@ -16,9 +16,6 @@ namespace OCaml.Vm.Primitives.Named.NamedValue
 set_option autoImplicit false
 open Vsa.Machine Vsa.Sim Vsa.MemRepr OCaml.Bytecode OCaml.Vm.Primitives OCaml.Vm.Boot.Startup OCaml.Vm.Sim
 
-/-- A C string's bytes as the key it spells. -/
-def strOf (bytes : List (BitVec 8)) : String := String.ofList (bytes.map fun b => Char.ofNat b.toNat)
-
 /-- One node of the table. -/
 structure NodeAt (m : Mem) (pl : Place) (node next : BitVec 64) (key : List (BitVec 8)) (v : Val) : Prop where
   nonnull : node ≠ 0#64

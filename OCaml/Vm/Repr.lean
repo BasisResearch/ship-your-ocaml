@@ -4,6 +4,7 @@ import OCaml.Vm.PrimitiveEntries
 import Vsa.Machine
 import Vsa.Sim.RamReadBytes
 import Vsa.Sim.BlockPilot
+import Vsa.Sim.DlHeap
 
 /-!
 # The VM-state representation predicate (skeleton)
@@ -254,6 +255,58 @@ theorem WorldRepr.chans {c : Config} {cp : ChanPlace} {w : World} (h : WorldRepr
 theorem WorldRepr.ooId {c : Config} {cp : ChanPlace} {w : World} (h : WorldRepr c cp w) :
     word c Layout.sym_oo_last_id = tag64 (BitVec.ofNat 63 w.ooId) := h.2.2
 
+end OCaml.Vm
+
+namespace OCaml.Vm.Primitives.Named.NamedValue
+
+/-- `hash_value_name`'s 32-bit accumulator over `bytes` (unsigned `char`). -/
+def hashBytes (bytes : List (BitVec 8)) : BitVec 32 :=
+  bytes.foldl (fun h b => h * 19#32 + b.zeroExtend 32) 0
+
+/-- A C string's bytes as the key it spells. -/
+def strOf (bytes : List (BitVec 8)) : String := String.ofList (bytes.map fun b => Char.ofNat b.toNat)
+
+end OCaml.Vm.Primitives.Named.NamedValue
+
+namespace OCaml.Vm
+open OCaml.Bytecode Vsa.Machine
+
+/-- **A node of the named-value table at a loop head** (`callback.c`'s
+`{ value val; struct named_value *next; char name[]; }`), read through total
+reads: a malloc'd block in the arena, its value word representing `v`, its
+next word, and its key's ASCII bytes NUL-terminated. -/
+structure NamedNode (c : Config) (pl : Place) (node next : Nat) (key : List (BitVec 8)) (v : Val) : Prop where
+  low : Vsa.Sim.DlHeap.heapStart ≤ node
+  arena : node + 16 + key.length + 1 ≤ Vsa.Sim.DlHeap.heapEnd
+  aligned : node % 8 = 0
+  value : valWord pl v = some (word c node)
+  next : (word c (node + 8)).toNat = next
+  keyBytes : ∀ i (hi : i < key.length), byte c (node + 16 + i) = key[i] ∧ key[i] ≠ 0 ∧ key[i].toNat < 128
+  nul : byte c (node + 16 + key.length) = 0
+
+/-- A bucket's chain of nodes, `NULL`-terminated. -/
+inductive NamedChain (c : Config) (pl : Place) : Nat → List (Nat × List (BitVec 8) × Val) → Prop where
+  | nil : NamedChain c pl 0 []
+  | cons {node next : Nat} {key : List (BitVec 8)} {v : Val} {rest : List (Nat × List (BitVec 8) × Val)} :
+      NamedNode c pl node next key v → NamedChain c pl next rest → NamedChain c pl node ((node, key, v) :: rest)
+
+/-- **The named-value table at a loop head**, with chains `chains`: the 13
+buckets of `named_value_table` (a `.bss` array) head the chains, each key in
+bucket `hash % 13`, the nodes exactly the entries of `world.named`, keys
+unique. The loop invariant holds `∃ chains, NamedRepr c pl named chains`. -/
+structure NamedRepr (c : Config) (pl : Place) (named : List (String × Val))
+    (chains : Nat → List (Nat × List (BitVec 8) × Val)) : Prop where
+  heads : ∀ b, b < 13 → NamedChain c pl (word c (Layout.sym_named_value_table + 8 * b)).toNat (chains b)
+  placed : ∀ b, b < 13 → ∀ e ∈ chains b, (Primitives.Named.NamedValue.hashBytes e.2.1).toNat % 13 = b
+  entries : ∀ k v, (k, v) ∈ named ↔
+    ∃ b, b < 13 ∧ ∃ n kb, (n, kb, v) ∈ chains b ∧ Primitives.Named.NamedValue.strOf kb = k
+  unique : (named.map Prod.fst).Nodup
+
+/-- The table's bytes: the bucket array and every node's header and key. -/
+def NamedReprFoot (chains : Nat → List (Nat × List (BitVec 8) × Val)) (a : Nat) : Prop :=
+  (Layout.sym_named_value_table ≤ a ∧ a < Layout.sym_named_value_table + 104) ∨
+    ∃ b, b < 13 ∧ ∃ e ∈ chains b, e.1 ≤ a ∧ a < e.1 + 16 + e.2.1.length + 1
+
 /-- Recognize only GETPUBMET cache operands on a linear instruction decode.
 An opcode-looking operand is never treated as an instruction boundary. -/
 def methodCacheSlot (code : Code) (index : Nat) : Bool :=
@@ -308,6 +361,8 @@ structure VmReprAt (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace
   atomBase : (word c Layout.sym_caml_atom_table).toNat = pl.atomBase
   /-- `main_argv` holds the program arguments' value (`caml_sys_argv`) -/
   argv : valWord pl s.world.argv = some (word c Layout.sym_main_argv)
+  /-- `named_value_table` represents `world.named` (`caml_register_named_value`) -/
+  named : ∃ chains, NamedRepr c pl s.world.named chains
 
 /-- **`VmRepr P s c`**: the machine is at `caml_interprete`'s loop head in the
 state `s` of program `P`, under SOME placement (a collection may change it). -/
