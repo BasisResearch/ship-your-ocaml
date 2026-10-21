@@ -19,3 +19,8 @@
   bridge; do not silently impose an ASCII guard or claim general refinement.
 - `CustomMemCall` returning `Ready k` alone does not establish exact counter
   increment. A named counter-transition post is needed for n-to-n+1 accounting.
+
+- `formatInteger` currently accepts `d/i/u/x/X/o`, flags, width and precision
+  (`OCaml/Bytecode/Data.lean`), despite older F1 prose saying `%d`. A `%d`-only
+  native summary can help whileMin but cannot discharge the general
+  `F1CcallOpen.format_int_c_call2` field. Preserve that boundary explicitly.

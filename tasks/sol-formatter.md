@@ -20,5 +20,5 @@ The preserved WIP directly edits generated VsaIris/Vsa/Snp*.lean outputs: first 
 Read bprime's format status around lines 128-171; the old SnpGeom excludes the real vsnprintf buffer and vararg layout.
 Reuse the existing LONGINT proof and stdio battery; generalize frame/buffer/va_list ownership rather than assume a run or add impossible placement premises.
 Done: existing SnpFmt and Format.SvfLong consumers build at default proof budgets, and the generalized interface admits the concrete vsnprintf layout; audit changed public theorems and pass template drift.
-Record the precise remaining wrapper/caml_alloc_sprintf/C_CALL2 obligations. Do not begin C4 scale-up.
+Record the precise remaining wrapper/caml_alloc_sprintf/C_CALL2 obligations. Current formatInteger accepts d/i/u/x/X/o plus flags/width/precision; a %d-only summary cannot close the general GoodF1 field. Do not begin C4 scale-up.
 Leave checked edits for lead review; do not attempt sandboxed Git writes or integration.
