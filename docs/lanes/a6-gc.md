@@ -28,6 +28,16 @@
   supplying shape/bitmap preservation, path selection and full allocator
   readiness remains open. This increment does not close G2.
 
+## Refcount transport (2026-10-21)
+
+`ChannelLinksKept.opened` preserves the concrete open-channel list independently
+of refcount writes. `refcountSum_add` and `RefcountSumAt.add/frame/link` handle
+pointwise increments, non-allocating frames and a freshly prepended channel.
+The increment premise is over natural counts, so callers must exclude 32-bit
+wrap. The targeted build passes under 12 GB. These lemmas do not establish
+`Customs`, the representation's refcount equality, or the C_CALL budget bridge;
+those remain open, as does the named `CustomMemCall` supplier.
+
 ## Library live sets (2026-10-12) — current
 
 - a0-boot's runtime readiness is generic over the live set:

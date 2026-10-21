@@ -48,6 +48,67 @@ theorem RefcountSum.of_null {m : Std.ExtHashMap Nat (BitVec 8)}
     (head : bytesT m Layout.sym_caml_all_opened_channels 8 = 0#64) : RefcountSum m 0 :=
   ⟨[], by rw [OpenChannelList, head]; exact .nil, rfl⟩
 
+/-- The list links survive a call. Refcounts may change independently; this
+is shared by ordinary channel calls and the listing primitive. -/
+structure ChannelLinksKept (m m' : Std.ExtHashMap Nat (BitVec 8)) (chs : List Nat) : Prop where
+  head : bytesT m' Layout.sym_caml_all_opened_channels 8 = bytesT m Layout.sym_caml_all_opened_channels 8
+  next : ∀ a ∈ chs, bytesT m' (a + chanOffNext) 8 = bytesT m (a + chanOffNext) 8
+
+theorem ChannelLinksKept.opened {m m' : Std.ExtHashMap Nat (BitVec 8)} {chs : List Nat}
+    (kept : ChannelLinksKept m m' chs) (opened : OpenChannelList m chs) : OpenChannelList m' chs := by
+  unfold OpenChannelList
+  rw [kept.head]
+  exact opened.congr kept.next
+
+/-- Pointwise refcount increments add to the total. `charge` is one for each
+record visited by `caml_ml_out_channels_list` and zero for the other records.
+The premise uses natural counts, so the caller must establish no 32-bit wrap. -/
+theorem refcountSum_add {m m' : Std.ExtHashMap Nat (BitVec 8)} (chs : List Nat) (charge : Nat → Nat)
+    (refs : ∀ a ∈ chs, chanRefs m' a = chanRefs m a + charge a) :
+    refcountSum m' chs = refcountSum m chs + (chs.map charge).sum := by
+  induction chs with
+  | nil => rfl
+  | cons a chs ih =>
+    have tail := ih (fun b hb => refs b (List.mem_cons_of_mem _ hb))
+    have head := refs a List.mem_cons_self
+    simp only [refcountSum, List.map_cons, List.sum_cons] at *
+    omega
+
+/-- A call's refcount update, with unchanged list links. -/
+theorem RefcountSumAt.add {m m' : Std.ExtHashMap Nat (BitVec 8)} {chs : List Nat} {n : Nat}
+    (before : RefcountSumAt m chs n) (links : ChannelLinksKept m m' chs) (charge : Nat → Nat)
+    (refs : ∀ a ∈ chs, chanRefs m' a = chanRefs m a + charge a) :
+    RefcountSumAt m' chs (n + (chs.map charge).sum) :=
+  ⟨links.opened before.opened, by rw [refcountSum_add chs charge refs, before.sum]⟩
+
+/-- Non-allocating channel calls keep the custom count when they keep the
+links and the refcount fields. Buffer, cursor and descriptor writes are free. -/
+theorem RefcountSumAt.frame {m m' : Std.ExtHashMap Nat (BitVec 8)} {chs : List Nat} {n : Nat}
+    (before : RefcountSumAt m chs n) (links : ChannelLinksKept m m' chs)
+    (refs : ∀ a ∈ chs, chanRefs m' a = chanRefs m a) : RefcountSumAt m' chs n := by
+  refine ⟨links.opened before.opened, ?_⟩
+  rw [refcountSum, List.map_congr_left refs]
+  exact before.sum
+
+/-- A newly opened channel is prepended with its initial reference count.
+Existing records need only their next links and refcounts preserved. -/
+theorem RefcountSumAt.link {m m' : Std.ExtHashMap Nat (BitVec 8)} {chs : List Nat} {n a k : Nat}
+    (before : RefcountSumAt m chs n) (linked : OpenChannelsLinked m m' a) (bound : a < 2 ^ 64)
+    (next : ∀ b ∈ chs, bytesT m' (b + chanOffNext) 8 = bytesT m (b + chanOffNext) 8)
+    (refs : ∀ b ∈ chs, chanRefs m' b = chanRefs m b) (initial : chanRefs m' a = k) :
+    RefcountSumAt m' (a :: chs) (n + k) := by
+  refine ⟨?_, ?_⟩
+  · unfold OpenChannelList
+    rw [linked.head, BitVec.toNat_ofNat, Nat.mod_eq_of_lt bound]
+    apply OpenChannels.cons linked.nonzero
+    rw [linked.next]
+    exact before.opened.congr next
+  · simp only [refcountSum, List.map_cons, List.sum_cons, initial]
+    rw [List.map_congr_left refs]
+    have sum := before.sum
+    unfold refcountSum at sum
+    omega
+
 /-- The G1 budget's custom blocks are the quiet ones (`quietBound`). -/
 theorem g1Budget_customs : g1Budget.customs = quietBound := rfl
 

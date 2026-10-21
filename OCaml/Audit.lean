@@ -6725,3 +6725,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.PrimReturnsAtR.toD
 #print axioms OCaml.Vm.Sim.CcallReturns.of_namesD
 #print axioms OCaml.Vm.Sim.CcallReturns.of_primsF1D
+#print axioms OCaml.Vm.Gc.ChannelLinksKept.opened
+#print axioms OCaml.Vm.Gc.refcountSum_add
+#print axioms OCaml.Vm.Gc.RefcountSumAt.add
+#print axioms OCaml.Vm.Gc.RefcountSumAt.frame
+#print axioms OCaml.Vm.Gc.RefcountSumAt.link
