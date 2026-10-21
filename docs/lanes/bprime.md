@@ -275,8 +275,9 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
       `open_out_placed`: the record's `NewChannelPlaced`.
       `open_out_geometry`: the loop geometry at the return (alloc to a
       config with only `young_ptr` written, then `openChan`).
-    - `caml_format_int` is deferred (Kiran, via the foreman); bprime works
-      on `open_descriptor_out` instead.
+    - `caml_format_int` was sequenced after `open_descriptor_out` (bprime's
+      own option 2, not a decision by Kiran); it is on whileMin's critical path
+      (its C_CALL2 sites) and is bprime's current item.
   * **`prim_caml_ml_open_descriptor_out_returns` is proved** (`Sim/OpenOutReturn.lean`), a
     `PrimReturnsAtR` at every C_CALL opcode, arity and return site.
     - Premises: `OpenOutRuntime L` (`∃ Ready state, OpenOutRuntimeAt`;

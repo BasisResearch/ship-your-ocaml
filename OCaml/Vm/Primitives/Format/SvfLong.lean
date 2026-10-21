@@ -86,7 +86,7 @@ theorem svf_convL {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
     (h167 : ldv .lbu Mt (BitVec.ofNat 64 (s - 864 + 167)).toNat = 0#64)
     (h25 : R 25 = BitVec.ofNat 64 x) (h6 : R 6 = 16#64) (h20 : R 20 = 18446744073709551615#64)
     (h27 : R 27 = 0#64)
-    (hv : ldv .ld Mt (BitVec.ofNat 64 ap).toNat = v) (hap1 : s - 40 ≤ ap) (hap2 : ap + 8 ≤ s)
+    (hv : ldv .ld Mt (BitVec.ofNat 64 ap).toNat = v) (hout : ArgsOut s dst n ap 1)
     (hk : ∀ R' Mt', IntAt DA s dst n R0 Mt0 x (ap + 8) rt total L (vMag v) (vSg v) R' Mt' →
       SnpW live Dt DA (snpS s dst n) Q 0x8004834c#64 R' Mt') :
     SnpW live Dt DA (snpS s dst n) Q 0x80048254#64 R Mt by
@@ -186,7 +186,7 @@ theorem svf_iterLD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {
     (hpc : imgM Dt (p + k) = 37#8) (hl1 : imgM Dt (p + k + 1) = 0x6c#8)
     (hd : imgM Dt (p + k + 2) = 0x64#8)
     (v : BitVec 64) (hv : ldv .ld Mt0 (BitVec.ofNat 64 ap).toNat = v)
-    (hap1 : s - 40 ≤ ap) (hap2 : ap + 8 ≤ s) (hc : total.length + k + 21 < 2 ^ 31)
+    (hout : ArgsOut s dst n ap 1) (hc : total.length + k + 21 < 2 ^ 31)
     (hk : ∀ R' Mt', SvfAt s dst n R0 Mt0 (p + k + 3) (ap + 8)
       (BitVec.ofNat 64 (total.length + k + (strBytes (Vsa.While.intToString v.toInt)).length))
       (total ++ pieceBytes (imgM Dt) p k ++ strBytes (Vsa.While.intToString v.toInt)) R' Mt' →
@@ -225,11 +225,11 @@ theorem svf_iterLD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {
   have St7 := CA.st.update SG (R' := R7) (fun z hz => kk z (by omega) (by omega) (by omega) (by omega) (by omega))
     (kk 23 (by decide) (by decide) (by decide) (by decide) (by decide)) (fun _ _ => rfl) CA.st.core.fmt
     CA.st.core.ret CA.st.core.ap
-  have hv' := (ld_ap SG CA.st.core.frame hap1 hap2).trans hv
+  have hv' := (ld_ap CA.st.core.frame hout).trans hv
   refine svf_intL hlive (p + k + 2 + 1) v R7 Mt4 SG St7 CA.sign h25''
     ((hkp7 6 (by decide) (by decide) (by decide) (by decide)).trans h6')
     ((kk 20 (by decide) (by decide) (by decide) (by decide) (by decide)).trans CA.r20)
-    ((kk 27 (by decide) (by decide) (by decide) (by decide) (by decide)).trans CA.r27) hv' hap1 hap2
+    ((kk 27 (by decide) (by decide) (by decide) (by decide) (by decide)).trans CA.r27) hv' hout
     fun R8 Mt8 IA => ?_
   refine svf_intTail hlive v R8 Mt8 SG IA hLl (by omega) (by omega) fun R9 Mt9 g hg A9 => hk R9 Mt9 ?_
   rw [catPieces_lit g hL, show p + k - p = k by omega,

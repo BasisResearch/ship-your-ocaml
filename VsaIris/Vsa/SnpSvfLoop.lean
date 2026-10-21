@@ -92,14 +92,12 @@ theorem catPieces_lit (g : Nat → BitVec 8) {L : List (Nat × Nat)} {p q : Nat}
   · simp [catPieces, pieceBytes]
   · simp [catPieces]
 
-theorem ld_ap {s dst n ap : Nat} {Mt Mt0 : Mem} (SG : SnpGeom s dst n)
-    (hfr : ∀ a, ¬ SvfW s dst n a → imgM Mt a = imgM Mt0 a) (hap1 : s - 40 ≤ ap) (hap2 : ap + 8 ≤ s) :
+theorem ld_ap {s dst n ap : Nat} {Mt Mt0 : Mem}
+    (hfr : ∀ a, ¬ SvfW s dst n a → imgM Mt a = imgM Mt0 a) (hout : ArgsOut s dst n ap 1) :
     ldv .ld Mt (BitVec.ofNat 64 ap).toNat = ldv .ld Mt0 (BitVec.ofNat 64 ap).toNat := by
-  have hs1 := SG.s_lo
-  have hs2 := SG.s_hi
-  have hdsep := SG.d_sep
+  have := hout.hi
   rw [toNat_ofNat_lt (by omega)]
-  exact ldv_agree .ld fun i hi => hfr _ (by simp only [SvfW, snpFP, widthOfM] at hi ⊢; omega)
+  exact ldv_agree .ld fun i hi => hfr _ (hout.out _ (by omega) (by simp only [widthOfM] at hi; omega))
 
 theorem svf_iterS {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt : Mem} {DA : List Nat}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
@@ -111,7 +109,7 @@ theorem svf_iterS {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
     (hb : ∀ i, i < k → imgM Dt (p + i) ≠ 0#8 ∧ imgM Dt (p + i) ≠ 37#8)
     (hpc : imgM Dt (p + k) = 37#8) (hsc : imgM Dt (p + k + 1) = 0x73#8)
     (a len : Nat) (hap : ldv .ld Mt0 (BitVec.ofNat 64 ap).toNat = BitVec.ofNat 64 a)
-    (hap1 : s - 40 ≤ ap) (hap2 : ap + 8 ≤ s) (hstr : DStr Dt DA a len)
+    (hout : ArgsOut s dst n ap 1) (hstr : DStr Dt DA a len)
     (hc : total.length + k + len + 1 < 2 ^ 31)
     (hk : ∀ R' Mt', SvfAt s dst n R0 Mt0 (p + k + 2) (ap + 8)
       (BitVec.ofNat 64 (total.length + k + len))
@@ -135,8 +133,8 @@ theorem svf_iterS {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
   refine svf_convStart hlive (p + k) R3 Mt3 SG St3 h22'' (fun b h1 h2 => FG.dom b (by omega) (by omega))
     (by omega) (by omega) (by omega) fun R4 Mt4 CA => ?_
   rw [hsc] at CA
-  have hap' := (ld_ap SG CA.st.core.frame hap1 hap2).trans hap
-  refine svf_convS hlive (p + k) a len R4 Mt4 SG CA hLl hap' hap1 hap2 (by omega) hstr
+  have hap' := (ld_ap CA.st.core.frame hout).trans hap
+  refine svf_convS hlive (p + k) a len R4 Mt4 SG CA hLl hap' hap (by omega) hstr
     (by have := hstr.lo; omega) (pieceSrc_of_data DO SG (by omega) hstr.dom) (by omega) (by omega) DO.tab
     fun R5 Mt5 PI => ?_
   refine svf_print hlive R5 Mt5 SG PI fun R6 Mt6 g hg1 hg2 A6 => hk R6 Mt6 ?_
@@ -249,7 +247,7 @@ theorem svf_iterLLD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) 
     (hpc : imgM Dt (p + k) = 37#8) (hl1 : imgM Dt (p + k + 1) = 0x6c#8)
     (hl2 : imgM Dt (p + k + 2) = 0x6c#8) (hd : imgM Dt (p + k + 3) = 0x64#8)
     (v : BitVec 64) (hv : ldv .ld Mt0 (BitVec.ofNat 64 ap).toNat = v)
-    (hap1 : s - 40 ≤ ap) (hap2 : ap + 8 ≤ s) (hc : total.length + k + 21 < 2 ^ 31)
+    (hout : ArgsOut s dst n ap 1) (hc : total.length + k + 21 < 2 ^ 31)
     (hk : ∀ R' Mt', SvfAt s dst n R0 Mt0 (p + k + 4) (ap + 8)
       (BitVec.ofNat 64 (total.length + k + (strBytes (Vsa.While.intToString v.toInt)).length))
       (total ++ pieceBytes (imgM Dt) p k ++ strBytes (Vsa.While.intToString v.toInt)) R' Mt' →
@@ -289,11 +287,11 @@ theorem svf_iterLLD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) 
   have St7 := CA.st.update SG (R' := R7) (fun z hz => kk z (by omega) (by omega) (by omega) (by omega) (by omega))
     (kk 23 (by decide) (by decide) (by decide) (by decide) (by decide)) (fun _ _ => rfl) CA.st.core.fmt
     CA.st.core.ret CA.st.core.ap
-  have hv' := (ld_ap SG CA.st.core.frame hap1 hap2).trans hv
+  have hv' := (ld_ap CA.st.core.frame hout).trans hv
   refine svf_intQ hlive (p + k + 2 + 1 + 1) v R7 Mt4 SG St7 CA.sign h25''
     ((hkp7 6 (by decide) (by decide) (by decide) (by decide)).trans h6')
     ((kk 20 (by decide) (by decide) (by decide) (by decide) (by decide)).trans CA.r20)
-    ((kk 27 (by decide) (by decide) (by decide) (by decide) (by decide)).trans CA.r27) hv' hap1 hap2
+    ((kk 27 (by decide) (by decide) (by decide) (by decide) (by decide)).trans CA.r27) hv' hout
     fun R8 Mt8 IA => ?_
   refine svf_intTail hlive v R8 Mt8 SG IA hLl (by omega) (by omega) fun R9 Mt9 g hg A9 => hk R9 Mt9 ?_
   rw [catPieces_lit g hL, show p + k - p = k by omega,
@@ -301,14 +299,12 @@ theorem svf_iterLLD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) 
   rw [show p + k + 2 + 1 + 1 = p + k + 4 by omega] at A9
   exact A9
 
-theorem lw_ap {s dst n ap : Nat} {Mt Mt0 : Mem} (SG : SnpGeom s dst n)
-    (hfr : ∀ a, ¬ SvfW s dst n a → imgM Mt a = imgM Mt0 a) (hap1 : s - 40 ≤ ap) (hap2 : ap + 8 ≤ s) :
+theorem lw_ap {s dst n ap : Nat} {Mt Mt0 : Mem}
+    (hfr : ∀ a, ¬ SvfW s dst n a → imgM Mt a = imgM Mt0 a) (hout : ArgsOut s dst n ap 1) :
     ldv .lw Mt (BitVec.ofNat 64 ap).toNat = ldv .lw Mt0 (BitVec.ofNat 64 ap).toNat := by
-  have hs1 := SG.s_lo
-  have hs2 := SG.s_hi
-  have hdsep := SG.d_sep
+  have := hout.hi
   rw [toNat_ofNat_lt (by omega)]
-  exact ldv_agree .lw fun i hi => hfr _ (by simp only [SvfW, snpFP, widthOfM] at hi ⊢; omega)
+  exact ldv_agree .lw fun i hi => hfr _ (hout.out _ (by omega) (by simp only [widthOfM] at hi; omega))
 
 theorem svf_iterD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt : Mem} {DA : List Nat}
     {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {s dst n : Nat}
@@ -320,7 +316,7 @@ theorem svf_iterD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
     (hb : ∀ i, i < k → imgM Dt (p + i) ≠ 0#8 ∧ imgM Dt (p + i) ≠ 37#8)
     (hpc : imgM Dt (p + k) = 37#8) (hd : imgM Dt (p + k + 1) = 0x64#8)
     (v : BitVec 64) (hv : ldv .lw Mt0 (BitVec.ofNat 64 ap).toNat = v)
-    (hap1 : s - 40 ≤ ap) (hap2 : ap + 8 ≤ s) (hc : total.length + k + 21 < 2 ^ 31)
+    (hout : ArgsOut s dst n ap 1) (hc : total.length + k + 21 < 2 ^ 31)
     (hk : ∀ R' Mt', SvfAt s dst n R0 Mt0 (p + k + 2) (ap + 8)
       (BitVec.ofNat 64 (total.length + k + (strBytes (Vsa.While.intToString v.toInt)).length))
       (total ++ pieceBytes (imgM Dt) p k ++ strBytes (Vsa.While.intToString v.toInt)) R' Mt' →
@@ -348,11 +344,11 @@ theorem svf_iterD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
   have St7 := CA.st.update SG (R' := R7) (fun z hz => hkp7 z (by omega) (by omega) (by omega) (by omega))
     (hkp7 23 (by decide) (by decide) (by decide) (by decide)) (fun _ _ => rfl) CA.st.core.fmt
     CA.st.core.ret CA.st.core.ap
-  have hv' := (lw_ap SG CA.st.core.frame hap1 hap2).trans hv
+  have hv' := (lw_ap CA.st.core.frame hout).trans hv
   refine svf_intD hlive (p + k + 1 + 1) v R7 Mt4 SG St7 CA.sign h25''
     ((hkp7 6 (by decide) (by decide) (by decide) (by decide)).trans CA.r6)
     ((hkp7 20 (by decide) (by decide) (by decide) (by decide)).trans CA.r20)
-    ((hkp7 27 (by decide) (by decide) (by decide) (by decide)).trans CA.r27) hv' hap1 hap2
+    ((hkp7 27 (by decide) (by decide) (by decide) (by decide)).trans CA.r27) hv' hout
     fun R8 Mt8 IA => ?_
   refine svf_intTail hlive v R8 Mt8 SG IA hLl (by omega) (by omega) fun R9 Mt9 g hg A9 => hk R9 Mt9 ?_
   rw [catPieces_lit g hL, show p + k - p = k by omega,

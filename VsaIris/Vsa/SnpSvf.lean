@@ -172,6 +172,37 @@ structure SvfSaved (Mt : Mem) (s : Nat) (R0 : Nat → BitVec 64) : Prop where
 def SvfW (s dst n a : Nat) : Prop :=
   (s - 992 ≤ a ∧ a < s - 272) ∨ (dst ≤ a ∧ a < dst + n) ∨ (snpFP s ≤ a ∧ a < snpFP s + 16)
 
+/-- **The va_list slots `[ap, ap + 8 len)` miss everything `_svfprintf_r`
+writes** (`SvfW`): snprintf's own spill below `s`, or a caller's `va_list`
+(vsnprintf's) anywhere apart from the frame, the buffer and the FILE. -/
+structure ArgsOut (s dst n ap len : Nat) : Prop where
+  ram : 0x80000000 ≤ ap
+  tohost : tohostAddr + 8 ≤ ap
+  hi : ap + 8 * len ≤ 0x100000000
+  /-- the slots lie in the formatter's owned window (`snpS`) -/
+  ownLo : s - snpNeed ≤ ap
+  ownHi : ap + 8 * len ≤ s + snpAbove
+  out : ∀ a, ap ≤ a → a < ap + 8 * len → ¬ SvfW s dst n a
+
+theorem ArgsOut.head {s dst n ap len : Nat} (h : ArgsOut s dst n ap len) (pos : 0 < len) :
+    ArgsOut s dst n ap 1 :=
+  ⟨h.ram, h.tohost, by have := h.hi; omega, h.ownLo, by have := h.ownHi; omega, fun a lo hi => h.out a lo (by omega)⟩
+
+theorem ArgsOut.tail {s dst n ap len : Nat} (h : ArgsOut s dst n ap (len + 1)) :
+    ArgsOut s dst n (ap + 8) len :=
+  ⟨by have := h.ram; omega, by have := h.tohost; omega, by have := h.hi; omega,
+    by have := h.ownLo; omega, by have := h.ownHi; omega, fun a lo hi => h.out a (by omega) (by omega)⟩
+
+/-- snprintf's spill: slots in `[s - 40, s)` with the buffer above `s`. -/
+theorem ArgsOut.of_spill {s dst n ap len : Nat} (SG : SnpGeom s dst n) (above : s ≤ dst)
+    (h1 : s - 40 ≤ ap) (h2 : ap + 8 * len ≤ s) : ArgsOut s dst n ap len := by
+  have := SG.s_hi
+  have := SG.s_lo
+  have ht : tohostAddr + 8 ≤ 0x8007d138 := by decide
+  refine ⟨by omega, by omega, by omega, by unfold snpNeed; omega, by unfold snpAbove; omega, fun a lo hi => ?_⟩
+  simp only [SvfW, snpFP]
+  omega
+
 structure SvfCore (s dst n : Nat) (R0 : Nat → BitVec 64) (Mt0 : Mem) (p ap : Nat) (rt : BitVec 64)
     (total : List (BitVec 8)) (R : Nat → BitVec 64) (Mt : Mem) : Prop where
   r2 : R 2 = BitVec.ofNat 64 (s - 864)

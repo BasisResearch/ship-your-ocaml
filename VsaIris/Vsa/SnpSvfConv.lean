@@ -9,7 +9,7 @@ macro_rules
   | `(tactic| sx_side) =>
     `(tactic| (apply snpRO_mem_img; (try simp only [upd_apply, Nat.reduceEqDiff, ite_true, ite_false]); decide))
 
-theorem svf_stack_owned {s dst n a : Nat} (h : s - snpNeed ≤ a ∧ a < s) : snpS s dst n a :=
+theorem svf_stack_owned {s dst n a : Nat} (h : s - snpNeed ≤ a ∧ a < s + snpAbove) : snpS s dst n a :=
   .inr (.inl h)
 
 macro_rules
@@ -244,8 +244,7 @@ theorem DStr.read {Dt : Mem} {DA : List Nat} {a len : Nat} (h : DStr Dt DA a len
     {L : List (Nat × Nat)} (q a len : Nat) (R : Nat → BitVec 64) (Mt : Mem) (SG : SnpGeom s dst n)
     (CA : ConvAt DA s dst n R0 Mt0 (q + 1) ap (BitVec.ofNat 64 c) total L (q + 1) 0x73 R Mt)
     (hL : L.length ≤ 1)
-    (hap : ldv .ld Mt (BitVec.ofNat 64 ap).toNat = BitVec.ofNat 64 a) (hap1 : s - 40 ≤ ap)
-    (hap2 : ap + 8 ≤ s) (hq : q + 3 < 2 ^ 64) (hstr : DStr Dt DA a len) (ha0 : a ≠ 0)
+    (hap : ldv .ld Mt (BitVec.ofNat 64 ap).toNat = BitVec.ofNat 64 a) (hout : ArgsOut s dst n ap 1) (hq : q + 3 < 2 ^ 64) (hstr : DStr Dt DA a len) (ha0 : a ≠ 0)
     (hsrc : PieceSrc DA s dst n a len) (hc : c + len + 1 < 2 ^ 31) (hsum : sumLen L + len + 1 < 2 ^ 31)
     (hT : TabAt Dt DA)
     (hk : ∀ R' Mt', PrintIn DA s dst n R0 Mt0 (q + 2) (ap + 8) c total L a len 0 R' Mt' →
@@ -253,6 +252,11 @@ theorem DStr.read {Dt : Mem} {DA : List Nat} {a len : Nat} (h : DStr Dt DA a len
     SnpW live Dt DA (snpS s dst n) Q 0x800479e4#64 R Mt by
   have hs1 := SG.s_lo
   have hs2 := SG.s_hi
+  have hoRam := hout.ram
+  have hoTo := hout.tohost
+  have hoHi := hout.hi
+  have hoLo := hout.ownLo
+  have hoUp := hout.ownHi
   refine svf_disp hlive (q + 1) 0x73 _ (.inl ⟨rfl, rfl⟩) R Mt (by omega) CA.r25 CA.r24 CA.r26 CA.r22 hT
     fun R1 h25 h24 hkp => ?_
   have hsa := SG.s_al
@@ -409,12 +413,17 @@ theorem vMag_lt (v : BitVec 64) : vMag v < 2 ^ 64 := by unfold vMag; split <;> e
     (h167 : ldv .lbu Mt (BitVec.ofNat 64 (s - 864 + 167)).toNat = 0#64)
     (h25 : R 25 = BitVec.ofNat 64 x) (h6 : R 6 = 32#64) (h20 : R 20 = 18446744073709551615#64)
     (h27 : R 27 = 0#64)
-    (hv : ldv .ld Mt (BitVec.ofNat 64 ap).toNat = v) (hap1 : s - 40 ≤ ap) (hap2 : ap + 8 ≤ s)
+    (hv : ldv .ld Mt (BitVec.ofNat 64 ap).toNat = v) (hout : ArgsOut s dst n ap 1)
     (hk : ∀ R' Mt', IntAt DA s dst n R0 Mt0 x (ap + 8) rt total L (vMag v) (vSg v) R' Mt' →
       SnpW live Dt DA (snpS s dst n) Q 0x8004834c#64 R' Mt') :
     SnpW live Dt DA (snpS s dst n) Q 0x80048254#64 R Mt by
   have hs1 := SG.s_lo
   have hs2 := SG.s_hi
+  have hoRam := hout.ram
+  have hoTo := hout.tohost
+  have hoHi := hout.hi
+  have hoLo := hout.ownLo
+  have hoUp := hout.ownHi
   have hsa := SG.s_al
   have h2 := St.core.r2
   have hapf := St.core.ap
@@ -505,12 +514,17 @@ theorem vMag_lt (v : BitVec 64) : vMag v < 2 ^ 64 := by unfold vMag; split <;> e
     (h167 : ldv .lbu Mt (BitVec.ofNat 64 (s - 864 + 167)).toNat = 0#64)
     (h25 : R 25 = BitVec.ofNat 64 x) (h6 : R 6 = 0#64) (h20 : R 20 = 18446744073709551615#64)
     (h27 : R 27 = 0#64)
-    (hv : ldv .lw Mt (BitVec.ofNat 64 ap).toNat = v) (hap1 : s - 40 ≤ ap) (hap2 : ap + 8 ≤ s)
+    (hv : ldv .lw Mt (BitVec.ofNat 64 ap).toNat = v) (hout : ArgsOut s dst n ap 1)
     (hk : ∀ R' Mt', IntAt DA s dst n R0 Mt0 x (ap + 8) rt total L (vMag v) (vSg v) R' Mt' →
       SnpW live Dt DA (snpS s dst n) Q 0x8004834c#64 R' Mt') :
     SnpW live Dt DA (snpS s dst n) Q 0x80048254#64 R Mt by
   have hs1 := SG.s_lo
   have hs2 := SG.s_hi
+  have hoRam := hout.ram
+  have hoTo := hout.tohost
+  have hoHi := hout.hi
+  have hoLo := hout.ownLo
+  have hoUp := hout.ownHi
   have hsa := SG.s_al
   have h2 := St.core.r2
   have hapf := St.core.ap
