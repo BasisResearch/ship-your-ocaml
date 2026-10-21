@@ -199,7 +199,8 @@ local macro "atom_step " seg:term : tactic => `(tactic| (
       atomloop_line_800044e4, atomloop_line_800044e8, runGM, stepGM, eraseG, wvalM, srcVal, lookupG,
       ite_true, ite_false, Nat.reduceEqDiff, ldsRunM, stepLdsM, List.headD_cons, List.tail_cons, Option.getD_some] at pins
     rw [word, atom_cursor_next, atom_header_next] at pins
-    exact ⟨gholds_lookup (n := 11) _ pins rfl, gholds_lookup (n := 15) _ pins rfl, gholds_lookup (n := 14) _ pins rfl,
+    exact ⟨gholds_lookup (n := 11) _ pins rfl, gholds_lookup (n := 15) _ pins rfl, gholds_lookup (n := 13) _ pins rfl,
+      gholds_lookup (n := 14) _ pins rfl,
       gholds_lookup (n := 12) _ pins rfl, gholds_lookup (n := 10) _ pins rfl, trivial⟩
   · rfl
   · decide))
@@ -217,8 +218,8 @@ theorem atom_loop_step (c : Config) (ra base a0 : BitVec 64) (k : Nat) {seg : Li
     (low : heapStart ≤ base.toNat) (high : base.toNat + 2048 ≤ heapEnd) (aligned : base.toNat % 8 = 0)
     (table : bytesT c.σ.mem atomTableAddr 8 = base) :
     FnSummary 0x800044d4#64 (fun e => e = c) (WriteRegistersPost [11, 15, 13, 14] [atomEntry base k] c next
-      a0 [(11, base), (15, atomCursor (k + 1)), (14, atomHeader (k + 1)), (12, BitVec.ofNat 64 atomTableAddr),
-        (10, a0)]) := by
+      a0 [(11, base), (15, atomCursor (k + 1)), (13, atomCursor (k + 1) + Functions.sign_extend (m := 64) 2048#12),
+        (14, atomHeader (k + 1)), (12, BitVec.ofNat 64 atomTableAddr), (10, a0)]) := by
   have hk : k < 256 := by cases exit <;> omega
   have hS : heapStart = 0x8007d140 := rfl
   have hE : heapEnd = 0x86800000 := rfl
