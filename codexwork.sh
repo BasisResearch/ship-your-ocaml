@@ -33,7 +33,9 @@ git rebase main || stuck 'rebase conflict; work preserved for manager'
 START=$(git rev-parse HEAD)
 echo "Worker: gpt-6.1-sol, high reasoning; initial commit: $START"
 set +e
-"$CODEX" exec -m gpt-6.1-sol -c 'model_reasoning_effort="high"' \
+systemd-run --user --scope -q -p MemoryMax=12G \
+  env LEAN_NUM_THREADS=2 SYO_LEAN_CAPPED=1 \
+  "$CODEX" exec -m gpt-6.1-sol -c 'model_reasoning_effort="high"' \
   -s workspace-write --add-dir "$ROOT" -C "$WORKTREE" \
   "$(cat "$TASK")" 8>&- 9>&-
 RC=$?

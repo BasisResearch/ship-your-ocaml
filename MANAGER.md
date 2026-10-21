@@ -7,18 +7,24 @@ subagents. At most two run for this project. Reuse `../syo-wt/*` lane worktrees.
 Launch from the main checkout:
 
 ```
-nohup ./codexwork.sh a0-boot-next tasks/sol-startup.md >/dev/null 2>&1 &
+./codexwork.sh a0-boot-next tasks/sol-startup.md > /tmp/syo-startup-launch.log 2>&1 & wait
 ```
 
 The runner checks free memory, locks a project worker slot and the worktree,
 requires preserved WIP to be committed, fetches and rebases on current `main`,
-then logs to `logs/sol-<slot>-<time>-<pid>.log`. Each task starts with
+then logs to `logs/sol-<slot>-<time>-<pid>.log`. Keep the shell waiting when
+using an exec tool so its process cleanup does not kill the background job.
+Each task starts with
 `tasks/RULES.txt` verbatim, followed by one target, files and a completion
-criterion; fewer than 40 lines in total. Every Lean run uses a 12 GB cgroup.
+criterion; fewer than 40 lines in total. The launcher puts the entire worker
+inside a 12 GB systemd scope, so sandboxed child builds inherit the limit.
+Use `scripts/lean-capped.sh` for builds; outside a worker it creates the scope.
 
 Review actual changes, theorem premises, audit results and gate output before
-counting a landing. Workers land through `scripts/integrate.sh`; the foreman
-also uses that train for reviewed recovered work and coordination updates.
+counting a landing. Workers commit and report results. The foreman runs
+`scripts/integrate.sh` outside the worker sandbox after review, because
+`workspace-write` denies the user systemd bus and home landing queue.
+Append the final `RESULT: landed <commit>` to the worker log after landing.
 Do not re-send routes recorded in `docs/lanes/DEAD-ENDS.md`. Keep `STATUS.md`
 current, reserving `## Needs user` for decisions only the user can make.
 

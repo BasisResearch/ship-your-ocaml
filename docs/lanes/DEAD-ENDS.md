@@ -1,5 +1,9 @@
 # Routes not to repeat
 
+- 2026-10-21: a `workspace-write` worker cannot reach the user systemd bus
+  or write the home integration queue. Launch the entire worker in the 12 GB
+  scope and have the lead run integration after review. Keep the sandbox.
+
 - 2026-10-21: `ulimit -v 12582912` prevents Lean thread/import initialization
   in large closures, even at low RSS and with two threads. Use the actual
   aggregate `MemoryMax=12G` cgroup cap without a virtual-address limit.
