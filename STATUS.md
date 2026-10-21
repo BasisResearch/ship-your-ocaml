@@ -25,8 +25,8 @@ None currently.
 
 The lead now uses separate `codex exec` workers (`gpt-6.1-sol`, high reasoning),
 at most two at a time, launched through `codexwork.sh`. Built-in proof agents
-have stopped. The current Sol tasks finish the named-value invariant migration and G2
-small-list removal. Startup and refcount changes are reviewed and queued
+have stopped. The current Sol tasks strengthen physical named-node ownership/separation and
+validate G2 small-list removal. Startup and refcount changes are reviewed and queued
 for lead integration. Workers inherit a 12 GB systemd scope; the lead handles
 Git and landings outside their workspace-write sandbox. Known failed routes are in `docs/lanes/DEAD-ENDS.md`.
 
@@ -41,8 +41,9 @@ The remaining general C_CALL fields are `openOutRuntime`, `outListRuntime`,
 The a2-sem uncaught-exception WIP is preserved in `syo-wt/a2-sem-next`;
 `GoodF1` excludes that path, so it is behind current F1 work in priority.
 
-The named worker has checked the missing domain-separation witness for the old
-geometry and is repairing the full-byte lookup bridge. This is an invariant
+The named worker checked the full-byte lookup bridge and 43 focused axiom
+reports, preserved at `7c6bc6c1`. Its full consumer build remains incomplete.
+The next worker is strengthening physical named-node ownership/separation. This is an invariant
 design task, not a user-only blocker. The next task supplies physical ownership
 and separation, then migrates payload consumers. The formatter WIP is preserved
 in `bprime` at `2c0a97a9`; its next worker must port generated edits into templates.
