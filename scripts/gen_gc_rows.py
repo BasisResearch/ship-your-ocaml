@@ -506,6 +506,7 @@ def outputs():
         index.write_text('\n'.join(decodes) + '\n')
         for name, stem in [('caml_oldify_one', 'OldifyOne'), ('caml_modify', 'Modify'),
                            ('caml_oldify_mopup', 'Mopup'), ('caml_alloc_shr_for_minor_gc', 'AllocMinor'), ('bf_allocate', 'BestFit'), ('bf_split', 'BestFitSplitFn'), ('ffs', 'Ffs'),
+                           ('bf_insert_remnant_small', 'BestFitRemnant'),
                            ('caml_realloc_ref_table', 'ReallocRef'),
                            ('realloc_generic_table.isra.0', 'Realloc'),
                            ('caml_oldify_local_roots', 'LocalRoots'),

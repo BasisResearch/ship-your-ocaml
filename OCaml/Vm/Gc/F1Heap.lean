@@ -77,12 +77,19 @@ theorem extents_miss_table : ∀ x ∈ f1Extents,
 def Covered (H : List (Nat × Nat)) (x : Nat × Nat) : Prop :=
   ∃ e ∈ H, e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2
 
+/-- `named_value_table`'s bucket array (`.bss`, 13 words): lane a1-prims'
+`NamedRepr` reads it, so no tolerated low-static write may touch it. -/
+def NamedStatic (a : Nat) : Prop :=
+  Layout.sym_named_value_table ≤ a ∧ a < Layout.sym_named_value_table + 104
+
+instance (a : Nat) : Decidable (NamedStatic a) := by unfold NamedStatic; infer_instance
+
 /-- A write window the F1 heap invariant tolerates, independent of the live
 blocks. -/
 def F1HeapSafe (w : W) : Prop :=
   (∃ x ∈ f1Extents, x.1 ≤ w.lo ∧ w.hi ≤ x.1 + x.2) ∨ heapEnd ≤ w.lo ∨
     (∀ a, w.lo ≤ a → a < w.hi → a ∈ errnoBytes) ∨
-    (w.hi ≤ heapStart ∧ ∀ a, w.lo ≤ a → a < w.hi → ¬ allocGlobal a ∧ ¬ HeapPinned a)
+    (w.hi ≤ heapStart ∧ ∀ a, w.lo ≤ a → a < w.hi → ¬ allocGlobal a ∧ ¬ HeapPinned a ∧ ¬ NamedStatic a)
 
 /-- The remembered set's storage `[b, e)` with insertion pointer `p` and
 limit `l` (`caml_alloc_table`: `limit = threshold ≤ end`): its own live block,
@@ -171,6 +178,43 @@ structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Co
 /-- The F1 heap invariant. -/
 def LibHeap (c : Config) : Prop := ∃ H cap chs, LibHeapAt H cap chs c
 
+/-! ## Named values (`caml_register_named_value`, lane a1-prims)
+
+Each registration allocates one node (`caml_stat_alloc(24 + len)`) and one
+skiplist cell for its generational root (`24 + 8·level` bytes, `level ≤ 16`).
+F1 programs register at most `maxNamed` names of at most `maxNameLen`
+bytes (BcSem guards); `NamedRoom` reserves a node and a cell for each one
+still to come, on top of `reserved`, and keeps the allocated blocks apart. -/
+
+def maxNamed : Nat := 16
+def maxNameLen : Nat := 64
+def nodeCharge : Nat := 2 ^ 7
+def cellCharge : Nat := 2 ^ 8
+def namedCharge : Nat := nodeCharge + cellCharge
+
+theorem node_fits {len : Nat} (h : len ≤ maxNameLen) : vsaChg (len + 24) nodeCharge := by
+  refine ⟨by omega, ?_⟩
+  unfold Vsa.Sim.roundUp16 nodeCharge; simp only [maxNameLen] at h; omega
+
+theorem cell_fits {level : Nat} (h : level ≤ 16) : vsaChg (24 + 8 * level) cellCharge := by
+  refine ⟨by omega, ?_⟩
+  unfold Vsa.Sim.roundUp16 cellCharge; omega
+
+/-- **Room and blocks for named values**: `named` registrations so far, their
+node and cell blocks `nodes`. -/
+structure NamedRoom (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (nodes : List (Nat × Nat))
+    (named : Nat) (c : Config) : Prop where
+  room : reserved (word c (refTable + Layout.off_ref_table_base)).toNat chs.length + namedCharge * (maxNamed - named)
+    ≤ cap
+  bound : named ≤ maxNamed
+  live : ∀ x ∈ nodes, x ∈ H
+  apartCovered : ∀ x ∈ nodes, ∀ y ∈ f1Covered, x.1 + x.2 ≤ y.1 ∨ y.1 + y.2 ≤ x.1
+  apartRecords : ∀ x ∈ nodes, ∀ a ∈ chs, x.1 + x.2 ≤ a ∨ a + chanRecordBytes ≤ x.1
+
+theorem NamedRoom.libRoom {H cap chs nodes named c} (r : NamedRoom H cap chs nodes named c) :
+    reserved (word c (refTable + Layout.off_ref_table_base)).toNat chs.length ≤ cap := by
+  have := r.room; omega
+
 theorem F1HeapSafe.heapSafe {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
     (h : LibHeapAt H cap chs c) {w : W} (s : F1HeapSafe w) : HeapSafe H w := by
   rcases s with ⟨x, hx, lo, hi⟩ | s | s | s
@@ -179,7 +223,7 @@ theorem F1HeapSafe.heapSafe {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat}
     exact Or.inl ⟨e, he, by omega, by omega⟩
   · exact Or.inr (Or.inl s)
   · exact Or.inr (Or.inr (Or.inl s))
-  · exact Or.inr (Or.inr (Or.inr s))
+  · exact Or.inr (Or.inr (Or.inr ⟨s.1, fun a lo hi => ⟨(s.2 a lo hi).1, (s.2 a lo hi).2.1⟩⟩))
 
 /-- A safe window misses every open channel record. -/
 theorem F1HeapSafe.outside {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}

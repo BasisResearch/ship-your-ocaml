@@ -663,22 +663,27 @@ theorem mutable_heapSafe : ∀ w ∈ mutableStatics, F1HeapSafe w := by
   have errno : ∀ lo hi : Nat, (∀ a, lo ≤ a → a < hi → a ∈ Startup.errnoBytes) → F1HeapSafe ⟨lo, hi⟩ :=
     fun _ _ h => Or.inr (Or.inr (Or.inl h))
   have low : ∀ lo hi : Nat, hi ≤ Vsa.Sim.DlHeap.heapStart →
-      (∀ a, lo ≤ a → a < hi → ¬ VsaIris.VsaHeap.allocGlobal a ∧ ¬ HeapPinned a) → F1HeapSafe ⟨lo, hi⟩ :=
+      (∀ a, lo ≤ a → a < hi → ¬ VsaIris.VsaHeap.allocGlobal a ∧ ¬ HeapPinned a ∧ ¬ NamedStatic a) →
+      F1HeapSafe ⟨lo, hi⟩ :=
     fun _ _ h k => Or.inr (Or.inr (Or.inr ⟨h, k⟩))
   rcases hw with rfl | rfl | rfl | rfl
   · exact errno _ _ fun a l h => Startup.errnoBytes_mem.2 (Or.inl ⟨l, h⟩)
-  · refine low _ _ (by decide) fun a l h => ⟨fun g => ?_, fun p => ?_⟩
+  · refine low _ _ (by decide) fun a l h => ⟨fun g => ?_, fun p => ?_, fun n => ?_⟩
     · unfold VsaIris.VsaHeap.allocGlobal VsaIris.VsaHeap.InRange at g
       simp only [Layout.sym_oo_last_id] at l h; omega
     · unfold HeapPinned at p
       simp only [Image.textBase, Image.textSize, Startup.allocatorImpureAddr, Layout.sym_Caml_state,
         Layout.sym_pool, Layout.sym_oo_last_id] at *; omega
-  · refine low _ _ (by decide) fun a l h => ⟨fun g => ?_, fun p => ?_⟩
+    · unfold NamedStatic at n
+      simp only [Layout.sym_named_value_table, Layout.sym_oo_last_id] at l h n; omega
+  · refine low _ _ (by decide) fun a l h => ⟨fun g => ?_, fun p => ?_, fun n => ?_⟩
     · unfold VsaIris.VsaHeap.allocGlobal VsaIris.VsaHeap.InRange at g
       simp only [Layout.sym_caml_callback_depth] at l h; omega
     · unfold HeapPinned at p
       simp only [Image.textBase, Image.textSize, Startup.allocatorImpureAddr, Layout.sym_Caml_state,
         Layout.sym_pool, Layout.sym_caml_callback_depth] at *; omega
+    · unfold NamedStatic at n
+      simp only [Layout.sym_named_value_table, Layout.sym_caml_callback_depth] at l h n; omega
   · exact errno _ _ fun a l h => Startup.errnoBytes_mem.2 (Or.inr ⟨l, h⟩)
 
 /-- **`AllocationRuntime` for a nursery reservation.** Every store misses the
