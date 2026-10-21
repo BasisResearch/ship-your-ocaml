@@ -96,7 +96,7 @@ checked alias explains the explicit alignment premise in the ISINT bridge. -/
 theorem isint_not_valWord : ¬ (∀ (pl : Place) (v : Val) (w : BitVec 64),
     valWord pl v = some w → isintWord w = tag64 (if v.isInt then 1#63 else 0#63)) := by
   intro h
-  have bad := h ⟨fun _ => some 1, 0, 0⟩ (.ptr 0 0) 1#64 rfl
+  have bad := h ⟨fun _ => some 1, 0, 0, []⟩ (.ptr 0 0) 1#64 rfl
   exact (by decide : isintWord 1#64 ≠ tag64 0#63) bad
 
 end OCaml.Vm.Sim

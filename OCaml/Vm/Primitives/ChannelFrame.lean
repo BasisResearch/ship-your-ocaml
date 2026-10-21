@@ -26,6 +26,7 @@ structure PayloadChanOutside (log : List WEntry) (P : Prog) (s : St) (c : Config
   ooId : OutLRange log Layout.sym_oo_last_id 8
   /-- `main_argv`, a static word -/
   argv : OutLRange log Layout.sym_main_argv 8
+  named : ∀ a, NamedPlFoot pl s.world.named a → OutLRange log a 1
 
 /-- **Transport the VM payload across a channel primitive's footprint**: the
 world changes only channel `id` (now `ch'`, represented at its record) and
@@ -38,7 +39,8 @@ theorem VmPayload.frame_chan {P : Prog} {s : St} {c c' : Config} {pl : Place} {c
     (counter : w'.ooId = s.world.ooId)
     (rootsEq : roots P {s with world := w'} = roots P s)
     (place : cp id = some a) (repr : ChanAt c' a ch')
-    (console : output c'.σ = bytesToString w'.console) :
+    (console : output c'.σ = bytesToString w'.console)
+    (named : w'.named = s.world.named := by first | rfl | assumption) :
     VmPayload P {s with world := w'} c' pl cp sp high := by
   have copy := fun a n (ho : OutLRange log a n) => copied_of_outsideLog memory ho
   have hw : ∀ a, OutLRange log a 8 → word c' a = word c a :=
@@ -96,5 +98,12 @@ theorem VmPayload.frame_chan {P : Prog} {s : St} {c c' : Config} {pl : Place} {c
       exact Option.some.inj e
     rw [same, hw _ outside.argv]
     exact h.argv
+
+  · obtain ⟨chains, nr⟩ := h.named
+    refine ⟨chains, ?_⟩
+    change NamedRepr c' pl w'.named chains
+    rw [named]
+    exact nr.frame fun a ha => by
+      simpa using (copy a 1 (outside.named a (nr.foot_sub ha))) 0 (by decide)
 
 end OCaml.Vm.Primitives

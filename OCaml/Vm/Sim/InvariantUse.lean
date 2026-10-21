@@ -48,7 +48,7 @@ theorem StackGeometry.payload {P s c pl cp sp high} {log : List WEntry}
     exact ⟨by simp only [freeWindow] at hd ⊢; omega, trivial⟩
   refine ⟨static _ (by decide), domainField _ (by decide), domainField _ (by decide),
     static _ (by decide), static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_, static _ (by decide),
-    static _ (by decide), static _ (by decide)⟩
+    static _ (by decide), static _ (by decide), ?_⟩
   · exact fun i w hw => outLRange_of_windows inside (OutWRange.narrow (g.code i w hw) below)
   · intro i v _
     exact outLRange_of_windows inside ⟨Or.inr (by simp only [freeWindow]; omega), trivial⟩
@@ -59,6 +59,8 @@ theorem StackGeometry.payload {P s c pl cp sp high} {log : List WEntry}
     · simp only [freeWindow] at ho ⊢; omega
   · exact fun id ch a hch hcp =>
       outLRange_of_windows inside (OutWRange.narrow (g.channels id ch a hch hcp) below)
+
+  · exact fun a ha => outLRange_of_windows inside (OutWRange.narrow (g.named a ha) below)
 
 theorem StackGeometry.image {P s c pl cp sp high} {log : List WEntry}
     (g : StackGeometry P s c pl cp high) (inside : LogInW [freeWindow sp high] log) :
