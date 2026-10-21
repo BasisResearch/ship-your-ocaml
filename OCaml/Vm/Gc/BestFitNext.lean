@@ -1,6 +1,7 @@
 import OCaml.Vm.Gc.BestFitFallback
 import OCaml.Vm.Gc.FfsLowest
 import OCaml.Vm.Gc.BestFitRemnant
+import Vsa.Sim.GRegsLookup
 
 /-! # Best-fit: the next nonempty small list
 
@@ -115,5 +116,267 @@ theorem pick_regs (sp s : BitVec 64) (b0 b8 bh bm : List (BitVec 8)) :
     Picked sp s b0 b8 bh bm (evalBlocks pickPlain (SegEvalState.init (pickRegs sp s) [b0, b8, bh, bm])).regs := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> simp only [pickPlain, evalBlocks, evalBlock, SegEvalState.init] <;>
     simp only [pickRegs] <;> bf_simp <;> rfl
+
+def pickRepair : List BBlock := [blk bf_allocateX73f8TSeg, blk bf_allocateX74a8TSeg, blk bf_allocateX7594Seg]
+def pickPc : BitVec 64 := 0x800073f8#64
+def popPc : BitVec 64 := 0x800074bc#64
+
+theorem pick_repair_regs (sp s : BitVec 64) (b0 b8 bh bm : List (BitVec 8)) :
+    Picked sp s b0 b8 bh bm (evalBlocks pickRepair (SegEvalState.init (pickRegs sp s) [b0, b8, bh, bm])).regs := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> simp only [pickRepair, evalBlocks, evalBlock, SegEvalState.init] <;>
+    simp only [pickRegs] <;> bf_simp <;> rfl
+
+theorem slot_of {s : BitVec 64} (small : s.toNat ≤ 16) : flBase + sx s <<< 4 = BestFitRemnant.slot s := by
+  have hs : s = BitVec.ofNat 64 s.toNat := by simp
+  rw [hs, sx_small (by omega)]
+  simp only [BestFitRemnant.slot, BestFitSmall.slot, flBase, Layout.bf_small_size, BestFitRemnant.log16,
+    Layout.sym_bf_small_fl]
+
+/-- The first two blocks' register list. -/
+def r73 (sp s : BitVec 64) (b0 b8 : List (BitVec 8)) (lds : List (List (BitVec 8))) : GRegs :=
+  runGM (blk bf_allocateX73f8TSeg).body (pickRegs sp s) (b0 :: b8 :: lds)
+
+theorem acc73 (m : Std.ExtHashMap Nat (BitVec 8)) (sp s : BitVec 64) (b0 b8 : List (BitVec 8))
+    (lds : List (List (BitVec 8))) (low : ReadWindow sp 8) (high : ReadWindow (sp + 8#64) 8)
+    (p0 : LPins8 m sp.toNat b0) (p8 : LPins8 m (sp + 8#64).toNat b8) :
+    AccessPlan m (pickRegs sp s) (b0 :: b8 :: lds) (blk bf_allocateX73f8TSeg).body := by
+  simp only [blk, bf_allocateX73f8TSeg, List.getD_cons_zero, AccessPlan]
+  chain_facts True.intro
+  · apply low.ld rfl (by simp only [pickRegs]; bf_simp)
+    simpa [stepMemM, mkLine, decodeM, stepLdsM] using p0
+  · apply high.ld rfl (by simp only [pickRegs]; bf_simp)
+    simpa [stepMemM, mkLine, decodeM, stepLdsM] using p8
+
+theorem guard73 (sp s : BitVec 64) (b0 b8 : List (BitVec 8)) (lds : List (List (BitVec 8)))
+    (positive : 1 ≤ s.toNat) (small : s.toNat ≤ 16) :
+    TermFactsO (r73 sp s b0 b8 lds) (blk bf_allocateX73f8TSeg).term := by
+  have hs : s = BitVec.ofNat 64 s.toNat := by simp
+  have v15 : srcVal 15 (r73 sp s b0 b8 lds) = sx s := by simp only [r73, pickRegs]; bf_simp; rfl
+  change guardB bop.BNE (srcVal 15 (r73 sp s b0 b8 lds)) (srcVal 0 (r73 sp s b0 b8 lds)) = true
+  have z : srcVal 0 (r73 sp s b0 b8 lds) = 0#64 := rfl
+  rw [v15, z, hs, sx_small (by omega)]
+  simp only [guardB, bne_iff_ne, ne_eq]
+  intro h
+  have := congrArg BitVec.toNat h
+  simp at this; omega
+
+theorem r73_regs (sp s : BitVec 64) (b0 b8 : List (BitVec 8)) (lds : List (List (BitVec 8))) :
+    srcVal 13 (r73 sp s b0 b8 lds) = flBase ∧ srcVal 15 (r73 sp s b0 b8 lds) = sx s := by
+  refine ⟨?_, ?_⟩ <;> simp only [r73, pickRegs] <;> bf_simp <;> rfl
+
+/-- The list slot read by `0x800074a8` from any register list with `a3`, `a5`. -/
+theorem acc74a8 (m : Std.ExtHashMap Nat (BitVec 8)) (L : GRegs) (x : BitVec 64) (bh bm : List (BitVec 8))
+    (lds : List (List (BitVec 8))) (addr : srcVal 13 L + srcVal 15 L <<< 4 = x)
+    (head : ReadWindow x 8) (merge : ReadWindow (x + 8#64) 8)
+    (ph : LPins8 m x.toNat bh) (pm : LPins8 m (x + 8#64).toNat bm) :
+    AccessPlan m L (bh :: bm :: lds) (blk bf_allocateX74a8FSeg).body := by
+  simp only [blk, bf_allocateX74a8FSeg, List.getD_cons_zero, AccessPlan]
+  chain_facts True.intro
+  · apply head.ld rfl
+    · simp [eaddrM, mkLine, decodeM, stepGM, srcVal, lookupG, eraseG, wvalM, shamtOf,
+        Sail.BitVec.extractLsb, LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend,
+        BestFitRemnant.shift4] at addr ⊢
+      rw [lookupG_eraseG_ne (by decide)]; exact addr
+    · simpa [stepMemM, mkLine, decodeM, stepLdsM] using ph
+  · apply merge.ld rfl
+    · simp [eaddrM, mkLine, decodeM, stepGM, srcVal, lookupG, eraseG, wvalM, shamtOf,
+        Sail.BitVec.extractLsb, LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend,
+        BestFitRemnant.shift4] at addr ⊢
+      rw [← addr, lookupG_eraseG_ne (by decide)]
+    · simpa [stepMemM, mkLine, decodeM, stepLdsM] using pm
+
+macro "gen_simp" : tactic => `(tactic|
+  simp [blk, bf_allocateX74a8FSeg, bf_allocateX74a8TSeg, bf_allocateX7594Seg, runGM, wlogM, wentryM, eaddrM, stepGM,
+    stepLdsM, wvalM, srcVal, lookupG, eraseG, mkLine, decodeM, widthOfM, shamtOf, Sail.BitVec.extractLsb,
+    LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend, BestFitRemnant.shift4, ldsRunM])
+
+structure After74 (L : GRegs) (bh bm : List (BitVec 8)) (L' : GRegs) : Prop where
+  block : srcVal 11 L' = bytesVal .ld bh
+  merge : srcVal 17 L' = bytesVal .ld bm
+  slot : srcVal 16 L' = srcVal 13 L + srcVal 15 L <<< 4
+
+theorem after74 (L : GRegs) (bh bm : List (BitVec 8)) (lds : List (List (BitVec 8))) :
+    After74 L bh bm (runGM (blk bf_allocateX74a8FSeg).body L (bh :: bm :: lds)) := by
+  refine ⟨?_, ?_, ?_⟩ <;> gen_simp <;> simp [lookupG_eraseG_ne]
+
+theorem body74 : (blk bf_allocateX74a8TSeg).body = (blk bf_allocateX74a8FSeg).body := rfl
+
+theorem fix_log (L : GRegs) (lds : List (List (BitVec 8))) :
+    wlogM (blk bf_allocateX7594Seg).body L lds = [((srcVal 16 L + 8#64).toNat, 8, srcVal 16 L)] := by
+  gen_simp
+
+theorem fix_regs (L : GRegs) (lds : List (List (BitVec 8))) : runGM (blk bf_allocateX7594Seg).body L lds = L := rfl
+
+theorem fix_access (m : Std.ExtHashMap Nat (BitVec 8)) (L : GRegs) (lds : List (List (BitVec 8))) (x : BitVec 64)
+    (slot : srcVal 16 L = x) (window : WriteWindow (x + 8#64) 8) :
+    AccessPlan m L lds (blk bf_allocateX7594Seg).body := by
+  simp only [blk, bf_allocateX7594Seg, List.getD_cons_zero, AccessPlan]
+  chain_facts True.intro
+  apply window.sd rfl
+  simp [eaddrM, mkLine, decodeM, LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend]
+  simpa [srcVal] using congrArg (· + 8#64) slot
+
+def allBlocks : List BBlock :=
+  [blk bf_allocateX73f8TSeg, blk bf_allocateX74a8FSeg, blk bf_allocateX74a8TSeg, blk bf_allocateX7594Seg,
+    blk bf_allocateX74bcTSeg, blk bf_allocateX74bcFSeg, blk bf_allocateX74ccSeg, blk bf_allocateX74e8Seg,
+    blk bf_allocateX7534Seg]
+
+theorem all_code {mem : Std.ExtHashMap Nat (BitVec 8)} (code : Code.Bf_allocateLoaded mem) :
+    ChainCode mem allBlocks := by
+  intro b member
+  simp only [allBlocks, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals constructor
+  all_goals simp only [blk, bf_allocateX73f8TSeg, bf_allocateX74a8FSeg, bf_allocateX74a8TSeg, bf_allocateX7594Seg,
+    bf_allocateX74bcTSeg, bf_allocateX74bcFSeg, bf_allocateX74ccSeg, bf_allocateX74e8Seg, bf_allocateX7534Seg,
+    List.getD_cons_zero, CodeFacts]
+  all_goals chain_facts code with "Vsa.Sim.Code.bf_allocate_at_"
+
+theorem code_of {mem : Std.ExtHashMap Nat (BitVec 8)} (code : Code.Bf_allocateLoaded mem) {bs : List BBlock}
+    (sub : ∀ b ∈ bs, b ∈ allBlocks) : ChainCode mem bs :=
+  fun b h => all_code code b (sub b h)
+
+def slotS (s : BitVec 64) : BitVec 64 := BestFitRemnant.slot s
+def headOf (s : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) : BitVec 64 := bytesT m (slotS s).toNat 8
+def cursorOf (s : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) : BitVec 64 := bytesT m (slotS s + 8#64).toNat 8
+
+def pickLoads (sp s : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) : List (List (BitVec 8)) :=
+  [Primitives.read8 m sp.toNat, Primitives.read8 m (sp + 8#64).toNat, Primitives.read8 m (slotS s).toNat,
+    Primitives.read8 m (slotS s + 8#64).toNat]
+
+/-- The cursor repair when the cursor pointed at the popped head. -/
+def pickLog (s : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) : List WEntry :=
+  if cursorOf s m = headOf s m then [((slotS s + 8#64).toNat, 8, slotS s)] else []
+
+structure PickInput (sp s : BitVec 64) (c : Config) : Prop where
+  good : GoodState c.σ
+  tick : c.tick < 2
+  minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
+  code : Code.Bf_allocateLoaded c.σ.mem
+  registers : GHolds c.σ (pickRegs sp s)
+  positive : 1 ≤ s.toNat
+  small : s.toNat ≤ 16
+  low : ReadWindow sp 8
+  high : ReadWindow (sp + 8#64) 8
+
+structure PickPost (sp s : BitVec 64) (before after : Config) : Prop where
+  pc : PCAt popPc after
+  registers : GHolds after.σ (popRegs sp s (headOf s before.σ.mem) (bytesT before.σ.mem sp.toNat 8)
+    (bytesT before.σ.mem (sp + 8#64).toNat 8))
+  memory : after.σ.mem = writeLog before.σ.mem (pickLog s before.σ.mem)
+  good : GoodState after.σ
+  tick : after.tick < 2
+  minstret : ∃ v, after.σ.regs.get? Register.minstret = some v
+  output : after.σ.sailOutput = before.σ.sailOutput
+  frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
+    (∀ n ∈ [10, 11, 12, 13, 14, 15, 16, 17], (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+
+theorem lds73 (b0 b8 : List (BitVec 8)) (lds : List (List (BitVec 8))) :
+    ldsRunM (blk bf_allocateX73f8TSeg).body (b0 :: b8 :: lds) = lds := rfl
+
+theorem addr73 {sp s : BitVec 64} (small : s.toNat ≤ 16) (b0 b8 : List (BitVec 8)) (lds : List (List (BitVec 8))) :
+    srcVal 13 (r73 sp s b0 b8 lds) + srcVal 15 (r73 sp s b0 b8 lds) <<< 4 = slotS s := by
+  rw [(r73_regs sp s b0 b8 lds).1, (r73_regs sp s b0 b8 lds).2]; exact slot_of small
+
+theorem picked_holds {c : Config} {sp s : BitVec 64} {m : Std.ExtHashMap Nat (BitVec 8)} {L : GRegs}
+    (picked : Picked sp s (Primitives.read8 m sp.toNat) (Primitives.read8 m (sp + 8#64).toNat)
+      (Primitives.read8 m (slotS s).toNat) (Primitives.read8 m (slotS s + 8#64).toNat) L) (held : GHolds c.σ L) :
+    GHolds c.σ (popRegs sp s (headOf s m) (bytesT m sp.toNat 8) (bytesT m (sp + 8#64).toNat 8)) := by
+  have b := picked.b; have bits := picked.bits; have wosz := picked.wosz
+  rw [read8_value] at b bits wosz
+  exact ⟨gholds_lookup _ held picked.sp, gholds_lookup _ held picked.size, gholds_lookup _ held b,
+    gholds_lookup _ held bits, gholds_lookup _ held picked.fl, gholds_lookup _ held wosz,
+    gholds_lookup _ held picked.shifted, True.intro⟩
+
+theorem plain_pc (sp s : BitVec 64) (b0 b8 bh bm : List (BitVec 8)) :
+    evalBlocksPC pickPc (SegEvalState.init (pickRegs sp s) [b0, b8, bh, bm]) pickPlain = popPc := by
+  simp only [evalBlocksPC, pickPlain, chainEndPC, SegEvalState.init, endPCB, tgtPCT, nextPC0, pickRegs]
+  bf_simp; rfl
+
+theorem repair_pc (sp s : BitVec 64) (b0 b8 bh bm : List (BitVec 8)) :
+    evalBlocksPC pickPc (SegEvalState.init (pickRegs sp s) [b0, b8, bh, bm]) pickRepair = popPc := by
+  simp only [evalBlocksPC, pickRepair, chainEndPC, SegEvalState.init, endPCB, tgtPCT, nextPC0, pickRegs]
+  bf_simp; rfl
+
+theorem plain_log (sp s : BitVec 64) (b0 b8 bh bm : List (BitVec 8)) :
+    (evalBlocks pickPlain (SegEvalState.init (pickRegs sp s) [b0, b8, bh, bm])).log = [] := by
+  simp only [pickPlain, evalBlocks, evalBlock, SegEvalState.init, pickRegs]; bf_simp
+
+theorem repair_log {sp s : BitVec 64} (small : s.toNat ≤ 16) (b0 b8 bh bm : List (BitVec 8)) :
+    (evalBlocks pickRepair (SegEvalState.init (pickRegs sp s) [b0, b8, bh, bm])).log =
+      [((slotS s + 8#64).toNat, 8, slotS s)] := by
+  rw [slotS, ← slot_of small]
+  simp only [pickRepair, evalBlocks, evalBlock, SegEvalState.init, pickRegs]; bf_simp; exact ⟨rfl, rfl⟩
+
+theorem pick {sp s c} (input : PickInput sp s c) : FnSummary pickPc (fun d => d = c) (PickPost sp s c) := by
+  let m := c.σ.mem
+  have small := input.small
+  have slotW := BestFitRemnant.slot_window small
+  have mergeW := BestFitRemnant.merge_window small
+  have after := after74 (r73 sp s (Primitives.read8 m sp.toNat) (Primitives.read8 m (sp + 8#64).toNat)
+    [Primitives.read8 m (slotS s).toNat, Primitives.read8 m (slotS s + 8#64).toNat])
+    (Primitives.read8 m (slotS s).toNat) (Primitives.read8 m (slotS s + 8#64).toNat) []
+  have addr := addr73 small (sp := sp) (Primitives.read8 m sp.toNat) (Primitives.read8 m (sp + 8#64).toNat)
+    [Primitives.read8 m (slotS s).toNat, Primitives.read8 m (slotS s + 8#64).toNat]
+  have access74 := acc74a8 m _ (slotS s) _ _ [] addr slotW.read mergeW.read (read8_pins _ _) (read8_pins _ _)
+  have first : BlockAccess m (pickRegs sp s) (pickLoads sp s m) (blk bf_allocateX73f8TSeg) :=
+    ⟨acc73 _ _ _ _ _ _ input.low input.high (read8_pins _ _) (read8_pins _ _),
+      guard73 _ _ _ _ _ input.positive small⟩
+  have keys : KeysOK (keysG (pickRegs sp s)) := by change KeysOK [2, 10]; decide
+  by_cases repair : cursorOf s m = headOf s m
+  · have chainA : ChainAccess m (pickRegs sp s) (pickLoads sp s m) pickRepair := by
+      apply ChainAccess.cons first
+      rw [show wlogM (blk bf_allocateX73f8TSeg).body (pickRegs sp s) (pickLoads sp s m) = [] from rfl]
+      change ChainAccess (writeLog m []) (r73 sp s _ _ _) (ldsRunM _ (_ :: _ :: _)) _
+      rw [lds73]
+      apply ChainAccess.cons ⟨by rw [body74]; exact access74, ?_⟩
+      · rw [body74]
+        apply ChainAccess.cons ⟨fix_access _ _ _ (slotS s) (by rw [after.slot, addr]) mergeW, trivial⟩
+          ChainAccess.nil
+      · rw [body74]
+        change guardB bop.BEQ (srcVal 17 _) (srcVal 11 _) = true
+        rw [after.merge, after.block, read8_value, read8_value]
+        simp only [guardB]
+        exact beq_iff_eq.mpr repair
+    have summary := block_summary pickRepair pickPc (pickRegs sp s) (pickLoads sp s m) c
+      ⟨input.good, input.minstret, input.registers, keys,
+        chainPlan_facts (code_of input.code (by
+          intro x h; simp only [pickRepair, List.mem_cons, List.not_mem_nil, or_false] at h
+          rcases h with rfl | rfl | rfl <;> simp [allBlocks])) chainA,
+        by change ChainOK pickPc [2, 10] pickRepair; decide, input.tick⟩
+    apply summary.weaken (fun _ h => h)
+    intro d post
+    refine ⟨?_, picked_holds ?_ post.regs, ?_, post.good, post.tick, post.minstret, post.output,
+      fun r noise outside => post.frame r noise (fun n hn => outside n (by
+        have h : ∀ n ∈ wrChain pickRepair, n ∈ [10, 11, 12, 13, 14, 15, 16, 17] := by decide
+        exact h n hn))⟩
+    · rw [PCAt, post.pc, pickLoads, repair_pc]
+    · exact pick_repair_regs _ _ _ _ _ _
+    · rw [post.memory, pickLoads, repair_log small, pickLog, if_pos repair]
+  · have chainA : ChainAccess m (pickRegs sp s) (pickLoads sp s m) pickPlain := by
+      apply ChainAccess.cons first
+      rw [show wlogM (blk bf_allocateX73f8TSeg).body (pickRegs sp s) (pickLoads sp s m) = [] from rfl]
+      change ChainAccess (writeLog m []) (r73 sp s _ _ _) (ldsRunM _ (_ :: _ :: _)) _
+      rw [lds73]
+      apply ChainAccess.cons ⟨access74, ?_⟩ ChainAccess.nil
+      change guardB bop.BEQ (srcVal 17 _) (srcVal 11 _) = false
+      rw [after.merge, after.block, read8_value, read8_value]
+      simp only [guardB]
+      exact beq_eq_false_iff_ne.mpr repair
+    have summary := block_summary pickPlain pickPc (pickRegs sp s) (pickLoads sp s m) c
+      ⟨input.good, input.minstret, input.registers, keys,
+        chainPlan_facts (code_of input.code (by
+          intro x h; simp only [pickPlain, List.mem_cons, List.not_mem_nil, or_false] at h
+          rcases h with rfl | rfl <;> simp [allBlocks])) chainA,
+        by change ChainOK pickPc [2, 10] pickPlain; decide, input.tick⟩
+    apply summary.weaken (fun _ h => h)
+    intro d post
+    refine ⟨?_, picked_holds ?_ post.regs, ?_, post.good, post.tick, post.minstret, post.output,
+      fun r noise outside => post.frame r noise (fun n hn => outside n (by
+        have h : ∀ n ∈ wrChain pickPlain, n ∈ [10, 11, 12, 13, 14, 15, 16, 17] := by decide
+        exact h n hn))⟩
+    · rw [PCAt, post.pc, pickLoads, plain_pc]
+    · exact pick_regs _ _ _ _ _ _
+    · rw [post.memory, pickLoads, plain_log, pickLog, if_neg repair]
 
 end OCaml.Vm.Gc.BestFitNext
