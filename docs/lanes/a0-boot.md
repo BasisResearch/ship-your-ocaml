@@ -427,7 +427,10 @@ insertion is proved generically:
     message. Generator regions `CamlInitStack`/`InitStack*` were added. The 58
     duplicated stem prefixes in `gen_startup_rows.py` are now one
     `CERTIFIED_STEMS`.
-* **Owed to a1-prims' RootCallsG: `RootsAt` at the whileMin cut** (agreed with
+* **Owed to a1-prims' RootCallsG: `RootsAt` at the whileMin cut** (shape final
+  on main 20610235, `Named/GenRoots.lean`; take S with empty lists and slots,
+  `cls = clsOf m`, `D = firstDomainPtr`, start/stop the minor heap's bounds;
+  `Off H m a = ¬ ListsFoot m a ∧ ¬ vsaFoot H a ∧ apart from random_seed`) (agreed with
   a1-prims; not at the end of init_gc, because the atom table, load_code and
   caml_init_stack change its state). It needs four pieces:
   * `RegisterRoot.YoungAt m D start stop` (RegisterRootRun.lean) plus

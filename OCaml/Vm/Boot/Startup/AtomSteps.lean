@@ -3,6 +3,9 @@ import OCaml.Vm.Boot.Startup.AtomSaveImage
 import OCaml.Vm.Boot.Startup.AtomSaveCallInterface
 import OCaml.Vm.Boot.Startup.AtomPublishNormalized
 import OCaml.Vm.Boot.Startup.AtomPublishImage
+import OCaml.Vm.Boot.Startup.AtomLoopNormalized
+import OCaml.Vm.Boot.Startup.AtomLoopImage
+import OCaml.Vm.Boot.Startup.MinorRefSteps
 import OCaml.Vm.Boot.Startup.InitStackSteps
 import OCaml.Vm.Boot.Startup.BlockCall
 namespace OCaml.Vm.Boot.Startup
@@ -95,4 +98,58 @@ theorem atom_publish (c : Config) (ra base : BitVec 64) (leaf : LeafInput ra c) 
       trivial⟩
   · rfl
   · decide
+theorem guard_bne_true {x : BitVec 64} (h : x ≠ 0#64) : guardB bop.BNE x 0#64 = true := by
+  unfold guardB; simp [h]
+
+theorem guard_bne_zero : guardB bop.BNE 0#64 0#64 = false := by decide
+
+/-- The loop's cursor and header after `k` iterations. -/
+abbrev atomCursor (k : Nat) : BitVec 64 := BitVec.ofNat 64 (8 * k)
+abbrev atomHeader (k : Nat) : BitVec 64 := BitVec.ofNat 64 (768 + k)
+
+theorem atom_cursor_next (k : Nat) : atomCursor k + Functions.sign_extend (m := 64) 8#12 = atomCursor (k + 1) := by
+  rw [show Functions.sign_extend (m := 64) 8#12 = 8#64 by decide]
+  apply BitVec.eq_of_toNat_eq
+  simp only [atomCursor, BitVec.toNat_add, BitVec.toNat_ofNat]
+  omega
+
+theorem atom_header_next (k : Nat) : atomHeader k + Functions.sign_extend (m := 64) 1#12 = atomHeader (k + 1) := by
+  rw [show Functions.sign_extend (m := 64) 1#12 = 1#64 by decide]
+  apply BitVec.eq_of_toNat_eq
+  simp only [atomHeader, BitVec.toNat_add, BitVec.toNat_ofNat]
+  omega
+
+/-- The loop's exit test `a5 - 2048` after the increment: nonzero before the last atom. -/
+theorem atom_test_more (k : Nat) (hk : k + 1 < 256) :
+    atomCursor k + Functions.sign_extend (m := 64) 8#12 + Functions.sign_extend (m := 64) 2048#12 ≠ 0#64 := by
+  rw [atom_cursor_next, show Functions.sign_extend (m := 64) 2048#12 = 0xfffffffffffff800#64 by decide]
+  intro h
+  have e := congrArg (· + 2048#64) h
+  simp only [BitVec.add_assoc, show (0xfffffffffffff800#64 + 2048#64 : BitVec 64) = 0#64 by decide,
+    BitVec.add_zero, BitVec.zero_add] at e
+  have v := congrArg BitVec.toNat e
+  rw [atomCursor, BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega), show (2048#64 : BitVec 64).toNat = 2048 by decide] at v
+  omega
+
+/-- … and zero after it. -/
+theorem atom_test_last :
+    atomCursor 255 + Functions.sign_extend (m := 64) 8#12 + Functions.sign_extend (m := 64) 2048#12 = 0#64 := by
+  decide
+
+/-- The atom words written so far. -/
+def atomEntry (base : BitVec 64) (k : Nat) : WEntry := ((base + atomCursor k).toNat, 8, atomHeader k)
+
+local macro "alp" : tactic => `(tactic| simp only [atomloop_line_800044d4, atomloop_line_800044d8, atomloop_line_800044dc, atomloop_line_800044e0, atomloop_line_800044e4, atomloop_line_800044e8, eaddrM, srcVal, lookupG, runGM, stepGM, eraseG, wvalM,
+  Option.getD_some, ite_true, ite_false, Nat.reduceEqDiff, Nat.reduceAdd, ldsRunM, stepLdsM, List.headD_cons,
+  List.tail_cons])
+
+/-- One iteration that loops back: atom `k`'s header, then `a1 = caml_atom_table`. -/
+theorem atom_loop_more (c : Config) (ra base : BitVec 64) (k : Nat) (hk : k + 1 < 256) (leaf : LeafInput ra c)
+    (regs : GHolds c.σ [(11, base), (15, atomCursor k), (14, atomHeader k), (12, BitVec.ofNat 64 atomTableAddr)])
+    (low : heapStart ≤ base.toNat) (high : base.toNat + 2048 ≤ heapEnd) (aligned : base.toNat % 8 = 0)
+    (table : bytesT c.σ.mem atomTableAddr 8 = base) :
+    FnSummary 0x800044d4#64 (fun e => e = c) (WriteRegistersPost [11, 15, 13, 14] [atomEntry base k] c 0x800044d4#64
+      base [(11, base), (15, atomCursor (k + 1)), (14, atomHeader (k + 1)), (12, BitVec.ofNat 64 atomTableAddr)]) := by
+  sorry
+
 end OCaml.Vm.Boot.Startup
