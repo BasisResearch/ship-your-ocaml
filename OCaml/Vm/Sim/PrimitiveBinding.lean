@@ -71,12 +71,13 @@ private theorem word_halts : BcHalts wordProbe "" 64 :=
 private theorem swapped_halts : BcHalts swappedProbe "" 63 :=
   halts_of_check (fuel := 3) (by decide +kernel)
 
-private def probeBudget : Budget := ⟨0, wordProbe.heap0.words⟩
+private def probeBudget : Budget := ⟨0, wordProbe.heap0.words, 0⟩
 
 private theorem fits_of_checked {P : Prog}
     (stop : (match Run.iter (bcK P) 3 P.init with | .ok _ => false | .error _ => true) = true)
     (check : ∀ k : Fin 3, (match Run.iter (bcK P) k P.init with
-      | .ok s => decide (s.stack.length ≤ probeBudget.stackWords ∧ s.heap.words ≤ probeBudget.heapWords)
+      | .ok s => decide (s.stack.length ≤ probeBudget.stackWords ∧ s.heap.words ≤ probeBudget.heapWords ∧
+          s.world.customs ≤ probeBudget.customs)
       | .error _ => true) = true) : Fits probeBudget P := by
   have done : ∃ o, Run.iter (bcK P) 3 P.init = .error o := by
     cases hx : Run.iter (bcK P) 3 P.init with
@@ -91,7 +92,8 @@ private theorem fits_of_checked {P : Prog}
   have hb := Run.iter_ok_lt ho hi
   have hc := check ⟨k, hb⟩
   simp only [hi] at hc
-  exact of_decide_eq_true hc
+  obtain ⟨stack, heap, customs⟩ := of_decide_eq_true hc
+  exact ⟨stack, heap, customs⟩
 
 private theorem word_fits : Fits probeBudget wordProbe :=
   fits_of_checked (by decide +kernel) (by decide +kernel)
@@ -107,8 +109,8 @@ theorem primitive_binding_obstruction {L : OCaml.Layout} {B : Budget} {c : Confi
   intro H
   have fits {P : Prog} (h : Fits probeBudget P) : Fits B P := by
     intro s hs
-    obtain ⟨stack, heap⟩ := h s hs
-    exact ⟨Nat.le_trans stack (Nat.zero_le _), Nat.le_trans heap capacity⟩
+    obtain ⟨stack, heap, customs⟩ := h s hs
+    exact ⟨Nat.le_trans stack (Nat.zero_le _), Nat.le_trans heap capacity, Nat.le_trans customs (Nat.zero_le _)⟩
   have other : UnboundLoaded L swappedProbe c := loaded_prims loaded swappedProbe.prims
   have first := (H wordProbe c loaded (good_of_halts word_halts) (fits word_fits)).1 "" 64
   have second := (H swappedProbe c other (good_of_halts swapped_halts) (fits swapped_fits)).1 "" 63

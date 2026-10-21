@@ -81,7 +81,8 @@ def St.callNamesOk (P : Prog) (names : Opcode → List String) (s : St) : Bool :
 def St.shapeOk (P : Prog) (ops : List Opcode) (names : Opcode → List String) (s : St) : Bool :=
   St.decodedOk P ops s && St.ccallOk P .C_CALL1 0 s &&
     s.heap.noForward &&
-    decide (s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords) &&
+    decide (s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords ∧
+      s.world.customs ≤ Vm.Gc.g1Budget.customs) &&
     St.callNamesOk P names s && OCaml.consolesOk s.world
 
 /-- The F1 shape checks of one state, by name. -/
@@ -91,7 +92,8 @@ structure ShapeFacts (P : Prog) (ops : List Opcode) (names : Opcode → List Str
   /-- no `Forward_tag` block (a6-gc: `gcSafe_of_noForward`) -/
   noForward : s.heap.noForward = true
   /-- within the F1 budget (a6-gc: `Fits g1Budget`) -/
-  fits : s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords
+  fits : s.stack.length ≤ Vm.Gc.g1Budget.stackWords ∧ s.heap.words ≤ Vm.Gc.g1Budget.heapWords ∧
+    s.world.customs ≤ Vm.Gc.g1Budget.customs
   callNames : St.callNamesOk P names s = true
   /-- every open channel is the console or stdin (`GoodF1.consoles`, `GoodF1.stdins`) -/
   consoles : OCaml.consolesOk s.world = true
@@ -145,7 +147,9 @@ theorem whileMin_shapeOk {s : St} (reach : Reach whileMin s) : ShapeFacts whileM
   .of_ok (reach_of_checkAll whileMin_shapeChecked reach)
 
 /-- **`Fits g1Budget whileMin`** (peak 18 stack / 125 heap words). -/
-theorem whileMin_fits : Fits Vm.Gc.g1Budget whileMin := fun _ reach => (whileMin_shapeOk reach).fits
+theorem whileMin_fits : Fits Vm.Gc.g1Budget whileMin := fun _ reach =>
+  have f := (whileMin_shapeOk reach).fits
+  ⟨f.1, f.2.1, f.2.2⟩
 
 /-- `whileMin` never creates a `Forward_tag` block. -/
 theorem whileMin_noForward : NoForward whileMin := fun _ reach => (whileMin_shapeOk reach).noForward

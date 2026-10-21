@@ -2771,6 +2771,16 @@ and dispatch adaptation are still open.
   `WalkGeometry.stateApart`); `CustomMemGrows` is a6-gc's
   `CustomMemReturned.grows` (`customMemGrows`).
 
+## Custom-allocation budget (2026-10-21)
+
+* The foreman's audit (docs/lanes/F1-split.md) found the budget unowned, and
+  I took it.
+* `Chan.refs` and `listRefs` (the listing's world), `World.customs`,
+  `Budget.customs` with `FitsAt` (named fields; `.1`/`.2` users unchanged),
+  `Gc.RefcountSum`.
+* The out_channels_list adapter carries the world change by
+  `VmPayload.listRefs` and `LoopGeometry.transport_ids`.
+
 ## Open / next
 
 Next on the C_CALL share: swap `F1CcallOpen` fields for summaries as

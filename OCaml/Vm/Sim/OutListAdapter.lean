@@ -604,10 +604,35 @@ theorem head_not_outW {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {st
       omega
     · walk_omega
 
+/-- The listing's refcount bumps keep the world's representation: `ChanAt`
+does not read `refs`. -/
+theorem worldRepr_listRefs {c : Config} {cp : ChanPlace} {w : World} (h : WorldRepr c cp w) :
+    WorldRepr c cp (listRefs w) := by
+  refine ⟨h.output, fun id ch hc => ?_, h.ooId⟩
+  cases e : w.chans[id]? with
+  | none => simp only [listRefs, List.getElem?_map, e, Option.map_none] at hc; cases hc
+  | some ch0 =>
+    simp only [listRefs, List.getElem?_map, e, Option.map_some, Option.some.injEq] at hc
+    subst hc
+    obtain ⟨a, hp, at_⟩ := h.chans id ch0 e
+    exact ⟨a, hp, by split <;> exact at_⟩
+
+theorem _root_.OCaml.Vm.Primitives.VmPayload.listRefs {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {sp high : Nat}
+    (h : VmPayload P s c pl cp sp high) : VmPayload P {s with world := listRefs s.world} c pl cp sp high :=
+  ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, worldRepr_listRefs h.world,
+    h.atomBase, h.argv⟩
+
+theorem listRefs_ids (w : World) (id : Nat) : ((listRefs w).chans[id]?).isSome = (w.chans[id]?).isSome := by
+  simp only [listRefs, List.getElem?_map, Option.isSome_map]
+
+/-- The state after `caml_ml_out_channels_list`: the list, its blocks, and
+one more refcount on each listed channel. -/
+def listPost (s : St) : St := { listState s with world := listRefs s.world }
+
 theorem primF1Impl_outList (s : St) :
     primF1Impl "caml_ml_out_channels_list" [s.accu] s.heap s.world =
       .ok (listVal s.heap.size (.int 0) (outChannelIds s.world))
-        (allocAll s.heap (listObjs s.heap.size (.int 0) (outChannelIds s.world))) s.world := by
+        (allocAll s.heap (listObjs s.heap.size (.int 0) (outChannelIds s.world))) (listRefs s.world) := by
   simp only [primF1Impl, outChannelsList_alloc]
 
 /-- **The represented return** of `caml_ml_out_channels_list`, and the loop
@@ -622,8 +647,9 @@ theorem out_list_post {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {p
     (stackFits : 8 * (s.stack.length + 2) ≤ Layout.stackBytes) :
     FramedPrimitivePostOn L.runtimeOk P s pl cp sp high "caml_ml_out_channels_list" [s.accu]
         (listVal s.heap.size (.int 0) (outChannelIds s.world)) (resWord w.Y (outChannelIds s.world).length)
-        (allocAll s.heap (listObjs s.heap.size (.int 0) (outChannelIds s.world))) s.world (outW w state) c ra f ∧
-      OCaml.LoopGeometry L P (listState s) f pl cp high := by
+        (allocAll s.heap (listObjs s.heap.size (.int 0) (outChannelIds s.world))) (listRefs s.world)
+        (outW w state) c ra f ∧
+      OCaml.LoopGeometry L P (listPost s) f pl cp high := by
   have input := setup.input
   have g := setup.geometry
   have wg := ent.geometry
@@ -687,7 +713,7 @@ theorem out_list_post {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {p
         · exact (ret.s0.trans ent.input.s0.symm : gprGet f.σ 8 = gprGet c.σ 8)
         · exact ret.saved 18 (by decide)
         · exact (ret.stack.trans ent.input.stack.symm : gprGet f.σ 2 = gprGet c.σ 2) }
-    data := payload
+    data := payload.listRefs
     primitives := bindings_frame_on input.primitives hw frame
     platform := ⟨ret.good, ret.image, rt.runtime P s c f pl cp high w.H0 input.runtime g
       (fun a ha => frame a fun o => ha (outW_writes ent o))
@@ -697,7 +723,8 @@ theorem out_list_post {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {p
     resultRepr := listVal_word (by walk_omega) placed (by omega)
     semantics := primF1Impl_outList s
     gprs := ret.gprs }, ?_⟩
-  exact geo.transport (fun l o h => ⟨o, h, rfl⟩) rfl rfl rfl rfl rfl rfl (fun _ _ _ _ _ => rfl) rfl
+  exact geo.transport_ids (s' := listPost s) (fun l o h => ⟨o, h, rfl⟩) (listRefs_ids s.world) rfl rfl rfl rfl rfl
+    (fun _ _ _ _ _ => rfl) rfl
 
 /-- A domain field outside the nursery words, `local_roots` and
 `extra_heap_resources_minor` is not written. -/
@@ -808,8 +835,9 @@ theorem prim_caml_ml_out_channels_list_returns {L : OCaml.Layout} {P : Prog} {op
   have S : FnSummary (BitVec.ofNat 64 Layout.sym_caml_ml_out_channels_list) (fun x => x = c) (fun after =>
       FramedPrimitivePostOn L.runtimeOk P s pl cp sp high "caml_ml_out_channels_list" [s.accu]
         (listVal s.heap.size (.int 0) (outChannelIds s.world)) (resWord w.Y (outChannelIds s.world).length)
-        (allocAll s.heap (listObjs s.heap.size (.int 0) (outChannelIds s.world))) s.world (outW w state) c ra after ∧
-      OCaml.LoopGeometry L P (listState s) after pl cp high) := by
+        (allocAll s.heap (listObjs s.heap.size (.int 0) (outChannelIds s.world))) (listRefs s.world)
+        (outW w state) c ra after ∧
+      OCaml.LoopGeometry L P (listPost s) after pl cp high) := by
     constructor
     intro c' ⟨_, e⟩
     subst e

@@ -24,8 +24,10 @@ theorem reach_of_checkAll {P : Prog} {ok : St → Bool} {fuel : Nat}
 
 /-- `Fits` is monotone in the budget. -/
 theorem _root_.OCaml.Fits.mono {B B' : Budget} {P : Prog} (h : Fits B P)
-    (stack : B.stackWords ≤ B'.stackWords) (heap : B.heapWords ≤ B'.heapWords) : Fits B' P :=
-  fun s reach => ⟨Nat.le_trans (h s reach).1 stack, Nat.le_trans (h s reach).2 heap⟩
+    (stack : B.stackWords ≤ B'.stackWords) (heap : B.heapWords ≤ B'.heapWords)
+    (customs : B.customs ≤ B'.customs) : Fits B' P :=
+  fun s reach => ⟨Nat.le_trans (h s reach).stack stack, Nat.le_trans (h s reach).heap heap,
+    Nat.le_trans (h s reach).customs customs⟩
 
 end OCaml.Bytecode
 

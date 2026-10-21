@@ -135,3 +135,22 @@ Outside whileMin, the general headline `ocamlrun_refinement_F1_open`
      like the 64-channel guard (`b601b2fe`); a2-sem owns `stepI`.
   3. Restate `budget` (and `OutListRuntime.entry`'s `Ready`) at the C_CALL
      entry whose primitive succeeds, so it follows from the guard.
+* **Decided (a2-sem, a6-gc, bprime, 2026-10-20).** Count per channel, as io.c
+  does (`caml_alloc_channel`: `chan->refcount++`).
+  - **Landed in this batch:**
+    - `Chan.refs`: `openChan` sets 1, `caml_ml_out_channels_list` adds 1 per
+      listed channel (`listRefs`), close leaves it.
+    - `World.customs` (Σ refs).
+    - The bound `Budget.customs` in `Fits` (`FitsAt`), with
+      `g1Budget.customs = quietBound = 5`. It is not a BcSem guard: the
+      compiler differential runs ocamlc on BcSem with more than 5 custom
+      allocations. whileMin is within 5, by its shape run.
+    - `Gc.RefcountSum` over the open-channel list (0 at the cut:
+      `RefcountSum.of_null`).
+    - `Fragment.customLedger` and the difftest `f1_chanrefs`.
+  - **Next:**
+    1. a6-gc: the concrete `Customs` and `F1Pins.customs : Customs c n` at
+       `RefcountSum c.σ.mem n`, plus the step across a call.
+    2. a1-arms: `ChanAt`'s refcount word `= ch.refs`.
+    3. a1-arms: `budget` restated at the succeeding C_CALL entry, with
+       `Ready := ReadyOf Customs`. bprime sees the diff first.

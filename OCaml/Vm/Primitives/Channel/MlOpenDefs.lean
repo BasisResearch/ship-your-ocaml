@@ -182,7 +182,7 @@ stream: `offset = -1`, empty buffer, nothing read ahead). -/
 theorem OpenRecord.chanAt {out : Bool} {c : Config} {p fd head : BitVec 64} {cfd : Int}
     (h : OpenRecord out c.σ.mem p fd head) (fdInt : (fd.setWidth 32).toInt = cfd) (open_ : cfd ≠ -1)
     (high : p.toNat + recordBytes ≤ heapEnd) (align : p.toNat % 16 = 0) :
-    OCaml.Vm.ChanAt c p.toNat ⟨cfd, out, [], [], 0, -1⟩ := by
+    OCaml.Vm.ChanAt c p.toNat ⟨cfd, out, [], [], 0, -1, 1⟩ := by
   have t (k : Nat) (b : k ≤ 65608) := recordAt (p := p) high b
   have e72 : (p + 72#64).toNat = p.toNat + 72 := t 72 (by decide)
   have eEnd : (p + (65536#64 + 72#64)).toNat = p.toNat + 65608 := by

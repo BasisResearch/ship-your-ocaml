@@ -82,6 +82,15 @@ structure Chan where
   inPos : Nat := 0
   /-- C channel offset: end of read-ahead, or bytes flushed on output. -/
   offset : Int := 0
+  /-- io.c's `chan->refcount`: the custom blocks wrapping the channel.
+  `caml_alloc_channel` increments it before every `caml_alloc_custom_mem`
+  (each open, and each channel `caml_ml_out_channels_list` lists);
+  `close_channel` leaves it, and only the finalizer, which never runs under
+  G1, decrements it. Channels are the fragment's only `caml_alloc_custom_mem`
+  source (the boxed integers' `caml_alloc_custom` has `mem = 0`), so the sum
+  over `chans` counts the custom allocations that move
+  `caml_extra_heap_resources`. -/
+  refs : Nat := 1
   deriving DecidableEq, Repr
 
 /-- Continuations of a nested caml_interprete invocation. -/
@@ -315,7 +324,7 @@ def openChan (h : Heap) (w : World) (fd : Int) (isOut : Bool) : PRes :=
   if 64 ≤ w.chans.length then .unsupported else
   if h.objs.contains (.channel id) then .unsupported else
   let (h', l) := h.alloc (.channel id)
-  .ok (.ptr l 0) h' { w with chans := w.chans ++ [⟨fd, isOut, [], [], 0, (match TCB.Os.lookupFd w.os fd.toNat with | .some (.file _ off _) => (if fd < 0 then -1 else off) | _ => -1)⟩] }
+  .ok (.ptr l 0) h' { w with chans := w.chans ++ [⟨fd, isOut, [], [], 0, (match TCB.Os.lookupFd w.os fd.toNat with | .some (.file _ off _) => (if fd < 0 then -1 else off) | _ => -1), 1⟩] }
 
 /-- `caml_ml_out_channels_list`: walks `caml_all_opened_channels` (most
 recent first) consing a FRESH custom block per output channel, so the
@@ -327,6 +336,18 @@ def outChannelsList (h : Heap) (w : World) : Heap × Val :=
     let (h1, lc) := h.alloc (.channel id)
     let (h2, cell) := h1.alloc (.block 0 [.ptr lc 0, acc])
     (h2, .ptr cell 0)) (h, .int 0)
+
+/-- Whether `caml_ml_out_channels_list` lists the channel (an open output
+channel: `outChannelsList`'s filter). -/
+def Chan.listed (c : Chan) : Bool := c.isOut && c.fd != -1
+
+/-- The custom blocks charged so far: the channels' refcounts. -/
+def World.customs (w : World) : Nat := (w.chans.map Chan.refs).sum
+
+/-- `caml_ml_out_channels_list`'s `caml_alloc_channel` on each listed
+channel: one more custom block wrapping it. -/
+def listRefs (w : World) : World :=
+  { w with chans := w.chans.map fun c => if c.listed then { c with refs := c.refs + 1 } else c }
 
 /-- The primitives of F1 (`Fragment.lean`). -/
 def primsF1 : List String :=
@@ -356,7 +377,7 @@ def primF1Impl (name : String) (args : List Val) (h : Heap) (w : World) : PRes :
   | "caml_ml_open_descriptor_in", [fd] => some (intArg? fd) fun fd => openChan h w fd false
   | "caml_ml_out_channels_list", [_] =>
       let (h', l) := outChannelsList h w
-      .ok l h' w
+      .ok l h' (listRefs w)
   | "caml_ml_flush", [ch] =>
       some (chanOf? h ch) fun id => some (flushChan w id) fun w' => .ok .unit h w'
   | "caml_ml_output_char", [ch, c] =>

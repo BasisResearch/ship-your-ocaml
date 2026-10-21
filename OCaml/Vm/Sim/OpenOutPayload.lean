@@ -31,7 +31,7 @@ theorem open_out_payload {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp
     (ok : openChan s.heap s.world fd code.out = .ok val heap' world')
     (fdWord : ((fdOf v).setWidth 32).toInt = fd) (open_ : fd ≠ -1)
     (placed : pl.φ (s.heap.alloc (.channel s.world.chans.length)).2 = some o.value.toNat) :
-    VmPayload P (openedSt s ⟨fd, code.out, [], [], 0, -1⟩) d pl
+    VmPayload P (openedSt s ⟨fd, code.out, [], [], 0, -1, 1⟩) d pl
       (cp.put s.world.chans.length o.opening.record.toNat) spV high := by
   have kept := VmPayload.keep_observed data (open_out_observed custom o heap h N pins data g fits) o.output
   have block := o.block

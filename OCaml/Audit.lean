@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.ChannelRefs
 import OCaml.Vm.Sim.F1Ccall
 import OCaml.Vm.Gc.FinalQuiet
 import OCaml.Vm.Gc.MemprofQuiet
@@ -6632,3 +6633,9 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.TableBlocks.shrink
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.TableBlocks.carry
 #print axioms OCaml.Vm.Primitives.Named.NamedRegister.vsaFoot_grown
+#print axioms OCaml.Vm.Gc.RefcountSum.unique
+#print axioms OCaml.Vm.Gc.RefcountSum.of_null
+#print axioms OCaml.Vm.Gc.g1Budget_customs
+#print axioms OCaml.Vm.Sim.OutListWalk.worldRepr_listRefs
+#print axioms OCaml.Vm.Primitives.VmPayload.listRefs
+#print axioms OCaml.Vm.Sim.OutListWalk.listRefs_ids

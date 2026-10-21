@@ -14,7 +14,7 @@ bound applies (a1-arms' `StackCapacity`). `heapWords`: the pinned image's nurser
 (`young_alloc_start` 0x80082000, `young_alloc_end` 0x80282000) with 800 bytes
 taken at the cut (`young_ptr` 0x80281ce0), leaving 262,044 words. The budget
 counts all `BcSem` heap words, the initial heap included, so it is conservative. -/
-def g1Budget : Budget := ⟨3584, 262044⟩
+def g1Budget : Budget := ⟨3584, 262044, 5⟩
 
 /-- **G1 room**: the nursery between `young_limit` and `young_ptr` holds every
 word the budget still allows.

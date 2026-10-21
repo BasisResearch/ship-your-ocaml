@@ -116,7 +116,7 @@ theorem open_out_console {P : Prog} {s : St} {heap : Heap} {world : World} {v : 
   obtain ⟨s', reach, -, hw⟩ := succ
   obtain ⟨live, -⟩ := openChan_live ok
   obtain ⟨-, -, off, hw'⟩ := openChan_ok ok
-  have get : s'.world.chans[s.world.chans.length]? = some ⟨fd, true, [], [], 0, off⟩ := by
+  have get : s'.world.chans[s.world.chans.length]? = some ⟨fd, true, [], [], 0, off, 1⟩ := by
     rw [hw, hw']; simp
   obtain ⟨one, -, st, stream, notIn⟩ := consoles s' reach _ _ get rfl (by dsimp only; omega)
   rw [hw, hw'] at stream

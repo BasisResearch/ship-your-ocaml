@@ -93,6 +93,16 @@ def channelLedger : List (String × String) :=
     ("caml_ml_open_descriptor_in",
       "channel-count bound lifted when channel records are allocated beyond the F1 reservation") ]
 
+/-- **The custom-allocation budget** (`Budget.customs`, bounded by `Fits`;
+the channels' `refs`). Under G1 the 6th `caml_alloc_custom_mem` since program
+start requests a major slice, so a G1 program allocates at most 5 channel
+custom blocks. It is a budget bound, not a `BcSem` guard: `boot/ocamlc` on
+`BcSem` (the compiler differential) makes more than 5. -/
+def customLedger : List (String × String) :=
+  [ ("caml_ml_open_descriptor_out", "custom blocks beyond Budget.customs (the major slice of caml_adjust_gc_speed)"),
+    ("caml_ml_open_descriptor_in", "custom blocks beyond Budget.customs (the major slice of caml_adjust_gc_speed)"),
+    ("caml_ml_out_channels_list", "custom blocks beyond Budget.customs (the major slice of caml_adjust_gc_speed)") ]
+
 /-- **Non-console output outside F1** (`OCaml.GoodF1.consoles`). F1's channel
 primitives write only to console channels (descriptor 1 or 2, an OS
 stdout/stderr stream, a live process): the machine certifies only HTIF's

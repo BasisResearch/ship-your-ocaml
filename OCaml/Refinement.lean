@@ -58,9 +58,15 @@ structure Layout where
   budget still allows (`Gc.G1Room`, no collection under G1) -/
   budget : Budget
 
+/-- One state within the budget. -/
+structure FitsAt (B : Budget) (s : St) : Prop where
+  stack : s.stack.length ≤ B.stackWords
+  heap : s.heap.words ≤ B.heapWords
+  customs : s.world.customs ≤ B.customs
+
 /-- Every reachable state is within the budget. -/
 def Fits (B : Budget) (P : Prog) : Prop :=
-  ∀ s, Reach P s → s.stack.length ≤ B.stackWords ∧ s.heap.words ≤ B.heapWords
+  ∀ s, Reach P s → FitsAt B s
 
 /-- **The loop geometry**: the arm geometry of a representation witness and the
 G1 nursery room for the layout's budget. -/

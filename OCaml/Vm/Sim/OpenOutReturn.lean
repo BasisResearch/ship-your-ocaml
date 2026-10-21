@@ -237,7 +237,7 @@ theorem open_in_stdin {P : Prog} {s : St} {heap : Heap} {world : World} {v : Val
   obtain ⟨s', reach, -, hw⟩ := succ
   obtain ⟨live, -⟩ := openChan_live ok
   obtain ⟨-, -, off, hw'⟩ := openChan_ok ok
-  have get : s'.world.chans[s.world.chans.length]? = some ⟨fd, false, [], [], 0, off⟩ := by
+  have get : s'.world.chans[s.world.chans.length]? = some ⟨fd, false, [], [], 0, off, 1⟩ := by
     rw [hw, hw']; simp
   obtain ⟨zero, -, stream⟩ := stdins s' reach _ _ get rfl (by dsimp only; omega)
   rw [hw, hw'] at stream

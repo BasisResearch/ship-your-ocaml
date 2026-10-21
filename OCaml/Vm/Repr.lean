@@ -117,6 +117,8 @@ def chanOffOffset : Nat := 8
 def chanOffMax : Nat := 32
 def chanOffEnd : Nat := 16
 def chanOffFlags : Nat := 68
+/-- `int refcount`, before `flags`: one per custom block wrapping the channel -/
+def chanOffRefcount : Nat := 64
 
 /-- `CHANNEL_FLAG_UNBUFFERED` (`runtime/caml/io.h`). -/
 def chanFlagUnbuffered : BitVec 32 := 16#32

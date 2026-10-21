@@ -148,7 +148,7 @@ with it, and the world with the new channel (its offset as the OS has it). -/
 theorem openChan_ok {h h' : Heap} {w w' : World} {fd : Int} {isOut : Bool} {v : Val}
     (ok : openChan h w fd isOut = .ok v h' w') :
     v = .ptr (h.alloc (.channel w.chans.length)).2 0 ∧ h' = (h.alloc (.channel w.chans.length)).1 ∧
-      ∃ off, w' = { w with chans := w.chans ++ [⟨fd, isOut, [], [], 0, off⟩] } := by
+      ∃ off, w' = { w with chans := w.chans ++ [⟨fd, isOut, [], [], 0, off, 1⟩] } := by
   unfold openChan at ok
   dsimp only at ok
   split at ok
@@ -165,7 +165,7 @@ theorem openChan_ok {h h' : Heap} {w w' : World} {fd : Int} {isOut : Bool} {v : 
 theorem openChan_stream {h h' : Heap} {w w' : World} {fd : Int} {isOut : Bool} {v : Val}
     {st : TCB.Os.Stream} (ok : openChan h w fd isOut = .ok v h' w')
     (stream : TCB.Os.lookupFd w.os fd.toNat = some (.stream st)) :
-    w' = { w with chans := w.chans ++ [⟨fd, isOut, [], [], 0, -1⟩] } := by
+    w' = { w with chans := w.chans ++ [⟨fd, isOut, [], [], 0, -1, 1⟩] } := by
   unfold openChan at ok
   dsimp only at ok
   split at ok
