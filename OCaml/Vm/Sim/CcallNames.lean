@@ -38,27 +38,57 @@ def PrimReturnsAtR (L : OCaml.Layout) (P : Prog) (op : Opcode) (ra : BitVec 64) 
     ∃ result, CcallCallee ra (s.accu :: s.stack.take k) L P s pl cp sp high (domainAt c) entry env
       name v result heap world
 
+/-- **A summary at a site whose stack holds the call's `k` arguments** (the
+row knows it: BcSem's `C_CALLk` needs `k ≤ stack.length`). Every
+`PrimReturnsAtR` is one (`PrimReturnsAtR.toD`); a primitive whose model takes
+no `k + 1` arguments has one vacuously (`PrimReturnsAtD.of_arity`). -/
+def PrimReturnsAtD (L : OCaml.Layout) (P : Prog) (op : Opcode) (ra : BitVec 64) (k : Nat)
+    (name : String) : Prop :=
+  ∀ s c pl cp sp high table entry value env index v heap world, Reach P s → k ≤ s.stack.length →
+    CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
+    primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .ok v heap world →
+    heap.words ≤ L.budget.heapWords → CcallSucc P heap world →
+    ∃ result, CcallCallee ra (s.accu :: s.stack.take k) L P s pl cp sp high (domainAt c) entry env
+      name v result heap world
+
 theorem PrimReturnsAt.toR {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
     {name : String} (h : PrimReturnsAt L P op ra k name) : PrimReturnsAtR L P op ra k name :=
   fun s c pl cp sp high table entry value env index v heap world reach ready ok words _ =>
     h s c pl cp sp high table entry value env index v heap world reach ready ok words
 
+theorem PrimReturnsAtR.toD {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
+    {name : String} (h : PrimReturnsAtR L P op ra k name) : PrimReturnsAtD L P op ra k name :=
+  fun s c pl cp sp high table entry value env index v heap world reach _ ready ok words succ =>
+    h s c pl cp sp high table entry value env index v heap world reach ready ok words succ
+
 /-- **Assembly**: every reached call names a summarized primitive. -/
+theorem CcallReturns.of_namesD {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
+    {names : List String} (each : ∀ name ∈ names, PrimReturnsAtD L P op ra k name)
+    (reached : ∀ s c pl cp sp high table entry value env index name, Reach P s →
+      CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
+      name ∈ primsF1 → name ∈ names) :
+    CcallReturns L P op ra k :=
+  ⟨fun s c pl cp sp high table entry value env index name v heap world reach depth ready member ok words succ =>
+    each name (reached s c pl cp sp high table entry value env index name reach ready member)
+      s c pl cp sp high table entry value env index v heap world reach depth ready ok words succ⟩
+
 theorem CcallReturns.of_names {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
     {names : List String} (each : ∀ name ∈ names, PrimReturnsAtR L P op ra k name)
     (reached : ∀ s c pl cp sp high table entry value env index name, Reach P s →
       CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
       name ∈ primsF1 → name ∈ names) :
     CcallReturns L P op ra k :=
-  ⟨fun s c pl cp sp high table entry value env index name v heap world reach ready member ok words succ =>
-    each name (reached s c pl cp sp high table entry value env index name reach ready member)
-      s c pl cp sp high table entry value env index v heap world reach ready ok words succ⟩
+  .of_namesD (fun name mem => (each name mem).toD) reached
 
 /-- **The general instance**: summaries for all F1 primitives give the C_CALL
 returns of every program (no per-program premise). -/
+theorem CcallReturns.of_primsF1D {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
+    (each : ∀ name ∈ primsF1, PrimReturnsAtD L P op ra k name) : CcallReturns L P op ra k :=
+  .of_namesD each fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ member => member
+
 theorem CcallReturns.of_primsF1 {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64} {k : Nat}
     (each : ∀ name ∈ primsF1, PrimReturnsAtR L P op ra k name) : CcallReturns L P op ra k :=
-  .of_names each fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ member => member
+  .of_primsF1D fun name mem => (each name mem).toD
 
 theorem _root_.OCaml.Bytecode.Opcode.toNat_lt (o : Opcode) : o.toNat < 149 := by cases o <;> decide
 

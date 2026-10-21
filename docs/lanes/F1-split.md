@@ -111,8 +111,8 @@ and C_CALL1/2/4 are the only call rows. C_CALL3 and C_CALL5 are vacuous
 Outside whileMin, the general headline `ocamlrun_refinement_F1_open`
 (`Sim/F1Ccall.lean`) adds `F1CcallOpen`'s fields:
 * `caml_register_named_value` (a1-prims) and `caml_format_int` (bprime) at
-  every arity;
-* the arity-fixed console and fresh-id summaries at the larger `C_CALLk`;
+  their successful two-argument arity; unsupported arities are excluded by
+  `PrimReturnsAtD.of_arity` using the row's stack-depth fact;
 * `OutListRuntimeL` (a6-gc / a0-boot). Its `entry` has the same budget gap
   (`Ready (k + listed)`).
 

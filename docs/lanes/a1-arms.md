@@ -1,5 +1,20 @@
 # Lane a1-arms
 
+## C_CALL exact-arity assembly (2026-10-21)
+
+`CcallReturns.callee` now receives the stack-depth fact already proved by
+its opcode row. `PrimReturnsAtD` exposes that fact to primitive summaries,
+so `PrimReturnsAtD.of_arity` excludes every unsupported argument count,
+including calls with too many arguments. Existing summaries lift through
+`PrimReturnsAtR.toD`; no new program or runtime hypothesis is introduced.
+
+The generated `F1CcallOpen` now has four fields: `openOutRuntime`,
+`outListRuntime`, `register_named_value_c_call2`, and `format_int_c_call2`.
+Wrong-arity gaps are discharged from the actual `primF1Impl` definition.
+Targeted `F1Ccall` and `WhileMinTable` builds pass under a 12 GB cgroup cap.
+Named-value and formatting summaries, and the custom-count budget bridge,
+remain open. The standing growth/custom-call premises are unchanged.
+
 ## Current (F1 round, 2026-10-05)
 
 Done (landed 741ad7a): `ArmSim` is stated over `LoopAt L P s c`

@@ -115,6 +115,7 @@ callee's machine summary. `k` stack words are passed after the accumulator;
 `ra` is the arm's return site. -/
 structure CcallReturns (L : OCaml.Layout) (P : Prog) (op : Opcode) (ra : BitVec 64) (k : Nat) : Prop where
   callee : ∀ s c pl cp sp high table entry value env index name v heap world, Reach P s →
+    k ≤ s.stack.length →
     CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
     name ∈ primsF1 → primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .ok v heap world →
     heap.words ≤ L.budget.heapWords → CcallSucc P heap world →
@@ -207,7 +208,7 @@ theorem ccall_row_of {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64
             cases step0
             exact ⟨_, reach_next reach hd step, rfl, rfl⟩
           obtain ⟨res, callee⟩ := returns.callee s c pl cp sp high _ entry value env w name v heap world
-            reach ready member result words succ
+            reach bound ready member result words succ
           have hs := ready.stack.1
           have same : high = high0 := ready.stackHigh.symm.trans (rf.stackHigh c ready.runtime)
           subst same

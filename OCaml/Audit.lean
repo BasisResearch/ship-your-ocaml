@@ -6619,7 +6619,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.OutListWalk.domainField_not_outW
 #print axioms OCaml.Vm.Sim.OutListWalk.outW_below
 #print axioms OCaml.Vm.Sim.prim_caml_ml_out_channels_list_returns
-#print axioms OCaml.Vm.Sim.PrimReturnsAtR.of_short
+#print axioms OCaml.Vm.Sim.PrimReturnsAtD.of_arity
 #print axioms OCaml.Vm.Sim.f1_c_call1_returns
 #print axioms OCaml.Vm.Sim.f1_c_call2_returns
 #print axioms OCaml.Vm.Sim.f1_c_call3_returns
@@ -6652,3 +6652,6 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.OutListWalk.worldRepr_listRefs
 #print axioms OCaml.Vm.Primitives.VmPayload.listRefs
 #print axioms OCaml.Vm.Sim.OutListWalk.listRefs_ids
+#print axioms OCaml.Vm.Sim.PrimReturnsAtR.toD
+#print axioms OCaml.Vm.Sim.CcallReturns.of_namesD
+#print axioms OCaml.Vm.Sim.CcallReturns.of_primsF1D
