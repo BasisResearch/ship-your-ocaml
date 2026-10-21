@@ -23,7 +23,7 @@
 #                            proofs (abstractions/clusters.def) at 8+ proofs whose
 #                            per-case cost did not fall by a third fails with
 #                            "run /abstraction-discovery".
-# Heavy steps honour the shared-machine rules (24 GB cap).
+# Heavy steps honour the shared-machine rules (12 GB cap).
 set -u
 cd "$(dirname "$0")/.."
 fail() { echo "FAIL: $*"; exit 1; }
@@ -36,7 +36,7 @@ run_lean() {
     echo "check_all: ${avail} GB available (< 25), waiting" >&2
     sleep 120
   done
-  systemd-run --user --scope -q -p MemoryMax=24G "$@"
+  (ulimit -v 12582912; systemd-run --user --scope -q -p MemoryMax=12G "$@")
 }
 
 # Lean may wrap a long theorem's axiom list. Normalize only those reports;
@@ -48,7 +48,7 @@ normalize_axioms() {
   } { print }'
 }
 
-echo "== $(date +%T) stage a1: lake build OCaml OCaml.Audit Vsa VsaIris (under a 24 GB cgroup cap)"
+echo "== $(date +%T) stage a1: lake build OCaml OCaml.Audit Vsa VsaIris (under a 12 GB cgroup cap)"
 run_lean lake build OCaml OCaml.Audit Vsa VsaIris runbc bootdump 2>&1 | tail -1 \
   | grep -q "Build completed successfully" || fail "stage a1: build"
 echo "stage a1: OK"
