@@ -1,0 +1,13 @@
+Binding rules: read CLAUDE.md, PHASES.md, PLAN.md and your lane log; user directions override older briefs.
+Run scripts/abs_inventory.sh before proof work; reuse mandatory abstractions by name.
+No sorry, axiom, native_decide, bv_decide, heartbeat increases, or edits to generated outputs.
+Edit generators; audit new theorems with only propext, Classical.choice, Quot.sound.
+Before each build check free -g (available >=25 GB); one build per worktree.
+Run all Lean through systemd-run --user --scope -q -p MemoryMax=12G env LEAN_NUM_THREADS=2.
+Do not add ulimit -v: virtual reservation breaks the large import closure; the cgroup enforces 12 GB.
+Work only in this worktree; preserve inherited WIP and never force-push or reset it away.
+BarrierGrowthFull stays with G2; CustomMemCall remains a named premise; C4 round 2 waits for F1.
+Read docs/lanes/DEAD-ENDS.md before choosing a route; record newly refuted routes there.
+Build affected modules; register audits and update lane log/PHASES accurately; commit small checked steps.
+Land only via scripts/integrate.sh (full gate and serialized fast-forward push); never bypass a failed gate.
+No subagents or other Codex workers. Finish with exactly RESULT: landed <commit> or RESULT: stuck <where>.

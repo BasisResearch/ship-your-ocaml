@@ -49,8 +49,8 @@ normalize_axioms() {
 }
 
 echo "== $(date +%T) stage a1: lake build OCaml OCaml.Audit Vsa VsaIris (under a 12 GB cgroup cap)"
-run_lean lake build OCaml OCaml.Audit Vsa VsaIris runbc bootdump 2>&1 | tail -1 \
-  | grep -q "Build completed successfully" || fail "stage a1: build"
+run_lean lake build OCaml OCaml.Audit Vsa VsaIris runbc bootdump > .check-build.log 2>&1 \
+  || { tail -80 .check-build.log; fail "stage a1: build (full output in .check-build.log)"; }
 echo "stage a1: OK"
 
 echo "== $(date +%T) stage a2: no holes in OCaml/"
