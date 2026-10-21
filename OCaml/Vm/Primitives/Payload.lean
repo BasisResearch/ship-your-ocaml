@@ -28,6 +28,81 @@ theorem _root_.OCaml.Vm.NamedChain.frame {c c' : Config} {pl : Place} :
     · rw [inNode _ (by omega) (by omega)]; exact hnode.keyBytes i hi
     · rw [inNode _ (by omega) (by omega)]; exact hnode.nul
 
+/-- A NUL-terminated key at `a` is fixed by the bytes up to its terminator. -/
+theorem key_unique {c c' : Config} {a : Nat} {k k' : List (BitVec 8)}
+    (agree : ∀ i, i ≤ k.length → byte c' (a + i) = byte c (a + i))
+    (bytes : ∀ i (hi : i < k.length), byte c (a + i) = k[i] ∧ k[i] ≠ 0 ∧ k[i].toNat < 128)
+    (nul : byte c (a + k.length) = 0)
+    (bytes' : ∀ i (hi : i < k'.length), byte c' (a + i) = k'[i] ∧ k'[i] ≠ 0 ∧ k'[i].toNat < 128)
+    (nul' : byte c' (a + k'.length) = 0) : k' = k := by
+  have len : k'.length = k.length := by
+    rcases Nat.lt_trichotomy k'.length k.length with lt | eq | gt
+    · exfalso
+      have b := (bytes _ lt)
+      rw [← agree _ (Nat.le_of_lt lt), nul'] at b
+      exact b.2.1 b.1.symm
+    · exact eq
+    · exfalso
+      have b := (bytes' _ gt)
+      rw [agree _ (Nat.le_refl _), nul] at b
+      exact b.2.1 b.1.symm
+  apply List.ext_getElem len
+  intro i h1 h2
+  rw [← (bytes' i h1).1, agree _ (Nat.le_of_lt h2), (bytes i h2).1]
+
+/-- **Chains read from memory that agrees on the first's nodes have the
+same nodes and keys** (so the same footprint). -/
+theorem _root_.OCaml.Vm.NamedChain.shape {c c' : Config} {pl pl' : Place} :
+    ∀ {head : Nat} {l l' : List (Nat × List (BitVec 8) × Val)}, NamedChain c pl head l → NamedChain c' pl' head l' →
+      (∀ e ∈ l, ∀ a, e.1 ≤ a → a < e.1 + 16 + e.2.1.length + 1 → byte c' a = byte c a) →
+      l'.map (fun e => (e.1, e.2.1)) = l.map (fun e => (e.1, e.2.1))
+  | _, _, _, .nil, .nil, _ => rfl
+  | _, _, _, .nil, .cons node' _, _ => absurd node'.low (by simp only [Vsa.Sim.DlHeap.heapStart]; omega)
+  | _, _, _, .cons node _, .nil, _ => absurd node.low (by simp only [Vsa.Sim.DlHeap.heapStart]; omega)
+  | _, _, _, @NamedChain.cons _ _ h next key v rest node hrest,
+      @NamedChain.cons _ _ _ next' key' v' rest' node' hrest', agree => by
+    have inNode (a : Nat) (lo : h ≤ a) (hi : a < h + 16 + key.length + 1) : byte c' a = byte c a :=
+      agree _ List.mem_cons_self a lo hi
+    have k : key' = key := key_unique (a := h + 16) (fun i hi => inNode _ (by omega) (by omega))
+      node.keyBytes node.nul node'.keyBytes node'.nul
+    have w8 : word c' (h + 8) = word c (h + 8) :=
+      Reloc.bytesT_congr (x := h + 8) (x' := h + 8) fun j hj => inNode (h + 8 + j) (by omega) (by omega)
+    have n : next' = next := by rw [← node'.next, ← node.next, w8]
+    subst k n
+    simp only [List.map_cons, List.cons.injEq, true_and]
+    exact hrest.shape hrest' fun e he => agree e (List.mem_cons_of_mem _ he)
+
+/-- **The table's footprint is fixed by memory**: any chains representing a
+table in memory that agrees on one representation's footprint have that
+footprint. -/
+theorem _root_.OCaml.Vm.NamedRepr.foot_eq {c c' : Config} {pl pl' : Place} {named named' : List (String × Val)}
+    {chains chains' : Nat → List (Nat × List (BitVec 8) × Val)} (h : NamedRepr c pl named chains)
+    (h' : NamedRepr c' pl' named' chains') (agree : ∀ a, NamedReprFoot chains a → byte c' a = byte c a) :
+    ∀ a, NamedReprFoot chains' a ↔ NamedReprFoot chains a := by
+  have shape : ∀ b, b < 13 → (chains' b).map (fun e => (e.1, e.2.1)) = (chains b).map (fun e => (e.1, e.2.1)) := by
+    intro b hb
+    have head : word c' (Layout.sym_named_value_table + 8 * b) = word c (Layout.sym_named_value_table + 8 * b) :=
+      Reloc.bytesT_congr fun j hj => agree _ (Or.inl ⟨by omega, by simp only [Layout.sym_named_value_table]; omega⟩)
+    have hb' := h'.heads b hb
+    rw [head] at hb'
+    exact (h.heads b hb).shape hb' fun e he a lo hi => agree a (Or.inr ⟨b, hb, e, he, lo, hi⟩)
+  intro a
+  constructor
+  · rintro (bucket | ⟨b, hb, e, he, lo, hi⟩)
+    · exact Or.inl bucket
+    · have m : (e.1, e.2.1) ∈ (chains b).map (fun e => (e.1, e.2.1)) := by
+        rw [← shape b hb]; exact List.mem_map_of_mem he
+      obtain ⟨e0, he0, eq⟩ := List.mem_map.1 m
+      simp only [Prod.mk.injEq] at eq
+      exact Or.inr ⟨b, hb, e0, he0, by rw [eq.1]; exact lo, by rw [eq.1, eq.2]; exact hi⟩
+  · rintro (bucket | ⟨b, hb, e, he, lo, hi⟩)
+    · exact Or.inl bucket
+    · have m : (e.1, e.2.1) ∈ (chains' b).map (fun e => (e.1, e.2.1)) := by
+        rw [shape b hb]; exact List.mem_map_of_mem he
+      obtain ⟨e0, he0, eq⟩ := List.mem_map.1 m
+      simp only [Prod.mk.injEq] at eq
+      exact Or.inr ⟨b, hb, e0, he0, by rw [eq.1]; exact lo, by rw [eq.1, eq.2]; exact hi⟩
+
 /-- **The named table across memory** whose bytes agree on its footprint. -/
 theorem _root_.OCaml.Vm.NamedRepr.frame {c c' : Config} {pl : Place} {named : List (String × Val)}
     {chains : Nat → List (Nat × List (BitVec 8) × Val)} (h : NamedRepr c pl named chains)

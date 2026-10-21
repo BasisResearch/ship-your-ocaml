@@ -125,6 +125,8 @@ structure PayloadObsOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
     OutLRange log a (chanOffBuff + ioBufferSize)
   /-- `main_argv`, a static word -/
   argv : OutLRange log Layout.sym_main_argv 8
+  /-- `named_value_table`'s bucket array and nodes -/
+  named : ∀ chains, NamedRepr c pl s.world.named chains → ∀ a, NamedReprFoot chains a → OutLRange log a 1
 
 /-- `PayloadObsOutside` and the object-ID counter word. -/
 structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
@@ -146,10 +148,13 @@ structure PayloadOutside (log : List WEntry) (P : Prog) (s : St) (c : Config)
   openHead : OutLRange log Layout.sym_caml_all_opened_channels 8
   /-- `main_argv`, a static word -/
   argv : OutLRange log Layout.sym_main_argv 8
+  /-- `named_value_table`'s bucket array and nodes -/
+  named : ∀ chains, NamedRepr c pl s.world.named chains → ∀ a, NamedReprFoot chains a → OutLRange log a 1
 
 theorem PayloadOutside.obs {log : List WEntry} {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp : Nat} (h : PayloadOutside log P s c pl cp sp) : PayloadObsOutside log P s c pl cp sp :=
-  ⟨h.domain, h.stackHigh, h.trapsp, h.codeBase, h.atomBase, h.globals, h.code, h.stack, h.heap, h.channels, h.argv⟩
+  ⟨h.domain, h.stackHigh, h.trapsp, h.codeBase, h.atomBase, h.globals, h.code, h.stack, h.heap, h.channels, h.argv,
+    h.named⟩
 
 /-- Transport the VM payload across a write footprint that may write the
 object-ID counter: the counter word afterwards represents `n`. -/
@@ -196,6 +201,9 @@ theorem VmPayload.frame_obs {P s c c' pl cp sp high log}
     exact h.atomBase
   · rw [hw _ outside.argv]
     exact h.argv
+  · obtain ⟨chains, r⟩ := h.named
+    exact ⟨chains, r.frame fun a f => by
+      simpa using copy a 1 (outside.named chains r a f) 0 (by decide)⟩
 
 /-- Transport the complete VM payload across a checked write footprint. -/
 theorem VmPayload.frame_outsideLog {P s c c' pl cp sp high log}
@@ -237,7 +245,7 @@ theorem VmPayload.ooId {P s c pl cp sp high} (h : VmPayload P s c pl cp sp high)
     (counter : word c Layout.sym_oo_last_id = tag64 (BitVec.ofNat 63 n)) :
     VmPayload P {s with world := {s.world with ooId := n}} c pl cp sp high :=
   ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap,
-    ⟨h.world.output, h.world.chans, counter⟩, h.atomBase, h.argv⟩
+    ⟨h.world.output, h.world.chans, counter⟩, h.atomBase, h.argv, h.named⟩
 
 /-- The primitive-table pointer and all referenced entries are outside a write
 log. The caller supplies this from its table allocation and write separation. -/
