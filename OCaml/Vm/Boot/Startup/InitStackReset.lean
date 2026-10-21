@@ -54,11 +54,19 @@ end OCaml.Vm.Boot.Startup
 namespace OCaml.Vm.Boot.WhileMinElfParse
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCaml.Vm.Primitives Startup
 
+/-- caml_init_stack returned in the reset run, with the page table caml_init_gc left. -/
+structure InitStackReset (H : List (Nat × Nat)) (capacity : Nat) (ra s0 s1 s2 mx p : BitVec 64) (before after : Config) :
+    Prop where
+  done : InitStackDone H capacity ra s0 s1 s2 mx p before after
+  table : ∃ ent, GcTableAt ((p.toNat, 32768) :: H) after.σ.mem ent
+
 /-- The reset run through caml_init_gc and caml_init_stack: back in caml_main
 with the interpreter stack allocated and recorded in the domain record. -/
-theorem reset_init_stack_returned_exists :
+theorem reset_init_stack_reset_exists :
     ∃ initial after, Steps (Vsa.Densify.fillZero initial) after ∧
-      ∃ H cap ra s0 s1 s2 mx p before, InitStackDone H cap ra s0 s1 s2 mx p before after := by
+      ∃ H s0 s1 s2 mx p before, InitStackReset H
+        (startupAllocatorCredits - 656 - initGcCredits - 32768)
+        jal_80004e78_call.link s0 s1 s2 mx p before after := by
   obtain ⟨initial, sections, ⟨w⟩⟩ := reset_read_sections_exists
   obtain ⟨t1, t2, t3, dom⟩ := reset_domain_kept initial sections w
   obtain ⟨a, run1, A, gcA⟩ := reset_init_gc_call w dom
@@ -95,5 +103,26 @@ theorem reset_init_stack_returned_exists :
       exact D.low _ (GcLowKeep.of_range (Or.inr (Or.inl ⟨by unfold Layout.sym_caml_verb_gc; omega,
         by unfold Layout.sym_caml_verb_gc; omega⟩))) }
   obtain ⟨p, f, run4, S⟩ := caml_init_stack e _ _ _ _ _ _ _ _ IS
-  exact ⟨initial, f, run1.trans (run2.trans (run3.trans run4)), _, _, _, _, _, _, _, _, _, S⟩
+  obtain ⟨ent, T⟩ := D.table
+  have dom : firstDomainPtr.toNat = 0x8007d150 := rfl
+  have table : GcTableAt ((p.toNat, 32768) :: Hfinal) f.σ.mem ent := (T.agree fun x inT => by
+    obtain ⟨below, foot⟩ := T.table.out inT
+    have ta := T.table.apartDomain
+    have th := T.table.high
+    have hP : pageTable = 0x800684b8 := rfl
+    have hS : heapStart = 0x8007d140 := rfl
+    rw [dom] at ta
+    rw [hS] at th
+    rw [S.kept x below foot (by
+        simp only [initStackFieldsLog, initStackCells, List.map, OutL, domainField, dom, camlMaxStackSizeAddr, and_true]
+        rcases inT with ⟨lo, hi⟩ | ⟨lo, hi⟩
+        · rw [hP] at lo hi; omega
+        · omega), show e.σ.mem = d.σ.mem from P.memory]).cons _
+  exact ⟨initial, f, run1.trans (run2.trans (run3.trans run4)), _, _, _, _, _, _, _, ⟨S, ent, table⟩⟩
+
+theorem reset_init_stack_returned_exists :
+    ∃ initial after, Steps (Vsa.Densify.fillZero initial) after ∧
+      ∃ H cap ra s0 s1 s2 mx p before, InitStackDone H cap ra s0 s1 s2 mx p before after := by
+  obtain ⟨initial, after, run, H, s0, s1, s2, mx, p, before, R⟩ := reset_init_stack_reset_exists
+  exact ⟨initial, after, run, H, _, _, s0, s1, s2, mx, p, before, R.done⟩
 end OCaml.Vm.Boot.WhileMinElfParse

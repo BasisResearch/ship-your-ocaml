@@ -185,17 +185,31 @@ structure MajorTableAt (H : List (Nat × Nat)) (m : Std.ExtHashMap Nat (BitVec 8
   apartDomain : ent.toNat + 16384 ≤ firstDomainPtr.toNat ∨ firstDomainPtr.toNat + 928 ≤ ent.toNat
   occupied : ∀ i, i < 2048 → slotWord m ent i ≠ 0#64 → SlotInBlock H (slotWord m ent i)
 
+theorem pageCount_agree {m m' : Std.ExtHashMap Nat (BitVec 8)} {ent : BitVec 64} (fits : ent.toNat + 16384 ≤ 2 ^ 64)
+    (same : ∀ x, InTable ent x → (m'[x]?).getD 0 = (m[x]?).getD 0) : pageCount m' ent.toNat = pageCount m ent.toNat :=
+  pageCount_congr fun i hi => by
+    rw [← slotWord_pageSlot _ _ i hi fits, ← slotWord_pageSlot _ _ i hi fits]
+    exact slotWord_window_agree fits same i hi
+
 theorem MajorTableAt.agree {H : List (Nat × Nat)} {m m' : Std.ExtHashMap Nat (BitVec 8)} {ent : BitVec 64}
     (T : MajorTableAt H m ent) (same : ∀ x, InTable ent x → (m'[x]?).getD 0 = (m[x]?).getD 0) :
     MajorTableAt H m' ent := by
   have fits : ent.toNat + 16384 ≤ 2 ^ 64 := by have := T.low; unfold heapEnd at this; omega
   have slots := slotWord_window_agree fits same
-  have count : pageCount m' ent.toNat = pageCount m ent.toNat :=
-    pageCount_congr fun i hi => by
-      rw [← slotWord_pageSlot _ _ i hi fits, ← slotWord_pageSlot _ _ i hi fits, slots i hi]
+  have count := pageCount_agree fits same
   refine ⟨?_, T.low, T.high, T.owned, T.windows, T.apartDomain, fun i hi occ => ?_⟩
   · rw [count]; exact T.fields.window_agree same
   · rw [slots i hi] at occ ⊢; exact T.occupied i hi occ
+
+/-- The table's bytes lie below the arena's end, outside the allocator's footprint. -/
+theorem MajorTableAt.out {H : List (Nat × Nat)} {m : Std.ExtHashMap Nat (BitVec 8)} {ent : BitVec 64}
+    (T : MajorTableAt H m ent) {x : Nat} (inT : InTable ent x) : x < heapEnd ∧ ¬ vsaFoot H x := by
+  have hP : pageTable = 0x800684b8 := rfl
+  have hE : heapEnd = 0x86800000 := rfl
+  have tl := T.low
+  rcases inT with ⟨lo, hi⟩ | ⟨lo, hi⟩
+  · exact ⟨by rw [hP] at hi; rw [hE]; omega, pageTable_record_not_foot lo hi⟩
+  · exact ⟨by omega, owned_not_foot' T.high T.owned lo hi⟩
 
 theorem MajorTableAt.cons {H : List (Nat × Nat)} {m : Std.ExtHashMap Nat (BitVec 8)} {ent : BitVec 64}
     (T : MajorTableAt H m ent) (e : Nat × Nat) : MajorTableAt (e :: H) m ent :=
@@ -1387,6 +1401,7 @@ structure MajorHeapInit (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0
   /-- The page table, naming the chunk's pages, over the final live list. -/
   table : MajorTableAt ((entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) ::
     (mem.toNat, (majorChunkSize hsize + 4152#64).toNat) :: H) after.σ.mem ent
+  count : pageCount after.σ.mem ent.toNat = pageCount before.σ.mem ent.toNat + majorPages hsize
 
 /-- **caml_init_major_heap(heap_size)**, from its entry to its return. -/
 theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 charge : Nat)
@@ -1449,6 +1464,27 @@ theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cha
   have markOut : OutLRange (memsetShiftLog (BitVec.ofNat 64 majorRingAddr) 24) (domainField 128) 8 :=
     OCaml.Vm.Sim.outLRange_of_windows (memsetShiftLog_in _ 24 (by decide))
       (by simp only [OutWRange, domainField, dom, BitVec.toNat_ofNat, majorRingAddr, and_true]; omega)
+  -- the page table's bytes are bf_make_free_blocks's
+  have same29 (x : Nat) (inT : InTable ent x) : (d29.σ.mem[x]?).getD 0 = (d19.σ.mem[x]?).getD 0 := by
+    have T19 := F.table
+    have hP : pageTable = 0x800684b8 := rfl
+    have th := T19.high
+    have tl := T19.low
+    have ta := T19.apartDomain
+    rw [hS] at th
+    rw [dom] at ta
+    rcases inT with ⟨lo, hi⟩ | ⟨lo, hi⟩
+    · rw [hP] at lo hi
+      exact fin x (by rw [hE]; omega)
+        (fun f => f.elim (fun g => by unfold allocGlobal InRange at g; omega) fun h => by rw [hS] at h; omega)
+        (by simp only [majorStackWindows, OutW, gcPhaseAddr, domainField, dom, extraResourcesAddr, allocatedWordsAddr,
+          and_true]; omega)
+        (by omega)
+    · have sa := stackApart _ T19.owned x ⟨lo, hi⟩
+      exact fin x (by rw [hE] at tl; omega) (owned_not_foot' (by rw [hS]; exact th) T19.owned lo hi)
+        (by simp only [majorStackWindows, OutW, gcPhaseAddr, domainField, dom, extraResourcesAddr, allocatedWordsAddr,
+          and_true]; omega)
+        (by omega)
   refine ⟨mem, stack, entries, d29, run8.trans (run12.trans (run16.trans (run19.trans (run24.trans (run28.trans
     run29))))), {
     pc := R.pc
@@ -1524,26 +1560,8 @@ theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cha
         Tl.back x (by rw [hE]; omega) (fun f => f.elim alloc fun h => by rw [hS] at h; omega)
           (by simp only [majorStackWindows, OutW, domainField, dom, and_true]; omega)]
       exact F.lowSame x (by rw [hS]; exact low) alloc o1
-    table := by
-      have T19 := F.table
-      have hP : pageTable = 0x800684b8 := rfl
-      refine ((T19.agree fun x inT => ?_).cons _).cons _
-      have th := T19.high
-      have tl := T19.low
-      have ta := T19.apartDomain
-      rw [hS] at th
-      rw [dom] at ta
-      rcases inT with ⟨lo, hi⟩ | ⟨lo, hi⟩
-      · rw [hP] at lo hi
-        exact fin x (by rw [hE]; omega)
-          (fun f => f.elim (fun g => by unfold allocGlobal InRange at g; omega) fun h => by rw [hS] at h; omega)
-          (by simp only [majorStackWindows, OutW, gcPhaseAddr, domainField, dom, extraResourcesAddr, allocatedWordsAddr,
-            and_true]; omega)
-          (by omega)
-      · have sa := stackApart _ T19.owned x ⟨lo, hi⟩
-        exact fin x (by rw [hE] at tl; omega) (owned_not_foot' (by rw [hS]; exact th) T19.owned lo hi)
-          (by simp only [majorStackWindows, OutW, gcPhaseAddr, domainField, dom, extraResourcesAddr, allocatedWordsAddr,
-            and_true]; omega)
-          (by omega) }⟩
+    table := ((F.table.agree same29).cons _).cons _
+    count := by
+      rw [pageCount_agree (Nat.le_trans F.table.low (by decide)) same29, F.count] }⟩
 
 end OCaml.Vm.Boot.Startup

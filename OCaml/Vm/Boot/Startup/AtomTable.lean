@@ -134,12 +134,6 @@ theorem range_last (base : BitVec 64) (len : Nat) (aligned : base.toNat % 4096 =
   rw [back]
   omega
 
-theorem pageCount_agree {m m' : Std.ExtHashMap Nat (BitVec 8)} {ent : BitVec 64} (fits : ent.toNat + 16384 ≤ 2 ^ 64)
-    (same : ∀ x, InTable ent x → (m'[x]?).getD 0 = (m[x]?).getD 0) : pageCount m' ent.toNat = pageCount m ent.toNat :=
-  pageCount_congr fun i hi => by
-    rw [← slotWord_pageSlot _ _ i hi fits, ← slotWord_pageSlot _ _ i hi fits]
-    exact slotWord_window_agree fits same i hi
-
 /-- caml_page_table_add keeps the ABI callee-saved registers. -/
 theorem PageAdded.gprs {H capacity sp ra kind s0 s1 s2 s3 base ent n before after}
     (PA : PageAdded H capacity sp ra kind s0 s1 s2 s3 base ent n before after)

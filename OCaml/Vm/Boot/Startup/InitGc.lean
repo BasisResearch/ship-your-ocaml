@@ -424,6 +424,8 @@ structure InitGcMajored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2
   /-- The page table over the live list. -/
   table : MajorTableAt ((entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) ::
     (mem.toNat, (majorChunkSize 0xf8000#64 + 4152#64).toNat) :: initGcH2 H blk raw) after.σ.mem blk
+  /-- The minor heap's 512 pages and the major chunk's. -/
+  count : pageCount after.σ.mem blk.toNat = 512 + majorPages 0xf8000#64
 
 theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM cP : Nat)
     (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 cur blk raw : BitVec 64)
@@ -683,7 +685,8 @@ theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA c
     low := fun x k => by
       rw [MH.lowKept x k.low k.notAlloc k.major]
       exact glob x k.low k.notAlloc k.table k.trigger k.policy k.percent k.increment
-    table := MH.table }⟩
+    table := MH.table
+    count := by rw [MH.count, count13] }⟩
 
 /-- Bytes the end of caml_init_gc leaves alone: low memory outside the stored
 parameters, and the caller's side of caml_init_gc's frame pointer. -/
@@ -691,6 +694,19 @@ def GcTailKeep (fsp : BitVec 64) (x : Nat) : Prop := (x < heapEnd ∧ OutW gcSto
 
 theorem MemSame.chain {c d e : Config} {K : Nat → Prop} (a : MemSame c d K) (b : MemSame d e K) : MemSame c e K :=
   (a.trans b).mono fun _ h => ⟨h, h⟩
+
+/-- The page table caml_init_gc leaves: the live-list invariant and its occupancy. -/
+structure GcTableAt (H : List (Nat × Nat)) (m : Std.ExtHashMap Nat (BitVec 8)) (ent : BitVec 64) : Prop where
+  table : MajorTableAt H m ent
+  count : pageCount m ent.toNat = 512 + majorPages 0xf8000#64
+
+theorem GcTableAt.agree {H : List (Nat × Nat)} {m m' : Std.ExtHashMap Nat (BitVec 8)} {ent : BitVec 64}
+    (T : GcTableAt H m ent) (same : ∀ x, InTable ent x → (m'[x]?).getD 0 = (m[x]?).getD 0) : GcTableAt H m' ent :=
+  ⟨T.table.agree same, by rw [pageCount_agree (Nat.le_trans T.table.low (by decide)) same]; exact T.count⟩
+
+theorem GcTableAt.cons {H : List (Nat × Nat)} {m : Std.ExtHashMap Nat (BitVec 8)} {ent : BitVec 64}
+    (T : GcTableAt H m ent) (e : Nat × Nat) : GcTableAt (e :: H) m ent :=
+  ⟨T.table.cons e, T.count⟩
 
 /-- caml_init_gc returned. -/
 structure InitGcDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64)
@@ -704,7 +720,7 @@ structure InitGcDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3
   /-- Low globals outside caml_init_gc's stores are kept. -/
   low : ∀ x, GcLowKeep x → (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0
   /-- The page table over the final live list. -/
-  table : ∃ ent, MajorTableAt Hfinal after.σ.mem ent
+  table : ∃ ent, GcTableAt Hfinal after.σ.mem ent
 
 /-- A global store window misses everything `GcTailKeep` keeps. -/
 theorem gcTail_out {fsp : BitVec 64} (high : heapEnd ≤ fsp.toNat) {a w : Nat} (v : BitVec 64)
@@ -918,6 +934,24 @@ theorem init_gc_finish (c d14 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM
     frameTail (gholds_lookup (n := 10) _ p10.regs rfl) (quietAt k15)
   have regs10 := p10.regs
   have gQ := Q.same
+  have sameT (x : Nat) (inT : InTable blk x) : (fin.σ.mem[x]?).getD 0 = (d14.σ.mem[x]?).getD 0 := by
+    have lower := frameTail.lower
+    have hS : heapStart = 0x8007d140 := rfl
+    have hE : heapEnd = 0x86800000 := rfl
+    have hP : pageTable = 0x800684b8 := rfl
+    have th := Mj.table.high
+    have tl := Mj.table.low
+    have below : x < heapEnd := by
+      rcases inT with ⟨_, hi⟩ | ⟨_, hi⟩
+      · rw [hP] at hi; rw [hE]; omega
+      · omega
+    have base : x < nativeFrameBase sp 80 := by unfold nativeFrameBase; omega
+    rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x ⟨Or.inl base, trivial⟩,
+      k15.same x (Or.inl ⟨below, by
+        simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true]
+        rcases inT with ⟨lo, _⟩ | ⟨lo, _⟩
+        · rw [hP] at lo; omega
+        · rw [hS] at th; omega⟩)]
   refine ⟨fin, run1.trans (run2.trans (run3.trans (run4.trans (runm1.trans (run5.trans (runm2.trans (run6.trans
     (runm3.trans (run7.trans (runm4.trans (run8.trans (runm5.trans (run9.trans (runm6.trans (run10.trans
     runf))))))))))))))), {
@@ -943,24 +977,8 @@ theorem init_gc_finish (c d14 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM
       rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x ⟨Or.inl below, trivial⟩,
         k15.same x (Or.inl ⟨by omega, k.stores⟩)]
       exact Mj.low x k
-    table := ⟨blk, Mj.table.agree fun x inT => by
-      have lower := frameTail.lower
-      have hS : heapStart = 0x8007d140 := rfl
-      have hE : heapEnd = 0x86800000 := rfl
-      have hP : pageTable = 0x800684b8 := rfl
-      have th := Mj.table.high
-      have tl := Mj.table.low
-      have below : x < heapEnd := by
-        rcases inT with ⟨_, hi⟩ | ⟨_, hi⟩
-        · rw [hP] at hi; rw [hE]; omega
-        · omega
-      have base : x < nativeFrameBase sp 80 := by unfold nativeFrameBase; omega
-      rw [Q.memory, frameOn_writeLog _ _ _ (gcMessageLog_inside frameTail) x ⟨Or.inl base, trivial⟩,
-        k15.same x (Or.inl ⟨below, by
-          simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true]
-          rcases inT with ⟨lo, _⟩ | ⟨lo, _⟩
-          · rw [hP] at lo; omega
-          · rw [hS] at th; omega⟩)]⟩
+    table := ⟨blk, Mj.table.agree sameT, by
+      rw [pageCount_agree (Nat.le_trans Mj.table.low (by decide)) sameT]; exact Mj.count⟩
     extends_ := ⟨[(entries.toNat, (32768#64).toNat), (stack.toNat, (24#64).toNat),
       (mem.toNat, (majorChunkSize 0xf8000#64 + 4152#64).toNat), (raw.toNat, (0x200000#64 + 4096#64).toNat),
       (blk.toNat, 16384)], rfl⟩ }⟩

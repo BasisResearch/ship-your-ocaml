@@ -1,5 +1,27 @@
 # Lane a0-boot
 
+## Current status (2026-10-21)
+
+`reset_init_atom_table_returned_exists` extends the actual reset execution
+through `caml_init_atom_table` and its return to caml_main at `0x80004e80`.
+The proof composes the aligned allocation, all 256 atom-header stores,
+page registration and caller return. `GcTableAt` carries the minor/major
+page occupancy through `caml_init_gc` and `caml_init_stack`, discharging
+the atom initializer's table-capacity premise. The predecessor atom-loop
+and function-composition commits are checked with this reset composition.
+
+`MajorTableAt.pageClasses` and `PageClasses.frame` supply the concrete
+page-class predicate and memory frame for the root-registration interface.
+The closed reset-to-cut theorem, `RootsAt` at the cut and `libHeap` for the
+running invariant remain open. Next: backtrace, interpreter initialization,
+debugger and loading, continuing the function-summary composition.
+
+Targeted startup builds pass under a 12 GB cgroup cap. A 12 GB virtual
+address-space cap prevents Lean thread initialization for this import
+closure; use `systemd-run --user --scope -p MemoryMax=12G` for its physical
+memory limit. No heartbeat or recursion budgets were increased.
+
+
 ## Round 2 status (2026-10-06, htif fs)
 
 The reset run reaches `open("ocamlrun")` (`reset_open_call_exists`).

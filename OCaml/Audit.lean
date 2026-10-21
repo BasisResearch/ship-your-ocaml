@@ -461,6 +461,8 @@ import OCaml.Vm.Boot.Startup.InitGcSteps
 import OCaml.Vm.Boot.Startup.InitGc
 import OCaml.Vm.Boot.Startup.InitGcReset
 import OCaml.Vm.Boot.Startup.InitStackReset
+import OCaml.Vm.Boot.Startup.AtomTableReset
+import OCaml.Vm.Boot.Startup.PageClasses
 import OCaml.Vm.Boot.Startup.StrchrHit
 import OCaml.Vm.Boot.Startup.ChildHit
 import OCaml.Vm.Boot.Startup.MemcmpRun
@@ -3156,6 +3158,13 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_gc_call
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_gc_exists
 #print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_stack_returned_exists
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_stack_reset_exists
+#print axioms OCaml.Vm.Boot.WhileMinElfParse.reset_init_atom_table_returned_exists
+#print axioms OCaml.Vm.Boot.Startup.caml_init_atom_table
+#print axioms OCaml.Vm.Boot.Startup.atom_loop
+#print axioms OCaml.Vm.Boot.Startup.GcTableAt.agree
+#print axioms OCaml.Vm.Boot.Startup.MajorTableAt.pageClasses
+#print axioms OCaml.Vm.Boot.Startup.PageClasses.frame
 #print axioms OCaml.Vm.Boot.Startup.caml_init_stack
 #print axioms OCaml.Vm.Boot.Startup.caml_init_stack_call
 #print axioms OCaml.Vm.Boot.Startup.init_stack_save
