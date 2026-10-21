@@ -21,6 +21,47 @@ address-space cap prevents Lean thread initialization for this import
 closure; use `systemd-run --user --scope -p MemoryMax=12G` for its physical
 memory limit. No heartbeat or recursion budgets were increased.
 
+Validation of the recovered milestone: `/tmp/syo-startup-audit.log` ends in
+`Build completed successfully (5405 jobs)` and reports exactly `propext`,
+`Classical.choice`, `Quot.sound` for the reset-to-atom theorem. The theorem
+has no arguments or caller-supplied premises: it existentially supplies
+`initial`, `after`, the `Steps (fillZero initial) after` run and an
+`AtomTableDone` with stack `parameterStack`, return link
+`jal_80004e7c_call.link` and remaining credits
+`startupAllocatorCredits - 656 - initGcCredits - 32768 - 8192`.
+Its proof obtains the reset witness from `reset_init_stack_reset_exists`;
+the conclusion does not separately export an `ElfReset` certificate.
+The generic `AtomTableCall` requirements (runtime readiness, native frame,
+allocation charge, `MajorTableAt` and a spare page-table slot) are supplied
+internally, including occupancy from `GcTableAt.count`.
+
+Remaining obligations:
+* Continue from `0x80004e80` through backtrace/interpreter/debugger
+  initialization, code and DATA loading, outer primitive-table construction,
+  unmarshalling/promotion and `caml_sys_init`; compose the actual reset run
+  to the cut and establish `Loaded` there.
+* Establish `RootsAt` at that cut, including the young-range adapter,
+  page lookup/table interface, the actual skiplist shapes after backtrace
+  and argv root registration, and address/footprint separation.
+  `MajorTableAt.pageClasses` and `PageClasses.frame` supply only the
+  concrete page-class component and its transport.
+* Supply `cut_heapReady_Statement` and
+  `cut_heapReady_covers_Statement f1Covered [(refTable, 56)]`: retain enough
+  newlib allocator capacity (at least `2^24`) and live blocks covering
+  every `f1Covered` extent: domain, ref table, minor/major regions,
+  VM stack, code buffer, primitive table, executable name and atom table,
+  with the ref-table struct an exact block. No channel is open at this
+  cut; later channel records belong to the running heap invariant.
+  These feed `libHeap_of`/`F1Pins.libHeap` and the running invariant;
+  this milestone does not discharge them.
+
+The Sol review added audit registrations for the predecessor atom helpers
+and new occupancy/frame helpers. Static hole, discipline, startup-drift,
+abstraction and whitespace checks passed; all 9,276 reports in the recovered
+audit log use only standard axioms. The foreman handles the remaining full
+gate and landing outside the worker sandbox.
+
+
 
 ## Round 2 status (2026-10-06, htif fs)
 
