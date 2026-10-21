@@ -36,7 +36,7 @@ run_lean() {
     echo "check_all: ${avail} GB available (< 25), waiting" >&2
     sleep 120
   done
-  (ulimit -v 12582912; systemd-run --user --scope -q -p MemoryMax=12G "$@")
+  (ulimit -v 12582912; systemd-run --user --scope -q -p MemoryMax=12G env LEAN_NUM_THREADS=2 "$@")
 }
 
 # Lean may wrap a long theorem's axiom list. Normalize only those reports;
