@@ -379,4 +379,159 @@ theorem pick {sp s c} (input : PickInput sp s c) : FnSummary pickPc (fun d => d 
     · exact pick_regs _ _ _ _ _ _
     · rw [post.memory, pickLoads, plain_log, pickLog, if_neg repair]
 
+/-! ## Stage 2: pop the head (`0x800074bc`) -/
+
+def splitPc : BitVec 64 := 0x800074e8#64
+def popKeep : List BBlock := [blk bf_allocateX74bcTSeg]
+def popEmpty : List BBlock := [blk bf_allocateX74bcFSeg, blk bf_allocateX74ccSeg]
+
+macro "pop_simp" : tactic => `(tactic|
+  simp [blk, bf_allocateX74bcTSeg, bf_allocateX74bcFSeg, bf_allocateX74ccSeg, popRegs, runGM, wlogM, wentryM,
+    eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, mkLine, decodeM, imm20Of, widthOfM, shamtOf,
+    Sail.BitVec.extractLsb, LeanRV64DExecutable.Functions.sign_extend, Sail.BitVec.signExtend, ldsRunM,
+    BitVec.sub_eq_add_neg, BestFitRemnant.shift4])
+
+/-- Stage 3's registers. -/
+def splitRegs (sp b wosz : BitVec 64) : GRegs := [(2, sp), (11, b), (14, wosz)]
+
+theorem keep_log (sp s b bits wosz : BitVec 64) (bn : List (BitVec 8)) :
+    (evalBlocks popKeep (SegEvalState.init (popRegs sp s b bits wosz) [bn])).log =
+      [((flBase + sx s <<< 4).toNat, 8, bytesVal .ld bn)] := by
+  simp only [popKeep, evalBlocks, evalBlock, SegEvalState.init]; pop_simp
+
+theorem empty_log (sp s b bits wosz : BitVec 64) (bn : List (BitVec 8)) :
+    (evalBlocks popEmpty (SegEvalState.init (popRegs sp s b bits wosz) [bn])).log =
+      [((flBase + sx s <<< 4).toNat, 8, bytesVal .ld bn), (Layout.sym_bf_small_map, 4, bits &&& (BestFitRemnant.bit s ^^^ 18446744073709551615#64))] := by
+  simp only [popEmpty, evalBlocks, evalBlock, SegEvalState.init]; pop_simp
+  exact ⟨rfl, rfl⟩
+
+def nextOf (b : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) : BitVec 64 := bytesT m b.toNat 8
+
+/-- The pop's stores: the slot takes the successor; an emptied list clears its bit. -/
+def popLog (s b bits : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) : List WEntry :=
+  [((slotS s).toNat, 8, nextOf b m)] ++
+    (if nextOf b m = 0#64 then
+      [(Layout.sym_bf_small_map, 4, bits &&& (BestFitRemnant.bit s ^^^ 18446744073709551615#64))] else [])
+
+structure PopInput (sp s b bits wosz : BitVec 64) (c : Config) : Prop where
+  good : GoodState c.σ
+  tick : c.tick < 2
+  minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
+  code : Code.Bf_allocateLoaded c.σ.mem
+  registers : GHolds c.σ (popRegs sp s b bits wosz)
+  small : s.toNat ≤ 16
+  block : ReadWindow b 8
+
+structure PopPost (sp s b bits wosz : BitVec 64) (before after : Config) : Prop where
+  pc : PCAt splitPc after
+  registers : GHolds after.σ (splitRegs sp b wosz)
+  memory : after.σ.mem = writeLog before.σ.mem (popLog s b bits before.σ.mem)
+  good : GoodState after.σ
+  tick : after.tick < 2
+  minstret : ∃ v, after.σ.regs.get? Register.minstret = some v
+  output : after.σ.sailOutput = before.σ.sailOutput
+  frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
+    (∀ n ∈ [10, 11, 12, 13, 14, 15, 16, 17], (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+
+theorem body74bc : (blk bf_allocateX74bcFSeg).body = (blk bf_allocateX74bcTSeg).body := rfl
+
+theorem acc74bc (m : Std.ExtHashMap Nat (BitVec 8)) (sp s b bits wosz : BitVec 64) (bn : List (BitVec 8))
+    (lds : List (List (BitVec 8))) (small : s.toNat ≤ 16) (block : ReadWindow b 8) (pins : LPins8 m b.toNat bn) :
+    AccessPlan m (popRegs sp s b bits wosz) (bn :: lds) (blk bf_allocateX74bcTSeg).body := by
+  simp only [blk, bf_allocateX74bcTSeg, List.getD_cons_zero, AccessPlan]
+  chain_facts True.intro
+  · apply block.ld rfl (by pop_simp)
+    simpa [stepMemM, mkLine, decodeM, stepLdsM] using pins
+  · apply (BestFitRemnant.slot_window small).sd rfl
+    show _ = BestFitRemnant.slot s
+    rw [← slot_of small]; pop_simp
+
+theorem pop_src (sp s b bits wosz : BitVec 64) (bn : List (BitVec 8)) (lds : List (List (BitVec 8))) :
+    srcVal 16 (runGM (blk bf_allocateX74bcTSeg).body (popRegs sp s b bits wosz) (bn :: lds)) = bytesVal .ld bn := by
+  pop_simp
+
+structure Split (sp b wosz : BitVec 64) (L : GRegs) : Prop where
+  sp : lookupG 2 L = some sp
+  b : lookupG 11 L = some b
+  wosz : lookupG 14 L = some wosz
+
+theorem keep_regs (sp s b bits wosz : BitVec 64) (bn : List (BitVec 8)) :
+    Split sp b wosz (evalBlocks popKeep (SegEvalState.init (popRegs sp s b bits wosz) [bn])).regs := by
+  refine ⟨?_, ?_, ?_⟩ <;> simp only [popKeep, evalBlocks, evalBlock, SegEvalState.init] <;> pop_simp
+
+theorem empty_regs (sp s b bits wosz : BitVec 64) (bn : List (BitVec 8)) :
+    Split sp b wosz (evalBlocks popEmpty (SegEvalState.init (popRegs sp s b bits wosz) [bn])).regs := by
+  refine ⟨?_, ?_, ?_⟩ <;> simp only [popEmpty, evalBlocks, evalBlock, SegEvalState.init] <;> pop_simp
+
+theorem keep_pc (sp s b bits wosz : BitVec 64) (bn : List (BitVec 8)) :
+    evalBlocksPC popPc (SegEvalState.init (popRegs sp s b bits wosz) [bn]) popKeep = splitPc := by
+  simp only [evalBlocksPC, popKeep, chainEndPC, SegEvalState.init, endPCB, tgtPCT]; pop_simp; rfl
+
+theorem empty_pc (sp s b bits wosz : BitVec 64) (bn : List (BitVec 8)) :
+    evalBlocksPC popPc (SegEvalState.init (popRegs sp s b bits wosz) [bn]) popEmpty = splitPc := by
+  simp only [evalBlocksPC, popEmpty, chainEndPC, SegEvalState.init, endPCB, tgtPCT]; pop_simp; rfl
+
+theorem split_holds {c : Config} {sp b wosz : BitVec 64} {L : GRegs} (split : Split sp b wosz L)
+    (held : GHolds c.σ L) : GHolds c.σ (splitRegs sp b wosz) :=
+  ⟨gholds_lookup _ held split.sp, gholds_lookup _ held split.b, gholds_lookup _ held split.wosz, True.intro⟩
+
+theorem pop {sp s b bits wosz c} (input : PopInput sp s b bits wosz c) :
+    FnSummary popPc (fun d => d = c) (PopPost sp s b bits wosz c) := by
+  let m := c.σ.mem
+  let bn := Primitives.read8 m b.toNat
+  have small := input.small
+  have keys : KeysOK (keysG (popRegs sp s b bits wosz)) := by change KeysOK [2, 10, 11, 12, 13, 14, 15]; decide
+  have access := acc74bc m sp s b bits wosz bn [] small input.block (read8_pins _ _)
+  have src := pop_src sp s b bits wosz bn []
+  have nextEq : bytesVal .ld bn = nextOf b m := read8_value _ _
+  by_cases emptied : nextOf b m = 0#64
+  · have chainA : ChainAccess m (popRegs sp s b bits wosz) [bn] popEmpty := by
+      apply ChainAccess.cons ⟨by rw [body74bc]; exact access, ?_⟩
+      · rw [body74bc]
+        apply ChainAccess.cons (b := blk bf_allocateX74ccSeg) ⟨?_, by simp [blk, bf_allocateX74ccSeg, TermFactsO]⟩
+          ChainAccess.nil
+        simp only [blk, bf_allocateX74ccSeg, List.getD_cons_zero, AccessPlan]
+        chain_facts True.intro
+        apply BestFitRemnant.map_write.sw rfl
+        pop_simp
+      · rw [body74bc]
+        change guardB bop.BNE (srcVal 16 _) (srcVal 0 _) = false
+        rw [src, nextEq, emptied]; rfl
+    have summary := block_summary popEmpty popPc (popRegs sp s b bits wosz) [bn] c
+      ⟨input.good, input.minstret, input.registers, keys,
+        chainPlan_facts (code_of input.code (by
+          intro x h; simp only [popEmpty, List.mem_cons, List.not_mem_nil, or_false] at h
+          rcases h with rfl | rfl <;> simp [allBlocks])) chainA,
+        by change ChainOK popPc [2, 10, 11, 12, 13, 14, 15] popEmpty; decide, input.tick⟩
+    apply summary.weaken (fun _ h => h)
+    intro d post
+    refine ⟨?_, split_holds (empty_regs _ _ _ _ _ _) post.regs, ?_, post.good, post.tick, post.minstret,
+      post.output, fun r noise outside => post.frame r noise (fun n hn => outside n (by
+        have h : ∀ n ∈ wrChain popEmpty, n ∈ [10, 11, 12, 13, 14, 15, 16, 17] := by decide
+        exact h n hn))⟩
+    · rw [PCAt, post.pc, empty_pc]
+    · rw [post.memory, empty_log, popLog, if_pos emptied, nextEq, slotS, ← slot_of small]
+      rfl
+  · have chainA : ChainAccess m (popRegs sp s b bits wosz) [bn] popKeep := by
+      apply ChainAccess.cons ⟨access, ?_⟩ ChainAccess.nil
+      change guardB bop.BNE (srcVal 16 _) (srcVal 0 _) = true
+      rw [src, nextEq]
+      simp only [guardB, bne_iff_ne, ne_eq]
+      exact emptied
+    have summary := block_summary popKeep popPc (popRegs sp s b bits wosz) [bn] c
+      ⟨input.good, input.minstret, input.registers, keys,
+        chainPlan_facts (code_of input.code (by
+          intro x h; simp only [popKeep, List.mem_cons, List.not_mem_nil, or_false] at h
+          subst h; simp [allBlocks])) chainA,
+        by change ChainOK popPc [2, 10, 11, 12, 13, 14, 15] popKeep; decide, input.tick⟩
+    apply summary.weaken (fun _ h => h)
+    intro d post
+    refine ⟨?_, split_holds (keep_regs _ _ _ _ _ _) post.regs, ?_, post.good, post.tick, post.minstret,
+      post.output, fun r noise outside => post.frame r noise (fun n hn => outside n (by
+        have h : ∀ n ∈ wrChain popKeep, n ∈ [10, 11, 12, 13, 14, 15, 16, 17] := by decide
+        exact h n hn))⟩
+    · rw [PCAt, post.pc, keep_pc]
+    · rw [post.memory, keep_log, popLog, if_neg emptied, nextEq, slotS, ← slot_of small]
+      rfl
+
 end OCaml.Vm.Gc.BestFitNext
