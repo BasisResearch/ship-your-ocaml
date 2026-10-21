@@ -21,9 +21,9 @@ inside a 12 GB systemd scope, so sandboxed child builds inherit the limit.
 Use `scripts/lean-capped.sh` for builds; outside a worker it creates the scope.
 
 Review actual changes, theorem premises, audit results and gate output before
-counting a landing. Workers commit and report results. The foreman runs
+counting a landing. Workers leave checked edits and report results. The foreman commits and runs
 `scripts/integrate.sh` outside the worker sandbox after review, because
-`workspace-write` denies the user systemd bus and home landing queue.
+`workspace-write` denies Git metadata, the user systemd bus and home landing queue.
 Append the final `RESULT: landed <commit>` to the worker log after landing.
 Do not re-send routes recorded in `docs/lanes/DEAD-ENDS.md`. Keep `STATUS.md`
 current, reserving `## Needs user` for decisions only the user can make.

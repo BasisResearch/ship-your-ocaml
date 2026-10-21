@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run one Sol task in an existing lane worktree; at most two per project.
 # Usage: nohup ./codexwork.sh a0-boot-next tasks/sol-startup.md >/dev/null 2>&1 &
+main() {
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")" && pwd -P)
 SLOT=${1:?usage: codexwork.sh SLOT TASKFILE}
@@ -49,3 +50,5 @@ elif [[ -z $(git status --porcelain) ]] && [[ $(git rev-parse HEAD) != "$START" 
 else
   echo "RESULT: stuck task not landed; inspect worker result in $LOG"
 fi
+}
+main "$@"
