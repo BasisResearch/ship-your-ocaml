@@ -16,6 +16,7 @@
 # gate fails, the holder falls back to gating its own branch alone. A run whose
 # commits already reached main on someone else's train finds nothing left to
 # land and exits at once.
+main() {
 set -euo pipefail
 QUEUE="${SYO_INTEGRATE_QUEUE:-$HOME/.syo-queue}"
 mkdir -p "$QUEUE"
@@ -44,7 +45,7 @@ wait_mem() {
   while :; do
     avail=$(free -g | awk '/^Mem:/{print $7}')
     [ "$avail" -ge 25 ] && return
-    echo "integrate: ${avail} GB available (< 25), waiting"; sleep 120
+    echo "integrate: ${avail} GB available (< 25), waiting"; sleep 60
   done
 }
 # 9>&-: the gate must not inherit the lock descriptor (the OS-spec
@@ -64,7 +65,12 @@ for attempt in 1 2 3 4 5; do
     [ -f "$e" ] || continue
     read -r sha br wt < "$e" || continue
     git merge-base --is-ancestor "$sha" origin/main 2>/dev/null && continue
-    if git cherry-pick "origin/main..$sha" >/dev/null 2>&1; then
+    # Lanes often share unlanded foreman commits, or copies of those commits
+    # rebased onto different heads. Pick only patches missing from this train.
+    commits=()
+    mapfile -t commits < <(git rev-list --reverse --topo-order --cherry-pick --right-only "HEAD...$sha")
+    [ ${#commits[@]} -gt 0 ] || continue
+    if git cherry-pick "${commits[@]}" >/dev/null 2>&1; then
       riders+=("$br")
     else
       git cherry-pick --abort 2>/dev/null || true
@@ -93,3 +99,5 @@ for attempt in 1 2 3 4 5; do
   echo "integrate: push race, retrying ($attempt)"
 done
 echo "integrate: gave up after 5 push races"; exit 1
+}
+main "$@"
