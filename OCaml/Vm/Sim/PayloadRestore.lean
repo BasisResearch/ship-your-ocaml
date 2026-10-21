@@ -21,6 +21,8 @@ structure PayloadCoreOutside (log : List WEntry) (P : Prog) (s : St) (c : Config
   openHead : OutLRange log Layout.sym_caml_all_opened_channels 8
   /-- `main_argv`, a static word -/
   argv : OutLRange log Layout.sym_main_argv 8
+  /-- the named table's bucket array and placed nodes -/
+  named : ∀ a, NamedPlFoot pl s.world.named a → OutLRange log a 1
 
 /-- Rebuild mutable payload components after a log, copying the fixed
 observations once through total-byte and relocation combinators. -/
@@ -64,6 +66,9 @@ theorem payload_rebuild_accu {P : Prog} {s : St} {before after : Config}
     exact h.atomBase
   · rw [hw _ outside.argv]
     exact h.argv
+  · obtain ⟨chains, table⟩ := h.named
+    exact ⟨chains, table.frame_outsideLog outside.named
+      (outsideLog_of_observedLog (fun a => by rw [memory]))⟩
 
 /-- Existing rebuilding interface for arms that retain the accumulator. -/
 theorem payload_rebuild {P : Prog} {s : St} {before after : Config}

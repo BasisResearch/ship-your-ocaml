@@ -169,10 +169,12 @@ theorem ArmGeometry.transport {P : Prog} {s s' : St} {c c' : Config} {pl : Place
     (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
     (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
     (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-      word c' (a + chanOffNext) = word c (a + chanOffNext)) :
+      word c' (a + chanOffNext) = word c (a + chanOffNext))
+    (named : s'.world.named = s.world.named := by
+      first | rfl | assumption | exact congrArg OCaml.Bytecode.World.named ‹_›) :
     ArmGeometry P s' c' pl cp high :=
-  ⟨g.toStackGeometry.transport objects chans domain prims,
-   g.nursery.transport objects chans domain prims limit ptr head links⟩
+  ⟨g.toStackGeometry.transport objects chans domain prims named,
+   g.nursery.transport objects chans domain prims limit ptr head links named⟩
 
 /-- Transport across a step that keeps the channel ids (channel primitives
 change only record contents). -/
@@ -187,10 +189,11 @@ theorem ArmGeometry.transport_ids {P : Prog} {s s' : St} {c c' : Config} {pl : P
     (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
     (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
     (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
-      word c' (a + chanOffNext) = word c (a + chanOffNext)) :
+      word c' (a + chanOffNext) = word c (a + chanOffNext))
+    (namedFoot : ∀ a, NamedPlFoot pl s'.world.named a → NamedPlFoot pl s.world.named a) :
     ArmGeometry P s' c' pl cp high :=
-  ⟨g.toStackGeometry.transport_ids objects ids domain prims,
-   g.nursery.transport_ids objects ids domain prims limit ptr head links⟩
+  ⟨g.toStackGeometry.transport_ids objects ids domain prims namedFoot,
+   g.nursery.transport_ids objects ids domain prims limit ptr head links namedFoot⟩
 
 /-- **Transport across an arm's write log**, which misses the
 `Caml_state`/primitive-table pointers and the allocation pointers. -/

@@ -43,6 +43,15 @@ theorem copied_of_observedLog {c c' : Config} {log : List WEntry} {a n : Nat}
   have same : (c'.σ.mem[a + j]?).getD 0 = ((writeLog c.σ.mem log)[a + j]?).getD 0 := memory _
   rw [same, writeLog_out _ _ _ (outL_of_range outside (by omega) (by omega))]
 
+/-- The named table survives a native footprint that misses its placed bytes.
+Exact and observed write-log frames share this total-read interface. -/
+theorem _root_.OCaml.Vm.NamedRepr.frame_outsideLog {c c' : Config} {pl : Place}
+    {named : List (String × Val)} {chains : Nat → List (Nat × List (BitVec 8) × Val)}
+    {log : List WEntry} (h : NamedRepr c pl named chains)
+    (outside : ∀ a, NamedPlFoot pl named a → OutLRange log a 1)
+    (memory : ∀ a, OutL log a → byte c' a = byte c a) : NamedRepr c' pl named chains :=
+  h.frame fun a f => memory a (outL_of_range (outside a (h.foot_sub f)) (Nat.le_refl _) (by omega))
+
 /-- Total scalar observations are unchanged outside a first-order write log. -/
 theorem bytesT_writeLog_out (m : Std.ExtHashMap Nat (BitVec 8)) {log : List WEntry} {a n : Nat}
     (outside : OutLRange log a n) : bytesT (writeLog m log) a n = bytesT m a n := by
@@ -202,8 +211,7 @@ theorem VmPayload.frame_obs {P s c c' pl cp sp high log}
   · rw [hw _ outside.argv]
     exact h.argv
   · obtain ⟨chains, r⟩ := h.named
-    exact ⟨chains, r.frame fun a f => by
-      simpa using copy a 1 (outside.named a (r.foot_sub f)) 0 (by decide)⟩
+    exact ⟨chains, r.frame_outsideLog outside.named memory⟩
 
 /-- Transport the complete VM payload across a checked write footprint. -/
 theorem VmPayload.frame_outsideLog {P s c c' pl cp sp high log}

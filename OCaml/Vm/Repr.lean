@@ -268,6 +268,16 @@ def hashBytes (bytes : List (BitVec 8)) : BitVec 32 :=
 /-- A C string's bytes as the key it spells. -/
 def strOf (bytes : List (BitVec 8)) : String := String.ofList (bytes.map fun b => Char.ofNat b.toNat)
 
+/-- The C key of an OCaml byte string ends at its first NUL. -/
+def nameBytes (bytes : List UInt8) : List (BitVec 8) :=
+  (bytes.takeWhile (· != 0)).map UInt8.toBitVec
+
+/-- Runtime keys use byte characters, including codes 128–255. -/
+theorem strOf_nameBytes (bytes : List UInt8) :
+    strOf (nameBytes bytes) = OCaml.Bytecode.namedValueKey bytes := by
+  simp only [strOf, nameBytes, OCaml.Bytecode.namedValueKey, List.map_map]
+  rfl
+
 end OCaml.Vm.Primitives.Named.NamedValue
 
 namespace OCaml.Vm
@@ -276,14 +286,14 @@ open OCaml.Bytecode Vsa.Machine
 /-- **A node of the named-value table at a loop head** (`callback.c`'s
 `{ value val; struct named_value *next; char name[]; }`), read through total
 reads: a malloc'd block in the arena, its value word representing `v`, its
-next word, and its key's ASCII bytes NUL-terminated. -/
+next word, and its key's arbitrary bytes NUL-terminated. -/
 structure NamedNode (c : Config) (pl : Place) (node next : Nat) (key : List (BitVec 8)) (v : Val) : Prop where
   low : Vsa.Sim.DlHeap.heapStart ≤ node
   arena : node + 16 + key.length + 1 ≤ Vsa.Sim.DlHeap.heapEnd
   aligned : node % 8 = 0
   value : valWord pl v = some (word c node)
   next : (word c (node + 8)).toNat = next
-  keyBytes : ∀ i (hi : i < key.length), byte c (node + 16 + i) = key[i] ∧ key[i] ≠ 0 ∧ key[i].toNat < 128
+  keyBytes : ∀ i (hi : i < key.length), byte c (node + 16 + i) = key[i] ∧ key[i] ≠ 0
   nul : byte c (node + 16 + key.length) = 0
 
 /-- A bucket's chain of nodes, `NULL`-terminated. -/

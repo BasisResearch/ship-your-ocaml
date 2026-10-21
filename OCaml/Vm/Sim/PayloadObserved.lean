@@ -41,6 +41,7 @@ inductive PayloadObserved (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
       InSpan a 48 x → PayloadObserved P s c pl cp sp x
   | chanBack {id : Nat} {ch : Chan} {a x : Nat} : s.world.chans[id]? = some ch → cp id = some a →
       InSpan (a + 64) (chanOffBuff + ioBufferSize - 64) x → PayloadObserved P s c pl cp sp x
+  | named {x : Nat} : NamedPlFoot pl s.world.named x → PayloadObserved P s c pl cp sp x
 
 section Keep
 
@@ -100,6 +101,8 @@ theorem VmPayload.keep_observed {high : Nat} (h : VmPayload P s c pl cp sp high)
     · rw [st (by simp [payloadStatics])]; exact h.world.ooId
   · rw [st (by simp [payloadStatics])]; exact h.atomBase
   · rw [st (by simp [payloadStatics])]; exact h.argv
+  · obtain ⟨chains, table⟩ := h.named
+    exact ⟨chains, table.frame fun a f => keep a (.named (table.foot_sub f))⟩
 
 end Keep
 

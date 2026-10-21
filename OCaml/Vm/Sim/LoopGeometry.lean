@@ -63,8 +63,11 @@ theorem LoopGeometry.transport {L : Layout} {P : Prog} {s s' : St} {c c' : Confi
     (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
     (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
       word c' (a + Gc.chanOffNext) = word c (a + Gc.chanOffNext))
-    (words : s'.heap.words = s.heap.words) : LoopGeometry L P s' c' pl cp high :=
-  ⟨g.toArmGeometry.transport objects chans domain prims limit ptr head links,
+    (words : s'.heap.words = s.heap.words)
+    (named : s'.world.named = s.world.named := by
+      first | rfl | assumption | exact congrArg OCaml.Bytecode.World.named ‹_›) :
+    LoopGeometry L P s' c' pl cp high :=
+  ⟨g.toArmGeometry.transport objects chans domain prims limit ptr head links named,
    ⟨by rw [limit, ptr, words]; exact g.room.nursery⟩⟩
 
 /-- Transport keeping the channel ids (channel primitives). -/
@@ -80,8 +83,12 @@ theorem LoopGeometry.transport_ids {L : Layout} {P : Prog} {s s' : St} {c c' : C
     (head : word c' Layout.sym_caml_all_opened_channels = word c Layout.sym_caml_all_opened_channels)
     (links : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
       word c' (a + Gc.chanOffNext) = word c (a + Gc.chanOffNext))
-    (words : s'.heap.words = s.heap.words) : LoopGeometry L P s' c' pl cp high :=
-  ⟨g.toArmGeometry.transport_ids objects ids domain prims limit ptr head links,
+    (words : s'.heap.words = s.heap.words)
+    (named : s'.world.named = s.world.named := by
+      first | rfl | assumption | exact congrArg OCaml.Bytecode.World.named ‹_›) :
+    LoopGeometry L P s' c' pl cp high :=
+  ⟨g.toArmGeometry.transport_ids objects ids domain prims limit ptr head links
+     (fun a f => by rw [named] at f; exact f),
    ⟨by rw [limit, ptr, words]; exact g.room.nursery⟩⟩
 
 /-- **Allocation consumes the room**: the reserved block holds exactly the

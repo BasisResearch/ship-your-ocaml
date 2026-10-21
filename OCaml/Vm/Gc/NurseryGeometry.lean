@@ -47,7 +47,7 @@ theorem WindowSeparated.payload {w : W} {P s c pl cp sp high} {log : List WEntry
     fun off hoff => outLRange_of_windows inside (outW_sub g.domain (by omega) (by omega))
   refine ⟨static _ (by decide), domainField _ (by decide), domainField _ (by decide),
     static _ (by decide), static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_, static _ (by decide),
-    static _ (by decide), static _ (by decide)⟩
+    static _ (by decide), static _ (by decide), ?_⟩
   · exact fun i v hv => outLRange_of_windows inside (g.code i v hv)
   · intro i v hv
     have bound : i < s.stack.length := (List.getElem?_eq_some_iff.1 hv).1
@@ -57,6 +57,7 @@ theorem WindowSeparated.payload {w : W} {P s c pl cp sp high} {log : List WEntry
     exact ⟨outLRange_of_windows inside (outW_sub ho (by omega) (by omega)),
       outLRange_of_windows inside (outW_sub ho (by omega) (by omega))⟩
   · exact fun id ch a hch hcp => outLRange_of_windows inside (g.channels id ch a hch hcp)
+  · exact fun a ha => outLRange_of_windows inside (g.named a ha)
 
 theorem WindowSeparated.image {w : W} {P s c pl cp high} {log : List WEntry}
     (g : WindowSeparated w P s c pl cp high) (inside : LogInW [w] log) : ImageOutside log :=

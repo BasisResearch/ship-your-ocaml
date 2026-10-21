@@ -14,9 +14,10 @@
   requests a minor GC. Standing decision: discharge via G2, retain its premise.
 - C4 hand-proof expansion triggered the abstraction gate. Preserve the draft;
   the approved discovery round 2 waits until F1 is closed.
-- Named-value WIP's ASCII-only node predicate is stronger than current
-  `GoodF1`, whose primitive accepts arbitrary bytes. Generalize the byte/string
-  bridge; do not silently impose an ASCII guard or claim general refinement.
+- Named-value WIP's former ASCII-only node predicate was stronger than
+  `GoodF1`, whose primitive accepts arbitrary bytes. The byte/string and
+  strcmp source bridges are now generalized; an ASCII guard on `GoodF1`
+  remains a rejected route.
 - `CustomMemCall` returning `Ready k` alone does not establish exact counter
   increment. A named counter-transition post is needed for n-to-n+1 accounting.
 
@@ -49,10 +50,26 @@
   The interval consequence requires `0 < len`: an empty argument window
   inside a write frame satisfies `ArgsOut.out` vacuously.
 
-- 2026-10-21: removing the ASCII conjunct only from `NamedNode` cannot close
-  the named-table bridge: `NamedTable.NodeAt.name` independently requires
-  `CString`, whose shared `Vsa.MemRepr.CStr.cons` requires bytes below 128.
+- 2026-10-21: removing the ASCII conjunct only from `NamedNode` could not
+  close the named-table bridge: `NamedTable.NodeAt.name` independently used
+  `CString`, whose shared `Vsa.MemRepr.CStr.cons` required bytes below 128.
   The one-byte key `[0x80]` exposes that contract obstruction by inspection.
-  Generalize the byte C-string/strcmp source interface and regenerate the
-  library battery; do not insert an ASCII guard into `GoodF1` or a premise
-  excluding successful calls. This inspection is not a kernel-checked theorem.
+  The byte C-string/strcmp source interface has now been generalized and
+  the library battery regenerated. Do not insert an ASCII guard into `GoodF1`
+  or a premise excluding successful calls. The original inspection was not
+  a kernel-checked counterexample.
+
+- 2026-10-21: `StackGeometry.named` only separates named footprints from
+  the VM stack. It does not justify the `.field` case of `LogWindows`:
+  `StackGeometry.named_domain_alias` (`OCaml/Vm/Sim/NamedGeometryObstruction.lean`)
+  is kernel checked and constructs that geometry with a placed named node
+  at `Caml_state->extern_sp`, proving an eight-byte store there overlaps
+  the named footprint. This refutes the geometry-only frame route, not
+  reachability of the alias. Extend the physical separation/ownership
+  invariant and its producers; do not hide the missing fact in `GoodF1`
+  or a new premise excluding successful calls.
+
+- 2026-10-21: the manager canceled overlapping build processes after earlier
+  interrupted attempts. `scripts/lean-capped.sh` now owns the per-worktree
+  `flock --close` serialization as well as the memory-cap policy. Retry
+  through that wrapper; do not infer a proof failure from the cancellation.

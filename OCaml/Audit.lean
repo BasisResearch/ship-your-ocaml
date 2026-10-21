@@ -1,3 +1,5 @@
+import OCaml.Vm.Sim.NamedGeometryObstruction
+import OCaml.Vm.Primitives.Named.NamedAt
 import OCaml.Vm.Gc.ChannelRefs
 import OCaml.Vm.Sim.F1Ccall
 import OCaml.Vm.Gc.FinalQuiet
@@ -6757,3 +6759,31 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms VsaIris.Sym.ArgsOut.frames
 
 #print axioms OCaml.Vm.Primitives.snpText_bounds
+#print axioms OCaml.Vm.NamedNode.cstring
+#print axioms OCaml.Vm.NamedNode.nodeAt
+#print axioms OCaml.Vm.NamedChain.tableChain
+#print axioms OCaml.Vm.NamedChain.bounds
+#print axioms OCaml.Vm.NamedRepr.namedAt
+#print axioms OCaml.Vm.NamedRepr.frame_outsideLog
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.cstr_of_bytes
+#print axioms OCaml.Vm.Sim.StackGeometry.named_domain_alias
+#print axioms Vsa.Sim.char_ofNat_toNat
+#print axioms Vsa.Sim.cstr_byte_lt256
+#print axioms Vsa.Sim.byteVal_lt
+#print axioms Vsa.Sim.strcmpSign_sub
+#print axioms Vsa.Sim.strcmpSign_block_sub
+#print axioms OCaml.Vm.Primitives.VmPayload.frame_obs
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.strOf_nameBytes
+#print axioms OCaml.Vm.strOf_length'
+#print axioms OCaml.Vm.NamedRepr.foot_sub
+#print axioms OCaml.Vm.NamedChain.frame
+#print axioms OCaml.Vm.NamedRepr.frame
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.agree_fill
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.NamedAt.frame
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.NamedAt.tableAt
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.agree_of_eq
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.NodeAt.transport
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableChain.transport
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableChain.arena
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.TableCore.transport
+#print axioms OCaml.Vm.Primitives.Named.NamedValue.strOf_length

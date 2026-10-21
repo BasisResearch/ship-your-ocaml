@@ -2,56 +2,67 @@
 
 ## Current status
 
-**2026-10-21 preserved named-invariant handoff (blocked on build runner).**
-Started at `402ec122`; the four checked producer repairs in that commit
-(`Caller`, `ChannelFrame`, `InvariantUse`, `IsintArithmetic`) remain intact.
-Ran `scripts/abs_inventory.sh` (output `/tmp/a1-abs-inventory.log`) and
-inspected `/tmp/syo-prims-full.log`: its only failed module was
-`Gc.NurseryTransport`, missing `named` at the two geometry constructors.
-The working-tree repair mirrors `StackGeometry.transport_ids`: explicit
-`NamedPlFoot` inclusion for general transport, named-table equality for
-ordinary transport/frame/allocation, and `OutWRange.shrink` for allocation.
-This repair is **unchecked**, and is not a completed producer migration.
-The existing audit registry already includes `NurseryGeometry.transport_ids`,
-`.transport`, `.frame_log`, and `.alloc`; their changed proofs still need
-rebuilding and auditing.
+**2026-10-21 named-invariant propagation: checked partial work; blocked on physical geometry.**
+Resumed preserved WIP at `4d2ea805`; the four earlier producer repairs remain
+intact. The inherited `NurseryGeometry.transport_ids`/`transport`/`frame_log`/
+`alloc` repair builds. Named-table facts now propagate through `ArmGeometry`
+and `LoopGeometry`. No `GoodF1` guard or F1 call premise was added.
 
-The required command was attempted after `free -g` reported 98 GB available:
-`systemd-run --user --scope -q -p MemoryMax=12G env LEAN_NUM_THREADS=2 lake build OCaml.Vm.Gc.NurseryTransport`.
-It failed before Lean started: `Failed to connect to user scope bus via local
-transport: Operation not permitted`. Both `XDG_RUNTIME_DIR` and
-`DBUS_SESSION_BUS_ADDRESS` point to the existing `/run/user/2000` user bus.
-The current sandbox cannot use that bus and does not permit escalation.
-No uncapped build, axiom audit, or integration was attempted; no claim is
-made that the full OCaml build now passes. Build output: `/tmp/a1-nursery.log`.
+The arbitrary-byte library contract gap is repaired. `Vsa.MemRepr.CStr`
+accepts the complete byte range; the byte/word strcmp proofs were changed in
+`experiments/syi/while-elf-only/Vsa/Sim/StrcmpSpec{,W3}.lean` and regenerated
+with `scripts/retarget_library_sites.py`. `NamedNode` accepts arbitrary
+nonzero key bytes. `nameBytes`/`strOf_nameBytes` preserve BcSem's first-NUL
+`namedValueKey`; footprints still use character counts, not UTF-8 lengths.
+`NamedNode.cstring`/`nodeAt`, `NamedChain.tableChain`/`bounds`, and
+`NamedRepr.namedAt` now supply the dense lookup contract from the preserved
+loop representation, without an ASCII premise.
 
-The byte/string issue crosses the shared library boundary. `NamedNode.keyBytes`
-(`Repr.lean`) requires ASCII; independently, `Vsa.MemRepr.CStr.cons` requires
-`b.toNat < 128`. `NamedTable.NodeAt.name` uses `CString`, so `NamedAt.tableAt`
-and the registration table contract cannot represent the one-byte C key
-`[0x80]` with the current shared predicate. In contrast,
-`primF1Impl` accepts that initialized string and `namedValueKey [128]` is
-`String.ofList [Char.ofNat 128]`. This is a source-level contract obstruction,
-not a newly kernel-checked counterexample. `strOf` already embeds arbitrary
-bytes as characters, and `NamedTable.strOf_inj` handles the full byte range;
-the missing step is a general byte C-string/strcmp interface, including the
-arbitrary-byte comparison lemmas in the `StrcmpSpec`/`StrcmpSpecW3` source
-battery (regenerate their outputs through `retarget_library_sites.py`).
-Do not add an ASCII premise or guard to successful F1 calls. Retain first-NUL
-truncation (`namedValueKey`) and character-count footprint lengths, rather
-than treating these names as UTF-8 payloads.
+Named-memory frames use the shared `NamedRepr.frame_outsideLog` in
+`VmPayload.frame_obs` and `payload_rebuild_accu`. `PayloadObserved` and
+`PayloadCoreOutside` include named bytes; `WindowSeparated.payload` consumes
+its existing named separation. These affected producer targets all build:
+`Named.NamedAt`, `Sim.PayloadObserved`, `Sim.PayloadRestore`,
+`Gc.NurseryGeometry`, `Sim.LoopGeometry`, `Sim.NamedGeometryObstruction`,
+and `Vsa.Sim.StrcmpSpecCond` (1,495 jobs including dependencies). Final log:
+`/tmp/a1-named-producers-checked.log`.
 
-Text checks passed: `check_holes.py` (4643 files), `check_discipline.py`
-(27 rules), and `git diff --check`. `check_abstraction_gate.py` failed because
-`abstractions/clusters.tsv` is stale: regenerated output in
-`/tmp/a1-abstraction-census.tsv` differs only in the inherited
-`Reloc.vmReprAt_reloc` line count (34 to 36). No gate was bypassed.
+**Precise remaining obstruction:** `StackGeometry` separates named bytes
+from the VM stack but not from `Caml_state`. The kernel-checked
+`StackGeometry.named_domain_alias` in `Sim/NamedGeometryObstruction.lean`
+constructs that geometry with a placed named node at `extern_sp` and proves
+that an eight-byte store there overlaps the named footprint. This refutes
+the geometry-only frame route; it does not assert the alias is reachable.
+Consequently `LogWindows`'s `.field` case cannot derive the new
+`PayloadCoreOutside.named` from its current hypotheses. By inspection, its
+native-stack and object-store routes also need named-node bounds and
+separation; channel-allocation frames need live malloc ownership for named
+nodes beyond the fixed `f1Covered` regions. Those physical invariant facts
+must come from allocation/ownership producers, rather than an extra premise
+excluding successful F1 calls.
 
-Resume with the nursery build and affected consumers (`ArmGeometry.transport`
-and `.transport_ids` still need named-footprint propagation), then factor
-shared named-memory frames and generalize the library bridge. `BarrierGrowthFull`
-remains G2, `CustomMemCall` remains a named premise, and C4 round 2 still waits
-for F1. The full gate and `scripts/integrate.sh` remain required before landing.
+The affected consumer check, `scripts/lean-capped.sh lake build
+OCaml.Vm.Sim.PayloadWindows`, fails at lines 168/186 (missing named payload
+fields) and 235/260/277 (missing named window fields). Exact log:
+`/tmp/a1-named-consumer-obstruction.log`. The full OCaml build and complete
+gate remain open; no passing full build is claimed. The old failure in
+`/tmp/syo-prims-full.log` was the nursery constructor, now repaired.
+
+Validation: 43 focused axiom reports use only `propext`, `Classical.choice`,
+and `Quot.sound` (`/tmp/a1-named-audit.lean`, `/tmp/a1-named-audit.log`);
+registered in `OCaml/Audit.lean`. Hole, discipline (27 rules), library
+regeneration, abstraction gate, wrapper shell syntax and `git diff --check`
+pass. Regenerated `abstractions/clusters.tsv` through its census script;
+its only change is the inherited `vmReprAt_reloc` count, 34 to 36.
+
+All builds/audits used the 12 GB inherited cgroup, two Lean threads and a
+preceding `free -g` check (available memory stayed above 25 GB). The manager
+canceled overlapping interrupted attempts and added per-worktree
+`flock --close` serialization to `scripts/lean-capped.sh`; that manager edit
+is preserved, and the final producer build/audit/consumer check used it.
+No Git metadata or landing queue was written. The lead owns commits and
+integration. `BarrierGrowthFull` remains G2, `CustomMemCall` remains a named
+premise, and C4 round 2 waits for F1.
 
 **Console output (in progress, shared by all channel primitives):**
 * `ConsoleWrite.write_console` (`Console/Write.lean`): newlib `_write(fd, buf, n)` on a

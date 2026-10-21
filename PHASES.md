@@ -397,17 +397,22 @@ for that snapshot; it does not assert kernel startup reachability.
 
 ## A1: F1 arms (exit: `ocamlrun_refinement_Statement` for F1)
 
-**Named-invariant propagation, 2026-10-21:** preserved WIP through `402ec122`
-is not a passing full build. The last full-build log failed in
-`Gc.NurseryTransport` on two missing `named` fields. Its working-tree
-transport/frame/allocation repair is unchecked: the required 12 GB
-`systemd-run --user --scope` runner cannot connect to the user bus in this
-session (`Operation not permitted`, before Lean starts; 98 GB available).
-Consumer migrations, changed-proof audits and the complete gate remain open.
-The arbitrary-byte named-key bridge also remains open: `NodeAt.name` depends
-on ASCII-only `Vsa.MemRepr.CStr`, whereas `primF1Impl` accepts arbitrary
-initialized bytes before the first NUL. No new F1 premise or semantics guard
-has been added. Details and resume commands are in `docs/lanes/a1-prims.md`.
+**Named-invariant propagation, 2026-10-21:** checked partial work on top of
+preserved WIP `4d2ea805`; the complete build remains open. Nursery, arm/loop
+transports, shared named-memory frames, `PayloadObserved`, and the
+`NamedRepr.namedAt` lookup bridge build under the 12 GB cap. The shared
+C-string and strcmp proofs now cover arbitrary bytes, retaining first-NUL
+`namedValueKey` semantics and character-count footprints. Forty-three
+focused axiom reports use only the allowed axioms and are registered in
+`OCaml/Audit.lean`. No `GoodF1` guard or F1 call premise was added.
+`StackGeometry.named_domain_alias` is kernel checked: the current geometry
+allows a named node at `extern_sp`, so `LogWindows`'s `.field` case cannot
+derive named-memory preservation from its existing hypotheses. The
+`PayloadWindows` consumer fails at its missing named fields; physical
+named-node separation/ownership and its producers remain open. Logs and
+resume details: `docs/lanes/a1-prims.md`. The manager's per-worktree build
+serialization in `scripts/lean-capped.sh` is preserved. C4 round 2 waits
+for F1; `BarrierGrowthFull` remains G2 and `CustomMemCall` stays named.
 
 **Status (arms).** Every F1 opcode has a row `*_row : OpArm P (LoopAt L P) op`
 (137 row theorems), dispatched by the generated `f1_table`. The rows' former
