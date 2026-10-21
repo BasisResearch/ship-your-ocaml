@@ -80,8 +80,9 @@ The Availability column says:
 5. **Builds and axioms.**
    * Build with `lake build <Module>` for the modules you touch; run one
      build at a time.
-   * On shared machines, run it under a memory cap
-     (`systemd-run --user --scope -p MemoryMax=30G …`).
+   * On shared machines, run it under a 12 GB memory cap
+     (`scripts/lean-capped.sh lake build <Module>`). Sol workers inherit
+     that cap from `codexwork.sh`; at most two workers run for this project.
    * The axioms of every new theorem must be ⊆ {propext, Classical.choice,
      Quot.sound}; `scripts/check_all.sh` stage a3 checks this (`OCaml/Audit.lean`).
 6. **Hide complexity by shape.** If you are counting conjuncts
