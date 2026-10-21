@@ -158,12 +158,10 @@ def TableFoot (chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)) (a :
   (Layout.sym_named_value_table ≤ a ∧ a < Layout.sym_named_value_table + 104) ∨
     ∃ b, b < 13 ∧ ∃ e ∈ chains b, NodeBytes e.1 e.2.1 a
 
-/-- **The table survives memory that agrees on its bytes**, given the code
-facts in the new memory (`strcmp_loaded`, `mask_pinned`). -/
-theorem TableShape.transport {m m' : Mem} {pl : Place} {named : List (String × Val)}
-    {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} (h : TableShape m pl named chains)
-    (agree : ∀ a, TableFoot chains a → Agree m m' a) (code : Code.StrcmpLoaded m')
-    (mask : MaskPinned m') : TableShape m' pl named chains where
+/-- **The table's memory survives memory that agrees on its bytes.** -/
+theorem TableCore.transport {m m' : Mem} {pl : Place} {named : List (String × Val)}
+    {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} (h : TableCore m pl named chains)
+    (agree : ∀ a, TableFoot chains a → Agree m m' a) : TableCore m' pl named chains where
   window := h.window
   heads := fun b hb => by
     have head : bytesVal .ld (read8 m' (bucketAddr b).toNat) = bytesVal .ld (read8 m (bucketAddr b).toNat) := by
@@ -178,8 +176,14 @@ theorem TableShape.transport {m m' : Mem} {pl : Place} {named : List (String × 
   placed := h.placed
   entries := h.entries
   unique := h.unique
-  code := code
-  mask := mask
+
+/-- **The table survives memory that agrees on its bytes**, given the code
+facts in the new memory (`strcmp_loaded`, `mask_pinned`). -/
+theorem TableShape.transport {m m' : Mem} {pl : Place} {named : List (String × Val)}
+    {chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)} (h : TableShape m pl named chains)
+    (agree : ∀ a, TableFoot chains a → Agree m m' a) (code : Code.StrcmpLoaded m')
+    (mask : MaskPinned m') : TableShape m' pl named chains :=
+  { h.toTableCore.transport agree with code, mask }
 
 /-- The table across memory that agrees exactly on its bytes below `heapEnd`. -/
 theorem TableShape.transport_below {m m' : Mem} {pl : Place} {named : List (String × Val)}

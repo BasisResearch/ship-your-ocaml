@@ -36,8 +36,8 @@ inductive TableChain (m : Mem) (pl : Place) : BitVec 64 → List (BitVec 64 × L
   | cons {node next : BitVec 64} {key : List (BitVec 8)} {v : Val} {rest : List (BitVec 64 × List (BitVec 8) × Val)} :
       NodeAt m pl node next key v → TableChain m pl next rest → TableChain m pl node ((node, key, v) :: rest)
 
-/-- The table with chosen bucket chains `chains`. -/
-structure TableShape (m : Mem) (pl : Place) (named : List (String × Val))
+/-- The table's memory with chosen bucket chains `chains`. -/
+structure TableCore (m : Mem) (pl : Place) (named : List (String × Val))
     (chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)) : Prop where
   window : ∀ b, b < 13 → ReadWindow (bucketAddr b) 8
   heads : ∀ b, b < 13 → TableChain m pl (bytesVal .ld (read8 m (bucketAddr b).toNat)) (chains b)
@@ -46,6 +46,11 @@ structure TableShape (m : Mem) (pl : Place) (named : List (String × Val))
   entries : ∀ k v, (k, v) ∈ named ↔ ∃ b, b < 13 ∧ ∃ n kb, (n, kb, v) ∈ chains b ∧ strOf kb = k
   /-- keys are unique (`caml_register_named_value` updates in place) -/
   unique : (named.map Prod.fst).Nodup
+
+/-- The table with chosen bucket chains `chains`, and the code `strcmp` runs
+(`TableCore` is the table's memory alone). -/
+structure TableShape (m : Mem) (pl : Place) (named : List (String × Val))
+    (chains : Nat → List (BitVec 64 × List (BitVec 8) × Val)) : Prop extends TableCore m pl named chains where
   code : Code.StrcmpLoaded m
   mask : MaskPinned m
 
