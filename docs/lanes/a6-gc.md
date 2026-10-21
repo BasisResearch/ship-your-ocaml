@@ -2545,3 +2545,12 @@ full integration gate.
   `Customs c (refcountSum c)` in F1Pins; a6-gc owes the concrete `Customs`,
   `Customs cut 0` (no channel open at the cut), the step per call and
   persistence across a minor GC.
+- Next-size small path (item 3): `ffs` nonzero (`FfsLowest`), the remnant
+  callee `bf_insert_remnant_small` (`BestFitRemnant`, segments from
+  gen_gc_rows), `search_nonzero`. Method: `block_summary` over generated
+  segments, as for every other `bf_*` proof; SWP/alloc step tables are
+  newlib-only (AW run model) and do not compose with the BestFit files.
+- For a1-prims: `NamedStatic` excluded from F1HeapSafe's low statics;
+  `NamedRoom` (node + cell per future registration, apart blocks) beside
+  LibHeapAt. a1-prims owns NamedRuntimeAt's statement and `registered`;
+  a6-gc discharges it and NamedImage (global-root scan).

@@ -15,6 +15,9 @@ import OCaml.Vm.Gc.RouteSupply
 import OCaml.Vm.Gc.FirstSlot
 import OCaml.Vm.Gc.FieldStep
 import OCaml.Vm.Gc.BfShape
+import OCaml.Vm.Gc.BestFitNext
+import OCaml.Vm.Gc.BestFitRemnant
+import OCaml.Vm.Gc.FfsLowest
 import OCaml.Vm.Gc.StackLoop
 import OCaml.Vm.Gc.StackScan
 import OCaml.Vm.Gc.SlotBridge
@@ -780,6 +783,16 @@ stage a3 checks the output: only `propext`, `Classical.choice`,
 #print axioms OCaml.Vm.Gc.BfShape.MapConsistent.clear
 #print axioms OCaml.Vm.Gc.quietBound_spec
 #print axioms OCaml.Vm.Gc.ReadyOf.succ
+#print axioms OCaml.Vm.Gc.FfsLowest.nonzero
+#print axioms OCaml.Vm.Gc.FfsLowest.test_ofNat
+#print axioms OCaml.Vm.Gc.BestFitRemnant.insert
+#print axioms OCaml.Vm.Gc.BestFitRemnant.insert_tail
+#print axioms OCaml.Vm.Gc.BestFitFallback.search_nonzero
+#print axioms OCaml.Vm.Gc.node_fits
+#print axioms OCaml.Vm.Gc.cell_fits
+#print axioms OCaml.Vm.Gc.NamedRoom.libRoom
+#print axioms OCaml.Vm.Gc.F1HeapSafe.heapSafe
+#print axioms OCaml.Vm.Gc.mutable_heapSafe
 #print axioms OCaml.Vm.Gc.RouteSupply.nonYoung_call
 #print axioms OCaml.Vm.Gc.RouteSupply.forwarded_call
 #print axioms OCaml.Vm.Gc.RouteSupply.slot_outside
