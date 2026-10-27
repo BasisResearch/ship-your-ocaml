@@ -25,4 +25,4 @@ Produce the returned OCaml byte-string representation, exact decimal bytes and l
 Carry actual allocator/runtime preconditions and selected ownership through the same run; never infer a raw sailOutput vector equality from observable-output equality.
 Done: checked entry-to-return native summary for this decimal path, focused affected build/standard-axiom audits and generator checks; accurately record unsupplied caller/runtime conditions.
 This milestone does not close general caml_format_int: d/i/u/x/X/o with flags, width, precision and large/major allocation remain required by GoodF1. Do not narrow GoodF1 or hide those cases.
-Leave checked edits for lead review, commit and integration; record new dead ends.
+Update docs/lanes/bprime.md (the formatting lane), PHASES and new dead ends; leave checked edits for lead review/integration. This slot is reused from G2; do not resume unrelated GC work.

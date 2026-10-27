@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 22:54 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 23:00 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -75,11 +75,19 @@ to `Loaded` is explicitly open. Both changes are in the next full gate in `syo-w
 handoff from the idle startup lane checked toolchain/manifests/dependency
 trees and held source/read and destination/write build locks.
 
+## Reviewed behind the active gate
+
+`0f5ecaef` preserves G2 `SmallPhysical` through the actual pop/split/remnant
+route and returns a combined small-list representation. The affected build
+passed 1,289 jobs; all 251 focused audit reports are present and allowed
+(249 standard-axiom reports, two axiom-free). Native initialization/caller
+production, original dispatch and the other allocator cases remain open.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| G2 Sol | Preserve physical free-list extents through repeated allocation | `syo-wt/a6-gc-next2` |
+| Formatter Sol | Compose decimal alloc_sprintf entry-to-return | `syo-wt/a6-gc-next2` |
 | Custom-ownership Sol | Repair universal-ledger assumption with selected ownership | `syo-wt/a1-prims-next` |
 | Lead | Gate allocation/universal reset; review remaining suppliers | main; `syo-wt/bprime` |
 
