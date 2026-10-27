@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 21:53 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 21:57 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -34,6 +34,9 @@ its generated-table consumer update `d890bf6a`. Counted-loop continuation
 `1161d44c` is checked at its worker base (3,694 jobs, 39 focused reports);
 the lead is checking its rebased composition with the closed allocator.
 The two boot-read extensions merged and reproduce through their generator.
+The same batch also contains checked G2 bitmap-search composition
+`4eec805d`: 1,287 affected jobs and 217 audited declarations. Its original
+list/map facts produce the selected size/head and saved native frame.
 These results are not yet published. Prior WIP and reviewed tips remain
 preserved on `keep/*` branches.
 
@@ -41,7 +44,7 @@ preserved on `keep/*` branches.
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| G2 Sol | Compose bitmap search with the checked pick/pop/split route | `syo-wt/a6-gc-next2` |
+| Next Sol slot | Counted stack-row frame reuse, after the combined check | `syo-wt/a1-prims-next` |
 | Startup Sol | Extend actual reset execution through backtrace/root registration | `syo-wt/a0-boot-next` |
 | Lead | Check and stage combined counted-entry/allocator batch | main; `syo-wt/a1-prims-next`, `syo-wt/bprime` |
 
@@ -56,7 +59,8 @@ and original native return compose with exact counter and selected frame
 facts. Complete pick/pop/split composition is checked as `78081098`:
 1,282 jobs, 199 allowed-axiom reports and 2 axiom-free declarations.
 Original-memory list/header/map facts supply each intermediate input;
-bitmap search before this route and final allocator preservation remain open. Task rules now require the
+bitmap search before this route is now checked in `4eec805d`.
+Final allocator preservation and other size classes remain open. Task rules now require the
 build guard to stop failed or 10 GiB builds before the worker cap.
 
 The first-insertion summary executes the actual prefix, `stat_checked` call,
@@ -104,7 +108,8 @@ obsolete generated caller argument, checked with 3,243 build jobs. This
 reviewed fourth batch awaits full integration with the counted continuation. A captured loaded memory snapshot
 is not reset execution. G2 pick/pop landed (`6d002aa5`); split/remnant is checked for the
 next landing batch, including its complete pick/pop/split route. Bitmap
-search composition, allocator readiness and full collection remain open. The a2-sem uncaught-path
+dispatch into fallback, final allocator preservation and full collection
+remain open; the nonzero bitmap search is checked in `4eec805d`. The a2-sem uncaught-path
 WIP is preserved and lower priority because GoodF1 excludes that path.
 
 Queued tasks: ordinary counted-loop migration, actual startup/backtrace
