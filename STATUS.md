@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 20:53 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 21:02 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,27 +18,29 @@ None currently.
 
 ## Landing train
 
-Published `origin/main` is `9cbf8b60`. The physical named-table migration
+Published `origin/main` is `71547e46`. The physical named-table migration
 landed at `7e7a052a`: 6,033 build jobs, 8,424 theorem audits, all generator/ELF
 checks and 329 OS traces (zero rejected). The next two batches are:
 
 1. Complete counted channel returns, `71547e46`, in `syo-wt/a1-prims-next`.
-   Its full integration gate is running. The final worker check passed
+   Landed through the full gate: 6,038 build jobs, 8,476 theorem audits,
+   all generators/ELF checks and 329 OS traces (zero rejected). The final worker check passed
    3,687 build jobs and 31 focused axiom reports; earlier count/setup
    checkpoints passed 52 and 27 reports. Actual `CustomMemCall` posts carry
    the count increment; native refcount stores/no-wrap facts reconstruct
    complete channel counts at the same returned placement. The unary arm
    retains that placement through its suffix.
 2. First empty-skiplist insertion plus native decimal formatter, `8b1f1377`,
-   staged in `syo-wt/a6-gc` on top of the channel candidate. Both workers
+   staged in `syo-wt/a6-gc` on top of the landed channel bundle. Both workers
    finished and the lead reviewed/committed their results. First insertion
    passes 2,720 jobs, 310 standard-axiom audits and startup generator drift.
    The `%ld` wrapper passes 978 jobs, its concrete caller check, 34 focused
    reports, stdio generator drift, hole/discipline/abstraction gates.
-   Full integration waits for the first batch and a coherent cache handoff.
+   The batch also includes the checked short formatter continuation. Its
+   full integration is starting after a coherent cache handoff.
 
-Local `main` includes these reviewed candidates to support subsequent worker
-work; this does not mean they have passed the full gate or reached origin.
+Local `main` includes the second reviewed batch to support subsequent worker
+work; that batch has not yet passed the full gate or reached origin.
 The earlier worker WIP and reviewed tips are preserved on `keep/*` branches.
 
 ## Active work
