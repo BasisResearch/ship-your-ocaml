@@ -1,3 +1,4 @@
+import OCaml.Vm.Primitives.Channel.OpenRepr
 import OCaml.Vm.Gc.ChannelRefs
 
 /-! Counted channel representation, separate from `ChanAt`'s data layout.
@@ -67,5 +68,57 @@ theorem ChannelCustomsRepr.boundary {Customs : Config → Nat → Prop} {c : Con
     {cp : ChanPlace} {w : World} (h : ChannelCustomsRepr Customs c cp w) :
     Gc.ChannelCustomsAt Customs c (Gc.placedChannels cp w.chans.length) w.customs 0 :=
   ⟨h.physical, ⟨h.opened, by simpa using h.references.sum⟩⟩
+
+/-- The intended counted loop invariant. Projection preserves the existing
+VM relation while producers are migrated; `VmReprAt` alone cannot supply the
+additional physical evidence. -/
+structure CountedVmReprAt (Customs : Config → Nat → Prop) (P : Prog) (s : St) (c : Config)
+    (pl : Place) (cp : ChanPlace) (sp high : Nat) : Prop extends VmReprAt P s c pl cp sp high where
+  counts : ChannelCustomsRepr Customs c cp s.world
+
+/-- The initial empty world, conditional only on the runtime's physical zero
+witness and the actual opened-list head. -/
+theorem ChannelCustomsRepr.empty {Customs : Config → Nat → Prop} {c : Config}
+    {cp : ChanPlace} {w : World} (empty : w.chans = []) (physical : Customs c 0)
+    (head : bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8 = 0#64) :
+    ChannelCustomsRepr Customs c cp w := by
+  refine ⟨⟨?_⟩, ?_, ?_⟩
+  · intro id ch at_
+    rw [empty] at at_
+    simp at at_
+  · simpa [Gc.placedChannels, empty] using (Gc.ChannelCustomsAt.of_null physical head).refs.opened
+  · simpa [World.customs, empty] using physical
+
+/-- Reference counts at the new channel placement. The observations of old
+records are shared with the ordinary payload frame. -/
+theorem ChannelRefsRepr.open {c d : Config} {cp : ChanPlace} {w : World} {rec : Nat} {ch : Chan}
+    (before : ChannelRefsRepr c cp w)
+    (kept : ∀ id old a, w.chans[id]? = some old → cp id = some a →
+      Gc.chanRefs d.σ.mem a = Gc.chanRefs c.σ.mem a)
+    (new : Gc.chanRefs d.σ.mem rec = ch.refs) :
+    ChannelRefsRepr d (cp.put w.chans.length rec) {w with chans := w.chans ++ [ch]} := by
+  constructor
+  intro id old at_
+  rcases Primitives.chans_append_cases at_ with ⟨at_, lt⟩ | ⟨rfl, rfl⟩
+  · obtain ⟨a, placed, count⟩ := before.refs id old at_
+    exact ⟨a, by rw [ChanPlace.put_other cp (Nat.ne_of_lt lt)]; exact placed,
+      (kept id old a at_ placed).trans count⟩
+  · exact ⟨rec, ChanPlace.put_self cp _ _, new⟩
+
+/-- The opening's physical transition and represented references meet at the
+VM boundary. The pre-allocation reference increment is never used as physical
+custom readiness. -/
+theorem ChannelCustomsRepr.open {Customs : Config → Nat → Prop} {c d : Config}
+    {cp : ChanPlace} {w : World} {rec : Nat} {ch : Chan}
+    (before : ChannelCustomsRepr Customs c cp w)
+    (step : Gc.CustomCountStep Customs c d 1) (one : ch.refs = 1)
+    (kept : ∀ id old a, w.chans[id]? = some old → cp id = some a →
+      Gc.chanRefs d.σ.mem a = Gc.chanRefs c.σ.mem a)
+    (new : Gc.chanRefs d.σ.mem rec = ch.refs)
+    (opened : Gc.OpenChannelList d.σ.mem
+      (Gc.placedChannels (cp.put w.chans.length rec) (w.chans ++ [ch]).length)) :
+    ChannelCustomsRepr Customs d (cp.put w.chans.length rec) {w with chans := w.chans ++ [ch]} := by
+  refine ⟨before.references.open kept new, opened, ?_⟩
+  simpa [World.customs, List.map_append, List.sum_append, one] using step.count before.physical
 
 end OCaml.Vm

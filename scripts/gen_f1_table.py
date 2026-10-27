@@ -137,7 +137,11 @@ def whilemin_calls():
 
 
 def prim_summaries():
-    """a1-prims' per-primitive summaries `prim_<name>_returns`, with their parameters."""
+    """Ordinary `prim_<name>_returns` summaries and their parameters.
+
+    CountedPrimReturnsAtR needs the counted loop/setup invariant. Keep those
+    channel rows as named ordinary obligations until its producers migrate.
+    """
     found = {}
     for f in sorted((ROOT / 'OCaml').rglob('*.lean')):
         text = f.read_text()

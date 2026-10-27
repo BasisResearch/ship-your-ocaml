@@ -153,3 +153,14 @@
   call-summary postcondition and carry its proof through channel callers;
   a separate implication from the old record does not supply that execution
   fact. The first custom-count WIP is preserved for this correction.
+
+- 2026-10-27 counted-channel continuation: replacing the universal readiness
+  field with `ChannelCountsAtCalls.atCall` derived from every ordinary
+  `CcallSetupPost` repeats the same invariant gap. `VmPayload`/`WorldRepr`
+  omit refcounts and physical custom counters; reachability of the BcSem
+  state alone does not constrain those bytes of an arbitrary represented
+  machine configuration. The draft blanket supplier was removed. Use
+  `CountedVmReprAt`/`CountedCcallSetupPost` with explicit physical evidence
+  and migrate their actual producers. Counted caller summaries cannot be
+  silently cast to the weaker, universally quantified `PrimReturnsAtR`.
+  This is contract inspection, not a checked reachable counterexample.

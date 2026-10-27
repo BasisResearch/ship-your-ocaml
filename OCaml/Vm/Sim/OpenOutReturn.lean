@@ -16,6 +16,7 @@ invocation are kept (`static_kept`, `domainField_kept`, `vmStack_kept`,
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
+variable {Customs : Vsa.Machine.Config → Nat → Prop}
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives OCaml.Vm.Primitives.Channel LeanRV64DExecutable
 
 /-- **The C_CALL return of `caml_ml_open_descriptor_out`.** -/
@@ -23,9 +24,9 @@ theorem open_out_return {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} 
     {cp : ChanPlace} {sp high domain entry : Nat} {env : BitVec 64} {c d : Config}
     {fd : Int} {val : Val} {heap' : Heap} {world' : World} {st : TCB.Os.Stream}
     {k : Nat} {H : List (Nat × Nat)} {cap N : Nat} {r0 r1 r2 v head : BitVec 64}
-    {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} (rt : OpenOutRuntimeAt L Ready state)
+    {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} (rt : OpenOutRuntimeAt L Ready state Customs)
     (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
-    {code : Channel.OpenCode} (o : OpenedOut code imageLive Ready state k H (cap - 65616) 65616 (BitVec.ofNat 64 N) ra r0 r1 r2 v head c d)
+    {code : Channel.OpenCode} (o : OpenedOut code imageLive Ready state Customs k H (cap - 65616) 65616 (BitVec.ofNat 64 N) ra r0 r1 r2 v head c d)
     (heap : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c)
     (h : OutInput imageLive H (cap - 65616) 65616 (BitVec.ofNat 64 N) ra r0 r1 r2 v head c)
     (Nur : OutNursery H (Gc.placedChannels cp s.world.chans.length) c)
@@ -143,7 +144,8 @@ theorem prim_open_tail {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 
     {pl : Place} {cp : ChanPlace} {sp high table entry : Nat} {value env : BitVec 64} {index : BitVec 32}
     {name : String} {res : Val} {heap : Heap} {world : World} {n : BitVec 63} {st : TCB.Os.Stream}
     {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
-    (code : Channel.OpenCode) (rt : OpenOutRuntimeAt L Ready state)
+    (code : Channel.OpenCode) (rt : OpenOutRuntimeAt L Ready state Customs)
+    (fitsP : OCaml.Fits L.budget P) (succ : CcallSucc P heap world)
     (ready : CcallReady op L P s c0 pl cp sp high (domainAt c0) table entry value env index name)
     (hentry : (BitVec.ofNat 64 entry : BitVec 64) = code.entry)
     (hacc : s.accu = .int n) (ok : openChan s.heap s.world n.toInt code.out = .ok res heap world)
@@ -154,13 +156,15 @@ theorem prim_open_tail {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 
       [((s.heap.alloc (.channel s.world.chans.length)).2, (young - 24#64).toNat + 8)])
     (words : heap.words ≤ L.budget.heapWords) :
     ∃ result, ∀ c, CcallSetupPost ra [s.accu] L P s pl cp sp high (domainAt c0) entry env c →
+      ChannelCustomsRepr Customs c cp s.world →
       (∀ p ∈ allocPlaces name s (BitVec.ofNat 64 (runtimeFields c).youngPtr), pl.φ p.1 = some p.2) →
       FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
-        (CcallReturn ra L P {s with pc := s.pc + 2, accu := res, heap := heap, world := world}
-          pl cp sp high (BitVec.ofNat 64 (domainAt c0)) (BitVec.ofNat 64 (sp - 16)) result env) := by
+        (CountedResult Customs
+          (CcallReturn ra L P {s with pc := s.pc + 2, accu := res, heap := heap, world := world}
+            pl cp sp high (BitVec.ofNat 64 (domainAt c0)) (BitVec.ofNat 64 (sp - 16)) result env) world.customs) := by
   have head0 := ready.allocPlaced _ (by rw [places]; exact List.mem_singleton_self _)
   refine ⟨BitVec.ofNat 64 ((BitVec.ofNat 64 (runtimeFields c0).youngPtr - 24#64).toNat + 8),
-    fun c setup placedAt => ?_⟩
+    fun c setup counts placedAt => ?_⟩
   have here := placedAt _ (by rw [places]; exact List.mem_singleton_self _)
   have same : (BitVec.ofNat 64 (runtimeFields c0).youngPtr - 24#64).toNat + 8 =
       (BitVec.ofNat 64 (runtimeFields c).youngPtr - 24#64).toNat + 8 :=
@@ -172,7 +176,8 @@ theorem prim_open_tail {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 
   have value : gpr c 10 = some (tag64 n) :=
     setup.input.arguments.get (i := 0) rfl (by simp [valWord, hacc])
   obtain ⟨H, cap, N, kk, r0, r1, r2, heapA, inp, nur, readyK, nsp⟩ :=
-    open_out_entry rt setup fits (openChan_bound ok) value (seek c setup.input.runtime)
+    open_out_entry rt setup
+      (open_call_ready rt.custom.accounting counts fitsP rt.customBudget succ ok) fits (openChan_bound ok) value (seek c setup.input.runtime)
   have S := Channel.ml_open_descriptor code c H (cap - 65616) 65616 (BitVec.ofNat 64 N) ra r0 r1 r2 (tag64 n) _
     rt.custom kk readyK nur inp
   rw [hentry]
@@ -189,16 +194,18 @@ theorem prim_open_tail {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 
     rw [here, yNat]
   have r : BitVec.ofNat 64 o.value.toNat = o.value := by simp
   rw [yNat, r]
-  exact ⟨_, open_out_return rt setup o heapA inp nur nsp ready.stackFits ok stream fdWord open_ placed⟩
+  refine ⟨⟨_, open_out_return rt setup o heapA inp nur nsp ready.stackFits ok stream fdWord open_ placed⟩, ?_⟩
+  rw [openChan_customs ok]
+  exact o.counted.count counts.physical
 
 /-- **`caml_ml_open_descriptor_out` at every `C_CALL` site** (premises: the
 runtime across the opening, `OpenOutRuntime L`, and `GoodF1`'s console
 channels). -/
-theorem prim_caml_ml_open_descriptor_out_returns {L : OCaml.Layout} {P : Prog} {op : Opcode}
-    {ra : BitVec 64} {k : Nat} (runtime : OpenOutRuntime L) (consoles : OCaml.ConsoleChannels P) :
-    PrimReturnsAtR L P op ra k "caml_ml_open_descriptor_out" := by
-  obtain ⟨Ready, state, rt⟩ := runtime
-  intro s c0 pl cp sp high table entry value env index res heap world _reach ready sem words succ
+theorem counted_caml_ml_open_descriptor_out_returns {L : OCaml.Layout} {P : Prog} {op : Opcode}
+    {ra : BitVec 64} {k : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
+    (rt : OpenOutRuntimeAt L Ready state Customs) (fits : OCaml.Fits L.budget P) (consoles : OCaml.ConsoleChannels P) :
+    CountedPrimReturnsAtR L P Customs op ra k "caml_ml_open_descriptor_out" := by
+  intro s c0 pl cp sp high table entry value env index res heap world reach ready sem words succ
   have nil : s.stack.take k = [] := by
     cases e : s.stack.take k with
     | nil => rfl
@@ -215,11 +222,12 @@ theorem prim_caml_ml_open_descriptor_out_returns {L : OCaml.Layout} {P : Prog} {
   have hentry : entry = Layout.sym_caml_ml_open_descriptor_out :=
     Option.some.inj (ready.entryName.symm.trans PrimitiveEntries.entry_caml_ml_open_descriptor_out)
   subst hentry
-  obtain ⟨result, summary⟩ := prim_open_tail Channel.openOutCode rt ready rfl hacc ok stream
+  obtain ⟨result, summary⟩ := prim_open_tail Channel.openOutCode rt fits succ ready rfl hacc ok stream
     (by rcases one with e | e <;> omega)
     (fun c ok => console_seekFd (rt.pins c ok).console vWord) fdWord
     (fun _ => by simp only [allocPlaces, hacc]) words
-  exact ⟨result, by decide, sem0, summary⟩
+  exact ⟨result, by decide, sem0, fun c ent placed =>
+    summary c ent.toCcallSetupPost ent.counts placed⟩
 
 /-- The stdin descriptor, tagged. -/
 theorem stdin_word {n : BitVec 63} (zero : n.toInt = 0) :
@@ -247,12 +255,12 @@ theorem open_in_stdin {P : Prog} {s : St} {heap : Heap} {world : World} {v : Val
 runtime across the opening, `GoodF1`'s stdin channels, and stdin's `lseek`
 slot at every runtime config, `stdinSeek`; F1: a0-boot's
 `ConsoleRuntime.stdinSeek`). -/
-theorem prim_caml_ml_open_descriptor_in_returns {L : OCaml.Layout} {P : Prog} {op : Opcode}
-    {ra : BitVec 64} {k : Nat} (runtime : OpenOutRuntime L) (stdins : OCaml.StdinChannels P)
+theorem counted_caml_ml_open_descriptor_in_returns {L : OCaml.Layout} {P : Prog} {op : Opcode}
+    {ra : BitVec 64} {k : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
+    (rt : OpenOutRuntimeAt L Ready state Customs) (fits : OCaml.Fits L.budget P) (stdins : OCaml.StdinChannels P)
     (stdinSeek : ∀ c, L.runtimeOk c → Channel.SeekFd 0#64 c) :
-    PrimReturnsAtR L P op ra k "caml_ml_open_descriptor_in" := by
-  obtain ⟨Ready, state, rt⟩ := runtime
-  intro s c0 pl cp sp high table entry value env index res heap world _reach ready sem words succ
+    CountedPrimReturnsAtR L P Customs op ra k "caml_ml_open_descriptor_in" := by
+  intro s c0 pl cp sp high table entry value env index res heap world reach ready sem words succ
   have nil : s.stack.take k = [] := by
     cases e : s.stack.take k with
     | nil => rfl
@@ -270,10 +278,11 @@ theorem prim_caml_ml_open_descriptor_in_returns {L : OCaml.Layout} {P : Prog} {o
     Option.some.inj (ready.entryName.symm.trans PrimitiveEntries.entry_caml_ml_open_descriptor_in)
   subst hentry
   have fd0 : Channel.fdOf (tag64 n) = 0#64 := by rw [vWord]; decide
-  obtain ⟨result, summary⟩ := prim_open_tail Channel.openInCode rt ready rfl hacc ok stream
+  obtain ⟨result, summary⟩ := prim_open_tail Channel.openInCode rt fits succ ready rfl hacc ok stream
     (by omega) (fun c ok => fd0 ▸ stdinSeek c ok) fdWord
     (fun _ => by simp only [allocPlaces, hacc]) words
-  exact ⟨result, by decide, sem0, summary⟩
+  exact ⟨result, by decide, sem0, fun c ent placed =>
+    summary c ent.toCcallSetupPost ent.counts placed⟩
 
 /-- **stdin's `lseek` slot at every F1 runtime config** (a0-boot's
 `ConsoleRuntime.stdin`), the input adapter's `stdinSeek` for `Gc.f1Layout`. -/

@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.ChannelReadiness
 import OCaml.Vm.Gc.NamedOwnership
 import OCaml.Vm.Sim.OutListRun
 import OCaml.Vm.Sim.OutListModel
@@ -15,7 +16,7 @@ The machine summary (`out_list_machine`) runs at the callee entry; the
 model's objects are represented from the nursery words (`listObjs_objAt`)
 and the C_CALL return is framed by the walk's footprint predicate
 (`ccall_observed_summary_on`). What the runtime supplies is the named
-obligation `OutListRuntime L Ready state`: a6-gc's `CustomMemCall`, the custom
+obligation `OutListRuntime L Ready state Customs`: a6-gc's `CustomMemCall`, the custom
 allocations' readiness for every listed channel, newlib's heap covering the
 records, the nursery and the domain record, the runtime's state and newlib's
 free space apart from the VM payload, and the layout's invariant across the
@@ -24,6 +25,7 @@ walk's writes.
 
 namespace OCaml.Vm.Sim.OutListWalk
 set_option autoImplicit false
+variable {Customs : Vsa.Machine.Config → Nat → Prop}
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm OCaml.Vm.Primitives OCaml.Vm.Primitives.Channel.OutList
 open LeanRV64DExecutable
 
@@ -100,7 +102,8 @@ def OutListWrites (state : Config → Nat → Prop) (H : List (Nat × Nat)) (chs
 /-- **The runtime's side of `caml_ml_out_channels_list`** (named obligation;
 F1: a6-gc's `CustomMemCall` instance with a0-boot's newlib heap). At a C_CALL
 entry of the layout:
-* the custom allocations are ready for every listed channel;
+* the layout custom budget is quiet; actual readiness is derived at the
+  counted successful C_CALL entry from its successor and `Fits`;
 * the physical named table has a matching `NamedLedger H [] c`;
 * newlib's heap `H` covers the minor heap, the domain record and the channel
   records, which lie apart (`RecordsPlaced`);
@@ -108,12 +111,13 @@ entry of the layout:
   the runtime's state;
 * the layout's invariant survives the primitive's writes (`OutListWrites`)
   when `young_ptr` stays in the nursery. -/
-structure OutListRuntime (L : OCaml.Layout) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) :
+structure OutListRuntime (L : OCaml.Layout) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (Customs : Config → Nat → Prop) :
     Prop where
-  custom : Gc.CustomMemCall Ready state
+  custom : Gc.CustomMemCall Ready state Customs
+  customBudget : L.budget.customs ≤ Gc.quietBound
   entry : ∀ (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (sp high : Nat),
     L.runtimeOk c → OCaml.LoopGeometry L P s c pl cp high →
-    ∃ k H cap, Ready (k + (outChannelIds s.world).length) c ∧ OCaml.Vm.Boot.Startup.HeapReady H cap c ∧
+    ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap c ∧
       Gc.NamedLedger H [] c ∧
       RecordsPlaced H (word c Layout.sym_Caml_state).toNat (Gc.placedChannels cp s.world.chans.length) ∧
       (∃ x ∈ H, x.1 ≤ Gc.minorRegion.lo ∧ Gc.minorRegion.hi ≤ x.1 + x.2) ∧
@@ -149,7 +153,7 @@ def entryWalk (c : Config) (N : Nat) (cp : ChanPlace) (len : Nat) (H : List (Nat
   S := state c
 
 /-- **What the C_CALL entry gives the walk.** -/
-structure OutListEntry (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (ra : BitVec 64) (P : Prog)
+structure OutListEntry (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (Customs : Config → Nat → Prop) (ra : BitVec 64) (P : Prog)
     (s : St) (pl : Place) (cp : ChanPlace) (sp : Nat) (c : Config) (w : Walk) (k cap : Nat) (s0 : BitVec 64) :
     Prop where
   geometry : WalkGeometry w (outChannelIds s.world).length
@@ -170,16 +174,17 @@ structure OutListEntry (Ready : Nat → Config → Prop) (state : Config → Nat
 /-- **The walk's inputs at the callee entry** of a C_CALL. -/
 theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
     {sp high domain entry : Nat} {env : BitVec 64} {c : Config} {Ready : Nat → Config → Prop}
-    {state : Config → Nat → Prop} (rt : OutListRuntime L Ready state)
+    {state : Config → Nat → Prop} (rt : OutListRuntime L Ready state Customs)
     (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
     (hentry : entry = Layout.sym_caml_ml_out_channels_list)
+    (ready : Ready (outChannelIds s.world).length c)
     (fits : s.heap.words + 6 * (outChannelIds s.world).length ≤ L.budget.heapWords) :
-    ∃ w k cap s0, OutListEntry Ready state ra P s pl cp sp c w k cap s0 := by
+    ∃ w k cap s0, OutListEntry Ready state Customs ra P s pl cp sp c w k cap s0 := by
   have input := setup.input
   have g := setup.geometry
   have ng := g.nursery
   obtain ⟨N, e⟩ := StringAllocEntry.of_setup setup fits
-  obtain ⟨k, H, cap, ready, heap, ledger, recs, ⟨xm, xmIn, xml, xmh⟩, ⟨xd, xdIn, xdl, xdh⟩, dap, pay⟩ :=
+  obtain ⟨H, cap, heap, ledger, recs, ⟨xm, xmIn, xml, xmh⟩, ⟨xd, xdIn, xdl, xdh⟩, dap, pay⟩ :=
     rt.entry P s c pl cp sp high input.runtime g
   have xdb := heap.block_bounds (q := xd.1) (n := xd.2) xdIn
   have nl := e.nativeLow; have nh := e.nativeHigh; have na := e.nativeAligned
@@ -212,7 +217,7 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
     (Y := (runtimeFields c).youngPtr) (Lm := (runtimeFields c).youngLimit) (by walk_omega) (by walk_omega)
     (by walk_omega) (by rw [BitVec.ofNat_toNat, BitVec.setWidth_eq]) rfl rfl
   have pcE : pcOf c = some entryPc := by rw [setup.target, hentry]; rfl
-  refine ⟨w, k, cap, s0, {
+  refine ⟨w, 0, cap, s0, {
     geometry := {
       spLow := by show _ ≤ (BitVec.ofNat 64 (N - 128)).toNat; rw [N128]; walk_omega
       spHigh := by show (BitVec.ofNat 64 (N - 128)).toNat + 128 ≤ _; rw [N128]; walk_omega
@@ -248,7 +253,7 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
       young := wY
       limit := wL
       opened := ng.channelsListed
-      ready := by rw [← nN]; exact ready
+      ready := by rw [← nN]; simpa only [Nat.zero_add] using ready
       heap := heap }
     listed := listed
     payload := pay
@@ -339,7 +344,7 @@ def outW (w : Walk) (state : Config → Nat → Prop) (a : Nat) : Prop :=
 /-- The walk's windows are payload windows of the entry's geometry. -/
 theorem synLog_windows {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {ra : BitVec 64} {L : OCaml.Layout}
     {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high : Nat} {c : Config} {w : Walk} {k cap : Nat}
-    {s0 : BitVec 64} (g : OCaml.LoopGeometry L P s c pl cp high) (ent : OutListEntry Ready state ra P s pl cp sp c w k cap s0)
+    {s0 : BitVec 64} (g : OCaml.LoopGeometry L P s c pl cp high) (ent : OutListEntry Ready state Customs ra P s pl cp sp c w k cap s0)
     {top : Nat} (htop : top ≤ high) :
     LogWindows (synLog w) P s c pl cp top high [Layout.off_young_limit, Layout.off_young_ptr, Layout.off_local_roots] := by
   have wg := ent.geometry
@@ -368,7 +373,7 @@ theorem synLog_windows {Ready : Nat → Config → Prop} {state : Config → Nat
 /-- **The payload misses everything the primitive writes.** -/
 theorem outW_payload {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {ra : BitVec 64} {L : OCaml.Layout}
     {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high : Nat} {c : Config} {w : Walk} {k cap : Nat}
-    {s0 : BitVec 64} (g : OCaml.LoopGeometry L P s c pl cp high) (ent : OutListEntry Ready state ra P s pl cp sp c w k cap s0)
+    {s0 : BitVec 64} (g : OCaml.LoopGeometry L P s c pl cp high) (ent : OutListEntry Ready state Customs ra P s pl cp sp c w k cap s0)
     (stack : sp + 8 * s.stack.length = high) (low : high - Layout.stackBytes ≤ sp - 16) (sp16 : 16 ≤ sp) :
     PayloadMisses (outW w state) P s c pl cp sp ∧ ∀ a, VmPoint P s c pl cp sp a → ¬ outW w state a := by
   have lw := synLog_windows g ent (top := sp - 16) (by omega)
@@ -414,7 +419,7 @@ theorem synLog_out {w : Walk} {a : Nat} (h : OutL (synLog w) a) :
 
 /-- **The return's byte frame** over everything the primitive writes. -/
 theorem outW_frame {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {k : Nat}
-    {ra s0 : BitVec 64} {c f : Config} (g : WalkGeometry w n) (ret : OutListReturned w Ready state k ra s0 c f)
+    {ra s0 : BitVec 64} {c f : Config} (g : WalkGeometry w n) (ret : OutListReturned w Ready state Customs k ra s0 c f)
     (x : Nat) (hx : ¬ outW w state x) : byte f x = byte c x := by
   have spl := g.spLow; have rm := g.room
   have c576 : Gc.customStackBytes = 576 := rfl
@@ -432,7 +437,7 @@ theorem outW_frame {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state
 /-- What the primitive writes is what the runtime's frame allows. -/
 theorem outW_writes {w : Walk} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {ra : BitVec 64}
     {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp : Nat} {c : Config} {k cap : Nat} {s0 : BitVec 64}
-    (ent : OutListEntry Ready state ra P s pl cp sp c w k cap s0) {a : Nat} (h : outW w state a) :
+    (ent : OutListEntry Ready state Customs ra P s pl cp sp c w k cap s0) {a : Nat} (h : outW w state a) :
     OutListWrites state w.H0 (Gc.placedChannels cp s.world.chans.length) c a := by
   have g := ent.geometry
   have spl := g.spLow; have rm := g.room
@@ -535,9 +540,9 @@ list in the accumulator. -/
 theorem out_list_payload {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {ra : BitVec 64}
     {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {sp high : Nat} {c f : Config}
     {w : Walk} {k cap : Nat} {s0 : BitVec 64} (g : OCaml.LoopGeometry L P s c pl cp high)
-    (ent : OutListEntry Ready state ra P s pl cp sp c w k cap s0)
+    (ent : OutListEntry Ready state Customs ra P s pl cp sp c w k cap s0)
     (data : VmPayload P s c pl cp sp high) (stack : sp + 8 * s.stack.length = high)
-    (low : high - Layout.stackBytes ≤ sp - 16) (sp16 : 16 ≤ sp) (ret : OutListReturned w Ready state k ra s0 c f)
+    (low : high - Layout.stackBytes ≤ sp - 16) (sp16 : 16 ≤ sp) (ret : OutListReturned w Ready state Customs k ra s0 c f)
     (placed : ∀ i, i < 2 * (outChannelIds s.world).length →
       pl.φ (s.heap.size + i) = some (w.Y - 24 * i - 16))
     (chanAt : ∀ id ∈ outChannelIds s.world, cp id = some ((cp id).getD 0) ∧ (cp id).getD 0 < 2 ^ 64)
@@ -606,7 +611,7 @@ theorem listVal_word {pl : Place} {size Y : Nat} {ids : List Nat} (yFit : Y < 2 
 
 /-- **The loop registers at the return.** -/
 theorem out_list_loop {w : Walk} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {k : Nat}
-    {ra s0 : BitVec 64} {c f : Config} (loop : LoopRegisters c) (ret : OutListReturned w Ready state k ra s0 c f) :
+    {ra s0 : BitVec 64} {c f : Config} (loop : LoopRegisters c) (ret : OutListReturned w Ready state Customs k ra s0 c f) :
     LoopRegisters f :=
   ⟨(ret.saved 22 (by decide)).trans loop.dispatchTable, (ret.saved 24 (by decide)).trans loop.opcodeBound,
     (ret.saved 20 (by decide)).trans loop.pending, (ret.saved 19 (by decide)).trans loop.domain, ret.idle,
@@ -614,7 +619,7 @@ theorem out_list_loop {w : Walk} {Ready : Nat → Config → Prop} {state : Conf
 
 /-- The list head's word is not written. -/
 theorem head_not_outW {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
-    (custom : Gc.CustomMemCall Ready state) (g : WalkGeometry w n) {i : Nat} (hi : i < 8) :
+    (custom : Gc.CustomMemCall Ready state Customs) (g : WalkGeometry w n) {i : Nat} (hi : i < 8) :
     ¬ outW w state (Layout.sym_caml_all_opened_channels + i) := by
   have spl := g.spLow; have nl := g.nurseryLow; have dl := g.domainLow
   rintro (o | ⟨r, hr, lo, _⟩ | hs | foot)
@@ -666,8 +671,8 @@ geometry of its post-state. -/
 theorem out_list_post {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
     {sp high domain entry : Nat} {env : BitVec 64} {c f : Config} {Ready : Nat → Config → Prop}
     {state : Config → Nat → Prop} {w : Walk} {k cap : Nat} {s0 : BitVec 64}
-    (rt : OutListRuntime L Ready state) (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
-    (ent : OutListEntry Ready state ra P s pl cp sp c w k cap s0) (ret : OutListReturned w Ready state k ra s0 c f)
+    (rt : OutListRuntime L Ready state Customs) (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
+    (ent : OutListEntry Ready state Customs ra P s pl cp sp c w k cap s0) (ret : OutListReturned w Ready state Customs k ra s0 c f)
     (placed : ∀ i, i < 2 * (outChannelIds s.world).length → pl.φ (s.heap.size + i) = some (w.Y - 24 * i - 16))
     (fits : s.heap.words + 6 * (outChannelIds s.world).length ≤ L.budget.heapWords)
     (stackFits : 8 * (s.stack.length + 2) ≤ Layout.stackBytes) :
@@ -755,7 +760,7 @@ theorem out_list_post {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {p
 /-- A domain field outside the nursery words, `local_roots` and
 `extra_heap_resources_minor` is not written. -/
 theorem domainField_not_outW {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
-    (custom : Gc.CustomMemCall Ready state) (g : WalkGeometry w n) {off i : Nat} (hi : i < 8)
+    (custom : Gc.CustomMemCall Ready state Customs) (g : WalkGeometry w n) {off i : Nat} (hi : i < 8)
     (fits : off + 8 ≤ Layout.domainStateBytes) (young : 16 ≤ off) (roots : off + 8 ≤ 288 ∨ 296 ≤ off)
     (extra : off + 8 ≤ Layout.off_extra_heap_resources_minor ∨ Layout.off_extra_heap_resources_minor + 8 ≤ off) :
     ¬ outW w state (w.D + off + i) := by
@@ -782,7 +787,7 @@ theorem domainField_not_outW {w : Walk} {n : Nat} {Ready : Nat → Config → Pr
 
 /-- Everything written lies below the caller's native stack pointer. -/
 theorem outW_below {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
-    (custom : Gc.CustomMemCall Ready state) (g : WalkGeometry w n) {a : Nat} (h : outW w state a) :
+    (custom : Gc.CustomMemCall Ready state Customs) (g : WalkGeometry w n) {a : Nat} (h : outW w state a) :
     a < w.sp.toNat + 128 := by
   have spl := g.spLow; have nh := g.nurseryHigh; have dh := g.domainHigh
   rcases h with o | ⟨r, hr, lo, hi⟩ | hs | foot
@@ -797,24 +802,25 @@ theorem outW_below {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state
 /-- The runtime's side of `caml_ml_out_channels_list` for some readiness
 and custom-allocation state (named obligation; F1: lanes a6-gc and a0-boot). -/
 def OutListRuntimeL (L : OCaml.Layout) : Prop :=
-  ∃ (Ready : Nat → Config → Prop) (state : Config → Nat → Prop), OutListRuntime L Ready state
+  ∃ (Ready : Nat → Config → Prop) (state Customs : Config → Nat → Prop), OutListRuntime L Ready state Customs
 
 
 end OCaml.Vm.Sim.OutListWalk
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
+variable {Customs : Vsa.Machine.Config → Nat → Prop}
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm OCaml.Vm.Primitives OCaml.Vm.Primitives.Channel.OutList
 open LeanRV64DExecutable OutListWalk
 
 /-- **`caml_ml_out_channels_list` at every C_CALL site**, given the runtime's
 side (`OutListRuntime`; F1: lane a6-gc's `CustomMemCall` with a0-boot's
 newlib heap). -/
-theorem prim_caml_ml_out_channels_list_returns {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64}
-    {k : Nat} (outList : OutListRuntimeL L) :
-    PrimReturnsAt L P op ra k "caml_ml_out_channels_list" := by
-  obtain ⟨Ready, state, rt⟩ := outList
-  intro s c0 pl cp sp high table entry value env index v heap world _reach ready sem words
+theorem counted_caml_ml_out_channels_list_returns {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 64}
+    {k : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
+    (rt : OutListRuntime L Ready state Customs) (fits : OCaml.Fits L.budget P) :
+    CountedPrimReturnsAtR L P Customs op ra k "caml_ml_out_channels_list" := by
+  intro s c0 pl cp sp high table entry value env index v heap world reach ready sem words succ
   have nil : s.stack.take k = [] := by
     cases e : s.stack.take k with
     | nil => rfl
@@ -825,11 +831,13 @@ theorem prim_caml_ml_out_channels_list_returns {L : OCaml.Layout} {P : Prog} {op
   have hentry : entry = Layout.sym_caml_ml_out_channels_list :=
     Option.some.inj (ready.entryName.symm.trans PrimitiveEntries.entry_caml_ml_out_channels_list)
   subst hentry
-  have fits : s.heap.words + 6 * (outChannelIds s.world).length ≤ L.budget.heapWords := by
+  have roomFits : s.heap.words + 6 * (outChannelIds s.world).length ≤ L.budget.heapWords := by
     rw [words_allocAll, blockWords_listObjs] at words; exact words
   refine ⟨(valWord pl (listVal s.heap.size (.int 0) (outChannelIds s.world))).getD 0,
-    ⟨by decide, primF1Impl_outList s, fun c setup placedAt => ?_⟩⟩
-  obtain ⟨w, kk, cap, s0, ent⟩ := out_list_entry rt setup rfl fits
+    ⟨by decide, primF1Impl_outList s, fun c countedEntry placedAt => ?_⟩⟩
+  have setup := countedEntry.toCcallSetupPost
+  obtain ⟨w, kk, cap, s0, ent⟩ := out_list_entry rt setup rfl
+    (out_list_call_ready rt.custom.accounting countedEntry.counts fits rt.customBudget succ) roomFits
   have wg := ent.geometry
   have rm := wg.room
   have yFit : w.Y < 2 ^ 64 := by have := wg.nurseryHigh; walk_omega
@@ -859,17 +867,22 @@ theorem prim_caml_ml_out_channels_list_returns {L : OCaml.Layout} {P : Prog} {op
     rw [setup.saved.domainWord, ent.domain]
   have dh := wg.domainHigh
   have S : FnSummary (BitVec.ofNat 64 Layout.sym_caml_ml_out_channels_list) (fun x => x = c) (fun after =>
+      CountedResult Customs (fun after =>
       FramedPrimitivePostOn L.runtimeOk P s pl cp sp high "caml_ml_out_channels_list" [s.accu]
         (listVal s.heap.size (.int 0) (outChannelIds s.world)) (resWord w.Y (outChannelIds s.world).length)
         (allocAll s.heap (listObjs s.heap.size (.int 0) (outChannelIds s.world))) (listRefs s.world)
         (outW w state) c ra after ∧
-      OCaml.LoopGeometry L P (listPost s) after pl cp high) := by
+      OCaml.LoopGeometry L P (listPost s) after pl cp high) (listRefs s.world).customs after) := by
     constructor
     intro c' ⟨_, e⟩
     subst e
     obtain ⟨f, run, ret⟩ := out_list_machine rt.custom wg customMemGrows ent.input (by rw [ent.listed, List.length_map]; exact Nat.le_refl _)
       fun a h => (ent.stateS a).mpr h
-    exact ⟨f, run, out_list_post rt setup ent ret placed fits stackFits⟩
+    refine ⟨f, run, out_list_post rt setup ent ret placed roomFits stackFits, ?_⟩
+    have physical := ret.counted.count countedEntry.counts.physical
+    rw [ent.listed, List.length_map] at physical
+    rw [listRefs_customs]
+    exact physical
   have outside : CcallSavedMisses (outW w state) (BitVec.ofNat 64 (domainAt c0)) (BitVec.ofNat 64 (sp - 16)) := by
     refine ⟨fun i hi => pts _ (Or.inl ⟨by omega, by omega⟩), ?_, ?_, ?_⟩
     · intro i hi
@@ -895,6 +908,9 @@ theorem prim_caml_ml_out_channels_list_returns {L : OCaml.Layout} {P : Prog} {op
     rw [BitVec.toNat_ofNat, BitVec.toNat_add, BitVec.toNat_ofNat] at e
     have := Nat.mod_le n (2 ^ 64)
     omega
-  exact ccall_observed_summary_on S setup.saved outside below setup.native
+  apply S.weaken (fun _ h => h)
+  intro after returned
+  exact ⟨ccall_observed_return_on returned.post.1 returned.post.2 setup.saved outside below setup.native,
+    returned.physical⟩
 
 end OCaml.Vm.Sim

@@ -13,6 +13,7 @@ allocation pointers and the open-channel list, which agree at `c₁` and `d`.
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
+variable {Customs : Vsa.Machine.Config → Nat → Prop}
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives OCaml.Vm.Primitives.Channel
 
 /-- Eight kept bytes give a kept word. -/
@@ -25,8 +26,8 @@ theorem open_out_geometry {L : OCaml.Layout} {P : Prog} {s s' : St} {pl : Place}
     {spV high : Nat} {ch : Chan}
     {live : Nat → Prop} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {k : Nat}
     {H : List (Nat × Nat)} {cap cap' charge : Nat} {sp ra r0 r1 r2 v head : BitVec 64} {c d : Config}
-    (custom : Gc.CustomMemCall Ready state)
-    {code : Channel.OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
+    (custom : Gc.CustomMemCall Ready state Customs)
+    {code : Channel.OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra r0 r1 r2 v head c d)
     (heap : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c)
     (h : OutInput live H cap' charge sp ra r0 r1 r2 v head c)
     (N : OutNursery H (Gc.placedChannels cp s.world.chans.length) c)

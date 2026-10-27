@@ -6184,8 +6184,8 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.primTable_kept
 #print axioms OCaml.Vm.Sim.native_kept
 #print axioms OCaml.Vm.Sim.open_out_return
-#print axioms OCaml.Vm.Sim.prim_caml_ml_open_descriptor_out_returns
-#print axioms OCaml.Vm.Sim.prim_caml_ml_open_descriptor_in_returns
+#print axioms OCaml.Vm.Sim.counted_caml_ml_open_descriptor_out_returns
+#print axioms OCaml.Vm.Sim.counted_caml_ml_open_descriptor_in_returns
 #print axioms OCaml.Vm.Sim.f1_stdinSeek
 #print axioms OCaml.Vm.Sim.prim_open_tail
 #print axioms OCaml.Vm.Sim.open_in_stdin
@@ -6700,7 +6700,7 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.OutListWalk.out_list_post
 #print axioms OCaml.Vm.Sim.OutListWalk.domainField_not_outW
 #print axioms OCaml.Vm.Sim.OutListWalk.outW_below
-#print axioms OCaml.Vm.Sim.prim_caml_ml_out_channels_list_returns
+#print axioms OCaml.Vm.Sim.counted_caml_ml_out_channels_list_returns
 #print axioms OCaml.Vm.Sim.PrimReturnsAtD.of_arity
 #print axioms OCaml.Vm.Sim.f1_c_call1_returns
 #print axioms OCaml.Vm.Sim.f1_c_call2_returns
@@ -6841,3 +6841,33 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 #print axioms OCaml.Vm.Gc.NamedLedger.read_bounds
 #print axioms OCaml.Vm.Gc.NamedLedger.read_not_foot
+
+-- Counted custom-allocation return evidence and successful-call readiness.
+#print axioms OCaml.Vm.Gc.CustomCountStep.trans
+#print axioms OCaml.Vm.Gc.CustomAccounting.sameMemory
+#print axioms OCaml.Vm.Gc.CustomMemCall.frame_counted
+#print axioms OCaml.Vm.Gc.CustomMemCall.Accounting.ready_of_bound
+#print axioms OCaml.Vm.Gc.ChannelCustomsAt.of_null
+#print axioms OCaml.Vm.Gc.ChannelCustomsAt.frame
+#print axioms OCaml.Vm.Gc.ChannelCustomsAt.charge
+#print axioms OCaml.Vm.Gc.ChannelCustomsAt.allocate
+#print axioms OCaml.Vm.Gc.ChannelCustomsAt.ready
+#print axioms OCaml.Vm.map_range_getD
+#print axioms OCaml.Vm.refcountSum_filterMap
+#print axioms OCaml.Vm.ChannelRefsRepr.sum
+#print axioms OCaml.Vm.ChannelCustomsRepr.boundary
+#print axioms OCaml.Vm.ChannelCustomsRepr.empty
+#print axioms OCaml.Vm.ChannelRefsRepr.open
+#print axioms OCaml.Vm.ChannelCustomsRepr.open
+#print axioms OCaml.Vm.Gc.f1_channelCounts_of
+#print axioms OCaml.Vm.Sim.CcallSucc.customs_bound
+#print axioms OCaml.Vm.Sim.openChan_customs
+#print axioms OCaml.Vm.Sim.listRefs_customs
+#print axioms OCaml.Vm.Sim.channel_call_ready
+#print axioms OCaml.Vm.Sim.open_call_ready
+#print axioms OCaml.Vm.Sim.out_list_call_ready
+#print axioms OCaml.Vm.Sim.ccall_observed_return_on
+#print axioms OCaml.Vm.Sim.open_out_counts
+
+#print axioms OCaml.Vm.Gc.CustomMemCall.call_forget
+#print axioms OCaml.Vm.Sim.OutListWalk.ListedStep.ready

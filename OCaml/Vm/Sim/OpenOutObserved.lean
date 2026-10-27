@@ -14,6 +14,7 @@ in a static word; `OpenOutFrame`'s lemmas keep each.
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
+variable {Customs : Vsa.Machine.Config → Nat → Prop}
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives OCaml.Vm.Primitives.Channel
 
 theorem payloadStatics_open : ∀ a ∈ payloadStatics, a ∈ openStatics := by decide
@@ -48,8 +49,8 @@ theorem high_eq {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {
 theorem open_out_observed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {spV high : Nat}
     {live : Nat → Prop} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {k : Nat}
     {H : List (Nat × Nat)} {cap cap' charge : Nat} {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
-    (custom : Gc.CustomMemCall Ready state)
-    {code : Channel.OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra s0 s1 s2 v head c d)
+    (custom : Gc.CustomMemCall Ready state Customs)
+    {code : Channel.OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra s0 s1 s2 v head c d)
     (heap : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c)
     (h : OutInput live H cap' charge sp ra s0 s1 s2 v head c)
     (N : OutNursery H (Gc.placedChannels cp s.world.chans.length) c)
@@ -148,8 +149,8 @@ variable {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} {s
   {H : List (Nat × Nat)} {cap cap' charge : Nat} {sp ra r0 r1 r2 v head : BitVec 64} {c d : Config}
 
 /-- **A VM stack byte is kept.** -/
-theorem vmStack_kept (custom : Gc.CustomMemCall Ready state)
-    {code : Channel.OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
+theorem vmStack_kept (custom : Gc.CustomMemCall Ready state Customs)
+    {code : Channel.OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra r0 r1 r2 v head c d)
     (heap : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c)
     (h : OutInput live H cap' charge sp ra r0 r1 r2 v head c)
     (N : OutNursery H (Gc.placedChannels cp s.world.chans.length) c)
@@ -167,8 +168,8 @@ theorem vmStack_kept (custom : Gc.CustomMemCall Ready state)
     (block_of_outside_minor N.low N.high (by obtain ⟨xl, xh⟩ := ix; dsimp only at m xl xh; omega))
 
 /-- **A primitive-table byte is kept.** -/
-theorem primTable_kept (custom : Gc.CustomMemCall Ready state)
-    {code : Channel.OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
+theorem primTable_kept (custom : Gc.CustomMemCall Ready state Customs)
+    {code : Channel.OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra r0 r1 r2 v head c d)
     (heap : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c)
     (h : OutInput live H cap' charge sp ra r0 r1 r2 v head c)
     (N : OutNursery H (Gc.placedChannels cp s.world.chans.length) c) {x : Nat}
@@ -183,8 +184,8 @@ theorem primTable_kept (custom : Gc.CustomMemCall Ready state)
 
 /-- **A byte at or above the C call's native stack pointer is kept** (the
 interpreter's frames). -/
-theorem native_kept (custom : Gc.CustomMemCall Ready state)
-    {code : Channel.OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
+theorem native_kept (custom : Gc.CustomMemCall Ready state Customs)
+    {code : Channel.OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra r0 r1 r2 v head c d)
     (h : OutInput live H cap' charge sp ra r0 r1 r2 v head c)
     (N : OutNursery H (Gc.placedChannels cp s.world.chans.length) c) {x : Nat}
     (above : sp.toNat ≤ x) :

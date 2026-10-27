@@ -97,10 +97,10 @@ and C_CALL1/2/4 are the only call rows. C_CALL3 and C_CALL5 are vacuous
 | `growth.full`: `BarrierGrowthFull Gc.f1Layout` (`F1GrowthPremises.full`) | **open**, by decision (2026-10-13) | a6-gc (G2) | G2's `CollectionEffect`. As stated it is not provable under G1, because the overflow requests a minor GC (a6-gc log, "Obstruction") |
 | SETGLOBAL barrier row: `f1_globalBarrier f1_barrierRuntime …` | **proved** | a1-arms / a6-gc | `8811ba3f` |
 | `c_call1_returns`: `caml_fresh_oo_id` | **proved** | a1-prims | `prim_caml_fresh_oo_id_returns` (`03604487`) |
-| `c_call1_returns`: `caml_ml_open_descriptor_out` | **proved given `OpenOutRuntime Gc.f1Layout`** | bprime (summary) | `prim_caml_ml_open_descriptor_out_returns` (`4d98b8b3`) |
-| `OpenOutRuntime Gc.f1Layout` (`WhileMinOpen.openOutRuntime`): `custom`, `after` | **open** | a6-gc | `CustomMemCall` for `f1Layout` (the quiet path of `caml_alloc_custom_mem`) |
+| `c_call1_returns`: `caml_ml_open_descriptor_out` | **counted interface proved; ordinary row open** | a1-prims / a1-arms | `counted_caml_ml_open_descriptor_out_returns` needs `CountedCcallSetupPost`; ordinary invariant/setup migration remains open |
+| `OpenOutRuntime Gc.f1Layout` (counted caller): `custom`, `after` | **open** | a6-gc | `CustomMemCall` for `f1Layout` (the quiet path of `caml_alloc_custom_mem`) |
 | `OpenOutRuntime Gc.f1Layout`: `pins` | **free** | — | `fun c ok => ok.freeListShape` (`f1Layout.runtimeOk` is `RuntimeOk F1Pins`) |
-| `OpenOutRuntime Gc.f1Layout`: `budget : ∀ c, runtimeOk c → ∃ k, Ready (k + 1) c` | **open, no owner; not derivable from `runtimeOk`** | **a1-arms (taken 2026-10-20)** | see below |
+| Successful-call readiness | **proved from counted entry + reachable successor + `Fits`** | a1-prims / a1-arms | Universal runtime budget removed; numeric `customBudget` only bounds the layout. Actual ordinary representation producers still need the physical count witness. |
 | `c_call1_returns`: `caml_ml_string_length` | **proved** | a1-prims | `prim_caml_ml_string_length_returns` (`53a7adea`) |
 | `c_call1_returns`: `caml_ml_flush` | **proved** | a1-prims | `prim_caml_ml_flush_returns` (`41c1c810`) |
 | `c_call2_returns`: `caml_format_int` (`WhileMinOpen.format_int_c_call2`) | **open** | bprime (started 2026-10-20) | `prim_caml_format_int_returns` |
@@ -108,49 +108,53 @@ and C_CALL1/2/4 are the only call rows. C_CALL3 and C_CALL5 are vacuous
 | `c_call4_returns`: `caml_ml_output` | **proved** | a1-prims | `prim_caml_ml_output_returns` (`61c3b012`) |
 | per-site assembly (`whileMin_ccallReturns`, `whileMinCalls`) | **proved** | a1-arms | `9aa10143` |
 
-Outside whileMin, the general headline `ocamlrun_refinement_F1_open`
-(`Sim/F1Ccall.lean`) adds `F1CcallOpen`'s fields:
-* `caml_register_named_value` (a1-prims) and `caml_format_int` (bprime) at
-  their successful two-argument arity; unsupported arities are excluded by
-  `PrimReturnsAtD.of_arity` using the row's stack-depth fact;
-* `OutListRuntimeL` (a6-gc / a0-boot). Its `entry` has the same budget gap
-  (`Ready (k + listed)`).
+Outside whileMin, `F1CcallOpen` now lists five ordinary row suppliers:
+open-descriptor-out, open-descriptor-in and out-channels-list at `C_CALL1`,
+named registration and integer formatting at `C_CALL2`. The counted channel
+summaries cannot fill the weaker ordinary rows until their entry producers
+carry physical accounting. Wrong arities are still discharged by
+`PrimReturnsAtD.of_arity`; the full `GoodF1` domain is unchanged.
 
-### The custom-allocation budget (a1-arms)
-* **Why it is not derivable.** `budget` quantifies over every
-  `f1Layout.runtimeOk` config. Neither `F1Pins` nor `RuntimeOk` constrains
-  `caml_extra_heap_resources`, and its doc says the premise is "False after
-  the fifth since the cut". The 6th custom allocation requests a major slice
-  (Kiran's decision of 2026-10-13: `Ready` carries fewer than 5 prior
-  allocations, and the major-slice path is a named open premise). The
-  argument is not yet machine-checked: a `runtimeOk` config with the
-  counter past the quiet range is not constructed in Lean.
-* **Consequence.** `WhileMinOpen.openOutRuntime` cannot be discharged, even
-  though whileMin stays on the quiet path.
-* **Plan.**
-  1. Count custom allocations since the cut where they can be read at a C_CALL
-     entry: the represented world's opens and listings, tied to
-     `caml_extra_heap_resources` by the runtime invariant.
-  2. Put the G1 bound in scope as a BcSem guard on the allocating primitives,
-     like the 64-channel guard (`b601b2fe`); a2-sem owns `stepI`.
-  3. Restate `budget` (and `OutListRuntime.entry`'s `Ready`) at the C_CALL
-     entry whose primitive succeeds, so it follows from the guard.
-* **Decided (a2-sem, a6-gc, bprime, 2026-10-20).** Count per channel, as io.c
-  does (`caml_alloc_channel`: `chan->refcount++`).
-  - **Landed in this batch:**
-    - `Chan.refs`: `openChan` sets 1, `caml_ml_out_channels_list` adds 1 per
-      listed channel (`listRefs`), close leaves it.
-    - `World.customs` (Σ refs).
-    - The bound `Budget.customs` in `Fits` (`FitsAt`), with
-      `g1Budget.customs = quietBound = 5`. It is not a BcSem guard: the
-      compiler differential runs ocamlc on BcSem with more than 5 custom
-      allocations. whileMin is within 5, by its shape run.
-    - `Gc.RefcountSum` over the open-channel list (0 at the cut:
-      `RefcountSum.of_null`).
-    - `Fragment.customLedger` and the difftest `f1_chanrefs`.
-  - **Next:**
-    1. a6-gc: the concrete `Customs` and `F1Pins.customs : Customs c n` at
-       `RefcountSum c.σ.mem n`, plus the step across a call.
-    2. a1-arms: `ChanAt`'s refcount word `= ch.refs`.
-    3. a1-arms: `budget` restated at the succeeding C_CALL entry, with
-       `Ready := ReadyOf Customs`. bprime sees the diff first.
+### The custom-allocation budget (2026-10-27 continuation)
+
+`Fits` bounds `World.customs` (Σ channel refs) at every reachable state;
+`g1Budget.customs = quietBound = 5`. This remains a budget hypothesis, not a
+BcSem guard. `openChan_customs` and `listRefs_customs` give the exact semantic
+charges, and `CcallSucc.customs_bound` reads the bound at the successful
+successor. `open_call_ready` and `out_list_call_ready` combine it with the
+represented physical count. The universal `OpenOutRuntimeAt.budget` and the
+out-list entry's universal `Ready` field are removed.
+
+`CustomMemCall.call` returns exact count evidence in the actual
+`CustomMemCountedReturned` post. The weak `CustomMemReturned` is a projection
+for ordinary memory/ABI clients. `CustomAccounting` supplies framing,
+uniqueness and `ReadyOf` conversion; it has no universal increment implication
+from the weak return. `OpenedOut`, the out-list loop and its final return
+retain the exact physical transition. Each listed record charges one custom
+allocation, and its cons cell charges zero. `ChannelCustomsAt.pending`
+distinguishes the incremented refcount before allocation from the physical
+counter.
+
+`CountedVmReprAt`, `CountedCcallSetupPost`, and `CountedResult` name the
+stronger boundaries. `f1_channelCounts_of` produces startup channel counts
+from the actual empty-list observation and a physical zero witness.
+`open_out_counts` produces full physical/refcount representation at the new
+placement using the existing shared payload frame.
+
+Still open:
+
+1. Concrete physical `Customs`, its zero witness at the cut, and all laws and
+   the actual machine summary in `CustomMemCall` (a6-gc).
+2. Migration of ordinary `WorldRepr`/`VmPayload`/`VmReprAt`, all arm frames and
+   actual C_CALL setup producers to carry those witnesses (a1-arms/a1-prims).
+3. The out-list's represented natural refcount increments/no-wrap producer;
+   its physical batch transition is proved, but does not imply these bytes.
+4. The open call's after-runtime pins; out-list selected heap/record/named
+   entry geometry and after-runtime pins (a6-gc/a0-boot).
+5. Connection of the counted summaries to the ordinary rows after (2).
+
+A blanket implication from every weak `CcallSetupPost` to counted evidence
+was removed: source reachability alone does not constrain the omitted
+machine counters. This repeats the old universal readiness gap, as recorded
+in `DEAD-ENDS.md`. No runtime supplier is claimed closed. Validation commands
+and lead-review status are in `a1-prims.md`.

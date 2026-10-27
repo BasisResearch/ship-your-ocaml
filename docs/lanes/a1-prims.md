@@ -2,6 +2,93 @@
 
 ## Current status
 
+**2026-10-27 counted-channel continuation: partial migration, not landed.**
+
+`CustomMemCall.call` now returns `CustomMemCountedReturned`: the exact
+`Customs f n → Customs d (n + 1)` is evidence from that execution's actual
+`FnSummary` post. The invalid universal `Accounting.step` from the weak return
+record is removed. `CustomAccounting` only supplies physical uniqueness,
+caller-store framing and readiness from `ReadyOf`. `CustomFramed` and
+`CustomCountStep` share framing/composition between consumers.
+
+`OpenedOut.custom` retains the stronger return; `OpenedOut.counted` composes
+the prefix, allocator and suffix physical transitions. The out-list walk
+retains its count at each head, consumes one physical allocation per listed
+record, frames the cons-cell allocation, and returns its whole batch charge
+in `OutListReturned.counted`. `RestoreKept` names the final shared frame.
+`ChannelCustomsAt` still distinguishes the pending refcount offset from the
+physical custom count; allocation consumes that offset using the actual
+counted post. `Ready` is never defined as a frame-stable refcount sum.
+
+`open_call_ready` and `out_list_call_ready` use the successful reachable
+successor's `Fits` bound. Both opening C_CALL adapters and the list adapter
+consume `CountedCcallSetupPost.counts` and return `CountedResult` with the
+physical successor count. `OpenOutRuntimeAt.budget` and the universal
+out-list entry readiness were removed; `customBudget` is only the numeric
+layout bound. `ccall_observed_return_on` exposes the shared pointwise return
+adapter so the out-list retains its count on the same execution.
+`ChannelRefsRepr.open`, `ChannelCustomsRepr.open`, and native `open_out_counts`
+produce complete opened-channel counts using shared payload observations.
+`f1_channelCounts_of` reads the actual empty startup list, conditional on the
+physical-zero witness.
+
+The ordinary invariant has **not** been migrated. `CountedVmReprAt` names the
+intended stronger relation; ordinary `VmReprAt`/`WorldRepr`/`VmPayload` and
+setup producers still omit it. A blanket `ChannelCountsAtCalls` implication
+from every weak setup was inspected and removed; it would repeat the old
+dead end. The generator now leaves ordinary open-in/open-out/out-list
+`C_CALL1` summaries as explicit fields (five fields total in `F1CcallOpen`,
+including named registration and integer formatting). `WhileMinOpen` likewise
+retains the ordinary output-opening row. This is an intentional integration
+blocker, not an extra `GoodF1` guard or a claim those suppliers are closed.
+
+Remaining suppliers:
+
+- a6-gc: concrete physical `Customs`, zero at startup, uniqueness/framing and
+  readiness laws, and the actual counted allocator call (including named
+  separation, heap/ABI effects and exact machine counter transition).
+- a1-arms/a1-prims: carry `CountedVmReprAt` through every loop/payload/arm and
+  actual C_CALL setup producer, then wire the counted summaries to those rows.
+- a1-prims: the out-list's represented natural refcount increments and no-wrap
+  proof; physical batch accounting alone does not supply these readbacks.
+- a6-gc/a0-boot: open runtime `after` pins and the out-list's selected heap,
+  record/named-ledger entry geometry and after-call runtime pins.
+- Existing named registration/general formatting rows remain open;
+  `BarrierGrowthFull` stays G2 and C4 round 2 waits for F1.
+
+A downstream rebuild also exposed a preserved named-migration omission in
+`LoopGeometry.of_above` (`PrimStringNotequalReturns`): its generic state
+transport needed named-table equality. That equality is now explicit and
+forwarded to `transport_ids`; its actual unchanged-world caller supplies it.
+
+Validation passes:
+
+- `scripts/lean-capped.sh lake build OCaml.Vm.Sim.OpenOutReturn
+  OCaml.Vm.Sim.OutListAdapter OCaml.Vm.Sim.F1Ccall
+  OCaml.Vm.Sim.WhileMinTable`: **3,684 jobs**
+  (`/tmp/a1-counts-final-build.log`). This includes `F1Runtime`, the counted
+  representation/readiness modules, native open/out-list chains and the
+  named-table transport correction.
+- `scripts/lean-capped.sh lake env lean /tmp/a1-channel-counts-audit.lean`:
+  **52 reports**, all within `propext`, `Classical.choice`, `Quot.sound`
+  (`/tmp/a1-channel-counts-audit.log`, checked by
+  `/tmp/a1-channel-counts-audit-check.txt`). All focused reports are
+  registered in `OCaml/Audit.lean`; its full run remains the lead gate.
+- `check_holes.py`, `check_discipline.py`, `check_abstraction_gate.py`,
+  `gen_f1_table.py --check`, and `git diff --check` pass. C4 remains at 3.
+
+Builds/audit used the capped wrapper, two Lean threads and `free -g` before
+each command (available memory remained above 25 GB). Earlier intermediate
+build errors were proof/interface corrections, including the preserved
+named-transport omission; the final build and audit pass. No virtual limit,
+heartbeat increase, new trust primitive, subworker or generated-output edit
+was used. The F1/whileMin tables were regenerated by their generator.
+
+The checkpoint remains **stuck at ordinary counted invariant/setup producers
+and the out-list refcount producer**. The checked interfaces do not close the
+runtime suppliers. Git metadata and the integration queue remain untouched;
+there is no new commit. The lead reviews, commits and lands.
+
 **2026-10-27 physical named migration complete: checked worktree ready for lead review.**
 The preserved `NamedRepr`, stronger `StackGeometry`, `LogWindows.named`,
 `LoadedAt.named`, and arbitrary-byte/first-NUL lookup work remain intact.
@@ -56,7 +143,8 @@ The focused audit, `scripts/lean-capped.sh lake env lean
 in `OCaml/Audit.lean`; its full execution remains the lead gate.
 
 **Separate primitive-machine obligations:** this migration does not discharge
-`F1CcallOpen.openOutRuntime`, `.outListRuntime`,
+`F1CcallOpen.ml_open_descriptor_out_c_call1`,
+`.ml_open_descriptor_in_c_call1`, `.ml_out_channels_list_c_call1`,
 `.register_named_value_c_call2`, or `.format_int_c_call2`. The existing
 `register_named_value_run` is a native summary; the represented C_CALL adapter
 and its runtime/resource post remain separate work. `CustomMemCall` remains

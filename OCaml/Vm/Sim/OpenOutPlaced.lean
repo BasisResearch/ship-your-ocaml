@@ -15,6 +15,7 @@ geometry's `OutWRange`.
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
+variable {Customs : Vsa.Machine.Config → Nat → Prop}
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives OCaml.Vm.Primitives.Channel
 
 /-- **A fresh record misses a covered range.** -/
@@ -46,7 +47,7 @@ theorem open_out_placed {L : OCaml.Layout} {P : Prog} {s t : St} {pl : Place} {c
     {live : Nat → Prop} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {k : Nat}
     {H : List (Nat × Nat)} {cap cap' charge : Nat} {sp ra r0 r1 r2 v head : BitVec 64} {c c' d : Config}
     {ob : Obj} {block : Nat}
-    {code : Channel.OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra r0 r1 r2 v head c d)
+    {code : Channel.OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra r0 r1 r2 v head c d)
     (heap : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c)
     (h : OutInput live H cap' charge sp ra r0 r1 r2 v head c)
     (pins : Gc.F1Pins c) (data : VmPayload P s c pl cp spV high) (g : OCaml.LoopGeometry L P s c pl cp high)

@@ -1,3 +1,4 @@
+import OCaml.Vm.Sim.ChannelReadiness
 import OCaml.Vm.Sim.StringAllocEntry
 import OCaml.Vm.Sim.LibraryEntry
 import OCaml.Vm.Sim.CopyStringInput
@@ -11,11 +12,11 @@ import OCaml.RefinementF1
 /-!
 # `caml_ml_open_descriptor_out` at a C_CALL site
 
-The runtime side is the named premise `OpenOutRuntime L` (lane a6-gc, who
-discharges it for `Gc.f1Layout` with `CustomMemCall`): the custom
-allocation's readiness, the agreed major-slice open premise (`budget`), the
-cut's pins at every runtime config (`F1Pins`), and the runtime after the
-opening (`after`).
+The runtime side remains the named premise `OpenOutRuntime L`: the custom
+allocation's counted machine summary, the numeric layout budget, the cut's
+pins (`F1Pins`), and the runtime after opening (`after`). The counted C_CALL
+entry supplies physical accounting separately; readiness follows from the
+reachable successful successor and `Fits`.
 
 `open_out_entry` turns the C_CALL entry into `ml_open_descriptor_out`'s
 premises: `OutInput` from `LibHeapAt` (`out_input`), `OutNursery`
@@ -25,20 +26,18 @@ custom allocation's readiness.
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
+variable {Customs : Vsa.Machine.Config → Nat → Prop}
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives LeanRV64DExecutable
 open OCaml.Vm.Boot.Startup (NativeFrame)
 
 /-- **The runtime across `caml_ml_open_descriptor_out`** (named premise, lane
-a6-gc, who discharges it for `Gc.f1Layout` together with `CustomMemCall`).
-`L.runtimeOk` carries no custom-allocation state, so the call's readiness and
-the runtime after the opening are supplied here. -/
-structure OpenOutRuntimeAt (L : OCaml.Layout) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) :
+a6-gc, whose concrete supplier remains open for `Gc.f1Layout`).
+Readiness is derived at a counted successful C_CALL from `Fits`.
+The allocator machine summary and the runtime after the opening remain open suppliers. -/
+structure OpenOutRuntimeAt (L : OCaml.Layout) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (Customs : Config → Nat → Prop) :
     Prop where
-  custom : Gc.CustomMemCall Ready state
-  /-- **The agreed major-slice open premise**: one more channel custom
-  allocation is quiet. False after the fifth since the cut, when
-  `caml_alloc_custom_mem` requests a major slice (G2). -/
-  budget : ∀ c, L.runtimeOk c → ∃ k, Ready (k + 1) c
+  custom : Gc.CustomMemCall Ready state Customs
+  customBudget : L.budget.customs ≤ Gc.quietBound
   /-- the cut's pins: newlib's heap, the console statics, the code, stack,
   primitive-table and atom-table words (F1: `RuntimeOk.freeListShape`) -/
   pins : ∀ c, L.runtimeOk c → Gc.F1Pins c
@@ -48,15 +47,15 @@ structure OpenOutRuntimeAt (L : OCaml.Layout) (Ready : Nat → Config → Prop) 
   after : ∀ {code : Channel.OpenCode} {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {k : Nat}
     {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config},
     L.runtimeOk c → Gc.LibHeapAt H cap chs c →
-    Channel.OpenedOut code imageLive Ready state k H (cap - 65616) 65616 sp ra s0 s1 s2 v head c d →
+    Channel.OpenedOut code imageLive Ready state Customs k H (cap - 65616) 65616 sp ra s0 s1 s2 v head c d →
     L.runtimeOk d
 
 /-- **The runtime across `caml_ml_open_descriptor_out`** (named premise, lane
-a6-gc, who discharges it for `Gc.f1Layout` together with `CustomMemCall`):
+a6-gc, whose concrete supplier remains open for `Gc.f1Layout`):
 some custom-allocation readiness `Ready` over the runtime's `state`, as
 `OpenOutRuntimeAt`. `L.runtimeOk` carries no custom-allocation state. -/
 def OpenOutRuntime (L : OCaml.Layout) : Prop :=
-  ∃ Ready state, OpenOutRuntimeAt L Ready state
+  ∃ Ready state Customs, OpenOutRuntimeAt L Ready state Customs
 
 theorem _root_.OCaml.Vm.Gc.placedChannels_length (cp : ChanPlace) (n : Nat) : (Gc.placedChannels cp n).length ≤ n := by
   unfold Gc.placedChannels
@@ -67,8 +66,9 @@ heap over the placed channel records, the primitive's input on the native
 stack, the collector's side, and one quiet custom allocation. -/
 theorem open_out_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     {cp : ChanPlace} {sp high domain entry : Nat} {env : BitVec 64} {c : Config}
-    {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} (rt : OpenOutRuntimeAt L Ready state)
+    {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} (rt : OpenOutRuntimeAt L Ready state Customs)
     (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
+    (ready : Ready 1 c)
     (fits : s.heap.words + 3 ≤ L.budget.heapWords) (bound : s.world.chans.length < Gc.maxChannels)
     {v : BitVec 64} (value : gpr c 10 = some v) (descriptor : Channel.SeekFd (Channel.fdOf v) c) :
     ∃ (H : List (Nat × Nat)) (cap N k : Nat) (s0 s1 s2 : BitVec 64),
@@ -84,7 +84,6 @@ theorem open_out_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
     Gc.OpenChannels.unique heap.channels ng.channelsListed
   subst same
   obtain ⟨N, e⟩ := StringAllocEntry.of_setup setup fits
-  obtain ⟨k, ready⟩ := rt.budget c input.runtime
   have nl := e.nativeLow
   have nh := e.nativeHigh
   have top : Layout.sym_stack_top < 2 ^ 64 := by decide
@@ -100,7 +99,7 @@ theorem open_out_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
       input.loop.htifIdle⟩
   have room := e.room
   have lowM := ng.nurseryLow
-  refine ⟨H, cap, N, k, s0, s1, s2, heap,
+  refine ⟨H, cap, N, 0, s0, s1, s2, heap,
     Channel.out_input heap (Nat.lt_of_le_of_lt (Gc.placedChannels_length _ _) bound) input.toLeafInput platform
       (roR_of_gp input.loop.gp).1 e.stack frame h0 h1 h2 value (rt.pins c input.runtime).console descriptor,
     Channel.out_nursery heap (by omega) e.youngAligned (by omega) ng.nurseryHigh, ready, e.stack⟩

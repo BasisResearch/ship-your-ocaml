@@ -2,8 +2,6 @@ import OCaml.Vm.Sim.CcallShort
 import OCaml.Vm.Sim.F1Console
 import OCaml.Vm.Sim.F1Headline
 import OCaml.Vm.Sim.F1NativeWindow
-import OCaml.Vm.Sim.OpenOutReturn
-import OCaml.Vm.Sim.OutListAdapter
 import OCaml.Vm.Sim.PrimAllocFrame
 import OCaml.Vm.Sim.PrimConsoleReturns
 import OCaml.Vm.Sim.PrimConstReturns
@@ -31,8 +29,9 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 
 /-- **The open C_CALL summaries** of the general F1 statement. -/
 structure F1CcallOpen (P : Prog) : Prop where
-  openOutRuntime : OpenOutRuntime Gc.f1Layout
-  outListRuntime : OCaml.Vm.Sim.OutListWalk.OutListRuntimeL Gc.f1Layout
+  ml_open_descriptor_out_c_call1 : PrimReturnsAtR Gc.f1Layout P .C_CALL1 (0x80003060#64) 0 "caml_ml_open_descriptor_out"
+  ml_open_descriptor_in_c_call1 : PrimReturnsAtR Gc.f1Layout P .C_CALL1 (0x80003060#64) 0 "caml_ml_open_descriptor_in"
+  ml_out_channels_list_c_call1 : PrimReturnsAtR Gc.f1Layout P .C_CALL1 (0x80003060#64) 0 "caml_ml_out_channels_list"
   register_named_value_c_call2 : PrimReturnsAtR Gc.f1Layout P .C_CALL2 (0x80003004#64) 1 "caml_register_named_value"
   format_int_c_call2 : PrimReturnsAtR Gc.f1Layout P .C_CALL2 (0x80003004#64) 1 "caml_format_int"
 
@@ -42,9 +41,9 @@ theorem f1_c_call1_returns {P : Prog} (good : OCaml.GoodF1 P) (o : F1CcallOpen P
     simp only [primsF1, List.mem_cons, List.mem_nil_iff, or_false] at h
     rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     · exact PrimReturnsAtD.of_arity (by prim_arity)
-    · exact (prim_caml_ml_open_descriptor_out_returns o.openOutRuntime good.consoles).toD
-    · exact (prim_caml_ml_open_descriptor_in_returns o.openOutRuntime good.stdins f1_stdinSeek).toD
-    · exact (prim_caml_ml_out_channels_list_returns o.outListRuntime).toR.toD
+    · exact o.ml_open_descriptor_out_c_call1.toD
+    · exact o.ml_open_descriptor_in_c_call1.toD
+    · exact o.ml_out_channels_list_c_call1.toD
     · exact (prim_caml_ml_flush_returns f1_console_stable Gc.f1_consoleRuntime good.consoles).toR.toD
     · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact PrimReturnsAtD.of_arity (by prim_arity)
@@ -78,9 +77,9 @@ theorem f1_c_call2_returns {P : Prog} (good : OCaml.GoodF1 P) (o : F1CcallOpen P
     simp only [primsF1, List.mem_cons, List.mem_nil_iff, or_false] at h
     rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     · exact o.register_named_value_c_call2.toD
-    · exact (prim_caml_ml_open_descriptor_out_returns o.openOutRuntime good.consoles).toD
-    · exact (prim_caml_ml_open_descriptor_in_returns o.openOutRuntime good.stdins f1_stdinSeek).toD
-    · exact (prim_caml_ml_out_channels_list_returns o.outListRuntime).toR.toD
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact (prim_caml_ml_output_char_returns f1_console_stable Gc.f1_consoleRuntime good.consoles).toR.toD
     · exact PrimReturnsAtD.of_arity (by prim_arity)
@@ -114,9 +113,9 @@ theorem f1_c_call3_returns {P : Prog} (good : OCaml.GoodF1 P) (o : F1CcallOpen P
     simp only [primsF1, List.mem_cons, List.mem_nil_iff, or_false] at h
     rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     · exact PrimReturnsAtD.of_arity (by prim_arity)
-    · exact (prim_caml_ml_open_descriptor_out_returns o.openOutRuntime good.consoles).toD
-    · exact (prim_caml_ml_open_descriptor_in_returns o.openOutRuntime good.stdins f1_stdinSeek).toD
-    · exact (prim_caml_ml_out_channels_list_returns o.outListRuntime).toR.toD
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact PrimReturnsAtD.of_arity (by prim_arity)
@@ -150,9 +149,9 @@ theorem f1_c_call4_returns {P : Prog} (good : OCaml.GoodF1 P) (o : F1CcallOpen P
     simp only [primsF1, List.mem_cons, List.mem_nil_iff, or_false] at h
     rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     · exact PrimReturnsAtD.of_arity (by prim_arity)
-    · exact (prim_caml_ml_open_descriptor_out_returns o.openOutRuntime good.consoles).toD
-    · exact (prim_caml_ml_open_descriptor_in_returns o.openOutRuntime good.stdins f1_stdinSeek).toD
-    · exact (prim_caml_ml_out_channels_list_returns o.outListRuntime).toR.toD
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact (prim_caml_ml_output_returns f1_console_stable Gc.f1_consoleRuntime good.consoles).toR.toD
@@ -186,9 +185,9 @@ theorem f1_c_call5_returns {P : Prog} (good : OCaml.GoodF1 P) (o : F1CcallOpen P
     simp only [primsF1, List.mem_cons, List.mem_nil_iff, or_false] at h
     rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
     · exact PrimReturnsAtD.of_arity (by prim_arity)
-    · exact (prim_caml_ml_open_descriptor_out_returns o.openOutRuntime good.consoles).toD
-    · exact (prim_caml_ml_open_descriptor_in_returns o.openOutRuntime good.stdins f1_stdinSeek).toD
-    · exact (prim_caml_ml_out_channels_list_returns o.outListRuntime).toR.toD
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
+    · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact PrimReturnsAtD.of_arity (by prim_arity)
     · exact PrimReturnsAtD.of_arity (by prim_arity)

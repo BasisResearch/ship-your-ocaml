@@ -161,16 +161,15 @@ theorem ChannelCustomsAt.charge {Ready : Nat → Config → Prop}
 /-- An allocator return consumes exactly one pending reference. The exact
 physical increment is a field of the named custom-call accounting obligation;
 it is never inferred from the returned `Ready k`. -/
-theorem ChannelCustomsAt.allocate {Ready : Nat → Config → Prop}
+theorem ChannelCustomsAt.allocate
     {state Customs : Config → Nat → Prop} {c d : Config} {chs : List Nat} {n pending : Nat}
     {H : List (Nat × Nat)} {site : CustomMemSite} {v : BitVec 64}
-    (accounting : CustomMemCall.Accounting Ready state Customs)
     (before : ChannelCustomsAt Customs c chs n (pending + 1))
-    (returned : CustomMemReturned state H site v c d)
+    (returned : CustomMemCountedReturned state Customs H site v c d)
     (links : ChannelLinksKept c.σ.mem d.σ.mem chs)
     (refs : ∀ a ∈ chs, chanRefs d.σ.mem a = chanRefs c.σ.mem a) :
     ChannelCustomsAt Customs d chs (n + 1) pending := by
-  refine ⟨accounting.step before.physical returned, ?_⟩
+  refine ⟨returned.count before.physical, ?_⟩
   have kept := before.refs.frame links refs
   rw [show n + 1 + pending = n + (pending + 1) by omega]
   exact kept

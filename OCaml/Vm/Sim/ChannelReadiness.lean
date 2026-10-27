@@ -12,6 +12,46 @@ namespace OCaml.Vm.Sim
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 set_option autoImplicit false
 
+/-- A return predicate together with its physical custom count. Old clients
+can retain `.post`; counted invariant consumers retain both fields. -/
+structure CountedResult (Customs : Config → Nat → Prop) (Q : Config → Prop) (n : Nat) (c : Config) : Prop where
+  post : Q c
+  physical : Customs c n
+
+/-- The C_CALL entry with physical custom accounting. The projection retains
+the existing caller interface while invariant producers migrate. -/
+structure CountedCcallSetupPost (Customs : Config → Nat → Prop) (ra : BitVec 64) (args : List Val)
+    (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
+    (sp high domain entry : Nat) (env : BitVec 64) (c : Config) : Prop
+    extends CcallSetupPost ra args L P s pl cp sp high domain entry env c where
+  counts : ChannelCustomsRepr Customs c cp s.world
+
+/-- A primitive summary at counted C_CALL entries. The ordinary F1 rows still
+need the invariant migration before they can consume this interface. -/
+structure CountedCcallCallee (Customs : Config → Nat → Prop) (ra : BitVec 64) (args : List Val)
+    (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
+    (sp high domain entry : Nat) (env : BitVec 64) (name : String)
+    (v : Val) (result : BitVec 64) (heap : Heap) (world : World) : Prop where
+  fragment : name ∈ primsF1
+  semantics : primF1Impl name args s.heap s.world = .ok v heap world
+  summary : ∀ c, CountedCcallSetupPost Customs ra args L P s pl cp sp high domain entry env c →
+    (∀ p ∈ allocPlaces name s (BitVec.ofNat 64 (runtimeFields c).youngPtr), pl.φ p.1 = some p.2) →
+    FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
+      (CountedResult Customs
+        (CcallReturn ra L P {s with pc := s.pc + 2, accu := v, heap := heap, world := world}
+          pl cp sp high (BitVec.ofNat 64 domain) (BitVec.ofNat 64 (sp - 16)) result env) world.customs)
+
+/-- Returning primitive contract for the counted invariant, over the full
+successful F1 domain. It adds physical evidence to the machine entry. -/
+def CountedPrimReturnsAtR (L : OCaml.Layout) (P : Prog) (Customs : Config → Nat → Prop)
+    (op : Opcode) (ra : BitVec 64) (k : Nat) (name : String) : Prop :=
+  ∀ s c pl cp sp high table entry value env index v heap world, Reach P s →
+    CcallReady op L P s c pl cp sp high (domainAt c) table entry value env index name →
+    primF1Impl name (s.accu :: s.stack.take k) s.heap s.world = .ok v heap world →
+    heap.words ≤ L.budget.heapWords → CcallSucc P heap world →
+    ∃ result, CountedCcallCallee Customs ra (s.accu :: s.stack.take k) L P s pl cp sp high
+      (domainAt c) entry env name v result heap world
+
 /-- `Fits` applies to the actual successful C_CALL successor's custom count. -/
 theorem CcallSucc.customs_bound {P : Prog} {B : OCaml.Budget} {heap : Heap} {world : World}
     (fits : OCaml.Fits B P) (succ : CcallSucc P heap world) : world.customs ≤ B.customs := by

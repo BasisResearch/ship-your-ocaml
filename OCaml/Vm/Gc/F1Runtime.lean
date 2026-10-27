@@ -1,3 +1,4 @@
+import OCaml.Vm.Repr.ChannelCounts
 import OCaml.Vm.Boot.WhileMinHeapObjects
 import OCaml.Vm.Boot.WhileMinLoaded
 import OCaml.Vm.Reloc
@@ -1139,6 +1140,15 @@ theorem libHeap_of {c : Config}
   unfold OpenChannelList
   rw [head]
   exact .nil
+
+/-- The actual startup channel producer. The cut has an empty opened list;
+the physical zero-count witness remains part of the named custom runtime
+supplier. This theorem does not assume a refcount-derived `Ready`. -/
+theorem f1_channelCounts_of {Customs : Config → Nat → Prop} {c : Config}
+    {cp : ChanPlace} {w : World}
+    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log))
+    (empty : w.chans = []) (physical : Customs c 0) : ChannelCustomsRepr Customs c cp w :=
+  ChannelCustomsRepr.empty empty physical (WhileMinEntry.read_caml_all_opened_channels memory)
 
 /-- The pins hold on the certified cut memory. -/
 theorem f1Pins_of {c : Config}

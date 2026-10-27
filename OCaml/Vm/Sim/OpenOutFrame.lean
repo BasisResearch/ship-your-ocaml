@@ -17,6 +17,7 @@ bytes the VM reads, by where they lie:
 namespace OCaml.Vm.Primitives.Channel
 open OCaml.Bytecode Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.VsaHeap
 set_option autoImplicit false
+variable {Customs : Vsa.Machine.Config → Nat → Prop}
 
 /-- The covered regions lie in the allocator arena. -/
 theorem f1Covered_arena : ∀ e ∈ Gc.f1Covered, heapStart ≤ e.1 ∧ e.1 + e.2 ≤ heapEnd := by decide
@@ -43,8 +44,8 @@ theorem OutInput.domain (h : OutInput live H cap' charge sp ra s0 s1 s2 v head c
 
 /-- **A covered byte is kept**: a byte of a region F1 covers, other than
 `Caml_state`, outside the custom block. -/
-theorem covered_kept (custom : Gc.CustomMemCall Ready state)
-    {code : OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra s0 s1 s2 v head c d)
+theorem covered_kept (custom : Gc.CustomMemCall Ready state Customs)
+    {code : OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra s0 s1 s2 v head c d)
     (heap : Gc.LibHeapAt H cap chs c) (h : OutInput live H cap' charge sp ra s0 s1 s2 v head c)
     {e : Nat × Nat} {x : Nat} (he : e ∈ Gc.f1Covered) (ne : e.1 ≠ Boot.WhileMinRuntime.domain)
     (ix : InExt e x) (blk : x + 24 < (runtimeFields c).youngPtr ∨ (runtimeFields c).youngPtr ≤ x) :
@@ -71,8 +72,8 @@ theorem covered_kept (custom : Gc.CustomMemCall Ready state)
 
 /-- The named table is kept using the same selected ledger as the actual
 malloc, including its dynamic nodes and its separate custom state. -/
-theorem named_kept (custom : Gc.CustomMemCall Ready state)
-    {code : OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra s0 s1 s2 v head c d)
+theorem named_kept (custom : Gc.CustomMemCall Ready state Customs)
+    {code : OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra s0 s1 s2 v head c d)
     (heap : Gc.LibHeapAt H cap chs c) (h : OutInput live H cap' charge sp ra s0 s1 s2 v head c)
     (N : OutNursery H chs c) {x : Nat} (read : NamedRead c x) :
     (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
@@ -124,8 +125,8 @@ theorem named_kept (custom : Gc.CustomMemCall Ready state)
 
 /-- **An open record is kept**, except the old head's `prev` word (bytes
 56–63), which the opening rewrites. -/
-theorem record_kept (custom : Gc.CustomMemCall Ready state)
-    {code : OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra s0 s1 s2 v head c d)
+theorem record_kept (custom : Gc.CustomMemCall Ready state Customs)
+    {code : OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra s0 s1 s2 v head c d)
     (heap : Gc.LibHeapAt H cap chs c) (h : OutInput live H cap' charge sp ra s0 s1 s2 v head c)
     (N : OutNursery H chs c) {r x : Nat} (hr : r ∈ chs) (lo : r ≤ x) (hi : x < r + Gc.chanRecordBytes)
     (link : r = head.toNat → x < r + 56 ∨ r + 64 ≤ x) :
@@ -165,8 +166,8 @@ theorem record_kept (custom : Gc.CustomMemCall Ready state)
 
 /-- **A `Caml_state` field is kept** unless it is `young_ptr` or the
 custom allocation's `extra_heap_resources_minor`. -/
-theorem domainField_kept (custom : Gc.CustomMemCall Ready state)
-    {code : OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra s0 s1 s2 v head c d)
+theorem domainField_kept (custom : Gc.CustomMemCall Ready state Customs)
+    {code : OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra s0 s1 s2 v head c d)
     (h : OutInput live H cap' charge sp ra s0 s1 s2 v head c)
     (N : OutNursery H chs c) {off x : Nat} (fits : off + 8 ≤ Layout.domainStateBytes)
     (young : Layout.off_young_ptr + 8 ≤ off)
@@ -218,8 +219,8 @@ theorem openStatics_apart : ∀ a ∈ openStatics, ∀ j < 8,
   decide
 
 /-- **A static word the VM reads is kept.** -/
-theorem static_kept (custom : Gc.CustomMemCall Ready state)
-    {code : OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra s0 s1 s2 v head c d)
+theorem static_kept (custom : Gc.CustomMemCall Ready state Customs)
+    {code : OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra s0 s1 s2 v head c d)
     (h : OutInput live H cap' charge sp ra s0 s1 s2 v head c) (N : OutNursery H chs c)
     {a j : Nat} (mem : a ∈ openStatics) (hj : j < 8) :
     (d.σ.mem[a + j]?).getD 0 = (c.σ.mem[a + j]?).getD 0 := by

@@ -9,6 +9,7 @@ open OCaml.Vm.Boot.Startup
 open OCaml.Vm.Sim (FrameOnD)
 open ExitPath (LogWithin)
 set_option autoImplicit false
+variable {Customs : Config → Nat → Prop}
 variable {live : Nat → Prop}
 
 /-- **One direction of `caml_ml_open_descriptor_{out,in}`**: its entry, the
@@ -142,7 +143,7 @@ theorem head_mem {m : Std.ExtHashMap Nat (BitVec 8)} {chs : List Nat} {head : Bi
 /-- `caml_ml_open_descriptor_out(v)` returned the custom block `value` holding
 the new output channel `record`, linked at the head of
 `caml_all_opened_channels`, with `k` custom allocations still safe. -/
-structure OpenedOut (code : OpenCode) (live : Nat → Prop) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (k : Nat)
+structure OpenedOut (code : OpenCode) (live : Nat → Prop) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (Customs : Config → Nat → Prop) (k : Nat)
     (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra s0 s1 s2 v head : BitVec 64) (c d : Config) where
   entered : Config
   opened : Config
@@ -152,7 +153,7 @@ structure OpenedOut (code : OpenCode) (live : Nat → Prop) (Ready : Nat → Con
   enter : OutEntered code.proLink live H capacity charge sp ra s0 s1 s2 v head c entered
   opening : OpenedIn live H capacity (sp - 16#64) code.proLink s0 s1 s2 (fdOf v) head entered opened
   flags : OutFlagged code.doneEntry code.out (sp - 16#64) opening.record opened flagged
-  custom : Gc.CustomMemReturned state ((opening.record.toNat, recordBytes) :: H)
+  custom : Gc.CustomMemCountedReturned state Customs ((opening.record.toNat, recordBytes) :: H)
     (outSite code.doneEntry (sp - 16#64) opening.record) value flagged allocated
   done : OutDone sp ra s0 opening.record value allocated d
   record : OpenRecord code.out d.σ.mem opening.record (fdOf v) head
@@ -163,6 +164,7 @@ structure OpenedOut (code : OpenCode) (live : Nat → Prop) (Ready : Nat → Con
   /-- the custom block's header (wosize 2, `Custom_tag`) -/
   header : bytesT d.σ.mem (value.toNat - 8) 8 = Gc.customHeader
   ready : Ready k d
+  counted : Gc.CustomCountStep Customs c d 1
   /-- the custom block lies just below the entry's young pointer, which drops by 24 -/
   block : value.toNat + 16 = (runtimeFields c).youngPtr
   youngPtr : (runtimeFields d).youngPtr = (runtimeFields c).youngPtr - 24
@@ -179,10 +181,10 @@ structure OpenedOut (code : OpenCode) (live : Nat → Prop) (Ready : Nat → Con
 
 theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra s0 s1 s2 v head : BitVec 64) {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
-    (custom : Gc.CustomMemCall Ready state) (k : Nat) (ready : Ready (k + 1) c) {chs : List Nat}
+    (custom : Gc.CustomMemCall Ready state Customs) (k : Nat) (ready : Ready (k + 1) c) {chs : List Nat}
     (N : OutNursery H chs c) (h : OutInput live H capacity charge sp ra s0 s1 s2 v head c) :
     FnSummary code.entry (fun d => d = c)
-      (fun d => Nonempty (OpenedOut code live Ready state k H capacity charge sp ra s0 s1 s2 v head c d)) := by
+      (fun d => Nonempty (OpenedOut code live Ready state Customs k H capacity charge sp ra s0 s1 s2 v head c d)) := by
   constructor
   intro before ⟨pc, eq⟩
   subst before
@@ -270,7 +272,9 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
       Or.inr (by unfold Layout.sym_Caml_state Layout.sym_caml_all_opened_channels; omega)⟩
   have domC : (word c Layout.sym_Caml_state).toNat = Boot.WhileMinRuntime.domain := by
     unfold word; rw [h.ready.domainWord]; rfl
-  obtain ⟨readyF, stateEq⟩ := custom.frame (k + 1) c flagged ready stateOut domF
+  have framedF := custom.frame_counted (k + 1) c flagged ready stateOut domF
+  have readyF := framedF.ready
+  have stateEq := framedF.state
   have fieldKept (off : Nat) (b : off + 8 ≤ Layout.domainStateBytes) :
       word flagged (Boot.WhileMinRuntime.domain + off) = word c (Boot.WhileMinRuntime.domain + off) := by
     unfold word
@@ -355,7 +359,7 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
   have savedS0 : bytesT allocated.σ.mem (sp.toNat - 16) 8 = s0 := by
     rw [slotKept _ (by omega) (by omega), E.memory, ← sp16]
     exact OCaml.Vm.Gc.word_writeLog_at _ (outSaveLog sp ra s0) 1 _ _ rfl trivial
-  obtain ⟨d, run5, D⟩ := (code.done allocated C vLow vHigh vAlign h.frame savedRa savedS0
+  obtain ⟨d, run5, D⟩ := (code.done allocated C.toCustomMemReturned vLow vHigh vAlign h.frame savedRa savedS0
     h.ready.aligned).run allocated ⟨C.pc, rfl⟩
   -- the record, the list head and the block at the return
   have v8 : (value + 8#64).toNat = value.toNat + 8 := record_toNat (off := 8) (by omega)
@@ -423,10 +427,11 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
     have e : (runtimeFields d).youngLimit = (runtimeFields allocated).youngLimit := by
       simp only [runtimeFields, domainWord]; rw [fieldD Layout.off_young_limit (by decide)]
     rw [e, C.youngLimit, limF]
-  have readyD := (custom.frame k allocated d readyA (fun a s => doneOut a (by
+  have framedD := custom.frame_counted k allocated d readyA (fun a s => doneOut a (by
     have m := (custom.apart allocated a s).minor
     simp only [Gc.minorRegion] at m
-    omega)) domD).1
+    omega)) domD
+  have readyD := framedD.ready
   refine ⟨d, run1.trans (run2.trans (run3.trans (run4.trans run5))), ⟨{
     entered := entered, opened := opened, flagged := flagged, allocated := allocated, value := value
     enter := E, opening := O, flags := F, custom := C, done := D
@@ -442,6 +447,9 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
       rw [D.memory, bytesT_writeLog_out _ (by simp only [OutLRange, and_true, v8]; omega)]
       exact C.ops
     ready := readyD
+    counted := by
+      have step := (framedF.counts.trans (Gc.CustomCountStep.mk C.count)).trans framedD.counts
+      simpa using step
     header := by
       rw [bytesT_keep (m := allocated.σ.mem) fun j hj => doneOut _ (Or.inl (by omega))]
       exact C.header
@@ -467,17 +475,17 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
 
 theorem ml_open_descriptor_out [LibraryLive live] (c : Config) (H : List (Nat × Nat)) (capacity charge : Nat)
     (sp ra s0 s1 s2 v head : BitVec 64) {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
-    (custom : Gc.CustomMemCall Ready state) (k : Nat) (ready : Ready (k + 1) c) {chs : List Nat}
+    (custom : Gc.CustomMemCall Ready state Customs) (k : Nat) (ready : Ready (k + 1) c) {chs : List Nat}
     (N : OutNursery H chs c) (h : OutInput live H capacity charge sp ra s0 s1 s2 v head c) :
     FnSummary 0x80015f50#64 (fun d => d = c)
-      (fun d => Nonempty (OpenedOut openOutCode live Ready state k H capacity charge sp ra s0 s1 s2 v head c d)) :=
+      (fun d => Nonempty (OpenedOut openOutCode live Ready state Customs k H capacity charge sp ra s0 s1 s2 v head c d)) :=
   ml_open_descriptor openOutCode c H capacity charge sp ra s0 s1 s2 v head custom k ready N h
 
 /-- `caml_ml_open_descriptor_out` keeps x20–x27 (among them `caml_interprete`'s
 `env`, accumulator and dispatch registers). -/
 theorem OpenedOut.keep_upper {code : OpenCode} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {left : Nat}
     {H : List (Nat × Nat)} {capacity charge : Nat} {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
-    (o : OpenedOut code live Ready state left H capacity charge sp ra s0 s1 s2 v head c d) {k : Nat} {x : BitVec 64}
+    (o : OpenedOut code live Ready state Customs left H capacity charge sp ra s0 s1 s2 v head c d) {k : Nat} {x : BitVec 64}
     (lo : 19 ≤ k) (hi : k ≤ 27) (h : gprGet c.σ k = some x) : gprGet d.σ k = some x := by
   have a := (o.enter.kept k (by omega) (by omega) (by simp; omega)).trans h
   have b := o.opening.keep_upper lo hi a
@@ -509,14 +517,14 @@ theorem OpenedIn.gprs {H : List (Nat × Nat)} {capacity : Nat} {sp ra s0 s1 s2 f
 /-- **`caml_ml_open_descriptor_out` keeps register presence and `gp`.** -/
 theorem OpenedOut.gprs {code : OpenCode} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {left : Nat}
     {H : List (Nat × Nat)} {capacity charge : Nat} {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
-    (o : OpenedOut code live Ready state left H capacity charge sp ra s0 s1 s2 v head c d) : GprsKept c d :=
+    (o : OpenedOut code live Ready state Customs left H capacity charge sp ra s0 s1 s2 v head c d) : GprsKept c d :=
   o.enter.gprs.trans ((o.opening.gprs o.enter.input.ready.gp).trans
     (o.flags.gprs.trans (o.custom.gprs.trans o.done.gprs)))
 
 /-- **`caml_ml_open_descriptor_out` restores `s0`, `s1`, `s2`.** -/
 theorem OpenedOut.keep_saved {code : OpenCode} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {left : Nat}
     {H : List (Nat × Nat)} {capacity charge : Nat} {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
-    (o : OpenedOut code live Ready state left H capacity charge sp ra s0 s1 s2 v head c d) :
+    (o : OpenedOut code live Ready state Customs left H capacity charge sp ra s0 s1 s2 v head c d) :
     gprGet d.σ 8 = some s0 ∧ gprGet d.σ 9 = some s1 ∧ gprGet d.σ 18 = some s2 := by
   refine ⟨o.done.s0Reg, ?_, ?_⟩
   · have e := (o.flags.kept 9 (by decide) (by decide) (by decide)).trans o.opening.link.s1Reg
@@ -529,7 +537,7 @@ theorem OpenedOut.keep_saved {code : OpenCode} {Ready : Nat → Config → Prop}
 /-- `caml_ml_open_descriptor_out` keeps the console output. -/
 theorem OpenedOut.output {code : OpenCode} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {left : Nat}
     {H : List (Nat × Nat)} {capacity charge : Nat} {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config}
-    (o : OpenedOut code live Ready state left H capacity charge sp ra s0 s1 s2 v head c d) :
+    (o : OpenedOut code live Ready state Customs left H capacity charge sp ra s0 s1 s2 v head c d) :
     Vsa.Machine.output d.σ = Vsa.Machine.output c.σ := by
   have i := o.opening.output
   simp only [Vsa.Machine.output] at i ⊢

@@ -152,21 +152,6 @@ structure CustomMemReturned (state : Config → Nat → Prop) (H : List (Nat × 
   (the custom table's storage, first allocated or reallocated) -/
   grows : ∀ a, state d a → state f a ∨ VsaIris.VsaHeap.vsaFoot H a
 
-/-- **The runtime's channel custom allocations** (named obligation, lane
-a6-gc). `Ready k c`: `k` more calls are safe at `c`, judged from `state c`
-alone: the bytes `Ready` reads and the call may write besides its stack, the
-block, `young_ptr` and newlib's own bytes (`vsaFoot H`): the counters and the
-custom table. -/
-structure CustomMemCall (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) : Prop where
-  apart : ∀ c a, state c a → CallerApart c a
-  /-- a caller's stores outside the runtime's state keep it ready -/
-  frame : ∀ k c c', Ready k c → (∀ a, state c a → (c'.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) →
-    word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state → Ready k c' ∧ (∀ a, state c' a ↔ state c a)
-  call : ∀ (H : List (Nat × Nat)) (cap : Nat) (site : CustomMemSite) (k : Nat) (f : Config),
-    Ready (k + 1) f → CustomMemInput H cap site f →
-    FnSummary customMemEntry (fun d => d = f)
-      (fun d => ∃ v, CustomMemReturned state H site v f d ∧ Ready k d)
-
 /-- Quiet channel custom allocations since the cut: each adds
 `57424/297968` to `caml_extra_heap_resources`, so the sixth requests a
 major slice. -/
@@ -187,25 +172,103 @@ theorem ReadyOf.succ {Customs : Config → Nat → Prop} {k n} {c d : Config} (r
   rw [unique n' at'] at bound
   exact ⟨n + 1, step, by omega⟩
 
-/-- The exact-count part of the named `CustomMemCall` machine obligation.
+/-- Physical-state laws of the named `CustomMemCall` machine obligation.
 `Customs` describes physical custom-allocation state, independently of the
 channel refcounts. Its concrete supplier must certify these laws together
 with the call summary; they do not follow from `Ready k`.
 
 The caller increments a channel refcount before calling the allocator. Such
 stores frame `Customs`; only the allocator advances its count. -/
-structure CustomMemCall.Accounting (Ready : Nat → Config → Prop)
+structure CustomAccounting (Ready : Nat → Config → Prop)
     (state : Config → Nat → Prop) (Customs : Config → Nat → Prop) : Prop where
   unique : ∀ {c n n'}, Customs c n → Customs c n' → n = n'
   frame : ∀ {c d n}, Customs c n →
     (∀ a, state c a → (d.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) →
     word d Layout.sym_Caml_state = word c Layout.sym_Caml_state → Customs d n
-  /-- Exact physical transition on the same returned call consumed by callers. -/
-  step : ∀ {H : List (Nat × Nat)} {site : CustomMemSite} {v : BitVec 64} {f d : Config} {n : Nat},
-    Customs f n → CustomMemReturned state H site v f d → Customs d (n + 1)
   /-- Quietness is proved from the physical state and the remaining budget,
   rather than from the refcount sum as a frame-stable definition of `Ready`. -/
   ready : ∀ {k c}, ReadyOf Customs k c → Ready k c
+
+/-- Physical accounting across a native span. The charge is the number of
+actual custom allocations, independent of earlier refcount stores. -/
+structure CustomCountStep (Customs : Config → Nat → Prop) (c d : Config) (charge : Nat) : Prop where
+  count : ∀ {n}, Customs c n → Customs d (n + charge)
+
+theorem CustomCountStep.trans {Customs : Config → Nat → Prop} {c d e : Config} {i j : Nat}
+    (first : CustomCountStep Customs c d i) (second : CustomCountStep Customs d e j) :
+    CustomCountStep Customs c e (i + j) := by
+  constructor
+  intro n h
+  simpa only [Nat.add_assoc] using second.count (first.count h)
+
+/-- Register-only segments preserve physical custom accounting. -/
+theorem CustomAccounting.sameMemory {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} (accounting : CustomAccounting Ready state Customs)
+    {c d : Config} (memory : d.σ.mem = c.σ.mem) : CustomCountStep Customs c d 0 :=
+by
+  constructor
+  intro n h
+  simpa only [Nat.add_zero] using accounting.frame h (fun _ _ => by rw [memory])
+    (by unfold word; rw [memory])
+
+/-- Readiness, state footprint, and physical count across caller stores. -/
+structure CustomFramed (Ready : Nat → Config → Prop) (state Customs : Config → Nat → Prop)
+    (k : Nat) (c d : Config) : Prop where
+  ready : Ready k d
+  state : ∀ a, state d a ↔ state c a
+  counts : CustomCountStep Customs c d 0
+
+/-- Exact physical accounting on this execution, in addition to the allocator's
+ordinary return facts. It is supplied by the actual `FnSummary` post. -/
+structure CustomMemCountedReturned (state : Config → Nat → Prop)
+    (Customs : Config → Nat → Prop) (H : List (Nat × Nat)) (site : CustomMemSite)
+    (v : BitVec 64) (f d : Config) : Prop extends CustomMemReturned state H site v f d where
+  count : ∀ {n}, Customs f n → Customs d (n + 1)
+
+/-- **The runtime's channel custom allocations** (named obligation, lane
+a6-gc). `Ready k c`: `k` more calls are safe at `c`, judged from `state c`
+alone: the bytes `Ready` reads and the call may write besides its stack, the
+block, `young_ptr` and newlib's own bytes (`vsaFoot H`): the counters and the
+custom table. -/
+structure CustomMemCall (Ready : Nat → Config → Prop) (state : Config → Nat → Prop)
+    (Customs : Config → Nat → Prop) : Prop where
+  accounting : CustomAccounting Ready state Customs
+  apart : ∀ c a, state c a → CallerApart c a
+  /-- a caller's stores outside the runtime's state keep it ready -/
+  frame : ∀ k c c', Ready k c → (∀ a, state c a → (c'.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) →
+    word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state → Ready k c' ∧ (∀ a, state c' a ↔ state c a)
+  call : ∀ (H : List (Nat × Nat)) (cap : Nat) (site : CustomMemSite) (k : Nat) (f : Config),
+    Ready (k + 1) f → CustomMemInput H cap site f →
+    FnSummary customMemEntry (fun d => d = f)
+      (fun d => ∃ v, CustomMemCountedReturned state Customs H site v f d ∧ Ready k d)
+
+/-- Forget physical return evidence for clients that only need the ordinary
+allocator post. The counted execution remains the source of the summary. -/
+theorem CustomMemCall.call_forget {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
+    (H : List (Nat × Nat)) (cap : Nat) (site : CustomMemSite) (k : Nat) (f : Config)
+    (ready : Ready (k + 1) f) (input : CustomMemInput H cap site f) :
+    FnSummary customMemEntry (fun d => d = f)
+      (fun d => ∃ v, CustomMemReturned state H site v f d ∧ Ready k d) := by
+  apply (custom.call H cap site k f ready input).weaken (fun _ h => h)
+  intro d ⟨v, returned, readyD⟩
+  exact ⟨v, returned.toCustomMemReturned, readyD⟩
+
+/-- Shared framing of readiness and physical accounting from the same byte
+and domain observations. Refcount stores are outside this state. -/
+theorem CustomMemCall.frame_counted {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
+    (k : Nat) (c d : Config) (ready : Ready k c)
+    (memory : ∀ a, state c a → (d.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0)
+    (domain : word d Layout.sym_Caml_state = word c Layout.sym_Caml_state) :
+    CustomFramed Ready state Customs k c d := by
+  obtain ⟨readyD, stateD⟩ := custom.frame k c d ready memory domain
+  refine ⟨readyD, stateD, ?_⟩
+  constructor
+  intro n h
+  simpa only [Nat.add_zero] using custom.accounting.frame h memory domain
+
+abbrev CustomMemCall.Accounting := CustomAccounting
 
 /-- A physical count plus the successful successor's bound supplies readiness. -/
 theorem CustomMemCall.Accounting.ready_of_bound
