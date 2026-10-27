@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 22:52 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 22:53 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -50,8 +50,8 @@ The verified batch contains:
   returning to `0x80004e84`, with domain/page-table/root-value frames.
   3,436 affected jobs; 3,440-job audit build (56 backtrace and 311 insertion
   declarations); all 2,045 startup generator outputs reproduce.
-  Review found that the exported stack/atom existential had dropped its
-  nested ELF-reset witness. The stronger interface is being checked now.
+  The original exported stack/atom existential dropped its nested ELF-reset
+  witness; reviewed follow-up `b49f9173` now supplies the stronger interface.
 - `8f60fb69`: actual G2 returned small-list/header/bitmap representation
   and allocated-block separation, from explicit original physical extents.
   1,288 affected jobs; 239 allowed-axiom reports and two axiom-free
@@ -67,11 +67,18 @@ theorems are registered. The ordinary counted census is now 67/134 locally;
 the primitive contracts still need complete C_CALL composition. This batch
 will be gated with the stronger reset interface.
 
+`b49f9173` retains actual ELF-reset witnesses through stack, atom and backtrace
+producers and proves universal reset-to-backtrace reachability. The affected
+build passed 3,436 jobs; its 3,439-job audit build reports all 78 focused
+declarations and 1,026 allowed reports. The actual continuation from backtrace
+to `Loaded` is explicitly open. Both changes are ready for the next gate in
+`syo-wt/bprime`, after a checked cache handoff from the idle startup lane.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| Startup Sol | Retain ELF-reset identity and expose universal reset-to-backtrace | `syo-wt/a0-boot-next` |
+| G2 Sol | Preserve physical free-list extents through repeated allocation | `syo-wt/a6-gc-next2` |
 | Custom-ownership Sol | Repair universal-ledger assumption with selected ownership | `syo-wt/a1-prims-next` |
 | Lead | Prepare next allocation/reset integration; review remaining suppliers | main |
 
