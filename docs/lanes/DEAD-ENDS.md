@@ -122,3 +122,17 @@
   `AllocLargeWrapper.allocate` where their premises hold, but retain heap
   expansion and the normal allocation wrapper's tracking obligations.
   This is source-level scope analysis, not a checked reachable-state witness.
+
+- 2026-10-27: a proposed unbounded named-key construction using repeated
+  mutation of one byte buffer is outside the current F1 opcode domain:
+  `SETBYTESCHAR` is F2 (`OCaml/Fragment.lean`). Do not use that construction
+  as a GoodF1 counterexample. A bound from immutable key provenance still
+  needs a proof; this observation does not supply the named reserve.
+
+- 2026-10-27: the general `Skiplist.Ops` interface needs an ownership/room
+  review before attempting its supplier. `live` quantifies over an arbitrary
+  `HeapReady H` rather than a ledger carrying the actual cells, while
+  `insert` has no explicit allocation-capacity premise. The first empty
+  insertion milestone retains explicit capacity and selected ownership;
+  it does not discharge this general interface. This is interface analysis,
+  not a kernel-checked impossibility result.
