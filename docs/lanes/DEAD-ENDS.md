@@ -195,7 +195,7 @@
   or rerun the identical broad evaluator proof unchanged.
 
 - The first skiplist retry also reached 12 GB at 18:48:05 UTC after splitting
-  into per-instruction certificates: broad `simp [stepGM, ...]` still expands
-  too much. Diagnose a single declaration with `lean -M 6000 -j 1 --profile`
+  into per-instruction certificates using broad `simp [stepGM, ...]`; the
+  exact failing declaration/cause is not isolated yet. Diagnose it with `lean -M 6000 -j 1 --profile`
   and narrow evaluator simplification. Use `scripts/lean-guarded.py` so a failed
   or memory-heavy build cannot leave descendants consuming the worker cap.
