@@ -21,6 +21,7 @@ Start from the landed RefcountSumAt transport/increment lemmas and ReadyOf; insp
 OpenOutRuntimeAt.budget over every runtimeOk configuration is the recorded dead end. Supply per-call readiness using the successful successor state's custom bound and the represented refcount total.
 CustomMemCall stays the accepted named machine premise; state any required exact counter transition explicitly within that obligation, never derive it from Ready k alone.
 Carry the physical custom-count witness through the invariant and actual startup/channel producers; preserve the named-node ledger work and full GoodF1 domain.
+io.c increments the channel refcount before caml_alloc_custom_mem; tie refcounts to physical custom accounting at VM boundaries and handle that intermediate offset. Do not define frame-stable Ready directly as the refcount sum.
 Use named structures and shared framing lemmas rather than separate per-consumer byte arguments. Keep out_channels_list accounting consistent with its multiple custom allocations.
 Done: the readiness bridge and its C_CALL callers build and audit, old impossible universal budget field is removed or replaced, and every still-open runtime/counter supplier is listed accurately.
 Do not claim the whole openOutRuntime/outListRuntime suppliers closed unless their after-call pins and all representation producers are supplied. Leave checked edits for lead integration.
