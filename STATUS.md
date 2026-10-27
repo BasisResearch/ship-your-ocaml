@@ -44,13 +44,13 @@ The a2-sem uncaught-exception WIP is preserved in `syo-wt/a2-sem-next`;
 The physical named-table migration passed the complete `OCaml` build (4,151
 jobs) and all 71 focused axiom reports. Its checked commit is `97e03f8d`;
 the rebased integration candidate is in `syo-wt/a6-gc-next2` (`3322dc6c` before
-status updates), alongside the formatter checkpoint. It still needs the full
-integration gate. The migration keeps the matching selected malloc ledger
+status updates), alongside the formatter checkpoint. Its full integration gate is now running in that staging worktree. The migration keeps the matching selected malloc ledger
 rather than assuming ownership of every live allocation. Its original Sol
 slot now implements the per-call custom-count/readiness bridge.
 
-The formatter layout/template checkpoint has passed its focused builds and
-is running the full integration gate in `bprime`. Its former Sol slot now proves
+The formatter layout/template checkpoint and its memmove integration repair
+landed as `d89766ae` after the full 6,029-job build and all gate stages. Its
+former Sol slot now proves
 the first empty-skiplist insertion used by `caml_init_backtrace` in `a6-gc`.
 The seed-zero path selects level 0 and allocates a 24-byte cell. Two evaluator
 attempts hit the 12 GB cap; factored certificates now pass with a 6 GB Lean
