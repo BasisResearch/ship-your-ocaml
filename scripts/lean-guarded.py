@@ -7,6 +7,7 @@ The 10 GiB early stop is enabled only inside an inherited <=12 GiB cgroup.
 import argparse
 import os
 from pathlib import Path
+import re
 import signal
 import subprocess
 import time
@@ -63,7 +64,8 @@ def main():
                 pending += reader.read()
                 lines = pending.split("\n")
                 pending = lines.pop()
-                failure = any(line.startswith(("error:", "✖")) for line in lines)
+                failure = any(re.match(r"(?:error:|✖|.+:\d+:\d+: error:)", line)
+                              for line in lines)
                 pressure = memory is not None and int(memory.read_text()) >= 10 * 1024**3
                 if failure or pressure:
                     aborted = True
