@@ -35,8 +35,10 @@ headline `ocamlrun_refinement_F1_open` still consumes primitive and growth
 premises. The captured `WhileMin.loaded_fillZero` proves the captured state
 is loaded; it does not prove execution from reset. F1 is not yet closed. The exact-arity C_CALL assembly landed as `c5c0fff4`
 after the full gate; bytecode audit/measurement caps landed as `a80d71cc`.
-On published main, the remaining general C_CALL fields are `openOutRuntime`, `outListRuntime`,
-`register_named_value_c_call2`, and `format_int_c_call2`.
+The channel-count integration candidate exposes five remaining ordinary C_CALL
+fields: the two descriptor opens, out-channel listing, named registration,
+and integer formatting. Its counted channel summaries need the ordinary
+loop invariant and runtime suppliers before they can discharge those rows.
 
 The a2-sem uncaught-exception WIP is preserved in `syo-wt/a2-sem-next`;
 `GoodF1` excludes that path, so it is behind current F1 work in priority.
@@ -67,12 +69,18 @@ The seed-zero path selects level 0 and allocates a 24-byte cell. Two evaluator
 attempts hit the 12 GB cap; factored certificates now pass with a 6 GB Lean
 diagnostic limit. The corrected prefix, generated evaluator and startup-key instruction witness
 pass the 2,719-job affected build. The suffix memory facts also check under
-the 6 GB diagnostic limit. The complete prefix/allocator/suffix run now checks in the worker's focused
-file; final readiness, selected ownership/frame, startup corollary and audits
-are still in progress. Reset composition remains open.
+the 6 GB diagnostic limit. The complete prefix/allocator/suffix run, allocator readiness, selected
+owned-block frame, domain-record key bounds, one-cell chain and remaining
+zero header bytes now check in the worker's focused file. Final seed
+readback, caller-facing packaging and audits are in progress. Reset
+composition remains open.
 
 The native formatter wrapper task (`tasks/sol-vsnprintf-wrapper.md`) is now
 active in the warmed `bprime` slot (909-job cache probe, no recompilation).
+Its native LONGINT-decimal summary uses the symbolic-run bridge and is
+under validation. The shared ownership window is being narrowed to end
+exactly after the seven vararg slots, before the real caller's parsed-format
+buffer; the template change is rebuilding shared formatter clients.
 Queued work includes ordinary counted-loop integration, startup backtrace
 composition after first insertion (`tasks/sol-backtrace-reset.md`), G2
 split/remnant composition, and a proved named-resource reserve without the
