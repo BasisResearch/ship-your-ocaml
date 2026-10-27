@@ -64,17 +64,18 @@ theorem Ccall1WriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} 
     Layout.off_extern_sp, Layout.domainStateBytes] at *
   all_goals omega
 
-/-- **The C_CALL call-site contract at a loop head.** -/
-theorem CcallReady.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {op : Opcode}
-    {index : BitVec 32} {name : String} (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op)
+/-- The shared C_CALL producer keeps the input's channel placement; only
+the heap placement is extended for primitive allocations. -/
+theorem CcallReady.of_input {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {op : Opcode}
+    {pl0 : Place} {cp : ChanPlace} {sp high : Nat}
+    {index : BitVec 32} {name : String} (input0 : ArmInput L P s op c pl0 cp sp high)
     (fetch : P.code[s.pc + 1]? = some index) (nonnegative : 0 ≤ index.toInt)
     (primitive : P.prims[index.toInt.toNat]? = some name)
     (space : 8 * (s.stack.length + 2) ≤ Layout.stackBytes)
     (places : ∀ young : BitVec 64, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
-    ∃ pl cp sp high entry value env, CcallReady op L P s c pl cp sp high
+    ∃ pl entry value env, CcallReady op L P s c pl cp sp high
       (word c Layout.sym_Caml_state).toNat
       (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat entry value env index name := by
-  obtain ⟨pl0, cp, sp, high, input0⟩ := ArmInput.of_loop h code
   have top := input0.geometry.nursery.top
   have youngAligned := input0.geometry.nursery.aligned
   have ok := places (BitVec.ofNat 64 (runtimeFields c).youngPtr)
@@ -84,7 +85,7 @@ theorem CcallReady.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {
   obtain ⟨value, -, valueWord⟩ := input.accu
   obtain ⟨env, -, envWord⟩ := input.env
   have aligned := PrimitiveEntries.lookup_aligned lookup
-  exact ⟨_, cp, sp, high, entry, value, env,
+  exact ⟨_, entry, value, env,
     { input with
       operand := OperandAt.of_fetch input.geometry.toArmGeometry fetch
       nonnegative, primitive, entryName := lookup
@@ -97,6 +98,20 @@ theorem CcallReady.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {
       space := Ccall1WriteOk.of_geometry _ env input.geometry.toArmGeometry input.stack space
       stackFits := space
       allocPlaced := putAll_placed pl0 _ ok.distinct }⟩
+
+/-- **The C_CALL call-site contract at an ordinary loop head.** -/
+theorem CcallReady.of_loop {L : OCaml.Layout} {P : Prog} {s : St} {c : Config} {op : Opcode}
+    {index : BitVec 32} {name : String} (h : OCaml.LoopAt L P s c) (code : DispatchCode P s op)
+    (fetch : P.code[s.pc + 1]? = some index) (nonnegative : 0 ≤ index.toInt)
+    (primitive : P.prims[index.toInt.toNat]? = some name)
+    (space : 8 * (s.stack.length + 2) ≤ Layout.stackBytes)
+    (places : ∀ young : BitVec 64, young.toNat % 8 = 0 → AllocPlacesOk name s young) :
+    ∃ pl cp sp high entry value env, CcallReady op L P s c pl cp sp high
+      (word c Layout.sym_Caml_state).toNat
+      (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat entry value env index name := by
+  obtain ⟨pl0, cp, sp, high, input⟩ := ArmInput.of_loop h code
+  obtain ⟨pl, entry, value, env, ready⟩ := CcallReady.of_input input fetch nonnegative primitive space places
+  exact ⟨pl, cp, sp, high, entry, value, env, ready⟩
 
 /-! ## The C_CALL rows -/
 

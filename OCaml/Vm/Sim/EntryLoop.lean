@@ -136,17 +136,25 @@ macro "log_out" : tactic =>
       OCaml.Vm.Layout.camlMainSaveOffset, OCaml.Vm.Layout.sym_caml_callback_depth,
       OCaml.Vm.Layout.off_external_raise, entryBuffer, and_true]; omega))
 
+/-- The actual entry post at the loaded placement, retaining its memory
+effect for invariant extensions. -/
+structure EntryLoopPost (L : OCaml.Layout) (P : Prog) (c : Config) (pl : Place)
+    (cp : ChanPlace) (high sp : Nat) (callerRegs : Nat → BitVec 64) (after : Config) : Prop
+    extends PlacedRunning L P P.init pl cp high high after where
+  clock : after.tick < 2
+  memory : after.σ.mem = writeLog c.σ.mem (entryLog sp callerRegs (BitVec.ofNat 64 pl.codeBase) c)
+
 /-- **`ArmSim.entry`**: from the loaded cut, the machine reaches the loop head
 representing `P.init`, at least one step later. The named premises are the
 caller (`InterpCaller`), the stack geometry at the cut, and stability of the
 runtime invariant under entry's three write windows. -/
-theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp : ChanPlace}
+theorem entry_loopAt_framed {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp : ChanPlace}
     {high sp : Nat} {callerRegs mainSaved : Nat → BitVec 64}
     (h : OCaml.LoadedAt L P c pl cp high)
     (caller : InterpCaller P c pl cp high sp callerRegs mainSaved)
     (geometry : OCaml.LoopGeometry L P P.init c pl cp high)
     (stable : WindowStable L.runtimeOk (entryWindows sp (word c Layout.sym_Caml_state).toNat)) :
-    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P P.init c' := by
+    ∃ c', OCaml.Plus c c' ∧ EntryLoopPost L P c pl cp high sp callerRegs c' := by
   have frame := EntryFrame.of_caller caller
   obtain ⟨b1, b2, b3⟩ := frame.nat
   have domain : DomainWindow (word c Layout.sym_Caml_state).toNat :=
@@ -292,13 +300,29 @@ theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp
     (by simp only [OCaml.Vm.runtimeFields, OCaml.Vm.domainWord, dom5]; rw [young _ (by simp)])
     (same _ caller.outside.openHead)
     (fun id ch a hc hp => same _ (links_of_channels caller.outside.channels id ch a hc hp)) rfl
-  refine ⟨c5, ?_, ⟨running_of_payload payload primitives platform regs p.loop geometry5 native, p.tick⟩⟩
+  refine ⟨c5, ?_, {
+    toRunning := running_of_payload payload primitives platform regs p.loop geometry5 native
+    represented := repr_of_payload payload primitives regs
+    geometry := geometry5
+    clock := p.tick
+    memory := p.memory }⟩
   cases n with
   | zero =>
     cases run
     have := h.atEntry.symm.trans p.head
     simp [Layout.sym_caml_interprete, Layout.loopHead] at this
   | succ n => exact ⟨n, run⟩
+
+/-- The ordinary entry API is a projection of the same framed execution. -/
+theorem entry_loopAt {L : OCaml.Layout} {P : Prog} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high sp : Nat} {callerRegs mainSaved : Nat → BitVec 64}
+    (h : OCaml.LoadedAt L P c pl cp high)
+    (caller : InterpCaller P c pl cp high sp callerRegs mainSaved)
+    (geometry : OCaml.LoopGeometry L P P.init c pl cp high)
+    (stable : WindowStable L.runtimeOk (entryWindows sp (word c Layout.sym_Caml_state).toNat)) :
+    ∃ c', OCaml.Plus c c' ∧ OCaml.LoopAt L P P.init c' := by
+  obtain ⟨after, run, post⟩ := entry_loopAt_framed h caller geometry stable
+  exact ⟨after, run, post.toRunning, post.clock⟩
 
 end OCaml.Vm.Sim
 

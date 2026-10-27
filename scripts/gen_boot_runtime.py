@@ -25,6 +25,7 @@ def read(a, width=8):
 domain = read(layout['sym_Caml_state'])
 assert domain == cut['domain']
 block = read(layout['sym_bf_large_tree'])
+custom_table = read(domain + layout['off_custom_table'])
 words = read(block-layout['header_bytes']) // 1024
 out = ['import OCaml.Vm.Boot.WhileMinLogChecks', 'import OCaml.Vm.Boot.FreeList',
        'import OCaml.Vm.Boot.WhileMinObservation', 'import Vsa.Sim.Boot.Bytes', '',
@@ -32,6 +33,7 @@ out = ['import OCaml.Vm.Boot.WhileMinLogChecks', 'import OCaml.Vm.Boot.FreeList'
        'namespace OCaml.Vm.Boot.WhileMinRuntime',
        'open Vsa.Machine Vsa.Sim Vsa.Sim.Boot WhileMinLog', '',
        f'def domain : Nat := {domain:#x}',
+       f'def customTable : Nat := {custom_table:#x}',
        f'def freeBlock : FreeBlock := ⟨{block:#x}, {words}⟩', '',
        'variable {c : Config} {initial : Vsa.MemRepr.Mem}', '']
 
@@ -44,6 +46,12 @@ for i in range(8):
 fields=['young_start','young_end','young_alloc_start','young_alloc_end','young_ptr','young_limit']
 for f in fields:
     fact(f, f'domain + Layout.off_{f}',domain+layout['off_'+f])
+fact('custom_table', 'domain + Layout.off_custom_table', domain + layout['off_custom_table'])
+for field in ['base', 'ptr']:
+    offset = layout['off_custom_table_' + field]
+    fact('custom_table_' + field,
+         f'customTable + Layout.off_custom_table_{field}',
+         custom_table + offset)
 fact('pending','Layout.sym_caml_something_to_do',layout['sym_caml_something_to_do'],4)
 for key, width in [('bf_small_map',4),('bf_large_tree',8),('bf_large_least',8),('caml_fl_cur_wsz',8)]:
     fact(key,f'Layout.sym_{key}',layout['sym_'+key],width)

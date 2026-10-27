@@ -2,6 +2,112 @@
 
 ## Current status
 
+**2026-10-27 counted loop continuation: checked partial work for lead review;
+headline open.**
+
+Prerequisite `71547e46` is committed (HEAD at start `cfbc61ef`, clean
+worktree). Its final remaining-obligation list, `CLAUDE.md`, the A1 sections
+of `PLAN.md`/`PHASES.md` and `DEAD-ENDS.md` were read before editing, and
+`scripts/abs_inventory.sh` was run. No worker/subagent was started.
+
+`CountedInvariant` supplies `CountedLoopAt` for the already arbitrary-relation
+`F1Arms` assembly. A shared coherence proof uses `OpenChannels.unique` and
+total channel placement to show that the opened list determines every valid
+channel address. `ChannelCustomsRepr.at_geometry` and
+`countedRunning_of_counts` therefore attach framed counts to an ordinary
+producer's own stack witness. They retain the independent physical count;
+they do not infer it from the refcount total or from the old runtime invariant.
+
+`countedLayout` is a local runtime extension for one non-channel row.
+`counted_memoryStable` proves its actual count frame via
+`ChannelCountFrame.sameMemory`; `counted_memory_row` then reuses generic
+opcode proofs unchanged, recovering the selected channel placement through
+the coherence theorem. `counted_const0_row` and `counted_negint_row` are
+the first ordinary counted rows on this route. There is no global change
+to `Layout`, `VmReprAt` or the `GoodF1` domain, and no new assumed row-result
+or count-preservation field.
+
+The entry execution now exports `EntryLoopPost` through
+`entry_loopAt_framed`; its ordinary API projects the same execution.
+`EntryFrame.customCountFrame` proves the physical frame from the existing
+named `CustomMemCall` footprint, including native stores, callback-depth
+and external-raise stores. `counted_entry_of_custom` carries any complete
+startup accounting witness through that actual prologue.
+
+The layout generator measures custom-table element size and base/pointer
+offsets. The startup-read generator certifies the actual empty table's
+pointer and its zero base/insertion words. `ChannelCustomCount` is an
+independent **table-occupancy component**, with checked uniqueness, byte
+framing and startup zero. `whileMin_counted_entry` carries that component
+through the real interpreter entry, retaining only the existing cut heap
+premise. It is **not** a complete physical `Customs` instantiation for the
+custom machine premise: GC resource accumulators and the current domain's
+custom-table pointer still need their full runtime invariant and producers.
+Occupancy alone is not used to derive readiness; this limitation is recorded
+in `DEAD-ENDS.md`. `table_count_resources_unconstrained` is a checked contract
+obstruction: every major-resource word is compatible with the same table
+occupancy. It makes no reachability claim.
+
+`CcallReady.of_input` factors the ordinary placement producer.
+`CcallReady.of_counted_loop` selects its channel placement from the counted
+stack, while the shared producer extends only the heap placement.
+`counted_c_call1_success` derives the actual reachable successful successor,
+applies its `Fits` bound and composes dispatch/setup/callee/return into
+`CountedLoopAt`. `counted_channel_c_call1_next` supplies the existing real
+counted opening and out-list summaries on that execution. It accepts exactly
+the existing runtime/heap/footprint suppliers, not an assumed counted
+primitive or opcode result. Complete `ChannelCustomsRepr` survives the suffix.
+
+**Remaining before ordinary F1 assembly can consume this path:**
+
+- A complete physical custom-runtime predicate and its actual startup zero,
+  including resource accumulators/table identity, with the accepted named
+  `CustomMemCall` supplier for its real counted returns. The checked table
+  occupancy component does not discharge this supplier. The current
+  `CallerApart.domainField` admits only `extra_heap_resources_minor`;
+  table-pointer identity needs its own actual pin/frame or a corrected
+  footprint and producers, not an implicit old-frame consequence.
+- Lift the remaining generic rows using actual frames. Memory-writing rows
+  need lifted `RuntimeFrame`/allocation/barrier instances from physical
+  footprint separation; non-custom primitive summaries must retain physical
+  counts, refcount observations and links across their actual effects.
+  CONST0/NEGINT alone do not preserve the invariant for a whole F1 loop.
+- Integrate all counted C_CALL branches (including non-custom primitives
+  and other arities) and all ordinary rows into `F1Arms` at `CountedLoopAt`.
+  Existing `f1_table`, `F1CcallOpen`, `WhileMinOpen` and the headline remain
+  at their original ordinary relation and retain their channel fields.
+- Opening `OpenOutRuntimeAt.after`; out-list selected heap/record/named
+  ledger entry geometry and after-call runtime pins; named registration,
+  general formatting, and reset/libHeap closure remain open. `BarrierGrowthFull`
+  stays with G2 and C4 round 2 waits for F1.
+
+Validation passes:
+
+- The guarded affected build of `OCaml.Vm.Sim.CountedEntry`,
+  `OCaml.Vm.Sim.CountedChannelRows`, `OCaml.Vm.Sim.CountedMemoryRows`,
+  `OCaml.Vm.Sim.F1Ccall` and `OCaml.Vm.Sim.WhileMinTable`: **3,694 jobs**
+  (`/tmp/counted-loop-checked-build2.log`). The physical-count/startup module
+  also passed its initial 1,301-job build.
+- Guarded `lake env lean /tmp/counted-loop-focused-audit.lean`: **39 reports**,
+  all using only `propext`, `Classical.choice`, `Quot.sound`
+  (`/tmp/counted-loop-focused-audit.log`, checked by
+  `/tmp/counted-loop-audit-check.txt`). All 32 new theorem reports and the
+  existing compatibility/downstream reports are registered in `OCaml/Audit.lean`.
+  The executable-name return observation now applies the existing
+  `copyMemory_eq` through `congrFun`, matching the shared `copyMemoryAt`
+  post; its entry and primitive reports are included.
+- Layout/runtime-read/F1-table generator drift, hole, discipline, abstraction
+  and diff checks pass; C4 remains at 3.
+
+All Lean invocations used `python3 scripts/lean-guarded.py --log /tmp/... --
+scripts/lean-capped.sh lake ...`, with `free -g` beforehand (available memory
+at least 25 GB), one build at a time, the inherited 12 GB scope and two
+threads. No proof budget was increased or virtual-memory limit added.
+Git metadata and the integration queue remain untouched; checked edits are
+uncommitted. Full `OCaml.Audit`, review, commit and landing belong to the lead.
+The task remains **stuck at complete startup custom-runtime accounting and
+the remaining ordinary/count-preserving frame/row producers for F1 assembly**.
+
 **2026-10-27 initialized-string native return (bprime): checked for lead review.**
 `InitializedString.initialized_string_nursery` proves the actual
 `caml_alloc_initialized_string` nursery entry-to-return at `0x8000c284`,

@@ -62,6 +62,9 @@ def collector_layout():
         **{f"off_ephe_ref_table_{name}": f"offsetof(struct caml_ephe_ref_table, {name})"
            for name in ("base", "end", "threshold", "ptr", "limit", "size", "reserve")},
         "ephe_ref_elt_size": "sizeof(struct caml_ephe_ref_elt)",
+        "custom_elt_size": "sizeof(struct caml_custom_elt)",
+        **{f"off_custom_table_{name}": f"offsetof(struct caml_custom_table, {name})"
+           for name in ("base", "ptr")},
         "off_ephe_ref_ephe": "offsetof(struct caml_ephe_ref_elt, ephe)",
         "off_ephe_ref_offset": "offsetof(struct caml_ephe_ref_elt, offset)",
         "ext_table_bytes": "sizeof(struct ext_table)",

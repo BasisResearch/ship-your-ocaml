@@ -4,6 +4,9 @@ import OCaml.Vm.Primitives.Named.NamedAt
 import OCaml.Vm.Gc.ChannelRefs
 import OCaml.Vm.Sim.F1Ccall
 import OCaml.Vm.Sim.CountedCcall1
+import OCaml.Vm.Sim.CountedEntry
+import OCaml.Vm.Sim.CountedChannelRows
+import OCaml.Vm.Sim.CountedMemoryRows
 import OCaml.Vm.Gc.FinalQuiet
 import OCaml.Vm.Gc.MemprofQuiet
 import OCaml.Vm.Gc.LocalRootsTail
@@ -6879,6 +6882,38 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.OutListWalk.ListedStep.ready
 
 -- Physical custom accounting through the generated C_CALL setup and suffix.
+#print axioms OCaml.Vm.Boot.WhileMinRuntime.read_custom_table
+#print axioms OCaml.Vm.Boot.WhileMinRuntime.read_custom_table_base
+#print axioms OCaml.Vm.Boot.WhileMinRuntime.read_custom_table_ptr
+#print axioms OCaml.Vm.Gc.ChannelCustomCount.unique
+#print axioms OCaml.Vm.Gc.ChannelCustomCount.frame
+#print axioms OCaml.Vm.Gc.ChannelCustomCount.startup
+#print axioms OCaml.Vm.Gc.channelCustoms_startup
+#print axioms OCaml.Vm.Sim.CountedLoopAt.toLoopAt
+#print axioms OCaml.Vm.Sim.placedChannels_injective
+#print axioms OCaml.Vm.ChannelCustomsRepr.at_geometry
+#print axioms OCaml.Vm.Sim.countedRunning_of_counts
+#print axioms OCaml.Vm.ChannelCustomsRepr.of_chans_eq
+#print axioms OCaml.Running.retarget
+#print axioms OCaml.Vm.Sim.counted_memoryStable
+#print axioms OCaml.Vm.Sim.counted_memory_row
+#print axioms OCaml.Vm.Sim.counted_const0_row
+#print axioms OCaml.Vm.Sim.counted_negint_row
+#print axioms OCaml.Vm.Sim.CountedLoopAt.of_plus
+#print axioms OCaml.Vm.Sim.ArmInput.of_counted_loop
+#print axioms OCaml.Vm.Sim.entry_loopAt_framed
+#print axioms OCaml.Vm.Sim.EntryFrame.customCount
+#print axioms OCaml.Vm.Sim.EntryFrame.customCountFrame
+#print axioms OCaml.Vm.Sim.EntryLoopPost.counted
+#print axioms OCaml.Vm.Sim.counted_entry_of_custom
+#print axioms OCaml.Vm.Sim.counted_entry_loopAt
+#print axioms OCaml.Vm.Sim.f1_counted_entry
+#print axioms OCaml.Vm.Sim.whileMin_counted_entry
+#print axioms OCaml.Vm.Sim.table_count_resources_unconstrained
+#print axioms OCaml.Vm.Sim.CcallReady.of_input
+#print axioms OCaml.Vm.Sim.CcallReady.of_counted_loop
+#print axioms OCaml.Vm.Sim.counted_c_call1_success
+#print axioms OCaml.Vm.Sim.counted_channel_c_call1_next
 #print axioms OCaml.Vm.Sim.ChannelCountFrame.repr
 #print axioms OCaml.Vm.Sim.ChannelCountFrame.sameMemory
 #print axioms OCaml.Vm.Sim.ChannelCountFrame.of_log

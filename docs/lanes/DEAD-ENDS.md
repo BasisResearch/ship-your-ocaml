@@ -8,6 +8,23 @@
   limits. Do not normalize the nested pick/pop/split write logs to equate
   the two branch-dependent counter expressions.
 
+- 2026-10-27 counted loop entry: custom-table occupancy is a physical count
+  component with a checked startup zero, but it is insufficient by itself
+  for `CustomMemCall.accounting.ready`. The resource accumulator words and
+  the domain's actual custom-table pointer are independent observations.
+  Do not instantiate the named machine premise with occupancy alone or
+  infer its quietness from represented refcounts. A complete physical
+  runtime predicate needs actual startup/frame/call producers for those
+  observations. `table_count_resources_unconstrained` in
+  `OCaml/Vm/Sim/CountedEntry.lean` now checks that every major-resource word
+  is compatible with the same occupancy. This is a kernel-checked contract
+  obstruction, not a reachable counterexample.
+  In particular, `CallerApart.domainField` currently admits only
+  `extra_heap_resources_minor` in the domain portion of `state`; it does
+  not admit the `custom_table` pointer. A predicate observing that pointer
+  needs an actual identity pin/frame (or an explicitly corrected footprint
+  with its producers), not an assumption that the old state frame reads it.
+
 - 2026-10-27 initialized-string shared readback: leaving the saved-bank
   prefix as an unconstrained `_ ++ [length-store]` inside `change` forces
   memory/log unification into the default heartbeat limit. Name the shared

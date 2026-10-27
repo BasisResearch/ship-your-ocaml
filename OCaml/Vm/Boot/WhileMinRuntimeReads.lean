@@ -9,6 +9,7 @@ namespace OCaml.Vm.Boot.WhileMinRuntime
 open Vsa.Machine Vsa.Sim Vsa.Sim.Boot WhileMinLog
 
 def domain : Nat := 0x8007d150
+def customTable : Nat := 0x8007d580
 def freeBlock : FreeBlock := ⟨0x80283008, 126879⟩
 
 variable {c : Config} {initial : Vsa.MemRepr.Mem}
@@ -101,6 +102,24 @@ theorem read_young_limit (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem init
     word c (domain + Layout.off_young_limit) = 0x80082000#64 := by
   unfold word
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := domain + Layout.off_young_limit) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_custom_table (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (domain + Layout.off_custom_table) = 0x8007d580#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := domain + Layout.off_custom_table) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_custom_table_base (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (customTable + Layout.off_custom_table_base) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := customTable + Layout.off_custom_table_base) (w := 8) (by decide +kernel)]
+  decide +kernel
+
+theorem read_custom_table_ptr (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    word c (customTable + Layout.off_custom_table_ptr) = 0x0#64 := by
+  unfold word
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := customTable + Layout.off_custom_table_ptr) (w := 8) (by decide +kernel)]
   decide +kernel
 
 theorem read_pending (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
