@@ -1,18 +1,20 @@
 import OCaml.Vm.Primitives.Format.AllocSprintf
 import OCaml.Vm.Primitives.Format.VsnprintfLong
 import OCaml.Vm.Primitives.Format.ParseFormatCall
-import OCaml.Vm.Primitives.StringCopyMachine
+import OCaml.Vm.Primitives.InitializedString
 
 /-! The real short-result continuation of `caml_alloc_sprintf`.
 
 The requested splice to `copy_string_machine` is obstructed by the pinned
 JAL target: this ELF calls `caml_alloc_initialized_string`, with a length in
 a0 and a source in a1. This module checks that obstruction and executes the
-actual fits/argument/JAL continuation. It does not claim an allocation or an
-entry-to-return `caml_alloc_sprintf` summary.
+actual fits/argument/JAL continuation. The short allocation composition below
+returns from that real callee to `0x80013f20`; the formatter's whole wrapper
+and original native caller return remain open.
 -/
 namespace OCaml.Vm.Primitives.Format.AllocSprintfLong
 open Vsa.Machine Vsa.Sim VsaIris VsaIris.Inst VsaIris.Sym VsaIris.MallocFast
+open OCaml.Vm.Boot.Startup
 
 def decimalBytes (v : BitVec 64) : List (BitVec 8) :=
   strBytes (Vsa.While.intToString v.toInt)
@@ -58,6 +60,8 @@ structure CopyEntered (R : Nat → BitVec 64) (before after : Config) : Prop
   arguments : GHolds after.σ [(2, R 2), (10, R 10), (11, R 2 + 16#64)]
   memory : after.σ.mem = before.σ.mem
   output : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
+  libraryGood : ∀ live, VsaOk live before → VsaOk live after
+  registers : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ [1, 11, 15] → gpr after n = gpr before n
 
 /-- Execute the real fit branch, source setup and decoded JAL. No callee
 summary or callee-return assumption occurs in these premises. -/
@@ -83,11 +87,58 @@ theorem short_continuation {v : BitVec 64} (c : Config) (R : Nat → BitVec 64)
   intro after entered
   refine ⟨⟨entered.good, entered.image, entered.minstret,
     gholds_lookup _ entered.regs rfl, by decide, entered.tick⟩,
-    ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact entered.pc
   · exact holds_project entered.regs (by simp [lookupG])
   · exact entered.memory.trans (q.memory.trans p.memory)
   · simp only [Vsa.Machine.output, entered.output, q.output, p.output]
+  · intro live good
+    have good1 := p.vsaOk (log := []) good (by decide) (by simp [AllocSprintf.fits_regs, keysG])
+    have good2 := q.vsaOk (log := []) good1 (by decide) (by simp [AllocSprintf.copy_regs, keysG])
+    exact entered.vsaOk (log := []) good2 (by decide) (by simp [keysG])
+  · have kept := ((GprsSame.of_post p (by decide)).trans
+      (GprsSame.of_post q (by decide))).trans (GprsSame.of_post entered (by decide))
+    intro n low high untouched
+    exact kept.same n low high (by
+      simp only [List.mem_append, List.mem_cons, List.mem_nil_iff, or_false] at untouched ⊢
+      omega)
+
+/-- This local decimal bound supplies the initialized-string nursery size
+branch; it makes no assertion about other GoodF1 formats or Fits. -/
+theorem decimal_nursery_small (v : BitVec 64) :
+    guardB .BLTU 256#64 (StringAllocation.stringWords (BitVec.ofNat 64 (decimalBytes v).length)) = false :=
+  StringAllocation.nursery_small_of_le20 (intToString_length_le v)
+
+/-- Direct composition of the real short-result continuation and initialized
+string call. Its return PC is the formatter continuation `0x80013f20`.
+The caller's prologue, final wrapper return and C_CALL2 suppliers remain open.
+Every callee requirement here is initial data or geometry at `0x80013f10`. -/
+theorem short_initialized {v : BitVec 64} {live g domain young limit}
+    (c : Config) (R : Nat → BitVec 64) (h : LeafInput (R 1) c)
+    (regs : GHolds c.σ (AllocSprintf.fits_input R))
+    (length : R 10 = BitVec.ofNat 64 (decimalBytes v).length)
+    (good : VsaOk live c)
+    (memory : InitializedString.Memory live AllocSprintf.copy_call.link (R 2)
+      (R 2 + 16#64).toNat (decimalBytes v).length g domain young limit c) :
+    FnSummary 0x80013f10#64 (fun d => d = c)
+      (InitializedString.Post live AllocSprintf.copy_call.link (R 2)
+        (R 2 + 16#64).toNat (decimalBytes v).length g domain young c) := by
+  apply summary_bind (short_continuation c R h regs length) (fun _ p => p.pc)
+  intro entered p
+  have input := (memory.transport p.memory).input p.toLeafInput (p.libraryGood live good)
+    (gholds_lookup _ p.arguments rfl)
+    (by simpa only [OCaml.Vm.gpr, length] using (gholds_lookup _ p.arguments (n := 10) rfl))
+    (by simpa only [OCaml.Vm.gpr, BitVec.ofNat_toNat, BitVec.setWidth_eq] using (gholds_lookup _ p.arguments (n := 11) rfl))
+  apply (InitializedString.initialized_string_nursery entered input).weaken (fun _ eq => eq)
+  intro after finish
+  refine { finish with memory := ?_, output := finish.output.trans p.output, registers := ?_ }
+  · intro x outside
+    rw [finish.memory x outside, p.memory]
+  · intro n low high untouched
+    apply (finish.registers n low high untouched).trans
+    apply p.registers n low high
+    simp only [StringCopy.copyWrites, List.mem_cons, List.mem_nil_iff, or_false] at untouched ⊢
+    omega
 
 /-- The actual a0 length cannot also be copy_string's source pointer at the
 real local-buffer address. The ordinary stack lower bound suffices. -/

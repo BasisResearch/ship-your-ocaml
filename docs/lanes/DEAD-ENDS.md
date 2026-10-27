@@ -1,5 +1,13 @@
 # Routes not to repeat
 
+- 2026-10-27 initialized-string shared readback: leaving the saved-bank
+  prefix as an unconstrained `_ ++ [length-store]` inside `change` forces
+  memory/log unification into the default heartbeat limit. Name the shared
+  `StringCopy.callerLog` and expose its explicit two-save prefix before
+  `writeLog_append`/`word_writeLog`. This is an elaboration obstruction,
+  not a counterexample to the native allocation route; the factored
+  `caller_readback_at` checks at the default budget.
+
 - 2026-10-27: the real `caml_alloc_sprintf` short-result JAL at
   `0x80013f1c` targets `caml_alloc_initialized_string` (`0x8000c284`),
   not the existing `copy_string_machine` entry (`0x8000c254`).

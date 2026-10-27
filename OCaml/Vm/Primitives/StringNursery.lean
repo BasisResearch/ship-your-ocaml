@@ -1,8 +1,21 @@
 import OCaml.Vm.Primitives.StringFast
 import OCaml.Vm.Primitives.LibraryEffects
+import OCaml.Vm.Primitives.StringAllocationArithmetic
 
 namespace OCaml.Vm.Primitives.StringAllocation
 open Vsa.Machine Vsa.Sim LeanRV64DExecutable
+
+/-- The formatter's proved decimal bound selects the nursery size branch.
+This is a local length fact, independent of Fits or the general GoodF1 domain. -/
+theorem nursery_small_of_le20 {n : Nat} (bound : n ≤ 20) :
+    guardB .BLTU 256#64 (stringWords (BitVec.ofNat 64 n)) = false := by
+  have count : (stringWords (BitVec.ofNat 64 n)).toNat ≤ (256#64).toNat := by
+    rw [stringWords_toNat n (by omega)]
+    change (n + 8) / 8 ≤ 256
+    omega
+  unfold guardB Functions.zopz0zI_u
+  simp only [Sail.BitVec.toNatInt]
+  exact decide_eq_false (Int.not_lt.mpr (Int.ofNat_le.mpr count))
 
 /-- ABI values at the constructor's three generated boundaries. -/
 def entryRegisters (ra sp length : BitVec 64) : Nat → BitVec 64

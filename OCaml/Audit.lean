@@ -335,6 +335,7 @@ import VsaIris.Vsa.SnpFmt
 import OCaml.Vm.Primitives.Format.SvfLong
 import OCaml.Vm.Primitives.Format.VsnprintfCaller
 import OCaml.Vm.Primitives.Format.AllocSprintfLong
+import OCaml.Vm.Primitives.InitializedString
 import VsaIris.Vsa.SnpPrint
 import VsaIris.Vsa.SnpStrlen
 import VsaIris.Vsa.SnpArith
@@ -6940,3 +6941,68 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.copy_string_target_obstruction
 #print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.short_continuation
 #print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.copy_string_argument_obstruction
+
+-- Initialized-string native return and shared byte-copy laws.
+#print axioms OCaml.Vm.Primitives.StringAllocation.nursery_small_of_le20
+#print axioms OCaml.Vm.Primitives.StringCopy.caller_readback_at
+#print axioms OCaml.Vm.Primitives.StringCopy.source_address
+#print axioms OCaml.Vm.Primitives.StringCopy.return_address
+#print axioms OCaml.Vm.Primitives.observed_register
+#print axioms OCaml.Vm.Primitives.StringCopy.finish_tail
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyInput.memory_transport
+#print axioms OCaml.Vm.Primitives.StringCopy.outL_append_iff
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyPostAt.footprint
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyPostAt.memory_complete
+#print axioms OCaml.Vm.Primitives.byteCopyLog_succ
+#print axioms OCaml.Vm.Primitives.byte_store_log
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyPostAt.observed_log
+#print axioms OCaml.Vm.Primitives.memcpy_readOnly_log
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyPostAt.object
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyPostAt.padded
+#print axioms OCaml.Vm.Primitives.StringCopy.CopyPostAt.source
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_chunk0
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_at_8000c284
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_at_8000c288
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_at_8000c28c
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_at_8000c290
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_at_8000c294
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_at_8000c298
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_at_8000c29c
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_at_8000c2a0
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_at_8000c2a4
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_at_8000c2a8
+#print axioms Vsa.Sim.Code.caml_alloc_initialized_string_at_8000c2ac
+#print axioms OCaml.Vm.Primitives.InitializedString.loaded
+#print axioms OCaml.Vm.Primitives.InitializedString.save_code
+#print axioms OCaml.Vm.Primitives.InitializedString.save_shape
+#print axioms OCaml.Vm.Primitives.InitializedString.save_summary
+#print axioms OCaml.Vm.Primitives.InitializedString.save_eval
+#print axioms OCaml.Vm.Primitives.InitializedString.save_call_shape
+#print axioms OCaml.Vm.Primitives.InitializedString.save_call_decode
+#print axioms OCaml.Vm.Primitives.InitializedString.save_call_target
+#print axioms OCaml.Vm.Primitives.InitializedString.save_call_pins
+#print axioms OCaml.Vm.Primitives.InitializedString.arguments_code
+#print axioms OCaml.Vm.Primitives.InitializedString.arguments_shape
+#print axioms OCaml.Vm.Primitives.InitializedString.arguments_summary
+#print axioms OCaml.Vm.Primitives.InitializedString.arguments_eval
+#print axioms OCaml.Vm.Primitives.InitializedString.arguments_call_shape
+#print axioms OCaml.Vm.Primitives.InitializedString.arguments_call_decode
+#print axioms OCaml.Vm.Primitives.InitializedString.arguments_call_target
+#print axioms OCaml.Vm.Primitives.InitializedString.arguments_call_pins
+#print axioms OCaml.Vm.Primitives.InitializedString.restore_code
+#print axioms OCaml.Vm.Primitives.InitializedString.restore_shape
+#print axioms OCaml.Vm.Primitives.InitializedString.restore_summary
+#print axioms OCaml.Vm.Primitives.InitializedString.restore_eval
+#print axioms OCaml.Vm.Primitives.InitializedString.save_access
+#print axioms OCaml.Vm.Primitives.InitializedString.save_log
+#print axioms OCaml.Vm.Primitives.InitializedString.save_fast
+#print axioms OCaml.Vm.Primitives.InitializedString.arguments_fast
+#print axioms OCaml.Vm.Primitives.InitializedString.restore_fast
+#print axioms OCaml.Vm.Primitives.InitializedString.Memory.transport
+#print axioms OCaml.Vm.Primitives.InitializedString.Memory.input
+#print axioms OCaml.Vm.Primitives.InitializedString.allocate
+#print axioms OCaml.Vm.Primitives.InitializedString.initialized_string_nursery
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.decimal_nursery_small
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.short_initialized
+#print axioms OCaml.Vm.Primitives.StringCopy.copyTail
+#print axioms OCaml.Vm.Primitives.InitializedString.tailBoundary

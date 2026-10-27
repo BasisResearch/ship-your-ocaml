@@ -45,15 +45,23 @@ def completeLog (ra sp : BitVec 64) (a len : Nat) (g : Nat → BitVec 8)
   allocationLog ra sp a len domain young ++
     byteCopyLog (resultWord young len).toNat len (fun i => g (a + i))
 
+/-- Both native string producers share the same complete total-byte effect. -/
+theorem CopyPostAt.observed_log {log dst live ra sp a len g before after}
+    (post : CopyPostAt log dst live ra sp a len g before after) :
+    Vsa.Densify.MemEqv after.σ.mem
+      (writeLog before.σ.mem (log ++ byteCopyLog dst.toNat len (fun i => g (a + i)))) := by
+  intro x
+  change (after.σ.mem[x]?).getD 0 =
+    ((writeLog before.σ.mem (log ++ byteCopyLog dst.toNat len (fun i => g (a + i))))[x]?).getD 0
+  rw [writeLog_append, byteCopyLog_observe]
+  simpa only [byte_total, copyMemoryAt] using post.memory_complete x
+
 /-- Full copy effects as equality of total byte observations with a finite
 canonical log. No claim is made about which bytes were initially present. -/
 theorem CopyPost.observed_log {live ra sp a len g domain young before after}
     (post : CopyPost live ra sp a len g domain young before after) :
-    Vsa.Densify.MemEqv after.σ.mem (writeLog before.σ.mem (completeLog ra sp a len g domain young)) := by
-  intro x
-  change (after.σ.mem[x]?).getD 0 = ((writeLog before.σ.mem (completeLog ra sp a len g domain young))[x]?).getD 0
-  rw [completeLog, writeLog_append, byteCopyLog_observe]
-  simpa only [byte_total, copyMemory] using post.memory_complete x
+    Vsa.Densify.MemEqv after.σ.mem (writeLog before.σ.mem (completeLog ra sp a len g domain young)) :=
+  CopyPostAt.observed_log post
 
 end StringCopy
 end OCaml.Vm.Primitives

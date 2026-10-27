@@ -66,21 +66,11 @@ theorem CopyInput.memory_transport {live Dt DA ra sp a len g domain young limit 
     CopyInput live Dt DA ra sp a len g domain young limit after :=
   (h.toCopyMemory.memory_transport memory gp).input leaf good stack
 
-/-- Whole native copy result, with its explicit allocation footprint and
-payload-only copy frame. Neither output nor the abstract byte string changes. -/
-structure CopyPost (live : Nat → Prop) (ra sp : BitVec 64) (a len : Nat)
-    (g : Nat → BitVec 8) (domain young : BitVec 64) (before after : Config) : Prop
-    extends LeafInput ra after where
-  libraryGood : VsaOk live after
-  pc : OCaml.Vm.pcOf after = some ra
-  result : gpr after 10 = some (resultWord young len)
-  stack : gpr after 2 = some sp
-  shell : StringShell after (resultWord young len).toNat len
-  bytes : ∀ i, i < len → byte after ((resultWord young len).toNat + i) = g (a + i)
-  memory : ∀ x, ¬ InExt ((resultWord young len).toNat, len) x →
-    byte after x = ((writeLog before.σ.mem (allocationLog ra sp a len domain young))[x]?).getD 0
-  output : Vsa.Machine.output after.σ = Vsa.Machine.output before.σ
-  registers : ∀ n, 1 ≤ n → n ≤ 31 → n ∉ copyWrites → gpr after n = gpr before n
+/-- Compatibility instance of the common allocated byte-copy result. -/
+abbrev CopyPost (live : Nat → Prop) (ra sp : BitVec 64) (a len : Nat)
+    (g : Nat → BitVec 8) (domain young : BitVec 64) (before after : Config) :=
+  CopyPostAt (allocationLog ra sp a len domain young) (resultWord young len)
+    live ra sp a len g before after
 
 /-- Full caml_copy_string execution: generated boundaries around strlen,
 the G1 constructor, complete memcpy, and restoration of the native caller. -/
@@ -91,14 +81,7 @@ theorem copy_string_machine {live Dt DA ra sp a len g domain young limit} (c : C
       (CopyPost live ra sp a len g domain young c) := by
   apply summary_bind (copy_string_allocated c h.toAllocateInput source) (fun _ p => p.pc)
   intro allocated p
-  have readonly : ROHolds (vsaModel live) allocated [] (mText ++ srcText a len g) := by
-    refine ⟨(fun _ h => nomatch h), ?_⟩
-    intro point member
-    have same := p.memory point.1
-    change (allocated.σ.mem[point.1]?).getD 0 =
-      ((writeLog c.σ.mem (allocationLog ra sp a len domain young))[point.1]?).getD 0 at same
-    rw [writeLog_out _ _ _ (h.copyReadsOutside point member)] at same
-    exact same.trans (h.copyReadOnly.2 point member)
+  have readonly := memcpy_readOnly_log h.copyReadOnly h.copyReadsOutside p.memory
   have input : FinishInput live ra sp (resultWord young len) a len g allocated := {
     toLeafInput := p.toLeafInput
     libraryGood := p.libraryGood

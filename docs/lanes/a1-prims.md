@@ -2,6 +2,24 @@
 
 ## Current status
 
+**2026-10-27 initialized-string native return (bprime): checked for lead review.**
+`InitializedString.initialized_string_nursery` proves the actual
+`caml_alloc_initialized_string` nursery entry-to-return at `0x8000c284`,
+reusing the nursery allocator and complete memcpy through generated real
+save/call/return boundaries. Data-only inputs admit the formatter's caller
+stack buffer; source bytes and saved words follow through actual stores.
+Shared StringCopy laws retain full byte-object/padding and native/output/byte
+frames. `AllocSprintfLong.short_initialized` composes the real continuation
+from `0x80013f10` back to `0x80013f20`; the local length ≤20 supplies the
+nursery size branch. The complete formatter prologue/wrapper/original return,
+reachable runtime/locale/ownership suppliers and C_CALL2 remain open, as do
+general GoodF1 formatting and its major-result route. The affected build
+passes (1,403 jobs), as do all 81 focused allowed-axiom reports; 63 audits are
+newly registered. Generator drift, hole, discipline and abstraction gates pass.
+Checked edits await lead review/commit/integration; full Audit is the lead gate.
+Detailed validation and remaining suppliers: `docs/lanes/bprime.md`.
+
+
 **2026-10-27 complete counted channel returns: checked for lead review/integration.**
 
 Started from checked HEAD `13320f38` with a clean worktree, after reading the

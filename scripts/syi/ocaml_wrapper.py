@@ -110,6 +110,7 @@ theorem caml_string_notequal_primitive {runtimeOk P s pl cp sp high ra nativeSp 
 end OCaml.Vm.Primitives
 """
     result.update(emit_string_copy(root, functions, decode, code, text_base, lib, build_cfg, literal))
+    result.update(emit_string_copy(root, functions, decode, code, text_base, lib, build_cfg, literal, initialized=True))
     result.update(emit_executable(root, functions, decode, code, text_base, lib, build_cfg, literal))
     result.update(emit_argv_tuple(root, functions, decode, code, text_base, lib, build_cfg, literal))
     return result

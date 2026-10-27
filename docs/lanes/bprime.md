@@ -1,5 +1,88 @@
 # Lane bprime
 
+## Initialized-string nursery return (2026-10-27): checked for lead review
+
+Started at clean `5967f970`. Read `CLAUDE.md`, relevant `PHASES.md`/`PLAN.md`
+and lane/dead-end sections, and ran `scripts/abs_inventory.sh` before proofs.
+
+`InitializedString.initialized_string_nursery` proves the actual native
+`caml_alloc_initialized_string` entry at `0x8000c284` through its original
+caller return. Its `Input` consists of initial registers, `LeafInput`,
+`VsaOk`, length/address bounds, native save/read windows, nursery room and
+metadata, executable/library pins and concrete separation facts. No callee
+execution or final postcondition is a premise. The source is an arbitrary
+byte buffer; it needs no OCaml heap header, C sentinel or static provenance.
+In particular, `AllocSprintfLong.short_initialized` uses the caller's native
+stack buffer at `sp + 16`.
+
+`gen_fn.py --ocaml-string-wrapper` now shares its CFG/block/call emitter
+between the two string constructors and generates `InitializedStringSteps`
+and the actual ELF code predicates. The decoded saves at `0x8000c284` save
+ra/source/length; the allocation JAL at `0x8000c294` targets `0x8000c174`;
+the argument loads start at `0x8000c298`, the memcpy JAL at `0x8000c2a0`
+targets `0x80042848`, and the restoring return starts at `0x8000c2a4`.
+The proof reuses `alloc_string_nursery` and `memcpy_summary` at those targets.
+
+Common laws live beside the existing StringCopy producers:
+
+- `callerLog`/`caller_readback_at` derive all three saved words from the
+  actual preceding stores; `memcpy_readOnly_log` preserves source bytes
+  and library code through nursery allocation, including a stack source.
+- `TailBoundary`/`finish_tail` factor the argument loads, decoded memcpy call,
+  copying, canonical-padding preservation and restoring native return.
+  Its instances use each constructor's own generated native addresses.
+- `CopyPostAt` retains the full header, bytes, zero padding and padding count,
+  original stack/return, saved ABI registers, output and byte frame.
+  `CopyPostAt.{object,padded,source}` in `Memcpy.lean` expose representation
+  and source preservation. Shared `footprint`, `memory_complete` and
+  `observed_log` provide complete total-byte effects; the existing copy-string
+  APIs remain compatibility instances. Register composition uses `GprsSame`.
+
+`AllocSprintfLong.short_continuation` is reused directly and now retains its
+library/register frame. `short_initialized` composes that actual path from
+`0x80013f10` through initialized-string allocation and back to `0x80013f20`,
+with initial data/geometry requirements. `decimal_nursery_small` uses the
+proved length ≤20, via `nursery_small_of_le20`. It is not a bound for arbitrary
+GoodF1 formats and does not follow from Fits.
+
+Still open: the complete formatter prologue/wrapper and its original native
+caller return; prologue-derived `VsnLongEntry`/`SymbolicInput`, spilled
+arguments and locale/readbacks; selected ownership, nursery/runtime and
+separation suppliers at the actual reachable call; after-call runtime facts;
+`caml_format_int` and C_CALL2. General GoodF1 still includes `d/i/u/x/X/o`,
+flags, width, precision and large/major results. `BarrierGrowthFull` stays
+G2, `CustomMemCall` remains named, and C4 round 2 waits for F1.
+
+Validation passes:
+
+- `python3 scripts/lean-guarded.py --log /tmp/initialized-compose-build.log --
+  scripts/lean-capped.sh lake build
+  OCaml.Vm.Primitives.Format.AllocSprintfLong
+  OCaml.Vm.Primitives.CamlSysExecutableName
+  OCaml.Vm.Primitives.Format.VsnprintfCaller
+  OCaml.Vm.Primitives.Format.FormatInt`: **1,403 jobs**, including every new
+  module, the shared copy producers and their existing consumer closure.
+- The same guard/capped wrappers with `lake env lean
+  experiments/syi/initialized-string-audit.lean`: **81 reports**, all using
+  only `propext`, `Classical.choice`, `Quot.sound`
+  (`/tmp/initialized-string-audit.log`, independently checked by
+  `/tmp/initialized-string-audit-check.txt`). All 63 previously unregistered
+  reports are now in `OCaml/Audit.lean`, including every new theorem, both
+  generated call targets and the two tail-boundary instances.
+- String-wrapper and format generator `--check` pass. Hole, discipline and
+  abstraction gates pass (C4 remains at 3); `git diff --check` passes.
+
+Every Lean invocation checked `free -g` first (available ≥25 GB), used the
+required guard and capped wrapper, and ran alone in this worktree with the
+inherited 12 GB cgroup/two-thread policy. No virtual-address limit or proof
+budget increase was used. The shared saved-bank readback elaboration dead end
+is recorded in `DEAD-ENDS.md`; its final proof uses the explicit log shape.
+Generated outputs were produced only through their generator.
+
+Checked edits remain uncommitted for lead review. Full `OCaml.Audit`, commit
+and `scripts/integrate.sh` landing remain the lead gate. No Git metadata or
+landing-queue write, subagent, model guard or trust primitive was introduced.
+
 ## Plain LONGINT allocation composition (2026-10-27): checked obstruction
 
 Started from clean committed `1ac28477`, including `8b1f1377`'s final
@@ -27,12 +110,10 @@ it assumes no callee execution or return. `decimal_fits` reuses
 extracts all decimal bytes and the final NUL from the checked `VsnResult`
 with capacity 128, proving length ≤20 and fit including NUL.
 
-**Milestone remains open.** No entry-to-return `caml_alloc_sprintf` summary,
-OCaml byte-string representation or C_CALL2 producer is claimed. The next
-route must generate/check `caml_alloc_initialized_string`'s native save,
-allocator call, memcpy and return boundaries, reuse the nursery constructor
-and shared copy proofs where applicable, and compose that actual target.
-The caller prologue still must establish `VsnLongEntry`/`SymbolicInput`,
+**The whole formatter milestone remains open.** The initialized-string
+native return and its short continuation composition are now proved above;
+this does not supply an entry-to-return `caml_alloc_sprintf` summary or
+C_CALL2 producer. The caller prologue still must establish `VsnLongEntry`/`SymbolicInput`,
 locale/data readbacks, code separation and the spilled argument. Its parsed
 format remains at `sp + 240`, outside seven slots ending there, with
 `snpAbove = 192`. Selected ownership, nursery capacity, allocator/runtime

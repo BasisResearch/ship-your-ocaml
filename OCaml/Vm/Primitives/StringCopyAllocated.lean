@@ -11,6 +11,11 @@ open StringAllocation
 def lengthRegisters (sp : BitVec 64) (len : Nat) : Nat → BitVec 64 :=
   entryRegisters save_call.link (sp - 32#64) len
 
+/-- Shared native save bank for both string-copy producers. -/
+def callerLog (ra sp : BitVec 64) (a len : Nat) : List WEntry :=
+  [((sp - 8#64).toNat, 8, ra), ((sp - 24#64).toNat, 8, BitVec.ofNat 64 a),
+    ((sp - 32#64).toNat, 8, BitVec.ofNat 64 len)]
+
 def prefixLog (ra sp : BitVec 64) (a len : Nat) : List WEntry :=
   saveLog (entryRegisters ra sp a) ++ sizeLog (lengthRegisters sp len)
 

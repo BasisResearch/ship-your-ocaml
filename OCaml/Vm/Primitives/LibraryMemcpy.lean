@@ -26,6 +26,20 @@ structure MemcpyPost (live : Nat → Prop) (dst src ra : BitVec 64) (n : Nat)
   result : gpr after 10 = some dst
   bytes : ∀ k, k < n → byte after (dst.toNat + k) = img (src.toNat + k)
 
+/-- Preserve copy source bytes and code through the actual preceding stores.
+This applies equally to caller stack buffers and heap/static byte sources. -/
+theorem memcpy_readOnly_log {live a len g log before after}
+    (readOnly : ROHolds (vsaModel live) before [] (mText ++ srcText a len g))
+    (outside : ∀ p ∈ mText ++ srcText a len g, OutL log p.1)
+    (memory : Vsa.Densify.MemEqv after.σ.mem (writeLog before.σ.mem log)) :
+    ROHolds (vsaModel live) after [] (mText ++ srcText a len g) := by
+  refine ⟨(fun _ h => nomatch h), ?_⟩
+  intro point member
+  have same := memory point.1
+  change (after.σ.mem[point.1]?).getD 0 = ((writeLog before.σ.mem log)[point.1]?).getD 0 at same
+  rw [writeLog_out _ _ _ (outside point member)] at same
+  exact same.trans (readOnly.2 point member)
+
 /-- The complete upstream alignment/bulk/word/byte proof as a machine summary. -/
 theorem memcpy_summary {live dst src ra n img} (c : Config)
     (codeLive : ∀ p ∈ mText, live p.1) (geometry : Geo dst src ra n)
