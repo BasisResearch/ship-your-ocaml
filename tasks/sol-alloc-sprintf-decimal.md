@@ -16,9 +16,9 @@ Keep reads targeted (rg, bounded sed); do not scan home or print whole huge ledg
 No subagents or other Codex workers. Finish with exactly RESULT: landed <commit> or RESULT: stuck <where>.
 
 Target: compose the real caml_alloc_sprintf native return for the plain LONGINT decimal path using the checked vsnprintf wrapper.
-Start after VsnprintfLong and its caller witness are checked and committed; inspect their final data-only contract, not a scratch version.
-Files: OCaml/Vm/Primitives/Format/{AllocSprintf,VsnprintfLong,ParseFormatCall,FormatInt}.lean, the existing copy-string summary, and a new composition module; generators own generated files.
-Use the actual prologue/call/fits/copy/return segments and FnSummary call combinators; derive the VsnLongEntry and SymbolicInput from the prologue execution at the real caller offsets.
+Start from the checked VsnprintfLong, InitializedString and AllocSprintfLong.short_initialized contracts. The last theorem already reaches 0x80013f20 from 0x80013f10; reuse that run.
+Files: OCaml/Vm/Primitives/Format/{AllocSprintf,AllocSprintfLong,VsnprintfLong,ParseFormatCall,FormatInt}.lean and InitializedString.lean; generators own generated files.
+Use the actual prologue/call/fits/copy/return segments and FnSummary call combinators; derive VsnLongEntry and SymbolicInput from the prologue at 0x80013ec4 and the real caller offsets. Restore saved registers and return through the actual 0x80013f20 epilogue.
 Keep the parsed format outside the owned vararg window. The seven spill slots end at sp+240; the real parsed-format buffer starts there. Reuse the corrected snpAbove=192.
 For signed 64-bit decimal, derive output length <=20, fit in the 128-byte local buffer, and use the actual caml_alloc_initialized_string target (0x8000c284) and nursery allocation proof. Do not assume its return or a primitive summary.
 Produce the returned OCaml byte-string representation, exact decimal bytes and length, tagged/native ABI, output and memory/frame facts needed by a future C_CALL2 producer.

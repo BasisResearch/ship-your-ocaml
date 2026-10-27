@@ -46,7 +46,7 @@ The October 27 cleanup removed only generated project caches in the idle
 `a0-boot`, `a0-lib`, `a1-arms-dev`, `a2-sem`, and `bprime-next` slots; warm
 them from a coherent donor before their next proof task. Source WIP remains.
 
-For a failing or memory-heavy proof, use `python3 scripts/lean-guarded.py
+For every worker Lean run, use `python3 scripts/lean-guarded.py
 --log /tmp/task-build.log -- scripts/lean-capped.sh lake ...`. Inside the worker
 scope it stops that build's process group on a reported error or at 10 GiB,
 leaving headroom below the 12 GiB cap for the worker. For diagnosis, use
