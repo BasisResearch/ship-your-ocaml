@@ -1029,12 +1029,8 @@ theorem PopPost.shape {sp s b bits request before after lists bs}
       omega
 
 theorem bit_word {s : BitVec 64} (lo : 1 ≤ s.toNat) (hi : s.toNat ≤ 16) :
-    (BestFitRemnant.bit s).setWidth 32 = 1#32 <<< (s.toNat - 1) := by
-  have cert : ∀ n < 17, 1 ≤ n →
-      (BestFitRemnant.bit (BitVec.ofNat 64 n)).setWidth 32 = 1#32 <<< (n-1) := by decide
-  have eq : s = BitVec.ofNat 64 s.toNat := by simp
-  conv => lhs; rw [eq]
-  exact cert _ (by omega) lo
+    (BestFitRemnant.bit s).setWidth 32 = 1#32 <<< (s.toNat - 1) :=
+  BestFitRemnant.bit32 lo hi
 
 /-- Empty-list bitmap readback, including the actual four-byte truncation. -/
 theorem PopPost.bitmap_empty {sp s b bits request before after}

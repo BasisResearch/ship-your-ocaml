@@ -1,4 +1,4 @@
-import OCaml.Vm.Gc.BestFitSearchRoute
+import OCaml.Vm.Gc.BestFitPreservation
 
 /-! Focused standard-axiom audit for the next-size search/pick/pop/split native route.
 The full OCaml.Audit remains the lead integration gate. -/
@@ -222,3 +222,29 @@ The full OCaml.Audit remains the lead integration gate. -/
 #print axioms OCaml.Vm.Gc.BestFitFallback.SearchPost.selected_spec
 #print axioms OCaml.Vm.Gc.BestFitFallback.search_allocate
 #print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.live
+
+/-! Native-return representation and original-extent separation. -/
+#print axioms OCaml.Vm.Gc.BfShape.SmallShape.push
+#print axioms OCaml.Vm.Gc.BfShape.SmallHeaders.congr
+#print axioms OCaml.Vm.Gc.BfShape.SmallHeaders.pop
+#print axioms OCaml.Vm.Gc.BfShape.SmallHeaders.push
+#print axioms OCaml.Vm.Gc.BfShape.SmallPhysical.selected_apart
+#print axioms OCaml.Vm.Gc.BfShape.MapConsistent.set
+#print axioms OCaml.Vm.Gc.BfShape.popped_mem
+#print axioms OCaml.Vm.Gc.BfShape.SmallPhysical.header_nat
+#print axioms OCaml.Vm.Gc.BfShape.SmallPhysical.insertApart
+#print axioms OCaml.Vm.Gc.BestFitRemnant.insertLog_inside
+#print axioms OCaml.Vm.Gc.BestFitRemnant.bit32
+#print axioms OCaml.Vm.Gc.BestFitRemnant.insert_readbacks
+#print axioms OCaml.Vm.Gc.BestFitRemnant.insert_representation
+#print axioms OCaml.Vm.Gc.BestFitRemnant.effect_representation
+#print axioms OCaml.Vm.Gc.BestFitRemnant.Post.representation
+#print axioms OCaml.Vm.Gc.BestFitNext.splitMemory_read
+#print axioms OCaml.Vm.Gc.BestFitNext.splitMemory_header
+#print axioms OCaml.Vm.Gc.BestFitNext.splitOutside_static
+#print axioms OCaml.Vm.Gc.BestFitNext.RouteInput.split_representation
+#print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.representation
+#print axioms OCaml.Vm.Gc.BestFitNext.resultHeader_nat
+#print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.allocated_apart
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.representation
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.allocated_apart

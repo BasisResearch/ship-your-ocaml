@@ -1,5 +1,65 @@
 # Lane a6-gc
 
+## Native next-size returned small representation (2026-10-27)
+
+- `BestFitRemnant.Post.representation` starts at the actual remnant helper
+  post. `insert_readbacks` reads the exact head/link/four-byte map stores
+  for both cursor branches. `insert_representation` and
+  `effect_representation` preserve `SmallShape`, `SmallHeaders` and
+  `MapConsistent`; `finalLists` keeps the zero-word and sweep-deferred
+  branches. Shared `insertLog_inside` supplies the existing helper footprint;
+  `BestFitNext.bit_word` now reuses `BestFitRemnant.bit32`.
+- `BfShape.SmallPhysical` states original physical header-plus-payload
+  extents: every represented payload pointer `b` of size `s` satisfies
+  `heapStart + 8 ≤ b.toNat` and `b.toNat + 8*s < 2^64`; distinct original
+  occurrences have disjoint extents. It is additional to `SmallShape`,
+  which has no full block separation. `selected_apart` derives separation
+  of the selected head from every remaining occurrence; no final shape,
+  post-list uniqueness or intermediate log frame is an entry premise.
+  Production of this stronger original component by native callers is open.
+- `BestFitPreservation.lean:RouteInput.split_representation` (namespace
+  `BestFitNext`) uses retained pick/pop witnesses, original physical
+  extents and original native-stack separation to derive every remaining
+  header/link frame through the split's exact three-store log.
+  `RoutePost.representation` composes with the actual remnant effect and
+  native return. `routeLists` pops the selected head and prepends the
+  remnant at its split-decoded size exactly when `BestFitRemnant.Inserts`
+  holds. All branch decisions use the checked original-data snapshots.
+- `SearchReturned.representation` and `allocated_apart` reuse the actual
+  `SearchPath`/`RoutePath`, with search stack separation supplied by the
+  existing original `SearchInput.sources`. They carry all three represented
+  components to actual returned memory and separate the returned allocated
+  header/payload extent from every final free header/payload extent,
+  including the inserted remnant. `resultHeader_nat` proves the address
+  and nonwrap bounds from the original whole-block bound. The existing
+  `SearchReturned.counter` equation, result/stack/ABI/code/output facts
+  remain available. No instruction proof is rerun or generated output edited.
+- Validation: guarded/capped affected `lake build` of `BfShape`,
+  `BestFitRemnant`, `BestFitNext`, `BestFitNextRoute`, `BestFitSearchRoute`,
+  `BestFitPreservation` and `BestFitNextAudit` passes (1288 jobs).
+  Standalone `lake env lean -M 6000 -j 1` on `BestFitNextAudit` passes:
+  241 declarations, including all 24 new theorems, use only `propext`,
+  `Classical.choice`, `Quot.sound`; no disallowed dependency. The existing
+  `OCaml.Audit` import registers the reports; full `OCaml.Audit` remains
+  the lead gate. Generator drift (`gen_gc_rows.py --check`), collector CFG,
+  discipline (27 rules), abstraction gate and `git diff --check` pass.
+  Every Lean launch used `lean-guarded.py` and `lean-capped.sh`, after
+  `free -g` reported available ≥25 GB, with the inherited 12 GB cgroup and
+  two Lean threads. Logs: `/tmp/a6-pres-checked-build2.log`,
+  `/tmp/a6-pres-focused-axioms.log`, `/tmp/a6-pres-generator.log`,
+  `/tmp/a6-pres-cfg.log`, `/tmp/a6-pres-discipline.log`,
+  `/tmp/a6-pres-abstraction.log`. Initial composed-check elaboration errors
+  were fixed with explicit scalar/address facts and a boundary reflexivity
+  proof, at unchanged proof limits.
+- Open: preservation of the new `SmallPhysical` component itself (needed
+  to reuse this representation theorem on a later allocation), production
+  of original physical extents, original dispatch, other
+  size classes, allocation colors, full allocator readiness and collection.
+  `BarrierGrowthFull` remains G2, `CustomMemCall` remains named, C4 round 2
+  waits for F1 and `GoodF1` is unchanged. Work stays in this worktree;
+  checked edits are left uncommitted for lead review/integration because Git
+  metadata and the landing queue are read-only here.
+
 ## Native next-size bitmap search through caller return (2026-10-27)
 
 - `BestFitSearchRoute.lean:search_allocate` composes the actual fallback

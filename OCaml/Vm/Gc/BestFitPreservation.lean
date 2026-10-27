@@ -1,0 +1,314 @@
+import OCaml.Vm.Gc.BestFitSearchRoute
+
+/-! Representation after native next-size allocation. Original physical extents
+are explicit: their production by allocator callers is still open. All memory
+transport below consumes checked stage posts or their exact bounded store logs. -/
+namespace OCaml.Vm.Gc.BfShape
+open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
+
+theorem popped_mem {lists s b bs t x} (selected : lists s = b :: bs)
+    (member : x ∈ popped lists s bs t) : x ∈ lists t := by
+  by_cases eq : t = s
+  · subst t
+    rw [selected]
+    exact List.mem_cons_of_mem _ (by simpa only [popped,ite_true] using member)
+  · simpa only [popped,if_neg eq] using member
+
+theorem SmallPhysical.header_nat {lists t x} (physical : SmallPhysical lists)
+    (lo : 1 ≤ t) (hi : t ≤ Layout.bf_small_count) (member : x ∈ lists t) :
+    (x-8#64).toNat = x.toNat-8 := by
+  have low := (physical.bounds t lo hi x member).1
+  have bound := x.isLt
+  simp only [BitVec.toNat_sub,BitVec.toNat_ofNat,DlHeap.heapStart] at *
+  omega
+
+/-- Original native-frame separation, only for the observed header and link.
+The search caller already supplies this for every original listed block. -/
+def StackApart (sp : BitVec 64) (lists : Nat → List (BitVec 64)) : Prop :=
+  ∀ t, 1 ≤ t → t ≤ Layout.bf_small_count → ∀ x ∈ lists t,
+    sp.toNat+32 ≤ x.toNat-8 ∨ x.toNat+8 ≤ sp.toNat
+
+theorem SmallPhysical.insertApart {lists s b bs} (physical : SmallPhysical lists)
+    (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) (selected : lists s = b :: bs) :
+    BestFitRemnant.InsertApart b (popped lists s bs) := by
+  constructor
+  · intro t lt ht x hx
+    have sep := physical.selected_apart lo hi selected lt ht hx
+    omega
+  · intro t lt ht x hx
+    have member := popped_mem selected hx
+    have xb := physical.bounds t lt ht x member
+    have xn := physical.header_nat lt ht member
+    have sep := physical.selected_apart lo hi selected lt ht hx
+    rw [xn]
+    exact ⟨by omega,by omega⟩
+end OCaml.Vm.Gc.BfShape
+
+namespace OCaml.Vm.Gc.BestFitNext
+open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
+
+/-- Bounded frame certificate for the split's three actual stores. -/
+structure SplitOutside (sp b : BitVec 64) (a n : Nat) : Prop where
+  counter : a+n ≤ Layout.sym_caml_fl_cur_wsz ∨ Layout.sym_caml_fl_cur_wsz+8 ≤ a
+  header : a+n ≤ (b-8#64).toNat ∨ (b-8#64).toNat+8 ≤ a
+  stack : a+n ≤ sp.toNat ∨ sp.toNat+8 ≤ a
+
+theorem splitMemory_read {sp b request m a n} (outside : SplitOutside sp b a n) :
+    bytesT (splitMemory sp b request m) a n = bytesT m a n := by
+  unfold splitMemory
+  apply bytesT_writeLog_out
+  exact ⟨outside.counter,outside.header,outside.stack,True.intro⟩
+
+theorem splitMemory_header {sp b request m} (geo : SplitGeometry sp b) :
+    sourceHeader b (splitMemory sp b request m) = smallHeader request (sourceHeader b m) := by
+  unfold sourceHeader splitMemory
+  apply word_writeLog_at _ _ 1 _ _ rfl
+  have sep := geo.separate
+  rw [geo.header_nat] at *
+  exact ⟨by dsimp only [splitLog]; omega,True.intro⟩
+
+theorem splitOutside_static {sp b} (geo : SplitGeometry sp b) {a n}
+    (high : a+n ≤ DlHeap.heapStart) (counter : a+n ≤ Layout.sym_caml_fl_cur_wsz ∨
+      Layout.sym_caml_fl_cur_wsz+8 ≤ a) : SplitOutside sp b a n := by
+  have sh := geo.stackHeap
+  have bh := geo.blockHeap
+  refine ⟨counter,Or.inl ?_,Or.inl (by omega)⟩
+  rw [geo.header_nat]
+  omega
+
+/-- The final family is precisely selected-head pop followed by conditional
+remnant insertion, at the size decoded in the actual split snapshot. -/
+def routeLists (sp s b request : BitVec 64) (lists : Nat → List (BitVec 64))
+    (bs : List (BitVec 64)) (m : Std.ExtHashMap Nat (BitVec 8)) :=
+  BestFitRemnant.finalLists b (splitMemory sp b request (poppedMemory sp s b m))
+    (BfShape.popped lists s.toNat bs)
+
+/-- The split prefix preserves the remaining representation. Every nonaliasing
+fact follows from original physical extents and original stack separation. -/
+theorem RouteInput.split_representation {sp s b request lists bs c picked popped}
+    (input : RouteInput sp s b request lists bs c)
+    (physical : BfShape.SmallPhysical lists) (stack : BfShape.StackApart sp lists)
+    (first : PickPost sp s c picked)
+    (second : PopPost sp s b (bytesT c.σ.mem sp.toNat 8) request picked popped) :
+    let m := splitMemory sp b request popped.σ.mem
+    BfShape.SmallShape m (BfShape.popped lists s.toNat bs) ∧
+    BfShape.SmallHeaders m (BfShape.popped lists s.toNat bs) ∧
+    BfShape.MapConsistent m (BfShape.popped lists s.toNat bs) := by
+  have represented := input.popped_shape first second
+  have headers : BfShape.SmallHeaders popped.σ.mem (BfShape.popped lists s.toNat bs) := by
+    apply (input.headers.pop input.selected).congr
+    intro t lo hi x hx
+    have member := BfShape.popped_mem input.selected hx
+    have bound := physical.bounds t lo hi x member
+    apply input.prefix_read first second
+    apply prefix_out_heap input.small
+    rw [physical.header_nat lo hi member]
+    omega
+  have frame : ∀ t, 1 ≤ t → t ≤ Layout.bf_small_count →
+      ∀ x ∈ BfShape.popped lists s.toNat bs t,
+      SplitOutside sp b x.toNat 8 ∧ SplitOutside sp b (x-8#64).toNat 8 := by
+    intro t lo hi x hx
+    have member := BfShape.popped_mem input.selected hx
+    have bounds := physical.bounds t lo hi x member
+    have sep := physical.selected_apart input.positive input.small input.selected lo hi hx
+    have st := stack t lo hi x member
+    have xn := physical.header_nat lo hi member
+    have bn := input.geometry.header_nat
+    have bh := input.geometry.blockHeap
+    simp only [DlHeap.heapStart,Layout.sym_caml_fl_cur_wsz] at bounds bh
+    constructor
+    · exact ⟨Or.inr (by simp only [Layout.sym_caml_fl_cur_wsz]; omega),by rw [bn]; omega,by omega⟩
+    · rw [xn]
+      exact ⟨Or.inr (by simp only [Layout.sym_caml_fl_cur_wsz]; omega),by rw [bn]; omega,by omega⟩
+  have slots : ∀ t, 1 ≤ t → t ≤ Layout.bf_small_count →
+      bytesT (splitMemory sp b request popped.σ.mem) (BfShape.slot t).toNat 8 =
+        bytesT popped.σ.mem (BfShape.slot t).toNat 8 := by
+    intro t lo hi
+    apply splitMemory_read
+    apply splitOutside_static input.geometry
+    · rw [BfShape.slot_toNat t hi]
+      simp only [Layout.bf_small_count] at hi
+      simp only [Layout.sym_bf_small_fl,DlHeap.heapStart]; omega
+    · rw [BfShape.slot_toNat t hi]
+      simp only [Layout.sym_bf_small_fl,Layout.sym_caml_fl_cur_wsz]; omega
+  have bits : BfShape.mapBits (splitMemory sp b request popped.σ.mem) =
+      BfShape.mapBits popped.σ.mem :=
+    splitMemory_read (splitOutside_static input.geometry (by decide) (by decide))
+  refine ⟨represented.1.congr slots (fun t lo hi x hx => splitMemory_read (frame t lo hi x hx).1),
+    headers.congr (fun t lo hi x hx => splitMemory_read (frame t lo hi x hx).2),?_⟩
+  intro t lo hi
+  change (BfShape.mapBits _).getLsbD _ = true ↔ _
+  rw [bits]
+  exact represented.2 t lo hi
+
+/-- Checked native-return preservation, for every existing remnant branch.
+The word counter equation remains available as `post.counter`. -/
+theorem RoutePost.representation {sp s b request lists bs before after}
+    (post : RoutePost sp s b request lists bs before after)
+    (input : RouteInput sp s b request lists bs before)
+    (physical : BfShape.SmallPhysical lists) (stack : BfShape.StackApart sp lists) :
+    BfShape.SmallShape after.σ.mem (routeLists sp s b request lists bs before.σ.mem) ∧
+    BfShape.SmallHeaders after.σ.mem (routeLists sp s b request lists bs before.σ.mem) ∧
+    BfShape.MapConsistent after.σ.mem (routeLists sp s b request lists bs before.σ.mem) := by
+  obtain ⟨picked,popped,path⟩ := post.path_spec
+  have represented := input.split_representation physical stack path.pick path.pop
+  have splitInput := input.split_input path.pick path.pop
+  have small : (BestFitRemnant.size b (splitMemory sp b request popped.σ.mem)).toNat ≤ 16 := by
+    change (sourceSize (sourceHeader b (splitMemory sp b request popped.σ.mem))).toNat ≤ 16
+    rw [splitMemory_header input.geometry,
+      smallHeader_size input.requestPositive splitInput.larger splitInput.small]
+    have := splitInput.small
+    omega
+  have result := BestFitRemnant.effect_representation small input.geometry.blockHeap input.remnant.read
+    represented.1 represented.2.1 represented.2.2
+    (physical.insertApart input.positive input.small input.selected) input.geometry.header_nat
+  have memory : after.σ.mem = writeLog (splitMemory sp b request popped.σ.mem)
+      (BestFitRemnant.effect b (splitMemory sp b request popped.σ.mem)) := by
+    rw [path.complete.memory,completeLog,writeLog_append]
+    rfl
+  have snapshot : poppedMemory sp s b before.σ.mem = popped.σ.mem := by
+    rw [poppedMemory,show pickedMemory s before.σ.mem = picked.σ.mem from path.pick.memory.symm]
+    exact path.pop.memory.symm
+  rw [memory]
+  simpa only [routeLists,snapshot] using result
+
+end OCaml.Vm.Gc.BestFitNext
+
+namespace OCaml.Vm.Gc.BestFitNext
+open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
+
+/-- The allocated header starts immediately after the remnant's physical
+extent. The original whole-block bound prevents every address wrap. -/
+theorem resultHeader_nat {b request hd : BitVec 64}
+    (positive : 1 ≤ request.toNat) (larger : request.toNat < (sourceSize hd).toNat)
+    (small : (sourceSize hd).toNat ≤ 16)
+    (lower : 8 ≤ b.toNat) (upper : b.toNat+8*(sourceSize hd).toNat < 2^64) :
+    (resultHeader b request hd).toNat = b.toNat+8*((sourceSize hd).toNat-request.toNat-1) := by
+  have cert : ∀ s < 17, ∀ r < 17, 1 ≤ r → r < s →
+      ((((BitVec.ofNat 64 s + 1#64 - BitVec.ofNat 64 r) <<< (3 : Nat)) - 8#64)).toNat =
+        8*(s-r) := by decide
+  have req : request = BitVec.ofNat 64 request.toNat := by simp
+  have sz : sourceSize hd = BitVec.ofNat 64 (sourceSize hd).toNat := by simp
+  have offset : ((cutWords request hd <<< (3 : Nat))-8#64).toNat =
+      8*((sourceSize hd).toNat-request.toNat) := by
+    unfold cutWords
+    rw [req,sz]
+    simpa only [BitVec.toNat_ofNat,Nat.mod_eq_of_lt request.isLt,
+      Nat.mod_eq_of_lt (sourceSize hd).isLt] using cert _ (by omega) _ (by omega) positive larger
+  have hn : (b-8#64).toNat = b.toNat-8 := by
+    have := b.isLt
+    simp only [BitVec.toNat_sub,BitVec.toNat_ofNat]
+    omega
+  rw [resultHeader,BitVec.toNat_add,offset,hn,Nat.mod_eq_of_lt (by omega)]
+  omega
+
+/-- Physical separation of the allocated header and all its payload words
+from the represented free header-plus-payload extents. -/
+structure AllocatedApart (a : Nat) (request : BitVec 64)
+    (lists : Nat → List (BitVec 64)) : Prop where
+  bound : a+8*(request.toNat+1) < 2^64
+  separate : ∀ t, 1 ≤ t → t ≤ Layout.bf_small_count → ∀ x ∈ lists t,
+    a+8*(request.toNat+1) ≤ x.toNat-8 ∨ x.toNat+8*t ≤ a
+
+/-- Preservation includes a disjoint allocated result, rather than only
+well-formed links in the remaining lists. -/
+theorem RoutePost.allocated_apart {sp s b request lists bs before after}
+    (post : RoutePost sp s b request lists bs before after)
+    (input : RouteInput sp s b request lists bs before)
+    (physical : BfShape.SmallPhysical lists) :
+    AllocatedApart (resultHeader b request (sourceHeader b before.σ.mem)).toNat request
+      (routeLists sp s b request lists bs before.σ.mem) := by
+  have member : b ∈ lists s.toNat := by rw [input.selected]; simp
+  have bounds := physical.bounds s.toNat input.positive input.small b member
+  have a := resultHeader_nat (b := b) (hd := sourceHeader b before.σ.mem) input.requestPositive (by simpa only [input.size] using input.larger)
+    (by simpa only [input.size] using input.small) (by have := input.geometry.blockHeap; omega)
+    (by simpa only [input.size] using bounds.2)
+  rw [input.size] at a
+  have remnant : (BestFitRemnant.size b
+      (splitMemory sp b request (poppedMemory sp s b before.σ.mem))).toNat =
+      s.toNat-request.toNat-1 := by
+    obtain ⟨picked,popped,path⟩ := post.path_spec
+    have snapshot : poppedMemory sp s b before.σ.mem = popped.σ.mem := by
+      rw [poppedMemory,show pickedMemory s before.σ.mem = picked.σ.mem from path.pick.memory.symm]
+      exact path.pop.memory.symm
+    rw [snapshot]
+    have splitInput := input.split_input path.pick path.pop
+    change (sourceSize (sourceHeader b (splitMemory sp b request popped.σ.mem))).toNat = _
+    rw [splitMemory_header input.geometry,
+      smallHeader_size input.requestPositive splitInput.larger splitInput.small]
+    have old : sourceHeader b popped.σ.mem = sourceHeader b before.σ.mem :=
+      input.prefix_read path.pick path.pop (prefix_out_heap input.small (by
+        rw [input.geometry.header_nat]; have := input.geometry.blockHeap; omega))
+    rw [old,input.size]
+  constructor
+  · rw [a]
+    have := input.larger
+    omega
+  · intro t lo hi x hx
+    rw [a]
+    have old : x ∈ BfShape.popped lists s.toNat bs t →
+        b.toNat+8*(s.toNat-request.toNat-1)+8*(request.toNat+1) ≤ x.toNat-8 ∨
+          x.toNat+8*t ≤ b.toNat+8*(s.toNat-request.toNat-1) := by
+      intro hx
+      have sep := physical.selected_apart input.positive input.small input.selected lo hi hx
+      have := input.larger
+      omega
+    unfold routeLists BestFitRemnant.finalLists at hx
+    split at hx
+    · by_cases eq : t = (BestFitRemnant.size b
+          (splitMemory sp b request (poppedMemory sp s b before.σ.mem))).toNat
+      · simp only [BfShape.inserted,if_pos eq,List.mem_cons] at hx
+        rcases hx with rfl | hx
+        · right
+          rw [eq,remnant]
+          exact Nat.le_refl _
+        · exact old hx
+      · exact old (by simpa only [BfShape.inserted,if_neg eq] using hx)
+    · exact old hx
+
+end OCaml.Vm.Gc.BestFitNext
+
+namespace OCaml.Vm.Gc.BestFitFallback
+open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable BestFitNext
+
+/-- The final family uses the exact native search snapshot, the selected-head
+pop and the remnant wrapper's actual insertion/defer test. -/
+def searchLists (R : Nat → BitVec 64) (s : Nat) (b : BitVec 64)
+    (lists : Nat → List (BitVec 64)) (bs : List (BitVec 64)) (before : Config) :=
+  routeLists (frameSp R) (BitVec.ofNat 64 s) b (R 10) lists bs (searchMemory R before)
+
+/-- Small representation in actual native returned memory, from original
+search data plus explicit original physical extents. The existing counter,
+returned-result and ABI equations remain in `SearchReturned`. -/
+theorem SearchReturned.representation {R lists s b bs before after}
+    (post : SearchReturned R lists s b bs before after)
+    (input : SearchInput R lists before) (physical : BfShape.SmallPhysical lists) :
+    BfShape.SmallShape after.σ.mem (searchLists R s b lists bs before) ∧
+    BfShape.SmallHeaders after.σ.mem (searchLists R s b lists bs before) ∧
+    BfShape.MapConsistent after.σ.mem (searchLists R s b lists bs before) := by
+  obtain ⟨searched,path⟩ := post.path_spec
+  have routeInput := input.route_input path.choice path.search
+  have result := path.allocation.representation routeInput physical (by
+    intro t lo hi x hx
+    exact (input.sources t lo hi x hx).geometry.separate)
+  have snapshot : searchMemory R before = searched.σ.mem := path.search.memory.symm
+  simpa only [searchLists,snapshot] using result
+
+/-- The native search result's allocated block is disjoint from every final
+represented free block, including the reinserted remnant when present. -/
+theorem SearchReturned.allocated_apart {R lists s b bs before after}
+    (post : SearchReturned R lists s b bs before after)
+    (input : SearchInput R lists before) (physical : BfShape.SmallPhysical lists) :
+    AllocatedApart (resultHeader b (R 10) (sourceHeader b before.σ.mem)).toNat (R 10)
+      (searchLists R s b lists bs before) := by
+  obtain ⟨searched,path⟩ := post.path_spec
+  have routeInput := input.route_input path.choice path.search
+  have result := path.allocation.allocated_apart routeInput physical
+  have positive : 1 ≤ s := by have := path.choice.larger; omega
+  have header : sourceHeader b searched.σ.mem = sourceHeader b before.σ.mem :=
+    path.search.read input.toStackConditions
+      (input.sources s positive path.choice.small b (by rw [path.choice.selected]; simp)).header_out
+  have snapshot : searchMemory R before = searched.σ.mem := path.search.memory.symm
+  simpa only [searchLists,snapshot,header] using result
+
+end OCaml.Vm.Gc.BestFitFallback

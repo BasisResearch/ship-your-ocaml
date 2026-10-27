@@ -793,18 +793,23 @@ def writeWindows (v w : BitVec 64) : List W :=
    ⟨(slot w + 8#64).toNat,(slot w + 8#64).toNat + 8⟩,
    ⟨Layout.sym_bf_small_map,Layout.sym_bf_small_map + 4⟩]
 
+/-- Footprint of the actual insertion, for either merge-cursor branch. -/
+theorem insertLog_inside (v w : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) :
+    LogInW (writeWindows v w) (insertLog v w m) := by
+  unfold insertLog
+  split <;> apply logInW_of_forall
+  all_goals intro e member
+  all_goals simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at member
+  · rcases member with ((rfl | rfl | rfl) | rfl) | rfl
+    all_goals simp [writeWindows,InsideW]
+  · rcases member with (rfl | rfl | rfl) | rfl
+    all_goals simp_all [writeWindows,InsideW]
+
 theorem effect_inside (v : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) :
     LogInW (writeWindows v (size v m)) (effect v m) := by
   unfold effect
   split
-  · unfold insertLog
-    split <;> apply logInW_of_forall
-    all_goals intro e member
-    all_goals simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at member
-    · rcases member with ((rfl | rfl | rfl) | rfl) | rfl
-      all_goals simp [writeWindows,InsideW]
-    · rcases member with (rfl | rfl | rfl) | rfl
-      all_goals simp_all [writeWindows,InsideW]
+  · exact insertLog_inside v (size v m) m
   · trivial
 
 /-- Caller readback uses the named footprint rather than assuming that the
@@ -873,5 +878,166 @@ theorem counter_effect (v : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8))
         Layout.sym_bf_small_fl,Layout.sym_bf_small_map] at heap hs hm ⊢
       all_goals omega
   · rfl
+
+
+/-- Bounded scalar certificate for the native SLLW bit. -/
+theorem bit32 {w : BitVec 64} (lo : 1 ≤ w.toNat) (hi : w.toNat ≤ 16) :
+    (bit w).setWidth 32 = 1#32 <<< (w.toNat-1) := by
+  have cert : ∀ n < 17, 1 ≤ n →
+      (bit (BitVec.ofNat 64 n)).setWidth 32 = 1#32 <<< (n-1) := by decide
+  have eq : w = BitVec.ofNat 64 w.toNat := by simp
+  conv => lhs; rw [eq]
+  exact cert _ (by omega) lo
+
+/-- Readbacks of the actual head/link/map stores, without expanding memory. -/
+structure InsertReadbacks (v w : BitVec 64) (m m' : Std.ExtHashMap Nat (BitVec 8)) : Prop where
+  head : bytesT m' (slot w).toNat 8 = v
+  link : bytesT m' v.toNat 8 = BestFitRemnant.head w m
+  bits : BfShape.mapBits m' = BfShape.mapBits m ||| (1#32 <<< (w.toNat-1))
+
+theorem insert_readbacks {v w : BitVec 64} {m : Std.ExtHashMap Nat (BitVec 8)}
+    (lo : 1 ≤ w.toNat) (hi : w.toNat ≤ 16)
+    (heap : Vsa.Sim.DlHeap.heapStart ≤ v.toNat) :
+    InsertReadbacks v w m (writeLog m (insertLog v w m)) := by
+  have hs := slot_nat hi
+  have hm := merge_nat hi
+  constructor
+  · unfold insertLog
+    split
+    all_goals apply word_writeLog_at _ _ 2 _ _ rfl
+    all_goals apply outLRange_of_forall
+    all_goals intro e member
+    all_goals simp only [List.cons_append,List.nil_append,List.drop_succ_cons,List.drop_zero,
+      List.mem_cons,List.not_mem_nil,or_false] at member
+    · rcases member with rfl | rfl
+      all_goals dsimp only
+      all_goals rw [hs]
+      · rw [hm]; omega
+      · simp only [Layout.sym_bf_small_map,Layout.sym_bf_small_fl] at hs ⊢; omega
+    · subst member
+      dsimp only
+      rw [hs]
+      simp only [Layout.sym_bf_small_map,Layout.sym_bf_small_fl]; omega
+  · unfold insertLog
+    split
+    all_goals apply word_writeLog_at _ _ 1 _ _ rfl
+    all_goals apply outLRange_of_forall
+    all_goals intro e member
+    all_goals simp only [List.cons_append,List.nil_append,List.drop_succ_cons,List.drop_zero,
+      List.mem_cons,List.not_mem_nil,or_false] at member
+    · rcases member with rfl | rfl | rfl
+      all_goals dsimp only
+      · rw [hs]; simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_bf_small_fl] at heap ⊢; omega
+      · rw [hm]; simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_bf_small_fl] at heap ⊢; omega
+      · simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_bf_small_map] at heap ⊢; omega
+    · rcases member with rfl | rfl
+      all_goals dsimp only
+      · rw [hs]; simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_bf_small_fl] at heap ⊢; omega
+      · simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_bf_small_map] at heap ⊢; omega
+  · rw [BfShape.mapBits,insertLog,writeLog_append,writeLog_append,word32_writeLog,
+      BitVec.setWidth_or,bit32 lo hi]
+    rw [BitVec.or_comm]
+    congr 1
+    simp only [read4_value,Functions.sign_extend,Sail.BitVec.signExtend,BfShape.mapBits]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    rw [BitVec.getLsbD_setWidth,BitVec.getLsbD_signExtend]
+    simp only [hi,show i < 64 by omega,decide_true,ite_true,Bool.true_and]
+
+/-- Original helper-entry separation of the new link from the represented
+free blocks' link and header windows. The route derives it from physical
+extents; this is not an assumption about the returned lists. -/
+structure InsertApart (v : BitVec 64) (lists : Nat → List (BitVec 64)) : Prop where
+  links : ∀ t, 1 ≤ t → t ≤ Layout.bf_small_count → ∀ x ∈ lists t,
+    x.toNat+8 ≤ v.toNat ∨ v.toNat+8 ≤ x.toNat
+  headers : ∀ t, 1 ≤ t → t ≤ Layout.bf_small_count → ∀ x ∈ lists t,
+    Vsa.Sim.DlHeap.heapStart ≤ (x-8#64).toNat ∧
+    ((x-8#64).toNat+8 ≤ v.toNat ∨ v.toNat+8 ≤ (x-8#64).toNat)
+
+/-- Actual insertion preserves the represented lists, headers and bitmap. -/
+theorem insert_representation {v w m lists} (lo : 1 ≤ w.toNat) (hi : w.toNat ≤ 16)
+    (heap : Vsa.Sim.DlHeap.heapStart + 8 ≤ v.toNat) (window : ReadWindow v 8)
+    (shape : BfShape.SmallShape m lists) (headers : BfShape.SmallHeaders m lists)
+    (map : BfShape.MapConsistent m lists) (apart : InsertApart v lists)
+    (headerNat : (v-8#64).toNat = v.toNat-8)
+    (size : bytesT m (v-8#64).toNat 8 >>> (10 : Nat) = w) :
+    let m' := writeLog m (insertLog v w m)
+    BfShape.SmallShape m' (BfShape.inserted lists w.toNat v) ∧
+    BfShape.SmallHeaders m' (BfShape.inserted lists w.toNat v) ∧
+    BfShape.MapConsistent m' (BfShape.inserted lists w.toNat v) := by
+  have read := insert_readbacks (m := m) lo hi (by omega : Vsa.Sim.DlHeap.heapStart ≤ v.toNat)
+  have frame : ∀ a n, OutWRange (writeWindows v w) a n →
+      bytesT (writeLog m (insertLog v w m)) a n = bytesT m a n :=
+    fun a n h => bytesT_writeLog_out _ (OCaml.Vm.Sim.outLRange_of_windows (insertLog_inside v w m) h)
+  have oldHeaders := headers.congr (fun t lt ht x hx => frame _ _
+    (writeWindows_out_heap hi (apart.headers t lt ht x hx).1 (apart.headers t lt ht x hx).2))
+  refine ⟨shape.push ?_ window (by omega) ?_ ?_ ?_ ?_,oldHeaders.push ?_,map.set lo hi read.bits⟩
+  · intro eq
+    rw [eq] at heap
+    simp only [BitVec.toNat_ofNat,Vsa.Sim.DlHeap.heapStart] at heap
+    omega
+  · simpa only [← slot_eq] using read.head
+  · simpa only [head,slot_eq] using read.link
+  · intro t lt ht ne
+    apply frame
+    have hs := slot_nat hi
+    have hm := merge_nat hi
+    have ht' := BfShape.slot_toNat t ht
+    simp only [Layout.bf_small_count] at ht
+    simp only [writeWindows,OutWRange]
+    rw [ht',hs,hm]
+    simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_caml_fl_cur_wsz,
+      Layout.sym_bf_small_fl,Layout.sym_bf_small_map] at heap ⊢
+    refine ⟨by omega,by omega,?_,by omega,by omega,True.intro⟩
+    by_cases h : t < w.toNat <;> omega
+  · intro t lt ht x hx
+    exact frame _ _ (writeWindows_out_heap hi (shape.heap t lt ht x hx) (apart.links t lt ht x hx))
+  · rw [frame _ _ (writeWindows_out_heap hi (by rw [headerNat]; omega)
+      (by rw [headerNat]; exact Or.inl (by omega))),size]
+    simp
+
+/-- The wrapper's final list family retains zero-word and sweep deferral. -/
+def finalLists (v : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8))
+    (lists : Nat → List (BitVec 64)) : Nat → List (BitVec 64) :=
+  if Inserts v m then BfShape.inserted lists (size v m).toNat v else lists
+
+
+/-- Memory form of the wrapper rule, using its exact branch-dependent log. -/
+theorem effect_representation {v m lists}
+    (small : (size v m).toNat ≤ 16)
+    (heap : Vsa.Sim.DlHeap.heapStart + 8 ≤ v.toNat) (window : ReadWindow v 8)
+    (shape : BfShape.SmallShape m lists) (headers : BfShape.SmallHeaders m lists)
+    (map : BfShape.MapConsistent m lists) (apart : InsertApart v lists)
+    (headerNat : (v-8#64).toNat = v.toNat-8) :
+    BfShape.SmallShape (writeLog m (effect v m)) (finalLists v m lists) ∧
+    BfShape.SmallHeaders (writeLog m (effect v m)) (finalLists v m lists) ∧
+    BfShape.MapConsistent (writeLog m (effect v m)) (finalLists v m lists) := by
+  unfold finalLists effect
+  by_cases ins : Inserts v m
+  · rw [if_pos ins,if_pos ins]
+    have positive : 1 ≤ (size v m).toNat := by
+      have nz : (size v m).toNat ≠ 0 := by
+        intro h
+        apply ins.1
+        apply BitVec.eq_of_toNat_eq
+        simpa using h
+      omega
+    exact insert_representation positive small heap window shape headers map apart headerNat rfl
+  · rw [if_neg ins,if_neg ins]
+    exact ⟨shape,headers,map⟩
+
+/-- All wrapper branches preserve representation in the actual returned memory. -/
+theorem Post.representation {ra v before after lists} (post : Post ra v before after)
+    (small : (size v before.σ.mem).toNat ≤ 16)
+    (heap : Vsa.Sim.DlHeap.heapStart + 8 ≤ v.toNat) (window : ReadWindow v 8)
+    (shape : BfShape.SmallShape before.σ.mem lists)
+    (headers : BfShape.SmallHeaders before.σ.mem lists)
+    (map : BfShape.MapConsistent before.σ.mem lists) (apart : InsertApart v lists)
+    (headerNat : (v-8#64).toNat = v.toNat-8) :
+    BfShape.SmallShape after.σ.mem (finalLists v before.σ.mem lists) ∧
+    BfShape.SmallHeaders after.σ.mem (finalLists v before.σ.mem lists) ∧
+    BfShape.MapConsistent after.σ.mem (finalLists v before.σ.mem lists) := by
+  rw [post.memory]
+  exact effect_representation small heap window shape headers map apart headerNat
 
 end OCaml.Vm.Gc.BestFitRemnant
