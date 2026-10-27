@@ -20,14 +20,14 @@ None currently.
 | --- | --- | --- |
 | a0-boot / a0-lib | Reset-through-atom milestone landed (`9c443c79`, audited at `bb55a4e5`); reset-to-cut and `libHeap` remain open | `syo-wt/a0-boot-next` |
 | a1-prims / bprime | Named-value representation and primitive returns, then `caml_format_int`; retain existing WIP | `syo-wt/a1-prims-next`, `syo-wt/bprime` |
-| a6-gc | G2 pick/pop landed as `6d002aa5`; refcount transport in the next train | `syo-wt/a6-gc`, `syo-wt/a6-gc-next2` |
+| a6-gc | G2 pick/pop landed as `6d002aa5`; refcount transport landed as `1960311a` | `syo-wt/a6-gc`, `syo-wt/a6-gc-next2` |
 | foreman / a1-arms / a2-sem | C_CALL arity landed; shared invariants, table assembly, integration | `syo-wt/a1-arms`; main |
 
 The lead now uses separate `codex exec` workers (`gpt-6.1-sol`, high reasoning),
 at most two at a time, launched through `codexwork.sh`. Built-in proof agents
 have stopped. The current Sol tasks finish physical named-node ownership/separation and
-generalize the formatter caller layout. Startup, G2 pick/pop and foreman tooling landed. Refcount transport and the
-repaired byte-string library are in the current train. Workers inherit a 12 GB systemd scope; the lead handles
+generalize the formatter caller layout. Startup, G2 pick/pop, refcount transport, all-byte C-string/strcmp, and foreman
+tooling landed. The current proof work remains in the two Sol worktrees. Workers inherit a 12 GB systemd scope; the lead handles
 Git and landings outside their workspace-write sandbox. Known failed routes are in `docs/lanes/DEAD-ENDS.md`.
 
 All F1 opcode rows and interpreter entry/halt composition are present. The
@@ -50,11 +50,13 @@ in `bprime` from `2c0a97a9`; its active worker is porting generated edits into t
 
 The independent all-byte C-string/strcmp extraction passed generation checks
 and its sole full-gate regression in `Uncaught.FatalNames` is repaired and
-focused-audited at `4e2ba558`; the full gate is queued. The formatter Sol worker
+focused-audited, then landed as `c5a18e5a` after the full gate. The formatter Sol worker
 is now active in `bprime`.
 The previous workers stopped on the October 21 usage limit; its logged October
 27 reset time has passed, so the lead is restarting separate Sol processes.
 
 G2 validation: the landing gate built 6029 jobs and audited 8325 declarations
-before pushing `6d002aa5`. This is search/pick/pop as separate summaries; split,
+before pushing `6d002aa5`. The refcount/library train passed all stages and
+audited 8338 declarations before pushing `c5a18e5a`. G2 still has
+search/pick/pop as separate summaries; split,
 remnant-call composition, allocator readiness and full collection remain open.
