@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 21:18 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 21:27 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,38 +18,30 @@ None currently.
 
 ## Landing train
 
-Published `origin/main` is `71547e46`. The physical named-table migration
-landed at `7e7a052a`: 6,033 build jobs, 8,424 theorem audits, all generator/ELF
-checks and 329 OS traces (zero rejected). The next two batches are:
+Published `origin/main` is `333e9614`. The insertion/formatter batch passed
+6,049 build jobs, 8,510 allowed-axiom reports, all generator/ELF checks,
+and 329 OS traces (zero rejected). It includes the complete first empty
+skiplist insertion, native `%ld` vsnprintf wrapper, concrete caller witness
+and actual short formatter continuation to initialized-string entry.
 
-1. Complete counted channel returns, `71547e46`, in `syo-wt/a1-prims-next`.
-   Landed through the full gate: 6,038 build jobs, 8,476 theorem audits,
-   all generators/ELF checks and 329 OS traces (zero rejected). The final worker check passed
-   3,687 build jobs and 31 focused axiom reports; earlier count/setup
-   checkpoints passed 52 and 27 reports. Actual `CustomMemCall` posts carry
-   the count increment; native refcount stores/no-wrap facts reconstruct
-   complete channel counts at the same returned placement. The unary arm
-   retains that placement through its suffix.
-2. First empty-skiplist insertion plus native decimal formatter, `8b1f1377`,
-   staged in `syo-wt/a6-gc` on top of the landed channel bundle. Both workers
-   finished and the lead reviewed/committed their results. First insertion
-   passes 2,720 jobs, 310 standard-axiom audits and startup generator drift.
-   The `%ld` wrapper passes 978 jobs, its concrete caller check, 34 focused
-   reports, stdio generator drift, hole/discipline/abstraction gates.
-   The batch also includes the checked short formatter continuation. Its
-   full integration is running after a coherent cache handoff.
+The preceding counted-channel return bundle landed at `71547e46` with
+6,038 jobs and 8,476 theorem reports. Physical named ownership landed at
+`7e7a052a`; both passed the same full gate.
 
-Local `main` includes the second reviewed batch to support subsequent worker
-work; that batch has not yet passed the full gate or reached origin.
-The earlier worker WIP and reviewed tips are preserved on `keep/*` branches.
+The next reviewed batch in `syo-wt/bprime` contains initialized-string
+allocation (`1150a772`), G2 split/remnant return (`ecca3e24`), and the complete
+pick/pop/split route (`78081098`). It will run the full gate after a coherent
+cache handoff from the now-idle, fully checked insertion worktree.
+Local main contains these reviewed results; they are not yet published.
+Prior WIP and reviewed tips remain preserved on `keep/*` branches.
 
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| G2 Sol | Compose the complete next-size pick/pop/split native return | `syo-wt/a6-gc-next2` |
+| Cut allocator Sol | Prove captured-cut allocator readiness and coverage for libHeap | `syo-wt/a0-boot-next` |
 | Counted-loop Sol | Carry actual channel/custom counts through entry and the ordinary F1 loop | `syo-wt/a1-prims-next` |
-| Lead | Insertion/formatter gate; initialized-string and G2 split landing batch | main; `syo-wt/a6-gc`, `syo-wt/bprime` |
+| Lead | Initialized-string and G2 route integration; prepare next G2 continuation | main; `syo-wt/bprime` |
 
 The first G2 split attempt reached the 12 GB cgroup cap while building
 `BestFitNext`, after its generated split module passed 609 jobs. WIP is
@@ -59,7 +51,10 @@ the expensive declarations under a 6 GB diagnostic limit. The checked result
 generator and discipline checks. Bounded scalar/log/access certificates
 replace the failed broad normalization. The actual split, remnant insertion
 and original native return compose with exact counter and selected frame
-facts; complete entry-to-return pick/pop/split composition is next. Task rules now require the
+facts. Complete pick/pop/split composition is checked as `78081098`:
+1,282 jobs, 199 allowed-axiom reports and 2 axiom-free declarations.
+Original-memory list/header/map facts supply each intermediate input;
+bitmap search before this route and final allocator preservation remain open. Task rules now require the
 build guard to stop failed or 10 GiB builds before the worker cap.
 
 The first-insertion summary executes the actual prefix, `stat_checked` call,
@@ -97,8 +92,8 @@ selected ledger; named resource reserves and registration remain open.
 Reset-through-atoms is landed (`9c443c79`, audited at `bb55a4e5`), but full
 reset-to-cut/Loaded and `libHeap` are open. A captured loaded memory snapshot
 is not reset execution. G2 pick/pop landed (`6d002aa5`); split/remnant is checked for the
-next landing batch; whole-route composition, allocator readiness and full
-collection remain open. The a2-sem uncaught-path
+next landing batch, including its complete pick/pop/split route. Bitmap
+search composition, allocator readiness and full collection remain open. The a2-sem uncaught-path
 WIP is preserved and lower priority because GoodF1 excludes that path.
 
 Queued tasks: ordinary counted-loop migration, actual startup/backtrace
