@@ -25,8 +25,8 @@ None currently.
 
 The lead now uses separate `codex exec` workers (`gpt-6.1-sol`, high reasoning),
 at most two at a time, launched through `codexwork.sh`. Built-in proof agents
-have stopped. The current Sol tasks strengthen physical named-node ownership/separation and
-repair the byte-string consumer regression. Startup and foreman tooling landed. G2 pick/pop and refcount transport are
+have stopped. The current Sol tasks finish physical named-node ownership/separation and
+generalize the formatter caller layout. Startup and foreman tooling landed. G2 pick/pop and refcount transport are
 queued together for lead integration. Workers inherit a 12 GB systemd scope; the lead handles
 Git and landings outside their workspace-write sandbox. Known failed routes are in `docs/lanes/DEAD-ENDS.md`.
 
@@ -46,10 +46,11 @@ reports, preserved at `7c6bc6c1`. Its full consumer build remains incomplete.
 The named worker is resuming physical ownership/separation WIP after a usage-limit stop. This is an invariant
 design task, not a user-only blocker. The next task supplies physical ownership
 and separation, then migrates payload consumers. The formatter WIP is preserved
-in `bprime` at `2c0a97a9`; its next worker must port generated edits into templates.
+in `bprime` from `2c0a97a9`; its active worker is porting generated edits into templates.
 
 The independent all-byte C-string/strcmp extraction passed generation checks
-but its full gate found one stale ASCII bound in `Uncaught.FatalNames`. A Sol
-repair is assigned before its landing. The formatter slot remains ready.
+and its sole full-gate regression in `Uncaught.FatalNames` is repaired and
+focused-audited at `4e2ba558`; the full gate is queued. The formatter Sol worker
+is now active in `bprime`.
 The previous workers stopped on the October 21 usage limit; its logged October
 27 reset time has passed, so the lead is restarting separate Sol processes.
