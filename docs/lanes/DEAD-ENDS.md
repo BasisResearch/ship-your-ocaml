@@ -256,3 +256,16 @@
   yet isolated. Preserve the WIP and diagnose source prefixes with
   `lean-guarded.py`, `lean -M 6000 -j 1 --profile`; do not repeat the broad
   build unchanged or raise the limits.
+
+- 2026-10-27 G2 next-size split diagnosis: the temporary source prefix
+  `/tmp/a6-next2-prefix.lean`, checked through the guard with
+  `lake env lean -M 6000 -j 1 --profile`, isolates `BestFitNext.split_writes`
+  as the first kernel excessive-memory failure. Broad `simp` over the
+  generated chunk logs expands symbolic address observations. `simp only`
+  over the log/scalar certificates checks without that expansion.
+  The subsequent monolithic `split_access` also exhausts kernel memory;
+  merely narrowing its address simplifier still times out at the final
+  stack store. Compose bounded access plans with `accessPlan_append` and
+  the existing `Native.nextSplit_piece*_regs/loads` certificates. The
+  repaired complete continuation checks at the same memory/proof limits;
+  do not restore whole-prefix reduction or increase budgets.

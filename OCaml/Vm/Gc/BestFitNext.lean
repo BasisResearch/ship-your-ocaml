@@ -5,6 +5,7 @@ import OCaml.Vm.Gc.Generated.BestFitSplit
 import OCaml.Vm.Primitives.MemoryFrame
 import OCaml.Vm.Sim.LogWindow
 import Vsa.Sim.GRegsLookup
+import OCaml.Vm.Boot.Startup.DomainRecord
 
 /-! # Best-fit: the next nonempty small list
 
@@ -560,9 +561,12 @@ theorem split_writes (sp b request : BitVec 64) (bh bc : List (BitVec 8)) :
       splitLog sp b request (bytesVal .ld bh) (bytesVal .ld bc) := by
   change wlogM Native.nextSplit_body (Native.nextSplit_input (splitR sp b request)) [bh,bc] = _
   rw [Native.nextSplit_log_chunks]
-  simp [Native.nextSplit_piece0_log,Native.nextSplit_piece1_log,Native.nextSplit_piece2_log,
+  simp only [Native.nextSplit_piece0_log,Native.nextSplit_piece1_log,Native.nextSplit_piece2_log,
     Native.nextSplit_piece3_log,splitR,splitLog,removedCount,smallHeader,resultHeader,cutWords,
-    sourceSize,Sail.shift_bits_left,Sail.shift_bits_right,BitVec.sub_eq_add_neg,Layout.sym_caml_fl_cur_wsz]
+    sourceSize,Sail.shift_bits_left,Sail.shift_bits_right,BitVec.sub_eq_add_neg,
+    List.getD_cons_zero,List.getD_cons_succ,List.nil_append,List.cons_append,List.append_nil,
+    Nat.reduceEqDiff,ite_true,ite_false,BitVec.add_zero]
+  congr 1
 
 structure SplitCallRegs (sp b : BitVec 64) (L : GRegs) : Prop where
   stack : lookupG 2 L = some sp
@@ -599,26 +603,63 @@ structure SplitInput (sp b request : BitVec 64) (c : Config) : Prop where
   small : (sourceSize (sourceHeader b c.σ.mem)).toNat ≤ 16
   aligned : (bytesT c.σ.mem (sp + 24#64).toNat 8).toNat % 4 = 0
 
-macro "next_address" : tactic => `(tactic|
-  simp [Native.splitBlock,splitRegs,blk,bf_allocateX74e8Seg,eaddrM,mkLine,decodeM,runGM,
-    wlogM,stepGM,stepLdsM,wvalM,srcVal,lookupG,eraseG,imm20Of,shamtOf,
-    Sail.BitVec.extractLsb,Functions.sign_extend,Sail.BitVec.signExtend,
-    sourceSize,cutWords,smallHeader,resultHeader,BitVec.sub_eq_add_neg,
-    BestFitRemnant.shift4,Layout.sym_caml_fl_cur_wsz])
+theorem split_access_head (m : Std.ExtHashMap Nat (BitVec 8)) (sp b request : BitVec 64)
+    (bh bc : List (BitVec 8)) (header : ReadWindow (b - 8#64) 8)
+    (ph : LPins8 m (b - 8#64).toNat bh) (pc : LPins8 m Layout.sym_caml_fl_cur_wsz bc) :
+    AccessPlan m (Native.nextSplit_input (splitR sp b request)) [bh,bc] Native.nextSplit_piece0 := by
+  simp only [Native.nextSplit_piece0,AccessPlan]
+  chain_facts True.intro
+  · apply header.ld rfl ?_ ph
+    change b + Functions.sign_extend (m := 64) (4088#12) = b - 8#64
+    rw [show Functions.sign_extend (m := 64) (4088#12) = - (8#64) by decide]
+    exact (BitVec.sub_eq_add_neg _ _).symm
+  · apply BestFitRemnant.cur_write.read.ld rfl ?_ pc
+    rfl
+
+theorem split_access_count (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64)
+    (loads : List (List (BitVec 8))) :
+    AccessPlan m (Native.nextSplit_piece1_input R loads) [] Native.nextSplit_piece1 := by
+  simp only [Native.nextSplit_piece1,AccessPlan]
+  chain_facts True.intro
+  apply BestFitRemnant.cur_write.sd rfl
+  rfl
+
+theorem split_access_tail (m : Std.ExtHashMap Nat (BitVec 8)) (sp b request : BitVec 64)
+    (bh bc : List (BitVec 8)) (header : WriteWindow (b - 8#64) 8) (stack : WriteWindow sp 8) :
+    AccessPlan m (Native.nextSplit_piece3_input (splitR sp b request) [bh,bc]) [] Native.nextSplit_piece3 := by
+  simp only [Native.nextSplit_piece3,AccessPlan]
+  chain_facts True.intro
+  · apply header.sd rfl ?_
+    change b + Functions.sign_extend (m := 64) (4088#12) = b - 8#64
+    rw [show Functions.sign_extend (m := 64) (4088#12) = -(8#64) by decide]
+    exact (BitVec.sub_eq_add_neg _ _).symm
+  · apply stack.sd rfl ?_
+    change sp + Functions.sign_extend (m := 64) (0#12) = sp
+    rw [show Functions.sign_extend (m := 64) (0#12) = 0#64 by decide,BitVec.add_zero]
 
 theorem split_access {sp b request c} (input : SplitInput sp b request c) :
     ChainAccess c.σ.mem (splitRegs sp b request) (splitLoads b c.σ.mem) [Native.splitBlock] := by
-  apply ChainAccess.cons ⟨?_,trivial⟩ ChainAccess.nil
-  simp only [Native.splitBlock,bf_allocateX74e8Seg,List.getD_cons_zero,AccessPlan]
-  chain_facts True.intro
-  · apply input.header.read.ld rfl (by next_address)
-    simpa [stepMemM,mkLine,decodeM,stepLdsM,splitLoads] using read8_pins c.σ.mem (b - 8#64).toNat
-  · apply BestFitRemnant.cur_write.read.ld rfl (by next_address)
-    simpa [stepMemM,mkLine,decodeM,stepLdsM,splitLoads,Layout.sym_caml_fl_cur_wsz] using
-      read8_pins c.σ.mem Layout.sym_caml_fl_cur_wsz
-  · apply BestFitRemnant.cur_write.sd rfl (by next_address)
-  · apply input.header.sd rfl (by next_address)
-  · apply input.stack.sd rfl (by next_address)
+  apply ChainAccess.cons (b := Native.splitBlock) ⟨?_,True.intro⟩ ChainAccess.nil
+  change AccessPlan _ (Native.nextSplit_input (splitR sp b request)) _
+    (Native.nextSplit_piece0 ++ (Native.nextSplit_piece1 ++ (Native.nextSplit_piece2 ++ Native.nextSplit_piece3)))
+  let loads := splitLoads b c.σ.mem
+  apply accessPlan_append (split_access_head _ _ _ _ _ _ input.header.read (read8_pins _ _) (read8_pins _ _))
+  change AccessPlan _ (runGM Native.nextSplit_piece0 (Native.nextSplit_piece0_input (splitR sp b request) loads) loads)
+    (ldsRunM Native.nextSplit_piece0 loads) _
+  rw [Native.nextSplit_piece0_regs (splitR sp b request) loads,
+    Native.nextSplit_piece0_loads (splitR sp b request) loads]
+  apply accessPlan_append (split_access_count _ _ loads)
+  change AccessPlan _ (runGM Native.nextSplit_piece1 (Native.nextSplit_piece1_input (splitR sp b request) loads) loads.tail.tail)
+    (ldsRunM Native.nextSplit_piece1 loads.tail.tail) _
+  rw [Native.nextSplit_piece1_regs (splitR sp b request) loads,
+    Native.nextSplit_piece1_loads (splitR sp b request) loads]
+  apply accessPlan_append (show AccessPlan _ _ [] Native.nextSplit_piece2 from by
+    simp only [Native.nextSplit_piece2,AccessPlan]; chain_facts True.intro)
+  change AccessPlan _ (runGM Native.nextSplit_piece2 (Native.nextSplit_piece2_input (splitR sp b request) loads) loads.tail.tail)
+    (ldsRunM Native.nextSplit_piece2 loads.tail.tail) _
+  rw [Native.nextSplit_piece2_regs (splitR sp b request) loads,
+    Native.nextSplit_piece2_loads (splitR sp b request) loads]
+  exact split_access_tail _ _ _ _ _ _ input.header input.stack
 
 structure SplitPrepared (sp b request : BitVec 64) (before after : Config) : Prop where
   machine : BlockPost [Native.splitBlock] splitPc (splitRegs sp b request) (splitLoads b before.σ.mem) before after
@@ -633,7 +674,7 @@ structure SplitPrepared (sp b request : BitVec 64) (before after : Config) : Pro
 /-- Execute the decoded split writes; no split postcondition is assumed. -/
 theorem prepare_split {sp b request c} (input : SplitInput sp b request c) :
     FnSummary splitPc (fun d => d = c) (SplitPrepared sp b request c) := by
-  have facts := chainPlan_facts (code_of input.code (by intro x h; simpa [allBlocks,Native.splitBlock,blk] using h))
+  have facts := chainPlan_facts (code_of input.code (by intro x h; have hx := List.mem_singleton.mp h; subst x; simp [allBlocks,Native.splitBlock,blk]))
     (split_access input)
   have summary := block_summary [Native.splitBlock] splitPc (splitRegs sp b request) (splitLoads b c.σ.mem) c
     ⟨input.good,input.minstret,input.registers,by change KeysOK [2,11,14]; decide,
@@ -648,7 +689,402 @@ theorem prepare_split {sp b request c} (input : SplitInput sp b request c) :
   · rw [PCAt,post.pc]; rfl
   · rw [post.memory]
     change writeLog _ (wlogM Native.splitBlock.body _ _) = _
-    rw [splitLoads,split_writes,read8_value,read8_value]
+    simp only [SegEvalState.init,splitLoads]
+    rw [split_writes,read8_value,read8_value]
     rfl
+
+/-- Scalar decoding of the actual split header, including a zero-word remnant. -/
+theorem smallHeader_size {request hd : BitVec 64} (positive : 1 ≤ request.toNat)
+    (larger : request.toNat < (sourceSize hd).toNat) (small : (sourceSize hd).toNat ≤ 16) :
+    (sourceSize (smallHeader request hd)).toNat = (sourceSize hd).toNat - request.toNat - 1 := by
+  have cert : ∀ s < 17, ∀ r < 17, 1 ≤ r → r < s →
+      (sourceSize (((BitVec.ofNat 64 s + 1#64 - BitVec.ofNat 64 r) <<< (10 : Nat)) - 1797#64)).toNat = s-r-1 := by decide
+  have req : request = BitVec.ofNat 64 request.toNat := by simp
+  have sz : sourceSize hd = BitVec.ofNat 64 (sourceSize hd).toNat := by simp
+  unfold smallHeader cutWords
+  rw [req,sz]
+  simpa only [BitVec.toNat_ofNat,Nat.mod_eq_of_lt request.isLt,
+    Nat.mod_eq_of_lt (sourceSize hd).isLt] using cert _ (by omega) _ (by omega) positive larger
+
+theorem SplitGeometry.header_nat {sp b} (geo : SplitGeometry sp b) :
+    (b - 8#64).toNat = b.toNat - 8 := by
+  have bound := b.isLt
+  have lower := geo.blockHeap
+  simp only [BitVec.toNat_sub,BitVec.toNat_ofNat,Vsa.Sim.DlHeap.heapStart] at *
+  omega
+
+theorem SplitGeometry.return_nat {sp b} (geo : SplitGeometry sp b) :
+    (sp + 24#64).toNat = sp.toNat + 24 := by
+  rw [BitVec.toNat_add]
+  simp only [BitVec.toNat_ofNat]
+  exact Nat.mod_eq_of_lt (by have := geo.stackRoom; omega)
+
+/-- Readbacks of the real three-store prefix. -/
+structure SplitReadbacks (sp b request : BitVec 64) (before after : Config) : Prop where
+  header : sourceHeader b after.σ.mem = smallHeader request (sourceHeader b before.σ.mem)
+  counter : bytesT after.σ.mem Layout.sym_caml_fl_cur_wsz 8 =
+    removedCount (bytesT before.σ.mem Layout.sym_caml_fl_cur_wsz 8) (sourceHeader b before.σ.mem)
+  saved : bytesT after.σ.mem sp.toNat 8 = resultHeader b request (sourceHeader b before.σ.mem)
+  returnWord : bytesT after.σ.mem (sp + 24#64).toNat 8 = bytesT before.σ.mem (sp + 24#64).toNat 8
+
+theorem SplitPrepared.readbacks {sp b request before after}
+    (post : SplitPrepared sp b request before after) (geo : SplitGeometry sp b) :
+    SplitReadbacks sp b request before after := by
+  have hn := geo.header_nat
+  have rn := geo.return_nat
+  have sh := geo.stackHeap
+  have bh := geo.blockHeap
+  have sep := geo.separate
+  simp only [Vsa.Sim.DlHeap.heapStart] at sh bh
+  constructor
+  · rw [sourceHeader,post.memory]
+    apply word_writeLog_at _ _ 1 _ _ rfl
+    exact ⟨by dsimp only [splitLog]; rw [hn]; omega,True.intro⟩
+  · rw [post.memory]
+    apply word_writeLog_at _ _ 0 _ _ rfl
+    exact ⟨by dsimp only [splitLog]; rw [hn]; simp only [Layout.sym_caml_fl_cur_wsz]; omega,
+      by dsimp only [splitLog]; simp only [Layout.sym_caml_fl_cur_wsz]; omega,True.intro⟩
+  · rw [post.memory]
+    exact word_writeLog_at _ _ 2 _ _ rfl True.intro
+  · rw [post.memory]
+    apply bytesT_writeLog_out
+    exact ⟨by dsimp only [splitLog]; rw [rn]; simp only [Layout.sym_caml_fl_cur_wsz]; omega,
+      by dsimp only [splitLog]; rw [rn,hn]; omega,
+      by dsimp only [splitLog]; rw [rn]; omega,True.intro⟩
+
+structure RemnantPath (sp b request : BitVec 64) (before after middle callee : Config) : Prop where
+  split : SplitPrepared sp b request before middle
+  callMemory : callee.σ.mem = middle.σ.mem
+  remnant : BestFitRemnant.Post Native.call.link b callee after
+
+/-- Execute the actual remnant wrapper from the split's generated JAL. -/
+structure RemnantReturned (sp b request : BitVec 64) (before after : Config) : Prop where
+  path : ∃ middle callee, RemnantPath sp b request before after middle callee
+  good : GoodState after.σ
+  tick : after.tick < 2
+  minstret : ∃ v, after.σ.regs.get? Register.minstret = some v
+  pc : PCAt Native.call.link after
+  stack : gprGet after.σ 2 = some sp
+  code : Code.Bf_allocateLoaded after.σ.mem
+  output : after.σ.sailOutput = before.σ.sailOutput
+  frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
+    (∀ n ∈ [1,10,11,12,13,14,15,16], (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+
+/-- Named eliminator for the two native composition witnesses. -/
+theorem RemnantReturned.path_spec {sp b request before after}
+    (post : RemnantReturned sp b request before after) :
+    ∃ middle callee, RemnantPath sp b request before after middle callee := post.path
+
+theorem split_remnant {sp b request c} (input : SplitInput sp b request c) :
+    FnSummary splitPc (fun d => d = c) (RemnantReturned sp b request c) := by
+  constructor
+  apply Vsa.Logic.Triple.seq (prepare_split input).run
+  intro middle prepared
+  have reads := prepared.readbacks input.geometry
+  let pins : GRegs := [(2,sp),(10,b)]
+  have held : GHolds middle.σ pins := ⟨prepared.stack,prepared.argument,True.intro⟩
+  have callSummary := call_summary Native.call_shape Native.call_decode middle (Native.call_pins prepared.code)
+    prepared.machine.good prepared.machine.tick prepared.machine.minstret pins held
+    (by change KeysOK [2,10]; decide) (by change ∀ n ∈ [2,10], n ≠ 1; decide)
+  obtain ⟨callee,callRun,called⟩ := callSummary.run middle ⟨prepared.pc,rfl⟩
+  have callMemory : callee.σ.mem = middle.σ.mem := called.mem
+  have sizeSmall : (BestFitRemnant.size b callee.σ.mem).toNat ≤ 16 := by
+    change (sourceSize (sourceHeader b callee.σ.mem)).toNat ≤ 16
+    rw [callMemory,reads.header,smallHeader_size input.requestPositive input.larger input.small]
+    have := input.small
+    omega
+  have remInput : BestFitRemnant.Input Native.call.link b callee :=
+    ⟨called.good,called.tick,called.minstret,called.mem ▸ prepared.remnantCode,
+      ⟨called.ra,gholds_lookup _ called.registers rfl,True.intro⟩,by decide,
+      input.header.read,input.remnant,by have := input.geometry.blockHeap; omega,sizeSmall⟩
+  have calleePc : PCAt BestFitRemnant.pc callee := by simpa only [PCAt,Native.call_target,BestFitRemnant.pc] using called.pc
+  obtain ⟨after,run,returned⟩ := (BestFitRemnant.insert remInput).run callee ⟨calleePc,rfl⟩
+  refine ⟨after,callRun.trans run,⟨⟨middle,callee,prepared,callMemory,returned⟩,returned.good,returned.tick,returned.minstret,returned.pc,?_,?_,
+    returned.output.trans (called.output.trans prepared.machine.output),?_⟩⟩
+  · exact (returned.frame Register.x2 (by decide) (by decide)).trans
+      (gholds_lookup _ called.registers (show lookupG 2 pins = some sp from rfl))
+  · exact returned.allocator_code (called.mem ▸ prepared.code) remInput.heap sizeSmall
+  · intro r noise outside
+    apply (returned.frame r noise (fun n hn => outside n (by simp only [List.mem_cons,List.not_mem_nil,or_false] at hn ⊢; rcases hn with rfl | rfl | rfl | rfl | rfl <;> simp))).trans
+    apply (called.frame r noise (by simp [wrChain]) (outside 1 (by simp))).trans
+    apply prepared.machine.frame r noise
+    intro n hn
+    have written : ∀ n ∈ wrChain [Native.splitBlock], n ∈ [1,10,11,12,13,14,15,16] := by decide
+    exact outside n (written n hn)
+
+/-- The original save words survive every actual remnant branch. -/
+structure ReturnedReadbacks (sp b request : BitVec 64) (before after : Config) : Prop where
+  header : sourceHeader b after.σ.mem = smallHeader request (sourceHeader b before.σ.mem)
+  saved : bytesT after.σ.mem sp.toNat 8 = resultHeader b request (sourceHeader b before.σ.mem)
+  returnWord : bytesT after.σ.mem (sp + 24#64).toNat 8 = bytesT before.σ.mem (sp + 24#64).toNat 8
+
+theorem RemnantReturned.readbacks {sp b request before after}
+    (post : RemnantReturned sp b request before after) (input : SplitInput sp b request before) :
+    ReturnedReadbacks sp b request before after := by
+  obtain ⟨splitState,callee,path⟩ := post.path_spec
+  have reads := path.split.readbacks input.geometry
+  have sizeSmall : (BestFitRemnant.size b callee.σ.mem).toNat ≤ 16 := by
+    change (sourceSize (sourceHeader b callee.σ.mem)).toNat ≤ 16
+    rw [path.callMemory,reads.header,smallHeader_size input.requestPositive input.larger input.small]
+    have := input.small
+    omega
+  have hn := input.geometry.header_nat
+  have rn := input.geometry.return_nat
+  have sh := input.geometry.stackHeap
+  have bh := input.geometry.blockHeap
+  have sep := input.geometry.separate
+  have frame (a n : Nat) (heap : Vsa.Sim.DlHeap.heapStart ≤ a)
+      (apart : a + n ≤ b.toNat ∨ b.toNat + 8 ≤ a) :
+      bytesT after.σ.mem a n = bytesT splitState.σ.mem a n := by
+    rw [path.remnant.read (BestFitRemnant.writeWindows_out_heap sizeSmall heap apart),path.callMemory]
+  constructor
+  · exact (frame _ _ (by rw [hn]; omega) (by rw [hn]; omega)).trans reads.header
+  · exact (frame _ _ sh (by omega)).trans reads.saved
+  · exact (frame _ _ (by rw [rn]; omega) (by rw [rn]; omega)).trans reads.returnWord
+
+structure ReturnInput (sp : BitVec 64) (c : Config) : Prop where
+  good : GoodState c.σ
+  tick : c.tick < 2
+  minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
+  code : Code.Bf_allocateLoaded c.σ.mem
+  stack : gprGet c.σ 2 = some sp
+  saved : ReadWindow sp 8
+  returnWord : ReadWindow (sp + 24#64) 8
+  aligned : (bytesT c.σ.mem (sp + 24#64).toNat 8).toNat % 4 = 0
+
+structure Returned (sp : BitVec 64) (before after : Config) : Prop where
+  machine : BlockPost [Native.returnBlock] Native.call.link (Native.returnRegs sp)
+    (Native.returnLoads before.σ.mem sp) before after
+  pc : PCAt (bytesT before.σ.mem (sp + 24#64).toNat 8) after
+  result : gprGet after.σ 10 = some (bytesT before.σ.mem sp.toNat 8)
+  stack : gprGet after.σ 2 = some (sp + 32#64)
+  memory : after.σ.mem = before.σ.mem
+
+/-- Native loads of the saved split result and original link, then ABI return. -/
+theorem finish_return {sp c} (input : ReturnInput sp c) :
+    FnSummary Native.call.link (fun d => d = c) (Returned sp c) := by
+  have access : ChainAccess c.σ.mem (Native.returnRegs sp) (Native.returnLoads c.σ.mem sp) [Native.returnBlock] := by
+    apply ChainAccess.cons (b := Native.returnBlock) ⟨?_,?_⟩ ChainAccess.nil
+    · simp only [Native.returnBlock,bf_allocateX7534Seg,List.getD_cons_zero,AccessPlan]
+      chain_facts True.intro
+      · exact input.saved.ld rfl (by change sp + Functions.sign_extend (m := 64) (0#12) = sp; simp [Functions.sign_extend,Sail.BitVec.signExtend]) (read8_pins _ _)
+      · exact input.returnWord.ld rfl rfl (read8_pins _ _)
+    · change (Sail.BitVec.update (srcVal 1 (runGM Native.returnBlock.body (Native.returnRegs sp)
+        (Native.returnLoads c.σ.mem sp)) + Functions.sign_extend (m := 64) (0#12)) 0 0#1).toNat % 4 = 0
+      rw [Native.returnLoads,Native.return_registers]
+      change (Sail.BitVec.update (bytesVal .ld (read8 c.σ.mem (sp + 24#64).toNat) +
+        Functions.sign_extend (m := 64) (0#12)) 0 0#1).toNat % 4 = 0
+      rw [read8_value,ret_tgt _ input.aligned]
+      exact input.aligned
+  have facts := chainPlan_facts (code_of input.code (by
+    intro x h; have hx := List.mem_singleton.mp h; subst x; simp [allBlocks,Native.returnBlock,blk])) access
+  have summary := block_summary [Native.returnBlock] Native.call.link (Native.returnRegs sp)
+    (Native.returnLoads c.σ.mem sp) c
+    ⟨input.good,input.minstret,⟨input.stack,True.intro⟩,by change KeysOK [2]; decide,
+      facts,by change ChainOK Native.call.link [2] [Native.returnBlock]; decide,input.tick⟩
+  apply summary.weaken (fun _ h => h)
+  intro after post
+  have held := post.regs
+  change GHolds after.σ (runGM Native.returnBlock.body (Native.returnRegs sp) (Native.returnLoads c.σ.mem sp)) at held
+  rw [Native.returnLoads,Native.return_registers,read8_value,read8_value] at held
+  refine ⟨post,?_,gholds_lookup _ held rfl,gholds_lookup _ held rfl,?_⟩
+  · rw [PCAt,post.pc,Native.returnLoads,Native.return_endpoint _ _ _ (by rw [read8_value]; exact input.aligned),read8_value]
+  · rw [post.memory]
+    change writeLog c.σ.mem (wlogM Native.returnBlock.body (Native.returnRegs sp) (Native.returnLoads c.σ.mem sp)) = _
+    rw [Native.return_log]
+    rfl
+
+def splitMemory (sp b request : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) :=
+  writeLog m (splitLog sp b request (sourceHeader b m) (bytesT m Layout.sym_caml_fl_cur_wsz 8))
+def completeLog (sp b request : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) :=
+  splitLog sp b request (sourceHeader b m) (bytesT m Layout.sym_caml_fl_cur_wsz 8) ++
+    BestFitRemnant.effect b (splitMemory sp b request m)
+
+structure Complete (sp b request : BitVec 64) (before after : Config) : Prop where
+  good : GoodState after.σ
+  tick : after.tick < 2
+  minstret : ∃ v, after.σ.regs.get? Register.minstret = some v
+  pc : PCAt (bytesT before.σ.mem (sp + 24#64).toNat 8) after
+  result : gprGet after.σ 10 = some (resultHeader b request (sourceHeader b before.σ.mem))
+  stack : gprGet after.σ 2 = some (sp + 32#64)
+  header : sourceHeader b after.σ.mem = smallHeader request (sourceHeader b before.σ.mem)
+  counter : bytesT after.σ.mem Layout.sym_caml_fl_cur_wsz 8 =
+    if BestFitRemnant.Inserts b (splitMemory sp b request before.σ.mem) then
+      removedCount (bytesT before.σ.mem Layout.sym_caml_fl_cur_wsz 8) (sourceHeader b before.σ.mem) +
+        1#64 + BestFitRemnant.size b (splitMemory sp b request before.σ.mem)
+    else removedCount (bytesT before.σ.mem Layout.sym_caml_fl_cur_wsz 8) (sourceHeader b before.σ.mem)
+  memory : after.σ.mem = writeLog before.σ.mem (completeLog sp b request before.σ.mem)
+  code : Code.Bf_allocateLoaded after.σ.mem
+  output : after.σ.sailOutput = before.σ.sailOutput
+  frame : ∀ r : Register, (∀ q ∈ noiseRegs, (q == r) = false) →
+    (∀ n ∈ [1,2,10,11,12,13,14,15,16], (gprReg n == r) = false) → after.σ.regs.get? r = before.σ.regs.get? r
+
+/-- Complete next-size continuation: split stores, real remnant wrapper and
+original native return. Zero remnant, sweep deferral and both cursor cases
+are selected from the actual memory by `BestFitRemnant.insert`. -/
+theorem split_return {sp b request c} (input : SplitInput sp b request c) :
+    FnSummary splitPc (fun d => d = c) (Complete sp b request c) := by
+  constructor
+  apply Vsa.Logic.Triple.seq (split_remnant input).run
+  intro middle remnant
+  have reads := remnant.readbacks input
+  have retInput : ReturnInput sp middle :=
+    ⟨remnant.good,remnant.tick,remnant.minstret,remnant.code,
+      remnant.stack,input.stack.read,input.returnWord,by rw [reads.returnWord]; exact input.aligned⟩
+  obtain ⟨after,run,returned⟩ := (finish_return retInput).run middle ⟨remnant.pc,rfl⟩
+  refine ⟨after,run,⟨returned.machine.good,returned.machine.tick,returned.machine.minstret,
+    ?_,?_,returned.stack,?_,?_,?_,returned.memory ▸ remnant.code,
+    returned.machine.output.trans remnant.output,?_⟩⟩
+  · simpa only [reads.returnWord] using returned.pc
+  · simpa only [reads.saved] using returned.result
+  · rw [sourceHeader,returned.memory]
+    exact reads.header
+  · obtain ⟨splitState,callee,path⟩ := remnant.path_spec
+    have splitReads := path.split.readbacks input.geometry
+    have snapshot : splitMemory sp b request c.σ.mem = splitState.σ.mem := path.split.memory.symm
+    have small : (BestFitRemnant.size b callee.σ.mem).toNat ≤ 16 := by
+      change (sourceSize (sourceHeader b callee.σ.mem)).toNat ≤ 16
+      rw [path.callMemory,splitReads.header,smallHeader_size input.requestPositive input.larger input.small]
+      have := input.small
+      omega
+    rw [returned.memory,path.remnant.memory,BestFitRemnant.counter_effect b _
+      (by have := input.geometry.blockHeap; omega) small,path.callMemory]
+    rw [← snapshot]
+    have count := splitReads.counter
+    rw [← snapshot] at count
+    rw [count]
+  · obtain ⟨splitState,callee,path⟩ := remnant.path_spec
+    rw [returned.memory,path.remnant.memory,path.callMemory,path.split.memory]
+    rw [completeLog,writeLog_append]
+    rfl
+  · intro r noise outside
+    apply (returned.machine.frame r noise (fun n hn => outside n (by
+      have written : ∀ n ∈ wrChain [Native.returnBlock], n ∈ [1,2,10,11,12,13,14,15,16] := by decide
+      exact written n hn))).trans
+    exact remnant.frame r noise (fun n hn => outside n (by
+      simp only [List.mem_cons,List.not_mem_nil,or_false] at hn ⊢
+      rcases hn with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp))
+
+/-- Data-only separation for observing the pop's two possible static stores. -/
+structure PopOutside (s : BitVec 64) (a n : Nat) : Prop where
+  slot : a + n ≤ (slotS s).toNat ∨ (slotS s).toNat + 8 ≤ a
+  bitmap : a + n ≤ Layout.sym_bf_small_map ∨ Layout.sym_bf_small_map + 4 ≤ a
+
+theorem PopPost.read {sp s b bits request before after a n}
+    (post : PopPost sp s b bits request before after) (outside : PopOutside s a n) :
+    bytesT after.σ.mem a n = bytesT before.σ.mem a n := by
+  rw [post.memory]
+  apply bytesT_writeLog_out
+  unfold popLog
+  split
+  · exact ⟨outside.slot,outside.bitmap,True.intro⟩
+  · exact ⟨outside.slot,True.intro⟩
+
+theorem PopPost.head {sp s b bits request before after}
+    (post : PopPost sp s b bits request before after) (small : s.toNat ≤ 16) :
+    bytesT after.σ.mem (slotS s).toNat 8 = nextOf b before.σ.mem := by
+  rw [post.memory]
+  unfold popLog
+  split
+  · apply word_writeLog_at _ _ 0 _ _ rfl
+    have hs := BestFitRemnant.slot_nat small
+    refine ⟨Or.inr ?_,True.intro⟩
+    change Layout.sym_bf_small_map + 4 ≤ (BestFitRemnant.slot s).toNat
+    rw [hs]
+    simp only [Layout.sym_bf_small_map,Layout.sym_bf_small_fl]
+    omega
+  · exact word_writeLog_at _ _ 0 _ _ rfl True.intro
+
+/-- The real pop stores supply all slot/link frame premises of `SmallShape.pop`.
+Heap ownership keeps every retained link above the static free-list array. -/
+theorem PopPost.shape {sp s b bits request before after lists bs}
+    (post : PopPost sp s b bits request before after) (small : s.toNat ≤ 16)
+    (shape : BfShape.SmallShape before.σ.mem lists) (hb : lists s.toNat = b :: bs) :
+    BfShape.SmallShape after.σ.mem (BfShape.popped lists s.toNat bs) := by
+  have hs : (slotS s).toNat = Layout.sym_bf_small_fl + 16 * s.toNat := BestFitRemnant.slot_nat small
+  apply shape.pop hb
+  · have same : slotS s = BfShape.slot s.toNat := BestFitRemnant.slot_eq s
+    rw [← same]
+    exact post.head small
+  · intro t lo hi ne
+    have ht := BfShape.slot_toNat t hi
+    apply post.read
+    constructor
+    · rw [hs,ht]; omega
+    · rw [ht]; simp only [Layout.sym_bf_small_fl,Layout.sym_bf_small_map]; omega
+  · intro t lo hi x hx
+    have old : x ∈ lists t := by
+      by_cases same : t = s.toNat
+      · subst t
+        simp only [BfShape.popped,ite_true] at hx
+        rw [hb]; exact List.mem_cons_of_mem _ hx
+      · simpa only [BfShape.popped,ite_false,same] using hx
+    have heap := shape.heap t lo hi x old
+    apply post.read
+    constructor
+    · rw [hs]
+      simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_bf_small_fl,Layout.bf_small_count] at heap hi ⊢
+      omega
+    · simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_bf_small_map] at heap ⊢
+      omega
+
+theorem bit_word {s : BitVec 64} (lo : 1 ≤ s.toNat) (hi : s.toNat ≤ 16) :
+    (BestFitRemnant.bit s).setWidth 32 = 1#32 <<< (s.toNat - 1) := by
+  have cert : ∀ n < 17, 1 ≤ n →
+      (BestFitRemnant.bit (BitVec.ofNat 64 n)).setWidth 32 = 1#32 <<< (n-1) := by decide
+  have eq : s = BitVec.ofNat 64 s.toNat := by simp
+  conv => lhs; rw [eq]
+  exact cert _ (by omega) lo
+
+/-- Empty-list bitmap readback, including the actual four-byte truncation. -/
+theorem PopPost.bitmap_empty {sp s b bits request before after}
+    (post : PopPost sp s b bits request before after) (lo : 1 ≤ s.toNat) (hi : s.toNat ≤ 16)
+    (empty : nextOf b before.σ.mem = 0#64) (bitsRead : bits.setWidth 32 = BfShape.mapBits before.σ.mem) :
+    BfShape.mapBits after.σ.mem = BfShape.mapBits before.σ.mem &&& ~~~(1#32 <<< (s.toNat-1)) := by
+  rw [BfShape.mapBits,post.memory,popLog,if_pos empty]
+  rw [writeLog_append,word32_writeLog]
+  rw [BitVec.setWidth_and,BitVec.setWidth_xor,bitsRead,bit_word lo hi]
+  change _ &&& (_ ^^^ BitVec.allOnes 32) = _
+  rw [BitVec.xor_allOnes]
+
+/-- Actual list exhaustion and bitmap bytes supply `MapConsistent.clear`. -/
+theorem PopPost.map_clear {sp s b bits request before after lists bs}
+    (post : PopPost sp s b bits request before after) (lo : 1 ≤ s.toNat) (hi : s.toNat ≤ 16)
+    (shape : BfShape.SmallShape before.σ.mem lists) (hb : lists s.toNat = b :: bs)
+    (map : BfShape.MapConsistent before.σ.mem lists) (empty : nextOf b before.σ.mem = 0#64)
+    (bitsRead : bits.setWidth 32 = BfShape.mapBits before.σ.mem) :
+    BfShape.MapConsistent after.σ.mem (BfShape.popped lists s.toNat bs) := by
+  have small : s.toNat ≤ Layout.bf_small_count := hi
+  have linked := shape.linked s.toNat lo small
+  rw [hb] at linked
+  have tail := linked.2.2
+  change BfShape.SmallList before.σ.mem (nextOf b before.σ.mem) bs at tail
+  rw [empty] at tail
+  have exhausted : bs = [] := by
+    cases bs with
+    | nil => rfl
+    | cons x xs => exact False.elim (tail.2.1 tail.1.symm)
+  exact map.clear lo small exhausted (post.bitmap_empty lo hi empty bitsRead)
+
+/-- Final memory retains the decoded size of the actual remnant header. -/
+theorem Complete.remnant_size {sp b request before after}
+    (post : Complete sp b request before after) (input : SplitInput sp b request before) :
+    (BestFitRemnant.size b after.σ.mem).toNat =
+      (sourceSize (sourceHeader b before.σ.mem)).toNat - request.toNat - 1 := by
+  change (sourceSize (sourceHeader b after.σ.mem)).toNat = _
+  rw [post.header]
+  exact smallHeader_size input.requestPositive input.larger input.small
+
+/-- Selected allocator-owned blocks survive the exact split/helper footprint.
+The caller supplies physical separation of those blocks, never a machine post. -/
+theorem Complete.live {sp b request before after H}
+    (post : Complete sp b request before after)
+    (bounds : ∀ e ∈ H, Vsa.Sim.DlHeap.heapStart ≤ e.1 ∧ e.1 + e.2 ≤ Vsa.Sim.DlHeap.heapEnd)
+    (outside : ∀ x, x < Vsa.Sim.DlHeap.heapEnd → ¬ VsaIris.VsaHeap.vsaFoot H x →
+      OutL (completeLog sp b request before.σ.mem) x) :
+    OCaml.Vm.Boot.Startup.LiveFrame H before after := by
+  apply OCaml.Vm.Boot.Startup.LiveFrame.of_foot bounds
+  intro x high owned
+  rw [post.memory,writeLog_out _ _ _ (outside x high owned)]
 
 end OCaml.Vm.Gc.BestFitNext

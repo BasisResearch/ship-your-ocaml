@@ -21,6 +21,7 @@ import OCaml.Vm.Gc.FirstSlot
 import OCaml.Vm.Gc.FieldStep
 import OCaml.Vm.Gc.BfShape
 import OCaml.Vm.Gc.BestFitNext
+import OCaml.Vm.Gc.BestFitNextAudit
 import OCaml.Vm.Gc.BestFitRemnant
 import OCaml.Vm.Gc.FfsLowest
 import OCaml.Vm.Gc.StackLoop

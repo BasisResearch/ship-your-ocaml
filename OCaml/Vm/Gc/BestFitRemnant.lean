@@ -801,9 +801,9 @@ theorem effect_inside (v : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) :
     split <;> apply logInW_of_forall
     all_goals intro e member
     all_goals simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at member
-    · rcases member with (rfl | rfl | rfl) | rfl | rfl
+    · rcases member with ((rfl | rfl | rfl) | rfl) | rfl
       all_goals simp [writeWindows,InsideW]
-    · rcases member with (rfl | rfl | rfl) | no | rfl
+    · rcases member with (rfl | rfl | rfl) | rfl
       all_goals simp_all [writeWindows,InsideW]
   · trivial
 
@@ -814,5 +814,64 @@ theorem Post.read {ra v before after a n} (post : Post ra v before after)
     bytesT after.σ.mem a n = bytesT before.σ.mem a n := by
   rw [post.memory]
   exact bytesT_writeLog_out _ (OCaml.Vm.Sim.outLRange_of_windows (effect_inside v before.σ.mem) outside)
+
+/-- The helper's static stores are below the heap. A heap observation only
+needs separation from the remnant's link word. -/
+theorem writeWindows_out_heap {v w : BitVec 64} {a n : Nat}
+    (small : w.toNat ≤ 16) (heap : Vsa.Sim.DlHeap.heapStart ≤ a)
+    (apart : a + n ≤ v.toNat ∨ v.toNat + 8 ≤ a) :
+    OutWRange (writeWindows v w) a n := by
+  have hs := slot_nat small
+  have hm := merge_nat small
+  simp only [writeWindows,OutWRange]
+  refine ⟨?_,apart,?_,?_,?_,True.intro⟩
+  all_goals simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_caml_fl_cur_wsz,
+    Layout.sym_bf_small_fl,Layout.sym_bf_small_map] at heap hs hm ⊢
+  all_goals omega
+
+/-- No wrapper branch writes allocator instructions. -/
+theorem Post.allocator_code {ra v before after} (post : Post ra v before after)
+    (code : Code.Bf_allocateLoaded before.σ.mem)
+    (heap : Vsa.Sim.DlHeap.heapStart ≤ v.toNat) (small : (size v before.σ.mem).toNat ≤ 16) :
+    Code.Bf_allocateLoaded after.σ.mem := by
+  apply Code.bf_allocate_transport code
+  intro a lo hi
+  rw [post.memory]
+  apply writeLog_out
+  apply outL_of_range (OCaml.Vm.Sim.outLRange_of_windows (effect_inside v before.σ.mem) ?_)
+    (Nat.le_refl a) (by omega : a < a + 1)
+  have hs := slot_nat small
+  have hm := merge_nat small
+  simp only [writeWindows,OutWRange]
+  simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_caml_fl_cur_wsz,
+    Layout.sym_bf_small_fl,Layout.sym_bf_small_map] at heap hs hm ⊢
+  exact ⟨by omega,by omega,by omega,by omega,by omega,True.intro⟩
+
+/-- Exact accounting selected by the wrapper's real zero/sweep tests. -/
+theorem counter_effect (v : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8))
+    (heap : Vsa.Sim.DlHeap.heapStart ≤ v.toNat) (small : (size v m).toNat ≤ 16) :
+    bytesT (writeLog m (effect v m)) Layout.sym_caml_fl_cur_wsz 8 =
+      if Inserts v m then bytesT m Layout.sym_caml_fl_cur_wsz 8 + 1#64 + size v m
+      else bytesT m Layout.sym_caml_fl_cur_wsz 8 := by
+  unfold effect
+  split
+  · have hs := slot_nat small
+    have hm := merge_nat small
+    unfold insertLog
+    split
+    all_goals apply word_writeLog_at _ _ 0 _ _ rfl
+    all_goals apply outLRange_of_forall
+    all_goals intro e member
+    all_goals simp only [List.cons_append,List.nil_append,List.drop_succ_cons,List.drop_zero,
+      List.mem_cons,List.mem_append,List.not_mem_nil,or_false] at member
+    · rcases member with rfl | rfl | rfl | rfl
+      all_goals simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_caml_fl_cur_wsz,
+        Layout.sym_bf_small_fl,Layout.sym_bf_small_map] at heap hs hm ⊢
+      all_goals omega
+    · rcases member with rfl | rfl | rfl
+      all_goals simp only [Vsa.Sim.DlHeap.heapStart,Layout.sym_caml_fl_cur_wsz,
+        Layout.sym_bf_small_fl,Layout.sym_bf_small_map] at heap hs hm ⊢
+      all_goals omega
+  · rfl
 
 end OCaml.Vm.Gc.BestFitRemnant

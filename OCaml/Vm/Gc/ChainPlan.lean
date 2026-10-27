@@ -62,4 +62,15 @@ theorem memAfter_eq (m : Std.ExtHashMap Nat (BitVec 8)) (body : List MInstr) (L 
   | cons a rest ih =>
     cases hk : a.kind <;> simp [memAfter, wlogM, stepMemM, stepGM, stepLdsM, hk, ih, writeLog]
 
+/-- Compose bounded scalar-access certificates using the certified first-order
+log; intermediate register states are supplied by the chunk certificates. -/
+theorem accessPlan_append {m L loads xs ys}
+    (first : AccessPlan m L loads xs)
+    (second : AccessPlan (writeLog m (wlogM xs L loads)) (runGM xs L loads)
+      (ldsRunM xs loads) ys) : AccessPlan m L loads (xs ++ ys) := by
+  rw [← memAfter_eq] at second
+  induction xs generalizing m L loads with
+  | nil => exact second
+  | cons a xs ih => exact ⟨first.1, ih first.2 second⟩
+
 end OCaml.Vm.Gc

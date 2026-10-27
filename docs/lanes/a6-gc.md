@@ -43,6 +43,59 @@
   and caller/startup/reset composition. `BarrierGrowthFull` remains with G2,
   `CustomMemCall` remains a named premise, and C4 round 2 waits for F1.
 
+## Next-size split, remnant wrapper and native return (2026-10-27)
+
+- `BestFitNext.split_return` proves the actual continuation from pop's
+  post PC `0x800074e8` through the inlined split, generated JAL at
+  `0x80007530`, complete `BestFitRemnant.insert` wrapper, and native
+  epilogue at `0x80007534`. It returns the saved carved header in `a0`,
+  restores `sp + 32`, and jumps to the original link read at `sp + 24`.
+  `SplitInput` retains positive request, request < source size ≤ 16,
+  readable/writable windows, native-stack/source separation and original
+  return alignment. No split or remnant postcondition is a premise.
+- `SplitPrepared.readbacks` derives the actual split header, reduced
+  free-word counter, saved result and original return-word observation
+  from the three-store `splitLog`. `RemnantReturned.readbacks` transports
+  the header/save/link through the helper's named `writeWindows` using
+  `Post.read`. `Complete.counter` records the exact branch-dependent
+  accounting: the split removes the old block's size plus header; actual
+  insertion adds the remnant's size plus header. Zero remnant and sweep
+  deferral add nothing. Both merge-cursor insertion branches remain in the
+  real helper summary. `Complete.remnant_size` decodes the final header.
+- `PopPost.shape` supplies `BfShape.SmallShape.pop` from the actual head
+  store and static-vs-heap slot/link frames. `PopPost.bitmap_empty` derives
+  the four-byte map store, including truncation; `PopPost.map_clear`
+  supplies `MapConsistent.clear` and derives list exhaustion from
+  `SmallList`. The original bitmap-register observation remains explicit.
+  `Complete.live` retains selected owned blocks through `LiveFrame.of_foot`
+  under physical separation from the exact combined log; general allocator
+  readiness and ownership suppliers remain open.
+- The first failing declaration was `split_writes`; a second failure was
+  the monolithic `split_access`. Bounded scalar/log rewrites and the shared
+  `accessPlan_append` law replace whole-prefix reduction. The access proof
+  composes `Native.nextSplit_piece*_regs/loads`, and the machine proof reuses
+  `block_summary`, generated call/decode pins and `FnSummary` composition.
+  `scripts/gen_gc_rows.py` emits the native return certificates and
+  registers them in the generated audit. No limits were increased.
+- Validation: guarded/capped `lake build` of `BestFitNext`,
+  `BestFitRemnant`, `Generated.BestFitSplit` and `BestFitNextAudit` passes
+  (1264 jobs). A standalone source-plus-audit check with
+  `-M 6000 -j 1 --profile` also passes; kernel type checking is 1.12s.
+  All 180 audited declarations use only `propext`, `Classical.choice`,
+  `Quot.sound`. Every Lean run uses `lean-guarded.py` and `lean-capped.sh`,
+  with `free -g` checked before launch. Generator drift, Python syntax,
+  proof discipline (27 rules) and `git diff --check` pass. Logs:
+  `/tmp/a6-next2-checked-build.log`, `/tmp/a6-next2-focused-axioms.log`,
+  `/tmp/a6-next2-drift.log`, `/tmp/a6-next2-discipline.log`.
+  `BestFitNextAudit` is registered in `OCaml.Audit`; the full audit remains
+  the lead gate.
+- Open: search/pick/pop composition with code/memory transport, route
+  selection, other size classes, full allocator readiness and allocation
+  color/GC integration. `BarrierGrowthFull` remains G2; `CustomMemCall`
+  remains a named premise; C4 round 2 waits for F1. `GoodF1` is unchanged.
+  Inherited WIP is retained, and edits are left for lead review, commit
+  and `scripts/integrate.sh` (Git metadata/landing queue are read-only here).
+
 ## Next-size small-list head removal (2026-10-21)
 
 - `BestFitNext.pick` is checked from `0x800073f8` to `0x800074bc`,

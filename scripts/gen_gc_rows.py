@@ -3549,6 +3549,28 @@ def nextSplit_input (R : Nat → BitVec 64) : GRegs := [(2,R 2),(11,R 11),(14,R 
 theorem split_registers (R : Nat → BitVec 64) (bh bc : List (BitVec 8)) :
     runGM splitBlock.body (nextSplit_input R) [bh,bc] = @OUTPUT@ R [bh,bc] := by
   exact nextSplit_registers_chunks R [bh,bc]
+
+
+def returnRegs (sp : BitVec 64) : GRegs := [(2,sp)]
+def returnLoads (m : Std.ExtHashMap Nat (BitVec 8)) (sp : BitVec 64) :=
+  [read8 m sp.toNat,read8 m (sp + 24#64).toNat]
+
+theorem return_registers (sp : BitVec 64) (result ra : List (BitVec 8)) :
+    runGM returnBlock.body (returnRegs sp) [result,ra] =
+      [(2,sp + 32#64),(10,bytesVal .ld result),(1,bytesVal .ld ra),(15,bytesVal .ld result)] := by
+  simp [returnBlock,@RETURN@,returnRegs,runGM,stepGM,wvalM,srcVal,lookupG,eraseG,
+    mkLine,decodeM,stepLdsM,Functions.sign_extend,Sail.BitVec.signExtend]
+
+theorem return_log (sp : BitVec 64) (loads : List (List (BitVec 8))) :
+    wlogM returnBlock.body (returnRegs sp) loads = [] := rfl
+
+theorem return_endpoint (sp : BitVec 64) (result ra : List (BitVec 8))
+    (aligned : (bytesVal .ld ra).toNat % 4 = 0) :
+    evalBlocksPC call.link (SegEvalState.init (returnRegs sp) [result,ra]) [returnBlock] = bytesVal .ld ra := by
+  simp only [evalBlocksPC,chainEndPC,SegEvalState.init,endPCB,return_registers]
+  change Sail.BitVec.update (bytesVal .ld ra + Functions.sign_extend (m := 64) (0#12)) 0 0#1 = _
+  exact ret_tgt _ aligned
+
 end OCaml.Vm.Gc.BestFitNext.Native
 """
 
