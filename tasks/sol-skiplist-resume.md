@@ -17,9 +17,10 @@ No subagents or other Codex workers. Finish with exactly RESULT: landed <commit>
 
 Target: finish the preserved first empty-skiplist insertion native summary, repairing its evaluator proof to stay below the 12 GB cap.
 Files: OCaml/Vm/Gc/SkiplistFirst.lean; generated Boot/Startup/SkipFirst* (edit scripts/gen_startup_rows.py); lane log, PHASES and audit.
-The previous worker was killed by the cgroup OOM limit at 18:42:17 UTC on October 27, not by a usage limit. Its WIP has been committed intact.
-Read /tmp/skipfirst-eval.log and the tail of logs/sol-a6-gc-20261027-182437-997318.log in the main repo. Generated rows built, but SkipFirstEval did not complete.
-Do not repeat the same monolithic simp certificates: factor evaluator normalization into small reusable lemmas/chunks in the generator and validate them separately; keep heavy compilation serialized.
+Two workers hit the 12 GB cgroup limit (18:42:17 and 18:48:05 UTC, October 27); both WIP checkpoints are preserved, including per-instruction certificates from the second retry.
+Read /tmp/skipfirst-chunks.log and the tail of logs/sol-a6-gc-20261027-184410-1478780.log in the main repo. Generated rows built; SkipFirstEval still exceeds memory.
+First isolate the exact failing declaration in a temporary prefix file using --profile, one Lean thread and -M 6000. Broad simp on stepGM still exceeded memory after per-instruction splitting; inspect the expansion, reuse scalar evaluator lemmas and use narrowly selected simp rules.
+Every diagnostic/build command MUST run through python3 scripts/lean-guarded.py --log /tmp/skipfirst-guarded.log -- scripts/lean-capped.sh lake env lean -M 6000 -j 1 <file> (or guarded lake build once repaired). It terminates only this build group on errors/10 GiB pressure; do not leave child Lean processes alive after cancellation.
 The actual startup seed 0 becomes 25173, chooses level 0 and requests a 24-byte cell. Reuse the generated rows, block_summary, stat_alloc_ready, native frames and selected live-block ownership.
 Continue the existing prefix proof, allocation call, cell/header stores and ABI return. Retain explicit room, key/frame bounds and precise memory/output effects.
 Done: checked first-insertion native summary with the startup key witness, allocator/owned-block frame, focused standard-axiom audits and generator drift check.
