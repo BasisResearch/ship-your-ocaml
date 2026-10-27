@@ -51,4 +51,4 @@ else
   echo "RESULT: stuck task not landed; inspect worker result in $LOG"
 fi
 }
-main "$@"
+main "$@"; exit "$?"
