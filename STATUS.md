@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-21. Active target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27. Active target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,16 +18,16 @@ None currently.
 
 | Lane | Current work | Worktree |
 | --- | --- | --- |
-| a0-boot / a0-lib | Reset-through-atom milestone reviewed and queued for full integration; reset-to-cut and `libHeap` remain open | `syo-wt/a0-boot-next` |
+| a0-boot / a0-lib | Reset-through-atom milestone landed (`9c443c79`, audited at `bb55a4e5`); reset-to-cut and `libHeap` remain open | `syo-wt/a0-boot-next` |
 | a1-prims / bprime | Named-value representation and primitive returns, then `caml_format_int`; retain existing WIP | `syo-wt/a1-prims-next`, `syo-wt/bprime` |
-| a6-gc | Sol worker validating inherited G2 next-size head removal; checked refcount transport queued separately | `syo-wt/a6-gc`, `syo-wt/a6-gc-next2` |
+| a6-gc | G2 pick/pop audit passed (5399 jobs); queued with reviewed refcount transport | `syo-wt/a6-gc`, `syo-wt/a6-gc-next2` |
 | foreman / a1-arms / a2-sem | C_CALL arity landed; shared invariants, table assembly, integration | `syo-wt/a1-arms`; main |
 
 The lead now uses separate `codex exec` workers (`gpt-6.1-sol`, high reasoning),
 at most two at a time, launched through `codexwork.sh`. Built-in proof agents
 have stopped. The current Sol tasks strengthen physical named-node ownership/separation and
-validate G2 small-list removal. Startup and refcount changes are reviewed and queued
-for lead integration. Workers inherit a 12 GB systemd scope; the lead handles
+repair the byte-string consumer regression. Startup and foreman tooling landed. G2 pick/pop and refcount transport are
+queued together for lead integration. Workers inherit a 12 GB systemd scope; the lead handles
 Git and landings outside their workspace-write sandbox. Known failed routes are in `docs/lanes/DEAD-ENDS.md`.
 
 All F1 opcode rows and interpreter entry/halt composition are present. The
@@ -43,7 +43,13 @@ The a2-sem uncaught-exception WIP is preserved in `syo-wt/a2-sem-next`;
 
 The named worker checked the full-byte lookup bridge and 43 focused axiom
 reports, preserved at `7c6bc6c1`. Its full consumer build remains incomplete.
-The next worker is strengthening physical named-node ownership/separation. This is an invariant
+The named worker is resuming physical ownership/separation WIP after a usage-limit stop. This is an invariant
 design task, not a user-only blocker. The next task supplies physical ownership
 and separation, then migrates payload consumers. The formatter WIP is preserved
 in `bprime` at `2c0a97a9`; its next worker must port generated edits into templates.
+
+The independent all-byte C-string/strcmp extraction passed generation checks
+but its full gate found one stale ASCII bound in `Uncaught.FatalNames`. A Sol
+repair is assigned before its landing. The formatter slot remains ready.
+The previous workers stopped on the October 21 usage limit; its logged October
+27 reset time has passed, so the lead is restarting separate Sol processes.

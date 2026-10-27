@@ -28,3 +28,5 @@ tcb/validation/tmp/
 .integrate.log
 .check-build.log
 logs/
+
+.integrate-train.log
