@@ -81,7 +81,12 @@ theorem _root_.OCaml.Vm.VmReprAt.put {P : Prog} {s : St} {c : Config} {pl : Plac
     argv := by rw [root _ (by simp [roots])]; exact h.argv
     stack := ⟨h.stack.1, fun i v hv => by
       rw [root _ (by simp [roots, List.mem_of_getElem? hv])]; exact h.stack.2 i v hv⟩
-    heap := HeapRepr.put h.heap absent }
+    heap := HeapRepr.put h.heap absent
+    named := by
+      obtain ⟨chains, table⟩ := h.named
+      exact ⟨chains, table.place rfl fun k v hv => root v (by
+        have mem : v ∈ s.world.named.map Prod.snd := List.mem_map.mpr ⟨(k, v), hv, rfl⟩
+        simp [roots, mem])⟩ }
 
 /-- Word alignment survives placing at an aligned address. -/
 theorem WordPlace.put {pl : Place} {l0 a : Nat} (w : WordPlace pl) (aligned : a % 8 = 0) :
@@ -104,6 +109,7 @@ theorem StackGeometry.put {P : Prog} {s : St} {c : Config} {pl : Place} {cp : Ch
     heapCode := fun l b o placed object => g.heapCode l b o (put_present absent object placed) object
     heapAtoms := fun l b o placed object => g.heapAtoms l b o (put_present absent object placed) object
     heapChannels := fun l b o placed object => g.heapChannels l b o (put_present absent object placed) object
+    heapNamed := fun l b o placed object => g.heapNamed l b o (put_present absent object placed) object
     heapPrims := fun l b o placed object => g.heapPrims l b o (put_present absent object placed) object
     domainHeap := fun l b o placed object => g.domainHeap l b o (put_present absent object placed) object }
 

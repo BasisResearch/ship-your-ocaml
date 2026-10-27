@@ -74,7 +74,7 @@ theorem FieldWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {
   have hn : (BitVec.ofNat 64 (a + 8 * k)).toNat = a + 8 * k := Nat.mod_eq_of_lt (by omega)
   refine ⟨by omega, ⟨?_, ?_, ?_, ?_⟩, ⟨⟨field_static low fDom, inDomain _ fHigh, field_static low fCode,
     field_static low fAtom, field_static low fGlob, ?_, ?_, field_static low fOo, field_static low fOH,
-    field_static low fArgv⟩, inDomain _ fTrap, ?_⟩,
+    field_static low fArgv, ?_⟩, inDomain _ fTrap, ?_⟩,
     ⟨field_static low fText, field_static low fRo⟩, ⟨?_, ?_, ?_⟩,
     ⟨field_static low fPrim, ?_⟩⟩
   · rw [hn]; omega
@@ -90,6 +90,10 @@ theorem FieldWriteOk.of_geometry {P : Prog} {s : St} {c : Config} {pl : Place} {
     have chan := g.heapChannels l a _ placed object id ch b found at_
     rw [size] at chan
     exact field_apart bound room chan (by omega) (by omega)
+  · intro x f
+    have apart := (g.heapNamed l a _ placed object x f).1
+    simp only [Obj.wosize, OutLRange, fieldLog, and_true] at apart ⊢
+    omega
   · intro i v found
     have hi := (List.getElem?_eq_some_iff.mp found).1
     have apart := g.heap l a _ placed object

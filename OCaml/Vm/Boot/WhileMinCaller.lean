@@ -109,6 +109,15 @@ theorem caller_outside :
   · simp only [entryFootprint, OutLRange]; decide
   · simp only [entryFootprint, OutLRange]; decide
 
+  · intro x f
+    have bucket := NamedPlFoot.empty.mp f
+    rcases bucket with ⟨lo, hi⟩
+    simp only [entryFootprint, OutLRange, callerSp, interpFrame, Layout.interpFrameBytes,
+      Layout.sym_caml_callback_depth, Layout.off_external_raise, BitVec.toNat_ofNat]
+    have bounds : Layout.sym_caml_callback_depth + 4 ≤ Layout.sym_named_value_table ∧
+        Layout.sym_named_value_table + 104 ≤ 0x8007d150 := by decide
+    exact ⟨Or.inl (by omega), Or.inr (by omega), Or.inl (by omega), trivial⟩
+
 /-- A register with an assignment in the captured table is present. -/
 theorem present_of_key {r : LeanRV64DExecutable.Register}
     (h : r ∈ WhileMinRegisters.assignments.map Sigma.fst) : (WhileMinRegisters.registers.get? r).isSome := by
@@ -233,6 +242,26 @@ theorem stackGeometry_of {c : Config} (memory : Vsa.Densify.MemEqv c.σ.mem
         have band := obj ha ho
         simp only [OCaml.Vm.Sim.stackWindow, OutWRange, WhileMinEntry.high, Layout.stackBytes]
         exact ⟨Or.inl (by omega), trivial⟩
+      named := fun x f => by
+        have bucket := NamedPlFoot.empty.mp f
+        have st : Layout.sym_named_value_table + 104 ≤ WhileMinEntry.high - Layout.stackBytes := by decide
+        exact ⟨Or.inl (by simp only [OCaml.Vm.Sim.stackWindow]; omega), trivial⟩
+      namedLow := fun x f => Or.inl (NamedPlFoot.empty.mp f)
+      namedArena := fun x f => by
+        have bucket := NamedPlFoot.empty.mp f
+        have bound : Layout.sym_named_value_table + 104 ≤ Vsa.Sim.DlHeap.heapEnd := by decide
+        omega
+      domainNamed := fun x f => by
+        have bucket := NamedPlFoot.empty.mp f
+        have bound : Layout.sym_named_value_table + 104 ≤ 0x8007d150 := by decide
+        rw [domain_word]
+        exact ⟨Or.inl (by dsimp only; omega), trivial⟩
+      heapNamed := fun l a o ha ho x f => by
+        have bucket := NamedPlFoot.empty.mp f
+        have band := obj ha ho
+        have bound : Layout.sym_named_value_table + 104 + 8 ≤ (0x80281008 : Nat) := by decide
+        exact ⟨Or.inl (by dsimp only; omega), trivial⟩
+      channelNamed := fun _ _ _ _ ha => by cases ha
       channels := fun id ch a _ ha => by cases ha
       primitives := fun i name _ => by
         rw [prim_table_word]

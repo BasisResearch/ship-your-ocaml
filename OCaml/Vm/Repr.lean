@@ -343,6 +343,63 @@ theorem NamedRepr.foot_sub {c : Config} {pl : Place} {named : List (String × Va
   · obtain ⟨i, hn, hk⟩ := h.nodes b hb e he
     exact Or.inr ⟨i, _, _, _, hk, hn, lo, by rw [strOf_length']; exact hi⟩
 
+/-- Empty-name startup requires exactly the thirteen zero bucket heads. -/
+theorem NamedRepr.empty (c : Config) (pl : Place)
+    (buckets : ∀ b, b < 13 → word c (Layout.sym_named_value_table + 8 * b) = 0) :
+    NamedRepr c pl [] (fun _ => []) where
+  heads b hb := by rw [buckets b hb]; exact .nil
+  placed := by simp
+  entries := by simp
+  unique := by simp
+  nodes := by simp
+
+/-- With no registered names the footprint consists only of static buckets. -/
+theorem NamedPlFoot.empty {pl : Place} {x : Nat} : NamedPlFoot pl [] x ↔
+    Layout.sym_named_value_table ≤ x ∧ x < Layout.sym_named_value_table + 104 := by
+  simp [NamedPlFoot]
+
+/-- Ownership of every named node by an actual live malloc block. The block
+is recorded in `H`, independently of the fixed F1 runtime extents. The
+registration producer supplies its malloc result and its requested size. -/
+structure NamedOwned (H : List (Nat × Nat)) (pl : Place) (named : List (String × Val)) : Prop where
+  nodes : ∀ (i : Nat) k v n, named[i]? = some (k, v) → pl.nodes[i]? = some n →
+    ∃ bytes, (n, bytes) ∈ H ∧ 16 + k.length + 1 ≤ bytes
+
+theorem NamedOwned.empty (H : List (Nat × Nat)) (pl : Place) : NamedOwned H pl [] :=
+  ⟨fun i k v n h _ => by simp at h⟩
+
+theorem NamedOwned.mono {H H' : List (Nat × Nat)} {pl : Place} {named : List (String × Val)}
+    (h : NamedOwned H pl named) (sub : ∀ e ∈ H, e ∈ H') : NamedOwned H' pl named := by
+  constructor
+  intro i k v n hk hn
+  obtain ⟨bytes, member, size⟩ := h.nodes i k v n hk hn
+  exact ⟨bytes, sub _ member, size⟩
+
+/-- Changing placement preserves a chain when it preserves represented
+values of its entries. -/
+theorem NamedChain.place {c : Config} {pl pl' : Place} {head : Nat}
+    {es : List (Nat × List (BitVec 8) × Val)} (chain : NamedChain c pl head es)
+    (values : ∀ e ∈ es, valWord pl' e.2.2 = valWord pl e.2.2) : NamedChain c pl' head es := by
+  induction chain with
+  | nil => exact .nil
+  | @cons node next key v rest h tail ih =>
+    exact .cons { h with value := by rw [values (node, key, v) (by simp)]; exact h.value }
+      (ih fun e he => values e (by simp [he]))
+
+/-- Re-place heap values without changing the physical named nodes. -/
+theorem NamedRepr.place {c : Config} {pl pl' : Place} {named : List (String × Val)}
+    {chains : Nat → List (Nat × List (BitVec 8) × Val)} (h : NamedRepr c pl named chains)
+    (nodes : pl'.nodes = pl.nodes)
+    (values : ∀ k v, (k, v) ∈ named → valWord pl' v = valWord pl v) : NamedRepr c pl' named chains := by
+  refine { h with heads := ?_, nodes := ?_ }
+  · intro b hb
+    apply (h.heads b hb).place
+    intro e he
+    exact values _ _ ((h.entries _ _).mpr ⟨b, hb, e.1, e.2.1, he, rfl⟩)
+  · intro b hb e he
+    rw [nodes]
+    exact h.nodes b hb e he
+
 /-- Recognize only GETPUBMET cache operands on a linear instruction decode.
 An opcode-looking operand is never treated as an instruction boundary. -/
 def methodCacheSlot (code : Code) (index : Nat) : Bool :=

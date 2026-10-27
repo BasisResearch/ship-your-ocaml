@@ -19,6 +19,21 @@ theorem ooCounter : word cut Layout.sym_oo_last_id = tag64 (BitVec.ofNat 63 0) :
   rw [← bytesT_view (fun _ => rfl), image]
   decide
 
+/-- The named table keeps its zero `.bss` initializer at the captured cut. -/
+theorem namedBuckets : ∀ b, b < 13 → word cut (Layout.sym_named_value_table + 8 * b) = 0 := by
+  have absent : ∀ b : Fin 13, ∀ i : Fin 8,
+      WhileMinLog.runs.fin (Layout.sym_named_value_table + 8 * b.val + i.val) = none := by decide +kernel
+  have image : ∀ b : Fin 13,
+      viewBytes (fun a => if inPieces WhileMinImage.pieces a then some (WhileMinImage.imageByte a) else none)
+        (Layout.sym_named_value_table + 8 * b.val) 8 = 0 := by decide +kernel
+  intro b hb
+  unfold word
+  rw [bytesT_memEqv memory_equiv, observedMem_bytes WhileMinLog.logOk]
+  rw [viewBytes_congr (v' := fun x => WhileMinImage.initialMem[x]?) (fun i hi => by
+    simp only [logView, absent ⟨b, hb⟩ ⟨i, hi⟩])]
+  rw [← bytesT_view (fun _ => rfl)]
+  exact (loaderMem_bytes WhileMinImage.pieces WhileMinImage.imageByte _ 8).trans (image ⟨b, hb⟩)
+
 /-- All remaining platform and call-register facts for the captured cut. -/
 theorem control : WhileMinEntry.EntryControl cut where
   atEntry := atEntry
@@ -31,6 +46,7 @@ theorem control : WhileMinEntry.EntryControl cut where
   caller := ⟨callerSp, callerRegs, mainSaved, interpCaller⟩
   geometry := ⟨stackGeometry, OCaml.Vm.Gc.whileMin_nurseryGeometry⟩
   ooCounter := ooCounter
+  namedBuckets := namedBuckets
 
 /-- The captured machine entry satisfies the complete loaded-state relation. -/
 theorem loaded : Loaded (runtimeLayout BestFitSingleton OCaml.Vm.Gc.g1Budget) whileMin cut :=

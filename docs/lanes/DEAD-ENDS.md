@@ -73,3 +73,20 @@
   interrupted attempts. `scripts/lean-capped.sh` now owns the per-worktree
   `flock --close` serialization as well as the memory-cap policy. Retry
   through that wrapper; do not infer a proof failure from the cancellation.
+
+- 2026-10-21 physical named geometry: allocator freshness cannot be framed
+  by putting arbitrary named nodes into `f1Covered`. `NamedOwned H pl named`
+  records actual `(node, requestedBytes) ∈ H`; `Gc.NamedOwned.fresh` derives
+  fresh-record separation from that ownership. The current `LibHeapAt H`
+  has no relation to `pl.nodes`/`world.named`, so it does not supply this
+  ownership. This is an interface gap found by inspection, not a claim that
+  a real malloc result aliases a live node.
+- 2026-10-21 physical named geometry: actual node ownership alone does not
+  discharge the custom-allocation part of `open_out_observed`. Its frame
+  also requires `¬ state c x` for a named byte. `CustomMemCall.apart`'s
+  `CallerApart.covered` excludes fixed extents, and `.records` excludes
+  channels; `.free` excludes allocator metadata/free space, not all live
+  blocks. A producer must establish that the custom table/state and named
+  nodes have separate ownership. Do not add an unexplained successful-call
+  premise or classify nodes as fixed extents to fill this gap. This is an
+  inspection of the current contracts, not a checked execution obstruction.

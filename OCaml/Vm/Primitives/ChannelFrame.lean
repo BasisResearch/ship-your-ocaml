@@ -103,7 +103,6 @@ theorem VmPayload.frame_chan {P : Prog} {s : St} {c c' : Config} {pl : Place} {c
     refine ⟨chains, ?_⟩
     change NamedRepr c' pl w'.named chains
     rw [named]
-    exact nr.frame fun a ha => by
-      simpa using (copy a 1 (outside.named a (nr.foot_sub ha))) 0 (by decide)
+    exact nr.frame_outsideLog outside.named memory
 
 end OCaml.Vm.Primitives

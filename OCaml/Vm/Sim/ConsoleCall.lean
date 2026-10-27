@@ -383,7 +383,7 @@ theorem console_outside {P : Prog} {s : St} {c : Config} {pl : Place} {cp : Chan
     by rw [K.atoms]; exact stat _ (by omega) (by omega) (by omega),
     by rw [K.globals]; exact stat _ (by omega) (by omega) (by omega), ?_, ?_, ?_, ?_,
     by rw [K.ooId]; exact stat _ (by omega) (by omega) (by omega),
-    by rw [show Layout.sym_main_argv = 0x80064c10 from rfl]; exact stat _ (by omega) (by omega) (by omega)⟩
+    by rw [show Layout.sym_main_argv = 0x80064c10 from rfl]; exact stat _ (by omega) (by omega) (by omega), ?_⟩
   · intro i w hw
     have bound : i < P.code.size := (Array.getElem?_eq_some_iff.1 hw).1
     have cl := g.codeLow; have ca := g.codeArena
@@ -409,6 +409,19 @@ theorem console_outside {P : Prog} {s : St} {c : Config} {pl : Place} {cp : Chan
     have ap := g.channelsApart id' id ch' chn a ch ne hch chan hcp record
     rw [K.bss] at l'; rw [K.heap, K.record] at a'; rw [K.record] at ap ⊢
     exact consoleLog_arena l' (by omega) ap nl
+
+  · intro x f
+    have arena := g.namedArena x f
+    have apart := (g.channelNamed id chn ch chan record x f).1
+    have bucketBounds : Layout.sym_named_value_table + 104 ≤ 0x8007d138 ∧
+        0x80064d48 + 4 ≤ Layout.sym_named_value_table ∧
+        0x80064668 + 4 ≤ Layout.sym_named_value_table := by decide
+    rcases g.namedLow x f with ⟨lo, hi⟩ | lo
+    · exact consoleLog_static (by omega) (by omega) (by omega) chl nl'
+    · rw [K.bss] at lo
+      rw [K.heap] at arena
+      simp only [chanOffBuff, ioBufferSize] at apart
+      exact consoleLog_arena lo arena (by dsimp only at apart; omega) nl
 
 /-- **The console footprint misses the primitive bindings.** -/
 theorem console_bindings {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}

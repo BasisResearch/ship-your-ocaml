@@ -53,7 +53,7 @@ def stackWindow (high : Nat) : W := ⟨high - Layout.stackBytes, high⟩
 
 /-- **Stack geometry** of a represented state under its placement. Every
 field is placement-level or names a config word the arms frame anyway. -/
-structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace)
+structure OldStackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace)
     (high : Nat) : Prop where
   /-- the whole allocation lies above `.bss` (hence above the image, `tohost`
   and every static runtime variable) -/
@@ -149,6 +149,22 @@ structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Chan
       (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩]
       ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8
 
+/-- Physical named-node separation added to the old stack-only geometry.
+The bucket array is static; node bytes are allocator-owned and below the
+native stack. Allocation producers must preserve these facts. -/
+structure StackGeometry (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace)
+    (high : Nat) : Prop extends OldStackGeometry P s c pl cp high where
+  namedLow : ∀ x, NamedPlFoot pl s.world.named x →
+    (Layout.sym_named_value_table ≤ x ∧ x < Layout.sym_named_value_table + 104) ∨ Layout.sym_bss_end ≤ x
+  namedArena : ∀ x, NamedPlFoot pl s.world.named x → x + 1 ≤ Vsa.Sim.DlHeap.heapEnd
+  domainNamed : ∀ x, NamedPlFoot pl s.world.named x →
+    OutWRange [⟨(word c Layout.sym_Caml_state).toNat,
+      (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes⟩] x 1
+  heapNamed : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
+    ∀ x, NamedPlFoot pl s.world.named x → OutWRange [⟨a - 8, a + 8 * o.wosize⟩] x 1
+  channelNamed : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
+    ∀ x, NamedPlFoot pl s.world.named x → OutWRange [⟨a, a + chanOffBuff + ioBufferSize⟩] x 1
+
 /-- **Placement of a fresh object** (named obligation of the allocating
 families, supplied by the nursery bounds, lane a6-gc): apart from the VM
 stack window, the code buffer and the atom table, inside the arena and above
@@ -191,6 +207,15 @@ theorem StackGeometry.transport_ids {P : Prog} {s s' : St} {c c' : Config} {pl :
     simpa only [size] using g.heap l a o placed ho
   channels id _ a h hp := let ⟨ch, hc⟩ := chan_back ids h; g.channels id ch a hc hp
   named a f := g.named a (namedFoot a f)
+  namedLow x f := g.namedLow x (namedFoot x f)
+  namedArena x f := g.namedArena x (namedFoot x f)
+  domainNamed x f := by rw [domain]; exact g.domainNamed x (namedFoot x f)
+  heapNamed l a o' placed object x f := by
+    obtain ⟨o, ho, size⟩ := objects l o' object
+    rw [← size]; exact g.heapNamed l a o placed ho x (namedFoot x f)
+  channelNamed id _ a h hp x f :=
+    let ⟨ch, hc⟩ := chan_back ids h
+    g.channelNamed id ch a hc hp x (namedFoot x f)
   primitives := by rw [prims]; exact g.primitives
   arena := g.arena
   domainArena := by rw [domain]; exact g.domainArena
@@ -298,6 +323,8 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
       OutWRange [⟨b, b + (chanOffBuff + ioBufferSize)⟩] (a - 8) (8 * o.wosize + 8))
     (primsApart : ∀ i name, P.prims[i]? = some name →
       OutWRange [⟨(word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i, (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8⟩] (a - 8) (8 * o.wosize + 8))
+    (namedApart : ∀ x, NamedPlFoot pl s.world.named x →
+      OutWRange [⟨a - 8, a + 8 * o.wosize⟩] x 1)
     (heap : s'.heap = (s.heap.alloc o).1) (world : s'.world = s.world) :
     StackGeometry P s' c pl cp high where
   statics := g.statics
@@ -314,6 +341,16 @@ theorem StackGeometry.alloc {P : Prog} {s s' : St} {c : Config} {pl : Place}
       exact np.stackApart
   channels := by rw [world]; exact g.channels
   named := by rw [world]; exact g.named
+  namedLow := by rw [world]; exact g.namedLow
+  namedArena := by rw [world]; exact g.namedArena
+  domainNamed := by rw [world]; exact g.domainNamed
+  channelNamed := by rw [world]; exact g.channelNamed
+  heapNamed l a' o' found object x f := by
+    rw [world] at f
+    rw [heap] at object
+    rcases heap_alloc_get object with old | ⟨rfl, rfl⟩
+    · exact g.heapNamed l a' o' found old x f
+    · rw [placed] at found; cases found; exact namedApart x f
   primitives := g.primitives
   arena := g.arena
   domainArena := g.domainArena

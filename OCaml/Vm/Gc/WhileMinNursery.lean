@@ -64,6 +64,11 @@ theorem whileMin_nurseryGeometry :
       have member : a ∈ WhileMinHeap.addresses := List.mem_of_getElem? placed
       have := whileMin_addresses_high a member
       exact above _ _ (by omega)
+    named := fun x f => by
+      have bucket := NamedPlFoot.empty.mp f
+      have bound : Layout.sym_named_value_table + 104 ≤ (0x80082000 : Nat) := by decide
+      rw [free]
+      exact ⟨Or.inl (by dsimp only; omega), trivial⟩
     channels := fun id ch a _ none => by cases none
     channelsPrivate := fun id ch a _ none => by cases none
     primitives := fun i name _ => above _ _ (by rw [prims]; simp; omega)

@@ -27,6 +27,7 @@ structure EntryControl (c : Config) : Prop where
   /-- `oo_last_id` still holds its `.data` initializer `Val_int(0)` (no startup store
   writes it; the cut's image facts supply it with the other initialized statics) -/
   ooCounter : word c Layout.sym_oo_last_id = tag64 (BitVec.ofNat 63 0)
+  namedBuckets : ∀ b, b < 13 → word c (Layout.sym_named_value_table + 8 * b) = 0
 
 /-- All heap, code, globals, stack and runtime obligations follow from the
 certified store-log memory. Control, image and primitive bindings remain explicit. -/
@@ -43,6 +44,7 @@ theorem loaded {c : Config} {initial : Vsa.MemRepr.Mem}
     code := code memory
     globals := (congrArg some (read_caml_global_data memory)).symm
     argv := (congrArg some (read_main_argv memory)).symm
+    named := ⟨_, NamedRepr.empty c place entry.namedBuckets⟩
     stackHigh := ?_
     externSp := ?_
     trapsp := ?_
@@ -90,6 +92,8 @@ theorem EntryControl.fillZero {c : Config} (h : EntryControl c) :
     h.geometry.transport (fun _ o' ho => ⟨o', ho, rfl⟩) rfl (hw _) (hw _)
       (by simp only [runtimeFields, domainWord, hw]) (by simp only [runtimeFields, domainWord, hw])
       (hw _) (fun _ _ _ _ _ => hw _)
+  namedBuckets := fun b hb => (bytesT_memEqv (Vsa.Densify.memEqv_fillZeroMem c.σ.mem).symm _ 8).trans
+    (h.namedBuckets b hb)
   ooCounter := (bytesT_memEqv (Vsa.Densify.memEqv_fillZeroMem c.σ.mem).symm _ 8).trans h.ooCounter
 
 /-- The requested densified entry statement, conditional only on the actual

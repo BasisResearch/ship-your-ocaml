@@ -30,6 +30,8 @@ theorem opened_cases {cs : List Chan} {ch ch' : Chan} {cp : ChanPlace} {r id a :
 bytes at `r`, apart from everything the geometry places. -/
 structure NewChannelPlaced (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (high r : Nat) :
     Prop where
+  named : ∀ x, NamedPlFoot pl s.world.named x →
+    OutWRange [⟨r, r + chanOffBuff + ioBufferSize⟩] x 1
   stack : OutWRange [stackWindow high] r (chanOffBuff + ioBufferSize)
   heap : ∀ l a o, pl.φ l = some a → s.heap.get? l = some o →
     OutWRange [⟨r, r + (chanOffBuff + ioBufferSize)⟩] (a - 8) (8 * o.wosize + 8)
@@ -51,7 +53,8 @@ structure NewChannelPlaced (P : Prog) (s : St) (c : Config) (pl : Place) (cp : C
 /-- **The stack geometry across an opening** (same heap). -/
 theorem StackGeometry.openChan {P : Prog} {s s' : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {high r : Nat} {ch : Chan} (g : StackGeometry P s c pl cp high) (new : NewChannelPlaced P s c pl cp high r)
-    (heap : s'.heap = s.heap) (chans : s'.world.chans = s.world.chans ++ [ch]) :
+    (heap : s'.heap = s.heap) (chans : s'.world.chans = s.world.chans ++ [ch])
+    (named : s'.world.named = s.world.named := by first | rfl | assumption) :
     StackGeometry P s' c pl (cp.put s.world.chans.length r) high := by
   have objects : ∀ l o', s'.heap.get? l = some o' → s.heap.get? l = some o' := fun l o' h => heap ▸ h
   exact {
@@ -62,6 +65,19 @@ theorem StackGeometry.openChan {P : Prog} {s s' : St} {c : Config} {pl : Place} 
       rcases opened_cases h hp with ⟨hc, hp, _⟩ | ⟨_, rfl⟩
       · exact g.channels id ch' a hc hp
       · exact new.stack
+    named := by rw [named]; exact g.named
+    namedLow := by rw [named]; exact g.namedLow
+    namedArena := by rw [named]; exact g.namedArena
+    domainNamed := by rw [named]; exact g.domainNamed
+    heapNamed := fun l a o placed object x f => by
+      rw [named] at f
+      exact g.heapNamed l a o placed (objects l o object) x f
+    channelNamed := fun id ch' a h hp x f => by
+      rw [named] at f
+      rw [chans] at h
+      rcases opened_cases h hp with ⟨hc, hp, _⟩ | ⟨_, rfl⟩
+      · exact g.channelNamed id ch' a hc hp x f
+      · exact new.named x f
     primitives := g.primitives, arena := g.arena, domainArena := g.domainArena
     domainLow := g.domainLow, domainAligned := g.domainAligned
     heapArena := fun l a o placed object => g.heapArena l a o placed (objects l o object)
@@ -133,7 +149,8 @@ theorem _root_.OCaml.Vm.Gc.NurseryGeometry.openChan {P : Prog} {s s' : St} {c c'
       word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
     (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
     (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
-    (listed : Gc.OpenChannelList c'.σ.mem (r :: Gc.placedChannels cp s.world.chans.length)) :
+    (listed : Gc.OpenChannelList c'.σ.mem (r :: Gc.placedChannels cp s.world.chans.length))
+    (named : s'.world.named = s.world.named := by first | rfl | assumption) :
     Gc.NurseryGeometry P s' c' pl (cp.put s.world.chans.length r) high := by
   have window : Gc.nurseryFree c' = Gc.nurseryFree c := by simp only [Gc.nurseryFree, limit, ptr]
   have objects : ∀ l o', s'.heap.get? l = some o' → s.heap.get? l = some o' := fun l o' h => heap ▸ h
@@ -154,6 +171,7 @@ theorem _root_.OCaml.Vm.Gc.NurseryGeometry.openChan {P : Prog} {s s' : St} {c c'
       rcases opened_cases h hp with ⟨hc, hq, _⟩ | ⟨_, rfl⟩
       · exact g.channelsPrivate id ch' a hc hq
       · exact new.private_
+    named := by rw [window, named]; exact g.named
     primitives := by rw [window, prims]; exact g.primitives
     top := by rw [ptr]; exact g.top
     aligned := by rw [ptr]; exact g.aligned
@@ -187,11 +205,12 @@ theorem _root_.OCaml.LoopGeometry.openChan {L : OCaml.Layout} {P : Prog} {s s' :
       word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
     (limit : (runtimeFields c').youngLimit = (runtimeFields c).youngLimit)
     (ptr : (runtimeFields c').youngPtr = (runtimeFields c).youngPtr)
-    (listed : Gc.OpenChannelList c'.σ.mem (r :: Gc.placedChannels cp s.world.chans.length)) :
+    (listed : Gc.OpenChannelList c'.σ.mem (r :: Gc.placedChannels cp s.world.chans.length))
+    (named : s'.world.named = s.world.named := by first | rfl | assumption) :
     OCaml.LoopGeometry L P s' c' pl (cp.put s.world.chans.length r) high :=
-  ⟨⟨(g.toStackGeometry.openChan new heap chans).transport_ids (fun l o' h => ⟨o', h, rfl⟩)
-      (fun _ => rfl) domain prims,
-    g.nursery.openChan new heap chans domain prims limit ptr listed⟩,
+  ⟨⟨(g.toStackGeometry.openChan new heap chans named).transport_ids (fun l o' h => ⟨o', h, rfl⟩)
+      (fun _ => rfl) domain prims (fun _ f => f),
+    g.nursery.openChan new heap chans domain prims limit ptr listed named⟩,
    ⟨by rw [limit, ptr, heap]; exact g.room.nursery⟩⟩
 
 end OCaml.Vm.Sim

@@ -142,6 +142,14 @@ theorem channel (h : LogWindows log P s c pl cp top high offs) {id : Nat} {ch : 
   h.out (fun w sep => sep.channels id ch a hch hcp) (h.stack_of_window (h.geometry.channels id ch a hch hcp))
     (h.field_of_record (h.geometry.domainChannels id ch a hch hcp))
 
+/-- Named nodes and the static buckets survive every kind of log window,
+including stores to fields of the domain record. -/
+theorem named (h : LogWindows log P s c pl cp top high offs) :
+    ∀ x, NamedPlFoot pl s.world.named x → OutLRange log x 1 :=
+  fun x f => h.out (fun _ sep => sep.named x f)
+    (h.stack_of_window (h.geometry.named x f))
+    (h.field_of_record (h.geometry.domainNamed x f))
+
 theorem bindings (h : LogWindows log P s c pl cp top high offs) : BindingsOutside log P c :=
   ⟨h.static (by decide), fun i name hi =>
     h.out (fun w sep => sep.primitives i name hi) (h.stack_of_window (h.geometry.primitives i name hi))
@@ -167,7 +175,7 @@ theorem core (h : LogWindows log P s c pl cp top high offs)
     PayloadCoreOutside log P s c pl cp :=
   ⟨h.static (by decide), h.domainField (by decide) stackHigh, h.static (by decide),
     h.static (by decide), h.static (by decide), fun _ _ hv => h.code hv,
-    fun _ _ _ hch hcp => h.channel hch hcp, h.static (by decide), h.static (by decide), h.static (by decide)⟩
+    fun _ _ _ hch hcp => h.channel hch hcp, h.static (by decide), h.static (by decide), h.static (by decide), h.named⟩
 
 /-- The allocation pointers: away from both. -/
 theorem young (h : LogWindows log P s c pl cp top high offs)
@@ -189,7 +197,7 @@ theorem payload (h : LogWindows log P s c pl cp top high offs) {sp : Nat}
       have := (List.getElem?_eq_some_iff.1 hv).1
       exact h.stackSlot (by omega) (by omega) (by omega),
     fun _ _ _ _ placed got => h.objectOutside placed got, fun _ _ _ hch hcp => h.channel hch hcp,
-    h.static (by decide), h.static (by decide), h.static (by decide)⟩
+    h.static (by decide), h.static (by decide), h.static (by decide), h.named⟩
 
 end LogWindows
 
@@ -248,6 +256,7 @@ theorem _root_.OCaml.Vm.Gc.WindowSeparated.of_above {P : Prog} {s : St} {c : Con
     have := g.heapLow l a o placed obj
     exact ⟨Or.inl (by omega), trivial⟩
   channels id ch a hch hcp := ⟨Or.inl (by have := g.channelArena id ch a hch hcp; omega), trivial⟩
+  named x f := ⟨Or.inl (by have := g.namedArena x f; omega), trivial⟩
   primitives i name hi := ⟨Or.inl (by have := g.primsArena i name hi; omega), trivial⟩
 
 /-- A subwindow of a separated window is separated. -/
@@ -263,7 +272,8 @@ theorem _root_.OCaml.Vm.Gc.WindowSeparated.sub {P : Prog} {s : St} {c : Config} 
           code := fun i x hx => sub (h.code i x hx)
           heap := fun l a o placed got => sub (h.heap l a o placed got)
           channels := fun id ch a hch hcp => sub (h.channels id ch a hch hcp)
-          primitives := fun i name hi => sub (h.primitives i name hi) }
+          primitives := fun i name hi => sub (h.primitives i name hi)
+          named := fun x f => sub (h.named x f) }
 
 /-- A separated window depends on the state only through object sizes and
 the channel records, and on the configuration only through two words. -/
@@ -273,7 +283,9 @@ theorem _root_.OCaml.Vm.Gc.WindowSeparated.transport {P : Prog} {s s' : St} {c c
     (chans : s'.world.chans = s.world.chans)
     (domain : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state)
     (prims : word c' (Layout.sym_caml_prim_table + Layout.off_prim_contents) =
-      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)) :
+      word c (Layout.sym_caml_prim_table + Layout.off_prim_contents))
+    (named : s'.world.named = s.world.named := by
+      first | rfl | assumption | exact congrArg OCaml.Bytecode.World.named ‹_›) :
     WindowSeparated w P s' c' pl cp high where
   statics := h.statics
   domain := by rw [domain]; exact h.domain
@@ -284,5 +296,6 @@ theorem _root_.OCaml.Vm.Gc.WindowSeparated.transport {P : Prog} {s s' : St} {c c
     simpa only [size] using h.heap l a o placed ho
   channels := by rw [chans]; exact h.channels
   primitives := by rw [prims]; exact h.primitives
+  named := by rw [named]; exact h.named
 
 end OCaml.Vm.Sim

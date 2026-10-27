@@ -47,6 +47,7 @@ inductive BarrierObserved (P : Prog) (s : St) (c : Config) (pl : Place) (cp : Ch
   | prim {i : Nat} {name : String} {x : Nat} : P.prims[i]? = some name →
       InSpan ((word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i) 8 x →
       BarrierObserved P s c pl cp sp D x
+  | named {x : Nat} : NamedPlFoot pl s.world.named x → BarrierObserved P s c pl cp sp D x
   | native {r : Nat × Nat} {x : Nat} : r ∈ invocationRanges → InSpan (D.nativeSp + r.1) r.2 x →
       BarrierObserved P s c pl cp sp D x
 
@@ -62,6 +63,7 @@ theorem PayloadObserved.barrier {P : Prog} {s : St} {c : Config} {pl : Place} {c
       simp only [List.mem_cons, List.not_mem_nil, or_false] at mem
       rcases mem with rfl | rfl <;> decide
     exact .domain ⟨by have := hx.1; omega, by have := hx.2; omega⟩
+  | named f => exact .named f
   | code hi hx => exact .code hi hx
   | stack hi hx => exact .stack hi hx
   | header ho ha hx => exact .header ho ha hx
@@ -194,6 +196,7 @@ theorem observed_of_written {P : Prog} {s : St} {c cm : Config} {pl : Place} {cp
   cases obs with
   | static mem hx => exact .static mem hx
   | domain hx => rw [domain] at hx; exact .domain hx
+  | named f => exact .named f
   | code hi hx => exact .code hi hx
   | stack hi hx => exact .stack hi hx
   | header ho ha hx =>

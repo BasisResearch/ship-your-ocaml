@@ -182,9 +182,11 @@ def LibHeap (c : Config) : Prop := ∃ H cap chs, LibHeapAt H cap chs c
 
 Each registration allocates one node (`caml_stat_alloc(24 + len)`) and one
 skiplist cell for its generational root (`24 + 8·level` bytes, `level ≤ 16`).
-F1 programs register at most `maxNamed` names of at most `maxNameLen`
-bytes (BcSem guards); `NamedRoom` reserves a node and a cell for each one
-still to come, on top of `reserved`, and keeps the allocated blocks apart. -/
+`NamedRoom` is a bounded reserve interface: it reserves a node and a cell
+for each of `maxNamed` registrations of at most `maxNameLen` bytes, on top
+of `reserved`. BcSem and `GoodF1` do not impose these bounds, so this
+interface does not supply room for general successful F1 registrations.
+An allocation producer must instead justify its actual requests and room. -/
 
 def maxNamed : Nat := 16
 def maxNameLen : Nat := 64

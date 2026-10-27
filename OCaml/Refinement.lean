@@ -105,6 +105,8 @@ structure LoadedAt (L : Layout) (P : Prog) (c : Config) (pl : Place) (cp : ChanP
   geometry : LoopGeometry L P P.init c pl cp high
   /-- `main_argv` holds the program arguments' value -/
   argv : valWord pl P.argv = some (word c Layout.sym_main_argv)
+  /-- Startup has initialized the named table (empty for `P.init`). -/
+  named : ∃ chains, NamedRepr c pl P.init.world.named chains
 
 def Loaded (L : Layout) (P : Prog) (c : Config) : Prop :=
   ∃ (pl : Place) (cp : ChanPlace) (high : Nat), LoadedAt L P c pl cp high

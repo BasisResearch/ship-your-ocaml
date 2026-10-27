@@ -57,6 +57,7 @@ theorem _root_.OCaml.Vm.Primitives.PayloadOutside.cover {log fp : List WEntry} {
   heap l a o hl ha ho := ⟨outLRange_of_cover cover (h.heap l a o hl ha ho).header,
     outLRange_of_cover cover (h.heap l a o hl ha ho).payload⟩
   channels id ch a hc ha := outLRange_of_cover cover (h.channels id ch a hc ha)
+  named x f := outLRange_of_cover cover (h.named x f)
 
 /-- Entry writes only inside its footprint. -/
 theorem entryLog_cover {sp : Nat} {regs : Nat → BitVec 64} {a0 : BitVec 64} {c : Config}
@@ -125,6 +126,7 @@ theorem _root_.OCaml.LoadedAt.payload {L : OCaml.Layout} {P : Prog} {c : Config}
   world := h.world
   atomBase := h.atomBase
   argv := h.argv
+  named := h.named
 
 /-- Close an `OutLRange` goal over the flattened entry log. -/
 macro "log_out" : tactic =>
