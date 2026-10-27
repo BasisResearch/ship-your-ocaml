@@ -398,6 +398,25 @@ for that snapshot; it does not assert kernel startup reachability.
 ## A1: F1 arms (exit: `ocamlrun_refinement_Statement` for F1)
 
 **Counted-channel continuation, 2026-10-27: partial migration for lead review.**
+The continuation of committed checkpoint `dc8035a8` now produces complete
+counted entries on the actual generated unary C_CALL setup execution.
+`ChannelCountFrame` shares the physical/refcount/list-link frame;
+`Ccall1WriteOk.customCountFrame` derives its physical component from the
+existing `CustomMemCall` footprint laws and the existing stack reserve.
+Both setup/return generators retain their exact effects in `_framed`
+theorems, with the ordinary interfaces as projections.
+`counted_c_call1_setup_ready` consumes successful-state `Fits` at that
+execution's call entry, and `counted_c_call1_arm` carries the actual callee's
+physical count through dispatch/setup/call/suffix via `dispatch_compose` and
+`callSeg`. Its `CountedResult (Running ...)` conclusion does not reconstruct
+the complete counted loop invariant; it is not wired into the F1/whileMin
+tables. The ordinary loop selection/producers and the full returned
+refcount/list observations remain open. Validation of this continuation is
+recorded at the top of `docs/lanes/a1-prims.md`: the affected **3,304-job**
+build and all **27** focused standard-axiom reports pass; the **17** new
+audits are registered, and full `OCaml.Audit` remains with the lead. Checked
+edits are uncommitted for lead review; this is not completion of the target.
+
 The exact custom increment is in the actual machine call post; native open
 and out-list summaries retain its physical evidence. Successful-call readiness
 uses `Fits` on the reachable successor and `ChannelCustomsRepr`; the impossible
@@ -409,13 +428,15 @@ supplier. The full out-list physical batch charge is retained.
 
 **Still open:** selecting/establishing physical `Customs` at startup, the
 concrete `CustomMemCall` machine supplier and its exact counter/footprint laws,
-all ordinary loop/payload/setup representation producers, the out-list's
+ordinary loop/payload representation producers and their selection of the
+counted entry consumed by the new unary setup producer, the out-list's
 represented natural refcounts/no-wrap producer, and both runtime entry/after
 suppliers. The generated F1/whileMin tables therefore retain ordinary channel
 return premises, rather than treating counted summaries as weaker ordinary
 rows. Named registration/general formatting, G2 growth and C4 remain as above.
 This is not closure of `openOutRuntime` or `outListRuntime`. Validation and
-review status are recorded at the top of `docs/lanes/a1-prims.md`. The affected
+review status are recorded at the top of `docs/lanes/a1-prims.md`. Checkpoint
+`dc8035a8`'s affected
 3,684-job build and all 52 focused axiom reports pass; full `OCaml.Audit`
 remains the lead gate.
 

@@ -10,11 +10,11 @@ open OCaml.Vm.Primitives
 
 /-- The generated return suffix restores Running from a represented primitive
 result, including saved VM registers and the complete platform invariant. -/
-theorem c_call1_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
+theorem c_call1_return_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     {cp : ChanPlace} {sp high : Nat} {domain frameSp result env : BitVec 64} {c : Config}
     (stable : MemoryStable L.runtimeOk)
     (h : CcallReturnAt (0x80003060#64) L P s pl cp sp high domain frameSp result env c) :
-    ∃ after, Plus c after ∧ Running L P s after := by
+    ∃ after, Plus c after ∧ Running L P s after ∧ after.σ.mem = c.σ.mem := by
   have loaded (a : Nat) : sign_extend (m := 64) (bytesT8 c.σ.mem a) = word c a := by
     simp only [word, bytesT_eight_eq, sign_extend, Sail.BitVec.signExtend, BitVec.signExtend_eq]
   have bp : SegSt (0x80003060#64)
@@ -32,7 +32,7 @@ theorem c_call1_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     h.stackRead.lower h.stackRead.upper h.stackRead.htif frameSp h.savedStack
     h.envRead.lower h.envRead.upper h.envRead.htif env h.savedEnv c bp
   obtain ⟨_, memory, frame⟩ := post.extra
-  refine ⟨after, ⟨n - 1, by simpa only [show n - 1 + 1 = n from by omega] using steps⟩, ?_⟩
+  refine ⟨after, ⟨n - 1, by simpa only [show n - 1 + 1 = n from by omega] using steps⟩, ?_, memory⟩
   apply ccall_return_restore stable h (count := 0) (Nat.zero_le _) ?_ ?_ post.good memory frame.out
     (frame.frame (gprReg 2) (by decide))
   · refine ⟨post.pcAt, ?_, ?_, ⟨result, ?_, h.resultRepr⟩,
@@ -47,6 +47,15 @@ theorem c_call1_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
   · exact loopRegisters_frame
       (fun r hr => frame.frame r (by revert r; decide)) h.loop
       (GprsKept.of_segment frame post.pins (by seg_cover))
+
+/-- Compatibility projection; the framed suffix retains memory equality. -/
+theorem c_call1_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
+    {cp : ChanPlace} {sp high : Nat} {domain frameSp result env : BitVec 64} {c : Config}
+    (stable : MemoryStable L.runtimeOk)
+    (h : CcallReturnAt (0x80003060#64) L P s pl cp sp high domain frameSp result env c) :
+    ∃ after, Plus c after ∧ Running L P s after := by
+  obtain ⟨after, run, running, _⟩ := c_call1_return_framed stable h
+  exact ⟨after, run, running⟩
 
 /-- Triple interface for the generated represented return, for callSeg splices. -/
 theorem c_call1_return_triple {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}

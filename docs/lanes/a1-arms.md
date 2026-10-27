@@ -1,5 +1,22 @@
 # Lane a1-arms
 
+## Counted unary caller continuation (2026-10-27)
+
+The ordinary F1/whileMin loop remains uncounted. The checked continuation of
+`dc8035a8` exposes exact generated setup/suffix effects;
+`counted_c_call1_setup` now produces complete counted entries on that actual
+execution, using `ChannelCountFrame` and the existing `CustomMemCall`
+footprint laws. `counted_c_call1_setup_ready` reads the successful reachable
+successor's `Fits` bound. `counted_c_call1_arm` composes the actual counted
+call and retains its physical successor count through the read-only suffix.
+Its physical `CountedResult (Running ...)` is not a complete counted loop
+boundary and is not installed in the table. `Running.stack`/entry/ordinary
+row producers, full C_CALL return observations and out-list natural refcount
+readbacks remain open. The current `F1CcallOpen` has five ordinary row fields
+(three channels, named registration and general formatting). Runtime entry
+and after-call suppliers remain named; details and validation are at the top
+of `a1-prims.md`. G2 owns `BarrierGrowthFull`; C4 round 2 waits for F1.
+
 ## C_CALL exact-arity assembly (2026-10-21)
 
 `CcallReturns.callee` now receives the stack-depth fact already proved by

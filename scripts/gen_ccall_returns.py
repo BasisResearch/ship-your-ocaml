@@ -22,11 +22,11 @@ open OCaml.Vm.Primitives
 
 /-- The generated return suffix restores Running from a represented primitive
 result, including saved VM registers and the complete platform invariant. -/
-theorem c_call@ARITY@_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
+theorem c_call@ARITY@_return_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     {cp : ChanPlace} {sp high : Nat} {domain frameSp result env : BitVec 64} {c : Config}
     (stable : MemoryStable L.runtimeOk)
     (h : CcallReturnAt (@PC@#64) L P s pl cp sp high domain frameSp result env c)@BOUND@ :
-    ∃ after, Plus c after ∧ Running L P @STATE@ after := by
+    ∃ after, Plus c after ∧ Running L P @STATE@ after ∧ after.σ.mem = c.σ.mem := by
   have loaded (a : Nat) : sign_extend (m := 64) (bytesT8 c.σ.mem a) = word c a := by
     simp only [word, bytesT_eight_eq, sign_extend, Sail.BitVec.signExtend, BitVec.signExtend_eq]
   have bp : SegSt (@PC@#64)
@@ -44,7 +44,7 @@ theorem c_call@ARITY@_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     h.stackRead.lower h.stackRead.upper h.stackRead.htif frameSp h.savedStack
     h.envRead.lower h.envRead.upper h.envRead.htif env h.savedEnv c bp
   obtain ⟨_, memory, frame⟩ := post.extra
-  refine ⟨after, ⟨n - 1, by simpa only [show n - 1 + 1 = n from by omega] using steps⟩, ?_⟩
+  refine ⟨after, ⟨n - 1, by simpa only [show n - 1 + 1 = n from by omega] using steps⟩, ?_, memory⟩
   apply ccall_return_restore stable h (count := @COUNT@) @BOUND_PROOF@ ?_ ?_ post.good memory frame.out
     (frame.frame (gprReg 2) (by decide))
   · refine ⟨post.pcAt, ?_, ?_, ⟨result, ?_, h.resultRepr⟩,
@@ -59,6 +59,8 @@ theorem c_call@ARITY@_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
   · exact loopRegisters_frame
       (fun r hr => frame.frame r (by revert r; decide)) h.loop
       (GprsKept.of_segment frame post.pins (by seg_cover))
+
+@FORGET_FRAME@
 
 /-- Triple interface for the generated represented return, for callSeg splices. -/
 theorem c_call@ARITY@_return_triple {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
@@ -93,6 +95,15 @@ def render(arity):
     out = TEMPLATE
     for name, value in values.items():
         out = out.replace("@" + name + "@", value)
+    header = out[out.index(f"theorem c_call{arity}_return_framed"):out.index(" := by\n")]
+    header = header.replace(f"c_call{arity}_return_framed", f"c_call{arity}_return", 1)
+    header = header[:header.index(" ∧ after.σ.mem = c.σ.mem")]
+    forget = ("/-- Compatibility projection; the framed suffix retains memory equality. -/\n"
+              + header + " := by\n"
+              + f"  obtain ⟨after, run, running, _⟩ := c_call{arity}_return_framed stable h"
+              + (" bound" if count else "") + "\n"
+              + "  exact ⟨after, run, running⟩")
+    out = out.replace("@FORGET_FRAME@", forget)
     return out
 
 

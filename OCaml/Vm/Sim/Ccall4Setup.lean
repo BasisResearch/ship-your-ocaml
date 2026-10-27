@@ -11,7 +11,7 @@ open OCaml.Vm.Primitives
 
 /-- The represented prefix is proved from generated machine execution and
 static separation/read bounds. Primitive execution is a separate summary. -/
-theorem c_call4_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
+theorem c_call4_setup_framed {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     {pl : Place} {cp : ChanPlace} {sp high domain table entry : Nat}
     {value env : BitVec 64} {index : BitVec 32} {name : String}
     (stable : WindowStable L.runtimeOk (ccall1Windows sp domain))
@@ -28,7 +28,9 @@ theorem c_call4_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     (arguments : CcallArguments s sp 3)
     (dp : DispatchPost c .C_CALL4 (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d) :
     ∃ n after, StepsN n d after ∧ CcallSetupPost (0x80002f40#64) (s.accu :: s.stack.take 3) L P s pl cp sp high domain entry env after ∧
-      (runtimeFields after).youngPtr = (runtimeFields c).youngPtr := by
+      (runtimeFields after).youngPtr = (runtimeFields c).youngPtr ∧
+      after.σ.mem = writeLog c.σ.mem
+        (ccall1Log sp domain (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) env) := by
   have room8 : 8 ≤ sp := by have := space.room; omega
   have sp16Nat : (BitVec.ofNat 64 (sp - 16)).toNat = sp - 16 := Nat.mod_eq_of_lt (by have := space.stackNat; omega)
   have sp8Nat : (BitVec.ofNat 64 (sp - 8)).toNat = sp - 8 := Nat.mod_eq_of_lt (by have := space.stackNat; omega)
@@ -127,7 +129,7 @@ theorem c_call4_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))) h.dispatch.loop
     (dp.gprs.trans (GprsKept.of_segment frame post.pins (by seg_cover)))
   have argument : gpr after 10 = some value := PinsHold.get post.pins ⟨7, by simp⟩
-  refine ⟨n, after, steps, ?_, space.young.youngPtr space.payload.domain written⟩
+  refine ⟨n, after, steps, ?_, space.young.youngPtr space.payload.domain written, written⟩
   constructor
   · refine ⟨⟨post.good, image, post.good.minstret, PinsHold.get post.pins ⟨0, by simp⟩,
       by decide, post.tick⟩,
@@ -158,5 +160,27 @@ theorem c_call4_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
   · exact space.native h.native h.geometry.toArmGeometry h.stack domainWord written
       ((frame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide)))
   · vm_saved_tac
+
+/-- Compatibility projection; the framed producer retains its exact write log. -/
+theorem c_call4_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
+    {pl : Place} {cp : ChanPlace} {sp high domain table entry : Nat}
+    {value env : BitVec 64} {index : BitVec 32} {name : String}
+    (stable : WindowStable L.runtimeOk (ccall1Windows sp domain))
+    (h : ArmInput L P s .C_CALL4 c pl cp sp high)
+    (operand : OperandAt P pl (s.pc + 1) index) (nonnegative : 0 ≤ index.toInt)
+    (primitive : P.prims[index.toInt.toNat]? = some name)
+    (entryName : PrimitiveEntries.lookup name = some entry)
+    (aligned : (BitVec.ofNat 64 entry).toNat % 4 = 0)
+    (domainWord : word c Layout.sym_Caml_state = BitVec.ofNat 64 domain)
+    (tableWord : word c (Layout.sym_caml_prim_table + Layout.off_prim_contents) = BitVec.ofNat 64 table)
+    (targetRead : RamReadAt (table + 8 * index.toInt.toNat) 8)
+    (accu : valWord pl s.accu = some value) (environment : valWord pl s.env = some env)
+    (space : Ccall1WriteOk P s c pl cp sp domain (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) env)
+    (arguments : CcallArguments s sp 3)
+    (dp : DispatchPost c .C_CALL4 (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d) :
+    ∃ n after, StepsN n d after ∧ CcallSetupPost (0x80002f40#64) (s.accu :: s.stack.take 3) L P s pl cp sp high domain entry env after ∧
+      (runtimeFields after).youngPtr = (runtimeFields c).youngPtr := by
+  obtain ⟨n, after, run, setup, young, _⟩ := c_call4_setup_framed stable h operand nonnegative primitive entryName aligned domainWord tableWord targetRead accu environment space arguments dp
+  exact ⟨n, after, run, setup, young⟩
 
 end OCaml.Vm.Sim

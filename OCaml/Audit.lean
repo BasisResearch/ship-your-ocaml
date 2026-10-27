@@ -3,6 +3,7 @@ import OCaml.Vm.Sim.NamedGeometryObstruction
 import OCaml.Vm.Primitives.Named.NamedAt
 import OCaml.Vm.Gc.ChannelRefs
 import OCaml.Vm.Sim.F1Ccall
+import OCaml.Vm.Sim.CountedCcall1
 import OCaml.Vm.Gc.FinalQuiet
 import OCaml.Vm.Gc.MemprofQuiet
 import OCaml.Vm.Gc.LocalRootsTail
@@ -6871,3 +6872,22 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 
 #print axioms OCaml.Vm.Gc.CustomMemCall.call_forget
 #print axioms OCaml.Vm.Sim.OutListWalk.ListedStep.ready
+
+-- Physical custom accounting through the generated C_CALL setup and suffix.
+#print axioms OCaml.Vm.Sim.ChannelCountFrame.repr
+#print axioms OCaml.Vm.Sim.ChannelCountFrame.sameMemory
+#print axioms OCaml.Vm.Sim.ChannelCountFrame.of_log
+#print axioms OCaml.Vm.Sim.Ccall1WriteOk.customCountFrame
+#print axioms OCaml.Vm.Sim.counted_c_call1_setup
+#print axioms OCaml.Vm.Sim.counted_c_call1_setup_ready
+#print axioms OCaml.Vm.Sim.counted_c_call1_arm
+#print axioms OCaml.Vm.Sim.c_call1_setup_framed
+#print axioms OCaml.Vm.Sim.c_call2_setup_framed
+#print axioms OCaml.Vm.Sim.c_call3_setup_framed
+#print axioms OCaml.Vm.Sim.c_call4_setup_framed
+#print axioms OCaml.Vm.Sim.c_call5_setup_framed
+#print axioms OCaml.Vm.Sim.c_call1_return_framed
+#print axioms OCaml.Vm.Sim.c_call2_return_framed
+#print axioms OCaml.Vm.Sim.c_call3_return_framed
+#print axioms OCaml.Vm.Sim.c_call4_return_framed
+#print axioms OCaml.Vm.Sim.c_call5_return_framed

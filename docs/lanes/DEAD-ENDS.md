@@ -164,3 +164,16 @@
   and migrate their actual producers. Counted caller summaries cannot be
   silently cast to the weaker, universally quantified `PrimReturnsAtR`.
   This is contract inspection, not a checked reachable counterexample.
+
+- 2026-10-27 unary setup/suffix continuation: the generated suffix's exact
+  memory equality preserves the callee's physical successor count, but
+  cannot turn `CountedResult.physical` into `ChannelCustomsRepr`. It copies
+  whatever refcount bytes the callee returned. `CcallReturn` existentially
+  selects a channel placement without retaining counted observations;
+  `OutListReturned` permits refcount writes and exports a physical batch
+  charge, without their natural readbacks. The opening's existing native
+  `open_out_counts` must be retained at that same selected placement; the
+  out-list needs increment/no-wrap observations as well. The checked
+  `counted_c_call1_arm` therefore deliberately concludes only physical
+  accounting, not a counted loop row. This is contract inspection, not a
+  claim that the missing suppliers are impossible.

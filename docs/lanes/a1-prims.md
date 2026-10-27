@@ -2,6 +2,86 @@
 
 ## Current status
 
+**2026-10-27 actual unary C_CALL setup/suffix: partial continuation of
+`dc8035a8`, for lead review. The ordinary F1 loop is still open.**
+
+The prerequisite custom-count checkpoint was committed at `dc8035a8`; its
+remaining-obligation list above the earlier validation was inspected before
+editing. The worktree started clean. The shared abstraction is
+`ChannelCountFrame`: its physical transition, natural refcount observations
+and opened-list links reconstruct all of `ChannelCustomsRepr`. Its `of_log`
+uses the existing whole-record payload separation and
+`outLRange_subrange`/`bytesT_writeLog_out`; `sameMemory` reuses
+`CustomAccounting.sameMemory`.
+
+The setup/return generators now retain exact effects in
+`c_call{1..5}_setup_framed` and `c_call{1..5}_return_framed`; the original
+interfaces are projections. `Ccall1WriteOk.customCountFrame` proves physical
+state separation from `CustomMemCall.apart.covered`/`.domainField`, the
+existing stack reserve and the actual setup log. `counted_c_call1_setup`
+therefore produces a complete `CountedCcallSetupPost` on that generated
+execution, with no new count-preservation supplier. From that actual setup,
+`counted_c_call1_setup_ready` consumes the reachable successful successor's
+`Fits` bound and its semantic charge (`openChan_customs` or
+`listRefs_customs`). No readiness is inferred from a pending refcount store.
+
+`counted_c_call1_arm` uses `dispatch_compose` and `callSeg` to compose this
+setup, the existing counted callee summary, and the generated suffix. It
+retains the callee's actual physical successor count across the suffix's
+memory equality. Its conclusion is explicitly only
+`CountedResult Customs (Running ...) world.customs`; it is **not** a complete
+counted loop boundary and is not installed in `f1_table` or `whileMin`.
+
+Remaining obligations, without new assumptions of primitive or row results:
+
+- Startup still needs the selected physical `Customs` predicate's actual
+  zero witness. `f1_channelCounts_of` consumes that witness and the checked
+  empty-head observation; it does not produce the physical zero.
+- Ordinary `Running.stack`/`LoopAt`, entry and the shared payload/row
+  producers still need one counted representation at their selected channel
+  placement. The new unary setup producer consumes such counts; ordinary
+  `CcallReady.of_loop` does not yet produce them. Counts through ordinary
+  non-custom primitive summaries also remain to be carried by their frames.
+- C_CALL returns must retain complete counts at the returned placement.
+  Native `open_out_counts` already supplies opening counts, but the common
+  counted callee post currently retains only the physical component. The
+  out-list additionally needs its actual natural refcount increments and
+  no-wrap proof; `OutListReturned.counted` and its frame outside refcounts
+  do not establish those observations.
+- The concrete `CustomMemCall` supplier remains named and open. Opening
+  `OpenOutRuntimeAt.after` pins and out-list entry geometry/selected heap,
+  matching named ledger and after-call runtime pins remain open. No runtime
+  supplier was replaced with the desired row or primitive result.
+- Named registration, general formatting, reset/libHeap and G2 remain open;
+  `BarrierGrowthFull` stays with G2 and C4 round 2 still waits for F1. The
+  `GoodF1` domain is unchanged.
+
+Validation of this continuation passes:
+
+- `scripts/lean-capped.sh lake build OCaml.Vm.Sim.CountedCcall1
+  OCaml.Vm.Sim.F1Ccall OCaml.Vm.Sim.WhileMinTable`: **3,304 jobs**
+  (`/tmp/a1-counted-loop-final-build.log`). This includes all five generated
+  setup and suffix modules and the actual unary setup/readiness/call proofs.
+- `scripts/lean-capped.sh lake env lean /tmp/a1-counted-loop-audit.lean`:
+  **27 reports**, including all 17 new theorems and the ten ordinary
+  compatibility projections. Every report uses only `propext`,
+  `Classical.choice`, `Quot.sound` (`/tmp/a1-counted-loop-audit.log`, checked
+  by `/tmp/a1-counted-loop-audit-check.txt`). The 17 new audits are registered
+  in `OCaml/Audit.lean`; the full audit remains the lead gate.
+- Hole, discipline and abstraction gates pass (C4 remains at 3), as do both
+  changed generators' `--check`, the F1 generator's `--check`, and
+  `git diff --check`.
+
+Each build/audit used the capped wrapper with the inherited two-thread,
+12 GB cgroup limit and `free -g` beforehand (available memory exceeded
+25 GB). Intermediate proof corrections concerned footprint offsets and the
+already-present stack reserve; final checks pass without increased budgets.
+Only generators were edited for generated artifacts. No new trust primitive,
+worker, virtual-memory limit, Git metadata or integration-queue write was
+used. Checked edits remain uncommitted for lead review and integration.
+This continuation remains **stuck at the ordinary counted loop invariant and
+complete returned refcount evidence**, not at the unary setup frame.
+
 **2026-10-27 counted-channel continuation: partial migration, not landed.**
 
 `CustomMemCall.call` now returns `CustomMemCountedReturned`: the exact

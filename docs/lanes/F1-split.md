@@ -115,6 +115,18 @@ summaries cannot fill the weaker ordinary rows until their entry producers
 carry physical accounting. Wrong arities are still discharged by
 `PrimReturnsAtD.of_arity`; the full `GoodF1` domain is unchanged.
 
+The 2026-10-27 continuation of `dc8035a8` now proves the actual unary
+counted setup producer (`CountedCcallSetup.lean`) from the existing custom
+state separation and the exact generated log. `ChannelCountFrame` shares
+the full boundary frame. `CountedCcall1.lean` composes dispatch/setup/call/
+suffix and retains the callee's actual physical count, but does not restore
+complete returned refcount observations. These theorems do not migrate
+`Running.stack`/entry/non-custom rows or fill the five ordinary fields;
+the ordinary F1/whileMin assembly still awaits that migration. No new
+primitive-result or row-result supplier was added. Validation and the
+remaining selected-count/startup/runtime/refcount suppliers are recorded
+at the top of `a1-prims.md`.
+
 ### The custom-allocation budget (2026-10-27 continuation)
 
 `Fits` bounds `World.customs` (Σ channel refs) at every reachable state;

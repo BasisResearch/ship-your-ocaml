@@ -23,7 +23,7 @@ open OCaml.Vm.Primitives
 
 /-- The represented prefix is proved from generated machine execution and
 static separation/read bounds. Primitive execution is a separate summary. -/
-theorem c_call@ARITY@_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
+theorem c_call@ARITY@_setup_framed {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config}
     {pl : Place} {cp : ChanPlace} {sp high domain table entry : Nat}
     {value env : BitVec 64} {index : BitVec 32} {name : String}
     (stable : WindowStable L.runtimeOk (ccall1Windows sp domain))
@@ -39,7 +39,9 @@ theorem c_call@ARITY@_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config
     (space : Ccall1WriteOk P s c pl cp sp domain (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) env)
 @ARGUMENTS_PARAM@    (dp : DispatchPost c .C_CALL@ARITY@ (BitVec.ofNat 64 (pl.codeBase + 4 * s.pc)) d) :
     ∃ n after, StepsN n d after ∧ CcallSetupPost (@RETURN@#64) @ARGS@ L P s pl cp sp high domain entry env after ∧
-      (runtimeFields after).youngPtr = (runtimeFields c).youngPtr := by
+      (runtimeFields after).youngPtr = (runtimeFields c).youngPtr ∧
+      after.σ.mem = writeLog c.σ.mem
+        (ccall1Log sp domain (BitVec.ofNat 64 (pl.codeBase + 4 * (s.pc + 2))) env) := by
   have room8 : 8 ≤ sp := by have := space.room; omega
   have sp16Nat : (BitVec.ofNat 64 (sp - 16)).toNat = sp - 16 := Nat.mod_eq_of_lt (by have := space.stackNat; omega)
   have sp8Nat : (BitVec.ofNat 64 (sp - 8)).toNat = sp - 8 := Nat.mod_eq_of_lt (by have := space.stackNat; omega)
@@ -125,7 +127,7 @@ theorem c_call@ARITY@_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config
     (frame.frame r (by revert r; decide)).trans (dp.frame.frame r (by revert r; decide))) h.dispatch.loop
     (dp.gprs.trans (GprsKept.of_segment frame post.pins (by seg_cover)))
   have argument : gpr after 10 = some value := PinsHold.get post.pins ⟨@ACCU_PIN@, by simp⟩
-  refine ⟨n, after, steps, ?_, space.young.youngPtr space.payload.domain written⟩
+  refine ⟨n, after, steps, ?_, space.young.youngPtr space.payload.domain written, written⟩
   constructor
   · refine ⟨⟨post.good, image, post.good.minstret, PinsHold.get post.pins ⟨0, by simp⟩,
       by decide, post.tick⟩,
@@ -149,6 +151,8 @@ theorem c_call@ARITY@_setup {L : OCaml.Layout} {P : Prog} {s : St} {c d : Config
   · exact space.native h.native h.geometry.toArmGeometry h.stack domainWord written
       ((frame.frame (gprReg 2) (by decide)).trans (dp.frame.frame (gprReg 2) (by decide)))
   · vm_saved_tac
+
+@FORGET_FRAME@
 
 end OCaml.Vm.Sim
 '''
@@ -207,6 +211,16 @@ def render(arity):
     out = TEMPLATE
     for name, value in values.items():
         out = out.replace("@" + name + "@", value)
+    header = out[out.index(f"theorem c_call{arity}_setup_framed"):out.index(" := by\n")]
+    header = header.replace(f"c_call{arity}_setup_framed", f"c_call{arity}_setup", 1)
+    header = header[:header.index(" ∧\n      after.σ.mem = writeLog")]
+    application = ("stable h operand nonnegative primitive entryName aligned domainWord "
+                   "tableWord targetRead accu environment space" + (" arguments" if count else "") + " dp")
+    forget = ("/-- Compatibility projection; the framed producer retains its exact write log. -/\n"
+              + header + " := by\n"
+              + f"  obtain ⟨n, after, run, setup, young, _⟩ := c_call{arity}_setup_framed {application}\n"
+              + "  exact ⟨n, after, run, setup, young⟩")
+    out = out.replace("@FORGET_FRAME@", forget)
     return out
 
 
