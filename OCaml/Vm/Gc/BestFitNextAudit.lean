@@ -248,3 +248,15 @@ The full OCaml.Audit remains the lead integration gate. -/
 #print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.allocated_apart
 #print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.representation
 #print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.allocated_apart
+
+/-! Reusable physical extents at the same checked native return. -/
+#print axioms OCaml.Vm.Gc.BfShape.SmallPhysical.empty
+#print axioms OCaml.Vm.Gc.BfShape.SmallPhysical.pop
+#print axioms OCaml.Vm.Gc.BfShape.inserted_occurrence
+#print axioms OCaml.Vm.Gc.BfShape.SmallPhysical.push
+#print axioms OCaml.Vm.Gc.BfShape.SmallPhysical.remnant
+#print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.remnant_size_nat
+#print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.physical
+#print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.smallRepresentation
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.physical
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.smallRepresentation

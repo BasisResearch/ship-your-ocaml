@@ -1,5 +1,59 @@
 # Lane a6-gc
 
+## Native next-size reusable physical representation (2026-10-27)
+
+- `BfShape.SmallPhysical.pop` embeds each retained occurrence into its original
+  index (successor only in the selected list). `inserted_occurrence` and
+  `SmallPhysical.push` preserve occurrence separation for both same-list and
+  cross-list pairs; they never replace it with pointer inequality or assume
+  final uniqueness. `SmallPhysical.remnant` uses `selected_apart` and bounded
+  arithmetic to inherit full header-plus-payload bounds and separation from
+  the original selected block for a smaller remnant at the same pointer.
+- `BestFitNext.RoutePost.remnant_size_nat` factors the actual decoded size
+  readback out of `allocated_apart`: retained pick/pop witnesses, original
+  header readback and `smallHeader_size` give `s-request-1` at the exact split
+  snapshot. `RoutePost.physical` returns `SmallPhysical` for `routeLists`;
+  `SearchReturned.physical` transports that result through the existing
+  `SearchPath` to `searchLists`. Insertion shrinks the original extent;
+  zero-word and sweep-deferred branches return the occurrence-preserving pop.
+  No final-state premise was added. Existing representation, allocated-result
+  separation, counter, ABI, code, output and native-return statements remain.
+- `SmallRepresentation` bundles shape, headers, bitmap agreement and physical
+  extents. `RoutePost.smallRepresentation` and
+  `SearchReturned.smallRepresentation` return the bundle at that same native
+  return, so callers can reuse all four components for later allocations.
+  `SmallPhysical.empty` derives the pure empty-family base case only; it does
+  not prove native initialization or that a caller produces these components.
+- Validation: guarded/capped `lake build OCaml.Vm.Gc.BfShape
+  OCaml.Vm.Gc.BestFitPreservation OCaml.Vm.Gc.BestFitNextAudit` passes
+  (1289 jobs, including affected next/search/remnant dependencies). The
+  standalone focused `lake env lean -M 6000 -j 1
+  OCaml/Vm/Gc/BestFitNextAudit.lean` passes: all 251 reports (249 with only
+  `propext`, `Classical.choice`, `Quot.sound`; two pure) are present, including
+  all ten new theorems, with no disallowed dependency. Reports are registered
+  in `BestFitNextAudit`, already imported by `OCaml.Audit`; full `OCaml.Audit`
+  remains the lead gate. Generator drift, collector CFG, hole check (4741
+  files), discipline (27 rules), abstraction gate and `git diff --check` pass.
+  All Lean launches used `lean-guarded.py` and `lean-capped.sh`, after
+  `free -g` showed available ≥25 GB, with inherited 12 GB cgroup/two threads
+  and unchanged proof budgets. Logs: `/tmp/a6-physical-build.log`,
+  `/tmp/a6-physical-axioms.log`, `/tmp/a6-physical-generator.log`,
+  `/tmp/a6-physical-cfg.log`, `/tmp/a6-physical-holes.log`,
+  `/tmp/a6-physical-discipline.log`, `/tmp/a6-physical-abstraction.log`.
+- Precise next entry/dispatch work: produce the four original components from
+  native major-heap initialization and preserve them to allocator calls;
+  prove original dispatch reaches fallback `0x800073cc` with a positive request
+  and some nonempty larger list of size ≤16, plus `SearchInput`'s loaded code,
+  register/good-state/tick/minstret observations, aligned caller return, native save
+  windows and original `SearchSource` stack geometry. A later allocation still
+  needs these request, dispatch and window suppliers. The pure empty lemma
+  supplies none of this execution. Other size classes/colors, large-tree
+  readiness, natural free-space accounting and full collection remain open.
+  `BarrierGrowthFull` stays G2, `CustomMemCall` remains a named premise, C4
+  round 2 waits for F1 and `GoodF1` is unchanged. Checked edits are left for
+  lead review; only the lead commits/lands via `scripts/integrate.sh`, since
+  Git metadata and the landing queue are read-only here.
+
 ## Native next-size returned small representation (2026-10-27)
 
 - `BestFitRemnant.Post.representation` starts at the actual remnant helper
@@ -51,10 +105,10 @@
   `/tmp/a6-pres-abstraction.log`. Initial composed-check elaboration errors
   were fixed with explicit scalar/address facts and a boundary reflexivity
   proof, at unchanged proof limits.
-- Open: preservation of the new `SmallPhysical` component itself (needed
-  to reuse this representation theorem on a later allocation), production
-  of original physical extents, original dispatch, other
-  size classes, allocation colors, full allocator readiness and collection.
+- Open after the physical-preservation extension above: production
+  of original physical extents from native initialization/callers, original
+  dispatch, other size classes, allocation colors, full allocator readiness
+  and collection.
   `BarrierGrowthFull` remains G2, `CustomMemCall` remains named, C4 round 2
   waits for F1 and `GoodF1` is unchanged. Work stays in this worktree;
   checked edits are left uncommitted for lead review/integration because Git
@@ -112,8 +166,8 @@
   `/tmp/a6-search-focused-axioms.log`, `/tmp/a6-search-generator.log`,
   `/tmp/a6-search-cfg.log`, `/tmp/a6-search-discipline.log`,
   `/tmp/a6-search-abstraction.log`.
-- Remaining: dispatch into fallback, final reinsertion preservation of the
-  allocator invariant, other size classes, general ownership/readiness
+- Remaining after the preservation extensions above: dispatch into fallback,
+  other size classes, general ownership/readiness
   suppliers, allocation colors and collector integration. This is no full
   allocator or `BarrierGrowthFull` closure. `BarrierGrowthFull` stays with
   G2, `CustomMemCall` remains a named premise, C4 round 2 waits for F1 and

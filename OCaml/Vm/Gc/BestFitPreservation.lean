@@ -202,6 +202,51 @@ theorem resultHeader_nat {b request hd : BitVec 64}
   rw [resultHeader,BitVec.toNat_add,offset,hn,Nat.mod_eq_of_lt (by omega)]
   omega
 
+/-- The actual split snapshot decodes the smaller remnant size from the
+original selected header. Shared by free and allocated extent preservation. -/
+theorem RoutePost.remnant_size_nat {sp s b request lists bs before after}
+    (post : RoutePost sp s b request lists bs before after)
+    (input : RouteInput sp s b request lists bs before) :
+    (BestFitRemnant.size b
+      (splitMemory sp b request (poppedMemory sp s b before.σ.mem))).toNat =
+      s.toNat-request.toNat-1 := by
+  obtain ⟨picked,popped,path⟩ := post.path_spec
+  have snapshot : poppedMemory sp s b before.σ.mem = popped.σ.mem := by
+    rw [poppedMemory,show pickedMemory s before.σ.mem = picked.σ.mem from path.pick.memory.symm]
+    exact path.pop.memory.symm
+  rw [snapshot]
+  have splitInput := input.split_input path.pick path.pop
+  change (sourceSize (sourceHeader b (splitMemory sp b request popped.σ.mem))).toNat = _
+  rw [splitMemory_header input.geometry,
+    smallHeader_size input.requestPositive splitInput.larger splitInput.small]
+  have old : sourceHeader b popped.σ.mem = sourceHeader b before.σ.mem :=
+    input.prefix_read path.pick path.pop (prefix_out_heap input.small (by
+      rw [input.geometry.header_nat]; have := input.geometry.blockHeap; omega))
+  rw [old,input.size]
+
+/-- Every final free occurrence has bounded, disjoint physical extents at the
+same native return. Zero-word and sweep-deferred remnants leave only the pop. -/
+theorem RoutePost.physical {sp s b request lists bs before after}
+    (post : RoutePost sp s b request lists bs before after)
+    (input : RouteInput sp s b request lists bs before)
+    (physical : BfShape.SmallPhysical lists) :
+    BfShape.SmallPhysical (routeLists sp s b request lists bs before.σ.mem) := by
+  unfold routeLists BestFitRemnant.finalLists
+  split
+  · apply physical.remnant input.positive input.small input.selected
+    rw [post.remnant_size_nat input]
+    omega
+  · exact physical.pop input.selected
+
+/-- A compact reusable representation at the checked route's native return. -/
+theorem RoutePost.smallRepresentation {sp s b request lists bs before after}
+    (post : RoutePost sp s b request lists bs before after)
+    (input : RouteInput sp s b request lists bs before)
+    (physical : BfShape.SmallPhysical lists) (stack : BfShape.StackApart sp lists) :
+    BfShape.SmallRepresentation after.σ.mem (routeLists sp s b request lists bs before.σ.mem) := by
+  have represented := post.representation input physical stack
+  exact ⟨represented.1,represented.2.1,represented.2.2,post.physical input physical⟩
+
 /-- Physical separation of the allocated header and all its payload words
 from the represented free header-plus-payload extents. -/
 structure AllocatedApart (a : Nat) (request : BitVec 64)
@@ -224,22 +269,7 @@ theorem RoutePost.allocated_apart {sp s b request lists bs before after}
     (by simpa only [input.size] using input.small) (by have := input.geometry.blockHeap; omega)
     (by simpa only [input.size] using bounds.2)
   rw [input.size] at a
-  have remnant : (BestFitRemnant.size b
-      (splitMemory sp b request (poppedMemory sp s b before.σ.mem))).toNat =
-      s.toNat-request.toNat-1 := by
-    obtain ⟨picked,popped,path⟩ := post.path_spec
-    have snapshot : poppedMemory sp s b before.σ.mem = popped.σ.mem := by
-      rw [poppedMemory,show pickedMemory s before.σ.mem = picked.σ.mem from path.pick.memory.symm]
-      exact path.pop.memory.symm
-    rw [snapshot]
-    have splitInput := input.split_input path.pick path.pop
-    change (sourceSize (sourceHeader b (splitMemory sp b request popped.σ.mem))).toNat = _
-    rw [splitMemory_header input.geometry,
-      smallHeader_size input.requestPositive splitInput.larger splitInput.small]
-    have old : sourceHeader b popped.σ.mem = sourceHeader b before.σ.mem :=
-      input.prefix_read path.pick path.pop (prefix_out_heap input.small (by
-        rw [input.geometry.header_nat]; have := input.geometry.blockHeap; omega))
-    rw [old,input.size]
+  have remnant := post.remnant_size_nat input
   constructor
   · rw [a]
     have := input.larger
@@ -293,6 +323,26 @@ theorem SearchReturned.representation {R lists s b bs before after}
     exact (input.sources t lo hi x hx).geometry.separate)
   have snapshot : searchMemory R before = searched.σ.mem := path.search.memory.symm
   simpa only [searchLists,snapshot] using result
+
+/-- Physical extents survive the actual native bitmap search and allocation
+return, using its existing stage witnesses and original input only. -/
+theorem SearchReturned.physical {R lists s b bs before after}
+    (post : SearchReturned R lists s b bs before after)
+    (input : SearchInput R lists before) (physical : BfShape.SmallPhysical lists) :
+    BfShape.SmallPhysical (searchLists R s b lists bs before) := by
+  obtain ⟨searched,path⟩ := post.path_spec
+  have result := path.allocation.physical (input.route_input path.choice path.search) physical
+  have snapshot : searchMemory R before = searched.σ.mem := path.search.memory.symm
+  simpa only [searchLists,snapshot] using result
+
+/-- All four components together at the same native search return, ready for
+later allocations once their request/dispatch/stack obligations are supplied. -/
+theorem SearchReturned.smallRepresentation {R lists s b bs before after}
+    (post : SearchReturned R lists s b bs before after)
+    (input : SearchInput R lists before) (physical : BfShape.SmallPhysical lists) :
+    BfShape.SmallRepresentation after.σ.mem (searchLists R s b lists bs before) := by
+  have represented := post.representation input physical
+  exact ⟨represented.1,represented.2.1,represented.2.2,post.physical input physical⟩
 
 /-- The native search result's allocated block is disjoint from every final
 represented free block, including the reinserted remnant when present. -/

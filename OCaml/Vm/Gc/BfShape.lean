@@ -328,6 +328,94 @@ structure SmallPhysical (lists : Nat → List (BitVec 64)) : Prop where
     (lists s)[i]? = some b → (lists t)[j]? = some x →
     (s ≠ t ∨ i ≠ j) → b.toNat + 8*s ≤ x.toNat-8 ∨ x.toNat + 8*t ≤ b.toNat-8
 
+/-- The empty family has no physical extents. This pure base case does not
+establish native initialization or produce a caller's represented lists. -/
+theorem SmallPhysical.empty : SmallPhysical (fun _ => []) := by
+  constructor
+  · intro s lo hi b hb
+    simp at hb
+  · intro s t i j b x lo hi lt ht hb hx different
+    simp at hb
+
+/-- Popping preserves original occurrences by shifting only the selected
+list's indices. No pointer-inequality or final uniqueness premise is used. -/
+theorem SmallPhysical.pop {lists s b bs} (physical : SmallPhysical lists)
+    (selected : lists s = b :: bs) : SmallPhysical (popped lists s bs) := by
+  have occurrence : ∀ t i x, (popped lists s bs t)[i]? = some x →
+      (lists t)[if t = s then i+1 else i]? = some x := by
+    intro t i x hx
+    by_cases eq : t = s
+    · subst t
+      simpa only [popped,ite_true,selected,List.getElem?_cons_succ] using hx
+    · simpa only [popped,if_neg eq] using hx
+  constructor
+  · intro t lo hi x hx
+    obtain ⟨i,hi'⟩ := List.mem_iff_getElem?.mp hx
+    exact physical.bounds t lo hi x (List.mem_iff_getElem?.mpr ⟨_,occurrence t i x hi'⟩)
+  · intro t u i j x y lo hi lu hu hx hy different
+    apply physical.separate t u _ _ x y lo hi lu hu (occurrence t i x hx) (occurrence u j y hy)
+    by_cases eq : t = u
+    · subst u
+      right
+      rcases different with h | h
+      · exact (h rfl).elim
+      · split <;> omega
+    · exact Or.inl eq
+
+/-- Classify an inserted occurrence, retaining the original occurrence index
+for every old block. -/
+theorem inserted_occurrence {lists s b t i x}
+    (hx : (inserted lists s b t)[i]? = some x) :
+    (t = s ∧ i = 0 ∧ x = b) ∨
+      ∃ j, (lists t)[j]? = some x ∧ i = if t = s then j+1 else j := by
+  by_cases eq : t = s
+  · subst t
+    cases i with
+    | zero =>
+      left
+      refine ⟨rfl,rfl,?_⟩
+      simpa only [inserted,ite_true,List.getElem?_cons_zero,Option.some.injEq] using hx.symm
+    | succ i =>
+      right
+      exact ⟨i,by simpa only [inserted,ite_true,List.getElem?_cons_succ] using hx,by simp⟩
+  · right
+    exact ⟨i,by simpa only [inserted,if_neg eq] using hx,by simp only [if_neg eq]⟩
+
+/-- Insertion preserves occurrence separation when the inserted whole extent
+is bounded and apart from every existing whole extent. -/
+theorem SmallPhysical.push {lists s b} (physical : SmallPhysical lists)
+    (bound : DlHeap.heapStart + 8 ≤ b.toNat ∧ b.toNat + 8*s < 2^64)
+    (apart : ∀ t, 1 ≤ t → t ≤ Layout.bf_small_count → ∀ x ∈ lists t,
+      b.toNat + 8*s ≤ x.toNat-8 ∨ x.toNat + 8*t ≤ b.toNat-8) :
+    SmallPhysical (inserted lists s b) := by
+  constructor
+  · intro t lo hi x hx
+    by_cases eq : t = s
+    · subst t
+      simp only [inserted,ite_true,List.mem_cons] at hx
+      rcases hx with rfl | hx
+      · exact bound
+      · exact physical.bounds s lo hi x hx
+    · exact physical.bounds t lo hi x (by simpa only [inserted,if_neg eq] using hx)
+  · intro t u i j x y lo hi lu hu hx hy different
+    rcases inserted_occurrence hx with ⟨rfl,rfl,rfl⟩ | ⟨i',hxOld,ix⟩
+    · rcases inserted_occurrence hy with ⟨rfl,rfl,rfl⟩ | ⟨j',hyOld,jy⟩
+      · rcases different with h | h <;> exact (h rfl).elim
+      · exact apart u lu hu y (List.mem_iff_getElem?.mpr ⟨j',hyOld⟩)
+    · rcases inserted_occurrence hy with ⟨rfl,rfl,rfl⟩ | ⟨j',hyOld,jy⟩
+      · exact (apart t lo hi x (List.mem_iff_getElem?.mpr ⟨i',hxOld⟩)).symm
+      · apply physical.separate t u i' j' x y lo hi lu hu hxOld hyOld
+        by_cases eq : t = u
+        · subst u
+          right
+          intro same
+          subst j'
+          have indices : i = j := ix.trans jy.symm
+          rcases different with h | h
+          · exact h rfl
+          · exact h indices
+        · exact Or.inl eq
+
 /-- Derive selected-block separation from original occurrence separation. -/
 theorem SmallPhysical.selected_apart {lists s b bs} (physical : SmallPhysical lists)
     (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) (selected : lists s = b :: bs)
@@ -347,6 +435,27 @@ theorem SmallPhysical.selected_apart {lists s b bs} (physical : SmallPhysical li
     exact physical.separate s t 0 j b x lo hi lt ht (by simp [selected]) hj
       (Or.inl (Ne.symm eq))
 
+
+/-- A smaller remnant at the selected pointer inherits its original extent's
+bounds and separation after removing precisely the selected occurrence. -/
+theorem SmallPhysical.remnant {lists s b bs r} (physical : SmallPhysical lists)
+    (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) (selected : lists s = b :: bs)
+    (smaller : r ≤ s) : SmallPhysical (inserted (popped lists s bs) r b) := by
+  have bound := physical.bounds s lo hi b (by rw [selected]; simp)
+  apply (physical.pop selected).push
+  · exact ⟨bound.1,by omega⟩
+  · intro t lt ht x hx
+    have sep := physical.selected_apart lo hi selected lt ht hx
+    omega
+
+/-- The reusable small-list representation, including physical extents.
+Caller production and native initialization remain separate obligations. -/
+structure SmallRepresentation (m : Std.ExtHashMap Nat (BitVec 8))
+    (lists : Nat → List (BitVec 64)) : Prop where
+  shape : SmallShape m lists
+  headers : SmallHeaders m lists
+  map : MapConsistent m lists
+  physical : SmallPhysical lists
 
 /-- Setting the inserted size's bit preserves bitmap/list agreement. -/
 theorem MapConsistent.set {m m' lists s b} (map : MapConsistent m lists)
