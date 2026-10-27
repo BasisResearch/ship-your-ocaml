@@ -21,6 +21,7 @@ Files: OCaml/Vm/Boot/Startup/AtomTableReset.lean and a new backtrace/startup con
 Use gen_fn.py / the existing startup-row generator for caml_init_backtrace, its register_global_root wrapper and the actual caller continuation from the atom-table return at 0x80004e80.
 Read the ELF's real call targets and generated Layout fields; never substitute a different allocator or root-registration entry because its interface looks similar.
 Derive domain-field initialization, the backtrace_last_exn key and initial value, empty header/seed, selected owned-block ledger and allocation room from the actual preceding run.
+The current reset_init_atom_table_returned_exists existential forgets domain ownership and low-memory data; strengthen its producer chain (InitStackReset / AtomTableDone) to retain them, rather than adding initial assumptions.
 Compose the checked first insertion and derive its postcondition from that run. Carry HeapReady/LiveFrame, native ABI, code/image and observable output through the return.
 Do not use the captured final memory or Loaded snapshot as evidence that initialization executed. Reuse the existing reset prefix and shared GprsSame/LiveFrame abstractions.
 Done: a checked reset-to-after-backtrace summary with explicit next native PC and preserved allocator/domain/global-root facts, focused build/standard-axiom audits and generator drift pass.
