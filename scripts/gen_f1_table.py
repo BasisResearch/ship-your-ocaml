@@ -318,9 +318,7 @@ def render_whilemin(fields, users):
              'open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives', '',
              '/-- **What `whileMin`\'s machine run still needs** from the arm lanes. -/',
              'structure WhileMinOpen : Prop where']
-    lines += ['  /-- newlib\'s heap at the cut covers the runtime\'s blocks (a0-boot) -/',
-              '  libHeap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered [(Gc.refTable, 56)]',
-              '  /-- the call state at `caml_modify` and the realloc branch (GC lane) -/',
+    lines += ['  /-- the call state at `caml_modify` and the realloc branch (GC lane) -/',
               '  growth : F1GrowthPremises']
     for fname, ty in open_.items():
         lines.append(f'  {fname} : {ty}')
@@ -330,7 +328,7 @@ def render_whilemin(fields, users):
     lines += ['', '/-- **The `whileMin` machine run** from the open premises only. -/',
               'theorem whileMin_halts_open (o : WhileMinOpen) :',
               '    Halts Boot.WhileMin.cut "55\\n2500\\n36\\n" 0 :=',
-              '  whileMin_halts_f1 o.libHeap o.growth (whileMin_premises o)', '', 'end OCaml.Vm.Sim', '']
+              '  whileMin_halts_f1 o.growth (whileMin_premises o)', '', 'end OCaml.Vm.Sim', '']
     return '\n'.join(lines)
 
 
