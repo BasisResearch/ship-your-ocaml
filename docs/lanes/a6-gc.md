@@ -1,5 +1,48 @@
 # Lane a6-gc
 
+## First empty-skiplist insertion (2026-10-27)
+
+- `SkiplistFirst.first_insert` and `first_insert_startup` compose actual
+  native execution from `0x8002aafc` through the allocation call, cell/header
+  stores and original ABI return. The zero seed becomes 25173, chooses level
+  0 and requests a 24-byte cell. `FirstInserted` records the exact prefix
+  and suffix logs, allocator result, key/zero/next words, one-cell level-0
+  chain, zero header tail, updated allocator ownership/readiness, saved ABI
+  registers, preserved selected live blocks/key, output and HTIF frame.
+  Room/charge, 768-byte native frame, selected-block bounds and full aligned
+  key-word bounds remain explicit premises; no run or postcondition is assumed.
+- `startupKey` is the actual `caml_init_backtrace` domain-record key:
+  `firstDomainPtr + 256`. The generator obtains the named
+  `backtrace_last_exn` field offset from `domain_state.tbl` and certifies the
+  pinned ADDI at `0x8000ef44`. `startup_key_slot` witnesses its aligned
+  eight-byte span inside the owned 928-byte domain block; the startup summary
+  requires that block in the allocator ownership list.
+- The evaluator repair isolates `SkipFirstEval.i8002ab00_store`. Symbolic
+  address observations stay opaque, scalar values are certified separately,
+  and `checkedLogStep`/`checkedLogStore` compose logs over abstract tails.
+  Narrow per-instruction rules replace broad `simp [stepGM, ...]`; the full
+  composition also checks in the temporary diagnostic with
+  `-M 6000 -j 1 --profile`. It reuses generated rows, `block_summary`, native
+  frames, scalar/window lemmas, `word_writeLog_at`, `word_writeLog_cells`,
+  `RuntimeReady.window_log`, `GprsSame` and the selected live-block frame.
+- The pinned `jal_8002acbc_call_target` is `caml_stat_alloc` at
+  `0x8000bb2c`, so the allocation step reuses `stat_checked`.
+  `stat_alloc_ready` describes the distinct `caml_stat_alloc_noexc` entry
+  and cannot be substituted at this checked-wrapper call target.
+- Validation: guarded/capped `lake build OCaml.Vm.Gc.SkiplistFirst
+  OCaml.Vm.Boot.Startup.SkipFirstAudit` passes (2720 jobs). The standalone
+  generated `SkipFirstAudit.lean` check at `-M 6000 -j 1 --profile` audits
+  all 310 declarations: only `propext`, `Classical.choice`, `Quot.sound`.
+  Full `python3 scripts/gen_startup_rows.py --check` passes (2026 outputs),
+  as do Python syntax and `git diff --check`. Logs:
+  `/tmp/skipfirst-final-build.log`, `/tmp/skipfirst-final-axioms.log`,
+  `/tmp/skipfirst-drift.log`. `SkipFirstAudit` is registered in
+  `OCaml.Audit`; the full audit remains the lead gate. Checked edits are
+  left uncommitted for lead review/integration; inherited WIP is preserved.
+- Still open: full `Skiplist.Ops`, arbitrary insertion/removal, `RootsAt`,
+  and caller/startup/reset composition. `BarrierGrowthFull` remains with G2,
+  `CustomMemCall` remains a named premise, and C4 round 2 waits for F1.
+
 ## Next-size small-list head removal (2026-10-21)
 
 - `BestFitNext.pick` is checked from `0x800073f8` to `0x800074bc`,

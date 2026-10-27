@@ -196,6 +196,23 @@
 
 - The first skiplist retry also reached 12 GB at 18:48:05 UTC after splitting
   into per-instruction certificates using broad `simp [stepGM, ...]`; the
-  exact failing declaration/cause is not isolated yet. Diagnose it with `lean -M 6000 -j 1 --profile`
+  exact failing declaration/cause was not isolated at that checkpoint. Diagnose it with `lean -M 6000 -j 1 --profile`
   and narrow evaluator simplification. Use `scripts/lean-guarded.py` so a failed
   or memory-heavy build cannot leave descendants consuming the worker cap.
+
+- 2026-10-27, first-insertion evaluator diagnosis: the first failing
+  declaration is `SkipFirstEval.i8002ab00_store`, not the long PRNG block.
+  A temporary prefix checked with `-M 6000 -j 1 --profile` reports kernel
+  excessive memory on its broad `simp` proof. Keep the symbolic stack
+  address's `toNat` opaque; prove the sign extension and constant offset sum
+  separately. Per-instruction splitting alone does not fix this route.
+  Direct expansion of a concrete `wlogM` step also remains expensive;
+  `checkedLogStep`/`checkedLogStore` compose the scalar certificates with an
+  abstract tail. Concrete memory facts should rewrite the certified decoded
+  instruction before applying the scalar window lemmas.
+
+- 2026-10-27, first-insertion allocation composition: do not apply
+  `stat_alloc_ready` directly at `jal_8002acbc_call.target`. The generated
+  target certificate pins `caml_stat_alloc` (`0x8000bb2c`), whereas that
+  summary starts at `caml_stat_alloc_noexc`. Compose the landed checked
+  wrapper `stat_checked` and its allocator/frame result at the actual target.

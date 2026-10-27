@@ -9,6 +9,7 @@ import OCaml.Vm.Gc.MemprofQuiet
 import OCaml.Vm.Gc.LocalRootsTail
 import OCaml.Vm.Gc.ChainScan
 import OCaml.Vm.Gc.Skiplist
+import OCaml.Vm.Boot.Startup.SkipFirstAudit
 import OCaml.Vm.Gc.GlobalScan
 import OCaml.Vm.Gc.SlotSupply
 import OCaml.Vm.Gc.RootLoops
