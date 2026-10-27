@@ -36,5 +36,13 @@ the transitive import hashes. Compare dependency artifacts before choosing a
 cache donor; let Lake validate all copied artifacts. Never alter trace hashes
 or copy into a worktree with an active build.
 
+For a failing or memory-heavy proof, use `python3 scripts/lean-guarded.py
+--log /tmp/task-build.log -- scripts/lean-capped.sh lake ...`. Inside the worker
+scope it stops that build's process group on a reported error or at 10 GiB,
+leaving headroom below the 12 GiB cap for the worker. For diagnosis, use
+`lake env lean -M 6000 -j 1 --profile` on a small temporary file before
+retrying the whole module. The guard also cleans up the build's descendants
+when interrupted; canceling Lake alone can leave a compiler running.
+
 F1 remains the priority; G2 continues as a slot becomes available. Preserve
 the older Bprime C4 draft and a2-sem uncaught-path WIP until their turn.
