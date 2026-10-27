@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 22:53 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 22:54 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -71,8 +71,9 @@ will be gated with the stronger reset interface.
 producers and proves universal reset-to-backtrace reachability. The affected
 build passed 3,436 jobs; its 3,439-job audit build reports all 78 focused
 declarations and 1,026 allowed reports. The actual continuation from backtrace
-to `Loaded` is explicitly open. Both changes are ready for the next gate in
-`syo-wt/bprime`, after a checked cache handoff from the idle startup lane.
+to `Loaded` is explicitly open. Both changes are in the next full gate in `syo-wt/bprime`. The cache
+handoff from the idle startup lane checked toolchain/manifests/dependency
+trees and held source/read and destination/write build locks.
 
 ## Active work
 
@@ -80,7 +81,7 @@ to `Loaded` is explicitly open. Both changes are ready for the next gate in
 | --- | --- | --- |
 | G2 Sol | Preserve physical free-list extents through repeated allocation | `syo-wt/a6-gc-next2` |
 | Custom-ownership Sol | Repair universal-ledger assumption with selected ownership | `syo-wt/a1-prims-next` |
-| Lead | Prepare next allocation/reset integration; review remaining suppliers | main |
+| Lead | Gate allocation/universal reset; review remaining suppliers | main; `syo-wt/bprime` |
 
 ## Remaining F1 boundaries
 
