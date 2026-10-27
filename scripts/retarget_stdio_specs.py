@@ -81,7 +81,10 @@ if __name__ == '__main__':
                 bad.append(str(p.relative_to(ROOT)))
         else:
             p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(s)
+            # Regenerating a caller-layout template should not touch the rest
+            # of the checked battery (or invalidate its build timestamps).
+            if not p.exists() or p.read_text() != s:
+                p.write_text(s)
     if bad:
         raise SystemExit('Stdio proof drift: ' + ', '.join(bad))
     print(f'Stdio templates: {len(files)} modules')

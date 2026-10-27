@@ -8,8 +8,12 @@ open Vsa.MemRepr Vsa.Sim VsaIris.Stdio
 
 abbrev snpNeed : Nat := 1024
 
+/-- Bytes above the formatter's frame base `s` the run may read: a `vsnprintf`
+caller's spilled varargs (`caml_alloc_sprintf` spills them at `s + 136`). -/
+abbrev snpAbove : Nat := 256
+
 def snpS (s dst n : Nat) (a : Nat) : Prop :=
-  (stdioFoot a ∧ ¬ (0x8001b970 ≤ a ∧ a < 0x8001b978)) ∨ (s - snpNeed ≤ a ∧ a < s) ∨
+  (stdioFoot a ∧ ¬ (0x8001b970 ≤ a ∧ a < 0x8001b978)) ∨ (s - snpNeed ≤ a ∧ a < s + snpAbove) ∨
     (dst ≤ a ∧ a < dst + n)
 
 def InDA (DA : List Nat) (lo hi : Nat) : Prop := ∀ b, lo ≤ b → b < hi → b ∈ DA

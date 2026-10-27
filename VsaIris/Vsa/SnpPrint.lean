@@ -27,6 +27,8 @@ structure SnpGeom (s dst n : Nat) : Prop where
   n_hi : n < 2 ^ 31
   d_lo : 0x8007d138 ≤ dst
   d_hi : dst + n ≤ 0x100000000
+  /-- Miss the active formatter frames and the FILE fields through `fp + 24`.
+  The caller may place its buffer below the synthetic base `s`. -/
   d_sep : dst + n ≤ s - 1024 ∨ s - 240 ≤ dst
 
 structure PieceGeom (s dst n b l : Nat) : Prop where

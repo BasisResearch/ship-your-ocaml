@@ -157,7 +157,7 @@ theorem svf_fmt {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt 
     ∀ (m : Nat) (bs : List (BitVec 8)) (q ap : Nat) (args : List (BitVec 64)) (cs : List Conv)
       (tot : List (BitVec 8)) (R : Nat → BitVec 64) (Mt : Mem), bs.length ≤ m →
       FmtAt Dt DA q bs → parseFmt bs = some cs → cs.length ≤ args.length →
-      ArgsAt Mt0 ap args → s - 40 ≤ ap → ap + 8 * args.length ≤ s → StrArgs Dt DA cs args →
+      ArgsAt Mt0 ap args → ArgsOut s dst n ap args.length → StrArgs Dt DA cs args →
       (tot ++ fmtRen (imgM Dt) bs args).length + 21 < 2 ^ 31 →
       SvfAt s dst n R0 Mt0 q ap (BitVec.ofNat 64 tot.length) tot R Mt →
       SvfRetK live Dt DA Q s dst n R0 Mt0 (BitVec.ofNat 64 (tot ++ fmtRen (imgM Dt) bs args).length)
@@ -166,14 +166,14 @@ theorem svf_fmt {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt 
   intro m
   induction m with
   | zero =>
-    intro bs q ap args cs tot R Mt hm F _ _ _ _ _ _ hlen A hret
+    intro bs q ap args cs tot R Mt hm F _ _ _ _ _ hlen A hret
     have hbs : bs = [] := List.eq_nil_of_length_eq_zero (by omega)
     subst hbs
     refine svf_iterEnd hlive R Mt SG DO hmb hmx A 0 F.geom (fun i hi => absurd hi (by omega))
       (by simpa using F.nul) (by simp [fmtRen] at hlen; omega) hal ?_
     simpa [fmtRen, pieceBytes_zero] using hret
   | succ m IH =>
-    intro bs q ap args cs tot R Mt hm F hp hcs HA hap1 hap2 HS hlen A hret
+    intro bs q ap args cs tot R Mt hm F hp hcs HA hout HS hlen A hret
     rcases fmt_split bs with hl | ⟨lit, x, rfl, hl⟩
     ·
       have hr := fmtRen_lit_all (imgM Dt) args bs hl
@@ -210,11 +210,11 @@ theorem svf_fmt {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt 
         rw [fmtRen_conv, if_pos rfl, hcs'] at hlen hret
         have hv : ldv .ld Mt0 (BitVec.ofNat 64 ap).toNat = BitVec.ofNat 64 a.toNat := by
           have := HA 0 (by simp); simpa using this
-        refine svf_iterS hlive R Mt SG DO hmb hmx A lit.length hG hb hk.1 hk1.1 a.toNat len hv hap1
-          (by simp at hap2; omega) hstr (by simp at hlen; omega) fun R' Mt' A' => ?_
+        refine svf_iterS hlive R Mt SG DO hmb hmx A lit.length hG hb hk.1 hk1.1 a.toNat len hv
+          (hout.head (by simp)) hstr (by simp at hlen; omega) fun R' Mt' A' => ?_
         rw [hpb] at A'
         refine IH r (q + lit.length + 2) (ap + 8) args cs' (tot ++ lit ++ pieceBytes (imgM Dt) a.toNat len)
-          R' Mt' hrl Fr hp' (by simp at hcs; omega) HA.tail (by omega) (by simp at hap2; omega) HS.tail
+          R' Mt' hrl Fr hp' (by simp at hcs; omega) HA.tail hout.tail HS.tail
           (by simp at hlen ⊢; omega) (by simpa [Nat.add_assoc] using A') ?_
         simpa [List.append_assoc] using hret
       · have hd' : c = 0x64#8 := by
@@ -228,12 +228,12 @@ theorem svf_fmt {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt 
         rw [fmtRen_conv, if_neg (by decide)] at hlen hret
         have hv : ldv .lw Mt0 (BitVec.ofNat 64 ap).toNat = sx32 a := by
           rw [lw_of_ld]; have := HA 0 (by simp); simp only [Nat.mul_zero, Nat.add_zero] at this; rw [this]; rfl
-        refine svf_iterD hlive R Mt SG DO hmb hmx A lit.length hG hb hk.1 hk1.1 (sx32 a) hv hap1
-          (by simp at hap2; omega) (by simp at hlen; omega) fun R' Mt' A' => ?_
+        refine svf_iterD hlive R Mt SG DO hmb hmx A lit.length hG hb hk.1 hk1.1 (sx32 a) hv
+          (hout.head (by simp)) (by simp at hlen; omega) fun R' Mt' A' => ?_
         rw [hpb] at A'
         refine IH r (q + lit.length + 2) (ap + 8) args cs'
           (tot ++ lit ++ strBytes (Vsa.While.intToString (sx32 a).toInt))
-          R' Mt' hrl Fr hp' (by simp at hcs; omega) HA.tail (by omega) (by simp at hap2; omega)
+          R' Mt' hrl Fr hp' (by simp at hcs; omega) HA.tail hout.tail
           (fun i h1 h2 hc => HS (i + 1) (by simp; omega) (by simp; omega) (by simpa using hc))
           (by simp at hlen ⊢; omega) (by simpa [Nat.add_assoc] using A') ?_
         simpa [List.append_assoc] using hret
@@ -244,13 +244,13 @@ theorem loop_fmt {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt
     (hmb : ldv .ld Mt0 0x8001b880 = 0x80012268#64) (hmx : ldv .lbu Mt0 0x8001b8f8 = 1#64)
     (hal : (R0 1).toNat % 4 = 0) (p ap : Nat) (bs : List (BitVec 8)) (cs : List Conv)
     (args : List (BitVec 64)) (F : FmtAt Dt DA p bs) (hp : parseFmt bs = some cs)
-    (hcs : cs.length ≤ args.length) (HA : ArgsAt Mt0 ap args) (hap1 : s - 40 ≤ ap)
-    (hap2 : ap + 8 * args.length ≤ s) (HS : StrArgs Dt DA cs args)
+    (hcs : cs.length ≤ args.length) (HA : ArgsAt Mt0 ap args) (hout : ArgsOut s dst n ap args.length)
+    (HS : StrArgs Dt DA cs args)
     (hlen : (fmtRen (imgM Dt) bs args).length + 21 < 2 ^ 31) :
     SvfLoopRun live Dt DA Q s dst n R0 Mt0 p ap (fmtRen (imgM Dt) bs args) := by
   intro R Mt A hret
   exact svf_fmt hlive SG DO hmb hmx hal bs.length bs p ap args cs [] R Mt (Nat.le_refl _) F hp hcs HA
-    hap1 hap2 HS (by simpa using hlen) (by simpa using A) (by simpa using hret)
+    hout HS (by simpa using hlen) (by simpa using A) (by simpa using hret)
 
 theorem fmtRen_length_le (g : Nat → BitVec 8) (B : Nat) (hB : 20 ≤ B) :
     ∀ (m : Nat) (bs : List (BitVec 8)) (cs : List Conv) (args : List (BitVec 64)), bs.length ≤ m →
@@ -319,7 +319,7 @@ theorem svfprintf_nw {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1)
     (hal : (R 1).toNat % 4 = 0) (bs : List (BitVec 8)) (cs : List Conv)
     (args : List (BitVec 64)) (F : FmtAt Dt DA (R 12).toNat bs) (hp : parseFmt bs = some cs)
     (hcs : cs.length ≤ args.length) (HA : ArgsAt Mt (R 13).toNat args)
-    (hap1 : s - 40 ≤ (R 13).toNat) (hap2 : (R 13).toNat + 8 * args.length ≤ s)
+    (hout : ArgsOut s dst n (R 13).toNat args.length)
     (HS : StrArgs Dt DA cs args) (hlen : (fmtRen (imgM Dt) bs args).length + 21 < 2 ^ 31)
     (hk : SvfRetK live Dt DA Q s dst n R Mt
       (BitVec.ofNat 64 (fmtRen (imgM Dt) bs args).length) (fmtRen (imgM Dt) bs args)) :
@@ -327,6 +327,6 @@ theorem svfprintf_nw {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1)
   apply svf_entry hlive R Mt SG h2 h11 hdp hdot hB
   intro R' Mt' A
   exact loop_fmt hlive R Mt SG DO hmb hmx hal (R 12).toNat (R 13).toNat bs cs args F hp hcs HA
-    hap1 hap2 HS hlen R' Mt' A hk
+    hout HS hlen R' Mt' A hk
 
 end VsaIris.Sym

@@ -95,6 +95,12 @@ theorem svf_convL {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
   have hsa := SG.s_al
   have h2 := St.core.r2
   have hapf := St.core.ap
+  have hoRam := hout.ram
+  have hoTo := hout.tohost
+  have hoHi := hout.hi
+  have hoLo := hout.ownLo
+  have hoUp := hout.ownHi
+  have hoFrame := hout.frames (by decide)
 
 #ix_piece svf_intL_run1 from svf_intL_p1 by
   snp_runF [2] hlive using [ofNat_add_ofNat, h2, h6, h20, h25, h27, hapf, hv] at 0x80048334
@@ -236,5 +242,29 @@ theorem svf_iterLD {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {
     pieceBytes_congr (g' := imgM Dt) fun i hi => hg _ (DO.stack _ (FG.dom _ (by omega) (by omega)))] at A9
   rw [show p + k + 2 + 1 = p + k + 3 by omega] at A9
   exact A9
+
+/-- Concrete caller geometry at `vsnprintf`'s entry, with `sp` the
+`caml_alloc_sprintf` frame base. Its 128-byte buffer starts at `sp + 16`,
+and all seven spilled argument slots start at `sp + 184`. The formatter's
+synthetic base is `sp + 48`, putting its entry stack at `sp - 224` and its
+FILE at `sp - 216`. No formatter run is assumed. -/
+structure VsnprintfLayout (sp : Nat) : Prop where
+  entryStack : sp + 48 - 272 = sp - 224
+  file : snpFP (sp + 48) = sp - 216
+  geom : SnpGeom (sp + 48) (sp + 16) 128
+  args : ArgsOut (sp + 48) (sp + 16) 128 (sp + 184) 7
+
+/-- The real wrapper layout is admitted throughout the ordinary stack arena. -/
+theorem vsnprintf_layout {sp : Nat} (lo : 0x8007d138 + 1024 ≤ sp)
+    (hi : sp + 48 ≤ 0x88000000) (align : sp % 16 = 0) : VsnprintfLayout sp := by
+  have ht : tohostAddr + 8 ≤ 0x8007d138 := by decide
+  refine ⟨by omega, by unfold snpFP; omega, ?_, ?_⟩
+  · exact ⟨by omega, hi, by omega, by decide, by decide, by omega,
+      by omega, .inr (by omega)⟩
+  · refine ⟨by omega, by omega, by omega, by unfold snpNeed; omega,
+      by unfold snpAbove; omega, ?_⟩
+    intro a lower upper
+    simp only [SvfW, snpFP]
+    omega
 
 end VsaIris.Sym

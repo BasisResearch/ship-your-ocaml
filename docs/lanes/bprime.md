@@ -146,20 +146,38 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
     (`Format/VsnprintfSteps.lean`, 72 lemmas, all 47 instructions) comes from
     `scripts/syi/gen_snp_extra.py`, ported from syi's `gen_interp_steps.py
     --target snp` (stage a5).
-  * **Obstruction (the vsnprintf wrapper):** the retargeted `_svfprintf_r`
-    battery is specialized to `snprintf`'s caller layout.
-    - svf's entry fixes `R 2 = s - 272` and the FILE at `s - 264`, so for
-      vsnprintf (224-byte frame) `s = sp + 48`.
-    - `SnpGeom.d_sep` puts the buffer outside `[s - 1024, s)`, but
-      caml_alloc_sprintf's buffer is at `sp + 16`.
-    - The va_list must lie in `[s - 40, s)`, owned stack (`hap1`/`hap2`,
-      `ld_ap`, `ArgsAt`); caml_alloc_sprintf's spill is at its `sp + 184`.
-    vsnprintf is therefore not an instance. The fix is a generalization of the
-    battery's caller layout: frame base, buffer placement, and the va_list
-    region as data or owned bytes, across the stdio templates (~300 uses of
-    `s - 864`, `snpFP`, `s - 40`, `d_sep`).
-  * Then caml_alloc_initialized_string (`alloc_string_nursery` + memcpy),
-    caml_format_int, and its C_CALL2 adapter.
+  * **Caller-layout generalization (2026-10-27, checked; lead review pending):**
+    inherited output edits are migrated into the stdio templates and regenerated.
+    `s` is a synthetic base: for vsnprintf's 224-byte frame, use `s = sp + 48`.
+    `SnpGeom.d_sep` now permits a buffer above `s - 240` (past the formatter's
+    frames and the FILE fields), including caml_alloc_sprintf's `sp + 16`.
+    `snpS` owns bytes through `s + snpAbove` (`snpAbove = 256`). `ArgsOut`
+    gives argument ownership, address bounds and separation from the exact
+    `SvfW` writes; `ArgsOut.frames` exposes interval separation to `svf_mem`.
+    It replaces `hap1`/`hap2` in the conversion and loop contracts, including
+    `svf_fmt`, `loop_fmt`, `svfprintf_nw`, and LONGINT's `svf_iterLD`.
+    `ArgsAt` still supplies the actual words; no execution premise is added.
+    `ArgsOut.of_spill` adapts snprintf's original spill with its buffer above `s`.
+    `VsnprintfLayout`/`vsnprintf_layout` state the concrete FILE at `sp - 216`,
+    formatter entry stack at `sp - 224`, 128-byte buffer at `sp + 16`, and all
+    seven argument slots at `sp + 184`; their only inputs are stack bounds
+    and alignment. A concrete stack witness is in the focused audit file.
+  * **Still open:** compose `vsnprintf`'s generated prologue/epilogue around
+    `svf_entry`, `svf_iterLD` and `svf_iterEnd`; establish the initialized FILE,
+    locale/image/data ownership, exact rendered length, truncation/NUL byte,
+    saved registers and the wrapper's memory frame, then expose the `SnpW`
+    result as a machine call summary with `VsaOk` at entry.
+  * Compose caml_alloc_sprintf's 240-byte frame and varargs spills with that
+    summary; for the short-result path prove the result fits 127 bytes and
+    compose `caml_alloc_initialized_string` (`alloc_string_nursery` + memcpy),
+    including fresh bytes, readiness, return and memory/register frames.
+    The long-result path remains open: `caml_stat_strdup` of the format,
+    `caml_alloc_string`, a second `vsnprintf`, `caml_stat_free`, and return.
+  * Compose parse_format, the tagged-integer conversion, allocation and return
+    for caml_format_int, then discharge its C_CALL2 representation/effects
+    adapter. The general `F1CcallOpen.format_int_c_call2` field stays open:
+    `formatInteger` accepts `d/i/u/x/X/o`, flags, width and precision. A plain
+    `%d` → `%ld` result does not cover that domain. No C4 scale-up is started.
   * Library calls need `VsaOk` (all 31 GPRs present) at the C_CALL callee
     entry. For now it is a premise (as in a1-prims' primitives); a0-boot is
     asked whether `VsaOk.gpr` can be weakened.
@@ -168,6 +186,21 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
     through `strlen_call`, caml_alloc_string through a1-prims'
     `alloc_string_nursery`, memcpy through `memcpy_summary`.
   * vsnprintf `%ld` is a LONGINT variant of upstream `svf_iterLLD`.
+  * Validation (2026-10-27): `scripts/lean-capped.sh lake build
+    VsaIris.Vsa.SnpFmt OCaml.Vm.Primitives.Format.SvfLong` passed, rebuilding
+    the affected battery at default proof budgets under the inherited 12 GB
+    cap and `LEAN_NUM_THREADS=2`. The focused audit
+    `scripts/lean-capped.sh lake env lean experiments/syi/stdio-layout-audit.lean`
+    passed: 23 public theorems use only `propext`, `Classical.choice`,
+    `Quot.sound` (or none), and the concrete stack witness checks.
+    `python3 scripts/retarget_stdio_specs.py --check` passed (47 modules),
+    as did `gen_snp_extra.py --check`, the hole, discipline and abstraction
+    gates, Python syntax compilation, and `git diff --check`.
+    Missing audit entries and an explicit SvfLong import are registered in
+    `OCaml/Audit.lean`; its full build/audit stays with the lead gate.
+    Checked edits are left in this worktree; Git metadata and integration
+    were not written. BarrierGrowthFull remains with G2, CustomMemCall is
+    still a named premise, and C4 round 2 still waits for F1.
 - Channel opening, `caml_ml_open_descriptor_{in,out}` (both bprime's since
   2026-10-12; they differ only by the output store `max := NULL`):
   * `scripts/syi/ocaml_channel.py` (`gen_fn.py --ocaml-channel`, stage a5)

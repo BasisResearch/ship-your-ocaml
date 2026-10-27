@@ -40,3 +40,11 @@
   silently infer a small-string bound from `Fits`. The fixed major-free-list
   pin in `F1Pins` must also be revisited for that path. This is source-level
   scope analysis, not a kernel-checked reachable-state counterexample.
+
+- 2026-10-27: replacing the formatter's `hap1`/`hap2` stack bounds with
+  only `ArgsOut` scalar ownership bounds leaves argument loads unreduced
+  across stack writes; `svf_intQ_cases` then reaches the default heartbeat
+  limit. Expose `ArgsOut.frames` (derived from `ArgsOut.out`) to `svf_mem`
+  before symbolic execution, rather than expanding the resulting load terms.
+  The interval consequence requires `0 < len`: an empty argument window
+  inside a write frame satisfies `ArgsOut.out` vacuously.

@@ -193,6 +193,17 @@ theorem ArgsOut.tail {s dst n ap len : Nat} (h : ArgsOut s dst n ap (len + 1)) :
   ⟨by have := h.ram; omega, by have := h.tohost; omega, by have := h.hi; omega,
     by have := h.ownLo; omega, by have := h.ownHi; omega, fun a lo hi => h.out a (by omega) (by omega)⟩
 
+/-- Interval form of argument separation, used by `svf_mem` to preserve
+loads across writes into the formatter's active stack frames. -/
+theorem ArgsOut.frames {s dst n ap len : Nat} (h : ArgsOut s dst n ap len) (pos : 0 < len) :
+    ap + 8 * len ≤ s - 992 ∨ s - 272 ≤ ap := by
+  by_cases sep : ap + 8 * len ≤ s - 992 ∨ s - 272 ≤ ap
+  · exact sep
+  · exfalso
+    have lower := Nat.le_max_left ap (s - 992)
+    have frameLower := Nat.le_max_right ap (s - 992)
+    exact h.out (max ap (s - 992)) lower (by omega) (.inl ⟨frameLower, by omega⟩)
+
 /-- snprintf's spill: slots in `[s - 40, s)` with the buffer above `s`. -/
 theorem ArgsOut.of_spill {s dst n ap len : Nat} (SG : SnpGeom s dst n) (above : s ≤ dst)
     (h1 : s - 40 ≤ ap) (h2 : ap + 8 * len ≤ s) : ArgsOut s dst n ap len := by

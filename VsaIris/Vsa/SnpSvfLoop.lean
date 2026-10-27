@@ -134,7 +134,7 @@ theorem svf_iterS {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {D
     (by omega) (by omega) (by omega) fun R4 Mt4 CA => ?_
   rw [hsc] at CA
   have hap' := (ld_ap CA.st.core.frame hout).trans hap
-  refine svf_convS hlive (p + k) a len R4 Mt4 SG CA hLl hap' hap (by omega) hstr
+  refine svf_convS hlive (p + k) a len R4 Mt4 SG CA hLl hap' hout (by omega) hstr
     (by have := hstr.lo; omega) (pieceSrc_of_data DO SG (by omega) hstr.dom) (by omega) (by omega) DO.tab
     fun R5 Mt5 PI => ?_
   refine svf_print hlive R5 Mt5 SG PI fun R6 Mt6 g hg1 hg2 A6 => hk R6 Mt6 ?_

@@ -327,6 +327,7 @@ import OCaml.Vm.Gc.QueueEmpty
 import OCaml.Vm.Gc.MixedPayload
 import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
+import OCaml.Vm.Primitives.Format.SvfLong
 import VsaIris.Vsa.SnpPrint
 import VsaIris.Vsa.SnpStrlen
 import VsaIris.Vsa.SnpArith
@@ -6738,3 +6739,19 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.RefcountSumAt.add
 #print axioms OCaml.Vm.Gc.RefcountSumAt.frame
 #print axioms OCaml.Vm.Gc.RefcountSumAt.link
+
+
+-- Formatter caller-layout and caller-owned va_list contracts.
+#print axioms VsaIris.Sym.ssputs_buf
+#print axioms VsaIris.Sym.ArgsOut.head
+#print axioms VsaIris.Sym.ArgsOut.tail
+#print axioms VsaIris.Sym.ArgsOut.of_spill
+#print axioms VsaIris.Sym.svf_stack_owned
+#print axioms VsaIris.Sym.ld_ap
+#print axioms VsaIris.Sym.lw_ap
+#print axioms VsaIris.Sym.svf_iterS
+#print axioms VsaIris.Sym.svf_iterLLD
+#print axioms VsaIris.Sym.svf_iterD
+#print axioms VsaIris.Sym.svf_fmt
+#print axioms VsaIris.Sym.vsnprintf_layout
+#print axioms VsaIris.Sym.ArgsOut.frames

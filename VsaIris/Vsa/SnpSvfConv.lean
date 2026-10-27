@@ -257,6 +257,7 @@ theorem DStr.read {Dt : Mem} {DA : List Nat} {a len : Nat} (h : DStr Dt DA a len
   have hoHi := hout.hi
   have hoLo := hout.ownLo
   have hoUp := hout.ownHi
+  have hoFrame := hout.frames (by decide)
   refine svf_disp hlive (q + 1) 0x73 _ (.inl ⟨rfl, rfl⟩) R Mt (by omega) CA.r25 CA.r24 CA.r26 CA.r22 hT
     fun R1 h25 h24 hkp => ?_
   have hsa := SG.s_al
@@ -424,6 +425,7 @@ theorem vMag_lt (v : BitVec 64) : vMag v < 2 ^ 64 := by unfold vMag; split <;> e
   have hoHi := hout.hi
   have hoLo := hout.ownLo
   have hoUp := hout.ownHi
+  have hoFrame := hout.frames (by decide)
   have hsa := SG.s_al
   have h2 := St.core.r2
   have hapf := St.core.ap
@@ -525,6 +527,7 @@ theorem vMag_lt (v : BitVec 64) : vMag v < 2 ^ 64 := by unfold vMag; split <;> e
   have hoHi := hout.hi
   have hoLo := hout.ownLo
   have hoUp := hout.ownHi
+  have hoFrame := hout.frames (by decide)
   have hsa := SG.s_al
   have h2 := St.core.r2
   have hapf := St.core.ap
