@@ -39,8 +39,8 @@ offsets. The startup-read generator certifies the actual empty table's
 pointer and its zero base/insertion words. `ChannelCustomCount` is an
 independent **table-occupancy component**, with checked uniqueness, byte
 framing and startup zero. `whileMin_counted_entry` carries that component
-through the real interpreter entry, retaining only the existing cut heap
-premise. It is **not** a complete physical `Customs` instantiation for the
+through the real interpreter entry. The lead integrated the closed cut
+allocator certificate and removed the former heap premise. It is **not** a complete physical `Customs` instantiation for the
 custom machine premise: GC resource accumulators and the current domain's
 custom-table pointer still need their full runtime invariant and producers.
 Occupancy alone is not used to derive readiness; this limitation is recorded
@@ -57,6 +57,11 @@ applies its `Fits` bound and composes dispatch/setup/callee/return into
 counted opening and out-list summaries on that execution. It accepts exactly
 the existing runtime/heap/footprint suppliers, not an assumed counted
 primitive or opcode result. Complete `ChannelCustomsRepr` survives the suffix.
+
+The lead merged the closed allocator certificate and both boot-read additions.
+The updated `whileMin_counted_entry` has no heap premise; the combined check
+passes 3,649 jobs and all 39 focused audits (`/tmp/syo-counted-allocator-assembly.log`,
+`/tmp/syo-counted-allocator-audit.log`). Generator drift also passes.
 
 **Remaining before ordinary F1 assembly can consume this path:**
 
@@ -78,7 +83,8 @@ primitive or opcode result. Complete `ChannelCustomsRepr` survives the suffix.
   at their original ordinary relation and retain their channel fields.
 - Opening `OpenOutRuntimeAt.after`; out-list selected heap/record/named
   ledger entry geometry and after-call runtime pins; named registration,
-  general formatting, and reset/libHeap closure remain open. `BarrierGrowthFull`
+  general formatting, and reset reachability remain open; captured `libHeap`
+  is now certified separately. `BarrierGrowthFull`
   stays with G2 and C4 round 2 waits for F1.
 
 Validation passes:

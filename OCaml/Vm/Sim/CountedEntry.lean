@@ -130,14 +130,13 @@ theorem f1_counted_entry {P : Prog} {c : Config} (h : OCaml.Loaded Gc.f1Layout P
   exact counted_entry_loopAt loaded caller (Gc.channelCustoms_startup memory rfl)
 
 /-- The captured whileMin entry establishes the counted loop relation for
-the table-count component from its actual zero witness, retaining only its
-existing allocator premise. Full custom runtime accounting remains open. -/
-theorem whileMin_counted_entry
-    (heap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered [(Gc.refTable, 56)]) :
+the table-count component from its actual zero witness and the closed
+allocator certificate. Full custom runtime accounting remains open. -/
+theorem whileMin_counted_entry :
     ∃ after, OCaml.Plus Boot.WhileMin.cut after ∧
       CountedLoopAt Gc.ChannelCustomCount Gc.f1Layout OCaml.Programs.whileMin
         OCaml.Programs.whileMin.init after :=
-  f1_counted_entry (Gc.whileMin_loaded_f1 heap) Boot.WhileMin.memory_equiv
+  f1_counted_entry Gc.whileMin_loaded_f1 Boot.WhileMin.memory_equiv
 
 /-- Contract obstruction: table occupancy permits every resource-accumulator
 word. Thus its checked startup zero does not by itself supply the physical
