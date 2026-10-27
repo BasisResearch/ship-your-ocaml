@@ -20,6 +20,8 @@ Start only after the current custom-count worker is checked and committed; inspe
 Files: OCaml/Refinement.lean, Vm/Repr, Vm/Sim/{ChannelReadiness,CcallRows,F1Ccall,F1Rows,WhileMinTable} and shared row/frame producers; generator scripts for generated files.
 The current CountedVmReprAt and CountedCcallSetupPost sidecars are not yet the ordinary loop invariant. Merely defining a stronger interface does not discharge the existing headline.
 Choose one shared representation/frame abstraction; reuse generic rows under strengthened runtime invariants where valid rather than duplicating every opcode proof.
+Before changing every row, also inspect boundary coherence in the runtime invariant plus represented refcounts as a route to deriving the physical model count; the present runtimeOk does not contain that fact.
+Any such coherence field needs actual startup, call and ordinary-frame producers; an unexplained implication from the old invariant would repeat the rejected universal-budget route.
 Carry physical Customs c s.world.customs from the actual startup zero witness, frame it across non-custom calls, and use CustomMemCall's ACTUAL counted return for allocations.
 CustomMemCall remains the accepted named machine premise. Do not infer counts from Ready k, unconstrained CustomMemReturned, or channel refcounts during the pre-call increment.
 Connect counted open/out-list summaries to the real C_CALL rows and interpreter assembly; preserve the full GoodF1 domain and accurately retain after-call runtime/pin suppliers still unproved.
