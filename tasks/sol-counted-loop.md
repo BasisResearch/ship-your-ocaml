@@ -19,6 +19,7 @@ Target: carry the checked physical custom-count evidence through the actual F1 l
 Start only after the current custom-count worker is checked and committed; inspect its final remaining-obligation list before editing.
 Files: OCaml/Refinement.lean, Vm/Repr, Vm/Sim/{ChannelReadiness,CcallRows,F1Ccall,F1Rows,WhileMinTable} and shared row/frame producers; generator scripts for generated files.
 The current CountedVmReprAt and CountedCcallSetupPost sidecars are not yet the ordinary loop invariant. Merely defining a stronger interface does not discharge the existing headline.
+F1Arms in OCaml/RefinementF1.lean already accepts an arbitrary relation R; inspect a CountedRunning/CountedLoopAt instantiation before globally changing Layout or VmReprAt. Actual entry and all row producers still need proofs.
 Choose one shared representation/frame abstraction; reuse generic rows under strengthened runtime invariants where valid rather than duplicating every opcode proof.
 Before changing every row, also inspect boundary coherence in the runtime invariant plus represented refcounts as a route to deriving the physical model count; the present runtimeOk does not contain that fact.
 Any such coherence field needs actual startup, call and ordinary-frame producers; an unexplained implication from the old invariant would repeat the rejected universal-budget route.
