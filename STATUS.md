@@ -46,7 +46,7 @@ The earlier worker WIP and reviewed tips are preserved on `keep/*` branches.
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | G2 Sol | Next-size split, remnant call and return after `BestFitNext.pop` | `syo-wt/a6-gc-next2` |
-| Formatter Sol | Next task: actual decimal `caml_alloc_sprintf` composition from the checked wrapper | `syo-wt/bprime` |
+| Formatter Sol | Actual decimal `caml_alloc_sprintf` composition from the checked wrapper | `syo-wt/bprime` |
 | Lead | Channel gate, combined next landing, invariant review and task preparation | main; `syo-wt/a1-prims-next`, `syo-wt/a6-gc` |
 
 The first-insertion summary executes the actual prefix, `stat_checked` call,

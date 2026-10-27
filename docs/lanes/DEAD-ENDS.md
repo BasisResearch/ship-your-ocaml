@@ -173,10 +173,11 @@
   `OutListReturned` permits refcount writes and exports a physical batch
   charge, without their natural readbacks. The opening's existing native
   `open_out_counts` must be retained at that same selected placement; the
-  out-list needs increment/no-wrap observations as well. The checked
-  `counted_c_call1_arm` therefore deliberately concludes only physical
-  accounting, not a counted loop row. This is contract inspection, not a
-  claim that the missing suppliers are impossible.
+  out-list needs increment/no-wrap observations as well. The earlier
+  `counted_c_call1_arm` concluded only physical accounting. The complete
+  return bundle now supplies those observations and retains complete
+  `CountedRunning` at the same placement. Ordinary loop preservation remains
+  open; do not recreate the weaker physical-only return interface.
 
 - 2026-10-27 counted return readbacks: elaborating a `change` over the whole
   `writeLog (enterLog ...)` inside the large `ListedStep` context exhausted
