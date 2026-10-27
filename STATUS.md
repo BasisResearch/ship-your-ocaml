@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 22:36 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 22:38 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -36,7 +36,8 @@ complete counted channel returns `71547e46`; named ownership `7e7a052a`.
 
 ## Next landing batch
 
-Reviewed and committed locally, awaiting the next full gate:
+Reviewed and committed locally; the next full gate is running in
+`syo-wt/a6-gc-next2` with coherent caches from the published batch:
 
 - `e97aaed4`: shared counted RuntimeFrame and 58 stack/load/assignment/trap
   wrappers. 3,194 affected jobs and 137 focused allowed-axiom reports pass.
@@ -60,7 +61,7 @@ Reviewed and committed locally, awaiting the next full gate:
 | --- | --- | --- |
 | Startup Sol | Retain ELF-reset identity and expose universal reset-to-backtrace | `syo-wt/a0-boot-next` |
 | Counted-allocation Sol | Lift nursery/native allocation frames and allocating rows | `syo-wt/a1-prims-next` |
-| Lead | Review remaining suppliers; assemble the next full-gate batch | main; idle landing slots |
+| Lead | Gate counted-stack/backtrace/G2 representation; review remaining suppliers | main; `syo-wt/a6-gc-next2` |
 
 ## Remaining F1 boundaries
 
