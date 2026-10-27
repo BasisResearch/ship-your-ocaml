@@ -35,21 +35,19 @@ headline `ocamlrun_refinement_F1_open` still consumes primitive and growth
 premises. The captured `WhileMin.loaded_fillZero` proves the captured state
 is loaded; it does not prove execution from reset. F1 is not yet closed. The exact-arity C_CALL assembly landed as `c5c0fff4`
 after the full gate; bytecode audit/measurement caps landed as `a80d71cc`.
-On the landing candidate, the remaining general C_CALL fields are `openOutRuntime`, `outListRuntime`,
+On published main, the remaining general C_CALL fields are `openOutRuntime`, `outListRuntime`,
 `register_named_value_c_call2`, and `format_int_c_call2`.
 
 The a2-sem uncaught-exception WIP is preserved in `syo-wt/a2-sem-next`;
 `GoodF1` excludes that path, so it is behind current F1 work in priority.
 
-The physical named-table migration passed the complete `OCaml` build (4,151
-jobs) and all 71 focused axiom reports. Its checked commit is `97e03f8d`;
-the rebased integration candidate is in `syo-wt/a6-gc-next2` (`3322dc6c` before
-status updates), alongside the formatter checkpoint. The first gate was stopped after a downstream build exposed a missing
-named-binding equality in `LoopGeometry.of_above`. That explicit frame premise
-is repaired; its focused build passes (1,539 jobs) and both axiom reports
-use only the permitted standard axioms. The full gate is running again at
-`3e4bc39f` in the staging worktree. The migration keeps the matching selected malloc ledger
-rather than assuming ownership of every live allocation. Its original Sol
+The physical named-table migration landed as `7e7a052a` through
+`scripts/integrate.sh`: all 6,033 build jobs, 8,424 theorem audits, generator
+and ELF checks, and 329 OS traces pass (zero rejected). The landing includes
+the explicit named-binding frame in `LoopGeometry.of_above` and the boot
+heap generator's empty named-node placement. `LibHeapAt` carries the matching
+selected named-node ledger; it does not infer ownership of every live
+allocation from arbitrary `HeapReady`. The original Sol
 slot completed the per-call custom-count/readiness checkpoint (`acb1f875` after rebase,
 not landed): 3,684 affected build jobs and 52 focused axiom reports pass.
 `CustomMemCall.call` carries the exact count transition in its actual post.
@@ -67,8 +65,10 @@ former Sol slot now proves
 the first empty-skiplist insertion used by `caml_init_backtrace` in `a6-gc`.
 The seed-zero path selects level 0 and allocates a 24-byte cell. Two evaluator
 attempts hit the 12 GB cap; factored certificates now pass with a 6 GB Lean
-diagnostic limit. The native summary, ownership/frame proof and reset
-composition remain in progress.
+diagnostic limit. The corrected prefix, generated evaluator and startup-key instruction witness
+pass the 2,719-job affected build. The suffix memory facts also check under
+the 6 GB diagnostic limit. The full native summary, ownership/frame proof
+and reset composition remain in progress.
 
 Prepared next assignments (not additional running workers): native `vsnprintf`
 wrapper execution (`tasks/sol-vsnprintf-wrapper.md`) and G2 split/remnant composition
