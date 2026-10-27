@@ -960,6 +960,29 @@ theorem NativeFirst.seed {H capacity sp ra s0 s1 key before after}
   rw [F.terminal.memory, bytesT_writeLog_out _ outside, Reloc.bytesT_congr copied, F.prepared.memory]
   exact prefix_seed_word _ sp ra s0 s1 short
 
+/-- Low runtime globals outside the seed, published root pointer and allocator
+metadata retain their entry values through the complete first insertion. -/
+theorem NativeFirst.low_kept {H capacity sp ra s0 s1 key before after}
+    (F : NativeFirst H capacity sp ra s0 s1 key before after)
+    (frame : NativeFrame sp Skiplist.opStack) (x : Nat) (low : x < heapStart)
+    (alloc : ¬ allocGlobal x) (seed : x < Skiplist.randomSeed ∨ Skiplist.randomSeed + 4 ≤ x)
+    (header : x < Skiplist.globalRoots ∨ Skiplist.globalRoots + 8 ≤ x) :
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0 := by
+  have short := frame.resize (small := 192) (by decide) (by decide)
+  have nested := call_frame frame
+  have cell := F.cell
+  have bound : heapStart ≤ heapEnd := by decide
+  have front : OutW (prefixWindows sp) x := by
+    simp only [prefixWindows, OutW, and_true]
+    have lower := short.lower
+    exact ⟨Or.inl (by unfold nativeFrameBase; omega), seed⟩
+  have back : OutW (finishWindows F.p) x := by
+    simp only [finishWindows, OutW, and_true]
+    exact ⟨Or.inl (by have := cell.low; omega), header⟩
+  rw [F.terminal.memory, frameOn_writeLog _ _ _ (finish_inside F.p key) x back,
+    F.allocation.framed_byte nested (by omega) (fun h => h.elim alloc (fun h => by omega)),
+    F.prepared.memory, frameOn_writeLog _ _ _ (prefix_inside short) x front]
+
 structure FirstInserted (H kept : List (Nat × Nat)) (capacity : Nat)
     (sp ra s0 s1 key : BitVec 64) (before after : Config) where
   native : NativeFirst H capacity sp ra s0 s1 key before after

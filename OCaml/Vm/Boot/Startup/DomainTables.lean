@@ -192,6 +192,7 @@ theorem DomainTablesAt.fields {H : List (Nat × Nat)} {m : Std.ExtHashMap Nat (B
     idle := by rw [out 8 (by decide), out 56 (by decide), h.core.young, h.core.trigger]
     noYoung := (out 32 (by decide)).trans h.core.start
     noHeap := domainFields_heap_word m
+    lastExn := domainFields_last_exn m
     refs := {
       ptr1 := (out 104 (by decide)).trans (by rw [← show MinorTableSlot.refs.address.toNat = domainField 104 from addr _]; exact h.refs.ptr)
       ptr2 := (out 112 (by decide)).trans (by rw [← show MinorTableSlot.ephemerons.address.toNat = domainField 112 from addr _]; exact h.ephemerons.ptr)

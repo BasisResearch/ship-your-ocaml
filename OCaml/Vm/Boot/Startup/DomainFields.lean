@@ -1,3 +1,4 @@
+import OCaml.Vm.Boot.Startup.BacktraceLayout
 import OCaml.Vm.Boot.Startup.DomainFieldsNormalized
 import OCaml.Vm.Boot.Startup.DomainCaller
 import OCaml.Vm.Primitives.AccessPlan
@@ -101,6 +102,14 @@ theorem domainFields_out (off : Nat) (h : off = 8 ∨ off = 32 ∨ off = 56 ∨ 
 theorem domainFields_heap_word (m : Std.ExtHashMap Nat (BitVec 8)) :
     bytesT (writeLog m domainFieldsLog) (firstDomainPtr.toNat + 336) 8 = 0#64 := by
   apply OCaml.Vm.Gc.word_writeLog_at (i := 15)
+  · rfl
+  · domain_fields_out
+
+/-- The actual domain initializer stores the tagged unit value into the
+last-exception root, before backtrace registration. -/
+theorem domainFields_last_exn (m : Std.ExtHashMap Nat (BitVec 8)) :
+    bytesT (writeLog m domainFieldsLog) (firstDomainPtr.toNat + backtrace_last_exnOffset) 8 = 1#64 := by
+  apply OCaml.Vm.Gc.word_writeLog_at (i := 30)
   · rfl
   · domain_fields_out
 

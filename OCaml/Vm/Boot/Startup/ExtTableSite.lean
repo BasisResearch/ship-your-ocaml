@@ -8,9 +8,10 @@ open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.Inst VsaIris.VsaHeap OCa
 abbrev GcApart (g n : Nat) : Prop :=
   (g + n ≤ 0x800649f0 ∨ 0x80064a00 ≤ g) ∧ (g + n ≤ 0x80064a40 ∨ 0x80064a48 ≤ g) ∧
     (g + n ≤ 0x80064b08 ∨ 0x80064b10 ≤ g) ∧ (g + n ≤ 0x80064b30 ∨ 0x80064b38 ≤ g) ∧
-    (g + n ≤ 0x80064cf0 ∨ 0x80064cf8 ≤ g) ∧ (g + n ≤ 0x800662e8 ∨ 0x800663e8 ≤ g)
+    (g + n ≤ 0x80064cf0 ∨ 0x80064cf8 ≤ g) ∧ (g + n ≤ 0x800662e8 ∨ 0x800663e8 ≤ g) ∧
+    (g + n ≤ 0x80064d10 ∨ 0x80064d14 ≤ g) ∧ (g + n ≤ 0x800684e0 ∨ 0x80068570 ≤ g)
 
-theorem GcApart.of_high {g n : Nat} (h : 0x800663e8 ≤ g) : GcApart g n := by
+theorem GcApart.of_high {g n : Nat} (h : 0x80068570 ≤ g) : GcApart g n := by
   unfold GcApart; omega
 
 /-- A 16-byte global table header between the startup globals and the arena,

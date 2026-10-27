@@ -56,6 +56,7 @@ structure InitGcCall (H : List (Nat × Nat)) (cap c1 c2 cA cM cP : Nat)
   idle : bytesT c.σ.mem (domainField 8) 8 = bytesT c.σ.mem (domainField 56) 8
   noYoung : bytesT c.σ.mem (domainField 32) 8 = 0#64
   noHeap : bytesT c.σ.mem (domainField 336) 8 = 0#64
+  lastExn : bytesT c.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   refs : RefTablesPre H c.σ.mem t1 t2 t3
   lambdaOff : bytesT c.σ.mem 0x80064cf0 8 = 0#64
   memprofIdle : bytesVal .lw (read8 c.σ.mem 0x80064b30) = 0#64
@@ -401,6 +402,7 @@ theorem GcLowKeep.of_range {x : Nat} (h : (0x800647f0 ≤ x ∧ x < 0x80064848) 
 /-- caml_init_major_heap returned into caml_init_gc. -/
 structure InitGcMajored (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 blk raw : BitVec 64)
     (mem stack entries cur : BitVec 64) (before after : Config) : Prop where
+  lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt jal_8001f3a4_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 96), (8, 0xf8000#64), (9, BitVec.ofNat 64 percentFreeAddr), (18, 8192#64),
     (19, BitVec.ofNat 64 percentMaxAddr), (20, 15#64), (21, 120#64), (22, 500#64), (23, 1#64), (24, 44#64),
@@ -562,6 +564,13 @@ theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA c
           (by simp only [OutL, majorIncrementAddr, domainField, dom, and_true]; omega),
           Mi.domainHigh 336 (by decide) (by decide)]
         exact A.noHeap
+      lastExn := by
+        rw [word_observed (m := d7.σ.mem) _ fun i hi => back13 _
+          (by simp only [OutL, policyLog, domainField, backtrace_last_exnOffset, dom, and_true]; omega)
+          (by simp only [OutL, percentFreeAddr, percentMaxAddr, domainField, backtrace_last_exnOffset, dom, and_true]; omega)
+          (by simp only [OutL, majorIncrementAddr, domainField, backtrace_last_exnOffset, dom, and_true]; omega),
+          Mi.domainHigh backtrace_last_exnOffset (by decide) (by decide)]
+        exact A.lastExn
       chunkMin := by decide
       huge := by
         rw [word_observed (m := c.σ.mem) _ (globWord2 _ (by decide) (by decide)
@@ -636,6 +645,7 @@ theorem init_gc_to_major (c d7 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA c
     rw [MH.saved k lo hi]; exact g713.get (by omega) (by omega) (by simp [abiClobbered]; omega) h
   refine ⟨mem, stack, entries, d14,
     run8.trans (run9.trans (run10.trans (run11.trans (run12.trans (run13.trans run14))))), {
+    lastExn := MH.lastExn
     pc := MH.pc
     regs := ⟨gholds_lookup (n := 2) _ MH.regs rfl, gholds_lookup (n := 8) _ MH.regs rfl,
       gholds_lookup (n := 9) _ MH.regs rfl, gholds_lookup (n := 18) _ MH.regs rfl, by rw [MH.s3]; exact s19,
@@ -711,6 +721,7 @@ theorem GcTableAt.cons {H : List (Nat × Nat)} {m : Std.ExtHashMap Nat (BitVec 8
 /-- caml_init_gc returned. -/
 structure InitGcDone (H : List (Nat × Nat)) (capacity : Nat) (sp ra s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 : BitVec 64)
     (Hfinal : List (Nat × Nat)) (before after : Config) : Prop where
+  lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt ra after
   regs : GHolds after.σ [(2, sp), (1, ra), (8, s0), (9, s1), (18, s2), (19, s3), (20, s4), (21, s5), (22, s6),
     (23, s7), (24, s8), (25, s9)]
@@ -955,6 +966,9 @@ theorem init_gc_finish (c d14 : Config) (H : List (Nat × Nat)) (cap c1 c2 cA cM
   refine ⟨fin, run1.trans (run2.trans (run3.trans (run4.trans (runm1.trans (run5.trans (runm2.trans (run6.trans
     (runm3.trans (run7.trans (runm4.trans (run8.trans (runm5.trans (run9.trans (runm6.trans (run10.trans
     runf))))))))))))))), {
+    lastExn := by
+      rw [Q.word frameTail _ (by decide), wordAt k15 _ (by decide)]
+      exact Mj.lastExn
     pc := Q.pc
     regs := ⟨gholds_lookup (n := 2) _ Q.regs rfl, gholds_lookup (n := 1) _ Q.regs rfl,
       gQ.get (by decide) (by decide) (by decide) (gholds_lookup (n := 8) _ regs10 rfl),

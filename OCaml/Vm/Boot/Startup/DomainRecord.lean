@@ -1,4 +1,5 @@
 import OCaml.Vm.Boot.Startup.DomainInit
+import OCaml.Vm.Boot.Startup.BacktraceLayout
 namespace OCaml.Vm.Boot.Startup
 open Vsa.Machine Vsa.Sim Vsa.Sim.DlHeap VsaIris VsaIris.VsaHeap OCaml.Vm.Primitives
 
@@ -100,6 +101,7 @@ structure DomainKept (H : List (Nat × Nat)) (m : Std.ExtHashMap Nat (BitVec 8))
   noYoung : bytesT m (domainField 32) 8 = 0#64
   noHeap : bytesT m (domainField 336) 8 = 0#64
   refs : RefTablesPre H m t1 t2 t3
+  lastExn : bytesT m (domainField backtrace_last_exnOffset) 8 = 1#64
 
 /-- The record and the tables survive any change that keeps the memory below the arena's end. -/
 theorem DomainKept.of_low {H : List (Nat × Nat)} {m m' : Std.ExtHashMap Nat (BitVec 8)} {t1 t2 t3 : BitVec 64}
@@ -122,7 +124,8 @@ theorem DomainKept.of_low {H : List (Nat × Nat)} {m m' : Std.ExtHashMap Nat (Bi
       ptr3 := (field 120 (by decide)).trans R.ptr3
       empty1 := (table R.spot1).trans R.empty1
       empty2 := (table R.spot2).trans R.empty2
-      empty3 := (table R.spot3).trans R.empty3 }⟩
+      empty3 := (table R.spot3).trans R.empty3 },
+    (field backtrace_last_exnOffset (by decide)).trans h.lastExn⟩
 
 
 /-- The record and the tables survive any change confined outside the arena. -/
@@ -148,7 +151,8 @@ theorem DomainKept.of_arena {H : List (Nat × Nat)} {m m' : Std.ExtHashMap Nat (
       ptr3 := (field 120 (by decide)).trans R.ptr3
       empty1 := (table R.spot1).trans R.empty1
       empty2 := (table R.spot2).trans R.empty2
-      empty3 := (table R.spot3).trans R.empty3 }⟩
+      empty3 := (table R.spot3).trans R.empty3 },
+    (field backtrace_last_exnOffset (by decide)).trans h.lastExn⟩
 
 /-- The record and the tables survive any run that keeps the owned blocks. -/
 theorem DomainKept.live {H : List (Nat × Nat)} {before after : Config} {t1 t2 t3 : BitVec 64}
@@ -166,11 +170,12 @@ theorem DomainKept.live {H : List (Nat × Nat)} {before after : Config} {t1 t2 t
       ptr3 := (field 120 (by decide)).trans R.ptr3
       empty1 := (table R.owned1).trans R.empty1
       empty2 := (table R.owned2).trans R.empty2
-      empty3 := (table R.owned3).trans R.empty3 }⟩
+      empty3 := (table R.owned3).trans R.empty3 },
+    (field backtrace_last_exnOffset (by decide)).trans h.lastExn⟩
 
 /-- More owned blocks keep the record's facts. -/
 theorem DomainKept.mono {H H' : List (Nat × Nat)} {m : Std.ExtHashMap Nat (BitVec 8)} {t1 t2 t3 : BitVec 64}
     (h : DomainKept H m t1 t2 t3) (sub : ∀ e ∈ H, e ∈ H') : DomainKept H' m t1 t2 t3 :=
   ⟨sub _ h.owned, h.idle, h.noYoung, h.noHeap,
-    { h.refs with owned1 := sub _ h.refs.owned1, owned2 := sub _ h.refs.owned2, owned3 := sub _ h.refs.owned3 }⟩
+    { h.refs with owned1 := sub _ h.refs.owned1, owned2 := sub _ h.refs.owned2, owned3 := sub _ h.refs.owned3 }, h.lastExn⟩
 end OCaml.Vm.Boot.Startup

@@ -99,9 +99,12 @@
   `/tmp/skipfirst-final-build.log`, `/tmp/skipfirst-final-axioms.log`,
   `/tmp/skipfirst-drift.log`. `SkipFirstAudit` is registered in
   `OCaml.Audit`; the full audit remains the lead gate. Checked edits are
-  left uncommitted for lead review/integration; inherited WIP is preserved.
-- Still open: full `Skiplist.Ops`, arbitrary insertion/removal, `RootsAt`,
-  and caller/startup/reset composition. `BarrierGrowthFull` remains with G2,
+  committed as `75a6c880`; inherited WIP was preserved.
+- The subsequent reset-through-backtrace composition is checked in
+  [lane a0-boot](a0-boot.md), including the actual startup key value and
+  preserved domain/page-table facts. Full `Skiplist.Ops`, arbitrary
+  insertion/removal, `RootsAt` and complete reset-to-cut execution remain open.
+  `BarrierGrowthFull` remains with G2,
   `CustomMemCall` remains a named premise, and C4 round 2 waits for F1.
 
 ## Complete next-size pick/pop/split route (2026-10-27)

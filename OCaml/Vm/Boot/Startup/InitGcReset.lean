@@ -105,6 +105,7 @@ theorem reset_init_gc_call {initial sections : Config} (w : ResetReadSections in
     idle := dom'.idle
     noYoung := dom'.noYoung
     noHeap := dom'.noHeap
+    lastExn := dom'.lastExn
     refs := dom'.refs
     lambdaOff := bss _ 0x80064cf0 0x80064cf8 ⟨by omega, by omega⟩ fun x lo hi => by unfold GcBssByte; omega
     memprofIdle := by

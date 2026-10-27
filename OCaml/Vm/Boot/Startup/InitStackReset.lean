@@ -59,6 +59,10 @@ structure InitStackReset (H : List (Nat × Nat)) (capacity : Nat) (ra s0 s1 s2 m
     Prop where
   done : InitStackDone H capacity ra s0 s1 s2 mx p before after
   table : ∃ ent, GcTableAt ((p.toNat, 32768) :: H) after.σ.mem ent
+  domainOwned : (firstDomainPtr.toNat, 928) ∈ H
+  lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
+  globals : ∀ x, (0x80064d10 ≤ x ∧ x < 0x80064d14) ∨ (0x800684e0 ≤ x ∧ x < 0x80068570) →
+    (after.σ.mem[x]?).getD 0 = 0
 
 /-- The reset run through caml_init_gc and caml_init_stack: back in caml_main
 with the interpreter stack allocated and recorded in the domain record. -/
@@ -118,7 +122,42 @@ theorem reset_init_stack_reset_exists :
         rcases inT with ⟨lo, hi⟩ | ⟨lo, hi⟩
         · rw [hP] at lo hi; omega
         · omega), show e.σ.mem = d.σ.mem from P.memory]).cons _
-  exact ⟨initial, f, run1.trans (run2.trans (run3.trans run4)), _, _, _, _, _, _, _, ⟨S, ent, table⟩⟩
+  exact ⟨initial, f, run1.trans (run2.trans (run3.trans run4)), _, _, _, _, _, _, _, {
+    done := S
+    table := ⟨ent, table⟩
+    domainOwned := IS.domainOwned
+    lastExn := by
+      rw [word_observed (m := d.σ.mem) _ fun i hi => by
+        rw [S.kept _ (by unfold domainField backtrace_last_exnOffset heapEnd; omega)
+          (owned_not_foot' (by decide) IS.domainOwned
+            (by unfold domainField backtrace_last_exnOffset; omega)
+            (by unfold domainField backtrace_last_exnOffset; omega))
+          (by simp only [initStackFieldsLog, initStackCells, List.map, OutL, domainField,
+            backtrace_last_exnOffset, camlMaxStackSizeAddr, and_true]; omega),
+          show e.σ.mem = d.σ.mem from P.memory]]
+      exact D.lastExn
+    globals := fun x hx => by
+      have keep : GcLowKeep x := by
+        refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+        · unfold heapStart; omega
+        · unfold allocGlobal InRange; omega
+        · unfold pageTable Layout.sym_caml_page_table; omega
+        · omega
+        · simp only [policyLog, OutL, and_true]; omega
+        · simp only [OutL, percentFreeAddr, percentMaxAddr, and_true]; omega
+        · simp only [OutL, majorIncrementAddr, and_true]; omega
+        · unfold majorInitLowWindows majorFreeWindows
+          simp only [outW_append, majorLowWindows, OutW, heapStartAddr, pageTable, Layout.sym_caml_page_table,
+            smallListsWindow, flMergeAddr, smallMapAddr, largeTreeAddr, flCurWszAddr, gcPhaseAddr, extraResourcesAddr,
+            allocatedWordsAddr, majorRingWindow, BitVec.toNat_ofNat, majorRingAddr, and_true]
+          omega
+        · simp only [gcStoreWindows, OutW, majorWindowAddr, customMajorAddr, customMinorAddr, customMaxAddr, and_true]
+          omega
+      rw [S.kept x (by unfold heapEnd; omega) (fun h => h.elim keep.notAlloc (fun h => by
+          have := h.1; unfold heapStart at this; omega)) (by
+          simp only [initStackFieldsLog, initStackCells, List.map, OutL, domainField, camlMaxStackSizeAddr, and_true]
+          omega), show e.σ.mem = d.σ.mem from P.memory, D.low x keep]
+      exact gcA.bss x (by unfold GcBssByte; omega) }⟩
 
 theorem reset_init_stack_returned_exists :
     ∃ initial after, Steps (Vsa.Densify.fillZero initial) after ∧

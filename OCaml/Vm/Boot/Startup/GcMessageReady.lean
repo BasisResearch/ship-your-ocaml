@@ -19,6 +19,21 @@ structure GcQuiet (H : List (Nat × Nat)) (capacity : Nat) (sp ra : BitVec 64) (
     (vsaReg before 14) (vsaReg before 15) (vsaReg before 16) (vsaReg before 17))
   same : GprsSame before after [6, 2, 10, 1]
 
+/-- A quiet message's spill keeps every complete word below the arena ceiling.
+Keep this readback abstract when composing long startup runs. -/
+theorem GcQuiet.word {H capacity sp ra before after}
+    (Q : GcQuiet H capacity sp ra before after) (frame : NativeFrame sp 80)
+    (a : Nat) (below : a + 8 ≤ heapEnd) :
+    bytesT after.σ.mem a 8 = bytesT before.σ.mem a 8 := by
+  rw [Q.memory]
+  apply bytesT_writeLog_out
+  apply OCaml.Vm.Sim.outLRange_of_windows (gcMessageLog_inside frame)
+  simp only [OutWRange, and_true]
+  have lower := frame.lower
+  left
+  unfold nativeFrameBase
+  omega
+
 theorem ready_gc_message (c : Config) (H : List (Nat × Nat)) (capacity : Nat) (sp ra v : BitVec 64)
     (pc : PCAt 0x80003cb0#64 c) (ready : RuntimeReady H capacity sp ra c) (frame : NativeFrame sp 80)
     (a0 : gprGet c.σ 10 = some v) (quiet : LPins8 c.σ.mem Layout.sym_caml_verb_gc (List.replicate 8 0#8)) :

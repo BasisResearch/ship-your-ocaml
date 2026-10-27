@@ -47,27 +47,28 @@ pending flag and lambda, the best-fit small lists, and `caml_verb_gc`. -/
 def GcBssByte (a : Nat) : Prop :=
   (0x800649f0 ≤ a ∧ a < 0x80064a00) ∨ (0x80064a40 ≤ a ∧ a < 0x80064a48) ∨ (0x80064b08 ≤ a ∧ a < 0x80064b10) ∨
     (0x80064b30 ≤ a ∧ a < 0x80064b38) ∨ (0x80064cf0 ≤ a ∧ a < 0x80064cf8) ∨ (0x800662e8 ≤ a ∧ a < 0x800663e8) ∨
-    (0x80064930 ≤ a ∧ a < 0x80064938)
+    (0x80064930 ≤ a ∧ a < 0x80064938) ∨ (0x80064d10 ≤ a ∧ a < 0x80064d14) ∨
+    (0x800684e0 ≤ a ∧ a < 0x80068570)
 
 def GcInitByte (a : Nat) : Prop := GcDataByte a ∨ GcBssByte a
 
-theorem GcInitByte.bounds {a} (h : GcInitByte a) : 0x800647f0 ≤ a ∧ a < 0x800663e8 := by
+theorem GcInitByte.bounds {a} (h : GcInitByte a) : 0x800647f0 ≤ a ∧ a < 0x80068570 := by
   rcases h with ⟨lo, hi⟩ | h
   · omega
-  · rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;> omega
+  · rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;> omega
 
 theorem GcInitByte.not_alloc {a} (h : GcInitByte a) : ¬ allocGlobal a := by
   unfold allocGlobal InRange
   rcases h with ⟨lo, hi⟩ | h
   · omega
-  · rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;> omega
+  · rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;> omega
 
 theorem GcInitByte.not_state {a} (h : GcInitByte a) :
     a < Layout.sym_Caml_state ∨ Layout.sym_Caml_state + 8 ≤ a := by
   unfold Layout.sym_Caml_state
   rcases h with ⟨lo, hi⟩ | h
   · omega
-  · rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;> omega
+  · rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;> omega
 
 /-- Bytes no startup function writes after main. -/
 def KeptByte (a : Nat) : Prop := EmbedByte a ∨ EnvironByte a ∨ VerbGcByte a ∨ HtifByte a ∨ GcInitByte a
@@ -135,7 +136,7 @@ theorem KeptByte.out_low {a g n} (ha : KeptByte a) (lo : Layout.sym_startup_coun
     unfold Layout.sym_startup_count at lo
     rcases gc with ⟨l, h⟩ | gc
     · left; omega
-    · rcases gc with ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ <;> omega
+    · rcases gc with ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ | ⟨l, h⟩ <;> omega
 
 structure EmbedFrame (before after : Config) : Prop where
   byte : ∀ a, KeptByte a → (after.σ.mem[a]?).getD 0 = (before.σ.mem[a]?).getD 0
@@ -406,7 +407,7 @@ def LateByte (a : Nat) : Prop :=
 allocator's globals, `errno`, and htif.c's `fs_ready`, `fds` and `files` heads. -/
 structure LateApart (a : Nat) : Prop where
   low : 0x8006466c ≤ a
-  high : a < 0x800663e8
+  high : a < 0x80068570
   notAlloc : ¬ allocGlobal a
   errno : a < 0x80064d48 ∨ 0x80064d4c ≤ a
   fsReady : a < Layout.sym_fs_ready ∨ Layout.sym_fs_ready + 4 ≤ a
@@ -421,14 +422,15 @@ theorem LateByte.range {a} (h : LateByte a) :
     (0x800647f0 ≤ a ∧ a < 0x80064848) ∨ (0x800648e0 ≤ a ∧ a < 0x800648e8) ∨ (0x800648f8 ≤ a ∧ a < 0x80064900) ∨
       (0x80064930 ≤ a ∧ a < 0x80064938) ∨
       (0x800649ac ≤ a ∧ a < 0x800649b4) ∨ (0x800649f0 ≤ a ∧ a < 0x80064a48) ∨ (0x80064b08 ≤ a ∧ a < 0x80064b38) ∨
-      (0x80064cf0 ≤ a ∧ a < 0x80064cf8) ∨ (0x800662e8 ≤ a ∧ a < 0x800663e8) := by
+      (0x80064cf0 ≤ a ∧ a < 0x80064cf8) ∨ (0x800662e8 ≤ a ∧ a < 0x800663e8) ∨
+      (0x80064d10 ≤ a ∧ a < 0x80064d14) ∨ (0x800684e0 ≤ a ∧ a < 0x80068570) := by
   rcases h with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | gc
   · unfold Layout.sym_environ at lo hi; omega
   · unfold Layout.sym_caml_verb_gc at lo hi; omega
   · unfold allocatorImpureAddr at lo hi; omega
   · unfold Layout.sym_print_config at lo hi; omega
   · omega
-  · rcases gc with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;> omega
+  · rcases gc with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;> omega
 
 theorem LateByte.apart {a} (h : LateByte a) : LateApart a := by
   have r := h.range
@@ -522,9 +524,9 @@ theorem ResetCamlMainWitness.gc {initial atMain : Config}
       unfold Layout.sym_stack_top Layout.sym_environ
       exact ⟨Or.inl (by omega), Or.inl (by omega), trivial⟩
   · intro a ha
-    have b : 0x80064930 ≤ a ∧ a < 0x800663e8 := by
-      rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;> omega
-    have bound : (0x800663e8 : Nat) ≤ Layout.sym_bss_start + 8 * bssWords := by decide
+    have b : 0x80064930 ≤ a ∧ a < 0x80068570 := by
+      rcases ha with ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩ <;> omega
+    have bound : (0x80068570 : Nat) ≤ Layout.sym_bss_start + 8 * bssWords := by decide
     exact w.post.toCrtCamlMainPost.bss_byte a (by unfold Layout.sym_bss_start; omega) (by omega)
       (mainWrites_between _ _ _ (by unfold Layout.sym_environ; omega)
         (by unfold Layout.sym_stack_top; omega))

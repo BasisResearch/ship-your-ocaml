@@ -31,6 +31,7 @@ heap yet (`stat_heap_wsz = 0`), huge pages off, the request at least
 `Heap_chunk_min`. -/
 structure MajorHeapCall (H : List (Nat × Nat)) (capacity charge : Nat) (sp ra hsize s0 s1 s2 inc : BitVec 64)
     (c : Config) : Prop where
+  lastExn : bytesT c.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt 0x80009340#64 c
   regs : GHolds c.σ [(2, sp), (1, ra), (10, hsize), (8, s0), (9, s1), (18, s2)]
   ready : RuntimeReady H (capacity + charge) sp ra c
@@ -599,6 +600,7 @@ def majorLowWindows : List W :=
 /-- bf_init_merge returned into caml_init_major_heap. -/
 structure MajorMerged (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 s3 mem ent : BitVec 64)
     (before after : Config) : Prop where
+  lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt jalr_80009410_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 48), (8, BitVec.ofNat 64 Layout.sym_Caml_state), (9, 1#64),
     (18, 0x80064ad0#64), (19, s3)]
@@ -711,6 +713,30 @@ theorem major_merged (c d12 : Config) (H : List (Nat × Nat)) (capacity charge :
   have ta := P.tableApart
   rw [dom] at ta
   refine ⟨d16, run13.trans (run14.trans (run15.trans run16)), {
+    lastExn := by
+      have positive : 0 < (majorChunkSize hsize + 4152#64).toNat := by
+        have bound := A.small
+        change (majorChunkSize hsize).toNat + 4152 < 2 ^ 32 at bound
+        rw [BitVec.toNat_add]
+        simp only [BitVec.toNat_ofNat, Nat.reducePow] at bound ⊢
+        omega
+      have apart := FreshBlock.apart P.fresh A.domainOwned positive (by decide)
+      rw [word_observed (m := c.σ.mem) _ fun i hi => by
+        have inside : firstDomainPtr.toNat ≤ domainField backtrace_last_exnOffset + i ∧
+            domainField backtrace_last_exnOffset + i < firstDomainPtr.toNat + 928 := by
+          simp only [domainField, backtrace_last_exnOffset]; omega
+        rw [back _
+          (by simp only [OutW, smallListsWindow, flMergeAddr, smallMapAddr, domainField,
+            backtrace_last_exnOffset, dom, and_true]; omega)
+          (Or.inl ⟨by simp only [domainField, backtrace_last_exnOffset, dom]; rw [hE]; omega,
+            by simp only [OutW, domainField, backtrace_last_exnOffset, dom, hP, and_true]; omega⟩)]
+        exact P.kept _ (by simp only [domainField, backtrace_last_exnOffset, dom]; rw [hE]; omega)
+          (owned_not_foot' (by decide) A.domainOwned inside.1 inside.2)
+          (by simp only [majorChunkWindows, OutW, heapStartAddr, domainField, backtrace_last_exnOffset, dom, and_true]
+              rw [dom] at apart
+              simp only [domainField, backtrace_last_exnOffset, dom] at inside
+              omega)]
+      exact A.lastExn
     pc := M.pc
     regs := ⟨M.ready.stack, g16.get (by decide) (by decide) (by decide) (gholds_lookup (n := 8) _ regs13 rfl),
       g16.get (by decide) (by decide) (by decide) (gholds_lookup (n := 9) _ regs13 rfl),
@@ -797,6 +823,7 @@ def majorFreeWindows : List W :=
 free block, the best-fit tree's root. -/
 structure MajorFreed (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 s3 mem ent cur : BitVec 64)
     (before after : Config) : Prop where
+  lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt jalr_80009430_call.link after
   regs : GHolds after.σ [(2, nativeStack sp 48), (8, BitVec.ofNat 64 Layout.sym_Caml_state), (9, 1#64),
     (18, 0x80064ad0#64), (19, s3), (10, chunkStart mem + 8#64)]
@@ -959,6 +986,16 @@ theorem major_freed (c d16 : Config) (H : List (Nat × Nat)) (capacity charge : 
   have fitsT : ent.toNat + 16384 ≤ 2 ^ 64 := Nat.le_trans M.tableLow (by decide)
   have regs19 := F.regs
   refine ⟨d19, run17.trans (run18.trans run19), {
+    lastExn := by
+      rw [word_observed (m := d16.σ.mem) _ fun i hi => back _ (Or.inl ⟨
+        by simp only [domainField, backtrace_last_exnOffset, dom]; rw [hE]; omega,
+        by
+          simp only [OutW, largeTreeAddr, flCurWszAddr, and_true]
+          exact ⟨chunkApart _ A.domainOwned _ ⟨by simp only [domainField, backtrace_last_exnOffset]; omega,
+            by simp only [domainField, backtrace_last_exnOffset]; omega⟩,
+            by simp only [domainField, backtrace_last_exnOffset, dom]; omega,
+            by simp only [domainField, backtrace_last_exnOffset, dom]; omega⟩⟩)]
+      exact M.lastExn
     pc := F.pc
     regs := ⟨gholds_lookup (n := 2) _ regs19 rfl, gholds_lookup (n := 8) _ regs19 rfl,
       gholds_lookup (n := 9) _ regs19 rfl, gholds_lookup (n := 18) _ regs19 rfl, gholds_lookup (n := 19) _ regs19 rfl,
@@ -1382,6 +1419,7 @@ def majorInitLowWindows : List W :=
 is the pair of new blocks `stack` and `entries`. -/
 structure MajorHeapInit (H : List (Nat × Nat)) (capacity : Nat) (sp ra hsize s0 s1 s2 mem stack entries cur ent : BitVec 64)
     (before after : Config) : Prop where
+  lastExn : bytesT after.σ.mem (domainField backtrace_last_exnOffset) 8 = 1#64
   pc : PCAt ra after
   regs : GHolds after.σ [(2, sp), (18, s2), (9, s1), (1, ra), (8, s0)]
   ready : RuntimeReady ((entries.toNat, (32768#64).toNat) :: (stack.toNat, (24#64).toNat) ::
@@ -1487,6 +1525,21 @@ theorem caml_init_major_heap (c : Config) (H : List (Nat × Nat)) (cap c1 c2 cha
         (by omega)
   refine ⟨mem, stack, entries, d29, run8.trans (run12.trans (run16.trans (run19.trans (run24.trans (run28.trans
     run29))))), {
+    lastExn := by
+      rw [word_observed (m := d19.σ.mem) _ fun i hi => fin _
+        (by simp only [domainField, backtrace_last_exnOffset, dom]; rw [hE]; omega)
+        (owned_not_foot' (by decide) domainOwned
+          (by simp only [domainField, backtrace_last_exnOffset]; omega)
+          (by simp only [domainField, backtrace_last_exnOffset]; omega))
+        (by
+          have sa := stackApart _ domainOwned (domainField backtrace_last_exnOffset + i)
+            ⟨by simp only [domainField, backtrace_last_exnOffset]; omega,
+             by simp only [domainField, backtrace_last_exnOffset]; omega⟩
+          simp only [majorStackWindows, OutW, gcPhaseAddr, domainField, backtrace_last_exnOffset, dom,
+            extraResourcesAddr, allocatedWordsAddr, and_true] at sa ⊢
+          omega)
+        (by simp only [domainField, backtrace_last_exnOffset, dom]; omega)]
+      exact F.lastExn
     pc := R.pc
     regs := R.regs
     ready := R.ready

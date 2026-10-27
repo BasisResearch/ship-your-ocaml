@@ -33,6 +33,15 @@
   needs an actual identity pin/frame (or an explicitly corrected footprint
   with its producers), not an assumption that the old state frame reads it.
 
+- 2026-10-27 reset identity review: `reset_init_stack_reset_exists` keeps
+  `Steps (fillZero initial) after` but drops the `ElfResetReady` witness
+  retained in its nested `ResetReadSections` source. Atom/backtrace existence
+  consumers inherit that loss. An argument-free existence theorem of this
+  form does not expose reset-qualified reachability. Carry the actual source
+  witness through stronger producer structures and project the older API;
+  do not infer reset from Steps. This is interface inspection, not a
+  counterexample to the constructed execution.
+
 - 2026-10-27 initialized-string shared readback: leaving the saved-bank
   prefix as an unconstrained `_ ++ [length-store]` inside `change` forces
   memory/log unification into the default heartbeat limit. Name the shared
@@ -325,3 +334,26 @@
   registration reserve also needs actual root-cell removal/reuse accounting.
   The current `FreeRoomEnd` preserves the same capacity `k`; do not silently
   treat it as a charge-refund theorem.
+
+- 2026-10-27, reset/backtrace continuation: the ELF's
+  `caml_init_backtrace` (`0x8000ef3c`) only loads `Caml_state`, adds the
+  generated `backtrace_last_exn` offset and tail-jumps at `0x8000ef48`
+  to `caml_register_global_root` (`0x8000c9e0`). That wrapper tail-jumps
+  at `0x8000c9f0` to `caml_skiplist_insert` (`0x8002aafc`). Neither wrapper
+  initializes domain fields or creates another native return frame. The
+  last-exception value must come from the executed domain stores, including
+  the store of tagged unit at `0x8002a9bc`, and survive GC/stack/atom startup.
+  `GcLowKeep` cannot supply that domain-word frame: it requires an address
+  below `heapStart`, whereas the key is inside the owned domain allocation.
+  Carry the domain observation through the actual producers; do not infer
+  its value from the backtrace wrapper or a captured final memory. These
+  are ELF and contract observations, not a kernel impossibility theorem.
+
+- 2026-10-27, reset/backtrace domain readback: expanding the final quiet
+  message's concrete `writeLog` inside `init_gc_finish` reaches the default
+  recursion limit when framing the last-exception word. A low-global frame
+  also lacks the domain allocation's natural upper bound. Use the shared
+  `GcQuiet.word` certificate over an abstract entry memory and the existing
+  `wordAt`/`MemSame` composition, with the concrete domain-word geometry
+  checked separately. Do not raise recursion or heartbeat budgets to unfold
+  the accumulated startup state.

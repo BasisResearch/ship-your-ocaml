@@ -429,4 +429,48 @@ theorem caml_init_atom_table (c : Config) (H : List (Nat × Nat)) (capacity char
         p1.memory, frameOn_writeLog _ _ _ inside1 x ⟨Or.inr hx, trivial⟩]⟩
     saved := fun k hk => total.same k (savedRange k hk).1 (savedRange k hk).2.1 (savedRange k hk).2.2 }⟩
 
+/-- The atom initializer keeps the already owned domain record. -/
+theorem AtomTableDone.domain_live {H capacity sp ra ent raw before after}
+    (A : AtomTableDone H capacity sp ra ent raw before after)
+    (owned : (firstDomainPtr.toNat, 928) ∈ H) :
+    LiveFrame [(firstDomainPtr.toNat, 928)] before after := by
+  constructor
+  intro e member x inside
+  have eq : e = (firstDomainPtr.toNat, 928) := List.mem_singleton.mp member
+  subst e
+  change firstDomainPtr.toNat ≤ x ∧ x < firstDomainPtr.toNat + 928 at inside
+  have apart := FreshBlock.apart A.fresh owned (by decide) (by decide)
+  have rawHi : raw.toNat + 8192 ≤ heapEnd := A.fresh.2.2.1
+  have page := pageAbove_inside raw 4096 (by unfold heapEnd at rawHi; omega)
+  have table := A.table.apartDomain
+  have domLo : heapStart ≤ firstDomainPtr.toNat := by decide
+  have domHi : firstDomainPtr.toNat + 928 ≤ heapEnd := by decide
+  have atomLow : atomTableAddr + 8 ≤ firstDomainPtr.toNat := by decide
+  exact A.kept x (by omega)
+    (owned_not_foot' domLo owned inside.1 inside.2)
+    (Or.inr (Nat.le_trans atomLow inside.1))
+    (by omega) (by
+      simp only [InTable, pageTable, Layout.sym_caml_page_table]
+      have lo : 0x800684b8 + 0x28 ≤ firstDomainPtr.toNat := by decide
+      omega)
+
+/-- The low root header and seed survive allocation, atom stores and page registration. -/
+theorem AtomTableDone.root_globals {H capacity sp ra ent raw before after}
+    (A : AtomTableDone H capacity sp ra ent raw before after) {x : Nat}
+    (range : (0x80064d10 ≤ x ∧ x < 0x80064d14) ∨ (0x800684e0 ≤ x ∧ x < 0x80068570)) :
+    (after.σ.mem[x]?).getD 0 = (before.σ.mem[x]?).getD 0 := by
+  have rawLo : heapStart ≤ raw.toNat := A.fresh.2.1
+  have rawHi : raw.toNat + 8192 ≤ heapEnd := A.fresh.2.2.1
+  have page := pageAbove_inside raw 4096 (by unfold heapEnd at rawHi; omega)
+  have tableLo := A.table.high
+  have low : x < heapStart := by unfold heapStart; omega
+  apply A.kept x (by unfold heapStart heapEnd at *; omega)
+  · rintro (glob | ⟨lo, _⟩)
+    · unfold allocGlobal InRange at glob; omega
+    · omega
+  · unfold atomTableAddr; omega
+  · omega
+  · simp only [InTable, pageTable, Layout.sym_caml_page_table]
+    omega
+
 end OCaml.Vm.Boot.Startup
