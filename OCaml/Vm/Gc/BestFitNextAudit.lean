@@ -1,6 +1,6 @@
-import OCaml.Vm.Gc.BestFitNext
+import OCaml.Vm.Gc.BestFitNextRoute
 
-/-! Focused standard-axiom audit for next-size split, remnant and return.
+/-! Focused standard-axiom audit for the next-size pick/pop/split native route.
 The full OCaml.Audit remains the lead integration gate. -/
 
 #print axioms OCaml.Vm.Gc.accessPlan_append
@@ -183,3 +183,25 @@ The full OCaml.Audit remains the lead integration gate. -/
 #print axioms OCaml.Vm.Gc.BestFitNext.Native.return_registers
 #print axioms OCaml.Vm.Gc.BestFitNext.Native.return_log
 #print axioms OCaml.Vm.Gc.BestFitNext.Native.return_endpoint
+
+#print axioms OCaml.Vm.Gc.BestFitNext.pick_inside
+#print axioms OCaml.Vm.Gc.BestFitNext.pop_inside
+#print axioms OCaml.Vm.Gc.BestFitNext.prefix_out_heap
+#print axioms OCaml.Vm.Gc.BestFitNext.prefix_out_code
+#print axioms OCaml.Vm.Gc.BestFitNext.prefix_code
+#print axioms OCaml.Vm.Gc.BestFitNext.PickPost.read
+#print axioms OCaml.Vm.Gc.BestFitNext.PickPost.shape
+#print axioms OCaml.Vm.Gc.BestFitNext.PopPost.map
+#print axioms OCaml.Vm.Gc.BestFitNext.RouteInput.positive
+#print axioms OCaml.Vm.Gc.BestFitNext.RouteInput.head
+#print axioms OCaml.Vm.Gc.BestFitNext.RouteInput.size
+#print axioms OCaml.Vm.Gc.BestFitNext.RouteInput.pick_input
+#print axioms OCaml.Vm.Gc.BestFitNext.RouteInput.pop_input
+#print axioms OCaml.Vm.Gc.BestFitNext.RouteInput.prefix_read
+#print axioms OCaml.Vm.Gc.BestFitNext.RouteInput.split_input
+#print axioms OCaml.Vm.Gc.BestFitNext.RouteInput.popped_shape
+#print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.path_spec
+#print axioms OCaml.Vm.Gc.BestFitNext.route_gprs
+#print axioms OCaml.Vm.Gc.BestFitNext.allocate_next
+#print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.live
+#print axioms OCaml.Vm.Gc.BfShape.SmallShape.congr

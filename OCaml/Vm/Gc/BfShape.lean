@@ -224,4 +224,22 @@ theorem MapConsistent.clear {m m' : Std.ExtHashMap Nat (BitVec 8)} {lists : Nat 
     simp [smallT, ne, ← old, BitVec.getLsbD_eq_getElem]
     omega
 
+/-- Header representation of the small lists, alongside their link shape.
+Every listed block carries the size of its list in its physical header. -/
+structure SmallHeaders (m : Std.ExtHashMap Nat (BitVec 8))
+    (lists : Nat → List (BitVec 64)) : Prop where
+  sizes : ∀ s, 1 ≤ s → s ≤ Layout.bf_small_count → ∀ b ∈ lists s,
+    bytesT m (b - 8#64).toNat 8 >>> (10 : Nat) = BitVec.ofNat 64 s
+
+/-- Transport a list representation through stores which keep its slots and links. -/
+theorem SmallShape.congr {m m' lists} (shape : SmallShape m lists)
+    (slots : ∀ s, 1 ≤ s → s ≤ Layout.bf_small_count →
+      bytesT m' (slot s).toNat 8 = bytesT m (slot s).toNat 8)
+    (links : ∀ s, 1 ≤ s → s ≤ Layout.bf_small_count → ∀ b ∈ lists s,
+      bytesT m' b.toNat 8 = bytesT m b.toNat 8) : SmallShape m' lists := by
+  refine ⟨?_,shape.blocks,shape.heap⟩
+  intro s lo hi
+  rw [slots s lo hi]
+  exact SmallList.congr _ _ (links s lo hi) (shape.linked s lo hi)
+
 end OCaml.Vm.Gc.BfShape

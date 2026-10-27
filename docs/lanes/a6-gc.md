@@ -43,6 +43,64 @@
   and caller/startup/reset composition. `BarrierGrowthFull` remains with G2,
   `CustomMemCall` remains a named premise, and C4 round 2 waits for F1.
 
+## Complete next-size pick/pop/split route (2026-10-27)
+
+- Starts from the checked split/remnant handoff `ecca3e24` (staged at
+  `2615a6e9`), with no inherited uncommitted changes. The new assembly
+  module `BestFitNextRoute.lean:allocate_next` composes actual `pick`,
+  `pop` and `split_return` from `pickPc = 0x800073f8` through the original
+  allocator caller return. No stage post, prepared split, later callee
+  input, or desired native run is an entry premise.
+- `RouteInput` is a single predicate over the original configuration,
+  small-list/map representation and physical geometry. Positive request
+  and request < selected size ≤ 16 are explicit. `BfShape.SmallHeaders`
+  represents sizes in the headers of every listed block;
+  `RouteInput.head/size` derive selected head/header agreement by list
+  membership. Existing `SmallShape` clients retain their link-only API.
+- `RouteInput.pick_input/pop_input/split_input` produce the actual inputs.
+  Pick's registers supply the original saved request and bitmap; bounded
+  `prefixWindows`, `LogInW` and `OutWRange` transport both code images,
+  source header, original link and counter. `PickPost.shape` uses
+  `SmallShape.congr`; `RouteInput.popped_shape` reuses checked
+  `PopPost.shape/map_clear`. `PopPost.map` handles the retained-successor
+  branch by deriving a nonempty tail and unchanged bitmap.
+- `RoutePost` retains original return PC, carved-header result, restored
+  stack, final remnant header/size, exact branch-dependent remaining
+  counter, allocator code and output. `GprsSame` composes the register
+  frames. `routeLog` uses successive snapshots computed from the original
+  memory; `RoutePath` retains actual stage posts and split-entry shape/map.
+  `RoutePost.live` supplies the selected `LiveFrame` under explicit
+  physical separation from that exact log. No free-list invariant after
+  reinsertion or general ownership supplier is claimed.
+- Every existing branch remains selected by actual observations: pick
+  repairs or retains the merge cursor; pop either clears the bitmap or
+  keeps a successor; the remnant wrapper handles zero size, sweep
+  deferral and both insertion cursor cases. The checked split access/log
+  proofs and generated bounded certificates are reused without expansion.
+  No generated output or generator change is needed for this assembly.
+- Validation: guarded/capped affected builds of `BfShape`, `BestFitNext`,
+  `BestFitRemnant`, `Generated.BestFitSplit`, `BestFitNextRoute` and
+  `BestFitNextAudit` pass (1282 jobs). The standalone focused audit with
+  `lake env lean -M 6000 -j 1` passes: 199 printed declarations use only
+  `propext`, `Classical.choice`, `Quot.sound`, including all 20 new route
+  theorems and `SmallShape.congr`. The existing `OCaml.Audit` import of
+  `BestFitNextAudit` registers these audits; the full audit is left to the
+  lead gate. Generator drift (`gen_gc_rows.py --check`), collector CFG,
+  proof discipline (27 rules), abstraction gate and `git diff --check`
+  pass. All Lean runs use `lean-guarded.py` and `lean-capped.sh`, with
+  `free -g` checked before launch and available memory above 25 GB.
+  Logs: `/tmp/a6-next-route-checked-build.log`,
+  `/tmp/a6-next-route-focused-axioms.log`,
+  `/tmp/a6-next-route-generator.log`, `/tmp/a6-next-route-cfg.log`,
+  `/tmp/a6-next-route-discipline.log`, `/tmp/a6-next-route-abstraction.log`.
+- Remaining: bitmap search and route dispatch before `pickPc` (the
+  separate `search_nonzero` summary is not composed here), other size
+  classes, full allocator readiness, allocation color and collector
+  integration. `BarrierGrowthFull` stays with G2; `CustomMemCall` remains
+  a named premise; C4 round 2 waits for F1. `GoodF1` is unchanged.
+  Checked edits are left for lead review/commit and `scripts/integrate.sh`;
+  this sandbox cannot write Git metadata or the landing queue.
+
 ## Next-size split, remnant wrapper and native return (2026-10-27)
 
 - `BestFitNext.split_return` proves the actual continuation from pop's
@@ -89,9 +147,9 @@
   `/tmp/a6-next2-drift.log`, `/tmp/a6-next2-discipline.log`.
   `BestFitNextAudit` is registered in `OCaml.Audit`; the full audit remains
   the lead gate.
-- Open: search/pick/pop composition with code/memory transport, route
-  selection, other size classes, full allocator readiness and allocation
-  color/GC integration. `BarrierGrowthFull` remains G2; `CustomMemCall`
+- The later complete-route entry above closes pick/pop/split composition
+  with code/memory transport. Search/route selection, other size classes,
+  full allocator readiness and allocation color/GC integration stay open. `BarrierGrowthFull` remains G2; `CustomMemCall`
   remains a named premise; C4 round 2 waits for F1. `GoodF1` is unchanged.
   Inherited WIP is retained, and edits are left for lead review, commit
   and `scripts/integrate.sh` (Git metadata/landing queue are read-only here).

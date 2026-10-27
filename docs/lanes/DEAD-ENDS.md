@@ -269,3 +269,13 @@
   the existing `Native.nextSplit_piece*_regs/loads` certificates. The
   repaired complete continuation checks at the same memory/proof limits;
   do not restore whole-prefix reduction or increase budgets.
+
+- 2026-10-27 next-size route representation: `BfShape.SmallShape` only
+  constrains list links, readable link windows and heap placement. Its
+  definition contains no block-header observation, so it cannot supply
+  selected-list size/header agreement for `SplitInput.larger/small`.
+  The complete route uses the original representation component
+  `BfShape.SmallHeaders`, then derives the selected header size by list
+  membership (`RouteInput.size`). This is a contract inspection, not a
+  kernel-checked reachable-state counterexample; do not replace it with
+  an unexplained header fact about an intermediate split state.
