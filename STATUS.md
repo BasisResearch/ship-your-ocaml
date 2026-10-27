@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 22:46 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 22:49 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -55,12 +55,21 @@ Reviewed and committed locally; the next full gate is running in
   declarations. Preservation of the new `SmallPhysical` component itself,
   and its production by native callers, remain open for repeated allocation.
 
+## Reviewed for the following batch
+
+`e35aa58b` supplies counted allocation frames, seven opcode rows and three
+allocating primitive return contracts. Both final affected builds passed
+3,626 jobs; 32 focused reports use only the allowed axioms, and all 27 new
+theorems are registered. The ordinary counted census is now 67/134 locally;
+the primitive contracts still need complete C_CALL composition. This batch
+is queued behind the active full gate.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | Startup Sol | Retain ELF-reset identity and expose universal reset-to-backtrace | `syo-wt/a0-boot-next` |
-| Counted-allocation Sol | Lift nursery/native allocation frames and allocating rows | `syo-wt/a1-prims-next` |
+| Custom-ownership Sol | Repair universal-ledger assumption with selected ownership | `syo-wt/a1-prims-next` |
 | Lead | Gate counted-stack/backtrace/G2 representation; review remaining suppliers | main; `syo-wt/a6-gc-next2` |
 
 ## Remaining F1 boundaries
