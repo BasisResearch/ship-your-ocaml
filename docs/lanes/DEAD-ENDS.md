@@ -112,3 +112,13 @@
   infers ownership from arbitrary `HeapReady H`. Custom-state separation is
   explicit in the existing `CustomMemCall`/`CallerApart.named` contract;
   its concrete machine discharge remains open and is not inferred from `.free`.
+
+- 2026-10-27: the captured major free block has only 126879 payload
+  words (`Boot.WhileMinRuntimeReads.freeBlock`), below `g1Budget.heapWords`
+  (262044). Thus a shrinking-singleton proof alone cannot cover every
+  successful `formatInteger` result allowed by `Fits`; for example the
+  width 1100000 is within the integer-format domain but exceeds that initial
+  block. Reuse the existing `BestFitFallback.allocate_large` and
+  `AllocLargeWrapper.allocate` where their premises hold, but retain heap
+  expansion and the normal allocation wrapper's tracking obligations.
+  This is source-level scope analysis, not a checked reachable-state witness.
