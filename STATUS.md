@@ -44,7 +44,10 @@ The a2-sem uncaught-exception WIP is preserved in `syo-wt/a2-sem-next`;
 The physical named-table migration passed the complete `OCaml` build (4,151
 jobs) and all 71 focused axiom reports. Its checked commit is `97e03f8d`;
 the rebased integration candidate is in `syo-wt/a6-gc-next2` (`3322dc6c` before
-status updates), alongside the formatter checkpoint. Its full integration gate is now running in that staging worktree. The migration keeps the matching selected malloc ledger
+status updates), alongside the formatter checkpoint. The first gate was stopped after a downstream build exposed a missing
+named-binding equality in `LoopGeometry.of_above`. That explicit frame premise
+is repaired; its focused build passes (1,539 jobs). The full gate is being
+restarted in the staging worktree. The migration keeps the matching selected malloc ledger
 rather than assuming ownership of every live allocation. Its original Sol
 slot now implements the per-call custom-count/readiness bridge.
 
@@ -59,7 +62,10 @@ composition remain in progress.
 
 Prepared next assignments (not additional running workers): native `vsnprintf`
 wrapper execution (`tasks/sol-vsnprintf-wrapper.md`) and G2 split/remnant composition
-(`tasks/sol-gc-split.md`). There are still only two active Sol workers.
+(`tasks/sol-gc-split.md`). The current count bridge must also be carried
+through the actual loop/setup invariant (`tasks/sol-counted-loop.md`); its
+helper sidecars alone do not close the ordinary C_CALL rows. There are still
+only two active Sol workers.
 
 G2 validation: the landing gate built 6029 jobs and audited 8325 declarations
 before pushing `6d002aa5`. The refcount/library train passed all stages and
