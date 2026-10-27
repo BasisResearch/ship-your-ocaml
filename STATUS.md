@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 22:22 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 22:28 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -44,6 +44,10 @@ row wrappers and a shared counted RuntimeFrame, 3,194 affected jobs and
 137 focused allowed-axiom reports. Backtrace composition `c100f1f0` joins
 that batch: 3,436 affected jobs, a 3,440-job audit build (56 backtrace and
 311 insertion declarations), all 2,045 generated startup outputs current.
+G2 returned list/header/bitmap representation and allocated-block separation
+also passed review: 1,288 affected jobs, 239 allowed-axiom reports and two
+axiom-free declarations. Original SmallPhysical production and preservation
+remain open before this can serve repeated allocations.
 The reset-witness interface follow-up is active; no complete reset-qualified
 backtrace or reset-to-cut theorem is claimed yet. Prior WIP and reviewed tips remain
 preserved on `keep/*` branches.
@@ -52,7 +56,7 @@ preserved on `keep/*` branches.
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| G2 Sol | Preserve small-list/header/bitmap representation through next-size return | `syo-wt/a6-gc-next2` |
+| Counted-allocation Sol | Lift nursery/native allocation frames and allocating opcode rows | `syo-wt/a1-prims-next` |
 | Startup Sol | Retain ELF-reset identity through the checked backtrace prefix | `syo-wt/a0-boot-next` |
 | Lead | Full gate at `2ee3051b`; review and stage counted-stack/reset results | main; `syo-wt/bprime` |
 
