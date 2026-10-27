@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27. Active target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 20:53 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -8,91 +8,76 @@ None currently.
 
 ## Standing decisions
 
-- `BarrierGrowthFull` remains a named premise until G2 supplies collection.
-- `CustomMemCall` remains a named premise.
-- C4 abstraction-discovery round 2 waits until F1 closes; its draft is preserved.
-- All Lean runs are capped at 12 GB. Landings use `scripts/integrate.sh`,
-  including its checks and serialized fast-forward push to `origin/main`.
+- `BarrierGrowthFull` remains with G2; `CustomMemCall` remains a named premise.
+- C4 abstraction-discovery round 2 waits until F1 closes. Its draft is preserved.
+- Separate `codex exec` Sol workers, high reasoning, at most two. Every worker
+  and Lean build has a 12 GB systemd cap; check available memory before launch.
+- The lead reviews and commits; all landings use `scripts/integrate.sh` and
+  normal fast-forward pushes to `origin/main`. Known failed routes are in
+  `docs/lanes/DEAD-ENDS.md`.
+
+## Landing train
+
+Published `origin/main` is `9cbf8b60`. The physical named-table migration
+landed at `7e7a052a`: 6,033 build jobs, 8,424 theorem audits, all generator/ELF
+checks and 329 OS traces (zero rejected). The next two batches are:
+
+1. Complete counted channel returns, `71547e46`, in `syo-wt/a1-prims-next`.
+   Its full integration gate is running. The final worker check passed
+   3,687 build jobs and 31 focused axiom reports; earlier count/setup
+   checkpoints passed 52 and 27 reports. Actual `CustomMemCall` posts carry
+   the count increment; native refcount stores/no-wrap facts reconstruct
+   complete channel counts at the same returned placement. The unary arm
+   retains that placement through its suffix.
+2. First empty-skiplist insertion plus native decimal formatter, `8b1f1377`,
+   staged in `syo-wt/a6-gc` on top of the channel candidate. Both workers
+   finished and the lead reviewed/committed their results. First insertion
+   passes 2,720 jobs, 310 standard-axiom audits and startup generator drift.
+   The `%ld` wrapper passes 978 jobs, its concrete caller check, 34 focused
+   reports, stdio generator drift, hole/discipline/abstraction gates.
+   Full integration waits for the first batch and a coherent cache handoff.
+
+Local `main` includes these reviewed candidates to support subsequent worker
+work; this does not mean they have passed the full gate or reached origin.
+The earlier worker WIP and reviewed tips are preserved on `keep/*` branches.
 
 ## Active work
 
-| Lane | Current work | Worktree |
+| Slot | Target | Worktree |
 | --- | --- | --- |
-| a0-boot / a0-lib | Reset-through-atom milestone landed (`9c443c79`, audited at `bb55a4e5`); reset-to-cut and `libHeap` remain open | `syo-wt/a0-boot-next` |
-| a1-prims / bprime | Named-value representation and primitive returns, then `caml_format_int`; retain existing WIP | `syo-wt/a1-prims-next`, `syo-wt/bprime` |
-| a6-gc | G2 pick/pop landed as `6d002aa5`; refcount transport landed as `1960311a` | `syo-wt/a6-gc`, `syo-wt/a6-gc-next2` |
-| foreman / a1-arms / a2-sem | C_CALL arity landed; shared invariants, table assembly, integration | `syo-wt/a1-arms`; main |
+| G2 Sol | Next-size split, remnant call and return after `BestFitNext.pop` | `syo-wt/a6-gc-next2` |
+| Formatter Sol | Next task: actual decimal `caml_alloc_sprintf` composition from the checked wrapper | `syo-wt/bprime` |
+| Lead | Channel gate, combined next landing, invariant review and task preparation | main; `syo-wt/a1-prims-next`, `syo-wt/a6-gc` |
 
-The lead now uses separate `codex exec` workers (`gpt-6.1-sol`, high reasoning),
-at most two at a time, launched through `codexwork.sh`. Built-in proof agents
-have stopped. The current Sol tasks prove the native `vsnprintf` wrapper and finish the
-first empty-skiplist insertion needed by startup. Startup, G2 pick/pop, refcount transport, all-byte C-string/strcmp, and foreman
-tooling landed. The current proof work remains in the two Sol worktrees. Workers inherit a 12 GB systemd scope; the lead handles
-Git and landings outside their workspace-write sandbox. Known failed routes are in `docs/lanes/DEAD-ENDS.md`.
+The first-insertion summary executes the actual prefix, `stat_checked` call,
+24-byte cell/header stores and ABI return. It exports seed 25173, a level-0
+chain, allocator readiness, selected owned-block frame and the domain key
+at the generated backtrace offset. Full `Skiplist.Ops`, arbitrary insertion,
+`RootsAt` and reset/backtrace caller composition remain open.
 
-All F1 opcode rows and interpreter entry/halt composition are present. The
-headline `ocamlrun_refinement_F1_open` still consumes primitive and growth
-premises. The captured `WhileMin.loaded_fillZero` proves the captured state
-is loaded; it does not prove execution from reset. F1 is not yet closed. The exact-arity C_CALL assembly landed as `c5c0fff4`
-after the full gate; bytecode audit/measurement caps landed as `a80d71cc`.
-The channel-count integration candidate exposes five remaining ordinary C_CALL
-fields: the two descriptor opens, out-channel listing, named registration,
-and integer formatting. Its counted channel summaries need the ordinary
-loop invariant and runtime suppliers before they can discharge those rows.
+The formatter summary executes native `vsnprintf` for plain `%ld`, including
+truncation, NUL, length, saved registers and memory frame. Its ownership ends
+before the real caller's parsed-format buffer (`snpAbove = 192`); a concrete
+native entry proves the contract is satisfiable. Reachable caller suppliers,
+string allocation, general `d/i/u/x/X/o` flags/width/precision, major allocation
+and the C_CALL2 return remain open. Decimal-only progress does not close F1.
 
-The a2-sem uncaught-exception WIP is preserved in `syo-wt/a2-sem-next`;
-`GoodF1` excludes that path, so it is behind current F1 work in priority.
+## Remaining F1 boundaries
 
-The physical named-table migration landed as `7e7a052a` through
-`scripts/integrate.sh`: all 6,033 build jobs, 8,424 theorem audits, generator
-and ELF checks, and 329 OS traces pass (zero rejected). The landing includes
-the explicit named-binding frame in `LoopGeometry.of_above` and the boot
-heap generator's empty named-node placement. `LibHeapAt` carries the matching
-selected named-node ledger; it does not infer ownership of every live
-allocation from arbitrary `HeapReady`. The original Sol
-slot completed the custom-count/readiness bridge, actual unary setup/suffix,
-and complete channel returns. The combined candidate is `71547e46` in
-`syo-wt/a1-prims-next`, with its full integration gate running. The final
-return task passes 3,687 build jobs and 31 axiom reports; earlier checkpoints
-passed 52 and 27 focused reports. `CustomMemCall.call` carries the exact count
-transition in its actual post; the out-list's native refcount increments and
-no-wrap proof reconstruct complete counts at the ordinary return placement.
-The unary arm retains that placement through its suffix. Ordinary loop
-preservation, startup physical zero and runtime entry/after suppliers remain
-open; this bundle is not F1 closure.
+All opcode row families and interpreter entry/halt composition are present;
+`ocamlrun_refinement_F1_open` still consumes primitive/growth premises.
+The five ordinary open C_CALL fields are the two descriptor opens, out-channel
+listing, named registration, and integer formatting. Counted channel helpers
+still need ordinary loop preservation, startup physical zero and actual
+runtime entry/after suppliers. `LibHeapAt.named` now carries ownership in the
+selected ledger; named resource reserves and registration remain open.
 
-The formatter layout/template checkpoint and its memmove integration repair
-landed as `d89766ae` after the full 6,029-job build and all gate stages. Its
-former Sol slot now proves
-the first empty-skiplist insertion used by `caml_init_backtrace` in `a6-gc`.
-The seed-zero path selects level 0 and allocates a 24-byte cell. Two evaluator
-attempts hit the 12 GB cap; factored certificates now pass with a 6 GB Lean
-diagnostic limit. The corrected prefix, generated evaluator and startup-key instruction witness
-pass the 2,719-job affected build. The suffix memory facts also check under
-the 6 GB diagnostic limit. The complete prefix/allocator/suffix run, allocator readiness, selected
-owned-block frame, domain-record key bounds, one-cell chain and remaining
-zero header bytes now check in the worker's focused file. Final seed
-readback, caller-facing packaging and audits are in progress. Reset
-composition remains open.
+Reset-through-atoms is landed (`9c443c79`, audited at `bb55a4e5`), but full
+reset-to-cut/Loaded and `libHeap` are open. A captured loaded memory snapshot
+is not reset execution. G2 pick/pop landed (`6d002aa5`); split/remnant,
+allocator readiness and full collection are open. The a2-sem uncaught-path
+WIP is preserved and lower priority because GoodF1 excludes that path.
 
-The native formatter wrapper task (`tasks/sol-vsnprintf-wrapper.md`) is now
-active in the warmed `bprime` slot (909-job cache probe, no recompilation).
-Its native LONGINT-decimal summary uses the symbolic-run bridge and is
-under validation. The shared ownership window is being narrowed to end
-exactly after the seven vararg slots, before the real caller's parsed-format
-buffer; the template change is rebuilding shared formatter clients.
-Queued work includes ordinary counted-loop integration, startup backtrace
-composition after first insertion (`tasks/sol-backtrace-reset.md`), G2
-split/remnant composition, and a proved named-resource reserve without the
-absent fixed guards. There are still only two Sol workers.
-
-G2 validation: the landing gate built 6029 jobs and audited 8325 declarations
-before pushing `6d002aa5`. The refcount/library train passed all stages and
-audited 8338 declarations before pushing `c5a18e5a`. G2 still has
-search/pick/pop as separate summaries; split,
-remnant-call composition, allocator readiness and full collection remain open.
-
-Formatter checkpoint: `SnpFmt` and `Format.SvfLong` built (911 jobs), and
-`vsnprintf_layout` admits the real FILE, buffer and seven varargs slots from
-stack bounds/alignment alone. Wrapper execution, allocation, and the general
-C_CALL2 return remain open, including large strings and nondecimal formats.
+Queued tasks: ordinary counted-loop migration, actual startup/backtrace
+composition after first insertion, and a proved named-key reserve without
+adding the absent max-name/count guards. See `tasks/sol-*.md`.
