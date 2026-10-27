@@ -38,24 +38,28 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 def countedStackOpcode : Opcode → Bool
 '''
 
-def output():
-    out = HEADER + ''.join(f'  | .{op} => true\n' for op, _ in ROWS) + '  | _ => false\n'
-    # Reuse the authoritative OCaml fixed-operand-count parser.
-    operands = nargs()
-    for op, _ in ROWS:
-        shape = ['cases args',
-                 'rcases args with _ | ⟨a, _ | ⟨b, rest⟩⟩',
-                 'rcases args with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩'][operands.get(op, 0)]
-        out += f'''
+def channel_certificate(op, definitions='stepI, opt', variable=False):
+    # Reuse the authoritative OCaml fixed-operand-count parser. Variable
+    # CLOSUREREC exposes its two leading operands and retains the offset list.
+    shape = ('rcases args with _ | ⟨a, _ | ⟨b, rest⟩⟩' if variable else
+        ['cases args',
+         'rcases args with _ | ⟨a, _ | ⟨b, rest⟩⟩',
+         'rcases args with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩'][nargs().get(op, 0)])
+    return f'''
 /-- BcSem channel preservation for {op}; physical framing is independent. -/
 theorem counted_{op.lower()}_channels {{P : Prog}} {{s s' : St}} {{args : List Int}}
     (effect : stepI P s ⟨.{op}, args⟩ = .next s') : s'.world.chans = s.world.chans := by
   {shape}
   all_goals
-    simp only [stepI, opt] at effect
+    simp only [{definitions}] at effect
     repeat' split at effect
     all_goals cases effect <;> rfl
 '''
+
+def output():
+    out = HEADER + ''.join(f'  | .{op} => true\n' for op, _ in ROWS) + '  | _ => false\n'
+    for op, _ in ROWS:
+        out += channel_certificate(op)
     for op, mode in ROWS:
         name = op.lower()
         budget = mode != 'stable'

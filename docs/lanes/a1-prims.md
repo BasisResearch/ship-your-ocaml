@@ -2,6 +2,105 @@
 
 ## Current status
 
+**2026-10-27 counted nursery/native allocation: checked for lead review and
+integration.** Started at committed HEAD `648afc4a`, with the checked counted
+stack frame. Read `CLAUDE.md`, the A1 plan/status and this log's remaining-row
+list plus `DEAD-ENDS.md`; ran `scripts/abs_inventory.sh` before proof work.
+No workers/subagents, Git metadata edits, commits or landing actions.
+
+`f1_channelCountFrame` factors the selected-ledger argument out of the checked
+stack frame; `f1_stack_channelCountFrame` reuses it. The entry's actual
+`LibHeapAt`, `OpenChannels.unique`, and `F1HeapSafe.outside` preserve whole
+channel records (refcounts and next links) and the static opened-list head.
+The frozen counted placement may differ from the nursery geometry's placement;
+no placement-equality premise or independent address separation was added.
+
+`CountedAllocFrame.lean` proves `CountAllocWindow` static/live-block/custom-state
+separation for caller windows, the actual free nursery, `young_ptr` and
+`local_roots`. Custom-state separation comes from `CustomMemCall.apart`;
+physical counts come from `accounting.frame`. `f1_alloc_channelCountFrame`
+reflects the actual log into windows, reuses `ChannelCountFrame.of_frame`, and
+transports the observations to total-byte native posts. `counted_allocFrame`
+lifts the real reservation/body log, including CLOSUREREC's VM-stack stores;
+`counted_primAllocFrame` lifts the existing native primitive log and final-young
+geometry contract. No stronger `WindowStable`/`AllocationRuntime` or counted
+successor is assumed. The only named custom supplier remains `CustomMemCall`.
+
+`counted_alloc_row` reuses `counted_row`, `counted_runtimeFrame` and the actual
+allocation/memory frames at `countedLayout f1Layout`. Its local budget is the
+existing F1 budget. The arbitrary-layout supplier route loses that budget
+agreement and is recorded as an interface dead end in `DEAD-ENDS.md`.
+`scripts/gen_counted_alloc_rows.py` generates seven instances: MAKEBLOCK,
+MAKEBLOCK1/2/3, CLOSURE, CLOSUREREC and GRAB. All native execution and existing
+GoodF1/Fits/capacity guards come from the ordinary rows. Shared generator
+`channel_certificate` exposes operand shapes (including CLOSUREREC's variable
+offset list), then reduces actual `stepI` branches for unchanged channels.
+The old stack generator output is byte-for-byte unchanged. The new generator
+is registered in `check_all.sh`.
+
+Checked every `PrimAllocFrame` use site: get-config requires that frame;
+executable-name and get-argv additionally require `ExeNameAt`. The existing
+`f1_exeNameAt` producer projects from the base runtime, so `CountedPrimAllocRows`
+instantiates all three `PrimReturnsAt` summaries at the local counted layout.
+These are callee return contracts, not complete counted C_CALL opcode rows.
+The separate int64-float conversion uses `AllocFrame` and is not instantiated
+here. Console/counter/native frames for other primitives are not assumed for
+the stronger predicate.
+
+Validation:
+
+- Guarded affected build of `CountedAllocRows`, `CountedPrimAllocRows`,
+  `CountedStackRows`, `CountedChannelRows`, `CountedEntry` and `F1Table`:
+  **3,626 jobs**, passed (`/tmp/counted-allocation-rows1.log`); final generated
+  row cleanup checked with the same targets and **3,626 jobs**, passed
+  (`/tmp/counted-allocation-rows2.log`). No new allocation-module warnings.
+  The shared frames passed separately, **2,004 jobs**
+  (`/tmp/counted-allocation-frame3.log`).
+- Guarded `/tmp/counted-allocation-focused-audit.lean`: **32 reports**,
+  including all **27 new theorems** and five stack-frame/row regressions,
+  passed. Only `propext`, `Classical.choice`, `Quot.sound` occur
+  (`/tmp/counted-allocation-focused-audit.log`,
+  `/tmp/counted-allocation-audit-check.txt`). All new reports are registered
+  in `OCaml/Audit.lean`; full Audit remains the lead gate.
+- Counted allocation/stack and F1 table generator drift checks, hole check
+  (4,741 files), discipline (27 rules), abstraction gate and diff checks pass.
+  C4 remains at 3. Generated files were produced by their generators.
+- Every Lean invocation checked `free -g` first (available ≥25 GB) and used
+  `python3 scripts/lean-guarded.py --log /tmp/... -- scripts/lean-capped.sh lake ...`.
+  One build at a time under the inherited 12 GB scope and two-thread limit;
+  no virtual-memory limit or increased proof budget.
+
+**Precise remaining counted-opcode list:** 67/134 ordinary counted F1 rows
+are supported (the previous 60 plus seven allocating rows). These **67** still
+lack complete counted `OpArm` instances:
+
+  `APPLY`, `APPLY1`, `APPLY2`, `APPLY3`, `APPTERM`, `APPTERM1`, `APPTERM2`, `APPTERM3`, `RETURN`,
+  `RESTART`, `SETGLOBAL`, `ATOM0`, `ATOM`, `SETFIELD0`, `SETFIELD1`, `SETFIELD2`, `SETFIELD3`, `SETFIELD`,
+  `BRANCH`, `BRANCHIF`, `BRANCHIFNOT`, `SWITCH`, `BOOLNOT`, `RAISE`, `CHECK_SIGNALS`, `C_CALL1`, `C_CALL2`,
+  `C_CALL3`, `C_CALL4`, `C_CALL5`, `CONST1`, `CONST2`, `CONST3`, `CONSTINT`, `ADDINT`, `SUBINT`, `MULINT`,
+  `DIVINT`, `MODINT`, `ANDINT`, `ORINT`, `XORINT`, `LSLINT`, `LSRINT`, `ASRINT`, `EQ`, `NEQ`, `LTINT`,
+  `LEINT`, `GTINT`, `GEINT`, `OFFSETINT`, `OFFSETREF`, `ISINT`, `BEQ`, `BNEQ`, `BLTINT`, `BLEINT`,
+  `BGTINT`, `BGEINT`, `ULTINT`, `UGEINT`, `BULTINT`, `BUGEINT`, `STOP`, `RERAISE`, `RAISE_NOTRACE`
+
+C_CALL obligations remain: compose the three new allocating return contracts
+through actual setup/callee/suffix into `CountedLoopAt`, with their unchanged
+channel semantics and selected-placement recovery; supply the other primitive
+frames/returns; handle other arities, exits and full opcode outcome cases.
+The three existing unary channel success paths still use their real named
+opening/listing suppliers and do not close the whole C_CALL1 row. Complete
+C_CALL1–5 rows and full `F1Arms` assembly remain open. No counted successor or
+stronger runtime frame was added as a supplier.
+
+Still explicit: complete physical custom runtime/startup zero and the named
+custom machine supplier, concrete channel opening/listing runtime/heap/ledger/
+pin and after-call suppliers, barriers and GC-capable allocation, effectful
+channel calls, named registration/general formatting, and reset reachability.
+`BarrierGrowthFull` stays with G2; C4 round 2 waits for F1. `GoodF1` and its
+nursery allocation domain are unchanged. Full `OCaml.Audit` and integration
+remain the lead gate; checked edits are left uncommitted for review. The lead
+commits and lands with `scripts/integrate.sh`.
+
+
 **2026-10-27 counted stack RuntimeFrame and 58 row instances: checked for lead
 review/integration.** Started at clean committed HEAD `2ee3051b`, after the
 counted-loop continuation (`274e994b`) and its allocator-entry follow-up

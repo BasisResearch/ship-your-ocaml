@@ -4,6 +4,17 @@ namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open Vsa.Sim
 
+/-- A range inside a selected member window is inside the window family. -/
+theorem insideW_of_mem {windows : List W} {w : W} {a n : Nat}
+    (member : w ∈ windows) (low : w.lo ≤ a) (high : a + n ≤ w.hi) :
+    InsideW windows a n := by
+  induction windows with
+  | nil => cases member
+  | cons v windows ih =>
+    rcases List.mem_cons.mp member with rfl | tail
+    · exact Or.inl ⟨low, high⟩
+    · exact Or.inr (ih tail)
+
 /-- A per-entry certificate constructs the inductive write-window predicate. -/
 theorem log_in_windows_of_mem {windows : List W} {log : List WEntry}
     (inside : ∀ e ∈ log, InsideW windows e.1 e.2.1) : LogInW windows log := by

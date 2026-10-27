@@ -10,6 +10,16 @@
   queued in `tasks/sol-custom-ledger.md`; no checked counterexample or global
   inconsistency of `CustomMemCall` is claimed by this inspection alone.
 
+- 2026-10-27 counted allocation adapter: the stack-row pattern quantifying
+  a row supplier over every `Layout` cannot directly consume allocating rows
+  with only `Fits f1Layout.budget P`. Allocation rows use the selected layout's
+  own budget (unlike several stack rows' independent budget parameter).
+  Restrict the local supplier to `countedLayout f1Layout Customs cp world`,
+  whose budget is definitionally the existing F1 budget; produce its frames
+  before applying the generic row. Do not assume Fits/capacity for an arbitrary
+  strengthened layout. This is an interface inspection, not a reachable
+  counterexample or a change to GoodF1.
+
 - 2026-10-27 counted stack rows: unfolding `stepI` while the operand list
   is unconstrained exhausts the default heartbeat budget even for a fixed
   opcode. Splitting only the opcode, or putting those expansions in separate

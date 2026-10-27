@@ -91,15 +91,16 @@ theorem CountStackWindow.custom_outside {Ready : Nat → Config → Prop}
   · have below := apart.belowStack
     omega
 
-/-- Complete counts survive actual VM/native stack and allowed domain-field
-writes. The entry runtime supplies its real LibHeapAt ledger; opened-list
-uniqueness matches that ledger with the represented placement. -/
-theorem f1_stack_channelCountFrame {Ready : Nat → Config → Prop}
+/-- The selected physical ledger frames all channel words. Window suppliers
+provide static, live-block and custom-state separation independently. -/
+theorem f1_channelCountFrame {Ready : Nat → Config → Prop}
     {state Customs : Config → Nat → Prop} {cp : ChanPlace} {world : World}
     {c d : Config} {ws : List Vsa.Sim.W}
     (custom : Gc.CustomMemCall Ready state Customs) (runtime : Gc.f1Layout.runtimeOk c)
     (counts : ChannelCustomsRepr Customs c cp world)
-    (allowed : ∀ w ∈ ws, CountStackWindow w)
+    (above : ∀ w ∈ ws, Layout.sym_bss_end ≤ w.lo)
+    (safe : ∀ w ∈ ws, Gc.F1HeapSafe w)
+    (outside : ∀ w ∈ ws, ∀ a, state c a → a < w.lo ∨ w.hi ≤ a)
     (frame : Vsa.Sim.FrameOn ws c.σ.mem d.σ.mem) :
     ChannelCountFrame Customs cp world c d := by
   have statics (a n : Nat) (bound : a + n ≤ Layout.sym_bss_end) :
@@ -107,7 +108,7 @@ theorem f1_stack_channelCountFrame {Ready : Nat → Config → Prop}
     apply Reloc.bytesT_congr
     intro j hj
     have same := frame (a + j) (Gc.outW_of fun w hw =>
-      Or.inl (by have := (allowed w hw).above_statics; omega))
+      Or.inl (by have := above w hw; omega))
     simp only [bytesT, same]
   apply ChannelCountFrame.of_frame frame
   · obtain ⟨H, cap, chs, heap⟩ := runtime.freeListShape.libHeap
@@ -120,22 +121,37 @@ theorem f1_stack_channelCountFrame {Ready : Nat → Config → Prop}
     rw [same] at member
     apply Gc.outW_of
     intro w hw
-    have safe : Gc.F1HeapSafe w := by
-      rcases allowed w hw with vm | native
-      · exact f1_vmWindow_heapSafe vm
-      · exact Or.inr (Or.inl native)
-    exact safe.outside heap member lo (by simpa only [Gc.chanRecordBytes, Nat.add_assoc] using hi)
+    exact (safe w hw).outside heap member lo
+      (by simpa only [Gc.chanRecordBytes, Nat.add_assoc] using hi)
   · intro y lo hi
     exact Gc.outW_of fun w hw => Or.inl (by
-      have := (allowed w hw).above_statics
+      have := above w hw
       have b : Layout.sym_caml_all_opened_channels + 8 ≤ Layout.sym_bss_end := by decide
       omega)
   · constructor
     intro n physical
     simpa only [Nat.add_zero] using custom.accounting.frame physical
       (fun a ha => congrArg (fun x => x.getD 0)
-        (frame a (Gc.outW_of fun w hw => (allowed w hw).custom_outside custom runtime ha)))
+        (frame a (Gc.outW_of fun w hw => outside w hw a ha)))
       (statics _ 8 (by decide))
+
+/-- Complete counts survive VM/native stack and allowed domain-field writes.
+All separation comes from the entry runtime and named custom allocator. -/
+theorem f1_stack_channelCountFrame {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} {cp : ChanPlace} {world : World}
+    {c d : Config} {ws : List Vsa.Sim.W}
+    (custom : Gc.CustomMemCall Ready state Customs) (runtime : Gc.f1Layout.runtimeOk c)
+    (counts : ChannelCustomsRepr Customs c cp world)
+    (allowed : ∀ w ∈ ws, CountStackWindow w)
+    (frame : Vsa.Sim.FrameOn ws c.σ.mem d.σ.mem) :
+    ChannelCountFrame Customs cp world c d :=
+  f1_channelCountFrame custom runtime counts
+    (fun w hw => (allowed w hw).above_statics)
+    (fun w hw => by
+      rcases allowed w hw with vm | native
+      · exact f1_vmWindow_heapSafe vm
+      · exact Gc.heapSafe_native native)
+    (fun w hw a ha => (allowed w hw).custom_outside custom runtime ha) frame
 
 /-- All RuntimeFrame fields lift at the actual pinned F1 runtime. No stronger
 WindowStable premise or global runtime coherence is assumed. -/

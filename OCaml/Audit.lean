@@ -8,6 +8,8 @@ import OCaml.Vm.Sim.CountedEntry
 import OCaml.Vm.Sim.CountedChannelRows
 import OCaml.Vm.Sim.CountedMemoryRows
 import OCaml.Vm.Sim.CountedStackRows
+import OCaml.Vm.Sim.CountedAllocRows
+import OCaml.Vm.Sim.CountedPrimAllocRows
 import OCaml.Vm.Gc.FinalQuiet
 import OCaml.Vm.Gc.MemprofQuiet
 import OCaml.Vm.Gc.LocalRootsTail
@@ -7746,3 +7748,32 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.counted_offsetclosure0_row
 #print axioms OCaml.Vm.Sim.counted_offsetclosure3_row
 #print axioms OCaml.Vm.Sim.counted_offsetclosure_row
+
+-- Counted nursery/native allocation frames and supported rows.
+#print axioms OCaml.Vm.Sim.insideW_of_mem
+#print axioms OCaml.Vm.Sim.f1_channelCountFrame
+#print axioms OCaml.Vm.Sim.CountAllocWindow.above_statics
+#print axioms OCaml.Vm.Sim.CountAllocWindow.heapSafe
+#print axioms OCaml.Vm.Sim.CountAllocWindow.custom_outside
+#print axioms OCaml.Vm.Sim.f1_alloc_channelCountFrame
+#print axioms OCaml.Vm.Sim.counted_primAllocFrame
+#print axioms OCaml.Vm.Sim.counted_allocFrame
+#print axioms OCaml.Vm.Sim.counted_alloc_row
+#print axioms OCaml.Vm.Sim.counted_makeblock_channels
+#print axioms OCaml.Vm.Sim.counted_makeblock1_channels
+#print axioms OCaml.Vm.Sim.counted_makeblock2_channels
+#print axioms OCaml.Vm.Sim.counted_makeblock3_channels
+#print axioms OCaml.Vm.Sim.counted_closure_channels
+#print axioms OCaml.Vm.Sim.counted_closurerec_channels
+#print axioms OCaml.Vm.Sim.counted_grab_channels
+#print axioms OCaml.Vm.Sim.counted_makeblock_row
+#print axioms OCaml.Vm.Sim.counted_makeblock1_row
+#print axioms OCaml.Vm.Sim.counted_makeblock2_row
+#print axioms OCaml.Vm.Sim.counted_makeblock3_row
+#print axioms OCaml.Vm.Sim.counted_closure_row
+#print axioms OCaml.Vm.Sim.counted_closurerec_row
+#print axioms OCaml.Vm.Sim.counted_grab_row
+#print axioms OCaml.Vm.Sim.counted_exeNameAt
+#print axioms OCaml.Vm.Sim.counted_prim_caml_sys_get_config_returns
+#print axioms OCaml.Vm.Sim.counted_prim_caml_sys_executable_name_returns
+#print axioms OCaml.Vm.Sim.counted_prim_caml_sys_get_argv_returns
