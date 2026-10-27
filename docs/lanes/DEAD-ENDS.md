@@ -53,14 +53,19 @@
   needs an actual identity pin/frame (or an explicitly corrected footprint
   with its producers), not an assumption that the old state frame reads it.
 
-- 2026-10-27 reset identity review: `reset_init_stack_reset_exists` keeps
-  `Steps (fillZero initial) after` but drops the `ElfResetReady` witness
-  retained in its nested `ResetReadSections` source. Atom/backtrace existence
-  consumers inherit that loss. An argument-free existence theorem of this
-  form does not expose reset-qualified reachability. Carry the actual source
-  witness through stronger producer structures and project the older API;
-  do not infer reset from Steps. This is interface inspection, not a
-  counterexample to the constructed execution.
+- 2026-10-27 reset identity review: the older
+  `reset_init_stack_reset_exists` interface keeps `Steps (fillZero initial) after`
+  but drops the `ElfResetReady` witness retained in its nested
+  `ResetReadSections` source; atom/backtrace consumers of only that interface
+  inherit the loss. This is interface inspection, not a counterexample to
+  the constructed execution. `ResetReadSections.reset` now follows the real
+  attempt/open/search/shared-table/parameter source; the stronger
+  `ResetInitStack` and `ResetAtomTable` producers carry its witness into
+  `ResetBacktrace.reset`, with the old existential APIs as projections.
+  Do not infer reset from Steps or assume arbitrary initial configs equal:
+  `ElfReset.unique` uses equality of deterministic setup results and both
+  zero counters. `ElfReset.of_whileMinElf` transports reset only after proving
+  equality of loader seeds and entry/HTIF setup metadata.
 
 - 2026-10-27 initialized-string shared readback: leaving the saved-bank
   prefix as an unconstrained `_ ++ [length-store]` inside `change` forces

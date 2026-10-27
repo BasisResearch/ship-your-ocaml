@@ -2,16 +2,26 @@
 
 ## Current status (2026-10-27)
 
-`reset_init_backtrace_returned_exists` constructs an argument-free execution
-existential through backtrace. Its `ResetBacktrace` witness contains the actual
-`Steps (fillZero initial) after` run, the preceding atom return and the
-backtrace call, and a `BacktraceDone` with explicit next native PC
-`0x80004e84`. It has no caller-supplied premises. Checked edits await lead
-review and integration. Lead review found that the stack/atom existential
-interface drops the nested `ElfResetReady` witness. The construction follows
-the reset prefix, but the exported theorem does not yet certify that its
-initial config is ELF reset. `sol-backtrace-reset-identity.md` restores that
-witness before further startup extension.
+`ResetBacktrace.reset` now retains `ElfResetReady WhileMinElfParse.elf initial`
+from the parsed ELF's actual setup. `ResetReadSections.reset` follows the
+nested attempt/open/search/shared-table source back through the parameter
+producer. `reset_init_stack_witness_exists` and
+`reset_init_atom_table_witness_exists` carry that fact in `ResetInitStack`
+and `ResetAtomTable` together with their actual `Steps (fillZero initial)`
+runs and existing ownership, page-table, root-global and capacity posts.
+The older stack/atom existential APIs remain compatibility projections.
+
+`reset_init_backtrace initial reset` reaches a structured `ResetBacktrace`
+for **every** initial config satisfying `ElfReset` for the parsed ELF.
+`ElfReset.unique` proves equality from the same deterministic setup result
+and both zero counters before transporting the constructed execution.
+`whileMin_reset_backtrace` also accepts exactly the existing
+`WhileMinElf imageElf` and `ElfReset imageElf initial` interface: matching
+loader memory and entry/HTIF metadata prove equal seeds/setup programs via
+`ElfReset.of_whileMinElf`. Neither Steps nor arbitrary config equality
+supplies the reset fact. The affected build and focused standard-axiom audit
+pass; these checked edits await lead review/integration. Full reset-to-cut
+remains open.
 
 The proof starts from the existing reset prefix through all 256 atom-header
 stores and page registration. `InitStackReset` now retains domain ownership,
@@ -52,34 +62,58 @@ owned entries block, adding the root cell to the allocator ledger.
 `ResetBacktrace.last_exn` proves the registered key still contains tagged unit.
 
 Validation: the guarded/capped affected build of `BacktraceReset` passes
-(3436 jobs; `/tmp/backtrace-continuation-6.log`). The focused audit build
-also passes (3440 jobs; `/tmp/backtrace-axioms.log`): 56 backtrace and 311
-first-insertion declarations are audited; all 1,313 axiom reports in that
-build use only `propext`, `Classical.choice`, `Quot.sound`. The audit also
-checks the closed reset theorem's argument-free type. `BacktraceAudit` and
-`SkipFirstAudit` are registered in `OCaml.Audit`; the full audit remains the
-lead gate. All builds use the launcher's 12 GB cgroup, two Lean threads and
-the guarded launcher, after checking at least 25 GB available memory.
-No virtual-address cap or proof-budget increase was used.
-`python3 scripts/gen_startup_rows.py --check` passes for all 2,045 outputs
-(`/tmp/backtrace-generator-final.log`). Python syntax, discipline (27 rules),
-abstraction and whitespace checks pass; the static logs are
-`/tmp/backtrace-discipline-final.log` and `/tmp/backtrace-abstraction-final.log`.
-The lead owns the full `OCaml.Audit` gate and commits/lands via
-`scripts/integrate.sh`; this worker leaves checked edits uncommitted.
+(3,436 jobs; `/tmp/reset-identity-affected-2.log`). This checks `Reset`,
+`SetupElf`, `ReadSectionsReset`, `InitGcReset`, `InitStackReset`,
+`AtomTableReset` and `BacktraceReset` in the affected closure.
+The focused audit build passes (3,439 jobs;
+`/tmp/reset-identity-axioms.log`): all 78 focused declarations are reported,
+including all eight new theorems; every one of the 1,026 unique axiom
+reports in the build uses only `propext`, `Classical.choice`, `Quot.sound`.
+The generated audit also checks the exported argument-free existence,
+universal parsed-ELF reset theorem, matching-image theorem and conditional
+full-reset adapter types. `scripts/gen_startup_rows.py` generates the audit;
+the existing `OCaml.Audit` import registers its expanded declaration list.
+The full `OCaml.Audit` remains the lead gate.
+
+All builds use the launcher's 12 GB cgroup, two Lean threads and the guarded
+launcher, after checking at least 25 GB available memory. No virtual-address
+cap or proof-budget increase was used. Generator drift passes for all 2,045
+outputs (`/tmp/reset-identity-generator.log`); discipline (27 rules),
+abstraction and whitespace checks pass. Static logs are
+`/tmp/reset-identity-discipline.log` and `/tmp/reset-identity-abstraction.log`.
+The lead commits/lands via `scripts/integrate.sh`; this worker leaves checked
+edits uncommitted and does not write Git metadata or the landing queue.
 
 Reproduction, after `free -g` confirms at least 25 GB available:
 
 ```sh
 free -g
-python3 scripts/lean-guarded.py --log /tmp/backtrace-continuation-6.log -- scripts/lean-capped.sh lake build OCaml.Vm.Boot.Startup.BacktraceReset
+python3 scripts/lean-guarded.py --log /tmp/reset-identity-affected-2.log -- scripts/lean-capped.sh lake build OCaml.Vm.Boot.Startup.BacktraceReset
 free -g
-python3 scripts/lean-guarded.py --log /tmp/backtrace-axioms.log -- scripts/lean-capped.sh lake build OCaml.Vm.Boot.Startup.BacktraceAudit OCaml.Vm.Boot.Startup.SkipFirstAudit
+python3 scripts/lean-guarded.py --log /tmp/reset-identity-axioms.log -- scripts/lean-capped.sh lake build OCaml.Vm.Boot.Startup.BacktraceAudit
 ```
 
 Remaining obligations:
-* Interpreter/debugger initialization, the later argv root registration,
-  loading and `caml_sys_init`, complete reset-to-cut execution and `Loaded`.
+
+* `backtrace_loaded_Statement` states the exact remaining contract:
+  for any `ResetBacktrace initial after`, find a cut with actual
+  `Steps after cut` and
+  `Loaded (runtimeLayout BestFitSingleton Gc.g1Budget) whileMin cut`.
+  `whileMin_reset_loaded_of_backtrace` composes this continuation with the
+  checked prefix to discharge the original `whileMin_reset_loaded_Statement`.
+  The continuation itself is open; reset-to-backtrace takes no later-state
+  or captured-state premise.
+* From `0x80004e84`, the actual next instructions set a1/a0 to zero and
+  call `caml_interprete(NULL, 0)` at `0x80004e8c`, then
+  `caml_debugger_init` at `0x80004e90`. Remaining work includes CODE seek/load
+  and debug-info initialization; DLPT/DLLS/PRIM reads, primitive-table
+  construction and temporary frees; DATA channel/lock/unmarshalling/unlock/close
+  and descriptor-table free; `caml_oldify_one`/`caml_oldify_mopup` promotion;
+  `caml_sys_init` including the later argv root registration; main debug-info
+  loading and the program-start debugger call at `0x80004fe0`; then the
+  `0x80004ff4` call to `caml_interprete(caml_start_code, caml_code_size)`
+  and its represented entry cut at `0x80001df8`. The argv root is registered
+  inside `caml_sys_init` (`sys.c:462`), after allocating the actual argv array.
 * `RootsAt` at the cut, including the actual young/old root shapes and
   footprint separation; general `Skiplist.Ops` remains open.
 * `BarrierGrowthFull` stays with G2; `CustomMemCall` remains a named premise;

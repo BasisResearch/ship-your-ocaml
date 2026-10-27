@@ -64,13 +64,24 @@ structure InitStackReset (H : List (Nat × Nat)) (capacity : Nat) (ra s0 s1 s2 m
   globals : ∀ x, (0x80064d10 ≤ x ∧ x < 0x80064d14) ∨ (0x800684e0 ≤ x ∧ x < 0x80068570) →
     (after.σ.mem[x]?).getD 0 = 0
 
+/-- Stack return with the actual parsed ELF reset retained alongside its native run. -/
+structure ResetInitStack (initial after : Config) where
+  reset : ElfResetReady elf initial
+  H : List (Nat × Nat)
+  s0 : BitVec 64
+  s1 : BitVec 64
+  s2 : BitVec 64
+  mx : BitVec 64
+  p : BitVec 64
+  before : Config
+  post : InitStackReset H (startupAllocatorCredits - 656 - initGcCredits - 32768)
+    jal_80004e78_call.link s0 s1 s2 mx p before after
+  run : Steps (Vsa.Densify.fillZero initial) after
+
 /-- The reset run through caml_init_gc and caml_init_stack: back in caml_main
 with the interpreter stack allocated and recorded in the domain record. -/
-theorem reset_init_stack_reset_exists :
-    ∃ initial after, Steps (Vsa.Densify.fillZero initial) after ∧
-      ∃ H s0 s1 s2 mx p before, InitStackReset H
-        (startupAllocatorCredits - 656 - initGcCredits - 32768)
-        jal_80004e78_call.link s0 s1 s2 mx p before after := by
+theorem reset_init_stack_witness_exists :
+    ∃ initial after, Nonempty (ResetInitStack initial after) := by
   obtain ⟨initial, sections, ⟨w⟩⟩ := reset_read_sections_exists
   obtain ⟨t1, t2, t3, dom⟩ := reset_domain_kept initial sections w
   obtain ⟨a, run1, A, gcA⟩ := reset_init_gc_call w dom
@@ -122,7 +133,18 @@ theorem reset_init_stack_reset_exists :
         rcases inT with ⟨lo, hi⟩ | ⟨lo, hi⟩
         · rw [hP] at lo hi; omega
         · omega), show e.σ.mem = d.σ.mem from P.memory]).cons _
-  exact ⟨initial, f, run1.trans (run2.trans (run3.trans run4)), _, _, _, _, _, _, _, {
+  refine ⟨initial, f, ⟨{
+    reset := w.reset
+    H := Hfinal
+    s0 := 3#64
+    s1 := argvPtr
+    s2 := vsaReg w.attempt.opened.call.atRetry 18
+    mx := gcParamWord 5
+    p := p
+    before := e
+    run := run1.trans (run2.trans (run3.trans run4))
+    post := ?_ }⟩⟩
+  exact {
     done := S
     table := ⟨ent, table⟩
     domainOwned := IS.domainOwned
@@ -157,7 +179,16 @@ theorem reset_init_stack_reset_exists :
           have := h.1; unfold heapStart at this; omega)) (by
           simp only [initStackFieldsLog, initStackCells, List.map, OutL, domainField, camlMaxStackSizeAddr, and_true]
           omega), show e.σ.mem = d.σ.mem from P.memory, D.low x keep]
-      exact gcA.bss x (by unfold GcBssByte; omega) }⟩
+      exact gcA.bss x (by unfold GcBssByte; omega) }
+
+/-- Compatibility projection; the stronger producer also exposes ELF reset. -/
+theorem reset_init_stack_reset_exists :
+    ∃ initial after, Steps (Vsa.Densify.fillZero initial) after ∧
+      ∃ H s0 s1 s2 mx p before, InitStackReset H
+        (startupAllocatorCredits - 656 - initGcCredits - 32768)
+        jal_80004e78_call.link s0 s1 s2 mx p before after := by
+  obtain ⟨initial, after, ⟨S⟩⟩ := reset_init_stack_witness_exists
+  exact ⟨initial, after, S.run, S.H, S.s0, S.s1, S.s2, S.mx, S.p, S.before, S.post⟩
 
 theorem reset_init_stack_returned_exists :
     ∃ initial after, Steps (Vsa.Densify.fillZero initial) after ∧

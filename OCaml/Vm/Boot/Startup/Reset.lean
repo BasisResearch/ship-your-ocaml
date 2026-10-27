@@ -18,6 +18,14 @@ structure ElfReset (elf : ELF64File) (c : Config) : Prop where
   tick : c.tick = 0
   steps : c.steps = 0
 
+/-- Setup is a function of its seed; step-zero counters determine the whole config. -/
+theorem ElfReset.unique {elf : ELF64File} {a b : Config}
+    (ha : ElfReset elf a) (hb : ElfReset elf b) : a = b := by
+  have state : a.σ = b.σ := (EStateM.Result.ok.inj (ha.setup.symm.trans hb.setup)).2
+  have tick : a.tick = b.tick := ha.tick.trans hb.tick.symm
+  have steps : a.steps = b.steps := ha.steps.trans hb.steps.symm
+  cases a; cases b; cases state; cases tick; cases steps; rfl
+
 /-- Only these two ELF metadata observations affect register setup. -/
 def tohostMetadata (elf : ELF64File) : Option Nat :=
   (elf.interpreted_sections.find? is_tohost).map (fun s => s.2.section_addr)
@@ -74,6 +82,18 @@ structure WhileMinElf (elf : ELF64File) : Prop where
   memory : initializeMemory .B64 elf = WhileMinImage.initialMem
   entry : (elf.file_header.e_entry : UInt64).toBitVec = BitVec.ofNat 64 Layout.sym_start
   tohost : tohostMetadata elf = some Layout.sym_tohost
+
+/-- Matching loader memory and setup metadata give the same reset predicate.
+No equality of arbitrary initial configurations is assumed. -/
+theorem ElfReset.of_whileMinElf {a b : ELF64File} {c : Config}
+    (reset : ElfReset a c) (A : WhileMinElf a) (B : WhileMinElf b) : ElfReset b c := by
+  have entry : a.file_header.e_entry = b.file_header.e_entry :=
+    UInt64.toBitVec_inj.mp (A.entry.trans B.entry.symm)
+  have setup := setupElf_congr entry (A.tohost.trans B.tohost.symm)
+  have seed : resetSeed a = resetSeed b := by
+    unfold resetSeed
+    rw [A.memory, B.memory]
+  exact ⟨by rw [← setup, ← seed]; exact reset.setup, reset.tick, reset.steps⟩
 
 /-- Round 2 target, stated over the machine's own initialized ELF configuration.
 Suppliers: loader correspondence, setup invariant, and startup function summaries. -/

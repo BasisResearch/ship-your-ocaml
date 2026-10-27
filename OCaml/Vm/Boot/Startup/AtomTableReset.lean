@@ -13,14 +13,25 @@ structure AtomTableReset (H : List (Nat × Nat)) (capacity : Nat)
   globals : ∀ x, (0x80064d10 ≤ x ∧ x < 0x80064d14) ∨ (0x800684e0 ≤ x ∧ x < 0x80068570) →
     (after.σ.mem[x]?).getD 0 = 0
 
+/-- Atom return retains the same source reset, ownership and page-table observations. -/
+structure ResetAtomTable (initial after : Config) where
+  reset : ElfResetReady elf initial
+  H : List (Nat × Nat)
+  ent : BitVec 64
+  raw : BitVec 64
+  before : Config
+  post : AtomTableReset H (startupAllocatorCredits - 656 - initGcCredits - 32768 - 8192)
+    parameterStack jal_80004e7c_call.link ent raw before after
+  run : Steps (Vsa.Densify.fillZero initial) after
+
 /-- The reset run through the atom-table initializer. The native allocator,
 256-header loop and page registration execute before returning to caml_main. -/
-theorem reset_init_atom_table_reset_exists :
-    ∃ initial after, Steps (Vsa.Densify.fillZero initial) after ∧
-      ∃ H ent raw before, AtomTableReset H
-        (startupAllocatorCredits - 656 - initGcCredits - 32768 - 8192)
-        parameterStack jal_80004e7c_call.link ent raw before after := by
-  obtain ⟨initial, d, run, H, s0, s1, s2, mx, p, before, R⟩ := reset_init_stack_reset_exists
+theorem reset_init_atom_table_witness_exists :
+    ∃ initial after, Nonempty (ResetAtomTable initial after) := by
+  obtain ⟨initial, d, ⟨S⟩⟩ := reset_init_stack_witness_exists
+  let H := S.H
+  let p := S.p
+  have R := S.post
   obtain ⟨ent, T⟩ := R.table
   obtain ⟨a0, ha0⟩ := Option.isSome_iff_exists.mp (R.done.ready.gpr_some 10 (by decide) (by decide))
   have pc : PCAt 0x80004e7c#64 d := by
@@ -48,7 +59,15 @@ theorem reset_init_atom_table_reset_exists :
       charged := ⟨by decide, by decide⟩
       table := by rw [mem]; exact T.table
       room := by rw [mem, T.count]; decide }
-  exact ⟨initial, f, run.trans (step.trans steps), _, ent, raw, e, {
+  refine ⟨initial, f, ⟨{
+    reset := S.reset
+    H := (p.toNat, 32768) :: H
+    ent := ent
+    raw := raw
+    before := e
+    run := S.run.trans (step.trans steps)
+    post := ?_ }⟩⟩
+  exact {
     done := A
     domainOwned := List.mem_cons_of_mem _ R.domainOwned
     lastExn := by
@@ -59,7 +78,16 @@ theorem reset_init_atom_table_reset_exists :
       exact R.lastExn
     globals := fun x hx => by
       rw [A.root_globals hx, mem]
-      exact R.globals x hx }⟩
+      exact R.globals x hx }
+
+/-- Compatibility projection of the reset-qualified atom producer. -/
+theorem reset_init_atom_table_reset_exists :
+    ∃ initial after, Steps (Vsa.Densify.fillZero initial) after ∧
+      ∃ H ent raw before, AtomTableReset H
+        (startupAllocatorCredits - 656 - initGcCredits - 32768 - 8192)
+        parameterStack jal_80004e7c_call.link ent raw before after := by
+  obtain ⟨initial, after, ⟨A⟩⟩ := reset_init_atom_table_witness_exists
+  exact ⟨initial, after, A.run, A.H, A.ent, A.raw, A.before, A.post⟩
 
 /-- Compatibility projection of the stronger reset producer. -/
 theorem reset_init_atom_table_returned_exists :

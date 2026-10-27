@@ -37,6 +37,12 @@ structure ResetReadSections (initial after : Config) where
     (vsaReg attempt.opened.call.atRetry 18) blk atCall after
   run : Steps (Vsa.Densify.fillZero initial) after
 
+/-- Follow the actual attempt/open/search history back to the parameter producer,
+whose nested source retains the parsed ELF's successful setup. -/
+theorem ResetReadSections.reset {initial after} (w : ResetReadSections initial after) :
+    ElfResetReady elf initial :=
+  w.attempt.opened.call.retry.failed.opened.call.search.path.table.shared.reset
+
 theorem reset_read_sections_exists : ∃ initial after, Nonempty (ResetReadSections initial after) := by
   obtain ⟨initial, d, ⟨w⟩⟩ := reset_attempt_ok_exists
   have K := w.ok

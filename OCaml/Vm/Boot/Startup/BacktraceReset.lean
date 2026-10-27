@@ -9,6 +9,7 @@ def backtraceCapacity : Nat := startupAllocatorCredits - 656 - initGcCredits - 3
 
 /-- The actual reset prefix, atom return, backtrace call and global-root insertion. -/
 structure ResetBacktrace (initial after : Config) where
+  reset : ElfResetReady elf initial
   atoms : Config
   H : List (Nat × Nat)
   ent : BitVec 64
@@ -68,7 +69,11 @@ theorem ResetBacktrace.last_exn {initial after} (B : ResetBacktrace initial afte
 they are supplied by the checked reset producer before taking the actual call. -/
 theorem reset_init_backtrace_returned_exists :
     ∃ initial after, Nonempty (ResetBacktrace initial after) := by
-  obtain ⟨initial, d, run, H, ent, raw, before, A⟩ := reset_init_atom_table_reset_exists
+  obtain ⟨initial, d, ⟨atoms⟩⟩ := reset_init_atom_table_witness_exists
+  let H := atoms.H
+  let ent := atoms.ent
+  let raw := atoms.raw
+  have A := atoms.post
   obtain ⟨a0, ha0⟩ := Option.isSome_iff_exists.mp (A.done.ready.gpr_some 10 (by decide) (by decide))
   have pc : PCAt jal_80004e80_call.pc d := A.done.pc
   obtain ⟨e, step, P⟩ := (call_registers_summary jal_80004e80_call_shape jal_80004e80_call_decode d
@@ -99,16 +104,51 @@ theorem reset_init_backtrace_returned_exists :
     jal_80004e80_call.link readyE frame empty (List.mem_cons_of_mem _ A.domainOwned) ⟨by decide,by decide⟩).run e
     ⟨by rw [← jal_80004e80_call_target]; exact P.pc, rfl⟩
   exact ⟨initial, f, ⟨{
+    reset := atoms.reset
     atoms := d
     H := H
     ent := ent
     raw := raw
-    beforeAtoms := before
+    beforeAtoms := atoms.before
     atomDone := A
     atCall := e
     a0 := a0
     call := P
     done := B
-    run := run.trans (step.trans steps) }⟩⟩
+    run := atoms.run.trans (step.trans steps) }⟩⟩
+
+/-- Every successful reset of the parsed ELF reaches the checked backtrace return.
+Deterministic setup identifies the producer's initial config before transporting its run. -/
+theorem reset_init_backtrace (initial : Config) (reset : ElfReset elf initial) :
+    ∃ after, Nonempty (ResetBacktrace initial after) := by
+  obtain ⟨source, after, ⟨B⟩⟩ := reset_init_backtrace_returned_exists
+  have same := reset.unique B.reset.toElfReset
+  subst source
+  exact ⟨after, ⟨B⟩⟩
+
+/-- The reset-facing interface of `whileMin_reset_loaded_Statement`: any image
+with its existing loader/metadata contract reaches the same structured native return. -/
+theorem whileMin_reset_backtrace {imageElf : ELF64File}
+    (image : WhileMinElf imageElf) (initial : Config) (reset : ElfReset imageElf initial) :
+    ∃ after, Nonempty (ResetBacktrace initial after) :=
+  reset_init_backtrace initial (reset.of_whileMinElf image whileMin_elf)
+
+/-- Remaining native execution from the backtrace return at `0x80004e84`:
+interpreter initialization, debugger initialization, CODE/primitive/DATA loading,
+global promotion and system/argv initialization, then the represented interpreter cut.
+All input facts are supplied by `ResetBacktrace`; this is an open continuation,
+not an additional premise of reset-to-backtrace reachability. -/
+def backtrace_loaded_Statement : Prop :=
+  ∀ initial after, ResetBacktrace initial after →
+    ∃ cut, Steps after cut ∧
+      Loaded (runtimeLayout BestFitSingleton OCaml.Vm.Gc.g1Budget) OCaml.Programs.whileMin cut
+
+/-- Discharging just the remaining continuation closes the existing full reset target. -/
+theorem whileMin_reset_loaded_of_backtrace (continuation : backtrace_loaded_Statement) :
+    whileMin_reset_loaded_Statement := by
+  intro imageElf image initial reset
+  obtain ⟨after, ⟨B⟩⟩ := whileMin_reset_backtrace image initial reset
+  obtain ⟨cut, run, loaded⟩ := continuation initial after B
+  exact ⟨cut, B.run.trans run, loaded⟩
 
 end OCaml.Vm.Boot.WhileMinElfParse
