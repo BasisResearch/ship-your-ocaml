@@ -1,5 +1,33 @@
 # Lane a6-gc
 
+## Next-size small-list head removal (2026-10-21)
+
+- `BestFitNext.pick` is checked from `0x800073f8` to `0x800074bc`,
+  including both merge-cursor branches and the repair store when the cursor
+  points at the selected head.
+- `BestFitNext.pop` is checked from `0x800074bc` to `0x800074e8`:
+  the selected list slot takes the head's successor; when it is zero,
+  the four-byte bitmap store clears the selected size's bit. `PopPost`
+  supplies the exact `popLog`, stack/block/request registers for splitting,
+  good state, tick/minstret, unchanged output and the native register frame.
+  `PopInput` keeps the small-size bound and readable head link explicit.
+- Both summaries use `block_summary` over the existing generated segments;
+  pop reuses `bf_allocateX74bcTSeg`, `bf_allocateX74bcFSeg` and
+  `bf_allocateX74ccSeg`, plus `BestFitRemnant.slot_window` and `map_write`.
+  The concrete build failure was the bitmap address's remaining definitional
+  equality with `Layout.sym_bf_small_map`; it closes by `rfl`.
+- Validation: capped `lake build OCaml.Vm.Gc.BestFitNext
+  OCaml.Vm.Gc.BestFitRemnant OCaml.Vm.Gc.BfShape` passes at default proof
+  budgets. Hole, proof-discipline and generated GC-row drift checks pass.
+- Open: compose nonzero search, pick and pop with code/memory transport;
+  prove the split stores from `0x800074e8`, link the remnant insertion call
+  and its return continuation, then finish accounting and the original
+  caller return. `BestFitRemnant.insert` is a checked standalone callee;
+  its next-size caller composition remains open. `BfShape.SmallShape.pop`
+  and `MapConsistent.clear` still require their stated frame/readback facts;
+  supplying shape/bitmap preservation, path selection and full allocator
+  readiness remains open. This increment does not close G2.
+
 ## Library live sets (2026-10-12) — current
 
 - a0-boot's runtime readiness is generic over the live set:

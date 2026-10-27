@@ -494,6 +494,7 @@ theorem pop {sp s b bits wosz c} (input : PopInput sp s b bits wosz c) :
         chain_facts True.intro
         apply BestFitRemnant.map_write.sw rfl
         pop_simp
+        rfl
       · rw [body74bc]
         change guardB bop.BNE (srcVal 16 _) (srcVal 0 _) = false
         rw [src, nextEq, emptied]; rfl
