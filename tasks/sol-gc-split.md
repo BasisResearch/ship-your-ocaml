@@ -4,7 +4,7 @@ No sorry, axiom, native_decide, bv_decide, heartbeat increases, or edits to gene
 Edit generators; audit new theorems with only propext, Classical.choice, Quot.sound.
 Before each build check free -g (available >=25 GB); one build per worktree.
 The launcher encloses this worker and all builds in systemd MemoryMax=12G, LEAN_NUM_THREADS=2.
-Run Lean with scripts/lean-capped.sh lake ...; it uses the inherited cap or creates a 12 GB scope.
+Run Lean via python3 scripts/lean-guarded.py --log /tmp/<task>.log -- scripts/lean-capped.sh lake ...; the guard stops failed/10 GiB builds.
 Do not add ulimit -v: virtual reservation breaks the large import closure; the cgroup enforces 12 GB.
 Work only in this worktree; preserve inherited WIP and never force-push or reset it away.
 BarrierGrowthFull stays with G2; CustomMemCall remains a named premise; C4 round 2 waits for F1.
