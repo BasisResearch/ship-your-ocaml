@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 22:04 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 22:14 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -38,16 +38,19 @@ The two boot-read extensions merged and reproduce through their generator.
 The same batch also contains checked G2 bitmap-search composition
 `4eec805d`: 1,287 affected jobs and 217 audited declarations. Its original
 list/map facts produce the selected size/head and saved native frame.
-These results are not yet published. Prior WIP and reviewed tips remain
+These results are not yet published; the full gate at `2ee3051b` is running.
+The following batch has reviewed counted-stack commit `e97aaed4`: 58 new
+row wrappers and a shared counted RuntimeFrame, 3,194 affected jobs and
+137 focused allowed-axiom reports. Prior WIP and reviewed tips remain
 preserved on `keep/*` branches.
 
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| Counted-stack Sol | Reuse generic stack-writing rows with actual count frames | `syo-wt/a1-prims-next` |
+| G2 Sol | Preserve small-list/header/bitmap representation through next-size return | `syo-wt/a6-gc-next2` |
 | Startup Sol | Extend actual reset execution through backtrace/root registration | `syo-wt/a0-boot-next` |
-| Lead | Full gate for allocator, counted continuation and G2 search | main; `syo-wt/a1-prims-next`, `syo-wt/bprime` |
+| Lead | Full gate at `2ee3051b`; review and stage counted-stack/reset results | main; `syo-wt/bprime` |
 
 The first G2 split attempt reached the 12 GB cgroup cap while building
 `BestFitNext`, after its generated split module passed 609 jobs. WIP is
@@ -94,8 +97,9 @@ listing, named registration, and integer formatting. Counted channel helpers
 still need the remaining ordinary loop frames and actual runtime entry/after
 suppliers. Concrete startup table occupancy, actual interpreter entry, shared
 placement coherence and memory-preserving row reuse are checked; occupancy
-alone does not supply the full custom-runtime predicate. CONST0/NEGINT are
-the first checked ordinary counted rows, not a complete F1 table. `LibHeapAt.named` now carries ownership in the
+alone does not supply the full custom-runtime predicate. With the reviewed stack/load wrappers there are 60/134 counted rows,
+including CONST0/NEGINT. The remaining 74 are listed in `a1-prims.md`;
+this is not a complete F1 table. `LibHeapAt.named` now carries ownership in the
 selected ledger; named resource reserves and registration remain open. Distinct-key
 provenance bounds nodes but does not account for repeated skiplist cell
 allocation on root-class changes; actual removal/reuse remains required.
@@ -107,8 +111,8 @@ reset-to-cut/Loaded remains open. The captured allocator is checked as
 The closed covers theorem supplies `libHeap`; `d890bf6a` removes its
 obsolete generated caller argument, checked with 3,243 build jobs. This
 reviewed fourth batch awaits full integration with the counted continuation. A captured loaded memory snapshot
-is not reset execution. G2 pick/pop landed (`6d002aa5`); split/remnant is checked for the
-next landing batch, including its complete pick/pop/split route. Bitmap
+is not reset execution. G2 pick/pop landed (`6d002aa5`); split/remnant and complete
+pick/pop/split landed at `88d4c057`. Bitmap
 dispatch into fallback, final allocator preservation and full collection
 remain open; the nonzero bitmap search is checked in `4eec805d`. The a2-sem uncaught-path
 WIP is preserved and lower priority because GoodF1 excludes that path.
@@ -117,3 +121,10 @@ Queued work: remaining counted frames/table assembly and full physical
 Customs supplier, full decimal formatter wrapper, general formatting, and
 a proved named-node/key reserve plus repeated root-cell reuse accounting.
 The captured allocator certificate is complete; reset/backtrace is active. See `tasks/sol-*.md`.
+
+Review follow-up: the stack/atom existential interface drops the earlier
+ELF-reset witness while retaining Steps. The witness remains in the nested
+ResetReadSections source. `sol-backtrace-reset-identity.md` restores that
+producer chain before extending the reset prefix beyond backtrace; this is
+a contract issue, not a refutation of the executed path. Next counted task:
+`sol-counted-allocation.md`. No user decision is required.
