@@ -15,14 +15,15 @@ The lead commits and lands via scripts/integrate.sh; this sandbox makes Git meta
 Keep reads targeted (rg, bounded sed); do not scan home or print whole huge ledgers or audit logs.
 No subagents or other Codex workers. Finish with exactly RESULT: landed <commit> or RESULT: stuck <where>.
 
-Target: replace the unjustified fixed named-key limits with a resource bound proved for reachable GoodF1 states from Fits.
+Target: prove a named-node/key resource bound for reachable GoodF1 states from Fits, replacing the absent fixed name/count guards for that component.
 Files: OCaml/Bytecode/{NamedValues,Data,Semantics}.lean; OCaml/Fragment.lean; OCaml/Vm/Gc/{F1Heap,NamedLedger}.lean or a shared named-resource module; relevant audit/ledger.
 Start by inspecting current namedLedger/NamedRoom consumers. maxNamed=16 and maxNameLen=64 are not GoodF1 guards; do not add guards or assume those bounds.
 A candidate route is key provenance: each registered first-NUL byte key comes from an immutable heap byte object; distinct keys require distinct source objects. Verify every F1 heap writer before relying on this.
 SETBYTESCHAR is F2, so the proposed reusable mutable-buffer counterexample is outside this task's domain. This fact alone does not prove provenance or the resource bound.
 Track actual C-string bytes through namedValueKey, using the landed full-byte bridge. UTF-8 byte size of the Lean String is not the source-byte length.
 Prove preservation using the shared run kernel/invariant interface, not hand induction on Reach. Include the actual initial named table and replacement-versus-fresh registration cases.
-Bound the combined node/key and worst-case skiplist-cell allocation charge using the actual vsaChg/rounding and heap-word budget; derive enough initial arena capacity rather than guessing a new constant.
-Connect the bound to an explicit selected-ledger reserve suitable for registration; retain physical allocator/root operations as separate named obligations until supplied.
-Done: a checked reachable-state resource bound and usable reserve contract replacing absent guards, focused build/standard-axiom audits, accurate remaining consumers. If a route is false, record the precise obstruction without weakening GoodF1.
+Bound node/key allocation charge using actual vsaChg/rounding and the heap-word budget; derive enough initial arena capacity rather than guessing a new constant.
+Existing-name root-class changes can remove and reinsert skiplist cells (globroots.c:135-162). Distinct keys do not bound those allocation calls; keep cell reuse/refund accounting explicitly open instead of multiplying one cell per key.
+Connect the node/key bound to an explicit selected-ledger reserve component; retain physical allocator/root operations and repeated root-cell charges as separate obligations until supplied.
+Done: a checked reachable-state node/key bound and reserve component replacing absent guards, focused build/standard-axiom audits, accurate remaining consumers. If a route is false, record the precise obstruction without weakening GoodF1.
 Leave checked edits for lead review and integration. Do not claim the general registration C_CALL2 supplier closed from a resource lemma alone.

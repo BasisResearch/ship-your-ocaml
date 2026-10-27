@@ -279,3 +279,16 @@
   membership (`RouteInput.size`). This is a contract inspection, not a
   kernel-checked reachable-state counterexample; do not replace it with
   an unexplained header fact about an intermediate split state.
+
+- 2026-10-27 named reserve review: bounding distinct immutable name keys does
+  not bound all skiplist allocation calls. `callback.c:212` updates an
+  existing node through `caml_modify_generational_global_root`; in
+  `globroots.c:135-162`, UNTRACKED-to-OLD/YOUNG inserts a cell, while a later
+  UNTRACKED value removes it (`skiplist.c:185` frees the cell). Replacing one
+  existing name can therefore revisit the allocation path without creating
+  another name node. This is a source/contract inspection, not a checked
+  reachable-state counterexample or an assertion that native memory grows
+  without bound. Key provenance bounds node/key allocation; a complete
+  registration reserve also needs actual root-cell removal/reuse accounting.
+  The current `FreeRoomEnd` preserves the same capacity `k`; do not silently
+  treat it as a charge-refund theorem.
