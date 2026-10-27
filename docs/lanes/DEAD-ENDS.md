@@ -29,3 +29,14 @@
   but the claimed BcSem guards are absent from `primF1Impl` and `GoodF1`.
   Do not infer those bounds for every F1 call. Generalize the reserve using
   proved bounds, or surface a real domain decision before adding restrictions.
+
+- 2026-10-27: a nursery-only `caml_format_int` return theorem cannot close
+  the current general `GoodF1` field. `formatInteger` accepts widths such
+  as `%2048d`; its result can exceed 256 payload words while remaining
+  within `g1Budget.heapWords`. `Instr.minorAlloc` constrains opcode
+  allocations, not this primitive result. The vendored `runtime/alloc.c`
+  sends such strings through `caml_alloc_shr` and `caml_check_urgent_gc`.
+  Preserve the current domain and prove the large-result path; do not
+  silently infer a small-string bound from `Fits`. The fixed major-free-list
+  pin in `F1Pins` must also be revisited for that path. This is source-level
+  scope analysis, not a kernel-checked reachable-state counterexample.
