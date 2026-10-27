@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 21:49 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 21:53 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,31 +18,32 @@ None currently.
 
 ## Landing train
 
-Published `origin/main` is `333e9614`. The insertion/formatter batch passed
-6,049 build jobs, 8,510 allowed-axiom reports, all generator/ELF checks,
-and 329 OS traces (zero rejected). It includes the complete first empty
-skiplist insertion, native `%ld` vsnprintf wrapper, concrete caller witness
-and actual short formatter continuation to initialized-string entry.
+Published `origin/main` is `88d4c057`: initialized-string nursery return,
+short formatter allocation splice, G2 split/remnant and complete pick/pop/split
+route. The full gate passed 6,056 jobs, 8,595 allowed-axiom reports, all
+generator/ELF checks, and 329 OS traces (zero rejected). The gate exposed an
+old executable-name rewrite after the shared copy-post refactor; its explicit
+adapter repair passed 2,010 jobs before the successful full rerun.
 
-The preceding counted-channel return bundle landed at `71547e46` with
-6,038 jobs and 8,476 theorem reports. Physical named ownership landed at
-`7e7a052a`; both passed the same full gate.
+Earlier batches: insertion/formatter `333e9614` (6,049 jobs, 8,510 reports),
+complete counted channel returns `71547e46` (6,038 jobs, 8,476 reports), and
+physical named ownership `7e7a052a`, all through the full gate.
 
-The next reviewed batch in `syo-wt/bprime` contains initialized-string
-allocation (`1150a772`), G2 split/remnant return (`ecca3e24`), and the complete
-pick/pop/split route (`78081098`). Its full gate restarted at `88d4c057` after fixing the executable-name
-consumer of the generalized string-copy post. The targeted adapter check
-passes 2,010 jobs; the coherent dependency cache is retained.
-Local main contains these reviewed results; they are not yet published.
-Prior WIP and reviewed tips remain preserved on `keep/*` branches.
+The next batch contains the captured allocator certificate `d959451a` and
+its generated-table consumer update `d890bf6a`. Counted-loop continuation
+`1161d44c` is checked at its worker base (3,694 jobs, 39 focused reports);
+the lead is checking its rebased composition with the closed allocator.
+The two boot-read extensions merged and reproduce through their generator.
+These results are not yet published. Prior WIP and reviewed tips remain
+preserved on `keep/*` branches.
 
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | G2 Sol | Compose bitmap search with the checked pick/pop/split route | `syo-wt/a6-gc-next2` |
-| Counted-loop Sol | Carry actual channel/custom counts through entry and the ordinary F1 loop | `syo-wt/a1-prims-next` |
-| Lead | Initialized-string/G2 integration; captured allocator consumer check | main; `syo-wt/bprime`, `syo-wt/a0-boot-next` |
+| Startup Sol | Extend actual reset execution through backtrace/root registration | `syo-wt/a0-boot-next` |
+| Lead | Check and stage combined counted-entry/allocator batch | main; `syo-wt/a1-prims-next`, `syo-wt/bprime` |
 
 The first G2 split attempt reached the 12 GB cgroup cap while building
 `BestFitNext`, after its generated split module passed 609 jobs. WIP is
@@ -70,8 +71,7 @@ with length and source arguments. The real fit/argument/JAL continuation
 passes 1,076 build jobs and 9 focused reports. The initialized-string callee
 and its direct short formatter splice are now checked and reviewed as
 `1150a772`: 1,403 affected jobs, 81 allowed-axiom reports and all focused
-generator/discipline checks pass. It awaits the next integration batch in
-`bprime`; no full formatter return is claimed.
+generator/discipline checks pass. It landed at `88d4c057`; no full formatter return is claimed.
 
 The formatter summary executes native `vsnprintf` for plain `%ld`, including
 truncation, NUL, length, saved registers and memory frame. Its ownership ends
@@ -86,8 +86,11 @@ All opcode row families and interpreter entry/halt composition are present;
 `ocamlrun_refinement_F1_open` still consumes primitive/growth premises.
 The five ordinary open C_CALL fields are the two descriptor opens, out-channel
 listing, named registration, and integer formatting. Counted channel helpers
-still need ordinary loop preservation, startup physical zero and actual
-runtime entry/after suppliers. `LibHeapAt.named` now carries ownership in the
+still need the remaining ordinary loop frames and actual runtime entry/after
+suppliers. Concrete startup table occupancy, actual interpreter entry, shared
+placement coherence and memory-preserving row reuse are checked; occupancy
+alone does not supply the full custom-runtime predicate. CONST0/NEGINT are
+the first checked ordinary counted rows, not a complete F1 table. `LibHeapAt.named` now carries ownership in the
 selected ledger; named resource reserves and registration remain open. Distinct-key
 provenance bounds nodes but does not account for repeated skiplist cell
 allocation on root-class changes; actual removal/reuse remains required.
@@ -98,7 +101,7 @@ reset-to-cut/Loaded remains open. The captured allocator is checked as
 3,211 affected build jobs and 577 allowed/axiom-free declaration audits.
 The closed covers theorem supplies `libHeap`; `d890bf6a` removes its
 obsolete generated caller argument, checked with 3,243 build jobs. This
-reviewed fourth batch awaits full integration after initialized-string/G2. A captured loaded memory snapshot
+reviewed fourth batch awaits full integration with the counted continuation. A captured loaded memory snapshot
 is not reset execution. G2 pick/pop landed (`6d002aa5`); split/remnant is checked for the
 next landing batch, including its complete pick/pop/split route. Bitmap
 search composition, allocator readiness and full collection remain open. The a2-sem uncaught-path
