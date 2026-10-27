@@ -36,6 +36,16 @@ the transitive import hashes. Compare dependency artifacts before choosing a
 cache donor; let Lake validate all copied artifacts. Never alter trace hashes
 or copy into a worktree with an active build.
 
+The coherent cache set is `.lake/build` plus the `.lake/build` directories
+under `riscv-lean/lean-sail`, `riscv-lean/Lean_RV64D_executable`, and
+`riscv-lean/lean_emulator`. Use an idle, fully checked donor with matching
+Lean toolchain and dependency sources; acquire the donor/target build locks
+before copying, and let Lake revalidate the resulting artifacts. Preserve
+worktree-only generated artifacts rather than deleting the target cache.
+The October 27 cleanup removed only generated project caches in the idle
+`a0-boot`, `a0-lib`, `a1-arms-dev`, `a2-sem`, and `bprime-next` slots; warm
+them from a coherent donor before their next proof task. Source WIP remains.
+
 For a failing or memory-heavy proof, use `python3 scripts/lean-guarded.py
 --log /tmp/task-build.log -- scripts/lean-capped.sh lake ...`. Inside the worker
 scope it stops that build's process group on a reported error or at 10 GiB,
