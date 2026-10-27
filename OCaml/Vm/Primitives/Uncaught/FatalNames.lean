@@ -20,7 +20,7 @@ open OCaml.Vm.Primitives.Named.NamedValue (NameAt strOf)
 def RodataString (off : Nat) (name : List (BitVec 8)) : Prop :=
   off + name.length < Image.rodataSize ∧
     (List.range name.length).all (fun i => Image.rodataByte (off + i) == name.getD i 0 && name.getD i 0 != 0 &&
-      decide ((name.getD i 0).toNat < 128)) = true ∧
+      decide ((name.getD i 0).toNat < 256)) = true ∧
     Image.rodataByte (off + name.length) = 0#8
 
 instance (off : Nat) (name : List (BitVec 8)) : Decidable (RodataString off name) := by
@@ -53,7 +53,7 @@ theorem rodata_nameAt {c : Config} (image : ExecutableImage c) {off : Nat} {name
 
 /-- A C string from its bytes, present in memory. -/
 theorem cstr_of_bytes {m : Mem} : ∀ (l : List (BitVec 8)) (a : Nat),
-    (∀ i (hi : i < l.length), m[a + i]? = some l[i] ∧ l[i] ≠ 0#8 ∧ l[i].toNat < 128) → m[a + l.length]? = some 0#8 →
+    (∀ i (hi : i < l.length), m[a + i]? = some l[i] ∧ l[i] ≠ 0#8 ∧ l[i].toNat < 256) → m[a + l.length]? = some 0#8 →
     CStr m a (l.map fun b => Char.ofNat b.toNat)
   | [], a, _, nul => .nil nul
   | b :: l, a, bytes, nul => by

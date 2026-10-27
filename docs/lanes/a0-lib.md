@@ -1,14 +1,31 @@
 # A0 library lane
 
-## Byte-string comparison domain (2026-10-21)
+## Byte-string comparison domain (2026-10-27)
 
 The named-value worker generalized `Vsa.MemRepr.CStr` from ASCII to all
 nonzero bytes, preserving NUL termination and one character per byte.
 The strcmp byte and word comparison proofs and their source templates now
 use bounds below 256. This standalone library increment is extracted from
 named checkpoint `7c6bc6c1`; it does not claim the named-value loop invariant
-or its physical ownership migration is complete. The worker's focused
-comparison build and axiom audit passed; the lead runs the full landing gate.
+or its physical ownership migration is complete.
+
+The full gate's sole regression, `FatalNames.lean:61`, is repaired:
+`RodataString` and `cstr_of_bytes` now use `< 256`, matching `CStr.cons`.
+NUL termination and the nonzero interior-byte check are preserved. A search
+of all `CStr`/`CString` consumers and the strcmp source templates found no
+other stale ASCII bound; `NameFrame` only retains an `ascii` binder name
+for the constructor's byte bound. No comparison/template repair was needed.
+
+The capped `FatalNames` and `StrcmpSpecCond` builds passed first, followed by
+`OCaml.Vm.Primitives.Uncaught.FatalMessage` and its downstream fatal-path
+import closure, including the format-string `.rodata` certificate.
+The focused audit of all seven `FatalNames`
+theorems plus `strcmp_full_spec_cond` passed with only `propext`,
+`Classical.choice`, and `Quot.sound`; the missing helper and name-wrapper
+audits are registered in `OCaml/Audit.lean`. The library-site and uncaught
+generator `--check` commands, proof discipline, and whitespace checks passed.
+The lead runs full `OCaml.Audit`, the full landing gate, and integration
+after reviewing the checked edits.
 
 
 ## Current status
@@ -17,7 +34,8 @@ comparison build and axiom audit passed; the lead runs the full landing gate.
 ELF’s addresses, pinned and audited. Final proof milestone `86cf6c9` landed on
 main through `scripts/integrate.sh`; every `check_all.sh` stage passed, including
 a8. The reachable-word decode coverage is generated and drift-checked by a5,
-and the PHASES.md ledger is updated. No lane work remains open.
+and the PHASES.md ledger is updated. The byte-string increment above awaits
+lead review and a fresh full gate before landing.
 
 - `strcmp`: `strcmp_full_spec_cond`.
 - `__ssputs_r`: `ssputs_fast_spec`, plus the general string-FILE `ssputs_nw`.
@@ -65,7 +83,7 @@ mismatches; the decoder covers 29,475 distinct disassembled words in 231 chunks.
 - `strcmp_full_spec_cond` (`Vsa/Sim/StrcmpSpecCond.lean:104`) now proves
   the whole strcmp contract, including aligned word and unaligned byte
   paths, return sign, memory/output preservation, and the register frame.
-  Its ASCII/NUL-terminated C-string, region/slack, code/mask pin and return
+  Its byte/NUL-terminated C-string, region/slack, code/mask pin and return
   alignment hypotheses are preserved from upstream. Six proof modules
   built in 3–23 seconds each. Both mask addresses are derived from this
   ELF's AUIPC/LD pair. Axiom audit passed; landed as `38d36d5`.
