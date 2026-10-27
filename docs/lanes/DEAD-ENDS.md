@@ -141,3 +141,9 @@
   `0x8000bb2c`, certified by `jal_8002acbc_call_target`. Use the checked
   `stat_checked` interface at this splice. `stat_alloc_ready` is for the
   distinct `caml_stat_alloc_noexc` entry; it cannot be substituted directly.
+
+- 2026-10-27: `LocalFrame.output` frames `vsaModel.out`, which is
+  `Vsa.Machine.output = String.join sailOutput.toList`. Equality of that
+  observation does not imply equality of raw output vectors. Compose the
+  observable output frame, or prove a stronger shared execution property;
+  do not extract a raw-vector frame from this weaker contract.
