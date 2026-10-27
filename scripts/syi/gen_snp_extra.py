@@ -78,6 +78,8 @@ if TABLE == 'stdio':
 TGT = 'snp'
 if TGT == 'snp':
     FUNCS = ['vsnprintf']
+    # LONGINT's two rows complete the existing `_svfprintf_r` battery.
+    EXTRA_PCS = {0x8004878c, 0x80048790}
     # `_svfprintf_r`'s conversion `switch` (characters `' '` to `'z'`)
     TABLES = []
     TABLE_LOADS = set()
@@ -105,7 +107,7 @@ for l in subprocess.run([str(TOOLS), '-d', str(ROOT / 'c/ocamlrun-riscv-htif.elf
         fn = m.group(2)
         continue
     m = re.match(r'^\s+([0-9a-f]+):\t([0-9a-f]{8})\s+\t(\S+)', l)
-    if m and (fn in FUNCS or fn in CODE_ONLY):
+    if m and (fn in FUNCS or fn in CODE_ONLY or int(m.group(1), 16) in EXTRA_PCS):
         pc = int(m.group(1), 16)
         W[pc] = int(m.group(2), 16)
         MN[pc] = m.group(3)
@@ -828,7 +830,8 @@ def main():
                 stale.append(rel)
         else:
             p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(text)
+            if not p.exists() or p.read_text() != text:
+                p.write_text(text)
     if check:
         for rel in stale:
             print(f'stale: {rel}', file=sys.stderr)

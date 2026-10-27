@@ -31,6 +31,7 @@ import Vsa.Sim.ElfDecode.Part140
 import Vsa.Sim.ElfDecode.Part159
 import Vsa.Sim.ElfDecode.Part162
 import Vsa.Sim.ElfDecode.Part166
+import Vsa.Sim.ElfDecode.Part178
 import Vsa.Sim.ElfDecode.Part209
 import Vsa.Sim.ElfDecode.Part216
 import Vsa.Sim.ElfDecode.Part220
@@ -38,7 +39,7 @@ import Vsa.Sim.ElfDecode.Part227
 import Vsa.Sim.ElfDecode.Part228
 import Vsa.Sim.ElfDecode.Part229
 
-/-! The `snprintf` family's step table, `0x8004018c` to `0x80040244` (see
+/-! The `snprintf` family's step table, `0x8004018c` to `0x80048790` (see
 `scripts/gen_interp_steps.py`). -/
 
 open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail
@@ -94,6 +95,8 @@ def nx_80040238 : List BBlock := [{ body := [mkLine 0x80040238#64 0x08b00793#32]
 def nx_8004023c : List BBlock := [{ body := [mkLine 0x8004023c#64 0x00f4a023#32], term := none }]
 def nx_80040240 : List BBlock := [{ body := [mkLine 0x80040240#64 0xfff00513#32], term := none }]
 def nx_80040244 : List BBlock := [⟨[], some (⟨0x80040244#64, 0xfb9ff06f#32, 0x6f#8, 0xf0#8, 0x9f#8, 0xfb#8, .j, 0, 0, 0x0#13, 0x1fffb8#21, 0#12⟩ : TInstr)⟩]
+def nx_8004878c : List BBlock := [{ body := [mkLine 0x8004878c#64 0x01036313#32], term := none }]
+def nx_80048790 : List BBlock := [⟨[], some (⟨0x80048790#64, 0xa54ff06f#32, 0x6f#8, 0xf0#8, 0x4f#8, 0xa5#8, .j, 0, 0, 0x0#13, 0x1ff254#21, 0#12⟩ : TInstr)⟩]
 
 end Vsa.Sim
 
@@ -1208,6 +1211,32 @@ theorem nt_80040244 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat �
   swp_stepD nx_80040244 [] [] [] [] 0 rfl (by decide) (by decide) (by decide)
     (fun a _ => trivial) hlive
     (fun m hm hD hLD => by unfold nx_80040244 ChainFacts; chain_facts hm)
+    (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) (fun a h => by cases h)
+    (fun a h => by cases h) rfl
+    (fun _ h => nomatch h)
+    (fun _ _ _ _ => rfl) rfl hk
+
+theorem nt_8004878c {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat → Prop}
+    {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
+    (hlive : ∀ p ∈ snpText, live p.1)
+    (hk : SnpW live Dt DA S Q 0x80048790#64 (upd R 6 ((R 6) ||| sign_extend (m := 64) (0x010#12))) Mt) :
+    SnpW live Dt DA S Q 0x8004878c#64 R Mt :=
+  swp_stepD nx_8004878c [6] [] [] [] 0 rfl (by decide) (by decide) (by decide)
+    (fun a _ => trivial) hlive
+    (fun m hm hD hLD => by unfold nx_8004878c ChainFacts; chain_facts hm)
+    (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) (fun a h => by cases h)
+    (fun a h => by cases h) rfl
+    (by intro x hx hg; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl <;> first | rfl | exact absurd rfl hg)
+    (fun x _ _ hx => upd_other _ _ (fun e => hx (e ▸ (by decide : 6 ∈ [6])))) rfl hk
+
+theorem nt_80048790 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat → Prop}
+    {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
+    (hlive : ∀ p ∈ snpText, live p.1)
+    (hk : SnpW live Dt DA S Q 0x800479e4#64 R Mt) :
+    SnpW live Dt DA S Q 0x80048790#64 R Mt :=
+  swp_stepD nx_80048790 [] [] [] [] 0 rfl (by decide) (by decide) (by decide)
+    (fun a _ => trivial) hlive
+    (fun m hm hD hLD => by unfold nx_80048790 ChainFacts; chain_facts hm)
     (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) (fun a h => by cases h)
     (fun a h => by cases h) rfl
     (fun _ h => nomatch h)

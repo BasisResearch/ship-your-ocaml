@@ -216,3 +216,13 @@
   target certificate pins `caml_stat_alloc` (`0x8000bb2c`), whereas that
   summary starts at `caml_stat_alloc_noexc`. Compose the landed checked
   wrapper `stat_checked` and its allocator/frame result at the actual target.
+
+- 2026-10-27: the formatter's former `snpAbove = 256` made the parsed
+  format at `sp + 240` owned by `snpS (sp + 48) (sp + 16) 128`.
+  The native `symbolic_summary` bridge requires its read-only data bytes
+  outside that owned set (`LocalSeparation.bytes`), so the real caller
+  could not use that ownership window. The seven spill slots occupy
+  `[sp + 184, sp + 240)` exactly; the template now uses `snpAbove = 192`,
+  ending ownership at `sp + 240`. Do not restore the wider window for
+  this caller. This is an interface/interval obstruction, not a claim
+  that a reachable formatter execution overwrites its format.

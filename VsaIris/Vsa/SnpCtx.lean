@@ -10,8 +10,9 @@ open Vsa.MemRepr Vsa.Sim VsaIris.Stdio
 abbrev snpNeed : Nat := 1024
 
 /-- Bytes above the formatter's frame base `s` the run may read: a `vsnprintf`
-caller's spilled varargs (`caml_alloc_sprintf` spills them at `s + 136`). -/
-abbrev snpAbove : Nat := 256
+caller's seven spilled varargs occupy `[s + 136, s + 192)`. The parsed
+format starts at `s + 192` and remains read-only for the native bridge. -/
+abbrev snpAbove : Nat := 192
 
 def snpS (s dst n : Nat) (a : Nat) : Prop :=
   (stdioFoot a ∧ ¬ (0x800648f8 ≤ a ∧ a < 0x80064900)) ∨ (s - snpNeed ≤ a ∧ a < s + snpAbove) ∨

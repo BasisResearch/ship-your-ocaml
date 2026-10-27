@@ -1,4 +1,5 @@
 import VsaIris.Vsa.SnpSvfLoop
+import OCaml.Vm.Primitives.Format.VsnprintfSteps
 
 /-!
 # `_svfprintf_r` on `%ld` (LONGINT)
@@ -14,45 +15,9 @@ print code test no LONGINT bit).
 
 open LeanRV64DExecutable LeanRV64DExecutable.Functions Sail
 
-namespace Vsa.Sim
-
-/-- The LONGINT arm of the `l` case: `ori t1,t1,16`, then `j rflag`. Upstream
-never ran it, so the retargeted step tables stop at the `beq`. -/
-def nx_8004878c : List BBlock := [{ body := [mkLine 0x8004878c#64 0x01036313#32], term := none }]
-def nx_80048790 : List BBlock := [⟨[], some (⟨0x80048790#64, 0xa54ff06f#32, 0x6f#8, 0xf0#8, 0x4f#8, 0xa5#8,
-  .j, 0, 0, 0x0#13, 0x1ff254#21, 0#12⟩ : TInstr)⟩]
-
-end Vsa.Sim
-
 namespace VsaIris.Sym
 
 open Vsa.MemRepr Vsa.Sim VsaIris.MallocFast VsaIris.Inst
-
-theorem nt_8004878c {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat → Prop}
-    {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
-    (hlive : ∀ p ∈ snpText, live p.1)
-    (hk : SnpW live Dt DA S Q 0x80048790#64 (upd R 6 ((R 6) ||| sign_extend (m := 64) (0x010#12))) Mt) :
-    SnpW live Dt DA S Q 0x8004878c#64 R Mt :=
-  swp_stepD nx_8004878c [6] [] [] [] 0 rfl (by decide) (by decide) (by decide)
-    (fun a _ => trivial) hlive
-    (fun m hm hD hLD => by unfold nx_8004878c ChainFacts; chain_facts hm)
-    (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) (fun a h => by cases h)
-    (fun a h => by cases h) rfl
-    (by intro x hx hg; simp only [List.mem_cons, List.not_mem_nil, or_false] at hx; rcases hx with rfl <;> first | rfl | exact absurd rfl hg)
-    (fun x _ _ hx => upd_other _ _ (fun e => hx (e ▸ (by decide : 6 ∈ [6])))) rfl hk
-
-theorem nt_80048790 {live : Nat → Prop} {Dt : Mem} {DA : List Nat} {S : Nat → Prop}
-    {Q : (Nat → BitVec 64) → (Nat → BitVec 8) → Prop} {R : Nat → BitVec 64} {Mt : Mem}
-    (hlive : ∀ p ∈ snpText, live p.1)
-    (hk : SnpW live Dt DA S Q 0x800479e4#64 R Mt) :
-    SnpW live Dt DA S Q 0x80048790#64 R Mt :=
-  swp_stepD nx_80048790 [] [] [] [] 0 rfl (by decide) (by decide) (by decide)
-    (fun a _ => trivial) hlive
-    (fun m hm hD hLD => by unfold nx_80048790 ChainFacts; chain_facts hm)
-    (by decide) (by decide) (fun h => absurd h (by decide)) (by decide) (fun a h => by cases h)
-    (fun a h => by cases h) rfl
-    (fun _ h => nomatch h)
-    (fun _ _ _ _ => rfl) rfl hk
 
 /-- The `l` case followed by `d`: `LONGINT`, back to `rflag` with the `d`. -/
 theorem svf_convL {live : Nat → Prop} (hlive : ∀ p ∈ snpText, live p.1) {Dt : Mem} {DA : List Nat}

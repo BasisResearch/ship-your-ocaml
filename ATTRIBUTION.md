@@ -297,3 +297,12 @@ are copied from ship-your-interpreter commit `0534d832` (BasisResearch/ship-your
 same paths). Only their imports were changed: the WHILE-specific `TermSimClose`
 and `ErrorSim` imports and opens are cut, and `StepStore`, `Skeleton` and
 `ExecuteStore` are imported directly.
+
+`OCaml/Vm/Primitives/Format/VsnprintfLong.lean` adapts the FILE initialization,
+save-bank restoration and truncating epilogue of syi's
+`VsaIris/Vsa/SnpSnprintf.lean` (source checkout commit
+`0534d83204c9fc7e3941d5743503a6e95dbcbdc8`) to this ELF's `vsnprintf`.
+It uses the existing symbolic step generator, LONGINT conversion proof and
+`symbolic_summary` machine adequacy. `VsnprintfCaller.lean` constructs a
+satisfiable entry at `caml_alloc_sprintf`'s checked caller offsets; it makes
+no startup reachability claim.
