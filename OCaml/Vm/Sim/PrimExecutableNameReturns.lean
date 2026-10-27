@@ -241,7 +241,11 @@ theorem executable_name_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s 
     (expected := fun x => ((writeLog c.σ.mem log)[x]?).getD 0)
     (S.weaken (fun _ h => h) fun after post => ?_) setup.saved ?_ (e.below logIn) ?_ setup.native
   · have obs : ∀ x, byte after x = ((writeLog c.σ.mem log)[x]?).getD 0 := fun x => by
-      rw [post.memory_complete x, copyMemory_eq]; rfl
+      rw [post.memory_complete x]
+      change StringCopy.copyMemory c ra (BitVec.ofNat 64 N) Gc.exeNameAddr
+        progExeName.length (imgM c.σ.mem) (BitVec.ofNat 64 D) (BitVec.ofNat 64 Y) x = _
+      rw [copyMemory_eq]
+      rfl
     refine ⟨framed_of_library post.toLibraryPrimitivePost post.libraryGood.gpr obs ?_ ?_, obs⟩
     · intro r hr
       simp only [callSavedRegs, List.mem_cons, List.not_mem_nil, or_false] at hr
