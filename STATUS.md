@@ -25,8 +25,8 @@ None currently.
 
 The lead now uses separate `codex exec` workers (`gpt-6.1-sol`, high reasoning),
 at most two at a time, launched through `codexwork.sh`. Built-in proof agents
-have stopped. The current Sol tasks carry physical custom counts through the actual F1 loop
-and C_CALL setup, and prove the first empty-skiplist insertion needed by startup. Startup, G2 pick/pop, refcount transport, all-byte C-string/strcmp, and foreman
+have stopped. The current Sol tasks reconstruct complete channel-count return evidence
+for the actual C_CALL execution, and prove the first empty-skiplist insertion needed by startup. Startup, G2 pick/pop, refcount transport, all-byte C-string/strcmp, and foreman
 tooling landed. The current proof work remains in the two Sol worktrees. Workers inherit a 12 GB systemd scope; the lead handles
 Git and landings outside their workspace-write sandbox. Known failed routes are in `docs/lanes/DEAD-ENDS.md`.
 
@@ -50,12 +50,16 @@ is repaired; its focused build passes (1,539 jobs) and both axiom reports
 use only the permitted standard axioms. The full gate is running again at
 `3e4bc39f` in the staging worktree. The migration keeps the matching selected malloc ledger
 rather than assuming ownership of every live allocation. Its original Sol
-slot completed the per-call custom-count/readiness checkpoint (`dc8035a8`,
+slot completed the per-call custom-count/readiness checkpoint (`acb1f875` after rebase,
 not landed): 3,684 affected build jobs and 52 focused axiom reports pass.
 `CustomMemCall.call` carries the exact count transition in its actual post.
-The next Sol worker is carrying this through the actual F1 loop and C_CALL
-setup. The checkpoint still leaves ordinary channel return premises and
-out-list refcount/no-wrap readbacks open; it is not F1 closure.
+The actual unary setup/suffix continuation is now checked at `13320f38`
+(not landed): 3,304 build jobs and 27 axiom reports pass. It retains the
+physical count on one execution, but the full loop boundary still needs
+refcounts and list links at the same returned placement. The active worker
+supplies those complete channel returns and the out-list increment/no-wrap
+proof. The ordinary loop invariant, startup zero and runtime suppliers remain
+open; these checkpoints are not F1 closure.
 
 The formatter layout/template checkpoint and its memmove integration repair
 landed as `d89766ae` after the full 6,029-job build and all gate stages. Its
@@ -69,8 +73,9 @@ composition remain in progress.
 Prepared next assignments (not additional running workers): native `vsnprintf`
 wrapper execution (`tasks/sol-vsnprintf-wrapper.md`) and G2 split/remnant composition
 (`tasks/sol-gc-split.md`), plus a proved named-resource reserve without the
-absent fixed guards (`tasks/sol-named-reserve.md`). The counted-loop task
-(`tasks/sol-counted-loop.md`) is active. There are still only two Sol workers.
+absent fixed guards (`tasks/sol-named-reserve.md`). The complete channel-return task
+(`tasks/sol-channel-returns.md`) is active before returning to the full loop
+migration. There are still only two Sol workers.
 
 G2 validation: the landing gate built 6029 jobs and audited 8325 declarations
 before pushing `6d002aa5`. The refcount/library train passed all stages and
