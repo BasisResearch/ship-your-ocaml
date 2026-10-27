@@ -1,5 +1,13 @@
 # Routes not to repeat
 
+- 2026-10-27 counted stack rows: unfolding `stepI` while the operand list
+  is unconstrained exhausts the default heartbeat budget even for a fixed
+  opcode. Splitting only the opcode, or putting those expansions in separate
+  per-opcode theorems, does not fix it. The generated channel-model lemmas
+  first expose the finite operand-list shapes using `gen_opcodes.nargs`,
+  then reduce the real semantic branch. All 58 certificates check at the
+  unchanged budget; native execution is still reused from ordinary rows.
+
 - 2026-10-27 next-size search composition: rewriting the entire search
   memory snapshot before the original header/counter observations in
   `search_allocate` exhausts the default heartbeat budget at the counter
