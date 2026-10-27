@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 21:27 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 21:47 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -30,8 +30,8 @@ The preceding counted-channel return bundle landed at `71547e46` with
 
 The next reviewed batch in `syo-wt/bprime` contains initialized-string
 allocation (`1150a772`), G2 split/remnant return (`ecca3e24`), and the complete
-pick/pop/split route (`78081098`). It will run the full gate after a coherent
-cache handoff from the now-idle, fully checked insertion worktree.
+pick/pop/split route (`78081098`). Its full gate is running after a coherent
+cache handoff from the fully checked insertion worktree.
 Local main contains these reviewed results; they are not yet published.
 Prior WIP and reviewed tips remain preserved on `keep/*` branches.
 
@@ -39,9 +39,9 @@ Prior WIP and reviewed tips remain preserved on `keep/*` branches.
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| Cut allocator Sol | Prove captured-cut allocator readiness and coverage for libHeap | `syo-wt/a0-boot-next` |
+| G2 Sol | Compose bitmap search with the checked pick/pop/split route | `syo-wt/a6-gc-next2` |
 | Counted-loop Sol | Carry actual channel/custom counts through entry and the ordinary F1 loop | `syo-wt/a1-prims-next` |
-| Lead | Initialized-string and G2 route integration; prepare next G2 continuation | main; `syo-wt/bprime` |
+| Lead | Initialized-string/G2 integration; captured allocator consumer check | main; `syo-wt/bprime`, `syo-wt/a0-boot-next` |
 
 The first G2 split attempt reached the 12 GB cgroup cap while building
 `BestFitNext`, after its generated split module passed 609 jobs. WIP is
@@ -87,10 +87,16 @@ The five ordinary open C_CALL fields are the two descriptor opens, out-channel
 listing, named registration, and integer formatting. Counted channel helpers
 still need ordinary loop preservation, startup physical zero and actual
 runtime entry/after suppliers. `LibHeapAt.named` now carries ownership in the
-selected ledger; named resource reserves and registration remain open.
+selected ledger; named resource reserves and registration remain open. Distinct-key
+provenance bounds nodes but does not account for repeated skiplist cell
+allocation on root-class changes; actual removal/reuse remains required.
 
-Reset-through-atoms is landed (`9c443c79`, audited at `bb55a4e5`), but full
-reset-to-cut/Loaded and `libHeap` are open. A captured loaded memory snapshot
+Reset-through-atoms is landed (`9c443c79`, audited at `bb55a4e5`); full
+reset-to-cut/Loaded remains open. The captured allocator is checked as
+`956ba74e`: all 30 chunks, 127 bins and 27 live blocks, 16 MiB of credits,
+3,211 affected build jobs and 577 allowed/axiom-free declaration audits.
+The closed covers theorem supplies `libHeap`; the lead is checking removal
+of its obsolete generated caller argument before staging integration. A captured loaded memory snapshot
 is not reset execution. G2 pick/pop landed (`6d002aa5`); split/remnant is checked for the
 next landing batch, including its complete pick/pop/split route. Bitmap
 search composition, allocator readiness and full collection remain open. The a2-sem uncaught-path
