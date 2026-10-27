@@ -21,7 +21,7 @@ Two workers hit the 12 GB cgroup limit (18:42:17 and 18:48:05 UTC, October 27); 
 Read /tmp/skipfirst-chunks.log and the tail of logs/sol-a6-gc-20261027-184410-1478780.log in the main repo. Generated rows built; SkipFirstEval still exceeds memory.
 First isolate the exact failing declaration in a temporary prefix file using --profile, one Lean thread and -M 6000. Broad simp on stepGM still exceeded memory after per-instruction splitting; inspect the expansion, reuse scalar evaluator lemmas and use narrowly selected simp rules.
 Every diagnostic/build command MUST run through python3 scripts/lean-guarded.py --log /tmp/skipfirst-guarded.log -- scripts/lean-capped.sh lake env lean -M 6000 -j 1 <file> (or guarded lake build once repaired). It terminates only this build group on errors/10 GiB pressure; do not leave child Lean processes alive after cancellation.
-The actual startup seed 0 becomes 25173, chooses level 0 and requests a 24-byte cell. Reuse the generated rows, block_summary, stat_alloc_ready, native frames and selected live-block ownership.
+The actual startup seed 0 becomes 25173, chooses level 0 and requests a 24-byte cell. Reuse the generated rows, block_summary, stat_checked, native frames and selected live-block ownership.
 Continue the existing prefix proof, allocation call, cell/header stores and ABI return. Retain explicit room, key/frame bounds and precise memory/output effects.
 Done: checked first-insertion native summary with the startup key witness, allocator/owned-block frame, focused standard-axiom audits and generator drift check.
 Do not claim full Skiplist.Ops, arbitrary insertion/removal, RootsAt or reset composition; list what remains. Avoid assumed runs/posts and never raise budgets.

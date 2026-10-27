@@ -136,3 +136,8 @@
   insertion milestone retains explicit capacity and selected ownership;
   it does not discharge this general interface. This is interface analysis,
   not a kernel-checked impossibility result.
+
+- 2026-10-27: first empty skiplist insertion calls `caml_stat_alloc` at
+  `0x8000bb2c`, certified by `jal_8002acbc_call_target`. Use the checked
+  `stat_checked` interface at this splice. `stat_alloc_ready` is for the
+  distinct `caml_stat_alloc_noexc` entry; it cannot be substituted directly.
