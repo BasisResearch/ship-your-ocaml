@@ -45,9 +45,15 @@ The earlier worker WIP and reviewed tips are preserved on `keep/*` branches.
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| G2 Sol | Next-size split, remnant call and return after `BestFitNext.pop` | `syo-wt/a6-gc-next2` |
+| G2 Sol | Guarded split/remnant continuation after preserved OOM checkpoint | `syo-wt/a6-gc-next2` |
 | Formatter Sol | Actual decimal `caml_alloc_sprintf` composition from the checked wrapper | `syo-wt/bprime` |
 | Lead | Channel gate, combined next landing, invariant review and task preparation | main; `syo-wt/a1-prims-next`, `syo-wt/a6-gc` |
+
+The first G2 split attempt reached the 12 GB cgroup cap while building
+`BestFitNext`, after its generated split module passed 609 jobs. WIP is
+preserved (`keep/gc-split-20261027-2057`), and the resumed worker must isolate
+the declaration under a 6 GB diagnostic limit. Task rules now require the
+build guard to stop failed or 10 GiB builds before the worker cap.
 
 The first-insertion summary executes the actual prefix, `stat_checked` call,
 24-byte cell/header stores and ABI return. It exports seed 25173, a level-0
