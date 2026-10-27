@@ -13,6 +13,7 @@ import OCaml.Vm.Sim.NurseryInput
 import VsaIris.Vsa.HeapShape
 import OCaml.Vm.Primitives.Console.Runtime
 import OCaml.Vm.Gc.F1Heap
+import OCaml.Vm.Boot.WhileMinAllocator
 
 /-!
 # The F1 runtime invariant, pinned at the cut
@@ -1203,6 +1204,21 @@ theorem Loaded.retarget {L L' : OCaml.Layout} {P : Prog} {c : Config} (h : OCaml
     platform := ⟨entry.platform.control, entry.platform.image, runtime⟩
     geometry := ⟨entry.geometry.toArmGeometry, budget ▸ entry.geometry.room⟩ }⟩
 
+/-- The actual in-use chunk ledger covers every fixed F1 runtime extent. -/
+theorem whileMin_allocator_covers : ∀ x ∈ f1Covered, ∃ e ∈ WhileMinAllocator.liveBlocks,
+    e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2 := by decide +kernel
+
+/-- The remembered-set struct remains an exact ledger entry, with 56 usable bytes. -/
+theorem whileMin_allocator_exact : ∀ x ∈ [(refTable, 56)], x ∈ WhileMinAllocator.liveBlocks := by
+  decide +kernel
+
+/-- Premise-free memory certificate at the existing captured cut. This says
+nothing about reset execution reaching that cut. -/
+theorem _root_.OCaml.Vm.Boot.WhileMin.cut_heapReady_covers :
+    WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56)] :=
+  ⟨WhileMinAllocator.liveBlocks, 2 ^ 24, Nat.le_refl _, WhileMinAllocator.cut_ready,
+    whileMin_allocator_covers, whileMin_allocator_exact⟩
+
 /-- a0-boot's covering readiness at the densified cut holds at the cut itself:
 `HeapReady` reads total bytes only. -/
 theorem heapCovers_cut (heap : WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56)]) : HeapCovers WhileMin.cut := by
@@ -1212,18 +1228,23 @@ theorem heapCovers_cut (heap : WhileMin.cut_heapReady_covers_Statement f1Covered
   simp only [Std.ExtHashMap.get?_eq_getElem?] at this
   exact this
 
-/-- **`Loaded f1Layout whileMin`** at the captured cut, given a0-boot's named
-obligation `WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56)]` (newlib's heap
-at the cut covers the runtime's blocks). -/
-theorem whileMin_loaded_f1 (heap : WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56)]) :
+/-- Usable F1 library heap at the captured cut, supplied by checked memory. -/
+theorem whileMin_libHeap : LibHeap WhileMin.cut :=
+  libHeap_of WhileMin.memory_equiv (heapCovers_cut WhileMin.cut_heapReady_covers)
+
+/-- **`Loaded f1Layout whileMin`** at the captured cut, from its checked
+covering allocator certificate. Reset-to-cut reachability remains open. -/
+theorem whileMin_loaded_f1 :
     OCaml.Loaded f1Layout OCaml.Programs.whileMin WhileMin.cut :=
-  Loaded.retarget WhileMin.loaded (f1Runtime_of WhileMin.memory_equiv (heapCovers_cut heap)) rfl
+  Loaded.retarget WhileMin.loaded
+    (f1Runtime_of WhileMin.memory_equiv (heapCovers_cut WhileMin.cut_heapReady_covers)) rfl
 
 /-- The densified entry, as a0-boot's `loaded_fillZero`. -/
-theorem whileMin_loaded_f1_fillZero (heap : WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56)]) :
+theorem whileMin_loaded_f1_fillZero :
     OCaml.Loaded f1Layout OCaml.Programs.whileMin (Vsa.Densify.fillZero WhileMin.cut) :=
   Loaded.retarget WhileMin.loaded_fillZero
-    (f1Runtime_of ((Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem).symm.trans WhileMin.memory_equiv) heap) rfl
+    (f1Runtime_of ((Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem).symm.trans WhileMin.memory_equiv)
+      WhileMin.cut_heapReady_covers) rfl
 
 /-- The global pointer at the cut (the captured register table), for a1-arms'
 `LoopRegisters.gp` and newlib calls' `LibraryReady.gp`. -/

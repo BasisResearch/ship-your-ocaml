@@ -1,11 +1,26 @@
 import OCaml.Vm.Boot.WhileMinImageData
 import OCaml.Vm.Boot.WhileMinLogChecks
 import OCaml.Vm.Platform
+import Vsa.Sim.Boot.Bytes
 
 /-! Immutable runtime image in the captured ELF loader memory and after
 application of the certified observed store log. No startup run is asserted. -/
 namespace OCaml.Vm.Boot.WhileMinImage
 open Vsa.Sim.Boot Vsa.Sim.Code Vsa.Machine WhileMinLog
+
+/-- A bounded read of the capture, including untouched loader bytes. This
+keeps certificate evaluation on functional views rather than the memory map. -/
+theorem observed_bytes_view (a w : Nat) :
+    Vsa.Sim.bytesT (observedMem initialMem log) a w =
+      viewBytes (logView runs (fun x =>
+        if inPieces pieces x then some (imageByte x) else none)) a w := by
+  rw [observedMem_bytes logOk]
+  apply viewBytes_congr
+  intro i _
+  unfold logView
+  split
+  · rfl
+  · exact loaderMem_get pieces imageByte (a + i)
 
 private theorem text_in_pieces {off : Nat} (h : off < Image.textSize) :
     inPieces pieces (Image.textBase + off) = true := by

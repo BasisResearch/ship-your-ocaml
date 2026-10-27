@@ -36,8 +36,10 @@ def refTable : Nat := Boot.WhileMinHeapChunks.refTablePayload
 the whileMin cut: the `Caml_state` record, the remembered-set struct, the
 minor heap (`minorRegion`), the major heap chunk (`majorRegion`), the VM stack
 `[stack_low, stack_high)`, the code buffer (`caml_load_code`'s request: whileMin's
-191 words) and the primitive table's contents (`8 ×` its capacity 768). The
-sizes are the blocks' requested bytes, which a0-boot's `HeapReady` records. -/
+191 words) and the primitive table's contents (`8 ×` its capacity 768).
+These are the runtime's observed extents. The allocator certificate covers
+them with actual in-use chunks at their usable sizes; it does not reconstruct
+the original allocation requests. -/
 def f1Covered : List (Nat × Nat) :=
   [(Boot.WhileMinRuntime.domain, Layout.domainStateBytes), (refTable, 56),
    (minorRegion.lo, minorRegion.hi - minorRegion.lo), (majorRegion.lo, majorRegion.hi - majorRegion.lo),

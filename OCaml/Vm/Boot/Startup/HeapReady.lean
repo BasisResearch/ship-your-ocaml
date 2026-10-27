@@ -39,10 +39,11 @@ end OCaml.Vm.Boot.Startup
 namespace OCaml.Vm.Boot.WhileMin
 open Startup
 
-/-- **The newlib heap at the captured cut** (named obligation, a0-boot).
+/-- **The newlib heap at the captured cut** (memory statement, a0-boot).
 Some live-block list and a capacity of at least 2^24 bytes (16 MiB) satisfy
-`HeapReady` at the densified cut. The reset route discharges it when it
-reaches the cut, by `RuntimeReadyL.heap`. a6-gc's write barrier
+`HeapReady` at the densified cut. `WhileMinAllocator.cut_heapReady` supplies
+the captured memory certificate. Reaching this cut from reset remains open;
+the reset route can also supply readiness by `RuntimeReadyL.heap`. a6-gc's write barrier
 (`caml_realloc_ref_table` → `caml_stat_alloc_noexc`) depends on it. At the
 cut `top` = 0x80391310 and the break is 0x803a4000, against
 `heapEnd` = 0x86800000, so about 105 MB above top remain. -/

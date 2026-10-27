@@ -26,14 +26,13 @@ theorem ocamlrun_refinement_F1_pinned (growth : F1GrowthPremises)
 /-- **The `whileMin` machine run**: the captured cut of the pinned image
 halts printing `55`, `2500`, `36` with exit code 0, given the premises of the
 rows of the opcodes `whileMin` reaches (`whileMinOps`, checked in the one
-shape run) and a0-boot's newlib heap at the cut
-(`cut_heapReady_covers_Statement`); the other rows are vacuous. -/
+shape run); the other rows are vacuous. The captured allocator memory is
+kernel certified; reset-to-cut reachability remains open. -/
 theorem whileMin_halts_f1
-    (heap : Boot.WhileMin.cut_heapReady_covers_Statement Gc.f1Covered [(Gc.refTable, 56)])
     (growth : F1GrowthPremises)
     (pre : F1PremisesFor (fun op => OCaml.Programs.whileMinOps.contains op) OCaml.Programs.whileMin) :
     Halts Boot.WhileMin.cut "55\n2500\n36\n" 0 :=
-  have table := f1_table_for (Gc.whileMin_loaded_f1 heap) OCaml.Programs.whileMin_goodF1
+  have table := f1_table_for Gc.whileMin_loaded_f1 OCaml.Programs.whileMin_goodF1
     OCaml.Programs.whileMin_fits OCaml.Programs.whileMin_ops growth pre
   ((table.simR OCaml.Programs.whileMin_goodF1).refines OCaml.Programs.whileMin_goodF1.good).1 _ _
     |>.1 OCaml.Programs.whileMin_bcSem

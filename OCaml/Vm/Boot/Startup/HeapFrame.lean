@@ -138,10 +138,10 @@ end OCaml.Vm.Boot.Startup
 namespace OCaml.Vm.Boot.WhileMin
 open Startup
 
-/-- **The newlib heap at the captured cut, covering given extents** (named
-obligation, a0-boot). `cut_heapReady_Statement` with the live-block list
+/-- **The newlib heap at the captured cut, covering given extents** (memory
+statement, a0-boot). `cut_heapReady_Statement` with the live-block list
 also covering each `[lo, lo + len)` of `E` and containing each block of
-`Exact` verbatim (its requested size). a6-gc instantiates `E` with the
+`Exact` verbatim (its recorded owned extent). a6-gc instantiates `E` with the
 runtime's blocks and `Exact` with the remembered-set struct. -/
 def cut_heapReady_covers_Statement (E Exact : List (Nat × Nat)) : Prop :=
   ∃ H capacity, 2 ^ 24 ≤ capacity ∧ HeapReady H capacity (Vsa.Densify.fillZero cut) ∧

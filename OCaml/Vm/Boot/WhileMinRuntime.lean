@@ -7,6 +7,20 @@ open Vsa.Machine Vsa.Sim.Boot WhileMinLog
 
 variable {c : Config} {initial : Vsa.MemRepr.Mem}
 
+/-- Startup has disabled the optional stat-allocation pool. -/
+theorem poolZero (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    Vsa.Sim.LPins8 c.σ.mem Layout.sym_pool (List.replicate 8 0#8) := by
+  have rd (i : Nat) (h : byte c (Layout.sym_pool + i) = 0#8) :
+      (c.σ.mem[Layout.sym_pool + i]?).getD 0 = 0#8 := by
+    apply BitVec.eq_of_getLsbD_eq
+    intro k hk
+    have bit := congrArg (fun v : BitVec 8 => v.getLsbD k) h
+    rw [byte, Vsa.Sim.getLsbD_bytesT _ 1 _ k hk] at bit
+    simpa only [Nat.div_eq_of_lt hk, Nat.mod_eq_of_lt hk, Nat.add_zero] using bit
+  exact ⟨rd 0 (read_pool_0 memory), rd 1 (read_pool_1 memory), rd 2 (read_pool_2 memory),
+    rd 3 (read_pool_3 memory), rd 4 (read_pool_4 memory), rd 5 (read_pool_5 memory),
+    rd 6 (read_pool_6 memory), rd 7 (read_pool_7 memory)⟩
+
 /-- The observed scalar projection equals reads from the certified memory. -/
 theorem fields (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     runtimeFields c = WhileMinObservation.observed := by

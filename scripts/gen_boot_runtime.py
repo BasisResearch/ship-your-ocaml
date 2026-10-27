@@ -39,6 +39,8 @@ def fact(name, expr, addr, width=8):
     return emit_read(out, name, expr, read(addr, width), width)
 
 fact('domain', 'Layout.sym_Caml_state',layout['sym_Caml_state'])
+for i in range(8):
+    fact(f'pool_{i}', f'Layout.sym_pool + {i}', layout['sym_pool'] + i, 1)
 fields=['young_start','young_end','young_alloc_start','young_alloc_end','young_ptr','young_limit']
 for f in fields:
     fact(f, f'domain + Layout.off_{f}',domain+layout['off_'+f])

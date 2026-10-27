@@ -19,6 +19,54 @@ theorem read_domain (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial l
   rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_Caml_state) (w := 8) (by decide +kernel)]
   decide +kernel
 
+theorem read_pool_0 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (Layout.sym_pool + 0) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_pool + 0) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pool_1 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (Layout.sym_pool + 1) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_pool + 1) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pool_2 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (Layout.sym_pool + 2) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_pool + 2) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pool_3 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (Layout.sym_pool + 3) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_pool + 3) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pool_4 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (Layout.sym_pool + 4) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_pool + 4) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pool_5 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (Layout.sym_pool + 5) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_pool + 5) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pool_6 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (Layout.sym_pool + 6) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_pool + 6) (w := 1) (by decide +kernel)]
+  decide +kernel
+
+theorem read_pool_7 (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
+    byte c (Layout.sym_pool + 7) = 0x0#8 := by
+  unfold byte
+  rw [bytesT_memEqv memory, observedMem_bytes_stored logOk (a := Layout.sym_pool + 7) (w := 1) (by decide +kernel)]
+  decide +kernel
+
 theorem read_young_start (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem initial log)) :
     word c (domain + Layout.off_young_start) = 0x80082000#64 := by
   unfold word

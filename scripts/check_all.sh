@@ -102,6 +102,7 @@ python3 scripts/gen_boot_observation.py results/boot/while_min-cut.json | cmp -s
 python3 scripts/gen_boot_log.py --check || fail "stage a5: boot log certificate drift"
 python3 scripts/gen_boot_runtime.py --check || fail "stage a5: boot runtime read drift"
 python3 scripts/gen_boot_chunks.py --check || fail "stage a5: boot heap chunk drift"
+python3 scripts/gen_boot_cut_allocator.py --check || fail "stage a5: cut allocator certificate drift"
 python3 scripts/gen_boot_heap.py --check || fail "stage a5: boot heap certificate drift"
 python3 scripts/gen_boot_entry.py --check || fail "stage a5: boot entry certificate drift"
 python3 scripts/gen_reent_wrappers.py --check || fail "stage a5: newlib reentrant wrapper drift"
