@@ -154,7 +154,7 @@ theorem prim_output_returns_at {L : OCaml.Layout} {P : Prog} {ra : BitVec 64} {n
   exact console_callee_summary ready setup site.inv site.valid site.arg rfl (by rw [hshape])
     (output_framed_at nameOk (enter c ra a) setup site.arg site.inv site.valid (consoleRt c setup.input.runtime)
       setup.libraryReady
-      (consoles s reach id chn hw) site.outside site.bindings consoleStable sem0)
+      (consoles s reach id chn hw) site.outside site.bindings consoleStable sem0) (by rw [hshape])
 
 /-- **`caml_ml_output` returns at a `C_CALL4` site.** -/
 theorem prim_caml_ml_output_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec 64}

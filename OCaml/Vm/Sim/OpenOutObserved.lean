@@ -137,6 +137,9 @@ theorem open_out_observed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {c
       Gc.mem_placedChannels.2 ⟨id, (List.getElem?_eq_some_iff.mp found).1, placed⟩
     have big : 64 ≤ chanOffBuff + ioBufferSize := by decide
     exact record_kept custom o heap h N mem (by omega) (by unfold Gc.chanRecordBytes; omega) (fun _ => Or.inr lo)
+  | named f =>
+    obtain ⟨chains, table⟩ := data.named
+    exact named_kept custom o heap h N ⟨pl, s.world.named, chains, table, f⟩
 
 section More
 

@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.NamedOwnership
 import OCaml.Vm.Sim.OutListRun
 import OCaml.Vm.Sim.OutListModel
 import OCaml.Vm.Sim.CcallFootprint
@@ -52,7 +53,9 @@ def VmPoint (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (sp :
 
 /-- A footprint missing every payload point misses the payload's words. -/
 theorem PayloadMisses.of_points {W : Nat → Prop} {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
-    {sp : Nat} (h : ∀ a, VmPoint P s c pl cp sp a → ¬ W a) : PayloadMisses W P s c pl cp sp where
+    {sp : Nat} (h : ∀ a, VmPoint P s c pl cp sp a → ¬ W a)
+    (named : ∀ a, NamedPlFoot pl s.world.named a → ¬ W a) : PayloadMisses W P s c pl cp sp where
+  named := named
   domain := fun i hi => h _ (Or.inl ⟨by omega, by omega⟩)
   stackHigh := fun i hi => h _ (Or.inr (Or.inl ⟨by omega, by omega⟩))
   trapsp := fun i hi => h _ (Or.inr (Or.inr (Or.inl ⟨by omega, by omega⟩)))
@@ -98,6 +101,7 @@ def OutListWrites (state : Config → Nat → Prop) (H : List (Nat × Nat)) (chs
 F1: a6-gc's `CustomMemCall` instance with a0-boot's newlib heap). At a C_CALL
 entry of the layout:
 * the custom allocations are ready for every listed channel;
+* the physical named table has a matching `NamedLedger H [] c`;
 * newlib's heap `H` covers the minor heap, the domain record and the channel
   records, which lie apart (`RecordsPlaced`);
 * the VM payload lies below the arena's end, in live blocks of `H`, apart from
@@ -110,6 +114,7 @@ structure OutListRuntime (L : OCaml.Layout) (Ready : Nat → Config → Prop) (s
   entry : ∀ (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (sp high : Nat),
     L.runtimeOk c → OCaml.LoopGeometry L P s c pl cp high →
     ∃ k H cap, Ready (k + (outChannelIds s.world).length) c ∧ OCaml.Vm.Boot.Startup.HeapReady H cap c ∧
+      Gc.NamedLedger H [] c ∧
       RecordsPlaced H (word c Layout.sym_Caml_state).toNat (Gc.placedChannels cp s.world.chans.length) ∧
       (∃ x ∈ H, x.1 ≤ Gc.minorRegion.lo ∧ Gc.minorRegion.hi ≤ x.1 + x.2) ∧
       (∃ x ∈ H, x.1 ≤ (word c Layout.sym_Caml_state).toNat ∧
@@ -152,6 +157,9 @@ structure OutListEntry (Ready : Nat → Config → Prop) (state : Config → Nat
   listed : listedRecs c.σ.mem w.chs = (outChannelIds s.world).map fun id => (cp id).getD 0
   payload : ∀ a, VmPoint P s c pl cp sp a → a < Vsa.Sim.DlHeap.heapEnd ∧ ¬ VsaIris.VsaHeap.vsaFoot w.H0 a ∧
     ¬ state c a
+  /-- The actual named table uses the same selected heap as the walk. -/
+  named : ∀ a, NamedPlFoot pl s.world.named a →
+    a < Vsa.Sim.DlHeap.heapEnd ∧ ¬ VsaIris.VsaHeap.vsaFoot w.H0 a ∧ ¬ state c a
   /-- the walk's entry state is the runtime's at `c` -/
   stateS : ∀ a, w.S a ↔ state c a
   chs : w.chs = Gc.placedChannels cp s.world.chans.length
@@ -171,7 +179,7 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
   have g := setup.geometry
   have ng := g.nursery
   obtain ⟨N, e⟩ := StringAllocEntry.of_setup setup fits
-  obtain ⟨k, H, cap, ready, heap, recs, ⟨xm, xmIn, xml, xmh⟩, ⟨xd, xdIn, xdl, xdh⟩, dap, pay⟩ :=
+  obtain ⟨k, H, cap, ready, heap, ledger, recs, ⟨xm, xmIn, xml, xmh⟩, ⟨xd, xdIn, xdl, xdh⟩, dap, pay⟩ :=
     rt.entry P s c pl cp sp high input.runtime g
   have xdb := heap.block_bounds (q := xd.1) (n := xd.2) xdIn
   have nl := e.nativeLow; have nh := e.nativeHigh; have na := e.nativeAligned
@@ -244,6 +252,11 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
       heap := heap }
     listed := listed
     payload := pay
+    named := fun a f => by
+      obtain ⟨chains, table⟩ := input.data.named
+      have read : NamedRead c a := ⟨pl, s.world.named, chains, table, f⟩
+      exact ⟨ledger.read_bounds heap read, ledger.read_not_foot heap read,
+        fun st => (rt.custom.apart c a st).named read⟩
     stateS := fun _ => Iff.rfl
     chs := rfl
     domain := rfl
@@ -379,7 +392,20 @@ theorem outW_payload {Ready : Nat → Config → Prop} {state : Config → Nat �
       exact VmPoint.not_refcount g.toStackGeometry low stack hp (List.getElem?_eq_getElem hid) hcp lo hi
     · exact (ent.payload a hp).2.2 ((ent.stateS a).mp hs)
     · exact (ent.payload a hp).2.1 foot
-  exact ⟨PayloadMisses.of_points pts, pts⟩
+  have named : ∀ a, NamedPlFoot pl s.world.named a → ¬ outW w state a := by
+    intro a f hw
+    rcases hw with o | ⟨r, hr, lo, hi⟩ | hs | foot
+    · exact o (outL_of_range (out.named a f) (Nat.le_refl _) (by omega))
+    · rw [ent.chs] at hr
+      obtain ⟨id, hid, hcp⟩ := Gc.mem_placedChannels.mp hr
+      have apart := (g.channelNamed id _ r (List.getElem?_eq_getElem hid) hcp a f).1
+      dsimp only at apart
+      rw [Nat.add_assoc] at apart
+      have size : 68 ≤ chanOffBuff + ioBufferSize := by decide
+      omega
+    · exact (ent.named a f).2.2 ((ent.stateS a).mp hs)
+    · exact (ent.named a f).2.1 foot
+  exact ⟨PayloadMisses.of_points pts named, pts⟩
 
 theorem synLog_out {w : Walk} {a : Nat} (h : OutL (synLog w) a) :
     (a < w.sp.toNat - 576 ∨ w.sp.toNat - 576 + 704 ≤ a) ∧ (a < w.Lm ∨ w.Lm + (w.Y - w.Lm) ≤ a) ∧
@@ -620,7 +646,7 @@ theorem worldRepr_listRefs {c : Config} {cp : ChanPlace} {w : World} (h : WorldR
 theorem _root_.OCaml.Vm.Primitives.VmPayload.listRefs {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {sp high : Nat}
     (h : VmPayload P s c pl cp sp high) : VmPayload P {s with world := listRefs s.world} c pl cp sp high :=
   ⟨h.stackHigh, h.trapsp, h.codeBase, h.code, h.globals, h.stack, h.heap, worldRepr_listRefs h.world,
-    h.atomBase, h.argv⟩
+    h.atomBase, h.argv, h.named⟩
 
 theorem listRefs_ids (w : World) (id : Nat) : ((listRefs w).chans[id]?).isSome = (w.chans[id]?).isSome := by
   simp only [listRefs, List.getElem?_map, Option.isSome_map]

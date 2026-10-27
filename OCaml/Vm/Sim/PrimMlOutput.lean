@@ -868,7 +868,7 @@ theorem output_framed_at {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp
     rw [Dn.memory x (by rw [hs, arg.pointer]; exact hx), b1]
   exact ⟨e, run1.trans run2, framed_of_ret setup inv valid (by simp only [Layout.sym_stack_top]; have := GL.high; omega)
     (ConsoleRet.jump p1 Dn.ret) memory outside bindings stable arg.chan arg.record
-    (by rw [hshape]) (by rw [hshape]) (by rw [hshape]; rfl) (by rw [← arg.pointer]; exact Dn.repr) Dn.console sem0⟩
+    (by rw [hshape]) (by rw [hshape]) (by rw [hshape]; rfl) (by rw [← arg.pointer]; exact Dn.repr) Dn.console sem0 (by rw [hshape])⟩
 
 /-- A configuration is its own empty run's register post. -/
 theorem WriteRegistersPost.refl {c : Config} {pc value : BitVec 64} (good : GoodState c.σ)

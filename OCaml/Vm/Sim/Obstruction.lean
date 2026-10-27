@@ -1,4 +1,5 @@
 import OCaml.Refinement
+import OCaml.Vm.Primitives.Payload
 
 /-!
 # A1 precondition obstruction
@@ -46,7 +47,10 @@ theorem repr_forceExit {P : Prog} {s : St} {c : Config}
     accu := by simpa only [hregs] using h.accu
     env := by simpa only [hregs] using h.env
     extra := (hregs _).trans h.extra
-    primitives := h.primitives.frame rfl }
+    primitives := h.primitives.frame rfl
+    named := by
+      obtain ⟨chains, table⟩ := h.named
+      exact ⟨chains, table.frame fun _ _ => rfl⟩ }
 
 /-- `stepOnce` checks HTIF before fetching any instruction. -/
 theorem forceExit_halted (c : Config) (e : BitVec 64) :

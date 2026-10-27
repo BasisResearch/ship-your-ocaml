@@ -41,7 +41,8 @@ theorem windowSeparated_of {P : Prog} {s : St} {c : Config} {pl : Place} {cp : C
     (stack : (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high)).toNat = high)
     {w : W} (bss : Layout.sym_bss_end ≤ w.lo)
     (uses : ∀ y ∈ f1Uses, w.hi ≤ y.1 ∨ y.1 + y.2 ≤ w.lo)
-    (records : ∀ chs, OpenChannelList c.σ.mem chs → ∀ a ∈ chs, w.hi ≤ a ∨ a + chanRecordBytes ≤ w.lo) :
+    (records : ∀ chs, OpenChannelList c.σ.mem chs → ∀ a ∈ chs, w.hi ≤ a ∨ a + chanRecordBytes ≤ w.lo)
+    (named : ∀ x, NamedPlFoot pl s.world.named x → OutWRange [w] x 1) :
     WindowSeparated w P s c pl cp high := by
   have out : ∀ x n (y : Nat × Nat), y ∈ f1Uses → y.1 ≤ x → x + n ≤ y.1 + y.2 → OutWRange [w] x n :=
     fun x n y hy lo hi => ⟨by rcases uses y hy with h | h <;> omega, trivial⟩
@@ -57,6 +58,7 @@ theorem windowSeparated_of {P : Prog} {s : St} {c : Config} {pl : Place} {cp : C
   obtain ⟨chs, list, placed, -⟩ := g.nursery.channelsListed_mem
   exact {
     statics := bss
+    named := named
     domain := by
       rw [dom]
       exact out _ _ (WhileMinRuntime.domain, Layout.domainStateBytes) List.mem_cons_self (Nat.le_refl _)
@@ -148,6 +150,7 @@ theorem f1_tableRuntime {c : Config} (ok : f1Runtime c) :
       ∀ (P : Prog) (s : St) (pl : Place) (cp : ChanPlace) (high : Nat), OCaml.LoopGeometry f1Layout P s c pl cp high →
         (word c Layout.sym_caml_start_code).toNat = pl.codeBase →
         (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high)).toNat = high →
+        (∃ chains, NamedRepr c pl s.world.named chains) →
         WindowSeparated ⟨tbl.toNat, tbl.toNat + 40⟩ P s c pl cp high ∧
         (ptr.toNat < limit.toNat → WindowSeparated ⟨ptr.toNat, ptr.toNat + 8⟩ P s c pl cp high) := by
   obtain ⟨H, cap, chs, h⟩ := ok.freeListShape.libHeap
@@ -157,21 +160,34 @@ theorem f1_tableRuntime {c : Config} (ok : f1Runtime c) :
     obtain ⟨-, hi⟩ := st.bounds h
     have := st.ptrAligned; have := st.ptrLimit; have := st.limitEnd; have := st.limitAligned
     omega
-  intro P s pl cp high g code stack
+  intro P s pl cp high g code stack names
+  obtain ⟨chains, table⟩ := names
   rw [tblNat]
-  refine ⟨windowSeparated_of g ok code stack (by decide) (by decide) fun chs' list a ha => ?_, fun room => ?_⟩
-  · rw [h.records_of list] at ha
-    have := h.recordsApart a ha (refTable, 56) (by decide)
-    dsimp only at this ⊢
-    omega
+  refine ⟨?_, fun room => ?_⟩
+  · apply windowSeparated_of g ok code stack (by decide) (by decide)
+    · intro chs' list a ha
+      rw [h.records_of list] at ha
+      have := h.recordsApart a ha (refTable, 56) (by decide)
+      dsimp only at this ⊢
+      omega
+    · intro x f
+      have apart := h.named_fixed ⟨pl, s.world.named, chains, table, f⟩ (by decide : (refTable, 56) ∈ f1Covered)
+      unfold VsaIris.InExt at apart
+      exact ⟨by dsimp only at *; omega, trivial⟩
   · have st := h.storage room
     obtain ⟨lo, -⟩ := st.bounds h
     have := st.ptrAligned; have := st.ptrLimit; have := st.limitEnd; have := st.limitAligned; have := st.low
-    refine windowSeparated_of g ok code stack ?_ (fun y hy => ?_) fun chs' list a ha => ?_
+    apply windowSeparated_of g ok code stack
     · simp only [Vsa.Sim.DlHeap.heapStart, Layout.sym_bss_end] at *; omega
-    · rcases st.apartBlocks y (uses_covered y hy) with r | r <;> dsimp only <;> omega
-    · rw [h.records_of list] at ha
+    · intro y hy
+      rcases st.apartBlocks y (uses_covered y hy) with r | r <;> dsimp only <;> omega
+    · intro chs' list a ha
+      rw [h.records_of list] at ha
       rcases st.apartRecords a ha with r | r <;> dsimp only <;> omega
+    · intro x f
+      have apart := h.named_storage ⟨pl, s.world.named, chains, table, f⟩ st.nonzero
+      unfold VsaIris.InExt at apart
+      exact ⟨by dsimp only at *; omega, trivial⟩
 
 /-- The insertion's two stores: the bumped `ptr` word and the entry. -/
 def insertWindows (p : Nat) : List W :=
@@ -240,6 +256,26 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
     simp only [Vsa.Sim.DlHeap.heapEnd] at hi
     simp only [BitVec.toNat_ofNat]
     omega
+  have namedKeep : ∀ x, NamedRead c x → byte c' x = byte c x := by
+    intro x read
+    have fixed := h.named_fixed read (by decide : (refTable, 56) ∈ f1Covered)
+    have storage := h.named_storage read st.nonzero
+    rw [byte_total, byte_total]
+    apply keep x
+    intro w hw
+    rcases win w hw with rfl | rfl
+    · by_cases l : x < refTable + Layout.off_ref_table_ptr
+      · exact Or.inl l
+      · exact Or.inr (by apply Classical.byContradiction; intro no; apply fixed; constructor <;>
+          dsimp only at * <;> simp only [Layout.off_ref_table_ptr] at * <;> omega)
+    · by_cases l : x < (word c (refTable + Layout.off_ref_table_ptr)).toNat
+      · exact Or.inl l
+      · exact Or.inr (by apply Classical.byContradiction; intro no; apply storage; constructor <;>
+          dsimp only at * <;> omega)
+  have namedLedger : NamedLedger H (namedBlocked chs c') c' := by
+    have kept := h.named.frame (c' := c') namedKeep
+    simpa only [namedBlocked, tableWord Layout.off_ref_table_base (by decide) (by decide),
+      tableWord Layout.off_ref_table_end (by decide) (by decide)] using kept
   refine {
     room := by rw [tableWord Layout.off_ref_table_base (by decide) (by decide)]; exact h.room
     channelsBound := h.channelsBound
@@ -251,7 +287,8 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
     recordsDisjoint := h.recordsDisjoint
     recordsAligned := h.recordsAligned
     table := ⟨?_, ?_, Or.inr ?_⟩
-    tableIn := h.tableIn }
+    tableIn := h.tableIn
+    named := namedLedger }
   · rcases win w hw with rfl | rfl
     · exact Or.inl ⟨e, he, by simp only [Layout.off_ref_table_ptr]; omega,
         by simp only [Layout.off_ref_table_ptr]; omega⟩

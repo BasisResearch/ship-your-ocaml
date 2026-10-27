@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.NamedOwnership
 import OCaml.Vm.Primitives.Channel.MlOpen
 import OCaml.Vm.Gc.CustomMem
 
@@ -67,6 +68,59 @@ theorem covered_kept (custom : Gc.CustomMemCall Ready state)
       unfold Gc.chanRecordBytes chanOffBuff ioBufferSize at r
       omega
   · unfold Gc.domainAddr; rw [h.domain]; unfold Layout.off_young_ptr; omega
+
+/-- The named table is kept using the same selected ledger as the actual
+malloc, including its dynamic nodes and its separate custom state. -/
+theorem named_kept (custom : Gc.CustomMemCall Ready state)
+    {code : OpenCode} (o : OpenedOut code live Ready state k H cap' charge sp ra s0 s1 s2 v head c d)
+    (heap : Gc.LibHeapAt H cap chs c) (h : OutInput live H cap' charge sp ra s0 s1 s2 v head c)
+    (N : OutNursery H chs c) {x : Nat} (read : NamedRead c x) :
+    (d.σ.mem[x]?).getD 0 = (c.σ.mem[x]?).getD 0 := by
+  have cov := heap.named.read_covered read
+  have lower := h.frame.lower
+  have lowM := N.low
+  have highM := N.high
+  have bounds : 0x80064d4c ≤ x ∧ x < heapEnd := by
+    rcases cov with ⟨lo, hi⟩ | ⟨e, he, lo, hi⟩
+    · simp only [Layout.sym_named_value_table, heapEnd] at *; omega
+    · have b := heap.ready.block_bounds he
+      simp only [heapStart] at b; omega
+  have noFoot := heap.named.read_not_foot heap.ready read
+  have out (e : Nat × Nat) (member : e ∈ Gc.f1Covered) : x < e.1 ∨ e.1 + e.2 ≤ x := by
+    have apart := heap.named_fixed read member
+    by_cases lo : x < e.1
+    · exact Or.inl lo
+    · exact Or.inr (by apply Classical.byContradiction; intro hi; exact apart ⟨by omega, by omega⟩)
+  have dom := out (Boot.WhileMinRuntime.domain, Layout.domainStateBytes) (by decide)
+  have minor := out (Gc.minorRegion.lo, Gc.minorRegion.hi - Gc.minorRegion.lo) (by decide)
+  have recOut : x < o.opening.record.toNat ∨ o.opening.record.toNat + recordBytes ≤ x := by
+    by_cases lo : x < o.opening.record.toNat
+    · exact Or.inl lo
+    · apply Or.inr
+      apply Classical.byContradiction; intro hi
+      rcases cov with bucket | ⟨e, he, elo, ehi⟩
+      · have low := o.opening.low
+        simp only [Layout.sym_named_value_table, heapStart] at *; omega
+      · exact o.opening.fresh e he x ⟨by omega, by omega⟩ ⟨elo, by omega⟩
+  have headOut : head ≠ 0#64 → x < head.toNat + 56 ∨ head.toNat + 64 ≤ x := by
+    intro nonzero
+    have member := head_mem heap.channels h.headWord nonzero
+    have apart := heap.named_record read member
+    have recordSize : 64 ≤ Gc.chanRecordBytes := by decide
+    by_cases lo : x < head.toNat + 56
+    · exact Or.inl lo
+    · exact Or.inr (by apply Classical.byContradiction; intro hi; apply apart; constructor <;> dsimp only <;> omega)
+  refine o.kept x (fun stateX => (custom.apart c x stateX).named read) noFoot
+    (outW_openWindows_static h.frame bounds.2 (Or.inr (by omega)) (Or.inr (by omega))
+      (Or.inr (by omega)) recOut headOut) (Or.inl (by omega)) ?_ ?_
+  · dsimp only at minor
+    have band : Gc.minorRegion.lo ≤ Gc.minorRegion.hi := by decide
+    omega
+  · unfold Gc.domainAddr
+    rw [h.domain]
+    dsimp only at dom
+    simp only [Layout.off_young_ptr, Layout.domainStateBytes] at *
+    omega
 
 /-- **An open record is kept**, except the old head's `prev` word (bytes
 56–63), which the opening rewrites. -/

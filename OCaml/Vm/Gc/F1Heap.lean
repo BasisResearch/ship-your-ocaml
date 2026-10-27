@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.NamedLedger
 import OCaml.Vm.Reloc
 import OCaml.Vm.Gc.LibHeap
 import OCaml.Vm.Gc.OpenChannels
@@ -72,10 +73,6 @@ theorem extents_miss_table : ∀ x ∈ f1Extents,
     (x.1 + x.2 ≤ refTable ∨ refTable + 56 ≤ x.1) ∧
     (x.1 + x.2 ≤ Boot.WhileMinRuntime.domain + Layout.off_minor_heap_wsz ∨
       Boot.WhileMinRuntime.domain + Layout.off_minor_heap_wsz + 8 ≤ x.1) := by decide
-
-/-- `x` lies inside a live block of `H`. -/
-def Covered (H : List (Nat × Nat)) (x : Nat × Nat) : Prop :=
-  ∃ e ∈ H, e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2
 
 /-- `named_value_table`'s bucket array (`.bss`, 13 words): lane a1-prims'
 `NamedRepr` reads it, so no tolerated low-static write may touch it. -/
@@ -155,6 +152,15 @@ def maxChannels : Nat := 64
 def reserved (base opened : Nat) : Nat :=
   (if base = 0 then tableCharge else 0) + recordCharge * (maxChannels - opened)
 
+/-- Runtime allocations disjoint from named nodes, including the dynamically
+allocated remembered-set storage. An unallocated table contributes an empty region. -/
+def namedBlocked (chs : List Nat) (c : Config) : List (Nat × Nat) :=
+  (f1Covered ++ chs.map (fun a => (a, chanRecordBytes))) ++
+    (if (word c (refTable + Layout.off_ref_table_base)).toNat = 0 then [] else
+      [((word c (refTable + Layout.off_ref_table_base)).toNat,
+        (word c (refTable + Layout.off_ref_table_end)).toNat -
+          (word c (refTable + Layout.off_ref_table_base)).toNat)])
+
 /-- **newlib's heap at an F1 state**, with live blocks `H` and open channels `chs`. -/
 structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Config) : Prop where
   /-- the room still covers every allocation F1 may make -/
@@ -174,6 +180,31 @@ structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Co
   /-- its struct is a live block verbatim (the barrier's growth path frees
   nothing and reads it as `(tbl, tableBytes) ∈ H`) -/
   tableIn : (refTable, 56) ∈ H
+  /-- The physical named table shares this selected live-block ledger. -/
+  named : NamedLedger H (namedBlocked chs c) c
+
+/-- A selected ledger's named reads miss each fixed runtime allocation. -/
+theorem LibHeapAt.named_fixed {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
+    (h : LibHeapAt H cap chs c) {x : Nat} (read : NamedRead c x) {e : Nat × Nat}
+    (member : e ∈ f1Covered) : ¬ VsaIris.InExt e x :=
+  h.named.read_apart read (by simp only [namedBlocked, List.mem_append, List.mem_singleton]; exact Or.inl (Or.inl member))
+
+/-- A selected ledger's named reads miss each channel record. -/
+theorem LibHeapAt.named_record {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
+    (h : LibHeapAt H cap chs c) {x a : Nat} (read : NamedRead c x) (member : a ∈ chs) :
+    ¬ VsaIris.InExt (a, chanRecordBytes) x :=
+  h.named.read_apart read (by
+    simp only [namedBlocked, List.mem_append, List.mem_singleton]
+    exact Or.inl (Or.inr (List.mem_map.mpr ⟨a, member, rfl⟩)))
+
+/-- A selected ledger's named reads miss dynamic remembered-set storage. -/
+theorem LibHeapAt.named_storage {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
+    (h : LibHeapAt H cap chs c) {x : Nat} (read : NamedRead c x)
+    (nonzero : (word c (refTable + Layout.off_ref_table_base)).toNat ≠ 0) :
+    ¬ VsaIris.InExt ((word c (refTable + Layout.off_ref_table_base)).toNat,
+      (word c (refTable + Layout.off_ref_table_end)).toNat -
+        (word c (refTable + Layout.off_ref_table_base)).toNat) x :=
+  h.named.read_apart read (by simp [namedBlocked, nonzero])
 
 /-- The F1 heap invariant. -/
 def LibHeap (c : Config) : Prop := ∃ H cap chs, LibHeapAt H cap chs c
@@ -269,6 +300,50 @@ theorem F1HeapSafe.misses_table {w : W} (s : F1HeapSafe w) {y : Nat} (hy : InTab
     · unfold heapStart at s; omega
   · exact Or.inr g
 
+/-- Safe runtime windows miss the physically named table recorded in this
+selected heap ledger. -/
+theorem F1HeapSafe.named_out {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
+    (h : LibHeapAt H cap chs c) {w : W} (safe : F1HeapSafe w) {x : Nat} (read : NamedRead c x) :
+    x < w.lo ∨ w.hi ≤ x := by
+  have cov := h.named.read_covered read
+  have high : x < heapEnd := by
+    rcases cov with bucket | ⟨e, he, lo, hi⟩
+    · have bound : Layout.sym_named_value_table + 104 ≤ heapEnd := by decide
+      omega
+    · have bounds := h.ready.block_bounds he
+      omega
+  rcases Nat.lt_or_ge x w.lo with below | lo
+  · exact Or.inl below
+  rcases Nat.lt_or_ge x w.hi with hi | above
+  · exfalso
+    rcases safe with ⟨e, member, low, top⟩ | low | errno | ⟨top, static⟩
+    · obtain ⟨e', member', low', top'⟩ := extent_covered e member
+      exact h.named_fixed read member' ⟨by omega, by omega⟩
+    · omega
+    · have atErrno := errnoBytes_mem.mp (errno x lo hi)
+      rcases cov with bucket | ⟨e, he, elo, ehi⟩
+      · unfold InRange at atErrno
+        simp only [Layout.sym_named_value_table, Layout.sym_errno, Layout.sym_impure_data] at *
+        omega
+      · have bounds := h.ready.block_bounds he
+        simp only [InRange, heapStart] at atErrno bounds
+        omega
+    · rcases cov with bucket | ⟨e, he, elo, ehi⟩
+      · exact (static x lo hi).2.2 bucket
+      · have bounds := h.ready.block_bounds he
+        omega
+  · exact Or.inr above
+
+/-- A record write also misses the physically named table. -/
+theorem LibHeapAt.named_record_out {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
+    (h : LibHeapAt H cap chs c) {a : Nat} (ha : a ∈ chs) {w : W}
+    (lo : a ≤ w.lo) (hi : w.hi ≤ a + chanRecordBytes) {x : Nat} (read : NamedRead c x) :
+    x < w.lo ∨ w.hi ≤ x := by
+  have apart := h.named_record read ha
+  by_cases l : x < w.lo
+  · exact Or.inl l
+  · exact Or.inr (by apply Classical.byContradiction; intro no; exact apart ⟨by omega, by omega⟩)
+
 /-- **The F1 heap invariant survives writes confined to safe windows**, given
 byte equality outside them and an unchanged open-channel list head. -/
 theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c c' : Config}
@@ -295,6 +370,14 @@ theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List N
   recordsDisjoint := h.recordsDisjoint
   recordsAligned := h.recordsAligned
   tableIn := h.tableIn
+  named := by
+    have kept := h.named.frame (c' := c') fun x read => by
+      rw [Primitives.byte_total, Primitives.byte_total]
+      exact keep x fun w hw => (safe w hw).named_out h read
+    have words (off : Nat) (ho : off + 8 ≤ 56) : word c' (refTable + off) = word c (refTable + off) :=
+      structWord_keep (fun y hy => keep y fun w hw => (safe w hw).misses_table hy) ho
+    simpa only [namedBlocked, words Layout.off_ref_table_base (by decide),
+      words Layout.off_ref_table_end (by decide)] using kept
   table := h.table.congr fun y hy => keep y fun w hw => (safe w hw).misses_table hy
 
 /-- `LibHeapAt.keep_windows` for a frame. -/
@@ -371,6 +454,20 @@ theorem LibHeapAt.keep_records {H : List (Nat × Nat)} {cap : Nat} {chs : List N
   recordsApart := h.recordsApart
   recordsDisjoint := h.recordsDisjoint
   recordsAligned := h.recordsAligned
+  named := by
+    have kept := h.named.frame (c' := c') fun x read => by
+      rw [Primitives.byte_total, Primitives.byte_total]
+      exact keep x fun w hw => by
+        rcases safe w hw with safe | ⟨lo, hi, _⟩
+        · exact safe.named_out h read
+        · exact h.named_record_out ha lo hi read
+    have words (off : Nat) (ho : off + 8 ≤ 56) : word c' (refTable + off) = word c (refTable + off) :=
+      structWord_keep (fun y hy => keep y fun w hw => by
+      rcases safe w hw with safe | rec
+      · exact safe.misses_table hy
+      · exact rec.misses_table h ha hy) ho
+    simpa only [namedBlocked, words Layout.off_ref_table_base (by decide),
+      words Layout.off_ref_table_end (by decide)] using kept
   tableIn := h.tableIn
   table := h.table.congr fun y hy => keep y fun w hw => by
     rcases safe w hw with s | r
@@ -422,7 +519,8 @@ theorem LibHeapAt.link {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
     (fresh : ∀ e ∈ H, ∀ y, VsaIris.InExt (a, req) y → ¬ VsaIris.InExt e y)
     (linked : OpenChannelsLinked c.σ.mem c'.σ.mem a)
     (keepTable : ∀ y, InTableWords y → (c'.σ.mem[y]?).getD 0 = (c.σ.mem[y]?).getD 0)
-    (keepLinks : ∀ b ∈ chs, bytesT c'.σ.mem (b + chanOffNext) 8 = bytesT c.σ.mem (b + chanOffNext) 8) :
+    (keepLinks : ∀ b ∈ chs, bytesT c'.σ.mem (b + chanOffNext) 8 = bytesT c.σ.mem (b + chanOffNext) 8)
+    (keepNamed : ∀ x, NamedRead c x → byte c' x = byte c x) :
     LibHeapAt ((a, req) :: H) cap' (a :: chs) c' where
   room := by
     rw [structWord_keep keepTable (by decide)]
@@ -490,6 +588,21 @@ theorem LibHeapAt.link {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
         · dsimp only at o
           exact Or.inl (by have := st.limitEnd; have := st.ptrLimit; have := st.low; omega)
       · exact st.apartRecords b hb
+  named := by
+    have low := (ready.block_bounds List.mem_cons_self).1
+    have ledger := h.named.allocate low big fresh keepNamed
+    have words (off : Nat) (ho : off + 8 ≤ 56) : word c' (refTable + off) = word c (refTable + off) :=
+      structWord_keep keepTable ho
+    apply ledger.restrict
+    intro e he
+    simp only [namedBlocked, words Layout.off_ref_table_base (by decide),
+      words Layout.off_ref_table_end (by decide), List.map_cons, List.mem_append,
+      List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false] at he ⊢
+    rcases he with (he | he | he) | he
+    · exact Or.inr (Or.inl (Or.inl he))
+    · exact Or.inl he
+    · exact Or.inr (Or.inl (Or.inr he))
+    · exact Or.inr (Or.inr he)
   tableIn := List.mem_cons_of_mem _ h.tableIn
 
 end OCaml.Vm.Gc
@@ -519,7 +632,8 @@ theorem LibHeapAt.grow {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
       word c (Boot.WhileMinRuntime.domain + Layout.off_minor_heap_wsz))
     (head : bytesT c'.σ.mem Layout.sym_caml_all_opened_channels 8 =
       bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8)
-    (keepLinks : ∀ b ∈ chs, bytesT c'.σ.mem (b + chanOffNext) 8 = bytesT c.σ.mem (b + chanOffNext) 8) :
+    (keepLinks : ∀ b ∈ chs, bytesT c'.σ.mem (b + chanOffNext) 8 = bytesT c.σ.mem (b + chanOffNext) 8)
+    (keepNamed : ∀ x, NamedRead c x → byte c' x = byte c x) :
     LibHeapAt ((p, req) :: H) cap' chs c' where
   room := by
     have r := h.room
@@ -560,6 +674,16 @@ theorem LibHeapAt.grow {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
         rcases fresh_apart_covered fresh (h.records a ha) record_pos (n := req) (by omega) (Nat.le_refl _) with o | o
         · exact Or.inl o
         · exact Or.inr o }
+  named := by
+    have low := (ready.block_bounds List.mem_cons_self).1
+    have ledger := h.named.allocate low (Nat.le_refl req) fresh keepNamed
+    apply ledger.restrict
+    intro e he
+    simp only [namedBlocked, base', end', nonzero, ite_false, Nat.add_sub_cancel_left, List.mem_append, List.mem_cons,
+      List.mem_singleton, List.not_mem_nil, or_false] at he ⊢
+    rcases he with he | he
+    · exact Or.inr (Or.inl he)
+    · exact Or.inl he
   tableIn := List.mem_cons_of_mem _ h.tableIn
 
 end OCaml.Vm.Gc

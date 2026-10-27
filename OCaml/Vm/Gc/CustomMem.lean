@@ -81,6 +81,10 @@ def domainAddr (c : Config) (offset : Nat) : Nat :=
 /-- What callers write around the call: the runtime's custom-allocation state
 lies apart from it. -/
 structure CallerApart (c : Config) (a : Nat) : Prop where
+  /-- The custom table/state owns allocations separate from the physical
+  named table. The custom allocator producer supplies this resource separation;
+  fresh growth preserves it against the same selected live-block ledger. -/
+  named : ¬ NamedRead c a
   belowStack : a < Vsa.Sim.DlHeap.heapEnd
   minor : a < minorRegion.lo ∨ minorRegion.hi ≤ a
   records : ∀ chs, OpenChannelList c.σ.mem chs → ∀ r ∈ chs, a < r ∨ r + chanOffBuff + OCaml.Bytecode.ioBufferSize ≤ a

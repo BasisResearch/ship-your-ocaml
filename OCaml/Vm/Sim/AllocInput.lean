@@ -39,7 +39,7 @@ theorem _root_.OCaml.Vm.Primitives.PayloadOutside.append {l1 l2 : List WEntry} {
      (h2.heap l a o live placed object),
    fun id ch a hch hcp => outLRange_append (h1.channels id ch a hch hcp) (h2.channels id ch a hch hcp),
    outLRange_append h1.ooId h2.ooId, outLRange_append h1.openHead h2.openHead,
-   outLRange_append h1.argv h2.argv⟩
+   outLRange_append h1.argv h2.argv, fun x f => outLRange_append (h1.named x f) (h2.named x f)⟩
 
 theorem _root_.OCaml.Vm.Primitives.ImageOutside.append {l1 l2 : List WEntry}
     (h1 : ImageOutside l1) (h2 : ImageOutside l2) : ImageOutside (l1 ++ l2) :=
@@ -85,7 +85,7 @@ theorem StackGeometry.young_payload {P : Prog} {s : St} {c : Config} {pl : Place
     grab_out (by omega)
   refine ⟨static _ (by decide), field _ (by decide), field _ (by decide), static _ (by decide),
     static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_, static _ (by decide), static _ (by decide),
-    static _ (by decide)⟩
+    static _ (by decide), ?_⟩
   · intro i w hw
     obtain ⟨hc, -⟩ := g.domainCode
     have bound : i < P.code.size := (Array.getElem?_eq_some_iff.mp hw).1
@@ -100,6 +100,7 @@ theorem StackGeometry.young_payload {P : Prog} {s : St} {c : Config} {pl : Place
     have apart := g.domainHeap l b o placed object
     exact ⟨young_apart (Gc.outW_sub apart (by omega) (by omega)), young_apart (Gc.outW_sub apart (by omega) (by omega))⟩
   · exact fun id ch b hch hcp => young_apart (g.domainChannels id ch b hch hcp)
+  · exact fun x f => young_apart (g.domainNamed x f)
 
 /-- The young-pointer store misses the executable image. -/
 theorem StackGeometry.young_image {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}

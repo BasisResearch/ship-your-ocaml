@@ -1107,10 +1107,29 @@ theorem libHeap_of {c : Config}
     rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl
   have reserve : reserved (word c (refTable + Layout.off_ref_table_base)).toNat ([] : List Nat).length ≤ cap := by
     rw [base]; simp only [reserved, tableCharge, recordCharge, maxChannels, if_true, List.length_nil] at *; omega
+  have namedLedger : NamedLedger H (namedBlocked [] c) c := by
+    have buckets : ∀ b, b < 13 → word c (Layout.sym_named_value_table + 8 * b) = 0 := by
+      intro b hb
+      unfold word
+      rw [bytesT_memEqv memory, ← bytesT_memEqv WhileMin.memory_equiv]
+      exact WhileMin.namedBuckets b hb
+    refine ⟨WhileMinHeap.place, [], fun _ => [], NamedRepr.empty c _ buckets, NamedOwned.empty H _, ?_⟩
+    intro x f e he inside
+    have bucket := NamedPlFoot.empty.mp f
+    have member : e ∈ f1Covered := by
+      simp only [namedBlocked, List.map_nil, List.append_nil, base, ite_true, List.not_mem_nil, or_false,
+        List.mem_append, List.mem_singleton] at he
+      exact he
+    have low : Vsa.Sim.DlHeap.heapStart ≤ e.1 := by
+      have all : ∀ e ∈ f1Covered, Vsa.Sim.DlHeap.heapStart ≤ e.1 := by decide
+      exact all e member
+    have bound : Layout.sym_named_value_table + 104 ≤ Vsa.Sim.DlHeap.heapStart := by decide
+    have := inside.1
+    omega
   refine ⟨H, cap, [], ⟨reserve, by decide, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h),
     (fun _ h => by cases h), (fun _ h => by cases h), ⟨WhileMinEntry.read_ref_table memory, WhileMinEntry.read_minor_heap_wsz memory,
       Or.inl ⟨?_, ?_, ?_⟩⟩,
-    exact _ List.mem_cons_self⟩⟩
+    exact _ List.mem_cons_self, namedLedger⟩⟩
   rotate_left
   · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl
   · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_ptr memory]; rfl

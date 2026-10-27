@@ -17,9 +17,9 @@ theorem counter_out_above {v : BitVec 64} {x n : Nat} (h : Layout.sym_bss_end �
   have : Layout.sym_oo_last_id + 8 ≤ Layout.sym_bss_end := by decide
   exact ⟨Or.inr (by dsimp only; omega), trivial⟩
 
-/-- A static word other than the counter misses the counter store. -/
-theorem counter_out_static {v : BitVec 64} {x : Nat} (h : x + 8 ≤ Layout.sym_oo_last_id ∨ Layout.sym_oo_last_id + 8 ≤ x) :
-    OutLRange (counterLog v) x 8 :=
+/-- A range outside the counter misses its store. -/
+theorem counter_out_static {v : BitVec 64} {x n : Nat} (h : x + n ≤ Layout.sym_oo_last_id ∨ Layout.sym_oo_last_id + 8 ≤ x) :
+    OutLRange (counterLog v) x n :=
   ⟨by dsimp only; omega, trivial⟩
 
 /-- F1's runtime invariant ignores the counter word (a6-gc's `ignoredStatics`). -/
@@ -76,7 +76,13 @@ theorem prim_caml_fresh_oo_id_returns {L : OCaml.Layout} {P : Prog} {ra : BitVec
           have := SG.heapLow l a o placed object
           exact ⟨counter_out_above (by omega), counter_out_above (by omega)⟩,
         fun id ch a hch hcp => counter_out_above (SG.channelLow id ch a hch hcp),
-        counter_out_static (by decide)⟩ }
+        counter_out_static (by decide), fun x f => by
+          apply counter_out_static
+          rcases SG.namedLow x f with ⟨lo, hi⟩ | lo
+          · have bound : Layout.sym_oo_last_id + 8 ≤ Layout.sym_named_value_table := by decide
+            exact Or.inr (by omega)
+          · have bound : Layout.sym_oo_last_id + 8 ≤ Layout.sym_bss_end := by decide
+            exact Or.inr (by omega)⟩ }
   have S := caml_fresh_oo_id_primitive counterStable input
   apply ccall_writing_summary (S.weaken (fun _ h => h) (fun _ p => p.toPrimitivePost)) (by decide)
     (fun after m => outsideLog_of_observedLog fun a => by rw [m]) setup.saved

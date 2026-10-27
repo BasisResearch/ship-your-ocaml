@@ -70,8 +70,10 @@ theorem OpenedRecord.flagsDir {out : Bool} {m : Std.ExtHashMap Nat (BitVec 8)} {
 /-- **A byte outside the opening's windows**: below the arena's end, outside
 the statics the opening writes, apart from the record and from the old head's
 `prev` word. -/
-theorem outW_openWindows {sp p head : BitVec 64} {y : Nat} (frame : NativeFrame sp 592) (below : y < heapEnd)
-    (stat : y < heapStart → 0x80064aa0 ≤ y ∧ y < 0x80064aa8)
+theorem outW_openWindows_static {sp p head : BitVec 64} {y : Nat} (frame : NativeFrame sp 592) (below : y < heapEnd)
+    (errno₁ : y < 0x80064668 ∨ 0x8006466c ≤ y)
+    (errno₂ : y < 0x80064d48 ∨ 0x80064d4c ≤ y)
+    (headWord : y < 0x80064b40 ∨ 0x80064b48 ≤ y)
     (recApart : y < p.toNat ∨ p.toNat + recordBytes ≤ y)
     (hd : head ≠ 0#64 → y < head.toNat + 56 ∨ head.toNat + 64 ≤ y) :
     OutW (openWindows (sp - 16#64) p head) y := by
@@ -87,21 +89,27 @@ theorem outW_openWindows {sp p head : BitVec 64} {y : Nat} (frame : NativeFrame 
   · simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
     rcases hw with rfl | rfl | rfl | rfl | rfl
     · left; dsimp only; rw [sp16]; arena_omega
-    · rcases Nat.lt_or_ge y heapStart with l | g
-      · have := stat l; dsimp only; omega
-      · right; dsimp only; omega
-    · rcases Nat.lt_or_ge y heapStart with l | g
-      · have := stat l; dsimp only; omega
-      · right; dsimp only; omega
+    · exact errno₁
+    · exact errno₂
     · exact recApart
-    · rcases Nat.lt_or_ge y heapStart with l | g
-      · have := stat l; dsimp only; omega
-      · right; dsimp only; omega
+    · exact headWord
   · by_cases hz : head = 0#64
     · simp [hz] at hw
     · simp only [hz, ite_false, List.mem_singleton] at hw
       subst hw
       exact hd hz
+
+/-- The original static-band instance of the general opening-window frame. -/
+theorem outW_openWindows {sp p head : BitVec 64} {y : Nat} (frame : NativeFrame sp 592) (below : y < heapEnd)
+    (stat : y < heapStart → 0x80064aa0 ≤ y ∧ y < 0x80064aa8)
+    (recApart : y < p.toNat ∨ p.toNat + recordBytes ≤ y)
+    (hd : head ≠ 0#64 → y < head.toNat + 56 ∨ head.toNat + 64 ≤ y) :
+    OutW (openWindows (sp - 16#64) p head) y := by
+  apply outW_openWindows_static frame below ?_ ?_ ?_ recApart hd
+  all_goals
+    rcases Nat.lt_or_ge y heapStart with low | high
+    · have := stat low; omega
+    · simp only [heapStart] at high; omega
 
 /-! ### The whole primitive -/
 

@@ -128,12 +128,13 @@ theorem StackGeometry.edit {P : Prog} {s : St} {c : Config} {pl : Place} {cp : C
     · simp only [stackWindow] at ho ⊢; omega
   refine ⟨⟨static _ (by decide), domainField _ (by decide), domainField _ (by decide),
     static _ (by decide), static _ (by decide), static _ (by decide), ?_, ?_, ?_, ?_, static _ (by decide),
-    static _ (by decide), static _ (by decide)⟩, ?_⟩
+    static _ (by decide), static _ (by decide), ?_⟩, ?_⟩
   · exact fun i w hw => outLRange_of_windows inside (g.code i w hw)
   · intro i v hv
     cases hv
   · exact fun l a o _ placed object => objects l a o placed object
   · exact fun id ch a hch hcp => outLRange_of_windows inside (g.channels id ch a hch hcp)
+  · exact fun x f => outLRange_of_windows inside (g.named x f)
   · exact fun l a o _ placed object => objects l a o placed object
 
 /-- A stack slot write is runtime-stable, writable and separated. -/

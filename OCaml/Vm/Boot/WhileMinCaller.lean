@@ -116,6 +116,7 @@ theorem caller_outside :
       Layout.sym_caml_callback_depth, Layout.off_external_raise, BitVec.toNat_ofNat]
     have bounds : Layout.sym_caml_callback_depth + 4 ≤ Layout.sym_named_value_table ∧
         Layout.sym_named_value_table + 104 ≤ 0x8007d150 := by decide
+    simp only [Layout.sym_caml_callback_depth] at bounds
     exact ⟨Or.inl (by omega), Or.inr (by omega), Or.inl (by omega), trivial⟩
 
 /-- A register with an assignment in the captured table is present. -/
@@ -255,7 +256,7 @@ theorem stackGeometry_of {c : Config} (memory : Vsa.Densify.MemEqv c.σ.mem
         have bucket := NamedPlFoot.empty.mp f
         have bound : Layout.sym_named_value_table + 104 ≤ 0x8007d150 := by decide
         rw [domain_word]
-        exact ⟨Or.inl (by dsimp only; omega), trivial⟩
+        exact ⟨Or.inl (by dsimp only; simp only [BitVec.toNat_ofNat]; omega), trivial⟩
       heapNamed := fun l a o ha ho x f => by
         have bucket := NamedPlFoot.empty.mp f
         have band := obj ha ho

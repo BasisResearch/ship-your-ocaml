@@ -99,6 +99,23 @@ theorem kept_static {H : List (Nat × Nat)} {sp tbl : BitVec 64} {a : Nat} (low 
     (notAlloc : ¬ allocGlobal a) : Realloc.Kept H sp tbl a :=
   Or.inr (Or.inl ⟨low, notAlloc⟩)
 
+/-- Named bytes are live in the matching selected ledger and lie outside the
+remembered-set struct, so realloc's shared frame keeps them. -/
+theorem LibHeapAt.named_realloc_kept {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat}
+    {c : Config} (h : LibHeapAt H cap chs c) {sp : BitVec 64} {x : Nat} (read : NamedRead c x) :
+    Realloc.Kept H sp (BitVec.ofNat 64 refTable) x := by
+  have notStruct := h.named_fixed read (by decide : (refTable, 56) ∈ f1Covered)
+  have outStruct : x < refTable ∨ refTable + 56 ≤ x := by
+    by_cases l : x < refTable
+    · exact Or.inl l
+    · exact Or.inr (by apply Classical.byContradiction; intro no; exact notStruct ⟨by omega, by omega⟩)
+  rcases h.named.read_covered read with bucket | cov
+  · apply kept_static (by simp only [Layout.sym_named_value_table, heapStart] at *; omega)
+    unfold allocGlobal InRange
+    simp only [Layout.sym_named_value_table] at bucket
+    omega
+  · exact kept_covered h (x := (x, 1)) cov (Nat.le_refl _) (by omega) outStruct
+
 omit [OCaml.Vm.Boot.Startup.LibraryLive live] in
 /-- A word whose bytes the growth call keeps (and that misses the slot) is unchanged. -/
 theorem grow_word {H : List (Nat × Nat)} {capacity : Nat} {slot v ra sp tbl wsz : BitVec 64} {c c' : Config}
@@ -225,11 +242,29 @@ theorem f1_afterGrow {c c' : Config} {H : List (Nat × Nat)} {cap : Nat} {chs : 
     refine grow_word g (fun j hj => kept_covered h (h.records b hb) (by dsimp only; omega)
       (by dsimp only; omega) (by rcases st with o | o <;> omega)) ?_
     rcases slotChunks with ⟨lo, hi⟩ | ⟨lo, hi⟩ <;> simp only [minorRegion, majorRegion] at * <;> omega
+  have keepNamed : ∀ x, NamedRead c x → byte c' x = byte c x := by
+    intro x read
+    have kept := h.named_realloc_kept (sp := sp) read
+    have outSlot : x < (slot + BitVec.ofNat 64 0).toNat ∨
+        (slot + BitVec.ofNat 64 0).toNat + 8 ≤ x := by
+      have notIn (e : Nat × Nat) (he : e ∈ f1Covered)
+          (lo : e.1 ≤ (slot + BitVec.ofNat 64 0).toNat)
+          (hi : (slot + BitVec.ofNat 64 0).toNat + 8 ≤ e.1 + e.2) :
+          x < (slot + BitVec.ofNat 64 0).toNat ∨ (slot + BitVec.ofNat 64 0).toNat + 8 ≤ x := by
+        have apart := h.named_fixed read he
+        by_cases l : x < (slot + BitVec.ofNat 64 0).toNat
+        · exact Or.inl l
+        · exact Or.inr (by apply Classical.byContradiction; intro no; exact apart ⟨by omega, by omega⟩)
+      rcases slotChunks with ⟨lo, hi⟩ | ⟨lo, hi⟩
+      · exact notIn (minorRegion.lo, minorRegion.hi - minorRegion.lo) (by decide) lo (by dsimp only; simp only [minorRegion] at *; omega)
+      · exact notIn (majorRegion.lo, majorRegion.hi - majorRegion.lo) (by decide) lo (by dsimp only; simp only [majorRegion] at *; omega)
+    rw [byte_total, byte_total]
+    exact g.kept x kept outSlot
   have pNat := g.nonzero
   have pAl := g.aligned
   refine f1_transfer keep (fun _ => ⟨_, _, chs, LibHeapAt.grow h g.ready.heap (charge := tableCharge)
     (by omega) (Nat.le_refl _) empty g.disjoint pNat (by omega) (lim := 262144) (by decide) (by decide)
-    (by decide) ?_ ?_ ?_ ?_ (domWord _ (by decide)) (domWord _ (by decide)) head links⟩) ok
+    (by decide) ?_ ?_ ?_ ?_ (domWord _ (by decide)) (domWord _ (by decide)) head links keepNamed⟩) ok
   · have b := g.base
     rw [tblNat] at b
     simp only [Layout.off_ref_table_base, Nat.add_zero]

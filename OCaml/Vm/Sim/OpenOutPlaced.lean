@@ -70,7 +70,22 @@ theorem open_out_placed {L : OCaml.Layout} {P : Prog} {s t : St} {pl : Place} {c
   have Mh : Gc.majorRegion.lo ≤ Gc.majorRegion.hi := by decide
   refine {
     stack := ?_, heap := ?_, arena := ?_, low := ?_, code := ?_, atoms := ?_, prims := ?_, apart := ?_,
-    domain := ?_, nursery := ?_, private_ := ?_ }
+    domain := ?_, nursery := ?_, private_ := ?_, named := ?_ }
+  · intro x f
+    rw [worldT] at f
+    obtain ⟨chains, table⟩ := data.named
+    rcases heap.named.covered table f with bucket | cov
+    · have low := o.opening.low
+      have endBucket : Layout.sym_named_value_table + 104 ≤ Vsa.Sim.DlHeap.heapStart := by decide
+      exact ⟨Or.inl (by dsimp only; omega), trivial⟩
+    · have apart := Gc.fresh_apart_covered fresh (x := (x, 1)) cov (by simp : 0 < (x, 1).2)
+        (n := recordBytes) (by unfold recordBytes; decide) (Nat.le_refl _)
+      have small : chanOffBuff + ioBufferSize ≤ recordBytes := by decide
+      refine ⟨?_, trivial⟩
+      dsimp only at apart ⊢
+      rw [Nat.add_assoc]
+      omega
+
   · have he : (Boot.WhileMinEntry.high - Layout.stackBytes, Layout.stackBytes) ∈ Gc.f1Covered := by
       simp [Gc.f1Covered]
     have below : Layout.stackBytes ≤ Boot.WhileMinEntry.high := by decide

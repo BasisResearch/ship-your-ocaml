@@ -38,6 +38,7 @@ structure BarrierRuntime (L : OCaml.Layout) : Prop where
     ∀ (P : Prog) (s : St) (pl : Place) (cp : ChanPlace) (high : Nat), OCaml.LoopGeometry L P s c pl cp high →
       (word c Layout.sym_caml_start_code).toNat = pl.codeBase →
       (word c ((word c Layout.sym_Caml_state).toNat + Layout.off_stack_high)).toNat = high →
+      (∃ chains, NamedRepr c pl s.world.named chains) →
       Gc.WindowSeparated ⟨tbl.toNat, tbl.toNat + 40⟩ P s c pl cp high ∧
       (ptr.toNat < limit.toNat → Gc.WindowSeparated ⟨ptr.toNat, ptr.toNat + 8⟩ P s c pl cp high)
   /-- an insertion with room keeps the runtime -/
@@ -459,7 +460,7 @@ theorem barrier_core {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : C
     have eP : ptr' = ptr := table'.ptrWord.symm.trans table2.ptrWord
     have eL : limit' = limit := table'.limitWord.symm.trans table2.limitWord
     rw [eP, eL] at arena' sepAll
-    have sep := sepAll P _ pl cp high st2.geometry st2.data.codeBase st2.data.stackHigh
+    have sep := sepAll P _ pl cp high st2.geometry st2.data.codeBase st2.data.stackHigh st2.data.named
     obtain ⟨tA, pA⟩ := arena'
     have pA := pA room
     have sepT := sep.1
@@ -610,7 +611,7 @@ theorem barrier_summary {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp 
   obtain ⟨D, inv, v⟩ := input.native
   obtain ⟨tbl, ptr, limit, table, arena, sepAll⟩ := br.table c input.runtime
   have rem := barrier_remembered (D := D) input v placed selected bound table arena
-    (sepAll P s pl cp high input.geometry input.data.codeBase input.data.stackHigh)
+    (sepAll P s pl cp high input.geometry input.data.codeBase input.data.stackHigh input.data.named)
   by_cases noGrow : Gc.Barrier.NoGrow (bytesT c.σ.mem (word c Layout.sym_Caml_state + BitVec.ofNat 64 32).toNat 8)
       (bytesT c.σ.mem (word c Layout.sym_Caml_state + BitVec.ofNat 64 40).toNat 8)
       (BitVec.ofNat 64 (a + 8 * i)) (bytesT c.σ.mem (BitVec.ofNat 64 (a + 8 * i) + BitVec.ofNat 64 0).toNat 8)

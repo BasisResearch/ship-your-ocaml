@@ -2,67 +2,74 @@
 
 ## Current status
 
-**2026-10-21 named-invariant propagation: checked partial work; blocked on physical geometry.**
-Resumed preserved WIP at `4d2ea805`; the four earlier producer repairs remain
-intact. The inherited `NurseryGeometry.transport_ids`/`transport`/`frame_log`/
-`alloc` repair builds. Named-table facts now propagate through `ArmGeometry`
-and `LoopGeometry`. No `GoodF1` guard or F1 call premise was added.
+**2026-10-27 physical named migration complete: checked worktree ready for lead review.**
+The preserved `NamedRepr`, stronger `StackGeometry`, `LogWindows.named`,
+`LoadedAt.named`, and arbitrary-byte/first-NUL lookup work remain intact.
+No `GoodF1` restriction was added. The old alias witness now explicitly
+uses `OldStackGeometry`; `StackGeometry.named_domain_disjoint` excludes it
+from the strengthened invariant. The witness remains history, not a reason
+to weaken that invariant.
 
-The arbitrary-byte library contract gap is repaired. `Vsa.MemRepr.CStr`
-accepts the complete byte range; the byte/word strcmp proofs were changed in
-`experiments/syi/while-elf-only/Vsa/Sim/StrcmpSpec{,W3}.lean` and regenerated
-with `scripts/retarget_library_sites.py`. `NamedNode` accepts arbitrary
-nonzero key bytes. `nameBytes`/`strOf_nameBytes` preserve BcSem's first-NUL
-`namedValueKey`; footprints still use character counts, not UTF-8 lengths.
-`NamedNode.cstring`/`nodeAt`, `NamedChain.tableChain`/`bounds`, and
-`NamedRepr.namedAt` now supply the dense lookup contract from the preserved
-loop representation, without an ASCII premise.
+`Gc.NamedLedger` links the physical named table to the **selected** live-block
+list in `LibHeapAt H cap chs c`. Its snapshot includes `NamedOwned H`, and
+`NamedRepr.foot_eq` matches that snapshot to the consumer's representation
+using physical chain addresses and terminated-key lengths. It does not infer
+ownership for arbitrary `HeapReady H`, or put dynamic nodes in `f1Covered`.
+`namedBlocked` separates nodes from fixed runtime allocations, channel
+records, and allocated remembered-set storage. Startup, safe-window and
+record frames, insertion, linking, and growth preserve that selected witness.
+`NamedOwned.append` and `.values` supply the new-node and replacement
+ownership constructors using actual requested sizes, without fixed name
+length or registration-count limits.
 
-Named-memory frames use the shared `NamedRepr.frame_outsideLog` in
-`VmPayload.frame_obs` and `payload_rebuild_accu`. `PayloadObserved` and
-`PayloadCoreOutside` include named bytes; `WindowSeparated.payload` consumes
-its existing named separation. These affected producer targets all build:
-`Named.NamedAt`, `Sim.PayloadObserved`, `Sim.PayloadRestore`,
-`Gc.NurseryGeometry`, `Sim.LoopGeometry`, `Sim.NamedGeometryObstruction`,
-and `Vsa.Sim.StrcmpSpecCond` (1,495 jobs including dependencies). Final log:
-`/tmp/a1-named-producers-checked.log`.
+The channel-opening consumer uses that ledger for malloc freshness and
+preservation of named bytes. `CallerApart.named` states the required custom
+state separation inside the existing `CustomMemCall` contract. Its concrete
+machine supplier remains an explicit obligation, alongside the rest of that
+contract; the consumer no longer tries to derive it from `.free` or from
+fixed extent coverage. The remembered-set separation interface consumes the
+already represented named table. Console and allocation consumers retain
+named bytes through the shared payload, geometry and log frames. The
+channel-list runtime entry exports `NamedLedger H [] c` alongside
+`HeapReady H cap c` for the walk's same `H`; `out_list_entry` derives named
+read safety from that matching witness and the represented table, and
+`PayloadMisses.named` carries it through the predicate frame. This checked
+conditional producer does not discharge the concrete `OutListRuntime` machine
+supplier. Startup's bucket proof reads the checked log's final view, including
+its zero stores.
 
-**Precise remaining obstruction:** `StackGeometry` separates named bytes
-from the VM stack but not from `Caml_state`. The kernel-checked
-`StackGeometry.named_domain_alias` in `Sim/NamedGeometryObstruction.lean`
-constructs that geometry with a placed named node at `extern_sp` and proves
-that an eight-byte store there overlaps the named footprint. This refutes
-the geometry-only frame route; it does not assert the alias is reachable.
-Consequently `LogWindows`'s `.field` case cannot derive the new
-`PayloadCoreOutside.named` from its current hypotheses. By inspection, its
-native-stack and object-store routes also need named-node bounds and
-separation; channel-allocation frames need live malloc ownership for named
-nodes beyond the fixed `f1Covered` regions. Those physical invariant facts
-must come from allocation/ownership producers, rather than an extra premise
-excluding successful F1 calls.
+Focused producer/consumer validation passes with 2,442 jobs:
+`scripts/lean-capped.sh lake build OCaml.Vm.Gc.F1Grow
+OCaml.Vm.Sim.OpenOutReturn OCaml.Vm.Gc.NamedOwnership`
+(`/tmp/a1-named-consumers-next.log`). The additional `Sim.F1Growth` and
+`Sim.PrimMlOutput` focused consumer build passes with 2,556 jobs
+(`/tmp/a1-named-growth.log`). The channel-list and channel-opening return
+check passes with 2,409 jobs (`/tmp/a1-named-outlist.log`). The complete
+`scripts/lean-capped.sh lake build OCaml` passes with **4,151 jobs**
+(`/tmp/a1-named-complete.log`).
 
-The affected consumer check, `scripts/lean-capped.sh lake build
-OCaml.Vm.Sim.PayloadWindows`, fails at lines 168/186 (missing named payload
-fields) and 235/260/277 (missing named window fields). Exact log:
-`/tmp/a1-named-consumer-obstruction.log`. The full OCaml build and complete
-gate remain open; no passing full build is claimed. The old failure in
-`/tmp/syo-prims-full.log` was the nursery constructor, now repaired.
+The focused audit, `scripts/lean-capped.sh lake env lean
+/tmp/a1-named-physical-audit.lean`, passes with **71 reports**, all using only
+`propext`, `Classical.choice`, and `Quot.sound`
+(`/tmp/a1-named-physical-audit.log`, checked by
+`/tmp/a1-named-physical-audit-check.txt`). Every focused report is registered
+in `OCaml/Audit.lean`; its full execution remains the lead gate.
 
-Validation: 43 focused axiom reports use only `propext`, `Classical.choice`,
-and `Quot.sound` (`/tmp/a1-named-audit.lean`, `/tmp/a1-named-audit.log`);
-registered in `OCaml/Audit.lean`. Hole, discipline (27 rules), library
-regeneration, abstraction gate, wrapper shell syntax and `git diff --check`
-pass. Regenerated `abstractions/clusters.tsv` through its census script;
-its only change is the inherited `vmReprAt_reloc` count, 34 to 36.
+**Separate primitive-machine obligations:** this migration does not discharge
+`F1CcallOpen.openOutRuntime`, `.outListRuntime`,
+`.register_named_value_c_call2`, or `.format_int_c_call2`. The existing
+`register_named_value_run` is a native summary; the represented C_CALL adapter
+and its runtime/resource post remain separate work. `CustomMemCall` remains
+a named premise, including the physical named/custom separation supplier.
+`BarrierGrowthFull` remains with G2; C4 discovery round 2 waits for F1.
 
-All builds/audits used the 12 GB inherited cgroup, two Lean threads and a
-preceding `free -g` check (available memory stayed above 25 GB). The manager
-canceled overlapping interrupted attempts and added per-worktree
-`flock --close` serialization to `scripts/lean-capped.sh`; that manager edit
-is preserved, and the final producer build/audit/consumer check used it.
-No Git metadata or landing queue was written. The lead owns commits and
-integration. `BarrierGrowthFull` remains G2, `CustomMemCall` remains a named
-premise, and C4 round 2 waits for F1.
+Builds use the inherited 12 GB cgroup and two Lean threads, with `free -g`
+before each command and the per-worktree lock. Failed builds are terminated
+before retrying. No virtual-address limit, heartbeat increase, hole, or
+new trust primitive was introduced. Hole, discipline and abstraction checks
+and `git diff --check` pass. No generated Lean source was edited. The preserved
+checkpoint is `ca56c230`. Git metadata and the landing queue remain untouched;
+the lead reviews, commits, and lands through `scripts/integrate.sh`.
 
 **Console output (in progress, shared by all channel primitives):**
 * `ConsoleWrite.write_console` (`Console/Write.lean`): newlib `_write(fd, buf, n)` on a

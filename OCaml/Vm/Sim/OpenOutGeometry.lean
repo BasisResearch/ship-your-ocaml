@@ -33,7 +33,8 @@ theorem open_out_geometry {L : OCaml.Layout} {P : Prog} {s s' : St} {pl : Place}
     (pins : Gc.F1Pins c) (data : VmPayload P s c pl cp spV high) (g : OCaml.LoopGeometry L P s c pl cp high)
     (placed : pl.φ (s.heap.alloc (.channel s.world.chans.length)).2 = some o.value.toNat)
     (heapS : s'.heap = (s.heap.alloc (.channel s.world.chans.length)).1)
-    (chansS : s'.world.chans = s.world.chans ++ [ch]) :
+    (chansS : s'.world.chans = s.world.chans ++ [ch])
+    (namedS : s'.world.named = s.world.named := by first | rfl | assumption) :
     OCaml.LoopGeometry L P s' d pl (cp.put s.world.chans.length o.opening.record.toNat) high := by
   have block := o.block
   have low := N.low
@@ -119,6 +120,6 @@ theorem open_out_geometry {L : OCaml.Layout} {P : Prog} {s s' : St} {pl : Place}
         (by unfold Gc.chanOffNext Gc.chanRecordBytes chanOffBuff ioBufferSize; omega)
         (fun _ => Or.inl (by unfold Gc.chanOffNext; omega))
   exact g₁.openChan new heapS chansS (by rw [o.domain, dom₁]) (by rw [primsD, prims₁])
-    (by rw [o.youngLimit, lim₁]) (by rw [o.youngPtr, ptr₁]) listed
+    (by rw [o.youngLimit, lim₁]) (by rw [o.youngPtr, ptr₁]) listed namedS
 
 end OCaml.Vm.Sim

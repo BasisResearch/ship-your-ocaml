@@ -105,6 +105,9 @@ theorem observed_kept {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPl
     rw [prims] at span
     exact block (Boot.WhileMinHeapChunks.primTablePayload, 8 * f1PrimCapacity) (by decide) (by decide) x
       (by dsimp only; have := span.1; omega) (by dsimp only; have := span.2; simp only [f1PrimCapacity] at *; omega)
+  | named f =>
+    obtain ⟨chains, table⟩ := data.named
+    exact h.named_realloc_kept ⟨pl, s.world.named, chains, table, f⟩
   | native hr span =>
     left
     rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt small]
@@ -157,7 +160,7 @@ theorem f1_barrierGrowth_gprs {P : Prog} {s : St} {pl : Place} {cp : ChanPlace} 
   obtain ⟨tbl', ptr', limit', t', arena, sep⟩ := f1_tableRuntime ok
   obtain ⟨rfl, rfl, rfl⟩ := table_unique t' (f1_table ok)
   have rem := barrier_remembered input v placed selected bound table arena
-    (sep P s pl cp high g input.data.codeBase input.data.stackHigh)
+    (sep P s pl cp high g input.data.codeBase input.data.stackHigh input.data.named)
   simp only [Gc.Barrier.NoGrow, not_or] at grows
   obtain ⟨notYoung, notOld, young, notRoom⟩ := grows
   have emptyNat : (word c (refTable + Layout.off_ref_table_base)).toNat = 0 := by

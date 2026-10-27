@@ -1,3 +1,4 @@
+import OCaml.Vm.Gc.NamedOwnership
 import OCaml.Vm.Sim.NamedGeometryObstruction
 import OCaml.Vm.Primitives.Named.NamedAt
 import OCaml.Vm.Gc.ChannelRefs
@@ -6787,3 +6788,56 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.TableChain.arena
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.TableCore.transport
 #print axioms OCaml.Vm.Primitives.Named.NamedValue.strOf_length
+
+-- Physical named ownership and geometry migration.
+#print axioms OCaml.Vm.NamedNode.key_length
+#print axioms OCaml.Vm.NamedChain.shape_eq
+#print axioms OCaml.Vm.NamedRepr.foot_complete
+#print axioms OCaml.Vm.NamedRepr.foot_eq
+#print axioms OCaml.Vm.NamedRepr.empty
+#print axioms OCaml.Vm.NamedPlFoot.empty
+#print axioms OCaml.Vm.NamedOwned.empty
+#print axioms OCaml.Vm.NamedOwned.mono
+#print axioms OCaml.Vm.NamedChain.place
+#print axioms OCaml.Vm.NamedRepr.place
+#print axioms OCaml.Vm.Gc.NamedOwned.covered
+#print axioms OCaml.Vm.Gc.NamedOwned.fresh
+#print axioms OCaml.Vm.Gc.NamedRepr.frame_owned
+#print axioms OCaml.Vm.Gc.NamedLedgerImage.frame
+#print axioms OCaml.Vm.Gc.NamedLedgerImage.mono
+#print axioms OCaml.Vm.Gc.NamedLedgerImage.covered
+#print axioms OCaml.Vm.Gc.NamedLedger.covered
+#print axioms OCaml.Vm.Gc.NamedLedger.apart
+#print axioms OCaml.Vm.Gc.NamedLedger.frame
+#print axioms OCaml.Vm.Gc.NamedLedger.read_covered
+#print axioms OCaml.Vm.Gc.NamedLedger.read_apart
+#print axioms OCaml.Vm.Gc.NamedLedger.mono
+#print axioms OCaml.Vm.Gc.NamedLedger.restrict
+#print axioms OCaml.Vm.Gc.NamedLedger.allocate
+#print axioms OCaml.Vm.Gc.LibHeapAt.named_fixed
+#print axioms OCaml.Vm.Gc.LibHeapAt.named_record
+#print axioms OCaml.Vm.Gc.LibHeapAt.named_storage
+#print axioms OCaml.Vm.Gc.F1HeapSafe.named_out
+#print axioms OCaml.Vm.Gc.LibHeapAt.named_record_out
+#print axioms OCaml.Vm.Primitives.Channel.outW_openWindows_static
+#print axioms OCaml.Vm.Primitives.Channel.named_kept
+#print axioms OCaml.Vm.Sim.console_named_static
+#print axioms OCaml.Vm.Sim.console_named_dynamic
+#print axioms OCaml.Vm.Sim.console_named
+#print axioms OCaml.Vm.Sim.StackGeometry.named_domain_disjoint
+#print axioms OCaml.Vm.Gc.NurseryGeometry.namedApart
+#print axioms OCaml.Vm.Sim.LogWindows.named
+#print axioms OCaml.Vm.Boot.WhileMin.namedBuckets
+
+#print axioms OCaml.Vm.Gc.NamedOwned.append
+#print axioms OCaml.Vm.Gc.NamedOwned.values
+#print axioms OCaml.Vm.Primitives.Uncaught.FatalUncaught.cstr_of_bytes
+
+#print axioms OCaml.Vm.Gc.LibHeapAt.named_realloc_kept
+
+-- Additional affected named-consumer audit reports.
+#print axioms OCaml.Vm.Boot.WhileMin.caller_outside
+#print axioms OCaml.Vm.Sim.counter_out_static
+
+#print axioms OCaml.Vm.Gc.NamedLedger.read_bounds
+#print axioms OCaml.Vm.Gc.NamedLedger.read_not_foot

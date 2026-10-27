@@ -178,6 +178,7 @@ structure PayloadMisses (W : Nat → Prop) (P : Prog) (s : St) (c : Config) (pl 
     Misses W a (8 * o.wosize)
   channels : ∀ id ch a, s.world.chans[id]? = some ch → cp id = some a →
     ∀ j, j < chanOffBuff + ioBufferSize → (j < 64 ∨ 68 ≤ j) → ¬ W (a + j)
+  named : ∀ x, NamedPlFoot pl s.world.named x → ¬ W x
 
 /-- **The VM payload across a footprint predicate.** -/
 theorem VmPayload.frame_on {P : Prog} {s : St} {c c' : Config} {pl : Place} {cp : ChanPlace} {sp high : Nat}
@@ -212,5 +213,7 @@ theorem VmPayload.frame_on {P : Prog} {s : St} {c c' : Config} {pl : Place} {cp 
     · rw [hw _ outside.ooId]; exact h.world.ooId
   · rw [hw _ outside.atomBase]; exact h.atomBase
   · rw [hw _ outside.argv]; exact h.argv
+  · obtain ⟨chains, table⟩ := h.named
+    exact ⟨chains, table.frame fun x f => memory x (outside.named x (table.foot_sub f))⟩
 
 end OCaml.Vm.Sim

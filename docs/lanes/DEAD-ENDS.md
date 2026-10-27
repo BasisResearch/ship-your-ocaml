@@ -90,3 +90,25 @@
   nodes have separate ownership. Do not add an unexplained successful-call
   premise or classify nodes as fixed extents to fill this gap. This is an
   inspection of the current contracts, not a checked execution obstruction.
+
+- 2026-10-27: separating named nodes only from `f1Covered` and channel records
+  omits the dynamically allocated remembered-set storage. Insertion writes
+  that storage too. `namedBlocked` now includes its live `[base,end)` region
+  when `base ≠ 0`; the startup, insertion and growth producers preserve it.
+  This was an interface inspection, not a reachable alias counterexample.
+- 2026-10-27: direct conversion between `(ch + chanOffBuff) + ioBufferSize`
+  and `ch + 65608` hit the kernel recursion limit in the console named frame.
+  Reassociate with `Nat.add_assoc` before converting the closed size. The
+  focused `ConsoleCall` build passes without increasing recursion or heartbeat
+  limits. This was a normalization failure, not a mathematical obstruction.
+- 2026-10-27: the startup bucket proof cannot assume the checked log contains
+  no stores to `named_value_table`: `decide +kernel` refuted that absence
+  claim. Read the compact log's final byte view with `observedMem_bytes`;
+  the stored values are zero. `WhileMin.namedBuckets` now checks that view.
+- 2026-10-27 resolution of the selected-heap gap above: `LibHeapAt.named`
+  carries a physical `NamedLedger` with `NamedOwned H`; footprint determinism
+  matches it to the represented table. Channel-list entry likewise returns
+  a ledger for the same `H` used by its allocation walk. Neither route
+  infers ownership from arbitrary `HeapReady H`. Custom-state separation is
+  explicit in the existing `CustomMemCall`/`CallerApart.named` contract;
+  its concrete machine discharge remains open and is not inferred from `.free`.

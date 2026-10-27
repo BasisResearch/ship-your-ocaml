@@ -251,7 +251,8 @@ theorem framed_of_ret {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : 
     (chans : w'.chans = s.world.chans.set id chn') (counter : w'.ooId = s.world.ooId)
     (rootsEq : roots P {s with world := w'} = roots P s)
     (repr : ChanAt e ch chn') (console : output e.σ = bytesToString w'.console)
-    (sem : primF1Impl name args s.heap s.world = .ok Val.unit s.heap w') :
+    (sem : primF1Impl name args s.heap s.world = .ok Val.unit s.heap w')
+    (named : w'.named = s.world.named := by first | rfl | assumption) :
     FramedPrimitivePost L.runtimeOk P s pl cp sp high name args Val.unit 1#64 s.heap w'
       (consoleLog D.nativeSp ch) c ra e := by
   have hr := valid.headroom
@@ -271,7 +272,7 @@ theorem framed_of_ret {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : 
     · exact ret.saved 8 (by decide)
     · exact ret.saved 18 (by decide)
     · exact ret.stack.trans inv.stack.symm
-  · exact (setup.input.data.frame_chan outside memory chans counter rootsEq record repr console).accu_int 0
+  · exact (setup.input.data.frame_chan outside memory chans counter rootsEq record repr console named).accu_int 0
 
 /-- What a channel update keeps: the descriptor, direction and read-ahead. -/
 structure ChanSame (chn chn' : Chan) : Prop where
@@ -358,6 +359,40 @@ structure ConsoleStatics : Prop where
 
 theorem consoleStatics : ConsoleStatics := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
+/-- Static bucket bytes miss all console windows. -/
+theorem console_named_static {nsp ch x : Nat}
+    (lo : Layout.sym_named_value_table ≤ x) (hi : x < Layout.sym_named_value_table + 104)
+    (chl : Layout.sym_bss_end ≤ ch) (nl : Vsa.Sim.DlHeap.heapEnd + 512 ≤ nsp) :
+    OutLRange (consoleLog nsp ch) x 1 := by
+  apply consoleLog_static
+  · have bound : Layout.sym_named_value_table + 104 ≤ 0x8007d138 := by decide
+    omega
+  · exact Or.inr (Nat.le_trans (by decide : 0x80064d48 + 4 ≤ Layout.sym_named_value_table) lo)
+  · exact Or.inr (Nat.le_trans (by decide : 0x80064668 + 4 ≤ Layout.sym_named_value_table) lo)
+  · exact chl
+  · exact Nat.le_trans (by decide : 0x8007d138 + 512 ≤ Vsa.Sim.DlHeap.heapEnd + 512) nl
+
+/-- Allocator-owned named bytes miss all console windows. -/
+theorem console_named_dynamic {nsp ch x : Nat} (lo : Layout.sym_bss_end ≤ x)
+    (hi : x + 1 ≤ Vsa.Sim.DlHeap.heapEnd)
+    (apart : OutWRange [⟨ch, ch + chanOffBuff + ioBufferSize⟩] x 1)
+    (nl : Vsa.Sim.DlHeap.heapEnd + 512 ≤ nsp) : OutLRange (consoleLog nsp ch) x 1 := by
+  apply consoleLog_arena lo hi _ nl
+  have separate := apart.1
+  dsimp only at separate
+  rw [Nat.add_assoc] at separate
+  exact separate
+
+/-- Console writes miss the statically allocated buckets and every named node. -/
+theorem console_named {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {high nsp id ch : Nat} {chn : Chan} (g : StackGeometry P s c pl cp high)
+    (nl : Vsa.Sim.DlHeap.heapEnd + 512 ≤ nsp) (chan : s.world.chans[id]? = some chn)
+    (record : cp id = some ch) : ∀ x, NamedPlFoot pl s.world.named x → OutLRange (consoleLog nsp ch) x 1 := by
+  intro x f
+  rcases g.namedLow x f with ⟨lo, hi⟩ | lo
+  · exact console_named_static lo hi (g.channelLow id chn ch chan record) nl
+  · exact console_named_dynamic lo (g.namedArena x f) (g.channelNamed id chn ch chan record x f) nl
+
 /-- **The console footprint misses the represented payload** (every channel
 record but the written one included). -/
 theorem console_outside {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
@@ -410,18 +445,7 @@ theorem console_outside {P : Prog} {s : St} {c : Config} {pl : Place} {cp : Chan
     rw [K.bss] at l'; rw [K.heap, K.record] at a'; rw [K.record] at ap ⊢
     exact consoleLog_arena l' (by omega) ap nl
 
-  · intro x f
-    have arena := g.namedArena x f
-    have apart := (g.channelNamed id chn ch chan record x f).1
-    have bucketBounds : Layout.sym_named_value_table + 104 ≤ 0x8007d138 ∧
-        0x80064d48 + 4 ≤ Layout.sym_named_value_table ∧
-        0x80064668 + 4 ≤ Layout.sym_named_value_table := by decide
-    rcases g.namedLow x f with ⟨lo, hi⟩ | lo
-    · exact consoleLog_static (by omega) (by omega) (by omega) chl nl'
-    · rw [K.bss] at lo
-      rw [K.heap] at arena
-      simp only [chanOffBuff, ioBufferSize] at apart
-      exact consoleLog_arena lo arena (by dsimp only at apart; omega) nl
+  · exact console_named g (by rw [K.heap]; exact nl) chan record
 
 /-- **The console footprint misses the primitive bindings.** -/
 theorem console_bindings {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
@@ -446,7 +470,8 @@ theorem console_loopGeometry {L : OCaml.Layout} {P : Prog} {s s' : St} {c c' : C
     (heap : s'.heap = s.heap) (chans : s'.world.chans = s.world.chans.set id chn')
     (chan : s.world.chans[id]? = some chn) (record : cp id = some ch)
     (nl : Vsa.Sim.DlHeap.heapEnd + 512 ≤ nsp)
-    (memory : ∀ x, OutL (consoleLog nsp ch) x → byte c' x = byte c x) :
+    (memory : ∀ x, OutL (consoleLog nsp ch) x → byte c' x = byte c x)
+    (named : s'.world.named = s.world.named := by first | rfl | assumption) :
     OCaml.LoopGeometry L P s' c' pl cp high := by
   have SG := g.toArmGeometry.toStackGeometry
   have K := consoleStatics
@@ -508,7 +533,8 @@ theorem console_callee_summary {L : OCaml.Layout} {P : Prog} {op : Opcode} {s : 
     (heapEq : heap = s.heap) (chans : world.chans = s.world.chans.set id chn')
     (S : FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
       (FramedPrimitivePost L.runtimeOk P s pl cp sp high name args v result heap world
-        (consoleLog D.nativeSp ch) c ra)) :
+        (consoleLog D.nativeSp ch) c ra))
+    (named : world.named = s.world.named := by first | rfl | assumption) :
     FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
       (CcallReturn ra L P {s with pc := s.pc + 2, accu := v, heap := heap, world := world} pl cp sp high
         (BitVec.ofNat 64 (domainAt c0)) (BitVec.ofNat 64 (sp - 16)) result env) := by
@@ -551,7 +577,7 @@ theorem console_callee_summary {L : OCaml.Layout} {P : Prog} {op : Opcode} {s : 
     refine ⟨Or.inl ⟨by omega, by omega⟩, Or.inl ⟨by omega, by omega⟩, Or.inl ⟨by omega, by omega⟩,
       Or.inl ⟨by omega, by omega⟩, Or.inl ⟨by omega, by omega⟩, Or.inl ⟨by omega, by omega⟩, trivial⟩
   · intro after frame
-    exact console_loopGeometry setup.geometry heapEq chans arg.chan arg.record nl frame
+    exact console_loopGeometry setup.geometry heapEq chans arg.chan arg.record nl frame named
   · exact setup.native
 
 end OCaml.Vm.Sim
