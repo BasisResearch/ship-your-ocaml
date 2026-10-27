@@ -17,7 +17,8 @@ world are kept, and every word the geometry reads lies below `heapEnd`. -/
 theorem LoopGeometry.of_above {L : OCaml.Layout} {P : Prog} {s s' : St} {c c' : Config} {pl : Place}
     {cp : ChanPlace} {high : Nat} (g : OCaml.LoopGeometry L P s c pl cp high)
     (heap : s'.heap = s.heap) (chans : s'.world.chans = s.world.chans)
-    (memory : ∀ x, x < Vsa.Sim.DlHeap.heapEnd → byte c' x = byte c x) :
+    (memory : ∀ x, x < Vsa.Sim.DlHeap.heapEnd → byte c' x = byte c x)
+    (named : s'.world.named = s.world.named := by rfl) :
     OCaml.LoopGeometry L P s' c' pl cp high := by
   have SG := g.toArmGeometry.toStackGeometry
   have kept : ∀ a, a + 8 ≤ Vsa.Sim.DlHeap.heapEnd → word c' a = word c a :=
@@ -42,7 +43,7 @@ theorem LoopGeometry.of_above {L : OCaml.Layout} {P : Prog} {s s' : St} {c c' : 
       have ca := SG.channelArena id ch a hc hp
       rw [show chanOffBuff + OCaml.Bytecode.ioBufferSize = 65608 from rfl] at ca
       exact kept _ (by rw [show Gc.chanOffNext = 48 from rfl]; omega))
-    (by rw [heap])
+    (by rw [heap]) named
 
 /-- A range below `heapEnd` misses a store at or above it. -/
 theorem out_of_above {log : List WEntry} {A n : Nat} (above : ∀ e ∈ log, Vsa.Sim.DlHeap.heapEnd ≤ e.1)
