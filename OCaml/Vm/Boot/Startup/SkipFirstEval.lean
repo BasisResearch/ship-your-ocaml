@@ -7,107 +7,403 @@ open Vsa.Sim LeanRV64DExecutable
 def state0 (sp ra key s0 s1 : BitVec 64) : GRegs := [(2, sp), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
 def block0 : BBlock := caml_skiplist_insertXaafcFSeg.getD 0 {body := [], term := none}
 def loads0 : List (List (BitVec 8)) := [[0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]]
+def i8002aafc_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(2, sp), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002aafc_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002aafc_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002aafc#64 0xf4010113#32) (i8002aafc_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002aafc_after sp ra key s0 s1 := by
+  simp [i8002aafc_before, i8002aafc_after, skipfirst_line_8002aafc, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab00_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab00_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab00_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab00#64 0x0a113c23#32) (i8002ab00_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab00_after sp ra key s0 s1 := by
+  simp [i8002ab00_before, i8002ab00_after, skipfirst_line_8002ab00, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+theorem i8002ab00_store (sp ra key s0 s1 : BitVec 64) :
+    wentryM (mkLine 0x8002ab00#64 0x0a113c23#32) (i8002ab00_before sp ra key s0 s1) = (((sp + 18446744073709551608#64)).toNat, 8, ra) := by
+  simp [i8002ab00_before, skipfirst_line_8002ab00, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab04_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab04_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab04_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab04#64 0x08852303#32) (i8002ab04_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab04_after sp ra key s0 s1 := by
+  simp [i8002ab04_before, i8002ab04_after, skipfirst_line_8002ab04, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab08_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab08_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab08_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab08#64 0x00050693#32) (i8002ab08_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab08_after sp ra key s0 s1 := by
+  simp [i8002ab08_before, i8002ab08_after, skipfirst_line_8002ab08, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
 def state1 (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
 def log0 (sp ra key s0 s1 : BitVec 64) : List WEntry := [(((sp + 18446744073709551608#64)).toNat, 8, ra)]
 theorem stage0_regs (sp ra key s0 s1 : BitVec 64) : runGM block0.body (state0 sp ra key s0 s1) loads0 = state1 sp ra key s0 s1 := by
-  simp [block0, caml_skiplist_insertXaafcFSeg, state0, state1, loads0, log0, skipfirst_line_8002aafc, skipfirst_line_8002ab00, skipfirst_line_8002ab04, skipfirst_line_8002ab08, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block0, caml_skiplist_insertXaafcFSeg, loads0, log0, runGM, ldsRunM, wlogM, i8002aafc_regs sp ra key s0 s1, i8002ab00_regs sp ra key s0 s1, i8002ab00_store sp ra key s0 s1, i8002ab04_regs sp ra key s0 s1, i8002ab08_regs sp ra key s0 s1, skipfirst_line_8002aafc, skipfirst_line_8002ab00, skipfirst_line_8002ab04, skipfirst_line_8002ab08, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage0_loads (sp ra key s0 s1 : BitVec 64) : ldsRunM block0.body loads0 = [[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]] := by
-  simp [block0, caml_skiplist_insertXaafcFSeg, state0, state1, loads0, log0, skipfirst_line_8002aafc, skipfirst_line_8002ab00, skipfirst_line_8002ab04, skipfirst_line_8002ab08, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block0, caml_skiplist_insertXaafcFSeg, loads0, log0, runGM, ldsRunM, wlogM, i8002aafc_regs sp ra key s0 s1, i8002ab00_regs sp ra key s0 s1, i8002ab00_store sp ra key s0 s1, i8002ab04_regs sp ra key s0 s1, i8002ab08_regs sp ra key s0 s1, skipfirst_line_8002aafc, skipfirst_line_8002ab00, skipfirst_line_8002ab04, skipfirst_line_8002ab08, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage0_log (sp ra key s0 s1 : BitVec 64) : wlogM block0.body (state0 sp ra key s0 s1) loads0 = log0 sp ra key s0 s1 := by
-  simp [block0, caml_skiplist_insertXaafcFSeg, state0, state1, loads0, log0, skipfirst_line_8002aafc, skipfirst_line_8002ab00, skipfirst_line_8002ab04, skipfirst_line_8002ab08, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block0, caml_skiplist_insertXaafcFSeg, loads0, log0, runGM, ldsRunM, wlogM, i8002aafc_regs sp ra key s0 s1, i8002ab00_regs sp ra key s0 s1, i8002ab00_store sp ra key s0 s1, i8002ab04_regs sp ra key s0 s1, i8002ab08_regs sp ra key s0 s1, skipfirst_line_8002aafc, skipfirst_line_8002ab00, skipfirst_line_8002ab04, skipfirst_line_8002ab08, stepLdsM, List.tail_cons]
+  try rfl
 
 def block1 : BBlock := caml_skiplist_insertXab10Seg.getD 0 {body := [], term := none}
 def loads1 : List (List (BitVec 8)) := [[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]]
+def i8002ab10_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab10_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab10_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab10#64 0x02031793#32) (i8002ab10_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab10_after sp ra key s0 s1 := by
+  simp [i8002ab10_before, i8002ab10_after, skipfirst_line_8002ab10, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab14_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab14_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab14_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab14#64 0x0207d793#32) (i8002ab14_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab14_after sp ra key s0 s1 := by
+  simp [i8002ab14_before, i8002ab14_after, skipfirst_line_8002ab14, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab18_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab18_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(28, 18446744073709551615#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab18_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab18#64 0xfff30e13#32) (i8002ab18_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab18_after sp ra key s0 s1 := by
+  simp [i8002ab18_before, i8002ab18_after, skipfirst_line_8002ab18, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab1c_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(28, 18446744073709551615#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab1c_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(28, 18446744073709551615#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab1c_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab1c#64 0x40fe0e33#32) (i8002ab1c_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab1c_after sp ra key s0 s1 := by
+  simp [i8002ab1c_before, i8002ab1c_after, skipfirst_line_8002ab1c, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab20_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(28, 18446744073709551615#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab20_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(17, 0#64), (28, 18446744073709551615#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab20_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab20#64 0x00331893#32) (i8002ab20_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab20_after sp ra key s0 s1 := by
+  simp [i8002ab20_before, i8002ab20_after, skipfirst_line_8002ab20, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab24_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(17, 0#64), (28, 18446744073709551615#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab24_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(28, 18446744073709551608#64), (17, 0#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab24_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab24#64 0x003e1e13#32) (i8002ab24_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab24_after sp ra key s0 s1 := by
+  simp [i8002ab24_before, i8002ab24_after, skipfirst_line_8002ab24, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab28_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(28, 18446744073709551608#64), (17, 0#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab28_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab28_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab28#64 0x01810e93#32) (i8002ab28_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab28_after sp ra key s0 s1 := by
+  simp [i8002ab28_before, i8002ab28_after, skipfirst_line_8002ab28, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
 def state2 (sp ra key s0 s1 : BitVec 64) : GRegs := [(29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
 def log1 (sp ra key s0 s1 : BitVec 64) : List WEntry := []
 theorem stage1_regs (sp ra key s0 s1 : BitVec 64) : runGM block1.body (state1 sp ra key s0 s1) loads1 = state2 sp ra key s0 s1 := by
-  simp [block1, caml_skiplist_insertXab10Seg, state1, state2, loads1, log1, skipfirst_line_8002ab10, skipfirst_line_8002ab14, skipfirst_line_8002ab18, skipfirst_line_8002ab1c, skipfirst_line_8002ab20, skipfirst_line_8002ab24, skipfirst_line_8002ab28, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block1, caml_skiplist_insertXab10Seg, loads1, log1, runGM, ldsRunM, wlogM, i8002ab10_regs sp ra key s0 s1, i8002ab14_regs sp ra key s0 s1, i8002ab18_regs sp ra key s0 s1, i8002ab1c_regs sp ra key s0 s1, i8002ab20_regs sp ra key s0 s1, i8002ab24_regs sp ra key s0 s1, i8002ab28_regs sp ra key s0 s1, skipfirst_line_8002ab10, skipfirst_line_8002ab14, skipfirst_line_8002ab18, skipfirst_line_8002ab1c, skipfirst_line_8002ab20, skipfirst_line_8002ab24, skipfirst_line_8002ab28, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage1_loads (sp ra key s0 s1 : BitVec 64) : ldsRunM block1.body loads1 = [[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]] := by
-  simp [block1, caml_skiplist_insertXab10Seg, state1, state2, loads1, log1, skipfirst_line_8002ab10, skipfirst_line_8002ab14, skipfirst_line_8002ab18, skipfirst_line_8002ab1c, skipfirst_line_8002ab20, skipfirst_line_8002ab24, skipfirst_line_8002ab28, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block1, caml_skiplist_insertXab10Seg, loads1, log1, runGM, ldsRunM, wlogM, i8002ab10_regs sp ra key s0 s1, i8002ab14_regs sp ra key s0 s1, i8002ab18_regs sp ra key s0 s1, i8002ab1c_regs sp ra key s0 s1, i8002ab20_regs sp ra key s0 s1, i8002ab24_regs sp ra key s0 s1, i8002ab28_regs sp ra key s0 s1, skipfirst_line_8002ab10, skipfirst_line_8002ab14, skipfirst_line_8002ab18, skipfirst_line_8002ab1c, skipfirst_line_8002ab20, skipfirst_line_8002ab24, skipfirst_line_8002ab28, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage1_log (sp ra key s0 s1 : BitVec 64) : wlogM block1.body (state1 sp ra key s0 s1) loads1 = log1 sp ra key s0 s1 := by
-  simp [block1, caml_skiplist_insertXab10Seg, state1, state2, loads1, log1, skipfirst_line_8002ab10, skipfirst_line_8002ab14, skipfirst_line_8002ab18, skipfirst_line_8002ab1c, skipfirst_line_8002ab20, skipfirst_line_8002ab24, skipfirst_line_8002ab28, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block1, caml_skiplist_insertXab10Seg, loads1, log1, runGM, ldsRunM, wlogM, i8002ab10_regs sp ra key s0 s1, i8002ab14_regs sp ra key s0 s1, i8002ab18_regs sp ra key s0 s1, i8002ab1c_regs sp ra key s0 s1, i8002ab20_regs sp ra key s0 s1, i8002ab24_regs sp ra key s0 s1, i8002ab28_regs sp ra key s0 s1, skipfirst_line_8002ab10, skipfirst_line_8002ab14, skipfirst_line_8002ab18, skipfirst_line_8002ab1c, skipfirst_line_8002ab20, skipfirst_line_8002ab24, skipfirst_line_8002ab28, stepLdsM, List.tail_cons]
+  try rfl
 
 def block2 : BBlock := caml_skiplist_insertXab3cFSeg.getD 0 {body := [], term := none}
 def loads2 : List (List (BitVec 8)) := [[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]]
+def i8002ab3c_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab3c_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab3c_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab3c#64 0x01168733#32) (i8002ab3c_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab3c_after sp ra key s0 s1 := by
+  simp [i8002ab3c_before, i8002ab3c_after, skipfirst_line_8002ab3c, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab40_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (15, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab40_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab40_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab40#64 0x00073783#32) (i8002ab40_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab40_after sp ra key s0 s1 := by
+  simp [i8002ab40_before, i8002ab40_after, skipfirst_line_8002ab40, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
 def state3 (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
 def log2 (sp ra key s0 s1 : BitVec 64) : List WEntry := []
 theorem stage2_regs (sp ra key s0 s1 : BitVec 64) : runGM block2.body (state2 sp ra key s0 s1) loads2 = state3 sp ra key s0 s1 := by
-  simp [block2, caml_skiplist_insertXab3cFSeg, state2, state3, loads2, log2, skipfirst_line_8002ab3c, skipfirst_line_8002ab40, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block2, caml_skiplist_insertXab3cFSeg, loads2, log2, runGM, ldsRunM, wlogM, i8002ab3c_regs sp ra key s0 s1, i8002ab40_regs sp ra key s0 s1, skipfirst_line_8002ab3c, skipfirst_line_8002ab40, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage2_loads (sp ra key s0 s1 : BitVec 64) : ldsRunM block2.body loads2 = [[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]] := by
-  simp [block2, caml_skiplist_insertXab3cFSeg, state2, state3, loads2, log2, skipfirst_line_8002ab3c, skipfirst_line_8002ab40, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block2, caml_skiplist_insertXab3cFSeg, loads2, log2, runGM, ldsRunM, wlogM, i8002ab3c_regs sp ra key s0 s1, i8002ab40_regs sp ra key s0 s1, skipfirst_line_8002ab3c, skipfirst_line_8002ab40, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage2_log (sp ra key s0 s1 : BitVec 64) : wlogM block2.body (state2 sp ra key s0 s1) loads2 = log2 sp ra key s0 s1 := by
-  simp [block2, caml_skiplist_insertXab3cFSeg, state2, state3, loads2, log2, skipfirst_line_8002ab3c, skipfirst_line_8002ab40, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block2, caml_skiplist_insertXab3cFSeg, loads2, log2, runGM, ldsRunM, wlogM, i8002ab3c_regs sp ra key s0 s1, i8002ab40_regs sp ra key s0 s1, skipfirst_line_8002ab3c, skipfirst_line_8002ab40, stepLdsM, List.tail_cons]
+  try rfl
 
 def block3 : BBlock := caml_skiplist_insertXab48FSeg.getD 0 {body := [], term := none}
 def loads3 : List (List (BitVec 8)) := [[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]]
+def i8002ab48_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab48_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, (sp + 18446744073709551448#64)), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab48_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab48#64 0x011e87b3#32) (i8002ab48_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab48_after sp ra key s0 s1 := by
+  simp [i8002ab48_before, i8002ab48_after, skipfirst_line_8002ab48, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab4c_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, (sp + 18446744073709551448#64)), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab4c_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, (sp + 18446744073709551448#64)), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab4c_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab4c#64 0x00e7b023#32) (i8002ab4c_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab4c_after sp ra key s0 s1 := by
+  simp [i8002ab4c_before, i8002ab4c_after, skipfirst_line_8002ab4c, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+theorem i8002ab4c_store (sp ra key s0 s1 : BitVec 64) :
+    wentryM (mkLine 0x8002ab4c#64 0x00e7b023#32) (i8002ab4c_before sp ra key s0 s1) = (((sp + 18446744073709551448#64)).toNat, 8, 2147910880#64) := by
+  simp [i8002ab4c_before, skipfirst_line_8002ab4c, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab50_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, (sp + 18446744073709551448#64)), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (17, 0#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab50_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(17, 18446744073709551608#64), (15, (sp + 18446744073709551448#64)), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab50_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab50#64 0xff888893#32) (i8002ab50_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab50_after sp ra key s0 s1 := by
+  simp [i8002ab50_before, i8002ab50_after, skipfirst_line_8002ab50, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
 def state4 (sp ra key s0 s1 : BitVec 64) : GRegs := [(17, 18446744073709551608#64), (15, (sp + 18446744073709551448#64)), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
 def log3 (sp ra key s0 s1 : BitVec 64) : List WEntry := [(((sp + 18446744073709551448#64)).toNat, 8, 2147910880#64)]
 theorem stage3_regs (sp ra key s0 s1 : BitVec 64) : runGM block3.body (state3 sp ra key s0 s1) loads3 = state4 sp ra key s0 s1 := by
-  simp [block3, caml_skiplist_insertXab48FSeg, state3, state4, loads3, log3, skipfirst_line_8002ab48, skipfirst_line_8002ab4c, skipfirst_line_8002ab50, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block3, caml_skiplist_insertXab48FSeg, loads3, log3, runGM, ldsRunM, wlogM, i8002ab48_regs sp ra key s0 s1, i8002ab4c_regs sp ra key s0 s1, i8002ab4c_store sp ra key s0 s1, i8002ab50_regs sp ra key s0 s1, skipfirst_line_8002ab48, skipfirst_line_8002ab4c, skipfirst_line_8002ab50, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage3_loads (sp ra key s0 s1 : BitVec 64) : ldsRunM block3.body loads3 = [[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]] := by
-  simp [block3, caml_skiplist_insertXab48FSeg, state3, state4, loads3, log3, skipfirst_line_8002ab48, skipfirst_line_8002ab4c, skipfirst_line_8002ab50, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block3, caml_skiplist_insertXab48FSeg, loads3, log3, runGM, ldsRunM, wlogM, i8002ab48_regs sp ra key s0 s1, i8002ab4c_regs sp ra key s0 s1, i8002ab4c_store sp ra key s0 s1, i8002ab50_regs sp ra key s0 s1, skipfirst_line_8002ab48, skipfirst_line_8002ab4c, skipfirst_line_8002ab50, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage3_log (sp ra key s0 s1 : BitVec 64) : wlogM block3.body (state3 sp ra key s0 s1) loads3 = log3 sp ra key s0 s1 := by
-  simp [block3, caml_skiplist_insertXab48FSeg, state3, state4, loads3, log3, skipfirst_line_8002ab48, skipfirst_line_8002ab4c, skipfirst_line_8002ab50, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block3, caml_skiplist_insertXab48FSeg, loads3, log3, runGM, ldsRunM, wlogM, i8002ab48_regs sp ra key s0 s1, i8002ab4c_regs sp ra key s0 s1, i8002ab4c_store sp ra key s0 s1, i8002ab50_regs sp ra key s0 s1, skipfirst_line_8002ab48, skipfirst_line_8002ab4c, skipfirst_line_8002ab50, stepLdsM, List.tail_cons]
+  try rfl
 
 def block4 : BBlock := caml_skiplist_insertXab58TSeg.getD 0 {body := [], term := none}
 def loads4 : List (List (BitVec 8)) := [[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]]
+def i8002ab58_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(17, 18446744073709551608#64), (15, (sp + 18446744073709551448#64)), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab58_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (17, 18446744073709551608#64), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab58_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab58#64 0x0006b783#32) (i8002ab58_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8,0#8,0#8,0#8,0#8], [0#8,0#8,0#8,0#8]].headD []) = i8002ab58_after sp ra key s0 s1 := by
+  simp [i8002ab58_before, i8002ab58_after, skipfirst_line_8002ab58, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
 def state5 (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (17, 18446744073709551608#64), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
 def log4 (sp ra key s0 s1 : BitVec 64) : List WEntry := []
 theorem stage4_regs (sp ra key s0 s1 : BitVec 64) : runGM block4.body (state4 sp ra key s0 s1) loads4 = state5 sp ra key s0 s1 := by
-  simp [block4, caml_skiplist_insertXab58TSeg, state4, state5, loads4, log4, skipfirst_line_8002ab58, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block4, caml_skiplist_insertXab58TSeg, loads4, log4, runGM, ldsRunM, wlogM, i8002ab58_regs sp ra key s0 s1, skipfirst_line_8002ab58, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage4_loads (sp ra key s0 s1 : BitVec 64) : ldsRunM block4.body loads4 = [[0#8,0#8,0#8,0#8]] := by
-  simp [block4, caml_skiplist_insertXab58TSeg, state4, state5, loads4, log4, skipfirst_line_8002ab58, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block4, caml_skiplist_insertXab58TSeg, loads4, log4, runGM, ldsRunM, wlogM, i8002ab58_regs sp ra key s0 s1, skipfirst_line_8002ab58, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage4_log (sp ra key s0 s1 : BitVec 64) : wlogM block4.body (state4 sp ra key s0 s1) loads4 = log4 sp ra key s0 s1 := by
-  simp [block4, caml_skiplist_insertXab58TSeg, state4, state5, loads4, log4, skipfirst_line_8002ab58, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block4, caml_skiplist_insertXab58TSeg, loads4, log4, runGM, ldsRunM, wlogM, i8002ab58_regs sp ra key s0 s1, skipfirst_line_8002ab58, stepLdsM, List.tail_cons]
+  try rfl
 
 def block5 : BBlock := caml_skiplist_insertXab68TSeg.getD 0 {body := [], term := none}
 def loads5 : List (List (BitVec 8)) := [[0#8,0#8,0#8,0#8]]
+def i8002ab68_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (17, 18446744073709551608#64), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (13, 2147910880#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab68_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 2147896168#64), (15, 0#64), (17, 18446744073709551608#64), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab68_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab68#64 0x0003a697#32) (i8002ab68_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8]].headD []) = i8002ab68_after sp ra key s0 s1 := by
+  simp [i8002ab68_before, i8002ab68_after, skipfirst_line_8002ab68, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab6c_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 2147896168#64), (15, 0#64), (17, 18446744073709551608#64), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab6c_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 0#64), (15, 0#64), (17, 18446744073709551608#64), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab6c_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab6c#64 0x1a86a683#32) (i8002ab6c_before sp ra key s0 s1) ([[0#8,0#8,0#8,0#8]].headD []) = i8002ab6c_after sp ra key s0 s1 := by
+  simp [i8002ab6c_before, i8002ab6c_after, skipfirst_line_8002ab6c, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab70_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 0#64), (15, 0#64), (17, 18446744073709551608#64), (14, 2147910880#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab70_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(14, 24576#64), (13, 0#64), (15, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab70_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab70#64 0x00006737#32) (i8002ab70_before sp ra key s0 s1) ([].headD []) = i8002ab70_after sp ra key s0 s1 := by
+  simp [i8002ab70_before, i8002ab70_after, skipfirst_line_8002ab70, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab74_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(14, 24576#64), (13, 0#64), (15, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab74_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(14, 25173#64), (13, 0#64), (15, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab74_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab74#64 0x2557071b#32) (i8002ab74_before sp ra key s0 s1) ([].headD []) = i8002ab74_after sp ra key s0 s1 := by
+  simp [i8002ab74_before, i8002ab74_after, skipfirst_line_8002ab74, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab78_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(14, 25173#64), (13, 0#64), (15, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab78_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab78_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab78#64 0x0056979b#32) (i8002ab78_before sp ra key s0 s1) ([].headD []) = i8002ab78_after sp ra key s0 s1 := by
+  simp [i8002ab78_before, i8002ab78_after, skipfirst_line_8002ab78, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab7c_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab7c_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab7c_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab7c#64 0x00d787bb#32) (i8002ab7c_before sp ra key s0 s1) ([].headD []) = i8002ab7c_after sp ra key s0 s1 := by
+  simp [i8002ab7c_before, i8002ab7c_after, skipfirst_line_8002ab7c, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab80_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab80_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab80_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab80#64 0x0027979b#32) (i8002ab80_before sp ra key s0 s1) ([].headD []) = i8002ab80_after sp ra key s0 s1 := by
+  simp [i8002ab80_before, i8002ab80_after, skipfirst_line_8002ab80, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab84_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab84_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab84_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab84#64 0x40d787bb#32) (i8002ab84_before sp ra key s0 s1) ([].headD []) = i8002ab84_after sp ra key s0 s1 := by
+  simp [i8002ab84_before, i8002ab84_after, skipfirst_line_8002ab84, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab88_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab88_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab88_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab88#64 0x0027979b#32) (i8002ab88_before sp ra key s0 s1) ([].headD []) = i8002ab88_after sp ra key s0 s1 := by
+  simp [i8002ab88_before, i8002ab88_after, skipfirst_line_8002ab88, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab8c_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab8c_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab8c_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab8c#64 0x40d787bb#32) (i8002ab8c_before sp ra key s0 s1) ([].headD []) = i8002ab8c_after sp ra key s0 s1 := by
+  simp [i8002ab8c_before, i8002ab8c_after, skipfirst_line_8002ab8c, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab90_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab90_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab90_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab90#64 0x0027979b#32) (i8002ab90_before sp ra key s0 s1) ([].headD []) = i8002ab90_after sp ra key s0 s1 := by
+  simp [i8002ab90_before, i8002ab90_after, skipfirst_line_8002ab90, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab94_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab94_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab94_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab94#64 0x00d787bb#32) (i8002ab94_before sp ra key s0 s1) ([].headD []) = i8002ab94_after sp ra key s0 s1 := by
+  simp [i8002ab94_before, i8002ab94_after, skipfirst_line_8002ab94, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab98_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (14, 25173#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab98_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 0#64), (15, 0#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab98_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab98#64 0x0057969b#32) (i8002ab98_before sp ra key s0 s1) ([].headD []) = i8002ab98_after sp ra key s0 s1 := by
+  simp [i8002ab98_before, i8002ab98_after, skipfirst_line_8002ab98, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002ab9c_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 0#64), (15, 0#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002ab9c_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (13, 0#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002ab9c_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002ab9c#64 0x00f687bb#32) (i8002ab9c_before sp ra key s0 s1) ([].headD []) = i8002ab9c_after sp ra key s0 s1 := by
+  simp [i8002ab9c_before, i8002ab9c_after, skipfirst_line_8002ab9c, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002aba0_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 0#64), (13, 0#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002aba0_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(14, 25173#64), (15, 0#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002aba0_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002aba0#64 0x00f7073b#32) (i8002aba0_before sp ra key s0 s1) ([].headD []) = i8002aba0_after sp ra key s0 s1 := by
+  simp [i8002aba0_before, i8002aba0_after, skipfirst_line_8002aba0, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002aba4_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(14, 25173#64), (15, 0#64), (13, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002aba4_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 2147896228#64), (14, 25173#64), (15, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002aba4_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002aba4#64 0x0003a697#32) (i8002aba4_before sp ra key s0 s1) ([].headD []) = i8002aba4_after sp ra key s0 s1 := by
+  simp [i8002aba4_before, i8002aba4_after, skipfirst_line_8002aba4, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002aba8_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 2147896228#64), (14, 25173#64), (15, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002aba8_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 2147896228#64), (14, 25173#64), (15, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002aba8_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002aba8#64 0x16e6a623#32) (i8002aba8_before sp ra key s0 s1) ([].headD []) = i8002aba8_after sp ra key s0 s1 := by
+  simp [i8002aba8_before, i8002aba8_after, skipfirst_line_8002aba8, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+theorem i8002aba8_store (sp ra key s0 s1 : BitVec 64) :
+    wentryM (mkLine 0x8002aba8#64 0x16e6a623#32) (i8002aba8_before sp ra key s0 s1) = ((2147896592#64).toNat, 4, 25173#64) := by
+  simp [i8002aba8_before, skipfirst_line_8002aba8, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002abac_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 2147896228#64), (14, 25173#64), (15, 0#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002abac_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 18446744072635809792#64), (13, 2147896228#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002abac_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002abac#64 0xc00007b7#32) (i8002abac_before sp ra key s0 s1) ([].headD []) = i8002abac_after sp ra key s0 s1 := by
+  simp [i8002abac_before, i8002abac_after, skipfirst_line_8002abac, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002abb0_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 18446744072635809792#64), (13, 2147896228#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002abb0_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 18446744072635809792#64), (13, 2147896228#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002abb0_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002abb0#64 0x0a813823#32) (i8002abb0_before sp ra key s0 s1) ([].headD []) = i8002abb0_after sp ra key s0 s1 := by
+  simp [i8002abb0_before, i8002abb0_after, skipfirst_line_8002abb0, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+theorem i8002abb0_store (sp ra key s0 s1 : BitVec 64) :
+    wentryM (mkLine 0x8002abb0#64 0x0a813823#32) (i8002abb0_before sp ra key s0 s1) = (((sp + 18446744073709551600#64)).toNat, 8, s0) := by
+  simp [i8002abb0_before, skipfirst_line_8002abb0, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002abb4_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 18446744072635809792#64), (13, 2147896228#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002abb4_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 18446744072635809792#64), (13, 2147896228#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002abb4_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002abb4#64 0x0a913423#32) (i8002abb4_before sp ra key s0 s1) ([].headD []) = i8002abb4_after sp ra key s0 s1 := by
+  simp [i8002abb4_before, i8002abb4_after, skipfirst_line_8002abb4, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+theorem i8002abb4_store (sp ra key s0 s1 : BitVec 64) :
+    wentryM (mkLine 0x8002abb4#64 0x0a913423#32) (i8002abb4_before sp ra key s0 s1) = (((sp + 18446744073709551592#64)).toNat, 8, s1) := by
+  simp [i8002abb4_before, skipfirst_line_8002abb4, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002abb8_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(15, 18446744072635809792#64), (13, 2147896228#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002abb8_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+theorem i8002abb8_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002abb8#64 0x00f776b3#32) (i8002abb8_before sp ra key s0 s1) ([].headD []) = i8002abb8_after sp ra key s0 s1 := by
+  simp [i8002abb8_before, i8002abb8_after, skipfirst_line_8002abb8, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002abbc_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0), (9, s1)]
+def i8002abbc_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(9, 0#64), (13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0)]
+theorem i8002abbc_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002abbc#64 0x00060493#32) (i8002abbc_before sp ra key s0 s1) ([].headD []) = i8002abbc_after sp ra key s0 s1 := by
+  simp [i8002abbc_before, i8002abbc_after, skipfirst_line_8002abbc, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002abc0_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(9, 0#64), (13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64), (8, s0)]
+def i8002abc0_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(8, key), (9, 0#64), (13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64)]
+theorem i8002abc0_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002abc0#64 0x00058413#32) (i8002abc0_before sp ra key s0 s1) ([].headD []) = i8002abc0_after sp ra key s0 s1 := by
+  simp [i8002abc0_before, i8002abc0_after, skipfirst_line_8002abc0, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
+def i8002abc4_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(8, key), (9, 0#64), (13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64)]
+def i8002abc4_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(16, 2147910880#64), (8, key), (9, 0#64), (13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64)]
+theorem i8002abc4_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002abc4#64 0x00050813#32) (i8002abc4_before sp ra key s0 s1) ([].headD []) = i8002abc4_after sp ra key s0 s1 := by
+  simp [i8002abc4_before, i8002abc4_after, skipfirst_line_8002abc4, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
 def state6 (sp ra key s0 s1 : BitVec 64) : GRegs := [(16, 2147910880#64), (8, key), (9, 0#64), (13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64)]
 def log5 (sp ra key s0 s1 : BitVec 64) : List WEntry := [((2147896592#64).toNat, 4, 25173#64), (((sp + 18446744073709551600#64)).toNat, 8, s0), (((sp + 18446744073709551592#64)).toNat, 8, s1)]
 theorem stage5_regs (sp ra key s0 s1 : BitVec 64) : runGM block5.body (state5 sp ra key s0 s1) loads5 = state6 sp ra key s0 s1 := by
-  simp [block5, caml_skiplist_insertXab68TSeg, state5, state6, loads5, log5, skipfirst_line_8002ab68, skipfirst_line_8002ab6c, skipfirst_line_8002ab70, skipfirst_line_8002ab74, skipfirst_line_8002ab78, skipfirst_line_8002ab7c, skipfirst_line_8002ab80, skipfirst_line_8002ab84, skipfirst_line_8002ab88, skipfirst_line_8002ab8c, skipfirst_line_8002ab90, skipfirst_line_8002ab94, skipfirst_line_8002ab98, skipfirst_line_8002ab9c, skipfirst_line_8002aba0, skipfirst_line_8002aba4, skipfirst_line_8002aba8, skipfirst_line_8002abac, skipfirst_line_8002abb0, skipfirst_line_8002abb4, skipfirst_line_8002abb8, skipfirst_line_8002abbc, skipfirst_line_8002abc0, skipfirst_line_8002abc4, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block5, caml_skiplist_insertXab68TSeg, loads5, log5, runGM, ldsRunM, wlogM, i8002ab68_regs sp ra key s0 s1, i8002ab6c_regs sp ra key s0 s1, i8002ab70_regs sp ra key s0 s1, i8002ab74_regs sp ra key s0 s1, i8002ab78_regs sp ra key s0 s1, i8002ab7c_regs sp ra key s0 s1, i8002ab80_regs sp ra key s0 s1, i8002ab84_regs sp ra key s0 s1, i8002ab88_regs sp ra key s0 s1, i8002ab8c_regs sp ra key s0 s1, i8002ab90_regs sp ra key s0 s1, i8002ab94_regs sp ra key s0 s1, i8002ab98_regs sp ra key s0 s1, i8002ab9c_regs sp ra key s0 s1, i8002aba0_regs sp ra key s0 s1, i8002aba4_regs sp ra key s0 s1, i8002aba8_regs sp ra key s0 s1, i8002aba8_store sp ra key s0 s1, i8002abac_regs sp ra key s0 s1, i8002abb0_regs sp ra key s0 s1, i8002abb0_store sp ra key s0 s1, i8002abb4_regs sp ra key s0 s1, i8002abb4_store sp ra key s0 s1, i8002abb8_regs sp ra key s0 s1, i8002abbc_regs sp ra key s0 s1, i8002abc0_regs sp ra key s0 s1, i8002abc4_regs sp ra key s0 s1, skipfirst_line_8002ab68, skipfirst_line_8002ab6c, skipfirst_line_8002ab70, skipfirst_line_8002ab74, skipfirst_line_8002ab78, skipfirst_line_8002ab7c, skipfirst_line_8002ab80, skipfirst_line_8002ab84, skipfirst_line_8002ab88, skipfirst_line_8002ab8c, skipfirst_line_8002ab90, skipfirst_line_8002ab94, skipfirst_line_8002ab98, skipfirst_line_8002ab9c, skipfirst_line_8002aba0, skipfirst_line_8002aba4, skipfirst_line_8002aba8, skipfirst_line_8002abac, skipfirst_line_8002abb0, skipfirst_line_8002abb4, skipfirst_line_8002abb8, skipfirst_line_8002abbc, skipfirst_line_8002abc0, skipfirst_line_8002abc4, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage5_loads (sp ra key s0 s1 : BitVec 64) : ldsRunM block5.body loads5 = [] := by
-  simp [block5, caml_skiplist_insertXab68TSeg, state5, state6, loads5, log5, skipfirst_line_8002ab68, skipfirst_line_8002ab6c, skipfirst_line_8002ab70, skipfirst_line_8002ab74, skipfirst_line_8002ab78, skipfirst_line_8002ab7c, skipfirst_line_8002ab80, skipfirst_line_8002ab84, skipfirst_line_8002ab88, skipfirst_line_8002ab8c, skipfirst_line_8002ab90, skipfirst_line_8002ab94, skipfirst_line_8002ab98, skipfirst_line_8002ab9c, skipfirst_line_8002aba0, skipfirst_line_8002aba4, skipfirst_line_8002aba8, skipfirst_line_8002abac, skipfirst_line_8002abb0, skipfirst_line_8002abb4, skipfirst_line_8002abb8, skipfirst_line_8002abbc, skipfirst_line_8002abc0, skipfirst_line_8002abc4, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block5, caml_skiplist_insertXab68TSeg, loads5, log5, runGM, ldsRunM, wlogM, i8002ab68_regs sp ra key s0 s1, i8002ab6c_regs sp ra key s0 s1, i8002ab70_regs sp ra key s0 s1, i8002ab74_regs sp ra key s0 s1, i8002ab78_regs sp ra key s0 s1, i8002ab7c_regs sp ra key s0 s1, i8002ab80_regs sp ra key s0 s1, i8002ab84_regs sp ra key s0 s1, i8002ab88_regs sp ra key s0 s1, i8002ab8c_regs sp ra key s0 s1, i8002ab90_regs sp ra key s0 s1, i8002ab94_regs sp ra key s0 s1, i8002ab98_regs sp ra key s0 s1, i8002ab9c_regs sp ra key s0 s1, i8002aba0_regs sp ra key s0 s1, i8002aba4_regs sp ra key s0 s1, i8002aba8_regs sp ra key s0 s1, i8002aba8_store sp ra key s0 s1, i8002abac_regs sp ra key s0 s1, i8002abb0_regs sp ra key s0 s1, i8002abb0_store sp ra key s0 s1, i8002abb4_regs sp ra key s0 s1, i8002abb4_store sp ra key s0 s1, i8002abb8_regs sp ra key s0 s1, i8002abbc_regs sp ra key s0 s1, i8002abc0_regs sp ra key s0 s1, i8002abc4_regs sp ra key s0 s1, skipfirst_line_8002ab68, skipfirst_line_8002ab6c, skipfirst_line_8002ab70, skipfirst_line_8002ab74, skipfirst_line_8002ab78, skipfirst_line_8002ab7c, skipfirst_line_8002ab80, skipfirst_line_8002ab84, skipfirst_line_8002ab88, skipfirst_line_8002ab8c, skipfirst_line_8002ab90, skipfirst_line_8002ab94, skipfirst_line_8002ab98, skipfirst_line_8002ab9c, skipfirst_line_8002aba0, skipfirst_line_8002aba4, skipfirst_line_8002aba8, skipfirst_line_8002abac, skipfirst_line_8002abb0, skipfirst_line_8002abb4, skipfirst_line_8002abb8, skipfirst_line_8002abbc, skipfirst_line_8002abc0, skipfirst_line_8002abc4, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage5_log (sp ra key s0 s1 : BitVec 64) : wlogM block5.body (state5 sp ra key s0 s1) loads5 = log5 sp ra key s0 s1 := by
-  simp [block5, caml_skiplist_insertXab68TSeg, state5, state6, loads5, log5, skipfirst_line_8002ab68, skipfirst_line_8002ab6c, skipfirst_line_8002ab70, skipfirst_line_8002ab74, skipfirst_line_8002ab78, skipfirst_line_8002ab7c, skipfirst_line_8002ab80, skipfirst_line_8002ab84, skipfirst_line_8002ab88, skipfirst_line_8002ab8c, skipfirst_line_8002ab90, skipfirst_line_8002ab94, skipfirst_line_8002ab98, skipfirst_line_8002ab9c, skipfirst_line_8002aba0, skipfirst_line_8002aba4, skipfirst_line_8002aba8, skipfirst_line_8002abac, skipfirst_line_8002abb0, skipfirst_line_8002abb4, skipfirst_line_8002abb8, skipfirst_line_8002abbc, skipfirst_line_8002abc0, skipfirst_line_8002abc4, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block5, caml_skiplist_insertXab68TSeg, loads5, log5, runGM, ldsRunM, wlogM, i8002ab68_regs sp ra key s0 s1, i8002ab6c_regs sp ra key s0 s1, i8002ab70_regs sp ra key s0 s1, i8002ab74_regs sp ra key s0 s1, i8002ab78_regs sp ra key s0 s1, i8002ab7c_regs sp ra key s0 s1, i8002ab80_regs sp ra key s0 s1, i8002ab84_regs sp ra key s0 s1, i8002ab88_regs sp ra key s0 s1, i8002ab8c_regs sp ra key s0 s1, i8002ab90_regs sp ra key s0 s1, i8002ab94_regs sp ra key s0 s1, i8002ab98_regs sp ra key s0 s1, i8002ab9c_regs sp ra key s0 s1, i8002aba0_regs sp ra key s0 s1, i8002aba4_regs sp ra key s0 s1, i8002aba8_regs sp ra key s0 s1, i8002aba8_store sp ra key s0 s1, i8002abac_regs sp ra key s0 s1, i8002abb0_regs sp ra key s0 s1, i8002abb0_store sp ra key s0 s1, i8002abb4_regs sp ra key s0 s1, i8002abb4_store sp ra key s0 s1, i8002abb8_regs sp ra key s0 s1, i8002abbc_regs sp ra key s0 s1, i8002abc0_regs sp ra key s0 s1, i8002abc4_regs sp ra key s0 s1, skipfirst_line_8002ab68, skipfirst_line_8002ab6c, skipfirst_line_8002ab70, skipfirst_line_8002ab74, skipfirst_line_8002ab78, skipfirst_line_8002ab7c, skipfirst_line_8002ab80, skipfirst_line_8002ab84, skipfirst_line_8002ab88, skipfirst_line_8002ab8c, skipfirst_line_8002ab90, skipfirst_line_8002ab94, skipfirst_line_8002ab98, skipfirst_line_8002ab9c, skipfirst_line_8002aba0, skipfirst_line_8002aba4, skipfirst_line_8002aba8, skipfirst_line_8002abac, skipfirst_line_8002abb0, skipfirst_line_8002abb4, skipfirst_line_8002abb8, skipfirst_line_8002abbc, skipfirst_line_8002abc0, skipfirst_line_8002abc4, stepLdsM, List.tail_cons]
+  try rfl
 
 def block6 : BBlock := caml_skiplist_insertXaca4TSeg.getD 0 {body := [], term := none}
 def loads6 : List (List (BitVec 8)) := []
 def state7 (sp ra key s0 s1 : BitVec 64) : GRegs := [(16, 2147910880#64), (8, key), (9, 0#64), (13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64)]
 def log6 (sp ra key s0 s1 : BitVec 64) : List WEntry := []
 theorem stage6_regs (sp ra key s0 s1 : BitVec 64) : runGM block6.body (state6 sp ra key s0 s1) loads6 = state7 sp ra key s0 s1 := by
-  simp [block6, caml_skiplist_insertXaca4TSeg, state6, state7, loads6, log6, , runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block6, caml_skiplist_insertXaca4TSeg, loads6, log6, runGM, ldsRunM, wlogM, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage6_loads (sp ra key s0 s1 : BitVec 64) : ldsRunM block6.body loads6 = [] := by
-  simp [block6, caml_skiplist_insertXaca4TSeg, state6, state7, loads6, log6, , runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block6, caml_skiplist_insertXaca4TSeg, loads6, log6, runGM, ldsRunM, wlogM, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage6_log (sp ra key s0 s1 : BitVec 64) : wlogM block6.body (state6 sp ra key s0 s1) loads6 = log6 sp ra key s0 s1 := by
-  simp [block6, caml_skiplist_insertXaca4TSeg, state6, state7, loads6, log6, , runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block6, caml_skiplist_insertXaca4TSeg, loads6, log6, runGM, ldsRunM, wlogM, stepLdsM, List.tail_cons]
+  try rfl
 
 def block7 : BBlock := caml_skiplist_insertXacb8Seg.getD 0 {body := [], term := none}
 def loads7 : List (List (BitVec 8)) := []
+def i8002acb8_before (sp ra key s0 s1 : BitVec 64) : GRegs := [(16, 2147910880#64), (8, key), (9, 0#64), (13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (10, 2147910880#64), (11, key), (12, 0#64)]
+def i8002acb8_after (sp ra key s0 s1 : BitVec 64) : GRegs := [(10, 24#64), (16, 2147910880#64), (8, key), (9, 0#64), (13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (11, key), (12, 0#64)]
+theorem i8002acb8_regs (sp ra key s0 s1 : BitVec 64) :
+    stepGM (mkLine 0x8002acb8#64 0x01800513#32) (i8002acb8_before sp ra key s0 s1) ([].headD []) = i8002acb8_after sp ra key s0 s1 := by
+  simp [i8002acb8_before, i8002acb8_after, skipfirst_line_8002acb8, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+
 def state8 (sp ra key s0 s1 : BitVec 64) : GRegs := [(10, 24#64), (16, 2147910880#64), (8, key), (9, 0#64), (13, 0#64), (15, 18446744072635809792#64), (14, 25173#64), (17, 18446744073709551608#64), (29, (sp + 18446744073709551448#64)), (28, 18446744073709551608#64), (6, 0#64), (2, (sp + 18446744073709551424#64)), (1, ra), (11, key), (12, 0#64)]
 def log7 (sp ra key s0 s1 : BitVec 64) : List WEntry := []
 theorem stage7_regs (sp ra key s0 s1 : BitVec 64) : runGM block7.body (state7 sp ra key s0 s1) loads7 = state8 sp ra key s0 s1 := by
-  simp [block7, caml_skiplist_insertXacb8Seg, state7, state8, loads7, log7, skipfirst_line_8002acb8, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block7, caml_skiplist_insertXacb8Seg, loads7, log7, runGM, ldsRunM, wlogM, i8002acb8_regs sp ra key s0 s1, skipfirst_line_8002acb8, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage7_loads (sp ra key s0 s1 : BitVec 64) : ldsRunM block7.body loads7 = [] := by
-  simp [block7, caml_skiplist_insertXacb8Seg, state7, state8, loads7, log7, skipfirst_line_8002acb8, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block7, caml_skiplist_insertXacb8Seg, loads7, log7, runGM, ldsRunM, wlogM, i8002acb8_regs sp ra key s0 s1, skipfirst_line_8002acb8, stepLdsM, List.tail_cons]
+  try rfl
 
 theorem stage7_log (sp ra key s0 s1 : BitVec 64) : wlogM block7.body (state7 sp ra key s0 s1) loads7 = log7 sp ra key s0 s1 := by
-  simp [block7, caml_skiplist_insertXacb8Seg, state7, state8, loads7, log7, skipfirst_line_8002acb8, runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc]
+  simp only [block7, caml_skiplist_insertXacb8Seg, loads7, log7, runGM, ldsRunM, wlogM, i8002acb8_regs sp ra key s0 s1, skipfirst_line_8002acb8, stepLdsM, List.tail_cons]
+  try rfl
 
 def blocks : List BBlock := [block0, block1, block2, block3, block4, block5, block6, block7]
 end OCaml.Vm.Boot.Startup.SkipFirstEval

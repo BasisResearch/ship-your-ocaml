@@ -164,7 +164,11 @@ def skip_first_eval(di, extents):
         def put(k, v):
             nonlocal state
             if k: state = [(k, v)] + [(r, x) for r, x in state if r != k]
-        for ins in b.instrs:
+        certs = []
+        for i, ins in enumerate(b.instrs):
+            old = list(state)
+            old_consumed = consumed
+            old_log_len = len(log)
             w = ins.word
             op, rd, f3 = w & 127, (w >> 7) & 31, (w >> 12) & 7
             r1, r2 = (w >> 15) & 31, (w >> 20) & 31
@@ -194,16 +198,36 @@ def skip_first_eval(di, extents):
                 if op == 0x3b: z = gen_fn.lib.sext(z & 0xffffffff, 32) & mask
                 put(rd, z)
             else: raise ValueError(ins)
+            # Each certificate normalizes just one instruction. In particular,
+            # never unfold a long runGM inside wlogM: that duplicates its state.
+            tag = f'i{ins.addr:x}'
+            instr = f'mkLine 0x{ins.addr:x}#64 0x{ins.word:08x}#32'
+            E(f'def {tag}_before (sp ra key s0 s1 : BitVec 64) : GRegs := {regs(old)}',
+              f'def {tag}_after (sp ra key s0 s1 : BitVec 64) : GRegs := {regs(state)}')
+            ops = 'stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, shamt5Of, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc'
+            rule = f'skipfirst_line_{ins.addr:x}'
+            E(f'theorem {tag}_regs (sp ra key s0 s1 : BitVec 64) :',
+              f'    stepGM ({instr}) ({tag}_before sp ra key s0 s1) ({loads(old_consumed)}.headD []) = {tag}_after sp ra key s0 s1 := by',
+              f'  simp [{tag}_before, {tag}_after, {rule}, {ops}]', '')
+            certs.append(f'{tag}_regs sp ra key s0 s1')
+            if len(log) != old_log_len:
+                a, n, v = log[-1]
+                E(f'theorem {tag}_store (sp ra key s0 s1 : BitVec 64) :',
+                  f'    wentryM ({instr}) ({tag}_before sp ra key s0 s1) = (({expr(a)}).toNat, {n}, {expr(v)}) := by',
+                  f'  simp [{tag}_before, {rule}, {ops}]', '')
+                certs.append(f'{tag}_store sp ra key s0 s1')
         E(f'def state{j+1} (sp ra key s0 s1 : BitVec 64) : GRegs := {regs(state)}',
           f'def log{j} (sp ra key s0 s1 : BitVec 64) : List WEntry := [' + ', '.join(f'(({expr(a)}).toNat, {n}, {expr(v)})' for a,n,v in log) + ']')
-        rules = ', '.join(f'skipfirst_line_{ins.addr:x}' for ins in b.instrs)
-        ops = 'runGM, ldsRunM, wlogM, stepGM, stepLdsM, wentryM, widthOfM, wvalM, eaddrM, srcVal, lookupG, eraseG, imm20Of, shamtOf, bytesVal, Functions.sign_extend, Sail.BitVec.signExtend, Sail.BitVec.extractLsb, BitVec.add_assoc'
+        # Rewrite normalized states between steps using the checked certificates;
+        # instruction decoding and load consumption are small structural facts.
+        rules = [f'skipfirst_line_{ins.addr:x}' for ins in b.instrs]
         for kind, lhs, rhs in [
             ('regs', f'runGM block{j}.body (state{j} sp ra key s0 s1) loads{j}', f'state{j+1} sp ra key s0 s1'),
             ('loads', f'ldsRunM block{j}.body loads{j}', loads(consumed)),
             ('log', f'wlogM block{j}.body (state{j} sp ra key s0 s1) loads{j}', f'log{j} sp ra key s0 s1')]:
             E(f'theorem stage{j}_{kind} (sp ra key s0 s1 : BitVec 64) : {lhs} = {rhs} := by',
-              f'  simp [block{j}, {seg}, state{j}, state{j+1}, loads{j}, log{j}, {rules}, {ops}]', '')
+              '  simp only [' + ', '.join([f'block{j}', seg, f'loads{j}', f'log{j}', 'runGM', 'ldsRunM', 'wlogM'] + certs + rules + ['stepLdsM', 'List.tail_cons']) + ']',
+              '  try rfl', '')
     E('def blocks : List BBlock := [' + ', '.join(f'block{j}' for j in range(len(route))) + ']',
       'end OCaml.Vm.Boot.Startup.SkipFirstEval', '')
     return '\n'.join(out)
