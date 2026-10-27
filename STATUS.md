@@ -26,7 +26,7 @@ None currently.
 The lead now uses separate `codex exec` workers (`gpt-6.1-sol`, high reasoning),
 at most two at a time, launched through `codexwork.sh`. Built-in proof agents
 have stopped. The current Sol tasks finish physical named-node ownership/separation and
-generalize the formatter caller layout. Startup, G2 pick/pop, refcount transport, all-byte C-string/strcmp, and foreman
+prove the first empty-skiplist insertion needed by startup. Startup, G2 pick/pop, refcount transport, all-byte C-string/strcmp, and foreman
 tooling landed. The current proof work remains in the two Sol worktrees. Workers inherit a 12 GB systemd scope; the lead handles
 Git and landings outside their workspace-write sandbox. Known failed routes are in `docs/lanes/DEAD-ENDS.md`.
 
@@ -46,12 +46,13 @@ reports, preserved at `7c6bc6c1`. Its full consumer build remains incomplete.
 The named worker is resuming physical ownership/separation WIP after a usage-limit stop. This is an invariant
 design task, not a user-only blocker. The next task supplies physical ownership
 and separation, then migrates payload consumers. The formatter WIP is preserved
-in `bprime` from `2c0a97a9`; its active worker is porting generated edits into templates.
+in `bprime` from `2c0a97a9`; template migration and caller-layout checks are
+complete at `4093ad0c`, and the full integration gate is next.
 
 The independent all-byte C-string/strcmp extraction passed generation checks
 and its sole full-gate regression in `Uncaught.FatalNames` is repaired and
-focused-audited, then landed as `c5a18e5a` after the full gate. The formatter Sol worker
-is now active in `bprime`.
+focused-audited, then landed as `c5a18e5a` after the full gate. The formatter Sol task
+finished its focused audit; its slot now runs skiplist insertion in `a6-gc`.
 The previous workers stopped on the October 21 usage limit; its logged October
 27 reset time has passed, so the lead is restarting separate Sol processes.
 
@@ -60,3 +61,8 @@ before pushing `6d002aa5`. The refcount/library train passed all stages and
 audited 8338 declarations before pushing `c5a18e5a`. G2 still has
 search/pick/pop as separate summaries; split,
 remnant-call composition, allocator readiness and full collection remain open.
+
+Formatter checkpoint: `SnpFmt` and `Format.SvfLong` built (911 jobs), and
+`vsnprintf_layout` admits the real FILE, buffer and seven varargs slots from
+stack bounds/alignment alone. Wrapper execution, allocation, and the general
+C_CALL2 return remain open, including large strings and nondecimal formats.
