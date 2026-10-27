@@ -1,5 +1,15 @@
 # Routes not to repeat
 
+- 2026-10-27 custom ownership review: `CallerApart.free` quantifies over
+  every `HeapReady H cap c`. `HeapAt.live/exact` only constrain extents that
+  are in H; they do not require an exhaustive ledger. The captured allocator
+  certificate even starts from `raw_heap` with an empty extent list. This
+  flags the same selected-ledger issue already repaired for named ownership:
+  a custom-state frame must use the actual caller ledger, not arbitrary H.
+  The explicit empty-ledger/readiness obstruction and producer repair are
+  queued in `tasks/sol-custom-ledger.md`; no checked counterexample or global
+  inconsistency of `CustomMemCall` is claimed by this inspection alone.
+
 - 2026-10-27 counted stack rows: unfolding `stepI` while the operand list
   is unconstrained exhausts the default heartbeat budget even for a fixed
   opcode. Splitting only the opcode, or putting those expansions in separate
