@@ -334,6 +334,7 @@ import Vsa.Sim.DeriveCaseRow
 import VsaIris.Vsa.SnpFmt
 import OCaml.Vm.Primitives.Format.SvfLong
 import OCaml.Vm.Primitives.Format.VsnprintfCaller
+import OCaml.Vm.Primitives.Format.AllocSprintfLong
 import VsaIris.Vsa.SnpPrint
 import VsaIris.Vsa.SnpStrlen
 import VsaIris.Vsa.SnpArith
@@ -6932,3 +6933,10 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms VsaIris.Sym.nt_80048790
 #print axioms OCaml.Vm.Primitives.Format.VsnprintfCaller.returned
 #print axioms OCaml.Vm.Primitives.Format.VsnprintfCaller.memory_eq
+
+-- Actual short-result continuation and the copy-string splice obstruction.
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.decimal_fits
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.decimal_buffer
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.copy_string_target_obstruction
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.short_continuation
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.copy_string_argument_obstruction

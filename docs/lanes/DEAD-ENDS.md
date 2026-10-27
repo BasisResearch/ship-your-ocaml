@@ -1,5 +1,18 @@
 # Routes not to repeat
 
+- 2026-10-27: the real `caml_alloc_sprintf` short-result JAL at
+  `0x80013f1c` targets `caml_alloc_initialized_string` (`0x8000c284`),
+  not the existing `copy_string_machine` entry (`0x8000c254`).
+  `Format.AllocSprintfLong.copy_string_target_obstruction` is kernel checked
+  against the generated decoded-call target; `copy_string_argument_obstruction`
+  also checks that its a0 decimal length cannot be the local-buffer pointer
+  expected by copy_string. `short_continuation` executes the real fit,
+  argument setup and JAL to initialized-string entry. Generate/compose that
+  function's allocator/memcpy/return boundaries; do not substitute a
+  copy_string return or primitive summary at this splice. This refutes the
+  requested direct splice, not the initialized-string composition route or
+  the reachability of the caller. The entry-to-return milestone stays open.
+
 - 2026-10-21: a `workspace-write` worker cannot reach the user systemd bus
   or write the home integration queue. Launch the entire worker in the 12 GB
   scope and have the lead run integration after review. Keep the sandbox.

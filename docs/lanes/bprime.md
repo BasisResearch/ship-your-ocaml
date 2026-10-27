@@ -1,5 +1,70 @@
 # Lane bprime
 
+## Plain LONGINT allocation composition (2026-10-27): checked obstruction
+
+Started from clean committed `1ac28477`, including `8b1f1377`'s final
+`VsnprintfLong` contract and caller witness. Read the binding briefs and
+`DEAD-ENDS.md`, and ran `scripts/abs_inventory.sh` before proof work.
+
+The requested direct `caml_copy_string` splice contradicts this ELF.
+`AllocSprintf.copy_call_target`/`copy_call_decode` certify the JAL at
+`0x80013f1c` to `0x8000c284` (`caml_alloc_initialized_string`). The existing
+`StringCopy.copy_string_machine` summary starts at `0x8000c254`, with its
+source in a0. The short path instead passes the decimal length in a0 and
+the local buffer in a1. `AllocSprintfLong.copy_string_target_obstruction`
+checks the target mismatch; `copy_string_argument_obstruction` independently
+checks that the decimal length cannot equal that buffer pointer under the
+ordinary stack bound. Neither theorem claims an unreachable caller or an
+impossibility of proving the initialized-string path.
+
+`AllocSprintfLong.short_continuation` composes the generated `fits_fast`,
+`copy_fast` and decoded `call_registers_summary` through `summary_bind`.
+It starts at the real vsnprintf continuation `0x80013f10` and executes to
+initialized-string entry, retaining exact arguments, memory, native entry
+facts and observable output. Its length premise is a data observation;
+it assumes no callee execution or return. `decimal_fits` reuses
+`intToString_length_le` and `ParseFormat.bltu_false_of_le`; `decimal_buffer`
+extracts all decimal bytes and the final NUL from the checked `VsnResult`
+with capacity 128, proving length ≤20 and fit including NUL.
+
+**Milestone remains open.** No entry-to-return `caml_alloc_sprintf` summary,
+OCaml byte-string representation or C_CALL2 producer is claimed. The next
+route must generate/check `caml_alloc_initialized_string`'s native save,
+allocator call, memcpy and return boundaries, reuse the nursery constructor
+and shared copy proofs where applicable, and compose that actual target.
+The caller prologue still must establish `VsnLongEntry`/`SymbolicInput`,
+locale/data readbacks, code separation and the spilled argument. Its parsed
+format remains at `sp + 240`, outside seven slots ending there, with
+`snpAbove = 192`. Selected ownership, nursery capacity, allocator/runtime
+metadata, native saved-word frames, after-call runtime facts and original
+return restoration remain unsupplied. No primitive-return summary, selected
+ownership or raw Sail-output equality is inferred from weaker observations.
+
+Validation:
+
+- `scripts/lean-capped.sh lake build
+  OCaml.Vm.Primitives.Format.AllocSprintfLong
+  OCaml.Vm.Primitives.Format.VsnprintfCaller
+  OCaml.Vm.Primitives.Format.FormatInt`: **1,076 jobs**, including
+  `AllocSprintf`, `VsnprintfLong`, `ParseFormatCall` and the copy-string
+  dependency closure (`/tmp/bprime-sprintf-long-build2.log`).
+- Focused `experiments/syi/alloc-sprintf-long-audit.lean`: **9 reports**;
+  all use only `propext`, `Classical.choice`, `Quot.sound`
+  (`/tmp/bprime-sprintf-long-axioms.log`). All five new theorem audits
+  are registered in `OCaml/Audit.lean`; full Audit stays with the lead.
+- Format, stdio-template and vsnprintf-step generator checks pass. Generated
+  outputs are unchanged. Hole, discipline and abstraction gates pass
+  (C4 remains at 3); `git diff --check` passes.
+  Every Lean invocation used the capped wrapper,
+  checked `free -g` first (available ≥25 GB), and ran one build at a time.
+
+Checked edits remain for lead review, commit and `scripts/integrate.sh`.
+No Git metadata or landing queue writes, subagents, proof-budget increases
+or trust primitives were used. General `GoodF1` formatting still requires
+`d/i/u/x/X/o`, flags, width, precision and large/major allocation.
+`BarrierGrowthFull` remains G2; `CustomMemCall` remains a named premise;
+C4 round 2 still waits for F1.
+
 ## F1 round (2026-10-05): entry, halt, final assembly
 
 **Done**
