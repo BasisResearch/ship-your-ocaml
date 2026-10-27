@@ -1,5 +1,17 @@
 # Routes not to repeat
 
+- 2026-10-27 custom global-frame review: `CustomMemCall.frame` preserves
+  `state` under arbitrary outside writes, while `CallerApart.records`
+  quantifies over linked lists reconstructed from those outside bytes.
+  A candidate obstruction redirects the opened-list head to the retained
+  domain resource byte and writes a null next word outside custom state.
+  It requires a checked conditional proof before being called a defect;
+  empty Ready/state may make the whole contract vacuous. The analogous
+  external dependency of `.named` also needs review. Selected ownership
+  alone does not establish frame-stable separation from arbitrary forged
+  lists. `tasks/sol-custom-apart-local.md` records the follow-up; do not
+  silently infer physical custom-state realizability from the ledger repair.
+
 - 2026-10-27 counted ordinary C_CALL interface inspection: the existing
   `CountedPrimReturnsAtR` accepts only ordinary `CcallReady` at the original
   loop entry. Its later `CountedCcallCallee.summary` receives counts at the

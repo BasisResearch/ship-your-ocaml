@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 23:00 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 23:06 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -104,8 +104,12 @@ domain's table identity need startup/frame/call producers.
 Lead review also flagged `CallerApart.free`, which quantifies over every
 heap ledger although `HeapReady` does not require a ledger to be exhaustive.
 `sol-custom-ledger.md` asks for the precise captured empty-ledger obstruction
-and a repair tied to the actual caller ledger. This is currently a contract
-inspection, not a checked counterexample or a claim of global inconsistency.
+and a repair tied to the actual caller ledger. The worker has checked the empty-ledger obstruction and is validating the
+selected-ownership repair. A separate lead inspection found a candidate
+incompatibility between the global record-separation law and unrestricted
+outside-byte framing; `sol-custom-apart-local.md` queues a checked conditional
+obstruction and local spatial-invariant repair. That second candidate is
+not yet a proved defect or a claim of global inconsistency.
 
 Named registration needs a proved node/key reserve and repeated root-cell
 removal/reuse accounting. Distinct immutable names alone do not bound all
