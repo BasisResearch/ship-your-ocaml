@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 22:14 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 22:22 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -41,7 +41,11 @@ list/map facts produce the selected size/head and saved native frame.
 These results are not yet published; the full gate at `2ee3051b` is running.
 The following batch has reviewed counted-stack commit `e97aaed4`: 58 new
 row wrappers and a shared counted RuntimeFrame, 3,194 affected jobs and
-137 focused allowed-axiom reports. Prior WIP and reviewed tips remain
+137 focused allowed-axiom reports. Backtrace composition `c100f1f0` joins
+that batch: 3,436 affected jobs, a 3,440-job audit build (56 backtrace and
+311 insertion declarations), all 2,045 generated startup outputs current.
+The reset-witness interface follow-up is active; no complete reset-qualified
+backtrace or reset-to-cut theorem is claimed yet. Prior WIP and reviewed tips remain
 preserved on `keep/*` branches.
 
 ## Active work
@@ -49,7 +53,7 @@ preserved on `keep/*` branches.
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | G2 Sol | Preserve small-list/header/bitmap representation through next-size return | `syo-wt/a6-gc-next2` |
-| Startup Sol | Extend actual reset execution through backtrace/root registration | `syo-wt/a0-boot-next` |
+| Startup Sol | Retain ELF-reset identity through the checked backtrace prefix | `syo-wt/a0-boot-next` |
 | Lead | Full gate at `2ee3051b`; review and stage counted-stack/reset results | main; `syo-wt/bprime` |
 
 The first G2 split attempt reached the 12 GB cgroup cap while building
@@ -120,7 +124,8 @@ WIP is preserved and lower priority because GoodF1 excludes that path.
 Queued work: remaining counted frames/table assembly and full physical
 Customs supplier, full decimal formatter wrapper, general formatting, and
 a proved named-node/key reserve plus repeated root-cell reuse accounting.
-The captured allocator certificate is complete; reset/backtrace is active. See `tasks/sol-*.md`.
+The captured allocator certificate and backtrace native continuation are checked;
+reset identity is active. See `tasks/sol-*.md`.
 
 Review follow-up: the stack/atom existential interface drops the earlier
 ELF-reset witness while retaining Steps. The witness remains in the nested
