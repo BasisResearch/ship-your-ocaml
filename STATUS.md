@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 21:02 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 21:14 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -48,8 +48,8 @@ The earlier worker WIP and reviewed tips are preserved on `keep/*` branches.
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | G2 Sol | Guarded split/remnant continuation after preserved OOM checkpoint | `syo-wt/a6-gc-next2` |
-| Formatter Sol | Native initialized-string callee after the checked short formatter continuation | `syo-wt/bprime` |
-| Lead | Channel gate, combined next landing, invariant review and task preparation | main; `syo-wt/a1-prims-next`, `syo-wt/a6-gc` |
+| Counted-loop Sol | Carry actual channel/custom counts through entry and the ordinary F1 loop | `syo-wt/a1-prims-next` |
+| Lead | Combined insertion/formatter gate; initialized-string review and next landing | main; `syo-wt/a6-gc`, `syo-wt/bprime` |
 
 The first G2 split attempt reached the 12 GB cgroup cap while building
 `BestFitNext`, after its generated split module passed 609 jobs. WIP is
@@ -66,8 +66,11 @@ at the generated backtrace offset. Full `Skiplist.Ops`, arbitrary insertion,
 The attempted direct copy-string splice was refuted by the pinned target:
 the short formatter calls `caml_alloc_initialized_string` at `0x8000c284`,
 with length and source arguments. The real fit/argument/JAL continuation
-passes 1,076 build jobs and 9 focused reports. The next worker proves that
-actual initialized-string callee; no full formatter return is claimed.
+passes 1,076 build jobs and 9 focused reports. The initialized-string callee
+and its direct short formatter splice are now checked and reviewed as
+`1150a772`: 1,403 affected jobs, 81 allowed-axiom reports and all focused
+generator/discipline checks pass. It awaits the next integration batch in
+`bprime`; no full formatter return is claimed.
 
 The formatter summary executes native `vsnprintf` for plain `%ld`, including
 truncation, NUL, length, saved registers and memory frame. Its ownership ends
