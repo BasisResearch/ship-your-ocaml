@@ -20,7 +20,7 @@ Start after VsnprintfLong and its caller witness are checked and committed; insp
 Files: OCaml/Vm/Primitives/Format/{AllocSprintf,VsnprintfLong,ParseFormatCall,FormatInt}.lean, the existing copy-string summary, and a new composition module; generators own generated files.
 Use the actual prologue/call/fits/copy/return segments and FnSummary call combinators; derive the VsnLongEntry and SymbolicInput from the prologue execution at the real caller offsets.
 Keep the parsed format outside the owned vararg window. The seven spill slots end at sp+240; the real parsed-format buffer starts there. Reuse the corrected snpAbove=192.
-For signed 64-bit decimal, derive output length <=20, fit in the 128-byte local buffer, and use the actual caml_copy_string target and nursery allocation proof. Do not assume its return or a primitive summary.
+For signed 64-bit decimal, derive output length <=20, fit in the 128-byte local buffer, and use the actual caml_alloc_initialized_string target (0x8000c284) and nursery allocation proof. Do not assume its return or a primitive summary.
 Produce the returned OCaml byte-string representation, exact decimal bytes and length, tagged/native ABI, output and memory/frame facts needed by a future C_CALL2 producer.
 Carry actual allocator/runtime preconditions and selected ownership through the same run; never infer a raw sailOutput vector equality from observable-output equality.
 Done: checked entry-to-return native summary for this decimal path, focused affected build/standard-axiom audits and generator checks; accurately record unsupplied caller/runtime conditions.

@@ -46,7 +46,7 @@ The earlier worker WIP and reviewed tips are preserved on `keep/*` branches.
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | G2 Sol | Guarded split/remnant continuation after preserved OOM checkpoint | `syo-wt/a6-gc-next2` |
-| Formatter Sol | Actual decimal `caml_alloc_sprintf` composition from the checked wrapper | `syo-wt/bprime` |
+| Formatter Sol | Native initialized-string callee after the checked short formatter continuation | `syo-wt/bprime` |
 | Lead | Channel gate, combined next landing, invariant review and task preparation | main; `syo-wt/a1-prims-next`, `syo-wt/a6-gc` |
 
 The first G2 split attempt reached the 12 GB cgroup cap while building
@@ -60,6 +60,12 @@ The first-insertion summary executes the actual prefix, `stat_checked` call,
 chain, allocator readiness, selected owned-block frame and the domain key
 at the generated backtrace offset. Full `Skiplist.Ops`, arbitrary insertion,
 `RootsAt` and reset/backtrace caller composition remain open.
+
+The attempted direct copy-string splice was refuted by the pinned target:
+the short formatter calls `caml_alloc_initialized_string` at `0x8000c284`,
+with length and source arguments. The real fit/argument/JAL continuation
+passes 1,076 build jobs and 9 focused reports. The next worker proves that
+actual initialized-string callee; no full formatter return is claimed.
 
 The formatter summary executes native `vsnprintf` for plain `%ld`, including
 truncation, NUL, length, saved registers and memory frame. Its ownership ends
