@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 22:49 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 22:52 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,26 +18,29 @@ None currently.
 
 ## Published
 
-`origin/main` is **`2ee3051b`**, verified remotely. The full gate passed
-**6,064 build jobs**, **9,169 allowed-axiom reports**, all generator/ELF
+`origin/main` is **`e12e1731`**, verified remotely. The full gate passed
+**6,083 build jobs**, **9,292 allowed-axiom reports**, all generator/ELF
 checks and **329 OS traces** (5,069 steps, 324 accepted, 5 special,
-zero rejected or unsupported). Integration log:
-`/tmp/syo-allocator-counted-search-integrate.log`.
+zero rejected or unsupported). Archived logs:
+`logs/integrate-e12e1731.log`, `logs/build-e12e1731.log`.
 
-This batch closes the captured allocator/`libHeap` premise, removes its
-obsolete generated-table argument, supplies counted interpreter entry and
-shared loop/placement continuation, and composes G2 bitmap search through
-the native allocation return. A captured heap certificate is not reset
-execution. The native G2 return alone is not full allocator preservation.
+The latest batch adds the counted stack RuntimeFrame and 58 opcode wrappers,
+actual backtrace/root-registration execution, and G2 returned free-list,
+header and bitmap representation with allocated-block separation. It does
+not yet export the stronger reset-qualified interface or preserve the new
+G2 `SmallPhysical` component for repeated allocation; those are next.
+
+The previous `2ee3051b` batch closes the captured allocator/`libHeap` premise,
+counted interpreter entry/loop placement and native G2 bitmap-search return.
+A captured heap certificate is not reset execution.
 
 Earlier full-gate batches: initialized string and G2 split/complete route
 `88d4c057`; first root insertion and decimal vsnprintf `333e9614`;
 complete counted channel returns `71547e46`; named ownership `7e7a052a`.
 
-## Next landing batch
+## Latest landed proofs
 
-Reviewed and committed locally; the next full gate is running in
-`syo-wt/a6-gc-next2` with coherent caches from the published batch:
+The verified batch contains:
 
 - `e97aaed4`: shared counted RuntimeFrame and 58 stack/load/assignment/trap
   wrappers. 3,194 affected jobs and 137 focused allowed-axiom reports pass.
@@ -55,14 +58,14 @@ Reviewed and committed locally; the next full gate is running in
   declarations. Preservation of the new `SmallPhysical` component itself,
   and its production by native callers, remain open for repeated allocation.
 
-## Reviewed for the following batch
+## Reviewed for the next batch
 
 `e35aa58b` supplies counted allocation frames, seven opcode rows and three
 allocating primitive return contracts. Both final affected builds passed
 3,626 jobs; 32 focused reports use only the allowed axioms, and all 27 new
 theorems are registered. The ordinary counted census is now 67/134 locally;
 the primitive contracts still need complete C_CALL composition. This batch
-is queued behind the active full gate.
+will be gated with the stronger reset interface.
 
 ## Active work
 
@@ -70,7 +73,7 @@ is queued behind the active full gate.
 | --- | --- | --- |
 | Startup Sol | Retain ELF-reset identity and expose universal reset-to-backtrace | `syo-wt/a0-boot-next` |
 | Custom-ownership Sol | Repair universal-ledger assumption with selected ownership | `syo-wt/a1-prims-next` |
-| Lead | Gate counted-stack/backtrace/G2 representation; review remaining suppliers | main; `syo-wt/a6-gc-next2` |
+| Lead | Prepare next allocation/reset integration; review remaining suppliers | main |
 
 ## Remaining F1 boundaries
 
