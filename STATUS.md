@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 22:28 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 22:36 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -8,132 +8,92 @@ None currently.
 
 ## Standing decisions
 
-- `BarrierGrowthFull` remains with G2; `CustomMemCall` remains a named premise.
+- `BarrierGrowthFull` remains G2; `CustomMemCall` remains a named premise.
 - C4 abstraction-discovery round 2 waits until F1 closes. Its draft is preserved.
-- Separate `codex exec` Sol workers, high reasoning, at most two. Every worker
-  and Lean build has a 12 GB systemd cap; check available memory before launch.
-- The lead reviews and commits; all landings use `scripts/integrate.sh` and
-  normal fast-forward pushes to `origin/main`. Known failed routes are in
-  `docs/lanes/DEAD-ENDS.md`.
+- Separate Sol CLI workers, high reasoning, at most two. Worker/build scopes
+  have a 12 GB cap; check available memory before launch. Use the build guard.
+- The lead reviews, commits and lands through `scripts/integrate.sh`, using
+  normal pushes to `origin/main`. Preserved work is on `keep/*` branches.
+- Read `docs/lanes/DEAD-ENDS.md` before assigning a route again.
 
-## Landing train
+## Published
 
-Published `origin/main` is `88d4c057`: initialized-string nursery return,
-short formatter allocation splice, G2 split/remnant and complete pick/pop/split
-route. The full gate passed 6,056 jobs, 8,595 allowed-axiom reports, all
-generator/ELF checks, and 329 OS traces (zero rejected). The gate exposed an
-old executable-name rewrite after the shared copy-post refactor; its explicit
-adapter repair passed 2,010 jobs before the successful full rerun.
+`origin/main` is **`2ee3051b`**, verified remotely. The full gate passed
+**6,064 build jobs**, **9,169 allowed-axiom reports**, all generator/ELF
+checks and **329 OS traces** (5,069 steps, 324 accepted, 5 special,
+zero rejected or unsupported). Integration log:
+`/tmp/syo-allocator-counted-search-integrate.log`.
 
-Earlier batches: insertion/formatter `333e9614` (6,049 jobs, 8,510 reports),
-complete counted channel returns `71547e46` (6,038 jobs, 8,476 reports), and
-physical named ownership `7e7a052a`, all through the full gate.
+This batch closes the captured allocator/`libHeap` premise, removes its
+obsolete generated-table argument, supplies counted interpreter entry and
+shared loop/placement continuation, and composes G2 bitmap search through
+the native allocation return. A captured heap certificate is not reset
+execution. The native G2 return alone is not full allocator preservation.
 
-The next batch contains the captured allocator certificate `d959451a` and
-its generated-table consumer update `d890bf6a`. Counted-loop continuation
-`274e994b` passed 3,694 jobs and 39 focused reports at its worker base.
-The merged allocator composition `16da258b` passes 3,649 jobs and the same
-39 focused audits; its counted whileMin entry has no heap premise.
-The two boot-read extensions merged and reproduce through their generator.
-The same batch also contains checked G2 bitmap-search composition
-`4eec805d`: 1,287 affected jobs and 217 audited declarations. Its original
-list/map facts produce the selected size/head and saved native frame.
-These results are not yet published; the full gate at `2ee3051b` is running.
-The following batch has reviewed counted-stack commit `e97aaed4`: 58 new
-row wrappers and a shared counted RuntimeFrame, 3,194 affected jobs and
-137 focused allowed-axiom reports. Backtrace composition `c100f1f0` joins
-that batch: 3,436 affected jobs, a 3,440-job audit build (56 backtrace and
-311 insertion declarations), all 2,045 generated startup outputs current.
-G2 returned list/header/bitmap representation and allocated-block separation
-also passed review: 1,288 affected jobs, 239 allowed-axiom reports and two
-axiom-free declarations. Original SmallPhysical production and preservation
-remain open before this can serve repeated allocations.
-The reset-witness interface follow-up is active; no complete reset-qualified
-backtrace or reset-to-cut theorem is claimed yet. Prior WIP and reviewed tips remain
-preserved on `keep/*` branches.
+Earlier full-gate batches: initialized string and G2 split/complete route
+`88d4c057`; first root insertion and decimal vsnprintf `333e9614`;
+complete counted channel returns `71547e46`; named ownership `7e7a052a`.
+
+## Next landing batch
+
+Reviewed and committed locally, awaiting the next full gate:
+
+- `e97aaed4`: shared counted RuntimeFrame and 58 stack/load/assignment/trap
+  wrappers. 3,194 affected jobs and 137 focused allowed-axiom reports pass.
+  Together with CONST0/NEGINT this gives 60/134 counted opcode rows;
+  the exact remaining 74 are listed in `docs/lanes/a1-prims.md`.
+- `c100f1f0`: actual backtrace/root registration through first insertion,
+  returning to `0x80004e84`, with domain/page-table/root-value frames.
+  3,436 affected jobs; 3,440-job audit build (56 backtrace and 311 insertion
+  declarations); all 2,045 startup generator outputs reproduce.
+  Review found that the exported stack/atom existential had dropped its
+  nested ELF-reset witness. The stronger interface is being checked now.
+- `8f60fb69`: actual G2 returned small-list/header/bitmap representation
+  and allocated-block separation, from explicit original physical extents.
+  1,288 affected jobs; 239 allowed-axiom reports and two axiom-free
+  declarations. Preservation of the new `SmallPhysical` component itself,
+  and its production by native callers, remain open for repeated allocation.
 
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| Counted-allocation Sol | Lift nursery/native allocation frames and allocating opcode rows | `syo-wt/a1-prims-next` |
-| Startup Sol | Retain ELF-reset identity through the checked backtrace prefix | `syo-wt/a0-boot-next` |
-| Lead | Full gate at `2ee3051b`; review and stage counted-stack/reset results | main; `syo-wt/bprime` |
-
-The first G2 split attempt reached the 12 GB cgroup cap while building
-`BestFitNext`, after its generated split module passed 609 jobs. WIP is
-preserved (`keep/gc-split-20261027-2057`), and the resumed worker isolated
-the expensive declarations under a 6 GB diagnostic limit. The checked result
-`ecca3e24` passes 1,264 affected jobs and 180 standard-axiom reports, with
-generator and discipline checks. Bounded scalar/log/access certificates
-replace the failed broad normalization. The actual split, remnant insertion
-and original native return compose with exact counter and selected frame
-facts. Complete pick/pop/split composition is checked as `78081098`:
-1,282 jobs, 199 allowed-axiom reports and 2 axiom-free declarations.
-Original-memory list/header/map facts supply each intermediate input;
-bitmap search before this route is now checked in `4eec805d`.
-Final allocator preservation and other size classes remain open. Task rules now require the
-build guard to stop failed or 10 GiB builds before the worker cap.
-
-The first-insertion summary executes the actual prefix, `stat_checked` call,
-24-byte cell/header stores and ABI return. It exports seed 25173, a level-0
-chain, allocator readiness, selected owned-block frame and the domain key
-at the generated backtrace offset. Full `Skiplist.Ops`, arbitrary insertion,
-`RootsAt` and reset/backtrace caller composition remain open.
-
-The attempted direct copy-string splice was refuted by the pinned target:
-the short formatter calls `caml_alloc_initialized_string` at `0x8000c284`,
-with length and source arguments. The real fit/argument/JAL continuation
-passes 1,076 build jobs and 9 focused reports. The initialized-string callee
-and its direct short formatter splice are now checked and reviewed as
-`1150a772`: 1,403 affected jobs, 81 allowed-axiom reports and all focused
-generator/discipline checks pass. It landed at `88d4c057`; no full formatter return is claimed.
-
-The formatter summary executes native `vsnprintf` for plain `%ld`, including
-truncation, NUL, length, saved registers and memory frame. Its ownership ends
-before the real caller's parsed-format buffer (`snpAbove = 192`); a concrete
-native entry proves the contract is satisfiable. Reachable caller suppliers,
-string allocation, general `d/i/u/x/X/o` flags/width/precision, major allocation
-and the C_CALL2 return remain open. Decimal-only progress does not close F1.
+| Startup Sol | Retain ELF-reset identity and expose universal reset-to-backtrace | `syo-wt/a0-boot-next` |
+| Counted-allocation Sol | Lift nursery/native allocation frames and allocating rows | `syo-wt/a1-prims-next` |
+| Lead | Review remaining suppliers; assemble the next full-gate batch | main; idle landing slots |
 
 ## Remaining F1 boundaries
 
-All opcode row families and interpreter entry/halt composition are present;
-`ocamlrun_refinement_F1_open` still consumes primitive/growth premises.
-The five ordinary open C_CALL fields are the two descriptor opens, out-channel
-listing, named registration, and integer formatting. Counted channel helpers
-still need the remaining ordinary loop frames and actual runtime entry/after
-suppliers. Concrete startup table occupancy, actual interpreter entry, shared
-placement coherence and memory-preserving row reuse are checked; occupancy
-alone does not supply the full custom-runtime predicate. With the reviewed stack/load wrappers there are 60/134 counted rows,
-including CONST0/NEGINT. The remaining 74 are listed in `a1-prims.md`;
-this is not a complete F1 table. `LibHeapAt.named` now carries ownership in the
-selected ledger; named resource reserves and registration remain open. Distinct-key
-provenance bounds nodes but does not account for repeated skiplist cell
-allocation on root-class changes; actual removal/reuse remains required.
+Ordinary uncounted opcode families and interpreter entry/halt composition
+exist. The counted table still needs its remaining allocation, control,
+barrier and primitive frames/rows and complete C_CALL assembly. Opening and
+out-channel listing use checked native returns, but their concrete runtime,
+heap/record and after-call suppliers remain open. Table occupancy alone is
+not the full physical `Customs` predicate: resource words and the current
+domain's table identity need startup/frame/call producers.
 
-Reset-through-atoms is landed (`9c443c79`, audited at `bb55a4e5`); full
-reset-to-cut/Loaded remains open. The captured allocator is checked as
-`d959451a`: all 30 chunks, 127 bins and 27 live blocks, 16 MiB of credits,
-3,211 affected build jobs and 577 allowed/axiom-free declaration audits.
-The closed covers theorem supplies `libHeap`; `d890bf6a` removes its
-obsolete generated caller argument, checked with 3,243 build jobs. This
-reviewed fourth batch awaits full integration with the counted continuation. A captured loaded memory snapshot
-is not reset execution. G2 pick/pop landed (`6d002aa5`); split/remnant and complete
-pick/pop/split landed at `88d4c057`. Bitmap
-dispatch into fallback, final allocator preservation and full collection
-remain open; the nonzero bitmap search is checked in `4eec805d`. The a2-sem uncaught-path
-WIP is preserved and lower priority because GoodF1 excludes that path.
+Lead review also flagged `CallerApart.free`, which quantifies over every
+heap ledger although `HeapReady` does not require a ledger to be exhaustive.
+`sol-custom-ledger.md` asks for the precise captured empty-ledger obstruction
+and a repair tied to the actual caller ledger. This is currently a contract
+inspection, not a checked counterexample or a claim of global inconsistency.
 
-Queued work: remaining counted frames/table assembly and full physical
-Customs supplier, full decimal formatter wrapper, general formatting, and
-a proved named-node/key reserve plus repeated root-cell reuse accounting.
-The captured allocator certificate and backtrace native continuation are checked;
-reset identity is active. See `tasks/sol-*.md`.
+Named registration needs a proved node/key reserve and repeated root-cell
+removal/reuse accounting. Distinct immutable names alone do not bound all
+skiplist allocation calls. The owned named ledger is already carried.
 
-Review follow-up: the stack/atom existential interface drops the earlier
-ELF-reset witness while retaining Steps. The witness remains in the nested
-ResetReadSections source. `sol-backtrace-reset-identity.md` restores that
-producer chain before extending the reset prefix beyond backtrace; this is
-a contract issue, not a refutation of the executed path. Next counted task:
-`sol-counted-allocation.md`. No user decision is required.
+Formatting still needs the complete decimal native wrapper, general
+`d/i/u/x/X/o` flags/width/precision, large/major allocation and the C_CALL2
+return. The checked decimal vsnprintf and initialized-string splice do not
+close general formatting. Do not narrow GoodF1 to make those premises vanish.
+
+Reset still needs the continuation after backtrace through interpreter/debugger
+initialization, code/primitives/data loading, system/argv setup and `Loaded`.
+G2 still needs original physical-invariant production/preservation, dispatch,
+other size classes/colors, complete allocator readiness and collection.
+The a2-sem uncaught-path WIP stays preserved and lower priority: GoodF1
+excludes that path.
+
+Task packets are in `tasks/sol-*.md`. Next priorities include selected custom
+ownership, counted control/console continuations, decimal formatter return,
+named reserves and G2 physical preservation. No user-only decision blocks work.
