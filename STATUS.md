@@ -25,7 +25,7 @@ None currently.
 
 The lead now uses separate `codex exec` workers (`gpt-6.1-sol`, high reasoning),
 at most two at a time, launched through `codexwork.sh`. Built-in proof agents
-have stopped. The current Sol tasks finish physical named-node ownership/separation and
+have stopped. The current Sol tasks supply the per-call custom-count/readiness bridge and
 prove the first empty-skiplist insertion needed by startup. Startup, G2 pick/pop, refcount transport, all-byte C-string/strcmp, and foreman
 tooling landed. The current proof work remains in the two Sol worktrees. Workers inherit a 12 GB systemd scope; the lead handles
 Git and landings outside their workspace-write sandbox. Known failed routes are in `docs/lanes/DEAD-ENDS.md`.
@@ -41,21 +41,24 @@ The remaining general C_CALL fields are `openOutRuntime`, `outListRuntime`,
 The a2-sem uncaught-exception WIP is preserved in `syo-wt/a2-sem-next`;
 `GoodF1` excludes that path, so it is behind current F1 work in priority.
 
-The named worker has checked physical named-table ownership/separation,
-runtime and channel-opening consumers, and 59 focused axiom reports. Its full
-OCaml build is finding and repairing the remaining consumers of the stronger
-invariant; the complete migration has not landed. It keeps the matching selected
-malloc ledger rather than assuming ownership of every live allocation.
+The physical named-table migration passed the complete `OCaml` build (4,151
+jobs) and all 71 focused axiom reports. Its checked commit is `97e03f8d`;
+the rebased integration candidate is in `syo-wt/a6-gc-next2` (`3322dc6c` before
+status updates), alongside the formatter checkpoint. It still needs the full
+integration gate. The migration keeps the matching selected malloc ledger
+rather than assuming ownership of every live allocation. Its original Sol
+slot now implements the per-call custom-count/readiness bridge.
 
 The formatter layout/template checkpoint has passed its focused builds and
 is running the full integration gate in `bprime`. Its former Sol slot now proves
 the first empty-skiplist insertion used by `caml_init_backtrace` in `a6-gc`.
-The seed-zero path selects level 0 and allocates a 24-byte cell; the native
-summary, ownership/frame proof and reset composition remain in progress.
+The seed-zero path selects level 0 and allocates a 24-byte cell. Two evaluator
+attempts hit the 12 GB cap; factored certificates now pass with a 6 GB Lean
+diagnostic limit. The native summary, ownership/frame proof and reset
+composition remain in progress.
 
 Prepared next assignments (not additional running workers): native `vsnprintf`
-wrapper execution (`tasks/sol-vsnprintf-wrapper.md`), the per-call custom-count
-budget bridge (`tasks/sol-custom-count.md`), and G2 split/remnant composition
+wrapper execution (`tasks/sol-vsnprintf-wrapper.md`) and G2 split/remnant composition
 (`tasks/sol-gc-split.md`). There are still only two active Sol workers.
 
 G2 validation: the landing gate built 6029 jobs and audited 8325 declarations
