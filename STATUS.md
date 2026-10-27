@@ -41,20 +41,22 @@ The remaining general C_CALL fields are `openOutRuntime`, `outListRuntime`,
 The a2-sem uncaught-exception WIP is preserved in `syo-wt/a2-sem-next`;
 `GoodF1` excludes that path, so it is behind current F1 work in priority.
 
-The named worker checked the full-byte lookup bridge and 43 focused axiom
-reports, preserved at `7c6bc6c1`. Its full consumer build remains incomplete.
-The named worker is resuming physical ownership/separation WIP after a usage-limit stop. This is an invariant
-design task, not a user-only blocker. The next task supplies physical ownership
-and separation, then migrates payload consumers. The formatter WIP is preserved
-in `bprime` from `2c0a97a9`; template migration and caller-layout checks are
-complete at `4093ad0c`, and the full integration gate is next.
+The named worker has checked physical named-table ownership/separation,
+runtime and channel-opening consumers, and 59 focused axiom reports. Its full
+OCaml build is finding and repairing the remaining consumers of the stronger
+invariant; the complete migration has not landed. It keeps the matching selected
+malloc ledger rather than assuming ownership of every live allocation.
 
-The independent all-byte C-string/strcmp extraction passed generation checks
-and its sole full-gate regression in `Uncaught.FatalNames` is repaired and
-focused-audited, then landed as `c5a18e5a` after the full gate. The formatter Sol task
-finished its focused audit; its slot now runs skiplist insertion in `a6-gc`.
-The previous workers stopped on the October 21 usage limit; its logged October
-27 reset time has passed, so the lead is restarting separate Sol processes.
+The formatter layout/template checkpoint has passed its focused builds and
+is running the full integration gate in `bprime`. Its former Sol slot now proves
+the first empty-skiplist insertion used by `caml_init_backtrace` in `a6-gc`.
+The seed-zero path selects level 0 and allocates a 24-byte cell; the native
+summary, ownership/frame proof and reset composition remain in progress.
+
+Prepared next assignments (not additional running workers): native `vsnprintf`
+wrapper execution (`tasks/sol-vsnprintf-wrapper.md`), the per-call custom-count
+budget bridge (`tasks/sol-custom-count.md`), and G2 split/remnant composition
+(`tasks/sol-gc-split.md`). There are still only two active Sol workers.
 
 G2 validation: the landing gate built 6029 jobs and audited 8325 declarations
 before pushing `6d002aa5`. The refcount/library train passed all stages and
