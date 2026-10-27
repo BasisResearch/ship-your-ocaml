@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 21:14 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 21:18 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -37,7 +37,7 @@ checks and 329 OS traces (zero rejected). The next two batches are:
    The `%ld` wrapper passes 978 jobs, its concrete caller check, 34 focused
    reports, stdio generator drift, hole/discipline/abstraction gates.
    The batch also includes the checked short formatter continuation. Its
-   full integration is starting after a coherent cache handoff.
+   full integration is running after a coherent cache handoff.
 
 Local `main` includes the second reviewed batch to support subsequent worker
 work; that batch has not yet passed the full gate or reached origin.
@@ -47,14 +47,19 @@ The earlier worker WIP and reviewed tips are preserved on `keep/*` branches.
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| G2 Sol | Guarded split/remnant continuation after preserved OOM checkpoint | `syo-wt/a6-gc-next2` |
+| G2 Sol | Compose the complete next-size pick/pop/split native return | `syo-wt/a6-gc-next2` |
 | Counted-loop Sol | Carry actual channel/custom counts through entry and the ordinary F1 loop | `syo-wt/a1-prims-next` |
-| Lead | Combined insertion/formatter gate; initialized-string review and next landing | main; `syo-wt/a6-gc`, `syo-wt/bprime` |
+| Lead | Insertion/formatter gate; initialized-string and G2 split landing batch | main; `syo-wt/a6-gc`, `syo-wt/bprime` |
 
 The first G2 split attempt reached the 12 GB cgroup cap while building
 `BestFitNext`, after its generated split module passed 609 jobs. WIP is
-preserved (`keep/gc-split-20261027-2057`), and the resumed worker must isolate
-the declaration under a 6 GB diagnostic limit. Task rules now require the
+preserved (`keep/gc-split-20261027-2057`), and the resumed worker isolated
+the expensive declarations under a 6 GB diagnostic limit. The checked result
+`ecca3e24` passes 1,264 affected jobs and 180 standard-axiom reports, with
+generator and discipline checks. Bounded scalar/log/access certificates
+replace the failed broad normalization. The actual split, remnant insertion
+and original native return compose with exact counter and selected frame
+facts; complete entry-to-return pick/pop/split composition is next. Task rules now require the
 build guard to stop failed or 10 GiB builds before the worker cap.
 
 The first-insertion summary executes the actual prefix, `stat_checked` call,
@@ -91,8 +96,9 @@ selected ledger; named resource reserves and registration remain open.
 
 Reset-through-atoms is landed (`9c443c79`, audited at `bb55a4e5`), but full
 reset-to-cut/Loaded and `libHeap` are open. A captured loaded memory snapshot
-is not reset execution. G2 pick/pop landed (`6d002aa5`); split/remnant,
-allocator readiness and full collection are open. The a2-sem uncaught-path
+is not reset execution. G2 pick/pop landed (`6d002aa5`); split/remnant is checked for the
+next landing batch; whole-route composition, allocator readiness and full
+collection remain open. The a2-sem uncaught-path
 WIP is preserved and lower priority because GoodF1 excludes that path.
 
 Queued tasks: ordinary counted-loop migration, actual startup/backtrace
