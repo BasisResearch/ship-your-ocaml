@@ -102,5 +102,5 @@ collection remain open. The a2-sem uncaught-path
 WIP is preserved and lower priority because GoodF1 excludes that path.
 
 Queued tasks: ordinary counted-loop migration, actual startup/backtrace
-composition after first insertion, and a proved named-key reserve without
-adding the absent max-name/count guards. See `tasks/sol-*.md`.
+composition after first insertion, a checked allocator-readiness certificate at the captured cut, and a proved
+named-key reserve without adding the absent max-name/count guards. See `tasks/sol-*.md`.
