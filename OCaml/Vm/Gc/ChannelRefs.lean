@@ -9,9 +9,11 @@ import OCaml.Vm.Gc.G1RoomDefs
 `caml_alloc_custom_mem`, from `caml_ml_open_descriptor_{in,out}` and from
 each channel `caml_ml_out_channels_list` lists. No finalizer runs under G1,
 so the custom blocks allocated since program start are the sum of the open
-channels' refcounts (`RefcountSum m n`, `RefcountSumAt` naming the list). a6-gc's `Customs c n` is read at
-this `n` (`F1Pins.customs`); the representation ties each refcount to the
-channel's `refs` in the world.
+channels' refcounts at VM boundaries (`RefcountSum m n`, `RefcountSumAt`
+naming the list). `ChannelCustomsAt` also names the intermediate offset:
+io.c increments the refcount before the physical custom allocation. The
+physical-count supplier and its connection to the represented world's
+`refs` must be carried by the invariant; `F1Pins` does not yet carry them.
 -/
 
 namespace OCaml.Vm.Gc
@@ -108,6 +110,79 @@ theorem RefcountSumAt.link {m m' : Std.ExtHashMap Nat (BitVec 8)} {chs : List Na
     have sum := before.sum
     unfold refcountSum at sum
     omega
+
+/-- Physical custom allocations and channel references at a native boundary.
+`pending` counts references incremented before their custom allocations;
+it is zero at VM boundaries and one immediately before `caml_alloc_custom_mem`.
+`Customs` reads the runtime's physical accounting state, separately from refs. -/
+structure ChannelCustomsAt (Customs : Config → Nat → Prop) (c : Config)
+    (chs : List Nat) (n pending : Nat) : Prop where
+  physical : Customs c n
+  refs : RefcountSumAt c.σ.mem chs (n + pending)
+
+/-- Initial empty channels, given the runtime's physical zero-count witness. -/
+theorem ChannelCustomsAt.of_null {Customs : Config → Nat → Prop} {c : Config}
+    (physical : Customs c 0)
+    (head : bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8 = 0#64) :
+    ChannelCustomsAt Customs c [] 0 0 := by
+  refine ⟨physical, ?_⟩
+  refine ⟨?_, rfl⟩
+  unfold OpenChannelList
+  rw [head]
+  exact .nil
+
+/-- Shared caller-store frame. Buffer/link readbacks and the custom-state
+frame are supplied once, independently of the consumer's byte argument. -/
+theorem ChannelCustomsAt.frame {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} {c d : Config} {chs : List Nat} {n pending : Nat}
+    (accounting : CustomMemCall.Accounting Ready state Customs)
+    (before : ChannelCustomsAt Customs c chs n pending)
+    (memory : ∀ a, state c a → (d.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0)
+    (domain : word d Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (links : ChannelLinksKept c.σ.mem d.σ.mem chs)
+    (refs : ∀ a ∈ chs, chanRefs d.σ.mem a = chanRefs c.σ.mem a) :
+    ChannelCustomsAt Customs d chs n pending :=
+  ⟨accounting.frame before.physical memory domain, before.refs.frame links refs⟩
+
+/-- The caller has bumped references, but the allocator has not run yet.
+For an out-list batch the sum is the number of listed records, not one. -/
+theorem ChannelCustomsAt.charge {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} {c d : Config} {chs : List Nat} {n pending : Nat}
+    (accounting : CustomMemCall.Accounting Ready state Customs)
+    (before : ChannelCustomsAt Customs c chs n pending)
+    (memory : ∀ a, state c a → (d.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0)
+    (domain : word d Layout.sym_Caml_state = word c Layout.sym_Caml_state)
+    (links : ChannelLinksKept c.σ.mem d.σ.mem chs) (charge : Nat → Nat)
+    (refs : ∀ a ∈ chs, chanRefs d.σ.mem a = chanRefs c.σ.mem a + charge a) :
+    ChannelCustomsAt Customs d chs n (pending + (chs.map charge).sum) := by
+  refine ⟨accounting.frame before.physical memory domain, ?_⟩
+  simpa only [Nat.add_assoc] using before.refs.add links charge refs
+
+/-- An allocator return consumes exactly one pending reference. The exact
+physical increment is a field of the named custom-call accounting obligation;
+it is never inferred from the returned `Ready k`. -/
+theorem ChannelCustomsAt.allocate {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} {c d : Config} {chs : List Nat} {n pending : Nat}
+    {H : List (Nat × Nat)} {site : CustomMemSite} {v : BitVec 64}
+    (accounting : CustomMemCall.Accounting Ready state Customs)
+    (before : ChannelCustomsAt Customs c chs n (pending + 1))
+    (returned : CustomMemReturned state H site v c d)
+    (links : ChannelLinksKept c.σ.mem d.σ.mem chs)
+    (refs : ∀ a ∈ chs, chanRefs d.σ.mem a = chanRefs c.σ.mem a) :
+    ChannelCustomsAt Customs d chs (n + 1) pending := by
+  refine ⟨accounting.step before.physical returned, ?_⟩
+  have kept := before.refs.frame links refs
+  rw [show n + 1 + pending = n + (pending + 1) by omega]
+  exact kept
+
+/-- Readiness uses physical accounting and the successful successor's budget.
+This also applies to several out-list custom allocations. -/
+theorem ChannelCustomsAt.ready {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} {c : Config} {chs : List Nat} {n pending k : Nat}
+    (accounting : CustomMemCall.Accounting Ready state Customs)
+    (before : ChannelCustomsAt Customs c chs n pending)
+    (bound : n + k ≤ quietBound) : Ready k c :=
+  accounting.ready_of_bound before.physical bound
 
 /-- The G1 budget's custom blocks are the quiet ones (`quietBound`). -/
 theorem g1Budget_customs : g1Budget.customs = quietBound := rfl

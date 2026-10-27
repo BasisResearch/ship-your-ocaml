@@ -147,3 +147,9 @@
   observation does not imply equality of raw output vectors. Compose the
   observable output frame, or prove a stronger shared execution property;
   do not extract a raw-vector frame from this weaker contract.
+- 2026-10-27: do not assert a physical custom-count increment universally
+  from the weak `CustomMemReturned` record. That record leaves the counter
+  bytes in `state` unconstrained. Put the exact count in the actual named
+  call-summary postcondition and carry its proof through channel callers;
+  a separate implication from the old record does not supply that execution
+  fact. The first custom-count WIP is preserved for this correction.

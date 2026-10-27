@@ -187,4 +187,31 @@ theorem ReadyOf.succ {Customs : Config → Nat → Prop} {k n} {c d : Config} (r
   rw [unique n' at'] at bound
   exact ⟨n + 1, step, by omega⟩
 
+/-- The exact-count part of the named `CustomMemCall` machine obligation.
+`Customs` describes physical custom-allocation state, independently of the
+channel refcounts. Its concrete supplier must certify these laws together
+with the call summary; they do not follow from `Ready k`.
+
+The caller increments a channel refcount before calling the allocator. Such
+stores frame `Customs`; only the allocator advances its count. -/
+structure CustomMemCall.Accounting (Ready : Nat → Config → Prop)
+    (state : Config → Nat → Prop) (Customs : Config → Nat → Prop) : Prop where
+  unique : ∀ {c n n'}, Customs c n → Customs c n' → n = n'
+  frame : ∀ {c d n}, Customs c n →
+    (∀ a, state c a → (d.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) →
+    word d Layout.sym_Caml_state = word c Layout.sym_Caml_state → Customs d n
+  /-- Exact physical transition on the same returned call consumed by callers. -/
+  step : ∀ {H : List (Nat × Nat)} {site : CustomMemSite} {v : BitVec 64} {f d : Config} {n : Nat},
+    Customs f n → CustomMemReturned state H site v f d → Customs d (n + 1)
+  /-- Quietness is proved from the physical state and the remaining budget,
+  rather than from the refcount sum as a frame-stable definition of `Ready`. -/
+  ready : ∀ {k c}, ReadyOf Customs k c → Ready k c
+
+/-- A physical count plus the successful successor's bound supplies readiness. -/
+theorem CustomMemCall.Accounting.ready_of_bound
+    {Ready : Nat → Config → Prop} {state Customs : Config → Nat → Prop}
+    (accounting : CustomMemCall.Accounting Ready state Customs) {c : Config} {n k : Nat}
+    (count : Customs c n) (bound : n + k ≤ quietBound) : Ready k c :=
+  accounting.ready ⟨n, count, bound⟩
+
 end OCaml.Vm.Gc
