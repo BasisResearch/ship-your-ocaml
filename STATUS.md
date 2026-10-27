@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 21:47 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 21:49 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -30,8 +30,9 @@ The preceding counted-channel return bundle landed at `71547e46` with
 
 The next reviewed batch in `syo-wt/bprime` contains initialized-string
 allocation (`1150a772`), G2 split/remnant return (`ecca3e24`), and the complete
-pick/pop/split route (`78081098`). Its full gate is running after a coherent
-cache handoff from the fully checked insertion worktree.
+pick/pop/split route (`78081098`). Its full gate restarted at `88d4c057` after fixing the executable-name
+consumer of the generalized string-copy post. The targeted adapter check
+passes 2,010 jobs; the coherent dependency cache is retained.
 Local main contains these reviewed results; they are not yet published.
 Prior WIP and reviewed tips remain preserved on `keep/*` branches.
 
@@ -93,10 +94,11 @@ allocation on root-class changes; actual removal/reuse remains required.
 
 Reset-through-atoms is landed (`9c443c79`, audited at `bb55a4e5`); full
 reset-to-cut/Loaded remains open. The captured allocator is checked as
-`956ba74e`: all 30 chunks, 127 bins and 27 live blocks, 16 MiB of credits,
+`d959451a`: all 30 chunks, 127 bins and 27 live blocks, 16 MiB of credits,
 3,211 affected build jobs and 577 allowed/axiom-free declaration audits.
-The closed covers theorem supplies `libHeap`; the lead is checking removal
-of its obsolete generated caller argument before staging integration. A captured loaded memory snapshot
+The closed covers theorem supplies `libHeap`; `d890bf6a` removes its
+obsolete generated caller argument, checked with 3,243 build jobs. This
+reviewed fourth batch awaits full integration after initialized-string/G2. A captured loaded memory snapshot
 is not reset execution. G2 pick/pop landed (`6d002aa5`); split/remnant is checked for the
 next landing batch, including its complete pick/pop/split route. Bitmap
 search composition, allocator readiness and full collection remain open. The a2-sem uncaught-path

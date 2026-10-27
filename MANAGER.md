@@ -56,3 +56,8 @@ when interrupted; canceling Lake alone can leave a compiler running.
 
 F1 remains the priority; G2 continues as a slot becomes available. Preserve
 the older Bprime C4 draft and a2-sem uncaught-path WIP until their turn.
+
+During a full gate, inspect all error markers in `.check-build.log`, not only
+its tail: Lake can keep building independent jobs after an earlier target
+fails. Stop the failed gate's own build scope before repairing its worktree;
+then run the affected check and restart integration. Preserve the failure log.
