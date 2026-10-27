@@ -18,7 +18,7 @@ No subagents or other Codex workers. Finish with exactly RESULT: landed <commit>
 Target: finish the ordinary counted memory/control rows that reuse the existing counted MemoryStable and RuntimeFrame, leaving allocation/barrier/new native-effect frames to their separate tasks.
 Files: Vm/Sim/{CountedRuntime,CountedMemoryRows,CountedStackRows,A2TableRows,ControlRows,OperandTableRows,SignalRows,SwitchRows,StopRow}.lean and counted row generator/audit.
 Reuse counted_row/counted_memory_row/counted_stack_row and the generic checked native rows. Do not duplicate instruction execution or add a new preservation premise.
-Cover remaining constants/atoms, integer arithmetic/comparisons/branches/SWITCH, APPLY/APPTERM/RETURN/RESTART, CHECK_SIGNALS and STOP wherever the existing proved frames suffice.
+Cover remaining constants/atoms, integer arithmetic/comparisons/branches/SWITCH, APPLY/APPTERM/RETURN/RESTART, CHECK_SIGNALS, STOP and RAISE/RERAISE/RAISE_NOTRACE wherever the existing proved frames suffice.
 Preserve GoodF1/Fits/capacity, ExtraBounded and integer/arity/branch guards through their actual existing suppliers. STOP must retain the real exit facts from the entry runtime, with no successor count requirement for a halt.
 Derive unchanged channel semantics from actual stepI, using the authoritative opcode operand counts before unfolding; read the counted-stack heartbeat dead end. Factor shared helpers for apply/tailcall/return semantic operations rather than expanding them repeatedly.
 DIVINT/MODINT require their caught-raise path; include them only if the actual RaiseRuntimeFrame lift is proved from existing count frames. OFFSETREF writes an object: do not treat it as memory-preserving or stack-only.
