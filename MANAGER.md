@@ -28,5 +28,13 @@ Append the final `RESULT: landed <commit>` to the worker log after landing.
 Do not re-send routes recorded in `docs/lanes/DEAD-ENDS.md`. Keep `STATUS.md`
 current, reserving `## Needs user` for decisions only the user can make.
 
+When warming an idle worktree, keep the dependency build caches consistent
+with the project cache. Copying only `.lake/build` can trigger a broad rebuild:
+the October 27 formatter gate found different `Sail.Sail` artifact hashes in
+the two worktrees despite identical source and compiler inputs, invalidating
+the transitive import hashes. Compare dependency artifacts before choosing a
+cache donor; let Lake validate all copied artifacts. Never alter trace hashes
+or copy into a worktree with an active build.
+
 F1 remains the priority; G2 continues as a slot becomes available. Preserve
 the older Bprime C4 draft and a2-sem uncaught-path WIP until their turn.
