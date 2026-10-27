@@ -1,5 +1,66 @@
 # Lane a6-gc
 
+## Native next-size bitmap search through caller return (2026-10-27)
+
+- `BestFitSearchRoute.lean:search_allocate` composes the actual fallback
+  entry `0x800073cc`, generated bitmap filter/native saves, linking ffs
+  call, `search_nonzero`, and checked `BestFitNext.allocate_next` through
+  the original allocator caller return. The checked route `78081098` is
+  already an ancestor of the initial worktree HEAD `b98e2a90`; no inherited
+  uncommitted edits were present. All edits stay in this worktree.
+- `SearchInput` describes original registers/memory, positive request,
+  `SmallShape`, `SmallHeaders`, `MapConsistent`, existence of a nonempty
+  larger size ≤16, native save windows and source/stack separation.
+  `select_list` supplies the least larger size/head/tail, and
+  `mask_bit`/`filtered_bit`/`Selection.lowest` prove the lowest filtered
+  bitmap bit from those original facts. No `Lowest`, `Found`, later
+  `RouteInput`, saved readback or desired native return is an entry field.
+- `StackConditions.search_inside` bounds the actual generated three-store
+  `effect` in the 32-byte native frame. `Found.saved` reuses
+  `effect_bank`, `saveShape` and `SaveBank.Shape.read` to derive request,
+  bitmap and original RA after the real prefix and memory-free ffs call.
+  `Found.read`, `OutWRange`, `SmallShape.congr` and original source geometry
+  preserve every represented slot/link/header, map, counter and code image.
+  `SearchInput.route_input` produces the actual later route input; selected
+  header size/head agreement follows from the transported representation.
+- `SearchReturned` retains the original return PC and stack, carved-header
+  result, final remnant header/size, exact branch-dependent word counter,
+  allocator code, raw output, shared `GprsSame`, and actual `SearchPath`
+  witnesses. `searchRouteLog` includes the generated native saves and all
+  selected pick/pop/split/remnant branches at their actual snapshots.
+  `SearchReturned.live` provides the selected original `LiveFrame` under
+  explicit physical separation from that combined log. No natural
+  counter/no-wrap or final free-list invariant is inferred.
+- The counter seam first hit the default heartbeat limit when the full
+  memory snapshot was rewritten before original header/count observations.
+  Rewriting those scalars first and transporting only the split snapshot
+  with `congrArg` checks at unchanged limits. The rejected normalization
+  route is recorded in `DEAD-ENDS.md`; no generated output or generator
+  modification was needed for this assembly.
+- Validation: guarded/capped `lake build` of `BfShape`, `FfsLowest`,
+  `BestFitFallback`, `BestFitNext`, `BestFitNextRoute`, `BestFitSearchRoute`
+  and `BestFitNextAudit` passes (1287 jobs). Standalone focused
+  `lake env lean -M 6000 -j 1 OCaml/Vm/Gc/BestFitNextAudit.lean` passes:
+  217 printed declarations, including all 16 new theorems, use only
+  `propext`, `Classical.choice`, `Quot.sound`. The existing `OCaml.Audit`
+  import of `BestFitNextAudit` registers the new reports; full
+  `OCaml.Audit` remains the lead gate. `gen_gc_rows.py --check`, collector
+  CFG, proof discipline (27 rules), abstraction gate and `git diff --check`
+  pass. Every Lean run uses `lean-guarded.py` and `lean-capped.sh`, with
+  `free -g` checked before launch (available ≥25 GB), inherited 12 GB cgroup
+  and two Lean threads. Logs: `/tmp/a6-search-checked-build.log`,
+  `/tmp/a6-search-focused-axioms.log`, `/tmp/a6-search-generator.log`,
+  `/tmp/a6-search-cfg.log`, `/tmp/a6-search-discipline.log`,
+  `/tmp/a6-search-abstraction.log`.
+- Remaining: dispatch into fallback, final reinsertion preservation of the
+  allocator invariant, other size classes, general ownership/readiness
+  suppliers, allocation colors and collector integration. This is no full
+  allocator or `BarrierGrowthFull` closure. `BarrierGrowthFull` stays with
+  G2, `CustomMemCall` remains a named premise, C4 round 2 waits for F1 and
+  `GoodF1` is unchanged. Checked edits are left uncommitted for lead review
+  and landing with `scripts/integrate.sh`; Git metadata and the landing
+  queue are read-only in this sandbox.
+
 ## First empty-skiplist insertion (2026-10-27)
 
 - `SkiplistFirst.first_insert` and `first_insert_startup` compose actual

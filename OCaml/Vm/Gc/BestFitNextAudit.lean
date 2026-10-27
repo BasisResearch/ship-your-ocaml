@@ -1,6 +1,6 @@
-import OCaml.Vm.Gc.BestFitNextRoute
+import OCaml.Vm.Gc.BestFitSearchRoute
 
-/-! Focused standard-axiom audit for the next-size pick/pop/split native route.
+/-! Focused standard-axiom audit for the next-size search/pick/pop/split native route.
 The full OCaml.Audit remains the lead integration gate. -/
 
 #print axioms OCaml.Vm.Gc.accessPlan_append
@@ -205,3 +205,20 @@ The full OCaml.Audit remains the lead integration gate. -/
 #print axioms OCaml.Vm.Gc.BestFitNext.allocate_next
 #print axioms OCaml.Vm.Gc.BestFitNext.RoutePost.live
 #print axioms OCaml.Vm.Gc.BfShape.SmallShape.congr
+
+#print axioms OCaml.Vm.Gc.BestFitFallback.mask_bit
+#print axioms OCaml.Vm.Gc.BestFitFallback.filtered_bit
+#print axioms OCaml.Vm.Gc.BestFitFallback.select_list
+#print axioms OCaml.Vm.Gc.BestFitFallback.Selection.lowest
+#print axioms OCaml.Vm.Gc.BestFitFallback.StackConditions.search_inside
+#print axioms OCaml.Vm.Gc.BestFitFallback.Found.read
+#print axioms OCaml.Vm.Gc.BestFitFallback.Found.saved
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchInput.static_out
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchSource.header_out
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchSource.link_out
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchInput.represented
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchInput.route_input
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.path_spec
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchPost.selected_spec
+#print axioms OCaml.Vm.Gc.BestFitFallback.search_allocate
+#print axioms OCaml.Vm.Gc.BestFitFallback.SearchReturned.live

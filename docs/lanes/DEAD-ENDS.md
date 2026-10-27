@@ -1,5 +1,13 @@
 # Routes not to repeat
 
+- 2026-10-27 next-size search composition: rewriting the entire search
+  memory snapshot before the original header/counter observations in
+  `search_allocate` exhausts the default heartbeat budget at the counter
+  seam. Rewrite those scalar observations first, then transport only the
+  split snapshot with `congrArg`; the bounded proof checks at the unchanged
+  limits. Do not normalize the nested pick/pop/split write logs to equate
+  the two branch-dependent counter expressions.
+
 - 2026-10-27 initialized-string shared readback: leaving the saved-bank
   prefix as an unconstrained `_ ++ [length-store]` inside `change` forces
   memory/log unification into the default heartbeat limit. Name the shared
