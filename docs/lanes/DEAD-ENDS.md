@@ -1,5 +1,16 @@
 # Routes not to repeat
 
+- 2026-10-27 counted ordinary C_CALL interface inspection: the existing
+  `CountedPrimReturnsAtR` accepts only ordinary `CcallReady` at the original
+  loop entry. Its later `CountedCcallCallee.summary` receives counts at the
+  native callee entry. This does not directly instantiate a local
+  `countedLayout` ordinary `PrimReturnsAt` at the original entry: that needs
+  the original counted witness. Carry it from `CcallReady.of_counted_loop`
+  in an explicit entry argument or named structure. Do not infer it from
+  ordinary `runtimeOk` or transport physical counts backwards without a
+  proof. This is interface inspection, not a checked counterexample;
+  `tasks/sol-counted-ordinary-calls.md` queues the actual adapter.
+
 - 2026-10-27 custom ownership review: `CallerApart.free` quantifies over
   every `HeapReady H cap c`. `HeapAt.live/exact` only constrain extents that
   are in H; they do not require an exhaustive ledger. The captured allocator
