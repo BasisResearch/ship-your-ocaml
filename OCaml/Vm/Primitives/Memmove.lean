@@ -77,16 +77,20 @@ theorem memmove_summary {live Dt DA s dst n} (d src len : Nat) (g : Nat → BitV
 the owned window: only the stdio footprint and `[d, d + len)`. -/
 abbrev moveOwned (d len : Nat) : Nat → Prop := snpS 0 d len
 
-/-- memmove's library code lies in `.text`, below `.rodata`. -/
-theorem snpText_below : ∀ p ∈ snpText, p.1 < 0x80053180 := by
-  apply forall_piecesText (P := fun a _ => a < 0x80053180)
+/-- memmove's library code lies in the RAM text interval, below rodata. -/
+theorem snpText_bounds : ∀ p ∈ snpText, 0x80000000 ≤ p.1 ∧ p.1 < 0x80053180 := by
+  apply forall_piecesText (P := fun a _ => 0x80000000 ≤ a ∧ a < 0x80053180)
   intro q hq a ha
   simp only [snpPieces, List.mem_singleton] at hq
   subst hq
-  obtain ⟨r, hr, -, high⟩ := inRangesB_iff.1 ha
-  have bounds : ∀ r ∈ snpCodeRanges, r.2 ≤ 0x80053180 := by decide
+  obtain ⟨r, hr, low, high⟩ := inRangesB_iff.1 ha
+  have bounds : ∀ r ∈ snpCodeRanges, 0x80000000 ≤ r.1 ∧ r.2 ≤ 0x80053180 := by decide
   have := bounds r hr
-  omega
+  constructor <;> omega
+
+/-- memmove's library code lies below rodata. -/
+theorem snpText_below : ∀ p ∈ snpText, p.1 < 0x80053180 :=
+  fun p hp => (snpText_bounds p hp).2
 
 /-- Every stdio-footprint byte lies at or above `0x800643a0`. -/
 theorem stdioFoot_low {a : Nat} (h : VsaIris.Stdio.stdioFoot a) : 0x800643a0 ≤ a := by
@@ -96,7 +100,7 @@ theorem stdioFoot_low {a : Nat} (h : VsaIris.Stdio.stdioFoot a) : 0x800643a0 ≤
 /-- The owned window misses the program image. -/
 theorem moveOwned_image {d len : Nat} (low : 0x80063b90 ≤ d) : ImageSeparate (moveOwned d len) := by
   constructor <;> intro i hi owned <;>
-    simp only [moveOwned, snpS, snpNeed, Image.textBase, Image.textSize, Image.rodataBase,
+    simp only [moveOwned, snpS, snpNeed, snpAbove, Image.textBase, Image.textSize, Image.rodataBase,
       Image.rodataSize] at hi owned <;>
     rcases owned with ⟨foot, -⟩ | ⟨lo, hi'⟩ | ⟨lo, hi'⟩ <;>
     first | (have := stdioFoot_low foot; omega) | omega
@@ -131,6 +135,7 @@ theorem memmove_call {live : Nat → Prop} {d src len : Nat} {ra : BitVec 64} (c
   have lenR : R 12 = BitVec.ofNat 64 len := by change (gpr c 12).getD 0 = _; rw [length]; rfl
   have align : (R 1).toNat % 4 = 0 := by rw [ret]; exact aligned
   have dLow := geometry.d_lo
+  have srcLow := geometry.s_lo
   have disj := geometry.disj
   have window : ReadWin c.σ.mem (List.range' src len) (moveOwned d len) c.σ.mem src (src + len)
       (imgM c.σ.mem) := fun a lo hi => .inl ⟨List.mem_range'_1.2 ⟨lo, by omega⟩, rfl⟩
@@ -141,16 +146,16 @@ theorem memmove_call {live : Nat → Prop} {d src len : Nat} {ra : BitVec 64} (c
       (moveOwned d len) := by
     refine ⟨by decide, fun p hp owned => ?_⟩
     rcases List.mem_append.1 hp with code | data
-    · have := snpText_below p code
+    · have := snpText_bounds p code
       rcases owned with ⟨foot, -⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩
       · have := stdioFoot_low foot; omega
-      · simp only [snpNeed] at lo hi; omega
+      · simp only [snpNeed, snpAbove] at lo hi; omega
       · omega
     · obtain ⟨a, ha, rfl⟩ := List.mem_map.1 data
       have inside := List.mem_range'_1.1 ha
       rcases owned with ⟨foot, -⟩ | ⟨lo, hi⟩ | ⟨lo, hi⟩
       · exact sourceOut a inside.1 (by omega) foot
-      · simp only [snpNeed] at lo hi; omega
+      · simp only [snpNeed, snpAbove] at lo hi; omega
       · dsimp only at lo hi; omega
   apply (memmove_summary d src len (imgM c.σ.mem) R c.σ.mem c codeLive geometry
     dst srcR lenR align window separate input).weaken

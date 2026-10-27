@@ -6755,3 +6755,5 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms VsaIris.Sym.svf_fmt
 #print axioms VsaIris.Sym.vsnprintf_layout
 #print axioms VsaIris.Sym.ArgsOut.frames
+
+#print axioms OCaml.Vm.Primitives.snpText_bounds

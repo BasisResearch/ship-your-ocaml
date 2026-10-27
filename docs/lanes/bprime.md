@@ -201,6 +201,13 @@ on the local branch `bprime-round2-draft`; `lane/bprime` was reset to
     Checked edits are left in this worktree; Git metadata and integration
     were not written. BarrierGrowthFull remains with G2, CustomMemCall is
     still a named premise, and C4 round 2 still waits for F1.
+  * Lead integration repair (2026-10-27): the expanded `snpS` window made
+    the zero-base `memmove` bridge require explicit RAM lower bounds.
+    `snpText_bounds` reuses `forall_piecesText`; the bridge also uses
+    `MoveGeom.s_lo` and unfolds `snpAbove`. Its contract is unchanged.
+    The focused Memmove build passes (964 jobs), and all four affected
+    public theorem audits use only the standard axioms. Full gate rerun
+    remains pending.
 - Channel opening, `caml_ml_open_descriptor_{in,out}` (both bprime's since
   2026-10-12; they differ only by the output store `max := NULL`):
   * `scripts/syi/ocaml_channel.py` (`gen_fn.py --ocaml-channel`, stage a5)
