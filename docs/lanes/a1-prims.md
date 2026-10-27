@@ -2,6 +2,93 @@
 
 ## Current status
 
+**2026-10-27 counted stack RuntimeFrame and 58 row instances: checked for lead
+review/integration.** Started at clean committed HEAD `2ee3051b`, after the
+counted-loop continuation (`274e994b`) and its allocator-entry follow-up
+(`16da258b`). Read its final remaining-obligation list, `CLAUDE.md`, relevant
+`PHASES.md`/`PLAN.md`, and `DEAD-ENDS.md`; ran `scripts/abs_inventory.sh`
+before proofs. No workers/subagents, Git metadata edits or landing actions.
+
+`ChannelCountFrame.of_frame` carries complete physical counts, natural
+refcounts and next links through window frames. `CountStackWindow` includes
+only VM stack windows, the existing four `vmDomainOffsets`, and native
+stack windows above the allocator arena. `f1_stack_channelCountFrame` obtains
+the **entry's own** `LibHeapAt` from `f1Runtime`; `OpenChannels.unique`
+identifies that ledger's opened list with `placedChannels cp world.chans.length`.
+`F1HeapSafe.outside` then derives record separation and bounds from actual
+live allocations. No independent channel-address assumption, matching return
+placement premise or frozen footprint is needed. The named
+`CustomMemCall.accounting.frame` and `CallerApart` prove physical-state
+preservation, including the existing domain-resource exception and native
+stack separation. Static head and `Caml_state` readbacks also survive.
+
+`counted_runtimeFrame` lifts **every** `RuntimeFrame` field at `countedLayout`;
+its `windows` field uses that proved complete frame. `counted_row` factors
+the old memory-row adapter and retains `countedRunning_of_counts` placement
+coherence. `counted_stack_row` supplies both the actual lifted frame and
+`counted_memoryStable`. No global runtime strengthening or extra `GoodF1`
+guard was added; the real counted C_CALL setup/callee/return path is retained.
+
+`scripts/gen_counted_stack_rows.py` generates `CountedStackRows.lean` and
+is registered in `check_all.sh`. Its **58 rows** reuse the existing generic
+native proofs: PUSH/PUSHACC0–7/PUSHACC, ASSIGN, PUSHENVACC1–4/PUSHENVACC,
+PUSHGETGLOBAL/PUSHGETGLOBALFIELD, PUSHATOM0/PUSHATOM,
+PUSHCONST0–3/PUSHCONSTINT, PUSHOFFSETCLOSUREM3/0/3/general, PUSH_RETADDR,
+PUSHTRAP/POPTRAP; ACC0–7/ACC, POP, ENVACC1–4/ENVACC, GETFIELD0–3/GETFIELD,
+GETGLOBAL/GETGLOBALFIELD, OFFSETCLOSUREM3/0/3/general. Fits, reachability,
+geometry and all use-site guards are inherited from those proved rows;
+`g1_capacity` supplies the actual capacity. Traps use exactly the same frame.
+Allocation and barrier effects are outside it.
+
+Validation:
+
+- Guarded build of `CountedStackRows`, `CountedMemoryRows`,
+  `CountedChannelRows`, `CountedEntry`: **3,194 jobs**, passed
+  (`/tmp/counted-stack-rows4.log`); the shared frame also passed separately
+  (`/tmp/counted-stack-frame3.log`, 1,540 jobs).
+- Guarded `/tmp/counted-stack-focused-audit.lean`: **137 reports**, passed,
+  including all **123 new theorems**, earlier memory rows, placement coherence,
+  counted channel execution and the concrete counted entry. Only `propext`,
+  `Classical.choice`, `Quot.sound` occur (`/tmp/counted-stack-focused-audit.log`,
+  `/tmp/counted-stack-audit-check.txt`). All new reports are registered in
+  `OCaml/Audit.lean`; the full Audit remains the lead gate.
+- Push/ACC/field/a2/count-stack generator drift checks, hole, discipline,
+  abstraction and diff checks pass; C4 remains at 3. Generator operand shapes
+  reuse `gen_opcodes.nargs`; no generated output was hand edited.
+- Each Lean invocation used `free -g` first (available ≥25 GB), then
+  `python3 scripts/lean-guarded.py --log /tmp/... -- scripts/lean-capped.sh lake ...`.
+  One build at a time in the inherited 12 GB scope with two threads; no
+  virtual-memory limit or increased proof budget.
+
+**Precise remaining counted-opcode list:** 60 of 134 F1 opcodes now have
+ordinary counted rows (these 58 plus CONST0/NEGINT). The following **74**
+still lack complete counted `OpArm` instances:
+
+  `APPLY`, `APPLY1`, `APPLY2`, `APPLY3`, `APPTERM`, `APPTERM1`, `APPTERM2`, `APPTERM3`, `RETURN`,
+  `RESTART`, `GRAB`, `CLOSURE`, `CLOSUREREC`, `SETGLOBAL`, `ATOM0`, `ATOM`, `MAKEBLOCK`, `MAKEBLOCK1`,
+  `MAKEBLOCK2`, `MAKEBLOCK3`, `SETFIELD0`, `SETFIELD1`, `SETFIELD2`, `SETFIELD3`, `SETFIELD`, `BRANCH`, `BRANCHIF`,
+  `BRANCHIFNOT`, `SWITCH`, `BOOLNOT`, `RAISE`, `CHECK_SIGNALS`, `C_CALL1`, `C_CALL2`, `C_CALL3`, `C_CALL4`,
+  `C_CALL5`, `CONST1`, `CONST2`, `CONST3`, `CONSTINT`, `ADDINT`, `SUBINT`, `MULINT`, `DIVINT`,
+  `MODINT`, `ANDINT`, `ORINT`, `XORINT`, `LSLINT`, `LSRINT`, `ASRINT`, `EQ`, `NEQ`,
+  `LTINT`, `LEINT`, `GTINT`, `GEINT`, `OFFSETINT`, `OFFSETREF`, `ISINT`, `BEQ`, `BNEQ`,
+  `BLTINT`, `BLEINT`, `BGTINT`, `BGEINT`, `ULTINT`, `UGEINT`, `BULTINT`, `BUGEINT`, `STOP`,
+  `RERAISE`, `RAISE_NOTRACE`.
+
+`C_CALL1` in that list already has successful counted execution for the three
+channel primitives under their real named opening/listing runtime suppliers;
+it is not a complete opcode row. The 74 include straightforward remaining
+memory-only adapters as well as allocation/barrier/control/primitive effects;
+this list makes no claim that all require a new frame.
+
+Still explicit: complete physical custom runtime/startup zero (table
+occupancy alone is insufficient), the named `CustomMemCall` machine supplier,
+allocation/barrier rows and other effectful primitives, counted other call
+arities, full `F1Arms` assembly, concrete opening/listing runtime/heap/record/
+named-ledger and after-call suppliers, named registration, general formatting
+and reset reachability. `BarrierGrowthFull` stays with G2; C4 round 2 waits
+for F1. Checked edits remain uncommitted for lead review and integration.
+
+
 **2026-10-27 counted loop continuation: checked partial work for lead review;
 headline open.**
 

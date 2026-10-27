@@ -37,6 +37,38 @@ theorem ChannelCountFrame.sameMemory {Ready : Nat → Config → Prop}
   exact ⟨accounting.sameMemory memory, fun _ _ _ _ _ => by rw [memory],
     ⟨by rw [memory], fun _ _ => by rw [memory]⟩⟩
 
+/-- A window frame preserves all channel observations. This also accepts
+native stack windows once their separation is proved from the entry ledger. -/
+theorem ChannelCountFrame.of_frame {Customs : Config → Nat → Prop} {w : World}
+    {cp : ChanPlace} {c d : Config} {ws : List W}
+    (frame : FrameOn ws c.σ.mem d.σ.mem)
+    (records : ∀ id ch a, w.chans[id]? = some ch → cp id = some a →
+      ∀ y, a ≤ y → y < a + chanOffBuff + ioBufferSize → OutW ws y)
+    (head : ∀ y, Layout.sym_caml_all_opened_channels ≤ y →
+      y < Layout.sym_caml_all_opened_channels + 8 → OutW ws y)
+    (physical : Gc.CustomCountStep Customs c d 0) :
+    ChannelCountFrame Customs cp w c d := by
+  have record (id : Nat) (ch : Chan) (a off n : Nat)
+      (at_ : w.chans[id]? = some ch) (placed : cp id = some a)
+      (bound : off + n ≤ chanOffBuff + ioBufferSize) :
+      bytesT d.σ.mem (a + off) n = bytesT c.σ.mem (a + off) n := by
+    apply Reloc.bytesT_congr
+    intro j hj
+    have same := frame (a + off + j) (records id ch a at_ placed (a + off + j) (by omega) (by omega))
+    simp only [bytesT, same]
+  refine ⟨physical, ?_, ⟨?_, ?_⟩⟩
+  · intro id ch a at_ placed
+    exact congrArg BitVec.toNat (record id ch a chanOffRefcount 4 at_ placed (by decide))
+  · apply Reloc.bytesT_congr
+    intro j hj
+    have same := frame (Layout.sym_caml_all_opened_channels + j) (head (Layout.sym_caml_all_opened_channels + j) (by omega) (by omega))
+    simp only [bytesT, same]
+  · intro a member
+    obtain ⟨id, member, placed⟩ := List.mem_filterMap.mp member
+    have bound : id < w.chans.length := List.mem_range.mp (List.mem_reverse.mp member)
+    exact record id w.chans[id] a Gc.chanOffNext 8
+      (List.getElem?_eq_getElem bound) placed (by decide)
+
 /-- Whole-record payload separation also frames refcounts and list links.
 Physical state separation is supplied by the independent custom-state frame. -/
 theorem ChannelCountFrame.of_log {Customs : Config → Nat → Prop} {s : St}
