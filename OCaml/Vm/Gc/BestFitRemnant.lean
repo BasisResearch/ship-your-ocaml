@@ -2,6 +2,7 @@ import OCaml.Vm.Gc.Generated.BestFitRemnant
 import OCaml.Vm.Gc.BestFitSmall
 import OCaml.Vm.Gc.BfShape
 import OCaml.Vm.Gc.FfsLowest
+import OCaml.Vm.Sim.LogWindow
 
 /-! # `bf_insert_remnant_small`
 
@@ -783,5 +784,35 @@ theorem insert {ra v c} (input : Input ra v c) : FnSummary pc (fun d => d = c) (
       · exact swept_case input zero sweep above
       · exact late_case input zero sweep above
     · exact direct_case input zero sweep
+
+/-- The wrapper's complete write footprint, including both cursor branches.
+The phase/zero-size return paths write nothing. -/
+def writeWindows (v w : BitVec 64) : List W :=
+  [⟨Layout.sym_caml_fl_cur_wsz,Layout.sym_caml_fl_cur_wsz + 8⟩,
+   ⟨v.toNat,v.toNat + 8⟩,⟨(slot w).toNat,(slot w).toNat + 8⟩,
+   ⟨(slot w + 8#64).toNat,(slot w + 8#64).toNat + 8⟩,
+   ⟨Layout.sym_bf_small_map,Layout.sym_bf_small_map + 4⟩]
+
+theorem effect_inside (v : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) :
+    LogInW (writeWindows v (size v m)) (effect v m) := by
+  unfold effect
+  split
+  · unfold insertLog
+    split <;> apply logInW_of_forall
+    all_goals intro e member
+    all_goals simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at member
+    · rcases member with (rfl | rfl | rfl) | rfl | rfl
+      all_goals simp [writeWindows,InsideW]
+    · rcases member with (rfl | rfl | rfl) | no | rfl
+      all_goals simp_all [writeWindows,InsideW]
+  · trivial
+
+/-- Caller readback uses the named footprint rather than assuming that the
+remnant helper preserves arbitrary saved words or free-list observations. -/
+theorem Post.read {ra v before after a n} (post : Post ra v before after)
+    (outside : OutWRange (writeWindows v (size v before.σ.mem)) a n) :
+    bytesT after.σ.mem a n = bytesT before.σ.mem a n := by
+  rw [post.memory]
+  exact bytesT_writeLog_out _ (OCaml.Vm.Sim.outLRange_of_windows (effect_inside v before.σ.mem) outside)
 
 end OCaml.Vm.Gc.BestFitRemnant

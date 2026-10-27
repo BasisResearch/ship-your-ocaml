@@ -1,6 +1,9 @@
 import OCaml.Vm.Gc.BestFitFallback
 import OCaml.Vm.Gc.FfsLowest
 import OCaml.Vm.Gc.BestFitRemnant
+import OCaml.Vm.Gc.Generated.BestFitSplit
+import OCaml.Vm.Primitives.MemoryFrame
+import OCaml.Vm.Sim.LogWindow
 import Vsa.Sim.GRegsLookup
 
 /-! # Best-fit: the next nonempty small list
@@ -534,5 +537,118 @@ theorem pop {sp s b bits wosz c} (input : PopInput sp s b bits wosz c) :
     · rw [PCAt, post.pc, keep_pc]
     · rw [post.memory, keep_log, popLog, if_neg emptied, nextEq, slotS, ← slot_of small]
       rfl
+
+/-! ## Stage 3: the inlined split and its native save (`0x800074e8`). -/
+
+def sourceHeader (b : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) := bytesT m (b - 8#64).toNat 8
+def sourceSize (hd : BitVec 64) := hd >>> (10 : Nat)
+def cutWords (request hd : BitVec 64) := sourceSize hd + 1#64 - request
+def smallHeader (request hd : BitVec 64) := (cutWords request hd <<< (10 : Nat)) - 1797#64
+def resultHeader (b request hd : BitVec 64) :=
+  ((cutWords request hd <<< (3 : Nat)) - 8#64) + (b - 8#64)
+def removedCount (cur hd : BitVec 64) := cur - (sourceSize hd + 1#64)
+def splitLog (sp b request hd cur : BitVec 64) : List WEntry :=
+  [(Layout.sym_caml_fl_cur_wsz,8,removedCount cur hd),
+   ((b - 8#64).toNat,8,smallHeader request hd),(sp.toNat,8,resultHeader b request hd)]
+def splitLoads (b : BitVec 64) (m : Std.ExtHashMap Nat (BitVec 8)) :=
+  [read8 m (b - 8#64).toNat,read8 m Layout.sym_caml_fl_cur_wsz]
+def splitR (sp b request : BitVec 64) (n : Nat) : BitVec 64 :=
+  if n = 2 then sp else if n = 11 then b else request
+
+theorem split_writes (sp b request : BitVec 64) (bh bc : List (BitVec 8)) :
+    wlogM Native.splitBlock.body (splitRegs sp b request) [bh,bc] =
+      splitLog sp b request (bytesVal .ld bh) (bytesVal .ld bc) := by
+  change wlogM Native.nextSplit_body (Native.nextSplit_input (splitR sp b request)) [bh,bc] = _
+  rw [Native.nextSplit_log_chunks]
+  simp [Native.nextSplit_piece0_log,Native.nextSplit_piece1_log,Native.nextSplit_piece2_log,
+    Native.nextSplit_piece3_log,splitR,splitLog,removedCount,smallHeader,resultHeader,cutWords,
+    sourceSize,Sail.shift_bits_left,Sail.shift_bits_right,BitVec.sub_eq_add_neg,Layout.sym_caml_fl_cur_wsz]
+
+structure SplitCallRegs (sp b : BitVec 64) (L : GRegs) : Prop where
+  stack : lookupG 2 L = some sp
+  argument : lookupG 10 L = some b
+
+theorem split_call_regs (sp b request : BitVec 64) (bh bc : List (BitVec 8)) :
+    SplitCallRegs sp b (runGM Native.splitBlock.body (splitRegs sp b request) [bh,bc]) := by
+  change SplitCallRegs sp b (runGM _ (Native.nextSplit_input (splitR sp b request)) _)
+  rw [Native.split_registers]
+  constructor <;> simp [Native.nextSplit_piece3_output,splitR,lookupG]
+
+/-- Physical separation of the native save area and the source block. This
+also separates their stores from the allocator's static accounting words. -/
+structure SplitGeometry (sp b : BitVec 64) : Prop where
+  stackHeap : Vsa.Sim.DlHeap.heapStart ≤ sp.toNat
+  stackRoom : sp.toNat + 32 < 2^64
+  blockHeap : Vsa.Sim.DlHeap.heapStart + 8 ≤ b.toNat
+  separate : sp.toNat + 32 ≤ b.toNat - 8 ∨ b.toNat + 8 ≤ sp.toNat
+
+structure SplitInput (sp b request : BitVec 64) (c : Config) : Prop where
+  good : GoodState c.σ
+  tick : c.tick < 2
+  minstret : ∃ v, c.σ.regs.get? Register.minstret = some v
+  code : Code.Bf_allocateLoaded c.σ.mem
+  remnantCode : Code.Bf_insert_remnant_smallLoaded c.σ.mem
+  registers : GHolds c.σ (splitRegs sp b request)
+  header : WriteWindow (b - 8#64) 8
+  remnant : WriteWindow b 8
+  stack : WriteWindow sp 8
+  returnWord : ReadWindow (sp + 24#64) 8
+  geometry : SplitGeometry sp b
+  requestPositive : 1 ≤ request.toNat
+  larger : request.toNat < (sourceSize (sourceHeader b c.σ.mem)).toNat
+  small : (sourceSize (sourceHeader b c.σ.mem)).toNat ≤ 16
+  aligned : (bytesT c.σ.mem (sp + 24#64).toNat 8).toNat % 4 = 0
+
+macro "next_address" : tactic => `(tactic|
+  simp [Native.splitBlock,splitRegs,blk,bf_allocateX74e8Seg,eaddrM,mkLine,decodeM,runGM,
+    wlogM,stepGM,stepLdsM,wvalM,srcVal,lookupG,eraseG,imm20Of,shamtOf,
+    Sail.BitVec.extractLsb,Functions.sign_extend,Sail.BitVec.signExtend,
+    sourceSize,cutWords,smallHeader,resultHeader,BitVec.sub_eq_add_neg,
+    BestFitRemnant.shift4,Layout.sym_caml_fl_cur_wsz])
+
+theorem split_access {sp b request c} (input : SplitInput sp b request c) :
+    ChainAccess c.σ.mem (splitRegs sp b request) (splitLoads b c.σ.mem) [Native.splitBlock] := by
+  apply ChainAccess.cons ⟨?_,trivial⟩ ChainAccess.nil
+  simp only [Native.splitBlock,bf_allocateX74e8Seg,List.getD_cons_zero,AccessPlan]
+  chain_facts True.intro
+  · apply input.header.read.ld rfl (by next_address)
+    simpa [stepMemM,mkLine,decodeM,stepLdsM,splitLoads] using read8_pins c.σ.mem (b - 8#64).toNat
+  · apply BestFitRemnant.cur_write.read.ld rfl (by next_address)
+    simpa [stepMemM,mkLine,decodeM,stepLdsM,splitLoads,Layout.sym_caml_fl_cur_wsz] using
+      read8_pins c.σ.mem Layout.sym_caml_fl_cur_wsz
+  · apply BestFitRemnant.cur_write.sd rfl (by next_address)
+  · apply input.header.sd rfl (by next_address)
+  · apply input.stack.sd rfl (by next_address)
+
+structure SplitPrepared (sp b request : BitVec 64) (before after : Config) : Prop where
+  machine : BlockPost [Native.splitBlock] splitPc (splitRegs sp b request) (splitLoads b before.σ.mem) before after
+  pc : PCAt Native.call.pc after
+  stack : gprGet after.σ 2 = some sp
+  argument : gprGet after.σ 10 = some b
+  memory : after.σ.mem = writeLog before.σ.mem
+    (splitLog sp b request (sourceHeader b before.σ.mem) (bytesT before.σ.mem Layout.sym_caml_fl_cur_wsz 8))
+  code : Code.Bf_allocateLoaded after.σ.mem
+  remnantCode : Code.Bf_insert_remnant_smallLoaded after.σ.mem
+
+/-- Execute the decoded split writes; no split postcondition is assumed. -/
+theorem prepare_split {sp b request c} (input : SplitInput sp b request c) :
+    FnSummary splitPc (fun d => d = c) (SplitPrepared sp b request c) := by
+  have facts := chainPlan_facts (code_of input.code (by intro x h; simpa [allBlocks,Native.splitBlock,blk] using h))
+    (split_access input)
+  have summary := block_summary [Native.splitBlock] splitPc (splitRegs sp b request) (splitLoads b c.σ.mem) c
+    ⟨input.good,input.minstret,input.registers,by change KeysOK [2,11,14]; decide,
+      facts,by change ChainOK splitPc [2,11,14] [Native.splitBlock]; decide,input.tick⟩
+  apply summary.weaken (fun _ h => h)
+  intro after post
+  have regs := split_call_regs sp b request (read8 c.σ.mem (b - 8#64).toNat)
+    (read8 c.σ.mem Layout.sym_caml_fl_cur_wsz)
+  refine ⟨post,?_,gholds_lookup _ post.regs regs.stack,gholds_lookup _ post.regs regs.argument,?_,
+    image_after Code.bf_allocate_transport (by decide) input.code facts post,
+    image_after Code.bf_insert_remnant_small_transport (by decide) input.remnantCode facts post⟩
+  · rw [PCAt,post.pc]; rfl
+  · rw [post.memory]
+    change writeLog _ (wlogM Native.splitBlock.body _ _) = _
+    rw [splitLoads,split_writes,read8_value,read8_value]
+    rfl
 
 end OCaml.Vm.Gc.BestFitNext

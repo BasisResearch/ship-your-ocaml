@@ -248,3 +248,11 @@
   ending ownership at `sp + 240`. Do not restore the wider window for
   this caller. This is an interface/interval obstruction, not a claim
   that a reachable formatter execution overwrites its format.
+
+- 2026-10-27 G2 next-size split: the first continuation worker hit the
+  12 GB cgroup cap at 20:55:32 UTC (`run-p4087439-i464873190.scope`).
+  Generated `BestFitSplit` had passed 609 build jobs, then the `BestFitNext`
+  build died before emitting a diagnostic. The exact declaration is not
+  yet isolated. Preserve the WIP and diagnose source prefixes with
+  `lean-guarded.py`, `lean -M 6000 -j 1 --profile`; do not repeat the broad
+  build unchanged or raise the limits.
