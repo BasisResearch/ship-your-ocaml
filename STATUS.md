@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 22:38 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 22:46 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -97,4 +97,5 @@ excludes that path.
 
 Task packets are in `tasks/sol-*.md`. Next priorities include selected custom
 ownership, counted control/console continuations, decimal formatter return,
-named reserves and G2 physical preservation. No user-only decision blocks work.
+named reserves and G2 physical preservation. The concrete null-interpreter/debugger
+continuation to `0x80004e94` is queued in `sol-reset-interp-init.md`. No user-only decision blocks work.
