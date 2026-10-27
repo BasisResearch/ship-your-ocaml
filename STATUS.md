@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-27 21:57 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-27 22:04 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -31,8 +31,9 @@ physical named ownership `7e7a052a`, all through the full gate.
 
 The next batch contains the captured allocator certificate `d959451a` and
 its generated-table consumer update `d890bf6a`. Counted-loop continuation
-`1161d44c` is checked at its worker base (3,694 jobs, 39 focused reports);
-the lead is checking its rebased composition with the closed allocator.
+`274e994b` passed 3,694 jobs and 39 focused reports at its worker base.
+The merged allocator composition `16da258b` passes 3,649 jobs and the same
+39 focused audits; its counted whileMin entry has no heap premise.
 The two boot-read extensions merged and reproduce through their generator.
 The same batch also contains checked G2 bitmap-search composition
 `4eec805d`: 1,287 affected jobs and 217 audited declarations. Its original
@@ -44,9 +45,9 @@ preserved on `keep/*` branches.
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| Next Sol slot | Counted stack-row frame reuse, after the combined check | `syo-wt/a1-prims-next` |
+| Counted-stack Sol | Reuse generic stack-writing rows with actual count frames | `syo-wt/a1-prims-next` |
 | Startup Sol | Extend actual reset execution through backtrace/root registration | `syo-wt/a0-boot-next` |
-| Lead | Check and stage combined counted-entry/allocator batch | main; `syo-wt/a1-prims-next`, `syo-wt/bprime` |
+| Lead | Full gate for allocator, counted continuation and G2 search | main; `syo-wt/a1-prims-next`, `syo-wt/bprime` |
 
 The first G2 split attempt reached the 12 GB cgroup cap while building
 `BestFitNext`, after its generated split module passed 609 jobs. WIP is
@@ -112,6 +113,7 @@ dispatch into fallback, final allocator preservation and full collection
 remain open; the nonzero bitmap search is checked in `4eec805d`. The a2-sem uncaught-path
 WIP is preserved and lower priority because GoodF1 excludes that path.
 
-Queued tasks: ordinary counted-loop migration, actual startup/backtrace
-composition after first insertion, a checked allocator-readiness certificate at the captured cut, and a proved
-named-key reserve without adding the absent max-name/count guards. See `tasks/sol-*.md`.
+Queued work: remaining counted frames/table assembly and full physical
+Customs supplier, full decimal formatter wrapper, general formatting, and
+a proved named-node/key reserve plus repeated root-cell reuse accounting.
+The captured allocator certificate is complete; reset/backtrace is active. See `tasks/sol-*.md`.
