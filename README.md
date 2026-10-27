@@ -44,6 +44,10 @@ while_min entry state, including its heap, collector invariant, platform
 and primitive bindings. A native Sail rerun checks every captured memory
 byte and register; reset-to-cut execution is not yet kernel-proved.
 
+The captured allocator certificate also supplies `libHeap` at that entry
+state. [STATUS.md](STATUS.md) tracks the remaining Layer A obligations for
+`GoodF1`, current workers and verified landings.
+
 ## The plan
 
 ```

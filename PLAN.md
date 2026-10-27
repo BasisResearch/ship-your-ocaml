@@ -118,7 +118,7 @@ opcode, `ledger_exact` is checked by `decide`):
 
 | | opcodes | primitives | programs |
 |---|---|---|---|
-| **F1** | 134: stack, env, ints, branches, `SWITCH`, globals, blocks, closures incl. `CLOSUREREC`, apply/return/`GRAB`/`RESTART`, traps, `STOP`, `C_CALL1-5` | 30: console channels, `%d`, named values, `Sys` constants, `exit`, string equality | `while.ml`, `f2_closures.ml` |
+| **F1** | 134: stack, env, ints, branches, `SWITCH`, globals, blocks, closures incl. `CLOSUREREC`, apply/return/`GRAB`/`RESTART`, traps, `STOP`, `C_CALL1-5` | 30: console channels, integer formats `d/i/u/x/X/o` with supported flags/width/precision, named values, `Sys` constants, `exit`, string equality | `while.ml`, `f2_closures.ml` |
 | **F2** | float fields, arrays, bytes/strings, `C_CALLN` | bytes/strings/arrays, compare, hash, `caml_format_float`, `Printf` | f1/f3/f5/f7 |
 | **F3** | `GETMETHOD`, `GETPUBMET` (writes its cache INTO THE CODE), `GETDYNMET` | `caml_obj_*`, lazy | f8 |
 | **F4** | — | callbacks: uncaught exceptions (`at_exit` then `Fatal error`), finalisers | error exits |
