@@ -187,3 +187,9 @@
   Re-expanding the full prologue log for a four-byte epilogue observation
   likewise hits the default recursion limit; reuse `ProKept.bytes` from
   `pro_keeps` for that frame instead of unfolding the memory again.
+- 2026-10-27: the first skiplist insertion worker's generated
+  `SkipFirstEval` build exhausted its 12 GB cgroup (unit
+  `run-p997545-i461614792.scope`, 18:42:17 UTC), killing the worker.
+  The source checkpoint is preserved. Split/check the evaluator certificates
+  and bound concurrent heavy compilation; do not raise memory or proof budgets
+  or rerun the identical broad evaluator proof unchanged.

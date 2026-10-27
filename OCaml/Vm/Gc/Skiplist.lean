@@ -121,7 +121,10 @@ structure Ops (Shape : Std.ExtHashMap Nat (BitVec 8) → Nat → List (BitVec 64
   init : ∀ m sk, tohostAddr ≤ sk → sk + headerBytes ≤ Vsa.Sim.DlHeap.heapStart →
     (sk + headerBytes ≤ randomSeed ∨ randomSeed + 4 ≤ sk) →
     (∀ k < headerBytes, (m[sk + k]?).getD 0 = 0) → Shape m sk []
-  /-- `caml_skiplist_insert(sk, key, 0)` -/
+  /-- `caml_skiplist_insert(sk, key, 0)`.
+  This legacy interface has no allocation-room premise at arbitrary `cap`.
+  A full supplier must first reconcile that requirement. The capacity-bearing
+  first-insertion contract is separate (`SkiplistFirst`); it does not supply `Ops`. -/
   insert : ∀ H cap sk cells (key sp ra : BitVec 64) (c : Config), Shape c.σ.mem sk cells →
     CallInput H cap [(10, BitVec.ofNat 64 sk), (11, key), (12, 0#64)] sp ra c →
     FnSummary insertPc (fun d => d = c) (fun d =>
