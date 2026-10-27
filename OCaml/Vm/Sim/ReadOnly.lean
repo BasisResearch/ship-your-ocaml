@@ -65,6 +65,20 @@ structure VmRegisters (s : St) (pl : Place) (sp : Nat) (c : Config) : Prop where
   env : ∃ w, gpr c Layout.reg_env = some w ∧ valWord pl s.env = some w
   extra : gpr c Layout.reg_extra = some (BitVec.ofNat 64 s.extra)
 
+/-- A loop return retaining the placement used for its ordinary stack witness. -/
+structure PlacedRunning (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place)
+    (cp : ChanPlace) (sp high : Nat) (c : Config) : Prop extends Running L P s c where
+  represented : VmReprAt P s c pl cp sp high
+  geometry : OCaml.LoopGeometry L P s c pl cp high
+
+/-- Payload and registers assemble the represented state at their own placement. -/
+theorem repr_of_payload {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {sp high : Nat}
+    (data : VmPayload P s c pl cp sp high) (primitives : PrimitiveBindings P c)
+    (regs : VmRegisters s pl sp c) : VmReprAt P s c pl cp sp high :=
+  ⟨regs.head, regs.pc, regs.spReg, regs.accu, regs.env, regs.extra,
+    data.stackHigh, data.trapsp, data.codeBase, data.code,
+    data.globals, data.stack, data.heap, data.world, primitives, data.atomBase, data.argv, data.named⟩
+
 /-- Assemble the loop relation once all named data/platform/register parts
 are established, independently of the arm's memory effect. -/
 theorem running_of_payload {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
@@ -73,9 +87,7 @@ theorem running_of_payload {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     (platform : PlatformOk L.runtimeOk c) (regs : VmRegisters s pl sp c)
     (loop : LoopRegisters c) (geometry : OCaml.LoopGeometry L P s c pl cp high)
     (native : NativePlaced c) : Running L P s c := by
-  have repr : VmReprAt P s c pl cp sp high := ⟨regs.head, regs.pc, regs.spReg, regs.accu, regs.env, regs.extra,
-    data.stackHigh, data.trapsp, data.codeBase, data.code,
-    data.globals, data.stack, data.heap, data.world, primitives, data.atomBase, data.argv, data.named⟩
+  have repr := repr_of_payload data primitives regs
   exact ⟨⟨pl, cp, sp, high, repr⟩, platform, loop, ⟨pl, cp, sp, high, repr, geometry⟩, native⟩
 
 /-- Restore any read-only result once its payload and register observations

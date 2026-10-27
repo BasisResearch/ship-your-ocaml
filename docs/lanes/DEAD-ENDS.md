@@ -177,3 +177,13 @@
   `counted_c_call1_arm` therefore deliberately concludes only physical
   accounting, not a counted loop row. This is contract inspection, not a
   claim that the missing suppliers are impossible.
+
+- 2026-10-27 counted return readbacks: elaborating a `change` over the whole
+  `writeLog (enterLog ...)` inside the large `ListedStep` context exhausted
+  the default normalization budget. Factor the single SW readback over an
+  abstract memory (`enter_refword` using `word32_writeLog`), then instantiate
+  it after the shared record frame. This was a proof-normalization failure,
+  not a mathematical no-wrap obstruction; do not increase heartbeats.
+  Re-expanding the full prologue log for a four-byte epilogue observation
+  likewise hits the default recursion limit; reuse `ProKept.bytes` from
+  `pro_keeps` for that frame instead of unfolding the memory again.

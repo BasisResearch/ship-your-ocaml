@@ -15,7 +15,7 @@ theorem c_call5_return_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place
     (stable : MemoryStable L.runtimeOk)
     (h : CcallReturnAt (0x80002ed8#64) L P s pl cp sp high domain frameSp result env c)
     (bound : 4 ≤ s.stack.length) :
-    ∃ after, Plus c after ∧ Running L P {s with stack := s.stack.drop 4} after ∧ after.σ.mem = c.σ.mem := by
+    ∃ after, Plus c after ∧ PlacedRunning L P {s with stack := s.stack.drop 4} pl cp (sp + 8 * 4) high after ∧ after.σ.mem = c.σ.mem := by
   have loaded (a : Nat) : sign_extend (m := 64) (bytesT8 c.σ.mem a) = word c a := by
     simp only [word, bytesT_eight_eq, sign_extend, Sail.BitVec.signExtend, BitVec.signExtend_eq]
   have bp : SegSt (0x80002ed8#64)
@@ -34,7 +34,7 @@ theorem c_call5_return_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place
     h.envRead.lower h.envRead.upper h.envRead.htif env h.savedEnv c bp
   obtain ⟨_, memory, frame⟩ := post.extra
   refine ⟨after, ⟨n - 1, by simpa only [show n - 1 + 1 = n from by omega] using steps⟩, ?_, memory⟩
-  apply ccall_return_restore stable h (count := 4) bound ?_ ?_ post.good memory frame.out
+  apply ccall_return_restore_placed stable h (count := 4) bound ?_ ?_ post.good memory frame.out
     (frame.frame (gprReg 2) (by decide))
   · refine ⟨post.pcAt, ?_, ?_, ⟨result, ?_, h.resultRepr⟩,
       ⟨env, PinsHold.get post.pins ⟨1, by simp⟩, h.envRepr⟩, ?_⟩
@@ -57,7 +57,7 @@ theorem c_call5_return {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     (bound : 4 ≤ s.stack.length) :
     ∃ after, Plus c after ∧ Running L P {s with stack := s.stack.drop 4} after := by
   obtain ⟨after, run, running, _⟩ := c_call5_return_framed stable h bound
-  exact ⟨after, run, running⟩
+  exact ⟨after, run, running.toRunning⟩
 
 /-- Triple interface for the generated represented return, for callSeg splices. -/
 theorem c_call5_return_triple {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}

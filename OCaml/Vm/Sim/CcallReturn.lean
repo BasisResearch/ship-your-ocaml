@@ -210,4 +210,20 @@ theorem ccall_return_restore {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
     Running L P {s with stack := s.stack.drop count} after :=
   ccall_result_restore stable h.toCcallResult bound regs loop good memory output nativeSp
 
+/-- The ordinary restoration with its actual selected placement retained. -/
+theorem ccall_return_restore_placed {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place}
+    {cp : ChanPlace} {sp high count : Nat} {ra domain frameSp result env : BitVec 64}
+    {c after : Config} (stable : MemoryStable L.runtimeOk)
+    (h : CcallReturnAt ra L P s pl cp sp high domain frameSp result env c)
+    (bound : count ≤ s.stack.length)
+    (regs : VmRegisters {s with stack := s.stack.drop count} pl (sp + 8 * count) after)
+    (loop : LoopRegisters after) (good : GoodState after.σ)
+    (memory : after.σ.mem = c.σ.mem) (output : after.σ.sailOutput = c.σ.sailOutput)
+    (nativeSp : gpr after 2 = gpr c 2) :
+    PlacedRunning L P {s with stack := s.stack.drop count} pl cp (sp + 8 * count) high after := by
+  exact { toRunning := ccall_return_restore stable h bound regs loop good memory output nativeSp
+          represented := repr_of_payload ((payload_stack_drop h.data bound).frame memory output)
+            (h.primitives.frame memory) regs
+          geometry := (h.geometry.state rfl rfl).same rfl rfl memory }
+
 end OCaml.Vm.Sim

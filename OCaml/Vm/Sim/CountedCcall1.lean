@@ -1,17 +1,20 @@
 import OCaml.Vm.Sim.CountedCcallSetup
 
-/-! Counted execution of the actual unary call arm. This retains the physical
-count from the callee's execution through the suffix. It deliberately does not
-claim to reconstruct `ChannelCustomsRepr`: that also needs the callee's natural
-reference-count observations at its returned channel placement. -/
+/-! Complete counted channel boundaries through the actual unary C_CALL run. -/
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim Vsa.Logic
 
+/-- The ordinary loop relation and counted stack at the same selected placement. -/
+structure CountedRunning (Customs : Config → Nat → Prop) (L : OCaml.Layout)
+    (P : Prog) (s : St) (c : Config) : Prop extends OCaml.Running L P s c where
+  countedStack : ∃ pl cp sp high, CountedVmReprAt Customs P s c pl cp sp high ∧
+    OCaml.LoopGeometry L P s c pl cp high
+
 /-- Dispatch, the generated counted setup, the actual counted call, and the
-generated return suffix on one execution. The physical successor count comes
-from the callee's post, never from its readiness or a pre-call refcount store. -/
+generated return suffix on one execution. All count observations come from
+the callee's actual post at the same returned channel placement. -/
 theorem counted_c_call1_arm {P : Prog} {s : St} {c : Config}
     {pl : Place} {cp : ChanPlace} {sp high domain table entry : Nat}
     {value env result : BitVec 64} {index : BitVec 32} {name : String}
@@ -22,9 +25,8 @@ theorem counted_c_call1_arm {P : Prog} {s : St} {c : Config}
     (counts : ChannelCustomsRepr Customs c cp s.world)
     (callee : CountedCcallCallee Customs (0x80003060#64) [s.accu] Gc.f1Layout P s
       pl cp sp high domain entry env name v result heap world) :
-    ∃ after, OCaml.Plus c after ∧ CountedResult Customs
-      (OCaml.Running Gc.f1Layout P {s with pc := s.pc + 2, accu := v, heap := heap, world := world})
-      world.customs after := by
+    ∃ after, OCaml.Plus c after ∧ CountedRunning Customs Gc.f1Layout P
+      {s with pc := s.pc + 2, accu := v, heap := heap, world := world} after := by
   apply dispatch_compose h.dispatch
   intro d dp
   obtain ⟨n, call, prefixSteps, setup, youngKept⟩ := counted_c_call1_setup custom h counts dp
@@ -32,18 +34,17 @@ theorem counted_c_call1_arm {P : Prog} {s : St} {c : Config}
     rintro x rfl
     exact ⟨call, prefixSteps.toSteps, setup.target, rfl⟩
   have suffix : Triple
-      (CountedResult Customs
-        (CcallReturn (0x80003060#64) Gc.f1Layout P
-          {s with pc := s.pc + 2, accu := v, heap := heap, world := world}
-          pl cp sp high (BitVec.ofNat 64 domain) (BitVec.ofNat 64 (sp - 16)) result env) world.customs)
-      (CountedResult Customs
-        (OCaml.Running Gc.f1Layout P {s with pc := s.pc + 2, accu := v, heap := heap, world := world})
-        world.customs) := by
+      (CountedCcallReturn Customs (0x80003060#64) Gc.f1Layout P
+        {s with pc := s.pc + 2, accu := v, heap := heap, world := world}
+        pl cp sp high (BitVec.ofNat 64 domain) (BitVec.ofNat 64 (sp - 16)) result env)
+      (CountedRunning Customs Gc.f1Layout P
+        {s with pc := s.pc + 2, accu := v, heap := heap, world := world}) := by
     intro f returned
-    obtain ⟨cp', at_⟩ := returned.post
-    obtain ⟨after, ⟨n, run⟩, running, memory⟩ := c_call1_return_framed f1_memoryStable at_
-    refine ⟨after, run.toSteps, running, ?_⟩
-    simpa only [Nat.add_zero] using (custom.accounting.sameMemory memory).count returned.physical
+    obtain ⟨cp', at_⟩ := returned.placed
+    obtain ⟨after, ⟨n, run⟩, running, memory⟩ := c_call1_return_framed f1_memoryStable at_.toCcallReturnAt
+    have counts := (ChannelCountFrame.sameMemory (cp := cp') custom.accounting memory).repr at_.counts
+    refine ⟨after, run.toSteps, { toRunning := running.toRunning, countedStack := ?_ }⟩
+    exact ⟨pl, cp', sp + 8 * 0, high, { toVmReprAt := running.represented, counts := counts }, running.geometry⟩
   have composed := callSeg pre
     (callee.summary call setup (by rw [youngKept]; exact h.allocPlaced)).run suffix
   obtain ⟨after, run, represented⟩ := composed d rfl

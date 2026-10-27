@@ -12,11 +12,24 @@ namespace OCaml.Vm.Sim
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 set_option autoImplicit false
 
-/-- A return predicate together with its physical custom count. Old clients
-can retain `.post`; counted invariant consumers retain both fields. -/
+/-- A physical accounting result for intermediate execution summaries.
+Complete VM boundaries use `CountedCcallReturnAt` instead. -/
 structure CountedResult (Customs : Config → Nat → Prop) (Q : Config → Prop) (n : Nat) (c : Config) : Prop where
   post : Q c
   physical : Customs c n
+
+/-- One returned placement witnesses both the ordinary result and every
+counted channel observation on this execution. -/
+structure CountedCcallReturnAt (Customs : Config → Nat → Prop) (ra : BitVec 64)
+    (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (cp : ChanPlace)
+    (sp high : Nat) (domain frameSp result env : BitVec 64) (c : Config) : Prop
+    extends CcallReturnAt ra L P s pl cp sp high domain frameSp result env c where
+  counts : ChannelCustomsRepr Customs c cp s.world
+
+structure CountedCcallReturn (Customs : Config → Nat → Prop) (ra : BitVec 64)
+    (L : OCaml.Layout) (P : Prog) (s : St) (pl : Place) (_cp : ChanPlace)
+    (sp high : Nat) (domain frameSp result env : BitVec 64) (c : Config) : Prop where
+  placed : ∃ cp', CountedCcallReturnAt Customs ra L P s pl cp' sp high domain frameSp result env c
 
 /-- The C_CALL entry with physical custom accounting. The projection retains
 the existing caller interface while invariant producers migrate. -/
@@ -37,12 +50,11 @@ structure CountedCcallCallee (Customs : Config → Nat → Prop) (ra : BitVec 64
   summary : ∀ c, CountedCcallSetupPost Customs ra args L P s pl cp sp high domain entry env c →
     (∀ p ∈ allocPlaces name s (BitVec.ofNat 64 (runtimeFields c).youngPtr), pl.φ p.1 = some p.2) →
     FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
-      (CountedResult Customs
-        (CcallReturn ra L P {s with pc := s.pc + 2, accu := v, heap := heap, world := world}
-          pl cp sp high (BitVec.ofNat 64 domain) (BitVec.ofNat 64 (sp - 16)) result env) world.customs)
+      (CountedCcallReturn Customs ra L P {s with pc := s.pc + 2, accu := v, heap := heap, world := world}
+        pl cp sp high (BitVec.ofNat 64 domain) (BitVec.ofNat 64 (sp - 16)) result env)
 
 /-- Returning primitive contract for the counted invariant, over the full
-successful F1 domain. It adds physical evidence to the machine entry. -/
+successful F1 domain. Its actual return retains complete channel counts. -/
 def CountedPrimReturnsAtR (L : OCaml.Layout) (P : Prog) (Customs : Config → Nat → Prop)
     (op : Opcode) (ra : BitVec 64) (k : Nat) (name : String) : Prop :=
   ∀ s c pl cp sp high table entry value env index v heap world, Reach P s →

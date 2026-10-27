@@ -97,7 +97,7 @@ structure FramedPrimitivePostOn (runtimeOk : Config → Prop) (P : Prog) (s : St
 /-- **Adapt a primitive framed by a footprint predicate to the C_CALL return
 boundary**: `ccall_observed_summary` with `Misses` for the saved words and a
 footprint below the native stack pointer. -/
-theorem ccall_observed_return_on {L : OCaml.Layout} {P : Prog} {s : St}
+theorem ccall_observed_return_at_on {L : OCaml.Layout} {P : Prog} {s : St}
     {pl : Place} {cp : ChanPlace} {sp high : Nat} {name : String} {v : Val}
     {heap : Heap} {world : World} {domain frameSp result env ra : BitVec 64} {pc : Nat}
     {args : List Val} {W : Nat → Prop} {before : Config}
@@ -108,12 +108,11 @@ theorem ccall_observed_return_on {L : OCaml.Layout} {P : Prog} {s : St}
     (outside : CcallSavedMisses W domain frameSp)
     (below : ∀ n, gpr before 2 = some (BitVec.ofNat 64 n) → ∀ x, W x → x < n)
     (native : NativePlaced before) :
-    CcallReturn ra L P {s with pc := pc, accu := v, heap := heap, world := world}
+    CcallReturnAt ra L P {s with pc := pc, accu := v, heap := heap, world := world}
       pl cp sp high domain frameSp result env after := by
   have frame := post.call.memory
   have regs := post.call.saved
   have kept := saved.frame_on outside frame regs
-  refine ⟨cp, ?_⟩
   exact { toCcall1Saved := { kept with pc := kept.pc }
           toCcallResult :=
             { geometry := geometry.state rfl rfl
@@ -127,6 +126,21 @@ theorem ccall_observed_return_on {L : OCaml.Layout} {P : Prog} {s : St}
               returnPC := post.call.pc
               resultReg := post.call.result
               resultRepr := post.resultRepr } }
+
+theorem ccall_observed_return_on {L : OCaml.Layout} {P : Prog} {s : St}
+    {pl : Place} {cp : ChanPlace} {sp high : Nat} {name : String} {v : Val}
+    {heap : Heap} {world : World} {domain frameSp result env ra : BitVec 64} {pc : Nat}
+    {args : List Val} {W : Nat → Prop} {before : Config}
+    {after : Config}
+    (post : FramedPrimitivePostOn L.runtimeOk P s pl cp sp high name args v result heap world W before ra after)
+    (geometry : OCaml.LoopGeometry L P {s with accu := v, heap := heap, world := world} after pl cp high)
+    (saved : Ccall1Saved {s with pc := pc} pl sp domain frameSp env before)
+    (outside : CcallSavedMisses W domain frameSp)
+    (below : ∀ n, gpr before 2 = some (BitVec.ofNat 64 n) → ∀ x, W x → x < n)
+    (native : NativePlaced before) :
+    CcallReturn ra L P {s with pc := pc, accu := v, heap := heap, world := world}
+      pl cp sp high domain frameSp result env after := by
+  exact ⟨cp, ccall_observed_return_at_on post geometry saved outside below native⟩
 
 /-- The footprint return adapter lifted through a whole-function summary. -/
 theorem ccall_observed_summary_on {L : OCaml.Layout} {P : Prog} {s : St}

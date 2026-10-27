@@ -159,9 +159,8 @@ theorem prim_open_tail {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 
       ChannelCustomsRepr Customs c cp s.world →
       (∀ p ∈ allocPlaces name s (BitVec.ofNat 64 (runtimeFields c).youngPtr), pl.φ p.1 = some p.2) →
       FnSummary (BitVec.ofNat 64 entry) (fun x => x = c)
-        (CountedResult Customs
-          (CcallReturn ra L P {s with pc := s.pc + 2, accu := res, heap := heap, world := world}
-            pl cp sp high (BitVec.ofNat 64 (domainAt c0)) (BitVec.ofNat 64 (sp - 16)) result env) world.customs) := by
+        (CountedCcallReturn Customs ra L P {s with pc := s.pc + 2, accu := res, heap := heap, world := world}
+          pl cp sp high (BitVec.ofNat 64 (domainAt c0)) (BitVec.ofNat 64 (sp - 16)) result env) := by
   have head0 := ready.allocPlaced _ (by rw [places]; exact List.mem_singleton_self _)
   refine ⟨BitVec.ofNat 64 ((BitVec.ofNat 64 (runtimeFields c0).youngPtr - 24#64).toNat + 8),
     fun c setup counts placedAt => ?_⟩
@@ -194,9 +193,12 @@ theorem prim_open_tail {L : OCaml.Layout} {P : Prog} {op : Opcode} {ra : BitVec 
     rw [here, yNat]
   have r : BitVec.ofNat 64 o.value.toNat = o.value := by simp
   rw [yNat, r]
-  refine ⟨⟨_, open_out_return rt setup o heapA inp nur nsp ready.stackFits ok stream fdWord open_ placed⟩, ?_⟩
-  rw [openChan_customs ok]
-  exact o.counted.count counts.physical
+  refine ⟨⟨cp.put s.world.chans.length o.opening.record.toNat,
+    { toCcallReturnAt := ?_, counts := ?_ }⟩⟩
+  · exact open_out_return rt setup o heapA inp nur nsp ready.stackFits ok stream fdWord open_ placed
+  · rw [openChan_stream ok stream]
+    exact open_out_counts rt.custom o heapA inp nur (rt.pins c setup.input.runtime)
+      setup.input.data setup.geometry (by have := ready.stackFits; omega) counts
 
 /-- **`caml_ml_open_descriptor_out` at every `C_CALL` site** (premises: the
 runtime across the opening, `OpenOutRuntime L`, and `GoodF1`'s console

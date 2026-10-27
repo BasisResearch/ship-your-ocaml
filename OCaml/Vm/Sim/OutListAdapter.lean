@@ -813,6 +813,76 @@ variable {Customs : Vsa.Machine.Config → Nat → Prop}
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm OCaml.Vm.Primitives OCaml.Vm.Primitives.Channel.OutList
 open LeanRV64DExecutable OutListWalk
 
+/-- The actual listing's SW observations reconstruct natural counts. The
+successful successor's quiet bound rules out wrap independently of the physical
+allocation post, which supplies the boundary's third component. -/
+theorem out_list_counts {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
+    {sp high domain entry : Nat} {env : BitVec 64} {c f : Config} {Ready : Nat → Config → Prop}
+    {state : Config → Nat → Prop} {w : Walk} {k cap : Nat} {s0 : BitVec 64}
+    (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
+    (ent : OutListEntry Ready state Customs ra P s pl cp sp c w k cap s0)
+    (ret : OutListReturned w Ready state Customs k ra s0 c f)
+    (counts : ChannelCustomsRepr Customs c cp s.world)
+    (bound : (listRefs s.world).customs ≤ Gc.quietBound) :
+    ChannelCustomsRepr Customs f cp (listRefs s.world) := by
+  have initialBound : s.world.customs ≤ Gc.quietBound := by
+    rw [listRefs_customs] at bound; omega
+  have refBound (ch : Chan) (member : ch ∈ s.world.chans) : ch.refs ≤ s.world.customs := by
+    have member : ch.refs ∈ s.world.chans.map Chan.refs := List.mem_map.mpr ⟨ch, member, rfl⟩
+    have le_sum (ns : List Nat) : ch.refs ∈ ns → ch.refs ≤ ns.sum := by
+      induction ns with
+      | nil => simp
+      | cons a ns ih =>
+        intro member
+        rcases List.mem_cons.mp member with eq | mem
+        · simp only [List.sum_cons]; omega
+        · have := ih mem; simp only [List.sum_cons]; omega
+    exact le_sum _ member
+  refine ⟨⟨?_⟩, ?_, ?_⟩
+  · intro id ch at_
+    cases oldEq : s.world.chans[id]? with
+    | none => simp [listRefs, oldEq] at at_
+    | some old =>
+      simp only [listRefs, List.getElem?_map, oldEq, Option.map_some, Option.some.injEq] at at_
+      subst ch
+      obtain ⟨a, placed, count⟩ := counts.references.refs id old oldEq
+      have mem : a ∈ w.chs := by
+        rw [ent.chs]
+        exact Gc.mem_placedChannels.mpr ⟨id, (List.getElem?_eq_some_iff.mp oldEq).1, placed⟩
+      obtain ⟨b, placedB, channel⟩ := setup.input.data.world.chans id old oldEq
+      have eq : b = a := Option.some.inj (placedB.symm.trans placed)
+      subst b
+      have geo := ent.geometry.records a mem
+      have al := geo.low; have ah := geo.high
+      have listed : Listed c.σ.mem (BitVec.ofNat 64 a) ↔ old.listed = true :=
+        listed_of_chanAt channel (by walk_omega) (by walk_omega)
+      have word := ret.refwords a mem
+      have fit : old.refs + 1 < 2 ^ 32 := by
+        have := refBound old (List.mem_of_getElem? oldEq)
+        have : Gc.quietBound = 5 := rfl
+        omega
+      have natural : (bytesT c.σ.mem (a + chanOffRefcount) 4).toNat = old.refs := count
+      have increment : (bytesT c.σ.mem (a + chanOffRefcount) 4 + 1#32).toNat = old.refs + 1 := by
+        rw [BitVec.toNat_add, natural]; simp only [BitVec.toNat_ofNat]
+        exact Nat.mod_eq_of_lt fit
+      refine ⟨a, placed, ?_⟩
+      by_cases yes : old.listed = true
+      · have member : a ∈ listedRecs c.σ.mem w.chs := by simp [listedRecs, mem, listed.mpr yes]
+        rw [if_pos yes]
+        change (bytesT f.σ.mem (a + chanOffRefcount) 4).toNat = old.refs + 1
+        rw [word, if_pos member, increment]
+      · have member : a ∉ listedRecs c.σ.mem w.chs := by
+          intro member
+          exact yes (listed.mp (of_decide_eq_true (List.mem_filter.mp member).2))
+        rw [if_neg yes]
+        change (bytesT f.σ.mem (a + chanOffRefcount) 4).toNat = old.refs
+        rw [word, if_neg member, BitVec.add_zero, natural]
+  · simpa only [listRefs, List.length_map, ← ent.chs] using ret.opened
+  · have physical := ret.counted.count counts.physical
+    rw [ent.listed, List.length_map] at physical
+    rw [listRefs_customs]
+    exact physical
+
 /-- **`caml_ml_out_channels_list` at every C_CALL site**, given the runtime's
 side (`OutListRuntime`; F1: lane a6-gc's `CustomMemCall` with a0-boot's
 newlib heap). -/
@@ -866,23 +936,6 @@ theorem counted_caml_ml_out_channels_list_returns {L : OCaml.Layout} {P : Prog} 
   have dom : (BitVec.ofNat 64 (domainAt c0)).toNat = w.D := by
     rw [setup.saved.domainWord, ent.domain]
   have dh := wg.domainHigh
-  have S : FnSummary (BitVec.ofNat 64 Layout.sym_caml_ml_out_channels_list) (fun x => x = c) (fun after =>
-      CountedResult Customs (fun after =>
-      FramedPrimitivePostOn L.runtimeOk P s pl cp sp high "caml_ml_out_channels_list" [s.accu]
-        (listVal s.heap.size (.int 0) (outChannelIds s.world)) (resWord w.Y (outChannelIds s.world).length)
-        (allocAll s.heap (listObjs s.heap.size (.int 0) (outChannelIds s.world))) (listRefs s.world)
-        (outW w state) c ra after ∧
-      OCaml.LoopGeometry L P (listPost s) after pl cp high) (listRefs s.world).customs after) := by
-    constructor
-    intro c' ⟨_, e⟩
-    subst e
-    obtain ⟨f, run, ret⟩ := out_list_machine rt.custom wg customMemGrows ent.input (by rw [ent.listed, List.length_map]; exact Nat.le_refl _)
-      fun a h => (ent.stateS a).mpr h
-    refine ⟨f, run, out_list_post rt setup ent ret placed roomFits stackFits, ?_⟩
-    have physical := ret.counted.count countedEntry.counts.physical
-    rw [ent.listed, List.length_map] at physical
-    rw [listRefs_customs]
-    exact physical
   have outside : CcallSavedMisses (outW w state) (BitVec.ofNat 64 (domainAt c0)) (BitVec.ofNat 64 (sp - 16)) := by
     refine ⟨fun i hi => pts _ (Or.inl ⟨by omega, by omega⟩), ?_, ?_, ?_⟩
     · intro i hi
@@ -908,9 +961,15 @@ theorem counted_caml_ml_out_channels_list_returns {L : OCaml.Layout} {P : Prog} 
     rw [BitVec.toNat_ofNat, BitVec.toNat_add, BitVec.toNat_ofNat] at e
     have := Nat.mod_le n (2 ^ 64)
     omega
-  apply S.weaken (fun _ h => h)
-  intro after returned
-  exact ⟨ccall_observed_return_on returned.post.1 returned.post.2 setup.saved outside below setup.native,
-    returned.physical⟩
+  constructor
+  intro c' ⟨_, e⟩
+  subst e
+  obtain ⟨f, run, ret⟩ := out_list_machine rt.custom wg customMemGrows ent.input
+    (by rw [ent.listed, List.length_map]; exact Nat.le_refl _) fun a h => (ent.stateS a).mpr h
+  obtain ⟨post, geometry⟩ := out_list_post rt setup ent ret placed roomFits stackFits
+  exact ⟨f, run, ⟨⟨cp, {
+    toCcallReturnAt := ccall_observed_return_at_on post geometry setup.saved outside below setup.native
+    counts := out_list_counts setup ent ret countedEntry.counts
+      (Nat.le_trans (succ.customs_bound fits) rt.customBudget) }⟩⟩⟩
 
 end OCaml.Vm.Sim

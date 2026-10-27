@@ -58,4 +58,32 @@ theorem OpenChannels.unique {m : Std.ExtHashMap Nat (BitVec 8)} {x : Nat} {l₁ 
     | nil => exact absurd rfl ne
     | cons _ tail => rw [ih tail]
 
+/-- Every listed address starts a suffix of the same finite chain. -/
+theorem OpenChannels.suffix {m : Std.ExtHashMap Nat (BitVec 8)} {x a : Nat} {chs : List Nat}
+    (h : OpenChannels m x chs) (member : a ∈ chs) :
+    ∃ rest, OpenChannels m a (a :: rest) ∧ (a :: rest).length ≤ chs.length := by
+  -- discipline: allow(O5-run-induction) finite linked-list shape, not execution
+  induction h with
+  | nil => simp at member
+  | @cons b bs ne tail ih =>
+    rcases List.mem_cons.mp member with rfl | member
+    · exact ⟨bs, .cons ne tail, Nat.le_refl _⟩
+    · obtain ⟨rest, at_, len⟩ := ih member
+      exact ⟨rest, at_, by simp only [List.length_cons] at *; omega⟩
+
+/-- A terminating singly linked list visits each address once. -/
+theorem OpenChannels.nodup {m : Std.ExtHashMap Nat (BitVec 8)} {x : Nat} {chs : List Nat}
+    (h : OpenChannels m x chs) : chs.Nodup := by
+  -- discipline: allow(O5-run-induction) finite linked-list shape, not execution
+  induction h with
+  | nil => exact List.nodup_nil
+  | @cons a rest ne tail ih =>
+    refine List.nodup_cons.mpr ⟨?_, ih⟩
+    intro member
+    obtain ⟨suffix, at_, len⟩ := tail.suffix member
+    have eq := (OpenChannels.cons ne tail).unique at_
+    have := congrArg List.length eq
+    simp only [List.length_cons] at *
+    omega
+
 end OCaml.Vm.Gc

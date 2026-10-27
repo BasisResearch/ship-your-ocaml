@@ -265,10 +265,10 @@ ELF pin).
 | `Skiplist.Ops Shape foot` (`caml_skiplist_insert`, `caml_skiplist_empty` on `caml_global_roots{,_old,_young}`) | `OCaml/Vm/Gc/Skiplist.lean` | A6 / G2 | **open** named obligation (a6-gc): `Shape m sk cells` with level-0 projection `Chain`, footprint in the header and live heap blocks; insert (`random_level`, `caml_stat_alloc`, per-level splice) returns a shape containing the key and every old key; empty frees every cell and leaves `Shape … []`; both ABI returns over `HeapReady`, kept outside the footprint, newlib's bytes, `random_seed` and `opStack` below `sp`. Also needed by `caml_register_named_value` (`caml_register_generational_global_root`) |
 | Global roots in the minor collection | `caml_scan_global_young_roots`, `caml_skiplist_{insert,empty}` | A6 / G2 | **open**: at the cut `caml_global_roots` holds `backtrace_last_exn` (immediate) and `caml_global_roots_young` holds `main_argv` (a young block), so the first minor GC oldifies it, inserts a cell into `caml_global_roots_old` (malloc, `random_level`) and frees the young cell; summaries over a0-boot's allocator/free summaries |
 | `CustomMemCall Ready state Customs` (`caml_alloc_custom_mem`) | `OCaml/Vm/Gc/CustomMem.lean`; a6-gc | A6 | **open named machine supplier**: actual `FnSummary.call` returns `CustomMemCountedReturned`, including `Customs f n → Customs d (n + 1)` on that execution. `CustomAccounting` supplies uniqueness, caller-store framing and `ReadyOf Customs → Ready`; no increment is inferred from `Ready k` or from weak `CustomMemReturned`. Concrete `Customs`, its startup zero witness, readiness/footprint laws, physical named separation, allocation/heap/ABI and exact counter machine return remain open. `CustomCountStep`/`CustomFramed` carry the count through native callers. |
-| `OutListRuntimeL L` / counted out-list C_CALL adapter | `OCaml/Vm/Sim/{OutListWalk,OutListRun,OutListAdapter}.lean`; a6-gc / a0-boot | A6 / A0 | **conditional counted interface**: universal entry readiness removed; `counted_caml_ml_out_channels_list_returns` derives batch readiness from `Fits`, the reachable successor and `CountedCcallSetupPost.counts`. `WalkAt`, listed steps and `OutListReturned.counted` preserve the exact physical charge for every listed record (cons cells charge zero). Concrete heap/record/named-ledger entry and after-call runtime suppliers remain open; represented natural refcount increments/no-wrap and ordinary-row invariant integration remain open. |
+| `OutListRuntimeL L` / counted out-list C_CALL adapter | `OCaml/Vm/Sim/{OutListWalk,OutListRun,OutListAdapter}.lean`; a6-gc / a0-boot | A6 / A0 | **conditional counted interface**: universal entry readiness removed; `counted_caml_ml_out_channels_list_returns` derives batch readiness from `Fits`, the reachable successor and `CountedCcallSetupPost.counts`. `WalkAt.refwords` and `OutListReturned.refwords` retain actual native four-byte increments and untouched records; `out_list_counts` proves natural readbacks/no-wrap from successor `Fits`. Physical batch accounting remains independent. Concrete heap/record/named-ledger entry and after-call runtime suppliers and ordinary-row invariant integration remain open; complete counted return and unary-arm preservation are checked for lead review. |
 | `F1CcallOpen P` (general per-arity returns and `ocamlrun_refinement_F1_open`) | generated `OCaml/Vm/Sim/F1Ccall.lean` (`scripts/gen_f1_table.py`) | A1 | **open, five fields**: ordinary `ml_open_descriptor_out_c_call1`, `ml_open_descriptor_in_c_call1`, `ml_out_channels_list_c_call1`, `register_named_value_c_call2`, `format_int_c_call2`. Counted channel summaries are checked interfaces, not ordinary `PrimReturnsAtR` suppliers until the loop/setup producers carry counts. Wrong arities remain discharged with `PrimReturnsAtD.of_arity`; full `GoodF1` unchanged; growth remains G2. |
-| `Chan.refs`, `World.customs`, `Budget.customs`/`FitsAt`, counted channel representation/readiness | `OCaml/Vm/{Gc/ChannelRefs,Repr/ChannelCounts,Sim/ChannelReadiness}.lean`, `Fragment.customLedger` | A1 / A6 | **proved bridge, invariant migration open**: `CcallSucc.customs_bound`, exact open/list model charges and represented physical counts imply readiness at a successful reachable C_CALL. `CountedVmReprAt`/`CountedCcallSetupPost` name the stronger invariant; ordinary `VmReprAt`/`WorldRepr`/setup still omit it. `f1_channelCounts_of` uses the actual empty startup list and an explicit physical-zero witness; `open_out_counts` produces full opened-channel counts. The old universal `OpenOutRuntimeAt.budget` is removed; numeric `customBudget` bounds the layout only. |
-| Concrete channel refcount/accounting transport | `OCaml/Vm/Gc/ChannelRefs.lean`, `Repr/ChannelCounts.lean` | A6 / A1 | **proved**: list-link frames, pointwise increments, fresh prepend, boundary sum, physical caller frames and one pending-reference consumption from the actual counted call post. `ChannelCustomsAt.pending` handles io.c's refcount-before-allocation ordering. Actual out-list refcount/no-wrap producer and migration through every ordinary representation producer remain open. |
+| `Chan.refs`, `World.customs`, `Budget.customs`/`FitsAt`, counted channel representation/readiness | `OCaml/Vm/{Gc/ChannelRefs,Repr/ChannelCounts,Sim/ChannelReadiness}.lean`, `Fragment.customLedger` | A1 / A6 | **proved bridge, invariant migration open**: `CcallSucc.customs_bound`, exact open/list model charges and represented physical counts imply readiness at a successful reachable C_CALL. `CountedVmReprAt`/`CountedCcallSetupPost` name the stronger invariant; ordinary `VmReprAt`/`WorldRepr`/setup still omit it. `f1_channelCounts_of` uses the actual empty startup list and an explicit physical-zero witness; `open_out_counts` produces full opened-channel counts; `CountedCcallReturn` retains these at the same ordinary return placement, and the checked unary arm returns `CountedRunning`. The old universal `OpenOutRuntimeAt.budget` is removed; numeric `customBudget` bounds the layout only. |
+| Concrete channel refcount/accounting transport | `OCaml/Vm/Gc/ChannelRefs.lean`, `Repr/ChannelCounts.lean` | A6 / A1 | **proved**: list-link frames, pointwise increments, fresh prepend, boundary sum, physical caller frames and one pending-reference consumption from the actual counted call post. `ChannelCustomsAt.pending` handles io.c's refcount-before-allocation ordering. Actual out-list four-byte increment/readback and no-wrap reconstruction are proved; migration through ordinary representation producers remains open. |
 | Whole non-young and immediate oldify calls and common return | `OCaml/Vm/Gc/NonYoungCall.lean:NonYoung.call`, `OldifyReturned.lean` | A6 / G2 | **proved**: real prologue, rejecting nursery tests and shared restore/root store/return compose to `OldifyReturned` with the root holding the value; forwarded, fresh-enqueued and fresh-single routes project to `OldifyReturned`; immediate route proved as a whole call (`OldifyImmediate.call`: taken parity branch, three saves, root store, reloads, return); slot-level `SlotDone` (root holds `relocation copies' v`, published table grows and holds) proved for the immediate, non-young, forwarded, fresh queue-inserting (`QueueResult`: exact-size and least-large-block allocators) and fresh single-field routes (`OldifySlot.lean`), each fresh route publishing its forwarding entry; dispatcher interface `SlotCall` supplied by every proved route (immediate, non-young, forwarded, fresh queue small/large, fresh single with immediate/non-young child small/large); forwarded- and young-child single routes, Infix/Forward/No_scan **open** |
 | Mopup forwarded-field call and resume jump | `MopupResume.lean:forwarded_resume` | A6 / G2 | **proved**: ELF-certified JAL via shared bridge, actual oldify callee, link return and jump to counter advance, relocated root/exact log/restored registers and mopup-code frame; header advance and loaded-field seam **open** |
 | Forwarded-field call through scan advance | `ForwardedAdvance.lean:forwarded_advance` | A6 / G2 | **proved**: concrete post-call header branch/source-index advance, exact native-save/root log and relocated word; shared restored-register ABI frame retains scan/domain registers; classifier seam and size footprint proved by `ForwardedField.forwarded_field` and `ForwardedEffect.lean:againAfterCall_count`; forwarded suffix loop proved below; fresh-copy relocation **open** |
@@ -397,48 +397,43 @@ for that snapshot; it does not assert kernel startup reachability.
 
 ## A1: F1 arms (exit: `ocamlrun_refinement_Statement` for F1)
 
-**Counted-channel continuation, 2026-10-27: partial migration for lead review.**
-The continuation of committed checkpoint `dc8035a8` now produces complete
-counted entries on the actual generated unary C_CALL setup execution.
-`ChannelCountFrame` shares the physical/refcount/list-link frame;
-`Ccall1WriteOk.customCountFrame` derives its physical component from the
-existing `CustomMemCall` footprint laws and the existing stack reserve.
-Both setup/return generators retain their exact effects in `_framed`
-theorems, with the ordinary interfaces as projections.
-`counted_c_call1_setup_ready` consumes successful-state `Fits` at that
-execution's call entry, and `counted_c_call1_arm` carries the actual callee's
-physical count through dispatch/setup/call/suffix via `dispatch_compose` and
-`callSeg`. Its `CountedResult (Running ...)` conclusion does not reconstruct
-the complete counted loop invariant; it is not wired into the F1/whileMin
-tables. The ordinary loop selection/producers and the full returned
-refcount/list observations remain open. Validation of this continuation is
-recorded at the top of `docs/lanes/a1-prims.md`: the affected **3,304-job**
-build and all **27** focused standard-axiom reports pass; the **17** new
-audits are registered, and full `OCaml.Audit` remains with the lead. Checked
-edits are uncommitted for lead review; this is not completion of the target.
+**Counted channel return continuation, 2026-10-27: checked for lead review.**
+The three counted channel callee summaries now return `CountedCcallReturn`:
+its chosen `ChanPlace` witnesses both `CcallReturnAt` and complete
+`ChannelCustomsRepr`. Both opening adapters reuse `open_out_counts` on their
+actual execution. `WalkAt.refwords` tracks the visited listed records once;
+`ListedStep.refwords` reads the native SW through `word32_writeLog` and frames
+all record refcounts through the custom call and cons allocation. Finite
+`OpenChannels.nodup` justifies one visit per record. `OutListReturned.refwords`
+retains these observations through the real prologue/epilogue. `out_list_counts`
+uses the successful reachable successor's `Fits` bound (`quietBound = 5`) to
+prove no 32-bit wrap and reconstruct natural counts, list links and independent
+physical accounting. There is no assumed readback/no-wrap field.
 
-The exact custom increment is in the actual machine call post; native open
-and out-list summaries retain its physical evidence. Successful-call readiness
-uses `Fits` on the reachable successor and `ChannelCustomsRepr`; the impossible
-universal runtime budget is gone. `CountedVmReprAt`, `CountedCcallSetupPost`
-and `CountedResult` make the stronger boundary explicit, with projections for
-old clients. Full opening counts are produced by `open_out_counts`; startup
-uses the actual empty-list observation plus the still-open physical zero
-supplier. The full out-list physical batch charge is retained.
+The generated `_return_framed` suffixes retain `PlacedRunning`, exposing the
+same placement used to construct the ordinary loop stack witness and exact
+memory equality. `counted_c_call1_arm` composes dispatch, counted setup, the
+actual callee and suffix with `dispatch_compose`/`callSeg`, and uses
+`ChannelCountFrame.sameMemory` to conclude `CountedRunning`, including
+`CountedVmReprAt` at that final placement. The setup still derives its physical
+frame from the named `CustomMemCall` footprint and existing stack reserve.
 
-**Still open:** selecting/establishing physical `Customs` at startup, the
-concrete `CustomMemCall` machine supplier and its exact counter/footprint laws,
-ordinary loop/payload representation producers and their selection of the
-counted entry consumed by the new unary setup producer, the out-list's
-represented natural refcounts/no-wrap producer, and both runtime entry/after
-suppliers. The generated F1/whileMin tables therefore retain ordinary channel
-return premises, rather than treating counted summaries as weaker ordinary
-rows. Named registration/general formatting, G2 growth and C4 remain as above.
-This is not closure of `openOutRuntime` or `outListRuntime`. Validation and
-review status are recorded at the top of `docs/lanes/a1-prims.md`. Checkpoint
-`dc8035a8`'s affected
-3,684-job build and all 52 focused axiom reports pass; full `OCaml.Audit`
-remains the lead gate.
+**Still open:** concrete physical `Customs`, its actual startup zero witness
+and accounting laws; the named `CustomMemCall` supplier with its exact machine
+counter post; startup/entry and ordinary `Running.stack`/`LoopAt` producers
+carrying counts at their selected placements; frames through non-channel
+opcodes and non-custom primitives, and counted integration of other call
+arities. `OpenOutRuntimeAt.after` and the out-list selected heap/record/named
+ledger entry and after-call runtime pins remain explicit suppliers. Ordinary
+F1/whileMin tables retain their channel-return premises until invariant
+migration supplies counted entries. Named registration/general formatting,
+`BarrierGrowthFull` (G2) and C4 round 2 (waiting for F1) remain open. The
+`GoodF1` domain is unchanged. Validation and review status are recorded at the
+top of `docs/lanes/a1-prims.md`; full `OCaml.Audit` and integration stay with
+the lead. The affected **3,687-job** build and all **31** focused standard-axiom
+reports pass; all eight new theorem audits are registered. Changed-generator
+drift, hole, discipline and abstraction checks pass. Checked edits remain
+uncommitted for lead integration.
 
 **Physical named migration, 2026-10-27: complete and checked for lead review.**
 The complete `OCaml` target passes with 4,151 jobs; all 71 focused axiom

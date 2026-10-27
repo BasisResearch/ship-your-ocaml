@@ -5,6 +5,7 @@ import Vsa.Sim.DeriveLoop
 import OCaml.Vm.Boot.Startup.HeapFrame
 import OCaml.Vm.Gc.LibHeap
 import OCaml.Vm.Gc.LoopFold
+import OCaml.Vm.Primitives.Word32Access
 
 /-!
 # `caml_ml_out_channels_list`'s list walk as one machine loop
@@ -187,6 +188,10 @@ structure WalkAt (w : Walk) (Ready : Nat → Config → Prop) (state : Config �
   list : Gc.OpenChannels d.σ.mem (rest.headD 0) rest
   opened : Gc.OpenChannelList d.σ.mem w.chs
   records : ∀ r ∈ w.chs, ∀ j, j < recBytes → (j < 64 ∨ 68 ≤ j) → bytesT d.σ.mem (r + j) 1 = bytesT e.σ.mem (r + j) 1
+  /-- Actual four-byte observations; only visited listed records are bumped. -/
+  refwords : ∀ r ∈ w.chs, bytesT d.σ.mem (r + chanOffRefcount) 4 =
+    bytesT e.σ.mem (r + chanOffRefcount) 4 +
+      (if r ∈ listedRecs e.σ.mem pre then 1#32 else 0#32)
   res : bytesT d.σ.mem (w.sp + 24#64).toNat 8 = resWord w.Y (listedRecs e.σ.mem pre).length
   domain : word d Layout.sym_Caml_state = BitVec.ofNat 64 w.D
   young : word d (w.D + Layout.off_young_ptr) = BitVec.ofNat 64 (w.Y - 48 * (listedRecs e.σ.mem pre).length)
@@ -327,6 +332,7 @@ theorem walk_skip {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state 
     list := by rw [m']; exact tail
     opened := by rw [m']; exact h.opened
     records := by rw [m']; exact h.records
+    refwords := by rw [m', listedRecs_skip skip]; exact h.refwords
     res := by rw [m', listedRecs_skip skip]; exact h.res
     domain := by unfold word; rw [m']; exact h.domain
     young := by unfold word; rw [m', listedRecs_skip skip]; exact h.young
@@ -979,6 +985,74 @@ theorem ListedStep.recordAtReturn {w : Walk} {n : Nat} {Ready : Nat → Config �
   · exact not_vsaFoot_in (s.sub _ xrIn) (by omega) ⟨by omega, by omega⟩
   all_goals walk_omega
 
+/-- Read the low four bytes of the actual increment store before the call. -/
+theorem enter_refword (m : Std.ExtHashMap Nat (BitVec 8)) (sp p roots : BitVec 64)
+    (apart : OutLRange [((sp + 8#64).toNat, 8, roots)] (p + 64#64).toNat 4) :
+    bytesT (writeLog m (enterLog m sp p roots)) (p + 64#64).toNat 4 =
+      bytesT m (p + 64#64).toNat 4 + 1#32 := by
+  have split : enterLog m sp p roots =
+      [((p + 64#64).toNat, 4, refcount m p)] ++ [((sp + 8#64).toNat, 8, roots)] := rfl
+  rw [split, writeLog_append, bytesT_writeLog_out _ apart, word32_writeLog]
+  have low : (bytesVal .lw (read8 m (p + 64#64).toNat)).setWidth 32 =
+      bytesT m (p + 64#64).toNat 4 := by
+    rw [Channel.lw_read8, truncate_signed_word]
+  simp only [refcount, Sail.BitVec.extractLsb, BitVec.extractLsb]
+  change (((bytesVal .lw (read8 m (p + 64#64).toNat) + 1#64).setWidth 32).signExtend 64).setWidth 32 = _
+  rw [show ∀ v : BitVec 32, (v.signExtend 64).setWidth 32 = v from fun v => truncate_signed_word v]
+  rw [BitVec.setWidth_add _ _ (by decide), low]
+  rfl
+
+/-- The native SW is read back after both allocations, with every other
+record's four-byte field preserved by the same record frame. -/
+theorem ListedStep.refwords {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
+    {k : Nat} {e : Config} {pre rest : List Nat} {r : Nat} {d f g' d' : Config} {V j : Nat}
+    {H H' : List (Nat × Nat)} {cap' : Nat} (custom : Gc.CustomMemCall Ready state Customs)
+    (s : ListedStep w Ready state Customs k e pre rest r d f g' d' V j H H' cap')
+    (g : WalkGeometry w n) (mem : r ∈ w.chs) (q : Nat) (member : q ∈ w.chs) :
+    bytesT d'.σ.mem (q + chanOffRefcount) 4 =
+      bytesT d.σ.mem (q + chanOffRefcount) 4 + (if q = r then 1#32 else 0#32) := by
+  obtain ⟨vlm, vy, vl, vf, spf⟩ := s.nums g
+  have qr := g.records q member
+  have ql := qr.low; have qh := qr.high; have qm := qr.minor; have qd := qr.domain
+  have spl := g.spLow; have nh := g.nurseryHigh; have nl := g.nurseryLow
+  have rfit := (g.records r mem).fit
+  have r64 : (BitVec.ofNat 64 r + 64#64).toNat = r + 64 := rec_off (by walk_omega)
+  have s8 : (w.sp + 8#64).toNat = w.sp.toNat + 8 := off_toNat (by walk_omega)
+  obtain ⟨xr, xrIn, xrl, xrh⟩ := g.coverRecords q member
+  have minRec : 68 ≤ recBytes := by decide
+  have minBytes : 68 ≤ chanOffBuff + OCaml.Bytecode.ioBufferSize := by decide
+  have kept : bytesT d'.σ.mem (q + chanOffRefcount) 4 = bytesT f.σ.mem (q + chanOffRefcount) 4 := by
+    apply Reloc.bytesT_congr
+    intro i hi
+    have hs : ¬ state f (q + chanOffRefcount + i) := by
+      intro hs
+      have := (custom.apart f _ hs).records w.chs s.openedF q member
+      unfold chanOffRefcount at *
+      omega
+    have hf : ¬ VsaIris.VsaHeap.vsaFoot H (q + chanOffRefcount + i) :=
+      not_vsaFoot_in (s.sub _ xrIn) (by omega) ⟨by unfold chanOffRefcount; omega,
+        by unfold chanOffRefcount; omega⟩
+    rw [Channel.bytesT_one_byte, s.afterMem,
+      writeLog_out _ _ _ (afterLog_outL (m := g'.σ.mem) (r := r) (D := w.D) spf vf vl
+        (by unfold chanOffRefcount; walk_omega) (by unfold chanOffRefcount; walk_omega)
+        (by unfold chanOffRefcount; walk_omega) (by unfold chanOffRefcount; walk_omega)),
+      ← Channel.bytesT_one_byte]
+    exact s.callKept _ hs hf (by unfold chanOffRefcount; walk_omega)
+      (by unfold chanOffRefcount; walk_omega) (by unfold chanOffRefcount; walk_omega)
+  rw [kept, s.enterMem]
+  by_cases eq : q = r
+  · subst q
+    rw [if_pos rfl]
+    have tail : OutLRange [((w.sp + 8#64).toNat, 8, w.roots)] (BitVec.ofNat 64 r + 64#64).toNat 4 := by
+      simp only [OutLRange, r64, s8, and_true]; walk_omega
+    simpa only [r64, chanOffRefcount] using enter_refword d.σ.mem w.sp (BitVec.ofNat 64 r) w.roots tail
+  · rw [if_neg eq, BitVec.add_zero]
+    apply bytesT_writeLog_out
+    have apart := g.recordsApart r mem q member (Ne.symm eq)
+    simp only [enterLog, OutLRange, r64, s8, and_true]
+    unfold chanOffRefcount
+    rcases apart with apart | apart <;> walk_omega
+
 /-- The frame's stack slots at the return. -/
 theorem ListedStep.stackAtReturn {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
     {k : Nat} {e : Config} {pre rest : List Nat} {r : Nat} {d f g' d' : Config} {V j : Nat}
@@ -1220,6 +1294,19 @@ theorem walk_listed {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {stat
     opened := opened_transfer h.opened headEq nexts
     records := fun r' mem' j' hj' hn =>
       (s.frame g mem _ (record_not_written custom g mem' hj' hn)).trans (h.records r' mem' j' hj' hn)
+    refwords := by
+      have nd := h.opened.nodup
+      rw [h.split] at nd
+      have fresh : r ∉ listedRecs e.σ.mem pre := by
+        intro member
+        have inPre := (List.mem_filter.mp member).1
+        have disjoint := (List.nodup_append.mp nd).2.2
+        exact disjoint r inPre r List.mem_cons_self rfl
+      intro q hq
+      rw [s.refwords custom g mem q hq, h.refwords q hq, listedNew]
+      by_cases eq : q = r
+      · subst q; simp [fresh]
+      · simp [eq, BitVec.add_assoc]
     res := by
       rw [lenNew, s.afterMem]
       refine (Gc.word_writeLog_at _ _ 5 _ _ rfl (by

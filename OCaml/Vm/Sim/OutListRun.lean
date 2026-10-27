@@ -428,6 +428,7 @@ theorem walk_start {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state
       word e a = word c a := fun a h1 h2 => word_keep me (pro_outLRange g h1 h2)
   have dom : word c Layout.sym_Caml_state = BitVec.ofNat 64 w.D := inp.domain
   refine {
+    refwords := fun r hr => by simp [listedRecs]
     counted := ⟨fun h => by simpa [listedRecs] using h⟩
     good := post.good, image := post.image, minstret := post.minstret, tick := post.tick
     link := ⟨ra, regs.link, inp.leaf.aligned⟩
@@ -491,6 +492,10 @@ structure OutListReturned (w : Walk) (Ready : Nat → Config → Prop) (state : 
   opened : Gc.OpenChannelList d.σ.mem w.chs
   frame : ∀ a, ¬ Written w state a → (a < w.sp.toNat ∨ w.sp.toNat + 128 ≤ a) → (a < w.D + 288 ∨ w.D + 296 ≤ a) →
     bytesT d.σ.mem a 1 = bytesT c.σ.mem a 1
+  /-- Four-byte readbacks from the native stores, including untouched records. -/
+  refwords : ∀ r ∈ w.chs, bytesT d.σ.mem (r + chanOffRefcount) 4 =
+    bytesT c.σ.mem (r + chanOffRefcount) 4 +
+      (if r ∈ listedRecs c.σ.mem w.chs then 1#32 else 0#32)
   counted : Gc.CustomCountStep Customs c d (listedRecs c.σ.mem w.chs).length
   ready : Ready k d
   heap : ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap d ∧ ∀ x ∈ w.H0, x ∈ H
@@ -659,7 +664,8 @@ theorem out_list_finish {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {
   obtain ⟨bytesF, wordsF, rootsF, readyF, openedF, heapF, countedF⟩ := restore_keeps custom g postD.memory
     ((wz _).trans walked.domain) readyZ (by rw [mz]; exact walked.opened)
     (by obtain ⟨H, cap', hd, sub⟩ := walked.heap; exact ⟨H, cap', HeapReady.of_mem hd mz, sub⟩)
-  have countedE := (pro_keeps custom g inp post.memory).counted
+  have proKept := pro_keeps custom g inp post.memory
+  have countedE := proKept.counted
   have listedE := pro_listed g (c := c) (e := e) post.memory
   have ns : ∀ n ∈ calleeSaved, n ∉ [1, 2, 8] ∧ n ∉ [10, 15] ∧ n ∉ [2, 8, 10, 11, 12, 13, 14, 15, 16, 17] ∧
       1 ≤ n ∧ n ≤ 31 := by decide
@@ -695,6 +701,19 @@ theorem out_list_finish {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {
     frame := fun a hw stk dom => by
       rw [bytesF a dom, Channel.bytesT_one_byte, mz, ← Channel.bytesT_one_byte, walked.frame a hw,
         Channel.bytesT_one_byte, Channel.bytesT_one_byte, post.memory, writeLog_out _ _ _ (pro_outL g stk dom)]
+    refwords := by
+      intro r hr
+      have recordGeo := g.records r hr
+      have rh := recordGeo.high; have rd := recordGeo.domain
+      have eqF : bytesT f.σ.mem (r + chanOffRefcount) 4 = bytesT d.σ.mem (r + chanOffRefcount) 4 :=
+        Reloc.bytesT_congr fun i hi => by
+          rw [bytesF _ (by unfold chanOffRefcount; walk_omega), Channel.bytesT_one_byte, mz,
+            ← Channel.bytesT_one_byte]
+      have eqE : bytesT e.σ.mem (r + chanOffRefcount) 4 = bytesT c.σ.mem (r + chanOffRefcount) 4 :=
+        Reloc.bytesT_congr fun i hi => by
+          exact proKept.bytes _ (by unfold chanOffRefcount; walk_omega)
+            (by unfold chanOffRefcount; walk_omega)
+      rw [eqF, walked.refwords r hr, eqE, listedE]
     counted := by
       have step := ((countedE.trans walked.counted).trans
         (custom.accounting.sameMemory mz)).trans countedF
@@ -760,6 +779,7 @@ theorem out_list_none {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {st
     opened := openedF
     frame := fun a _ stk dom => by
       rw [bytesF a dom, Channel.bytesT_one_byte, mz, ← Channel.bytesT_one_byte]; exact bytesE a stk dom
+    refwords := by intro r hr; rw [empty] at hr; simp at hr
     counted := by
       have step := (countedE.trans (custom.accounting.sameMemory mz)).trans countedF
       simpa only [Nat.add_zero, l0, List.length_nil] using step

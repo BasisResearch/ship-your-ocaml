@@ -26,7 +26,7 @@ theorem c_call@ARITY@_return_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl :
     {cp : ChanPlace} {sp high : Nat} {domain frameSp result env : BitVec 64} {c : Config}
     (stable : MemoryStable L.runtimeOk)
     (h : CcallReturnAt (@PC@#64) L P s pl cp sp high domain frameSp result env c)@BOUND@ :
-    ∃ after, Plus c after ∧ Running L P @STATE@ after ∧ after.σ.mem = c.σ.mem := by
+    ∃ after, Plus c after ∧ PlacedRunning L P @STATE@ pl cp (sp + 8 * @COUNT@) high after ∧ after.σ.mem = c.σ.mem := by
   have loaded (a : Nat) : sign_extend (m := 64) (bytesT8 c.σ.mem a) = word c a := by
     simp only [word, bytesT_eight_eq, sign_extend, Sail.BitVec.signExtend, BitVec.signExtend_eq]
   have bp : SegSt (@PC@#64)
@@ -45,7 +45,7 @@ theorem c_call@ARITY@_return_framed {L : OCaml.Layout} {P : Prog} {s : St} {pl :
     h.envRead.lower h.envRead.upper h.envRead.htif env h.savedEnv c bp
   obtain ⟨_, memory, frame⟩ := post.extra
   refine ⟨after, ⟨n - 1, by simpa only [show n - 1 + 1 = n from by omega] using steps⟩, ?_, memory⟩
-  apply ccall_return_restore stable h (count := @COUNT@) @BOUND_PROOF@ ?_ ?_ post.good memory frame.out
+  apply ccall_return_restore_placed stable h (count := @COUNT@) @BOUND_PROOF@ ?_ ?_ post.good memory frame.out
     (frame.frame (gprReg 2) (by decide))
   · refine ⟨post.pcAt, ?_, ?_, ⟨result, ?_, h.resultRepr⟩,
       ⟨env, PinsHold.get post.pins ⟨1, by simp⟩, h.envRepr⟩, ?_⟩
@@ -98,11 +98,13 @@ def render(arity):
     header = out[out.index(f"theorem c_call{arity}_return_framed"):out.index(" := by\n")]
     header = header.replace(f"c_call{arity}_return_framed", f"c_call{arity}_return", 1)
     header = header[:header.index(" ∧ after.σ.mem = c.σ.mem")]
+    header = header.replace(f"PlacedRunning L P {values['STATE']} pl cp (sp + 8 * {count}) high after",
+                            f"Running L P {values['STATE']} after")
     forget = ("/-- Compatibility projection; the framed suffix retains memory equality. -/\n"
               + header + " := by\n"
               + f"  obtain ⟨after, run, running, _⟩ := c_call{arity}_return_framed stable h"
               + (" bound" if count else "") + "\n"
-              + "  exact ⟨after, run, running⟩")
+              + "  exact ⟨after, run, running.toRunning⟩")
     out = out.replace("@FORGET_FRAME@", forget)
     return out
 

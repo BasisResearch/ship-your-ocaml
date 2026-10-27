@@ -6891,3 +6891,12 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.c_call3_return_framed
 #print axioms OCaml.Vm.Sim.c_call4_return_framed
 #print axioms OCaml.Vm.Sim.c_call5_return_framed
+
+#print axioms OCaml.Vm.Gc.OpenChannels.suffix
+#print axioms OCaml.Vm.Gc.OpenChannels.nodup
+#print axioms OCaml.Vm.Sim.OutListWalk.ListedStep.refwords
+#print axioms OCaml.Vm.Sim.repr_of_payload
+#print axioms OCaml.Vm.Sim.ccall_return_restore_placed
+#print axioms OCaml.Vm.Sim.ccall_observed_return_at_on
+#print axioms OCaml.Vm.Sim.out_list_counts
+#print axioms OCaml.Vm.Sim.OutListWalk.enter_refword

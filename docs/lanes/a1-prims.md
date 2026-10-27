@@ -2,6 +2,88 @@
 
 ## Current status
 
+**2026-10-27 complete counted channel returns: checked for lead review/integration.**
+
+Started from checked HEAD `13320f38` with a clean worktree, after reading the
+previous worker's remaining-obligation list and `DEAD-ENDS.md`. The abstraction
+inventory was run before proof work. `CountedCcallReturnAt` strengthens the
+actual machine post with full `ChannelCustomsRepr` at its own `ChanPlace`;
+`CountedCcallReturn.placed` packages that same ordinary/count witness. Both
+open-descriptor adapters reuse `open_out_counts` from their actual `OpenedOut`
+return. No second unrelated post or universal count implication is assumed.
+
+`WalkAt.refwords` tracks the visited listed portion once. `OpenChannels.nodup`
+uses finite-chain suffixes and `OpenChannels.unique` to justify one visit per
+record. `ListedStep.refwords` reads the actual four-byte native SW through
+`word32_writeLog`, then frames every record's field through the named custom
+call and cons allocation. This includes unvisited and unlisted records.
+`OutListReturned.refwords` retains those observations through the native
+prologue/epilogue. `out_list_counts` converts the machine words to natural
+counts using the successful successor's `Fits`/customs bound (`quietBound = 5`)
+to rule out wrap. The physical batch count still comes independently from
+`CustomMemCall`'s exact actual machine post, never from a transient refcount sum.
+
+The return generator now retains `PlacedRunning` in `_return_framed`, exposing
+the placement used by the ordinary return. The ordinary interfaces remain
+projections. `counted_c_call1_arm` uses `dispatch_compose`/`callSeg` for the same
+dispatch/setup/callee/suffix run and `ChannelCountFrame.sameMemory` for its
+suffix. Its result is `CountedRunning`, with `CountedVmReprAt` and geometry at
+that final placement, rather than only `CountedResult.physical`.
+
+Remaining obligations outside this return-boundary task:
+
+- Startup: select the concrete physical `Customs` predicate and establish its
+  actual zero witness. `f1_channelCounts_of` still consumes that witness and
+  the checked empty-list head. Carry counted representation through
+  `LoadedAt`/entry into the selected ordinary loop-stack placement.
+- Ordinary loop preservation: strengthen `Running.stack`/`LoopAt` and the
+  shared payload/opcode producers to retain counts at their own placements;
+  prove `ChannelCountFrame` through non-channel opcodes and ordinary
+  non-custom primitive summaries; integrate counted entries/returns into the
+  F1/whileMin tables. The actual unary setup and unary return are handled;
+  counted composition of other call arities remains separate work.
+- Runtime suppliers: concrete `CustomMemCall` (accounting uniqueness, frame,
+  readiness, footprint and exact machine counter transition), opening
+  `OpenOutRuntimeAt.after`, and out-list selected heap/record/named-ledger
+  entry geometry and after-call runtime pins stay explicit and open.
+- Named registration, general formatting and reset/libHeap closure remain
+  open. `BarrierGrowthFull` stays G2; C4 round 2 waits for F1. No new model
+  guard or `GoodF1` restriction was added.
+
+Validation passes:
+
+- `scripts/lean-capped.sh lake build OCaml.Vm.Sim.OutListRun
+  OCaml.Vm.Sim.OutListAdapter OCaml.Vm.Sim.OpenOutReturn
+  OCaml.Vm.Sim.CountedCcall1 OCaml.Vm.Sim.F1Ccall
+  OCaml.Vm.Sim.WhileMinTable`: **3,687 jobs**
+  (`/tmp/channel-boundary-checked-build.log`), including `OutListWalk`, all
+  five generated suffixes, both opening adapters and the out-list boundary.
+- `scripts/lean-capped.sh lake env lean /tmp/channel-boundary-audit.lean`:
+  **31 reports**, including all eight new theorems and the five framed suffixes
+  with their compatibility projections. Every report uses only `propext`,
+  `Classical.choice`, `Quot.sound`; all are registered in `OCaml/Audit.lean`
+  (`/tmp/channel-boundary-audit.log`, checked by
+  `/tmp/channel-boundary-audit-check.txt`).
+- Hole, discipline and abstraction gates pass (C4 remains at 3). The changed
+  return generator, setup generator and F1 table generator all pass `--check`;
+  `git diff --check` passes.
+
+Each Lean invocation used the capped wrapper with `free -g` beforehand
+(available memory exceeded 25 GB), one build at a time and the inherited
+12 GB/two-thread policy. Default-budget normalization failures were repaired
+with `enter_refword`/`word32_writeLog` and the existing `ProKept.bytes` frame;
+these routes are recorded in `DEAD-ENDS.md`. Final checks pass without
+increasing budgets or adding trust primitives. Generated suffixes were changed
+only through their generator. No subagent, virtual-memory limit, Git metadata
+or integration-queue write was used.
+
+The requested channel return/refcount producer and actual unary return are
+closed **conditionally on the existing named runtime suppliers**. The startup
+and ordinary non-channel invariant obligations above remain open. Checked
+edits are uncommitted for lead review; full `OCaml.Audit`, commit and
+`scripts/integrate.sh` landing remain the lead gate.
+
+
 **2026-10-27 actual unary C_CALL setup/suffix: partial continuation of
 `dc8035a8`, for lead review. The ordinary F1 loop is still open.**
 
