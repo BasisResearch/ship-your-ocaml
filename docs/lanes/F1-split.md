@@ -126,9 +126,13 @@ physical transitions and natural refcount observations. They do not by
 themselves produce the allocating primitives' complete runtime invariant.
 Listing entry now consumes actual C_CALL setup and stack room;
 `OutListF1.f1_outList_entry` derives its selected ledger and spatial facts.
-`outList_f1_restore` reconstructs the returned runtime conditional on ordinary
-reserve at that same returned capacity. Input credit and native spending must
-be propagated on the selected heap to remove that final numeric premise.
+Reviewed change `66343b8a` supplies `f1_outList_runtime` relative only to
+named `CustomMemCall`. `LibHeapAt.credit` retains ordinary plus custom reserve;
+`CustomMemCountedReturned.credited` supplies native spending on its selected
+returned ledger. The actual listing walk and epilogue preserve this evidence,
+so `outList_f1_restore` no longer needs a separate returned-reserve premise.
+Opening retains the same selected spending; its after-runtime reconstruction
+is the active task.
 
 ### The custom-allocation budget (2026-10-27 continuation)
 
@@ -162,17 +166,20 @@ Still open:
    accepted named `CustomMemCall` premise. Concrete `PhysicalCustoms`,
    independent read context, startup/caller frames and captured counted entry
    are reviewed in `53e93d16`; reset execution remains separate.
-2. Selected custom-allocation credit and returned spending through listing,
-   plus the opening call's complete after-runtime reconstruction.
+2. The opening call's complete after-runtime reconstruction; listing
+   runtime and its selected credit propagation are reviewed in `66343b8a`.
 3. Whole C_CALL1 assembly from all unary successes and native exit, and
    C_CALL2's general formatting/named-registration runtime producers.
 4. Complete counted F1 assembly, with counted `BarrierGrowthFull` supplied by
    G2. The old ordinary table is not completed merely by weakening away counts.
-5. Reset through CODE/PRIM/DATA loading, promotion and system/argv to Loaded;
-   captured-memory certificates do not establish that execution.
+5. Reset through the native CODE scan, CODE/PRIM/DATA loading, promotion and
+   system/argv to Loaded. Reviewed `2165d4de` supplies current descriptor,
+   OpenFile, embedded-image and fd-position observations at the actual CODE
+   seek entry. Captured-memory certificates do not establish later execution.
 
 A blanket implication from every weak `CcallSetupPost` to counted evidence
 was removed: source reachability alone does not constrain the omitted
 machine counters. This repeats the old universal readiness gap, as recorded
-in `DEAD-ENDS.md`. No runtime supplier is claimed closed. Validation commands
-and lead-review status are in `a1-prims.md`.
+in `DEAD-ENDS.md`. Listing now has its concrete producer; opening and the
+remaining C_CALL2 producers retain the boundaries above. Validation commands
+and lead-review status are in `a1-prims.md` and `STATUS.md`.
