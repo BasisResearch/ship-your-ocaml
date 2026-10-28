@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 15:05 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 15:17 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -71,20 +71,38 @@ G2 passed 1,290 jobs and 260 audits (258 standard, two axiom-free), including
 all nine new theorems. Lead independently checked coverage and allowed sets;
 proof rebases were clean, and both adjacent lane-log entries were retained.
 Evidence is archived in `logs/counted-spatial-*` and `logs/a6-entry-next-*`.
-Reviewed snapshots remain on `keep/*` branches. Full integration is next;
-none of these five proof commits is yet published.
+Reviewed snapshots remain on `keep/*` branches. The full gate is active in `syo-wt/bprime` at candidate
+`dfbaf16567d49618803d7cd6be32c4e51bfb3c20` (started 15:03 UTC);
+none of these five proof commits is yet published. Log:
+`/tmp/syo-counted-spatial-integrate.log`. The candidate stays fixed.
+
+## Reviewed for the following gate
+
+`19b964fd` supplies original-entry counted C_CALL1/2 success for 19 ordinary
+primitive names (16 unary, three binary), using the existing native returns.
+The explicit entry count witness comes from the real counted loop; return
+counts use the actual returned placement. Existing channel consumers check.
+The 3,698-job downstream build and 63 focused reports passed; lead checked
+all 52 new registrations and allowed axioms independently. Evidence:
+`logs/counted-prim-*`; preserved snapshot:
+`keep/counted-ordinary-reviewed-20261028`. Whole C_CALL rows remain open.
+This commit is not in the active `dfbaf165` gate.
 
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| C_CALL Sol | Actual counted C_CALL1/2 successes for 19 ordinary primitive names | `syo-wt/a6-gc-next2` |
+| C_CALL Sol | Complete C_CALL3/5 rows from checked F1 arity classification | `syo-wt/a6-gc-next2` |
 | Startup Sol | Universal reset through null-interpreter/debugger initialization | `syo-wt/a1-prims-next` |
 | Lead | Full combined gate, then concrete custom runtime supplier review | main; `syo-wt/bprime` |
 
-Two replacement Sol CLI tasks are queued after review, under the same 12 GB
-caps and memory checks. G2's next-size entry result is in the gate batch;
+Two Sol CLI workers are active under the same 12 GB caps and memory checks.
+The first ordinary-call attempt stopped on transient Sol capacity before edits;
+a same-model retry completed successfully. No model/workflow change was needed. G2's next-size entry result is in the gate batch;
 remaining allocator routes and full growth continue in subsequent slots.
+`sol-gc-small-success.md` queues exact-size representation and shared small
+dispatch. `sol-format-parse-all.md` queues the full l/n/L parser branch and
+actual formatting caller prefix; neither is reported as closed.
 No user-only decision blocks work.
 
 ## Remaining F1 boundaries
