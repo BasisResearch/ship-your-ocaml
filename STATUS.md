@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 16:39 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 16:44 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -107,19 +107,31 @@ The next full gate is active in `syo-wt/bprime` at fixed candidate
 `34658c24` (started 16:36 UTC), including both reviewed batches.
 Log: `/tmp/syo-console-g2-integrate.log`.
 
+## Reviewed for the following gate
+
+`9b490e19` supplies original-entry counted fresh-OO-ID success and the actual
+native C_CALL1 halt branch. The counter frame uses the selected heap and
+physical counts; the halt projects the counted relation and reuses pinned
+native exit execution. The row assembler still requires complete unary
+success coverage. Lead checked all nine new unique audit registrations,
+3,291/3,715-job builds and all 77 focused reports (75 standard, two pure).
+Rebase was clean. Snapshot: `keep/counted-counter-exit-reviewed-20261028`;
+evidence: `logs/counted-fresh-exit-*`. It is not in the active gate.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| C_CALL Sol | Counted fresh-OO-ID success and actual sys_exit halt | `syo-wt/a6-gc-next2` |
+| G2 Sol | Original-entry least-large split and returned physical representation | `syo-wt/a6-gc-next2` |
 | Runtime Sol | Listing entry/runtime contract and concrete custom allocation credit | `syo-wt/a1-prims-next` |
 | Lead | Next full gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-Counter/exit started at 16:35 UTC from `319f74d2`; log:
-`/tmp/syo-counted-counter-exit-launch.log`. Listing started at 16:15 UTC from
+G2 started at 16:45 UTC from `9b490e19`; log:
+`/tmp/syo-gc-large-split-entry-launch.log`. Listing started at 16:15 UTC from
 `a1be6936`; log: `/tmp/syo-outlist-runtime-local-launch.log`.
-G2's exact/next-size task is reviewed for the next gate; the original-entry
-least-large split/return packet is ready for its next rotation. Other ready
+The least-large packet covers only the existing request<=16 and sufficiently
+large source branch, not arbitrary tree cases or full allocator readiness.
+Other ready
 packets cover physical custom startup/read context, general formatting,
 named reserve and actual CODE-section seek. No worker cache is copied while
 that worktree is building.
