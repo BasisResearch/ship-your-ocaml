@@ -53,6 +53,39 @@ def VmPoint (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (sp :
     (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i ≤ a ∧
     a < (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8)
 
+/-- Named elimination of the payload-point union, keeping consumers' proof
+terms independent of its nested disjunction representation. -/
+theorem VmPoint.fold {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace} {sp a : Nat}
+    {Q : Prop} (point : VmPoint P s c pl cp sp a)
+    (domain : Layout.sym_Caml_state ≤ a → a < Layout.sym_Caml_state + 8 → Q)
+    (stackHigh : (word c Layout.sym_Caml_state).toNat + Layout.off_stack_high ≤ a →
+      a < (word c Layout.sym_Caml_state).toNat + Layout.off_stack_high + 8 → Q)
+    (trap : (word c Layout.sym_Caml_state).toNat + Layout.off_trapsp ≤ a →
+      a < (word c Layout.sym_Caml_state).toNat + Layout.off_trapsp + 8 → Q)
+    (statics : ∀ x ∈ [Layout.sym_caml_start_code, Layout.sym_caml_atom_table, Layout.sym_caml_global_data,
+      Layout.sym_main_argv, Layout.sym_oo_last_id, Layout.sym_caml_prim_table + Layout.off_prim_contents],
+      x ≤ a → a < x + 8 → Q)
+    (code : ∀ i w, P.code[i]? = some w → pl.codeBase + 4 * i ≤ a → a < pl.codeBase + 4 * i + 4 → Q)
+    (stack : sp - 16 ≤ a → a < sp + 8 * s.stack.length → Q)
+    (heap : ∀ l b o, Live s.heap (roots P s) l → pl.φ l = some b → s.heap.get? l = some o →
+      ((b - 8 ≤ a ∧ a < b - 8 + 8) ∨ (b ≤ a ∧ a < b + 8 * o.wosize)) → Q)
+    (channel : ∀ id ch b, s.world.chans[id]? = some ch → cp id = some b → b ≤ a →
+      a < b + chanOffBuff + ioBufferSize → (a < b + 64 ∨ b + 68 ≤ a) → Q)
+    (prims : ∀ i name, P.prims[i]? = some name →
+      (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i ≤ a →
+      a < (word c (Layout.sym_caml_prim_table + Layout.off_prim_contents)).toNat + 8 * i + 8 → Q) : Q := by
+  rcases point with h | h | h | ⟨x, hx, lo, hi⟩ | ⟨i, w, hw, lo, hi⟩ | h |
+      ⟨l, b, o, live, hp, ho, inside⟩ | ⟨id, ch, b, hc, hp, lo, hi, noRef⟩ | ⟨i, name, hn, lo, hi⟩
+  · exact domain h.1 h.2
+  · exact stackHigh h.1 h.2
+  · exact trap h.1 h.2
+  · exact statics x hx lo hi
+  · exact code i w hw lo hi
+  · exact stack h.1 h.2
+  · exact heap l b o live hp ho inside
+  · exact channel id ch b hc hp lo hi noRef
+  · exact prims i name hn lo hi
+
 /-- A footprint missing every payload point misses the payload's words. -/
 theorem PayloadMisses.of_points {W : Nat → Prop} {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
     {sp : Nat} (h : ∀ a, VmPoint P s c pl cp sp a → ¬ W a)
@@ -99,43 +132,6 @@ def OutListWrites (state : Config → Nat → Prop) (H : List (Nat × Nat)) (chs
       a < (word c Layout.sym_Caml_state).toNat + Layout.off_local_roots + 8) ∨
     state c a ∨ VsaIris.VsaHeap.vsaFoot H a
 
-/-- **The runtime's side of `caml_ml_out_channels_list`** (named obligation;
-F1: a6-gc's `CustomMemCall` instance with a0-boot's newlib heap). At a C_CALL
-entry of the layout:
-* the layout custom budget is quiet; actual readiness is derived at the
-  counted successful C_CALL entry from its successor and `Fits`;
-* the physical named table has a matching `NamedLedger H [] c`;
-* newlib's heap `H` covers the minor heap, the domain record and the channel
-  records, which lie apart (`RecordsPlaced`);
-* the VM payload lies below the arena's end, in live blocks of `H`, apart from
-  the runtime's state;
-* the layout's invariant survives the primitive's writes (`OutListWrites`)
-  when `young_ptr` stays in the nursery. -/
-structure OutListRuntime (L : OCaml.Layout) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (Customs : Config → Nat → Prop) :
-    Prop where
-  custom : Gc.CustomMemCall Ready state Customs
-  customBudget : L.budget.customs ≤ Gc.quietBound
-  entry : ∀ (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (sp high : Nat),
-    L.runtimeOk c → OCaml.LoopGeometry L P s c pl cp high →
-    ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap c ∧
-      Gc.CustomLedger H c ∧
-      Gc.CustomSpace ((Gc.placedChannels cp s.world.chans.length).map (fun r => (r, recBytes))) c ∧
-      Gc.NamedLedger H [] c ∧
-      RecordsPlaced H (word c Layout.sym_Caml_state).toNat (Gc.placedChannels cp s.world.chans.length) ∧
-      (∃ x ∈ H, x.1 ≤ Gc.minorRegion.lo ∧ Gc.minorRegion.hi ≤ x.1 + x.2) ∧
-      (∃ x ∈ H, x.1 ≤ (word c Layout.sym_Caml_state).toNat ∧
-        (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes ≤ x.1 + x.2) ∧
-      ((word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes ≤ Gc.minorRegion.lo ∨
-        Gc.minorRegion.hi ≤ (word c Layout.sym_Caml_state).toNat) ∧
-      ∀ a, VmPoint P s c pl cp sp a → a < Vsa.Sim.DlHeap.heapEnd ∧ ¬ VsaIris.VsaHeap.vsaFoot H a ∧
-        ¬ state c a
-  runtime : ∀ (P : Prog) (s : St) (c after : Config) (pl : Place) (cp : ChanPlace) (high : Nat)
-    (H : List (Nat × Nat)), L.runtimeOk c → OCaml.LoopGeometry L P s c pl cp high →
-    (∀ a, ¬ OutListWrites state H (Gc.placedChannels cp s.world.chans.length) c a → byte after a = byte c a) →
-    (runtimeFields c).youngLimit ≤ (runtimeFields after).youngPtr →
-    (runtimeFields after).youngPtr ≤ (runtimeFields c).youngPtr →
-    (runtimeFields after).youngPtr % 8 = 0 → L.runtimeOk after
-
 theorem words_allocAll (os : List Obj) : ∀ h : Heap, (allocAll h os).words = h.words + blockWords os := by
   induction os with
   | nil => intro h; rfl
@@ -159,6 +155,7 @@ structure OutListEntry (Ready : Nat → Config → Prop) (state : Config → Nat
     (s : St) (pl : Place) (cp : ChanPlace) (sp : Nat) (c : Config) (w : Walk) (k cap : Nat) (s0 : BitVec 64) :
     Prop where
   geometry : WalkGeometry w (outChannelIds s.world).length
+  selected : Gc.LibHeapAt w.H0 cap w.chs c
   input : OutListInput w Ready state k cap ra s0 c
   listed : listedRecs c.σ.mem w.chs = (outChannelIds s.world).map fun id => (cp id).getD 0
   payload : ∀ a, VmPoint P s c pl cp sp a → a < Vsa.Sim.DlHeap.heapEnd ∧ ¬ VsaIris.VsaHeap.vsaFoot w.H0 a ∧
@@ -173,6 +170,42 @@ structure OutListEntry (Ready : Nat → Config → Prop) (state : Config → Nat
   young : w.Y = (runtimeFields c).youngPtr
   limit : w.Lm = (runtimeFields c).youngLimit
 
+/-- Selected allocation evidence at the actual C_CALL setup. Full ledgers
+retain named roots and dynamic remembered storage; the stack bound is supplied
+by the caller's setup and stack room, rather than quantified independently. -/
+structure OutListEntryHeap (P : Prog) (s : St) (c : Config) (pl : Place)
+    (cp : ChanPlace) (sp : Nat) (state : Config → Nat → Prop)
+    (H : List (Nat × Nat)) (cap : Nat) : Prop where
+  selected : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c
+  records : RecordsPlaced H (word c Layout.sym_Caml_state).toNat
+    (Gc.placedChannels cp s.world.chans.length)
+  minor : Gc.Covered H (Gc.minorRegion.lo, Gc.minorRegion.hi - Gc.minorRegion.lo)
+  domain : Gc.Covered H ((word c Layout.sym_Caml_state).toNat, Layout.domainStateBytes)
+  domainApart : (word c Layout.sym_Caml_state).toNat + Layout.domainStateBytes ≤ Gc.minorRegion.lo ∨
+    Gc.minorRegion.hi ≤ (word c Layout.sym_Caml_state).toNat
+  payload : ∀ a, VmPoint P s c pl cp sp a → a < Vsa.Sim.DlHeap.heapEnd ∧
+    ¬ VsaIris.VsaHeap.vsaFoot H a ∧ ¬ state c a
+
+/-- Runtime interface bounded by the actual setup and checked native return.
+The remaining supplier must reconstruct runtime fields from that return and
+its selected input ledger. Arbitrary writes in an arbitrary allocator
+footprint are no longer a sufficient premise. -/
+structure OutListRuntime (L : OCaml.Layout) (Ready : Nat → Config → Prop)
+    (state Customs : Config → Nat → Prop) : Prop where
+  custom : Gc.CustomMemCall Ready state Customs
+  customBudget : L.budget.customs ≤ Gc.quietBound
+  entry : ∀ {ra : BitVec 64} {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanPlace}
+    {sp high domain entry : Nat} {env : BitVec 64},
+    CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c →
+    8 * (s.stack.length + 2) ≤ Layout.stackBytes →
+    ∃ H cap, OutListEntryHeap P s c pl cp sp state H cap
+  runtime : ∀ {ra s0 : BitVec 64} {P : Prog} {s : St} {c after : Config} {pl : Place} {cp : ChanPlace}
+    {sp high domain entry k cap : Nat} {env : BitVec 64} {w : Walk},
+    CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c →
+    OutListEntry Ready state Customs ra P s pl cp sp c w k cap s0 →
+    Gc.LibHeapAt w.H0 cap w.chs c →
+    OutListReturned w Ready state Customs k ra s0 c after → L.runtimeOk after
+
 /-- **The walk's inputs at the callee entry** of a C_CALL. -/
 theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {pl : Place} {cp : ChanPlace}
     {sp high domain entry : Nat} {env : BitVec 64} {c : Config} {Ready : Nat → Config → Prop}
@@ -180,14 +213,23 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
     (setup : CcallSetupPost ra [s.accu] L P s pl cp sp high domain entry env c)
     (hentry : entry = Layout.sym_caml_ml_out_channels_list)
     (ready : Ready (outChannelIds s.world).length c)
-    (fits : s.heap.words + 6 * (outChannelIds s.world).length ≤ L.budget.heapWords) :
+    (fits : s.heap.words + 6 * (outChannelIds s.world).length ≤ L.budget.heapWords)
+    (stackFits : 8 * (s.stack.length + 2) ≤ Layout.stackBytes) :
     ∃ w k cap s0, OutListEntry Ready state Customs ra P s pl cp sp c w k cap s0 := by
   have input := setup.input
   have g := setup.geometry
   have ng := g.nursery
   obtain ⟨N, e⟩ := StringAllocEntry.of_setup setup fits
-  obtain ⟨H, cap, heap, customLedger, space, ledger, recs, ⟨xm, xmIn, xml, xmh⟩, ⟨xd, xdIn, xdl, xdh⟩, dap, pay⟩ :=
-    rt.entry P s c pl cp sp high input.runtime g
+  obtain ⟨H, cap, selected⟩ := rt.entry setup stackFits
+  have heap := selected.selected.ready
+  have customLedger := selected.selected.custom
+  have space := selected.selected.customSpace
+  have ledger := selected.selected.named
+  have recs := selected.records
+  obtain ⟨xm, xmIn, xml, xmh⟩ := selected.minor
+  obtain ⟨xd, xdIn, xdl, xdh⟩ := selected.domain
+  have dap := selected.domainApart
+  have pay := selected.payload
   have fixedDomain : (word c Layout.sym_Caml_state).toNat = Boot.WhileMinRuntime.domain := by
     rw [show word c Layout.sym_Caml_state = Boot.Startup.firstDomainPtr from heap.domainWord]
     rfl
@@ -242,7 +284,8 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
       coverDomain := ⟨xd, xdIn, xdl, xdh⟩
       stateApart := fun a hs => ⟨c, rt.custom.apart c a hs,
         fun r hr => space.record_apart (rt.custom.footprint c a hs) (recs.low r hr) (by simpa only [fixedDomain, recBytes, Gc.chanRecordBytes] using recs.domain r hr)
-          (List.mem_map.mpr ⟨r, hr, rfl⟩), rfl⟩ }
+          (by simp only [Gc.namedBlocked, List.mem_append]; exact Or.inl (Or.inr (List.mem_map.mpr ⟨r, hr, rfl⟩))), rfl⟩ }
+    selected := selected.selected
     input := {
       leaf := input.toLeafInput
       pc := pcE
@@ -755,10 +798,7 @@ theorem out_list_post {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {p
         · exact (ret.stack.trans ent.input.stack.symm : gprGet f.σ 2 = gprGet c.σ 2) }
     data := payload.listRefs
     primitives := bindings_frame_on input.primitives hw frame
-    platform := ⟨ret.good, ret.image, rt.runtime P s c f pl cp high w.H0 input.runtime g
-      (fun a ha => frame a fun o => ha (outW_writes ent o))
-      (by rw [young]; have := g.nursery.nurseryLow; rw [blockWords_listObjs, ← ent.young]; omega)
-      (by rw [young]; omega) (by rw [young, blockWords_listObjs, ← ent.young]; have := wg.youngAligned; omega)⟩
+    platform := ⟨ret.good, ret.image, rt.runtime setup ent ent.selected ret⟩
     loop := out_list_loop input.loop ret
     resultRepr := listVal_word (by walk_omega) placed (by omega)
     semantics := primF1Impl_outList s
@@ -916,7 +956,7 @@ theorem counted_caml_ml_out_channels_list_returns {L : OCaml.Layout} {P : Prog} 
     ⟨by decide, primF1Impl_outList s, fun c countedEntry placedAt => ?_⟩⟩
   have setup := countedEntry.toCcallSetupPost
   obtain ⟨w, kk, cap, s0, ent⟩ := out_list_entry rt setup rfl
-    (out_list_call_ready rt.custom.accounting countedEntry.counts fits rt.customBudget succ) roomFits
+    (out_list_call_ready rt.custom.accounting countedEntry.counts fits rt.customBudget succ) roomFits ready.stackFits
   have wg := ent.geometry
   have rm := wg.room
   have yFit : w.Y < 2 ^ 64 := by have := wg.nurseryHigh; walk_omega

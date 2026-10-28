@@ -37,7 +37,7 @@ TOOLS = os.path.expanduser(
     "~/toolchains/xpack-riscv-none-elf-gcc-15.2.0-1/bin/riscv-none-elf-")
 
 
-def collector_layout():
+def collector_layout(custom_geometry=False):
     """Ask the target compiler for the actual freelist.c structure layout."""
     fields = {
         "bf_small_count": "BF_NUM_SMALL",
@@ -75,6 +75,10 @@ def collector_layout():
         **{f"off_ext_table_{name}": f"offsetof(struct ext_table, {name})"
            for name in ("size", "capacity", "contents")},
     }
+    if custom_geometry:
+        fields.update({f"off_custom_table_{name}":
+                       f"offsetof(struct caml_custom_table, {name})"
+                       for name in ("threshold", "limit", "size", "reserve")})
     source = ('#include <stddef.h>\n#include ' +
               json.dumps(str(ROOT / "vendor/ocaml-4.14.4/runtime/freelist.c")) +
               '\n#include \"caml/minor_gc.h\"\nconst unsigned long boot_offsets[] '

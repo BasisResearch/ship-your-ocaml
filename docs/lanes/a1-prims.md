@@ -1,5 +1,124 @@
 # A1 F1 primitive summaries
 
+## Listing entry/runtime repair and native credit boundary (2026-10-28)
+
+Checked edits are ready for lead review, based on clean `a1be6936`; no commit,
+Git metadata write, queue write or landing was attempted. No subagents were
+used. The remaining result is **stuck at native custom capacity spending and
+carrying its separate credit through the counted caller invariant**.
+
+`Sim/OutListObstruction.lean` checks the old entry's precise defect:
+`VmPoint.arbitrary_stack` places heapEnd in the saved-slot interval at
+`sp = heapEnd + 16`, and `unrestricted_entry_obstruction` refutes the old
+universal bound conditional on a supplied runtime/geometry witness. Neither
+existence/reachability of that witness nor global inconsistency is claimed.
+
+The new `OutListRuntime.entry` consumes the actual `CcallSetupPost` and the
+caller's stack-room bound. `OutListEntryHeap` and `OutListEntry.selected`
+retain the **same selected LibHeapAt H cap** as the native walk. The concrete
+`OutListF1.f1_outList_entry` selects H/cap by opened-list uniqueness, derives
+`RecordsPlaced`, nursery/domain coverage, the full `CustomLedger`,
+`CustomSpace (namedBlocked chs c)` and `NamedLedger H (namedBlocked chs c)`,
+and proves payload bounds/ownership/separation using actual represented
+stack/data/pointer pins. Named nodes and dynamically allocated remembered
+storage remain in `namedBlocked`; neither was dropped to an empty ledger or
+fixed-only footprint. `VmPoint.fold` is the named consumer of the point union.
+
+The former arbitrary-H `OutListWrites` runtime preservation law is removed.
+Its replacement consumes actual setup, `OutListEntry`, the selected input
+ledger and the checked `OutListReturned`. The native walk, its refcount
+readbacks, physical count transition, list result and C_CALL continuation are
+preserved. `OutListReturned.restore_heap` reuses `spatial_heap` to rebuild
+all selected heap fields from the actual native return and unchanged
+ref-table/named observations. `outList_f1_restore` then reconstructs the full
+ordinary F1 runtime **conditional on reserve at that same selected returned
+capacity**. Its result is `OutListF1Restored`; it does not claim the reserve
+or supply an unconditional `OutListRuntime` instance. No returned LibHeapAt,
+whole primitive result or whole runtime is assumed as the final supplier.
+`outList_core_frame` uses the actual returned young-limit word separately
+from the synthetic write footprint. The F1 kept-read window now correctly
+excludes the mutable static custom resource accumulator, which F1Pins never
+reads; all actual core observations and the selected heap invariant remain.
+
+`Gc/CustomMemCredit.lean` makes the missing allocation component precise:
+
+- The new generator invokes mandatory `gen_fn` and shared `gen_chain` for
+  `caml_realloc_custom_table` and the existing generic null-base route to
+  the actual `__muldi3` size-product call. Scalar readback proves the
+  request `((wsz >>> 3) + 256) * Layout.custom_elt_size`. At the observed
+  `0x40000` words it is **792576 bytes**, with checked `vsaChg` for the
+  separate **2^20-byte** custom-table allowance. This is not a proof of the
+  subsequent malloc or custom allocation execution.
+- `libHeap_at_of` retains the actual startup H/cap and its `2^24 ≤ cap`
+  certificate; the existing `libHeap_of` forgets that bound. The concrete
+  snapshot producer `customHeapCredit_of` supplies `CustomHeapCredit` in
+  addition to the existing remembered-table and future-record reserves.
+  This is captured-memory certification, not reset execution.
+- `CustomHeapCredit.frame_windows` and `.spending_frame` preserve actual
+  selected caller credit through safe ordinary stores.
+  `CustomMemSpending.trans` composes native/caller spending on their
+  actual intermediate ledger; `.room` derives the remaining ordinary plus
+  custom reserve from real input credit and returned spending.
+- `CustomMemInput.zeroCapacity`/`.credit_obstruction`,
+  `LibHeapAt.tightCapacity`/`.customCredit_obstruction`, and
+  `CustomMemReturned.heap_zero` check why the present input and returned
+  spatial interfaces cannot supply the required numeric credit. The
+  obstructions concern advertised capacities; they neither show a reachable
+  shortage nor exclude existence of a better actual heap witness.
+- Target-ABI-generated custom offsets cover threshold/limit/size/reserve.
+  `QuietCustomTable` requires actual table identity, nursery size and all
+  base/ptr/threshold/limit/end/size/reserve observations.
+  `.not_full` proves ptr < limit for a count ≤ quietBound = 5. No table
+  shape or capacity is inferred from occupancy alone. The physical supplier
+  must still establish these pins and their relation to its count.
+
+Still required at the accepted **CustomMemCall** boundary: supply actual
+input credit at every opening/listing allocation; refine the native returned
+heap witness with `CustomMemSpending` (actual cap', same H', real physical
+table spending); prove and retain the quiet table shape so no later growth
+is charged as free; and propagate that credit through counted setup/walk/
+returns. The present ordinary LibHeapAt room and CustomMemInput remain
+insufficient, as checked above. `CustomMemSpending` is a named missing
+component, not a proved native call or a new trust axiom. Physical Customs,
+read-only call-context production and exact native binary64 quietness remain
+with `tasks/sol-custom-physical-runtime.md`. GoodF1 is unchanged;
+BarrierGrowthFull stays with G2; C4 round 2 waits for F1.
+
+Validation:
+
+- `lake build OCaml.Vm.Sim.OutListObstruction
+  OCaml.Vm.Sim.OutListF1Runtime OCaml.Vm.Sim.CountedChannelRows
+  OCaml.Vm.Sim.CountedControlRows` passes **3594 jobs**,
+  `/tmp/outlist-counted-consumers.log`. This includes affected F1Runtime,
+  custom-credit/native request modules, listing entry/return reconstruction,
+  counted channel C_CALL consumers and existing counted control consumers.
+- `lake env lean OCaml/Vm/Sim/OutListRuntimeAudit.lean` passes
+  **117 exact focused reports**, `/tmp/outlist-runtime-focused-audit2.log`.
+  All use only `{propext, Classical.choice, Quot.sound}` or no axioms;
+  report membership/order and unique full-Audit registration were checked.
+  Every new theorem and generated segment theorem is included, with core
+  runtime and counted listing regressions. The first audit exposed an
+  apostrophe dropped from a generated theorem name; the generator and
+  registration were corrected before this successful run.
+- Both new generator `--check` commands pass, and the default
+  `gen_layout.py` output is byte-identical to committed Layout.lean.
+  The optional full custom geometry extraction changes no existing generated
+  layout. Both new checks are registered in check_all.sh stage a5.
+  Hole, discipline, abstraction and whitespace gates pass; C4 remains 3.
+- Every Lean launch checked `free -g` (available ≥25 GB), ran serially
+  through `python3 scripts/lean-guarded.py --log /tmp/<task>.log --
+  scripts/lean-capped.sh lake ...`, and retained the inherited 12 GiB /
+  two-thread cap. No virtual-memory limit, heartbeat increase or handwritten
+  recursion-budget increase was used; generated rows retain the mandatory
+  generators' standard literal settings. No generated-output hand edit or
+  new trust primitive was used. Failed
+  intermediate interface/elaboration routes are recorded in DEAD-ENDS.md.
+
+Full OCaml.Audit and integration through scripts/integrate.sh remain the
+lead gate. All edits are left uncommitted for review.
+
+
+
 ## Counted fresh OO ID success and native C_CALL1 exit (2026-10-28)
 
 Checked edits remain for lead review/integration in this worktree. Initial

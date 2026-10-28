@@ -87,12 +87,14 @@ def f1Layout : OCaml.Layout := runtimeLayout F1Pins g1Budget
 /-- **Static words `f1Runtime` never reads**, in address order: newlib
 malloc's globals (`allocGlobal`: the bins, `_impure_data._errno`, the
 sbrk/top-pad words, `errno`, the malloc lock words), `caml_fresh_oo_id`'s
-counter `oo_last_id`, and `caml_callback_depth` (moved by the interpreter's
+counter `oo_last_id`, the custom resource accumulator, and `caml_callback_depth` (moved by the interpreter's
 entry and `STOP`). Writes to them keep the invariant (`f1_ignoredStatic`). -/
 def ignoredStatics : List W :=
   [⟨0x80063b90, 0x800643a0⟩, ⟨Layout.sym_impure_data, Layout.sym_impure_data + 4⟩,
    ⟨Layout.sym_oo_last_id, Layout.sym_oo_last_id + 8⟩, ⟨0x800648e8, 0x800648f8⟩,
-   ⟨0x80064910, 0x80064910 + 8⟩, ⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩,
+   ⟨0x80064910, 0x80064910 + 8⟩,
+   ⟨Layout.sym_caml_extra_heap_resources, Layout.sym_caml_extra_heap_resources + 8⟩,
+   ⟨Layout.sym_caml_callback_depth, Layout.sym_caml_callback_depth + 4⟩,
    ⟨0x80064d20, 0x80064d38⟩, ⟨Layout.sym_errno, Layout.sym_errno + 4⟩, ⟨0x8007c9e8, 0x8007ca38⟩]
 
 /-- Every malloc global lies in an ignored static window (the windows are
@@ -126,16 +128,16 @@ instance (x n : Nat) : Decidable (StaticApart x n) := by unfold StaticApart; inf
 theorem StaticApart.above {x n : Nat} (h : 0x8007ca38 ≤ x) : StaticApart x n := by
   intro w hw
   simp only [ignoredStatics, List.mem_cons, List.not_mem_nil, or_false] at hw
-  simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_callback_depth, Layout.sym_errno] at *
-  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
+  simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_extra_heap_resources, Layout.sym_caml_callback_depth, Layout.sym_errno] at *
+  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
 
 /-- Between `errno` and the last malloc global window (the best-fit lists). -/
 theorem StaticApart.between {x n : Nat} (low : 0x80064d4c ≤ x) (high : x + n ≤ 0x8007c9e8) :
     StaticApart x n := by
   intro w hw
   simp only [ignoredStatics, List.mem_cons, List.not_mem_nil, or_false] at hw
-  simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_callback_depth, Layout.sym_errno] at *
-  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
+  simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_extra_heap_resources, Layout.sym_caml_callback_depth, Layout.sym_errno] at *
+  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
 
 /-- The gaps of `[lo, hi)` around the windows `ws`. -/
 def gaps : Nat → List W → Nat → List W
@@ -1101,9 +1103,9 @@ def HeapCovers (c : Config) : Prop :=
     (∀ x ∈ f1Covered, ∃ e ∈ H, e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2) ∧ ∀ x ∈ [(refTable, 56), (customTable, Layout.custom_table_bytes)], x ∈ H
 
 /-- newlib's heap at the cut: no channel is open yet. -/
-theorem libHeap_of {c : Config}
+theorem libHeap_at_of {c : Config}
     (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log)) (heap : HeapCovers c) :
-    LibHeap c := by
+    ∃ H cap, 2 ^ 24 ≤ cap ∧ LibHeapAt H cap [] c := by
   obtain ⟨H, cap, room, ready, covers, exact⟩ := heap
   have base : (word c (refTable + Layout.off_ref_table_base)).toNat = 0 := by
     rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl
@@ -1145,7 +1147,7 @@ theorem libHeap_of {c : Config}
     have sep : ∀ e ∈ f1Covered, customTable + Layout.custom_table_bytes ≤ e.1 ∨
         e.1 + e.2 ≤ customTable := by decide
     exact sep e member
-  refine ⟨H, cap, [], ⟨reserve, by decide, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h),
+  refine ⟨H, cap, room, ⟨reserve, by decide, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h),
     (fun _ h => by cases h), (fun _ h => by cases h), ⟨WhileMinEntry.read_ref_table memory, WhileMinEntry.read_minor_heap_wsz memory,
       Or.inl ⟨?_, ?_, ?_⟩⟩,
     exact _ List.mem_cons_self, namedLedger, customLedger, customSpace, (fun _ h => by cases h)⟩⟩
@@ -1158,6 +1160,14 @@ theorem libHeap_of {c : Config}
   unfold OpenChannelList
   rw [head]
   exact .nil
+
+/-- Forget only the advertised startup capacity bound. The stronger selected
+producer is retained for callers tracking native allocation credit. -/
+theorem libHeap_of {c : Config}
+    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem WhileMinImage.initialMem log))
+    (heap : HeapCovers c) : LibHeap c := by
+  obtain ⟨H, cap, _, selected⟩ := libHeap_at_of memory heap
+  exact ⟨H, cap, [], selected⟩
 
 /-- The actual startup channel producer. The cut has an empty opened list;
 the physical zero-count witness remains part of the named custom runtime

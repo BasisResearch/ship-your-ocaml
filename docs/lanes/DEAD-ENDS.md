@@ -1,5 +1,42 @@
 # Routes not to repeat
 
+- 2026-10-28 listing interface repair (checked):
+  `VmPoint.arbitrary_stack` and `unrestricted_entry_obstruction` in
+  `Sim/OutListObstruction.lean` check the old entry defect at
+  `sp = heapEnd + 16`, conditional on an input runtime/geometry witness.
+  This is not a reachable counterexample or global inconsistency. The
+  replacement takes the actual `CcallSetupPost` and stack room;
+  `f1_outList_entry` derives the full selected ledger and payload separation.
+  Never restore the independent-sp interface or an arbitrary-H allocator
+  write law as a runtime supplier.
+
+- 2026-10-28 native custom capacity (checked interface obstructions):
+  `CustomMemInput.zeroCapacity` retains every native precondition while
+  advertising zero; `CustomMemInput.credit_obstruction` refutes deriving a
+  positive charge from that contract. `LibHeapAt.tightCapacity` keeps the
+  selected spatial invariant at exactly its ordinary reserve, and
+  `LibHeapAt.customCredit_obstruction` refutes deriving additional custom
+  credit for that selected capacity when the table is empty. The actual
+  returned heap also admits a zero-capacity witness
+  (`CustomMemReturned.heap_zero`). These do not show a physical shortage,
+  nor refute existence of a better returned capacity witness. Neither
+  ownership nor `HeapReady` alone proves future `LibHeapAt.room` after
+  native table spending. Carry separate input credit, actual table shape,
+  and spending on the same returned ledger/capacity. `CustomMemSpending`
+  names the missing component of the accepted `CustomMemCall` obligation;
+  its native supplier and migration through counted callers remain open.
+
+- 2026-10-28 listing default kernel recursion: the represented channel
+  upper bound is `(b + chanOffBuff) + ioBufferSize`, whereas the selected
+  record helper takes `b + chanRecordBytes`. Relying on definitional equality
+  unrolls the 64 KiB addition and fails kernel recursion even after factoring
+  the union's cases (`/tmp/outlist-f1-entry2.log` through `entry12.log`).
+  Normalize explicitly with `simpa only [chanRecordBytes, Nat.add_assoc]`.
+  The entry then checks at default limits (`/tmp/outlist-f1-entry13.log`).
+  No budget increase is needed. The actual returned young-limit word must
+  be used separately: the synthetic listing footprint includes its store,
+  even though the checked native return restores the same value.
+
 - 2026-10-28 original-entry least-large routing: absence of suitable small
   classes does **not** supply the native zero-filtered-bitmap branch from
   the current `SmallRepresentation`. `MapConsistent` constrains only bits
