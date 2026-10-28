@@ -1,6 +1,7 @@
 import OCaml.Vm.Repr.ChannelCounts
 import OCaml.Vm.Boot.WhileMinRuntimeReads
 import OCaml.Vm.Boot.WhileMinEntryReads
+import OCaml.Vm.Boot.WhileMinAllocator
 
 /-! A physical count component for G1's channel allocations. The custom
 table's occupied entries count allocations independently of channel refcount
@@ -62,6 +63,36 @@ theorem ChannelCustomCount.startup {c : Config}
   rw [Boot.WhileMinRuntime.read_custom_table_base memory,
     Boot.WhileMinRuntime.read_custom_table_ptr memory]
   rfl
+
+/-- Initial ownership uses the closed in-use chunk ledger, rather than the
+empty ledger that also satisfies allocator readiness. The fixed table is
+the startup table (`WhileMinRuntime.read_custom_table`); its observed null
+base owns no storage. The domain pointer is not added to the framed state. -/
+theorem customLedger_startup {c : Config}
+    (memory : Vsa.Densify.MemEqv c.σ.mem (observedMem Boot.WhileMinImage.initialMem log)) :
+    CustomLedger Boot.WhileMinAllocator.liveBlocks c := by
+  refine ⟨?_, ?_, Or.inl ?_⟩
+  · unfold Covered
+    decide +kernel
+  · unfold Covered
+    decide +kernel
+  · unfold customBase customTable
+    rw [Boot.WhileMinRuntime.read_custom_table_base memory]
+    rfl
+
+/-- Occupancy's physical reads are owned by the selected custom ledger. -/
+theorem ChannelCustomCountFoot.owned {H : List (Nat × Nat)} {c : Config}
+    (heap : CustomLedger H c) {a : Nat} (foot : ChannelCustomCountFoot a) :
+    Covered H (a, 1) := by
+  obtain ⟨e, he, lo, hi⟩ := heap.table
+  have bounds : customTable ≤ a ∧ a < customTable + Layout.custom_table_bytes := by
+    rcases foot with base | ptr
+    all_goals
+      simp only [customTable, Layout.off_custom_table_base, Layout.off_custom_table_ptr,
+        Layout.custom_table_bytes] at *
+      omega
+  exact ⟨e, he, by dsimp only; omega, by dsimp only; omega⟩
+
 
 /-- Complete initial channel accounting from concrete startup reads. -/
 theorem channelCustoms_startup {c : Config} {cp : ChanPlace} {w : World}

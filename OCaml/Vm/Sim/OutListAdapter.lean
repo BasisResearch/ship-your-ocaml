@@ -118,7 +118,7 @@ structure OutListRuntime (L : OCaml.Layout) (Ready : Nat → Config → Prop) (s
   entry : ∀ (P : Prog) (s : St) (c : Config) (pl : Place) (cp : ChanPlace) (sp high : Nat),
     L.runtimeOk c → OCaml.LoopGeometry L P s c pl cp high →
     ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap c ∧
-      Gc.NamedLedger H [] c ∧
+      Gc.CustomLedger H c ∧ Gc.NamedLedger H [] c ∧
       RecordsPlaced H (word c Layout.sym_Caml_state).toNat (Gc.placedChannels cp s.world.chans.length) ∧
       (∃ x ∈ H, x.1 ≤ Gc.minorRegion.lo ∧ Gc.minorRegion.hi ≤ x.1 + x.2) ∧
       (∃ x ∈ H, x.1 ≤ (word c Layout.sym_Caml_state).toNat ∧
@@ -157,7 +157,7 @@ structure OutListEntry (Ready : Nat → Config → Prop) (state : Config → Nat
     (s : St) (pl : Place) (cp : ChanPlace) (sp : Nat) (c : Config) (w : Walk) (k cap : Nat) (s0 : BitVec 64) :
     Prop where
   geometry : WalkGeometry w (outChannelIds s.world).length
-  input : OutListInput w Ready k cap ra s0 c
+  input : OutListInput w Ready state k cap ra s0 c
   listed : listedRecs c.σ.mem w.chs = (outChannelIds s.world).map fun id => (cp id).getD 0
   payload : ∀ a, VmPoint P s c pl cp sp a → a < Vsa.Sim.DlHeap.heapEnd ∧ ¬ VsaIris.VsaHeap.vsaFoot w.H0 a ∧
     ¬ state c a
@@ -184,7 +184,7 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
   have g := setup.geometry
   have ng := g.nursery
   obtain ⟨N, e⟩ := StringAllocEntry.of_setup setup fits
-  obtain ⟨H, cap, heap, ledger, recs, ⟨xm, xmIn, xml, xmh⟩, ⟨xd, xdIn, xdl, xdh⟩, dap, pay⟩ :=
+  obtain ⟨H, cap, heap, customLedger, ledger, recs, ⟨xm, xmIn, xml, xmh⟩, ⟨xd, xdIn, xdl, xdh⟩, dap, pay⟩ :=
     rt.entry P s c pl cp sp high input.runtime g
   have xdb := heap.block_bounds (q := xd.1) (n := xd.2) xdIn
   have nl := e.nativeLow; have nh := e.nativeHigh; have na := e.nativeAligned
@@ -254,7 +254,8 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
       limit := wL
       opened := ng.channelsListed
       ready := by rw [← nN]; simpa only [Nat.zero_add] using ready
-      heap := heap }
+      heap := heap
+      owned := ⟨fun a ha => customLedger.owned.bytes a (rt.custom.footprint c a ha)⟩ }
     listed := listed
     payload := pay
     named := fun a f => by

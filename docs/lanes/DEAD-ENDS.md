@@ -23,15 +23,19 @@
   proof. This is interface inspection, not a checked counterexample;
   `tasks/sol-counted-ordinary-calls.md` queues the actual adapter.
 
-- 2026-10-27 custom ownership review: `CallerApart.free` quantifies over
-  every `HeapReady H cap c`. `HeapAt.live/exact` only constrain extents that
-  are in H; they do not require an exhaustive ledger. The captured allocator
-  certificate even starts from `raw_heap` with an empty extent list. This
-  flags the same selected-ledger issue already repaired for named ownership:
-  a custom-state frame must use the actual caller ledger, not arbitrary H.
-  The explicit empty-ledger/readiness obstruction and producer repair are
-  queued in `tasks/sol-custom-ledger.md`; no checked counterexample or global
-  inconsistency of `CustomMemCall` is claimed by this inspection alone.
+- 2026-10-27 custom ownership: the universal-ledger route is refuted by
+  `Gc.captured_empty_ready` and `captured_custom_bytes_obstruction` in
+  `OCaml/Vm/Gc/CustomLedgerObstruction.lean`. The proof reuses
+  `WhileMinAllocator.raw_heap`, `heap_transport`, the captured image agreement
+  and capacity. `HeapAt.live/exact` constrain only listed extents, so the
+  same cut admits `HeapReady [] (2^24)`, making every arena byte `vsaFoot []`.
+  `cut_empty_ready` and `cut_custom_bytes_obstruction` specialize this to
+  `WhileMin.cut` without a memory premise; neither asserts reset reachability.
+  The old `CallerApart.free` therefore excludes the actual domain minor-resource
+  byte and custom-table base byte. Ownership must use the caller's selected
+  ledger, with real initial/frame/call producers. This does not show global
+  inconsistency of `CustomMemCall`: empty readiness/accounting predicates
+  can make the call premise vacuous.
 
 - 2026-10-27 counted allocation adapter: the stack-row pattern quantifying
   a row supplier over every `Layout` cannot directly consume allocating rows

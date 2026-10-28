@@ -281,6 +281,22 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
     channelsBound := h.channelsBound
     ready := HeapReady.keep_windows h.ready (fun w hw => ?_) keep
     extents := h.extents
+    custom := h.custom.frame fun a inside => by
+      rw [byte_total, byte_total]
+      apply keep a
+      intro w hw
+      rcases win w hw with rfl | rfl
+      · have sep : refTable + Layout.off_ref_table_ptr + 8 ≤ customTable := by decide
+        have := inside.1
+        right
+        dsimp only at *
+        omega
+      · have sep := st.apartCustom
+        have low := inside.1
+        have high := inside.2
+        dsimp only at *
+        omega
+    customRecords := h.customRecords
     channels := ?_
     records := h.records
     recordsApart := h.recordsApart
@@ -330,7 +346,7 @@ theorem LibHeapAt.insert {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c
       low := by omega
       ptrLimit := by omega
       limitEnd := st.limitEnd, sized := st.sized, covered := st.covered, apartBlocks := st.apartBlocks
-      apartRecords := st.apartRecords }
+      apartRecords := st.apartRecords, apartCustom := st.apartCustom }
 
 /-- **`BarrierRuntime.insert` for F1**: an insertion into the remembered set
 with room keeps `f1Runtime`. -/

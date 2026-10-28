@@ -118,6 +118,7 @@ theorem outW_openWindows {sp p head : BitVec 64} {y : Nat} (frame : NativeFrame 
 heap are live blocks of `H`, the open records `chs` lie apart from
 `Caml_state`, and the nursery has room for the custom block. -/
 structure OutNursery (H : List (Nat × Nat)) (chs : List Nat) (c : Config) : Prop where
+  custom : Gc.CustomLedger H c
   domain : Gc.Covered H (Boot.WhileMinRuntime.domain, Layout.domainStateBytes)
   minor : Gc.Covered H (Gc.minorRegion.lo, Gc.minorRegion.hi - Gc.minorRegion.lo)
   channels : Gc.OpenChannelList c.σ.mem chs
@@ -165,6 +166,9 @@ structure OpenedOut (code : OpenCode) (live : Nat → Prop) (Ready : Nat → Con
   header : bytesT d.σ.mem (value.toNat - 8) 8 = Gc.customHeader
   ready : Ready k d
   counted : Gc.CustomCountStep Customs c d 1
+  /-- Heap readiness and state ownership use the same returned ledger. -/
+  heap : ∃ H' cap', HeapReady H' cap' d ∧ Gc.CustomOwned state H' d ∧
+    ∀ e ∈ (opening.record.toNat, recordBytes) :: H, e ∈ H'
   /-- the custom block lies just below the entry's young pointer, which drops by 24 -/
   block : value.toNat + 16 = (runtimeFields c).youngPtr
   youngPtr : (runtimeFields d).youngPtr = (runtimeFields c).youngPtr - 24
@@ -231,9 +235,10 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
       (frame : a < sp.toNat - 16 ∨ sp.toNat ≤ a) : (flagged.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0 := by
     rw [flagsOut a (openOut a o), O.frame a o notFoot, E.memory, frameOn_writeLog _ _ _ saveIn a ⟨frame, trivial⟩]
   -- where the record, `Caml_state` and the minor heap lie
-  have heapC := h.ready.heap
-  have recordFree (a : Nat) (lo : O.record.toNat ≤ a) (hi : a < O.record.toNat + recordBytes) : vsaFoot H a :=
-    Or.inr ⟨by arena_omega, by unfold recordBytes at hi; arena_omega, fun e he ie => O.fresh e he a ⟨lo, hi⟩ ie⟩
+  have owned : Gc.CustomOwned state H c :=
+    ⟨fun a ha => N.custom.owned.bytes a (custom.footprint c a ha)⟩
+  have freshRecord : FreshBlock vsaLayoutP H O.record.toNat recordBytes :=
+    ⟨by arena_omega, O.low, O.high, O.fresh⟩
   have recMinor := Gc.fresh_apart_covered O.fresh N.minor (by decide) (n := recordBytes)
     (by unfold recordBytes; decide) (Nat.le_refl _)
   have recDomain := Gc.fresh_apart_covered O.fresh N.domain (by decide) (n := recordBytes)
@@ -253,7 +258,7 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
   have stateOut (a : Nat) (s : state c a) : (flagged.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0 := by
     have ap := custom.apart c a s
     have below := ap.belowStack
-    have free := ap.free H _ heapC
+    have free := custom.notFoot owned s
     refine keptF a (outOpen a below (fun l => ?_) ?_ fun hz => headApart a hz
       (ap.records chs N.channels _ (head_mem N.channels h.headWord hz))) free (Or.inl (by arena_omega))
     · have e := ap.static l
@@ -261,7 +266,7 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
       omega
     · rcases Nat.lt_or_ge a O.record.toNat with l | g
       · exact Or.inl l
-      · exact Or.inr (Nat.le_of_not_lt fun hi => free (recordFree a g hi))
+      · exact Or.inr (Nat.le_of_not_lt fun hi => owned.fresh freshRecord s ⟨g, hi⟩)
   have staticC : StaticKept c flagged := staticE.trans (O.static.trans staticF)
   have domF : word flagged Layout.sym_Caml_state = word c Layout.sym_Caml_state := by
     unfold word
@@ -313,7 +318,8 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
     room := by rw [ptrF, limF]; exact N.room
     youngAligned := by rw [ptrF]; exact N.aligned }
   obtain ⟨allocated, run4, ⟨value, C, readyA⟩⟩ :=
-    (custom.call _ capacity (outSite code.doneEntry (sp - 16#64) O.record) k flagged readyF input).run flagged ⟨F.pc, rfl⟩
+    (custom.call _ capacity (outSite code.doneEntry (sp - 16#64) O.record) k flagged readyF input
+      ((owned.frame stateEq).mono (fun e he => List.mem_cons_of_mem _ he))).run flagged ⟨F.pc, rfl⟩
   have block := C.block
   rw [ptrF] at block
   have vLow : heapStart ≤ value.toNat := by arena_omega
@@ -371,7 +377,7 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
   have recordKept (a : Nat) (lo : O.record.toNat ≤ a) (hi : a < O.record.toNat + recordBytes) :
       (allocated.σ.mem[a]?).getD 0 = (flagged.σ.mem[a]?).getD 0 := by
     have hi' : a < O.record.toNat + 65616 := hi
-    refine C.kept a (fun s => (custom.apart c a ((stateEq a).mp s)).free H _ heapC (recordFree a lo hi))
+    refine C.kept a (fun s => owned.fresh freshRecord ((stateEq a).mp s) ⟨lo, hi⟩)
       ?_ (Or.inl ?_) ?_ (youngWord a (by omega))
     · rintro (g | ⟨_, _, no⟩)
       · rcases allocGlobal_off_arena _ g with y | y <;> omega
@@ -432,6 +438,20 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
     simp only [Gc.minorRegion] at m
     omega)) domD
   have readyD := framedD.ready
+  have heapD : ∃ H' cap', HeapReady H' cap' d ∧ Gc.CustomOwned state H' d ∧
+      ∀ e ∈ (O.record.toNat, recordBytes) :: H, e ∈ H' := by
+    obtain ⟨H', cap', heapA, ownedA, sub⟩ := C.heap
+    refine ⟨H', cap', Gc.HeapReady.keep_windows heapA
+      (ws := [⟨value.toNat + 8, value.toNat + 16⟩]) ?_
+      (fun a ha => doneOut a (ha _ List.mem_cons_self)), ownedA.frame framedD.state, sub⟩
+    intro w hw
+    simp only [List.mem_singleton] at hw
+    subst w
+    obtain ⟨e, he, elo, ehi⟩ := N.minor
+    simp only [Gc.minorRegion] at elo ehi
+    exact Or.inl ⟨e, sub e (List.mem_cons_of_mem _ he), by dsimp only; omega,
+      by dsimp only; omega⟩
+
   refine ⟨d, run1.trans (run2.trans (run3.trans (run4.trans run5))), ⟨{
     entered := entered, opened := opened, flagged := flagged, allocated := allocated, value := value
     enter := E, opening := O, flags := F, custom := C, done := D
@@ -447,6 +467,7 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
       rw [D.memory, bytesT_writeLog_out _ (by simp only [OutLRange, and_true, v8]; omega)]
       exact C.ops
     ready := readyD
+    heap := heapD
     counted := by
       have step := (framedF.counts.trans (Gc.CustomCountStep.mk C.count)).trans framedD.counts
       simpa using step
@@ -599,6 +620,7 @@ theorem out_nursery {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Co
     (aligned : (runtimeFields c).youngPtr % 8 = 0)
     (low : Gc.minorRegion.lo + 24 ≤ (runtimeFields c).youngPtr)
     (high : (runtimeFields c).youngPtr ≤ Gc.minorRegion.hi) : OutNursery H chs c where
+  custom := heap.custom
   domain := heap.extents _ (by simp [Gc.f1Covered])
   minor := heap.extents _ (by simp [Gc.f1Covered])
   channels := heap.channels

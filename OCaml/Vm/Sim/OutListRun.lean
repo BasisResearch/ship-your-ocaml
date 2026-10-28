@@ -265,7 +265,7 @@ theorem empty_step {ra sp roots dom : BitVec 64} {e : Config} (leaf : LeafInput 
 walk's frame `+ 128`, the domain words read the walk's `D`, `Y`, `Lm` and
 `roots`, the open-channel list is `w.chs`, the custom allocations are ready
 for every listed record and newlib's heap is `H0`. -/
-structure OutListInput (w : Walk) (Ready : Nat → Config → Prop) (k : Nat) (cap : Nat) (ra s0 : BitVec 64)
+structure OutListInput (w : Walk) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (k : Nat) (cap : Nat) (ra s0 : BitVec 64)
     (c : Config) : Prop where
   leaf : LeafInput ra c
   pc : pcOf c = some entryPc
@@ -279,6 +279,7 @@ structure OutListInput (w : Walk) (Ready : Nat → Config → Prop) (k : Nat) (c
   opened : Gc.OpenChannelList c.σ.mem w.chs
   ready : Ready (k + (listedRecs c.σ.mem w.chs).length) c
   heap : OCaml.Vm.Boot.Startup.HeapReady w.H0 cap c
+  owned : Gc.CustomOwned state w.H0 c
 
 
 /-- The prologue's stores miss the records, the list head and the domain's
@@ -328,6 +329,7 @@ structure ProKept (w : Walk) (Ready : Nat → Config → Prop) (state : Config �
     (c e : Config) : Prop where
   ready : Ready (k + (listedRecs c.σ.mem w.chs).length) e
   heap : OCaml.Vm.Boot.Startup.HeapReady w.H0 cap e
+  owned : Gc.CustomOwned state w.H0 e
   opened : Gc.OpenChannelList e.σ.mem w.chs
   words : ∀ a, (a + 8 ≤ w.sp.toNat ∨ w.sp.toNat + 128 ≤ a) → (a + 8 ≤ w.D + 288 ∨ w.D + 296 ≤ a) →
     word e a = word c a
@@ -340,7 +342,7 @@ structure ProKept (w : Walk) (Ready : Nat → Config → Prop) (state : Config �
 open-channel list, and every word outside the frame and `local_roots`. -/
 theorem pro_keeps {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {k cap : Nat}
     {ra s0 : BitVec 64} {c e : Config} (custom : Gc.CustomMemCall Ready state Customs) (g : WalkGeometry w n)
-    (inp : OutListInput w Ready k cap ra s0 c)
+    (inp : OutListInput w Ready state k cap ra s0 c)
     (me : e.σ.mem = writeLog c.σ.mem (proStoreLog w.sp ra s0 (BitVec.ofNat 64 w.D) w.roots)) :
     ProKept w Ready state Customs k cap c e := by
   have spl := g.spLow; have dl := g.domainLow; have dh := g.domainHigh
@@ -358,7 +360,7 @@ theorem pro_keeps {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state 
     rw [da] at lr
     have bs := ap.belowStack
     exact bkeep a (by walk_omega) (by omega)) (wkeep _ (by walk_omega) (by walk_omega))
-  refine ⟨fr.ready, ?_, ?_, wkeep, fun a h1 h2 => by rw [Channel.bytesT_one_byte, Channel.bytesT_one_byte]; exact bkeep a h1 h2,
+  refine ⟨fr.ready, ?_, inp.owned.frame fr.state, ?_, wkeep, fun a h1 h2 => by rw [Channel.bytesT_one_byte, Channel.bytesT_one_byte]; exact bkeep a h1 h2,
     fr.state, fr.counts⟩
   · obtain ⟨xd, xdIn, xdl, xdh⟩ := g.coverDomain
     refine Gc.HeapReady.keep_windows inp.heap (ws := [⟨w.sp.toNat, w.sp.toNat + 128⟩, ⟨w.D + 288, w.D + 296⟩])
@@ -399,7 +401,7 @@ theorem pro_saved {w : Walk} {n : Nat} (g : WalkGeometry w n) {ra s0 : BitVec 64
 /-- **The walk's invariant at its first visit**, after the prologue. -/
 theorem walk_start {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop} {k cap : Nat}
     {ra s0 : BitVec 64} {c e : Config} (custom : Gc.CustomMemCall Ready state Customs) (g : WalkGeometry w n)
-    (inp : OutListInput w Ready k cap ra s0 c)
+    (inp : OutListInput w Ready state k cap ra s0 c)
     (post : EffectPost [2, 8, 10, 11, 12, 13, 14, 15, 16, 17]
       (writeLog c.σ.mem (proStoreLog w.sp ra s0 (BitVec.ofNat 64 w.D) w.roots)) c headPc 1#64 e)
     (regs : ProRegs ra w.sp (BitVec.ofNat 64 (w.chs.headD 0)) w.roots (BitVec.ofNat 64 w.D) e)
@@ -462,7 +464,7 @@ theorem walk_start {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state
     nursery := fun j r hj => by simp [listedRecs] at hj
     frame := fun _ _ => rfl
     ready := by rw [listedE]; exact keeps.ready
-    heap := ⟨w.H0, cap, keeps.heap, fun _ h => h⟩
+    heap := ⟨w.H0, cap, keeps.heap, keeps.owned, fun _ h => h⟩
     stateIn := fun a hs => Or.inl (hS a ((keeps.state a).mp hs)) }
 
 /-- **`caml_ml_out_channels_list` returned**, relative to its entry `c`: `res`
@@ -498,7 +500,7 @@ structure OutListReturned (w : Walk) (Ready : Nat → Config → Prop) (state : 
       (if r ∈ listedRecs c.σ.mem w.chs then 1#32 else 0#32)
   counted : Gc.CustomCountStep Customs c d (listedRecs c.σ.mem w.chs).length
   ready : Ready k d
-  heap : ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap d ∧ ∀ x ∈ w.H0, x ∈ H
+  heap : ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap d ∧ Gc.CustomOwned state H d ∧ ∀ x ∈ w.H0, x ∈ H
 
 /-- The walk's frame numbers for the prologue and epilogue. -/
 theorem WalkGeometry.proNums {w : Walk} {n : Nat} (g : WalkGeometry w n) :
@@ -513,14 +515,14 @@ theorem WalkGeometry.proNums {w : Walk} {n : Nat} (g : WalkGeometry w n) :
 theorem sp_round (sp : BitVec 64) : sp + 128#64 - 128#64 = sp := BitVec.add_sub_cancel _ _
 
 /-- The restore stores preserve the physical custom count and channel list. -/
-structure RestoreKept (w : Walk) (Ready : Nat → Config → Prop) (Customs : Config → Nat → Prop)
+structure RestoreKept (w : Walk) (Ready : Nat → Config → Prop) (state Customs : Config → Nat → Prop)
     (k : Nat) (z f : Config) : Prop where
   bytes : ∀ a, (a < w.D + 288 ∨ w.D + 296 ≤ a) → bytesT f.σ.mem a 1 = bytesT z.σ.mem a 1
   words : ∀ a, (a + 8 ≤ w.D + 288 ∨ w.D + 296 ≤ a) → word f a = word z a
   roots : bytesT f.σ.mem (w.D + 288) 8 = w.roots
   ready : Ready k f
   opened : Gc.OpenChannelList f.σ.mem w.chs
-  heap : ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap f ∧ ∀ x ∈ w.H0, x ∈ H
+  heap : ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap f ∧ Gc.CustomOwned state H f ∧ ∀ x ∈ w.H0, x ∈ H
   counted : Gc.CustomCountStep Customs z f 0
 
 /-- The final `local_roots` store keeps everything the return reads, apart from that word. -/
@@ -528,8 +530,8 @@ theorem restore_keeps {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {st
     (custom : Gc.CustomMemCall Ready state Customs) (g : WalkGeometry w n) {z f : Config}
     (mf : f.σ.mem = writeLog z.σ.mem [((BitVec.ofNat 64 w.D + 288#64).toNat, 8, w.roots)])
     (dom : word z Layout.sym_Caml_state = BitVec.ofNat 64 w.D) (ready : Ready k z) (opened : Gc.OpenChannelList z.σ.mem w.chs)
-    (heap : ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap z ∧ ∀ x ∈ w.H0, x ∈ H) :
-    RestoreKept w Ready Customs k z f := by
+    (heap : ∃ H cap, OCaml.Vm.Boot.Startup.HeapReady H cap z ∧ Gc.CustomOwned state H z ∧ ∀ x ∈ w.H0, x ∈ H) :
+    RestoreKept w Ready state Customs k z f := by
   have dh := g.domainHigh; have dl := g.domainLow
   have d288 : (BitVec.ofNat 64 w.D + 288#64).toNat = w.D + 288 := by
     rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat]; walk_omega
@@ -549,9 +551,9 @@ theorem restore_keeps {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {st
   · exact opened_transfer opened (words _ (by walk_omega)) fun r hr => by
       have h := g.records r hr; have := h.domain; have := h.high; have := h.low
       exact words _ (by simp only [Gc.chanOffNext]; walk_omega)
-  · obtain ⟨H, cap, hz, sub⟩ := heap
+  · obtain ⟨H, cap, hz, owned, sub⟩ := heap
     obtain ⟨xd, xdIn, xdl, xdh⟩ := g.coverDomain
-    refine ⟨H, cap, Gc.HeapReady.keep_windows hz (ws := [⟨w.D + 288, w.D + 296⟩]) ?_ fun a ha => bytes a ?_, sub⟩
+    refine ⟨H, cap, Gc.HeapReady.keep_windows hz (ws := [⟨w.D + 288, w.D + 296⟩]) ?_ fun a ha => bytes a ?_, owned.frame fr.state, sub⟩
     · simp only [List.forall_mem_cons]
       exact ⟨Or.inl ⟨xd, sub _ xdIn, by simp only; omega, by simp only; walk_omega⟩, fun _ h => absurd h List.not_mem_nil⟩
     · have := ha _ List.mem_cons_self; simpa using this
@@ -567,7 +569,7 @@ theorem head_word {w : Walk} {n : Nat} (g : WalkGeometry w n) {c : Config} (open
 theorem out_list_walked {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
     {k cap : Nat} {ra s0 : BitVec 64} {c : Config} (custom : Gc.CustomMemCall Ready state Customs) (g : WalkGeometry w n)
     (grows : CustomMemGrows state)
-    (inp : OutListInput w Ready k cap ra s0 c) (count : (listedRecs c.σ.mem w.chs).length ≤ n) (ne : w.chs ≠ [])
+    (inp : OutListInput w Ready state k cap ra s0 c) (count : (listedRecs c.σ.mem w.chs).length ≤ n) (ne : w.chs ≠ [])
     (hS : ∀ a, state c a → w.S a) :
     ∃ e d, Steps c d ∧
       EffectPost [2, 8, 10, 11, 12, 13, 14, 15, 16, 17]
@@ -638,7 +640,7 @@ theorem pro_listed {w : Walk} {n : Nat} (g : WalkGeometry w n) {ra s0 : BitVec 6
 /-- **From the walk's exit to the return.** -/
 theorem out_list_finish {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
     {k cap : Nat} {ra s0 : BitVec 64} {c e d : Config} (custom : Gc.CustomMemCall Ready state Customs) (g : WalkGeometry w n)
-    (inp : OutListInput w Ready k cap ra s0 c)
+    (inp : OutListInput w Ready state k cap ra s0 c)
     (post : EffectPost [2, 8, 10, 11, 12, 13, 14, 15, 16, 17]
       (writeLog c.σ.mem (proStoreLog w.sp ra s0 (BitVec.ofNat 64 w.D) w.roots)) c headPc 1#64 e)
     (walked : WalkAt w Ready state Customs k e w.chs [] d) (count : (listedRecs c.σ.mem w.chs).length ≤ n) :
@@ -663,7 +665,9 @@ theorem out_list_finish {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {
     exact (custom.frame _ d z this (fun a _ => by rw [mz]) (wz _)).1
   obtain ⟨bytesF, wordsF, rootsF, readyF, openedF, heapF, countedF⟩ := restore_keeps custom g postD.memory
     ((wz _).trans walked.domain) readyZ (by rw [mz]; exact walked.opened)
-    (by obtain ⟨H, cap', hd, sub⟩ := walked.heap; exact ⟨H, cap', HeapReady.of_mem hd mz, sub⟩)
+    (by obtain ⟨H, cap', hd, owned, sub⟩ := walked.heap
+        exact ⟨H, cap', HeapReady.of_mem hd mz,
+          owned.frame (custom.frame _ d z walked.ready (fun _ _ => by rw [mz]) (wz _)).2, sub⟩)
   have proKept := pro_keeps custom g inp post.memory
   have countedE := proKept.counted
   have listedE := pro_listed g (c := c) (e := e) post.memory
@@ -724,7 +728,7 @@ theorem out_list_finish {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {
 /-- **The empty list**: the prologue, its `j`, the epilogue. -/
 theorem out_list_none {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
     {k cap : Nat} {ra s0 : BitVec 64} {c : Config} (custom : Gc.CustomMemCall Ready state Customs) (g : WalkGeometry w n)
-    (inp : OutListInput w Ready k cap ra s0 c) (empty : w.chs = []) :
+    (inp : OutListInput w Ready state k cap ra s0 c) (empty : w.chs = []) :
     ∃ f, Steps c f ∧ OutListReturned w Ready state Customs k ra s0 c f := by
   have spl := g.spLow; have sph := g.spHigh; have spa := g.spAligned
   have dl := g.domainLow; have dh := g.domainHigh; have da := g.domainAligned
@@ -734,7 +738,7 @@ theorem out_list_none {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {st
   obtain ⟨e, run1, post, regs⟩ := pro_empty g.proNums inp.leaf inp.pc inp.stack inp.s0 inp.domain hw inp.roots
   rw [sp_round] at post regs
   have me := post.memory
-  obtain ⟨readyE, heapE, openedE, wordsE, bytesE, _, countedE⟩ := pro_keeps custom g inp me
+  obtain ⟨readyE, heapE, ownedE, openedE, wordsE, bytesE, stateE, countedE⟩ := pro_keeps custom g inp me
   obtain ⟨wRa, wS0⟩ := pro_saved g (c := c) me
   have leafE : LeafInput ra e := post.leafInput (by decide) (by decide) inp.leaf
   obtain ⟨z, run2, postE, z2, z10, z14, z15⟩ := empty_step leafE regs post.pc
@@ -749,7 +753,8 @@ theorem out_list_none {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {st
   have domE : word e Layout.sym_Caml_state = BitVec.ofNat 64 w.D := by
     rw [wordsE _ (by walk_omega) (by walk_omega)]; exact inp.domain
   obtain ⟨bytesF, wordsF, rootsF, readyF, openedF, heapF, countedF⟩ := restore_keeps custom g postD.memory
-    ((wz _).trans domE) readyZ (by rw [mz]; exact openedE) ⟨w.H0, cap, HeapReady.of_mem heapE mz, fun _ h => h⟩
+    ((wz _).trans domE) readyZ (by rw [mz]; exact openedE) ⟨w.H0, cap, HeapReady.of_mem heapE mz,
+      ownedE.frame (custom.frame _ e z readyE (fun _ _ => by rw [mz]) (wz _)).2, fun _ h => h⟩
   have ns : ∀ n ∈ calleeSaved, n ∉ [1, 2, 8] ∧ n ∉ ([] : List Nat) ∧ n ∉ [2, 8, 10, 11, 12, 13, 14, 15, 16, 17] ∧
       1 ≤ n ∧ n ≤ 31 := by decide
   refine ⟨f, run1.trans (run2.trans run3), {
@@ -791,7 +796,7 @@ its return, over any open-channel list. -/
 theorem out_list_machine {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
     {k cap : Nat} {ra s0 : BitVec 64} {c : Config} (custom : Gc.CustomMemCall Ready state Customs) (g : WalkGeometry w n)
     (grows : CustomMemGrows state)
-    (inp : OutListInput w Ready k cap ra s0 c) (count : (listedRecs c.σ.mem w.chs).length ≤ n)
+    (inp : OutListInput w Ready state k cap ra s0 c) (count : (listedRecs c.σ.mem w.chs).length ≤ n)
     (hS : ∀ a, state c a → w.S a) :
     ∃ f, Steps c f ∧ OutListReturned w Ready state Customs k ra s0 c f := by
   by_cases empty : w.chs = []

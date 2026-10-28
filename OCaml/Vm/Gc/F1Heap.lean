@@ -1,4 +1,5 @@
 import OCaml.Vm.Gc.NamedLedger
+import OCaml.Vm.Gc.CustomLedger
 import OCaml.Vm.Reloc
 import OCaml.Vm.Gc.LibHeap
 import OCaml.Vm.Gc.OpenChannels
@@ -105,6 +106,7 @@ structure RefStorage (H : List (Nat × Nat)) (chs : List Nat) (b e p l : Nat) : 
   covered : Covered H (b, e - b)
   apartBlocks : ∀ x ∈ f1Covered, e ≤ x.1 ∨ x.1 + x.2 ≤ b
   apartRecords : ∀ a ∈ chs, e ≤ a ∨ a + chanRecordBytes ≤ b
+  apartCustom : e ≤ customTable ∨ customTable + Layout.custom_table_bytes ≤ b
 
 /-- **The remembered set at an F1 state**: `Caml_state->ref_table` is the
 cut's struct; the table is unallocated (as at the cut) or has its storage. -/
@@ -184,6 +186,9 @@ structure LibHeapAt (H : List (Nat × Nat)) (cap : Nat) (chs : List Nat) (c : Co
   tableIn : (refTable, 56) ∈ H
   /-- The physical named table shares this selected live-block ledger. -/
   named : NamedLedger H (namedBlocked chs c) c
+  custom : CustomLedger H c
+  customRecords : ∀ a ∈ chs, a + chanRecordBytes ≤ customTable ∨
+    customTable + Layout.custom_table_bytes ≤ a
 
 /-- A selected ledger's named reads miss each fixed runtime allocation. -/
 theorem LibHeapAt.named_fixed {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
@@ -207,6 +212,45 @@ theorem LibHeapAt.named_storage {H : List (Nat × Nat)} {cap : Nat} {chs : List 
       (word c (refTable + Layout.off_ref_table_end)).toNat -
         (word c (refTable + Layout.off_ref_table_base)).toNat) x :=
   h.named.read_apart read (by simp [namedBlocked, nonzero])
+
+/-- The custom table is not among the ordinary caller-write extents. -/
+theorem F1HeapSafe.custom_out {w : W} (safe : F1HeapSafe w) {a : Nat}
+    (inside : VsaIris.InExt (customTable, Layout.custom_table_bytes) a) :
+    a < w.lo ∨ w.hi ≤ a := by
+  have lo := inside.1
+  have hi := inside.2
+  rcases safe with ⟨e, he, elo, ehi⟩ | high | errno | ⟨low, _⟩
+  · have sep : ∀ e ∈ f1Extents, e.1 + e.2 ≤ customTable ∨
+        customTable + Layout.custom_table_bytes ≤ e.1 := by decide
+    rcases sep e he with left | right <;> dsimp only at * <;> omega
+  · have bound : customTable + Layout.custom_table_bytes ≤ heapEnd := by decide
+    dsimp only at hi
+    omega
+  · by_cases low : a < w.lo
+    · exact Or.inl low
+    · right
+      apply Classical.byContradiction
+      intro high
+      have err := errno a (by omega) (by omega)
+      rw [errnoBytes_mem] at err
+      have bound : heapStart ≤ customTable := by decide
+      unfold VsaIris.VsaHeap.InRange heapStart at *
+      dsimp only at lo
+      omega
+  · have bound : heapStart ≤ customTable := by decide
+    dsimp only at lo
+    omega
+
+/-- Record writes preserve the separate custom-table addressing words. -/
+theorem LibHeapAt.custom_record_out {H cap chs c} (h : LibHeapAt H cap chs c)
+    {r a : Nat} (member : r ∈ chs) (inside : VsaIris.InExt (customTable, Layout.custom_table_bytes) a)
+    {w : W} (low : r ≤ w.lo) (high : w.hi ≤ r + chanRecordBytes) :
+    a < w.lo ∨ w.hi ≤ a := by
+  have apart := h.customRecords r member
+  have lo := inside.1
+  have hi := inside.2
+  dsimp only at lo hi
+  omega
 
 /-- The F1 heap invariant. -/
 def LibHeap (c : Config) : Prop := ∃ H cap chs, LibHeapAt H cap chs c
@@ -358,6 +402,10 @@ theorem LibHeapAt.keep_windows {H : List (Nat × Nat)} {cap : Nat} {chs : List N
   channelsBound := h.channelsBound
   ready := HeapReady.keep_windows h.ready (fun w hw => (safe w hw).heapSafe h) keep
   extents := h.extents
+  custom := h.custom.frame fun a ha => by
+    rw [Primitives.byte_total, Primitives.byte_total]
+    exact keep a fun w hw => (safe w hw).custom_out ha
+  customRecords := h.customRecords
   channels := by
     unfold OpenChannelList
     rw [head]
@@ -437,6 +485,13 @@ theorem LibHeapAt.keep_records {H : List (Nat × Nat)} {cap : Nat} {chs : List N
       dsimp only at elo ehi
       exact Or.inl ⟨e, he, by omega, by omega⟩) keep
   extents := h.extents
+  custom := h.custom.frame fun x hx => by
+    rw [Primitives.byte_total, Primitives.byte_total]
+    exact keep x fun w hw => by
+      rcases safe w hw with safe | ⟨lo, hi, _⟩
+      · exact safe.custom_out hx
+      · exact h.custom_record_out ha hx lo hi
+  customRecords := h.customRecords
   channels := by
     unfold OpenChannelList
     rw [head]
@@ -522,7 +577,8 @@ theorem LibHeapAt.link {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
     (linked : OpenChannelsLinked c.σ.mem c'.σ.mem a)
     (keepTable : ∀ y, InTableWords y → (c'.σ.mem[y]?).getD 0 = (c.σ.mem[y]?).getD 0)
     (keepLinks : ∀ b ∈ chs, bytesT c'.σ.mem (b + chanOffNext) 8 = bytesT c.σ.mem (b + chanOffNext) 8)
-    (keepNamed : ∀ x, NamedRead c x → byte c' x = byte c x) :
+    (keepNamed : ∀ x, NamedRead c x → byte c' x = byte c x)
+    (keepCustom : ∀ x, VsaIris.InExt (customTable, Layout.custom_table_bytes) x → byte c' x = byte c x) :
     LibHeapAt ((a, req) :: H) cap' (a :: chs) c' where
   room := by
     rw [structWord_keep keepTable (by decide)]
@@ -538,6 +594,12 @@ theorem LibHeapAt.link {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
   channelsBound := by simp only [List.length_cons]; omega
   ready := ready
   extents := fun x hx => (h.extents x hx).mono _
+  custom := (h.custom.frame keepCustom).mono (fun e he => List.mem_cons_of_mem _ he)
+  customRecords := by
+    intro r hr
+    rcases List.mem_cons.mp hr with rfl | hr
+    · exact fresh_apart_covered fresh h.custom.table (by decide) record_pos big
+    · exact h.customRecords r hr
   channels := by
     unfold OpenChannelList
     rw [linked.head, BitVec.toNat_ofNat]
@@ -635,7 +697,8 @@ theorem LibHeapAt.grow {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
     (head : bytesT c'.σ.mem Layout.sym_caml_all_opened_channels 8 =
       bytesT c.σ.mem Layout.sym_caml_all_opened_channels 8)
     (keepLinks : ∀ b ∈ chs, bytesT c'.σ.mem (b + chanOffNext) 8 = bytesT c.σ.mem (b + chanOffNext) 8)
-    (keepNamed : ∀ x, NamedRead c x → byte c' x = byte c x) :
+    (keepNamed : ∀ x, NamedRead c x → byte c' x = byte c x)
+    (keepCustom : ∀ x, VsaIris.InExt (customTable, Layout.custom_table_bytes) x → byte c' x = byte c x) :
     LibHeapAt ((p, req) :: H) cap' chs c' where
   room := by
     have r := h.room
@@ -646,6 +709,8 @@ theorem LibHeapAt.grow {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
   channelsBound := h.channelsBound
   ready := ready
   extents := fun x hx => (h.extents x hx).mono _
+  custom := (h.custom.frame keepCustom).mono (fun e he => List.mem_cons_of_mem _ he)
+  customRecords := h.customRecords
   channels := by
     unfold OpenChannelList
     rw [head]
@@ -672,6 +737,11 @@ theorem LibHeapAt.grow {H : List (Nat × Nat)} {cap cap' charge : Nat} {chs : Li
           (Nat.le_refl _) with o | o
         · exact Or.inl o
         · exact Or.inr o
+      apartCustom := by
+        rcases fresh_apart_covered fresh h.custom.table (by decide) (n := req) (by omega)
+          (Nat.le_refl _) with low | high
+        · exact Or.inl low
+        · exact Or.inr high
       apartRecords := fun a ha => by
         rcases fresh_apart_covered fresh (h.records a ha) record_pos (n := req) (by omega) (Nat.le_refl _) with o | o
         · exact Or.inl o

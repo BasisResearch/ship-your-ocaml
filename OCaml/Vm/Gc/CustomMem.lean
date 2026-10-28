@@ -27,7 +27,7 @@ runtime's own state (`CustomMemCall.state`): the static
 `caml_extra_heap_resources`, the domain's `extra_heap_resources_minor`, and the
 custom table's struct and storage (live blocks of newlib's heap). It lies apart
 from what callers write (`CallerApart`):
-* newlib's free space and allocator globals;
+* allocator globals (selected-ledger ownership excludes free arena bytes);
 * F1's covered regions other than the domain record;
 * the native stack;
 * the minor heap;
@@ -99,8 +99,6 @@ structure CallerApart (c : Config) (a : Nat) : Prop where
   /-- apart from F1's regions other than the domain record (the custom table's
   struct and storage are blocks of their own) -/
   covered : ∀ e ∈ f1Covered, e.1 ≠ Boot.WhileMinRuntime.domain → ¬ VsaIris.InExt e a
-  /-- in live blocks or statics, never newlib's free space or globals -/
-  free : ∀ H cap, HeapReady H cap c → ¬ VsaIris.VsaHeap.vsaFoot H a
 
 /-- At the call: the link and argument registers, the callee's stack room,
 and nursery room for the block (`caml_alloc_small`'s fast path). -/
@@ -141,8 +139,9 @@ structure CustomMemReturned (state : Config → Nat → Prop) (H : List (Nat × 
   header : bytesT d.σ.mem (v.toNat - 8) 8 = customHeader
   ops : bytesT d.σ.mem v.toNat 8 = channelOps
   /-- newlib's heap over every block of `H` (plus the custom table's on the
-  first call), ready for the next call -/
-  heap : ∃ H' cap', HeapReady H' cap' d ∧ ∀ e ∈ H, e ∈ H'
+  first call), ready for the next call; ownership of the returned state is
+  certified in that same existential ledger -/
+  heap : ∃ H' cap', HeapReady H' cap' d ∧ CustomOwned state H' d ∧ ∀ e ∈ H, e ∈ H'
   kept : ∀ a, ¬ state f a → ¬ VsaIris.VsaHeap.vsaFoot H a →
     (a < site.sp.toNat - customStackBytes ∨ site.sp.toNat ≤ a) →
     (a + 24 < (runtimeFields f).youngPtr ∨ (runtimeFields f).youngPtr ≤ a) →
@@ -232,25 +231,53 @@ block, `young_ptr` and newlib's own bytes (`vsaFoot H`): the counters and the
 custom table. -/
 structure CustomMemCall (Ready : Nat → Config → Prop) (state : Config → Nat → Prop)
     (Customs : Config → Nat → Prop) : Prop where
+  /-- The runtime footprint consists of the resource words and the fixed G1
+  custom table with its actual storage. This does not assert quietness or a
+  complete physical accounting predicate. -/
+  footprint : ∀ c a, state c a → CustomFoot c a
   accounting : CustomAccounting Ready state Customs
   apart : ∀ c a, state c a → CallerApart c a
   /-- a caller's stores outside the runtime's state keep it ready -/
   frame : ∀ k c c', Ready k c → (∀ a, state c a → (c'.σ.mem[a]?).getD 0 = (c.σ.mem[a]?).getD 0) →
     word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state → Ready k c' ∧ (∀ a, state c' a ↔ state c a)
   call : ∀ (H : List (Nat × Nat)) (cap : Nat) (site : CustomMemSite) (k : Nat) (f : Config),
-    Ready (k + 1) f → CustomMemInput H cap site f →
+    Ready (k + 1) f → CustomMemInput H cap site f → CustomOwned state H f →
     FnSummary customMemEntry (fun d => d = f)
       (fun d => ∃ v, CustomMemCountedReturned state Customs H site v f d ∧ Ready k d)
+
+/-- State ownership comes from the same ledger selected by `LibHeapAt`. -/
+theorem CustomMemCall.owned {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
+    {H cap chs c} (heap : LibHeapAt H cap chs c) : CustomOwned state H c :=
+  ⟨fun a ha => heap.custom.owned.bytes a (custom.footprint c a ha)⟩
+
+/-- Selected owned bytes are outside newlib's footprint. -/
+theorem CustomMemCall.notFoot {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
+    {H c} (owned : CustomOwned state H c) {a : Nat} (ha : state c a) :
+    ¬ VsaIris.VsaHeap.vsaFoot H a := by
+  rintro (global | ⟨low, high, outside⟩)
+  · have below : a < Vsa.Sim.DlHeap.heapStart := by
+      unfold VsaIris.VsaHeap.allocGlobal VsaIris.VsaHeap.InRange at global
+      unfold Vsa.Sim.DlHeap.heapStart
+      omega
+    have static := (custom.apart c a ha).static below
+    unfold VsaIris.InExt Layout.sym_caml_extra_heap_resources at static
+    unfold VsaIris.VsaHeap.allocGlobal VsaIris.VsaHeap.InRange at global
+    omega
+  · rcases owned.bytes a ha with below | ⟨e, he, lo, hi⟩
+    · omega
+    · exact outside e he ⟨lo, by dsimp only at hi; omega⟩
 
 /-- Forget physical return evidence for clients that only need the ordinary
 allocator post. The counted execution remains the source of the summary. -/
 theorem CustomMemCall.call_forget {Ready : Nat → Config → Prop}
     {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
     (H : List (Nat × Nat)) (cap : Nat) (site : CustomMemSite) (k : Nat) (f : Config)
-    (ready : Ready (k + 1) f) (input : CustomMemInput H cap site f) :
+    (ready : Ready (k + 1) f) (input : CustomMemInput H cap site f) (owned : CustomOwned state H f) :
     FnSummary customMemEntry (fun d => d = f)
       (fun d => ∃ v, CustomMemReturned state H site v f d ∧ Ready k d) := by
-  apply (custom.call H cap site k f ready input).weaken (fun _ h => h)
+  apply (custom.call H cap site k f ready input owned).weaken (fun _ h => h)
   intro d ⟨v, returned, readyD⟩
   exact ⟨v, returned.toCustomMemReturned, readyD⟩
 

@@ -1098,7 +1098,7 @@ theorem consoleRuntime_of {c : Config}
 `WhileMin.cut_heapReady_covers_Statement`, at any configuration). -/
 def HeapCovers (c : Config) : Prop :=
   ∃ H cap, 2 ^ 24 ≤ cap ∧ Startup.HeapReady H cap c ∧
-    (∀ x ∈ f1Covered, ∃ e ∈ H, e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2) ∧ ∀ x ∈ [(refTable, 56)], x ∈ H
+    (∀ x ∈ f1Covered, ∃ e ∈ H, e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2) ∧ ∀ x ∈ [(refTable, 56), (customTable, Layout.custom_table_bytes)], x ∈ H
 
 /-- newlib's heap at the cut: no channel is open yet. -/
 theorem libHeap_of {c : Config}
@@ -1128,10 +1128,16 @@ theorem libHeap_of {c : Config}
     have bound : Layout.sym_named_value_table + 104 ≤ Vsa.Sim.DlHeap.heapStart := by decide
     have := inside.1
     omega
+  have customLedger : CustomLedger H c := by
+    refine ⟨covers _ (by simp [f1Covered]), ?_, Or.inl ?_⟩
+    · exact ⟨_, exact _ (by simp), Nat.le_refl _, Nat.le_refl _⟩
+    · unfold customBase customTable
+      rw [WhileMinRuntime.read_custom_table_base memory]
+      rfl
   refine ⟨H, cap, [], ⟨reserve, by decide, ready, covers, ?_, (fun _ h => by cases h), (fun _ h => by cases h),
     (fun _ h => by cases h), (fun _ h => by cases h), ⟨WhileMinEntry.read_ref_table memory, WhileMinEntry.read_minor_heap_wsz memory,
       Or.inl ⟨?_, ?_, ?_⟩⟩,
-    exact _ List.mem_cons_self, namedLedger⟩⟩
+    exact _ List.mem_cons_self, namedLedger, customLedger, (fun _ h => by cases h)⟩⟩
   rotate_left
   · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_base memory]; rfl
   · rw [show refTable = WhileMinHeapChunks.refTablePayload from rfl, WhileMinEntry.read_ref_table_ptr memory]; rfl
@@ -1208,20 +1214,21 @@ theorem Loaded.retarget {L L' : OCaml.Layout} {P : Prog} {c : Config} (h : OCaml
 theorem whileMin_allocator_covers : ∀ x ∈ f1Covered, ∃ e ∈ WhileMinAllocator.liveBlocks,
     e.1 ≤ x.1 ∧ x.1 + x.2 ≤ e.1 + e.2 := by decide +kernel
 
-/-- The remembered-set struct remains an exact ledger entry, with 56 usable bytes. -/
-theorem whileMin_allocator_exact : ∀ x ∈ [(refTable, 56)], x ∈ WhileMinAllocator.liveBlocks := by
+/-- The remembered-set and custom-table structs are exact ledger entries.
+The custom table is deliberately separate from the caller-write `f1Covered`. -/
+theorem whileMin_allocator_exact : ∀ x ∈ [(refTable, 56), (customTable, Layout.custom_table_bytes)], x ∈ WhileMinAllocator.liveBlocks := by
   decide +kernel
 
 /-- Premise-free memory certificate at the existing captured cut. This says
 nothing about reset execution reaching that cut. -/
 theorem _root_.OCaml.Vm.Boot.WhileMin.cut_heapReady_covers :
-    WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56)] :=
+    WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56), (customTable, Layout.custom_table_bytes)] :=
   ⟨WhileMinAllocator.liveBlocks, 2 ^ 24, Nat.le_refl _, WhileMinAllocator.cut_ready,
     whileMin_allocator_covers, whileMin_allocator_exact⟩
 
 /-- a0-boot's covering readiness at the densified cut holds at the cut itself:
 `HeapReady` reads total bytes only. -/
-theorem heapCovers_cut (heap : WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56)]) : HeapCovers WhileMin.cut := by
+theorem heapCovers_cut (heap : WhileMin.cut_heapReady_covers_Statement f1Covered [(refTable, 56), (customTable, Layout.custom_table_bytes)]) : HeapCovers WhileMin.cut := by
   obtain ⟨H, cap, room, ready, covers, exact⟩ := heap
   refine ⟨H, cap, room, HeapReady.frame_read ready fun a _ _ => ?_, covers, exact⟩
   have := Vsa.Densify.memEqv_fillZeroMem WhileMin.cut.σ.mem a

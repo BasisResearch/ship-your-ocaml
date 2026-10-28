@@ -1,5 +1,98 @@
 # Lane a6-gc
 
+## Selected custom-state ledger repair (2026-10-28)
+
+- Recovered proof edits are preserved in `87997286`. The inherited
+  `/tmp/custom-ledger-affected5.log` ends with a successful 3,628-job build;
+  no proof or generator implementation changed during this review. Read
+  `tasks/sol-custom-ledger.md` and the separate queued
+  `tasks/sol-custom-apart-local.md`, the binding briefs and relevant ledgers;
+  ran `scripts/abs_inventory.sh` before reviewing proofs. Work stays in this
+  worktree, with no subagents, proof-budget changes or Git metadata writes.
+- `CustomLedgerObstruction` reuses `WhileMinAllocator.raw_heap`,
+  `heap_transport`, image agreement and capacity to construct
+  `captured_empty_ready`. Every arena byte is `vsaFoot []`;
+  `captured_custom_bytes_obstruction` refutes the old universally quantified
+  `CallerApart.free` for the actual domain minor-resource and custom-table
+  base bytes. `cut_empty_ready` and `cut_custom_bytes_obstruction` specialize
+  to the captured configuration without premises. This is a memory
+  certificate, with no reset-to-cut execution claim. It does not establish
+  global inconsistency of the named contract: empty Ready/state can be vacuous.
+- `CustomLedger H c` covers the fixed domain/table allocations and current
+  nonnull custom storage. `CustomOwned state H c` owns each state byte below
+  `heapStart` or in that same selected H. `CustomOwned.frame`, `.mono` and
+  `.fresh`, and `CustomLedger.frame`/`.mono`, supply the shared transports.
+  `LibHeapAt.custom` selects that H alongside heap readiness and named
+  ownership; `CustomMemCall.owned` uses its concrete `footprint` bound.
+  `CustomMemCall.notFoot` combines selected ownership with static separation.
+- Startup coverage uses the actual closed `WhileMinAllocator.liveBlocks`
+  ledger, captured domain/table coverage and the observed null storage base.
+  `customLedger_startup` and `ChannelCustomCountFoot.owned` connect the
+  physical count reads to it. Generated `custom_table_bytes` and
+  `off_custom_table_end` come from `scripts/gen_layout.py`. The table struct
+  is a separate exact startup entry; it is absent from caller-write
+  `f1Covered`. Its struct already exists at the cut; a native custom call
+  may allocate or grow its backing storage. No domain table-pointer
+  observation was added to `state`, and `domainField` was not widened.
+- Ordinary, record, link, remembered insertion and actual `f1_afterGrow`
+  frames preserve the custom ledger. `customRecords` and
+  `RefStorage.apartCustom` retain table separation; fresh link/storage
+  separation follows from owned coverage and the real fresh allocation.
+  `MlOpen` derives entry ownership from `OutNursery.custom`/`LibHeapAt` and
+  uses `CustomOwned.fresh` with the allocator's actual `FreshBlock` to
+  separate the new record. Flag/done stores preserve ownership. The named
+  custom call consumes ownership of its input H and returns heap readiness,
+  state ownership and old-block inclusion under one existential output H.
+  `OpenedOut.heap` and the listing walk retain that package through setup,
+  skips, native custom calls, cons stores and both epilogues. The listing
+  entry's `CustomLedger` uses its selected walk heap. Physical count meaning,
+  GoodF1 and actual C_CALL setup/return are preserved.
+- Validation: post-rebase guarded/capped `lake build` passes **3,653 jobs**.
+  Explicit targets are `OCaml.Vm.Gc.CustomLedgerObstruction`,
+  `OCaml.Vm.Gc.ChannelCustomCount`, `OCaml.Vm.Gc.F1Barrier`,
+  `OCaml.Vm.Gc.F1Grow`, `OCaml.Vm.Sim.CountedChannelRows`,
+  `OCaml.Vm.Sim.CountedAllocRows`, `OCaml.Vm.Sim.CountedEntry`,
+  `OCaml.Vm.Sim.F1Table` and `OCaml.Vm.Sim.WhileMinTable`; their closure
+  checks every affected module, opening/listing adapter and ordinary/count
+  consumer. Log: `/tmp/custom-ledger-review-affected.log`.
+  The standalone `/tmp/custom-ledger-review-focused-audit.lean` passes via
+  `lake env lean -M 6000 -j 1`: **60 reports**, 59 using only `propext`,
+  `Classical.choice`, `Quot.sound` and one without axioms. All **19 new
+  theorems** and the affected heap/opening/listing/count consumers are covered;
+  all 60 reports are registered in `OCaml/Audit.lean`, including the added
+  `ListedStep.heap` registration. The recovered temporary audit's incorrect
+  namespace for `counted_caml_ml_out_channels_list_returns` was corrected
+  before execution. A name/count/allow-list check rejects missing, duplicate
+  or unexpected reports. Evidence: `/tmp/custom-ledger-review-axioms.log`,
+  `/tmp/custom-ledger-review-audit-check.log` and
+  `/tmp/custom-ledger-review-new-theorems.txt`.
+- Every Lean launch used `python3 scripts/lean-guarded.py --log /tmp/... --
+  scripts/lean-capped.sh lake ...`, sequentially, within the inherited 12 GiB
+  cgroup/two-thread limit. `free -g` reported 85 GB available before the build
+  and 87 GB before the audit (both ≥25 GB); no virtual-address limit was added.
+  Layout output matches `gen_layout.py` byte for byte. GC rows, captured
+  allocator/runtime, F1 table and channel generators pass drift checks;
+  collector CFG, holes (4,743 files), discipline (27 rules), abstraction gate
+  and `git diff --check` pass. Check logs use `/tmp/custom-ledger-review-`
+  followed by `layout.log`, `gc-generator.log`, `boot-allocator-generator.log`,
+  `boot-runtime-generator.log`, `f1-generator.log`, `channel-generator.log`,
+  `cfg.log`, `holes.log`, `discipline.log` and `abstraction.log`.
+- Exact remaining producers: complete physical `Customs`, including actual
+  startup resource-accumulator observations/zero witness, resource arithmetic,
+  quietness and accounting frames; a domain table-pointer identity pin/frame
+  (or a corrected footprint/`domainField` with all actual frame producers);
+  native `CustomMemCall` allocation/table-room, heap/ABI/footprint, state-growth
+  and exact-count return. Occupancy and selected ownership alone supply none
+  of these laws. `OpenOutRuntimeAt.pins`/`.after`, `OutListRuntime.entry`
+  (heap, custom/named ledgers, records and payload separation) and `.runtime`
+  remain concrete suppliers, as do remaining counted rows/arities and full
+  F1 assembly. The global `.records`/`.named` versus arbitrary outside-write
+  frame issue is separately queued in `tasks/sol-custom-apart-local.md`;
+  its candidate obstruction is not proved by this patch. `CustomMemCall`
+  stays named, `BarrierGrowthFull` stays G2, C4 round 2 waits for F1 and
+  reset-to-cut execution remains open. Full `OCaml.Audit` and integration
+  remain the lead gate; checked edits are left for lead review.
+
 ## Native next-size reusable physical representation (2026-10-27)
 
 - `BfShape.SmallPhysical.pop` embeds each retained occurrence into its original
@@ -432,8 +525,10 @@ those remain open, as does the named `CustomMemCall` supplier.
 - `CustomMemCall` interface (bprime, a1-arms): `HeapReady` in, `∃ H' cap'`
   out; `CallerApart` places `state` in the static `caml_extra_heap_resources`,
   the domain's `extra_heap_resources_minor` and live newlib blocks outside
-  `f1Covered` (fields `static`, `domainField`, `covered`, `free`); the return
-  keeps the HTIF payload idle (`idle`) and the console output (`output`).
+  `f1Covered` (fields `static`, `domainField`, `covered`). The old universal
+  `free` field is replaced by `CustomOwned state H c` for the selected caller
+  ledger, produced from `LibHeapAt.custom` and the concrete footprint bound;
+  the return heap and ownership share one existential ledger. The return keeps the HTIF payload idle (`idle`) and the console output (`output`).
 - G2: rows and code pins for memprof's hook route (`th_ctx_iter_default`,
   `call_on_entry_array`, `entry_array_oldify_young_roots`). The quiet path:
   `entries_global` empty, `caml_memprof_th_ctx_iter_hook` =

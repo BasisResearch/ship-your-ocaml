@@ -1,3 +1,5 @@
+import OCaml.Vm.Gc.ChannelCustomCount
+import OCaml.Vm.Gc.CustomLedgerObstruction
 import OCaml.Vm.Gc.NamedOwnership
 import OCaml.Vm.Sim.NamedGeometryObstruction
 import OCaml.Vm.Primitives.Named.NamedAt
@@ -7798,3 +7800,25 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.native_return
 #print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.NativePost.live
 #print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.NativePost.object
+
+-- Selected custom-state ownership and the captured empty-ledger obstruction.
+#print axioms OCaml.Vm.Gc.CustomOwned.mono
+#print axioms OCaml.Vm.Gc.CustomOwned.frame
+#print axioms OCaml.Vm.Gc.CustomOwned.fresh
+#print axioms OCaml.Vm.Gc.CustomLedger.owned
+#print axioms OCaml.Vm.Gc.CustomLedger.congr
+#print axioms OCaml.Vm.Gc.CustomLedger.frame
+#print axioms OCaml.Vm.Gc.CustomLedger.mono
+#print axioms OCaml.Vm.Gc.captured_empty_ready
+#print axioms OCaml.Vm.Gc.empty_ledger_arena
+#print axioms OCaml.Vm.Gc.captured_universal_free_obstruction
+#print axioms OCaml.Vm.Gc.captured_custom_bytes_obstruction
+#print axioms OCaml.Vm.Gc.F1HeapSafe.custom_out
+#print axioms OCaml.Vm.Gc.LibHeapAt.custom_record_out
+#print axioms OCaml.Vm.Gc.CustomMemCall.owned
+#print axioms OCaml.Vm.Gc.CustomMemCall.notFoot
+#print axioms OCaml.Vm.Gc.customLedger_startup
+#print axioms OCaml.Vm.Gc.ChannelCustomCountFoot.owned
+#print axioms OCaml.Vm.Gc.cut_empty_ready
+#print axioms OCaml.Vm.Gc.cut_custom_bytes_obstruction
+#print axioms OCaml.Vm.Sim.OutListWalk.ListedStep.heap

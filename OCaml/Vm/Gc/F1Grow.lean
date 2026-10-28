@@ -260,11 +260,22 @@ theorem f1_afterGrow {c c' : Config} {H : List (Nat × Nat)} {cap : Nat} {chs : 
       · exact notIn (majorRegion.lo, majorRegion.hi - majorRegion.lo) (by decide) lo (by dsimp only; simp only [majorRegion] at *; omega)
     rw [byte_total, byte_total]
     exact g.kept x kept outSlot
+  have keepCustom : ∀ x, VsaIris.InExt (customTable, Layout.custom_table_bytes) x → byte c' x = byte c x := by
+    intro x inside
+    have low := inside.1
+    have high := inside.2
+    have sep : refTable + 56 ≤ customTable := by decide
+    have kept := kept_covered h (sp := sp) h.custom.table low high (Or.inr (by omega))
+    rw [byte_total, byte_total]
+    apply g.kept x kept
+    rcases slotChunks with ⟨lo, hi⟩ | ⟨lo, hi⟩ <;>
+      simp only [customTable, WhileMinRuntime.customTable, Layout.custom_table_bytes,
+        minorRegion, majorRegion] at * <;> omega
   have pNat := g.nonzero
   have pAl := g.aligned
   refine f1_transfer keep (fun _ => ⟨_, _, chs, LibHeapAt.grow h g.ready.heap (charge := tableCharge)
     (by omega) (Nat.le_refl _) empty g.disjoint pNat (by omega) (lim := 262144) (by decide) (by decide)
-    (by decide) ?_ ?_ ?_ ?_ (domWord _ (by decide)) (domWord _ (by decide)) head links keepNamed⟩) ok
+    (by decide) ?_ ?_ ?_ ?_ (domWord _ (by decide)) (domWord _ (by decide)) head links keepNamed keepCustom⟩) ok
   · have b := g.base
     rw [tblNat] at b
     simp only [Layout.off_ref_table_base, Nat.add_zero]
