@@ -98,7 +98,7 @@ theorem open_out_return {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} 
         rw [contents, ← t]
         exact word_of_kept fun j hj => primTable_kept custom o heap h Nur (by rw [base]; omega)
           (by rw [base]; omega)⟩
-      platform := ⟨o.done.good, o.done.image, rt.after runtime heap o⟩
+      platform := ⟨o.done.good, o.done.image, rt.after runtime heap (Nat.lt_of_le_of_lt (Gc.placedChannels_length _ _) (openChan_bound ok)) h Nur o⟩
       loop := {
         dispatchTable := (keepReg Layout.reg_dispatchTable (by decide) (by decide)).trans
           setup.input.loop.dispatchTable

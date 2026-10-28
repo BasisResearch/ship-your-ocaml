@@ -1,5 +1,28 @@
 # Routes not to repeat
 
+- 2026-10-28 actual opening runtime reconstruction:
+  blanket equality on the original keptFootprint is false for opening:
+  caml_all_opened_channels changes to the fresh record. Adding that head to ignoredStatics and removing it
+  from keptFootprint globally also breaks in_channelsHead and
+  the ordinary allocation/window/record frames that use it to preserve the
+  selected list. Keep the full footprint and its existing transfer API;
+  f1_core_except_head instead consumes only core reads outside that word,
+  and its heap supplier reconstructs the actual changed list. StaticApart
+  now excludes that independently checked head for core static reads.
+  OpenedOut alone does not expose the actual OutInput/OutNursery frame;
+  after now receives the caller's existing inputs and successful selected
+  list bound. Never substitute an arbitrary native stack/nursery frame or
+  assume a returned LibHeapAt. spatial_heap now returns named protection
+  for the actual fresh record as well, on its same credited returned H/cap.
+  recordBytes = 65616 is the full malloc request; chanRecordBytes = 65608
+  is the represented record extent. Their equality is refuted by decide.
+  Retain the full block in H, and use its checked size inequality for the
+  represented named/custom protection; preserve the full spending charge.
+  The conservative eight-byte young_ptr exclusion in OpenedOut.kept does
+  not frame every byte of the adjacent young_limit word. Use the actual
+  OpenedOut.youngLimit readback (as listing does for its limit) and frame
+  the remaining core reads; do not demand a stronger arbitrary byte frame.
+
 - 2026-10-28 CODE selected-table provenance (interface inspection; repaired):
   the current `GcTableAt` and final readiness contracts alone did not expose
   the page table's original fresh-allocation separation from the selected

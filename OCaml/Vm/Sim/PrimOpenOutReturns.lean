@@ -12,9 +12,10 @@ import OCaml.RefinementF1
 /-!
 # `caml_ml_open_descriptor_out` at a C_CALL site
 
-The runtime side remains the named premise `OpenOutRuntime L`: the custom
-allocation's counted machine summary, the numeric layout budget, the cut's
-pins (`F1Pins`), and the runtime after opening (`after`). The counted C_CALL
+The runtime interface `OpenOutRuntime L` retains the custom allocation's
+counted native summary, layout budget, entry pins and actual input frames.
+`OpenOutF1Runtime.f1_openOut_runtime` reconstructs its F1 instance relative
+only to the named native `CustomMemCall`. The counted C_CALL
 entry supplies physical accounting separately; readiness follows from the
 reachable successful successor and `Fits`.
 
@@ -30,10 +31,9 @@ variable {Customs : Vsa.Machine.Config → Nat → Prop}
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives LeanRV64DExecutable
 open OCaml.Vm.Boot.Startup (NativeFrame)
 
-/-- **The runtime across `caml_ml_open_descriptor_out`** (named premise, lane
-a6-gc, whose concrete supplier remains open for `Gc.f1Layout`).
-Readiness is derived at a counted successful C_CALL from `Fits`.
-The allocator machine summary and the runtime after the opening remain open suppliers. -/
+/-- The runtime interface across native channel opening. Its F1 instance is
+concrete relative to CustomMemCall; counted successful C_CALL readiness follows
+from Fits. The actual input stack/nursery frames are retained for reconstruction. -/
 structure OpenOutRuntimeAt (L : OCaml.Layout) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (Customs : Config → Nat → Prop) :
     Prop where
   custom : Gc.CustomMemCall Ready state Customs
@@ -41,19 +41,20 @@ structure OpenOutRuntimeAt (L : OCaml.Layout) (Ready : Nat → Config → Prop) 
   /-- the cut's pins: newlib's heap, the console statics, the code, stack,
   primitive-table and atom-table words (F1: `RuntimeOk.freeListShape`) -/
   pins : ∀ c, L.runtimeOk c → Gc.F1Pins c
-  /-- the runtime after the opening, from the heap invariant at the entry and
-  everything the primitive's summary exports (the call's whole
-  `CustomMemReturned` at its site, `Ready k`) -/
+  /-- Reconstruct from the selected entry ledger, actual native inputs and
+  actual return. The strict selected-list bound follows from the successful
+  model opening and placedChannels_length at the existing caller. -/
   after : ∀ {code : Channel.OpenCode} {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {k : Nat}
     {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config},
-    L.runtimeOk c → Gc.LibHeapAt H cap chs c →
+    L.runtimeOk c → Gc.LibHeapAt H cap chs c → chs.length < Gc.maxChannels →
+    Channel.OutInput imageLive H (cap - 65616) 65616 sp ra s0 s1 s2 v head c →
+    Channel.OutNursery H chs c →
     Channel.OpenedOut code imageLive Ready state Customs k H (cap - 65616) 65616 sp ra s0 s1 s2 v head c d →
     L.runtimeOk d
 
-/-- **The runtime across `caml_ml_open_descriptor_out`** (named premise, lane
-a6-gc, whose concrete supplier remains open for `Gc.f1Layout`):
-some custom-allocation readiness `Ready` over the runtime's `state`, as
-`OpenOutRuntimeAt`. `L.runtimeOk` carries no custom-allocation state. -/
+/-- Existential packaging of the channel-opening runtime interface.
+The F1 instance is supplied by f1_openOut_runtime from CustomMemCall.
+L.runtimeOk carries no physical custom counts; counted callers retain them. -/
 def OpenOutRuntime (L : OCaml.Layout) : Prop :=
   ∃ Ready state Customs, OpenOutRuntimeAt L Ready state Customs
 

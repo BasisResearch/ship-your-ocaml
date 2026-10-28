@@ -122,8 +122,10 @@ theorem mutableStatics_ignored : ∀ w ∈ mutableStatics, w ∈ ignoredStatics 
   simp only [mutableStatics, List.mem_cons, List.not_mem_nil, or_false] at hw
   rcases hw with rfl | rfl | rfl | rfl <;> simp [ignoredStatics]
 
-/-- A static range misses every ignored static word. -/
-def StaticApart (x n : Nat) : Prop := ∀ w ∈ ignoredStatics, x + n ≤ w.lo ∨ w.hi ≤ x
+/-- A core static read misses ignored stores and the independently checked channel-list head. -/
+def StaticApart (x n : Nat) : Prop := ∀ w ∈
+    (⟨Layout.sym_caml_all_opened_channels, Layout.sym_caml_all_opened_channels + 8⟩ :: ignoredStatics),
+    x + n ≤ w.lo ∨ w.hi ≤ x
 
 instance (x n : Nat) : Decidable (StaticApart x n) := by unfold StaticApart; infer_instance
 
@@ -131,16 +133,16 @@ instance (x n : Nat) : Decidable (StaticApart x n) := by unfold StaticApart; inf
 theorem StaticApart.above {x n : Nat} (h : 0x8007ca38 ≤ x) : StaticApart x n := by
   intro w hw
   simp only [ignoredStatics, List.mem_cons, List.not_mem_nil, or_false] at hw
-  simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_extra_heap_resources, Layout.sym_caml_callback_depth, Layout.sym_errno] at *
-  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
+  simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_extra_heap_resources, Layout.sym_caml_callback_depth, Layout.sym_caml_all_opened_channels, Layout.sym_errno] at *
+  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
 
 /-- Between `errno` and the last malloc global window (the best-fit lists). -/
 theorem StaticApart.between {x n : Nat} (low : 0x80064d4c ≤ x) (high : x + n ≤ 0x8007c9e8) :
     StaticApart x n := by
   intro w hw
   simp only [ignoredStatics, List.mem_cons, List.not_mem_nil, or_false] at hw
-  simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_extra_heap_resources, Layout.sym_caml_callback_depth, Layout.sym_errno] at *
-  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
+  simp only [Layout.sym_impure_data, Layout.sym_oo_last_id, Layout.sym_caml_extra_heap_resources, Layout.sym_caml_callback_depth, Layout.sym_caml_all_opened_channels, Layout.sym_errno] at *
+  rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
 
 /-- The gaps of `[lo, hi)` around the windows `ws`. -/
 def gaps : Nat → List W → Nat → List W
@@ -274,7 +276,7 @@ theorem footprint_keepD {ws : List W} {m m' : Std.ExtHashMap Nat (BitVec 8)}
 
 /-- A static read missing the ignored statics. -/
 theorem in_bss {x n : Nat} (h : x + n ≤ Layout.sym_bss_end) (side : StaticApart x n) : InKept x n := by
-  obtain ⟨v, member, low, high⟩ := in_gaps (lo := 0) (Nat.zero_le x) h side
+  obtain ⟨v, member, low, high⟩ := in_gaps (lo := 0) (Nat.zero_le x) h (fun w hw => side w (List.mem_cons_of_mem _ hw))
   exact ⟨v, List.mem_append_left _ member, low, high⟩
 
 theorem in_youngLimit {x n : Nat} (low : f1Domain ≤ x) (h : x + n ≤ f1Domain + Layout.off_young_ptr) :
@@ -417,48 +419,72 @@ theorem customCall_in_kept : ∀ obs ∈ customCallWords, InKept obs.1 8 := by
     refine ⟨⟨_, _⟩, ?_, Nat.le_refl _, Nat.le_refl _⟩
     simp [keptFootprint, dynamicKept, f1Domain]
 
-/-- **Core transfer**: if every kept footprint read is unchanged, the pins
-survive and only `young_ptr` may differ among the runtime fields. -/
-theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem x n = bytesT c.σ.mem x n)
+/-- Normalize only scalar pin addresses when checking separation from the
+mutable list head; symbolic small-list indices retain their actual bounds. -/
+macro "core_outside" : tactic => `(tactic|
+  first
+  | decide
+  | (simp only [smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.bf_small_count,
+       Layout.sym_caml_all_opened_channels, Layout.off_bf_small_free, Layout.off_bf_small_merge,
+       f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.off_bf_left,
+       Layout.off_bf_right, Layout.off_bf_prev, Layout.off_bf_next, Layout.off_young_ptr,
+       Layout.off_young_limit, Layout.off_stack_high, Layout.off_stack_threshold,
+       Layout.off_trap_barrier, Layout.off_backtrace_active] at *
+     omega))
+
+/-- **Core transfer**: kept reads outside the mutable channel-list head retain
+all pins; the heap supplier independently reconstructs the actual list. Only
+`young_ptr` may differ among the runtime fields. -/
+theorem f1_core_except_head {c c' : Config}
+    (keep : ∀ x n, InKept x n →
+      (x + n ≤ Layout.sym_caml_all_opened_channels ∨ Layout.sym_caml_all_opened_channels + 8 ≤ x) →
+      bytesT c'.σ.mem x n = bytesT c.σ.mem x n)
     (heap : LibHeap c → LibHeap c') (pins : F1Pins c) :
     F1Pins c' ∧ runtimeFields c' =
       { runtimeFields c with youngPtr := (word c' (f1Domain + Layout.off_young_ptr)).toNat } := by
-  have w8 : ∀ x, InKept x 8 → word c' x = word c x := fun x h => keep x 8 h
-  have w4 : ∀ x, InKept x 4 → word32 c' x = word32 c x := fun x h => keep x 4 h
+  have w8 (x : Nat) (h : InKept x 8)
+      (outside : x + 8 ≤ Layout.sym_caml_all_opened_channels ∨ Layout.sym_caml_all_opened_channels + 8 ≤ x) :
+      word c' x = word c x := keep x 8 h outside
+  have w4 (x : Nat) (h : InKept x 4)
+      (outside : x + 4 ≤ Layout.sym_caml_all_opened_channels ∨ Layout.sym_caml_all_opened_channels + 8 ≤ x) :
+      word32 c' x = word32 c x := keep x 4 h outside
   have b : ∀ {x n}, x + n ≤ Layout.sym_bss_end → StaticApart x n → InKept x n := in_bss
   have dom : word c' Layout.sym_Caml_state = word c Layout.sym_Caml_state :=
-    w8 _ (b (by simp [Layout.sym_Caml_state, Layout.sym_bss_end]) (by decide))
+    w8 _ (b (by simp [Layout.sym_Caml_state, Layout.sym_bss_end]) (by decide)) (by core_outside)
   have domNat : (word c Layout.sym_Caml_state).toNat = f1Domain := by
     rw [pins.domain]; simp [f1Domain, WhileMinRuntime.domain]
   have young : ∀ off, Layout.off_young_ptr + 8 ≤ off → off + 8 ≤ 64 →
       word c' (f1Domain + off) = word c (f1Domain + off) :=
-    fun off l h => w8 _ (in_youngRest (by omega) (by omega))
+    fun off l h => w8 _ (in_youngRest (by omega) (by omega)) (by core_outside)
   have limit : word c' (f1Domain + Layout.off_young_limit) = word c (f1Domain + Layout.off_young_limit) :=
-    w8 _ (in_youngLimit (by simp [Layout.off_young_limit]) (by simp [Layout.off_young_limit, Layout.off_young_ptr]))
+    w8 _ (in_youngLimit (by simp [Layout.off_young_limit]) (by simp [Layout.off_young_limit, Layout.off_young_ptr])) (by core_outside)
   have fields : runtimeFields c' =
       { runtimeFields c with youngPtr := (word c' (f1Domain + Layout.off_young_ptr)).toNat } := by
     simp only [runtimeFields, domainWord, dom, domNat]
     rw [young _ (by decide) (by decide), young _ (by decide) (by decide), young _ (by decide) (by decide),
       young _ (by decide) (by decide), limit,
-      w4 _ (b (by simp [Layout.sym_caml_something_to_do, Layout.sym_bss_end]) (by decide))]
+      w4 _ (b (by simp [Layout.sym_caml_something_to_do, Layout.sym_bss_end]) (by decide)) (by core_outside)]
   have node : ∀ off, off + 8 ≤ 40 →
       InKept (WhileMinRuntime.freeBlock.block + off) 8 := fun off h =>
     in_block (by simp [WhileMinRuntime.freeBlock]; omega) (by simp [WhileMinRuntime.freeBlock]; omega)
   have shape := pins.freeList
-  refine ⟨⟨?_, ?_, ?_, ?_, ExitGlobals.transfer (fun x hx side => keep x 8 (b hx side)) pins.exit,
-    by rw [w8 _ in_trapBarrier]; exact pins.trapBarrier, by rw [w8 _ in_backtrace]; exact pins.backtraceOff,
+  refine ⟨⟨?_, ?_, ?_, ?_, ExitGlobals.transfer (fun x hx side => keep x 8 (b hx side) (side _ List.mem_cons_self)) pins.exit,
+    by rw [w8 _ in_trapBarrier (by core_outside)]; exact pins.trapBarrier, by rw [w8 _ in_backtrace (by core_outside)]; exact pins.backtraceOff,
     by rw [w8 _ (b (by simp [Layout.sym_caml_channel_mutex_unlock_exn, Layout.sym_bss_end])
-      (by decide))];
+      (by decide)) (by core_outside)];
        exact pins.channelUnlock,
-    ConsoleRuntime.transfer (fun x hx side => keep x 8 (b hx side)) pins.console, heap pins.libHeap,
-    by rw [w4 _ (b (by simp [Layout.sym_caml_gc_phase, Layout.sym_bss_end]) (by decide))]; exact pins.gcIdle,
-    by rw [w8 _ (b (by simp [Layout.sym_caml_start_code, Layout.sym_bss_end]) (by decide))]; exact pins.codeWord,
+    ConsoleRuntime.transfer (fun x hx side => keep x 8 (b hx side) (side _ List.mem_cons_self)) pins.console, heap pins.libHeap,
+    by rw [w4 _ (b (by simp [Layout.sym_caml_gc_phase, Layout.sym_bss_end]) (by decide)) (by core_outside)]; exact pins.gcIdle,
+    by rw [w8 _ (b (by simp [Layout.sym_caml_start_code, Layout.sym_bss_end]) (by decide)) (by core_outside)]; exact pins.codeWord,
     by rw [w8 _ (b (by simp [Layout.sym_caml_prim_table, Layout.off_prim_contents, Layout.sym_bss_end])
-      (by decide))]; exact pins.primsWord,
-    by rw [w8 _ (b (by simp [Layout.sym_caml_exe_name, Layout.sym_bss_end]) (by decide))]; exact pins.exeNameWord,
-    fun i => by unfold byte; rw [keep _ 1 (in_exeName i.isLt)]; exact pins.exeName i,
-    by rw [w8 _ (b (by simp [Layout.sym_caml_atom_table, Layout.sym_bss_end]) (by decide))]; exact pins.atomsWord,
-    ⟨fun obs member => (w8 _ (customCall_in_kept obs member)).trans (pins.customPins.words obs member)⟩⟩,
+      (by decide)) (by core_outside)]; exact pins.primsWord,
+    by rw [w8 _ (b (by simp [Layout.sym_caml_exe_name, Layout.sym_bss_end]) (by decide)) (by core_outside)]; exact pins.exeNameWord,
+    fun i => by unfold byte; rw [keep _ 1 (in_exeName i.isLt) (Or.inr (by simp only [exeNameAddr, Layout.sym_caml_all_opened_channels]; omega))]; exact pins.exeName i,
+    by rw [w8 _ (b (by simp [Layout.sym_caml_atom_table, Layout.sym_bss_end]) (by decide)) (by core_outside)]; exact pins.atomsWord,
+    ⟨fun obs member => (w8 _ (customCall_in_kept obs member) (by
+      have cert : ∀ obs ∈ customCallWords, obs.1 + 8 ≤ Layout.sym_caml_all_opened_channels ∨
+          Layout.sym_caml_all_opened_channels + 8 ≤ obs.1 := by decide
+      exact cert obs member)).trans (pins.customPins.words obs member)⟩⟩,
     fields⟩
   · exact {
       nonnull := shape.nonnull
@@ -471,31 +497,39 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
           simp only [smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.sym_bss_end,
             Layout.bf_small_count] at hi ⊢
           omega
-        exact ⟨by rw [w8 _ (b (by simp only [Layout.off_bf_small_free]; omega) (StaticApart.between (by simp only [Layout.off_bf_small_free, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size] at hi ⊢; omega) (by simp only [Layout.off_bf_small_free, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.bf_small_count] at hi ⊢; omega)))]; exact e.head,
-          by rw [w8 _ (b (by simp only [Layout.off_bf_small_merge]; omega) (StaticApart.between (by simp only [Layout.off_bf_small_merge, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size] at hi ⊢; omega) (by simp only [Layout.off_bf_small_merge, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.bf_small_count] at hi ⊢; omega)))]; exact e.merge⟩
-      bitmap := by rw [w4 _ (b (by simp [Layout.sym_bf_small_map, Layout.sym_bss_end]) (by decide))]; exact shape.bitmap
-      root := by rw [w8 _ (b (by simp [Layout.sym_bf_large_tree, Layout.sym_bss_end]) (by decide))]; exact shape.root
-      least := by rw [w8 _ (b (by simp [Layout.sym_bf_large_least, Layout.sym_bss_end]) (by decide))]; exact shape.least
+        exact ⟨by rw [w8 _ (b (by simp only [Layout.off_bf_small_free]; omega) (StaticApart.between (by simp only [Layout.off_bf_small_free, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size] at hi ⊢; omega) (by simp only [Layout.off_bf_small_free, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.bf_small_count] at hi ⊢; omega))) (by core_outside)]; exact e.head,
+          by rw [w8 _ (b (by simp only [Layout.off_bf_small_merge]; omega) (StaticApart.between (by simp only [Layout.off_bf_small_merge, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size] at hi ⊢; omega) (by simp only [Layout.off_bf_small_merge, smallSlot, Layout.sym_bf_small_fl, Layout.bf_small_size, Layout.bf_small_count] at hi ⊢; omega))) (by core_outside)]; exact e.merge⟩
+      bitmap := by rw [w4 _ (b (by simp [Layout.sym_bf_small_map, Layout.sym_bss_end]) (by decide)) (by core_outside)]; exact shape.bitmap
+      root := by rw [w8 _ (b (by simp [Layout.sym_bf_large_tree, Layout.sym_bss_end]) (by decide)) (by core_outside)]; exact shape.root
+      least := by rw [w8 _ (b (by simp [Layout.sym_bf_large_least, Layout.sym_bss_end]) (by decide)) (by core_outside)]; exact shape.least
       header := by
         rw [w8 _ (in_block (by simp [WhileMinRuntime.freeBlock, Layout.header_bytes])
-          (by simp [WhileMinRuntime.freeBlock, Layout.header_bytes]))]
+          (by simp [WhileMinRuntime.freeBlock, Layout.header_bytes])) (by core_outside)]
         exact shape.header
       node := by
         rw [w4 _ (in_block (by simp [WhileMinRuntime.freeBlock, Layout.off_bf_isnode])
-          (by simp [WhileMinRuntime.freeBlock, Layout.off_bf_isnode]))]
+          (by simp [WhileMinRuntime.freeBlock, Layout.off_bf_isnode])) (by core_outside)]
         exact shape.node
-      left := by rw [w8 _ (node _ (by simp [Layout.off_bf_left]))]; exact shape.left
-      right := by rw [w8 _ (node _ (by simp [Layout.off_bf_right]))]; exact shape.right
-      prev := by rw [w8 _ (node _ (by simp [Layout.off_bf_prev]))]; exact shape.prev
-      next := by rw [w8 _ (node _ (by simp [Layout.off_bf_next]))]; exact shape.next
-      total := by rw [w8 _ (b (by simp [Layout.sym_caml_fl_cur_wsz, Layout.sym_bss_end]) (by decide))]; exact shape.total }
+      left := by rw [w8 _ (node _ (by simp [Layout.off_bf_left])) (by core_outside)]; exact shape.left
+      right := by rw [w8 _ (node _ (by simp [Layout.off_bf_right])) (by core_outside)]; exact shape.right
+      prev := by rw [w8 _ (node _ (by simp [Layout.off_bf_prev])) (by core_outside)]; exact shape.prev
+      next := by rw [w8 _ (node _ (by simp [Layout.off_bf_next])) (by core_outside)]; exact shape.next
+      total := by rw [w8 _ (b (by simp [Layout.sym_caml_fl_cur_wsz, Layout.sym_bss_end]) (by decide)) (by core_outside)]; exact shape.total }
   · rw [dom]; exact pins.domain
   · rw [w8 _ (in_stackFields (by simp [Layout.off_stack_high]) (by simp [Layout.off_stack_high,
-      Layout.off_stack_threshold]))]
+      Layout.off_stack_threshold])) (by core_outside)]
     exact pins.stackHigh
   · rw [w8 _ (in_stackFields (by simp [Layout.off_stack_high, Layout.off_stack_threshold])
-      (by simp [Layout.off_stack_threshold]))]
+      (by simp [Layout.off_stack_threshold])) (by core_outside)]
     exact pins.threshold
+
+/-- Core transfer with the ordinary unchanged-footprint interface. -/
+theorem f1_core {c c' : Config}
+    (keep : ∀ x n, InKept x n → bytesT c'.σ.mem x n = bytesT c.σ.mem x n)
+    (heap : LibHeap c → LibHeap c') (pins : F1Pins c) :
+    F1Pins c' ∧ runtimeFields c' =
+      { runtimeFields c with youngPtr := (word c' (f1Domain + Layout.off_young_ptr)).toNat } :=
+  f1_core_except_head (fun x n inside _ => keep x n inside) heap pins
 
 /-- Read-equality on the whole footprint transfers `f1Runtime`. -/
 theorem f1_transfer {c c' : Config} (keep : ∀ x n, InFootprint x n → bytesT c'.σ.mem x n = bytesT c.σ.mem x n)
@@ -513,7 +547,8 @@ theorem f1_transfer {c c' : Config} (keep : ∀ x n, InFootprint x n → bytesT 
 
 /-- The open-channel list head is a kept static word. -/
 theorem in_channelsHead : InKept Layout.sym_caml_all_opened_channels 8 :=
-  in_bss (by simp [Layout.sym_caml_all_opened_channels, Layout.sym_bss_end]) (by decide)
+  ⟨⟨Layout.sym_caml_extra_heap_resources + 8, Layout.sym_caml_callback_depth⟩,
+    List.mem_append_left _ (by simp [staticKept, gaps, ignoredStatics]), by decide, by decide⟩
 
 /-- Equal memories keep `f1Runtime`. -/
 theorem f1_sameMemory {c c' : Config} (memory : c'.σ.mem = c.σ.mem) (ok : f1Runtime c) : f1Runtime c' :=

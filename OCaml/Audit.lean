@@ -8312,3 +8312,14 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Gc.LibHeapAt.open_credit
 #print axioms OCaml.Vm.Sim.counted_f1_out_channels_list_returns
 #print axioms OCaml.Vm.Gc.LibHeapAt.customHeapCredit
+
+-- Actual native opening runtime and counted consumers.
+#print axioms OCaml.Vm.Gc.f1_core_except_head
+#print axioms OCaml.Vm.Sim.opening_kept_statics
+#print axioms OCaml.Vm.Sim.opening_table_frame
+#print axioms OCaml.Vm.Sim.opening_core_frame
+#print axioms OCaml.Vm.Sim.opening_restore_heap
+#print axioms OCaml.Vm.Sim.opening_runtime
+#print axioms OCaml.Vm.Sim.f1_openOut_runtime
+#print axioms OCaml.Vm.Sim.counted_f1_open_descriptor_out_returns
+#print axioms OCaml.Vm.Sim.counted_f1_open_descriptor_in_returns

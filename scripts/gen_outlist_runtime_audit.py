@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused audit of every new listing-runtime and custom-credit theorem."""
+"""Focused audit of opening/listing runtime and selected custom credit."""
 import argparse
 from pathlib import Path
 import re
@@ -9,6 +9,7 @@ FILES = [
     'OCaml/Vm/Sim/OutListObstruction.lean',
     'OCaml/Vm/Sim/OutListF1.lean',
     'OCaml/Vm/Sim/OutListF1Runtime.lean',
+    'OCaml/Vm/Sim/OpenOutF1Runtime.lean',
     'OCaml/Vm/Gc/CustomMemCredit.lean',
     'OCaml/Vm/Gc/CustomCreditDefs.lean',
     'OCaml/Vm/Gc/Generated/CustomRealloc.lean',
@@ -17,6 +18,15 @@ FILES = [
 ]
 REGRESSIONS = [
     'OCaml.Vm.Gc.LibHeapAt.open_credit',
+    'OCaml.Vm.Gc.f1_core_except_head',
+    'OCaml.Vm.Gc.in_channelsHead', 'OCaml.Vm.Gc.in_bss',
+    'OCaml.Vm.Gc.ExitGlobals.transfer', 'OCaml.Vm.Gc.ConsoleRuntime.transfer',
+    'OCaml.Vm.Sim.counted_f1_open_descriptor_out_returns',
+    'OCaml.Vm.Sim.counted_f1_open_descriptor_in_returns',
+    'OCaml.Vm.Sim.open_out_return',
+    'OCaml.Vm.Sim.counted_caml_ml_open_descriptor_out_returns',
+    'OCaml.Vm.Sim.counted_caml_ml_open_descriptor_in_returns',
+    'OCaml.Vm.Primitives.Channel.OpenedOut.context',
     'OCaml.Vm.Sim.counted_f1_out_channels_list_returns',
     'OCaml.Vm.Gc.LibHeapAt.keep_windows', 'OCaml.Vm.Gc.LibHeapAt.keep_records',
     'OCaml.Vm.Gc.LibHeapAt.link', 'OCaml.Vm.Gc.LibHeapAt.grow', 'OCaml.Vm.Gc.LibHeapAt.insert',
@@ -46,11 +56,15 @@ REGRESSIONS = [
 
 def declarations(path):
     namespace = []
+    blocks = []
     for line in (ROOT / path).read_text().splitlines():
         if match := re.match(r'^namespace (\S+)', line):
             namespace.append(match[1])
+            blocks.append('namespace')
+        elif re.match(r'^section(?: |$)', line):
+            blocks.append('section')
         elif re.match(r'^end(?: |$)', line):
-            if namespace:
+            if blocks and blocks.pop() == 'namespace':
                 namespace.pop()
         elif match := re.match(r"^(?:theorem|#derive_case) ([\w.']+)", line):
             name = match[1] + ('_seg' if line.startswith('#derive_case') else '')

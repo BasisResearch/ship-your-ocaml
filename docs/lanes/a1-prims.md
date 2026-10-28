@@ -1,5 +1,68 @@
 # A1 F1 primitive summaries
 
+## Actual native opening runtime (2026-10-28; checked for lead review)
+
+The opening runtime is assembled relative only to named `CustomMemCall` in
+`Sim/OpenOutF1Runtime.lean`. `OpenOutRuntimeAt.after` receives its caller's
+existing `OutInput`/`OutNursery` and the strict selected-list bound derived
+from `openChan_bound` and `placedChannels_length`. No arbitrary stack/nursery
+frame or returned `LibHeapAt` is assumed.
+
+`opening_restore_heap` selects `OpenedOut.spatial_heap`'s one returned H/cap,
+retained full malloc block, named/custom ledgers and local custom separation.
+The spatial return now protects the fresh represented record in both named
+and custom ledgers. Actual fresh-block evidence supplies record alignment,
+coverage, separation from covered payload regions and all existing records;
+unchanged actual ref-table words retain its geometry and dynamic storage.
+`LibHeapAt.open_credit` and the returned spending inequality reconstruct
+both room and credit after adding the channel: the record request spends
+65616 while the future-channel decrement is `recordCharge = 2^17`.
+
+`f1_core_except_head` factors core pin transfer outside the changed opened
+list head, preserving the original full-footprint interface and ordinary
+frames. `StaticApart` excludes the independently checked head for core reads.
+Actual native stack, fresh record, covered regions and selected custom
+footprint frame the remaining words; runtime bounds use the actual
+`young_ptr - 24`. `OpenedOut.context` supplies independent call pins.
+`counted_f1_open_descriptor_out_returns` and its input counterpart consume
+this instance. `counted_channel_c_call1_next` now takes `CustomMemCall`
+directly for all three native channel cases, including the concrete listing
+runtime from the previous handoff. Physical counts remain intact.
+
+Validation is complete; checked edits remain uncommitted for lead review.
+
+- Guarded/capped affected build: **3683 jobs, passed**, with
+  `lake build OCaml.Vm.Sim.OutListRuntimeAudit OCaml.Vm.Gc.CustomPhysicalAudit
+  OCaml.Vm.Sim.CountedControlRows OCaml.Vm.Sim.F1Table
+  OCaml.Vm.Sim.WhileMinTable`, `/tmp/opening-runtime-affected.log`.
+  This includes opening input/frame/payload/placement/geometry/return,
+  concrete opening and listing runtime, counted channel/C_CALL/entry/control
+  consumers, F1Runtime and ordinary F1/whileMin tables.
+- Direct focused `lake env lean OCaml/Vm/Sim/OutListRuntimeAudit.lean`:
+  **161 exact reports**, `/tmp/opening-runtime-focused.log`.
+  **20** use no axioms; **141** use only
+  `{propext, Classical.choice, Quot.sound}`. All **nine new theorems** are
+  included and registered exactly once for full Audit. Exact membership,
+  order, allowed axioms and registrations are checked in
+  `/tmp/opening-runtime-focused-check.json` by
+  `/tmp/check-opening-runtime-audit.py`. The generator now tracks sections
+  separately from namespaces when discovering theorem names.
+- Custom-table request/geometry, opening-phase, F1-table and focused-audit
+  generator checks pass. Hole, 27-rule discipline, abstraction and whitespace
+  checks pass; C4 remains 3. DEAD-ENDS records the full-footprint head route,
+  actual record-size distinction and adjacent young-limit readback route.
+- Every Lean launch checked `free -g` (available >=25 GB), ran serially via
+  `python3 scripts/lean-guarded.py --log /tmp/<task>.log --
+  scripts/lean-capped.sh lake ...`, and retained the inherited 12 GiB,
+  two-thread/default-budget limits. No virtual-memory limit, generated-output
+  hand edit, other worker/worktree, Git metadata/queue write or commit was used.
+
+There is no residual opening runtime supplier beyond the accepted named
+`CustomMemCall`. Its concrete native execution/credit/context/table duties
+remain named. Full `OCaml.Audit`, review and landing via `scripts/integrate.sh`
+stay with the lead. GoodF1 is unchanged, BarrierGrowthFull stays G2 and C4
+round 2 waits for F1.
+
 ## Selected custom credit and concrete listing runtime (2026-10-28)
 
 The numeric reserve seam is discharged relative to the accepted named

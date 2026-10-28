@@ -1,5 +1,33 @@
 # Lane a6-gc
 
+## Actual native opening runtime (2026-10-28)
+
+- `f1_openOut_runtime` supplies concrete OpenOutRuntimeAt at f1Layout relative
+  only to named CustomMemCall. after now retains the actual existing
+  OutInput/OutNursery and the successful selected-list bound; no arbitrary
+  frame or returned LibHeapAt is assumed.
+- Opening selects spatial_heap's one credited returned H/cap, full fresh
+  malloc block and named/custom ledgers. The returned spatial protection
+  includes the new represented record. Actual list/link/alignment/coverage,
+  payload and dynamic remembered/custom separation and unchanged ref-table
+  geometry reconstruct all heap fields. open_credit pays the real 65616
+  charge from recordCharge = 2^17 and returned spending reconstructs both
+  ordinary room and custom credit on that same capacity.
+- f1_core_except_head preserves core pins while retaining the original full
+  footprint API for ordinary frames; the changed head comes from actual
+  native linking. Actual limit readback, young_ptr minus 24 and
+  OpenedOut.context reconstruct RuntimeOk and independent call pins.
+  Counted opening in/out and counted_channel_c_call1_next now consume only
+  CustomMemCall, as the listing return already did. Physical counts remain.
+- Affected guarded build: **3683 jobs, passed**. All **161 exact focused
+  reports**, including all **nine new theorems**, use only allowed axioms
+  (20 use none). Each new theorem is registered once for full Audit.
+  Generator, hole, discipline, abstraction and whitespace gates pass.
+  Exact commands/logs are at the top of a1-prims.md; rejected routes are in
+  DEAD-ENDS. Checked edits remain uncommitted for lead review/integration.
+  Full Audit stays with the lead. CustomMemCall remains named, GoodF1 is
+  unchanged, BarrierGrowthFull stays G2 and C4 round 2 waits for F1.
+
 ## Selected credit and concrete listing return (2026-10-28)
 
 - LibHeapAt now carries ordinary reserve plus the actual one-time 1 MiB
