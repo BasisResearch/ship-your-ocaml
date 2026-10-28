@@ -12,8 +12,12 @@ mkdir -p $O/sandbox
 gcc -O1 -Wall -o $O/driver-linux tcb/validation/driver.c
 gcc -O1 -w -DMEMFS -Ic/src/config -o $O/driver-memfs tcb/validation/driver.c
 python3 tcb/validation/gen.py $O/all.scripts ${Q:+--quick}
-$O/driver-linux $O/all.scripts $O/linux.trace $(realpath $O/sandbox) < /dev/null > /dev/null
-$O/driver-memfs $O/all.scripts $O/memfs.trace < /dev/null > /dev/null
+# Scripts probe fd 2, including lseek. Give each driver its own stderr file:
+# inheriting the gate's redirected stderr would move the gate log's offset.
+$O/driver-linux $O/all.scripts $O/linux.trace $(realpath $O/sandbox) < /dev/null > /dev/null 2> $O/linux.driver.log \
+  || { cat $O/linux.driver.log >&2; exit 1; }
+$O/driver-memfs $O/all.scripts $O/memfs.trace < /dev/null > /dev/null 2> $O/memfs.driver.log \
+  || { cat $O/memfs.driver.log >&2; exit 1; }
 lake build tcbcheck 2>&1 | tail -1
 for b in linux memfs; do
   echo "== $b"
