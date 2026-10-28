@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 19:20 UTC. Target: close Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 19:58 UTC. Target: close Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -47,6 +47,13 @@ pushes to origin/main. Reviewed snapshots remain on `keep/*` branches.
 | `9f4e4fa1` | Concrete channel-opening runtime and counted in/out adapters, relative only to CustomMemCall | Nine new registrations; 3,683 jobs; 161 focused (141 allowed, 20 pure); `logs/opening-runtime-*` |
 | `ce120d18` | Original-caller bounded least-large allocation wrapper, actual color/header, remaining representation, exact counters/log/ABI | 39 new registrations; 1,419 jobs; 43 focused (40 allowed, three pure); `logs/a6-wrapper-*` |
 | `26201d6b` | Complete counted C_CALL1 using concrete ordinary/channel/counter/flush returns and actual native exit; table 133/134 | Four new registrations; 3,733 jobs; 22 focused (21 allowed, one pure); `logs/counted-unary-*` |
+| `d9c0be7b` | Actual reset through reverse CODE scan, lseek and return at 0x80004eb0; length 764, fd position 57, selected ownership/runtime/source frames | 80 new registrations; 3,545 jobs; 80 focused (78 allowed, two pure); 2,157 generated outputs and ELF pins; `logs/code-scan-*` |
+
+`d9c0be7b` follows the active fixed gate; it is not in candidate `92be3a3e`.
+The CODE worker was stopped after its checks and notes were complete and
+it remained quiet with no active command. Reviewed source hashes were
+unchanged; its task was preserved and committed. Only additive dead-end
+notes conflicted on rebase, and both were retained.
 
 Each focused list was checked exactly against its registrations and allowed
 axioms; the full integration gate remains required. Rebase conflicts were
@@ -56,7 +63,8 @@ additive lane/dead-end notes and retained both sides. Snapshot branches:
 `keep/startup-code-source-reviewed-20261028`,
 `keep/opening-runtime-reviewed-20261028`,
 `keep/g2-large-wrapper-reviewed-20261028`,
-`keep/counted-unary-reviewed-20261028`.
+`keep/counted-unary-reviewed-20261028`,
+`keep/startup-code-scan-reviewed-20261028`.
 
 ## Active workers and next tasks
 
@@ -68,16 +76,16 @@ No active worker cache is copied into bprime.
 
 | Slot | Current task | Log |
 | --- | --- | --- |
-| `syo-wt/a6-gc-next2` | Actual CODE reverse scan, lseek and return, including CRCS/CODE second-byte mismatch | `logs/sol-a6-gc-next2-20261028-184250-2791879.log` |
+| `syo-wt/a6-gc-next2` | Original-caller exact/next-size small G2 wrapper | `/tmp/syo-g2-small-wrapper-launch.log` |
 | `syo-wt/a1-prims-next` | Full native format parser including l/n/L and actual signed/unsigned caller prefix to alloc_sprintf | `logs/sol-a1-prims-next-20261028-184554-2825386.log` |
 | Lead | Gate, independent review, next-task contracts and integration | main and bprime |
 
-The parser worker resumed output after a quiet interval; it is active.
-Current task files: `tasks/sol-code-seek-scan.md`, `tasks/sol-format-parse-all.md`.
-Next G2 rotation: `tasks/sol-g2-small-wrapper.md` (original exact/next-small
-wrapper, factoring common caller frames), then `tasks/sol-code-load.md`
-(actual CODE allocation/read to code-fragment registration entry). Next primitive rotation:
-`tasks/sol-named-reserve.md`; subsequent formatting decoder work is in
+The parser worker is checking its full caller composition and affected
+consumers after factoring the memory-heavy proof; the parser itself builds.
+The CODE task is reviewed and committed. Current G2 task:
+`tasks/sol-g2-small-wrapper.md`, then `tasks/sol-code-load.md` (actual CODE
+allocation/read to code-fragment registration entry). Current primitive task:
+`tasks/sol-format-parse-all.md`, then `tasks/sol-named-reserve.md` and
 `tasks/sol-format-decoder.md`. Read `docs/lanes/DEAD-ENDS.md` before reassignment.
 All task packets start with binding rules and stay under 40 lines.
 
@@ -98,9 +106,10 @@ All task packets start with binding rules and stay under 40 lines.
 - **Initial relation:** the captured whileMin physical/counting entry is
   checked, but captured memory is not reset execution. Arbitrary Loaded
   does not imply an initial PhysicalCustoms witness.
-- **Reset to Loaded:** actual CODE scan/lseek (active), CODE allocation/read,
+- **Reset to Loaded:** CODE allocation/read,
   code fragments/digest, PRIM, DATA unmarshalling, promotion and system/argv.
-  Current source/descriptor/file observations at the scan entry are reviewed.
+  The complete CODE scan/lseek/return and its current source observations
+  are reviewed in `d9c0be7b`.
 - **G2:** small original wrappers, remaining tree/size cases, requests>16,
   heap expansion, caller invariant production, full allocator readiness and
   collection. The counted table requires returned custom-count preservation
