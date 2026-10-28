@@ -1,5 +1,16 @@
 # Routes not to repeat
 
+- 2026-10-28 custom read-context inspection: native `caml_alloc_custom_mem`
+  reads ratio/max-size globals, domain heap sizes and memprof state beyond
+  the current mutable custom footprint (`custom.c`, `memory.c`). Its input
+  currently contains leaf/heap/register/frame/nursery facts, while the global
+  readiness frame preserves only state bytes and Caml_state. Do not infer
+  those external runtime observations from physical count/ownership or the
+  rational quiet-bound inequality. Audit and supply concrete stable call
+  pins at actual native boundaries; `sol-custom-physical-runtime.md` queues
+  this work. This is source/interface inspection, not a checked machine
+  counterexample or global inconsistency claim.
+
 - 2026-10-28 counted division channel semantics: fully splitting the unfolded
   DIVINT/MODINT effect before applying the shared `raiseTo` channel lemma
   expands its dependent trap-frame match and fails dependent elimination.
