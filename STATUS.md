@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 17:15 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 17:20 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -101,6 +101,8 @@ open. Lead checked all 56 new registrations, 1,337-job final build and
 352 focused reports (350 standard, two pure). Rebase was clean.
 Snapshot: `keep/g2-bounded-large-reviewed-20261028`;
 evidence: `logs/a6-bounded-*`. The next gate includes this repair; the preceding gate did not.
+The gate is active in bprime at `a017d2ba`, started 17:15 UTC;
+log `/tmp/syo-bounded-large-integrate.log`.
 
 ## Active work
 
@@ -113,7 +115,9 @@ evidence: `logs/a6-bounded-*`. The next gate includes this repair; the preceding
 Startup began at 17:10 UTC from `d90918a9`; log:
 `/tmp/syo-startup-code-seek-launch.log`. Its actual descriptor/file source
 must be framed through the executed initialization, not assumed at the new PC.
-G2's remaining branch/wrapper/caller work stays in its ledger for rotation.
+G2's next rotation packet is `tasks/sol-g2-large-wrapper.md`: original-caller
+wrapper conditions and returned representation/color for the reviewed branch.
+Its other branch/caller work stays in the ledger.
 Physical custom work started at 16:56 UTC from `4e99ba14`, reusing the
 checked table geometry, credit and runtime components. Log:
 `/tmp/syo-custom-physical-runtime-launch.log`. Source/destination build locks and
