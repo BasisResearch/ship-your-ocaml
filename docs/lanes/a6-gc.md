@@ -1,5 +1,60 @@
 # Lane a6-gc
 
+## Original-entry least-large bitmap prerequisite obstruction (2026-10-28)
+
+- **Stuck at the requested zero-bitmap derivation.** The current shared
+  `SmallRepresentation` supplies `MapConsistent` for classes 1–16, hence
+  bitmap bits 0–15 only. The real generated filter retains all higher
+  word bits as well. `BestFitEntryLarge.lean:highBitmapMemory` is a concrete
+  memory with all list slots zero and bitmap `0x10000`.
+  `highBitmapMemory_representation` proves its full current representation
+  of the empty family, including headers and physical extents;
+  `highBitmapMemory_filtered` proves that the actual LW/SLLW/AND expression
+  for positive request 1 is `0x10000`. `highBitmapMemory_obstruction` and
+  `no_representation_only_zero_bitmap` formally refute the proposed
+  representation-only supplier. These declarations live in the
+  `BestFitFallback` namespace in `BestFitEntryLarge.lean`. The witness is
+  an interface counterexample; native initialization reachability is not
+  claimed. All-empty lists are only a refuting witness, not a new route
+  precondition. The failed route is recorded in `DEAD-ENDS.md`.
+- The valid slot obligation is factored into shared
+  `EntryInput.missing_input`; `EntryNextInput.missing_input` reuses it.
+  `EntryInput.missing_of_noSuitable` derives the actual readable, zero
+  request slot from the original representation, positive request, small
+  bound and absence of suitable classes, while allowing every lower class.
+  No original-entry execution, generator or existing `allocate_large` run
+  was regenerated or reproved. No extra zero-bitmap assumption is presented
+  as a producer. The bitmap invariant needs strengthening to require unused
+  bits zero, with preservation through the actual exact/next-size writes;
+  native/caller production remains open.
+- Validation: the initial bounded obstruction build passes **1,300 jobs**
+  (`/tmp/a6-entry-large-obstruction-build.log`). The final affected
+  `lake build OCaml.Vm.Gc.BestFitEntryNext OCaml.Vm.Gc.BestFitEntrySmall
+  OCaml.Vm.Gc.BestFitEntryLarge OCaml.Vm.Gc.BestFitNextAudit` passes
+  **1,301 jobs** (`/tmp/a6-entry-large-affected.log`). Separate
+  `lake env lean -M 6000 -j 1 OCaml/Vm/Gc/BestFitNextAudit.lean` passes
+  (`/tmp/a6-entry-large-focused-axioms.log`). All **295** unique reports
+  use only `propext`, `Classical.choice`, `Quot.sound`; all eight new
+  theorems and the changed next-size missing-slot theorem are covered once
+  in that focused audit, already imported by `OCaml.Audit`.
+  Holes, discipline (27 rules), abstraction gate and whitespace checks pass;
+  their logs use `/tmp/a6-entry-large-{holes,discipline,abstraction}.log`.
+  Every Lean launch checked `free -g` (available ≥25 GB), ran alone via
+  `python3 scripts/lean-guarded.py --log <log> -- scripts/lean-capped.sh
+  lake ...` in the inherited 12 GiB/two-thread scope, and retained the
+  existing proof budgets. No generated output or Git metadata was edited.
+- The requested original-entry least-large split/return with derived setup
+  and physical representation/separation is **not discharged**. Source
+  ownership, source/stack setup, large-tree fields/singleton specialization,
+  returned remnant/allocated extents, natural credit and caller/invariant
+  production remain open for that adapter. Existing conditional large
+  machine runs remain proved. Other tree branches, requests >16, colors,
+  full readiness and collection remain open. Counted `BarrierGrowthFull`
+  stays G2; `CustomMemCall` stays named; C4 round 2 waits for F1; GoodF1 is
+  unchanged. No subagents, other worktrees or metadata writes were used.
+  Checked edits remain for lead review, full `OCaml.Audit` and integration
+  through `scripts/integrate.sh`; nothing was committed or landed here.
+
 ## Counted console frame and complete C_CALL4 (2026-10-28)
 
 - The actual console windows now preserve physical customs, natural

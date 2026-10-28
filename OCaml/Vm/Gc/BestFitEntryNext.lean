@@ -50,22 +50,28 @@ theorem EntryNextInput.request_small {R lists c} (input : EntryNextInput R lists
 
 /-- The empty represented family supplies the real slot read; neither the
 slot observation nor a fallback configuration is an entry premise. -/
-theorem EntryNextInput.missing_input {R lists c} (input : EntryNextInput R lists c) :
+theorem EntryInput.missing_input {R lists c} (input : EntryInput R lists c)
+    (small : (R 10).toNat ≤ Layout.bf_small_count) (empty : lists (R 10).toNat = []) :
     MissingInput R c := by
   have linked := input.representation.shape.linked (R 10).toNat
-    input.requestPositive input.request_small
-  rw [input.empty] at linked
+    input.requestPositive small
+  rw [empty] at linked
   have slot : BfShape.slot (R 10).toNat = BestFitSmall.slot (R 10) := by
     simp only [BfShape.slot,BitVec.ofNat_toNat,BitVec.setWidth_eq]
   refine { input.toInput with
-    small := input.request_small
+    small := small
     slotRead := ?_
     empty := ?_ }
   · rw [← slot]
-    exact (BfShape.slot_write _ input.request_small).read
+    exact (BfShape.slot_write _ small).read
   · change bytesT c.σ.mem (BestFitSmall.slot (R 10)).toNat 8 = 0#64
     rw [← slot]
     exact linked
+
+/-- The larger-list route uses the same representation-derived slot proof. -/
+theorem EntryNextInput.missing_input {R lists c} (input : EntryNextInput R lists c) :
+    MissingInput R c :=
+  input.toEntryInput.missing_input input.request_small input.empty
 
 /-- Every fallback input observation is derived at the actual returned
 configuration of the read-only entry probe. -/

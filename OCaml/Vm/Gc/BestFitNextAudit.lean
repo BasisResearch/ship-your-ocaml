@@ -1,6 +1,7 @@
 import OCaml.Vm.Gc.BestFitPreservation
 import OCaml.Vm.Gc.BestFitEntryNext
 import OCaml.Vm.Gc.BestFitEntrySmall
+import OCaml.Vm.Gc.BestFitEntryLarge
 
 /-! Focused standard-axiom audit for the next-size search/pick/pop/split native route.
 The full OCaml.Audit remains the lead integration gate. -/
@@ -302,3 +303,12 @@ The full OCaml.Audit remains the lead integration gate. -/
 #print axioms OCaml.Vm.Gc.BestFitFallback.EntrySmallPost.selected_spec
 #print axioms OCaml.Vm.Gc.BestFitFallback.allocate_entry_small
 #print axioms OCaml.Vm.Gc.BestFitFallback.EntrySmallReturned.live
+
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryInput.missing_input
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryInput.missing_of_noSuitable
+#print axioms OCaml.Vm.Gc.BestFitFallback.highBitmapMemory_bits
+#print axioms OCaml.Vm.Gc.BestFitFallback.highBitmapMemory_slot
+#print axioms OCaml.Vm.Gc.BestFitFallback.highBitmapMemory_representation
+#print axioms OCaml.Vm.Gc.BestFitFallback.highBitmapMemory_filtered
+#print axioms OCaml.Vm.Gc.BestFitFallback.highBitmapMemory_obstruction
+#print axioms OCaml.Vm.Gc.BestFitFallback.no_representation_only_zero_bitmap

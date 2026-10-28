@@ -1,5 +1,25 @@
 # Routes not to repeat
 
+- 2026-10-28 original-entry least-large routing: absence of suitable small
+  classes does **not** supply the native zero-filtered-bitmap branch from
+  the current `SmallRepresentation`. `MapConsistent` constrains only bits
+  0–15, whereas the generated SLLW/AND mask also retains bits 16–31 (and
+  the signed LW may extend bit 31). `BestFitEntryLarge.lean` now checks
+  `highBitmapMemory_obstruction`: a concrete total memory with all small
+  slots zero and bitmap `0x10000` has full `SmallRepresentation` of the
+  empty family; positive request 1 still filters to `0x10000`.
+  `no_representation_only_zero_bitmap` formally refutes that supplier.
+  This is an entry-interface counterexample, not a native reachable-state
+  counterexample. Empty lists are only the refuting witness, not a routing
+  precondition; `EntryInput.missing_of_noSuitable` still permits lower lists.
+  Do not replace the filter by a sixteen-bit filter, assume every list is
+  empty, or add a zero-bitmap premise and call it a producer. Continuing
+  requires a stronger bitmap invariant with unused bits zero, preserved by
+  the real exact/next-size writes; its native/caller production stays open.
+  The existing `allocate_large` run is unchanged. Source/stack ownership,
+  returned large extents and natural accounting have not been discharged
+  by this obstruction. Checked build/audit evidence is in `a6-gc.md`.
+
 - 2026-10-28 counted fresh-id/exit boundaries: stack-window count framing
   does not cover `counterWindows`, whose actual store is the low static
   `oo_last_id` word. This is interface inspection, not a reachable-state
