@@ -109,7 +109,10 @@
   function's allocator/memcpy/return boundaries; do not substitute a
   copy_string return or primitive summary at this splice. This refutes the
   requested direct splice, not the initialized-string composition route or
-  the reachability of the caller. The entry-to-return milestone stays open.
+  the reachability of the caller. `Format/AllocSprintfNative.lean` now
+  composes the initialized-string route through the original native return
+  for plain signed decimal under explicit initial runtime/separation facts;
+  reachable caller suppliers, general formatting and C_CALL2 remain open.
 
 - 2026-10-21: a `workspace-write` worker cannot reach the user systemd bus
   or write the home integration queue. Launch the entire worker in the 12 GB

@@ -17,15 +17,14 @@ def allocationLog (ra sp : BitVec 64) (a len : Nat) (domain young : BitVec 64) :
 /-- Data-only entry requirements. The source needs no OCaml header, sentinel,
 static-image provenance or heap membership. Separation preserves every source
 byte through the native save bank and nursery allocation. -/
-structure Memory (live : Nat → Prop) (ra sp : BitVec 64) (a len : Nat)
-    (g : Nat → BitVec 8) (domain young limit : BitVec 64) (c : Config) : Prop where
+structure Requirements (live : Nat → Prop) (ra sp : BitVec 64) (a len : Nat)
+    (g : Nat → BitVec 8) (domain young limit : BitVec 64) : Prop where
   lengthBound : len < 2^32
   sourceBound : a < 2^64
   returnSlot : WriteWindow (sp - 8#64) 8
   sourceSlot : WriteWindow (sp - 24#64) 8
   lengthSlot : WriteWindow (sp - 32#64) 8
   saveImage : ImageOutside (StringCopy.callerLog ra sp a len)
-  metadata : NurseryMetadata domain young limit c
   metadataOutside : MetadataOutside (StringCopy.callerLog ra sp a len) domain
   geometry : NurseryGeometry save_call.link (sp - 32#64) (BitVec.ofNat 64 len) domain young limit
   separate : NurserySeparation save_call.link (sp - 32#64) (BitVec.ofNat 64 len) domain young
@@ -35,10 +34,17 @@ structure Memory (live : Nat → Prop) (ra sp : BitVec 64) (a len : Nat)
   liveImage : ImageLive live
   copyImage : ImageSeparate (InExt ((StringCopy.resultWord young len).toNat, len))
   textSeparate : ∀ p ∈ mText ++ srcText a len g, ¬ InExt ((StringCopy.resultWord young len).toNat, len) p.1
-  readOnly : ROHolds (vsaModel live) c [] (mText ++ srcText a len g)
   readsOutside : ∀ p ∈ mText ++ srcText a len g, OutL (allocationLog ra sp a len domain young) p.1
   returnOutside : (sp - 8#64).toNat + 8 ≤ (StringCopy.resultWord young len).toNat ∨
     (StringCopy.resultWord young len).toNat + len ≤ (sp - 8#64).toNat
+
+/-- Geometry and read footprints can be supplied before a caller produces the
+source bytes. Only metadata and readable bytes depend on the current state. -/
+structure Memory (live : Nat → Prop) (ra sp : BitVec 64) (a len : Nat)
+    (g : Nat → BitVec 8) (domain young limit : BitVec 64) (c : Config) : Prop
+    extends Requirements live ra sp a len g domain young limit where
+  metadata : NurseryMetadata domain young limit c
+  readOnly : ROHolds (vsaModel live) c [] (mText ++ srcText a len g)
 
 structure Input (live : Nat → Prop) (ra sp : BitVec 64) (a len : Nat)
     (g : Nat → BitVec 8) (domain young limit : BitVec 64) (c : Config) : Prop

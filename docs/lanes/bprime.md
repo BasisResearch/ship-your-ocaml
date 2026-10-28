@@ -1,5 +1,104 @@
 # Lane bprime
 
+## Decimal native alloc_sprintf return (2026-10-28): checked for lead review
+
+Resumed checkpoint `5d6bc04f`, preserving its successful proof composition.
+Read the binding task, `CLAUDE.md`, relevant `PHASES.md`/`PLAN.md` and
+dead-end/lane sections; ran `scripts/abs_inventory.sh` before proof review.
+The inherited `/tmp/sprintf-native-build7.log` completed **1,403 jobs**,
+including `AllocSprintfEntry` and `AllocSprintfNative`.
+
+`AllocSprintfLong.native_return` in `Format/AllocSprintfNative.lean` proves
+`FnSummary 0x80013ec4` through the original native `R 1` return for precisely
+the plain signed LONGINT decimal path. Its `NativeInput` has initial
+register/data, geometry, runtime and separation requirements; no execution,
+primitive return or C_CALL return is a premise.
+
+- `AllocSprintfEntry.enter` reuses generated `pro_fast` and the decoded JAL
+  to `vsnprintf` at `0x8004018c`. The eleven prologue stores establish the
+  first vararg and original ra/s0/s2 save bank. `VsnLongEntry` and
+  `SymbolicInput` follow from those stores and initial library/data facts.
+  The local base is `sp`, original stack and parsed `%ld` are at `sp + 240`,
+  buffer at `sp + 16`, and seven spill slots at `sp + 184` through `sp + 240`
+  (exclusive). `snpAbove = 192` keeps the parsed format outside ownership.
+- `to_return` composes `enter`, `vsnprintf_long_summary` and the existing
+  `short_initialized` with `summary_bind`/`FnSummary` call composition.
+  It reuses `decimal_buffer`, `decimal_fits` and `decimal_nursery_small`:
+  signed 64-bit decimal has length ≤20 and fits the 128-byte buffer with
+  its NUL. The actual short call at `0x80013f1c` targets initialized-string
+  entry `0x8000c284`; that proof executes nursery allocation and memcpy
+  and returns to `0x80013f20`.
+- `finish_return` reuses generated `done_fast`, loading original ra/s0/s2
+  and restoring the original stack, a0 result and all ABI saved registers.
+  `NativePost` retains aligned result, exact `decimalBytes (R 11)`
+  (`strBytes (intToString (R 11).toInt)`), length, header/padding layout,
+  observable output and total-byte memory facts. `NativePost.object`
+  exposes `ObjAt ... (.bytes (decimalPayload (R 11)))`.
+- `NativePost.live` uses `LiveFrame.of_foot` for the selected arena-owned
+  blocks under its explicit bounds/footprint separation premise; `GprsSame`
+  composes register frames and `LogInW`/`frameOn_writeLog` frames the
+  prologue. Outside the enclosing native stack window, `effects` gives
+  the actual initialized-string metadata/save log plus byte-copy log
+  relative to the original memory. `preserved` gives unchanged bytes outside
+  the stack/allocation/copy footprint. `WriteLogObservation` transports
+  agreement at a selected total byte through later stores; it assumes no
+  optional-map equality. Output is `Vsa.Machine.output` equality throughout;
+  no raw `sailOutput` vector equality is inferred.
+
+`InitializedString.Requirements` separates static geometry/footprints from
+`Memory`'s current metadata/readable bytes. This lets the caller supply
+geometry at entry and derive source bytes from the formatter's actual run.
+The existing initialized-string interfaces and consumers still build.
+
+Remaining caller conditions are explicit: the reachable native registers
+and parsed `%ld` bytes; locale/tables, code pins and symbolic read ownership;
+native read/write windows and executable/library separation; young pointer,
+limit, nursery room/alignment and allocator metadata; metadata/code frames
+through formatting; allocation/copy separation from source and original
+save bank; and the selected owned-block footprint premise for `.live`.
+After-call runtime invariants, heap placement/freshness/accounting and their
+transport into a `caml_format_int`/C_CALL2 producer remain to be supplied.
+This native summary does not discharge a complete primitive or C_CALL2.
+General `GoodF1` remains unchanged: `d/i/u/x/X/o`, flags, width, precision,
+large/major allocation and the second formatting/free path remain open.
+`BarrierGrowthFull` stays G2; `CustomMemCall` stays named; C4 round 2 waits
+for F1.
+
+Validation on the resumed worktree:
+
+- Guarded/capped `lake build
+  OCaml.Vm.Primitives.Format.AllocSprintfNative
+  OCaml.Vm.Primitives.InitializedString
+  OCaml.Vm.Primitives.WriteLogObservation
+  OCaml.Vm.Primitives.CamlSysExecutableName
+  OCaml.Vm.Primitives.Format.VsnprintfCaller
+  OCaml.Vm.Primitives.Format.FormatInt`: **1,412 jobs**, successful
+  (`/tmp/sprintf-native-final-build.log`).
+- Guarded/capped `lake env lean
+  experiments/syi/alloc-sprintf-native-audit.lean`: **28 reports**, including
+  every one of the **16 new theorems**, the four initialized-string
+  compatibility theorems, `short_initialized`, four decoded call targets
+  and three decimal facts. All depend only on `propext`, `Classical.choice`,
+  `Quot.sound` (`/tmp/sprintf-native-final-audit.log`, checked for exact
+  coverage/allow-list/registration in
+  `/tmp/sprintf-native-final-audit-check.txt`). All 28 are registered
+  in `OCaml/Audit.lean`; 18 registrations are new. Full Audit stays with
+  the lead gate.
+- Format, string-wrapper, vsnprintf-step and stdio-template generator checks;
+  hole, discipline and abstraction gates; and `git diff --check` pass.
+  Generated outputs are unchanged; C4 remains at 3
+  (`/tmp/sprintf-native-final-checks.log`).
+
+Every Lean invocation used `python3 scripts/lean-guarded.py --log /tmp/...
+-- scripts/lean-capped.sh lake ...`, checked `free -g` first (available
+≥25 GB), and ran alone under the inherited 12 GB cgroup/two-thread policy.
+No proof budget was increased. The duplicate
+`experiments/syi/sprintf-entry-prefix.lean` was removed only after comparing
+it against `AllocSprintfEntry.lean`; all its declarations are retained there
+and the scratch is preserved in checkpoint `5d6bc04f`.
+Checked edits await lead review, commit and `scripts/integrate.sh`; no Git
+metadata/landing queue writes or subagents were used.
+
 ## Initialized-string nursery return (2026-10-27): checked for lead review
 
 Started at clean `5967f970`. Read `CLAUDE.md`, relevant `PHASES.md`/`PLAN.md`
@@ -45,10 +144,11 @@ with initial data/geometry requirements. `decimal_nursery_small` uses the
 proved length ≤20, via `nursery_small_of_le20`. It is not a bound for arbitrary
 GoodF1 formats and does not follow from Fits.
 
-Still open: the complete formatter prologue/wrapper and its original native
-caller return; prologue-derived `VsnLongEntry`/`SymbolicInput`, spilled
-arguments and locale/readbacks; selected ownership, nursery/runtime and
-separation suppliers at the actual reachable call; after-call runtime facts;
+The decimal formatter prologue/wrapper, prologue-derived
+`VsnLongEntry`/`SymbolicInput`, spills/readbacks and original native return
+are now composed in the 2026-10-28 summary above. Still open: selected
+ownership, nursery/runtime and separation suppliers at the actual reachable
+call; after-call runtime facts;
 `caml_format_int` and C_CALL2. General GoodF1 still includes `d/i/u/x/X/o`,
 flags, width, precision and large/major results. `BarrierGrowthFull` stays
 G2, `CustomMemCall` remains named, and C4 round 2 waits for F1.
@@ -110,16 +210,17 @@ it assumes no callee execution or return. `decimal_fits` reuses
 extracts all decimal bytes and the final NUL from the checked `VsnResult`
 with capacity 128, proving length ≤20 and fit including NUL.
 
-**The whole formatter milestone remains open.** The initialized-string
-native return and its short continuation composition are now proved above;
-this does not supply an entry-to-return `caml_alloc_sprintf` summary or
-C_CALL2 producer. The caller prologue still must establish `VsnLongEntry`/`SymbolicInput`,
-locale/data readbacks, code separation and the spilled argument. Its parsed
+**The plain decimal native milestone is now checked above.** The
+entry-to-return `caml_alloc_sprintf` summary establishes
+`VsnLongEntry`/`SymbolicInput` and the spilled argument from the prologue;
+initial locale/data readbacks and code separation remain explicit conditions.
+It does not supply a C_CALL2 producer. Its parsed
 format remains at `sp + 240`, outside seven slots ending there, with
 `snpAbove = 192`. Selected ownership, nursery capacity, allocator/runtime
-metadata, native saved-word frames, after-call runtime facts and original
-return restoration remain unsupplied. No primitive-return summary, selected
-ownership or raw Sail-output equality is inferred from weaker observations.
+metadata, native saved-word separation and after-call runtime suppliers
+remain open; original return restoration is proved. No primitive-return
+summary, selected ownership or raw Sail-output equality is inferred from
+weaker observations.
 
 Validation:
 

@@ -343,6 +343,7 @@ import VsaIris.Vsa.SnpFmt
 import OCaml.Vm.Primitives.Format.SvfLong
 import OCaml.Vm.Primitives.Format.VsnprintfCaller
 import OCaml.Vm.Primitives.Format.AllocSprintfLong
+import OCaml.Vm.Primitives.Format.AllocSprintfNative
 import OCaml.Vm.Primitives.InitializedString
 import VsaIris.Vsa.SnpPrint
 import VsaIris.Vsa.SnpStrlen
@@ -7777,3 +7778,23 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.counted_prim_caml_sys_get_config_returns
 #print axioms OCaml.Vm.Sim.counted_prim_caml_sys_executable_name_returns
 #print axioms OCaml.Vm.Sim.counted_prim_caml_sys_get_argv_returns
+
+-- Plain signed decimal: real variadic entry through original native return.
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintf.pro_call_target
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintf.copy_call_target
+#print axioms Vsa.Densify.insert_observed_at
+#print axioms Vsa.Densify.applyW_observed_at
+#print axioms Vsa.Densify.writeLog_observed_at
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.stored_word
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.ldv_word
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.entry_log
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.entry_inside
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.entry_frame
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.entry_words
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.pro_arguments
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.enter
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.to_return
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.finish_return
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.native_return
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.NativePost.live
+#print axioms OCaml.Vm.Primitives.Format.AllocSprintfLong.NativePost.object
