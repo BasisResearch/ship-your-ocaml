@@ -1,3 +1,4 @@
+import OCaml.Bytecode.PrimArity
 import OCaml.Vm.Sim.CcallNames
 
 /-!
