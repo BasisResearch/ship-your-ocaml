@@ -471,4 +471,83 @@ theorem MapConsistent.set {m m' lists s b} (map : MapConsistent m lists)
   · simp [inserted,eq]
   · simpa only [inserted,if_neg eq,eq,decide_false,Bool.or_false,ite_false] using map t lt ht
 
+/-- A represented link is zero exactly when its remaining list is empty. -/
+theorem SmallList.zero_iff {m p bs} (linked : SmallList m p bs) : p = 0#64 ↔ bs = [] := by
+  cases bs with
+  | nil => exact ⟨fun _ => rfl,fun _ => linked⟩
+  | cons b bs =>
+    obtain ⟨rfl,nonzero,_⟩ := linked
+    simp only [nonzero,List.cons_ne_nil]
+
+/-- Unchanged bitmap when the popped list still has a successor. -/
+theorem MapConsistent.pop_nonempty {m m' lists s b bs} (map : MapConsistent m lists)
+    (selected : lists s = b :: bs) (nonempty : bs ≠ []) (bits : mapBits m' = mapBits m) :
+    MapConsistent m' (popped lists s bs) := by
+  intro t lo hi
+  change (mapBits m').getLsbD (t-1) = true ↔ _
+  rw [bits]
+  by_cases same : t = s
+  · subst t
+    simp only [popped,ite_true]
+    exact ⟨fun _ => nonempty,fun _ => (map s lo hi).mpr (by rw [selected]; simp)⟩
+  · simpa only [popped,if_neg same] using map t lo hi
+
+/-- All exact-size stores are static and below every free extent. -/
+theorem exact_heap_outside {s a n} (hi : s ≤ Layout.bf_small_count)
+    (heap : DlHeap.heapStart ≤ a) : BestFitExact.StoreOutside (BitVec.ofNat 64 s) a n := by
+  have hs := slot_toNat s hi
+  have hm := merge_toNat s hi
+  change (BestFitSmall.slot (BitVec.ofNat 64 s)).toNat = _ at hs
+  change (BestFitSmall.slot (BitVec.ofNat 64 s) + BitVec.ofNat 64 Layout.off_bf_small_merge).toNat = _ at hm
+  simp only [DlHeap.heapStart,Layout.bf_small_count] at heap hi
+  constructor
+  · right; rw [hs]; simp only [Layout.sym_bf_small_fl]; omega
+  · right; rw [hm]; simp only [Layout.sym_bf_small_fl]; omega
+  · right; simp only [Layout.sym_bf_small_map]; omega
+  · right; simp only [Layout.sym_caml_fl_cur_wsz]; omega
+
+/-- Other head slots miss the actual slot, merge, bitmap and counter writes. -/
+theorem exact_slot_outside {s t} (hi : s ≤ Layout.bf_small_count)
+    (ht : t ≤ Layout.bf_small_count) (different : t ≠ s) :
+    BestFitExact.StoreOutside (BitVec.ofNat 64 s) (slot t).toNat 8 := by
+  have hs := slot_toNat s hi
+  have hm := merge_toNat s hi
+  have h := slot_toNat t ht
+  change (BestFitSmall.slot (BitVec.ofNat 64 s)).toNat = _ at hs
+  change (BestFitSmall.slot (BitVec.ofNat 64 s) + BitVec.ofNat 64 Layout.off_bf_small_merge).toNat = _ at hm
+  simp only [Layout.bf_small_count] at hi ht
+  constructor
+  · rw [h,hs]; omega
+  · rw [h,hm]; omega
+  · rw [h]; simp only [Layout.sym_bf_small_fl,Layout.sym_bf_small_map]; omega
+  · rw [h]; simp only [Layout.sym_bf_small_fl,Layout.sym_caml_fl_cur_wsz]; omega
+
+theorem exact_prefix_bitmap {s c} (hi : s ≤ Layout.bf_small_count) :
+    OutLRange (BestFitEmpty.effect (BitVec.ofNat 64 s) c) Layout.sym_bf_small_map 4 := by
+  have hs := slot_toNat s hi
+  have hm := merge_toNat s hi
+  have head : Layout.sym_bf_small_map+4 ≤ (BestFitSmall.slot (BitVec.ofNat 64 s)).toNat := by
+    rw [show BestFitSmall.slot (BitVec.ofNat 64 s) = slot s from rfl,hs]
+    simp only [Layout.sym_bf_small_map,Layout.sym_bf_small_fl]; omega
+  have merge : Layout.sym_bf_small_map+4 ≤
+      (BestFitSmall.slot (BitVec.ofNat 64 s) + BitVec.ofNat 64 Layout.off_bf_small_merge).toNat := by
+    change Layout.sym_bf_small_map+4 ≤ (slot s + BitVec.ofNat 64 Layout.off_bf_small_merge).toNat
+    rw [hm]; simp only [Layout.sym_bf_small_map,Layout.sym_bf_small_fl]; omega
+  unfold BestFitEmpty.effect
+  split
+  · exact ⟨Or.inl merge,Or.inl head,True.intro⟩
+  · exact ⟨Or.inl head,True.intro⟩
+
+/-- Static slot readback, before any represented-family transport. -/
+theorem exact_effect_head {s c} (hi : s ≤ Layout.bf_small_count) :
+    bytesT (writeLog c.σ.mem (BestFitExact.effect (BitVec.ofNat 64 s) c)) (slot s).toNat 8 =
+      BestFitSmall.next (BitVec.ofNat 64 s) c := by
+  have hs := slot_toNat s hi
+  have small : s ≤ 16 := hi
+  apply BestFitExact.effect_head
+  · change _ ∨ Layout.sym_bf_small_map+4 ≤ (slot s).toNat
+    right; rw [hs]; simp only [Layout.sym_bf_small_map,Layout.sym_bf_small_fl]; omega
+  · change (slot s).toNat+8 ≤ Layout.sym_caml_fl_cur_wsz ∨ Layout.sym_caml_fl_cur_wsz+8 ≤ (slot s).toNat
+    right; rw [hs]; simp only [Layout.sym_caml_fl_cur_wsz,Layout.sym_bf_small_fl]; omega
+
 end OCaml.Vm.Gc.BfShape

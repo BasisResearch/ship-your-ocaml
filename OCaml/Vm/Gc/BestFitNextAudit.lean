@@ -1,5 +1,6 @@
 import OCaml.Vm.Gc.BestFitPreservation
 import OCaml.Vm.Gc.BestFitEntryNext
+import OCaml.Vm.Gc.BestFitEntrySmall
 
 /-! Focused standard-axiom audit for the next-size search/pick/pop/split native route.
 The full OCaml.Audit remains the lead integration gate. -/
@@ -272,3 +273,32 @@ The full OCaml.Audit remains the lead integration gate. -/
 #print axioms OCaml.Vm.Gc.BestFitFallback.EntryNextPost.selected_spec
 #print axioms OCaml.Vm.Gc.BestFitFallback.allocate_entry_next
 #print axioms OCaml.Vm.Gc.BestFitFallback.EntryNextReturned.live
+
+/-! Exact-size representation and shared original-entry small dispatch. -/
+#print axioms OCaml.Vm.Gc.BestFitExact.effect_parts
+#print axioms OCaml.Vm.Gc.BestFitExact.effect_outside
+#print axioms OCaml.Vm.Gc.BestFitExact.effect_head
+#print axioms OCaml.Vm.Gc.BestFitExact.effect_bitmap
+#print axioms OCaml.Vm.Gc.BestFitExact.Post.gprs
+#print axioms OCaml.Vm.Gc.BestFitExact.Post.live
+#print axioms OCaml.Vm.Gc.BfShape.SmallList.zero_iff
+#print axioms OCaml.Vm.Gc.BfShape.MapConsistent.pop_nonempty
+#print axioms OCaml.Vm.Gc.BfShape.exact_heap_outside
+#print axioms OCaml.Vm.Gc.BfShape.exact_slot_outside
+#print axioms OCaml.Vm.Gc.BfShape.exact_prefix_bitmap
+#print axioms OCaml.Vm.Gc.BfShape.exact_effect_head
+#print axioms OCaml.Vm.Gc.BestFitExact.selected_first
+#print axioms OCaml.Vm.Gc.BestFitExact.Post.smallRepresentation
+#print axioms OCaml.Vm.Gc.BestFitExact.Post.selected_header
+#print axioms OCaml.Vm.Gc.BestFitExact.Post.allocated_apart
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryInput.exact_input
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntrySmallInput.request_small
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntrySmallInput.next_input
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryExactReturned.of_post
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntryExactPost.selected_spec
+#print axioms OCaml.Vm.Gc.BestFitFallback.allocate_entry_exact
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntrySmallReturned.of_exact
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntrySmallReturned.of_next
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntrySmallPost.selected_spec
+#print axioms OCaml.Vm.Gc.BestFitFallback.allocate_entry_small
+#print axioms OCaml.Vm.Gc.BestFitFallback.EntrySmallReturned.live

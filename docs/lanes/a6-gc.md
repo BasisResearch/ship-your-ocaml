@@ -1,5 +1,71 @@
 # Lane a6-gc
 
+## Original-entry exact/next-size small-success dispatch (2026-10-28)
+
+- `BestFitEntrySmall.allocate_entry_small` checks actual `bf_allocate`
+  entry through original native return for positive requests ≤16 whenever
+  a suitable small list exists. The shared `EntryInput` contains original
+  representation, code/register/native-save/source windows and stack/return
+  observations. `EntrySmallInput.suitable` allows either the request class
+  itself or a larger class. A nonempty request class selects
+  `allocate_entry_exact`; an empty class derives `EntryNextInput` and reuses
+  `allocate_entry_next`. No intermediate or final state is an input.
+- `EntryInput.exact_input` derives `Conditions` via
+  `BfShape.exact_of_nonempty` from the original selected list, and derives
+  register/native inputs from this same entry interface.
+  `allocate_entry_exact` reuses `BestFitExact.allocate` for all four existing
+  empty/nonempty-successor and repaired/unchanged-cursor branches; no native
+  run or generated output was rederived. `effect_parts`, `effect_head`,
+  `effect_bitmap` and static separation helpers factor bounded log
+  observations before representation transport. Every frame consumes the
+  actual branch log; bitmap clearing uses `cleared_word` and
+  `MapConsistent.clear`, with unchanged bits on a nonempty successor.
+- `BestFitExact.Post.smallRepresentation` applies `SmallShape.pop`,
+  `SmallHeaders.pop` and `SmallPhysical.pop` to return the actual
+  `BfShape.popped lists s bs` family in `after.σ.mem`.
+  `selected_header` preserves the original selected header through the
+  static stores; its size comes from original `SmallHeaders` membership.
+  `allocated_apart` uses original physical bounds and `selected_apart`.
+  `EntryExactReturned` ties that separation to the actual returned header,
+  retaining stack, native/ABI, code/output, exact effect and modular counter.
+- `EntrySmallReturned` uniformly returns the selected full representation,
+  allocated separation, original selected header size, result, exact log,
+  caller PC/stack, machine/code/output and shared `GprsSame`. Its indexed
+  `EntrySmallPath` retains the exact or next-size native contract and all
+  branch accounting/header facts; the next-size constructor explicitly
+  requires the original exact list to be empty. `live` uses `LiveFrame`
+  and the selected actual log under explicit owned-block separation.
+  No dependent whole-memory branch simplifier is used. Natural accounting
+  remains `BestFitExact.Post.counter_nat` with separately supplied actual
+  sufficient credit; representation alone does not establish that credit.
+- Validation: guarded/capped affected `lake build` of `BestFitExact`,
+  `BfShape`, `BestFitPreservation`, `BestFitEntryNext`, `BestFitEntrySmall`
+  and `BestFitNextAudit` passes **1,291 jobs**
+  (`/tmp/a6-exact-entry-build.log`). Separate guarded/capped
+  `lake env lean -M 6000 -j 1 OCaml/Vm/Gc/BestFitNextAudit.lean` passes
+  (`/tmp/a6-exact-entry-focused-axioms.log`). All **287** expected unique
+  reports are present and use only `propext`, `Classical.choice`,
+  `Quot.sound`; all **27 new theorem declarations** are covered and registered
+  once in `BestFitNextAudit`, already imported by `OCaml.Audit`.
+  `gen_gc_rows.py --check`, collector CFG, holes (4,796 files), discipline
+  (27 rules), abstraction gate and `git diff --check` pass. Check logs are
+  `/tmp/a6-exact-entry-{generator,cfg,holes,discipline,abstraction}.log`.
+  Every Lean launch checked `free -g` (available ≥25 GB), ran alone through
+  the guard/cap with the inherited 12 GiB cgroup/two threads, and kept the
+  existing proof budgets. The initial head-readback elaboration failure and
+  corrected bounded route are recorded in `DEAD-ENDS.md`.
+- Remaining G2 scope: zero-filtered bitmap/large-tree dispatch; other sizes
+  and colors; native major-heap initialization and caller/invariant production
+  of the original representation, branch/code/register/return/windows;
+  wrapper integration of the next-size route; natural free-space accounting,
+  full allocator readiness and collection. No caller initialization or full
+  readiness is claimed. Counted `BarrierGrowthFull` stays G2 and must preserve
+  cp/world counts together with base runtime; `CustomMemCall` stays a named
+  premise; C4 round 2 waits for F1. GoodF1 is unchanged. Work stayed in this
+  worktree with no subagents, generated-output edits or Git metadata writes.
+  Checked edits remain for lead review, full `OCaml.Audit` and landing via
+  `scripts/integrate.sh`; Git metadata and the landing queue are read-only.
+
 ## Counted named C_CALL continuation (2026-10-28)
 
 - The A1 continuation explicitly carries original entry counts into

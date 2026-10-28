@@ -1,4 +1,6 @@
 import OCaml.Vm.Gc.BestFitEmpty
+import OCaml.Vm.Boot.Startup.GprsSame
+import OCaml.Vm.Boot.Startup.DomainRecord
 
 namespace OCaml.Vm.Gc.BestFitExact
 open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable BestFitSmall
@@ -25,6 +27,77 @@ theorem Conditions.of_memory {size} {before after : Config}
 
 def effect (size : BitVec 64) (c : Config) : List WEntry :=
   if next size c = 0 then BestFitEmpty.allocationEffect size c else selectedEffect size c
+
+/-- Factor only the bounded store log, retaining both memory-selected branches. -/
+theorem effect_parts (size : BitVec 64) (c : Config) :
+    effect size c = BestFitEmpty.effect size c ++
+      (if next size c = 0 then [(Layout.sym_bf_small_map,4,
+        BestFitBitmap.cleared size (bytesVal .lw (read4 c.σ.mem Layout.sym_bf_small_map)))] else []) ++
+      BestFitFinish.effect size c := by
+  by_cases empty : next size c = 0
+  all_goals by_cases repair : cursor size c = first size c
+  all_goals simp only [effect,empty,repair,ite_true,ite_false,BestFitEmpty.allocationEffect,
+    BestFitEmpty.effect,BestFitEmpty.route,selectedEffect,decide_true,decide_false,
+    BestFitSmall.effect,BestFitFinish.effect,total,Bool.false_eq_true,List.append_assoc,List.cons_append,List.nil_append]
+
+/-- Separation certificate for the actual possible exact-size stores. -/
+structure StoreOutside (size : BitVec 64) (a n : Nat) : Prop where
+  slot : a+n ≤ (BestFitSmall.slot size).toNat ∨ (BestFitSmall.slot size).toNat+8 ≤ a
+  merge : a+n ≤ (BestFitSmall.slot size + BitVec.ofNat 64 Layout.off_bf_small_merge).toNat ∨
+    (BestFitSmall.slot size + BitVec.ofNat 64 Layout.off_bf_small_merge).toNat+8 ≤ a
+  bitmap : a+n ≤ Layout.sym_bf_small_map ∨ Layout.sym_bf_small_map+4 ≤ a
+  counter : a+n ≤ Layout.sym_caml_fl_cur_wsz ∨ Layout.sym_caml_fl_cur_wsz+8 ≤ a
+
+theorem effect_outside {size c a n} (outside : StoreOutside size a n) :
+    OutLRange (effect size c) a n := by
+  rw [effect_parts]
+  by_cases empty : next size c = 0
+  all_goals by_cases repair : cursor size c = first size c
+  all_goals simp only [BestFitEmpty.effect,BestFitEmpty.route,repair,empty,decide_true,decide_false,
+    ite_true,ite_false,Bool.false_eq_true,repairLog,BestFitFinish.effect,List.cons_append,List.nil_append,OutLRange]
+  all_goals first
+    | exact ⟨outside.merge,outside.slot,outside.bitmap,outside.counter,True.intro⟩
+    | exact ⟨outside.slot,outside.bitmap,outside.counter,True.intro⟩
+    | exact ⟨outside.merge,outside.slot,outside.counter,True.intro⟩
+    | exact ⟨outside.slot,outside.counter,True.intro⟩
+
+/-- The slot store is last in the pop prefix; later bitmap/accounting stores
+are read back through scalar frame laws. -/
+theorem effect_head {size c}
+    (bitmap : (slot size).toNat+8 ≤ Layout.sym_bf_small_map ∨ Layout.sym_bf_small_map+4 ≤ (slot size).toNat)
+    (counter : (slot size).toNat+8 ≤ Layout.sym_caml_fl_cur_wsz ∨ Layout.sym_caml_fl_cur_wsz+8 ≤ (slot size).toNat) :
+    bytesT (writeLog c.σ.mem (effect size c)) (slot size).toNat 8 = next size c := by
+  rw [effect_parts,writeLog_append,writeLog_append]
+  rw [bytesT_writeLog_out _ (show OutLRange (BestFitFinish.effect size c) (slot size).toNat 8 from
+    ⟨counter,True.intro⟩)]
+  have suffix : OutLRange (if next size c = 0 then [(Layout.sym_bf_small_map,4,
+      BestFitBitmap.cleared size (bytesVal .lw (read4 c.σ.mem Layout.sym_bf_small_map)))] else [])
+      (slot size).toNat 8 := by
+    split
+    · exact ⟨bitmap,True.intro⟩
+    · trivial
+  rw [bytesT_writeLog_out _ suffix,BestFitEmpty.effect,writeLog_append]
+  exact word_writeLog _ _ _
+
+/-- Bitmap observation from the actual conditional four-byte store. -/
+theorem effect_bitmap {size c} (positive : 0 < size.toNat)
+    (small : size.toNat ≤ Layout.bf_small_count)
+    (popOutside : OutLRange (BestFitEmpty.effect size c) Layout.sym_bf_small_map 4) :
+    bytesT (writeLog c.σ.mem (effect size c)) Layout.sym_bf_small_map 4 =
+      if next size c = 0 then word32 c Layout.sym_bf_small_map &&& ~~~(1#32 <<< (size.toNat-1))
+      else word32 c Layout.sym_bf_small_map := by
+  rw [effect_parts,writeLog_append,writeLog_append]
+  rw [bytesT_writeLog_out _ (show OutLRange (BestFitFinish.effect size c) Layout.sym_bf_small_map 4 from
+    ⟨by
+      change Layout.sym_bf_small_map+4 ≤ Layout.sym_caml_fl_cur_wsz ∨
+        Layout.sym_caml_fl_cur_wsz+8 ≤ Layout.sym_bf_small_map
+      decide,True.intro⟩)]
+  by_cases empty : next size c = 0
+  · simp only [empty,ite_true]
+    rw [word32_writeLog]
+    exact BestFitBitmap.cleared_word c size positive small
+  · simp only [empty,ite_false]
+    exact bytesT_writeLog_out _ popOutside
 
 /-- All branch choices and store values depend only on memory observations. -/
 theorem effect_of_memory {size} {before after : Config} (memory : after.σ.mem = before.σ.mem) :
@@ -107,5 +180,20 @@ theorem Post.counter_nat {ra size before after} (post : Post ra size before afte
     (credit : size.toNat + 1 ≤ (total before).toNat) :
     (total after).toNat + size.toNat + 1 = (total before).toNat :=
   accounting_nat post.counter credit
+
+/-- Shared register-frame interface for every exact-size branch. -/
+theorem Post.gprs {ra size before after} (post : Post ra size before after) :
+    OCaml.Vm.Boot.Startup.GprsSame before after [10,11,12,13,14,15] := by
+  apply OCaml.Vm.Boot.Startup.GprsSame.of_regFrame (by decide)
+  intro r outside noise
+  exact post.native r noise (fun n hn => beq_eq_false_iff_ne.mpr (outside n hn))
+
+theorem Post.live {ra size before after H} (post : Post ra size before after)
+    (bounds : ∀ e ∈ H, Vsa.Sim.DlHeap.heapStart ≤ e.1 ∧ e.1+e.2 ≤ Vsa.Sim.DlHeap.heapEnd)
+    (outside : ∀ x, x < Vsa.Sim.DlHeap.heapEnd → ¬ VsaIris.VsaHeap.vsaFoot H x →
+      OutL (effect size before) x) : OCaml.Vm.Boot.Startup.LiveFrame H before after := by
+  apply OCaml.Vm.Boot.Startup.LiveFrame.of_foot bounds
+  intro x high owned
+  rw [post.memory,writeLog_out _ _ _ (outside x high owned)]
 
 end OCaml.Vm.Gc.BestFitExact

@@ -9,17 +9,37 @@ open OCaml.Vm.Boot.Startup BestFitNext
 
 /-- Observations only at the original allocator entry. Native callers must
 supply the representation, code, register and source/stack window facts. -/
-structure EntryNextInput (R : Nat → BitVec 64) (lists : Nat → List (BitVec 64))
+structure EntryInput (R : Nat → BitVec 64) (lists : Nat → List (BitVec 64))
     (c : Config) : Prop extends Input R c where
   ffsCode : Code.FfsLoaded c.σ.mem
   remnantCode : Code.Bf_insert_remnant_smallLoaded c.σ.mem
   representation : BfShape.SmallRepresentation c.σ.mem lists
   requestPositive : 1 ≤ (R 10).toNat
-  empty : lists (R 10).toNat = []
-  existsLarger : ∃ s, (R 10).toNat < s ∧ s ≤ 16 ∧ lists s ≠ []
   stackHeap : Vsa.Sim.DlHeap.heapStart ≤ (frameSp R).toNat
   sources : ∀ s, 1 ≤ s → s ≤ 16 → ∀ b ∈ lists s, SearchSource (frameSp R) b
   aligned : (R 1).toNat % 4 = 0
+
+/-- The existing search route specializes the shared original-entry interface. -/
+structure EntryNextInput (R : Nat → BitVec 64) (lists : Nat → List (BitVec 64))
+    (c : Config) : Prop extends EntryInput R lists c where
+  empty : lists (R 10).toNat = []
+  existsLarger : ∃ s, (R 10).toNat < s ∧ s ≤ 16 ∧ lists s ≠ []
+
+/-- Derive the exact-size native input from the original represented list
+and the same entry registers used by the next-size probe. -/
+theorem EntryInput.exact_input {R lists c} (input : EntryInput R lists c)
+    (small : (R 10).toNat ≤ Layout.bf_small_count) (nonempty : lists (R 10).toNat ≠ []) :
+    BestFitExact.Input (R 1) (R 10) c := by
+  have conditions : BestFitExact.Conditions (R 10) c := by
+    simpa only [BitVec.ofNat_toNat,BitVec.setWidth_eq] using
+      BfShape.exact_of_nonempty input.representation.shape rfl input.requestPositive small nonempty
+  exact { conditions with
+    good := input.good
+    tick := input.tick
+    minstret := input.minstret
+    code := input.code
+    registers := ⟨gholds_lookup _ input.registers rfl,gholds_lookup _ input.registers rfl,True.intro⟩
+    aligned := input.aligned }
 
 /-- A larger small list bounds the original request's decoded size test. -/
 theorem EntryNextInput.request_small {R lists c} (input : EntryNextInput R lists c) :

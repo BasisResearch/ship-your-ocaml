@@ -44,6 +44,82 @@ theorem SmallPhysical.insertApart {lists s b bs} (physical : SmallPhysical lists
     exact ⟨by omega,by omega⟩
 end OCaml.Vm.Gc.BfShape
 
+namespace OCaml.Vm.Gc.BestFitExact
+open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
+
+/-- Read the selected head from the original represented list. -/
+theorem selected_first {lists s b bs c} (shape : BfShape.SmallShape c.σ.mem lists)
+    (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) (selected : lists s = b :: bs) :
+    BestFitSmall.first (BitVec.ofNat 64 s) c = b := by
+  have linked := shape.linked s lo hi
+  rw [selected] at linked
+  exact linked.1
+
+/-- Every exact-size native branch returns the actual popped representation. -/
+theorem Post.smallRepresentation {ra lists s b bs before after}
+    (post : Post ra (BitVec.ofNat 64 s) before after)
+    (repr : BfShape.SmallRepresentation before.σ.mem lists)
+    (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) (selected : lists s = b :: bs) :
+    BfShape.SmallRepresentation after.σ.mem (BfShape.popped lists s bs) := by
+  have first := selected_first repr.shape lo hi selected
+  have linked := repr.shape.linked s lo hi
+  rw [selected] at linked
+  have tail : BfShape.SmallList before.σ.mem (BestFitSmall.next (BitVec.ofNat 64 s) before) bs := by
+    simpa only [BestFitSmall.next,first,word] using linked.2.2
+  have size : (BitVec.ofNat 64 s).toNat = s := by
+    have : s < 2^64 := by simp only [Layout.bf_small_count] at hi; omega
+    simp only [BitVec.toNat_ofNat,Nat.mod_eq_of_lt this]
+  have headStore : bytesT after.σ.mem (BfShape.slot s).toNat 8 = bytesT before.σ.mem b.toNat 8 := by
+    have observed : bytesT after.σ.mem (BfShape.slot s).toNat 8 =
+        BestFitSmall.next (BitVec.ofNat 64 s) before := by
+      rw [post.memory]
+      exact BfShape.exact_effect_head hi
+    rw [observed]
+    change bytesT before.σ.mem (BestFitSmall.first (BitVec.ofNat 64 s) before).toNat 8 = _
+    rw [first]
+  have heapRead : ∀ a n, Vsa.Sim.DlHeap.heapStart ≤ a → bytesT after.σ.mem a n = bytesT before.σ.mem a n := by
+    intro a n heap
+    rw [post.memory]
+    exact bytesT_writeLog_out _ (effect_outside (BfShape.exact_heap_outside hi heap))
+  refine ⟨repr.shape.pop selected headStore ?_ ?_,(repr.headers.pop selected).congr ?_,?_,repr.physical.pop selected⟩
+  · intro t lt ht different
+    rw [post.memory]
+    exact bytesT_writeLog_out _ (effect_outside (BfShape.exact_slot_outside hi ht different))
+  · intro t lt ht x hx
+    exact heapRead _ _ (repr.shape.heap t lt ht x (BfShape.popped_mem selected hx))
+  · intro t lt ht x hx
+    have member := BfShape.popped_mem selected hx
+    have bound := repr.physical.bounds t lt ht x member
+    rw [repr.physical.header_nat lt ht member]
+    exact heapRead _ _ (by omega)
+  · have bits : BfShape.mapBits after.σ.mem =
+        if BestFitSmall.next (BitVec.ofNat 64 s) before = 0 then
+          BfShape.mapBits before.σ.mem &&& ~~~(1#32 <<< (s-1)) else BfShape.mapBits before.σ.mem := by
+      rw [BfShape.mapBits,post.memory,effect_bitmap (by omega) (by omega) (BfShape.exact_prefix_bitmap hi),size]
+      rfl
+    by_cases empty : BestFitSmall.next (BitVec.ofNat 64 s) before = 0
+    · apply repr.map.clear lo hi (tail.zero_iff.mp empty)
+      simpa only [empty,ite_true] using bits
+    · apply repr.map.pop_nonempty selected (fun h => empty (tail.zero_iff.mpr h))
+      simpa only [empty,ite_false] using bits
+
+/-- The selected physical header is unchanged by the static branch stores. -/
+theorem Post.selected_header {ra lists s b bs before after}
+    (post : Post ra (BitVec.ofNat 64 s) before after)
+    (physical : BfShape.SmallPhysical lists)
+    (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) (selected : lists s = b :: bs) :
+    bytesT after.σ.mem (b-8#64).toNat 8 = bytesT before.σ.mem (b-8#64).toNat 8 := by
+  have member : b ∈ lists s := by rw [selected]; exact List.mem_cons_self ..
+  have bound := physical.bounds s lo hi b member
+  rw [post.memory]
+  apply bytesT_writeLog_out
+  apply effect_outside
+  apply BfShape.exact_heap_outside hi
+  rw [physical.header_nat lo hi member]
+  omega
+
+end OCaml.Vm.Gc.BestFitExact
+
 namespace OCaml.Vm.Gc.BestFitNext
 open Vsa.Machine Vsa.Sim Primitives LeanRV64DExecutable
 
@@ -254,6 +330,26 @@ structure AllocatedApart (a : Nat) (request : BitVec 64)
   bound : a+8*(request.toNat+1) < 2^64
   separate : ∀ t, 1 ≤ t → t ≤ Layout.bf_small_count → ∀ x ∈ lists t,
     a+8*(request.toNat+1) ≤ x.toNat-8 ∨ x.toNat+8*t ≤ a
+
+/-- Exact-size removal separates the whole actual returned allocation. -/
+theorem _root_.OCaml.Vm.Gc.BestFitExact.Post.allocated_apart {ra lists s b bs before after}
+    (_post : BestFitExact.Post ra (BitVec.ofNat 64 s) before after)
+    (physical : BfShape.SmallPhysical lists)
+    (lo : 1 ≤ s) (hi : s ≤ Layout.bf_small_count) (selected : lists s = b :: bs) :
+    AllocatedApart (b-8#64).toNat (BitVec.ofNat 64 s) (BfShape.popped lists s bs) := by
+  have member : b ∈ lists s := by rw [selected]; exact List.mem_cons_self ..
+  have bound := physical.bounds s lo hi b member
+  have hn := physical.header_nat lo hi member
+  have size : (BitVec.ofNat 64 s).toNat = s := by
+    have : s < 2^64 := by simp only [Layout.bf_small_count] at hi; omega
+    simp only [BitVec.toNat_ofNat,Nat.mod_eq_of_lt this]
+  constructor
+  · rw [hn,size]
+    omega
+  · intro t lt ht x hx
+    rw [hn,size]
+    have sep := physical.selected_apart lo hi selected lt ht hx
+    omega
 
 /-- Preservation includes a disjoint allocated result, rather than only
 well-formed links in the remaining lists. -/

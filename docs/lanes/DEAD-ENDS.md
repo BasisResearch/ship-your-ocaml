@@ -1,5 +1,19 @@
 # Routes not to repeat
 
+- 2026-10-28 exact-size representation readback: mixing slot readback,
+  scalar address rewriting and represented-family transport in one theorem
+  exhausted the default heartbeats at the head-store seam
+  (`/tmp/a6-exact-preserve.log`). This is an elaboration failure, not a native
+  obstruction. Factor `BestFitExact.effect_parts`, `effect_head`,
+  `effect_bitmap` and the static `BfShape.exact_effect_head` first; consume
+  those scalar observations before `SmallShape.pop` and header/map transport.
+  The bounded proof checks at unchanged limits. The actual accounting cell
+  is below the small-list slots, so its readback separation uses
+  `counter + 8 ≤ slot`, not the opposite interval order.
+  `SmallRepresentation` has no relationship between the modular counter and
+  the natural sum of free extents. Keep actual sufficient credit separate
+  in `BestFitExact.Post.counter_nat`; do not infer it from list preservation.
+
 - 2026-10-28 lead listing-supplier inspection (not yet a checked obstruction):
   `OutListRuntime.entry` quantifies over `sp` but receives only runtime and
   `LoopGeometry ... high`, which does not index that stack pointer. Its
