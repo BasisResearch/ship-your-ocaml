@@ -1323,6 +1323,136 @@ theorem plain_fast (c : Config) (R : Nat → BitVec 64)
   · rfl
   · decide
 
+def annotation_test_body : List MInstr := [
+  ⟨0x80010458#64, 0xfff98993#32, 0x93#8, 0x89#8, 0xf9#8, 0xff#8, .addi, 19, 19, 0, 0xfff#12⟩,
+  ⟨0x8001045c#64, 0x013407b3#32, 0xb3#8, 0x07#8, 0x34#8, 0x01#8, .add, 15, 8, 19, 0x000#12⟩,
+  ⟨0x80010460#64, 0xfff7c683#32, 0x83#8, 0xc6#8, 0xf7#8, 0xff#8, .lbu, 13, 15, 0, 0xfff#12⟩,
+  ⟨0x80010464#64, 0x02200713#32, 0x13#8, 0x07#8, 0x20#8, 0x02#8, .addi, 14, 0, 0, 0x022#12⟩,
+  ⟨0x80010468#64, 0x0007c403#32, 0x03#8, 0xc4#8, 0x07#8, 0x00#8, .lbu, 8, 15, 0, 0x000#12⟩,
+  ⟨0x8001046c#64, 0xfb46869b#32, 0x9b#8, 0x86#8, 0x46#8, 0xfb#8, .addiw, 13, 13, 0, 0xfb4#12⟩,
+  ⟨0x80010470#64, 0x0ff6f693#32, 0x93#8, 0xf6#8, 0xf6#8, 0x0f#8, .andi, 13, 13, 0, 0x0ff#12⟩
+]
+def annotation_test_term : TInstr := ⟨0x80010474#64, 0x00d76e63#32, 0x63#8, 0x6e#8, 0xd7#8, 0x00#8, .br bop.BLTU false, 14, 13, 0x001c#13, 0#21, 0#12⟩
+def annotation_test_blocks : List BBlock := [{ body := annotation_test_body, term := some annotation_test_term }]
+def annotation_test_input (R : Nat → BitVec 64) : GRegs := [(1, R 1), (2, R 2), (8, R 8), (9, R 9), (10, R 10), (18, R 18), (19, R 19)]
+
+theorem annotation_test_code {c : Config} (image : ExecutableImage c) : CodeFacts c.σ.mem annotation_test_body := by
+  have hc := loaded image
+  simp only [CodeFacts, annotation_test_body]
+  chain_facts hc with "Vsa.Sim.Code.parse_format_at_"
+
+theorem annotation_test_shape : ChainOK 0x80010458#64 [1, 2, 8, 9, 10, 18, 19] annotation_test_blocks := by
+  simp only [ChainOK, BBlockOK, annotation_test_blocks, annotation_test_body, annotation_test_term, BlockOKM]
+  repeat' apply And.intro
+  all_goals decide
+
+theorem annotation_test_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)
+    (loads : List (List (BitVec 8))) (h : LeafInput ra c)
+    (regs : GHolds c.σ (annotation_test_input R))
+    (access : AccessPlan c.σ.mem (annotation_test_input R) loads annotation_test_body)
+    (control : TermFactsO (runGM annotation_test_body (annotation_test_input R) loads) (some annotation_test_term)) :
+    FnSummary 0x80010458#64 (fun d => d = c)
+      (BlockPost annotation_test_blocks 0x80010458#64 (annotation_test_input R) loads c) := by
+  apply block_summary annotation_test_blocks _ _ _ c
+  refine ⟨h.good, h.minstret, regs, ?_, ?_, annotation_test_shape, h.tick⟩
+  · change KeysOK [1, 2, 8, 9, 10, 18, 19]; decide
+  · apply singleton_chain_facts (accessPlan_facts (annotation_test_code h.image) access) ?_ control
+    have hc := loaded h.image
+    chain_facts hc with "Vsa.Sim.Code.parse_format_at_"
+
+def annotation_test_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs :=
+  [(13, BitVec.signExtend 64 (Sail.BitVec.extractLsb (bytesVal .lbu (loads.getD 0 []) + 18446744073709551540#64) 31 0) &&& 255#64), (8, bytesVal .lbu (loads.getD 1 [])), (14, 34#64), (15, R 8 + (R 19 - 1#64)), (19, R 19 - 1#64), (1, R 1), (2, R 2), (9, R 9), (10, R 10), (18, R 18)]
+theorem annotation_test_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM annotation_test_body (annotation_test_input R) loads = annotation_test_regs R loads := by
+  simp [annotation_test_body, annotation_test_input, annotation_test_regs, runGM, stepGM, stepLdsM,
+    wvalM, srcVal, lookupG, eraseG, imm20Of, DoubleAllocation.domainGlobal, Layout.sym_Caml_state,
+    Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?, BitVec.add_assoc]
+
+def annotation_test_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
+  [[(m[(R 8 + (R 19 + 18446744073709551615#64) + 18446744073709551615#64).toNat]?).getD 0], [(m[(R 8 + (R 19 + 18446744073709551615#64)).toNat]?).getD 0]]
+
+theorem annotation_test_fast (c : Config) (R : Nat → BitVec 64)
+    (h : LeafInput (R 1) c) (regs : GHolds c.σ (annotation_test_input R))
+    (w0 : ReadWindow (R 8 + (R 19 + 18446744073709551615#64) + 18446744073709551615#64) 1)
+    (w1 : ReadWindow (R 8 + (R 19 + 18446744073709551615#64)) 1)
+    (ok : guardB .BLTU (34#64) (BitVec.signExtend 64 (Sail.BitVec.extractLsb (bytesVal .lbu ((annotation_test_loads c.σ.mem R).getD 0 []) + 18446744073709551540#64) 31 0) &&& 255#64) = false) :
+    FnSummary 0x80010458#64 (fun d => d = c)
+      (WriteRegistersPost [8, 13, 14, 15, 19] [] c (0x80010478#64) (R 10) (annotation_test_regs R (annotation_test_loads c.σ.mem R))) := by
+  have access : AccessPlan c.σ.mem (annotation_test_input R) (annotation_test_loads c.σ.mem R) annotation_test_body := by
+    simp only [AccessPlan, annotation_test_body, annotation_test_loads]
+    chain_facts True.intro
+    · apply w0.lbu rfl ?_ rfl
+      simp only [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, ↓reduceIte, Nat.reduceEqDiff, Option.getD_some, List.headD_cons, BitVec.add_zero, annotation_test_input, shamtOf, Sail.BitVec.extractLsb, (show BitVec.signExtend 64 4095#12 = 18446744073709551615#64 by decide), (show BitVec.signExtend 64 34#12 = 34#64 by decide), (show BitVec.signExtend 64 0#12 = 0#64 by decide), (show BitVec.signExtend 64 4020#12 = 18446744073709551540#64 by decide), (show BitVec.signExtend 64 255#12 = 255#64 by decide)]
+    · apply w1.lbu rfl ?_ rfl
+      simp only [eaddrM, stepGM, stepLdsM, wvalM, srcVal, lookupG, eraseG, imm20Of, Functions.sign_extend, Sail.BitVec.signExtend, ↓reduceIte, Nat.reduceEqDiff, Option.getD_some, List.headD_cons, BitVec.add_zero, annotation_test_input, shamtOf, Sail.BitVec.extractLsb, (show BitVec.signExtend 64 4095#12 = 18446744073709551615#64 by decide), (show BitVec.signExtend 64 34#12 = 34#64 by decide), (show BitVec.signExtend 64 0#12 = 0#64 by decide), (show BitVec.signExtend 64 4020#12 = 18446744073709551540#64 by decide), (show BitVec.signExtend 64 255#12 = 255#64 by decide)]
+  have control : TermFactsO (runGM annotation_test_body (annotation_test_input R) (annotation_test_loads c.σ.mem R)) (some annotation_test_term) := by rw [annotation_test_eval]; exact ok
+  apply registers_of_blocks h.image (log := []) ⟨True.intro, True.intro⟩ (annotation_test_summary c (R 1) R _ h regs access control)
+  · exact readonly_log _ (by unfold ReadOnlyBody; decide) _ _
+  · rfl
+  · exact annotation_test_eval R _
+  · rfl
+  · decide
+
+def annotation_body : List MInstr := [
+  ⟨0x80010478#64, 0x00500713#32, 0x13#8, 0x07#8, 0x50#8, 0x00#8, .addi, 14, 0, 0, 0x005#12⟩,
+  ⟨0x8001047c#64, 0x02071713#32, 0x13#8, 0x17#8, 0x07#8, 0x02#8, .slli, 14, 14, 0, 0x020#12⟩,
+  ⟨0x80010480#64, 0x00170713#32, 0x13#8, 0x07#8, 0x17#8, 0x00#8, .addi, 14, 14, 0, 0x001#12⟩,
+  ⟨0x80010484#64, 0x00d75733#32, 0x33#8, 0x57#8, 0xd7#8, 0x00#8, .srl, 14, 14, 13, 0x000#12⟩,
+  ⟨0x80010488#64, 0x00177713#32, 0x13#8, 0x77#8, 0x17#8, 0x00#8, .andi, 14, 14, 0, 0x001#12⟩,
+  ⟨0x8001048c#64, 0x40e787b3#32, 0xb3#8, 0x87#8, 0xe7#8, 0x40#8, .sub, 15, 15, 14, 0x000#12⟩
+]
+def annotation_blocks : List BBlock := [{ body := annotation_body, term := none }]
+def annotation_input (R : Nat → BitVec 64) : GRegs := [(1, R 1), (2, R 2), (8, R 8), (9, R 9), (10, R 10), (13, R 13), (15, R 15), (18, R 18), (19, R 19)]
+
+theorem annotation_code {c : Config} (image : ExecutableImage c) : CodeFacts c.σ.mem annotation_body := by
+  have hc := loaded image
+  simp only [CodeFacts, annotation_body]
+  chain_facts hc with "Vsa.Sim.Code.parse_format_at_"
+
+theorem annotation_shape : ChainOK 0x80010478#64 [1, 2, 8, 9, 10, 13, 15, 18, 19] annotation_blocks := by
+  simp only [ChainOK, BBlockOK, annotation_blocks, annotation_body, BlockOKM]
+  repeat' apply And.intro
+  all_goals decide
+
+theorem annotation_summary (c : Config) (ra : BitVec 64) (R : Nat → BitVec 64)
+    (loads : List (List (BitVec 8))) (h : LeafInput ra c)
+    (regs : GHolds c.σ (annotation_input R))
+    (access : AccessPlan c.σ.mem (annotation_input R) loads annotation_body)
+    (control : TermFactsO (runGM annotation_body (annotation_input R) loads) (none)) :
+    FnSummary 0x80010478#64 (fun d => d = c)
+      (BlockPost annotation_blocks 0x80010478#64 (annotation_input R) loads c) := by
+  apply block_summary annotation_blocks _ _ _ c
+  refine ⟨h.good, h.minstret, regs, ?_, ?_, annotation_shape, h.tick⟩
+  · change KeysOK [1, 2, 8, 9, 10, 13, 15, 18, 19]; decide
+  · apply singleton_chain_facts (accessPlan_facts (annotation_code h.image) access) ?_ control
+    trivial
+
+def annotation_regs (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) : GRegs :=
+  [(15, R 15 - (21474836481#64 >>> ((R 13).toNat % 64) &&& 1#64)), (14, 21474836481#64 >>> ((R 13).toNat % 64) &&& 1#64), (1, R 1), (2, R 2), (8, R 8), (9, R 9), (10, R 10), (13, R 13), (18, R 18), (19, R 19)]
+theorem annotation_eval (R : Nat → BitVec 64) (loads : List (List (BitVec 8))) :
+    runGM annotation_body (annotation_input R) loads = annotation_regs R loads := by
+  simp [annotation_body, annotation_input, annotation_regs, runGM, stepGM, stepLdsM,
+    wvalM, srcVal, lookupG, eraseG, imm20Of, DoubleAllocation.domainGlobal, Layout.sym_Caml_state,
+    Functions.sign_extend, Sail.BitVec.signExtend, BitVec.sub_eq_add_neg, List.head?_eq_getElem?, BitVec.add_assoc, shamtOf, Sail.BitVec.extractLsb, Sail.shift_bits_right, Sail.shift_bits_left]
+
+def annotation_loads (m : Std.ExtHashMap Nat (BitVec 8)) (R : Nat → BitVec 64) : List (List (BitVec 8)) :=
+  []
+
+theorem annotation_fast (c : Config) (R : Nat → BitVec 64)
+    (h : LeafInput (R 1) c) (regs : GHolds c.σ (annotation_input R)) :
+    FnSummary 0x80010478#64 (fun d => d = c)
+      (WriteRegistersPost [14, 15] [] c (0x80010490#64) (R 10) (annotation_regs R (annotation_loads c.σ.mem R))) := by
+  have access : AccessPlan c.σ.mem (annotation_input R) (annotation_loads c.σ.mem R) annotation_body := by
+    simp only [AccessPlan, annotation_body, annotation_loads]
+    chain_facts True.intro
+  have control : TermFactsO (runGM annotation_body (annotation_input R) (annotation_loads c.σ.mem R)) (none) := True.intro
+  apply registers_of_blocks h.image (log := []) ⟨True.intro, True.intro⟩ (annotation_summary c (R 1) R _ h regs access control)
+  · exact readonly_log _ (by unfold ReadOnlyBody; decide) _ _
+  · rfl
+  · exact annotation_eval R _
+  · rfl
+  · decide
+
 def append_body : List MInstr := [
   ⟨0x80010490#64, 0x00090593#32, 0x93#8, 0x05#8, 0x09#8, 0x00#8, .addi, 11, 18, 0, 0x000#12⟩,
   ⟨0x80010494#64, 0x00048613#32, 0x13#8, 0x86#8, 0x04#8, 0x00#8, .addi, 12, 9, 0, 0x000#12⟩,

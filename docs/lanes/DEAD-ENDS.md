@@ -883,3 +883,26 @@
   `wordAt`/`MemSame` composition, with the concrete domain-word geometry
   checked separately. Do not raise recursion or heartbeat budgets to unfold
   the accumulated startup state.
+
+- 2026-10-28 integer-format input extraction: `dsimp only` over the whole
+  unfolded `formatInteger` success hypothesis exceeds the simplifier's step
+  budget, as does `simp_all` with that rendering hypothesis in scope. The
+  width/precision result expression duplicates symbolic replication and
+  rendering terms. Expose only the outer rejection conditional with `change`,
+  then the selected conversion conditional; leave their rendering remainder
+  opaque. `formatInteger_conditions` checks at the default budget without
+  evaluating the output or narrowing GoodF1.
+
+- 2026-10-28 native format caller register projection: the generated prologue
+  gives both sp and a2 as `R 2 + 18446744073709551568#64`. Asking
+  `holds_project`'s Boolean certificate to select either as `R 2 - 48#64`
+  made `caller_pro_arguments` fail kernel checking at 4 GiB; complete attempts
+  reached the 10 GiB guard. Select the exact generated values first, then
+  rewrite the scalar address equality in the resulting `GHolds`. The repaired
+  isolated prologue/projection checks under 4 GiB with unchanged heartbeat
+  limits. This is a proof-construction failure, not a native counterexample.
+  Keep the caller's entry data, execution and returned observation as named
+  phases. A returned length equation also needs the derived source-byte
+  equality before transport between original/copied byte views. An extending
+  structure must not name its format-list parameter `fmt`: `MeasureInput.fmt`
+  is an inherited register observation and shadows that parameter.

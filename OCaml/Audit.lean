@@ -357,6 +357,7 @@ import OCaml.Vm.Primitives.Format.SvfLong
 import OCaml.Vm.Primitives.Format.VsnprintfCaller
 import OCaml.Vm.Primitives.Format.AllocSprintfLong
 import OCaml.Vm.Primitives.Format.AllocSprintfNative
+import OCaml.Vm.Primitives.Format.FormatInt
 import OCaml.Vm.Primitives.InitializedString
 import VsaIris.Vsa.SnpPrint
 import VsaIris.Vsa.SnpStrlen
@@ -8328,3 +8329,54 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.f1_openOut_runtime
 #print axioms OCaml.Vm.Sim.counted_f1_open_descriptor_out_returns
 #print axioms OCaml.Vm.Sim.counted_f1_open_descriptor_in_returns
+
+-- Full native parser and original caml_format_int prefix.
+#print axioms OCaml.Bytecode.formatInteger_conditions
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_test_code
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_test_shape
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_test_summary
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_test_eval
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_test_fast
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_code
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_shape
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_summary
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_eval
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_fast
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_mask_code
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_mask_shape
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_mask_summary
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_mask_eval
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_mask_fast
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_code
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_shape
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_summary
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_eval
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_call_shape
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_call_decode
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_call_target
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_call_pins
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_fast
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.conversion_table
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.conversion_facts
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.unsigned_argument
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.setup_argument
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.conversion_byte_table
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.supported_conversion
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.CallerParsed.of_returned
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.caller_log
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.caller_log_outside
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.caller_entry_post
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.caller_prologue
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.caller_pro_arguments
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.caller_enter
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.caller_parse
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.caller_prefix
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.CallerPrefix.live
+#print axioms OCaml.Vm.Primitives.Format.FormatInt.CallerPrefix.window
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.append_selected
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_table
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotation_facts
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.annotationSize_le
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.select_format
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.append_full
+#print axioms OCaml.Vm.Primitives.Format.ParseFormat.parse_format_full_call
