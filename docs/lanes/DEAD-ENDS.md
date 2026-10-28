@@ -823,6 +823,16 @@
   registration reserve also needs actual root-cell removal/reuse accounting.
   The current `FreeRoomEnd` preserves the same capacity `k`; do not silently
   treat it as a charge-refund theorem.
+  Follow-up contract inspection (2026-10-28): `vsaRoomB` in
+  `VsaIris/Vsa/HeapRoom.lean` measures `2*k + extendSlack <= heapEnd - top`;
+  free chunks in bins do not contribute to this capacity. `fOK_chg` in
+  `FreeRunAll.lean` uses only returned `top <= top0`. An interior free
+  can therefore preserve this top-based bound without producing extra
+  credit. General reuse needs a bin-aware resource invariant or a proved
+  allocation route consuming the freed chunk; do not strengthen the existing
+  post to `k + charge` by arithmetic alone. These are inspected definitions,
+  not a checked reachable-state counterexample. Allocator files are generated
+  from `experiments/syi/allocator-template` by `retarget_allocator_specs.py`.
 
 - 2026-10-27, reset/backtrace continuation: the ELF's
   `caml_init_backtrace` (`0x8000ef3c`) only loads `Caml_state`, adds the
