@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 15:43 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 15:59 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,67 +18,74 @@ None currently.
 
 ## Published
 
-`origin/main` is **`dfbaf16567d49618803d7cd6be32c4e51bfb3c20`**, independently
-verified remotely after the full gate exited successfully at 15:39 UTC.
-The gate passed **6,095 build jobs**, **9,542 main axiom reports**, generated
-and ELF checks, and **329 OS traces** (5,069 steps, 324 accepted, 5 special,
-zero rejected or unsupported). C4 remains below its discovery threshold.
+`origin/main` is **`51c9653c02784a3b83742eb176524659305553ab`**, verified remotely
+after the full gate exited at 15:49 UTC. It passed **6,098 build jobs**,
+**9,592 main audit reports** (9,596 including TCB) and 133 axiom-free reports,
+generator/ELF checks, and **329 OS traces** (5,069 steps, 324 accepted,
+5 special, zero rejected or unsupported). Every stage marker and the complete
+log header/tail are intact. Evidence: `logs/{integrate,build}-51c9653c.log`.
 
-This batch contains:
+This adds `19b964fd`: original-entry counted C_CALL1/2 success for **19 ordinary
+primitive names** (16 unary, three binary), using actual native returns.
+Entry counts come from the counted loop, and returned counts use the actual
+returned placement. Lead checked all 52 new registrations, the 3,698-job
+downstream build and 63 focused reports before integration.
+`keep/counted-ordinary-reviewed-20261028` preserves its reviewed snapshot.
 
-- `9de2d983`: 122 counted opcode rows, with actual native/count frames.
-- `2e47e2fc`: local custom-space repair, selected ownership and physical
-  allocation footprint; removes the old universal record-separation law.
-- `9549edb8`: field and empty-growth frames.
-- `4f827ee5`: actual insertion separation from `LibHeapAt.refCustomApart`,
-  completing all seven field rows and the **129/134** counted table.
-- `d1314b91`: original best-fit entry through next-size allocation and return,
-  retaining SmallRepresentation and actual allocated-block separation.
+The previous `dfbaf165` batch published `9de2d983` (122 counted rows),
+`2e47e2fc` (selected custom-space repair), `9549edb8` (field/empty-growth
+frames), `4f827ee5` (actual insertion separation and **129/134** table), and
+`d1314b91` (original best-fit entry through next-size allocation return,
+with SmallRepresentation and actual allocated separation).
+Its 6,095-job gate passed 9,546 allowed reports and 131 axiom-free reports.
+Evidence: `logs/*dfbaf165*`, `logs/{counted-spatial,a6-entry-next}-*`.
 
-Evidence: `logs/integrate-dfbaf165.log`, `logs/build-dfbaf165.log`,
-`logs/integrate-dfbaf165-notes.txt`, and `logs/{counted-spatial,a6-entry-next}-*`.
-The OS driver's inherited fd 2 seek overwrote the start of the raw gate log;
-its exit, final success, full build and remote push were verified separately.
-The raw archive is preserved. `7047b3cd` isolates driver stderr; a capped
-329-trace check retained leading/trailing log markers. That fix is reviewed
-for the next gate, not yet published.
+`7047b3cd` fixes inherited stderr offset corruption by the OS driver's fd 2
+seek probe. The old raw gate log and explanatory notes are preserved; its
+axiom reports survived, but its initial stage headers were overwritten.
+A capped targeted check and the subsequent full gate verify the fix.
 
-Previous published `804538a5` includes `da1ab268` (plain signed decimal native
-entry-to-return) and `58740097` (selected custom ownership/ledger). Their
-6,090-job full gate and review evidence remain in `logs/*804538a5*`,
-`logs/counted-prim-*` and the lane logs. General formatting remains open.
+Earlier published `804538a5` contains the plain signed decimal native wrapper
+and selected custom ownership. General formatting remains open.
 
 ## Reviewed for the next gate
 
-`19b964fd` supplies original-entry counted C_CALL1/2 success for 19 ordinary
-primitive names (16 unary, three binary), reusing actual native returns.
-The original count witness comes from the counted loop and returned counts
-use the actual placement. Existing channel consumers still check.
-Its 3,698-job downstream build and 63 focused reports passed; lead checked
-all 52 new registrations and allowed axioms. Evidence: `logs/counted-prim-*`;
-preserved snapshot: `keep/counted-ordinary-reviewed-20261028`.
-Whole C_CALL rows remain open. The next full gate will include this result,
-the validation-log fix and the current task/status packets.
+`66a597af` executes universal parsed-ELF reset through interpreter/debugger
+initialization to `0x80004e94`. It retains the actual backtrace/descriptor
+ancestry, local Steps, fd/argv bank, thirteen saves, restored ABI, runtime/
+capacity, owned heap/caller frames, page table and tagged-unit root.
+Its 3,481-job affected build passed. Lead independently checked all 99 new
+public registrations, all 117 initialization and 80 backtrace audit reports
+(only standard axioms or no axioms), and the actual native composition.
+The sole rebase conflict was adjacent dead-end notes; both were retained.
+Snapshot: `keep/interpreter-init-reviewed-20261028`; evidence:
+`logs/interpreter-init-*`. `10c5e3c6` removes the duplicate GC-call witness
+from the generated backtrace audit (now 79 declarations); initialization
+still audits it. The full gate will check the combined result.
+
+C_CALL3/5 has passed its 3,184-job table build and 12 focused reports; six
+new theorems have unique registrations. The worker is finishing its handoff,
+so this **131/134** census is not yet reviewed or published. It closes those
+whole rows from actual F1 arity rejection without changing GoodF1.
 
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | C_CALL Sol | Complete C_CALL3/5 from checked F1 arity classification | `syo-wt/a6-gc-next2` |
-| Startup Sol | Universal reset through null-interpreter/debugger initialization | `syo-wt/a1-prims-next` |
+| G2 Sol | Exact-size representation and shared original small-success dispatch | `syo-wt/a1-prims-next` |
 | Lead | Next full gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-C_CALL3/5 source review covers all primitive outcomes and malformed operands;
-its shared helper now builds, and downstream table checks are running. The
-proposed **131/134** census is not yet a reviewed/published result.
-Startup is repairing a default-budget kernel recursion failure in the new
-save-bank proof; no budget increase or reset-to-Loaded claim is authorized.
+Two Sol CLI workers are active. G2 started at 15:58 UTC from `10c5e3c6`
+in `a1-prims-next`; log `/tmp/syo-gc-small-success-launch.log`.
+The idle startup cache was transferred to the integration worktree under
+source/destination build locks, with matching toolchain/manifests and
+tracked dependency trees, before the G2 launch. All four build roots were
+copied coherently, without deletion.
 
-G2's next-size entry result has landed. `sol-gc-small-success.md` is the next
-G2 rotation: exact-size representation and shared original small dispatch.
-Other ready packets: counted console/C_CALL4, counted counter/exit, listing
-runtime repair, full physical custom startup/read context, general format
-parser, named reserve, and the actual startup CODE-section seek.
+The next call slot is counted console/C_CALL4. Other ready packets cover
+counter/exit, listing runtime repair, full physical custom startup/read
+context, general formatting, named reserve and the actual CODE-section seek.
 
 ## Remaining F1 boundaries
 
@@ -107,8 +114,8 @@ reuse accounting. Distinct names alone do not bound all allocation calls.
 Formatting needs general d/i/u/x/X/o flags/width/precision, large/major
 allocation, actual caller/runtime suppliers and its C_CALL2 return.
 
-Reset needs the continuation after backtrace through interpreter/debugger,
-CODE/primitive/DATA loading, promotion, system/argv setup and `Loaded`.
+The reviewed reset prefix reaches the debugger return. Reset-to-Loaded still
+needs CODE/primitive/DATA loading, promotion, system/argv and representation.
 The next ELF call after debugger initialization is directly to
 `caml_seek_optional_section`, not a separate seek wrapper. Its input must
 frame the retained executed descriptor/file history, not assume a snapshot.
