@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 18:09 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 18:13 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -148,23 +148,33 @@ build and all 144 focused reports (126 allowed-axiom, 18 pure). Rebase clean.
 Snapshot: `keep/custom-credit-listing-reviewed-20261028`;
 evidence: `logs/custom-credit-*`. This follows the active physical-state gate.
 
+## Reviewed current CODE source frames
+
+`2165d4de` closes current descriptor/file/source observations at the actual
+optional-section entry. Selected descriptor/name LiveFrames and actual
+fresh page-table provenance compose through initialization; HTIF and
+scratch-bounded image frames supply current file size, fd position and
+all descriptor bytes. The universal reset producer has no later-memory
+matching premise. Lead checked 37 new public registrations, the 3,533-job
+build and exact 37 focused reports (36 allowed-axiom, one pure).
+Snapshot: `keep/startup-code-source-reviewed-20261028`;
+evidence: `logs/code-source-*`. Only additive dead-end notes conflicted;
+both were retained. This is queued behind the active physical-state gate.
+The native reverse scan and lseek remain open.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| Startup Sol | Current descriptor/file/source frames at actual CODE seek entry | `syo-wt/a6-gc-next2` |
+| G2 Sol | Original-caller bounded least-large allocator wrapper | `syo-wt/a6-gc-next2` |
 | Runtime Sol | Concrete opening after-runtime supplier | `syo-wt/a1-prims-next` |
 | Lead | Gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-Startup entry handoff from 17:10 UTC is reviewed. Next packet:
-`tasks/sol-startup-seek-frames.md`, log `/tmp/syo-startup-seek-frames-launch.log`.
-The worker now has a passing 3,533-job affected build of selected descriptor,
-filename/OpenFile, embedded-image and fd-position frames through actual
-initialization. Final audit and lead review remain. The next native scan
-packet is `tasks/sol-code-seek-scan.md`; G2 gets the next slot rotation first.
-G2's next rotation packet is `tasks/sol-g2-large-wrapper.md`: original-caller
-wrapper conditions and returned representation/color for the reviewed branch.
-Its other branch/caller work stays in the ledger.
+The source-frame handoff is reviewed and committed. Its slot now rotates to
+`tasks/sol-g2-large-wrapper.md`: original-caller wrapper conditions and
+returned representation/color for the reviewed branch. Log:
+`/tmp/syo-g2-large-wrapper-launch.log`. The next startup packet is
+`tasks/sol-code-seek-scan.md`; G2's other branch/caller work stays in the ledger.
 Physical custom and listing credit work are reviewed. That slot now takes
 `tasks/sol-opening-runtime-local.md`, log
 `/tmp/syo-opening-runtime-launch.log`, using the selected returned spending
@@ -195,8 +205,9 @@ and an actual captured counted entry. Captured memory is still not reset
 execution, and arbitrary Loaded alone supplies no initial physical witness.
 
 Reset-to-Loaded still needs CODE/PRIM/DATA loading, promotion and system/argv.
-The next actual native call is caml_seek_optional_section; retained ancestor
-Steps alone do not frame its descriptor/file memory into the current state.
+Current descriptor/file memory at caml_seek_optional_section now follows
+from reviewed actual reset frames. The call still needs its native reverse
+scan, lseek and return composition.
 Ready packets cover this seek, opening runtime, physical custom state, general
 format parsing and named reserve. G2 also needs remaining tree/size/color
 cases, caller invariant production, full allocator readiness and collection.
