@@ -64,6 +64,78 @@ structure ChannelCustomsRepr (Customs : Config → Nat → Prop) (c : Config)
   opened : Gc.OpenChannelList c.σ.mem (Gc.placedChannels cp w.chans.length)
   physical : Customs c w.customs
 
+/-- Console effects may change channel data while retaining every reference
+count and the number of records. These are model observations, not a physical
+accounting assumption. -/
+structure ChannelRefsSame (w w' : World) : Prop where
+  length : w'.chans.length = w.chans.length
+  refs : ∀ (id : Nat) (ch ch' : Chan), w.chans[id]? = some ch → w'.chans[id]? = some ch' → ch'.refs = ch.refs
+
+theorem ChannelRefsSame.of_chans {w w' : World} (same : w'.chans = w.chans) :
+    ChannelRefsSame w w' := by
+  refine ⟨by rw [same], ?_⟩
+  intro id ch ch' at_ at'
+  rw [same, at_] at at'
+  cases at'; rfl
+
+theorem ChannelRefsSame.trans {w w' w'' : World} (first : ChannelRefsSame w w')
+    (second : ChannelRefsSame w' w'') : ChannelRefsSame w w'' := by
+  refine ⟨second.length.trans first.length, ?_⟩
+  intro id ch ch'' at_ at''
+  have bound : id < w'.chans.length := by
+    rw [first.length]; exact (List.getElem?_eq_some_iff.mp at_).1
+  have at' := List.getElem?_eq_getElem bound
+  exact (second.refs id _ _ at' at'').trans (first.refs id _ _ at_ at')
+
+theorem ChannelRefsSame.set {w : World} {id : Nat} {ch ch' : Chan}
+    (at_ : w.chans[id]? = some ch) (refs : ch'.refs = ch.refs) :
+    ChannelRefsSame w (w.setChan id ch') := by
+  refine ⟨List.length_set, ?_⟩
+  intro j old new oldAt newAt
+  by_cases eq : j = id
+  · subst j
+    rw [at_] at oldAt; cases oldAt
+    have bound := (List.getElem?_eq_some_iff.mp at_).1
+    change (w.chans.set id ch')[id]? = some new at newAt
+    rw [List.getElem?_set_self bound] at newAt
+    cases newAt; exact refs
+  · change (w.chans.set id ch')[j]? = some new at newAt
+    rw [List.getElem?_set_ne (Ne.symm eq), oldAt] at newAt
+    cases newAt; rfl
+
+theorem ChannelRefsSame.customs {w w' : World} (same : ChannelRefsSame w w') :
+    w'.customs = w.customs := by
+  have maps : w'.chans.map Chan.refs = w.chans.map Chan.refs := by
+    apply List.ext_getElem (by simp [same.length])
+    intro i hi hi'
+    simp only [List.getElem_map]
+    exact same.refs i _ _ (List.getElem?_eq_getElem (by simpa using hi'))
+      (List.getElem?_eq_getElem (by simpa using hi))
+  exact congrArg List.sum maps
+
+/-- Update after an OS effect, retaining the original channel's refs. -/
+theorem ChannelRefsSame.set_after {w mid : World} {id : Nat} {ch : Chan}
+    (same : ChannelRefsSame w mid) (at_ : w.chans[id]? = some ch)
+    (new : Chan) (refs : new.refs = ch.refs) : ChannelRefsSame w (mid.setChan id new) := by
+  have bound : id < mid.chans.length := by
+    rw [same.length]; exact (List.getElem?_eq_some_iff.mp at_).1
+  have midAt := List.getElem?_eq_getElem bound
+  exact same.trans (.set (ch' := new) midAt (refs.trans (same.refs id _ _ at_ midAt).symm))
+
+/-- Retarget the complete count witness from length and per-id refs alone. -/
+theorem ChannelCustomsRepr.of_refs_same {Customs : Config → Nat → Prop} {c : Config}
+    {cp : ChanPlace} {w w' : World} (counts : ChannelCustomsRepr Customs c cp w)
+    (same : ChannelRefsSame w w') : ChannelCustomsRepr Customs c cp w' := by
+  refine ⟨⟨?_⟩, ?_, ?_⟩
+  · intro id ch' at'
+    have bound : id < w.chans.length := by
+      rw [← same.length]; exact (List.getElem?_eq_some_iff.mp at').1
+    have at_ := List.getElem?_eq_getElem bound
+    obtain ⟨a, placed, count⟩ := counts.references.refs id _ at_
+    exact ⟨a, placed, count.trans (same.refs id _ _ at_ at').symm⟩
+  · simpa only [same.length] using counts.opened
+  · rw [same.customs]; exact counts.physical
+
 theorem ChannelCustomsRepr.boundary {Customs : Config → Nat → Prop} {c : Config}
     {cp : ChanPlace} {w : World} (h : ChannelCustomsRepr Customs c cp w) :
     Gc.ChannelCustomsAt Customs c (Gc.placedChannels cp w.chans.length) w.customs 0 :=

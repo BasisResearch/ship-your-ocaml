@@ -1,5 +1,23 @@
 # Routes not to repeat
 
+- 2026-10-28 counted console transport: whole `world.chans` equality is
+  not a semantic frame for successful flush/output. The real implementations
+  set the selected channel's buffer and/or offset; a whole-record memory
+  frame likewise excludes their actual writes. This is direct model/contract
+  inspection, not a reachable-state impossibility claim. Use the checked
+  `ChannelRefsSame` (length and per-id refs), derived from successful
+  `flushChan`/`putChar`/`putBlock`, and `ChannelCustomsRepr.of_refs_same`.
+  A total-count equation alone cannot recover per-record observations or
+  physical accounting. The native frame observes refcount/next words through
+  actual `consoleWindows`, selected `LibHeapAt` bounds/disjointness and
+  custom-space separation. Recover the actual returned placement using
+  `ChannelCustomsRepr.at_geometry`; never assume it matches the entry place.
+  In the recursive model proof, leaving the intermediate updated record as
+  `_` lets Lean infer the original record from the refs projection before
+  it sees the recursive tail. Give the real buffer/offset update explicitly
+  to `ChannelRefsSame.set_after`; no stronger semantic or runtime premise is
+  needed. Checked in `ConsoleCounts` and the complete `CountedConsoleRows`.
+
 - 2026-10-28 exact-size representation readback: mixing slot readback,
   scalar address rewriting and represented-family transport in one theorem
   exhausted the default heartbeats at the head-store seam

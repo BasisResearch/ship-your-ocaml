@@ -5,9 +5,9 @@ import OCaml.Vm.Sim.F1Frame
 import OCaml.Vm.Sim.F1RaiseRuntime
 import OCaml.Vm.Sim.HeapRows
 
-/-! Reuse generic rows under a local runtime invariant. Channel calls change
-the frozen world and use their counted machine summaries instead. Ordinary
-rows still need actual frame instances for the effects they perform. -/
+/-! Reuse generic rows under a local runtime invariant. Semantic reference
+transport permits buffer/offset changes while ordinary equality is a
+specialization. Every row needs actual frames for the effects it performs. -/
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
@@ -18,10 +18,8 @@ named values and the object-id counter. -/
 theorem _root_.OCaml.Vm.ChannelCustomsRepr.of_chans_eq
     {Customs : Config → Nat → Prop} {c : Config} {cp : ChanPlace} {w w' : World}
     (counts : ChannelCustomsRepr Customs c cp w) (channels : w'.chans = w.chans) :
-    ChannelCustomsRepr Customs c cp w' := by
-  refine ⟨⟨fun id ch at_ => counts.references.refs id ch (by rwa [channels] at at_)⟩, ?_, ?_⟩
-  · simpa only [channels] using counts.opened
-  · simpa only [World.customs, channels] using counts.physical
+    ChannelCustomsRepr Customs c cp w' :=
+  counts.of_refs_same (.of_chans channels)
 
 /-- Retarget only runtime facts and the definitionally equal budget. The
 ordinary representation and its selected channel placement are retained. -/
@@ -34,7 +32,7 @@ theorem _root_.OCaml.Running.retarget {L L' : OCaml.Layout} {P : Prog} {s : St} 
     stack := ⟨pl, cp, sp, high, repr,
       ⟨geometry.toArmGeometry, by rw [budget]; exact geometry.room⟩⟩ }
 
-/-- A local layout used for one non-channel row. It freezes the boundary
+/-- A local layout used for one counted row. It freezes the boundary
 channel world, while generic VM proofs retain their usual statements. -/
 def countedLayout (L : OCaml.Layout) (Customs : Config → Nat → Prop) (cp : ChanPlace)
     (world : World) : OCaml.Layout :=
@@ -295,11 +293,11 @@ theorem counted_brOp_channels {s s' : St} {n ofs : Int} {f : BitVec 64 → BitVe
 frame supplies the count observations; linked-list coherence recovers them
 at the ordinary producer's selected stack placement. No preservation
 supplier is added to the headline. -/
-theorem counted_row {L : OCaml.Layout} {P : Prog} {op : Opcode}
+theorem counted_refs_row {L : OCaml.Layout} {P : Prog} {op : Opcode}
     {Customs : Config → Nat → Prop}
     (row : ∀ cp world, OCaml.OpArm P (OCaml.LoopAt (countedLayout L Customs cp world) P) op)
     (channels : ∀ (s : St) (i : Instr) (s' : St),
-      i.op = op → stepI P s i = .next s' → s'.world.chans = s.world.chans) :
+      i.op = op → OCaml.InF1 P i → stepI P s i = .next s' → ChannelRefsSame s.world s'.world) :
     OCaml.OpArm P (CountedLoopAt Customs L P) op := by
   intro s c i reach h decoded opcode fragment
   obtain ⟨pl, cp, sp, high, repr, geometry⟩ := h.running.countedStack
@@ -312,11 +310,20 @@ theorem counted_row {L : OCaml.Layout} {P : Prog} {op : Opcode}
   | next s' =>
     obtain ⟨after, run, post⟩ := (show ∃ after, OCaml.Plus c after ∧ OCaml.LoopAt L' P s' after by
       simpa only [OCaml.ArmOutcome, effect] using outcome)
-    have counts := post.running.platform.runtime.2.of_chans_eq (channels s i s' opcode effect)
+    have counts := post.running.platform.runtime.2.of_refs_same (channels s i s' opcode fragment effect)
     exact ⟨after, run, h.of_plus run
       (countedRunning_of_counts (post.running.retarget post.running.platform.runtime.1 rfl) counts)⟩
   | halt e w => simpa only [OCaml.ArmOutcome, effect] using outcome
   | unsupported | wrong => trivial
+
+/-- Whole-channel equality specializes the refcount/length row transport. -/
+theorem counted_row {L : OCaml.Layout} {P : Prog} {op : Opcode}
+    {Customs : Config → Nat → Prop}
+    (row : ∀ cp world, OCaml.OpArm P (OCaml.LoopAt (countedLayout L Customs cp world) P) op)
+    (channels : ∀ (s : St) (i : Instr) (s' : St),
+      i.op = op → stepI P s i = .next s' → s'.world.chans = s.world.chans) :
+    OCaml.OpArm P (CountedLoopAt Customs L P) op :=
+  counted_refs_row row (fun s i s' opcode _ effect => .of_chans (channels s i s' opcode effect))
 
 /-- Memory-only specialization of the shared row adapter. -/
 theorem counted_memory_row {L : OCaml.Layout} {P : Prog} {op : Opcode}

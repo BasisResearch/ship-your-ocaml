@@ -37,26 +37,35 @@ theorem CountedCcallSetupPost.local {L : OCaml.Layout} {P : Prog} {s : St} {c : 
     geometry := h.geometry.retarget rfl }
 
 /-- Forget the local layout only after recovering counts at the returned cp.
-The real semantic channel equality changes the frozen world; linked-list
+Semantic length/refcount observations retarget the frozen world; linked-list
 uniqueness and total placement supply coherence at that same return. -/
-theorem CcallReturnAt.of_countedLayout {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
+theorem CcallReturnAt.of_countedLayout_refs {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
     {Customs : Config → Nat → Prop} {ra : BitVec 64} {pl : Place} {cp cp0 : ChanPlace}
     {world : World} {sp high : Nat} {domain frameSp result env : BitVec 64}
     (h : CcallReturnAt ra (countedLayout L Customs cp0 world) P s pl cp sp high
-      domain frameSp result env c) (channels : s.world.chans = world.chans) :
+      domain frameSp result env c) (channels : ChannelRefsSame world s.world) :
     CountedCcallReturnAt Customs ra L P s pl cp sp high domain frameSp result env c := by
-  have counts := h.platform.runtime.2.of_chans_eq channels
+  have counts := h.platform.runtime.2.of_refs_same channels
   exact { h with
     platform := { h.platform with runtime := h.platform.runtime.1 }
     geometry := h.geometry.retarget rfl
     counts := counts.at_geometry h.data.world h.geometry.nursery }
 
+/-- Compatibility for primitives retaining all channel data. -/
+theorem CcallReturnAt.of_countedLayout {L : OCaml.Layout} {P : Prog} {s : St} {c : Config}
+    {Customs : Config → Nat → Prop} {ra : BitVec 64} {pl : Place} {cp cp0 : ChanPlace}
+    {world : World} {sp high : Nat} {domain frameSp result env : BitVec 64}
+    (h : CcallReturnAt ra (countedLayout L Customs cp0 world) P s pl cp sp high
+      domain frameSp result env c) (channels : s.world.chans = world.chans) :
+    CountedCcallReturnAt Customs ra L P s pl cp sp high domain frameSp result env c :=
+  h.of_countedLayout_refs (.of_chans channels)
+
 /-- Shared native-summary adapter. The original entry count witness is an
 explicit argument of CountedPrimReturnsAtR, independent of the later callee. -/
-theorem counted_prim_returns_of_local {L : OCaml.Layout} {P : Prog}
+theorem counted_prim_returns_of_refs {L : OCaml.Layout} {P : Prog}
     {Customs : Config → Nat → Prop} {op : Opcode} {ra : BitVec 64} {k : Nat} {name : String}
     (localReturns : ∀ cp world, PrimReturnsAt (countedLayout L Customs cp world) P op ra k name)
-    (channels : ∀ args h w v h' w', primF1Impl name args h w = .ok v h' w' → w'.chans = w.chans) :
+    (channels : ∀ args h w v h' w', primF1Impl name args h w = .ok v h' w' → ChannelRefsSame w w') :
     CountedPrimReturnsAtR L P Customs op ra k name := by
   intro s c pl cp sp high table entry value env index v heap world reach ready counts sem words _succ
   obtain ⟨result, callee⟩ := localReturns cp s.world s c pl cp sp high table entry value env index
@@ -65,7 +74,16 @@ theorem counted_prim_returns_of_local {L : OCaml.Layout} {P : Prog}
   intro call setup placed
   exact (callee.summary call setup.local placed).weaken (fun _ h => h) fun after returned => by
     obtain ⟨cp', post⟩ := returned
-    exact ⟨cp', post.of_countedLayout (channels _ _ _ _ _ _ sem)⟩
+    exact ⟨cp', post.of_countedLayout_refs (channels _ _ _ _ _ _ sem)⟩
+
+/-- Ordinary/read-only primitives specialize the same native adapter. -/
+theorem counted_prim_returns_of_local {L : OCaml.Layout} {P : Prog}
+    {Customs : Config → Nat → Prop} {op : Opcode} {ra : BitVec 64} {k : Nat} {name : String}
+    (localReturns : ∀ cp world, PrimReturnsAt (countedLayout L Customs cp world) P op ra k name)
+    (channels : ∀ args h w v h' w', primF1Impl name args h w = .ok v h' w' → w'.chans = w.chans) :
+    CountedPrimReturnsAtR L P Customs op ra k name :=
+  counted_prim_returns_of_refs localReturns
+    (fun args h w v h' w' sem => .of_chans (channels args h w v h' w' sem))
 
 /-- The saved-ra window uses the existing native runtime frame and the
 selected heap's channel/count frame on that exact window. -/

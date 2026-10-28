@@ -19,6 +19,17 @@ structure ChannelCountFrame (Customs : Config → Nat → Prop) (cp : ChanPlace)
     Gc.chanRefs d.σ.mem a = Gc.chanRefs c.σ.mem a
   links : Gc.ChannelLinksKept c.σ.mem d.σ.mem (Gc.placedChannels cp w.chans.length)
 
+/-- Console writes need only the observed refcount/link words, rather than
+a frame for the entire record (whose buffer and offset actually change). -/
+theorem ChannelCountFrame.of_observations {Customs : Config → Nat → Prop}
+    {cp : ChanPlace} {w : World} {c d : Config}
+    (physical : Gc.CustomCountStep Customs c d 0)
+    (references : ∀ id ch a, w.chans[id]? = some ch → cp id = some a →
+      bytesT d.σ.mem (a + chanOffRefcount) 4 = bytesT c.σ.mem (a + chanOffRefcount) 4)
+    (links : Gc.ChannelLinksKept c.σ.mem d.σ.mem (Gc.placedChannels cp w.chans.length)) :
+    ChannelCountFrame Customs cp w c d :=
+  ⟨physical, fun id ch a at_ placed => congrArg BitVec.toNat (references id ch a at_ placed), links⟩
+
 /-- Reconstruct all three boundary components from one shared frame. -/
 theorem ChannelCountFrame.repr {Customs : Config → Nat → Prop} {cp : ChanPlace}
     {w : World} {c d : Config} (frame : ChannelCountFrame Customs cp w c d)

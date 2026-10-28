@@ -1,5 +1,26 @@
 # Lane a6-gc
 
+## Counted console frame and complete C_CALL4 (2026-10-28)
+
+- The actual console windows now preserve physical customs, natural
+  per-record refs and open-list links through the selected LibHeapAt,
+  custom-space separation and named CustomMemCall.accounting.frame.
+  `ChannelRefsSame` transports changed model buffers/offsets from successful
+  flush/output semantics; returned placement is recovered through existing
+  open-list/geometry coherence.
+- All four actual console returns/consumers at arities 1/2/4 and complete
+  C_CALL4 are checked. The generated census is 132/134, with C_CALL1/2 open.
+  All 131 prior complete row terms remain unchanged. This supersedes the
+  older census entries below. Exact remaining obligations and validation:
+  top of `a1-prims.md`. The affected build passes 3,713 jobs; the focused
+  audit passes 47 allowed-axiom reports covering all 36 new theorems and
+  eleven regressions, with unique registrations. Eleven generator checks,
+  hole/discipline/abstraction and whitespace checks pass.
+- CustomMemCall and concrete runtime/startup suppliers remain named/open;
+  full counted BarrierGrowthFull stays G2, and C4 round 2 waits for F1.
+  Full Audit and integration remain the lead gate; checked edits stay here.
+
+
 ## Original-entry exact/next-size small-success dispatch (2026-10-28)
 
 - `BestFitEntrySmall.allocate_entry_small` checks actual `bf_allocate`

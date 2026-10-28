@@ -7,6 +7,7 @@ import OCaml.Vm.Primitives.Named.NamedAt
 import OCaml.Vm.Gc.ChannelRefs
 import OCaml.Vm.Sim.F1Ccall
 import OCaml.Vm.Sim.CountedCcall1
+import OCaml.Vm.Sim.CountedConsoleRows
 import OCaml.Vm.Sim.CountedEntry
 import OCaml.Vm.Sim.CountedChannelRows
 import OCaml.Vm.Sim.CountedMemoryRows
@@ -8086,3 +8087,41 @@ Every generated block rule is also audited by scripts/check_bc_audit.py. -/
 #print axioms OCaml.Vm.Sim.ccall_wrong_arity_row
 #print axioms OCaml.Vm.Sim.counted_c_call3_row
 #print axioms OCaml.Vm.Sim.counted_c_call5_row
+
+-- Actual counted console frames, returns/consumers and complete C_CALL4.
+#print axioms OCaml.Vm.ChannelRefsSame.of_chans
+#print axioms OCaml.Vm.ChannelRefsSame.trans
+#print axioms OCaml.Vm.ChannelRefsSame.set
+#print axioms OCaml.Vm.ChannelRefsSame.customs
+#print axioms OCaml.Vm.ChannelRefsSame.set_after
+#print axioms OCaml.Vm.ChannelCustomsRepr.of_refs_same
+#print axioms OCaml.Vm.Sim.ChannelCountFrame.of_observations
+#print axioms OCaml.Vm.Sim.counted_refs_row
+#print axioms OCaml.Vm.Sim.CcallReturnAt.of_countedLayout_refs
+#print axioms OCaml.Vm.Sim.counted_prim_returns_of_refs
+#print axioms OCaml.Vm.Sim.writeFd_refs_same
+#print axioms OCaml.Vm.Sim.flushChan_refs_same
+#print axioms OCaml.Vm.Sim.putChar_refs_same
+#print axioms OCaml.Vm.Sim.putBlock_refs_same
+#print axioms OCaml.Vm.Sim.flush_primitive_refs_same
+#print axioms OCaml.Vm.Sim.output_char_primitive_refs_same
+#print axioms OCaml.Vm.Sim.output_primitive_refs_same
+#print axioms OCaml.Vm.Sim.primF1Impl_four_name
+#print axioms OCaml.Vm.Sim.console_fixed_out
+#print axioms OCaml.Vm.Sim.console_static_out
+#print axioms OCaml.Vm.Sim.f1_console_channelCountFrame
+#print axioms OCaml.Vm.Sim.counted_console_stable
+#print axioms OCaml.Vm.Sim.counted_console_returns
+#print axioms OCaml.Vm.Sim.counted_caml_ml_flush_returns
+#print axioms OCaml.Vm.Sim.counted_caml_ml_output_char_returns
+#print axioms OCaml.Vm.Sim.counted_caml_ml_output_returns
+#print axioms OCaml.Vm.Sim.counted_caml_ml_output_bytes_returns
+#print axioms OCaml.Vm.Sim.counted_flush_next
+#print axioms OCaml.Vm.Sim.counted_output_char_next
+#print axioms OCaml.Vm.Sim.counted_output_next
+#print axioms OCaml.Vm.Sim.counted_c_call4_setup
+#print axioms OCaml.Vm.Sim.counted_c_call4_arm
+#print axioms OCaml.Vm.Sim.counted_c_call4_success
+#print axioms OCaml.Vm.Sim.counted_c_call4_local_returns
+#print axioms OCaml.Vm.Sim.counted_c_call4_refs
+#print axioms OCaml.Vm.Sim.counted_c_call4_row

@@ -1,7 +1,119 @@
 # A1 F1 primitive summaries
 
+## Actual counted console returns and complete C_CALL4 (2026-10-28)
 
-## Complete counted C_CALL3/5 by F1 arity (2026-10-28)
+Checked edits remain for lead review/integration. Initial worktree at
+`004b521c` was clean; all work stays here. No workers, Git metadata writes,
+proof-budget changes, generated-output hand edits or full Audit were used.
+
+`ChannelRefsSame` names exactly equal list length and per-id refs.
+`ChannelCustomsRepr.of_refs_same` transports all boundary counts; the model
+custom-total equality is derived from those observations. `ConsoleCounts`
+proves the observations from actual successful `writeFd`, closed/open flush,
+room/full character output and all block-output fuel iterations, including
+empty slices. Primitive inversions retain the real channel/int/slice/offset
+checks and successful argument patterns. Chan, `primF1Impl`, `io.h` and the
+actual `io.c` flush/output implementations were inspected. The failed
+whole-chans/whole-record route and intermediate-update elaboration issue
+are recorded in `DEAD-ENDS.md`.
+
+`ChannelCountFrame.of_observations` permits mutable target buffer, offset
+and cursor fields. `f1_console_channelCountFrame` uses the actual six
+`consoleWindows` and the selected heap: opened-list uniqueness aligns frozen
+count records with its real `chs`; malloc bounds separate statics/native
+stack; recordsDisjoint separates every other record; the target refcount and
+next offsets miss all three mutable record windows. `CustomMemCall.apart`
+protects native/statics, `footprint` and `LibHeapAt.custom_apart_record`
+protect the selected record through CustomSpace, and `accounting.frame`
+transports the physical predicate with the preserved Caml_state word.
+`counted_console_stable` pairs that complete count frame with the existing
+`f1_console_stable`. The generic console native summaries retain their
+ordinary payload/named/domain/native-save frames and target data proof.
+
+`counted_prim_returns_of_refs` and `counted_refs_row` reuse that local runtime.
+Existing unchanged-channel adapters specialize them. Actual callee returns
+retain the frozen count observations, retarget through model refs/length,
+then recover the returned placement with `ChannelCustomsRepr.at_geometry`.
+Neither a matching placement nor a counted successor is presumed.
+
+Four concrete counted primitive returns and their consumers are checked:
+
+| Primitive | Arity | Actual counted consumer |
+|---|---:|---|
+| `caml_ml_flush` | 1 | `counted_flush_next` |
+| `caml_ml_output_char` | 2 | `counted_output_char_next` |
+| `caml_ml_output` | 4 | `counted_output_next` |
+| `caml_ml_output_bytes` | 4 | `counted_output_next` |
+
+`gen_counted_ccall2.py` now emits C_CALL2 and C_CALL4 from the same unary
+composition/pattern; the arity-four instance reuses the existing native
+prefix/argument loads, real `ccall1Log` setup frame and memory-preserving
+suffix, with the actual return site and three popped stack arguments.
+No new global runtime or stronger WindowStable supplier is introduced.
+GoodF1, Fits, original readiness/reach/successor, heap and argument guards
+remain unchanged.
+
+Complete C_CALL4 is supplied separately from partial successes.
+`primF1Impl_four_name` inspects every real primitive implementation pattern;
+only output/output-bytes can return successfully at arity four.
+`counted_c_call4_local_returns` uses their actual native contracts and
+`PrimReturnsAtD.of_arity` for all other names. `counted_c_call4_refs` follows
+all operand shapes, negative-index/stack-depth checks, missing slots, actual
+F1 dispatch and primitive outcomes. The whole row reuses `c_call4_row`,
+including its real setup/return execution, malformed/absent-slot rejection,
+raise/callback exclusion and `CcallExit.of_arity`. The generated supported
+census is **132/134**; comparison with HEAD preserves all 131 prior complete
+row terms and adds exactly C_CALL4.
+
+Exact remaining complete rows:
+
+- C_CALL1: existing ordinary unary successes, three channel successes and
+  flush now compose; concrete opening/listing runtime producers,
+  fresh-oo-id and the actual unary sys_exit halt remain.
+- C_CALL2: existing ordinary binary successes and output-char now compose;
+  general format-int (including large-result allocation) and named
+  registration remain.
+
+Opening/listing, named registration, general formatting, concrete physical
+runtime/startup suppliers and full counted F1 table assembly remain separate.
+CustomMemCall remains named. Six barrier rows retain precisely
+`∀ cp world, BarrierGrowthFull (countedLayout f1Layout Customs cp world)`
+with G2; C4 round 2 waits for F1. Complete C_CALL1 and C_CALL2 remain open.
+
+Validation:
+
+- Focused returns/consumers/whole-row build passes **2,372 jobs**:
+  `lake build OCaml.Vm.Sim.CountedConsoleRows`,
+  `/tmp/console-counts-rows3.log`.
+- The affected build passes **3,713 jobs**: CountedControlRows,
+  CountedPrimRows, CountedChannelRows, CountedEntry, F1Table and WhileMinTable,
+  `/tmp/console-counts-affected.log`.
+- `lake build OCaml.Vm.Sim.CountedConsoleAudit` passes **3,267 jobs** and
+  **47 focused axiom reports**, `/tmp/console-counts-focused-audit.log`.
+  `/tmp/console-counts-check-audit.py` verifies exact report membership,
+  coverage of **all 36 new theorem declarations**, unique full-Audit
+  registrations and axioms contained in
+  `{propext, Classical.choice, Quot.sound}` (or none). The eleven regressions
+  include unchanged-channel adapters, census/table terms and existing named
+  primitive consumers. Full Audit is registered and left to the lead.
+- Eleven relevant generator drift checks pass: native C_CALL
+  setups/returns/arms/exits, counted stack/allocation/field/control/
+  C_CALL2+4/primitive rows and the new focused console audit. A read-only
+  comparison with HEAD confirms all 131 previous supplied row terms are
+  unchanged and exactly C_CALL4 is added. Holes (4,802 files), discipline
+  (27 rules), abstraction gate and whitespace checks pass.
+- Every Lean launch checks `free -g` (available ≥25 GB), runs serially via
+  `python3 scripts/lean-guarded.py --log /tmp/<task>.log --
+  scripts/lean-capped.sh lake ...`, and retains the launcher's 12 GiB cap,
+  two-thread setting and guard's failed/10 GiB stop. No virtual-memory
+  limit, proof-budget change or generated-output hand edit was used.
+
+Full `OCaml.Audit` and landing via `scripts/integrate.sh` remain the lead
+gate. Git metadata and the landing queue are untouched.
+
+
+
+## Previous arity milestone: counted C_CALL3/5 by F1 arity (2026-10-28)
 
 Checked edits are ready for lead review; no landing was attempted.
 The initial worktree at `19b964fd` was clean. Read the binding briefs,
