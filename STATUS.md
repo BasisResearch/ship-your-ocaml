@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 19:12 UTC. Target: close Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 19:20 UTC. Target: close Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,19 +18,22 @@ GoodF1 has not been narrowed to simplify named registration or formatting.
 
 ## Published and landing
 
-`origin/main`: **`29994e71e449eb89c336180dc4e82adc0357e3ec`**, independently
-verified after the 17:47 UTC gate. That gate passed 6,208 jobs, 9,736 main
-allowed-axiom reports (9,740 including TCB), 150 axiom-free reports and 329
-OS traces: 5,069 steps, 324 accepted, five special, zero rejected/unsupported.
-The whole build has 12,196 allowed-axiom reports including imported audits.
-Evidence: `logs/{integrate,build}-29994e71.log`, `logs/gate-29994e71.json`.
+`origin/main`: **`4c4209eae1e1979f3a9e95501a78a58ce5cda0a6`**, independently
+verified after the 19:20 UTC gate. That gate passed 6,211 jobs, 9,778 main
+allowed-axiom reports (9,782 including TCB), 153 axiom-free reports in the
+gate transcript and 329 OS traces: 5,069 steps, 324 accepted, five special,
+zero rejected/unsupported. The whole build has 12,238 allowed-axiom reports.
+Evidence: `logs/{integrate,build}-4c4209ea.log`, `logs/gate-4c4209ea.json`.
 
-**Active gate:** bprime at fixed candidate `4c4209ea`, started 17:47 UTC,
-for physical custom-state/read-context changes (`53e93d16`). Its Layout
-changes trigger a broad rebuild; no error has been reported. Log:
-`/tmp/syo-custom-physical-integrate.log`; bprime `.integrate.log` and
+This publishes `53e93d16`: physical custom state, exact read-only call pins,
+footprint/accounting/frame laws and the captured counted startup entry.
+Lead review covered 45 new registrations, 3,679 consumer jobs and 62 focused
+reports (59 allowed, three pure); `logs/custom-physical-*`.
+
+**Next gate:** bprime is moving to the reviewed local batch below, including
+complete C_CALL1, for `scripts/integrate.sh`. Log:
+`/tmp/syo-counted-unary-integrate.log`; bprime `.integrate.log` and
 `.check-build.log`. Do not change this tree's HEAD, source or cache mid-gate.
-Later reviewed commits below are queued for the following gate.
 
 All publication goes through `scripts/integrate.sh` and normal fast-forward
 pushes to origin/main. Reviewed snapshots remain on `keep/*` branches.
@@ -39,7 +42,6 @@ pushes to origin/main. Reviewed snapshots remain on `keep/*` branches.
 
 | Commit | Result | Lead-reviewed evidence |
 | --- | --- | --- |
-| `53e93d16` | Physical custom state, exact read-only call pins, footprint/accounting/frame laws and captured counted startup entry | 45 new registrations; 3,679-job consumer build; 62 focused reports (59 allowed, three pure); `logs/custom-physical-*` |
 | `66343b8a` | Selected custom reserve/spending on one returned ledger; concrete listing runtime relative only to CustomMemCall | Six new registrations; 3,682 jobs; 144 focused (126 allowed, 18 pure); `logs/custom-credit-*` |
 | `2165d4de` | Current CODE descriptor/file/image observations derived from actual reset initialization, without later-memory matching premises | 37 new registrations; 3,533 jobs; 37 focused (36 allowed, one pure); `logs/code-source-*` |
 | `9f4e4fa1` | Concrete channel-opening runtime and counted in/out adapters, relative only to CustomMemCall | Nine new registrations; 3,683 jobs; 161 focused (141 allowed, 20 pure); `logs/opening-runtime-*` |
