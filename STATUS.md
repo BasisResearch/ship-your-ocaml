@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 12:24 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 12:29 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -48,7 +48,15 @@ Logs: `logs/integrate-026238f7.log`, `logs/build-026238f7.log`.
 with exact byte-string representation, saved ABI, observable output and explicit
 runtime/frame conditions. Its 1,412-job affected build passed. Lead verified
 all 16 new theorem registrations and 28 allowed focused axiom reports.
-General formatting and C_CALL2 remain open. This change awaits the next full gate.
+General formatting and C_CALL2 remain open. It is combined with `58740097` in the next full gate.
+
+`58740097` repairs custom-state ownership using the selected caller ledger,
+with a checked captured empty-ledger obstruction and actual startup/frame/
+opening/listing consumers. Recovery passed 3,653 affected jobs and 60 focused
+audits (59 standard, one axiom-free); all 19 new theorems are registered.
+Full physical Customs and the separate global-frame compatibility issue
+remain open. The gate cache transfer from the idle custom lane checks
+toolchain/manifests/dependency trees and holds both build locks.
 
 ## Recovery work
 
@@ -56,14 +64,14 @@ Both Sol workers stopped on a usage limit on October 27. Their proof edits
 are preserved in `keep/custom-ledger-recovery-20261028` (`ea24267b`) and
 `keep/decimal-native-recovery-20261028` (`7f9b7f7d`). Neither checkpoint itself is claimed landed; the reviewed decimal patch is `da1ab268`.
 The selected-ledger affected build passed 3,628 jobs; the decimal native
-composition passed 1,403. Sol availability was restored on resumption. Decimal recovery is complete;
-custom recovery is checking affected consumers and focused audits before integration.
+composition passed 1,403. Sol availability was restored on resumption. Both recovery tasks are complete;
+the reviewed patches are committed for the full gate. Original snapshots remain preserved.
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
 | Control Sol | Remaining counted memory/control rows | `syo-wt/a6-gc-next2` |
-| Custom Sol recovery | Audit selected-ledger ownership repair | `syo-wt/a1-prims-next` |
-| Lead | Review custom recovery; gate decimal native return | main; `syo-wt/bprime` |
+| Custom Sol | Conditional global-frame obstruction and local separation repair | `syo-wt/a1-prims-next` |
+| Lead | Gate selected custom ownership and decimal native return | main; `syo-wt/bprime` |
 
 ## Remaining F1 boundaries
 
@@ -78,8 +86,8 @@ domain's table identity need startup/frame/call producers.
 Lead review also flagged `CallerApart.free`, which quantifies over every
 heap ledger although `HeapReady` does not require a ledger to be exhaustive.
 `sol-custom-ledger.md` asks for the precise captured empty-ledger obstruction
-and a repair tied to the actual caller ledger. The interrupted worker checked the empty-ledger obstruction and the affected
-selected-ownership consumers; recovery will complete audits and review. A separate lead inspection found a candidate
+and a repair tied to the actual caller ledger. The empty-ledger obstruction and selected-ownership consumers are now
+checked and reviewed in `58740097`. A separate lead inspection found a candidate
 incompatibility between the global record-separation law and unrestricted
 outside-byte framing; `sol-custom-apart-local.md` queues a checked conditional
 obstruction and local spatial-invariant repair. That second candidate is
