@@ -1,5 +1,111 @@
 # A1 F1 primitive summaries
 
+## Concrete custom physical startup and independent native context (2026-10-28)
+
+Checked edits remain for lead review. No commit, integration queue write,
+other worktree, subagent or other worker was used. The accepted native
+`CustomMemCall` stays named. Full `OCaml.Audit` and landing via
+`scripts/integrate.sh` remain the lead gate.
+
+`Gc/CustomPhysical.lean` supplies concrete `PhysicalCustoms`, `PhysicalReady`
+and `PhysicalState`. The physical observations include unique natural table
+occupancy, count <=5, both exact resource bit-pattern targets, full caller
+separation, and all seven initial zero or allocated table words. The allocated
+case reuses `CustomTableShape`, factored in `Gc/CustomMemCredit.lean` from the existing
+`QuietCustomTable`; combining it with independent stable pins constructs that
+same QuietCustomTable. Actual ptr/limit/threshold/end/base/size/reserve give
+no-wrap interval bounds and ptr < limit at the quiet bound. Occupancy alone
+still cannot exclude growth. The existing request remains 792576 bytes;
+size=32768 and reserve=256 are actual observations, not inferred capacity.
+
+The concrete null-footprint producer establishes all `CallerApart` laws from
+the observed domain and null backing base. Restricting `PhysicalState` to a
+physical witness avoids asserting global apartness for arbitrary malformed
+backing pointers. `physicalAccounting`, `physical_footprint`,
+`physical_complete`, `physical_apart` and `physical_frame` prove the existing
+full accounting/Ready/state laws, including both resource words and table
+address transport. Caml_state uses its existing explicit frame condition.
+All other read-only call pins remain separate from Ready.
+
+`Gc/CustomContext.lean` supplies `CustomCallPins`. Generated Layout symbols
+and captured total-read certificates pin minor max=8192, minor ratio=100,
+major ratio=44, lambda=+0, nursery words=0x40000, major heap words=0x1f000,
+Caml_state and actual domain custom-table identity. The source/disassembly
+read audit is [CUSTOM-READS.md](CUSTOM-READS.md). The lambda-zero branch
+avoids local/suspended/random/callback reads; no such observation is inferred
+from the mutable-state frame. F1Pins and its real kept footprint now retain
+exactly the additional three domain words. Every affected domain/window,
+allocation, remembered-growth, console, entry and raise frame is checked
+against that stronger footprint.
+
+CustomMemInput explicitly consumes this independent context. Opening derives
+it from the strengthened F1 producer and preserves it through actual saves,
+selected malloc/open effects and flags; `OpenedOut.context` uses the checked
+native returned effects and epilogue. Listing's actual selected entry supplies
+it, and the real walk retains it through prologue, refcount/scratch stores,
+native custom returns and cons stores. `OutListReturned.context` retains it
+through either actual epilogue. These are observation/frame producers, not
+new whole-primitive or returned-runtime assumptions. The old resource-band
+opening helper was insufficient for these static reads; the proof reuses
+`outW_openWindows_static` with actual errno/head separation instead.
+
+`PhysicalCustoms.startup` proves full physical zero from generated captured
+reads, alongside `CustomCallPins.startup` and the existing selected ownership
+producer. `f1_physical_counted_entry` and `whileMin_physical_counted_entry`
+carry that full predicate through the actual counted prologue using
+`EntryFrame.accountingFrame` and the concrete physical accounting laws,
+without a custom-call premise at startup. Later custom calls retain precisely
+`CustomMemCall PhysicalReady PhysicalState PhysicalCustoms`.
+The old occupancy-only entry remains available as a component. Captured
+memory is never presented as execution from reset.
+
+`Gc/CustomResources.lean` checks actual input parameter arithmetic and finite
+integer rounding *targets*: ratios are rounded before repeated addition.
+The minor denominator is 2097100, reflecting native divide-before-multiply,
+not 2097152. Kernel finite checks put all targets through five calls below
+one and the sixth major target above one. These facts do not assert native
+soft-double semantics. The exact remaining numeric duty is connecting those
+targets to actual `__floatundidf`, `__divdf3`, `__adddf3` and `__gedf2`
+executions, ABI returns and threshold branches inside CustomMemCall.
+`quietBound_spec` alone still proves no such connection.
+
+Remaining at the accepted native boundary: actual first table allocation and
+initialization, insertion, physical resource/count transition, quiet native
+return, selected returned full ledger and actual table spending. The existing
+`CustomMemSpending` supplier and propagation of separate input credit through
+counted callers remain open; no `LibHeapAt.room` is inferred from spatial
+HeapReady/CustomLedger. Concrete opening whole-runtime reconstruction,
+remaining F1 assembly obligations and reset reachability keep their prior
+boundaries. GoodF1 is unchanged; counted BarrierGrowthFull stays G2 and
+C4 round 2 waits for F1.
+
+Validation:
+
+- Final affected build passes **3679 jobs**:
+  `lake build OCaml.Vm.Gc.CustomPhysicalAudit
+  OCaml.Vm.Sim.CountedChannelRows OCaml.Vm.Sim.CountedControlRows
+  OCaml.Vm.Sim.F1Table OCaml.Vm.Sim.WhileMinTable`,
+  `/tmp/custom-physical-final.log`. The preceding full affected run also
+  passes 3679 jobs (`/tmp/custom-physical-affected.log`); the final run
+  checks the strengthened unconditional counted startup adapter.
+- The focused file compiles in that build and emits **62 exact reports**,
+  extracted/checked in `/tmp/custom-physical-focused-axioms.log`: 59 use
+  only `{propext, Classical.choice, Quot.sound}` and three use no axioms.
+  All **45 new theorems**, including all 13 generated captured reads, are
+  included; the other 17 are regressions. Unique report membership and
+  exactly one full-Audit registration per new theorem were checked. Full
+  OCaml.Audit was not run.
+- `gen_boot_runtime.py --check`, `gen_custom_table_credit.py --check`,
+  `gen_outlist_runtime_audit.py --check`, and byte comparison of a fresh
+  `gen_layout.py` output pass. Hole, 27-rule discipline, abstraction and
+  whitespace gates pass; the C4 cluster remains 3.
+- Every Lean launch first checked `free -g` (available >=25 GB), ran
+  serially via `python3 scripts/lean-guarded.py --log <log> --
+  scripts/lean-capped.sh lake ...`, and retained the inherited 12 GiB /
+  two-thread scope. No heartbeat/recursion increase, virtual-memory ulimit,
+  generated-output hand edit or Git metadata write was used.
+
+
 ## Listing entry/runtime repair and native credit boundary (2026-10-28)
 
 Checked edits are ready for lead review, based on clean `a1be6936`; no commit,

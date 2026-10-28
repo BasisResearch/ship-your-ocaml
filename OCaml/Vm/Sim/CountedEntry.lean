@@ -1,24 +1,26 @@
 import OCaml.Vm.Gc.ChannelCustomCount
+import OCaml.Vm.Gc.CustomPhysical
 import OCaml.Vm.Sim.CountedInvariant
 import OCaml.Vm.Sim.ChannelCountFrame
 import OCaml.Vm.Sim.EntryF1
 
 /-! The actual interpreter prologue carries the concrete startup table-count
 component to the counted loop relation. No additional machine/frame supplier
-is used. This does not yet instantiate the full physical runtime predicate
-needed by `CustomMemCall`; see `ChannelCustomCount`. -/
+is used. The full physical variant below uses `PhysicalCustoms.startup`
+and the concrete accounting/frame laws. Later native custom calls remain a
+separate accepted `CustomMemCall` obligation. -/
 
 namespace OCaml.Vm.Sim
 set_option autoImplicit false
 open OCaml.Bytecode Vsa.Machine Vsa.Sim OCaml.Vm.Primitives
 
-/-- The named custom runtime's footprint also frames a complete physical
-accounting predicate through the actual prologue, independently of which
-concrete predicate its eventual supplier selects. -/
-theorem EntryFrame.customCountFrame {c d : Config} {pl : Place}
+/-- Physical accounting and caller separation frame a complete predicate
+through the actual prologue. This rule needs no native custom execution. -/
+theorem EntryFrame.accountingFrame {c d : Config} {pl : Place}
     {sp : Nat} {regs : Nat → BitVec 64}
     {Ready : Nat → Config → Prop} {state Customs : Config → Nat → Prop}
-    (custom : Gc.CustomMemCall Ready state Customs) (frame : EntryFrame sp)
+    (accounting : Gc.CustomAccounting Ready state Customs)
+    (apart : ∀ c a, state c a → Gc.CallerApart c a) (frame : EntryFrame sp)
     (dom : (word c Layout.sym_Caml_state).toNat = Gc.f1Domain)
     (memory : d.σ.mem = writeLog c.σ.mem (entryLog sp regs (BitVec.ofNat 64 pl.codeBase) c)) :
     Gc.CustomCountStep Customs c d 0 := by
@@ -26,7 +28,7 @@ theorem EntryFrame.customCountFrame {c d : Config} {pl : Place}
   have outside (a : Nat) (at_ : state c a) :
       OutLRange (entryLog sp regs (BitVec.ofNat 64 pl.codeBase) c) a 1 := by
     apply outLRange_of_cover cover
-    have apart := custom.apart c a at_
+    have apart := apart c a at_
     have low := apart.belowStack
     have static := apart.static
     have domain := apart.domainField
@@ -40,7 +42,7 @@ theorem EntryFrame.customCountFrame {c d : Config} {pl : Place}
     omega
   constructor
   intro n physical
-  simpa only [Nat.add_zero] using custom.accounting.frame physical
+  simpa only [Nat.add_zero] using accounting.frame physical
     (fun a at_ => by rw [memory, writeLog_out _ _ _
       (outL_of_range (outside a at_) (Nat.le_refl a) (by omega))])
     (word_of_log memory (outLRange_of_cover cover (by
@@ -51,6 +53,17 @@ theorem EntryFrame.customCountFrame {c d : Config} {pl : Place}
       simp only [OutLRange, entryFootprint, interpFrame, Layout.interpFrameBytes,
         Layout.sym_caml_callback_depth, Layout.sym_Caml_state, and_true] at domainAbove ⊢
       omega)))
+
+/-- The accepted native interface supplies the same reusable accounting
+frame at generic counted entries. -/
+theorem EntryFrame.customCountFrame {c d : Config} {pl : Place}
+    {sp : Nat} {regs : Nat → BitVec 64}
+    {Ready : Nat → Config → Prop} {state Customs : Config → Nat → Prop}
+    (custom : Gc.CustomMemCall Ready state Customs) (frame : EntryFrame sp)
+    (dom : (word c Layout.sym_Caml_state).toNat = Gc.f1Domain)
+    (memory : d.σ.mem = writeLog c.σ.mem (entryLog sp regs (BitVec.ofNat 64 pl.codeBase) c)) :
+    Gc.CustomCountStep Customs c d 0 :=
+  frame.accountingFrame custom.accounting custom.apart dom memory
 
 /-- Attach any complete physical count to entry's retained placement using
 the same whole-record and opened-head frame as the loaded payload. -/
@@ -83,6 +96,34 @@ theorem counted_entry_of_custom {P : Prog} {c : Config} {pl : Place} {cp : ChanP
   obtain ⟨after, run, post⟩ := entry_loopAt_framed h caller h.geometry
     (by rw [dom]; exact f1_entryStable frame)
   exact ⟨after, run, post.counted caller counts (frame.customCountFrame custom dom post.memory)⟩
+
+/-- Full physical startup, including resources and table shape, enters the
+counted invariant through the actual prologue using the concrete accounting
+laws. The captured read certificates supply zero; no custom call occurs here. -/
+theorem f1_physical_counted_entry {P : Prog} {c : Config}
+    (loaded : OCaml.Loaded Gc.f1Layout P c)
+    (memory : Vsa.Densify.MemEqv c.σ.mem
+      (Vsa.Sim.Boot.observedMem Boot.WhileMinImage.initialMem Boot.WhileMinLog.log)) :
+    ∃ after, OCaml.Plus c after ∧ CountedLoopAt Gc.PhysicalCustoms Gc.f1Layout P P.init after := by
+  obtain ⟨pl, cp, high, entry⟩ := loaded
+  obtain ⟨sp, regs, saved, caller⟩ := entry.caller
+  have dom := Gc.f1_domain entry.platform.runtime
+  have frame := EntryFrame.of_caller caller
+  obtain ⟨after, run, post⟩ := entry_loopAt_framed entry caller entry.geometry
+    (by rw [dom]; exact f1_entryStable frame)
+  have counts : ChannelCustomsRepr Gc.PhysicalCustoms c cp P.init.world :=
+    ChannelCustomsRepr.empty rfl (Gc.PhysicalCustoms.startup memory)
+      (Boot.WhileMinEntry.read_caml_all_opened_channels memory)
+  exact ⟨after, run, post.counted caller counts
+    (frame.accountingFrame Gc.physicalAccounting (fun _ _ state => Gc.physical_apart state) dom post.memory)⟩
+
+/-- The captured whileMin candidate has a full physical counted entry.
+Execution from reset and later native custom calls remain separate gates. -/
+theorem whileMin_physical_counted_entry :
+    ∃ after, OCaml.Plus Boot.WhileMin.cut after ∧
+      CountedLoopAt Gc.PhysicalCustoms Gc.f1Layout OCaml.Programs.whileMin
+        OCaml.Programs.whileMin.init after :=
+  f1_physical_counted_entry Gc.whileMin_loaded_f1 Boot.WhileMin.memory_equiv
 
 /-- Entry's actual stores miss the custom table's two count words. -/
 theorem EntryFrame.customCount {c d : Config} {pl : Place}

@@ -176,6 +176,7 @@ by the caller's setup and stack room, rather than quantified independently. -/
 structure OutListEntryHeap (P : Prog) (s : St) (c : Config) (pl : Place)
     (cp : ChanPlace) (sp : Nat) (state : Config → Nat → Prop)
     (H : List (Nat × Nat)) (cap : Nat) : Prop where
+  context : Gc.CustomCallPins c
   selected : Gc.LibHeapAt H cap (Gc.placedChannels cp s.world.chans.length) c
   records : RecordsPlaced H (word c Layout.sym_Caml_state).toNat
     (Gc.placedChannels cp s.world.chans.length)
@@ -266,6 +267,31 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
   have pcE : pcOf c = some entryPc := by rw [setup.target, hentry]; rfl
   refine ⟨w, 0, cap, s0, {
     geometry := {
+      callReadOutside := by
+        intro a read written
+        have bounds := read.bounds
+        have below := bounds.below
+        have minor := bounds.minor
+        have young := bounds.young
+        have free := read.notFoot heap selected.selected.custom.domain
+        have notState := read.not_state rt.custom selected.context
+        change Written w state a at written
+        rcases written with native | nursery | ⟨r, hr', rlo, rhi⟩ | dom | customState | alloc
+        · change (BitVec.ofNat 64 (N - 128)).toNat - Gc.customStackBytes ≤ a ∧
+            a < (BitVec.ofNat 64 (N - 128)).toNat + 48 at native
+          rw [N128] at native
+          walk_omega
+        · change (runtimeFields c).youngLimit ≤ a ∧ a < (runtimeFields c).youngPtr at nursery
+          omega
+        · have apart := read.outside_record (size := recBytes) (recs.low r hr')
+            (by simpa only [fixedDomain, recBytes, Gc.chanRecordBytes, Nat.add_assoc] using recs.domain r hr')
+          have size : 68 ≤ recBytes := by decide
+          omega
+        · change (word c Layout.sym_Caml_state).toNat ≤ a ∧ a < (word c Layout.sym_Caml_state).toNat + 16 at dom
+          rw [fixedDomain] at dom
+          omega
+        · exact notState customState
+        · exact free alloc
       spLow := by show _ ≤ (BitVec.ofNat 64 (N - 128)).toNat; rw [N128]; walk_omega
       spHigh := by show (BitVec.ofNat 64 (N - 128)).toNat + 128 ≤ _; rw [N128]; walk_omega
       spAligned := by show (BitVec.ofNat 64 (N - 128)).toNat % 16 = 0; rw [N128]; omega
@@ -287,6 +313,7 @@ theorem out_list_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
           (by simp only [Gc.namedBlocked, List.mem_append]; exact Or.inl (Or.inr (List.mem_map.mpr ⟨r, hr, rfl⟩))), rfl⟩ }
     selected := selected.selected
     input := {
+      context := selected.context
       leaf := input.toLeafInput
       pc := pcE
       stack := by

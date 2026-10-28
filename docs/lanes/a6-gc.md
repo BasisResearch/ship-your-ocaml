@@ -1,5 +1,32 @@
 # Lane a6-gc
 
+## Concrete custom physical startup/context (2026-10-28)
+
+- `CustomPhysical` now supplies full resource/table observations, unique
+  counts, physical caller separation and all existing accounting/Ready/state
+  laws. `CustomContext` supplies independent actual ratio/max-size/heap-size/
+  lambda/domain/table pins, with generated captured startup certificates.
+  The stronger F1 footprint and actual opening/listing input, walk and
+  native returned-effect frames preserve those pins. The actual counted
+  prologue carries full physical zero without a native custom-call premise.
+- Allocated shape reuses QuietCustomTable and target-ABI offsets: all seven
+  words, size 32768, reserve 256, actual ptr < limit and unwrapped end. The
+  first request remains 792576 bytes. Native arithmetic is still explicit:
+  finite exact integer targets do not prove actual soft-double helpers or
+  threshold branches. Native CustomMemCall, actual selected table spending
+  and counted credit propagation remain open. No spatial-to-room inference,
+  new whole-primitive/poststate supplier or GoodF1 restriction was added.
+- Final affected build passes **3679 jobs**; **62 focused allowed-axiom
+  reports** include all **45 new theorems**, each registered once for the
+  lead's full Audit. Generator/layout, holes, discipline, abstraction and
+  whitespace checks pass. All guarded builds checked >=25 GB available and
+  retained the 12 GiB/two-thread/default-budget rules. Exact commands/logs
+  and native residuals are at the top of [a1-prims.md](a1-prims.md);
+  [CUSTOM-READS.md](CUSTOM-READS.md) records the native read set, and
+  DEAD-ENDS records the rejected shortcuts.
+- Checked edits remain for lead review; no commit or landing was attempted.
+  Full OCaml.Audit/integration remain the lead gate. Counted
+  BarrierGrowthFull stays G2; C4 round 2 waits for F1.
 
 ## Bounded bitmap repair and original-entry least-large split/return (2026-10-28)
 

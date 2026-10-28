@@ -7,8 +7,9 @@ import OCaml.Vm.Boot.WhileMinAllocator
 table's occupied entries count allocations independently of channel refcount
 stores. This component alone does not constrain GC resource accumulators or
 the current domain's table pointer, and is not a complete instantiation of
-`CustomMemCall`'s accounting predicate. A complete physical runtime predicate
-still needs those facts and their startup/frame/call producers. No readiness
+`CustomMemCall`'s accounting predicate. The complete mutable
+predicate and independent stable context are in `CustomPhysical` and
+`CustomContext`; actual native transitions still belong to `CustomMemCall`. No readiness
 or machine transition is inferred from occupancy alone. -/
 
 namespace OCaml.Vm.Gc

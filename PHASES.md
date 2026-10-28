@@ -276,7 +276,7 @@ ELF pin).
 | `Skiplist.Ops Shape foot` (`caml_skiplist_insert`, `caml_skiplist_empty` on `caml_global_roots{,_old,_young}`) | `OCaml/Vm/Gc/Skiplist.lean` | A6 / G2 | **open** named obligation (a6-gc): `Shape m sk cells` with level-0 projection `Chain`, footprint in the header and live heap blocks; insert (`random_level`, `caml_stat_alloc`, per-level splice) returns a shape containing the key and every old key; empty frees every cell and leaves `Shape … []`; both ABI returns over `HeapReady`, kept outside the footprint, newlib's bytes, `random_seed` and `opStack` below `sp`. Also needed by `caml_register_named_value` (`caml_register_generational_global_root`) |
 | First empty-skiplist insertion | `Gc/SkiplistFirst.lean`; generated `Boot/Startup/SkipFirst{Eval,Audit}.lean` | A6 / G2 | **checked and committed (`75a6c880`)**: `first_insert_startup` executes zero-seed prefix, checked allocation, 24-byte cell/header stores and ABI return; seed 25173, level-0 chain, actual startup key witness, allocator/selected-block frame, precise logs and output. Evaluator repaired under `-M 6000 -j 1`; affected modules build; 310 focused axiom audits use only the standard three; full generator drift passes. Audit registered; full audit left to lead. Full `Skiplist.Ops`, arbitrary insertion/removal, `RootsAt` and caller/reset composition remain **open** |
 | Global roots in the minor collection | `caml_scan_global_young_roots`, `caml_skiplist_{insert,empty}` | A6 / G2 | **open**: at the cut `caml_global_roots` holds `backtrace_last_exn` (immediate) and `caml_global_roots_young` holds `main_argv` (a young block), so the first minor GC oldifies it, inserts a cell into `caml_global_roots_old` (malloc, `random_level`) and frees the young cell; summaries over a0-boot's allocator/free summaries |
-| `CustomMemCall Ready state Customs` (`caml_alloc_custom_mem`) | `OCaml/Vm/Gc/CustomMem.lean`; a6-gc | A6 | **open named machine supplier**: selected-ledger `CustomOwned state H f` is an input; the returned heap and state ownership share one existential ledger. The old universal `CallerApart.free` is refuted at the captured cut (`CustomLedgerObstruction`) and removed. `LibHeapAt.custom`, captured startup ownership and actual ordinary/link/growth frame producers supply ownership; the concrete footprint bound is part of the named native contract. Actual `FnSummary.call` returns `CustomMemCountedReturned`, including `Customs f n → Customs d (n + 1)` on that execution. `CustomAccounting` supplies uniqueness, caller-store framing and `ReadyOf Customs → Ready`; no increment is inferred from `Ready k` or from weak `CustomMemReturned`. Concrete full `Customs`, its startup resource observations/zero witness, readiness/physical-footprint laws, pointer identity/frame, physical named separation, allocation/table-room/heap/ABI and exact counter machine return remain open. Occupancy/ownership alone does not supply them; observing the domain table pointer requires correcting `domainField` and all real frame producers. `CustomCountStep`/`CustomFramed` carry the count through native callers. |
+| `CustomMemCall Ready state Customs` (`caml_alloc_custom_mem`) | `OCaml/Vm/Gc/{CustomMem,CustomPhysical,CustomContext,CustomResources,CustomMemCredit}.lean`; a6-gc | A6 / A1 | **native machine supplier remains named**. Concrete `PhysicalCustoms` observes both resource target words, unique occupancy, complete zero/allocated table shape and physical caller separation. Captured full zero, `PhysicalState` footprint/completeness/apartness, accounting/Ready/state frames and unconditional full physical counted entry are proved. Independent `CustomCallPins` records actual ratios/max-size/heap sizes/lambda/domain/table identity; strengthened real F1 and opening/listing producers preserve them through actual stores and native returned effects. `CustomMemInput` consumes those pins explicitly. Native allocation/table initialization and insertion, actual soft-double target/threshold linkage, full same-ledger returned heap/ABI and exact physical count/resource transition remain the accepted `CustomMemCall` duty. `CustomMemSpending` and separate counted credit propagation remain open; spatial evidence supplies no numeric room. QuietCustomTable supplies actual ptr < limit from full shape, never occupancy alone. GoodF1 is unchanged; growth stays G2. |
 | `OutListRuntimeL L` / counted out-list C_CALL adapter | `OCaml/Vm/Sim/{OutListWalk,OutListRun,OutListAdapter,OutListF1,OutListF1Runtime,OutListObstruction}.lean`; `Gc/CustomMemCredit.lean`; a6-gc / a0-boot | A6 / A0 | **conditional counted interface**: universal entry readiness removed; `counted_caml_ml_out_channels_list_returns` derives batch readiness from `Fits`, the reachable successor and `CountedCcallSetupPost.counts`. `WalkAt.refwords` and `OutListReturned.refwords` retain actual native four-byte increments and untouched records; `out_list_counts` proves natural readbacks/no-wrap from successor `Fits`. Physical batch accounting remains independent. The walk's heap and custom-state ownership share one ledger through actual setup/call/return frames. The old independent-sp entry bound has a checked conditional obstruction; entry now consumes the actual C_CALL setup/stack room, and `OutListF1.f1_outList_entry` supplies its selected heap, records, full named/custom ledgers and payload separation. The arbitrary-H allocator-write runtime law is removed. `OutListF1Runtime.outList_f1_restore` reconstructs all runtime fields from the actual native return conditional only on reserve at its selected returned capacity. `CustomMemCredit` supplies the ELF request/charge, separate startup credit and ordinary frame/composition laws; native spending on the same returned heap and carrying that credit through counted callers remain open. Complete counted return and unary-arm preservation retain those explicit suppliers. |
 | `F1CcallOpen P` (general per-arity returns and `ocamlrun_refinement_F1_open`) | generated `OCaml/Vm/Sim/F1Ccall.lean` (`scripts/gen_f1_table.py`) | A1 | **open, five fields**: ordinary `ml_open_descriptor_out_c_call1`, `ml_open_descriptor_in_c_call1`, `ml_out_channels_list_c_call1`, `register_named_value_c_call2`, `format_int_c_call2`. Counted channel summaries are checked interfaces, not ordinary `PrimReturnsAtR` suppliers until the loop/setup producers carry counts. Wrong arities remain discharged with `PrimReturnsAtD.of_arity`; full `GoodF1` unchanged; growth remains G2. |
 | `Chan.refs`, `World.customs`, `Budget.customs`/`FitsAt`, counted channel representation/readiness | `OCaml/Vm/{Gc/ChannelRefs,Repr/ChannelCounts,Sim/ChannelReadiness}.lean`, `Fragment.customLedger` | A1 / A6 | **proved bridge, invariant migration open**: `CcallSucc.customs_bound`, exact open/list model charges and represented physical counts imply readiness at a successful reachable C_CALL. `CountedVmReprAt`/`CountedCcallSetupPost` name the stronger invariant; ordinary `VmReprAt`/`WorldRepr`/setup still omit it. `f1_channelCounts_of` uses the actual empty startup list and an explicit physical-zero witness; `open_out_counts` produces full opened-channel counts; `CountedCcallReturn` retains these at the same ordinary return placement, and the checked unary arm returns `CountedRunning`. The old universal `OpenOutRuntimeAt.budget` is removed; numeric `customBudget` bounds the layout only. |
@@ -409,6 +409,41 @@ for that snapshot; it does not assert kernel startup reachability.
   state, kernel-checked; `#print axioms` standard.
 
 ## A1: F1 arms (exit: `ocamlrun_refinement_Statement` for F1)
+
+
+**Concrete custom physical startup/context, 2026-10-28: checked for lead
+review.** `Gc/CustomPhysical` defines complete mutable resource/table
+observations with caller separation, unique counts and all physical
+accounting/Ready/state frame laws. Generated captured reads establish both
+zero resource words and all seven initial table words. Stable domain/table
+identity, minor/max/major ratios, heap sizes and lambda are separately
+produced by `CustomContext` and the strengthened F1 footprint. Actual
+opening/listing setup, native returned effects and epilogues retain these
+pins. `f1_physical_counted_entry` and `whileMin_physical_counted_entry` use
+`EntryFrame.accountingFrame` to establish the full concrete counted entry
+without a native custom-call premise at startup.
+
+Allocated shape reuses `QuietCustomTable` and generated offsets; complete
+base/ptr/threshold/limit/end/size/reserve observations give actual no-growth
+and no-wrap bounds. The first request is 792576 bytes. Kernel finite
+resource targets include the actual divide-before-multiply minor denominator
+2097100, but their linkage to native `__floatundidf`/`__divdf3`/`__adddf3`/
+`__gedf2` and threshold branches remains a precise CustomMemCall obligation.
+Native allocation/table insertion, exact resource/count return and selected
+capacity spending remain open; no LibHeapAt.room follows from spatial
+ownership. Full counted F1 assembly and existing opening whole-runtime
+suppliers retain their prior boundaries. GoodF1 is unchanged;
+BarrierGrowthFull stays G2 and C4 round 2 waits for F1.
+
+The final affected build passes **3679 jobs**, including CountedEntry,
+CountedChannelRows/CountedControlRows, F1Table/WhileMinTable and the focused
+CustomPhysicalAudit. All **62 focused reports** pass the allowed-axiom check
+(59 standard-set, three without axioms), covering all **45 new theorems**
+with unique full-Audit registrations. Generator/layout, hole, discipline,
+abstraction and whitespace gates pass. Native read-set evidence and exact
+commands/logs are at the top of a1-prims/a6-gc and in
+`docs/lanes/CUSTOM-READS.md`. Full OCaml.Audit and integration remain the
+lead gate; no commit or landing was attempted.
 
 
 **Counted fresh OO ID success and actual C_CALL1 exit, 2026-10-28: checked

@@ -145,6 +145,8 @@ the nursery (with room for `n` listed records), the records, pairwise apart,
 and newlib's blocks at the head covering the nursery, the records and the
 domain record. -/
 structure WalkGeometry (w : Walk) (n : Nat) : Prop where
+  /-- Concrete call-read separation supplied at the actual selected entry. -/
+  callReadOutside : ∀ a, Gc.CustomCallRead a → ¬ Written w (fun _ _ => False) a
   spLow : Vsa.Sim.DlHeap.heapEnd + Gc.customStackBytes ≤ w.sp.toNat
   spHigh : w.sp.toNat + 128 ≤ Layout.sym_stack_top
   spAligned : w.sp.toNat % 16 = 0
@@ -173,6 +175,7 @@ def calleeSaved : List Nat := [9, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]
 empty), having visited `pre`, relative to the first visit `e`. -/
 structure WalkAt (w : Walk) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (Customs : Config → Nat → Prop) (k : Nat)
     (e : Config) (pre rest : List Nat) (d : Config) : Prop where
+  context : Gc.CustomCallPins d
   good : GoodState d.σ
   image : ExecutableImage d
   minstret : ∃ v, d.σ.regs.get? Register.minstret = some v
@@ -340,6 +343,7 @@ theorem walk_skip {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state 
   rw [listedRecs_cons_skip skip] at readyD
   have fr := custom.frame_counted _ d d' readyD (fun a _ => by rw [m']) (by unfold word; rw [m'])
   refine ⟨d', run, {
+    context := h.context.frame (fun a _ => by unfold byte; rw [m'])
     good := post.good, image := post.image, minstret := post.minstret, tick := post.tick
     link := ⟨ra, (post.gpr_frame (by decide) 1 (by decide) (by decide) (by decide)).trans hra, al⟩
     idle := (post.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans h.idle
@@ -512,6 +516,16 @@ theorem walk_enter {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state
   have readyF := frF.ready
   refine ⟨f, H, cap, run1.trans run2, {
     leaf := ⟨post2.good, post2.image, post2.minstret, link, by show call_call.link.toNat % 4 = 0; decide, post2.tick⟩
+    context := h.context.frame (fun a read => by
+      rw [byte_total, byte_total]
+      have outside := g.callReadOutside a read
+      apply keepByte a
+      · have no : ¬ (r + 64 ≤ a ∧ a < r + 68) := fun at_ =>
+          outside (Or.inr (Or.inr (Or.inl ⟨r, mem, at_⟩)))
+        omega
+      · have no : ¬ (w.sp.toNat - Gc.customStackBytes ≤ a ∧ a < w.sp.toNat + 48) :=
+          fun at_ => outside (Or.inl at_)
+        omega)
     heap := heapF
     pc := post2.pc
     regs := args
@@ -1310,6 +1324,7 @@ theorem walk_listed {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {stat
       n ∉ [15, 10, 11, 12, 15, 1] ∧ 1 ≤ n ∧ n ≤ 31 := by decide
   obtain ⟨readyD, domD, stateD, countedD, ownedD, ledgerD, allocD⟩ := s.ready custom g
   refine ⟨d', s.run, {
+    context := h.context.frame (fun a read => s.frame g mem a (g.callReadOutside a read))
     good := s.post.good, image := s.post.image, minstret := s.post.minstret, tick := s.post.tick
     link := ⟨cons_call.link, s.link, by decide⟩
     idle := (s.post.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans s.idleG

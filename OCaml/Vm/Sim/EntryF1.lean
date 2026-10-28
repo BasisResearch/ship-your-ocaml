@@ -33,10 +33,10 @@ theorem f1_entryStable {sp : Nat} (frame : EntryFrame sp) :
           interpFrame, Layout.interpFrameBytes] at *; omega
       intro v hv
       simp only [Gc.youngWord, Gc.dynamicKept, List.mem_cons, List.mem_nil_iff, or_false] at hv
-      rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
       simp only [Gc.Apart, Gc.f1Domain, Boot.WhileMinRuntime.domain, Boot.WhileMinRuntime.freeBlock,
         Layout.sym_bss_end, Layout.off_young_ptr, Layout.off_stack_high,
-        Layout.off_stack_threshold, Layout.off_trap_barrier, Layout.off_backtrace_active,
+        Layout.off_stack_threshold, Layout.off_trap_barrier, Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table,
         Layout.off_external_raise, interpFrame, Layout.interpFrameBytes] <;> omega
   · intro w hw
     simp only [entryWindows, footprintWindows, entryFootprint, List.map, List.mem_cons, List.mem_nil_iff,

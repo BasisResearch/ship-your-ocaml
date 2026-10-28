@@ -164,7 +164,8 @@ def main():
             "__bss_start", "__bss_end", "__global_pointer$", "environ",
             "custom_ops_table", "caml_ba_ops", "caml_stat_alloc", "caml_shared_libs_path",
             "caml_startup_aux", "shutdown_happened", "startup_count", "caml_cleanup_on_exit",
-            "caml_extra_heap_resources"]
+            "caml_extra_heap_resources", "caml_custom_minor_max_bsz",
+            "caml_custom_minor_ratio", "caml_custom_major_ratio"]
     need += ["_open", "_read", "_write", "_lseek", "_close", "_fstat", "_stat",
              "_unlink", "rename", "opendir", "readdir", "closedir", "_gettimeofday",
              "_times", "files", "fds", "dirs", "fs_ready"]

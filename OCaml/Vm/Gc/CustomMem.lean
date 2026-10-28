@@ -5,6 +5,7 @@ import OCaml.Vm.Gc.NurseryDefs
 import OCaml.Vm.Boot.Startup.HeapReady
 import OCaml.Vm.Gc.F1Heap
 import OCaml.Vm.Gc.NamedOwnership
+import OCaml.Vm.Gc.CustomContext
 
 /-!
 # `caml_alloc_custom_mem` for a channel's custom block, from any call site
@@ -19,9 +20,9 @@ accounting. Its summary is the named obligation `CustomMemCall` (lane a6-gc).
 A call site (`CustomMemSite`) is its return address, its stack pointer, the
 record in `s0` and the caller's frame above `sp`. The call is safe for `k + 1`
 more such allocations (`Ready (k + 1)`); each one consumes one
-(`caml_extra_heap_resources` grows by `57424/297968` per call, and the sixth
-since the cut requests a major slice). newlib's heap enters as `HeapReady H cap`
-at the call and returns as `HeapReady H' cap'` over every block of `H` (the
+(the major-resource charge has rational operands `57424/297968`; the
+actual binary64 helper/threshold execution remains part of this obligation). newlib's heap enters as `HeapReady H cap`
+at the call, together with independent `CustomCallPins`, and returns as `HeapReady H' cap'` over every block of `H` (the
 first call since the cut adds the custom table's block), so a caller with
 several calls (`caml_ml_out_channels_list`) chains it. `Ready` reads only the
 runtime's own state (`CustomMemCall.state`): the static
@@ -103,6 +104,8 @@ structure CallerApart (c : Config) (a : Nat) : Prop where
 and nursery room for the block (`caml_alloc_small`'s fast path). -/
 structure CustomMemInput (H : List (Nat × Nat)) (cap : Nat) (site : CustomMemSite) (f : Config) : Prop where
   leaf : LeafInput site.link f
+  /-- Actual read-only parameters and identity, independent of Ready. -/
+  context : CustomCallPins f
   /-- newlib's heap, for the custom table's first allocation -/
   heap : HeapReady H cap f
   pc : pcOf f = some customMemEntry
@@ -154,9 +157,9 @@ structure CustomMemReturned (state : Config → Nat → Prop) (H : List (Nat × 
   cannot be reclassified as backing storage. Supplied by the native callee. -/
   allocGrows : ∀ a, CustomAllocFoot d a → CustomAllocFoot f a ∨ VsaIris.VsaHeap.vsaFoot H a
 
-/-- Quiet channel custom allocations since the cut: each adds
-`57424/297968` to `caml_extra_heap_resources`, so the sixth requests a
-major slice. -/
+/-- Finite G1 channel-custom budget. The rational inequality below does
+not prove actual binary64 rounding or native threshold branches; those remain
+part of the accepted native call obligation. -/
 def quietBound : Nat := 5
 
 theorem quietBound_spec : quietBound * 57424 ≤ 297968 ∧ 297968 < (quietBound + 1) * 57424 := by decide
@@ -230,7 +233,8 @@ structure CustomMemCountedReturned (state : Config → Nat → Prop)
 
 /-- **The runtime's channel custom allocations** (named obligation, lane
 a6-gc). `Ready k c`: `k` more calls are safe at `c`, judged from `state c`
-alone: the bytes `Ready` reads and the call may write besides its stack, the
+alone; read-only call parameters are separately required by CustomMemInput.
+These are the bytes the call may write besides its stack, the
 block, `young_ptr` and newlib's own bytes (`vsaFoot H`): the counters and the
 custom table. -/
 structure CustomMemCall (Ready : Nat → Config → Prop) (state : Config → Nat → Prop)
@@ -252,6 +256,43 @@ structure CustomMemCall (Ready : Nat → Config → Prop) (state : Config → Na
     Ready (k + 1) f → CustomMemInput H cap site f → CustomOwned state H f →
     FnSummary customMemEntry (fun d => d = f)
       (fun d => ∃ v, CustomMemCountedReturned state Customs H site v f d ∧ Ready k d)
+
+/-- Concrete read-only pins cannot overlap mutable custom-state bytes.
+This uses the actual domain pin and the existing footprint's local rules. -/
+theorem CustomCallRead.not_state {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} (custom : CustomMemCall Ready state Customs)
+    {c : Config} (pins : CustomCallPins c) {a : Nat} (read : CustomCallRead a) : ¬ state c a := by
+  intro at_
+  have bounds := read.bounds
+  have apart := custom.apart c a at_
+  rcases bounds.location with low | domain
+  · exact bounds.resource (apart.static low)
+  · apply bounds.minorResource
+    have dom : (word c Layout.sym_Caml_state).toNat = Boot.WhileMinRuntime.domain := by
+      rw [pins.domain]; rfl
+    simpa only [domainAddr, dom] using apart.domainField (by simpa only [domainAddr, dom, Nat.add_zero] using domain)
+
+/-- Read-only domain observations belong to the same selected allocator
+ledger; low static reads avoid allocator globals by finite address checks. -/
+theorem CustomCallRead.notFoot {H : List (Nat × Nat)} {cap : Nat} {c : Config}
+    (heap : HeapReady H cap c) (domain : Covered H (Boot.WhileMinRuntime.domain, Layout.domainStateBytes))
+    {a : Nat} (read : CustomCallRead a) : ¬ VsaIris.VsaHeap.vsaFoot H a := by
+  rcases read.bounds.location with low | inside
+  · rintro (global | ⟨lo, _, _⟩)
+    · exact read.bounds.allocator global
+    · omega
+  · exact domain.notFoot (fun _ member => heap.block_bounds member) inside
+
+/-- Actual record/domain separation also protects every read-only call pin. -/
+theorem CustomCallRead.outside_record {a r size : Nat} (read : CustomCallRead a)
+    (low : Vsa.Sim.DlHeap.heapStart ≤ r)
+    (apart : r + size ≤ Boot.WhileMinRuntime.domain ∨
+      Boot.WhileMinRuntime.domain + Layout.domainStateBytes ≤ r) : a < r ∨ r + size ≤ a := by
+  rcases read.bounds.location with below | inside
+  · omega
+  · have lo := inside.1; have hi := inside.2
+    dsimp only at hi
+    omega
 
 /-- State ownership comes from the same ledger selected by `LibHeapAt`. -/
 theorem CustomMemCall.owned {Ready : Nat → Config → Prop}

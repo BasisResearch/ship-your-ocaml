@@ -1,5 +1,31 @@
 # Routes not to repeat
 
+- 2026-10-28 concrete custom physical/context production:
+  occupancy is still only a component. `CustomPhysical` records both exact
+  resource target words, all seven zero/allocated table observations and
+  footprint caller separation; `CustomContext` separately pins the native
+  ratios, max size, heap sizes, lambda, Caml_state and table identity.
+  Source/interface inspection rules out treating table shape without caller
+  separation as enough for the global `CustomMemCall.apart`/`physical` laws:
+  arbitrary backing addresses need not be below the native stack or outside
+  caller regions. `PhysicalState` filters the existing footprint by a full
+  physical witness; startup and its actual frame now produce separation.
+  This is an interface requirement, not a claimed reachable counterexample.
+  The older `outW_openWindows` helper admits only the static resource band;
+  it cannot establish read-only ratio/lambda/Caml_state frames. Use existing
+  `outW_openWindows_static` with the concrete errno/head certificates, and
+  normalize record-size addition before read-window transport. Inferring
+  positivity with `omega` over the large opening context hit default
+  recursion; compose selected `block_bounds.1` with `Covered`'s lower bound
+  via `Nat.le_trans`, without unfolding 64 KiB sizes or raising limits.
+  The actual minor denominator is **2097100**, not 2097152: native custom.c
+  divides nursery bytes by 100 before multiplying by the ratio. The ground
+  parameter and finite rounding-target checks do not prove native
+  `__floatundidf`/`__divdf3`/`__adddf3`/`__gedf2` execution or its threshold
+  branches. That precise linkage remains in `CustomMemCall`; spending on the
+  actual selected returned capacity remains `CustomMemSpending`'s native
+  supplier. See `CUSTOM-READS.md` for the source/disassembly read set.
+
 - 2026-10-28 CODE seek source selection: the pinned runtime ELF's stock
   `.embed` contains CODE length 11836. The selected `WhileMinImage` loader
   pieces contain CODE length 764, file length 9388, and seven descriptors.

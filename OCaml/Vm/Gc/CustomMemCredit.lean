@@ -141,10 +141,7 @@ theorem CustomMemReturned.heap_zero {state : Config → Nat → Prop} {H : List 
 /-- Full actual table-addressing observations needed to rule out a later
 reallocation. Occupancy by itself supplies none of these pins. A concrete
 physical Customs producer must establish and preserve them. -/
-structure QuietCustomTable (c : Config) (count : Nat) : Prop where
-  /-- Native custom allocation must address this same observed table. -/
-  tableWord : word c (domainAddr c Layout.off_custom_table) = BitVec.ofNat 64 customTable
-  nurseryWords : word c (domainAddr c Layout.off_minor_heap_wsz) = 0x40000#64
+structure CustomTableShape (c : Config) (count : Nat) : Prop where
   base : customBase c ≠ 0
   pointer : (word c (customTable + Layout.off_custom_table_ptr)).toNat =
     customBase c + count * Layout.custom_elt_size
@@ -154,6 +151,12 @@ structure QuietCustomTable (c : Config) (count : Nat) : Prop where
   ending : customEnd c = customBase c + (0x40000 / 8 + 256) * Layout.custom_elt_size
   size : word c (customTable + CustomTable.off_size) = 32768#64
   reserve : word c (customTable + CustomTable.off_reserve) = 256#64
+
+/-- Full quiet addressing combines mutable table shape with separately
+preserved read-only runtime identity and nursery parameters. -/
+structure QuietCustomTable (c : Config) (count : Nat) : Prop extends CustomTableShape c count where
+  tableWord : word c (domainAddr c Layout.off_custom_table) = BitVec.ofNat 64 customTable
+  nurseryWords : word c (domainAddr c Layout.off_minor_heap_wsz) = 0x40000#64
 
 /-- At the quiet bound the actual ptr is strictly below the actual limit. -/
 theorem QuietCustomTable.not_full {c : Config} {count : Nat}

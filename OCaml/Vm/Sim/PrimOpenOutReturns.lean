@@ -102,7 +102,7 @@ theorem open_out_entry {ra : BitVec 64} {L : OCaml.Layout} {P : Prog} {s : St} {
   refine ⟨H, cap, N, 0, s0, s1, s2, heap,
     Channel.out_input heap (Nat.lt_of_le_of_lt (Gc.placedChannels_length _ _) bound) input.toLeafInput platform
       (roR_of_gp input.loop.gp).1 e.stack frame h0 h1 h2 value (rt.pins c input.runtime).console descriptor,
-    Channel.out_nursery heap (by omega) e.youngAligned (by omega) ng.nurseryHigh, ready, e.stack⟩
+    Channel.out_nursery heap (rt.pins c input.runtime).customPins (by omega) e.youngAligned (by omega) ng.nurseryHigh, ready, e.stack⟩
 
 /-- **The opened descriptor is a console stream**: the new output channel is
 open (`openChan_live`: `fd ≥ 0`) in the reachable successor (`CcallSucc`), so

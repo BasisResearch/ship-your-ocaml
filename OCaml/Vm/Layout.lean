@@ -84,6 +84,12 @@ def sym_startup_count : Nat := 0x8006498c
 def sym_caml_cleanup_on_exit : Nat := 0x80064990
 /-- `caml_extra_heap_resources` -/
 def sym_caml_extra_heap_resources : Nat := 0x80064aa0
+/-- `caml_custom_minor_max_bsz` -/
+def sym_caml_custom_minor_max_bsz : Nat := 0x800648b0
+/-- `caml_custom_minor_ratio` -/
+def sym_caml_custom_minor_ratio : Nat := 0x800648b8
+/-- `caml_custom_major_ratio` -/
+def sym_caml_custom_major_ratio : Nat := 0x800648c0
 /-- `_open` -/
 def sym_open : Nat := 0x800008b8
 /-- `_read` -/

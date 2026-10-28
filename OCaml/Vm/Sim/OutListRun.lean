@@ -267,6 +267,7 @@ walk's frame `+ 128`, the domain words read the walk's `D`, `Y`, `Lm` and
 for every listed record and newlib's heap is `H0`. -/
 structure OutListInput (w : Walk) (Ready : Nat → Config → Prop) (state : Config → Nat → Prop) (k : Nat) (cap : Nat) (ra s0 : BitVec 64)
     (c : Config) : Prop where
+  context : Gc.CustomCallPins c
   leaf : LeafInput ra c
   pc : pcOf c = some entryPc
   stack : gpr c 2 = some (w.sp + 128#64)
@@ -410,6 +411,11 @@ theorem walk_start {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state
     (regs : ProRegs ra w.sp (BitVec.ofNat 64 (w.chs.headD 0)) w.roots (BitVec.ofNat 64 w.D) e)
     (ne : w.chs ≠ []) (hS : ∀ a, state c a → w.S a) : WalkAt w Ready state Customs k e [] w.chs e := by
   have spl := g.spLow; have dl := g.domainLow; have dh := g.domainHigh; have dap := g.domainApart
+  have wd : w.D = Boot.WhileMinRuntime.domain := by
+    have natD : (BitVec.ofNat 64 w.D).toNat = w.D := toNat_ofNat_small (by walk_omega)
+    have eq : word c Layout.sym_Caml_state = BitVec.ofNat 64 w.D := inp.domain
+    have both := congrArg BitVec.toNat (eq.symm.trans inp.context.domain)
+    simpa only [natD, show (BitVec.ofNat 64 Boot.WhileMinRuntime.domain).toNat = Boot.WhileMinRuntime.domain from rfl] using both
   have nl := g.nurseryLow
   have me := post.memory
   have keeps := pro_keeps custom g inp me
@@ -435,6 +441,18 @@ theorem walk_start {w : Walk} {n : Nat} {Ready : Nat → Config → Prop} {state
   refine {
     refwords := fun r hr => by simp [listedRecs]
     counted := ⟨fun h => by simpa [listedRecs] using h⟩
+    context := inp.context.frame (fun a read => by
+      rw [byte_total, byte_total, post.memory]
+      have bounds := read.bounds
+      have outside : OutL (proStoreLog w.sp ra s0 (BitVec.ofNat 64 w.D) w.roots) a := by
+        apply pro_outL g
+        · have low := bounds.below
+          walk_omega
+        · rw [wd]
+          have apart := bounds.roots
+          simp only [Layout.off_local_roots] at apart
+          omega
+      rw [writeLog_out _ _ _ outside])
     good := post.good, image := post.image, minstret := post.minstret, tick := post.tick
     link := ⟨ra, regs.link, inp.leaf.aligned⟩
     idle := (post.frame _ (fun n _ => gprReg_ne_htif n) (by decide)).trans inp.idle
@@ -508,6 +526,32 @@ structure OutListReturned (w : Walk) (Ready : Nat → Config → Prop) (state : 
   /-- Checked growth evidence survives both actual epilogues. -/
   stateIn : ∀ a, state d a → w.S a ∨ VsaIris.VsaHeap.vsaFoot w.H0 a
   allocIn : ∀ a, Gc.CustomAllocFoot d a → Gc.CustomAllocFoot c a ∨ VsaIris.VsaHeap.vsaFoot w.H0 a
+
+/-- Actual returned listing effects preserve the independent read-only
+call context through both epilogues and every native iteration. -/
+theorem OutListReturned.context {w : Walk} {n : Nat}
+    {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
+    {k cap : Nat} {ra s0 : BitVec 64} {c d : Config}
+    (g : WalkGeometry w n) (input : OutListInput w Ready state k cap ra s0 c)
+    (ret : OutListReturned w Ready state Customs k ra s0 c d) : Gc.CustomCallPins d := by
+  have low := g.spLow
+  have high := g.domainHigh
+  have wd : w.D = Boot.WhileMinRuntime.domain := by
+    have natD : (BitVec.ofNat 64 w.D).toNat = w.D := toNat_ofNat_small (by walk_omega)
+    have eq : word c Layout.sym_Caml_state = BitVec.ofNat 64 w.D := input.domain
+    have both := congrArg BitVec.toNat (eq.symm.trans input.context.domain)
+    simpa only [natD, show (BitVec.ofNat 64 Boot.WhileMinRuntime.domain).toNat = Boot.WhileMinRuntime.domain from rfl] using both
+  apply input.context.frame
+  intro a read
+  have bounds := read.bounds
+  apply ret.frame a (g.callReadOutside a read)
+  · have below := bounds.below
+    left
+    walk_omega
+  · rw [wd]
+    have roots := bounds.roots
+    simp only [Layout.off_local_roots] at roots
+    omega
 
 /-- The final listing return owns all physical custom bytes and separates
 all represented channel records, using the same existential returned heap. -/

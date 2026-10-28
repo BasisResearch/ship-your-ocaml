@@ -118,6 +118,7 @@ theorem outW_openWindows {sp p head : BitVec 64} {y : Nat} (frame : NativeFrame 
 heap are live blocks of `H`, the open records `chs` lie apart from
 `Caml_state`, and the nursery has room for the custom block. -/
 structure OutNursery (H : List (Nat × Nat)) (chs : List Nat) (c : Config) : Prop where
+  context : Gc.CustomCallPins c
   custom : Gc.CustomLedger H c
   space : Gc.CustomSpace (chs.map (fun r => (r, Gc.chanRecordBytes))) c
   records : ∀ r ∈ chs, Gc.Covered H (r, Gc.chanRecordBytes)
@@ -331,6 +332,21 @@ theorem ml_open_descriptor [LibraryLive live] (code : OpenCode) (c : Config) (H 
         subst hw
         exact Or.inl ⟨_, List.mem_cons_self, Nat.le_refl _, by dsimp only; unfold recordBytes; omega⟩)
       (fun a out => flagsOut a (out _ List.mem_cons_self))
+    context := N.context.frame (fun a read => by
+      rw [byte_total, byte_total]
+      have bounds := read.bounds
+      have low := bounds.below
+      have free := read.notFoot h.ready.heap N.domain
+      apply keptF a (outW_openWindows_static h.frame low bounds.errno1 bounds.errno2 bounds.opened ?_ (fun hz => ?_))
+        free (Or.inl (by arena_omega))
+      · exact read.outside_record (size := recordBytes) O.low (by simpa only [recordBytes] using recDomain)
+      · have member := head_mem N.channels h.headWord hz
+        have headLow : heapStart ≤ head.toNat := by
+          obtain ⟨e, he, elo, _⟩ := N.records head.toNat member
+          have bound := h.ready.heap.block_bounds he
+          exact Nat.le_trans bound.1 elo
+        have apart := read.outside_record (size := Gc.chanRecordBytes) headLow (N.recordsApart _ member)
+        exact headApart a hz (by simpa only [Gc.chanRecordBytes, Nat.add_assoc] using apart))
     pc := F.pc
     regs := F.regs
     frame := E.input.frame
@@ -648,10 +664,12 @@ theorem out_input {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Conf
 minor heap are covered regions, and every open record lies apart from them. -/
 theorem out_nursery {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Config}
     (heap : Gc.LibHeapAt H cap chs c)
+    (context : Gc.CustomCallPins c)
     (room : (runtimeFields c).youngLimit + 24 ≤ (runtimeFields c).youngPtr)
     (aligned : (runtimeFields c).youngPtr % 8 = 0)
     (low : Gc.minorRegion.lo + 24 ≤ (runtimeFields c).youngPtr)
     (high : (runtimeFields c).youngPtr ≤ Gc.minorRegion.hi) : OutNursery H chs c where
+  context := context
   custom := heap.custom
   space := heap.customSpace.restrict (fun e he => by
     simp only [Gc.namedBlocked, List.mem_append]
@@ -666,5 +684,46 @@ theorem out_nursery {H : List (Nat × Nat)} {cap : Nat} {chs : List Nat} {c : Co
   aligned := aligned
   low := low
   high := high
+
+/-- Actual opening effects retain the independent native-call observations,
+without a whole returned-runtime premise. -/
+theorem OpenedOut.context {Ready : Nat → Config → Prop} {state : Config → Nat → Prop}
+    {k : Nat} {H : List (Nat × Nat)} {cap' charge : Nat}
+    {sp ra s0 s1 s2 v head : BitVec 64} {c d : Config} {chs : List Nat}
+    (custom : Gc.CustomMemCall Ready state Customs)
+    {code : OpenCode} (o : OpenedOut code live Ready state Customs k H cap' charge sp ra s0 s1 s2 v head c d)
+    (h : OutInput live H cap' charge sp ra s0 s1 s2 v head c) (N : OutNursery H chs c) :
+    Gc.CustomCallPins d := by
+  have lower := h.frame.lower
+  have lowM := N.low
+  have recDomain := Gc.fresh_apart_covered o.opening.fresh N.domain (by decide) (n := recordBytes)
+    (by unfold recordBytes; decide) (Nat.le_refl _)
+  apply N.context.frame
+  intro a read
+  rw [byte_total, byte_total]
+  have bounds := read.bounds
+  have below := bounds.below
+  have minor := bounds.minor
+  simp only [Gc.minorRegion] at minor
+  have domain : (word c Layout.sym_Caml_state).toNat = Boot.WhileMinRuntime.domain := by
+    rw [N.context.domain]; rfl
+  apply o.kept a (read.not_state custom N.context) (read.notFoot h.ready.heap N.domain)
+    (outW_openWindows_static h.frame below bounds.errno1 bounds.errno2 bounds.opened
+      (read.outside_record (size := recordBytes) o.opening.low recDomain) ?_)
+    (Or.inl (by arena_omega)) (Or.inl (by simp only [Gc.minorRegion] at lowM; omega)) ?_
+  · intro nonzero
+    have member := head_mem N.channels h.headWord nonzero
+    have low : heapStart ≤ head.toNat := by
+      obtain ⟨e, he, lo, _⟩ := N.records _ member
+      have bound := h.ready.heap.block_bounds he
+      exact Nat.le_trans bound.1 lo
+    have apart := read.outside_record (size := Gc.chanRecordBytes) low (N.recordsApart _ member)
+    unfold Gc.chanRecordBytes chanOffBuff ioBufferSize at apart
+    omega
+  · unfold Gc.domainAddr
+    rw [domain]
+    have apart := bounds.young
+    simp only [Layout.off_young_ptr]
+    omega
 
 end OCaml.Vm.Primitives.Channel

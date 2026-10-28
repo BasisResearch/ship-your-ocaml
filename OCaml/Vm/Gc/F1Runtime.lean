@@ -13,6 +13,7 @@ import OCaml.Vm.Sim.NurseryInput
 import VsaIris.Vsa.HeapShape
 import OCaml.Vm.Primitives.Console.Runtime
 import OCaml.Vm.Gc.F1Heap
+import OCaml.Vm.Gc.CustomContext
 import OCaml.Vm.Boot.WhileMinAllocator
 
 /-!
@@ -77,6 +78,8 @@ structure F1Pins (c : Config) : Prop where
   exeName : ∀ i : Fin 6, byte c (exeNameAddr + i.val) = exeNameBytes.getD i.val 0
   /-- the atom table stays in its startup block (no F1 path writes `caml_atom_table`) -/
   atomsWord : word c Layout.sym_caml_atom_table = BitVec.ofNat 64 atomTableAddr
+  /-- Concrete read-only native custom-call context, separate from accounting. -/
+  customPins : CustomCallPins c
 
 /-- The F1 runtime invariant. -/
 def f1Runtime : Config → Prop := RuntimeOk F1Pins
@@ -170,7 +173,10 @@ def dynamicKept : List W :=
    ⟨f1Domain + Layout.off_backtrace_active, f1Domain + Layout.off_backtrace_active + 8⟩,
    ⟨WhileMinRuntime.freeBlock.block - 8,
     WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words⟩,
-   ⟨0x8007d700, 0x8007d706⟩]
+   ⟨0x8007d700, 0x8007d706⟩,
+   ⟨f1Domain + Layout.off_minor_heap_wsz, f1Domain + Layout.off_minor_heap_wsz + 8⟩,
+   ⟨f1Domain + Layout.off_stat_heap_wsz, f1Domain + Layout.off_stat_heap_wsz + 8⟩,
+   ⟨f1Domain + Layout.off_custom_table, f1Domain + Layout.off_custom_table + 8⟩]
 
 /-- The memory `f1Runtime` reads, except the `young_ptr` word. -/
 def keptFootprint : List W := staticKept ++ dynamicKept
@@ -214,8 +220,8 @@ theorem dynamic_above : ∀ v ∈ youngWord :: dynamicKept, Layout.sym_bss_end �
   intro v hv
   simp only [youngWord, dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
   simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-    Layout.off_backtrace_active] at *
-  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
+    Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table] at *
+  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> dsimp only <;> omega
 
 /-- A window inside one ignored static word misses the whole footprint. -/
 theorem footprint_apart_ignored {w : W} (inside : ∃ i ∈ ignoredStatics, i.lo ≤ w.lo ∧ w.hi ≤ i.hi) :
@@ -397,6 +403,20 @@ theorem ConsoleRuntime.transfer {c c' : Config}
     exact ⟨by rw [ready]; exact h.stdin.ready, h.stdin.range, h.stdin.slotWindow, by rw [kind]; exact h.stdin.live,
       by rw [kind]; exact h.stdin.notFile⟩
 
+/-- Every concrete call-context read is retained by the real F1 footprint. -/
+theorem customCall_in_kept : ∀ obs ∈ customCallWords, InKept obs.1 8 := by
+  intro obs member
+  simp only [customCallWords, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  · exact in_bss (by decide) (by decide)
+  · exact in_bss (by decide) (by decide)
+  · exact in_bss (by decide) (by decide)
+  · exact in_bss (by decide) (by decide)
+  · exact in_bss (by decide) (by decide)
+  all_goals
+    refine ⟨⟨_, _⟩, ?_, Nat.le_refl _, Nat.le_refl _⟩
+    simp [keptFootprint, dynamicKept, f1Domain]
+
 /-- **Core transfer**: if every kept footprint read is unchanged, the pins
 survive and only `young_ptr` may differ among the runtime fields. -/
 theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem x n = bytesT c.σ.mem x n)
@@ -437,7 +457,8 @@ theorem f1_core {c c' : Config} (keep : ∀ x n, InKept x n → bytesT c'.σ.mem
       (by decide))]; exact pins.primsWord,
     by rw [w8 _ (b (by simp [Layout.sym_caml_exe_name, Layout.sym_bss_end]) (by decide))]; exact pins.exeNameWord,
     fun i => by unfold byte; rw [keep _ 1 (in_exeName i.isLt)]; exact pins.exeName i,
-    by rw [w8 _ (b (by simp [Layout.sym_caml_atom_table, Layout.sym_bss_end]) (by decide))]; exact pins.atomsWord⟩,
+    by rw [w8 _ (b (by simp [Layout.sym_caml_atom_table, Layout.sym_bss_end]) (by decide))]; exact pins.atomsWord,
+    ⟨fun obs member => (w8 _ (customCall_in_kept obs member)).trans (pins.customPins.words obs member)⟩⟩,
     fields⟩
   · exact {
       nonnull := shape.nonnull
@@ -524,10 +545,10 @@ theorem arena_footprint_apart {w : W} (low : Vsa.Sim.DlHeap.heapStart ≤ w.lo)
   · have := staticKept_below v hs
     simp only [Apart, Layout.sym_bss_end] at *; omega
   · simp only [dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hd
-    rcases hd with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    rcases hd with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
       simp only [Apart, f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.off_young_ptr,
         Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-        Layout.off_backtrace_active] <;> omega
+        Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table] <;> omega
 
 /-- An open record misses the whole footprint: it lies in the arena, apart
 from the `Caml_state` record and the major chunk. -/
@@ -588,6 +609,9 @@ theorem f1_window_of {lo hi : Nat}
     (block : hi ≤ WhileMinRuntime.freeBlock.block - 8 ∨
       WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words ≤ lo)
     (exe : hi ≤ exeNameAddr ∨ exeNameAddr + 6 ≤ lo)
+    (custom : (hi ≤ f1Domain + Layout.off_minor_heap_wsz ∨ f1Domain + Layout.off_minor_heap_wsz + 8 ≤ lo) ∧
+      (hi ≤ f1Domain + Layout.off_stat_heap_wsz ∨ f1Domain + Layout.off_stat_heap_wsz + 8 ≤ lo) ∧
+      (hi ≤ f1Domain + Layout.off_custom_table ∨ f1Domain + Layout.off_custom_table + 8 ≤ lo))
     (heap : F1HeapSafe ⟨lo, hi⟩) :
     WindowStable f1Runtime [⟨lo, hi⟩] := by
   refine f1_window ?_ heap
@@ -595,7 +619,7 @@ theorem f1_window_of {lo hi : Nat}
   intro v hv
   simp only [youngWord, dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
   simp only [Layout.off_young_ptr] at *
-  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · dsimp only [Apart]; omega
   · dsimp only [Apart]; omega
   · dsimp only [Apart]; omega
@@ -604,6 +628,9 @@ theorem f1_window_of {lo hi : Nat}
   · exact backtrace
   · exact block
   · simp only [exeNameAddr] at exe; dsimp only [Apart]; omega
+  · exact custom.1
+  · exact custom.2.1
+  · exact custom.2.2
 
 /-- A window inside one of the runtime's blocks is safe for newlib's heap. -/
 theorem heapSafe_extent {lo hi : Nat} {x : Nat × Nat} (member : x ∈ f1Extents) (low : x.1 ≤ lo)
@@ -744,46 +771,51 @@ theorem f1_domainField {off : Nat} (notYoung : 64 ≤ off)
       (Layout.off_stack_threshold + 8 ≤ off ∧ off + 8 ≤ Layout.off_trap_barrier) ∨
       (Layout.off_trap_barrier + 8 ≤ off ∧ off + 8 ≤ Layout.off_backtrace_active) ∨
       Layout.off_backtrace_active + 8 ≤ off)
+    (notCustom : (off + 8 ≤ Layout.off_minor_heap_wsz ∨ Layout.off_minor_heap_wsz + 8 ≤ off) ∧
+      (off + 8 ≤ Layout.off_stat_heap_wsz ∨ Layout.off_stat_heap_wsz + 8 ≤ off) ∧
+      (off + 8 ≤ Layout.off_custom_table ∨ Layout.off_custom_table + 8 ≤ off))
     (inRecord : off + 8 ≤ Layout.domainStateBytes)
     (notTable : off + 8 ≤ Layout.off_minor_heap_wsz ∨
       (Layout.off_minor_heap_wsz + 8 ≤ off ∧ off + 8 ≤ Layout.off_ref_table) ∨ Layout.off_ref_table + 8 ≤ off) :
     WindowStable f1Runtime [⟨f1Domain + off, f1Domain + off + 8⟩] := by
   simp only [Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-    Layout.off_backtrace_active] at notPinned
+    Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table] at notPinned
   apply f1_window_of
   · simp [f1Domain, WhileMinRuntime.domain, Layout.sym_bss_end]; omega
   · omega
   · simp only [Layout.off_stack_high, Layout.off_stack_threshold]; omega
   · simp only [Layout.off_trap_barrier]; omega
-  · simp only [Layout.off_backtrace_active]; omega
+  · simp only [Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table]; omega
   · simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.domainStateBytes] at *
     omega
   · simp only [f1Domain, WhileMinRuntime.domain, exeNameAddr, Layout.domainStateBytes] at *; omega
+  · rcases notCustom with ⟨a, b, c⟩; constructor; · omega
+    constructor <;> omega
   · exact heapSafe_domain (by omega) (by omega) (by unfold TableFree; omega)
 
 theorem f1_trapsp : WindowStable f1Runtime [⟨f1Domain + Layout.off_trapsp, f1Domain + Layout.off_trapsp + 8⟩] :=
-  f1_domainField (by decide) (by decide) (by decide) (by decide)
+  f1_domainField (by decide) (by decide) (by decide) (by decide) (by decide)
 theorem f1_extern_sp :
     WindowStable f1Runtime [⟨f1Domain + Layout.off_extern_sp, f1Domain + Layout.off_extern_sp + 8⟩] :=
-  f1_domainField (by decide) (by decide) (by decide) (by decide)
+  f1_domainField (by decide) (by decide) (by decide) (by decide) (by decide)
 theorem f1_local_roots :
     WindowStable f1Runtime [⟨f1Domain + Layout.off_local_roots, f1Domain + Layout.off_local_roots + 8⟩] :=
-  f1_domainField (by decide) (by decide) (by decide) (by decide)
+  f1_domainField (by decide) (by decide) (by decide) (by decide) (by decide)
 theorem f1_exn_bucket :
     WindowStable f1Runtime [⟨f1Domain + Layout.off_exn_bucket, f1Domain + Layout.off_exn_bucket + 8⟩] :=
-  f1_domainField (by decide) (by decide) (by decide) (by decide)
+  f1_domainField (by decide) (by decide) (by decide) (by decide) (by decide)
 theorem f1_external_raise :
     WindowStable f1Runtime [⟨f1Domain + Layout.off_external_raise, f1Domain + Layout.off_external_raise + 8⟩] :=
-  f1_domainField (by decide) (by decide) (by decide) (by decide)
+  f1_domainField (by decide) (by decide) (by decide) (by decide) (by decide)
 
 /-- (b) Any window inside the nursery `[young_start, young_end)` of the cut,
 in particular the field windows of objects placed there. -/
 theorem f1_nursery {lo hi : Nat} (low : 0x80082000 ≤ lo) (high : hi ≤ 0x80282000) :
     WindowStable f1Runtime [⟨lo, hi⟩] := by
-  refine f1_window_of ?_ ?_ ?_ ?_ ?_ ?_ ?_ (heapSafe_minor low high) <;>
+  refine f1_window_of ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ (heapSafe_minor low high) <;>
     simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, exeNameAddr, Layout.sym_bss_end,
       Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-      Layout.off_backtrace_active] <;> omega
+      Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table] <;> omega
 
 /-- (b) Any window above the free block and below `heap_end` (the initial
 heap's placement and the VM stack lie there). -/
@@ -791,10 +823,10 @@ theorem f1_aboveBlock {lo hi : Nat}
     (low : WhileMinRuntime.freeBlock.block + 8 * WhileMinRuntime.freeBlock.words ≤ lo)
     (heap : F1HeapSafe ⟨lo, hi⟩) :
     WindowStable f1Runtime [⟨lo, hi⟩] := by
-  refine f1_window_of ?_ ?_ ?_ ?_ ?_ ?_ ?_ heap <;>
+  refine f1_window_of ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ heap <;>
     simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, exeNameAddr, Layout.sym_bss_end,
       Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-      Layout.off_backtrace_active] at * <;> omega
+      Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table] at * <;> omega
 
 /-- `RuntimeFrame.stackWindow`: every window inside the VM stack allocation. -/
 theorem f1_stackWindow {lo hi : Nat} (low : f1High - Layout.stackBytes ≤ lo) (high : hi ≤ f1High) :
@@ -841,8 +873,8 @@ theorem stackWindow_apart {lo hi : Nat} (low : f1High - Layout.stackBytes ≤ lo
   simp only [youngWord, dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
   simp only [f1High, f1Domain, WhileMinEntry.high, WhileMinRuntime.domain, WhileMinRuntime.freeBlock,
     Layout.stackBytes, Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-    Layout.off_backtrace_active] at *
-  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;> omega
+    Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table] at *
+  rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;> omega
 
 /-- The VM-owned `Caml_state` fields miss the whole footprint. -/
 theorem domainField_apart {off : Nat}
@@ -855,10 +887,10 @@ theorem domainField_apart {off : Nat}
   intro v hv
   simp only [youngWord, dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
   simp only [f1Domain, WhileMinRuntime.domain, WhileMinRuntime.freeBlock, Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-    Layout.off_backtrace_active, Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots,
+    Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table, Layout.off_trapsp, Layout.off_extern_sp, Layout.off_local_roots,
     Layout.off_exn_bucket, Layout.off_external_raise] at *
   rcases member with rfl | rfl | rfl | rfl | rfl <;>
-    rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;> omega
+    rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;> omega
 
 /-- **`caml_callback_depth` is not read by `f1Runtime`**: the interpreter's
 entry (`entry_prep`, depth + 1) and `STOP` (depth − 1) keep the invariant. -/
@@ -917,11 +949,14 @@ theorem f1_objectField {P : Prog} {s : St} {c : Config} {pl : Place} {cp : ChanP
   · simp only [Layout.domainStateBytes] at hd; omega
   · simp only [Layout.domainStateBytes, Layout.off_stack_high, Layout.off_stack_threshold] at hd ⊢; omega
   · simp only [Layout.domainStateBytes, Layout.off_trap_barrier] at hd ⊢; omega
-  · simp only [Layout.domainStateBytes, Layout.off_backtrace_active] at hd ⊢; omega
+  · simp only [Layout.domainStateBytes, Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table] at hd ⊢; omega
   · omega
   · have ch := g.heapChunks l a o placed object
     simp only [InHeapChunks, minorRegion, majorRegion] at ch
     simp only [exeNameAddr]; omega
+  · simp only [Layout.domainStateBytes, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table] at hd ⊢
+    constructor; · omega
+    constructor <;> omega
   · exact heapSafe_object g placed object start finish
 
 theorem mem_of_logInW {ws : List W} {log : List WEntry} (h : LogInW ws log) :
@@ -972,10 +1007,10 @@ theorem f1_allocFrame_core' {P : Prog} {s : St} {c : Config} {pl : Place} {cp : 
       intro v hv
       simp only [dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
       simp only [f1Domain, WhileMinRuntime.domain, Layout.off_young_ptr] at *
-      rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;>
+      rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;>
         (try simp only [WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth,
           Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-          Layout.off_backtrace_active]) <;> omega
+          Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table]) <;> omega
     · rcases entries e hl with hin | hin | hin
       · simp only [nurseryFree] at hin
         refine kept_apart (w := ⟨e.1, e.1 + e.2.1⟩) (Or.inl (by
@@ -983,10 +1018,10 @@ theorem f1_allocFrame_core' {P : Prog} {s : St} {c : Config} {pl : Place} {cp : 
         intro v hv
         simp only [dynamicKept, List.mem_cons, List.not_mem_nil, or_false] at hv
         simp only [f1Domain, WhileMinRuntime.domain] at *
-        rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;>
+        rcases hv with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp only [Apart] <;>
           (try simp only [WhileMinRuntime.freeBlock, Layout.sym_bss_end, Layout.sym_caml_callback_depth,
             Layout.off_young_ptr, Layout.off_stack_high, Layout.off_stack_threshold, Layout.off_trap_barrier,
-            Layout.off_backtrace_active]) <;> omega
+            Layout.off_backtrace_active, Layout.off_minor_heap_wsz, Layout.off_stat_heap_wsz, Layout.off_custom_table]) <;> omega
       · exact stackApart e hin.1 hin.2 v (List.mem_cons_of_mem _ hv)
       · cases hin
   · intro e he
@@ -1194,7 +1229,7 @@ theorem f1Pins_of {c : Config}
       simp at root total
       omega
   subst same
-  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨shape, WhileMinRuntime.read_domain memory, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, CustomCallPins.startup memory⟩
   · exact WhileMinEntry.read_stack_high memory
   · exact WhileMinEntry.read_stack_threshold memory
   · have z : ∀ (g : BitVec 64) (n : Nat), g.toNat = n → word c n = 0#64 →

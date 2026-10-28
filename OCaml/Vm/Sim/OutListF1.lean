@@ -306,7 +306,7 @@ theorem f1_outList_entry {Ready : Nat → Config → Prop} {state Customs : Conf
     · intro a ha
       rw [domainEq]
       exact h.recordsApart a ha (Boot.WhileMinRuntime.domain, Layout.domainStateBytes) (by simp [f1Covered])
-  refine ⟨H, cap, ⟨h, records, h.extents _ (by simp [f1Covered]), ?_, ?_, ?_⟩⟩
+  refine ⟨H, cap, ⟨ok.freeListShape.customPins, h, records, h.extents _ (by simp [f1Covered]), ?_, ?_, ?_⟩⟩
   · rw [domainEq]
     exact h.extents _ (by simp [f1Covered])
   · rw [domainEq]
