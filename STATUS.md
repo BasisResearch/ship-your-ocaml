@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 17:20 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 17:23 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,13 +18,15 @@ None currently.
 
 ## Published
 
-`origin/main` is **`4e99ba14bc73be7bc8609e3dd17e76c453d48dfc`**, verified remotely
-after the full gate passed. It passed **6,155 build jobs**, **9,736 main
+`origin/main` is **`a017d2bae8440602a4a5e8a94b5af45415a196fc`**, verified remotely
+after the full gate passed. It passed **6,157 build jobs**, **9,736 main
 allowed-axiom reports** (9,740 including TCB), 150 axiom-free reports in the
 gate transcript, generator/ELF checks and **329 OS traces** (5,069 steps,
 324 accepted, 5 special, zero rejected or unsupported). All build dependency
 reports also use only allowed axioms. Evidence:
-`logs/{integrate,build}-4e99ba14.log`, `logs/gate-4e99ba14.json`.
+`logs/{integrate,build}-a017d2ba.log`, `logs/gate-a017d2ba.json`.
+The build also checks imported audit modules: 11,825 allowed-axiom reports
+across the whole build, including the 56 new G2 theorem registrations.
 
 The preceding `34658c24` batch published:
 
@@ -89,7 +91,7 @@ It does not close the native spending or full runtime supplier.
 
 Both are published in `4e99ba14`; log `/tmp/syo-listing-bitmap-integrate.log`.
 
-## Reviewed for the next gate
+## Newly published bounded bitmap and least-large return
 
 `d90918a9` repairs bitmap boundedness and supplies the original-entry
 least-large split for positive requests<=16 and request+17<source size.
@@ -100,8 +102,7 @@ requests, wrapper/caller production and natural total-free credit remain
 open. Lead checked all 56 new registrations, 1,337-job final build and
 352 focused reports (350 standard, two pure). Rebase was clean.
 Snapshot: `keep/g2-bounded-large-reviewed-20261028`;
-evidence: `logs/a6-bounded-*`. The next gate includes this repair; the preceding gate did not.
-The gate is active in bprime at `a017d2ba`, started 17:15 UTC;
+evidence: `logs/a6-bounded-*`. Published in `a017d2ba` after the full gate passed at 17:23 UTC;
 log `/tmp/syo-bounded-large-integrate.log`.
 
 ## Active work
