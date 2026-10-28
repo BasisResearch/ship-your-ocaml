@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 16:02 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 16:04 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -73,22 +73,29 @@ Snapshot: `keep/counted-arity-reviewed-20261028`; logs: `logs/ccall35-*`.
 Semantics.lean is byte-identical to the published baseline. The full gate
 will validate the import change and combined 131-row/startup result.
 
+The combined full gate is active in `syo-wt/bprime` at fixed candidate
+`004b521cc338bcf6d93fbaf13b265e3644f7d3c2`, started 16:03 UTC. Log:
+`/tmp/syo-startup-arity-integrate.log`. Neither reviewed proof is published yet.
+
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| Next C_CALL Sol | Counted console primitive returns and complete C_CALL4 | `syo-wt/a6-gc-next2` |
+| C_CALL Sol | Counted console primitive returns and complete C_CALL4 | `syo-wt/a6-gc-next2` |
 | G2 Sol | Exact-size representation and shared original small-success dispatch | `syo-wt/a1-prims-next` |
 | Lead | Next full gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-G2 is active; the completed arity slot is being prepared for console work. G2 started at 15:58 UTC from `10c5e3c6`
+Two Sol CLI workers are active. G2 started at 15:58 UTC from `10c5e3c6`
 in `a1-prims-next`; log `/tmp/syo-gc-small-success-launch.log`.
 The idle startup cache was transferred to the integration worktree under
 source/destination build locks, with matching toolchain/manifests and
 tracked dependency trees, before the G2 launch. All four build roots were
 copied coherently, without deletion.
 
-The next call slot is counted console/C_CALL4; it starts after the idle cache transfer. Other ready packets cover
+Counted console/C_CALL4 started at 16:03 UTC from `004b521c` in
+`a6-gc-next2`; log `/tmp/syo-counted-console-launch.log`. The idle integration
+cache was copied into that slot under the same provenance/build-lock checks
+before launch, avoiding stale foundational build outputs. Other ready packets cover
 counter/exit, listing runtime repair, full physical custom startup/read
 context, general formatting, named reserve and the actual CODE-section seek.
 
