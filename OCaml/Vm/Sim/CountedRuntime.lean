@@ -2,6 +2,7 @@ import OCaml.Vm.Sim.CountedInvariant
 import OCaml.Vm.Sim.ChannelCountFrame
 import OCaml.RefinementF1
 import OCaml.Vm.Sim.F1Frame
+import OCaml.Vm.Sim.F1RaiseRuntime
 
 /-! Reuse generic rows under a local runtime invariant. Channel calls change
 the frozen world and use their counted machine summaries instead. Ordinary
@@ -169,6 +170,56 @@ theorem counted_runtimeFrame {Ready : Nat → Config → Prop}
   quiet c h := f1_runtimeFrame.quiet c h.1
   barrier c h := f1_runtimeFrame.barrier c h.1
   backtrace c h := f1_runtimeFrame.backtrace c h.1
+
+/-- Native caught division raises use the already proved VM/native stack
+count frame. The scratch bound comes from the real invocation's headroom. -/
+theorem counted_raiseRuntimeFrame {Ready : Nat → Config → Prop}
+    {state Customs : Config → Nat → Prop} {cp : ChanPlace} {w : World}
+    (custom : Gc.CustomMemCall Ready state Customs) :
+    RaiseRuntimeFrame (countedLayout Gc.f1Layout Customs cp w) Gc.f1High Gc.f1Domain where
+  hook c h := f1_raiseRuntimeFrame.hook c h.1
+  scratch ws D valid each c d frame before :=
+    ⟨f1_raiseRuntimeFrame.scratch ws D valid each c d frame before.1,
+      (f1_stack_channelCountFrame custom before.1 before.2 (fun window member => by
+        rcases each window member with vm | rfl
+        · exact Or.inl vm
+        · exact Or.inr (Nat.le_sub_of_add_le valid.headroom)) frame).repr before.2⟩
+
+/-- Shared application operation for APPLY, tail calls and RETURN. -/
+theorem counted_enter_channels {s s' : St} {stack : List Val} {extra : Nat}
+    (effect : enter s stack extra = .next s') : s'.world.chans = s.world.chans := by
+  simp only [enter, opt] at effect
+  repeat' split at effect
+  all_goals cases effect <;> rfl
+
+/-- Caught and uncaught semantic raises retain the channel model. Reachable
+F1 rows still discharge caughtness using their existing GoodF1 supplier. -/
+theorem counted_raiseTo_channels {P : Prog} {s s' : St} {v : Val}
+    (effect : raiseTo P s v = .next s') : s'.world.chans = s.world.chans := by
+  simp only [raiseTo] at effect
+  repeat' split at effect
+  all_goals cases effect <;> rfl
+
+/-- Tagged binary arithmetic does not change channels. -/
+theorem counted_intOp_channels {s s' : St} {f : BitVec 64 → BitVec 64 → BitVec 64}
+    (effect : intOp s f = .next s') : s'.world.chans = s.world.chans := by
+  simp only [intOp, opt] at effect
+  repeat' split at effect
+  all_goals cases effect <;> rfl
+
+/-- Shared comparison operation. -/
+theorem counted_cmpOp_channels {s s' : St} {f : BitVec 64 → BitVec 64 → Bool}
+    (effect : cmpOp s f = .next s') : s'.world.chans = s.world.chans := by
+  simp only [cmpOp, opt] at effect
+  repeat' split at effect
+  all_goals cases effect <;> rfl
+
+/-- Shared immediate branch operation. -/
+theorem counted_brOp_channels {s s' : St} {n ofs : Int} {f : BitVec 64 → BitVec 64 → Bool}
+    (effect : brOp s n ofs f = .next s') : s'.world.chans = s.world.chans := by
+  simp only [brOp, opt] at effect
+  repeat' split at effect
+  all_goals cases effect <;> rfl
 
 /-- Reuse a generic row at the local counted runtime. Its actual runtime
 frame supplies the count observations; linked-list coherence recovers them

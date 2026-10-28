@@ -2,6 +2,81 @@
 
 ## Current status
 
+**2026-10-28 ordinary counted memory/control continuation (base `ed54de04`):
+122/134 complete counted F1 row instances checked; lead integration pending.**
+
+`scripts/gen_counted_control_rows.py` generates `CountedMemoryRows.lean`
+(41 rows, including the existing CONST0/NEGINT) and `CountedControlRows.lean`
+(16 control/raise/halt rows). These add 55 rows to the previous 67. Constants
+and atoms, integer arithmetic/comparisons/branches, SWITCH, APPLY/APPLY1–3,
+APPTERM/APPTERM1–3, RETURN, RESTART, CHECK_SIGNALS, STOP and all three explicit
+raise opcodes reuse the existing checked native rows. `counted_memory_row`,
+`counted_stack_row` and `counted_row` retain the ordinary guards and actual
+GoodF1/Fits/capacity suppliers; no preservation premise or semantic guard was
+added. RETURN keeps the original extra-count and saved-count use-site guards.
+
+`counted_raiseRuntimeFrame` lifts the actual F1 `RaiseRuntimeFrame` using
+`f1_stack_channelCountFrame`: VM writes use `CountStackWindow`, and
+`NativeValid.headroom` places the real `nativeScratch` window above the
+allocator arena. The channel-unlock hook comes from the entry base runtime.
+Consequently DIVINT and MODINT reuse their complete ordinary rows, including
+the caught zero-divisor native raise path and its GoodF1 caughtness proof.
+The explicit raise family only needs the already lifted ordinary RuntimeFrame.
+
+Channel semantics reduce actual `stepI`, exposing operand shapes using the
+authoritative `gen_opcodes.nargs` before unfolding. SWITCH keeps the full
+variable table tail. Shared `counted_enter_channels` covers apply, tail calls
+and RETURN's apply path; `counted_raiseTo_channels`, `counted_intOp_channels`,
+`counted_cmpOp_channels` and `counted_brOp_channels` factor the other operations.
+The existing stack-row generator now accepts an optional semantic-operation
+helper; its previous 58-row output and the allocation output remain current.
+
+STOP uses the entry runtime's actual `Gc.f1_exitGlobals` and the loop's HTIF
+idleness through generic `stop_row`. `counted_row` transports its halt
+outcome directly; there is no successor count or stronger exit premise.
+
+`counted_supported_row` supplies an actual complete `OpArm` for every true
+entry of `countedOrdinaryOpcode`, using only the existing named custom
+supplier plus GoodF1/Fits. `counted_opcode_census`, `counted_opcode_count` and
+`counted_remaining_count` check the exact complement against
+`Opcode.fragment = .F1` (the authoritative F1 opcode domain), 122 supported
+opcodes and twelve distinct remaining obligations:
+
+  `SETGLOBAL`, `SETFIELD0`, `SETFIELD1`, `SETFIELD2`, `SETFIELD3`, `SETFIELD`,
+  `OFFSETREF`, `C_CALL1`, `C_CALL2`, `C_CALL3`, `C_CALL4`, `C_CALL5`.
+
+OFFSETREF writes a represented object and is excluded from these memory/stack
+frames. Allocating/barrier extensions and effectful primitive-call summaries
+remain with their separate tasks; the seven previously checked nursery rows
+are only reused in the partial table/census. Successful named C_CALL cases do
+not close any complete C_CALL opcode row. No full counted `F1Arms` assembly
+is claimed. `CustomMemCall` remains named; physical startup/runtime suppliers,
+channel opening/listing suppliers and the existing allocation/GC boundaries
+remain explicit. `BarrierGrowthFull` stays with G2; C4 round 2 waits for F1.
+
+Verification:
+
+- Guarded final affected build of `CountedControlRows`, `CountedChannelRows`,
+  `CountedEntry` and `CountedPrimAllocRows`: **3,494 jobs, passed**
+  (`/tmp/counted-control-final-build.log`). This checks generated memory/control
+  rows, the inherited stack/allocation rows and counted entry/channel regressions.
+  No new warnings in CountedRuntime/CountedMemoryRows/CountedControlRows.
+- Guarded `/tmp/counted-control-focused-audit.lean`: **130 reports, passed**;
+  only `propext`, `Classical.choice`, `Quot.sound` or no axioms
+  (`/tmp/counted-control-focused-audit.log`,
+  `/tmp/counted-control-audit-check.txt`). All 122 newly introduced theorem
+  reports are registered in `OCaml/Audit.lean`; the focus also rechecks the
+  two inherited memory rows and six existing frame/entry/channel boundaries.
+- Counted control/stack/allocation, A2 and F1 table generator drift checks,
+  proof discipline (27 rules), hole check and abstraction gate: **passed**.
+  The control generator is registered in `check_all.sh` stage a5.
+- Every build/audit checked `free -g` first (available at least 25 GB) and
+  ran alone through `lean-guarded.py`/`lean-capped.sh`, within the inherited
+  12 GB scope and two-thread limit. No increased proof budgets.
+
+The lead owns full `OCaml.Audit` and commits/landing via `scripts/integrate.sh`;
+this worktree leaves checked source edits uncommitted for review.
+
 **2026-10-27 counted nursery/native allocation: checked for lead review and
 integration.** Started at committed HEAD `648afc4a`, with the checked counted
 stack frame. Read `CLAUDE.md`, the A1 plan/status and this log's remaining-row

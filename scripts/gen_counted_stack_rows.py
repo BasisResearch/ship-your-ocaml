@@ -38,13 +38,22 @@ open OCaml.Bytecode Vsa.Machine OCaml.Vm.Primitives
 def countedStackOpcode : Opcode → Bool
 '''
 
-def channel_certificate(op, definitions='stepI, opt', variable=False):
+def channel_certificate(op, definitions='stepI, opt', variable=False, operation=None):
     # Reuse the authoritative OCaml fixed-operand-count parser. Variable
     # CLOSUREREC exposes its two leading operands and retains the offset list.
     shape = ('rcases args with _ | ⟨a, _ | ⟨b, rest⟩⟩' if variable else
         ['cases args',
          'rcases args with _ | ⟨a, _ | ⟨b, rest⟩⟩',
          'rcases args with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩'][nargs().get(op, 0)])
+    finish = "repeat' split at effect\n    all_goals cases effect <;> rfl"
+    if operation:
+        # Consume shared semantic operations before split unfolds a dependent
+        # match (notably the trap frame in division's raiseTo branch).
+        finish = f'''repeat' first
+      | have channels := {operation} effect
+        exact channels
+      | (cases effect <;> rfl)
+      | split at effect'''
     return f'''
 /-- BcSem channel preservation for {op}; physical framing is independent. -/
 theorem counted_{op.lower()}_channels {{P : Prog}} {{s s' : St}} {{args : List Int}}
@@ -52,8 +61,7 @@ theorem counted_{op.lower()}_channels {{P : Prog}} {{s s' : St}} {{args : List I
   {shape}
   all_goals
     simp only [{definitions}] at effect
-    repeat' split at effect
-    all_goals cases effect <;> rfl
+    {finish}
 '''
 
 def output():

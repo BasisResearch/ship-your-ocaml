@@ -1,5 +1,14 @@
 # Routes not to repeat
 
+- 2026-10-28 counted division channel semantics: fully splitting the unfolded
+  DIVINT/MODINT effect before applying the shared `raiseTo` channel lemma
+  expands its dependent trap-frame match and fails dependent elimination.
+  Apply the named semantic-operation helpers before each further split;
+  retain the actual caught-raise native row through `counted_raiseRuntimeFrame`.
+  The aggregate 149-opcode filter count also exceeds elaborator recursion
+  under plain `decide`; use kernel evaluation of that generated literal census,
+  without changing proof budgets or count/frame premises.
+
 - 2026-10-27 custom global-frame review: `CustomMemCall.frame` preserves
   `state` under arbitrary outside writes, while `CallerApart.records`
   quantifies over linked lists reconstructed from those outside bytes.
