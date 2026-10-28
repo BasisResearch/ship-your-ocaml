@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 16:47 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 16:52 UTC. Target: Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -18,15 +18,15 @@ None currently.
 
 ## Published
 
-`origin/main` is **`34658c244a0fd1ec4c6020f0a64d21a781504821`**, verified remotely
-after the full gate exited at 16:46 UTC. It passed **6,146 build jobs**,
-**9,634 main allowed-axiom reports** (9,638 including TCB), 133 axiom-free
+`origin/main` is **`7ee2926299e5ed23a1299fb53a40df194626ee8c`**, verified remotely
+after the full gate exited at 16:51 UTC. It passed **6,146 build jobs**,
+**9,643 main allowed-axiom reports** (9,647 including TCB), 133 axiom-free
 reports in the gate transcript, generator/ELF checks and **329 OS traces**
 (5,069 steps, 324 accepted, 5 special, zero rejected or unsupported).
 All build dependency reports also use only allowed axioms. Evidence:
-`logs/{integrate,build}-34658c24.log`, `logs/gate-34658c24.json`.
+`logs/{integrate,build}-7ee29262.log`, `logs/gate-7ee29262.json`.
 
-This batch publishes:
+The preceding `34658c24` batch published:
 
 - `319f74d2`: four counted console returns and complete C_CALL4. The actual
   native windows preserve physical counts and per-record refs/links while
@@ -55,7 +55,7 @@ initial G2 next-size dispatch and plain decimal formatting. Their raw gate
 and focused logs remain archived. `7047b3cd` isolates fd-2 seek probes so
 validation cannot overwrite integration log headers; later full gates pass.
 
-## Reviewed for the next gate
+## Newly published counter and exit proofs
 
 `9b490e19` supplies original-entry counted fresh-OO-ID success and actual
 native C_CALL1 halt. The counter frame uses the selected heap and physical
@@ -64,20 +64,30 @@ Whole C_CALL1 still needs complete unary success coverage. Lead checked
 all nine new unique registrations, 3,291/3,715-job builds and 77 focused
 reports (75 standard, two pure). Rebase was clean.
 Snapshot: `keep/counted-counter-exit-reviewed-20261028`;
-evidence: `logs/counted-fresh-exit-*`. This result is not yet published.
+evidence: `logs/counted-fresh-exit-*`. Published in `7ee29262`.
+
+## Reviewed for the next gate
+
+`eddfc88c` checks the unused-high-bit obstruction in the existing small
+representation and factors the actual missing-slot supplier. This is an
+interface counterexample, not a reachable native state. Lead checked all
+eight new unique registrations, 1,300/1,301-job builds and 295 focused
+reports (293 standard, two pure). Snapshot:
+`keep/g2-bitmap-obstruction-reviewed-20261028`; `logs/a6-entry-large-*`.
+The least-large adapter remains open; its bounded bitmap repair is active.
 
 ## Active work
 
 | Slot | Target | Worktree |
 | --- | --- | --- |
-| G2 Sol | Original-entry least-large split and returned physical representation | `syo-wt/a6-gc-next2` |
+| G2 Sol | Bounded bitmap invariant and original-entry least-large continuation | `syo-wt/a6-gc-next2` |
 | Runtime Sol | Listing entry/runtime contract and concrete custom allocation credit | `syo-wt/a1-prims-next` |
 | Lead | Gate, result review and concrete runtime supplier analysis | main; `syo-wt/bprime` |
 
-G2 started at 16:44 UTC from `9b490e19`; log:
-`/tmp/syo-gc-large-split-entry-launch.log`. It is checking the unconstrained
-high-bitmap-bit gap before deriving native zero filtering. The packet covers
-only request<=16 and the existing sufficiently-large source branch.
+G2 repair started at 16:51 UTC from `eddfc88c`; log:
+`/tmp/syo-gc-bitmap-large-repair-launch.log`. It must preserve a bounded
+bitmap refinement and derive zero filtering before composing the existing
+request<=16/sufficiently-large-source native branch.
 Listing started at 16:15 UTC from `a1be6936`; log:
 `/tmp/syo-outlist-runtime-local-launch.log`. Its actual setup/entry and
 custom-table request/credit components build; returned runtime is in progress.
