@@ -1,6 +1,6 @@
 # Foreman status
 
-Updated 2026-10-28 19:58 UTC. Target: close Layer A for `GoodF1`, with G2 continuing.
+Updated 2026-10-28 20:04 UTC. Target: close Layer A for `GoodF1`, with G2 continuing.
 
 ## Needs user
 
@@ -8,37 +8,39 @@ None currently. Work continues; no user-only decision blocks the next steps.
 
 ## Current result
 
-The reviewed local counted table is **133/134**: complete `C_CALL1` is checked;
-`C_CALL2` remains. Published coverage is **132/134** until the queued batch
-passes integration. Neither count establishes reset-to-Loaded or full G2.
-
+The published counted table is **133/134**: complete `C_CALL1` is checked
+and integrated; `C_CALL2` remains. This does not establish reset-to-Loaded
+or full G2.
 Standing decisions: `BarrierGrowthFull` remains G2; `CustomMemCall` remains a
 named premise; C4 abstraction-discovery round 2 waits until F1 closes.
 GoodF1 has not been narrowed to simplify named registration or formatting.
 
 ## Published and landing
 
-`origin/main`: **`4c4209eae1e1979f3a9e95501a78a58ce5cda0a6`**, independently
-verified after the 19:20 UTC gate. That gate passed 6,211 jobs, 9,778 main
-allowed-axiom reports (9,782 including TCB), 153 axiom-free reports in the
+`origin/main`: **`92be3a3e9db89510c6ec67c19c44861a26cf57e4`**, independently
+verified after the 20:02 UTC gate. It passed 6,217 jobs, 9,796 main
+allowed-axiom reports (9,800 including TCB), 154 axiom-free reports in the
 gate transcript and 329 OS traces: 5,069 steps, 324 accepted, five special,
-zero rejected/unsupported. The whole build has 12,238 allowed-axiom reports.
-Evidence: `logs/{integrate,build}-4c4209ea.log`, `logs/gate-4c4209ea.json`.
+zero rejected/unsupported. The whole build has 12,512 allowed-axiom reports.
+Evidence: `logs/{integrate,build}-92be3a3e.log`, `logs/gate-92be3a3e.json`.
 
-This publishes `53e93d16`: physical custom state, exact read-only call pins,
-footprint/accounting/frame laws and the captured counted startup entry.
-Lead review covered 45 new registrations, 3,679 consumer jobs and 62 focused
-reports (59 allowed, three pure); `logs/custom-physical-*`.
+This publishes complete C_CALL1, concrete channel runtimes, current CODE
+source frames and the bounded original G2 wrapper below. Physical custom
+state/read context was published in `4c4209ea`; its gate evidence remains
+archived alongside `logs/custom-physical-*`.
 
-**Active gate:** bprime at fixed candidate `92be3a3e`, started 19:20 UTC,
-contains the reviewed local batch below, including complete C_CALL1. Log:
-`/tmp/syo-counted-unary-integrate.log`; bprime `.integrate.log` and
-`.check-build.log`. Do not change this tree's HEAD, source or cache mid-gate.
+**CODE scan integration:** `d9c0be7b` plus handoff/status commits is the next
+reviewed batch in bprime. Log: `/tmp/syo-code-scan-integrate.log`; bprime
+`.integrate.log` and `.check-build.log`. The candidate is fixed at launch;
+do not change that tree's HEAD, source or cache mid-gate.
 
 All publication goes through `scripts/integrate.sh` and normal fast-forward
 pushes to origin/main. Reviewed snapshots remain on `keep/*` branches.
 
-## Reviewed commits awaiting publication
+## Recent proof handoffs
+
+The first five commits below are published in `92be3a3e`; the final CODE
+scan commit is queued for the next gate.
 
 | Commit | Result | Lead-reviewed evidence |
 | --- | --- | --- |
@@ -49,14 +51,14 @@ pushes to origin/main. Reviewed snapshots remain on `keep/*` branches.
 | `26201d6b` | Complete counted C_CALL1 using concrete ordinary/channel/counter/flush returns and actual native exit; table 133/134 | Four new registrations; 3,733 jobs; 22 focused (21 allowed, one pure); `logs/counted-unary-*` |
 | `d9c0be7b` | Actual reset through reverse CODE scan, lseek and return at 0x80004eb0; length 764, fd position 57, selected ownership/runtime/source frames | 80 new registrations; 3,545 jobs; 80 focused (78 allowed, two pure); 2,157 generated outputs and ELF pins; `logs/code-scan-*` |
 
-`d9c0be7b` follows the active fixed gate; it is not in candidate `92be3a3e`.
+`d9c0be7b` is not in published `92be3a3e`.
 The CODE worker was stopped after its checks and notes were complete and
 it remained quiet with no active command. Reviewed source hashes were
 unchanged; its task was preserved and committed. Only additive dead-end
 notes conflicted on rebase, and both were retained.
 
 Each focused list was checked exactly against its registrations and allowed
-axioms; the full integration gate remains required. Rebase conflicts were
+axioms. The CODE scan still requires its full integration gate. Rebase conflicts were
 additive lane/dead-end notes and retained both sides. Snapshot branches:
 `keep/custom-physical-reviewed-20261028`,
 `keep/custom-credit-listing-reviewed-20261028`,
@@ -80,8 +82,9 @@ No active worker cache is copied into bprime.
 | `syo-wt/a1-prims-next` | Full native format parser including l/n/L and actual signed/unsigned caller prefix to alloc_sprintf | `logs/sol-a1-prims-next-20261028-184554-2825386.log` |
 | Lead | Gate, independent review, next-task contracts and integration | main and bprime |
 
-The parser worker is checking its full caller composition and affected
-consumers after factoring the memory-heavy proof; the parser itself builds.
+The parser/caller modules and 52 focused reports pass. Its unchanged decimal
+consumer hits the 10 GiB early guard; the worker is trying a single-thread
+check under the same hard cap before claiming compatibility.
 The CODE task is reviewed and committed. Current G2 task:
 `tasks/sol-g2-small-wrapper.md`, then `tasks/sol-code-load.md` (actual CODE
 allocation/read to code-fragment registration entry). Current primitive task:
